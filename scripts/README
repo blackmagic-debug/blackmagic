@@ -1,0 +1,9 @@
+This directory contains some useful scripts for working
+on the Black Magic Debug project.
+
+bootprog.py - Production programmer using the STM32 SystemMemory bootloader.
+hexprog.py - Write an Intel hex file to a target using the GDB protocol.
+stm32_mem.py - Access STM32 Flash memory using USB DFU class interface.
+
+stubs/ - Source code for the microcode strings included in hexprog.py.
+
