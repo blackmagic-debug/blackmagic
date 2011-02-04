@@ -67,7 +67,7 @@ platform_init(void)
 
 	gpio_set_mode(JTAG_PORT, GPIO_MODE_OUTPUT_10_MHZ, 
 			GPIO_CNF_OUTPUT_PUSHPULL,
-			TMS_PIN | TCK_PIN | TDO_PIN);
+			TMS_PIN | TCK_PIN | TDI_PIN);
 
 	gpio_set_mode(LED_PORT, GPIO_MODE_OUTPUT_2_MHZ, 
 			GPIO_CNF_OUTPUT_PUSHPULL, 

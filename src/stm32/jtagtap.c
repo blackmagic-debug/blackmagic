@@ -37,7 +37,7 @@ int jtagtap_init(void)
 	gpio_port_write(GPIOA, 0x8180);
 	gpio_port_write(GPIOB, 0x0002);
 	
-	gpio_set_mode(JTAG_PORT, GPIO_MODE_OUTPUT_2_MHZ, 
+	gpio_set_mode(JTAG_PORT, GPIO_MODE_OUTPUT_10_MHZ, 
 		GPIO_CNF_OUTPUT_PUSHPULL, TMS_PIN); 
 
 	/* Go to JTAG mode for SWJ-DP */
