@@ -98,12 +98,12 @@ uint8_t swdptap_bit_in(void)
 
 	//ftdi_read_data(&ftdic, &ret, 1);
 	ftdi_read_pins(&ftdic, &ret);
-	//ret &= 0x08;
+	ret &= 0x08;
 	ftdi_write_data(&ftdic, "\xA1\xA0", 2);
 
-	DEBUG("%x\n", ret);
+	DEBUG("%d", ret?1:0);
 
-	return ret & 0x08;
+	return ret;
 }
 
 void swdptap_bit_out(uint8_t val)
