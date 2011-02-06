@@ -60,7 +60,7 @@ int adiv5_swdp_scan(void)
 	/* Read the SW-DP IDCODE register to syncronise */
 	/* This could be done with adiv_swdp_low_access(), but this doesn't
 	 * allow the ack to be checked here. */
-	swdptap_seq_out(0b10100101, 8);
+	swdptap_seq_out(0xA5, 8);
 	ack = swdptap_seq_in(3);
 	if((ack != SWDP_ACK_OK) || swdptap_seq_in_parity(&dp->idcode, 32)) {
 		DEBUG("\n");
@@ -128,19 +128,19 @@ static uint32_t adiv5_swdp_error(ADIv5_DP_t *dp)
 static uint32_t adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t APnDP, uint8_t RnW, 
 				      uint8_t addr, uint32_t value)
 {
-	uint8_t request =  0b10000001;
+	uint8_t request = 0x81;
 	uint32_t response;
 	uint8_t ack;
 
 	if(APnDP && dp->fault) return 0;
 
-	if(APnDP) request ^= 0b100010;
-	if(RnW)   request ^= 0b100100;
+	if(APnDP) request ^= 0x22;
+	if(RnW)   request ^= 0x24;
 
 	addr &= 0xC;
-	request |= (addr << 1) & 0b11000;
+	request |= (addr << 1) & 0x18;
 	if((addr == 4) || (addr == 8))
-		request ^= 0b100000;
+		request ^= 0x20;
 
 	do {
 		swdptap_seq_out(request, 8);
