@@ -1,7 +1,7 @@
-# release: pcb 20080202
-# date:    Tue Oct 14 12:50:59 2008
+# release: pcb 20091103
+# date:    Sun Feb  6 18:51:56 2011
 # user:    gareth (Gareth McMullin,,,)
-# host:    home-laptop
+# host:    gareth-desktop
 
 # To read pcb files, the pcb version (or the cvs source date) must be >= the file version
 FileVersion[20070407]
@@ -9,7 +9,7 @@ FileVersion[20070407]
 PCB["" 160000 100000]
 
 Grid[500.000000 0 0 1]
-Cursor[0 0 0.000000]
+Cursor[0 100000 0.000000]
 PolyArea[200000000.000000]
 Thermal[0.500000]
 DRC[1000 1000 1000 1000 1500 1000]
@@ -1676,6 +1676,10 @@ Layer(8 "signal4")
 )
 Layer(9 "silk")
 (
+	Text[3000 58500 0 169 "www.blacksphere.co.nz" "auto"]
+	Text[2500 97500 0 125 "BLACK MAGIC PROBE 1.0" "auto"]
+	Text[3000 80500 0 114 "Licensed CC-BY-SA" "auto"]
+	Text[3000 89000 0 114 "(C) 2011 Black Sphere Technologies" "auto"]
 )
 Layer(10 "silk")
 (
