@@ -134,36 +134,6 @@ int lmi_flash_erase(struct target_s *target, uint32_t addr, int len)
 int lmi_flash_write_words(struct target_s *target, uint32_t dest, 
 			  const uint32_t *src, int len)
 {
-#if 0
-	struct target_ap_s *t = (void *)target;
-	uint32_t tmp;
-
-	dest &= 0xFFFFFFFC;
-	len &= 0xFFFFFFFC;
-
-	/* setup word access */
-	adiv5_ap_write(t->ap, 0x00, 0xA2000052);
-
-	/* select Flash Control */
-	while(adiv5_dp_access(t->ap->dp, NULL, 0, 0x04, 0x400FD000) != 2);
-
-	while(len) {
-		/* write address to FMA */
-		adiv5_ap_write(t->ap, 0x10, dest); /* Required to switch banks */
-		/* Write data in FMD */
-		while(adiv5_dp_access(t->ap->dp, NULL, 0, 0x04, *src++) != 2);
-		/* set ERASE bit in FMC */
-		while(adiv5_dp_access(t->ap->dp, NULL, 0, 0x08, 0xA4420001) != 2);
-		/* Read FMC to poll for ERASE bit */
-		while(adiv5_dp_access(t->ap->dp, NULL, 1, 0x08, 0) != 2);
-		do {
-			while(adiv5_dp_access(t->ap->dp, &tmp, 1, 0x08, 0) != 2);
-		} while (tmp & 1);
-
-		len -= 0x4;
-		dest += 0x4;
-	}
-#else
 	uint32_t data[(len>>2)+2];
 	data[0] = dest;
 	data[1] = len >> 2;
@@ -177,7 +147,7 @@ int lmi_flash_write_words(struct target_s *target, uint32_t dest,
 	target_halt_resume(target, 0);
 	DEBUG("Waiting for halt\n");
 	while(!target_halt_wait(target));
-#endif
+
 	return 0;
 }
 
