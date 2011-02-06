@@ -81,7 +81,7 @@ gdb_main(void)
 			break;
 		    }
 		    case 'm': {	/* 'm addr,len': Read len bytes from addr */
-			uint32_t addr, len;
+			unsigned long addr, len;
 			char *mem;
 			ERROR_IF_NO_TARGET();
 			sscanf(pbuf, "m%08lX,%08lX", &addr, &len);
@@ -107,7 +107,7 @@ gdb_main(void)
 			break;
 
 		    case 'M': { /* 'M addr,len:XX': Write len bytes to addr */
-			uint32_t addr, len;
+			unsigned long addr, len;
 			int hex;
 			char *mem;
 			ERROR_IF_NO_TARGET();
@@ -209,7 +209,7 @@ gdb_main(void)
 			break;
 
 		    case 'X': { /* 'X addr,len:XX': Write binary data to addr */
-			uint32_t addr, len;
+			unsigned long addr, len;
 			int bin;
 			ERROR_IF_NO_TARGET();
 			sscanf(pbuf, "X%08lX,%08lX:%n", &addr, &len, &bin);
@@ -238,7 +238,7 @@ gdb_main(void)
 		    case 'z': { /* z type,addr,len: Clear breakpoint packet */
 			uint8_t set = (pbuf[0]=='Z')?1:0;
 			int type, len;
-			uint32_t addr;
+			unsigned long addr;
 			int ret;
 			ERROR_IF_NO_TARGET();
 			/* I have no idea why this doesn't work. Seems to work
@@ -313,7 +313,7 @@ handle_q_packet(char *packet, int len)
 
 	} else if (strncmp (packet, "qXfer:memory-map:read::", 23) == 0) {
 		/* Read target XML memory map */
-		uint32_t addr, len;
+		unsigned long addr, len;
 		sscanf(packet+23, "%08lX,%08lX", &addr, &len);
 		if((!cur_target) && last_target) {
 			/* Attach to last target if detached. */
@@ -342,7 +342,7 @@ handle_q_packet(char *packet, int len)
 static void
 handle_v_packet(char *packet, int plen)
 {
-	uint32_t addr, len;
+	unsigned long addr, len;
 	int bin;
 	static uint8_t flash_mode = 0;
 
