@@ -1,12 +1,12 @@
 # release: pcb 20091103
-# date:    Sun Feb  6 18:51:56 2011
+# date:    Sun Feb  6 18:56:36 2011
 # user:    gareth (Gareth McMullin,,,)
 # host:    gareth-desktop
 
 # To read pcb files, the pcb version (or the cvs source date) must be >= the file version
 FileVersion[20070407]
 
-PCB["" 160000 100000]
+PCB["Black Magic Probe" 160000 100000]
 
 Grid[500.000000 0 0 1]
 Cursor[0 100000 0.000000]
