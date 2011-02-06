@@ -84,7 +84,7 @@ gdb_main(void)
 			uint32_t addr, len;
 			char *mem;
 			ERROR_IF_NO_TARGET();
-			siscanf(pbuf, "m%08lX,%08lX", &addr, &len);
+			sscanf(pbuf, "m%08lX,%08lX", &addr, &len);
 			DEBUG("m packet: addr = %08lX, len = %08lX\n", addr, len);
 			mem = malloc(len);
 			if(!mem) break;
@@ -111,7 +111,7 @@ gdb_main(void)
 			int hex;
 			char *mem;
 			ERROR_IF_NO_TARGET();
-			siscanf(pbuf, "M%08lX,%08lX:%n", &addr, &len, &hex);
+			sscanf(pbuf, "M%08lX,%08lX:%n", &addr, &len, &hex);
 			DEBUG("M packet: addr = %08lX, len = %08lX\n", addr, len);
 			mem = malloc(len);
 			unhexify(mem, pbuf + hex, len);
@@ -212,7 +212,7 @@ gdb_main(void)
 			uint32_t addr, len;
 			int bin;
 			ERROR_IF_NO_TARGET();
-			siscanf(pbuf, "X%08lX,%08lX:%n", &addr, &len, &bin);
+			sscanf(pbuf, "X%08lX,%08lX:%n", &addr, &len, &bin);
 			DEBUG("X packet: addr = %08lX, len = %08lX\n", addr, len);
 			if(((addr & 3) == 0) && ((len & 3) == 0)) 
 				target_mem_write_words(cur_target, addr, (void*)pbuf+bin, len);
@@ -243,9 +243,9 @@ gdb_main(void)
 			ERROR_IF_NO_TARGET();
 			/* I have no idea why this doesn't work. Seems to work
 			 * with real sscanf() though... */
-			//siscanf(pbuf, "%*[zZ]%hhd,%08lX,%hhd", &type, &addr, &len);
+			//sscanf(pbuf, "%*[zZ]%hhd,%08lX,%hhd", &type, &addr, &len);
 			type = pbuf[1] - '0';
-			siscanf(pbuf + 2, ",%08lX,%d", &addr, &len);
+			sscanf(pbuf + 2, ",%08lX,%d", &addr, &len);
 			switch(type) {
 			    case 1: /* Hardware breakpoint */
 				if(!cur_target->set_hw_bp) { /* Not supported */
@@ -314,7 +314,7 @@ handle_q_packet(char *packet, int len)
 	} else if (strncmp (packet, "qXfer:memory-map:read::", 23) == 0) {
 		/* Read target XML memory map */
 		uint32_t addr, len;
-		siscanf(packet+23, "%08lX,%08lX", &addr, &len);
+		sscanf(packet+23, "%08lX,%08lX", &addr, &len);
 		if((!cur_target) && last_target) {
 			/* Attach to last target if detached. */
 			cur_target = last_target;
@@ -346,7 +346,7 @@ handle_v_packet(char *packet, int plen)
 	int bin;
 	static uint8_t flash_mode = 0;
 
-	if (siscanf(packet, "vAttach;%08lX", &addr) == 1) {
+	if (sscanf(packet, "vAttach;%08lX", &addr) == 1) {
 		/* Attach to remote target processor */
 		target *t;
 		uint32_t i;
@@ -372,7 +372,7 @@ handle_v_packet(char *packet, int plen)
 			gdb_putpacketz("T05");
 		} else	gdb_putpacketz("E01");
 
-	} else if (siscanf(packet, "vFlashErase:%08lX,%08lX", &addr, &len) == 2) {
+	} else if (sscanf(packet, "vFlashErase:%08lX,%08lX", &addr, &len) == 2) {
 		/* Erase Flash Memory */
 		DEBUG("Flash Erase %08lX %08lX\n", addr, len);
 		if(!cur_target) { gdb_putpacketz("EFF"); return; }
@@ -388,7 +388,7 @@ handle_v_packet(char *packet, int plen)
 		else
 			gdb_putpacketz("EFF");
 
-	} else if (siscanf(packet, "vFlashWrite:%08lX:%n", &addr, &bin) == 1) {
+	} else if (sscanf(packet, "vFlashWrite:%08lX:%n", &addr, &bin) == 1) {
 		/* Write Flash Memory */
 		len = plen - bin;
 		DEBUG("Flash Write %08lX %08lX\n", addr, len);

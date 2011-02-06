@@ -107,7 +107,7 @@ void gdb_putpacket(unsigned char *packet, int size)
 			}
 		}
 		gdb_if_putchar('#', 0);
-		siprintf(xmit_csum, "%02X", csum);
+		sprintf(xmit_csum, "%02X", csum);
 		gdb_if_putchar(xmit_csum[0], 0);
 		gdb_if_putchar(xmit_csum[1], 1);
 
@@ -122,7 +122,7 @@ void gdb_putpacket_f(const unsigned char *fmt, ...)
 	int size;
 
 	va_start(ap, fmt);
-	size = vasiprintf(&buf, fmt, ap);
+	size = vasprintf(&buf, fmt, ap);
 	gdb_putpacket(buf, size);
 	free(buf);
 	va_end(ap);
@@ -145,7 +145,7 @@ void gdb_outf(const char *fmt, ...)
 	char *buf;
 
 	va_start(ap, fmt);
-	vasiprintf(&buf, fmt, ap);
+	vasprintf(&buf, fmt, ap);
 	gdb_out(buf);
 	free(buf);
 	va_end(ap);

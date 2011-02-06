@@ -117,5 +117,10 @@ extern const char *morse_msg;
 int platform_init(void);
 void morse(const char *msg, char repeat);
 
+/* Use newlib provided integer only stdio functions */
+#define sscanf siscanf
+#define sprintf siprintf
+#define vasprintf vasiprintf
+
 #endif
 
