@@ -1,0 +1,22 @@
+=======================================
+The Black Magic Debug Project -- README
+=======================================
+
+The Black Magic Debug Probe is gadget providing an in-application
+debug capability for ARM Cortex-M3 microcontrollers.  It interfaces
+with the GDB, the GNU source level debugger over the USB bus, and
+communicates with the target microcontroller over either a JTAG or
+Serial Wire debug port.
+
+Currently supported microcontrollers:
+
+ - ST STM32 Family
+ - TI/LMI Stellaris Family
+
+Project layout
+==============
+flashstub/ - Source code for flash programming stubs in target drivers.
+hardware/ - Schematic and PCB layout for the Black Magic Probe
+scripts/ - Python scripts useful for programming devices.
+src/ - Firmware source code for the Black Magic debug probe.
+
