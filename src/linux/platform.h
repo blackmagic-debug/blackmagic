@@ -22,6 +22,7 @@
 #define __PLATFORM_H
 
 #include <stdint.h>
+#include <ftdi.h>
 
 #define FT2232_VID	0x0403
 #define FT2232_PID	0xbcd9
@@ -35,6 +36,8 @@
 
 #define morse(x, y) do {} while(0)
 #define morse_msg 0
+
+extern struct ftdi_context *ftdic;
 
 int platform_init(void);
 

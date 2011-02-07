@@ -38,7 +38,6 @@ main(void)
 {
 	assert(platform_init() == 0);
 	assert(gdb_if_init() == 0);
-	assert(jtagtap_init() == 0);
 
 	jtag_scan();
 //	adiv5_swdp_scan();

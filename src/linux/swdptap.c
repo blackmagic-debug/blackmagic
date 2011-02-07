@@ -29,32 +29,63 @@
 #include "platform.h"
 #include "swdptap.h"
 
-static struct ftdi_context ftdic;
-static int f;
-
 #define BUF_SIZE 4096
 
 int swdptap_init(void)
 {
-	ftdi_init(&ftdic);
-	ftdi_set_interface(&ftdic, INTERFACE_A);
-	f = ftdi_usb_open(&ftdic, FT2232_VID, FT2232_PID);
-	if(f < 0 && f != -5) {
-		fprintf(stderr, "unable to open ftdi device: %d (%s)\n", 
-			f, ftdi_get_error_string(&ftdic));
-		return -1;
-	}
-	printf("ftdi open succeeded(channel 1): %d\n",f);
+	int err;
 
-	ftdi_set_latency_timer(&ftdic, 1);
-	ftdi_set_baudrate(&ftdic, 10000000);
-	ftdi_usb_purge_buffers(&ftdic);
+	if(ftdic) {
+		ftdi_usb_close(ftdic);
+		ftdi_free(ftdic);
+		ftdic = NULL;
+	}
+	if((ftdic = ftdi_new()) == NULL) {
+		fprintf(stderr, "ftdi_new: %s\n", 
+			ftdi_get_error_string(ftdic));
+		abort();
+	}
+	if((err = ftdi_set_interface(ftdic, INTERFACE_A)) != 0) {
+		fprintf(stderr, "ftdi_set_interface: %d: %s\n", 
+			err, ftdi_get_error_string(ftdic));
+		abort();
+	}
+	if((err = ftdi_usb_open(ftdic, FT2232_VID, FT2232_PID)) != 0) {
+		fprintf(stderr, "unable to open ftdi device: %d (%s)\n", 
+			err, ftdi_get_error_string(ftdic));
+		abort();
+	}
+
+	if((err = ftdi_set_latency_timer(ftdic, 1)) != 0) {
+		fprintf(stderr, "ftdi_set_latency_timer: %d: %s\n", 
+			err, ftdi_get_error_string(ftdic));
+		abort();
+	}
+	if((err = ftdi_set_baudrate(ftdic, 1000000)) != 0) {
+		fprintf(stderr, "ftdi_set_baudrate: %d: %s\n", 
+			err, ftdi_get_error_string(ftdic));
+		abort();
+	}
+	if((err = ftdi_usb_purge_buffers(ftdic)) != 0) {
+		fprintf(stderr, "ftdi_set_baudrate: %d: %s\n", 
+			err, ftdi_get_error_string(ftdic));
+		abort();
+	}
 
 	printf("enabling bitbang mode(channel 1)\n");
-	assert(ftdi_set_bitmode(&ftdic, 0xAB, BITMODE_BITBANG) == 0);
-	//assert(ftdi_write_data(&ftdic, "\x86\x00\x00\x80\xA8\xAB", 6) == 6);
-	ftdi_write_data(&ftdic, "\xAB\xA8", 2);
-	ftdi_write_data_set_chunksize(&ftdic, BUF_SIZE);
+	if((err = ftdi_set_bitmode(ftdic, 0xAB, BITMODE_BITBANG)) != 0) {
+		fprintf(stderr, "ftdi_set_bitmode: %d: %s\n", 
+			err, ftdi_get_error_string(ftdic));
+		abort();
+	}
+
+	assert(ftdi_write_data(ftdic, "\xAB\xA8", 2) == 2);
+
+	if((err = ftdi_write_data_set_chunksize(ftdic, BUF_SIZE)) != 0) {
+		fprintf(stderr, "ftdi_write_data_set_chunksize: %d: %s\n", 
+			err, ftdi_get_error_string(ftdic));
+		abort();
+	}
 
 	/* This must be investigated in more detail.
 	 * As described in STM32 Reference Manual... */
@@ -83,23 +114,23 @@ void swdptap_turnaround(uint8_t dir)
 	olddir = dir;
 
 	if(dir)	/* SWDIO goes to input */
-		assert(ftdi_set_bitmode(&ftdic, 0xA3, BITMODE_BITBANG) == 0);
+		assert(ftdi_set_bitmode(ftdic, 0xA3, BITMODE_BITBANG) == 0);
 
 	/* One clock cycle */
-	ftdi_write_data(&ftdic, "\xAB\xA8", 2);
+	ftdi_write_data(ftdic, "\xAB\xA8", 2);
 
 	if(!dir) /* SWDIO goes to output */
-		assert(ftdi_set_bitmode(&ftdic, 0xAB, BITMODE_BITBANG) == 0);
+		assert(ftdi_set_bitmode(ftdic, 0xAB, BITMODE_BITBANG) == 0);
 }
 
 uint8_t swdptap_bit_in(void) 
 {
 	uint8_t ret;
 
-	//ftdi_read_data(&ftdic, &ret, 1);
-	ftdi_read_pins(&ftdic, &ret);
+	//ftdi_read_data(ftdic, &ret, 1);
+	ftdi_read_pins(ftdic, &ret);
 	ret &= 0x08;
-	ftdi_write_data(&ftdic, "\xA1\xA0", 2);
+	ftdi_write_data(ftdic, "\xA1\xA0", 2);
 
 	DEBUG("%d", ret?1:0);
 
@@ -116,7 +147,7 @@ void swdptap_bit_out(uint8_t val)
 		for(int i = 0; i < 3; i++)
 			buf[i] |= 0x08;
 	}
-	ftdi_write_data(&ftdic, buf, 3);
+	ftdi_write_data(ftdic, buf, 3);
 }
 
 uint32_t swdptap_seq_in(int ticks)
