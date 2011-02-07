@@ -83,8 +83,18 @@ static int buffer_read(uint8_t *data, int size)
 
 int jtagtap_init(void)
 {
-	ftdi_init(&ftdic);
-	ftdi_set_interface(&ftdic, INTERFACE_A);
+	int err;
+
+	if((err = ftdi_init(&ftdic)) != 0) {
+		fprintf(stderr, "ftdi_init: %d: %s\n", 
+			err, ftdi_get_error_string(&ftdic));
+		abort();
+	}
+	if((err = ftdi_set_interface(&ftdic, INTERFACE_A)) != 0) {
+		fprintf(stderr, "ftdi_set_interface: %d: %s\n", 
+			err, ftdi_get_error_string(&ftdic));
+		abort();
+	}
 	f = ftdi_usb_open(&ftdic, FT2232_VID, FT2232_PID);
 	if(f < 0 && f != -5) {
 		fprintf(stderr, "unable to open ftdi device: %d (%s)\n", 
@@ -93,14 +103,35 @@ int jtagtap_init(void)
 	}
 	fprintf(stderr, "ftdi open succeeded(channel 1): %d\n",f);
 
-	ftdi_set_latency_timer(&ftdic, 1);
-	ftdi_set_baudrate(&ftdic, 480000000);
-	ftdi_usb_purge_buffers(&ftdic);
+	if((err = ftdi_set_latency_timer(&ftdic, 1)) != 0) {
+		fprintf(stderr, "ftdi_set_latency_timer: %d: %s\n", 
+			err, ftdi_get_error_string(&ftdic));
+		abort();
+	}
+	if((err = ftdi_set_baudrate(&ftdic, 1000000)) != 0) {
+		fprintf(stderr, "ftdi_set_baudrate: %d: %s\n", 
+			err, ftdi_get_error_string(&ftdic));
+		abort();
+	}
+	if((err = ftdi_usb_purge_buffers(&ftdic)) != 0) {
+		fprintf(stderr, "ftdi_set_baudrate: %d: %s\n", 
+			err, ftdi_get_error_string(&ftdic));
+		abort();
+	}
 
-	fprintf(stderr, "enabling bitbang mode(channel 1)\n");
-	assert(ftdi_set_bitmode(&ftdic, 0xAB, BITMODE_MPSSE) == 0);
+	if((err = ftdi_set_bitmode(&ftdic, 0xAB, BITMODE_MPSSE)) != 0) {
+		fprintf(stderr, "ftdi_set_bitmode: %d: %s\n", 
+			err, ftdi_get_error_string(&ftdic));
+		abort();
+	}
+
 	assert(ftdi_write_data(&ftdic, "\x86\x00\x00\x80\xA8\xAB", 6) == 6);
-	ftdi_write_data_set_chunksize(&ftdic, BUF_SIZE);
+
+	if((err = ftdi_write_data_set_chunksize(&ftdic, BUF_SIZE)) != 0) {
+		fprintf(stderr, "ftdi_write_data_set_chunksize: %d: %s\n", 
+			err, ftdi_get_error_string(&ftdic));
+		abort();
+	}
 
 	return 0;
 }
