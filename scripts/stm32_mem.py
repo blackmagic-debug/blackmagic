@@ -1,7 +1,7 @@
 #!/usr/bin/python
 #
 # stm32_mem.py: STM32 memory access using USB DFU class
-# Copyright (C) 2009  Black Sphere Technologies 
+# Copyright (C) 2011  Black Sphere Technologies 
 # Written by Gareth McMullin <gareth@blacksphere.co.nz>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -61,8 +61,8 @@ def stm32_manifest(dev):
 if __name__ == "__main__":
 	print
 	print "USB Device Firmware Upgrade - Host Utility -- version 1.1"
-	print "Copyright (C) 2009  Black Sphere Technologies"
-	print "All rights reserved"
+	print "Copyright (C) 2011  Black Sphere Technologies"
+	print "License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>"
 	print
 
 	devs = dfu.finddevs()

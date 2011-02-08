@@ -1,7 +1,7 @@
 #!/usr/bin/python
 #
 # bootprog.py: STM32 SystemMemory Production Programmer -- version 1.1
-# Copyright (C) 2009  Black Sphere Technologies 
+# Copyright (C) 2011  Black Sphere Technologies 
 # Written by Gareth McMullin <gareth@blacksphere.co.nz>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -136,7 +136,8 @@ if __name__ == "__main__":
 	if platform == "linux2":
 		print  "\x1b\x5b\x48\x1b\x5b\x32\x4a" # clear terminal screen
 	print "STM32 SystemMemory Production Programmer -- version 1.1"
-	print "Copyright (C) 2009  Black Sphere Technologies, All rights reserved."
+	print "Copyright (C) 2011  Black Sphere Technologies"
+	print "License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>"
 	print
 
 	dev = "COM1" if platform == "win32" else "/dev/ttyUSB0"
