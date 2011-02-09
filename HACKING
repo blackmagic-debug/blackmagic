@@ -1,0 +1,58 @@
+========================================
+The Black Magic Debug Project -- HACKING
+========================================
+
+The Black Magic Probe consists of both hardware and firmware components.
+The hardware design resides in the 'hardware' directory and the firmware
+resides in the 'src' directory.
+
+
+Compiling for the native hardware
+---------------------------------
+To build the firmware for the standard hardware platform run 'make' in the
+src directory.  You will require a GCC cross compiler for ARM Cortex-M3 
+targets.  You will also need to have the libopenstm32 library installed.
+The default makefile assumes the target is arm-cortexm3-eabi, but 
+you can override this on the command line:
+
+make CROSS_COMPILE=arm-none-eabi-
+
+This will result in binary files:
+blackmagic - ELF binary of the Black Magic debug probe.
+blackmagic.bin - Flat binary of the Black Magic debug probe, load at 0x8002000.
+blackmagic_dfu - ELF binary of the Black Magic DFU bootloader.
+blackmagic_dfu.bin - Flat binary of the DFU bootloader, load at 0x8000000.
+
+If you already have a JTAG/SWD debug probe that can be used to load these
+binaries to your target hardware.  If not the SystemMemory bootloader can
+be used to load the DFU bootloader:
+../scripts/bootprog.py blackmagic_dfu.bin
+
+This requires an appropriate cable to connect the PC serial port to the probe.
+See the schematic for more information.
+
+Once the DFU bootloader is loaded, the Black Magic application can be loaded
+over USB:
+(First connect the probe and observe the flashing red led)
+../scripts/stm32_mem.py blackmagic.bin
+
+The device should reset and re-enumerate as a CDC-ACM device implementing
+the GDB protocol.
+
+
+Compiling as a Linux application using FT2232 hardware
+------------------------------------------------------
+The Black Magic application can also be compiled as a native Linux application
+which will use an FT2232 device to implement the physical JTAG interface.
+This is not the intended mode of operation, but is useful for debugging,
+experimentation, and if you don't have the actual hardware.
+
+First, get the VID/PID for your FT2232 device using 'lsusb'.  Edit the file
+'src/linux/platform.h' and change the VID/PID to match your hardware. 
+Compile the application with the command:
+
+make HOST=linux
+
+Running the application 'blackmagic' will start a GDB server on TCP port 2000.
+
+

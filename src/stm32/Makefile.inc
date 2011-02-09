@@ -1,5 +1,6 @@
-CC = arm-cortexm3-eabi-gcc
-OBJCOPY = arm-cortexm3-eabi-objcopy
+CROSS_COMPILE ?= arm-cortexm3-eabi-
+CC = $(CROSS_COMPILE)gcc
+OBJCOPY = $(CROSS_COMPILE)objcopy
 
 CFLAGS += -Istm32/include
 LDFLAGS_BOOT = -lopencm3_stm32 -Wl,--defsym,_stack=0x20005000 \

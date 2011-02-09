@@ -13,6 +13,31 @@ Currently supported microcontrollers:
  - ST STM32 Family
  - TI/LMI Stellaris Family
 
+
+Getting started
+===============
+The Black Magic Probe is available as a built-up product form Black
+Sphere Technologies.  Contact <sales@blacksphere.co.nz> should
+you wish to order one.  If you would like to work on the project see
+the file HACKING for developer's info.
+
+When connected via USB, the Black Magic probe will enumerate as a CDC-ACM
+device which the OS should present as a tty device or serial port.  The
+GDB remote debugging protocol is implemented over this virtual character
+stream.  To connect your ARM GDB to the target device use the following
+commands:
+
+(gdb) target extended-remote /dev/ttyACM0
+(gdb) mon jtag_scan
+(gdb) attach 1
+
+The command 'mon swdp_scan' may be used to use the Serial-Wire Debug Protocol
+instead of JTAG to connect to the target.
+
+Once attached, all the standard GDB commands may be used to start and control
+the execution of the embedded application.
+
+
 Project layout
 ==============
 flashstub/ - Source code for flash programming stubs in target drivers.
