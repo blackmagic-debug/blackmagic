@@ -85,6 +85,10 @@ platform_init(void)
 	/* Enable IRQs */
 	nvic_enable_irq(NVIC_TIM2_IRQ);
 
+	cdcacm_init();
+
+	jtag_scan();
+	
 	return 0;
 }
 

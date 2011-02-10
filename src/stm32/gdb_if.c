@@ -35,13 +35,6 @@ static uint32_t out_ptr;
 static uint8_t buffer_out[VIRTUAL_COM_PORT_DATA_SIZE];
 static uint8_t buffer_in[VIRTUAL_COM_PORT_DATA_SIZE];
 
-int gdb_if_init(void)
-{
-	cdcacm_init();
-
-	return 0;
-}
-
 void gdb_if_putchar(unsigned char c, int flush)
 {
 	buffer_in[count_in++] = c;

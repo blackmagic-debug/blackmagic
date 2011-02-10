@@ -50,76 +50,11 @@
 #define TMS 	0x08
 #define nSRST 	0x20
 
-struct ftdi_context *ftdic;
-
-#define BUF_SIZE 4096
-static uint8_t outbuf[BUF_SIZE];
-static uint16_t bufptr = 0;
-
-static void buffer_flush(void)
-{
-	assert(ftdi_write_data(ftdic, outbuf, bufptr) == bufptr);
-//	printf("FT2232 buffer flush: %d bytes\n", bufptr);
-	bufptr = 0;
-}
-
-static int buffer_write(const uint8_t *data, int size)
-{
-	if((bufptr + size) / BUF_SIZE > 0) buffer_flush();
-	memcpy(outbuf + bufptr, data, size);
-	bufptr += size;
-	return size;
-}
-
-static int buffer_read(uint8_t *data, int size)
-{
-	int index = 0;
-	buffer_flush();
-	while((index += ftdi_read_data(ftdic, data + index, size-index)) != size);
-	return size;
-}
-
-
 int jtagtap_init(void)
 {
 	int err;
 
-	if(ftdic) {
-		ftdi_usb_close(ftdic);
-		ftdi_free(ftdic);
-		ftdic = NULL;
-	}
-	if((ftdic = ftdi_new()) == NULL) {
-		fprintf(stderr, "ftdi_new: %s\n", 
-			ftdi_get_error_string(ftdic));
-		abort();
-	}
-	if((err = ftdi_set_interface(ftdic, INTERFACE_A)) != 0) {
-		fprintf(stderr, "ftdi_set_interface: %d: %s\n", 
-			err, ftdi_get_error_string(ftdic));
-		abort();
-	}
-	if((err = ftdi_usb_open(ftdic, FT2232_VID, FT2232_PID)) != 0) {
-		fprintf(stderr, "unable to open ftdi device: %d (%s)\n", 
-			err, ftdi_get_error_string(ftdic));
-		abort();
-	}
-
-	if((err = ftdi_set_latency_timer(ftdic, 1)) != 0) {
-		fprintf(stderr, "ftdi_set_latency_timer: %d: %s\n", 
-			err, ftdi_get_error_string(ftdic));
-		abort();
-	}
-	if((err = ftdi_set_baudrate(ftdic, 1000000)) != 0) {
-		fprintf(stderr, "ftdi_set_baudrate: %d: %s\n", 
-			err, ftdi_get_error_string(ftdic));
-		abort();
-	}
-	if((err = ftdi_usb_purge_buffers(ftdic)) != 0) {
-		fprintf(stderr, "ftdi_set_baudrate: %d: %s\n", 
-			err, ftdi_get_error_string(ftdic));
-		abort();
-	}
+	assert(ftdic != NULL);
 
 	if((err = ftdi_set_bitmode(ftdic, 0xAB, BITMODE_MPSSE)) != 0) {
 		fprintf(stderr, "ftdi_set_bitmode: %d: %s\n", 
@@ -128,12 +63,6 @@ int jtagtap_init(void)
 	}
 
 	assert(ftdi_write_data(ftdic, "\x86\x00\x00\x80\xA8\xAB", 6) == 6);
-
-	if((err = ftdi_write_data_set_chunksize(ftdic, BUF_SIZE)) != 0) {
-		fprintf(stderr, "ftdi_write_data_set_chunksize: %d: %s\n", 
-			err, ftdi_get_error_string(ftdic));
-		abort();
-	}
 
 	/* Go to JTAG mode for SWJ-DP */
 	for(int i = 0; i <= 50; i++) jtagtap_next(1, 0); /* Reset SW-DP */
@@ -150,7 +79,7 @@ void jtagtap_reset(void)
 
 void jtagtap_srst(void)
 {
-	buffer_flush();
+	platform_buffer_flush();
 	//ftdi_write_data(ftdic, "\x80\x88\xAB", 3);
 	//usleep(1000);
 	//ftdi_write_data(ftdic, "\x80\xA8\xAB", 3);
@@ -167,7 +96,7 @@ jtagtap_tms_seq(uint32_t MS, int ticks)
 		tmp[2] = 0x80 | (MS & 0x7F);
 		
 //		assert(ftdi_write_data(ftdic, tmp, 3) == 3);
-		buffer_write(tmp, 3);
+		platform_buffer_write(tmp, 3);
 		MS >>= 7; ticks -= 7;
 	}
 }
@@ -207,7 +136,7 @@ jtagtap_tdi_seq(const uint8_t final_tms, const uint8_t *DI, int ticks)
 		tmp[index++] = (*DI)>>rticks?0x81:0x01;
 	}
 //	assert(ftdi_write_data(ftdic, tmp, index) == index);
-	buffer_write(tmp, index);
+	platform_buffer_write(tmp, index);
 }
 #endif
 
@@ -248,10 +177,10 @@ jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int
 		tmp[index++] = (*DI)>>rticks?0x81:0x01;
 	}
 //	assert(ftdi_write_data(ftdic, tmp, index) == index);
-	buffer_write(tmp, index);
+	platform_buffer_write(tmp, index);
 //	index = 0;
 //	while((index += ftdi_read_data(ftdic, tmp + index, rsize-index)) != rsize);
-	buffer_read(tmp, rsize);
+	platform_buffer_read(tmp, rsize);
 	/*for(index = 0; index < rsize; index++)
 		printf("%02X ", tmp[index]);
 	printf("\n");*/
@@ -281,8 +210,8 @@ uint8_t jtagtap_next(uint8_t dTMS, uint8_t dTDO)
 	tmp[2] = (dTDO?0x80:0) | (dTMS?0x01:0);
 //	assert(ftdi_write_data(ftdic, tmp, 3) == 3);
 //	while(ftdi_read_data(ftdic, &ret, 1) != 1);
-	buffer_write(tmp, 3);
-	buffer_read(&ret, 1);
+	platform_buffer_write(tmp, 3);
+	platform_buffer_read(&ret, 1);
 
 	ret &= 0x80;
 

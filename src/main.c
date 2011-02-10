@@ -37,10 +37,6 @@ int
 main(void)
 {
 	assert(platform_init() == 0);
-	assert(gdb_if_init() == 0);
-
-	jtag_scan();
-//	adiv5_swdp_scan();
 
 	PLATFORM_SET_FATAL_ERROR_RECOVERY();
 

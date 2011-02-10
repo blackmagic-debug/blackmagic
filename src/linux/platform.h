@@ -25,7 +25,7 @@
 #include <ftdi.h>
 
 #define FT2232_VID	0x0403
-#define FT2232_PID	0xbcd9
+#define FT2232_PID	0x6010
 
 #define SET_RUN_STATE(state)
 #define SET_IDLE_STATE(state)
@@ -40,6 +40,10 @@
 extern struct ftdi_context *ftdic;
 
 int platform_init(void);
+
+void platform_buffer_flush(void);
+int platform_buffer_write(const uint8_t *data, int size);
+int platform_buffer_read(uint8_t *data, int size);
 
 #endif
 
