@@ -1,0 +1,5 @@
+These are the assembler routines for executing a flash write
+on the supported targets.  They are kept here for reference, but
+are not used, as the compiled binary code is included in the 
+target drivers.
+
