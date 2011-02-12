@@ -258,7 +258,11 @@ const struct usb_dfu_descriptor dfu_function = {
 const struct usb_interface_descriptor dfu_iface = {
 	.bLength = USB_DT_INTERFACE_SIZE,
 	.bDescriptorType = USB_DT_INTERFACE,
+#ifdef INCLUDE_UART_INTERFACE
 	.bInterfaceNumber = 4,
+#else
+	.bInterfaceNumber = 2,
+#endif
 	.bAlternateSetting = 0,
 	.bNumEndpoints = 0,
 	.bInterfaceClass = 0xFE,
