@@ -30,6 +30,8 @@
 
 #include "gdb_packet.h"
 
+//#define INCLUDE_UART_INTERFACE
+
 /* Important pin mappings for STM32 implementation:
  *
  * LED0 = 	PB2	(Yellow LED : Running)

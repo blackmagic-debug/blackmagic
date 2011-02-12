@@ -27,8 +27,10 @@
 #include <libopencm3/stm32/systick.h>
 #include <libopencm3/stm32/scb.h>
 #include <libopencm3/stm32/nvic.h>
+#include <libopencm3/stm32/usart.h>
 
 #include "platform.h"
+#include "jtag_scan.h"
 
 #include <ctype.h>
 
@@ -39,9 +41,9 @@ jmp_buf fatal_error_jmpbuf;
 
 void morse(const char *msg, char repeat);
 static void morse_update(void);
+static void uart_init(void);
 
-int 
-platform_init(void)
+int platform_init(void)
 {
 #ifndef LIGHT
 	rcc_clock_setup_in_hse_8mhz_out_72mhz();
@@ -79,12 +81,12 @@ platform_init(void)
 	systick_interrupt_enable();
 	systick_counter_enable();
 
+#ifdef INCLUDE_UART_INTERFACE
+	uart_init();
+#endif
 #ifndef LIGHT
 	SCB_VTOR = 0x2000;	// Relocate interrupt vector table here
 #endif
-	/* Enable IRQs */
-	nvic_enable_irq(NVIC_TIM2_IRQ);
-
 	cdcacm_init();
 
 	jtag_scan();
@@ -181,3 +183,35 @@ static void morse_update(void)
 	code >>= 1; bits--;
 }
 
+#ifdef INCLUDE_UART_INTERFACE
+void uart_init(void)
+{
+	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_USART1EN);
+
+	/* UART1 TX to 'alternate function output push-pull' */
+	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
+		      GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO9);
+
+	/* Setup UART parameters. */
+	usart_set_baudrate(USART1, 38400);
+	usart_set_databits(USART1, 8);
+	usart_set_stopbits(USART1, USART_STOPBITS_1);
+	usart_set_mode(USART1, USART_MODE_TX_RX);
+	usart_set_parity(USART1, USART_PARITY_NONE);
+	usart_set_flow_control(USART1, USART_FLOWCONTROL_NONE);
+
+	/* Finally enable the USART. */
+	usart_enable(USART1);
+
+	/* Enable interrupts */
+	USART1_CR1 |= USART_CR1_RXNEIE;
+	nvic_enable_irq(NVIC_USART1_IRQ);
+}
+
+void usart1_isr(void)
+{
+	char c = usart_recv(USART1);
+
+	usbd_ep_write_packet(0x83, &c, 1);
+}
+#endif
