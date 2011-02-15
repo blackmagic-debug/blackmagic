@@ -37,6 +37,12 @@
 
 #include "platform.h"
 
+#ifdef INCLUDE_UART_INTERFACE
+#	define DFU_IF_NO 4
+#else
+#	define DFU_IF_NO 2
+#endif
+
 static char *get_dev_unique_id(char *serial_no);
 
 static int configured;
@@ -258,11 +264,7 @@ const struct usb_dfu_descriptor dfu_function = {
 const struct usb_interface_descriptor dfu_iface = {
 	.bLength = USB_DT_INTERFACE_SIZE,
 	.bDescriptorType = USB_DT_INTERFACE,
-#ifdef INCLUDE_UART_INTERFACE
-	.bInterfaceNumber = 4,
-#else
-	.bInterfaceNumber = 2,
-#endif
+	.bInterfaceNumber = DFU_IF_NO,
 	.bAlternateSetting = 0,
 	.bNumEndpoints = 0,
 	.bInterfaceClass = 0xFE,
@@ -346,7 +348,7 @@ static int cdcacm_control_request(struct usb_setup_data *req, uint8_t **buf,
 		 * even though it's optional in the CDC spec, and we don't 
 		 * advertise it in the ACM functional descriptor. */
 		return 1;
-#ifdef INLCUDE_UART_INTERFACE
+#ifdef INCLUDE_UART_INTERFACE
 	case USB_CDC_REQ_SET_LINE_CODING: {
 		if(*len < sizeof(struct usb_cdc_line_coding)) 
 			return 0;
@@ -354,7 +356,7 @@ static int cdcacm_control_request(struct usb_setup_data *req, uint8_t **buf,
 		if(req->wIndex != 2) 
 			return 0;
 
-		struct usb_cdc_line_coding *coding = *buf;
+		struct usb_cdc_line_coding *coding = (void*)*buf;
 		usart_set_baudrate(USART1, coding->dwDTERate);
 		usart_set_databits(USART1, coding->bDataBits);
 		switch(coding->bCharFormat) {
@@ -384,7 +386,7 @@ static int cdcacm_control_request(struct usb_setup_data *req, uint8_t **buf,
 		}
 #endif
 	case DFU_DETACH:
-		if(req->wIndex == 4) {
+		if(req->wIndex == DFU_IF_NO) {
 			*complete = dfu_detach_complete;
 			return 1;
 		}
