@@ -32,7 +32,7 @@ include $(HOST)/Makefile.inc
 OBJ = $(SRC:.c=.o)
 
 blackmagic: $(OBJ)
-	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+	$(CC) -o $@ $^ $(LDFLAGS)
 
 .PHONY:	clean host_clean
 
