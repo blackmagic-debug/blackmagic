@@ -6,7 +6,7 @@ CFLAGS += -Istm32/include -mcpu=cortex-m3 -mthumb -msoft-float
 LDFLAGS_BOOT = -lopencm3_stm32 -Wl,--defsym,_stack=0x20005000 \
 	-Wl,-T,stm32/blackmagic.ld -nostartfiles -lc -lnosys -Wl,-Map=mapfile \
 	-mthumb -march=armv7 -mfix-cortex-m3-ldrd -msoft-float
-LDFLAGS = $(LDFLAGS_BOOT) -Wl,-Ttext=0x8002000 -mthumb -march=armv7 -mfix-cortex-m3-ldrd -msoft-float
+LDFLAGS = $(LDFLAGS_BOOT) -Wl,-Ttext=0x8002000
 
 SRC += 	cdcacm.c	\
 	platform.c	\
