@@ -79,8 +79,7 @@ class dfu_device(object):
 		try:
 			self.handle.setConfiguration(conf)
 		except: pass
-		self.handle.claimInterface(iface)
-		self.handle.setAltInterface(iface)
+		self.handle.claimInterface(iface.interfaceNumber)
 		if type(self.iface) is usb.Interface:
 			self.index = self.iface.interfaceNumber
 		else:	self.index = self.iface
@@ -184,9 +183,9 @@ if __name__ == "__main__":
 		handle = dfu[0].open()
 		man = handle.getString(dfu[0].iManufacturer, 30)
 		product = handle.getString(dfu[0].iProduct, 30)
-		iname = handle.getString(dfu[2].iInterface, 30)
 		print "Device %s: ID %04x:%04x %s - %s" % (dfu[0].filename, 
 			dfu[0].idVendor, dfu[0].idProduct, man, product)
+		print "%r, %r" % (dfu[1], dfu[2])
 
 
 
