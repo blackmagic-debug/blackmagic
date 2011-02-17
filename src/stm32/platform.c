@@ -41,7 +41,10 @@ jmp_buf fatal_error_jmpbuf;
 
 void morse(const char *msg, char repeat);
 static void morse_update(void);
+
+#ifdef INCLUDE_UART_INTERFACE
 static void uart_init(void);
+#endif
 
 int platform_init(void)
 {

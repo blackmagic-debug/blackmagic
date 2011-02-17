@@ -341,6 +341,8 @@ static int cdcacm_control_request(struct usb_setup_data *req, uint8_t **buf,
 		uint16_t *len, void (**complete)(struct usb_setup_data *req))
 {
 	(void)complete;
+	(void)buf;
+	(void)len;
 
 	switch(req->bRequest) {
 	case USB_CDC_REQ_SET_CONTROL_LINE_STATE: 
@@ -432,6 +434,25 @@ static void cdcacm_set_config(u16 wValue)
 			USB_REQ_TYPE_CLASS | USB_REQ_TYPE_INTERFACE, 
 			USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT,
 			cdcacm_control_request);
+
+	/* Notify the host that DCD is asserted.  
+	 * Allows the use of /dev/tty* devices on *BSD/MacOS
+	 */
+	char buf[10];
+	struct usb_cdc_notification *notif = (void*)buf;
+	/* We echo signals back to host as notification */
+	notif->bmRequestType = 0xA1;
+	notif->bNotification = USB_CDC_NOTIFY_SERIAL_STATE;
+	notif->wValue = 0;
+	notif->wIndex = 0;
+	notif->wLength = 2;
+	buf[8] = 3; /* DCD | DSR */
+	buf[9] = 0;
+	usbd_ep_write_packet(0x82, buf, 10);
+#ifdef INCLUDE_UART_INTERFACE
+	notif->wIndex = 2;
+	usbd_ep_write_packet(0x84, buf, 10);
+#endif
 }
 
 /* We need a special large control buffer for this device: */

@@ -119,6 +119,11 @@ extern const char *morse_msg;
 int platform_init(void);
 void morse(const char *msg, char repeat);
 
+/* <cdcacm.c> */
+void cdcacm_init(void);
+/* Returns current usb configuration, or 0 if not configured. */
+int cdcacm_get_config(void);
+
 /* Use newlib provided integer only stdio functions */
 #define sscanf siscanf
 #define sprintf siprintf
