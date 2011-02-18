@@ -54,6 +54,9 @@ int adiv5_swdp_scan(void)
 	uint8_t ack;
 
 	TARGET_LIST_FREE();
+#warning "These should be elsewhere!"
+	adiv5_free_all();
+
 	dp = (void*)calloc(1, sizeof(ADIv5_DP_t));
 
 	swdptap_init();

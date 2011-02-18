@@ -8,7 +8,8 @@ BUILDDATE := `date +"%Y%m%d"`
 
 CFLAGS += -Wall -Wextra -Wno-pointer-sign -Wno-char-subscripts\
 	-O0 -std=gnu99 -g3 -DBUILDDATE=\"$(BUILDDATE)\"\
-	-I. -Iinclude -I$(HOST)
+	-I. -Iinclude -I$(HOST) \
+	-DVERSION_SUFFIX=\"`../scripts/setlocalversion`\"
 
 SRC = 	gdb_if.c	\
 	gdb_packet.c	\
