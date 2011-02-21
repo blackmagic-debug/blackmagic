@@ -275,7 +275,6 @@ static int cm3_fault_unwind(struct target_s *target)
 		uint32_t stack[8];
 		/* Read registers for post-exception stack pointer */
 		ap_regs_read(target, regs);
-		gdb_outf("SP pre exception 0x%08X\n", regs[13]);
 		/* Read stack for pre-exception registers */
 		target_mem_read_words(target, stack, regs[13], 8 << 2); 
 		regs[0] = stack[0];
@@ -285,7 +284,6 @@ static int cm3_fault_unwind(struct target_s *target)
 		regs[12] = stack[4];
 		regs[14] = stack[5];
 		regs[15] = stack[6];
-		gdb_outf("PC pre exception 0x%08X\n", regs[15]);
 		/* FIXME: stack[7] contains xPSR when this is supported */
 
 		/* Write pre-exception registers back to core */
