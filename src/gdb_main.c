@@ -160,14 +160,17 @@ gdb_main(void)
 
 			SET_RUN_STATE(0);
 			/* Report reason for halt */
-			if(target_check_hw_wp(cur_target, &watch_addr)) 
+			if(target_check_hw_wp(cur_target, &watch_addr)) {
 				/* Watchpoint hit */
 				gdb_putpacket_f("T05watch:%08X;", watch_addr);
-			else if(sent_int) 
+			} else if(target_fault_unwind(cur_target)) {
+				gdb_putpacketz("T0b");
+			} else if(sent_int) {
 				/* Target interrupted */
 				gdb_putpacketz("T02");
-			else
+			} else {
 				gdb_putpacketz("T05");
+			}
 			break;
 		    }
 

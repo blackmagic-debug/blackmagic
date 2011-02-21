@@ -51,6 +51,7 @@ static void cm3_reset(struct target_s *target);
 static void ap_halt_resume(struct target_s *target, uint8_t step);
 static int ap_halt_wait(struct target_s *target);
 static void ap_halt_request(struct target_s *target);
+static int cm3_fault_unwind(struct target_s *target);
 
 static int cm3_set_hw_bp(struct target_s *target, uint32_t addr);
 static int cm3_clear_hw_bp(struct target_s *target, uint32_t addr);
@@ -88,6 +89,7 @@ cm3_probe(struct target_s *target)
 	target->halt_request = ap_halt_request;
 	target->halt_wait = ap_halt_wait;
 	target->halt_resume = ap_halt_resume;
+	target->fault_unwind = cm3_fault_unwind;
 	target->regs_size = 16<<2;
 
 	/* if not STM32 try LMI */
@@ -109,6 +111,9 @@ cm3_attach(struct target_s *target)
 	/* Request halt on reset */
 	/* TRCENA | VC_CORERESET */
 	adiv5_ap_mem_write(t->ap, 0xE000EDFC, 0x01000401); 
+
+	/* Reset DFSR flags */
+	adiv5_ap_mem_write(t->ap, 0xE000ED30UL, 0x1F);
 
 	/* Clear any stale breakpoints */
 	for(i = 0; i < 6; i++) {
@@ -218,6 +223,12 @@ cm3_reset(struct target_s *target)
 	 */
 	adiv5_ap_mem_write(t->ap, 0xE000ED0C, 0x05FA0004);
 	adiv5_ap_mem_write(t->ap, 0xE000ED0C, 0x05FA0001);
+
+	/* FIXME: poll for release from reset! */
+	for(int i = 0; i < 10000; i++) asm("nop");
+
+	/* Reset DFSR flags */
+	adiv5_ap_mem_write(t->ap, 0xE000ED30UL, 0x1F);
 }
 
 static void 
@@ -252,6 +263,38 @@ ap_halt_resume(struct target_s *target, uint8_t step)
 	adiv5_ap_mem_write(t->ap, 0xE000EDF0UL, step?0xA05F000DUL:0xA05F0001UL);
 }
 
+static int cm3_fault_unwind(struct target_s *target)
+{
+	struct target_ap_s *t = (void *)target;
+	uint32_t dfsr = adiv5_ap_mem_read(t->ap, 0xE000ED30UL); //DFSR
+	//gdb_outf("DFSR = 0x%08X\n", dfsr);
+	adiv5_ap_mem_write(t->ap, 0xE000ED30UL, dfsr);/* write back to reset */
+	if(dfsr & (1 << 3)) {	// VCATCH
+		/* Unwind exception */
+		uint32_t regs[16];
+		uint32_t stack[8];
+		/* Read registers for post-exception stack pointer */
+		ap_regs_read(target, regs);
+		gdb_outf("SP pre exception 0x%08X\n", regs[13]);
+		/* Read stack for pre-exception registers */
+		target_mem_read_words(target, stack, regs[13], 8 << 2); 
+		regs[0] = stack[0];
+		regs[1] = stack[1];
+		regs[2] = stack[2];
+		regs[3] = stack[3];
+		regs[12] = stack[4];
+		regs[14] = stack[5];
+		regs[15] = stack[6];
+		gdb_outf("PC pre exception 0x%08X\n", regs[15]);
+		/* FIXME: stack[7] contains xPSR when this is supported */
+
+		/* Write pre-exception registers back to core */
+		ap_regs_write(target, regs);
+
+		return 1;
+	}
+	return 0;
+}
 
 /* The following routines implement hardware breakpoints.
  * The Flash Patch and Breakpoint (FPB) system is used. */
