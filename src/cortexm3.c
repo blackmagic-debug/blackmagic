@@ -276,7 +276,8 @@ static int cm3_fault_unwind(struct target_s *target)
 		/* Read registers for post-exception stack pointer */
 		ap_regs_read(target, regs);
 		/* Read stack for pre-exception registers */
-		target_mem_read_words(target, stack, regs[13], 8 << 2); 
+		target_mem_read_words(target, stack, regs[13], sizeof(stack)); 
+		regs[13] += sizeof(stack); /* Adjust SP for pop */ 
 		regs[0] = stack[0];
 		regs[1] = stack[1];
 		regs[2] = stack[2];
