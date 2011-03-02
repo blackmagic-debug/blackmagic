@@ -45,10 +45,20 @@ static char cm3_driver_str[] = "ARM Cortex-M3";
 
 #define CM3_SCS_BASE	(CM3_PPB_BASE + 0xE000)
 
+#define CM3_DFSR	(CM3_SCS_BASE + 0xD30)
 #define CM3_DHCSR	(CM3_SCS_BASE + 0xDF0)
 #define CM3_DCRSR	(CM3_SCS_BASE + 0xDF4)
 #define CM3_DCRDR	(CM3_SCS_BASE + 0xDF8)
 #define CM3_DEMCR	(CM3_SCS_BASE + 0xDFC)
+
+/* Debug Fault Status Register (DFSR) */
+/* Bits 31:5 - Reserved */
+#define CM3_DFSR_RESETALL	0x1F
+#define CM3_DFSR_EXTERNAL	(1 << 4)
+#define CM3_DFSR_VCATCH		(1 << 3)
+#define CM3_DFSR_DWTTRAP	(1 << 2)
+#define CM3_DFSR_BKPT		(1 << 1)
+#define CM3_DFSR_HALTED		(1 << 0)
 
 /* Debug Halting Control and Status Register (DHCSR) */
 /* This key must be written to bits 31:16 for write to take effect */
@@ -168,7 +178,7 @@ cm3_attach(struct target_s *target)
 			CM3_DEMCR_VC_CORERESET); 
 
 	/* Reset DFSR flags */
-	adiv5_ap_mem_write(t->ap, 0xE000ED30UL, 0x1F);
+	adiv5_ap_mem_write(t->ap, CM3_DFSR, CM3_DFSR_RESETALL);
 
 	/* Clear any stale breakpoints */
 	for(i = 0; i < 6; i++) {
@@ -285,7 +295,7 @@ cm3_reset(struct target_s *target)
 	for(int i = 0; i < 10000; i++) asm("nop");
 
 	/* Reset DFSR flags */
-	adiv5_ap_mem_write(t->ap, 0xE000ED30UL, 0x1F);
+	adiv5_ap_mem_write(t->ap, CM3_DFSR, CM3_DFSR_RESETALL);
 }
 
 static void 
@@ -326,10 +336,9 @@ cm3_halt_resume(struct target_s *target, uint8_t step)
 static int cm3_fault_unwind(struct target_s *target)
 {
 	struct target_ap_s *t = (void *)target;
-	uint32_t dfsr = adiv5_ap_mem_read(t->ap, 0xE000ED30UL); //DFSR
-	//gdb_outf("DFSR = 0x%08X\n", dfsr);
-	adiv5_ap_mem_write(t->ap, 0xE000ED30UL, dfsr);/* write back to reset */
-	if(dfsr & (1 << 3)) {	// VCATCH
+	uint32_t dfsr = adiv5_ap_mem_read(t->ap, CM3_DFSR);
+	adiv5_ap_mem_write(t->ap, CM3_DFSR, dfsr);/* write back to reset */
+	if(dfsr & (1 << 3)) {
 		/* Unwind exception */
 		uint32_t regs[16];
 		uint32_t stack[8];
