@@ -40,17 +40,72 @@
 
 static char cm3_driver_str[] = "ARM Cortex-M3";
 
+/* Private peripheral bus base address */
+#define CM3_PPB_BASE	0xE0000000
+
+#define CM3_SCS_BASE	(CM3_PPB_BASE + 0xE000)
+
+#define CM3_DHCSR	(CM3_SCS_BASE + 0xDF0)
+#define CM3_DCRSR	(CM3_SCS_BASE + 0xDF4)
+#define CM3_DCRDR	(CM3_SCS_BASE + 0xDF8)
+#define CM3_DEMCR	(CM3_SCS_BASE + 0xDFC)
+
+/* Debug Halting Control and Status Register (DHCSR) */
+/* This key must be written to bits 31:16 for write to take effect */
+#define CM3_DHCSR_DBGKEY	0xA05F0000
+/* Bits 31:26 - Reserved */
+#define CM3_DHCSR_S_RESET_ST	(1 << 25)
+#define CM3_DHCSR_S_RETIRE_ST	(1 << 24)
+/* Bits 23:20 - Reserved */
+#define CM3_DHCSR_S_LOCKUP	(1 << 19)
+#define CM3_DHCSR_S_SLEEP	(1 << 18)
+#define CM3_DHCSR_S_HALT	(1 << 17)
+#define CM3_DHCSR_S_REGRDY	(1 << 16)
+/* Bits 15:6 - Reserved */
+#define CM3_DHCSR_C_SNAPSTALL	(1 << 5)
+/* Bit 4 - Reserved */
+#define CM3_DHCSR_C_MASKINTS	(1 << 3)
+#define CM3_DHCSR_C_STEP	(1 << 2)
+#define CM3_DHCSR_C_HALT	(1 << 1)
+#define CM3_DHCSR_C_DEBUGEN	(1 << 0)
+
+/* Debug Core Register Selector Register (DCRSR) */
+#define CM3_DCRSR_REGSEL_MASK	0x0000001F
+#define CM3_DCRSR_REGSEL_XPSR	0x00000010
+#define CM3_DCRSR_REGSEL_MSP	0x00000011
+#define CM3_DCRSR_REGSEL_PSP	0x00000012
+
+/* Debug Exception and Monitor Control Register (DEMCR) */
+/* Bits 31:25 - Reserved */
+#define CM3_DEMCR_TRCENA	(1 << 24)
+/* Bits 23:20 - Reserved */
+#define CM3_DEMCR_MON_REQ	(1 << 19)
+#define CM3_DEMCR_MON_STEP	(1 << 18)
+#define CM3_DEMCR_VC_MON_PEND	(1 << 17)
+#define CM3_DEMCR_VC_MON_EN	(1 << 16)
+/* Bits 15:11 - Reserved */
+#define CM3_DEMCR_VC_HARDERR	(1 << 10)
+#define CM3_DEMCR_VC_INTERR	(1 << 9)
+#define CM3_DEMCR_VC_BUSERR	(1 << 8)
+#define CM3_DEMCR_VC_STATERR	(1 << 7)
+#define CM3_DEMCR_VC_CHKERR	(1 << 6)
+#define CM3_DEMCR_VC_NOCPERR	(1 << 5)
+#define CM3_DEMCR_VC_MMERR	(1 << 4)
+/* Bits 3:1 - Reserved */
+#define CM3_DEMCR_VC_CORERESET	(1 << 0)
+
+
 static void cm3_attach(struct target_s *target);
 static void cm3_detach(struct target_s *target);
 
-static int ap_regs_read(struct target_s *target, void *data);
-static int ap_regs_write(struct target_s *target, const void *data);
-static int ap_pc_write(struct target_s *target, const uint32_t val);
+static int cm3_regs_read(struct target_s *target, void *data);
+static int cm3_regs_write(struct target_s *target, const void *data);
+static int cm3_pc_write(struct target_s *target, const uint32_t val);
 
 static void cm3_reset(struct target_s *target);
-static void ap_halt_resume(struct target_s *target, uint8_t step);
-static int ap_halt_wait(struct target_s *target);
-static void ap_halt_request(struct target_s *target);
+static void cm3_halt_resume(struct target_s *target, uint8_t step);
+static int cm3_halt_wait(struct target_s *target);
+static void cm3_halt_request(struct target_s *target);
 static int cm3_fault_unwind(struct target_s *target);
 
 static int cm3_set_hw_bp(struct target_s *target, uint32_t addr);
@@ -80,15 +135,14 @@ cm3_probe(struct target_s *target)
 	target->detach = cm3_detach;
 
 	/* Should probe here to make sure it's Cortex-M3 */
-	target->regs_read = ap_regs_read;
-	target->regs_write = ap_regs_write;
-//	target->pc_read = ap_pc_read;
-	target->pc_write = ap_pc_write;
+	target->regs_read = cm3_regs_read;
+	target->regs_write = cm3_regs_write;
+	target->pc_write = cm3_pc_write;
 
 	target->reset = cm3_reset;
-	target->halt_request = ap_halt_request;
-	target->halt_wait = ap_halt_wait;
-	target->halt_resume = ap_halt_resume;
+	target->halt_request = cm3_halt_request;
+	target->halt_wait = cm3_halt_wait;
+	target->halt_resume = cm3_halt_resume;
 	target->fault_unwind = cm3_fault_unwind;
 	target->regs_size = 16<<2;
 
@@ -109,8 +163,9 @@ cm3_attach(struct target_s *target)
 	while(!target_halt_wait(target));
 
 	/* Request halt on reset */
-	/* TRCENA | VC_CORERESET */
-	adiv5_ap_mem_write(t->ap, 0xE000EDFC, 0x01000401); 
+	adiv5_ap_mem_write(t->ap, CM3_DEMCR, 
+			CM3_DEMCR_TRCENA | CM3_DEMCR_VC_HARDERR | 
+			CM3_DEMCR_VC_CORERESET); 
 
 	/* Reset DFSR flags */
 	adiv5_ap_mem_write(t->ap, 0xE000ED30UL, 0x1F);
@@ -153,16 +208,17 @@ cm3_detach(struct target_s *target)
 		adiv5_ap_mem_write(t->ap, 0xE0001028 + i*0x10, 0);
 
 	/* Disable debug */
-	adiv5_ap_mem_write(t->ap, 0xE000EDF0UL, 0xA05F0000UL);
+	adiv5_ap_mem_write(t->ap, CM3_DHCSR, CM3_DHCSR_DBGKEY);
 }
 
 static int
-ap_regs_read(struct target_s *target, void *data)
+cm3_regs_read(struct target_s *target, void *data)
 {
 	struct target_ap_s *t = (void *)target;
 	uint32_t *regs = data;
 	int i;
 
+	/* FIXME: Describe what's really going on here */
 	adiv5_ap_write(t->ap, 0x00, 0xA2000052);
 	adiv5_dp_low_access(t->ap->dp, 1, 0, 0x04, 0xE000EDF0);
 	adiv5_ap_write(t->ap, 0x14, 0); /* Required to switch banks */
@@ -176,12 +232,13 @@ ap_regs_read(struct target_s *target, void *data)
 }
 
 static int
-ap_regs_write(struct target_s *target, const void *data)
+cm3_regs_write(struct target_s *target, const void *data)
 {
 	struct target_ap_s *t = (void *)target;
 	const uint32_t *regs = data;
 	int i;
 
+	/* FIXME: Describe what's really going on here */
 	adiv5_ap_write(t->ap, 0x00, 0xA2000052);
 	adiv5_dp_low_access(t->ap->dp, 1, 0, 0x04, 0xE000EDF0);
 	adiv5_ap_write(t->ap, 0x18, *regs++); /* Required to switch banks */
@@ -195,7 +252,7 @@ ap_regs_write(struct target_s *target, const void *data)
 }
 
 static int
-ap_pc_write(struct target_s *target, const uint32_t val)
+cm3_pc_write(struct target_s *target, const uint32_t val)
 {
 	struct target_ap_s *t = (void *)target;
 
@@ -232,35 +289,38 @@ cm3_reset(struct target_s *target)
 }
 
 static void 
-ap_halt_request(struct target_s *target)
+cm3_halt_request(struct target_s *target)
 {
 	struct target_ap_s *t = (void *)target;
 
-	adiv5_ap_mem_write(t->ap, 0xE000EDF0UL, 0xA05F0003UL);
+	adiv5_ap_mem_write(t->ap, CM3_DHCSR, 
+		CM3_DHCSR_DBGKEY | CM3_DHCSR_C_HALT | CM3_DHCSR_C_DEBUGEN);
 }
 
 static int
-ap_halt_wait(struct target_s *target)
+cm3_halt_wait(struct target_s *target)
 {
 	struct target_ap_s *t = (void *)target;
 
-	return adiv5_ap_mem_read(t->ap, 0xE000EDF0UL) & 0x20000;
+	return adiv5_ap_mem_read(t->ap, CM3_DHCSR) & CM3_DHCSR_S_HALT;
 }
 
 static void 
-ap_halt_resume(struct target_s *target, uint8_t step)
+cm3_halt_resume(struct target_s *target, uint8_t step)
 {
 	struct target_ap_s *t = (void *)target;
 	static uint8_t old_step = 0;
+	uint32_t dhcsr = CM3_DHCSR_DBGKEY | CM3_DHCSR_C_DEBUGEN;
+
+	if(step) dhcsr |= CM3_DHCSR_C_STEP | CM3_DHCSR_C_MASKINTS;
 
 	/* Disable interrupts while single stepping... */
 	if(step != old_step) {
-		adiv5_ap_mem_write(t->ap, 0xE000EDF0UL, 
-			step?0xA05F000FUL:0xA05F0003UL);
+		adiv5_ap_mem_write(t->ap, CM3_DHCSR, dhcsr | CM3_DHCSR_C_HALT);
 		old_step = step;
 	}
 
-	adiv5_ap_mem_write(t->ap, 0xE000EDF0UL, step?0xA05F000DUL:0xA05F0001UL);
+	adiv5_ap_mem_write(t->ap, CM3_DHCSR, dhcsr);
 }
 
 static int cm3_fault_unwind(struct target_s *target)
@@ -274,7 +334,7 @@ static int cm3_fault_unwind(struct target_s *target)
 		uint32_t regs[16];
 		uint32_t stack[8];
 		/* Read registers for post-exception stack pointer */
-		ap_regs_read(target, regs);
+		target_regs_read(target, regs);
 		/* Read stack for pre-exception registers */
 		target_mem_read_words(target, stack, regs[13], sizeof(stack)); 
 		regs[13] += sizeof(stack); /* Adjust SP for pop */ 
@@ -288,7 +348,7 @@ static int cm3_fault_unwind(struct target_s *target)
 		/* FIXME: stack[7] contains xPSR when this is supported */
 
 		/* Write pre-exception registers back to core */
-		ap_regs_write(target, regs);
+		target_regs_write(target, regs);
 
 		return 1;
 	}
