@@ -107,7 +107,7 @@ static uint32_t adiv5_swdp_read_ap(ADIv5_DP_t *dp, uint8_t addr)
 	uint32_t ret;
 
 	adiv5_swdp_low_access(dp, 1, 1, addr, 0);
-	ret = adiv5_swdp_low_access(dp, 0, 1, DP_RDBUFF, 0);
+	ret = adiv5_swdp_low_access(dp, 0, 1, ADIV5_DP_RDBUFF, 0);
 
 	return ret;
 }
@@ -116,13 +116,18 @@ static uint32_t adiv5_swdp_error(ADIv5_DP_t *dp)
 {
 	uint32_t err, clr = 0;
 
-	err = adiv5_swdp_read(dp, DP_CTRLSTAT) & 0x32;
+	err = adiv5_swdp_read(dp, ADIV5_DP_CTRLSTAT) & 
+		(ADIV5_DP_CTRLSTAT_STICKYORUN | ADIV5_DP_CTRLSTAT_STICKYCMP |
+		ADIV5_DP_CTRLSTAT_STICKYERR);
 
-	if(err & 0x02) clr |= 0x10; /* STICKORUN */
-	if(err & 0x10) clr |= 0x02; /* STICKCMP */
-	if(err & 0x20) clr |= 0x04; /* STICKERR */
+	if(err & ADIV5_DP_CTRLSTAT_STICKYORUN) 
+		clr |= ADIV5_DP_ABORT_ORUNERRCLR;
+	if(err & ADIV5_DP_CTRLSTAT_STICKYCMP) 
+		clr |= ADIV5_DP_ABORT_STKCMPCLR;
+	if(err & ADIV5_DP_CTRLSTAT_STICKYERR) 
+		clr |= ADIV5_DP_ABORT_STKERRCLR;
 
-	adiv5_swdp_write(dp, DP_ABORT, clr);
+	adiv5_swdp_write(dp, ADIV5_DP_ABORT, clr);
 	dp->fault = 0;
 
 	return err;

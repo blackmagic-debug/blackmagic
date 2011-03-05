@@ -42,14 +42,6 @@
 #define DO_RESET_SEQ 0
 #endif
 
-/* Bits in the DP_CTRLSTAT register */
-#define CSYSPWRUPACK	0x80000000L
-#define CSYSPWRUPREQ	0x40000000L
-#define CDBGPWRUPACK	0x20000000L
-#define CDBGPWRUPREQ	0x10000000L
-#define CDBGRSTACK	0x08000000L
-#define CDBGRSTREQ	0x04000000L
-
 /* This belongs elsewhere... */
 target *target_list = NULL;
 target *cur_target = NULL;
@@ -94,13 +86,16 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 	dp->next = adiv5_dp_list;
 	adiv5_dp_list = dp;
 
-	ctrlstat = adiv5_dp_read(dp, DP_CTRLSTAT);
+	ctrlstat = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT);
 
 	/* Write request for system and debug power up */
-	adiv5_dp_write(dp, DP_CTRLSTAT, ctrlstat |= CSYSPWRUPREQ | CDBGPWRUPREQ);
+	adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT, 
+			ctrlstat |= ADIV5_DP_CTRLSTAT_CSYSPWRUPREQ | 
+				ADIV5_DP_CTRLSTAT_CDBGPWRUPREQ);
 	/* Wait for acknowledge */
-	while(((ctrlstat = adiv5_dp_read(dp, DP_CTRLSTAT)) & 
-		(CSYSPWRUPACK | CDBGPWRUPACK)) != (CSYSPWRUPACK | CDBGPWRUPACK));
+	while(((ctrlstat = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT)) & 
+		(ADIV5_DP_CTRLSTAT_CSYSPWRUPACK | ADIV5_DP_CTRLSTAT_CDBGPWRUPACK)) != 
+		(ADIV5_DP_CTRLSTAT_CSYSPWRUPACK | ADIV5_DP_CTRLSTAT_CDBGPWRUPACK));
 
 	if(DO_RESET_SEQ) {
 		/* This AP reset logic is described in ADIv5, but fails to work 
@@ -109,21 +104,25 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 		 */
 
 		/* Write request for debug reset */
-		adiv5_dp_write(dp, DP_CTRLSTAT, ctrlstat |= CDBGRSTREQ);
+		adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT, 
+				ctrlstat |= ADIV5_DP_CTRLSTAT_CDBGRSTREQ);
 		/* Wait for acknowledge */
-		while(!((ctrlstat = adiv5_dp_read(dp, DP_CTRLSTAT)) & CDBGRSTACK));
+		while(!((ctrlstat = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT)) & 
+				ADIV5_DP_CTRLSTAT_CDBGRSTACK));
 
 		/* Write request for debug reset release */
-		adiv5_dp_write(dp, DP_CTRLSTAT, ctrlstat &= ~CDBGRSTREQ);
+		adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT, 
+				ctrlstat &= ~ADIV5_DP_CTRLSTAT_CDBGRSTREQ);
 		/* Wait for acknowledge */
-		while(adiv5_dp_read(dp, DP_CTRLSTAT) & CDBGRSTACK);
+		while(adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT) & 
+				ADIV5_DP_CTRLSTAT_CDBGRSTACK);
 	}
 
 	/* Probe for APs on this DP */
 	for(int i = 0; i < 256; i++) {
 		uint32_t idr;
 
-		adiv5_dp_write(dp, DP_SELECT, ((uint32_t)i << 24) | 0xF0);
+		adiv5_dp_write(dp, ADIV5_DP_SELECT, ((uint32_t)i << 24) | 0xF0);
 		idr = adiv5_dp_read_ap(dp, 0x0C); /* attempt to read IDR */
 
 		if(idr) {	/* We have a valid AP, adding to list */
@@ -173,13 +172,13 @@ ap_mem_read_words(struct target_s *target, uint32_t *dest, uint32_t src, int len
 
 	len >>= 2;
 
-	adiv5_ap_write(t->ap, 0x00, 0xA2000052);
-	adiv5_dp_low_access(t->ap->dp, 1, 0, 0x04, src);
-	adiv5_dp_low_access(t->ap->dp, 1, 1, 0x0C, 0);
+	adiv5_ap_write(t->ap, ADIV5_AP_CSW, 0xA2000052);
+	adiv5_dp_low_access(t->ap->dp, 1, 0, ADIV5_AP_TAR, src);
+	adiv5_dp_low_access(t->ap->dp, 1, 1, ADIV5_AP_DRW, 0);
 	while(--len) 
-		*dest++ = adiv5_dp_low_access(t->ap->dp, 1, 1, 0x0C, 0);
+		*dest++ = adiv5_dp_low_access(t->ap->dp, 1, 1, ADIV5_AP_DRW, 0);
 	
-	*dest++ = adiv5_dp_low_access(t->ap->dp, 0, 1, DP_RDBUFF, 0);
+	*dest++ = adiv5_dp_low_access(t->ap->dp, 0, 1, ADIV5_DP_RDBUFF, 0);
 
 	return 0;
 }
@@ -190,14 +189,14 @@ ap_mem_read_bytes(struct target_s *target, uint8_t *dest, uint32_t src, int len)
 	struct target_ap_s *t = (void *)target;
 	uint32_t tmp = src;
 
-	adiv5_ap_write(t->ap, 0x00, 0xA2000050);
-	adiv5_dp_low_access(t->ap->dp, 1, 0, 0x04, src);
-	adiv5_dp_low_access(t->ap->dp, 1, 1, 0x0C, 0);
+	adiv5_ap_write(t->ap, ADIV5_AP_CSW, 0xA2000050);
+	adiv5_dp_low_access(t->ap->dp, 1, 0, ADIV5_AP_TAR, src);
+	adiv5_dp_low_access(t->ap->dp, 1, 1, ADIV5_AP_DRW, 0);
 	while(--len) {
-		tmp = adiv5_dp_low_access(t->ap->dp, 1, 1, 0x0C, 0);
+		tmp = adiv5_dp_low_access(t->ap->dp, 1, 1, ADIV5_AP_DRW, 0);
 		*dest++ = (tmp >> ((src++ & 0x3) << 3) & 0xFF);
 	}
-	tmp = adiv5_dp_low_access(t->ap->dp, 0, 1, DP_RDBUFF, 0);
+	tmp = adiv5_dp_low_access(t->ap->dp, 0, 1, ADIV5_DP_RDBUFF, 0);
 	*dest++ = (tmp >> ((src++ & 0x3) << 3) & 0xFF);
 
 	return 0;
@@ -211,10 +210,10 @@ ap_mem_write_words(struct target_s *target, uint32_t dest, const uint32_t *src, 
 
 	len >>= 2;
 
-	adiv5_ap_write(t->ap, 0x00, 0xA2000052);
-	adiv5_dp_low_access(t->ap->dp, 1, 0, 0x04, dest);
+	adiv5_ap_write(t->ap, ADIV5_AP_CSW, 0xA2000052);
+	adiv5_dp_low_access(t->ap->dp, 1, 0, ADIV5_AP_TAR, dest);
 	while(len--) 
-		adiv5_dp_low_access(t->ap->dp, 1, 0, 0x0C, *src++);
+		adiv5_dp_low_access(t->ap->dp, 1, 0, ADIV5_AP_DRW, *src++);
 	
 	return 0;
 }
@@ -225,11 +224,11 @@ ap_mem_write_bytes(struct target_s *target, uint32_t dest, const uint8_t *src, i
 	struct target_ap_s *t = (void *)target;
 	uint32_t tmp;
 
-	adiv5_ap_write(t->ap, 0x00, 0xA2000050);
-	adiv5_dp_low_access(t->ap->dp, 1, 0, 0x04, dest);
+	adiv5_ap_write(t->ap, ADIV5_AP_CSW, 0xA2000050);
+	adiv5_dp_low_access(t->ap->dp, 1, 0, ADIV5_AP_TAR, dest);
 	while(len--) {
 		tmp = (uint32_t)*src++ << ((dest++ & 3) << 3);
-		adiv5_dp_low_access(t->ap->dp, 1, 0, 0x0C, tmp);
+		adiv5_dp_low_access(t->ap->dp, 1, 0, ADIV5_AP_DRW, tmp);
 	}
 	return 0;
 }
@@ -238,21 +237,21 @@ ap_mem_write_bytes(struct target_s *target, uint32_t dest, const uint8_t *src, i
 
 uint32_t adiv5_ap_mem_read(ADIv5_AP_t *ap, uint32_t addr)
 {
-	adiv5_ap_write(ap, 0x00, 0xA2000052);
-	adiv5_ap_write(ap, 0x04, addr);
-	return adiv5_ap_read(ap, 0x0C);
+	adiv5_ap_write(ap, ADIV5_AP_CSW, 0xA2000052);
+	adiv5_ap_write(ap, ADIV5_AP_TAR, addr);
+	return adiv5_ap_read(ap, ADIV5_AP_DRW);
 }
 
 void adiv5_ap_mem_write(ADIv5_AP_t *ap, uint32_t addr, uint32_t value)
 {
-	adiv5_ap_write(ap, 0x00, 0xA2000052);
-	adiv5_ap_write(ap, 0x04, addr);
-	adiv5_ap_write(ap, 0x0C, value);
+	adiv5_ap_write(ap, ADIV5_AP_CSW, 0xA2000052);
+	adiv5_ap_write(ap, ADIV5_AP_TAR, addr);
+	adiv5_ap_write(ap, ADIV5_AP_DRW, value);
 }
 
 void adiv5_ap_write(ADIv5_AP_t *ap, uint8_t addr, uint32_t value)
 {
-	adiv5_dp_write(ap->dp, DP_SELECT, 
+	adiv5_dp_write(ap->dp, ADIV5_DP_SELECT, 
 			((uint32_t)ap->apsel << 24)|(addr & 0xF0));
 	adiv5_dp_write_ap(ap->dp, addr, value);
 }
@@ -260,7 +259,7 @@ void adiv5_ap_write(ADIv5_AP_t *ap, uint8_t addr, uint32_t value)
 uint32_t adiv5_ap_read(ADIv5_AP_t *ap, uint8_t addr)
 {
 	uint32_t ret;
-	adiv5_dp_write(ap->dp, DP_SELECT, 
+	adiv5_dp_write(ap->dp, ADIV5_DP_SELECT, 
 			((uint32_t)ap->apsel << 24)|(addr & 0xF0));
 	ret = adiv5_dp_read_ap(ap->dp, addr);
 	return ret;
