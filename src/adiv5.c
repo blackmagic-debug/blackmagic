@@ -157,6 +157,21 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 	}
 }
 
+void adiv5_dp_write_ap(ADIv5_DP_t *dp, uint8_t addr, uint32_t value)
+{
+	adiv5_dp_low_access(dp, 1, 0, addr, value);
+}
+
+uint32_t adiv5_dp_read_ap(ADIv5_DP_t *dp, uint8_t addr)
+{
+	uint32_t ret;
+
+	adiv5_dp_low_access(dp, 1, 1, addr, 0);
+	ret = adiv5_dp_low_access(dp, 0, 1, ADIV5_DP_RDBUFF, 0);
+
+	return ret;
+}
+
 
 static int 
 ap_check_error(struct target_s *target)

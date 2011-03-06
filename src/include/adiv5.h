@@ -98,9 +98,6 @@ typedef struct ADIv5_DP_s {
 	void (*dp_write)(struct ADIv5_DP_s *dp, uint8_t addr, uint32_t value);
 	uint32_t (*dp_read)(struct ADIv5_DP_s *dp, uint8_t addr);
 
-	void (*ap_write)(struct ADIv5_DP_s *dp, uint8_t addr, uint32_t value);
-	uint32_t (*ap_read)(struct ADIv5_DP_s *dp, uint8_t addr);
-
 	uint32_t (*error)(struct ADIv5_DP_s *dp);
 
 	uint32_t (*low_access)(struct ADIv5_DP_s *dp, uint8_t APnDP, uint8_t RnW, 
@@ -120,16 +117,6 @@ static inline void adiv5_dp_write(ADIv5_DP_t *dp, uint8_t addr, uint32_t value)
 static inline uint32_t adiv5_dp_read(ADIv5_DP_t *dp, uint8_t addr)
 {
 	return dp->dp_read(dp, addr);
-}
-
-static inline void adiv5_dp_write_ap(ADIv5_DP_t *dp, uint8_t addr, uint32_t value)
-{
-	dp->ap_write(dp, addr, value);
-}
-
-static inline uint32_t adiv5_dp_read_ap(ADIv5_DP_t *dp, uint8_t addr)
-{
-	return dp->ap_read(dp, addr);
 }
 
 static inline uint32_t adiv5_dp_error(ADIv5_DP_t *dp)
@@ -164,6 +151,9 @@ extern int adiv5_ap_count;
 
 void adiv5_free_all(void);
 void adiv5_dp_init(ADIv5_DP_t *dp);
+
+void adiv5_dp_write_ap(ADIv5_DP_t *dp, uint8_t addr, uint32_t value);
+uint32_t adiv5_dp_read_ap(ADIv5_DP_t *dp, uint8_t addr);
 
 uint32_t adiv5_ap_mem_read(ADIv5_AP_t *ap, uint32_t addr);
 void adiv5_ap_mem_write(ADIv5_AP_t *ap, uint32_t addr, uint32_t value);

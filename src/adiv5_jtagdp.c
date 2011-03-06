@@ -41,9 +41,6 @@
 static void adiv5_jtagdp_write(ADIv5_DP_t *dp, uint8_t addr, uint32_t value);
 static uint32_t adiv5_jtagdp_read(ADIv5_DP_t *dp, uint8_t addr);
 
-static void adiv5_jtagdp_write_ap(ADIv5_DP_t *dp, uint8_t addr, uint32_t value);
-static uint32_t adiv5_jtagdp_read_ap(ADIv5_DP_t *dp, uint8_t addr);
-
 static uint32_t adiv5_jtagdp_error(ADIv5_DP_t *dp);
 
 static uint32_t adiv5_jtagdp_low_access(ADIv5_DP_t *dp, uint8_t APnDP, uint8_t RnW, 
@@ -60,9 +57,6 @@ void adiv5_jtag_dp_handler(jtag_dev_t *dev)
 	dp->dp_write = adiv5_jtagdp_write;
 	dp->dp_read = adiv5_jtagdp_read;
 
-	dp->ap_write = adiv5_jtagdp_write_ap;
-	dp->ap_read = adiv5_jtagdp_read_ap;
-
 	dp->error = adiv5_jtagdp_error;
 
 	dp->low_access = adiv5_jtagdp_low_access;
@@ -78,17 +72,6 @@ static void adiv5_jtagdp_write(ADIv5_DP_t *dp, uint8_t addr, uint32_t value)
 static uint32_t adiv5_jtagdp_read(ADIv5_DP_t *dp, uint8_t addr)
 {
 	adiv5_jtagdp_low_access(dp, 0, 1, addr, 0);
-	return adiv5_jtagdp_low_access(dp, 0, 1, ADIV5_DP_RDBUFF, 0);
-}
-
-static void adiv5_jtagdp_write_ap(ADIv5_DP_t *dp, uint8_t addr, uint32_t value)
-{
-	adiv5_jtagdp_low_access(dp, 1, 0, addr, value);
-}
-
-static uint32_t adiv5_jtagdp_read_ap(ADIv5_DP_t *dp, uint8_t addr)
-{
-	adiv5_jtagdp_low_access(dp, 1, 1, addr, 0);
 	return adiv5_jtagdp_low_access(dp, 0, 1, ADIV5_DP_RDBUFF, 0);
 }
 

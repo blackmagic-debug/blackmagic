@@ -39,9 +39,6 @@
 static void adiv5_swdp_write(ADIv5_DP_t *dp, uint8_t addr, uint32_t value);
 static uint32_t adiv5_swdp_read(ADIv5_DP_t *dp, uint8_t addr);
 
-static void adiv5_swdp_write_ap(ADIv5_DP_t *dp, uint8_t addr, uint32_t value);
-static uint32_t adiv5_swdp_read_ap(ADIv5_DP_t *dp, uint8_t addr);
-
 static uint32_t adiv5_swdp_error(ADIv5_DP_t *dp);
 
 static uint32_t adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t APnDP, uint8_t RnW, 
@@ -74,8 +71,6 @@ int adiv5_swdp_scan(void)
 
 	dp->dp_write = adiv5_swdp_write;
 	dp->dp_read = adiv5_swdp_read;
-	dp->ap_write = adiv5_swdp_write_ap;
-	dp->ap_read = adiv5_swdp_read_ap;
 	dp->error = adiv5_swdp_error;
 	dp->low_access = adiv5_swdp_low_access;
 
@@ -95,21 +90,6 @@ static void adiv5_swdp_write(ADIv5_DP_t *dp, uint8_t addr, uint32_t value)
 static uint32_t adiv5_swdp_read(ADIv5_DP_t *dp, uint8_t addr)
 {
 	return adiv5_swdp_low_access(dp, 0, 1, addr, 0);
-}
-
-static void adiv5_swdp_write_ap(ADIv5_DP_t *dp, uint8_t addr, uint32_t value)
-{
-	adiv5_swdp_low_access(dp, 1, 0, addr, value);
-}
-
-static uint32_t adiv5_swdp_read_ap(ADIv5_DP_t *dp, uint8_t addr)
-{
-	uint32_t ret;
-
-	adiv5_swdp_low_access(dp, 1, 1, addr, 0);
-	ret = adiv5_swdp_low_access(dp, 0, 1, ADIV5_DP_RDBUFF, 0);
-
-	return ret;
 }
 
 static uint32_t adiv5_swdp_error(ADIv5_DP_t *dp)
