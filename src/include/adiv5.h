@@ -76,19 +76,29 @@
 
 /* AP Control and Status Word (CSW) */
 #define ADIV5_AP_CSW_DBGSWENABLE	(1u << 31)
-/* Bits 30:24 - Prot (Implementation defined) */
+/* Bits 30:24 - Prot, Implementation defined, for Cortex-M3: */
+#define ADIV5_AP_CSW_MASTERTYPE_DEBUG	(1u << 29)
+#define ADIV5_AP_CSW_HPROT1		(1u << 25)
 #define ADIV5_AP_CSW_SPIDEN		(1u << 23)
 /* Bits 22:12 - Reserved */
 /* Bits 11:8 - Mode, must be zero */
 #define ADIV5_AP_CSW_TRINPROG		(1u << 7)
 #define ADIV5_AP_CSW_DEVICEEN		(1u << 6)
+#define ADIV5_AP_CSW_ADDRINC_NONE	(0u << 4)
 #define ADIV5_AP_CSW_ADDRINC_SINGLE	(1u << 4)
+#define ADIV5_AP_CSW_ADDRINC_PACKED	(2u << 4)
+#define ADIV5_AP_CSW_ADDRINC_MASK	(3u << 4)
 /* Bit 3 - Reserved */
 #define ADIV5_AP_CSW_SIZE_BYTE		(0u << 0)
 #define ADIV5_AP_CSW_SIZE_HALFWORD	(1u << 0)
 #define ADIV5_AP_CSW_SIZE_WORD		(2u << 0)
 #define ADIV5_AP_CSW_SIZE_MASK		(7u << 0)
 
+/* Constants to make RnW and APnDP parameters more clear in code */
+#define ADIV5_LOW_WRITE		0
+#define ADIV5_LOW_READ		1
+#define ADIV5_LOW_DP		0
+#define ADIV5_LOW_AP		1
 
 /* Try to keep this somewhat absract for later adding SW-DP */
 typedef struct ADIv5_DP_s {

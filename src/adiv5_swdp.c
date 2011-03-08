@@ -84,12 +84,12 @@ int adiv5_swdp_scan(void)
 
 static void adiv5_swdp_write(ADIv5_DP_t *dp, uint8_t addr, uint32_t value)
 {
-	adiv5_swdp_low_access(dp, 0, 0, addr, value);
+	adiv5_swdp_low_access(dp, ADIV5_LOW_DP, ADIV5_LOW_WRITE, addr, value);
 }
 
 static uint32_t adiv5_swdp_read(ADIv5_DP_t *dp, uint8_t addr)
 {
-	return adiv5_swdp_low_access(dp, 0, 1, addr, 0);
+	return adiv5_swdp_low_access(dp, ADIV5_LOW_DP, ADIV5_LOW_READ, addr, 0);
 }
 
 static uint32_t adiv5_swdp_error(ADIv5_DP_t *dp)

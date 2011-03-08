@@ -50,11 +50,6 @@ target *last_target = NULL;
 static const char adiv5_driver_str[] = "ARM ADIv5 MEM-AP";
 
 ADIv5_DP_t *adiv5_dp_list;
-/*
-ADIv5_DP_t adiv5_dps[5];
-int adiv5_dp_count;
-*/
-
 ADIv5_AP_t adiv5_aps[5];
 int adiv5_ap_count;
 
@@ -120,54 +115,55 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 
 	/* Probe for APs on this DP */
 	for(int i = 0; i < 256; i++) {
-		uint32_t idr;
+		ADIv5_AP_t *ap = &adiv5_aps[adiv5_ap_count];
+		target *t;
 
-		adiv5_dp_write(dp, ADIV5_DP_SELECT, ((uint32_t)i << 24) | 0xF0);
-		idr = adiv5_dp_read_ap(dp, 0x0C); /* attempt to read IDR */
+		/* Assume valid and try to read IDR */
+		ap->dp = dp;
+		ap->apsel = i;
+		ap->idr = adiv5_ap_read(ap, ADIV5_AP_IDR);
 
-		if(idr) {	/* We have a valid AP, adding to list */
-			target *t;
+		if(!ap->idr) /* IDR Invalid - Should we not continue here? */
+			break;
 
-			adiv5_aps[adiv5_ap_count].dp = dp;
-			adiv5_aps[adiv5_ap_count].apsel = i;
-			adiv5_aps[adiv5_ap_count].idr = idr;
-			adiv5_aps[adiv5_ap_count].cfg = adiv5_dp_read_ap(dp, 0x04);
-			adiv5_aps[adiv5_ap_count].base = adiv5_dp_read_ap(dp, 0x08);
-			/* Should probe further here... */
+		/* We have a valid AP, adding to list */
+		ap->cfg = adiv5_ap_read(ap, ADIV5_AP_CFG);
+		ap->base = adiv5_ap_read(ap, ADIV5_AP_BASE);
+		/* Should probe further here... */
 
-			/* Prepend to target list... */
-			t = target_list;
-			target_list = (void*)calloc(1, sizeof(struct target_ap_s));
-			target_list->next = t;
-			((struct target_ap_s *)target_list)->ap = &adiv5_aps[adiv5_ap_count];
+		/* Prepend to target list... */
+		t = (void*)calloc(1, sizeof(struct target_ap_s));
+		t->next = target_list;
+		target_list = t;
+		((struct target_ap_s *)t)->ap = ap;
 
-			target_list->driver = adiv5_driver_str;
-			target_list->check_error = ap_check_error;
+		t->driver = adiv5_driver_str;
+		t->check_error = ap_check_error;
 
-			target_list->mem_read_words = ap_mem_read_words;
-			target_list->mem_write_words = ap_mem_write_words;
-			target_list->mem_read_bytes = ap_mem_read_bytes;
-			target_list->mem_write_bytes = ap_mem_write_bytes;
+		t->mem_read_words = ap_mem_read_words;
+		t->mem_write_words = ap_mem_write_words;
+		t->mem_read_bytes = ap_mem_read_bytes;
+		t->mem_write_bytes = ap_mem_write_bytes;
 
-			/* The rest sould only be added after checking ROM table */
-			cm3_probe((void*)target_list);
+		/* The rest sould only be added after checking ROM table */
+		cm3_probe(t);
 
-			adiv5_ap_count++;
-		} else break;
+		adiv5_ap_count++;
 	}
 }
 
 void adiv5_dp_write_ap(ADIv5_DP_t *dp, uint8_t addr, uint32_t value)
 {
-	adiv5_dp_low_access(dp, 1, 0, addr, value);
+	adiv5_dp_low_access(dp, ADIV5_LOW_AP, ADIV5_LOW_WRITE, addr, value);
 }
 
 uint32_t adiv5_dp_read_ap(ADIv5_DP_t *dp, uint8_t addr)
 {
 	uint32_t ret;
 
-	adiv5_dp_low_access(dp, 1, 1, addr, 0);
-	ret = adiv5_dp_low_access(dp, 0, 1, ADIV5_DP_RDBUFF, 0);
+	adiv5_dp_low_access(dp, ADIV5_LOW_AP, ADIV5_LOW_READ, addr, 0);
+	ret = adiv5_dp_low_access(dp, ADIV5_LOW_DP, ADIV5_LOW_READ, 
+				ADIV5_DP_RDBUFF, 0);
 
 	return ret;
 }
@@ -188,12 +184,16 @@ ap_mem_read_words(struct target_s *target, uint32_t *dest, uint32_t src, int len
 	len >>= 2;
 
 	adiv5_ap_write(t->ap, ADIV5_AP_CSW, 0xA2000052);
-	adiv5_dp_low_access(t->ap->dp, 1, 0, ADIV5_AP_TAR, src);
-	adiv5_dp_low_access(t->ap->dp, 1, 1, ADIV5_AP_DRW, 0);
+	adiv5_dp_low_access(t->ap->dp, ADIV5_LOW_AP, ADIV5_LOW_WRITE, 
+					ADIV5_AP_TAR, src);
+	adiv5_dp_low_access(t->ap->dp, ADIV5_LOW_AP, ADIV5_LOW_READ, 
+					ADIV5_AP_DRW, 0);
 	while(--len) 
-		*dest++ = adiv5_dp_low_access(t->ap->dp, 1, 1, ADIV5_AP_DRW, 0);
+		*dest++ = adiv5_dp_low_access(t->ap->dp, ADIV5_LOW_AP, 
+					ADIV5_LOW_READ, ADIV5_AP_DRW, 0);
 	
-	*dest++ = adiv5_dp_low_access(t->ap->dp, 0, 1, ADIV5_DP_RDBUFF, 0);
+	*dest++ = adiv5_dp_low_access(t->ap->dp, ADIV5_LOW_DP, ADIV5_LOW_READ, 
+					ADIV5_DP_RDBUFF, 0);
 
 	return 0;
 }
@@ -205,8 +205,10 @@ ap_mem_read_bytes(struct target_s *target, uint8_t *dest, uint32_t src, int len)
 	uint32_t tmp = src;
 
 	adiv5_ap_write(t->ap, ADIV5_AP_CSW, 0xA2000050);
-	adiv5_dp_low_access(t->ap->dp, 1, 0, ADIV5_AP_TAR, src);
-	adiv5_dp_low_access(t->ap->dp, 1, 1, ADIV5_AP_DRW, 0);
+	adiv5_dp_low_access(t->ap->dp, ADIV5_LOW_AP, ADIV5_LOW_WRITE, 
+					ADIV5_AP_TAR, src);
+	adiv5_dp_low_access(t->ap->dp, ADIV5_LOW_AP, ADIV5_LOW_READ, 
+					ADIV5_AP_DRW, 0);
 	while(--len) {
 		tmp = adiv5_dp_low_access(t->ap->dp, 1, 1, ADIV5_AP_DRW, 0);
 		*dest++ = (tmp >> ((src++ & 0x3) << 3) & 0xFF);
@@ -226,9 +228,11 @@ ap_mem_write_words(struct target_s *target, uint32_t dest, const uint32_t *src, 
 	len >>= 2;
 
 	adiv5_ap_write(t->ap, ADIV5_AP_CSW, 0xA2000052);
-	adiv5_dp_low_access(t->ap->dp, 1, 0, ADIV5_AP_TAR, dest);
+	adiv5_dp_low_access(t->ap->dp, ADIV5_LOW_AP, ADIV5_LOW_WRITE, 
+					ADIV5_AP_TAR, dest);
 	while(len--) 
-		adiv5_dp_low_access(t->ap->dp, 1, 0, ADIV5_AP_DRW, *src++);
+		adiv5_dp_low_access(t->ap->dp, ADIV5_LOW_AP, ADIV5_LOW_WRITE, 
+					ADIV5_AP_DRW, *src++);
 	
 	return 0;
 }
@@ -240,10 +244,12 @@ ap_mem_write_bytes(struct target_s *target, uint32_t dest, const uint8_t *src, i
 	uint32_t tmp;
 
 	adiv5_ap_write(t->ap, ADIV5_AP_CSW, 0xA2000050);
-	adiv5_dp_low_access(t->ap->dp, 1, 0, ADIV5_AP_TAR, dest);
+	adiv5_dp_low_access(t->ap->dp, ADIV5_LOW_AP, ADIV5_LOW_WRITE, 
+					ADIV5_AP_TAR, dest);
 	while(len--) {
 		tmp = (uint32_t)*src++ << ((dest++ & 3) << 3);
-		adiv5_dp_low_access(t->ap->dp, 1, 0, ADIV5_AP_DRW, tmp);
+		adiv5_dp_low_access(t->ap->dp, ADIV5_LOW_AP, ADIV5_LOW_WRITE, 
+					ADIV5_AP_DRW, tmp);
 	}
 	return 0;
 }
