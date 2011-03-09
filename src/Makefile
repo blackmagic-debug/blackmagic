@@ -27,6 +27,7 @@ SRC = 	gdb_if.c	\
 	jtag_scan.c	\
 	adiv5_jtagdp.c	\
 	lmi.c		\
+	arm7tdmi.c	\
 
 include $(HOST)/Makefile.inc
 

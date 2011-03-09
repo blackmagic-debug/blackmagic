@@ -37,6 +37,7 @@
 #include "gdb_packet.h"
 
 #include "adiv5.h"
+#include "arm7tdmi.h"
 
 struct jtag_dev_s jtag_devs[JTAG_MAX_DEVS+1];
 int jtag_dev_count;
@@ -50,6 +51,9 @@ static struct jtag_dev_descr_s {
 	{.idcode = 0x0BA00477, .idmask = 0x0FFFFFFF, 
 		.descr = "ARM Limited: ADIv5 JTAG-DP port.", 
 		.handler = adiv5_jtag_dp_handler},
+	{.idcode = 0x3F0F0F0F, .idmask = 0xFFFFFFFF, 
+		.descr = "ST Microelectronics: STR730", 
+		.handler = arm7tdmi_jtag_handler},
 	{.idcode = 0x06410041, .idmask = 0x0FFFFFFF, 
 		.descr = "ST Microelectronics: STM32, Medium density."},
 	{.idcode = 0x06412041, .idmask = 0x0FFFFFFF, 
