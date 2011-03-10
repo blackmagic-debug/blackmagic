@@ -7,7 +7,7 @@ VPATH += $(HOST)
 BUILDDATE := `date +"%Y%m%d"`
 
 CFLAGS += -Wall -Wextra -Wno-pointer-sign -Wno-char-subscripts\
-	-Os -std=gnu99 -g3 -DBUILDDATE=\"$(BUILDDATE)\"\
+	-O0 -std=gnu99 -g3 -DBUILDDATE=\"$(BUILDDATE)\"\
 	-I. -Iinclude -I$(HOST) \
 	-DVERSION_SUFFIX=\"`../scripts/setlocalversion`\"
 

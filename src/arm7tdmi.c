@@ -63,8 +63,8 @@ static const char arm7_driver_str[] = "ARM7TDMI";
 #define ARM7_SCANN_EICE		2
 
 /* EmbeddedICE-RT Register addresses */
-#define ARM7_EICE_DEBUG_STAT		0x00
-#define ARM7_EICE_DEBUG_CTRL		0x01
+#define ARM7_EICE_DEBUG_CTRL		0x00
+#define ARM7_EICE_DEBUG_STAT		0x01
 #define ARM7_EICE_ABORT_STAT		0x02
 #define ARM7_EICE_COMMS_CTRL		0x04
 #define ARM7_EICE_COMMS_DATA		0x05
@@ -74,6 +74,25 @@ static const char arm7_driver_str[] = "ARM7TDMI";
 #define ARM7_EICE_WATCH_DATA_MASK(x)	(0x0B + (8 * (x))
 #define ARM7_EICE_WATCH_CTRL(x)		(0x0C + (8 * (x))
 #define ARM7_EICE_WATCH_CTRL_MASK(x)	(0x0D + (8 * (x))
+
+/* Read/write bit in EmbeddedICE-RT scan chain */
+#define ARM7_EICE_READ 		(0uLL << 37)
+#define ARM7_EICE_WRITE		(1uLL << 37)
+
+/* Debug Control Register bits */
+#define ARM7_EICE_DEBUG_CTRL_EICE_DISABLE	(1 << 5)
+#define ARM7_EICE_DEBUG_CTRL_MONITOR		(1 << 4)
+/* Bit 3 - Reserved */
+#define ARM7_EICE_DEBUG_CTRL_INTDIS		(1 << 2)
+#define ARM7_EICE_DEBUG_CTRL_DBGRQ		(1 << 1)
+#define ARM7_EICE_DEBUG_CTRL_DBGACK		(1 << 0)
+
+/* Debug Status Register bits */
+#define ARM7_EICE_DEBUG_STAT_TBIT		(1 << 4)
+#define ARM7_EICE_DEBUG_STAT_NMREQ		(1 << 3)
+#define ARM7_EICE_DEBUG_STAT_INTDIS		(1 << 2)
+#define ARM7_EICE_DEBUG_STAT_DBGRQ		(1 << 1)
+#define ARM7_EICE_DEBUG_STAT_DBGACK		(1 << 0)
 
 struct target_arm7_s {
 	target t;
@@ -123,20 +142,87 @@ void arm7tdmi_jtag_handler(jtag_dev_t *dev)
 	target_list = t;
 }
 
+static void arm7_select_scanchain(struct target_arm7_s *target, uint8_t chain)
+{
+	jtag_dev_write_ir(target->jtag, ARM7_IR_SCAN_N);
+	jtag_dev_shift_dr(target->jtag, NULL, &chain, 4);
+	jtag_dev_write_ir(target->jtag, ARM7_IR_INTEST);
+}
+
+static void arm7_eice_write(struct target_arm7_s *target, 
+				uint8_t addr, uint32_t value)
+{
+	uint64_t val = ((uint64_t)addr << 32) | value | ARM7_EICE_WRITE;
+
+	arm7_select_scanchain(target, ARM7_SCANN_EICE);
+	jtag_dev_shift_dr(target->jtag, NULL, (uint8_t *)&val, 38);
+}
+
+static uint32_t arm7_eice_read(struct target_arm7_s *target, uint8_t addr)
+{
+	uint64_t val = ((uint64_t)addr << 32) | ARM7_EICE_READ;
+
+	arm7_select_scanchain(target, ARM7_SCANN_EICE);
+	jtag_dev_shift_dr(target->jtag, NULL, (uint8_t *)&val, 38);
+	jtag_dev_shift_dr(target->jtag, (uint8_t *)&val, (uint8_t *)&val, 38);
+
+	return (uint32_t)val;
+}
+
 static void arm7_halt_request(struct target_s *target)
 {
-	(void)target;
+	struct target_arm7_s *t = (struct target_arm7_s *)target;
+
+	arm7_eice_write(t, ARM7_EICE_DEBUG_CTRL, ARM7_EICE_DEBUG_CTRL_DBGRQ);
 }
 
 static int arm7_halt_wait(struct target_s *target)
 {
-	(void)target;
+	struct target_arm7_s *t = (struct target_arm7_s *)target;
+	int stat = arm7_eice_read(t, ARM7_EICE_DEBUG_STAT);
+
+	if(!(stat & ARM7_EICE_DEBUG_STAT_DBGACK))
+		return 0;
+
+	/* We are halted, so switch to ARM mode if needed. */
+	if(stat & ARM7_EICE_DEBUG_STAT_TBIT) {
+		/* This sequence switches to ARM mode:
+		 * STR R0, [R0]	; Save R0 before use
+		 * MOV R0, PC	; Copy PC into R0
+		 * STR R0, [R0]	; Now save the PC in R0
+		 * BX PC	; Jump into ARM state
+		 * MOV R8, R8	; NOP
+		 * MOV R8, R8	; NOP
+		 */
+		/* FIXME: Switch to ARM mode. */
+	}
+
+	/* FIXME: Get core register cache. */
+	/* STM R0, {R0-R15} */
+
 	return 1;
 }
 
 static void arm7_halt_resume(struct target_s *target, uint8_t step)
 {
-	(void)target;
-	(void)step;
+	struct target_arm7_s *t = (struct target_arm7_s *)target;
+
+	if(step) {
+		/* FIXME: Set breakpoint on any instruction to single step. */
+	}
+
+	/* FIXME: Restore core registers. */
+	/* LDM R0, {R0-R15} */
+
+	/* Release DBGRQ */
+	arm7_eice_write(t, ARM7_EICE_DEBUG_CTRL, 0);
+	/* This sequence restores PC if no other instructions issued in 
+	 * debug mode...
+	 * 0 E1A00000; MOV R0, R0
+	 * 1 E1A00000; MOV R0, R0
+	 * 0 EAFFFFFA; B -6
+	 * FIXME: Add this sequence and adjustment for other opcodes.
+	 */
+	jtag_dev_write_ir(t->jtag, ARM7_IR_RESTART);
 }
 
