@@ -45,11 +45,31 @@ static char cm3_driver_str[] = "ARM Cortex-M3";
 
 #define CM3_SCS_BASE	(CM3_PPB_BASE + 0xE000)
 
+#define CM3_AIRCR	(CM3_SCS_BASE + 0xD0C)
+#define CM3_HFSR	(CM3_SCS_BASE + 0xD2C)
 #define CM3_DFSR	(CM3_SCS_BASE + 0xD30)
 #define CM3_DHCSR	(CM3_SCS_BASE + 0xDF0)
 #define CM3_DCRSR	(CM3_SCS_BASE + 0xDF4)
 #define CM3_DCRDR	(CM3_SCS_BASE + 0xDF8)
 #define CM3_DEMCR	(CM3_SCS_BASE + 0xDFC)
+
+/* Application Interrupt and Reset Control Register (AIRCR) */
+#define CM3_AIRCR_VECTKEY	(0x05FA << 16)
+/* Bits 31:16 - Read as VECTKETSTAT, 0xFA05 */
+#define CM3_AIRCR_ENDIANESS	(1 << 15)
+/* Bits 15:11 - Unused, reserved */
+#define CM3_AIRCR_PRIGROUP	(7 << 8)
+/* Bits 7:3 - Unused, reserved */
+#define CM3_AIRCR_SYSRESETREQ	(1 << 2)
+#define CM3_AIRCR_VECTCLRACTIVE	(1 << 1)
+#define CM3_AIRCR_VECTRESET	(1 << 0)
+
+/* HardFault Status Register (HFSR) */
+#define CM3_HFSR_DEBUGEVT	(1 << 31)
+#define CM3_HFSR_FORCED		(1 << 30)
+/* Bits 29:2 - Not specified */
+#define CM3_HFSR_VECTTBL	(1 << 1)
+/* Bits 0 - Reserved */
 
 /* Debug Fault Status Register (DFSR) */
 /* Bits 31:5 - Reserved */
@@ -288,11 +308,12 @@ cm3_reset(struct target_s *target)
 	/* This could be VECTRESET: 0x05FA0001 (reset only core)
 	 *          or SYSRESETREQ: 0x05FA0004 (system reset)
 	 */
-	adiv5_ap_mem_write(t->ap, 0xE000ED0C, 0x05FA0004);
-	adiv5_ap_mem_write(t->ap, 0xE000ED0C, 0x05FA0001);
+	adiv5_ap_mem_write(t->ap, CM3_AIRCR,
+			CM3_AIRCR_VECTKEY | CM3_AIRCR_SYSRESETREQ);
 
-	/* FIXME: poll for release from reset! */
-	for(int i = 0; i < 10000; i++) asm("nop");
+	/* Poll for release from reset */
+	while(adiv5_ap_mem_read(t->ap, CM3_AIRCR) & 
+			(CM3_AIRCR_VECTRESET | CM3_AIRCR_SYSRESETREQ));
 
 	/* Reset DFSR flags */
 	adiv5_ap_mem_write(t->ap, CM3_DFSR, CM3_DFSR_RESETALL);
@@ -337,8 +358,12 @@ static int cm3_fault_unwind(struct target_s *target)
 {
 	struct target_ap_s *t = (void *)target;
 	uint32_t dfsr = adiv5_ap_mem_read(t->ap, CM3_DFSR);
+	uint32_t hfsr = adiv5_ap_mem_read(t->ap, CM3_HFSR);
 	adiv5_ap_mem_write(t->ap, CM3_DFSR, dfsr);/* write back to reset */
-	if(dfsr & (1 << 3)) {
+	adiv5_ap_mem_write(t->ap, CM3_HFSR, hfsr);/* write back to reset */
+	/* We check for FORCED in the HardFault Status Register to avoid
+	 * catching core resets */
+	if((dfsr & CM3_DFSR_VCATCH) && (hfsr & CM3_HFSR_FORCED)) {
 		/* Unwind exception */
 		uint32_t regs[16];
 		uint32_t stack[8];
@@ -355,6 +380,12 @@ static int cm3_fault_unwind(struct target_s *target)
 		regs[14] = stack[5];
 		regs[15] = stack[6];
 		/* FIXME: stack[7] contains xPSR when this is supported */
+
+		/* Reset exception state to allow resuming from restored
+		 * state.
+		 */
+		adiv5_ap_mem_write(t->ap, CM3_AIRCR, 
+				CM3_AIRCR_VECTKEY | CM3_AIRCR_VECTCLRACTIVE);
 
 		/* Write pre-exception registers back to core */
 		target_regs_write(target, regs);
