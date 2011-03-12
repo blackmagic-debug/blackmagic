@@ -30,6 +30,7 @@
 #include "jtagtap.h"
 
 #include <stdlib.h>
+#include <string.h>
 
 /* TODO:
  * Skeleton target.
@@ -94,6 +95,8 @@ static const char arm7_driver_str[] = "ARM7TDMI";
 #define ARM7_EICE_DEBUG_STAT_DBGRQ		(1 << 1)
 #define ARM7_EICE_DEBUG_STAT_DBGACK		(1 << 0)
 
+#define ARM7_OP_NOP		0xE1A00000
+
 struct target_arm7_s {
 	target t;
 	jtag_dev_t *jtag;
@@ -105,6 +108,9 @@ static void do_nothing(void)
 {
 }
 
+static void arm7_attach(struct target_s *target);
+static int arm7_regs_read(struct target_s *target, void *data);
+static int arm7_regs_write(struct target_s *target, const void *data);
 static void arm7_halt_request(struct target_s *target);
 static int arm7_halt_wait(struct target_s *target);
 static void arm7_halt_resume(struct target_s *target, uint8_t step);
@@ -118,7 +124,7 @@ void arm7tdmi_jtag_handler(jtag_dev_t *dev)
 	tj->jtag = dev;
 
 	/* Setup mandatory virtual methods */
-	t->attach = (void *)do_nothing;
+	t->attach = arm7_attach;
 	t->detach = (void *)do_nothing;
 	t->check_error = (void *)do_nothing;
 	t->mem_read_words = (void *)do_nothing;
@@ -126,8 +132,8 @@ void arm7tdmi_jtag_handler(jtag_dev_t *dev)
 	t->mem_read_bytes = (void *)do_nothing;
 	t->mem_write_bytes = (void *)do_nothing;
 	t->regs_size = 16 * 4;
-	t->regs_read = (void *)do_nothing;
-	t->regs_write = (void *)do_nothing;
+	t->regs_read = (void *)arm7_regs_read;
+	t->regs_write = (void *)arm7_regs_write;
 	t->pc_write = (void *)do_nothing;
 	t->reset = (void *)do_nothing;
 	t->halt_request = arm7_halt_request;
@@ -156,6 +162,7 @@ static void arm7_eice_write(struct target_arm7_s *target,
 
 	arm7_select_scanchain(target, ARM7_SCANN_EICE);
 	jtag_dev_shift_dr(target->jtag, NULL, (uint8_t *)&val, 38);
+	DEBUG("eice_write(%d, 0x%08X)\n", addr, value);
 }
 
 static uint32_t arm7_eice_read(struct target_arm7_s *target, uint8_t addr)
@@ -165,8 +172,42 @@ static uint32_t arm7_eice_read(struct target_arm7_s *target, uint8_t addr)
 	arm7_select_scanchain(target, ARM7_SCANN_EICE);
 	jtag_dev_shift_dr(target->jtag, NULL, (uint8_t *)&val, 38);
 	jtag_dev_shift_dr(target->jtag, (uint8_t *)&val, (uint8_t *)&val, 38);
+	DEBUG("eice_read(%d, 0x%08X)\n", addr, (uint32_t)val);
 
 	return (uint32_t)val;
+}
+
+/* Execute a single instruction at debug speed.
+ * Performs datalen data bus accesses after the op to capture data.
+ */
+static void arm7_op_debug(struct target_arm7_s *t, uint32_t op, uint32_t *data,
+			int datalen)
+{
+	uint64_t tmp;
+	/* FIXME: This routine is broken.
+	 * This process isn't very well documented.  Maybe NOPs need to
+	 * be shifted into pipeline before data is read out.
+	 */
+	DEBUG("op_debug(0x%08X)\n", op);
+	arm7_select_scanchain(t, ARM7_SCANN_DBUS);
+	tmp = op;
+	jtag_dev_shift_dr(t->jtag, NULL, (const uint8_t*)&tmp, 33);
+	while(datalen--) {
+		tmp = *data;
+		jtag_dev_shift_dr(t->jtag, (uint8_t*)&tmp, (uint8_t*)&tmp, 33);
+		*data = (uint32_t)tmp;
+		DEBUG("\t0x%08X\n", *data);
+		data++;
+	}
+}
+
+/* Execute a single instruction at system speed.  */
+static void arm7_op_system(struct target_arm7_s *t, uint32_t op)
+{
+	uint64_t tmp;
+	arm7_select_scanchain(t, ARM7_SCANN_DBUS);
+	tmp = op | (1uLL << 32);
+	jtag_dev_shift_dr(t->jtag, NULL, (const uint8_t*)&tmp, 33);
 }
 
 static void arm7_halt_request(struct target_s *target)
@@ -187,18 +228,19 @@ static int arm7_halt_wait(struct target_s *target)
 	/* We are halted, so switch to ARM mode if needed. */
 	if(stat & ARM7_EICE_DEBUG_STAT_TBIT) {
 		/* This sequence switches to ARM mode:
-		 * STR R0, [R0]	; Save R0 before use
-		 * MOV R0, PC	; Copy PC into R0
-		 * STR R0, [R0]	; Now save the PC in R0
-		 * BX PC	; Jump into ARM state
-		 * MOV R8, R8	; NOP
-		 * MOV R8, R8	; NOP
+		 * 6000  STR R0, [R0]	; Save R0 before use
+		 * 4678  MOV R0, PC	; Copy PC into R0
+		 * 6000  STR R0, [R0]	; Now save the PC in R0
+		 * 4778  BX PC		; Jump into ARM state
+		 * 46c0  MOV R8, R8	; NOP
+		 * 46c0  MOV R8, R8	; NOP
 		 */
 		/* FIXME: Switch to ARM mode. */
 	}
 
-	/* FIXME: Get core register cache. */
-	/* STM R0, {R0-R15} */
+	/* Fetch core register values */
+	/* E880FFFF  STM R0, {R0-R15} */
+	arm7_op_debug(t, 0xE880FFFF, t->reg_cache, 16);
 
 	return 1;
 }
@@ -211,8 +253,9 @@ static void arm7_halt_resume(struct target_s *target, uint8_t step)
 		/* FIXME: Set breakpoint on any instruction to single step. */
 	}
 
-	/* FIXME: Restore core registers. */
-	/* LDM R0, {R0-R15} */
+	/* Restore core registers. */
+	/* E890FFFF  LDM R0, {R0-R15} */
+	arm7_op_debug(t, 0xE890FFFF, t->reg_cache, 16);
 
 	/* Release DBGRQ */
 	arm7_eice_write(t, ARM7_EICE_DEBUG_CTRL, 0);
@@ -221,8 +264,32 @@ static void arm7_halt_resume(struct target_s *target, uint8_t step)
 	 * 0 E1A00000; MOV R0, R0
 	 * 1 E1A00000; MOV R0, R0
 	 * 0 EAFFFFFA; B -6
-	 * FIXME: Add this sequence and adjustment for other opcodes.
+	 * FIXME: Add adjustment for other opcodes.
 	 */
+	arm7_op_debug(t, ARM7_OP_NOP, NULL, 0);
+	arm7_op_system(t, ARM7_OP_NOP);
+	arm7_op_debug(t, 0xEAFFFFF8, NULL, 0);
+
 	jtag_dev_write_ir(t->jtag, ARM7_IR_RESTART);
+}
+
+static void arm7_attach(struct target_s *target)
+{
+	target_halt_request(target);
+	while(!target_halt_wait(target));
+}
+
+static int arm7_regs_read(struct target_s *target, void *data)
+{
+	struct target_arm7_s *t = (struct target_arm7_s *)target;
+	memcpy(data, t->reg_cache, target->regs_size);
+	return 0;
+}
+
+static int arm7_regs_write(struct target_s *target, const void *data)
+{
+	struct target_arm7_s *t = (struct target_arm7_s *)target;
+	memcpy(t->reg_cache, data, target->regs_size);
+	return 0;
 }
 

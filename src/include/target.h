@@ -96,7 +96,7 @@
 
 
 #define target_check_hw_wp(target, addr)	\
-	(target)->check_hw_wp((target), (addr))
+	((target)->check_hw_wp?(target)->check_hw_wp((target), (addr)):0)
 
 
 /* Flash memory access functions */
