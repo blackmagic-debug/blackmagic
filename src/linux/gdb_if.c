@@ -23,10 +23,15 @@
  * uses a TCP server on port 2000.
  */
 #include <stdio.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
 
-#include <sys/select.h>
+#ifndef WIN32
+#   include <sys/socket.h>
+#   include <netinet/in.h>
+#   include <sys/select.h>
+#else
+#   include <windows.h>
+#   include <ws2tcpip.h>
+#endif
 
 #include <assert.h>
 
@@ -37,6 +42,10 @@ static int gdb_if_serv, gdb_if_conn;
 
 int gdb_if_init(void)
 {
+#ifdef WIN32
+	WSADATA wsaData;
+	WSAStartup(MAKEWORD(2, 2), &wsaData);
+#endif
 	struct sockaddr_in addr;
 
 	addr.sin_family = AF_INET;

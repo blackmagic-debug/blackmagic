@@ -27,6 +27,7 @@
 #include <libopencm3/stm32/gpio.h>
 
 #include <setjmp.h>
+#include <alloca.h>
 
 #include "gdb_packet.h"
 

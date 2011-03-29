@@ -31,7 +31,6 @@
 #include <string.h>
 
 #include <assert.h>
-#include <alloca.h>
 
 #include <ftdi.h>
 

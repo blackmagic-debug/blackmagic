@@ -28,8 +28,6 @@
 
 #include <assert.h>
 
-#include <alloca.h>
-
 #include "general.h"
 #include "jtagtap.h"
 #include "jtag_scan.h"

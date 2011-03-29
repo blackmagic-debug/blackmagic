@@ -1,1 +1,1 @@
-LDFLAGS += -lftdi
+LDFLAGS += -lftdi -lusb

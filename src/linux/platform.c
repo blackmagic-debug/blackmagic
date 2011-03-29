@@ -107,3 +107,17 @@ int platform_buffer_read(uint8_t *data, int size)
 	return size;
 }
 
+#ifdef WIN32
+#warning "This vasprintf() is dubious!"
+int vasprintf(char **strp, const char *fmt, va_list ap)
+{
+	int size = 128, ret = 0;
+
+	*strp = malloc(size);
+	while(*strp && ((ret = vsnprintf(*strp, size, fmt, ap)) == size)) 
+		*strp = realloc(*strp, size <<= 1);
+	
+	return ret;
+}
+#endif
+

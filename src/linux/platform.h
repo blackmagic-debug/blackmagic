@@ -24,6 +24,12 @@
 #include <stdint.h>
 #include <ftdi.h>
 
+#ifndef WIN32
+#	include <alloca.h>
+#else
+#	define alloca __builtin_alloca
+#endif
+
 #define FT2232_VID	0x0403
 #define FT2232_PID	0x6010
 

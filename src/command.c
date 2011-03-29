@@ -26,7 +26,6 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <alloca.h>
 
 #include "general.h"
 

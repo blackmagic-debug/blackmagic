@@ -29,8 +29,6 @@
 
 #include <stdarg.h>
 
-#include <alloca.h>
-
 #include "general.h"
 #include "gdb_if.h"
 #include "gdb_packet.h"

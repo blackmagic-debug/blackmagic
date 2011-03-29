@@ -28,7 +28,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <alloca.h>
 #include <assert.h>
 
 #include "platform.h"
