@@ -53,6 +53,13 @@ static char cm3_driver_str[] = "ARM Cortex-M3";
 #define CM3_DCRDR	(CM3_SCS_BASE + 0xDF8)
 #define CM3_DEMCR	(CM3_SCS_BASE + 0xDFC)
 
+#define CM3_FPB_BASE	(CM3_PPB_BASE + 0x2000)
+
+/* ARM Literature uses FP_*, we use CM3_FPB_* consistently */
+#define CM3_FPB_CTRL	(CM3_FPB_BASE + 0x000)
+#define CM3_FPB_REMAP	(CM3_FPB_BASE + 0x004)
+#define CM3_FPB_COMP(i)	(CM3_FPB_BASE + 0x008 + (4*(i)))
+
 /* Application Interrupt and Reset Control Register (AIRCR) */
 #define CM3_AIRCR_VECTKEY	(0x05FA << 16)
 /* Bits 31:16 - Read as VECTKETSTAT, 0xFA05 */
@@ -124,6 +131,14 @@ static char cm3_driver_str[] = "ARM Cortex-M3";
 /* Bits 3:1 - Reserved */
 #define CM3_DEMCR_VC_CORERESET	(1 << 0)
 
+/* Flash Patch and Breakpoint Control Register (FP_CTRL) */
+/* Bits 32:15 - Reserved */
+/* Bits 14:12 - NUM_CODE2 */
+/* Bits 11:8 - NUM_LIT */
+/* Bits 7:4 - NUM_CODE1 */
+/* Bits 3:2 - Unspecified */
+#define CM3_FPB_CTRL_KEY	(1 << 1)
+#define CM3_FPB_CTRL_ENABLE	(1 << 0)
 
 static void cm3_attach(struct target_s *target);
 static void cm3_detach(struct target_s *target);
@@ -202,7 +217,7 @@ cm3_attach(struct target_s *target)
 
 	/* Clear any stale breakpoints */
 	for(i = 0; i < 6; i++) {
-		adiv5_ap_mem_write(t->ap, 0xE0002008 + i*4, 0);
+		adiv5_ap_mem_write(t->ap, CM3_FPB_COMP(i), 0);
 		hw_breakpoint[i] = 0;
 	}
 
@@ -213,7 +228,8 @@ cm3_attach(struct target_s *target)
 	}
 
 	/* Flash Patch Control Register: set ENABLE */
-	adiv5_ap_mem_write(t->ap, 0xE0002000, 3);
+	adiv5_ap_mem_write(t->ap, CM3_FPB_CTRL, 
+			CM3_FPB_CTRL_KEY | CM3_FPB_CTRL_ENABLE);
 	target->set_hw_bp = cm3_set_hw_bp;
 	target->clear_hw_bp = cm3_clear_hw_bp;
 
@@ -231,7 +247,7 @@ cm3_detach(struct target_s *target)
 
 	/* Clear any stale breakpoints */
 	for(i = 0; i < 6; i++)
-		adiv5_ap_mem_write(t->ap, 0xE0002008 + i*4, 0);
+		adiv5_ap_mem_write(t->ap, CM3_FPB_COMP(i), 0);
 
 	/* Clear any stale watchpoints */
 	for(i = 0; i < 4; i++) 
@@ -415,7 +431,7 @@ cm3_set_hw_bp(struct target_s *target, uint32_t addr)
 
 	hw_breakpoint[i] = addr | 1;
 
-	adiv5_ap_mem_write(t->ap, 0xE0002008 + i*4, val);
+	adiv5_ap_mem_write(t->ap, CM3_FPB_COMP(i), val);
 
 	return 0;
 }
@@ -433,7 +449,7 @@ cm3_clear_hw_bp(struct target_s *target, uint32_t addr)
 
 	hw_breakpoint[i] = 0;
 
-	adiv5_ap_mem_write(t->ap, 0xE0002008 + i*4, 0);
+	adiv5_ap_mem_write(t->ap, CM3_FPB_COMP(i), 0);
 
 	return 0; 
 }
