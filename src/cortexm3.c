@@ -60,6 +60,13 @@ static char cm3_driver_str[] = "ARM Cortex-M3";
 #define CM3_FPB_REMAP	(CM3_FPB_BASE + 0x004)
 #define CM3_FPB_COMP(i)	(CM3_FPB_BASE + 0x008 + (4*(i)))
 
+#define CM3_DWT_BASE	(CM3_PPB_BASE + 0x1000)
+
+#define CM3_DWT_CTRL	(CM3_DWT_BASE + 0x000)
+#define CM3_DWT_COMP(i)	(CM3_DWT_BASE + 0x020 + (0x10*(i)))
+#define CM3_DWT_MASK(i)	(CM3_DWT_BASE + 0x024 + (0x10*(i)))
+#define CM3_DWT_FUNC(i)	(CM3_DWT_BASE + 0x028 + (0x10*(i)))
+
 /* Application Interrupt and Reset Control Register (AIRCR) */
 #define CM3_AIRCR_VECTKEY	(0x05FA << 16)
 /* Bits 31:16 - Read as VECTKETSTAT, 0xFA05 */
@@ -139,6 +146,18 @@ static char cm3_driver_str[] = "ARM Cortex-M3";
 /* Bits 3:2 - Unspecified */
 #define CM3_FPB_CTRL_KEY	(1 << 1)
 #define CM3_FPB_CTRL_ENABLE	(1 << 0)
+
+/* Data Watchpoint and Trace Mask Register (DWT_MASKx) */
+#define CM3_DWT_MASK_BYTE	(0 << 0)
+#define CM3_DWT_MASK_HALFWORD	(1 << 0)
+#define CM3_DWT_MASK_WORD	(3 << 0)
+
+/* Data Watchpoint and Trace Function Register (DWT_FUNCTIONx) */
+#define CM3_DWT_FUNC_MATCHED		(1 << 24)
+#define CM3_DWT_FUNC_DATAVSIZE_WORD	(2 << 10)
+#define CM3_DWT_FUNC_FUNC_READ		(5 << 0)
+#define CM3_DWT_FUNC_FUNC_WRITE		(6 << 0)
+#define CM3_DWT_FUNC_FUNC_ACCESS	(7 << 0)
 
 static void cm3_attach(struct target_s *target);
 static void cm3_detach(struct target_s *target);
@@ -223,7 +242,7 @@ cm3_attach(struct target_s *target)
 
 	/* Clear any stale watchpoints */
 	for(i = 0; i < 4; i++) {
-		adiv5_ap_mem_write(t->ap, 0xE0001028 + i*0x10, 0);
+		adiv5_ap_mem_write(t->ap, CM3_DWT_FUNC(i), 0);
 		hw_watchpoint[i].type = 0;
 	}
 
@@ -251,7 +270,7 @@ cm3_detach(struct target_s *target)
 
 	/* Clear any stale watchpoints */
 	for(i = 0; i < 4; i++) 
-		adiv5_ap_mem_write(t->ap, 0xE0001028 + i*0x10, 0);
+		adiv5_ap_mem_write(t->ap, CM3_DWT_FUNC(i), 0);
 
 	/* Disable debug */
 	adiv5_ap_mem_write(t->ap, CM3_DHCSR, CM3_DHCSR_DBGKEY);
@@ -465,17 +484,17 @@ cm3_set_hw_wp(struct target_s *target, uint8_t type, uint32_t addr, uint8_t len)
 	int i;
 
 	switch(len) { /* Convert bytes size to mask size */
-		case 1: len = 0; break;
-		case 2: len = 1; break;
-		case 4: len = 2; break;
+		case 1: len = CM3_DWT_MASK_BYTE; break;
+		case 2: len = CM3_DWT_MASK_HALFWORD; break;
+		case 4: len = CM3_DWT_MASK_WORD; break;
 		default:
 			return -1;
 	}
 
 	switch(type) { /* Convert gdb type to function type */
-		case 2: type = 6; break;
-		case 3: type = 5; break;
-		case 4: type = 7; break;
+		case 2: type = CM3_DWT_FUNC_FUNC_WRITE; break;
+		case 3: type = CM3_DWT_FUNC_FUNC_READ; break;
+		case 4: type = CM3_DWT_FUNC_FUNC_ACCESS; break;
 		default:
 			return -1;
 	}
@@ -489,9 +508,10 @@ cm3_set_hw_wp(struct target_s *target, uint8_t type, uint32_t addr, uint8_t len)
 	hw_watchpoint[i].addr = addr;
 	hw_watchpoint[i].size = len;
 
-	adiv5_ap_mem_write(t->ap, 0xE0001020 + i*0x10, addr);
-	adiv5_ap_mem_write(t->ap, 0xE0001024 + i*0x10, len);
-	adiv5_ap_mem_write(t->ap, 0xE0001028 + i*0x10, 0x800 | type);
+	adiv5_ap_mem_write(t->ap, CM3_DWT_COMP(i), addr);
+	adiv5_ap_mem_write(t->ap, CM3_DWT_MASK(i), len);
+	adiv5_ap_mem_write(t->ap, CM3_DWT_FUNC(i), 
+			CM3_DWT_FUNC_DATAVSIZE_WORD | type);
 
 	return 0;
 }
@@ -503,17 +523,17 @@ cm3_clear_hw_wp(struct target_s *target, uint8_t type, uint32_t addr, uint8_t le
 	int i;
 
 	switch(len) {
-		case 1: len = 0; break;
-		case 2: len = 1; break;
-		case 4: len = 2; break;
+		case 1: len = CM3_DWT_MASK_BYTE; break;
+		case 2: len = CM3_DWT_MASK_HALFWORD; break;
+		case 4: len = CM3_DWT_MASK_WORD; break;
 		default:
 			return -1;
 	}
 
 	switch(type) {
-		case 2: type = 6; break;
-		case 3: type = 5; break;
-		case 4: type = 7; break;
+		case 2: type = CM3_DWT_FUNC_FUNC_WRITE; break;
+		case 3: type = CM3_DWT_FUNC_FUNC_READ; break;
+		case 4: type = CM3_DWT_FUNC_FUNC_ACCESS; break;
 		default:
 			return -1;
 	}
@@ -527,7 +547,7 @@ cm3_clear_hw_wp(struct target_s *target, uint8_t type, uint32_t addr, uint8_t le
 
 	hw_watchpoint[i].type = 0;
 
-	adiv5_ap_mem_write(t->ap, 0xE0001028 + i*0x10, 0);
+	adiv5_ap_mem_write(t->ap, CM3_DWT_FUNC(i), 0);
 
 	return 0;
 }
@@ -541,7 +561,8 @@ cm3_check_hw_wp(struct target_s *target, uint32_t *addr)
 	for(i = 0; i < 4; i++)
 		/* if SET and MATCHED then break */
 		if(hw_watchpoint[i].type && 
-		   (adiv5_ap_mem_read(t->ap, 0xE0001028 + i*0x10) & 0x01000000))
+		   (adiv5_ap_mem_read(t->ap, CM3_DWT_FUNC(i)) & 
+					CM3_DWT_FUNC_MATCHED))
 			break;
 
 	if(i == 4) return 0;
