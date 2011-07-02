@@ -47,6 +47,10 @@ void gdb_if_putchar(unsigned char c, int flush)
 unsigned char gdb_if_getchar(void)
 {
 	while(!(out_ptr < count_out)) {
+		/* Detach if port closed */
+		if(!cdcacm_get_dtr())
+			return 0x04;
+
 		while(cdcacm_get_config() != 1);
 		count_out = usbd_ep_read_packet(1, buffer_out, 
 					VIRTUAL_COM_PORT_DATA_SIZE);
@@ -61,6 +65,10 @@ unsigned char gdb_if_getchar_to(int timeout)
 	timeout_counter = timeout/100;
 
 	if(!(out_ptr < count_out)) do {
+		/* Detach if port closed */
+		if(!cdcacm_get_dtr())
+			return 0x04;
+
 		count_out = usbd_ep_read_packet(1, buffer_out, 
 					VIRTUAL_COM_PORT_DATA_SIZE);
 		out_ptr = 0;
