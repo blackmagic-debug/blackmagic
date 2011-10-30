@@ -26,11 +26,12 @@
  * The device's unique id is used as the USB serial number string.
  */
 
+#include <libopencm3/stm32/f1/rcc.h>
 #include <libopencm3/stm32/nvic.h>
-#include <libopencm3/stm32/gpio.h>
+#include <libopencm3/stm32/f1/gpio.h>
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/cdc.h>
-#include <libopencm3/stm32/scb.h>
+#include <libopencm3/stm32/f1/scb.h>
 #include <libopencm3/usb/dfu.h>
 #include <libopencm3/stm32/usart.h>
 #include <stdlib.h>
@@ -359,7 +360,8 @@ static int cdcacm_control_request(struct usb_setup_data *req, uint8_t **buf,
 			return 0;
 
 		struct usb_cdc_line_coding *coding = (void*)*buf;
-		usart_set_baudrate(USART1, coding->dwDTERate);
+		usart_set_baudrate(USART1, coding->dwDTERate, 
+				rcc_ppre2_frequency);
 		usart_set_databits(USART1, coding->bDataBits);
 		switch(coding->bCharFormat) {
 		case 0:

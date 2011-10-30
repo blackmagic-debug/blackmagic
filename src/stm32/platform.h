@@ -24,7 +24,7 @@
 #ifndef __PLATFORM_H
 #define __PLATFORM_H
 
-#include <libopencm3/stm32/gpio.h>
+#include <libopencm3/stm32/f1/gpio.h>
 
 #include <setjmp.h>
 #include <alloca.h>

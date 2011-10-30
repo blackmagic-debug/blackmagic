@@ -1,9 +1,9 @@
-CROSS_COMPILE ?= arm-cortexm3-eabi-
+CROSS_COMPILE ?= arm-none-eabi-
 CC = $(CROSS_COMPILE)gcc
 OBJCOPY = $(CROSS_COMPILE)objcopy
 
-CFLAGS += -Istm32/include -mcpu=cortex-m3 -mthumb -msoft-float
-LDFLAGS_BOOT = -lopencm3_stm32 -Wl,--defsym,_stack=0x20005000 \
+CFLAGS += -Istm32/include -mcpu=cortex-m3 -mthumb -msoft-float -DSTM32F1
+LDFLAGS_BOOT = -lopencm3_stm32f1 -Wl,--defsym,_stack=0x20005000 \
 	-Wl,-T,stm32/blackmagic.ld -nostartfiles -lc -lnosys -Wl,-Map=mapfile \
 	-mthumb -march=armv7 -mfix-cortex-m3-ldrd -msoft-float
 LDFLAGS = $(LDFLAGS_BOOT) -Wl,-Ttext=0x8002000

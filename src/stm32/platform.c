@@ -22,10 +22,10 @@
  * implementation.
  */
 
-#include <libopencm3/stm32/rcc.h>
-#include <libopencm3/stm32/gpio.h>
+#include <libopencm3/stm32/f1/rcc.h>
+#include <libopencm3/stm32/f1/gpio.h>
 #include <libopencm3/stm32/systick.h>
-#include <libopencm3/stm32/scb.h>
+#include <libopencm3/stm32/f1/scb.h>
 #include <libopencm3/stm32/nvic.h>
 #include <libopencm3/stm32/usart.h>
 
@@ -201,7 +201,7 @@ void uart_init(void)
 		      GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO9);
 
 	/* Setup UART parameters. */
-	usart_set_baudrate(USART1, 38400);
+	usart_set_baudrate(USART1, 38400, rcc_ppre2_frequency);
 	usart_set_databits(USART1, 8);
 	usart_set_stopbits(USART1, USART_STOPBITS_1);
 	usart_set_mode(USART1, USART_MODE_TX_RX);
