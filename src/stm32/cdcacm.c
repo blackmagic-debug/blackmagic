@@ -47,6 +47,7 @@
 static char *get_dev_unique_id(char *serial_no);
 
 static int configured;
+static int cdcacm_gdb_dtr;
 
 static const struct usb_device_descriptor dev = {
         .bLength = USB_DT_DEVICE_SIZE,
@@ -347,9 +348,12 @@ static int cdcacm_control_request(struct usb_setup_data *req, uint8_t **buf,
 
 	switch(req->bRequest) {
 	case USB_CDC_REQ_SET_CONTROL_LINE_STATE: 
-		/* This Linux cdc_acm driver requires this to be implemented 
-		 * even though it's optional in the CDC spec, and we don't 
-		 * advertise it in the ACM functional descriptor. */
+		/* Ignore if not for GDB interface */
+		if(req->wIndex != 0)
+			return 1;
+
+		cdcacm_gdb_dtr = req->wValue & 1;
+
 		return 1;
 #ifdef INCLUDE_UART_INTERFACE
 	case USB_CDC_REQ_SET_LINE_CODING: {
@@ -402,6 +406,11 @@ static int cdcacm_control_request(struct usb_setup_data *req, uint8_t **buf,
 int cdcacm_get_config(void)
 {
 	return configured;
+}
+
+int cdcacm_get_dtr(void)
+{
+	return cdcacm_gdb_dtr;
 }
 
 #ifdef INCLUDE_UART_INTERFACE

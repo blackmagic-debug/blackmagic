@@ -28,6 +28,7 @@
 #include <libopencm3/stm32/f1/scb.h>
 #include <libopencm3/stm32/nvic.h>
 #include <libopencm3/stm32/usart.h>
+#include <libopencm3/usb/usbd.h>
 
 #include "platform.h"
 #include "jtag_scan.h"

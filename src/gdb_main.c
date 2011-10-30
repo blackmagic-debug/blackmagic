@@ -151,11 +151,13 @@ gdb_main(void)
 			}
 
 			/* Wait for target halt */
-			while(!target_halt_wait(cur_target)) 
-				if(gdb_if_getchar_to(0) == '\x03') {
+			while(!target_halt_wait(cur_target)) { 
+				unsigned char c = gdb_if_getchar_to(0);
+				if((c == '\x03') || (c == '\x04')) {
 					target_halt_request(cur_target);
 					sent_int = 1;
 				}
+			}
 
 			SET_RUN_STATE(0);
 			/* Report reason for halt */
