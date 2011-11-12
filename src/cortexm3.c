@@ -210,9 +210,10 @@ cm3_probe(struct target_s *target)
 	target->fault_unwind = cm3_fault_unwind;
 	target->regs_size = 16<<2;
 
-	/* if not STM32 try LMI */
-	if(stm32_probe(target) != 0)
-		lmi_probe(target);
+	if(stm32_probe(target) == 0) return 0;
+	if(stm32f4_probe(target) == 0) return 0;
+	/* if not STM32 try LMI which I don't know how to detect reliably */
+	lmi_probe(target);
 
 	return 0;
 }

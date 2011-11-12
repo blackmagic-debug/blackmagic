@@ -186,7 +186,8 @@ gdb_main(void)
 
 		    case 0x04:
                     case 'D':	/* GDB 'detach' command. */
-			if(cur_target) target_detach(cur_target);
+			if(cur_target) 
+				target_detach(cur_target);
 			last_target = cur_target;
 			cur_target = NULL;
 			gdb_putpacket("OK", 2);
