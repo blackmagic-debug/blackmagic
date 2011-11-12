@@ -39,6 +39,12 @@ void gdb_if_putchar(unsigned char c, int flush)
 {
 	buffer_in[count_in++] = c;
 	if(flush || (count_in == VIRTUAL_COM_PORT_DATA_SIZE)) {
+		/* Refuse to send if USB isn't configured, and
+		 * don't bother if nobody's listening */
+		if((cdcacm_get_config() != 1) || !cdcacm_get_dtr()) {
+			count_in = 0;
+			return;
+		}
 		while(usbd_ep_write_packet(1, buffer_in, count_in) <= 0);
 		count_in = 0;
 	}
