@@ -101,7 +101,13 @@ if __name__ == "__main__":
 		exit(-1)
 
 	try:
-		target = gdb.Target(Serial(dev, baud, timeout=3))
+		s = Serial(dev, baud, timeout=3)
+		s.setDTR(1)
+		while s.read(1024):
+			pass
+
+		target = gdb.Target(s)
+		
 	except SerialException, e:
 		print("FATAL: Failed to open serial device!\n%s\n" % e[0])
 		exit(-1)
