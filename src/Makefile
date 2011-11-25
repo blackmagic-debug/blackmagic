@@ -1,14 +1,14 @@
-ifndef HOST
-HOST = stm32
+ifndef PROBE_HOST
+PROBE_HOST = stm32
 endif
 
-VPATH += $(HOST)
+VPATH += $(PROBE_HOST)
 
 BUILDDATE := `date +"%Y%m%d"`
 
 CFLAGS += -Wall -Wextra -Wno-pointer-sign -Wno-char-subscripts\
 	-O0 -std=gnu99 -g3 -DBUILDDATE=\"$(BUILDDATE)\"\
-	-I. -Iinclude -I$(HOST) \
+	-I. -Iinclude -I$(PROBE_HOST) \
 	-DVERSION_SUFFIX=\"`../scripts/setlocalversion`\"
 
 SRC = 	gdb_if.c	\
@@ -30,7 +30,7 @@ SRC = 	gdb_if.c	\
 	arm7tdmi.c	\
 	stm32f4.c	\
 
-include $(HOST)/Makefile.inc
+include $(PROBE_HOST)/Makefile.inc
 
 OBJ = $(SRC:.c=.o)
 

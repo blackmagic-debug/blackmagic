@@ -47,12 +47,16 @@ int gdb_if_init(void)
 	WSAStartup(MAKEWORD(2, 2), &wsaData);
 #endif
 	struct sockaddr_in addr;
+	int opt;
 
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(2000);
 	addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
 	assert((gdb_if_serv = socket(PF_INET, SOCK_STREAM, 0)) != -1);
+	opt = 1;
+	assert(setsockopt(gdb_if_serv, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) != -1);
+
 	assert(bind(gdb_if_serv, (void*)&addr, sizeof(addr)) != -1);
 	assert(listen(gdb_if_serv, 1) != -1);
 
