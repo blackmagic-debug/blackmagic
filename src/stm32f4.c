@@ -59,6 +59,7 @@ static const char stm32f4_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 	"    <property name=\"blocksize\">0x20000</property>"
 	"  </memory>"
 	"  <memory type=\"ram\" start=\"0x20000000\" length=\"0x30000\"/>"
+	"  <memory type=\"ram\" start=\"0x10000000\" length=\"0x10000\"/>"
 	"</memory-map>";
 
 
