@@ -335,7 +335,7 @@ handle_q_packet(char *packet, int len)
 
 	} else if (!strncmp (packet, "qSupported", 10)) {
 		/* Query supported protocol features */
-		gdb_putpacket_f("PacketSize=%X;qXfer:memory-map:read+:qXfer:features:read+", BUF_SIZE);
+		gdb_putpacket_f("PacketSize=%X;qXfer:memory-map:read+;qXfer:features:read+", BUF_SIZE);
 
 	} else if (strncmp (packet, "qXfer:memory-map:read::", 23) == 0) {
 		/* Read target XML memory map */
