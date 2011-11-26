@@ -136,6 +136,7 @@ typedef struct target_s {
 
 	/* Register access functions */
 	int regs_size;
+	const char *tdesc;
 	int (*regs_read)(struct target_s *target, void *data);
 	int (*regs_write)(struct target_s *target, const void *data);
 

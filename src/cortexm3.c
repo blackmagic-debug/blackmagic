@@ -46,6 +46,7 @@ static char cm3_driver_str[] = "ARM Cortex-M3";
 #define CM3_SCS_BASE	(CM3_PPB_BASE + 0xE000)
 
 #define CM3_AIRCR	(CM3_SCS_BASE + 0xD0C)
+#define CM3_CFSR	(CM3_SCS_BASE + 0xD28)
 #define CM3_HFSR	(CM3_SCS_BASE + 0xD2C)
 #define CM3_DFSR	(CM3_SCS_BASE + 0xD30)
 #define CM3_DHCSR	(CM3_SCS_BASE + 0xDF0)
@@ -190,6 +191,54 @@ static struct wp_unit_s {
 /* Breakpoint unit status */
 static uint32_t hw_breakpoint[6];
 
+/* Register number tables */
+static uint32_t regnum_v7m[] = {
+	0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,	/* standard r0-r15 */
+	0x10,	/* xpsr */
+	0x11,	/* msp */
+	0x12,	/* psp */
+	0x14	/* special */
+};
+#if 0
+/* XXX: need some way for a specific CPU to indicate it has FP registers */
+static uint32_t regnum_v7mf[] = {
+	0x21,	/* fpscr */
+	0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47,	/* s0-s7 */
+	0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f,	/* s8-s15 */
+	0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57,	/* s16-s23 */
+	0x58, 0x59, 0x5a, 0x5b, 0x5c, 0x5d, 0x5e, 0x5f,	/* s24-s31 */
+};
+#endif
+
+static const char tdesc_armv7m[] =
+	"<?xml version=\"1.0\"?>"
+	"<!DOCTYPE target SYSTEM \"gdb-target.dtd\">"
+	"<target>"
+	"  <architecture>arm</architecture>"
+	"  <feature name=\"org.gnu.gdb.arm.m-profile\">"
+	"    <reg name=\"r0\" bitsize=\"32\"/>"
+	"    <reg name=\"r1\" bitsize=\"32\"/>"
+	"    <reg name=\"r2\" bitsize=\"32\"/>"
+	"    <reg name=\"r3\" bitsize=\"32\"/>"
+	"    <reg name=\"r4\" bitsize=\"32\"/>"
+	"    <reg name=\"r5\" bitsize=\"32\"/>"
+	"    <reg name=\"r6\" bitsize=\"32\"/>"
+	"    <reg name=\"r7\" bitsize=\"32\"/>"
+	"    <reg name=\"r8\" bitsize=\"32\"/>"
+	"    <reg name=\"r9\" bitsize=\"32\"/>"
+	"    <reg name=\"r10\" bitsize=\"32\"/>"
+	"    <reg name=\"r11\" bitsize=\"32\"/>"
+	"    <reg name=\"r12\" bitsize=\"32\"/>"
+	"    <reg name=\"sp\" bitsize=\"32\" type=\"data_ptr\"/>"
+	"    <reg name=\"lr\" bitsize=\"32\" type=\"code_ptr\"/>"
+	"    <reg name=\"pc\" bitsize=\"32\" type=\"code_ptr\"/>"
+	"    <reg name=\"xpsr\" bitsize=\"32\"/>"
+	"    <reg name=\"msp\" bitsize=\"32\" save-restore=\"no\" type=\"data_ptr\"/>"
+	"    <reg name=\"psp\" bitsize=\"32\" save-restore=\"no\" type=\"data_ptr\"/>"
+	"    <reg name=\"special\" bitsize=\"32\" save-restore=\"no\"/>"
+	"  </feature>"
+	"</target>";
+
 int
 cm3_probe(struct target_s *target)
 {
@@ -199,6 +248,7 @@ cm3_probe(struct target_s *target)
 	target->detach = cm3_detach;
 
 	/* Should probe here to make sure it's Cortex-M3 */
+	target->tdesc = tdesc_armv7m;
 	target->regs_read = cm3_regs_read;
 	target->regs_write = cm3_regs_write;
 	target->pc_write = cm3_pc_write;
@@ -208,7 +258,7 @@ cm3_probe(struct target_s *target)
 	target->halt_wait = cm3_halt_wait;
 	target->halt_resume = cm3_halt_resume;
 	target->fault_unwind = cm3_fault_unwind;
-	target->regs_size = 16<<2;
+	target->regs_size = sizeof(regnum_v7m);	/* XXX: detect FP extension */
 
 	if(stm32_probe(target) == 0) return 0;
 	if(stm32f4_probe(target) == 0) return 0;
@@ -282,15 +332,21 @@ cm3_regs_read(struct target_s *target, void *data)
 {
 	struct target_ap_s *t = (void *)target;
 	uint32_t *regs = data;
-	int i;
+	unsigned i;
 
 	/* FIXME: Describe what's really going on here */
 	adiv5_ap_write(t->ap, 0x00, 0xA2000052);
-	adiv5_dp_low_access(t->ap->dp, 1, 0, 0x04, 0xE000EDF0);
-	adiv5_ap_write(t->ap, 0x14, 0); /* Required to switch banks */
+
+	/* Map the banked data registers (0x10-0x1c) to the
+	 * debug registers DHCSR, DCRSR, DCRDR and DEMCR respectively */
+	adiv5_dp_low_access(t->ap->dp, 1, 0, 0x04, CM3_DHCSR);
+
+	/* Walk the regnum_v7m array, reading the registers it 
+	 * calls out. */
+	adiv5_ap_write(t->ap, 0x14, regnum_v7m[0]); /* Required to switch banks */
 	*regs++ = adiv5_dp_read_ap(t->ap->dp, 0x18);
-	for(i = 1; i < 16; i++) {
-		adiv5_dp_low_access(t->ap->dp, 1, 0, 0x14, i);
+	for(i = 1; i < sizeof(regnum_v7m) / 4; i++) {
+		adiv5_dp_low_access(t->ap->dp, 1, 0, 0x14, regnum_v7m[i]);
 		*regs++ = adiv5_dp_read_ap(t->ap->dp, 0x18);
 	}
 
@@ -306,12 +362,18 @@ cm3_regs_write(struct target_s *target, const void *data)
 
 	/* FIXME: Describe what's really going on here */
 	adiv5_ap_write(t->ap, 0x00, 0xA2000052);
-	adiv5_dp_low_access(t->ap->dp, 1, 0, 0x04, 0xE000EDF0);
+
+	/* Map the banked data registers (0x10-0x1c) to the
+	 * debug registers DHCSR, DCRSR, DCRDR and DEMCR respectively */
+	adiv5_dp_low_access(t->ap->dp, 1, 0, 0x04, CM3_DHCSR);
+
+	/* Walk the regnum_v7m array, writing the registers it 
+	 * calls out. */
 	adiv5_ap_write(t->ap, 0x18, *regs++); /* Required to switch banks */
-	adiv5_dp_low_access(t->ap->dp, 1, 0, 0x14, 0x10000);
-	for(i = 1; i < 16; i++) {
+	adiv5_dp_low_access(t->ap->dp, 1, 0, 0x14, 0x10000 | regnum_v7m[0]);
+	for(i = 1; i < sizeof(regnum_v7m) / 4; i++) {
 		adiv5_dp_low_access(t->ap->dp, 1, 0, 0x18, *regs++);
-		adiv5_dp_low_access(t->ap->dp, 1, 0, 0x14, i | 0x10000);
+		adiv5_dp_low_access(t->ap->dp, 1, 0, 0x14, 0x10000 | regnum_v7m[i]);
 	}
 
 	return 0;
@@ -395,27 +457,34 @@ static int cm3_fault_unwind(struct target_s *target)
 	struct target_ap_s *t = (void *)target;
 	uint32_t dfsr = adiv5_ap_mem_read(t->ap, CM3_DFSR);
 	uint32_t hfsr = adiv5_ap_mem_read(t->ap, CM3_HFSR);
+	uint32_t cfsr = adiv5_ap_mem_read(t->ap, CM3_CFSR);
 	adiv5_ap_mem_write(t->ap, CM3_DFSR, dfsr);/* write back to reset */
 	adiv5_ap_mem_write(t->ap, CM3_HFSR, hfsr);/* write back to reset */
-	/* We check for FORCED in the HardFault Status Register to avoid
-	 * catching core resets */
-	if((dfsr & CM3_DFSR_VCATCH) && (hfsr & CM3_HFSR_FORCED)) {
+	adiv5_ap_mem_write(t->ap, CM3_CFSR, cfsr);/* write back to reset */
+	/* We check for FORCED in the HardFault Status Register or 
+	 * for a configurable fault to avoid catching core resets */
+	if((dfsr & CM3_DFSR_VCATCH) && ((hfsr & CM3_HFSR_FORCED) || cfsr)) {
 		/* Unwind exception */
-		uint32_t regs[16];
+		uint32_t regs[target->regs_size];
 		uint32_t stack[8];
+		uint32_t retcode, framesize;
 		/* Read registers for post-exception stack pointer */
 		target_regs_read(target, regs);
+		/* save retcode currently in lr */
+		retcode = regs[14];
 		/* Read stack for pre-exception registers */
 		target_mem_read_words(target, stack, regs[13], sizeof(stack)); 
-		regs[13] += sizeof(stack); /* Adjust SP for pop */ 
-		regs[0] = stack[0];
-		regs[1] = stack[1];
-		regs[2] = stack[2];
-		regs[3] = stack[3];
-		regs[12] = stack[4];
-		regs[14] = stack[5];
-		regs[15] = stack[6];
+		regs[14] = stack[5];	/* restore LR to pre-exception state */
+		regs[15] = stack[6];	/* restore PC to pre-exception state */
+
+		/* adjust stack to pop exception state */
+		framesize = (retcode & (1<<4)) ? 0x68 : 0x20;	/* check for basic vs. extended frame */
+		if (stack[7] & (1<<9))				/* check for stack alignment fixup */
+			framesize += 4;
+		regs[13] += framesize;
+
 		/* FIXME: stack[7] contains xPSR when this is supported */
+		/* although, if we caught the exception it will be unchanged */
 
 		/* Reset exception state to allow resuming from restored
 		 * state.
