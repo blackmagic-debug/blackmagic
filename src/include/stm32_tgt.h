@@ -24,6 +24,7 @@
 #include "target.h"
 
 int stm32_probe(struct target_s *target);
+int stm32f4_probe(struct target_s *target);
 
 #endif
 
