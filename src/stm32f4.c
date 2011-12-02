@@ -123,7 +123,7 @@ uint16_t stm32f4_flash_write_stub[] = {
 //_cr:
 	0x0201, 0x0000, //.word 0x00000201 (Value to write to FLASH_CR) */
 // _flashbase:
- 	0x2000, 0x4002, // .word 0x40022000 (FPEC_BASE)
+ 	0x3c00, 0x4002, // .word 0x40023c00 (FPEC_BASE)
 // _addr:
 // 	0x0000, 0x0000,
 // _size:
@@ -212,7 +212,7 @@ static int stm32f4_flash_write_words(struct target_s *target, uint32_t dest,
 	memcpy(&data[2], src, len);
 
 	/* Write stub and data to target ram and set PC */
-	target_mem_write_words(target, 0x20000000, (void*)stm32f4_flash_write_stub, 0x2C);
+	target_mem_write_words(target, 0x20000000, (void*)stm32f4_flash_write_stub, 0x30);
 	target_mem_write_words(target, 0x20000030, data, len + 8);
 	target_pc_write(target, 0x20000000);
 	if(target_check_error(target)) 

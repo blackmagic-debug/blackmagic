@@ -64,6 +64,10 @@ static struct jtag_dev_descr_s {
 		.descr = "ST Microelectronics: STM32, Value Line."},
 	{.idcode = 0x06428041, .idmask = 0x0FFFFFFF, 
 		.descr = "ST Microelectronics: STM32, Value Line, High density."},
+	{.idcode = 0x06411041, .idmask = 0xFFFFFFFF, 
+		.descr = "ST Microelectronics: STM32F2xx."},
+	{.idcode = 0x06413041 , .idmask = 0xFFFFFFFF, 
+		.descr = "ST Microelectronics: STM32F4xx."},
 /* Just for fun, unsupported */
 	{.idcode = 0x8940303F, .idmask = 0xFFFFFFFF, .descr = "ATMEL: ATMega16."},
 	{.idcode = 0x0792603F, .idmask = 0xFFFFFFFF, .descr = "ATMEL: AT91SAM9261."},
