@@ -47,7 +47,7 @@
 static char *get_dev_unique_id(char *serial_no);
 
 static int configured;
-static int cdcacm_gdb_dtr;
+static int cdcacm_gdb_dtr = 1;
 
 static const struct usb_device_descriptor dev = {
         .bLength = USB_DT_DEVICE_SIZE,
