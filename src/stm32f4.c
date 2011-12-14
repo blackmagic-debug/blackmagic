@@ -158,7 +158,7 @@ static int stm32f4_flash_erase(struct target_s *target, uint32_t addr, int len)
 	uint32_t cr;
 	uint32_t pagesize;
 
-	addr &= 0x07E00000;
+	addr &= 0x07FFC000;
 
 	/* Enable FPEC controller access */
 	adiv5_ap_mem_write(t->ap, FLASH_KEYR, KEY1);
@@ -207,13 +207,13 @@ static int stm32f4_flash_write_words(struct target_s *target, uint32_t dest,
 	uint16_t sr;
 
 	/* Construct data buffer used by stub */
-	data[0] = dest & 0xFFFFFFFE;
-	data[1] = len & 0xFFFFFFFE;
+	data[0] = dest & 0xFFFFFFFC;
+	data[1] = (len + 3) & 0xFFFFFFFC;
 	memcpy(&data[2], src, len);
 
 	/* Write stub and data to target ram and set PC */
 	target_mem_write_words(target, 0x20000000, (void*)stm32f4_flash_write_stub, 0x30);
-	target_mem_write_words(target, 0x20000030, data, len + 8);
+	target_mem_write_words(target, 0x20000030, data, len + 11);
 	target_pc_write(target, 0x20000000);
 	if(target_check_error(target)) 
 		return -1;
