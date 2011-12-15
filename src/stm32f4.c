@@ -203,17 +203,21 @@ static int stm32f4_flash_write_words(struct target_s *target, uint32_t dest,
 			  const uint32_t *src, int len)
 {
 	struct target_ap_s *t = (void *)target;
-	uint32_t data[(len>>2)+2];
+	uint32_t offset = dest % 4;
+	uint32_t words = (offset + len + 3) / 4;
+	uint32_t data[2 + words];
 	uint16_t sr;
 
 	/* Construct data buffer used by stub */
-	data[0] = dest & 0xFFFFFFFC;
-	data[1] = (len + 3) & 0xFFFFFFFC;
-	memcpy(&data[2], src, len);
+	data[0] = dest - offset;
+	data[1] = words * 4;		/* length must always be a multiple of 4 */
+	data[2] = 0xFFFFFFFF;		/* pad partial words with all 1s to avoid */
+	data[words - 1] = 0xFFFFFFFF;	/* damaging overlapping areas */
+	memcpy((uint8_t *)&data[2] + offset, src, len);
 
 	/* Write stub and data to target ram and set PC */
 	target_mem_write_words(target, 0x20000000, (void*)stm32f4_flash_write_stub, 0x30);
-	target_mem_write_words(target, 0x20000030, data, len + 11);
+	target_mem_write_words(target, 0x20000030, data, sizeof(data));
 	target_pc_write(target, 0x20000000);
 	if(target_check_error(target)) 
 		return -1;
