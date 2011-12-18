@@ -49,11 +49,7 @@ static void uart_init(void);
 
 int platform_init(void)
 {
-#ifndef LIGHT
 	rcc_clock_setup_in_hse_8mhz_out_72mhz();
-#else
-	rcc_clock_setup_in_hsi_out_48mhz();
-#endif
 
 	/* Enable peripherals */
 	rcc_peripheral_enable_clock(&RCC_APB1ENR, RCC_APB1ENR_USBEN);
@@ -63,10 +59,6 @@ int platform_init(void)
 	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPDEN);
 
 	/* Setup GPIO ports */
-#ifdef LIGHT
-	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_AFIOEN);
-	AFIO_MAPR |= AFIO_MAPR_SWJ_CFG_JTAG_OFF_SW_ON;
-#endif
 	gpio_clear(USB_PU_PORT, USB_PU_PIN);
 	gpio_set_mode(USB_PU_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, 
 			USB_PU_PIN);
@@ -93,9 +85,8 @@ int platform_init(void)
 #ifdef INCLUDE_UART_INTERFACE
 	uart_init();
 #endif
-#ifndef LIGHT
 	SCB_VTOR = 0x2000;	// Relocate interrupt vector table here
-#endif
+
 	cdcacm_init();
 
 	jtag_scan();
