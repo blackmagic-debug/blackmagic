@@ -335,19 +335,19 @@ cm3_regs_read(struct target_s *target, void *data)
 	unsigned i;
 
 	/* FIXME: Describe what's really going on here */
-	adiv5_ap_write(t->ap, 0x00, 0xA2000052);
+	adiv5_ap_write(t->ap, ADIV5_AP_CSW, 0xA2000052);
 
 	/* Map the banked data registers (0x10-0x1c) to the
 	 * debug registers DHCSR, DCRSR, DCRDR and DEMCR respectively */
-	adiv5_dp_low_access(t->ap->dp, 1, 0, 0x04, CM3_DHCSR);
+	adiv5_dp_low_access(t->ap->dp, 1, 0, ADIV5_AP_TAR, CM3_DHCSR);
 
 	/* Walk the regnum_v7m array, reading the registers it 
 	 * calls out. */
-	adiv5_ap_write(t->ap, 0x14, regnum_v7m[0]); /* Required to switch banks */
-	*regs++ = adiv5_dp_read_ap(t->ap->dp, 0x18);
+	adiv5_ap_write(t->ap, ADIV5_AP_DB(1), regnum_v7m[0]); /* Required to switch banks */
+	*regs++ = adiv5_dp_read_ap(t->ap->dp, ADIV5_AP_DB(2));
 	for(i = 1; i < sizeof(regnum_v7m) / 4; i++) {
-		adiv5_dp_low_access(t->ap->dp, 1, 0, 0x14, regnum_v7m[i]);
-		*regs++ = adiv5_dp_read_ap(t->ap->dp, 0x18);
+		adiv5_dp_low_access(t->ap->dp, 1, 0, ADIV5_AP_DB(1), regnum_v7m[i]);
+		*regs++ = adiv5_dp_read_ap(t->ap->dp, ADIV5_AP_DB(2));
 	}
 
 	return 0;
@@ -361,19 +361,20 @@ cm3_regs_write(struct target_s *target, const void *data)
 	int i;
 
 	/* FIXME: Describe what's really going on here */
-	adiv5_ap_write(t->ap, 0x00, 0xA2000052);
+	adiv5_ap_write(t->ap, ADIV5_AP_CSW, 0xA2000052);
 
 	/* Map the banked data registers (0x10-0x1c) to the
 	 * debug registers DHCSR, DCRSR, DCRDR and DEMCR respectively */
-	adiv5_dp_low_access(t->ap->dp, 1, 0, 0x04, CM3_DHCSR);
+	adiv5_dp_low_access(t->ap->dp, 1, 0, ADIV5_AP_TAR, CM3_DHCSR);
 
 	/* Walk the regnum_v7m array, writing the registers it 
 	 * calls out. */
-	adiv5_ap_write(t->ap, 0x18, *regs++); /* Required to switch banks */
-	adiv5_dp_low_access(t->ap->dp, 1, 0, 0x14, 0x10000 | regnum_v7m[0]);
+	adiv5_ap_write(t->ap, ADIV5_AP_DB(2), *regs++); /* Required to switch banks */
+	adiv5_dp_low_access(t->ap->dp, 1, 0, ADIV5_AP_DB(1), 0x10000 | regnum_v7m[0]);
 	for(i = 1; i < sizeof(regnum_v7m) / 4; i++) {
-		adiv5_dp_low_access(t->ap->dp, 1, 0, 0x18, *regs++);
-		adiv5_dp_low_access(t->ap->dp, 1, 0, 0x14, 0x10000 | regnum_v7m[i]);
+		adiv5_dp_low_access(t->ap->dp, 1, 0, ADIV5_AP_DB(2), *regs++);
+		adiv5_dp_low_access(t->ap->dp, 1, 0, ADIV5_AP_DB(1), 
+					0x10000 | regnum_v7m[i]);
 	}
 
 	return 0;
@@ -384,11 +385,11 @@ cm3_pc_write(struct target_s *target, const uint32_t val)
 {
 	struct target_ap_s *t = (void *)target;
 
-	adiv5_ap_write(t->ap, 0x00, 0xA2000052);
-	adiv5_dp_low_access(t->ap->dp, 1, 0, 0x04, 0xE000EDF0);
+	adiv5_ap_write(t->ap, ADIV5_AP_CSW, 0xA2000052);
+	adiv5_dp_low_access(t->ap->dp, 1, 0, ADIV5_AP_TAR, CM3_DHCSR);
 
-	adiv5_ap_write(t->ap, 0x18, val); /* Required to switch banks */
-	adiv5_dp_low_access(t->ap->dp, 1, 0, 0x14, 0x1000F);
+	adiv5_ap_write(t->ap, ADIV5_AP_DB(2), val); /* Required to switch banks */
+	adiv5_dp_low_access(t->ap->dp, 1, 0, ADIV5_AP_DB(1), 0x1000F);
 
 	return 0;
 }
