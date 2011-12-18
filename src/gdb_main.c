@@ -69,7 +69,6 @@ gdb_main(void)
 		SET_IDLE_STATE(1);
 		size = gdb_getpacket(pbuf, BUF_SIZE);
 		SET_IDLE_STATE(0);
-		DEBUG("%s\n", pbuf);
 		switch(pbuf[0]) {
 		    /* Implementation of these is mandatory! */
 		    case 'g': { /* 'g': Read general registers */
@@ -287,7 +286,7 @@ gdb_main(void)
 		    }
 
 		    default: 	/* Packet not implemented */
-			DEBUG("Unsupported packet: %s\n", pbuf);
+			DEBUG("*** Unsupported packet: %s\n", pbuf);
 			gdb_putpacket("", 0);
 		}
 	}
