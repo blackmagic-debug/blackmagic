@@ -8,18 +8,20 @@
 #include "target.h"
 #include "nxp_tgt.h"
 
+#define IAP_PGM_CHUNKSIZE	256	/* should fit in RAM on any device */
+
 struct flash_param {
 	uint16_t	opcodes[2];	/* two opcodes to return to after calling the ROM */
 	uint32_t	command[5];	/* command operands */
 	uint32_t	result[4];	/* result data */
 };
 
-#define IAP_PGM_CHUNKSIZE	256	/* should fit in RAM on any device */
-
 struct flash_program {
 	struct flash_param	p;
 	uint8_t			data[IAP_PGM_CHUNKSIZE];
 };
+
+static struct flash_program flash_pgm;
 
 #define IAP_ENTRYPOINT	0x1fff1ff1
 #define IAP_RAM_BASE	0x10000000
@@ -139,17 +141,15 @@ lpc11x_iap_call(struct target_s *target, struct flash_param *param, unsigned par
 
 static int
 lpc11xx_flash_prepare(struct target_s *target, uint32_t addr, int len)
-{
-	struct flash_param p;
-	
+{	
 	/* prepare the sector(s) to be erased */
-	memset(&p, 0, sizeof(p));
-	p.command[0] = IAP_CMD_PREPARE;
-	p.command[1] = addr / 4096;
-	p.command[2] = p.command[1] + ((len + 4095) / 4096) - 1;
+	memset(&flash_pgm.p, 0, sizeof(flash_pgm.p));
+	flash_pgm.p.command[0] = IAP_CMD_PREPARE;
+	flash_pgm.p.command[1] = addr / 4096;
+	flash_pgm.p.command[2] = flash_pgm.p.command[1] + ((len + 4095) / 4096) - 1;
 
-	lpc11x_iap_call(target, &p, sizeof(p));
-	if (p.result[0] != IAP_STATUS_CMD_SUCCESS) {
+	lpc11x_iap_call(target, &flash_pgm.p, sizeof(flash_pgm.p));
+	if (flash_pgm.p.result[0] != IAP_STATUS_CMD_SUCCESS) {
 		return -1;
 	}
 
@@ -159,7 +159,6 @@ lpc11xx_flash_prepare(struct target_s *target, uint32_t addr, int len)
 static int
 lpc11xx_flash_erase(struct target_s *target, uint32_t addr, int len)
 {
-	struct flash_param p;
 
 	if (addr % 4096)
 		return -1;
@@ -169,17 +168,17 @@ lpc11xx_flash_erase(struct target_s *target, uint32_t addr, int len)
 		return -1;
 
 	/* and now erase them */
-	p.command[0] = IAP_CMD_ERASE;
-	p.command[1] = addr / 4096;
-	p.command[2] = p.command[1] + ((len + 4095) / 4096) - 1;
-	p.command[3] = 12000;	/* XXX safe to assume this? */
-	lpc11x_iap_call(target, &p, sizeof(p));
-	if (p.result[0] != IAP_STATUS_CMD_SUCCESS) {
+	flash_pgm.p.command[0] = IAP_CMD_ERASE;
+	flash_pgm.p.command[1] = addr / 4096;
+	flash_pgm.p.command[2] = flash_pgm.p.command[1] + ((len + 4095) / 4096) - 1;
+	flash_pgm.p.command[3] = 12000;	/* XXX safe to assume this? */
+	lpc11x_iap_call(target, &flash_pgm.p, sizeof(flash_pgm.p));
+	if (flash_pgm.p.result[0] != IAP_STATUS_CMD_SUCCESS) {
 		return -1;
 	}
-	p.command[0] = IAP_CMD_BLANKCHECK;
-	lpc11x_iap_call(target, &p, sizeof(p));
-	if (p.result[0] != IAP_STATUS_CMD_SUCCESS) {
+	flash_pgm.p.command[0] = IAP_CMD_BLANKCHECK;
+	lpc11x_iap_call(target, &flash_pgm.p, sizeof(flash_pgm.p));
+	if (flash_pgm.p.result[0] != IAP_STATUS_CMD_SUCCESS) {
 		return -1;
 	}
 
@@ -189,7 +188,6 @@ lpc11xx_flash_erase(struct target_s *target, uint32_t addr, int len)
 static int
 lpc11xx_flash_write_words(struct target_s *target, uint32_t dest, const uint32_t *src, int len)
 {
-	struct flash_program pgm;
 	const uint8_t *s = (const uint8_t *)src;
 	unsigned first_chunk = dest / IAP_PGM_CHUNKSIZE;
 	unsigned last_chunk = (dest + len - 1) / IAP_PGM_CHUNKSIZE;
@@ -203,13 +201,13 @@ lpc11xx_flash_write_words(struct target_s *target, uint32_t dest, const uint32_t
 		if ((chunk == first_chunk) || (chunk == last_chunk)) {
 
 			/* fill with all ff to avoid sector rewrite corrupting other writes */
-			memset(pgm.data, 0xff, sizeof(pgm.data));
+			memset(flash_pgm.data, 0xff, sizeof(flash_pgm.data));
 		
 			/* copy as much as fits */				
 			int copylen = IAP_PGM_CHUNKSIZE - chunk_offset;
 			if (copylen > len)
 				copylen = len;
-			memcpy(&pgm.data[chunk_offset], s, copylen);
+			memcpy(&flash_pgm.data[chunk_offset], s, copylen);
 
 			/* update to suit */
 			len -= copylen;
@@ -218,7 +216,7 @@ lpc11xx_flash_write_words(struct target_s *target, uint32_t dest, const uint32_t
 
 			/* if we are programming the vectors, calculate the magic number */
 			if (chunk == 0) {
-				uint32_t *w = (uint32_t *)(&pgm.data[0]);
+				uint32_t *w = (uint32_t *)(&flash_pgm.data[0]);
 				uint32_t sum = 0;
 
 				for (unsigned i = 0; i < 7; i++)
@@ -229,7 +227,7 @@ lpc11xx_flash_write_words(struct target_s *target, uint32_t dest, const uint32_t
 		} else {
 
 			/* interior chunk, must be aligned and full-sized */
-			memcpy(pgm.data, s, IAP_PGM_CHUNKSIZE);
+			memcpy(flash_pgm.data, s, IAP_PGM_CHUNKSIZE);
 			len -= IAP_PGM_CHUNKSIZE;
 			s += IAP_PGM_CHUNKSIZE;
 		}
@@ -239,13 +237,13 @@ lpc11xx_flash_write_words(struct target_s *target, uint32_t dest, const uint32_t
 			return -1;
 
 		/* set the destination address and program */
-		pgm.p.command[0] = IAP_CMD_PROGRAM;
-		pgm.p.command[1] = chunk * IAP_PGM_CHUNKSIZE;
-		pgm.p.command[2] = IAP_RAM_BASE + offsetof(struct flash_program, data);
-		pgm.p.command[3] = IAP_PGM_CHUNKSIZE;
-		pgm.p.command[4] = 12000;	/* XXX safe to presume this? */
-		lpc11x_iap_call(target, &pgm.p, sizeof(pgm));
-		if (pgm.p.result[0] != IAP_STATUS_CMD_SUCCESS) {
+		flash_pgm.p.command[0] = IAP_CMD_PROGRAM;
+		flash_pgm.p.command[1] = chunk * IAP_PGM_CHUNKSIZE;
+		flash_pgm.p.command[2] = IAP_RAM_BASE + offsetof(struct flash_program, data);
+		flash_pgm.p.command[3] = IAP_PGM_CHUNKSIZE;
+		flash_pgm.p.command[4] = 12000;	/* XXX safe to presume this? */
+		lpc11x_iap_call(target, &flash_pgm.p, sizeof(flash_pgm));
+		if (flash_pgm.p.result[0] != IAP_STATUS_CMD_SUCCESS) {
 			return -1;
 		}
 
