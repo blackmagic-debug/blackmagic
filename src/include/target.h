@@ -159,6 +159,9 @@ typedef struct target_s {
 
 	int (*check_hw_wp)(struct target_s *target, uint32_t *addr);
 
+	/* target-defined options */
+	unsigned target_options;
+
 	/* Flash memory access functions */
 	const char *xml_mem_map;
 	int (*flash_erase)(struct target_s *target, uint32_t addr, int len);

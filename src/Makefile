@@ -21,6 +21,7 @@ SRC = 	gdb_if.c	\
 	adiv5_swdp.c	\
 	cortexm3.c	\
 	stm32_tgt.c	\
+	nxp_tgt.c	\
 	main.c		\
 	platform.c	\
 	command.c	\

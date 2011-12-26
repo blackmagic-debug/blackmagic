@@ -18,15 +18,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __CORTEXM3_H
-#define __CORTEXM3_H
+#ifndef __NXP_TGT_H
+#define __NXP_TGT_H
 
 #include "target.h"
 
-/* target options recognised by the Cortex-M target */
-#define	TOPT_FLAVOUR_V6M	(1<<0)		/* if not set, target is assumed to be v7m */
-
-int cm3_probe(struct target_s *target);
+int lpc11xx_probe(struct target_s *target);
 
 #endif
-
