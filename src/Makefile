@@ -30,6 +30,7 @@ SRC = 	gdb_if.c	\
 	lmi.c		\
 	arm7tdmi.c	\
 	stm32f4.c	\
+	crc32.c		\
 
 include $(PROBE_HOST)/Makefile.inc
 

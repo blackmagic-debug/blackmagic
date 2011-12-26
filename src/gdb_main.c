@@ -45,6 +45,7 @@
 #include "target.h"
 
 #include "command.h"
+#include "crc32.h"
 
 #define BUF_SIZE	1024
 
@@ -68,7 +69,6 @@ gdb_main(void)
 		SET_IDLE_STATE(1);
 		size = gdb_getpacket(pbuf, BUF_SIZE);
 		SET_IDLE_STATE(0);
-		DEBUG("%s\n", pbuf);
 		switch(pbuf[0]) {
 		    /* Implementation of these is mandatory! */
 		    case 'g': { /* 'g': Read general registers */
@@ -286,7 +286,7 @@ gdb_main(void)
 		    }
 
 		    default: 	/* Packet not implemented */
-			DEBUG("Unsupported packet: %s\n", pbuf);
+			DEBUG("*** Unsupported packet: %s\n", pbuf);
 			gdb_putpacket("", 0);
 		}
 	}
@@ -317,7 +317,8 @@ handle_q_string_reply(const char *str, const char *param)
 static void
 handle_q_packet(char *packet, int len)
 {
-	/* These 'monitor' commands only available on the real deal */
+	uint32_t addr, alen;
+
 	if(!strncmp(packet, "qRcmd,", 6)) {
 		unsigned char *data;
 		int datalen;
@@ -362,6 +363,12 @@ handle_q_packet(char *packet, int len)
 			return;
 		}
 		handle_q_string_reply(cur_target->tdesc, packet + 31);
+	} else if (sscanf(packet, "qCRC:%08lX,%08lX", &addr, &alen) == 2) {
+		if(!cur_target) {
+			gdb_putpacketz("E01");
+			return;
+		}
+		gdb_putpacket_f("C%lx", generic_crc32(cur_target, addr, alen));
 
 	} else gdb_putpacket("", 0);
 }
