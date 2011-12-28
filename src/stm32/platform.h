@@ -31,7 +31,7 @@
 
 #include "gdb_packet.h"
 
-//#define INCLUDE_UART_INTERFACE
+#define INCLUDE_UART_INTERFACE
 
 /* Important pin mappings for STM32 implementation:
  *

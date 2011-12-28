@@ -53,9 +53,9 @@ static const struct usb_device_descriptor dev = {
         .bLength = USB_DT_DEVICE_SIZE,
         .bDescriptorType = USB_DT_DEVICE,
         .bcdUSB = 0x0200,
-        .bDeviceClass = USB_CLASS_CDC,
-        .bDeviceSubClass = 0,
-        .bDeviceProtocol = 0,
+        .bDeviceClass = 0xEF,		/* Miscellaneous Device */
+        .bDeviceSubClass = 2,		/* Common Class */
+        .bDeviceProtocol = 1,		/* Interface Association */
         .bMaxPacketSize0 = 64,
         .idVendor = 0x0483,
         .idProduct = 0x5740,
@@ -138,7 +138,7 @@ static const struct usb_interface_descriptor gdb_comm_iface[] = {{
 	.bInterfaceClass = USB_CLASS_CDC,
 	.bInterfaceSubClass = USB_CDC_SUBCLASS_ACM,
 	.bInterfaceProtocol = USB_CDC_PROTOCOL_AT,
-	.iInterface = 0,
+	.iInterface = 4,
 
 	.endpoint = gdb_comm_endp,
 
@@ -159,6 +159,17 @@ static const struct usb_interface_descriptor gdb_data_iface[] = {{
 
 	.endpoint = gdb_data_endp,
 }};
+
+static const struct usb_iface_assoc_descriptor gdb_assoc = {
+	.bLength = USB_DT_INTERFACE_ASSOCIATION_SIZE,
+	.bDescriptorType = USB_DT_INTERFACE_ASSOCIATION,
+	.bFirstInterface = 0,
+	.bInterfaceCount = 2,
+	.bFunctionClass = USB_CLASS_CDC,
+	.bFunctionSubClass = USB_CDC_SUBCLASS_ACM,
+	.bFunctionProtocol = USB_CDC_PROTOCOL_AT,
+	.iFunction = 0,
+};
 
 #ifdef INCLUDE_UART_INTERFACE
 /* Serial ACM interface */
@@ -231,7 +242,7 @@ static const struct usb_interface_descriptor uart_comm_iface[] = {{
 	.bInterfaceClass = USB_CLASS_CDC,
 	.bInterfaceSubClass = USB_CDC_SUBCLASS_ACM,
 	.bInterfaceProtocol = USB_CDC_PROTOCOL_AT,
-	.iInterface = 0,
+	.iInterface = 5,
 
 	.endpoint = uart_comm_endp,
 
@@ -252,6 +263,17 @@ static const struct usb_interface_descriptor uart_data_iface[] = {{
 
 	.endpoint = uart_data_endp,
 }};
+
+static const struct usb_iface_assoc_descriptor uart_assoc = {
+	.bLength = USB_DT_INTERFACE_ASSOCIATION_SIZE,
+	.bDescriptorType = USB_DT_INTERFACE_ASSOCIATION,
+	.bFirstInterface = 2,
+	.bInterfaceCount = 2,
+	.bFunctionClass = USB_CLASS_CDC,
+	.bFunctionSubClass = USB_CDC_SUBCLASS_ACM,
+	.bFunctionProtocol = USB_CDC_PROTOCOL_AT,
+	.iFunction = 0,
+};
 #endif
 
 const struct usb_dfu_descriptor dfu_function = {
@@ -272,14 +294,26 @@ const struct usb_interface_descriptor dfu_iface = {
 	.bInterfaceClass = 0xFE,
 	.bInterfaceSubClass = 1,
 	.bInterfaceProtocol = 1,
-	.iInterface = 0,
+	.iInterface = 6,
 
 	.extra = &dfu_function,
 	.extralen = sizeof(dfu_function),
 };
 
+static const struct usb_iface_assoc_descriptor dfu_assoc = {
+	.bLength = USB_DT_INTERFACE_ASSOCIATION_SIZE,
+	.bDescriptorType = USB_DT_INTERFACE_ASSOCIATION,
+	.bFirstInterface = 4,
+	.bInterfaceCount = 1,
+	.bFunctionClass = 0xFE,
+	.bFunctionSubClass = 1,
+	.bFunctionProtocol = 1,
+	.iFunction = 6,
+};
+
 static const struct usb_interface ifaces[] = {{
 	.num_altsetting = 1,
+	.iface_assoc = &gdb_assoc,
 	.altsetting = gdb_comm_iface,
 }, {
 	.num_altsetting = 1,
@@ -287,6 +321,7 @@ static const struct usb_interface ifaces[] = {{
 }, {
 #ifdef INCLUDE_UART_INTERFACE
 	.num_altsetting = 1,
+	.iface_assoc = &uart_assoc,
 	.altsetting = uart_comm_iface,
 }, {
 	.num_altsetting = 1,
@@ -294,6 +329,7 @@ static const struct usb_interface ifaces[] = {{
 }, {
 #endif
 	.num_altsetting = 1,
+	.iface_assoc = &dfu_assoc,
 	.altsetting = &dfu_iface,
 }};
 
@@ -321,6 +357,9 @@ static const char *usb_strings[] = {
 	"Black Sphere Technologies",
 	"Black Magic Probe",
 	serial_no,
+	"Black Magic GDB Server",
+	"Black Magic UART Port",
+	"Black Magic Firmware Upgrade",
 };
 
 static void dfu_detach_complete(struct usb_setup_data *req)
@@ -364,8 +403,7 @@ static int cdcacm_control_request(struct usb_setup_data *req, uint8_t **buf,
 			return 0;
 
 		struct usb_cdc_line_coding *coding = (void*)*buf;
-		usart_set_baudrate(USART1, coding->dwDTERate, 
-				rcc_ppre2_frequency);
+		usart_set_baudrate(USART1, coding->dwDTERate);
 		usart_set_databits(USART1, coding->bDataBits);
 		switch(coding->bCharFormat) {
 		case 0:
