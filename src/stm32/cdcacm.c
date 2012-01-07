@@ -118,7 +118,7 @@ static const struct {
 		.bFunctionLength = sizeof(struct usb_cdc_acm_descriptor),
 		.bDescriptorType = CS_INTERFACE,
 		.bDescriptorSubtype = USB_CDC_TYPE_ACM,
-		.bmCapabilities = 0,
+		.bmCapabilities = 2, /* SET_LINE_CODING supported */
 	},
 	.cdc_union = {
 		.bFunctionLength = sizeof(struct usb_cdc_union_descriptor),
@@ -222,7 +222,7 @@ static const struct {
 		.bFunctionLength = sizeof(struct usb_cdc_acm_descriptor),
 		.bDescriptorType = CS_INTERFACE,
 		.bDescriptorSubtype = USB_CDC_TYPE_ACM,
-		.bmCapabilities = 0,
+		.bmCapabilities = 2, /* SET_LINE_CODING supported*/
 	},
 	.cdc_union = {
 		.bFunctionLength = sizeof(struct usb_cdc_union_descriptor),
@@ -398,6 +398,9 @@ static int cdcacm_control_request(struct usb_setup_data *req, uint8_t **buf,
 	case USB_CDC_REQ_SET_LINE_CODING: {
 		if(*len < sizeof(struct usb_cdc_line_coding)) 
 			return 0;
+
+		if(req->wIndex == 0)
+			return 1; /* Ignore on GDB Port */
 
 		if(req->wIndex != 2) 
 			return 0;
