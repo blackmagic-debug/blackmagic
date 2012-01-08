@@ -1,0 +1,48 @@
+[Version]
+Signature="$Windows NT$"
+Class=Ports
+ClassGuid={4D36E978-E325-11CE-BFC1-08002BE10318}
+Provider=%BLACKSPHERE%
+DriverVer=03/11/2008,0.0.1.0
+; Copyright (C) 2004 Al Borchers (alborchers@steinerpoint.com)
+
+; Taken from Linux documentation, modified for Black Magic debug probe
+; by Gareth McMullin <gareth@blacksphere.co.nz>
+
+[Manufacturer]
+%BLACKSPHERE%=BlackSphereDeviceList
+
+[BlackSphereDeviceList]
+%BLACKSPHEREDEV%=BlackSphereInstall, USB\VID_0483&PID_5740
+
+[DestinationDirs]
+DefaultDestDir=10,System32\Drivers
+
+[BlackSphereInstall]
+CopyFiles=BlackSphereCopyFiles
+AddReg=BlackSphereAddReg
+
+[BlackSphereCopyFiles]
+usbser.sys
+
+[BlackSphereAddReg]
+HKR,,DevLoader,,*ntkern
+HKR,,NTMPDriver,,usbser.sys
+HKR,,EnumPropPages32,,"MsPorts.dll,SerialPortPropPageProvider"
+
+[BlackSphereInstall.Services]
+AddService = usbser,0x0002,BlackSphereService
+
+[BlackSphereService]
+DisplayName = %BLACKSPHERE_DISPLAY_NAME%
+ServiceType = 1                  ; SERVICE_KERNEL_DRIVER
+StartType = 3                    ; SERVICE_DEMAND_START
+ErrorControl = 1                 ; SERVICE_ERROR_NORMAL
+ServiceBinary = %10%\System32\Drivers\usbser.sys
+LoadOrderGroup = Base
+
+[Strings]
+BLACKSPHERE = "Black Sphere Technologies"
+BLACKSPHEREDEV = "Black Magic Probe"
+BLACKSPHERE_DISPLAY_NAME = "Black Magic Probe Driver"
+
