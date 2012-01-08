@@ -26,10 +26,6 @@
 int swdptap_init(void);
 void swdptap_reset(void);
 
-void swdptap_turnaround(uint8_t dir);
-uint8_t swdptap_bit_in(void);
-void swdptap_bit_out(uint8_t val);
-
 uint32_t swdptap_seq_in(int ticks);
 uint8_t swdptap_seq_in_parity(uint32_t *data, int ticks);
 void swdptap_seq_out(uint32_t MS, int ticks);

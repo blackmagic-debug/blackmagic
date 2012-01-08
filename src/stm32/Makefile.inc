@@ -6,7 +6,7 @@ LIBOPENCM3 ?= /usr/local/arm-none-eabi
 CFLAGS += -Istm32/include -mcpu=cortex-m3 -mthumb -msoft-float -DSTM32F1 -I$(LIBOPENCM3)/include
 LDFLAGS_BOOT = -lopencm3_stm32f1 -Wl,--defsym,_stack=0x20005000 \
 	-Wl,-T,stm32/blackmagic.ld -nostartfiles -lc -lnosys -Wl,-Map=mapfile \
-	-mthumb -march=armv7 -mcpu=cortex-m3 -mfix-cortex-m3-ldrd -msoft-float -L$(LIBOPENCM3)/lib/stm32/f1
+	-mthumb -march=armv7 -mcpu=cortex-m3 -mfix-cortex-m3-ldrd -msoft-float -L$(LIBOPENCM3)/lib/stm32/f1 -Wl,-gc-sections
 LDFLAGS = $(LDFLAGS_BOOT) -Wl,-Ttext=0x8002000
 
 SRC += 	cdcacm.c	\

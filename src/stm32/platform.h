@@ -32,6 +32,7 @@
 #include "gdb_packet.h"
 
 #define INCLUDE_UART_INTERFACE
+#define INLINE_GPIO
 
 /* Important pin mappings for STM32 implementation:
  *
@@ -115,6 +116,26 @@ int cdcacm_get_dtr(void);
 #define sscanf siscanf
 #define sprintf siprintf
 #define vasprintf vasiprintf
+
+#ifdef INLINE_GPIO
+static inline void _gpio_set(u32 gpioport, u16 gpios)
+{
+	GPIO_BSRR(gpioport) = gpios;
+}
+#define gpio_set _gpio_set
+
+static inline void _gpio_clear(u32 gpioport, u16 gpios)
+{
+	GPIO_BRR(gpioport) = gpios;
+}
+#define gpio_clear _gpio_clear
+
+static inline u16 _gpio_get(u32 gpioport, u16 gpios)
+{
+	return (u16)GPIO_IDR(gpioport) & gpios;
+}
+#define gpio_get _gpio_get
+#endif
 
 #endif
 

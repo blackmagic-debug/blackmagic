@@ -7,9 +7,9 @@ VPATH += $(PROBE_HOST)
 BUILDDATE := `date +"%Y%m%d"`
 
 CFLAGS += -Wall -Wextra -Wno-pointer-sign -Wno-char-subscripts\
-	-O0 -std=gnu99 -g3 -DBUILDDATE=\"$(BUILDDATE)\"\
+	-O2 -std=gnu99 -g3 -DBUILDDATE=\"$(BUILDDATE)\"\
 	-I. -Iinclude -I$(PROBE_HOST) \
-	-DVERSION_SUFFIX=\"`../scripts/setlocalversion`\"
+	-DVERSION_SUFFIX=\"`../scripts/setlocalversion`\" -MD
 
 SRC = 	gdb_if.c	\
 	gdb_packet.c	\
@@ -43,4 +43,6 @@ blackmagic: $(OBJ)
 
 clean:	host_clean
 	$(RM) *.o *~ blackmagic $(HOSTFILES)
+
+-include *.d
 

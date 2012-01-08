@@ -23,7 +23,6 @@
  */
 
 #include <libopencm3/stm32/f1/rcc.h>
-#include <libopencm3/stm32/f1/gpio.h>
 #include <libopencm3/stm32/systick.h>
 #include <libopencm3/stm32/f1/scb.h>
 #include <libopencm3/stm32/nvic.h>
@@ -63,7 +62,7 @@ int platform_init(void)
 	gpio_set_mode(USB_PU_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, 
 			USB_PU_PIN);
 
-	gpio_set_mode(JTAG_PORT, GPIO_MODE_OUTPUT_10_MHZ, 
+	gpio_set_mode(JTAG_PORT, GPIO_MODE_OUTPUT_50_MHZ, 
 			GPIO_CNF_OUTPUT_PUSHPULL,
 			TMS_PIN | TCK_PIN | TDI_PIN);
 

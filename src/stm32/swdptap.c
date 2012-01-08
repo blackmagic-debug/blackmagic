@@ -20,7 +20,6 @@
 
 /* This file implements the low-level SW-DP interface. */
 
-#include <libopencm3/stm32/f1/gpio.h>
 #include <stdio.h>
 
 #include "general.h"
@@ -29,7 +28,7 @@
 
 #include "gdb_packet.h"
 
-void swdptap_turnaround(uint8_t dir)
+static void swdptap_turnaround(uint8_t dir)
 {
 	static uint8_t olddir = 0;
 
@@ -45,11 +44,11 @@ void swdptap_turnaround(uint8_t dir)
 	gpio_set(SWDP_PORT, SWCLK_PIN);
 	gpio_clear(SWDP_PORT, SWCLK_PIN);
 	if(!dir) 
-		gpio_set_mode(SWDP_PORT, GPIO_MODE_OUTPUT_10_MHZ, 
+		gpio_set_mode(SWDP_PORT, GPIO_MODE_OUTPUT_50_MHZ, 
 				GPIO_CNF_OUTPUT_PUSHPULL, SWDIO_PIN);
 }
 
-uint8_t swdptap_bit_in(void)
+static uint8_t swdptap_bit_in(void)
 {
 	uint8_t ret;
 
@@ -62,7 +61,7 @@ uint8_t swdptap_bit_in(void)
 	return ret;
 }
 
-void swdptap_bit_out(uint8_t val)
+static void swdptap_bit_out(uint8_t val)
 {
 	DEBUG("%d", val);
 
