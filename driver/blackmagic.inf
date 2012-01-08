@@ -3,7 +3,7 @@ Signature="$Windows NT$"
 Class=Ports
 ClassGuid={4D36E978-E325-11CE-BFC1-08002BE10318}
 Provider=%BLACKSPHERE%
-DriverVer=03/11/2008,0.0.1.0
+DriverVer=28/12/2011,0.0.1.1
 ; Copyright (C) 2004 Al Borchers (alborchers@steinerpoint.com)
 
 ; Taken from Linux documentation, modified for Black Magic debug probe
@@ -13,7 +13,8 @@ DriverVer=03/11/2008,0.0.1.0
 %BLACKSPHERE%=BlackSphereDeviceList
 
 [BlackSphereDeviceList]
-%BLACKSPHEREDEV%=BlackSphereInstall, USB\VID_0483&PID_5740
+%BLACKMAGICGDB%=BlackSphereInstall, USB\VID_0483&PID_5740&MI_00
+%BLACKMAGICUART%=BlackSphereInstall, USB\VID_0483&PID_5740&MI_02
 
 [DestinationDirs]
 DefaultDestDir=10,System32\Drivers
@@ -43,6 +44,7 @@ LoadOrderGroup = Base
 
 [Strings]
 BLACKSPHERE = "Black Sphere Technologies"
-BLACKSPHEREDEV = "Black Magic Probe"
+BLACKMAGICGDB = "Black Magic GDB Server"
+BLACKMAGICUART = "Black Magic UART Port"
 BLACKSPHERE_DISPLAY_NAME = "Black Magic Probe Driver"
 
