@@ -83,14 +83,14 @@ static const struct usb_endpoint_descriptor gdb_data_endp[] = {{
 	.bDescriptorType = USB_DT_ENDPOINT,
 	.bEndpointAddress = 0x01,
 	.bmAttributes = USB_ENDPOINT_ATTR_BULK,
-	.wMaxPacketSize = 64,
+	.wMaxPacketSize = CDCACM_PACKET_SIZE,
 	.bInterval = 1,
 }, {
 	.bLength = USB_DT_ENDPOINT_SIZE,
 	.bDescriptorType = USB_DT_ENDPOINT,
 	.bEndpointAddress = 0x81,
 	.bmAttributes = USB_ENDPOINT_ATTR_BULK,
-	.wMaxPacketSize = 64,
+	.wMaxPacketSize = CDCACM_PACKET_SIZE,
 	.bInterval = 1,
 }};
 
@@ -187,14 +187,14 @@ static const struct usb_endpoint_descriptor uart_data_endp[] = {{
 	.bDescriptorType = USB_DT_ENDPOINT,
 	.bEndpointAddress = 0x03,
 	.bmAttributes = USB_ENDPOINT_ATTR_BULK,
-	.wMaxPacketSize = 64,
+	.wMaxPacketSize = CDCACM_PACKET_SIZE,
 	.bInterval = 1,
 }, {
 	.bLength = USB_DT_ENDPOINT_SIZE,
 	.bDescriptorType = USB_DT_ENDPOINT,
 	.bEndpointAddress = 0x83,
 	.bmAttributes = USB_ENDPOINT_ATTR_BULK,
-	.wMaxPacketSize = 64,
+	.wMaxPacketSize = CDCACM_PACKET_SIZE,
 	.bInterval = 1,
 }};
 
@@ -459,8 +459,8 @@ static void cdcacm_data_rx_cb(u8 ep)
 {
 	(void)ep;
 
-	char buf[64];
-	int len = usbd_ep_read_packet(0x03, buf, 64);
+	char buf[CDCACM_PACKET_SIZE];
+	int len = usbd_ep_read_packet(0x03, buf, CDCACM_PACKET_SIZE);
 	for(int i = 0; i < len; i++)
 		usart_send_blocking(USART1, buf[i]);
 }
@@ -471,14 +471,14 @@ static void cdcacm_set_config(u16 wValue)
 	configured = wValue;
 
 	/* GDB interface */
-	usbd_ep_setup(0x01, USB_ENDPOINT_ATTR_BULK, 64, NULL);
-	usbd_ep_setup(0x81, USB_ENDPOINT_ATTR_BULK, 64, NULL);
+	usbd_ep_setup(0x01, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE, NULL);
+	usbd_ep_setup(0x81, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE, NULL);
 	usbd_ep_setup(0x82, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
 
 #ifdef INCLUDE_UART_INTERFACE
 	/* Serial interface */
-	usbd_ep_setup(0x03, USB_ENDPOINT_ATTR_BULK, 64, cdcacm_data_rx_cb);
-	usbd_ep_setup(0x83, USB_ENDPOINT_ATTR_BULK, 64, NULL);
+	usbd_ep_setup(0x03, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE, cdcacm_data_rx_cb);
+	usbd_ep_setup(0x83, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE, NULL);
 	usbd_ep_setup(0x84, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
 #endif
 

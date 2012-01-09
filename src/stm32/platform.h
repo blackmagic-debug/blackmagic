@@ -33,6 +33,7 @@
 
 #define INCLUDE_UART_INTERFACE
 #define INLINE_GPIO
+#define CDCACM_PACKET_SIZE 	64
 
 /* Important pin mappings for STM32 implementation:
  *
