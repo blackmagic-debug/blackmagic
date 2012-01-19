@@ -434,6 +434,20 @@ static int cdcacm_control_request(struct usb_setup_data *req, uint8_t **buf,
 		return 1;
 		}
 #endif
+	case DFU_GETSTATUS: 
+		if(req->wIndex == DFU_IF_NO) {
+			u32 bwPollTimeout = 0; /* 24-bit integer in DFU class spec */
+
+			(*buf)[0] = DFU_STATUS_OK;
+			(*buf)[1] = 0;
+			(*buf)[2] = 0;
+			(*buf)[3] = 0;
+			(*buf)[4] = STATE_APP_IDLE;
+			(*buf)[5] = 0;	/* iString not used here */
+			*len = 6;
+
+			return 1;
+		}
 	case DFU_DETACH:
 		if(req->wIndex == DFU_IF_NO) {
 			*complete = dfu_detach_complete;
