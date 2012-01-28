@@ -42,7 +42,7 @@ the execution of the embedded application.
 Project layout
 ==============
 flashstub/ - Source code for flash programming stubs in target drivers.
-hardware/ - Schematic and PCB layout for the Black Magic Probe
+hardware/ - Schematic (gschem) and PCB layout for the Black Magic Probe
 scripts/ - Python scripts useful for programming devices.
 src/ - Firmware source code for the Black Magic debug probe.
 
