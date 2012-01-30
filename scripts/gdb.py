@@ -163,7 +163,7 @@ class Target:
 			data = unhexify(reply)
 		except Excpetion:
 			raise Exception('Invalid response to memory read packet: %r' % reply)
-		return struct.unpack("=16L", data)
+		return struct.unpack("=20L", data)
 
 	def write_regs(self, *regs):
 		"""Write target core registers"""
