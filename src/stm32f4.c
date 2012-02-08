@@ -100,7 +100,7 @@ uint16_t stm32f4_flash_write_stub[] = {
 	0x467a, // mov r2, pc
 	0x3230, // adds r2, #48
 	0x4b0a, // ldr r3, [pc, #36] // _size
- 	0x4d07, // movs r5, #1
+ 	0x4d07, // ldr r5, [pc, #28] // _cr
 // _next:
  	0xb153, // cbz r3, _done
 	0x6105, // str r5, [r0, #16]
@@ -212,7 +212,7 @@ static int stm32f4_flash_write_words(struct target_s *target, uint32_t dest,
 	data[0] = dest - offset;
 	data[1] = words * 4;		/* length must always be a multiple of 4 */
 	data[2] = 0xFFFFFFFF;		/* pad partial words with all 1s to avoid */
-	data[words - 1] = 0xFFFFFFFF;	/* damaging overlapping areas */
+	data[words + 1] = 0xFFFFFFFF;	/* damaging overlapping areas */
 	memcpy((uint8_t *)&data[2] + offset, src, len);
 
 	/* Write stub and data to target ram and set PC */
