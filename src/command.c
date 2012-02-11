@@ -75,7 +75,10 @@ int command_process(char *cmd)
 
 	/* Look for match and call handler */
 	for(c = cmd_list; c->cmd; c++) {
-		if(!strcmp(argv[0], c->cmd)) {
+		/* Accept a partial match as GDB does.
+		 * So 'mon ver' will match 'monitor version' 
+		 */
+		if(!strncmp(argv[0], c->cmd, strlen(argv[0]))) {
 			c->handler(argc, argv);
 			return 0;
 		}
