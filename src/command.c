@@ -37,13 +37,13 @@
 
 #include "adiv5.h"
 
-void cmd_version(void);
-void cmd_help(void);
+static void cmd_version(void);
+static void cmd_help(void);
 
-void cmd_jtag_scan(void);
-void cmd_swdp_scan(void);
-void cmd_targets(void);
-void cmd_morse(void);
+static void cmd_jtag_scan(void);
+static void cmd_swdp_scan(void);
+static void cmd_targets(void);
+static void cmd_morse(void);
 
 const struct command_s cmd_list[] = {
 	{"version", (cmd_handler)cmd_version, "Display firmware version info"},
