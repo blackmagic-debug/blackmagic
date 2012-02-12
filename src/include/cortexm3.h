@@ -25,6 +25,7 @@
 
 /* target options recognised by the Cortex-M target */
 #define	TOPT_FLAVOUR_V6M	(1<<0)		/* if not set, target is assumed to be v7m */
+#define	TOPT_FLAVOUR_V7MF	(1<<1)		/* if set, floating-point enabled. */
 
 int cm3_probe(struct target_s *target);
 

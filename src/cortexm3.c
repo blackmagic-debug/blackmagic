@@ -52,6 +52,7 @@ static char cm3_driver_str[] = "ARM Cortex-M3";
 #define CM3_CFSR	(CM3_SCS_BASE + 0xD28)
 #define CM3_HFSR	(CM3_SCS_BASE + 0xD2C)
 #define CM3_DFSR	(CM3_SCS_BASE + 0xD30)
+#define CM3_CPACR	(CM3_SCS_BASE + 0xD88)
 #define CM3_DHCSR	(CM3_SCS_BASE + 0xDF0)
 #define CM3_DCRSR	(CM3_SCS_BASE + 0xDF4)
 #define CM3_DCRDR	(CM3_SCS_BASE + 0xDF8)
@@ -206,8 +207,7 @@ static uint32_t regnum_cortex_m[] = {
 	0x12,	/* psp */
 	0x14	/* special */
 };
-#if 0
-/* XXX: need some way for a specific CPU to indicate it has FP registers */
+
 static uint32_t regnum_cortex_mf[] = {
 	0x21,	/* fpscr */
 	0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47,	/* s0-s7 */
@@ -215,7 +215,6 @@ static uint32_t regnum_cortex_mf[] = {
 	0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57,	/* s16-s23 */
 	0x58, 0x59, 0x5a, 0x5b, 0x5c, 0x5d, 0x5e, 0x5f,	/* s24-s31 */
 };
-#endif
 
 static const char tdesc_cortex_m[] =
 	"<?xml version=\"1.0\"?>"
@@ -246,6 +245,52 @@ static const char tdesc_cortex_m[] =
 	"  </feature>"
 	"</target>";
 
+static const char tdesc_cortex_mf[] =
+	"<?xml version=\"1.0\"?>"
+	"<!DOCTYPE target SYSTEM \"gdb-target.dtd\">"
+	"<target>"
+	"  <architecture>arm</architecture>"
+	"  <feature name=\"org.gnu.gdb.arm.m-profile\">"
+	"    <reg name=\"r0\" bitsize=\"32\"/>"
+	"    <reg name=\"r1\" bitsize=\"32\"/>"
+	"    <reg name=\"r2\" bitsize=\"32\"/>"
+	"    <reg name=\"r3\" bitsize=\"32\"/>"
+	"    <reg name=\"r4\" bitsize=\"32\"/>"
+	"    <reg name=\"r5\" bitsize=\"32\"/>"
+	"    <reg name=\"r6\" bitsize=\"32\"/>"
+	"    <reg name=\"r7\" bitsize=\"32\"/>"
+	"    <reg name=\"r8\" bitsize=\"32\"/>"
+	"    <reg name=\"r9\" bitsize=\"32\"/>"
+	"    <reg name=\"r10\" bitsize=\"32\"/>"
+	"    <reg name=\"r11\" bitsize=\"32\"/>"
+	"    <reg name=\"r12\" bitsize=\"32\"/>"
+	"    <reg name=\"sp\" bitsize=\"32\" type=\"data_ptr\"/>"
+	"    <reg name=\"lr\" bitsize=\"32\" type=\"code_ptr\"/>"
+	"    <reg name=\"pc\" bitsize=\"32\" type=\"code_ptr\"/>"
+	"    <reg name=\"xpsr\" bitsize=\"32\"/>"
+	"    <reg name=\"msp\" bitsize=\"32\" save-restore=\"no\" type=\"data_ptr\"/>"
+	"    <reg name=\"psp\" bitsize=\"32\" save-restore=\"no\" type=\"data_ptr\"/>"
+	"    <reg name=\"special\" bitsize=\"32\" save-restore=\"no\"/>"
+	"    <reg name=\"fpscr\" bitsize=\"32\"/>"
+	"    <reg name=\"d0\" bitsize=\"64\" type=\"float\"/>"
+	"    <reg name=\"d1\" bitsize=\"64\" type=\"float\"/>"
+	"    <reg name=\"d2\" bitsize=\"64\" type=\"float\"/>"
+	"    <reg name=\"d3\" bitsize=\"64\" type=\"float\"/>"
+	"    <reg name=\"d4\" bitsize=\"64\" type=\"float\"/>"
+	"    <reg name=\"d5\" bitsize=\"64\" type=\"float\"/>"
+	"    <reg name=\"d6\" bitsize=\"64\" type=\"float\"/>"
+	"    <reg name=\"d7\" bitsize=\"64\" type=\"float\"/>"
+	"    <reg name=\"d8\" bitsize=\"64\" type=\"float\"/>"
+	"    <reg name=\"d9\" bitsize=\"64\" type=\"float\"/>"
+	"    <reg name=\"d10\" bitsize=\"64\" type=\"float\"/>"
+	"    <reg name=\"d11\" bitsize=\"64\" type=\"float\"/>"
+	"    <reg name=\"d12\" bitsize=\"64\" type=\"float\"/>"
+	"    <reg name=\"d13\" bitsize=\"64\" type=\"float\"/>"
+	"    <reg name=\"d14\" bitsize=\"64\" type=\"float\"/>"
+	"    <reg name=\"d15\" bitsize=\"64\" type=\"float\"/>"
+	"  </feature>"
+	"</target>";
+
 int
 cm3_probe(struct target_s *target)
 {
@@ -266,6 +311,18 @@ cm3_probe(struct target_s *target)
 	target->halt_resume = cm3_halt_resume;
 	target->fault_unwind = cm3_fault_unwind;
 	target->regs_size = sizeof(regnum_cortex_m);	/* XXX: detect FP extension */
+
+	/* Probe for FP extension */
+	struct target_ap_s *t = (void*)target;
+	uint32_t cpacr = adiv5_ap_mem_read(t->ap, CM3_CPACR);
+	cpacr |= 0x00F00000; /* CP10 = 0b11, CP11 = 0b11 */
+	adiv5_ap_mem_write(t->ap, CM3_CPACR, cpacr);
+	if (adiv5_ap_mem_read(t->ap, CM3_CPACR) == cpacr) {
+		target->target_options |= TOPT_FLAVOUR_V7MF;
+		target->regs_size += sizeof(regnum_cortex_mf);
+		target->tdesc = tdesc_cortex_mf;
+	}
+	
 
 	if(stm32_probe(target) == 0) return 0;
 	if(stm32f4_probe(target) == 0) return 0;
@@ -368,6 +425,11 @@ cm3_regs_read(struct target_s *target, void *data)
 		adiv5_dp_low_access(t->ap->dp, 1, 0, ADIV5_AP_DB(1), regnum_cortex_m[i]);
 		*regs++ = adiv5_dp_read_ap(t->ap->dp, ADIV5_AP_DB(2));
 	}
+	if (target->target_options & TOPT_FLAVOUR_V7MF) 
+		for(i = 0; i < sizeof(regnum_cortex_mf) / 4; i++) {
+			adiv5_dp_low_access(t->ap->dp, 1, 0, ADIV5_AP_DB(1), regnum_cortex_mf[i]);
+			*regs++ = adiv5_dp_read_ap(t->ap->dp, ADIV5_AP_DB(2));
+		}
 
 	return 0;
 }
@@ -395,6 +457,12 @@ cm3_regs_write(struct target_s *target, const void *data)
 		adiv5_dp_low_access(t->ap->dp, 1, 0, ADIV5_AP_DB(1), 
 					0x10000 | regnum_cortex_m[i]);
 	}
+	if (target->target_options & TOPT_FLAVOUR_V7MF) 
+		for(i = 0; i < sizeof(regnum_cortex_mf) / 4; i++) {
+			adiv5_dp_low_access(t->ap->dp, 1, 0, ADIV5_AP_DB(2), *regs++);
+			adiv5_dp_low_access(t->ap->dp, 1, 0, ADIV5_AP_DB(1), 
+						0x10000 | regnum_cortex_mf[i]);
+		}
 
 	return 0;
 }
