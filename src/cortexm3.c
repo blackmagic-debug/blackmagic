@@ -271,6 +271,8 @@ static const char tdesc_cortex_mf[] =
 	"    <reg name=\"msp\" bitsize=\"32\" save-restore=\"no\" type=\"data_ptr\"/>"
 	"    <reg name=\"psp\" bitsize=\"32\" save-restore=\"no\" type=\"data_ptr\"/>"
 	"    <reg name=\"special\" bitsize=\"32\" save-restore=\"no\"/>"
+	"  </feature>"
+	"  <feature name=\"org.gnu.gdb.arm.vfp\">"
 	"    <reg name=\"fpscr\" bitsize=\"32\"/>"
 	"    <reg name=\"d0\" bitsize=\"64\" type=\"float\"/>"
 	"    <reg name=\"d1\" bitsize=\"64\" type=\"float\"/>"
