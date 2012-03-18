@@ -33,7 +33,7 @@
 #define STATE_DFU_IDLE                0x02
 #define STATE_DFU_DOWNLOAD_SYNC       0x03
 #define STATE_DFU_DOWNLOAD_BUSY       0x04
-define STATE_DFU_DOWNLOAD_IDLE       0x05
+#define STATE_DFU_DOWNLOAD_IDLE       0x05
 #define STATE_DFU_MANIFEST_SYNC       0x06
 #define STATE_DFU_MANIFEST            0x07
 #define STATE_DFU_MANIFEST_WAIT_RESET 0x08

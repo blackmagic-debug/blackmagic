@@ -43,16 +43,16 @@ static int stm32_download(usb_dev_handle *dev, uint16_t iface,
 	while(1) {
 		if((i = dfu_getstatus(dev, iface, &status)) < 0) return i;
 		switch(status.bState) {
-		    case STATE_DFU_DOWNLOAD_BUSY:
+		case STATE_DFU_DOWNLOAD_BUSY:
 #ifdef WIN32
 			Sleep(status.bwPollTimeout);
 #else
 			usleep(status.bwPollTimeout * 1000);
 #endif
 			break;
-		    case STATE_DFU_DOWNLOAD_IDLE:
+		case STATE_DFU_DOWNLOAD_IDLE:
 			return 0;
-		    default:	
+		default:	
 			return -1;
 		}
 	}
@@ -87,9 +87,9 @@ int stm32_mem_manifest(usb_dev_handle *dev, uint16_t iface)
 		usleep(status.bwPollTimeout * 1000);
 #endif
 		switch(status.bState) {
-		    case STATE_DFU_MANIFEST:
+		case STATE_DFU_MANIFEST:
 			return 0;
-		    default:	
+		default:	
 			return -1;
 		}
 	}

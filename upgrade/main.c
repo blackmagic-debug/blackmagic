@@ -21,6 +21,8 @@
 #include <usb.h>
 #include <string.h>
 
+#include <assert.h>
+
 #include "dfu.h"
 #include "stm32mem.h"
 #include "bindata.h"
@@ -66,7 +68,7 @@ struct usb_device * find_dev(void)
 
 			if((dev->descriptor.idProduct == 0x5740) &&
 			   !strcmp(man, "Black Sphere Technologies") &&
-			   !strcmp(prod, "Black Magic Probe"))
+			   !strcmp(prod, "Black Magic Firmware Upgrade"))
 				return dev;
 
 			if((dev->descriptor.idProduct == 0xDF11) &&
@@ -98,7 +100,8 @@ usb_dev_handle * get_dfu_interface(struct usb_device *dev, uint16_t *interface)
 					//usb_set_configuration(handle, i);
 					usb_claim_interface(handle, j);
 					//usb_set_altinterface(handle, k);
-					*interface = j;
+					//*interface = j;
+					*interface = iface->bInterfaceNumber;
 					return handle;
 				}
 			}
@@ -122,6 +125,9 @@ int main(void)
 retry:
 	if(!(dev = find_dev()) || !(handle = get_dfu_interface(dev, &iface))) {
 		puts("FATAL: No compatible device found!\n");
+#ifdef WIN32
+		system("pause");
+#endif
 		return -1;
 	}
 
@@ -132,9 +138,9 @@ retry:
 		usb_release_interface(handle, iface);
 		usb_close(handle);
 #ifdef WIN32
-		Sleep(3000);
+		Sleep(5000);
 #else
-		sleep(1);
+		sleep(5);
 #endif
 		goto retry;
 	}
@@ -145,7 +151,7 @@ retry:
 	for(offset = 0; offset < bindatalen; offset += 1024) {
 		printf("Progress: %d%%\r", (offset*100)/bindatalen);
 		fflush(stdout);
-		stm32_mem_erase(handle, iface, LOAD_ADDRESS + offset);
+		assert(stm32_mem_erase(handle, iface, LOAD_ADDRESS + offset) == 0);
 		stm32_mem_write(handle, iface, (void*)&bindata[offset], 1024);
 	}
 	stm32_mem_manifest(handle, iface);
@@ -154,6 +160,10 @@ retry:
 	usb_close(handle);
 
 	puts("All operations complete!\n");
+
+#ifdef WIN32
+		system("pause");
+#endif
 
 	return 0;
 }
