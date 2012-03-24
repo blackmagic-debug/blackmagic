@@ -28,6 +28,7 @@
 
 #include <libopencm3/stm32/f1/rcc.h>
 #include <libopencm3/stm32/nvic.h>
+#include <libopencm3/stm32/exti.h>
 #include <libopencm3/stm32/f1/gpio.h>
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/cdc.h>
@@ -436,8 +437,6 @@ static int cdcacm_control_request(struct usb_setup_data *req, uint8_t **buf,
 #endif
 	case DFU_GETSTATUS: 
 		if(req->wIndex == DFU_IF_NO) {
-			u32 bwPollTimeout = 0; /* 24-bit integer in DFU class spec */
-
 			(*buf)[0] = DFU_STATUS_OK;
 			(*buf)[1] = 0;
 			(*buf)[2] = 0;
@@ -526,6 +525,8 @@ uint8_t usbd_control_buffer[256];
 
 void cdcacm_init(void)
 {
+	void exti15_10_isr(void);
+
 	get_dev_unique_id(serial_no);
 
 	usbd_init(&stm32f103_usb_driver, &dev, &config, usb_strings);
@@ -533,15 +534,40 @@ void cdcacm_init(void)
 	usbd_register_set_config_callback(cdcacm_set_config);
 
 	nvic_enable_irq(NVIC_USB_LP_CAN_RX0_IRQ);
+	nvic_enable_irq(USB_VBUS_IRQ);
 
+	gpio_set(USB_VBUS_PORT, USB_VBUS_PIN);
 	gpio_set(USB_PU_PORT, USB_PU_PIN);
-	gpio_set_mode(USB_PU_PORT, GPIO_MODE_OUTPUT_10_MHZ, 
-			GPIO_CNF_OUTPUT_PUSHPULL, USB_PU_PIN);
+
+	gpio_set_mode(USB_VBUS_PORT, GPIO_MODE_INPUT, 
+			GPIO_CNF_INPUT_PULL_UPDOWN, USB_VBUS_PIN);
+
+	/* Configure EXTI for USB VBUS monitor */
+	exti_select_source(USB_VBUS_PIN, USB_VBUS_PORT);
+	exti_set_trigger(USB_VBUS_PIN, EXTI_TRIGGER_BOTH);
+	exti_enable_request(USB_VBUS_PIN);
+
+	exti15_10_isr();
 }
 
 void usb_lp_can_rx0_isr(void)
 {
 	usbd_poll();
+}
+
+void exti15_10_isr(void)
+{
+	if (gpio_get(USB_VBUS_PORT, USB_VBUS_PIN)) {
+		/* Drive pull-up high if VBUS connected */
+		gpio_set_mode(USB_PU_PORT, GPIO_MODE_OUTPUT_10_MHZ, 
+				GPIO_CNF_OUTPUT_PUSHPULL, USB_PU_PIN);
+	} else {
+		/* Allow pull-up to float if VBUS disconnected */
+		gpio_set_mode(USB_PU_PORT, GPIO_MODE_INPUT, 
+				GPIO_CNF_INPUT_FLOAT, USB_PU_PIN);
+	}
+
+	exti_reset_request(USB_VBUS_PIN);
 }
 
 static char *get_dev_unique_id(char *s) 

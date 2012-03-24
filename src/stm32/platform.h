@@ -41,7 +41,7 @@
  * LED1 = 	PB10	(Yellow LED : Idle)
  * LED2 = 	PB11	(Red LED    : Error)
  *
- * TPWR = 	RB0 (input)
+ * TPWR = 	RB0 (input) -- analogue on mini design ADC1, ch8
  * nTRST = 	PB1
  * SRST_OUT = 	PA2
  * TDI = 	PA3
@@ -50,7 +50,9 @@
  * TDO = 	PA6 (input)
  * nSRST = 	PA7 (input)
  *
- * USB cable pull-up: PA8	// was PA10 on prototype
+ * USB cable pull-up: PA8
+ * USB VBUS detect:  PB13 -- New on mini design.  
+ *                           Enable pull up for compatibility.
  * Force DFU mode button: PB12
  */
 
@@ -67,6 +69,10 @@
 
 #define USB_PU_PORT	GPIOA
 #define USB_PU_PIN	GPIO8
+
+#define USB_VBUS_PORT	GPIOB
+#define USB_VBUS_PIN	GPIO13
+#define USB_VBUS_IRQ	NVIC_EXTI15_10_IRQ
 
 #define LED_PORT	GPIOB
 #define LED_RUN	GPIO2
