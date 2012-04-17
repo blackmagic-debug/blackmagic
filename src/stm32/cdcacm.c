@@ -38,12 +38,9 @@
 #include <stdlib.h>
 
 #include "platform.h"
+#include "traceswo.h"
 
-#ifdef INCLUDE_UART_INTERFACE
-#	define DFU_IF_NO 4
-#else
-#	define DFU_IF_NO 2
-#endif
+#define DFU_IF_NO 4
 
 static char *get_dev_unique_id(char *serial_no);
 
@@ -172,7 +169,6 @@ static const struct usb_iface_assoc_descriptor gdb_assoc = {
 	.iFunction = 0,
 };
 
-#ifdef INCLUDE_UART_INTERFACE
 /* Serial ACM interface */
 static const struct usb_endpoint_descriptor uart_comm_endp[] = {{
 	.bLength = USB_DT_ENDPOINT_SIZE,
@@ -275,7 +271,6 @@ static const struct usb_iface_assoc_descriptor uart_assoc = {
 	.bFunctionProtocol = USB_CDC_PROTOCOL_AT,
 	.iFunction = 0,
 };
-#endif
 
 const struct usb_dfu_descriptor dfu_function = {
 	.bLength = sizeof(struct usb_dfu_descriptor),
@@ -312,6 +307,40 @@ static const struct usb_iface_assoc_descriptor dfu_assoc = {
 	.iFunction = 6,
 };
 
+static const struct usb_endpoint_descriptor trace_endp[] = {{
+	.bLength = USB_DT_ENDPOINT_SIZE,
+	.bDescriptorType = USB_DT_ENDPOINT,
+	.bEndpointAddress = 0x85,
+	.bmAttributes = USB_ENDPOINT_ATTR_BULK,
+	.wMaxPacketSize = 16,
+	.bInterval = 0,
+}};
+
+const struct usb_interface_descriptor trace_iface = {
+	.bLength = USB_DT_INTERFACE_SIZE,
+	.bDescriptorType = USB_DT_INTERFACE,
+	.bInterfaceNumber = 5,
+	.bAlternateSetting = 0,
+	.bNumEndpoints = 1,
+	.bInterfaceClass = 0xFF,
+	.bInterfaceSubClass = 0xFF,
+	.bInterfaceProtocol = 0xFF,
+	.iInterface = 7,
+
+	.endpoint = trace_endp,
+};
+
+static const struct usb_iface_assoc_descriptor trace_assoc = {
+	.bLength = USB_DT_INTERFACE_ASSOCIATION_SIZE,
+	.bDescriptorType = USB_DT_INTERFACE_ASSOCIATION,
+	.bFirstInterface = 5,
+	.bInterfaceCount = 1,
+	.bFunctionClass = 0xFF,
+	.bFunctionSubClass = 0xFF,
+	.bFunctionProtocol = 0xFF,
+	.iFunction = 7,
+};
+
 static const struct usb_interface ifaces[] = {{
 	.num_altsetting = 1,
 	.iface_assoc = &gdb_assoc,
@@ -320,7 +349,6 @@ static const struct usb_interface ifaces[] = {{
 	.num_altsetting = 1,
 	.altsetting = gdb_data_iface,
 }, {
-#ifdef INCLUDE_UART_INTERFACE
 	.num_altsetting = 1,
 	.iface_assoc = &uart_assoc,
 	.altsetting = uart_comm_iface,
@@ -328,21 +356,20 @@ static const struct usb_interface ifaces[] = {{
 	.num_altsetting = 1,
 	.altsetting = uart_data_iface,
 }, {
-#endif
 	.num_altsetting = 1,
 	.iface_assoc = &dfu_assoc,
 	.altsetting = &dfu_iface,
+}, {
+	.num_altsetting = 1,
+	.iface_assoc = &trace_assoc,
+	.altsetting = &trace_iface,
 }};
 
 static const struct usb_config_descriptor config = {
 	.bLength = USB_DT_CONFIGURATION_SIZE,
 	.bDescriptorType = USB_DT_CONFIGURATION,
 	.wTotalLength = 0,
-#ifdef INCLUDE_UART_INTERFACE
-	.bNumInterfaces = 5,
-#else
-	.bNumInterfaces = 3,
-#endif
+	.bNumInterfaces = 6,
 	.bConfigurationValue = 1,
 	.iConfiguration = 0,
 	.bmAttributes = 0x80,
@@ -361,6 +388,7 @@ static const char *usb_strings[] = {
 	"Black Magic GDB Server",
 	"Black Magic UART Port",
 	"Black Magic Firmware Upgrade",
+	"Black Magic Trace Capture",
 };
 
 static void dfu_detach_complete(struct usb_setup_data *req)
@@ -395,7 +423,6 @@ static int cdcacm_control_request(struct usb_setup_data *req, uint8_t **buf,
 		cdcacm_gdb_dtr = req->wValue & 1;
 
 		return 1;
-#ifdef INCLUDE_UART_INTERFACE
 	case USB_CDC_REQ_SET_LINE_CODING: {
 		if(*len < sizeof(struct usb_cdc_line_coding)) 
 			return 0;
@@ -434,7 +461,6 @@ static int cdcacm_control_request(struct usb_setup_data *req, uint8_t **buf,
 
 		return 1;
 		}
-#endif
 	case DFU_GETSTATUS: 
 		if(req->wIndex == DFU_IF_NO) {
 			(*buf)[0] = DFU_STATUS_OK;
@@ -467,7 +493,6 @@ int cdcacm_get_dtr(void)
 	return cdcacm_gdb_dtr;
 }
 
-#ifdef INCLUDE_UART_INTERFACE
 static void cdcacm_data_rx_cb(u8 ep)
 {
 	(void)ep;
@@ -477,7 +502,6 @@ static void cdcacm_data_rx_cb(u8 ep)
 	for(int i = 0; i < len; i++)
 		usart_send_blocking(USART1, buf[i]);
 }
-#endif
 
 static void cdcacm_set_config(u16 wValue)
 {
@@ -488,12 +512,13 @@ static void cdcacm_set_config(u16 wValue)
 	usbd_ep_setup(0x81, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE, NULL);
 	usbd_ep_setup(0x82, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
 
-#ifdef INCLUDE_UART_INTERFACE
 	/* Serial interface */
 	usbd_ep_setup(0x03, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE, cdcacm_data_rx_cb);
 	usbd_ep_setup(0x83, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE, NULL);
 	usbd_ep_setup(0x84, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
-#endif
+
+	/* Trace interface */
+	usbd_ep_setup(0x85, USB_ENDPOINT_ATTR_BULK, 16, trace_buf_drain);
 
 	usbd_register_control_callback(
 			USB_REQ_TYPE_CLASS | USB_REQ_TYPE_INTERFACE, 
@@ -514,10 +539,8 @@ static void cdcacm_set_config(u16 wValue)
 	buf[8] = 3; /* DCD | DSR */
 	buf[9] = 0;
 	usbd_ep_write_packet(0x82, buf, 10);
-#ifdef INCLUDE_UART_INTERFACE
 	notif->wIndex = 2;
 	usbd_ep_write_packet(0x84, buf, 10);
-#endif
 }
 
 /* We need a special large control buffer for this device: */

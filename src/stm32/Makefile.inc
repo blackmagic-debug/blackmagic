@@ -11,6 +11,7 @@ LDFLAGS = $(LDFLAGS_BOOT) -Wl,-Ttext=0x8002000
 
 SRC += 	cdcacm.c	\
 	platform.c	\
+	traceswo.c	\
 
 all:	blackmagic.bin blackmagic_dfu.bin
 
