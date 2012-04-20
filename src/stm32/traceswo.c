@@ -96,6 +96,8 @@ void trace_buf_drain(uint8_t ep)
 	trace_usb_buf_size = 0;
 }
 
+#define ALLOWED_DUTY_ERROR 5
+
 void tim3_isr(void)
 {
 	uint16_t sr = TIM_SR(TIM3) & TIM_DIER(TIM3);
@@ -109,13 +111,9 @@ void tim3_isr(void)
 	if (sr & (TIM_SR_CC1OF | TIM_SR_UIF)) {
 		timer_clear_flag(TIM3, TIM_SR_CC1OF | TIM_SR_UIF);
 		if (!(sr & TIM_SR_CC1IF)) {
-			trace_buf_push(decbuf, decbuf_pos >> 3);
-			memset(decbuf, 0, sizeof(decbuf));
-			decbuf_pos = 0;
-			bt = 0;
 			timer_set_period(TIM3, -1);
 			timer_disable_irq(TIM3, TIM_DIER_UIE); 
-			return;
+			goto flush_and_reset;
 		}
 	}
 
@@ -127,19 +125,16 @@ void tim3_isr(void)
 
 	/* Reset decoder state if crazy shit happened */
 	if ((bt && (((duty / bt) > 2) || ((cycle / bt) > 4))) ||
-	    (duty == 0)) {
-		bt = 0;
-		trace_buf_push(decbuf, decbuf_pos >> 3);
-		decbuf_pos = 0;
-		memset(decbuf, 0, sizeof(decbuf));
-		return;
-	}
+	    (duty == 0)) 
+		goto flush_and_reset;
 
 	if (!bt) {
 		/* First bit, sync decoder */
-		if ((cycle / (duty - 5)) != 2)
+		duty -= ALLOWED_DUTY_ERROR;
+		if (((cycle / duty) != 2) && 
+		    ((cycle / duty) != 3))
 			return;
-		bt = duty - 5;
+		bt = duty;
 		lastbit = 1;
 		timer_set_period(TIM3, duty * 5);
 		timer_clear_flag(TIM3, TIM_SR_UIF);
@@ -159,13 +154,14 @@ void tim3_isr(void)
 		decbuf_pos++;
 	}
 
-	if (decbuf_pos >= 128) {
-		trace_buf_push(decbuf, 16);
-		/* bt = 0; */
-		decbuf_pos = 0;
-		memset(decbuf, 0, sizeof(decbuf));
-	}
+	if (decbuf_pos < 128) 
+		return;
 
+flush_and_reset:
+	trace_buf_push(decbuf, decbuf_pos >> 3);
+	bt = 0;
+	decbuf_pos = 0;
+	memset(decbuf, 0, sizeof(decbuf));
 }
 
 
