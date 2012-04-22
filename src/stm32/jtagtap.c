@@ -31,10 +31,10 @@ int jtagtap_init(void)
 	/* This needs some fixing... */
 	/* Toggle required to sort out line drivers... */
 	gpio_port_write(GPIOA, 0x8100);
-	gpio_port_write(GPIOB, 0x0000);
+	gpio_port_write(GPIOB, 0x2000);
 
 	gpio_port_write(GPIOA, 0x8180);
-	gpio_port_write(GPIOB, 0x0002);
+	gpio_port_write(GPIOB, 0x2002);
 	
 	gpio_set_mode(JTAG_PORT, GPIO_MODE_OUTPUT_50_MHZ, 
 		GPIO_CNF_OUTPUT_PUSHPULL, TMS_PIN); 
