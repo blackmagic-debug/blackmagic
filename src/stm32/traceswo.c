@@ -31,6 +31,8 @@
  * These can be capture directly to RAM by DMA.
  * The core can then process the buffer to extract the frame.
  */
+#include "general.h"
+
 #include <libopencm3/stm32/nvic.h>
 #include <libopencm3/stm32/timer.h>
 #include <libopencm3/stm32/f1/rcc.h>
@@ -66,6 +68,7 @@ void traceswo_init(void)
 	timer_slave_set_mode(TIM3, TIM_SMCR_SMS_RM);
 
 	/* Enable capture interrupt */
+	nvic_set_priority(NVIC_TIM3_IRQ, 0);
 	nvic_enable_irq(NVIC_TIM3_IRQ);
 	timer_enable_irq(TIM3, TIM_DIER_CC1IE); 
 
@@ -76,14 +79,20 @@ void traceswo_init(void)
 	timer_enable_counter(TIM3);
 }
 
-static uint8_t trace_usb_buf[16];
+static uint8_t trace_usb_buf[64];
 static uint8_t trace_usb_buf_size;
 
 void trace_buf_push(uint8_t *buf, int len)
 {
 	if (usbd_ep_write_packet(0x85, buf, len) != len) {
-		memcpy(trace_usb_buf, buf, len);
-		trace_usb_buf_size = len;
+		if (trace_usb_buf_size + len > 64) {
+			/* Stall if upstream to too slow. */
+			usbd_ep_stall_set(0x85, 1);
+			trace_usb_buf_size = 0;
+			return;
+		}
+		memcpy(trace_usb_buf + trace_usb_buf_size, buf, len);
+		trace_usb_buf_size += len;
 	}
 }
 
@@ -106,6 +115,7 @@ void tim3_isr(void)
 	static uint8_t lastbit;
 	static uint8_t decbuf[17];
 	static uint8_t decbuf_pos;
+	static uint8_t halfbit;
 
 	/* Reset decoder state if capture overflowed */
 	if (sr & (TIM_SR_CC1OF | TIM_SR_UIF)) {
@@ -124,8 +134,7 @@ void tim3_isr(void)
 	duty = TIM_CCR2(TIM3);
 
 	/* Reset decoder state if crazy shit happened */
-	if ((bt && (((duty / bt) > 2) || ((cycle / bt) > 4))) ||
-	    (duty == 0)) 
+	if ((bt && ((duty / bt) > 2)) || (duty == 0)) 
 		goto flush_and_reset;
 
 	if (!bt) {
@@ -136,19 +145,30 @@ void tim3_isr(void)
 			return;
 		bt = duty;
 		lastbit = 1;
+		halfbit = 0;
 		timer_set_period(TIM3, duty * 5);
 		timer_clear_flag(TIM3, TIM_SR_UIF);
 		timer_enable_irq(TIM3, TIM_DIER_UIE); 
 	} else {
 		/* If high time is extended we need to flip the bit */
-		if ((duty / bt) > 1)
+		if ((duty / bt) > 1) {
+			if (!halfbit) /* lost sync somehow */
+				goto flush_and_reset;
+			halfbit = 0;
 			lastbit ^= 1;
+		}
 		decbuf[decbuf_pos >> 3] |= lastbit << (decbuf_pos & 7);
 		decbuf_pos++;
 	}
 
+	if (((cycle - duty) / bt) > 2)
+		goto flush_and_reset;
+
 	if (((cycle - duty) / bt) > 1) {
 		/* If low time extended we need to pack another bit. */
+		if (halfbit) /* this is a valid stop-bit or we lost sync */
+			goto flush_and_reset;
+		halfbit = 1;
 		lastbit ^= 1;
 		decbuf[decbuf_pos >> 3] |= lastbit << (decbuf_pos & 7);
 		decbuf_pos++;

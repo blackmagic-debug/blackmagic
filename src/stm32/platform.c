@@ -204,6 +204,7 @@ void uart_init(void)
 
 	/* Enable interrupts */
 	USART1_CR1 |= USART_CR1_RXNEIE;
+	nvic_set_priority(NVIC_USART1_IRQ, 14);
 	nvic_enable_irq(NVIC_USART1_IRQ);
 }
 

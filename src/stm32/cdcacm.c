@@ -312,7 +312,7 @@ static const struct usb_endpoint_descriptor trace_endp[] = {{
 	.bDescriptorType = USB_DT_ENDPOINT,
 	.bEndpointAddress = 0x85,
 	.bmAttributes = USB_ENDPOINT_ATTR_BULK,
-	.wMaxPacketSize = 16,
+	.wMaxPacketSize = 64,
 	.bInterval = 0,
 }};
 
@@ -378,7 +378,7 @@ static const struct usb_config_descriptor config = {
 	.interface = ifaces,
 };
 
-static char serial_no[9];
+char serial_no[9];
 
 static const char *usb_strings[] = {
 	"x",
@@ -518,7 +518,7 @@ static void cdcacm_set_config(u16 wValue)
 	usbd_ep_setup(0x84, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
 
 	/* Trace interface */
-	usbd_ep_setup(0x85, USB_ENDPOINT_ATTR_BULK, 16, trace_buf_drain);
+	usbd_ep_setup(0x85, USB_ENDPOINT_ATTR_BULK, 64, trace_buf_drain);
 
 	usbd_register_control_callback(
 			USB_REQ_TYPE_CLASS | USB_REQ_TYPE_INTERFACE, 
@@ -556,7 +556,9 @@ void cdcacm_init(void)
 	usbd_set_control_buffer_size(sizeof(usbd_control_buffer));
 	usbd_register_set_config_callback(cdcacm_set_config);
 
+	nvic_set_priority(NVIC_USB_LP_CAN_RX0_IRQ, 1);
 	nvic_enable_irq(NVIC_USB_LP_CAN_RX0_IRQ);
+	nvic_set_priority(USB_VBUS_IRQ, 14);
 	nvic_enable_irq(USB_VBUS_IRQ);
 
 	gpio_set(USB_VBUS_PORT, USB_VBUS_PIN);
