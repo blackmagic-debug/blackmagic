@@ -109,35 +109,36 @@ void trace_buf_drain(uint8_t ep)
 
 void tim3_isr(void)
 {
-	uint16_t sr = TIM_SR(TIM3) & TIM_DIER(TIM3);
+	uint16_t sr = TIM_SR(TIM3);
 	uint16_t duty, cycle;
 	static uint16_t bt;
 	static uint8_t lastbit;
 	static uint8_t decbuf[17];
 	static uint8_t decbuf_pos;
 	static uint8_t halfbit;
+	static uint8_t notstart;
 
 	/* Reset decoder state if capture overflowed */
 	if (sr & (TIM_SR_CC1OF | TIM_SR_UIF)) {
 		timer_clear_flag(TIM3, TIM_SR_CC1OF | TIM_SR_UIF);
-		if (!(sr & TIM_SR_CC1IF)) {
-			timer_set_period(TIM3, -1);
-			timer_disable_irq(TIM3, TIM_DIER_UIE); 
+		if (!(sr & (TIM_SR_CC2IF | TIM_SR_CC1IF)))
 			goto flush_and_reset;
-		}
 	}
-
-	if (!(sr & TIM_SR_CC1IF))
-		return;
 
 	cycle = TIM_CCR1(TIM3);
 	duty = TIM_CCR2(TIM3);
 
 	/* Reset decoder state if crazy shit happened */
-	if ((bt && ((duty / bt) > 2)) || (duty == 0)) 
+	if ((bt && (((duty / bt) > 2) || ((duty / bt) == 0))) || (duty == 0)) 
 		goto flush_and_reset;
 
+	if(!(sr & TIM_SR_CC1IF)) notstart = 1;
+
 	if (!bt) {
+		if (notstart) { 
+			notstart = 0;
+			return;
+		}
 		/* First bit, sync decoder */
 		duty -= ALLOWED_DUTY_ERROR;
 		if (((cycle / duty) != 2) && 
@@ -146,7 +147,7 @@ void tim3_isr(void)
 		bt = duty;
 		lastbit = 1;
 		halfbit = 0;
-		timer_set_period(TIM3, duty * 5);
+		timer_set_period(TIM3, duty * 6);
 		timer_clear_flag(TIM3, TIM_SR_UIF);
 		timer_enable_irq(TIM3, TIM_DIER_UIE); 
 	} else {
@@ -161,7 +162,7 @@ void tim3_isr(void)
 		decbuf_pos++;
 	}
 
-	if (((cycle - duty) / bt) > 2)
+	if (!(sr & TIM_SR_CC1IF) || (((cycle - duty) / bt) > 2))
 		goto flush_and_reset;
 
 	if (((cycle - duty) / bt) > 1) {
@@ -178,6 +179,8 @@ void tim3_isr(void)
 		return;
 
 flush_and_reset:
+	timer_set_period(TIM3, -1);
+	timer_disable_irq(TIM3, TIM_DIER_UIE); 
 	trace_buf_push(decbuf, decbuf_pos >> 3);
 	bt = 0;
 	decbuf_pos = 0;
