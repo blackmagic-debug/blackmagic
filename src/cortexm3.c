@@ -660,7 +660,9 @@ cm3_set_hw_wp(struct target_s *target, uint8_t type, uint32_t addr, uint8_t len)
 	}
 
 	for(i = 0; i < hw_watchpoint_max; i++) 
-		if((hw_watchpoint[i].type) == 0) break;
+		if((hw_watchpoint[i].type == 0) &&
+		   ((adiv5_ap_mem_read(t->ap, CM3_DWT_FUNC(i)) & 0xF) == 0))
+			break;
 	
 	if(i == hw_watchpoint_max) return -2;
 
