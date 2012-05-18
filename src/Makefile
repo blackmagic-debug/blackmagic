@@ -42,7 +42,7 @@ blackmagic: $(OBJ)
 .PHONY:	clean host_clean
 
 clean:	host_clean
-	$(RM) *.o *~ blackmagic $(HOSTFILES)
+	$(RM) *.o *.d *~ blackmagic $(HOSTFILES)
 
 -include *.d
 
