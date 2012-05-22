@@ -32,6 +32,8 @@
 #define CMD_SETADDR	0x21 
 #define CMD_ERASE	0x41 
 
+#define FLASH_OBP_WRP10 0x1FFFF808 
+
 /* We need a special large control buffer for this device: */
 u8 usbd_control_buffer[1024];
 
@@ -147,6 +149,11 @@ static void usbdfu_getstatus_complete(struct usb_setup_data *req)
 
 		flash_unlock();
 		if(prog.blocknum == 0) {
+			if ((*(u32*)(prog.buf+1) < 0x8002000) ||
+			    (*(u32*)(prog.buf+1) >= 0x8020000)) {
+				usbd_ep_stall_set(0, 1);
+				return;
+			}
 			switch(prog.buf[0]) {
 			case CMD_ERASE:
 				flash_erase_page(*(u32*)(prog.buf+1));
@@ -249,6 +256,11 @@ int main(void)
 			/* Jump to application */
 			(*(void(**)())(APP_ADDRESS + 4))();
 		}
+	}
+
+	if ((FLASH_WRPR & 0x03) != 0x00) {
+		flash_unlock();
+		flash_program_option_bytes(FLASH_OBP_WRP10, 0x03FC);
 	}
 
 	rcc_clock_setup_in_hse_8mhz_out_72mhz();
