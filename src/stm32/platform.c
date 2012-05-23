@@ -28,6 +28,7 @@
 #include <libopencm3/stm32/nvic.h>
 #include <libopencm3/stm32/usart.h>
 #include <libopencm3/usb/usbd.h>
+#include <libopencm3/cm3/scs.h>
 
 #include "platform.h"
 #include "jtag_scan.h"
@@ -45,6 +46,23 @@ static void morse_update(void);
 #ifdef INCLUDE_UART_INTERFACE
 static void uart_init(void);
 #endif
+
+/* Pins PB[7:5] are used to detect hardware revision.
+ * 000 - Original production build.
+ * 001 - Mini production build.
+ */
+int platform_hwversion(void)
+{
+	static int hwversion = -1;
+	if (hwversion == -1) {
+		gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ, 
+				GPIO_CNF_INPUT_PULL_UPDOWN,
+				GPIO7 | GPIO6 | GPIO5);
+		gpio_clear(GPIOB, GPIO7 | GPIO6 | GPIO5);
+		hwversion = gpio_get(GPIOB, GPIO7 | GPIO6 | GPIO5) >> 5;
+	}
+	return hwversion;
+}
 
 int platform_init(void)
 {
@@ -84,7 +102,11 @@ int platform_init(void)
 	systick_counter_enable();
 
 #ifdef INCLUDE_UART_INTERFACE
-	uart_init();
+	/* On mini hardware, UART and SWD share connector pins.
+	 * Don't enable UART if we're being debugged. */
+	if ((platform_hwversion() == 0) ||
+	    !(SCS_DEMCR & SCS_DEMCR_TRCENA))
+		uart_init();
 #endif
 	SCB_VTOR = 0x2000;	// Relocate interrupt vector table here
 

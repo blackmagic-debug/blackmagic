@@ -499,6 +499,13 @@ static void cdcacm_data_rx_cb(u8 ep)
 
 	char buf[CDCACM_PACKET_SIZE];
 	int len = usbd_ep_read_packet(0x03, buf, CDCACM_PACKET_SIZE);
+
+	/* Don't bother if uart is disabled.
+	 * This will be the case on mini while we're being debugged. 
+	 */
+	if(!(RCC_APB2ENR & RCC_APB2ENR_USART1EN)) 
+		return;
+
 	for(int i = 0; i < len; i++)
 		usart_send_blocking(USART1, buf[i]);
 }
