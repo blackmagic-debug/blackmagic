@@ -32,7 +32,10 @@
 #define CMD_SETADDR	0x21 
 #define CMD_ERASE	0x41 
 
+#define FLASH_OBP_RDP 0x1FFFF800 
 #define FLASH_OBP_WRP10 0x1FFFF808 
+
+#define FLASH_OBP_RDP_KEY 0x5aa5
 
 /* We need a special large control buffer for this device: */
 u8 usbd_control_buffer[1024];
@@ -260,6 +263,9 @@ int main(void)
 
 	if ((FLASH_WRPR & 0x03) != 0x00) {
 		flash_unlock();
+		FLASH_CR = 0;
+		flash_erase_option_bytes();
+		flash_program_option_bytes(FLASH_OBP_RDP, FLASH_OBP_RDP_KEY);
 		flash_program_option_bytes(FLASH_OBP_WRP10, 0x03FC);
 	}
 
