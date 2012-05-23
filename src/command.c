@@ -110,6 +110,8 @@ void cmd_help(void)
 
 void cmd_jtag_scan(void)
 {
+	gdb_outf("Target voltage: %s\n", platform_target_voltage());
+
 	int devs = jtag_scan();
 
 	if(devs < 0) {
@@ -131,6 +133,8 @@ void cmd_jtag_scan(void)
 
 void cmd_swdp_scan(void)
 {
+	gdb_outf("Target voltage: %s\n", platform_target_voltage());
+
 	if(adiv5_swdp_scan() < 0) {
 		gdb_out("SW-DP scan failed!\n");
 		return;

@@ -112,6 +112,7 @@ extern const char *morse_msg;
 
 int platform_init(void);
 void morse(const char *msg, char repeat);
+const char *platform_target_voltage(void);
 
 /* <cdcacm.c> */
 void cdcacm_init(void);

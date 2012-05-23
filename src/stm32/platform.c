@@ -29,6 +29,7 @@
 #include <libopencm3/stm32/usart.h>
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/cm3/scs.h>
+#include <libopencm3/stm32/f1/adc.h>
 
 #include "platform.h"
 #include "jtag_scan.h"
@@ -46,6 +47,7 @@ static void morse_update(void);
 #ifdef INCLUDE_UART_INTERFACE
 static void uart_init(void);
 #endif
+static void adc_init(void);
 
 /* Pins PB[7:5] are used to detect hardware revision.
  * 000 - Original production build.
@@ -55,7 +57,7 @@ int platform_hwversion(void)
 {
 	static int hwversion = -1;
 	if (hwversion == -1) {
-		gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ, 
+		gpio_set_mode(GPIOB, GPIO_MODE_INPUT, 
 				GPIO_CNF_INPUT_PULL_UPDOWN,
 				GPIO7 | GPIO6 | GPIO5);
 		gpio_clear(GPIOB, GPIO7 | GPIO6 | GPIO5);
@@ -108,6 +110,14 @@ int platform_init(void)
 	    !(SCS_DEMCR & SCS_DEMCR_TRCENA))
 		uart_init();
 #endif
+	if (platform_hwversion() > 0) {
+		adc_init();
+	} else {
+		gpio_clear(GPIOB, GPIO0);
+		gpio_set_mode(GPIOB, GPIO_MODE_INPUT, 
+				GPIO_CNF_INPUT_PULL_UPDOWN, GPIO0);
+	}
+
 	SCB_VTOR = 0x2000;	// Relocate interrupt vector table here
 
 	cdcacm_init();
@@ -207,7 +217,7 @@ static void morse_update(void)
 }
 
 #ifdef INCLUDE_UART_INTERFACE
-void uart_init(void)
+static void uart_init(void)
 {
 	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_USART1EN);
 
@@ -239,3 +249,49 @@ void usart1_isr(void)
 	usbd_ep_write_packet(0x83, &c, 1);
 }
 #endif
+
+static void adc_init(void)
+{
+	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_ADC1EN);
+
+	gpio_set_mode(GPIOB, GPIO_MODE_INPUT, 
+			GPIO_CNF_INPUT_ANALOG, GPIO0);
+
+	adc_off(ADC1);
+	adc_disable_scan_mode(ADC1);
+	adc_set_single_conversion_mode(ADC1);
+	adc_enable_discontinous_mode_regular(ADC1);
+	adc_disable_external_trigger_regular(ADC1);
+	adc_set_right_aligned(ADC1);
+	adc_set_conversion_time_on_all_channels(ADC1, ADC_SMPR_SMP_28DOT5CYC);
+
+	adc_on(ADC1);
+
+	/* Wait for ADC starting up. */
+	for (int i = 0; i < 800000; i++)    /* Wait a bit. */
+		__asm__("nop");
+
+	adc_reset_calibration(ADC1);
+	adc_calibration(ADC1);
+}
+
+const char *platform_target_voltage(void)
+{
+	if (platform_hwversion() == 0)
+		return gpio_get(GPIOB, GPIO0) ? "OK" : "ABSENT!";
+
+	static char ret[] = "0.0V";
+	const u8 channel = 8;
+	adc_set_regular_sequence(ADC1, 1, (u8*)&channel);
+
+	adc_on(ADC1);
+
+	/* Wait for end of conversion. */
+	while (!(ADC_SR(ADC1) & ADC_SR_EOC));
+
+	u32 val = ADC_DR(ADC1) * 99; /* 0-4095 */
+	ret[0] = '0' + val / 81910;
+	ret[2] = '0' + (val / 8191) % 10;
+
+	return ret;
+}
