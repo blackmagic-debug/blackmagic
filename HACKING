@@ -51,7 +51,7 @@ First, get the VID/PID for your FT2232 device using 'lsusb'.  Edit the file
 'src/linux/platform.h' and change the VID/PID to match your hardware. 
 Compile the application with the command:
 
-make HOST=linux
+make PROBE_HOST=linux
 
 Running the application 'blackmagic' will start a GDB server on TCP port 2000.
 
