@@ -12,8 +12,9 @@ LDFLAGS = $(LDFLAGS_BOOT) -Wl,-Ttext=0x8002000
 SRC += 	cdcacm.c	\
 	platform.c	\
 	traceswo.c	\
+	usbuart.c	\
 
-all:	blackmagic.bin blackmagic_dfu.bin
+all:	blackmagic.bin blackmagic_dfu.bin blackmagic_dfu.hex
 
 blackmagic.bin:	blackmagic
 	$(OBJCOPY) -O binary $^ $@
@@ -24,6 +25,9 @@ blackmagic_dfu: usbdfu.o
 blackmagic_dfu.bin:	blackmagic_dfu
 	$(OBJCOPY) -O binary $^ $@
 
+blackmagic_dfu.hex:	blackmagic_dfu
+	$(OBJCOPY) -O ihex $^ $@
+
 host_clean:
-	-rm blackmagic.bin blackmagic_dfu blackmagic_dfu.bin
+	-rm blackmagic.bin blackmagic_dfu blackmagic_dfu.bin blackmagic_dfu.hex
 

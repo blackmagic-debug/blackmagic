@@ -34,11 +34,11 @@
 #include <libopencm3/usb/cdc.h>
 #include <libopencm3/stm32/f1/scb.h>
 #include <libopencm3/usb/dfu.h>
-#include <libopencm3/stm32/usart.h>
 #include <stdlib.h>
 
 #include "platform.h"
 #include "traceswo.h"
+#include "usbuart.h"
 
 #define DFU_IF_NO 4
 
@@ -423,43 +423,17 @@ static int cdcacm_control_request(struct usb_setup_data *req, uint8_t **buf,
 		cdcacm_gdb_dtr = req->wValue & 1;
 
 		return 1;
-	case USB_CDC_REQ_SET_LINE_CODING: {
+	case USB_CDC_REQ_SET_LINE_CODING: 
 		if(*len < sizeof(struct usb_cdc_line_coding)) 
 			return 0;
 
-		if(req->wIndex == 0)
+		switch(req->wIndex) {
+		case 2:
+			usbuart_set_line_coding((struct usb_cdc_line_coding*)*buf);
+		case 0:
 			return 1; /* Ignore on GDB Port */
-
-		if(req->wIndex != 2) 
+		default:
 			return 0;
-
-		struct usb_cdc_line_coding *coding = (void*)*buf;
-		usart_set_baudrate(USART1, coding->dwDTERate);
-		usart_set_databits(USART1, coding->bDataBits);
-		switch(coding->bCharFormat) {
-		case 0:
-			usart_set_stopbits(USART1, USART_STOPBITS_1);
-			break;
-		case 1:
-			usart_set_stopbits(USART1, USART_STOPBITS_1_5);
-			break;
-		case 2:
-			usart_set_stopbits(USART1, USART_STOPBITS_2);
-			break;
-		}
-		switch(coding->bParityType) {
-		case 0:
-			usart_set_parity(USART1, USART_PARITY_NONE);
-			break;
-		case 1:
-			usart_set_parity(USART1, USART_PARITY_ODD);
-			break;
-		case 2:
-			usart_set_parity(USART1, USART_PARITY_EVEN);
-			break;
-		}
-
-		return 1;
 		}
 	case DFU_GETSTATUS: 
 		if(req->wIndex == DFU_IF_NO) {
@@ -493,23 +467,6 @@ int cdcacm_get_dtr(void)
 	return cdcacm_gdb_dtr;
 }
 
-static void cdcacm_data_rx_cb(u8 ep)
-{
-	(void)ep;
-
-	char buf[CDCACM_PACKET_SIZE];
-	int len = usbd_ep_read_packet(0x03, buf, CDCACM_PACKET_SIZE);
-
-	/* Don't bother if uart is disabled.
-	 * This will be the case on mini while we're being debugged. 
-	 */
-	if(!(RCC_APB2ENR & RCC_APB2ENR_USART1EN)) 
-		return;
-
-	for(int i = 0; i < len; i++)
-		usart_send_blocking(USART1, buf[i]);
-}
-
 static void cdcacm_set_config(u16 wValue)
 {
 	configured = wValue;
@@ -520,8 +477,8 @@ static void cdcacm_set_config(u16 wValue)
 	usbd_ep_setup(0x82, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
 
 	/* Serial interface */
-	usbd_ep_setup(0x03, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE, cdcacm_data_rx_cb);
-	usbd_ep_setup(0x83, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE, uart_usb_buf_drain);
+	usbd_ep_setup(0x03, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE, usbuart_usb_out_cb);
+	usbd_ep_setup(0x83, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE, usbuart_usb_in_cb);
 	usbd_ep_setup(0x84, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
 
 	/* Trace interface */

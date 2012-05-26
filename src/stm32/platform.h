@@ -31,7 +31,6 @@
 
 #include "gdb_packet.h"
 
-#define INCLUDE_UART_INTERFACE
 #define INLINE_GPIO
 #define CDCACM_PACKET_SIZE 	64
 #define PLATFORM_HAS_TRACESWO
@@ -123,6 +122,7 @@ extern const char *morse_msg;
 int platform_init(void);
 void morse(const char *msg, char repeat);
 const char *platform_target_voltage(void);
+int platform_hwversion(void);
 
 /* <cdcacm.c> */
 void cdcacm_init(void);

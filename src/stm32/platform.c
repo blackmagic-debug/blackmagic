@@ -28,11 +28,11 @@
 #include <libopencm3/stm32/nvic.h>
 #include <libopencm3/stm32/usart.h>
 #include <libopencm3/usb/usbd.h>
-#include <libopencm3/cm3/scs.h>
 #include <libopencm3/stm32/f1/adc.h>
 
 #include "platform.h"
 #include "jtag_scan.h"
+#include "usbuart.h"
 
 #include <ctype.h>
 
@@ -44,9 +44,6 @@ jmp_buf fatal_error_jmpbuf;
 void morse(const char *msg, char repeat);
 static void morse_update(void);
 
-#ifdef INCLUDE_UART_INTERFACE
-static void uart_init(void);
-#endif
 static void adc_init(void);
 
 /* Pins PB[7:5] are used to detect hardware revision.
@@ -103,13 +100,8 @@ int platform_init(void)
 	systick_interrupt_enable();
 	systick_counter_enable();
 
-#ifdef INCLUDE_UART_INTERFACE
-	/* On mini hardware, UART and SWD share connector pins.
-	 * Don't enable UART if we're being debugged. */
-	if ((platform_hwversion() == 0) ||
-	    !(SCS_DEMCR & SCS_DEMCR_TRCENA))
-		uart_init();
-#endif
+	usbuart_init();
+
 	if (platform_hwversion() > 0) {
 		adc_init();
 	} else {
@@ -215,62 +207,6 @@ static void morse_update(void)
 	SET_ERROR_STATE(code & 1);
 	code >>= 1; bits--;
 }
-
-#ifdef INCLUDE_UART_INTERFACE
-static void uart_init(void)
-{
-	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_USART1EN);
-
-	/* UART1 TX to 'alternate function output push-pull' */
-	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
-		      GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO9);
-
-	/* Setup UART parameters. */
-	usart_set_baudrate(USART1, 38400);
-	usart_set_databits(USART1, 8);
-	usart_set_stopbits(USART1, USART_STOPBITS_1);
-	usart_set_mode(USART1, USART_MODE_TX_RX);
-	usart_set_parity(USART1, USART_PARITY_NONE);
-	usart_set_flow_control(USART1, USART_FLOWCONTROL_NONE);
-
-	/* Finally enable the USART. */
-	usart_enable(USART1);
-
-	/* Enable interrupts */
-	USART1_CR1 |= USART_CR1_RXNEIE;
-	nvic_set_priority(NVIC_USART1_IRQ, IRQ_PRI_USART1);
-	nvic_enable_irq(NVIC_USART1_IRQ);
-}
-
-static uint8_t uart_usb_buf[CDCACM_PACKET_SIZE];
-static uint8_t uart_usb_buf_size;
-
-void uart_usb_buf_drain(uint8_t ep)
-{
-	if (!uart_usb_buf_size) 
-		return;
-
-	usbd_ep_write_packet(ep, uart_usb_buf, uart_usb_buf_size);
-	uart_usb_buf_size = 0;
-}
-
-void usart1_isr(void)
-{
-	char c = usart_recv(USART1);
-
-	/* Try to send now */
-	if (usbd_ep_write_packet(0x83, &c, 1) == 1) 
-		return;
-		
-	/* We failed, so queue for later */
-	if (uart_usb_buf_size == CDCACM_PACKET_SIZE) {
-		/* Drop if the buffer's full: we have no flow control */
-		return;
-	}
-
-	uart_usb_buf[uart_usb_buf_size++] = c;
-}
-#endif
 
 static void adc_init(void)
 {
