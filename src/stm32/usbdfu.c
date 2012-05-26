@@ -59,9 +59,9 @@ const struct usb_device_descriptor dev = {
         .bDeviceSubClass = 0,
         .bDeviceProtocol = 0,
         .bMaxPacketSize0 = 64,
-        .idVendor = 0x0483,
-        .idProduct = 0xDF11,
-        .bcdDevice = 0x0200,
+        .idVendor = 0x1D50,
+        .idProduct = 0x6017,
+        .bcdDevice = 0x0100,
         .iManufacturer = 1,
         .iProduct = 2,
         .iSerialNumber = 3,
@@ -113,7 +113,7 @@ const struct usb_config_descriptor config = {
 	.interface = ifaces,
 };
 
-static char serial_no[25];
+static char serial_no[9];
 
 static const char *usb_strings[] = {
 	"x",
@@ -304,17 +304,20 @@ int main(void)
 
 static char *get_dev_unique_id(char *s) 
 {
-        volatile uint8_t *unique_id = (volatile uint8_t *)0x1FFFF7E8;
+        volatile uint32_t *unique_id_p = (volatile uint32_t *)0x1FFFF7E8;
+	uint32_t unique_id = *unique_id_p +
+			*(unique_id_p + 1) +
+			*(unique_id_p + 2);
         int i;
 
         /* Fetch serial number from chip's unique ID */
-        for(i = 0; i < 24; i+=2) {
-                s[i] = ((*unique_id >> 4) & 0xF) + '0';
-                s[i+1] = (*unique_id++ & 0xF) + '0';
+        for(i = 0; i < 8; i++) {
+                s[7-i] = ((unique_id >> (4*i)) & 0xF) + '0';
         }
-        for(i = 0; i < 24; i++) 
+        for(i = 0; i < 8; i++)
                 if(s[i] > '9') 
                         s[i] += 'A' - '9' - 1;
+	s[8] = 0;
 
 	return s;
 }
