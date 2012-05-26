@@ -238,15 +238,37 @@ static void uart_init(void)
 
 	/* Enable interrupts */
 	USART1_CR1 |= USART_CR1_RXNEIE;
-	nvic_set_priority(NVIC_USART1_IRQ, 14);
+	nvic_set_priority(NVIC_USART1_IRQ, IRQ_PRI_USART1);
 	nvic_enable_irq(NVIC_USART1_IRQ);
+}
+
+static uint8_t uart_usb_buf[CDCACM_PACKET_SIZE];
+static uint8_t uart_usb_buf_size;
+
+void uart_usb_buf_drain(uint8_t ep)
+{
+	if (!uart_usb_buf_size) 
+		return;
+
+	usbd_ep_write_packet(ep, uart_usb_buf, uart_usb_buf_size);
+	uart_usb_buf_size = 0;
 }
 
 void usart1_isr(void)
 {
 	char c = usart_recv(USART1);
 
-	usbd_ep_write_packet(0x83, &c, 1);
+	/* Try to send now */
+	if (usbd_ep_write_packet(0x83, &c, 1) == 1) 
+		return;
+		
+	/* We failed, so queue for later */
+	if (uart_usb_buf_size == CDCACM_PACKET_SIZE) {
+		/* Drop if the buffer's full: we have no flow control */
+		return;
+	}
+
+	uart_usb_buf[uart_usb_buf_size++] = c;
 }
 #endif
 

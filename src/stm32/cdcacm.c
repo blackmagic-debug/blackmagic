@@ -521,7 +521,7 @@ static void cdcacm_set_config(u16 wValue)
 
 	/* Serial interface */
 	usbd_ep_setup(0x03, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE, cdcacm_data_rx_cb);
-	usbd_ep_setup(0x83, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE, NULL);
+	usbd_ep_setup(0x83, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE, uart_usb_buf_drain);
 	usbd_ep_setup(0x84, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
 
 	/* Trace interface */
@@ -563,9 +563,9 @@ void cdcacm_init(void)
 	usbd_set_control_buffer_size(sizeof(usbd_control_buffer));
 	usbd_register_set_config_callback(cdcacm_set_config);
 
-	nvic_set_priority(NVIC_USB_LP_CAN_RX0_IRQ, 1);
+	nvic_set_priority(NVIC_USB_LP_CAN_RX0_IRQ, IRQ_PRI_USB);
 	nvic_enable_irq(NVIC_USB_LP_CAN_RX0_IRQ);
-	nvic_set_priority(USB_VBUS_IRQ, 14);
+	nvic_set_priority(USB_VBUS_IRQ, IRQ_PRI_USB_VBUS);
 	nvic_enable_irq(USB_VBUS_IRQ);
 
 	gpio_set(USB_VBUS_PORT, USB_VBUS_PIN);

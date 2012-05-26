@@ -68,7 +68,7 @@ void traceswo_init(void)
 	timer_slave_set_mode(TIM3, TIM_SMCR_SMS_RM);
 
 	/* Enable capture interrupt */
-	nvic_set_priority(NVIC_TIM3_IRQ, 0);
+	nvic_set_priority(NVIC_TIM3_IRQ, IRQ_PRI_TIM3);
 	nvic_enable_irq(NVIC_TIM3_IRQ);
 	timer_enable_irq(TIM3, TIM_DIER_CC1IE); 
 
