@@ -29,6 +29,10 @@
 #include "platform.h"
 #include "swdptap.h"
 
+static void swdptap_turnaround(uint8_t dir);
+static uint8_t swdptap_bit_in(void);
+static void swdptap_bit_out(uint8_t val);
+
 int swdptap_init(void)
 {
 	int err;
@@ -61,7 +65,7 @@ void swdptap_reset(void)
         for(int i = 0; i < 50; i++) swdptap_bit_out(1);
 }
 
-void swdptap_turnaround(uint8_t dir)
+static void swdptap_turnaround(uint8_t dir)
 {
 	static uint8_t olddir = 0;
 
@@ -81,7 +85,7 @@ void swdptap_turnaround(uint8_t dir)
 		assert(ftdi_set_bitmode(ftdic, 0xAB, BITMODE_BITBANG) == 0);
 }
 
-uint8_t swdptap_bit_in(void) 
+static uint8_t swdptap_bit_in(void) 
 {
 	uint8_t ret;
 
@@ -95,7 +99,7 @@ uint8_t swdptap_bit_in(void)
 	return ret;
 }
 
-void swdptap_bit_out(uint8_t val)
+static void swdptap_bit_out(uint8_t val)
 {
 	uint8_t buf[3] = "\xA0\xA1\xA0";
 

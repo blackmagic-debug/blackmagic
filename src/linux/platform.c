@@ -121,3 +121,8 @@ int vasprintf(char **strp, const char *fmt, va_list ap)
 }
 #endif
 
+const char *platform_target_voltage(void)
+{
+	return "not supported";
+}
+

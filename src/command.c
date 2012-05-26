@@ -37,8 +37,6 @@
 
 #include "adiv5.h"
 
-#include <libopencm3/usb/usbd.h>
-
 static void cmd_version(void);
 static void cmd_help(void);
 
@@ -46,8 +44,9 @@ static void cmd_jtag_scan(void);
 static void cmd_swdp_scan(void);
 static void cmd_targets(void);
 static void cmd_morse(void);
-
+#ifdef PLATFORM_HAS_TRACESWO
 static void cmd_traceswo(void);
+#endif
 
 const struct command_s cmd_list[] = {
 	{"version", (cmd_handler)cmd_version, "Display firmware version info"},
@@ -56,8 +55,9 @@ const struct command_s cmd_list[] = {
 	{"swdp_scan", (cmd_handler)cmd_swdp_scan, "Scan SW-DP for devices" },
 	{"targets", (cmd_handler)cmd_targets, "Display list of available targets" },
 	{"morse", (cmd_handler)cmd_morse, "Display morse error message" },
+#ifdef PLATFORM_HAS_TRACESWO
 	{"traceswo", (cmd_handler)cmd_traceswo, "Start trace capture" },
-
+#endif
 	{NULL, NULL, NULL}
 };
 
@@ -168,10 +168,12 @@ void cmd_morse(void)
 		gdb_outf("%s\n", morse_msg);
 }
 
+#ifdef PLATFORM_HAS_TRACESWO
 static void cmd_traceswo(void)
 {
 	extern char serial_no[9];
 	traceswo_init();
 	gdb_outf("%s:%02X:%02X\n", serial_no, 5, 0x85);
 }
+#endif
 
