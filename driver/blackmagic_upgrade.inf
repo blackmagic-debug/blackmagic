@@ -6,9 +6,10 @@ DeviceNameDFU = "Black Magic Probe (Upgrade)"
 DeviceNameTPA = "Black Magic Trace Capture"
 VendorName = "Black Sphere Technologies"
 SourceName = "Black Magic Firmware Upgrade Install Disk"
-DeviceID   = "VID_0483&PID_5740&Rev_0200&MI_04"
-DeviceIDDFU= "VID_0483&PID_df11&Rev_0200"
-DeviceIDTPA= "VID_0483&PID_5740&Rev_0200&MI_05"
+DeviceID   = "VID_1d50&PID_6018&Rev_0100&MI_04"
+DeviceIDDFU= "VID_1d50&PID_6017&Rev_0100"
+DeviceIDTPA= "VID_1d50&PID_6018&Rev_0100&MI_05"
+DeviceIDDFUold= "VID_0483&PID_df11&Rev_0200"
 
 [Version]
 Signature   = "$Windows NT$"
@@ -138,19 +139,23 @@ ServiceBinary = %12%\libusb0.sys
 %DeviceName% = LIBUSB_WIN32_DEV, USB\%DeviceID%
 %DeviceNameDFU% = LIBUSB_WIN32_DEV, USB\%DeviceIDDFU%
 %DeviceNameTPA% = LIBUSB_WIN32_DEV, USB\%DeviceIDTPA%
+%DeviceNameDFU% = LIBUSB_WIN32_DEV, USB\%DeviceIDDFUold%
 
 [Devices.NT]
 %DeviceName% = LIBUSB_WIN32_DEV.NT, USB\%DeviceID%
 %DeviceNameDFU% = LIBUSB_WIN32_DEV.NT, USB\%DeviceIDDFU%
 %DeviceNameTPA% = LIBUSB_WIN32_DEV.NT, USB\%DeviceIDTPA%
+%DeviceNameDFU% = LIBUSB_WIN32_DEV.NT, USB\%DeviceIDDFUold%
 
 [Devices.NTAMD64]
 %DeviceName% = LIBUSB_WIN32_DEV.NTAMD64, USB\%DeviceID%
 %DeviceNameDFU% = LIBUSB_WIN32_DEV.NTAMD64, USB\%DeviceIDDFU%
 %DeviceNameTPA% = LIBUSB_WIN32_DEV.NTAMD64, USB\%DeviceIDTPA%
+%DeviceNameDFU% = LIBUSB_WIN32_DEV.NTAMD64, USB\%DeviceIDDFUold%
 
 [Devices.NTIA64]
 %DeviceName% = LIBUSB_WIN32_DEV.NTIA64, USB\%DeviceID%
 %DeviceNameDFU% = LIBUSB_WIN32_DEV.NTIA64, USB\%DeviceIDDFU%
 %DeviceNameTPA% = LIBUSB_WIN32_DEV.NTIA64, USB\%DeviceIDTPA%
+%DeviceNameDFU% = LIBUSB_WIN32_DEV.NTIA64, USB\%DeviceIDDFUold%
 
