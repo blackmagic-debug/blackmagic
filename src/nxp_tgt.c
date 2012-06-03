@@ -196,7 +196,7 @@ lpc11xx_flash_write_words(struct target_s *target, uint32_t dest, const uint32_t
 
 	for (chunk = first_chunk; chunk <= last_chunk; chunk++) {
 		
-		printf("chunk %u len %d\n", chunk, len);
+		DEBUG("chunk %u len %d\n", chunk, len);
 		/* first and last chunk may require special handling */
 		if ((chunk == first_chunk) || (chunk == last_chunk)) {
 
