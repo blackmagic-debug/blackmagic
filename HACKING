@@ -42,16 +42,16 @@ the GDB protocol.
 
 Compiling as a Linux application using FT2232 hardware
 ------------------------------------------------------
-The Black Magic application can also be compiled as a native Linux application
+The Black Magic application can also be compiled as a native PC application
 which will use an FT2232 device to implement the physical JTAG interface.
 This is not the intended mode of operation, but is useful for debugging,
 experimentation, and if you don't have the actual hardware.
 
 First, get the VID/PID for your FT2232 device using 'lsusb'.  Edit the file
-'src/linux/platform.h' and change the VID/PID to match your hardware. 
+'src/libftdi/platform.h' and change the VID/PID to match your hardware. 
 Compile the application with the command:
 
-make PROBE_HOST=linux
+make PROBE_HOST=libftdi
 
 Running the application 'blackmagic' will start a GDB server on TCP port 2000.
 
