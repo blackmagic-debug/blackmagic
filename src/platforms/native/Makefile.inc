@@ -8,6 +8,8 @@ LDFLAGS_BOOT = -lopencm3_stm32f1 -Wl,--defsym,_stack=0x20005000 \
 	-mthumb -mcpu=cortex-m3 -Wl,-gc-sections
 LDFLAGS = $(LDFLAGS_BOOT) -Wl,-Ttext=0x8002000
 
+VPATH += platforms/stm32
+
 SRC += 	cdcacm.c	\
 	platform.c	\
 	traceswo.c	\

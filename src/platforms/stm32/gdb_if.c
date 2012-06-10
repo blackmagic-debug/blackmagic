@@ -43,7 +43,7 @@ void gdb_if_putchar(unsigned char c, int flush)
 			count_in = 0;
 			return;
 		}
-		while(usbd_ep_write_packet(1, buffer_in, count_in) <= 0);
+		while(usbd_ep_write_packet(CDCACM_GDB_ENDPOINT, buffer_in, count_in) <= 0);
 		count_in = 0;
 	}
 }
@@ -56,7 +56,7 @@ unsigned char gdb_if_getchar(void)
 			return 0x04;
 
 		while(cdcacm_get_config() != 1);
-		count_out = usbd_ep_read_packet(1, buffer_out, 
+		count_out = usbd_ep_read_packet(CDCACM_GDB_ENDPOINT, buffer_out, 
 					CDCACM_PACKET_SIZE);
 		out_ptr = 0;
 	}
@@ -73,7 +73,7 @@ unsigned char gdb_if_getchar_to(int timeout)
 		if(!cdcacm_get_dtr())
 			return 0x04;
 
-		count_out = usbd_ep_read_packet(1, buffer_out, 
+		count_out = usbd_ep_read_packet(CDCACM_GDB_ENDPOINT, buffer_out, 
 					CDCACM_PACKET_SIZE);
 		out_ptr = 0;
 	} while(timeout_counter && !(out_ptr < count_out));

@@ -91,7 +91,7 @@ void usbuart_usb_out_cb(uint8_t ep)
 	(void)ep;
 
 	char buf[CDCACM_PACKET_SIZE];
-	int len = usbd_ep_read_packet(0x03, buf, CDCACM_PACKET_SIZE);
+	int len = usbd_ep_read_packet(CDCACM_UART_ENDPOINT, buf, CDCACM_PACKET_SIZE);
 
 	/* Don't bother if uart is disabled.
 	 * This will be the case on mini while we're being debugged. 
@@ -126,7 +126,7 @@ void usart1_isr(void)
 	gpio_set(LED_PORT, LED_UART);
 
 	/* Try to send now */
-	if (usbd_ep_write_packet(0x83, &c, 1) == 1) 
+	if (usbd_ep_write_packet(CDCACM_UART_ENDPOINT, &c, 1) == 1) 
 		return;
 		
 	/* We failed, so queue for later */

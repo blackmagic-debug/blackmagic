@@ -35,6 +35,9 @@
 #define CDCACM_PACKET_SIZE 	64
 #define PLATFORM_HAS_TRACESWO
 
+#define CDCACM_GDB_ENDPOINT	1
+#define CDCACM_UART_ENDPOINT	3
+
 /* Important pin mappings for STM32 implementation:
  *
  * LED0 = 	PB2	(Yellow LED : Running)
