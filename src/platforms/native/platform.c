@@ -41,7 +41,6 @@ volatile uint32_t timeout_counter;
 
 jmp_buf fatal_error_jmpbuf;
 
-void morse(const char *msg, char repeat);
 static void morse_update(void);
 
 static void adc_init(void);
@@ -69,10 +68,8 @@ int platform_init(void)
 
 	/* Enable peripherals */
 	rcc_peripheral_enable_clock(&RCC_APB1ENR, RCC_APB1ENR_USBEN);
-	rcc_peripheral_enable_clock(&RCC_APB1ENR, RCC_APB1ENR_TIM2EN);
 	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPAEN);
 	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPBEN);
-	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPDEN);
 	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_AFIOEN);
 
 	/* Setup GPIO ports */
