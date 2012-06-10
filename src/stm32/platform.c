@@ -73,6 +73,7 @@ int platform_init(void)
 	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPAEN);
 	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPBEN);
 	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPDEN);
+	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_AFIOEN);
 
 	/* Setup GPIO ports */
 	gpio_clear(USB_PU_PORT, USB_PU_PIN);
@@ -85,7 +86,7 @@ int platform_init(void)
 
 	gpio_set_mode(LED_PORT, GPIO_MODE_OUTPUT_2_MHZ, 
 			GPIO_CNF_OUTPUT_PUSHPULL, 
-			LED_RUN | LED_IDLE | LED_ERROR);
+			LED_UART | LED_IDLE_RUN | LED_ERROR);
 
 	/* FIXME: This pin in intended to be input, but the TXS0108 fails
 	 * to release the device from reset if this floats. */
@@ -122,9 +123,7 @@ int platform_init(void)
 void sys_tick_handler(void)
 {
 	if(running_status) 
-		gpio_toggle(LED_PORT, LED_RUN);
-	else
-		gpio_clear(LED_PORT, LED_RUN);
+		gpio_toggle(LED_PORT, LED_IDLE_RUN);
 
 	if(timeout_counter) 
 		timeout_counter--;

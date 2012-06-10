@@ -75,8 +75,8 @@
 #define USB_VBUS_IRQ	NVIC_EXTI15_10_IRQ
 
 #define LED_PORT	GPIOB
-#define LED_RUN	GPIO2
-#define LED_IDLE	GPIO10
+#define LED_UART	GPIO2
+#define LED_IDLE_RUN	GPIO10
 #define LED_ERROR	GPIO11
 
 /* Interrupt priorities.  Low numbers are high priority.
@@ -105,7 +105,7 @@ extern const char *morse_msg;
 } while(0)
 
 #define SET_RUN_STATE(state)	{running_status = (state);}
-#define SET_IDLE_STATE(state)	{gpio_set_val(LED_PORT, LED_IDLE, state);}
+#define SET_IDLE_STATE(state)	{gpio_set_val(LED_PORT, LED_IDLE_RUN, state);}
 #define SET_ERROR_STATE(state)	{gpio_set_val(LED_PORT, LED_ERROR, state);}
 
 #define PLATFORM_SET_FATAL_ERROR_RECOVERY()	{setjmp(fatal_error_jmpbuf);}
