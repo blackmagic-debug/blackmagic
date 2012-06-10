@@ -1,14 +1,12 @@
-ifndef PROBE_HOST
-PROBE_HOST = stm32
-endif
-
-VPATH += $(PROBE_HOST)
+PROBE_HOST ?= native
+PLATFORM_DIR = platforms/$(PROBE_HOST)
+VPATH += $(PLATFORM_DIR)
 
 BUILDDATE := `date +"%Y%m%d"`
 
 CFLAGS += -Wall -Wextra -Wno-pointer-sign -Wno-char-subscripts\
 	-O2 -std=gnu99 -g3 -DBUILDDATE=\"$(BUILDDATE)\"\
-	-I. -Iinclude -I$(PROBE_HOST) \
+	-I. -Iinclude -I$(PLATFORM_DIR) \
 	-DVERSION_SUFFIX=\"`../scripts/setlocalversion`\" -MD
 
 SRC = 	gdb_if.c	\
@@ -32,7 +30,7 @@ SRC = 	gdb_if.c	\
 	stm32f4.c	\
 	crc32.c		\
 
-include $(PROBE_HOST)/Makefile.inc
+include $(PLATFORM_DIR)/Makefile.inc
 
 OBJ = $(SRC:.c=.o)
 

@@ -4,7 +4,7 @@ OBJCOPY = $(CROSS_COMPILE)objcopy
 
 CFLAGS += -Istm32/include -mcpu=cortex-m3 -mthumb -DSTM32F1
 LDFLAGS_BOOT = -lopencm3_stm32f1 -Wl,--defsym,_stack=0x20005000 \
-	-Wl,-T,stm32/blackmagic.ld -nostartfiles -lc -lnosys -Wl,-Map=mapfile \
+	-Wl,-T,$(PLATFORM_DIR)/blackmagic.ld -nostartfiles -lc -lnosys -Wl,-Map=mapfile \
 	-mthumb -mcpu=cortex-m3 -Wl,-gc-sections
 LDFLAGS = $(LDFLAGS_BOOT) -Wl,-Ttext=0x8002000
 
