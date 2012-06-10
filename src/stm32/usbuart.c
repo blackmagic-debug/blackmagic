@@ -99,8 +99,10 @@ void usbuart_usb_out_cb(uint8_t ep)
 	if(!(RCC_APB2ENR & RCC_APB2ENR_USART1EN)) 
 		return;
 
+	gpio_set(LED_PORT, LED_UART);
 	for(int i = 0; i < len; i++)
 		usart_send_blocking(USART1, buf[i]);
+	gpio_clear(LED_PORT, LED_UART);
 }
 
 static uint8_t uart_usb_buf[CDCACM_PACKET_SIZE];
@@ -108,8 +110,10 @@ static uint8_t uart_usb_buf_size;
 
 void usbuart_usb_in_cb(uint8_t ep)
 {
-	if (!uart_usb_buf_size) 
+	if (!uart_usb_buf_size) {
+		gpio_clear(LED_PORT, LED_UART);
 		return;
+	}
 
 	usbd_ep_write_packet(ep, uart_usb_buf, uart_usb_buf_size);
 	uart_usb_buf_size = 0;
@@ -118,6 +122,8 @@ void usbuart_usb_in_cb(uint8_t ep)
 void usart1_isr(void)
 {
 	char c = usart_recv(USART1);
+
+	gpio_set(LED_PORT, LED_UART);
 
 	/* Try to send now */
 	if (usbd_ep_write_packet(0x83, &c, 1) == 1) 
