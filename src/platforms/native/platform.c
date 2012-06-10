@@ -84,6 +84,14 @@ int platform_init(void)
 			GPIO_CNF_OUTPUT_PUSHPULL,
 			TMS_PIN | TCK_PIN | TDI_PIN);
 
+	/* This needs some fixing... */
+	/* Toggle required to sort out line drivers... */
+	gpio_port_write(GPIOA, 0x8100);
+	gpio_port_write(GPIOB, 0x2000);
+
+	gpio_port_write(GPIOA, 0x8180);
+	gpio_port_write(GPIOB, 0x2002);
+	
 	gpio_set_mode(LED_PORT, GPIO_MODE_OUTPUT_2_MHZ, 
 			GPIO_CNF_OUTPUT_PUSHPULL, 
 			LED_UART | LED_IDLE_RUN | LED_ERROR);

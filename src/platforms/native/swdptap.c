@@ -39,35 +39,35 @@ static void swdptap_turnaround(uint8_t dir)
 	olddir = dir;
 
 	if(dir) 
-		gpio_set_mode(SWDP_PORT, GPIO_MODE_INPUT, 
+		gpio_set_mode(SWDIO_PORT, GPIO_MODE_INPUT, 
 				GPIO_CNF_INPUT_FLOAT, SWDIO_PIN);
-	gpio_set(SWDP_PORT, SWCLK_PIN);
-	gpio_clear(SWDP_PORT, SWCLK_PIN);
+	gpio_set(SWCLK_PORT, SWCLK_PIN);
+	gpio_clear(SWCLK_PORT, SWCLK_PIN);
 	if(!dir) 
-		gpio_set_mode(SWDP_PORT, GPIO_MODE_OUTPUT_50_MHZ, 
+		gpio_set_mode(SWDIO_PORT, GPIO_MODE_OUTPUT_50_MHZ, 
 				GPIO_CNF_OUTPUT_PUSHPULL, SWDIO_PIN);
 }
 
 static uint8_t swdptap_bit_in(void)
 {
-	uint8_t ret;
+	uint16_t ret;
 
-	ret = gpio_get(SWDP_PORT, SWDIO_PIN);
-	gpio_set(SWDP_PORT, SWCLK_PIN);
-	gpio_clear(SWDP_PORT, SWCLK_PIN);
+	ret = gpio_get(SWDIO_PORT, SWDIO_PIN);
+	gpio_set(SWCLK_PORT, SWCLK_PIN);
+	gpio_clear(SWCLK_PORT, SWCLK_PIN);
 
 	DEBUG("%d", ret?1:0);
 
-	return ret;
+	return ret != 0;
 }
 
 static void swdptap_bit_out(uint8_t val)
 {
 	DEBUG("%d", val);
 
-	gpio_set_val(SWDP_PORT, SWDIO_PIN, val);
-	gpio_set(SWDP_PORT, SWCLK_PIN);
-	gpio_clear(SWDP_PORT, SWCLK_PIN);
+	gpio_set_val(SWDIO_PORT, SWDIO_PIN, val);
+	gpio_set(SWCLK_PORT, SWCLK_PIN);
+	gpio_clear(SWCLK_PORT, SWCLK_PIN);
 }
 
 int swdptap_init(void)

@@ -28,15 +28,7 @@
 
 int jtagtap_init(void)
 {
-	/* This needs some fixing... */
-	/* Toggle required to sort out line drivers... */
-	gpio_port_write(GPIOA, 0x8100);
-	gpio_port_write(GPIOB, 0x2000);
-
-	gpio_port_write(GPIOA, 0x8180);
-	gpio_port_write(GPIOB, 0x2002);
-	
-	gpio_set_mode(JTAG_PORT, GPIO_MODE_OUTPUT_50_MHZ, 
+	gpio_set_mode(TMS_PORT, GPIO_MODE_OUTPUT_50_MHZ, 
 		GPIO_CNF_OUTPUT_PUSHPULL, TMS_PIN); 
 
 	/* Go to JTAG mode for SWJ-DP */
@@ -50,33 +42,33 @@ int jtagtap_init(void)
 void jtagtap_reset(void)
 {
 	volatile int i;
-	gpio_clear(GPIOB, GPIO1);
+	gpio_clear(TRST_PORT, TRST_PIN);
 	for(i = 0; i < 10000; i++) asm("nop");
-	gpio_set(GPIOB, GPIO1);
+	gpio_set(TRST_PORT, TRST_PIN);
 	jtagtap_soft_reset();
 }
 
 void jtagtap_srst(void)
 {
 	volatile int i;
-	gpio_set(GPIOA, GPIO2);
+	gpio_set(SRST_PORT, SRST_PIN);
 	for(i = 0; i < 10000; i++) asm("nop");
-	gpio_clear(GPIOA, GPIO2);
+	gpio_clear(SRST_PORT, SRST_PIN);
 }
 
 inline uint8_t jtagtap_next(uint8_t dTMS, uint8_t dTDO)
 {
-	uint8_t ret;
+	uint16_t ret;
 
-	gpio_set_val(JTAG_PORT, TMS_PIN, dTMS);
-	gpio_set_val(JTAG_PORT, TDI_PIN, dTDO);
-	gpio_set(JTAG_PORT, TCK_PIN);
-	ret = gpio_get(JTAG_PORT, TDO_PIN);
-	gpio_clear(JTAG_PORT, TCK_PIN);
+	gpio_set_val(TMS_PORT, TMS_PIN, dTMS);
+	gpio_set_val(TDI_PORT, TDI_PIN, dTDO);
+	gpio_set(TCK_PORT, TCK_PIN);
+	ret = gpio_get(TDO_PORT, TDO_PIN);
+	gpio_clear(TCK_PORT, TCK_PIN);
 
 	DEBUG("jtagtap_next(TMS = %d, TDO = %d) = %d\n", dTMS, dTDO, ret);
 
-	return ret;
+	return ret != 0;
 }
 
 
