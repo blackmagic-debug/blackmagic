@@ -40,6 +40,7 @@
 #include "lmi.h"
 #include "stm32_tgt.h"
 #include "nxp_tgt.h"
+#include "sam3u.h"
 
 static char cm3_driver_str[] = "ARM Cortex-M3";
 
@@ -315,11 +316,11 @@ cm3_probe(struct target_s *target)
 	target->regs_size = sizeof(regnum_cortex_m);	/* XXX: detect FP extension */
 
 	/* Probe for FP extension */
-	struct target_ap_s *t = (void*)target;
-	uint32_t cpacr = adiv5_ap_mem_read(t->ap, CM3_CPACR);
+	ADIv5_AP_t *ap = adiv5_target_ap(target);
+	uint32_t cpacr = adiv5_ap_mem_read(ap, CM3_CPACR);
 	cpacr |= 0x00F00000; /* CP10 = 0b11, CP11 = 0b11 */
-	adiv5_ap_mem_write(t->ap, CM3_CPACR, cpacr);
-	if (adiv5_ap_mem_read(t->ap, CM3_CPACR) == cpacr) {
+	adiv5_ap_mem_write(ap, CM3_CPACR, cpacr);
+	if (adiv5_ap_mem_read(ap, CM3_CPACR) == cpacr) {
 		target->target_options |= TOPT_FLAVOUR_V7MF;
 		target->regs_size += sizeof(regnum_cortex_mf);
 		target->tdesc = tdesc_cortex_mf;
@@ -329,6 +330,7 @@ cm3_probe(struct target_s *target)
 	if(stm32_probe(target) == 0) return 0;
 	if(stm32f4_probe(target) == 0) return 0;
 	if(lpc11xx_probe(target) == 0) return 0;
+	if(sam3u_probe(target) == 0) return 0;
 	/* if not STM32 try LMI which I don't know how to detect reliably */
 	lmi_probe(target);
 
@@ -338,7 +340,7 @@ cm3_probe(struct target_s *target)
 static void
 cm3_attach(struct target_s *target)
 {
-	struct target_ap_s *t = (void *)target;
+	ADIv5_AP_t *ap = adiv5_target_ap(target);
 	unsigned i;
 	uint32_t r;
 
@@ -346,37 +348,37 @@ cm3_attach(struct target_s *target)
 	while(!target_halt_wait(target));
 
 	/* Request halt on reset */
-	adiv5_ap_mem_write(t->ap, CM3_DEMCR, 
+	adiv5_ap_mem_write(ap, CM3_DEMCR, 
 			CM3_DEMCR_TRCENA | CM3_DEMCR_VC_HARDERR | 
 			CM3_DEMCR_VC_CORERESET); 
 
 	/* Reset DFSR flags */
-	adiv5_ap_mem_write(t->ap, CM3_DFSR, CM3_DFSR_RESETALL);
+	adiv5_ap_mem_write(ap, CM3_DFSR, CM3_DFSR_RESETALL);
 
 	/* size the break/watchpoint units */
 	hw_breakpoint_max = CM3_MAX_BREAKPOINTS;
-	r = adiv5_ap_mem_read(t->ap, CM3_FPB_CTRL);
+	r = adiv5_ap_mem_read(ap, CM3_FPB_CTRL);
 	if (((r >> 4) & 0xf) < hw_breakpoint_max)	/* only look at NUM_COMP1 */
 		hw_breakpoint_max = (r >> 4) & 0xf;
 	hw_watchpoint_max = CM3_MAX_WATCHPOINTS;
-	r = adiv5_ap_mem_read(t->ap, CM3_DWT_CTRL);
+	r = adiv5_ap_mem_read(ap, CM3_DWT_CTRL);
 	if ((r >> 28) > hw_watchpoint_max)
 		hw_watchpoint_max = r >> 28;
 
 	/* Clear any stale breakpoints */
 	for(i = 0; i < hw_breakpoint_max; i++) {
-		adiv5_ap_mem_write(t->ap, CM3_FPB_COMP(i), 0);
+		adiv5_ap_mem_write(ap, CM3_FPB_COMP(i), 0);
 		hw_breakpoint[i] = 0;
 	}
 
 	/* Clear any stale watchpoints */
 	for(i = 0; i < hw_watchpoint_max; i++) {
-		adiv5_ap_mem_write(t->ap, CM3_DWT_FUNC(i), 0);
+		adiv5_ap_mem_write(ap, CM3_DWT_FUNC(i), 0);
 		hw_watchpoint[i].type = 0;
 	}
 
 	/* Flash Patch Control Register: set ENABLE */
-	adiv5_ap_mem_write(t->ap, CM3_FPB_CTRL, 
+	adiv5_ap_mem_write(ap, CM3_FPB_CTRL, 
 			CM3_FPB_CTRL_KEY | CM3_FPB_CTRL_ENABLE);
 	target->set_hw_bp = cm3_set_hw_bp;
 	target->clear_hw_bp = cm3_clear_hw_bp;
@@ -390,47 +392,47 @@ cm3_attach(struct target_s *target)
 static void
 cm3_detach(struct target_s *target)
 {
-	struct target_ap_s *t = (void *)target;
+	ADIv5_AP_t *ap = adiv5_target_ap(target);
 	unsigned i;
 
 	/* Clear any stale breakpoints */
 	for(i = 0; i < hw_breakpoint_max; i++)
-		adiv5_ap_mem_write(t->ap, CM3_FPB_COMP(i), 0);
+		adiv5_ap_mem_write(ap, CM3_FPB_COMP(i), 0);
 
 	/* Clear any stale watchpoints */
 	for(i = 0; i < hw_watchpoint_max; i++) 
-		adiv5_ap_mem_write(t->ap, CM3_DWT_FUNC(i), 0);
+		adiv5_ap_mem_write(ap, CM3_DWT_FUNC(i), 0);
 
 	/* Disable debug */
-	adiv5_ap_mem_write(t->ap, CM3_DHCSR, CM3_DHCSR_DBGKEY);
+	adiv5_ap_mem_write(ap, CM3_DHCSR, CM3_DHCSR_DBGKEY);
 }
 
 static int
 cm3_regs_read(struct target_s *target, void *data)
 {
-	struct target_ap_s *t = (void *)target;
+	ADIv5_AP_t *ap = adiv5_target_ap(target);
 	uint32_t *regs = data;
 	unsigned i;
 
 	/* FIXME: Describe what's really going on here */
-	adiv5_ap_write(t->ap, ADIV5_AP_CSW, 0xA2000052);
+	adiv5_ap_write(ap, ADIV5_AP_CSW, 0xA2000052);
 
 	/* Map the banked data registers (0x10-0x1c) to the
 	 * debug registers DHCSR, DCRSR, DCRDR and DEMCR respectively */
-	adiv5_dp_low_access(t->ap->dp, 1, 0, ADIV5_AP_TAR, CM3_DHCSR);
+	adiv5_dp_low_access(ap->dp, 1, 0, ADIV5_AP_TAR, CM3_DHCSR);
 
 	/* Walk the regnum_cortex_m array, reading the registers it 
 	 * calls out. */
-	adiv5_ap_write(t->ap, ADIV5_AP_DB(1), regnum_cortex_m[0]); /* Required to switch banks */
-	*regs++ = adiv5_dp_read_ap(t->ap->dp, ADIV5_AP_DB(2));
+	adiv5_ap_write(ap, ADIV5_AP_DB(1), regnum_cortex_m[0]); /* Required to switch banks */
+	*regs++ = adiv5_dp_read_ap(ap->dp, ADIV5_AP_DB(2));
 	for(i = 1; i < sizeof(regnum_cortex_m) / 4; i++) {
-		adiv5_dp_low_access(t->ap->dp, 1, 0, ADIV5_AP_DB(1), regnum_cortex_m[i]);
-		*regs++ = adiv5_dp_read_ap(t->ap->dp, ADIV5_AP_DB(2));
+		adiv5_dp_low_access(ap->dp, 1, 0, ADIV5_AP_DB(1), regnum_cortex_m[i]);
+		*regs++ = adiv5_dp_read_ap(ap->dp, ADIV5_AP_DB(2));
 	}
 	if (target->target_options & TOPT_FLAVOUR_V7MF) 
 		for(i = 0; i < sizeof(regnum_cortex_mf) / 4; i++) {
-			adiv5_dp_low_access(t->ap->dp, 1, 0, ADIV5_AP_DB(1), regnum_cortex_mf[i]);
-			*regs++ = adiv5_dp_read_ap(t->ap->dp, ADIV5_AP_DB(2));
+			adiv5_dp_low_access(ap->dp, 1, 0, ADIV5_AP_DB(1), regnum_cortex_mf[i]);
+			*regs++ = adiv5_dp_read_ap(ap->dp, ADIV5_AP_DB(2));
 		}
 
 	return 0;
@@ -439,30 +441,30 @@ cm3_regs_read(struct target_s *target, void *data)
 static int
 cm3_regs_write(struct target_s *target, const void *data)
 {
-	struct target_ap_s *t = (void *)target;
+	ADIv5_AP_t *ap = adiv5_target_ap(target);
 	const uint32_t *regs = data;
 	unsigned i;
 
 	/* FIXME: Describe what's really going on here */
-	adiv5_ap_write(t->ap, ADIV5_AP_CSW, 0xA2000052);
+	adiv5_ap_write(ap, ADIV5_AP_CSW, 0xA2000052);
 
 	/* Map the banked data registers (0x10-0x1c) to the
 	 * debug registers DHCSR, DCRSR, DCRDR and DEMCR respectively */
-	adiv5_dp_low_access(t->ap->dp, 1, 0, ADIV5_AP_TAR, CM3_DHCSR);
+	adiv5_dp_low_access(ap->dp, 1, 0, ADIV5_AP_TAR, CM3_DHCSR);
 
 	/* Walk the regnum_cortex_m array, writing the registers it 
 	 * calls out. */
-	adiv5_ap_write(t->ap, ADIV5_AP_DB(2), *regs++); /* Required to switch banks */
-	adiv5_dp_low_access(t->ap->dp, 1, 0, ADIV5_AP_DB(1), 0x10000 | regnum_cortex_m[0]);
+	adiv5_ap_write(ap, ADIV5_AP_DB(2), *regs++); /* Required to switch banks */
+	adiv5_dp_low_access(ap->dp, 1, 0, ADIV5_AP_DB(1), 0x10000 | regnum_cortex_m[0]);
 	for(i = 1; i < sizeof(regnum_cortex_m) / 4; i++) {
-		adiv5_dp_low_access(t->ap->dp, 1, 0, ADIV5_AP_DB(2), *regs++);
-		adiv5_dp_low_access(t->ap->dp, 1, 0, ADIV5_AP_DB(1), 
+		adiv5_dp_low_access(ap->dp, 1, 0, ADIV5_AP_DB(2), *regs++);
+		adiv5_dp_low_access(ap->dp, 1, 0, ADIV5_AP_DB(1), 
 					0x10000 | regnum_cortex_m[i]);
 	}
 	if (target->target_options & TOPT_FLAVOUR_V7MF) 
 		for(i = 0; i < sizeof(regnum_cortex_mf) / 4; i++) {
-			adiv5_dp_low_access(t->ap->dp, 1, 0, ADIV5_AP_DB(2), *regs++);
-			adiv5_dp_low_access(t->ap->dp, 1, 0, ADIV5_AP_DB(1), 
+			adiv5_dp_low_access(ap->dp, 1, 0, ADIV5_AP_DB(2), *regs++);
+			adiv5_dp_low_access(ap->dp, 1, 0, ADIV5_AP_DB(1), 
 						0x10000 | regnum_cortex_mf[i]);
 		}
 
@@ -472,13 +474,13 @@ cm3_regs_write(struct target_s *target, const void *data)
 static int
 cm3_pc_write(struct target_s *target, const uint32_t val)
 {
-	struct target_ap_s *t = (void *)target;
+	ADIv5_AP_t *ap = adiv5_target_ap(target);
 
-	adiv5_ap_write(t->ap, ADIV5_AP_CSW, 0xA2000052);
-	adiv5_dp_low_access(t->ap->dp, 1, 0, ADIV5_AP_TAR, CM3_DHCSR);
+	adiv5_ap_write(ap, ADIV5_AP_CSW, 0xA2000052);
+	adiv5_dp_low_access(ap->dp, 1, 0, ADIV5_AP_TAR, CM3_DHCSR);
 
-	adiv5_ap_write(t->ap, ADIV5_AP_DB(2), val); /* Required to switch banks */
-	adiv5_dp_low_access(t->ap->dp, 1, 0, ADIV5_AP_DB(1), 0x1000F);
+	adiv5_ap_write(ap, ADIV5_AP_DB(2), val); /* Required to switch banks */
+	adiv5_dp_low_access(ap->dp, 1, 0, ADIV5_AP_DB(1), 0x1000F);
 
 	return 0;
 }
@@ -488,7 +490,7 @@ cm3_pc_write(struct target_s *target, const uint32_t val)
 static void 
 cm3_reset(struct target_s *target)
 {
-	struct target_ap_s *t = (void *)target;
+	ADIv5_AP_t *ap = adiv5_target_ap(target);
 
 	jtagtap_srst();
 
@@ -496,38 +498,38 @@ cm3_reset(struct target_s *target)
 	/* This could be VECTRESET: 0x05FA0001 (reset only core)
 	 *          or SYSRESETREQ: 0x05FA0004 (system reset)
 	 */
-	adiv5_ap_mem_write(t->ap, CM3_AIRCR,
+	adiv5_ap_mem_write(ap, CM3_AIRCR,
 			CM3_AIRCR_VECTKEY | CM3_AIRCR_SYSRESETREQ);
 
 	/* Poll for release from reset */
-	while(adiv5_ap_mem_read(t->ap, CM3_AIRCR) & 
+	while(adiv5_ap_mem_read(ap, CM3_AIRCR) & 
 			(CM3_AIRCR_VECTRESET | CM3_AIRCR_SYSRESETREQ));
 
 	/* Reset DFSR flags */
-	adiv5_ap_mem_write(t->ap, CM3_DFSR, CM3_DFSR_RESETALL);
+	adiv5_ap_mem_write(ap, CM3_DFSR, CM3_DFSR_RESETALL);
 }
 
 static void 
 cm3_halt_request(struct target_s *target)
 {
-	struct target_ap_s *t = (void *)target;
+	ADIv5_AP_t *ap = adiv5_target_ap(target);
 
-	adiv5_ap_mem_write(t->ap, CM3_DHCSR, 
+	adiv5_ap_mem_write(ap, CM3_DHCSR, 
 		CM3_DHCSR_DBGKEY | CM3_DHCSR_C_HALT | CM3_DHCSR_C_DEBUGEN);
 }
 
 static int
 cm3_halt_wait(struct target_s *target)
 {
-	struct target_ap_s *t = (void *)target;
+	ADIv5_AP_t *ap = adiv5_target_ap(target);
 
-	return adiv5_ap_mem_read(t->ap, CM3_DHCSR) & CM3_DHCSR_S_HALT;
+	return adiv5_ap_mem_read(ap, CM3_DHCSR) & CM3_DHCSR_S_HALT;
 }
 
 static void 
 cm3_halt_resume(struct target_s *target, uint8_t step)
 {
-	struct target_ap_s *t = (void *)target;
+	ADIv5_AP_t *ap = adiv5_target_ap(target);
 	static uint8_t old_step = 0;
 	uint32_t dhcsr = CM3_DHCSR_DBGKEY | CM3_DHCSR_C_DEBUGEN;
 
@@ -535,22 +537,22 @@ cm3_halt_resume(struct target_s *target, uint8_t step)
 
 	/* Disable interrupts while single stepping... */
 	if(step != old_step) {
-		adiv5_ap_mem_write(t->ap, CM3_DHCSR, dhcsr | CM3_DHCSR_C_HALT);
+		adiv5_ap_mem_write(ap, CM3_DHCSR, dhcsr | CM3_DHCSR_C_HALT);
 		old_step = step;
 	}
 
-	adiv5_ap_mem_write(t->ap, CM3_DHCSR, dhcsr);
+	adiv5_ap_mem_write(ap, CM3_DHCSR, dhcsr);
 }
 
 static int cm3_fault_unwind(struct target_s *target)
 {
-	struct target_ap_s *t = (void *)target;
-	uint32_t dfsr = adiv5_ap_mem_read(t->ap, CM3_DFSR);
-	uint32_t hfsr = adiv5_ap_mem_read(t->ap, CM3_HFSR);
-	uint32_t cfsr = adiv5_ap_mem_read(t->ap, CM3_CFSR);
-	adiv5_ap_mem_write(t->ap, CM3_DFSR, dfsr);/* write back to reset */
-	adiv5_ap_mem_write(t->ap, CM3_HFSR, hfsr);/* write back to reset */
-	adiv5_ap_mem_write(t->ap, CM3_CFSR, cfsr);/* write back to reset */
+	ADIv5_AP_t *ap = adiv5_target_ap(target);
+	uint32_t dfsr = adiv5_ap_mem_read(ap, CM3_DFSR);
+	uint32_t hfsr = adiv5_ap_mem_read(ap, CM3_HFSR);
+	uint32_t cfsr = adiv5_ap_mem_read(ap, CM3_CFSR);
+	adiv5_ap_mem_write(ap, CM3_DFSR, dfsr);/* write back to reset */
+	adiv5_ap_mem_write(ap, CM3_HFSR, hfsr);/* write back to reset */
+	adiv5_ap_mem_write(ap, CM3_CFSR, cfsr);/* write back to reset */
 	/* We check for FORCED in the HardFault Status Register or 
 	 * for a configurable fault to avoid catching core resets */
 	if((dfsr & CM3_DFSR_VCATCH) && ((hfsr & CM3_HFSR_FORCED) || cfsr)) {
@@ -579,7 +581,7 @@ static int cm3_fault_unwind(struct target_s *target)
 		/* Reset exception state to allow resuming from restored
 		 * state.
 		 */
-		adiv5_ap_mem_write(t->ap, CM3_AIRCR, 
+		adiv5_ap_mem_write(ap, CM3_AIRCR, 
 				CM3_AIRCR_VECTKEY | CM3_AIRCR_VECTCLRACTIVE);
 
 		/* Write pre-exception registers back to core */
@@ -596,7 +598,7 @@ static int cm3_fault_unwind(struct target_s *target)
 static int
 cm3_set_hw_bp(struct target_s *target, uint32_t addr)
 {
-	struct target_ap_s *t = (void *)target;
+	ADIv5_AP_t *ap = adiv5_target_ap(target);
 	uint32_t val = addr & 0x1FFFFFFC;
 	unsigned i;
 
@@ -610,7 +612,7 @@ cm3_set_hw_bp(struct target_s *target, uint32_t addr)
 
 	hw_breakpoint[i] = addr | 1;
 
-	adiv5_ap_mem_write(t->ap, CM3_FPB_COMP(i), val);
+	adiv5_ap_mem_write(ap, CM3_FPB_COMP(i), val);
 
 	return 0;
 }
@@ -618,7 +620,7 @@ cm3_set_hw_bp(struct target_s *target, uint32_t addr)
 static int
 cm3_clear_hw_bp(struct target_s *target, uint32_t addr)
 {
-	struct target_ap_s *t = (void *)target;
+	ADIv5_AP_t *ap = adiv5_target_ap(target);
 	unsigned i;
 
 	for(i = 0; i < hw_breakpoint_max; i++)
@@ -628,7 +630,7 @@ cm3_clear_hw_bp(struct target_s *target, uint32_t addr)
 
 	hw_breakpoint[i] = 0;
 
-	adiv5_ap_mem_write(t->ap, CM3_FPB_COMP(i), 0);
+	adiv5_ap_mem_write(ap, CM3_FPB_COMP(i), 0);
 
 	return 0; 
 }
@@ -640,7 +642,7 @@ cm3_clear_hw_bp(struct target_s *target, uint32_t addr)
 static int
 cm3_set_hw_wp(struct target_s *target, uint8_t type, uint32_t addr, uint8_t len)
 {
-	struct target_ap_s *t = (void *)target;
+	ADIv5_AP_t *ap = adiv5_target_ap(target);
 	unsigned i;
 
 	switch(len) { /* Convert bytes size to mask size */
@@ -661,7 +663,7 @@ cm3_set_hw_wp(struct target_s *target, uint8_t type, uint32_t addr, uint8_t len)
 
 	for(i = 0; i < hw_watchpoint_max; i++) 
 		if((hw_watchpoint[i].type == 0) &&
-		   ((adiv5_ap_mem_read(t->ap, CM3_DWT_FUNC(i)) & 0xF) == 0))
+		   ((adiv5_ap_mem_read(ap, CM3_DWT_FUNC(i)) & 0xF) == 0))
 			break;
 	
 	if(i == hw_watchpoint_max) return -2;
@@ -670,9 +672,9 @@ cm3_set_hw_wp(struct target_s *target, uint8_t type, uint32_t addr, uint8_t len)
 	hw_watchpoint[i].addr = addr;
 	hw_watchpoint[i].size = len;
 
-	adiv5_ap_mem_write(t->ap, CM3_DWT_COMP(i), addr);
-	adiv5_ap_mem_write(t->ap, CM3_DWT_MASK(i), len);
-	adiv5_ap_mem_write(t->ap, CM3_DWT_FUNC(i), type |
+	adiv5_ap_mem_write(ap, CM3_DWT_COMP(i), addr);
+	adiv5_ap_mem_write(ap, CM3_DWT_MASK(i), len);
+	adiv5_ap_mem_write(ap, CM3_DWT_FUNC(i), type |
 			((target->target_options & TOPT_FLAVOUR_V6M) ? 0: CM3_DWT_FUNC_DATAVSIZE_WORD));
 
 	return 0;
@@ -681,7 +683,7 @@ cm3_set_hw_wp(struct target_s *target, uint8_t type, uint32_t addr, uint8_t len)
 static int
 cm3_clear_hw_wp(struct target_s *target, uint8_t type, uint32_t addr, uint8_t len)
 {
-	struct target_ap_s *t = (void *)target;
+	ADIv5_AP_t *ap = adiv5_target_ap(target);
 	unsigned i;
 
 	switch(len) {
@@ -709,7 +711,7 @@ cm3_clear_hw_wp(struct target_s *target, uint8_t type, uint32_t addr, uint8_t le
 
 	hw_watchpoint[i].type = 0;
 
-	adiv5_ap_mem_write(t->ap, CM3_DWT_FUNC(i), 0);
+	adiv5_ap_mem_write(ap, CM3_DWT_FUNC(i), 0);
 
 	return 0;
 }
@@ -717,13 +719,13 @@ cm3_clear_hw_wp(struct target_s *target, uint8_t type, uint32_t addr, uint8_t le
 static int
 cm3_check_hw_wp(struct target_s *target, uint32_t *addr)
 {
-	struct target_ap_s *t = (void *)target;
+	ADIv5_AP_t *ap = adiv5_target_ap(target);
 	unsigned i;
 
 	for(i = 0; i < hw_watchpoint_max; i++)
 		/* if SET and MATCHED then break */
 		if(hw_watchpoint[i].type && 
-		   (adiv5_ap_mem_read(t->ap, CM3_DWT_FUNC(i)) & 
+		   (adiv5_ap_mem_read(ap, CM3_DWT_FUNC(i)) & 
 					CM3_DWT_FUNC_MATCHED))
 			break;
 
