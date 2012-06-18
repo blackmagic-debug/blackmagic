@@ -40,8 +40,8 @@ static int stm32md_flash_erase(struct target_s *target, uint32_t addr, int len);
 static int stm32hd_flash_erase(struct target_s *target, uint32_t addr, int len);
 static int stm32f1_flash_erase(struct target_s *target, uint32_t addr, int len, 
 				uint32_t pagesize);
-static int stm32f1_flash_write_words(struct target_s *target, uint32_t dest, 
-			const uint32_t *src, int len);
+static int stm32f1_flash_write(struct target_s *target, uint32_t dest, 
+			const uint8_t *src, int len);
 
 static const char stm32f1_driver_str[] = "STM32, Medium density.";
 static const char stm32hd_driver_str[] = "STM32, High density.";
@@ -136,7 +136,7 @@ int stm32f1_probe(struct target_s *target)
 		target->driver = stm32f1_driver_str;
 		target->xml_mem_map = stm32f1_xml_memory_map;
 		target->flash_erase = stm32md_flash_erase;
-		target->flash_write_words = stm32f1_flash_write_words;
+		target->flash_write = stm32f1_flash_write;
 		return 0;
 	case 0x414:	 /* High density */
 	case 0x418:  /* Connectivity Line */
@@ -144,7 +144,7 @@ int stm32f1_probe(struct target_s *target)
 		target->driver = stm32hd_driver_str;
 		target->xml_mem_map = stm32hd_xml_memory_map;
 		target->flash_erase = stm32hd_flash_erase;
-		target->flash_write_words = stm32f1_flash_write_words;
+		target->flash_write = stm32f1_flash_write;
 		return 0;
 	default:
 		return -1;
@@ -197,16 +197,20 @@ static int stm32md_flash_erase(struct target_s *target, uint32_t addr, int len)
 	return stm32f1_flash_erase(target, addr, len, 0x400);
 }
 
-static int stm32f1_flash_write_words(struct target_s *target, uint32_t dest, 
-			  const uint32_t *src, int len)
+static int stm32f1_flash_write(struct target_s *target, uint32_t dest, 
+			  const uint8_t *src, int len)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
-	uint32_t data[(len>>2)+2];
+	uint32_t offset = dest % 4;
+	uint32_t words = (offset + len + 3) / 4;
+	uint32_t data[2 + words];
 
 	/* Construct data buffer used by stub */
-	data[0] = dest & 0xFFFFFFFE;
-	data[1] = len & 0xFFFFFFFE;
-	memcpy(&data[2], src, len);
+	data[0] = dest - offset;
+	data[1] = words * 4;		/* length must always be a multiple of 4 */
+	data[2] = 0xFFFFFFFF;		/* pad partial words with all 1s to avoid */
+	data[words + 1] = 0xFFFFFFFF;	/* damaging overlapping areas */
+	memcpy((uint8_t *)&data[2] + offset, src, len);
 
 	/* Write stub and data to target ram and set PC */
 	target_mem_write_words(target, 0x20000000, (void*)stm32f1_flash_write_stub, 0x2C);

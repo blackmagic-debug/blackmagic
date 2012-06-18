@@ -426,7 +426,7 @@ handle_v_packet(char *packet, int plen)
 		/* Write Flash Memory */
 		len = plen - bin;
 		DEBUG("Flash Write %08lX %08lX\n", addr, len);
-		if(cur_target && target_flash_write_words(cur_target, addr, (void*)packet + bin, len) == 0)
+		if(cur_target && target_flash_write(cur_target, addr, (void*)packet + bin, len) == 0)
 			gdb_putpacketz("OK");
 		else
 			gdb_putpacketz("EFF");

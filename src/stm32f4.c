@@ -38,8 +38,8 @@
 #include "target.h"
 
 static int stm32f4_flash_erase(struct target_s *target, uint32_t addr, int len);
-static int stm32f4_flash_write_words(struct target_s *target, uint32_t dest, const uint32_t *src, 
-			  int len);
+static int stm32f4_flash_write(struct target_s *target, uint32_t dest, 
+			const uint8_t *src, int len);
 
 static const char stm32f4_driver_str[] = "STM32F4xx";
 
@@ -143,7 +143,7 @@ int stm32f4_probe(struct target_s *target)
 		target->driver = stm32f4_driver_str;
 		target->xml_mem_map = stm32f4_xml_memory_map;
 		target->flash_erase = stm32f4_flash_erase;
-		target->flash_write_words = stm32f4_flash_write_words;
+		target->flash_write = stm32f4_flash_write;
 		return 0;
 	} 
 	return -1;
@@ -198,8 +198,8 @@ static int stm32f4_flash_erase(struct target_s *target, uint32_t addr, int len)
 	return 0;
 }
 
-static int stm32f4_flash_write_words(struct target_s *target, uint32_t dest, 
-			  const uint32_t *src, int len)
+static int stm32f4_flash_write(struct target_s *target, uint32_t dest, 
+			  const uint8_t *src, int len)
 {
 	struct target_ap_s *t = (void *)target;
 	uint32_t offset = dest % 4;

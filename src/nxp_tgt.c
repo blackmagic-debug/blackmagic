@@ -47,7 +47,7 @@ static struct flash_program flash_pgm;
 static void lpc11x_iap_call(struct target_s *target, struct flash_param *param, unsigned param_len);
 static int lpc11xx_flash_prepare(struct target_s *target, uint32_t addr, int len);
 static int lpc11xx_flash_erase(struct target_s *target, uint32_t addr, int len);
-static int lpc11xx_flash_write_words(struct target_s *target, uint32_t dest, const uint32_t *src, 
+static int lpc11xx_flash_write(struct target_s *target, uint32_t dest, const uint8_t *src, 
 			  int len);
 
 /* 
@@ -100,7 +100,7 @@ lpc11xx_probe(struct target_s *target)
 		target->driver = "lpc11xx";
 		target->xml_mem_map = lpc11xx_xml_memory_map;
 		target->flash_erase = lpc11xx_flash_erase;
-		target->flash_write_words = lpc11xx_flash_write_words;
+		target->flash_write = lpc11xx_flash_write;
 
 		return 0;
 
@@ -185,9 +185,8 @@ lpc11xx_flash_erase(struct target_s *target, uint32_t addr, int len)
 }
 
 static int
-lpc11xx_flash_write_words(struct target_s *target, uint32_t dest, const uint32_t *src, int len)
+lpc11xx_flash_write(struct target_s *target, uint32_t dest, const uint8_t *src, int len)
 {
-	const uint8_t *s = (const uint8_t *)src;
 	unsigned first_chunk = dest / IAP_PGM_CHUNKSIZE;
 	unsigned last_chunk = (dest + len - 1) / IAP_PGM_CHUNKSIZE;
 	unsigned chunk_offset = dest % IAP_PGM_CHUNKSIZE;
@@ -206,11 +205,11 @@ lpc11xx_flash_write_words(struct target_s *target, uint32_t dest, const uint32_t
 			int copylen = IAP_PGM_CHUNKSIZE - chunk_offset;
 			if (copylen > len)
 				copylen = len;
-			memcpy(&flash_pgm.data[chunk_offset], s, copylen);
+			memcpy(&flash_pgm.data[chunk_offset], src, copylen);
 
 			/* update to suit */
 			len -= copylen;
-			s += copylen;
+			src += copylen;
 			chunk_offset = 0;
 
 			/* if we are programming the vectors, calculate the magic number */
@@ -226,9 +225,9 @@ lpc11xx_flash_write_words(struct target_s *target, uint32_t dest, const uint32_t
 		} else {
 
 			/* interior chunk, must be aligned and full-sized */
-			memcpy(flash_pgm.data, s, IAP_PGM_CHUNKSIZE);
+			memcpy(flash_pgm.data, src, IAP_PGM_CHUNKSIZE);
 			len -= IAP_PGM_CHUNKSIZE;
-			s += IAP_PGM_CHUNKSIZE;
+			src += IAP_PGM_CHUNKSIZE;
 		}
 
 		/* prepare... */

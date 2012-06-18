@@ -35,8 +35,8 @@
 #include "target.h"
 
 static int lmi_flash_erase(struct target_s *target, uint32_t addr, int len);
-static int lmi_flash_write_words(struct target_s *target, uint32_t dest, 
-			  const uint32_t *src, int len);
+static int lmi_flash_write(struct target_s *target, uint32_t dest, 
+			  const uint8_t *src, int len);
 
 static const char lmi_driver_str[] = "LuminaryMicro Stellaris";
 
@@ -96,7 +96,7 @@ int lmi_probe(struct target_s *target)
 	target->driver = lmi_driver_str;
 	target->xml_mem_map = lmi_xml_memory_map;
 	target->flash_erase = lmi_flash_erase;
-	target->flash_write_words = lmi_flash_write_words;
+	target->flash_write = lmi_flash_write;
 	return 0;
 }
 
@@ -131,8 +131,8 @@ int lmi_flash_erase(struct target_s *target, uint32_t addr, int len)
 	return 0;
 }
 
-int lmi_flash_write_words(struct target_s *target, uint32_t dest, 
-			  const uint32_t *src, int len)
+int lmi_flash_write(struct target_s *target, uint32_t dest, 
+			  const uint8_t *src, int len)
 {
 	uint32_t data[(len>>2)+2];
 	data[0] = dest;

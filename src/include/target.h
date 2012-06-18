@@ -103,8 +103,8 @@
 #define target_flash_erase(target, addr, len)	\
 	(target)->flash_erase((target), (addr), (len))
 
-#define target_flash_write_words(target, dest, src, len)	\
-	(target)->flash_write_words((target), (dest), (src), (len))
+#define target_flash_write(target, dest, src, len)	\
+	(target)->flash_write((target), (dest), (src), (len))
 
 
 #define TARGET_LIST_FREE() {				\
@@ -165,8 +165,8 @@ typedef struct target_s {
 	/* Flash memory access functions */
 	const char *xml_mem_map;
 	int (*flash_erase)(struct target_s *target, uint32_t addr, int len);
-	int (*flash_write_words)(struct target_s *target, uint32_t dest, 
-				const uint32_t *src, int len);
+	int (*flash_write)(struct target_s *target, uint32_t dest, 
+				const uint8_t *src, int len);
 
 	const char *driver;
 
