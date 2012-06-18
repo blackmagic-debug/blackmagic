@@ -174,5 +174,10 @@ uint32_t adiv5_ap_read(ADIv5_AP_t *ap, uint8_t addr);
 void adiv5_jtag_dp_handler(jtag_dev_t *dev);
 int adiv5_swdp_scan(void);
 
+static inline ADIv5_AP_t *adiv5_target_ap(target *target)
+{
+	return ((struct target_ap_s *)target)->ap;
+}
+
 #endif
 

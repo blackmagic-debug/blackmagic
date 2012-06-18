@@ -172,27 +172,27 @@ uint32_t adiv5_dp_read_ap(ADIv5_DP_t *dp, uint8_t addr)
 static int 
 ap_check_error(struct target_s *target)
 {
-	struct target_ap_s *t = (void *)target;
-	return adiv5_dp_error(t->ap->dp);
+	ADIv5_AP_t *ap = adiv5_target_ap(target);
+	return adiv5_dp_error(ap->dp);
 }
 
 static int 
 ap_mem_read_words(struct target_s *target, uint32_t *dest, uint32_t src, int len)
 {
-	struct target_ap_s *t = (void *)target;
+	ADIv5_AP_t *ap = adiv5_target_ap(target);
 
 	len >>= 2;
 
-	adiv5_ap_write(t->ap, ADIV5_AP_CSW, 0xA2000052);
-	adiv5_dp_low_access(t->ap->dp, ADIV5_LOW_AP, ADIV5_LOW_WRITE, 
+	adiv5_ap_write(ap, ADIV5_AP_CSW, 0xA2000052);
+	adiv5_dp_low_access(ap->dp, ADIV5_LOW_AP, ADIV5_LOW_WRITE, 
 					ADIV5_AP_TAR, src);
-	adiv5_dp_low_access(t->ap->dp, ADIV5_LOW_AP, ADIV5_LOW_READ, 
+	adiv5_dp_low_access(ap->dp, ADIV5_LOW_AP, ADIV5_LOW_READ, 
 					ADIV5_AP_DRW, 0);
 	while(--len) 
-		*dest++ = adiv5_dp_low_access(t->ap->dp, ADIV5_LOW_AP, 
+		*dest++ = adiv5_dp_low_access(ap->dp, ADIV5_LOW_AP, 
 					ADIV5_LOW_READ, ADIV5_AP_DRW, 0);
 	
-	*dest++ = adiv5_dp_low_access(t->ap->dp, ADIV5_LOW_DP, ADIV5_LOW_READ, 
+	*dest++ = adiv5_dp_low_access(ap->dp, ADIV5_LOW_DP, ADIV5_LOW_READ, 
 					ADIV5_DP_RDBUFF, 0);
 
 	return 0;
@@ -201,19 +201,19 @@ ap_mem_read_words(struct target_s *target, uint32_t *dest, uint32_t src, int len
 static int 
 ap_mem_read_bytes(struct target_s *target, uint8_t *dest, uint32_t src, int len)
 {
-	struct target_ap_s *t = (void *)target;
+	ADIv5_AP_t *ap = adiv5_target_ap(target);
 	uint32_t tmp = src;
 
-	adiv5_ap_write(t->ap, ADIV5_AP_CSW, 0xA2000050);
-	adiv5_dp_low_access(t->ap->dp, ADIV5_LOW_AP, ADIV5_LOW_WRITE, 
+	adiv5_ap_write(ap, ADIV5_AP_CSW, 0xA2000050);
+	adiv5_dp_low_access(ap->dp, ADIV5_LOW_AP, ADIV5_LOW_WRITE, 
 					ADIV5_AP_TAR, src);
-	adiv5_dp_low_access(t->ap->dp, ADIV5_LOW_AP, ADIV5_LOW_READ, 
+	adiv5_dp_low_access(ap->dp, ADIV5_LOW_AP, ADIV5_LOW_READ, 
 					ADIV5_AP_DRW, 0);
 	while(--len) {
-		tmp = adiv5_dp_low_access(t->ap->dp, 1, 1, ADIV5_AP_DRW, 0);
+		tmp = adiv5_dp_low_access(ap->dp, 1, 1, ADIV5_AP_DRW, 0);
 		*dest++ = (tmp >> ((src++ & 0x3) << 3) & 0xFF);
 	}
-	tmp = adiv5_dp_low_access(t->ap->dp, 0, 1, ADIV5_DP_RDBUFF, 0);
+	tmp = adiv5_dp_low_access(ap->dp, 0, 1, ADIV5_DP_RDBUFF, 0);
 	*dest++ = (tmp >> ((src++ & 0x3) << 3) & 0xFF);
 
 	return 0;
@@ -223,15 +223,15 @@ ap_mem_read_bytes(struct target_s *target, uint8_t *dest, uint32_t src, int len)
 static int 
 ap_mem_write_words(struct target_s *target, uint32_t dest, const uint32_t *src, int len)
 {
-	struct target_ap_s *t = (void *)target;
+	ADIv5_AP_t *ap = adiv5_target_ap(target);
 
 	len >>= 2;
 
-	adiv5_ap_write(t->ap, ADIV5_AP_CSW, 0xA2000052);
-	adiv5_dp_low_access(t->ap->dp, ADIV5_LOW_AP, ADIV5_LOW_WRITE, 
+	adiv5_ap_write(ap, ADIV5_AP_CSW, 0xA2000052);
+	adiv5_dp_low_access(ap->dp, ADIV5_LOW_AP, ADIV5_LOW_WRITE, 
 					ADIV5_AP_TAR, dest);
 	while(len--) 
-		adiv5_dp_low_access(t->ap->dp, ADIV5_LOW_AP, ADIV5_LOW_WRITE, 
+		adiv5_dp_low_access(ap->dp, ADIV5_LOW_AP, ADIV5_LOW_WRITE, 
 					ADIV5_AP_DRW, *src++);
 	
 	return 0;
@@ -240,15 +240,14 @@ ap_mem_write_words(struct target_s *target, uint32_t dest, const uint32_t *src, 
 static int 
 ap_mem_write_bytes(struct target_s *target, uint32_t dest, const uint8_t *src, int len)
 {
-	struct target_ap_s *t = (void *)target;
-	uint32_t tmp;
+	ADIv5_AP_t *ap = adiv5_target_ap(target);
 
-	adiv5_ap_write(t->ap, ADIV5_AP_CSW, 0xA2000050);
-	adiv5_dp_low_access(t->ap->dp, ADIV5_LOW_AP, ADIV5_LOW_WRITE, 
+	adiv5_ap_write(ap, ADIV5_AP_CSW, 0xA2000050);
+	adiv5_dp_low_access(ap->dp, ADIV5_LOW_AP, ADIV5_LOW_WRITE, 
 					ADIV5_AP_TAR, dest);
 	while(len--) {
-		tmp = (uint32_t)*src++ << ((dest++ & 3) << 3);
-		adiv5_dp_low_access(t->ap->dp, ADIV5_LOW_AP, ADIV5_LOW_WRITE, 
+		uint32_t tmp = (uint32_t)*src++ << ((dest++ & 3) << 3);
+		adiv5_dp_low_access(ap->dp, ADIV5_LOW_AP, ADIV5_LOW_WRITE, 
 					ADIV5_AP_DRW, tmp);
 	}
 	return 0;
