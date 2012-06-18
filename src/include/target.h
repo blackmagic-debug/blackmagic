@@ -176,5 +176,14 @@ typedef struct target_s {
 
 extern target *target_list, *cur_target, *last_target;
 
+/* Probe for various targets.
+ * Actual functions implemented in their respective drivers.
+ */
+int cortexm_probe(struct target_s *target);
+int stm32f1_probe(struct target_s *target);
+int stm32f4_probe(struct target_s *target);
+int lmi_probe(struct target_s *target);
+int lpc11xx_probe(struct target_s *target);
+
 #endif
 

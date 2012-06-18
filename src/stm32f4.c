@@ -36,7 +36,6 @@
 #include "general.h"
 #include "adiv5.h"
 #include "target.h"
-#include "stm32.h"
 
 static int stm32f4_flash_erase(struct target_s *target, uint32_t addr, int len);
 static int stm32f4_flash_write_words(struct target_s *target, uint32_t dest, const uint32_t *src, 

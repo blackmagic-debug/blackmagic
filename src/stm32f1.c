@@ -35,7 +35,6 @@
 #include "general.h"
 #include "adiv5.h"
 #include "target.h"
-#include "stm32.h"
 
 static int stm32md_flash_erase(struct target_s *target, uint32_t addr, int len);
 static int stm32hd_flash_erase(struct target_s *target, uint32_t addr, int len);

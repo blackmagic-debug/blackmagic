@@ -36,13 +36,11 @@
 #include "adiv5.h"
 #include "target.h"
 
-#include "cortexm.h"
-#include "lmi.h"
-#include "stm32.h"
-#include "nxp_tgt.h"
-#include "sam3u.h"
-
 static char cortexm_driver_str[] = "ARM Cortex-M3";
+
+/* target options recognised by the Cortex-M target */
+#define	TOPT_FLAVOUR_V6M	(1<<0)	/* if not set, target is assumed to be v7m */
+#define	TOPT_FLAVOUR_V7MF	(1<<1)	/* if set, floating-point enabled. */
 
 /* Private peripheral bus base address */
 #define CORTEXM_PPB_BASE	0xE0000000

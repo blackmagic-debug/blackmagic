@@ -6,7 +6,6 @@
 #include "general.h"
 #include "adiv5.h"
 #include "target.h"
-#include "nxp_tgt.h"
 
 #define IAP_PGM_CHUNKSIZE	256	/* should fit in RAM on any device */
 

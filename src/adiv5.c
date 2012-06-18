@@ -36,8 +36,6 @@
 
 #include "target.h"
 
-#include "cortexm.h"
-
 #ifndef DO_RESET_SEQ
 #define DO_RESET_SEQ 0
 #endif
