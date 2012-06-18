@@ -36,7 +36,7 @@
 
 #include "target.h"
 
-#include "cortexm3.h"
+#include "cortexm.h"
 
 #ifndef DO_RESET_SEQ
 #define DO_RESET_SEQ 0
@@ -146,7 +146,7 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 		t->mem_write_bytes = ap_mem_write_bytes;
 
 		/* The rest sould only be added after checking ROM table */
-		cm3_probe(t);
+		cortexm_probe(t);
 
 		adiv5_ap_count++;
 	}

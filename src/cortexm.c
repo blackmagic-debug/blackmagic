@@ -36,113 +36,113 @@
 #include "adiv5.h"
 #include "target.h"
 
-#include "cortexm3.h"
+#include "cortexm.h"
 #include "lmi.h"
 #include "stm32.h"
 #include "nxp_tgt.h"
 #include "sam3u.h"
 
-static char cm3_driver_str[] = "ARM Cortex-M3";
+static char cortexm_driver_str[] = "ARM Cortex-M3";
 
 /* Private peripheral bus base address */
-#define CM3_PPB_BASE	0xE0000000
+#define CORTEXM_PPB_BASE	0xE0000000
 
-#define CM3_SCS_BASE	(CM3_PPB_BASE + 0xE000)
+#define CORTEXM_SCS_BASE	(CORTEXM_PPB_BASE + 0xE000)
 
-#define CM3_AIRCR	(CM3_SCS_BASE + 0xD0C)
-#define CM3_CFSR	(CM3_SCS_BASE + 0xD28)
-#define CM3_HFSR	(CM3_SCS_BASE + 0xD2C)
-#define CM3_DFSR	(CM3_SCS_BASE + 0xD30)
-#define CM3_CPACR	(CM3_SCS_BASE + 0xD88)
-#define CM3_DHCSR	(CM3_SCS_BASE + 0xDF0)
-#define CM3_DCRSR	(CM3_SCS_BASE + 0xDF4)
-#define CM3_DCRDR	(CM3_SCS_BASE + 0xDF8)
-#define CM3_DEMCR	(CM3_SCS_BASE + 0xDFC)
+#define CORTEXM_AIRCR		(CORTEXM_SCS_BASE + 0xD0C)
+#define CORTEXM_CFSR		(CORTEXM_SCS_BASE + 0xD28)
+#define CORTEXM_HFSR		(CORTEXM_SCS_BASE + 0xD2C)
+#define CORTEXM_DFSR		(CORTEXM_SCS_BASE + 0xD30)
+#define CORTEXM_CPACR		(CORTEXM_SCS_BASE + 0xD88)
+#define CORTEXM_DHCSR		(CORTEXM_SCS_BASE + 0xDF0)
+#define CORTEXM_DCRSR		(CORTEXM_SCS_BASE + 0xDF4)
+#define CORTEXM_DCRDR		(CORTEXM_SCS_BASE + 0xDF8)
+#define CORTEXM_DEMCR		(CORTEXM_SCS_BASE + 0xDFC)
 
-#define CM3_FPB_BASE	(CM3_PPB_BASE + 0x2000)
+#define CORTEXM_FPB_BASE	(CORTEXM_PPB_BASE + 0x2000)
 
-/* ARM Literature uses FP_*, we use CM3_FPB_* consistently */
-#define CM3_FPB_CTRL	(CM3_FPB_BASE + 0x000)
-#define CM3_FPB_REMAP	(CM3_FPB_BASE + 0x004)
-#define CM3_FPB_COMP(i)	(CM3_FPB_BASE + 0x008 + (4*(i)))
+/* ARM Literature uses FP_*, we use CORTEXM_FPB_* consistently */
+#define CORTEXM_FPB_CTRL	(CORTEXM_FPB_BASE + 0x000)
+#define CORTEXM_FPB_REMAP	(CORTEXM_FPB_BASE + 0x004)
+#define CORTEXM_FPB_COMP(i)	(CORTEXM_FPB_BASE + 0x008 + (4*(i)))
 
-#define CM3_DWT_BASE	(CM3_PPB_BASE + 0x1000)
+#define CORTEXM_DWT_BASE	(CORTEXM_PPB_BASE + 0x1000)
 
-#define CM3_DWT_CTRL	(CM3_DWT_BASE + 0x000)
-#define CM3_DWT_COMP(i)	(CM3_DWT_BASE + 0x020 + (0x10*(i)))
-#define CM3_DWT_MASK(i)	(CM3_DWT_BASE + 0x024 + (0x10*(i)))
-#define CM3_DWT_FUNC(i)	(CM3_DWT_BASE + 0x028 + (0x10*(i)))
+#define CORTEXM_DWT_CTRL	(CORTEXM_DWT_BASE + 0x000)
+#define CORTEXM_DWT_COMP(i)	(CORTEXM_DWT_BASE + 0x020 + (0x10*(i)))
+#define CORTEXM_DWT_MASK(i)	(CORTEXM_DWT_BASE + 0x024 + (0x10*(i)))
+#define CORTEXM_DWT_FUNC(i)	(CORTEXM_DWT_BASE + 0x028 + (0x10*(i)))
 
 /* Application Interrupt and Reset Control Register (AIRCR) */
-#define CM3_AIRCR_VECTKEY	(0x05FA << 16)
+#define CORTEXM_AIRCR_VECTKEY		(0x05FA << 16)
 /* Bits 31:16 - Read as VECTKETSTAT, 0xFA05 */
-#define CM3_AIRCR_ENDIANESS	(1 << 15)
+#define CORTEXM_AIRCR_ENDIANESS		(1 << 15)
 /* Bits 15:11 - Unused, reserved */
-#define CM3_AIRCR_PRIGROUP	(7 << 8)
+#define CORTEXM_AIRCR_PRIGROUP		(7 << 8)
 /* Bits 7:3 - Unused, reserved */
-#define CM3_AIRCR_SYSRESETREQ	(1 << 2)
-#define CM3_AIRCR_VECTCLRACTIVE	(1 << 1)
-#define CM3_AIRCR_VECTRESET	(1 << 0)
+#define CORTEXM_AIRCR_SYSRESETREQ	(1 << 2)
+#define CORTEXM_AIRCR_VECTCLRACTIVE	(1 << 1)
+#define CORTEXM_AIRCR_VECTRESET		(1 << 0)
 
 /* HardFault Status Register (HFSR) */
-#define CM3_HFSR_DEBUGEVT	(1 << 31)
-#define CM3_HFSR_FORCED		(1 << 30)
+#define CORTEXM_HFSR_DEBUGEVT		(1 << 31)
+#define CORTEXM_HFSR_FORCED		(1 << 30)
 /* Bits 29:2 - Not specified */
-#define CM3_HFSR_VECTTBL	(1 << 1)
+#define CORTEXM_HFSR_VECTTBL		(1 << 1)
 /* Bits 0 - Reserved */
 
 /* Debug Fault Status Register (DFSR) */
 /* Bits 31:5 - Reserved */
-#define CM3_DFSR_RESETALL	0x1F
-#define CM3_DFSR_EXTERNAL	(1 << 4)
-#define CM3_DFSR_VCATCH		(1 << 3)
-#define CM3_DFSR_DWTTRAP	(1 << 2)
-#define CM3_DFSR_BKPT		(1 << 1)
-#define CM3_DFSR_HALTED		(1 << 0)
+#define CORTEXM_DFSR_RESETALL		0x1F
+#define CORTEXM_DFSR_EXTERNAL		(1 << 4)
+#define CORTEXM_DFSR_VCATCH		(1 << 3)
+#define CORTEXM_DFSR_DWTTRAP		(1 << 2)
+#define CORTEXM_DFSR_BKPT		(1 << 1)
+#define CORTEXM_DFSR_HALTED		(1 << 0)
 
 /* Debug Halting Control and Status Register (DHCSR) */
 /* This key must be written to bits 31:16 for write to take effect */
-#define CM3_DHCSR_DBGKEY	0xA05F0000
+#define CORTEXM_DHCSR_DBGKEY		0xA05F0000
 /* Bits 31:26 - Reserved */
-#define CM3_DHCSR_S_RESET_ST	(1 << 25)
-#define CM3_DHCSR_S_RETIRE_ST	(1 << 24)
+#define CORTEXM_DHCSR_S_RESET_ST	(1 << 25)
+#define CORTEXM_DHCSR_S_RETIRE_ST	(1 << 24)
 /* Bits 23:20 - Reserved */
-#define CM3_DHCSR_S_LOCKUP	(1 << 19)
-#define CM3_DHCSR_S_SLEEP	(1 << 18)
-#define CM3_DHCSR_S_HALT	(1 << 17)
-#define CM3_DHCSR_S_REGRDY	(1 << 16)
+#define CORTEXM_DHCSR_S_LOCKUP		(1 << 19)
+#define CORTEXM_DHCSR_S_SLEEP		(1 << 18)
+#define CORTEXM_DHCSR_S_HALT		(1 << 17)
+#define CORTEXM_DHCSR_S_REGRDY		(1 << 16)
 /* Bits 15:6 - Reserved */
-#define CM3_DHCSR_C_SNAPSTALL	(1 << 5)	/* v7m only */
+#define CORTEXM_DHCSR_C_SNAPSTALL	(1 << 5)	/* v7m only */
 /* Bit 4 - Reserved */
-#define CM3_DHCSR_C_MASKINTS	(1 << 3)
-#define CM3_DHCSR_C_STEP	(1 << 2)
-#define CM3_DHCSR_C_HALT	(1 << 1)
-#define CM3_DHCSR_C_DEBUGEN	(1 << 0)
+#define CORTEXM_DHCSR_C_MASKINTS	(1 << 3)
+#define CORTEXM_DHCSR_C_STEP		(1 << 2)
+#define CORTEXM_DHCSR_C_HALT		(1 << 1)
+#define CORTEXM_DHCSR_C_DEBUGEN		(1 << 0)
 
 /* Debug Core Register Selector Register (DCRSR) */
-#define CM3_DCRSR_REGSEL_MASK	0x0000001F
-#define CM3_DCRSR_REGSEL_XPSR	0x00000010
-#define CM3_DCRSR_REGSEL_MSP	0x00000011
-#define CM3_DCRSR_REGSEL_PSP	0x00000012
+#define CORTEXM_DCRSR_REGSEL_MASK	0x0000001F
+#define CORTEXM_DCRSR_REGSEL_XPSR	0x00000010
+#define CORTEXM_DCRSR_REGSEL_MSP	0x00000011
+#define CORTEXM_DCRSR_REGSEL_PSP	0x00000012
 
 /* Debug Exception and Monitor Control Register (DEMCR) */
 /* Bits 31:25 - Reserved */
-#define CM3_DEMCR_TRCENA	(1 << 24)
+#define CORTEXM_DEMCR_TRCENA		(1 << 24)
 /* Bits 23:20 - Reserved */
-#define CM3_DEMCR_MON_REQ	(1 << 19)	/* v7m only */
-#define CM3_DEMCR_MON_STEP	(1 << 18)	/* v7m only */
-#define CM3_DEMCR_VC_MON_PEND	(1 << 17)	/* v7m only */
-#define CM3_DEMCR_VC_MON_EN	(1 << 16)	/* v7m only */
+#define CORTEXM_DEMCR_MON_REQ		(1 << 19)	/* v7m only */
+#define CORTEXM_DEMCR_MON_STEP		(1 << 18)	/* v7m only */
+#define CORTEXM_DEMCR_VC_MON_PEND	(1 << 17)	/* v7m only */
+#define CORTEXM_DEMCR_VC_MON_EN		(1 << 16)	/* v7m only */
 /* Bits 15:11 - Reserved */
-#define CM3_DEMCR_VC_HARDERR	(1 << 10)
-#define CM3_DEMCR_VC_INTERR	(1 << 9)	/* v7m only */
-#define CM3_DEMCR_VC_BUSERR	(1 << 8)	/* v7m only */
-#define CM3_DEMCR_VC_STATERR	(1 << 7)	/* v7m only */
-#define CM3_DEMCR_VC_CHKERR	(1 << 6)	/* v7m only */
-#define CM3_DEMCR_VC_NOCPERR	(1 << 5)	/* v7m only */
-#define CM3_DEMCR_VC_MMERR	(1 << 4)	/* v7m only */
+#define CORTEXM_DEMCR_VC_HARDERR	(1 << 10)
+#define CORTEXM_DEMCR_VC_INTERR		(1 << 9)	/* v7m only */
+#define CORTEXM_DEMCR_VC_BUSERR		(1 << 8)	/* v7m only */
+#define CORTEXM_DEMCR_VC_STATERR	(1 << 7)	/* v7m only */
+#define CORTEXM_DEMCR_VC_CHKERR		(1 << 6)	/* v7m only */
+#define CORTEXM_DEMCR_VC_NOCPERR	(1 << 5)	/* v7m only */
+#define CORTEXM_DEMCR_VC_MMERR		(1 << 4)	/* v7m only */
 /* Bits 3:1 - Reserved */
-#define CM3_DEMCR_VC_CORERESET	(1 << 0)
+#define CORTEXM_DEMCR_VC_CORERESET	(1 << 0)
 
 /* Flash Patch and Breakpoint Control Register (FP_CTRL) */
 /* Bits 32:15 - Reserved */
@@ -150,54 +150,54 @@ static char cm3_driver_str[] = "ARM Cortex-M3";
 /* Bits 11:8 - NUM_LIT */	/* v7m only */
 /* Bits 7:4 - NUM_CODE1 */
 /* Bits 3:2 - Unspecified */
-#define CM3_FPB_CTRL_KEY	(1 << 1)
-#define CM3_FPB_CTRL_ENABLE	(1 << 0)
+#define CORTEXM_FPB_CTRL_KEY		(1 << 1)
+#define CORTEXM_FPB_CTRL_ENABLE		(1 << 0)
 
 /* Data Watchpoint and Trace Mask Register (DWT_MASKx) */
-#define CM3_DWT_MASK_BYTE	(0 << 0)
-#define CM3_DWT_MASK_HALFWORD	(1 << 0)
-#define CM3_DWT_MASK_WORD	(3 << 0)
+#define CORTEXM_DWT_MASK_BYTE		(0 << 0)
+#define CORTEXM_DWT_MASK_HALFWORD	(1 << 0)
+#define CORTEXM_DWT_MASK_WORD		(3 << 0)
 
 /* Data Watchpoint and Trace Function Register (DWT_FUNCTIONx) */
-#define CM3_DWT_FUNC_MATCHED		(1 << 24)
-#define CM3_DWT_FUNC_DATAVSIZE_WORD	(2 << 10)	/* v7m only */
-#define CM3_DWT_FUNC_FUNC_READ		(5 << 0)
-#define CM3_DWT_FUNC_FUNC_WRITE		(6 << 0)
-#define CM3_DWT_FUNC_FUNC_ACCESS	(7 << 0)
+#define CORTEXM_DWT_FUNC_MATCHED	(1 << 24)
+#define CORTEXM_DWT_FUNC_DATAVSIZE_WORD	(2 << 10)	/* v7m only */
+#define CORTEXM_DWT_FUNC_FUNC_READ	(5 << 0)
+#define CORTEXM_DWT_FUNC_FUNC_WRITE	(6 << 0)
+#define CORTEXM_DWT_FUNC_FUNC_ACCESS	(7 << 0)
 
-static void cm3_attach(struct target_s *target);
-static void cm3_detach(struct target_s *target);
+static void cortexm_attach(struct target_s *target);
+static void cortexm_detach(struct target_s *target);
 
-static int cm3_regs_read(struct target_s *target, void *data);
-static int cm3_regs_write(struct target_s *target, const void *data);
-static int cm3_pc_write(struct target_s *target, const uint32_t val);
+static int cortexm_regs_read(struct target_s *target, void *data);
+static int cortexm_regs_write(struct target_s *target, const void *data);
+static int cortexm_pc_write(struct target_s *target, const uint32_t val);
 
-static void cm3_reset(struct target_s *target);
-static void cm3_halt_resume(struct target_s *target, uint8_t step);
-static int cm3_halt_wait(struct target_s *target);
-static void cm3_halt_request(struct target_s *target);
-static int cm3_fault_unwind(struct target_s *target);
+static void cortexm_reset(struct target_s *target);
+static void cortexm_halt_resume(struct target_s *target, uint8_t step);
+static int cortexm_halt_wait(struct target_s *target);
+static void cortexm_halt_request(struct target_s *target);
+static int cortexm_fault_unwind(struct target_s *target);
 
-static int cm3_set_hw_bp(struct target_s *target, uint32_t addr);
-static int cm3_clear_hw_bp(struct target_s *target, uint32_t addr);
+static int cortexm_set_hw_bp(struct target_s *target, uint32_t addr);
+static int cortexm_clear_hw_bp(struct target_s *target, uint32_t addr);
 
-static int cm3_set_hw_wp(struct target_s *target, uint8_t type, uint32_t addr, uint8_t len);
-static int cm3_clear_hw_wp(struct target_s *target, uint8_t type, uint32_t addr, uint8_t len);
+static int cortexm_set_hw_wp(struct target_s *target, uint8_t type, uint32_t addr, uint8_t len);
+static int cortexm_clear_hw_wp(struct target_s *target, uint8_t type, uint32_t addr, uint8_t len);
 
-static int cm3_check_hw_wp(struct target_s *target, uint32_t *addr);
+static int cortexm_check_hw_wp(struct target_s *target, uint32_t *addr);
 
 /* Watchpoint unit status */
-#define CM3_MAX_WATCHPOINTS	4	/* architecture says up to 15, no implementation has > 4 */
+#define CORTEXM_MAX_WATCHPOINTS	4	/* architecture says up to 15, no implementation has > 4 */
 static struct wp_unit_s {
 	uint32_t addr;
 	uint8_t type;
 	uint8_t size;
-} hw_watchpoint[CM3_MAX_WATCHPOINTS];
+} hw_watchpoint[CORTEXM_MAX_WATCHPOINTS];
 static unsigned hw_watchpoint_max;
 
 /* Breakpoint unit status */
-#define CM3_MAX_BREAKPOINTS	6	/* architecture says up to 127, no implementation has > 6 */
-static uint32_t hw_breakpoint[CM3_MAX_BREAKPOINTS];
+#define CORTEXM_MAX_BREAKPOINTS	6	/* architecture says up to 127, no implementation has > 6 */
+static uint32_t hw_breakpoint[CORTEXM_MAX_BREAKPOINTS];
 static unsigned hw_breakpoint_max;
 
 /* Register number tables */
@@ -295,32 +295,32 @@ static const char tdesc_cortex_mf[] =
 	"</target>";
 
 int
-cm3_probe(struct target_s *target)
+cortexm_probe(struct target_s *target)
 {
-	target->driver = cm3_driver_str;
+	target->driver = cortexm_driver_str;
 
-	target->attach = cm3_attach;
-	target->detach = cm3_detach;
+	target->attach = cortexm_attach;
+	target->detach = cortexm_detach;
 
 	/* Should probe here to make sure it's Cortex-M3 */
 	target->tdesc = tdesc_cortex_m;
-	target->regs_read = cm3_regs_read;
-	target->regs_write = cm3_regs_write;
-	target->pc_write = cm3_pc_write;
+	target->regs_read = cortexm_regs_read;
+	target->regs_write = cortexm_regs_write;
+	target->pc_write = cortexm_pc_write;
 
-	target->reset = cm3_reset;
-	target->halt_request = cm3_halt_request;
-	target->halt_wait = cm3_halt_wait;
-	target->halt_resume = cm3_halt_resume;
-	target->fault_unwind = cm3_fault_unwind;
+	target->reset = cortexm_reset;
+	target->halt_request = cortexm_halt_request;
+	target->halt_wait = cortexm_halt_wait;
+	target->halt_resume = cortexm_halt_resume;
+	target->fault_unwind = cortexm_fault_unwind;
 	target->regs_size = sizeof(regnum_cortex_m);	/* XXX: detect FP extension */
 
 	/* Probe for FP extension */
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
-	uint32_t cpacr = adiv5_ap_mem_read(ap, CM3_CPACR);
+	uint32_t cpacr = adiv5_ap_mem_read(ap, CORTEXM_CPACR);
 	cpacr |= 0x00F00000; /* CP10 = 0b11, CP11 = 0b11 */
-	adiv5_ap_mem_write(ap, CM3_CPACR, cpacr);
-	if (adiv5_ap_mem_read(ap, CM3_CPACR) == cpacr) {
+	adiv5_ap_mem_write(ap, CORTEXM_CPACR, cpacr);
+	if (adiv5_ap_mem_read(ap, CORTEXM_CPACR) == cpacr) {
 		target->target_options |= TOPT_FLAVOUR_V7MF;
 		target->regs_size += sizeof(regnum_cortex_mf);
 		target->tdesc = tdesc_cortex_mf;
@@ -337,7 +337,7 @@ cm3_probe(struct target_s *target)
 }
 
 static void
-cm3_attach(struct target_s *target)
+cortexm_attach(struct target_s *target)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
 	unsigned i;
@@ -347,67 +347,67 @@ cm3_attach(struct target_s *target)
 	while(!target_halt_wait(target));
 
 	/* Request halt on reset */
-	adiv5_ap_mem_write(ap, CM3_DEMCR, 
-			CM3_DEMCR_TRCENA | CM3_DEMCR_VC_HARDERR | 
-			CM3_DEMCR_VC_CORERESET); 
+	adiv5_ap_mem_write(ap, CORTEXM_DEMCR, 
+			CORTEXM_DEMCR_TRCENA | CORTEXM_DEMCR_VC_HARDERR | 
+			CORTEXM_DEMCR_VC_CORERESET); 
 
 	/* Reset DFSR flags */
-	adiv5_ap_mem_write(ap, CM3_DFSR, CM3_DFSR_RESETALL);
+	adiv5_ap_mem_write(ap, CORTEXM_DFSR, CORTEXM_DFSR_RESETALL);
 
 	/* size the break/watchpoint units */
-	hw_breakpoint_max = CM3_MAX_BREAKPOINTS;
-	r = adiv5_ap_mem_read(ap, CM3_FPB_CTRL);
+	hw_breakpoint_max = CORTEXM_MAX_BREAKPOINTS;
+	r = adiv5_ap_mem_read(ap, CORTEXM_FPB_CTRL);
 	if (((r >> 4) & 0xf) < hw_breakpoint_max)	/* only look at NUM_COMP1 */
 		hw_breakpoint_max = (r >> 4) & 0xf;
-	hw_watchpoint_max = CM3_MAX_WATCHPOINTS;
-	r = adiv5_ap_mem_read(ap, CM3_DWT_CTRL);
+	hw_watchpoint_max = CORTEXM_MAX_WATCHPOINTS;
+	r = adiv5_ap_mem_read(ap, CORTEXM_DWT_CTRL);
 	if ((r >> 28) > hw_watchpoint_max)
 		hw_watchpoint_max = r >> 28;
 
 	/* Clear any stale breakpoints */
 	for(i = 0; i < hw_breakpoint_max; i++) {
-		adiv5_ap_mem_write(ap, CM3_FPB_COMP(i), 0);
+		adiv5_ap_mem_write(ap, CORTEXM_FPB_COMP(i), 0);
 		hw_breakpoint[i] = 0;
 	}
 
 	/* Clear any stale watchpoints */
 	for(i = 0; i < hw_watchpoint_max; i++) {
-		adiv5_ap_mem_write(ap, CM3_DWT_FUNC(i), 0);
+		adiv5_ap_mem_write(ap, CORTEXM_DWT_FUNC(i), 0);
 		hw_watchpoint[i].type = 0;
 	}
 
 	/* Flash Patch Control Register: set ENABLE */
-	adiv5_ap_mem_write(ap, CM3_FPB_CTRL, 
-			CM3_FPB_CTRL_KEY | CM3_FPB_CTRL_ENABLE);
-	target->set_hw_bp = cm3_set_hw_bp;
-	target->clear_hw_bp = cm3_clear_hw_bp;
+	adiv5_ap_mem_write(ap, CORTEXM_FPB_CTRL, 
+			CORTEXM_FPB_CTRL_KEY | CORTEXM_FPB_CTRL_ENABLE);
+	target->set_hw_bp = cortexm_set_hw_bp;
+	target->clear_hw_bp = cortexm_clear_hw_bp;
 
 	/* Data Watchpoint and Trace */
-	target->set_hw_wp = cm3_set_hw_wp;
-	target->clear_hw_wp = cm3_clear_hw_wp;
-	target->check_hw_wp = cm3_check_hw_wp;
+	target->set_hw_wp = cortexm_set_hw_wp;
+	target->clear_hw_wp = cortexm_clear_hw_wp;
+	target->check_hw_wp = cortexm_check_hw_wp;
 }
 
 static void
-cm3_detach(struct target_s *target)
+cortexm_detach(struct target_s *target)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
 	unsigned i;
 
 	/* Clear any stale breakpoints */
 	for(i = 0; i < hw_breakpoint_max; i++)
-		adiv5_ap_mem_write(ap, CM3_FPB_COMP(i), 0);
+		adiv5_ap_mem_write(ap, CORTEXM_FPB_COMP(i), 0);
 
 	/* Clear any stale watchpoints */
 	for(i = 0; i < hw_watchpoint_max; i++) 
-		adiv5_ap_mem_write(ap, CM3_DWT_FUNC(i), 0);
+		adiv5_ap_mem_write(ap, CORTEXM_DWT_FUNC(i), 0);
 
 	/* Disable debug */
-	adiv5_ap_mem_write(ap, CM3_DHCSR, CM3_DHCSR_DBGKEY);
+	adiv5_ap_mem_write(ap, CORTEXM_DHCSR, CORTEXM_DHCSR_DBGKEY);
 }
 
 static int
-cm3_regs_read(struct target_s *target, void *data)
+cortexm_regs_read(struct target_s *target, void *data)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
 	uint32_t *regs = data;
@@ -418,7 +418,7 @@ cm3_regs_read(struct target_s *target, void *data)
 
 	/* Map the banked data registers (0x10-0x1c) to the
 	 * debug registers DHCSR, DCRSR, DCRDR and DEMCR respectively */
-	adiv5_dp_low_access(ap->dp, 1, 0, ADIV5_AP_TAR, CM3_DHCSR);
+	adiv5_dp_low_access(ap->dp, 1, 0, ADIV5_AP_TAR, CORTEXM_DHCSR);
 
 	/* Walk the regnum_cortex_m array, reading the registers it 
 	 * calls out. */
@@ -438,7 +438,7 @@ cm3_regs_read(struct target_s *target, void *data)
 }
 
 static int
-cm3_regs_write(struct target_s *target, const void *data)
+cortexm_regs_write(struct target_s *target, const void *data)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
 	const uint32_t *regs = data;
@@ -449,7 +449,7 @@ cm3_regs_write(struct target_s *target, const void *data)
 
 	/* Map the banked data registers (0x10-0x1c) to the
 	 * debug registers DHCSR, DCRSR, DCRDR and DEMCR respectively */
-	adiv5_dp_low_access(ap->dp, 1, 0, ADIV5_AP_TAR, CM3_DHCSR);
+	adiv5_dp_low_access(ap->dp, 1, 0, ADIV5_AP_TAR, CORTEXM_DHCSR);
 
 	/* Walk the regnum_cortex_m array, writing the registers it 
 	 * calls out. */
@@ -471,12 +471,12 @@ cm3_regs_write(struct target_s *target, const void *data)
 }
 
 static int
-cm3_pc_write(struct target_s *target, const uint32_t val)
+cortexm_pc_write(struct target_s *target, const uint32_t val)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
 
 	adiv5_ap_write(ap, ADIV5_AP_CSW, 0xA2000052);
-	adiv5_dp_low_access(ap->dp, 1, 0, ADIV5_AP_TAR, CM3_DHCSR);
+	adiv5_dp_low_access(ap->dp, 1, 0, ADIV5_AP_TAR, CORTEXM_DHCSR);
 
 	adiv5_ap_write(ap, ADIV5_AP_DB(2), val); /* Required to switch banks */
 	adiv5_dp_low_access(ap->dp, 1, 0, ADIV5_AP_DB(1), 0x1000F);
@@ -487,7 +487,7 @@ cm3_pc_write(struct target_s *target, const uint32_t val)
 /* The following three routines implement target halt/resume
  * using the core debug registers in the NVIC. */
 static void 
-cm3_reset(struct target_s *target)
+cortexm_reset(struct target_s *target)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
 
@@ -497,64 +497,64 @@ cm3_reset(struct target_s *target)
 	/* This could be VECTRESET: 0x05FA0001 (reset only core)
 	 *          or SYSRESETREQ: 0x05FA0004 (system reset)
 	 */
-	adiv5_ap_mem_write(ap, CM3_AIRCR,
-			CM3_AIRCR_VECTKEY | CM3_AIRCR_SYSRESETREQ);
+	adiv5_ap_mem_write(ap, CORTEXM_AIRCR,
+			CORTEXM_AIRCR_VECTKEY | CORTEXM_AIRCR_SYSRESETREQ);
 
 	/* Poll for release from reset */
-	while(adiv5_ap_mem_read(ap, CM3_AIRCR) & 
-			(CM3_AIRCR_VECTRESET | CM3_AIRCR_SYSRESETREQ));
+	while(adiv5_ap_mem_read(ap, CORTEXM_AIRCR) & 
+			(CORTEXM_AIRCR_VECTRESET | CORTEXM_AIRCR_SYSRESETREQ));
 
 	/* Reset DFSR flags */
-	adiv5_ap_mem_write(ap, CM3_DFSR, CM3_DFSR_RESETALL);
+	adiv5_ap_mem_write(ap, CORTEXM_DFSR, CORTEXM_DFSR_RESETALL);
 }
 
 static void 
-cm3_halt_request(struct target_s *target)
+cortexm_halt_request(struct target_s *target)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
 
-	adiv5_ap_mem_write(ap, CM3_DHCSR, 
-		CM3_DHCSR_DBGKEY | CM3_DHCSR_C_HALT | CM3_DHCSR_C_DEBUGEN);
+	adiv5_ap_mem_write(ap, CORTEXM_DHCSR, 
+		CORTEXM_DHCSR_DBGKEY | CORTEXM_DHCSR_C_HALT | CORTEXM_DHCSR_C_DEBUGEN);
 }
 
 static int
-cm3_halt_wait(struct target_s *target)
+cortexm_halt_wait(struct target_s *target)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
 
-	return adiv5_ap_mem_read(ap, CM3_DHCSR) & CM3_DHCSR_S_HALT;
+	return adiv5_ap_mem_read(ap, CORTEXM_DHCSR) & CORTEXM_DHCSR_S_HALT;
 }
 
 static void 
-cm3_halt_resume(struct target_s *target, uint8_t step)
+cortexm_halt_resume(struct target_s *target, uint8_t step)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
 	static uint8_t old_step = 0;
-	uint32_t dhcsr = CM3_DHCSR_DBGKEY | CM3_DHCSR_C_DEBUGEN;
+	uint32_t dhcsr = CORTEXM_DHCSR_DBGKEY | CORTEXM_DHCSR_C_DEBUGEN;
 
-	if(step) dhcsr |= CM3_DHCSR_C_STEP | CM3_DHCSR_C_MASKINTS;
+	if(step) dhcsr |= CORTEXM_DHCSR_C_STEP | CORTEXM_DHCSR_C_MASKINTS;
 
 	/* Disable interrupts while single stepping... */
 	if(step != old_step) {
-		adiv5_ap_mem_write(ap, CM3_DHCSR, dhcsr | CM3_DHCSR_C_HALT);
+		adiv5_ap_mem_write(ap, CORTEXM_DHCSR, dhcsr | CORTEXM_DHCSR_C_HALT);
 		old_step = step;
 	}
 
-	adiv5_ap_mem_write(ap, CM3_DHCSR, dhcsr);
+	adiv5_ap_mem_write(ap, CORTEXM_DHCSR, dhcsr);
 }
 
-static int cm3_fault_unwind(struct target_s *target)
+static int cortexm_fault_unwind(struct target_s *target)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
-	uint32_t dfsr = adiv5_ap_mem_read(ap, CM3_DFSR);
-	uint32_t hfsr = adiv5_ap_mem_read(ap, CM3_HFSR);
-	uint32_t cfsr = adiv5_ap_mem_read(ap, CM3_CFSR);
-	adiv5_ap_mem_write(ap, CM3_DFSR, dfsr);/* write back to reset */
-	adiv5_ap_mem_write(ap, CM3_HFSR, hfsr);/* write back to reset */
-	adiv5_ap_mem_write(ap, CM3_CFSR, cfsr);/* write back to reset */
+	uint32_t dfsr = adiv5_ap_mem_read(ap, CORTEXM_DFSR);
+	uint32_t hfsr = adiv5_ap_mem_read(ap, CORTEXM_HFSR);
+	uint32_t cfsr = adiv5_ap_mem_read(ap, CORTEXM_CFSR);
+	adiv5_ap_mem_write(ap, CORTEXM_DFSR, dfsr);/* write back to reset */
+	adiv5_ap_mem_write(ap, CORTEXM_HFSR, hfsr);/* write back to reset */
+	adiv5_ap_mem_write(ap, CORTEXM_CFSR, cfsr);/* write back to reset */
 	/* We check for FORCED in the HardFault Status Register or 
 	 * for a configurable fault to avoid catching core resets */
-	if((dfsr & CM3_DFSR_VCATCH) && ((hfsr & CM3_HFSR_FORCED) || cfsr)) {
+	if((dfsr & CORTEXM_DFSR_VCATCH) && ((hfsr & CORTEXM_HFSR_FORCED) || cfsr)) {
 		/* Unwind exception */
 		uint32_t regs[target->regs_size];
 		uint32_t stack[8];
@@ -580,8 +580,8 @@ static int cm3_fault_unwind(struct target_s *target)
 		/* Reset exception state to allow resuming from restored
 		 * state.
 		 */
-		adiv5_ap_mem_write(ap, CM3_AIRCR, 
-				CM3_AIRCR_VECTKEY | CM3_AIRCR_VECTCLRACTIVE);
+		adiv5_ap_mem_write(ap, CORTEXM_AIRCR, 
+				CORTEXM_AIRCR_VECTKEY | CORTEXM_AIRCR_VECTCLRACTIVE);
 
 		/* Write pre-exception registers back to core */
 		target_regs_write(target, regs);
@@ -595,7 +595,7 @@ static int cm3_fault_unwind(struct target_s *target)
  * The Flash Patch and Breakpoint (FPB) system is used. */
 
 static int
-cm3_set_hw_bp(struct target_s *target, uint32_t addr)
+cortexm_set_hw_bp(struct target_s *target, uint32_t addr)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
 	uint32_t val = addr & 0x1FFFFFFC;
@@ -611,13 +611,13 @@ cm3_set_hw_bp(struct target_s *target, uint32_t addr)
 
 	hw_breakpoint[i] = addr | 1;
 
-	adiv5_ap_mem_write(ap, CM3_FPB_COMP(i), val);
+	adiv5_ap_mem_write(ap, CORTEXM_FPB_COMP(i), val);
 
 	return 0;
 }
 
 static int
-cm3_clear_hw_bp(struct target_s *target, uint32_t addr)
+cortexm_clear_hw_bp(struct target_s *target, uint32_t addr)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
 	unsigned i;
@@ -629,7 +629,7 @@ cm3_clear_hw_bp(struct target_s *target, uint32_t addr)
 
 	hw_breakpoint[i] = 0;
 
-	adiv5_ap_mem_write(ap, CM3_FPB_COMP(i), 0);
+	adiv5_ap_mem_write(ap, CORTEXM_FPB_COMP(i), 0);
 
 	return 0; 
 }
@@ -639,30 +639,30 @@ cm3_clear_hw_bp(struct target_s *target, uint32_t addr)
  * The Data Watch and Trace (DWT) system is used. */
 
 static int
-cm3_set_hw_wp(struct target_s *target, uint8_t type, uint32_t addr, uint8_t len)
+cortexm_set_hw_wp(struct target_s *target, uint8_t type, uint32_t addr, uint8_t len)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
 	unsigned i;
 
 	switch(len) { /* Convert bytes size to mask size */
-		case 1: len = CM3_DWT_MASK_BYTE; break;
-		case 2: len = CM3_DWT_MASK_HALFWORD; break;
-		case 4: len = CM3_DWT_MASK_WORD; break;
+		case 1: len = CORTEXM_DWT_MASK_BYTE; break;
+		case 2: len = CORTEXM_DWT_MASK_HALFWORD; break;
+		case 4: len = CORTEXM_DWT_MASK_WORD; break;
 		default:
 			return -1;
 	}
 
 	switch(type) { /* Convert gdb type to function type */
-		case 2: type = CM3_DWT_FUNC_FUNC_WRITE; break;
-		case 3: type = CM3_DWT_FUNC_FUNC_READ; break;
-		case 4: type = CM3_DWT_FUNC_FUNC_ACCESS; break;
+		case 2: type = CORTEXM_DWT_FUNC_FUNC_WRITE; break;
+		case 3: type = CORTEXM_DWT_FUNC_FUNC_READ; break;
+		case 4: type = CORTEXM_DWT_FUNC_FUNC_ACCESS; break;
 		default:
 			return -1;
 	}
 
 	for(i = 0; i < hw_watchpoint_max; i++) 
 		if((hw_watchpoint[i].type == 0) &&
-		   ((adiv5_ap_mem_read(ap, CM3_DWT_FUNC(i)) & 0xF) == 0))
+		   ((adiv5_ap_mem_read(ap, CORTEXM_DWT_FUNC(i)) & 0xF) == 0))
 			break;
 	
 	if(i == hw_watchpoint_max) return -2;
@@ -671,32 +671,32 @@ cm3_set_hw_wp(struct target_s *target, uint8_t type, uint32_t addr, uint8_t len)
 	hw_watchpoint[i].addr = addr;
 	hw_watchpoint[i].size = len;
 
-	adiv5_ap_mem_write(ap, CM3_DWT_COMP(i), addr);
-	adiv5_ap_mem_write(ap, CM3_DWT_MASK(i), len);
-	adiv5_ap_mem_write(ap, CM3_DWT_FUNC(i), type |
-			((target->target_options & TOPT_FLAVOUR_V6M) ? 0: CM3_DWT_FUNC_DATAVSIZE_WORD));
+	adiv5_ap_mem_write(ap, CORTEXM_DWT_COMP(i), addr);
+	adiv5_ap_mem_write(ap, CORTEXM_DWT_MASK(i), len);
+	adiv5_ap_mem_write(ap, CORTEXM_DWT_FUNC(i), type |
+			((target->target_options & TOPT_FLAVOUR_V6M) ? 0: CORTEXM_DWT_FUNC_DATAVSIZE_WORD));
 
 	return 0;
 }
 
 static int
-cm3_clear_hw_wp(struct target_s *target, uint8_t type, uint32_t addr, uint8_t len)
+cortexm_clear_hw_wp(struct target_s *target, uint8_t type, uint32_t addr, uint8_t len)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
 	unsigned i;
 
 	switch(len) {
-		case 1: len = CM3_DWT_MASK_BYTE; break;
-		case 2: len = CM3_DWT_MASK_HALFWORD; break;
-		case 4: len = CM3_DWT_MASK_WORD; break;
+		case 1: len = CORTEXM_DWT_MASK_BYTE; break;
+		case 2: len = CORTEXM_DWT_MASK_HALFWORD; break;
+		case 4: len = CORTEXM_DWT_MASK_WORD; break;
 		default:
 			return -1;
 	}
 
 	switch(type) {
-		case 2: type = CM3_DWT_FUNC_FUNC_WRITE; break;
-		case 3: type = CM3_DWT_FUNC_FUNC_READ; break;
-		case 4: type = CM3_DWT_FUNC_FUNC_ACCESS; break;
+		case 2: type = CORTEXM_DWT_FUNC_FUNC_WRITE; break;
+		case 3: type = CORTEXM_DWT_FUNC_FUNC_READ; break;
+		case 4: type = CORTEXM_DWT_FUNC_FUNC_ACCESS; break;
 		default:
 			return -1;
 	}
@@ -710,13 +710,13 @@ cm3_clear_hw_wp(struct target_s *target, uint8_t type, uint32_t addr, uint8_t le
 
 	hw_watchpoint[i].type = 0;
 
-	adiv5_ap_mem_write(ap, CM3_DWT_FUNC(i), 0);
+	adiv5_ap_mem_write(ap, CORTEXM_DWT_FUNC(i), 0);
 
 	return 0;
 }
 
 static int
-cm3_check_hw_wp(struct target_s *target, uint32_t *addr)
+cortexm_check_hw_wp(struct target_s *target, uint32_t *addr)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
 	unsigned i;
@@ -724,8 +724,8 @@ cm3_check_hw_wp(struct target_s *target, uint32_t *addr)
 	for(i = 0; i < hw_watchpoint_max; i++)
 		/* if SET and MATCHED then break */
 		if(hw_watchpoint[i].type && 
-		   (adiv5_ap_mem_read(ap, CM3_DWT_FUNC(i)) & 
-					CM3_DWT_FUNC_MATCHED))
+		   (adiv5_ap_mem_read(ap, CORTEXM_DWT_FUNC(i)) & 
+					CORTEXM_DWT_FUNC_MATCHED))
 			break;
 
 	if(i == hw_watchpoint_max) return 0;

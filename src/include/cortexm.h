@@ -18,8 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __CORTEXM3_H
-#define __CORTEXM3_H
+#ifndef __CORTEXM_H
+#define __CORTEXM_H
 
 #include "target.h"
 
@@ -27,7 +27,7 @@
 #define	TOPT_FLAVOUR_V6M	(1<<0)		/* if not set, target is assumed to be v7m */
 #define	TOPT_FLAVOUR_V7MF	(1<<1)		/* if set, floating-point enabled. */
 
-int cm3_probe(struct target_s *target);
+int cortexm_probe(struct target_s *target);
 
 #endif
 

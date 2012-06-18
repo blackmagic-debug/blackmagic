@@ -17,7 +17,7 @@ SRC = 	gdb_if.c	\
 	swdptap.c	\
 	adiv5.c		\
 	adiv5_swdp.c	\
-	cortexm3.c	\
+	cortexm.c	\
 	stm32f1.c	\
 	nxp_tgt.c	\
 	main.c		\
