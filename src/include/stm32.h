@@ -18,12 +18,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __STM32_TGT_H
-#define __STM32_TGT_H
+#ifndef __STM32_H
+#define __STM32_H
 
 #include "target.h"
 
-int stm32_probe(struct target_s *target);
+int stm32f1_probe(struct target_s *target);
 int stm32f4_probe(struct target_s *target);
 
 #endif

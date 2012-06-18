@@ -38,7 +38,7 @@
 
 #include "cortexm3.h"
 #include "lmi.h"
-#include "stm32_tgt.h"
+#include "stm32.h"
 #include "nxp_tgt.h"
 #include "sam3u.h"
 
@@ -327,10 +327,9 @@ cm3_probe(struct target_s *target)
 	}
 	
 
-	if(stm32_probe(target) == 0) return 0;
+	if(stm32f1_probe(target) == 0) return 0;
 	if(stm32f4_probe(target) == 0) return 0;
 	if(lpc11xx_probe(target) == 0) return 0;
-	if(sam3u_probe(target) == 0) return 0;
 	/* if not STM32 try LMI which I don't know how to detect reliably */
 	lmi_probe(target);
 

@@ -27,10 +27,6 @@
  *   and STM32F107xx advanced ARM-based 32-bit MCUs
  * ST doc - PM0075
  *   Programming manual - STM32F10xxx Flash memory microcontrollers
- *
- * Issues:
- * On some devices this fails occasionally.  A retry suceeds. Maybe
- * a timing issue.
  */
 
 #include <stdlib.h>
@@ -39,19 +35,19 @@
 #include "general.h"
 #include "adiv5.h"
 #include "target.h"
-#include "stm32_tgt.h"
+#include "stm32.h"
 
 static int stm32md_flash_erase(struct target_s *target, uint32_t addr, int len);
 static int stm32hd_flash_erase(struct target_s *target, uint32_t addr, int len);
-static int stm32_flash_erase(struct target_s *target, uint32_t addr, int len, 
+static int stm32f1_flash_erase(struct target_s *target, uint32_t addr, int len, 
 				uint32_t pagesize);
-static int stm32_flash_write_words(struct target_s *target, uint32_t dest, const uint32_t *src, 
-			  int len);
+static int stm32f1_flash_write_words(struct target_s *target, uint32_t dest, 
+			const uint32_t *src, int len);
 
-static const char stm32_driver_str[] = "STM32, Medium density.";
+static const char stm32f1_driver_str[] = "STM32, Medium density.";
 static const char stm32hd_driver_str[] = "STM32, High density.";
 
-static const char stm32_xml_memory_map[] = "<?xml version=\"1.0\"?>"
+static const char stm32f1_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 /*	"<!DOCTYPE memory-map "
 	"             PUBLIC \"+//IDN gnu.org//DTD GDB Memory Map V1.0//EN\""
 	"                    \"http://sourceware.org/gdb/gdb-memory-map.dtd\">"*/
@@ -90,7 +86,9 @@ static const char stm32hd_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 #define SR_ERROR_MASK	0x14
 #define SR_EOP		0x20
 
-uint16_t stm32_flash_write_stub[] = {
+#define DBGMCU_IDCODE	0xE0042000
+
+uint16_t stm32f1_flash_write_stub[] = {
 // _start:
 	0x4809,	// ldr r0, [pc, #36] // _flashbase
 	0x490a,	// ldr r1, [pc, #40] // _addr
@@ -127,83 +125,83 @@ uint16_t stm32_flash_write_stub[] = {
 // 	...
 };
 
-int stm32_probe(struct target_s *target)
+int stm32f1_probe(struct target_s *target)
 {
-	struct target_ap_s *t = (void *)target;
 	uint32_t idcode;
 
-	idcode = adiv5_ap_mem_read(t->ap, 0xE0042000);
+	idcode = adiv5_ap_mem_read(adiv5_target_ap(target), DBGMCU_IDCODE);
 	switch(idcode & 0xFFF) {
-	    case 0x410:  /* Medium density */
-	    case 0x412:  /* Low denisty */
-	    case 0x420:  /* Value Line, Low-/Medium density */
-		target->driver = stm32_driver_str;
-		target->xml_mem_map = stm32_xml_memory_map;
+	case 0x410:  /* Medium density */
+	case 0x412:  /* Low denisty */
+	case 0x420:  /* Value Line, Low-/Medium density */
+		target->driver = stm32f1_driver_str;
+		target->xml_mem_map = stm32f1_xml_memory_map;
 		target->flash_erase = stm32md_flash_erase;
-		target->flash_write_words = stm32_flash_write_words;
+		target->flash_write_words = stm32f1_flash_write_words;
 		return 0;
-	    case 0x414:	 /* High density */
-	    case 0x418:  /* Connectivity Line */
-	    case 0x428:	 /* Value Line, High Density */
+	case 0x414:	 /* High density */
+	case 0x418:  /* Connectivity Line */
+	case 0x428:	 /* Value Line, High Density */
 		target->driver = stm32hd_driver_str;
 		target->xml_mem_map = stm32hd_xml_memory_map;
 		target->flash_erase = stm32hd_flash_erase;
-		target->flash_write_words = stm32_flash_write_words;
+		target->flash_write_words = stm32f1_flash_write_words;
 		return 0;
-	    default:
+	default:
 		return -1;
 	} 
 }
 
-	
-static int stm32_flash_erase(struct target_s *target, uint32_t addr, int len, uint32_t pagesize)
+static int stm32f1_flash_erase(struct target_s *target, uint32_t addr, int len, uint32_t pagesize)
 {
-	struct target_ap_s *t = (void *)target;
+	ADIv5_AP_t *ap = adiv5_target_ap(target);
 	uint16_t sr;
 
 	addr &= ~(pagesize - 1);
 	len &= ~(pagesize - 1);
 
 	/* Enable FPEC controller access */
-	adiv5_ap_mem_write(t->ap, FLASH_KEYR, KEY1);
-	adiv5_ap_mem_write(t->ap, FLASH_KEYR, KEY2);
+	adiv5_ap_mem_write(ap, FLASH_KEYR, KEY1);
+	adiv5_ap_mem_write(ap, FLASH_KEYR, KEY2);
 	while(len) {
 		/* Flash page erase instruction */
-		adiv5_ap_mem_write(t->ap, FLASH_CR, 2);
+		adiv5_ap_mem_write(ap, FLASH_CR, 2);
 		/* write address to FMA */
-		adiv5_ap_mem_write(t->ap, FLASH_AR, addr); 
+		adiv5_ap_mem_write(ap, FLASH_AR, addr); 
 		/* Flash page erase start instruction */
-		adiv5_ap_mem_write(t->ap, FLASH_CR, 0x42);
+		adiv5_ap_mem_write(ap, FLASH_CR, 0x42);
 
 		/* Read FLASH_SR to poll for BSY bit */
-		while(adiv5_ap_mem_read(t->ap, FLASH_SR) & 1)
-			if(target_check_error(target)) return -1;
+		while(adiv5_ap_mem_read(ap, FLASH_SR) & 1)
+			if(target_check_error(target))
+				return -1;
 
 		len -= pagesize;
 		addr += pagesize;
 	}
 
 	/* Check for error */
-	sr = adiv5_ap_mem_read(t->ap, FLASH_SR);
-	if((sr & SR_ERROR_MASK) || !(sr & SR_EOP)) return -1;
+	sr = adiv5_ap_mem_read(ap, FLASH_SR);
+	if ((sr & SR_ERROR_MASK) || !(sr & SR_EOP))
+		return -1;
 
 	return 0;
 }
 
 static int stm32hd_flash_erase(struct target_s *target, uint32_t addr, int len)
 {
-	return stm32_flash_erase(target, addr, len, 0x800);
+	return stm32f1_flash_erase(target, addr, len, 0x800);
 }
 
 static int stm32md_flash_erase(struct target_s *target, uint32_t addr, int len)
 {
-	return stm32_flash_erase(target, addr, len, 0x400);
+	return stm32f1_flash_erase(target, addr, len, 0x400);
 }
 
-static int stm32_flash_write_words(struct target_s *target, uint32_t dest, 
+static int stm32f1_flash_write_words(struct target_s *target, uint32_t dest, 
 			  const uint32_t *src, int len)
 {
-	struct target_ap_s *t = (void *)target;
+	ADIv5_AP_t *ap = adiv5_target_ap(target);
 	uint32_t data[(len>>2)+2];
 
 	/* Construct data buffer used by stub */
@@ -212,17 +210,19 @@ static int stm32_flash_write_words(struct target_s *target, uint32_t dest,
 	memcpy(&data[2], src, len);
 
 	/* Write stub and data to target ram and set PC */
-	target_mem_write_words(target, 0x20000000, (void*)stm32_flash_write_stub, 0x2C);
+	target_mem_write_words(target, 0x20000000, (void*)stm32f1_flash_write_stub, 0x2C);
 	target_mem_write_words(target, 0x2000002C, data, len + 8);
 	target_pc_write(target, 0x20000000);
-	if(target_check_error(target)) return -1;
+	if(target_check_error(target))
+		return -1;
 
 	/* Execute the stub */
 	target_halt_resume(target, 0);
 	while(!target_halt_wait(target));
 
 	/* Check for error */
-	if(adiv5_ap_mem_read(t->ap, FLASH_SR) & SR_ERROR_MASK) return -1;
+	if (adiv5_ap_mem_read(ap, FLASH_SR) & SR_ERROR_MASK)
+		return -1;
 
 	return 0;
 }
