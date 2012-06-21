@@ -325,11 +325,15 @@ cortexm_probe(struct target_s *target)
 	}
 	
 
-	if(stm32f1_probe(target) == 0) return 0;
-	if(stm32f4_probe(target) == 0) return 0;
-	if(lpc11xx_probe(target) == 0) return 0;
-	/* if not STM32 try LMI which I don't know how to detect reliably */
-	lmi_probe(target);
+#define PROBE(x) \
+	do { if (!(x)(target) && !target_check_error(target)) return 0; } while (0)
+
+	PROBE(stm32f1_probe);
+	PROBE(stm32f4_probe);
+	PROBE(lpc11xx_probe);
+	/* Try LMI last, as it doesn't fail. */
+	PROBE(lmi_probe);
+#undef PROBE
 
 	return 0;
 }
