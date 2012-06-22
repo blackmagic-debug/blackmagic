@@ -29,6 +29,7 @@ SRC = 	gdb_if.c	\
 	arm7tdmi.c	\
 	stm32f4.c	\
 	crc32.c		\
+	sam3x.c		\
 
 include $(PLATFORM_DIR)/Makefile.inc
 

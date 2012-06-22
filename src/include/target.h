@@ -161,6 +161,7 @@ typedef struct target_s {
 
 	/* target-defined options */
 	unsigned target_options;
+	uint32_t idcode;
 
 	/* Flash memory access functions */
 	const char *xml_mem_map;
@@ -184,6 +185,7 @@ int stm32f1_probe(struct target_s *target);
 int stm32f4_probe(struct target_s *target);
 int lmi_probe(struct target_s *target);
 int lpc11xx_probe(struct target_s *target);
+int sam3x_probe(struct target_s *target);
 
 #endif
 

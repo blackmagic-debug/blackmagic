@@ -326,11 +326,12 @@ cortexm_probe(struct target_s *target)
 	
 
 #define PROBE(x) \
-	do { if (!(x)(target) && !target_check_error(target)) return 0; } while (0)
+	do { if (!(x)(target)) return 0; else target_check_error(target); } while (0)
 
 	PROBE(stm32f1_probe);
 	PROBE(stm32f4_probe);
 	PROBE(lpc11xx_probe);
+	PROBE(sam3x_probe);
 	/* Try LMI last, as it doesn't fail. */
 	PROBE(lmi_probe);
 #undef PROBE
