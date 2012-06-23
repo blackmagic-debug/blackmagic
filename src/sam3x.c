@@ -163,12 +163,28 @@ sam3x_flash_bank(struct target_s *target, uint32_t addr, uint32_t *offset)
 
 static int sam3x_flash_erase(struct target_s *target, uint32_t addr, int len)
 {
-	/* FIXME: This device can't do sector erase.  What do we do here?
-	 * Sector erase is done as part of write cycle in sam3x_flash_write()
+	uint32_t offset;
+	uint8_t bank = sam3x_flash_bank(target, addr, &offset);
+	unsigned chunk = offset / PAGE_SIZE;
+	uint8_t buf[PAGE_SIZE];
+
+	/* This device doesn't really have a page erase function.
+	 * This Erase/Write page is the best we have, so we write with all
+	 * ones.  This does waste time, but what can we do?
 	 */
-	(void)target;
-	(void)addr;
-	(void)len;
+
+	memset(buf, 0xff, sizeof(buf));
+	/* Only do this once, since it doesn't change. */
+	target_mem_write_words(target, addr, (void*)buf, PAGE_SIZE); 
+
+	while (len) {
+		if(sam3x_flash_cmd(target, bank, EEFC_FCR_FCMD_EWP, chunk))
+			return -1;
+
+		len -= PAGE_SIZE;
+		addr += PAGE_SIZE;
+		chunk++;
+	}
 
 	return 0;
 }
@@ -178,7 +194,7 @@ static int sam3x_flash_write(struct target_s *target, uint32_t dest,
 {
 	uint32_t offset;
 	uint8_t bank = sam3x_flash_bank(target, dest, &offset);
-	uint32_t buf[PAGE_SIZE];
+	uint8_t buf[PAGE_SIZE];
 	unsigned first_chunk = offset / PAGE_SIZE;
 	unsigned last_chunk = (offset + len - 1) / PAGE_SIZE;
 	offset %= PAGE_SIZE;
@@ -211,8 +227,8 @@ static int sam3x_flash_write(struct target_s *target, uint32_t dest,
 			src += PAGE_SIZE;
 		}
 
-		target_mem_write_words(target, dest, buf, PAGE_SIZE); 
-		if(sam3x_flash_cmd(target, bank, EEFC_FCR_FCMD_EWP, chunk))
+		target_mem_write_words(target, dest, (void*)buf, PAGE_SIZE); 
+		if(sam3x_flash_cmd(target, bank, EEFC_FCR_FCMD_WP, chunk))
 			return -1;
 	}
 
