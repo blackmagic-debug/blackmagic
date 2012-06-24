@@ -117,7 +117,7 @@ static void arm7_halt_resume(struct target_s *target, uint8_t step);
 
 void arm7tdmi_jtag_handler(jtag_dev_t *dev)
 {
-	struct target_arm7_s *tj = calloc(1, sizeof(*tj));
+	struct target_arm7_s *tj = (void*)target_new(sizeof(*tj));
 	target *t = (target *)tj;
 
 	t->driver = arm7_driver_str;
@@ -143,9 +143,6 @@ void arm7tdmi_jtag_handler(jtag_dev_t *dev)
 	/* TODO: Breakpoint and watchpoint functions. */
 	/* TODO: Fault unwinder. */
 	/* TODO: Memory map / Flash programming. */
-
-	t->next = target_list;
-	target_list = t;
 }
 
 static void arm7_select_scanchain(struct target_arm7_s *target, uint8_t chain)

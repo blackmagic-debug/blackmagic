@@ -40,11 +40,6 @@
 #define DO_RESET_SEQ 0
 #endif
 
-/* This belongs elsewhere... */
-target *target_list = NULL;
-target *cur_target = NULL;
-target *last_target = NULL;
-
 static const char adiv5_driver_str[] = "ARM ADIv5 MEM-AP";
 
 ADIv5_DP_t *adiv5_dp_list;
@@ -130,9 +125,7 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 		/* Should probe further here... */
 
 		/* Prepend to target list... */
-		t = (void*)calloc(1, sizeof(struct target_ap_s));
-		t->next = target_list;
-		target_list = t;
+		t = target_new(sizeof(struct target_ap_s));
 		((struct target_ap_s *)t)->ap = ap;
 
 		t->driver = adiv5_driver_str;

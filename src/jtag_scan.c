@@ -102,7 +102,7 @@ int jtag_scan(void)
 	int i;
 	uint32_t j;
 
-	TARGET_LIST_FREE();
+	target_list_free();
 
 	jtag_dev_count = 0;
 	memset(&jtag_devs, 0, sizeof(jtag_devs));

@@ -30,6 +30,7 @@ SRC = 	gdb_if.c	\
 	stm32f4.c	\
 	crc32.c		\
 	sam3x.c		\
+	target.c	\
 
 include $(PLATFORM_DIR)/Makefile.inc
 

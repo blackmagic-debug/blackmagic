@@ -50,7 +50,7 @@ int adiv5_swdp_scan(void)
 	ADIv5_DP_t *dp;
 	uint8_t ack;
 
-	TARGET_LIST_FREE();
+	target_list_free();
 #warning "These should be elsewhere!"
 	adiv5_free_all();
 

@@ -25,6 +25,11 @@
 #ifndef __TARGET_H
 #define __TARGET_H
 
+typedef struct target_s target;
+
+target *target_new(unsigned size);
+void target_list_free(void);
+
 /* Halt/resume functions */
 #define target_attach(target)	\
 	(target)->attach(target)
@@ -106,18 +111,7 @@
 #define target_flash_write(target, dest, src, len)	\
 	(target)->flash_write((target), (dest), (src), (len))
 
-
-#define TARGET_LIST_FREE() {				\
-	while(target_list) {				\
-		target *t = target_list->next;		\
-		free(target_list);			\
-		target_list = t;			\
-	}						\
-	last_target = cur_target = NULL;		\
-}
-
-
-typedef struct target_s {
+struct target_s {
 	/* Attach/Detach funcitons */
 	void (*attach)(struct target_s *target);
 	void (*detach)(struct target_s *target);
@@ -173,7 +167,7 @@ typedef struct target_s {
 
 	int size;
 	struct target_s *next;
-} target;
+};
 
 extern target *target_list, *cur_target, *last_target;
 

@@ -126,7 +126,7 @@ extern const char *morse_msg;
 	if(running_status) gdb_putpacketz("X1D");	\
 		else gdb_putpacketz("EFF");		\
 	running_status = 0;				\
-	TARGET_LIST_FREE();				\
+	target_list_free();				\
 	cur_target = last_target = NULL;		\
 	morse("TARGET LOST.", 1);			\
 	longjmp(fatal_error_jmpbuf, (error));		\
