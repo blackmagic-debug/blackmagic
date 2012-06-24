@@ -91,6 +91,8 @@ static const char stm32f4_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 #define SR_ERROR_MASK	0xF2
 #define SR_EOP		0x01
 
+#define DBGMCU_IDCODE	0xE0042000
+
 /* This routine is uses word access.  Only usable on target voltage >2.7V */
 uint16_t stm32f4_flash_write_stub[] = {
 // _start:
@@ -133,10 +135,9 @@ uint16_t stm32f4_flash_write_stub[] = {
 
 int stm32f4_probe(struct target_s *target)
 {
-	struct target_ap_s *t = (void *)target;
 	uint32_t idcode;
 
-	idcode = adiv5_ap_mem_read(t->ap, 0xE0042000);
+	idcode = adiv5_ap_mem_read(adiv5_target_ap(target), DBGMCU_IDCODE);
 	switch(idcode & 0xFFF) {
 	case 0x411: /* Documented to be 0x413! This is what I read... */
 	case 0x413:  
@@ -152,7 +153,7 @@ int stm32f4_probe(struct target_s *target)
 	
 static int stm32f4_flash_erase(struct target_s *target, uint32_t addr, int len)
 {
-	struct target_ap_s *t = (void *)target;
+	ADIv5_AP_t *ap = adiv5_target_ap(target);
 	uint16_t sr;
 	uint32_t cr;
 	uint32_t pagesize;
@@ -160,8 +161,8 @@ static int stm32f4_flash_erase(struct target_s *target, uint32_t addr, int len)
 	addr &= 0x07FFC000;
 
 	/* Enable FPEC controller access */
-	adiv5_ap_mem_write(t->ap, FLASH_KEYR, KEY1);
-	adiv5_ap_mem_write(t->ap, FLASH_KEYR, KEY2);
+	adiv5_ap_mem_write(ap, FLASH_KEYR, KEY1);
+	adiv5_ap_mem_write(ap, FLASH_KEYR, KEY2);
 	while(len) {
 		if (addr < 0x10000) { /* Sector 0..3 */
 			cr = (addr >> 11);
@@ -177,12 +178,12 @@ static int stm32f4_flash_erase(struct target_s *target, uint32_t addr, int len)
 		}
 		cr |= FLASH_CR_EOPIE | FLASH_CR_ERRIE | FLASH_CR_SER;
 		/* Flash page erase instruction */
-		adiv5_ap_mem_write(t->ap, FLASH_CR, cr);
+		adiv5_ap_mem_write(ap, FLASH_CR, cr);
 		/* write address to FMA */
-		adiv5_ap_mem_write(t->ap, FLASH_CR, cr | FLASH_CR_STRT); 
+		adiv5_ap_mem_write(ap, FLASH_CR, cr | FLASH_CR_STRT); 
 
 		/* Read FLASH_SR to poll for BSY bit */
-		while(adiv5_ap_mem_read(t->ap, FLASH_SR) & FLASH_SR_BSY)
+		while(adiv5_ap_mem_read(ap, FLASH_SR) & FLASH_SR_BSY)
 			if(target_check_error(target)) 
 				return -1;
 
@@ -191,7 +192,7 @@ static int stm32f4_flash_erase(struct target_s *target, uint32_t addr, int len)
 	}
 
 	/* Check for error */
-	sr = adiv5_ap_mem_read(t->ap, FLASH_SR);
+	sr = adiv5_ap_mem_read(ap, FLASH_SR);
 	if(sr & SR_ERROR_MASK)
 		return -1;
 
@@ -201,7 +202,7 @@ static int stm32f4_flash_erase(struct target_s *target, uint32_t addr, int len)
 static int stm32f4_flash_write(struct target_s *target, uint32_t dest, 
 			  const uint8_t *src, int len)
 {
-	struct target_ap_s *t = (void *)target;
+	ADIv5_AP_t *ap = adiv5_target_ap(target);
 	uint32_t offset = dest % 4;
 	uint32_t words = (offset + len + 3) / 4;
 	uint32_t data[2 + words];
@@ -226,7 +227,7 @@ static int stm32f4_flash_write(struct target_s *target, uint32_t dest,
 	while(!target_halt_wait(target));
 
 	/* Check for error */
-	sr = adiv5_ap_mem_read(t->ap, FLASH_SR);
+	sr = adiv5_ap_mem_read(ap, FLASH_SR);
 	if(sr & SR_ERROR_MASK)
 		return -1;
 

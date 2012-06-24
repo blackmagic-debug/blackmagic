@@ -102,27 +102,27 @@ int lmi_probe(struct target_s *target)
 
 int lmi_flash_erase(struct target_s *target, uint32_t addr, int len)
 {
-	struct target_ap_s *t = (void *)target;
+	ADIv5_AP_t *ap = adiv5_target_ap(target);
 	uint32_t tmp;
 
 	addr &= 0xFFFFFC00;
 	len &= 0xFFFFFC00;
 
 	/* setup word access */
-	adiv5_ap_write(t->ap, 0x00, 0xA2000052);
+	adiv5_ap_write(ap, 0x00, 0xA2000052);
 
 	/* select Flash Control */
-	adiv5_dp_low_access(t->ap->dp, 1, 0, 0x04, 0x400FD000);
+	adiv5_dp_low_access(ap->dp, 1, 0, 0x04, 0x400FD000);
 
 	while(len) {
 		/* write address to FMA */
-		adiv5_ap_write(t->ap, 0x10, addr); /* Required to switch banks */
+		adiv5_ap_write(ap, 0x10, addr); /* Required to switch banks */
 		/* set ERASE bit in FMC */
-		adiv5_dp_low_access(t->ap->dp, 1, 0, 0x08, 0xA4420002);
+		adiv5_dp_low_access(ap->dp, 1, 0, 0x08, 0xA4420002);
 		/* Read FMC to poll for ERASE bit */
-		adiv5_dp_low_access(t->ap->dp, 1, 1, 0x08, 0);
+		adiv5_dp_low_access(ap->dp, 1, 1, 0x08, 0);
 		do {
-			tmp = adiv5_dp_low_access(t->ap->dp, 1, 1, 0x08, 0);
+			tmp = adiv5_dp_low_access(ap->dp, 1, 1, 0x08, 0);
 		} while (tmp & 2);
 
 		len -= 0x400;

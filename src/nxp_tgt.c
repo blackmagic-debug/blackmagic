@@ -70,11 +70,10 @@ static const char lpc11xx_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 int
 lpc11xx_probe(struct target_s *target)
 {
-	struct target_ap_s *t = (void *)target;
 	uint32_t idcode;
 
 	/* read the device ID register */
-	idcode = adiv5_ap_mem_read(t->ap, 0x400483F4);
+	idcode = adiv5_ap_mem_read(adiv5_target_ap(target), 0x400483F4);
 
 	switch (idcode) {
 
@@ -114,7 +113,7 @@ lpc11xx_probe(struct target_s *target)
 static void
 lpc11x_iap_call(struct target_s *target, struct flash_param *param, unsigned param_len)
 {
-	uint32_t	regs[target->regs_size];
+	uint32_t regs[target->regs_size];
 
 	/* fill out the remainder of the parameters and copy the structure to RAM */
 	param->opcodes[0] = 0xbe00;
