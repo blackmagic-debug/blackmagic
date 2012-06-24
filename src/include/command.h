@@ -22,9 +22,10 @@
 #define __COMMAND_H
 
 #include "general.h"
+#include "target.h"
 
 int command_process(char *cmd);
-typedef void (*cmd_handler)(int argc, const char **argv);
+typedef bool (*cmd_handler)(target *t, int argc, const char **argv);
 
 struct command_s {
 	const char *cmd;

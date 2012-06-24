@@ -38,11 +38,32 @@ target *target_new(unsigned size)
 
 void target_list_free(void)
 {
+	struct target_command_s *tc;
+
 	while(target_list) {
 		target *t = target_list->next;
+		while (target_list->commands) {
+			tc = target_list->commands->next;
+			free(target_list->commands);
+			target_list->commands = tc;
+		}
 		free(target_list);
 		target_list = t;
 	}
 	last_target = cur_target = NULL;
+}
+
+void target_add_commands(target *t, const struct command_s *cmds, const char *name)
+{
+	struct target_command_s *tc;
+	if (t->commands) {
+		for (tc = t->commands; tc->next; tc = tc->next);
+		tc = tc->next = malloc(sizeof(*tc));
+	} else {
+		t->commands = tc = malloc(sizeof(*tc));
+	}
+	tc->specific_name = name;
+	tc->cmds = cmds;
+	tc->next = NULL;
 }
 

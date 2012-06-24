@@ -20,8 +20,6 @@
 
 /* This file implements a basic command interpreter for GDB 'monitor'
  * commands.
- * 
- * TODO: Add a mechanism for target driver so register new commands.
  */
 
 #include <stdlib.h>
@@ -37,15 +35,15 @@
 
 #include "adiv5.h"
 
-static void cmd_version(void);
-static void cmd_help(void);
+static bool cmd_version(void);
+static bool cmd_help(void);
 
-static void cmd_jtag_scan(void);
-static void cmd_swdp_scan(void);
-static void cmd_targets(void);
-static void cmd_morse(void);
+static bool cmd_jtag_scan(void);
+static bool cmd_swdp_scan(void);
+static bool cmd_targets(void);
+static bool cmd_morse(void);
 #ifdef PLATFORM_HAS_TRACESWO
-static void cmd_traceswo(void);
+static bool cmd_traceswo(void);
 #endif
 
 const struct command_s cmd_list[] = {
@@ -64,6 +62,7 @@ const struct command_s cmd_list[] = {
 
 int command_process(char *cmd)
 {
+	struct target_command_s *tc;
 	const struct command_s *c;
 	int argc = 0;
 	const char **argv;
@@ -83,32 +82,47 @@ int command_process(char *cmd)
 		/* Accept a partial match as GDB does.
 		 * So 'mon ver' will match 'monitor version' 
 		 */
-		if(!strncmp(argv[0], c->cmd, strlen(argv[0]))) {
-			c->handler(argc, argv);
-			return 0;
-		}
+		if(!strncmp(argv[0], c->cmd, strlen(argv[0])))
+			return !c->handler(cur_target, argc, argv);
 	}
+
+	for (tc = cur_target->commands; tc; tc = tc->next)
+		for(c = tc->cmds; c->cmd; c++) 
+			if(!strncmp(argv[0], c->cmd, strlen(argv[0])))
+				return !c->handler(cur_target, argc, argv);
 
 	return -1;
 }
 
-void cmd_version(void)
+bool cmd_version(void)
 {
 	gdb_out("Black Magic Probe (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")\n");
 	gdb_out("Copyright (C) 2011  Black Sphere Technologies Ltd.\n");
 	gdb_out("License GPLv3+: GNU GPL version 3 or later "
 		"<http://gnu.org/licenses/gpl.html>\n\n");
+
+	return true;
 }
 
-void cmd_help(void)
+bool cmd_help(void)
 {
+	struct target_command_s *tc;
 	const struct command_s *c;
 
+	gdb_out("General commands:\n");
 	for(c = cmd_list; c->cmd; c++) 
-		gdb_outf("%s -- %s\n", c->cmd, c->help);
+		gdb_outf("\t%s -- %s\n", c->cmd, c->help);
+
+	for (tc = cur_target->commands; tc; tc = tc->next) {
+		gdb_outf("%s specific commands:\n", tc->specific_name);
+		for(c = tc->cmds; c->cmd; c++) 
+			gdb_outf("\t%s -- %s\n", c->cmd, c->help);
+	}
+
+	return true;
 }
 
-void cmd_jtag_scan(void)
+bool cmd_jtag_scan(void)
 {
 	gdb_outf("Target voltage: %s\n", platform_target_voltage());
 
@@ -116,11 +130,11 @@ void cmd_jtag_scan(void)
 
 	if(devs < 0) {
 		gdb_out("JTAG device scan failed!\n");
-		return;
+		return false;
 	} 
 	if(devs == 0) {
 		gdb_out("JTAG scan found no devices!\n");
-		return;
+		return false;
 	} 
 	gdb_outf("Device  IR Len  IDCODE      Description\n");
 	for(int i = 0; i < jtag_dev_count; i++)
@@ -129,30 +143,33 @@ void cmd_jtag_scan(void)
 			 jtag_devs[i].descr);
 	gdb_out("\n");
 	cmd_targets();
+	return true;
 }
 
-void cmd_swdp_scan(void)
+bool cmd_swdp_scan(void)
 {
 	gdb_outf("Target voltage: %s\n", platform_target_voltage());
 
 	if(adiv5_swdp_scan() < 0) {
 		gdb_out("SW-DP scan failed!\n");
-		return;
+		return false;
 	} 
 
 	gdb_outf("SW-DP detected IDCODE: 0x%08X\n", adiv5_dp_list->idcode);
 
 	cmd_targets();
+	return true;
+	
 }
 
-void cmd_targets(void)
+bool cmd_targets(void)
 {
 	struct target_s *t;
 	int i;
 
 	if(!target_list) {
 		gdb_out("No usable targets found.\n");
-		return;
+		return false;
 	}
 	
 	gdb_out("Available Targets:\n");
@@ -160,20 +177,24 @@ void cmd_targets(void)
 	for(t = target_list, i = 1; t; t = t->next, i++)
 		gdb_outf("%2d   %c  %s\n", i, t==cur_target?'*':' ', 
 			 t->driver);
+
+	return true;
 }
 
-void cmd_morse(void)
+bool cmd_morse(void)
 {
 	if(morse_msg) 
 		gdb_outf("%s\n", morse_msg);
+	return true;
 }
 
 #ifdef PLATFORM_HAS_TRACESWO
-static void cmd_traceswo(void)
+static bool cmd_traceswo(void)
 {
 	extern char serial_no[9];
 	traceswo_init();
 	gdb_outf("%s:%02X:%02X\n", serial_no, 5, 0x85);
+	return true;
 }
 #endif
 

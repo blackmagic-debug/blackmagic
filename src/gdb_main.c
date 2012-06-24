@@ -330,9 +330,13 @@ handle_q_packet(char *packet, int len)
 		unhexify(data, packet+6, datalen);
 		data[datalen] = 0;	/* add terminating null */
 
-		if(command_process(data) < 0) 
-			gdb_putpacket("", 0);
-		else	gdb_putpacket("OK", 2);
+		int c = command_process(data);
+		if(c < 0) 
+			gdb_putpacketz("");
+		else if(c == 0)
+			gdb_putpacketz("OK");
+		else
+			gdb_putpacketz("E");
 
 	} else if (!strncmp (packet, "qSupported", 10)) {
 		/* Query supported protocol features */

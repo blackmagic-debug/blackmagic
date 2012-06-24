@@ -27,9 +27,6 @@
 
 typedef struct target_s target;
 
-target *target_new(unsigned size);
-void target_list_free(void);
-
 /* Halt/resume functions */
 #define target_attach(target)	\
 	(target)->attach(target)
@@ -164,12 +161,24 @@ struct target_s {
 				const uint8_t *src, int len);
 
 	const char *driver;
+	struct target_command_s *commands;
 
 	int size;
 	struct target_s *next;
+
+};
+
+struct target_command_s {
+	const char *specific_name;
+	const struct command_s *cmds;
+	struct target_command_s *next;
 };
 
 extern target *target_list, *cur_target, *last_target;
+
+target *target_new(unsigned size);
+void target_list_free(void);
+void target_add_commands(target *t, const struct command_s *cmds, const char *name);
 
 /* Probe for various targets.
  * Actual functions implemented in their respective drivers.
