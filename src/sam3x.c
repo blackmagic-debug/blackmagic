@@ -28,12 +28,23 @@
 #include "general.h"
 #include "adiv5.h"
 #include "target.h"
+#include "command.h"
+#include "gdb_packet.h"
 
 static int sam3x_flash_erase(struct target_s *target, uint32_t addr, int len);
 static int sam3x_flash_write(struct target_s *target, uint32_t dest, 
 			const uint8_t *src, int len);
 
+bool sam3x_cmd_gpnvm_get(target *t);
+bool sam3x_cmd_gpnvm_set(target *t, int argc, char *argv[]);
+
 static const char sam3x_driver_str[] = "Atmel SAM3X";
+
+const struct command_s sam3x_cmd_list[] = {
+	{"gpnvm_get", (cmd_handler)sam3x_cmd_gpnvm_get, "Get GPVNM value"},
+	{"gpnvm_set", (cmd_handler)sam3x_cmd_gpnvm_set, "Set GPVNM bit"},
+	{NULL, NULL, NULL}
+};
 
 static const char sam3x_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 /*	"<!DOCTYPE memory-map "
@@ -113,6 +124,7 @@ int sam3x_probe(struct target_s *target)
 		target->xml_mem_map = sam3x_xml_memory_map;
 		target->flash_erase = sam3x_flash_erase;
 		target->flash_write = sam3x_flash_write;
+		target_add_commands(target, sam3x_cmd_list, sam3x_driver_str);
 		return 0;
 	}
 	return -1;
@@ -233,5 +245,32 @@ static int sam3x_flash_write(struct target_s *target, uint32_t dest,
 	}
 
 	return 0;
+}
+
+bool sam3x_cmd_gpnvm_get(target *t)
+{
+	ADIv5_AP_t *ap = adiv5_target_ap(t);
+	
+	sam3x_flash_cmd(t, 0, EEFC_FCR_FCMD_GGPB, 0);
+	gdb_outf("GPNVM: 0x%08X\n", adiv5_ap_mem_read(ap, EEFC_FRR(0)));
+
+	return true;
+}
+
+bool sam3x_cmd_gpnvm_set(target *t, int argc, char *argv[])
+{
+	uint32_t bit, cmd;
+	
+	if (argc != 3) {
+		gdb_out("usage: monitor gpnvm_set <bit> <val>\n");
+		return false;
+	}
+	bit = atol(argv[1]);
+	cmd = atol(argv[2]) ? EEFC_FCR_FCMD_SGPB : EEFC_FCR_FCMD_CGPB;
+
+	sam3x_flash_cmd(t, 0, cmd, bit);
+	sam3x_cmd_gpnvm_get(t);
+
+	return true;
 }
 
