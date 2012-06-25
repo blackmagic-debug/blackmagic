@@ -35,8 +35,8 @@ static int sam3x_flash_erase(struct target_s *target, uint32_t addr, int len);
 static int sam3x_flash_write(struct target_s *target, uint32_t dest, 
 			const uint8_t *src, int len);
 
-bool sam3x_cmd_gpnvm_get(target *t);
-bool sam3x_cmd_gpnvm_set(target *t, int argc, char *argv[]);
+static bool sam3x_cmd_gpnvm_get(target *t);
+static bool sam3x_cmd_gpnvm_set(target *t, int argc, char *argv[]);
 
 static const char sam3x_driver_str[] = "Atmel SAM3X";
 
@@ -247,7 +247,7 @@ static int sam3x_flash_write(struct target_s *target, uint32_t dest,
 	return 0;
 }
 
-bool sam3x_cmd_gpnvm_get(target *t)
+static bool sam3x_cmd_gpnvm_get(target *t)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(t);
 	
@@ -257,7 +257,7 @@ bool sam3x_cmd_gpnvm_get(target *t)
 	return true;
 }
 
-bool sam3x_cmd_gpnvm_set(target *t, int argc, char *argv[])
+static bool sam3x_cmd_gpnvm_set(target *t, int argc, char *argv[])
 {
 	uint32_t bit, cmd;
 	
