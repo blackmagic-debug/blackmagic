@@ -29,14 +29,24 @@
  * There are way too many magic numbers used here.
  */
 #include <stdio.h>
+#include <string.h>
 
 #include "general.h"
 #include "jtagtap.h"
 #include "jtag_scan.h"
 #include "adiv5.h"
 #include "target.h"
+#include "command.h"
+#include "gdb_packet.h"
 
-static char cortexm_driver_str[] = "ARM Cortex-M3";
+static char cortexm_driver_str[] = "ARM Cortex-M";
+
+static bool cortexm_vector_catch(target *t, int argc, char *argv[]);
+
+const struct command_s cortexm_cmd_list[] = {
+	{"vector_catch", (cmd_handler)cortexm_vector_catch, "Catch exception vectors"},
+	{NULL, NULL, NULL}
+};
 
 /* target options recognised by the Cortex-M target */
 #define	TOPT_FLAVOUR_V6M	(1<<0)	/* if not set, target is assumed to be v7m */
@@ -312,6 +322,8 @@ cortexm_probe(struct target_s *target)
 	target->halt_resume = cortexm_halt_resume;
 	target->fault_unwind = cortexm_fault_unwind;
 	target->regs_size = sizeof(regnum_cortex_m);	/* XXX: detect FP extension */
+
+	target_add_commands(target, cortexm_cmd_list, cortexm_driver_str);
 
 	/* Probe for FP extension */
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
@@ -735,5 +747,43 @@ cortexm_check_hw_wp(struct target_s *target, uint32_t *addr)
 
 	*addr = hw_watchpoint[i].addr;
 	return 1;
+}
+
+static bool cortexm_vector_catch(target *t, int argc, char *argv[])
+{
+	ADIv5_AP_t *ap = adiv5_target_ap(t);
+	const char *vectors[] = {"reset", NULL, NULL, NULL, "mm", "nocp",
+				"chk", "stat", "bus", "int", "hard"};
+	uint32_t demcr = adiv5_ap_mem_read(ap, CORTEXM_DEMCR);
+	uint32_t tmp = 0;
+	unsigned i, j;
+	
+	if ((argc < 3) || ((argv[1][0] != 'e') && (argv[1][0] != 'd'))) {
+		gdb_out("usage: monitor vector_catch (enable|disable) "
+			"(hard|int|bus|stat|chk|nocp|mm|reset)\n");
+	} else {
+		for (j = 0; j < argc; j++)
+			for (i = 0; i < sizeof(vectors) / sizeof(char*); i++) {
+				if (vectors[i] && !strcmp(vectors[i], argv[j]))
+					tmp |= 1 << i;
+			}
+
+		if (argv[1][0] == 'e')
+			demcr |= tmp;
+		else
+			demcr &= ~tmp;
+
+		adiv5_ap_mem_write(ap, CORTEXM_DEMCR, demcr);
+	}
+
+	gdb_out("Catching vectors: ");
+	for (i = 0; i < sizeof(vectors) / sizeof(char*); i++) {
+		if (!vectors[i])
+			continue;
+		if (demcr & (1 << i))
+			gdb_outf("%s ", vectors[i]);
+	}
+	gdb_out("\n");
+	return true;
 }
 
