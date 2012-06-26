@@ -35,6 +35,15 @@
 #include "general.h"
 #include "adiv5.h"
 #include "target.h"
+#include "command.h"
+
+static bool stm32f1_cmd_erase_mass(target *t);
+
+const struct command_s stm32f1_cmd_list[] = {
+	{"erase_mass", (cmd_handler)stm32f1_cmd_erase_mass, "Erase entire flash memory"},
+	{NULL, NULL, NULL}
+};
+
 
 static int stm32md_flash_erase(struct target_s *target, uint32_t addr, int len);
 static int stm32hd_flash_erase(struct target_s *target, uint32_t addr, int len);
@@ -78,6 +87,12 @@ static const char stm32hd_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 #define FLASH_AR	(FPEC_BASE+0x14)
 #define FLASH_OBR	(FPEC_BASE+0x1C)
 #define FLASH_WRPR	(FPEC_BASE+0x20)
+
+#define FLASH_CR_STRT	(1 << 6)
+#define FLASH_CR_MER	(1 << 2)
+#define FLASH_CR_PER	(1 << 1)
+
+#define FLASH_SR_BSY	(1 << 0)
 
 #define KEY1 0x45670123
 #define KEY2 0xCDEF89AB
@@ -137,6 +152,7 @@ int stm32f1_probe(struct target_s *target)
 		target->xml_mem_map = stm32f1_xml_memory_map;
 		target->flash_erase = stm32md_flash_erase;
 		target->flash_write = stm32f1_flash_write;
+		target_add_commands(target, stm32f1_cmd_list, "STM32");
 		return 0;
 	case 0x414:	 /* High density */
 	case 0x418:  /* Connectivity Line */
@@ -145,6 +161,7 @@ int stm32f1_probe(struct target_s *target)
 		target->xml_mem_map = stm32hd_xml_memory_map;
 		target->flash_erase = stm32hd_flash_erase;
 		target->flash_write = stm32f1_flash_write;
+		target_add_commands(target, stm32f1_cmd_list, "STM32");
 		return 0;
 	default:
 		return -1;
@@ -164,14 +181,14 @@ static int stm32f1_flash_erase(struct target_s *target, uint32_t addr, int len, 
 	adiv5_ap_mem_write(ap, FLASH_KEYR, KEY2);
 	while(len) {
 		/* Flash page erase instruction */
-		adiv5_ap_mem_write(ap, FLASH_CR, 2);
+		adiv5_ap_mem_write(ap, FLASH_CR, FLASH_CR_PER);
 		/* write address to FMA */
 		adiv5_ap_mem_write(ap, FLASH_AR, addr); 
 		/* Flash page erase start instruction */
-		adiv5_ap_mem_write(ap, FLASH_CR, 0x42);
+		adiv5_ap_mem_write(ap, FLASH_CR, FLASH_CR_STRT | FLASH_CR_PER);
 
 		/* Read FLASH_SR to poll for BSY bit */
-		while(adiv5_ap_mem_read(ap, FLASH_SR) & 1)
+		while(adiv5_ap_mem_read(ap, FLASH_SR) & FLASH_SR_BSY)
 			if(target_check_error(target))
 				return -1;
 
@@ -228,5 +245,30 @@ static int stm32f1_flash_write(struct target_s *target, uint32_t dest,
 		return -1;
 
 	return 0;
+}
+
+static bool stm32f1_cmd_erase_mass(target *t)
+{
+	ADIv5_AP_t *ap = adiv5_target_ap(t);
+	
+	/* Enable FPEC controller access */
+	adiv5_ap_mem_write(ap, FLASH_KEYR, KEY1);
+	adiv5_ap_mem_write(ap, FLASH_KEYR, KEY2);
+
+	/* Flash mass erase start instruction */
+	adiv5_ap_mem_write(ap, FLASH_CR, FLASH_CR_MER);
+	adiv5_ap_mem_write(ap, FLASH_CR, FLASH_CR_STRT | FLASH_CR_MER);
+
+	/* Read FLASH_SR to poll for BSY bit */
+	while(adiv5_ap_mem_read(ap, FLASH_SR) & FLASH_SR_BSY)
+		if(target_check_error(t))
+			return false;
+
+	/* Check for error */
+	uint16_t sr = adiv5_ap_mem_read(ap, FLASH_SR);
+	if ((sr & SR_ERROR_MASK) || !(sr & SR_EOP))
+		return false;
+
+	return true;
 }
 
