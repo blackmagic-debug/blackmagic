@@ -36,11 +36,14 @@
 #include "adiv5.h"
 #include "target.h"
 #include "command.h"
+#include "gdb_packet.h"
 
 static bool stm32f1_cmd_erase_mass(target *t);
+static bool stm32f1_cmd_option(target *t, int argc, char *argv[]);
 
 const struct command_s stm32f1_cmd_list[] = {
 	{"erase_mass", (cmd_handler)stm32f1_cmd_erase_mass, "Erase entire flash memory"},
+	{"option", (cmd_handler)stm32f1_cmd_option, "Manipulate option bytes"},
 	{NULL, NULL, NULL}
 };
 
@@ -88,11 +91,17 @@ static const char stm32hd_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 #define FLASH_OBR	(FPEC_BASE+0x1C)
 #define FLASH_WRPR	(FPEC_BASE+0x20)
 
+#define FLASH_CR_OPTWRE	(1 << 9)
 #define FLASH_CR_STRT	(1 << 6)
+#define FLASH_CR_OPTER	(1 << 5)
+#define FLASH_CR_OPTPG	(1 << 4)
 #define FLASH_CR_MER	(1 << 2)
 #define FLASH_CR_PER	(1 << 1)
 
 #define FLASH_SR_BSY	(1 << 0)
+
+#define FLASH_OBP_RDP 0x1FFFF800 
+#define FLASH_OBP_RDP_KEY 0x5aa5
 
 #define KEY1 0x45670123
 #define KEY2 0xCDEF89AB
@@ -168,6 +177,12 @@ int stm32f1_probe(struct target_s *target)
 	} 
 }
 
+static void stm32f1_flash_unlock(ADIv5_AP_t *ap)
+{
+	adiv5_ap_mem_write(ap, FLASH_KEYR, KEY1);
+	adiv5_ap_mem_write(ap, FLASH_KEYR, KEY2);
+}
+
 static int stm32f1_flash_erase(struct target_s *target, uint32_t addr, int len, uint32_t pagesize)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
@@ -176,9 +191,8 @@ static int stm32f1_flash_erase(struct target_s *target, uint32_t addr, int len, 
 	addr &= ~(pagesize - 1);
 	len &= ~(pagesize - 1);
 
-	/* Enable FPEC controller access */
-	adiv5_ap_mem_write(ap, FLASH_KEYR, KEY1);
-	adiv5_ap_mem_write(ap, FLASH_KEYR, KEY2);
+	stm32f1_flash_unlock(ap);
+
 	while(len) {
 		/* Flash page erase instruction */
 		adiv5_ap_mem_write(ap, FLASH_CR, FLASH_CR_PER);
@@ -251,9 +265,7 @@ static bool stm32f1_cmd_erase_mass(target *t)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(t);
 	
-	/* Enable FPEC controller access */
-	adiv5_ap_mem_write(ap, FLASH_KEYR, KEY1);
-	adiv5_ap_mem_write(ap, FLASH_KEYR, KEY2);
+	stm32f1_flash_unlock(ap);
 
 	/* Flash mass erase start instruction */
 	adiv5_ap_mem_write(ap, FLASH_CR, FLASH_CR_MER);
@@ -269,6 +281,65 @@ static bool stm32f1_cmd_erase_mass(target *t)
 	if ((sr & SR_ERROR_MASK) || !(sr & SR_EOP))
 		return false;
 
+	return true;
+}
+
+static bool stm32f1_option_erase(target *t)
+{
+	ADIv5_AP_t *ap = adiv5_target_ap(t);
+
+	/* Erase option bytes instruction */
+	adiv5_ap_mem_write(ap, FLASH_CR, FLASH_CR_OPTER | FLASH_CR_OPTWRE);
+	adiv5_ap_mem_write(ap, FLASH_CR, 
+			FLASH_CR_STRT | FLASH_CR_OPTER | FLASH_CR_OPTWRE);
+	/* Read FLASH_SR to poll for BSY bit */
+	while(adiv5_ap_mem_read(ap, FLASH_SR) & FLASH_SR_BSY)
+		if(target_check_error(t))
+			return false;
+	return true;
+}
+
+static bool stm32f1_option_write(target *t, uint32_t addr, uint16_t value)
+{
+	ADIv5_AP_t *ap = adiv5_target_ap(t);
+
+	/* Erase option bytes instruction */
+	adiv5_ap_mem_write(ap, FLASH_CR, FLASH_CR_OPTPG | FLASH_CR_OPTWRE);
+	adiv5_ap_mem_write_halfword(ap, addr, value);
+	/* Read FLASH_SR to poll for BSY bit */
+	while(adiv5_ap_mem_read(ap, FLASH_SR) & FLASH_SR_BSY)
+		if(target_check_error(t))
+			return false;
+	return true;
+}
+
+static bool stm32f1_cmd_option(target *t, int argc, char *argv[])
+{
+	uint32_t addr, val;
+
+	ADIv5_AP_t *ap = adiv5_target_ap(t);
+	stm32f1_flash_unlock(ap);
+	adiv5_ap_mem_write(ap, FLASH_OPTKEYR, KEY1);
+	adiv5_ap_mem_write(ap, FLASH_OPTKEYR, KEY2);
+
+	if ((argc == 2) && !strcmp(argv[1], "erase")) {
+		stm32f1_option_erase(t);
+		stm32f1_option_write(t, FLASH_OBP_RDP, FLASH_OBP_RDP_KEY);
+	} else if (argc == 3) {
+		addr = strtol(argv[1], NULL, 0);
+		val = strtol(argv[2], NULL, 0);
+		stm32f1_option_write(t, addr, val);
+	} else {
+		gdb_out("usage: monitor option erase\n");
+		gdb_out("usage: monitor option <addr> <value>\n");
+	}
+
+	for (int i = 0; i < 0xf; i += 4) {
+		addr = 0x1ffff800 + i;
+		val = adiv5_ap_mem_read(ap, addr);
+		gdb_outf("0x%08X: 0x%04X\n", addr, val & 0xFFFF);
+		gdb_outf("0x%08X: 0x%04X\n", addr + 2, val >> 16);
+	}
 	return true;
 }
 

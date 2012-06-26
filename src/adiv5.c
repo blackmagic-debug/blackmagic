@@ -260,6 +260,17 @@ void adiv5_ap_mem_write(ADIv5_AP_t *ap, uint32_t addr, uint32_t value)
 	adiv5_ap_write(ap, ADIV5_AP_DRW, value);
 }
 
+void adiv5_ap_mem_write_halfword(ADIv5_AP_t *ap, uint32_t addr, uint16_t value)
+{
+	uint32_t v = value;
+	if (addr & 2)
+		v <<= 16;
+
+	adiv5_ap_write(ap, ADIV5_AP_CSW, 0xA2000051);
+	adiv5_ap_write(ap, ADIV5_AP_TAR, addr);
+	adiv5_ap_write(ap, ADIV5_AP_DRW, v);
+}
+
 void adiv5_ap_write(ADIv5_AP_t *ap, uint8_t addr, uint32_t value)
 {
 	adiv5_dp_write(ap->dp, ADIV5_DP_SELECT, 
