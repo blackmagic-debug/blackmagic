@@ -86,6 +86,9 @@ int command_process(char *cmd)
 			return !c->handler(cur_target, argc, argv);
 	}
 
+	if (!cur_target)
+		return -1;
+
 	for (tc = cur_target->commands; tc; tc = tc->next)
 		for(c = tc->cmds; c->cmd; c++) 
 			if(!strncmp(argv[0], c->cmd, strlen(argv[0])))
@@ -112,6 +115,9 @@ bool cmd_help(void)
 	gdb_out("General commands:\n");
 	for(c = cmd_list; c->cmd; c++) 
 		gdb_outf("\t%s -- %s\n", c->cmd, c->help);
+
+	if (!cur_target)
+		return -1;
 
 	for (tc = cur_target->commands; tc; tc = tc->next) {
 		gdb_outf("%s specific commands:\n", tc->specific_name);
