@@ -54,8 +54,20 @@
 
 static unsigned char pbuf[BUF_SIZE];
 
+static target *cur_target;
+static target *last_target;
+
 static void handle_q_packet(char *packet, int len);
 static void handle_v_packet(char *packet, int len);
+
+static void gdb_target_destroy_callback(target *t)
+{
+	if (cur_target == t)
+		cur_target = NULL;
+
+	if (last_target == t)
+		last_target = NULL;
+}
 
 void
 gdb_main(void)
@@ -207,8 +219,8 @@ gdb_main(void)
 			if(cur_target)
 				target_reset(cur_target);
 			else if(last_target) {
-				cur_target = last_target;
-				target_attach(cur_target);
+				cur_target = target_attach(last_target, 
+						gdb_target_destroy_callback);
 				target_reset(cur_target);
 			}
 			break;
@@ -330,7 +342,7 @@ handle_q_packet(char *packet, int len)
 		unhexify(data, packet+6, datalen);
 		data[datalen] = 0;	/* add terminating null */
 
-		int c = command_process(data);
+		int c = command_process(cur_target, data);
 		if(c < 0) 
 			gdb_putpacketz("");
 		else if(c == 0)
@@ -346,8 +358,8 @@ handle_q_packet(char *packet, int len)
 		/* Read target XML memory map */
 		if((!cur_target) && last_target) {
 			/* Attach to last target if detached. */
-			cur_target = last_target;
-			target_attach(cur_target);
+			cur_target = target_attach(last_target, 
+						gdb_target_destroy_callback);
 		}
 		if((!cur_target) || (!cur_target->xml_mem_map)) {
 			gdb_putpacketz("E01");
@@ -359,8 +371,8 @@ handle_q_packet(char *packet, int len)
 		/* Read target description */
 		if((!cur_target) && last_target) {
 			/* Attach to last target if detached. */
-			cur_target = last_target;
-			target_attach(cur_target);
+			cur_target = target_attach(last_target, 
+						gdb_target_destroy_callback);
 		}
 		if((!cur_target) || (!cur_target->tdesc)) {
 			gdb_putpacketz("E01");
@@ -374,7 +386,10 @@ handle_q_packet(char *packet, int len)
 		}
 		gdb_putpacket_f("C%lx", generic_crc32(cur_target, addr, alen));
 
-	} else gdb_putpacket("", 0);
+	} else {
+		DEBUG("*** Unsupported packet: %s\n", packet);
+		gdb_putpacket("", 0);
+	}
 }
 
 static void
@@ -390,8 +405,8 @@ handle_v_packet(char *packet, int plen)
 		uint32_t i;
 		for(t = target_list, i = 1; t; t = t->next, i++) 
 			if(i == addr) {
-				cur_target = t;
-				target_attach(t);
+				cur_target = target_attach(t, 
+						gdb_target_destroy_callback);
 				gdb_putpacketz("T05");
 				break;
 			}
@@ -404,8 +419,8 @@ handle_v_packet(char *packet, int plen)
 			target_reset(cur_target);
 			gdb_putpacketz("T05");
 		} else if(last_target) {
-			cur_target = last_target;
-			target_attach(cur_target);
+			cur_target = target_attach(last_target, 
+						gdb_target_destroy_callback);
 			target_reset(cur_target);
 			gdb_putpacketz("T05");
 		} else	gdb_putpacketz("E01");
@@ -440,7 +455,9 @@ handle_v_packet(char *packet, int plen)
 		gdb_putpacketz("OK");
 		flash_mode = 0;
 
-	} else
+	} else {
+		DEBUG("*** Unsupported packet: %s\n", packet);
 		gdb_putpacket("", 0);
+	}
 }
 

@@ -36,11 +36,11 @@
 #include "adiv5.h"
 
 static bool cmd_version(void);
-static bool cmd_help(void);
+static bool cmd_help(target *t);
 
 static bool cmd_jtag_scan(void);
 static bool cmd_swdp_scan(void);
-static bool cmd_targets(void);
+static bool cmd_targets(target *t);
 static bool cmd_morse(void);
 #ifdef PLATFORM_HAS_TRACESWO
 static bool cmd_traceswo(void);
@@ -60,7 +60,7 @@ const struct command_s cmd_list[] = {
 };
 
 
-int command_process(char *cmd)
+int command_process(target *t, char *cmd)
 {
 	struct target_command_s *tc;
 	const struct command_s *c;
@@ -83,16 +83,16 @@ int command_process(char *cmd)
 		 * So 'mon ver' will match 'monitor version' 
 		 */
 		if(!strncmp(argv[0], c->cmd, strlen(argv[0])))
-			return !c->handler(cur_target, argc, argv);
+			return !c->handler(t, argc, argv);
 	}
 
-	if (!cur_target)
+	if (!t)
 		return -1;
 
-	for (tc = cur_target->commands; tc; tc = tc->next)
+	for (tc = t->commands; tc; tc = tc->next)
 		for(c = tc->cmds; c->cmd; c++) 
 			if(!strncmp(argv[0], c->cmd, strlen(argv[0])))
-				return !c->handler(cur_target, argc, argv);
+				return !c->handler(t, argc, argv);
 
 	return -1;
 }
@@ -107,7 +107,7 @@ bool cmd_version(void)
 	return true;
 }
 
-bool cmd_help(void)
+bool cmd_help(target *t)
 {
 	struct target_command_s *tc;
 	const struct command_s *c;
@@ -116,10 +116,10 @@ bool cmd_help(void)
 	for(c = cmd_list; c->cmd; c++) 
 		gdb_outf("\t%s -- %s\n", c->cmd, c->help);
 
-	if (!cur_target)
+	if (!t)
 		return -1;
 
-	for (tc = cur_target->commands; tc; tc = tc->next) {
+	for (tc = t->commands; tc; tc = tc->next) {
 		gdb_outf("%s specific commands:\n", tc->specific_name);
 		for(c = tc->cmds; c->cmd; c++) 
 			gdb_outf("\t%s -- %s\n", c->cmd, c->help);
@@ -148,7 +148,7 @@ bool cmd_jtag_scan(void)
 			 jtag_devs[i].ir_len, jtag_devs[i].idcode, 
 			 jtag_devs[i].descr);
 	gdb_out("\n");
-	cmd_targets();
+	cmd_targets(NULL);
 	return true;
 }
 
@@ -163,12 +163,12 @@ bool cmd_swdp_scan(void)
 
 	gdb_outf("SW-DP detected IDCODE: 0x%08X\n", adiv5_dp_list->idcode);
 
-	cmd_targets();
+	cmd_targets(NULL);
 	return true;
 	
 }
 
-bool cmd_targets(void)
+bool cmd_targets(target *cur_target)
 {
 	struct target_s *t;
 	int i;

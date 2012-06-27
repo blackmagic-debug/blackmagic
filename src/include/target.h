@@ -27,16 +27,25 @@
 
 typedef struct target_s target;
 
+/* The destroy callback function will be called by target_list_free() just
+ * before the target is free'd.  This may be because we're scanning for new
+ * targets, or because of a communication failure.  The target data may
+ * be assumed to be intact, but the communication medium may not be available,
+ * so access methods shouldn't be called.
+ * 
+ * The callback is installed by target_attach() and only removed by attaching
+ * with a different callback.  It remains intact after target_detach().
+ */
+typedef void (*target_destroy_callback)(target *t);
+
 /* Halt/resume functions */
-#define target_attach(target)	\
-	(target)->attach(target)
+target *target_attach(target *t, target_destroy_callback destroy_cb);
 
 #define target_detach(target)	\
 	(target)->detach(target)
 
 #define target_check_error(target)	\
 	(target)->check_error(target)
-
 
 /* Memory access functions */
 #define target_mem_read_words(target, dest, src, len)	\
@@ -108,7 +117,11 @@ typedef struct target_s target;
 #define target_flash_write(target, dest, src, len)	\
 	(target)->flash_write((target), (dest), (src), (len))
 
+
 struct target_s {
+	/* Notify controlling debugger if target is lost */
+	target_destroy_callback destroy_callback;
+
 	/* Attach/Detach funcitons */
 	void (*attach)(struct target_s *target);
 	void (*detach)(struct target_s *target);
@@ -174,7 +187,7 @@ struct target_command_s {
 	struct target_command_s *next;
 };
 
-extern target *target_list, *cur_target, *last_target;
+extern target *target_list;
 
 target *target_new(unsigned size);
 void target_list_free(void);

@@ -24,8 +24,6 @@
 #include <stdlib.h>
 
 target *target_list = NULL;
-target *cur_target = NULL;
-target *last_target = NULL;
 
 target *target_new(unsigned size)
 {
@@ -42,6 +40,8 @@ void target_list_free(void)
 
 	while(target_list) {
 		target *t = target_list->next;
+		if (target_list->destroy_callback)
+			target_list->destroy_callback(target_list);
 		while (target_list->commands) {
 			tc = target_list->commands->next;
 			free(target_list->commands);
@@ -50,7 +50,6 @@ void target_list_free(void)
 		free(target_list);
 		target_list = t;
 	}
-	last_target = cur_target = NULL;
 }
 
 void target_add_commands(target *t, const struct command_s *cmds, const char *name)
@@ -65,5 +64,17 @@ void target_add_commands(target *t, const struct command_s *cmds, const char *na
 	tc->specific_name = name;
 	tc->cmds = cmds;
 	tc->next = NULL;
+}
+
+target *target_attach(target *t, target_destroy_callback destroy_cb)
+{
+	if (t->destroy_callback)
+		t->destroy_callback(t);
+
+	t->destroy_callback = destroy_cb;
+
+	t->attach(t);
+
+	return t;
 }
 

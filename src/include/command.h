@@ -24,7 +24,7 @@
 #include "general.h"
 #include "target.h"
 
-int command_process(char *cmd);
+int command_process(target *t, char *cmd);
 typedef bool (*cmd_handler)(target *t, int argc, const char **argv);
 
 struct command_s {
