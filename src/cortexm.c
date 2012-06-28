@@ -358,6 +358,9 @@ cortexm_attach(struct target_s *target)
 	unsigned i;
 	uint32_t r;
 
+	/* Clear any pending fault condition */
+	target_check_error(target);
+
 	target_halt_request(target);
 	while(!target_halt_wait(target));
 
