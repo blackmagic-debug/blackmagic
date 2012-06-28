@@ -99,7 +99,6 @@ extern const char *morse_msg;
 		else gdb_putpacketz("EFF");		\
 	running_status = 0;				\
 	target_list_free();				\
-	cur_target = last_target = NULL;		\
 	longjmp(fatal_error_jmpbuf, (error));		\
 }
 
