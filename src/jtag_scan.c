@@ -97,7 +97,7 @@ static const char ones[] = "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF";
  *	continue to next device. If this is one shift out the remaining 31 bits
  *	of the IDCODE register.
  */
-int jtag_scan(void)
+int jtag_scan(const uint8_t *irlens)
 {
 	int i;
 	uint32_t j;
@@ -117,35 +117,59 @@ int jtag_scan(void)
 	jtagtap_init();
 	jtagtap_reset();
 
-	DEBUG("Change state to Shift-IR\n");
-	jtagtap_shift_ir();
-
-	DEBUG("Scanning out IRs\n");
-	if(!jtagtap_next(0, 1)) {
-		DEBUG("jtag_scan: Sanity check failed: IR[0] shifted out as 0\n");
-		jtag_dev_count = -1;
-		return -1; /* must be 1 */
-	}
-	jtag_devs[0].ir_len = 1; j = 1;
-	while((jtag_dev_count <= JTAG_MAX_DEVS) && 
-	      (jtag_devs[jtag_dev_count].ir_len <= JTAG_MAX_IR_LEN)) {
-		if(jtagtap_next(0, 1)) {
-			if(jtag_devs[jtag_dev_count].ir_len == 1) break;
-			jtag_devs[++jtag_dev_count].ir_len = 1;
+	if (irlens) {
+		DEBUG("Given list of IR lengths, skipping probe\n");
+		DEBUG("Change state to Shift-IR\n");
+		jtagtap_shift_ir();
+		j = 0;
+		while((jtag_dev_count <= JTAG_MAX_DEVS) && 
+		      (jtag_devs[jtag_dev_count].ir_len <= JTAG_MAX_IR_LEN)) {
+			uint32_t irout;
+			if(*irlens == 0) 
+				break;
+			jtagtap_tdi_tdo_seq((uint8_t*)&irout, 0, ones, *irlens);
+			if (!(irout & 1)) {
+				DEBUG("check failed: IR[0] != 1\n");
+				return -1;
+			}
+			jtag_devs[jtag_dev_count].ir_len = *irlens;
 			jtag_devs[jtag_dev_count].ir_prescan = j;
 			jtag_devs[jtag_dev_count].dev = jtag_dev_count;
-		} else jtag_devs[jtag_dev_count].ir_len++;
-		j++;
-	}
-	if(jtag_dev_count > JTAG_MAX_DEVS) {
-		DEBUG("jtag_scan: Maximum device count exceeded\n");
-		jtag_dev_count = -1;
-		return -1;
-	}
-	if(jtag_devs[jtag_dev_count].ir_len > JTAG_MAX_IR_LEN) {
-		DEBUG("jtag_scan: Maximum IR length exceeded\n");
-		jtag_dev_count = -1;
-		return -1;
+			j += *irlens;
+			irlens++;
+			jtag_dev_count++;
+		}
+	} else {
+		DEBUG("Change state to Shift-IR\n");
+		jtagtap_shift_ir();
+
+		DEBUG("Scanning out IRs\n");
+		if(!jtagtap_next(0, 1)) {
+			DEBUG("jtag_scan: Sanity check failed: IR[0] shifted out as 0\n");
+			jtag_dev_count = -1;
+			return -1; /* must be 1 */
+		}
+		jtag_devs[0].ir_len = 1; j = 1;
+		while((jtag_dev_count <= JTAG_MAX_DEVS) && 
+		      (jtag_devs[jtag_dev_count].ir_len <= JTAG_MAX_IR_LEN)) {
+			if(jtagtap_next(0, 1)) {
+				if(jtag_devs[jtag_dev_count].ir_len == 1) break;
+				jtag_devs[++jtag_dev_count].ir_len = 1;
+				jtag_devs[jtag_dev_count].ir_prescan = j;
+				jtag_devs[jtag_dev_count].dev = jtag_dev_count;
+			} else jtag_devs[jtag_dev_count].ir_len++;
+			j++;
+		}
+		if(jtag_dev_count > JTAG_MAX_DEVS) {
+			DEBUG("jtag_scan: Maximum device count exceeded\n");
+			jtag_dev_count = -1;
+			return -1;
+		}
+		if(jtag_devs[jtag_dev_count].ir_len > JTAG_MAX_IR_LEN) {
+			DEBUG("jtag_scan: Maximum IR length exceeded\n");
+			jtag_dev_count = -1;
+			return -1;
+		}
 	}
 	
 	DEBUG("Return to Run-Test/Idle\n");

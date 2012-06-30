@@ -38,7 +38,7 @@
 static bool cmd_version(void);
 static bool cmd_help(target *t);
 
-static bool cmd_jtag_scan(void);
+static bool cmd_jtag_scan(target *t, int argc, char **argv);
 static bool cmd_swdp_scan(void);
 static bool cmd_targets(target *t);
 static bool cmd_morse(void);
@@ -128,11 +128,22 @@ bool cmd_help(target *t)
 	return true;
 }
 
-bool cmd_jtag_scan(void)
+static bool cmd_jtag_scan(target *t, int argc, char **argv)
 {
+	(void)t;
+	uint8_t *irlens = NULL;
+
 	gdb_outf("Target voltage: %s\n", platform_target_voltage());
 
-	int devs = jtag_scan();
+	if (argc > 1) {
+		/* Accept a list of IR lengths on command line */
+		irlens = alloca(argc);
+		for (int i = 1; i < argc; i++)
+			irlens[i-1] = atoi(argv[i]);
+		irlens[argc-1] = 0;
+	}
+
+	int devs = jtag_scan(irlens);
 
 	if(devs < 0) {
 		gdb_out("JTAG device scan failed!\n");

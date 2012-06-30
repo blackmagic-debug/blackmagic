@@ -79,7 +79,7 @@ int platform_init(void)
 
 	assert(gdb_if_init() == 0);
 
-	jtag_scan();
+	jtag_scan(NULL);
 	
 	return 0; 
 }

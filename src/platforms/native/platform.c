@@ -120,7 +120,7 @@ int platform_init(void)
 
 	cdcacm_init();
 
-	jtag_scan();
+	jtag_scan(NULL);
 	
 	return 0;
 }
