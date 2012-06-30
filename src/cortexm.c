@@ -173,6 +173,11 @@ const struct command_s cortexm_cmd_list[] = {
 #define CORTEXM_DWT_FUNC_FUNC_WRITE	(6 << 0)
 #define CORTEXM_DWT_FUNC_FUNC_ACCESS	(7 << 0)
 
+/* Signals returned by cortexm_halt_wait() */
+#define SIGINT 2
+#define SIGTRAP 5
+#define SIGSEGV 11
+
 static void cortexm_attach(struct target_s *target);
 static void cortexm_detach(struct target_s *target);
 
@@ -320,7 +325,6 @@ cortexm_probe(struct target_s *target)
 	target->halt_request = cortexm_halt_request;
 	target->halt_wait = cortexm_halt_wait;
 	target->halt_resume = cortexm_halt_resume;
-	target->fault_unwind = cortexm_fault_unwind;
 	target->regs_size = sizeof(regnum_cortex_m);	/* XXX: detect FP extension */
 
 	target_add_commands(target, cortexm_cmd_list, cortexm_driver_str);
@@ -535,19 +539,37 @@ cortexm_halt_request(struct target_s *target)
 		CORTEXM_DHCSR_DBGKEY | CORTEXM_DHCSR_C_HALT | CORTEXM_DHCSR_C_DEBUGEN);
 }
 
+/* FIXME: static here must go! */
+static uint8_t old_step = 0;
+
 static int
 cortexm_halt_wait(struct target_s *target)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
+	if (!(adiv5_ap_mem_read(ap, CORTEXM_DHCSR) & CORTEXM_DHCSR_S_HALT))
+		return 0;
 
-	return adiv5_ap_mem_read(ap, CORTEXM_DHCSR) & CORTEXM_DHCSR_S_HALT;
+	/* We've halted.  Let's find out why. */
+	uint32_t dfsr = adiv5_ap_mem_read(ap, CORTEXM_DFSR);
+	adiv5_ap_mem_write(ap, CORTEXM_DFSR, dfsr); /* write back to reset */
+
+	if ((dfsr & CORTEXM_DFSR_VCATCH) && cortexm_fault_unwind(target))
+		return SIGSEGV;
+
+	if (dfsr & (CORTEXM_DFSR_BKPT | CORTEXM_DFSR_DWTTRAP))
+		return SIGTRAP;
+
+	if (dfsr & CORTEXM_DFSR_HALTED)
+		return old_step ? SIGTRAP : SIGINT;
+
+	return SIGTRAP;
+
 }
 
 static void 
 cortexm_halt_resume(struct target_s *target, uint8_t step)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
-	static uint8_t old_step = 0;
 	uint32_t dhcsr = CORTEXM_DHCSR_DBGKEY | CORTEXM_DHCSR_C_DEBUGEN;
 
 	if(step) dhcsr |= CORTEXM_DHCSR_C_STEP | CORTEXM_DHCSR_C_MASKINTS;
@@ -564,15 +586,13 @@ cortexm_halt_resume(struct target_s *target, uint8_t step)
 static int cortexm_fault_unwind(struct target_s *target)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
-	uint32_t dfsr = adiv5_ap_mem_read(ap, CORTEXM_DFSR);
 	uint32_t hfsr = adiv5_ap_mem_read(ap, CORTEXM_HFSR);
 	uint32_t cfsr = adiv5_ap_mem_read(ap, CORTEXM_CFSR);
-	adiv5_ap_mem_write(ap, CORTEXM_DFSR, dfsr);/* write back to reset */
 	adiv5_ap_mem_write(ap, CORTEXM_HFSR, hfsr);/* write back to reset */
 	adiv5_ap_mem_write(ap, CORTEXM_CFSR, cfsr);/* write back to reset */
 	/* We check for FORCED in the HardFault Status Register or 
 	 * for a configurable fault to avoid catching core resets */
-	if((dfsr & CORTEXM_DFSR_VCATCH) && ((hfsr & CORTEXM_HFSR_FORCED) || cfsr)) {
+	if((hfsr & CORTEXM_HFSR_FORCED) || cfsr) {
 		/* Unwind exception */
 		uint32_t regs[target->regs_size];
 		uint32_t stack[8];

@@ -88,9 +88,6 @@ target *target_attach(target *t, target_destroy_callback destroy_cb);
 #define target_halt_resume(target, step)	\
 	(target)->halt_resume((target), (step))
 
-#define target_fault_unwind(target)	\
-	((target)->fault_unwind?(target)->fault_unwind((target)):0)
-
 /* Break-/watchpoint functions */
 #define target_set_hw_bp(target, addr)	\
 	(target)->set_hw_bp((target), (addr))
@@ -152,7 +149,6 @@ struct target_s {
 	void (*halt_request)(struct target_s *target);
 	int (*halt_wait)(struct target_s *target);
 	void (*halt_resume)(struct target_s *target, uint8_t step);
-	int (*fault_unwind)(struct target_s *target);
 
 	/* Break-/watchpoint functions */
 	int (*set_hw_bp)(struct target_s *target, uint32_t addr);

@@ -153,8 +153,8 @@ gdb_main(void)
 		    case '?': {	/* '?': Request reason for target halt */
 			/* This packet isn't documented as being mandatory,
 			 * but GDB doesn't work without it. */
-			int sent_int = 0;
-			uint32_t watch_addr;		
+			uint32_t watch_addr;
+			int sig;
 
 			if(!cur_target) {
 				/* Report "target exited" if no target */
@@ -163,26 +163,19 @@ gdb_main(void)
 			}
 
 			/* Wait for target halt */
-			while(!target_halt_wait(cur_target)) { 
+			while(!(sig = target_halt_wait(cur_target))) { 
 				unsigned char c = gdb_if_getchar_to(0);
 				if((c == '\x03') || (c == '\x04')) {
 					target_halt_request(cur_target);
-					sent_int = 1;
 				}
 			}
-
 			SET_RUN_STATE(0);
 			/* Report reason for halt */
 			if(target_check_hw_wp(cur_target, &watch_addr)) {
 				/* Watchpoint hit */
-				gdb_putpacket_f("T05watch:%08X;", watch_addr);
-			} else if(target_fault_unwind(cur_target)) {
-				gdb_putpacketz("T0b");
-			} else if(sent_int) {
-				/* Target interrupted */
-				gdb_putpacketz("T02");
+				gdb_putpacket_f("T%02Xwatch:%08X;", sig, watch_addr);
 			} else {
-				gdb_putpacketz("T05");
+				gdb_putpacket_f("T%02X", sig);
 			}
 			break;
 		    }
