@@ -47,6 +47,7 @@ extern struct ftdi_context *ftdic;
 
 int platform_init(void);
 const char *platform_target_voltage(void);
+void platform_delay(uint32_t delay);
 
 void platform_buffer_flush(void);
 int platform_buffer_write(const uint8_t *data, int size);

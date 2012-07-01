@@ -125,6 +125,12 @@ int platform_init(void)
 	return 0;
 }
 
+void platform_delay(uint32_t delay)
+{
+	timeout_counter = delay;
+	while(timeout_counter);
+}
+
 void sys_tick_handler(void)
 {
 	if(running_status) 

@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#include <unistd.h>
 
 struct ftdi_context *ftdic;
 
@@ -124,5 +125,10 @@ int vasprintf(char **strp, const char *fmt, va_list ap)
 const char *platform_target_voltage(void)
 {
 	return "not supported";
+}
+
+void platform_delay(uint32_t delay)
+{
+	usleep(delay * 10000000);
 }
 

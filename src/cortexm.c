@@ -526,6 +526,8 @@ cortexm_reset(struct target_s *target)
 	while(adiv5_ap_mem_read(ap, CORTEXM_AIRCR) & 
 			(CORTEXM_AIRCR_VECTRESET | CORTEXM_AIRCR_SYSRESETREQ));
 
+	platform_delay(2);
+
 	/* Reset DFSR flags */
 	adiv5_ap_mem_write(ap, CORTEXM_DFSR, CORTEXM_DFSR_RESETALL);
 }
