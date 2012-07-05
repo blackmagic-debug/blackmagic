@@ -515,6 +515,9 @@ cortexm_reset(struct target_s *target)
 
 	jtagtap_srst();
 
+	/* Read DHCSR here to clear S_RESET_ST bit before reset */
+	adiv5_ap_mem_read(ap, CORTEXM_DHCSR);
+
 	/* Request system reset from NVIC: SRST doesn't work correctly */
 	/* This could be VECTRESET: 0x05FA0001 (reset only core)
 	 *          or SYSRESETREQ: 0x05FA0004 (system reset)
@@ -523,10 +526,7 @@ cortexm_reset(struct target_s *target)
 			CORTEXM_AIRCR_VECTKEY | CORTEXM_AIRCR_SYSRESETREQ);
 
 	/* Poll for release from reset */
-	while(adiv5_ap_mem_read(ap, CORTEXM_AIRCR) & 
-			(CORTEXM_AIRCR_VECTRESET | CORTEXM_AIRCR_SYSRESETREQ));
-
-	platform_delay(2);
+	while(adiv5_ap_mem_read(ap, CORTEXM_DHCSR) & CORTEXM_DHCSR_S_RESET_ST);
 
 	/* Reset DFSR flags */
 	adiv5_ap_mem_write(ap, CORTEXM_DFSR, CORTEXM_DFSR_RESETALL);
