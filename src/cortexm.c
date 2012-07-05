@@ -30,6 +30,7 @@
  */
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "general.h"
 #include "jtagtap.h"
@@ -186,7 +187,7 @@ static int cortexm_regs_write(struct target_s *target, const void *data);
 static int cortexm_pc_write(struct target_s *target, const uint32_t val);
 
 static void cortexm_reset(struct target_s *target);
-static void cortexm_halt_resume(struct target_s *target, uint8_t step);
+static void cortexm_halt_resume(struct target_s *target, bool step);
 static int cortexm_halt_wait(struct target_s *target);
 static void cortexm_halt_request(struct target_s *target);
 static int cortexm_fault_unwind(struct target_s *target);
@@ -199,22 +200,25 @@ static int cortexm_clear_hw_wp(struct target_s *target, uint8_t type, uint32_t a
 
 static int cortexm_check_hw_wp(struct target_s *target, uint32_t *addr);
 
-/* Watchpoint unit status */
 #define CORTEXM_MAX_WATCHPOINTS	4	/* architecture says up to 15, no implementation has > 4 */
-static struct wp_unit_s {
-	uint32_t addr;
-	uint8_t type;
-	uint8_t size;
-} hw_watchpoint[CORTEXM_MAX_WATCHPOINTS];
-static unsigned hw_watchpoint_max;
-
-/* Breakpoint unit status */
 #define CORTEXM_MAX_BREAKPOINTS	6	/* architecture says up to 127, no implementation has > 6 */
-static uint32_t hw_breakpoint[CORTEXM_MAX_BREAKPOINTS];
-static unsigned hw_breakpoint_max;
+
+struct cortexm_priv {
+	bool stepping;
+	/* Watchpoint unit status */
+	struct wp_unit_s {
+		uint32_t addr;
+		uint8_t type;
+		uint8_t size;
+	} hw_watchpoint[CORTEXM_MAX_WATCHPOINTS];
+	unsigned hw_watchpoint_max;
+	/* Breakpoint unit status */
+	uint32_t hw_breakpoint[CORTEXM_MAX_BREAKPOINTS];
+	unsigned hw_breakpoint_max;
+};
 
 /* Register number tables */
-static uint32_t regnum_cortex_m[] = {
+static const uint32_t regnum_cortex_m[] = {
 	0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,	/* standard r0-r15 */
 	0x10,	/* xpsr */
 	0x11,	/* msp */
@@ -222,7 +226,7 @@ static uint32_t regnum_cortex_m[] = {
 	0x14	/* special */
 };
 
-static uint32_t regnum_cortex_mf[] = {
+static const uint32_t regnum_cortex_mf[] = {
 	0x21,	/* fpscr */
 	0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47,	/* s0-s7 */
 	0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f,	/* s8-s15 */
@@ -340,6 +344,8 @@ cortexm_probe(struct target_s *target)
 		target->tdesc = tdesc_cortex_mf;
 	}
 	
+	ap->priv = calloc(1, sizeof(struct cortexm_priv));
+	ap->priv_free = free;
 
 #define PROBE(x) \
 	do { if (!(x)(target)) return 0; else target_check_error(target); } while (0)
@@ -359,6 +365,7 @@ static void
 cortexm_attach(struct target_s *target)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
+	struct cortexm_priv *priv = ap->priv;
 	unsigned i;
 	uint32_t r;
 
@@ -377,25 +384,25 @@ cortexm_attach(struct target_s *target)
 	adiv5_ap_mem_write(ap, CORTEXM_DFSR, CORTEXM_DFSR_RESETALL);
 
 	/* size the break/watchpoint units */
-	hw_breakpoint_max = CORTEXM_MAX_BREAKPOINTS;
+	priv->hw_breakpoint_max = CORTEXM_MAX_BREAKPOINTS;
 	r = adiv5_ap_mem_read(ap, CORTEXM_FPB_CTRL);
-	if (((r >> 4) & 0xf) < hw_breakpoint_max)	/* only look at NUM_COMP1 */
-		hw_breakpoint_max = (r >> 4) & 0xf;
-	hw_watchpoint_max = CORTEXM_MAX_WATCHPOINTS;
+	if (((r >> 4) & 0xf) < priv->hw_breakpoint_max)	/* only look at NUM_COMP1 */
+		priv->hw_breakpoint_max = (r >> 4) & 0xf;
+	priv->hw_watchpoint_max = CORTEXM_MAX_WATCHPOINTS;
 	r = adiv5_ap_mem_read(ap, CORTEXM_DWT_CTRL);
-	if ((r >> 28) > hw_watchpoint_max)
-		hw_watchpoint_max = r >> 28;
+	if ((r >> 28) > priv->hw_watchpoint_max)
+		priv->hw_watchpoint_max = r >> 28;
 
 	/* Clear any stale breakpoints */
-	for(i = 0; i < hw_breakpoint_max; i++) {
+	for(i = 0; i < priv->hw_breakpoint_max; i++) {
 		adiv5_ap_mem_write(ap, CORTEXM_FPB_COMP(i), 0);
-		hw_breakpoint[i] = 0;
+		priv->hw_breakpoint[i] = 0;
 	}
 
 	/* Clear any stale watchpoints */
-	for(i = 0; i < hw_watchpoint_max; i++) {
+	for(i = 0; i < priv->hw_watchpoint_max; i++) {
 		adiv5_ap_mem_write(ap, CORTEXM_DWT_FUNC(i), 0);
-		hw_watchpoint[i].type = 0;
+		priv->hw_watchpoint[i].type = 0;
 	}
 
 	/* Flash Patch Control Register: set ENABLE */
@@ -414,14 +421,15 @@ static void
 cortexm_detach(struct target_s *target)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
+	struct cortexm_priv *priv = ap->priv;
 	unsigned i;
 
 	/* Clear any stale breakpoints */
-	for(i = 0; i < hw_breakpoint_max; i++)
+	for(i = 0; i < priv->hw_breakpoint_max; i++)
 		adiv5_ap_mem_write(ap, CORTEXM_FPB_COMP(i), 0);
 
 	/* Clear any stale watchpoints */
-	for(i = 0; i < hw_watchpoint_max; i++) 
+	for(i = 0; i < priv->hw_watchpoint_max; i++) 
 		adiv5_ap_mem_write(ap, CORTEXM_DWT_FUNC(i), 0);
 
 	/* Disable debug */
@@ -541,13 +549,11 @@ cortexm_halt_request(struct target_s *target)
 		CORTEXM_DHCSR_DBGKEY | CORTEXM_DHCSR_C_HALT | CORTEXM_DHCSR_C_DEBUGEN);
 }
 
-/* FIXME: static here must go! */
-static uint8_t old_step = 0;
-
 static int
 cortexm_halt_wait(struct target_s *target)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
+	struct cortexm_priv *priv = ap->priv;
 	if (!(adiv5_ap_mem_read(ap, CORTEXM_DHCSR) & CORTEXM_DHCSR_S_HALT))
 		return 0;
 
@@ -562,24 +568,25 @@ cortexm_halt_wait(struct target_s *target)
 		return SIGTRAP;
 
 	if (dfsr & CORTEXM_DFSR_HALTED)
-		return old_step ? SIGTRAP : SIGINT;
+		return priv->stepping ? SIGTRAP : SIGINT;
 
 	return SIGTRAP;
 
 }
 
 static void 
-cortexm_halt_resume(struct target_s *target, uint8_t step)
+cortexm_halt_resume(struct target_s *target, bool step)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
+	struct cortexm_priv *priv = ap->priv;
 	uint32_t dhcsr = CORTEXM_DHCSR_DBGKEY | CORTEXM_DHCSR_C_DEBUGEN;
 
 	if(step) dhcsr |= CORTEXM_DHCSR_C_STEP | CORTEXM_DHCSR_C_MASKINTS;
 
 	/* Disable interrupts while single stepping... */
-	if(step != old_step) {
+	if(step != priv->stepping) {
 		adiv5_ap_mem_write(ap, CORTEXM_DHCSR, dhcsr | CORTEXM_DHCSR_C_HALT);
-		old_step = step;
+		priv->stepping = step;
 	}
 
 	adiv5_ap_mem_write(ap, CORTEXM_DHCSR, dhcsr);
@@ -638,18 +645,19 @@ static int
 cortexm_set_hw_bp(struct target_s *target, uint32_t addr)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
+	struct cortexm_priv *priv = ap->priv;
 	uint32_t val = addr & 0x1FFFFFFC;
 	unsigned i;
 
 	val |= (addr & 2)?0x80000000:0x40000000;
 	val |= 1;
 
-	for(i = 0; i < hw_breakpoint_max; i++) 
-		if((hw_breakpoint[i] & 1) == 0) break;
+	for(i = 0; i < priv->hw_breakpoint_max; i++) 
+		if((priv->hw_breakpoint[i] & 1) == 0) break;
 	
-	if(i == hw_breakpoint_max) return -1;
+	if(i == priv->hw_breakpoint_max) return -1;
 
-	hw_breakpoint[i] = addr | 1;
+	priv->hw_breakpoint[i] = addr | 1;
 
 	adiv5_ap_mem_write(ap, CORTEXM_FPB_COMP(i), val);
 
@@ -660,14 +668,15 @@ static int
 cortexm_clear_hw_bp(struct target_s *target, uint32_t addr)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
+	struct cortexm_priv *priv = ap->priv;
 	unsigned i;
 
-	for(i = 0; i < hw_breakpoint_max; i++)
-		if((hw_breakpoint[i] & ~1) == addr) break;
+	for(i = 0; i < priv->hw_breakpoint_max; i++)
+		if((priv->hw_breakpoint[i] & ~1) == addr) break;
 
-	if(i == hw_breakpoint_max) return -1;
+	if(i == priv->hw_breakpoint_max) return -1;
 
-	hw_breakpoint[i] = 0;
+	priv->hw_breakpoint[i] = 0;
 
 	adiv5_ap_mem_write(ap, CORTEXM_FPB_COMP(i), 0);
 
@@ -682,6 +691,7 @@ static int
 cortexm_set_hw_wp(struct target_s *target, uint8_t type, uint32_t addr, uint8_t len)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
+	struct cortexm_priv *priv = ap->priv;
 	unsigned i;
 
 	switch(len) { /* Convert bytes size to mask size */
@@ -700,16 +710,16 @@ cortexm_set_hw_wp(struct target_s *target, uint8_t type, uint32_t addr, uint8_t 
 			return -1;
 	}
 
-	for(i = 0; i < hw_watchpoint_max; i++) 
-		if((hw_watchpoint[i].type == 0) &&
+	for(i = 0; i < priv->hw_watchpoint_max; i++) 
+		if((priv->hw_watchpoint[i].type == 0) &&
 		   ((adiv5_ap_mem_read(ap, CORTEXM_DWT_FUNC(i)) & 0xF) == 0))
 			break;
 	
-	if(i == hw_watchpoint_max) return -2;
+	if(i == priv->hw_watchpoint_max) return -2;
 
-	hw_watchpoint[i].type = type;
-	hw_watchpoint[i].addr = addr;
-	hw_watchpoint[i].size = len;
+	priv->hw_watchpoint[i].type = type;
+	priv->hw_watchpoint[i].addr = addr;
+	priv->hw_watchpoint[i].size = len;
 
 	adiv5_ap_mem_write(ap, CORTEXM_DWT_COMP(i), addr);
 	adiv5_ap_mem_write(ap, CORTEXM_DWT_MASK(i), len);
@@ -723,6 +733,7 @@ static int
 cortexm_clear_hw_wp(struct target_s *target, uint8_t type, uint32_t addr, uint8_t len)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
+	struct cortexm_priv *priv = ap->priv;
 	unsigned i;
 
 	switch(len) {
@@ -741,14 +752,14 @@ cortexm_clear_hw_wp(struct target_s *target, uint8_t type, uint32_t addr, uint8_
 			return -1;
 	}
 
-	for(i = 0; i < hw_watchpoint_max; i++)
-		if((hw_watchpoint[i].addr == addr) &&
-		   (hw_watchpoint[i].type == type) &&
-		   (hw_watchpoint[i].size == len)) break;
+	for(i = 0; i < priv->hw_watchpoint_max; i++)
+		if((priv->hw_watchpoint[i].addr == addr) &&
+		   (priv->hw_watchpoint[i].type == type) &&
+		   (priv->hw_watchpoint[i].size == len)) break;
 
-	if(i == hw_watchpoint_max) return -2;
+	if(i == priv->hw_watchpoint_max) return -2;
 
-	hw_watchpoint[i].type = 0;
+	priv->hw_watchpoint[i].type = 0;
 
 	adiv5_ap_mem_write(ap, CORTEXM_DWT_FUNC(i), 0);
 
@@ -759,18 +770,19 @@ static int
 cortexm_check_hw_wp(struct target_s *target, uint32_t *addr)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
+	struct cortexm_priv *priv = ap->priv;
 	unsigned i;
 
-	for(i = 0; i < hw_watchpoint_max; i++)
+	for(i = 0; i < priv->hw_watchpoint_max; i++)
 		/* if SET and MATCHED then break */
-		if(hw_watchpoint[i].type && 
+		if(priv->hw_watchpoint[i].type && 
 		   (adiv5_ap_mem_read(ap, CORTEXM_DWT_FUNC(i)) & 
 					CORTEXM_DWT_FUNC_MATCHED))
 			break;
 
-	if(i == hw_watchpoint_max) return 0;
+	if(i == priv->hw_watchpoint_max) return 0;
 
-	*addr = hw_watchpoint[i].addr;
+	*addr = priv->hw_watchpoint[i].addr;
 	return 1;
 }
 

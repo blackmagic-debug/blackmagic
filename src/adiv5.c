@@ -69,6 +69,8 @@ void adiv5_ap_unref(ADIv5_AP_t *ap)
 {
 	if (--(ap->refcnt) == 0) {
 		adiv5_dp_unref(ap->dp);
+		if (ap->priv)
+			ap->priv_free(ap->priv);
 		free(ap);
 	}
 }

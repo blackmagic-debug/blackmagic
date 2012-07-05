@@ -148,7 +148,7 @@ struct target_s {
 	void (*reset)(struct target_s *target);
 	void (*halt_request)(struct target_s *target);
 	int (*halt_wait)(struct target_s *target);
-	void (*halt_resume)(struct target_s *target, uint8_t step);
+	void (*halt_resume)(struct target_s *target, bool step);
 
 	/* Break-/watchpoint functions */
 	int (*set_hw_bp)(struct target_s *target, uint32_t addr);
