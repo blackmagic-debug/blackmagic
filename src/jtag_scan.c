@@ -107,9 +107,6 @@ int jtag_scan(const uint8_t *irlens)
 	jtag_dev_count = 0;
 	memset(&jtag_devs, 0, sizeof(jtag_devs));
 
-#warning "These should be elsewhere!"
-	adiv5_free_all();
-
 	/* Run throught the SWD to JTAG sequence for the case where an attached SWJ-DP is
 	 * in SW-DP mode.
 	 */

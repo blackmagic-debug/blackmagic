@@ -47,14 +47,10 @@ static uint32_t adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t APnDP, uint8_t RnW
 
 int adiv5_swdp_scan(void)
 {
-	ADIv5_DP_t *dp;
 	uint8_t ack;
 
 	target_list_free();
-#warning "These should be elsewhere!"
-	adiv5_free_all();
-
-	dp = (void*)calloc(1, sizeof(ADIv5_DP_t));
+	ADIv5_DP_t *dp = (void*)calloc(1, sizeof(*dp));
 
 	swdptap_init();
 	/* Read the SW-DP IDCODE register to syncronise */

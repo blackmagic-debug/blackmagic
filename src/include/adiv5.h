@@ -102,7 +102,8 @@
 
 /* Try to keep this somewhat absract for later adding SW-DP */
 typedef struct ADIv5_DP_s {
-	struct ADIv5_DP_s *next;
+	int refcnt;
+
 	uint32_t idcode;
 
 	void (*dp_write)(struct ADIv5_DP_s *dp, uint8_t addr, uint32_t value);
@@ -140,9 +141,9 @@ static inline uint32_t adiv5_dp_low_access(struct ADIv5_DP_s *dp, uint8_t APnDP,
 	return dp->low_access(dp, APnDP, RnW, addr, value);
 }
 
-extern ADIv5_DP_t *adiv5_dp_list;
-
 typedef struct ADIv5_AP_s {
+	int refcnt;
+
 	ADIv5_DP_t *dp;
 	uint8_t apsel;
 
@@ -151,16 +152,12 @@ typedef struct ADIv5_AP_s {
 	uint32_t base;
 } ADIv5_AP_t;
 
-struct target_ap_s {
-	target t;
-	ADIv5_AP_t *ap;
-};
-
-extern ADIv5_AP_t adiv5_aps[5];
-extern int adiv5_ap_count;
-
-void adiv5_free_all(void);
 void adiv5_dp_init(ADIv5_DP_t *dp);
+
+void adiv5_dp_ref(ADIv5_DP_t *dp);
+void adiv5_ap_ref(ADIv5_AP_t *ap);
+void adiv5_dp_unref(ADIv5_DP_t *dp);
+void adiv5_ap_unref(ADIv5_AP_t *ap);
 
 void adiv5_dp_write_ap(ADIv5_DP_t *dp, uint8_t addr, uint32_t value);
 uint32_t adiv5_dp_read_ap(ADIv5_DP_t *dp, uint8_t addr);
@@ -177,7 +174,7 @@ int adiv5_swdp_scan(void);
 
 static inline ADIv5_AP_t *adiv5_target_ap(target *target)
 {
-	return ((struct target_ap_s *)target)->ap;
+	return target->priv;
 }
 
 #endif

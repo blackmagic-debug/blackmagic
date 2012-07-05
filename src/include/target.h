@@ -175,6 +175,8 @@ struct target_s {
 	int size;
 	struct target_s *next;
 
+	void *priv;
+	void (*priv_free)(void *);
 };
 
 struct target_command_s {

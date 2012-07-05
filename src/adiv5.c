@@ -42,10 +42,6 @@
 
 static const char adiv5_driver_str[] = "ARM ADIv5 MEM-AP";
 
-ADIv5_DP_t *adiv5_dp_list;
-ADIv5_AP_t adiv5_aps[5];
-int adiv5_ap_count;
-
 static int ap_check_error(struct target_s *target);
 
 static int ap_mem_read_words(struct target_s *target, uint32_t *dest, uint32_t src, int len);
@@ -53,26 +49,35 @@ static int ap_mem_write_words(struct target_s *target, uint32_t dest, const uint
 static int ap_mem_read_bytes(struct target_s *target, uint8_t *dest, uint32_t src, int len);
 static int ap_mem_write_bytes(struct target_s *target, uint32_t dest, const uint8_t *src, int len);
 
-void adiv5_free_all(void)
+void adiv5_dp_ref(ADIv5_DP_t *dp)
 {
-	ADIv5_DP_t *dp;
-
-	while(adiv5_dp_list) {
-		dp = adiv5_dp_list->next;
-		free(adiv5_dp_list);
-		adiv5_dp_list = dp;
-	}
-
-	adiv5_ap_count = 0;
+	dp->refcnt++;
 }
 
+void adiv5_ap_ref(ADIv5_AP_t *ap)
+{
+	ap->refcnt++;
+}
+
+void adiv5_dp_unref(ADIv5_DP_t *dp)
+{
+	if (--(dp->refcnt) == 0)
+		free(dp);
+}
+
+void adiv5_ap_unref(ADIv5_AP_t *ap)
+{
+	if (--(ap->refcnt) == 0) {
+		adiv5_dp_unref(ap->dp);
+		free(ap);
+	}
+}
 
 void adiv5_dp_init(ADIv5_DP_t *dp)
 {
 	uint32_t ctrlstat;
 
-	dp->next = adiv5_dp_list;
-	adiv5_dp_list = dp;
+	adiv5_dp_ref(dp);
 
 	ctrlstat = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT);
 
@@ -108,25 +113,35 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 
 	/* Probe for APs on this DP */
 	for(int i = 0; i < 256; i++) {
-		ADIv5_AP_t *ap = &adiv5_aps[adiv5_ap_count];
+		ADIv5_AP_t *ap, tmpap;
 		target *t;
 
 		/* Assume valid and try to read IDR */
-		ap->dp = dp;
-		ap->apsel = i;
-		ap->idr = adiv5_ap_read(ap, ADIV5_AP_IDR);
+		memset(&tmpap, 0, sizeof(tmpap));
+		tmpap.dp = dp;
+		tmpap.apsel = i;
+		tmpap.idr = adiv5_ap_read(&tmpap, ADIV5_AP_IDR);
 
-		if(!ap->idr) /* IDR Invalid - Should we not continue here? */
+		if(!tmpap.idr) /* IDR Invalid - Should we not continue here? */
 			break;
 
-		/* We have a valid AP, adding to list */
+		/* It's valid to so create a heap copy */
+		ap = malloc(sizeof(*ap));
+		memcpy(ap, &tmpap, sizeof(*ap));
+		adiv5_dp_ref(dp);
+
 		ap->cfg = adiv5_ap_read(ap, ADIV5_AP_CFG);
 		ap->base = adiv5_ap_read(ap, ADIV5_AP_BASE);
-		/* Should probe further here... */
+
+		/* Should probe further here to make sure it's a valid target.
+		 * AP should be unref'd if not valid.
+		 */
 
 		/* Prepend to target list... */
-		t = target_new(sizeof(struct target_ap_s));
-		((struct target_ap_s *)t)->ap = ap;
+		t = target_new(sizeof(*t));
+		adiv5_ap_ref(ap);
+		t->priv = ap;
+		t->priv_free = (void (*)(void *))adiv5_ap_unref;
 
 		t->driver = adiv5_driver_str;
 		t->check_error = ap_check_error;
@@ -138,9 +153,8 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 
 		/* The rest sould only be added after checking ROM table */
 		cortexm_probe(t);
-
-		adiv5_ap_count++;
 	}
+	adiv5_dp_unref(dp);
 }
 
 void adiv5_dp_write_ap(ADIv5_DP_t *dp, uint8_t addr, uint32_t value)

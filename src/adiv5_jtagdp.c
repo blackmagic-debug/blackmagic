@@ -49,7 +49,7 @@ static uint32_t adiv5_jtagdp_low_access(ADIv5_DP_t *dp, uint8_t APnDP, uint8_t R
 
 void adiv5_jtag_dp_handler(jtag_dev_t *dev)
 {
-	ADIv5_DP_t *dp = (void*)calloc(1, sizeof(ADIv5_DP_t));
+	ADIv5_DP_t *dp = (void*)calloc(1, sizeof(*dp));
 
 	dp->dev = dev;
 	dp->idcode = dev->idcode;

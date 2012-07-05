@@ -172,7 +172,7 @@ bool cmd_swdp_scan(void)
 		return false;
 	} 
 
-	gdb_outf("SW-DP detected IDCODE: 0x%08X\n", adiv5_dp_list->idcode);
+	//gdb_outf("SW-DP detected IDCODE: 0x%08X\n", adiv5_dp_list->idcode);
 
 	cmd_targets(NULL);
 	return true;

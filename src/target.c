@@ -42,6 +42,8 @@ void target_list_free(void)
 		target *t = target_list->next;
 		if (target_list->destroy_callback)
 			target_list->destroy_callback(target_list);
+		if (target_list->priv)
+			target_list->priv_free(target_list->priv);
 		while (target_list->commands) {
 			tc = target_list->commands->next;
 			free(target_list->commands);
