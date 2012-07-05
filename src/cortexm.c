@@ -129,6 +129,7 @@ const struct command_s cortexm_cmd_list[] = {
 #define CORTEXM_DHCSR_C_DEBUGEN		(1 << 0)
 
 /* Debug Core Register Selector Register (DCRSR) */
+#define CORTEXM_DCRSR_REGWnR		0x00010000
 #define CORTEXM_DCRSR_REGSEL_MASK	0x0000001F
 #define CORTEXM_DCRSR_REGSEL_XPSR	0x00000010
 #define CORTEXM_DCRSR_REGSEL_MSP	0x00000011
@@ -205,6 +206,7 @@ static int cortexm_check_hw_wp(struct target_s *target, uint32_t *addr);
 
 struct cortexm_priv {
 	bool stepping;
+	bool on_bkpt;
 	/* Watchpoint unit status */
 	struct wp_unit_s {
 		uint32_t addr;
@@ -500,16 +502,24 @@ cortexm_regs_write(struct target_s *target, const void *data)
 	return 0;
 }
 
+static uint32_t 
+cortexm_pc_read(struct target_s *target)
+{
+	ADIv5_AP_t *ap = adiv5_target_ap(target);
+
+	adiv5_ap_mem_write(ap, CORTEXM_DCRSR, 0x0F);
+	return adiv5_ap_mem_read(ap, CORTEXM_DCRDR);
+
+	return 0;
+}
+
 static int
 cortexm_pc_write(struct target_s *target, const uint32_t val)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
 
-	adiv5_ap_write(ap, ADIV5_AP_CSW, 0xA2000052);
-	adiv5_dp_low_access(ap->dp, 1, 0, ADIV5_AP_TAR, CORTEXM_DHCSR);
-
-	adiv5_ap_write(ap, ADIV5_AP_DB(2), val); /* Required to switch banks */
-	adiv5_dp_low_access(ap->dp, 1, 0, ADIV5_AP_DB(1), 0x1000F);
+	adiv5_ap_mem_write(ap, CORTEXM_DCRDR, val);
+	adiv5_ap_mem_write(ap, CORTEXM_DCRSR, CORTEXM_DCRSR_REGWnR | 0x0F);
 
 	return 0;
 }
@@ -564,6 +574,8 @@ cortexm_halt_wait(struct target_s *target)
 	if ((dfsr & CORTEXM_DFSR_VCATCH) && cortexm_fault_unwind(target))
 		return SIGSEGV;
 
+	/* Remember if we stopped on a breakpoint */
+	priv->on_bkpt = dfsr & (CORTEXM_DFSR_BKPT);
 	if (dfsr & (CORTEXM_DFSR_BKPT | CORTEXM_DFSR_DWTTRAP))
 		return SIGTRAP;
 
@@ -587,6 +599,12 @@ cortexm_halt_resume(struct target_s *target, bool step)
 	if(step != priv->stepping) {
 		adiv5_ap_mem_write(ap, CORTEXM_DHCSR, dhcsr | CORTEXM_DHCSR_C_HALT);
 		priv->stepping = step;
+	}
+
+	if (priv->on_bkpt) {
+		uint32_t pc = cortexm_pc_read(target);
+		if ((adiv5_ap_mem_read_halfword(ap, pc) & 0xFF00) == 0xBE00)
+			cortexm_pc_write(target, pc + 2);
 	}
 
 	adiv5_ap_mem_write(ap, CORTEXM_DHCSR, dhcsr);
