@@ -129,6 +129,6 @@ const char *platform_target_voltage(void)
 
 void platform_delay(uint32_t delay)
 {
-	usleep(delay * 10000000);
+	usleep(delay * 100000);
 }
 
