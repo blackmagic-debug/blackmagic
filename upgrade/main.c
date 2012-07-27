@@ -53,7 +53,9 @@ struct usb_device * find_dev(void)
 	for(bus = usb_get_busses(); bus; bus = bus->next) {
 		for(dev = bus->devices; dev; dev = dev->next) {
 			/* Check for ST Microelectronics vendor ID */
-			if(dev->descriptor.idVendor != 0x483) continue;
+			if ((dev->descriptor.idVendor != 0x483) &&
+			    (dev->descriptor.idVendor != 0x1d50))
+				continue;
 
 			handle = usb_open(dev);
 			usb_get_string_simple(handle, dev->descriptor.iManufacturer, man,
@@ -66,12 +68,14 @@ struct usb_device * find_dev(void)
 #endif
 			usb_close(handle);
 
-			if((dev->descriptor.idProduct == 0x5740) &&
+			if (((dev->descriptor.idProduct == 0x5740) ||
+			     (dev->descriptor.idProduct == 0x6018)) &&
 			   !strcmp(man, "Black Sphere Technologies") &&
 			   !strcmp(prod, "Black Magic Firmware Upgrade"))
 				return dev;
 
-			if((dev->descriptor.idProduct == 0xDF11) &&
+			if (((dev->descriptor.idProduct == 0xDF11) ||
+			     (dev->descriptor.idProduct == 0x6017)) &&
 			   !strcmp(man, "Black Sphere Technologies") &&
 			   !strcmp(prod, "Black Magic Probe (Upgrade)"))
 				return dev;
@@ -105,7 +109,6 @@ usb_dev_handle * get_dfu_interface(struct usb_device *dev, uint16_t *interface)
 					return handle;
 				}
 			}
-			
 		}
 	}
 	return NULL;
