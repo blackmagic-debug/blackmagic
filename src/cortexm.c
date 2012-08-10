@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2011  Black Sphere Technologies Ltd.
+ * Copyright (C) 2012  Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -19,7 +19,7 @@
  */
 
 /* This file implements debugging functionality specific to ARM
- * the Cortex-M3 core.  This should be generic to ARMv7-M as it is 
+ * the Cortex-M3 core.  This should be generic to ARMv7-M as it is
  * implemented according to the "ARMv7-M Architectue Reference Manual",
  * ARM doc DDI0403C.
  *
@@ -217,6 +217,8 @@ struct cortexm_priv {
 	/* Breakpoint unit status */
 	uint32_t hw_breakpoint[CORTEXM_MAX_BREAKPOINTS];
 	unsigned hw_breakpoint_max;
+	/* Copy of DEMCR for vector-catch */
+	uint32_t demcr;
 };
 
 /* Register number tables */
@@ -345,9 +347,14 @@ cortexm_probe(struct target_s *target)
 		target->regs_size += sizeof(regnum_cortex_mf);
 		target->tdesc = tdesc_cortex_mf;
 	}
-	
-	ap->priv = calloc(1, sizeof(struct cortexm_priv));
+
+	struct cortexm_priv *priv = calloc(1, sizeof(*priv));
+	ap->priv = priv;
 	ap->priv_free = free;
+
+	/* Default vectors to catch */
+	priv->demcr = CORTEXM_DEMCR_TRCENA | CORTEXM_DEMCR_VC_HARDERR |
+			CORTEXM_DEMCR_VC_CORERESET;
 
 #define PROBE(x) \
 	do { if (!(x)(target)) return 0; else target_check_error(target); } while (0)
@@ -378,9 +385,7 @@ cortexm_attach(struct target_s *target)
 	while(!target_halt_wait(target));
 
 	/* Request halt on reset */
-	adiv5_ap_mem_write(ap, CORTEXM_DEMCR, 
-			CORTEXM_DEMCR_TRCENA | CORTEXM_DEMCR_VC_HARDERR | 
-			CORTEXM_DEMCR_VC_CORERESET); 
+	adiv5_ap_mem_write(ap, CORTEXM_DEMCR, priv->demcr);
 
 	/* Reset DFSR flags */
 	adiv5_ap_mem_write(ap, CORTEXM_DFSR, CORTEXM_DFSR_RESETALL);
@@ -408,7 +413,7 @@ cortexm_attach(struct target_s *target)
 	}
 
 	/* Flash Patch Control Register: set ENABLE */
-	adiv5_ap_mem_write(ap, CORTEXM_FPB_CTRL, 
+	adiv5_ap_mem_write(ap, CORTEXM_FPB_CTRL,
 			CORTEXM_FPB_CTRL_KEY | CORTEXM_FPB_CTRL_ENABLE);
 	target->set_hw_bp = cortexm_set_hw_bp;
 	target->clear_hw_bp = cortexm_clear_hw_bp;
@@ -431,7 +436,7 @@ cortexm_detach(struct target_s *target)
 		adiv5_ap_mem_write(ap, CORTEXM_FPB_COMP(i), 0);
 
 	/* Clear any stale watchpoints */
-	for(i = 0; i < priv->hw_watchpoint_max; i++) 
+	for(i = 0; i < priv->hw_watchpoint_max; i++)
 		adiv5_ap_mem_write(ap, CORTEXM_DWT_FUNC(i), 0);
 
 	/* Disable debug */
@@ -452,7 +457,7 @@ cortexm_regs_read(struct target_s *target, void *data)
 	 * debug registers DHCSR, DCRSR, DCRDR and DEMCR respectively */
 	adiv5_dp_low_access(ap->dp, 1, 0, ADIV5_AP_TAR, CORTEXM_DHCSR);
 
-	/* Walk the regnum_cortex_m array, reading the registers it 
+	/* Walk the regnum_cortex_m array, reading the registers it
 	 * calls out. */
 	adiv5_ap_write(ap, ADIV5_AP_DB(1), regnum_cortex_m[0]); /* Required to switch banks */
 	*regs++ = adiv5_dp_read_ap(ap->dp, ADIV5_AP_DB(2));
@@ -460,7 +465,7 @@ cortexm_regs_read(struct target_s *target, void *data)
 		adiv5_dp_low_access(ap->dp, 1, 0, ADIV5_AP_DB(1), regnum_cortex_m[i]);
 		*regs++ = adiv5_dp_read_ap(ap->dp, ADIV5_AP_DB(2));
 	}
-	if (target->target_options & TOPT_FLAVOUR_V7MF) 
+	if (target->target_options & TOPT_FLAVOUR_V7MF)
 		for(i = 0; i < sizeof(regnum_cortex_mf) / 4; i++) {
 			adiv5_dp_low_access(ap->dp, 1, 0, ADIV5_AP_DB(1), regnum_cortex_mf[i]);
 			*regs++ = adiv5_dp_read_ap(ap->dp, ADIV5_AP_DB(2));
@@ -483,26 +488,26 @@ cortexm_regs_write(struct target_s *target, const void *data)
 	 * debug registers DHCSR, DCRSR, DCRDR and DEMCR respectively */
 	adiv5_dp_low_access(ap->dp, 1, 0, ADIV5_AP_TAR, CORTEXM_DHCSR);
 
-	/* Walk the regnum_cortex_m array, writing the registers it 
+	/* Walk the regnum_cortex_m array, writing the registers it
 	 * calls out. */
 	adiv5_ap_write(ap, ADIV5_AP_DB(2), *regs++); /* Required to switch banks */
 	adiv5_dp_low_access(ap->dp, 1, 0, ADIV5_AP_DB(1), 0x10000 | regnum_cortex_m[0]);
 	for(i = 1; i < sizeof(regnum_cortex_m) / 4; i++) {
 		adiv5_dp_low_access(ap->dp, 1, 0, ADIV5_AP_DB(2), *regs++);
-		adiv5_dp_low_access(ap->dp, 1, 0, ADIV5_AP_DB(1), 
+		adiv5_dp_low_access(ap->dp, 1, 0, ADIV5_AP_DB(1),
 					0x10000 | regnum_cortex_m[i]);
 	}
-	if (target->target_options & TOPT_FLAVOUR_V7MF) 
+	if (target->target_options & TOPT_FLAVOUR_V7MF)
 		for(i = 0; i < sizeof(regnum_cortex_mf) / 4; i++) {
 			adiv5_dp_low_access(ap->dp, 1, 0, ADIV5_AP_DB(2), *regs++);
-			adiv5_dp_low_access(ap->dp, 1, 0, ADIV5_AP_DB(1), 
+			adiv5_dp_low_access(ap->dp, 1, 0, ADIV5_AP_DB(1),
 						0x10000 | regnum_cortex_mf[i]);
 		}
 
 	return 0;
 }
 
-static uint32_t 
+static uint32_t
 cortexm_pc_read(struct target_s *target)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
@@ -526,7 +531,7 @@ cortexm_pc_write(struct target_s *target, const uint32_t val)
 
 /* The following three routines implement target halt/resume
  * using the core debug registers in the NVIC. */
-static void 
+static void
 cortexm_reset(struct target_s *target)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
@@ -550,12 +555,12 @@ cortexm_reset(struct target_s *target)
 	adiv5_ap_mem_write(ap, CORTEXM_DFSR, CORTEXM_DFSR_RESETALL);
 }
 
-static void 
+static void
 cortexm_halt_request(struct target_s *target)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
 
-	adiv5_ap_mem_write(ap, CORTEXM_DHCSR, 
+	adiv5_ap_mem_write(ap, CORTEXM_DHCSR,
 		CORTEXM_DHCSR_DBGKEY | CORTEXM_DHCSR_C_HALT | CORTEXM_DHCSR_C_DEBUGEN);
 }
 
@@ -586,7 +591,7 @@ cortexm_halt_wait(struct target_s *target)
 
 }
 
-static void 
+static void
 cortexm_halt_resume(struct target_s *target, bool step)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
@@ -617,7 +622,7 @@ static int cortexm_fault_unwind(struct target_s *target)
 	uint32_t cfsr = adiv5_ap_mem_read(ap, CORTEXM_CFSR);
 	adiv5_ap_mem_write(ap, CORTEXM_HFSR, hfsr);/* write back to reset */
 	adiv5_ap_mem_write(ap, CORTEXM_CFSR, cfsr);/* write back to reset */
-	/* We check for FORCED in the HardFault Status Register or 
+	/* We check for FORCED in the HardFault Status Register or
 	 * for a configurable fault to avoid catching core resets */
 	if((hfsr & CORTEXM_HFSR_FORCED) || cfsr) {
 		/* Unwind exception */
@@ -629,7 +634,7 @@ static int cortexm_fault_unwind(struct target_s *target)
 		/* save retcode currently in lr */
 		retcode = regs[14];
 		/* Read stack for pre-exception registers */
-		target_mem_read_words(target, stack, regs[13], sizeof(stack)); 
+		target_mem_read_words(target, stack, regs[13], sizeof(stack));
 		regs[14] = stack[5];	/* restore LR to pre-exception state */
 		regs[15] = stack[6];	/* restore PC to pre-exception state */
 
@@ -645,7 +650,7 @@ static int cortexm_fault_unwind(struct target_s *target)
 		/* Reset exception state to allow resuming from restored
 		 * state.
 		 */
-		adiv5_ap_mem_write(ap, CORTEXM_AIRCR, 
+		adiv5_ap_mem_write(ap, CORTEXM_AIRCR,
 				CORTEXM_AIRCR_VECTKEY | CORTEXM_AIRCR_VECTCLRACTIVE);
 
 		/* Write pre-exception registers back to core */
@@ -670,9 +675,9 @@ cortexm_set_hw_bp(struct target_s *target, uint32_t addr)
 	val |= (addr & 2)?0x80000000:0x40000000;
 	val |= 1;
 
-	for(i = 0; i < priv->hw_breakpoint_max; i++) 
+	for(i = 0; i < priv->hw_breakpoint_max; i++)
 		if((priv->hw_breakpoint[i] & 1) == 0) break;
-	
+
 	if(i == priv->hw_breakpoint_max) return -1;
 
 	priv->hw_breakpoint[i] = addr | 1;
@@ -698,7 +703,7 @@ cortexm_clear_hw_bp(struct target_s *target, uint32_t addr)
 
 	adiv5_ap_mem_write(ap, CORTEXM_FPB_COMP(i), 0);
 
-	return 0; 
+	return 0;
 }
 
 
@@ -728,11 +733,11 @@ cortexm_set_hw_wp(struct target_s *target, uint8_t type, uint32_t addr, uint8_t 
 			return -1;
 	}
 
-	for(i = 0; i < priv->hw_watchpoint_max; i++) 
+	for(i = 0; i < priv->hw_watchpoint_max; i++)
 		if((priv->hw_watchpoint[i].type == 0) &&
 		   ((adiv5_ap_mem_read(ap, CORTEXM_DWT_FUNC(i)) & 0xF) == 0))
 			break;
-	
+
 	if(i == priv->hw_watchpoint_max) return -2;
 
 	priv->hw_watchpoint[i].type = type;
@@ -793,8 +798,8 @@ cortexm_check_hw_wp(struct target_s *target, uint32_t *addr)
 
 	for(i = 0; i < priv->hw_watchpoint_max; i++)
 		/* if SET and MATCHED then break */
-		if(priv->hw_watchpoint[i].type && 
-		   (adiv5_ap_mem_read(ap, CORTEXM_DWT_FUNC(i)) & 
+		if(priv->hw_watchpoint[i].type &&
+		   (adiv5_ap_mem_read(ap, CORTEXM_DWT_FUNC(i)) &
 					CORTEXM_DWT_FUNC_MATCHED))
 			break;
 
@@ -807,12 +812,12 @@ cortexm_check_hw_wp(struct target_s *target, uint32_t *addr)
 static bool cortexm_vector_catch(target *t, int argc, char *argv[])
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(t);
+	struct cortexm_priv *priv = ap->priv;
 	const char *vectors[] = {"reset", NULL, NULL, NULL, "mm", "nocp",
 				"chk", "stat", "bus", "int", "hard"};
-	uint32_t demcr = adiv5_ap_mem_read(ap, CORTEXM_DEMCR);
 	uint32_t tmp = 0;
 	unsigned i, j;
-	
+
 	if ((argc < 3) || ((argv[1][0] != 'e') && (argv[1][0] != 'd'))) {
 		gdb_out("usage: monitor vector_catch (enable|disable) "
 			"(hard|int|bus|stat|chk|nocp|mm|reset)\n");
@@ -824,18 +829,18 @@ static bool cortexm_vector_catch(target *t, int argc, char *argv[])
 			}
 
 		if (argv[1][0] == 'e')
-			demcr |= tmp;
+			priv->demcr |= tmp;
 		else
-			demcr &= ~tmp;
+			priv->demcr &= ~tmp;
 
-		adiv5_ap_mem_write(ap, CORTEXM_DEMCR, demcr);
+		adiv5_ap_mem_write(ap, CORTEXM_DEMCR, priv->demcr);
 	}
 
 	gdb_out("Catching vectors: ");
 	for (i = 0; i < sizeof(vectors) / sizeof(char*); i++) {
 		if (!vectors[i])
 			continue;
-		if (demcr & (1 << i))
+		if (priv->demcr & (1 << i))
 			gdb_outf("%s ", vectors[i]);
 	}
 	gdb_out("\n");
