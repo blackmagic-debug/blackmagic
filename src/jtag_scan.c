@@ -20,7 +20,7 @@
 
 /* This file implements JTAG protocol support.  Provides functionality
  * to detect devices on the scan chain and read their IDCODEs.
- * It depends on the low-level function provided by the platform's jtagtap.c.  
+ * It depends on the low-level function provided by the platform's jtagtap.c.
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -46,27 +46,27 @@ static struct jtag_dev_descr_s {
 	char *descr;
 	void (*handler)(jtag_dev_t *dev);
 } dev_descr[] = {
-	{.idcode = 0x0BA00477, .idmask = 0x0FFFFFFF, 
-		.descr = "ARM Limited: ADIv5 JTAG-DP port.", 
+	{.idcode = 0x0BA00477, .idmask = 0x0FFFFFFF,
+		.descr = "ARM Limited: ADIv5 JTAG-DP port.",
 		.handler = adiv5_jtag_dp_handler},
-	{.idcode = 0x3F0F0F0F, .idmask = 0xFFFFFFFF, 
-		.descr = "ST Microelectronics: STR730", 
+	{.idcode = 0x3F0F0F0F, .idmask = 0xFFFFFFFF,
+		.descr = "ST Microelectronics: STR730",
 		.handler = arm7tdmi_jtag_handler},
-	{.idcode = 0x06410041, .idmask = 0x0FFFFFFF, 
+	{.idcode = 0x06410041, .idmask = 0x0FFFFFFF,
 		.descr = "ST Microelectronics: STM32, Medium density."},
-	{.idcode = 0x06412041, .idmask = 0x0FFFFFFF, 
+	{.idcode = 0x06412041, .idmask = 0x0FFFFFFF,
 		.descr = "ST Microelectronics: STM32, Low density."},
-	{.idcode = 0x06414041, .idmask = 0x0FFFFFFF, 
+	{.idcode = 0x06414041, .idmask = 0x0FFFFFFF,
 		.descr = "ST Microelectronics: STM32, High density."},
-	{.idcode = 0x06418041, .idmask = 0x0FFFFFFF, 
+	{.idcode = 0x06418041, .idmask = 0x0FFFFFFF,
 		.descr = "ST Microelectronics: STM32, Connectivity Line."},
-	{.idcode = 0x06420041, .idmask = 0x0FFFFFFF, 
+	{.idcode = 0x06420041, .idmask = 0x0FFFFFFF,
 		.descr = "ST Microelectronics: STM32, Value Line."},
-	{.idcode = 0x06428041, .idmask = 0x0FFFFFFF, 
+	{.idcode = 0x06428041, .idmask = 0x0FFFFFFF,
 		.descr = "ST Microelectronics: STM32, Value Line, High density."},
-	{.idcode = 0x06411041, .idmask = 0xFFFFFFFF, 
+	{.idcode = 0x06411041, .idmask = 0xFFFFFFFF,
 		.descr = "ST Microelectronics: STM32F2xx."},
-	{.idcode = 0x06413041 , .idmask = 0xFFFFFFFF, 
+	{.idcode = 0x06413041 , .idmask = 0xFFFFFFFF,
 		.descr = "ST Microelectronics: STM32F4xx."},
 	{.idcode = 0x0BB11477 , .idmask = 0xFFFFFFFF,
 		.descr = "NPX: LPC11C24."},
@@ -119,10 +119,10 @@ int jtag_scan(const uint8_t *irlens)
 		DEBUG("Change state to Shift-IR\n");
 		jtagtap_shift_ir();
 		j = 0;
-		while((jtag_dev_count <= JTAG_MAX_DEVS) && 
+		while((jtag_dev_count <= JTAG_MAX_DEVS) &&
 		      (jtag_devs[jtag_dev_count].ir_len <= JTAG_MAX_IR_LEN)) {
 			uint32_t irout;
-			if(*irlens == 0) 
+			if(*irlens == 0)
 				break;
 			jtagtap_tdi_tdo_seq((uint8_t*)&irout, 0, ones, *irlens);
 			if (!(irout & 1)) {
@@ -147,7 +147,7 @@ int jtag_scan(const uint8_t *irlens)
 			return -1; /* must be 1 */
 		}
 		jtag_devs[0].ir_len = 1; j = 1;
-		while((jtag_dev_count <= JTAG_MAX_DEVS) && 
+		while((jtag_dev_count <= JTAG_MAX_DEVS) &&
 		      (jtag_devs[jtag_dev_count].ir_len <= JTAG_MAX_IR_LEN)) {
 			if(jtagtap_next(0, 1)) {
 				if(jtag_devs[jtag_dev_count].ir_len == 1) break;
@@ -168,7 +168,7 @@ int jtag_scan(const uint8_t *irlens)
 			return -1;
 		}
 	}
-	
+
 	DEBUG("Return to Run-Test/Idle\n");
 	jtagtap_next(1, 1);
 	jtagtap_return_idle();
@@ -197,8 +197,8 @@ int jtag_scan(const uint8_t *irlens)
 	}
 
 	/* Fill in the ir_postscan fields */
-	for(i = jtag_dev_count - 1; i; i--) 
-		jtag_devs[i-1].ir_postscan = jtag_devs[i].ir_postscan + 
+	for(i = jtag_dev_count - 1; i; i--)
+		jtag_devs[i-1].ir_postscan = jtag_devs[i].ir_postscan +
 					jtag_devs[i].ir_len;
 
 	/* Reset jtagtap: should take all devs to IDCODE */
@@ -207,28 +207,28 @@ int jtag_scan(const uint8_t *irlens)
 	for(i = 0; i < jtag_dev_count; i++) {
 		if(!jtagtap_next(0, 1)) continue;
 		jtag_devs[i].idcode = 1;
-		for(j = 2; j; j <<= 1) 
+		for(j = 2; j; j <<= 1)
 			if(jtagtap_next(0, 1)) jtag_devs[i].idcode |= j;
-		
+
 	}
 	DEBUG("Return to Run-Test/Idle\n");
 	jtagtap_next(1, 1);
 	jtagtap_return_idle();
 
 	/* Check for known devices and handle accordingly */
-	for(i = 0; i < jtag_dev_count; i++) 
-		for(j = 0; dev_descr[j].idcode; j++) 	
-			if((jtag_devs[i].idcode & dev_descr[j].idmask) == 
+	for(i = 0; i < jtag_dev_count; i++)
+		for(j = 0; dev_descr[j].idcode; j++)
+			if((jtag_devs[i].idcode & dev_descr[j].idmask) ==
 			   dev_descr[j].idcode) {
 				jtag_devs[i].current_ir = -1;
 				/* Save description in table */
 				jtag_devs[i].descr = dev_descr[j].descr;
 				/* Call handler to initialise/probe device further */
-				if(dev_descr[j].handler) 
+				if(dev_descr[j].handler)
 					dev_descr[j].handler(&jtag_devs[i]);
 				break;
 			}
-	
+
 	if(!target_list) morse("NO TARGETS.", 1);
 	else morse(NULL, 0);
 
