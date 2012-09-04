@@ -46,7 +46,7 @@ static struct jtag_dev_descr_s {
 	char *descr;
 	void (*handler)(jtag_dev_t *dev);
 } dev_descr[] = {
-	{.idcode = 0x0BA00477, .idmask = 0x0FFFFFFF,
+	{.idcode = 0x0BA00477, .idmask = 0x0FFF0FFF,
 		.descr = "ARM Limited: ADIv5 JTAG-DP port.",
 		.handler = adiv5_jtag_dp_handler},
 	{.idcode = 0x3F0F0F0F, .idmask = 0xFFFFFFFF,
@@ -238,6 +238,8 @@ int jtag_scan(const uint8_t *irlens)
 void jtag_dev_write_ir(jtag_dev_t *d, uint32_t ir)
 {
 	if(ir == d->current_ir) return;
+	for(int i = 0; i < jtag_dev_count; i++)
+		jtag_devs[i].current_ir = -1;
 	d->current_ir = ir;
 
 	jtagtap_shift_ir();
