@@ -53,7 +53,7 @@ int platform_hwversion(void)
 {
 	static int hwversion = -1;
 	if (hwversion == -1) {
-		gpio_set_mode(GPIOB, GPIO_MODE_INPUT, 
+		gpio_set_mode(GPIOB, GPIO_MODE_INPUT,
 				GPIO_CNF_INPUT_PULL_UPDOWN,
 				GPIO7 | GPIO6 | GPIO5);
 		gpio_clear(GPIOB, GPIO7 | GPIO6 | GPIO5);
@@ -74,10 +74,10 @@ int platform_init(void)
 
 	/* Setup GPIO ports */
 	gpio_clear(USB_PU_PORT, USB_PU_PIN);
-	gpio_set_mode(USB_PU_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, 
+	gpio_set_mode(USB_PU_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT,
 			USB_PU_PIN);
 
-	gpio_set_mode(JTAG_PORT, GPIO_MODE_OUTPUT_50_MHZ, 
+	gpio_set_mode(JTAG_PORT, GPIO_MODE_OUTPUT_50_MHZ,
 			GPIO_CNF_OUTPUT_PUSHPULL,
 			TMS_PIN | TCK_PIN | TDI_PIN);
 
@@ -88,18 +88,18 @@ int platform_init(void)
 
 	gpio_port_write(GPIOA, 0x8180);
 	gpio_port_write(GPIOB, 0x2002);
-	
-	gpio_set_mode(LED_PORT, GPIO_MODE_OUTPUT_2_MHZ, 
-			GPIO_CNF_OUTPUT_PUSHPULL, 
+
+	gpio_set_mode(LED_PORT, GPIO_MODE_OUTPUT_2_MHZ,
+			GPIO_CNF_OUTPUT_PUSHPULL,
 			LED_UART | LED_IDLE_RUN | LED_ERROR);
 
 	/* FIXME: This pin in intended to be input, but the TXS0108 fails
 	 * to release the device from reset if this floats. */
-	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ, 
+	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
 			GPIO_CNF_OUTPUT_PUSHPULL, GPIO7);
 
 	/* Setup heartbeat timer */
-	systick_set_clocksource(STK_CTRL_CLKSOURCE_AHB_DIV8); 
+	systick_set_clocksource(STK_CTRL_CLKSOURCE_AHB_DIV8);
 	systick_set_reload(900000);	/* Interrupt us at 10 Hz */
 	SCB_SHPR(11) &= ~((15 << 4) & 0xff);
 	SCB_SHPR(11) |= ((14 << 4) & 0xff);
@@ -112,7 +112,7 @@ int platform_init(void)
 		adc_init();
 	} else {
 		gpio_clear(GPIOB, GPIO0);
-		gpio_set_mode(GPIOB, GPIO_MODE_INPUT, 
+		gpio_set_mode(GPIOB, GPIO_MODE_INPUT,
 				GPIO_CNF_INPUT_PULL_UPDOWN, GPIO0);
 	}
 
@@ -133,10 +133,10 @@ void platform_delay(uint32_t delay)
 
 void sys_tick_handler(void)
 {
-	if(running_status) 
+	if(running_status)
 		gpio_toggle(LED_PORT, LED_IDLE_RUN);
 
-	if(timeout_counter) 
+	if(timeout_counter)
 		timeout_counter--;
 
 	morse_update();
@@ -222,18 +222,17 @@ static void adc_init(void)
 {
 	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_ADC1EN);
 
-	gpio_set_mode(GPIOB, GPIO_MODE_INPUT, 
+	gpio_set_mode(GPIOB, GPIO_MODE_INPUT,
 			GPIO_CNF_INPUT_ANALOG, GPIO0);
 
 	adc_off(ADC1);
 	adc_disable_scan_mode(ADC1);
 	adc_set_single_conversion_mode(ADC1);
-	adc_enable_discontinous_mode_regular(ADC1);
 	adc_disable_external_trigger_regular(ADC1);
 	adc_set_right_aligned(ADC1);
 	adc_set_conversion_time_on_all_channels(ADC1, ADC_SMPR_SMP_28DOT5CYC);
 
-	adc_on(ADC1);
+	adc_power_on(ADC1);
 
 	/* Wait for ADC starting up. */
 	for (int i = 0; i < 800000; i++)    /* Wait a bit. */
