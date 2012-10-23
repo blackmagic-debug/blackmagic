@@ -57,6 +57,7 @@ static int stm32f1_flash_write(struct target_s *target, uint32_t dest,
 
 static const char stm32f1_driver_str[] = "STM32, Medium density.";
 static const char stm32hd_driver_str[] = "STM32, High density.";
+static const char stm32f3_driver_str[] = "STM32F3xx";
 
 static const char stm32f1_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 /*	"<!DOCTYPE memory-map "
@@ -167,6 +168,13 @@ int stm32f1_probe(struct target_s *target)
 	case 0x418:  /* Connectivity Line */
 	case 0x428:	 /* Value Line, High Density */
 		target->driver = stm32hd_driver_str;
+		target->xml_mem_map = stm32hd_xml_memory_map;
+		target->flash_erase = stm32hd_flash_erase;
+		target->flash_write = stm32f1_flash_write;
+		target_add_commands(target, stm32f1_cmd_list, "STM32");
+		return 0;
+	case 0x422:  /* STM32F3 */
+		target->driver = stm32f3_driver_str;
 		target->xml_mem_map = stm32hd_xml_memory_map;
 		target->flash_erase = stm32hd_flash_erase;
 		target->flash_write = stm32f1_flash_write;
