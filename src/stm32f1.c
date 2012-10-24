@@ -58,6 +58,7 @@ static int stm32f1_flash_write(struct target_s *target, uint32_t dest,
 static const char stm32f1_driver_str[] = "STM32, Medium density.";
 static const char stm32hd_driver_str[] = "STM32, High density.";
 static const char stm32f3_driver_str[] = "STM32F3xx";
+static const char stm32f0_driver_str[] = "STM32F0xx";
 
 static const char stm32f1_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 /*	"<!DOCTYPE memory-map "
@@ -111,6 +112,7 @@ static const char stm32hd_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 #define SR_EOP		0x20
 
 #define DBGMCU_IDCODE	0xE0042000
+#define DBGMCU_IDCODE_F0	0x40015800
 
 uint16_t stm32f1_flash_write_stub[] = {
 // _start:
@@ -121,7 +123,8 @@ uint16_t stm32f1_flash_write_stub[] = {
 	0x4b09, // ldr r3, [pc, #36] // _size
  	0x2501, // movs r5, #1
 // _next:
- 	0xb153, // cbz r3, _done
+	0x2b00, // cmp r3, #0
+	0xd00a, // beq _done
 	0x6105, // str r5, [r0, #16]
 	0x8814, // ldrh r4, [r2]
 	0x800c, // strh r4, [r1]
@@ -134,10 +137,9 @@ uint16_t stm32f1_flash_write_stub[] = {
 	0x3b02, // subs r3, #2
 	0x3102, // adds r1, #2
 	0x3202, // adds r2, #2
-	0xe7f3, // b _next
+	0xe7f2, // b _next
 // _done:
 	0xbe00, // bkpt
-	0x0000,
 // .org 0x28
 // _flashbase:
  	0x2000, 0x4002, // .word 0x40022000 (FPEC_BASE)
@@ -180,9 +182,20 @@ int stm32f1_probe(struct target_s *target)
 		target->flash_write = stm32f1_flash_write;
 		target_add_commands(target, stm32f1_cmd_list, "STM32");
 		return 0;
-	default:
-		return -1;
-	} 
+	}
+
+	idcode = adiv5_ap_mem_read(adiv5_target_ap(target), DBGMCU_IDCODE_F0);
+	switch(idcode & 0xFFF) {
+	case 0x440:  /* STM32F0 */
+		target->driver = stm32f0_driver_str;
+		target->xml_mem_map = stm32f1_xml_memory_map;
+		target->flash_erase = stm32md_flash_erase;
+		target->flash_write = stm32f1_flash_write;
+		target_add_commands(target, stm32f1_cmd_list, "STM32");
+		return 0;
+	}
+	
+	return -1;
 }
 
 static void stm32f1_flash_unlock(ADIv5_AP_t *ap)

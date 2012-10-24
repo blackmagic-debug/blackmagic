@@ -8,7 +8,8 @@ _start:
 	ldr r3, _size
 	mov r5, #1
 _next:
-	cbz r3, _done
+	cmp r3, #0
+	beq _done
 	@ Write PG command to FLASH_CR
 	str r5, [r0, #0x10]
 	@ Write data to flash (half-word)
