@@ -29,6 +29,7 @@ SRC = 	gdb_if.c	\
 	lmi.c		\
 	arm7tdmi.c	\
 	stm32f4.c	\
+	stm32l1.c	\
 	crc32.c		\
 	sam3x.c		\
 	target.c	\
