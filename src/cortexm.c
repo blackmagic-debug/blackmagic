@@ -180,7 +180,7 @@ const struct command_s cortexm_cmd_list[] = {
 #define SIGTRAP 5
 #define SIGSEGV 11
 
-static void cortexm_attach(struct target_s *target);
+static bool cortexm_attach(struct target_s *target);
 static void cortexm_detach(struct target_s *target);
 
 static int cortexm_regs_read(struct target_s *target, void *data);
@@ -333,7 +333,7 @@ cortexm_probe(struct target_s *target)
 	target->halt_request = cortexm_halt_request;
 	target->halt_wait = cortexm_halt_wait;
 	target->halt_resume = cortexm_halt_resume;
-	target->regs_size = sizeof(regnum_cortex_m);	/* XXX: detect FP extension */
+	target->regs_size = sizeof(regnum_cortex_m);
 
 	target_add_commands(target, cortexm_cmd_list, cortexm_driver_str);
 
@@ -371,19 +371,24 @@ cortexm_probe(struct target_s *target)
 	return 0;
 }
 
-static void
+static bool
 cortexm_attach(struct target_s *target)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
 	struct cortexm_priv *priv = ap->priv;
 	unsigned i;
 	uint32_t r;
+	int tries;
 
 	/* Clear any pending fault condition */
 	target_check_error(target);
 
 	target_halt_request(target);
-	while(!target_halt_wait(target));
+	tries = 10;
+	while(!target_halt_wait(target) && --tries)
+		platform_delay(2);
+	if(!tries)
+		return false;
 
 	/* Request halt on reset */
 	adiv5_ap_mem_write(ap, CORTEXM_DEMCR, priv->demcr);
@@ -423,6 +428,8 @@ cortexm_attach(struct target_s *target)
 	target->set_hw_wp = cortexm_set_hw_wp;
 	target->clear_hw_wp = cortexm_clear_hw_wp;
 	target->check_hw_wp = cortexm_check_hw_wp;
+
+	return true;
 }
 
 static void

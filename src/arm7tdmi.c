@@ -108,12 +108,12 @@ static void do_nothing(void)
 {
 }
 
-static void arm7_attach(struct target_s *target);
+static bool arm7_attach(struct target_s *target);
 static int arm7_regs_read(struct target_s *target, void *data);
 static int arm7_regs_write(struct target_s *target, const void *data);
 static void arm7_halt_request(struct target_s *target);
 static int arm7_halt_wait(struct target_s *target);
-static void arm7_halt_resume(struct target_s *target, uint8_t step);
+static void arm7_halt_resume(struct target_s *target, bool step);
 
 void arm7tdmi_jtag_handler(jtag_dev_t *dev)
 {
@@ -242,7 +242,7 @@ static int arm7_halt_wait(struct target_s *target)
 	return 1;
 }
 
-static void arm7_halt_resume(struct target_s *target, uint8_t step)
+static void arm7_halt_resume(struct target_s *target, bool step)
 {
 	struct target_arm7_s *t = (struct target_arm7_s *)target;
 
@@ -270,10 +270,15 @@ static void arm7_halt_resume(struct target_s *target, uint8_t step)
 	jtag_dev_write_ir(t->jtag, ARM7_IR_RESTART);
 }
 
-static void arm7_attach(struct target_s *target)
+static bool arm7_attach(struct target_s *target)
 {
+	int tries = 0;
 	target_halt_request(target);
-	while(!target_halt_wait(target));
+	while(!target_halt_wait(target) && --tries)
+		platform_delay(2);
+	if(!tries)
+		return false;
+	return true;
 }
 
 static int arm7_regs_read(struct target_s *target, void *data)

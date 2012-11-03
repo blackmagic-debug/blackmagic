@@ -396,14 +396,15 @@ handle_v_packet(char *packet, int plen)
 		/* Attach to remote target processor */
 		target *t;
 		uint32_t i;
-		for(t = target_list, i = 1; t; t = t->next, i++) 
+		for(t = target_list, i = 1; t; t = t->next, i++)
 			if(i == addr) {
-				cur_target = target_attach(t, 
+				cur_target = target_attach(t,
 						gdb_target_destroy_callback);
-				gdb_putpacketz("T05");
 				break;
 			}
-		if(!cur_target) /* Failed to attach */
+		if(cur_target)
+			gdb_putpacketz("T05");
+		else
 			gdb_putpacketz("E01");
 
 	} else if (!strcmp(packet, "vRun;")) {

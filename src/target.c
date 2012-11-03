@@ -75,7 +75,8 @@ target *target_attach(target *t, target_destroy_callback destroy_cb)
 
 	t->destroy_callback = destroy_cb;
 
-	t->attach(t);
+	if (!t->attach(t))
+		return NULL;
 
 	return t;
 }

@@ -120,7 +120,7 @@ struct target_s {
 	target_destroy_callback destroy_callback;
 
 	/* Attach/Detach funcitons */
-	void (*attach)(struct target_s *target);
+	bool (*attach)(struct target_s *target);
 	void (*detach)(struct target_s *target);
 	int (*check_error)(struct target_s *target);
 
