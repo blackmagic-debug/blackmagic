@@ -19,7 +19,7 @@
  */
 
 /* This file implements the GDB Remote Serial Debugging protocol as
- * described in "Debugging with GDB" build from GDB source.  
+ * described in "Debugging with GDB" build from GDB source.
  *
  * Originally written for GDB 6.8, updated and tested with GDB 7.2.
  */
@@ -73,7 +73,7 @@ void
 gdb_main(void)
 {
 	int size;
-	static uint8_t single_step = 0;
+	bool single_step = false;
 
 	DEBUG("Entring GDB protocol main loop\n");
 	/* GDB protocol main loop */
@@ -91,13 +91,11 @@ gdb_main(void)
 			break;
 		    }
 		    case 'm': {	/* 'm addr,len': Read len bytes from addr */
-			unsigned long addr, len;
-			char *mem;
+			uint32_t addr, len;
 			ERROR_IF_NO_TARGET();
 			sscanf(pbuf, "m%08lX,%08lX", &addr, &len);
 			DEBUG("m packet: addr = %08lX, len = %08lX\n", addr, len);
-			mem = malloc(len);
-			if(!mem) break;
+			uint8_t mem[len];
 			if(((addr & 3) == 0) && ((len & 3) == 0))
 				target_mem_read_words(cur_target, (void*)mem, addr, len);
 			else
@@ -106,7 +104,6 @@ gdb_main(void)
 				gdb_putpacket("E01", 3);
 			else
 				gdb_putpacket(hexify(pbuf, mem, len), len*2);
-			free(mem);
 			break;
 		    }
 		    case 'G': {	/* 'G XX': Write general registers */
@@ -118,27 +115,25 @@ gdb_main(void)
 			break;
 		    }
 		    case 'M': { /* 'M addr,len:XX': Write len bytes to addr */
-			unsigned long addr, len;
+			uint32_t addr, len;
 			int hex;
-			char *mem;
 			ERROR_IF_NO_TARGET();
 			sscanf(pbuf, "M%08lX,%08lX:%n", &addr, &len, &hex);
 			DEBUG("M packet: addr = %08lX, len = %08lX\n", addr, len);
-			mem = malloc(len);
+			uint8_t mem[len];
 			unhexify(mem, pbuf + hex, len);
-			if(((addr & 3) == 0) && ((len & 3) == 0)) 
+			if(((addr & 3) == 0) && ((len & 3) == 0))
 				target_mem_write_words(cur_target, addr, (void*)mem, len);
-			else 
+			else
 				target_mem_write_bytes(cur_target, addr, (void*)mem, len);
 			if(target_check_error(cur_target))
 				gdb_putpacket("E01", 3);
 			else
 				gdb_putpacket("OK", 2);
-			free(mem);
 			break;
 		    }
 		    case 's':	/* 's [addr]': Single step [start at addr] */
-			single_step = 1;
+			single_step = true;
 			// Fall through to resume target
 		    case 'c':	/* 'c [addr]': Continue [at addr] */
 			if(!cur_target) {
@@ -148,7 +143,7 @@ gdb_main(void)
 
 			target_halt_resume(cur_target, single_step);
 			SET_RUN_STATE(1);
-			single_step = 0;
+			single_step = false;
 			// Fall through to wait for target halt
 		    case '?': {	/* '?': Request reason for target halt */
 			/* This packet isn't documented as being mandatory,
@@ -163,7 +158,7 @@ gdb_main(void)
 			}
 
 			/* Wait for target halt */
-			while(!(sig = target_halt_wait(cur_target))) { 
+			while(!(sig = target_halt_wait(cur_target))) {
 				unsigned char c = gdb_if_getchar_to(0);
 				if((c == '\x03') || (c == '\x04')) {
 					target_halt_request(cur_target);
@@ -182,16 +177,16 @@ gdb_main(void)
 
 		    /* Optional GDB packet support */
 		    case '!':	/* Enable Extended GDB Protocol. */
-			/* This doesn't do anything, we support the extended 
+			/* This doesn't do anything, we support the extended
 			 * protocol anyway, but GDB will never send us a 'R'
-			 * packet unless we answer 'OK' here. 
+			 * packet unless we answer 'OK' here.
 			 */
 			gdb_putpacket("OK", 2);
 			break;
 
 		    case 0x04:
                     case 'D':	/* GDB 'detach' command. */
-			if(cur_target) 
+			if(cur_target)
 				target_detach(cur_target);
 			last_target = cur_target;
 			cur_target = NULL;
@@ -212,21 +207,21 @@ gdb_main(void)
 			if(cur_target)
 				target_reset(cur_target);
 			else if(last_target) {
-				cur_target = target_attach(last_target, 
+				cur_target = target_attach(last_target,
 						gdb_target_destroy_callback);
 				target_reset(cur_target);
 			}
 			break;
 
 		    case 'X': { /* 'X addr,len:XX': Write binary data to addr */
-			unsigned long addr, len;
+			uint32_t addr, len;
 			int bin;
 			ERROR_IF_NO_TARGET();
 			sscanf(pbuf, "X%08lX,%08lX:%n", &addr, &len, &bin);
 			DEBUG("X packet: addr = %08lX, len = %08lX\n", addr, len);
-			if(((addr & 3) == 0) && ((len & 3) == 0)) 
+			if(((addr & 3) == 0) && ((len & 3) == 0))
 				target_mem_write_words(cur_target, addr, (void*)pbuf+bin, len);
-			else 
+			else
 				target_mem_write_bytes(cur_target, addr, (void*)pbuf+bin, len);
 			if(target_check_error(cur_target))
 				gdb_putpacket("E01", 3);
@@ -248,7 +243,7 @@ gdb_main(void)
 		    case 'z': { /* z type,addr,len: Clear breakpoint packet */
 			uint8_t set = (pbuf[0]=='Z')?1:0;
 			int type, len;
-			unsigned long addr;
+			uint32_t addr;
 			int ret;
 			ERROR_IF_NO_TARGET();
 			/* I have no idea why this doesn't work. Seems to work
@@ -310,7 +305,7 @@ handle_q_string_reply(const char *str, const char *param)
 		uint8_t reply[len+2];
 		reply[0] = 'm';
 		strncpy (reply + 1, &str[addr], len);
-		if(len > strlen(&str[addr])) 
+		if(len > strlen(&str[addr]))
 			len = strlen(&str[addr]);
 		gdb_putpacket(reply, len + 1);
 	} else if (addr == strlen (str)) {
@@ -336,7 +331,7 @@ handle_q_packet(char *packet, int len)
 		data[datalen] = 0;	/* add terminating null */
 
 		int c = command_process(cur_target, data);
-		if(c < 0) 
+		if(c < 0)
 			gdb_putpacketz("");
 		else if(c == 0)
 			gdb_putpacketz("OK");
@@ -351,7 +346,7 @@ handle_q_packet(char *packet, int len)
 		/* Read target XML memory map */
 		if((!cur_target) && last_target) {
 			/* Attach to last target if detached. */
-			cur_target = target_attach(last_target, 
+			cur_target = target_attach(last_target,
 						gdb_target_destroy_callback);
 		}
 		if((!cur_target) || (!cur_target->xml_mem_map)) {
@@ -364,7 +359,7 @@ handle_q_packet(char *packet, int len)
 		/* Read target description */
 		if((!cur_target) && last_target) {
 			/* Attach to last target if detached. */
-			cur_target = target_attach(last_target, 
+			cur_target = target_attach(last_target,
 						gdb_target_destroy_callback);
 		}
 		if((!cur_target) || (!cur_target->tdesc)) {
@@ -413,7 +408,7 @@ handle_v_packet(char *packet, int plen)
 			target_reset(cur_target);
 			gdb_putpacketz("T05");
 		} else if(last_target) {
-			cur_target = target_attach(last_target, 
+			cur_target = target_attach(last_target,
 						gdb_target_destroy_callback);
 			target_reset(cur_target);
 			gdb_putpacketz("T05");
@@ -424,7 +419,7 @@ handle_v_packet(char *packet, int plen)
 		DEBUG("Flash Erase %08lX %08lX\n", addr, len);
 		if(!cur_target) { gdb_putpacketz("EFF"); return; }
 
-		if(!flash_mode) { 
+		if(!flash_mode) {
 			/* Reset target if first flash command! */
 			/* This saves us if we're interrupted in IRQ context */
 			target_reset(cur_target);
