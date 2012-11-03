@@ -82,15 +82,15 @@ gdb_main(void)
 		size = gdb_getpacket(pbuf, BUF_SIZE);
 		SET_IDLE_STATE(0);
 		switch(pbuf[0]) {
-		    /* Implementation of these is mandatory! */
-		    case 'g': { /* 'g': Read general registers */
+		/* Implementation of these is mandatory! */
+		case 'g': { /* 'g': Read general registers */
 			ERROR_IF_NO_TARGET();
 			uint32_t arm_regs[cur_target->regs_size];
 			target_regs_read(cur_target, (void*)arm_regs);
 			gdb_putpacket(hexify(pbuf, (void*)arm_regs, cur_target->regs_size), cur_target->regs_size * 2);
 			break;
-		    }
-		    case 'm': {	/* 'm addr,len': Read len bytes from addr */
+			}
+		case 'm': {	/* 'm addr,len': Read len bytes from addr */
 			uint32_t addr, len;
 			ERROR_IF_NO_TARGET();
 			sscanf(pbuf, "m%08lX,%08lX", &addr, &len);
@@ -105,16 +105,16 @@ gdb_main(void)
 			else
 				gdb_putpacket(hexify(pbuf, mem, len), len*2);
 			break;
-		    }
-		    case 'G': {	/* 'G XX': Write general registers */
+			}
+		case 'G': {	/* 'G XX': Write general registers */
 			ERROR_IF_NO_TARGET();
 			uint32_t arm_regs[cur_target->regs_size];
 			unhexify((void*)arm_regs, &pbuf[1], cur_target->regs_size);
 			target_regs_write(cur_target, arm_regs);
 			gdb_putpacket("OK", 2);
 			break;
-		    }
-		    case 'M': { /* 'M addr,len:XX': Write len bytes to addr */
+			}
+		case 'M': { /* 'M addr,len:XX': Write len bytes to addr */
 			uint32_t addr, len;
 			int hex;
 			ERROR_IF_NO_TARGET();
@@ -131,11 +131,11 @@ gdb_main(void)
 			else
 				gdb_putpacket("OK", 2);
 			break;
-		    }
-		    case 's':	/* 's [addr]': Single step [start at addr] */
+			}
+		case 's':	/* 's [addr]': Single step [start at addr] */
 			single_step = true;
 			// Fall through to resume target
-		    case 'c':	/* 'c [addr]': Continue [at addr] */
+		case 'c':	/* 'c [addr]': Continue [at addr] */
 			if(!cur_target) {
 				gdb_putpacketz("X1D");
 				break;
@@ -145,7 +145,7 @@ gdb_main(void)
 			SET_RUN_STATE(1);
 			single_step = false;
 			// Fall through to wait for target halt
-		    case '?': {	/* '?': Request reason for target halt */
+		case '?': {	/* '?': Request reason for target halt */
 			/* This packet isn't documented as being mandatory,
 			 * but GDB doesn't work without it. */
 			uint32_t watch_addr;
@@ -173,10 +173,10 @@ gdb_main(void)
 				gdb_putpacket_f("T%02X", sig);
 			}
 			break;
-		    }
+			}
 
-		    /* Optional GDB packet support */
-		    case '!':	/* Enable Extended GDB Protocol. */
+		/* Optional GDB packet support */
+		case '!':	/* Enable Extended GDB Protocol. */
 			/* This doesn't do anything, we support the extended
 			 * protocol anyway, but GDB will never send us a 'R'
 			 * packet unless we answer 'OK' here.
@@ -184,8 +184,8 @@ gdb_main(void)
 			gdb_putpacket("OK", 2);
 			break;
 
-		    case 0x04:
-                    case 'D':	/* GDB 'detach' command. */
+		case 0x04:
+                case 'D':	/* GDB 'detach' command. */
 			if(cur_target)
 				target_detach(cur_target);
 			last_target = cur_target;
@@ -193,7 +193,7 @@ gdb_main(void)
 			gdb_putpacket("OK", 2);
 			break;
 
-		    case 'k':	/* Kill the target */
+		case 'k':	/* Kill the target */
 			if(cur_target) {
 				target_reset(cur_target);
 				target_detach(cur_target);
@@ -202,8 +202,8 @@ gdb_main(void)
 			}
 			break;
 
-		    case 'r':	/* Reset the target system */
-		    case 'R':	/* Restart the target program */
+		case 'r':	/* Reset the target system */
+		case 'R':	/* Restart the target program */
 			if(cur_target)
 				target_reset(cur_target);
 			else if(last_target) {
@@ -213,7 +213,7 @@ gdb_main(void)
 			}
 			break;
 
-		    case 'X': { /* 'X addr,len:XX': Write binary data to addr */
+		case 'X': { /* 'X addr,len:XX': Write binary data to addr */
 			uint32_t addr, len;
 			int bin;
 			ERROR_IF_NO_TARGET();
@@ -228,19 +228,19 @@ gdb_main(void)
 			else
 				gdb_putpacket("OK", 2);
 			break;
-		    }
+			}
 
-		    case 'q':	/* General query packet */
+		case 'q':	/* General query packet */
 			handle_q_packet(pbuf, size);
 			break;
 
-		    case 'v':	/* General query packet */
+		case 'v':	/* General query packet */
 			handle_v_packet(pbuf, size);
 			break;
 
-		    /* These packet implement hardware break-/watchpoints */
-		    case 'Z':	/* Z type,addr,len: Set breakpoint packet */
-		    case 'z': { /* z type,addr,len: Clear breakpoint packet */
+		/* These packet implement hardware break-/watchpoints */
+		case 'Z':	/* Z type,addr,len: Set breakpoint packet */
+		case 'z': { /* z type,addr,len: Clear breakpoint packet */
 			uint8_t set = (pbuf[0]=='Z')?1:0;
 			int type, len;
 			uint32_t addr;
@@ -252,40 +252,48 @@ gdb_main(void)
 			type = pbuf[1] - '0';
 			sscanf(pbuf + 2, ",%08lX,%d", &addr, &len);
 			switch(type) {
-			    case 1: /* Hardware breakpoint */
+			case 1: /* Hardware breakpoint */
 				if(!cur_target->set_hw_bp) { /* Not supported */
 					gdb_putpacket("", 0);
 					break;
 				}
-				if(set) ret = target_set_hw_bp(cur_target, addr);
-				else	ret = target_clear_hw_bp(cur_target, addr);
+				if(set)
+					ret = target_set_hw_bp(cur_target, addr);
+				else
+					ret = target_clear_hw_bp(cur_target, addr);
 
-				if(!ret) gdb_putpacket("OK", 2);
-				else gdb_putpacket("E01", 3);
+				if(!ret)
+					gdb_putpacket("OK", 2);
+				else
+					gdb_putpacket("E01", 3);
 
 				break;
 
-			    case 2:
-			    case 3:
-			    case 4:
+			case 2:
+			case 3:
+			case 4:
 				if(!cur_target->set_hw_wp) { /* Not supported */
 					gdb_putpacket("", 0);
 					break;
 				}
-				if(set) ret = target_set_hw_wp(cur_target, type, addr, len);
-				else	ret = target_clear_hw_wp(cur_target, type, addr, len);
+				if(set)
+					ret = target_set_hw_wp(cur_target, type, addr, len);
+				else
+					ret = target_clear_hw_wp(cur_target, type, addr, len);
 
-				if(!ret) gdb_putpacket("OK", 2);
-				else gdb_putpacket("E01", 3);
+				if(!ret)
+					gdb_putpacket("OK", 2);
+				else
+					gdb_putpacket("E01", 3);
 
 				break;
-			    default:
+			default:
 				gdb_putpacket("", 0);
 			}
 			break;
-		    }
+			}
 
-		    default: 	/* Packet not implemented */
+		default: 	/* Packet not implemented */
 			DEBUG("*** Unsupported packet: %s\n", pbuf);
 			gdb_putpacket("", 0);
 		}
@@ -296,7 +304,7 @@ static void
 handle_q_string_reply(const char *str, const char *param)
 {
 	unsigned long addr, len;
-	
+
 	if (sscanf(param, "%08lX,%08lX", &addr, &len) != 2) {
 		gdb_putpacketz("E01");
 		return;
