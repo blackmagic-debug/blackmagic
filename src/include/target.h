@@ -200,6 +200,7 @@ int stm32f4_probe(struct target_s *target);
 int stm32l1_probe(struct target_s *target);
 int lmi_probe(struct target_s *target);
 int lpc11xx_probe(struct target_s *target);
+int lpc43xx_probe(struct target_s *target);
 int sam3x_probe(struct target_s *target);
 
 #endif

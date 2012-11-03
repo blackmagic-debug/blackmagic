@@ -10,28 +10,30 @@ CFLAGS += -Wall -Wextra -Wno-pointer-sign -Wno-char-subscripts\
 	-I. -Iinclude -I$(PLATFORM_DIR) \
 	-DVERSION_SUFFIX=\"`../scripts/setlocalversion`\" -MD
 
-SRC = 	gdb_if.c	\
-	gdb_packet.c	\
-	gdb_main.c	\
-	hex_utils.c	\
-	jtagtap.c	\
-	swdptap.c	\
+SRC =			\
 	adiv5.c		\
-	adiv5_swdp.c	\
-	cortexm.c	\
-	stm32f1.c	\
-	nxp_tgt.c	\
-	main.c		\
-	platform.c	\
-	command.c	\
-	jtag_scan.c	\
 	adiv5_jtagdp.c	\
-	lmi.c		\
+	adiv5_swdp.c	\
 	arm7tdmi.c	\
+	command.c	\
+	cortexm.c	\
+	crc32.c		\
+	gdb_if.c	\
+	gdb_main.c	\
+	gdb_packet.c	\
+	hex_utils.c	\
+	jtag_scan.c	\
+	jtagtap.c	\
+	lmi.c		\
+	lpc43xx.c	\
+	main.c		\
+	nxp_tgt.c	\
+	platform.c	\
+	sam3x.c		\
+	stm32f1.c	\
 	stm32f4.c	\
 	stm32l1.c	\
-	crc32.c		\
-	sam3x.c		\
+	swdptap.c	\
 	target.c	\
 
 include $(PLATFORM_DIR)/Makefile.inc
