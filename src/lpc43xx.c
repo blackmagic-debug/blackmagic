@@ -24,7 +24,7 @@
 #define LPC43XX_CHIPID	0x40043200
 #define ARM_CPUID	0xE000ED00
 
-int lpc43xx_probe(struct target_s *target)
+bool lpc43xx_probe(struct target_s *target)
 {
 	uint32_t chipid, cpuid;
 
@@ -45,9 +45,9 @@ int lpc43xx_probe(struct target_s *target)
 		default:
 			target->driver = "LPC43xx <Unknown>";
 		}
-		return 0;
+		return true;
 	}
 
-	return -1;
+	return false;
 }
 

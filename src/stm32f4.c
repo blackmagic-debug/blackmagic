@@ -133,24 +133,24 @@ uint16_t stm32f4_flash_write_stub[] = {
 // 	...
 };
 
-int stm32f4_probe(struct target_s *target)
+bool stm32f4_probe(struct target_s *target)
 {
 	uint32_t idcode;
 
 	idcode = adiv5_ap_mem_read(adiv5_target_ap(target), DBGMCU_IDCODE);
 	switch(idcode & 0xFFF) {
 	case 0x411: /* Documented to be 0x413! This is what I read... */
-	case 0x413:  
+	case 0x413:
 		target->driver = stm32f4_driver_str;
 		target->xml_mem_map = stm32f4_xml_memory_map;
 		target->flash_erase = stm32f4_flash_erase;
 		target->flash_write = stm32f4_flash_write;
-		return 0;
-	} 
-	return -1;
+		return true;
+	}
+	return false;
 }
 
-	
+
 static int stm32f4_flash_erase(struct target_s *target, uint32_t addr, int len)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);

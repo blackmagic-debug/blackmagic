@@ -89,15 +89,19 @@ uint16_t lmi_flash_write_stub[] = {
 // _data:
 // 	...
 };
-	
-int lmi_probe(struct target_s *target)
+
+bool lmi_probe(struct target_s *target)
 {
-	/* How do we really probe the LMI device??? */
-	target->driver = lmi_driver_str;
-	target->xml_mem_map = lmi_xml_memory_map;
-	target->flash_erase = lmi_flash_erase;
-	target->flash_write = lmi_flash_write;
-	return 0;
+	uint32_t did1 = adiv5_ap_mem_read(adiv5_target_ap(target), 0x400FE004);
+	switch (did1 >> 16) {
+	case 0x1049:	/* LM3S3748 */
+		target->driver = lmi_driver_str;
+		target->xml_mem_map = lmi_xml_memory_map;
+		target->flash_erase = lmi_flash_erase;
+		target->flash_write = lmi_flash_write;
+		return true;
+	}
+	return false;
 }
 
 int lmi_flash_erase(struct target_s *target, uint32_t addr, int len)

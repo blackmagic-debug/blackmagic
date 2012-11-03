@@ -109,7 +109,7 @@ static const char sam3x_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 
 #define PAGE_SIZE 256
 
-int sam3x_probe(struct target_s *target)
+bool sam3x_probe(struct target_s *target)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
 
@@ -125,9 +125,9 @@ int sam3x_probe(struct target_s *target)
 		target->flash_erase = sam3x_flash_erase;
 		target->flash_write = sam3x_flash_write;
 		target_add_commands(target, sam3x_cmd_list, sam3x_driver_str);
-		return 0;
+		return true;
 	}
-	return -1;
+	return false;
 }
 
 static int

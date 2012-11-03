@@ -151,7 +151,7 @@ uint16_t stm32f1_flash_write_stub[] = {
 // 	...
 };
 
-int stm32f1_probe(struct target_s *target)
+bool stm32f1_probe(struct target_s *target)
 {
 	uint32_t idcode;
 
@@ -165,7 +165,7 @@ int stm32f1_probe(struct target_s *target)
 		target->flash_erase = stm32md_flash_erase;
 		target->flash_write = stm32f1_flash_write;
 		target_add_commands(target, stm32f1_cmd_list, "STM32");
-		return 0;
+		return true;
 	case 0x414:	 /* High density */
 	case 0x418:  /* Connectivity Line */
 	case 0x428:	 /* Value Line, High Density */
@@ -174,14 +174,14 @@ int stm32f1_probe(struct target_s *target)
 		target->flash_erase = stm32hd_flash_erase;
 		target->flash_write = stm32f1_flash_write;
 		target_add_commands(target, stm32f1_cmd_list, "STM32");
-		return 0;
+		return true;
 	case 0x422:  /* STM32F3 */
 		target->driver = stm32f3_driver_str;
 		target->xml_mem_map = stm32hd_xml_memory_map;
 		target->flash_erase = stm32hd_flash_erase;
 		target->flash_write = stm32f1_flash_write;
 		target_add_commands(target, stm32f1_cmd_list, "STM32");
-		return 0;
+		return true;
 	}
 
 	idcode = adiv5_ap_mem_read(adiv5_target_ap(target), DBGMCU_IDCODE_F0);
@@ -192,10 +192,10 @@ int stm32f1_probe(struct target_s *target)
 		target->flash_erase = stm32md_flash_erase;
 		target->flash_write = stm32f1_flash_write;
 		target_add_commands(target, stm32f1_cmd_list, "STM32");
-		return 0;
+		return true;
 	}
-	
-	return -1;
+
+	return false;
 }
 
 static void stm32f1_flash_unlock(ADIv5_AP_t *ap)

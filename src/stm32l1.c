@@ -85,7 +85,7 @@ static const char stm32l1_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 
 #define DBGMCU_IDCODE	0xE0042000
 
-int stm32l1_probe(struct target_s *target)
+bool stm32l1_probe(struct target_s *target)
 {
 	uint32_t idcode;
 
@@ -97,10 +97,10 @@ int stm32l1_probe(struct target_s *target)
 		target->xml_mem_map = stm32l1_xml_memory_map;
 		target->flash_erase = stm32l1_flash_erase;
 		target->flash_write = stm32l1_flash_write;
-		return 0;
+		return true;
 	}
 
-	return -1;
+	return false;
 }
 
 static void stm32l1_flash_unlock(ADIv5_AP_t *ap)

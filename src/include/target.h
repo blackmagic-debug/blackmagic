@@ -25,6 +25,8 @@
 #ifndef __TARGET_H
 #define __TARGET_H
 
+#include "general.h"
+
 typedef struct target_s target;
 
 /* The destroy callback function will be called by target_list_free() just
@@ -194,14 +196,14 @@ void target_add_commands(target *t, const struct command_s *cmds, const char *na
 /* Probe for various targets.
  * Actual functions implemented in their respective drivers.
  */
-int cortexm_probe(struct target_s *target);
-int stm32f1_probe(struct target_s *target);
-int stm32f4_probe(struct target_s *target);
-int stm32l1_probe(struct target_s *target);
-int lmi_probe(struct target_s *target);
-int lpc11xx_probe(struct target_s *target);
-int lpc43xx_probe(struct target_s *target);
-int sam3x_probe(struct target_s *target);
+bool cortexm_probe(struct target_s *target);
+bool stm32f1_probe(struct target_s *target);
+bool stm32f4_probe(struct target_s *target);
+bool stm32l1_probe(struct target_s *target);
+bool lmi_probe(struct target_s *target);
+bool lpc11xx_probe(struct target_s *target);
+bool lpc43xx_probe(struct target_s *target);
+bool sam3x_probe(struct target_s *target);
 
 #endif
 

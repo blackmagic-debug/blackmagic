@@ -67,7 +67,7 @@ static const char lpc11xx_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 	"</memory-map>";
 
 
-int
+bool
 lpc11xx_probe(struct target_s *target)
 {
 	uint32_t idcode;
@@ -101,13 +101,10 @@ lpc11xx_probe(struct target_s *target)
 		target->flash_erase = lpc11xx_flash_erase;
 		target->flash_write = lpc11xx_flash_write;
 
-		return 0;
-
-	default:
-		break;
+		return true;
 	}
 
-	return -1;
+	return false;
 }
 
 static void
