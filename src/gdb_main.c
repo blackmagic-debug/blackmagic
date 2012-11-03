@@ -59,6 +59,7 @@ static target *last_target;
 
 static void handle_q_packet(char *packet, int len);
 static void handle_v_packet(char *packet, int len);
+static void handle_z_packet(char *packet, int len);
 
 static void gdb_target_destroy_callback(target *t)
 {
@@ -101,7 +102,7 @@ gdb_main(void)
 			else
 				target_mem_read_bytes(cur_target, (void*)mem, addr, len);
 			if(target_check_error(cur_target))
-				gdb_putpacket("E01", 3);
+				gdb_putpacketz("E01");
 			else
 				gdb_putpacket(hexify(pbuf, mem, len), len*2);
 			break;
@@ -111,7 +112,7 @@ gdb_main(void)
 			uint32_t arm_regs[cur_target->regs_size];
 			unhexify((void*)arm_regs, &pbuf[1], cur_target->regs_size);
 			target_regs_write(cur_target, arm_regs);
-			gdb_putpacket("OK", 2);
+			gdb_putpacketz("OK");
 			break;
 			}
 		case 'M': { /* 'M addr,len:XX': Write len bytes to addr */
@@ -127,9 +128,9 @@ gdb_main(void)
 			else
 				target_mem_write_bytes(cur_target, addr, (void*)mem, len);
 			if(target_check_error(cur_target))
-				gdb_putpacket("E01", 3);
+				gdb_putpacketz("E01");
 			else
-				gdb_putpacket("OK", 2);
+				gdb_putpacketz("OK");
 			break;
 			}
 		case 's':	/* 's [addr]': Single step [start at addr] */
@@ -181,7 +182,7 @@ gdb_main(void)
 			 * protocol anyway, but GDB will never send us a 'R'
 			 * packet unless we answer 'OK' here.
 			 */
-			gdb_putpacket("OK", 2);
+			gdb_putpacketz("OK");
 			break;
 
 		case 0x04:
@@ -190,7 +191,7 @@ gdb_main(void)
 				target_detach(cur_target);
 			last_target = cur_target;
 			cur_target = NULL;
-			gdb_putpacket("OK", 2);
+			gdb_putpacketz("OK");
 			break;
 
 		case 'k':	/* Kill the target */
@@ -224,9 +225,9 @@ gdb_main(void)
 			else
 				target_mem_write_bytes(cur_target, addr, (void*)pbuf+bin, len);
 			if(target_check_error(cur_target))
-				gdb_putpacket("E01", 3);
+				gdb_putpacketz("E01");
 			else
-				gdb_putpacket("OK", 2);
+				gdb_putpacketz("OK");
 			break;
 			}
 
@@ -240,62 +241,14 @@ gdb_main(void)
 
 		/* These packet implement hardware break-/watchpoints */
 		case 'Z':	/* Z type,addr,len: Set breakpoint packet */
-		case 'z': { /* z type,addr,len: Clear breakpoint packet */
-			uint8_t set = (pbuf[0]=='Z')?1:0;
-			int type, len;
-			uint32_t addr;
-			int ret;
+		case 'z':	/* z type,addr,len: Clear breakpoint packet */
 			ERROR_IF_NO_TARGET();
-			/* I have no idea why this doesn't work. Seems to work
-			 * with real sscanf() though... */
-			//sscanf(pbuf, "%*[zZ]%hhd,%08lX,%hhd", &type, &addr, &len);
-			type = pbuf[1] - '0';
-			sscanf(pbuf + 2, ",%08lX,%d", &addr, &len);
-			switch(type) {
-			case 1: /* Hardware breakpoint */
-				if(!cur_target->set_hw_bp) { /* Not supported */
-					gdb_putpacket("", 0);
-					break;
-				}
-				if(set)
-					ret = target_set_hw_bp(cur_target, addr);
-				else
-					ret = target_clear_hw_bp(cur_target, addr);
-
-				if(!ret)
-					gdb_putpacket("OK", 2);
-				else
-					gdb_putpacket("E01", 3);
-
-				break;
-
-			case 2:
-			case 3:
-			case 4:
-				if(!cur_target->set_hw_wp) { /* Not supported */
-					gdb_putpacket("", 0);
-					break;
-				}
-				if(set)
-					ret = target_set_hw_wp(cur_target, type, addr, len);
-				else
-					ret = target_clear_hw_wp(cur_target, type, addr, len);
-
-				if(!ret)
-					gdb_putpacket("OK", 2);
-				else
-					gdb_putpacket("E01", 3);
-
-				break;
-			default:
-				gdb_putpacket("", 0);
-			}
+			handle_z_packet(pbuf, size);
 			break;
-			}
 
 		default: 	/* Packet not implemented */
 			DEBUG("*** Unsupported packet: %s\n", pbuf);
-			gdb_putpacket("", 0);
+			gdb_putpacketz("");
 		}
 	}
 }
@@ -456,5 +409,56 @@ handle_v_packet(char *packet, int plen)
 		DEBUG("*** Unsupported packet: %s\n", packet);
 		gdb_putpacket("", 0);
 	}
+}
+
+static void
+handle_z_packet(char *packet, int plen)
+{
+	(void)plen;
+
+	uint8_t set = (packet[0] == 'Z') ? 1 : 0;
+	int type, len;
+	uint32_t addr;
+	int ret;
+
+	/* I have no idea why this doesn't work. Seems to work
+	 * with real sscanf() though... */
+	//sscanf(packet, "%*[zZ]%hhd,%08lX,%hhd", &type, &addr, &len);
+	type = packet[1] - '0';
+	sscanf(packet + 2, ",%08lX,%d", &addr, &len);
+	switch(type) {
+	case 1: /* Hardware breakpoint */
+		if(!cur_target->set_hw_bp) { /* Not supported */
+			gdb_putpacketz("");
+			return;
+		}
+		if(set)
+			ret = target_set_hw_bp(cur_target, addr);
+		else
+			ret = target_clear_hw_bp(cur_target, addr);
+		break;
+
+	case 2:
+	case 3:
+	case 4:
+		if(!cur_target->set_hw_wp) { /* Not supported */
+			gdb_putpacketz("");
+			return;
+		}
+		if(set)
+			ret = target_set_hw_wp(cur_target, type, addr, len);
+		else
+			ret = target_clear_hw_wp(cur_target, type, addr, len);
+		break;
+
+	default:
+		gdb_putpacketz("");
+		return;
+	}
+
+	if(!ret)
+		gdb_putpacketz("OK");
+	else
+		gdb_putpacketz("E01");
 }
 
