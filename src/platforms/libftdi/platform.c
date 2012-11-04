@@ -32,9 +32,125 @@ struct ftdi_context *ftdic;
 static uint8_t outbuf[BUF_SIZE];
 static uint16_t bufptr = 0;
 
+static struct cable_desc_s {
+	int vendor;
+	int product;
+	int interface;
+	uint8_t dbus_data;
+	uint8_t dbus_ddr;
+	uint8_t cbus_data;
+	uint8_t cbus_ddr;
+	char *description;
+	char * name;
+} cable_desc[] = {
+	{
+		.vendor = 0x0403,
+		.product = 0x6010,
+		.interface = INTERFACE_A,
+		.dbus_data = 0x08,
+		.dbus_ddr  = 0x1B,
+		.description = "FTDIJTAG",
+		.name = "ftdijtag"
+	},
+	{
+		.vendor = 0x15b1,
+		.product = 0x0003,
+		.interface = INTERFACE_A,
+		.dbus_data = 0x08,
+		.dbus_ddr  = 0x1B,
+		.name = "olimex"
+	},
+	{
+		.vendor = 0x0403,
+		.product = 0xbdc8,
+		.interface = INTERFACE_A,
+		.dbus_data = 0x08,
+		.dbus_ddr  = 0x1B,
+		.name = "turtelizer"
+	},
+	{
+		.vendor = 0x0403,
+		.product = 0xbdc8,
+		.interface = INTERFACE_A,
+		.dbus_data = 0x08,
+		.dbus_ddr  = 0x1B,
+		.name = "jtaghs1"
+	},
+	{
+		.vendor = 0x0403,
+		.product = 0xbdc8,
+		.interface = INTERFACE_A,
+		.dbus_data = 0xA8,
+		.dbus_ddr  = 0xAB,
+		.name = "ftdi"
+	},
+	{
+		.vendor = 0x0403,
+		.product = 0x6014,
+		.interface = INTERFACE_A,
+		.dbus_data = 0x08,
+		.dbus_ddr  = 0x0B,
+		.name = "ft232h"
+	},
+	{
+		.vendor = 0x0403,
+		.product = 0x6011,
+		.interface = INTERFACE_A,
+		.dbus_data = 0x08,
+		.dbus_ddr  = 0x0B,
+		.name = "ft4232h"
+	},
+	{
+		.vendor = 0x15ba,
+		.product = 0x002b,
+		.interface = INTERFACE_A,
+		.dbus_data = 0x08,
+		.dbus_ddr  = 0x1B,
+		.cbus_data = 0x00,
+		.cbus_ddr  = 0x08,
+		.name = "arm-usb-ocd-h"
+	},
+};
+
 int platform_init(int argc, char **argv)
 { 
 	int err;
+	int c;
+	int index = 0;
+	char *serial = NULL;
+	char * cablename =  "ftdi";
+	uint8_t ftdi_init[9] = {TCK_DIVISOR, 0x01, 0x00, SET_BITS_LOW, 0,0,
+				SET_BITS_HIGH, 0,0};
+
+	while((c = getopt(argc, argv, "c:s:")) != -1) {
+		switch(c) {
+		case 'c':
+			cablename =  optarg;
+			break;
+		case 's':
+			serial = optarg;
+			break;
+		}
+	}
+
+	for(index = 0; index < sizeof(cable_desc)/sizeof(cable_desc[0]);
+		index++)
+		 if (strcmp(cable_desc[index].name, cablename) == 0)
+		 break;
+
+	if (index == sizeof(cable_desc)/sizeof(cable_desc[0])){
+		fprintf(stderr, "No cable matching %s found\n",cablename);
+		return -1;
+	}
+
+	if (cable_desc[index].dbus_data)
+		ftdi_init[4]= cable_desc[index].dbus_data;
+	if (cable_desc[index].dbus_ddr)
+		ftdi_init[5]= cable_desc[index].dbus_ddr;
+	if (cable_desc[index].cbus_data)
+		ftdi_init[7]= cable_desc[index].cbus_data;
+	if(cable_desc[index].cbus_ddr)
+		ftdi_init[8]= cable_desc[index].cbus_ddr;
 
 	if(ftdic) {
 		ftdi_usb_close(ftdic);
@@ -46,12 +162,14 @@ int platform_init(int argc, char **argv)
 			ftdi_get_error_string(ftdic));
 		abort();
 	}
-	if((err = ftdi_set_interface(ftdic, INTERFACE_A)) != 0) {
+	if((err = ftdi_set_interface(ftdic, cable_desc[index].interface)) != 0) {
 		fprintf(stderr, "ftdi_set_interface: %d: %s\n", 
 			err, ftdi_get_error_string(ftdic));
 		abort();
 	}
-	if((err = ftdi_usb_open(ftdic, FT2232_VID, FT2232_PID)) != 0) {
+	if((err = ftdi_usb_open_desc(
+		ftdic, cable_desc[index].vendor, cable_desc[index].product,
+		cable_desc[index].description, serial)) != 0) {
 		fprintf(stderr, "unable to open ftdi device: %d (%s)\n", 
 			err, ftdi_get_error_string(ftdic));
 		abort();
@@ -77,6 +195,14 @@ int platform_init(int argc, char **argv)
 			err, ftdi_get_error_string(ftdic));
 		abort();
 	}
+
+	if((err = ftdi_set_bitmode(ftdic, 0xAB, BITMODE_MPSSE)) != 0) {
+		fprintf(stderr, "ftdi_set_bitmode: %d: %s\n",
+			err, ftdi_get_error_string(ftdic));
+		abort();
+	}
+
+	assert(ftdi_write_data(ftdic, ftdi_init, 9) == 9);
 
 	assert(gdb_if_init() == 0);
 
