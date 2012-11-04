@@ -32,7 +32,7 @@ struct ftdi_context *ftdic;
 static uint8_t outbuf[BUF_SIZE];
 static uint16_t bufptr = 0;
 
-int platform_init(void) 
+int platform_init(int argc, char **argv)
 { 
 	int err;
 
