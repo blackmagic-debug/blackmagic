@@ -175,7 +175,8 @@ bool stm32f1_probe(struct target_s *target)
 		target->flash_write = stm32f1_flash_write;
 		target_add_commands(target, stm32f1_cmd_list, "STM32");
 		return true;
-	case 0x422:  /* STM32F3 */
+	case 0x422:  /* STM32F30x */
+	case 0x432:  /* STM32F37x */
 		target->driver = stm32f3_driver_str;
 		target->xml_mem_map = stm32hd_xml_memory_map;
 		target->flash_erase = stm32hd_flash_erase;
