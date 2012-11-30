@@ -18,7 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file implements the transport generic functions of the 
+/* This file implements the transport generic functions of the
  * ARM Debug Interface v5 Architecure Specification, ARM doc IHI0031A.
  *
  * Issues:
@@ -84,32 +84,32 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 	ctrlstat = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT);
 
 	/* Write request for system and debug power up */
-	adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT, 
-			ctrlstat |= ADIV5_DP_CTRLSTAT_CSYSPWRUPREQ | 
+	adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT,
+			ctrlstat |= ADIV5_DP_CTRLSTAT_CSYSPWRUPREQ |
 				ADIV5_DP_CTRLSTAT_CDBGPWRUPREQ);
 	/* Wait for acknowledge */
-	while(((ctrlstat = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT)) & 
-		(ADIV5_DP_CTRLSTAT_CSYSPWRUPACK | ADIV5_DP_CTRLSTAT_CDBGPWRUPACK)) != 
+	while(((ctrlstat = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT)) &
+		(ADIV5_DP_CTRLSTAT_CSYSPWRUPACK | ADIV5_DP_CTRLSTAT_CDBGPWRUPACK)) !=
 		(ADIV5_DP_CTRLSTAT_CSYSPWRUPACK | ADIV5_DP_CTRLSTAT_CDBGPWRUPACK));
 
 	if(DO_RESET_SEQ) {
-		/* This AP reset logic is described in ADIv5, but fails to work 
-		 * correctly on STM32.  CDBGRSTACK is never asserted, and we 
-		 * just wait forever. 
+		/* This AP reset logic is described in ADIv5, but fails to work
+		 * correctly on STM32.  CDBGRSTACK is never asserted, and we
+		 * just wait forever.
 		 */
 
 		/* Write request for debug reset */
-		adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT, 
+		adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT,
 				ctrlstat |= ADIV5_DP_CTRLSTAT_CDBGRSTREQ);
 		/* Wait for acknowledge */
-		while(!((ctrlstat = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT)) & 
+		while(!((ctrlstat = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT)) &
 				ADIV5_DP_CTRLSTAT_CDBGRSTACK));
 
 		/* Write request for debug reset release */
-		adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT, 
+		adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT,
 				ctrlstat &= ~ADIV5_DP_CTRLSTAT_CDBGRSTREQ);
 		/* Wait for acknowledge */
-		while(adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT) & 
+		while(adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT) &
 				ADIV5_DP_CTRLSTAT_CDBGRSTACK);
 	}
 
@@ -169,56 +169,78 @@ uint32_t adiv5_dp_read_ap(ADIv5_DP_t *dp, uint8_t addr)
 	uint32_t ret;
 
 	adiv5_dp_low_access(dp, ADIV5_LOW_AP, ADIV5_LOW_READ, addr, 0);
-	ret = adiv5_dp_low_access(dp, ADIV5_LOW_DP, ADIV5_LOW_READ, 
+	ret = adiv5_dp_low_access(dp, ADIV5_LOW_DP, ADIV5_LOW_READ,
 				ADIV5_DP_RDBUFF, 0);
 
 	return ret;
 }
 
 
-static int 
+static int
 ap_check_error(struct target_s *target)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
 	return adiv5_dp_error(ap->dp);
 }
 
-static int 
+static int
 ap_mem_read_words(struct target_s *target, uint32_t *dest, uint32_t src, int len)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
+	uint32_t osrc = src;
 
 	len >>= 2;
 
 	adiv5_ap_write(ap, ADIV5_AP_CSW, 0xA2000052);
-	adiv5_dp_low_access(ap->dp, ADIV5_LOW_AP, ADIV5_LOW_WRITE, 
+	adiv5_dp_low_access(ap->dp, ADIV5_LOW_AP, ADIV5_LOW_WRITE,
 					ADIV5_AP_TAR, src);
-	adiv5_dp_low_access(ap->dp, ADIV5_LOW_AP, ADIV5_LOW_READ, 
+	adiv5_dp_low_access(ap->dp, ADIV5_LOW_AP, ADIV5_LOW_READ,
 					ADIV5_AP_DRW, 0);
-	while(--len) 
-		*dest++ = adiv5_dp_low_access(ap->dp, ADIV5_LOW_AP, 
+	while(--len) {
+		*dest++ = adiv5_dp_low_access(ap->dp, ADIV5_LOW_AP,
 					ADIV5_LOW_READ, ADIV5_AP_DRW, 0);
-	
-	*dest++ = adiv5_dp_low_access(ap->dp, ADIV5_LOW_DP, ADIV5_LOW_READ, 
+		src += 4;
+		/* Check for 10 bit address overflow */
+		if ((src ^ osrc) & 0xfffffc00) {
+			osrc = src;
+			adiv5_dp_low_access(ap->dp, ADIV5_LOW_AP,
+					ADIV5_LOW_WRITE, ADIV5_AP_TAR, src);
+			adiv5_dp_low_access(ap->dp, ADIV5_LOW_AP,
+					ADIV5_LOW_READ, ADIV5_AP_DRW, 0);
+		}
+
+	}
+	*dest++ = adiv5_dp_low_access(ap->dp, ADIV5_LOW_DP, ADIV5_LOW_READ,
 					ADIV5_DP_RDBUFF, 0);
 
 	return 0;
 }
 
-static int 
+static int
 ap_mem_read_bytes(struct target_s *target, uint8_t *dest, uint32_t src, int len)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
-	uint32_t tmp = src;
+	uint32_t tmp;
+	uint32_t osrc = src;
 
 	adiv5_ap_write(ap, ADIV5_AP_CSW, 0xA2000050);
-	adiv5_dp_low_access(ap->dp, ADIV5_LOW_AP, ADIV5_LOW_WRITE, 
+	adiv5_dp_low_access(ap->dp, ADIV5_LOW_AP, ADIV5_LOW_WRITE,
 					ADIV5_AP_TAR, src);
-	adiv5_dp_low_access(ap->dp, ADIV5_LOW_AP, ADIV5_LOW_READ, 
+	adiv5_dp_low_access(ap->dp, ADIV5_LOW_AP, ADIV5_LOW_READ,
 					ADIV5_AP_DRW, 0);
 	while(--len) {
 		tmp = adiv5_dp_low_access(ap->dp, 1, 1, ADIV5_AP_DRW, 0);
 		*dest++ = (tmp >> ((src++ & 0x3) << 3) & 0xFF);
+
+		src++;
+		/* Check for 10 bit address overflow */
+		if ((src ^ osrc) & 0xfffffc00) {
+			osrc = src;
+			adiv5_dp_low_access(ap->dp, ADIV5_LOW_AP,
+					ADIV5_LOW_WRITE, ADIV5_AP_TAR, src);
+			adiv5_dp_low_access(ap->dp, ADIV5_LOW_AP,
+					ADIV5_LOW_READ, ADIV5_AP_DRW, 0);
+		}
 	}
 	tmp = adiv5_dp_low_access(ap->dp, 0, 1, ADIV5_DP_RDBUFF, 0);
 	*dest++ = (tmp >> ((src++ & 0x3) << 3) & 0xFF);
@@ -227,35 +249,53 @@ ap_mem_read_bytes(struct target_s *target, uint8_t *dest, uint32_t src, int len)
 }
 
 
-static int 
+static int
 ap_mem_write_words(struct target_s *target, uint32_t dest, const uint32_t *src, int len)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
+	uint32_t odest = dest;
 
 	len >>= 2;
 
 	adiv5_ap_write(ap, ADIV5_AP_CSW, 0xA2000052);
-	adiv5_dp_low_access(ap->dp, ADIV5_LOW_AP, ADIV5_LOW_WRITE, 
+	adiv5_dp_low_access(ap->dp, ADIV5_LOW_AP, ADIV5_LOW_WRITE,
 					ADIV5_AP_TAR, dest);
-	while(len--) 
-		adiv5_dp_low_access(ap->dp, ADIV5_LOW_AP, ADIV5_LOW_WRITE, 
+	while(len--) {
+		adiv5_dp_low_access(ap->dp, ADIV5_LOW_AP, ADIV5_LOW_WRITE,
 					ADIV5_AP_DRW, *src++);
-	
+		dest += 4;
+		/* Check for 10 bit address overflow */
+		if ((dest ^ odest) & 0xfffffc00) {
+			odest = dest;
+			adiv5_dp_low_access(ap->dp, ADIV5_LOW_AP,
+					ADIV5_LOW_WRITE, ADIV5_AP_TAR, dest);
+		}
+	}
+
 	return 0;
 }
 
-static int 
+static int
 ap_mem_write_bytes(struct target_s *target, uint32_t dest, const uint8_t *src, int len)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
+	uint32_t odest = dest;
 
 	adiv5_ap_write(ap, ADIV5_AP_CSW, 0xA2000050);
-	adiv5_dp_low_access(ap->dp, ADIV5_LOW_AP, ADIV5_LOW_WRITE, 
+	adiv5_dp_low_access(ap->dp, ADIV5_LOW_AP, ADIV5_LOW_WRITE,
 					ADIV5_AP_TAR, dest);
 	while(len--) {
 		uint32_t tmp = (uint32_t)*src++ << ((dest++ & 3) << 3);
-		adiv5_dp_low_access(ap->dp, ADIV5_LOW_AP, ADIV5_LOW_WRITE, 
+		adiv5_dp_low_access(ap->dp, ADIV5_LOW_AP, ADIV5_LOW_WRITE,
 					ADIV5_AP_DRW, tmp);
+
+		dest ++;
+		/* Check for 10 bit address overflow */
+		if ((dest ^ odest) & 0xfffffc00) {
+			odest = dest;
+			adiv5_dp_low_access(ap->dp, ADIV5_LOW_AP,
+					ADIV5_LOW_WRITE, ADIV5_AP_TAR, dest);
+		}
 	}
 	return 0;
 }
@@ -300,7 +340,7 @@ void adiv5_ap_mem_write_halfword(ADIv5_AP_t *ap, uint32_t addr, uint16_t value)
 
 void adiv5_ap_write(ADIv5_AP_t *ap, uint8_t addr, uint32_t value)
 {
-	adiv5_dp_write(ap->dp, ADIV5_DP_SELECT, 
+	adiv5_dp_write(ap->dp, ADIV5_DP_SELECT,
 			((uint32_t)ap->apsel << 24)|(addr & 0xF0));
 	adiv5_dp_write_ap(ap->dp, addr, value);
 }
@@ -308,7 +348,7 @@ void adiv5_ap_write(ADIv5_AP_t *ap, uint8_t addr, uint32_t value)
 uint32_t adiv5_ap_read(ADIv5_AP_t *ap, uint8_t addr)
 {
 	uint32_t ret;
-	adiv5_dp_write(ap->dp, ADIV5_DP_SELECT, 
+	adiv5_dp_write(ap->dp, ADIV5_DP_SELECT,
 			((uint32_t)ap->apsel << 24)|(addr & 0xF0));
 	ret = adiv5_dp_read_ap(ap->dp, addr);
 	return ret;
