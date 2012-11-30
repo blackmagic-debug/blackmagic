@@ -60,16 +60,16 @@ static const char stm32hd_driver_str[] = "STM32, High density.";
 static const char stm32f3_driver_str[] = "STM32F3xx";
 static const char stm32f0_driver_str[] = "STM32F0xx";
 
-static const char stm32f1_xml_memory_map[] = "<?xml version=\"1.0\"?>"
-/*	"<!DOCTYPE memory-map "
-	"             PUBLIC \"+//IDN gnu.org//DTD GDB Memory Map V1.0//EN\""
-	"                    \"http://sourceware.org/gdb/gdb-memory-map.dtd\">"*/
-	"<memory-map>"
-	"  <memory type=\"flash\" start=\"0x8000000\" length=\"0x20000\">"
-	"    <property name=\"blocksize\">0x400</property>"
-	"  </memory>"
-	"  <memory type=\"ram\" start=\"0x20000000\" length=\"0x5000\"/>"
-	"</memory-map>";
+//static const char stm32f1_xml_memory_map[] = "<?xml version=\"1.0\"?>"
+///*	"<!DOCTYPE memory-map "
+//	"             PUBLIC \"+//IDN gnu.org//DTD GDB Memory Map V1.0//EN\""
+//	"                    \"http://sourceware.org/gdb/gdb-memory-map.dtd\">"*/
+//	"<memory-map>"
+//	"  <memory type=\"flash\" start=\"0x8000000\" length=\"0x20000\">"
+//	"    <property name=\"blocksize\">0x400</property>"
+//	"  </memory>"
+//	"  <memory type=\"ram\" start=\"0x20000000\" length=\"0x5000\"/>"
+//	"</memory-map>";
 
 static const char stm32hd_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 /*	"<!DOCTYPE memory-map "
@@ -81,6 +81,17 @@ static const char stm32hd_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 	"  </memory>"
 	"  <memory type=\"ram\" start=\"0x20000000\" length=\"0x10000\"/>"
 	"</memory-map>";
+
+static const char stm32f1_xml_memory_map[] = "<?xml version=\"1.0\"?>"
+/*	"<!DOCTYPE memory-map "
+ "             PUBLIC \"+//IDN gnu.org//DTD GDB Memory Map V1.0//EN\""
+ "                    \"http://sourceware.org/gdb/gdb-memory-map.dtd\">"*/
+"<memory-map>"
+"  <memory type=\"flash\" start=\"0x8000000\" length=\"0x10000\">"
+"    <property name=\"blocksize\">0x400</property>"
+"  </memory>"
+"  <memory type=\"ram\" start=\"0x20000000\" length=\"0x2000\"/>"
+"</memory-map>";
 
 /* Flash Program ad Erase Controller Register Map */
 #define FPEC_BASE	0x40022000
@@ -158,7 +169,7 @@ bool stm32f1_probe(struct target_s *target)
 	idcode = adiv5_ap_mem_read(adiv5_target_ap(target), DBGMCU_IDCODE);
 	switch(idcode & 0xFFF) {
 	case 0x410:  /* Medium density */
-	case 0x412:  /* Low denisty */
+	case 0x412:  /* Low density */
 	case 0x420:  /* Value Line, Low-/Medium density */
 		target->driver = stm32f1_driver_str;
 		target->xml_mem_map = stm32f1_xml_memory_map;
