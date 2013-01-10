@@ -230,7 +230,7 @@ ap_mem_read_bytes(struct target_s *target, uint8_t *dest, uint32_t src, int len)
 					ADIV5_AP_DRW, 0);
 	while(--len) {
 		tmp = adiv5_dp_low_access(ap->dp, 1, 1, ADIV5_AP_DRW, 0);
-		*dest++ = (tmp >> ((src++ & 0x3) << 3) & 0xFF);
+		*dest++ = (tmp >> ((src & 0x3) << 3) & 0xFF);
 
 		src++;
 		/* Check for 10 bit address overflow */
