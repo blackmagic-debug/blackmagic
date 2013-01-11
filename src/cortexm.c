@@ -459,7 +459,8 @@ cortexm_regs_read(struct target_s *target, void *data)
 	unsigned i;
 
 	/* FIXME: Describe what's really going on here */
-	adiv5_ap_write(ap, ADIV5_AP_CSW, 0xA2000052);
+	adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw |
+		ADIV5_AP_CSW_SIZE_WORD | ADIV5_AP_CSW_ADDRINC_SINGLE);
 
 	/* Map the banked data registers (0x10-0x1c) to the
 	 * debug registers DHCSR, DCRSR, DCRDR and DEMCR respectively */
@@ -490,7 +491,8 @@ cortexm_regs_write(struct target_s *target, const void *data)
 	unsigned i;
 
 	/* FIXME: Describe what's really going on here */
-	adiv5_ap_write(ap, ADIV5_AP_CSW, 0xA2000052);
+	adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw |
+		ADIV5_AP_CSW_SIZE_WORD | ADIV5_AP_CSW_ADDRINC_SINGLE);
 
 	/* Map the banked data registers (0x10-0x1c) to the
 	 * debug registers DHCSR, DCRSR, DCRDR and DEMCR respectively */

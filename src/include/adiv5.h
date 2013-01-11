@@ -150,6 +150,7 @@ typedef struct ADIv5_AP_s {
 	uint32_t idr;
 	uint32_t cfg;
 	uint32_t base;
+	uint32_t csw;
 
 	void *priv;
 	void (*priv_free)(void *);

@@ -134,6 +134,8 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 
 		ap->cfg = adiv5_ap_read(ap, ADIV5_AP_CFG);
 		ap->base = adiv5_ap_read(ap, ADIV5_AP_BASE);
+		ap->csw = adiv5_ap_read(ap, ADIV5_AP_CSW) &
+			~(ADIV5_AP_CSW_SIZE_MASK | ADIV5_AP_CSW_ADDRINC_MASK);
 
 		/* Should probe further here to make sure it's a valid target.
 		 * AP should be unref'd if not valid.
@@ -191,7 +193,8 @@ ap_mem_read_words(struct target_s *target, uint32_t *dest, uint32_t src, int len
 
 	len >>= 2;
 
-	adiv5_ap_write(ap, ADIV5_AP_CSW, 0xA2000052);
+	adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw |
+		ADIV5_AP_CSW_SIZE_WORD | ADIV5_AP_CSW_ADDRINC_SINGLE);
 	adiv5_dp_low_access(ap->dp, ADIV5_LOW_AP, ADIV5_LOW_WRITE,
 					ADIV5_AP_TAR, src);
 	adiv5_dp_low_access(ap->dp, ADIV5_LOW_AP, ADIV5_LOW_READ,
@@ -223,7 +226,8 @@ ap_mem_read_bytes(struct target_s *target, uint8_t *dest, uint32_t src, int len)
 	uint32_t tmp;
 	uint32_t osrc = src;
 
-	adiv5_ap_write(ap, ADIV5_AP_CSW, 0xA2000050);
+	adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw |
+		ADIV5_AP_CSW_SIZE_BYTE | ADIV5_AP_CSW_ADDRINC_SINGLE);
 	adiv5_dp_low_access(ap->dp, ADIV5_LOW_AP, ADIV5_LOW_WRITE,
 					ADIV5_AP_TAR, src);
 	adiv5_dp_low_access(ap->dp, ADIV5_LOW_AP, ADIV5_LOW_READ,
@@ -257,7 +261,8 @@ ap_mem_write_words(struct target_s *target, uint32_t dest, const uint32_t *src, 
 
 	len >>= 2;
 
-	adiv5_ap_write(ap, ADIV5_AP_CSW, 0xA2000052);
+	adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw |
+		ADIV5_AP_CSW_SIZE_WORD | ADIV5_AP_CSW_ADDRINC_SINGLE);
 	adiv5_dp_low_access(ap->dp, ADIV5_LOW_AP, ADIV5_LOW_WRITE,
 					ADIV5_AP_TAR, dest);
 	while(len--) {
@@ -281,7 +286,8 @@ ap_mem_write_bytes(struct target_s *target, uint32_t dest, const uint8_t *src, i
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
 	uint32_t odest = dest;
 
-	adiv5_ap_write(ap, ADIV5_AP_CSW, 0xA2000050);
+	adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw |
+		ADIV5_AP_CSW_SIZE_BYTE | ADIV5_AP_CSW_ADDRINC_SINGLE);
 	adiv5_dp_low_access(ap->dp, ADIV5_LOW_AP, ADIV5_LOW_WRITE,
 					ADIV5_AP_TAR, dest);
 	while(len--) {
@@ -304,21 +310,24 @@ ap_mem_write_bytes(struct target_s *target, uint32_t dest, const uint8_t *src, i
 
 uint32_t adiv5_ap_mem_read(ADIv5_AP_t *ap, uint32_t addr)
 {
-	adiv5_ap_write(ap, ADIV5_AP_CSW, 0xA2000052);
+	adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw |
+		ADIV5_AP_CSW_SIZE_WORD | ADIV5_AP_CSW_ADDRINC_SINGLE);
 	adiv5_ap_write(ap, ADIV5_AP_TAR, addr);
 	return adiv5_ap_read(ap, ADIV5_AP_DRW);
 }
 
 void adiv5_ap_mem_write(ADIv5_AP_t *ap, uint32_t addr, uint32_t value)
 {
-	adiv5_ap_write(ap, ADIV5_AP_CSW, 0xA2000052);
+	adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw |
+		ADIV5_AP_CSW_SIZE_WORD | ADIV5_AP_CSW_ADDRINC_SINGLE);
 	adiv5_ap_write(ap, ADIV5_AP_TAR, addr);
 	adiv5_ap_write(ap, ADIV5_AP_DRW, value);
 }
 
 uint16_t adiv5_ap_mem_read_halfword(ADIv5_AP_t *ap, uint32_t addr)
 {
-	adiv5_ap_write(ap, ADIV5_AP_CSW, 0xA2000051);
+	adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw |
+		ADIV5_AP_CSW_SIZE_HALFWORD | ADIV5_AP_CSW_ADDRINC_SINGLE);
 	adiv5_ap_write(ap, ADIV5_AP_TAR, addr);
 	uint32_t v = adiv5_ap_read(ap, ADIV5_AP_DRW);
 	if (addr & 2)
@@ -333,7 +342,8 @@ void adiv5_ap_mem_write_halfword(ADIv5_AP_t *ap, uint32_t addr, uint16_t value)
 	if (addr & 2)
 		v <<= 16;
 
-	adiv5_ap_write(ap, ADIV5_AP_CSW, 0xA2000051);
+	adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw |
+		ADIV5_AP_CSW_SIZE_HALFWORD | ADIV5_AP_CSW_ADDRINC_SINGLE);
 	adiv5_ap_write(ap, ADIV5_AP_TAR, addr);
 	adiv5_ap_write(ap, ADIV5_AP_DRW, v);
 }
