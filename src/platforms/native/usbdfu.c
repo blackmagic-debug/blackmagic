@@ -18,11 +18,11 @@
  */
 
 #include <string.h>
-#include <libopencm3/stm32/systick.h>
+#include <libopencm3/cm3/systick.h>
 #include <libopencm3/stm32/f1/rcc.h>
 #include <libopencm3/stm32/f1/gpio.h>
 #include <libopencm3/stm32/f1/flash.h>
-#include <libopencm3/stm32/f1/scb.h>
+#include <libopencm3/cm3/scb.h>
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/dfu.h>
 
@@ -37,6 +37,7 @@
 
 #define FLASH_OBP_RDP_KEY 0x5aa5
 
+usbd_device *usbdev;
 /* We need a special large control buffer for this device: */
 u8 usbd_control_buffer[1024];
 
@@ -116,7 +117,6 @@ const struct usb_config_descriptor config = {
 static char serial_no[9];
 
 static const char *usb_strings[] = {
-	"x",
 	"Black Sphere Technologies",
 	"Black Magic Probe (Upgrade)",
 	serial_no,
@@ -142,7 +142,8 @@ static u8 usbdfu_getstatus(u32 *bwPollTimeout)
 	}
 }
 
-static void usbdfu_getstatus_complete(struct usb_setup_data *req)
+static void
+usbdfu_getstatus_complete(usbd_device *dev, struct usb_setup_data *req)
 {
 	int i;
 	(void)req;
@@ -154,7 +155,7 @@ static void usbdfu_getstatus_complete(struct usb_setup_data *req)
 		if(prog.blocknum == 0) {
 			if ((*(u32*)(prog.buf+1) < 0x8002000) ||
 			    (*(u32*)(prog.buf+1) >= 0x8020000)) {
-				usbd_ep_stall_set(0, 1);
+				usbd_ep_stall_set(dev, 0, 1);
 				return;
 			}
 			switch(prog.buf[0]) {
@@ -188,9 +189,11 @@ static void usbdfu_getstatus_complete(struct usb_setup_data *req)
 	}
 }
 
-static int usbdfu_control_request(struct usb_setup_data *req, u8 **buf, 
-		u16 *len, void (**complete)(struct usb_setup_data *req))
+static int usbdfu_control_request(usbd_device *dev,
+		struct usb_setup_data *req, u8 **buf, u16 *len,
+		void (**complete)(usbd_device *dev, struct usb_setup_data *req))
 {
+	(void)dev;
 
 	if((req->bmRequestType & 0x7F) != 0x21) 
 		return 0; /* Only accept class request */
@@ -287,22 +290,23 @@ int main(void)
 
 	get_dev_unique_id(serial_no);
 
-	usbd_init(&stm32f103_usb_driver, &dev, &config, usb_strings);
-	usbd_set_control_buffer_size(sizeof(usbd_control_buffer));
-	usbd_register_control_callback(
+	usbdev = usbd_init(&stm32f103_usb_driver,
+				&dev, &config, usb_strings, 4);
+	usbd_set_control_buffer_size(usbdev, sizeof(usbd_control_buffer));
+	usbd_register_control_callback(usbdev,
 				USB_REQ_TYPE_CLASS | USB_REQ_TYPE_INTERFACE,
 				USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT,
 				usbdfu_control_request);
 
 	gpio_set(GPIOA, GPIO8);
-	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ, 
+	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
 			GPIO_CNF_OUTPUT_PUSHPULL, GPIO8);
 
-	while (1) 
-		usbd_poll();
+	while (1)
+		usbd_poll(usbdev);
 }
 
-static char *get_dev_unique_id(char *s) 
+static char *get_dev_unique_id(char *s)
 {
         volatile uint32_t *unique_id_p = (volatile uint32_t *)0x1FFFF7E8;
 	uint32_t unique_id = *unique_id_p +

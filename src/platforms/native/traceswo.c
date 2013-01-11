@@ -33,7 +33,7 @@
  */
 #include "general.h"
 
-#include <libopencm3/stm32/nvic.h>
+#include <libopencm3/cm3/nvic.h>
 #include <libopencm3/stm32/timer.h>
 #include <libopencm3/stm32/f1/rcc.h>
 
@@ -84,10 +84,10 @@ static uint8_t trace_usb_buf_size;
 
 void trace_buf_push(uint8_t *buf, int len)
 {
-	if (usbd_ep_write_packet(0x85, buf, len) != len) {
+	if (usbd_ep_write_packet(usbdev, 0x85, buf, len) != len) {
 		if (trace_usb_buf_size + len > 64) {
 			/* Stall if upstream to too slow. */
-			usbd_ep_stall_set(0x85, 1);
+			usbd_ep_stall_set(usbdev, 0x85, 1);
 			trace_usb_buf_size = 0;
 			return;
 		}
@@ -96,12 +96,12 @@ void trace_buf_push(uint8_t *buf, int len)
 	}
 }
 
-void trace_buf_drain(uint8_t ep)
+void trace_buf_drain(usbd_device *dev, uint8_t ep)
 {
-	if (!trace_usb_buf_size) 
+	if (!trace_usb_buf_size)
 		return;
 
-	usbd_ep_write_packet(ep, trace_usb_buf, trace_usb_buf_size);
+	usbd_ep_write_packet(dev, ep, trace_usb_buf, trace_usb_buf_size);
 	trace_usb_buf_size = 0;
 }
 

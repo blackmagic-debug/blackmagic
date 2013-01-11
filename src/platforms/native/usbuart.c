@@ -21,7 +21,7 @@
 #include <libopencm3/stm32/f1/rcc.h>
 #include <libopencm3/stm32/f1/gpio.h>
 #include <libopencm3/stm32/usart.h>
-#include <libopencm3/stm32/nvic.h>
+#include <libopencm3/cm3/nvic.h>
 #include <libopencm3/cm3/scs.h>
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/cdc.h>
@@ -86,12 +86,13 @@ void usbuart_set_line_coding(struct usb_cdc_line_coding *coding)
 	}
 }
 
-void usbuart_usb_out_cb(uint8_t ep)
+void usbuart_usb_out_cb(usbd_device *dev, uint8_t ep)
 {
 	(void)ep;
 
 	char buf[CDCACM_PACKET_SIZE];
-	int len = usbd_ep_read_packet(CDCACM_UART_ENDPOINT, buf, CDCACM_PACKET_SIZE);
+	int len = usbd_ep_read_packet(dev, CDCACM_UART_ENDPOINT,
+					buf, CDCACM_PACKET_SIZE);
 
 	/* Don't bother if uart is disabled.
 	 * This will be the case on mini while we're being debugged. 
@@ -108,14 +109,14 @@ void usbuart_usb_out_cb(uint8_t ep)
 static uint8_t uart_usb_buf[CDCACM_PACKET_SIZE];
 static uint8_t uart_usb_buf_size;
 
-void usbuart_usb_in_cb(uint8_t ep)
+void usbuart_usb_in_cb(usbd_device *dev, uint8_t ep)
 {
 	if (!uart_usb_buf_size) {
 		gpio_clear(LED_PORT, LED_UART);
 		return;
 	}
 
-	usbd_ep_write_packet(ep, uart_usb_buf, uart_usb_buf_size);
+	usbd_ep_write_packet(dev, ep, uart_usb_buf, uart_usb_buf_size);
 	uart_usb_buf_size = 0;
 }
 
@@ -126,9 +127,9 @@ void usart1_isr(void)
 	gpio_set(LED_PORT, LED_UART);
 
 	/* Try to send now */
-	if (usbd_ep_write_packet(CDCACM_UART_ENDPOINT, &c, 1) == 1) 
+	if (usbd_ep_write_packet(usbdev, CDCACM_UART_ENDPOINT, &c, 1) == 1)
 		return;
-		
+
 	/* We failed, so queue for later */
 	if (uart_usb_buf_size == CDCACM_PACKET_SIZE) {
 		/* Drop if the buffer's full: we have no flow control */

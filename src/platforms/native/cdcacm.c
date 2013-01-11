@@ -27,12 +27,12 @@
  */
 
 #include <libopencm3/stm32/f1/rcc.h>
-#include <libopencm3/stm32/nvic.h>
+#include <libopencm3/cm3/nvic.h>
 #include <libopencm3/stm32/exti.h>
 #include <libopencm3/stm32/f1/gpio.h>
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/cdc.h>
-#include <libopencm3/stm32/f1/scb.h>
+#include <libopencm3/cm3/scb.h>
 #include <libopencm3/usb/dfu.h>
 #include <stdlib.h>
 
@@ -42,10 +42,13 @@
 
 #define DFU_IF_NO 4
 
+usbd_device * usbdev;
+
 static char *get_dev_unique_id(char *serial_no);
 
 static int configured;
 static int cdcacm_gdb_dtr = 1;
+
 
 static const struct usb_device_descriptor dev = {
         .bLength = USB_DT_DEVICE_SIZE,
@@ -381,7 +384,6 @@ static const struct usb_config_descriptor config = {
 char serial_no[9];
 
 static const char *usb_strings[] = {
-	"x",
 	"Black Sphere Technologies",
 	"Black Magic Probe",
 	serial_no,
@@ -391,8 +393,9 @@ static const char *usb_strings[] = {
 	"Black Magic Trace Capture",
 };
 
-static void dfu_detach_complete(struct usb_setup_data *req)
+static void dfu_detach_complete(usbd_device *dev, struct usb_setup_data *req)
 {
+	(void)dev;
 	(void)req;
 
 	/* Disconnect USB cable */
@@ -407,9 +410,11 @@ static void dfu_detach_complete(struct usb_setup_data *req)
 	scb_reset_core();
 }
 
-static int cdcacm_control_request(struct usb_setup_data *req, uint8_t **buf,
-		uint16_t *len, void (**complete)(struct usb_setup_data *req))
+static int cdcacm_control_request(usbd_device *dev,
+		struct usb_setup_data *req, uint8_t **buf, uint16_t *len,
+		void (**complete)(usbd_device *dev, struct usb_setup_data *req))
 {
+	(void)dev;
 	(void)complete;
 	(void)buf;
 	(void)len;
@@ -467,29 +472,34 @@ int cdcacm_get_dtr(void)
 	return cdcacm_gdb_dtr;
 }
 
-static void cdcacm_set_config(u16 wValue)
+static void cdcacm_set_config(usbd_device *dev, u16 wValue)
 {
 	configured = wValue;
 
 	/* GDB interface */
-	usbd_ep_setup(0x01, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE, NULL);
-	usbd_ep_setup(0x81, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE, NULL);
-	usbd_ep_setup(0x82, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
+	usbd_ep_setup(dev, 0x01, USB_ENDPOINT_ATTR_BULK,
+					CDCACM_PACKET_SIZE, NULL);
+	usbd_ep_setup(dev, 0x81, USB_ENDPOINT_ATTR_BULK,
+					CDCACM_PACKET_SIZE, NULL);
+	usbd_ep_setup(dev, 0x82, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
 
 	/* Serial interface */
-	usbd_ep_setup(0x03, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE, usbuart_usb_out_cb);
-	usbd_ep_setup(0x83, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE, usbuart_usb_in_cb);
-	usbd_ep_setup(0x84, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
+	usbd_ep_setup(dev, 0x03, USB_ENDPOINT_ATTR_BULK,
+					CDCACM_PACKET_SIZE, usbuart_usb_out_cb);
+	usbd_ep_setup(dev, 0x83, USB_ENDPOINT_ATTR_BULK,
+					CDCACM_PACKET_SIZE, usbuart_usb_in_cb);
+	usbd_ep_setup(dev, 0x84, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
 
 	/* Trace interface */
-	usbd_ep_setup(0x85, USB_ENDPOINT_ATTR_BULK, 64, trace_buf_drain);
+	usbd_ep_setup(dev, 0x85, USB_ENDPOINT_ATTR_BULK,
+					64, trace_buf_drain);
 
-	usbd_register_control_callback(
-			USB_REQ_TYPE_CLASS | USB_REQ_TYPE_INTERFACE, 
+	usbd_register_control_callback(dev,
+			USB_REQ_TYPE_CLASS | USB_REQ_TYPE_INTERFACE,
 			USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT,
 			cdcacm_control_request);
 
-	/* Notify the host that DCD is asserted.  
+	/* Notify the host that DCD is asserted.
 	 * Allows the use of /dev/tty* devices on *BSD/MacOS
 	 */
 	char buf[10];
@@ -502,9 +512,9 @@ static void cdcacm_set_config(u16 wValue)
 	notif->wLength = 2;
 	buf[8] = 3; /* DCD | DSR */
 	buf[9] = 0;
-	usbd_ep_write_packet(0x82, buf, 10);
+	usbd_ep_write_packet(dev, 0x82, buf, 10);
 	notif->wIndex = 2;
-	usbd_ep_write_packet(0x84, buf, 10);
+	usbd_ep_write_packet(dev, 0x84, buf, 10);
 }
 
 /* We need a special large control buffer for this device: */
@@ -516,9 +526,10 @@ void cdcacm_init(void)
 
 	get_dev_unique_id(serial_no);
 
-	usbd_init(&stm32f103_usb_driver, &dev, &config, usb_strings);
-	usbd_set_control_buffer_size(sizeof(usbd_control_buffer));
-	usbd_register_set_config_callback(cdcacm_set_config);
+	usbdev = usbd_init(&stm32f103_usb_driver,
+					&dev, &config, usb_strings, 7);
+	usbd_set_control_buffer_size(usbdev, sizeof(usbd_control_buffer));
+	usbd_register_set_config_callback(usbdev, cdcacm_set_config);
 
 	nvic_set_priority(NVIC_USB_LP_CAN_RX0_IRQ, IRQ_PRI_USB);
 	nvic_enable_irq(NVIC_USB_LP_CAN_RX0_IRQ);
@@ -528,7 +539,7 @@ void cdcacm_init(void)
 	gpio_set(USB_VBUS_PORT, USB_VBUS_PIN);
 	gpio_set(USB_PU_PORT, USB_PU_PIN);
 
-	gpio_set_mode(USB_VBUS_PORT, GPIO_MODE_INPUT, 
+	gpio_set_mode(USB_VBUS_PORT, GPIO_MODE_INPUT,
 			GPIO_CNF_INPUT_PULL_UPDOWN, USB_VBUS_PIN);
 
 	/* Configure EXTI for USB VBUS monitor */
@@ -541,7 +552,7 @@ void cdcacm_init(void)
 
 void usb_lp_can_rx0_isr(void)
 {
-	usbd_poll();
+	usbd_poll(usbdev);
 }
 
 void exti15_10_isr(void)
