@@ -37,6 +37,7 @@
 
 extern usbd_device *usbdev;
 #define CDCACM_GDB_ENDPOINT	1
+#define CDCACM_UART_ENDPOINT	3
 
 /* Important pin mappings for STM32 implementation:
  *
@@ -75,7 +76,28 @@ extern usbd_device *usbdev;
 #define SWCLK_PIN	TCK_PIN
 
 #define LED_PORT	GPIOA
+/* Use PC14 for a "dummy" uart led. So we can observere at least with scope*/
+#define LED_PORT_UART	GPIOC
+#define LED_UART	GPIO14
 #define LED_IDLE_RUN	GPIO8
+
+/* Interrupt priorities.  Low numbers are high priority.
+ * For now USART2 preempts USB which may spin while buffer is drained.
+ * TIM3 is used for traceswo capture and must be highest priority.
+ */
+#define IRQ_PRI_USB		(2 << 4)
+#define IRQ_PRI_USBUSART	(1 << 4)
+#define IRQ_PRI_USB_VBUS	(14 << 4)
+#define IRQ_PRI_TIM3		(0 << 4)
+
+#define USBUSART USART2
+#define USBUSART_CR1 USART2_CR1
+#define USBUSART_IRQ NVIC_USART2_IRQ
+#define USBUSART_APB_ENR RCC_APB1ENR
+#define USBUSART_CLK_ENABLE  RCC_APB1ENR_USART2EN
+#define USBUSART_PORT GPIOA
+#define USBUSART_TX_PIN GPIO2
+#define USBUSART_ISR usart2_isr
 
 #define DEBUG(...)
 
@@ -115,6 +137,9 @@ void cdcacm_init(void);
 /* Returns current usb configuration, or 0 if not configured. */
 int cdcacm_get_config(void);
 int cdcacm_get_dtr(void);
+
+/* <platform.h> */
+void uart_usb_buf_drain(uint8_t ep);
 
 /* Use newlib provided integer only stdio functions */
 #define sscanf siscanf

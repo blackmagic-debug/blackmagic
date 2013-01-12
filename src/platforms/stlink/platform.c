@@ -32,6 +32,7 @@
 
 #include "platform.h"
 #include "jtag_scan.h"
+#include <usbuart.h>
 
 #include <ctype.h>
 
@@ -48,6 +49,7 @@ int platform_init(void)
 	rcc_peripheral_enable_clock(&RCC_APB1ENR, RCC_APB1ENR_USBEN);
 	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPAEN);
 	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPBEN);
+	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_AFIOEN);
 
 	/* Setup GPIO ports */
 	gpio_set_mode(TMS_PORT, GPIO_MODE_OUTPUT_50_MHZ, 
@@ -63,8 +65,14 @@ int platform_init(void)
 	/* Setup heartbeat timer */
 	systick_set_clocksource(STK_CTRL_CLKSOURCE_AHB_DIV8); 
 	systick_set_reload(900000);	/* Interrupt us at 10 Hz */
+	SCB_SHPR(11) &= ~((15 << 4) & 0xff);
+	SCB_SHPR(11) |= ((14 << 4) & 0xff);
 	systick_interrupt_enable();
 	systick_counter_enable();
+
+	usbuart_init();
+
+	SCB_VTOR = 0x2000;	// Relocate interrupt vector table here
 
 	cdcacm_init();
 
