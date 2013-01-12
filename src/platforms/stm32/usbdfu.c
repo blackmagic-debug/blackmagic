@@ -29,11 +29,11 @@
 #define APP_ADDRESS	0x08002000
 
 /* Commands sent with wBlockNum == 0 as per ST implementation. */
-#define CMD_SETADDR	0x21 
-#define CMD_ERASE	0x41 
+#define CMD_SETADDR	0x21
+#define CMD_ERASE	0x41
 
-#define FLASH_OBP_RDP 0x1FFFF800 
-#define FLASH_OBP_WRP10 0x1FFFF808 
+#define FLASH_OBP_RDP 0x1FFFF800
+#define FLASH_OBP_WRP10 0x1FFFF808
 
 #define FLASH_OBP_RDP_KEY 0x5aa5
 
@@ -88,7 +88,7 @@ const struct usb_interface_descriptor iface = {
 	.bInterfaceSubClass = 1,
 	.bInterfaceProtocol = 2,
 
-	/* The ST Microelectronics DfuSe application needs this string. 
+	/* The ST Microelectronics DfuSe application needs this string.
 	 * The format isn't documented... */
 	.iInterface = 4,
 
@@ -128,7 +128,7 @@ static u8 usbdfu_getstatus(u32 *bwPollTimeout)
 {
 	switch(usbdfu_state) {
 	case STATE_DFU_DNLOAD_SYNC:
-		usbdfu_state = STATE_DFU_DNBUSY; 
+		usbdfu_state = STATE_DFU_DNBUSY;
 		*bwPollTimeout = 100;
 		return DFU_STATUS_OK;
 
@@ -165,17 +165,17 @@ usbdfu_getstatus_complete(usbd_device *dev, struct usb_setup_data *req)
 				prog.addr = *(u32*)(prog.buf+1);
 			}
 		} else {
-			u32 baseaddr = prog.addr + 
-				((prog.blocknum - 2) * 
+			u32 baseaddr = prog.addr +
+				((prog.blocknum - 2) *
 					dfu_function.wTransferSize);
-			for(i = 0; i < prog.len; i += 2) 
-				flash_program_half_word(baseaddr + i, 
+			for(i = 0; i < prog.len; i += 2)
+				flash_program_half_word(baseaddr + i,
 						*(u16*)(prog.buf+i));
 		}
 		flash_lock();
 
-		/* We jump straight to dfuDNLOAD-IDLE, 
-		 * skipping dfuDNLOAD-SYNC 
+		/* We jump straight to dfuDNLOAD-IDLE,
+		 * skipping dfuDNLOAD-SYNC
 		 */
 		usbdfu_state = STATE_DFU_DNLOAD_IDLE;
 		return;
@@ -195,7 +195,7 @@ static int usbdfu_control_request(usbd_device *dev,
 {
 	(void)dev;
 
-	if((req->bmRequestType & 0x7F) != 0x21) 
+	if((req->bmRequestType & 0x7F) != 0x21)
 		return 0; /* Only accept class request */
 
 	switch(req->bRequest) {
@@ -279,13 +279,13 @@ int main(void)
 
 	gpio_set_mode(GPIOA, GPIO_MODE_INPUT, 0, GPIO8);
 
-	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ, 
+	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ,
 			GPIO_CNF_OUTPUT_PUSHPULL, GPIO11);
-	systick_set_clocksource(STK_CTRL_CLKSOURCE_AHB_DIV8); 
+	systick_set_clocksource(STK_CTRL_CLKSOURCE_AHB_DIV8);
 	systick_set_reload(900000);
 	systick_interrupt_enable();
 	systick_counter_enable();
-	gpio_set_mode(GPIOB, GPIO_MODE_INPUT, 
+	gpio_set_mode(GPIOB, GPIO_MODE_INPUT,
 			GPIO_CNF_INPUT_FLOAT, GPIO2 | GPIO10);
 
 	get_dev_unique_id(serial_no);
@@ -319,7 +319,7 @@ static char *get_dev_unique_id(char *s)
                 s[7-i] = ((unique_id >> (4*i)) & 0xF) + '0';
         }
         for(i = 0; i < 8; i++)
-                if(s[i] > '9') 
+                if(s[i] > '9')
                         s[i] += 'A' - '9' - 1;
 	s[8] = 0;
 
@@ -330,4 +330,3 @@ void sys_tick_handler()
 {
 	gpio_toggle(GPIOB, GPIO11); /* LED2 on/off */
 }
-
