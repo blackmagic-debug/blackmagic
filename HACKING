@@ -9,6 +9,11 @@ resides in the 'src' directory.
 
 Compiling for the native hardware
 ---------------------------------
+Run
+git submodule init
+git submodule update
+after cloning blackmagic to fill the libopencm3 directory.
+
 To build the firmware for the standard hardware platform run 'make' in the
 src directory.  You will require a GCC cross compiler for ARM Cortex-M3 
 targets.  You will also need to have the libopenstm32 library installed.
