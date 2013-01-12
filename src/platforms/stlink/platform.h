@@ -25,6 +25,7 @@
 #define __PLATFORM_H
 
 #include <libopencm3/stm32/f1/gpio.h>
+#include <libopencm3/usb/usbd.h>
 
 #include <setjmp.h>
 #include <alloca.h>
@@ -33,6 +34,8 @@
 
 #define INLINE_GPIO
 #define CDCACM_PACKET_SIZE 	64
+
+extern usbd_device *usbdev;
 #define CDCACM_GDB_ENDPOINT	1
 
 /* Important pin mappings for STM32 implementation:
