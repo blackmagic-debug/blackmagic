@@ -90,6 +90,7 @@ extern usbd_device *usbdev;
 #define USB_VBUS_IRQ	NVIC_EXTI15_10_IRQ
 
 #define LED_PORT	GPIOB
+#define LED_PORT_UART	GPIOB
 #define LED_UART	GPIO2
 #define LED_IDLE_RUN	GPIO10
 #define LED_ERROR	GPIO11
@@ -99,9 +100,18 @@ extern usbd_device *usbdev;
  * TIM3 is used for traceswo capture and must be highest priority. 
  */
 #define IRQ_PRI_USB		(2 << 4)
-#define IRQ_PRI_USART1		(1 << 4)
+#define IRQ_PRI_USBUSART	(1 << 4)
 #define IRQ_PRI_USB_VBUS	(14 << 4)
 #define IRQ_PRI_TIM3		(0 << 4)
+
+#define USBUSART USART1
+#define USBUSART_CR1 USART1_CR1
+#define USBUSART_IRQ NVIC_USART1_IRQ
+#define USBUSART_APB_ENR RCC_APB2ENR
+#define USBUSART_CLK_ENABLE  RCC_APB2ENR_USART1EN
+#define USBUSART_PORT GPIOA
+#define USBUSART_TX_PIN GPIO9
+#define USBUSART_ISR usart1_isr
 
 #define DEBUG(...)
 
@@ -174,4 +184,3 @@ static inline u16 _gpio_get(u32 gpioport, u16 gpios)
 #endif
 
 #endif
-

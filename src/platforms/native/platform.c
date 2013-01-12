@@ -32,7 +32,7 @@
 
 #include "platform.h"
 #include "jtag_scan.h"
-#include "usbuart.h"
+#include <usbuart.h>
 
 #include <ctype.h>
 
