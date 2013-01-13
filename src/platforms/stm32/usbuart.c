@@ -98,9 +98,9 @@ void usbuart_usb_out_cb(usbd_device *dev, uint8_t ep)
 
 #if defined(BLACKMAGIC)
 	/* Don't bother if uart is disabled.
-	 * This will be the case on mini while we're being debugged. 
+	 * This will be the case on mini while we're being debugged.
 	 */
-	if(!(RCC_APB2ENR & RCC_APB2ENR_USART1EN)) 
+	if(!(RCC_APB2ENR & RCC_APB2ENR_USART1EN))
 		return;
 #endif
 
@@ -142,4 +142,3 @@ void USBUSART_ISR(void)
 
 	uart_usb_buf[uart_usb_buf_size++] = c;
 }
-
