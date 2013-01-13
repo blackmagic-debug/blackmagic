@@ -81,6 +81,7 @@ extern usbd_device *usbdev;
 #define LED_UART	GPIO14
 #define LED_IDLE_RUN	GPIO8
 
+#define USB_DRIVER      stm32f103_usb_driver
 #define USB_IRQ         NVIC_USB_LP_CAN_RX0_IRQ
 #define USB_ISR          usb_lp_can_rx0_isr
 /* Interrupt priorities.  Low numbers are high priority.

@@ -19,9 +19,17 @@
 
 #include <string.h>
 #include <libopencm3/cm3/systick.h>
-#include <libopencm3/stm32/f1/rcc.h>
-#include <libopencm3/stm32/f1/gpio.h>
+#include <libopencm3/stm32/rcc.h>
+#include <libopencm3/stm32/gpio.h>
+#if defined(STM32F1)
 #include <libopencm3/stm32/f1/flash.h>
+#elif defined(STM32F2)
+#include <libopencm3/stm32/f2/flash.h>
+#elif defined(STM32F4)
+#include <libopencm3/stm32/f4/flash.h>
+#else
+#warning "Unhandled STM32 family"
+#endif
 #include <libopencm3/cm3/scb.h>
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/dfu.h>
