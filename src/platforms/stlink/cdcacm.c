@@ -28,7 +28,6 @@
 
 #include <libopencm3/stm32/f1/rcc.h>
 #include <libopencm3/cm3/nvic.h>
-#include <libopencm3/stm32/exti.h>
 #include <libopencm3/stm32/f1/gpio.h>
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/cdc.h>
@@ -37,6 +36,9 @@
 #include <stdlib.h>
 
 #include "platform.h"
+#if defined(PLATFORM_HAS_TRACESWO)
+#include "traceswo.h"
+#endif
 #include <usbuart.h>
 
 #define DFU_IF_NO 4
@@ -309,6 +311,42 @@ static const struct usb_iface_assoc_descriptor dfu_assoc = {
 	.iFunction = 6,
 };
 
+#if defined(PLATFORM_HAS_TRACESWO)
+static const struct usb_endpoint_descriptor trace_endp[] = {{
+	.bLength = USB_DT_ENDPOINT_SIZE,
+	.bDescriptorType = USB_DT_ENDPOINT,
+	.bEndpointAddress = 0x85,
+	.bmAttributes = USB_ENDPOINT_ATTR_BULK,
+	.wMaxPacketSize = 64,
+	.bInterval = 0,
+}};
+
+const struct usb_interface_descriptor trace_iface = {
+	.bLength = USB_DT_INTERFACE_SIZE,
+	.bDescriptorType = USB_DT_INTERFACE,
+	.bInterfaceNumber = 5,
+	.bAlternateSetting = 0,
+	.bNumEndpoints = 1,
+	.bInterfaceClass = 0xFF,
+	.bInterfaceSubClass = 0xFF,
+	.bInterfaceProtocol = 0xFF,
+	.iInterface = 7,
+
+	.endpoint = trace_endp,
+};
+
+static const struct usb_iface_assoc_descriptor trace_assoc = {
+	.bLength = USB_DT_INTERFACE_ASSOCIATION_SIZE,
+	.bDescriptorType = USB_DT_INTERFACE_ASSOCIATION,
+	.bFirstInterface = 5,
+	.bInterfaceCount = 1,
+	.bFunctionClass = 0xFF,
+	.bFunctionSubClass = 0xFF,
+	.bFunctionProtocol = 0xFF,
+	.iFunction = 7,
+};
+#endif
+
 static const struct usb_interface ifaces[] = {{
 	.num_altsetting = 1,
 	.iface_assoc = &gdb_assoc,
@@ -327,13 +365,23 @@ static const struct usb_interface ifaces[] = {{
 	.num_altsetting = 1,
 	.iface_assoc = &dfu_assoc,
 	.altsetting = &dfu_iface,
+#if defined(PLATFORM_HAS_TRACESWO)
+}, {
+	.num_altsetting = 1,
+	.iface_assoc = &trace_assoc,
+	.altsetting = &trace_iface,
+#endif
 }};
 
 static const struct usb_config_descriptor config = {
 	.bLength = USB_DT_CONFIGURATION_SIZE,
 	.bDescriptorType = USB_DT_CONFIGURATION,
 	.wTotalLength = 0,
+#if defined(PLATFORM_HAS_TRACESWO)
+	.bNumInterfaces = 6,
+#else
 	.bNumInterfaces = 5,
+#endif
 	.bConfigurationValue = 1,
 	.iConfiguration = 0,
 	.bmAttributes = 0x80,
@@ -351,6 +399,9 @@ static const char *usb_strings[] = {
 	"Black Magic GDB Server",
 	"Black Magic UART Port",
 	"Black Magic Firmware Upgrade",
+#if defined(PLATFORM_HAS_TRACESWO)
+	"Black Magic Trace Capture",
+#endif
 };
 
 static void dfu_detach_complete(usbd_device *dev, struct usb_setup_data *req)
@@ -358,20 +409,11 @@ static void dfu_detach_complete(usbd_device *dev, struct usb_setup_data *req)
 	(void)dev;
 	(void)req;
 
-	/* Disconnect USB cable by resetting USB Device and pulling USB_DP low*/
-	rcc_peripheral_reset(&RCC_APB1RSTR, RCC_APB1ENR_USBEN);
-	rcc_peripheral_clear_reset(&RCC_APB1RSTR, RCC_APB1ENR_USBEN);
-	rcc_peripheral_enable_clock(&RCC_APB1ENR, RCC_APB1ENR_USBEN);
-	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPAEN);
-	gpio_clear(GPIOA, GPIO12);
-	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
-		GPIO_CNF_OUTPUT_OPENDRAIN, GPIO12);
+	/* Disconnect USB cable */
+	disconnect_usb();
 
 	/* Assert boot-request pin */
-	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPCEN);
-	gpio_set_mode(GPIOC, GPIO_MODE_OUTPUT_2_MHZ,
-			GPIO_CNF_OUTPUT_PUSHPULL, GPIO13);
-	gpio_set(GPIOC, GPIO13);
+        assert_boot_pin();
 
 	/* Reset core to enter bootloader */
 	scb_reset_core();
@@ -457,6 +499,12 @@ static void cdcacm_set_config(usbd_device *dev, u16 wValue)
 					CDCACM_PACKET_SIZE, usbuart_usb_in_cb);
 	usbd_ep_setup(dev, 0x84, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
 
+#if defined(PLATFORM_HAS_TRACESWO)
+	/* Trace interface */
+	usbd_ep_setup(dev, 0x85, USB_ENDPOINT_ATTR_BULK,
+					64, trace_buf_drain);
+#endif
+
 	usbd_register_control_callback(dev,
 			USB_REQ_TYPE_CLASS | USB_REQ_TYPE_INTERFACE, 
 			USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT,
@@ -490,12 +538,18 @@ void cdcacm_init(void)
 	get_dev_unique_id(serial_no);
 
 	usbdev = usbd_init(&stm32f103_usb_driver,
-					&dev, &config, usb_strings, 6);
+#if defined(PLATFORM_HAS_TRACESWO)
+					&dev, &config, usb_strings, 6
+#else
+					&dev, &config, usb_strings, 7
+#endif
+	    );
 	usbd_set_control_buffer_size(usbdev, sizeof(usbd_control_buffer));
 	usbd_register_set_config_callback(usbdev, cdcacm_set_config);
 
-	nvic_set_priority(NVIC_USB_LP_CAN_RX0_IRQ, IRQ_PRI_USB);
-	nvic_enable_irq(NVIC_USB_LP_CAN_RX0_IRQ);
+	nvic_set_priority(USB_IRQ, IRQ_PRI_USB);
+	nvic_enable_irq(USB_IRQ);
+	setup_vbus_irq();
 }
 
 void usb_lp_can_rx0_isr(void)

@@ -81,6 +81,8 @@ extern usbd_device *usbdev;
 #define LED_UART	GPIO14
 #define LED_IDLE_RUN	GPIO8
 
+#define USB_IRQ         NVIC_USB_LP_CAN_RX0_IRQ
+#define USB_ISR          usb_lp_can_rx0_isr
 /* Interrupt priorities.  Low numbers are high priority.
  * For now USART2 preempts USB which may spin while buffer is drained.
  * TIM3 is used for traceswo capture and must be highest priority.
@@ -168,3 +170,5 @@ static inline u16 _gpio_get(u32 gpioport, u16 gpios)
 
 #endif
 
+void disconnect_usb(void);
+void assert_boot_pin(void);

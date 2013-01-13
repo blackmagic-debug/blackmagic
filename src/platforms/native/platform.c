@@ -26,6 +26,7 @@
 #include <libopencm3/cm3/systick.h>
 #include <libopencm3/cm3/scb.h>
 #include <libopencm3/cm3/nvic.h>
+#include <libopencm3/stm32/exti.h>
 #include <libopencm3/stm32/usart.h>
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/stm32/f1/adc.h>
@@ -261,4 +262,45 @@ const char *platform_target_voltage(void)
 	ret[2] = '0' + (val / 8191) % 10;
 
 	return ret;
+}
+
+void assert_boot_pin(void)
+{
+	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ,
+			GPIO_CNF_OUTPUT_PUSHPULL, GPIO12);
+	gpio_clear(GPIOB, GPIO12);
+}
+
+void exti15_10_isr(void)
+{
+	if (gpio_get(USB_VBUS_PORT, USB_VBUS_PIN)) {
+		/* Drive pull-up high if VBUS connected */
+		gpio_set_mode(USB_PU_PORT, GPIO_MODE_OUTPUT_10_MHZ,
+				GPIO_CNF_OUTPUT_PUSHPULL, USB_PU_PIN);
+	} else {
+		/* Allow pull-up to float if VBUS disconnected */
+		gpio_set_mode(USB_PU_PORT, GPIO_MODE_INPUT,
+				GPIO_CNF_INPUT_FLOAT, USB_PU_PIN);
+	}
+
+	exti_reset_request(USB_VBUS_PIN);
+}
+
+void setup_vbus_irq(void)
+{
+	nvic_set_priority(USB_VBUS_IRQ, IRQ_PRI_USB_VBUS);
+	nvic_enable_irq(USB_VBUS_IRQ);
+
+	gpio_set(USB_VBUS_PORT, USB_VBUS_PIN);
+	gpio_set(USB_PU_PORT, USB_PU_PIN);
+
+	gpio_set_mode(USB_VBUS_PORT, GPIO_MODE_INPUT,
+			GPIO_CNF_INPUT_PULL_UPDOWN, USB_VBUS_PIN);
+
+	/* Configure EXTI for USB VBUS monitor */
+	exti_select_source(USB_VBUS_PIN, USB_VBUS_PORT);
+	exti_set_trigger(USB_VBUS_PIN, EXTI_TRIGGER_BOTH);
+	exti_enable_request(USB_VBUS_PIN);
+
+	exti15_10_isr();
 }

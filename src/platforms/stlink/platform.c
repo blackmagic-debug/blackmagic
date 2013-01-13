@@ -108,3 +108,24 @@ const char *platform_target_voltage(void)
 {
 	return "unknown";
 }
+
+void disconnect_usb(void)
+{
+	/* Disconnect USB cable by resetting USB Device and pulling USB_DP low*/
+	rcc_peripheral_reset(&RCC_APB1RSTR, RCC_APB1ENR_USBEN);
+	rcc_peripheral_clear_reset(&RCC_APB1RSTR, RCC_APB1ENR_USBEN);
+	rcc_peripheral_enable_clock(&RCC_APB1ENR, RCC_APB1ENR_USBEN);
+	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPAEN);
+	gpio_clear(GPIOA, GPIO12);
+	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
+		GPIO_CNF_OUTPUT_OPENDRAIN, GPIO12);
+}
+
+void assert_boot_pin(void)
+{
+	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPCEN);
+	gpio_set_mode(GPIOC, GPIO_MODE_OUTPUT_2_MHZ,
+			GPIO_CNF_OUTPUT_PUSHPULL, GPIO13);
+	gpio_set(GPIOC, GPIO13);
+}
+void setup_vbus_irq(void){};

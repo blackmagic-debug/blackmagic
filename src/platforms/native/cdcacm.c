@@ -26,10 +26,9 @@
  * The device's unique id is used as the USB serial number string.
  */
 
-#include <libopencm3/stm32/f1/rcc.h>
+#include <libopencm3/stm32/rcc.h>
 #include <libopencm3/cm3/nvic.h>
-#include <libopencm3/stm32/exti.h>
-#include <libopencm3/stm32/f1/gpio.h>
+#include <libopencm3/stm32/gpio.h>
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/cdc.h>
 #include <libopencm3/cm3/scb.h>
@@ -37,8 +36,10 @@
 #include <stdlib.h>
 
 #include "platform.h"
+#if defined(PLATFORM_HAS_TRACESWO)
 #include "traceswo.h"
-#include "usbuart.h"
+#endif
+#include <usbuart.h>
 
 #define DFU_IF_NO 4
 
@@ -310,6 +311,7 @@ static const struct usb_iface_assoc_descriptor dfu_assoc = {
 	.iFunction = 6,
 };
 
+#if defined(PLATFORM_HAS_TRACESWO)
 static const struct usb_endpoint_descriptor trace_endp[] = {{
 	.bLength = USB_DT_ENDPOINT_SIZE,
 	.bDescriptorType = USB_DT_ENDPOINT,
@@ -343,6 +345,7 @@ static const struct usb_iface_assoc_descriptor trace_assoc = {
 	.bFunctionProtocol = 0xFF,
 	.iFunction = 7,
 };
+#endif
 
 static const struct usb_interface ifaces[] = {{
 	.num_altsetting = 1,
@@ -362,17 +365,23 @@ static const struct usb_interface ifaces[] = {{
 	.num_altsetting = 1,
 	.iface_assoc = &dfu_assoc,
 	.altsetting = &dfu_iface,
+#if defined(PLATFORM_HAS_TRACESWO)
 }, {
 	.num_altsetting = 1,
 	.iface_assoc = &trace_assoc,
 	.altsetting = &trace_iface,
+#endif
 }};
 
 static const struct usb_config_descriptor config = {
 	.bLength = USB_DT_CONFIGURATION_SIZE,
 	.bDescriptorType = USB_DT_CONFIGURATION,
 	.wTotalLength = 0,
+#if defined(PLATFORM_HAS_TRACESWO)
 	.bNumInterfaces = 6,
+#else
+	.bNumInterfaces = 5,
+#endif
 	.bConfigurationValue = 1,
 	.iConfiguration = 0,
 	.bmAttributes = 0x80,
@@ -390,7 +399,9 @@ static const char *usb_strings[] = {
 	"Black Magic GDB Server",
 	"Black Magic UART Port",
 	"Black Magic Firmware Upgrade",
+#if defined(PLATFORM_HAS_TRACESWO)
 	"Black Magic Trace Capture",
+#endif
 };
 
 static void dfu_detach_complete(usbd_device *dev, struct usb_setup_data *req)
@@ -399,12 +410,10 @@ static void dfu_detach_complete(usbd_device *dev, struct usb_setup_data *req)
 	(void)req;
 
 	/* Disconnect USB cable */
-	gpio_set_mode(USB_PU_PORT, GPIO_MODE_INPUT, 0, USB_PU_PIN);
+	disconnect_usb();
 
 	/* Assert boot-request pin */
-	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ, 
-			GPIO_CNF_OUTPUT_PUSHPULL, GPIO12);
-	gpio_clear(GPIOB, GPIO12);
+        assert_boot_pin();
 
 	/* Reset core to enter bootloader */
 	scb_reset_core();
@@ -490,9 +499,11 @@ static void cdcacm_set_config(usbd_device *dev, u16 wValue)
 					CDCACM_PACKET_SIZE, usbuart_usb_in_cb);
 	usbd_ep_setup(dev, 0x84, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
 
+#if defined(PLATFORM_HAS_TRACESWO)
 	/* Trace interface */
 	usbd_ep_setup(dev, 0x85, USB_ENDPOINT_ATTR_BULK,
 					64, trace_buf_drain);
+#endif
 
 	usbd_register_control_callback(dev,
 			USB_REQ_TYPE_CLASS | USB_REQ_TYPE_INTERFACE,
@@ -526,48 +537,18 @@ void cdcacm_init(void)
 
 	get_dev_unique_id(serial_no);
 
-	usbdev = usbd_init(&stm32f103_usb_driver,
-					&dev, &config, usb_strings, 7);
+	usbdev = usbd_init(&USB_DRIVER, &dev, &config, usb_strings, sizeof(usb_strings)/sizeof(char *));
 	usbd_set_control_buffer_size(usbdev, sizeof(usbd_control_buffer));
 	usbd_register_set_config_callback(usbdev, cdcacm_set_config);
 
-	nvic_set_priority(NVIC_USB_LP_CAN_RX0_IRQ, IRQ_PRI_USB);
-	nvic_enable_irq(NVIC_USB_LP_CAN_RX0_IRQ);
-	nvic_set_priority(USB_VBUS_IRQ, IRQ_PRI_USB_VBUS);
-	nvic_enable_irq(USB_VBUS_IRQ);
-
-	gpio_set(USB_VBUS_PORT, USB_VBUS_PIN);
-	gpio_set(USB_PU_PORT, USB_PU_PIN);
-
-	gpio_set_mode(USB_VBUS_PORT, GPIO_MODE_INPUT,
-			GPIO_CNF_INPUT_PULL_UPDOWN, USB_VBUS_PIN);
-
-	/* Configure EXTI for USB VBUS monitor */
-	exti_select_source(USB_VBUS_PIN, USB_VBUS_PORT);
-	exti_set_trigger(USB_VBUS_PIN, EXTI_TRIGGER_BOTH);
-	exti_enable_request(USB_VBUS_PIN);
-
-	exti15_10_isr();
+	nvic_set_priority(USB_IRQ, IRQ_PRI_USB);
+	nvic_enable_irq(USB_IRQ);
+	setup_vbus_irq();
 }
 
-void usb_lp_can_rx0_isr(void)
+void USB_ISR(void)
 {
 	usbd_poll(usbdev);
-}
-
-void exti15_10_isr(void)
-{
-	if (gpio_get(USB_VBUS_PORT, USB_VBUS_PIN)) {
-		/* Drive pull-up high if VBUS connected */
-		gpio_set_mode(USB_PU_PORT, GPIO_MODE_OUTPUT_10_MHZ, 
-				GPIO_CNF_OUTPUT_PUSHPULL, USB_PU_PIN);
-	} else {
-		/* Allow pull-up to float if VBUS disconnected */
-		gpio_set_mode(USB_PU_PORT, GPIO_MODE_INPUT, 
-				GPIO_CNF_INPUT_FLOAT, USB_PU_PIN);
-	}
-
-	exti_reset_request(USB_VBUS_PIN);
 }
 
 static char *get_dev_unique_id(char *s) 
