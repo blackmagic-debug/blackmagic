@@ -19,10 +19,10 @@
  */
 
 /* This file implements a the USB Communications Device Class - Abstract
- * Control Model (CDC-ACM) as defined in CDC PSTN subclass 1.2.  
- * A Device Firmware Upgrade (DFU 1.1) class interface is provided for 
+ * Control Model (CDC-ACM) as defined in CDC PSTN subclass 1.2.
+ * A Device Firmware Upgrade (DFU 1.1) class interface is provided for
  * field firmware upgrade.
- * 
+ *
  * The device's unique id is used as the USB serial number string.
  */
 
@@ -68,8 +68,8 @@ static const struct usb_device_descriptor dev = {
         .bNumConfigurations = 1,
 };
 
-/* This notification endpoint isn't implemented. According to CDC spec its 
- * optional, but its absence causes a NULL pointer dereference in Linux cdc_acm 
+/* This notification endpoint isn't implemented. According to CDC spec its
+ * optional, but its absence causes a NULL pointer dereference in Linux cdc_acm
  * driver. */
 static const struct usb_endpoint_descriptor gdb_comm_endp[] = {{
 	.bLength = USB_DT_ENDPOINT_SIZE,
@@ -109,7 +109,7 @@ static const struct {
 		.bcdCDC = 0x0110,
 	},
 	.call_mgmt = {
-		.bFunctionLength = 
+		.bFunctionLength =
 			sizeof(struct usb_cdc_call_management_descriptor),
 		.bDescriptorType = CS_INTERFACE,
 		.bDescriptorSubtype = USB_CDC_TYPE_CALL_MANAGEMENT,
@@ -127,7 +127,7 @@ static const struct {
 		.bDescriptorType = CS_INTERFACE,
 		.bDescriptorSubtype = USB_CDC_TYPE_UNION,
 		.bControlInterface = 0,
-		.bSubordinateInterface0 = 1, 
+		.bSubordinateInterface0 = 1,
 	 }
 };
 
@@ -212,7 +212,7 @@ static const struct {
 		.bcdCDC = 0x0110,
 	},
 	.call_mgmt = {
-		.bFunctionLength = 
+		.bFunctionLength =
 			sizeof(struct usb_cdc_call_management_descriptor),
 		.bDescriptorType = CS_INTERFACE,
 		.bDescriptorSubtype = USB_CDC_TYPE_CALL_MANAGEMENT,
@@ -230,7 +230,7 @@ static const struct {
 		.bDescriptorType = CS_INTERFACE,
 		.bDescriptorSubtype = USB_CDC_TYPE_UNION,
 		.bControlInterface = 2,
-		.bSubordinateInterface0 = 3, 
+		.bSubordinateInterface0 = 3,
 	 }
 };
 
@@ -429,7 +429,7 @@ static int cdcacm_control_request(usbd_device *dev,
 	(void)len;
 
 	switch(req->bRequest) {
-	case USB_CDC_REQ_SET_CONTROL_LINE_STATE: 
+	case USB_CDC_REQ_SET_CONTROL_LINE_STATE:
 		/* Ignore if not for GDB interface */
 		if(req->wIndex != 0)
 			return 1;
@@ -437,8 +437,8 @@ static int cdcacm_control_request(usbd_device *dev,
 		cdcacm_gdb_dtr = req->wValue & 1;
 
 		return 1;
-	case USB_CDC_REQ_SET_LINE_CODING: 
-		if(*len < sizeof(struct usb_cdc_line_coding)) 
+	case USB_CDC_REQ_SET_LINE_CODING:
+		if(*len < sizeof(struct usb_cdc_line_coding))
 			return 0;
 
 		switch(req->wIndex) {
@@ -449,7 +449,7 @@ static int cdcacm_control_request(usbd_device *dev,
 		default:
 			return 0;
 		}
-	case DFU_GETSTATUS: 
+	case DFU_GETSTATUS:
 		if(req->wIndex == DFU_IF_NO) {
 			(*buf)[0] = DFU_STATUS_OK;
 			(*buf)[1] = 0;
@@ -551,7 +551,7 @@ void USB_ISR(void)
 	usbd_poll(usbdev);
 }
 
-static char *get_dev_unique_id(char *s) 
+static char *get_dev_unique_id(char *s)
 {
         volatile uint32_t *unique_id_p = (volatile uint32_t *)0x1FFFF7E8;
 	uint32_t unique_id = *unique_id_p +
@@ -564,10 +564,9 @@ static char *get_dev_unique_id(char *s)
                 s[7-i] = ((unique_id >> (4*i)) & 0xF) + '0';
         }
         for(i = 0; i < 8; i++)
-                if(s[i] > '9') 
+                if(s[i] > '9')
                         s[i] += 'A' - '9' - 1;
 	s[8] = 0;
 
 	return s;
 }
-
