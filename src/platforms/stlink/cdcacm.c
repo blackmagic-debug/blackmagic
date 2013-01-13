@@ -39,12 +39,15 @@
 #include "platform.h"
 #include <usbuart.h>
 
+#define DFU_IF_NO 4
+
 usbd_device * usbdev;
 
 static char *get_dev_unique_id(char *serial_no);
 
 static int configured;
 static int cdcacm_gdb_dtr = 1;
+
 
 static const struct usb_device_descriptor dev = {
         .bLength = USB_DT_DEVICE_SIZE,
@@ -271,6 +274,41 @@ static const struct usb_iface_assoc_descriptor uart_assoc = {
 	.iFunction = 0,
 };
 
+const struct usb_dfu_descriptor dfu_function = {
+	.bLength = sizeof(struct usb_dfu_descriptor),
+	.bDescriptorType = DFU_FUNCTIONAL,
+	.bmAttributes = USB_DFU_CAN_DOWNLOAD | USB_DFU_WILL_DETACH,
+	.wDetachTimeout = 255,
+	.wTransferSize = 1024,
+	.bcdDFUVersion = 0x011A,
+};
+
+const struct usb_interface_descriptor dfu_iface = {
+	.bLength = USB_DT_INTERFACE_SIZE,
+	.bDescriptorType = USB_DT_INTERFACE,
+	.bInterfaceNumber = DFU_IF_NO,
+	.bAlternateSetting = 0,
+	.bNumEndpoints = 0,
+	.bInterfaceClass = 0xFE,
+	.bInterfaceSubClass = 1,
+	.bInterfaceProtocol = 1,
+	.iInterface = 6,
+
+	.extra = &dfu_function,
+	.extralen = sizeof(dfu_function),
+};
+
+static const struct usb_iface_assoc_descriptor dfu_assoc = {
+	.bLength = USB_DT_INTERFACE_ASSOCIATION_SIZE,
+	.bDescriptorType = USB_DT_INTERFACE_ASSOCIATION,
+	.bFirstInterface = 4,
+	.bInterfaceCount = 1,
+	.bFunctionClass = 0xFE,
+	.bFunctionSubClass = 1,
+	.bFunctionProtocol = 1,
+	.iFunction = 6,
+};
+
 static const struct usb_interface ifaces[] = {{
 	.num_altsetting = 1,
 	.iface_assoc = &gdb_assoc,
@@ -285,13 +323,17 @@ static const struct usb_interface ifaces[] = {{
 }, {
 	.num_altsetting = 1,
 	.altsetting = uart_data_iface,
+}, {
+	.num_altsetting = 1,
+	.iface_assoc = &dfu_assoc,
+	.altsetting = &dfu_iface,
 }};
 
 static const struct usb_config_descriptor config = {
 	.bLength = USB_DT_CONFIGURATION_SIZE,
 	.bDescriptorType = USB_DT_CONFIGURATION,
 	.wTotalLength = 0,
-	.bNumInterfaces = 4,
+	.bNumInterfaces = 5,
 	.bConfigurationValue = 1,
 	.iConfiguration = 0,
 	.bmAttributes = 0x80,
@@ -308,7 +350,32 @@ static const char *usb_strings[] = {
 	serial_no,
 	"Black Magic GDB Server",
 	"Black Magic UART Port",
+	"Black Magic Firmware Upgrade",
 };
+
+static void dfu_detach_complete(usbd_device *dev, struct usb_setup_data *req)
+{
+	(void)dev;
+	(void)req;
+
+	/* Disconnect USB cable by resetting USB Device and pulling USB_DP low*/
+	rcc_peripheral_reset(&RCC_APB1RSTR, RCC_APB1ENR_USBEN);
+	rcc_peripheral_clear_reset(&RCC_APB1RSTR, RCC_APB1ENR_USBEN);
+	rcc_peripheral_enable_clock(&RCC_APB1ENR, RCC_APB1ENR_USBEN);
+	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPAEN);
+	gpio_clear(GPIOA, GPIO12);
+	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
+		GPIO_CNF_OUTPUT_OPENDRAIN, GPIO12);
+
+	/* Assert boot-request pin */
+	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPCEN);
+	gpio_set_mode(GPIOC, GPIO_MODE_OUTPUT_2_MHZ,
+			GPIO_CNF_OUTPUT_PUSHPULL, GPIO13);
+	gpio_set(GPIOC, GPIO13);
+
+	/* Reset core to enter bootloader */
+	scb_reset_core();
+}
 
 static int cdcacm_control_request(usbd_device *dev,
     struct usb_setup_data *req, uint8_t **buf, uint16_t *len,
@@ -340,6 +407,24 @@ static int cdcacm_control_request(usbd_device *dev,
 		default:
 			return 0;
 		}
+	case DFU_GETSTATUS:
+		if(req->wIndex == DFU_IF_NO) {
+			(*buf)[0] = DFU_STATUS_OK;
+			(*buf)[1] = 0;
+			(*buf)[2] = 0;
+			(*buf)[3] = 0;
+			(*buf)[4] = STATE_APP_IDLE;
+			(*buf)[5] = 0;	/* iString not used here */
+			*len = 6;
+
+			return 1;
+		}
+	case DFU_DETACH:
+		if(req->wIndex == DFU_IF_NO) {
+			*complete = dfu_detach_complete;
+			return 1;
+		}
+		return 0;
 	}
 	return 0;
 }
@@ -405,7 +490,7 @@ void cdcacm_init(void)
 	get_dev_unique_id(serial_no);
 
 	usbdev = usbd_init(&stm32f103_usb_driver,
-					&dev, &config, usb_strings, 5);
+					&dev, &config, usb_strings, 6);
 	usbd_set_control_buffer_size(usbdev, sizeof(usbd_control_buffer));
 	usbd_register_set_config_callback(usbdev, cdcacm_set_config);
 

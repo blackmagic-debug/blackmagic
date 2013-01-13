@@ -41,6 +41,10 @@ usbd_device *usbdev;
 /* We need a special large control buffer for this device: */
 u8 usbd_control_buffer[1024];
 
+#if defined(DISCOVERY_STLINK)
+u32 led2_state = 0;
+#endif
+
 static enum dfu_state usbdfu_state = STATE_DFU_IDLE;
 
 static char *get_dev_unique_id(char *serial_no);
@@ -118,7 +122,11 @@ static char serial_no[9];
 
 static const char *usb_strings[] = {
 	"Black Sphere Technologies",
+#if defined(DISCOVERY_STLINK)
+	"Black Magic (Upgrade) for STLink/Discovery",
+#else
 	"Black Magic Probe (Upgrade)",
+#endif
 	serial_no,
 	/* This string is used by ST Microelectronics' DfuSe utility */
 	"@Internal Flash   /0x08000000/8*001Ka,120*001Kg"
@@ -181,7 +189,19 @@ usbdfu_getstatus_complete(usbd_device *dev, struct usb_setup_data *req)
 		return;
 
 	case STATE_DFU_MANIFEST:
-		/* USB device must detach, we just reset... */
+#if defined (DISCOVERY_STLINK)
+		/* Disconnect USB cable by resetting USB Device
+                   and pulling USB_DP low*/
+		rcc_peripheral_reset(&RCC_APB1RSTR, RCC_APB1ENR_USBEN);
+		rcc_peripheral_clear_reset(&RCC_APB1RSTR, RCC_APB1ENR_USBEN);
+		rcc_peripheral_enable_clock(&RCC_APB1ENR, RCC_APB1ENR_USBEN);
+		rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPAEN);
+		gpio_clear(GPIOA, GPIO12);
+		gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
+			GPIO_CNF_OUTPUT_OPENDRAIN, GPIO12);
+#else
+        /* USB device must detach, we just reset... */
+#endif
 		scb_reset_system();
 		return; /* Will never return */
 	default:
@@ -250,8 +270,13 @@ static int usbdfu_control_request(usbd_device *dev,
 
 int main(void)
 {
+#if defined (DISCOVERY_STLINK)
+	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPCEN);
+	if(!gpio_get(GPIOC, GPIO13)) {
+#else
 	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPBEN);
 	if(gpio_get(GPIOB, GPIO12)) {
+#endif
 		/* Boot the application if it's valid */
 		if((*(volatile u32*)APP_ADDRESS & 0x2FFE0000) == 0x20000000) {
 			/* Set vector table base address */
@@ -272,15 +297,31 @@ int main(void)
 		flash_program_option_bytes(FLASH_OBP_WRP10, 0x03FC);
 	}
 
+#if defined (DISCOVERY_STLINK)
+	/* Just in case: Disconnect USB cable by resetting USB Device
+	and pulling USB_DP low*/
+	rcc_peripheral_reset(&RCC_APB1RSTR, RCC_APB1ENR_USBEN);
+	rcc_peripheral_clear_reset(&RCC_APB1RSTR, RCC_APB1ENR_USBEN);
+	rcc_peripheral_enable_clock(&RCC_APB1ENR, RCC_APB1ENR_USBEN);
+	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPAEN);
+	gpio_clear(GPIOA, GPIO12);
+	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
+		GPIO_CNF_OUTPUT_OPENDRAIN, GPIO12);
+#endif
 	rcc_clock_setup_in_hse_8mhz_out_72mhz();
 
 	rcc_peripheral_enable_clock(&RCC_APB1ENR, RCC_APB1ENR_USBEN);
 	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPAEN);
 
+#if defined(DISCOVERY_STLINK)
+	gpio_set_mode(GPIOA, GPIO_MODE_INPUT,
+			GPIO_CNF_INPUT_ANALOG, GPIO0);
+#else
 	gpio_set_mode(GPIOA, GPIO_MODE_INPUT, 0, GPIO8);
 
 	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ,
 			GPIO_CNF_OUTPUT_PUSHPULL, GPIO11);
+#endif
 	systick_set_clocksource(STK_CTRL_CLKSOURCE_AHB_DIV8);
 	systick_set_reload(900000);
 	systick_interrupt_enable();
@@ -298,9 +339,11 @@ int main(void)
 				USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT,
 				usbdfu_control_request);
 
+#if defined(BLACKMAGIG)
 	gpio_set(GPIOA, GPIO8);
 	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
 			GPIO_CNF_OUTPUT_PUSHPULL, GPIO8);
+#endif
 
 	while (1)
 		usbd_poll(usbdev);
@@ -328,5 +371,16 @@ static char *get_dev_unique_id(char *s)
 
 void sys_tick_handler()
 {
+#if defined(DISCOVERY_STLINK)
+	if (led2_state & 1)
+		gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
+			GPIO_CNF_OUTPUT_PUSHPULL, GPIO9);
+	else
+		gpio_set_mode(GPIOA, GPIO_MODE_INPUT,
+		GPIO_CNF_INPUT_ANALOG, GPIO9);
+	led2_state++;
+#else
 	gpio_toggle(GPIOB, GPIO11); /* LED2 on/off */
+#endif
 }
+
