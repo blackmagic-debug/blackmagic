@@ -158,6 +158,13 @@ static u8 usbdfu_getstatus(u32 *bwPollTimeout)
 	}
 }
 
+#if defined (STM32_CAN)
+#define FLASHBLOCKSIZE 2048
+#else
+#define FLASHBLOCKSIZE 1024
+#endif
+static uint32_t last_erased_pages=0xffffffff;
+
 static void
 usbdfu_getstatus_complete(usbd_device *dev, struct usb_setup_data *req)
 {
@@ -175,8 +182,15 @@ usbdfu_getstatus_complete(usbd_device *dev, struct usb_setup_data *req)
 				return;
 			}
 			switch(prog.buf[0]) {
-			case CMD_ERASE:
-				flash_erase_page(*(u32*)(prog.buf+1));
+			case CMD_ERASE: {
+				u32 page_start = *(u32*)(prog.buf+1);
+
+				page_start &= (~(FLASHBLOCKSIZE-1));
+				if (page_start != last_erased_pages) {
+					flash_erase_page(page_start);
+					last_erased_pages = page_start;
+				}
+			}
 			case CMD_SETADDR:
 				prog.addr = *(u32*)(prog.buf+1);
 			}
