@@ -130,14 +130,26 @@ static char serial_no[9];
 
 static const char *usb_strings[] = {
 	"Black Sphere Technologies",
-#if defined(DISCOVERY_STLINK)
-	"Black Magic (Upgrade) for STLink/Discovery",
-#else
+#if defined(BLACKMAGIC)
 	"Black Magic Probe (Upgrade)",
+#elif defined(DISCOVERY_STLINK)
+	"Black Magic (Upgrade) for STLink/Discovery",
+#elif defined(STM32_CAN)
+	"Black Magic (Upgrade) for STM32_CAN",
+#else
+#warning "Unhandled board"
 #endif
 	serial_no,
 	/* This string is used by ST Microelectronics' DfuSe utility */
+#if defined(BLACKMAGIC)
 	"@Internal Flash   /0x08000000/8*001Ka,120*001Kg"
+#elif defined(DISCOVERY_STLINK)
+	"@Internal Flash   /0x08000000/8*001Ka,56*001Kg"
+#elif defined(STM32_CAN)
+	"@Internal Flash   /0x08000000/4*002Ka,124*002Kg"
+#else
+#warning "Unhandled board"
+#endif
 };
 
 static u8 usbdfu_getstatus(u32 *bwPollTimeout)
@@ -190,6 +202,7 @@ usbdfu_getstatus_complete(usbd_device *dev, struct usb_setup_data *req)
 					flash_erase_page(page_start);
 					last_erased_pages = page_start;
 				}
+
 			}
 			case CMD_SETADDR:
 				prog.addr = *(u32*)(prog.buf+1);
@@ -295,6 +308,9 @@ int main(void)
 #if defined (DISCOVERY_STLINK)
 	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPCEN);
 	if(!gpio_get(GPIOC, GPIO13)) {
+#elif defined (STM32_CAN)
+	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPAEN);
+	if(!gpio_get(GPIOA, GPIO0)) {
 #else
 	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPBEN);
 	if(gpio_get(GPIOB, GPIO12)) {
@@ -316,6 +332,8 @@ int main(void)
 		FLASH_CR = 0;
 		flash_erase_option_bytes();
 		flash_program_option_bytes(FLASH_OBP_RDP, FLASH_OBP_RDP_KEY);
+		/* CL Device: Protect 2 bits with (2 * 2k pages each)*/
+		/* MD Device: Protect 2 bits with (4 * 1k pages each)*/
 		flash_program_option_bytes(FLASH_OBP_WRP10, 0x03FC);
 	}
 
@@ -332,13 +350,18 @@ int main(void)
 #endif
 	rcc_clock_setup_in_hse_8mhz_out_72mhz();
 
-	rcc_peripheral_enable_clock(&RCC_APB1ENR, RCC_APB1ENR_USBEN);
 	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPAEN);
 
 #if defined(DISCOVERY_STLINK)
 	gpio_set_mode(GPIOA, GPIO_MODE_INPUT,
 			GPIO_CNF_INPUT_ANALOG, GPIO0);
+#elif defined (STM32_CAN)
+	rcc_peripheral_enable_clock(&RCC_AHBENR, RCC_AHBENR_OTGFSEN);
+	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPBEN);
+	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ,
+			GPIO_CNF_OUTPUT_PUSHPULL, GPIO0);
 #else
+        rcc_peripheral_enable_clock(&RCC_APB1ENR, RCC_APB1ENR_USBEN);
 	gpio_set_mode(GPIOA, GPIO_MODE_INPUT, 0, GPIO8);
 
 	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ,
@@ -353,8 +376,13 @@ int main(void)
 
 	get_dev_unique_id(serial_no);
 
+#if defined(STM32_CAN)
+	usbdev = usbd_init(&stm32f107_usb_driver,
+				&dev, &config, usb_strings, 4);
+#else
 	usbdev = usbd_init(&stm32f103_usb_driver,
 				&dev, &config, usb_strings, 4);
+#endif
 	usbd_set_control_buffer_size(usbdev, sizeof(usbd_control_buffer));
 	usbd_register_control_callback(usbdev,
 				USB_REQ_TYPE_CLASS | USB_REQ_TYPE_INTERFACE,
@@ -401,6 +429,8 @@ void sys_tick_handler()
 		gpio_set_mode(GPIOA, GPIO_MODE_INPUT,
 		GPIO_CNF_INPUT_ANALOG, GPIO9);
 	led2_state++;
+#elif defined(STM32_CAN)
+	gpio_toggle(GPIOB, GPIO0);  /* LED2 on/off */
 #else
 	gpio_toggle(GPIOB, GPIO11); /* LED2 on/off */
 #endif
