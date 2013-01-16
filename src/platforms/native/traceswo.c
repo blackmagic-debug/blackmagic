@@ -40,12 +40,13 @@
 #include <libopencm3/usb/usbd.h>
 
 #include <string.h>
+#include "platform.h"
 
 void traceswo_init(void)
 {
-	rcc_peripheral_enable_clock(&RCC_APB1ENR, RCC_APB1ENR_TIM3EN);
+	TRACE_TIM_CLK_EN();
 
-	timer_reset(TIM3);
+	timer_reset(TRACE_TIM);
 
 	/* Refer to ST doc RM0008 - STM32F10xx Reference Manual.
 	 * Section 14.3.4 - 14.3.6 (General Purpose Timer - Input Capture)
@@ -54,29 +55,29 @@ void traceswo_init(void)
 	 */
 
 	/* Use TI1 as capture input for CH1 and CH2 */
-	timer_ic_set_input(TIM3, TIM_IC1, TIM_IC_IN_TI1);
-	timer_ic_set_input(TIM3, TIM_IC2, TIM_IC_IN_TI1);
+	timer_ic_set_input(TRACE_TIM, TIM_IC1, TIM_IC_IN_TI1);
+	timer_ic_set_input(TRACE_TIM, TIM_IC2, TIM_IC_IN_TI1);
 
 	/* Capture CH1 on rising edge, CH2 on falling edge */
-	timer_ic_set_polarity(TIM3, TIM_IC1, TIM_IC_RISING);
-	timer_ic_set_polarity(TIM3, TIM_IC2, TIM_IC_FALLING);
+	timer_ic_set_polarity(TRACE_TIM, TIM_IC1, TIM_IC_RISING);
+	timer_ic_set_polarity(TRACE_TIM, TIM_IC2, TIM_IC_FALLING);
 
 	/* Trigger on Filtered Timer Input 1 (TI1FP1) */
-	timer_slave_set_trigger(TIM3, TIM_SMCR_TS_IT1FP1);
+	timer_slave_set_trigger(TRACE_TIM, TIM_SMCR_TS_IT1FP1);
 
 	/* Slave reset mode: reset counter on trigger */
-	timer_slave_set_mode(TIM3, TIM_SMCR_SMS_RM);
+	timer_slave_set_mode(TRACE_TIM, TIM_SMCR_SMS_RM);
 
 	/* Enable capture interrupt */
-	nvic_set_priority(NVIC_TIM3_IRQ, IRQ_PRI_TIM3);
-	nvic_enable_irq(NVIC_TIM3_IRQ);
-	timer_enable_irq(TIM3, TIM_DIER_CC1IE); 
+	nvic_set_priority(TRACE_IRQ, IRQ_PRI_TRACE);
+	nvic_enable_irq(TRACE_IRQ);
+	timer_enable_irq(TRACE_TIM, TIM_DIER_CC1IE);
 
 	/* Enable the capture channels */
-	timer_ic_enable(TIM3, TIM_IC1);
-	timer_ic_enable(TIM3, TIM_IC2);
+	timer_ic_enable(TRACE_TIM, TIM_IC1);
+	timer_ic_enable(TRACE_TIM, TIM_IC2);
 
-	timer_enable_counter(TIM3);
+	timer_enable_counter(TRACE_TIM);
 }
 
 static uint8_t trace_usb_buf[64];
@@ -107,9 +108,9 @@ void trace_buf_drain(usbd_device *dev, uint8_t ep)
 
 #define ALLOWED_DUTY_ERROR 5
 
-void tim3_isr(void)
+void trace_isr(void)
 {
-	uint16_t sr = TIM_SR(TIM3);
+	uint16_t sr = TIM_SR(TRACE_TIM);
 	uint16_t duty, cycle;
 	static uint16_t bt;
 	static uint8_t lastbit;
@@ -120,13 +121,13 @@ void tim3_isr(void)
 
 	/* Reset decoder state if capture overflowed */
 	if (sr & (TIM_SR_CC1OF | TIM_SR_UIF)) {
-		timer_clear_flag(TIM3, TIM_SR_CC1OF | TIM_SR_UIF);
+		timer_clear_flag(TRACE_TIM, TIM_SR_CC1OF | TIM_SR_UIF);
 		if (!(sr & (TIM_SR_CC2IF | TIM_SR_CC1IF)))
 			goto flush_and_reset;
 	}
 
-	cycle = TIM_CCR1(TIM3);
-	duty = TIM_CCR2(TIM3);
+	cycle = TIM_CCR1(TRACE_TIM);
+	duty = TIM_CCR2(TRACE_TIM);
 
 	/* Reset decoder state if crazy shit happened */
 	if ((bt && (((duty / bt) > 2) || ((duty / bt) == 0))) || (duty == 0)) 
@@ -147,9 +148,9 @@ void tim3_isr(void)
 		bt = duty;
 		lastbit = 1;
 		halfbit = 0;
-		timer_set_period(TIM3, duty * 6);
-		timer_clear_flag(TIM3, TIM_SR_UIF);
-		timer_enable_irq(TIM3, TIM_DIER_UIE); 
+		timer_set_period(TRACE_TIM, duty * 6);
+		timer_clear_flag(TRACE_TIM, TIM_SR_UIF);
+		timer_enable_irq(TRACE_TIM, TIM_DIER_UIE);
 	} else {
 		/* If high time is extended we need to flip the bit */
 		if ((duty / bt) > 1) {
@@ -179,8 +180,8 @@ void tim3_isr(void)
 		return;
 
 flush_and_reset:
-	timer_set_period(TIM3, -1);
-	timer_disable_irq(TIM3, TIM_DIER_UIE); 
+	timer_set_period(TRACE_TIM, -1);
+	timer_disable_irq(TRACE_TIM, TIM_DIER_UIE);
 	trace_buf_push(decbuf, decbuf_pos >> 3);
 	bt = 0;
 	decbuf_pos = 0;

@@ -105,7 +105,7 @@ extern usbd_device *usbdev;
 #define IRQ_PRI_USB		(2 << 4)
 #define IRQ_PRI_USBUSART	(1 << 4)
 #define IRQ_PRI_USB_VBUS	(14 << 4)
-#define IRQ_PRI_TIM3		(0 << 4)
+#define IRQ_PRI_TRACE		(0 << 4)
 
 #define USBUSART USART1
 #define USBUSART_CR1 USART1_CR1
@@ -115,6 +115,11 @@ extern usbd_device *usbdev;
 #define USBUSART_PORT GPIOA
 #define USBUSART_TX_PIN GPIO9
 #define USBUSART_ISR usart1_isr
+
+#define TRACE_TIM TIM3
+#define TRACE_TIM_CLK_EN() rcc_peripheral_enable_clock(&RCC_APB1ENR, RCC_APB1ENR_TIM3EN)
+#define TRACE_IRQ   NVIC_TIM3_IRQ
+#define TRACE_ISR   tim3_isr
 
 #define DEBUG(...)
 
