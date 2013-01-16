@@ -95,6 +95,20 @@ extern usbd_device *usbdev;
 #define LED_IDLE_RUN	GPIO10
 #define LED_ERROR	GPIO11
 
+#define TMS_SET_MODE()                                          \
+    gpio_set_mode(TMS_PORT, GPIO_MODE_OUTPUT_50_MHZ,            \
+                  GPIO_CNF_OUTPUT_PUSHPULL, TMS_PIN);
+#define SWDIO_MODE_FLOAT()                              \
+    gpio_set_mode(SWDIO_PORT, GPIO_MODE_INPUT,          \
+                  GPIO_CNF_INPUT_FLOAT, SWDIO_PIN);
+#define SWDIO_MODE_DRIVE()                                              \
+    gpio_set_mode(SWDIO_PORT, GPIO_MODE_OUTPUT_50_MHZ,                  \
+                  GPIO_CNF_OUTPUT_PUSHPULL, SWDIO_PIN);
+
+#define UART_PIN_SETUP()                                                \
+    gpio_set_mode(USBUSART_PORT, GPIO_MODE_OUTPUT_2_MHZ,                \
+                  GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, USBUSART_TX_PIN);
+
 #define USB_DRIVER      stm32f103_usb_driver
 #define USB_IRQ         NVIC_USB_LP_CAN_RX0_IRQ
 #define USB_ISR         usb_lp_can_rx0_isr

@@ -39,9 +39,7 @@ void usbuart_init(void)
 
 	rcc_peripheral_enable_clock(&USBUSART_APB_ENR, USBUSART_CLK_ENABLE);
 
-	/* UART TX to 'alternate function output push-pull' */
-	gpio_set_mode(USBUSART_PORT, GPIO_MODE_OUTPUT_2_MHZ,
-		GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, USBUSART_TX_PIN);
+	UART_PIN_SETUP();
 
 	/* Setup UART parameters. */
 	usart_set_baudrate(USBUSART, 38400);
