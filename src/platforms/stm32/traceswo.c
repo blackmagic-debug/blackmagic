@@ -130,19 +130,19 @@ void trace_isr(void)
 	duty = TIM_CCR2(TRACE_TIM);
 
 	/* Reset decoder state if crazy shit happened */
-	if ((bt && (((duty / bt) > 2) || ((duty / bt) == 0))) || (duty == 0)) 
+	if ((bt && (((duty / bt) > 2) || ((duty / bt) == 0))) || (duty == 0))
 		goto flush_and_reset;
 
 	if(!(sr & TIM_SR_CC1IF)) notstart = 1;
 
 	if (!bt) {
-		if (notstart) { 
+		if (notstart) {
 			notstart = 0;
 			return;
 		}
 		/* First bit, sync decoder */
 		duty -= ALLOWED_DUTY_ERROR;
-		if (((cycle / duty) != 2) && 
+		if (((cycle / duty) != 2) &&
 		    ((cycle / duty) != 3))
 			return;
 		bt = duty;
@@ -176,7 +176,7 @@ void trace_isr(void)
 		decbuf_pos++;
 	}
 
-	if (decbuf_pos < 128) 
+	if (decbuf_pos < 128)
 		return;
 
 flush_and_reset:
@@ -187,5 +187,3 @@ flush_and_reset:
 	decbuf_pos = 0;
 	memset(decbuf, 0, sizeof(decbuf));
 }
-
-

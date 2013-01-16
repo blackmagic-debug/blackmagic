@@ -37,7 +37,7 @@
 
 #include "platform.h"
 #if defined(PLATFORM_HAS_TRACESWO)
-#include "traceswo.h"
+#include <traceswo.h>
 #endif
 #include <usbuart.h>
 
