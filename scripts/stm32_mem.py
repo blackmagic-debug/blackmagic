@@ -115,7 +115,11 @@ if __name__ == "__main__":
 	while bin:
 		print ("Programming memory at 0x%08X\r" % addr),
 		stdout.flush()
-		stm32_erase(dfudev, addr)
+		try:
+			stm32_erase(dfudev, addr)
+                except:
+			print "\nErase Timed out\n"
+			break
 		stm32_write(dfudev, bin[:1024])
 
 		bin = bin[1024:]
