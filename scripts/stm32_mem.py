@@ -21,6 +21,7 @@ from time import sleep
 import struct
 from sys import stdout, argv
 
+import argparse
 import usb
 import dfu
 
@@ -60,11 +61,15 @@ def stm32_manifest(dev):
 
 if __name__ == "__main__":
 	print
-	print "USB Device Firmware Upgrade - Host Utility -- version 1.1"
+	print "USB Device Firmware Upgrade - Host Utility -- version 1.2"
 	print "Copyright (C) 2011  Black Sphere Technologies"
 	print "License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>"
 	print
 
+	parser = argparse.ArgumentParser()
+	parser.add_argument("progfile", help="Binary file to program")
+	parser.add_argument("-s", "--serial_target", help="Match Serial Number")
+	args = parser.parse_args()
 	devs = dfu.finddevs()
 	if not devs:
 		print "No devices found!"
@@ -73,13 +78,22 @@ if __name__ == "__main__":
 	for dev in devs:
 		dfudev = dfu.dfu_device(*dev)
 		man = dfudev.handle.getString(dfudev.dev.iManufacturer, 30)
-		product = dfudev.handle.getString(dfudev.dev.iProduct, 30)
-		if man == "Black Sphere Technologies": break
-		if man == "STMicroelectronics": break
+		product = dfudev.handle.getString(dfudev.dev.iProduct, 64)
+		serial_no = dfudev.handle.getString(dfudev.dev.iSerialNumber, 30)
+		if args.serial_target:
+			if man == "Black Sphere Technologies" and serial_no ==  args.serial_target: break
+			if man == "STMicroelectronics" and serial_no == args.serial_target: break
+                else:
+			if man == "Black Sphere Technologies": break
+			if man == "STMicroelectronics": break
 
-	print "Device %s: ID %04x:%04x %s - %s" % (dfudev.dev.filename, 
-		dfudev.dev.idVendor, dfudev.dev.idProduct, man, product)
+	print "Device %s: ID %04x:%04x %s - %s\n\tSerial %s" % (
+                dfudev.dev.filename, dfudev.dev.idVendor,
+                dfudev.dev.idProduct, man, product, serial_no)
 
+	if args.serial_target and serial_no !=  args.serial_target:
+                print "Serial number doesn't match!\n"
+                exit(-2)
 	try:
 		state = dfudev.get_state()
 	except:
@@ -92,9 +106,12 @@ if __name__ == "__main__":
 	
 	dfudev.make_idle()
 
-	bin = open(argv[1], "rb").read()
+	bin = open(args.progfile, "rb").read()
 
-	addr = 0x8002000
+	if product.find("F4") :
+		addr = 0x8004000
+	else:
+		addr = 0x8002000
 	while bin:
 		print ("Programming memory at 0x%08X\r" % addr),
 		stdout.flush()
