@@ -24,7 +24,7 @@
 #ifndef __PLATFORM_H
 #define __PLATFORM_H
 
-#include <libopencm3/stm32/f1/gpio.h>
+#include <libopencm3/stm32/f4/gpio.h>
 #include <libopencm3/usb/usbd.h>
 
 #include <setjmp.h>
@@ -42,18 +42,18 @@ extern usbd_device *usbdev;
 
 /* Important pin mappings for STM32 implementation:
  *
- * LED0 = 	PB2	(Yellow LED : Running)
- * LED1 = 	PB10	(Yellow LED : Idle)
- * LED2 = 	PB11	(Red LED    : Error)
+ * LED0 = 	PD12	(Green  LED : Running)
+ * LED1 = 	PD13	(Orange LED : Idle)
+ * LED2 = 	PD12	(Red LED    : Error)
  *
- * TPWR = 	RB0 (input) -- analogue on mini design ADC1, ch8
- * nTRST = 	PB1
- * SRST_OUT = 	PA2
- * TDI = 	PA3
- * TMS = 	PA4 (input for SWDP)
- * TCK = 	PA5
- * TDO = 	PA6 (input)
- * nSRST = 	PA7 (input)
+ * TPWR = 	XXX (input) -- analogue on mini design ADC1, ch8
+ * nTRST = 	PD0
+ * SRST_OUT = 	PD1
+ * TDI = 	PA1
+ * TMS = 	PA3 (input for SWDP)
+ * TCK = 	PA8
+ * TDO = 	PB4 (input)
+ * nSRST = 	PD2 (input)
  *
  * USB cable pull-up: PA8
  * USB VBUS detect:  PB13 -- New on mini design.
@@ -66,55 +66,68 @@ extern usbd_device *usbdev;
 #define TDI_PORT	JTAG_PORT
 #define TMS_PORT	JTAG_PORT
 #define TCK_PORT	JTAG_PORT
-#define TDO_PORT	JTAG_PORT
-#define TDI_PIN		GPIO3
-#define TMS_PIN		GPIO4
-#define TCK_PIN		GPIO5
-#define TDO_PIN		GPIO6
+#define TDO_PORT	GPIOB
+#define TDI_PIN		GPIO1
+#define TMS_PIN		GPIO3
+#define TCK_PIN		GPIO2
+#define TDO_PIN		GPIO4
 
 #define SWDIO_PORT 	JTAG_PORT
 #define SWCLK_PORT 	JTAG_PORT
 #define SWDIO_PIN	TMS_PIN
 #define SWCLK_PIN	TCK_PIN
 
-#define TRST_PORT	GPIOB
-#define TRST_PIN	GPIO1
-#define SRST_PORT	GPIOA
-#define SRST_PIN	GPIO2
+#define TRST_PORT	GPIOD
+#define TRST_PIN	GPIO0
+#define SRST_PORT	GPIOD
+#define SRST_PIN	GPIO1
 
-#define USB_PU_PORT	GPIOA
-#define USB_PU_PIN	GPIO8
+#define LED_PORT	GPIOD
+#define LED_PORT_UART	GPIOD
+#define LED_UART	GPIO12
+#define LED_IDLE_RUN	GPIO13
+#define LED_ERROR	GPIO14
+#define LED_SPARE1	GPIO15
 
-#define USB_VBUS_PORT	GPIOB
-#define USB_VBUS_PIN	GPIO13
-#define USB_VBUS_IRQ	NVIC_EXTI15_10_IRQ
+#define TMS_SET_MODE() gpio_mode_setup(TMS_PORT, GPIO_MODE_OUTPUT, \
+                                       GPIO_PUPD_NONE, TMS_PIN);
+#define SWDIO_MODE_FLOAT() gpio_mode_setup(SWDIO_PORT, GPIO_MODE_INPUT, \
+                                           GPIO_PUPD_NONE, SWDIO_PIN);
 
-#define LED_PORT	GPIOB
-#define LED_PORT_UART	GPIOB
-#define LED_UART	GPIO2
-#define LED_IDLE_RUN	GPIO10
-#define LED_ERROR	GPIO11
+#define SWDIO_MODE_DRIVE() gpio_mode_setup(SWDIO_PORT, GPIO_MODE_OUTPUT, \
+                                           GPIO_PUPD_NONE, SWDIO_PIN);
 
-#define USB_DRIVER      stm32f103_usb_driver
-#define USB_IRQ         NVIC_USB_LP_CAN_RX0_IRQ
-#define USB_ISR         usb_lp_can_rx0_isr
+
+#define USB_DRIVER      stm32f107_usb_driver
+#define USB_IRQ         NVIC_OTG_FS_IRQ
+#define USB_ISR         otg_fs_isr
 /* Interrupt priorities.  Low numbers are high priority.
  * For now USART1 preempts USB which may spin while buffer is drained.
  * TIM3 is used for traceswo capture and must be highest priority.
  */
 #define IRQ_PRI_USB		(2 << 4)
 #define IRQ_PRI_USBUSART	(1 << 4)
-#define IRQ_PRI_USB_VBUS	(14 << 4)
 #define IRQ_PRI_TRACE		(0 << 4)
 
-#define USBUSART USART1
-#define USBUSART_CR1 USART1_CR1
-#define USBUSART_IRQ NVIC_USART1_IRQ
-#define USBUSART_APB_ENR RCC_APB2ENR
-#define USBUSART_CLK_ENABLE  RCC_APB2ENR_USART1EN
-#define USBUSART_PORT GPIOA
-#define USBUSART_TX_PIN GPIO9
-#define USBUSART_ISR usart1_isr
+#define USBUSART USART3
+#define USBUSART_CR1 USART3_CR1
+#define USBUSART_IRQ NVIC_USART3_IRQ
+#define USBUSART_APB_ENR RCC_APB1ENR
+#define USBUSART_CLK_ENABLE  RCC_APB1ENR_USART3EN
+#define USBUSART_TX_PORT GPIOD
+#define USBUSART_TX_PIN  GPIO8
+#define USBUSART_RX_PORT GPIOD
+#define USBUSART_RX_PIN  GPIO9
+#define USBUSART_ISR usart3_isr
+
+#define UART_PIN_SETUP() do {                                           \
+        gpio_mode_setup(USBUSART_TX_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, \
+                        USBUSART_TX_PIN);                               \
+        gpio_mode_setup(USBUSART_RX_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, \
+                        USBUSART_RX_PIN);                               \
+        gpio_set_af(USBUSART_TX_PORT, GPIO_AF7, USBUSART_TX_PIN);       \
+        gpio_set_af(USBUSART_RX_PORT, GPIO_AF7, USBUSART_RX_PIN);       \
+    } while(0)
 
 #define TRACE_TIM TIM3
 #define TRACE_TIM_CLK_EN() rcc_peripheral_enable_clock(&RCC_APB1ENR, RCC_APB1ENR_TIM3EN)
@@ -180,7 +193,7 @@ static inline void _gpio_set(u32 gpioport, u16 gpios)
 
 static inline void _gpio_clear(u32 gpioport, u16 gpios)
 {
-	GPIO_BRR(gpioport) = gpios;
+	GPIO_BSRR(gpioport) = gpios<<16;
 }
 #define gpio_clear _gpio_clear
 
@@ -193,6 +206,6 @@ static inline u16 _gpio_get(u32 gpioport, u16 gpios)
 
 #endif
 
-#define disconnect_usb() gpio_set_mode(USB_PU_PORT, GPIO_MODE_INPUT, 0, USB_PU_PIN);
+#define disconnect_usb() do {usbd_disconnect(usbdev,1); nvic_disable_irq(USB_IRQ);} while(0)
 void assert_boot_pin(void);
-void setup_vbus_irq(void);
+#define setup_vbus_irq()

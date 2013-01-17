@@ -34,8 +34,6 @@
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/dfu.h>
 
-#define APP_ADDRESS	0x08002000
-
 /* Commands sent with wBlockNum == 0 as per ST implementation. */
 #define CMD_SETADDR	0x21
 #define CMD_ERASE	0x41
@@ -49,8 +47,58 @@ usbd_device *usbdev;
 /* We need a special large control buffer for this device: */
 u8 usbd_control_buffer[1024];
 
+#if defined (STM32_CAN)
+#define FLASHBLOCKSIZE 2048
+#else
+#define FLASHBLOCKSIZE 1024
+#endif
+
 #if defined(DISCOVERY_STLINK)
 u32 led2_state = 0;
+#endif
+
+static u32 max_address;
+#if defined (STM32F4)
+#define APP_ADDRESS	0x08010000
+static u32 sector_addr[] = {0x8000000, 0x8004000, 0x8008000, 0x800c000,
+                            0x8010000, 0x8020000, 0x8040000, 0x8060000,
+                            0x8080000, 0x80a0000, 0x80c0000, 0x80e0000,
+                            0x8100000, 0};
+u16 sector_erase_time[12]= {500, 500, 500, 500,
+                            1100,
+                            2600, 2600, 2600, 2600, 2600, 2600, 2600};
+u8 sector_num = 0xff;
+/* Find the sector number for a given address*/
+void get_sector_num(u32 addr)
+{
+	int i = 0;
+	while(sector_addr[i+1]) {
+		if (addr < sector_addr[i+1])
+			break;
+		i++;
+		}
+	if (!sector_addr[i])
+		return;
+	sector_num = i;
+}
+
+void check_and_do_sector_erase(u32 addr)
+{
+	if(addr == sector_addr[sector_num]) {
+		flash_erase_sector((sector_num & 0x1f)<<3, FLASH_PROGRAM_X32);
+	}
+}
+#else
+#define APP_ADDRESS	0x08002000
+static uint32_t last_erased_page=0xffffffff;
+void check_and_do_sector_erase(u32 sector)
+{
+	sector &= (~(FLASHBLOCKSIZE-1));
+	if (sector != last_erased_page) {
+		flash_erase_page(sector);
+		last_erased_page = sector;
+	}
+}
 #endif
 
 static enum dfu_state usbdfu_state = STATE_DFU_IDLE;
@@ -136,6 +184,8 @@ static const char *usb_strings[] = {
 	"Black Magic (Upgrade) for STLink/Discovery",
 #elif defined(STM32_CAN)
 	"Black Magic (Upgrade) for STM32_CAN",
+#elif defined(F4DISCOVERY)
+	"Black Magic (Upgrade) for F4DISCOVERY",
 #else
 #warning "Unhandled board"
 #endif
@@ -147,6 +197,8 @@ static const char *usb_strings[] = {
 	"@Internal Flash   /0x08000000/8*001Ka,56*001Kg"
 #elif defined(STM32_CAN)
 	"@Internal Flash   /0x08000000/4*002Ka,124*002Kg"
+#elif defined(F4DISCOVERY)
+	"@Internal Flash   /0x08000000/1*016Ka,3*016Kg,1*064Kg,7*128Kg"
 #else
 #warning "Unhandled board"
 #endif
@@ -157,7 +209,20 @@ static u8 usbdfu_getstatus(u32 *bwPollTimeout)
 	switch(usbdfu_state) {
 	case STATE_DFU_DNLOAD_SYNC:
 		usbdfu_state = STATE_DFU_DNBUSY;
+#if defined(STM32F4)
+                /* Programming 256 word with 100 us(max) per word*/
+		*bwPollTimeout = 26;
+		/* Erase for big pages on STM2/4 needs "long" time
+                   Try not to hit USB timeouts*/
+		if ((prog.blocknum == 0) && (prog.buf[0] == CMD_ERASE)) {
+			u32 addr = *(u32 *)(prog.buf + 1);
+			get_sector_num(addr);
+			if(addr == sector_addr[sector_num])
+				*bwPollTimeout = sector_erase_time[sector_num];
+		}
+#else
 		*bwPollTimeout = 100;
+#endif
 		return DFU_STATUS_OK;
 
 	case STATE_DFU_MANIFEST_SYNC:
@@ -170,13 +235,6 @@ static u8 usbdfu_getstatus(u32 *bwPollTimeout)
 	}
 }
 
-#if defined (STM32_CAN)
-#define FLASHBLOCKSIZE 2048
-#else
-#define FLASHBLOCKSIZE 1024
-#endif
-static uint32_t last_erased_pages=0xffffffff;
-
 static void
 usbdfu_getstatus_complete(usbd_device *dev, struct usb_setup_data *req)
 {
@@ -188,32 +246,33 @@ usbdfu_getstatus_complete(usbd_device *dev, struct usb_setup_data *req)
 
 		flash_unlock();
 		if(prog.blocknum == 0) {
-			if ((*(u32*)(prog.buf+1) < 0x8002000) ||
-			    (*(u32*)(prog.buf+1) >= 0x8020000)) {
+			u32 addr = *(u32 *)(prog.buf + 1);
+			if (addr < APP_ADDRESS ||
+			    (addr >= max_address)) {
+				flash_lock();
 				usbd_ep_stall_set(dev, 0, 1);
 				return;
 			}
 			switch(prog.buf[0]) {
-			case CMD_ERASE: {
-				u32 page_start = *(u32*)(prog.buf+1);
-
-				page_start &= (~(FLASHBLOCKSIZE-1));
-				if (page_start != last_erased_pages) {
-					flash_erase_page(page_start);
-					last_erased_pages = page_start;
-				}
-
-			}
+			case CMD_ERASE:
+				check_and_do_sector_erase(addr);
 			case CMD_SETADDR:
-				prog.addr = *(u32*)(prog.buf+1);
+				prog.addr = addr;
 			}
 		} else {
 			u32 baseaddr = prog.addr +
 				((prog.blocknum - 2) *
 					dfu_function.wTransferSize);
+#if defined (STM32F4)
+			for(i = 0; i < prog.len; i += 4)
+				flash_program_word(baseaddr + i,
+					*(u32*)(prog.buf+i),
+					FLASH_PROGRAM_X32);
+#else
 			for(i = 0; i < prog.len; i += 2)
 				flash_program_half_word(baseaddr + i,
 						*(u16*)(prog.buf+i));
+#endif
 		}
 		flash_lock();
 
@@ -311,14 +370,23 @@ int main(void)
 #elif defined (STM32_CAN)
 	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPAEN);
 	if(!gpio_get(GPIOA, GPIO0)) {
+#elif defined (F4DISCOVERY)
+	rcc_peripheral_enable_clock(&RCC_AHB1ENR, RCC_AHB1ENR_IOPAEN);
+	if(!gpio_get(GPIOA, GPIO0)) {
 #else
 	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPBEN);
 	if(gpio_get(GPIOB, GPIO12)) {
 #endif
 		/* Boot the application if it's valid */
+#if defined (STM32F4)
+		/* Vector table may be anywhere in 128 kByte RAM
+                   CCM not handled*/
+		if((*(volatile u32*)APP_ADDRESS & 0x2FFC0000) == 0x20000000) {
+#else
 		if((*(volatile u32*)APP_ADDRESS & 0x2FFE0000) == 0x20000000) {
+#endif
 			/* Set vector table base address */
-			SCB_VTOR = APP_ADDRESS & 0xFFFF;
+			SCB_VTOR = APP_ADDRESS & 0x1FFFFF; /* Max 2 MByte Flash*/
 			/* Initialise master stack pointer */
 			asm volatile ("msr msp, %0"::"g"
 					(*(volatile u32*)APP_ADDRESS));
@@ -327,6 +395,9 @@ int main(void)
 		}
 	}
 
+#if defined (STM32F4)
+        /* don' touch option bits for now */
+#else
 	if ((FLASH_WRPR & 0x03) != 0x00) {
 		flash_unlock();
 		FLASH_CR = 0;
@@ -336,6 +407,7 @@ int main(void)
 		/* MD Device: Protect 2 bits with (4 * 1k pages each)*/
 		flash_program_option_bytes(FLASH_OBP_WRP10, 0x03FC);
 	}
+#endif
 
 #if defined (DISCOVERY_STLINK)
 	/* Just in case: Disconnect USB cable by resetting USB Device
@@ -348,19 +420,22 @@ int main(void)
 	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
 		GPIO_CNF_OUTPUT_OPENDRAIN, GPIO12);
 #endif
+#if defined (F4DISCOVERY)
+        rcc_clock_setup_hse_3v3(&hse_8mhz_3v3[CLOCK_3V3_168MHZ]);
+#else
 	rcc_clock_setup_in_hse_8mhz_out_72mhz();
-
-	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPAEN);
+#endif
 
 #if defined(DISCOVERY_STLINK)
-	gpio_set_mode(GPIOA, GPIO_MODE_INPUT,
-			GPIO_CNF_INPUT_ANALOG, GPIO0);
+#elif defined(F4DISCOVERY)
 #elif defined (STM32_CAN)
+	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPAEN);
 	rcc_peripheral_enable_clock(&RCC_AHBENR, RCC_AHBENR_OTGFSEN);
 	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPBEN);
 	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ,
 			GPIO_CNF_OUTPUT_PUSHPULL, GPIO0);
 #else
+	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPAEN);
         rcc_peripheral_enable_clock(&RCC_APB1ENR, RCC_APB1ENR_USBEN);
 	gpio_set_mode(GPIOA, GPIO_MODE_INPUT, 0, GPIO8);
 
@@ -368,18 +443,33 @@ int main(void)
 			GPIO_CNF_OUTPUT_PUSHPULL, GPIO11);
 #endif
 	systick_set_clocksource(STK_CTRL_CLKSOURCE_AHB_DIV8);
-	systick_set_reload(900000);
+	systick_set_reload(2100000);
 	systick_interrupt_enable();
 	systick_counter_enable();
-	gpio_set_mode(GPIOB, GPIO_MODE_INPUT,
-			GPIO_CNF_INPUT_FLOAT, GPIO2 | GPIO10);
-
 	get_dev_unique_id(serial_no);
 
 #if defined(STM32_CAN)
 	usbdev = usbd_init(&stm32f107_usb_driver,
 				&dev, &config, usb_strings, 4);
+#elif defined(F4DISCOVERY)
+	rcc_peripheral_enable_clock(&RCC_AHB1ENR, RCC_AHB1ENR_IOPDEN);
+	gpio_clear(GPIOD, GPIO12 | GPIO13 | GPIO14 |GPIO15);
+	gpio_mode_setup(GPIOD, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE,
+			GPIO12 | GPIO13 | GPIO14 |GPIO15);
+
+	rcc_peripheral_enable_clock(&RCC_AHB2ENR, RCC_AHB2ENR_OTGFSEN);
+
+	/* Set up USB Pins and alternate function*/
+	gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE,
+		GPIO9 | GPIO11 | GPIO12);
+	gpio_set_af(GPIOA, GPIO_AF10, GPIO9 | GPIO11 | GPIO12);
+
+	usbdev = usbd_init(&stm32f107_usb_driver,
+				&dev, &config, usb_strings, 4);
 #else
+	gpio_set_mode(GPIOB, GPIO_MODE_INPUT,
+			GPIO_CNF_INPUT_FLOAT, GPIO2 | GPIO10);
+
 	usbdev = usbd_init(&stm32f103_usb_driver,
 				&dev, &config, usb_strings, 4);
 #endif
@@ -401,12 +491,28 @@ int main(void)
 
 static char *get_dev_unique_id(char *s)
 {
-        volatile uint32_t *unique_id_p = (volatile uint32_t *)0x1FFFF7E8;
+#if defined(STM32F4) || defined(STM32F2)
+#define UNIQUE_SERIAL_R 0x1FFF7A10
+#define FLASH_SIZE_R    0x1fff7A22
+#elif defined(STM32F3)
+#define UNIQUE_SERIAL_R 0x1FFFF7AC
+#define FLASH_SIZE_R    0x1fff77cc
+#elif defined(STM32L1)
+#define UNIQUE_SERIAL_R 0x1ff80050
+#define FLASH_SIZE_R    0x1FF8004C
+#else
+#define UNIQUE_SERIAL_R 0x1FFFF7E8;
+#define FLASH_SIZE_R    0x1ffff7e0
+#endif
+        volatile uint32_t *unique_id_p = (volatile uint32_t *)UNIQUE_SERIAL_R;
 	uint32_t unique_id = *unique_id_p +
 			*(unique_id_p + 1) +
 			*(unique_id_p + 2);
         int i;
 
+        /* Calculated the upper flash limit from the exported data
+           in theparameter block*/
+        max_address = (*(u32 *) FLASH_SIZE_R) <<10;
         /* Fetch serial number from chip's unique ID */
         for(i = 0; i < 8; i++) {
                 s[7-i] = ((unique_id >> (4*i)) & 0xF) + '0';
@@ -429,6 +535,8 @@ void sys_tick_handler()
 		gpio_set_mode(GPIOA, GPIO_MODE_INPUT,
 		GPIO_CNF_INPUT_ANALOG, GPIO9);
 	led2_state++;
+#elif defined (F4DISCOVERY)
+	gpio_toggle(GPIOD, GPIO12);  /* Green LED on/off */
 #elif defined(STM32_CAN)
 	gpio_toggle(GPIOB, GPIO0);  /* LED2 on/off */
 #else

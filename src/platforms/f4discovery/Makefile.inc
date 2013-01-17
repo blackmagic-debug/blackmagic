@@ -3,13 +3,13 @@ CC = $(CROSS_COMPILE)gcc
 OBJCOPY = $(CROSS_COMPILE)objcopy
 
 CFLAGS += -Istm32/include -mcpu=cortex-m3 -mthumb \
-	-DSTM32F1 -DBLACKMAGIC -I../libopencm3/include
+	-DSTM32F4 -DF4DISCOVERY -I../libopencm3/include
 
-LDFLAGS_BOOT = -lopencm3_stm32f1 -Wl,--defsym,_stack=0x20005000 \
-	-Wl,-T,platforms/stm32/blackmagic.ld -nostartfiles -lc -lnosys \
+LDFLAGS_BOOT = -lopencm3_stm32f4 -Wl,--defsym,_stack=0x20020000 \
+	-Wl,-T,platforms/stm32/f4discovery.ld -nostartfiles -lc -lnosys \
 	-Wl,-Map=mapfile -mthumb -mcpu=cortex-m3 -Wl,-gc-sections \
 	-L../libopencm3/lib
-LDFLAGS = $(LDFLAGS_BOOT) -Wl,-Ttext=0x8002000
+LDFLAGS = $(LDFLAGS_BOOT) -Wl,-Ttext=0x8010000
 
 VPATH += platforms/stm32
 

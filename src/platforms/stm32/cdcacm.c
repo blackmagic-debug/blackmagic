@@ -553,7 +553,11 @@ void USB_ISR(void)
 
 static char *get_dev_unique_id(char *s)
 {
+#if defined(STM32F4)
+        volatile uint32_t *unique_id_p = (volatile uint32_t *)0x1FFF7A10;
+#else
         volatile uint32_t *unique_id_p = (volatile uint32_t *)0x1FFFF7E8;
+#endif
 	uint32_t unique_id = *unique_id_p +
 			*(unique_id_p + 1) +
 			*(unique_id_p + 2);
