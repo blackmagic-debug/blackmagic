@@ -79,7 +79,7 @@ extern usbd_device *usbdev;
 /* Use PC14 for a "dummy" uart led. So we can observere at least with scope*/
 #define LED_PORT_UART	GPIOC
 #define LED_UART	GPIO14
-#define LED_IDLE_RUN	GPIO8
+#define LED_IDLE_RUN	GPIO9
 
 #define TMS_SET_MODE()                                          \
     gpio_set_mode(TMS_PORT, GPIO_MODE_OUTPUT_50_MHZ,            \
