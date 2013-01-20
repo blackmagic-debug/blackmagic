@@ -55,6 +55,18 @@ u8 usbd_control_buffer[1024];
 
 #if defined(DISCOVERY_STLINK)
 u32 led2_state = 0;
+int stlink_test_nrst(void) {
+/* Test if NRST is pulled down*/
+    int i;
+    uint16_t nrst;
+    rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPBEN);
+    gpio_set_mode(GPIOB, GPIO_MODE_INPUT,
+                  GPIO_CNF_INPUT_PULL_UPDOWN, GPIO0);
+    gpio_set(GPIOB, GPIO0);
+    for (i=0; i< 100000; i++)
+        nrst = gpio_get(GPIOB, GPIO0);
+    return (nrst)?1:0;
+}
 #endif
 
 static u32 max_address;
@@ -366,7 +378,7 @@ int main(void)
 {
 #if defined (DISCOVERY_STLINK)
 	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPCEN);
-	if(!gpio_get(GPIOC, GPIO13)) {
+	if(!gpio_get(GPIOC, GPIO13) && stlink_test_nrst()) {
 #elif defined (STM32_CAN)
 	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPAEN);
 	if(!gpio_get(GPIOA, GPIO0)) {
