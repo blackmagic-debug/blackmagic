@@ -36,6 +36,7 @@
 #include <stdlib.h>
 
 #include "platform.h"
+#include "gdb_if.h"
 #if defined(PLATFORM_HAS_TRACESWO)
 #include <traceswo.h>
 #endif
@@ -487,7 +488,7 @@ static void cdcacm_set_config(usbd_device *dev, u16 wValue)
 
 	/* GDB interface */
 	usbd_ep_setup(dev, 0x01, USB_ENDPOINT_ATTR_BULK,
-					CDCACM_PACKET_SIZE, NULL);
+					CDCACM_PACKET_SIZE, gdb_usb_out_cb);
 	usbd_ep_setup(dev, 0x81, USB_ENDPOINT_ATTR_BULK,
 					CDCACM_PACKET_SIZE, NULL);
 	usbd_ep_setup(dev, 0x82, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
