@@ -394,11 +394,11 @@ char serial_no[9];
 
 static const char *usb_strings[] = {
 	"Black Sphere Technologies",
-	"Black Magic Probe",
+	BOARD_IDENT,
 	serial_no,
 	"Black Magic GDB Server",
 	"Black Magic UART Port",
-	"Black Magic Firmware Upgrade",
+	DFU_IDENT,
 #if defined(PLATFORM_HAS_TRACESWO)
 	"Black Magic Trace Capture",
 #endif

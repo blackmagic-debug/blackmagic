@@ -39,6 +39,8 @@
 extern usbd_device *usbdev;
 #define CDCACM_GDB_ENDPOINT	1
 #define CDCACM_UART_ENDPOINT	3
+#define BOARD_IDENT             "Black Magic Probe (STM32_CAN)"
+#define DFU_IDENT               "Black Magic Firmware Upgrade (STM32_CAN)"
 
 /* Important pin mappings for STM32 implementation:
  *

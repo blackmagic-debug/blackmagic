@@ -185,7 +185,7 @@ static const char *usb_strings[] = {
 #elif defined(STM32_CAN)
 	"Black Magic (Upgrade) for STM32_CAN",
 #elif defined(F4DISCOVERY)
-	"Black Magic (Upgrade) for F4DISCOVERY",
+	"Black Magic (Upgrade) for F4Discovery",
 #else
 #warning "Unhandled board"
 #endif

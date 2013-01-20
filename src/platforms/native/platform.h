@@ -35,6 +35,8 @@
 #define INLINE_GPIO
 #define CDCACM_PACKET_SIZE 	64
 #define PLATFORM_HAS_TRACESWO
+#define BOARD_IDENT             "Black Magic Probe"
+#define DFU_IDENT               "Black Magic Firmware Upgrade"
 
 extern usbd_device *usbdev;
 #define CDCACM_GDB_ENDPOINT	1
