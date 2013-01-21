@@ -38,6 +38,11 @@ instead of JTAG to connect to the target.
 Once attached, all the standard GDB commands may be used to start and control
 the execution of the embedded application.
 
+The peripheral registers are not included in the memory map provided to GDB.
+I suggest you add the command "set mem inaccessible-by-default off' to
+your '.gdbinit'.  That will allow you to access addresses outside of
+the memory map.  It will treat anything outside of the memory map as
+RAM.
 
 Project layout
 ==============
