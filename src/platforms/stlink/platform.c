@@ -62,6 +62,12 @@ int platform_init(void)
 	gpio_set_mode(LED_PORT, GPIO_MODE_OUTPUT_2_MHZ, 
 			GPIO_CNF_OUTPUT_PUSHPULL, LED_IDLE_RUN);
 
+	/* unconditionally activate MCO on PORTA8 with HSE*/
+	RCC_CFGR &= ~(                 0xf<< 24);
+	RCC_CFGR |=  (RCC_CFGR_MCO_HSECLK << 24);
+	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ,
+			GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO8);
+
 	/* Setup heartbeat timer */
 	systick_set_clocksource(STK_CTRL_CLKSOURCE_AHB_DIV8); 
 	systick_set_reload(900000);	/* Interrupt us at 10 Hz */
