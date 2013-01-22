@@ -408,7 +408,10 @@ int main(void)
 	}
 
 #if defined (STM32F4)
-        /* don' touch option bits for now */
+	if ((FLASH_OPTCR & 0x10000) != 0) {
+		flash_program_option_bytes(FLASH_OPTCR & ~0x10000);
+		flash_lock_option_bytes();
+	}
 #else
 	if ((FLASH_WRPR & 0x03) != 0x00) {
 		flash_unlock();
