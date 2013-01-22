@@ -58,6 +58,8 @@ static struct jtag_dev_descr_s {
 		.descr = "ST Microelectronics: STM32, Low density."},
 	{.idcode = 0x06414041, .idmask = 0x0FFFFFFF,
 		.descr = "ST Microelectronics: STM32, High density."},
+	{.idcode = 0x06416041, .idmask = 0x0FFFFFFF,
+		.descr = "ST Microelectronics: STM32L."},
 	{.idcode = 0x06418041, .idmask = 0x0FFFFFFF,
 		.descr = "ST Microelectronics: STM32, Connectivity Line."},
 	{.idcode = 0x06420041, .idmask = 0x0FFFFFFF,
