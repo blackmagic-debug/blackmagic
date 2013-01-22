@@ -36,6 +36,15 @@
 #include "general.h"
 #include "adiv5.h"
 #include "target.h"
+#include "command.h"
+
+static bool stm32f4_cmd_option(target *t, int argc, char *argv[]);
+
+const struct command_s stm32f4_cmd_list[] = {
+	{"option", (cmd_handler)stm32f4_cmd_option, "Manipulate option bytes"},
+	{NULL, NULL, NULL}
+};
+
 
 static int stm32f4_flash_erase(struct target_s *target, uint32_t addr, int len);
 static int stm32f4_flash_write(struct target_s *target, uint32_t dest, 
@@ -85,8 +94,15 @@ static const char stm32f4_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 
 #define FLASH_SR_BSY		(1 << 16)
 
+#define FLASH_OPTCR_OPTLOCK	(1 << 0)
+#define FLASH_OPTCR_OPTSTRT	(1 << 1)
+#define FLASH_OPTCR_RESERVED	0xf0000013
+
 #define KEY1 0x45670123
 #define KEY2 0xCDEF89AB
+
+#define OPTKEY1 0x08192A3B
+#define OPTKEY2 0x4C5D6E7F
 
 #define SR_ERROR_MASK	0xF2
 #define SR_EOP		0x01
@@ -145,6 +161,7 @@ bool stm32f4_probe(struct target_s *target)
 		target->xml_mem_map = stm32f4_xml_memory_map;
 		target->flash_erase = stm32f4_flash_erase;
 		target->flash_write = stm32f4_flash_write;
+		target_add_commands(target, stm32f4_cmd_list, "STM32F4");
 		return true;
 	}
 	return false;
@@ -234,3 +251,45 @@ static int stm32f4_flash_write(struct target_s *target, uint32_t dest,
 	return 0;
 }
 
+static bool stm32f4_option_write(target *t, uint32_t value)
+{
+	ADIv5_AP_t *ap = adiv5_target_ap(t);
+
+	adiv5_ap_mem_write(ap, FLASH_OPTKEYR, OPTKEY1);
+	adiv5_ap_mem_write(ap, FLASH_OPTKEYR, OPTKEY2);
+	value &= ~FLASH_OPTCR_RESERVED;
+	while(adiv5_ap_mem_read(ap, FLASH_SR) & FLASH_SR_BSY)
+		if(target_check_error(t))
+			return -1;
+
+	/* WRITE option bytes instruction */
+	adiv5_ap_mem_write(ap, FLASH_OPTCR, value);
+	adiv5_ap_mem_write(ap, FLASH_OPTCR, value | FLASH_OPTCR_OPTSTRT);
+	/* Read FLASH_SR to poll for BSY bit */
+	while(adiv5_ap_mem_read(ap, FLASH_SR) & FLASH_SR_BSY)
+		if(target_check_error(t))
+			return false;
+	adiv5_ap_mem_write(ap, FLASH_OPTCR, value | FLASH_OPTCR_OPTLOCK);
+	return true;
+}
+
+static bool stm32f4_cmd_option(target *t, int argc, char *argv[])
+{
+	uint32_t addr, val;
+
+	ADIv5_AP_t *ap = adiv5_target_ap(t);
+
+	if ((argc == 3) && !strcmp(argv[1], "write")) {
+		val = strtoul(argv[2], NULL, 0);
+		stm32f4_option_write(t, val);
+	} else {
+		gdb_out("usage: monitor option write <value>\n");
+	}
+
+	for (int i = 0; i < 0xf; i += 8) {
+		addr = 0x1fffC000 + i;
+		val = adiv5_ap_mem_read(ap, addr);
+		gdb_outf("0x%08X: 0x%04X\n", addr, val & 0xFFFF);
+	}
+	return true;
+}
