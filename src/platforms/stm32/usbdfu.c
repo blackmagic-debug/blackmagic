@@ -191,13 +191,13 @@ static char serial_no[9];
 static const char *usb_strings[] = {
 	"Black Sphere Technologies",
 #if defined(BLACKMAGIC)
-	"Black Magic Probe (Upgrade)",
+	"Black Magic Probe (Upgrade), (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")",
 #elif defined(DISCOVERY_STLINK)
-	"Black Magic (Upgrade) for STLink/Discovery",
+	"Black Magic (Upgrade) for STLink/Discovery, (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")",
 #elif defined(STM32_CAN)
-	"Black Magic (Upgrade) for STM32_CAN",
+	"Black Magic (Upgrade) for STM32_CAN, (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")",
 #elif defined(F4DISCOVERY)
-	"Black Magic (Upgrade) for F4Discovery",
+	"Black Magic (Upgrade) for F4Discovery, (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")",
 #else
 #warning "Unhandled board"
 #endif

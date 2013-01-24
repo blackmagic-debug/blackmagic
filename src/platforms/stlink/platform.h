@@ -34,7 +34,7 @@
 
 #define INLINE_GPIO
 #define CDCACM_PACKET_SIZE 	64
-#define BOARD_IDENT             "Black Magic Probe (STLINK)"
+#define BOARD_IDENT             "Black Magic Probe (STLINK), (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")"
 #define DFU_IDENT               "Black Magic Firmware Upgrade (STLINK)"
 
 extern usbd_device *usbdev;
