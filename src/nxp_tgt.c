@@ -146,7 +146,7 @@ lpc11xx_flash_prepare(struct target_s *target, uint32_t addr, int len)
 	memset(&flash_pgm.p, 0, sizeof(flash_pgm.p));
 	flash_pgm.p.command[0] = IAP_CMD_PREPARE;
 	flash_pgm.p.command[1] = addr / 4096;
-	flash_pgm.p.command[2] = (addr + len) / 4096;
+	flash_pgm.p.command[2] = (addr + len - 1) / 4096;
 
 	lpc11x_iap_call(target, &flash_pgm.p, sizeof(flash_pgm.p));
 	if (flash_pgm.p.result[0] != IAP_STATUS_CMD_SUCCESS) {
@@ -170,7 +170,7 @@ lpc11xx_flash_erase(struct target_s *target, uint32_t addr, int len)
 	/* and now erase them */
 	flash_pgm.p.command[0] = IAP_CMD_ERASE;
 	flash_pgm.p.command[1] = addr / 4096;
-	flash_pgm.p.command[2] = (addr + len) / 4096;
+	flash_pgm.p.command[2] = (addr + len - 1) / 4096;
 	flash_pgm.p.command[3] = 12000;	/* XXX safe to assume this? */
 	lpc11x_iap_call(target, &flash_pgm.p, sizeof(flash_pgm.p));
 	if (flash_pgm.p.result[0] != IAP_STATUS_CMD_SUCCESS) {
