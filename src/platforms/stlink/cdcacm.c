@@ -27,16 +27,18 @@
  */
 
 #include <libopencm3/stm32/f1/rcc.h>
-#include <libopencm3/stm32/nvic.h>
+#include <libopencm3/stm32/f1/nvic.h>
 #include <libopencm3/stm32/exti.h>
 #include <libopencm3/stm32/f1/gpio.h>
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/cdc.h>
-#include <libopencm3/stm32/f1/scb.h>
+#include <libopencm3/cm3/scb.h>
 #include <libopencm3/usb/dfu.h>
 #include <stdlib.h>
 
 #include "platform.h"
+
+usbd_device *usbdev;
 
 static char *get_dev_unique_id(char *serial_no);
 
@@ -190,16 +192,17 @@ static const struct usb_config_descriptor config = {
 char serial_no[9];
 
 static const char *usb_strings[] = {
-	"x",
 	"Black Sphere Technologies",
 	"Black Magic Probe",
 	serial_no,
 	"Black Magic GDB Server",
 };
 
-static int cdcacm_control_request(struct usb_setup_data *req, uint8_t **buf,
-		uint16_t *len, void (**complete)(struct usb_setup_data *req))
+static int cdcacm_control_request(usbd_device *dev,
+                struct usb_setup_data *req, uint8_t **buf, uint16_t *len,
+                void (**complete)(usbd_device *dev, struct usb_setup_data *req))
 {
+	(void)dev;
 	(void)complete;
 	(void)buf;
 	(void)len;
@@ -237,16 +240,16 @@ int cdcacm_get_dtr(void)
 	return cdcacm_gdb_dtr;
 }
 
-static void cdcacm_set_config(u16 wValue)
+static void cdcacm_set_config(usbd_device *dev, u16 wValue)
 {
 	configured = wValue;
 
 	/* GDB interface */
-	usbd_ep_setup(0x01, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE, NULL);
-	usbd_ep_setup(0x81, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE, NULL);
-	usbd_ep_setup(0x82, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
+	usbd_ep_setup(dev, 0x01, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE, NULL);
+	usbd_ep_setup(dev, 0x81, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE, NULL);
+	usbd_ep_setup(dev, 0x82, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
 
-	usbd_register_control_callback(
+	usbd_register_control_callback(dev,
 			USB_REQ_TYPE_CLASS | USB_REQ_TYPE_INTERFACE, 
 			USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT,
 			cdcacm_control_request);
@@ -264,7 +267,7 @@ static void cdcacm_set_config(u16 wValue)
 	notif->wLength = 2;
 	buf[8] = 3; /* DCD | DSR */
 	buf[9] = 0;
-	usbd_ep_write_packet(0x82, buf, 10);
+	usbd_ep_write_packet(dev, 0x82, buf, 10);
 }
 
 void cdcacm_init(void)
@@ -273,15 +276,15 @@ void cdcacm_init(void)
 
 	get_dev_unique_id(serial_no);
 
-	usbd_init(&stm32f103_usb_driver, &dev, &config, usb_strings);
-	usbd_register_set_config_callback(cdcacm_set_config);
+	usbdev = usbd_init(&stm32f103_usb_driver, &dev, &config, usb_strings, 4);
+	usbd_register_set_config_callback(usbdev, cdcacm_set_config);
 
 	nvic_enable_irq(NVIC_USB_LP_CAN_RX0_IRQ);
 }
 
 void usb_lp_can_rx0_isr(void)
 {
-	usbd_poll();
+	usbd_poll(usbdev);
 }
 
 static char *get_dev_unique_id(char *s) 
