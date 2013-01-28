@@ -25,6 +25,7 @@
 #define __PLATFORM_H
 
 #include <libopencm3/stm32/f1/gpio.h>
+#include <libopencm3/usb/usbd.h>
 
 #include <setjmp.h>
 #include <alloca.h>
@@ -32,6 +33,8 @@
 #include "gdb_packet.h"
 
 #define INLINE_GPIO
+
+extern usbd_device *usbdev;
 #define CDCACM_PACKET_SIZE 	64
 #define CDCACM_GDB_ENDPOINT	1
 
@@ -72,7 +75,10 @@
 #define SWCLK_PIN	TCK_PIN
 
 #define LED_PORT	GPIOA
-#define LED_IDLE_RUN	GPIO8
+/* The value line discovery board stlink has it's led on PA8
+ * All other stlinks have the led connected to PA9 instead and MCO to PA8
+ */
+#define LED_IDLE_RUN	GPIO9
 
 #define DEBUG(...)
 
