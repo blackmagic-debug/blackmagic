@@ -75,7 +75,10 @@ extern usbd_device *usbdev;
 #define SWCLK_PIN	TCK_PIN
 
 #define LED_PORT	GPIOA
-#define LED_IDLE_RUN	GPIO8
+/* The value line discovery board stlink has it's led on PA8
+ * All other stlinks have the led connected to PA9 instead and MCO to PA8
+ */
+#define LED_IDLE_RUN	GPIO9
 
 #define DEBUG(...)
 
