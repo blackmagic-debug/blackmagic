@@ -93,6 +93,7 @@ static const char stm32hd_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 #define FLASH_OBR	(FPEC_BASE+0x1C)
 #define FLASH_WRPR	(FPEC_BASE+0x20)
 
+#define FLASH_CR_OBL_LAUNCH (1<<13)
 #define FLASH_CR_OPTWRE	(1 << 9)
 #define FLASH_CR_STRT	(1 << 6)
 #define FLASH_CR_OPTER	(1 << 5)
@@ -104,6 +105,7 @@ static const char stm32hd_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 
 #define FLASH_OBP_RDP 0x1FFFF800 
 #define FLASH_OBP_RDP_KEY 0x5aa5
+#define FLASH_OBP_RDP_KEY_F3 0x55AA
 
 #define KEY1 0x45670123
 #define KEY2 0xCDEF89AB
@@ -153,10 +155,9 @@ uint16_t stm32f1_flash_write_stub[] = {
 
 bool stm32f1_probe(struct target_s *target)
 {
-	uint32_t idcode;
 
-	idcode = adiv5_ap_mem_read(adiv5_target_ap(target), DBGMCU_IDCODE);
-	switch(idcode & 0xFFF) {
+	target->idcode = adiv5_ap_mem_read(adiv5_target_ap(target), DBGMCU_IDCODE) & 0xfff;
+	switch(target->idcode) {
 	case 0x410:  /* Medium density */
 	case 0x412:  /* Low denisty */
 	case 0x420:  /* Value Line, Low-/Medium density */
@@ -164,7 +165,7 @@ bool stm32f1_probe(struct target_s *target)
 		target->xml_mem_map = stm32f1_xml_memory_map;
 		target->flash_erase = stm32md_flash_erase;
 		target->flash_write = stm32f1_flash_write;
-		target_add_commands(target, stm32f1_cmd_list, "STM32");
+		target_add_commands(target, stm32f1_cmd_list, "STM32 LD/MD");
 		return true;
 	case 0x414:	 /* High density */
 	case 0x418:  /* Connectivity Line */
@@ -173,7 +174,7 @@ bool stm32f1_probe(struct target_s *target)
 		target->xml_mem_map = stm32hd_xml_memory_map;
 		target->flash_erase = stm32hd_flash_erase;
 		target->flash_write = stm32f1_flash_write;
-		target_add_commands(target, stm32f1_cmd_list, "STM32");
+		target_add_commands(target, stm32f1_cmd_list, "STM32 HD/CL");
 		return true;
 	case 0x422:  /* STM32F30x */
 	case 0x432:  /* STM32F37x */
@@ -181,18 +182,18 @@ bool stm32f1_probe(struct target_s *target)
 		target->xml_mem_map = stm32hd_xml_memory_map;
 		target->flash_erase = stm32hd_flash_erase;
 		target->flash_write = stm32f1_flash_write;
-		target_add_commands(target, stm32f1_cmd_list, "STM32");
+		target_add_commands(target, stm32f1_cmd_list, "STM32F3");
 		return true;
 	}
 
-	idcode = adiv5_ap_mem_read(adiv5_target_ap(target), DBGMCU_IDCODE_F0);
-	switch(idcode & 0xFFF) {
+	target->idcode = adiv5_ap_mem_read(adiv5_target_ap(target), DBGMCU_IDCODE_F0) & 0xfff;
+	switch(target->idcode) {
 	case 0x440:  /* STM32F0 */
 		target->driver = stm32f0_driver_str;
 		target->xml_mem_map = stm32f1_xml_memory_map;
 		target->flash_erase = stm32md_flash_erase;
 		target->flash_write = stm32f1_flash_write;
-		target_add_commands(target, stm32f1_cmd_list, "STM32");
+		target_add_commands(target, stm32f1_cmd_list, "STM32F0");
 		return true;
 	}
 
@@ -338,15 +339,24 @@ static bool stm32f1_option_write(target *t, uint32_t addr, uint16_t value)
 static bool stm32f1_cmd_option(target *t, int argc, char *argv[])
 {
 	uint32_t addr, val;
-
+	uint32_t flash_obp_rdp_key;
 	ADIv5_AP_t *ap = adiv5_target_ap(t);
+
+	switch(t->idcode) {
+	case 0x422:  /* STM32F30x */
+	case 0x432:  /* STM32F37x */
+	case 0x440:  /* STM32F0 */
+		flash_obp_rdp_key = FLASH_OBP_RDP_KEY_F3;
+		break;
+	default: flash_obp_rdp_key = FLASH_OBP_RDP_KEY;
+	}
 	stm32f1_flash_unlock(ap);
 	adiv5_ap_mem_write(ap, FLASH_OPTKEYR, KEY1);
 	adiv5_ap_mem_write(ap, FLASH_OPTKEYR, KEY2);
 
 	if ((argc == 2) && !strcmp(argv[1], "erase")) {
 		stm32f1_option_erase(t);
-		stm32f1_option_write(t, FLASH_OBP_RDP, FLASH_OBP_RDP_KEY);
+		stm32f1_option_write(t, FLASH_OBP_RDP, flash_obp_rdp_key);
 	} else if (argc == 3) {
 		addr = strtol(argv[1], NULL, 0);
 		val = strtol(argv[2], NULL, 0);
@@ -354,6 +364,15 @@ static bool stm32f1_cmd_option(target *t, int argc, char *argv[])
 	} else {
 		gdb_out("usage: monitor option erase\n");
 		gdb_out("usage: monitor option <addr> <value>\n");
+	}
+
+	if (0 && flash_obp_rdp_key == FLASH_OBP_RDP_KEY_F3) {
+		/* Reload option bytes on F0 and F3*/
+		val = adiv5_ap_mem_read(ap, FLASH_CR);
+		val |= FLASH_CR_OBL_LAUNCH;
+		stm32f1_option_write(t, FLASH_CR, val);
+		val &= ~FLASH_CR_OBL_LAUNCH;
+		stm32f1_option_write(t, FLASH_CR, val);
 	}
 
 	for (int i = 0; i < 0xf; i += 4) {
