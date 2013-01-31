@@ -295,7 +295,6 @@ ap_mem_write_bytes(struct target_s *target, uint32_t dest, const uint8_t *src, i
 		adiv5_dp_low_access(ap->dp, ADIV5_LOW_AP, ADIV5_LOW_WRITE,
 					ADIV5_AP_DRW, tmp);
 
-		dest ++;
 		/* Check for 10 bit address overflow */
 		if ((dest ^ odest) & 0xfffffc00) {
 			odest = dest;
