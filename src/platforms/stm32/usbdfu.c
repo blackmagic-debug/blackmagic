@@ -376,6 +376,7 @@ static int usbdfu_control_request(usbd_device *dev,
 
 int main(void)
 {
+    /* Check the force bootloader pin*/
 #if defined (DISCOVERY_STLINK)
 	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPCEN);
 	if(!gpio_get(GPIOC, GPIO13) && stlink_test_nrst()) {
@@ -424,9 +425,22 @@ int main(void)
 	}
 #endif
 
-#if defined (DISCOVERY_STLINK)
+        /* Set up clock*/
+#if defined (F4DISCOVERY)
+        rcc_clock_setup_hse_3v3(&hse_8mhz_3v3[CLOCK_3V3_168MHZ]);
+	systick_set_clocksource(STK_CTRL_CLKSOURCE_AHB_DIV8);
+	systick_set_reload(2100000);
+#else
+	rcc_clock_setup_in_hse_8mhz_out_72mhz();
+	systick_set_clocksource(STK_CTRL_CLKSOURCE_AHB_DIV8);
+	systick_set_reload(900000);
+#endif
+
+        /* Handle USB disconnect/connect */
+#if defined(DISCOVERY_STLINK)
 	/* Just in case: Disconnect USB cable by resetting USB Device
-	and pulling USB_DP low*/
+         * and pulling USB_DP low
+         * Device will reconnect automatically as Pull-Up is hard wired*/
 	rcc_peripheral_reset(&RCC_APB1RSTR, RCC_APB1ENR_USBEN);
 	rcc_peripheral_clear_reset(&RCC_APB1RSTR, RCC_APB1ENR_USBEN);
 	rcc_peripheral_enable_clock(&RCC_APB1ENR, RCC_APB1ENR_USBEN);
@@ -434,57 +448,53 @@ int main(void)
 	gpio_clear(GPIOA, GPIO12);
 	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
 		GPIO_CNF_OUTPUT_OPENDRAIN, GPIO12);
-#endif
-#if defined (F4DISCOVERY)
-        rcc_clock_setup_hse_3v3(&hse_8mhz_3v3[CLOCK_3V3_168MHZ]);
-#else
-	rcc_clock_setup_in_hse_8mhz_out_72mhz();
-#endif
-
-#if defined(DISCOVERY_STLINK)
 #elif defined(F4DISCOVERY)
-#elif defined (STM32_CAN)
-	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPAEN);
-	rcc_peripheral_enable_clock(&RCC_AHBENR, RCC_AHBENR_OTGFSEN);
-	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPBEN);
-	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ,
-			GPIO_CNF_OUTPUT_PUSHPULL, GPIO0);
+#elif defined(STM32_CAN)
 #else
 	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPAEN);
         rcc_peripheral_enable_clock(&RCC_APB1ENR, RCC_APB1ENR_USBEN);
 	gpio_set_mode(GPIOA, GPIO_MODE_INPUT, 0, GPIO8);
 
-	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ,
-			GPIO_CNF_OUTPUT_PUSHPULL, GPIO11);
 #endif
-	systick_set_clocksource(STK_CTRL_CLKSOURCE_AHB_DIV8);
-	systick_set_reload(2100000);
 	systick_interrupt_enable();
 	systick_counter_enable();
 	get_dev_unique_id(serial_no);
 
-#if defined(STM32_CAN)
-	usbdev = usbd_init(&stm32f107_usb_driver,
-				&dev, &config, usb_strings, 4);
-#elif defined(F4DISCOVERY)
+/* Handle LEDs */
+#if defined(F4DISCOVERY)
 	rcc_peripheral_enable_clock(&RCC_AHB1ENR, RCC_AHB1ENR_IOPDEN);
 	gpio_clear(GPIOD, GPIO12 | GPIO13 | GPIO14 |GPIO15);
 	gpio_mode_setup(GPIOD, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE,
 			GPIO12 | GPIO13 | GPIO14 |GPIO15);
+#elif defined (STM32_CAN)
+	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ,
+			GPIO_CNF_OUTPUT_PUSHPULL, GPIO0);
+#else
+	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ,
+			GPIO_CNF_OUTPUT_PUSHPULL, GPIO11);
+	gpio_set_mode(GPIOB, GPIO_MODE_INPUT,
+			GPIO_CNF_INPUT_FLOAT, GPIO2 | GPIO10);
 
+#endif
+
+/* Set up USB*/
+#if defined(STM32_CAN)
+	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPAEN);
+	rcc_peripheral_enable_clock(&RCC_AHBENR, RCC_AHBENR_OTGFSEN);
+	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPBEN);
+	usbdev = usbd_init(&stm32f107_usb_driver,
+				&dev, &config, usb_strings, 4);
+#elif defined(STM32F2)||defined(STM32F4)
+	rcc_peripheral_enable_clock(&RCC_AHB1ENR, RCC_AHB1ENR_IOPAEN);
 	rcc_peripheral_enable_clock(&RCC_AHB2ENR, RCC_AHB2ENR_OTGFSEN);
 
 	/* Set up USB Pins and alternate function*/
 	gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE,
-		GPIO9 | GPIO11 | GPIO12);
-	gpio_set_af(GPIOA, GPIO_AF10, GPIO9 | GPIO11 | GPIO12);
-
+		GPIO9 | GPIO10 | GPIO11 | GPIO12);
+	gpio_set_af(GPIOA, GPIO_AF10, GPIO9 | GPIO10| GPIO11 | GPIO12);
 	usbdev = usbd_init(&stm32f107_usb_driver,
 				&dev, &config, usb_strings, 4);
 #else
-	gpio_set_mode(GPIOB, GPIO_MODE_INPUT,
-			GPIO_CNF_INPUT_FLOAT, GPIO2 | GPIO10);
-
 	usbdev = usbd_init(&stm32f103_usb_driver,
 				&dev, &config, usb_strings, 4);
 #endif
