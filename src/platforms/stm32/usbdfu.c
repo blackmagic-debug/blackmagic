@@ -198,6 +198,8 @@ static const char *usb_strings[] = {
 	"Black Magic (Upgrade) for STM32_CAN, (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")",
 #elif defined(F4DISCOVERY)
 	"Black Magic (Upgrade) for F4Discovery, (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")",
+#elif defined(USPS_F407)
+	"Black Magic (Upgrade) for USPS_F407, (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")",
 #else
 #warning "Unhandled board"
 #endif
@@ -209,7 +211,7 @@ static const char *usb_strings[] = {
 	"@Internal Flash   /0x08000000/8*001Ka,56*001Kg"
 #elif defined(STM32_CAN)
 	"@Internal Flash   /0x08000000/4*002Ka,124*002Kg"
-#elif defined(F4DISCOVERY)
+#elif defined(F4DISCOVERY) || defined(USPS_F407)
 	"@Internal Flash   /0x08000000/1*016Ka,3*016Kg,1*064Kg,7*128Kg"
 #else
 #warning "Unhandled board"
@@ -386,6 +388,15 @@ int main(void)
 #elif defined (F4DISCOVERY)
 	rcc_peripheral_enable_clock(&RCC_AHB1ENR, RCC_AHB1ENR_IOPAEN);
 	if(!gpio_get(GPIOA, GPIO0)) {
+#elif defined (USPS_F407)
+	rcc_peripheral_enable_clock(&RCC_AHB1ENR, RCC_AHB1ENR_IOPBEN);
+        /* Pull up an look if external pulled low or if we restart with PB1 low*/
+        GPIOB_PUPDR |= 4;
+        {
+            int i;
+            for(i=0; i<100000; i++) __asm__("NOP");
+        }
+	if(gpio_get(GPIOB, GPIO1)) {
 #else
 	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPBEN);
 	if(gpio_get(GPIOB, GPIO12)) {
@@ -426,7 +437,7 @@ int main(void)
 #endif
 
         /* Set up clock*/
-#if defined (F4DISCOVERY)
+#if defined (F4DISCOVERY) || defined(USPS_F407)
         rcc_clock_setup_hse_3v3(&hse_8mhz_3v3[CLOCK_3V3_168MHZ]);
 	systick_set_clocksource(STK_CTRL_CLKSOURCE_AHB_DIV8);
 	systick_set_reload(2100000);
@@ -449,6 +460,7 @@ int main(void)
 	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
 		GPIO_CNF_OUTPUT_OPENDRAIN, GPIO12);
 #elif defined(F4DISCOVERY)
+#elif defined(USPS_F407)
 #elif defined(STM32_CAN)
 #else
 	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPAEN);
@@ -466,6 +478,11 @@ int main(void)
 	gpio_clear(GPIOD, GPIO12 | GPIO13 | GPIO14 |GPIO15);
 	gpio_mode_setup(GPIOD, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE,
 			GPIO12 | GPIO13 | GPIO14 |GPIO15);
+#elif defined(USPS_F407)
+	rcc_peripheral_enable_clock(&RCC_AHB1ENR, RCC_AHB1ENR_IOPBEN);
+	gpio_clear(GPIOB, GPIO2);
+	gpio_mode_setup(GPIOB, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE,
+			GPIO2);
 #elif defined (STM32_CAN)
 	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ,
 			GPIO_CNF_OUTPUT_PUSHPULL, GPIO0);
@@ -562,6 +579,8 @@ void sys_tick_handler()
 	led2_state++;
 #elif defined (F4DISCOVERY)
 	gpio_toggle(GPIOD, GPIO12);  /* Green LED on/off */
+#elif defined (USPS_F407)
+	gpio_toggle(GPIOB, GPIO2);  /* Green LED on/off */
 #elif defined(STM32_CAN)
 	gpio_toggle(GPIOB, GPIO0);  /* LED2 on/off */
 #else
