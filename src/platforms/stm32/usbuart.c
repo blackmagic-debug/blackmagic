@@ -126,6 +126,12 @@ void USBUSART_ISR(void)
 {
 	char c = usart_recv(USBUSART);
 
+	/* Don't try to write until we are configured.
+	 * Otherwise enumeration hanged in some cases.
+	 */
+	if (cdcacm_get_config() != 1)
+		return;
+
 	gpio_set(LED_PORT_UART, LED_UART);
 
 	/* Try to send now */
