@@ -28,9 +28,11 @@
 #include "gdb_if.h"
 
 static uint32_t count_out;
+static uint32_t count_new;
 static uint32_t count_in;
 static uint32_t out_ptr;
 static uint8_t buffer_out[CDCACM_PACKET_SIZE];
+static uint8_t double_buffer_out[CDCACM_PACKET_SIZE];
 static uint8_t buffer_in[CDCACM_PACKET_SIZE];
 
 void gdb_if_putchar(unsigned char c, int flush)
@@ -49,17 +51,28 @@ void gdb_if_putchar(unsigned char c, int flush)
 	}
 }
 
+void gdb_usb_out_cb(usbd_device *dev, uint8_t ep)
+{
+	(void)ep;
+        count_new = usbd_ep_read_packet(dev, CDCACM_GDB_ENDPOINT,
+                                        double_buffer_out, CDCACM_PACKET_SIZE);
+}
+
 unsigned char gdb_if_getchar(void)
 {
+
 	while(!(out_ptr < count_out)) {
 		/* Detach if port closed */
 		if(!cdcacm_get_dtr())
 			return 0x04;
 
 		while(cdcacm_get_config() != 1);
-		count_out = usbd_ep_read_packet(usbdev, CDCACM_GDB_ENDPOINT,
-					buffer_out, CDCACM_PACKET_SIZE);
-		out_ptr = 0;
+                if (count_new) {
+                    memcpy(buffer_out, double_buffer_out,count_new);
+		    count_out = count_new;
+                    count_new = 0;
+                    out_ptr = 0;
+                }
 	}
 
 	return buffer_out[out_ptr++];
@@ -74,9 +87,13 @@ unsigned char gdb_if_getchar_to(int timeout)
 		if(!cdcacm_get_dtr())
 			return 0x04;
 
-		count_out = usbd_ep_read_packet(usbdev, CDCACM_GDB_ENDPOINT,
-					buffer_out, CDCACM_PACKET_SIZE);
-		out_ptr = 0;
+		while(cdcacm_get_config() != 1);
+                if (count_new) {
+                    memcpy(buffer_out, double_buffer_out,count_new);
+		    count_out = count_new;
+                    count_new = 0;
+                    out_ptr = 0;
+                }
 	} while(timeout_counter && !(out_ptr < count_out));
 
 	if(out_ptr < count_out)

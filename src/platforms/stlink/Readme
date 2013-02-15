@@ -1,0 +1,11 @@
+Find a description how to modify a Discovery Board to use it's Stlink as
+black magic debug at
+http://embdev.net/articles/STM_Discovery_as_Black_Magic_Probe
+
+Differences between V1/V2
+
+                V1                V2
+ID Pins PC13/14 unconnected       PC 13 pulled low
+LED STLINK      PA8, active High  PA9, Dual Led
+MCO Out         NA                PA8
+RESET(Target)   T_JRST(PB1)       NRST (PB0)

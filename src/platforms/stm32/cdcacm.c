@@ -19,17 +19,14 @@
  */
 
 /* This file implements a the USB Communications Device Class - Abstract
- * Control Model (CDC-ACM) as defined in CDC PSTN subclass 1.2.  
- * A Device Firmware Upgrade (DFU 1.1) class interface is provided for 
+ * Control Model (CDC-ACM) as defined in CDC PSTN subclass 1.2.
+ * A Device Firmware Upgrade (DFU 1.1) class interface is provided for
  * field firmware upgrade.
- * 
+ *
  * The device's unique id is used as the USB serial number string.
  */
 
-#include <libopencm3/stm32/f1/rcc.h>
 #include <libopencm3/cm3/nvic.h>
-#include <libopencm3/stm32/exti.h>
-#include <libopencm3/stm32/f1/gpio.h>
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/cdc.h>
 #include <libopencm3/cm3/scb.h>
@@ -37,8 +34,11 @@
 #include <stdlib.h>
 
 #include "platform.h"
-#include "traceswo.h"
-#include "usbuart.h"
+#include "gdb_if.h"
+#if defined(PLATFORM_HAS_TRACESWO)
+#include <traceswo.h>
+#endif
+#include <usbuart.h>
 
 #define DFU_IF_NO 4
 
@@ -67,8 +67,8 @@ static const struct usb_device_descriptor dev = {
         .bNumConfigurations = 1,
 };
 
-/* This notification endpoint isn't implemented. According to CDC spec its 
- * optional, but its absence causes a NULL pointer dereference in Linux cdc_acm 
+/* This notification endpoint isn't implemented. According to CDC spec its
+ * optional, but its absence causes a NULL pointer dereference in Linux cdc_acm
  * driver. */
 static const struct usb_endpoint_descriptor gdb_comm_endp[] = {{
 	.bLength = USB_DT_ENDPOINT_SIZE,
@@ -108,7 +108,7 @@ static const struct {
 		.bcdCDC = 0x0110,
 	},
 	.call_mgmt = {
-		.bFunctionLength = 
+		.bFunctionLength =
 			sizeof(struct usb_cdc_call_management_descriptor),
 		.bDescriptorType = CS_INTERFACE,
 		.bDescriptorSubtype = USB_CDC_TYPE_CALL_MANAGEMENT,
@@ -126,7 +126,7 @@ static const struct {
 		.bDescriptorType = CS_INTERFACE,
 		.bDescriptorSubtype = USB_CDC_TYPE_UNION,
 		.bControlInterface = 0,
-		.bSubordinateInterface0 = 1, 
+		.bSubordinateInterface0 = 1,
 	 }
 };
 
@@ -211,7 +211,7 @@ static const struct {
 		.bcdCDC = 0x0110,
 	},
 	.call_mgmt = {
-		.bFunctionLength = 
+		.bFunctionLength =
 			sizeof(struct usb_cdc_call_management_descriptor),
 		.bDescriptorType = CS_INTERFACE,
 		.bDescriptorSubtype = USB_CDC_TYPE_CALL_MANAGEMENT,
@@ -229,7 +229,7 @@ static const struct {
 		.bDescriptorType = CS_INTERFACE,
 		.bDescriptorSubtype = USB_CDC_TYPE_UNION,
 		.bControlInterface = 2,
-		.bSubordinateInterface0 = 3, 
+		.bSubordinateInterface0 = 3,
 	 }
 };
 
@@ -310,6 +310,7 @@ static const struct usb_iface_assoc_descriptor dfu_assoc = {
 	.iFunction = 6,
 };
 
+#if defined(PLATFORM_HAS_TRACESWO)
 static const struct usb_endpoint_descriptor trace_endp[] = {{
 	.bLength = USB_DT_ENDPOINT_SIZE,
 	.bDescriptorType = USB_DT_ENDPOINT,
@@ -343,6 +344,7 @@ static const struct usb_iface_assoc_descriptor trace_assoc = {
 	.bFunctionProtocol = 0xFF,
 	.iFunction = 7,
 };
+#endif
 
 static const struct usb_interface ifaces[] = {{
 	.num_altsetting = 1,
@@ -362,17 +364,23 @@ static const struct usb_interface ifaces[] = {{
 	.num_altsetting = 1,
 	.iface_assoc = &dfu_assoc,
 	.altsetting = &dfu_iface,
+#if defined(PLATFORM_HAS_TRACESWO)
 }, {
 	.num_altsetting = 1,
 	.iface_assoc = &trace_assoc,
 	.altsetting = &trace_iface,
+#endif
 }};
 
 static const struct usb_config_descriptor config = {
 	.bLength = USB_DT_CONFIGURATION_SIZE,
 	.bDescriptorType = USB_DT_CONFIGURATION,
 	.wTotalLength = 0,
+#if defined(PLATFORM_HAS_TRACESWO)
 	.bNumInterfaces = 6,
+#else
+	.bNumInterfaces = 5,
+#endif
 	.bConfigurationValue = 1,
 	.iConfiguration = 0,
 	.bmAttributes = 0x80,
@@ -385,12 +393,14 @@ char serial_no[9];
 
 static const char *usb_strings[] = {
 	"Black Sphere Technologies",
-	"Black Magic Probe",
+	BOARD_IDENT,
 	serial_no,
 	"Black Magic GDB Server",
 	"Black Magic UART Port",
-	"Black Magic Firmware Upgrade",
+	DFU_IDENT,
+#if defined(PLATFORM_HAS_TRACESWO)
 	"Black Magic Trace Capture",
+#endif
 };
 
 static void dfu_detach_complete(usbd_device *dev, struct usb_setup_data *req)
@@ -399,12 +409,10 @@ static void dfu_detach_complete(usbd_device *dev, struct usb_setup_data *req)
 	(void)req;
 
 	/* Disconnect USB cable */
-	gpio_set_mode(USB_PU_PORT, GPIO_MODE_INPUT, 0, USB_PU_PIN);
+	disconnect_usb();
 
 	/* Assert boot-request pin */
-	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ, 
-			GPIO_CNF_OUTPUT_PUSHPULL, GPIO12);
-	gpio_clear(GPIOB, GPIO12);
+        assert_boot_pin();
 
 	/* Reset core to enter bootloader */
 	scb_reset_core();
@@ -420,7 +428,7 @@ static int cdcacm_control_request(usbd_device *dev,
 	(void)len;
 
 	switch(req->bRequest) {
-	case USB_CDC_REQ_SET_CONTROL_LINE_STATE: 
+	case USB_CDC_REQ_SET_CONTROL_LINE_STATE:
 		/* Ignore if not for GDB interface */
 		if(req->wIndex != 0)
 			return 1;
@@ -428,8 +436,8 @@ static int cdcacm_control_request(usbd_device *dev,
 		cdcacm_gdb_dtr = req->wValue & 1;
 
 		return 1;
-	case USB_CDC_REQ_SET_LINE_CODING: 
-		if(*len < sizeof(struct usb_cdc_line_coding)) 
+	case USB_CDC_REQ_SET_LINE_CODING:
+		if(*len < sizeof(struct usb_cdc_line_coding))
 			return 0;
 
 		switch(req->wIndex) {
@@ -440,7 +448,7 @@ static int cdcacm_control_request(usbd_device *dev,
 		default:
 			return 0;
 		}
-	case DFU_GETSTATUS: 
+	case DFU_GETSTATUS:
 		if(req->wIndex == DFU_IF_NO) {
 			(*buf)[0] = DFU_STATUS_OK;
 			(*buf)[1] = 0;
@@ -478,7 +486,7 @@ static void cdcacm_set_config(usbd_device *dev, u16 wValue)
 
 	/* GDB interface */
 	usbd_ep_setup(dev, 0x01, USB_ENDPOINT_ATTR_BULK,
-					CDCACM_PACKET_SIZE, NULL);
+					CDCACM_PACKET_SIZE, gdb_usb_out_cb);
 	usbd_ep_setup(dev, 0x81, USB_ENDPOINT_ATTR_BULK,
 					CDCACM_PACKET_SIZE, NULL);
 	usbd_ep_setup(dev, 0x82, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
@@ -490,9 +498,11 @@ static void cdcacm_set_config(usbd_device *dev, u16 wValue)
 					CDCACM_PACKET_SIZE, usbuart_usb_in_cb);
 	usbd_ep_setup(dev, 0x84, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
 
+#if defined(PLATFORM_HAS_TRACESWO)
 	/* Trace interface */
 	usbd_ep_setup(dev, 0x85, USB_ENDPOINT_ATTR_BULK,
 					64, trace_buf_drain);
+#endif
 
 	usbd_register_control_callback(dev,
 			USB_REQ_TYPE_CLASS | USB_REQ_TYPE_INTERFACE,
@@ -526,53 +536,27 @@ void cdcacm_init(void)
 
 	get_dev_unique_id(serial_no);
 
-	usbdev = usbd_init(&stm32f103_usb_driver,
-					&dev, &config, usb_strings, 7);
+	usbdev = usbd_init(&USB_DRIVER, &dev, &config, usb_strings, sizeof(usb_strings)/sizeof(char *));
 	usbd_set_control_buffer_size(usbdev, sizeof(usbd_control_buffer));
 	usbd_register_set_config_callback(usbdev, cdcacm_set_config);
 
-	nvic_set_priority(NVIC_USB_LP_CAN_RX0_IRQ, IRQ_PRI_USB);
-	nvic_enable_irq(NVIC_USB_LP_CAN_RX0_IRQ);
-	nvic_set_priority(USB_VBUS_IRQ, IRQ_PRI_USB_VBUS);
-	nvic_enable_irq(USB_VBUS_IRQ);
-
-	gpio_set(USB_VBUS_PORT, USB_VBUS_PIN);
-	gpio_set(USB_PU_PORT, USB_PU_PIN);
-
-	gpio_set_mode(USB_VBUS_PORT, GPIO_MODE_INPUT,
-			GPIO_CNF_INPUT_PULL_UPDOWN, USB_VBUS_PIN);
-
-	/* Configure EXTI for USB VBUS monitor */
-	exti_select_source(USB_VBUS_PIN, USB_VBUS_PORT);
-	exti_set_trigger(USB_VBUS_PIN, EXTI_TRIGGER_BOTH);
-	exti_enable_request(USB_VBUS_PIN);
-
-	exti15_10_isr();
+	nvic_set_priority(USB_IRQ, IRQ_PRI_USB);
+	nvic_enable_irq(USB_IRQ);
+	setup_vbus_irq();
 }
 
-void usb_lp_can_rx0_isr(void)
+void USB_ISR(void)
 {
 	usbd_poll(usbdev);
 }
 
-void exti15_10_isr(void)
+static char *get_dev_unique_id(char *s)
 {
-	if (gpio_get(USB_VBUS_PORT, USB_VBUS_PIN)) {
-		/* Drive pull-up high if VBUS connected */
-		gpio_set_mode(USB_PU_PORT, GPIO_MODE_OUTPUT_10_MHZ, 
-				GPIO_CNF_OUTPUT_PUSHPULL, USB_PU_PIN);
-	} else {
-		/* Allow pull-up to float if VBUS disconnected */
-		gpio_set_mode(USB_PU_PORT, GPIO_MODE_INPUT, 
-				GPIO_CNF_INPUT_FLOAT, USB_PU_PIN);
-	}
-
-	exti_reset_request(USB_VBUS_PIN);
-}
-
-static char *get_dev_unique_id(char *s) 
-{
+#if defined(STM32F4)
+        volatile uint32_t *unique_id_p = (volatile uint32_t *)0x1FFF7A10;
+#else
         volatile uint32_t *unique_id_p = (volatile uint32_t *)0x1FFFF7E8;
+#endif
 	uint32_t unique_id = *unique_id_p +
 			*(unique_id_p + 1) +
 			*(unique_id_p + 2);
@@ -583,10 +567,9 @@ static char *get_dev_unique_id(char *s)
                 s[7-i] = ((unique_id >> (4*i)) & 0xF) + '0';
         }
         for(i = 0; i < 8; i++)
-                if(s[i] > '9') 
+                if(s[i] > '9')
                         s[i] += 'A' - '9' - 1;
 	s[8] = 0;
 
 	return s;
 }
-
