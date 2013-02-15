@@ -81,7 +81,6 @@ extern usbd_device *usbdev;
 /* Use PC14 for a "dummy" uart led. So we can observere at least with scope*/
 #define LED_PORT_UART	GPIOC
 #define LED_UART	GPIO14
-#define LED_IDLE_RUN	GPIO9
 
 #define TMS_SET_MODE()                                          \
     gpio_set_mode(TMS_PORT, GPIO_MODE_OUTPUT_50_MHZ,            \
@@ -134,8 +133,9 @@ extern const char *morse_msg;
 		gpio_clear((port), (pin));	\
 } while(0)
 
+extern uint16_t led_idle_run;
 #define SET_RUN_STATE(state)	{running_status = (state);}
-#define SET_IDLE_STATE(state)	{gpio_set_val(LED_PORT, LED_IDLE_RUN, state);}
+#define SET_IDLE_STATE(state)	{gpio_set_val(LED_PORT, led_idle_run, state);}
 
 #define PLATFORM_SET_FATAL_ERROR_RECOVERY()	{setjmp(fatal_error_jmpbuf);}
 #define PLATFORM_FATAL_ERROR(error)	{ 		\

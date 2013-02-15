@@ -54,17 +54,44 @@ u8 usbd_control_buffer[1024];
 #endif
 
 #if defined(DISCOVERY_STLINK)
+uint8_t rev;
+uint16_t led_idle_run;
 u32 led2_state = 0;
 int stlink_test_nrst(void) {
-/* Test if NRST is pulled down*/
+/* Test if JRST/NRST is pulled down*/
     int i;
     uint16_t nrst;
+    uint16_t pin;
+
+    /* First, get Board revision by pulling PC13/14 up. Read
+     *  11 for ST-Link V1, e.g. on VL Discovery, tag as rev 0
+     *  10 for ST-Link V2, e.g. on F4 Discovery, tag as rev 1
+     */
+    rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPCEN);
+    gpio_set_mode(GPIOC, GPIO_MODE_INPUT,
+                  GPIO_CNF_INPUT_PULL_UPDOWN, GPIO14|GPIO13);
+    gpio_set(GPIOC, GPIO14|GPIO13);
+    for (i=0; i< 100; i++)
+        rev = (~(gpio_get(GPIOC, GPIO14|GPIO13))>>13) & 3;
+
+    switch (rev)
+    {
+    case 0:
+        pin = GPIO1;
+        led_idle_run= GPIO8;
+        break;
+    default:
+        pin = GPIO0;
+        led_idle_run = GPIO9;
+    }
+    gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
+                  GPIO_CNF_OUTPUT_PUSHPULL, led_idle_run);
     rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPBEN);
     gpio_set_mode(GPIOB, GPIO_MODE_INPUT,
-                  GPIO_CNF_INPUT_PULL_UPDOWN, GPIO0);
-    gpio_set(GPIOB, GPIO0);
-    for (i=0; i< 100000; i++)
-        nrst = gpio_get(GPIOB, GPIO0);
+                  GPIO_CNF_INPUT_PULL_UPDOWN, pin);
+    gpio_set(GPIOB, pin);
+    for (i=0; i< 100; i++)
+        nrst = gpio_get(GPIOB, pin);
     return (nrst)?1:0;
 }
 #endif
@@ -380,8 +407,12 @@ int main(void)
 {
     /* Check the force bootloader pin*/
 #if defined (DISCOVERY_STLINK)
-	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPCEN);
-	if(!gpio_get(GPIOC, GPIO13) && stlink_test_nrst()) {
+	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPAEN);
+/* Check value of GPIOA1 configuration. This pin is unconnected on
+ * STLink V1 and V2. If we have a value other than the reset value (0x4),
+ * we have a warm start and request Bootloader entry
+ */
+	if(((GPIOA_CRL & 0x40) == 0x40) && stlink_test_nrst()) {
 #elif defined (STM32_CAN)
 	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPAEN);
 	if(!gpio_get(GPIOA, GPIO0)) {
@@ -569,14 +600,19 @@ static char *get_dev_unique_id(char *s)
 
 void sys_tick_handler()
 {
-#if defined(DISCOVERY_STLINK)
-	if (led2_state & 1)
-		gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
-			GPIO_CNF_OUTPUT_PUSHPULL, GPIO9);
+	#if defined(DISCOVERY_STLINK)
+	if (rev == 0)
+		gpio_toggle(GPIOA, led_idle_run);
 	else
-		gpio_set_mode(GPIOA, GPIO_MODE_INPUT,
-		GPIO_CNF_INPUT_ANALOG, GPIO9);
-	led2_state++;
+	{
+		if (led2_state & 1)
+			gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
+				GPIO_CNF_OUTPUT_PUSHPULL, led_idle_run);
+		else
+			gpio_set_mode(GPIOA, GPIO_MODE_INPUT,
+				GPIO_CNF_INPUT_ANALOG, led_idle_run);
+		led2_state++;
+	}
 #elif defined (F4DISCOVERY)
 	gpio_toggle(GPIOD, GPIO12);  /* Green LED on/off */
 #elif defined (USPS_F407)
