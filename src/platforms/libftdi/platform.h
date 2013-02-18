@@ -40,12 +40,12 @@
 #define PLATFORM_FATAL_ERROR(error)	abort()
 #define PLATFORM_SET_FATAL_ERROR_RECOVERY()
 
-#define morse(x, y) do {} while(0)
+#define morse(x, y) fprintf(stderr,"%s\n", x)
 #define morse_msg 0
 
 extern struct ftdi_context *ftdic;
 
-int platform_init(void);
+int platform_init(int argc, char **argv);
 const char *platform_target_voltage(void);
 void platform_delay(uint32_t delay);
 

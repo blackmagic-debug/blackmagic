@@ -34,12 +34,13 @@
 
 #define INLINE_GPIO
 #define CDCACM_PACKET_SIZE 	64
-#define BOARD_IDENT             "Black Magic Probe (STLINK), (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")"
-#define DFU_IDENT               "Black Magic Firmware Upgrade (STLINK)"
+/*#define PLATFORM_HAS_TRACESWO*/
 
 extern usbd_device *usbdev;
 #define CDCACM_GDB_ENDPOINT	1
 #define CDCACM_UART_ENDPOINT	3
+#define BOARD_IDENT             "Black Magic Probe (STM32_CAN), (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")"
+#define DFU_IDENT               "Black Magic Firmware Upgrade (STM32_CAN)"
 
 /* Important pin mappings for STM32 implementation:
  *
@@ -48,39 +49,41 @@ extern usbd_device *usbdev;
  * LED2 = 	PB11	(Red LED    : Error)
  *
  * TPWR = 	RB0 (input) -- analogue on mini design ADC1, ch8
- * nTRST = 	PB1
- * SRST_OUT = 	PA2
- * TDI = 	PA3
- * TMS = 	PA4 (input for SWDP)
- * TCK = 	PA5
- * TDO = 	PA6 (input)
+ * nTRST = 	PC9
+ * SRST_OUT = 	NA
+ * TDI = 	PC12
+ * TMS = 	PB14(input for SWDP)
+ * TCK = 	PC10
+ * TDO = 	PC11(input)
  * nSRST = 	PA7 (input)
  *
- * USB cable pull-up: PA8
- * USB VBUS detect:  PB13 -- New on mini design.  
- *                           Enable pull up for compatibility.
- * Force DFU mode button: PB12
+ * Force DFU mode button: PA0  Read High for Bootloader Req
  */
 
 /* Hardware definitions... */
-#define TDI_PORT	GPIOA
+#define TDI_PORT	GPIOC
 #define TMS_PORT	GPIOB
-#define TCK_PORT	GPIOA
-#define TDO_PORT	GPIOA
-#define TDI_PIN		GPIO7
+#define TCK_PORT	GPIOC
+#define TDO_PORT	GPIOC
+#define TDI_PIN		GPIO12
 #define TMS_PIN		GPIO14
-#define TCK_PIN		GPIO5
-#define TDO_PIN		GPIO6
+#define TCK_PIN		GPIO10
+#define TDO_PIN		GPIO11
 
 #define SWDIO_PORT 	TMS_PORT
-#define SWCLK_PORT 	TCK_PORT
+#define SWCLK_PORT      TCK_PORT
 #define SWDIO_PIN	TMS_PIN
 #define SWCLK_PIN	TCK_PIN
 
-#define LED_PORT	GPIOA
-/* Use PC14 for a "dummy" uart led. So we can observere at least with scope*/
-#define LED_PORT_UART	GPIOC
-#define LED_UART	GPIO14
+//#define TRST_PORT	GPIOC
+//#define TRST_PIN	GPIO9
+
+#define LED_PORT	GPIOB
+#define LED_PORT_UART	GPIOB
+#define LED_UART	GPIO0
+
+#define LED_IDLE_RUN	GPIO1
+#define LED_ERROR	GPIO12
 
 #define TMS_SET_MODE()                                          \
     gpio_set_mode(TMS_PORT, GPIO_MODE_OUTPUT_50_MHZ,            \
@@ -96,16 +99,15 @@ extern usbd_device *usbdev;
     gpio_set_mode(USBUSART_PORT, GPIO_MODE_OUTPUT_2_MHZ,                \
                   GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, USBUSART_TX_PIN);
 
-#define USB_DRIVER      stm32f103_usb_driver
-#define USB_IRQ         NVIC_USB_LP_CAN_RX0_IRQ
-#define USB_ISR          usb_lp_can_rx0_isr
+#define USB_DRIVER      stm32f107_usb_driver
+#define USB_IRQ         NVIC_OTG_FS_IRQ
+#define USB_ISR         otg_fs_isr
 /* Interrupt priorities.  Low numbers are high priority.
- * For now USART2 preempts USB which may spin while buffer is drained.
+ * For now USART1 preempts USB which may spin while buffer is drained.
  * TIM3 is used for traceswo capture and must be highest priority.
  */
 #define IRQ_PRI_USB		(2 << 4)
 #define IRQ_PRI_USBUSART	(1 << 4)
-#define IRQ_PRI_USB_VBUS	(14 << 4)
 #define IRQ_PRI_TIM3		(0 << 4)
 
 #define USBUSART USART2
@@ -133,9 +135,9 @@ extern const char *morse_msg;
 		gpio_clear((port), (pin));	\
 } while(0)
 
-extern uint16_t led_idle_run;
 #define SET_RUN_STATE(state)	{running_status = (state);}
-#define SET_IDLE_STATE(state)	{gpio_set_val(LED_PORT, led_idle_run, state);}
+#define SET_IDLE_STATE(state)	{gpio_set_val(LED_PORT, LED_IDLE_RUN, state);}
+#define SET_ERROR_STATE(state)	{gpio_set_val(LED_PORT, LED_ERROR, state);}
 
 #define PLATFORM_SET_FATAL_ERROR_RECOVERY()	{setjmp(fatal_error_jmpbuf);}
 #define PLATFORM_FATAL_ERROR(error)	{ 		\
@@ -143,12 +145,14 @@ extern uint16_t led_idle_run;
 		else gdb_putpacketz("EFF");		\
 	running_status = 0;				\
 	target_list_free();				\
+	morse("TARGET LOST.", 1);			\
 	longjmp(fatal_error_jmpbuf, (error));		\
 }
 
 int platform_init(void);
 void morse(const char *msg, char repeat);
 const char *platform_target_voltage(void);
+int platform_hwversion(void);
 void platform_delay(uint32_t delay);
 
 /* <cdcacm.c> */
@@ -187,5 +191,6 @@ static inline u16 _gpio_get(u32 gpioport, u16 gpios)
 
 #endif
 
-void disconnect_usb(void);
+#define disconnect_usb() usbd_disconnect(usbdev,1)
 void assert_boot_pin(void);
+#define setup_vbus_irq()

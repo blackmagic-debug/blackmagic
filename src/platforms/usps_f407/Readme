@@ -1,0 +1,22 @@
+Hardware
+========
+Find eagle schematics at
+https://github.com/UweBonnes/wiki_fuer_alex/tree/master/layout
+The board can be used for F1/L1/F2 and F4 with some changed parts,
+see the datasheet and hints in the schematic
+
+JTAG: Reuse the JTAG Connector, unconnect JTAG Tap and reuse JTAG pins
+in inverse direction.
+Forced boot request: Connect Jumper Wire X11-34/X11-40 to pull PC15
+to ground
+System Bootloader: Jumper Boot0  to '1'
+
+Led: PB2 (Boot1)
+
+Application start address:
+=========================
+
+Use 0x8010000
+- lower 3 16 k pages may be used for parameter storage
+- Erasing a single 64 k Page is faster then erasing 2 16 k Pages
+  eventual the 64 k page

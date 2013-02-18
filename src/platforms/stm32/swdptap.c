@@ -38,14 +38,12 @@ static void swdptap_turnaround(uint8_t dir)
 	if(dir == olddir) return;
 	olddir = dir;
 
-	if(dir) 
-		gpio_set_mode(SWDIO_PORT, GPIO_MODE_INPUT, 
-				GPIO_CNF_INPUT_FLOAT, SWDIO_PIN);
+	if(dir)
+		SWDIO_MODE_FLOAT();
 	gpio_set(SWCLK_PORT, SWCLK_PIN);
 	gpio_clear(SWCLK_PORT, SWCLK_PIN);
-	if(!dir) 
-		gpio_set_mode(SWDIO_PORT, GPIO_MODE_OUTPUT_50_MHZ, 
-				GPIO_CNF_OUTPUT_PUSHPULL, SWDIO_PIN);
+	if(!dir)
+		SWDIO_MODE_DRIVE();
 }
 
 static uint8_t swdptap_bit_in(void)

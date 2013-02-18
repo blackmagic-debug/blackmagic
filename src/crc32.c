@@ -21,6 +21,7 @@
 #include "platform.h"
 #include "target.h"
 
+#if !defined(STM32F1) && !defined(STM32F4)
 static const uint32_t crc32_table[] = {
 	0x00000000, 0x04C11DB7, 0x09823B6E, 0x0D4326D9,
 	0x130476DC, 0x17C56B6B, 0x1A864DB2, 0x1E475005,
@@ -107,4 +108,31 @@ uint32_t generic_crc32(struct target_s *target, uint32_t base, int len)
 	}
 	return crc;
 }
+#else
+#include <libopencm3/stm32/crc.h>
+uint32_t generic_crc32(struct target_s *target, uint32_t base, int len)
+{
+	uint32_t data;
+	uint8_t byte;
 
+        CRC_CR |= CRC_CR_RESET;
+
+	while (len >3) {
+		if (target_mem_read_words(target, &data, base, 1) != 0)
+			return -1;
+
+		CRC_DR = data;
+		base+=4;
+                len -= 4;
+	}
+	while (len--) {
+		if (target_mem_read_bytes(target, &byte, base, 1) != 0)
+			return -1;
+
+		CRC_DR = byte;
+		base++;
+	}
+	return CRC_DR;
+}
+
+#endif

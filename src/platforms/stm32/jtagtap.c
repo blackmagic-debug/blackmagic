@@ -25,11 +25,11 @@
 #include "general.h"
 
 #include "jtagtap.h"
+#include "platform.h"
 
 int jtagtap_init(void)
 {
-	gpio_set_mode(TMS_PORT, GPIO_MODE_OUTPUT_50_MHZ, 
-		GPIO_CNF_OUTPUT_PUSHPULL, TMS_PIN); 
+	TMS_SET_MODE();
 
 	/* Go to JTAG mode for SWJ-DP */
 	for(int i = 0; i <= 50; i++) jtagtap_next(1, 0); /* Reset SW-DP */

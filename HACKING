@@ -9,6 +9,11 @@ resides in the 'src' directory.
 
 Compiling for the native hardware
 ---------------------------------
+Run
+git submodule init
+git submodule update
+after cloning blackmagic to fill the libopencm3 directory.
+
 To build the firmware for the standard hardware platform run 'make' in the
 src directory.  You will require a GCC cross compiler for ARM Cortex-M3 
 targets.  You will also need to have the libopenstm32 library installed.
@@ -39,6 +44,16 @@ over USB:
 The device should reset and re-enumerate as a CDC-ACM device implementing
 the GDB protocol.
 
+Errors when compiling libopencm3
+-------------------------------
+If while compiling libopencm3 you get an error like
+arm-none-eabi/bin/ld: error: cdcacm.elf uses VFP register arguments, \
+ arm-none-eabi/lib/thumb/v7m/libc.a(lib_a-memcpy-stub.o) does not
+your toolchain and libopencm3 disagree on the calling convention for floation
+point functions on the F4. Change in
+lib/stm32/f4/Makefile and examples/stm32/f4/Makefile.include all apperance of
+-mfloat-abi=hard to -mfloat-abi=soft
+This doesn't matter for blackmagic, as it doesn't use floating point.
 
 Compiling as a Linux application using FT2232 hardware
 ------------------------------------------------------

@@ -1,0 +1,17 @@
+Application start address:
+=========================
+
+Use 0x8010000
+- lower 3 16 k pages may be used for parameter storage
+- Erasing a single 64 k Page is faster then erasing 2 16 k Pages
+  eventual the 64 k page
+
+
+Internal boot loader:
+====================
+
+When we request invokation of a bootloader from inside the application,
+we boot the device internal bootloader with the blue botton pressed.
+
+That way, we can easy exchange the custom bootloader via the device
+internale bootloader

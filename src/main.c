@@ -34,10 +34,15 @@
 #include "target.h"
 
 int
-main(void)
+main(int argc, char **argv)
 {
+#if defined(LIBFTDI)
+	assert(platform_init(argc, argv) == 0);
+#else
+	(void) argc;
+	(void) argv;
 	assert(platform_init() == 0);
-
+#endif
 	PLATFORM_SET_FATAL_ERROR_RECOVERY();
 
 	gdb_main();

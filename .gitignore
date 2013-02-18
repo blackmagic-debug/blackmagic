@@ -1,3 +1,9 @@
+blackmagic
+blackmagic.bin
+blackmagic_dfu
+blackmagic_dfu.bin
+blackmagic_dfu.hex
+mapfile
 *.o
 *.d
 .*.swp
