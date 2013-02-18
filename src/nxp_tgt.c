@@ -22,6 +22,10 @@ struct flash_program {
 
 static struct flash_program flash_pgm;
 
+#define MSP				17												// Main stack pointer register number
+#define MIN_RAM_SIZE_FOR_LPC1xxx			2048
+#define RAM_USAGE_FOR_IAP_ROUTINES			32							// IAP routines use 32 bytes at top of ram
+
 #define IAP_ENTRYPOINT	0x1fff1ff1
 #define IAP_RAM_BASE	0x10000000
 
@@ -122,6 +126,7 @@ lpc11x_iap_call(struct target_s *target, struct flash_param *param, unsigned par
 	regs[0] = IAP_RAM_BASE + offsetof(struct flash_param, command);
 	regs[1] = IAP_RAM_BASE + offsetof(struct flash_param, result);
 
+	regs[MSP] = IAP_RAM_BASE + MIN_RAM_SIZE_FOR_LPC1xxx - RAM_USAGE_FOR_IAP_ROUTINES;// stack pointer - top of the smallest ram less 32 for IAP usage
 	regs[14] = IAP_RAM_BASE | 1;
 	regs[15] = IAP_ENTRYPOINT;
 	target_regs_write(target, regs);
@@ -141,7 +146,7 @@ lpc11xx_flash_prepare(struct target_s *target, uint32_t addr, int len)
 	memset(&flash_pgm.p, 0, sizeof(flash_pgm.p));
 	flash_pgm.p.command[0] = IAP_CMD_PREPARE;
 	flash_pgm.p.command[1] = addr / 4096;
-	flash_pgm.p.command[2] = flash_pgm.p.command[1] + ((len + 4095) / 4096) - 1;
+	flash_pgm.p.command[2] = (addr + len - 1) / 4096;
 
 	lpc11x_iap_call(target, &flash_pgm.p, sizeof(flash_pgm.p));
 	if (flash_pgm.p.result[0] != IAP_STATUS_CMD_SUCCESS) {
@@ -165,7 +170,7 @@ lpc11xx_flash_erase(struct target_s *target, uint32_t addr, int len)
 	/* and now erase them */
 	flash_pgm.p.command[0] = IAP_CMD_ERASE;
 	flash_pgm.p.command[1] = addr / 4096;
-	flash_pgm.p.command[2] = flash_pgm.p.command[1] + ((len + 4095) / 4096) - 1;
+	flash_pgm.p.command[2] = (addr + len - 1) / 4096;
 	flash_pgm.p.command[3] = 12000;	/* XXX safe to assume this? */
 	lpc11x_iap_call(target, &flash_pgm.p, sizeof(flash_pgm.p));
 	if (flash_pgm.p.result[0] != IAP_STATUS_CMD_SUCCESS) {
