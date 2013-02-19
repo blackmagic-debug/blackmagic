@@ -108,7 +108,7 @@ if __name__ == "__main__":
 
 	bin = open(args.progfile, "rb").read()
 
-	if product.find("F4") :
+	if "F4" in product:
 		addr = 0x8004000
 	else:
 		addr = 0x8002000
