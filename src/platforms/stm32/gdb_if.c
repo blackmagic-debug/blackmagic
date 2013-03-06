@@ -54,8 +54,12 @@ void gdb_if_putchar(unsigned char c, int flush)
 void gdb_usb_out_cb(usbd_device *dev, uint8_t ep)
 {
 	(void)ep;
+	usbd_ep_nak_set(dev, CDCACM_GDB_ENDPOINT, 1);
         count_new = usbd_ep_read_packet(dev, CDCACM_GDB_ENDPOINT,
                                         double_buffer_out, CDCACM_PACKET_SIZE);
+	if(!count_new) {
+		usbd_ep_nak_set(dev, CDCACM_GDB_ENDPOINT, 0);
+	}
 }
 
 unsigned char gdb_if_getchar(void)
@@ -72,6 +76,7 @@ unsigned char gdb_if_getchar(void)
 		    count_out = count_new;
                     count_new = 0;
                     out_ptr = 0;
+                    usbd_ep_nak_set(usbdev, CDCACM_GDB_ENDPOINT, 0);
                 }
 	}
 
@@ -93,6 +98,7 @@ unsigned char gdb_if_getchar_to(int timeout)
 		    count_out = count_new;
                     count_new = 0;
                     out_ptr = 0;
+                    usbd_ep_nak_set(usbdev, CDCACM_GDB_ENDPOINT, 0);
                 }
 	} while(timeout_counter && !(out_ptr < count_out));
 
