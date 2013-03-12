@@ -108,7 +108,7 @@ void trace_buf_drain(usbd_device *dev, uint8_t ep)
 
 #define ALLOWED_DUTY_ERROR 5
 
-void trace_isr(void)
+void TRACE_ISR(void)
 {
 	uint16_t sr = TIM_SR(TRACE_TIM);
 	uint16_t duty, cycle;
