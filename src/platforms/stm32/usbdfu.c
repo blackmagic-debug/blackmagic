@@ -21,27 +21,9 @@
 #include <libopencm3/cm3/systick.h>
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
-#if defined(STM32F1)
-#include <libopencm3/stm32/f1/flash.h>
-#elif defined(STM32F2)
-#include <libopencm3/stm32/f2/flash.h>
-#elif defined(STM32F4)
-#include <libopencm3/stm32/f4/flash.h>
-#else
-#warning "Unhandled STM32 family"
-#endif
 #include <libopencm3/cm3/scb.h>
 
-#define FLASH_OBP_RDP 0x1FFFF800
-#define FLASH_OBP_WRP10 0x1FFFF808
-
-#define FLASH_OBP_RDP_KEY 0x5aa5
-
-#if defined (STM32_CAN)
-#define FLASHBLOCKSIZE 2048
-#else
-#define FLASHBLOCKSIZE 1024
-#endif
+#include "usbdfu.h"
 
 #if defined(DISCOVERY_STLINK)
 uint8_t rev;
@@ -86,119 +68,7 @@ int stlink_test_nrst(void) {
 }
 #endif
 
-static u32 max_address;
-#if defined (STM32F4)
-#define APP_ADDRESS	0x08010000
-static u32 sector_addr[] = {0x8000000, 0x8004000, 0x8008000, 0x800c000,
-                            0x8010000, 0x8020000, 0x8040000, 0x8060000,
-                            0x8080000, 0x80a0000, 0x80c0000, 0x80e0000,
-                            0x8100000, 0};
-u16 sector_erase_time[12]= {500, 500, 500, 500,
-                            1100,
-                            2600, 2600, 2600, 2600, 2600, 2600, 2600};
-u8 sector_num = 0xff;
-/* Find the sector number for a given address*/
-void get_sector_num(u32 addr)
-{
-	int i = 0;
-	while(sector_addr[i+1]) {
-		if (addr < sector_addr[i+1])
-			break;
-		i++;
-		}
-	if (!sector_addr[i])
-		return;
-	sector_num = i;
-}
-
-void check_and_do_sector_erase(u32 addr)
-{
-	if(addr == sector_addr[sector_num]) {
-		flash_erase_sector((sector_num & 0x1f)<<3, FLASH_PROGRAM_X32);
-	}
-}
-#else
-#define APP_ADDRESS	0x08002000
-static uint32_t last_erased_page=0xffffffff;
-void check_and_do_sector_erase(u32 sector)
-{
-	sector &= (~(FLASHBLOCKSIZE-1));
-	if (sector != last_erased_page) {
-		flash_erase_page(sector);
-		last_erased_page = sector;
-	}
-}
-#endif
-
-#if defined(BLACKMAGIC)
-#	define PRODUCT_STRING	\
-		"Black Magic Probe (Upgrade), (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")"
-#elif defined(DISCOVERY_STLINK)
-#	define PRODUCT_STRING	\
-		"Black Magic (Upgrade) for STLink/Discovery, (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")"
-#elif defined(STM32_CAN)
-#	define PRODUCT_STRING	\
-		"Black Magic (Upgrade) for STM32_CAN, (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")"
-#elif defined(F4DISCOVERY)
-#	define PRODUCT_STRING	\
-		"Black Magic (Upgrade) for F4Discovery, (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")"
-#elif defined(USPS_F407)
-#	define PRODUCT_STRING	\
-		"Black Magic (Upgrade) for USPS_F407, (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")"
-#else
-#	warning "Unhandled board"
-#endif
-
-	/* This string is used by ST Microelectronics' DfuSe utility */
-#if defined(BLACKMAGIC)
-#	define IFACE_STRING	"@Internal Flash   /0x08000000/8*001Ka,120*001Kg"
-#elif defined(DISCOVERY_STLINK)
-#	define IFACE_STRING	"@Internal Flash   /0x08000000/8*001Ka,56*001Kg"
-#elif defined(STM32_CAN)
-#	define IFACE_STRING	"@Internal Flash   /0x08000000/4*002Ka,124*002Kg"
-#elif defined(F4DISCOVERY) || defined(USPS_F407)
-#	define IFACE_STRING	"@Internal Flash   /0x08000000/1*016Ka,3*016Kg,1*064Kg,7*128Kg"
-#else
-#	warning "Unhandled board"
-#endif
-
-static u32 poll_timeout(uint8_t cmd, uint32_t addr, uint16_t blocknum)
-{
-#if defined(STM32F4)
-	/* Erase for big pages on STM2/4 needs "long" time
-	   Try not to hit USB timeouts*/
-	if ((blocknum == 0) && (cmd == CMD_ERASE)) {
-		get_sector_num(addr);
-		if(addr == sector_addr[sector_num])
-			return sector_erase_time[sector_num];
-	}
-
-	/* Programming 256 word with 100 us(max) per word*/
-	return 26;
-#else
-	(void)cmd;
-	(void)addr;
-	(void)blocknum;
-	return 100;
-#endif
-}
-
-static void flash_program_buffer(uint32_t baseaddr, void *buf, int len)
-{
-	int i;
-#if defined (STM32F4)
-	for(i = 0; i < len; i += 4)
-		flash_program_word(baseaddr + i,
-			*(u32*)(buf+i),
-			FLASH_PROGRAM_X32);
-#else
-	for(i = 0; i < len; i += 2)
-		flash_program_half_word(baseaddr + i,
-				*(u16*)(buf+i));
-#endif
-}
-
-static void detach(void)
+void dfu_detach(void)
 {
 #if defined (DISCOVERY_STLINK)
 	/* Disconnect USB cable by resetting USB Device
@@ -215,8 +85,6 @@ static void detach(void)
 #endif
 	scb_reset_system();
 }
-
-#include "dfucore.c"
 
 int main(void)
 {
@@ -247,40 +115,10 @@ int main(void)
 	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPBEN);
 	if(gpio_get(GPIOB, GPIO12)) {
 #endif
-		/* Boot the application if it's valid */
-#if defined (STM32F4)
-		/* Vector table may be anywhere in 128 kByte RAM
-                   CCM not handled*/
-		if((*(volatile u32*)APP_ADDRESS & 0x2FFC0000) == 0x20000000) {
-#else
-		if((*(volatile u32*)APP_ADDRESS & 0x2FFE0000) == 0x20000000) {
-#endif
-			/* Set vector table base address */
-			SCB_VTOR = APP_ADDRESS & 0x1FFFFF; /* Max 2 MByte Flash*/
-			/* Initialise master stack pointer */
-			asm volatile ("msr msp, %0"::"g"
-					(*(volatile u32*)APP_ADDRESS));
-			/* Jump to application */
-			(*(void(**)())(APP_ADDRESS + 4))();
-		}
+		dfu_jump_app_if_valid();
 	}
 
-#if defined (STM32F4)
-	if ((FLASH_OPTCR & 0x10000) != 0) {
-		flash_program_option_bytes(FLASH_OPTCR & ~0x10000);
-		flash_lock_option_bytes();
-	}
-#else
-	if ((FLASH_WRPR & 0x03) != 0x00) {
-		flash_unlock();
-		FLASH_CR = 0;
-		flash_erase_option_bytes();
-		flash_program_option_bytes(FLASH_OBP_RDP, FLASH_OBP_RDP_KEY);
-		/* CL Device: Protect 2 bits with (2 * 2k pages each)*/
-		/* MD Device: Protect 2 bits with (4 * 1k pages each)*/
-		flash_program_option_bytes(FLASH_OBP_WRP10, 0x03FC);
-	}
-#endif
+	dfu_protect_enable();
 
         /* Set up clock*/
 #if defined (F4DISCOVERY) || defined(USPS_F407)
@@ -316,7 +154,6 @@ int main(void)
 #endif
 	systick_interrupt_enable();
 	systick_counter_enable();
-	get_dev_unique_id(serial_no);
 
 /* Handle LEDs */
 #if defined(F4DISCOVERY)
@@ -345,8 +182,7 @@ int main(void)
 	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPAEN);
 	rcc_peripheral_enable_clock(&RCC_AHBENR, RCC_AHBENR_OTGFSEN);
 	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPBEN);
-	usbdev = usbd_init(&stm32f107_usb_driver,
-				&dev, &config, usb_strings, 4);
+	dfu_init(&stm32f107_usb_driver);
 #elif defined(STM32F2)||defined(STM32F4)
 	rcc_peripheral_enable_clock(&RCC_AHB1ENR, RCC_AHB1ENR_IOPAEN);
 	rcc_peripheral_enable_clock(&RCC_AHB2ENR, RCC_AHB2ENR_OTGFSEN);
@@ -355,17 +191,10 @@ int main(void)
 	gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE,
 		GPIO9 | GPIO10 | GPIO11 | GPIO12);
 	gpio_set_af(GPIOA, GPIO_AF10, GPIO9 | GPIO10| GPIO11 | GPIO12);
-	usbdev = usbd_init(&stm32f107_usb_driver,
-				&dev, &config, usb_strings, 4);
+	dfu_init(&stm32f107_usb_driver);
 #else
-	usbdev = usbd_init(&stm32f103_usb_driver,
-				&dev, &config, usb_strings, 4);
+	dfu_init(&stm32f103_usb_driver);
 #endif
-	usbd_set_control_buffer_size(usbdev, sizeof(usbd_control_buffer));
-	usbd_register_control_callback(usbdev,
-				USB_REQ_TYPE_CLASS | USB_REQ_TYPE_INTERFACE,
-				USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT,
-				usbdfu_control_request);
 
 #if defined(BLACKMAGIC)
 	gpio_set(GPIOA, GPIO8);
@@ -373,45 +202,9 @@ int main(void)
 			GPIO_CNF_OUTPUT_PUSHPULL, GPIO8);
 #endif
 
-	while (1)
-		usbd_poll(usbdev);
+	dfu_main();
 }
 
-static char *get_dev_unique_id(char *s)
-{
-#if defined(STM32F4) || defined(STM32F2)
-#define UNIQUE_SERIAL_R 0x1FFF7A10
-#define FLASH_SIZE_R    0x1fff7A22
-#elif defined(STM32F3)
-#define UNIQUE_SERIAL_R 0x1FFFF7AC
-#define FLASH_SIZE_R    0x1fff77cc
-#elif defined(STM32L1)
-#define UNIQUE_SERIAL_R 0x1ff80050
-#define FLASH_SIZE_R    0x1FF8004C
-#else
-#define UNIQUE_SERIAL_R 0x1FFFF7E8;
-#define FLASH_SIZE_R    0x1ffff7e0
-#endif
-        volatile uint32_t *unique_id_p = (volatile uint32_t *)UNIQUE_SERIAL_R;
-	uint32_t unique_id = *unique_id_p +
-			*(unique_id_p + 1) +
-			*(unique_id_p + 2);
-        int i;
-
-        /* Calculated the upper flash limit from the exported data
-           in theparameter block*/
-        max_address = (*(u32 *) FLASH_SIZE_R) <<10;
-        /* Fetch serial number from chip's unique ID */
-        for(i = 0; i < 8; i++) {
-                s[7-i] = ((unique_id >> (4*i)) & 0xF) + '0';
-        }
-        for(i = 0; i < 8; i++)
-                if(s[i] > '9')
-                        s[i] += 'A' - '9' - 1;
-	s[8] = 0;
-
-	return s;
-}
 
 void sys_tick_handler()
 {

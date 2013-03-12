@@ -21,7 +21,7 @@ all:	blackmagic.bin blackmagic_dfu.bin blackmagic_dfu.hex
 blackmagic.bin:	blackmagic
 	$(OBJCOPY) -O binary $^ $@
 
-blackmagic_dfu: usbdfu.o
+blackmagic_dfu: usbdfu.o dfucore.o dfu_f1.o
 	$(CC) $^ -o $@ $(LDFLAGS_BOOT)
 
 blackmagic_dfu.bin:	blackmagic_dfu

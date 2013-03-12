@@ -17,9 +17,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "platform.h"
+
 #include <string.h>
+#if defined(STM32F1)
+#	include <libopencm3/stm32/f1/flash.h>
+#elif defined(STM32F2)
+#	include <libopencm3/stm32/f2/flash.h>
+#elif defined(STM32F4)
+#	include <libopencm3/stm32/f4/flash.h>
+#endif
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/dfu.h>
+
+#include "usbdfu.h"
 
 /* Commands sent with wBlockNum == 0 as per ST implementation. */
 #define CMD_SETADDR	0x21
@@ -28,6 +39,8 @@
 usbd_device *usbdev;
 /* We need a special large control buffer for this device: */
 u8 usbd_control_buffer[1024];
+
+static u32 max_address;
 
 static enum dfu_state usbdfu_state = STATE_DFU_IDLE;
 
@@ -106,10 +119,10 @@ static char serial_no[9];
 
 static const char *usb_strings[] = {
 	"Black Sphere Technologies",
-	PRODUCT_STRING,
+	BOARD_IDENT_DFU,
 	serial_no,
 	/* This string is used by ST Microelectronics' DfuSe utility */
-	IFACE_STRING,
+	DFU_IFACE_STRING,
 };
 
 static u8 usbdfu_getstatus(u32 *bwPollTimeout)
@@ -117,7 +130,7 @@ static u8 usbdfu_getstatus(u32 *bwPollTimeout)
 	switch(usbdfu_state) {
 	case STATE_DFU_DNLOAD_SYNC:
 		usbdfu_state = STATE_DFU_DNBUSY;
-		*bwPollTimeout = poll_timeout(prog.buf[0],
+		*bwPollTimeout = dfu_poll_timeout(prog.buf[0],
 					*(u32 *)(prog.buf + 1),
 					prog.blocknum);
 		return DFU_STATUS_OK;
@@ -151,7 +164,7 @@ usbdfu_getstatus_complete(usbd_device *dev, struct usb_setup_data *req)
 			}
 			switch(prog.buf[0]) {
 			case CMD_ERASE:
-				check_and_do_sector_erase(addr);
+				dfu_check_and_do_sector_erase(addr);
 			case CMD_SETADDR:
 				prog.addr = addr;
 			}
@@ -159,7 +172,7 @@ usbdfu_getstatus_complete(usbd_device *dev, struct usb_setup_data *req)
 			u32 baseaddr = prog.addr +
 				((prog.blocknum - 2) *
 					dfu_function.wTransferSize);
-			flash_program_buffer(baseaddr, prog.buf, prog.len);
+			dfu_flash_program_buffer(baseaddr, prog.buf, prog.len);
 		}
 		flash_lock();
 
@@ -170,7 +183,7 @@ usbdfu_getstatus_complete(usbd_device *dev, struct usb_setup_data *req)
 		return;
 
 	case STATE_DFU_MANIFEST:
-		detach();
+		dfu_detach();
 		return; /* Will never return */
 	default:
 		return;
@@ -236,3 +249,56 @@ static int usbdfu_control_request(usbd_device *dev,
 	return 0;
 }
 
+void dfu_init(const usbd_driver *driver)
+{
+	get_dev_unique_id(serial_no);
+
+	usbdev = usbd_init(driver, &dev, &config, usb_strings, 4);
+	usbd_set_control_buffer_size(usbdev, sizeof(usbd_control_buffer));
+	usbd_register_control_callback(usbdev,
+				USB_REQ_TYPE_CLASS | USB_REQ_TYPE_INTERFACE,
+				USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT,
+				usbdfu_control_request);
+}
+
+void dfu_main(void)
+{
+	while (1)
+		usbd_poll(usbdev);
+}
+
+static char *get_dev_unique_id(char *s)
+{
+#if defined(STM32F4) || defined(STM32F2)
+#define UNIQUE_SERIAL_R 0x1FFF7A10
+#define FLASH_SIZE_R    0x1fff7A22
+#elif defined(STM32F3)
+#define UNIQUE_SERIAL_R 0x1FFFF7AC
+#define FLASH_SIZE_R    0x1fff77cc
+#elif defined(STM32L1)
+#define UNIQUE_SERIAL_R 0x1ff80050
+#define FLASH_SIZE_R    0x1FF8004C
+#else
+#define UNIQUE_SERIAL_R 0x1FFFF7E8;
+#define FLASH_SIZE_R    0x1ffff7e0
+#endif
+        volatile uint32_t *unique_id_p = (volatile uint32_t *)UNIQUE_SERIAL_R;
+	uint32_t unique_id = *unique_id_p +
+			*(unique_id_p + 1) +
+			*(unique_id_p + 2);
+        int i;
+
+        /* Calculated the upper flash limit from the exported data
+           in theparameter block*/
+        max_address = (*(u32 *) FLASH_SIZE_R) <<10;
+        /* Fetch serial number from chip's unique ID */
+        for(i = 0; i < 8; i++) {
+                s[7-i] = ((unique_id >> (4*i)) & 0xF) + '0';
+        }
+        for(i = 0; i < 8; i++)
+                if(s[i] > '9')
+                        s[i] += 'A' - '9' - 1;
+	s[8] = 0;
+
+	return s;
+}
