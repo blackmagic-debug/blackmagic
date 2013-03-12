@@ -3,7 +3,8 @@ CC = $(CROSS_COMPILE)gcc
 OBJCOPY = $(CROSS_COMPILE)objcopy
 
 CFLAGS += -Istm32/include -mcpu=cortex-m3 -mthumb \
-	-DSTM32F1 -DBLACKMAGIC -I../libopencm3/include
+	-DSTM32F1 -DBLACKMAGIC -I../libopencm3/include \
+	-Iplatforms/stm32
 
 LDFLAGS_BOOT = -lopencm3_stm32f1 -Wl,--defsym,_stack=0x20005000 \
 	-Wl,-T,platforms/stm32/blackmagic.ld -nostartfiles -lc -lnosys \
