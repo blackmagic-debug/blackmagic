@@ -1,0 +1,15 @@
+Blackmagic for the STM8S Discovery Board
+========================================
+
+The board is a ST-Link V1 Board, but with access to JTAG pins accessible
+on CN5. This allows easy reprogramming and reuse of the JTAG header.
+Programmatical it seems indistinguishable from a e.g. STM32VL
+Discovery. So here avariant that uses CN5 for JTAG/SWD_TRACESWO and CN7 for
+UART.
+
+Force Bootloader entry is done with shorting CN7 Pin3/4 so PB6 read low while
+pulled up momentary by PB6.
+
+Reuse SWIM Pins for Uart (USART1)
+RX: CN7 Pin2 ->SWIM_IN (PB7)/USART1_RX / SWIM_IN(PB9)
+TX: CN7 Pin4 -> SWIM_RST_IN(PB6)/USART1_TX
