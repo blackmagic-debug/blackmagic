@@ -22,6 +22,7 @@
 #elif defined(STM32F4)
 #	include <libopencm3/stm32/f4/flash.h>
 #endif
+#include <libopencm3/cm3/scb.h>
 
 #include "usbdfu.h"
 

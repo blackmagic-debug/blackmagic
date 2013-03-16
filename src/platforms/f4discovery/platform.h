@@ -38,7 +38,7 @@
 #define BOARD_IDENT             "Black Magic Probe (F4Discovery), (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")"
 #define BOARD_IDENT_DFU		"Black Magic (Upgrade) for F4Discovery, (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")"
 #define DFU_IDENT               "Black Magic Firmware Upgrade (F4Discovery"
-#define IFACE_STRING		"@Internal Flash   /0x08000000/1*016Ka,3*016Kg,1*064Kg,7*128Kg"
+#define DFU_IFACE_STRING	"@Internal Flash   /0x08000000/1*016Ka,3*016Kg,1*064Kg,7*128Kg"
 
 extern usbd_device *usbdev;
 #define CDCACM_GDB_ENDPOINT	1

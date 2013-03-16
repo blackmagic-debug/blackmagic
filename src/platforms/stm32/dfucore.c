@@ -32,10 +32,6 @@
 
 #include "usbdfu.h"
 
-/* Commands sent with wBlockNum == 0 as per ST implementation. */
-#define CMD_SETADDR	0x21
-#define CMD_ERASE	0x41
-
 usbd_device *usbdev;
 /* We need a special large control buffer for this device: */
 u8 usbd_control_buffer[1024];
