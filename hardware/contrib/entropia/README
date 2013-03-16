@@ -1,0 +1,9 @@
+This is a variant of the Blackmagic Mini that uses only 0603
+parts and standard connectors for better availability and easier manual
+soldering.
+
+Additionally, another voltage regulator has been used that is
+cheaper, pin-compatible and has better characteristics.
+
+Schematic and PCB layout done using EAGLE.
+
