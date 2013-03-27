@@ -38,9 +38,11 @@
 #include "target.h"
 #include "command.h"
 
+static bool stm32f4_cmd_erase_mass(target *t);
 static bool stm32f4_cmd_option(target *t, int argc, char *argv[]);
 
 const struct command_s stm32f4_cmd_list[] = {
+	{"erase_mass", (cmd_handler)stm32f4_cmd_erase_mass, "Erase entire flash memory"},
 	{"option", (cmd_handler)stm32f4_cmd_option, "Manipulate option bytes"},
 	{NULL, NULL, NULL}
 };
@@ -100,6 +102,7 @@ static const char stm32f4_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 #define FLASH_CR_EOPIE		(1 << 24)
 #define FLASH_CR_ERRIE		(1 << 25)
 #define FLASH_CR_STRT		(1 << 16)
+#define FLASH_CR_LOCK		(1 << 31)
 
 #define FLASH_SR_BSY		(1 << 16)
 
@@ -177,6 +180,14 @@ bool stm32f4_probe(struct target_s *target)
 	return false;
 }
 
+static void stm32f4_flash_unlock(ADIv5_AP_t *ap)
+{
+	if (adiv5_ap_mem_read(ap, FLASH_CR) & FLASH_CR_LOCK) {
+		/* Enable FPEC controller access */
+		adiv5_ap_mem_write(ap, FLASH_KEYR, KEY1);
+		adiv5_ap_mem_write(ap, FLASH_KEYR, KEY2);
+	}
+}
 
 static int stm32f4_flash_erase(struct target_s *target, uint32_t addr, int len)
 {
@@ -187,9 +198,8 @@ static int stm32f4_flash_erase(struct target_s *target, uint32_t addr, int len)
 
 	addr &= 0x07FFC000;
 
-	/* Enable FPEC controller access */
-	adiv5_ap_mem_write(ap, FLASH_KEYR, KEY1);
-	adiv5_ap_mem_write(ap, FLASH_KEYR, KEY2);
+	stm32f4_flash_unlock(ap);
+
 	while(len) {
 		if (addr < 0x10000) { /* Sector 0..3 */
 			cr = (addr >> 11);
@@ -259,6 +269,38 @@ static int stm32f4_flash_write(struct target_s *target, uint32_t dest,
 		return -1;
 
 	return 0;
+}
+
+static bool stm32f4_cmd_erase_mass(target *t)
+{
+	const char spinner[] = "|/-\\";
+	int spinindex = 0;
+
+	ADIv5_AP_t *ap = adiv5_target_ap(t);
+
+	gdb_out("Erasing flash... This may take a few seconds.  ");
+	stm32f4_flash_unlock(ap);
+
+	/* Flash mass erase start instruction */
+	adiv5_ap_mem_write(ap, FLASH_CR, FLASH_CR_MER);
+	adiv5_ap_mem_write(ap, FLASH_CR, FLASH_CR_STRT | FLASH_CR_MER);
+
+	/* Read FLASH_SR to poll for BSY bit */
+	while(adiv5_ap_mem_read(ap, FLASH_SR) & FLASH_SR_BSY) {
+		gdb_outf("\b%c", spinner[spinindex++ % 4]);
+		if(target_check_error(t)) {
+			gdb_out("\n");
+			return false;
+		}
+	}
+	gdb_out("\n");
+
+	/* Check for error */
+	uint16_t sr = adiv5_ap_mem_read(ap, FLASH_SR);
+	if ((sr & SR_ERROR_MASK) || !(sr & SR_EOP))
+		return false;
+
+	return true;
 }
 
 static bool stm32f4_option_write(target *t, uint32_t value)
