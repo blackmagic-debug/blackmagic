@@ -66,6 +66,15 @@ static const char stm32f4_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 	"  <memory type=\"flash\" start=\"0x8020000\" length=\"0xE0000\">"
 	"    <property name=\"blocksize\">0x20000</property>"
 	"  </memory>"
+	"  <memory type=\"flash\" start=\"0x8100000\" length=\"0x10000\">"
+	"    <property name=\"blocksize\">0x4000</property>"
+	"  </memory>"
+	"  <memory type=\"flash\" start=\"0x8110000\" length=\"0x10000\">"
+	"    <property name=\"blocksize\">0x10000</property>"
+	"  </memory>"
+	"  <memory type=\"flash\" start=\"0x8120000\" length=\"0xE0000\">"
+	"    <property name=\"blocksize\">0x20000</property>"
+	"  </memory>"
 	"  <memory type=\"ram\" start=\"0x20000000\" length=\"0x30000\"/>"
 	"  <memory type=\"ram\" start=\"0x10000000\" length=\"0x10000\"/>"
 	"</memory-map>";
@@ -157,6 +166,7 @@ bool stm32f4_probe(struct target_s *target)
 	switch(idcode & 0xFFF) {
 	case 0x411: /* Documented to be 0x413! This is what I read... */
 	case 0x413:
+	case 0x419: /* 427/437 */
 		target->driver = stm32f4_driver_str;
 		target->xml_mem_map = stm32f4_xml_memory_map;
 		target->flash_erase = stm32f4_flash_erase;
