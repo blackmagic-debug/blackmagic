@@ -108,8 +108,6 @@ int platform_init(void)
 	systick_interrupt_enable();
 	systick_counter_enable();
 
-	usbuart_init();
-
 	if (platform_hwversion() > 0) {
 		adc_init();
 	} else {
@@ -121,6 +119,7 @@ int platform_init(void)
 	SCB_VTOR = 0x2000;	// Relocate interrupt vector table here
 
 	cdcacm_init();
+	usbuart_init();
 
 	jtag_scan(NULL);
 	

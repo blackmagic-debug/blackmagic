@@ -112,6 +112,7 @@ extern usbd_device *usbdev;
  */
 #define IRQ_PRI_USB		(2 << 4)
 #define IRQ_PRI_USBUSART	(1 << 4)
+#define IRQ_PRI_USBUSART_TIM	(3 << 4)
 #define IRQ_PRI_TRACE		(0 << 4)
 
 #define USBUSART USART3
@@ -124,6 +125,10 @@ extern usbd_device *usbdev;
 #define USBUSART_RX_PORT GPIOD
 #define USBUSART_RX_PIN  GPIO9
 #define USBUSART_ISR usart3_isr
+#define USBUSART_TIM TIM4
+#define USBUSART_TIM_CLK_EN() rcc_peripheral_enable_clock(&RCC_APB1ENR, RCC_APB1ENR_TIM4EN)
+#define USBUSART_TIM_IRQ NVIC_TIM4_IRQ
+#define USBUSART_TIM_ISR tim4_isr
 
 #define UART_PIN_SETUP() do {                                           \
         gpio_mode_setup(USBUSART_TX_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, \
