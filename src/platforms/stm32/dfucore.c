@@ -121,13 +121,19 @@ static const char *usb_strings[] = {
 	DFU_IFACE_STRING,
 };
 
+static u32 get_le32(const void *vp)
+{
+	const u8 *p = vp;
+	return ((u32)p[3] << 24) + ((u32)p[2] << 16) + (p[1] << 8) + p[0];
+}
+
 static u8 usbdfu_getstatus(u32 *bwPollTimeout)
 {
 	switch(usbdfu_state) {
 	case STATE_DFU_DNLOAD_SYNC:
 		usbdfu_state = STATE_DFU_DNBUSY;
 		*bwPollTimeout = dfu_poll_timeout(prog.buf[0],
-					*(u32 *)(prog.buf + 1),
+					get_le32(prog.buf + 1),
 					prog.blocknum);
 		return DFU_STATUS_OK;
 
@@ -151,7 +157,7 @@ usbdfu_getstatus_complete(usbd_device *dev, struct usb_setup_data *req)
 
 		flash_unlock();
 		if(prog.blocknum == 0) {
-			u32 addr = *(u32 *)(prog.buf + 1);
+			u32 addr = get_le32(prog.buf + 1);
 			if (addr < APP_ADDRESS ||
 			    (addr >= max_address)) {
 				flash_lock();
