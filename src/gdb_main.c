@@ -75,6 +75,8 @@ gdb_main(void)
 {
 	int size;
 	bool single_step = false;
+	char last_activity = 0;
+	uint32_t semihost_read_bytes = 0;
 
 	DEBUG("Entring GDB protocol main loop\n");
 	/* GDB protocol main loop */
@@ -82,6 +84,7 @@ gdb_main(void)
 		SET_IDLE_STATE(1);
 		size = gdb_getpacket(pbuf, BUF_SIZE);
 		SET_IDLE_STATE(0);
+	continue_activity:
 		switch(pbuf[0]) {
 		/* Implementation of these is mandatory! */
 		case 'g': { /* 'g': Read general registers */
@@ -163,9 +166,48 @@ gdb_main(void)
 				unsigned char c = gdb_if_getchar_to(0);
 				if((c == '\x03') || (c == '\x04')) {
 					target_halt_request(cur_target);
+					last_activity = 's';
 				}
 			}
 			SET_RUN_STATE(0);
+
+			uint32_t arm_regs[cur_target->regs_size];
+			uint32_t semihost_buf[4];
+			target_regs_read(cur_target, arm_regs);
+			target_mem_read_bytes(cur_target, (uint8_t *)semihost_buf, arm_regs[15], 2);
+			/* Is this a semihosting breakpoint? */
+			if ((semihost_buf[0] & 0xFFFF) == 0xBEAB) {
+				last_activity = pbuf[0];
+				semihost_read_bytes = 0;
+				target_mem_read_words(cur_target, semihost_buf, arm_regs[1], sizeof(semihost_buf));
+
+				switch (arm_regs[0]) {
+				case 0x09: /* SYS_ISTTY */
+					arm_regs[0] = 1; /* it's a tty */
+					target_regs_write(cur_target, arm_regs);
+					/* fall-through */
+				case 0x01: /* SYS_OPEN */
+				case 0x0C: /* SYS_FLEN */
+					/* pretend it's successful, r0 is non-zero already */
+					goto continue_activity;
+				case 0x13: /* SYS_ERRNO */
+					arm_regs[0] = 4; /* EINTR */
+					target_regs_write(cur_target, arm_regs);
+					goto continue_activity;
+				case 0x05: /* SYS_WRITE */
+					gdb_putpacket_f("Fwrite,1,%08X,%08X",
+							semihost_buf[1], semihost_buf[2]);
+					arm_regs[0] = 0; /* pretend it's always successful */
+					target_regs_write(cur_target, arm_regs);
+					continue;
+				case 0x06: /* SYS_READ */
+					gdb_putpacket_f("Fread,0,%08X,%08X",
+							semihost_buf[1], semihost_buf[2]);
+					semihost_read_bytes = semihost_buf[2];
+					continue;
+				}
+			}
+
 			/* Report reason for halt */
 			if(target_check_hw_wp(cur_target, &watch_addr)) {
 				/* Watchpoint hit */
@@ -175,6 +217,34 @@ gdb_main(void)
 			}
 			break;
 			}
+		case 'F': {	/* Semihosting call finished */
+			int bytes, errcode, items;
+			char c, *p;
+			if (pbuf[1] == '-')
+				p = &pbuf[2];
+			else
+				p = &pbuf[1];
+			items = sscanf(p, "%x,%x,%c", &bytes, &errcode, &c);
+
+			if (semihost_read_bytes) {
+				uint32_t arm_regs[cur_target->regs_size];
+				target_regs_read(cur_target, arm_regs);
+				if (items == 3 && c == 'C')
+					arm_regs[0] = -1;
+				else
+					arm_regs[0] = semihost_read_bytes - bytes;
+				target_regs_write(cur_target, arm_regs);
+			}
+
+			/* if break is requested */
+			if (items == 3 && c == 'C') {
+				gdb_putpacketz("T02");
+				break;
+			}
+
+			pbuf[0] = last_activity;
+			goto continue_activity;
+		}
 
 		/* Optional GDB packet support */
 		case '!':	/* Enable Extended GDB Protocol. */

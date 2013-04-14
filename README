@@ -45,6 +45,18 @@ your '.gdbinit'.  That will allow you to access addresses outside of
 the memory map.  It will treat anything outside of the memory map as
 RAM.
 
+Semihosting support
+===================
+Basic armv6m/armv7m semihosting is supported, i.e. you can build your
+application in a special way to use host's stdin and stdout right
+inside gdb simply by calling printf(), scanf() and other input-output
+functions. To make use of it, add --specs=rdimon.specs and -lrdimon to
+the linker flags for your firmware.
+
+All writes are treated as writes to the stdout, all reads are done
+from stdin; SYS_ISTTY always returns true, SYS_ERRNO -- EINTR;
+SYS_OPEN and SYS_FLEN return dummy non-zero values.
+
 Project layout
 ==============
 driver/ - Windows drivers for the Black Magic probe hardware.
