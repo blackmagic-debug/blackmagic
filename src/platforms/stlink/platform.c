@@ -79,6 +79,7 @@ int platform_init(void)
 	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPBEN);
 	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPCEN);
 	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_AFIOEN);
+	rcc_peripheral_enable_clock(&RCC_AHBENR, RCC_AHBENR_CRCEN);
 
 	/* On Rev 1 unconditionally activate MCO on PORTA8 with HSE
          * platform_hwversion() also needed to initialize led_idle_run!

@@ -113,26 +113,35 @@ uint32_t generic_crc32(struct target_s *target, uint32_t base, int len)
 uint32_t generic_crc32(struct target_s *target, uint32_t base, int len)
 {
 	uint32_t data;
-	uint8_t byte;
+	uint32_t crc;
+	size_t i;
 
-        CRC_CR |= CRC_CR_RESET;
+	CRC_CR |= CRC_CR_RESET;
 
-	while (len >3) {
-		if (target_mem_read_words(target, &data, base, 1) != 0)
+	while (len > 3) {
+		if (target_mem_read_words(target, &data, base, 4) != 0)
 			return -1;
 
-		CRC_DR = data;
-		base+=4;
-                len -= 4;
+		CRC_DR = __builtin_bswap32(data);
+		base += 4;
+		len -= 4;
 	}
+
+	crc = CRC_DR;
+
 	while (len--) {
-		if (target_mem_read_bytes(target, &byte, base, 1) != 0)
+		if (target_mem_read_bytes(target, (uint8_t *)&data, base++, 1) != 0)
 			return -1;
 
-		CRC_DR = byte;
-		base++;
+		crc ^= data << 24;
+		for (i = 0; i < 8; i++) {
+			if (crc & 0x80000000)
+				crc = (crc << 1) ^ 0x4C11DB7;
+			else
+				crc <<= 1;
+		}
 	}
-	return CRC_DR;
+	return crc;
 }
 
 #endif

@@ -72,6 +72,7 @@ int platform_init(void)
 	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPAEN);
 	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPBEN);
 	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_AFIOEN);
+	rcc_peripheral_enable_clock(&RCC_AHBENR, RCC_AHBENR_CRCEN);
 
 	/* Setup GPIO ports */
 	gpio_clear(USB_PU_PORT, USB_PU_PIN);
