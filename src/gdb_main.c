@@ -94,7 +94,7 @@ gdb_main(void)
 		case 'm': {	/* 'm addr,len': Read len bytes from addr */
 			uint32_t addr, len;
 			ERROR_IF_NO_TARGET();
-			sscanf(pbuf, "m%08lX,%08lX", &addr, &len);
+			sscanf(pbuf, "m%08lx,%08lx", &addr, &len);
 			DEBUG("m packet: addr = %08lX, len = %08lX\n", addr, len);
 			uint8_t mem[len];
 			if(((addr & 3) == 0) && ((len & 3) == 0))
@@ -119,7 +119,7 @@ gdb_main(void)
 			uint32_t addr, len;
 			int hex;
 			ERROR_IF_NO_TARGET();
-			sscanf(pbuf, "M%08lX,%08lX:%n", &addr, &len, &hex);
+			sscanf(pbuf, "M%08lx,%08lx:%n", &addr, &len, &hex);
 			DEBUG("M packet: addr = %08lX, len = %08lX\n", addr, len);
 			uint8_t mem[len];
 			unhexify(mem, pbuf + hex, len);
@@ -218,7 +218,7 @@ gdb_main(void)
 			uint32_t addr, len;
 			int bin;
 			ERROR_IF_NO_TARGET();
-			sscanf(pbuf, "X%08lX,%08lX:%n", &addr, &len, &bin);
+			sscanf(pbuf, "X%08lx,%08lx:%n", &addr, &len, &bin);
 			DEBUG("X packet: addr = %08lX, len = %08lX\n", addr, len);
 			if(((addr & 3) == 0) && ((len & 3) == 0))
 				target_mem_write_words(cur_target, addr, (void*)pbuf+bin, len);
@@ -258,7 +258,7 @@ handle_q_string_reply(const char *str, const char *param)
 {
 	unsigned long addr, len;
 
-	if (sscanf(param, "%08lX,%08lX", &addr, &len) != 2) {
+	if (sscanf(param, "%08lx,%08lx", &addr, &len) != 2) {
 		gdb_putpacketz("E01");
 		return;
 	}
@@ -328,7 +328,7 @@ handle_q_packet(char *packet, int len)
 			return;
 		}
 		handle_q_string_reply(cur_target->tdesc, packet + 31);
-	} else if (sscanf(packet, "qCRC:%08lX,%08lX", &addr, &alen) == 2) {
+	} else if (sscanf(packet, "qCRC:%08lx,%08lx", &addr, &alen) == 2) {
 		if(!cur_target) {
 			gdb_putpacketz("E01");
 			return;
@@ -348,7 +348,7 @@ handle_v_packet(char *packet, int plen)
 	int bin;
 	static uint8_t flash_mode = 0;
 
-	if (sscanf(packet, "vAttach;%08lX", &addr) == 1) {
+	if (sscanf(packet, "vAttach;%08lx", &addr) == 1) {
 		/* Attach to remote target processor */
 		target *t;
 		uint32_t i;
@@ -375,7 +375,7 @@ handle_v_packet(char *packet, int plen)
 			gdb_putpacketz("T05");
 		} else	gdb_putpacketz("E01");
 
-	} else if (sscanf(packet, "vFlashErase:%08lX,%08lX", &addr, &len) == 2) {
+	} else if (sscanf(packet, "vFlashErase:%08lx,%08lx", &addr, &len) == 2) {
 		/* Erase Flash Memory */
 		DEBUG("Flash Erase %08lX %08lX\n", addr, len);
 		if(!cur_target) { gdb_putpacketz("EFF"); return; }
@@ -391,7 +391,7 @@ handle_v_packet(char *packet, int plen)
 		else
 			gdb_putpacketz("EFF");
 
-	} else if (sscanf(packet, "vFlashWrite:%08lX:%n", &addr, &bin) == 1) {
+	} else if (sscanf(packet, "vFlashWrite:%08lx:%n", &addr, &bin) == 1) {
 		/* Write Flash Memory */
 		len = plen - bin;
 		DEBUG("Flash Write %08lX %08lX\n", addr, len);
@@ -425,7 +425,7 @@ handle_z_packet(char *packet, int plen)
 	 * with real sscanf() though... */
 	//sscanf(packet, "%*[zZ]%hhd,%08lX,%hhd", &type, &addr, &len);
 	type = packet[1] - '0';
-	sscanf(packet + 2, ",%08lX,%d", &addr, &len);
+	sscanf(packet + 2, ",%08lx,%d", &addr, &len);
 	switch(type) {
 	case 1: /* Hardware breakpoint */
 		if(!cur_target->set_hw_bp) { /* Not supported */
