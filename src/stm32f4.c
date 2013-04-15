@@ -331,10 +331,14 @@ static bool stm32f4_cmd_option(target *t, int argc, char *argv[])
 
 	ADIv5_AP_t *ap = adiv5_target_ap(t);
 
-	if ((argc == 3) && !strcmp(argv[1], "write")) {
+	if ((argc == 2) && !strcmp(argv[1], "erase")) {
+		stm32f4_option_write(t, 0x0fffaaed);
+	}
+	else if ((argc == 3) && !strcmp(argv[1], "write")) {
 		val = strtoul(argv[2], NULL, 0);
 		stm32f4_option_write(t, val);
 	} else {
+		gdb_out("usage: monitor option erase\n");
 		gdb_out("usage: monitor option write <value>\n");
 	}
 
