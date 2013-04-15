@@ -47,15 +47,19 @@ RAM.
 
 Semihosting support
 ===================
-Basic armv6m/armv7m semihosting is supported, i.e. you can build your
-application in a special way to use host's stdin and stdout right
-inside gdb simply by calling printf(), scanf() and other input-output
-functions. To make use of it, add --specs=rdimon.specs and -lrdimon to
+Standard ARMv6-M/ARMv7-M semihosting is supported, i.e. you can build
+your application in a special way to have calls to certain functions
+(open(), close(), read(), write(), lseek(), rename(), unlink(),
+stat(), isatty(), system()) executed on the debugging host itself. To
+make use of these facilities, add --specs=rdimon.specs and -lrdimon to
 the linker flags for your firmware.
 
-All writes are treated as writes to the stdout, all reads are done
-from stdin; SYS_ISTTY always returns true, SYS_ERRNO -- EINTR;
-SYS_OPEN and SYS_FLEN return dummy non-zero values.
+If you're going to use stdin, stdout or stderr (e.g. via
+printf()/scanf()) and you're not using newlib's crt0 (by specifying
+-nostartfiles), you need to add this to your initialisation:
+
+void initialise_monitor_handles(void);
+initialise_monitor_handles();
 
 Project layout
 ==============

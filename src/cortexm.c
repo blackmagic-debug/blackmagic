@@ -28,6 +28,7 @@
  * Issues:
  * There are way too many magic numbers used here.
  */
+#include <unistd.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -949,41 +950,60 @@ static int cortexm_hostio_request(target *t)
 			FILEIO_O_WRONLY | FILEIO_O_CREAT | FILEIO_O_APPEND,/*a*/
 			FILEIO_O_RDWR | FILEIO_O_CREAT | FILEIO_O_APPEND,/*a+*/
 		};
+		uint32_t pflag = flags[params[1] >> 1];
+		char filename[4];
+
+		target_mem_read_bytes(t, filename, params[0], sizeof(filename));
+		/* handle requests for console i/o */
+		if (!strcmp(filename, ":tt")) {
+			if (pflag == FILEIO_O_RDONLY)
+				arm_regs[0] = STDIN_FILENO;
+			else if (pflag & FILEIO_O_TRUNC)
+				arm_regs[0] = STDOUT_FILENO;
+			else
+				arm_regs[0] = STDERR_FILENO;
+			arm_regs[0]++;
+			target_regs_write(t, arm_regs);
+			return 1;
+		}
+
 		gdb_putpacket_f("Fopen,%08X/%X,%08X,%08X",
 				params[0], params[2] + 1,
-				flags[params[1] >> 1], 0644);
+				pflag, 0644);
 		break;
 		}
 	case SYS_CLOSE:	/* close */
-		gdb_putpacket_f("Fclose,%08X", params[0]);
+		gdb_putpacket_f("Fclose,%08X", params[0] - 1);
 		break;
 	case SYS_READ:	/* read */
 		priv->byte_count = params[2];
 		gdb_putpacket_f("Fread,%08X,%08X,%08X",
-				params[0], params[1], params[2]);
+				params[0] - 1, params[1], params[2]);
 		break;
 	case SYS_WRITE:	/* write */
 		priv->byte_count = params[2];
 		gdb_putpacket_f("Fwrite,%08X,%08X,%08X",
-				params[0], params[1], params[2]);
+				params[0] - 1, params[1], params[2]);
 		break;
 	case SYS_ISTTY:	/* isatty */
-		gdb_putpacket_f("Fisatty,%08X", params[0]);
+		gdb_putpacket_f("Fisatty,%08X", params[0] - 1);
 		break;
 	case SYS_SEEK:	/* lseek */
 		gdb_putpacket_f("Flseek,%08X,%08X,%08X",
-				params[0], params[1], FILEIO_SEEK_SET);
+				params[0] - 1, params[1], FILEIO_SEEK_SET);
 		break;
 	case SYS_RENAME:/* rename */
 		gdb_putpacket_f("Frename,%08X/%X,%08X/%X",
-				params[0], params[1] + 1,
+				params[0] - 1, params[1] + 1,
 				params[2], params[3] + 1);
 		break;
 	case SYS_REMOVE:/* unlink */
-		gdb_putpacket_f("Funlink,%08X/%X", params[0], params[1] + 1);
+		gdb_putpacket_f("Funlink,%08X/%X", params[0] - 1,
+				params[1] + 1);
 		break;
 	case SYS_SYSTEM:/* system */
-		gdb_putpacket_f("Fsystem,%08X/%X", params[0], params[1] + 1);
+		gdb_putpacket_f("Fsystem,%08X/%X", params[0] - 1,
+				params[1] + 1);
 		break;
 
 	case SYS_FLEN:	/* Not supported, fake success */
@@ -1015,6 +1035,8 @@ static void cortexm_hostio_reply(target *t, int32_t retcode, uint32_t errcode)
 	if (((priv->syscall == SYS_READ) || (priv->syscall == SYS_WRITE)) &&
 	    (retcode > 0))
 		retcode = priv->byte_count - retcode;
+	if ((priv->syscall == SYS_OPEN) && (retcode != -1))
+		retcode++;
 	arm_regs[0] = retcode;
 	target_regs_write(t, arm_regs);
 	priv->errno = errcode;
