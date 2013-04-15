@@ -46,23 +46,28 @@ static void morse_update(void);
 
 int platform_init(void)
 {
+	/* Check the USER button*/
+	rcc_peripheral_enable_clock(&RCC_AHB1ENR, RCC_AHB1ENR_IOPAEN);
+	if(gpio_get(GPIOA, GPIO0)) {
+		assert_boot_pin();
+		scb_reset_core();
+	}
+
 	rcc_clock_setup_hse_3v3(&hse_8mhz_3v3[CLOCK_3V3_168MHZ]);
 
 	/* Enable peripherals */
 	rcc_peripheral_enable_clock(&RCC_AHB2ENR, RCC_AHB2ENR_OTGFSEN);
-	rcc_peripheral_enable_clock(&RCC_AHB1ENR, RCC_AHB1ENR_IOPAEN);
-	rcc_peripheral_enable_clock(&RCC_AHB1ENR, RCC_AHB1ENR_IOPBEN);
+	rcc_peripheral_enable_clock(&RCC_AHB1ENR, RCC_AHB1ENR_IOPCEN);
 	rcc_peripheral_enable_clock(&RCC_AHB1ENR, RCC_AHB1ENR_IOPDEN);
 	rcc_peripheral_enable_clock(&RCC_AHB1ENR, RCC_AHB1ENR_CRCEN);
-
 
 	/* Set up USB Pins and alternate function*/
 	gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE,
 		GPIO9 | GPIO11 | GPIO12);
 	gpio_set_af(GPIOA, GPIO_AF10, GPIO9 | GPIO11 | GPIO12);
 
-        GPIOA_OSPEEDR &=~0xfc;
-        GPIOA_OSPEEDR |= 0xa8;
+	GPIOC_OSPEEDR &=~0xF30;
+	GPIOC_OSPEEDR |= 0xA20;
 	gpio_mode_setup(JTAG_PORT, GPIO_MODE_OUTPUT,
 			GPIO_PUPD_NONE,
 			TMS_PIN | TCK_PIN | TDI_PIN);
@@ -73,7 +78,7 @@ int platform_init(void)
 
 	gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT,
 			GPIO_PUPD_NONE,
-			LED_UART | LED_IDLE_RUN | LED_ERROR | LED_SPARE1);
+			LED_UART | LED_IDLE_RUN | LED_ERROR | LED_BOOTLOADER);
 
 	/* Setup heartbeat timer */
 	systick_set_clocksource(STK_CTRL_CLKSOURCE_AHB_DIV8);
@@ -84,8 +89,6 @@ int platform_init(void)
 	systick_counter_enable();
 
 	usbuart_init();
-
-	SCB_VTOR = 0x10000;	// Relocate interrupt vector table here
 
 	cdcacm_init();
 
@@ -194,16 +197,14 @@ const char *platform_target_voltage(void)
 
 void assert_boot_pin(void)
 {
-	if (gpio_get(GPIOA, GPIO0)) {
-		/* Jump to the built in bootloader by mapping System flash */
-		rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_SYSCFGEN);
-		SYSCFG_MEMRM &= ~3;
-		SYSCFG_MEMRM |=  1;
-	}
-        else {
-		/* Flag Bootloader Request by mimicing a pushed USER button*/
-		gpio_mode_setup(GPIOA, GPIO_MODE_OUTPUT,
-				GPIO_PUPD_NONE, GPIO0);
-		gpio_set(GPIOA, GPIO0);
-	}
+	/* Assert blue LED as indicator we are in the bootloader */
+	rcc_peripheral_enable_clock(&RCC_AHB1ENR, RCC_AHB1ENR_IOPDEN);
+	gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT,
+		GPIO_PUPD_NONE, LED_BOOTLOADER);
+	gpio_set(LED_PORT, LED_BOOTLOADER);
+
+	/* Jump to the built in bootloader by mapping System flash */
+	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_SYSCFGEN);
+	SYSCFG_MEMRM &= ~3;
+	SYSCFG_MEMRM |=  1;
 }

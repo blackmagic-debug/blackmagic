@@ -49,15 +49,16 @@ extern usbd_device *usbdev;
  * LED0 = 	PD12	(Green  LED : Running)
  * LED1 = 	PD13	(Orange LED : Idle)
  * LED2 = 	PD12	(Red LED    : Error)
+ * LED3 = 	PD15	(Blue LED   : Bootloader active)
  *
  * TPWR = 	XXX (input) -- analogue on mini design ADC1, ch8
- * nTRST = 	PD0
- * SRST_OUT = 	PD1
- * TDI = 	PA1
- * TMS = 	PA3 (input for SWDP)
- * TCK = 	PA8
- * TDO = 	PB4 (input)
- * nSRST = 	PD2 (input)
+ * nTRST = 	PC1
+ * SRST_OUT =   PC8
+ * TDI = 	PC2
+ * TMS = 	PC4 (input for SWDP)
+ * TCK = 	PC5/SWCLK
+ * TDO = 	PC6 (input for TRACESWO
+ * nSRST =
  *
  * USB cable pull-up: PA8
  * USB VBUS detect:  PB13 -- New on mini design.
@@ -66,32 +67,32 @@ extern usbd_device *usbdev;
  */
 
 /* Hardware definitions... */
-#define JTAG_PORT 	GPIOA
+#define JTAG_PORT 	GPIOC
 #define TDI_PORT	JTAG_PORT
 #define TMS_PORT	JTAG_PORT
 #define TCK_PORT	JTAG_PORT
-#define TDO_PORT	GPIOB
-#define TDI_PIN		GPIO1
-#define TMS_PIN		GPIO3
-#define TCK_PIN		GPIO2
-#define TDO_PIN		GPIO4
+#define TDO_PORT	GPIOC
+#define TDI_PIN		GPIO2
+#define TMS_PIN		GPIO4
+#define TCK_PIN		GPIO5
+#define TDO_PIN		GPIO6
 
 #define SWDIO_PORT 	JTAG_PORT
 #define SWCLK_PORT 	JTAG_PORT
 #define SWDIO_PIN	TMS_PIN
 #define SWCLK_PIN	TCK_PIN
 
-#define TRST_PORT	GPIOD
-#define TRST_PIN	GPIO0
-#define SRST_PORT	GPIOD
-#define SRST_PIN	GPIO1
+#define TRST_PORT	GPIOC
+#define TRST_PIN	GPIO1
+#define SRST_PORT	GPIOC
+#define SRST_PIN	GPIO8
 
 #define LED_PORT	GPIOD
 #define LED_PORT_UART	GPIOD
 #define LED_UART	GPIO12
 #define LED_IDLE_RUN	GPIO13
 #define LED_ERROR	GPIO14
-#define LED_SPARE1	GPIO15
+#define LED_BOOTLOADER	GPIO15
 
 #define TMS_SET_MODE() gpio_mode_setup(TMS_PORT, GPIO_MODE_OUTPUT, \
                                        GPIO_PUPD_NONE, TMS_PIN);
