@@ -204,6 +204,9 @@ static int cortexm_check_hw_wp(struct target_s *target, uint32_t *addr);
 #define CORTEXM_MAX_WATCHPOINTS	4	/* architecture says up to 15, no implementation has > 4 */
 #define CORTEXM_MAX_BREAKPOINTS	6	/* architecture says up to 127, no implementation has > 6 */
 
+static int cortexm_hostio_request(target *t);
+static void cortexm_hostio_reply(target *t, int32_t retcode, uint32_t errcode);
+
 struct cortexm_priv {
 	bool stepping;
 	bool on_bkpt;
@@ -219,6 +222,10 @@ struct cortexm_priv {
 	unsigned hw_breakpoint_max;
 	/* Copy of DEMCR for vector-catch */
 	uint32_t demcr;
+	/* Semihosting state */
+	uint32_t syscall;
+	uint32_t errno;
+	uint32_t byte_count;
 };
 
 /* Register number tables */
@@ -334,6 +341,8 @@ cortexm_probe(struct target_s *target)
 	target->halt_wait = cortexm_halt_wait;
 	target->halt_resume = cortexm_halt_resume;
 	target->regs_size = sizeof(regnum_cortex_m);
+
+	target->hostio_reply = cortexm_hostio_reply;
 
 	target_add_commands(target, cortexm_cmd_list, cortexm_driver_str);
 
@@ -595,6 +604,23 @@ cortexm_halt_wait(struct target_s *target)
 
 	/* Remember if we stopped on a breakpoint */
 	priv->on_bkpt = dfsr & (CORTEXM_DFSR_BKPT);
+	if (priv->on_bkpt) {
+		/* If we've hit a programmed breakpoint, check for semihosting
+		 * call. */
+		uint32_t pc = cortexm_pc_read(target);
+		uint16_t bkpt_instr;
+		target_mem_read_bytes(target, (uint8_t *)&bkpt_instr, pc, 2);
+		if (bkpt_instr == 0xBEAB) {
+			int n = cortexm_hostio_request(target);
+			if (n > 0) {
+				target_halt_resume(target, priv->stepping);
+				return 0;
+			} else if (n < 0) {
+				return -1;
+			}
+		}
+	}
+
 	if (dfsr & (CORTEXM_DFSR_BKPT | CORTEXM_DFSR_DWTTRAP))
 		return SIGTRAP;
 
@@ -859,5 +885,138 @@ static bool cortexm_vector_catch(target *t, int argc, char *argv[])
 	}
 	gdb_out("\n");
 	return true;
+}
+
+
+/* Semihosting support */
+/* ARM Semihosting syscall numbers, from ARM doc DUI0471C, Chapter 8 */
+#define SYS_CLOSE	0x02
+#define SYS_CLOCK	0x10
+#define SYS_ELAPSED	0x30
+#define SYS_ERRNO	0x13
+#define SYS_FLEN	0x0C
+#define SYS_GET_CMDLINE	0x15
+#define SYS_HEAPINFO	0x16
+#define SYS_ISERROR	0x08
+#define SYS_ISTTY	0x09
+#define SYS_OPEN	0x01
+#define SYS_READ	0x06
+#define SYS_READC	0x07
+#define SYS_REMOVE	0x0E
+#define SYS_RENAME	0x0F
+#define SYS_SEEK	0x0A
+#define SYS_SYSTEM	0x12
+#define SYS_TICKFREQ	0x31
+#define SYS_TIME	0x11
+#define SYS_TMPNAM	0x0D
+#define SYS_WRITE	0x05
+#define SYS_WRITEC	0x03
+#define SYS_WRITE0	0x04
+
+#define FILEIO_O_RDONLY		0
+#define FILEIO_O_WRONLY		1
+#define FILEIO_O_RDWR		2
+#define FILEIO_O_APPEND		0x008
+#define FILEIO_O_CREAT		0x200
+#define FILEIO_O_TRUNC		0x400
+
+#define FILEIO_SEEK_SET		0
+#define FILEIO_SEEK_CUR		1
+#define FILEIO_SEEK_END		2
+
+static int cortexm_hostio_request(target *t)
+{
+	ADIv5_AP_t *ap = adiv5_target_ap(t);
+	struct cortexm_priv *priv = ap->priv;
+	uint32_t arm_regs[t->regs_size];
+	uint32_t params[4];
+
+	target_regs_read(t, arm_regs);
+	target_mem_read_words(t, params, arm_regs[1], sizeof(params));
+	priv->syscall = arm_regs[0];
+
+	DEBUG("syscall 0x%x (%x %x %x %x)\n", priv->syscall,
+			params[0], params[1], params[2], params[3]);
+	switch (priv->syscall) {
+	case SYS_OPEN:{	/* open */
+		/* Translate stupid fopen modes to open flags.
+		 * See DUI0471C, Table 8-3 */
+                const uint32_t flags[] = {
+			FILEIO_O_RDONLY,	/* r, rb */
+			FILEIO_O_RDWR,		/* r+, r+b */
+			FILEIO_O_WRONLY | FILEIO_O_CREAT | FILEIO_O_TRUNC,/*w*/
+			FILEIO_O_RDWR | FILEIO_O_CREAT | FILEIO_O_TRUNC,/*w+*/
+			FILEIO_O_WRONLY | FILEIO_O_CREAT | FILEIO_O_APPEND,/*a*/
+			FILEIO_O_RDWR | FILEIO_O_CREAT | FILEIO_O_APPEND,/*a+*/
+		};
+		gdb_putpacket_f("Fopen,%08X/%X,%08X,%08X",
+				params[0], params[2] + 1,
+				flags[params[1] >> 1], 0644);
+		break;
+		}
+	case SYS_CLOSE:	/* close */
+		gdb_putpacket_f("Fclose,%08X", params[0]);
+		break;
+	case SYS_READ:	/* read */
+		priv->byte_count = params[2];
+		gdb_putpacket_f("Fread,%08X,%08X,%08X",
+				params[0], params[1], params[2]);
+		break;
+	case SYS_WRITE:	/* write */
+		priv->byte_count = params[2];
+		gdb_putpacket_f("Fwrite,%08X,%08X,%08X",
+				params[0], params[1], params[2]);
+		break;
+	case SYS_ISTTY:	/* isatty */
+		gdb_putpacket_f("Fisatty,%08X", params[0]);
+		break;
+	case SYS_SEEK:	/* lseek */
+		gdb_putpacket_f("Flseek,%08X,%08X,%08X",
+				params[0], params[1], FILEIO_SEEK_SET);
+		break;
+	case SYS_RENAME:/* rename */
+		gdb_putpacket_f("Frename,%08X/%X,%08X/%X",
+				params[0], params[1] + 1,
+				params[2], params[3] + 1);
+		break;
+	case SYS_REMOVE:/* unlink */
+		gdb_putpacket_f("Funlink,%08X/%X", params[0], params[1] + 1);
+		break;
+	case SYS_SYSTEM:/* system */
+		gdb_putpacket_f("Fsystem,%08X/%X", params[0], params[1] + 1);
+		break;
+
+	case SYS_FLEN:	/* Not supported, fake success */
+		priv->errno = 0;
+		return 1;
+
+	case SYS_ERRNO: /* Return last errno from GDB */
+		arm_regs[0] = priv->errno;
+		target_regs_write(t, arm_regs);
+		return 1;
+
+	case SYS_TIME:	/* gettimeofday */
+		/* FIXME How do we use gdb's gettimeofday? */
+	default:
+		return 0;
+	}
+
+	return -1;
+}
+
+static void cortexm_hostio_reply(target *t, int32_t retcode, uint32_t errcode)
+{
+	ADIv5_AP_t *ap = adiv5_target_ap(t);
+	struct cortexm_priv *priv = ap->priv;
+	uint32_t arm_regs[t->regs_size];
+
+	DEBUG("syscall return ret=%d errno=%d\n", retcode, errcode);
+	target_regs_read(t, arm_regs);
+	if (((priv->syscall == SYS_READ) || (priv->syscall == SYS_WRITE)) &&
+	    (retcode > 0))
+		retcode = priv->byte_count - retcode;
+	arm_regs[0] = retcode;
+	target_regs_write(t, arm_regs);
+	priv->errno = errcode;
 }
 

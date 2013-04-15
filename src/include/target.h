@@ -116,6 +116,10 @@ target *target_attach(target *t, target_destroy_callback destroy_cb);
 #define target_flash_write(target, dest, src, len)	\
 	(target)->flash_write((target), (dest), (src), (len))
 
+/* Host I/O */
+#define target_hostio_reply(target, recode, errcode)	\
+	(target)->hostio_reply((target), (retcode), (errcode))
+
 
 struct target_s {
 	/* Notify controlling debugger if target is lost */
@@ -170,6 +174,9 @@ struct target_s {
 	int (*flash_erase)(struct target_s *target, uint32_t addr, int len);
 	int (*flash_write)(struct target_s *target, uint32_t dest, 
 				const uint8_t *src, int len);
+
+	/* Host I/O support */
+	void (*hostio_reply)(target *t, int32_t retcode, uint32_t errcode);
 
 	const char *driver;
 	struct target_command_s *commands;
