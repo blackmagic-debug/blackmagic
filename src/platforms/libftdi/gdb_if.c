@@ -108,7 +108,9 @@ unsigned char gdb_if_getchar_to(int timeout)
 
 void gdb_if_putchar(unsigned char c, int flush)
 {
-	if(gdb_if_conn > 0) 
+	(void)flush;
+
+	if (gdb_if_conn > 0)
 		send(gdb_if_conn, &c, 1, 0);
 }
 

@@ -51,12 +51,11 @@
 
 int jtagtap_init(void)
 {
-	int err;
-
 	assert(ftdic != NULL);
 
 	/* Go to JTAG mode for SWJ-DP */
-	for(int i = 0; i <= 50; i++) jtagtap_next(1, 0); /* Reset SW-DP */
+	for (int i = 0; i <= 50; i++)
+		jtagtap_next(1, 0);		/* Reset SW-DP */
 	jtagtap_tms_seq(0xE73C, 16);		/* SWD to JTAG sequence */
 	jtagtap_soft_reset();
 
