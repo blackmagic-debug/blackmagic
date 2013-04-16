@@ -61,6 +61,7 @@ uint32_t dfu_poll_timeout(uint8_t cmd, uint32_t addr, uint16_t blocknum)
 
 void dfu_protect_enable(void)
 {
+#ifdef DFU_SELF_PROTECT
 	if ((FLASH_WRPR & 0x03) != 0x00) {
 		flash_unlock();
 		FLASH_CR = 0;
@@ -70,6 +71,7 @@ void dfu_protect_enable(void)
 		/* MD Device: Protect 2 bits with (4 * 1k pages each)*/
 		flash_program_option_bytes(FLASH_OBP_WRP10, 0x03FC);
 	}
+#endif
 }
 
 void dfu_jump_app_if_valid(void)

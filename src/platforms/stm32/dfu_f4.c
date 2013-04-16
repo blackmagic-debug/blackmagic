@@ -80,10 +80,12 @@ uint32_t dfu_poll_timeout(uint8_t cmd, uint32_t addr, uint16_t blocknum)
 
 void dfu_protect_enable(void)
 {
+#ifdef DFU_SELF_PROTECT
 	if ((FLASH_OPTCR & 0x10000) != 0) {
 		flash_program_option_bytes(FLASH_OPTCR & ~0x10000);
 		flash_lock_option_bytes();
 	}
+#endif
 }
 
 void dfu_jump_app_if_valid(void)
