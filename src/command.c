@@ -35,6 +35,10 @@
 
 #include "adiv5.h"
 
+#ifdef PLATFORM_HAS_TRACESWO
+#	include "traceswo.h"
+#endif
+
 static bool cmd_version(void);
 static bool cmd_help(target *t);
 

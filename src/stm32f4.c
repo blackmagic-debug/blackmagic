@@ -37,6 +37,7 @@
 #include "adiv5.h"
 #include "target.h"
 #include "command.h"
+#include "gdb_packet.h"
 
 static bool stm32f4_cmd_erase_mass(target *t);
 static bool stm32f4_cmd_option(target *t, int argc, char *argv[]);
