@@ -232,7 +232,7 @@ static void adc_init(void)
 	adc_set_single_conversion_mode(ADC1);
 	adc_disable_external_trigger_regular(ADC1);
 	adc_set_right_aligned(ADC1);
-	adc_set_conversion_time_on_all_channels(ADC1, ADC_SMPR_SMP_28DOT5CYC);
+	adc_set_sample_time_on_all_channels(ADC1, ADC_SMPR_SMP_28DOT5CYC);
 
 	adc_power_on(ADC1);
 
@@ -253,12 +253,12 @@ const char *platform_target_voltage(void)
 	const u8 channel = 8;
 	adc_set_regular_sequence(ADC1, 1, (u8*)&channel);
 
-	adc_on(ADC1);
+	adc_start_conversion_direct(ADC1);
 
 	/* Wait for end of conversion. */
-	while (!(ADC_SR(ADC1) & ADC_SR_EOC));
+	while (!adc_eoc(ADC1));
 
-	u32 val = ADC_DR(ADC1) * 99; /* 0-4095 */
+	u32 val = adc_read_regular(ADC1) * 99; /* 0-4095 */
 	ret[0] = '0' + val / 81910;
 	ret[2] = '0' + (val / 8191) % 10;
 
