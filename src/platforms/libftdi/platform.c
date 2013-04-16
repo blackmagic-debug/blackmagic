@@ -49,6 +49,15 @@ static struct cable_desc_s {
 		.interface = INTERFACE_A,
 		.dbus_data = 0x08,
 		.dbus_ddr  = 0x1B,
+		.description = "FLOSS-JTAG",
+		.name = "flossjtag"
+	},
+	{
+		.vendor = 0x0403,
+		.product = 0x6010,
+		.interface = INTERFACE_A,
+		.dbus_data = 0x08,
+		.dbus_ddr  = 0x1B,
 		.description = "FTDIJTAG",
 		.name = "ftdijtag"
 	},
