@@ -193,11 +193,13 @@ void uart_usb_buf_drain(uint8_t ep);
 static inline void _gpio_set(u32 gpioport, u16 gpios)
 {
 	GPIO_BSRR(gpioport) = gpios;
+	GPIO_BSRR(gpioport) = gpios;
 }
 #define gpio_set _gpio_set
 
 static inline void _gpio_clear(u32 gpioport, u16 gpios)
 {
+	GPIO_BSRR(gpioport) = gpios<<16;
 	GPIO_BSRR(gpioport) = gpios<<16;
 }
 #define gpio_clear _gpio_clear
