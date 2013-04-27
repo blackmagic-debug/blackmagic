@@ -75,9 +75,12 @@ void usbuart_init(void)
 	/* Setup timer for running deferred FIFO processing */
 	USBUSART_TIM_CLK_EN();
 	timer_reset(USBUSART_TIM);
-	timer_set_mode(USBUSART_TIM, TIM_CR1_CKD_CK_INT, TIM_CR1_CMS_EDGE, TIM_CR1_DIR_UP);
-	timer_set_prescaler(USBUSART_TIM, rcc_ppre2_frequency/TIMER_FREQ_HZ*2 - 1);
-	timer_set_period(USBUSART_TIM, TIMER_FREQ_HZ/USBUART_RUN_FREQ_HZ - 1);
+	timer_set_mode(USBUSART_TIM, TIM_CR1_CKD_CK_INT,
+			TIM_CR1_CMS_EDGE, TIM_CR1_DIR_UP);
+	timer_set_prescaler(USBUSART_TIM,
+			rcc_ppre2_frequency / USBUART_TIMER_FREQ_HZ * 2 - 1);
+	timer_set_period(USBUSART_TIM,
+			USBUART_TIMER_FREQ_HZ / USBUART_RUN_FREQ_HZ - 1);
 
 	/* Setup update interrupt in NVIC */
 	nvic_set_priority(USBUSART_TIM_IRQ, IRQ_PRI_USBUSART_TIM);
@@ -88,8 +91,9 @@ void usbuart_init(void)
 }
 
 /*
- * Runs deferred processing for usb uart rx, draining RX FIFO by sending characters to host PC via CDCACM.
- * Allowed to read from FIFO in pointer, but not write to it. Allowed to write to FIFO out pointer.
+ * Runs deferred processing for usb uart rx, draining RX FIFO by sending
+ * characters to host PC via CDCACM.  Allowed to read from FIFO in pointer,
+ * but not write to it. Allowed to write to FIFO out pointer.
  */
 static void usbuart_run(void)
 {
@@ -125,7 +129,9 @@ static void usbuart_run(void)
 		}
 
 		/* advance fifo out pointer by amount written */
-		buf_rx_out = (buf_rx_out + usbd_ep_write_packet(usbdev, CDCACM_UART_ENDPOINT, packet_buf, packet_size)) % FIFO_SIZE;
+		buf_rx_out += usbd_ep_write_packet(usbdev,
+				CDCACM_UART_ENDPOINT, packet_buf, packet_size);
+		buf_rx_out %= FIFO_SIZE;
 	}
 }
 
@@ -188,7 +194,8 @@ void usbuart_usb_in_cb(usbd_device *dev, uint8_t ep)
 
 /*
  * Read a character from the UART RX and stuff it in a software FIFO.
- * Allowed to read from FIFO out pointer, but not write to it. Allowed to write to FIFO in pointer.
+ * Allowed to read from FIFO out pointer, but not write to it.
+ * Allowed to write to FIFO in pointer.
  */
 void USBUSART_ISR(void)
 {
@@ -224,3 +231,4 @@ void USBUSART_TIM_ISR(void)
 	/* process FIFO */
 	usbuart_run();
 }
+
