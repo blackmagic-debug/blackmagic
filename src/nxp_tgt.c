@@ -98,6 +98,8 @@ lpc11xx_probe(struct target_s *target)
 	case 0x0444102B:
 	case 0x2540102B:
 	case 0x1440102B:	/* lpc1114 */
+	case 0x0A40902B:
+	case 0x1A40902B:
 	case 0x1431102B:	/* lpc11c22 */
 	case 0x1430102B:	/* lpc11c24 */
 		target->driver = "lpc11xx";
