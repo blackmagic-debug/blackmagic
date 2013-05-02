@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 #
 # gdb.py: Python module for low level GDB protocol implementation
 # Copyright (C) 2009  Black Sphere Technologies
