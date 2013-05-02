@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 #
 # bootprog.py: STM32 SystemMemory Production Programmer -- version 1.1
 # Copyright (C) 2011  Black Sphere Technologies 
