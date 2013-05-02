@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 # hexprog.py: Python application to flash a target with an Intel hex file
 # Copyright (C) 2011  Black Sphere Technologies
