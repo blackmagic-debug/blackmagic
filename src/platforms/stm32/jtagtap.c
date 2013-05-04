@@ -50,13 +50,16 @@ void jtagtap_reset(void)
 	jtagtap_soft_reset();
 }
 
-void jtagtap_srst(void)
+void jtagtap_srst(bool assert)
 {
-#ifdef SRST_PORT
-	volatile int i;
-	gpio_set(SRST_PORT, SRST_PIN);
-	for(i = 0; i < 10000; i++) asm("nop");
-	gpio_clear(SRST_PORT, SRST_PIN);
+	(void)assert;
+#ifdef SRST_SET_VAL
+	SRST_SET_VAL(assert);
+	if(assert) {
+		int i;
+		for(i = 0; i < 10000; i++)
+			asm volatile("nop");
+	}
 #endif
 }
 

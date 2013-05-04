@@ -385,7 +385,7 @@ cortexm_attach(struct target_s *target)
 
 	target_halt_request(target);
 	tries = 10;
-	while(!target_halt_wait(target) && --tries)
+	while(!connect_assert_srst && !target_halt_wait(target) && --tries)
 		platform_delay(2);
 	if(!tries)
 		return false;
@@ -428,6 +428,9 @@ cortexm_attach(struct target_s *target)
 	target->set_hw_wp = cortexm_set_hw_wp;
 	target->clear_hw_wp = cortexm_clear_hw_wp;
 	target->check_hw_wp = cortexm_check_hw_wp;
+
+	if(connect_assert_srst)
+		jtagtap_srst(false);
 
 	return true;
 }
@@ -546,7 +549,8 @@ cortexm_reset(struct target_s *target)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
 
-	jtagtap_srst();
+	jtagtap_srst(true);
+	jtagtap_srst(false);
 
 	/* Read DHCSR here to clear S_RESET_ST bit before reset */
 	adiv5_ap_mem_read(ap, CORTEXM_DHCSR);

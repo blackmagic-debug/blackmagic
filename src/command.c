@@ -46,6 +46,7 @@ static bool cmd_jtag_scan(target *t, int argc, char **argv);
 static bool cmd_swdp_scan(void);
 static bool cmd_targets(target *t);
 static bool cmd_morse(void);
+static bool cmd_connect_srst(target *t, int argc, const char **argv);
 #ifdef PLATFORM_HAS_TRACESWO
 static bool cmd_traceswo(void);
 #endif
@@ -57,6 +58,7 @@ const struct command_s cmd_list[] = {
 	{"swdp_scan", (cmd_handler)cmd_swdp_scan, "Scan SW-DP for devices" },
 	{"targets", (cmd_handler)cmd_targets, "Display list of available targets" },
 	{"morse", (cmd_handler)cmd_morse, "Display morse error message" },
+	{"connect_srst", (cmd_handler)cmd_connect_srst, "Configure connect under SRST: (enable|disable)" },
 #ifdef PLATFORM_HAS_TRACESWO
 	{"traceswo", (cmd_handler)cmd_traceswo, "Start trace capture" },
 #endif
@@ -206,6 +208,17 @@ bool cmd_morse(void)
 {
 	if(morse_msg) 
 		gdb_outf("%s\n", morse_msg);
+	return true;
+}
+
+static bool cmd_connect_srst(target *t, int argc, const char **argv)
+{
+	(void)t;
+	if (argc == 1)
+		gdb_outf("Assert SRST during connect: %s\n",
+			 connect_assert_srst ? "enabled" : "disabled");
+	else
+		connect_assert_srst = !strcmp(argv[1], "enable");
 	return true;
 }
 

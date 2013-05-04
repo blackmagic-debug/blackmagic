@@ -27,6 +27,7 @@
 #include "adiv5.h"
 
 #include "swdptap.h"
+#include "jtagtap.h"
 
 #include "command.h"
 
@@ -53,6 +54,8 @@ int adiv5_swdp_scan(void)
 	ADIv5_DP_t *dp = (void*)calloc(1, sizeof(*dp));
 
 	swdptap_init();
+	if(connect_assert_srst)
+		jtagtap_srst(true); /* will be deasserted after attach */
 	/* Read the SW-DP IDCODE register to syncronise */
 	/* This could be done with adiv_swdp_low_access(), but this doesn't
 	 * allow the ack to be checked here. */
