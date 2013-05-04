@@ -79,6 +79,10 @@ extern usbd_device *usbdev;
 #define SWDIO_PIN	TMS_PIN
 #define SWCLK_PIN	TCK_PIN
 
+#define SRST_PORT	GPIOB
+#define SRST_PIN_V1	GPIO1
+#define SRST_PIN_V2	GPIO0
+
 #define LED_PORT	GPIOA
 /* Use PC14 for a "dummy" uart led. So we can observere at least with scope*/
 #define LED_PORT_UART	GPIOC
@@ -97,6 +101,9 @@ extern usbd_device *usbdev;
 #define UART_PIN_SETUP()                                                \
     gpio_set_mode(USBUSART_PORT, GPIO_MODE_OUTPUT_2_MHZ,                \
                   GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, USBUSART_TX_PIN);
+
+#define SRST_SET_VAL(x)				\
+    platform_srst_set_val(x)
 
 #define USB_DRIVER      stm32f103_usb_driver
 #define USB_IRQ         NVIC_USB_LP_CAN_RX0_IRQ
@@ -152,6 +159,7 @@ int platform_init(void);
 void morse(const char *msg, char repeat);
 const char *platform_target_voltage(void);
 void platform_delay(uint32_t delay);
+void platform_srst_set_val(bool assert);
 
 /* <cdcacm.c> */
 void cdcacm_init(void);

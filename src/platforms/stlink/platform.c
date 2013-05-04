@@ -98,6 +98,11 @@ int platform_init(void)
 			GPIO_CNF_OUTPUT_PUSHPULL, TCK_PIN);
 	gpio_set_mode(TDI_PORT, GPIO_MODE_OUTPUT_50_MHZ, 
 			GPIO_CNF_OUTPUT_PUSHPULL, TDI_PIN);
+	uint16_t srst_pin = platform_hwversion() == 0 ?
+		SRST_PIN_V1 : SRST_PIN_V2;
+	gpio_set(SRST_PORT, srst_pin);
+	gpio_set_mode(SRST_PORT, GPIO_MODE_OUTPUT_50_MHZ, 
+			GPIO_CNF_OUTPUT_OPENDRAIN, srst_pin);
 	
 	gpio_set_mode(LED_PORT, GPIO_MODE_OUTPUT_2_MHZ, 
 			GPIO_CNF_OUTPUT_PUSHPULL, led_idle_run);
@@ -125,6 +130,16 @@ void platform_delay(uint32_t delay)
 {
 	timeout_counter = delay;
 	while(timeout_counter);
+}
+
+void platform_srst_set_val(bool assert)
+{
+	uint16_t pin;
+	pin = platform_hwversion() == 0 ? SRST_PIN_V1 : SRST_PIN_V2;
+	if (assert)
+		gpio_clear(SRST_PORT, pin);
+	else
+		gpio_set(SRST_PORT, pin);
 }
 
 void sys_tick_handler(void)
