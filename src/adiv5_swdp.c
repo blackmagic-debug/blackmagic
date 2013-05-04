@@ -129,10 +129,14 @@ static uint32_t adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t APnDP, uint8_t RnW
 	if((addr == 4) || (addr == 8))
 		request ^= 0x20;
 
+	size_t tries = 1000;
 	do {
 		swdptap_seq_out(request, 8);
 		ack = swdptap_seq_in(3);
-	} while(ack == SWDP_ACK_WAIT);
+	} while(--tries && ack == SWDP_ACK_WAIT);
+
+	if(!tries)
+		PLATFORM_FATAL_ERROR(1);
 
 	if(ack == SWDP_ACK_FAULT) {
 		dp->fault = 1;
