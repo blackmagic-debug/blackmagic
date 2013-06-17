@@ -667,7 +667,7 @@ static int cortexm_fault_unwind(struct target_s *target)
 	 * for a configurable fault to avoid catching core resets */
 	if((hfsr & CORTEXM_HFSR_FORCED) || cfsr) {
 		/* Unwind exception */
-		uint32_t regs[target->regs_size];
+		uint32_t regs[target->regs_size / 4];
 		uint32_t stack[8];
 		uint32_t retcode, framesize;
 		/* Read registers for post-exception stack pointer */

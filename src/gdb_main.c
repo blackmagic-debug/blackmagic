@@ -88,8 +88,8 @@ gdb_main(void)
 		/* Implementation of these is mandatory! */
 		case 'g': { /* 'g': Read general registers */
 			ERROR_IF_NO_TARGET();
-			uint32_t arm_regs[cur_target->regs_size];
-			target_regs_read(cur_target, (void*)arm_regs);
+			uint8_t arm_regs[cur_target->regs_size];
+			target_regs_read(cur_target, arm_regs);
 			gdb_putpacket(hexify(pbuf, (void*)arm_regs, cur_target->regs_size), cur_target->regs_size * 2);
 			break;
 			}
@@ -111,8 +111,8 @@ gdb_main(void)
 			}
 		case 'G': {	/* 'G XX': Write general registers */
 			ERROR_IF_NO_TARGET();
-			uint32_t arm_regs[cur_target->regs_size];
-			unhexify((void*)arm_regs, &pbuf[1], cur_target->regs_size);
+			uint8_t arm_regs[cur_target->regs_size];
+			unhexify(arm_regs, &pbuf[1], cur_target->regs_size);
 			target_regs_write(cur_target, arm_regs);
 			gdb_putpacketz("OK");
 			break;

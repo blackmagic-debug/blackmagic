@@ -116,7 +116,7 @@ lpc11xx_probe(struct target_s *target)
 static void
 lpc11x_iap_call(struct target_s *target, struct flash_param *param, unsigned param_len)
 {
-	uint32_t regs[target->regs_size];
+	uint32_t regs[target->regs_size / 4];
 
 	/* fill out the remainder of the parameters and copy the structure to RAM */
 	param->opcodes[0] = 0xbe00;

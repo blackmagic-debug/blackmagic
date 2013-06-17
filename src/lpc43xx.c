@@ -313,7 +313,7 @@ static int32_t sector_number(uint32_t addr)
 
 static void lpc43xx_iap_call(struct target_s *target, struct flash_param *param, unsigned param_len)
 {
-	uint32_t regs[target->regs_size];
+	uint32_t regs[target->regs_size / 4];
 	uint32_t iap_entry;
 
 	target_mem_read_words(target, &iap_entry, IAP_ENTRYPOINT_LOCATION, sizeof(iap_entry));
