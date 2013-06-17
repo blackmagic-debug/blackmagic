@@ -452,7 +452,9 @@ static int lpc43xx_flash_write(struct target_s *target, uint32_t dest, const uin
 		}
 
 		/* copy buffer into target memory */
-		target_mem_write_words(target, IAP_RAM_BASE + offsetof(struct flash_program, data), flash_pgm.data, sizeof(flash_pgm.data));
+		target_mem_write_words(target,
+			IAP_RAM_BASE + offsetof(struct flash_program, data),
+			(uint32_t*)flash_pgm.data, sizeof(flash_pgm.data));
 
 		/* set the destination address and program */
 		flash_pgm.p.command = IAP_CMD_PROGRAM;
