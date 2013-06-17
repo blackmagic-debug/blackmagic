@@ -25,9 +25,9 @@ SRC =			\
 	jtag_scan.c	\
 	jtagtap.c	\
 	lmi.c		\
+	lpc11xx.c	\
 	lpc43xx.c	\
 	main.c		\
-	nxp_tgt.c	\
 	platform.c	\
 	sam3x.c		\
 	stm32f1.c	\
