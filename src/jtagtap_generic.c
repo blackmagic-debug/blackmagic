@@ -28,14 +28,14 @@ jtagtap_tms_seq(uint32_t MS, int ticks)
 {
 	while(ticks--) {
 		jtagtap_next(MS & 1, 1);
-		MS >>= 1; 
+		MS >>= 1;
 	}
 }
 #endif
 
 
 #ifdef PROVIDE_GENERIC_JTAGTAP_TDI_TDO_SEQ
-void 
+void
 jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int ticks)
 {
 	uint8_t index = 1;
@@ -55,7 +55,7 @@ jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int
 
 
 #ifdef PROVIDE_GENERIC_JTAGTAP_TDI_SEQ
-void 
+void
 jtagtap_tdi_seq(const uint8_t final_tms, const uint8_t *DI, int ticks)
 {
 	uint8_t index = 1;
@@ -63,7 +63,7 @@ jtagtap_tdi_seq(const uint8_t final_tms, const uint8_t *DI, int ticks)
 		jtagtap_next(ticks?0:final_tms, *DI & index);
 		if(!(index <<= 1)) {
 			index = 1;
-			DI++; 
+			DI++;
 		}
 	}
 }

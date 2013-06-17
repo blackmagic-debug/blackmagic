@@ -18,7 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file implements the JTAG-DP specific functions of the 
+/* This file implements the JTAG-DP specific functions of the
  * ARM Debug Interface v5 Architecure Specification, ARM doc IHI0031A.
  */
 
@@ -43,7 +43,7 @@ static uint32_t adiv5_jtagdp_read(ADIv5_DP_t *dp, uint8_t addr);
 
 static uint32_t adiv5_jtagdp_error(ADIv5_DP_t *dp);
 
-static uint32_t adiv5_jtagdp_low_access(ADIv5_DP_t *dp, uint8_t APnDP, uint8_t RnW, 
+static uint32_t adiv5_jtagdp_low_access(ADIv5_DP_t *dp, uint8_t APnDP, uint8_t RnW,
 					uint8_t addr, uint32_t value);
 
 
@@ -70,19 +70,19 @@ static void adiv5_jtagdp_write(ADIv5_DP_t *dp, uint8_t addr, uint32_t value)
 static uint32_t adiv5_jtagdp_read(ADIv5_DP_t *dp, uint8_t addr)
 {
 	adiv5_jtagdp_low_access(dp, ADIV5_LOW_DP, ADIV5_LOW_READ, addr, 0);
-	return adiv5_jtagdp_low_access(dp, ADIV5_LOW_DP, ADIV5_LOW_READ, 
+	return adiv5_jtagdp_low_access(dp, ADIV5_LOW_DP, ADIV5_LOW_READ,
 					ADIV5_DP_RDBUFF, 0);
 }
 
 static uint32_t adiv5_jtagdp_error(ADIv5_DP_t *dp)
 {
-	adiv5_jtagdp_low_access(dp, ADIV5_LOW_DP, ADIV5_LOW_READ, 
+	adiv5_jtagdp_low_access(dp, ADIV5_LOW_DP, ADIV5_LOW_READ,
 				ADIV5_DP_CTRLSTAT, 0);
-	return adiv5_jtagdp_low_access(dp, ADIV5_LOW_DP, ADIV5_LOW_WRITE, 
+	return adiv5_jtagdp_low_access(dp, ADIV5_LOW_DP, ADIV5_LOW_WRITE,
 				ADIV5_DP_CTRLSTAT, 0xF0000032) & 0x32;
 }
 
-static uint32_t adiv5_jtagdp_low_access(ADIv5_DP_t *dp, uint8_t APnDP, uint8_t RnW, 
+static uint32_t adiv5_jtagdp_low_access(ADIv5_DP_t *dp, uint8_t APnDP, uint8_t RnW,
 					uint8_t addr, uint32_t value)
 {
 	uint64_t request, response;

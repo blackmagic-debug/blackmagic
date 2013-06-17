@@ -32,7 +32,7 @@
 #include "gdb_packet.h"
 
 static int sam3x_flash_erase(struct target_s *target, uint32_t addr, int len);
-static int sam3x_flash_write(struct target_s *target, uint32_t dest, 
+static int sam3x_flash_write(struct target_s *target, uint32_t dest,
 			const uint8_t *src, int len);
 
 static bool sam3x_cmd_gpnvm_get(target *t);

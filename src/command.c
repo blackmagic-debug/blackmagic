@@ -74,19 +74,19 @@ int command_process(target *t, char *cmd)
 	const char **argv;
 
 	/* Initial estimate for argc */
-	for(char *s = cmd; *s; s++) 
+	for(char *s = cmd; *s; s++)
 		if((*s == ' ') || (*s == '\t')) argc++;
 
 	argv = alloca(sizeof(const char *) * argc);
 
 	/* Tokenize cmd to find argv */
-	for(argc = 0, argv[argc] = strtok(cmd, " \t"); 
+	for(argc = 0, argv[argc] = strtok(cmd, " \t");
 		argv[argc]; argv[++argc] = strtok(NULL, " \t"));
 
 	/* Look for match and call handler */
 	for(c = cmd_list; c->cmd; c++) {
 		/* Accept a partial match as GDB does.
-		 * So 'mon ver' will match 'monitor version' 
+		 * So 'mon ver' will match 'monitor version'
 		 */
 		if(!strncmp(argv[0], c->cmd, strlen(argv[0])))
 			return !c->handler(t, argc, argv);
@@ -96,7 +96,7 @@ int command_process(target *t, char *cmd)
 		return -1;
 
 	for (tc = t->commands; tc; tc = tc->next)
-		for(c = tc->cmds; c->cmd; c++) 
+		for(c = tc->cmds; c->cmd; c++)
 			if(!strncmp(argv[0], c->cmd, strlen(argv[0])))
 				return !c->handler(t, argc, argv);
 
@@ -119,7 +119,7 @@ bool cmd_help(target *t)
 	const struct command_s *c;
 
 	gdb_out("General commands:\n");
-	for(c = cmd_list; c->cmd; c++) 
+	for(c = cmd_list; c->cmd; c++)
 		gdb_outf("\t%s -- %s\n", c->cmd, c->help);
 
 	if (!t)
@@ -127,7 +127,7 @@ bool cmd_help(target *t)
 
 	for (tc = t->commands; tc; tc = tc->next) {
 		gdb_outf("%s specific commands:\n", tc->specific_name);
-		for(c = tc->cmds; c->cmd; c++) 
+		for(c = tc->cmds; c->cmd; c++)
 			gdb_outf("\t%s -- %s\n", c->cmd, c->help);
 	}
 
@@ -154,15 +154,15 @@ static bool cmd_jtag_scan(target *t, int argc, char **argv)
 	if(devs < 0) {
 		gdb_out("JTAG device scan failed!\n");
 		return false;
-	} 
+	}
 	if(devs == 0) {
 		gdb_out("JTAG scan found no devices!\n");
 		return false;
-	} 
+	}
 	gdb_outf("Device  IR Len  IDCODE      Description\n");
 	for(int i = 0; i < jtag_dev_count; i++)
-		gdb_outf("%d\t%d\t0x%08lX  %s\n", i, 
-			 jtag_devs[i].ir_len, jtag_devs[i].idcode, 
+		gdb_outf("%d\t%d\t0x%08lX  %s\n", i,
+			 jtag_devs[i].ir_len, jtag_devs[i].idcode,
 			 jtag_devs[i].descr);
 	gdb_out("\n");
 	cmd_targets(NULL);
@@ -176,13 +176,13 @@ bool cmd_swdp_scan(void)
 	if(adiv5_swdp_scan() < 0) {
 		gdb_out("SW-DP scan failed!\n");
 		return false;
-	} 
+	}
 
 	//gdb_outf("SW-DP detected IDCODE: 0x%08X\n", adiv5_dp_list->idcode);
 
 	cmd_targets(NULL);
 	return true;
-	
+
 }
 
 bool cmd_targets(target *cur_target)
@@ -194,11 +194,11 @@ bool cmd_targets(target *cur_target)
 		gdb_out("No usable targets found.\n");
 		return false;
 	}
-	
+
 	gdb_out("Available Targets:\n");
 	gdb_out("No. Att Driver\n");
 	for(t = target_list, i = 1; t; t = t->next, i++)
-		gdb_outf("%2d   %c  %s\n", i, t==cur_target?'*':' ', 
+		gdb_outf("%2d   %c  %s\n", i, t==cur_target?'*':' ',
 			 t->driver);
 
 	return true;
@@ -206,7 +206,7 @@ bool cmd_targets(target *cur_target)
 
 bool cmd_morse(void)
 {
-	if(morse_msg) 
+	if(morse_msg)
 		gdb_outf("%s\n", morse_msg);
 	return true;
 }

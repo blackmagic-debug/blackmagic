@@ -18,7 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* Convenience function to convert to/from ascii strings of hex digits. 
+/* Convenience function to convert to/from ascii strings of hex digits.
  */
 
 #include <stdio.h>
@@ -44,9 +44,9 @@ char * hexify(char *hex, const unsigned char *buf, int size)
 static uint8_t unhex_digit(char hex)
 {
 	uint8_t tmp = hex - '0';
-	if(tmp > 9) 
+	if(tmp > 9)
 		tmp -= 'A' - '0' - 10;
-	if(tmp > 16) 
+	if(tmp > 16)
 		tmp -= 'a' - 'A';
 	return tmp;
 }

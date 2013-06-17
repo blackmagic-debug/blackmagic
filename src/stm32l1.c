@@ -39,7 +39,7 @@
 #include "gdb_packet.h"
 
 static int stm32l1_flash_erase(struct target_s *target, uint32_t addr, int len);
-static int stm32l1_flash_write(struct target_s *target, uint32_t dest, 
+static int stm32l1_flash_write(struct target_s *target, uint32_t dest,
 			const uint8_t *src, int len);
 
 static const char stm32l1_driver_str[] = "STM32L1xx";
@@ -148,7 +148,7 @@ static int stm32l1_flash_erase(struct target_s *target, uint32_t addr, int len)
 	return 0;
 }
 
-static int stm32l1_flash_write(struct target_s *target, uint32_t dest, 
+static int stm32l1_flash_write(struct target_s *target, uint32_t dest,
 			  const uint8_t *src, int len)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);

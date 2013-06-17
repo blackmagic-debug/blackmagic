@@ -50,9 +50,9 @@ const struct command_s stm32f1_cmd_list[] = {
 
 static int stm32md_flash_erase(struct target_s *target, uint32_t addr, int len);
 static int stm32hd_flash_erase(struct target_s *target, uint32_t addr, int len);
-static int stm32f1_flash_erase(struct target_s *target, uint32_t addr, int len, 
+static int stm32f1_flash_erase(struct target_s *target, uint32_t addr, int len,
 				uint32_t pagesize);
-static int stm32f1_flash_write(struct target_s *target, uint32_t dest, 
+static int stm32f1_flash_write(struct target_s *target, uint32_t dest,
 			const uint8_t *src, int len);
 
 static const char stm32f1_driver_str[] = "STM32, Medium density.";
@@ -103,7 +103,7 @@ static const char stm32hd_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 
 #define FLASH_SR_BSY	(1 << 0)
 
-#define FLASH_OBP_RDP 0x1FFFF800 
+#define FLASH_OBP_RDP 0x1FFFF800
 #define FLASH_OBP_RDP_KEY 0x5aa5
 #define FLASH_OBP_RDP_KEY_F3 0x55AA
 
@@ -220,7 +220,7 @@ static int stm32f1_flash_erase(struct target_s *target, uint32_t addr, int len, 
 		/* Flash page erase instruction */
 		adiv5_ap_mem_write(ap, FLASH_CR, FLASH_CR_PER);
 		/* write address to FMA */
-		adiv5_ap_mem_write(ap, FLASH_AR, addr); 
+		adiv5_ap_mem_write(ap, FLASH_AR, addr);
 		/* Flash page erase start instruction */
 		adiv5_ap_mem_write(ap, FLASH_CR, FLASH_CR_STRT | FLASH_CR_PER);
 
@@ -251,7 +251,7 @@ static int stm32md_flash_erase(struct target_s *target, uint32_t addr, int len)
 	return stm32f1_flash_erase(target, addr, len, 0x400);
 }
 
-static int stm32f1_flash_write(struct target_s *target, uint32_t dest, 
+static int stm32f1_flash_write(struct target_s *target, uint32_t dest,
 			  const uint8_t *src, int len)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
@@ -287,7 +287,7 @@ static int stm32f1_flash_write(struct target_s *target, uint32_t dest,
 static bool stm32f1_cmd_erase_mass(target *t)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(t);
-	
+
 	stm32f1_flash_unlock(ap);
 
 	/* Flash mass erase start instruction */
@@ -313,7 +313,7 @@ static bool stm32f1_option_erase(target *t)
 
 	/* Erase option bytes instruction */
 	adiv5_ap_mem_write(ap, FLASH_CR, FLASH_CR_OPTER | FLASH_CR_OPTWRE);
-	adiv5_ap_mem_write(ap, FLASH_CR, 
+	adiv5_ap_mem_write(ap, FLASH_CR,
 			FLASH_CR_STRT | FLASH_CR_OPTER | FLASH_CR_OPTWRE);
 	/* Read FLASH_SR to poll for BSY bit */
 	while(adiv5_ap_mem_read(ap, FLASH_SR) & FLASH_SR_BSY)

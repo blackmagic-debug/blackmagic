@@ -51,10 +51,10 @@ static struct flash_program flash_pgm;
 static void lpc11x_iap_call(struct target_s *target, struct flash_param *param, unsigned param_len);
 static int lpc11xx_flash_prepare(struct target_s *target, uint32_t addr, int len);
 static int lpc11xx_flash_erase(struct target_s *target, uint32_t addr, int len);
-static int lpc11xx_flash_write(struct target_s *target, uint32_t dest, const uint8_t *src, 
+static int lpc11xx_flash_write(struct target_s *target, uint32_t dest, const uint8_t *src,
 			  int len);
 
-/* 
+/*
  * Note that this memory map is actually for the largest of the lpc11xx devices;
  * There seems to be no good way to decode the part number to determine the RAM
  * and flash sizes.
@@ -143,7 +143,7 @@ lpc11x_iap_call(struct target_s *target, struct flash_param *param, unsigned par
 
 static int
 lpc11xx_flash_prepare(struct target_s *target, uint32_t addr, int len)
-{	
+{
 	/* prepare the sector(s) to be erased */
 	memset(&flash_pgm.p, 0, sizeof(flash_pgm.p));
 	flash_pgm.p.command[0] = IAP_CMD_PREPARE;
@@ -196,15 +196,15 @@ lpc11xx_flash_write(struct target_s *target, uint32_t dest, const uint8_t *src, 
 	unsigned chunk;
 
 	for (chunk = first_chunk; chunk <= last_chunk; chunk++) {
-		
+
 		DEBUG("chunk %u len %d\n", chunk, len);
 		/* first and last chunk may require special handling */
 		if ((chunk == first_chunk) || (chunk == last_chunk)) {
 
 			/* fill with all ff to avoid sector rewrite corrupting other writes */
 			memset(flash_pgm.data, 0xff, sizeof(flash_pgm.data));
-		
-			/* copy as much as fits */				
+
+			/* copy as much as fits */
 			int copylen = IAP_PGM_CHUNKSIZE - chunk_offset;
 			if (copylen > len)
 				copylen = len;

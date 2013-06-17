@@ -40,7 +40,7 @@ int swdptap_init(void)
 	assert(ftdic != NULL);
 
 	if((err = ftdi_set_bitmode(ftdic, 0xAB, BITMODE_BITBANG)) != 0) {
-		fprintf(stderr, "ftdi_set_bitmode: %d: %s\n", 
+		fprintf(stderr, "ftdi_set_bitmode: %d: %s\n",
 			err, ftdi_get_error_string(ftdic));
 		abort();
 	}
@@ -49,11 +49,11 @@ int swdptap_init(void)
 
 	/* This must be investigated in more detail.
 	 * As described in STM32 Reference Manual... */
-	swdptap_seq_out(0xFFFF, 16); 
+	swdptap_seq_out(0xFFFF, 16);
 	swdptap_reset();
-	swdptap_seq_out(0xE79E, 16); /* 0b0111100111100111 */ 
+	swdptap_seq_out(0xE79E, 16); /* 0b0111100111100111 */
 	swdptap_reset();
-	swdptap_seq_out(0, 16); 
+	swdptap_seq_out(0, 16);
 
 	return 0;
 }
@@ -85,7 +85,7 @@ static void swdptap_turnaround(uint8_t dir)
 		assert(ftdi_set_bitmode(ftdic, 0xAB, BITMODE_BITBANG) == 0);
 }
 
-static uint8_t swdptap_bit_in(void) 
+static uint8_t swdptap_bit_in(void)
 {
 	uint8_t ret;
 

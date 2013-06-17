@@ -111,7 +111,7 @@ typedef struct ADIv5_DP_s {
 
 	uint32_t (*error)(struct ADIv5_DP_s *dp);
 
-	uint32_t (*low_access)(struct ADIv5_DP_s *dp, uint8_t APnDP, uint8_t RnW, 
+	uint32_t (*low_access)(struct ADIv5_DP_s *dp, uint8_t APnDP, uint8_t RnW,
 			uint8_t addr, uint32_t value);
 
 	union {
@@ -135,7 +135,7 @@ static inline uint32_t adiv5_dp_error(ADIv5_DP_t *dp)
 	return dp->error(dp);
 }
 
-static inline uint32_t adiv5_dp_low_access(struct ADIv5_DP_s *dp, uint8_t APnDP, 
+static inline uint32_t adiv5_dp_low_access(struct ADIv5_DP_s *dp, uint8_t APnDP,
 					uint8_t RnW, uint8_t addr, uint32_t value)
 {
 	return dp->low_access(dp, APnDP, RnW, addr, value);

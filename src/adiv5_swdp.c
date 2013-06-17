@@ -18,7 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file implements the SW-DP specific functions of the 
+/* This file implements the SW-DP specific functions of the
  * ARM Debug Interface v5 Architecure Specification, ARM doc IHI0031A.
  */
 
@@ -42,7 +42,7 @@ static uint32_t adiv5_swdp_read(ADIv5_DP_t *dp, uint8_t addr);
 
 static uint32_t adiv5_swdp_error(ADIv5_DP_t *dp);
 
-static uint32_t adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t APnDP, uint8_t RnW, 
+static uint32_t adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t APnDP, uint8_t RnW,
 				      uint8_t addr, uint32_t value);
 
 
@@ -95,15 +95,15 @@ static uint32_t adiv5_swdp_error(ADIv5_DP_t *dp)
 {
 	uint32_t err, clr = 0;
 
-	err = adiv5_swdp_read(dp, ADIV5_DP_CTRLSTAT) & 
+	err = adiv5_swdp_read(dp, ADIV5_DP_CTRLSTAT) &
 		(ADIV5_DP_CTRLSTAT_STICKYORUN | ADIV5_DP_CTRLSTAT_STICKYCMP |
 		ADIV5_DP_CTRLSTAT_STICKYERR);
 
-	if(err & ADIV5_DP_CTRLSTAT_STICKYORUN) 
+	if(err & ADIV5_DP_CTRLSTAT_STICKYORUN)
 		clr |= ADIV5_DP_ABORT_ORUNERRCLR;
-	if(err & ADIV5_DP_CTRLSTAT_STICKYCMP) 
+	if(err & ADIV5_DP_CTRLSTAT_STICKYCMP)
 		clr |= ADIV5_DP_ABORT_STKCMPCLR;
-	if(err & ADIV5_DP_CTRLSTAT_STICKYERR) 
+	if(err & ADIV5_DP_CTRLSTAT_STICKYERR)
 		clr |= ADIV5_DP_ABORT_STKERRCLR;
 
 	adiv5_swdp_write(dp, ADIV5_DP_ABORT, clr);
@@ -112,7 +112,7 @@ static uint32_t adiv5_swdp_error(ADIv5_DP_t *dp)
 	return err;
 }
 
-static uint32_t adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t APnDP, uint8_t RnW, 
+static uint32_t adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t APnDP, uint8_t RnW,
 				      uint8_t addr, uint32_t value)
 {
 	uint8_t request = 0x81;

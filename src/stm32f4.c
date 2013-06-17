@@ -50,7 +50,7 @@ const struct command_s stm32f4_cmd_list[] = {
 
 
 static int stm32f4_flash_erase(struct target_s *target, uint32_t addr, int len);
-static int stm32f4_flash_write(struct target_s *target, uint32_t dest, 
+static int stm32f4_flash_write(struct target_s *target, uint32_t dest,
 			const uint8_t *src, int len);
 
 static const char stm32f4_driver_str[] = "STM32F4xx";
@@ -218,11 +218,11 @@ static int stm32f4_flash_erase(struct target_s *target, uint32_t addr, int len)
 		/* Flash page erase instruction */
 		adiv5_ap_mem_write(ap, FLASH_CR, cr);
 		/* write address to FMA */
-		adiv5_ap_mem_write(ap, FLASH_CR, cr | FLASH_CR_STRT); 
+		adiv5_ap_mem_write(ap, FLASH_CR, cr | FLASH_CR_STRT);
 
 		/* Read FLASH_SR to poll for BSY bit */
 		while(adiv5_ap_mem_read(ap, FLASH_SR) & FLASH_SR_BSY)
-			if(target_check_error(target)) 
+			if(target_check_error(target))
 				return -1;
 
 		len -= pagesize;
@@ -237,7 +237,7 @@ static int stm32f4_flash_erase(struct target_s *target, uint32_t addr, int len)
 	return 0;
 }
 
-static int stm32f4_flash_write(struct target_s *target, uint32_t dest, 
+static int stm32f4_flash_write(struct target_s *target, uint32_t dest,
 			  const uint8_t *src, int len)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
@@ -257,7 +257,7 @@ static int stm32f4_flash_write(struct target_s *target, uint32_t dest,
 	target_mem_write_words(target, 0x20000000, (void*)stm32f4_flash_write_stub, 0x30);
 	target_mem_write_words(target, 0x20000030, data, sizeof(data));
 	target_pc_write(target, 0x20000000);
-	if(target_check_error(target)) 
+	if(target_check_error(target))
 		return -1;
 
 	/* Execute the stub */

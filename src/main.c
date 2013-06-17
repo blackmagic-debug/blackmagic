@@ -18,7 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* Provides main entry point.  Initialise subsystems and enter GDB 
+/* Provides main entry point.  Initialise subsystems and enter GDB
  * protocol loop.
  */
 

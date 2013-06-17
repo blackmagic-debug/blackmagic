@@ -73,9 +73,9 @@ int swdptap_init(void)
 	/* This must be investigated in more detail.
 	 * As described in STM32 Reference Manual... */
 	swdptap_reset();
-	swdptap_seq_out(0xE79E, 16); /* 0b0111100111100111 */ 
+	swdptap_seq_out(0xE79E, 16); /* 0b0111100111100111 */
 	swdptap_reset();
-	swdptap_seq_out(0, 16); 
+	swdptap_seq_out(0, 16);
 
 	return 0;
 }
@@ -132,7 +132,7 @@ void swdptap_seq_out(uint32_t MS, int ticks)
 
 	while(ticks--) {
 		swdptap_bit_out(MS & 1);
-		MS >>= 1; 
+		MS >>= 1;
 	}
 }
 
@@ -146,7 +146,7 @@ void swdptap_seq_out_parity(uint32_t MS, int ticks)
 	while(ticks--) {
 		swdptap_bit_out(MS & 1);
 		parity ^= MS;
-		MS >>= 1; 
+		MS >>= 1;
 	}
 	swdptap_bit_out(parity & 1);
 }

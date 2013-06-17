@@ -139,7 +139,7 @@ void arm7tdmi_jtag_handler(jtag_dev_t *dev)
 	t->halt_request = arm7_halt_request;
 	t->halt_wait = arm7_halt_wait;
 	t->halt_resume = arm7_halt_resume;
-	
+
 	/* TODO: Breakpoint and watchpoint functions. */
 	/* TODO: Fault unwinder. */
 	/* TODO: Memory map / Flash programming. */
@@ -152,7 +152,7 @@ static void arm7_select_scanchain(struct target_arm7_s *target, uint8_t chain)
 	jtag_dev_write_ir(target->jtag, ARM7_IR_INTEST);
 }
 
-static void arm7_eice_write(struct target_arm7_s *target, 
+static void arm7_eice_write(struct target_arm7_s *target,
 				uint8_t addr, uint32_t value)
 {
 	uint64_t val = ((uint64_t)addr << 32) | value | ARM7_EICE_WRITE;
@@ -256,7 +256,7 @@ static void arm7_halt_resume(struct target_s *target, bool step)
 
 	/* Release DBGRQ */
 	arm7_eice_write(t, ARM7_EICE_DEBUG_CTRL, 0);
-	/* This sequence restores PC if no other instructions issued in 
+	/* This sequence restores PC if no other instructions issued in
 	 * debug mode...
 	 * 0 E1A00000; MOV R0, R0
 	 * 1 E1A00000; MOV R0, R0

@@ -92,23 +92,23 @@ int platform_init(void)
                           GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO8);
         }
 	/* Setup GPIO ports */
-	gpio_set_mode(TMS_PORT, GPIO_MODE_OUTPUT_50_MHZ, 
+	gpio_set_mode(TMS_PORT, GPIO_MODE_OUTPUT_50_MHZ,
 			GPIO_CNF_OUTPUT_PUSHPULL, TMS_PIN);
-	gpio_set_mode(TCK_PORT, GPIO_MODE_OUTPUT_50_MHZ, 
+	gpio_set_mode(TCK_PORT, GPIO_MODE_OUTPUT_50_MHZ,
 			GPIO_CNF_OUTPUT_PUSHPULL, TCK_PIN);
-	gpio_set_mode(TDI_PORT, GPIO_MODE_OUTPUT_50_MHZ, 
+	gpio_set_mode(TDI_PORT, GPIO_MODE_OUTPUT_50_MHZ,
 			GPIO_CNF_OUTPUT_PUSHPULL, TDI_PIN);
 	uint16_t srst_pin = platform_hwversion() == 0 ?
 		SRST_PIN_V1 : SRST_PIN_V2;
 	gpio_set(SRST_PORT, srst_pin);
-	gpio_set_mode(SRST_PORT, GPIO_MODE_OUTPUT_50_MHZ, 
+	gpio_set_mode(SRST_PORT, GPIO_MODE_OUTPUT_50_MHZ,
 			GPIO_CNF_OUTPUT_OPENDRAIN, srst_pin);
-	
-	gpio_set_mode(LED_PORT, GPIO_MODE_OUTPUT_2_MHZ, 
+
+	gpio_set_mode(LED_PORT, GPIO_MODE_OUTPUT_2_MHZ,
 			GPIO_CNF_OUTPUT_PUSHPULL, led_idle_run);
 
 	/* Setup heartbeat timer */
-	systick_set_clocksource(STK_CTRL_CLKSOURCE_AHB_DIV8); 
+	systick_set_clocksource(STK_CTRL_CLKSOURCE_AHB_DIV8);
 	systick_set_reload(900000);	/* Interrupt us at 10 Hz */
 	SCB_SHPR(11) &= ~((15 << 4) & 0xff);
 	SCB_SHPR(11) |= ((14 << 4) & 0xff);
@@ -122,7 +122,7 @@ int platform_init(void)
 	cdcacm_init();
 
 	jtag_scan(NULL);
-	
+
 	return 0;
 }
 
@@ -144,10 +144,10 @@ void platform_srst_set_val(bool assert)
 
 void sys_tick_handler(void)
 {
-	if(running_status) 
+	if(running_status)
 		gpio_toggle(LED_PORT, led_idle_run);
 
-	if(timeout_counter) 
+	if(timeout_counter)
 		timeout_counter--;
 }
 

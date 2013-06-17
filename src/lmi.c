@@ -18,7 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file implements TI/LMI LM3S target specific functions providing 
+/* This file implements TI/LMI LM3S target specific functions providing
  * the XML memory map and Flash memory programming.
  *
  * Issues:
@@ -35,7 +35,7 @@
 #include "target.h"
 
 static int lmi_flash_erase(struct target_s *target, uint32_t addr, int len);
-static int lmi_flash_write(struct target_s *target, uint32_t dest, 
+static int lmi_flash_write(struct target_s *target, uint32_t dest,
 			  const uint8_t *src, int len);
 
 static const char lmi_driver_str[] = "LuminaryMicro Stellaris";
@@ -135,7 +135,7 @@ int lmi_flash_erase(struct target_s *target, uint32_t addr, int len)
 	return 0;
 }
 
-int lmi_flash_write(struct target_s *target, uint32_t dest, 
+int lmi_flash_write(struct target_s *target, uint32_t dest,
 			  const uint8_t *src, int len)
 {
 	uint32_t data[(len>>2)+2];

@@ -60,7 +60,7 @@ extern usbd_device *usbdev;
  * nSRST = 	PA7 (input)
  *
  * USB cable pull-up: PA8
- * USB VBUS detect:  PB13 -- New on mini design.  
+ * USB VBUS detect:  PB13 -- New on mini design.
  *                           Enable pull up for compatibility.
  * Force DFU mode button: PB12
  */
@@ -118,7 +118,7 @@ extern usbd_device *usbdev;
 #define USB_ISR         usb_lp_can_rx0_isr
 /* Interrupt priorities.  Low numbers are high priority.
  * For now USART1 preempts USB which may spin while buffer is drained.
- * TIM3 is used for traceswo capture and must be highest priority. 
+ * TIM3 is used for traceswo capture and must be highest priority.
  */
 #define IRQ_PRI_USB		(2 << 4)
 #define IRQ_PRI_USBUSART	(1 << 4)

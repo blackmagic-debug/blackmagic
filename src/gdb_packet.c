@@ -34,7 +34,7 @@
 #include "gdb_packet.h"
 #include "hex_utils.h"
 
-int 
+int
 gdb_getpacket(unsigned char *packet, int size)
 {
 	unsigned char c;
@@ -54,9 +54,9 @@ gdb_getpacket(unsigned char *packet, int size)
 			if(i == size) break; /* Oh shit */
 
 			if(c == '$') { /* Restart capture */
-				i = 0; 
-				csum = 0; 
-				continue; 
+				i = 0;
+				csum = 0;
+				continue;
 			}
 			if(c == '}') { /* escaped char */
 				c = gdb_if_getchar();
@@ -70,7 +70,7 @@ gdb_getpacket(unsigned char *packet, int size)
 		recv_csum[0] = gdb_if_getchar();
 		recv_csum[1] = gdb_if_getchar();
 		recv_csum[2] = 0;
-		
+
 		/* return packet if checksum matches */
 		if(csum == strtol(recv_csum, NULL, 16)) break;
 
@@ -84,7 +84,7 @@ gdb_getpacket(unsigned char *packet, int size)
 	DEBUG("%s : ", __func__);
 	for(int j = 0; j < i; j++) {
 		c = packet[j];
-		if ((c >= 32) && (c < 127)) 
+		if ((c >= 32) && (c < 127))
 			DEBUG("%c", c);
 		else
 			DEBUG("\\x%02X", c);
@@ -101,7 +101,7 @@ void gdb_putpacket(unsigned char *packet, int size)
 	unsigned char c;
 	char xmit_csum[3];
 	int tries = 0;
-	
+
 	do {
 #ifdef DEBUG_GDBPACKET
 		DEBUG("%s : ", __func__);
@@ -111,7 +111,7 @@ void gdb_putpacket(unsigned char *packet, int size)
 		for(i = 0; i < size; i++) {
 			c = packet[i];
 #ifdef DEBUG_GDBPACKET
-			if ((c >= 32) && (c < 127)) 
+			if ((c >= 32) && (c < 127))
 				DEBUG("%c", c);
 			else
 				DEBUG("\\x%02X", c);

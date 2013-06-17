@@ -84,7 +84,7 @@ jtagtap_tms_seq(uint32_t MS, int ticks)
 		//jtagtap_next(MS & 1, 1);
 		tmp[1] = ticks<7?ticks-1:6;
 		tmp[2] = 0x80 | (MS & 0x7F);
-		
+
 //		assert(ftdi_write_data(ftdic, tmp, 3) == 3);
 		platform_buffer_write(tmp, 3);
 		MS >>= 7; ticks -= 7;
@@ -93,7 +93,7 @@ jtagtap_tms_seq(uint32_t MS, int ticks)
 #endif
 
 #ifndef PROVIDE_GENERIC_TAP_TDI_SEQ
-void 
+void
 jtagtap_tdi_seq(const uint8_t final_tms, const uint8_t *DI, int ticks)
 {
 	char *tmp;
@@ -119,7 +119,7 @@ jtagtap_tdi_seq(const uint8_t final_tms, const uint8_t *DI, int ticks)
 		tmp[index++] = rticks - 1;
 		tmp[index++] = *DI;
 	}
-	
+
 	if(final_tms) {
 		tmp[index++] = 0x4B;
 		tmp[index++] = 0;
@@ -131,7 +131,7 @@ jtagtap_tdi_seq(const uint8_t final_tms, const uint8_t *DI, int ticks)
 #endif
 
 #ifndef PROVIDE_GENERIC_TAP_TDI_TDO_SEQ
-void 
+void
 jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int ticks)
 {
 	uint8_t *tmp;
@@ -159,7 +159,7 @@ jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int
 		tmp[index++] = rticks - 1;
 		tmp[index++] = *DI;
 	}
-	
+
 	if(final_tms) {
 		rsize++;
 		tmp[index++] = 0x6B;
@@ -176,7 +176,7 @@ jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int
 	printf("\n");*/
 	index = 0;
 	if(final_tms) rsize--;
-	
+
 	while(rsize--) {
 		/*if(rsize) printf("%02X ", tmp[index]);*/
 		*DO++ = tmp[index++];

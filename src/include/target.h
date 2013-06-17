@@ -34,7 +34,7 @@ typedef struct target_s target;
  * targets, or because of a communication failure.  The target data may
  * be assumed to be intact, but the communication medium may not be available,
  * so access methods shouldn't be called.
- * 
+ *
  * The callback is installed by target_attach() and only removed by attaching
  * with a different callback.  It remains intact after target_detach().
  */
@@ -131,14 +131,14 @@ struct target_s {
 	int (*check_error)(struct target_s *target);
 
 	/* Memory access functions */
-	int (*mem_read_words)(struct target_s *target, uint32_t *dest, uint32_t src, 
+	int (*mem_read_words)(struct target_s *target, uint32_t *dest, uint32_t src,
 				int len);
-	int (*mem_write_words)(struct target_s *target, uint32_t dest, 
+	int (*mem_write_words)(struct target_s *target, uint32_t dest,
 				const uint32_t *src, int len);
 
-	int (*mem_read_bytes)(struct target_s *target, uint8_t *dest, uint32_t src, 
+	int (*mem_read_bytes)(struct target_s *target, uint8_t *dest, uint32_t src,
 				int len);
-	int (*mem_write_bytes)(struct target_s *target, uint32_t dest, 
+	int (*mem_write_bytes)(struct target_s *target, uint32_t dest,
 				const uint8_t *src, int len);
 
 	/* Register access functions */
@@ -172,7 +172,7 @@ struct target_s {
 	/* Flash memory access functions */
 	const char *xml_mem_map;
 	int (*flash_erase)(struct target_s *target, uint32_t addr, int len);
-	int (*flash_write)(struct target_s *target, uint32_t dest, 
+	int (*flash_write)(struct target_s *target, uint32_t dest,
 				const uint8_t *src, int len);
 
 	/* Host I/O support */

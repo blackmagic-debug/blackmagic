@@ -44,9 +44,9 @@ void jtagtap_tms_seq(uint32_t MS, int ticks);
 void jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int ticks);
 void jtagtap_tdi_seq(const uint8_t final_tms, const uint8_t *DI, int ticks);
 /* Shift out a sequence on MS and DI, capture data to DO.
- * - This is not endian safe: First byte will always be first shifted out. 
- * - DO may be NULL to ignore captured data. 
- * - DO may be point to the same address as DI. 
+ * - This is not endian safe: First byte will always be first shifted out.
+ * - DO may be NULL to ignore captured data.
+ * - DO may be point to the same address as DI.
  */
 
 /* generic soft reset: 1, 1, 1, 1, 1, 0 */

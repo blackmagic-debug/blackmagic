@@ -122,7 +122,7 @@ static struct cable_desc_s {
 };
 
 int platform_init(int argc, char **argv)
-{ 
+{
 	int err;
 	int c;
 	int index = 0;
@@ -167,40 +167,40 @@ int platform_init(int argc, char **argv)
 		ftdic = NULL;
 	}
 	if((ftdic = ftdi_new()) == NULL) {
-		fprintf(stderr, "ftdi_new: %s\n", 
+		fprintf(stderr, "ftdi_new: %s\n",
 			ftdi_get_error_string(ftdic));
 		abort();
 	}
 	if((err = ftdi_set_interface(ftdic, cable_desc[index].interface)) != 0) {
-		fprintf(stderr, "ftdi_set_interface: %d: %s\n", 
+		fprintf(stderr, "ftdi_set_interface: %d: %s\n",
 			err, ftdi_get_error_string(ftdic));
 		abort();
 	}
 	if((err = ftdi_usb_open_desc(
 		ftdic, cable_desc[index].vendor, cable_desc[index].product,
 		cable_desc[index].description, serial)) != 0) {
-		fprintf(stderr, "unable to open ftdi device: %d (%s)\n", 
+		fprintf(stderr, "unable to open ftdi device: %d (%s)\n",
 			err, ftdi_get_error_string(ftdic));
 		abort();
 	}
 
 	if((err = ftdi_set_latency_timer(ftdic, 1)) != 0) {
-		fprintf(stderr, "ftdi_set_latency_timer: %d: %s\n", 
+		fprintf(stderr, "ftdi_set_latency_timer: %d: %s\n",
 			err, ftdi_get_error_string(ftdic));
 		abort();
 	}
 	if((err = ftdi_set_baudrate(ftdic, 1000000)) != 0) {
-		fprintf(stderr, "ftdi_set_baudrate: %d: %s\n", 
+		fprintf(stderr, "ftdi_set_baudrate: %d: %s\n",
 			err, ftdi_get_error_string(ftdic));
 		abort();
 	}
 	if((err = ftdi_usb_purge_buffers(ftdic)) != 0) {
-		fprintf(stderr, "ftdi_set_baudrate: %d: %s\n", 
+		fprintf(stderr, "ftdi_set_baudrate: %d: %s\n",
 			err, ftdi_get_error_string(ftdic));
 		abort();
 	}
 	if((err = ftdi_write_data_set_chunksize(ftdic, BUF_SIZE)) != 0) {
-		fprintf(stderr, "ftdi_write_data_set_chunksize: %d: %s\n", 
+		fprintf(stderr, "ftdi_write_data_set_chunksize: %d: %s\n",
 			err, ftdi_get_error_string(ftdic));
 		abort();
 	}
@@ -216,8 +216,8 @@ int platform_init(int argc, char **argv)
 	assert(gdb_if_init() == 0);
 
 	jtag_scan(NULL);
-	
-	return 0; 
+
+	return 0;
 }
 
 void platform_buffer_flush(void)
@@ -250,9 +250,9 @@ int vasprintf(char **strp, const char *fmt, va_list ap)
 	int size = 128, ret = 0;
 
 	*strp = malloc(size);
-	while(*strp && ((ret = vsnprintf(*strp, size, fmt, ap)) == size)) 
+	while(*strp && ((ret = vsnprintf(*strp, size, fmt, ap)) == size))
 		*strp = realloc(*strp, size <<= 1);
-	
+
 	return ret;
 }
 #endif

@@ -59,7 +59,7 @@ extern usbd_device *usbdev;
  * nSRST = 	PA7 (input)
  *
  * USB cable pull-up: PA8
- * USB VBUS detect:  PB13 -- New on mini design.  
+ * USB VBUS detect:  PB13 -- New on mini design.
  *                           Enable pull up for compatibility.
  * Force DFU mode button: PB12
  */
