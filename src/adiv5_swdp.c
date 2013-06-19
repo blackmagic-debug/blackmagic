@@ -73,6 +73,7 @@ int adiv5_swdp_scan(void)
 	dp->error = adiv5_swdp_error;
 	dp->low_access = adiv5_swdp_low_access;
 
+	adiv5_swdp_error(dp);
 	adiv5_dp_init(dp);
 
 	if(!target_list) morse("NO TARGETS.", 1);
@@ -97,7 +98,7 @@ static uint32_t adiv5_swdp_error(ADIv5_DP_t *dp)
 
 	err = adiv5_swdp_read(dp, ADIV5_DP_CTRLSTAT) &
 		(ADIV5_DP_CTRLSTAT_STICKYORUN | ADIV5_DP_CTRLSTAT_STICKYCMP |
-		ADIV5_DP_CTRLSTAT_STICKYERR);
+		ADIV5_DP_CTRLSTAT_STICKYERR | ADIV5_DP_CTRLSTAT_WDATAERR);
 
 	if(err & ADIV5_DP_CTRLSTAT_STICKYORUN)
 		clr |= ADIV5_DP_ABORT_ORUNERRCLR;
@@ -105,6 +106,8 @@ static uint32_t adiv5_swdp_error(ADIv5_DP_t *dp)
 		clr |= ADIV5_DP_ABORT_STKCMPCLR;
 	if(err & ADIV5_DP_CTRLSTAT_STICKYERR)
 		clr |= ADIV5_DP_ABORT_STKERRCLR;
+	if(err & ADIV5_DP_CTRLSTAT_WDATAERR)
+		clr |= ADIV5_DP_ABORT_WDERRCLR;
 
 	adiv5_swdp_write(dp, ADIV5_DP_ABORT, clr);
 	dp->fault = 0;
