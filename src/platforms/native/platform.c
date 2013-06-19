@@ -82,7 +82,6 @@ int platform_init(void)
 	gpio_set_mode(JTAG_PORT, GPIO_MODE_OUTPUT_50_MHZ,
 			GPIO_CNF_OUTPUT_PUSHPULL,
 			TMS_PIN | TCK_PIN | TDI_PIN);
-
 	/* This needs some fixing... */
 	/* Toggle required to sort out line drivers... */
 	gpio_port_write(GPIOA, 0x8100);
@@ -99,6 +98,11 @@ int platform_init(void)
 	 * to release the device from reset if this floats. */
 	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
 			GPIO_CNF_OUTPUT_PUSHPULL, GPIO7);
+	/* Enable SRST output */
+	gpio_set_val(SRST_PORT, SRST_PIN, platform_hwversion() > 0);
+	gpio_set_mode(SRST_PORT, GPIO_MODE_OUTPUT_50_MHZ,
+			GPIO_CNF_OUTPUT_PUSHPULL,
+			SRST_PIN);
 
 	/* Setup heartbeat timer */
 	systick_set_clocksource(STK_CTRL_CLKSOURCE_AHB_DIV8);
@@ -125,6 +129,15 @@ int platform_init(void)
 	jtag_scan(NULL);
 
 	return 0;
+}
+
+void platform_srst_set_val(bool assert)
+{
+	if (platform_hwversion() == 0) {
+		gpio_set_val(SRST_PORT, SRST_PIN, assert);
+	} else {
+		gpio_set_val(SRST_PORT, SRST_PIN, !assert);
+	}
 }
 
 void platform_delay(uint32_t delay)
