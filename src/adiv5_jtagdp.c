@@ -92,10 +92,14 @@ static uint32_t adiv5_jtagdp_low_access(ADIv5_DP_t *dp, uint8_t APnDP, uint8_t R
 
 	jtag_dev_write_ir(dp->dev, APnDP?IR_APACC:IR_DPACC);
 
+	int tries = 1000;
 	do {
 		jtag_dev_shift_dr(dp->dev, (uint8_t*)&response, (uint8_t*)&request, 35);
 		ack = response & 0x07;
-	} while(ack == JTAGDP_ACK_WAIT);
+	} while(--tries && (ack == JTAGDP_ACK_WAIT));
+
+	if (dp->allow_timeout && (ack == JTAGDP_ACK_WAIT))
+		return 0;
 
 	if((ack != JTAGDP_ACK_OK)) {
 		/* Fatal error if invalid ACK response */

@@ -584,6 +584,7 @@ cortexm_halt_request(struct target_s *target)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
 
+	ap->dp->allow_timeout = false;
 	adiv5_ap_mem_write(ap, CORTEXM_DHCSR,
 		CORTEXM_DHCSR_DBGKEY | CORTEXM_DHCSR_C_HALT | CORTEXM_DHCSR_C_DEBUGEN);
 }
@@ -595,6 +596,8 @@ cortexm_halt_wait(struct target_s *target)
 	struct cortexm_priv *priv = ap->priv;
 	if (!(adiv5_ap_mem_read(ap, CORTEXM_DHCSR) & CORTEXM_DHCSR_S_HALT))
 		return 0;
+
+	ap->dp->allow_timeout = false;
 
 	/* We've halted.  Let's find out why. */
 	uint32_t dfsr = adiv5_ap_mem_read(ap, CORTEXM_DFSR);
@@ -654,6 +657,7 @@ cortexm_halt_resume(struct target_s *target, bool step)
 	}
 
 	adiv5_ap_mem_write(ap, CORTEXM_DHCSR, dhcsr);
+	ap->dp->allow_timeout = true;
 }
 
 static int cortexm_fault_unwind(struct target_s *target)
