@@ -34,19 +34,19 @@
 
 usbd_device *usbdev;
 /* We need a special large control buffer for this device: */
-u8 usbd_control_buffer[1024];
+uint8_t usbd_control_buffer[1024];
 
-static u32 max_address;
+static uint32_t max_address;
 
 static enum dfu_state usbdfu_state = STATE_DFU_IDLE;
 
 static char *get_dev_unique_id(char *serial_no);
 
 static struct {
-	u8 buf[sizeof(usbd_control_buffer)];
-	u16 len;
-	u32 addr;
-	u16 blocknum;
+	uint8_t buf[sizeof(usbd_control_buffer)];
+	uint16_t len;
+	uint32_t addr;
+	uint16_t blocknum;
 } prog;
 
 const struct usb_device_descriptor dev = {
@@ -121,13 +121,13 @@ static const char *usb_strings[] = {
 	DFU_IFACE_STRING,
 };
 
-static u32 get_le32(const void *vp)
+static uint32_t get_le32(const void *vp)
 {
-	const u8 *p = vp;
-	return ((u32)p[3] << 24) + ((u32)p[2] << 16) + (p[1] << 8) + p[0];
+	const uint8_t *p = vp;
+	return ((uint32_t)p[3] << 24) + ((uint32_t)p[2] << 16) + (p[1] << 8) + p[0];
 }
 
-static u8 usbdfu_getstatus(u32 *bwPollTimeout)
+static uint8_t usbdfu_getstatus(uint32_t *bwPollTimeout)
 {
 	switch(usbdfu_state) {
 	case STATE_DFU_DNLOAD_SYNC:
@@ -157,7 +157,7 @@ usbdfu_getstatus_complete(usbd_device *dev, struct usb_setup_data *req)
 
 		flash_unlock();
 		if(prog.blocknum == 0) {
-			u32 addr = get_le32(prog.buf + 1);
+			uint32_t addr = get_le32(prog.buf + 1);
 			if (addr < APP_ADDRESS ||
 			    (addr >= max_address)) {
 				flash_lock();
@@ -171,7 +171,7 @@ usbdfu_getstatus_complete(usbd_device *dev, struct usb_setup_data *req)
 				prog.addr = addr;
 			}
 		} else {
-			u32 baseaddr = prog.addr +
+			uint32_t baseaddr = prog.addr +
 				((prog.blocknum - 2) *
 					dfu_function.wTransferSize);
 			dfu_flash_program_buffer(baseaddr, prog.buf, prog.len);
@@ -193,7 +193,7 @@ usbdfu_getstatus_complete(usbd_device *dev, struct usb_setup_data *req)
 }
 
 static int usbdfu_control_request(usbd_device *dev,
-		struct usb_setup_data *req, u8 **buf, u16 *len,
+		struct usb_setup_data *req, uint8_t **buf, uint16_t *len,
 		void (**complete)(usbd_device *dev, struct usb_setup_data *req))
 {
 	(void)dev;
@@ -227,7 +227,7 @@ static int usbdfu_control_request(usbd_device *dev,
 		/* Upload not supported for now */
 		return 0;
 	case DFU_GETSTATUS: {
-		u32 bwPollTimeout = 0; /* 24-bit integer in DFU class spec */
+		uint32_t bwPollTimeout = 0; /* 24-bit integer in DFU class spec */
 
 		(*buf)[0] = usbdfu_getstatus(&bwPollTimeout);
 		(*buf)[1] = bwPollTimeout & 0xFF;
@@ -292,7 +292,7 @@ static char *get_dev_unique_id(char *s)
 
         /* Calculated the upper flash limit from the exported data
            in theparameter block*/
-        max_address = (*(u32 *) FLASH_SIZE_R) <<10;
+        max_address = (*(uint32_t *) FLASH_SIZE_R) <<10;
         /* Fetch serial number from chip's unique ID */
         for(i = 0; i < 8; i++) {
                 s[7-i] = ((unique_id >> (4*i)) & 0xF) + '0';

@@ -263,15 +263,15 @@ const char *platform_target_voltage(void)
 		return gpio_get(GPIOB, GPIO0) ? "OK" : "ABSENT!";
 
 	static char ret[] = "0.0V";
-	const u8 channel = 8;
-	adc_set_regular_sequence(ADC1, 1, (u8*)&channel);
+	const uint8_t channel = 8;
+	adc_set_regular_sequence(ADC1, 1, (uint8_t*)&channel);
 
 	adc_start_conversion_direct(ADC1);
 
 	/* Wait for end of conversion. */
 	while (!adc_eoc(ADC1));
 
-	u32 val = adc_read_regular(ADC1) * 99; /* 0-4095 */
+	uint32_t val = adc_read_regular(ADC1) * 99; /* 0-4095 */
 	ret[0] = '0' + val / 81910;
 	ret[2] = '0' + (val / 8191) % 10;
 

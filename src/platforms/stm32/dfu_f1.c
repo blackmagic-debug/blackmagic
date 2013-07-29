@@ -48,7 +48,7 @@ void dfu_flash_program_buffer(uint32_t baseaddr, void *buf, int len)
 {
 	for(int i = 0; i < len; i += 2)
 		flash_program_half_word(baseaddr + i,
-				*(u16*)(buf+i));
+				*(uint16_t*)(buf+i));
 }
 
 uint32_t dfu_poll_timeout(uint8_t cmd, uint32_t addr, uint16_t blocknum)
@@ -77,12 +77,12 @@ void dfu_protect_enable(void)
 void dfu_jump_app_if_valid(void)
 {
 	/* Boot the application if it's valid */
-	if((*(volatile u32*)APP_ADDRESS & 0x2FFE0000) == 0x20000000) {
+	if((*(volatile uint32_t*)APP_ADDRESS & 0x2FFE0000) == 0x20000000) {
 		/* Set vector table base address */
 		SCB_VTOR = APP_ADDRESS & 0x1FFFFF; /* Max 2 MByte Flash*/
 		/* Initialise master stack pointer */
 		asm volatile ("msr msp, %0"::"g"
-				(*(volatile u32*)APP_ADDRESS));
+				(*(volatile uint32_t*)APP_ADDRESS));
 		/* Jump to application */
 		(*(void(**)())(APP_ADDRESS + 4))();
 	}
