@@ -255,8 +255,9 @@ void dfu_init(const usbd_driver *driver)
 {
 	get_dev_unique_id(serial_no);
 
-	usbdev = usbd_init(driver, &dev, &config, usb_strings, 4);
-	usbd_set_control_buffer_size(usbdev, sizeof(usbd_control_buffer));
+	usbdev = usbd_init(driver, &dev, &config, usb_strings, 4, 
+			   usbd_control_buffer, sizeof(usbd_control_buffer));
+
 	usbd_register_control_callback(usbdev,
 				USB_REQ_TYPE_CLASS | USB_REQ_TYPE_INTERFACE,
 				USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT,

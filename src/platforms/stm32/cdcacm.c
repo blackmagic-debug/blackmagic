@@ -536,8 +536,10 @@ void cdcacm_init(void)
 
 	get_dev_unique_id(serial_no);
 
-	usbdev = usbd_init(&USB_DRIVER, &dev, &config, usb_strings, sizeof(usb_strings)/sizeof(char *));
-	usbd_set_control_buffer_size(usbdev, sizeof(usbd_control_buffer));
+	usbdev = usbd_init(&USB_DRIVER, &dev, &config, usb_strings,
+			    sizeof(usb_strings)/sizeof(char *),
+			    usbd_control_buffer, sizeof(usbd_control_buffer));
+
 	usbd_register_set_config_callback(usbdev, cdcacm_set_config);
 
 	nvic_set_priority(USB_IRQ, IRQ_PRI_USB);
