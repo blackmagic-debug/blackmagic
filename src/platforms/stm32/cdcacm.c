@@ -480,7 +480,7 @@ int cdcacm_get_dtr(void)
 	return cdcacm_gdb_dtr;
 }
 
-static void cdcacm_set_config(usbd_device *dev, u16 wValue)
+static void cdcacm_set_config(usbd_device *dev, uint16_t wValue)
 {
 	configured = wValue;
 

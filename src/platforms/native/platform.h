@@ -193,21 +193,21 @@ void uart_usb_buf_drain(uint8_t ep);
 #define vasprintf vasiprintf
 
 #ifdef INLINE_GPIO
-static inline void _gpio_set(u32 gpioport, u16 gpios)
+static inline void _gpio_set(uint32_t gpioport, uint16_t gpios)
 {
 	GPIO_BSRR(gpioport) = gpios;
 }
 #define gpio_set _gpio_set
 
-static inline void _gpio_clear(u32 gpioport, u16 gpios)
+static inline void _gpio_clear(uint32_t gpioport, uint16_t gpios)
 {
 	GPIO_BRR(gpioport) = gpios;
 }
 #define gpio_clear _gpio_clear
 
-static inline u16 _gpio_get(u32 gpioport, u16 gpios)
+static inline uint16_t _gpio_get(uint32_t gpioport, uint16_t gpios)
 {
-	return (u16)GPIO_IDR(gpioport) & gpios;
+	return (uint16_t)GPIO_IDR(gpioport) & gpios;
 }
 #define gpio_get _gpio_get
 #endif
