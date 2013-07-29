@@ -46,8 +46,8 @@ blackmagic: $(OBJ)
 .PHONY:	clean host_clean
 
 clean:	host_clean
-	$(RM) *.o *.d *~ blackmagic $(HOSTFILES)
-	$(RM) platforms/*/*.o platforms/*/*.d mapfile
+	-$(RM) *.o *.d *~ blackmagic $(HOSTFILES)
+	-$(RM) platforms/*/*.o platforms/*/*.d mapfile
 
 -include *.d
 
