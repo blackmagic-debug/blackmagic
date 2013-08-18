@@ -6,7 +6,7 @@
 <setting alwaysvectorfont="no"/>
 <setting verticaltext="up"/>
 </settings>
-<grid distance="1" unitdist="mm" unit="mm" style="lines" multiple="1" display="yes" altdistance="0.025" altunitdist="inch" altunit="inch"/>
+<grid distance="0.5" unitdist="mm" unit="mm" style="lines" multiple="1" display="yes" altdistance="0.025" altunitdist="inch" altunit="inch"/>
 <layers>
 <layer number="1" name="Top" color="4" fill="1" visible="yes" active="yes"/>
 <layer number="2" name="Route2" color="1" fill="3" visible="no" active="no"/>
@@ -803,46 +803,46 @@ minimale Strichstärke: &lt;b&gt;0.2 mm&lt;/b&gt;&lt;br&gt;&lt;br&gt;
 </pass>
 </autorouter>
 <elements>
-<element name="IC1" library="stm32f" package="TQFP48" value="STM32F_48PIN" x="24" y="8" rot="R90"/>
-<element name="Q1" library="transistor-small-signal" package="SOT23" value="IRLML5103" x="37" y="14" rot="R270"/>
-<element name="JTAG1" library="microbuilder_v3" package="2X05_1.27MM_SMT" value="" x="44" y="9" rot="R90"/>
-<element name="R4" library="microbuilder" package="0603-MINI" value="10K" x="17" y="15"/>
-<element name="CN1" library="microbuilder_v3" package="USB-MINIB" value="" x="5" y="7" rot="R270"/>
-<element name="R1" library="microbuilder" package="0603-MINI" value="22Ω" x="16" y="6" rot="R180"/>
-<element name="R2" library="microbuilder" package="0603-MINI" value="22Ω" x="16" y="8" rot="R180"/>
-<element name="R3" library="microbuilder" package="0603-MINI" value="4K7" x="12" y="15"/>
-<element name="R5" library="microbuilder" package="0603-MINI" value="1K5" x="16" y="10" rot="R180"/>
-<element name="BTN1" library="omron" package="B3U-1000P(M)-B" value="SPST.B3U-1000P(M)-B" x="18" y="13" rot="R180"/>
-<element name="R6" library="microbuilder" package="0603-MINI" value="10K" x="20" y="17" rot="R90"/>
-<element name="IC2" library="dan-translate" package="TSSOP20" value="TXS0108" x="36" y="9" rot="R90"/>
-<element name="R7" library="microbuilder" package="0603-MINI" value="10K" x="45" y="15"/>
-<element name="R8" library="microbuilder" package="0603-MINI" value="4K7" x="47" y="16"/>
-<element name="C12" library="resistor" package="C0603K" value="100nF" x="46" y="14"/>
-<element name="Y1" library="SparkFun" package="CRYSTAL-SMD-5X3" value="12MHz" x="32" y="3" rot="R180"/>
-<element name="C10" library="resistor" package="C0603K" value="18pF" x="26" y="2"/>
-<element name="C11" library="resistor" package="C0603K" value="18pF" x="38" y="3"/>
-<element name="JP1" library="SparkFun" package="1X04_LOCK" value="" x="19" y="2" rot="R180"/>
-<element name="LED2" library="led" package="CHIPLED_0603" value="" x="2" y="-6"/>
-<element name="R9" library="microbuilder" package="0603-MINI" value="390Ω" x="1" y="-9"/>
-<element name="LED1" library="led" package="CHIPLED_0603" value="" x="2" y="-14"/>
-<element name="R10" library="microbuilder" package="0603-MINI" value="390Ω" x="1" y="-17"/>
-<element name="LED3" library="led" package="CHIPLED_0603" value="" x="2" y="-22"/>
-<element name="R11" library="microbuilder" package="0603-MINI" value="390Ω" x="1" y="-25"/>
-<element name="LED4" library="led" package="CHIPLED_0603" value="" x="2" y="-30"/>
-<element name="R12" library="microbuilder" package="0603-MINI" value="390Ω" x="1" y="-33"/>
+<element name="IC1" library="stm32f" package="TQFP48" value="STM32F_48PIN" x="18.5" y="8" rot="R90"/>
+<element name="Q1" library="transistor-small-signal" package="SOT23" value="IRLML5103" x="29.5" y="13" rot="R270"/>
+<element name="JTAG1" library="microbuilder_v3" package="2X05_1.27MM_SMT" value="" x="36" y="8" rot="R90"/>
+<element name="R4" library="microbuilder" package="0603-MINI" value="10K" x="11.5" y="10.5"/>
+<element name="CN1" library="microbuilder_v3" package="USB-MINIB" value="" x="4.5" y="6" rot="R270"/>
+<element name="R1" library="microbuilder" package="0603-MINI" value="22Ω" x="11.5" y="5.5" rot="R180"/>
+<element name="R2" library="microbuilder" package="0603-MINI" value="22Ω" x="11.5" y="6.75" rot="R180"/>
+<element name="R3" library="microbuilder" package="0603-MINI" value="4K7" x="11.5" y="9.25" rot="R180"/>
+<element name="R5" library="microbuilder" package="0603-MINI" value="1K5" x="11.5" y="8" rot="R180"/>
+<element name="BTN1" library="omron" package="B3U-1000P(M)-B" value="SPST.B3U-1000P(M)-B" x="18.5" y="15"/>
+<element name="R6" library="microbuilder" package="0603-MINI" value="10K" x="14.75" y="15" rot="R270"/>
+<element name="IC2" library="dan-translate" package="TSSOP20" value="TXS0108" x="28" y="8" rot="R90"/>
+<element name="R7" library="microbuilder" package="0603-MINI" value="10K" x="24" y="13" rot="R90"/>
+<element name="R8" library="microbuilder" package="0603-MINI" value="4K7" x="25.5" y="13" rot="R270"/>
+<element name="C12" library="resistor" package="C0603K" value="100nF" x="22.5" y="13" rot="R270"/>
+<element name="Y1" library="SparkFun" package="CRYSTAL-SMD-5X3" value="8MHz" x="26.5" y="2.5" rot="R180"/>
+<element name="C10" library="resistor" package="C0603K" value="18pF" x="22.5" y="2.5" rot="R90"/>
+<element name="C11" library="resistor" package="C0603K" value="18pF" x="30.5" y="2.5" rot="R90"/>
+<element name="JP1" library="SparkFun" package="1X04_LOCK" value="" x="18.5" y="1.5" rot="R180"/>
+<element name="D2" library="led" package="CHIPLED_0603" value="RED" x="7.5" y="13.75" rot="R90"/>
+<element name="R9" library="microbuilder" package="0603-MINI" value="390Ω" x="11.5" y="13.75" rot="R180"/>
+<element name="D1" library="led" package="CHIPLED_0603" value="GREEN" x="7.5" y="12.5" rot="R90"/>
+<element name="R10" library="microbuilder" package="0603-MINI" value="390Ω" x="11.5" y="12.5" rot="R180"/>
+<element name="D3" library="led" package="CHIPLED_0603" value="YELLOW" x="7.5" y="15" rot="R90"/>
+<element name="R11" library="microbuilder" package="0603-MINI" value="390Ω" x="11.5" y="15" rot="R180"/>
+<element name="D4" library="led" package="CHIPLED_0603" value="YELLOW" x="7.5" y="16.25" rot="R90"/>
+<element name="R12" library="microbuilder" package="0603-MINI" value="390Ω" x="11.5" y="16.25" rot="R180"/>
 </elements>
 <signals>
 <signal name="GND">
 <polygon width="0.2032" layer="1">
-<vertex x="0" y="25"/>
-<vertex x="50" y="25"/>
-<vertex x="50" y="0"/>
+<vertex x="0" y="17"/>
+<vertex x="40" y="17"/>
+<vertex x="40" y="0"/>
 <vertex x="0" y="0"/>
 </polygon>
 <polygon width="0.2032" layer="16">
-<vertex x="0" y="25"/>
-<vertex x="50" y="25"/>
-<vertex x="50" y="0"/>
+<vertex x="0" y="17"/>
+<vertex x="40" y="17"/>
+<vertex x="40" y="0"/>
 <vertex x="0" y="0"/>
 </polygon>
 <contactref element="IC1" pad="23"/>
@@ -867,67 +867,77 @@ minimale Strichstärke: &lt;b&gt;0.2 mm&lt;/b&gt;&lt;br&gt;&lt;br&gt;
 <contactref element="C10" pad="1"/>
 <contactref element="C11" pad="1"/>
 <contactref element="JP1" pad="4"/>
+<contactref element="D1" pad="C"/>
+<contactref element="D4" pad="C"/>
+<contactref element="D3" pad="C"/>
+<contactref element="D2" pad="C"/>
 </signal>
 <signal name="OSC_IN">
 <contactref element="IC1" pad="5"/>
 <contactref element="C10" pad="2"/>
 <contactref element="Y1" pad="3"/>
-<wire x1="26.875" y1="2" x2="28.25" y2="7.25" width="0" layer="19" extent="1-1"/>
-<wire x1="30.15" y1="1.85" x2="26.875" y2="2" width="0" layer="19" extent="1-1"/>
+<wire x1="22.5" y1="3.375" x2="22.75" y2="7.25" width="0" layer="19" extent="1-1"/>
+<wire x1="24.65" y1="1.35" x2="22.5" y2="3.375" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="USB_ENUMERATE">
 <contactref element="IC1" pad="29"/>
 <contactref element="R5" pad="1"/>
-<wire x1="16.75" y1="10" x2="19.75" y2="8.75" width="0" layer="19" extent="1-1"/>
+<wire x1="12.25" y1="8" x2="14.25" y2="8.75" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="USB_DM">
 <contactref element="IC1" pad="32"/>
 <contactref element="R2" pad="1"/>
-<wire x1="16.75" y1="8" x2="19.75" y2="7.25" width="0" layer="19" extent="1-1"/>
+<wire x1="12.25" y1="6.75" x2="14.25" y2="7.25" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="USB_DP">
 <contactref element="IC1" pad="33"/>
 <contactref element="R1" pad="1"/>
-<wire x1="16.75" y1="6" x2="19.75" y2="6.75" width="0" layer="19" extent="1-1"/>
+<wire x1="12.25" y1="5.5" x2="14.25" y2="6.75" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="LED2">
 <contactref element="IC1" pad="22"/>
+<contactref element="R9" pad="1"/>
+<wire x1="12.25" y1="13.75" x2="16.75" y2="12.25" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="LED1">
 <contactref element="IC1" pad="21"/>
+<contactref element="R11" pad="1"/>
+<wire x1="12.25" y1="15" x2="17.25" y2="12.25" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="LED0">
 <contactref element="IC1" pad="20"/>
+<contactref element="R12" pad="1"/>
+<wire x1="12.25" y1="16.25" x2="17.75" y2="12.25" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="RST">
 <contactref element="IC1" pad="12"/>
 <contactref element="IC2" pad="13"/>
-<wire x1="28.25" y1="10.75" x2="33.2" y2="10.625" width="0" layer="19" extent="1-1"/>
+<wire x1="25.2" y1="9.625" x2="22.75" y2="10.75" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="TDI">
 <contactref element="IC1" pad="13"/>
 <contactref element="IC2" pad="14"/>
-<wire x1="26.75" y1="12.25" x2="33.2" y2="9.975" width="0" layer="19" extent="1-1"/>
+<wire x1="25.2" y1="8.975" x2="21.25" y2="12.25" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="TMS">
 <contactref element="IC1" pad="14"/>
 <contactref element="IC2" pad="17"/>
-<wire x1="26.25" y1="12.25" x2="33.2" y2="8.025" width="0" layer="19" extent="1-1"/>
+<wire x1="25.2" y1="7.025" x2="20.75" y2="12.25" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="TCK">
 <contactref element="IC1" pad="15"/>
 <contactref element="IC2" pad="16"/>
-<wire x1="25.75" y1="12.25" x2="33.2" y2="8.675" width="0" layer="19" extent="1-1"/>
+<wire x1="20.25" y1="12.25" x2="25.2" y2="7.675" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="TDO">
 <contactref element="IC1" pad="16"/>
 <contactref element="IC2" pad="15"/>
-<wire x1="25.25" y1="12.25" x2="33.2" y2="9.325" width="0" layer="19" extent="1-1"/>
+<wire x1="19.75" y1="12.25" x2="25.2" y2="8.325" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="PWR_BR">
 <contactref element="IC1" pad="19"/>
 <contactref element="Q1" pad="1"/>
-<wire x1="23.75" y1="12.25" x2="35.9" y2="14.95" width="0" layer="19" extent="1-1"/>
+<wire x1="18.25" y1="12.25" x2="28.4" y2="13.95" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="TPWR">
 <contactref element="Q1" pad="3"/>
@@ -935,24 +945,24 @@ minimale Strichstärke: &lt;b&gt;0.2 mm&lt;/b&gt;&lt;br&gt;&lt;br&gt;
 <contactref element="JTAG1" pad="1"/>
 <contactref element="IC2" pad="10"/>
 <contactref element="R8" pad="2"/>
-<wire x1="45.85" y1="6.46" x2="47.75" y2="16" width="0" layer="19" extent="1-1"/>
-<wire x1="38.8" y1="6.725" x2="45.85" y2="6.46" width="0" layer="19" extent="1-1"/>
-<wire x1="38.8" y1="11.925" x2="38.8" y2="6.725" width="0" layer="19" extent="1-1"/>
-<wire x1="38.1" y1="14" x2="38.8" y2="11.925" width="0" layer="19" extent="1-1"/>
+<wire x1="30.8" y1="10.925" x2="30.6" y2="13" width="0" layer="19" extent="1-1"/>
+<wire x1="25.5" y1="12.25" x2="30.6" y2="13" width="0" layer="19" extent="1-1"/>
+<wire x1="30.8" y1="5.725" x2="30.8" y2="10.925" width="0" layer="19" extent="1-1"/>
+<wire x1="37.85" y1="5.46" x2="30.8" y2="5.725" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="RXD">
 <contactref element="IC1" pad="34"/>
 <contactref element="IC1" pad="31"/>
 <contactref element="JP1" pad="3"/>
-<wire x1="19.75" y1="6.25" x2="19.75" y2="7.75" width="0" layer="19" extent="1-1"/>
-<wire x1="13.92" y1="1.873" x2="19.75" y2="6.25" width="0" layer="19" extent="1-1"/>
+<wire x1="14.25" y1="6.25" x2="14.25" y2="7.75" width="0" layer="19" extent="1-1"/>
+<wire x1="13.42" y1="1.373" x2="14.25" y2="6.25" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="TXD">
 <contactref element="IC1" pad="37"/>
 <contactref element="IC1" pad="30"/>
 <contactref element="JP1" pad="2"/>
-<wire x1="21.25" y1="3.75" x2="19.75" y2="8.25" width="0" layer="19" extent="1-1"/>
-<wire x1="16.46" y1="2.127" x2="21.25" y2="3.75" width="0" layer="19" extent="1-1"/>
+<wire x1="15.75" y1="3.75" x2="14.25" y2="8.25" width="0" layer="19" extent="1-1"/>
+<wire x1="15.96" y1="1.627" x2="15.75" y2="3.75" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="3.3V">
 <contactref element="IC1" pad="1"/>
@@ -966,120 +976,110 @@ minimale Strichstärke: &lt;b&gt;0.2 mm&lt;/b&gt;&lt;br&gt;&lt;br&gt;
 <contactref element="IC2" pad="19"/>
 <contactref element="Q1" pad="2"/>
 <contactref element="JP1" pad="1"/>
-<wire x1="33.2" y1="6.725" x2="35.9" y2="13.05" width="0" layer="19" extent="1-1"/>
-<wire x1="28.25" y1="5.25" x2="33.2" y2="6.725" width="0" layer="19" extent="1-1"/>
-<wire x1="26.75" y1="3.75" x2="28.25" y2="5.25" width="0" layer="19" extent="1-1"/>
-<wire x1="23.25" y1="3.75" x2="26.75" y2="3.75" width="0" layer="19" extent="1-1"/>
-<wire x1="22.75" y1="3.75" x2="23.25" y2="3.75" width="0" layer="19" extent="1-1"/>
-<wire x1="19.75" y1="5.25" x2="22.75" y2="3.75" width="0" layer="19" extent="1-1"/>
-<wire x1="19" y1="1.873" x2="19.75" y2="5.25" width="0" layer="19" extent="1-1"/>
-<wire x1="28.25" y1="9.25" x2="28.25" y2="5.25" width="0" layer="19" extent="1-1"/>
-<wire x1="21.25" y1="12.25" x2="19.75" y2="5.25" width="0" layer="19" extent="1-1"/>
-<wire x1="20" y1="17.75" x2="21.25" y2="12.25" width="0" layer="19" extent="1-1"/>
+<contactref element="R10" pad="1"/>
+<wire x1="22.75" y1="9.25" x2="28.4" y2="12.05" width="0" layer="19" extent="1-1"/>
+<wire x1="22.75" y1="5.25" x2="22.75" y2="9.25" width="0" layer="19" extent="1-1"/>
+<wire x1="21.25" y1="3.75" x2="22.75" y2="5.25" width="0" layer="19" extent="1-1"/>
+<wire x1="25.2" y1="5.725" x2="22.75" y2="5.25" width="0" layer="19" extent="1-1"/>
+<wire x1="17.75" y1="3.75" x2="21.25" y2="3.75" width="0" layer="19" extent="1-1"/>
+<wire x1="17.25" y1="3.75" x2="17.75" y2="3.75" width="0" layer="19" extent="1-1"/>
+<wire x1="18.5" y1="1.373" x2="17.75" y2="3.75" width="0" layer="19" extent="1-1"/>
+<wire x1="14.25" y1="5.25" x2="17.25" y2="3.75" width="0" layer="19" extent="1-1"/>
+<wire x1="15.75" y1="12.25" x2="14.25" y2="5.25" width="0" layer="19" extent="1-1"/>
+<wire x1="14.75" y1="14.25" x2="15.75" y2="12.25" width="0" layer="19" extent="1-1"/>
+<wire x1="12.25" y1="12.5" x2="14.75" y2="14.25" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="D+">
 <contactref element="CN1" pad="D+"/>
 <contactref element="R1" pad="2"/>
 <contactref element="R5" pad="2"/>
-<wire x1="15.25" y1="6" x2="15.25" y2="10" width="0" layer="19" extent="1-1"/>
-<wire x1="9.064" y1="7" x2="15.25" y2="6" width="0" layer="19" extent="1-1"/>
+<wire x1="10.75" y1="5.5" x2="10.75" y2="8" width="0" layer="19" extent="1-1"/>
+<wire x1="8.564" y1="6" x2="10.75" y2="5.5" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="D-">
 <contactref element="CN1" pad="D-"/>
 <contactref element="R2" pad="2"/>
-<wire x1="9.064" y1="7.8" x2="15.25" y2="8" width="0" layer="19" extent="1-1"/>
+<wire x1="8.564" y1="6.8" x2="10.75" y2="6.75" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="5.0V">
 <contactref element="CN1" pad="VBUS"/>
 <contactref element="R3" pad="2"/>
-<wire x1="9.064" y1="8.6" x2="12.75" y2="15" width="0" layer="19" extent="1-1"/>
+<wire x1="8.564" y1="7.6" x2="10.75" y2="9.25" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="VBUS">
 <contactref element="IC1" pad="26"/>
 <contactref element="R4" pad="2"/>
 <contactref element="R3" pad="1"/>
-<wire x1="17.75" y1="15" x2="19.75" y2="10.25" width="0" layer="19" extent="1-1"/>
-<wire x1="11.25" y1="15" x2="17.75" y2="15" width="0" layer="19" extent="1-1"/>
+<wire x1="12.25" y1="10.5" x2="14.25" y2="10.25" width="0" layer="19" extent="1-1"/>
+<wire x1="12.25" y1="9.25" x2="12.25" y2="10.5" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="FORCE_BOOTLOADER">
 <contactref element="IC1" pad="25"/>
 <contactref element="BTN1" pad="1"/>
 <contactref element="R6" pad="1"/>
-<wire x1="19.75" y1="13" x2="20" y2="16.25" width="0" layer="19" extent="1-1"/>
-<wire x1="19.75" y1="10.75" x2="19.75" y2="13" width="0" layer="19" extent="1-1"/>
+<wire x1="14.75" y1="15.75" x2="16.75" y2="15" width="0" layer="19" extent="1-1"/>
+<wire x1="14.25" y1="10.75" x2="16.75" y2="15" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="TARGET_POWER_ADC">
 <contactref element="IC1" pad="18"/>
 <contactref element="R8" pad="1"/>
 <contactref element="C12" pad="1"/>
 <contactref element="R7" pad="2"/>
-<wire x1="45.75" y1="15" x2="46.25" y2="16" width="0" layer="19" extent="1-1"/>
-<wire x1="45.125" y1="14" x2="45.75" y2="15" width="0" layer="19" extent="1-1"/>
-<wire x1="24.25" y1="12.25" x2="45.125" y2="14" width="0" layer="19" extent="1-1"/>
+<wire x1="24" y1="13.75" x2="25.5" y2="13.75" width="0" layer="19" extent="1-1"/>
+<wire x1="22.5" y1="13.875" x2="24" y2="13.75" width="0" layer="19" extent="1-1"/>
+<wire x1="18.75" y1="12.25" x2="22.5" y2="13.875" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="TARGET_TMS">
 <contactref element="JTAG1" pad="2"/>
 <contactref element="IC2" pad="4"/>
-<wire x1="38.8" y1="8.025" x2="42.15" y2="6.46" width="0" layer="19" extent="1-1"/>
+<wire x1="30.8" y1="7.025" x2="34.15" y2="5.46" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="TARGET_TCK">
 <contactref element="JTAG1" pad="4"/>
 <contactref element="IC2" pad="5"/>
-<wire x1="38.8" y1="8.675" x2="42.15" y2="7.73" width="0" layer="19" extent="1-1"/>
+<wire x1="30.8" y1="7.675" x2="34.15" y2="6.73" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="TARGET_TDO">
 <contactref element="JTAG1" pad="6"/>
 <contactref element="IC2" pad="6"/>
-<wire x1="38.8" y1="9.325" x2="42.15" y2="9" width="0" layer="19" extent="1-1"/>
+<wire x1="30.8" y1="8.325" x2="34.15" y2="8" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="TARGET_TDI">
 <contactref element="JTAG1" pad="8"/>
 <contactref element="IC2" pad="7"/>
-<wire x1="38.8" y1="9.975" x2="42.15" y2="10.27" width="0" layer="19" extent="1-1"/>
+<wire x1="30.8" y1="8.975" x2="34.15" y2="9.27" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="TARGET_RST">
 <contactref element="JTAG1" pad="10"/>
 <contactref element="IC2" pad="8"/>
-<wire x1="38.8" y1="10.625" x2="42.15" y2="11.54" width="0" layer="19" extent="1-1"/>
+<wire x1="30.8" y1="9.625" x2="34.15" y2="10.54" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="LPC_XTAL2">
 <contactref element="Y1" pad="1"/>
 <contactref element="C11" pad="2"/>
 <contactref element="IC1" pad="6"/>
-<wire x1="33.85" y1="4.15" x2="38.875" y2="3" width="0" layer="19" extent="1-1"/>
-<wire x1="28.25" y1="7.75" x2="33.85" y2="4.15" width="0" layer="19" extent="1-1"/>
-</signal>
-<signal name="N$1">
-<contactref element="LED2" pad="C"/>
+<wire x1="28.35" y1="3.65" x2="30.5" y2="3.375" width="0" layer="19" extent="1-1"/>
+<wire x1="22.75" y1="7.75" x2="28.35" y2="3.65" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="N$2">
-<contactref element="LED2" pad="A"/>
+<contactref element="D2" pad="A"/>
 <contactref element="R9" pad="2"/>
-<wire x1="2" y1="-6.75" x2="1.75" y2="-9" width="0" layer="19" extent="1-1"/>
-</signal>
-<signal name="N$3">
-<contactref element="LED1" pad="C"/>
+<wire x1="8.25" y1="13.75" x2="10.75" y2="13.75" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="N$4">
-<contactref element="LED1" pad="A"/>
+<contactref element="D1" pad="A"/>
 <contactref element="R10" pad="2"/>
-<wire x1="2" y1="-14.75" x2="1.75" y2="-17" width="0" layer="19" extent="1-1"/>
-</signal>
-<signal name="N$5">
-<contactref element="LED3" pad="C"/>
+<wire x1="8.25" y1="12.5" x2="10.75" y2="12.5" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="N$6">
-<contactref element="LED3" pad="A"/>
+<contactref element="D3" pad="A"/>
 <contactref element="R11" pad="2"/>
-<wire x1="2" y1="-22.75" x2="1.75" y2="-25" width="0" layer="19" extent="1-1"/>
-</signal>
-<signal name="N$7">
-<contactref element="LED4" pad="C"/>
+<wire x1="8.25" y1="15" x2="10.75" y2="15" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="N$8">
-<contactref element="LED4" pad="A"/>
+<contactref element="D4" pad="A"/>
 <contactref element="R12" pad="2"/>
-<wire x1="1.75" y1="-33" x2="2" y2="-30.75" width="0" layer="19" extent="1-1"/>
+<wire x1="8.25" y1="16.25" x2="10.75" y2="16.25" width="0" layer="19" extent="1-1"/>
 </signal>
 </signals>
 </board>
