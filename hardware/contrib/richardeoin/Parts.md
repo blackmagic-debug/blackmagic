@@ -1,7 +1,7 @@
 ## Parts List
 
 | ID | Part Number | Description | Supplier | Order Code | Quantity
-| --- | --- | --- | --- | ---
+| --- | --- | --- | --- | --- | ---
 | IC1 | STM32F103CBT6 | Microcontroller, 128Kb Flash, 20Kb SRAM, -40 to 85°C | Farnell | 1606327 | 1
 | JTAG1 | 20021121-00010C4LF | 2x5 Pin Header, SMT, 1.27mm Pitch, Gold Plate | Farnell | 1865279 | 1
 | N/A | FFSD-05-D-06.00-01-N | Ribbon Cable 6", Grey, 10 way, 1.27mm Pitch | Farnell | 1667659 | 1
