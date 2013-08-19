@@ -18,7 +18,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <usb.h>
+#ifdef WIN32
+#   include <lusb0_usb.h>
+#else
+#   include <usb.h>
+#endif
 
 #include "dfu.h"
 

@@ -18,8 +18,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include <stdio.h>
-#include <usb.h>
 #include <string.h>
+#ifdef WIN32
+#   include <lusb0_usb.h>
+#else
+#   include <usb.h>
+#endif
 
 #include <assert.h>
 

@@ -20,7 +20,11 @@
 #ifndef __STM32MEM_H
 #define __STM32MEM_H
 
-#include <usb.h>
+#ifdef WIN32
+#   include <lusb0_usb.h>
+#else
+#   include <usb.h>
+#endif
 
 int stm32_mem_erase(usb_dev_handle *dev, uint16_t iface, uint32_t addr);
 int stm32_mem_write(usb_dev_handle *dev, uint16_t iface, void *data, int size);
