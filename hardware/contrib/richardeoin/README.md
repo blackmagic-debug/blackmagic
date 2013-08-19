@@ -1,7 +1,7 @@
 This variant attempts to be as faitful to the Blackmagic mini as
 possible, but also has several diferences.
 
-[Blackmagic richardeoin PCB](blackmagic_richardeoin_board.png "Blackmagic richardeoin PCB")
+![Blackmagic richardeoin PCB](blackmagic_richardeoin_board.png "Blackmagic richardeoin PCB")
 
 ## Details
 
@@ -9,7 +9,7 @@ possible, but also has several diferences.
 
 * The board size is 40mm x 16mm.
 
-* The programming connector is an ARM 10-PIN Interface as described [here](http://www.keil.com/support/man/docs/ulink2/ulink2_hw_connectors.htm)
+* The programming connector is an ARM 10-PIN Interface as described [here](http://www.keil.com/support/man/docs/ulink2/ulink2_hw_connectors.htm).
 
 ## Differences
 
