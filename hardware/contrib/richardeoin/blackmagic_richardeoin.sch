@@ -6346,6 +6346,100 @@ Source: www.kingbright.com</description>
 </deviceset>
 </devicesets>
 </library>
+<library name="tlv700">
+<packages>
+<package name="SOT23-5L">
+<description>&lt;b&gt;Small Outline Transistor&lt;/b&gt;&lt;p&gt;
+package type OT</description>
+<wire x1="1.422" y1="0.81" x2="1.422" y2="-0.81" width="0.1524" layer="21"/>
+<wire x1="1.422" y1="-0.81" x2="-1.422" y2="-0.81" width="0.1524" layer="51"/>
+<wire x1="-1.422" y1="-0.81" x2="-1.422" y2="0.81" width="0.1524" layer="21"/>
+<wire x1="-1.422" y1="0.81" x2="1.422" y2="0.81" width="0.1524" layer="51"/>
+<wire x1="-0.522" y1="0.81" x2="0.522" y2="0.81" width="0.1524" layer="21"/>
+<wire x1="-0.428" y1="-0.81" x2="-0.522" y2="-0.81" width="0.1524" layer="21"/>
+<wire x1="0.522" y1="-0.81" x2="0.428" y2="-0.81" width="0.1524" layer="21"/>
+<wire x1="-1.328" y1="-0.81" x2="-1.422" y2="-0.81" width="0.1524" layer="21"/>
+<wire x1="1.422" y1="-0.81" x2="1.328" y2="-0.81" width="0.1524" layer="21"/>
+<wire x1="1.328" y1="0.81" x2="1.422" y2="0.81" width="0.1524" layer="21"/>
+<wire x1="-1.422" y1="0.81" x2="-1.328" y2="0.81" width="0.1524" layer="21"/>
+<smd name="1" x="-0.95" y="-1.3" dx="0.55" dy="1.2" layer="1"/>
+<smd name="2" x="0" y="-1.3" dx="0.55" dy="1.2" layer="1"/>
+<smd name="3" x="0.95" y="-1.3" dx="0.55" dy="1.2" layer="1"/>
+<smd name="4" x="0.95" y="1.3" dx="0.55" dy="1.2" layer="1"/>
+<smd name="5" x="-0.95" y="1.3" dx="0.55" dy="1.2" layer="1"/>
+<text x="-1.905" y="1.905" size="1.27" layer="25">&gt;NAME</text>
+<text x="-1.905" y="-3.429" size="1.27" layer="27">&gt;VALUE</text>
+<rectangle x1="-1.2" y1="-1.5" x2="-0.7" y2="-0.85" layer="51"/>
+<rectangle x1="-0.25" y1="-1.5" x2="0.25" y2="-0.85" layer="51"/>
+<rectangle x1="0.7" y1="-1.5" x2="1.2" y2="-0.85" layer="51"/>
+<rectangle x1="0.7" y1="0.85" x2="1.2" y2="1.5" layer="51"/>
+<rectangle x1="-1.2" y1="0.85" x2="-0.7" y2="1.5" layer="51"/>
+</package>
+<package name="SC70-5L">
+<description>&lt;b&gt;SC-70 Package&lt;/b&gt;</description>
+<wire x1="1.1" y1="-0.5" x2="-1.1" y2="-0.5" width="0.2032" layer="51"/>
+<wire x1="-1.1" y1="-0.5" x2="-1.1" y2="0.5" width="0.2032" layer="21"/>
+<wire x1="-1.1" y1="0.5" x2="1.1" y2="0.5" width="0.2032" layer="51"/>
+<wire x1="1.1" y1="0.5" x2="1.1" y2="-0.5" width="0.2032" layer="21"/>
+<circle x="-0.65" y="-0.2" radius="0.15" width="0" layer="21"/>
+<smd name="4" x="0.65" y="0.85" dx="0.35" dy="0.8" layer="1"/>
+<smd name="5" x="-0.65" y="0.85" dx="0.35" dy="0.8" layer="1"/>
+<smd name="1" x="-0.65" y="-0.85" dx="0.35" dy="0.8" layer="1"/>
+<smd name="2" x="0" y="-0.85" dx="0.35" dy="0.8" layer="1"/>
+<smd name="3" x="0.65" y="-0.85" dx="0.35" dy="0.8" layer="1"/>
+<text x="-1.2" y="1.35" size="1.016" layer="25">&gt;NAME</text>
+<text x="-1.2" y="-2.35" size="1.016" layer="27">&gt;VALUE</text>
+<rectangle x1="0.5" y1="0.6" x2="0.8" y2="1.1" layer="51"/>
+<rectangle x1="-0.8" y1="0.6" x2="-0.5" y2="1.1" layer="51"/>
+<rectangle x1="-0.8" y1="-1.1" x2="-0.5" y2="-0.6" layer="51"/>
+<rectangle x1="-0.15" y1="-1.1" x2="0.15" y2="-0.6" layer="51"/>
+<rectangle x1="0.5" y1="-1.1" x2="0.8" y2="-0.6" layer="51"/>
+</package>
+</packages>
+<symbols>
+<symbol name="TLV700">
+<pin name="GND" x="7.62" y="-5.08" length="middle" rot="R90"/>
+<pin name="EN" x="-5.08" y="2.54" length="middle"/>
+<pin name="IN" x="-5.08" y="5.08" length="middle"/>
+<pin name="OUT" x="20.32" y="5.08" length="middle" rot="R180"/>
+<wire x1="0" y1="7.62" x2="15.24" y2="7.62" width="0.254" layer="94"/>
+<wire x1="15.24" y1="7.62" x2="15.24" y2="0" width="0.254" layer="94"/>
+<wire x1="15.24" y1="0" x2="0" y2="0" width="0.254" layer="94"/>
+<wire x1="0" y1="0" x2="0" y2="7.62" width="0.254" layer="94"/>
+</symbol>
+</symbols>
+<devicesets>
+<deviceset name="TLV700">
+<gates>
+<gate name="G$1" symbol="TLV700" x="0" y="0"/>
+</gates>
+<devices>
+<device name="DCC" package="SOT23-5L">
+<connects>
+<connect gate="G$1" pin="EN" pad="3"/>
+<connect gate="G$1" pin="GND" pad="2"/>
+<connect gate="G$1" pin="IN" pad="1"/>
+<connect gate="G$1" pin="OUT" pad="5"/>
+</connects>
+<technologies>
+<technology name=""/>
+</technologies>
+</device>
+<device name="DCK" package="SC70-5L">
+<connects>
+<connect gate="G$1" pin="EN" pad="3"/>
+<connect gate="G$1" pin="GND" pad="2"/>
+<connect gate="G$1" pin="IN" pad="1"/>
+<connect gate="G$1" pin="OUT" pad="5"/>
+</connects>
+<technologies>
+<technology name=""/>
+</technologies>
+</device>
+</devices>
+</deviceset>
+</devicesets>
+</library>
 </libraries>
 <attributes>
 </attributes>
@@ -6405,6 +6499,20 @@ Source: www.kingbright.com</description>
 <part name="R12" library="microbuilder" deviceset="RESISTOR" device="0603MINI" value="390Ω"/>
 <part name="U$19" library="microbuilder_v3" deviceset="GND" device=""/>
 <part name="U$20" library="microbuilder_v3" deviceset="3.3V" device=""/>
+<part name="U$21" library="tlv700" deviceset="TLV700" device="DCK" value="TLV70033DCK"/>
+<part name="U$22" library="microbuilder" deviceset="GND" device=""/>
+<part name="C1" library="resistor" deviceset="C-EU" device="C0603K" value="1µF"/>
+<part name="U$23" library="microbuilder_v3" deviceset="5.0V" device=""/>
+<part name="C2" library="resistor" deviceset="C-EU" device="C0603K" value="1µF"/>
+<part name="U$24" library="microbuilder" deviceset="GND" device=""/>
+<part name="C3" library="resistor" deviceset="C-EU" device="C0603K" value="100nF"/>
+<part name="C4" library="resistor" deviceset="C-EU" device="C0603K" value="100nF"/>
+<part name="C5" library="resistor" deviceset="C-EU" device="C0603K" value="100nF"/>
+<part name="U$25" library="microbuilder" deviceset="GND" device=""/>
+<part name="U$26" library="microbuilder" deviceset="GND" device=""/>
+<part name="U$27" library="microbuilder" deviceset="GND" device=""/>
+<part name="U$28" library="microbuilder" deviceset="GND" device=""/>
+<part name="U$31" library="microbuilder_v3" deviceset="3.3V" device=""/>
 </parts>
 <sheets>
 <sheet>
@@ -6414,6 +6522,7 @@ Source: www.kingbright.com</description>
 <wire x1="78.74" y1="77.47" x2="81.28" y2="77.47" width="0.1524" layer="97"/>
 <wire x1="81.28" y1="77.47" x2="81.28" y2="69.85" width="0.1524" layer="97"/>
 <wire x1="81.28" y1="69.85" x2="78.74" y2="69.85" width="0.1524" layer="97"/>
+<text x="30.48" y="175.26" size="1.778" layer="97" font="vector" ratio="12">TLV70033</text>
 </plain>
 <instances>
 <instance part="IC1" gate="G$1" x="38.1" y="48.26"/>
@@ -6466,6 +6575,20 @@ Source: www.kingbright.com</description>
 <instance part="R12" gate="G$1" x="210.82" y="53.34"/>
 <instance part="U$19" gate="G$1" x="231.14" y="40.64"/>
 <instance part="U$20" gate="G$1" x="200.66" y="88.9"/>
+<instance part="U$21" gate="G$1" x="30.48" y="165.1"/>
+<instance part="U$22" gate="G$1" x="38.1" y="154.94"/>
+<instance part="C1" gate="G$1" x="17.78" y="165.1"/>
+<instance part="U$23" gate="G$1" x="17.78" y="177.8"/>
+<instance part="C2" gate="G$1" x="55.88" y="165.1"/>
+<instance part="U$24" gate="G$1" x="17.78" y="154.94"/>
+<instance part="C3" gate="G$1" x="66.04" y="165.1"/>
+<instance part="C4" gate="G$1" x="76.2" y="165.1"/>
+<instance part="C5" gate="G$1" x="86.36" y="165.1"/>
+<instance part="U$25" gate="G$1" x="55.88" y="154.94"/>
+<instance part="U$26" gate="G$1" x="66.04" y="154.94"/>
+<instance part="U$27" gate="G$1" x="76.2" y="154.94"/>
+<instance part="U$28" gate="G$1" x="86.36" y="154.94"/>
+<instance part="U$31" gate="G$1" x="86.36" y="177.8"/>
 </instances>
 <busses>
 </busses>
@@ -6590,6 +6713,36 @@ Source: www.kingbright.com</description>
 <junction x="231.14" y="73.66"/>
 <junction x="231.14" y="63.5"/>
 <junction x="231.14" y="53.34"/>
+</segment>
+<segment>
+<pinref part="C1" gate="G$1" pin="2"/>
+<pinref part="U$24" gate="G$1" pin="GND"/>
+<wire x1="17.78" y1="160.02" x2="17.78" y2="157.48" width="0.1524" layer="91"/>
+</segment>
+<segment>
+<pinref part="U$22" gate="G$1" pin="GND"/>
+<pinref part="U$21" gate="G$1" pin="GND"/>
+<wire x1="38.1" y1="157.48" x2="38.1" y2="160.02" width="0.1524" layer="91"/>
+</segment>
+<segment>
+<pinref part="U$28" gate="G$1" pin="GND"/>
+<pinref part="C5" gate="G$1" pin="2"/>
+<wire x1="86.36" y1="157.48" x2="86.36" y2="160.02" width="0.1524" layer="91"/>
+</segment>
+<segment>
+<pinref part="U$27" gate="G$1" pin="GND"/>
+<pinref part="C4" gate="G$1" pin="2"/>
+<wire x1="76.2" y1="157.48" x2="76.2" y2="160.02" width="0.1524" layer="91"/>
+</segment>
+<segment>
+<pinref part="U$26" gate="G$1" pin="GND"/>
+<pinref part="C3" gate="G$1" pin="2"/>
+<wire x1="66.04" y1="157.48" x2="66.04" y2="160.02" width="0.1524" layer="91"/>
+</segment>
+<segment>
+<pinref part="U$25" gate="G$1" pin="GND"/>
+<pinref part="C2" gate="G$1" pin="2"/>
+<wire x1="55.88" y1="157.48" x2="55.88" y2="160.02" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="OSC_IN" class="0">
@@ -6853,6 +7006,27 @@ Source: www.kingbright.com</description>
 <wire x1="205.74" y1="83.82" x2="200.66" y2="83.82" width="0.1524" layer="91"/>
 <wire x1="200.66" y1="83.82" x2="200.66" y2="86.36" width="0.1524" layer="91"/>
 </segment>
+<segment>
+<pinref part="U$21" gate="G$1" pin="OUT"/>
+<pinref part="C2" gate="G$1" pin="1"/>
+<wire x1="50.8" y1="170.18" x2="55.88" y2="170.18" width="0.1524" layer="91"/>
+<wire x1="55.88" y1="170.18" x2="55.88" y2="167.64" width="0.1524" layer="91"/>
+<pinref part="C3" gate="G$1" pin="1"/>
+<wire x1="55.88" y1="170.18" x2="66.04" y2="170.18" width="0.1524" layer="91"/>
+<wire x1="66.04" y1="170.18" x2="66.04" y2="167.64" width="0.1524" layer="91"/>
+<pinref part="C4" gate="G$1" pin="1"/>
+<wire x1="66.04" y1="170.18" x2="76.2" y2="170.18" width="0.1524" layer="91"/>
+<wire x1="76.2" y1="170.18" x2="76.2" y2="167.64" width="0.1524" layer="91"/>
+<pinref part="C5" gate="G$1" pin="1"/>
+<wire x1="76.2" y1="170.18" x2="86.36" y2="170.18" width="0.1524" layer="91"/>
+<wire x1="86.36" y1="170.18" x2="86.36" y2="167.64" width="0.1524" layer="91"/>
+<junction x="55.88" y="170.18"/>
+<junction x="66.04" y="170.18"/>
+<junction x="76.2" y="170.18"/>
+<junction x="86.36" y="170.18"/>
+<pinref part="U$31" gate="G$1" pin="3.3V"/>
+<wire x1="86.36" y1="170.18" x2="86.36" y2="175.26" width="0.1524" layer="91"/>
+</segment>
 </net>
 <net name="D+" class="0">
 <segment>
@@ -6884,6 +7058,20 @@ Source: www.kingbright.com</description>
 <pinref part="U$8" gate="G$1" pin="5.0V"/>
 <pinref part="R3" gate="G$1" pin="2"/>
 <wire x1="101.6" y1="76.2" x2="101.6" y2="73.66" width="0.1524" layer="91"/>
+</segment>
+<segment>
+<pinref part="U$23" gate="G$1" pin="5.0V"/>
+<pinref part="C1" gate="G$1" pin="1"/>
+<wire x1="17.78" y1="175.26" x2="17.78" y2="170.18" width="0.1524" layer="91"/>
+<pinref part="U$21" gate="G$1" pin="IN"/>
+<wire x1="17.78" y1="170.18" x2="17.78" y2="167.64" width="0.1524" layer="91"/>
+<wire x1="25.4" y1="170.18" x2="22.86" y2="170.18" width="0.1524" layer="91"/>
+<wire x1="22.86" y1="170.18" x2="22.86" y2="167.64" width="0.1524" layer="91"/>
+<pinref part="U$21" gate="G$1" pin="EN"/>
+<wire x1="22.86" y1="167.64" x2="25.4" y2="167.64" width="0.1524" layer="91"/>
+<wire x1="22.86" y1="170.18" x2="17.78" y2="170.18" width="0.1524" layer="91"/>
+<junction x="22.86" y="170.18"/>
+<junction x="17.78" y="170.18"/>
 </segment>
 </net>
 <net name="VBUS" class="0">
