@@ -1,15 +1,18 @@
 This variant attempts to be as faithful to the Blackmagic mini as
 possible, but also has several diferences.
 
-![Blackmagic richardeoin PCB](blackmagic_richardeoin_board.png "Blackmagic richardeoin PCB")
+![Blackmagic richardeoin PCB](blackmagic_richardeoin_board.png
+ "Blackmagic richardeoin PCB")
 
 ## Details
 
-* The schematic and board have both been designed using Cadsoft EAGLE v6.4.0.
+* The schematic and board have both been designed using Cadsoft EAGLE
+  v6.4.0.
 
 * The board size is 40mm x 16mm.
 
-* The programming connector is an ARM 10-PIN Interface as described [here](http://www.keil.com/support/man/docs/ulink2/ulink2_hw_connectors.htm).
+* The programming connector is an ARM 10-PIN Interface as described
+  [here](http://www.keil.com/support/man/docs/ulink2/ulink2_hw_connectors.htm).
 
 ## Differences
 
@@ -19,11 +22,15 @@ Makes reflow soldering much easier.
 
 ### Includes Level Translator
 
-This board incorporates the same level translator used in the full-sized Blackmagic, so it can be used to safely program 2.7V or 1.8V systems.
+This board incorporates the same level translator used in the
+full-sized Blackmagic, so it can be used to safely program 2.7V or
+1.8V systems.
 
 ### USART Connector
 
-The STM32F103's USART1 peripheral is broken out into a 0.1" header. The hole centres are [slightly offset to allow a press-fit](https://www.sparkfun.com/tutorials/114).
+The STM32F103's USART1 peripheral is broken out into a 0.1"
+header. The hole centres are
+[slightly offset to allow a press-fit](https://www.sparkfun.com/tutorials/114).
 
 ### BOOT0 Button
 
@@ -37,14 +44,8 @@ interface.
 
 * [Parts List](Parts.md)
 
-Parts Cost (Approximate): £14 + VAT ([uk.farnell.com](http://uk.farnell.com) August 2013)
-Programming Cable: £8.49 + VAT ([uk.farnell.com](http://uk.farnell.com/samtec/ffsd-05-d-06-00-01-n/ribbon-cable-idc-152-4mm-grey-10way/dp/1667659) August 2013)
-
-
-
-
-
-
-
-
-
+Parts Cost (Approximate): £14 + VAT
+([uk.farnell.com](http://uk.farnell.com) August 2013) Programming
+Cable: £8.49 + VAT
+([uk.farnell.com](http://uk.farnell.com/samtec/ffsd-05-d-06-00-01-n/ribbon-cable-idc-152-4mm-grey-10way/dp/1667659)
+August 2013)
