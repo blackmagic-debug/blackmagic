@@ -6499,7 +6499,7 @@ package type OT</description>
 <part name="R12" library="microbuilder" deviceset="RESISTOR" device="0603MINI" value="390Ω"/>
 <part name="U$19" library="microbuilder_v3" deviceset="GND" device=""/>
 <part name="U$20" library="microbuilder_v3" deviceset="3.3V" device=""/>
-<part name="U$21" library="tlv700" deviceset="TLV700" device="DCK" value="TLV70033DCK"/>
+<part name="IC3" library="tlv700" deviceset="TLV700" device="DCK" value="TLV70033DCK"/>
 <part name="U$22" library="microbuilder" deviceset="GND" device=""/>
 <part name="C1" library="resistor" deviceset="C-EU" device="C0603K" value="1µF"/>
 <part name="U$23" library="microbuilder_v3" deviceset="5.0V" device=""/>
@@ -6575,7 +6575,7 @@ package type OT</description>
 <instance part="R12" gate="G$1" x="210.82" y="53.34"/>
 <instance part="U$19" gate="G$1" x="231.14" y="40.64"/>
 <instance part="U$20" gate="G$1" x="200.66" y="88.9"/>
-<instance part="U$21" gate="G$1" x="30.48" y="165.1"/>
+<instance part="IC3" gate="G$1" x="30.48" y="165.1"/>
 <instance part="U$22" gate="G$1" x="38.1" y="154.94"/>
 <instance part="C1" gate="G$1" x="17.78" y="165.1"/>
 <instance part="U$23" gate="G$1" x="17.78" y="177.8"/>
@@ -6721,7 +6721,7 @@ package type OT</description>
 </segment>
 <segment>
 <pinref part="U$22" gate="G$1" pin="GND"/>
-<pinref part="U$21" gate="G$1" pin="GND"/>
+<pinref part="IC3" gate="G$1" pin="GND"/>
 <wire x1="38.1" y1="157.48" x2="38.1" y2="160.02" width="0.1524" layer="91"/>
 </segment>
 <segment>
@@ -7007,7 +7007,7 @@ package type OT</description>
 <wire x1="200.66" y1="83.82" x2="200.66" y2="86.36" width="0.1524" layer="91"/>
 </segment>
 <segment>
-<pinref part="U$21" gate="G$1" pin="OUT"/>
+<pinref part="IC3" gate="G$1" pin="OUT"/>
 <pinref part="C2" gate="G$1" pin="1"/>
 <wire x1="50.8" y1="170.18" x2="55.88" y2="170.18" width="0.1524" layer="91"/>
 <wire x1="55.88" y1="170.18" x2="55.88" y2="167.64" width="0.1524" layer="91"/>
@@ -7063,15 +7063,15 @@ package type OT</description>
 <pinref part="U$23" gate="G$1" pin="5.0V"/>
 <pinref part="C1" gate="G$1" pin="1"/>
 <wire x1="17.78" y1="175.26" x2="17.78" y2="170.18" width="0.1524" layer="91"/>
-<pinref part="U$21" gate="G$1" pin="IN"/>
+<pinref part="IC3" gate="G$1" pin="IN"/>
 <wire x1="17.78" y1="170.18" x2="17.78" y2="167.64" width="0.1524" layer="91"/>
 <wire x1="25.4" y1="170.18" x2="22.86" y2="170.18" width="0.1524" layer="91"/>
-<wire x1="22.86" y1="170.18" x2="22.86" y2="167.64" width="0.1524" layer="91"/>
-<pinref part="U$21" gate="G$1" pin="EN"/>
-<wire x1="22.86" y1="167.64" x2="25.4" y2="167.64" width="0.1524" layer="91"/>
-<wire x1="22.86" y1="170.18" x2="17.78" y2="170.18" width="0.1524" layer="91"/>
-<junction x="22.86" y="170.18"/>
 <junction x="17.78" y="170.18"/>
+<pinref part="IC3" gate="G$1" pin="EN"/>
+<wire x1="22.86" y1="170.18" x2="17.78" y2="170.18" width="0.1524" layer="91"/>
+<wire x1="22.86" y1="167.64" x2="25.4" y2="167.64" width="0.1524" layer="91"/>
+<wire x1="22.86" y1="167.64" x2="22.86" y2="170.18" width="0.1524" layer="91"/>
+<junction x="22.86" y="170.18"/>
 </segment>
 </net>
 <net name="VBUS" class="0">
