@@ -21,5 +21,5 @@
 | D3, D4 | KPT-1608YC | LED, Yellow 588nm, 0603 [1608 Metric] | Farnell | 2099227 | 2
 | C1, C2 | MC0603X105K100CT | Capacitor 1µF, X5R, 10V, 0603 [1608 Metric] | Farnell | 1759399 | 2
 | C3, C4, C5, C6 | MC0603B104K500CT | Capacitor 100nF, X7R, 50V, 0603 [1608 Metric] | Farnell | 1759122 | 4
-| C7, C8 | MC0603N180J500CT | Capacitor 18pF, C0G / NP0, 50V, 0603 [1608 Metric] | Farnell | 2
+| C7, C8 | MC0603N180J500CT | Capacitor 18pF, C0G / NP0, 50V, 0603 [1608 Metric] | Farnell | 1759056 | 2
 
