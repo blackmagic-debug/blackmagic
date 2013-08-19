@@ -1,7 +1,15 @@
 This variant attempts to be as faitful to the Blackmagic mini as
 possible, but also has several diferences.
 
-The schematic and board have both been designed using Cadsoft EAGLE v6.4.0.
+[Blackmagic richardeoin PCB](blackmagic_richardeoin_board.png "Blackmagic richardeoin PCB")
+
+## Details
+
+* The schematic and board have both been designed using Cadsoft EAGLE v6.4.0.
+
+* The board size is 40mm x 16mm.
+
+* The programming connector is an ARM 10-PIN Interface as described [here](http://www.keil.com/support/man/docs/ulink2/ulink2_hw_connectors.htm)
 
 ## Differences
 
@@ -30,7 +38,7 @@ interface.
 * [Parts List](Parts.md)
 
 Parts Cost (Approximate): £14 + VAT ([uk.farnell.com](uk.farnell.com) August 2013)
-Programming Cable: £8.49 + VAT ([uk.farnell.com](http://uk.farnell.com/samtec/ffsd-05-d-06-00-01-n/ribbon-cable-idc-152-4mm-grey-10way/dp/1667659) August 2013)3D
+Programming Cable: £8.49 + VAT ([uk.farnell.com](http://uk.farnell.com/samtec/ffsd-05-d-06-00-01-n/ribbon-cable-idc-152-4mm-grey-10way/dp/1667659) August 2013)
 
 
 
