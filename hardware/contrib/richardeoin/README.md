@@ -1,4 +1,4 @@
-This variant attempts to be as faitful to the Blackmagic mini as
+This variant attempts to be as faithful to the Blackmagic mini as
 possible, but also has several diferences.
 
 ![Blackmagic richardeoin PCB](blackmagic_richardeoin_board.png "Blackmagic richardeoin PCB")
