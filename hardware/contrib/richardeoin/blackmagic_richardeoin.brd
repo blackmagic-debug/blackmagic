@@ -6,7 +6,7 @@
 <setting alwaysvectorfont="no"/>
 <setting verticaltext="up"/>
 </settings>
-<grid distance="0.125" unitdist="mm" unit="mm" style="lines" multiple="1" display="yes" altdistance="0.025" altunitdist="inch" altunit="inch"/>
+<grid distance="0.5" unitdist="mm" unit="mm" style="lines" multiple="1" display="yes" altdistance="0.025" altunitdist="inch" altunit="inch"/>
 <layers>
 <layer number="1" name="Top" color="4" fill="1" visible="yes" active="yes"/>
 <layer number="2" name="Route2" color="1" fill="3" visible="no" active="no"/>
@@ -144,6 +144,14 @@
 <text x="15.875" y="7.625" size="1" layer="29" font="vector" ratio="15">STM32F
 103CB</text>
 <text x="29.375" y="4.875" size="1" layer="29" font="vector" ratio="15" rot="R90">TXS0108</text>
+<text x="33" y="14.5" size="1" layer="16" font="vector" ratio="15" rot="MR0">Blackmagic Debug Probe</text>
+<text x="38.5" y="15" size="1" layer="30" font="vector" ratio="15" rot="SMR270">ARM Cortex Debug</text>
+<text x="2.5" y="7" size="1" layer="16" font="vector" ratio="15" rot="MR270">USB</text>
+<text x="17" y="2.5" size="1" layer="16" font="vector" ratio="15" rot="MR0">Tx/Rx</text>
+<text x="17" y="2.5" size="1" layer="30" font="vector" ratio="15" rot="MR0">Tx/Rx</text>
+<text x="2.5" y="7" size="1" layer="30" font="vector" ratio="15" rot="MR270">USB</text>
+<text x="38.5" y="15" size="1" layer="16" font="vector" ratio="15" rot="SMR270">ARM Cortex Debug</text>
+<text x="33" y="14.5" size="1" layer="30" font="vector" ratio="15" rot="MR0">Blackmagic Debug Probe</text>
 </plain>
 <libraries>
 <library name="stm32f">
@@ -843,22 +851,22 @@ Covered vias can be set in Masks (Limit).
 <element name="CN1" library="microbuilder_v3" package="USB-MINIB" value="" x="4.5" y="5.5" rot="R270"/>
 <element name="R1" library="microbuilder" package="0603-MINI" value="22Ω" x="11.5" y="4.5" rot="R180"/>
 <element name="R2" library="microbuilder" package="0603-MINI" value="22Ω" x="11.5" y="5.75" rot="R180"/>
-<element name="R3" library="microbuilder" package="0603-MINI" value="4K7" x="11.5" y="8.25" rot="R180"/>
-<element name="R5" library="microbuilder" package="0603-MINI" value="1K5" x="11.5" y="7" rot="R180"/>
+<element name="R7" library="microbuilder" package="0603-MINI" value="4K7" x="11.5" y="8.25" rot="R180"/>
+<element name="R3" library="microbuilder" package="0603-MINI" value="1K5" x="11.5" y="7" rot="R180"/>
 <element name="BTN1" library="omron" package="B3U-1000P(M)-B" value="SPST.B3U-1000P(M)-B" x="11.5" y="14" rot="R180"/>
-<element name="R6" library="microbuilder" package="0603-MINI" value="10K" x="15" y="14"/>
+<element name="R5" library="microbuilder" package="0603-MINI" value="10K" x="15" y="14"/>
 <element name="IC2" library="dan-translate" package="TSSOP20" value="TXS0108" x="28.75" y="8" rot="R90"/>
-<element name="R7" library="microbuilder" package="0603-MINI" value="10K" x="26" y="14" rot="R90"/>
+<element name="R6" library="microbuilder" package="0603-MINI" value="10K" x="26" y="14" rot="R90"/>
 <element name="R8" library="microbuilder" package="0603-MINI" value="4K7" x="27.5" y="14" rot="R270"/>
-<element name="C12" library="resistor" package="C0603K" value="100nF" x="24.5" y="14" rot="R270"/>
+<element name="C6" library="resistor" package="C0603K" value="100nF" x="24.5" y="14" rot="R270"/>
 <element name="Y1" library="SparkFun" package="CRYSTAL-SMD-5X3" value="8MHz" x="26" y="1.875" rot="R180"/>
-<element name="C10" library="resistor" package="C0603K" value="18pF" x="21.5" y="0.625"/>
-<element name="C11" library="resistor" package="C0603K" value="18pF" x="29.75" y="2" rot="R90"/>
+<element name="C7" library="resistor" package="C0603K" value="18pF" x="21.5" y="0.625"/>
+<element name="C8" library="resistor" package="C0603K" value="18pF" x="29.75" y="2" rot="R90"/>
 <element name="JP1" library="SparkFun" package="1X04_LOCK" value="" x="18.5" y="1.25" rot="R180"/>
 <element name="D2" library="led" package="CHIPLED_0603" value="RED" x="1.5" y="13.25" rot="R90"/>
-<element name="R9" library="microbuilder" package="0603-MINI" value="390Ω" x="5.25" y="12.75" rot="R180"/>
+<element name="R10" library="microbuilder" package="0603-MINI" value="390Ω" x="5.25" y="12.75" rot="R180"/>
 <element name="D1" library="led" package="CHIPLED_0603" value="GREEN" x="1.5" y="12.25" rot="R90"/>
-<element name="R10" library="microbuilder" package="0603-MINI" value="390Ω" x="5.25" y="11.5" rot="R180"/>
+<element name="R9" library="microbuilder" package="0603-MINI" value="390Ω" x="5.25" y="11.5" rot="R180"/>
 <element name="D3" library="led" package="CHIPLED_0603" value="YELLOW" x="1.5" y="14.25" rot="R90"/>
 <element name="R11" library="microbuilder" package="0603-MINI" value="390Ω" x="5.25" y="14" rot="R180"/>
 <element name="D4" library="led" package="CHIPLED_0603" value="YELLOW" x="1.5" y="15.25" rot="R90"/>
@@ -897,14 +905,14 @@ Covered vias can be set in Masks (Limit).
 <contactref element="CN1" pad="GND"/>
 <contactref element="R4" pad="1"/>
 <contactref element="BTN1" pad="2"/>
-<contactref element="C12" pad="2"/>
-<contactref element="R7" pad="1"/>
+<contactref element="C6" pad="2"/>
+<contactref element="R6" pad="1"/>
 <contactref element="IC2" pad="11"/>
 <contactref element="IC2" pad="12"/>
 <contactref element="IC2" pad="18"/>
 <contactref element="IC2" pad="20"/>
-<contactref element="C10" pad="1"/>
-<contactref element="C11" pad="1"/>
+<contactref element="C7" pad="1"/>
+<contactref element="C8" pad="1"/>
 <contactref element="JP1" pad="4"/>
 <contactref element="D1" pad="C"/>
 <contactref element="D4" pad="C"/>
@@ -942,10 +950,12 @@ Covered vias can be set in Masks (Limit).
 <wire x1="11" y1="9.625" x2="11.5" y2="10.125" width="0.2" layer="1"/>
 <wire x1="11.5" y1="10.125" x2="11.5" y2="10.75" width="0.2" layer="1"/>
 <wire x1="11.5" y1="10.75" x2="12.375" y2="10.75" width="0.2" layer="1"/>
+<via x="39.5" y="4.5" extent="1-16" drill="0.3"/>
+<via x="39.5" y="11.5" extent="1-16" drill="0.3"/>
 </signal>
 <signal name="OSC_IN">
 <contactref element="IC1" pad="5"/>
-<contactref element="C10" pad="2"/>
+<contactref element="C7" pad="2"/>
 <contactref element="Y1" pad="3"/>
 <wire x1="24.15" y1="0.725" x2="24.6" y2="0.85" width="0.15" layer="1"/>
 <wire x1="24.6" y1="0.85" x2="25.5" y2="1.75" width="0.15" layer="1"/>
@@ -959,7 +969,7 @@ Covered vias can be set in Masks (Limit).
 </signal>
 <signal name="USB_ENUMERATE">
 <contactref element="IC1" pad="29"/>
-<contactref element="R5" pad="1"/>
+<contactref element="R3" pad="1"/>
 <wire x1="14.25" y1="8.5" x2="13.25" y2="8.5" width="0.15" layer="1"/>
 <wire x1="13.25" y1="8.5" x2="13" y2="8.25" width="0.15" layer="1"/>
 <wire x1="13" y1="8.25" x2="13" y2="7.75" width="0.15" layer="1"/>
@@ -981,7 +991,7 @@ Covered vias can be set in Masks (Limit).
 </signal>
 <signal name="LED2">
 <contactref element="IC1" pad="22"/>
-<contactref element="R9" pad="1"/>
+<contactref element="R10" pad="1"/>
 <wire x1="6" y1="12.75" x2="6.875" y2="13.625" width="0.15" layer="1"/>
 <wire x1="6.875" y1="13.625" x2="6.875" y2="14.375" width="0.15" layer="1"/>
 <wire x1="6.875" y1="14.375" x2="7.625" y2="15.125" width="0.15" layer="1"/>
@@ -1070,9 +1080,9 @@ Covered vias can be set in Masks (Limit).
 <contactref element="IC1" pad="19"/>
 <contactref element="Q1" pad="1"/>
 <wire x1="18.25" y1="12" x2="18.25" y2="15.25" width="0.15" layer="1"/>
-<wire x1="18.25" y1="15.25" x2="18.75" y2="15.75" width="0.15" layer="1"/>
-<wire x1="18.75" y1="15.75" x2="28.5" y2="15.75" width="0.15" layer="1"/>
-<wire x1="28.5" y1="15.75" x2="29" y2="15.25" width="0.15" layer="1"/>
+<wire x1="18.25" y1="15.25" x2="18.875" y2="15.875" width="0.15" layer="1"/>
+<wire x1="18.875" y1="15.875" x2="28.375" y2="15.875" width="0.15" layer="1"/>
+<wire x1="28.375" y1="15.875" x2="29" y2="15.25" width="0.15" layer="1"/>
 <wire x1="29" y1="15.25" x2="29.1" y2="15.25" width="0.15" layer="1"/>
 <wire x1="29.1" y1="15.25" x2="29.4" y2="14.95" width="0.15" layer="1"/>
 </signal>
@@ -1129,13 +1139,13 @@ Covered vias can be set in Masks (Limit).
 <contactref element="IC1" pad="36"/>
 <contactref element="IC1" pad="48"/>
 <contactref element="IC1" pad="9"/>
-<contactref element="R6" pad="2"/>
+<contactref element="R5" pad="2"/>
 <contactref element="IC1" pad="41"/>
 <contactref element="IC1" pad="40"/>
 <contactref element="IC2" pad="19"/>
 <contactref element="Q1" pad="2"/>
 <contactref element="JP1" pad="1"/>
-<contactref element="R10" pad="1"/>
+<contactref element="R9" pad="1"/>
 <contactref element="IC3" pad="5"/>
 <contactref element="C2" pad="1"/>
 <contactref element="C3" pad="1"/>
@@ -1198,7 +1208,7 @@ Covered vias can be set in Masks (Limit).
 <signal name="D+">
 <contactref element="CN1" pad="D+"/>
 <contactref element="R1" pad="2"/>
-<contactref element="R5" pad="2"/>
+<contactref element="R3" pad="2"/>
 <wire x1="8.564" y1="5.5" x2="9.75" y2="5.5" width="0.15" layer="1"/>
 <wire x1="9.75" y1="5.5" x2="10.75" y2="4.5" width="0.15" layer="1"/>
 <wire x1="10.75" y1="7" x2="11.5" y2="6.25" width="0.15" layer="1"/>
@@ -1214,7 +1224,7 @@ Covered vias can be set in Masks (Limit).
 </signal>
 <signal name="5.0V">
 <contactref element="CN1" pad="VBUS"/>
-<contactref element="R3" pad="2"/>
+<contactref element="R7" pad="2"/>
 <contactref element="C1" pad="1"/>
 <contactref element="IC3" pad="1"/>
 <contactref element="IC3" pad="3"/>
@@ -1236,7 +1246,7 @@ Covered vias can be set in Masks (Limit).
 <signal name="VBUS">
 <contactref element="IC1" pad="26"/>
 <contactref element="R4" pad="2"/>
-<contactref element="R3" pad="1"/>
+<contactref element="R7" pad="1"/>
 <wire x1="12.25" y1="8.25" x2="12.25" y2="9.5" width="0.4" layer="1"/>
 <wire x1="14.25" y1="10" x2="13.25" y2="10" width="0.15" layer="1"/>
 <wire x1="13.25" y1="10" x2="13" y2="9.75" width="0.15" layer="1"/>
@@ -1246,15 +1256,15 @@ Covered vias can be set in Masks (Limit).
 <signal name="FORCE_BOOTLOADER">
 <contactref element="IC1" pad="25"/>
 <contactref element="BTN1" pad="1"/>
-<contactref element="R6" pad="1"/>
+<contactref element="R5" pad="1"/>
 <wire x1="14.25" y1="14" x2="13.25" y2="14" width="0.4" layer="1"/>
 <wire x1="14.25" y1="10.5" x2="14.25" y2="14" width="0.15" layer="1"/>
 </signal>
 <signal name="TARGET_POWER_ADC">
 <contactref element="IC1" pad="18"/>
 <contactref element="R8" pad="1"/>
-<contactref element="C12" pad="1"/>
-<contactref element="R7" pad="2"/>
+<contactref element="C6" pad="1"/>
+<contactref element="R6" pad="2"/>
 <wire x1="18.75" y1="12" x2="18.75" y2="14" width="0.2" layer="1"/>
 <wire x1="18.75" y1="14" x2="19.625" y2="14.875" width="0.2" layer="1"/>
 <wire x1="19.625" y1="14.875" x2="24.5" y2="14.875" width="0.2" layer="1"/>
@@ -1299,13 +1309,13 @@ Covered vias can be set in Masks (Limit).
 <contactref element="JTAG1" pad="10"/>
 <contactref element="IC2" pad="8"/>
 <wire x1="31.55" y1="9.625" x2="32.625" y2="9.625" width="0.15" layer="1"/>
-<wire x1="32.625" y1="9.625" x2="33.75" y2="10.5" width="0.15" layer="1"/>
-<wire x1="33.75" y1="10.5" x2="34.61" y2="10.5" width="0.15" layer="1"/>
+<wire x1="32.625" y1="9.625" x2="33.5" y2="10.5" width="0.15" layer="1"/>
+<wire x1="33.5" y1="10.5" x2="34.61" y2="10.5" width="0.15" layer="1"/>
 <wire x1="34.61" y1="10.5" x2="34.4" y2="10.54" width="0.15" layer="1"/>
 </signal>
 <signal name="LPC_XTAL2">
 <contactref element="Y1" pad="1"/>
-<contactref element="C11" pad="2"/>
+<contactref element="C8" pad="2"/>
 <contactref element="IC1" pad="6"/>
 <wire x1="22.75" y1="7.5" x2="23.5" y2="7.5" width="0.15" layer="1"/>
 <wire x1="23.5" y1="7.5" x2="24.125" y2="6.875" width="0.15" layer="1"/>
@@ -1319,14 +1329,14 @@ Covered vias can be set in Masks (Limit).
 </signal>
 <signal name="N$2">
 <contactref element="D2" pad="A"/>
-<contactref element="R9" pad="2"/>
+<contactref element="R10" pad="2"/>
 <wire x1="4.5" y1="12.75" x2="4.25" y2="12.75" width="0.2" layer="1"/>
 <wire x1="4.25" y1="12.75" x2="3.75" y2="13.25" width="0.2" layer="1"/>
 <wire x1="3.75" y1="13.25" x2="2.25" y2="13.25" width="0.2" layer="1"/>
 </signal>
 <signal name="N$4">
 <contactref element="D1" pad="A"/>
-<contactref element="R10" pad="2"/>
+<contactref element="R9" pad="2"/>
 <wire x1="4.5" y1="11.5" x2="4.25" y2="11.5" width="0.2" layer="1"/>
 <wire x1="4.25" y1="11.5" x2="3.5" y2="12.25" width="0.2" layer="1"/>
 <wire x1="3.5" y1="12.25" x2="2.25" y2="12.25" width="0.2" layer="1"/>
@@ -1341,6 +1351,9 @@ Covered vias can be set in Masks (Limit).
 <contactref element="D4" pad="A"/>
 <contactref element="R12" pad="2"/>
 <wire x1="4.5" y1="15.25" x2="2.25" y2="15.25" width="0.2" layer="1"/>
+</signal>
+<signal name="KEY">
+<wire x1="39.75" y1="9" x2="39.75" y2="7" width="0.2" layer="1"/>
 </signal>
 </signals>
 <errors>
