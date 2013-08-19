@@ -147,13 +147,13 @@ extern uint16_t led_idle_run;
 #define SET_IDLE_STATE(state)	{gpio_set_val(LED_PORT, led_idle_run, state);}
 
 #define PLATFORM_SET_FATAL_ERROR_RECOVERY()	{setjmp(fatal_error_jmpbuf);}
-#define PLATFORM_FATAL_ERROR(error)	{ 		\
+#define PLATFORM_FATAL_ERROR(error)	do { 		\
 	if(running_status) gdb_putpacketz("X1D");	\
 		else gdb_putpacketz("EFF");		\
 	running_status = 0;				\
 	target_list_free();				\
 	longjmp(fatal_error_jmpbuf, (error));		\
-}
+} while (0)
 
 int platform_init(void);
 void morse(const char *msg, char repeat);
