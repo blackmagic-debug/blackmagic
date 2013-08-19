@@ -6458,7 +6458,6 @@ package type OT</description>
 <part name="U$6" library="microbuilder_v3" deviceset="GND" device=""/>
 <part name="R4" library="microbuilder" deviceset="RESISTOR" device="0603MINI" value="10K"/>
 <part name="U$3" library="microbuilder_v3" deviceset="3.3V" device=""/>
-<part name="U$2" library="microbuilder_v3" deviceset="GND" device=""/>
 <part name="CN1" library="microbuilder_v3" deviceset="USB" device="MINIB"/>
 <part name="R1" library="microbuilder" deviceset="RESISTOR" device="0603MINI" value="22Ω"/>
 <part name="R2" library="microbuilder" deviceset="RESISTOR" device="0603MINI" value="22Ω"/>
@@ -6513,6 +6512,9 @@ package type OT</description>
 <part name="U$27" library="microbuilder" deviceset="GND" device=""/>
 <part name="U$28" library="microbuilder" deviceset="GND" device=""/>
 <part name="U$31" library="microbuilder_v3" deviceset="3.3V" device=""/>
+<part name="BTN2" library="omron" deviceset="SPST" device=".B3U-1000P(M)-B"/>
+<part name="R13" library="microbuilder" deviceset="RESISTOR" device="0603MINI" value="10K"/>
+<part name="U$2" library="microbuilder_v3" deviceset="3.3V" device=""/>
 </parts>
 <sheets>
 <sheet>
@@ -6534,7 +6536,6 @@ package type OT</description>
 <instance part="U$6" gate="G$1" x="241.3" y="134.62" rot="MR0"/>
 <instance part="R4" gate="G$1" x="101.6" y="48.26" rot="R90"/>
 <instance part="U$3" gate="G$1" x="30.48" y="139.7"/>
-<instance part="U$2" gate="G$1" x="30.48" y="104.14"/>
 <instance part="CN1" gate="G$1" x="198.12" y="101.6" rot="MR0"/>
 <instance part="R1" gate="G$1" x="170.18" y="104.14"/>
 <instance part="R2" gate="G$1" x="170.18" y="101.6"/>
@@ -6589,6 +6590,9 @@ package type OT</description>
 <instance part="U$27" gate="G$1" x="76.2" y="154.94"/>
 <instance part="U$28" gate="G$1" x="86.36" y="154.94"/>
 <instance part="U$31" gate="G$1" x="86.36" y="177.8"/>
+<instance part="BTN2" gate="G$1" x="20.32" y="119.38" rot="R90"/>
+<instance part="R13" gate="G$1" x="12.7" y="106.68"/>
+<instance part="U$2" gate="G$1" x="20.32" y="139.7"/>
 </instances>
 <busses>
 </busses>
@@ -6625,11 +6629,6 @@ package type OT</description>
 <pinref part="U$6" gate="G$1" pin="GND"/>
 <junction x="241.3" y="142.24"/>
 <junction x="241.3" y="147.32"/>
-</segment>
-<segment>
-<pinref part="IC1" gate="G$1" pin="BOOT0"/>
-<pinref part="U$2" gate="G$1" pin="GND"/>
-<wire x1="33.02" y1="106.68" x2="30.48" y2="106.68" width="0.1524" layer="91"/>
 </segment>
 <segment>
 <pinref part="CN1" gate="G$1" pin="ID"/>
@@ -6689,6 +6688,10 @@ package type OT</description>
 <pinref part="C7" gate="G$1" pin="1"/>
 <pinref part="C8" gate="G$1" pin="1"/>
 <pinref part="U$16" gate="G$1" pin="GND"/>
+<pinref part="R13" gate="G$1" pin="1"/>
+<wire x1="7.62" y1="106.68" x2="5.08" y2="106.68" width="0.1524" layer="91"/>
+<wire x1="5.08" y1="106.68" x2="5.08" y2="99.06" width="0.1524" layer="91"/>
+<junction x="5.08" y="99.06"/>
 </segment>
 <segment>
 <pinref part="JP1" gate="G$1" pin="4"/>
@@ -7027,6 +7030,11 @@ package type OT</description>
 <pinref part="U$31" gate="G$1" pin="3.3V"/>
 <wire x1="86.36" y1="170.18" x2="86.36" y2="175.26" width="0.1524" layer="91"/>
 </segment>
+<segment>
+<pinref part="U$2" gate="G$1" pin="3.3V"/>
+<pinref part="BTN2" gate="G$1" pin="2"/>
+<wire x1="20.32" y1="137.16" x2="20.32" y2="121.92" width="0.1524" layer="91"/>
+</segment>
 </net>
 <net name="D+" class="0">
 <segment>
@@ -7190,6 +7198,17 @@ package type OT</description>
 <pinref part="D4" gate="G$1" pin="A"/>
 <pinref part="R12" gate="G$1" pin="2"/>
 <wire x1="218.44" y1="53.34" x2="215.9" y2="53.34" width="0.1524" layer="91"/>
+</segment>
+</net>
+<net name="BOOT0" class="0">
+<segment>
+<pinref part="IC1" gate="G$1" pin="BOOT0"/>
+<pinref part="R13" gate="G$1" pin="2"/>
+<wire x1="17.78" y1="106.68" x2="20.32" y2="106.68" width="0.1524" layer="91"/>
+<pinref part="BTN2" gate="G$1" pin="1"/>
+<wire x1="20.32" y1="106.68" x2="33.02" y2="106.68" width="0.1524" layer="91"/>
+<wire x1="20.32" y1="116.84" x2="20.32" y2="106.68" width="0.1524" layer="91"/>
+<junction x="20.32" y="106.68"/>
 </segment>
 </net>
 </nets>
