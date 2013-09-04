@@ -19,7 +19,7 @@ possible, but also has several diferences.
 
 ### Uses 0603 [1608 Metric] components
 
-Makes reflow soldering much easier.
+The layout is intended for reflow soldering.
 
 ### Includes Level Translator
 
@@ -38,7 +38,7 @@ header. The hole centres are
 As well as the standard button for entering USB DFU mode, this variant
 also provides a button for pulling the BOOT0 pin high to activate the
 STM32 SystemMemory bootloader. Hold this button when plugging in the
-module to enter bootloader mode where
+module to enter then bootloader mode. Then
 [scripts/bootprog.py](scripts/bootprog.py) can be used to program and
 reprogram the chip over the USART1 interface.
 
@@ -59,6 +59,8 @@ August 2013)
 
 ## Assembly Photos
 
+Blank PCB:
 ![PCB Front Side](blackmagic_richardeoin_pcb_front.JPG "PCB Front Side")
 ![PCB Reverse Side](blackmagic_richardeoin_pcb_reverse.JPG "PCB Reverse Side")
+Solder Paste Stencil:
 ![PCB Stencil](blackmagic_richardeoin_stencil.JPG "PCB Stencil")
