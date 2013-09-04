@@ -36,16 +36,22 @@ header. The hole centres are
 
 As well as the standard button for entering USB DFU mode, this variant
 also provides a button for pulling the BOOT0 pin high to activate the
-STM32 SystemMemory bootloeader. This means that /scripts/bootprog.py
-can be used to program and reprogram the chip over the USART1
-interface.
+STM32 SystemMemory bootloader. Hold this button when plugging in the
+module to enter bootloader mode where
+[scripts/bootprog.py](scripts/bootprog.py) can be used to program and
+reprogram the chip over the USART1 interface.
+
+This is useful for programming a brand new or 'bricked' blackmagic
+with the DFU firmware (src/blackmagic_dfu.bin), the standard DFU mode
+should be used for regualar firmware updates.
 
 ## Parts and Costings
 
 * [Parts List](Parts.md)
 
 Parts Cost (Approximate): £14 + VAT
-([uk.farnell.com](http://uk.farnell.com) August 2013) Programming
-Cable: £8.49 + VAT
+([uk.farnell.com](http://uk.farnell.com) August 2013)
+
+Programming Cable: £8.49 + VAT
 ([uk.farnell.com](http://uk.farnell.com/samtec/ffsd-05-d-06-00-01-n/ribbon-cable-idc-152-4mm-grey-10way/dp/1667659)
 August 2013)
