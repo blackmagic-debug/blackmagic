@@ -61,8 +61,11 @@ August 2013)
 
 ## Assembly Photos
 
-Blank PCB:
+### Blank PCB:
+
 ![PCB Front Side](blackmagic_richardeoin_pcb_front.JPG "PCB Front Side")
 ![PCB Reverse Side](blackmagic_richardeoin_pcb_reverse.JPG "PCB Reverse Side")
-Solder Paste Stencil:
+
+### Solder Paste Stencil:
+
 ![PCB Stencil](blackmagic_richardeoin_stencil.JPG "PCB Stencil")
