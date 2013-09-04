@@ -3,7 +3,7 @@ possible, but also has several diferences.
 
 ![Blackmagic richardeoin PCB](blackmagic_richardeoin_board.png
  "Blackmagic richardeoin PCB")
-![Blackmagic richardeoin Assembled](blackmagic_richardeoin_assembed.JPG "Blackmagic richardeoin Assembled")
+![Blackmagic richardeoin Assembled](blackmagic_richardeoin_assembled.JPG "Blackmagic richardeoin Assembled")
 
 ## Details
 
