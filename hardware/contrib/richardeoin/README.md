@@ -1,9 +1,11 @@
 This variant attempts to be as faithful to the Blackmagic mini as
-possible, but also has several diferences.
+possible, but also has several differences. This board has been built
+and functions.
 
 ![Blackmagic richardeoin PCB](blackmagic_richardeoin_board.png
  "Blackmagic richardeoin PCB")
-![Blackmagic richardeoin Assembled](blackmagic_richardeoin_assembled.JPG "Blackmagic richardeoin Assembled")
+![Blackmagic richardeoin Assembled](blackmagic_richardeoin_assembled.JPG
+ "Blackmagic richardeoin Assembled")
 
 ## Details
 
@@ -44,7 +46,7 @@ reprogram the chip over the USART1 interface.
 
 This is useful for programming a brand new or 'bricked' blackmagic
 with the DFU firmware (src/blackmagic_dfu.bin), the standard DFU mode
-should be used for regualar firmware updates.
+should be used for regular firmware updates.
 
 ## Parts and Costings
 
