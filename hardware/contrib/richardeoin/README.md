@@ -3,6 +3,7 @@ possible, but also has several diferences.
 
 ![Blackmagic richardeoin PCB](blackmagic_richardeoin_board.png
  "Blackmagic richardeoin PCB")
+![Blackmagic richardeoin Assembled](blackmagic_richardeoin_assembed.JPG "Blackmagic richardeoin Assembled")
 
 ## Details
 
@@ -55,3 +56,9 @@ Parts Cost (Approximate): £14 + VAT
 Programming Cable: £8.49 + VAT
 ([uk.farnell.com](http://uk.farnell.com/samtec/ffsd-05-d-06-00-01-n/ribbon-cable-idc-152-4mm-grey-10way/dp/1667659)
 August 2013)
+
+## Assembly Photos
+
+![PCB Front Side](blackmagic_richardeoin_pcb_front.JPG "PCB Front Side")
+![PCB Reverse Side](blackmagic_richardeoin_pcb_reverse.JPG "PCB Reverse Side")
+![PCB Stencil](blackmagic_richardeoin_stencil.JPG "PCB Stencil")
