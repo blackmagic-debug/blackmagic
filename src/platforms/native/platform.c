@@ -104,6 +104,15 @@ int platform_init(void)
 			GPIO_CNF_OUTPUT_PUSHPULL,
 			SRST_PIN);
 
+        /* Enable internal pull-up on PWR_BR so that we don't drive
+           TPWR locally or inadvertently supply power to the target. */
+        if (platform_hwversion () > 0) {
+          gpio_set (PWR_BR_PORT, PWR_BR_PIN);
+          gpio_set_mode(PWR_BR_PORT, GPIO_MODE_INPUT,
+                        GPIO_CNF_INPUT_PULL_UPDOWN,
+                        PWR_BR_PIN);
+        }
+
 	/* Setup heartbeat timer */
 	systick_set_clocksource(STK_CTRL_CLKSOURCE_AHB_DIV8);
 	systick_set_reload(900000);	/* Interrupt us at 10 Hz */
