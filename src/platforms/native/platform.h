@@ -51,7 +51,8 @@ extern usbd_device *usbdev;
  * LED2 = 	PB11	(Red LED    : Error)
  *
  * TPWR = 	RB0 (input) -- analogue on mini design ADC1, ch8
- * nTRST = 	PB1
+ * nTRST = 	PB1 [blackmagic]
+ * PWR_BR = 	PB1 [blackmagic_mini] -- supply power to the target, active low
  * SRST_OUT = 	PA2
  * TDI = 	PA3
  * TMS = 	PA4 (input for SWDP)
@@ -83,6 +84,8 @@ extern usbd_device *usbdev;
 
 #define TRST_PORT	GPIOB
 #define TRST_PIN	GPIO1
+#define PWR_BR_PORT	GPIOB
+#define PWR_BR_PIN	GPIO1
 #define SRST_PORT	GPIOA
 #define SRST_PIN	GPIO2
 
