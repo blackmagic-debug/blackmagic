@@ -216,13 +216,18 @@ lpc11xx_flash_write(struct target_s *target, uint32_t dest, const uint8_t *src, 
 			chunk_offset = 0;
 
 			/* if we are programming the vectors, calculate the magic number */
-			if (chunk == 0) {
+			if (dest == 0) {
 				uint32_t *w = (uint32_t *)(&flash_pgm.data[0]);
 				uint32_t sum = 0;
 
-				for (unsigned i = 0; i < 7; i++)
-					sum += w[i];
-				w[7] = 0 - sum;
+				if (copylen >= 7) {
+					for (unsigned i = 0; i < 7; i++)
+						sum += w[i];
+					w[7] = 0 - sum;
+				} else {
+					/* We can't possibly calculate the magic number */
+					return -1;
+				}
 			}
 
 		} else {
