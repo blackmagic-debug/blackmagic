@@ -26,8 +26,11 @@
 #include "target.h"
 
 #define ARM_CPUID		0xE000ED00
+#define DBGMCU_IDCODE		0xE0042000
 #define MEMMAP			0x400FC040
 #define ARM_THUMB_BREAKPOINT	0xBE00
+
+#define CORTEX_M3_CPUID		0x412FC230	// Cortex-M3 r2p0
 
 #define R_MSP			17	// Main stack pointer register number
 #define R_PC			15	// Program counter register number
@@ -142,40 +145,60 @@ bool
 lpc17xx_probe(struct target_s *target)
 {
 	struct flash_program flash_pgm;
-	uint32_t idcode;
+	uint32_t cpuid, idcode;
+		
+	cpuid = adiv5_ap_mem_read(adiv5_target_ap(target), ARM_CPUID);
 
-	/* Read the Part ID */
-	memset(&flash_pgm.p, 0, sizeof(flash_pgm.p));
-	flash_pgm.p.command = IAP_CMD_PREPARE;
-	flash_pgm.p.result[0] = IAP_STATUS_CMD_SUCCESS;
-//	lpc17xx_iap_call(target, &flash_pgm.p, sizeof(flash_pgm.p));
-//	if (flash_pgm.p.result[0] != IAP_STATUS_CMD_SUCCESS) {
-//		return false;
-//	}
+	/* Ignore the cortex-m3 version */
+	if ((cpuid & 0xFF00FFF0) == (CORTEX_M3_CPUID & 0xFF00FFF0)) {
+	  
+		/* TODO: Check the IDCODE is lpc17xx: 0x4BA00477 */
+	  
+		/* 
+		 * Now that we're sure it's a cortex-m3, we need to
+		 * halt the target and make an IAP call to get the
+		 * part number. There appears to no other method of
+		 * reading the part number.
+		 */
+		target_halt_request(target);
 
-//	switch (flash_pgm.p.result[1]) {
-//		case 0x26113F37: /* LPC1769 */
-//		case 0x26013F37: /* LPC1768 */
-//		case 0x26012837: /* LPC1767 */
-//		case 0x26013F33: /* LPC1766 */
-//		case 0x26013733: /* LPC1765 */
-//		case 0x26011922: /* LPC1764 */
-//		case 0x25113737: /* LPC1759 */
-//		case 0x25013F37: /* LPC1758 */
-//		case 0x25011723: /* LPC1756 */
-//		case 0x25011722: /* LPC1754 */
-//		case 0x25001121: /* LPC1752 */
-//		case 0x25001118: /* LPC1751 */
-//		case 0x25001110: /* LPC1751 (No CRP) */
+		/* Read the Part ID */
+		memset(&flash_pgm.p, 0, sizeof(flash_pgm.p));
+		flash_pgm.p.command = IAP_CMD_PARTID;
+		flash_pgm.p.result[0] = IAP_STATUS_CMD_SUCCESS;
+		lpc17xx_iap_call(target, &flash_pgm.p, sizeof(flash_pgm.p));
 
-			target->driver = "LPC17xx";
-			target->xml_mem_map = lpc17xx_xml_memory_map;
-			target->flash_erase = lpc17xx_flash_erase;
-			target->flash_write = lpc17xx_flash_write;
-			target_add_commands(target, lpc17xx_cmd_list, "LPC17xx");
+		target_reset(target);
+//		target_halt_resume(target, 0);
 
-			return true;
-//	}
+		if (flash_pgm.p.result[0] != IAP_STATUS_CMD_SUCCESS) {
+			return false;
+		}
+
+		switch (flash_pgm.p.result[1]) {
+			case 0x26113F37: /* LPC1769 */
+			case 0x26013F37: /* LPC1768 */
+			case 0x26012837: /* LPC1767 */
+			case 0x26013F33: /* LPC1766 */
+			case 0x26013733: /* LPC1765 */
+			case 0x26011922: /* LPC1764 */
+			case 0x25113737: /* LPC1759 */
+			case 0x25013F37: /* LPC1758 */
+			case 0x25011723: /* LPC1756 */
+			case 0x25011722: /* LPC1754 */
+			case 0x25001121: /* LPC1752 */
+			case 0x25001118: /* LPC1751 */
+			case 0x25001110: /* LPC1751 (No CRP) */
+
+				target->driver = "LPC17xx";
+				target->xml_mem_map = lpc17xx_xml_memory_map;
+				target->flash_erase = lpc17xx_flash_erase;
+				target->flash_write = lpc17xx_flash_write;
+				target_add_commands(target, lpc17xx_cmd_list, "LPC17xx");
+
+				return true;
+		}
+	}
 
 	return false;
 }
