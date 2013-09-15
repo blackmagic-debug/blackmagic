@@ -989,6 +989,9 @@ static int cortexm_hostio_request(target *t)
 		gdb_putpacket_f("Fwrite,%08X,%08X,%08X",
 				params[0] - 1, params[1], params[2]);
 		break;
+	case SYS_WRITEC: /* writec */
+		gdb_putpacket_f("Fwrite,2,%08X,1", arm_regs[1]);
+		break;
 	case SYS_ISTTY:	/* isatty */
 		gdb_putpacket_f("Fisatty,%08X", params[0] - 1);
 		break;
