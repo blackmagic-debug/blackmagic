@@ -11,4 +11,5 @@ mapfile
 *.pyc
 tags
 .gdbinit
-
+*.s#*
+*.b#*
