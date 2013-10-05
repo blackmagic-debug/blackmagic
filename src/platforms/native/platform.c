@@ -98,10 +98,15 @@ int platform_init(void)
 	 * to release the device from reset if this floats. */
 	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
 			GPIO_CNF_OUTPUT_PUSHPULL, GPIO7);
-	/* Enable SRST output */
-	gpio_set_val(SRST_PORT, SRST_PIN, platform_hwversion() > 0);
+	/* Enable SRST output. Original uses a NPN to pull down, so setting the
+	 * output HIGH asserts. Mini is directly connected so use open drain output
+	 * and set LOW to assert.
+	 */
+	platform_srst_set_val(false);
 	gpio_set_mode(SRST_PORT, GPIO_MODE_OUTPUT_50_MHZ,
-			GPIO_CNF_OUTPUT_PUSHPULL,
+			(platform_hwversion() == 0
+				? GPIO_CNF_OUTPUT_PUSHPULL
+				: GPIO_CNF_OUTPUT_OPENDRAIN),
 			SRST_PIN);
 
         /* Enable internal pull-up on PWR_BR so that we don't drive
