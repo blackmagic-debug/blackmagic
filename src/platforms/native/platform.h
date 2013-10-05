@@ -217,3 +217,4 @@ static inline u16 _gpio_get(u32 gpioport, u16 gpios)
 #define disconnect_usb() gpio_set_mode(USB_PU_PORT, GPIO_MODE_INPUT, 0, USB_PU_PIN);
 void assert_boot_pin(void);
 void setup_vbus_irq(void);
+void platform_srst_set_val(bool assert);
