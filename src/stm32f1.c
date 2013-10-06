@@ -324,16 +324,48 @@ static bool stm32f1_option_erase(target *t)
 	return true;
 }
 
-static bool stm32f1_option_write(target *t, uint32_t addr, uint16_t value)
+static bool stm32f1_option_write_erased(target *t, uint32_t addr, uint16_t value)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(t);
 
+	if (value == 0xffff)
+		return true;
 	/* Erase option bytes instruction */
 	adiv5_ap_mem_write(ap, FLASH_CR, FLASH_CR_OPTPG | FLASH_CR_OPTWRE);
 	adiv5_ap_mem_write_halfword(ap, addr, value);
 	/* Read FLASH_SR to poll for BSY bit */
 	while(adiv5_ap_mem_read(ap, FLASH_SR) & FLASH_SR_BSY)
 		if(target_check_error(t))
+			return false;
+	return true;
+}
+
+static bool stm32f1_option_write(target *t, uint32_t addr, uint16_t value)
+{
+	ADIv5_AP_t *ap = adiv5_target_ap(t);
+	uint16_t opt_val[8];
+	int i, index;
+
+	index = (addr - FLASH_OBP_RDP) / 2;
+	if ((index < 0) || (index > 7))
+		 return false;
+	/* Retrieve old values */
+	for (i = 0; i < 16; i = i +4) {
+		 uint32_t val = adiv5_ap_mem_read(ap, FLASH_OBP_RDP + i);
+		 opt_val[i/2] = val & 0xffff;
+		 opt_val[i/2 +1] = val >> 16;
+	}
+	if (opt_val[index] == value)
+		return true;
+	/* Check for erased value */
+	if (opt_val[index] != 0xffff)
+		if (!(stm32f1_option_erase(t)))
+			return false;
+	opt_val[index] = value;
+	/* Write changed values*/
+	for (i = 0; i < 8; i++)
+		if (!(stm32f1_option_write_erased
+			(t, FLASH_OBP_RDP + i*2,opt_val[i])))
 			return false;
 	return true;
 }
@@ -353,14 +385,14 @@ static bool stm32f1_cmd_option(target *t, int argc, char *argv[])
 		break;
 	default: flash_obp_rdp_key = FLASH_OBP_RDP_KEY;
 	}
-        rdprt = (adiv5_ap_mem_read(ap, FLASH_OBR) & FLASH_OBR_RDPRT);
+	rdprt = (adiv5_ap_mem_read(ap, FLASH_OBR) & FLASH_OBR_RDPRT);
 	stm32f1_flash_unlock(ap);
 	adiv5_ap_mem_write(ap, FLASH_OPTKEYR, KEY1);
 	adiv5_ap_mem_write(ap, FLASH_OPTKEYR, KEY2);
 
 	if ((argc == 2) && !strcmp(argv[1], "erase")) {
 		stm32f1_option_erase(t);
-		stm32f1_option_write(t, FLASH_OBP_RDP, flash_obp_rdp_key);
+		stm32f1_option_write_erased(t, FLASH_OBP_RDP, flash_obp_rdp_key);
 	} else if (rdprt) {
 		gdb_out("Device is Read Protected\n");
 		gdb_out("Use \"monitor option erase\" to unprotect, erasing device\n");
