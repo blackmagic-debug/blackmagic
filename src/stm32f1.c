@@ -101,6 +101,8 @@ static const char stm32hd_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 #define FLASH_CR_MER	(1 << 2)
 #define FLASH_CR_PER	(1 << 1)
 
+#define FLASH_OBR_RDPRT (1 << 1)
+
 #define FLASH_SR_BSY	(1 << 0)
 
 #define FLASH_OBP_RDP 0x1FFFF800
@@ -341,6 +343,7 @@ static bool stm32f1_cmd_option(target *t, int argc, char *argv[])
 	uint32_t addr, val;
 	uint32_t flash_obp_rdp_key;
 	ADIv5_AP_t *ap = adiv5_target_ap(t);
+	uint32_t rdprt;
 
 	switch(t->idcode) {
 	case 0x422:  /* STM32F30x */
@@ -350,6 +353,7 @@ static bool stm32f1_cmd_option(target *t, int argc, char *argv[])
 		break;
 	default: flash_obp_rdp_key = FLASH_OBP_RDP_KEY;
 	}
+        rdprt = (adiv5_ap_mem_read(ap, FLASH_OBR) & FLASH_OBR_RDPRT);
 	stm32f1_flash_unlock(ap);
 	adiv5_ap_mem_write(ap, FLASH_OPTKEYR, KEY1);
 	adiv5_ap_mem_write(ap, FLASH_OPTKEYR, KEY2);
@@ -357,6 +361,10 @@ static bool stm32f1_cmd_option(target *t, int argc, char *argv[])
 	if ((argc == 2) && !strcmp(argv[1], "erase")) {
 		stm32f1_option_erase(t);
 		stm32f1_option_write(t, FLASH_OBP_RDP, flash_obp_rdp_key);
+	} else if (rdprt) {
+		gdb_out("Device is Read Protected\n");
+		gdb_out("Use \"monitor option erase\" to unprotect, erasing device\n");
+		return true;
 	} else if (argc == 3) {
 		addr = strtol(argv[1], NULL, 0);
 		val = strtol(argv[2], NULL, 0);
