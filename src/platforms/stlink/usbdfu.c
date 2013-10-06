@@ -40,13 +40,13 @@ static int stlink_test_nrst(void)
 	 *  11 for ST-Link V1, e.g. on VL Discovery, tag as rev 0
 	 *  10 for ST-Link V2, e.g. on F4 Discovery, tag as rev 1
 	 */
-	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPCEN);
-	gpio_set_mode(GPIOC, GPIO_MODE_INPUT,
-			GPIO_CNF_INPUT_PULL_UPDOWN, GPIO14 | GPIO13);
-	gpio_set(GPIOC, GPIO14 | GPIO13);
-	for (i = 0; i < 100; i++)
-		rev = (~(gpio_get(GPIOC, GPIO14 | GPIO13)) >> 13) & 3;
-
+	for (i = 0; i < 0x200; i++) {
+            rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPCEN);
+            gpio_set_mode(GPIOC, GPIO_MODE_INPUT,
+                          GPIO_CNF_INPUT_PULL_UPDOWN, GPIO14 | GPIO13);
+            gpio_set(GPIOC, GPIO14 | GPIO13);
+            rev = (~(gpio_get(GPIOC, GPIO14 | GPIO13)) >> 13) & 3;
+        }
 	switch (rev) {
 	case 0:
 		pin = GPIO1;
