@@ -170,6 +170,7 @@ bool stm32f4_probe(struct target_s *target)
 	switch(idcode & 0xFFF) {
 	case 0x411: /* Documented to be 0x413! This is what I read... */
 	case 0x413:
+	case 0x423: /* F401 */
 	case 0x419: /* 427/437 */
 		target->driver = stm32f4_driver_str;
 		target->xml_mem_map = stm32f4_xml_memory_map;
