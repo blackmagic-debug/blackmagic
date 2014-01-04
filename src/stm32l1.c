@@ -92,7 +92,8 @@ bool stm32l1_probe(struct target_s *target)
 	idcode = adiv5_ap_mem_read(adiv5_target_ap(target), STM32L1_DBGMCU_IDCODE);
 	switch(idcode & 0xFFF) {
 	case 0x416:  /* Medium density */
-	case 0x436:  /* High density */
+	case 0x427:  /* Medium+ density*/
+	case 0x436:  /* Medium+/High density */
 		target->driver = stm32l1_driver_str;
 		target->xml_mem_map = stm32l1_xml_memory_map;
 		target->flash_erase = stm32l1_flash_erase;
