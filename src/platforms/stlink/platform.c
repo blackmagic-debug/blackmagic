@@ -22,13 +22,13 @@
  * implementation.
  */
 
-#include <libopencm3/stm32/f1/rcc.h>
+#include <libopencm3/stm32/rcc.h>
 #include <libopencm3/cm3/systick.h>
 #include <libopencm3/cm3/scb.h>
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/stm32/usart.h>
 #include <libopencm3/usb/usbd.h>
-#include <libopencm3/stm32/f1/adc.h>
+#include <libopencm3/stm32/adc.h>
 
 #include "platform.h"
 #include "jtag_scan.h"
@@ -108,7 +108,7 @@ int platform_init(void)
 			GPIO_CNF_OUTPUT_PUSHPULL, led_idle_run);
 
 	/* Setup heartbeat timer */
-	systick_set_clocksource(STK_CTRL_CLKSOURCE_AHB_DIV8);
+	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
 	systick_set_reload(900000);	/* Interrupt us at 10 Hz */
 	SCB_SHPR(11) &= ~((15 << 4) & 0xff);
 	SCB_SHPR(11) |= ((14 << 4) & 0xff);
