@@ -25,6 +25,8 @@
 
 #include "usbdfu.h"
 
+uint32_t app_address = 0x08002000;
+
 void dfu_detach(void)
 {
         /* USB device must detach, we just reset... */
@@ -38,7 +40,7 @@ int main(void)
 	if(gpio_get(GPIOB, GPIO12))
 		dfu_jump_app_if_valid();
 
-	dfu_protect_enable();
+	dfu_protect(DFU_MODE);
 
 	rcc_clock_setup_in_hse_8mhz_out_72mhz();
 	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
@@ -56,7 +58,7 @@ int main(void)
 	gpio_set_mode(GPIOB, GPIO_MODE_INPUT,
 			GPIO_CNF_INPUT_FLOAT, GPIO2 | GPIO10);
 
-	dfu_init(&stm32f103_usb_driver);
+	dfu_init(&stm32f103_usb_driver, DFU_MODE);
 
 	gpio_set(GPIOA, GPIO8);
 	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,

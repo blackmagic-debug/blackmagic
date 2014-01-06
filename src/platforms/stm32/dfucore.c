@@ -121,6 +121,14 @@ static const char *usb_strings[] = {
 	DFU_IFACE_STRING,
 };
 
+static const char *usb_strings_upd[] = {
+	"Black Sphere Technologies",
+	BOARD_IDENT_UPD,
+	serial_no,
+	/* This string is used by ST Microelectronics' DfuSe utility */
+	UPD_IFACE_STRING,
+};
+
 static uint32_t get_le32(const void *vp)
 {
 	const uint8_t *p = vp;
@@ -158,8 +166,8 @@ usbdfu_getstatus_complete(usbd_device *dev, struct usb_setup_data *req)
 		flash_unlock();
 		if(prog.blocknum == 0) {
 			uint32_t addr = get_le32(prog.buf + 1);
-			if (addr < APP_ADDRESS ||
-			    (addr >= max_address)) {
+			if (addr < app_address ||
+                             (addr >= max_address)) {
 				flash_lock();
 				usbd_ep_stall_set(dev, 0, 1);
 				return;
@@ -251,11 +259,12 @@ static int usbdfu_control_request(usbd_device *dev,
 	return 0;
 }
 
-void dfu_init(const usbd_driver *driver)
+void dfu_init(const usbd_driver *driver, dfu_mode_t mode)
 {
 	get_dev_unique_id(serial_no);
 
-	usbdev = usbd_init(driver, &dev, &config, usb_strings, 4, 
+	usbdev = usbd_init(driver, &dev, &config,
+			   (mode == DFU_MODE)?usb_strings:usb_strings_upd, 4,
 			   usbd_control_buffer, sizeof(usbd_control_buffer));
 
 	usbd_register_control_callback(usbdev,

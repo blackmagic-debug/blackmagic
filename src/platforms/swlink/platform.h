@@ -36,8 +36,10 @@
 #define CDCACM_PACKET_SIZE 	64
 #define BOARD_IDENT             "Black Magic Probe (SWLINK), (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")"
 #define BOARD_IDENT_DFU		"Black Magic (Upgrade), STM8S Discovery, (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")"
+#define BOARD_IDENT_UPD		"Black Magic (DFU Upgrade), STM8S Discovery, (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")"
 #define DFU_IDENT               "Black Magic Firmware Upgrade (SWLINK)"
 #define DFU_IFACE_STRING	"@Internal Flash   /0x08000000/8*001Ka,56*001Kg"
+#define UPD_IFACE_STRING	"@Internal Flash   /0x08000000/8*001Kg"
 
 extern usbd_device *usbdev;
 #define CDCACM_GDB_ENDPOINT	1

@@ -1,8 +1,8 @@
 blackmagic
-blackmagic.bin
+*.bin
+*.hex
 blackmagic_dfu
-blackmagic_dfu.bin
-blackmagic_dfu.hex
+dfu_upgrade
 mapfile
 *.o
 *.d
