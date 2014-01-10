@@ -114,6 +114,7 @@ struct flash_program {
 };
 
 static bool lpc43xx_cmd_erase(target *t);
+static bool lpc43xx_cmd_mkboot(target *target, int argc, const char *argv[]);
 static int lpc43xx_flash_init(struct target_s *target);
 static void lpc43xx_iap_call(struct target_s *target, struct flash_param *param, unsigned param_len);
 static int lpc43xx_flash_prepare(struct target_s *target, uint32_t addr, int len);
@@ -122,6 +123,7 @@ static int lpc43xx_flash_write(struct target_s *target, uint32_t dest, const uin
 
 const struct command_s lpc43xx_cmd_list[] = {
 	{"erase_mass", (cmd_handler)lpc43xx_cmd_erase, "Erase entire flash memory"},
+	{"mkboot", lpc43xx_cmd_mkboot, "Make flash bank bootable"},
 	{NULL, NULL, NULL}
 };
 
@@ -467,21 +469,56 @@ static int lpc43xx_flash_write(struct target_s *target, uint32_t dest, const uin
 		if (flash_pgm.p.result[0] != IAP_STATUS_CMD_SUCCESS) {
 			return -1;
 		}
-
-		/* special command to compute/write magic vector for signature */
-		if (chunk == first_chunk)
-		{
-			flash_pgm.p.command = IAP_CMD_SET_ACTIVE_BANK;
-			flash_pgm.p.params.make_active.flash_bank = flash_bank(dest);
-			flash_pgm.p.params.make_active.cpu_clk_khz = CPU_CLK_KHZ;
-			flash_pgm.p.result[0] = IAP_STATUS_CMD_SUCCESS;
-			lpc43xx_iap_call(target, &flash_pgm.p, sizeof(flash_pgm));
-			if (flash_pgm.p.result[0] != IAP_STATUS_CMD_SUCCESS) {
-				return -1;
-			}
-		}
-
 	}
 
 	return 0;
 }
+
+/* 
+ * Call Boot ROM code to make a flash bank bootable by computing and writing the
+ * correct signature into the exception table near the start of the bank.
+ *
+ * This is done indepently of writing to give the user a chance to verify flash
+ * before changing it.
+ */
+static bool lpc43xx_cmd_mkboot(target *target, int argc, const char *argv[])
+{
+	/* Usage: mkboot 0 or mkboot 1 */
+	if (argc == 2)
+	{
+		const long int bank = strtol(argv[1], NULL, 0);
+
+		if (bank == 0 || bank == 1)
+		{
+			lpc43xx_flash_init(target);
+			struct flash_program flash_pgm;
+
+			/* special command to compute/write magic vector for signature */
+			flash_pgm.p.command = IAP_CMD_SET_ACTIVE_BANK;
+			flash_pgm.p.params.make_active.flash_bank = bank;
+			flash_pgm.p.params.make_active.cpu_clk_khz = CPU_CLK_KHZ;
+			flash_pgm.p.result[0] = IAP_STATUS_CMD_SUCCESS;
+			lpc43xx_iap_call(target, &flash_pgm.p, sizeof(flash_pgm));
+			if (flash_pgm.p.result[0] == IAP_STATUS_CMD_SUCCESS) {
+				gdb_outf("Set bootable OK.\n");
+				return true;
+			}
+			else
+			{
+				gdb_outf("Set bootable failed.\n");
+			}
+		}
+		else
+		{
+			gdb_outf("Unexpected bank number, should be 0 or 1.\n");
+		}
+	}
+	else
+	{
+		gdb_outf("Expected bank argument 0 or 1.\n");
+	}
+
+
+	return false;
+}
+
