@@ -113,7 +113,7 @@ struct flash_program {
 	uint8_t	data[IAP_PGM_CHUNKSIZE];
 };
 
-static bool lpc43xx_cmd_erase(target *t);
+static bool lpc43xx_cmd_erase(target *target, int argc, const char *argv[]);
 static bool lpc43xx_cmd_reset(target *target, int argc, const char *argv[]);
 static bool lpc43xx_cmd_mkboot(target *target, int argc, const char *argv[]);
 static int lpc43xx_flash_init(struct target_s *target);
@@ -123,7 +123,7 @@ static int lpc43xx_flash_erase(struct target_s *target, uint32_t addr, int len);
 static int lpc43xx_flash_write(struct target_s *target, uint32_t dest, const uint8_t *src, int len);
 
 const struct command_s lpc43xx_cmd_list[] = {
-	{"erase_mass", (cmd_handler)lpc43xx_cmd_erase, "Erase entire flash memory"},
+	{"erase_mass", lpc43xx_cmd_erase, "Erase entire flash memory"},
 	{"reset", lpc43xx_cmd_reset, "Reset target"},
 	{"mkboot", lpc43xx_cmd_mkboot, "Make flash bank bootable"},
 	{NULL, NULL, NULL}
@@ -214,7 +214,7 @@ static bool lpc43xx_cmd_reset(target *target, int __attribute__((unused)) argc, 
 	return true;
 }
 
-static bool lpc43xx_cmd_erase(target *target)
+static bool lpc43xx_cmd_erase(target *target, int __attribute__((unused)) argc, const char __attribute__((unused)) *argv[])
 {
 	uint32_t bank = 0;
 	struct flash_program flash_pgm;
