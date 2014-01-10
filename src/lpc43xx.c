@@ -431,12 +431,20 @@ static int lpc43xx_flash_write(struct target_s *target, uint32_t dest, const uin
 {
 	unsigned first_chunk = dest / IAP_PGM_CHUNKSIZE;
 	unsigned last_chunk = (dest + len - 1) / IAP_PGM_CHUNKSIZE;
-	unsigned chunk_offset = dest % IAP_PGM_CHUNKSIZE;
+	unsigned chunk_offset;
 	unsigned chunk;
 	struct flash_program flash_pgm;
 
 	for (chunk = first_chunk; chunk <= last_chunk; chunk++)
 	{
+		if (chunk == first_chunk)
+		{
+			chunk_offset = dest % IAP_PGM_CHUNKSIZE;
+		}
+		else
+		{
+			chunk_offset = 0;
+		}
 
 		/* first and last chunk may require special handling */
 		if ((chunk == first_chunk) || (chunk == last_chunk)) {
@@ -454,7 +462,6 @@ static int lpc43xx_flash_write(struct target_s *target, uint32_t dest, const uin
 			/* update to suit */
 			len -= copylen;
 			src += copylen;
-			chunk_offset = 0;
 		} else {
 
 			/* interior chunk, must be aligned and full-sized */
