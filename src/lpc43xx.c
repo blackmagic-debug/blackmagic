@@ -121,6 +121,7 @@ static void lpc43xx_iap_call(struct target_s *target, struct flash_param *param,
 static int lpc43xx_flash_prepare(struct target_s *target, uint32_t addr, int len);
 static int lpc43xx_flash_erase(struct target_s *target, uint32_t addr, int len);
 static int lpc43xx_flash_write(struct target_s *target, uint32_t dest, const uint8_t *src, int len);
+static void lpc43xx_set_internal_clock(struct target_s *target);
 
 const struct command_s lpc43xx_cmd_list[] = {
 	{"erase_mass", lpc43xx_cmd_erase, "Erase entire flash memory"},
@@ -254,6 +255,9 @@ static bool lpc43xx_cmd_erase(target *target, int __attribute__((unused)) argc, 
 static int lpc43xx_flash_init(struct target_s *target)
 {
 	struct flash_program flash_pgm;
+
+	/* Force internal clock */
+	lpc43xx_set_internal_clock(target);
 
 	/* Initialize flash IAP */
 	flash_pgm.p.command = IAP_CMD_INIT;
@@ -425,6 +429,12 @@ lpc43xx_flash_erase(struct target_s *target, uint32_t addr, int len)
 	}
 
 	return 0;
+}
+
+static void lpc43xx_set_internal_clock(struct target_s *target)
+{
+	const uint32_t val2 = (1 << 11) | (1 << 24);
+	target_mem_write_words(target, 0x40050000 + 0x06C, &val2, sizeof(val2));
 }
 
 static int lpc43xx_flash_write(struct target_s *target, uint32_t dest, const uint8_t *src, int len)
