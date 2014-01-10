@@ -106,7 +106,7 @@ struct flash_param {
 		} make_active;
 	} params;
 	uint32_t	result[5];	/* result data */
-};
+} __attribute__((aligned(4)));
 
 struct flash_program {
 	struct	flash_param	p;
