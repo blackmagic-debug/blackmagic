@@ -114,6 +114,7 @@ struct flash_program {
 };
 
 static bool lpc43xx_cmd_erase(target *t);
+static bool lpc43xx_cmd_reset(target *target, int argc, const char *argv[]);
 static bool lpc43xx_cmd_mkboot(target *target, int argc, const char *argv[]);
 static int lpc43xx_flash_init(struct target_s *target);
 static void lpc43xx_iap_call(struct target_s *target, struct flash_param *param, unsigned param_len);
@@ -123,6 +124,7 @@ static int lpc43xx_flash_write(struct target_s *target, uint32_t dest, const uin
 
 const struct command_s lpc43xx_cmd_list[] = {
 	{"erase_mass", (cmd_handler)lpc43xx_cmd_erase, "Erase entire flash memory"},
+	{"reset", lpc43xx_cmd_reset, "Reset target"},
 	{"mkboot", lpc43xx_cmd_mkboot, "Make flash bank bootable"},
 	{NULL, NULL, NULL}
 };
@@ -196,6 +198,20 @@ bool lpc43xx_probe(struct target_s *target)
 	}
 
 	return false;
+}
+
+/* Reset all major systems _except_ debug */
+static bool lpc43xx_cmd_reset(target *target, int __attribute__((unused)) argc, const char __attribute__((unused)) *argv[])
+{
+	/* Cortex-M4 Application Interrupt and Reset Control Register */
+	static const uint32_t AIRCR = 0xE000ED0C;
+	/* Magic value key */
+	static const uint32_t reset_val = 0x05FA0004;
+
+	/* System reset on target */
+	target_mem_write_words(target, AIRCR, &reset_val, sizeof(reset_val));
+
+	return true;
 }
 
 static bool lpc43xx_cmd_erase(target *target)
