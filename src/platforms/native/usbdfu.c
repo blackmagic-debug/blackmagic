@@ -41,7 +41,7 @@ int main(void)
 	dfu_protect_enable();
 
 	rcc_clock_setup_in_hse_8mhz_out_72mhz();
-	systick_set_clocksource(STK_CTRL_CLKSOURCE_AHB_DIV8);
+	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
 	systick_set_reload(900000);
 
 	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPAEN);
