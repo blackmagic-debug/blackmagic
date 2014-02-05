@@ -209,6 +209,7 @@ bool stm32f1_probe(struct target_s *target);
 bool stm32f4_probe(struct target_s *target);
 bool stm32l1_probe(struct target_s *target);
 bool lmi_probe(struct target_s *target);
+bool lpc8xx_probe(struct target_s *target);
 bool lpc11xx_probe(struct target_s *target);
 bool lpc43xx_probe(struct target_s *target);
 bool sam3x_probe(struct target_s *target);
