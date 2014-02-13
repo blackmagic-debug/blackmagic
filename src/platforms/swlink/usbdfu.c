@@ -31,10 +31,9 @@ void dfu_detach(void)
 {
 	/* Disconnect USB cable by resetting USB Device
 	   and pulling USB_DP low*/
-	rcc_peripheral_reset(&RCC_APB1RSTR, RCC_APB1ENR_USBEN);
-	rcc_peripheral_clear_reset(&RCC_APB1RSTR, RCC_APB1ENR_USBEN);
-	rcc_peripheral_enable_clock(&RCC_APB1ENR, RCC_APB1ENR_USBEN);
-	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPAEN);
+	rcc_periph_reset_pulse(RST_USB);
+	rcc_periph_clock_enable(RCC_USB);
+	rcc_periph_clock_enable(RCC_GPIOA);
 	gpio_clear(GPIOA, GPIO12);
 	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
 		GPIO_CNF_OUTPUT_OPENDRAIN, GPIO12);
@@ -45,8 +44,8 @@ int main(void)
 {
 	/* Check the force bootloader pin*/
         uint16_t pin_b;
-	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPAEN);
-	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPBEN);
+	rcc_periph_clock_enable(RCC_GPIOA);
+	rcc_periph_clock_enable(RCC_GPIOB);
 /* Switch PB5 (SWIM_RST_IN) up */
 	gpio_set(GPIOB, GPIO5);
 	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ,
@@ -70,10 +69,9 @@ int main(void)
 	/* Just in case: Disconnect USB cable by resetting USB Device
          * and pulling USB_DP low
          * Device will reconnect automatically as Pull-Up is hard wired*/
-	rcc_peripheral_reset(&RCC_APB1RSTR, RCC_APB1ENR_USBEN);
-	rcc_peripheral_clear_reset(&RCC_APB1RSTR, RCC_APB1ENR_USBEN);
-	rcc_peripheral_enable_clock(&RCC_APB1ENR, RCC_APB1ENR_USBEN);
-	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPAEN);
+	rcc_periph_reset_pulse(RST_USB);
+	rcc_periph_clock_enable(RCC_USB);
+	rcc_periph_clock_enable(RCC_GPIOA);
 	gpio_clear(GPIOA, GPIO12);
 	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
 		GPIO_CNF_OUTPUT_OPENDRAIN, GPIO12);

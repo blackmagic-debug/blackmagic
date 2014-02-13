@@ -36,7 +36,7 @@ void dfu_detach(void)
 int main(void)
 {
 	/* Check the force bootloader pin*/
-	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPBEN);
+	rcc_periph_clock_enable(RCC_GPIOB);
 	if(gpio_get(GPIOB, GPIO12))
 		dfu_jump_app_if_valid();
 
@@ -46,8 +46,8 @@ int main(void)
 	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
 	systick_set_reload(900000);
 
-	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPAEN);
-        rcc_peripheral_enable_clock(&RCC_APB1ENR, RCC_APB1ENR_USBEN);
+	rcc_periph_clock_enable(RCC_GPIOA);
+	rcc_periph_clock_enable(RCC_USB);
 	gpio_set_mode(GPIOA, GPIO_MODE_INPUT, 0, GPIO8);
 
 	systick_interrupt_enable();
