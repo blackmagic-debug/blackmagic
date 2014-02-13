@@ -68,11 +68,11 @@ int platform_init(void)
 	rcc_clock_setup_in_hse_8mhz_out_72mhz();
 
 	/* Enable peripherals */
-	rcc_peripheral_enable_clock(&RCC_APB1ENR, RCC_APB1ENR_USBEN);
-	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPAEN);
-	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPBEN);
-	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_AFIOEN);
-	rcc_peripheral_enable_clock(&RCC_AHBENR, RCC_AHBENR_CRCEN);
+	rcc_periph_clock_enable(RCC_USB);
+	rcc_periph_clock_enable(RCC_GPIOA);
+	rcc_periph_clock_enable(RCC_GPIOB);
+	rcc_periph_clock_enable(RCC_AFIO);
+	rcc_periph_clock_enable(RCC_CRC);
 
 	/* Setup GPIO ports */
 	gpio_clear(USB_PU_PORT, USB_PU_PIN);
@@ -248,7 +248,7 @@ static void morse_update(void)
 
 static void adc_init(void)
 {
-	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_ADC1EN);
+	rcc_periph_clock_enable(RCC_ADC1);
 
 	gpio_set_mode(GPIOB, GPIO_MODE_INPUT,
 			GPIO_CNF_INPUT_ANALOG, GPIO0);

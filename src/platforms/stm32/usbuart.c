@@ -52,7 +52,7 @@ void usbuart_init(void)
 		return;
 #endif
 
-	rcc_peripheral_enable_clock(&USBUSART_APB_ENR, USBUSART_CLK_ENABLE);
+	rcc_periph_clock_enable(USBUSART_CLK);
 
 	UART_PIN_SETUP();
 

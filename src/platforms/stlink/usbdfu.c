@@ -38,7 +38,7 @@ static int stlink_test_nrst(void)
 	uint16_t pin;
 	uint32_t systick_value;
 
-	systick_set_clocksource(STK_CTRL_CLKSOURCE_AHB_DIV8);
+	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
 	systick_set_reload(0xffffff); /* no underflow for about 16.7 seconds*/
 	systick_counter_enable();
 	/* systick ist now running with 1 MHz, systick counts down */
@@ -47,7 +47,7 @@ static int stlink_test_nrst(void)
 	 *  11 for ST-Link V1, e.g. on VL Discovery, tag as rev 0
 	 *  10 for ST-Link V2, e.g. on F4 Discovery, tag as rev 1
 	 */
-	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPCEN);
+	rcc_periph_clock_enable(RCC_GPIOC);
 	gpio_set_mode(GPIOC, GPIO_MODE_INPUT,
 				  GPIO_CNF_INPUT_PULL_UPDOWN, GPIO14 | GPIO13);
 	gpio_set(GPIOC, GPIO14 | GPIO13);
@@ -65,7 +65,7 @@ static int stlink_test_nrst(void)
 	}
 	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
 			GPIO_CNF_OUTPUT_PUSHPULL, led_idle_run);
-	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPBEN);
+	rcc_periph_clock_enable(RCC_GPIOB);
 	gpio_set_mode(GPIOB, GPIO_MODE_INPUT,
 			GPIO_CNF_INPUT_PULL_UPDOWN, pin);
 	gpio_set(GPIOB, pin);
@@ -80,10 +80,9 @@ void dfu_detach(void)
 {
 	/* Disconnect USB cable by resetting USB Device
 	   and pulling USB_DP low*/
-	rcc_peripheral_reset(&RCC_APB1RSTR, RCC_APB1ENR_USBEN);
-	rcc_peripheral_clear_reset(&RCC_APB1RSTR, RCC_APB1ENR_USBEN);
-	rcc_peripheral_enable_clock(&RCC_APB1ENR, RCC_APB1ENR_USBEN);
-	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPAEN);
+	rcc_periph_reset_pulse(RST_USB);
+	rcc_periph_clock_enable(RCC_USB);
+	rcc_periph_clock_enable(RCC_GPIOA);
 	gpio_clear(GPIOA, GPIO12);
 	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
 		GPIO_CNF_OUTPUT_OPENDRAIN, GPIO12);
@@ -93,7 +92,7 @@ void dfu_detach(void)
 int main(void)
 {
 	/* Check the force bootloader pin*/
-	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPAEN);
+	rcc_periph_clock_enable(RCC_GPIOA);
 	/* Check value of GPIOA1 configuration. This pin is unconnected on
 	 * STLink V1 and V2. If we have a value other than the reset value (0x4),
 	 * we have a warm start and request Bootloader entry
@@ -111,10 +110,9 @@ int main(void)
 	/* Just in case: Disconnect USB cable by resetting USB Device
          * and pulling USB_DP low
          * Device will reconnect automatically as Pull-Up is hard wired*/
-	rcc_peripheral_reset(&RCC_APB1RSTR, RCC_APB1ENR_USBEN);
-	rcc_peripheral_clear_reset(&RCC_APB1RSTR, RCC_APB1ENR_USBEN);
-	rcc_peripheral_enable_clock(&RCC_APB1ENR, RCC_APB1ENR_USBEN);
-	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPAEN);
+	rcc_periph_reset_pulse(RST_USB);
+	rcc_periph_clock_enable(RCC_USB);
+	rcc_periph_clock_enable(RCC_GPIOA);
 	gpio_clear(GPIOA, GPIO12);
 	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
 		GPIO_CNF_OUTPUT_OPENDRAIN, GPIO12);
