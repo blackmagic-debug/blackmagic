@@ -38,7 +38,7 @@ static int stlink_test_nrst(void)
 	uint16_t pin;
 	uint32_t systick_value;
 
-	systick_set_clocksource(STK_CTRL_CLKSOURCE_AHB_DIV8);
+	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
 	systick_set_reload(0xffffff); /* no underflow for about 16.7 seconds*/
 	systick_counter_enable();
 	/* systick ist now running with 1 MHz, systick counts down */
