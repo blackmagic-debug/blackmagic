@@ -22,13 +22,13 @@ struct flash_program {
 
 static struct flash_program flash_pgm;
 
-#define MSP				17												// Main stack pointer register number
-#define MIN_RAM_SIZE_FOR_LPC1xxx			2048
-#define RAM_USAGE_FOR_IAP_ROUTINES			32							// IAP routines use 32 bytes at top of ram
+#define MSP	17			/* Main stack pointer register number */
+#define MIN_RAM_SIZE_FOR_LPC8xx		1024
+#define MIN_RAM_SIZE_FOR_LPC1xxx	2048
+#define RAM_USAGE_FOR_IAP_ROUTINES	32	/* IAP routines use 32 bytes at top of ram */
 
 #define IAP_ENTRYPOINT	0x1fff1ff1
 #define IAP_RAM_BASE	0x10000000
-
 
 #define IAP_CMD_PREPARE		50
 #define IAP_CMD_PROGRAM		51
@@ -48,6 +48,8 @@ static struct flash_program flash_pgm;
 #define IAP_STATUS_COMPARE_ERROR	10
 #define IAP_STATUS_BUSY			11
 
+static const char lpc8xx_driver[] = "lpc8xx";
+static const char lpc11xx_driver[] = "lpc11xx";
 static void lpc11x_iap_call(struct target_s *target, struct flash_param *param, unsigned param_len);
 static int lpc11xx_flash_prepare(struct target_s *target, uint32_t addr, int len);
 static int lpc11xx_flash_erase(struct target_s *target, uint32_t addr, int len);
@@ -70,6 +72,24 @@ static const char lpc11xx_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 	"  <memory type=\"ram\" start=\"0x10000000\" length=\"0x2000\"/>"
 	"</memory-map>";
 
+/*
+ * Memory map for the lpc8xx devices, which otherwise look much like the lpc11xx.
+ *
+ * We could decode the RAM/flash sizes, but we just encode the largest possible here.
+ *
+ * Note that the LPC810 and LPC811 map their flash oddly; see the NXP LPC800 user
+ * manual (UM10601) for more details.
+ */
+static const char lpc8xx_xml_memory_map[] = "<?xml version=\"1.0\"?>"
+/*	"<!DOCTYPE memory-map "
+	"             PUBLIC \"+//IDN gnu.org//DTD GDB Memory Map V1.0//EN\""
+	"                    \"http://sourceware.org/gdb/gdb-memory-map.dtd\">"*/
+	"<memory-map>"
+	"  <memory type=\"flash\" start=\"0x00000000\" length=\"0x4000\">"
+	"    <property name=\"blocksize\">0x400</property>"
+	"  </memory>"
+	"  <memory type=\"ram\" start=\"0x10000000\" length=\"0x1000\"/>"
+	"</memory-map>";
 
 bool
 lpc11xx_probe(struct target_s *target)
@@ -103,8 +123,16 @@ lpc11xx_probe(struct target_s *target)
 	case 0x2058002B:	/* lpc1115 */
 	case 0x1431102B:	/* lpc11c22 */
 	case 0x1430102B:	/* lpc11c24 */
-		target->driver = "lpc11xx";
+		target->driver = lpc11xx_driver;
 		target->xml_mem_map = lpc11xx_xml_memory_map;
+		target->flash_erase = lpc11xx_flash_erase;
+		target->flash_write = lpc11xx_flash_write;
+
+		return true;
+
+	case 0x1812202b:	/* LPC812M101FDH20 */
+		target->driver = lpc8xx_driver;
+		target->xml_mem_map = lpc8xx_xml_memory_map;
 		target->flash_erase = lpc11xx_flash_erase;
 		target->flash_write = lpc11xx_flash_write;
 
@@ -129,7 +157,11 @@ lpc11x_iap_call(struct target_s *target, struct flash_param *param, unsigned par
 	regs[0] = IAP_RAM_BASE + offsetof(struct flash_param, command);
 	regs[1] = IAP_RAM_BASE + offsetof(struct flash_param, result);
 
-	regs[MSP] = IAP_RAM_BASE + MIN_RAM_SIZE_FOR_LPC1xxx - RAM_USAGE_FOR_IAP_ROUTINES;// stack pointer - top of the smallest ram less 32 for IAP usage
+	// stack pointer - top of the smallest ram less 32 for IAP usage
+	if (target->driver == lpc8xx_driver)
+		regs[MSP] = IAP_RAM_BASE + MIN_RAM_SIZE_FOR_LPC8xx - RAM_USAGE_FOR_IAP_ROUTINES;
+	else
+		regs[MSP] = IAP_RAM_BASE + MIN_RAM_SIZE_FOR_LPC1xxx - RAM_USAGE_FOR_IAP_ROUTINES;
 	regs[14] = IAP_RAM_BASE | 1;
 	regs[15] = IAP_ENTRYPOINT;
 	target_regs_write(target, regs);
@@ -142,14 +174,22 @@ lpc11x_iap_call(struct target_s *target, struct flash_param *param, unsigned par
 	target_mem_read_words(target, (void *)param, IAP_RAM_BASE, sizeof(struct flash_param));
 }
 
+static int flash_page_size(struct target_s *target)
+{
+	if (target->driver == lpc8xx_driver)
+		return 1024;
+	else
+		return 4096;
+}
+
 static int
 lpc11xx_flash_prepare(struct target_s *target, uint32_t addr, int len)
 {
 	/* prepare the sector(s) to be erased */
 	memset(&flash_pgm.p, 0, sizeof(flash_pgm.p));
 	flash_pgm.p.command[0] = IAP_CMD_PREPARE;
-	flash_pgm.p.command[1] = addr / 4096;
-	flash_pgm.p.command[2] = (addr + len - 1) / 4096;
+	flash_pgm.p.command[1] = addr / flash_page_size(target);
+	flash_pgm.p.command[2] = (addr + len - 1) / flash_page_size(target);
 
 	lpc11x_iap_call(target, &flash_pgm.p, sizeof(flash_pgm.p));
 	if (flash_pgm.p.result[0] != IAP_STATUS_CMD_SUCCESS) {
@@ -163,7 +203,7 @@ static int
 lpc11xx_flash_erase(struct target_s *target, uint32_t addr, int len)
 {
 
-	if (addr % 4096)
+	if (addr % flash_page_size(target))
 		return -1;
 
 	/* prepare... */
@@ -172,8 +212,8 @@ lpc11xx_flash_erase(struct target_s *target, uint32_t addr, int len)
 
 	/* and now erase them */
 	flash_pgm.p.command[0] = IAP_CMD_ERASE;
-	flash_pgm.p.command[1] = addr / 4096;
-	flash_pgm.p.command[2] = (addr + len - 1) / 4096;
+	flash_pgm.p.command[1] = addr / flash_page_size(target);
+	flash_pgm.p.command[2] = (addr + len - 1) / flash_page_size(target);
 	flash_pgm.p.command[3] = 12000;	/* XXX safe to assume this? */
 	lpc11x_iap_call(target, &flash_pgm.p, sizeof(flash_pgm.p));
 	if (flash_pgm.p.result[0] != IAP_STATUS_CMD_SUCCESS) {
@@ -217,7 +257,7 @@ lpc11xx_flash_write(struct target_s *target, uint32_t dest, const uint8_t *src, 
 			chunk_offset = 0;
 
 			/* if we are programming the vectors, calculate the magic number */
-			if (chunk * IAP_PGM_CHUNKSIZE == 0) {
+			if (chunk == 0) {
 				uint32_t *w = (uint32_t *)(&flash_pgm.data[0]);
 				uint32_t sum = 0;
 
@@ -248,6 +288,7 @@ lpc11xx_flash_write(struct target_s *target, uint32_t dest, const uint8_t *src, 
 		flash_pgm.p.command[1] = chunk * IAP_PGM_CHUNKSIZE;
 		flash_pgm.p.command[2] = IAP_RAM_BASE + offsetof(struct flash_program, data);
 		flash_pgm.p.command[3] = IAP_PGM_CHUNKSIZE;
+		/* assuming we are running off IRC - safe lower bound */
 		flash_pgm.p.command[4] = 12000;	/* XXX safe to presume this? */
 		lpc11x_iap_call(target, &flash_pgm.p, sizeof(flash_pgm));
 		if (flash_pgm.p.result[0] != IAP_STATUS_CMD_SUCCESS) {
