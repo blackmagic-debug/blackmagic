@@ -323,6 +323,14 @@ static const char tdesc_cortex_mf[] =
 	"  </feature>"
 	"</target>";
 
+#define REG_SP		13
+#define REG_LR		14
+#define REG_PC		15
+#define REG_XPSR	16
+#define REG_MSP		17
+#define REG_PSP		18
+#define REG_SPECIAL	19
+
 bool
 cortexm_probe(struct target_s *target)
 {
@@ -677,17 +685,29 @@ static int cortexm_fault_unwind(struct target_s *target)
 		/* Read registers for post-exception stack pointer */
 		target_regs_read(target, regs);
 		/* save retcode currently in lr */
-		retcode = regs[14];
+		retcode = regs[REG_LR];
+		bool spsel = retcode & (1<<2);
+		bool fpca = !(retcode & (1<<4));
 		/* Read stack for pre-exception registers */
-		target_mem_read_words(target, stack, regs[13], sizeof(stack));
-		regs[14] = stack[5];	/* restore LR to pre-exception state */
-		regs[15] = stack[6];	/* restore PC to pre-exception state */
+		uint32_t sp = spsel ? regs[REG_PSP] : regs[REG_MSP];
+		target_mem_read_words(target, stack, sp, sizeof(stack));
+		regs[REG_LR] = stack[5];	/* restore LR to pre-exception state */
+		regs[REG_PC] = stack[6];	/* restore PC to pre-exception state */
 
 		/* adjust stack to pop exception state */
-		framesize = (retcode & (1<<4)) ? 0x68 : 0x20;	/* check for basic vs. extended frame */
+		framesize = fpca ? 0x68 : 0x20;	/* check for basic vs. extended frame */
 		if (stack[7] & (1<<9))				/* check for stack alignment fixup */
 			framesize += 4;
-		regs[13] += framesize;
+
+		if (spsel) {
+			regs[REG_SPECIAL] |= 0x4000000;
+			regs[REG_SP] = regs[REG_PSP] += framesize;
+		} else {
+			regs[REG_SP] = regs[REG_MSP] += framesize;
+		}
+
+		if (fpca)
+			regs[REG_SPECIAL] |= 0x2000000;
 
 		/* FIXME: stack[7] contains xPSR when this is supported */
 		/* although, if we caught the exception it will be unchanged */
