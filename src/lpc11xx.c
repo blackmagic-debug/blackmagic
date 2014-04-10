@@ -64,7 +64,7 @@ static const char lpc11xx_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 	"             PUBLIC \"+//IDN gnu.org//DTD GDB Memory Map V1.0//EN\""
 	"                    \"http://sourceware.org/gdb/gdb-memory-map.dtd\">"*/
 	"<memory-map>"
-	"  <memory type=\"flash\" start=\"0x00000000\" length=\"0x10000\">"
+	"  <memory type=\"flash\" start=\"0x00000000\" length=\"0x20000\">"
 	"    <property name=\"blocksize\">0x1000</property>"
 	"  </memory>"
 	"  <memory type=\"ram\" start=\"0x10000000\" length=\"0x2000\"/>"
@@ -103,6 +103,15 @@ lpc11xx_probe(struct target_s *target)
 	case 0x2058002B:	/* lpc1115 */
 	case 0x1431102B:	/* lpc11c22 */
 	case 0x1430102B:	/* lpc11c24 */
+	case 0x095C802B:	/* lpc11u12x/201 */
+	case 0x295C802B:
+	case 0x097A802B:	/* lpc11u13/201 */
+	case 0x297A802B:
+	case 0x0998802B:	/* lpc11u14x/201 */
+	case 0x2998802B:
+	case 0x2972402B:	/* lpc11u23/301 */
+	case 0x2988402B:	/* lpc11u24x/301 */
+	case 0x2980002B:	/* lpc11u24x/401 */
 		target->driver = "lpc11xx";
 		target->xml_mem_map = lpc11xx_xml_memory_map;
 		target->flash_erase = lpc11xx_flash_erase;
@@ -117,7 +126,7 @@ lpc11xx_probe(struct target_s *target)
 static void
 lpc11x_iap_call(struct target_s *target, struct flash_param *param, unsigned param_len)
 {
-	uint32_t regs[target->regs_size / 4];
+	uint32_t regs[target->regs_size / sizeof(uint32_t)];
 
 	/* fill out the remainder of the parameters and copy the structure to RAM */
 	param->opcodes[0] = 0xbe00;
@@ -217,13 +226,18 @@ lpc11xx_flash_write(struct target_s *target, uint32_t dest, const uint8_t *src, 
 			chunk_offset = 0;
 
 			/* if we are programming the vectors, calculate the magic number */
-			if (chunk == 0) {
+			if (chunk * IAP_PGM_CHUNKSIZE == 0) {
 				uint32_t *w = (uint32_t *)(&flash_pgm.data[0]);
 				uint32_t sum = 0;
 
-				for (unsigned i = 0; i < 7; i++)
-					sum += w[i];
-				w[7] = 0 - sum;
+				if (copylen >= 7) {
+					for (unsigned i = 0; i < 7; i++)
+						sum += w[i];
+					w[7] = 0 - sum;
+				} else {
+					/* We can't possibly calculate the magic number */
+					return -1;
+				}
 			}
 
 		} else {

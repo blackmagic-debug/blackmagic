@@ -68,11 +68,11 @@ int platform_init(void)
 	rcc_clock_setup_in_hse_8mhz_out_72mhz();
 
 	/* Enable peripherals */
-	rcc_peripheral_enable_clock(&RCC_APB1ENR, RCC_APB1ENR_USBEN);
-	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPAEN);
-	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPBEN);
-	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_AFIOEN);
-	rcc_peripheral_enable_clock(&RCC_AHBENR, RCC_AHBENR_CRCEN);
+	rcc_periph_clock_enable(RCC_USB);
+	rcc_periph_clock_enable(RCC_GPIOA);
+	rcc_periph_clock_enable(RCC_GPIOB);
+	rcc_periph_clock_enable(RCC_AFIO);
+	rcc_periph_clock_enable(RCC_CRC);
 
 	/* Setup GPIO ports */
 	gpio_clear(USB_PU_PORT, USB_PU_PIN);
@@ -98,21 +98,33 @@ int platform_init(void)
 	 * to release the device from reset if this floats. */
 	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
 			GPIO_CNF_OUTPUT_PUSHPULL, GPIO7);
-	/* Enable SRST output */
-	gpio_set_val(SRST_PORT, SRST_PIN, platform_hwversion() > 0);
+	/* Enable SRST output. Original uses a NPN to pull down, so setting the
+	 * output HIGH asserts. Mini is directly connected so use open drain output
+	 * and set LOW to assert.
+	 */
+	platform_srst_set_val(false);
 	gpio_set_mode(SRST_PORT, GPIO_MODE_OUTPUT_50_MHZ,
-			GPIO_CNF_OUTPUT_PUSHPULL,
+			(platform_hwversion() == 0
+				? GPIO_CNF_OUTPUT_PUSHPULL
+				: GPIO_CNF_OUTPUT_OPENDRAIN),
 			SRST_PIN);
 
+        /* Enable internal pull-up on PWR_BR so that we don't drive
+           TPWR locally or inadvertently supply power to the target. */
+        if (platform_hwversion () > 0) {
+          gpio_set (PWR_BR_PORT, PWR_BR_PIN);
+          gpio_set_mode(PWR_BR_PORT, GPIO_MODE_INPUT,
+                        GPIO_CNF_INPUT_PULL_UPDOWN,
+                        PWR_BR_PIN);
+        }
+
 	/* Setup heartbeat timer */
-	systick_set_clocksource(STK_CTRL_CLKSOURCE_AHB_DIV8);
+	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
 	systick_set_reload(900000);	/* Interrupt us at 10 Hz */
 	SCB_SHPR(11) &= ~((15 << 4) & 0xff);
 	SCB_SHPR(11) |= ((14 << 4) & 0xff);
 	systick_interrupt_enable();
 	systick_counter_enable();
-
-	usbuart_init();
 
 	if (platform_hwversion() > 0) {
 		adc_init();
@@ -125,6 +137,7 @@ int platform_init(void)
 	SCB_VTOR = 0x2000;	// Relocate interrupt vector table here
 
 	cdcacm_init();
+	usbuart_init();
 
 	jtag_scan(NULL);
 
@@ -235,7 +248,7 @@ static void morse_update(void)
 
 static void adc_init(void)
 {
-	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_ADC1EN);
+	rcc_periph_clock_enable(RCC_ADC1);
 
 	gpio_set_mode(GPIOB, GPIO_MODE_INPUT,
 			GPIO_CNF_INPUT_ANALOG, GPIO0);
@@ -263,15 +276,15 @@ const char *platform_target_voltage(void)
 		return gpio_get(GPIOB, GPIO0) ? "OK" : "ABSENT!";
 
 	static char ret[] = "0.0V";
-	const u8 channel = 8;
-	adc_set_regular_sequence(ADC1, 1, (u8*)&channel);
+	const uint8_t channel = 8;
+	adc_set_regular_sequence(ADC1, 1, (uint8_t*)&channel);
 
 	adc_start_conversion_direct(ADC1);
 
 	/* Wait for end of conversion. */
 	while (!adc_eoc(ADC1));
 
-	u32 val = adc_read_regular(ADC1) * 99; /* 0-4095 */
+	uint32_t val = adc_read_regular(ADC1) * 99; /* 0-4095 */
 	ret[0] = '0' + val / 81910;
 	ret[2] = '0' + (val / 8191) % 10;
 

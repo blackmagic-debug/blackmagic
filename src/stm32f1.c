@@ -58,7 +58,9 @@ static int stm32f1_flash_write(struct target_s *target, uint32_t dest,
 static const char stm32f1_driver_str[] = "STM32, Medium density.";
 static const char stm32hd_driver_str[] = "STM32, High density.";
 static const char stm32f3_driver_str[] = "STM32F3xx";
-static const char stm32f0_driver_str[] = "STM32F0xx";
+static const char stm32f03_driver_str[] = "STM32F03x";
+static const char stm32f05_driver_str[] = "STM32F05x";
+static const char stm32f07_driver_str[] = "STM32F07x";
 
 static const char stm32f1_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 /*	"<!DOCTYPE memory-map "
@@ -100,6 +102,8 @@ static const char stm32hd_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 #define FLASH_CR_OPTPG	(1 << 4)
 #define FLASH_CR_MER	(1 << 2)
 #define FLASH_CR_PER	(1 << 1)
+
+#define FLASH_OBR_RDPRT (1 << 1)
 
 #define FLASH_SR_BSY	(1 << 0)
 
@@ -188,8 +192,20 @@ bool stm32f1_probe(struct target_s *target)
 
 	target->idcode = adiv5_ap_mem_read(adiv5_target_ap(target), DBGMCU_IDCODE_F0) & 0xfff;
 	switch(target->idcode) {
-	case 0x440:  /* STM32F0 */
-		target->driver = stm32f0_driver_str;
+	case 0x444:  /* STM32F03 */
+	case 0x440:  /* STM32F05 */
+	case 0x448:  /* STM32F07 */
+		switch(target->idcode) {
+		case 0x444:  /* STM32F03 */
+			target->driver = stm32f03_driver_str;
+			break;
+		case 0x440:  /* STM32F05 */
+			target->driver = stm32f05_driver_str;
+			break;
+		case 0x448:  /* STM32F07 */
+			target->driver = stm32f07_driver_str;
+			break;
+		}
 		target->xml_mem_map = stm32f1_xml_memory_map;
 		target->flash_erase = stm32md_flash_erase;
 		target->flash_write = stm32f1_flash_write;
@@ -322,10 +338,12 @@ static bool stm32f1_option_erase(target *t)
 	return true;
 }
 
-static bool stm32f1_option_write(target *t, uint32_t addr, uint16_t value)
+static bool stm32f1_option_write_erased(target *t, uint32_t addr, uint16_t value)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(t);
 
+	if (value == 0xffff)
+		return true;
 	/* Erase option bytes instruction */
 	adiv5_ap_mem_write(ap, FLASH_CR, FLASH_CR_OPTPG | FLASH_CR_OPTWRE);
 	adiv5_ap_mem_write_halfword(ap, addr, value);
@@ -336,11 +354,42 @@ static bool stm32f1_option_write(target *t, uint32_t addr, uint16_t value)
 	return true;
 }
 
+static bool stm32f1_option_write(target *t, uint32_t addr, uint16_t value)
+{
+	ADIv5_AP_t *ap = adiv5_target_ap(t);
+	uint16_t opt_val[8];
+	int i, index;
+
+	index = (addr - FLASH_OBP_RDP) / 2;
+	if ((index < 0) || (index > 7))
+		 return false;
+	/* Retrieve old values */
+	for (i = 0; i < 16; i = i +4) {
+		 uint32_t val = adiv5_ap_mem_read(ap, FLASH_OBP_RDP + i);
+		 opt_val[i/2] = val & 0xffff;
+		 opt_val[i/2 +1] = val >> 16;
+	}
+	if (opt_val[index] == value)
+		return true;
+	/* Check for erased value */
+	if (opt_val[index] != 0xffff)
+		if (!(stm32f1_option_erase(t)))
+			return false;
+	opt_val[index] = value;
+	/* Write changed values*/
+	for (i = 0; i < 8; i++)
+		if (!(stm32f1_option_write_erased
+			(t, FLASH_OBP_RDP + i*2,opt_val[i])))
+			return false;
+	return true;
+}
+
 static bool stm32f1_cmd_option(target *t, int argc, char *argv[])
 {
 	uint32_t addr, val;
 	uint32_t flash_obp_rdp_key;
 	ADIv5_AP_t *ap = adiv5_target_ap(t);
+	uint32_t rdprt;
 
 	switch(t->idcode) {
 	case 0x422:  /* STM32F30x */
@@ -350,13 +399,18 @@ static bool stm32f1_cmd_option(target *t, int argc, char *argv[])
 		break;
 	default: flash_obp_rdp_key = FLASH_OBP_RDP_KEY;
 	}
+	rdprt = (adiv5_ap_mem_read(ap, FLASH_OBR) & FLASH_OBR_RDPRT);
 	stm32f1_flash_unlock(ap);
 	adiv5_ap_mem_write(ap, FLASH_OPTKEYR, KEY1);
 	adiv5_ap_mem_write(ap, FLASH_OPTKEYR, KEY2);
 
 	if ((argc == 2) && !strcmp(argv[1], "erase")) {
 		stm32f1_option_erase(t);
-		stm32f1_option_write(t, FLASH_OBP_RDP, flash_obp_rdp_key);
+		stm32f1_option_write_erased(t, FLASH_OBP_RDP, flash_obp_rdp_key);
+	} else if (rdprt) {
+		gdb_out("Device is Read Protected\n");
+		gdb_out("Use \"monitor option erase\" to unprotect, erasing device\n");
+		return true;
 	} else if (argc == 3) {
 		addr = strtol(argv[1], NULL, 0);
 		val = strtol(argv[2], NULL, 0);

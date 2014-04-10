@@ -56,40 +56,40 @@ static const char stm32l1_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 	"</memory-map>";
 
 /* Flash Controller Register Map */
-#define FLASH_BASE 0x40023C00
-#define FLASH_ACR     (FLASH_BASE+0x00)
-#define FLASH_PECR    (FLASH_BASE+0x04)
-#define FLASH_PDKEYR  (FLASH_BASE+0x08)
-#define FLASH_PEKEYR  (FLASH_BASE+0x0C)
-#define FLASH_PRGKEYR (FLASH_BASE+0x10)
-#define FLASH_OPTKEYR (FLASH_BASE+0x14)
-#define FLASH_SR      (FLASH_BASE+0x18)
-#define FLASH_OBR     (FLASH_BASE+0x1C)
-#define FLASH_WRPR1   (FLASH_BASE+0x20)
-#define FLASH_WRPR2   (FLASH_BASE+0x80)
-#define FLASH_WRPR3   (FLASH_BASE+0x84)
+#define STM32L1_FLASH_BASE	0x40023C00
+#define STM32L1_FLASH_ACR     (STM32L1_FLASH_BASE + 0x00)
+#define STM32L1_FLASH_PECR    (STM32L1_FLASH_BASE + 0x04)
+#define STM32L1_FLASH_PDKEYR  (STM32L1_FLASH_BASE + 0x08)
+#define STM32L1_FLASH_PEKEYR  (STM32L1_FLASH_BASE + 0x0C)
+#define STM32L1_FLASH_PRGKEYR (STM32L1_FLASH_BASE + 0x10)
+#define STM32L1_FLASH_OPTKEYR (STM32L1_FLASH_BASE + 0x14)
+#define STM32L1_FLASH_SR      (STM32L1_FLASH_BASE + 0x18)
+#define STM32L1_FLASH_OBR     (STM32L1_FLASH_BASE + 0x1C)
+#define STM32L1_FLASH_WRPR1   (STM32L1_FLASH_BASE + 0x20)
+#define STM32L1_FLASH_WRPR2   (STM32L1_FLASH_BASE + 0x80)
+#define STM32L1_FLASH_WRPR3   (STM32L1_FLASH_BASE + 0x84)
 
-#define FLASH_PECR_FPRG  (1 << 10)
-#define FLASH_PECR_ERASE (1 <<  9)
-#define FLASH_PECR_PROG  (1 <<  3)
+#define STM32L1_FLASH_PECR_FPRG  (1 << 10)
+#define STM32L1_FLASH_PECR_ERASE (1 <<  9)
+#define STM32L1_FLASH_PECR_PROG  (1 <<  3)
 
-#define FLASH_SR_BSY (1 << 0)
-#define FLASH_SR_EOP (1 << 1)
+#define STM32L1_FLASH_SR_BSY (1 << 0)
+#define STM32L1_FLASH_SR_EOP (1 << 1)
 
-#define FLASH_SR_ERROR_MASK (0x1f << 8)
+#define STM32L1_FLASH_SR_ERROR_MASK (0x1f << 8)
 
-#define PEKEY1 0x89ABCDEF
-#define PEKEY2 0x02030405
-#define PRGKEY1 0x8C9DAEBF
-#define PRGKEY2 0x13141516
+#define STM32L1_PEKEY1 0x89ABCDEF
+#define STM32L1_PEKEY2 0x02030405
+#define STM32L1_PRGKEY1 0x8C9DAEBF
+#define STM32L1_PRGKEY2 0x13141516
 
-#define DBGMCU_IDCODE	0xE0042000
+#define STM32L1_DBGMCU_IDCODE	0xE0042000
 
 bool stm32l1_probe(struct target_s *target)
 {
 	uint32_t idcode;
 
-	idcode = adiv5_ap_mem_read(adiv5_target_ap(target), DBGMCU_IDCODE);
+	idcode = adiv5_ap_mem_read(adiv5_target_ap(target), STM32L1_DBGMCU_IDCODE);
 	switch(idcode & 0xFFF) {
 	case 0x416:  /* Medium density */
 	case 0x436:  /* High density */
@@ -105,10 +105,10 @@ bool stm32l1_probe(struct target_s *target)
 
 static void stm32l1_flash_unlock(ADIv5_AP_t *ap)
 {
-	adiv5_ap_mem_write(ap, FLASH_PEKEYR, PEKEY1);
-	adiv5_ap_mem_write(ap, FLASH_PEKEYR, PEKEY2);
-	adiv5_ap_mem_write(ap, FLASH_PRGKEYR, PRGKEY1);
-	adiv5_ap_mem_write(ap, FLASH_PRGKEYR, PRGKEY2);
+	adiv5_ap_mem_write(ap, STM32L1_FLASH_PEKEYR, STM32L1_PEKEY1);
+	adiv5_ap_mem_write(ap, STM32L1_FLASH_PEKEYR, STM32L1_PEKEY2);
+	adiv5_ap_mem_write(ap, STM32L1_FLASH_PRGKEYR, STM32L1_PRGKEY1);
+	adiv5_ap_mem_write(ap, STM32L1_FLASH_PRGKEYR, STM32L1_PRGKEY2);
 }
 
 static int stm32l1_flash_erase(struct target_s *target, uint32_t addr, int len)
@@ -122,10 +122,10 @@ static int stm32l1_flash_erase(struct target_s *target, uint32_t addr, int len)
 	stm32l1_flash_unlock(ap);
 
 	/* Flash page erase instruction */
-	adiv5_ap_mem_write(ap, FLASH_PECR, FLASH_PECR_ERASE | FLASH_PECR_PROG);
+	adiv5_ap_mem_write(ap, STM32L1_FLASH_PECR, STM32L1_FLASH_PECR_ERASE | STM32L1_FLASH_PECR_PROG);
 
 	/* Read FLASH_SR to poll for BSY bit */
-	while(adiv5_ap_mem_read(ap, FLASH_SR) & FLASH_SR_BSY)
+	while(adiv5_ap_mem_read(ap, STM32L1_FLASH_SR) & STM32L1_FLASH_SR_BSY)
 		if(target_check_error(target))
 			return -1;
 
@@ -138,11 +138,11 @@ static int stm32l1_flash_erase(struct target_s *target, uint32_t addr, int len)
 	}
 
 	/* Disable programming mode */
-	adiv5_ap_mem_write(ap, FLASH_PECR, 0);
+	adiv5_ap_mem_write(ap, STM32L1_FLASH_PECR, 0);
 
 	/* Check for error */
-	sr = adiv5_ap_mem_read(ap, FLASH_SR);
-	if ((sr & FLASH_SR_ERROR_MASK) || !(sr & FLASH_SR_EOP))
+	sr = adiv5_ap_mem_read(ap, STM32L1_FLASH_SR);
+	if ((sr & STM32L1_FLASH_SR_ERROR_MASK) || !(sr & STM32L1_FLASH_SR_EOP))
 		return -1;
 
 	return 0;
@@ -183,10 +183,10 @@ static int stm32l1_flash_write(struct target_s *target, uint32_t dest,
 	/* Write half-pages */
 	if(len > 128) {
 		/* Enable half page mode */
-		adiv5_ap_mem_write(ap, FLASH_PECR, FLASH_PECR_FPRG | FLASH_PECR_PROG);
+		adiv5_ap_mem_write(ap, STM32L1_FLASH_PECR, STM32L1_FLASH_PECR_FPRG | STM32L1_FLASH_PECR_PROG);
 
 		/* Read FLASH_SR to poll for BSY bit */
-		while(adiv5_ap_mem_read(ap, FLASH_SR) & FLASH_SR_BSY)
+		while(adiv5_ap_mem_read(ap, STM32L1_FLASH_SR) & STM32L1_FLASH_SR_BSY)
 			if(target_check_error(target))
 				return -1;
 
@@ -196,10 +196,10 @@ static int stm32l1_flash_write(struct target_s *target, uint32_t dest,
 		len -= len & ~127;
 
 		/* Disable half page mode */
-		adiv5_ap_mem_write(ap, FLASH_PECR, 0);
+		adiv5_ap_mem_write(ap, STM32L1_FLASH_PECR, 0);
 
 		/* Read FLASH_SR to poll for BSY bit */
-		while(adiv5_ap_mem_read(ap, FLASH_SR) & FLASH_SR_BSY)
+		while(adiv5_ap_mem_read(ap, STM32L1_FLASH_SR) & STM32L1_FLASH_SR_BSY)
 			if(target_check_error(target))
 				return -1;
 	}
@@ -221,8 +221,8 @@ static int stm32l1_flash_write(struct target_s *target, uint32_t dest,
 	}
 
 	/* Check for error */
-	sr = adiv5_ap_mem_read(ap, FLASH_SR);
-	if ((sr & FLASH_SR_ERROR_MASK) || !(sr & FLASH_SR_EOP))
+	sr = adiv5_ap_mem_read(ap, STM32L1_FLASH_SR);
+	if ((sr & STM32L1_FLASH_SR_ERROR_MASK) || !(sr & STM32L1_FLASH_SR_EOP))
 		return -1;
 
 	return 0;

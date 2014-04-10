@@ -25,14 +25,15 @@
 
 #include "usbdfu.h"
 
+uint32_t app_address = 0x08002000;
+
 void dfu_detach(void)
 {
 	/* Disconnect USB cable by resetting USB Device
 	   and pulling USB_DP low*/
-	rcc_peripheral_reset(&RCC_APB1RSTR, RCC_APB1ENR_USBEN);
-	rcc_peripheral_clear_reset(&RCC_APB1RSTR, RCC_APB1ENR_USBEN);
-	rcc_peripheral_enable_clock(&RCC_APB1ENR, RCC_APB1ENR_USBEN);
-	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPAEN);
+	rcc_periph_reset_pulse(RST_USB);
+	rcc_periph_clock_enable(RCC_USB);
+	rcc_periph_clock_enable(RCC_GPIOA);
 	gpio_clear(GPIOA, GPIO12);
 	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
 		GPIO_CNF_OUTPUT_OPENDRAIN, GPIO12);
@@ -43,8 +44,8 @@ int main(void)
 {
 	/* Check the force bootloader pin*/
         uint16_t pin_b;
-	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPAEN);
-	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPBEN);
+	rcc_periph_clock_enable(RCC_GPIOA);
+	rcc_periph_clock_enable(RCC_GPIOB);
 /* Switch PB5 (SWIM_RST_IN) up */
 	gpio_set(GPIOB, GPIO5);
 	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ,
@@ -58,20 +59,19 @@ int main(void)
 	if(((GPIOA_CRL & 0x40) == 0x40) && pin_b)
 		dfu_jump_app_if_valid();
 
-	dfu_protect_enable();
+	dfu_protect(DFU_MODE);
 
 	rcc_clock_setup_in_hse_8mhz_out_72mhz();
-	systick_set_clocksource(STK_CTRL_CLKSOURCE_AHB_DIV8);
+	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
 	systick_set_reload(900000);
 
         /* Handle USB disconnect/connect */
 	/* Just in case: Disconnect USB cable by resetting USB Device
          * and pulling USB_DP low
          * Device will reconnect automatically as Pull-Up is hard wired*/
-	rcc_peripheral_reset(&RCC_APB1RSTR, RCC_APB1ENR_USBEN);
-	rcc_peripheral_clear_reset(&RCC_APB1RSTR, RCC_APB1ENR_USBEN);
-	rcc_peripheral_enable_clock(&RCC_APB1ENR, RCC_APB1ENR_USBEN);
-	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_IOPAEN);
+	rcc_periph_reset_pulse(RST_USB);
+	rcc_periph_clock_enable(RCC_USB);
+	rcc_periph_clock_enable(RCC_GPIOA);
 	gpio_clear(GPIOA, GPIO12);
 	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
 		GPIO_CNF_OUTPUT_OPENDRAIN, GPIO12);
@@ -83,7 +83,7 @@ int main(void)
 	systick_interrupt_enable();
 	systick_counter_enable();
 
-	dfu_init(&stm32f103_usb_driver);
+	dfu_init(&stm32f103_usb_driver, DFU_MODE);
 
 	dfu_main();
 }

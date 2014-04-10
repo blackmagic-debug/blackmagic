@@ -112,18 +112,22 @@ extern usbd_device *usbdev;
  */
 #define IRQ_PRI_USB		(2 << 4)
 #define IRQ_PRI_USBUSART	(1 << 4)
+#define IRQ_PRI_USBUSART_TIM	(3 << 4)
 #define IRQ_PRI_TRACE		(0 << 4)
 
 #define USBUSART USART3
 #define USBUSART_CR1 USART3_CR1
 #define USBUSART_IRQ NVIC_USART3_IRQ
-#define USBUSART_APB_ENR RCC_APB1ENR
-#define USBUSART_CLK_ENABLE  RCC_APB1ENR_USART3EN
+#define USBUSART_CLK RCC_USART3 
 #define USBUSART_TX_PORT GPIOD
 #define USBUSART_TX_PIN  GPIO8
 #define USBUSART_RX_PORT GPIOD
 #define USBUSART_RX_PIN  GPIO9
 #define USBUSART_ISR usart3_isr
+#define USBUSART_TIM TIM4
+#define USBUSART_TIM_CLK_EN() rcc_periph_clock_enable(RCC_TIM4)
+#define USBUSART_TIM_IRQ NVIC_TIM4_IRQ
+#define USBUSART_TIM_ISR tim4_isr
 
 #define UART_PIN_SETUP() do {                                           \
         gpio_mode_setup(USBUSART_TX_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, \
@@ -135,7 +139,7 @@ extern usbd_device *usbdev;
     } while(0)
 
 #define TRACE_TIM TIM3
-#define TRACE_TIM_CLK_EN() rcc_peripheral_enable_clock(&RCC_APB1ENR, RCC_APB1ENR_TIM3EN)
+#define TRACE_TIM_CLK_EN() rcc_periph_clock_enable(RCC_TIM3)
 #define TRACE_IRQ   NVIC_TIM3_IRQ
 #define TRACE_ISR   tim3_isr
 
@@ -190,23 +194,23 @@ void uart_usb_buf_drain(uint8_t ep);
 #define vasprintf vasiprintf
 
 #ifdef INLINE_GPIO
-static inline void _gpio_set(u32 gpioport, u16 gpios)
+static inline void _gpio_set(uint32_t gpioport, uint16_t gpios)
 {
 	GPIO_BSRR(gpioport) = gpios;
 	GPIO_BSRR(gpioport) = gpios;
 }
 #define gpio_set _gpio_set
 
-static inline void _gpio_clear(u32 gpioport, u16 gpios)
+static inline void _gpio_clear(uint32_t gpioport, uint16_t gpios)
 {
 	GPIO_BSRR(gpioport) = gpios<<16;
 	GPIO_BSRR(gpioport) = gpios<<16;
 }
 #define gpio_clear _gpio_clear
 
-static inline u16 _gpio_get(u32 gpioport, u16 gpios)
+static inline uint16_t _gpio_get(uint32_t gpioport, uint16_t gpios)
 {
-	return (u16)GPIO_IDR(gpioport) & gpios;
+	return (uint16_t)GPIO_IDR(gpioport) & gpios;
 }
 #define gpio_get _gpio_get
 #endif

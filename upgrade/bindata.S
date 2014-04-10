@@ -24,5 +24,5 @@ _bindata:
 	.incbin "../src/blackmagic.bin"
 
 _bindatalen:
-	.word . - _bindata
+	.long (. - _bindata)
 

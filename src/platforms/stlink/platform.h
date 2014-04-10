@@ -36,8 +36,10 @@
 #define CDCACM_PACKET_SIZE 	64
 #define BOARD_IDENT             "Black Magic Probe (STLINK), (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")"
 #define BOARD_IDENT_DFU		"Black Magic (Upgrade) for STLink/Discovery, (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")"
+#define BOARD_IDENT_UPD		"Black Magic (DFU Upgrade) for STLink/Discovery, (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")"
 #define DFU_IDENT               "Black Magic Firmware Upgrade (STLINK)"
 #define DFU_IFACE_STRING	"@Internal Flash   /0x08000000/8*001Ka,56*001Kg"
+#define UPD_IFACE_STRING	"@Internal Flash   /0x08000000/8*001Kg"
 
 extern usbd_device *usbdev;
 #define CDCACM_GDB_ENDPOINT	1
@@ -114,17 +116,21 @@ extern usbd_device *usbdev;
  */
 #define IRQ_PRI_USB		(2 << 4)
 #define IRQ_PRI_USBUSART	(1 << 4)
+#define IRQ_PRI_USBUSART_TIM	(3 << 4)
 #define IRQ_PRI_USB_VBUS	(14 << 4)
 #define IRQ_PRI_TIM3		(0 << 4)
 
 #define USBUSART USART2
 #define USBUSART_CR1 USART2_CR1
 #define USBUSART_IRQ NVIC_USART2_IRQ
-#define USBUSART_APB_ENR RCC_APB1ENR
-#define USBUSART_CLK_ENABLE  RCC_APB1ENR_USART2EN
+#define USBUSART_CLK RCC_USART2
 #define USBUSART_PORT GPIOA
 #define USBUSART_TX_PIN GPIO2
 #define USBUSART_ISR usart2_isr
+#define USBUSART_TIM TIM4
+#define USBUSART_TIM_CLK_EN() rcc_periph_clock_enable(RCC_TIM4)
+#define USBUSART_TIM_IRQ NVIC_TIM4_IRQ
+#define USBUSART_TIM_ISR tim4_isr
 
 #define DEBUG(...)
 
@@ -147,13 +153,13 @@ extern uint16_t led_idle_run;
 #define SET_IDLE_STATE(state)	{gpio_set_val(LED_PORT, led_idle_run, state);}
 
 #define PLATFORM_SET_FATAL_ERROR_RECOVERY()	{setjmp(fatal_error_jmpbuf);}
-#define PLATFORM_FATAL_ERROR(error)	{ 		\
+#define PLATFORM_FATAL_ERROR(error)	do { 		\
 	if(running_status) gdb_putpacketz("X1D");	\
 		else gdb_putpacketz("EFF");		\
 	running_status = 0;				\
 	target_list_free();				\
 	longjmp(fatal_error_jmpbuf, (error));		\
-}
+} while (0)
 
 int platform_init(void);
 void morse(const char *msg, char repeat);
@@ -176,21 +182,21 @@ void uart_usb_buf_drain(uint8_t ep);
 #define vasprintf vasiprintf
 
 #ifdef INLINE_GPIO
-static inline void _gpio_set(u32 gpioport, u16 gpios)
+static inline void _gpio_set(uint32_t gpioport, uint16_t gpios)
 {
 	GPIO_BSRR(gpioport) = gpios;
 }
 #define gpio_set _gpio_set
 
-static inline void _gpio_clear(u32 gpioport, u16 gpios)
+static inline void _gpio_clear(uint32_t gpioport, uint16_t gpios)
 {
 	GPIO_BRR(gpioport) = gpios;
 }
 #define gpio_clear _gpio_clear
 
-static inline u16 _gpio_get(u32 gpioport, u16 gpios)
+static inline uint16_t _gpio_get(uint32_t gpioport, uint16_t gpios)
 {
-	return (u16)GPIO_IDR(gpioport) & gpios;
+	return (uint16_t)GPIO_IDR(gpioport) & gpios;
 }
 #define gpio_get _gpio_get
 #endif

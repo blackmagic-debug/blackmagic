@@ -17,13 +17,14 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <usb.h>
 #include <string.h>
 
 #ifdef WIN32
 #   include <windows.h>
+#   include <lusb0_usb.h>
 #else
 #   include <unistd.h>
+#   include <usb.h>
 #endif
 
 #include "dfu.h"

@@ -26,17 +26,17 @@
 
 #include "usbdfu.h"
 
-static u32 sector_addr[] = {0x8000000, 0x8004000, 0x8008000, 0x800c000,
+static uint32_t sector_addr[] = {0x8000000, 0x8004000, 0x8008000, 0x800c000,
                             0x8010000, 0x8020000, 0x8040000, 0x8060000,
                             0x8080000, 0x80a0000, 0x80c0000, 0x80e0000,
                             0x8100000, 0};
-static u16 sector_erase_time[12]= {500, 500, 500, 500,
+static uint16_t sector_erase_time[12]= {500, 500, 500, 500,
                             1100,
                             2600, 2600, 2600, 2600, 2600, 2600, 2600};
-static u8 sector_num = 0xff;
+static uint8_t sector_num = 0xff;
 
 /* Find the sector number for a given address*/
-static void get_sector_num(u32 addr)
+static void get_sector_num(uint32_t addr)
 {
 	int i = 0;
 	while(sector_addr[i+1]) {
@@ -60,7 +60,7 @@ void dfu_flash_program_buffer(uint32_t baseaddr, void *buf, int len)
 {
 	for(int i = 0; i < len; i += 4)
 		flash_program_word(baseaddr + i,
-			*(u32*)(buf+i),
+			*(uint32_t*)(buf+i),
 			FLASH_PROGRAM_X32);
 }
 
@@ -93,12 +93,12 @@ void dfu_jump_app_if_valid(void)
 	/* Boot the application if it's valid */
 	/* Vector table may be anywhere in 128 kByte RAM
 	   CCM not handled*/
-	if((*(volatile u32*)APP_ADDRESS & 0x2FFC0000) == 0x20000000) {
+	if((*(volatile uint32_t*)APP_ADDRESS & 0x2FFC0000) == 0x20000000) {
 		/* Set vector table base address */
 		SCB_VTOR = APP_ADDRESS & 0x1FFFFF; /* Max 2 MByte Flash*/
 		/* Initialise master stack pointer */
 		asm volatile ("msr msp, %0"::"g"
-				(*(volatile u32*)APP_ADDRESS));
+				(*(volatile uint32_t*)APP_ADDRESS));
 		/* Jump to application */
 		(*(void(**)())(APP_ADDRESS + 4))();
 	}

@@ -18,7 +18,7 @@ SRC += 	cdcacm.c	\
 	platform.c	\
 	usbuart.c \
 
-all:	blackmagic.bin blackmagic_dfu.bin blackmagic_dfu.hex
+all:	blackmagic.bin blackmagic_dfu.bin blackmagic_dfu.hex dfu_upgrade.bin dfu_upgrade.hex
 
 blackmagic.bin:	blackmagic
 	$(OBJCOPY) -O binary $^ $@
@@ -32,6 +32,15 @@ blackmagic_dfu.bin:	blackmagic_dfu
 blackmagic_dfu.hex:	blackmagic_dfu
 	$(OBJCOPY) -O ihex $^ $@
 
+dfu_upgrade: dfu_upgrade.o dfucore.o dfu_f1.o
+	$(CC) $^ -o $@ $(LDFLAGS)
+
+dfu_upgrade.bin:	dfu_upgrade
+	$(OBJCOPY) -O binary $^ $@
+
+dfu_upgrade.hex:	dfu_upgrade
+	$(OBJCOPY) -O ihex $^ $@
+
 host_clean:
-	-rm blackmagic.bin blackmagic_dfu blackmagic_dfu.bin blackmagic_dfu.hex
+	-rm blackmagic.bin blackmagic_dfu blackmagic_dfu.bin blackmagic_dfu.hex dfu_upgrade dfu_upgrade.bin dfu_upgrade.hex
 
