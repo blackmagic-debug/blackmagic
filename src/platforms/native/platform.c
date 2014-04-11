@@ -153,7 +153,13 @@ void platform_srst_set_val(bool assert)
 		gpio_set_val(SRST_PORT, SRST_PIN, !assert);
 	}
 }
-
+bool platform_target_get_power(void) {
+	return gpio_get(PWR_BR_PORT, PWR_BR_PIN);
+}
+void platform_target_set_power(bool power)
+{
+	gpio_set_val(PWR_BR_PORT, PWR_BR_PIN, !power);
+}
 void platform_delay(uint32_t delay)
 {
 	timeout_counter = delay;
