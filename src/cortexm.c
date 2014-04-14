@@ -668,6 +668,12 @@ cortexm_halt_resume(struct target_s *target, bool step)
 
 	adiv5_ap_mem_write(ap, CORTEXM_DHCSR, dhcsr);
 	ap->dp->allow_timeout = true;
+
+	/**
+	 * For the LPC17xx we need to re-read the IDCODE to re-sync
+	 * after resuming.
+	 */
+	adiv5_idcode_sync(ap->dp);
 }
 
 static int cortexm_fault_unwind(struct target_s *target)

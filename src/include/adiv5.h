@@ -116,6 +116,8 @@ typedef struct ADIv5_DP_s {
 	uint32_t (*low_access)(struct ADIv5_DP_s *dp, uint8_t APnDP, uint8_t RnW,
 			uint8_t addr, uint32_t value);
 
+	uint32_t (*idcode_sync)(struct ADIv5_DP_s *dp);
+
 	union {
 		jtag_dev_t *dev;
 		uint8_t fault;
@@ -141,6 +143,13 @@ static inline uint32_t adiv5_dp_low_access(struct ADIv5_DP_s *dp, uint8_t APnDP,
 					uint8_t RnW, uint8_t addr, uint32_t value)
 {
 	return dp->low_access(dp, APnDP, RnW, addr, value);
+}
+static inline uint32_t adiv5_idcode_sync(struct ADIv5_DP_s *dp)
+{
+	if (dp->idcode_sync) { /* Implemenation of this method is optional */
+		return dp->idcode_sync(dp);
+	}
+	return 0; // Ok, not implemented
 }
 
 typedef struct ADIv5_AP_s {

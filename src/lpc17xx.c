@@ -123,7 +123,7 @@ const struct command_s lpc17xx_cmd_list[] = {
 /*  16kB SRAM  @ 0x2007 C000 */
 /*  16kB SRAM  @ 0x2008 0000 */
 static const char lpc17xx_xml_memory_map[] = "<?xml version=\"1.0\"?>"
-/*	
+/*
 	"<!DOCTYPE memory-map "
 	" PUBLIC \"+//IDN gnu.org//DTD GDB Memory Map V1.0//EN\""
 	"\"http://sourceware.org/gdb/gdb-memory-map.dtd\">"
@@ -145,16 +145,16 @@ bool
 lpc17xx_probe(struct target_s *target)
 {
 	struct flash_program flash_pgm;
-	uint32_t cpuid, idcode;
-		
+	uint32_t cpuid;
+
 	cpuid = adiv5_ap_mem_read(adiv5_target_ap(target), ARM_CPUID);
 
 	/* Ignore the cortex-m3 version */
 	if ((cpuid & 0xFF00FFF0) == (CORTEX_M3_CPUID & 0xFF00FFF0)) {
-	  
+
 		/* TODO: Check the IDCODE is lpc17xx: 0x4BA00477 */
-	  
-		/* 
+
+		/*
 		 * Now that we're sure it's a cortex-m3, we need to
 		 * halt the target and make an IAP call to get the
 		 * part number. There appears to no other method of
@@ -168,8 +168,7 @@ lpc17xx_probe(struct target_s *target)
 		flash_pgm.p.result[0] = IAP_STATUS_CMD_SUCCESS;
 		lpc17xx_iap_call(target, &flash_pgm.p, sizeof(flash_pgm.p));
 
-		target_reset(target);
-//		target_halt_resume(target, 0);
+		target_halt_resume(target, 0);
 
 		if (flash_pgm.p.result[0] != IAP_STATUS_CMD_SUCCESS) {
 			return false;
@@ -190,7 +189,7 @@ lpc17xx_probe(struct target_s *target)
 			case 0x25001118: /* LPC1751 */
 			case 0x25001110: /* LPC1751 (No CRP) */
 
-				target->driver = "LPC17xx";
+				target->driver = "lpc17xx";
 				target->xml_mem_map = lpc17xx_xml_memory_map;
 				target->flash_erase = lpc17xx_flash_erase;
 				target->flash_write = lpc17xx_flash_write;
@@ -273,7 +272,7 @@ lpc17xx_cmd_erase(struct target_s *target)
 		return false;
 	}
 
-	
+
 	gdb_outf("Erase OK.\n");
 
 	return true;
@@ -417,7 +416,7 @@ lpc17xx_flash_write(struct target_s *target, uint32_t dest, const uint8_t *src, 
 			if (dest == 0) {
 				uint32_t *w = (uint32_t *)(&flash_pgm.data[0]);
 				uint32_t sum = 0;
-				
+
 				if (copylen >= 7) {
 					for (unsigned i = 0; i < 7; i++)
 						sum += w[i];

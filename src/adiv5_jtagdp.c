@@ -58,6 +58,7 @@ void adiv5_jtag_dp_handler(jtag_dev_t *dev)
 	dp->dp_read = adiv5_jtagdp_read;
 	dp->error = adiv5_jtagdp_error;
 	dp->low_access = adiv5_jtagdp_low_access;
+	dp->idcode_sync = NULL;
 
 	adiv5_dp_init(dp);
 }
