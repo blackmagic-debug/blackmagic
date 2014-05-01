@@ -212,6 +212,7 @@ bool lmi_probe(struct target_s *target);
 bool lpc11xx_probe(struct target_s *target);
 bool lpc43xx_probe(struct target_s *target);
 bool sam3x_probe(struct target_s *target);
+bool nrf51_probe(struct target_s *target);
 
 #endif
 
