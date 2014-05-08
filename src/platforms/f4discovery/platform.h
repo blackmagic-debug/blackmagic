@@ -24,6 +24,9 @@
 #ifndef __PLATFORM_H
 #define __PLATFORM_H
 
+#include <stdint.h>
+#include <libopencm3/cm3/common.h>
+#include <libopencm3/stm32/f4/memorymap.h>
 #include <libopencm3/stm32/f4/gpio.h>
 #include <libopencm3/usb/usbd.h>
 
