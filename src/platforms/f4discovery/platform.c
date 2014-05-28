@@ -22,6 +22,7 @@
  * implementation.
  */
 
+#include "platform.h"
 #include <libopencm3/stm32/f4/rcc.h>
 #include <libopencm3/cm3/systick.h>
 #include <libopencm3/cm3/scb.h>
@@ -31,7 +32,6 @@
 #include <libopencm3/stm32/syscfg.h>
 #include <libopencm3/usb/usbd.h>
 
-#include "platform.h"
 #include "jtag_scan.h"
 #include <usbuart.h>
 

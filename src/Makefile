@@ -28,6 +28,7 @@ SRC =			\
 	lpc11xx.c	\
 	lpc43xx.c	\
 	main.c		\
+	nrf51.c		\
 	platform.c	\
 	sam3x.c		\
 	stm32f1.c	\

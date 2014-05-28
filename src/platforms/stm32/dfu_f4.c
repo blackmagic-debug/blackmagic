@@ -17,6 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "platform.h"
+
 #if defined(STM32F2)
 #	include <libopencm3/stm32/f2/flash.h>
 #elif defined(STM32F4)
