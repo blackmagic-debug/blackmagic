@@ -189,7 +189,7 @@ lpc17xx_probe(struct target_s *target)
 			case 0x25001118: /* LPC1751 */
 			case 0x25001110: /* LPC1751 (No CRP) */
 
-				target->driver = "lpc17xx";
+				target->driver = "lpc17xx (experimental, compile blackmagic with -O0)";
 				target->xml_mem_map = lpc17xx_xml_memory_map;
 				target->flash_erase = lpc17xx_flash_erase;
 				target->flash_write = lpc17xx_flash_write;
