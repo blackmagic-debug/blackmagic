@@ -154,11 +154,16 @@ void platform_srst_set_val(bool assert)
 	}
 }
 bool platform_target_get_power(void) {
-	return gpio_get(PWR_BR_PORT, PWR_BR_PIN);
+	if (platform_hwversion() > 0) {
+		return gpio_get(PWR_BR_PORT, PWR_BR_PIN);
+  	}
+	return 1; // 1 = Unpowered
 }
 void platform_target_set_power(bool power)
 {
-	gpio_set_val(PWR_BR_PORT, PWR_BR_PIN, !power);
+	if (platform_hwversion() > 0) {
+		gpio_set_val(PWR_BR_PORT, PWR_BR_PIN, !power);
+	}
 }
 void platform_delay(uint32_t delay)
 {
