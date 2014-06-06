@@ -35,9 +35,24 @@ static int nrf51_flash_write(struct target_s *target, uint32_t dest,
 			const uint8_t *src, int len);
 
 static bool nrf51_cmd_erase_all(target *t);
+static bool nrf51_cmd_read_hwid(target *t);
+static bool nrf51_cmd_read_fwid(target *t);
+static bool nrf51_cmd_read_deviceid(target *t);
+static bool nrf51_cmd_read_deviceaddr(target *t);
+static bool nrf51_cmd_read_help();
+static bool nrf51_cmd_read(target *t, int argc, const char *argv[]);
 
 const struct command_s nrf51_cmd_list[] = {
 	{"erase_mass", (cmd_handler)nrf51_cmd_erase_all, "Erase entire flash memory"},
+	{"read", (cmd_handler)nrf51_cmd_read, "Read device parameters"},
+	{NULL, NULL, NULL}
+};
+const struct command_s nrf51_read_cmd_list[] = {
+	{"help", (cmd_handler)nrf51_cmd_read_help, "Display help for read commands"},
+	{"hwid", (cmd_handler)nrf51_cmd_read_hwid, "Read hardware identification number"},
+	{"fwid", (cmd_handler)nrf51_cmd_read_fwid, "Read pre-loaded firmware ID"},
+	{"deviceid", (cmd_handler)nrf51_cmd_read_deviceid, "Read unique device ID"},
+	{"deviceaddr", (cmd_handler)nrf51_cmd_read_deviceaddr, "Read device address"},
 	{NULL, NULL, NULL}
 };
 
@@ -65,10 +80,15 @@ static const char nrf51_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 #define NRF51_NVMC_CONFIG_EEN		0x2						// Erase enable
 
 /* Factory Information Configuration Registers (FICR) */
-#define NRF51_FICR					0x10000000
-#define NRF51_FICR_CODEPAGESIZE		(NRF51_FICR + 0x010)
+#define NRF51_FICR				0x10000000
+#define NRF51_FICR_CODEPAGESIZE			(NRF51_FICR + 0x010)
 #define NRF51_FICR_CODESIZE			(NRF51_FICR + 0x014)
 #define NRF51_FICR_CONFIGID			(NRF51_FICR + 0x05C)
+#define NRF51_FICR_DEVICEID_LOW			(NRF51_FICR + 0x060)
+#define NRF51_FICR_DEVICEID_HIGH		(NRF51_FICR + 0x064)
+#define NRF51_FICR_DEVICEADDRTYPE		(NRF51_FICR + 0x0A0)
+#define NRF51_FICR_DEVICEADDR_LOW		(NRF51_FICR + 0x0A4)
+#define NRF51_FICR_DEVICEADDR_HIGH		(NRF51_FICR + 0x0A8)
 
 #define NRF51_PAGE_SIZE 1024
 
@@ -224,6 +244,8 @@ static bool nrf51_cmd_erase_all(target *t)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(t);
 
+	gdb_out("erase..\n");
+
 	/* Enable erase */
 	adiv5_ap_mem_write(ap, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_EEN);
 
@@ -242,3 +264,74 @@ static bool nrf51_cmd_erase_all(target *t)
 
 	return true;
 }
+
+static bool nrf51_cmd_read_hwid(target *t)
+{
+	ADIv5_AP_t *ap = adiv5_target_ap(t);
+
+	uint32_t hwid = adiv5_ap_mem_read(ap, NRF51_FICR_CONFIGID) & 0xFFFF;
+	gdb_outf("Hardware ID: 0x%04X\n", hwid);
+
+	return true;
+}
+static bool nrf51_cmd_read_fwid(target *t)
+{
+	ADIv5_AP_t *ap = adiv5_target_ap(t);
+
+	uint32_t fwid = (adiv5_ap_mem_read(ap, NRF51_FICR_CONFIGID) >> 16) & 0xFFFF;
+	gdb_outf("Firmware ID: 0x%04X\n", fwid);
+
+	return true;
+}
+static bool nrf51_cmd_read_deviceid(target *t)
+{
+	ADIv5_AP_t *ap = adiv5_target_ap(t);
+
+	uint32_t deviceid_low = adiv5_ap_mem_read(ap, NRF51_FICR_DEVICEID_LOW);
+	uint32_t deviceid_high = adiv5_ap_mem_read(ap, NRF51_FICR_DEVICEID_HIGH);
+
+	gdb_outf("Device ID: 0x%08X%08X\n", deviceid_high, deviceid_low);
+
+	return true;
+}
+static bool nrf51_cmd_read_deviceaddr(target *t)
+{
+	ADIv5_AP_t *ap = adiv5_target_ap(t);
+
+	uint32_t addr_type = adiv5_ap_mem_read(ap, NRF51_FICR_DEVICEADDRTYPE);
+	uint32_t addr_low = adiv5_ap_mem_read(ap, NRF51_FICR_DEVICEADDR_LOW);
+	uint32_t addr_high = adiv5_ap_mem_read(ap, NRF51_FICR_DEVICEADDR_HIGH) & 0xFFFF;
+
+	if ((addr_type & 1) == 0) {
+		gdb_outf("Publicly Listed Address: 0x%04X%08X\n", addr_high, addr_low);
+	} else {
+		gdb_outf("Randomly Assigned Address: 0x%04X%08X\n", addr_high, addr_low);
+	}
+
+	return true;
+}
+static bool nrf51_cmd_read_help()
+{
+	const struct command_s *c;
+
+	gdb_out("Read commands:\n");
+	for(c = nrf51_read_cmd_list; c->cmd; c++)
+		gdb_outf("\t%s -- %s\n", c->cmd, c->help);
+
+	return true;
+}
+static bool nrf51_cmd_read(target *t, int argc, const char *argv[])
+{
+	const struct command_s *c;
+
+	for(c = nrf51_read_cmd_list; c->cmd; c++) {
+		/* Accept a partial match as GDB does.
+		 * So 'mon ver' will match 'monitor version'
+		 */
+		if(!strncmp(argv[1], c->cmd, strlen(argv[1])))
+			return !c->handler(t, argc - 1, &argv[1]);
+	}
+
+	return nrf51_cmd_read_help(t);
+}
+
