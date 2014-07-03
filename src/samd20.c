@@ -21,6 +21,13 @@
  * detecting the device, providing the XML memory map and Flash memory
  * programming.
  */
+/* Refer to the SAM D20 Datasheet:
+ * http://www.atmel.com/Images/Atmel-42129-SAM-D20_Datasheet.pdf
+ * particularly Sections 12. DSU and 20. NVMCTRL
+ */
+/* TODO: Support for the NVMCTRL Security Bit. If this is set then the
+ * device will probably not even be detected.
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
