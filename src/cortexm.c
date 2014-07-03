@@ -384,6 +384,7 @@ cortexm_probe(struct target_s *target)
 	PROBE(lpc43xx_probe);
 	PROBE(sam3x_probe);
 	PROBE(nrf51_probe);
+	PROBE(samd20_probe);
 	PROBE(lmi_probe);
 #undef PROBE
 
