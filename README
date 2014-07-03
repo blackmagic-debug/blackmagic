@@ -14,6 +14,7 @@ Currently supported microcontrollers:
  - TI/LMI Stellaris Family
  - NXP LPC11xx Family
  - Atmel SAM3X
+ - Atmel SAM D20
 
 
 Getting started
