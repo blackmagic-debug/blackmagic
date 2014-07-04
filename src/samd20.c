@@ -248,6 +248,15 @@ samd20_reset(struct target_s *target)
 	adiv5_ap_mem_write(ap, CORTEXM_AIRCR,
 			   CORTEXM_AIRCR_VECTKEY | CORTEXM_AIRCR_SYSRESETREQ);
 
+	/* Poll for release from reset */
+	while(adiv5_ap_mem_read(ap, CORTEXM_DHCSR) & CORTEXM_DHCSR_S_RESET_ST);
+
+	/* Reset DFSR flags */
+	adiv5_ap_mem_write(ap, CORTEXM_DFSR, CORTEXM_DFSR_RESETALL);
+
+	/* Clear any pending fault condition */
+	target_check_error(target);
+
 	/* Exit extended reset */
 	if (adiv5_ap_mem_read(ap, SAMD20_DSU_CTRLSTAT) &
 	    SAMD20_STATUSA_CRSTEXT) {
@@ -255,15 +264,6 @@ samd20_reset(struct target_s *target)
 		adiv5_ap_mem_write(ap, SAMD20_DSU_CTRLSTAT,
 				   SAMD20_STATUSA_CRSTEXT);
 	}
-
-	/* Poll for release from reset */
-	while(adiv5_ap_mem_read(ap, CORTEXM_DHCSR) & CORTEXM_DHCSR_S_RESET_ST);
-
-	/* Reset DFSR flags */
-	adiv5_ap_mem_write(ap, CORTEXM_DFSR, CORTEXM_DFSR_RESETALL);
-
-	/* Clear any target errors */
-	target_check_error(target);
 }
 
 char variant_string[30];
