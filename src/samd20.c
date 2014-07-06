@@ -353,9 +353,6 @@ static int samd20_flash_erase(struct target_s *target, uint32_t addr, int len)
 	addr &= ~(SAMD20_ROW_SIZE - 1);
 	len &= ~(SAMD20_ROW_SIZE - 1);
 
-
-
-
 	while (len) {
 		/* Write address of first word in row to erase it */
 		/* Must be shifted right for 16-bit address, see Datasheet §20.8.8 Address */
@@ -414,10 +411,16 @@ static int samd20_flash_write(struct target_s *target, uint32_t dest,
 		end_of_this_page = page + (SAMD20_PAGE_SIZE - 4);
 
 		if (addr > page || (page == last_page && end < end_of_this_page)) {
+			/* Setup write */
+			adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw |
+				       ADIV5_AP_CSW_SIZE_WORD | ADIV5_AP_CSW_ADDRINC_SINGLE);
+			adiv5_ap_write(ap, ADIV5_AP_TAR, addr);
+			adiv5_dp_write(ap->dp, ADIV5_DP_SELECT,
+				       ((uint32_t)ap->apsel << 24)|(ADIV5_AP_DRW & 0xF0));
 
 			/* Partial, manual page write */
 			for (; addr <= MINIMUM(end, end_of_this_page); addr += 4, i++) {
-				adiv5_ap_mem_write(ap, addr, data[i]);
+				adiv5_dp_write_ap(ap->dp, ADIV5_AP_DRW, data[i]);
 			}
 
 			/* Unlock */
@@ -433,9 +436,16 @@ static int samd20_flash_write(struct target_s *target, uint32_t dest,
 			/* Unlock */
 			samd20_unlock_current_address(target);
 
+			/* Set up write */
+			adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw |
+				       ADIV5_AP_CSW_SIZE_WORD | ADIV5_AP_CSW_ADDRINC_SINGLE);
+			adiv5_ap_write(ap, ADIV5_AP_TAR, addr);
+			adiv5_dp_write(ap->dp, ADIV5_DP_SELECT,
+				       ((uint32_t)ap->apsel << 24)|(ADIV5_AP_DRW & 0xF0));
+
 			/* Full, automatic page write */
 			for (; addr < page + SAMD20_PAGE_SIZE; addr += 4, i++) {
-				adiv5_ap_mem_write(ap, addr, data[i]);
+				adiv5_dp_write_ap(ap->dp, ADIV5_AP_DRW, data[i]);
 			}
 		}
 
