@@ -64,6 +64,9 @@ static const char nrf51_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 	"  <memory type=\"flash\" start=\"0x0\" length=\"0x40000\">"
 	"    <property name=\"blocksize\">0x400</property>"
 	"  </memory>"
+	"  <memory type=\"flash\" start=\"0x10001000\" length=\"0x100\">"
+	"    <property name=\"blocksize\">0x400</property>"
+	"  </memory>"
 	"  <memory type=\"ram\" start=\"0x20000000\" length=\"0x4000\"/>"
 	"</memory-map>";
 
@@ -89,6 +92,9 @@ static const char nrf51_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 #define NRF51_FICR_DEVICEADDRTYPE		(NRF51_FICR + 0x0A0)
 #define NRF51_FICR_DEVICEADDR_LOW		(NRF51_FICR + 0x0A4)
 #define NRF51_FICR_DEVICEADDR_HIGH		(NRF51_FICR + 0x0A8)
+
+/* User Information Configuration Registers (UICR) */
+#define NRF51_UICR				0x10001000
 
 #define NRF51_PAGE_SIZE 1024
 
@@ -177,8 +183,14 @@ static int nrf51_flash_erase(struct target_s *target, uint32_t addr, int len)
 			return -1;
 
 	while (len) {
-		/* Write address of first word in page to erase it */
-		adiv5_ap_mem_write(ap, NRF51_NVMC_ERASEPAGE, addr);
+		if (addr == NRF51_UICR) { // Special Case
+			/* Write to the ERASE_UICR register to erase */
+			adiv5_ap_mem_write(ap, NRF51_NVMC_ERASEUICR, 0x1);
+
+		} else { // Standard Flash Page
+			/* Write address of first word in page to erase it */
+			adiv5_ap_mem_write(ap, NRF51_NVMC_ERASEPAGE, addr);
+		}
 
 		/* Poll for NVMC_READY */
 		while(adiv5_ap_mem_read(ap, NRF51_NVMC_READY) == 0)
