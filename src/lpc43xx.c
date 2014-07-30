@@ -18,6 +18,7 @@
  */
 
 #include <stddef.h>
+#include <stdlib.h>
 #include "command.h"
 #include "general.h"
 #include "adiv5.h"
@@ -73,11 +74,11 @@
 #define CPU_CLK_KHZ 12000
 
 struct flash_param {
-	uint16_t	opcode;			/* opcode to return to after calling the ROM */
-	uint16_t	pad0;
-	uint32_t	command;		/* IAP command */
+	uint16_t opcode;			/* opcode to return to after calling the ROM */
+	uint16_t pad0;
+	uint32_t command;		/* IAP command */
 	union {
-		uint32_t	words[5];	/* command parameters */
+		uint32_t words[5];	/* command parameters */
 		struct {
 			uint32_t start_sector;
 			uint32_t end_sector;
@@ -105,11 +106,11 @@ struct flash_param {
 			uint32_t cpu_clk_khz;
 		} make_active;
 	} params;
-	uint32_t	result[5];	/* result data */
+	uint32_t result[5];	/* result data */
 } __attribute__((aligned(4)));
 
 struct flash_program {
-	struct	flash_param	p;
+	struct flash_param p;
 	uint8_t	data[IAP_PGM_CHUNKSIZE];
 };
 
@@ -117,10 +118,13 @@ static bool lpc43xx_cmd_erase(target *target, int argc, const char *argv[]);
 static bool lpc43xx_cmd_reset(target *target, int argc, const char *argv[]);
 static bool lpc43xx_cmd_mkboot(target *target, int argc, const char *argv[]);
 static int lpc43xx_flash_init(struct target_s *target);
-static void lpc43xx_iap_call(struct target_s *target, struct flash_param *param, unsigned param_len);
-static int lpc43xx_flash_prepare(struct target_s *target, uint32_t addr, int len);
+static void lpc43xx_iap_call(struct target_s *target, struct flash_param *param,
+                             unsigned param_len);
+static int lpc43xx_flash_prepare(struct target_s *target,
+                                 uint32_t addr, int len);
 static int lpc43xx_flash_erase(struct target_s *target, uint32_t addr, int len);
-static int lpc43xx_flash_write(struct target_s *target, uint32_t dest, const uint8_t *src, int len);
+static int lpc43xx_flash_write(struct target_s *target,
+                               uint32_t dest, const uint8_t *src, int len);
 static void lpc43xx_set_internal_clock(struct target_s *target);
 
 const struct command_s lpc43xx_cmd_list[] = {
@@ -163,47 +167,50 @@ bool lpc43xx_probe(struct target_s *target)
 	cpuid = adiv5_ap_mem_read(adiv5_target_ap(target), ARM_CPUID);
 
 	switch(chipid) {
-		case 0x4906002B:	/* Parts with on-chip flash */
-			switch (cpuid & 0xFF00FFF0) {
-				case 0x4100C240:
-					target->driver = "LPC43xx Cortex-M4";
-					if (cpuid == 0x410FC241)
-					{
-						/* LPC4337 */
-						target->xml_mem_map = lpc4337_xml_memory_map;
-						target->flash_erase = lpc43xx_flash_erase;
-						target->flash_write = lpc43xx_flash_write;
-						target_add_commands(target, lpc43xx_cmd_list, "LPC43xx");
-					}
-					break;
-				case 0x4100C200:
-					target->driver = "LPC43xx Cortex-M0";
-					break;
-				default:
-					target->driver = "LPC43xx <Unknown>";
+	case 0x4906002B:	/* Parts with on-chip flash */
+		switch (cpuid & 0xFF00FFF0) {
+		case 0x4100C240:
+			target->driver = "LPC43xx Cortex-M4";
+			if (cpuid == 0x410FC241)
+			{
+				/* LPC4337 */
+				target->xml_mem_map = lpc4337_xml_memory_map;
+				target->flash_erase = lpc43xx_flash_erase;
+				target->flash_write = lpc43xx_flash_write;
+				target_add_commands(target, lpc43xx_cmd_list, "LPC43xx");
 			}
-			return true;
-		case 0x5906002B:	/* Flashless parts */
-		case 0x6906002B:
-			switch (cpuid & 0xFF00FFF0) {
-				case 0x4100C240:
-					target->driver = "LPC43xx Cortex-M4";
-					break;
-				case 0x4100C200:
-					target->driver = "LPC43xx Cortex-M0";
-					break;
-				default:
-					target->driver = "LPC43xx <Unknown>";
-			}
-			return true;
+			break;
+		case 0x4100C200:
+			target->driver = "LPC43xx Cortex-M0";
+			break;
+		default:
+			target->driver = "LPC43xx <Unknown>";
+		}
+		return true;
+	case 0x5906002B:	/* Flashless parts */
+	case 0x6906002B:
+		switch (cpuid & 0xFF00FFF0) {
+		case 0x4100C240:
+			target->driver = "LPC43xx Cortex-M4";
+			break;
+		case 0x4100C200:
+			target->driver = "LPC43xx Cortex-M0";
+			break;
+		default:
+			target->driver = "LPC43xx <Unknown>";
+		}
+		return true;
 	}
 
 	return false;
 }
 
 /* Reset all major systems _except_ debug */
-static bool lpc43xx_cmd_reset(target *target, int __attribute__((unused)) argc, const char __attribute__((unused)) *argv[])
+static bool lpc43xx_cmd_reset(target *target, int argc, const char *argv[])
 {
+	(void)argc;
+	(void)argv;
+
 	/* Cortex-M4 Application Interrupt and Reset Control Register */
 	static const uint32_t AIRCR = 0xE000ED0C;
 	/* Magic value key */
@@ -215,8 +222,11 @@ static bool lpc43xx_cmd_reset(target *target, int __attribute__((unused)) argc, 
 	return true;
 }
 
-static bool lpc43xx_cmd_erase(target *target, int __attribute__((unused)) argc, const char __attribute__((unused)) *argv[])
+static bool lpc43xx_cmd_erase(target *target, int argc, const char *argv[])
 {
+	(void)argc;
+	(void)argv;
+
 	uint32_t bank = 0;
 	struct flash_program flash_pgm;
 
@@ -264,9 +274,7 @@ static int lpc43xx_flash_init(struct target_s *target)
 	flash_pgm.p.result[0] = IAP_STATUS_CMD_SUCCESS;
 	lpc43xx_iap_call(target, &flash_pgm.p, sizeof(flash_pgm.p));
 	if (flash_pgm.p.result[0] != IAP_STATUS_CMD_SUCCESS)
-	{
 		return -1;
-	}
 
 	return 0;
 }
@@ -278,22 +286,14 @@ static int lpc43xx_flash_init(struct target_s *target)
  */
 static int32_t flash_bank(uint32_t addr)
 {
-	int32_t retVal;
+	if ((addr >= FLASH_BANK_A_BASE) &&
+	    (addr < (FLASH_BANK_A_BASE + FLASH_BANK_A_SIZE)))
+		return 0;
+	if ((addr >= FLASH_BANK_B_BASE) &&
+	    (addr < (FLASH_BANK_B_BASE + FLASH_BANK_B_SIZE)))
+		return 1;
 
-	if (addr >= FLASH_BANK_A_BASE && addr < (FLASH_BANK_A_BASE+FLASH_BANK_A_SIZE))
-	{
-		retVal = 0;
-	}
-	else if (addr >= FLASH_BANK_B_BASE && addr < (FLASH_BANK_B_BASE+FLASH_BANK_B_SIZE))
-	{
-		retVal = 1;
-	}
-	else
-	{
-		retVal = -1;
-	}
-
-	return retVal;
+	return -1;
 }
 
 /**
@@ -301,36 +301,25 @@ static int32_t flash_bank(uint32_t addr)
  */
 static int32_t sector_number(uint32_t addr)
 {
-	int32_t retVal = 0;
 	int32_t bank = flash_bank(addr);
 
-	if (bank == 0)
-	{
+	switch (bank) {
+	case 0:
 		addr = addr - FLASH_BANK_A_BASE;
-	}
-	else if (bank == 1)
-	{
+		break;
+	case 1:
 		addr = addr - FLASH_BANK_B_BASE;
-	}
-	else
-	{
-		retVal = -1;
-	}
-
-	if (retVal != -1)
-	{
-		/* from 47.5 "Sector numbers" (page 1218) UM10503.pdf (Rev 1.6) */
-		if (addr < FLASH_LARGE_SECTOR_OFFSET)
-		{
-			retVal = addr >> 13;
-		}
-		else
-		{
-			retVal = 8 + ((addr - FLASH_LARGE_SECTOR_OFFSET) >> 16);
-		}
+		break;
+	default:
+		return -1;
 	}
 
-	return retVal;
+	/* from 47.5 "Sector numbers" (page 1218) UM10503.pdf (Rev 1.6) */
+	if (addr < FLASH_LARGE_SECTOR_OFFSET) {
+		return addr >> 13;
+	} else {
+		return 8 + ((addr - FLASH_LARGE_SECTOR_OFFSET) >> 16);
+	}
 }
 
 static void lpc43xx_iap_call(struct target_s *target, struct flash_param *param, unsigned param_len)
@@ -382,28 +371,21 @@ static int lpc43xx_flash_prepare(struct target_s *target, uint32_t addr, int len
 	return 0;
 }
 
-	static int
-lpc43xx_flash_erase(struct target_s *target, uint32_t addr, int len)
+static int lpc43xx_flash_erase(struct target_s *target, uint32_t addr, int len)
 {
 	struct flash_program flash_pgm;
 
 	/* min block size */
 	if (addr % 8192)
-	{
 		return -1;
-	}
 
 	/* init */
 	if (lpc43xx_flash_init(target))
-	{
 		return -1;
-	}
 
 	/* prepare... */
 	if (lpc43xx_flash_prepare(target, addr, len))
-	{
 		return -1;
-	}
 
 	/* and now erase them */
 	flash_pgm.p.command = IAP_CMD_ERASE;
@@ -437,7 +419,8 @@ static void lpc43xx_set_internal_clock(struct target_s *target)
 	target_mem_write_words(target, 0x40050000 + 0x06C, &val2, sizeof(val2));
 }
 
-static int lpc43xx_flash_write(struct target_s *target, uint32_t dest, const uint8_t *src, int len)
+static int lpc43xx_flash_write(struct target_s *target,
+                               uint32_t dest, const uint8_t *src, int len)
 {
 	unsigned first_chunk = dest / IAP_PGM_CHUNKSIZE;
 	unsigned last_chunk = (dest + len - 1) / IAP_PGM_CHUNKSIZE;
@@ -445,14 +428,10 @@ static int lpc43xx_flash_write(struct target_s *target, uint32_t dest, const uin
 	unsigned chunk;
 	struct flash_program flash_pgm;
 
-	for (chunk = first_chunk; chunk <= last_chunk; chunk++)
-	{
-		if (chunk == first_chunk)
-		{
+	for (chunk = first_chunk; chunk <= last_chunk; chunk++) {
+		if (chunk == first_chunk) {
 			chunk_offset = dest % IAP_PGM_CHUNKSIZE;
-		}
-		else
-		{
+		} else {
 			chunk_offset = 0;
 		}
 
@@ -473,7 +452,6 @@ static int lpc43xx_flash_write(struct target_s *target, uint32_t dest, const uin
 			len -= copylen;
 			src += copylen;
 		} else {
-
 			/* interior chunk, must be aligned and full-sized */
 			memcpy(flash_pgm.data, src, IAP_PGM_CHUNKSIZE);
 			len -= IAP_PGM_CHUNKSIZE;
@@ -481,8 +459,7 @@ static int lpc43xx_flash_write(struct target_s *target, uint32_t dest, const uin
 		}
 
 		/* prepare... */
-		if (lpc43xx_flash_prepare(target, chunk * IAP_PGM_CHUNKSIZE, IAP_PGM_CHUNKSIZE))
-		{
+		if (lpc43xx_flash_prepare(target, chunk * IAP_PGM_CHUNKSIZE, IAP_PGM_CHUNKSIZE)) {
 			return -1;
 		}
 
@@ -507,7 +484,7 @@ static int lpc43xx_flash_write(struct target_s *target, uint32_t dest, const uin
 	return 0;
 }
 
-/* 
+/*
  * Call Boot ROM code to make a flash bank bootable by computing and writing the
  * correct signature into the exception table near the start of the bank.
  *
@@ -517,41 +494,33 @@ static int lpc43xx_flash_write(struct target_s *target, uint32_t dest, const uin
 static bool lpc43xx_cmd_mkboot(target *target, int argc, const char *argv[])
 {
 	/* Usage: mkboot 0 or mkboot 1 */
-	if (argc == 2)
-	{
-		const long int bank = strtol(argv[1], NULL, 0);
-
-		if (bank == 0 || bank == 1)
-		{
-			lpc43xx_flash_init(target);
-			struct flash_program flash_pgm;
-
-			/* special command to compute/write magic vector for signature */
-			flash_pgm.p.command = IAP_CMD_SET_ACTIVE_BANK;
-			flash_pgm.p.params.make_active.flash_bank = bank;
-			flash_pgm.p.params.make_active.cpu_clk_khz = CPU_CLK_KHZ;
-			flash_pgm.p.result[0] = IAP_STATUS_CMD_SUCCESS;
-			lpc43xx_iap_call(target, &flash_pgm.p, sizeof(flash_pgm));
-			if (flash_pgm.p.result[0] == IAP_STATUS_CMD_SUCCESS) {
-				gdb_outf("Set bootable OK.\n");
-				return true;
-			}
-			else
-			{
-				gdb_outf("Set bootable failed.\n");
-			}
-		}
-		else
-		{
-			gdb_outf("Unexpected bank number, should be 0 or 1.\n");
-		}
-	}
-	else
-	{
+	if (argc != 2) {
 		gdb_outf("Expected bank argument 0 or 1.\n");
+		return false;
 	}
 
+	const long int bank = strtol(argv[1], NULL, 0);
 
-	return false;
+	if ((bank != 0) && (bank != 1)) {
+		gdb_outf("Unexpected bank number, should be 0 or 1.\n");
+		return false;
+	}
+
+	lpc43xx_flash_init(target);
+	struct flash_program flash_pgm;
+
+	/* special command to compute/write magic vector for signature */
+	flash_pgm.p.command = IAP_CMD_SET_ACTIVE_BANK;
+	flash_pgm.p.params.make_active.flash_bank = bank;
+	flash_pgm.p.params.make_active.cpu_clk_khz = CPU_CLK_KHZ;
+	flash_pgm.p.result[0] = IAP_STATUS_CMD_SUCCESS;
+	lpc43xx_iap_call(target, &flash_pgm.p, sizeof(flash_pgm));
+	if (flash_pgm.p.result[0] != IAP_STATUS_CMD_SUCCESS) {
+		gdb_outf("Set bootable failed.\n");
+		return false;
+	}
+
+	gdb_outf("Set bootable OK.\n");
+	return true;
 }
 
