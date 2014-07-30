@@ -380,6 +380,7 @@ cortexm_probe(struct target_s *target)
 	PROBE(stm32f1_probe);
 	PROBE(stm32f4_probe);
 	PROBE(stm32l1_probe);
+	PROBE(lpc8xx_probe);
 	PROBE(lpc11xx_probe);
 	PROBE(lpc43xx_probe);
 	PROBE(sam3x_probe);
