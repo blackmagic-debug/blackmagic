@@ -231,3 +231,5 @@ static inline uint16_t _gpio_get(uint32_t gpioport, uint16_t gpios)
 void assert_boot_pin(void);
 void setup_vbus_irq(void);
 void platform_srst_set_val(bool assert);
+bool platform_target_get_power(void);
+void platform_target_set_power(bool power);

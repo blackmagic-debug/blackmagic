@@ -47,6 +47,7 @@ static bool cmd_swdp_scan(void);
 static bool cmd_targets(target *t);
 static bool cmd_morse(void);
 static bool cmd_connect_srst(target *t, int argc, const char **argv);
+static bool cmd_target_power(target *t, int argc, const char **argv);
 #ifdef PLATFORM_HAS_TRACESWO
 static bool cmd_traceswo(void);
 #endif
@@ -59,6 +60,7 @@ const struct command_s cmd_list[] = {
 	{"targets", (cmd_handler)cmd_targets, "Display list of available targets" },
 	{"morse", (cmd_handler)cmd_morse, "Display morse error message" },
 	{"connect_srst", (cmd_handler)cmd_connect_srst, "Configure connect under SRST: (enable|disable)" },
+	{"tpwr", (cmd_handler)cmd_target_power, "Supplies power to the target: (enable|disable)"},
 #ifdef PLATFORM_HAS_TRACESWO
 	{"traceswo", (cmd_handler)cmd_traceswo, "Start trace capture" },
 #endif
@@ -219,6 +221,16 @@ static bool cmd_connect_srst(target *t, int argc, const char **argv)
 			 connect_assert_srst ? "enabled" : "disabled");
 	else
 		connect_assert_srst = !strcmp(argv[1], "enable");
+	return true;
+}
+static bool cmd_target_power(target *t, int argc, const char **argv)
+{
+	(void)t;
+	if (argc == 1)
+		gdb_outf("Target Power: %s\n",
+			 !platform_target_get_power() ? "enabled" : "disabled");
+	else
+		platform_target_set_power(!strncmp(argv[1], "enable", strlen(argv[1])));
 	return true;
 }
 
