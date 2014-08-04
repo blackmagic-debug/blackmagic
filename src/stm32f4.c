@@ -82,7 +82,6 @@ static const char stm32f4_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 	"  <memory type=\"ram\" start=\"0x10000000\" length=\"0x10000\"/>"
 	"</memory-map>";
 
-
 /* Flash Program ad Erase Controller Register Map */
 #define FPEC_BASE	0x40023C00
 #define FLASH_ACR	(FPEC_BASE+0x00)
@@ -169,11 +168,12 @@ bool stm32f4_probe(struct target_s *target)
 	idcode = adiv5_ap_mem_read(adiv5_target_ap(target), DBGMCU_IDCODE);
 	switch(idcode & 0xFFF) {
 	case 0x411: /* Documented to be 0x413! This is what I read... */
-	case 0x413:
-	case 0x423: /* F401 */
+	case 0x413: /* F407VGT6 */
 	case 0x419: /* 427/437 */
-		target->driver = stm32f4_driver_str;
+	case 0x423: /* F401 */
+	case 0x433: /* F401RET6U */
 		target->xml_mem_map = stm32f4_xml_memory_map;
+		target->driver = stm32f4_driver_str;
 		target->flash_erase = stm32f4_flash_erase;
 		target->flash_write = stm32f4_flash_write;
 		target_add_commands(target, stm32f4_cmd_list, "STM32F4");
