@@ -47,6 +47,18 @@ void gdb_if_putchar(unsigned char c, int flush)
 		}
 		while(usbd_ep_write_packet(usbdev, CDCACM_GDB_ENDPOINT,
 			buffer_in, count_in) <= 0);
+
+		if (flush && (count_in == CDCACM_PACKET_SIZE)) {
+			/* We need to send an empty packet for some hosts
+			 * to accept this as a complete transfer. */
+			/* libopencm3 needs a change for us to confirm when
+			 * that transfer is complete, so we just send a packet
+			 * containing a null byte for now.
+			 */
+			while (usbd_ep_write_packet(usbdev, CDCACM_GDB_ENDPOINT,
+				"\0", 1) <= 0);
+		}
+
 		count_in = 0;
 	}
 }
