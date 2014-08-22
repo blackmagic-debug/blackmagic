@@ -615,7 +615,7 @@ static bool samd20_cmd_mbist(target *t)
 
 	/* Test the protection error bit in Status A */
 	if (status & SAMD20_STATUSA_PERR) {
-		gdb_outf("MBIST not run due to protection error.\n")
+		gdb_outf("MBIST not run due to protection error.\n");
 		return true;
 	}
 
