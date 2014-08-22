@@ -235,8 +235,21 @@ samd20_reset(struct target_s *target)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
 
-	jtagtap_srst(true);
-	jtagtap_srst(false);
+	/**
+	 * SRST is not asserted here as it appears to reset the adiv5
+	 * logic, meaning that subsequent adiv5_* calls PLATFORM_FATAL_ERROR.
+	 *
+	 * This is ok as normally you can just connect the debugger and go,
+	 * but if that's not possible (protection or SWCLK being used for
+	 * something else) then having SWCLK low on reset should get you
+	 * debug access (cold-plugging). TODO: Confirm this
+	 *
+	 * See the SAM D20 datasheet §12.6 Debug Operation for more
+	 * details.
+	 *
+	 * jtagtap_srst(true);
+	 * jtagtap_srst(false);
+	 */
 
 	/* Read DHCSR here to clear S_RESET_ST bit before reset */
 	adiv5_ap_mem_read(ap, CORTEXM_DHCSR);
@@ -309,13 +322,17 @@ bool samd20_probe(struct target_s *target)
 			target->flash_write = samd20_flash_write;
 			target_add_commands(target, samd20_cmd_list, "SAMD20");
 
-			/* Release the target from extended reset to make attach possible */
-			if (adiv5_ap_mem_read(ap, SAMD20_DSU_CTRLSTAT) &
-			    SAMD20_STATUSA_CRSTEXT) {
+			/* If we're not in reset here */
+			if (!connect_assert_srst) {
+			  /* We'll have to release the target from
+			   * extended reset to make attach possible */
+			  if (adiv5_ap_mem_read(ap, SAMD20_DSU_CTRLSTAT) &
+			      SAMD20_STATUSA_CRSTEXT) {
 
-				/* Write bit to clear from extended reset */
-				adiv5_ap_mem_write(ap, SAMD20_DSU_CTRLSTAT,
-						   SAMD20_STATUSA_CRSTEXT);
+			    /* Write bit to clear from extended reset */
+			    adiv5_ap_mem_write(ap, SAMD20_DSU_CTRLSTAT,
+					       SAMD20_STATUSA_CRSTEXT);
+			  }
 			}
 
 			return true;
