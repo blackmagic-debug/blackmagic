@@ -110,10 +110,11 @@ static const char samd20_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 
 /* Device Service Unit (DSU) Registers */
 #define SAMD20_DSU			0x41002000
-#define SAMD20_DSU_CTRLSTAT		(SAMD20_DSU + 0x0)
-#define SAMD20_DSU_ADDRESS		(SAMD20_DSU + 0x4)
-#define SAMD20_DSU_LENGTH		(SAMD20_DSU + 0x8)
-#define SAMD20_DSU_DID			(SAMD20_DSU + 0x018)
+#define SAMD20_DSU_EXT_ACCESS		(SAMD20_DSU + 0x100)
+#define SAMD20_DSU_CTRLSTAT		(SAMD20_DSU_EXT_ACCESS + 0x0)
+#define SAMD20_DSU_ADDRESS		(SAMD20_DSU_EXT_ACCESS + 0x4)
+#define SAMD20_DSU_LENGTH		(SAMD20_DSU_EXT_ACCESS + 0x8)
+#define SAMD20_DSU_DID			(SAMD20_DSU_EXT_ACCESS + 0x018)
 #define SAMD20_DSU_PID(n)		(SAMD20_DSU + 0x1FE0 + \
 					 (0x4 * (n % 4)) - (0x10 * (n / 4)))
 #define SAMD20_DSU_CID(n)		(SAMD20_DSU + 0x1FF0 + \
