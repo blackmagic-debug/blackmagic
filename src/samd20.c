@@ -124,7 +124,9 @@ static const char samd20_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 #define SAMD20_CTRL_CHIP_ERASE		(1 << 4)
 #define SAMD20_CTRL_MBIST		(1 << 3)
 #define SAMD20_CTRL_CRC			(1 << 2)
+#define SAMD20_STATUSA_PERR		(1 << 12)
 #define SAMD20_STATUSA_FAIL		(1 << 11)
+#define SAMD20_STATUSA_BERR		(1 << 10)
 #define SAMD20_STATUSA_CRSTEXT		(1 << 9)
 #define SAMD20_STATUSA_DONE		(1 << 8)
 
@@ -605,12 +607,20 @@ static bool samd20_cmd_mbist(target *t)
 	adiv5_ap_mem_write(ap, SAMD20_DSU_CTRLSTAT, SAMD20_CTRL_MBIST);
 
 	/* Poll for DSU Ready */
-	while ((adiv5_ap_mem_read(ap, SAMD20_DSU_CTRLSTAT) & SAMD20_STATUSA_DONE) == 0)
+	uint32_t status;
+	while (((status = adiv5_ap_mem_read(ap, SAMD20_DSU_CTRLSTAT)) &
+		(SAMD20_STATUSA_DONE | SAMD20_STATUSA_PERR | SAMD20_STATUSA_FAIL)) == 0)
 		if(target_check_error(t))
 			return false;
 
+	/* Test the protection error bit in Status A */
+	if (status & SAMD20_STATUSA_PERR) {
+		gdb_outf("MBIST not run due to protection error.\n")
+		return true;
+	}
+
 	/* Test the fail bit in Status A */
-	if (adiv5_ap_mem_read(ap, SAMD20_DSU_CTRLSTAT) & SAMD20_STATUSA_FAIL) {
+	if (status & SAMD20_STATUSA_FAIL) {
 		gdb_outf("MBIST Fail @ 0x%08x\n",
 			 adiv5_ap_mem_read(ap, SAMD20_DSU_ADDRESS));
 	} else {
