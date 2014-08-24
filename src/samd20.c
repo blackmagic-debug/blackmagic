@@ -134,6 +134,9 @@ static const char samd20_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 #define SAMD20_DID_MASK			0xFFBF0000
 #define SAMD20_DID_CONST_VALUE		0x10000000
 #define SAMD20_DID_DEVSEL_MASK		0x0F
+#define SAMD20_DID_DEVSEL_POS		0
+#define SAMD20_DID_REVISION_MASK	0x0F
+#define SAMD20_DID_REVISION_POS		8
 
 /* Peripheral ID */
 #define SAMD20_PID_MASK			0x00F7FFFF
@@ -299,7 +302,10 @@ bool samd20_probe(struct target_s *target)
 		/* If the Device ID matches */
 		if ((did & SAMD20_DID_MASK) == SAMD20_DID_CONST_VALUE) {
 
-			uint8_t devsel = did & SAMD20_DID_DEVSEL_MASK;
+			uint8_t devsel = (did >> SAMD20_DID_DEVSEL_POS)
+			  & SAMD20_DID_DEVSEL_MASK;
+			uint8_t revision = (did >> SAMD20_DID_REVISION_POS)
+			  & SAMD20_DID_REVISION_MASK;
 
 			/* Pin Variant */
 			char pin_variant;
@@ -313,9 +319,12 @@ bool samd20_probe(struct target_s *target)
 			/* Mem Variant */
 			uint8_t mem_variant = 18 - (devsel % 5);
 
+			/* Revision */
+			char revision_variant = 'A' + revision;
+
 			/* Part String */
-			sprintf(variant_string, "Atmel SAMD20%c%dA",
-				pin_variant, mem_variant);
+			sprintf(variant_string, "Atmel SAMD20%c%dA (rev %c)",
+				pin_variant, mem_variant, revision_variant);
 
 			/* Setup Target */
 			target->driver = variant_string;
