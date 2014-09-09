@@ -37,6 +37,12 @@
 #define LPC43XX_ETBAHB_SRAM_BASE 0x2000C000
 #define LPC43XX_ETBAHB_SRAM_SIZE (16*1024)
 
+#define LPC43XX_WDT_MODE 0x40080000
+#define LPC43XX_WDT_CNT  0x40080004
+#define LPC43XX_WDT_FEED 0x40080008
+#define LPC43XX_WDT_PERIOD_MAX 0xFFFFFF
+#define LPC43XX_WDT_PROTECT (1 << 4)
+
 #define IAP_RAM_SIZE	LPC43XX_ETBAHB_SRAM_SIZE
 #define IAP_RAM_BASE	LPC43XX_ETBAHB_SRAM_BASE
 
@@ -126,6 +132,8 @@ static int lpc43xx_flash_erase(struct target_s *target, uint32_t addr, int len);
 static int lpc43xx_flash_write(struct target_s *target,
                                uint32_t dest, const uint8_t *src, int len);
 static void lpc43xx_set_internal_clock(struct target_s *target);
+static void lpc43xx_wdt_set_period(struct target_s *target);
+static void lpc43xx_wdt_pet(struct target_s *target);
 
 const struct command_s lpc43xx_cmd_list[] = {
 	{"erase_mass", lpc43xx_cmd_erase, "Erase entire flash memory"},
@@ -264,10 +272,13 @@ static bool lpc43xx_cmd_erase(target *target, int argc, const char *argv[])
 
 static int lpc43xx_flash_init(struct target_s *target)
 {
-	struct flash_program flash_pgm;
+	/* Deal with WDT */
+	lpc43xx_wdt_set_period(target);
 
 	/* Force internal clock */
 	lpc43xx_set_internal_clock(target);
+
+	struct flash_program flash_pgm;
 
 	/* Initialize flash IAP */
 	flash_pgm.p.command = IAP_CMD_INIT;
@@ -326,6 +337,9 @@ static void lpc43xx_iap_call(struct target_s *target, struct flash_param *param,
 {
 	uint32_t regs[target->regs_size / sizeof(uint32_t)];
 	uint32_t iap_entry;
+
+	/* Pet WDT before each IAP call, if it is on */
+	lpc43xx_wdt_pet(target);
 
 	target_mem_read_words(target, &iap_entry, IAP_ENTRYPOINT_LOCATION, sizeof(iap_entry));
 
@@ -524,3 +538,36 @@ static bool lpc43xx_cmd_mkboot(target *target, int argc, const char *argv[])
 	return true;
 }
 
+static void lpc43xx_wdt_set_period(struct target_s *target)
+{
+	uint32_t wdt_mode = 0;
+	/* Check if WDT is on */
+	target_mem_read_words(target, &wdt_mode, LPC43XX_WDT_MODE, sizeof(wdt_mode));
+
+	/* If WDT on, we can't disable it, but we may be able to set a long period */
+	if (wdt_mode && !(wdt_mode & LPC43XX_WDT_PROTECT))
+	{
+		const uint32_t wdt_period = LPC43XX_WDT_PERIOD_MAX;
+
+
+		target_mem_write_words(target, LPC43XX_WDT_CNT, &wdt_period, sizeof(wdt_period));
+	}
+}
+
+static void lpc43xx_wdt_pet(struct target_s *target)
+{
+	uint32_t wdt_mode = 0;
+	/* Check if WDT is on */
+	target_mem_read_words(target, &wdt_mode, LPC43XX_WDT_MODE, sizeof(wdt_mode));
+
+	/* If WDT on, pet */
+	if (wdt_mode)
+	{
+		const uint32_t feed1 = 0xAA;;
+		const uint32_t feed2 = 0x55;;
+
+
+		target_mem_write_words(target, LPC43XX_WDT_FEED, &feed1, sizeof(feed1));
+		target_mem_write_words(target, LPC43XX_WDT_FEED, &feed2, sizeof(feed2));
+	}
+}
