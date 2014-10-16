@@ -485,17 +485,22 @@ static void cdcacm_set_config(usbd_device *dev, uint16_t wValue)
 	configured = wValue;
 
 	/* GDB interface */
+#ifdef STM32F4
 	usbd_ep_setup(dev, 0x01, USB_ENDPOINT_ATTR_BULK,
-					CDCACM_PACKET_SIZE, gdb_usb_out_cb);
+	              CDCACM_PACKET_SIZE, gdb_usb_out_cb);
+#else
+	usbd_ep_setup(dev, 0x01, USB_ENDPOINT_ATTR_BULK,
+	              CDCACM_PACKET_SIZE, NULL);
+#endif
 	usbd_ep_setup(dev, 0x81, USB_ENDPOINT_ATTR_BULK,
-					CDCACM_PACKET_SIZE, NULL);
+	              CDCACM_PACKET_SIZE, NULL);
 	usbd_ep_setup(dev, 0x82, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
 
 	/* Serial interface */
 	usbd_ep_setup(dev, 0x03, USB_ENDPOINT_ATTR_BULK,
-					CDCACM_PACKET_SIZE, usbuart_usb_out_cb);
+	              CDCACM_PACKET_SIZE, usbuart_usb_out_cb);
 	usbd_ep_setup(dev, 0x83, USB_ENDPOINT_ATTR_BULK,
-					CDCACM_PACKET_SIZE, usbuart_usb_in_cb);
+	              CDCACM_PACKET_SIZE, usbuart_usb_in_cb);
 	usbd_ep_setup(dev, 0x84, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
 
 #if defined(PLATFORM_HAS_TRACESWO)
