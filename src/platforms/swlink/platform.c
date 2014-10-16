@@ -54,10 +54,10 @@ int platform_init(void)
 	rcc_periph_clock_enable(RCC_CRC);
 
 	/* Unmap JTAG Pins so we can reuse as GPIO */
-        data = AFIO_MAPR;
-        data &= ~AFIO_MAPR_SWJ_MASK;
-        data |= AFIO_MAPR_SWJ_CFG_JTAG_OFF_SW_OFF;
-        AFIO_MAPR = data;
+	data = AFIO_MAPR;
+	data &= ~AFIO_MAPR_SWJ_MASK;
+	data |= AFIO_MAPR_SWJ_CFG_JTAG_OFF_SW_OFF;
+	AFIO_MAPR = data;
 	/* Setup JTAG GPIO ports */
 	gpio_set_mode(TMS_PORT, GPIO_MODE_OUTPUT_10_MHZ,
 			GPIO_CNF_OUTPUT_PUSHPULL, TMS_PIN);
@@ -69,21 +69,21 @@ int platform_init(void)
 	gpio_set_mode(TDO_PORT, GPIO_MODE_INPUT,
 			GPIO_CNF_INPUT_FLOAT, TDO_PIN);
 
-        gpio_set(NRST_PORT,NRST_PIN);
+	gpio_set(NRST_PORT,NRST_PIN);
 	gpio_set_mode(NRST_PORT, GPIO_MODE_INPUT,
 			GPIO_CNF_INPUT_PULL_UPDOWN, NRST_PIN);
 
 	gpio_set_mode(LED_PORT, GPIO_MODE_OUTPUT_2_MHZ,
 			GPIO_CNF_OUTPUT_PUSHPULL, led_idle_run);
 
-        /* Remap TIM2 TIM2_REMAP[1]
-         * TIM2_CH1_ETR -> PA15 (TDI, set as output above)
-         * TIM2_CH2     -> PB3  (TDO)
-         */
-        data = AFIO_MAPR;
-        data &= ~AFIO_MAPR_TIM2_REMAP_FULL_REMAP;
-        data |=  AFIO_MAPR_TIM2_REMAP_PARTIAL_REMAP1;
-        AFIO_MAPR = data;
+	/* Remap TIM2 TIM2_REMAP[1]
+	 * TIM2_CH1_ETR -> PA15 (TDI, set as output above)
+	 * TIM2_CH2     -> PB3  (TDO)
+	 */
+	data = AFIO_MAPR;
+	data &= ~AFIO_MAPR_TIM2_REMAP_FULL_REMAP;
+	data |=  AFIO_MAPR_TIM2_REMAP_PARTIAL_REMAP1;
+	AFIO_MAPR = data;
 
 	/* Setup heartbeat timer */
 	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);

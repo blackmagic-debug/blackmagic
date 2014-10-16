@@ -217,7 +217,7 @@ gdb_main(void)
 			break;
 
 		case 0x04:
-                case 'D':	/* GDB 'detach' command. */
+		case 'D':	/* GDB 'detach' command. */
 			if(cur_target)
 				target_detach(cur_target);
 			last_target = cur_target;

@@ -67,8 +67,8 @@ void gdb_usb_out_cb(usbd_device *dev, uint8_t ep)
 {
 	(void)ep;
 	usbd_ep_nak_set(dev, CDCACM_GDB_ENDPOINT, 1);
-        count_new = usbd_ep_read_packet(dev, CDCACM_GDB_ENDPOINT,
-                                        double_buffer_out, CDCACM_PACKET_SIZE);
+	count_new = usbd_ep_read_packet(dev, CDCACM_GDB_ENDPOINT,
+	                                double_buffer_out, CDCACM_PACKET_SIZE);
 	if(!count_new) {
 		usbd_ep_nak_set(dev, CDCACM_GDB_ENDPOINT, 0);
 	}
@@ -77,19 +77,19 @@ void gdb_usb_out_cb(usbd_device *dev, uint8_t ep)
 unsigned char gdb_if_getchar(void)
 {
 
-	while(!(out_ptr < count_out)) {
+	while (!(out_ptr < count_out)) {
 		/* Detach if port closed */
-		if(!cdcacm_get_dtr())
+		if (!cdcacm_get_dtr())
 			return 0x04;
 
-		while(cdcacm_get_config() != 1);
-                if (count_new) {
-                    memcpy(buffer_out, double_buffer_out,count_new);
-		    count_out = count_new;
-                    count_new = 0;
-                    out_ptr = 0;
-                    usbd_ep_nak_set(usbdev, CDCACM_GDB_ENDPOINT, 0);
-                }
+		while (cdcacm_get_config() != 1);
+		if (count_new) {
+			memcpy(buffer_out, double_buffer_out,count_new);
+			count_out = count_new;
+			count_new = 0;
+			out_ptr = 0;
+			usbd_ep_nak_set(usbdev, CDCACM_GDB_ENDPOINT, 0);
+		}
 	}
 
 	return buffer_out[out_ptr++];
@@ -99,19 +99,19 @@ unsigned char gdb_if_getchar_to(int timeout)
 {
 	timeout_counter = timeout/100;
 
-	if(!(out_ptr < count_out)) do {
+	if (!(out_ptr < count_out)) do {
 		/* Detach if port closed */
-		if(!cdcacm_get_dtr())
+		if (!cdcacm_get_dtr())
 			return 0x04;
 
-		while(cdcacm_get_config() != 1);
-                if (count_new) {
-                    memcpy(buffer_out, double_buffer_out,count_new);
-		    count_out = count_new;
-                    count_new = 0;
-                    out_ptr = 0;
-                    usbd_ep_nak_set(usbdev, CDCACM_GDB_ENDPOINT, 0);
-                }
+		while (cdcacm_get_config() != 1);
+		if (count_new) {
+			memcpy(buffer_out, double_buffer_out,count_new);
+			count_out = count_new;
+			count_new = 0;
+			out_ptr = 0;
+			usbd_ep_nak_set(usbdev, CDCACM_GDB_ENDPOINT, 0);
+		}
 	} while(timeout_counter && !(out_ptr < count_out));
 
 	if(out_ptr < count_out)

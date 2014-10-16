@@ -81,17 +81,17 @@ int main(void)
 
 	rcc_clock_setup_in_hse_8mhz_out_72mhz();
 
-        stlink_set_rev();
+	stlink_set_rev();
 
 	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
 	systick_set_reload(900000);
 
-        dfu_protect(UPD_MODE);
+	dfu_protect(UPD_MODE);
 
-        /* Handle USB disconnect/connect */
+	/* Handle USB disconnect/connect */
 	/* Just in case: Disconnect USB cable by resetting USB Device
-         * and pulling USB_DP low
-         * Device will reconnect automatically as Pull-Up is hard wired*/
+	 * and pulling USB_DP low
+	 * Device will reconnect automatically as Pull-Up is hard wired*/
 	rcc_periph_reset_pulse(RST_USB);
 	rcc_periph_clock_enable(RCC_USB);
 	rcc_periph_clock_enable(RCC_GPIOA);

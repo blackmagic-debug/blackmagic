@@ -29,7 +29,7 @@ uint32_t app_address = 0x08002000;
 
 void dfu_detach(void)
 {
-        /* USB device must detach, we just reset... */
+	/* USB device must detach, we just reset... */
 	scb_reset_system();
 }
 

@@ -50,20 +50,20 @@ static struct {
 } prog;
 
 const struct usb_device_descriptor dev = {
-        .bLength = USB_DT_DEVICE_SIZE,
-        .bDescriptorType = USB_DT_DEVICE,
-        .bcdUSB = 0x0200,
-        .bDeviceClass = 0,
-        .bDeviceSubClass = 0,
-        .bDeviceProtocol = 0,
-        .bMaxPacketSize0 = 64,
-        .idVendor = 0x1D50,
-        .idProduct = 0x6017,
-        .bcdDevice = 0x0100,
-        .iManufacturer = 1,
-        .iProduct = 2,
-        .iSerialNumber = 3,
-        .bNumConfigurations = 1,
+	.bLength = USB_DT_DEVICE_SIZE,
+	.bDescriptorType = USB_DT_DEVICE,
+	.bcdUSB = 0x0200,
+	.bDeviceClass = 0,
+	.bDeviceSubClass = 0,
+	.bDeviceProtocol = 0,
+	.bMaxPacketSize0 = 64,
+	.idVendor = 0x1D50,
+	.idProduct = 0x6017,
+	.bcdDevice = 0x0100,
+	.iManufacturer = 1,
+	.iProduct = 2,
+	.iSerialNumber = 3,
+	.bNumConfigurations = 1,
 };
 
 const struct usb_dfu_descriptor dfu_function = {
@@ -166,8 +166,7 @@ usbdfu_getstatus_complete(usbd_device *dev, struct usb_setup_data *req)
 		flash_unlock();
 		if(prog.blocknum == 0) {
 			uint32_t addr = get_le32(prog.buf + 1);
-			if (addr < app_address ||
-                             (addr >= max_address)) {
+			if ((addr < app_address) || (addr >= max_address)) {
 				flash_lock();
 				usbd_ep_stall_set(dev, 0, 1);
 				return;
@@ -282,34 +281,34 @@ void dfu_main(void)
 static char *get_dev_unique_id(char *s)
 {
 #if defined(STM32F4) || defined(STM32F2)
-#define UNIQUE_SERIAL_R 0x1FFF7A10
-#define FLASH_SIZE_R    0x1fff7A22
+#	define UNIQUE_SERIAL_R 0x1FFF7A10
+#	define FLASH_SIZE_R    0x1fff7A22
 #elif defined(STM32F3)
-#define UNIQUE_SERIAL_R 0x1FFFF7AC
-#define FLASH_SIZE_R    0x1fff77cc
+#	define UNIQUE_SERIAL_R 0x1FFFF7AC
+#	define FLASH_SIZE_R    0x1fff77cc
 #elif defined(STM32L1)
-#define UNIQUE_SERIAL_R 0x1ff80050
-#define FLASH_SIZE_R    0x1FF8004C
+#	define UNIQUE_SERIAL_R 0x1ff80050
+#	define FLASH_SIZE_R    0x1FF8004C
 #else
-#define UNIQUE_SERIAL_R 0x1FFFF7E8;
-#define FLASH_SIZE_R    0x1ffff7e0
+#	define UNIQUE_SERIAL_R 0x1FFFF7E8;
+#	define FLASH_SIZE_R    0x1ffff7e0
 #endif
-        volatile uint32_t *unique_id_p = (volatile uint32_t *)UNIQUE_SERIAL_R;
+	volatile uint32_t *unique_id_p = (volatile uint32_t *)UNIQUE_SERIAL_R;
 	uint32_t unique_id = *unique_id_p +
 			*(unique_id_p + 1) +
 			*(unique_id_p + 2);
-        int i;
+	int i;
 
-        /* Calculated the upper flash limit from the exported data
-           in theparameter block*/
-        max_address = (*(uint32_t *) FLASH_SIZE_R) <<10;
-        /* Fetch serial number from chip's unique ID */
-        for(i = 0; i < 8; i++) {
-                s[7-i] = ((unique_id >> (4*i)) & 0xF) + '0';
-        }
-        for(i = 0; i < 8; i++)
-                if(s[i] > '9')
-                        s[i] += 'A' - '9' - 1;
+	/* Calculated the upper flash limit from the exported data
+	   in theparameter block*/
+	max_address = (*(uint32_t *) FLASH_SIZE_R) <<10;
+	/* Fetch serial number from chip's unique ID */
+	for(i = 0; i < 8; i++) {
+		s[7-i] = ((unique_id >> (4*i)) & 0xF) + '0';
+	}
+	for(i = 0; i < 8; i++)
+		if(s[i] > '9')
+			s[i] += 'A' - '9' - 1;
 	s[8] = 0;
 
 	return s;

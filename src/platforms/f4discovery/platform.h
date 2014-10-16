@@ -38,10 +38,10 @@
 #define INLINE_GPIO
 #define CDCACM_PACKET_SIZE 	64
 #define PLATFORM_HAS_TRACESWO
-#define BOARD_IDENT             "Black Magic Probe (F4Discovery), (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")"
-#define BOARD_IDENT_DFU		"Black Magic (Upgrade) for F4Discovery, (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")"
-#define DFU_IDENT               "Black Magic Firmware Upgrade (F4Discovery"
-#define DFU_IFACE_STRING	"@Internal Flash   /0x08000000/1*016Ka,3*016Kg,1*064Kg,7*128Kg"
+#define BOARD_IDENT       "Black Magic Probe (F4Discovery), (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")"
+#define BOARD_IDENT_DFU   "Black Magic (Upgrade) for F4Discovery, (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")"
+#define DFU_IDENT         "Black Magic Firmware Upgrade (F4Discovery"
+#define DFU_IFACE_STRING  "@Internal Flash   /0x08000000/1*016Ka,3*016Kg,1*064Kg,7*128Kg"
 
 extern usbd_device *usbdev;
 #define CDCACM_GDB_ENDPOINT	1
@@ -97,13 +97,16 @@ extern usbd_device *usbdev;
 #define LED_ERROR	GPIO14
 #define LED_BOOTLOADER	GPIO15
 
-#define TMS_SET_MODE() gpio_mode_setup(TMS_PORT, GPIO_MODE_OUTPUT, \
-                                       GPIO_PUPD_NONE, TMS_PIN);
-#define SWDIO_MODE_FLOAT() gpio_mode_setup(SWDIO_PORT, GPIO_MODE_INPUT, \
-                                           GPIO_PUPD_NONE, SWDIO_PIN);
+#define TMS_SET_MODE() \
+	gpio_mode_setup(TMS_PORT, GPIO_MODE_OUTPUT, \
+	                GPIO_PUPD_NONE, TMS_PIN);
+#define SWDIO_MODE_FLOAT() \
+	gpio_mode_setup(SWDIO_PORT, GPIO_MODE_INPUT, \
+	                GPIO_PUPD_NONE, SWDIO_PIN);
 
-#define SWDIO_MODE_DRIVE() gpio_mode_setup(SWDIO_PORT, GPIO_MODE_OUTPUT, \
-                                           GPIO_PUPD_NONE, SWDIO_PIN);
+#define SWDIO_MODE_DRIVE() \
+	gpio_mode_setup(SWDIO_PORT, GPIO_MODE_OUTPUT, \
+	                GPIO_PUPD_NONE, SWDIO_PIN);
 
 
 #define USB_DRIVER      stm32f107_usb_driver
@@ -121,7 +124,7 @@ extern usbd_device *usbdev;
 #define USBUSART USART3
 #define USBUSART_CR1 USART3_CR1
 #define USBUSART_IRQ NVIC_USART3_IRQ
-#define USBUSART_CLK RCC_USART3 
+#define USBUSART_CLK RCC_USART3
 #define USBUSART_TX_PORT GPIOD
 #define USBUSART_TX_PIN  GPIO8
 #define USBUSART_RX_PORT GPIOD
@@ -132,13 +135,13 @@ extern usbd_device *usbdev;
 #define USBUSART_TIM_IRQ NVIC_TIM4_IRQ
 #define USBUSART_TIM_ISR tim4_isr
 
-#define UART_PIN_SETUP() do {                                           \
-        gpio_mode_setup(USBUSART_TX_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, \
-                        USBUSART_TX_PIN);                               \
-        gpio_mode_setup(USBUSART_RX_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, \
-                        USBUSART_RX_PIN);                               \
-        gpio_set_af(USBUSART_TX_PORT, GPIO_AF7, USBUSART_TX_PIN);       \
-        gpio_set_af(USBUSART_RX_PORT, GPIO_AF7, USBUSART_RX_PIN);       \
+#define UART_PIN_SETUP() do { \
+	gpio_mode_setup(USBUSART_TX_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, \
+	                USBUSART_TX_PIN); \
+	gpio_mode_setup(USBUSART_RX_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, \
+	                USBUSART_RX_PIN); \
+	gpio_set_af(USBUSART_TX_PORT, GPIO_AF7, USBUSART_TX_PIN); \
+	gpio_set_af(USBUSART_RX_PORT, GPIO_AF7, USBUSART_RX_PIN); \
     } while(0)
 
 #define TRACE_TIM TIM3

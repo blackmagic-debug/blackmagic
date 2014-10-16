@@ -49,22 +49,21 @@ uint16_t led_idle_run;
 int platform_hwversion(void)
 {
 	static int hwversion = -1;
-        int i;
+	int i;
 	if (hwversion == -1) {
 		gpio_set_mode(GPIOC, GPIO_MODE_INPUT,
-				GPIO_CNF_INPUT_PULL_UPDOWN,
-				GPIO14 | GPIO13);
+		              GPIO_CNF_INPUT_PULL_UPDOWN, GPIO14 | GPIO13);
 		gpio_set(GPIOC, GPIO14 | GPIO13);
-                for (i = 0; i<10; i++)
-                    hwversion = ~(gpio_get(GPIOC, GPIO14 | GPIO13) >> 13) & 3;
-                switch (hwversion)
-                {
-                case 0:
-                    led_idle_run = GPIO8;
-                    break;
-                default:
-                    led_idle_run = GPIO9;
-                }
+		for (i = 0; i<10; i++)
+			hwversion = ~(gpio_get(GPIOC, GPIO14 | GPIO13) >> 13) & 3;
+		switch (hwversion)
+		{
+		case 0:
+			led_idle_run = GPIO8;
+			break;
+		default:
+			led_idle_run = GPIO9;
+		}
 	}
 	return hwversion;
 }
@@ -82,30 +81,30 @@ int platform_init(void)
 	rcc_periph_clock_enable(RCC_CRC);
 
 	/* On Rev 1 unconditionally activate MCO on PORTA8 with HSE
-         * platform_hwversion() also needed to initialize led_idle_run!
-         */
-        if (platform_hwversion() == 1)
-        {
-            RCC_CFGR &= ~(                 0xf<< 24);
-            RCC_CFGR |=  (RCC_CFGR_MCO_HSECLK << 24);
-            gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ,
-                          GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO8);
-        }
+	 * platform_hwversion() also needed to initialize led_idle_run!
+	 */
+	if (platform_hwversion() == 1)
+	{
+		RCC_CFGR &= ~(0xf << 24);
+		RCC_CFGR |= (RCC_CFGR_MCO_HSECLK << 24);
+		gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ,
+		GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO8);
+	}
 	/* Setup GPIO ports */
 	gpio_set_mode(TMS_PORT, GPIO_MODE_OUTPUT_50_MHZ,
-			GPIO_CNF_OUTPUT_PUSHPULL, TMS_PIN);
+	              GPIO_CNF_OUTPUT_PUSHPULL, TMS_PIN);
 	gpio_set_mode(TCK_PORT, GPIO_MODE_OUTPUT_50_MHZ,
-			GPIO_CNF_OUTPUT_PUSHPULL, TCK_PIN);
+	              GPIO_CNF_OUTPUT_PUSHPULL, TCK_PIN);
 	gpio_set_mode(TDI_PORT, GPIO_MODE_OUTPUT_50_MHZ,
-			GPIO_CNF_OUTPUT_PUSHPULL, TDI_PIN);
+	              GPIO_CNF_OUTPUT_PUSHPULL, TDI_PIN);
 	uint16_t srst_pin = platform_hwversion() == 0 ?
-		SRST_PIN_V1 : SRST_PIN_V2;
+	                    SRST_PIN_V1 : SRST_PIN_V2;
 	gpio_set(SRST_PORT, srst_pin);
 	gpio_set_mode(SRST_PORT, GPIO_MODE_OUTPUT_50_MHZ,
-			GPIO_CNF_OUTPUT_OPENDRAIN, srst_pin);
+	              GPIO_CNF_OUTPUT_OPENDRAIN, srst_pin);
 
 	gpio_set_mode(LED_PORT, GPIO_MODE_OUTPUT_2_MHZ,
-			GPIO_CNF_OUTPUT_PUSHPULL, led_idle_run);
+	              GPIO_CNF_OUTPUT_PUSHPULL, led_idle_run);
 
 	/* Setup heartbeat timer */
 	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
@@ -117,13 +116,14 @@ int platform_init(void)
 
 	usbuart_init();
 
-	SCB_VTOR = 0x2000;	// Relocate interrupt vector table here
+	SCB_VTOR = 0x2000; /* Relocate interrupt vector table here */
 
 	cdcacm_init();
 
-	// Set recovery point
+	/* Set recovery point */
 	if (setjmp(fatal_error_jmpbuf)) {
-		return 0; // Do nothing on failure
+		/* Do nothing on failure */
+		return 0;
 	}
 
 	jtag_scan(NULL);
@@ -134,7 +134,7 @@ int platform_init(void)
 void platform_delay(uint32_t delay)
 {
 	timeout_counter = delay;
-	while(timeout_counter);
+	while (timeout_counter);
 }
 
 void platform_srst_set_val(bool assert)
@@ -177,7 +177,7 @@ void disconnect_usb(void)
 	rcc_periph_clock_enable(RCC_GPIOA);
 	gpio_clear(GPIOA, GPIO12);
 	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
-		GPIO_CNF_OUTPUT_OPENDRAIN, GPIO12);
+	              GPIO_CNF_OUTPUT_OPENDRAIN, GPIO12);
 }
 
 void assert_boot_pin(void)
@@ -192,4 +192,8 @@ void assert_boot_pin(void)
 	crl |= 0x80;
 	GPIOA_CRL = crl;
 }
-void setup_vbus_irq(void){};
+
+void setup_vbus_irq(void)
+{
+}
+

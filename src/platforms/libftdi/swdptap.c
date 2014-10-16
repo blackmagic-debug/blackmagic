@@ -60,16 +60,17 @@ int swdptap_init(void)
 
 void swdptap_reset(void)
 {
-        swdptap_turnaround(0);
-        /* 50 clocks with TMS high */
-        for(int i = 0; i < 50; i++) swdptap_bit_out(1);
+	swdptap_turnaround(0);
+	/* 50 clocks with TMS high */
+	for(int i = 0; i < 50; i++)
+		swdptap_bit_out(1);
 }
 
 static void swdptap_turnaround(uint8_t dir)
 {
 	static uint8_t olddir = 0;
 
-        //DEBUG("%s", dir ? "\n-> ":"\n<- ");
+	/*DEBUG("%s", dir ? "\n-> ":"\n<- ");*/
 	platform_buffer_flush();
 
 	if(dir == olddir) return;

@@ -43,19 +43,19 @@ void dfu_detach(void)
 int main(void)
 {
 	/* Check the force bootloader pin*/
-        uint16_t pin_b;
+	uint16_t pin_b;
 	rcc_periph_clock_enable(RCC_GPIOA);
 	rcc_periph_clock_enable(RCC_GPIOB);
 /* Switch PB5 (SWIM_RST_IN) up */
 	gpio_set(GPIOB, GPIO5);
 	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ,
-                      GPIO_CNF_OUTPUT_PUSHPULL, GPIO5);
+	              GPIO_CNF_OUTPUT_PUSHPULL, GPIO5);
 	gpio_set(GPIOB, GPIO5);
-        pin_b = gpio_get(GPIOB, GPIO6);
+	pin_b = gpio_get(GPIOB, GPIO6);
 /* Check state on PB6 ((SWIM_RST) and release PB5*/
-        pin_b = gpio_get(GPIOB, GPIO6);
+	pin_b = gpio_get(GPIOB, GPIO6);
 	gpio_set_mode(GPIOB, GPIO_MODE_INPUT,
-                      GPIO_CNF_INPUT_FLOAT, GPIO5);
+	              GPIO_CNF_INPUT_FLOAT, GPIO5);
 	if(((GPIOA_CRL & 0x40) == 0x40) && pin_b)
 		dfu_jump_app_if_valid();
 
@@ -65,10 +65,10 @@ int main(void)
 	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
 	systick_set_reload(900000);
 
-        /* Handle USB disconnect/connect */
+	/* Handle USB disconnect/connect */
 	/* Just in case: Disconnect USB cable by resetting USB Device
-         * and pulling USB_DP low
-         * Device will reconnect automatically as Pull-Up is hard wired*/
+	 * and pulling USB_DP low
+	 * Device will reconnect automatically as Pull-Up is hard wired*/
 	rcc_periph_reset_pulse(RST_USB);
 	rcc_periph_clock_enable(RCC_USB);
 	rcc_periph_clock_enable(RCC_GPIOA);
@@ -76,7 +76,7 @@ int main(void)
 	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
 		GPIO_CNF_OUTPUT_OPENDRAIN, GPIO12);
 
-        /* Handle LED*/
+	/* Handle LED*/
 	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
 		GPIO_CNF_OUTPUT_PUSHPULL, GPIO8);
 
@@ -90,5 +90,5 @@ int main(void)
 
 void sys_tick_handler(void)
 {
-        gpio_toggle(GPIOA, GPIO8);
+	gpio_toggle(GPIOA, GPIO8);
 }
