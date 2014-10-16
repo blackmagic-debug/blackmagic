@@ -182,8 +182,11 @@ extern const char *morse_msg;
 int platform_init(void);
 void morse(const char *msg, char repeat);
 const char *platform_target_voltage(void);
-int platform_hwversion(void);
 void platform_delay(uint32_t delay);
+static inline int platform_hwversion(void)
+{
+	return 0;
+}
 
 /* <cdcacm.c> */
 void cdcacm_init(void);
@@ -226,3 +229,4 @@ static inline uint16_t _gpio_get(uint32_t gpioport, uint16_t gpios)
 #define disconnect_usb() do {usbd_disconnect(usbdev,1); nvic_disable_irq(USB_IRQ);} while(0)
 void assert_boot_pin(void);
 #define setup_vbus_irq()
+
