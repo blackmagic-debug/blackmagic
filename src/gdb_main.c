@@ -101,6 +101,8 @@ gdb_main(void)
 			uint8_t mem[len];
 			if(((addr & 3) == 0) && ((len & 3) == 0))
 				target_mem_read_words(cur_target, (void*)mem, addr, len);
+			else if(((addr & 1) == 0) && ((len & 1) == 0))
+				target_mem_read_halfwords(cur_target, (void*)mem, addr, len);
 			else
 				target_mem_read_bytes(cur_target, (void*)mem, addr, len);
 			if(target_check_error(cur_target))
@@ -127,6 +129,8 @@ gdb_main(void)
 			unhexify(mem, pbuf + hex, len);
 			if(((addr & 3) == 0) && ((len & 3) == 0))
 				target_mem_write_words(cur_target, addr, (void*)mem, len);
+			else if(((addr & 1) == 0) && ((len & 1) == 0))
+				target_mem_write_halfwords(cur_target, addr, (void*)mem, len);
 			else
 				target_mem_write_bytes(cur_target, addr, (void*)mem, len);
 			if(target_check_error(cur_target))

@@ -129,6 +129,8 @@ void arm7tdmi_jtag_handler(jtag_dev_t *dev)
 	t->check_error = (void *)do_nothing;
 	t->mem_read_words = (void *)do_nothing;
 	t->mem_write_words = (void *)do_nothing;
+	t->mem_read_halfwords = (void *)do_nothing;
+	t->mem_write_halfwords = (void *)do_nothing;
 	t->mem_read_bytes = (void *)do_nothing;
 	t->mem_write_bytes = (void *)do_nothing;
 	t->regs_size = 16 * sizeof(uint32_t);
