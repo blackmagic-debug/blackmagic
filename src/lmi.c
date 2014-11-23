@@ -38,7 +38,7 @@ static int lmi_flash_erase(struct target_s *target, uint32_t addr, int len);
 static int lmi_flash_write(struct target_s *target, uint32_t dest,
 			  const uint8_t *src, int len);
 
-static const char lmi_driver_str[] = "LuminaryMicro Stellaris";
+static const char lmi_driver_str[] = "TI Stellaris/Tiva";
 
 static const char lmi_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 /*	"<!DOCTYPE memory-map "
@@ -49,6 +49,17 @@ static const char lmi_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 	"    <property name=\"blocksize\">0x400</property>"
 	"  </memory>"
 	"  <memory type=\"ram\" start=\"0x20000000\" length=\"0x10000\"/>"
+	"</memory-map>";
+
+static const char tm4c123gh6pm_xml_memory_map[] = "<?xml version=\"1.0\"?>"
+/*	"<!DOCTYPE memory-map "
+	"             PUBLIC \"+//IDN gnu.org//DTD GDB Memory Map V1.0//EN\""
+	"                    \"http://sourceware.org/gdb/gdb-memory-map.dtd\">"*/
+	"<memory-map>"
+	"  <memory type=\"flash\" start=\"0\" length=\"0x40000\">"
+	"    <property name=\"blocksize\">0x400</property>"
+	"  </memory>"
+	"  <memory type=\"ram\" start=\"0x20000000\" length=\"0x8000\"/>"
 	"</memory-map>";
 
 
@@ -97,6 +108,13 @@ bool lmi_probe(struct target_s *target)
 	case 0x1049:	/* LM3S3748 */
 		target->driver = lmi_driver_str;
 		target->xml_mem_map = lmi_xml_memory_map;
+		target->flash_erase = lmi_flash_erase;
+		target->flash_write = lmi_flash_write;
+		return true;
+
+	case 0x10A1:	/* TM4C123GH6PM */
+		target->driver = lmi_driver_str;
+		target->xml_mem_map = tm4c123gh6pm_xml_memory_map;
 		target->flash_erase = lmi_flash_erase;
 		target->flash_write = lmi_flash_write;
 		return true;
