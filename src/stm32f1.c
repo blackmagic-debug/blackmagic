@@ -59,8 +59,10 @@ static const char stm32f1_driver_str[] = "STM32, Medium density.";
 static const char stm32hd_driver_str[] = "STM32, High density.";
 static const char stm32f3_driver_str[] = "STM32F3xx";
 static const char stm32f03_driver_str[] = "STM32F03x";
+static const char stm32f04_driver_str[] = "STM32F04x";
 static const char stm32f05_driver_str[] = "STM32F05x";
 static const char stm32f07_driver_str[] = "STM32F07x";
+static const char stm32f09_driver_str[] = "STM32F09x";
 
 static const char stm32f1_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 /*	"<!DOCTYPE memory-map "
@@ -192,18 +194,26 @@ bool stm32f1_probe(struct target_s *target)
 
 	target->idcode = adiv5_ap_mem_read(adiv5_target_ap(target), DBGMCU_IDCODE_F0) & 0xfff;
 	switch(target->idcode) {
-	case 0x444:  /* STM32F03 */
-	case 0x440:  /* STM32F05 */
-	case 0x448:  /* STM32F07 */
+	case 0x444:  /* STM32F03 RM0091 Rev.7 */
+	case 0x445:  /* STM32F04 RM0091 Rev.7 */
+	case 0x440:  /* STM32F05 RM0091 Rev.7 */
+	case 0x448:  /* STM32F07 RM0091 Rev.7 */
+	case 0x442:  /* STM32F09 RM0091 Rev.7 */
 		switch(target->idcode) {
 		case 0x444:  /* STM32F03 */
 			target->driver = stm32f03_driver_str;
+			break;
+		case 0x445:  /* STM32F04 */
+			target->driver = stm32f04_driver_str;
 			break;
 		case 0x440:  /* STM32F05 */
 			target->driver = stm32f05_driver_str;
 			break;
 		case 0x448:  /* STM32F07 */
 			target->driver = stm32f07_driver_str;
+			break;
+		case 0x442:  /* STM32F09 */
+			target->driver = stm32f09_driver_str;
 			break;
 		}
 		target->xml_mem_map = stm32f1_xml_memory_map;

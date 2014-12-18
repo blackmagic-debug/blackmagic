@@ -170,8 +170,9 @@ bool stm32f4_probe(struct target_s *target)
 	case 0x411: /* Documented to be 0x413! This is what I read... */
 	case 0x413: /* F407VGT6 */
 	case 0x419: /* 427/437 */
-	case 0x423: /* F401 */
-	case 0x433: /* F401RET6U */
+	case 0x423: /* F401 B/C RM0368 Rev.3 */
+	case 0x431: /* F411     RM0383 Rev.4 */
+	case 0x433: /* F401 D/E RM0368 Rev.3 */
 		target->xml_mem_map = stm32f4_xml_memory_map;
 		target->driver = stm32f4_driver_str;
 		target->flash_erase = stm32f4_flash_erase;
