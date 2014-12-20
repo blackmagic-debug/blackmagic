@@ -1,0 +1,159 @@
+// 
+// stm32l05x-nvm-prog-erase.o:     file format elf32-littlearm
+// 
+// 
+// Disassembly of section .text:
+// 
+// 00000000 <stm32l05x_nvm_prog_erase>:
+//                   ".word 0\n\t"
+//                   ".word 0\n\t"
+//                   ".word 0\n\t"
+//                   ".word 0\n\t"
+//                   ".word 0\n\t"
+//                   "0:");
+  [0x0/2] = 0xe00a, //    0:	e00a      	b.n	18 <stm32l05x_nvm_prog_erase+0x18>
+  [0x2/2] = 0x46c0, //    2:	46c0      	nop			; (mov r8, r8)
+// 	...
+// 
+//   auto& nvm = Nvm (Info.nvm);
+  [0x18/2] = 0x491a, //   18:	491a      	ldr	r1, [pc, #104]	; (84 <stm32l05x_nvm_prog_erase+0x84>)
+// 
+//   // Align to the start of the first page so that we make sure to erase
+//   // all of the target pages.
+//   auto remainder    = reinterpret_cast<uint32_t> (Info.destination)
+//     & (Info.page_size - 1);
+  [0x1a/2] = 0x8a08, //   1a:	8a08      	ldrh	r0, [r1, #16]
+  [0x1c/2] = 0x680c, //   1c:	680c      	ldr	r4, [r1, #0]
+//   Info.size        += remainder;
+  [0x1e/2] = 0x684d, //   1e:	684d      	ldr	r5, [r1, #4]
+//   auto& nvm = Nvm (Info.nvm);
+// 
+//   // Align to the start of the first page so that we make sure to erase
+//   // all of the target pages.
+//   auto remainder    = reinterpret_cast<uint32_t> (Info.destination)
+//     & (Info.page_size - 1);
+  [0x20/2] = 0x1e42, //   20:	1e42      	subs	r2, r0, #1
+  [0x22/2] = 0x4022, //   22:	4022      	ands	r2, r4
+//   Info.size        += remainder;
+  [0x24/2] = 0x1955, //   24:	1955      	adds	r5, r2, r5
+//   Info.destination -= remainder/sizeof (*Info.destination);
+  [0x26/2] = 0x0892, //   26:	0892      	lsrs	r2, r2, #2
+  [0x28/2] = 0x0092, //   28:	0092      	lsls	r2, r2, #2
+  [0x2a/2] = 0x1aa2, //   2a:	1aa2      	subs	r2, r4, r2
+  [0x2c/2] = 0x600a, //   2c:	600a      	str	r2, [r1, #0]
+// #define Nvm(nvm) (*reinterpret_cast<STM32::NVM*>(nvm))
+// #define Info (*reinterpret_cast<stm32lx_nvm_stub_info*>(STM32Lx_STUB_INFO_PHYS))
+// 
+// namespace {
+//   inline __attribute((always_inline)) bool unlock (STM32::NVM& nvm) {
+//     nvm.pecr      = STM32Lx_NVM_PECR_PELOCK; // Lock to guarantee unlock
+  [0x2e/2] = 0x2201, //   2e:	2201      	movs	r2, #1
+//                   ".word 0\n\t"
+//                   ".word 0\n\t"
+//                   ".word 0\n\t"
+//                   "0:");
+// 
+//   auto& nvm = Nvm (Info.nvm);
+  [0x30/2] = 0x68cb, //   30:	68cb      	ldr	r3, [r1, #12]
+// 
+//   // Align to the start of the first page so that we make sure to erase
+//   // all of the target pages.
+//   auto remainder    = reinterpret_cast<uint32_t> (Info.destination)
+//     & (Info.page_size - 1);
+//   Info.size        += remainder;
+  [0x32/2] = 0x604d, //   32:	604d      	str	r5, [r1, #4]
+  [0x34/2] = 0x605a, //   34:	605a      	str	r2, [r3, #4]
+//     nvm.pkeyr     = STM32::NVM::PKEY1;
+  [0x36/2] = 0x4a14, //   36:	4a14      	ldr	r2, [pc, #80]	; (88 <stm32l05x_nvm_prog_erase+0x88>)
+  [0x38/2] = 0x60da, //   38:	60da      	str	r2, [r3, #12]
+//     nvm.pkeyr     = STM32::NVM::PKEY2;
+  [0x3a/2] = 0x4a14, //   3a:	4a14      	ldr	r2, [pc, #80]	; (8c <stm32l05x_nvm_prog_erase+0x8c>)
+  [0x3c/2] = 0x60da, //   3c:	60da      	str	r2, [r3, #12]
+//     nvm.prgkeyr   = STM32::NVM::PRGKEY1;
+  [0x3e/2] = 0x4a14, //   3e:	4a14      	ldr	r2, [pc, #80]	; (90 <stm32l05x_nvm_prog_erase+0x90>)
+  [0x40/2] = 0x611a, //   40:	611a      	str	r2, [r3, #16]
+//     nvm.prgkeyr   = STM32::NVM::PRGKEY2;
+  [0x42/2] = 0x4a14, //   42:	4a14      	ldr	r2, [pc, #80]	; (94 <stm32l05x_nvm_prog_erase+0x94>)
+  [0x44/2] = 0x611a, //   44:	611a      	str	r2, [r3, #16]
+//     return !(nvm.pecr & STM32Lx_NVM_PECR_PRGLOCK);
+  [0x46/2] = 0x685a, //   46:	685a      	ldr	r2, [r3, #4]
+//   Info.destination -= remainder/sizeof (*Info.destination);
+// 
+//   if (!unlock (nvm))
+  [0x48/2] = 0x0792, //   48:	0792      	lsls	r2, r2, #30
+  [0x4a/2] = 0xd502, //   4a:	d502      	bpl.n	52 <stm32l05x_nvm_prog_erase+0x52>
+//   }
+//   inline __attribute((always_inline)) void lock (STM32::NVM& nvm) {
+//     nvm.pecr      = STM32Lx_NVM_PECR_PELOCK; }
+  [0x4c/2] = 0x2201, //   4c:	2201      	movs	r2, #1
+  [0x4e/2] = 0x605a, //   4e:	605a      	str	r2, [r3, #4]
+//     Info.size -= Info.page_size;
+//   }
+// 
+// quit:
+//   lock (nvm);
+//   __asm volatile ("bkpt");
+  [0x50/2] = 0xbe00, //   50:	be00      	bkpt	0x0000
+//   Info.destination -= remainder/sizeof (*Info.destination);
+// 
+//   if (!unlock (nvm))
+//     goto quit;
+// 
+//   nvm.sr = STM32Lx_NVM_SR_ERR_M; // Clear errors
+  [0x52/2] = 0x4a11, //   52:	4a11      	ldr	r2, [pc, #68]	; (98 <stm32l05x_nvm_prog_erase+0x98>)
+  [0x54/2] = 0x619a, //   54:	619a      	str	r2, [r3, #24]
+// 
+//   // Enable erasing
+//   nvm.pecr = STM32Lx_NVM_PECR_PROG | STM32Lx_NVM_PECR_ERASE;
+  [0x56/2] = 0x2282, //   56:	2282      	movs	r2, #130	; 0x82
+  [0x58/2] = 0x0092, //   58:	0092      	lsls	r2, r2, #2
+  [0x5a/2] = 0x605a, //   5a:	605a      	str	r2, [r3, #4]
+//   if ((nvm.pecr & (STM32Lx_NVM_PECR_PROG | STM32Lx_NVM_PECR_ERASE))
+  [0x5c/2] = 0x685c, //   5c:	685c      	ldr	r4, [r3, #4]
+  [0x5e/2] = 0x4014, //   5e:	4014      	ands	r4, r2
+  [0x60/2] = 0x4294, //   60:	4294      	cmp	r4, r2
+  [0x62/2] = 0xd1f3, //   62:	d1f3      	bne.n	4c <stm32l05x_nvm_prog_erase+0x4c>
+//     goto quit;
+// 
+//   while (Info.size > 0) {
+//     *Info.destination = 0;      // Initiate erase
+// 
+//     Info.destination += Info.page_size/sizeof (*Info.destination);
+  [0x64/2] = 0x0884, //   64:	0884      	lsrs	r4, r0, #2
+  [0x66/2] = 0x00a4, //   66:	00a4      	lsls	r4, r4, #2
+//   nvm.pecr = STM32Lx_NVM_PECR_PROG | STM32Lx_NVM_PECR_ERASE;
+//   if ((nvm.pecr & (STM32Lx_NVM_PECR_PROG | STM32Lx_NVM_PECR_ERASE))
+//       != (STM32Lx_NVM_PECR_PROG | STM32Lx_NVM_PECR_ERASE))
+//     goto quit;
+// 
+//   while (Info.size > 0) {
+  [0x68/2] = 0x684d, //   68:	684d      	ldr	r5, [r1, #4]
+  [0x6a/2] = 0x4a06, //   6a:	4a06      	ldr	r2, [pc, #24]	; (84 <stm32l05x_nvm_prog_erase+0x84>)
+  [0x6c/2] = 0x2d00, //   6c:	2d00      	cmp	r5, #0
+  [0x6e/2] = 0xdded, //   6e:	dded      	ble.n	4c <stm32l05x_nvm_prog_erase+0x4c>
+//     *Info.destination = 0;      // Initiate erase
+  [0x70/2] = 0x2600, //   70:	2600      	movs	r6, #0
+  [0x72/2] = 0x6815, //   72:	6815      	ldr	r5, [r2, #0]
+  [0x74/2] = 0x602e, //   74:	602e      	str	r6, [r5, #0]
+// 
+//     Info.destination += Info.page_size/sizeof (*Info.destination);
+  [0x76/2] = 0x6815, //   76:	6815      	ldr	r5, [r2, #0]
+  [0x78/2] = 0x192d, //   78:	192d      	adds	r5, r5, r4
+  [0x7a/2] = 0x6015, //   7a:	6015      	str	r5, [r2, #0]
+//     Info.size -= Info.page_size;
+  [0x7c/2] = 0x6855, //   7c:	6855      	ldr	r5, [r2, #4]
+  [0x7e/2] = 0x1a2d, //   7e:	1a2d      	subs	r5, r5, r0
+  [0x80/2] = 0x6055, //   80:	6055      	str	r5, [r2, #4]
+  [0x82/2] = 0xe7f1, //   82:	e7f1      	b.n	68 <stm32l05x_nvm_prog_erase+0x68>
+  [0x84/2] = 0x0004, //   84:	20000004 	.word	0x20000004
+  [0x84/2 + 1] = 0x2000,
+  [0x88/2] = 0xcdef, //   88:	89abcdef 	.word	0x89abcdef
+  [0x88/2 + 1] = 0x89ab,
+  [0x8c/2] = 0x0405, //   8c:	02030405 	.word	0x02030405
+  [0x8c/2 + 1] = 0x0203,
+  [0x90/2] = 0xaebf, //   90:	8c9daebf 	.word	0x8c9daebf
+  [0x90/2 + 1] = 0x8c9d,
+  [0x94/2] = 0x1516, //   94:	13141516 	.word	0x13141516
+  [0x94/2 + 1] = 0x1314,
+  [0x98/2] = 0x0700, //   98:	00010700 	.word	0x00010700
+  [0x98/2 + 1] = 0x0001,

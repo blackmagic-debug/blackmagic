@@ -216,6 +216,7 @@ void target_add_commands(target *t, const struct command_s *cmds, const char *na
 bool cortexm_probe(struct target_s *target);
 bool stm32f1_probe(struct target_s *target);
 bool stm32f4_probe(struct target_s *target);
+bool stm32l0_probe(struct target_s *target);
 bool stm32l1_probe(struct target_s *target);
 bool lmi_probe(struct target_s *target);
 bool lpc11xx_probe(struct target_s *target);
