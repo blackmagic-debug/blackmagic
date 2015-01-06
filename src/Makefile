@@ -27,6 +27,7 @@ SRC =			\
 	lmi.c		\
 	lpc11xx.c	\
 	lpc43xx.c	\
+	kinetis.c	\
 	main.c		\
 	nrf51.c		\
 	platform.c	\

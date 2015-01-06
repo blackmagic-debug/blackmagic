@@ -172,6 +172,8 @@ uint32_t adiv5_ap_mem_read(ADIv5_AP_t *ap, uint32_t addr);
 void adiv5_ap_mem_write(ADIv5_AP_t *ap, uint32_t addr, uint32_t value);
 uint16_t adiv5_ap_mem_read_halfword(ADIv5_AP_t *ap, uint32_t addr);
 void adiv5_ap_mem_write_halfword(ADIv5_AP_t *ap, uint32_t addr, uint16_t value);
+uint8_t adiv5_ap_mem_read_byte(ADIv5_AP_t *ap, uint32_t addr);
+void adiv5_ap_mem_write_byte(ADIv5_AP_t *ap, uint32_t addr, uint8_t value);
 
 void adiv5_ap_write(ADIv5_AP_t *ap, uint8_t addr, uint32_t value);
 uint32_t adiv5_ap_read(ADIv5_AP_t *ap, uint8_t addr);

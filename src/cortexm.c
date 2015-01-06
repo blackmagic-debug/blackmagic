@@ -386,6 +386,7 @@ cortexm_probe(struct target_s *target)
 	PROBE(nrf51_probe);
 	PROBE(samd20_probe);
 	PROBE(lmi_probe);
+	PROBE(kinetis_probe);
 #undef PROBE
 
 	return true;
