@@ -98,7 +98,7 @@ static const char nrf51_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 
 #define NRF51_PAGE_SIZE 1024
 
-uint16_t nrf51_flash_write_stub[] = {
+static const uint16_t nrf51_flash_write_stub[] = {
 // _start:
 	0x4808, // ldr	r0, [pc, #32]	; (24 <_ready>)
 	0x4909, // ldr	r1, [pc, #36]	; (28 <_addr>)

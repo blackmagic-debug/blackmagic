@@ -122,7 +122,7 @@ static const char stm32f4_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 #define DBGMCU_IDCODE	0xE0042000
 
 /* This routine is uses word access.  Only usable on target voltage >2.7V */
-uint16_t stm32f4_flash_write_stub[] = {
+static const uint16_t stm32f4_flash_write_stub[] = {
 // _start:
 	0x480a,	// ldr r0, [pc, #40] // _flashbase
 	0x490b,	// ldr r1, [pc, #44] // _addr
