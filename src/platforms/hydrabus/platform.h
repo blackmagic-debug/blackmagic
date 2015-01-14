@@ -3,6 +3,7 @@
  *
  * Copyright (C) 2011  Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
+ * Copyright (C) 2015 Benjamin Vernoux <bvernoux@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -40,7 +41,7 @@
 #define PLATFORM_HAS_TRACESWO
 #define BOARD_IDENT       "Black Magic Probe (HydraBus), (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")"
 #define BOARD_IDENT_DFU   "Black Magic (Upgrade) for HydraBus, (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")"
-#define DFU_IDENT         "Black Magic Firmware Upgrade (HydraBus"
+#define DFU_IDENT         "Black Magic Firmware Upgrade (HydraBus)"
 #define DFU_IFACE_STRING  "@Internal Flash   /0x08000000/1*016Ka,3*016Kg,1*064Kg,7*128Kg"
 
 extern usbd_device *usbdev;
