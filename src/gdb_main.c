@@ -406,8 +406,13 @@ handle_v_packet(char *packet, int plen)
 		} else if(last_target) {
 			cur_target = target_attach(last_target,
 						gdb_target_destroy_callback);
-			target_reset(cur_target);
-			gdb_putpacketz("T05");
+
+                        /* If we were able to attach to the target again */
+                        if (cur_target) {
+                        	target_reset(cur_target);
+                                gdb_putpacketz("T05");
+                        } else  gdb_putpacketz("E01");
+
 		} else	gdb_putpacketz("E01");
 
 	} else if (sscanf(packet, "vFlashErase:%08lx,%08lx", &addr, &len) == 2) {
