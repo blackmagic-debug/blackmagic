@@ -410,8 +410,8 @@ handle_v_packet(char *packet, int plen)
                         /* If we were able to attach to the target again */
                         if (cur_target) {
                         	target_reset(cur_target);
-                                gdb_putpacketz("T05");
-                        } else  gdb_putpacketz("E01");
+                        	gdb_putpacketz("T05");
+                        } else	gdb_putpacketz("E01");
 
 		} else	gdb_putpacketz("E01");
 
