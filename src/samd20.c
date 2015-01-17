@@ -39,6 +39,7 @@
 #include "target.h"
 #include "command.h"
 #include "gdb_packet.h"
+#include "cortexm.h"
 
 static int samd20_flash_erase(struct target_s *target, uint32_t addr, int len);
 static int samd20_flash_write(struct target_s *target, uint32_t dest,
@@ -145,104 +146,6 @@ static const char samd20_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 /* Component ID */
 #define SAMD20_CID_VALUE		0xB105100D
 
-#define CORTEXM_PPB_BASE	0xE0000000
-
-#define CORTEXM_SCS_BASE	(CORTEXM_PPB_BASE + 0xE000)
-
-#define CORTEXM_AIRCR		(CORTEXM_SCS_BASE + 0xD0C)
-#define CORTEXM_CFSR		(CORTEXM_SCS_BASE + 0xD28)
-#define CORTEXM_HFSR		(CORTEXM_SCS_BASE + 0xD2C)
-#define CORTEXM_DFSR		(CORTEXM_SCS_BASE + 0xD30)
-#define CORTEXM_CPACR		(CORTEXM_SCS_BASE + 0xD88)
-#define CORTEXM_DHCSR		(CORTEXM_SCS_BASE + 0xDF0)
-#define CORTEXM_DCRSR		(CORTEXM_SCS_BASE + 0xDF4)
-#define CORTEXM_DCRDR		(CORTEXM_SCS_BASE + 0xDF8)
-#define CORTEXM_DEMCR		(CORTEXM_SCS_BASE + 0xDFC)
-
-/* Application Interrupt and Reset Control Register (AIRCR) */
-#define CORTEXM_AIRCR_VECTKEY		(0x05FA << 16)
-/* Bits 31:16 - Read as VECTKETSTAT, 0xFA05 */
-#define CORTEXM_AIRCR_ENDIANESS		(1 << 15)
-/* Bits 15:11 - Unused, reserved */
-#define CORTEXM_AIRCR_PRIGROUP		(7 << 8)
-/* Bits 7:3 - Unused, reserved */
-#define CORTEXM_AIRCR_SYSRESETREQ	(1 << 2)
-#define CORTEXM_AIRCR_VECTCLRACTIVE	(1 << 1)
-#define CORTEXM_AIRCR_VECTRESET		(1 << 0)
-
-/* Debug Fault Status Register (DFSR) */
-/* Bits 31:5 - Reserved */
-#define CORTEXM_DFSR_RESETALL		0x1F
-#define CORTEXM_DFSR_EXTERNAL		(1 << 4)
-#define CORTEXM_DFSR_VCATCH		(1 << 3)
-#define CORTEXM_DFSR_DWTTRAP		(1 << 2)
-#define CORTEXM_DFSR_BKPT		(1 << 1)
-#define CORTEXM_DFSR_HALTED		(1 << 0)
-
-/* Debug Halting Control and Status Register (DHCSR) */
-/* This key must be written to bits 31:16 for write to take effect */
-#define CORTEXM_DHCSR_DBGKEY		0xA05F0000
-/* Bits 31:26 - Reserved */
-#define CORTEXM_DHCSR_S_RESET_ST	(1 << 25)
-#define CORTEXM_DHCSR_S_RETIRE_ST	(1 << 24)
-/* Bits 23:20 - Reserved */
-#define CORTEXM_DHCSR_S_LOCKUP		(1 << 19)
-#define CORTEXM_DHCSR_S_SLEEP		(1 << 18)
-#define CORTEXM_DHCSR_S_HALT		(1 << 17)
-#define CORTEXM_DHCSR_S_REGRDY		(1 << 16)
-/* Bits 15:6 - Reserved */
-#define CORTEXM_DHCSR_C_SNAPSTALL	(1 << 5)	/* v7m only */
-/* Bit 4 - Reserved */
-#define CORTEXM_DHCSR_C_MASKINTS	(1 << 3)
-#define CORTEXM_DHCSR_C_STEP		(1 << 2)
-#define CORTEXM_DHCSR_C_HALT		(1 << 1)
-#define CORTEXM_DHCSR_C_DEBUGEN		(1 << 0)
-
-
-/* -------------------------------------------------------------------------- */
-/* Cortex-M definitions for SAM D20 revision B fix                            */
-/* -------------------------------------------------------------------------- */
-
-#define CORTEXM_FPB_BASE	(CORTEXM_PPB_BASE + 0x2000)
-
-/* ARM Literature uses FP_*, we use CORTEXM_FPB_* consistently */
-#define CORTEXM_FPB_CTRL	(CORTEXM_FPB_BASE + 0x000)
-#define CORTEXM_FPB_REMAP	(CORTEXM_FPB_BASE + 0x004)
-#define CORTEXM_FPB_COMP(i)	(CORTEXM_FPB_BASE + 0x008 + (4*(i)))
-
-#define CORTEXM_DWT_BASE	(CORTEXM_PPB_BASE + 0x1000)
-
-#define CORTEXM_DWT_CTRL	(CORTEXM_DWT_BASE + 0x000)
-#define CORTEXM_DWT_COMP(i)	(CORTEXM_DWT_BASE + 0x020 + (0x10*(i)))
-#define CORTEXM_DWT_MASK(i)	(CORTEXM_DWT_BASE + 0x024 + (0x10*(i)))
-#define CORTEXM_DWT_FUNC(i)	(CORTEXM_DWT_BASE + 0x028 + (0x10*(i)))
-
-#define CORTEXM_MAX_WATCHPOINTS	4	/* architecture says up to 15, no implementation has > 4 */
-#define CORTEXM_MAX_BREAKPOINTS	6	/* architecture says up to 127, no implementation has > 6 */
-
-struct cortexm_priv {
-	bool stepping;
-	bool on_bkpt;
-	/* Watchpoint unit status */
-	struct wp_unit_s {
-		uint32_t addr;
-		uint8_t type;
-		uint8_t size;
-	} hw_watchpoint[CORTEXM_MAX_WATCHPOINTS];
-	unsigned hw_watchpoint_max;
-	/* Breakpoint unit status */
-	uint32_t hw_breakpoint[CORTEXM_MAX_BREAKPOINTS];
-	unsigned hw_breakpoint_max;
-	/* Copy of DEMCR for vector-catch */
-	uint32_t demcr;
-	/* Semihosting state */
-	uint32_t syscall;
-	uint32_t errno;
-	uint32_t byte_count;
-};
-
-
-
 /* Utility */
 #define MINIMUM(a,b)			((a < b) ? a : b)
 
@@ -340,19 +243,7 @@ static void
 samd20_revB_detach(struct target_s *target)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
-	struct cortexm_priv *priv = ap->priv;
-	unsigned i;
-
-	/* Clear any stale breakpoints */
-	for(i = 0; i < priv->hw_breakpoint_max; i++)
-		adiv5_ap_mem_write(ap, CORTEXM_FPB_COMP(i), 0);
-
-	/* Clear any stale watchpoints */
-	for(i = 0; i < priv->hw_watchpoint_max; i++)
-		adiv5_ap_mem_write(ap, CORTEXM_DWT_FUNC(i), 0);
-
-	/* Disable debug */
-	adiv5_ap_mem_write(ap, CORTEXM_DHCSR, CORTEXM_DHCSR_DBGKEY);
+	cortexm_detach(target);
 
 	/* ---- Additional ---- */
 	/* Exit extended reset */
@@ -374,25 +265,7 @@ static void
 samd20_revB_halt_resume(struct target_s *target, bool step)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
-	struct cortexm_priv *priv = ap->priv;
-	uint32_t dhcsr = CORTEXM_DHCSR_DBGKEY | CORTEXM_DHCSR_C_DEBUGEN;
-
-	if(step) dhcsr |= CORTEXM_DHCSR_C_STEP | CORTEXM_DHCSR_C_MASKINTS;
-
-	/* Disable interrupts while single stepping... */
-	if(step != priv->stepping) {
-		adiv5_ap_mem_write(ap, CORTEXM_DHCSR, dhcsr | CORTEXM_DHCSR_C_HALT);
-		priv->stepping = step;
-	}
-
-	if (priv->on_bkpt) {
-		uint32_t pc = target->pc_read(target);
-		if ((adiv5_ap_mem_read_halfword(ap, pc) & 0xFF00) == 0xBE00)
-			target->pc_write(target, pc + 2);
-	}
-
-	adiv5_ap_mem_write(ap, CORTEXM_DHCSR, dhcsr);
-	ap->dp->allow_timeout = true;
+	cortexm_halt_resume(target, step);
 
 	/* ---- Additional ---- */
 	/* Exit extended reset */
