@@ -198,6 +198,51 @@ static const char samd20_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 #define CORTEXM_DHCSR_C_HALT		(1 << 1)
 #define CORTEXM_DHCSR_C_DEBUGEN		(1 << 0)
 
+
+/* -------------------------------------------------------------------------- */
+/* Cortex-M definitions for SAM D20 revision B fix                            */
+/* -------------------------------------------------------------------------- */
+
+#define CORTEXM_FPB_BASE	(CORTEXM_PPB_BASE + 0x2000)
+
+/* ARM Literature uses FP_*, we use CORTEXM_FPB_* consistently */
+#define CORTEXM_FPB_CTRL	(CORTEXM_FPB_BASE + 0x000)
+#define CORTEXM_FPB_REMAP	(CORTEXM_FPB_BASE + 0x004)
+#define CORTEXM_FPB_COMP(i)	(CORTEXM_FPB_BASE + 0x008 + (4*(i)))
+
+#define CORTEXM_DWT_BASE	(CORTEXM_PPB_BASE + 0x1000)
+
+#define CORTEXM_DWT_CTRL	(CORTEXM_DWT_BASE + 0x000)
+#define CORTEXM_DWT_COMP(i)	(CORTEXM_DWT_BASE + 0x020 + (0x10*(i)))
+#define CORTEXM_DWT_MASK(i)	(CORTEXM_DWT_BASE + 0x024 + (0x10*(i)))
+#define CORTEXM_DWT_FUNC(i)	(CORTEXM_DWT_BASE + 0x028 + (0x10*(i)))
+
+#define CORTEXM_MAX_WATCHPOINTS	4	/* architecture says up to 15, no implementation has > 4 */
+#define CORTEXM_MAX_BREAKPOINTS	6	/* architecture says up to 127, no implementation has > 6 */
+
+struct cortexm_priv {
+	bool stepping;
+	bool on_bkpt;
+	/* Watchpoint unit status */
+	struct wp_unit_s {
+		uint32_t addr;
+		uint8_t type;
+		uint8_t size;
+	} hw_watchpoint[CORTEXM_MAX_WATCHPOINTS];
+	unsigned hw_watchpoint_max;
+	/* Breakpoint unit status */
+	uint32_t hw_breakpoint[CORTEXM_MAX_BREAKPOINTS];
+	unsigned hw_breakpoint_max;
+	/* Copy of DEMCR for vector-catch */
+	uint32_t demcr;
+	/* Semihosting state */
+	uint32_t syscall;
+	uint32_t errno;
+	uint32_t byte_count;
+};
+
+
+
 /* Utility */
 #define MINIMUM(a,b)			((a < b) ? a : b)
 
@@ -285,6 +330,81 @@ samd20_reset(struct target_s *target)
 	target_check_error(target);
 }
 
+/**
+ * Overloads the default cortexm detached function with a version that
+ * removes the target from extended reset where required.
+ *
+ * Only required for SAM D20 _Revision B_ Silicon
+ */
+static void
+samd20_revB_detach(struct target_s *target)
+{
+	ADIv5_AP_t *ap = adiv5_target_ap(target);
+	struct cortexm_priv *priv = ap->priv;
+	unsigned i;
+
+	/* Clear any stale breakpoints */
+	for(i = 0; i < priv->hw_breakpoint_max; i++)
+		adiv5_ap_mem_write(ap, CORTEXM_FPB_COMP(i), 0);
+
+	/* Clear any stale watchpoints */
+	for(i = 0; i < priv->hw_watchpoint_max; i++)
+		adiv5_ap_mem_write(ap, CORTEXM_DWT_FUNC(i), 0);
+
+	/* Disable debug */
+	adiv5_ap_mem_write(ap, CORTEXM_DHCSR, CORTEXM_DHCSR_DBGKEY);
+
+	/* ---- Additional ---- */
+	/* Exit extended reset */
+	if (adiv5_ap_mem_read(ap, SAMD20_DSU_CTRLSTAT) &
+	    SAMD20_STATUSA_CRSTEXT) {
+		/* Write bit to clear from extended reset */
+	  adiv5_ap_mem_write(ap, SAMD20_DSU_CTRLSTAT,
+			     SAMD20_STATUSA_CRSTEXT);
+	}
+}
+
+/**
+ * Overloads the default cortexm halt_resume function with a version
+ * that removes the target from extended reset where required.
+ *
+ * Only required for SAM D20 _Revision B_ Silicon
+ */
+static void
+samd20_revB_halt_resume(struct target_s *target, bool step)
+{
+	ADIv5_AP_t *ap = adiv5_target_ap(target);
+	struct cortexm_priv *priv = ap->priv;
+	uint32_t dhcsr = CORTEXM_DHCSR_DBGKEY | CORTEXM_DHCSR_C_DEBUGEN;
+
+	if(step) dhcsr |= CORTEXM_DHCSR_C_STEP | CORTEXM_DHCSR_C_MASKINTS;
+
+	/* Disable interrupts while single stepping... */
+	if(step != priv->stepping) {
+		adiv5_ap_mem_write(ap, CORTEXM_DHCSR, dhcsr | CORTEXM_DHCSR_C_HALT);
+		priv->stepping = step;
+	}
+
+	if (priv->on_bkpt) {
+		uint32_t pc = target->pc_read(target);
+		if ((adiv5_ap_mem_read_halfword(ap, pc) & 0xFF00) == 0xBE00)
+			target->pc_write(target, pc + 2);
+	}
+
+	adiv5_ap_mem_write(ap, CORTEXM_DHCSR, dhcsr);
+	ap->dp->allow_timeout = true;
+
+	/* ---- Additional ---- */
+	/* Exit extended reset */
+	if (adiv5_ap_mem_read(ap, SAMD20_DSU_CTRLSTAT) &
+	    SAMD20_STATUSA_CRSTEXT) {
+		/* Write bit to clear from extended reset */
+		adiv5_ap_mem_write(ap, SAMD20_DSU_CTRLSTAT,
+				   SAMD20_STATUSA_CRSTEXT);
+	}
+}
+
+
 char variant_string[30];
 bool samd20_probe(struct target_s *target)
 {
@@ -329,6 +449,17 @@ bool samd20_probe(struct target_s *target)
 			/* Setup Target */
 			target->driver = variant_string;
 			target->reset = samd20_reset;
+
+			if (revision_variant == 'B') {
+				/**
+				 * These functions check for and
+				 * extended reset. Appears to be
+				 * related to Errata 35.4.1 ref 12015
+				 */
+				target->detach      = samd20_revB_detach;
+				target->halt_resume = samd20_revB_halt_resume;
+			}
+
 			target->xml_mem_map = samd20_xml_memory_map;
 			target->flash_erase = samd20_flash_erase;
 			target->flash_write = samd20_flash_write;
