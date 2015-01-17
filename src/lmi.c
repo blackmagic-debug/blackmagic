@@ -63,7 +63,7 @@ static const char tm4c123gh6pm_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 	"</memory-map>";
 
 
-uint16_t lmi_flash_write_stub[] = {
+static const uint16_t lmi_flash_write_stub[] = {
 // _start:
 	0x4809,	// ldr r0, [pc, #36] // _flashbase
 	0x490b,	// ldr r1, [pc, #44] // _addr
