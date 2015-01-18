@@ -32,7 +32,7 @@ SRC =			\
 	nrf51.c		\
 	platform.c	\
 	sam3x.c		\
-	samd20.c	\
+	samd.c		\
 	stm32f1.c	\
 	stm32f4.c	\
 	stm32l1.c	\
@@ -53,4 +53,3 @@ clean:	host_clean
 	-$(RM) platforms/*/*.o platforms/*/*.d mapfile
 
 -include *.d
-
