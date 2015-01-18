@@ -81,23 +81,27 @@ static const char samd20_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 #define SAMD20_ROW_SIZE			256
 #define SAMD20_PAGE_SIZE		64
 
+/* -------------------------------------------------------------------------- */
 /* Non-Volatile Memory Controller (NVMC) Registers */
+/* -------------------------------------------------------------------------- */
+
 #define SAMD20_NVMC			0x41004000
-#define SAMD20_NVMC_CMD			(SAMD20_NVMC + 0x0)
+#define SAMD20_NVMC_CTRLA		(SAMD20_NVMC + 0x0)
+#define SAMD20_NVMC_CTRLB		(SAMD20_NVMC + 0x04)
 #define SAMD20_NVMC_PARAM		(SAMD20_NVMC + 0x08)
 #define SAMD20_NVMC_INTFLAG		(SAMD20_NVMC + 0x14)
 #define SAMD20_NVMC_STATUS		(SAMD20_NVMC + 0x18)
 #define SAMD20_NVMC_ADDRESS		(SAMD20_NVMC + 0x1C)
 
-/* Command Register (CMD) */
-#define SAMD20_CMD_KEY			0xA500
-#define SAMD20_CMD_ERASEROW		0x0002
-#define SAMD20_CMD_WRITEPAGE		0x0004
-#define SAMD20_CMD_ERASEAUXROW		0x0005
-#define SAMD20_CMD_WRITEAUXPAGE		0x0006
-#define SAMD20_CMD_LOCK			0x0040
-#define SAMD20_CMD_UNLOCK		0x0041
-#define SAMD20_CMD_PAGEBUFFERCLEAR	0x0044
+/* Control A Register (CTRLA) */
+#define SAMD20_CTRLA_CMD_KEY		0xA500
+#define SAMD20_CTRLA_CMD_ERASEROW	0x0002
+#define SAMD20_CTRLA_CMD_WRITEPAGE	0x0004
+#define SAMD20_CTRLA_CMD_ERASEAUXROW	0x0005
+#define SAMD20_CTRLA_CMD_WRITEAUXPAGE	0x0006
+#define SAMD20_CTRLA_CMD_LOCK		0x0040
+#define SAMD20_CTRLA_CMD_UNLOCK		0x0041
+#define SAMD20_CTRLA_CMD_PAGEBUFFERCLEAR 0x0044
 
 /* Interrupt Flag Register (INTFLAG) */
 #define SAMD20_NVMC_READY		(1 << 0)
@@ -109,7 +113,10 @@ static const char samd20_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 #define SAMD20_NVM_SERIAL(n)		(0x0080A00C + (0x30 * ((n + 3) / 4)) + \
 					 (0x4 * n))
 
+/* -------------------------------------------------------------------------- */
 /* Device Service Unit (DSU) Registers */
+/* -------------------------------------------------------------------------- */
+
 #define SAMD20_DSU			0x41002000
 #define SAMD20_DSU_EXT_ACCESS		(SAMD20_DSU + 0x100)
 #define SAMD20_DSU_CTRLSTAT		(SAMD20_DSU_EXT_ACCESS + 0x0)
@@ -366,14 +373,14 @@ static void samd20_lock_current_address(struct target_s *target)
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
 
 	/* Issue the unlock command */
-	adiv5_ap_mem_write(ap, SAMD20_NVMC_CMD, SAMD20_CMD_KEY | SAMD20_CMD_LOCK);
+	adiv5_ap_mem_write(ap, SAMD20_NVMC_CTRLA, SAMD20_CTRLA_CMD_KEY | SAMD20_CTRLA_CMD_LOCK);
 }
 static void samd20_unlock_current_address(struct target_s *target)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
 
 	/* Issue the unlock command */
-	adiv5_ap_mem_write(ap, SAMD20_NVMC_CMD, SAMD20_CMD_KEY | SAMD20_CMD_UNLOCK);
+	adiv5_ap_mem_write(ap, SAMD20_NVMC_CTRLA, SAMD20_CTRLA_CMD_KEY | SAMD20_CTRLA_CMD_UNLOCK);
 }
 
 /**
@@ -395,7 +402,7 @@ static int samd20_flash_erase(struct target_s *target, uint32_t addr, int len)
 		samd20_unlock_current_address(target);
 
 		/* Issue the erase command */
-		adiv5_ap_mem_write(ap, SAMD20_NVMC_CMD, SAMD20_CMD_KEY | SAMD20_CMD_ERASEROW);
+		adiv5_ap_mem_write(ap, SAMD20_NVMC_CTRLA, SAMD20_CTRLA_CMD_KEY | SAMD20_CTRLA_CMD_ERASEROW);
 		/* Poll for NVM Ready */
 		while ((adiv5_ap_mem_read(ap, SAMD20_NVMC_INTFLAG) & SAMD20_NVMC_READY) == 0)
 			if(target_check_error(target))
@@ -460,8 +467,8 @@ static int samd20_flash_write(struct target_s *target, uint32_t dest,
 			samd20_unlock_current_address(target);
 
 			/* Issue the write page command */
-			adiv5_ap_mem_write(ap, SAMD20_NVMC_CMD,
-					   SAMD20_CMD_KEY | SAMD20_CMD_WRITEPAGE);
+			adiv5_ap_mem_write(ap, SAMD20_NVMC_CTRLA,
+					   SAMD20_CTRLA_CMD_KEY | SAMD20_CTRLA_CMD_WRITEPAGE);
 		} else {
 			/* Write first word to set address */
 			adiv5_ap_mem_write(ap, addr, data[i]); addr += 4; i++;
@@ -551,7 +558,7 @@ static bool samd20_set_flashlock(target *t, uint16_t value)
 	adiv5_ap_mem_write(ap, SAMD20_NVMC_ADDRESS, SAMD20_NVM_USER_ROW_LOW >> 1);
 
 	/* Issue the erase command */
-	adiv5_ap_mem_write(ap, SAMD20_NVMC_CMD, SAMD20_CMD_KEY | SAMD20_CMD_ERASEAUXROW);
+	adiv5_ap_mem_write(ap, SAMD20_NVMC_CTRLA, SAMD20_CTRLA_CMD_KEY | SAMD20_CTRLA_CMD_ERASEAUXROW);
 
 	/* Poll for NVM Ready */
 	while ((adiv5_ap_mem_read(ap, SAMD20_NVMC_INTFLAG) & SAMD20_NVMC_READY) == 0)
@@ -566,8 +573,8 @@ static bool samd20_set_flashlock(target *t, uint16_t value)
 	adiv5_ap_mem_write(ap, SAMD20_NVM_USER_ROW_HIGH, high);
 
 	/* Issue the page write command */
-	adiv5_ap_mem_write(ap, SAMD20_NVMC_CMD,
-		   SAMD20_CMD_KEY | SAMD20_CMD_WRITEAUXPAGE);
+	adiv5_ap_mem_write(ap, SAMD20_NVMC_CTRLA,
+		   SAMD20_CTRLA_CMD_KEY | SAMD20_CTRLA_CMD_WRITEAUXPAGE);
 
   	return true;
 }
