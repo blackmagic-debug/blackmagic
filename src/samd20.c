@@ -501,13 +501,33 @@ static bool samd20_cmd_erase_all(target *t)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(t);
 
+	/* Clear the DSU status bits */
+	adiv5_ap_mem_write(ap, SAMD20_DSU_CTRLSTAT,
+			   (SAMD20_STATUSA_DONE | SAMD20_STATUSA_PERR | SAMD20_STATUSA_FAIL));
+
 	/* Erase all */
 	adiv5_ap_mem_write(ap, SAMD20_DSU_CTRLSTAT, SAMD20_CTRL_CHIP_ERASE);
 
 	/* Poll for DSU Ready */
-	while ((adiv5_ap_mem_read(ap, SAMD20_DSU_CTRLSTAT) & SAMD20_STATUSA_DONE) == 0)
+	uint32_t status;
+	while (((status = adiv5_ap_mem_read(ap, SAMD20_DSU_CTRLSTAT)) &
+		(SAMD20_STATUSA_DONE | SAMD20_STATUSA_PERR | SAMD20_STATUSA_FAIL)) == 0)
 		if(target_check_error(t))
 			return false;
+
+	/* Test the protection error bit in Status A */
+	if (status & SAMD20_STATUSA_PERR) {
+		gdb_outf("Erase failed due to a protection error.\n");
+		return true;
+	}
+
+	/* Test the fail bit in Status A */
+	if (status & SAMD20_STATUSA_FAIL) {
+		gdb_outf("Erase failed.\n");
+		return true;
+	}
+
+	gdb_outf("Erase successful!\n");
 
 	return true;
 }
