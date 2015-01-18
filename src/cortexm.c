@@ -60,8 +60,6 @@ const struct command_s cortexm_cmd_list[] = {
 #define SIGTRAP 5
 #define SIGSEGV 11
 
-static bool cortexm_attach(struct target_s *target);
-
 static int cortexm_regs_read(struct target_s *target, void *data);
 static int cortexm_regs_write(struct target_s *target, const void *data);
 static int cortexm_pc_write(struct target_s *target, const uint32_t val);
@@ -269,8 +267,7 @@ cortexm_probe(struct target_s *target)
 	return true;
 }
 
-static bool
-cortexm_attach(struct target_s *target)
+bool cortexm_attach(struct target_s *target)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
 	struct cortexm_priv *priv = ap->priv;

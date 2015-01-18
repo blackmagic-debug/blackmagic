@@ -123,6 +123,7 @@
 #define CORTEXM_DWT_FUNC_FUNC_WRITE	(6 << 0)
 #define CORTEXM_DWT_FUNC_FUNC_ACCESS	(7 << 0)
 
+bool cortexm_attach(struct target_s *target);
 void cortexm_detach(struct target_s *target);
 void cortexm_halt_resume(struct target_s *target, bool step);
 

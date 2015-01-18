@@ -25,9 +25,6 @@
  * http://www.atmel.com/Images/Atmel-42129-SAM-D20_Datasheet.pdf
  * particularly Sections 12. DSU and 20. NVMCTRL
  */
-/* TODO: Support for the NVMCTRL Security Bit. If this is set then the
- * device will probably not even be detected.
- */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -51,6 +48,7 @@ static bool samd20_cmd_unlock_flash(target *t);
 static bool samd20_cmd_read_userrow(target *t);
 static bool samd20_cmd_serial(target *t);
 static bool samd20_cmd_mbist(target *t);
+static bool samd20_cmd_ssb(target *t);
 
 const struct command_s samd20_cmd_list[] = {
 	{"erase_mass", (cmd_handler)samd20_cmd_erase_all, "Erase entire flash memory"},
@@ -59,6 +57,7 @@ const struct command_s samd20_cmd_list[] = {
 	{"user_row", (cmd_handler)samd20_cmd_read_userrow, "Prints user row from flash"},
 	{"serial", (cmd_handler)samd20_cmd_serial, "Prints serial number"},
 	{"mbist", (cmd_handler)samd20_cmd_mbist, "Runs the built-in memory test"},
+        {"set_security_bit", (cmd_handler)samd20_cmd_ssb, "Sets the Security Bit"},
 	{NULL, NULL, NULL}
 };
 
@@ -102,6 +101,8 @@ static const char samd20_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 #define SAMD20_CTRLA_CMD_LOCK		0x0040
 #define SAMD20_CTRLA_CMD_UNLOCK		0x0041
 #define SAMD20_CTRLA_CMD_PAGEBUFFERCLEAR 0x0044
+#define SAMD20_CTRLA_CMD_SSB		0x0045
+#define SAMD20_CTRLA_CMD_INVALL		0x0046
 
 /* Interrupt Flag Register (INTFLAG) */
 #define SAMD20_NVMC_READY		(1 << 0)
@@ -137,6 +138,7 @@ static const char samd20_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 #define SAMD20_STATUSA_BERR		(1 << 10)
 #define SAMD20_STATUSA_CRSTEXT		(1 << 9)
 #define SAMD20_STATUSA_DONE		(1 << 8)
+#define SAMD20_STATUSB_PROT		(1 << 16)
 
 /* Device Identification Register (DID) */
 #define SAMD20_DID_MASK			0xFFBF0000
@@ -284,8 +286,32 @@ samd20_revB_halt_resume(struct target_s *target, bool step)
 	}
 }
 
+/**
+ * Overload the default cortexm attach for when the samd20 is protected.
+ *
+ * If the samd20 is protected then the default cortexm attach will
+ * fail as the S_HALT bit in the DHCSR will never go high. This
+ * function allows users to attach on a temporary basis so they can
+ * rescue the device.
+ */
+static bool
+samd20_protected_attach(struct target_s *target)
+{
+	/**
+	 * TODO: Notify the user that we're not really attached and
+	 * they should issue the 'monitor erase_mass' command to
+	 * regain access to the chip.
+	 */
 
-char variant_string[30];
+        /* Patch back in the normal cortexm attach for next time */
+        target->attach = cortexm_attach;
+
+        /* Allow attach this time */
+	return true;
+}
+
+
+char variant_string[40];
 bool samd20_probe(struct target_s *target)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
@@ -306,6 +332,7 @@ bool samd20_probe(struct target_s *target)
 			  & SAMD20_DID_DEVSEL_MASK;
 			uint8_t revision = (did >> SAMD20_DID_REVISION_POS)
 			  & SAMD20_DID_REVISION_MASK;
+			uint32_t ctrlstat = adiv5_ap_mem_read(ap, SAMD20_DSU_CTRLSTAT);
 
 			/* Pin Variant */
 			char pin_variant;
@@ -322,9 +349,17 @@ bool samd20_probe(struct target_s *target)
 			/* Revision */
 			char revision_variant = 'A' + revision;
 
+                        /* Protected? */
+                        int protected = (ctrlstat & SAMD20_STATUSB_PROT);
+
 			/* Part String */
-			sprintf(variant_string, "Atmel SAMD20%c%dA (rev %c)",
-				pin_variant, mem_variant, revision_variant);
+                        if (protected) {
+                        	sprintf(variant_string, "Atmel SAMD20%c%dA (rev %c) (PROT=1)",
+					pin_variant, mem_variant, revision_variant);
+			} else {
+                        	sprintf(variant_string, "Atmel SAMD20%c%dA (rev %c)",
+					pin_variant, mem_variant, revision_variant);
+                        }
 
 			/* Setup Target */
 			target->driver = variant_string;
@@ -338,6 +373,16 @@ bool samd20_probe(struct target_s *target)
 				 */
 				target->detach      = samd20_revB_detach;
 				target->halt_resume = samd20_revB_halt_resume;
+			}
+			if (protected) {
+				/**
+				 * Overload the default cortexm attach
+				 * for when the samd20 is protected.
+				 * This function allows users to
+				 * attach on a temporary basis so they
+				 * can rescue the device.
+				 */
+				target->attach = samd20_protected_attach;
 			}
 
 			target->xml_mem_map = samd20_xml_memory_map;
@@ -666,6 +711,26 @@ static bool samd20_cmd_mbist(target *t)
 	} else {
 		gdb_outf("MBIST Passed!\n");
 	}
+
+	return true;
+}
+/**
+ * Sets the security bit
+ */
+static bool samd20_cmd_ssb(target *t)
+{
+	ADIv5_AP_t *ap = adiv5_target_ap(t);
+
+	/* Issue the ssb command */
+	adiv5_ap_mem_write(ap, SAMD20_NVMC_CTRLA, SAMD20_CTRLA_CMD_KEY | SAMD20_CTRLA_CMD_SSB);
+
+        /* Poll for NVM Ready */
+        while ((adiv5_ap_mem_read(ap, SAMD20_NVMC_INTFLAG) & SAMD20_NVMC_READY) == 0)
+        	if(target_check_error(t))
+			return -1;
+
+	gdb_outf("Set the security bit! "
+		 "You will need to issue 'monitor erase_mass' to clear this.\n");
 
 	return true;
 }
