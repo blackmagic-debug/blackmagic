@@ -1,0 +1,184 @@
+// 
+// stm32l05x-nvm-prog-write.o:     file format elf32-littlearm
+// 
+// 
+// Disassembly of section .text:
+// 
+// 00000000 <stm32l05x_nvm_prog_write>:
+//                   ".align 2\n\t"
+//                   ".word 0\n\t"
+//                   ".word 0\n\t"
+//                   ".word 0\n\t"
+//                   ".word 0\n\t"
+//                   "0:");
+  [0x0/2] = 0xe008, //    0:	e008      	b.n	14 <stm32l05x_nvm_prog_write+0x14>
+  [0x2/2] = 0x46c0, //    2:	46c0      	nop			; (mov r8, r8)
+// 	...
+// #define Nvm  (*reinterpret_cast<STM32::NVM*>(STM32L0_NVM_PHYS))
+// #define Info (*reinterpret_cast<stm32l0_nvm_stub_info*>(STM32L0_STUB_INFO_PHYS))
+// 
+// namespace {
+//   inline __attribute((always_inline)) bool unlock () {
+//     Nvm.pecr    = STM32L0_NVM_PECR_PELOCK; // Lock to guarantee unlock
+  [0x14/2] = 0x2201, //   14:	2201      	movs	r2, #1
+  [0x16/2] = 0x4b28, //   16:	4b28      	ldr	r3, [pc, #160]	; (b8 <stm32l05x_nvm_prog_write+0xb8>)
+  [0x18/2] = 0x605a, //   18:	605a      	str	r2, [r3, #4]
+//     Nvm.pkeyr   = STM32::NVM::PKEY1;
+  [0x1a/2] = 0x4a28, //   1a:	4a28      	ldr	r2, [pc, #160]	; (bc <stm32l05x_nvm_prog_write+0xbc>)
+  [0x1c/2] = 0x1c18, //   1c:	1c18      	adds	r0, r3, #0
+  [0x1e/2] = 0x60da, //   1e:	60da      	str	r2, [r3, #12]
+//     Nvm.pkeyr   = STM32::NVM::PKEY2;
+  [0x20/2] = 0x4a27, //   20:	4a27      	ldr	r2, [pc, #156]	; (c0 <stm32l05x_nvm_prog_write+0xc0>)
+  [0x22/2] = 0x60da, //   22:	60da      	str	r2, [r3, #12]
+//     Nvm.prgkeyr = STM32::NVM::PRGKEY1;
+  [0x24/2] = 0x4a27, //   24:	4a27      	ldr	r2, [pc, #156]	; (c4 <stm32l05x_nvm_prog_write+0xc4>)
+  [0x26/2] = 0x611a, //   26:	611a      	str	r2, [r3, #16]
+//     Nvm.prgkeyr = STM32::NVM::PRGKEY2;
+  [0x28/2] = 0x4a27, //   28:	4a27      	ldr	r2, [pc, #156]	; (c8 <stm32l05x_nvm_prog_write+0xc8>)
+  [0x2a/2] = 0x611a, //   2a:	611a      	str	r2, [r3, #16]
+//     return !(Nvm.pecr & STM32L0_NVM_PECR_PRGLOCK);
+  [0x2c/2] = 0x685a, //   2c:	685a      	ldr	r2, [r3, #4]
+// 
+//   if (!unlock ())
+  [0x2e/2] = 0x0793, //   2e:	0793      	lsls	r3, r2, #30
+  [0x30/2] = 0xd514, //   30:	d514      	bpl.n	5c <stm32l05x_nvm_prog_write+0x5c>
+//   }
+//   inline __attribute((always_inline)) void lock () {
+//     Nvm.pecr = STM32L0_NVM_PECR_PELOCK; }
+  [0x32/2] = 0x2301, //   32:	2301      	movs	r3, #1
+  [0x34/2] = 0x6043, //   34:	6043      	str	r3, [r0, #4]
+//     }
+//   }
+// 
+// quit:
+//   lock ();
+//   __asm volatile ("bkpt");
+  [0x36/2] = 0xbe00, //   36:	be00      	bkpt	0x0000
+// 
+//   while (Info.size > 0) {
+// 
+//     // Either we're not half-page aligned or we have less than a half
+//     // page to write
+//     if (Info.size < Info.page_size/2
+  [0x38/2] = 0x68cd, //   38:	68cd      	ldr	r5, [r1, #12]
+  [0x3a/2] = 0x086e, //   3a:	086e      	lsrs	r6, r5, #1
+  [0x3c/2] = 0x1e73, //   3c:	1e73      	subs	r3, r6, #1
+  [0x3e/2] = 0x42b2, //   3e:	42b2      	cmp	r2, r6
+  [0x40/2] = 0xd212, //   40:	d212      	bcs.n	68 <stm32l05x_nvm_prog_write+0x68>
+//         || (reinterpret_cast<uint32_t> (Info.destination)
+//             & (Info.page_size/2 - 1))) {
+//       Nvm.pecr = STM32L0_NVM_PECR_PROG; // Word programming
+  [0x42/2] = 0x2508, //   42:	2508      	movs	r5, #8
+  [0x44/2] = 0x6045, //   44:	6045      	str	r5, [r0, #4]
+//       size_t c = Info.page_size/2
+//         - (reinterpret_cast<uint32_t> (Info.destination)
+//            & (Info.page_size/2 - 1));
+  [0x46/2] = 0x680d, //   46:	680d      	ldr	r5, [r1, #0]
+  [0x48/2] = 0x402b, //   48:	402b      	ands	r3, r5
+  [0x4a/2] = 0x1af3, //   4a:	1af3      	subs	r3, r6, r3
+  [0x4c/2] = 0x4293, //   4c:	4293      	cmp	r3, r2
+  [0x4e/2] = 0xd900, //   4e:	d900      	bls.n	52 <stm32l05x_nvm_prog_write+0x52>
+  [0x50/2] = 0x1c13, //   50:	1c13      	adds	r3, r2, #0
+//       if (c > Info.size)
+//         c = Info.size;
+//       Info.size -= c;
+  [0x52/2] = 0x1ad2, //   52:	1ad2      	subs	r2, r2, r3
+  [0x54/2] = 0x604a, //   54:	604a      	str	r2, [r1, #4]
+//       c /= 4;
+  [0x56/2] = 0x089b, //   56:	089b      	lsrs	r3, r3, #2
+//       while (c--) {
+  [0x58/2] = 0x3b01, //   58:	3b01      	subs	r3, #1
+  [0x5a/2] = 0xd209, //   5a:	d209      	bcs.n	70 <stm32l05x_nvm_prog_write+0x70>
+//                   "0:");
+// 
+//   if (!unlock ())
+//     goto quit;
+// 
+//   while (Info.size > 0) {
+  [0x5c/2] = 0x491b, //   5c:	491b      	ldr	r1, [pc, #108]	; (cc <stm32l05x_nvm_prog_write+0xcc>)
+  [0x5e/2] = 0x684a, //   5e:	684a      	ldr	r2, [r1, #4]
+  [0x60/2] = 0x1c0c, //   60:	1c0c      	adds	r4, r1, #0
+  [0x62/2] = 0x2a00, //   62:	2a00      	cmp	r2, #0
+  [0x64/2] = 0xdce8, //   64:	dce8      	bgt.n	38 <stm32l05x_nvm_prog_write+0x38>
+  [0x66/2] = 0xe7e4, //   66:	e7e4      	b.n	32 <stm32l05x_nvm_prog_write+0x32>
+// 
+//     // Either we're not half-page aligned or we have less than a half
+//     // page to write
+//     if (Info.size < Info.page_size/2
+//         || (reinterpret_cast<uint32_t> (Info.destination)
+  [0x68/2] = 0x680f, //   68:	680f      	ldr	r7, [r1, #0]
+  [0x6a/2] = 0x421f, //   6a:	421f      	tst	r7, r3
+  [0x6c/2] = 0xd00d, //   6c:	d00d      	beq.n	8a <stm32l05x_nvm_prog_write+0x8a>
+  [0x6e/2] = 0xe7e8, //   6e:	e7e8      	b.n	42 <stm32l05x_nvm_prog_write+0x42>
+//       if (c > Info.size)
+//         c = Info.size;
+//       Info.size -= c;
+//       c /= 4;
+//       while (c--) {
+//         uint32_t v = *Info.source++;
+  [0x70/2] = 0x68a2, //   70:	68a2      	ldr	r2, [r4, #8]
+  [0x72/2] = 0x1d11, //   72:	1d11      	adds	r1, r2, #4
+  [0x74/2] = 0x60a1, //   74:	60a1      	str	r1, [r4, #8]
+  [0x76/2] = 0x6811, //   76:	6811      	ldr	r1, [r2, #0]
+//         *Info.destination++ = v;
+  [0x78/2] = 0x6822, //   78:	6822      	ldr	r2, [r4, #0]
+  [0x7a/2] = 0x1d15, //   7a:	1d15      	adds	r5, r2, #4
+  [0x7c/2] = 0x6025, //   7c:	6025      	str	r5, [r4, #0]
+  [0x7e/2] = 0x6011, //   7e:	6011      	str	r1, [r2, #0]
+//         if (Nvm.sr & STM32L0_NVM_SR_ERR_M)
+  [0x80/2] = 0x6981, //   80:	6981      	ldr	r1, [r0, #24]
+  [0x82/2] = 0x4a13, //   82:	4a13      	ldr	r2, [pc, #76]	; (d0 <stm32l05x_nvm_prog_write+0xd0>)
+  [0x84/2] = 0x4211, //   84:	4211      	tst	r1, r2
+  [0x86/2] = 0xd0e7, //   86:	d0e7      	beq.n	58 <stm32l05x_nvm_prog_write+0x58>
+  [0x88/2] = 0xe7d3, //   88:	e7d3      	b.n	32 <stm32l05x_nvm_prog_write+0x32>
+//           goto quit;
+//       }
+//     }
+//     // Or we are writing a half-page
+//     else {
+//       Nvm.pecr = STM32L0_NVM_PECR_PROG | STM32L0_NVM_PECR_FPRG; // Half-page prg
+  [0x8a/2] = 0x2381, //   8a:	2381      	movs	r3, #129	; 0x81
+  [0x8c/2] = 0x00db, //   8c:	00db      	lsls	r3, r3, #3
+  [0x8e/2] = 0x6043, //   8e:	6043      	str	r3, [r0, #4]
+//       size_t c = Info.page_size/2;
+//       Info.size -= c;
+  [0x90/2] = 0x1b93, //   90:	1b93      	subs	r3, r2, r6
+  [0x92/2] = 0x604b, //   92:	604b      	str	r3, [r1, #4]
+//       c /= 4;
+  [0x94/2] = 0x08eb, //   94:	08eb      	lsrs	r3, r5, #3
+//       while (c--) {
+  [0x96/2] = 0x3b01, //   96:	3b01      	subs	r3, #1
+  [0x98/2] = 0xd308, //   98:	d308      	bcc.n	ac <stm32l05x_nvm_prog_write+0xac>
+//         uint32_t v = *Info.source++;
+  [0x9a/2] = 0x68a2, //   9a:	68a2      	ldr	r2, [r4, #8]
+  [0x9c/2] = 0x1d11, //   9c:	1d11      	adds	r1, r2, #4
+  [0x9e/2] = 0x60a1, //   9e:	60a1      	str	r1, [r4, #8]
+  [0xa0/2] = 0x6811, //   a0:	6811      	ldr	r1, [r2, #0]
+//         *Info.destination++ = v;
+  [0xa2/2] = 0x6822, //   a2:	6822      	ldr	r2, [r4, #0]
+  [0xa4/2] = 0x1d15, //   a4:	1d15      	adds	r5, r2, #4
+  [0xa6/2] = 0x6025, //   a6:	6025      	str	r5, [r4, #0]
+  [0xa8/2] = 0x6011, //   a8:	6011      	str	r1, [r2, #0]
+  [0xaa/2] = 0xe7f4, //   aa:	e7f4      	b.n	96 <stm32l05x_nvm_prog_write+0x96>
+//       }
+//       if (Nvm.sr & STM32L0_NVM_SR_ERR_M)
+  [0xac/2] = 0x6982, //   ac:	6982      	ldr	r2, [r0, #24]
+  [0xae/2] = 0x4b08, //   ae:	4b08      	ldr	r3, [pc, #32]	; (d0 <stm32l05x_nvm_prog_write+0xd0>)
+  [0xb0/2] = 0x421a, //   b0:	421a      	tst	r2, r3
+  [0xb2/2] = 0xd0d3, //   b2:	d0d3      	beq.n	5c <stm32l05x_nvm_prog_write+0x5c>
+  [0xb4/2] = 0xe7bd, //   b4:	e7bd      	b.n	32 <stm32l05x_nvm_prog_write+0x32>
+  [0xb6/2] = 0x46c0, //   b6:	46c0      	nop			; (mov r8, r8)
+  [0xb8/2] = 0x2000, //   b8:	40022000 	.word	0x40022000
+  [0xb8/2 + 1] = 0x4002,
+  [0xbc/2] = 0xcdef, //   bc:	89abcdef 	.word	0x89abcdef
+  [0xbc/2 + 1] = 0x89ab,
+  [0xc0/2] = 0x0405, //   c0:	02030405 	.word	0x02030405
+  [0xc0/2 + 1] = 0x0203,
+  [0xc4/2] = 0xaebf, //   c4:	8c9daebf 	.word	0x8c9daebf
+  [0xc4/2 + 1] = 0x8c9d,
+  [0xc8/2] = 0x1516, //   c8:	13141516 	.word	0x13141516
+  [0xc8/2 + 1] = 0x1314,
+  [0xcc/2] = 0x0004, //   cc:	20000004 	.word	0x20000004
+  [0xcc/2 + 1] = 0x2000,
+  [0xd0/2] = 0x0700, //   d0:	00010700 	.word	0x00010700
+  [0xd0/2 + 1] = 0x0001,
