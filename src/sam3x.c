@@ -112,6 +112,7 @@ static const char sam4s_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 
 #define SAM3X_CHIPID_CIDR	0x400E0940
 #define SAM3N_CHIPID_CIDR	0x400E0740
+#define SAM3S_CHIPID_CIDR	0x400E0740
 #define SAM4S_CHIPID_CIDR	0x400E0740
 
 #define CHIPID_CIDR_VERSION_MASK	(0x1F << 0)
@@ -133,6 +134,9 @@ static const char sam4s_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 #define CHIPID_CIDR_ARCH_SAM3NxA	(0x93 << 20)
 #define CHIPID_CIDR_ARCH_SAM3NxB	(0x94 << 20)
 #define CHIPID_CIDR_ARCH_SAM3NxC	(0x95 << 20)
+#define CHIPID_CIDR_ARCH_SAM3SxA	(0x88 << 20)
+#define CHIPID_CIDR_ARCH_SAM3SxB	(0x89 << 20)
+#define CHIPID_CIDR_ARCH_SAM3SxC	(0x8A << 20)
 #define CHIPID_CIDR_ARCH_SAM4SxA	(0x88 << 20)
 #define CHIPID_CIDR_ARCH_SAM4SxB	(0x89 << 20)
 #define CHIPID_CIDR_ARCH_SAM4SxC	(0x8A << 20)
@@ -175,6 +179,19 @@ bool sam3x_probe(struct target_s *target)
 		target_add_commands(target, sam3x_cmd_list, "SAM3N");
 		return true;
 	}
+    
+    target->idcode = adiv5_ap_mem_read(ap, SAM3S_CHIPID_CIDR);
+    switch (target->idcode & (CHIPID_CIDR_ARCH_MASK | CHIPID_CIDR_EPROC_MASK)) {
+        case CHIPID_CIDR_ARCH_SAM3SxA | CHIPID_CIDR_EPROC_CM3:
+        case CHIPID_CIDR_ARCH_SAM3SxB | CHIPID_CIDR_EPROC_CM3:
+        case CHIPID_CIDR_ARCH_SAM3SxC | CHIPID_CIDR_EPROC_CM3:
+            target->driver = "Atmel SAM3S";
+            target->xml_mem_map = sam3n_xml_memory_map;
+            target->flash_erase = sam3x_flash_erase;
+            target->flash_write = sam3x_flash_write;
+            target_add_commands(target, sam3x_cmd_list, "SAM3S");
+            return true;
+    }
 
 	target->idcode = adiv5_ap_mem_read(ap, SAM4S_CHIPID_CIDR);
 	switch (target->idcode & (CHIPID_CIDR_ARCH_MASK | CHIPID_CIDR_EPROC_MASK)) {
