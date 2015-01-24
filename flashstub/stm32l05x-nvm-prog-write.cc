@@ -43,70 +43,71 @@
 /* Write a block of bytes to flash.  The called is responsible for
    making sure that the address are aligned and that the count is an
    even multiple of words. */
-extern "C" void __attribute((naked)) stm32l05x_nvm_prog_write () {
+extern "C" void __attribute((naked)) stm32l05x_nvm_prog_write() {
   // Leave room for INFO at second word of routine
-  __asm volatile ("b 0f\n\t"
-                  ".align 2\n\t"
-                  ".word 0\n\t"
-                  ".word 0\n\t"
-                  ".word 0\n\t"
-                  ".word 0\n\t"
-                  ".word 0\n\t"
-                  "0:");
+        __asm volatile ("b 0f\n\t"
+                        ".align 2\n\t"
+                        ".word 0\n\t"
+                        ".word 0\n\t"
+                        ".word 0\n\t"
+                        ".word 0\n\t"
+                        ".word 0\n\t"
+                        "0:");
 
-  auto& nvm = Nvm (Info.nvm);
+        auto& nvm = Nvm (Info.nvm);
 
-  if (!unlock (nvm))
-    goto quit;
+        if (!unlock(nvm))
+                goto quit;
 
-  nvm.sr = STM32Lx_NVM_SR_ERR_M; // Clear errors
+        nvm.sr = STM32Lx_NVM_SR_ERR_M; // Clear errors
 
-  while (Info.size > 0) {
+        while (Info.size > 0) {
 
-    // Either we're not half-page aligned or we have less than a half
-    // page to write
-    if (Info.size < Info.page_size/2
-        || (reinterpret_cast<uint32_t> (Info.destination)
-            & (Info.page_size/2 - 1))) {
-      nvm.pecr = (Info.options & OPT_STM32L1) ? 0
-        : STM32Lx_NVM_PECR_PROG; // Word programming
-      size_t c = Info.page_size/2
-        - (reinterpret_cast<uint32_t> (Info.destination)
-           & (Info.page_size/2 - 1));
-      if (c > Info.size)
-        c = Info.size;
-      Info.size -= c;
-      c /= 4;
-      while (c--) {
-        uint32_t v = *Info.source++;
-        *Info.destination++ = v;
-        if (nvm.sr & STM32Lx_NVM_SR_ERR_M)
-          goto quit;
-      }
-    }
-    // Or we are writing a half-page(s)
-    else {
-      nvm.pecr = STM32Lx_NVM_PECR_PROG | STM32Lx_NVM_PECR_FPRG; // Half-page prg
-      size_t c = Info.size & ~(Info.page_size/2 - 1);
-      Info.size -= c;
-      c /= 4;
-      while (c--) {
-        uint32_t v = *Info.source++;
-        *Info.destination++ = v;
-      }
-      if (nvm.sr & STM32Lx_NVM_SR_ERR_M)
-        goto quit;
-    }
-  }
+                // Either we're not half-page aligned or we have less
+                // than a half page to write
+                if (Info.size < Info.page_size/2
+                    || (reinterpret_cast<uint32_t> (Info.destination)
+                        & (Info.page_size/2 - 1))) {
+                        nvm.pecr = (Info.options & OPT_STM32L1) ? 0
+                                : STM32Lx_NVM_PECR_PROG; // Word programming
+                        size_t c = Info.page_size/2
+                                - (reinterpret_cast<uint32_t> (Info.destination)
+                                   & (Info.page_size/2 - 1));
+                        if (c > Info.size)
+                                c = Info.size;
+                        Info.size -= c;
+                        c /= 4;
+                        while (c--) {
+                                uint32_t v = *Info.source++;
+                                *Info.destination++ = v;
+                                if (nvm.sr & STM32Lx_NVM_SR_ERR_M)
+                                        goto quit;
+                        }
+                }
+                // Or we are writing a half-page(s)
+                else {
+                        nvm.pecr = STM32Lx_NVM_PECR_PROG
+                                | STM32Lx_NVM_PECR_FPRG; // Half-page prg
+                        size_t c = Info.size & ~(Info.page_size/2 - 1);
+                        Info.size -= c;
+                        c /= 4;
+                        while (c--) {
+                                uint32_t v = *Info.source++;
+                                *Info.destination++ = v;
+                        }
+                        if (nvm.sr & STM32Lx_NVM_SR_ERR_M)
+                                goto quit;
+                }
+        }
 
 quit:
-  lock (nvm);
-  __asm volatile ("bkpt");
+        lock(nvm);
+        __asm volatile ("bkpt");
 }
 
 /*
    Local Variables:
-   compile-command: "/opt/arm/arm-none-eabi-g++ -mcpu=cortex-m0plus -g -c -std=c++11 -mthumb -o stm32l05x-nvm-prog-write.o -Os -Wa,-ahndl=stm32l05x-nvm-prog-write.lst stm32l05x-nvm-prog-write.cc ; /opt/arm/arm-none-eabi-objdump -S stm32l05x-nvm-prog-write.o | ./code-to-array.pl > stm32l05x-nvm-prog-write.stub"
+   compile-command: "/opt/arm/arm-none-eabi-g++ -mcpu=cortex-m0plus -g -c -std=c++11 -mthumb -o stm32l05x-nvm-prog-write.o -Os -Wa,-ahndl=stm32l05x-nvm-prog-write.lst stm32l05x-nvm-prog-write.cc ; /opt/arm/arm-none-eabi-objdump -d -z stm32l05x-nvm-prog-write.o | ./dump-to-array.sh > stm32l05x-nvm-prog-write.stub"
    End:
 
 */

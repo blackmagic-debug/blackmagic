@@ -42,52 +42,52 @@
 /* Erase a region of flash.  In the event that the erase is misaligned
    with respect to pages, it will erase the pages that contain the
    requested range of bytes. */
-extern "C" void __attribute((naked)) stm32l05x_nvm_prog_erase () {
-  // Leave room for INFO at second word of routine
-  __asm volatile ("b 0f\n\t"
-                  ".align 2\n\t"
-                  ".word 0\n\t"
-                  ".word 0\n\t"
-                  ".word 0\n\t"
-                  ".word 0\n\t"
-                  ".word 0\n\t"
-                  "0:");
+extern "C" void __attribute((naked)) stm32l05x_nvm_prog_erase() {
+        // Leave room for INFO at second word of routine
+        __asm volatile ("b 0f\n\t"
+                        ".align 2\n\t"
+                        ".word 0\n\t"
+                        ".word 0\n\t"
+                        ".word 0\n\t"
+                        ".word 0\n\t"
+                        ".word 0\n\t"
+                        "0:");
 
-  auto& nvm = Nvm (Info.nvm);
+        auto& nvm = Nvm (Info.nvm);
 
-  // Align to the start of the first page so that we make sure to erase
-  // all of the target pages.
-  auto remainder    = reinterpret_cast<uint32_t> (Info.destination)
-    & (Info.page_size - 1);
-  Info.size        += remainder;
-  Info.destination -= remainder/sizeof (*Info.destination);
+        // Align to the start of the first page so that we make sure to erase
+        // all of the target pages.
+        auto remainder    = reinterpret_cast<uint32_t> (Info.destination)
+                & (Info.page_size - 1);
+        Info.size        += remainder;
+        Info.destination -= remainder/sizeof (*Info.destination);
 
-  if (!unlock (nvm))
-    goto quit;
+        if (!unlock(nvm))
+                goto quit;
 
-  nvm.sr = STM32Lx_NVM_SR_ERR_M; // Clear errors
+        nvm.sr = STM32Lx_NVM_SR_ERR_M; // Clear errors
 
-  // Enable erasing
-  nvm.pecr = STM32Lx_NVM_PECR_PROG | STM32Lx_NVM_PECR_ERASE;
-  if ((nvm.pecr & (STM32Lx_NVM_PECR_PROG | STM32Lx_NVM_PECR_ERASE))
-      != (STM32Lx_NVM_PECR_PROG | STM32Lx_NVM_PECR_ERASE))
-    goto quit;
+        // Enable erasing
+        nvm.pecr = STM32Lx_NVM_PECR_PROG | STM32Lx_NVM_PECR_ERASE;
+        if ((nvm.pecr & (STM32Lx_NVM_PECR_PROG | STM32Lx_NVM_PECR_ERASE))
+            != (STM32Lx_NVM_PECR_PROG | STM32Lx_NVM_PECR_ERASE))
+                goto quit;
 
-  while (Info.size > 0) {
-    *Info.destination = 0;      // Initiate erase
+        while (Info.size > 0) {
+                *Info.destination = 0;      // Initiate erase
 
-    Info.destination += Info.page_size/sizeof (*Info.destination);
-    Info.size -= Info.page_size;
-  }
+                Info.destination += Info.page_size/sizeof (*Info.destination);
+                Info.size -= Info.page_size;
+        }
 
 quit:
-  lock (nvm);
-  __asm volatile ("bkpt");
+        lock(nvm);
+        __asm volatile ("bkpt");
 }
 
 /*
    Local Variables:
-   compile-command: "/opt/arm/arm-none-eabi-g++ -mcpu=cortex-m0plus -g -c -std=c++11 -mthumb -o stm32l05x-nvm-prog-erase.o -Os -Wa,-ahndl=stm32l05x-nvm-prog-erase.lst stm32l05x-nvm-prog-erase.cc ; /opt/arm/arm-none-eabi-objdump -S stm32l05x-nvm-prog-erase.o | ./code-to-array.pl > stm32l05x-nvm-prog-erase.stub"
+   compile-command: "/opt/arm/arm-none-eabi-g++ -mcpu=cortex-m0plus -g -c -std=c++11 -mthumb -o stm32l05x-nvm-prog-erase.o -Os -Wa,-ahndl=stm32l05x-nvm-prog-erase.lst stm32l05x-nvm-prog-erase.cc ; /opt/arm/arm-none-eabi-objdump -d -z stm32l05x-nvm-prog-erase.o | ./dump-to-array.sh > stm32l05x-nvm-prog-erase.stub"
    End:
 
 */
