@@ -96,6 +96,7 @@ static const char sam4s_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 #define EEFC_FCR_FCMD_EWP	0x03
 #define EEFC_FCR_FCMD_EWPL	0x04
 #define EEFC_FCR_FCMD_EA	0x05
+#define EEFC_FCR_FCMD_EPA	0x07
 #define EEFC_FCR_FCMD_SLB	0x08
 #define EEFC_FCR_FCMD_CLB	0x09
 #define EEFC_FCR_FCMD_GLB	0x0A
@@ -289,32 +290,52 @@ sam3x_flash_base(struct target_s *target, uint32_t addr, uint32_t *offset)
 
 static int sam3x_flash_erase(struct target_s *target, uint32_t addr, int len)
 {
-	unsigned page_size;
-	if (strcmp(target->driver, "Atmel SAM4S") == 0) {
-	        page_size = SAM4_PAGE_SIZE;
-	} else {
-		page_size = SAM3_PAGE_SIZE;
-	}
 	uint32_t offset;
 	uint32_t base = sam3x_flash_base(target, addr, &offset);
-	unsigned chunk = offset / page_size;
-	uint8_t buf[page_size];
 
-	/* This device doesn't really have a page erase function.
+	/* The SAM4S is the only supported device with a page erase command.
+	 * Erasing is done in 16-page chunks. arg[15:2] contains the page
+	 * number and arg[1:0] contains 0x2, indicating 16-page chunks.
+	 */
+	if (strcmp(target->driver, "Atmel SAM4S") == 0) {
+		unsigned chunk = offset / SAM4_PAGE_SIZE;
+		/* Fail if the start address is not 16-page-aligned. */
+		if (chunk % 16 != 0)
+			return -1;
+
+		/* Note that the length might not be a multiple of 16 pages.
+		 * In this case, we will erase a few extra pages at the end.
+		 */
+		while (len > 0) {
+			int16_t arg = (chunk << 2) | 0x2;
+			if(sam3x_flash_cmd(target, base, EEFC_FCR_FCMD_EPA, arg))
+				return -1;
+
+			len -= SAM4_PAGE_SIZE * 16;
+			addr += SAM4_PAGE_SIZE * 16;
+			chunk += 16;
+		}
+
+		return 0;
+	}
+
+	/* The SAM3X/SAM3N don't really have a page erase function.
 	 * This Erase/Write page is the best we have, so we write with all
 	 * ones.  This does waste time, but what can we do?
 	 */
+	unsigned chunk = offset / SAM3_PAGE_SIZE;
+	uint8_t buf[SAM3_PAGE_SIZE];
 
 	memset(buf, 0xff, sizeof(buf));
 	/* Only do this once, since it doesn't change. */
-	target_mem_write_words(target, addr, (void*)buf, page_size);
+	target_mem_write_words(target, addr, (void*)buf, SAM3_PAGE_SIZE);
 
 	while (len) {
 		if(sam3x_flash_cmd(target, base, EEFC_FCR_FCMD_EWP, chunk))
 			return -1;
 
-		len -= page_size;
-		addr += page_size;
+		len -= SAM3_PAGE_SIZE;
+		addr += SAM3_PAGE_SIZE;
 		chunk++;
 	}
 
