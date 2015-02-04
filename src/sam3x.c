@@ -291,26 +291,27 @@ static int sam3x_flash_erase(struct target_s *target, uint32_t addr, int len)
 	uint32_t base = sam3x_flash_base(target, addr, &offset);
 
 	/* The SAM4S is the only supported device with a page erase command.
-	 * Erasing is done in 16-page chunks. arg[15:2] contains the page
-	 * number and arg[1:0] contains 0x2, indicating 16-page chunks.
+	 * Erasing is done in 8-page chunks. arg[15:2] contains the page
+	 * number and arg[1:0] contains 0x1, indicating 8-page chunks.
 	 */
 	if (strcmp(target->driver, "Atmel SAM4S") == 0) {
 		unsigned chunk = offset / SAM4_PAGE_SIZE;
-		/* Fail if the start address is not 16-page-aligned. */
-		if (chunk % 16 != 0)
+
+		/* Fail if the start address is not 8-page-aligned. */
+		if (chunk % 8 != 0)
 			return -1;
 
-		/* Note that the length might not be a multiple of 16 pages.
+		/* Note that the length might not be a multiple of 8 pages.
 		 * In this case, we will erase a few extra pages at the end.
 		 */
 		while (len > 0) {
-			int16_t arg = (chunk << 2) | 0x2;
+			int16_t arg = chunk | 0x1;
 			if(sam3x_flash_cmd(target, base, EEFC_FCR_FCMD_EPA, arg))
 				return -1;
 
-			len -= SAM4_PAGE_SIZE * 16;
-			addr += SAM4_PAGE_SIZE * 16;
-			chunk += 16;
+			len -= SAM4_PAGE_SIZE * 8;
+			addr += SAM4_PAGE_SIZE * 8;
+			chunk += 8;
 		}
 
 		return 0;
