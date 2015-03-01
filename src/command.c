@@ -26,6 +26,7 @@
 #include <string.h>
 
 #include "general.h"
+#include "exception.h"
 
 #include "command.h"
 #include "gdb_packet.h"
@@ -143,19 +144,30 @@ bool cmd_help(target *t)
 static bool cmd_jtag_scan(target *t, int argc, char **argv)
 {
 	(void)t;
-	uint8_t *irlens = NULL;
+	uint8_t irlens[argc];
 
 	gdb_outf("Target voltage: %s\n", platform_target_voltage());
 
 	if (argc > 1) {
 		/* Accept a list of IR lengths on command line */
-		irlens = alloca(argc);
 		for (int i = 1; i < argc; i++)
 			irlens[i-1] = atoi(argv[i]);
 		irlens[argc-1] = 0;
 	}
 
-	int devs = jtag_scan(irlens);
+	int devs = -1;
+	volatile struct exception e;
+	TRY_CATCH (e, EXCEPTION_ALL) {
+		devs = jtag_scan(argc > 1 ? irlens : NULL);
+	}
+	switch (e.type) {
+	case EXCEPTION_TIMEOUT:
+		gdb_outf("Timeout during scan. Is target stuck in WFI?\n");
+		break;
+	case EXCEPTION_ERROR:
+		gdb_outf("Exception: %s\n", e.msg);
+		break;
+	}
 
 	if(devs < 0) {
 		gdb_out("JTAG device scan failed!\n");
@@ -179,12 +191,24 @@ bool cmd_swdp_scan(void)
 {
 	gdb_outf("Target voltage: %s\n", platform_target_voltage());
 
-	if(adiv5_swdp_scan() < 0) {
+	int devs = -1;
+	volatile struct exception e;
+	TRY_CATCH (e, EXCEPTION_ALL) {
+		devs = adiv5_swdp_scan();
+	}
+	switch (e.type) {
+	case EXCEPTION_TIMEOUT:
+		gdb_outf("Timeout during scan. Is target stuck in WFI?\n");
+		break;
+	case EXCEPTION_ERROR:
+		gdb_outf("Exception: %s\n", e.msg);
+		break;
+	}
+
+	if(devs < 0) {
 		gdb_out("SW-DP scan failed!\n");
 		return false;
 	}
-
-	//gdb_outf("SW-DP detected IDCODE: 0x%08X\n", adiv5_dp_list->idcode);
 
 	cmd_targets(NULL);
 	return true;
