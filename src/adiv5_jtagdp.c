@@ -23,6 +23,7 @@
  */
 
 #include "general.h"
+#include "exception.h"
 #include "adiv5.h"
 #include "jtag_scan.h"
 #include "jtagtap.h"
@@ -93,10 +94,8 @@ static uint32_t adiv5_jtagdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 	if (dp->allow_timeout && (ack == JTAGDP_ACK_WAIT))
 		return 0;
 
-	if((ack != JTAGDP_ACK_OK)) {
-		/* Fatal error if invalid ACK response */
-		PLATFORM_FATAL_ERROR(1);
-	}
+	if((ack != JTAGDP_ACK_OK))
+		raise_exception(EXCEPTION_ERROR, "JTAG-DP invalid ACK");
 
 	return (uint32_t)(response >> 3);
 }

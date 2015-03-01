@@ -24,6 +24,7 @@ SRC =			\
 	command.c	\
 	cortexm.c	\
 	crc32.c		\
+	exception.c	\
 	gdb_if.c	\
 	gdb_main.c	\
 	gdb_packet.c	\

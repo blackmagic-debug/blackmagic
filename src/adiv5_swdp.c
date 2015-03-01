@@ -23,6 +23,7 @@
  */
 
 #include "general.h"
+#include "exception.h"
 #include "adiv5.h"
 #include "swdptap.h"
 #include "jtagtap.h"
@@ -143,14 +144,12 @@ static uint32_t adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 		return 0;
 	}
 
-	if(ack != SWDP_ACK_OK) {
-		/* Fatal error if invalid ACK response */
-		PLATFORM_FATAL_ERROR(1);
-	}
+	if(ack != SWDP_ACK_OK)
+		raise_exception(EXCEPTION_ERROR, "SWDP invalid ACK");
 
 	if(RnW) {
 		if(swdptap_seq_in_parity(&response, 32))  /* Give up on parity error */
-			PLATFORM_FATAL_ERROR(1);
+			raise_exception(EXCEPTION_ERROR, "SWDP Parity error");
 	} else {
 		swdptap_seq_out_parity(value, 32);
 	}
