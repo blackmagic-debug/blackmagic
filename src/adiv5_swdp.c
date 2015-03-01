@@ -136,8 +136,8 @@ static uint32_t adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 		ack = swdptap_seq_in(3);
 	} while(--tries && ack == SWDP_ACK_WAIT);
 
-	if (dp->allow_timeout && (ack == SWDP_ACK_WAIT))
-		return 0;
+	if (ack == SWDP_ACK_WAIT)
+		raise_exception(EXCEPTION_TIMEOUT, "SWDP ACK timeout");
 
 	if(ack == SWDP_ACK_FAULT) {
 		dp->fault = 1;

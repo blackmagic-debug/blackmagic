@@ -29,6 +29,7 @@
  * There are way too many magic numbers used here.
  */
 #include "general.h"
+#include "exception.h"
 #include "jtagtap.h"
 #include "jtag_scan.h"
 #include "adiv5.h"
@@ -467,12 +468,15 @@ cortexm_reset(struct target_s *target)
 static void
 cortexm_halt_request(struct target_s *target)
 {
-	ADIv5_AP_t *ap = adiv5_target_ap(target);
-
-	ap->dp->allow_timeout = false;
-	target_mem_write32(target, CORTEXM_DHCSR,
-	                   CORTEXM_DHCSR_DBGKEY | CORTEXM_DHCSR_C_HALT |
-	                   CORTEXM_DHCSR_C_DEBUGEN);
+	volatile struct exception e;
+	TRY_CATCH (e, EXCEPTION_TIMEOUT) {
+		target_mem_write32(target, CORTEXM_DHCSR, CORTEXM_DHCSR_DBGKEY |
+		                                          CORTEXM_DHCSR_C_HALT |
+		                                          CORTEXM_DHCSR_C_DEBUGEN);
+	}
+	if (e.type) {
+		gdb_out("Timeout sending interrupt, is target in WFI?\n");
+	}
 }
 
 static int
@@ -480,10 +484,16 @@ cortexm_halt_wait(struct target_s *target)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
 	struct cortexm_priv *priv = ap->priv;
-	if (!(target_mem_read32(target, CORTEXM_DHCSR) & CORTEXM_DHCSR_S_HALT))
-		return 0;
 
-	ap->dp->allow_timeout = false;
+	uint32_t dhcsr = 0;
+	volatile struct exception e;
+	TRY_CATCH (e, EXCEPTION_TIMEOUT) {
+		/* If this times out because the target is in WFI then
+		 * the target is still running. */
+		dhcsr = target_mem_read32(target, CORTEXM_DHCSR);
+	}
+	if (e.type || !(dhcsr & CORTEXM_DHCSR_S_HALT))
+		return 0;
 
 	/* We've halted.  Let's find out why. */
 	uint32_t dfsr = target_mem_read32(target, CORTEXM_DFSR);
@@ -543,7 +553,6 @@ void cortexm_halt_resume(struct target_s *target, bool step)
 	}
 
 	target_mem_write32(target, CORTEXM_DHCSR, dhcsr);
-	ap->dp->allow_timeout = true;
 }
 
 static int cortexm_fault_unwind(struct target_s *target)

@@ -91,8 +91,8 @@ static uint32_t adiv5_jtagdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 		ack = response & 0x07;
 	} while(--tries && (ack == JTAGDP_ACK_WAIT));
 
-	if (dp->allow_timeout && (ack == JTAGDP_ACK_WAIT))
-		return 0;
+	if (ack == JTAGDP_ACK_WAIT)
+		raise_exception(EXCEPTION_TIMEOUT, "JTAG-DP ACK timeout");
 
 	if((ack != JTAGDP_ACK_OK))
 		raise_exception(EXCEPTION_ERROR, "JTAG-DP invalid ACK");
