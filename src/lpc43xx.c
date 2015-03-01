@@ -19,10 +19,12 @@
 
 #include <stddef.h>
 #include <stdlib.h>
+#include <string.h>
 #include "command.h"
 #include "general.h"
 #include "adiv5.h"
 #include "target.h"
+#include "gdb_packet.h"
 
 #define LPC43XX_CHIPID	0x40043200
 #define ARM_CPUID	0xE000ED00
