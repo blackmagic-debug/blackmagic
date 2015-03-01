@@ -234,7 +234,7 @@ static bool cmd_target_power(target *t, int argc, const char **argv)
 	(void)t;
 	if (argc == 1)
 		gdb_outf("Target Power: %s\n",
-			 !platform_target_get_power() ? "enabled" : "disabled");
+			 platform_target_get_power() ? "enabled" : "disabled");
 	else
 		platform_target_set_power(!strncmp(argv[1], "enable", strlen(argv[1])));
 	return true;
