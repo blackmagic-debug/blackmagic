@@ -34,6 +34,7 @@
 #include <alloca.h>
 
 #include "gdb_packet.h"
+#include "morse.h"
 
 #define INLINE_GPIO
 #define CDCACM_PACKET_SIZE 	64
@@ -156,8 +157,6 @@ extern volatile uint32_t timeout_counter;
 
 extern jmp_buf fatal_error_jmpbuf;
 
-extern const char *morse_msg;
-
 #define gpio_set_val(port, pin, val) do {	\
 	if(val)					\
 		gpio_set((port), (pin));	\
@@ -180,7 +179,6 @@ extern const char *morse_msg;
 }
 
 int platform_init(void);
-void morse(const char *msg, char repeat);
 const char *platform_target_voltage(void);
 void platform_delay(uint32_t delay);
 static inline int platform_hwversion(void)

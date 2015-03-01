@@ -19,14 +19,6 @@ jmp_buf fatal_error_jmpbuf;
 uint8_t running_status;
 volatile uint32_t timeout_counter;
 
-const char *morse_msg;
-
-void morse(const char *msg, char repeat)
-{
-	(void) msg;
-	(void) repeat;
-}
-
 void sys_tick_handler(void)
 {
 	if(timeout_counter)

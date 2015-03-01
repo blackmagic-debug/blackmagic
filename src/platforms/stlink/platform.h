@@ -143,8 +143,6 @@ extern volatile uint32_t timeout_counter;
 
 extern jmp_buf fatal_error_jmpbuf;
 
-extern const char *morse_msg;
-
 #define gpio_set_val(port, pin, val) do {	\
 	if(val)					\
 		gpio_set((port), (pin));	\
@@ -166,7 +164,6 @@ extern uint16_t led_idle_run;
 } while (0)
 
 int platform_init(void);
-void morse(const char *msg, char repeat);
 const char *platform_target_voltage(void);
 void platform_delay(uint32_t delay);
 void platform_srst_set_val(bool assert);

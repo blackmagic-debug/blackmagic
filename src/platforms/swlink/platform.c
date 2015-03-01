@@ -124,14 +124,6 @@ void sys_tick_handler(void)
 		timeout_counter--;
 }
 
-const char *morse_msg;
-
-void morse(const char *msg, char repeat)
-{
-	(void)repeat;
-	morse_msg = msg;
-}
-
 const char *platform_target_voltage(void)
 {
 	return "unknown";

@@ -23,7 +23,6 @@ extern usbd_device *usbdev;
 
 extern jmp_buf fatal_error_jmpbuf;
 extern uint8_t running_status;
-extern const char *morse_msg;
 extern volatile uint32_t timeout_counter;
 
 #define TMS_PORT	GPIOA_BASE
@@ -112,7 +111,6 @@ extern usbd_driver lm4f_usb_driver;
 #define PLATFORM_HAS_TRACESWO
 
 int platform_init(void);
-void morse(const char *msg, char repeat);
 
 inline static void gpio_set_val(uint32_t port, uint8_t pin, uint8_t val) {
 	gpio_write(port, pin, val == 0 ? 0 : 0xff);

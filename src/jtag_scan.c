@@ -30,6 +30,7 @@
 
 #include "general.h"
 #include "jtagtap.h"
+#include "morse.h"
 #include "jtag_scan.h"
 
 #include "gdb_packet.h"

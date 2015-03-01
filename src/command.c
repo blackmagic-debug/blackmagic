@@ -32,6 +32,7 @@
 
 #include "jtag_scan.h"
 #include "target.h"
+#include "morse.h"
 
 #include "adiv5.h"
 

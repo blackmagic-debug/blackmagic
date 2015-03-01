@@ -27,6 +27,7 @@
 #include "adiv5.h"
 #include "jtag_scan.h"
 #include "jtagtap.h"
+#include "morse.h"
 
 #include <stdlib.h>
 

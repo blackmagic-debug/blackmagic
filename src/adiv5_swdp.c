@@ -30,6 +30,7 @@
 #include "jtagtap.h"
 
 #include "command.h"
+#include "morse.h"
 
 #include <stdlib.h>
 

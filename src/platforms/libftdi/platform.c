@@ -267,11 +267,3 @@ void platform_delay(uint32_t delay)
 	usleep(delay * 100000);
 }
 
-void morse(const char *msg, char repeat)
-{
-	(void)repeat;
-
-	if (msg != NULL)
-		fprintf(stderr,"%s\n", msg);
-}
-
