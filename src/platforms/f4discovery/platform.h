@@ -34,9 +34,9 @@
 #include <alloca.h>
 
 #include "gdb_packet.h"
+#include "gpio.h"
 #include "morse.h"
 
-#define INLINE_GPIO
 #define CDCACM_PACKET_SIZE 	64
 #define PLATFORM_HAS_TRACESWO
 #define BOARD_IDENT       "Black Magic Probe (F4Discovery), (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")"
@@ -200,31 +200,9 @@ void uart_usb_buf_drain(uint8_t ep);
 #define sprintf siprintf
 #define vasprintf vasiprintf
 
-#ifdef INLINE_GPIO
-static inline void _gpio_set(uint32_t gpioport, uint16_t gpios)
-{
-	GPIO_BSRR(gpioport) = gpios;
-	GPIO_BSRR(gpioport) = gpios;
-}
-#define gpio_set _gpio_set
-
-static inline void _gpio_clear(uint32_t gpioport, uint16_t gpios)
-{
-	GPIO_BSRR(gpioport) = gpios<<16;
-	GPIO_BSRR(gpioport) = gpios<<16;
-}
-#define gpio_clear _gpio_clear
-
-static inline uint16_t _gpio_get(uint32_t gpioport, uint16_t gpios)
-{
-	return (uint16_t)GPIO_IDR(gpioport) & gpios;
-}
-#define gpio_get _gpio_get
-#endif
-
-#endif
-
 #define disconnect_usb() do {usbd_disconnect(usbdev,1); nvic_disable_irq(USB_IRQ);} while(0)
 void assert_boot_pin(void);
 #define setup_vbus_irq()
+
+#endif
 

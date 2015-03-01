@@ -35,9 +35,9 @@
 #include <alloca.h>
 
 #include "gdb_packet.h"
+#include "gpio.h"
 #include "morse.h"
 
-#define INLINE_GPIO
 #define CDCACM_PACKET_SIZE 	64
 #define PLATFORM_HAS_TRACESWO
 #define PLATFORM_HAS_POWER_SWITCH
@@ -164,14 +164,6 @@ extern volatile uint32_t timeout_counter;
 
 extern jmp_buf fatal_error_jmpbuf;
 
-
-#define gpio_set_val(port, pin, val) do {	\
-	if(val)					\
-		gpio_set((port), (pin));	\
-	else					\
-		gpio_clear((port), (pin));	\
-} while(0)
-
 #define SET_RUN_STATE(state)	{running_status = (state);}
 #define SET_IDLE_STATE(state)	{gpio_set_val(LED_PORT, LED_IDLE_RUN, state);}
 #define SET_ERROR_STATE(state)	{gpio_set_val(LED_PORT, LED_ERROR, state);}
@@ -189,6 +181,8 @@ extern jmp_buf fatal_error_jmpbuf;
 int platform_init(void);
 const char *platform_target_voltage(void);
 int platform_hwversion(void);
+void platform_set_timeout(uint32_t ms);
+bool platform_timeout_expired(void);
 void platform_delay(uint32_t delay);
 
 /* <cdcacm.c> */
@@ -204,27 +198,6 @@ void uart_usb_buf_drain(uint8_t ep);
 #define sscanf siscanf
 #define sprintf siprintf
 #define vasprintf vasiprintf
-
-#ifdef INLINE_GPIO
-static inline void _gpio_set(uint32_t gpioport, uint16_t gpios)
-{
-	GPIO_BSRR(gpioport) = gpios;
-}
-#define gpio_set _gpio_set
-
-static inline void _gpio_clear(uint32_t gpioport, uint16_t gpios)
-{
-	GPIO_BRR(gpioport) = gpios;
-}
-#define gpio_clear _gpio_clear
-
-static inline uint16_t _gpio_get(uint32_t gpioport, uint16_t gpios)
-{
-	return (uint16_t)GPIO_IDR(gpioport) & gpios;
-}
-#define gpio_get _gpio_get
-#endif
-
 
 #define disconnect_usb() gpio_set_mode(USB_PU_PORT, GPIO_MODE_INPUT, 0, USB_PU_PIN);
 void assert_boot_pin(void);
