@@ -23,8 +23,7 @@
  * uses the USB CDC-ACM device bulk endpoints to implement the channel.
  */
 #include "platform.h"
-#include <libopencm3/usb/usbd.h>
-
+#include "cdcacm.h"
 #include "gdb_if.h"
 
 static uint32_t count_out;

@@ -34,6 +34,7 @@
 #include <libopencm3/stm32/f1/adc.h>
 
 #include "jtag_scan.h"
+#include "cdcacm.h"
 #include "usbuart.h"
 #include "morse.h"
 

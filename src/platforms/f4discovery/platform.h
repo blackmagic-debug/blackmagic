@@ -37,16 +37,11 @@
 #include "gpio.h"
 #include "morse.h"
 
-#define CDCACM_PACKET_SIZE 	64
 #define PLATFORM_HAS_TRACESWO
 #define BOARD_IDENT       "Black Magic Probe (F4Discovery), (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")"
 #define BOARD_IDENT_DFU   "Black Magic (Upgrade) for F4Discovery, (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")"
 #define DFU_IDENT         "Black Magic Firmware Upgrade (F4Discovery"
 #define DFU_IFACE_STRING  "@Internal Flash   /0x08000000/1*016Ka,3*016Kg,1*064Kg,7*128Kg"
-
-extern usbd_device *usbdev;
-#define CDCACM_GDB_ENDPOINT	1
-#define CDCACM_UART_ENDPOINT	3
 
 /* Important pin mappings for STM32 implementation:
  *
@@ -185,15 +180,6 @@ static inline int platform_hwversion(void)
 {
 	return 0;
 }
-
-/* <cdcacm.c> */
-void cdcacm_init(void);
-/* Returns current usb configuration, or 0 if not configured. */
-int cdcacm_get_config(void);
-int cdcacm_get_dtr(void);
-
-/* <platform.h> */
-void uart_usb_buf_drain(uint8_t ep);
 
 /* Use newlib provided integer only stdio functions */
 #define sscanf siscanf

@@ -38,7 +38,6 @@
 #include "gpio.h"
 #include "morse.h"
 
-#define CDCACM_PACKET_SIZE 	64
 #define PLATFORM_HAS_TRACESWO
 #define PLATFORM_HAS_POWER_SWITCH
 #define BOARD_IDENT             "Black Magic Probe"
@@ -47,10 +46,6 @@
 #define DFU_IDENT               "Black Magic Firmware Upgrade"
 #define DFU_IFACE_STRING        "@Internal Flash   /0x08000000/8*001Ka,120*001Kg"
 #define UPD_IFACE_STRING        "@Internal Flash   /0x08000000/8*001Kg"
-
-extern usbd_device *usbdev;
-#define CDCACM_GDB_ENDPOINT	1
-#define CDCACM_UART_ENDPOINT	3
 
 /* Important pin mappings for STM32 implementation:
  *
@@ -184,15 +179,6 @@ int platform_hwversion(void);
 void platform_set_timeout(uint32_t ms);
 bool platform_timeout_expired(void);
 void platform_delay(uint32_t delay);
-
-/* <cdcacm.c> */
-void cdcacm_init(void);
-/* Returns current usb configuration, or 0 if not configured. */
-int cdcacm_get_config(void);
-int cdcacm_get_dtr(void);
-
-/* <platform.h> */
-void uart_usb_buf_drain(uint8_t ep);
 
 /* Use newlib provided integer only stdio functions */
 #define sscanf siscanf

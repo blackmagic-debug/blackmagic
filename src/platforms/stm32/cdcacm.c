@@ -35,10 +35,11 @@
 
 #include "platform.h"
 #include "gdb_if.h"
+#include "cdcacm.h"
 #if defined(PLATFORM_HAS_TRACESWO)
-#include <traceswo.h>
+#include "traceswo.h"
 #endif
-#include <usbuart.h>
+#include "usbuart.h"
 
 #define DFU_IF_NO 4
 

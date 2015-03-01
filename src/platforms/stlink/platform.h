@@ -37,17 +37,12 @@
 #include "gdb_packet.h"
 #include "gpio.h"
 
-#define CDCACM_PACKET_SIZE 	64
 #define BOARD_IDENT       "Black Magic Probe (STLINK), (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")"
 #define BOARD_IDENT_DFU   "Black Magic (Upgrade) for STLink/Discovery, (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")"
 #define BOARD_IDENT_UPD   "Black Magic (DFU Upgrade) for STLink/Discovery, (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")"
 #define DFU_IDENT         "Black Magic Firmware Upgrade (STLINK)"
 #define DFU_IFACE_STRING  "@Internal Flash   /0x08000000/8*001Ka,56*001Kg"
 #define UPD_IFACE_STRING  "@Internal Flash   /0x08000000/8*001Kg"
-
-extern usbd_device *usbdev;
-#define CDCACM_GDB_ENDPOINT	1
-#define CDCACM_UART_ENDPOINT	3
 
 /* Important pin mappings for STM32 implementation:
  *
@@ -160,15 +155,6 @@ int platform_init(void);
 const char *platform_target_voltage(void);
 void platform_delay(uint32_t delay);
 void platform_srst_set_val(bool assert);
-
-/* <cdcacm.c> */
-void cdcacm_init(void);
-/* Returns current usb configuration, or 0 if not configured. */
-int cdcacm_get_config(void);
-int cdcacm_get_dtr(void);
-
-/* <platform.h> */
-void uart_usb_buf_drain(uint8_t ep);
 
 /* Use newlib provided integer only stdio functions */
 #define sscanf siscanf

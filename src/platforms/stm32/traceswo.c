@@ -37,10 +37,9 @@
 #include <libopencm3/stm32/timer.h>
 #include <libopencm3/stm32/f1/rcc.h>
 
-#include <libopencm3/usb/usbd.h>
-
 #include <string.h>
 #include "platform.h"
+#include "cdcacm.h"
 
 void traceswo_init(void)
 {
