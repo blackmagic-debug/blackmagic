@@ -191,6 +191,8 @@ int platform_init(void);
 void morse(const char *msg, char repeat);
 const char *platform_target_voltage(void);
 int platform_hwversion(void);
+void platform_set_timeout(uint32_t ms);
+bool platform_timeout_expired(void);
 void platform_delay(uint32_t delay);
 
 /* <cdcacm.c> */
