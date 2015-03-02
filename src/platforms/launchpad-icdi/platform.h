@@ -1,15 +1,12 @@
 #ifndef __PLATFORM_H
 #define __PLATFORM_H
 
-#include <stdint.h>
+#include "gdb_packet.h"
 
 #include <setjmp.h>
-#include <alloca.h>
 
 #include <libopencm3/lm4f/gpio.h>
 #include <libopencm3/usb/usbd.h>
-
-#include "gdb_packet.h"
 
 #define CDCACM_PACKET_SIZE 	64
 #define BOARD_IDENT             "Black Magic Probe (Launchpad ICDI), (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")"
@@ -110,8 +107,6 @@ extern usbd_driver lm4f_usb_driver;
 
 #define PLATFORM_HAS_TRACESWO
 
-int platform_init(void);
-
 inline static void gpio_set_val(uint32_t port, uint8_t pin, uint8_t val) {
 	gpio_write(port, pin, val == 0 ? 0 : 0xff);
 }
@@ -119,15 +114,6 @@ inline static void gpio_set_val(uint32_t port, uint8_t pin, uint8_t val) {
 inline static uint8_t gpio_get(uint32_t port, uint8_t pin) {
 	return !(gpio_read(port, pin) == 0);
 }
-
-void platform_delay(uint32_t delay);
-const char *platform_target_voltage(void);
-
-/* <cdcacm.c> */
-void cdcacm_init(void);
-/* Returns current usb configuration, or 0 if not configured. */
-int cdcacm_get_config(void);
-int cdcacm_get_dtr(void);
 
 #define disconnect_usb() do { usbd_disconnect(usbdev,1); nvic_disable_irq(USB_IRQ);} while(0)
 #define setup_vbus_irq()

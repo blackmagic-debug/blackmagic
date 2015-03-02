@@ -32,10 +32,6 @@
  * particularly Sections 12. DSU and 20. NVMCTRL
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
 #include "general.h"
 #include "jtagtap.h"
 #include "adiv5.h"

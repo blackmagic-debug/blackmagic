@@ -22,17 +22,12 @@
  * reception and transmission as well as some convenience functions.
  */
 
-#define _GNU_SOURCE
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include <stdarg.h>
-
 #include "general.h"
 #include "gdb_if.h"
 #include "gdb_packet.h"
 #include "hex_utils.h"
+
+#include <stdarg.h>
 
 int
 gdb_getpacket(unsigned char *packet, int size)

@@ -21,7 +21,6 @@
 #ifndef __ARM7TDMI_H
 #define __ARM7TDMI_H
 
-#include "general.h"
 #include "jtag_scan.h"
 
 void arm7tdmi_jtag_handler(jtag_dev_t *dev);

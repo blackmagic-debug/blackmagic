@@ -1,3 +1,4 @@
+#include "general.h"
 #include "jtagtap.h"
 
 int

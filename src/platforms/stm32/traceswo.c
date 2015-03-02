@@ -32,14 +32,11 @@
  * The core can then process the buffer to extract the frame.
  */
 #include "general.h"
+#include "cdcacm.h"
 
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/stm32/timer.h>
 #include <libopencm3/stm32/f1/rcc.h>
-
-#include <string.h>
-#include "platform.h"
-#include "cdcacm.h"
 
 void traceswo_init(void)
 {

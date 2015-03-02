@@ -24,18 +24,14 @@
 #ifndef __PLATFORM_H
 #define __PLATFORM_H
 
-#include <stdint.h>
+#include "gdb_packet.h"
+#include "gpio.h"
+
 #include <libopencm3/cm3/common.h>
 #include <libopencm3/stm32/f1/memorymap.h>
-
-#include <libopencm3/stm32/f1/gpio.h>
 #include <libopencm3/usb/usbd.h>
 
 #include <setjmp.h>
-#include <alloca.h>
-
-#include "gdb_packet.h"
-#include "gpio.h"
 
 #define BOARD_IDENT       "Black Magic Probe (STLINK), (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")"
 #define BOARD_IDENT_DFU   "Black Magic (Upgrade) for STLink/Discovery, (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")"
@@ -151,11 +147,6 @@ extern uint16_t led_idle_run;
 	longjmp(fatal_error_jmpbuf, (error));		\
 } while (0)
 
-int platform_init(void);
-const char *platform_target_voltage(void);
-void platform_delay(uint32_t delay);
-void platform_srst_set_val(bool assert);
-
 /* Use newlib provided integer only stdio functions */
 #define sscanf siscanf
 #define sprintf siprintf
@@ -163,6 +154,7 @@ void platform_srst_set_val(bool assert);
 
 void disconnect_usb(void);
 void assert_boot_pin(void);
+void setup_vbus_irq(void);
 
 #endif
 

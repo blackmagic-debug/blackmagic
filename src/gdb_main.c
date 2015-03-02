@@ -24,26 +24,15 @@
  * Originally written for GDB 6.8, updated and tested with GDB 7.2.
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include <assert.h>
-
-#include "platform.h"
-
 #include "general.h"
 #include "hex_utils.h"
 #include "gdb_if.h"
 #include "gdb_packet.h"
 #include "gdb_main.h"
-
 #include "jtagtap.h"
 #include "jtag_scan.h"
 #include "adiv5.h"
-
 #include "target.h"
-
 #include "command.h"
 #include "crc32.h"
 

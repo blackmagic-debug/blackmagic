@@ -1,5 +1,6 @@
-#include "platform.h"
+#include "general.h"
 #include "gdb_if.h"
+#include "cdcacm.h"
 #include "usbuart.h"
 
 #include <libopencm3/lm4f/rcc.h>
@@ -26,14 +27,14 @@ void sys_tick_handler(void)
 	trace_tick();
 }
 
-int
+void
 platform_init(void)
 {
         int i;
         for(i=0; i<1000000; i++);
 
 	rcc_sysclk_config(OSCSRC_MOSC, XTAL_16M, PLL_DIV_80MHZ);
-	
+
 	// Enable all JTAG ports and set pins to output
 	periph_clock_enable(RCC_GPIOA);
 	periph_clock_enable(RCC_GPIOB);
@@ -59,10 +60,6 @@ platform_init(void)
 
 	usbuart_init();
 	cdcacm_init();
-
-	//jtag_scan(NULL);
-
-	return 0;
 }
 
 void platform_delay(uint32_t delay)

@@ -21,7 +21,6 @@
 #ifndef __ADIV5_H
 #define __ADIV5_H
 
-#include "general.h"
 #include "jtag_scan.h"
 #include "target.h"
 

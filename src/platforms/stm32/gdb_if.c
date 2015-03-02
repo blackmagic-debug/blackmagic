@@ -22,7 +22,7 @@
  * Serial Debugging protocol is implemented.  This implementation for STM32
  * uses the USB CDC-ACM device bulk endpoints to implement the channel.
  */
-#include "platform.h"
+#include "general.h"
 #include "cdcacm.h"
 #include "gdb_if.h"
 

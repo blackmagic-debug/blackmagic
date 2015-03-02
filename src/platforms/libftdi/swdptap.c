@@ -26,7 +26,7 @@
 #include <assert.h>
 #include <ftdi.h>
 
-#include "platform.h"
+#include "general.h"
 #include "swdptap.h"
 
 static void swdptap_turnaround(uint8_t dir);

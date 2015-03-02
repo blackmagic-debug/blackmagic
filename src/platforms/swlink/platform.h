@@ -24,18 +24,10 @@
 #ifndef __PLATFORM_H
 #define __PLATFORM_H
 
-#include <stdint.h>
-#include <libopencm3/cm3/common.h>
-#include <libopencm3/stm32/f1/memorymap.h>
-
-#include <libopencm3/stm32/f1/gpio.h>
-#include <libopencm3/usb/usbd.h>
-
-#include <setjmp.h>
-#include <alloca.h>
-
 #include "gdb_packet.h"
 #include "gpio.h"
+
+#include <setjmp.h>
 
 #define BOARD_IDENT            "Black Magic Probe (SWLINK), (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")"
 #define BOARD_IDENT_DFU	       "Black Magic (Upgrade), STM8S Discovery, (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")"
@@ -148,10 +140,6 @@ extern jmp_buf fatal_error_jmpbuf;
 	target_list_free();				\
 	longjmp(fatal_error_jmpbuf, (error));		\
 }
-
-int platform_init(void);
-const char *platform_target_voltage(void);
-void platform_delay(uint32_t delay);
 
 /* Use newlib provided integer only stdio functions */
 #define sscanf siscanf

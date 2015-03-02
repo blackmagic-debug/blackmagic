@@ -24,19 +24,11 @@
 #ifndef __PLATFORM_H
 #define __PLATFORM_H
 
-#include <stdint.h>
-#include <libopencm3/cm3/common.h>
-#include <libopencm3/stm32/f1/memorymap.h>
-
-#include <libopencm3/stm32/f1/gpio.h>
-#include <libopencm3/usb/usbd.h>
-
-#include <setjmp.h>
-#include <alloca.h>
-
 #include "gdb_packet.h"
 #include "gpio.h"
 #include "morse.h"
+
+#include <setjmp.h>
 
 #define PLATFORM_HAS_TRACESWO
 #define PLATFORM_HAS_POWER_SWITCH
@@ -173,13 +165,6 @@ extern jmp_buf fatal_error_jmpbuf;
 	longjmp(fatal_error_jmpbuf, (error));		\
 } while (0)
 
-int platform_init(void);
-const char *platform_target_voltage(void);
-int platform_hwversion(void);
-void platform_set_timeout(uint32_t ms);
-bool platform_timeout_expired(void);
-void platform_delay(uint32_t delay);
-
 /* Use newlib provided integer only stdio functions */
 #define sscanf siscanf
 #define sprintf siprintf
@@ -188,9 +173,6 @@ void platform_delay(uint32_t delay);
 #define disconnect_usb() gpio_set_mode(USB_PU_PORT, GPIO_MODE_INPUT, 0, USB_PU_PIN);
 void assert_boot_pin(void);
 void setup_vbus_irq(void);
-void platform_srst_set_val(bool assert);
-bool platform_target_get_power(void);
-void platform_target_set_power(bool power);
 
 #endif
 

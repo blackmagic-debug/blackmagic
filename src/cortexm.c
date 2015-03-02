@@ -28,11 +28,6 @@
  * Issues:
  * There are way too many magic numbers used here.
  */
-#include <unistd.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-
 #include "general.h"
 #include "jtagtap.h"
 #include "jtag_scan.h"
@@ -41,6 +36,8 @@
 #include "command.h"
 #include "gdb_packet.h"
 #include "cortexm.h"
+
+#include <unistd.h>
 
 static char cortexm_driver_str[] = "ARM Cortex-M";
 

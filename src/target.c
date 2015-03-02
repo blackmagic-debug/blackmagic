@@ -21,8 +21,6 @@
 #include "general.h"
 #include "target.h"
 
-#include <stdlib.h>
-
 target *target_list = NULL;
 bool connect_assert_srst;
 

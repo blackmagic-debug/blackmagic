@@ -21,8 +21,6 @@
 #ifndef __SWDPTAP_H
 #define __SWDPTAP_H
 
-#include "general.h"
-
 int swdptap_init(void);
 void swdptap_reset(void);
 

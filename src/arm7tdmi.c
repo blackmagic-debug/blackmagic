@@ -24,13 +24,9 @@
  */
 
 #include "general.h"
-#include "platform.h"
 #include "target.h"
 #include "jtag_scan.h"
 #include "jtagtap.h"
-
-#include <stdlib.h>
-#include <string.h>
 
 /* TODO:
  * Skeleton target.

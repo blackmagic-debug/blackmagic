@@ -21,9 +21,7 @@
 /* Convenience function to convert to/from ascii strings of hex digits.
  */
 
-#include <stdio.h>
-#include <stdint.h>
-
+#include "general.h"
 #include "hex_utils.h"
 
 static char hexdigits[] = "0123456789abcdef";

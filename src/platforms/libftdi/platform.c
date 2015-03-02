@@ -17,14 +17,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include "platform.h"
+#include "general.h"
 #include "gdb_if.h"
-#include "jtag_scan.h"
 
-#include <stdio.h>
-#include <string.h>
 #include <assert.h>
-#include <unistd.h>
 
 struct ftdi_context *ftdic;
 
@@ -121,7 +117,7 @@ static struct cable_desc_s {
 	},
 };
 
-int platform_init(int argc, char **argv)
+void platform_init(int argc, char **argv)
 {
 	int err;
 	int c;
@@ -149,7 +145,7 @@ int platform_init(int argc, char **argv)
 
 	if (index == sizeof(cable_desc)/sizeof(cable_desc[0])){
 		fprintf(stderr, "No cable matching %s found\n",cablename);
-		return -1;
+		exit(-1);
 	}
 
 	if (cable_desc[index].dbus_data)
@@ -212,12 +208,7 @@ int platform_init(int argc, char **argv)
 	}
 
 	assert(ftdi_write_data(ftdic, ftdi_init, 9) == 9);
-
 	assert(gdb_if_init() == 0);
-
-	jtag_scan(NULL);
-
-	return 0;
 }
 
 void platform_buffer_flush(void)

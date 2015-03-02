@@ -21,8 +21,6 @@
 #ifndef __MORSE_H
 #define __MORSE_H
 
-#include <stdbool.h>
-
 extern const char *morse_msg;
 
 void morse(const char *msg, char repeat);

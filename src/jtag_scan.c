@@ -22,19 +22,12 @@
  * to detect devices on the scan chain and read their IDCODEs.
  * It depends on the low-level function provided by the platform's jtagtap.c.
  */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include <assert.h>
 
 #include "general.h"
 #include "jtagtap.h"
 #include "morse.h"
 #include "jtag_scan.h"
-
 #include "gdb_packet.h"
-
 #include "adiv5.h"
 #include "arm7tdmi.h"
 

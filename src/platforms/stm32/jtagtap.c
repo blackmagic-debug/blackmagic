@@ -23,9 +23,7 @@
 #include <stdio.h>
 
 #include "general.h"
-
 #include "jtagtap.h"
-#include "platform.h"
 
 int jtagtap_init(void)
 {

@@ -22,7 +22,11 @@
  * implementation.
  */
 
-#include "platform.h"
+#include "general.h"
+#include "cdcacm.h"
+#include "usbuart.h"
+#include "morse.h"
+
 #include <libopencm3/stm32/f4/rcc.h>
 #include <libopencm3/cm3/systick.h>
 #include <libopencm3/cm3/scb.h>
@@ -32,16 +36,12 @@
 #include <libopencm3/stm32/syscfg.h>
 #include <libopencm3/usb/usbd.h>
 
-#include "jtag_scan.h"
-#include "usbuart.h"
-#include "morse.h"
-
 uint8_t running_status;
 volatile uint32_t timeout_counter;
 
 jmp_buf fatal_error_jmpbuf;
 
-int platform_init(void)
+void platform_init(void)
 {
 	/* Check the USER button*/
 	rcc_peripheral_enable_clock(&RCC_AHB1ENR, RCC_AHB1ENR_IOPAEN);
@@ -86,17 +86,7 @@ int platform_init(void)
 	systick_counter_enable();
 
 	usbuart_init();
-
 	cdcacm_init();
-
-	// Set recovery point
-	if (setjmp(fatal_error_jmpbuf)) {
-		return 0; // Do nothing on failure
-	}
-
-	jtag_scan(NULL);
-
-	return 0;
 }
 
 void platform_delay(uint32_t delay)

@@ -21,7 +21,6 @@
 #ifndef __COMMAND_H
 #define __COMMAND_H
 
-#include "general.h"
 #include "target.h"
 
 int command_process(target *t, char *cmd);

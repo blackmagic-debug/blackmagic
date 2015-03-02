@@ -22,7 +22,10 @@
  * implementation.
  */
 
-#include "platform.h"
+#include "general.h"
+#include "cdcacm.h"
+#include "usbuart.h"
+
 #include <libopencm3/stm32/f1/rcc.h>
 #include <libopencm3/cm3/systick.h>
 #include <libopencm3/cm3/scb.h>
@@ -31,17 +34,12 @@
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/stm32/f1/adc.h>
 
-#include "jtag_scan.h"
-#include <usbuart.h>
-
-#include <ctype.h>
-
 uint8_t running_status;
 volatile uint32_t timeout_counter;
 
 jmp_buf fatal_error_jmpbuf;
 
-int platform_init(void)
+void platform_init(void)
 {
 	uint32_t data;
 	rcc_clock_setup_in_hse_8mhz_out_72mhz();
@@ -98,15 +96,6 @@ int platform_init(void)
 	SCB_VTOR = 0x2000;	// Relocate interrupt vector table here
 
 	cdcacm_init();
-
-	// Set recovery point
-	if (setjmp(fatal_error_jmpbuf)) {
-		return 0; // Do nothing on failure
-	}
-
-	jtag_scan(NULL);
-
-	return 0;
 }
 
 void platform_delay(uint32_t delay)

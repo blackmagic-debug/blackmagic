@@ -1,8 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2011  Black Sphere Technologies Ltd.
- * Written by Gareth McMullin <gareth@blacksphere.co.nz>
+ * Copyright (C) 2015 Gareth McMullin <gareth@blacksphere.co.nz>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,32 +17,25 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __PLATFORM_H
-#define __PLATFORM_H
+#ifndef __PLATFORM_SUPPORT_H
+#define __PLATFORM_SUPPORT_H
 
-#include <ftdi.h>
-
-#ifndef WIN32
-#	include <alloca.h>
-#else
-#	define alloca __builtin_alloca
+#ifndef __GENERAL_H
+#	error "Include 'general.h' instead"
 #endif
 
-#define FT2232_VID	0x0403
-#define FT2232_PID	0x6010
+#if defined(LIBFTDI)
+void platform_init(int argc, char **argv);
+#else
+void platform_init(void);
+#endif
 
-#define SET_RUN_STATE(state)
-#define SET_IDLE_STATE(state)
-#define SET_ERROR_STATE(state)
-
-#define PLATFORM_FATAL_ERROR(error)	abort()
-#define PLATFORM_SET_FATAL_ERROR_RECOVERY()
-
-extern struct ftdi_context *ftdic;
-
-void platform_buffer_flush(void);
-int platform_buffer_write(const uint8_t *data, int size);
-int platform_buffer_read(uint8_t *data, int size);
+const char *platform_target_voltage(void);
+int platform_hwversion(void);
+void platform_delay(uint32_t delay);
+void platform_srst_set_val(bool assert);
+bool platform_target_get_power(void);
+void platform_target_set_power(bool power);
 
 #endif
 

@@ -32,13 +32,8 @@
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/lm4f/rcc.h>
 #include <libopencm3/lm4f/nvic.h>
-
 #include <libopencm3/lm4f/uart.h>
-
 #include <libopencm3/usb/usbd.h>
-
-#include <string.h>
-#include "platform.h"
 
 void traceswo_init(void)
 {

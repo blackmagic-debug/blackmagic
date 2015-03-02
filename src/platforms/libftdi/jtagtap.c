@@ -69,6 +69,7 @@ void jtagtap_reset(void)
 
 void jtagtap_srst(bool assert)
 {
+	(void)assert;
 	platform_buffer_flush();
 	//ftdi_write_data(ftdic, "\x80\x88\xAB", 3);
 	//usleep(1000);

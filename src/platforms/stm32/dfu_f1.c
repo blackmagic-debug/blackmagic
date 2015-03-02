@@ -16,12 +16,11 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
-#include "platform.h"
+#include "general.h"
+#include "usbdfu.h"
 
 #include <libopencm3/stm32/f1/flash.h>
 #include <libopencm3/cm3/scb.h>
-#include "usbdfu.h"
 
 #define FLASH_OBP_RDP 0x1FFFF800
 #define FLASH_OBP_WRP10 0x1FFFF808

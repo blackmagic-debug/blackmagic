@@ -27,9 +27,6 @@
  * Flash erase is very slow.
  */
 
-#include <stdlib.h>
-#include <string.h>
-
 #include "general.h"
 #include "adiv5.h"
 #include "target.h"

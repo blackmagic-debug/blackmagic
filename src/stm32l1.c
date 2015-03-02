@@ -29,9 +29,6 @@
  *   Flash and EEPROM programming
  */
 
-#include <stdlib.h>
-#include <string.h>
-
 #include "general.h"
 #include "adiv5.h"
 #include "target.h"

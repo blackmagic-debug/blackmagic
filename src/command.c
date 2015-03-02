@@ -22,18 +22,12 @@
  * commands.
  */
 
-#include <stdlib.h>
-#include <string.h>
-
 #include "general.h"
-
 #include "command.h"
 #include "gdb_packet.h"
-
 #include "jtag_scan.h"
 #include "target.h"
 #include "morse.h"
-
 #include "adiv5.h"
 
 #ifdef PLATFORM_HAS_TRACESWO

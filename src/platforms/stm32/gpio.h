@@ -20,6 +20,16 @@
 #ifndef __GPIO_H
 #define __GPIO_H
 
+#include <libopencm3/cm3/common.h>
+
+#ifndef STM32F4
+#	include <libopencm3/stm32/f1/memorymap.h>
+#	include <libopencm3/stm32/f1/gpio.h>
+#else
+#	include <libopencm3/stm32/f4/memorymap.h>
+#	include <libopencm3/stm32/f4/gpio.h>
+#endif
+
 #define INLINE_GPIO
 
 #define gpio_set_val(port, pin, val) do {	\

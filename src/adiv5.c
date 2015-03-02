@@ -25,15 +25,10 @@
  * Currently doesn't use ROM table for introspection, just assumes
  * the device is Cortex-M3.
  */
-
-#include <stdio.h>
-#include <stdlib.h>
-
 #include "general.h"
 #include "jtag_scan.h"
 #include "gdb_packet.h"
 #include "adiv5.h"
-
 #include "target.h"
 
 #ifndef DO_RESET_SEQ

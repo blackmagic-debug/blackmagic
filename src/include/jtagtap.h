@@ -21,8 +21,6 @@
 #ifndef __JTAGTAP_H
 #define __JTAGTAP_H
 
-#include "general.h"
-
 /* Note: Signal names are as for the device under test. */
 
 int jtagtap_init(void);

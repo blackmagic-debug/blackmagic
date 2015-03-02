@@ -24,18 +24,11 @@
 #ifndef __PLATFORM_H
 #define __PLATFORM_H
 
-#include <stdint.h>
-#include <libopencm3/cm3/common.h>
-#include <libopencm3/stm32/f4/memorymap.h>
-#include <libopencm3/stm32/f4/gpio.h>
-#include <libopencm3/usb/usbd.h>
-
-#include <setjmp.h>
-#include <alloca.h>
-
 #include "gdb_packet.h"
 #include "gpio.h"
 #include "morse.h"
+
+#include <setjmp.h>
 
 #define PLATFORM_HAS_TRACESWO
 #define BOARD_IDENT       "Black Magic Probe (F4Discovery), (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")"
@@ -173,9 +166,6 @@ extern jmp_buf fatal_error_jmpbuf;
 	longjmp(fatal_error_jmpbuf, (error));		\
 }
 
-int platform_init(void);
-const char *platform_target_voltage(void);
-void platform_delay(uint32_t delay);
 static inline int platform_hwversion(void)
 {
 	return 0;

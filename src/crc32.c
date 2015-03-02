@@ -18,7 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "platform.h"
+#include "general.h"
 #include "target.h"
 
 #if !defined(STM32F1) && !defined(STM32F4)

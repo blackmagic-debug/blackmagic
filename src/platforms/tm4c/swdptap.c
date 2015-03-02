@@ -1,5 +1,4 @@
 #include "general.h"
-#include "platform.h"
 #include "swdptap.h"
 
 static void swdptap_turnaround(uint8_t dir)

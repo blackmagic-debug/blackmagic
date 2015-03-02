@@ -22,7 +22,6 @@
 
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/cdc.h>
-#include "general.h"
 
 void usbuart_init(void);
 

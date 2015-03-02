@@ -21,8 +21,6 @@
 #ifndef __JTAG_SCAN_H
 #define __JTAG_SCAN_H
 
-#include "general.h"
-
 #define JTAG_MAX_DEVS	5
 #define JTAG_MAX_IR_LEN	16
 

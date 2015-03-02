@@ -27,7 +27,7 @@
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/cdc.h>
 
-#include "platform.h"
+#include "general.h"
 #include "cdcacm.h"
 
 #define USBUART_TIMER_FREQ_HZ 1000000U /* 1us per tick */

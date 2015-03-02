@@ -25,8 +25,6 @@
 #ifndef __TARGET_H
 #define __TARGET_H
 
-#include "general.h"
-
 typedef struct target_s target;
 
 /* The destroy callback function will be called by target_list_free() just

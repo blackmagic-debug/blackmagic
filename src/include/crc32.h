@@ -21,8 +21,6 @@
 #ifndef __CRC32_H
 #define __CRC32_H
 
-#include "platform.h"
-
 uint32_t crc32_calc(uint32_t crc, uint8_t data);
 uint32_t generic_crc32(struct target_s *target, uint32_t base, int len);
 

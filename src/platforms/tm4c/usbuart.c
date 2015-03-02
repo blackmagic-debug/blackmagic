@@ -19,6 +19,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+#include "general.h"
+#include "cdcacm.h"
 
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/cm3/scs.h>
@@ -26,8 +28,6 @@
 #include <libopencm3/usb/cdc.h>
 #include <libopencm3/lm4f/rcc.h>
 #include <libopencm3/lm4f/uart.h>
-
-#include <platform.h>
 
 #define FIFO_SIZE 128
 

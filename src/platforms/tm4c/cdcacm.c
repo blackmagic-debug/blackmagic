@@ -35,7 +35,7 @@
 #include <libopencm3/lm4f/usb.h>
 #include <stdlib.h>
 
-#include "platform.h"
+#include "general.h"
 #include "gdb_if.h"
 #if defined(PLATFORM_HAS_TRACESWO)
 #include <traceswo.h>
