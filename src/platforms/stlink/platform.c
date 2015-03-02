@@ -131,10 +131,20 @@ int platform_init(void)
 	return 0;
 }
 
+void platform_set_timeout(uint32_t ms)
+{
+	timeout_counter = ms / 100;
+}
+
+bool platform_timeout_expired(void)
+{
+	return timeout_counter == 0;
+}
+
 void platform_delay(uint32_t delay)
 {
-	timeout_counter = delay;
-	while (timeout_counter);
+	platform_set_timeout(delay);
+	while (!platform_timeout_expired());
 }
 
 void platform_srst_set_val(bool assert)
