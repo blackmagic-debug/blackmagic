@@ -28,6 +28,7 @@
  */
 
 #include "general.h"
+#include "cdcacm.h"
 
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/lm4f/rcc.h>

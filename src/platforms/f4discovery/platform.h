@@ -176,9 +176,5 @@ static inline int platform_hwversion(void)
 #define sprintf siprintf
 #define vasprintf vasiprintf
 
-#define disconnect_usb() do {usbd_disconnect(usbdev,1); nvic_disable_irq(USB_IRQ);} while(0)
-void assert_boot_pin(void);
-#define setup_vbus_irq()
-
 #endif
 

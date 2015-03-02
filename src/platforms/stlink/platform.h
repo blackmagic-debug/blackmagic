@@ -152,9 +152,5 @@ extern uint16_t led_idle_run;
 #define sprintf siprintf
 #define vasprintf vasiprintf
 
-void disconnect_usb(void);
-void assert_boot_pin(void);
-void setup_vbus_irq(void);
-
 #endif
 

@@ -46,7 +46,7 @@ void platform_init(void)
 	/* Check the USER button*/
 	rcc_peripheral_enable_clock(&RCC_AHB1ENR, RCC_AHB1ENR_IOPAEN);
 	if(gpio_get(GPIOA, GPIO0)) {
-		assert_boot_pin();
+		platform_request_boot();
 		scb_reset_core();
 	}
 
@@ -111,8 +111,12 @@ const char *platform_target_voltage(void)
 	return "ABSENT!";
 }
 
-void assert_boot_pin(void)
+void platform_request_boot(void)
 {
+	/* Disconnect USB cable */
+	usbd_disconnect(usbdev, 1);
+	nvic_disable_irq(USB_IRQ);
+
 	/* Assert blue LED as indicator we are in the bootloader */
 	rcc_peripheral_enable_clock(&RCC_AHB1ENR, RCC_AHB1ENR_IOPDEN);
 	gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT,

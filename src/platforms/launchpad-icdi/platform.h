@@ -1,3 +1,19 @@
+/*
+ * This file is part of the Black Magic Debug project.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 #ifndef __PLATFORM_H
 #define __PLATFORM_H
 
@@ -8,15 +24,10 @@
 #include <libopencm3/lm4f/gpio.h>
 #include <libopencm3/usb/usbd.h>
 
-#define CDCACM_PACKET_SIZE 	64
 #define BOARD_IDENT             "Black Magic Probe (Launchpad ICDI), (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")"
 #define BOARD_IDENT_DFU		"Black Magic (Upgrade) for Launchpad, (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")"
 #define DFU_IDENT               "Black Magic Firmware Upgrade (Launchpad)"
 #define DFU_IFACE_STRING	"lolwut"
-
-extern usbd_device *usbdev;
-#define CDCACM_GDB_ENDPOINT	1
-#define CDCACM_UART_ENDPOINT	3
 
 extern jmp_buf fatal_error_jmpbuf;
 extern uint8_t running_status;
@@ -116,6 +127,5 @@ inline static uint8_t gpio_get(uint32_t port, uint8_t pin) {
 }
 
 #define disconnect_usb() do { usbd_disconnect(usbdev,1); nvic_disable_irq(USB_IRQ);} while(0)
-#define setup_vbus_irq()
 
 #endif

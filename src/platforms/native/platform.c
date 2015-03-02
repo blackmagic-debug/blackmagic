@@ -42,6 +42,7 @@ volatile uint32_t timeout_counter;
 jmp_buf fatal_error_jmpbuf;
 
 static void adc_init(void);
+static void setup_vbus_irq(void);
 
 /* Pins PB[7:5] are used to detect hardware revision.
  * 000 - Original production build.
@@ -134,6 +135,7 @@ void platform_init(void)
 
 	cdcacm_init();
 	usbuart_init();
+	setup_vbus_irq();
 }
 
 void platform_srst_set_val(bool assert)
@@ -221,8 +223,12 @@ const char *platform_target_voltage(void)
 	return ret;
 }
 
-void assert_boot_pin(void)
+void platform_request_boot(void)
 {
+	/* Disconnect USB cable */
+	gpio_set_mode(USB_PU_PORT, GPIO_MODE_INPUT, 0, USB_PU_PIN);
+
+	/* Drive boot request pin */
 	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ,
 			GPIO_CNF_OUTPUT_PUSHPULL, GPIO12);
 	gpio_clear(GPIOB, GPIO12);
@@ -243,7 +249,7 @@ void exti15_10_isr(void)
 	exti_reset_request(USB_VBUS_PIN);
 }
 
-void setup_vbus_irq(void)
+static void setup_vbus_irq(void)
 {
 	nvic_set_priority(USB_VBUS_IRQ, IRQ_PRI_USB_VBUS);
 	nvic_enable_irq(USB_VBUS_IRQ);

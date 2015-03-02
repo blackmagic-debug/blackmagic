@@ -16,7 +16,8 @@ VPATH += platforms/stm32
 
 SRC += 	cdcacm.c	\
 	platform.c	\
-	usbuart.c \
+	usbuart.c 	\
+	serialno.c	\
 
 all:	blackmagic.bin blackmagic_dfu.bin blackmagic_dfu.hex dfu_upgrade.bin dfu_upgrade.hex
 

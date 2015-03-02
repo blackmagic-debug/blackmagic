@@ -170,9 +170,5 @@ extern jmp_buf fatal_error_jmpbuf;
 #define sprintf siprintf
 #define vasprintf vasiprintf
 
-#define disconnect_usb() gpio_set_mode(USB_PU_PORT, GPIO_MODE_INPUT, 0, USB_PU_PIN);
-void assert_boot_pin(void);
-void setup_vbus_irq(void);
-
 #endif
 

@@ -1,7 +1,8 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2015 Gareth McMullin <gareth@blacksphere.co.nz>
+ * Copyright (C) 2015  Black Sphere Technologies Ltd.
+ * Written by Gareth McMullin <gareth@blacksphere.co.nz>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,27 +17,29 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+#include "general.h"
 
-#ifndef __PLATFORM_SUPPORT_H
-#define __PLATFORM_SUPPORT_H
-
-#ifndef __GENERAL_H
-#	error "Include 'general.h' instead"
-#endif
-
-#if defined(LIBFTDI)
-void platform_init(int argc, char **argv);
+char *serialno_read(char *s)
+{
+#if defined(STM32F4)
+	volatile uint32_t *unique_id_p = (volatile uint32_t *)0x1FFF7A10;
 #else
-void platform_init(void);
+	volatile uint32_t *unique_id_p = (volatile uint32_t *)0x1FFFF7E8;
 #endif
+	uint32_t unique_id = *unique_id_p +
+			*(unique_id_p + 1) +
+			*(unique_id_p + 2);
+	int i;
 
-const char *platform_target_voltage(void);
-int platform_hwversion(void);
-void platform_delay(uint32_t delay);
-void platform_srst_set_val(bool assert);
-bool platform_target_get_power(void);
-void platform_target_set_power(bool power);
-void platform_request_boot(void);
+	/* Fetch serial number from chip's unique ID */
+	for(i = 0; i < 8; i++) {
+		s[7-i] = ((unique_id >> (4*i)) & 0xF) + '0';
+	}
+	for(i = 0; i < 8; i++)
+		if(s[i] > '9')
+			s[i] += 'A' - '9' - 1;
+	s[8] = 0;
 
-#endif
+	return s;
+}
 

@@ -18,6 +18,7 @@ SRC += 	cdcacm.c	\
 	platform.c	\
 	traceswo.c	\
 	usbuart.c	\
+	serialno.c	\
 
 all:	blackmagic.bin blackmagic_dfu.bin blackmagic_dfu.hex
 

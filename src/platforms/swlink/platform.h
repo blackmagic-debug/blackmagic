@@ -146,8 +146,5 @@ extern jmp_buf fatal_error_jmpbuf;
 #define sprintf siprintf
 #define vasprintf vasiprintf
 
-void disconnect_usb(void);
-void assert_boot_pin(void);
-
 #endif
 
