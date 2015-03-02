@@ -156,6 +156,7 @@ extern uint16_t led_idle_run;
 #define SET_RUN_STATE(state)	{running_status = (state);}
 #define SET_IDLE_STATE(state)	{gpio_set_val(LED_PORT, led_idle_run, state);}
 
+#include "target.h"
 #define PLATFORM_SET_FATAL_ERROR_RECOVERY()	{setjmp(fatal_error_jmpbuf);}
 #define PLATFORM_FATAL_ERROR(error)	do { 		\
 	if(running_status) gdb_putpacketz("X1D");	\
@@ -168,6 +169,8 @@ extern uint16_t led_idle_run;
 int platform_init(void);
 void morse(const char *msg, char repeat);
 const char *platform_target_voltage(void);
+void platform_set_timeout(uint32_t ms);
+bool platform_timeout_expired(void);
 void platform_delay(uint32_t delay);
 void platform_srst_set_val(bool assert);
 
@@ -203,10 +206,10 @@ static inline uint16_t _gpio_get(uint32_t gpioport, uint16_t gpios)
 	return (uint16_t)GPIO_IDR(gpioport) & gpios;
 }
 #define gpio_get _gpio_get
-#endif
-
-#endif
+#endif /* INLINE_GPIO */
 
 void disconnect_usb(void);
 void assert_boot_pin(void);
+void setup_vbus_irq(void);
 
+#endif /* __PLATFORM_H */
