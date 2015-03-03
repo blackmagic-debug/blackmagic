@@ -47,10 +47,24 @@ OBJ = $(SRC:.c=.o)
 blackmagic: $(OBJ)
 	$(CC) -o $@ $^ $(LDFLAGS)
 
-.PHONY:	clean host_clean
+.PHONY:	clean host_clean all_platforms
 
 clean:	host_clean
 	-$(RM) *.o *.d *~ blackmagic $(HOSTFILES)
 	-$(RM) platforms/*/*.o platforms/*/*.d mapfile
 
+all_platforms:
+	for i in platforms/*/Makefile.inc ; do \
+		export DIRNAME=`dirname $$i` ;\
+		export PROBE_HOST=`basename $$DIRNAME` ;\
+		export CFLAGS=-Werror ;\
+		echo $$PROBE_HOST ;\
+		$(MAKE) clean ;\
+		$(MAKE) ;\
+		if [ -f blackmagic.bin ]; then \
+			mv blackmagic.bin blackmagic-$$PROBE_HOST.bin ;\
+		fi ;\
+	done
+
 -include *.d
+
