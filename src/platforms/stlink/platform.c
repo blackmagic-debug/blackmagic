@@ -27,7 +27,6 @@
 #include "usbuart.h"
 
 #include <libopencm3/stm32/rcc.h>
-#include <libopencm3/cm3/systick.h>
 #include <libopencm3/cm3/scb.h>
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/stm32/usart.h>
@@ -104,25 +103,11 @@ void platform_init(void)
 	gpio_set_mode(LED_PORT, GPIO_MODE_OUTPUT_2_MHZ,
 	              GPIO_CNF_OUTPUT_PUSHPULL, led_idle_run);
 
-	/* Setup heartbeat timer */
-	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
-	systick_set_reload(900000);	/* Interrupt us at 10 Hz */
-	SCB_SHPR(11) &= ~((15 << 4) & 0xff);
-	SCB_SHPR(11) |= ((14 << 4) & 0xff);
-	systick_interrupt_enable();
-	systick_counter_enable();
-
-	usbuart_init();
-
 	SCB_VTOR = 0x2000; /* Relocate interrupt vector table here */
 
+	platform_timing_init();
 	cdcacm_init();
-}
-
-void platform_delay(uint32_t delay)
-{
-	timeout_counter = delay;
-	while (timeout_counter);
+	usbuart_init();
 }
 
 void platform_srst_set_val(bool assert)
@@ -133,15 +118,6 @@ void platform_srst_set_val(bool assert)
 		gpio_clear(SRST_PORT, pin);
 	else
 		gpio_set(SRST_PORT, pin);
-}
-
-void sys_tick_handler(void)
-{
-	if(running_status)
-		gpio_toggle(LED_PORT, led_idle_run);
-
-	if(timeout_counter)
-		timeout_counter--;
 }
 
 const char *platform_target_voltage(void)

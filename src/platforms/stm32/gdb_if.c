@@ -113,7 +113,7 @@ unsigned char gdb_if_getchar(void)
 
 unsigned char gdb_if_getchar_to(int timeout)
 {
-	timeout_counter = timeout/100;
+	platform_timeout_set(timeout);
 
 	if (!(out_ptr < count_out)) do {
 		/* Detach if port closed */
@@ -121,7 +121,7 @@ unsigned char gdb_if_getchar_to(int timeout)
 			return 0x04;
 
 		gdb_if_update_buf();
-	} while(timeout_counter && !(out_ptr < count_out));
+	} while (!platform_timeout_is_expired() && !(out_ptr < count_out));
 
 	if(out_ptr < count_out)
 		return gdb_if_getchar();

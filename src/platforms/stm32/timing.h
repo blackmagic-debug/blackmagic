@@ -16,29 +16,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+#ifndef __TIMING_H
+#define __TIMING_H
 
-#ifndef __PLATFORM_SUPPORT_H
-#define __PLATFORM_SUPPORT_H
+extern uint8_t running_status;
 
-#ifndef __GENERAL_H
-#	error "Include 'general.h' instead"
-#endif
-
-#if defined(LIBFTDI)
-void platform_init(int argc, char **argv);
-#else
-void platform_init(void);
-#endif
-
-const char *platform_target_voltage(void);
-int platform_hwversion(void);
-void platform_timeout_set(uint32_t ms);
-bool platform_timeout_is_expired(void);
-void platform_delay(uint32_t delay);
-void platform_srst_set_val(bool assert);
-bool platform_target_get_power(void);
-void platform_target_set_power(bool power);
-void platform_request_boot(void);
+void platform_timing_init(void);
 
 #endif
 

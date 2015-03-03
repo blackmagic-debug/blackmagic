@@ -27,6 +27,7 @@
 #include "gdb_packet.h"
 #include "gpio.h"
 #include "morse.h"
+#include "timing.h"
 
 #include <setjmp.h>
 
@@ -139,9 +140,6 @@
 #define TRACE_ISR   tim3_isr
 
 #define DEBUG(...)
-
-extern uint8_t running_status;
-extern volatile uint32_t timeout_counter;
 
 extern jmp_buf fatal_error_jmpbuf;
 

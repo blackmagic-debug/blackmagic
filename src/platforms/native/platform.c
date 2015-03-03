@@ -28,16 +28,12 @@
 #include "morse.h"
 
 #include <libopencm3/stm32/f1/rcc.h>
-#include <libopencm3/cm3/systick.h>
 #include <libopencm3/cm3/scb.h>
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/stm32/exti.h>
 #include <libopencm3/stm32/usart.h>
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/stm32/f1/adc.h>
-
-uint8_t running_status;
-volatile uint32_t timeout_counter;
 
 jmp_buf fatal_error_jmpbuf;
 
@@ -115,14 +111,6 @@ void platform_init(void)
 		              GPIO_CNF_INPUT_PULL_UPDOWN, PWR_BR_PIN);
 	}
 
-	/* Setup heartbeat timer */
-	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
-	systick_set_reload(900000);	/* Interrupt us at 10 Hz */
-	SCB_SHPR(11) &= ~((15 << 4) & 0xff);
-	SCB_SHPR(11) |= ((14 << 4) & 0xff);
-	systick_interrupt_enable();
-	systick_counter_enable();
-
 	if (platform_hwversion() > 0) {
 		adc_init();
 	} else {
@@ -133,6 +121,7 @@ void platform_init(void)
 	/* Relocate interrupt vector table here */
 	SCB_VTOR = 0x2000;
 
+	platform_timing_init();
 	cdcacm_init();
 	usbuart_init();
 	setup_vbus_irq();
@@ -160,22 +149,6 @@ void platform_target_set_power(bool power)
 	if (platform_hwversion() > 0) {
 		gpio_set_val(PWR_BR_PORT, PWR_BR_PIN, !power);
 	}
-}
-void platform_delay(uint32_t delay)
-{
-	timeout_counter = delay;
-	while(timeout_counter);
-}
-
-void sys_tick_handler(void)
-{
-	if(running_status)
-		gpio_toggle(LED_PORT, LED_IDLE_RUN);
-
-	if(timeout_counter)
-		timeout_counter--;
-
-	SET_ERROR_STATE(morse_update());
 }
 
 static void adc_init(void)

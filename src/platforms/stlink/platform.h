@@ -26,6 +26,7 @@
 
 #include "gdb_packet.h"
 #include "gpio.h"
+#include "timing.h"
 
 #include <libopencm3/cm3/common.h>
 #include <libopencm3/stm32/f1/memorymap.h>
@@ -129,14 +130,13 @@
 
 #define DEBUG(...)
 
-extern uint8_t running_status;
-extern volatile uint32_t timeout_counter;
-
 extern jmp_buf fatal_error_jmpbuf;
 
 extern uint16_t led_idle_run;
+#define LED_IDLE_RUN            led_idle_run
 #define SET_RUN_STATE(state)	{running_status = (state);}
 #define SET_IDLE_STATE(state)	{gpio_set_val(LED_PORT, led_idle_run, state);}
+#define SET_ERROR_STATE(x)
 
 #define PLATFORM_SET_FATAL_ERROR_RECOVERY()	{setjmp(fatal_error_jmpbuf);}
 #define PLATFORM_FATAL_ERROR(error)	do { 		\

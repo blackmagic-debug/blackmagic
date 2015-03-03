@@ -20,6 +20,7 @@ SRC += 	cdcacm.c	\
 	traceswo.c	\
 	usbuart.c	\
 	serialno.c	\
+	timing.c	\
 
 all:	blackmagic.bin
 

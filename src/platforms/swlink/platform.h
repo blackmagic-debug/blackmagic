@@ -26,6 +26,7 @@
 
 #include "gdb_packet.h"
 #include "gpio.h"
+#include "timing.h"
 
 #include <setjmp.h>
 
@@ -69,6 +70,7 @@
 #define SWCLK_PIN	TCK_PIN
 
 #define LED_PORT	GPIOA
+#define LED_IDLE_RUN    GPIO8
 /* Use PC14 for a "dummy" uart led. So we can observere at least with scope*/
 #define LED_PORT_UART	GPIOC
 #define LED_UART	GPIO14
@@ -123,14 +125,11 @@
 
 #define DEBUG(...)
 
-extern uint8_t running_status;
-extern volatile uint32_t timeout_counter;
-
 extern jmp_buf fatal_error_jmpbuf;
 
-#define led_idle_run GPIO8
 #define SET_RUN_STATE(state)	{running_status = (state);}
-#define SET_IDLE_STATE(state)	{gpio_set_val(LED_PORT, led_idle_run, state);}
+#define SET_IDLE_STATE(state)	{gpio_set_val(LED_PORT, LED_IDLE_RUN, state);}
+#define SET_ERROR_STATE(x)
 
 #define PLATFORM_SET_FATAL_ERROR_RECOVERY()	{setjmp(fatal_error_jmpbuf);}
 #define PLATFORM_FATAL_ERROR(error)	{ 		\

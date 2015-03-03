@@ -27,15 +27,11 @@
 #include "usbuart.h"
 
 #include <libopencm3/stm32/f1/rcc.h>
-#include <libopencm3/cm3/systick.h>
 #include <libopencm3/cm3/scb.h>
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/stm32/usart.h>
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/stm32/f1/adc.h>
-
-uint8_t running_status;
-volatile uint32_t timeout_counter;
 
 jmp_buf fatal_error_jmpbuf;
 
@@ -72,7 +68,7 @@ void platform_init(void)
 			GPIO_CNF_INPUT_PULL_UPDOWN, NRST_PIN);
 
 	gpio_set_mode(LED_PORT, GPIO_MODE_OUTPUT_2_MHZ,
-			GPIO_CNF_OUTPUT_PUSHPULL, led_idle_run);
+			GPIO_CNF_OUTPUT_PUSHPULL, LED_IDLE_RUN);
 
 	/* Remap TIM2 TIM2_REMAP[1]
 	 * TIM2_CH1_ETR -> PA15 (TDI, set as output above)
@@ -83,34 +79,11 @@ void platform_init(void)
 	data |=  AFIO_MAPR_TIM2_REMAP_PARTIAL_REMAP1;
 	AFIO_MAPR = data;
 
-	/* Setup heartbeat timer */
-	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
-	systick_set_reload(900000);	/* Interrupt us at 10 Hz */
-	SCB_SHPR(11) &= ~((15 << 4) & 0xff);
-	SCB_SHPR(11) |= ((14 << 4) & 0xff);
-	systick_interrupt_enable();
-	systick_counter_enable();
-
-	usbuart_init();
-
 	SCB_VTOR = 0x2000;	// Relocate interrupt vector table here
 
+	platform_timing_init();
 	cdcacm_init();
-}
-
-void platform_delay(uint32_t delay)
-{
-	timeout_counter = delay;
-	while(timeout_counter);
-}
-
-void sys_tick_handler(void)
-{
-	if(running_status)
-		gpio_toggle(LED_PORT, led_idle_run);
-
-	if(timeout_counter)
-		timeout_counter--;
+	usbuart_init();
 }
 
 const char *platform_target_voltage(void)

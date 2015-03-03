@@ -28,16 +28,12 @@
 #include "morse.h"
 
 #include <libopencm3/stm32/f4/rcc.h>
-#include <libopencm3/cm3/systick.h>
 #include <libopencm3/cm3/scb.h>
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/stm32/exti.h>
 #include <libopencm3/stm32/usart.h>
 #include <libopencm3/stm32/syscfg.h>
 #include <libopencm3/usb/usbd.h>
-
-uint8_t running_status;
-volatile uint32_t timeout_counter;
 
 jmp_buf fatal_error_jmpbuf;
 
@@ -77,33 +73,9 @@ void platform_init(void)
 			GPIO_PUPD_NONE,
 			LED_UART | LED_IDLE_RUN | LED_ERROR | LED_BOOTLOADER);
 
-	/* Setup heartbeat timer */
-	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
-	systick_set_reload(168000000/(10*8));	/* Interrupt us at 10 Hz */
-	SCB_SHPR(11) &= ~((15 << 4) & 0xff);
-	SCB_SHPR(11) |= ((14 << 4) & 0xff);
-	systick_interrupt_enable();
-	systick_counter_enable();
-
+	platform_timing_init();
 	usbuart_init();
 	cdcacm_init();
-}
-
-void platform_delay(uint32_t delay)
-{
-	timeout_counter = delay;
-	while(timeout_counter);
-}
-
-void sys_tick_handler(void)
-{
-	if(running_status)
-		gpio_toggle(LED_PORT, LED_IDLE_RUN);
-
-	if(timeout_counter)
-		timeout_counter--;
-
-	SET_ERROR_STATE(morse_update());
 }
 
 const char *platform_target_voltage(void)
