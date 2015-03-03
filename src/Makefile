@@ -54,6 +54,7 @@ clean:	host_clean
 	-$(RM) platforms/*/*.o platforms/*/*.d mapfile
 
 all_platforms:
+	set -e ;\
 	for i in platforms/*/Makefile.inc ; do \
 		export DIRNAME=`dirname $$i` ;\
 		export PROBE_HOST=`basename $$DIRNAME` ;\
