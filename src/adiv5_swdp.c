@@ -130,11 +130,11 @@ static uint32_t adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 	if((addr == 4) || (addr == 8))
 		request ^= 0x20;
 
-	size_t tries = 1000;
+	platform_timeout_set(2000);
 	do {
 		swdptap_seq_out(request, 8);
 		ack = swdptap_seq_in(3);
-	} while(--tries && ack == SWDP_ACK_WAIT);
+	} while (!platform_timeout_is_expired() && ack == SWDP_ACK_WAIT);
 
 	if (ack == SWDP_ACK_WAIT)
 		raise_exception(EXCEPTION_TIMEOUT, "SWDP ACK timeout");

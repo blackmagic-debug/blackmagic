@@ -85,11 +85,11 @@ static uint32_t adiv5_jtagdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 
 	jtag_dev_write_ir(dp->dev, APnDP ? IR_APACC : IR_DPACC);
 
-	int tries = 1000;
+	platform_timeout_set(2000);
 	do {
 		jtag_dev_shift_dr(dp->dev, (uint8_t*)&response, (uint8_t*)&request, 35);
 		ack = response & 0x07;
-	} while(--tries && (ack == JTAGDP_ACK_WAIT));
+	} while(!platform_timeout_is_expired() && (ack == JTAGDP_ACK_WAIT));
 
 	if (ack == JTAGDP_ACK_WAIT)
 		raise_exception(EXCEPTION_TIMEOUT, "JTAG-DP ACK timeout");
