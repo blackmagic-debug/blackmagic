@@ -28,6 +28,7 @@
 #include "gpio.h"
 #include "morse.h"
 #include "timing.h"
+#include "target.h"
 
 #include <setjmp.h>
 

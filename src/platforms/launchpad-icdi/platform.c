@@ -86,10 +86,20 @@ platform_init(void)
 	cdcacm_init();
 }
 
+void platform_timeout_set(uint32_t ms)
+{
+	timeout_counter = ms / 10;
+}
+
+bool platform_timeout_is_expired(void)
+{
+	return timeout_counter == 0;
+}
+
 void platform_delay(uint32_t delay)
 {
-	timeout_counter = delay * 10;
-	while(timeout_counter);
+	platform_timeout_set(delay);
+	while (platform_timeout_is_expired());
 }
 
 const char *platform_target_voltage(void)

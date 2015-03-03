@@ -27,6 +27,7 @@
 #include "gdb_packet.h"
 #include "gpio.h"
 #include "timing.h"
+#include "target.h"
 
 #include <setjmp.h>
 

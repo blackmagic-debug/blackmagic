@@ -18,6 +18,8 @@
 #define __PLATFORM_H
 
 #include "gdb_packet.h"
+#include "target.h"
+#include "morse.h"
 
 #include <setjmp.h>
 
