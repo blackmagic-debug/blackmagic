@@ -47,6 +47,12 @@ OBJ = $(SRC:.c=.o)
 blackmagic: $(OBJ)
 	$(CC) -o $@ $^ $(LDFLAGS)
 
+%.bin:	%
+	$(OBJCOPY) -O binary $^ $@
+
+%.hex:	%
+	$(OBJCOPY) -O ihex $^ $@
+
 .PHONY:	clean host_clean all_platforms
 
 clean:	host_clean

@@ -19,5 +19,3 @@ SRC +=	cdcacm.c	\
 
 all: blackmagic.bin
 
-blackmagic.bin: blackmagic
-	$(OBJCOPY) -O binary $^ $@
