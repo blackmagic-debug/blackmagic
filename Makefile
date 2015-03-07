@@ -1,13 +1,18 @@
+ifneq ($(V), 1)
+MFLAGS += --no-print-dir
+Q := @
+endif
+
 all:
-	@if [ ! -f libopencm3/Makefile ]; then \
+	$(Q)if [ ! -f libopencm3/Makefile ]; then \
 		echo "Initialising git submodules..." ;\
 		git submodule init ;\
 		git submodule update ;\
 	fi
-	$(MAKE) -C libopencm3 lib
-	$(MAKE) -C src
+	$(Q)$(MAKE) $(MFLAGS) -C libopencm3 lib
+	$(Q)$(MAKE) $(MFLAGS) -C src
 
-%:
-	$(MAKE) -C libopencm3 $@
-	$(MAKE) -C src $@
+clean:
+	$(Q)$(MAKE) $(MFLAGS) -C libopencm3 $@
+	$(Q)$(MAKE) $(MFLAGS) -C src $@
 

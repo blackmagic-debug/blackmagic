@@ -25,4 +25,4 @@ SRC += 	cdcacm.c	\
 all:	blackmagic.bin
 
 host_clean:
-	-rm blackmagic.bin
+	-$(Q)$(RM) blackmagic.bin

@@ -23,11 +23,13 @@ SRC += 	cdcacm.c	\
 all:	blackmagic.bin blackmagic_dfu.bin blackmagic_dfu.hex dfu_upgrade.bin dfu_upgrade.hex
 
 blackmagic_dfu: usbdfu.o dfucore.o dfu_f1.o
-	$(CC) $^ -o $@ $(LDFLAGS_BOOT)
+	@echo "  LD      $@"
+	$(Q)$(CC) $^ -o $@ $(LDFLAGS_BOOT)
 
 dfu_upgrade: dfu_upgrade.o dfucore.o dfu_f1.o
-	$(CC) $^ -o $@ $(LDFLAGS)
+	@echo "  LD      $@"
+	$(Q)$(CC) $^ -o $@ $(LDFLAGS)
 
 host_clean:
-	-rm blackmagic.bin blackmagic_dfu blackmagic_dfu.bin blackmagic_dfu.hex dfu_upgrade dfu_upgrade.bin dfu_upgrade.hex
+	-$(Q)$(RM) blackmagic.bin blackmagic_dfu blackmagic_dfu.bin blackmagic_dfu.hex dfu_upgrade dfu_upgrade.bin dfu_upgrade.hex
 

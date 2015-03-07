@@ -24,9 +24,9 @@ SRC += 	cdcacm.c	\
 all:	blackmagic.bin blackmagic_dfu.bin blackmagic_dfu.hex
 
 blackmagic_dfu: usbdfu.o dfucore.o dfu_f1.o
-	$(CC) $^ -o $@ $(LDFLAGS_BOOT)
-
+	@echo "  LD      $@"
+	$(Q)$(CC) $^ -o $@ $(LDFLAGS_BOOT)
 
 host_clean:
-	-rm blackmagic.bin blackmagic_dfu blackmagic_dfu.bin blackmagic_dfu.hex
+	-$(Q)$(RM) -f blackmagic.bin blackmagic_dfu blackmagic_dfu.bin blackmagic_dfu.hex
 

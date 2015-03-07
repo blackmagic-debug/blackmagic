@@ -2,6 +2,11 @@ PROBE_HOST ?= native
 PLATFORM_DIR = platforms/$(PROBE_HOST)
 VPATH += platforms/common $(PLATFORM_DIR)
 
+ifneq ($(V), 1)
+MAKEFLAGS += --no-print-dir
+Q := @
+endif
+
 BUILDDATE := `date +"%Y%m%d"`
 
 CFLAGS += -Wall -Wextra -Wno-pointer-sign -Wno-char-subscripts\
@@ -45,29 +50,37 @@ include $(PLATFORM_DIR)/Makefile.inc
 OBJ = $(SRC:.c=.o)
 
 blackmagic: $(OBJ)
-	$(CC) -o $@ $^ $(LDFLAGS)
+	@echo "  LD      $@"
+	$(Q)$(CC) -o $@ $^ $(LDFLAGS)
+
+%.o:	%.c
+	@echo "  CC      $<"
+	$(Q)$(CC) $(CFLAGS) -c $< -o $@
 
 %.bin:	%
-	$(OBJCOPY) -O binary $^ $@
+	@echo "  OBJCOPY $@"
+	$(Q)$(OBJCOPY) -O binary $^ $@
 
 %.hex:	%
-	$(OBJCOPY) -O ihex $^ $@
+	@echo "  OBJCOPY $@"
+	$(Q)$(OBJCOPY) -O ihex $^ $@
 
 .PHONY:	clean host_clean all_platforms
 
 clean:	host_clean
-	-$(RM) *.o *.d *~ blackmagic $(HOSTFILES)
-	-$(RM) platforms/*/*.o platforms/*/*.d mapfile
+	$(Q)echo "  CLEAN"
+	-$(Q)$(RM) -f *.o *.d *~ blackmagic $(HOSTFILES)
+	-$(Q)$(RM) -f platforms/*/*.o platforms/*/*.d mapfile
 
 all_platforms:
-	set -e ;\
+	$(Q)set -e ;\
 	for i in platforms/*/Makefile.inc ; do \
 		export DIRNAME=`dirname $$i` ;\
 		export PROBE_HOST=`basename $$DIRNAME` ;\
 		export CFLAGS=-Werror ;\
-		echo $$PROBE_HOST ;\
-		$(MAKE) clean ;\
-		$(MAKE) ;\
+		echo "Building for hardware platform: $$PROBE_HOST" ;\
+		$(MAKE) $(MAKEFLAGS) clean ;\
+		$(MAKE) $(MAKEFLAGS);\
 		if [ -f blackmagic.bin ]; then \
 			mv blackmagic.bin blackmagic-$$PROBE_HOST.bin ;\
 		fi ;\
