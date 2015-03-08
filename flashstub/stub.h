@@ -17,25 +17,14 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include "libopencm3/stm32/flash.h"
-#include "stub.h"
+#ifndef __STUB_H
+#define __STUB_H
 
-#define SR_ERROR_MASK 0x14
-
-void __attribute__((naked))
-stm32f1_flash_write_stub(uint16_t *dest, uint16_t *src, uint32_t size)
+static inline __attribute__((always_inline))
+stub_exit(const int code)
 {
-	while (size) {
-		FLASH_CR = FLASH_CR_PG;
-		*dest++ = *src++;
-		size -= 2;
-		while (FLASH_SR & FLASH_SR_BSY)
-			;
-	}
-
-	if (FLASH_SR & SR_ERROR_MASK)
-		stub_exit(1);
-
-	stub_exit(0);
+	asm("bkpt %0"::"i"(code));
 }
+
+#endif
 

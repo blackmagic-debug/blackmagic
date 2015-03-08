@@ -256,16 +256,11 @@ static int stm32f1_flash_write(struct target_s *target, uint32_t dest,
 	memcpy((uint8_t *)data + offset, src, len);
 
 	/* Write stub and data to target ram and set PC */
-	target_mem_write(target, STUB_BUFFER_BASE, data, sizeof(data));
-	cortexm_run_stub(target, SRAM_BASE, stm32f1_flash_write_stub,
-	                sizeof(stm32f1_flash_write_stub),
-	                dest - offset, STUB_BUFFER_BASE, sizeof(data), 0);
-
-	/* Check for error */
-	if (target_mem_read32(target, FLASH_SR) & SR_ERROR_MASK)
-		return -1;
-
-	return 0;
+	target_mem_write(target, STUB_BUFFER_BASE, (void*)data, sizeof(data));
+	return cortexm_run_stub(target, SRAM_BASE, stm32f1_flash_write_stub,
+	                        sizeof(stm32f1_flash_write_stub),
+	                        dest - offset, STUB_BUFFER_BASE, sizeof(data),
+	                        0);
 }
 
 static bool stm32f1_cmd_erase_mass(target *t)
