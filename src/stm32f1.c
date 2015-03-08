@@ -36,8 +36,6 @@
 #include "command.h"
 #include "gdb_packet.h"
 
-#define SRAM_BASE 0x20000000
-
 static bool stm32f1_cmd_erase_mass(target *t);
 static bool stm32f1_cmd_option(target *t, int argc, char *argv[]);
 
@@ -123,8 +121,11 @@ static const char stm32hd_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 #define DBGMCU_IDCODE_F0	0x40015800
 
 static const uint16_t stm32f1_flash_write_stub[] = {
-#include "../flashstub/stm32.stub"
+#include "../flashstub/stm32f1.stub"
 };
+
+#define SRAM_BASE 0x20000000
+#define STUB_BUFFER_BASE ALIGN(SRAM_BASE + sizeof(stm32f1_flash_write_stub), 4)
 
 bool stm32f1_probe(struct target_s *target)
 {
@@ -247,22 +248,18 @@ static int stm32f1_flash_write(struct target_s *target, uint32_t dest,
                                const uint8_t *src, size_t len)
 {
 	uint32_t offset = dest % 4;
-	uint32_t words = (offset + len + 3) / 4;
-	if (words > 256)
-		return -1;
-	uint32_t data[2 + words];
+	uint8_t data[ALIGN(offset + len, 4)];
 
 	/* Construct data buffer used by stub */
-	data[0] = dest - offset;
-	data[1] = words * 4;		/* length must always be a multiple of 4 */
-	data[2] = 0xFFFFFFFF;		/* pad partial words with all 1s to avoid */
-	data[words + 1] = 0xFFFFFFFF;	/* damaging overlapping areas */
-	memcpy((uint8_t *)&data[2] + offset, src, len);
+	/* pad partial words with all 1s to avoid damaging overlapping areas */
+	memset(data, 0xff, sizeof(data));
+	memcpy((uint8_t *)data + offset, src, len);
 
 	/* Write stub and data to target ram and set PC */
-	target_mem_write(target, 0x2000002C, data, sizeof(data));
-	cortexm_run_stub(target, SRAM_BASE, stm32f1_flash_write_stub, 0x2C,
-	                 0, 0, 0, 0);
+	target_mem_write(target, STUB_BUFFER_BASE, data, sizeof(data));
+	cortexm_run_stub(target, SRAM_BASE, stm32f1_flash_write_stub,
+	                sizeof(stm32f1_flash_write_stub),
+	                dest - offset, STUB_BUFFER_BASE, sizeof(data), 0);
 
 	/* Check for error */
 	if (target_mem_read32(target, FLASH_SR) & SR_ERROR_MASK)
