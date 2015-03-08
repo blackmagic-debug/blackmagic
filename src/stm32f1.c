@@ -120,40 +120,7 @@ static const char stm32hd_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 #define DBGMCU_IDCODE_F0	0x40015800
 
 static const uint16_t stm32f1_flash_write_stub[] = {
-// _start:
-	0x4809,	// ldr r0, [pc, #36] // _flashbase
-	0x490a,	// ldr r1, [pc, #40] // _addr
-	0x467a, // mov r2, pc
-	0x322c, // adds r2, #44
-	0x4b09, // ldr r3, [pc, #36] // _size
- 	0x2501, // movs r5, #1
-// _next:
-	0x2b00, // cmp r3, #0
-	0xd00a, // beq _done
-	0x6105, // str r5, [r0, #16]
-	0x8814, // ldrh r4, [r2]
-	0x800c, // strh r4, [r1]
-// _wait:
-	0x68c4, // ldr r4, [r0, #12]
-	0x2601, // movs r6, #1
-	0x4234, // tst r4, r6
-	0xd1fb, // bne _wait
-
-	0x3b02, // subs r3, #2
-	0x3102, // adds r1, #2
-	0x3202, // adds r2, #2
-	0xe7f2, // b _next
-// _done:
-	0xbe00, // bkpt
-// .org 0x28
-// _flashbase:
- 	0x2000, 0x4002, // .word 0x40022000 (FPEC_BASE)
-// _addr:
-// 	0x0000, 0x0000,
-// _size:
-// 	0x0000, 0x0000,
-// _data:
-// 	...
+#include "../flashstub/stm32.stub"
 };
 
 bool stm32f1_probe(struct target_s *target)
