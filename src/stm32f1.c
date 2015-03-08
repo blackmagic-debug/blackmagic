@@ -32,8 +32,11 @@
 #include "general.h"
 #include "adiv5.h"
 #include "target.h"
+#include "cortexm.h"
 #include "command.h"
 #include "gdb_packet.h"
+
+#define SRAM_BASE 0x20000000
 
 static bool stm32f1_cmd_erase_mass(target *t);
 static bool stm32f1_cmd_option(target *t, int argc, char *argv[]);
@@ -257,15 +260,9 @@ static int stm32f1_flash_write(struct target_s *target, uint32_t dest,
 	memcpy((uint8_t *)&data[2] + offset, src, len);
 
 	/* Write stub and data to target ram and set PC */
-	target_mem_write(target, 0x20000000, stm32f1_flash_write_stub, 0x2C);
 	target_mem_write(target, 0x2000002C, data, sizeof(data));
-	target_pc_write(target, 0x20000000);
-	if(target_check_error(target))
-		return -1;
-
-	/* Execute the stub */
-	target_halt_resume(target, 0);
-	while(!target_halt_wait(target));
+	cortexm_run_stub(target, SRAM_BASE, stm32f1_flash_write_stub, 0x2C,
+	                 0, 0, 0, 0);
 
 	/* Check for error */
 	if (target_mem_read32(target, FLASH_SR) & SR_ERROR_MASK)
