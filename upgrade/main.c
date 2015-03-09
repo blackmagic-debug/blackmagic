@@ -74,14 +74,12 @@ struct usb_device * find_dev(void)
 
 			if (((dev->descriptor.idProduct == 0x5740) ||
 			     (dev->descriptor.idProduct == 0x6018)) &&
-			   !strcmp(man, "Black Sphere Technologies") &&
-			   !strcmp(prod, "Black Magic Firmware Upgrade"))
+			   !strcmp(man, "Black Sphere Technologies"))
 				return dev;
 
 			if (((dev->descriptor.idProduct == 0xDF11) ||
 			     (dev->descriptor.idProduct == 0x6017)) &&
-			   !strcmp(man, "Black Sphere Technologies") &&
-			   !strcmp(prod, "Black Magic Probe (Upgrade)"))
+			   !strcmp(man, "Black Sphere Technologies"))
 				return dev;
 		}
 	}
