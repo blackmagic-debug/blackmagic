@@ -25,10 +25,9 @@
 void __attribute__((naked))
 stm32f1_flash_write_stub(uint16_t *dest, uint16_t *src, uint32_t size)
 {
-	while (size) {
+	for (int i; i < size; i += 2) {
 		FLASH_CR = FLASH_CR_PG;
 		*dest++ = *src++;
-		size -= 2;
 		while (FLASH_SR & FLASH_SR_BSY)
 			;
 	}
