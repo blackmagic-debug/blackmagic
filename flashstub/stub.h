@@ -20,7 +20,7 @@
 #ifndef __STUB_H
 #define __STUB_H
 
-static inline __attribute__((always_inline))
+static inline void __attribute__((always_inline))
 stub_exit(const int code)
 {
 	asm("bkpt %0"::"i"(code));
