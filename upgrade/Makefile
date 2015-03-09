@@ -1,3 +1,4 @@
+OUTFILE = blackmagic_upgrade
 
 CC = $(CROSS_COMPILE)gcc
 
@@ -9,14 +10,14 @@ OBJ =	bindata.o	\
 	stm32mem.o	\
 	main.o
 
-all: bmp_upgrade
+all: $(OUTFILE)
 
-bmp_upgrade: $(OBJ)
+$(OUTFILE) $(OUTFILE).exe: $(OBJ)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 .PHONY: clean
 clean:
-	-rm -rf bmp_upgrade *.d *.o
+	-rm -rf $(OUTFILE) $(OUTFILE).exe *.d *.o
 
 -include *.d
 
