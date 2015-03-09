@@ -84,12 +84,13 @@ int dfu_getstate(usb_dev_handle *dev, uint16_t iface)
 	int i;
 	uint8_t state;
 	do {
-		i = usb_control_msg(dev, 
+		i = usb_control_msg(dev,
 			USB_ENDPOINT_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-			DFU_GETSTATE, 0, iface, &state, 1, USB_DEFAULT_TIMEOUT);
+			DFU_GETSTATE, 0, iface, (char*)&state, 1,
+			USB_DEFAULT_TIMEOUT);
 	} while(i == 0);
 
-	if(i > 0) 
+	if (i > 0)
 		return state;
 	else
 		return i;
