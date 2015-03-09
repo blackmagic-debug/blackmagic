@@ -13,3 +13,6 @@ tags
 .gdbinit
 *.s#*
 *.b#*
+blackmagic_upgrade
+*.exe
+
