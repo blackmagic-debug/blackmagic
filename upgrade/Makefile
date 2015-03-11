@@ -2,7 +2,7 @@ OUTFILE = blackmagic_upgrade
 
 CC = $(CROSS_COMPILE)gcc
 
-CFLAGS = -Wall -Wextra -std=gnu99 -O0 -g -MD
+CFLAGS = -Wall -Wextra -std=gnu99 -O0 -g -MD -mno-ms-bitfields
 LDFLAGS = -lusb
 
 OBJ =	bindata.o	\
