@@ -49,6 +49,7 @@ usbd_device * usbdev;
 static int configured;
 static int cdcacm_gdb_dtr = 1;
 
+static void cdcacm_set_modem_state(usbd_device *dev, int iface, bool dsr, bool dcd);
 
 static const struct usb_device_descriptor dev = {
 	.bLength = USB_DT_DEVICE_SIZE,
@@ -430,6 +431,7 @@ static int cdcacm_control_request(usbd_device *dev,
 			return 1;
 
 		cdcacm_gdb_dtr = req->wValue & 1;
+		cdcacm_set_modem_state(dev, 0, true, true);
 
 		return 1;
 	case USB_CDC_REQ_SET_LINE_CODING:
@@ -476,6 +478,23 @@ int cdcacm_get_dtr(void)
 	return cdcacm_gdb_dtr;
 }
 
+static void cdcacm_set_modem_state(usbd_device *dev, int iface, bool dsr, bool dcd)
+{
+	char buf[10];
+	struct usb_cdc_notification *notif = (void*)buf;
+	/* We echo signals back to host as notification */
+	notif->bmRequestType = 0xA1;
+	notif->bNotification = USB_CDC_NOTIFY_SERIAL_STATE;
+	notif->wValue = 0;
+	notif->wIndex = iface;
+	notif->wLength = 2;
+	buf[8] = (dsr ? 2 : 0) | (dcd ? 1 : 0);
+	buf[9] = 0;
+	usbd_ep_write_packet(dev, 0x82, buf, 10);
+	notif->wIndex = 2;
+	usbd_ep_write_packet(dev, 0x84, buf, 10);
+}
+
 static void cdcacm_set_config(usbd_device *dev, uint16_t wValue)
 {
 	configured = wValue;
@@ -513,19 +532,7 @@ static void cdcacm_set_config(usbd_device *dev, uint16_t wValue)
 	/* Notify the host that DCD is asserted.
 	 * Allows the use of /dev/tty* devices on *BSD/MacOS
 	 */
-	char buf[10];
-	struct usb_cdc_notification *notif = (void*)buf;
-	/* We echo signals back to host as notification */
-	notif->bmRequestType = 0xA1;
-	notif->bNotification = USB_CDC_NOTIFY_SERIAL_STATE;
-	notif->wValue = 0;
-	notif->wIndex = 0;
-	notif->wLength = 2;
-	buf[8] = 3; /* DCD | DSR */
-	buf[9] = 0;
-	usbd_ep_write_packet(dev, 0x82, buf, 10);
-	notif->wIndex = 2;
-	usbd_ep_write_packet(dev, 0x84, buf, 10);
+	cdcacm_set_modem_state(dev, 0, true, true);
 }
 
 /* We need a special large control buffer for this device: */
