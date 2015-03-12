@@ -28,6 +28,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stddef.h>
+#include <inttypes.h>
 
 #include "platform.h"
 #include "platform_support.h"

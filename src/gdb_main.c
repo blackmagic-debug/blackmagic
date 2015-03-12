@@ -85,8 +85,8 @@ gdb_main(void)
 		case 'm': {	/* 'm addr,len': Read len bytes from addr */
 			uint32_t addr, len;
 			ERROR_IF_NO_TARGET();
-			sscanf(pbuf, "m%08lx,%08lx", &addr, &len);
-			DEBUG("m packet: addr = %08lX, len = %08lX\n", addr, len);
+			sscanf(pbuf, "m%" SCNx32 ",%" SCNx32, &addr, &len);
+			DEBUG("m packet: addr = %" PRIx32 ", len = %" PRIx32 "\n", addr, len);
 			uint8_t mem[len];
 			if(((addr & 3) == 0) && ((len & 3) == 0))
 				target_mem_read_words(cur_target, (void*)mem, addr, len);
@@ -112,8 +112,8 @@ gdb_main(void)
 			uint32_t addr, len;
 			int hex;
 			ERROR_IF_NO_TARGET();
-			sscanf(pbuf, "M%08lx,%08lx:%n", &addr, &len, &hex);
-			DEBUG("M packet: addr = %08lX, len = %08lX\n", addr, len);
+			sscanf(pbuf, "M%" SCNx32 ",%" SCNx32 ":%n", &addr, &len, &hex);
+			DEBUG("M packet: addr = %" PRIx32 ", len = %" PRIx32 "\n", addr, len);
 			uint8_t mem[len];
 			unhexify(mem, pbuf + hex, len);
 			if(((addr & 3) == 0) && ((len & 3) == 0))
@@ -242,8 +242,8 @@ gdb_main(void)
 			uint32_t addr, len;
 			int bin;
 			ERROR_IF_NO_TARGET();
-			sscanf(pbuf, "X%08lx,%08lx:%n", &addr, &len, &bin);
-			DEBUG("X packet: addr = %08lX, len = %08lX\n", addr, len);
+			sscanf(pbuf, "X%" SCNx32 ",%" SCNx32 ":%n", &addr, &len, &bin);
+			DEBUG("X packet: addr = %" PRIx32 ", len = %" PRIx32 "\n", addr, len);
 			if(((addr & 3) == 0) && ((len & 3) == 0))
 				target_mem_write_words(cur_target, addr, (void*)pbuf+bin, len);
 			else
@@ -352,7 +352,7 @@ handle_q_packet(char *packet, int len)
 			return;
 		}
 		handle_q_string_reply(cur_target->tdesc, packet + 31);
-	} else if (sscanf(packet, "qCRC:%08lx,%08lx", &addr, &alen) == 2) {
+	} else if (sscanf(packet, "qCRC:%" PRIx32 ",%" PRIx32, &addr, &alen) == 2) {
 		if(!cur_target) {
 			gdb_putpacketz("E01");
 			return;
@@ -454,7 +454,7 @@ handle_z_packet(char *packet, int plen)
 	 * with real sscanf() though... */
 	//sscanf(packet, "%*[zZ]%hhd,%08lX,%hhd", &type, &addr, &len);
 	type = packet[1] - '0';
-	sscanf(packet + 2, ",%08lx,%d", &addr, &len);
+	sscanf(packet + 2, ",%" PRIx32 ",%d", &addr, &len);
 	switch(type) {
 	case 1: /* Hardware breakpoint */
 		if(!cur_target->set_hw_bp) { /* Not supported */

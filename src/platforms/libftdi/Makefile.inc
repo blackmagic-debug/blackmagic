@@ -1,2 +1,2 @@
-CFLAGS += -DLIBFTDI -Wno-format
+CFLAGS += -DLIBFTDI
 LDFLAGS += -lftdi -lusb
