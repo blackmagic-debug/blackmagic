@@ -426,12 +426,12 @@ static int cdcacm_control_request(usbd_device *dev,
 
 	switch(req->bRequest) {
 	case USB_CDC_REQ_SET_CONTROL_LINE_STATE:
+		cdcacm_set_modem_state(dev, req->wIndex, true, true);
 		/* Ignore if not for GDB interface */
 		if(req->wIndex != 0)
 			return 1;
 
 		cdcacm_gdb_dtr = req->wValue & 1;
-		cdcacm_set_modem_state(dev, 0, true, true);
 
 		return 1;
 	case USB_CDC_REQ_SET_LINE_CODING:
@@ -490,9 +490,7 @@ static void cdcacm_set_modem_state(usbd_device *dev, int iface, bool dsr, bool d
 	notif->wLength = 2;
 	buf[8] = (dsr ? 2 : 0) | (dcd ? 1 : 0);
 	buf[9] = 0;
-	usbd_ep_write_packet(dev, 0x82, buf, 10);
-	notif->wIndex = 2;
-	usbd_ep_write_packet(dev, 0x84, buf, 10);
+	usbd_ep_write_packet(dev, 0x82 + iface, buf, 10);
 }
 
 static void cdcacm_set_config(usbd_device *dev, uint16_t wValue)
@@ -533,6 +531,7 @@ static void cdcacm_set_config(usbd_device *dev, uint16_t wValue)
 	 * Allows the use of /dev/tty* devices on *BSD/MacOS
 	 */
 	cdcacm_set_modem_state(dev, 0, true, true);
+	cdcacm_set_modem_state(dev, 2, true, true);
 }
 
 /* We need a special large control buffer for this device: */
