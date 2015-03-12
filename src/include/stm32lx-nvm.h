@@ -159,25 +159,12 @@ namespace {
 
 typedef uint32_t stm32lx_stub_pointer_t;
 
-struct stm32lx_nvm {
-        volatile uint32_t acr;
-        volatile uint32_t pecr;
-        volatile uint32_t pdkeyr;
-        volatile uint32_t pekeyr;
-        volatile uint32_t prgkeyr;
-        volatile uint32_t optkeyr;
-        volatile uint32_t sr;
-        volatile uint32_t optr;       /* or obr */
-        volatile uint32_t wrprot;     /* or wprot1 */
-};
-
-#define STM32Lx_NVM(p)		(*(struct stm32lx_nvm*) (p))
-#define STM32Lx_NVM_PECR(p)	((uint32_t) &STM32Lx_NVM(p).pecr)
-#define STM32Lx_NVM_PEKEYR(p)	((uint32_t) &STM32Lx_NVM(p).pekeyr)
-#define STM32Lx_NVM_PRGKEYR(p)	((uint32_t) &STM32Lx_NVM(p).prgkeyr)
-#define STM32Lx_NVM_OPTKEYR(p)	((uint32_t) &STM32Lx_NVM(p).optkeyr)
-#define STM32Lx_NVM_SR(p)	((uint32_t) &STM32Lx_NVM(p).sr)
-#define STM32Lx_NVM_OPTR(p)	((uint32_t) &STM32Lx_NVM(p).optr)
+#define STM32Lx_NVM_PECR(p)     ((p) + 0x04)
+#define STM32Lx_NVM_PEKEYR(p)   ((p) + 0x0C)
+#define STM32Lx_NVM_PRGKEYR(p)  ((p) + 0x10)
+#define STM32Lx_NVM_OPTKEYR(p)  ((p) + 0x14)
+#define STM32Lx_NVM_SR(p)       ((p) + 0x18)
+#define STM32Lx_NVM_OPTR(p)     ((p) + 0x1C)
 
 #endif
 
