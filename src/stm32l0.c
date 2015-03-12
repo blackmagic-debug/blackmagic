@@ -114,14 +114,11 @@
 
 #define CONFIG_STM32L1          /* Include support for STM32L1 */
 
-#include <stdlib.h>
-#include <string.h>
-#include <stdint.h>
-
 #include "general.h"
 #include "adiv5.h"
 #include "target.h"
 #include "command.h"
+#include "gdb_packet.h"
 
 #include "stm32lx-nvm.h"
 
