@@ -40,9 +40,9 @@
 #include "gdb_packet.h"
 #include "cortexm.h"
 
-static int samd_flash_erase(struct target_s *target, uint32_t addr, int len);
+static int samd_flash_erase(struct target_s *target, uint32_t addr, size_t len);
 static int samd_flash_write(struct target_s *target, uint32_t dest,
-			const uint8_t *src, int len);
+                            const uint8_t *src, size_t len);
 
 static bool samd_cmd_erase_all(target *t);
 static bool samd_cmd_lock_flash(target *t);
@@ -479,7 +479,7 @@ static void samd_unlock_current_address(struct target_s *target)
 /**
  * Erase flash row by row
  */
-static int samd_flash_erase(struct target_s *target, uint32_t addr, int len)
+static int samd_flash_erase(struct target_s *target, uint32_t addr, size_t len)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
 
@@ -515,7 +515,7 @@ static int samd_flash_erase(struct target_s *target, uint32_t addr, int len)
  * Write flash page by page
  */
 static int samd_flash_write(struct target_s *target, uint32_t dest,
-			  const uint8_t *src, int len)
+                            const uint8_t *src, size_t len)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
 

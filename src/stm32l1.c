@@ -35,9 +35,10 @@
 #include "command.h"
 #include "gdb_packet.h"
 
-static int stm32l1_flash_erase(struct target_s *target, uint32_t addr, int len);
+static int stm32l1_flash_erase(struct target_s *target, uint32_t addr,
+                               size_t len);
 static int stm32l1_flash_write(struct target_s *target, uint32_t dest,
-			const uint8_t *src, int len);
+                               const uint8_t *src, size_t len);
 
 static const char stm32l1_driver_str[] = "STM32L1xx";
 
@@ -112,7 +113,7 @@ static void stm32l1_flash_unlock(ADIv5_AP_t *ap)
 	adiv5_ap_mem_write(ap, STM32L1_FLASH_PRGKEYR, STM32L1_PRGKEY2);
 }
 
-static int stm32l1_flash_erase(struct target_s *target, uint32_t addr, int len)
+static int stm32l1_flash_erase(struct target_s *target, uint32_t addr, size_t len)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
 	uint16_t sr;
@@ -150,7 +151,7 @@ static int stm32l1_flash_erase(struct target_s *target, uint32_t addr, int len)
 }
 
 static int stm32l1_flash_write(struct target_s *target, uint32_t dest,
-			  const uint8_t *src, int len)
+			  const uint8_t *src, size_t len)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
 	uint16_t sr;

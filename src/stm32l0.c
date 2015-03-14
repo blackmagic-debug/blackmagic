@@ -125,32 +125,32 @@
 static int inhibit_stubs;       /* Local option to force non-stub flash IO */
 
 static int stm32lx_nvm_erase(struct target_s* target,
-                             uint32_t addr, int len);
+                             uint32_t addr, size_t len);
 static int stm32lx_nvm_write(struct target_s* target,
                              uint32_t destination,
                              const uint8_t* source,
-                             int size);
+                             size_t size);
 
 static int stm32lx_nvm_prog_erase(struct target_s* target,
-                                  uint32_t addr, int len);
+                                  uint32_t addr, size_t len);
 static int stm32lx_nvm_prog_write(struct target_s* target,
                                   uint32_t destination,
                                   const uint8_t* source,
-                                  int size);
+                                  size_t size);
 
 static int stm32lx_nvm_prog_erase_stubbed(struct target_s* target,
-                                          uint32_t addr, int len);
+                                          uint32_t addr, size_t len);
 static int stm32lx_nvm_prog_write_stubbed(struct target_s* target,
                                           uint32_t destination,
                                           const uint8_t* source,
-                                          int size);
+                                          size_t size);
 
 static int stm32lx_nvm_data_erase(struct target_s* target,
-                                  uint32_t addr, int len);
+                                  uint32_t addr, size_t len);
 static int stm32lx_nvm_data_write(struct target_s* target,
                                   uint32_t destination,
                                   const uint8_t* source,
-                                  int size);
+                                  size_t size);
 
 static bool stm32lx_cmd_option     (target* t, int argc, char** argv);
 static bool stm32lx_cmd_eeprom     (target* t, int argc, char** argv);
@@ -371,7 +371,7 @@ static bool stm32lx_nvm_opt_unlock(ADIv5_AP_t* ap, uint32_t nvm)
     when the MCU hasn't entered a fault state(see NOTES).  The flash
     array is erased for all pages from addr to addr+len inclusive. */
 static int stm32lx_nvm_prog_erase_stubbed(struct target_s* target,
-                                          uint32_t addr, int size)
+                                          uint32_t addr, size_t size)
 {
         struct stm32lx_nvm_stub_info info;
         const uint32_t nvm = stm32lx_nvm_phys(target);
@@ -417,7 +417,7 @@ static int stm32lx_nvm_prog_erase_stubbed(struct target_s* target,
 static int stm32lx_nvm_prog_write_stubbed(struct target_s* target,
                                           uint32_t destination,
                                           const uint8_t* source,
-                                          int size)
+                                          size_t size)
 {
         struct stm32lx_nvm_stub_info info;
         const uint32_t nvm = stm32lx_nvm_phys(target);
@@ -491,7 +491,7 @@ static int stm32lx_nvm_prog_write_stubbed(struct target_s* target,
 /** Erase a region of NVM for STM32Lx.  This is the lead function and
     it will invoke an implementation, stubbed or not depending on the
     options and the range of addresses. */
-static int stm32lx_nvm_erase(struct target_s* target, uint32_t addr, int size)
+static int stm32lx_nvm_erase(struct target_s* target, uint32_t addr, size_t size)
 {
         if (addr >= STM32Lx_NVM_EEPROM_PHYS)
                 return stm32lx_nvm_data_erase(target, addr, size);
@@ -515,7 +515,7 @@ static int stm32lx_nvm_erase(struct target_s* target, uint32_t addr, int size)
 static int stm32lx_nvm_write(struct target_s* target,
                              uint32_t destination,
                              const uint8_t* source,
-                             int size)
+                             size_t size)
 {
         if (destination >= STM32Lx_NVM_EEPROM_PHYS)
                 return stm32lx_nvm_data_write(target, destination, source,
@@ -556,7 +556,7 @@ static int stm32lx_nvm_write(struct target_s* target,
     flash array is erased for all pages from addr to addr+len
     inclusive.  NVM register file address chosen from target. */
 static int stm32lx_nvm_prog_erase(struct target_s* target,
-                                  uint32_t addr, int len)
+                                  uint32_t addr, size_t len)
 {
         ADIv5_AP_t* ap = adiv5_target_ap(target);
         const size_t page_size = stm32lx_nvm_prog_page_size(target);
@@ -617,7 +617,7 @@ static int stm32lx_nvm_prog_erase(struct target_s* target,
 static int stm32lx_nvm_prog_write(struct target_s* target,
                                   uint32_t destination,
                                   const uint8_t* source_8,
-                                  int size)
+                                  size_t size)
 {
         ADIv5_AP_t*    ap         = adiv5_target_ap(target);
         const uint32_t nvm        = stm32lx_nvm_phys(target);
@@ -705,7 +705,7 @@ static int stm32lx_nvm_prog_write(struct target_s* target,
     addr+len, inclusive, on a word boundary.  NVM register file
     address chosen from target. */
 static int stm32lx_nvm_data_erase(struct target_s* target,
-                                  uint32_t addr, int len)
+                                  uint32_t addr, size_t len)
 {
         ADIv5_AP_t* ap = adiv5_target_ap(target);
         const size_t page_size = stm32lx_nvm_data_page_size(target);
@@ -763,7 +763,7 @@ static int stm32lx_nvm_data_erase(struct target_s* target,
 static int stm32lx_nvm_data_write(struct target_s* target,
                                   uint32_t destination,
                                   const uint8_t* source_8,
-                                  int size)
+                                  size_t size)
 {
         ADIv5_AP_t*    ap         = adiv5_target_ap(target);
         const uint32_t nvm        = stm32lx_nvm_phys(target);
@@ -933,7 +933,7 @@ static bool stm32lx_cmd_option(target* t, int argc, char** argv)
                 goto usage;
 
         /* Report the current option values */
-        for(int i = 0; i < opt_size; i += sizeof(uint32_t)) {
+        for(unsigned i = 0; i < opt_size; i += sizeof(uint32_t)) {
                 uint32_t addr = STM32Lx_NVM_OPT_PHYS + i;
                 uint32_t val = adiv5_ap_mem_read(ap, addr);
                 gdb_outf("0x%08x: 0x%04x 0x%04x %s\n",

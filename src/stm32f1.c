@@ -45,12 +45,12 @@ const struct command_s stm32f1_cmd_list[] = {
 };
 
 
-static int stm32md_flash_erase(struct target_s *target, uint32_t addr, int len);
-static int stm32hd_flash_erase(struct target_s *target, uint32_t addr, int len);
-static int stm32f1_flash_erase(struct target_s *target, uint32_t addr, int len,
+static int stm32md_flash_erase(struct target_s *target, uint32_t addr, size_t len);
+static int stm32hd_flash_erase(struct target_s *target, uint32_t addr, size_t len);
+static int stm32f1_flash_erase(struct target_s *target, uint32_t addr, size_t len,
 				uint32_t pagesize);
 static int stm32f1_flash_write(struct target_s *target, uint32_t dest,
-			const uint8_t *src, int len);
+                               const uint8_t *src, size_t len);
 
 static const char stm32f1_driver_str[] = "STM32, Medium density.";
 static const char stm32hd_driver_str[] = "STM32, High density.";
@@ -229,7 +229,8 @@ static void stm32f1_flash_unlock(ADIv5_AP_t *ap)
 	adiv5_ap_mem_write(ap, FLASH_KEYR, KEY2);
 }
 
-static int stm32f1_flash_erase(struct target_s *target, uint32_t addr, int len, uint32_t pagesize)
+static int stm32f1_flash_erase(struct target_s *target, uint32_t addr,
+                               size_t len, uint32_t pagesize)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
 	uint16_t sr;
@@ -264,18 +265,18 @@ static int stm32f1_flash_erase(struct target_s *target, uint32_t addr, int len, 
 	return 0;
 }
 
-static int stm32hd_flash_erase(struct target_s *target, uint32_t addr, int len)
+static int stm32hd_flash_erase(struct target_s *target, uint32_t addr, size_t len)
 {
 	return stm32f1_flash_erase(target, addr, len, 0x800);
 }
 
-static int stm32md_flash_erase(struct target_s *target, uint32_t addr, int len)
+static int stm32md_flash_erase(struct target_s *target, uint32_t addr, size_t len)
 {
 	return stm32f1_flash_erase(target, addr, len, 0x400);
 }
 
 static int stm32f1_flash_write(struct target_s *target, uint32_t dest,
-			  const uint8_t *src, int len)
+                               const uint8_t *src, size_t len)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
 	uint32_t offset = dest % 4;

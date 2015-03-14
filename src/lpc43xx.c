@@ -127,9 +127,9 @@ static void lpc43xx_iap_call(struct target_s *target, struct flash_param *param,
                              unsigned param_len);
 static int lpc43xx_flash_prepare(struct target_s *target,
                                  uint32_t addr, int len);
-static int lpc43xx_flash_erase(struct target_s *target, uint32_t addr, int len);
+static int lpc43xx_flash_erase(struct target_s *target, uint32_t addr, size_t len);
 static int lpc43xx_flash_write(struct target_s *target,
-                               uint32_t dest, const uint8_t *src, int len);
+                               uint32_t dest, const uint8_t *src, size_t len);
 static void lpc43xx_set_internal_clock(struct target_s *target);
 static void lpc43xx_wdt_set_period(struct target_s *target);
 static void lpc43xx_wdt_pet(struct target_s *target);
@@ -384,7 +384,7 @@ static int lpc43xx_flash_prepare(struct target_s *target, uint32_t addr, int len
 	return 0;
 }
 
-static int lpc43xx_flash_erase(struct target_s *target, uint32_t addr, int len)
+static int lpc43xx_flash_erase(struct target_s *target, uint32_t addr, size_t len)
 {
 	struct flash_program flash_pgm;
 
@@ -433,7 +433,7 @@ static void lpc43xx_set_internal_clock(struct target_s *target)
 }
 
 static int lpc43xx_flash_write(struct target_s *target,
-                               uint32_t dest, const uint8_t *src, int len)
+                               uint32_t dest, const uint8_t *src, size_t len)
 {
 	unsigned first_chunk = dest / IAP_PGM_CHUNKSIZE;
 	unsigned last_chunk = (dest + len - 1) / IAP_PGM_CHUNKSIZE;
@@ -455,7 +455,7 @@ static int lpc43xx_flash_write(struct target_s *target,
 			memset(flash_pgm.data, 0xff, sizeof(flash_pgm.data));
 
 			/* copy as much as fits */
-			int copylen = IAP_PGM_CHUNKSIZE - chunk_offset;
+			size_t copylen = IAP_PGM_CHUNKSIZE - chunk_offset;
 			if (copylen > len)
 				copylen = len;
 

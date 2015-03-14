@@ -180,9 +180,9 @@ struct target_s {
 
 	/* Flash memory access functions */
 	const char *xml_mem_map;
-	int (*flash_erase)(struct target_s *target, uint32_t addr, int len);
+	int (*flash_erase)(struct target_s *target, uint32_t addr, size_t len);
 	int (*flash_write)(struct target_s *target, uint32_t dest,
-				const uint8_t *src, int len);
+	                   const uint8_t *src, size_t len);
 
 	/* Host I/O support */
 	void (*hostio_reply)(target *t, int32_t retcode, uint32_t errcode);

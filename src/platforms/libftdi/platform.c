@@ -121,7 +121,7 @@ void platform_init(int argc, char **argv)
 {
 	int err;
 	int c;
-	int index = 0;
+	unsigned index = 0;
 	char *serial = NULL;
 	char * cablename =  "ftdi";
 	uint8_t ftdi_init[9] = {TCK_DIVISOR, 0x01, 0x00, SET_BITS_LOW, 0,0,

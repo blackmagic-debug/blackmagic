@@ -31,9 +31,9 @@
 #include "adiv5.h"
 #include "target.h"
 
-static int lmi_flash_erase(struct target_s *target, uint32_t addr, int len);
+static int lmi_flash_erase(struct target_s *target, uint32_t addr, size_t len);
 static int lmi_flash_write(struct target_s *target, uint32_t dest,
-			  const uint8_t *src, int len);
+			  const uint8_t *src, size_t len);
 
 static const char lmi_driver_str[] = "TI Stellaris/Tiva";
 
@@ -119,7 +119,7 @@ bool lmi_probe(struct target_s *target)
 	return false;
 }
 
-int lmi_flash_erase(struct target_s *target, uint32_t addr, int len)
+int lmi_flash_erase(struct target_s *target, uint32_t addr, size_t len)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
 	uint32_t tmp;
@@ -151,7 +151,7 @@ int lmi_flash_erase(struct target_s *target, uint32_t addr, int len)
 }
 
 int lmi_flash_write(struct target_s *target, uint32_t dest,
-			  const uint8_t *src, int len)
+                    const uint8_t *src, size_t len)
 {
 	uint32_t data[(len>>2)+2];
 	data[0] = dest;

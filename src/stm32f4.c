@@ -46,9 +46,9 @@ const struct command_s stm32f4_cmd_list[] = {
 };
 
 
-static int stm32f4_flash_erase(struct target_s *target, uint32_t addr, int len);
+static int stm32f4_flash_erase(struct target_s *target, uint32_t addr, size_t len);
 static int stm32f4_flash_write(struct target_s *target, uint32_t dest,
-			const uint8_t *src, int len);
+                               const uint8_t *src, size_t len);
 
 static const char stm32f4_driver_str[] = "STM32F4xx";
 
@@ -189,7 +189,7 @@ static void stm32f4_flash_unlock(ADIv5_AP_t *ap)
 	}
 }
 
-static int stm32f4_flash_erase(struct target_s *target, uint32_t addr, int len)
+static int stm32f4_flash_erase(struct target_s *target, uint32_t addr, size_t len)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
 	uint16_t sr;
@@ -237,7 +237,7 @@ static int stm32f4_flash_erase(struct target_s *target, uint32_t addr, int len)
 }
 
 static int stm32f4_flash_write(struct target_s *target, uint32_t dest,
-			  const uint8_t *src, int len)
+                               const uint8_t *src, size_t len)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
 	uint32_t offset = dest % 4;

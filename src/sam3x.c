@@ -28,9 +28,9 @@
 #include "command.h"
 #include "gdb_packet.h"
 
-static int sam3x_flash_erase(struct target_s *target, uint32_t addr, int len);
+static int sam3x_flash_erase(struct target_s *target, uint32_t addr, size_t len);
 static int sam3x_flash_write(struct target_s *target, uint32_t dest,
-			const uint8_t *src, int len);
+                             const uint8_t *src, size_t len);
 
 static bool sam3x_cmd_gpnvm_get(target *t);
 static bool sam3x_cmd_gpnvm_set(target *t, int argc, char *argv[]);
@@ -285,7 +285,7 @@ sam3x_flash_base(struct target_s *target, uint32_t addr, uint32_t *offset)
 	return SAM3N_EEFC_BASE;
 }
 
-static int sam3x_flash_erase(struct target_s *target, uint32_t addr, int len)
+static int sam3x_flash_erase(struct target_s *target, uint32_t addr, size_t len)
 {
 	uint32_t offset;
 	uint32_t base = sam3x_flash_base(target, addr, &offset);
@@ -341,7 +341,7 @@ static int sam3x_flash_erase(struct target_s *target, uint32_t addr, int len)
 }
 
 static int sam3x_flash_write(struct target_s *target, uint32_t dest,
-			  const uint8_t *src, int len)
+                             const uint8_t *src, size_t len)
 {
 	unsigned page_size;
 	if (strcmp(target->driver, "Atmel SAM4S") == 0) {
@@ -359,7 +359,7 @@ static int sam3x_flash_write(struct target_s *target, uint32_t dest,
 
 	for (unsigned chunk = first_chunk; chunk <= last_chunk; chunk++) {
 
-		DEBUG("chunk %u len %d\n", chunk, len);
+		DEBUG("chunk %u len %zu\n", chunk, len);
 		/* first and last chunk may require special handling */
 		if ((chunk == first_chunk) || (chunk == last_chunk)) {
 
@@ -367,7 +367,7 @@ static int sam3x_flash_write(struct target_s *target, uint32_t dest,
 			memset(buf, 0xff, sizeof(buf));
 
 			/* copy as much as fits */
-			int copylen = page_size - offset;
+			size_t copylen = page_size - offset;
 			if (copylen > len)
 				copylen = len;
 			memcpy(&buf[offset], src, copylen);

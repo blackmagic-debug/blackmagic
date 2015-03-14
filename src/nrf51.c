@@ -27,9 +27,9 @@
 #include "command.h"
 #include "gdb_packet.h"
 
-static int nrf51_flash_erase(struct target_s *target, uint32_t addr, int len);
+static int nrf51_flash_erase(struct target_s *target, uint32_t addr, size_t len);
 static int nrf51_flash_write(struct target_s *target, uint32_t dest,
-			const uint8_t *src, int len);
+                             const uint8_t *src, size_t len);
 
 static bool nrf51_cmd_erase_all(target *t);
 static bool nrf51_cmd_read_hwid(target *t);
@@ -163,7 +163,7 @@ bool nrf51_probe(struct target_s *target)
 	return false;
 }
 
-static int nrf51_flash_erase(struct target_s *target, uint32_t addr, int len)
+static int nrf51_flash_erase(struct target_s *target, uint32_t addr, size_t len)
 {
 
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
@@ -210,7 +210,7 @@ static int nrf51_flash_erase(struct target_s *target, uint32_t addr, int len)
 }
 
 static int nrf51_flash_write(struct target_s *target, uint32_t dest,
-			  const uint8_t *src, int len)
+                             const uint8_t *src, size_t len)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
 	uint32_t offset = dest % 4;
