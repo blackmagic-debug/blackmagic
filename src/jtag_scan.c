@@ -74,7 +74,7 @@ static struct jtag_dev_descr_s {
 };
 
 /* bucket of ones for don't care TDI */
-static const char ones[] = "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF";
+static const uint8_t ones[] = "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF";
 
 /* Scan JTAG chain for devices, store IR length and IDCODE (if present).
  * Reset TAP state machine.

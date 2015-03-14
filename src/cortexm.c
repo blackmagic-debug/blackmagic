@@ -853,7 +853,8 @@ static int cortexm_hostio_request(target *t)
 		uint32_t pflag = flags[params[1] >> 1];
 		char filename[4];
 
-		target_mem_read_bytes(t, filename, params[0], sizeof(filename));
+		target_mem_read_bytes(t, (uint8_t *)filename,
+		                      params[0], sizeof(filename));
 		/* handle requests for console i/o */
 		if (!strcmp(filename, ":tt")) {
 			if (pflag == FILEIO_O_RDONLY)

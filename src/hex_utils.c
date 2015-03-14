@@ -24,15 +24,16 @@
 #include "general.h"
 #include "hex_utils.h"
 
-static char hexdigits[] = "0123456789abcdef";
+static const char hexdigits[] = "0123456789abcdef";
 
-char * hexify(char *hex, const unsigned char *buf, int size)
+char * hexify(char *hex, const void *buf, size_t size)
 {
 	char *tmp = hex;
+	const uint8_t *b = buf;
 
-	while(size--) {
-		*tmp++ = hexdigits[*buf >> 4];
-		*tmp++ = hexdigits[*buf++ & 0xF];
+	while (size--) {
+		*tmp++ = hexdigits[*b >> 4];
+		*tmp++ = hexdigits[*b++ & 0xF];
 	}
 	*tmp++ = 0;
 
@@ -49,11 +50,12 @@ static uint8_t unhex_digit(char hex)
 	return tmp;
 }
 
-char * unhexify(unsigned char *buf, const char *hex, int size)
+char * unhexify(void *buf, const char *hex, size_t size)
 {
-	while(size--) {
-		*buf = unhex_digit(*hex++) << 4;
-		*buf++ |= unhex_digit(*hex++);
+	uint8_t *b = buf;
+	while (size--) {
+		*b = unhex_digit(*hex++) << 4;
+		*b++ |= unhex_digit(*hex++);
 	}
 	return buf;
 }

@@ -29,8 +29,7 @@
 
 #include <stdarg.h>
 
-int
-gdb_getpacket(unsigned char *packet, int size)
+int gdb_getpacket(char *packet, int size)
 {
 	unsigned char c;
 	unsigned char csum;
@@ -89,7 +88,7 @@ gdb_getpacket(unsigned char *packet, int size)
 	return i;
 }
 
-void gdb_putpacket(unsigned char *packet, int size)
+void gdb_putpacket(const char *packet, int size)
 {
 	int i;
 	unsigned char csum;
@@ -130,7 +129,7 @@ void gdb_putpacket(unsigned char *packet, int size)
 	} while((gdb_if_getchar_to(2000) != '+') && (tries++ < 3));
 }
 
-void gdb_putpacket_f(const unsigned char *fmt, ...)
+void gdb_putpacket_f(const char *fmt, ...)
 {
 	va_list ap;
 	char *buf;

@@ -21,9 +21,8 @@
 #ifndef __HEX_UTILS_H
 #define __HEX_UTILS_H
 
-char * hexify(char *hex, const unsigned char *buf, int size);
-
-char * unhexify(unsigned char *buf, const char *hex, int size);
+char * hexify(char *hex, const void *buf, size_t size);
+char * unhexify(void *buf, const char *hex, size_t size);
 
 #endif
 

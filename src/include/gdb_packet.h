@@ -21,10 +21,10 @@
 #ifndef __GDB_PACKET_H
 #define __GDB_PACKET_H
 
-int gdb_getpacket(unsigned char *packet, int size);
-void gdb_putpacket(unsigned char *packet, int size);
+int gdb_getpacket(char *packet, int size);
+void gdb_putpacket(const char *packet, int size);
 #define gdb_putpacketz(packet) gdb_putpacket((packet), strlen(packet))
-void gdb_putpacket_f(const unsigned char *packet, ...);
+void gdb_putpacket_f(const char *packet, ...);
 
 void gdb_out(const char *buf);
 void gdb_outf(const char *fmt, ...);

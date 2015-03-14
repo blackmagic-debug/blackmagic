@@ -97,7 +97,7 @@ jtagtap_tms_seq(uint32_t MS, int ticks)
 void
 jtagtap_tdi_seq(const uint8_t final_tms, const uint8_t *DI, int ticks)
 {
-	char *tmp;
+	uint8_t *tmp;
 	int index = 0;
 	int rticks;
 

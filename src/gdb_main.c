@@ -41,7 +41,7 @@
 #define ERROR_IF_NO_TARGET()	\
 	if(!cur_target) { gdb_putpacketz("EFF"); break; }
 
-static unsigned char pbuf[BUF_SIZE];
+static char pbuf[BUF_SIZE];
 
 static target *cur_target;
 static target *last_target;
@@ -287,7 +287,7 @@ handle_q_string_reply(const char *str, const char *param)
 		return;
 	}
 	if (addr < strlen (str)) {
-		uint8_t reply[len+2];
+		char reply[len+2];
 		reply[0] = 'm';
 		strncpy (reply + 1, &str[addr], len);
 		if(len > strlen(&str[addr]))
@@ -305,7 +305,7 @@ handle_q_packet(char *packet, int len)
 	uint32_t addr, alen;
 
 	if(!strncmp(packet, "qRcmd,", 6)) {
-		unsigned char *data;
+		char *data;
 		int datalen;
 
 		/* calculate size and allocate buffer for command */

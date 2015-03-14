@@ -9,7 +9,7 @@ endif
 
 BUILDDATE := `date +"%Y%m%d"`
 
-CFLAGS += -Wall -Wextra -Wno-pointer-sign -Wno-char-subscripts\
+CFLAGS += -Wall -Wextra -Wno-char-subscripts\
 	-Wno-sign-compare \
 	-O2 -std=gnu99 -g3 -DBUILDDATE=\"$(BUILDDATE)\"\
 	-I. -Iinclude -Iplatforms/common -I$(PLATFORM_DIR) \

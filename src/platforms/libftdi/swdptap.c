@@ -45,7 +45,7 @@ int swdptap_init(void)
 		abort();
 	}
 
-	assert(ftdi_write_data(ftdic, "\xAB\xA8", 2) == 2);
+	assert(ftdi_write_data(ftdic, (void*)"\xAB\xA8", 2) == 2);
 
 	/* This must be investigated in more detail.
 	 * As described in STM32 Reference Manual... */
@@ -70,7 +70,6 @@ static void swdptap_turnaround(uint8_t dir)
 {
 	static uint8_t olddir = 0;
 
-	/*DEBUG("%s", dir ? "\n-> ":"\n<- ");*/
 	platform_buffer_flush();
 
 	if(dir == olddir) return;
@@ -80,7 +79,7 @@ static void swdptap_turnaround(uint8_t dir)
 		assert(ftdi_set_bitmode(ftdic, 0xA3, BITMODE_BITBANG) == 0);
 
 	/* One clock cycle */
-	ftdi_write_data(ftdic, "\xAB\xA8", 2);
+	ftdi_write_data(ftdic, (void *)"\xAB\xA8", 2);
 
 	if(!dir) /* SWDIO goes to output */
 		assert(ftdi_set_bitmode(ftdic, 0xAB, BITMODE_BITBANG) == 0);
@@ -90,12 +89,9 @@ static uint8_t swdptap_bit_in(void)
 {
 	uint8_t ret;
 
-	//ftdi_read_data(ftdic, &ret, 1);
 	ftdi_read_pins(ftdic, &ret);
 	ret &= 0x08;
-	ftdi_write_data(ftdic, "\xA1\xA0", 2);
-
-	//DEBUG("%d", ret?1:0);
+	ftdi_write_data(ftdic, (void *)"\xA1\xA0", 2);
 
 	return ret;
 }
@@ -104,13 +100,10 @@ static void swdptap_bit_out(uint8_t val)
 {
 	uint8_t buf[3] = "\xA0\xA1\xA0";
 
-	//DEBUG("%d", val);
-
 	if(val) {
 		for(int i = 0; i < 3; i++)
 			buf[i] |= 0x08;
 	}
-	//ftdi_write_data(ftdic, buf, 3);
 	platform_buffer_write(buf, 3);
 }
 
