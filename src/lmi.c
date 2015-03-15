@@ -100,7 +100,7 @@ static const uint16_t lmi_flash_write_stub[] = {
 
 bool lmi_probe(struct target_s *target)
 {
-	uint32_t did1 = adiv5_ap_mem_read(adiv5_target_ap(target), 0x400FE004);
+	uint32_t did1 = target_mem_read32(target, 0x400FE004);
 	switch (did1 >> 16) {
 	case 0x1049:	/* LM3S3748 */
 		target->driver = lmi_driver_str;

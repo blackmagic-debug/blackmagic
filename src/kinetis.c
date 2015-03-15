@@ -72,7 +72,7 @@ static const char kl25_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 
 bool kinetis_probe(struct target_s *t)
 {
-	uint32_t sdid = adiv5_ap_mem_read(adiv5_target_ap(t), SIM_SDID);
+	uint32_t sdid = target_mem_read32(t, SIM_SDID);
 	switch (sdid >> 20) {
 	case 0x251:
 		t->driver = "KL25";
@@ -87,12 +87,11 @@ bool kinetis_probe(struct target_s *t)
 static bool
 kl25_command(struct target_s *t, uint8_t cmd, uint32_t addr, const uint8_t data[8])
 {
-	ADIv5_AP_t *ap = adiv5_target_ap(t);
 	uint8_t fstat;
 
         /* Wait for CCIF to be high */
 	do {
-		fstat = adiv5_ap_mem_read_byte(ap, FTFA_FSTAT);
+		fstat = target_mem_read8(t, FTFA_FSTAT);
 		/* Check ACCERR and FPVIOL are zero in FSTAT */
             	if (fstat & (FTFA_FSTAT_ACCERR | FTFA_FSTAT_FPVIOL))
 			return false;
@@ -101,18 +100,18 @@ kl25_command(struct target_s *t, uint8_t cmd, uint32_t addr, const uint8_t data[
 	/* Write command to FCCOB */
 	addr &= 0xffffff;
 	addr |= (uint32_t)cmd << 24;
-	adiv5_ap_mem_write(ap, FTFA_FCCOB(0), addr);
+	target_mem_write32(t, FTFA_FCCOB(0), addr);
 	if (data) {
-		adiv5_ap_mem_write(ap, FTFA_FCCOB(4), *(uint32_t*)&data[0]);
-		adiv5_ap_mem_write(ap, FTFA_FCCOB(8), *(uint32_t*)&data[4]);
+		target_mem_write32(t, FTFA_FCCOB(4), *(uint32_t*)&data[0]);
+		target_mem_write32(t, FTFA_FCCOB(8), *(uint32_t*)&data[4]);
 	}
 
 	/* Enable execution by clearing CCIF */
-	adiv5_ap_mem_write_byte(ap, FTFA_FSTAT, FTFA_FSTAT_CCIF);
+	target_mem_write8(t, FTFA_FSTAT, FTFA_FSTAT_CCIF);
 
 	/* Wait for execution to complete */
 	do {
-		fstat = adiv5_ap_mem_read_byte(ap, FTFA_FSTAT);
+		fstat = target_mem_read8(t, FTFA_FSTAT);
 		/* Check ACCERR and FPVIOL are zero in FSTAT */
             	if (fstat & (FTFA_FSTAT_ACCERR | FTFA_FSTAT_FPVIOL))
 			return false;

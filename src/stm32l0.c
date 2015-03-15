@@ -72,13 +72,13 @@
      to regain control of the target after the option byte reload.
 
        stm32l0_option_write(t, 0x1ff80000, 0xffff0000);
-       adiv5_ap_mem_write(ap, STM32L0_NVM_PECR, STM32L0_NVM_PECR_OBL_LAUNCH);
+       target_mem_write32(target, STM32L0_NVM_PECR, STM32L0_NVM_PECR_OBL_LAUNCH);
        stm32l0_option_write(t, 0x1ff80000, 0xff5500aa);
-       adiv5_ap_mem_write(ap, STM32L0_NVM_PECR, STM32L0_NVM_PECR_OBL_LAUNCH);
+       target_mem_write32(target, STM32L0_NVM_PECR, STM32L0_NVM_PECR_OBL_LAUNCH);
 
        uint32_t sr;
        do {
-         sr = adiv5_ap_mem_read(ap, STM32L0_NVM_SR);
+         sr = target_mem_read32(target, STM32L0_NVM_SR);
        } while (sr & STM32L0_NVM_SR_BSY);
 
    o Errors.  We probably should clear SR errors immediately after
@@ -288,7 +288,7 @@ bool stm32l0_probe(struct target_s* target)
 
 #if defined(CONFIG_STM32L1)
 
-        idcode = adiv5_ap_mem_read(adiv5_target_ap(target),
+        idcode = target_mem_read32(target,
                                    STM32L1_DBGMCU_IDCODE_PHYS) & 0xfff;
         switch (idcode) {
         case 0x416:                   /* CAT. 1 device */
@@ -306,7 +306,7 @@ bool stm32l0_probe(struct target_s* target)
         }
 #endif
 
-        idcode = adiv5_ap_mem_read(adiv5_target_ap(target),
+        idcode = target_mem_read32(target,
                                    STM32L0_DBGMCU_IDCODE_PHYS) & 0xfff;
         switch (idcode) {
         default:
@@ -327,42 +327,42 @@ bool stm32l0_probe(struct target_s* target)
 
 
 /** Lock the NVM control registers preventing writes or erases. */
-static void stm32lx_nvm_lock(ADIv5_AP_t* ap, uint32_t nvm)
+static void stm32lx_nvm_lock(target *t, uint32_t nvm)
 {
-        adiv5_ap_mem_write(ap, STM32Lx_NVM_PECR(nvm), STM32Lx_NVM_PECR_PELOCK);
+        target_mem_write32(t, STM32Lx_NVM_PECR(nvm), STM32Lx_NVM_PECR_PELOCK);
 }
 
 
 /** Unlock the NVM control registers for modifying program or
     data flash.  Returns true if the unlock succeeds. */
-static bool stm32lx_nvm_prog_data_unlock(ADIv5_AP_t* ap, uint32_t nvm)
+static bool stm32lx_nvm_prog_data_unlock(target* t, uint32_t nvm)
 {
         /* Always lock first because that's the only way to know that the
            unlock can succeed on the STM32L0's. */
-        adiv5_ap_mem_write(ap, STM32Lx_NVM_PECR(nvm),  STM32Lx_NVM_PECR_PELOCK);
-        adiv5_ap_mem_write(ap, STM32Lx_NVM_PEKEYR(nvm),  STM32Lx_NVM_PEKEY1);
-        adiv5_ap_mem_write(ap, STM32Lx_NVM_PEKEYR(nvm),  STM32Lx_NVM_PEKEY2);
-        adiv5_ap_mem_write(ap, STM32Lx_NVM_PRGKEYR(nvm), STM32Lx_NVM_PRGKEY1);
-        adiv5_ap_mem_write(ap, STM32Lx_NVM_PRGKEYR(nvm), STM32Lx_NVM_PRGKEY2);
+        target_mem_write32(t, STM32Lx_NVM_PECR(nvm),  STM32Lx_NVM_PECR_PELOCK);
+        target_mem_write32(t, STM32Lx_NVM_PEKEYR(nvm),  STM32Lx_NVM_PEKEY1);
+        target_mem_write32(t, STM32Lx_NVM_PEKEYR(nvm),  STM32Lx_NVM_PEKEY2);
+        target_mem_write32(t, STM32Lx_NVM_PRGKEYR(nvm), STM32Lx_NVM_PRGKEY1);
+        target_mem_write32(t, STM32Lx_NVM_PRGKEYR(nvm), STM32Lx_NVM_PRGKEY2);
 
-        return !(adiv5_ap_mem_read(ap, STM32Lx_NVM_PECR(nvm))
+        return !(target_mem_read32(t, STM32Lx_NVM_PECR(nvm))
                  & STM32Lx_NVM_PECR_PRGLOCK);
 }
 
 
 /** Unlock the NVM control registers for modifying option bytes.
     Returns true if the unlock succeeds. */
-static bool stm32lx_nvm_opt_unlock(ADIv5_AP_t* ap, uint32_t nvm)
+static bool stm32lx_nvm_opt_unlock(target *t, uint32_t nvm)
 {
         /* Always lock first because that's the only way to know that the
            unlock can succeed on the STM32L0's. */
-        adiv5_ap_mem_write(ap, STM32Lx_NVM_PECR(nvm),  STM32Lx_NVM_PECR_PELOCK);
-        adiv5_ap_mem_write(ap, STM32Lx_NVM_PEKEYR(nvm),  STM32Lx_NVM_PEKEY1);
-        adiv5_ap_mem_write(ap, STM32Lx_NVM_PEKEYR(nvm),  STM32Lx_NVM_PEKEY2);
-        adiv5_ap_mem_write(ap, STM32Lx_NVM_OPTKEYR(nvm), STM32Lx_NVM_OPTKEY1);
-        adiv5_ap_mem_write(ap, STM32Lx_NVM_OPTKEYR(nvm), STM32Lx_NVM_OPTKEY2);
+        target_mem_write32(t, STM32Lx_NVM_PECR(nvm),  STM32Lx_NVM_PECR_PELOCK);
+        target_mem_write32(t, STM32Lx_NVM_PEKEYR(nvm),  STM32Lx_NVM_PEKEY1);
+        target_mem_write32(t, STM32Lx_NVM_PEKEYR(nvm),  STM32Lx_NVM_PEKEY2);
+        target_mem_write32(t, STM32Lx_NVM_OPTKEYR(nvm), STM32Lx_NVM_OPTKEY1);
+        target_mem_write32(t, STM32Lx_NVM_OPTKEYR(nvm), STM32Lx_NVM_OPTKEY2);
 
-        return !(adiv5_ap_mem_read(ap, STM32Lx_NVM_PECR(nvm))
+        return !(target_mem_read32(t, STM32Lx_NVM_PECR(nvm))
                  & STM32Lx_NVM_PECR_OPTLOCK);
 }
 
@@ -400,8 +400,7 @@ static int stm32lx_nvm_prog_erase_stubbed(struct target_s* target,
         while (!target_halt_wait(target))
                 ;
         {
-                ADIv5_AP_t* ap = adiv5_target_ap(target);
-                if (adiv5_ap_mem_read(ap, STM32Lx_NVM_SR(nvm))
+                if (target_mem_read32(target, STM32Lx_NVM_SR(nvm))
                     & STM32Lx_NVM_SR_ERR_M)
                         return -1;
         }
@@ -477,8 +476,7 @@ static int stm32lx_nvm_prog_write_stubbed(struct target_s* target,
                 while (!target_halt_wait(target))
                         ;
 
-                if (adiv5_ap_mem_read(adiv5_target_ap(target),
-                                      STM32Lx_NVM_SR(nvm))
+                if (target_mem_read32(target, STM32Lx_NVM_SR(nvm))
                    & STM32Lx_NVM_SR_ERR_M)
                         return -1;
         }
@@ -557,7 +555,6 @@ static int stm32lx_nvm_write(struct target_s* target,
 static int stm32lx_nvm_prog_erase(struct target_s* target,
                                   uint32_t addr, size_t len)
 {
-        ADIv5_AP_t* ap = adiv5_target_ap(target);
         const size_t page_size = stm32lx_nvm_prog_page_size(target);
         const uint32_t nvm = stm32lx_nvm_phys(target);
 
@@ -565,15 +562,15 @@ static int stm32lx_nvm_prog_erase(struct target_s* target,
         len += (addr & 3);
         addr &= ~3;
 
-        if (!stm32lx_nvm_prog_data_unlock(ap, nvm))
+        if (!stm32lx_nvm_prog_data_unlock(target, nvm))
                 return -1;
 
         /* Flash page erase instruction */
-        adiv5_ap_mem_write(ap, STM32Lx_NVM_PECR(nvm),
+        target_mem_write32(target, STM32Lx_NVM_PECR(nvm),
                            STM32Lx_NVM_PECR_ERASE | STM32Lx_NVM_PECR_PROG);
 
         {
-                uint32_t pecr = adiv5_ap_mem_read(ap, STM32Lx_NVM_PECR(nvm));
+                uint32_t pecr = target_mem_read32(target, STM32Lx_NVM_PECR(nvm));
                 if ((pecr & (STM32Lx_NVM_PECR_PROG | STM32Lx_NVM_PECR_ERASE))
                    != (STM32Lx_NVM_PECR_PROG | STM32Lx_NVM_PECR_ERASE))
                         return -1;
@@ -581,22 +578,22 @@ static int stm32lx_nvm_prog_erase(struct target_s* target,
 
         /* Clear errors.  Note that this only works when we wait for the NVM
            block to complete the last operation. */
-        adiv5_ap_mem_write(ap, STM32Lx_NVM_SR(nvm), STM32Lx_NVM_SR_ERR_M);
+        target_mem_write32(target, STM32Lx_NVM_SR(nvm), STM32Lx_NVM_SR_ERR_M);
 
         while (len > 0) {
                 /* Write first word of page to 0 */
-                adiv5_ap_mem_write(ap, addr, 0);
+                target_mem_write32(target, addr, 0);
 
                 len  -= page_size;
                 addr += page_size;
         }
 
         /* Disable further programming by locking PECR */
-        stm32lx_nvm_lock(ap, nvm);
+        stm32lx_nvm_lock(target, nvm);
 
         /* Wait for completion or an error */
         while (1) {
-                uint32_t sr = adiv5_ap_mem_read(ap, STM32Lx_NVM_SR(nvm));
+                uint32_t sr = target_mem_read32(target, STM32Lx_NVM_SR(nvm));
                 if (target_check_error(target))
                         return -1;
                 if (sr & STM32Lx_NVM_SR_BSY)
@@ -618,7 +615,6 @@ static int stm32lx_nvm_prog_write(struct target_s* target,
                                   const uint8_t* source_8,
                                   size_t size)
 {
-        ADIv5_AP_t*    ap         = adiv5_target_ap(target);
         const uint32_t nvm        = stm32lx_nvm_phys(target);
         const bool     is_stm32l1 = stm32lx_is_stm32l1(target);
 
@@ -629,7 +625,7 @@ static int stm32lx_nvm_prog_write(struct target_s* target,
         if ((destination & 3) || (size & 3))
                 return -1;
 
-        if (!stm32lx_nvm_prog_data_unlock(ap, nvm))
+        if (!stm32lx_nvm_prog_data_unlock(target, nvm))
                 return -1;
 
         const size_t half_page_size = stm32lx_nvm_prog_page_size(target)/2;
@@ -639,7 +635,7 @@ static int stm32lx_nvm_prog_write(struct target_s* target,
 
                 /* Wait for BSY to clear because we cannot write the PECR until
                    the previous operation completes on STM32Lxxx. */
-                while (adiv5_ap_mem_read(ap, STM32Lx_NVM_SR(nvm))
+                while (target_mem_read32(target, STM32Lx_NVM_SR(nvm))
                        & STM32Lx_NVM_SR_BSY)
                         if (target_check_error(target)) {
                                 return -1;
@@ -649,7 +645,7 @@ static int stm32lx_nvm_prog_write(struct target_s* target,
                 // than a half page to write
                 if (size < half_page_size
                     || (destination & (half_page_size - 1))) {
-                        adiv5_ap_mem_write(ap, STM32Lx_NVM_PECR(nvm),
+                        target_mem_write32(target, STM32Lx_NVM_PECR(nvm),
                                            is_stm32l1
                                            ? 0
                                            : STM32Lx_NVM_PECR_PROG);
@@ -666,7 +662,7 @@ static int stm32lx_nvm_prog_write(struct target_s* target,
                 }
                 // Or we are writing a half-page(s)
                 else {
-                        adiv5_ap_mem_write(ap, STM32Lx_NVM_PECR(nvm),
+                        target_mem_write32(target, STM32Lx_NVM_PECR(nvm),
                                            STM32Lx_NVM_PECR_PROG
                                            | STM32Lx_NVM_PECR_FPRG);
 
@@ -679,11 +675,11 @@ static int stm32lx_nvm_prog_write(struct target_s* target,
         }
 
         /* Disable further programming by locking PECR */
-        stm32lx_nvm_lock(ap, nvm);
+        stm32lx_nvm_lock(target, nvm);
 
         /* Wait for completion or an error */
         while (1) {
-                uint32_t sr = adiv5_ap_mem_read(ap, STM32Lx_NVM_SR(nvm));
+                uint32_t sr = target_mem_read32(target, STM32Lx_NVM_SR(nvm));
                 if (target_check_error(target)) {
                         return -1;
                 }
@@ -706,7 +702,6 @@ static int stm32lx_nvm_prog_write(struct target_s* target,
 static int stm32lx_nvm_data_erase(struct target_s* target,
                                   uint32_t addr, size_t len)
 {
-        ADIv5_AP_t* ap = adiv5_target_ap(target);
         const size_t page_size = stm32lx_nvm_data_page_size(target);
         const uint32_t nvm = stm32lx_nvm_phys(target);
 
@@ -714,15 +709,15 @@ static int stm32lx_nvm_data_erase(struct target_s* target,
         len += (addr & 3);
         addr &= ~3;
 
-        if (!stm32lx_nvm_prog_data_unlock(ap, nvm))
+        if (!stm32lx_nvm_prog_data_unlock(target, nvm))
                 return -1;
 
         /* Flash data erase instruction */
-        adiv5_ap_mem_write(ap, STM32Lx_NVM_PECR(nvm),
+        target_mem_write32(target, STM32Lx_NVM_PECR(nvm),
                            STM32Lx_NVM_PECR_ERASE | STM32Lx_NVM_PECR_DATA);
 
         {
-                uint32_t pecr = adiv5_ap_mem_read(ap, STM32Lx_NVM_PECR(nvm));
+                uint32_t pecr = target_mem_read32(target, STM32Lx_NVM_PECR(nvm));
                 if ((pecr & (STM32Lx_NVM_PECR_ERASE | STM32Lx_NVM_PECR_DATA))
                    != (STM32Lx_NVM_PECR_ERASE | STM32Lx_NVM_PECR_DATA))
                         return -1;
@@ -730,18 +725,18 @@ static int stm32lx_nvm_data_erase(struct target_s* target,
 
         while (len > 0) {
                 /* Write first word of page to 0 */
-                adiv5_ap_mem_write(ap, addr, 0);
+                target_mem_write32(target, addr, 0);
 
                 len  -= page_size;
                 addr += page_size;
         }
 
         /* Disable further programming by locking PECR */
-        stm32lx_nvm_lock(ap, nvm);
+        stm32lx_nvm_lock(target, nvm);
 
         /* Wait for completion or an error */
         while (1) {
-                uint32_t sr = adiv5_ap_mem_read(ap, STM32Lx_NVM_SR(nvm));
+                uint32_t sr = target_mem_read32(target, STM32Lx_NVM_SR(nvm));
                 if (target_check_error(target))
                         return -1;
                 if (sr & STM32Lx_NVM_SR_BSY)
@@ -764,22 +759,21 @@ static int stm32lx_nvm_data_write(struct target_s* target,
                                   const uint8_t* source_8,
                                   size_t size)
 {
-        ADIv5_AP_t*    ap         = adiv5_target_ap(target);
         const uint32_t nvm        = stm32lx_nvm_phys(target);
         const bool     is_stm32l1 = stm32lx_is_stm32l1(target);
         uint32_t* source	  = (uint32_t*) source_8;
 
-        if (!stm32lx_nvm_prog_data_unlock(ap, nvm))
+        if (!stm32lx_nvm_prog_data_unlock(target, nvm))
                 return -1;
 
 
-        adiv5_ap_mem_write(ap, STM32Lx_NVM_PECR(nvm),
+        target_mem_write32(target, STM32Lx_NVM_PECR(nvm),
                            is_stm32l1 ? 0 : STM32Lx_NVM_PECR_DATA);
 
         while (size) {
                 size -= 4;
                 uint32_t v = *source++;
-                adiv5_ap_mem_write(ap, destination, v);
+                target_mem_write32(target, destination, v);
                 destination += 4;
 
                 if (target_check_error(target))
@@ -787,11 +781,11 @@ static int stm32lx_nvm_data_write(struct target_s* target,
         }
 
         /* Disable further programming by locking PECR */
-        stm32lx_nvm_lock(ap, nvm);
+        stm32lx_nvm_lock(target, nvm);
 
         /* Wait for completion or an error */
         while (1) {
-                uint32_t sr = adiv5_ap_mem_read(ap, STM32Lx_NVM_SR(nvm));
+                uint32_t sr = target_mem_read32(target, STM32Lx_NVM_SR(nvm));
                 if (target_check_error(target))
                         return -1;
                 if (sr & STM32Lx_NVM_SR_BSY)
@@ -813,16 +807,15 @@ static int stm32lx_nvm_data_write(struct target_s* target,
     The return value is true if the write succeeded. */
 static bool stm32lx_option_write(target *t, uint32_t address, uint32_t value)
 {
-        ADIv5_AP_t*    ap  = adiv5_target_ap(t);
         const uint32_t nvm = stm32lx_nvm_phys(t);
 
         /* Erase and program option in one go. */
-        adiv5_ap_mem_write(ap, STM32Lx_NVM_PECR(nvm), STM32Lx_NVM_PECR_FIX);
-        adiv5_ap_mem_write(ap, address, value);
+        target_mem_write32(t, STM32Lx_NVM_PECR(nvm), STM32Lx_NVM_PECR_FIX);
+        target_mem_write32(t, address, value);
 
         uint32_t sr;
         do {
-                sr = adiv5_ap_mem_read(ap, STM32Lx_NVM_SR(nvm));
+                sr = target_mem_read32(t, STM32Lx_NVM_SR(nvm));
         } while (sr & STM32Lx_NVM_SR_BSY);
 
         return !(sr & STM32Lx_NVM_SR_ERR_M);
@@ -839,29 +832,28 @@ static bool stm32lx_option_write(target *t, uint32_t address, uint32_t value)
 static bool stm32lx_eeprom_write(target *t, uint32_t address,
                                  size_t cb, uint32_t value)
 {
-        ADIv5_AP_t*    ap         = adiv5_target_ap(t);
         const uint32_t nvm        = stm32lx_nvm_phys(t);
         const bool     is_stm32l1 = stm32lx_is_stm32l1(t);
 
         /* Clear errors. */
-        adiv5_ap_mem_write(ap, STM32Lx_NVM_SR(nvm), STM32Lx_NVM_SR_ERR_M);
+        target_mem_write32(t, STM32Lx_NVM_SR(nvm), STM32Lx_NVM_SR_ERR_M);
 
         /* Erase and program option in one go. */
-        adiv5_ap_mem_write(ap, STM32Lx_NVM_PECR(nvm),
+        target_mem_write32(t, STM32Lx_NVM_PECR(nvm),
                            (is_stm32l1 ? 0 : STM32Lx_NVM_PECR_DATA)
                            | STM32Lx_NVM_PECR_FIX);
         if (cb == 4)
-                adiv5_ap_mem_write(ap, address, value);
+                target_mem_write32(t, address, value);
         else if (cb == 2)
-                adiv5_ap_mem_write_halfword(ap, address, value);
+                target_mem_write16(t, address, value);
         else if (cb == 1)
-                adiv5_ap_mem_write_byte(ap, address, value);
+                target_mem_write8(t, address, value);
         else
                 return false;
 
         uint32_t sr;
         do {
-                sr = adiv5_ap_mem_read(ap, STM32Lx_NVM_SR(nvm));
+                sr = target_mem_read32(t, STM32Lx_NVM_SR(nvm));
         } while (sr & STM32Lx_NVM_SR_BSY);
 
         return !(sr & STM32Lx_NVM_SR_ERR_M);
@@ -888,11 +880,10 @@ static bool stm32lx_cmd_stubs(target* t,
 
 static bool stm32lx_cmd_option(target* t, int argc, char** argv)
 {
-        ADIv5_AP_t*    ap       = adiv5_target_ap(t);
         const uint32_t nvm      = stm32lx_nvm_phys(t);
         const size_t   opt_size = stm32lx_nvm_option_size(t);
 
-        if (!stm32lx_nvm_opt_unlock(ap, nvm)) {
+        if (!stm32lx_nvm_opt_unlock(t, nvm)) {
                 gdb_out("unable to unlock NVM option bytes\n");
                 return true;
         }
@@ -900,7 +891,7 @@ static bool stm32lx_cmd_option(target* t, int argc, char** argv)
         size_t cb = strlen(argv[1]);
 
         if (argc == 2 && !strncasecmp(argv[1], "obl_launch", cb)) {
-                adiv5_ap_mem_write(ap, STM32Lx_NVM_PECR(nvm),
+                target_mem_write32(t, STM32Lx_NVM_PECR(nvm),
                                    STM32Lx_NVM_PECR_OBL_LAUNCH);
         }
         else if (argc == 4 && !strncasecmp(argv[1], "raw", cb)) {
@@ -934,7 +925,7 @@ static bool stm32lx_cmd_option(target* t, int argc, char** argv)
         /* Report the current option values */
         for(unsigned i = 0; i < opt_size; i += sizeof(uint32_t)) {
                 uint32_t addr = STM32Lx_NVM_OPT_PHYS + i;
-                uint32_t val = adiv5_ap_mem_read(ap, addr);
+                uint32_t val = target_mem_read32(t, addr);
                 gdb_outf("0x%08x: 0x%04x 0x%04x %s\n",
                          addr, val & 0xffff, (val >> 16) & 0xffff,
                          ((val & 0xffff) == ((~val >> 16) & 0xffff))
@@ -942,7 +933,7 @@ static bool stm32lx_cmd_option(target* t, int argc, char** argv)
         }
 
         if (stm32lx_is_stm32l1(t)) {
-                uint32_t optr   = adiv5_ap_mem_read(ap, STM32Lx_NVM_OPTR(nvm));
+                uint32_t optr   = target_mem_read32(t, STM32Lx_NVM_OPTR(nvm));
                 uint8_t  rdprot = (optr >> STM32L1_NVM_OPTR_RDPROT_S)
                         & STM32L1_NVM_OPTR_RDPROT_M;
                 if (rdprot == STM32L1_NVM_OPTR_RDPROT_0)
@@ -964,7 +955,7 @@ static bool stm32lx_cmd_option(target* t, int argc, char** argv)
                          (optr &  STM32L1_NVM_OPTR_nBFB2)      ? 1 : 0);
         }
         else {
-                uint32_t optr   = adiv5_ap_mem_read(ap, STM32Lx_NVM_OPTR(nvm));
+                uint32_t optr   = target_mem_read32(t, STM32Lx_NVM_OPTR(nvm));
                 uint8_t  rdprot = (optr >> STM32L0_NVM_OPTR_RDPROT_S)
                         & STM32L0_NVM_OPTR_RDPROT_M;
                 if (rdprot == STM32L0_NVM_OPTR_RDPROT_0)
@@ -997,17 +988,16 @@ usage:
                  STM32Lx_NVM_OPT_PHYS + opt_size - sizeof(uint32_t));
 
 done:
-        stm32lx_nvm_lock(ap, nvm);
+        stm32lx_nvm_lock(t, nvm);
         return true;
 }
 
 
 static bool stm32lx_cmd_eeprom(target* t, int argc, char** argv)
 {
-        ADIv5_AP_t*    ap  = adiv5_target_ap(t);
         const uint32_t nvm = stm32lx_nvm_phys(t);
 
-        if (!stm32lx_nvm_prog_data_unlock(ap, nvm)) {
+        if (!stm32lx_nvm_prog_data_unlock(t, nvm)) {
                 gdb_out("unable to unlock EEPROM\n");
                 return true;
         }
@@ -1061,6 +1051,6 @@ usage:
                  + stm32lx_nvm_eeprom_size(t));
 
 done:
-        stm32lx_nvm_lock(ap, nvm);
+        stm32lx_nvm_lock(t, nvm);
         return true;
 }

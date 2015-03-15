@@ -111,7 +111,6 @@ target *target_attach(target *t, target_destroy_callback destroy_cb);
 #define target_hostio_reply(target, recode, errcode)	\
 	(target)->hostio_reply((target), (retcode), (errcode))
 
-
 struct target_s {
 	/* Notify controlling debugger if target is lost */
 	target_destroy_callback destroy_callback;
@@ -186,6 +185,43 @@ extern bool connect_assert_srst;
 target *target_new(unsigned size);
 void target_list_free(void);
 void target_add_commands(target *t, const struct command_s *cmds, const char *name);
+
+static inline uint32_t target_mem_read32(target *t, uint32_t addr)
+{
+	uint32_t ret;
+	target_mem_read(t, &ret, addr, sizeof(ret));
+	return ret;
+}
+
+static inline void target_mem_write32(target *t, uint32_t addr, uint32_t value)
+{
+	target_mem_write(t, addr, &value, sizeof(value));
+}
+
+static inline uint16_t target_mem_read16(target *t, uint32_t addr)
+{
+	uint16_t ret;
+	target_mem_read(t, &ret, addr, sizeof(ret));
+	return ret;
+}
+
+static inline void target_mem_write16(target *t, uint32_t addr, uint16_t value)
+{
+	target_mem_write(t, addr, &value, sizeof(value));
+}
+
+static inline uint8_t target_mem_read8(target *t, uint32_t addr)
+{
+	uint8_t ret;
+	target_mem_read(t, &ret, addr, sizeof(ret));
+	return ret;
+}
+
+static inline void target_mem_write8(target *t, uint32_t addr, uint8_t value)
+{
+	target_mem_write(t, addr, &value, sizeof(value));
+}
+
 
 /* Probe for various targets.
  * Actual functions implemented in their respective drivers.

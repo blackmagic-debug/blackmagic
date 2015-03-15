@@ -136,9 +136,7 @@ static const uint16_t nrf51_flash_write_stub[] = {
 
 bool nrf51_probe(struct target_s *target)
 {
-	ADIv5_AP_t *ap = adiv5_target_ap(target);
-
-	target->idcode = adiv5_ap_mem_read(ap, NRF51_FICR_CONFIGID) & 0xFFFF;
+	target->idcode = target_mem_read32(target, NRF51_FICR_CONFIGID) & 0xFFFF;
 
 	switch (target->idcode) {
 	case 0x001D:
@@ -165,32 +163,29 @@ bool nrf51_probe(struct target_s *target)
 
 static int nrf51_flash_erase(struct target_s *target, uint32_t addr, size_t len)
 {
-
-	ADIv5_AP_t *ap = adiv5_target_ap(target);
-
 	addr &= ~(NRF51_PAGE_SIZE - 1);
 	len &= ~(NRF51_PAGE_SIZE - 1);
 
 	/* Enable erase */
-	adiv5_ap_mem_write(ap, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_EEN);
+	target_mem_write32(target, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_EEN);
 
 	/* Poll for NVMC_READY */
-	while(adiv5_ap_mem_read(ap, NRF51_NVMC_READY) == 0)
+	while (target_mem_read32(target, NRF51_NVMC_READY) == 0)
 		if(target_check_error(target))
 			return -1;
 
 	while (len) {
 		if (addr == NRF51_UICR) { // Special Case
 			/* Write to the ERASE_UICR register to erase */
-			adiv5_ap_mem_write(ap, NRF51_NVMC_ERASEUICR, 0x1);
+			target_mem_write32(target, NRF51_NVMC_ERASEUICR, 0x1);
 
 		} else { // Standard Flash Page
 			/* Write address of first word in page to erase it */
-			adiv5_ap_mem_write(ap, NRF51_NVMC_ERASEPAGE, addr);
+			target_mem_write32(target, NRF51_NVMC_ERASEPAGE, addr);
 		}
 
 		/* Poll for NVMC_READY */
-		while(adiv5_ap_mem_read(ap, NRF51_NVMC_READY) == 0)
+		while (target_mem_read32(target, NRF51_NVMC_READY) == 0)
 			if(target_check_error(target))
 				return -1;
 
@@ -199,10 +194,10 @@ static int nrf51_flash_erase(struct target_s *target, uint32_t addr, size_t len)
 	}
 
 	/* Return to read-only */
-	adiv5_ap_mem_write(ap, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_REN);
+	target_mem_write32(target, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_REN);
 
 	/* Poll for NVMC_READY */
-	while(adiv5_ap_mem_read(ap, NRF51_NVMC_READY) == 0)
+	while (target_mem_read32(target, NRF51_NVMC_READY) == 0)
 		if(target_check_error(target))
 			return -1;
 
@@ -212,7 +207,6 @@ static int nrf51_flash_erase(struct target_s *target, uint32_t addr, size_t len)
 static int nrf51_flash_write(struct target_s *target, uint32_t dest,
                              const uint8_t *src, size_t len)
 {
-	ADIv5_AP_t *ap = adiv5_target_ap(target);
 	uint32_t offset = dest % 4;
 	uint32_t words = (offset + len + 3) / 4;
 	uint32_t data[2 + words];
@@ -225,10 +219,10 @@ static int nrf51_flash_write(struct target_s *target, uint32_t dest,
 	memcpy((uint8_t *)&data[2] + offset, src, len);
 
 	/* Enable write */
-	adiv5_ap_mem_write(ap, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_WEN);
+	target_mem_write32(target, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_WEN);
 
 	/* Poll for NVMC_READY */
-	while(adiv5_ap_mem_read(ap, NRF51_NVMC_READY) == 0)
+	while (target_mem_read32(target, NRF51_NVMC_READY) == 0)
 		if(target_check_error(target))
 			return -1;
 
@@ -244,30 +238,28 @@ static int nrf51_flash_write(struct target_s *target, uint32_t dest,
 	while(!target_halt_wait(target));
 
 	/* Return to read-only */
-	adiv5_ap_mem_write(ap, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_REN);
+	target_mem_write32(target, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_REN);
 
 	return 0;
 }
 
 static bool nrf51_cmd_erase_all(target *t)
 {
-	ADIv5_AP_t *ap = adiv5_target_ap(t);
-
 	gdb_out("erase..\n");
 
 	/* Enable erase */
-	adiv5_ap_mem_write(ap, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_EEN);
+	target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_EEN);
 
 	/* Poll for NVMC_READY */
-	while(adiv5_ap_mem_read(ap, NRF51_NVMC_READY) == 0)
+	while (target_mem_read32(t, NRF51_NVMC_READY) == 0)
 		if(target_check_error(t))
 			return false;
 
 	/* Erase all */
-	adiv5_ap_mem_write(ap, NRF51_NVMC_ERASEALL, 1);
+	target_mem_write32(t, NRF51_NVMC_ERASEALL, 1);
 
 	/* Poll for NVMC_READY */
-	while(adiv5_ap_mem_read(ap, NRF51_NVMC_READY) == 0)
+	while (target_mem_read32(t, NRF51_NVMC_READY) == 0)
 		if(target_check_error(t))
 			return false;
 
@@ -276,28 +268,22 @@ static bool nrf51_cmd_erase_all(target *t)
 
 static bool nrf51_cmd_read_hwid(target *t)
 {
-	ADIv5_AP_t *ap = adiv5_target_ap(t);
-
-	uint32_t hwid = adiv5_ap_mem_read(ap, NRF51_FICR_CONFIGID) & 0xFFFF;
+	uint32_t hwid = target_mem_read32(t, NRF51_FICR_CONFIGID) & 0xFFFF;
 	gdb_outf("Hardware ID: 0x%04X\n", hwid);
 
 	return true;
 }
 static bool nrf51_cmd_read_fwid(target *t)
 {
-	ADIv5_AP_t *ap = adiv5_target_ap(t);
-
-	uint32_t fwid = (adiv5_ap_mem_read(ap, NRF51_FICR_CONFIGID) >> 16) & 0xFFFF;
+	uint32_t fwid = (target_mem_read32(t, NRF51_FICR_CONFIGID) >> 16) & 0xFFFF;
 	gdb_outf("Firmware ID: 0x%04X\n", fwid);
 
 	return true;
 }
 static bool nrf51_cmd_read_deviceid(target *t)
 {
-	ADIv5_AP_t *ap = adiv5_target_ap(t);
-
-	uint32_t deviceid_low = adiv5_ap_mem_read(ap, NRF51_FICR_DEVICEID_LOW);
-	uint32_t deviceid_high = adiv5_ap_mem_read(ap, NRF51_FICR_DEVICEID_HIGH);
+	uint32_t deviceid_low = target_mem_read32(t, NRF51_FICR_DEVICEID_LOW);
+	uint32_t deviceid_high = target_mem_read32(t, NRF51_FICR_DEVICEID_HIGH);
 
 	gdb_outf("Device ID: 0x%08X%08X\n", deviceid_high, deviceid_low);
 
@@ -305,11 +291,9 @@ static bool nrf51_cmd_read_deviceid(target *t)
 }
 static bool nrf51_cmd_read_deviceaddr(target *t)
 {
-	ADIv5_AP_t *ap = adiv5_target_ap(t);
-
-	uint32_t addr_type = adiv5_ap_mem_read(ap, NRF51_FICR_DEVICEADDRTYPE);
-	uint32_t addr_low = adiv5_ap_mem_read(ap, NRF51_FICR_DEVICEADDR_LOW);
-	uint32_t addr_high = adiv5_ap_mem_read(ap, NRF51_FICR_DEVICEADDR_HIGH) & 0xFFFF;
+	uint32_t addr_type = target_mem_read32(t, NRF51_FICR_DEVICEADDRTYPE);
+	uint32_t addr_low = target_mem_read32(t, NRF51_FICR_DEVICEADDR_LOW);
+	uint32_t addr_high = target_mem_read32(t, NRF51_FICR_DEVICEADDR_HIGH) & 0xFFFF;
 
 	if ((addr_type & 1) == 0) {
 		gdb_outf("Publicly Listed Address: 0x%04X%08X\n", addr_high, addr_low);

@@ -170,8 +170,8 @@ bool lpc43xx_probe(struct target_s *target)
 {
 	uint32_t chipid, cpuid;
 
-	chipid = adiv5_ap_mem_read(adiv5_target_ap(target), LPC43XX_CHIPID);
-	cpuid = adiv5_ap_mem_read(adiv5_target_ap(target), ARM_CPUID);
+	chipid = target_mem_read32(target, LPC43XX_CHIPID);
+	cpuid = target_mem_read32(target, ARM_CPUID);
 
 	switch(chipid) {
 	case 0x4906002B:	/* Parts with on-chip flash */

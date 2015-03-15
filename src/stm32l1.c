@@ -87,7 +87,7 @@ bool stm32l1_probe(struct target_s *target)
 {
 	uint32_t idcode;
 
-	idcode = adiv5_ap_mem_read(adiv5_target_ap(target), STM32L1_DBGMCU_IDCODE);
+	idcode = target_mem_read32(target, STM32L1_DBGMCU_IDCODE);
 	switch(idcode & 0xFFF) {
 	case 0x416:  /* CAT. 1 device */
 	case 0x429:  /* CAT. 2 device */
@@ -105,45 +105,44 @@ bool stm32l1_probe(struct target_s *target)
 	return false;
 }
 
-static void stm32l1_flash_unlock(ADIv5_AP_t *ap)
+static void stm32l1_flash_unlock(target *t)
 {
-	adiv5_ap_mem_write(ap, STM32L1_FLASH_PEKEYR, STM32L1_PEKEY1);
-	adiv5_ap_mem_write(ap, STM32L1_FLASH_PEKEYR, STM32L1_PEKEY2);
-	adiv5_ap_mem_write(ap, STM32L1_FLASH_PRGKEYR, STM32L1_PRGKEY1);
-	adiv5_ap_mem_write(ap, STM32L1_FLASH_PRGKEYR, STM32L1_PRGKEY2);
+	target_mem_write32(t, STM32L1_FLASH_PEKEYR, STM32L1_PEKEY1);
+	target_mem_write32(t, STM32L1_FLASH_PEKEYR, STM32L1_PEKEY2);
+	target_mem_write32(t, STM32L1_FLASH_PRGKEYR, STM32L1_PRGKEY1);
+	target_mem_write32(t, STM32L1_FLASH_PRGKEYR, STM32L1_PRGKEY2);
 }
 
 static int stm32l1_flash_erase(struct target_s *target, uint32_t addr, size_t len)
 {
-	ADIv5_AP_t *ap = adiv5_target_ap(target);
 	uint16_t sr;
 
 	addr &= ~255;
 	len &= ~255;
 
-	stm32l1_flash_unlock(ap);
+	stm32l1_flash_unlock(target);
 
 	/* Flash page erase instruction */
-	adiv5_ap_mem_write(ap, STM32L1_FLASH_PECR, STM32L1_FLASH_PECR_ERASE | STM32L1_FLASH_PECR_PROG);
+	target_mem_write32(target, STM32L1_FLASH_PECR, STM32L1_FLASH_PECR_ERASE | STM32L1_FLASH_PECR_PROG);
 
 	/* Read FLASH_SR to poll for BSY bit */
-	while(adiv5_ap_mem_read(ap, STM32L1_FLASH_SR) & STM32L1_FLASH_SR_BSY)
+	while(target_mem_read32(target, STM32L1_FLASH_SR) & STM32L1_FLASH_SR_BSY)
 		if(target_check_error(target))
 			return -1;
 
 	while(len) {
 		/* Write first word of page to 0 */
-		adiv5_ap_mem_write(ap, addr, 0);
+		target_mem_write32(target, addr, 0);
 
 		len -= 256;
 		addr += 256;
 	}
 
 	/* Disable programming mode */
-	adiv5_ap_mem_write(ap, STM32L1_FLASH_PECR, 0);
+	target_mem_write32(target, STM32L1_FLASH_PECR, 0);
 
 	/* Check for error */
-	sr = adiv5_ap_mem_read(ap, STM32L1_FLASH_SR);
+	sr = target_mem_read32(target, STM32L1_FLASH_SR);
 	if ((sr & STM32L1_FLASH_SR_ERROR_MASK) || !(sr & STM32L1_FLASH_SR_EOP))
 		return -1;
 
@@ -153,7 +152,6 @@ static int stm32l1_flash_erase(struct target_s *target, uint32_t addr, size_t le
 static int stm32l1_flash_write(struct target_s *target, uint32_t dest,
 			  const uint8_t *src, size_t len)
 {
-	ADIv5_AP_t *ap = adiv5_target_ap(target);
 	uint16_t sr;
 
 	/* Handle non word-aligned start */
@@ -164,7 +162,7 @@ static int stm32l1_flash_write(struct target_s *target, uint32_t dest,
 			wlen = len;
 
 		memcpy((uint8_t *)&data + (dest & 3), src, wlen);
-		adiv5_ap_mem_write(ap, dest & ~3, data);
+		target_mem_write32(target, dest & ~3, data);
 		src += wlen;
 		dest += wlen;
 		len -= wlen;
@@ -185,10 +183,10 @@ static int stm32l1_flash_write(struct target_s *target, uint32_t dest,
 	/* Write half-pages */
 	if(len > 128) {
 		/* Enable half page mode */
-		adiv5_ap_mem_write(ap, STM32L1_FLASH_PECR, STM32L1_FLASH_PECR_FPRG | STM32L1_FLASH_PECR_PROG);
+		target_mem_write32(target, STM32L1_FLASH_PECR, STM32L1_FLASH_PECR_FPRG | STM32L1_FLASH_PECR_PROG);
 
 		/* Read FLASH_SR to poll for BSY bit */
-		while(adiv5_ap_mem_read(ap, STM32L1_FLASH_SR) & STM32L1_FLASH_SR_BSY)
+		while(target_mem_read32(target, STM32L1_FLASH_SR) & STM32L1_FLASH_SR_BSY)
 			if(target_check_error(target))
 				return -1;
 
@@ -198,10 +196,10 @@ static int stm32l1_flash_write(struct target_s *target, uint32_t dest,
 		len -= len & ~127;
 
 		/* Disable half page mode */
-		adiv5_ap_mem_write(ap, STM32L1_FLASH_PECR, 0);
+		target_mem_write32(target, STM32L1_FLASH_PECR, 0);
 
 		/* Read FLASH_SR to poll for BSY bit */
-		while(adiv5_ap_mem_read(ap, STM32L1_FLASH_SR) & STM32L1_FLASH_SR_BSY)
+		while(target_mem_read32(target, STM32L1_FLASH_SR) & STM32L1_FLASH_SR_BSY)
 			if(target_check_error(target))
 				return -1;
 	}
@@ -219,11 +217,11 @@ static int stm32l1_flash_write(struct target_s *target, uint32_t dest,
 		uint32_t data = 0;
 
 		memcpy((uint8_t *)&data, src, len);
-		adiv5_ap_mem_write(ap, dest, data);
+		target_mem_write32(target, dest, data);
 	}
 
 	/* Check for error */
-	sr = adiv5_ap_mem_read(ap, STM32L1_FLASH_SR);
+	sr = target_mem_read32(target, STM32L1_FLASH_SR);
 	if ((sr & STM32L1_FLASH_SR_ERROR_MASK) || !(sr & STM32L1_FLASH_SR_EOP))
 		return -1;
 

@@ -108,7 +108,7 @@ lpc11xx_probe(struct target_s *target)
 	uint32_t idcode;
 
 	/* read the device ID register */
-	idcode = adiv5_ap_mem_read(adiv5_target_ap(target), 0x400483F4);
+	idcode = target_mem_read32(target, 0x400483F4);
 
 	switch (idcode) {
 

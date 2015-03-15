@@ -273,66 +273,6 @@ ap_mem_write(struct target_s *target, uint32_t dest, const void *src, size_t len
 	}
 }
 
-uint32_t adiv5_ap_mem_read(ADIv5_AP_t *ap, uint32_t addr)
-{
-	adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw |
-		ADIV5_AP_CSW_SIZE_WORD | ADIV5_AP_CSW_ADDRINC_SINGLE);
-	adiv5_ap_write(ap, ADIV5_AP_TAR, addr);
-	return adiv5_ap_read(ap, ADIV5_AP_DRW);
-}
-
-void adiv5_ap_mem_write(ADIv5_AP_t *ap, uint32_t addr, uint32_t value)
-{
-	adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw |
-		ADIV5_AP_CSW_SIZE_WORD | ADIV5_AP_CSW_ADDRINC_SINGLE);
-	adiv5_ap_write(ap, ADIV5_AP_TAR, addr);
-	adiv5_ap_write(ap, ADIV5_AP_DRW, value);
-}
-
-uint16_t adiv5_ap_mem_read_halfword(ADIv5_AP_t *ap, uint32_t addr)
-{
-	adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw |
-		ADIV5_AP_CSW_SIZE_HALFWORD | ADIV5_AP_CSW_ADDRINC_SINGLE);
-	adiv5_ap_write(ap, ADIV5_AP_TAR, addr);
-	uint32_t v = adiv5_ap_read(ap, ADIV5_AP_DRW);
-	if (addr & 2)
-		return v >> 16;
-	else
-		return v & 0xFFFF;
-}
-
-void adiv5_ap_mem_write_halfword(ADIv5_AP_t *ap, uint32_t addr, uint16_t value)
-{
-	uint32_t v = value;
-	if (addr & 2)
-		v <<= 16;
-
-	adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw |
-		ADIV5_AP_CSW_SIZE_HALFWORD | ADIV5_AP_CSW_ADDRINC_SINGLE);
-	adiv5_ap_write(ap, ADIV5_AP_TAR, addr);
-	adiv5_ap_write(ap, ADIV5_AP_DRW, v);
-}
-
-uint8_t adiv5_ap_mem_read_byte(ADIv5_AP_t *ap, uint32_t addr)
-{
-	adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw |
-		ADIV5_AP_CSW_SIZE_BYTE | ADIV5_AP_CSW_ADDRINC_SINGLE);
-	adiv5_ap_write(ap, ADIV5_AP_TAR, addr);
-	uint32_t v = adiv5_ap_read(ap, ADIV5_AP_DRW);
-
-	return v >> ((addr & 3) * 8);
-}
-
-void adiv5_ap_mem_write_byte(ADIv5_AP_t *ap, uint32_t addr, uint8_t value)
-{
-	uint32_t v = value << ((addr & 3) * 8);
-
-	adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw |
-		ADIV5_AP_CSW_SIZE_BYTE | ADIV5_AP_CSW_ADDRINC_SINGLE);
-	adiv5_ap_write(ap, ADIV5_AP_TAR, addr);
-	adiv5_ap_write(ap, ADIV5_AP_DRW, v);
-}
-
 void adiv5_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value)
 {
 	adiv5_dp_write(ap->dp, ADIV5_DP_SELECT,
