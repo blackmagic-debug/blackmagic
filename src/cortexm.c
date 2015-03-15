@@ -359,20 +359,23 @@ cortexm_regs_read(struct target_s *target, void *data)
 
 	/* Map the banked data registers (0x10-0x1c) to the
 	 * debug registers DHCSR, DCRSR, DCRDR and DEMCR respectively */
-	adiv5_dp_low_access(ap->dp, 1, 0, ADIV5_AP_TAR, CORTEXM_DHCSR);
+	adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR, CORTEXM_DHCSR);
 
 	/* Walk the regnum_cortex_m array, reading the registers it
 	 * calls out. */
 	adiv5_ap_write(ap, ADIV5_AP_DB(1), regnum_cortex_m[0]); /* Required to switch banks */
-	*regs++ = adiv5_dp_read_ap(ap->dp, ADIV5_AP_DB(2));
+	*regs++ = adiv5_dp_read(ap->dp, ADIV5_AP_DB(2));
 	for(i = 1; i < sizeof(regnum_cortex_m) / 4; i++) {
-		adiv5_dp_low_access(ap->dp, 1, 0, ADIV5_AP_DB(1), regnum_cortex_m[i]);
-		*regs++ = adiv5_dp_read_ap(ap->dp, ADIV5_AP_DB(2));
+		adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DB(1),
+		                    regnum_cortex_m[i]);
+		*regs++ = adiv5_dp_read(ap->dp, ADIV5_AP_DB(2));
 	}
 	if (target->target_options & TOPT_FLAVOUR_V7MF)
 		for(i = 0; i < sizeof(regnum_cortex_mf) / 4; i++) {
-			adiv5_dp_low_access(ap->dp, 1, 0, ADIV5_AP_DB(1), regnum_cortex_mf[i]);
-			*regs++ = adiv5_dp_read_ap(ap->dp, ADIV5_AP_DB(2));
+			adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE,
+			                    ADIV5_AP_DB(1),
+			                    regnum_cortex_mf[i]);
+			*regs++ = adiv5_dp_read(ap->dp, ADIV5_AP_DB(2));
 		}
 
 	return 0;
@@ -391,22 +394,26 @@ cortexm_regs_write(struct target_s *target, const void *data)
 
 	/* Map the banked data registers (0x10-0x1c) to the
 	 * debug registers DHCSR, DCRSR, DCRDR and DEMCR respectively */
-	adiv5_dp_low_access(ap->dp, 1, 0, ADIV5_AP_TAR, CORTEXM_DHCSR);
+	adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR, CORTEXM_DHCSR);
 
 	/* Walk the regnum_cortex_m array, writing the registers it
 	 * calls out. */
 	adiv5_ap_write(ap, ADIV5_AP_DB(2), *regs++); /* Required to switch banks */
-	adiv5_dp_low_access(ap->dp, 1, 0, ADIV5_AP_DB(1), 0x10000 | regnum_cortex_m[0]);
+	adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DB(1),
+	                    0x10000 | regnum_cortex_m[0]);
 	for(i = 1; i < sizeof(regnum_cortex_m) / 4; i++) {
-		adiv5_dp_low_access(ap->dp, 1, 0, ADIV5_AP_DB(2), *regs++);
-		adiv5_dp_low_access(ap->dp, 1, 0, ADIV5_AP_DB(1),
-					0x10000 | regnum_cortex_m[i]);
+		adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE,
+		                    ADIV5_AP_DB(2), *regs++);
+		adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DB(1),
+		                    0x10000 | regnum_cortex_m[i]);
 	}
 	if (target->target_options & TOPT_FLAVOUR_V7MF)
 		for(i = 0; i < sizeof(regnum_cortex_mf) / 4; i++) {
-			adiv5_dp_low_access(ap->dp, 1, 0, ADIV5_AP_DB(2), *regs++);
-			adiv5_dp_low_access(ap->dp, 1, 0, ADIV5_AP_DB(1),
-						0x10000 | regnum_cortex_mf[i]);
+			adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE,
+			                    ADIV5_AP_DB(2), *regs++);
+			adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE,
+			                    ADIV5_AP_DB(1),
+			                    0x10000 | regnum_cortex_mf[i]);
 		}
 
 	return 0;

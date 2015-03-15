@@ -33,13 +33,13 @@
 #define SWDP_ACK_WAIT  0x02
 #define SWDP_ACK_FAULT 0x04
 
-static void adiv5_swdp_write(ADIv5_DP_t *dp, uint8_t addr, uint32_t value);
-static uint32_t adiv5_swdp_read(ADIv5_DP_t *dp, uint8_t addr);
+static void adiv5_swdp_write(ADIv5_DP_t *dp, uint16_t addr, uint32_t value);
+static uint32_t adiv5_swdp_read(ADIv5_DP_t *dp, uint16_t addr);
 
 static uint32_t adiv5_swdp_error(ADIv5_DP_t *dp);
 
-static uint32_t adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t APnDP, uint8_t RnW,
-				      uint8_t addr, uint32_t value);
+static uint32_t adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
+				      uint16_t addr, uint32_t value);
 
 
 int adiv5_swdp_scan(void)
@@ -78,14 +78,20 @@ int adiv5_swdp_scan(void)
 	return target_list?1:0;
 }
 
-static void adiv5_swdp_write(ADIv5_DP_t *dp, uint8_t addr, uint32_t value)
+static void adiv5_swdp_write(ADIv5_DP_t *dp, uint16_t addr, uint32_t value)
 {
-	adiv5_swdp_low_access(dp, ADIV5_LOW_DP, ADIV5_LOW_WRITE, addr, value);
+	adiv5_swdp_low_access(dp, ADIV5_LOW_WRITE, addr, value);
 }
 
-static uint32_t adiv5_swdp_read(ADIv5_DP_t *dp, uint8_t addr)
+static uint32_t adiv5_swdp_read(ADIv5_DP_t *dp, uint16_t addr)
 {
-	return adiv5_swdp_low_access(dp, ADIV5_LOW_DP, ADIV5_LOW_READ, addr, 0);
+	if (addr & ADIV5_APnDP) {
+		adiv5_dp_low_access(dp, ADIV5_LOW_READ, addr, 0);
+		return adiv5_dp_low_access(dp, ADIV5_LOW_READ,
+		                           ADIV5_DP_RDBUFF, 0);
+	} else {
+		return adiv5_swdp_low_access(dp, ADIV5_LOW_READ, addr, 0);
+	}
 }
 
 static uint32_t adiv5_swdp_error(ADIv5_DP_t *dp)
@@ -111,9 +117,11 @@ static uint32_t adiv5_swdp_error(ADIv5_DP_t *dp)
 	return err;
 }
 
-static uint32_t adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t APnDP, uint8_t RnW,
-				      uint8_t addr, uint32_t value)
+static uint32_t adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
+				      uint16_t addr, uint32_t value)
 {
+	bool APnDP = addr & ADIV5_APnDP;
+	addr &= 0xff;
 	uint8_t request = 0x81;
 	uint32_t response;
 	uint8_t ack;

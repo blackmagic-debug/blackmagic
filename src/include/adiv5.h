@@ -24,12 +24,16 @@
 #include "jtag_scan.h"
 #include "target.h"
 
+#define ADIV5_APnDP       0x100
+#define ADIV5_DP_REG(x)   (x)
+#define ADIV5_AP_REG(x)   (ADIV5_APnDP | (x))
+
 /* ADIv5 DP Register addresses */
-#define ADIV5_DP_IDCODE		0x0
-#define ADIV5_DP_ABORT		0x0
-#define ADIV5_DP_CTRLSTAT	0x4
-#define ADIV5_DP_SELECT		0x8
-#define ADIV5_DP_RDBUFF		0xC
+#define ADIV5_DP_IDCODE   ADIV5_DP_REG(0x0)
+#define ADIV5_DP_ABORT    ADIV5_DP_REG(0x0)
+#define ADIV5_DP_CTRLSTAT ADIV5_DP_REG(0x4)
+#define ADIV5_DP_SELECT   ADIV5_DP_REG(0x8)
+#define ADIV5_DP_RDBUFF   ADIV5_DP_REG(0xC)
 
 /* AP Abort Register (ABORT) */
 /* Bits 31:5 - Reserved */
@@ -63,15 +67,15 @@
 
 
 /* ADIv5 MEM-AP Registers */
-#define ADIV5_AP_CSW		0x00
-#define ADIV5_AP_TAR		0x04
+#define ADIV5_AP_CSW		ADIV5_AP_REG(0x00)
+#define ADIV5_AP_TAR		ADIV5_AP_REG(0x04)
 /* 0x08 - Reserved */
-#define ADIV5_AP_DRW		0x0C
-#define ADIV5_AP_DB(x)		(0x10 + (4*(x)))
+#define ADIV5_AP_DRW		ADIV5_AP_REG(0x0C)
+#define ADIV5_AP_DB(x)		ADIV5_AP_REG(0x10 + (4*(x)))
 /* 0x20:0xF0 - Reserved */
-#define ADIV5_AP_CFG		0xF4
-#define ADIV5_AP_BASE		0xF8
-#define ADIV5_AP_IDR		0xFC
+#define ADIV5_AP_CFG		ADIV5_AP_REG(0xF4)
+#define ADIV5_AP_BASE		ADIV5_AP_REG(0xF8)
+#define ADIV5_AP_IDR		ADIV5_AP_REG(0xFC)
 
 /* AP Control and Status Word (CSW) */
 #define ADIV5_AP_CSW_DBGSWENABLE	(1u << 31)
@@ -93,11 +97,9 @@
 #define ADIV5_AP_CSW_SIZE_WORD		(2u << 0)
 #define ADIV5_AP_CSW_SIZE_MASK		(7u << 0)
 
-/* Constants to make RnW and APnDP parameters more clear in code */
+/* Constants to make RnW parameters more clear in code */
 #define ADIV5_LOW_WRITE		0
 #define ADIV5_LOW_READ		1
-#define ADIV5_LOW_DP		0
-#define ADIV5_LOW_AP		1
 
 /* Try to keep this somewhat absract for later adding SW-DP */
 typedef struct ADIv5_DP_s {
@@ -107,13 +109,13 @@ typedef struct ADIv5_DP_s {
 
 	bool allow_timeout;
 
-	void (*dp_write)(struct ADIv5_DP_s *dp, uint8_t addr, uint32_t value);
-	uint32_t (*dp_read)(struct ADIv5_DP_s *dp, uint8_t addr);
+	void (*dp_write)(struct ADIv5_DP_s *dp, uint16_t addr, uint32_t value);
+	uint32_t (*dp_read)(struct ADIv5_DP_s *dp, uint16_t addr);
 
 	uint32_t (*error)(struct ADIv5_DP_s *dp);
 
-	uint32_t (*low_access)(struct ADIv5_DP_s *dp, uint8_t APnDP, uint8_t RnW,
-			uint8_t addr, uint32_t value);
+	uint32_t (*low_access)(struct ADIv5_DP_s *dp, uint8_t RnW,
+                               uint16_t addr, uint32_t value);
 
 	union {
 		jtag_dev_t *dev;
@@ -121,12 +123,12 @@ typedef struct ADIv5_DP_s {
 	};
 } ADIv5_DP_t;
 
-static inline void adiv5_dp_write(ADIv5_DP_t *dp, uint8_t addr, uint32_t value)
+static inline void adiv5_dp_write(ADIv5_DP_t *dp, uint16_t addr, uint32_t value)
 {
 	dp->dp_write(dp, addr, value);
 }
 
-static inline uint32_t adiv5_dp_read(ADIv5_DP_t *dp, uint8_t addr)
+static inline uint32_t adiv5_dp_read(ADIv5_DP_t *dp, uint16_t addr)
 {
 	return dp->dp_read(dp, addr);
 }
@@ -136,10 +138,10 @@ static inline uint32_t adiv5_dp_error(ADIv5_DP_t *dp)
 	return dp->error(dp);
 }
 
-static inline uint32_t adiv5_dp_low_access(struct ADIv5_DP_s *dp, uint8_t APnDP,
-					uint8_t RnW, uint8_t addr, uint32_t value)
+static inline uint32_t adiv5_dp_low_access(struct ADIv5_DP_s *dp, uint8_t RnW,
+                                           uint16_t addr, uint32_t value)
 {
-	return dp->low_access(dp, APnDP, RnW, addr, value);
+	return dp->low_access(dp, RnW, addr, value);
 }
 
 typedef struct ADIv5_AP_s {
@@ -164,9 +166,6 @@ void adiv5_ap_ref(ADIv5_AP_t *ap);
 void adiv5_dp_unref(ADIv5_DP_t *dp);
 void adiv5_ap_unref(ADIv5_AP_t *ap);
 
-void adiv5_dp_write_ap(ADIv5_DP_t *dp, uint8_t addr, uint32_t value);
-uint32_t adiv5_dp_read_ap(ADIv5_DP_t *dp, uint8_t addr);
-
 uint32_t adiv5_ap_mem_read(ADIv5_AP_t *ap, uint32_t addr);
 void adiv5_ap_mem_write(ADIv5_AP_t *ap, uint32_t addr, uint32_t value);
 uint16_t adiv5_ap_mem_read_halfword(ADIv5_AP_t *ap, uint32_t addr);
@@ -174,8 +173,8 @@ void adiv5_ap_mem_write_halfword(ADIv5_AP_t *ap, uint32_t addr, uint16_t value);
 uint8_t adiv5_ap_mem_read_byte(ADIv5_AP_t *ap, uint32_t addr);
 void adiv5_ap_mem_write_byte(ADIv5_AP_t *ap, uint32_t addr, uint8_t value);
 
-void adiv5_ap_write(ADIv5_AP_t *ap, uint8_t addr, uint32_t value);
-uint32_t adiv5_ap_read(ADIv5_AP_t *ap, uint8_t addr);
+void adiv5_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value);
+uint32_t adiv5_ap_read(ADIv5_AP_t *ap, uint16_t addr);
 
 void adiv5_jtag_dp_handler(jtag_dev_t *dev);
 int adiv5_swdp_scan(void);

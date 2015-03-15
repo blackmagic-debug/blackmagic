@@ -36,13 +36,13 @@
 #define IR_DPACC	0xA
 #define IR_APACC	0xB
 
-static void adiv5_jtagdp_write(ADIv5_DP_t *dp, uint8_t addr, uint32_t value);
-static uint32_t adiv5_jtagdp_read(ADIv5_DP_t *dp, uint8_t addr);
+static void adiv5_jtagdp_write(ADIv5_DP_t *dp, uint16_t addr, uint32_t value);
+static uint32_t adiv5_jtagdp_read(ADIv5_DP_t *dp, uint16_t addr);
 
 static uint32_t adiv5_jtagdp_error(ADIv5_DP_t *dp);
 
-static uint32_t adiv5_jtagdp_low_access(ADIv5_DP_t *dp, uint8_t APnDP, uint8_t RnW,
-					uint8_t addr, uint32_t value);
+static uint32_t adiv5_jtagdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
+					uint16_t addr, uint32_t value);
 
 
 void adiv5_jtag_dp_handler(jtag_dev_t *dev)
@@ -60,35 +60,36 @@ void adiv5_jtag_dp_handler(jtag_dev_t *dev)
 	adiv5_dp_init(dp);
 }
 
-static void adiv5_jtagdp_write(ADIv5_DP_t *dp, uint8_t addr, uint32_t value)
+static void adiv5_jtagdp_write(ADIv5_DP_t *dp, uint16_t addr, uint32_t value)
 {
-	adiv5_jtagdp_low_access(dp, ADIV5_LOW_DP, ADIV5_LOW_WRITE, addr, value);
+	adiv5_jtagdp_low_access(dp, ADIV5_LOW_WRITE, addr, value);
 }
 
-static uint32_t adiv5_jtagdp_read(ADIv5_DP_t *dp, uint8_t addr)
+static uint32_t adiv5_jtagdp_read(ADIv5_DP_t *dp, uint16_t addr)
 {
-	adiv5_jtagdp_low_access(dp, ADIV5_LOW_DP, ADIV5_LOW_READ, addr, 0);
-	return adiv5_jtagdp_low_access(dp, ADIV5_LOW_DP, ADIV5_LOW_READ,
+	adiv5_jtagdp_low_access(dp, ADIV5_LOW_READ, addr, 0);
+	return adiv5_jtagdp_low_access(dp, ADIV5_LOW_READ,
 					ADIV5_DP_RDBUFF, 0);
 }
 
 static uint32_t adiv5_jtagdp_error(ADIv5_DP_t *dp)
 {
-	adiv5_jtagdp_low_access(dp, ADIV5_LOW_DP, ADIV5_LOW_READ,
-				ADIV5_DP_CTRLSTAT, 0);
-	return adiv5_jtagdp_low_access(dp, ADIV5_LOW_DP, ADIV5_LOW_WRITE,
+	adiv5_jtagdp_low_access(dp, ADIV5_LOW_READ, ADIV5_DP_CTRLSTAT, 0);
+	return adiv5_jtagdp_low_access(dp, ADIV5_LOW_WRITE,
 				ADIV5_DP_CTRLSTAT, 0xF0000032) & 0x32;
 }
 
-static uint32_t adiv5_jtagdp_low_access(ADIv5_DP_t *dp, uint8_t APnDP, uint8_t RnW,
-					uint8_t addr, uint32_t value)
+static uint32_t adiv5_jtagdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
+					uint16_t addr, uint32_t value)
 {
+	bool APnDP = addr & ADIV5_APnDP;
+	addr &= 0xff;
 	uint64_t request, response;
 	uint8_t ack;
 
 	request = ((uint64_t)value << 3) | ((addr >> 1) & 0x06) | (RnW?1:0);
 
-	jtag_dev_write_ir(dp->dev, APnDP?IR_APACC:IR_DPACC);
+	jtag_dev_write_ir(dp->dev, APnDP ? IR_APACC : IR_DPACC);
 
 	int tries = 1000;
 	do {

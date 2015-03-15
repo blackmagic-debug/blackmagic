@@ -553,7 +553,7 @@ static int samd_flash_write(struct target_s *target, uint32_t dest,
 
 			/* Partial, manual page write */
 			for (; addr <= MINIMUM(end, end_of_this_page); addr += 4, i++) {
-				adiv5_dp_write_ap(ap->dp, ADIV5_AP_DRW, data[i]);
+				adiv5_dp_write(ap->dp, ADIV5_AP_DRW, data[i]);
 			}
 
 			/* Unlock */
@@ -578,7 +578,7 @@ static int samd_flash_write(struct target_s *target, uint32_t dest,
 
 			/* Full, automatic page write */
 			for (; addr < page + SAMD_PAGE_SIZE; addr += 4, i++) {
-				adiv5_dp_write_ap(ap->dp, ADIV5_AP_DRW, data[i]);
+				adiv5_dp_write(ap->dp, ADIV5_AP_DRW, data[i]);
 			}
 		}
 
