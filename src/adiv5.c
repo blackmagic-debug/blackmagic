@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2011  Black Sphere Technologies Ltd.
+ * Copyright (C) 2015  Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -39,12 +39,10 @@ static const char adiv5_driver_str[] = "ARM ADIv5 MEM-AP";
 
 static int ap_check_error(struct target_s *target);
 
-static int ap_mem_read_words(struct target_s *target, uint32_t *dest, uint32_t src, int len);
-static int ap_mem_write_words(struct target_s *target, uint32_t dest, const uint32_t *src, int len);
-static int ap_mem_read_halfwords(struct target_s *target, uint16_t *dest, uint32_t src, int len);
-static int ap_mem_write_halfwords(struct target_s *target, uint32_t dest, const uint16_t *src, int len);
-static int ap_mem_read_bytes(struct target_s *target, uint8_t *dest, uint32_t src, int len);
-static int ap_mem_write_bytes(struct target_s *target, uint32_t dest, const uint8_t *src, int len);
+static void ap_mem_read(struct target_s *target, void *dest, uint32_t src,
+                        size_t len);
+static void ap_mem_write(struct target_s *target, uint32_t dest,
+                         const void *src, size_t len);
 
 void adiv5_dp_ref(ADIv5_DP_t *dp)
 {
@@ -147,12 +145,8 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 		t->driver = adiv5_driver_str;
 		t->check_error = ap_check_error;
 
-		t->mem_read_words = ap_mem_read_words;
-		t->mem_write_words = ap_mem_write_words;
-		t->mem_read_halfwords = ap_mem_read_halfwords;
-		t->mem_write_halfwords = ap_mem_write_halfwords;
-		t->mem_read_bytes = ap_mem_read_bytes;
-		t->mem_write_bytes = ap_mem_write_bytes;
+		t->mem_read = ap_mem_read;
+		t->mem_write = ap_mem_write;
 
 		/* The rest sould only be added after checking ROM table */
 		cortexm_probe(t);
@@ -167,88 +161,69 @@ ap_check_error(struct target_s *target)
 	return adiv5_dp_error(ap->dp);
 }
 
-static int
-ap_mem_read_words(struct target_s *target, uint32_t *dest, uint32_t src, int len)
+enum align {
+	ALIGN_BYTE =  0,
+	ALIGN_HALFWORD = 1,
+	ALIGN_WORD = 2
+};
+#define ALIGNOF(x) (((x) & 3) == 0 ? ALIGN_WORD : \
+                    (((x) & 1) == 0 ? ALIGN_HALFWORD : ALIGN_BYTE))
+#undef MIN
+#define MIN(x, y)  (((x) < (y)) ? (x) : (y))
+
+/* Program the CSW and TAR for sequencial access at a given width */
+static void ap_mem_access_setup(ADIv5_AP_t *ap, uint32_t addr, enum align align)
 {
-	ADIv5_AP_t *ap = adiv5_target_ap(target);
-	uint32_t osrc = src;
+	uint32_t csw = ap->csw | ADIV5_AP_CSW_ADDRINC_SINGLE;
 
-	len >>= 2;
-
-	adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw |
-		ADIV5_AP_CSW_SIZE_WORD | ADIV5_AP_CSW_ADDRINC_SINGLE);
-	adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR, src);
-	adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_AP_DRW, 0);
-	while(--len) {
-		*dest++ = adiv5_dp_low_access(ap->dp,
-					ADIV5_LOW_READ, ADIV5_AP_DRW, 0);
-		src += 4;
-		/* Check for 10 bit address overflow */
-		if ((src ^ osrc) & 0xfffffc00) {
-			osrc = src;
-			adiv5_dp_low_access(ap->dp,
-					ADIV5_LOW_WRITE, ADIV5_AP_TAR, src);
-			adiv5_dp_low_access(ap->dp,
-					ADIV5_LOW_READ, ADIV5_AP_DRW, 0);
-		}
-
+	switch (align) {
+	case ALIGN_BYTE:
+		csw |= ADIV5_AP_CSW_SIZE_BYTE;
+		break;
+	case ALIGN_HALFWORD:
+		csw |= ADIV5_AP_CSW_SIZE_HALFWORD;
+		break;
+	case ALIGN_WORD:
+		csw |= ADIV5_AP_CSW_SIZE_WORD;
+		break;
 	}
-	*dest++ = adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ,
-	                              ADIV5_DP_RDBUFF, 0);
-
-	return 0;
+	adiv5_ap_write(ap, ADIV5_AP_CSW, csw);
+	adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR, addr);
 }
 
-static int
-ap_mem_read_halfwords(struct target_s *target, uint16_t *dest, uint32_t src, int len)
+/* Extract read data from data lane based on align and src address */
+static void * extract(void *dest, uint32_t src, uint32_t val, enum align align)
+{
+	switch (align) {
+	case ALIGN_BYTE:
+		*(uint8_t *)dest = (val >> ((src & 0x3) << 3) & 0xFF);
+		break;
+	case ALIGN_HALFWORD:
+		*(uint16_t *)dest = (val >> ((src & 0x2) << 3) & 0xFFFF);
+		break;
+	case ALIGN_WORD:
+		*(uint32_t *)dest = val;
+		break;
+	}
+	return (uint8_t *)dest + (1 << align);
+}
+
+static void
+ap_mem_read(struct target_s *target, void *dest, uint32_t src, size_t len)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
 	uint32_t tmp;
 	uint32_t osrc = src;
+	enum align align = MIN(ALIGNOF(src), ALIGNOF(len));
 
-	len >>= 1;
-
-	adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw |
-		ADIV5_AP_CSW_SIZE_HALFWORD | ADIV5_AP_CSW_ADDRINC_SINGLE);
-	adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR, src);
+	len >>= align;
+	ap_mem_access_setup(ap, src, align);
 	adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_AP_DRW, 0);
-	while(--len) {
-		tmp = adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ,
-					ADIV5_AP_DRW, 0);
-		*dest++ = (tmp >> ((src & 0x2) << 3) & 0xFFFF);
-
-		src += 2;
-		/* Check for 10 bit address overflow */
-		if ((src ^ osrc) & 0xfffffc00) {
-			osrc = src;
-			adiv5_dp_low_access(ap->dp,
-					ADIV5_LOW_WRITE, ADIV5_AP_TAR, src);
-			adiv5_dp_low_access(ap->dp,
-					ADIV5_LOW_READ, ADIV5_AP_DRW, 0);
-		}
-	}
-	tmp = adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_DP_RDBUFF, 0);
-	*dest++ = (tmp >> ((src & 0x2) << 3) & 0xFFFF);
-
-	return 0;
-}
-
-static int
-ap_mem_read_bytes(struct target_s *target, uint8_t *dest, uint32_t src, int len)
-{
-	ADIv5_AP_t *ap = adiv5_target_ap(target);
-	uint32_t tmp;
-	uint32_t osrc = src;
-
-	adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw |
-		ADIV5_AP_CSW_SIZE_BYTE | ADIV5_AP_CSW_ADDRINC_SINGLE);
-	adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR, src);
-	adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_AP_DRW, 0);
-	while(--len) {
+	while (--len) {
 		tmp = adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_AP_DRW, 0);
-		*dest++ = (tmp >> ((src & 0x3) << 3) & 0xFF);
+		dest = extract(dest, src, tmp, align);
 
-		src++;
+		src += (1 << align);
 		/* Check for 10 bit address overflow */
 		if ((src ^ osrc) & 0xfffffc00) {
 			osrc = src;
@@ -259,77 +234,35 @@ ap_mem_read_bytes(struct target_s *target, uint8_t *dest, uint32_t src, int len)
 		}
 	}
 	tmp = adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_DP_RDBUFF, 0);
-	*dest++ = (tmp >> ((src++ & 0x3) << 3) & 0xFF);
-
-	return 0;
+	extract(dest, src, tmp, align);
 }
 
-
-static int
-ap_mem_write_words(struct target_s *target, uint32_t dest, const uint32_t *src, int len)
+static void
+ap_mem_write(struct target_s *target, uint32_t dest, const void *src, size_t len)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(target);
 	uint32_t odest = dest;
+	enum align align = MIN(ALIGNOF(dest), ALIGNOF(len));
 
-	len >>= 2;
-
-	adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw |
-		ADIV5_AP_CSW_SIZE_WORD | ADIV5_AP_CSW_ADDRINC_SINGLE);
-	adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR, dest);
-	while(len--) {
-		adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE,
-					ADIV5_AP_DRW, *src++);
-		dest += 4;
-		/* Check for 10 bit address overflow */
-		if ((dest ^ odest) & 0xfffffc00) {
-			odest = dest;
-			adiv5_dp_low_access(ap->dp,
-					ADIV5_LOW_WRITE, ADIV5_AP_TAR, dest);
+	len >>= align;
+	ap_mem_access_setup(ap, dest, align);
+	while (len--) {
+		uint32_t tmp = 0;
+		/* Pack data into correct data lane */
+		switch (align) {
+		case ALIGN_BYTE:
+			tmp = ((uint32_t)*(uint8_t *)src) << ((dest & 3) << 3);
+			break;
+		case ALIGN_HALFWORD:
+			tmp = ((uint32_t)*(uint16_t *)src) << ((dest & 2) << 3);
+			break;
+		case ALIGN_WORD:
+			tmp = *(uint32_t *)src;
+			break;
 		}
-	}
-
-	return 0;
-}
-
-static int
-ap_mem_write_halfwords(struct target_s *target, uint32_t dest, const uint16_t *src, int len)
-{
-	ADIv5_AP_t *ap = adiv5_target_ap(target);
-	uint32_t odest = dest;
-
-	len >>= 1;
-
-	adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw |
-		ADIV5_AP_CSW_SIZE_HALFWORD | ADIV5_AP_CSW_ADDRINC_SINGLE);
-	adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR, dest);
-	while(len--) {
-		uint32_t tmp = (uint32_t)*src++ << ((dest & 2) << 3);
-		adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE,
-					ADIV5_AP_DRW, tmp);
-		dest += 2;
-		/* Check for 10 bit address overflow */
-		if ((dest ^ odest) & 0xfffffc00) {
-			odest = dest;
-			adiv5_dp_low_access(ap->dp,
-					ADIV5_LOW_WRITE, ADIV5_AP_TAR, dest);
-		}
-	}
-	return 0;
-}
-
-static int
-ap_mem_write_bytes(struct target_s *target, uint32_t dest, const uint8_t *src, int len)
-{
-	ADIv5_AP_t *ap = adiv5_target_ap(target);
-	uint32_t odest = dest;
-
-	adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw |
-		ADIV5_AP_CSW_SIZE_BYTE | ADIV5_AP_CSW_ADDRINC_SINGLE);
-	adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR, dest);
-	while(len--) {
-		uint32_t tmp = (uint32_t)*src++ << ((dest++ & 3) << 3);
-		adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE,
-					ADIV5_AP_DRW, tmp);
+		src = (uint8_t *)src + (1 << align);
+		dest += (1 << align);
+		adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DRW, tmp);
 
 		/* Check for 10 bit address overflow */
 		if ((dest ^ odest) & 0xfffffc00) {
@@ -338,10 +271,7 @@ ap_mem_write_bytes(struct target_s *target, uint32_t dest, const uint8_t *src, i
 					ADIV5_LOW_WRITE, ADIV5_AP_TAR, dest);
 		}
 	}
-	return 0;
 }
-
-
 
 uint32_t adiv5_ap_mem_read(ADIv5_AP_t *ap, uint32_t addr)
 {

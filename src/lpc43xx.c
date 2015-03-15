@@ -224,7 +224,7 @@ static bool lpc43xx_cmd_reset(target *target, int argc, const char *argv[])
 	static const uint32_t reset_val = 0x05FA0004;
 
 	/* System reset on target */
-	target_mem_write_words(target, AIRCR, &reset_val, sizeof(reset_val));
+	target_mem_write(target, AIRCR, &reset_val, sizeof(reset_val));
 
 	return true;
 }
@@ -340,12 +340,12 @@ static void lpc43xx_iap_call(struct target_s *target, struct flash_param *param,
 	/* Pet WDT before each IAP call, if it is on */
 	lpc43xx_wdt_pet(target);
 
-	target_mem_read_words(target, &iap_entry, IAP_ENTRYPOINT_LOCATION, sizeof(iap_entry));
+	target_mem_read(target, &iap_entry, IAP_ENTRYPOINT_LOCATION, sizeof(iap_entry));
 
 	/* fill out the remainder of the parameters and copy the structure to RAM */
 	param->opcode = ARM_THUMB_BREAKPOINT; /* breakpoint */
 	param->pad0 = 0x0000; /* pad */
-	target_mem_write_words(target, IAP_RAM_BASE, (void *)param, param_len);
+	target_mem_write(target, IAP_RAM_BASE, param, param_len);
 
 	/* set up for the call to the IAP ROM */
 	target_regs_read(target, regs);
@@ -362,7 +362,7 @@ static void lpc43xx_iap_call(struct target_s *target, struct flash_param *param,
 	while (!target_halt_wait(target));
 
 	/* copy back just the parameters structure */
-	target_mem_read_words(target, (void *)param, IAP_RAM_BASE, sizeof(struct flash_param));
+	target_mem_read(target, param, IAP_RAM_BASE, sizeof(struct flash_param));
 }
 
 static int lpc43xx_flash_prepare(struct target_s *target, uint32_t addr, int len)
@@ -429,7 +429,7 @@ static int lpc43xx_flash_erase(struct target_s *target, uint32_t addr, size_t le
 static void lpc43xx_set_internal_clock(struct target_s *target)
 {
 	const uint32_t val2 = (1 << 11) | (1 << 24);
-	target_mem_write_words(target, 0x40050000 + 0x06C, &val2, sizeof(val2));
+	target_mem_write(target, 0x40050000 + 0x06C, &val2, sizeof(val2));
 }
 
 static int lpc43xx_flash_write(struct target_s *target,
@@ -477,9 +477,9 @@ static int lpc43xx_flash_write(struct target_s *target,
 		}
 
 		/* copy buffer into target memory */
-		target_mem_write_words(target,
+		target_mem_write(target,
 			IAP_RAM_BASE + offsetof(struct flash_program, data),
-			(uint32_t*)flash_pgm.data, sizeof(flash_pgm.data));
+			flash_pgm.data, sizeof(flash_pgm.data));
 
 		/* set the destination address and program */
 		flash_pgm.p.command = IAP_CMD_PROGRAM;
@@ -541,7 +541,7 @@ static void lpc43xx_wdt_set_period(struct target_s *target)
 {
 	uint32_t wdt_mode = 0;
 	/* Check if WDT is on */
-	target_mem_read_words(target, &wdt_mode, LPC43XX_WDT_MODE, sizeof(wdt_mode));
+	target_mem_read(target, &wdt_mode, LPC43XX_WDT_MODE, sizeof(wdt_mode));
 
 	/* If WDT on, we can't disable it, but we may be able to set a long period */
 	if (wdt_mode && !(wdt_mode & LPC43XX_WDT_PROTECT))
@@ -549,7 +549,7 @@ static void lpc43xx_wdt_set_period(struct target_s *target)
 		const uint32_t wdt_period = LPC43XX_WDT_PERIOD_MAX;
 
 
-		target_mem_write_words(target, LPC43XX_WDT_CNT, &wdt_period, sizeof(wdt_period));
+		target_mem_write(target, LPC43XX_WDT_CNT, &wdt_period, sizeof(wdt_period));
 	}
 }
 
@@ -557,7 +557,7 @@ static void lpc43xx_wdt_pet(struct target_s *target)
 {
 	uint32_t wdt_mode = 0;
 	/* Check if WDT is on */
-	target_mem_read_words(target, &wdt_mode, LPC43XX_WDT_MODE, sizeof(wdt_mode));
+	target_mem_read(target, &wdt_mode, LPC43XX_WDT_MODE, sizeof(wdt_mode));
 
 	/* If WDT on, pet */
 	if (wdt_mode)
@@ -566,7 +566,7 @@ static void lpc43xx_wdt_pet(struct target_s *target)
 		const uint32_t feed2 = 0x55;;
 
 
-		target_mem_write_words(target, LPC43XX_WDT_FEED, &feed1, sizeof(feed1));
-		target_mem_write_words(target, LPC43XX_WDT_FEED, &feed2, sizeof(feed2));
+		target_mem_write(target, LPC43XX_WDT_FEED, &feed1, sizeof(feed1));
+		target_mem_write(target, LPC43XX_WDT_FEED, &feed2, sizeof(feed2));
 	}
 }

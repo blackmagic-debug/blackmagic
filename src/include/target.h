@@ -48,24 +48,11 @@ target *target_attach(target *t, target_destroy_callback destroy_cb);
 	(target)->check_error(target)
 
 /* Memory access functions */
-#define target_mem_read_words(target, dest, src, len)	\
-	(target)->mem_read_words((target), (dest), (src), (len))
+#define target_mem_read(target, dest, src, len)	\
+	(target)->mem_read((target), (dest), (src), (len))
 
-#define target_mem_write_words(target, dest, src, len)	\
-	(target)->mem_write_words((target), (dest), (src), (len))
-
-#define target_mem_read_halfwords(target, dest, src, len)	\
-	(target)->mem_read_halfwords((target), (dest), (src), (len))
-
-#define target_mem_write_halfwords(target, dest, src, len)	\
-	(target)->mem_write_halfwords((target), (dest), (src), (len))
-
-#define target_mem_read_bytes(target, dest, src, len)	\
-	(target)->mem_read_bytes((target), (dest), (src), (len))
-
-#define target_mem_write_bytes(target, dest, src, len)	\
-	(target)->mem_write_bytes((target), (dest), (src), (len))
-
+#define target_mem_write(target, dest, src, len)	\
+	(target)->mem_write((target), (dest), (src), (len))
 
 /* Register access functions */
 #define target_regs_read(target, data)	\
@@ -135,20 +122,10 @@ struct target_s {
 	int (*check_error)(struct target_s *target);
 
 	/* Memory access functions */
-	int (*mem_read_words)(struct target_s *target, uint32_t *dest, uint32_t src,
-				int len);
-	int (*mem_write_words)(struct target_s *target, uint32_t dest,
-				const uint32_t *src, int len);
-
-	int (*mem_read_halfwords)(struct target_s *target, uint16_t *dest, uint32_t src,
-				int len);
-	int (*mem_write_halfwords)(struct target_s *target, uint32_t dest,
-				const uint16_t *src, int len);
-
-	int (*mem_read_bytes)(struct target_s *target, uint8_t *dest, uint32_t src,
-				int len);
-	int (*mem_write_bytes)(struct target_s *target, uint32_t dest,
-				const uint8_t *src, int len);
+	void (*mem_read)(struct target_s *target, void *dest, uint32_t src,
+	                 size_t len);
+	void (*mem_write)(struct target_s *target, uint32_t dest,
+	                  const void *src, size_t len);
 
 	/* Register access functions */
 	int regs_size;

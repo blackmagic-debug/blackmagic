@@ -502,7 +502,7 @@ cortexm_halt_wait(struct target_s *target)
 		 * call. */
 		uint32_t pc = cortexm_pc_read(target);
 		uint16_t bkpt_instr;
-		target_mem_read_bytes(target, (uint8_t *)&bkpt_instr, pc, 2);
+		target_mem_read(target, &bkpt_instr, pc, 2);
 		if (bkpt_instr == 0xBEAB) {
 			int n = cortexm_hostio_request(target);
 			if (n > 0) {
@@ -571,7 +571,7 @@ static int cortexm_fault_unwind(struct target_s *target)
 		bool fpca = !(retcode & (1<<4));
 		/* Read stack for pre-exception registers */
 		uint32_t sp = spsel ? regs[REG_PSP] : regs[REG_MSP];
-		target_mem_read_words(target, stack, sp, sizeof(stack));
+		target_mem_read(target, stack, sp, sizeof(stack));
 		if (target_check_error(target))
 			return 0;
 		regs[REG_LR] = stack[5];	/* restore LR to pre-exception state */
@@ -840,7 +840,7 @@ static int cortexm_hostio_request(target *t)
 	uint32_t params[4];
 
 	target_regs_read(t, arm_regs);
-	target_mem_read_words(t, params, arm_regs[1], sizeof(params));
+	target_mem_read(t, params, arm_regs[1], sizeof(params));
 	priv->syscall = arm_regs[0];
 
 	DEBUG("syscall 0x%x (%x %x %x %x)\n", priv->syscall,
@@ -860,8 +860,7 @@ static int cortexm_hostio_request(target *t)
 		uint32_t pflag = flags[params[1] >> 1];
 		char filename[4];
 
-		target_mem_read_bytes(t, (uint8_t *)filename,
-		                      params[0], sizeof(filename));
+		target_mem_read(t, filename, params[0], sizeof(filename));
 		/* handle requests for console i/o */
 		if (!strcmp(filename, ":tt")) {
 			if (pflag == FILEIO_O_RDONLY)

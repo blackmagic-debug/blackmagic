@@ -100,8 +100,7 @@ uint32_t generic_crc32(struct target_s *target, uint32_t base, int len)
 	uint8_t byte;
 
 	while (len--) {
-		if (target_mem_read_bytes(target, &byte, base, 1) != 0)
-			return -1;
+		target_mem_read(target, &byte, base, 1);
 
 		crc = crc32_calc(crc, byte);
 		base++;
@@ -119,8 +118,7 @@ uint32_t generic_crc32(struct target_s *target, uint32_t base, int len)
 	CRC_CR |= CRC_CR_RESET;
 
 	while (len > 3) {
-		if (target_mem_read_words(target, &data, base, 4) != 0)
-			return -1;
+		target_mem_read(target, &data, base, 4);
 
 		CRC_DR = __builtin_bswap32(data);
 		base += 4;
@@ -130,8 +128,7 @@ uint32_t generic_crc32(struct target_s *target, uint32_t base, int len)
 	crc = CRC_DR;
 
 	while (len--) {
-		if (target_mem_read_bytes(target, (uint8_t *)&data, base++, 1) != 0)
-			return -1;
+		target_mem_read(target, &data, base++, 1);
 
 		crc ^= data << 24;
 		for (i = 0; i < 8; i++) {

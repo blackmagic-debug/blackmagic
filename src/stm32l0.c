@@ -380,17 +380,17 @@ static int stm32lx_nvm_prog_erase_stubbed(struct target_s* target,
         info.page_size = stm32lx_nvm_prog_page_size(target);
 
         /* Load the stub */
-        target_mem_write_words(target, STM32Lx_STUB_PHYS,
-                               (void*) &stm32l0_nvm_prog_erase_stub[0],
-                               sizeof(stm32l0_nvm_prog_erase_stub));
+        target_mem_write(target, STM32Lx_STUB_PHYS,
+                         &stm32l0_nvm_prog_erase_stub[0],
+                         sizeof(stm32l0_nvm_prog_erase_stub));
 
         /* Setup parameters */
         info.destination = addr;
         info.size        = size;
 
         /* Copy parameters */
-        target_mem_write_words(target, STM32Lx_STUB_INFO_PHYS,
-                               (void*) &info, sizeof(info));
+        target_mem_write(target, STM32Lx_STUB_INFO_PHYS,
+                         &info, sizeof(info));
 
         /* Execute stub */
         target_pc_write(target, STM32Lx_STUB_PHYS);
@@ -434,9 +434,9 @@ static int stm32lx_nvm_prog_write_stubbed(struct target_s* target,
         info.page_size = page_size;
 
         /* Load the stub */
-        target_mem_write_words(target, STM32Lx_STUB_PHYS,
-                               (void*) &stm32l0_nvm_prog_write_stub[0],
-                               sizeof(stm32l0_nvm_prog_write_stub));
+        target_mem_write(target, STM32Lx_STUB_PHYS,
+                         &stm32l0_nvm_prog_write_stub[0],
+                         sizeof(stm32l0_nvm_prog_write_stub));
 
         while (size > 0) {
 
@@ -458,8 +458,7 @@ static int stm32lx_nvm_prog_write_stubbed(struct target_s* target,
                 info.size        = cb;
 
                 /* Copy data to write to flash */
-                target_mem_write_words(target, info.source, (void*) source,
-                                       info.size);
+                target_mem_write(target, info.source, source, info.size);
 
                 /* Move pointers early */
                 destination += cb;
@@ -467,8 +466,8 @@ static int stm32lx_nvm_prog_write_stubbed(struct target_s* target,
                 size -= cb;
 
                 /* Copy parameters */
-                target_mem_write_words(target, STM32Lx_STUB_INFO_PHYS,
-                                       (void*) &info, sizeof(info));
+                target_mem_write(target, STM32Lx_STUB_INFO_PHYS,
+                                 &info, sizeof(info));
 
                 /* Execute stub */
                 target_pc_write(target, STM32Lx_STUB_PHYS);
@@ -661,7 +660,7 @@ static int stm32lx_nvm_prog_write(struct target_s* target,
                                 c = size;
                         size -= c;
 
-                        target_mem_write_words(target, destination, source, c);
+                        target_mem_write(target, destination, source, c);
                         source += c/4;
                         destination += c;
                 }
@@ -673,7 +672,7 @@ static int stm32lx_nvm_prog_write(struct target_s* target,
 
                         size_t c = size & ~(half_page_size - 1);
                         size -= c;
-                        target_mem_write_words(target, destination, source, c);
+                        target_mem_write(target, destination, source, c);
                         source += c/4;
                         destination += c;
                 }

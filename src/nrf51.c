@@ -233,8 +233,8 @@ static int nrf51_flash_write(struct target_s *target, uint32_t dest,
 			return -1;
 
 	/* Write stub and data to target ram and set PC */
-	target_mem_write_words(target, 0x20000000, (void*)nrf51_flash_write_stub, 0x28);
-	target_mem_write_words(target, 0x20000028, data, len + 8);
+	target_mem_write(target, 0x20000000, nrf51_flash_write_stub, 0x28);
+	target_mem_write(target, 0x20000028, data, len + 8);
 	target_pc_write(target, 0x20000000);
 	if(target_check_error(target))
 		return -1;

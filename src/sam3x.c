@@ -326,7 +326,7 @@ static int sam3x_flash_erase(struct target_s *target, uint32_t addr, size_t len)
 
 	memset(buf, 0xff, sizeof(buf));
 	/* Only do this once, since it doesn't change. */
-	target_mem_write_words(target, addr, (void*)buf, SAM3_PAGE_SIZE);
+	target_mem_write(target, addr, buf, SAM3_PAGE_SIZE);
 
 	while (len) {
 		if(sam3x_flash_cmd(target, base, EEFC_FCR_FCMD_EWP, chunk))
@@ -384,7 +384,7 @@ static int sam3x_flash_write(struct target_s *target, uint32_t dest,
 			src += page_size;
 		}
 
-		target_mem_write_words(target, dest, (void*)buf, page_size);
+		target_mem_write(target, dest, buf, page_size);
 		if(sam3x_flash_cmd(target, base, EEFC_FCR_FCMD_WP, chunk))
 			return -1;
 	}

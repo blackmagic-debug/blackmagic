@@ -159,9 +159,9 @@ int lmi_flash_write(struct target_s *target, uint32_t dest,
 	data[1] = len >> 2;
 	memcpy(&data[2], src, len);
 	DEBUG("Sending stub\n");
-	target_mem_write_words(target, 0x20000000, (void*)lmi_flash_write_stub, 0x30);
+	target_mem_write(target, 0x20000000, (void*)lmi_flash_write_stub, 0x30);
 	DEBUG("Sending data\n");
-	target_mem_write_words(target, 0x20000030, data, len + 8);
+	target_mem_write(target, 0x20000030, data, len + 8);
 	DEBUG("Running stub\n");
 	target_pc_write(target, 0x20000000);
 	target_halt_resume(target, 0);

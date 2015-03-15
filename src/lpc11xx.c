@@ -170,7 +170,7 @@ lpc11x_iap_call(struct target_s *target, struct flash_param *param, unsigned par
 	/* fill out the remainder of the parameters and copy the structure to RAM */
 	param->opcodes[0] = 0xbe00;
 	param->opcodes[1] = 0x0000;
-	target_mem_write_words(target, IAP_RAM_BASE, (void *)param, param_len);
+	target_mem_write(target, IAP_RAM_BASE, param, param_len);
 
 	/* set up for the call to the IAP ROM */
 	target_regs_read(target, regs);
@@ -191,7 +191,7 @@ lpc11x_iap_call(struct target_s *target, struct flash_param *param, unsigned par
 	while (!target_halt_wait(target));
 
 	/* copy back just the parameters structure */
-	target_mem_read_words(target, (void *)param, IAP_RAM_BASE, sizeof(struct flash_param));
+	target_mem_read(target, param, IAP_RAM_BASE, sizeof(struct flash_param));
 }
 
 static int flash_page_size(struct target_s *target)

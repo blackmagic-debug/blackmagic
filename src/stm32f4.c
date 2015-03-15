@@ -253,8 +253,8 @@ static int stm32f4_flash_write(struct target_s *target, uint32_t dest,
 	memcpy((uint8_t *)&data[2] + offset, src, len);
 
 	/* Write stub and data to target ram and set PC */
-	target_mem_write_words(target, 0x20000000, (void*)stm32f4_flash_write_stub, 0x30);
-	target_mem_write_words(target, 0x20000030, data, sizeof(data));
+	target_mem_write(target, 0x20000000, stm32f4_flash_write_stub, 0x30);
+	target_mem_write(target, 0x20000030, data, sizeof(data));
 	target_pc_write(target, 0x20000000);
 	if(target_check_error(target))
 		return -1;

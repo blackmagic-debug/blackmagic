@@ -176,7 +176,7 @@ static int stm32l1_flash_write(struct target_s *target, uint32_t dest,
 		if(xlen > len)
 			xlen = len & ~3;
 
-		target_mem_write_words(target, dest, (uint32_t*)src, xlen);
+		target_mem_write(target, dest, src, xlen);
 		src += xlen;
 		dest += xlen;
 		len -= xlen;
@@ -192,7 +192,7 @@ static int stm32l1_flash_write(struct target_s *target, uint32_t dest,
 			if(target_check_error(target))
 				return -1;
 
-		target_mem_write_words(target, dest, (uint32_t*)src, len & ~127);
+		target_mem_write(target, dest, src, len & ~127);
 		src += len & ~127;
 		dest += len & ~127;
 		len -= len & ~127;
@@ -208,7 +208,7 @@ static int stm32l1_flash_write(struct target_s *target, uint32_t dest,
 
 	/* Handle non-full page at the end */
 	if(len >= 4) {
-		target_mem_write_words(target, dest, (uint32_t*)src, len & ~3);
+		target_mem_write(target, dest, src, len & ~3);
 		src += len & ~3;
 		dest += len & ~3;
 		len -= len & ~3;
