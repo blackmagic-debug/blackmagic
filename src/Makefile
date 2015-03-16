@@ -9,8 +9,10 @@ endif
 
 BUILDDATE := `date +"%Y%m%d"`
 
-CFLAGS += -Wall -Wextra -Wno-char-subscripts\
-	-O2 -std=gnu99 -g3 -DBUILDDATE=\"$(BUILDDATE)\"\
+OPT_FLAGS ?= -O2
+
+CFLAGS += -Wall -Wextra -Werror -Wno-char-subscripts\
+	$(OPT_FLAGS) -std=gnu99 -g3 -DBUILDDATE=\"$(BUILDDATE)\"\
 	-I. -Iinclude -Iplatforms/common -I$(PLATFORM_DIR) \
 	-DVERSION_SUFFIX=\"`../scripts/setlocalversion`\" -MD
 
