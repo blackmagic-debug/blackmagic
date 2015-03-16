@@ -70,6 +70,11 @@ void adiv5_ap_unref(ADIv5_AP_t *ap)
 	}
 }
 
+void adiv5_dp_write(ADIv5_DP_t *dp, uint16_t addr, uint32_t value)
+{
+	dp->low_access(dp, ADIV5_LOW_WRITE, addr, value);
+}
+
 void adiv5_dp_init(ADIv5_DP_t *dp)
 {
 	uint32_t ctrlstat;

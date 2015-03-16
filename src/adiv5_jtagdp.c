@@ -36,7 +36,6 @@
 #define IR_DPACC	0xA
 #define IR_APACC	0xB
 
-static void adiv5_jtagdp_write(ADIv5_DP_t *dp, uint16_t addr, uint32_t value);
 static uint32_t adiv5_jtagdp_read(ADIv5_DP_t *dp, uint16_t addr);
 
 static uint32_t adiv5_jtagdp_error(ADIv5_DP_t *dp);
@@ -52,17 +51,11 @@ void adiv5_jtag_dp_handler(jtag_dev_t *dev)
 	dp->dev = dev;
 	dp->idcode = dev->idcode;
 
-	dp->dp_write = adiv5_jtagdp_write;
 	dp->dp_read = adiv5_jtagdp_read;
 	dp->error = adiv5_jtagdp_error;
 	dp->low_access = adiv5_jtagdp_low_access;
 
 	adiv5_dp_init(dp);
-}
-
-static void adiv5_jtagdp_write(ADIv5_DP_t *dp, uint16_t addr, uint32_t value)
-{
-	adiv5_jtagdp_low_access(dp, ADIV5_LOW_WRITE, addr, value);
 }
 
 static uint32_t adiv5_jtagdp_read(ADIv5_DP_t *dp, uint16_t addr)

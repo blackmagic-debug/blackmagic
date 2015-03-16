@@ -33,7 +33,6 @@
 #define SWDP_ACK_WAIT  0x02
 #define SWDP_ACK_FAULT 0x04
 
-static void adiv5_swdp_write(ADIv5_DP_t *dp, uint16_t addr, uint32_t value);
 static uint32_t adiv5_swdp_read(ADIv5_DP_t *dp, uint16_t addr);
 
 static uint32_t adiv5_swdp_error(ADIv5_DP_t *dp);
@@ -64,7 +63,6 @@ int adiv5_swdp_scan(void)
 		return -1;
 	}
 
-	dp->dp_write = adiv5_swdp_write;
 	dp->dp_read = adiv5_swdp_read;
 	dp->error = adiv5_swdp_error;
 	dp->low_access = adiv5_swdp_low_access;
@@ -76,11 +74,6 @@ int adiv5_swdp_scan(void)
 	else morse(NULL, 0);
 
 	return target_list?1:0;
-}
-
-static void adiv5_swdp_write(ADIv5_DP_t *dp, uint16_t addr, uint32_t value)
-{
-	adiv5_swdp_low_access(dp, ADIV5_LOW_WRITE, addr, value);
 }
 
 static uint32_t adiv5_swdp_read(ADIv5_DP_t *dp, uint16_t addr)
@@ -111,7 +104,7 @@ static uint32_t adiv5_swdp_error(ADIv5_DP_t *dp)
 	if(err & ADIV5_DP_CTRLSTAT_WDATAERR)
 		clr |= ADIV5_DP_ABORT_WDERRCLR;
 
-	adiv5_swdp_write(dp, ADIV5_DP_ABORT, clr);
+	adiv5_dp_write(dp, ADIV5_DP_ABORT, clr);
 	dp->fault = 0;
 
 	return err;

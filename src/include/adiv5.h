@@ -109,7 +109,6 @@ typedef struct ADIv5_DP_s {
 
 	bool allow_timeout;
 
-	void (*dp_write)(struct ADIv5_DP_s *dp, uint16_t addr, uint32_t value);
 	uint32_t (*dp_read)(struct ADIv5_DP_s *dp, uint16_t addr);
 
 	uint32_t (*error)(struct ADIv5_DP_s *dp);
@@ -122,11 +121,6 @@ typedef struct ADIv5_DP_s {
 		uint8_t fault;
 	};
 } ADIv5_DP_t;
-
-static inline void adiv5_dp_write(ADIv5_DP_t *dp, uint16_t addr, uint32_t value)
-{
-	dp->dp_write(dp, addr, value);
-}
 
 static inline uint32_t adiv5_dp_read(ADIv5_DP_t *dp, uint16_t addr)
 {
@@ -160,6 +154,7 @@ typedef struct ADIv5_AP_s {
 } ADIv5_AP_t;
 
 void adiv5_dp_init(ADIv5_DP_t *dp);
+void adiv5_dp_write(ADIv5_DP_t *dp, uint16_t addr, uint32_t value);
 
 void adiv5_dp_ref(ADIv5_DP_t *dp);
 void adiv5_ap_ref(ADIv5_AP_t *ap);
