@@ -564,7 +564,7 @@ static int samd_flash_write(struct target_s *target, uint32_t dest,
  */
 static bool samd_cmd_erase_all(target *t)
 {
-  /* Clear the DSU status bits */
+	/* Clear the DSU status bits */
 	target_mem_write32(t, SAMD_DSU_CTRLSTAT,
 			   (SAMD_STATUSA_DONE | SAMD_STATUSA_PERR | SAMD_STATUSA_FAIL));
 
