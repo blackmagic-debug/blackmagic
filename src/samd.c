@@ -526,34 +526,26 @@ static int samd_flash_write(struct target_s *target, uint32_t dest,
 	uint32_t first_page = dest & ~(SAMD_PAGE_SIZE - 1);
 	/* The start address of the last page involved in the write */
 	uint32_t last_page = (dest + len - 1) & ~(SAMD_PAGE_SIZE - 1);
-	uint32_t end_of_this_page;
-
+	uint32_t next_page;
+	uint32_t length;
 
 	for (uint32_t page = first_page; page <= last_page; page += SAMD_PAGE_SIZE) {
-		end_of_this_page = page + (SAMD_PAGE_SIZE - 4);
+		next_page = page + SAMD_PAGE_SIZE;
+		length = MINIMUM(end + 4, next_page) - addr;
 
-		if (addr > page || (page == last_page && end < end_of_this_page)) {
-			/* Partial, manual page write */
-			target_mem_write(target, addr, &data[i],
-			                 MINIMUM(end, end_of_this_page));
+		/* Write within a single page. This may be part or all of the page */
+                target_mem_write(target, addr, &data[i], length);
+                addr += length; i += (length >> 2);
 
-			/* Unlock */
-			samd_unlock_current_address(target);
+                /* If MANW=0 (default) we may have triggered an automatic
+                 * write. Ignore this */
 
-			/* Issue the write page command */
-			target_mem_write32(target, SAMD_NVMC_CTRLA,
-			                   SAMD_CTRLA_CMD_KEY | SAMD_CTRLA_CMD_WRITEPAGE);
-		} else {
-			/* Write first word to set address */
-			target_mem_write32(target, addr, data[i]);
-			addr += 4; i++;
+                /* Unlock */
+                samd_unlock_current_address(target);
 
-			/* Unlock */
-			samd_unlock_current_address(target);
-
-			target_mem_write(target, addr, &data[i],
-			                 MINIMUM(end, end_of_this_page));
-		}
+                /* Issue the write page command */
+                target_mem_write32(target, SAMD_NVMC_CTRLA,
+				   SAMD_CTRLA_CMD_KEY | SAMD_CTRLA_CMD_WRITEPAGE);
 
 		/* Poll for NVM Ready */
 		while ((target_mem_read32(target, SAMD_NVMC_INTFLAG) & SAMD_NVMC_READY) == 0)
@@ -572,7 +564,7 @@ static int samd_flash_write(struct target_s *target, uint32_t dest,
  */
 static bool samd_cmd_erase_all(target *t)
 {
-	/* Clear the DSU status bits */
+  /* Clear the DSU status bits */
 	target_mem_write32(t, SAMD_DSU_CTRLSTAT,
 			   (SAMD_STATUSA_DONE | SAMD_STATUSA_PERR | SAMD_STATUSA_FAIL));
 
