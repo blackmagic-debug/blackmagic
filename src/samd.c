@@ -508,7 +508,6 @@ static int samd_flash_erase(struct target_s *target, uint32_t addr, size_t len)
 static int samd_flash_write(struct target_s *target, uint32_t dest,
                             const uint8_t *src, size_t len)
 {
-	ADIv5_AP_t *ap = adiv5_target_ap(target);
 	/* Find the size of our 32-bit data buffer */
 	uint32_t offset = dest % 4;
 	uint32_t words = (offset + len + 3) / 4;
@@ -534,42 +533,26 @@ static int samd_flash_write(struct target_s *target, uint32_t dest,
 		end_of_this_page = page + (SAMD_PAGE_SIZE - 4);
 
 		if (addr > page || (page == last_page && end < end_of_this_page)) {
-			/* Setup write */
-			adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw |
-				       ADIV5_AP_CSW_SIZE_WORD | ADIV5_AP_CSW_ADDRINC_SINGLE);
-			adiv5_ap_write(ap, ADIV5_AP_TAR, addr);
-			adiv5_dp_write(ap->dp, ADIV5_DP_SELECT,
-				       ((uint32_t)ap->apsel << 24)|(ADIV5_AP_DRW & 0xF0));
-
 			/* Partial, manual page write */
-			for (; addr <= MINIMUM(end, end_of_this_page); addr += 4, i++) {
-				adiv5_dp_write(ap->dp, ADIV5_AP_DRW, data[i]);
-			}
+			target_mem_write(target, addr, &data[i],
+			                 MINIMUM(end, end_of_this_page));
 
 			/* Unlock */
 			samd_unlock_current_address(target);
 
 			/* Issue the write page command */
 			target_mem_write32(target, SAMD_NVMC_CTRLA,
-					   SAMD_CTRLA_CMD_KEY | SAMD_CTRLA_CMD_WRITEPAGE);
+			                   SAMD_CTRLA_CMD_KEY | SAMD_CTRLA_CMD_WRITEPAGE);
 		} else {
 			/* Write first word to set address */
-			target_mem_write32(target, addr, data[i]); addr += 4; i++;
+			target_mem_write32(target, addr, data[i]);
+			addr += 4; i++;
 
 			/* Unlock */
 			samd_unlock_current_address(target);
 
-			/* Set up write */
-			adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw |
-				       ADIV5_AP_CSW_SIZE_WORD | ADIV5_AP_CSW_ADDRINC_SINGLE);
-			adiv5_ap_write(ap, ADIV5_AP_TAR, addr);
-			adiv5_dp_write(ap->dp, ADIV5_DP_SELECT,
-				       ((uint32_t)ap->apsel << 24)|(ADIV5_AP_DRW & 0xF0));
-
-			/* Full, automatic page write */
-			for (; addr < page + SAMD_PAGE_SIZE; addr += 4, i++) {
-				adiv5_dp_write(ap->dp, ADIV5_AP_DRW, data[i]);
-			}
+			target_mem_write(target, addr, &data[i],
+			                 MINIMUM(end, end_of_this_page));
 		}
 
 		/* Poll for NVM Ready */
