@@ -374,82 +374,80 @@ bool samd_probe(struct target_s *target)
 	uint32_t pid = samd_read_pid(target);
 
 	/* Check the ARM Coresight Component and Perhiperal IDs */
-	if (cid == SAMD_CID_VALUE &&
-	    (pid & SAMD_PID_MASK) == SAMD_PID_CONST_VALUE) {
+	if ((cid != SAMD_CID_VALUE) ||
+	    ((pid & SAMD_PID_MASK) != SAMD_PID_CONST_VALUE))
+		return false;
 
-		/* Read the Device ID */
-		uint32_t did = target_mem_read32(target, SAMD_DSU_DID);
+	/* Read the Device ID */
+	uint32_t did = target_mem_read32(target, SAMD_DSU_DID);
 
-		/* If the Device ID matches */
-		if ((did & SAMD_DID_MASK) == SAMD_DID_CONST_VALUE) {
+	/* If the Device ID matches */
+	if ((did & SAMD_DID_MASK) != SAMD_DID_CONST_VALUE)
+		return false;
 
-			uint32_t ctrlstat = target_mem_read32(target,
-			                                      SAMD_DSU_CTRLSTAT);
-			struct samd_descr samd = samd_parse_device_id(did);
+	uint32_t ctrlstat = target_mem_read32(target,
+	                                      SAMD_DSU_CTRLSTAT);
+	struct samd_descr samd = samd_parse_device_id(did);
 
-			/* Protected? */
-			int protected = (ctrlstat & SAMD_STATUSB_PROT);
+	/* Protected? */
+	bool protected = (ctrlstat & SAMD_STATUSB_PROT);
 
-			/* Part String */
-			if (protected) {
-				sprintf(variant_string,
-					"Atmel SAMD%d%c%dA%s (rev %c) (PROT=1)",
-					samd.series, samd.pin, samd.mem,
-					samd.package, samd.revision);
-			} else {
-				sprintf(variant_string,
-					"Atmel SAMD%d%c%dA%s (rev %c)",
-					samd.series, samd.pin, samd.mem,
-					samd.package, samd.revision);
-			}
+	/* Part String */
+	if (protected) {
+		sprintf(variant_string,
+		        "Atmel SAMD%d%c%dA%s (rev %c) (PROT=1)",
+		        samd.series, samd.pin, samd.mem,
+		        samd.package, samd.revision);
+	} else {
+		sprintf(variant_string,
+		        "Atmel SAMD%d%c%dA%s (rev %c)",
+		        samd.series, samd.pin, samd.mem,
+		        samd.package, samd.revision);
+	}
 
-			/* Setup Target */
-			target->driver = variant_string;
-			target->reset = samd_reset;
+	/* Setup Target */
+	target->driver = variant_string;
+	target->reset = samd_reset;
 
-			if (samd.series == 20 && samd.revision == 'B') {
-				/**
-				 * These functions check for and
-				 * extended reset. Appears to be
-				 * related to Errata 35.4.1 ref 12015
-				 */
-				target->detach      = samd20_revB_detach;
-				target->halt_resume = samd20_revB_halt_resume;
-			}
-			if (protected) {
-				/**
-				 * Overload the default cortexm attach
-				 * for when the samd is protected.
-				 * This function allows users to
-				 * attach on a temporary basis so they
-				 * can rescue the device.
-				 */
-				target->attach = samd_protected_attach;
-			}
+	if (samd.series == 20 && samd.revision == 'B') {
+		/**
+		 * These functions check for and
+		 * extended reset. Appears to be
+		 * related to Errata 35.4.1 ref 12015
+		 */
+		target->detach      = samd20_revB_detach;
+		target->halt_resume = samd20_revB_halt_resume;
+	}
+	if (protected) {
+		/**
+		 * Overload the default cortexm attach
+		 * for when the samd is protected.
+		 * This function allows users to
+		 * attach on a temporary basis so they
+		 * can rescue the device.
+		 */
+		target->attach = samd_protected_attach;
+	}
 
-			target->xml_mem_map = samd_xml_memory_map;
-			target->flash_erase = samd_flash_erase;
-			target->flash_write = samd_flash_write;
-			target_add_commands(target, samd_cmd_list, "SAMD");
+	target->xml_mem_map = samd_xml_memory_map;
+	target->flash_erase = samd_flash_erase;
+	target->flash_write = samd_flash_write;
+	target_add_commands(target, samd_cmd_list, "SAMD");
 
-			/* If we're not in reset here */
-			if (!connect_assert_srst) {
-			  /* We'll have to release the target from
-			   * extended reset to make attach possible */
-			  if (target_mem_read32(target, SAMD_DSU_CTRLSTAT) &
-			      SAMD_STATUSA_CRSTEXT) {
+	/* If we're not in reset here */
+	if (!connect_assert_srst) {
+		/* We'll have to release the target from
+		 * extended reset to make attach possible */
+		if (target_mem_read32(target, SAMD_DSU_CTRLSTAT) &
+		    SAMD_STATUSA_CRSTEXT) {
 
-			    /* Write bit to clear from extended reset */
-			    target_mem_write32(target, SAMD_DSU_CTRLSTAT,
-					       SAMD_STATUSA_CRSTEXT);
-			  }
-			}
-
-			return true;
+			/* Write bit to clear from extended reset */
+			target_mem_write32(target, SAMD_DSU_CTRLSTAT,
+			                   SAMD_STATUSA_CRSTEXT);
 		}
 	}
 
-	return false;
+	return true;
 }
 
 /**
