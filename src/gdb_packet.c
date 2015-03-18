@@ -159,7 +159,8 @@ void gdb_outf(const char *fmt, ...)
 	char *buf;
 
 	va_start(ap, fmt);
-	vasprintf(&buf, fmt, ap);
+	if (vasprintf(&buf, fmt, ap) < 0)
+		return;
 	gdb_out(buf);
 	free(buf);
 	va_end(ap);
