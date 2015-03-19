@@ -59,7 +59,7 @@ const struct command_s samd_cmd_list[] = {
 	{"user_row", (cmd_handler)samd_cmd_read_userrow, "Prints user row from flash"},
 	{"serial", (cmd_handler)samd_cmd_serial, "Prints serial number"},
 	{"mbist", (cmd_handler)samd_cmd_mbist, "Runs the built-in memory test"},
-        {"set_security_bit", (cmd_handler)samd_cmd_ssb, "Sets the Security Bit"},
+	{"set_security_bit", (cmd_handler)samd_cmd_ssb, "Sets the Security Bit"},
 	{NULL, NULL, NULL}
 };
 
@@ -222,14 +222,14 @@ samd_reset(struct target_s *target)
 	 *          or SYSRESETREQ: 0x05FA0004 (system reset)
 	 */
 	target_mem_write32(target, CORTEXM_AIRCR,
-			   CORTEXM_AIRCR_VECTKEY | CORTEXM_AIRCR_SYSRESETREQ);
+	                   CORTEXM_AIRCR_VECTKEY | CORTEXM_AIRCR_SYSRESETREQ);
 
 	/* Exit extended reset */
 	if (target_mem_read32(target, SAMD_DSU_CTRLSTAT) &
 	    SAMD_STATUSA_CRSTEXT) {
 		/* Write bit to clear from extended reset */
 		target_mem_write32(target, SAMD_DSU_CTRLSTAT,
-				   SAMD_STATUSA_CRSTEXT);
+		                   SAMD_STATUSA_CRSTEXT);
 	}
 
 	/* Poll for release from reset */
@@ -301,10 +301,10 @@ samd_protected_attach(struct target_s *target)
 	 * regain access to the chip.
 	 */
 
-        /* Patch back in the normal cortexm attach for next time */
-        target->attach = cortexm_attach;
+	/* Patch back in the normal cortexm attach for next time */
+	target->attach = cortexm_attach;
 
-        /* Allow attach this time */
+	/* Allow attach this time */
 	return true;
 }
 
@@ -374,82 +374,80 @@ bool samd_probe(struct target_s *target)
 	uint32_t pid = samd_read_pid(target);
 
 	/* Check the ARM Coresight Component and Perhiperal IDs */
-	if (cid == SAMD_CID_VALUE &&
-	    (pid & SAMD_PID_MASK) == SAMD_PID_CONST_VALUE) {
+	if ((cid != SAMD_CID_VALUE) ||
+	    ((pid & SAMD_PID_MASK) != SAMD_PID_CONST_VALUE))
+		return false;
 
-		/* Read the Device ID */
-		uint32_t did = target_mem_read32(target, SAMD_DSU_DID);
+	/* Read the Device ID */
+	uint32_t did = target_mem_read32(target, SAMD_DSU_DID);
 
-		/* If the Device ID matches */
-		if ((did & SAMD_DID_MASK) == SAMD_DID_CONST_VALUE) {
+	/* If the Device ID matches */
+	if ((did & SAMD_DID_MASK) != SAMD_DID_CONST_VALUE)
+		return false;
 
-			uint32_t ctrlstat = target_mem_read32(target,
-			                                      SAMD_DSU_CTRLSTAT);
-			struct samd_descr samd = samd_parse_device_id(did);
+	uint32_t ctrlstat = target_mem_read32(target,
+	                                      SAMD_DSU_CTRLSTAT);
+	struct samd_descr samd = samd_parse_device_id(did);
 
-                        /* Protected? */
-                        int protected = (ctrlstat & SAMD_STATUSB_PROT);
+	/* Protected? */
+	bool protected = (ctrlstat & SAMD_STATUSB_PROT);
 
-			/* Part String */
-                        if (protected) {
-				sprintf(variant_string,
-					"Atmel SAMD%d%c%dA%s (rev %c) (PROT=1)",
-					samd.series, samd.pin, samd.mem,
-					samd.package, samd.revision);
-			} else {
-				sprintf(variant_string,
-					"Atmel SAMD%d%c%dA%s (rev %c)",
-					samd.series, samd.pin, samd.mem,
-					samd.package, samd.revision);
-                        }
+	/* Part String */
+	if (protected) {
+		sprintf(variant_string,
+		        "Atmel SAMD%d%c%dA%s (rev %c) (PROT=1)",
+		        samd.series, samd.pin, samd.mem,
+		        samd.package, samd.revision);
+	} else {
+		sprintf(variant_string,
+		        "Atmel SAMD%d%c%dA%s (rev %c)",
+		        samd.series, samd.pin, samd.mem,
+		        samd.package, samd.revision);
+	}
 
-			/* Setup Target */
-			target->driver = variant_string;
-			target->reset = samd_reset;
+	/* Setup Target */
+	target->driver = variant_string;
+	target->reset = samd_reset;
 
-			if (samd.series == 20 && samd.revision == 'B') {
-				/**
-				 * These functions check for and
-				 * extended reset. Appears to be
-				 * related to Errata 35.4.1 ref 12015
-				 */
-				target->detach      = samd20_revB_detach;
-				target->halt_resume = samd20_revB_halt_resume;
-			}
-			if (protected) {
-				/**
-				 * Overload the default cortexm attach
-				 * for when the samd is protected.
-				 * This function allows users to
-				 * attach on a temporary basis so they
-				 * can rescue the device.
-				 */
-				target->attach = samd_protected_attach;
-			}
+	if (samd.series == 20 && samd.revision == 'B') {
+		/**
+		 * These functions check for and
+		 * extended reset. Appears to be
+		 * related to Errata 35.4.1 ref 12015
+		 */
+		target->detach      = samd20_revB_detach;
+		target->halt_resume = samd20_revB_halt_resume;
+	}
+	if (protected) {
+		/**
+		 * Overload the default cortexm attach
+		 * for when the samd is protected.
+		 * This function allows users to
+		 * attach on a temporary basis so they
+		 * can rescue the device.
+		 */
+		target->attach = samd_protected_attach;
+	}
 
-			target->xml_mem_map = samd_xml_memory_map;
-			target->flash_erase = samd_flash_erase;
-			target->flash_write = samd_flash_write;
-			target_add_commands(target, samd_cmd_list, "SAMD");
+	target->xml_mem_map = samd_xml_memory_map;
+	target->flash_erase = samd_flash_erase;
+	target->flash_write = samd_flash_write;
+	target_add_commands(target, samd_cmd_list, "SAMD");
 
-			/* If we're not in reset here */
-			if (!connect_assert_srst) {
-			  /* We'll have to release the target from
-			   * extended reset to make attach possible */
-			  if (target_mem_read32(target, SAMD_DSU_CTRLSTAT) &
-			      SAMD_STATUSA_CRSTEXT) {
+	/* If we're not in reset here */
+	if (!connect_assert_srst) {
+		/* We'll have to release the target from
+		 * extended reset to make attach possible */
+		if (target_mem_read32(target, SAMD_DSU_CTRLSTAT) &
+		    SAMD_STATUSA_CRSTEXT) {
 
-			    /* Write bit to clear from extended reset */
-			    target_mem_write32(target, SAMD_DSU_CTRLSTAT,
-					       SAMD_STATUSA_CRSTEXT);
-			  }
-			}
-
-			return true;
+			/* Write bit to clear from extended reset */
+			target_mem_write32(target, SAMD_DSU_CTRLSTAT,
+			                   SAMD_STATUSA_CRSTEXT);
 		}
 	}
 
-	return false;
+	return true;
 }
 
 /**
@@ -489,7 +487,7 @@ static int samd_flash_erase(struct target_s *target, uint32_t addr, size_t len)
 		                   SAMD_CTRLA_CMD_KEY | SAMD_CTRLA_CMD_ERASEROW);
 		/* Poll for NVM Ready */
 		while ((target_mem_read32(target, SAMD_NVMC_INTFLAG) & SAMD_NVMC_READY) == 0)
-			if(target_check_error(target))
+			if (target_check_error(target))
 				return -1;
 
 		/* Lock */
@@ -508,7 +506,6 @@ static int samd_flash_erase(struct target_s *target, uint32_t addr, size_t len)
 static int samd_flash_write(struct target_s *target, uint32_t dest,
                             const uint8_t *src, size_t len)
 {
-	ADIv5_AP_t *ap = adiv5_target_ap(target);
 	/* Find the size of our 32-bit data buffer */
 	uint32_t offset = dest % 4;
 	uint32_t words = (offset + len + 3) / 4;
@@ -527,54 +524,30 @@ static int samd_flash_write(struct target_s *target, uint32_t dest,
 	uint32_t first_page = dest & ~(SAMD_PAGE_SIZE - 1);
 	/* The start address of the last page involved in the write */
 	uint32_t last_page = (dest + len - 1) & ~(SAMD_PAGE_SIZE - 1);
-	uint32_t end_of_this_page;
-
+	uint32_t next_page;
+	uint32_t length;
 
 	for (uint32_t page = first_page; page <= last_page; page += SAMD_PAGE_SIZE) {
-		end_of_this_page = page + (SAMD_PAGE_SIZE - 4);
+		next_page = page + SAMD_PAGE_SIZE;
+		length = MINIMUM(end + 4, next_page) - addr;
 
-		if (addr > page || (page == last_page && end < end_of_this_page)) {
-			/* Setup write */
-			adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw |
-				       ADIV5_AP_CSW_SIZE_WORD | ADIV5_AP_CSW_ADDRINC_SINGLE);
-			adiv5_ap_write(ap, ADIV5_AP_TAR, addr);
-			adiv5_dp_write(ap->dp, ADIV5_DP_SELECT,
-				       ((uint32_t)ap->apsel << 24)|(ADIV5_AP_DRW & 0xF0));
+		/* Write within a single page. This may be part or all of the page */
+		target_mem_write(target, addr, &data[i], length);
+		addr += length; i += (length >> 2);
 
-			/* Partial, manual page write */
-			for (; addr <= MINIMUM(end, end_of_this_page); addr += 4, i++) {
-				adiv5_dp_write(ap->dp, ADIV5_AP_DRW, data[i]);
-			}
+		/* If MANW=0 (default) we may have triggered an automatic
+		* write. Ignore this */
 
-			/* Unlock */
-			samd_unlock_current_address(target);
+		/* Unlock */
+		samd_unlock_current_address(target);
 
-			/* Issue the write page command */
-			target_mem_write32(target, SAMD_NVMC_CTRLA,
-					   SAMD_CTRLA_CMD_KEY | SAMD_CTRLA_CMD_WRITEPAGE);
-		} else {
-			/* Write first word to set address */
-			target_mem_write32(target, addr, data[i]); addr += 4; i++;
-
-			/* Unlock */
-			samd_unlock_current_address(target);
-
-			/* Set up write */
-			adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw |
-				       ADIV5_AP_CSW_SIZE_WORD | ADIV5_AP_CSW_ADDRINC_SINGLE);
-			adiv5_ap_write(ap, ADIV5_AP_TAR, addr);
-			adiv5_dp_write(ap->dp, ADIV5_DP_SELECT,
-				       ((uint32_t)ap->apsel << 24)|(ADIV5_AP_DRW & 0xF0));
-
-			/* Full, automatic page write */
-			for (; addr < page + SAMD_PAGE_SIZE; addr += 4, i++) {
-				adiv5_dp_write(ap->dp, ADIV5_AP_DRW, data[i]);
-			}
-		}
+		/* Issue the write page command */
+		target_mem_write32(target, SAMD_NVMC_CTRLA,
+		                   SAMD_CTRLA_CMD_KEY | SAMD_CTRLA_CMD_WRITEPAGE);
 
 		/* Poll for NVM Ready */
 		while ((target_mem_read32(target, SAMD_NVMC_INTFLAG) & SAMD_NVMC_READY) == 0)
-			if(target_check_error(target))
+			if (target_check_error(target))
 				return -1;
 
 		/* Lock */
@@ -591,7 +564,8 @@ static bool samd_cmd_erase_all(target *t)
 {
 	/* Clear the DSU status bits */
 	target_mem_write32(t, SAMD_DSU_CTRLSTAT,
-			   (SAMD_STATUSA_DONE | SAMD_STATUSA_PERR | SAMD_STATUSA_FAIL));
+	                   SAMD_STATUSA_DONE | SAMD_STATUSA_PERR |
+	                   SAMD_STATUSA_FAIL);
 
 	/* Erase all */
 	target_mem_write32(t, SAMD_DSU_CTRLSTAT, SAMD_CTRL_CHIP_ERASE);
@@ -600,7 +574,7 @@ static bool samd_cmd_erase_all(target *t)
 	uint32_t status;
 	while (((status = target_mem_read32(t, SAMD_DSU_CTRLSTAT)) &
 		(SAMD_STATUSA_DONE | SAMD_STATUSA_PERR | SAMD_STATUSA_FAIL)) == 0)
-		if(target_check_error(t))
+		if (target_check_error(t))
 			return false;
 
 	/* Test the protection error bit in Status A */
@@ -642,7 +616,7 @@ static bool samd_set_flashlock(target *t, uint16_t value)
 
 	/* Poll for NVM Ready */
 	while ((target_mem_read32(t, SAMD_NVMC_INTFLAG) & SAMD_NVMC_READY) == 0)
-		if(target_check_error(t))
+		if (target_check_error(t))
 			return -1;
 
 	/* Modify the high byte of the user row */
@@ -656,16 +630,19 @@ static bool samd_set_flashlock(target *t, uint16_t value)
 	target_mem_write32(t, SAMD_NVMC_CTRLA,
 	                   SAMD_CTRLA_CMD_KEY | SAMD_CTRLA_CMD_WRITEAUXPAGE);
 
-  	return true;
+	return true;
 }
+
 static bool samd_cmd_lock_flash(target *t)
 {
 	return samd_set_flashlock(t, 0x0000);
 }
+
 static bool samd_cmd_unlock_flash(target *t)
 {
 	return samd_set_flashlock(t, 0xFFFF);
 }
+
 static bool samd_cmd_read_userrow(target *t)
 {
 	gdb_outf("User Row: 0x%08x%08x\n",
@@ -674,6 +651,7 @@ static bool samd_cmd_read_userrow(target *t)
 
 	return true;
 }
+
 /**
  * Reads the 128-bit serial number from the NVM
  */
@@ -689,6 +667,7 @@ static bool samd_cmd_serial(target *t)
 
 	return true;
 }
+
 /**
  * Returns the size (in bytes) of the current SAM D20's flash memory.
  */
@@ -703,6 +682,7 @@ static uint32_t samd_flash_size(target *t)
 	/* Shift the maximum flash size (256KB) down as appropriate */
 	return (0x40000 >> (devsel % 5));
 }
+
 /**
  * Runs the Memory Built In Self Test (MBIST)
  */
@@ -722,7 +702,7 @@ static bool samd_cmd_mbist(target *t)
 	uint32_t status;
 	while (((status = target_mem_read32(t, SAMD_DSU_CTRLSTAT)) &
 		(SAMD_STATUSA_DONE | SAMD_STATUSA_PERR | SAMD_STATUSA_FAIL)) == 0)
-		if(target_check_error(t))
+		if (target_check_error(t))
 			return false;
 
 	/* Test the protection error bit in Status A */
@@ -734,7 +714,7 @@ static bool samd_cmd_mbist(target *t)
 	/* Test the fail bit in Status A */
 	if (status & SAMD_STATUSA_FAIL) {
 		gdb_outf("MBIST Fail @ 0x%08x\n",
-			 target_mem_read32(t, SAMD_DSU_ADDRESS));
+		         target_mem_read32(t, SAMD_DSU_ADDRESS));
 	} else {
 		gdb_outf("MBIST Passed!\n");
 	}
@@ -750,9 +730,9 @@ static bool samd_cmd_ssb(target *t)
 	target_mem_write32(t, SAMD_NVMC_CTRLA,
 	                   SAMD_CTRLA_CMD_KEY | SAMD_CTRLA_CMD_SSB);
 
-        /* Poll for NVM Ready */
-        while ((target_mem_read32(t, SAMD_NVMC_INTFLAG) & SAMD_NVMC_READY) == 0)
-        	if(target_check_error(t))
+	/* Poll for NVM Ready */
+	while ((target_mem_read32(t, SAMD_NVMC_INTFLAG) & SAMD_NVMC_READY) == 0)
+		if (target_check_error(t))
 			return -1;
 
 	gdb_outf("Set the security bit! "
@@ -760,3 +740,4 @@ static bool samd_cmd_ssb(target *t)
 
 	return true;
 }
+
