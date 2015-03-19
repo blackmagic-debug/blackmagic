@@ -254,6 +254,7 @@ cortexm_probe(struct target_s *target)
 	PROBE(stm32l0_probe);   /* STM32L0xx & STM32L1xx */
 	PROBE(stm32l1_probe);
 	PROBE(lpc11xx_probe);
+	PROBE(lpc17xx_probe);
 	PROBE(lpc43xx_probe);
 	PROBE(sam3x_probe);
 	PROBE(nrf51_probe);
@@ -542,6 +543,12 @@ void cortexm_halt_resume(struct target_s *target, bool step)
 
 	target_mem_write32(target, CORTEXM_DHCSR, dhcsr);
 	ap->dp->allow_timeout = true;
+
+	/**
+	 * For the LPC17xx we need to re-read the IDCODE to re-sync
+	 * after resuming.
+	 */
+	adiv5_idcode_sync(ap->dp);
 }
 
 static int cortexm_fault_unwind(struct target_s *target)
