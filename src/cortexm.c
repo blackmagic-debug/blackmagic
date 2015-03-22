@@ -60,6 +60,7 @@ const struct command_s cortexm_cmd_list[] = {
 static int cortexm_regs_read(struct target_s *target, void *data);
 static int cortexm_regs_write(struct target_s *target, const void *data);
 static int cortexm_pc_write(struct target_s *target, const uint32_t val);
+static uint32_t cortexm_pc_read(struct target_s *target);
 
 static void cortexm_reset(struct target_s *target);
 static int cortexm_halt_wait(struct target_s *target);
@@ -216,6 +217,7 @@ cortexm_probe(struct target_s *target)
 	target->regs_read = cortexm_regs_read;
 	target->regs_write = cortexm_regs_write;
 	target->pc_write = cortexm_pc_write;
+	target->pc_read = cortexm_pc_read;
 
 	target->reset = cortexm_reset;
 	target->halt_request = cortexm_halt_request;
@@ -603,6 +605,40 @@ static int cortexm_fault_unwind(struct target_s *target)
 	return 0;
 }
 
+int cortexm_run_stub(struct target_s *target, uint32_t loadaddr,
+                     const uint16_t *stub, uint32_t stublen,
+                     uint32_t r0, uint32_t r1, uint32_t r2, uint32_t r3)
+{
+	uint32_t regs[target->regs_size / 4];
+
+	memset(regs, 0, sizeof(regs));
+	regs[0] = r0;
+	regs[1] = r1;
+	regs[2] = r2;
+	regs[3] = r3;
+	regs[15] = loadaddr;
+	regs[16] = 0x1000000;
+	regs[19] = 0;
+
+	target_mem_write(target, loadaddr, stub, stublen);
+	cortexm_regs_write(target, regs);
+
+	if (target_check_error(target))
+		return -1;
+
+	/* Execute the stub */
+	cortexm_halt_resume(target, 0);
+	while (!cortexm_halt_wait(target))
+		;
+
+	uint32_t pc = cortexm_pc_read(target);
+	uint16_t bkpt_instr = target_mem_read16(target, pc);
+	if (bkpt_instr >> 8 != 0xbe)
+		return -2;
+
+	return bkpt_instr & 0xff;
+}
+
 /* The following routines implement hardware breakpoints.
  * The Flash Patch and Breakpoint (FPB) system is used. */
 
@@ -647,7 +683,6 @@ cortexm_clear_hw_bp(struct target_s *target, uint32_t addr)
 
 	return 0;
 }
-
 
 /* The following routines implement hardware watchpoints.
  * The Data Watch and Trace (DWT) system is used. */

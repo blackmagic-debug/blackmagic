@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2011  Black Sphere Technologies Ltd.
+ * Copyright (C) 2015  Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -17,28 +17,14 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+#ifndef __STUB_H
+#define __STUB_H
 
-#ifndef __GENERAL_H
-#define __GENERAL_H
-
-#define _GNU_SOURCE
-#include <stdint.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
-#include <stddef.h>
-#include <inttypes.h>
-
-#include "platform.h"
-#include "platform_support.h"
-
-#ifndef DEBUG
-#include <stdio.h>
-#define DEBUG	printf
-#endif
-
-#define ALIGN(x, n) (((x) + (n) - 1) & ~((n) - 1))
+static inline void __attribute__((always_inline))
+stub_exit(const int code)
+{
+	asm("bkpt %0"::"i"(code));
+}
 
 #endif
 

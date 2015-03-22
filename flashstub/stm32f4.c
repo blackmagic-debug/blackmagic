@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2011  Black Sphere Technologies Ltd.
+ * Copyright (C) 2015  Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -17,28 +17,24 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+#include "libopencm3/stm32/flash.h"
+#include "stub.h"
 
-#ifndef __GENERAL_H
-#define __GENERAL_H
+#define SR_ERROR_MASK 0xF2
 
-#define _GNU_SOURCE
-#include <stdint.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
-#include <stddef.h>
-#include <inttypes.h>
+void __attribute__((naked))
+stm32f4_flash_write_stub(uint32_t *dest, uint32_t *src, uint32_t size)
+{
+	for (int i = 0; i < size; i += 4) {
+		FLASH_CR = FLASH_CR_PROGRAM_X32 | FLASH_CR_PG;
+		*dest++ = *src++;
+		while (FLASH_SR & FLASH_SR_BSY)
+			;
+	}
 
-#include "platform.h"
-#include "platform_support.h"
+	if (FLASH_SR & SR_ERROR_MASK)
+		stub_exit(1);
 
-#ifndef DEBUG
-#include <stdio.h>
-#define DEBUG	printf
-#endif
-
-#define ALIGN(x, n) (((x) + (n) - 1) & ~((n) - 1))
-
-#endif
+	stub_exit(0);
+}
 

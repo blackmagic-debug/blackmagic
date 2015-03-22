@@ -33,6 +33,7 @@
 #include "general.h"
 #include "adiv5.h"
 #include "target.h"
+#include "cortexm.h"
 #include "command.h"
 #include "gdb_packet.h"
 
@@ -120,43 +121,11 @@ static const char stm32f4_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 
 /* This routine is uses word access.  Only usable on target voltage >2.7V */
 static const uint16_t stm32f4_flash_write_stub[] = {
-// _start:
-	0x480a,	// ldr r0, [pc, #40] // _flashbase
-	0x490b,	// ldr r1, [pc, #44] // _addr
-	0x467a, // mov r2, pc
-	0x3230, // adds r2, #48
-	0x4b0a, // ldr r3, [pc, #36] // _size
- 	0x4d07, // ldr r5, [pc, #28] // _cr
-// _next:
- 	0xb153, // cbz r3, _done
-	0x6105, // str r5, [r0, #16]
-	0x6814, // ldr r4, [r2]
-	0x600c, // str r4, [r1]
-// _wait:
-	0x89c4, // ldrb r4, [r0, #14]
-	0x2601, // movs r6, #1
-	0x4234, // tst r4, r6
-	0xd1fb, // bne _wait
-
-	0x3b04, // subs r3, #4
-	0x3104, // adds r1, #4
-	0x3204, // adds r2, #4
-	0xe7f3, // b _next
-// _done:
-	0xbe00, // bkpt
-	0x0000,
-// .org 0x28
-//_cr:
-	0x0201, 0x0000, //.word 0x00000201 (Value to write to FLASH_CR) */
-// _flashbase:
- 	0x3c00, 0x4002, // .word 0x40023c00 (FPEC_BASE)
-// _addr:
-// 	0x0000, 0x0000,
-// _size:
-// 	0x0000, 0x0000,
-// _data:
-// 	...
+#include "../flashstub/stm32f4.stub"
 };
+
+#define SRAM_BASE 0x20000000
+#define STUB_BUFFER_BASE ALIGN(SRAM_BASE + sizeof(stm32f4_flash_write_stub), 4)
 
 bool stm32f4_probe(struct target_s *target)
 {
@@ -239,34 +208,19 @@ static int stm32f4_flash_write(struct target_s *target, uint32_t dest,
                                const uint8_t *src, size_t len)
 {
 	uint32_t offset = dest % 4;
-	uint32_t words = (offset + len + 3) / 4;
-	uint32_t data[2 + words];
-	uint16_t sr;
+	uint8_t data[ALIGN(offset + len, 4)];
 
 	/* Construct data buffer used by stub */
-	data[0] = dest - offset;
-	data[1] = words * 4;		/* length must always be a multiple of 4 */
-	data[2] = 0xFFFFFFFF;		/* pad partial words with all 1s to avoid */
-	data[words + 1] = 0xFFFFFFFF;	/* damaging overlapping areas */
-	memcpy((uint8_t *)&data[2] + offset, src, len);
+	/* pad partial words with all 1s to avoid damaging overlapping areas */
+	memset(data, 0xff, sizeof(data));
+	memcpy((uint8_t *)data + offset, src, len);
 
-	/* Write stub and data to target ram and set PC */
-	target_mem_write(target, 0x20000000, stm32f4_flash_write_stub, 0x30);
-	target_mem_write(target, 0x20000030, data, sizeof(data));
-	target_pc_write(target, 0x20000000);
-	if(target_check_error(target))
-		return -1;
-
-	/* Execute the stub */
-	target_halt_resume(target, 0);
-	while(!target_halt_wait(target));
-
-	/* Check for error */
-	sr = target_mem_read32(target, FLASH_SR);
-	if(sr & SR_ERROR_MASK)
-		return -1;
-
-	return 0;
+	/* Write buffer to target ram call stub */
+	target_mem_write(target, STUB_BUFFER_BASE, data, sizeof(data));
+	return cortexm_run_stub(target, SRAM_BASE, stm32f4_flash_write_stub,
+	                        sizeof(stm32f4_flash_write_stub),
+	                        dest - offset, STUB_BUFFER_BASE, sizeof(data),
+	                        0);
 }
 
 static bool stm32f4_cmd_erase_mass(target *t)
