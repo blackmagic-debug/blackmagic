@@ -33,7 +33,6 @@
 
 extern void trace_tick(void);
 
-jmp_buf fatal_error_jmpbuf;
 uint8_t running_status;
 volatile uint32_t timeout_counter;
 

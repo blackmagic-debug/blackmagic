@@ -35,8 +35,6 @@
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/stm32/f1/adc.h>
 
-jmp_buf fatal_error_jmpbuf;
-
 static void adc_init(void);
 static void setup_vbus_irq(void);
 

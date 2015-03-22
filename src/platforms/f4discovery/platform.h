@@ -24,11 +24,8 @@
 #ifndef __PLATFORM_H
 #define __PLATFORM_H
 
-#include "gdb_packet.h"
 #include "gpio.h"
-#include "morse.h"
 #include "timing.h"
-#include "target.h"
 
 #include <setjmp.h>
 
@@ -142,8 +139,6 @@
 
 #define DEBUG(...)
 
-extern jmp_buf fatal_error_jmpbuf;
-
 #define gpio_set_val(port, pin, val) do {	\
 	if(val)					\
 		gpio_set((port), (pin));	\
@@ -154,16 +149,6 @@ extern jmp_buf fatal_error_jmpbuf;
 #define SET_RUN_STATE(state)	{running_status = (state);}
 #define SET_IDLE_STATE(state)	{gpio_set_val(LED_PORT, LED_IDLE_RUN, state);}
 #define SET_ERROR_STATE(state)	{gpio_set_val(LED_PORT, LED_ERROR, state);}
-
-#define PLATFORM_SET_FATAL_ERROR_RECOVERY()	{setjmp(fatal_error_jmpbuf);}
-#define PLATFORM_FATAL_ERROR(error)	{ 		\
-	if(running_status) gdb_putpacketz("X1D");	\
-		else gdb_putpacketz("EFF");		\
-	running_status = 0;				\
-	target_list_free();				\
-	morse("TARGET LOST.", 1);			\
-	longjmp(fatal_error_jmpbuf, (error));		\
-}
 
 static inline int platform_hwversion(void)
 {

@@ -24,12 +24,8 @@
 #ifndef __PLATFORM_H
 #define __PLATFORM_H
 
-#include "gdb_packet.h"
 #include "gpio.h"
-#include "morse.h"
 #include "timing.h"
-
-#include <setjmp.h>
 
 #define PLATFORM_HAS_TRACESWO
 #define PLATFORM_HAS_POWER_SWITCH
@@ -147,22 +143,9 @@
 
 #define DEBUG(...)
 
-extern jmp_buf fatal_error_jmpbuf;
-
 #define SET_RUN_STATE(state)	{running_status = (state);}
 #define SET_IDLE_STATE(state)	{gpio_set_val(LED_PORT, LED_IDLE_RUN, state);}
 #define SET_ERROR_STATE(state)	{gpio_set_val(LED_PORT, LED_ERROR, state);}
-
-#include "target.h"
-#define PLATFORM_SET_FATAL_ERROR_RECOVERY()	{setjmp(fatal_error_jmpbuf);}
-#define PLATFORM_FATAL_ERROR(error)	do { 		\
-	if(running_status) gdb_putpacketz("X1D");	\
-		else gdb_putpacketz("EFF");		\
-	running_status = 0;				\
-	target_list_free();				\
-	morse("TARGET LOST.", 1);			\
-	longjmp(fatal_error_jmpbuf, (error));		\
-} while (0)
 
 /* Use newlib provided integer only stdio functions */
 #define sscanf siscanf

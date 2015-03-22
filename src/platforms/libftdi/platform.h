@@ -36,9 +36,6 @@
 #define SET_IDLE_STATE(state)
 #define SET_ERROR_STATE(state)
 
-#define PLATFORM_FATAL_ERROR(error)	abort()
-#define PLATFORM_SET_FATAL_ERROR_RECOVERY()
-
 extern struct ftdi_context *ftdic;
 
 void platform_buffer_flush(void);
