@@ -173,8 +173,6 @@ enum align {
 };
 #define ALIGNOF(x) (((x) & 3) == 0 ? ALIGN_WORD : \
                     (((x) & 1) == 0 ? ALIGN_HALFWORD : ALIGN_BYTE))
-#undef MIN
-#define MIN(x, y)  (((x) < (y)) ? (x) : (y))
 
 /* Program the CSW and TAR for sequencial access at a given width */
 static void ap_mem_access_setup(ADIv5_AP_t *ap, uint32_t addr, enum align align)

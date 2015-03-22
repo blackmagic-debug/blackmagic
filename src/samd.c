@@ -159,9 +159,6 @@ static const char samd_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 /* Component ID */
 #define SAMD_CID_VALUE			0xB105100D
 
-/* Utility */
-#define MINIMUM(a,b)			((a < b) ? a : b)
-
 /**
  * Reads the SAM D20 Peripheral ID
  */
@@ -529,7 +526,7 @@ static int samd_flash_write(struct target_s *target, uint32_t dest,
 
 	for (uint32_t page = first_page; page <= last_page; page += SAMD_PAGE_SIZE) {
 		next_page = page + SAMD_PAGE_SIZE;
-		length = MINIMUM(end + 4, next_page) - addr;
+		length = MIN(end + 4, next_page) - addr;
 
 		/* Write within a single page. This may be part or all of the page */
 		target_mem_write(target, addr, &data[i], length);
