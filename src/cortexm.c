@@ -37,6 +37,7 @@
 #include "command.h"
 #include "gdb_packet.h"
 #include "cortexm.h"
+#include "morse.h"
 
 #include <unistd.h>
 
@@ -57,6 +58,7 @@ const struct command_s cortexm_cmd_list[] = {
 #define SIGINT 2
 #define SIGTRAP 5
 #define SIGSEGV 11
+#define SIGLOST 29
 
 static int cortexm_regs_read(struct target_s *target, void *data);
 static int cortexm_regs_write(struct target_s *target, const void *data);
@@ -487,12 +489,23 @@ cortexm_halt_wait(struct target_s *target)
 
 	uint32_t dhcsr = 0;
 	volatile struct exception e;
-	TRY_CATCH (e, EXCEPTION_TIMEOUT) {
+	TRY_CATCH (e, EXCEPTION_ALL) {
 		/* If this times out because the target is in WFI then
 		 * the target is still running. */
 		dhcsr = target_mem_read32(target, CORTEXM_DHCSR);
 	}
-	if (e.type || !(dhcsr & CORTEXM_DHCSR_S_HALT))
+	switch (e.type) {
+	case EXCEPTION_ERROR:
+		/* Oh crap, there's no recovery from this... */
+		target_list_free();
+		morse("TARGET LOST.", 1);
+		return SIGLOST;
+	case EXCEPTION_TIMEOUT:
+		/* Timeout isn't a problem, target could be in WFI */
+		return 0;
+	}
+
+	if (!(dhcsr & CORTEXM_DHCSR_S_HALT))
 		return 0;
 
 	/* We've halted.  Let's find out why. */

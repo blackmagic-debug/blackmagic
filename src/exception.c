@@ -34,6 +34,6 @@ void raise_exception(uint32_t type, const char *msg)
 			longjmp(e->jmpbuf, type);
 		}
 	}
-	PLATFORM_FATAL_ERROR(type);
+	abort();
 }
 

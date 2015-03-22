@@ -158,6 +158,12 @@ gdb_main(void)
 			if (sig < 0)
 				break;
 
+			/* Target disappeared */
+			if (cur_target == NULL) {
+				gdb_putpacket_f("X%02X", sig);
+				break;
+			}
+
 			/* Report reason for halt */
 			if(target_check_hw_wp(cur_target, &watch_addr)) {
 				/* Watchpoint hit */
