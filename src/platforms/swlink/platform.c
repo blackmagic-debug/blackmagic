@@ -33,8 +33,6 @@
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/stm32/f1/adc.h>
 
-jmp_buf fatal_error_jmpbuf;
-
 void platform_init(void)
 {
 	uint32_t data;

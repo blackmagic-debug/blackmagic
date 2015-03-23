@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2011  Black Sphere Technologies Ltd.
+ * Copyright (C) 2015  Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -18,29 +18,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __PLATFORM_H
-#define __PLATFORM_H
+#include "general.h"
+#include "exception.h"
 
-#include <ftdi.h>
+struct exception *innermost_exception;
 
-#ifndef WIN32
-#	include <alloca.h>
-#else
-#	define alloca __builtin_alloca
-#endif
-
-#define FT2232_VID	0x0403
-#define FT2232_PID	0x6010
-
-#define SET_RUN_STATE(state)
-#define SET_IDLE_STATE(state)
-#define SET_ERROR_STATE(state)
-
-extern struct ftdi_context *ftdic;
-
-void platform_buffer_flush(void);
-int platform_buffer_write(const uint8_t *data, int size);
-int platform_buffer_read(uint8_t *data, int size);
-
-#endif
+void raise_exception(uint32_t type, const char *msg)
+{
+	struct exception *e;
+	for (e = innermost_exception; e; e = e->outer) {
+		if (e->mask & type) {
+			e->type = type;
+			e->msg = msg;
+			innermost_exception = e->outer;
+			longjmp(e->jmpbuf, type);
+		}
+	}
+	abort();
+}
 

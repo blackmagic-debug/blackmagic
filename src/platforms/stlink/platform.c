@@ -36,8 +36,6 @@
 uint8_t running_status;
 volatile uint32_t timeout_counter;
 
-jmp_buf fatal_error_jmpbuf;
-
 uint16_t led_idle_run;
 /* Pins PC[14:13] are used to detect hardware revision. Read
  * 11 for STLink V1 e.g. on VL Discovery, tag as hwversion 0

@@ -24,15 +24,12 @@
 #ifndef __PLATFORM_H
 #define __PLATFORM_H
 
-#include "gdb_packet.h"
 #include "gpio.h"
 #include "timing.h"
 
 #include <libopencm3/cm3/common.h>
 #include <libopencm3/stm32/f1/memorymap.h>
 #include <libopencm3/usb/usbd.h>
-
-#include <setjmp.h>
 
 #define BOARD_IDENT       "Black Magic Probe (STLINK), (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")"
 #define BOARD_IDENT_DFU   "Black Magic (Upgrade) for STLink/Discovery, (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")"
@@ -130,22 +127,11 @@
 
 #define DEBUG(...)
 
-extern jmp_buf fatal_error_jmpbuf;
-
 extern uint16_t led_idle_run;
 #define LED_IDLE_RUN            led_idle_run
 #define SET_RUN_STATE(state)	{running_status = (state);}
 #define SET_IDLE_STATE(state)	{gpio_set_val(LED_PORT, led_idle_run, state);}
 #define SET_ERROR_STATE(x)
-
-#define PLATFORM_SET_FATAL_ERROR_RECOVERY()	{setjmp(fatal_error_jmpbuf);}
-#define PLATFORM_FATAL_ERROR(error)	do { 		\
-	if(running_status) gdb_putpacketz("X1D");	\
-		else gdb_putpacketz("EFF");		\
-	running_status = 0;				\
-	target_list_free();				\
-	longjmp(fatal_error_jmpbuf, (error));		\
-} while (0)
 
 /* Use newlib provided integer only stdio functions */
 #define sscanf siscanf

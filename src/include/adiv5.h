@@ -107,12 +107,8 @@ typedef struct ADIv5_DP_s {
 
 	uint32_t idcode;
 
-	bool allow_timeout;
-
 	uint32_t (*dp_read)(struct ADIv5_DP_s *dp, uint16_t addr);
-
 	uint32_t (*error)(struct ADIv5_DP_s *dp);
-
 	uint32_t (*low_access)(struct ADIv5_DP_s *dp, uint8_t RnW,
                                uint16_t addr, uint32_t value);
 

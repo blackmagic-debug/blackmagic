@@ -17,10 +17,6 @@
 #ifndef __PLATFORM_H
 #define __PLATFORM_H
 
-#include "gdb_packet.h"
-
-#include <setjmp.h>
-
 #include <libopencm3/lm4f/gpio.h>
 #include <libopencm3/usb/usbd.h>
 
@@ -29,7 +25,6 @@
 #define DFU_IDENT               "Black Magic Firmware Upgrade (Launchpad)"
 #define DFU_IFACE_STRING	"lolwut"
 
-extern jmp_buf fatal_error_jmpbuf;
 extern uint8_t running_status;
 extern volatile uint32_t timeout_counter;
 
@@ -105,16 +100,6 @@ extern usbd_driver lm4f_usb_driver;
 #define SET_RUN_STATE(state)	{running_status = (state);}
 #define SET_IDLE_STATE(state)	{}
 #define SET_ERROR_STATE(state)	SET_IDLE_STATE(state)
-
-#define PLATFORM_SET_FATAL_ERROR_RECOVERY()	{setjmp(fatal_error_jmpbuf);}
-#define PLATFORM_FATAL_ERROR(error) {			\
-	if( running_status ) gdb_putpacketz("X1D");	\
-		else gdb_putpacketz("EFF");		\
-	running_status = 0;				\
-	target_list_free();				\
-	morse("TARGET LOST.", 1);			\
-	longjmp(fatal_error_jmpbuf, (error));		\
-}
 
 #define PLATFORM_HAS_TRACESWO
 
