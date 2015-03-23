@@ -116,39 +116,39 @@ struct target_s {
 	target_destroy_callback destroy_callback;
 
 	/* Attach/Detach funcitons */
-	bool (*attach)(struct target_s *target);
-	void (*detach)(struct target_s *target);
-	int (*check_error)(struct target_s *target);
+	bool (*attach)(target *t);
+	void (*detach)(target *t);
+	int (*check_error)(target *t);
 
 	/* Memory access functions */
-	void (*mem_read)(struct target_s *target, void *dest, uint32_t src,
+	void (*mem_read)(target *t, void *dest, uint32_t src,
 	                 size_t len);
-	void (*mem_write)(struct target_s *target, uint32_t dest,
+	void (*mem_write)(target *t, uint32_t dest,
 	                  const void *src, size_t len);
 
 	/* Register access functions */
 	int regs_size;
 	const char *tdesc;
-	int (*regs_read)(struct target_s *target, void *data);
-	int (*regs_write)(struct target_s *target, const void *data);
+	int (*regs_read)(target *t, void *data);
+	int (*regs_write)(target *t, const void *data);
 
-	uint32_t (*pc_read)(struct target_s *target);
-	int (*pc_write)(struct target_s *target, const uint32_t val);
+	uint32_t (*pc_read)(target *t);
+	int (*pc_write)(target *t, const uint32_t val);
 
 	/* Halt/resume functions */
-	void (*reset)(struct target_s *target);
-	void (*halt_request)(struct target_s *target);
-	int (*halt_wait)(struct target_s *target);
-	void (*halt_resume)(struct target_s *target, bool step);
+	void (*reset)(target *t);
+	void (*halt_request)(target *t);
+	int (*halt_wait)(target *t);
+	void (*halt_resume)(target *t, bool step);
 
 	/* Break-/watchpoint functions */
-	int (*set_hw_bp)(struct target_s *target, uint32_t addr);
-	int (*clear_hw_bp)(struct target_s *target, uint32_t addr);
+	int (*set_hw_bp)(target *t, uint32_t addr);
+	int (*clear_hw_bp)(target *t, uint32_t addr);
 
-	int (*set_hw_wp)(struct target_s *target, uint8_t type, uint32_t addr, uint8_t len);
-	int (*clear_hw_wp)(struct target_s *target, uint8_t type, uint32_t addr, uint8_t len);
+	int (*set_hw_wp)(target *t, uint8_t type, uint32_t addr, uint8_t len);
+	int (*clear_hw_wp)(target *t, uint8_t type, uint32_t addr, uint8_t len);
 
-	int (*check_hw_wp)(struct target_s *target, uint32_t *addr);
+	int (*check_hw_wp)(target *t, uint32_t *addr);
 
 	/* target-defined options */
 	unsigned target_options;
@@ -156,8 +156,8 @@ struct target_s {
 
 	/* Flash memory access functions */
 	const char *xml_mem_map;
-	int (*flash_erase)(struct target_s *target, uint32_t addr, size_t len);
-	int (*flash_write)(struct target_s *target, uint32_t dest,
+	int (*flash_erase)(target *t, uint32_t addr, size_t len);
+	int (*flash_write)(target *t, uint32_t dest,
 	                   const uint8_t *src, size_t len);
 
 	/* Host I/O support */
@@ -226,18 +226,18 @@ static inline void target_mem_write8(target *t, uint32_t addr, uint8_t value)
 /* Probe for various targets.
  * Actual functions implemented in their respective drivers.
  */
-bool cortexm_probe(struct target_s *target);
-bool stm32f1_probe(struct target_s *target);
-bool stm32f4_probe(struct target_s *target);
-bool stm32l0_probe(struct target_s *target);
-bool stm32l1_probe(struct target_s *target);
-bool lmi_probe(struct target_s *target);
-bool lpc11xx_probe(struct target_s *target);
-bool lpc43xx_probe(struct target_s *target);
-bool sam3x_probe(struct target_s *target);
-bool nrf51_probe(struct target_s *target);
-bool samd_probe(struct target_s *target);
-bool kinetis_probe(struct target_s *target);
+bool cortexm_probe(target *t);
+bool stm32f1_probe(target *t);
+bool stm32f4_probe(target *t);
+bool stm32l0_probe(target *t);
+bool stm32l1_probe(target *t);
+bool lmi_probe(target *t);
+bool lpc11xx_probe(target *t);
+bool lpc43xx_probe(target *t);
+bool sam3x_probe(target *t);
+bool nrf51_probe(target *t);
+bool samd_probe(target *t);
+bool kinetis_probe(target *t);
 
 #endif
 
