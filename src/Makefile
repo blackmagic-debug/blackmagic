@@ -20,7 +20,6 @@ SRC =			\
 	adiv5.c		\
 	adiv5_jtagdp.c	\
 	adiv5_swdp.c	\
-	arm7tdmi.c	\
 	command.c	\
 	cortexm.c	\
 	crc32.c		\
