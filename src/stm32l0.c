@@ -112,8 +112,6 @@
 
 */
 
-#define CONFIG_STM32L1          /* Include support for STM32L1 */
-
 #include "general.h"
 #include "adiv5.h"
 #include "target.h"
@@ -190,7 +188,6 @@ static const char stm32l0_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 	"  <memory type=\"ram\" start=\"0x20000000\" length=\"0x2000\"/>"
 	"</memory-map>";
 
-#if defined(CONFIG_STM32L1)
 static const char stm32l1_driver_str[] = "STM32L1xx";
 
 static const char stm32l1_xml_memory_map[] = "<?xml version=\"1.0\"?>"
@@ -209,7 +206,6 @@ static const char stm32l1_xml_memory_map[] = "<?xml version=\"1.0\"?>"
         /* SRAM; ranges from 4KiB to 80KiB(0x14000). */
 	"  <memory type=\"ram\" start=\"0x20000000\" length=\"0x14000\"/>"
 	"</memory-map>";
-#endif
 
 static const uint16_t stm32l0_nvm_prog_write_stub [] = {
 #include "../flashstub/stm32l05x-nvm-prog-write.stub"
@@ -286,8 +282,6 @@ bool stm32l0_probe(struct target_s* target)
 {
         uint32_t idcode;
 
-#if defined(CONFIG_STM32L1)
-
         idcode = target_mem_read32(target,
                                    STM32L1_DBGMCU_IDCODE_PHYS) & 0xfff;
         switch (idcode) {
@@ -304,7 +298,6 @@ bool stm32l0_probe(struct target_s* target)
                 target_add_commands(target, stm32lx_cmd_list, "STM32L1x");
                 return true;
         }
-#endif
 
         idcode = target_mem_read32(target,
                                    STM32L0_DBGMCU_IDCODE_PHYS) & 0xfff;
