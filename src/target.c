@@ -80,3 +80,61 @@ target *target_attach(target *t, target_destroy_callback destroy_cb)
 	return t;
 }
 
+void target_add_ram(target *t, uint32_t start, uint32_t len)
+{
+	struct target_ram *ram = malloc(sizeof(*ram));
+	ram->start = start;
+	ram->length = len;
+	ram->next = t->ram;
+	t->ram = ram;
+}
+
+void target_add_flash(target *t, struct target_flash *f)
+{
+	f->t = t;
+	f->next = t->flash;
+	t->flash = f;
+}
+
+static ssize_t map_ram(char *buf, size_t len, struct target_ram *ram)
+{
+	return snprintf(buf, len, "<memory type=\"ram\" start=\"0x%08"PRIx32
+	                          "\" length=\"0x%08"PRIx32"\"/>",
+	                          ram->start, ram->length);
+}
+
+static ssize_t map_flash(char *buf, size_t len, struct target_flash *f)
+{
+	int i = 0;
+	i += snprintf(&buf[i], len - i, "<memory type=\"flash\" start=\"0x%08"PRIx32
+	                                "\" length=\"0x%08"PRIx32"\">",
+	                                f->start, f->length);
+	i += snprintf(&buf[i], len - i, "<property name=\"blocksize\">0x%08"PRIx32
+	                            "</property></memory>",
+	                            f->blocksize);
+	return i;
+}
+
+const char *target_mem_map(target *t)
+{
+	if (t->xml_mem_map)
+		return t->xml_mem_map;
+
+	/* FIXME size buffer */
+	size_t len = 1024;
+	char *tmp = malloc(len);
+	size_t i = 0;
+	i = snprintf(&tmp[i], len - i, "<memory-map>");
+	/* Map each defined RAM */
+	for (struct target_ram *r = t->ram; r; r = r->next)
+		i += map_ram(&tmp[i], len - i, r);
+	/* Map each defined Flash */
+	for (struct target_flash *f = t->flash; f; f = f->next)
+		i += map_flash(&tmp[i], len - i, f);
+	i += snprintf(&tmp[i], len - i, "</memory-map>");
+
+	t->xml_mem_map = tmp;
+
+	return t->xml_mem_map;
+}
+
