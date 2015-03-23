@@ -424,7 +424,7 @@ handle_v_packet(char *packet, int plen)
 
 	} else if (!strcmp(packet, "vFlashDone")) {
 		/* Commit flash operations. */
-		gdb_putpacketz("OK");
+		gdb_putpacketz(target_flash_done(cur_target) ? "EFF" : "OK");
 		flash_mode = 0;
 
 	} else {

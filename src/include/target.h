@@ -107,6 +107,9 @@ target *target_attach(target *t, target_destroy_callback destroy_cb);
 #define target_flash_write(target, dest, src, len)	\
 	(target)->flash_write((target), (dest), (src), (len))
 
+#define target_flash_done(target)	\
+	((target)->flash_done ? (target)->flash_done(target) : 0)
+
 /* Host I/O */
 #define target_hostio_reply(target, recode, errcode)	\
 	(target)->hostio_reply((target), (retcode), (errcode))
@@ -159,6 +162,7 @@ struct target_s {
 	int (*flash_erase)(target *t, uint32_t addr, size_t len);
 	int (*flash_write)(target *t, uint32_t dest,
 	                   const uint8_t *src, size_t len);
+	int (*flash_done)(target *t);
 
 	/* Host I/O support */
 	void (*hostio_reply)(target *t, int32_t retcode, uint32_t errcode);
