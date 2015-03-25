@@ -95,14 +95,10 @@ target *target_attach(target *t, target_destroy_callback destroy_cb);
 
 
 /* Flash memory access functions */
-#define target_flash_erase(target, addr, len)	\
-	(target)->flash_erase((target), (addr), (len))
-
-#define target_flash_write(target, dest, src, len)	\
-	(target)->flash_write((target), (dest), (src), (len))
-
-#define target_flash_done(target)	\
-	((target)->flash_done ? (target)->flash_done(target) : 0)
+int target_flash_erase(target *t, uint32_t addr, size_t len);
+int target_flash_write(target *t,
+                       uint32_t dest, const void *src, size_t len);
+int target_flash_done(target *t);
 
 /* Host I/O */
 #define target_hostio_reply(target, recode, errcode)	\

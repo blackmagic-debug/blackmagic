@@ -154,3 +154,57 @@ const char *target_mem_map(target *t)
 	return t->dyn_mem_map;
 }
 
+static struct target_flash *flash_for_addr(target *t, uint32_t addr)
+{
+	for (struct target_flash *f = t->flash; f; f = f->next)
+		if ((f->start <= addr) &&
+		    (addr < (f->start + f->length)))
+			return f;
+	return NULL;
+}
+
+int target_flash_erase(target *t, uint32_t addr, size_t len)
+{
+	if (t->flash_write)
+		return t->flash_erase(t, addr, len);
+
+	int ret = 0;
+	while (len) {
+		struct target_flash *f = flash_for_addr(t, addr);
+		size_t tmplen = MIN(len, f->length - (addr % f->length));
+		ret |= f->erase(f, addr, tmplen);
+		addr += tmplen;
+		len -= tmplen;
+	}
+	return ret;
+}
+
+int target_flash_write(target *t,
+                       uint32_t dest, const void *src, size_t len)
+{
+	if (t->flash_write)
+		return t->flash_write(t, dest, src, len);
+
+	int ret = 0;
+	while (len) {
+		struct target_flash *f = flash_for_addr(t, dest);
+		size_t tmplen = MIN(len, f->length - (dest % f->length));
+		ret |= f->write(f, dest, src, tmplen);
+		src += tmplen;
+		len -= tmplen;
+	}
+	return ret;
+}
+
+int target_flash_done(target *t)
+{
+	for (struct target_flash *f = t->flash; f; f = f->next) {
+		if (f->done) {
+			int tmp = f->done(f);
+			if (tmp)
+				return tmp;
+		}
+	}
+	return 0;
+}
+
