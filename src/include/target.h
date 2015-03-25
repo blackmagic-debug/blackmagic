@@ -121,14 +121,18 @@ struct target_ram {
 	struct target_ram *next;
 };
 
+struct target_flash;
+typedef int (*flash_erase_func)(struct target_flash *f, uint32_t addr, size_t len);
+typedef int (*flash_write_func)(struct target_flash *f, uint32_t dest,
+                                const void *src, size_t len);
+typedef int (*flash_done_func)(struct target_flash *f);
 struct target_flash {
 	uint32_t start;
 	uint32_t length;
 	uint32_t blocksize;
-	int (*erase)(struct target_flash *f, uint32_t addr, size_t len);
-	int (*write)(struct target_flash *f, uint32_t dest,
-	             const uint8_t *src, size_t len);
-	int (*done)(struct target_flash *t);
+	flash_erase_func erase;
+	flash_write_func write;
+	flash_done_func done;
 	target *t;
 	struct target_flash *next;
 };
@@ -175,6 +179,7 @@ struct target_s {
 
 	/* Target memory map */
 	const char *xml_mem_map;
+	char *dyn_mem_map;
 	struct target_ram *ram;
 	struct target_flash *flash;
 

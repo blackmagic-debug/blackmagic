@@ -48,6 +48,18 @@ void target_list_free(void)
 			free(target_list->commands);
 			target_list->commands = tc;
 		}
+		if (target_list->dyn_mem_map)
+			free(target_list->dyn_mem_map);
+		while (target_list->ram) {
+			void * next = target_list->ram->next;
+			free(target_list->ram);
+			target_list->ram = next;
+		}
+		while (target_list->flash) {
+			void * next = target_list->flash->next;
+			free(target_list->flash);
+			target_list->flash = next;
+		}
 		free(target_list);
 		target_list = t;
 	}
@@ -117,8 +129,12 @@ static ssize_t map_flash(char *buf, size_t len, struct target_flash *f)
 
 const char *target_mem_map(target *t)
 {
+	/* Deprecated static const memory map */
 	if (t->xml_mem_map)
 		return t->xml_mem_map;
+
+	if (t->dyn_mem_map)
+		return t->dyn_mem_map;
 
 	/* FIXME size buffer */
 	size_t len = 1024;
@@ -133,8 +149,8 @@ const char *target_mem_map(target *t)
 		i += map_flash(&tmp[i], len - i, f);
 	i += snprintf(&tmp[i], len - i, "</memory-map>");
 
-	t->xml_mem_map = tmp;
+	t->dyn_mem_map = tmp;
 
-	return t->xml_mem_map;
+	return t->dyn_mem_map;
 }
 
