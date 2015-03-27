@@ -48,7 +48,7 @@ main(int argc, char **argv)
 		TRY_CATCH(e, EXCEPTION_ALL) {
 			gdb_main();
 		}
-		if (e.type == EXCEPTION_ERROR) {
+		if (e.type) {
 			gdb_putpacketz("EFF");
 			target_list_free();
 			morse("TARGET LOST.", 1);
