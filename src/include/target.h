@@ -131,6 +131,8 @@ struct target_flash {
 	flash_done_func done;
 	target *t;
 	struct target_flash *next;
+	int align;
+	uint8_t erased;
 };
 
 struct target_s {
