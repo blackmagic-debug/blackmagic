@@ -57,6 +57,8 @@ void target_list_free(void)
 		}
 		while (target_list->flash) {
 			void * next = target_list->flash->next;
+			if (target_list->flash->buf)
+				free(target_list->flash->buf);
 			free(target_list->flash);
 			target_list->flash = next;
 		}
@@ -215,4 +217,52 @@ int target_flash_done(target *t)
 	}
 	return 0;
 }
+
+int target_flash_write_buffered(struct target_flash *f,
+                                uint32_t dest, const void *src, size_t len)
+{
+	int ret = 0;
+
+	if (f->buf == NULL) {
+		/* Allocate flash sector buffer */
+		f->buf = malloc(f->buf_size);
+		f->buf_addr = -1;
+	}
+	while (len) {
+		uint32_t offset = dest % f->buf_size;
+		uint32_t base = dest - offset;
+		if (base != f->buf_addr) {
+			if (f->buf_addr != (uint32_t)-1) {
+				/* Write sector to flash if valid */
+				ret |= f->write_buf(f, f->buf_addr,
+				                    f->buf, f->buf_size);
+			}
+			/* Setup buffer for a new sector */
+			f->buf_addr = base;
+			memset(f->buf, f->erased, f->buf_size);
+		}
+		/* Copy chunk into sector buffer */
+		size_t sectlen = MIN(f->buf_size - offset, len);
+		memcpy(f->buf + offset, src, sectlen);
+		dest += sectlen;
+		src += sectlen;
+		len -= sectlen;
+	}
+	return ret;
+}
+
+int target_flash_done_buffered(struct target_flash *f)
+{
+	int ret = 0;
+	if ((f->buf != NULL) &&(f->buf_addr != (uint32_t)-1)) {
+		/* Write sector to flash if valid */
+		ret = f->write_buf(f, f->buf_addr, f->buf, f->buf_size);
+		f->buf_addr = -1;
+		free(f->buf);
+		f->buf = NULL;
+	}
+
+	return ret;
+}
+
 

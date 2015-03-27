@@ -133,6 +133,12 @@ struct target_flash {
 	struct target_flash *next;
 	int align;
 	uint8_t erased;
+
+	/* For buffered flash */
+	size_t buf_size;
+	flash_write_func write_buf;
+	uint32_t buf_addr;
+	void *buf;
 };
 
 struct target_s {
@@ -215,6 +221,9 @@ void target_add_commands(target *t, const struct command_s *cmds, const char *na
 void target_add_ram(target *t, uint32_t start, uint32_t len);
 void target_add_flash(target *t, struct target_flash *f);
 const char *target_mem_map(target *t);
+int target_flash_write_buffered(struct target_flash *f,
+                                uint32_t dest, const void *src, size_t len);
+int target_flash_done_buffered(struct target_flash *f);
 
 static inline uint32_t target_mem_read32(target *t, uint32_t addr)
 {
