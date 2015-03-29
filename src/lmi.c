@@ -29,7 +29,10 @@
 #include "cortexm.h"
 
 #define SRAM_BASE            0x20000000
+#define STUB_BUFFER_BASE     (SRAM_BASE + 0x30)
+
 #define BLOCK_SIZE           0x400
+
 #define LMI_SCB_BASE         0x400FE000
 #define LMI_SCB_DID1         (LMI_SCB_BASE + 0x004)
 
@@ -73,41 +76,7 @@ static const char tm4c123gh6pm_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 
 
 static const uint16_t lmi_flash_write_stub[] = {
-// _start:
-	0x4809,	// ldr r0, [pc, #36] // _flashbase
-	0x490b,	// ldr r1, [pc, #44] // _addr
-	0x467a, // mov r2, pc
-	0x3230, // adds r2, #48
-	0x4b0a, // ldr r3, [pc, #40] // _size
-	0x4d08, // ldr r5, [pc, #32] // _flash_write_cmd
-// _next:
- 	0xb15b, // cbz r3, _done
-	0x6001, // str r1, [r0, #0]
-	0x6814, // ldr r4, [r2]
-	0x6044, // str r4, [r0, #4]
-	0x6085, // str r5, [r0, #8]
-// _wait:
-	0x6884, // ldr r4, [r0, #8]
-	0x2601, // movs r6, #1
-	0x4234, // tst r4, r6
-	0xd1fb, // bne _wait
-
-	0x3b01, // subs r3, #1
-	0x3104, // adds r1, #4
-	0x3204, // adds r2, #4
-	0xe7f2, // b _next
-// _done:
-	0xbe00, // bkpt
-// _flashbase:
- 	0xd000, 0x400f, // .word 0x400fd000
-// _flash_write_cmd:
- 	0x0001, 0xa442, // .word 0xa4420001
-// _addr:
-// 	0x0000, 0x0000,
-// _size:
-// 	0x0000, 0x0000,
-// _data:
-// 	...
+#include "../flashstub/lmi.stub"
 };
 
 bool lmi_probe(target *t)
@@ -155,16 +124,10 @@ int lmi_flash_write(target *t, uint32_t dest, const uint8_t *src, size_t len)
 	data[0] = dest;
 	data[1] = len >> 2;
 	memcpy(&data[2], src, len);
-	DEBUG("Sending stub\n");
-	target_mem_write(t, SRAM_BASE, lmi_flash_write_stub, 0x30);
-	DEBUG("Sending data\n");
-	target_mem_write(t, 0x20000030, data, len + 8);
-	DEBUG("Running stub\n");
-	cortexm_pc_write(t, 0x20000000);
-	target_halt_resume(t, 0);
-	DEBUG("Waiting for halt\n");
-	while(!target_halt_wait(t));
 
-	return 0;
+	target_mem_write(t, SRAM_BASE, lmi_flash_write_stub,
+	                 sizeof(lmi_flash_write_stub));
+	target_mem_write(t, STUB_BUFFER_BASE, data, len + 8);
+	return cortexm_run_stub(t, SRAM_BASE, 0, 0, 0, 0);
 }
 
