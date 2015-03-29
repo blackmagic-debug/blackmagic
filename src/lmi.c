@@ -30,6 +30,7 @@
 #include "general.h"
 #include "adiv5.h"
 #include "target.h"
+#include "cortexm.h"
 
 static int lmi_flash_erase(struct target_s *target, uint32_t addr, size_t len);
 static int lmi_flash_write(struct target_s *target, uint32_t dest,
@@ -163,7 +164,7 @@ int lmi_flash_write(struct target_s *target, uint32_t dest,
 	DEBUG("Sending data\n");
 	target_mem_write(target, 0x20000030, data, len + 8);
 	DEBUG("Running stub\n");
-	target_pc_write(target, 0x20000000);
+	cortexm_pc_write(target, 0x20000000);
 	target_halt_resume(target, 0);
 	DEBUG("Waiting for halt\n");
 	while(!target_halt_wait(target));

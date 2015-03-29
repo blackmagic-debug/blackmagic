@@ -61,12 +61,6 @@ target *target_attach(target *t, target_destroy_callback destroy_cb);
 #define target_regs_write(target, data)	\
 	(target)->regs_write((target), (data))
 
-#define target_pc_read(target)	\
-	(target)->pc_read((target))
-
-#define target_pc_write(target, val)	\
-	(target)->pc_write((target), (val))
-
 
 /* Halt/resume functions */
 #define target_reset(target)	\
@@ -134,9 +128,6 @@ struct target_s {
 	const char *tdesc;
 	int (*regs_read)(target *t, void *data);
 	int (*regs_write)(target *t, const void *data);
-
-	uint32_t (*pc_read)(target *t);
-	int (*pc_write)(target *t, const uint32_t val);
 
 	/* Halt/resume functions */
 	void (*reset)(target *t);

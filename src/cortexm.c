@@ -62,7 +62,6 @@ const struct command_s cortexm_cmd_list[] = {
 
 static int cortexm_regs_read(target *t, void *data);
 static int cortexm_regs_write(target *t, const void *data);
-static int cortexm_pc_write(target *t, const uint32_t val);
 static uint32_t cortexm_pc_read(target *t);
 
 static void cortexm_reset(target *t);
@@ -218,8 +217,6 @@ bool cortexm_probe(target *t)
 	t->tdesc = tdesc_cortex_m;
 	t->regs_read = cortexm_regs_read;
 	t->regs_write = cortexm_regs_write;
-	t->pc_write = cortexm_pc_write;
-	t->pc_read = cortexm_pc_read;
 
 	t->reset = cortexm_reset;
 	t->halt_request = cortexm_halt_request;
@@ -428,7 +425,7 @@ static uint32_t cortexm_pc_read(target *t)
 	return 0;
 }
 
-static int cortexm_pc_write(target *t, const uint32_t val)
+int cortexm_pc_write(target *t, const uint32_t val)
 {
 	target_mem_write32(t, CORTEXM_DCRDR, val);
 	target_mem_write32(t, CORTEXM_DCRSR, CORTEXM_DCRSR_REGWnR | 0x0F);

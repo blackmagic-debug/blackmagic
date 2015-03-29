@@ -117,6 +117,7 @@
 #include "target.h"
 #include "command.h"
 #include "gdb_packet.h"
+#include "cortexm.h"
 
 #include "stm32lx-nvm.h"
 
@@ -386,7 +387,7 @@ static int stm32lx_nvm_prog_erase_stubbed(struct target_s* target,
                          &info, sizeof(info));
 
         /* Execute stub */
-        target_pc_write(target, STM32Lx_STUB_PHYS);
+        cortexm_pc_write(target, STM32Lx_STUB_PHYS);
         if (target_check_error(target))
                 return -1;
         target_halt_resume(target, 0);
@@ -462,7 +463,7 @@ static int stm32lx_nvm_prog_write_stubbed(struct target_s* target,
                                  &info, sizeof(info));
 
                 /* Execute stub */
-                target_pc_write(target, STM32Lx_STUB_PHYS);
+                cortexm_pc_write(target, STM32Lx_STUB_PHYS);
                 if (target_check_error(target))
                         return -1;
                 target_halt_resume(target, 0);
