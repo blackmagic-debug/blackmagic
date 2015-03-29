@@ -94,13 +94,13 @@ uint32_t crc32_calc(uint32_t crc, uint8_t data)
 	return (crc << 8) ^ crc32_table[((crc >> 24) ^ data) & 255];
 }
 
-uint32_t generic_crc32(struct target_s *target, uint32_t base, int len)
+uint32_t generic_crc32(target *t, uint32_t base, int len)
 {
 	uint32_t crc = -1;
 	uint8_t byte;
 
 	while (len--) {
-		byte = target_mem_read8(target, base);
+		byte = target_mem_read8(t, base);
 
 		crc = crc32_calc(crc, byte);
 		base++;
@@ -109,7 +109,7 @@ uint32_t generic_crc32(struct target_s *target, uint32_t base, int len)
 }
 #else
 #include <libopencm3/stm32/crc.h>
-uint32_t generic_crc32(struct target_s *target, uint32_t base, int len)
+uint32_t generic_crc32(target *t, uint32_t base, int len)
 {
 	uint32_t data;
 	uint32_t crc;
@@ -118,7 +118,7 @@ uint32_t generic_crc32(struct target_s *target, uint32_t base, int len)
 	CRC_CR |= CRC_CR_RESET;
 
 	while (len > 3) {
-		data = target_mem_read32(target, base);
+		data = target_mem_read32(t, base);
 
 		CRC_DR = __builtin_bswap32(data);
 		base += 4;
@@ -128,7 +128,7 @@ uint32_t generic_crc32(struct target_s *target, uint32_t base, int len)
 	crc = CRC_DR;
 
 	while (len--) {
-		data = target_mem_read8(target, base++);
+		data = target_mem_read8(t, base++);
 
 		crc ^= data << 24;
 		for (i = 0; i < 8; i++) {

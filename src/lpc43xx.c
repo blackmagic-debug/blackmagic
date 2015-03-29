@@ -119,20 +119,20 @@ struct flash_program {
 	uint8_t	data[IAP_PGM_CHUNKSIZE];
 };
 
-static bool lpc43xx_cmd_erase(target *target, int argc, const char *argv[]);
-static bool lpc43xx_cmd_reset(target *target, int argc, const char *argv[]);
-static bool lpc43xx_cmd_mkboot(target *target, int argc, const char *argv[]);
-static int lpc43xx_flash_init(struct target_s *target);
-static void lpc43xx_iap_call(struct target_s *target, struct flash_param *param,
+static bool lpc43xx_cmd_erase(target *t, int argc, const char *argv[]);
+static bool lpc43xx_cmd_reset(target *t, int argc, const char *argv[]);
+static bool lpc43xx_cmd_mkboot(target *t, int argc, const char *argv[]);
+static int lpc43xx_flash_init(target *t);
+static void lpc43xx_iap_call(target *t, struct flash_param *param,
                              unsigned param_len);
-static int lpc43xx_flash_prepare(struct target_s *target,
+static int lpc43xx_flash_prepare(target *t,
                                  uint32_t addr, int len);
-static int lpc43xx_flash_erase(struct target_s *target, uint32_t addr, size_t len);
-static int lpc43xx_flash_write(struct target_s *target,
+static int lpc43xx_flash_erase(target *t, uint32_t addr, size_t len);
+static int lpc43xx_flash_write(target *t,
                                uint32_t dest, const uint8_t *src, size_t len);
-static void lpc43xx_set_internal_clock(struct target_s *target);
-static void lpc43xx_wdt_set_period(struct target_s *target);
-static void lpc43xx_wdt_pet(struct target_s *target);
+static void lpc43xx_set_internal_clock(target *t);
+static void lpc43xx_wdt_set_period(target *t);
+static void lpc43xx_wdt_pet(target *t);
 
 const struct command_s lpc43xx_cmd_list[] = {
 	{"erase_mass", lpc43xx_cmd_erase, "Erase entire flash memory"},
@@ -166,45 +166,45 @@ static const char lpc4337_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 "  <memory type=\"ram\" start=\"0x1B080000\" length=\"0xE4F80000\"/>"
 "</memory-map>";
 
-bool lpc43xx_probe(struct target_s *target)
+bool lpc43xx_probe(target *t)
 {
 	uint32_t chipid, cpuid;
 
-	chipid = target_mem_read32(target, LPC43XX_CHIPID);
-	cpuid = target_mem_read32(target, ARM_CPUID);
+	chipid = target_mem_read32(t, LPC43XX_CHIPID);
+	cpuid = target_mem_read32(t, ARM_CPUID);
 
 	switch(chipid) {
 	case 0x4906002B:	/* Parts with on-chip flash */
 		switch (cpuid & 0xFF00FFF0) {
 		case 0x4100C240:
-			target->driver = "LPC43xx Cortex-M4";
+			t->driver = "LPC43xx Cortex-M4";
 			if (cpuid == 0x410FC241)
 			{
 				/* LPC4337 */
-				target->xml_mem_map = lpc4337_xml_memory_map;
-				target->flash_erase = lpc43xx_flash_erase;
-				target->flash_write = lpc43xx_flash_write;
-				target_add_commands(target, lpc43xx_cmd_list, "LPC43xx");
+				t->xml_mem_map = lpc4337_xml_memory_map;
+				t->flash_erase = lpc43xx_flash_erase;
+				t->flash_write = lpc43xx_flash_write;
+				target_add_commands(t, lpc43xx_cmd_list, "LPC43xx");
 			}
 			break;
 		case 0x4100C200:
-			target->driver = "LPC43xx Cortex-M0";
+			t->driver = "LPC43xx Cortex-M0";
 			break;
 		default:
-			target->driver = "LPC43xx <Unknown>";
+			t->driver = "LPC43xx <Unknown>";
 		}
 		return true;
 	case 0x5906002B:	/* Flashless parts */
 	case 0x6906002B:
 		switch (cpuid & 0xFF00FFF0) {
 		case 0x4100C240:
-			target->driver = "LPC43xx Cortex-M4";
+			t->driver = "LPC43xx Cortex-M4";
 			break;
 		case 0x4100C200:
-			target->driver = "LPC43xx Cortex-M0";
+			t->driver = "LPC43xx Cortex-M0";
 			break;
 		default:
-			target->driver = "LPC43xx <Unknown>";
+			t->driver = "LPC43xx <Unknown>";
 		}
 		return true;
 	}
@@ -213,7 +213,7 @@ bool lpc43xx_probe(struct target_s *target)
 }
 
 /* Reset all major systems _except_ debug */
-static bool lpc43xx_cmd_reset(target *target, int argc, const char *argv[])
+static bool lpc43xx_cmd_reset(target *t, int argc, const char *argv[])
 {
 	(void)argc;
 	(void)argv;
@@ -224,12 +224,12 @@ static bool lpc43xx_cmd_reset(target *target, int argc, const char *argv[])
 	static const uint32_t reset_val = 0x05FA0004;
 
 	/* System reset on target */
-	target_mem_write(target, AIRCR, &reset_val, sizeof(reset_val));
+	target_mem_write(t, AIRCR, &reset_val, sizeof(reset_val));
 
 	return true;
 }
 
-static bool lpc43xx_cmd_erase(target *target, int argc, const char *argv[])
+static bool lpc43xx_cmd_erase(target *t, int argc, const char *argv[])
 {
 	(void)argc;
 	(void)argv;
@@ -237,7 +237,7 @@ static bool lpc43xx_cmd_erase(target *target, int argc, const char *argv[])
 	uint32_t bank = 0;
 	struct flash_program flash_pgm;
 
-	lpc43xx_flash_init(target);
+	lpc43xx_flash_init(t);
 
 	for (bank = 0; bank < FLASH_NUM_BANK; bank++)
 	{
@@ -246,7 +246,7 @@ static bool lpc43xx_cmd_erase(target *target, int argc, const char *argv[])
 		flash_pgm.p.params.prepare.end_sector = FLASH_NUM_SECTOR-1;
 		flash_pgm.p.params.prepare.flash_bank = bank;
 		flash_pgm.p.result[0] = IAP_STATUS_CMD_SUCCESS;
-		lpc43xx_iap_call(target, &flash_pgm.p, sizeof(flash_pgm.p));
+		lpc43xx_iap_call(t, &flash_pgm.p, sizeof(flash_pgm.p));
 		if (flash_pgm.p.result[0] != IAP_STATUS_CMD_SUCCESS) {
 			return false;
 		}
@@ -257,7 +257,7 @@ static bool lpc43xx_cmd_erase(target *target, int argc, const char *argv[])
 		flash_pgm.p.params.erase.cpu_clk_khz = CPU_CLK_KHZ;
 		flash_pgm.p.params.erase.flash_bank = bank;
 		flash_pgm.p.result[0] = IAP_STATUS_CMD_SUCCESS;
-		lpc43xx_iap_call(target, &flash_pgm.p, sizeof(flash_pgm.p));
+		lpc43xx_iap_call(t, &flash_pgm.p, sizeof(flash_pgm.p));
 		if (flash_pgm.p.result[0] != IAP_STATUS_CMD_SUCCESS)
 		{
 			return false;
@@ -269,20 +269,20 @@ static bool lpc43xx_cmd_erase(target *target, int argc, const char *argv[])
 	return true;
 }
 
-static int lpc43xx_flash_init(struct target_s *target)
+static int lpc43xx_flash_init(target *t)
 {
 	/* Deal with WDT */
-	lpc43xx_wdt_set_period(target);
+	lpc43xx_wdt_set_period(t);
 
 	/* Force internal clock */
-	lpc43xx_set_internal_clock(target);
+	lpc43xx_set_internal_clock(t);
 
 	struct flash_program flash_pgm;
 
 	/* Initialize flash IAP */
 	flash_pgm.p.command = IAP_CMD_INIT;
 	flash_pgm.p.result[0] = IAP_STATUS_CMD_SUCCESS;
-	lpc43xx_iap_call(target, &flash_pgm.p, sizeof(flash_pgm.p));
+	lpc43xx_iap_call(t, &flash_pgm.p, sizeof(flash_pgm.p));
 	if (flash_pgm.p.result[0] != IAP_STATUS_CMD_SUCCESS)
 		return -1;
 
@@ -332,40 +332,40 @@ static int32_t sector_number(uint32_t addr)
 	}
 }
 
-static void lpc43xx_iap_call(struct target_s *target, struct flash_param *param, unsigned param_len)
+static void lpc43xx_iap_call(target *t, struct flash_param *param, unsigned param_len)
 {
-	uint32_t regs[target->regs_size / sizeof(uint32_t)];
+	uint32_t regs[t->regs_size / sizeof(uint32_t)];
 	uint32_t iap_entry;
 
 	/* Pet WDT before each IAP call, if it is on */
-	lpc43xx_wdt_pet(target);
+	lpc43xx_wdt_pet(t);
 
-	target_mem_read(target, &iap_entry, IAP_ENTRYPOINT_LOCATION, sizeof(iap_entry));
+	target_mem_read(t, &iap_entry, IAP_ENTRYPOINT_LOCATION, sizeof(iap_entry));
 
 	/* fill out the remainder of the parameters and copy the structure to RAM */
 	param->opcode = ARM_THUMB_BREAKPOINT; /* breakpoint */
 	param->pad0 = 0x0000; /* pad */
-	target_mem_write(target, IAP_RAM_BASE, param, param_len);
+	target_mem_write(t, IAP_RAM_BASE, param, param_len);
 
 	/* set up for the call to the IAP ROM */
-	target_regs_read(target, regs);
+	target_regs_read(t, regs);
 	regs[0] = IAP_RAM_BASE + offsetof(struct flash_param, command);
 	regs[1] = IAP_RAM_BASE + offsetof(struct flash_param, result);
 
 	regs[R_MSP] = IAP_RAM_BASE + IAP_RAM_SIZE;
 	regs[R_LR] = IAP_RAM_BASE | 1;
 	regs[R_PC] = iap_entry;
-	target_regs_write(target, regs);
+	target_regs_write(t, regs);
 
 	/* start the target and wait for it to halt again */
-	target_halt_resume(target, 0);
-	while (!target_halt_wait(target));
+	target_halt_resume(t, 0);
+	while (!target_halt_wait(t));
 
 	/* copy back just the parameters structure */
-	target_mem_read(target, param, IAP_RAM_BASE, sizeof(struct flash_param));
+	target_mem_read(t, param, IAP_RAM_BASE, sizeof(struct flash_param));
 }
 
-static int lpc43xx_flash_prepare(struct target_s *target, uint32_t addr, int len)
+static int lpc43xx_flash_prepare(target *t, uint32_t addr, int len)
 {
 	struct flash_program flash_pgm;
 
@@ -376,7 +376,7 @@ static int lpc43xx_flash_prepare(struct target_s *target, uint32_t addr, int len
 	flash_pgm.p.params.prepare.flash_bank = flash_bank(addr);
 	flash_pgm.p.result[0] = IAP_STATUS_CMD_SUCCESS;
 
-	lpc43xx_iap_call(target, &flash_pgm.p, sizeof(flash_pgm.p));
+	lpc43xx_iap_call(t, &flash_pgm.p, sizeof(flash_pgm.p));
 	if (flash_pgm.p.result[0] != IAP_STATUS_CMD_SUCCESS) {
 		return -1;
 	}
@@ -384,7 +384,7 @@ static int lpc43xx_flash_prepare(struct target_s *target, uint32_t addr, int len
 	return 0;
 }
 
-static int lpc43xx_flash_erase(struct target_s *target, uint32_t addr, size_t len)
+static int lpc43xx_flash_erase(target *t, uint32_t addr, size_t len)
 {
 	struct flash_program flash_pgm;
 
@@ -393,11 +393,11 @@ static int lpc43xx_flash_erase(struct target_s *target, uint32_t addr, size_t le
 		return -1;
 
 	/* init */
-	if (lpc43xx_flash_init(target))
+	if (lpc43xx_flash_init(t))
 		return -1;
 
 	/* prepare... */
-	if (lpc43xx_flash_prepare(target, addr, len))
+	if (lpc43xx_flash_prepare(t, addr, len))
 		return -1;
 
 	/* and now erase them */
@@ -407,7 +407,7 @@ static int lpc43xx_flash_erase(struct target_s *target, uint32_t addr, size_t le
 	flash_pgm.p.params.erase.cpu_clk_khz = CPU_CLK_KHZ;
 	flash_pgm.p.params.erase.flash_bank = flash_bank(addr);
 	flash_pgm.p.result[0] = IAP_STATUS_CMD_SUCCESS;
-	lpc43xx_iap_call(target, &flash_pgm.p, sizeof(flash_pgm.p));
+	lpc43xx_iap_call(t, &flash_pgm.p, sizeof(flash_pgm.p));
 	if (flash_pgm.p.result[0] != IAP_STATUS_CMD_SUCCESS) {
 		return -1;
 	}
@@ -418,7 +418,7 @@ static int lpc43xx_flash_erase(struct target_s *target, uint32_t addr, size_t le
 	flash_pgm.p.params.blank_check.end_sector = sector_number(addr+len);
 	flash_pgm.p.params.blank_check.flash_bank = flash_bank(addr);
 	flash_pgm.p.result[0] = IAP_STATUS_CMD_SUCCESS;
-	lpc43xx_iap_call(target, &flash_pgm.p, sizeof(flash_pgm.p));
+	lpc43xx_iap_call(t, &flash_pgm.p, sizeof(flash_pgm.p));
 	if (flash_pgm.p.result[0] != IAP_STATUS_CMD_SUCCESS) {
 		return -1;
 	}
@@ -426,13 +426,13 @@ static int lpc43xx_flash_erase(struct target_s *target, uint32_t addr, size_t le
 	return 0;
 }
 
-static void lpc43xx_set_internal_clock(struct target_s *target)
+static void lpc43xx_set_internal_clock(target *t)
 {
 	const uint32_t val2 = (1 << 11) | (1 << 24);
-	target_mem_write(target, 0x40050000 + 0x06C, &val2, sizeof(val2));
+	target_mem_write(t, 0x40050000 + 0x06C, &val2, sizeof(val2));
 }
 
-static int lpc43xx_flash_write(struct target_s *target,
+static int lpc43xx_flash_write(target *t,
                                uint32_t dest, const uint8_t *src, size_t len)
 {
 	unsigned first_chunk = dest / IAP_PGM_CHUNKSIZE;
@@ -472,12 +472,12 @@ static int lpc43xx_flash_write(struct target_s *target,
 		}
 
 		/* prepare... */
-		if (lpc43xx_flash_prepare(target, chunk * IAP_PGM_CHUNKSIZE, IAP_PGM_CHUNKSIZE)) {
+		if (lpc43xx_flash_prepare(t, chunk * IAP_PGM_CHUNKSIZE, IAP_PGM_CHUNKSIZE)) {
 			return -1;
 		}
 
 		/* copy buffer into target memory */
-		target_mem_write(target,
+		target_mem_write(t,
 			IAP_RAM_BASE + offsetof(struct flash_program, data),
 			flash_pgm.data, sizeof(flash_pgm.data));
 
@@ -488,7 +488,7 @@ static int lpc43xx_flash_write(struct target_s *target,
 		flash_pgm.p.params.program.byte_count = IAP_PGM_CHUNKSIZE;
 		flash_pgm.p.params.program.cpu_clk_khz = CPU_CLK_KHZ;
 		flash_pgm.p.result[0] = IAP_STATUS_CMD_SUCCESS;
-		lpc43xx_iap_call(target, &flash_pgm.p, sizeof(flash_pgm));
+		lpc43xx_iap_call(t, &flash_pgm.p, sizeof(flash_pgm));
 		if (flash_pgm.p.result[0] != IAP_STATUS_CMD_SUCCESS) {
 			return -1;
 		}
@@ -504,7 +504,7 @@ static int lpc43xx_flash_write(struct target_s *target,
  * This is done indepently of writing to give the user a chance to verify flash
  * before changing it.
  */
-static bool lpc43xx_cmd_mkboot(target *target, int argc, const char *argv[])
+static bool lpc43xx_cmd_mkboot(target *t, int argc, const char *argv[])
 {
 	/* Usage: mkboot 0 or mkboot 1 */
 	if (argc != 2) {
@@ -519,7 +519,7 @@ static bool lpc43xx_cmd_mkboot(target *target, int argc, const char *argv[])
 		return false;
 	}
 
-	lpc43xx_flash_init(target);
+	lpc43xx_flash_init(t);
 	struct flash_program flash_pgm;
 
 	/* special command to compute/write magic vector for signature */
@@ -527,7 +527,7 @@ static bool lpc43xx_cmd_mkboot(target *target, int argc, const char *argv[])
 	flash_pgm.p.params.make_active.flash_bank = bank;
 	flash_pgm.p.params.make_active.cpu_clk_khz = CPU_CLK_KHZ;
 	flash_pgm.p.result[0] = IAP_STATUS_CMD_SUCCESS;
-	lpc43xx_iap_call(target, &flash_pgm.p, sizeof(flash_pgm));
+	lpc43xx_iap_call(t, &flash_pgm.p, sizeof(flash_pgm));
 	if (flash_pgm.p.result[0] != IAP_STATUS_CMD_SUCCESS) {
 		gdb_outf("Set bootable failed.\n");
 		return false;
@@ -537,11 +537,11 @@ static bool lpc43xx_cmd_mkboot(target *target, int argc, const char *argv[])
 	return true;
 }
 
-static void lpc43xx_wdt_set_period(struct target_s *target)
+static void lpc43xx_wdt_set_period(target *t)
 {
 	uint32_t wdt_mode = 0;
 	/* Check if WDT is on */
-	target_mem_read(target, &wdt_mode, LPC43XX_WDT_MODE, sizeof(wdt_mode));
+	target_mem_read(t, &wdt_mode, LPC43XX_WDT_MODE, sizeof(wdt_mode));
 
 	/* If WDT on, we can't disable it, but we may be able to set a long period */
 	if (wdt_mode && !(wdt_mode & LPC43XX_WDT_PROTECT))
@@ -549,15 +549,15 @@ static void lpc43xx_wdt_set_period(struct target_s *target)
 		const uint32_t wdt_period = LPC43XX_WDT_PERIOD_MAX;
 
 
-		target_mem_write(target, LPC43XX_WDT_CNT, &wdt_period, sizeof(wdt_period));
+		target_mem_write(t, LPC43XX_WDT_CNT, &wdt_period, sizeof(wdt_period));
 	}
 }
 
-static void lpc43xx_wdt_pet(struct target_s *target)
+static void lpc43xx_wdt_pet(target *t)
 {
 	uint32_t wdt_mode = 0;
 	/* Check if WDT is on */
-	target_mem_read(target, &wdt_mode, LPC43XX_WDT_MODE, sizeof(wdt_mode));
+	target_mem_read(t, &wdt_mode, LPC43XX_WDT_MODE, sizeof(wdt_mode));
 
 	/* If WDT on, pet */
 	if (wdt_mode)
@@ -565,8 +565,7 @@ static void lpc43xx_wdt_pet(struct target_s *target)
 		const uint32_t feed1 = 0xAA;;
 		const uint32_t feed2 = 0x55;;
 
-
-		target_mem_write(target, LPC43XX_WDT_FEED, &feed1, sizeof(feed1));
-		target_mem_write(target, LPC43XX_WDT_FEED, &feed2, sizeof(feed2));
+		target_mem_write(t, LPC43XX_WDT_FEED, &feed1, sizeof(feed1));
+		target_mem_write(t, LPC43XX_WDT_FEED, &feed2, sizeof(feed2));
 	}
 }

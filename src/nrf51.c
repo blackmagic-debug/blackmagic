@@ -28,8 +28,8 @@
 #include "gdb_packet.h"
 #include "cortexm.h"
 
-static int nrf51_flash_erase(struct target_s *target, uint32_t addr, size_t len);
-static int nrf51_flash_write(struct target_s *target, uint32_t dest,
+static int nrf51_flash_erase(target *t, uint32_t addr, size_t len);
+static int nrf51_flash_write(target *t, uint32_t dest,
                              const uint8_t *src, size_t len);
 
 static bool nrf51_cmd_erase_all(target *t);
@@ -135,11 +135,11 @@ static const uint16_t nrf51_flash_write_stub[] = {
 
 };
 
-bool nrf51_probe(struct target_s *target)
+bool nrf51_probe(target *t)
 {
-	target->idcode = target_mem_read32(target, NRF51_FICR_CONFIGID) & 0xFFFF;
+	t->idcode = target_mem_read32(t, NRF51_FICR_CONFIGID) & 0xFFFF;
 
-	switch (target->idcode) {
+	switch (t->idcode) {
 	case 0x001D:
 	case 0x002A:
 	case 0x0044:
@@ -151,43 +151,43 @@ bool nrf51_probe(struct target_s *target)
 	case 0x004D:
 	case 0x0026:
 	case 0x004C:
-		target->driver = "Nordic nRF51";
-		target->xml_mem_map = nrf51_xml_memory_map;
-		target->flash_erase = nrf51_flash_erase;
-		target->flash_write = nrf51_flash_write;
-		target_add_commands(target, nrf51_cmd_list, "nRF51");
+		t->driver = "Nordic nRF51";
+		t->xml_mem_map = nrf51_xml_memory_map;
+		t->flash_erase = nrf51_flash_erase;
+		t->flash_write = nrf51_flash_write;
+		target_add_commands(t, nrf51_cmd_list, "nRF51");
 		return true;
 	}
 
 	return false;
 }
 
-static int nrf51_flash_erase(struct target_s *target, uint32_t addr, size_t len)
+static int nrf51_flash_erase(target *t, uint32_t addr, size_t len)
 {
 	addr &= ~(NRF51_PAGE_SIZE - 1);
 	len &= ~(NRF51_PAGE_SIZE - 1);
 
 	/* Enable erase */
-	target_mem_write32(target, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_EEN);
+	target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_EEN);
 
 	/* Poll for NVMC_READY */
-	while (target_mem_read32(target, NRF51_NVMC_READY) == 0)
-		if(target_check_error(target))
+	while (target_mem_read32(t, NRF51_NVMC_READY) == 0)
+		if(target_check_error(t))
 			return -1;
 
 	while (len) {
 		if (addr == NRF51_UICR) { // Special Case
 			/* Write to the ERASE_UICR register to erase */
-			target_mem_write32(target, NRF51_NVMC_ERASEUICR, 0x1);
+			target_mem_write32(t, NRF51_NVMC_ERASEUICR, 0x1);
 
 		} else { // Standard Flash Page
 			/* Write address of first word in page to erase it */
-			target_mem_write32(target, NRF51_NVMC_ERASEPAGE, addr);
+			target_mem_write32(t, NRF51_NVMC_ERASEPAGE, addr);
 		}
 
 		/* Poll for NVMC_READY */
-		while (target_mem_read32(target, NRF51_NVMC_READY) == 0)
-			if(target_check_error(target))
+		while (target_mem_read32(t, NRF51_NVMC_READY) == 0)
+			if(target_check_error(t))
 				return -1;
 
 		addr += NRF51_PAGE_SIZE;
@@ -195,17 +195,17 @@ static int nrf51_flash_erase(struct target_s *target, uint32_t addr, size_t len)
 	}
 
 	/* Return to read-only */
-	target_mem_write32(target, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_REN);
+	target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_REN);
 
 	/* Poll for NVMC_READY */
-	while (target_mem_read32(target, NRF51_NVMC_READY) == 0)
-		if(target_check_error(target))
+	while (target_mem_read32(t, NRF51_NVMC_READY) == 0)
+		if(target_check_error(t))
 			return -1;
 
 	return 0;
 }
 
-static int nrf51_flash_write(struct target_s *target, uint32_t dest,
+static int nrf51_flash_write(target *t, uint32_t dest,
                              const uint8_t *src, size_t len)
 {
 	uint32_t offset = dest % 4;
@@ -220,26 +220,26 @@ static int nrf51_flash_write(struct target_s *target, uint32_t dest,
 	memcpy((uint8_t *)&data[2] + offset, src, len);
 
 	/* Enable write */
-	target_mem_write32(target, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_WEN);
+	target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_WEN);
 
 	/* Poll for NVMC_READY */
-	while (target_mem_read32(target, NRF51_NVMC_READY) == 0)
-		if(target_check_error(target))
+	while (target_mem_read32(t, NRF51_NVMC_READY) == 0)
+		if(target_check_error(t))
 			return -1;
 
 	/* Write stub and data to target ram and set PC */
-	target_mem_write(target, 0x20000000, nrf51_flash_write_stub, 0x28);
-	target_mem_write(target, 0x20000028, data, len + 8);
-	cortexm_pc_write(target, 0x20000000);
-	if(target_check_error(target))
+	target_mem_write(t, 0x20000000, nrf51_flash_write_stub, 0x28);
+	target_mem_write(t, 0x20000028, data, len + 8);
+	cortexm_pc_write(t, 0x20000000);
+	if(target_check_error(t))
 		return -1;
 
 	/* Execute the stub */
-	target_halt_resume(target, 0);
-	while(!target_halt_wait(target));
+	target_halt_resume(t, 0);
+	while(!target_halt_wait(t));
 
 	/* Return to read-only */
-	target_mem_write32(target, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_REN);
+	target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_REN);
 
 	return 0;
 }

@@ -47,8 +47,8 @@ const struct command_s stm32f4_cmd_list[] = {
 };
 
 
-static int stm32f4_flash_erase(struct target_s *target, uint32_t addr, size_t len);
-static int stm32f4_flash_write(struct target_s *target, uint32_t dest,
+static int stm32f4_flash_erase(target *t, uint32_t addr, size_t len);
+static int stm32f4_flash_write(target *t, uint32_t dest,
                                const uint8_t *src, size_t len);
 
 static const char stm32f4_driver_str[] = "STM32F4xx";
@@ -127,11 +127,11 @@ static const uint16_t stm32f4_flash_write_stub[] = {
 #define SRAM_BASE 0x20000000
 #define STUB_BUFFER_BASE ALIGN(SRAM_BASE + sizeof(stm32f4_flash_write_stub), 4)
 
-bool stm32f4_probe(struct target_s *target)
+bool stm32f4_probe(target *t)
 {
 	uint32_t idcode;
 
-	idcode = target_mem_read32(target, DBGMCU_IDCODE);
+	idcode = target_mem_read32(t, DBGMCU_IDCODE);
 	switch(idcode & 0xFFF) {
 	case 0x411: /* Documented to be 0x413! This is what I read... */
 	case 0x413: /* F407VGT6 */
@@ -139,11 +139,11 @@ bool stm32f4_probe(struct target_s *target)
 	case 0x423: /* F401 B/C RM0368 Rev.3 */
 	case 0x431: /* F411     RM0383 Rev.4 */
 	case 0x433: /* F401 D/E RM0368 Rev.3 */
-		target->xml_mem_map = stm32f4_xml_memory_map;
-		target->driver = stm32f4_driver_str;
-		target->flash_erase = stm32f4_flash_erase;
-		target->flash_write = stm32f4_flash_write;
-		target_add_commands(target, stm32f4_cmd_list, "STM32F4");
+		t->xml_mem_map = stm32f4_xml_memory_map;
+		t->driver = stm32f4_driver_str;
+		t->flash_erase = stm32f4_flash_erase;
+		t->flash_write = stm32f4_flash_write;
+		target_add_commands(t, stm32f4_cmd_list, "STM32F4");
 		return true;
 	}
 	return false;
@@ -158,7 +158,7 @@ static void stm32f4_flash_unlock(target *t)
 	}
 }
 
-static int stm32f4_flash_erase(struct target_s *target, uint32_t addr, size_t len)
+static int stm32f4_flash_erase(target *t, uint32_t addr, size_t len)
 {
 	uint16_t sr;
 	uint32_t cr;
@@ -166,7 +166,7 @@ static int stm32f4_flash_erase(struct target_s *target, uint32_t addr, size_t le
 
 	addr &= 0x07FFC000;
 
-	stm32f4_flash_unlock(target);
+	stm32f4_flash_unlock(t);
 
 	while(len) {
 		if (addr < 0x10000) { /* Sector 0..3 */
@@ -183,13 +183,13 @@ static int stm32f4_flash_erase(struct target_s *target, uint32_t addr, size_t le
 		}
 		cr |= FLASH_CR_EOPIE | FLASH_CR_ERRIE | FLASH_CR_SER;
 		/* Flash page erase instruction */
-		target_mem_write32(target, FLASH_CR, cr);
+		target_mem_write32(t, FLASH_CR, cr);
 		/* write address to FMA */
-		target_mem_write32(target, FLASH_CR, cr | FLASH_CR_STRT);
+		target_mem_write32(t, FLASH_CR, cr | FLASH_CR_STRT);
 
 		/* Read FLASH_SR to poll for BSY bit */
-		while(target_mem_read32(target, FLASH_SR) & FLASH_SR_BSY)
-			if(target_check_error(target))
+		while(target_mem_read32(t, FLASH_SR) & FLASH_SR_BSY)
+			if(target_check_error(t))
 				return -1;
 
 		len -= pagesize;
@@ -197,14 +197,14 @@ static int stm32f4_flash_erase(struct target_s *target, uint32_t addr, size_t le
 	}
 
 	/* Check for error */
-	sr = target_mem_read32(target, FLASH_SR);
+	sr = target_mem_read32(t, FLASH_SR);
 	if(sr & SR_ERROR_MASK)
 		return -1;
 
 	return 0;
 }
 
-static int stm32f4_flash_write(struct target_s *target, uint32_t dest,
+static int stm32f4_flash_write(target *t, uint32_t dest,
                                const uint8_t *src, size_t len)
 {
 	uint32_t offset = dest % 4;
@@ -216,8 +216,8 @@ static int stm32f4_flash_write(struct target_s *target, uint32_t dest,
 	memcpy((uint8_t *)data + offset, src, len);
 
 	/* Write buffer to target ram call stub */
-	target_mem_write(target, STUB_BUFFER_BASE, data, sizeof(data));
-	return cortexm_run_stub(target, SRAM_BASE, stm32f4_flash_write_stub,
+	target_mem_write(t, STUB_BUFFER_BASE, data, sizeof(data));
+	return cortexm_run_stub(t, SRAM_BASE, stm32f4_flash_write_stub,
 	                        sizeof(stm32f4_flash_write_stub),
 	                        dest - offset, STUB_BUFFER_BASE, sizeof(data),
 	                        0);

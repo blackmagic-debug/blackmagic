@@ -54,8 +54,8 @@
 
 #define KL25_PAGESIZE 0x400
 
-static int kl25_flash_erase(struct target_s *target, uint32_t addr, size_t len);
-static int kl25_flash_write(struct target_s *target, uint32_t dest,
+static int kl25_flash_erase(target *t, uint32_t addr, size_t len);
+static int kl25_flash_write(target *t, uint32_t dest,
                             const uint8_t *src, size_t len);
 
 static const char kl25_xml_memory_map[] = "<?xml version=\"1.0\"?>"
@@ -70,7 +70,7 @@ static const char kl25_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 	"  <memory type=\"ram\" start=\"0x20000000\" length=\"0x3000\"/>"
 	"</memory-map>";
 
-bool kinetis_probe(struct target_s *t)
+bool kinetis_probe(target *t)
 {
 	uint32_t sdid = target_mem_read32(t, SIM_SDID);
 	switch (sdid >> 20) {
@@ -85,7 +85,7 @@ bool kinetis_probe(struct target_s *t)
 }
 
 static bool
-kl25_command(struct target_s *t, uint8_t cmd, uint32_t addr, const uint8_t data[8])
+kl25_command(target *t, uint8_t cmd, uint32_t addr, const uint8_t data[8])
 {
 	uint8_t fstat;
 
@@ -120,7 +120,7 @@ kl25_command(struct target_s *t, uint8_t cmd, uint32_t addr, const uint8_t data[
 	return true;
 }
 
-static int kl25_flash_erase(struct target_s *t, uint32_t addr, size_t len)
+static int kl25_flash_erase(target *t, uint32_t addr, size_t len)
 {
 	addr &= ~(KL25_PAGESIZE - 1);
 	len = (len + KL25_PAGESIZE - 1) & ~(KL25_PAGESIZE - 1);
@@ -133,7 +133,7 @@ static int kl25_flash_erase(struct target_s *t, uint32_t addr, size_t len)
 	return 0;
 }
 
-static int kl25_flash_write(struct target_s *t, uint32_t dest,
+static int kl25_flash_write(target *t, uint32_t dest,
 			  const uint8_t *src, size_t len)
 {
 	/* FIXME handle misaligned start and end of sections */

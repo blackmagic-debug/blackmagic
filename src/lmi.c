@@ -32,8 +32,8 @@
 #include "target.h"
 #include "cortexm.h"
 
-static int lmi_flash_erase(struct target_s *target, uint32_t addr, size_t len);
-static int lmi_flash_write(struct target_s *target, uint32_t dest,
+static int lmi_flash_erase(target *t, uint32_t addr, size_t len);
+static int lmi_flash_write(target *t, uint32_t dest,
 			  const uint8_t *src, size_t len);
 
 static const char lmi_driver_str[] = "TI Stellaris/Tiva";
@@ -99,30 +99,30 @@ static const uint16_t lmi_flash_write_stub[] = {
 // 	...
 };
 
-bool lmi_probe(struct target_s *target)
+bool lmi_probe(target *t)
 {
-	uint32_t did1 = target_mem_read32(target, 0x400FE004);
+	uint32_t did1 = target_mem_read32(t, 0x400FE004);
 	switch (did1 >> 16) {
 	case 0x1049:	/* LM3S3748 */
-		target->driver = lmi_driver_str;
-		target->xml_mem_map = lmi_xml_memory_map;
-		target->flash_erase = lmi_flash_erase;
-		target->flash_write = lmi_flash_write;
+		t->driver = lmi_driver_str;
+		t->xml_mem_map = lmi_xml_memory_map;
+		t->flash_erase = lmi_flash_erase;
+		t->flash_write = lmi_flash_write;
 		return true;
 
 	case 0x10A1:	/* TM4C123GH6PM */
-		target->driver = lmi_driver_str;
-		target->xml_mem_map = tm4c123gh6pm_xml_memory_map;
-		target->flash_erase = lmi_flash_erase;
-		target->flash_write = lmi_flash_write;
+		t->driver = lmi_driver_str;
+		t->xml_mem_map = tm4c123gh6pm_xml_memory_map;
+		t->flash_erase = lmi_flash_erase;
+		t->flash_write = lmi_flash_write;
 		return true;
 	}
 	return false;
 }
 
-int lmi_flash_erase(struct target_s *target, uint32_t addr, size_t len)
+int lmi_flash_erase(target *t, uint32_t addr, size_t len)
 {
-	ADIv5_AP_t *ap = adiv5_target_ap(target);
+	ADIv5_AP_t *ap = adiv5_target_ap(t);
 	uint32_t tmp;
 
 	addr &= 0xFFFFFC00;
@@ -152,22 +152,21 @@ int lmi_flash_erase(struct target_s *target, uint32_t addr, size_t len)
 	return 0;
 }
 
-int lmi_flash_write(struct target_s *target, uint32_t dest,
-                    const uint8_t *src, size_t len)
+int lmi_flash_write(target *t, uint32_t dest, const uint8_t *src, size_t len)
 {
 	uint32_t data[(len>>2)+2];
 	data[0] = dest;
 	data[1] = len >> 2;
 	memcpy(&data[2], src, len);
 	DEBUG("Sending stub\n");
-	target_mem_write(target, 0x20000000, (void*)lmi_flash_write_stub, 0x30);
+	target_mem_write(t, 0x20000000, (void*)lmi_flash_write_stub, 0x30);
 	DEBUG("Sending data\n");
-	target_mem_write(target, 0x20000030, data, len + 8);
+	target_mem_write(t, 0x20000030, data, len + 8);
 	DEBUG("Running stub\n");
-	cortexm_pc_write(target, 0x20000000);
-	target_halt_resume(target, 0);
+	cortexm_pc_write(t, 0x20000000);
+	target_halt_resume(t, 0);
 	DEBUG("Waiting for halt\n");
-	while(!target_halt_wait(target));
+	while(!target_halt_wait(t));
 
 	return 0;
 }
