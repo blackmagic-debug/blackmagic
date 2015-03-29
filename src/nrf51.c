@@ -97,42 +97,7 @@ static const char nrf51_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 #define NRF51_PAGE_SIZE 1024
 
 static const uint16_t nrf51_flash_write_stub[] = {
-// _start:
-	0x4808, // ldr	r0, [pc, #32]	; (24 <_ready>)
-	0x4909, // ldr	r1, [pc, #36]	; (28 <_addr>)
-	0x467a, // mov	r2, pc
-	0x3228, // adds	r2, #40	; 0x28
-	0x4b08, // ldr	r3, [pc, #32]	; (2c <_size>)
-
-// next:
-	0x2b00, // cmp	r3, #0
-	0xd009, // beq.n	22 <_done>
-	0x6814, // ldr	r4, [r2, #0]
-	0x600c, // str	r4, [r1, #0]
-
-// wait:
-	0x6804, // ldr	r4, [r0, #0]
-	0x2601, // movs	r6, #1
-	0x4234, // tst	r4, r6
-	0xd0fb, // beq.n	12 <_wait>
-
-	0x3b04, // subs	r3, #4
-	0x3104, // adds	r1, #4
-	0x3204, // adds	r2, #4
-	0xe7f3, // b.n	a <_next>
-
-// done:
-	0xbe00, // bkpt	0x0000
-
-// ready:
-	0xe400, 0x4001 // .word	0x4001e400
-// addr:
-//	0x0000, 0x0000
-// size:
-//	0x0000, 0x0000
-// data:
-//	...
-
+#include "../flashstub/nrf51.stub"
 };
 
 bool nrf51_probe(target *t)
