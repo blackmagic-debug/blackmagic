@@ -96,6 +96,9 @@ static const char nrf51_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 
 #define NRF51_PAGE_SIZE 1024
 
+#define SRAM_BASE          0x20000000
+#define STUB_BUFFER_BASE   (SRAM_BASE + 0x28)
+
 static const uint16_t nrf51_flash_write_stub[] = {
 #include "../flashstub/nrf51.stub"
 };
@@ -192,16 +195,11 @@ static int nrf51_flash_write(target *t, uint32_t dest,
 		if(target_check_error(t))
 			return -1;
 
-	/* Write stub and data to target ram and set PC */
-	target_mem_write(t, 0x20000000, nrf51_flash_write_stub, 0x28);
-	target_mem_write(t, 0x20000028, data, len + 8);
-	cortexm_pc_write(t, 0x20000000);
-	if(target_check_error(t))
-		return -1;
-
-	/* Execute the stub */
-	target_halt_resume(t, 0);
-	while(!target_halt_wait(t));
+	/* Write stub and data to target ram and call stub */
+	target_mem_write(t, SRAM_BASE, nrf51_flash_write_stub,
+	                 sizeof(nrf51_flash_write_stub));
+	target_mem_write(t, STUB_BUFFER_BASE, data, len + 8);
+	cortexm_run_stub(t, SRAM_BASE, 0, 0, 0, 0);
 
 	/* Return to read-only */
 	target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_REN);
