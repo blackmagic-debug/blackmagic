@@ -372,12 +372,7 @@ static int stm32lx_nvm_prog_erase_stubbed(target *t,
         target_mem_write(t, STM32Lx_STUB_INFO_PHYS, &info, sizeof(info));
 
         /* Execute stub */
-        cortexm_pc_write(t, STM32Lx_STUB_PHYS);
-        if (target_check_error(t))
-                return -1;
-        target_halt_resume(t, 0);
-        while (!target_halt_wait(t))
-                ;
+        cortexm_run_stub(t, STM32Lx_STUB_PHYS, 0, 0, 0, 0);
 
 	if (target_mem_read32(t, STM32Lx_NVM_SR(nvm))
 	    & STM32Lx_NVM_SR_ERR_M)
@@ -448,12 +443,7 @@ static int stm32lx_nvm_prog_write_stubbed(target *t,
                                  &info, sizeof(info));
 
                 /* Execute stub */
-                cortexm_pc_write(t, STM32Lx_STUB_PHYS);
-                if (target_check_error(t))
-                        return -1;
-                target_halt_resume(t, 0);
-                while (!target_halt_wait(t))
-                        ;
+                cortexm_run_stub(t, STM32Lx_STUB_PHYS, 0, 0, 0, 0);
 
                 if (target_mem_read32(t, STM32Lx_NVM_SR(nvm))
                    & STM32Lx_NVM_SR_ERR_M)
