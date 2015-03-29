@@ -24,9 +24,6 @@
  * ARM doc DDI0403C.
  *
  * Also supports Cortex-M0 / ARMv6-M
- *
- * Issues:
- * There are way too many magic numbers used here.
  */
 #include "general.h"
 #include "exception.h"
@@ -421,16 +418,12 @@ static uint32_t cortexm_pc_read(target *t)
 {
 	target_mem_write32(t, CORTEXM_DCRSR, 0x0F);
 	return target_mem_read32(t, CORTEXM_DCRDR);
-
-	return 0;
 }
 
-int cortexm_pc_write(target *t, const uint32_t val)
+static void cortexm_pc_write(target *t, const uint32_t val)
 {
 	target_mem_write32(t, CORTEXM_DCRDR, val);
 	target_mem_write32(t, CORTEXM_DCRSR, CORTEXM_DCRSR_REGWnR | 0x0F);
-
-	return 0;
 }
 
 /* The following three routines implement target halt/resume
