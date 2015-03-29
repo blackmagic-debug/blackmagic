@@ -147,7 +147,6 @@ bool cortexm_attach(target *t);
 void cortexm_detach(target *t);
 void cortexm_halt_resume(target *t, bool step);
 int cortexm_run_stub(target *t, uint32_t loadaddr,
-                     const uint16_t *stub, uint32_t stublen,
                      uint32_t r0, uint32_t r1, uint32_t r2, uint32_t r3);
 int cortexm_pc_write(target *t, const uint32_t val);
 
