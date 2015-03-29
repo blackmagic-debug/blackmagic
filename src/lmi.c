@@ -21,16 +21,27 @@
 /* This file implements TI/LMI LM3S target specific functions providing
  * the XML memory map and Flash memory programming.
  *
- * Issues:
- * No detection of the target device.
- * Add reference to documentation.
- * Flash erase is very slow.
+ * According to: TivaTM TM4C123GH6PM Microcontroller Datasheet
  */
 
 #include "general.h"
-#include "adiv5.h"
 #include "target.h"
 #include "cortexm.h"
+
+#define SRAM_BASE            0x20000000
+#define BLOCK_SIZE           0x400
+#define LMI_SCB_BASE         0x400FE000
+#define LMI_SCB_DID1         (LMI_SCB_BASE + 0x004)
+
+#define LMI_FLASH_BASE       0x400FD000
+#define LMI_FLASH_FMA        (LMI_FLASH_BASE + 0x000)
+#define LMI_FLASH_FMC        (LMI_FLASH_BASE + 0x008)
+
+#define LMI_FLASH_FMC_WRITE  (1 << 0)
+#define LMI_FLASH_FMC_ERASE  (1 << 1)
+#define LMI_FLASH_FMC_MERASE (1 << 2)
+#define LMI_FLASH_FMC_COMT   (1 << 3)
+#define LMI_FLASH_FMC_WRKEY  0xA4420000
 
 static int lmi_flash_erase(target *t, uint32_t addr, size_t len);
 static int lmi_flash_write(target *t, uint32_t dest,
@@ -101,7 +112,7 @@ static const uint16_t lmi_flash_write_stub[] = {
 
 bool lmi_probe(target *t)
 {
-	uint32_t did1 = target_mem_read32(t, 0x400FE004);
+	uint32_t did1 = target_mem_read32(t, LMI_SCB_DID1);
 	switch (did1 >> 16) {
 	case 0x1049:	/* LM3S3748 */
 		t->driver = lmi_driver_str;
@@ -122,32 +133,18 @@ bool lmi_probe(target *t)
 
 int lmi_flash_erase(target *t, uint32_t addr, size_t len)
 {
-	ADIv5_AP_t *ap = adiv5_target_ap(t);
-	uint32_t tmp;
-
-	addr &= 0xFFFFFC00;
-	len &= 0xFFFFFC00;
-
-	/* setup word access */
-	adiv5_ap_write(ap, 0x00, 0xA2000052);
-
-	/* select Flash Control */
-	adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, 0x04, 0x400FD000);
+	addr &= ~(BLOCK_SIZE - 1);
+	len &= ~(BLOCK_SIZE - 1);
 
 	while(len) {
-		/* write address to FMA */
-		adiv5_ap_write(ap, ADIV5_AP_DB(0), addr); /* Required to switch banks */
-		/* set ERASE bit in FMC */
-		adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DB(2), 0xA4420002);
-		/* Read FMC to poll for ERASE bit */
-		adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_AP_DB(2), 0);
-		do {
-			tmp = adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ,
-			                          ADIV5_AP_DB(2), 0);
-		} while (tmp & 2);
+		target_mem_write32(t, LMI_FLASH_FMA, addr);
+		target_mem_write32(t, LMI_FLASH_FMC,
+		                   LMI_FLASH_FMC_WRKEY | LMI_FLASH_FMC_ERASE);
+		while (target_mem_read32(t, LMI_FLASH_FMC) &
+		       LMI_FLASH_FMC_ERASE);
 
-		len -= 0x400;
-		addr += 0x400;
+		len -= BLOCK_SIZE;
+		addr += BLOCK_SIZE;
 	}
 	return 0;
 }
@@ -159,7 +156,7 @@ int lmi_flash_write(target *t, uint32_t dest, const uint8_t *src, size_t len)
 	data[1] = len >> 2;
 	memcpy(&data[2], src, len);
 	DEBUG("Sending stub\n");
-	target_mem_write(t, 0x20000000, (void*)lmi_flash_write_stub, 0x30);
+	target_mem_write(t, SRAM_BASE, lmi_flash_write_stub, 0x30);
 	DEBUG("Sending data\n");
 	target_mem_write(t, 0x20000030, data, len + 8);
 	DEBUG("Running stub\n");
