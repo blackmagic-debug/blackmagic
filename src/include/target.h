@@ -115,7 +115,7 @@ struct target_s {
 	/* Attach/Detach funcitons */
 	bool (*attach)(target *t);
 	void (*detach)(target *t);
-	int (*check_error)(target *t);
+	bool (*check_error)(target *t);
 
 	/* Memory access functions */
 	void (*mem_read)(target *t, void *dest, uint32_t src,
@@ -126,8 +126,8 @@ struct target_s {
 	/* Register access functions */
 	int regs_size;
 	const char *tdesc;
-	int (*regs_read)(target *t, void *data);
-	int (*regs_write)(target *t, const void *data);
+	void (*regs_read)(target *t, void *data);
+	void (*regs_write)(target *t, const void *data);
 
 	/* Halt/resume functions */
 	void (*reset)(target *t);

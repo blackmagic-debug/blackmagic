@@ -37,7 +37,7 @@
 
 static const char adiv5_driver_str[] = "ARM ADIv5 MEM-AP";
 
-static int ap_check_error(target *t);
+static bool ap_check_error(target *t);
 
 static void ap_mem_read(target *t, void *dest, uint32_t src, size_t len);
 static void ap_mem_write(target *t, uint32_t dest, const void *src, size_t len);
@@ -157,11 +157,10 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 	adiv5_dp_unref(dp);
 }
 
-static int
-ap_check_error(target *t)
+static bool ap_check_error(target *t)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(t);
-	return adiv5_dp_error(ap->dp);
+	return adiv5_dp_error(ap->dp) != 0;
 }
 
 enum align {
