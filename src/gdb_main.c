@@ -77,9 +77,10 @@ gdb_main(void)
 		/* Implementation of these is mandatory! */
 		case 'g': { /* 'g': Read general registers */
 			ERROR_IF_NO_TARGET();
-			uint8_t arm_regs[cur_target->regs_size];
+			uint8_t arm_regs[target_regs_size(cur_target)];
 			target_regs_read(cur_target, arm_regs);
-			gdb_putpacket(hexify(pbuf, (void*)arm_regs, cur_target->regs_size), cur_target->regs_size * 2);
+			gdb_putpacket(hexify(pbuf, arm_regs, sizeof(arm_regs)),
+			              sizeof(arm_regs) * 2);
 			break;
 			}
 		case 'm': {	/* 'm addr,len': Read len bytes from addr */
@@ -97,8 +98,8 @@ gdb_main(void)
 			}
 		case 'G': {	/* 'G XX': Write general registers */
 			ERROR_IF_NO_TARGET();
-			uint8_t arm_regs[cur_target->regs_size];
-			unhexify(arm_regs, &pbuf[1], cur_target->regs_size);
+			uint8_t arm_regs[target_regs_size(cur_target)];
+			unhexify(arm_regs, &pbuf[1], sizeof(arm_regs));
 			target_regs_write(cur_target, arm_regs);
 			gdb_putpacketz("OK");
 			break;
@@ -327,11 +328,11 @@ handle_q_packet(char *packet, int len)
 			cur_target = target_attach(last_target,
 						gdb_target_destroy_callback);
 		}
-		if((!cur_target) || (!cur_target->xml_mem_map)) {
+		if (!cur_target) {
 			gdb_putpacketz("E01");
 			return;
 		}
-		handle_q_string_reply(cur_target->xml_mem_map, packet + 23);
+		handle_q_string_reply(target_mem_map(cur_target), packet + 23);
 
 	} else if (strncmp (packet, "qXfer:features:read:target.xml:", 31) == 0) {
 		/* Read target description */
@@ -340,11 +341,11 @@ handle_q_packet(char *packet, int len)
 			cur_target = target_attach(last_target,
 						gdb_target_destroy_callback);
 		}
-		if((!cur_target) || (!cur_target->tdesc)) {
+		if (!cur_target) {
 			gdb_putpacketz("E01");
 			return;
 		}
-		handle_q_string_reply(cur_target->tdesc, packet + 31);
+		handle_q_string_reply(target_tdesc(cur_target), packet + 31);
 	} else if (sscanf(packet, "qCRC:%" PRIx32 ",%" PRIx32, &addr, &alen) == 2) {
 		if(!cur_target) {
 			gdb_putpacketz("E01");
@@ -450,10 +451,6 @@ handle_z_packet(char *packet, int plen)
 	sscanf(packet + 2, ",%" PRIx32 ",%d", &addr, &len);
 	switch(type) {
 	case 1: /* Hardware breakpoint */
-		if(!cur_target->set_hw_bp) { /* Not supported */
-			gdb_putpacketz("");
-			return;
-		}
 		if(set)
 			ret = target_set_hw_bp(cur_target, addr);
 		else
@@ -463,10 +460,6 @@ handle_z_packet(char *packet, int plen)
 	case 2:
 	case 3:
 	case 4:
-		if(!cur_target->set_hw_wp) { /* Not supported */
-			gdb_putpacketz("");
-			return;
-		}
 		if(set)
 			ret = target_set_hw_wp(cur_target, type, addr, len);
 		else

@@ -108,6 +108,16 @@ target *target_attach(target *t, target_destroy_callback destroy_cb);
 #define target_hostio_reply(target, recode, errcode)	\
 	(target)->hostio_reply((target), (retcode), (errcode))
 
+/* Accessor functions */
+#define target_regs_size(target) \
+	((target)->regs_size)
+
+#define target_mem_map(target) \
+	((target)->xml_mem_map ? (target)->xml_mem_map : "")
+
+#define target_tdesc(target) \
+	((target)->tdesc ? (target)->tdesc : "")
+
 struct target_s {
 	/* Notify controlling debugger if target is lost */
 	target_destroy_callback destroy_callback;
