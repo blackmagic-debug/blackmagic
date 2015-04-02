@@ -122,10 +122,7 @@ static const char sam4s_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 #define EEFC_FSR_ERROR		(EEFC_FSR_FCMDE | EEFC_FSR_FLOCKE)
 
 #define SAM3X_CHIPID_CIDR	0x400E0940
-#define SAM3N_CHIPID_CIDR	0x400E0740
-#define SAM3S_CHIPID_CIDR	0x400E0740
-#define SAM3U_CHIPID_CIDR	0x400E0740
-#define SAM4S_CHIPID_CIDR	0x400E0740
+#define SAM34NSU_CHIPID_CIDR	0x400E0740
 
 #define CHIPID_CIDR_VERSION_MASK	(0x1F << 0)
 #define CHIPID_CIDR_EPROC_CM3		(0x03 << 5)
@@ -166,7 +163,6 @@ bool sam3x_probe(target *t)
 {
 	t->idcode = target_mem_read32(t, SAM3X_CHIPID_CIDR);
 
-	/* FIXME: Check for all variants with similar flash interface */
 	switch (t->idcode & (CHIPID_CIDR_ARCH_MASK | CHIPID_CIDR_EPROC_MASK)) {
 	case CHIPID_CIDR_ARCH_SAM3XxC | CHIPID_CIDR_EPROC_CM3:
 	case CHIPID_CIDR_ARCH_SAM3XxE | CHIPID_CIDR_EPROC_CM3:
@@ -179,34 +175,20 @@ bool sam3x_probe(target *t)
 		return true;
 	}
 
-	t->idcode = target_mem_read32(t, SAM3N_CHIPID_CIDR);
+	t->idcode = target_mem_read32(t, SAM34NSU_CHIPID_CIDR);
 	switch (t->idcode & (CHIPID_CIDR_ARCH_MASK | CHIPID_CIDR_EPROC_MASK)) {
 	case CHIPID_CIDR_ARCH_SAM3NxA | CHIPID_CIDR_EPROC_CM3:
 	case CHIPID_CIDR_ARCH_SAM3NxB | CHIPID_CIDR_EPROC_CM3:
 	case CHIPID_CIDR_ARCH_SAM3NxC | CHIPID_CIDR_EPROC_CM3:
-		t->driver = "Atmel SAM3N";
+	case CHIPID_CIDR_ARCH_SAM3SxA | CHIPID_CIDR_EPROC_CM3:
+	case CHIPID_CIDR_ARCH_SAM3SxB | CHIPID_CIDR_EPROC_CM3:
+	case CHIPID_CIDR_ARCH_SAM3SxC | CHIPID_CIDR_EPROC_CM3:
+		t->driver = "Atmel SAM3N/S";
 		t->xml_mem_map = sam3n_xml_memory_map;
 		t->flash_erase = sam3x_flash_erase;
 		t->flash_write = sam3x_flash_write;
 		target_add_commands(t, sam3x_cmd_list, "SAM3N");
 		return true;
-	}
-
-	t->idcode = target_mem_read32(t, SAM3S_CHIPID_CIDR);
-	switch (t->idcode & (CHIPID_CIDR_ARCH_MASK | CHIPID_CIDR_EPROC_MASK)) {
-	case CHIPID_CIDR_ARCH_SAM3SxA | CHIPID_CIDR_EPROC_CM3:
-	case CHIPID_CIDR_ARCH_SAM3SxB | CHIPID_CIDR_EPROC_CM3:
-	case CHIPID_CIDR_ARCH_SAM3SxC | CHIPID_CIDR_EPROC_CM3:
-		t->driver = "Atmel SAM3S";
-		t->xml_mem_map = sam3n_xml_memory_map;
-		t->flash_erase = sam3x_flash_erase;
-		t->flash_write = sam3x_flash_write;
-		target_add_commands(t, sam3x_cmd_list, "SAM3S");
-		return true;
-	}
-
-	t->idcode = target_mem_read32(t, SAM3U_CHIPID_CIDR);
-	switch (t->idcode & (CHIPID_CIDR_ARCH_MASK | CHIPID_CIDR_EPROC_MASK)) {
 	case CHIPID_CIDR_ARCH_SAM3UxC | CHIPID_CIDR_EPROC_CM3:
 	case CHIPID_CIDR_ARCH_SAM3UxE | CHIPID_CIDR_EPROC_CM3:
 		t->driver = "Atmel SAM3U";
@@ -215,10 +197,6 @@ bool sam3x_probe(target *t)
 		t->flash_write = sam3x_flash_write;
 		target_add_commands(t, sam3x_cmd_list, "SAM3U");
 		return true;
-	}
-
-	t->idcode = target_mem_read32(t, SAM4S_CHIPID_CIDR);
-	switch (t->idcode & (CHIPID_CIDR_ARCH_MASK | CHIPID_CIDR_EPROC_MASK)) {
 	case CHIPID_CIDR_ARCH_SAM4SxA | CHIPID_CIDR_EPROC_CM4:
 	case CHIPID_CIDR_ARCH_SAM4SxB | CHIPID_CIDR_EPROC_CM4:
 	case CHIPID_CIDR_ARCH_SAM4SxC | CHIPID_CIDR_EPROC_CM4:
