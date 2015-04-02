@@ -65,6 +65,18 @@ static const char sam3n_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 	"  <memory type=\"ram\" start=\"0x20000000\" length=\"0x200000\"/>"
 	"</memory-map>";
 
+static const char sam3u_xml_memory_map[] = "<?xml version=\"1.0\"?>"
+/*	"<!DOCTYPE memory-map "
+	"             PUBLIC \"+//IDN gnu.org//DTD GDB Memory Map V1.0//EN\""
+	"                    \"http://sourceware.org/gdb/gdb-memory-map.dtd\">"*/
+	"<memory-map>"
+	"  <memory type=\"flash\" start=\"0x80000\" length=\"0x100000\">"
+	"    <property name=\"blocksize\">0x100</property>"
+	"  </memory>"
+	"  <memory type=\"rom\" start=\"0x180000\" length=\"0x200000\"/>"
+	"  <memory type=\"ram\" start=\"0x20000000\" length=\"0x200000\"/>"
+	"</memory-map>";
+
 static const char sam4s_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 /*	"<!DOCTYPE memory-map "
 	"             PUBLIC \"+//IDN gnu.org//DTD GDB Memory Map V1.0//EN\""
@@ -80,6 +92,7 @@ static const char sam4s_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 /* Enhanced Embedded Flash Controller (EEFC) Register Map */
 #define SAM3N_EEFC_BASE 	0x400E0A00
 #define SAM3X_EEFC_BASE(x)	(0x400E0A00+((x)*0x400))
+#define SAM3U_EEFC_BASE(x)	(0x400E0800+((x)*0x200))
 #define SAM4S_EEFC_BASE(x)	(0x400E0A00+((x)*0x200))
 #define EEFC_FMR(base)		((base)+0x00)
 #define EEFC_FCR(base)		((base)+0x04)
@@ -111,6 +124,7 @@ static const char sam4s_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 #define SAM3X_CHIPID_CIDR	0x400E0940
 #define SAM3N_CHIPID_CIDR	0x400E0740
 #define SAM3S_CHIPID_CIDR	0x400E0740
+#define SAM3U_CHIPID_CIDR	0x400E0740
 #define SAM4S_CHIPID_CIDR	0x400E0740
 
 #define CHIPID_CIDR_VERSION_MASK	(0x1F << 0)
@@ -126,6 +140,8 @@ static const char sam4s_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 #define CHIPID_CIDR_NVPSIZ2_MASK	(0x0F << 12)
 #define CHIPID_CIDR_SRAMSIZ_MASK	(0x0F << 16)
 #define CHIPID_CIDR_ARCH_MASK		(0xFF << 20)
+#define CHIPID_CIDR_ARCH_SAM3UxC	(0x80 << 20)
+#define CHIPID_CIDR_ARCH_SAM3UxE	(0x81 << 20)
 #define CHIPID_CIDR_ARCH_SAM3XxC	(0x84 << 20)
 #define CHIPID_CIDR_ARCH_SAM3XxE	(0x85 << 20)
 #define CHIPID_CIDR_ARCH_SAM3XxG	(0x86 << 20)
@@ -189,6 +205,18 @@ bool sam3x_probe(target *t)
 		return true;
 	}
 
+	t->idcode = target_mem_read32(t, SAM3U_CHIPID_CIDR);
+	switch (t->idcode & (CHIPID_CIDR_ARCH_MASK | CHIPID_CIDR_EPROC_MASK)) {
+	case CHIPID_CIDR_ARCH_SAM3UxC | CHIPID_CIDR_EPROC_CM3:
+	case CHIPID_CIDR_ARCH_SAM3UxE | CHIPID_CIDR_EPROC_CM3:
+		t->driver = "Atmel SAM3U";
+		t->xml_mem_map = sam3u_xml_memory_map;
+		t->flash_erase = sam3x_flash_erase;
+		t->flash_write = sam3x_flash_write;
+		target_add_commands(t, sam3x_cmd_list, "SAM3U");
+		return true;
+	}
+
 	t->idcode = target_mem_read32(t, SAM4S_CHIPID_CIDR);
 	switch (t->idcode & (CHIPID_CIDR_ARCH_MASK | CHIPID_CIDR_EPROC_MASK)) {
 	case CHIPID_CIDR_ARCH_SAM4SxA | CHIPID_CIDR_EPROC_CM4:
@@ -245,6 +273,21 @@ sam3x_flash_base(target *t, uint32_t addr, uint32_t *offset)
 			if (offset)
 				*offset = addr - 0x80000;
 			return SAM3X_EEFC_BASE(0);
+		}
+	}
+
+	/* The SAM3U has a constant split between both banks */
+	if (strcmp(t->driver, "Atmel SAM3U") == 0) {
+		if (addr >= 0x100000) {
+			if(offset)
+				*offset = addr - 0x100000;
+
+			return SAM3U_EEFC_BASE(1);
+		} else {
+			if(offset)
+				*offset = addr - 0x80000;
+
+			return SAM3U_EEFC_BASE(0);
 		}
 	}
 
