@@ -464,7 +464,7 @@ static int cortexm_halt_wait(target *t)
 	ADIv5_AP_t *ap = adiv5_target_ap(t);
 	struct cortexm_priv *priv = ap->priv;
 
-	uint32_t dhcsr = 0;
+	volatile uint32_t dhcsr = 0;
 	volatile struct exception e;
 	TRY_CATCH (e, EXCEPTION_ALL) {
 		/* If this times out because the target is in WFI then
