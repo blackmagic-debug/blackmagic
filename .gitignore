@@ -1,3 +1,4 @@
+src/include/version.h
 blackmagic
 *.bin
 *.hex

@@ -29,6 +29,7 @@
 #include "target.h"
 #include "morse.h"
 #include "adiv5.h"
+#include "version.h"
 
 #ifdef PLATFORM_HAS_TRACESWO
 #	include "traceswo.h"
@@ -106,8 +107,8 @@ int command_process(target *t, char *cmd)
 
 bool cmd_version(void)
 {
-	gdb_out("Black Magic Probe (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")\n");
-	gdb_out("Copyright (C) 2011  Black Sphere Technologies Ltd.\n");
+	gdb_out("Black Magic Probe (Firmware " FIRMWARE_VERSION ")\n");
+	gdb_out("Copyright (C) 2015  Black Sphere Technologies Ltd.\n");
 	gdb_out("License GPLv3+: GNU GPL version 3 or later "
 		"<http://gnu.org/licenses/gpl.html>\n\n");
 

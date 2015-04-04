@@ -19,6 +19,7 @@
  */
 #include "general.h"
 #include "gdb_if.h"
+#include "version.h"
 
 #include <assert.h>
 
@@ -156,6 +157,11 @@ void platform_init(int argc, char **argv)
 		ftdi_init[7]= cable_desc[index].cbus_data;
 	if(cable_desc[index].cbus_ddr)
 		ftdi_init[8]= cable_desc[index].cbus_ddr;
+
+	printf("\nBlack Magic Probe (" FIRMWARE_VERSION ")\n");
+	printf("Copyright (C) 2015  Black Sphere Technologies Ltd.\n");
+	printf("License GPLv3+: GNU GPL version 3 or later "
+	       "<http://gnu.org/licenses/gpl.html>\n\n");
 
 	if(ftdic) {
 		ftdi_usb_close(ftdic);
