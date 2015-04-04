@@ -20,10 +20,12 @@
 
 /* This file implements KL25 target specific functions providing
  * the XML memory map and Flash memory programming.
+ *
+ * According to Freescale doc KL25P80M48SF0RM:
+ *    KL25 Sub-family Reference Manual
  */
 
 #include "general.h"
-#include "adiv5.h"
 #include "target.h"
 
 #define SIM_SDID   0x40048024
@@ -54,21 +56,23 @@
 
 #define KL25_PAGESIZE 0x400
 
-static int kl25_flash_erase(target *t, uint32_t addr, size_t len);
-static int kl25_flash_write(target *t, uint32_t dest,
-                            const uint8_t *src, size_t len);
+static int kl25_flash_erase(struct target_flash *f, uint32_t addr, size_t len);
+static int kl25_flash_write(struct target_flash *f,
+                            uint32_t dest, const void *src, size_t len);
 
-static const char kl25_xml_memory_map[] = "<?xml version=\"1.0\"?>"
-/*	"<!DOCTYPE memory-map "
-	"             PUBLIC \"+//IDN gnu.org//DTD GDB Memory Map V1.0//EN\""
-	"                    \"http://sourceware.org/gdb/gdb-memory-map.dtd\">"*/
-	"<memory-map>"
-	"  <memory type=\"flash\" start=\"0\" length=\"0x20000\">"
-	"    <property name=\"blocksize\">0x400</property>"
-	"  </memory>"
-	"  <memory type=\"ram\" start=\"0x1ffff000\" length=\"0x1000\"/>"
-	"  <memory type=\"ram\" start=\"0x20000000\" length=\"0x3000\"/>"
-	"</memory-map>";
+static void kl25_add_flash(target *t,
+                           uint32_t addr, size_t length, size_t erasesize)
+{
+	struct target_flash *f = calloc(1, sizeof(*f));
+	f->start = addr;
+	f->length = length;
+	f->blocksize = erasesize;
+	f->erase = kl25_flash_erase;
+	f->write = kl25_flash_write;
+	f->align = 4;
+	f->erased = 0xff;
+	target_add_flash(t, f);
+}
 
 bool kinetis_probe(target *t)
 {
@@ -76,9 +80,9 @@ bool kinetis_probe(target *t)
 	switch (sdid >> 20) {
 	case 0x251:
 		t->driver = "KL25";
-		t->xml_mem_map = kl25_xml_memory_map;
-		t->flash_erase = kl25_flash_erase;
-		t->flash_write = kl25_flash_write;
+		target_add_ram(t, 0x1ffff000, 0x1000);
+		target_add_ram(t, 0x20000000, 0x3000);
+		kl25_add_flash(t, 0x00000000, 0x20000, 0x400);
 		return true;
 	}
 	return false;
@@ -89,11 +93,11 @@ kl25_command(target *t, uint8_t cmd, uint32_t addr, const uint8_t data[8])
 {
 	uint8_t fstat;
 
-        /* Wait for CCIF to be high */
+	/* Wait for CCIF to be high */
 	do {
 		fstat = target_mem_read8(t, FTFA_FSTAT);
 		/* Check ACCERR and FPVIOL are zero in FSTAT */
-            	if (fstat & (FTFA_FSTAT_ACCERR | FTFA_FSTAT_FPVIOL))
+		if (fstat & (FTFA_FSTAT_ACCERR | FTFA_FSTAT_FPVIOL))
 			return false;
 	} while (!(fstat & FTFA_FSTAT_CCIF));
 
@@ -113,35 +117,28 @@ kl25_command(target *t, uint8_t cmd, uint32_t addr, const uint8_t data[8])
 	do {
 		fstat = target_mem_read8(t, FTFA_FSTAT);
 		/* Check ACCERR and FPVIOL are zero in FSTAT */
-            	if (fstat & (FTFA_FSTAT_ACCERR | FTFA_FSTAT_FPVIOL))
+		if (fstat & (FTFA_FSTAT_ACCERR | FTFA_FSTAT_FPVIOL))
 			return false;
 	} while (!(fstat & FTFA_FSTAT_CCIF));
 
 	return true;
 }
 
-static int kl25_flash_erase(target *t, uint32_t addr, size_t len)
+static int kl25_flash_erase(struct target_flash *f, uint32_t addr, size_t len)
 {
-	addr &= ~(KL25_PAGESIZE - 1);
-	len = (len + KL25_PAGESIZE - 1) & ~(KL25_PAGESIZE - 1);
-
 	while (len) {
-		kl25_command(t, FTFA_CMD_ERASE_SECTOR, addr, NULL);
+		kl25_command(f->t, FTFA_CMD_ERASE_SECTOR, addr, NULL);
 		len -= KL25_PAGESIZE;
 		addr += KL25_PAGESIZE;
 	}
 	return 0;
 }
 
-static int kl25_flash_write(target *t, uint32_t dest,
-			  const uint8_t *src, size_t len)
+static int kl25_flash_write(struct target_flash *f,
+                            uint32_t dest, const void *src, size_t len)
 {
-	/* FIXME handle misaligned start and end of sections */
-	if ((dest & 3) || (len & 3))
-		return -1;
-
 	while (len) {
-		kl25_command(t, FTFA_CMD_PROGRAM_LONGWORD, dest, src);
+		kl25_command(f->t, FTFA_CMD_PROGRAM_LONGWORD, dest, src);
 		len -= 4;
 		dest += 4;
 		src += 4;
