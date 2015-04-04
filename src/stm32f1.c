@@ -46,43 +46,10 @@ const struct command_s stm32f1_cmd_list[] = {
 };
 
 
-static int stm32md_flash_erase(target *t, uint32_t addr, size_t len);
-static int stm32hd_flash_erase(target *t, uint32_t addr, size_t len);
-static int stm32f1_flash_erase(target *t, uint32_t addr, size_t len,
-				uint32_t pagesize);
-static int stm32f1_flash_write(target *t, uint32_t dest,
-                               const uint8_t *src, size_t len);
-
-static const char stm32f1_driver_str[] = "STM32, Medium density.";
-static const char stm32hd_driver_str[] = "STM32, High density.";
-static const char stm32f3_driver_str[] = "STM32F3xx";
-static const char stm32f03_driver_str[] = "STM32F03x";
-static const char stm32f04_driver_str[] = "STM32F04x";
-static const char stm32f05_driver_str[] = "STM32F05x";
-static const char stm32f07_driver_str[] = "STM32F07x";
-static const char stm32f09_driver_str[] = "STM32F09x";
-
-static const char stm32f1_xml_memory_map[] = "<?xml version=\"1.0\"?>"
-/*	"<!DOCTYPE memory-map "
-	"             PUBLIC \"+//IDN gnu.org//DTD GDB Memory Map V1.0//EN\""
-	"                    \"http://sourceware.org/gdb/gdb-memory-map.dtd\">"*/
-	"<memory-map>"
-	"  <memory type=\"flash\" start=\"0x8000000\" length=\"0x20000\">"
-	"    <property name=\"blocksize\">0x400</property>"
-	"  </memory>"
-	"  <memory type=\"ram\" start=\"0x20000000\" length=\"0x5000\"/>"
-	"</memory-map>";
-
-static const char stm32hd_xml_memory_map[] = "<?xml version=\"1.0\"?>"
-/*	"<!DOCTYPE memory-map "
-	"             PUBLIC \"+//IDN gnu.org//DTD GDB Memory Map V1.0//EN\""
-	"                    \"http://sourceware.org/gdb/gdb-memory-map.dtd\">"*/
-	"<memory-map>"
-	"  <memory type=\"flash\" start=\"0x8000000\" length=\"0x80000\">"
-	"    <property name=\"blocksize\">0x800</property>"
-	"  </memory>"
-	"  <memory type=\"ram\" start=\"0x20000000\" length=\"0x10000\"/>"
-	"</memory-map>";
+static int stm32f1_flash_erase(struct target_flash *f,
+                               uint32_t addr, size_t len);
+static int stm32f1_flash_write(struct target_flash *f,
+                               uint32_t dest, const void *src, size_t len);
 
 /* Flash Program ad Erase Controller Register Map */
 #define FPEC_BASE	0x40022000
@@ -127,6 +94,20 @@ static const uint16_t stm32f1_flash_write_stub[] = {
 #define SRAM_BASE 0x20000000
 #define STUB_BUFFER_BASE ALIGN(SRAM_BASE + sizeof(stm32f1_flash_write_stub), 4)
 
+static void stm32f1_add_flash(target *t,
+                              uint32_t addr, size_t length, size_t erasesize)
+{
+	struct target_flash *f = calloc(1, sizeof(*f));
+	f->start = addr;
+	f->length = length;
+	f->blocksize = erasesize;
+	f->erase = stm32f1_flash_erase;
+	f->write = stm32f1_flash_write;
+	f->align = 2;
+	f->erased = 0xff;
+	target_add_flash(t, f);
+}
+
 bool stm32f1_probe(target *t)
 {
 	t->idcode = target_mem_read32(t, DBGMCU_IDCODE) & 0xfff;
@@ -134,27 +115,24 @@ bool stm32f1_probe(target *t)
 	case 0x410:  /* Medium density */
 	case 0x412:  /* Low denisty */
 	case 0x420:  /* Value Line, Low-/Medium density */
-		t->driver = stm32f1_driver_str;
-		t->xml_mem_map = stm32f1_xml_memory_map;
-		t->flash_erase = stm32md_flash_erase;
-		t->flash_write = stm32f1_flash_write;
+		t->driver = "STM32F1 medium density";
+		target_add_ram(t, 0x20000000, 0x5000);
+		stm32f1_add_flash(t, 0x8000000, 0x20000, 0x400);
 		target_add_commands(t, stm32f1_cmd_list, "STM32 LD/MD");
 		return true;
 	case 0x414:	 /* High density */
 	case 0x418:  /* Connectivity Line */
 	case 0x428:	 /* Value Line, High Density */
-		t->driver = stm32hd_driver_str;
-		t->xml_mem_map = stm32hd_xml_memory_map;
-		t->flash_erase = stm32hd_flash_erase;
-		t->flash_write = stm32f1_flash_write;
+		t->driver = "STM32F1 high density";
+		target_add_ram(t, 0x20000000, 0x10000);
+		stm32f1_add_flash(t, 0x8000000, 0x80000, 0x800);
 		target_add_commands(t, stm32f1_cmd_list, "STM32 HD/CL");
 		return true;
 	case 0x422:  /* STM32F30x */
 	case 0x432:  /* STM32F37x */
-		t->driver = stm32f3_driver_str;
-		t->xml_mem_map = stm32hd_xml_memory_map;
-		t->flash_erase = stm32hd_flash_erase;
-		t->flash_write = stm32f1_flash_write;
+		t->driver = "STM32F3";
+		target_add_ram(t, 0x20000000, 0x10000);
+		stm32f1_add_flash(t, 0x8000000, 0x80000, 0x800);
 		target_add_commands(t, stm32f1_cmd_list, "STM32F3");
 		return true;
 	}
@@ -166,26 +144,9 @@ bool stm32f1_probe(target *t)
 	case 0x440:  /* STM32F05 RM0091 Rev.7 */
 	case 0x448:  /* STM32F07 RM0091 Rev.7 */
 	case 0x442:  /* STM32F09 RM0091 Rev.7 */
-		switch(t->idcode) {
-		case 0x444:  /* STM32F03 */
-			t->driver = stm32f03_driver_str;
-			break;
-		case 0x445:  /* STM32F04 */
-			t->driver = stm32f04_driver_str;
-			break;
-		case 0x440:  /* STM32F05 */
-			t->driver = stm32f05_driver_str;
-			break;
-		case 0x448:  /* STM32F07 */
-			t->driver = stm32f07_driver_str;
-			break;
-		case 0x442:  /* STM32F09 */
-			t->driver = stm32f09_driver_str;
-			break;
-		}
-		t->xml_mem_map = stm32f1_xml_memory_map;
-		t->flash_erase = stm32md_flash_erase;
-		t->flash_write = stm32f1_flash_write;
+		t->driver = "STM32F0";
+		target_add_ram(t, 0x20000000, 0x5000);
+		stm32f1_add_flash(t, 0x8000000, 0x20000, 0x400);
 		target_add_commands(t, stm32f1_cmd_list, "STM32F0");
 		return true;
 	}
@@ -199,13 +160,11 @@ static void stm32f1_flash_unlock(target *t)
 	target_mem_write32(t, FLASH_KEYR, KEY2);
 }
 
-static int stm32f1_flash_erase(target *t, uint32_t addr,
-                               size_t len, uint32_t pagesize)
+static int stm32f1_flash_erase(struct target_flash *f,
+                               uint32_t addr, size_t len)
 {
+	target *t = f->t;
 	uint16_t sr;
-
-	addr &= ~(pagesize - 1);
-	len = (len + pagesize - 1) & ~(pagesize - 1);
 
 	stm32f1_flash_unlock(t);
 
@@ -222,8 +181,8 @@ static int stm32f1_flash_erase(target *t, uint32_t addr,
 			if(target_check_error(t))
 				return -1;
 
-		len -= pagesize;
-		addr += pagesize;
+		len -= f->blocksize;
+		addr += f->blocksize;
 	}
 
 	/* Check for error */
@@ -234,33 +193,15 @@ static int stm32f1_flash_erase(target *t, uint32_t addr,
 	return 0;
 }
 
-static int stm32hd_flash_erase(target *t, uint32_t addr, size_t len)
+static int stm32f1_flash_write(struct target_flash *f,
+                               uint32_t dest, const void *src, size_t len)
 {
-	return stm32f1_flash_erase(t, addr, len, 0x800);
-}
-
-static int stm32md_flash_erase(target *t, uint32_t addr, size_t len)
-{
-	return stm32f1_flash_erase(t, addr, len, 0x400);
-}
-
-static int stm32f1_flash_write(target *t, uint32_t dest,
-                               const uint8_t *src, size_t len)
-{
-	uint32_t offset = dest % 4;
-	uint8_t data[ALIGN(offset + len, 4)];
-
-	/* Construct data buffer used by stub */
-	/* pad partial words with all 1s to avoid damaging overlapping areas */
-	memset(data, 0xff, sizeof(data));
-	memcpy((uint8_t *)data + offset, src, len);
-
+	target *t = f->t;
 	/* Write stub and data to target ram and set PC */
 	target_mem_write(t, SRAM_BASE, stm32f1_flash_write_stub,
 	                 sizeof(stm32f1_flash_write_stub));
-	target_mem_write(t, STUB_BUFFER_BASE, data, sizeof(data));
-	return cortexm_run_stub(t, SRAM_BASE, dest - offset,
-	                        STUB_BUFFER_BASE, sizeof(data), 0);
+	target_mem_write(t, STUB_BUFFER_BASE, src, len);
+	return cortexm_run_stub(t, SRAM_BASE, dest, STUB_BUFFER_BASE, len, 0);
 }
 
 static bool stm32f1_cmd_erase_mass(target *t)
