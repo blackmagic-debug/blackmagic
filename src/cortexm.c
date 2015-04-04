@@ -195,14 +195,6 @@ static const char tdesc_cortex_mf[] =
 	"  </feature>"
 	"</target>";
 
-#define REG_SP		13
-#define REG_LR		14
-#define REG_PC		15
-#define REG_XPSR	16
-#define REG_MSP		17
-#define REG_PSP		18
-#define REG_SPECIAL	19
-
 bool cortexm_probe(target *t)
 {
 	t->driver = cortexm_driver_str;

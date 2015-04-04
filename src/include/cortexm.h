@@ -143,6 +143,16 @@
 #define CORTEXM_DWT_FUNC_FUNC_WRITE	(6 << 0)
 #define CORTEXM_DWT_FUNC_FUNC_ACCESS	(7 << 0)
 
+#define REG_SP		13
+#define REG_LR		14
+#define REG_PC		15
+#define REG_XPSR	16
+#define REG_MSP		17
+#define REG_PSP		18
+#define REG_SPECIAL	19
+
+#define ARM_THUMB_BREAKPOINT 0xBE00
+
 bool cortexm_attach(target *t);
 void cortexm_detach(target *t);
 void cortexm_halt_resume(target *t, bool step);

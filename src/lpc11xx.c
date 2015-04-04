@@ -1,6 +1,9 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
+ * Copyright (C) 2011 Mike Smith <drziplok@me.com>
+ * Copyright (C) 2015 Gareth McMullin <gareth@blacksphere.co.nz>
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -14,50 +17,21 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 #include "general.h"
-#include "adiv5.h"
 #include "target.h"
+#include "cortexm.h"
+#include "lpc_common.h"
 
 #define IAP_PGM_CHUNKSIZE	256	/* should fit in RAM on any device */
 
-struct flash_param {
-	uint16_t	opcodes[2];	/* two opcodes to return to after calling the ROM */
-	uint32_t	command[5];	/* command operands */
-	uint32_t	result[4];	/* result data */
-};
 
-struct flash_program {
-	struct flash_param	p;
-	uint8_t			data[IAP_PGM_CHUNKSIZE];
-};
-
-static struct flash_program flash_pgm;
-
-#define MSP	17			/* Main stack pointer register number */
 #define MIN_RAM_SIZE_FOR_LPC8xx		1024
 #define MIN_RAM_SIZE_FOR_LPC1xxx	2048
 #define RAM_USAGE_FOR_IAP_ROUTINES	32	/* IAP routines use 32 bytes at top of ram */
 
 #define IAP_ENTRYPOINT	0x1fff1ff1
 #define IAP_RAM_BASE	0x10000000
-
-#define IAP_CMD_PREPARE		50
-#define IAP_CMD_PROGRAM		51
-#define IAP_CMD_ERASE		52
-#define IAP_CMD_BLANKCHECK	53
-
-#define IAP_STATUS_CMD_SUCCESS		0
-#define IAP_STATUS_INVALID_COMMAND	1
-#define IAP_STATUS_SRC_ADDR_ERROR	2
-#define IAP_STATUS_DST_ADDR_ERROR	3
-#define IAP_STATUS_SRC_ADDR_NOT_MAPPED	4
-#define IAP_STATUS_DST_ADDR_NOT_MAPPED	5
-#define IAP_STATUS_COUNT_ERROR		6
-#define IAP_STATUS_INVALID_SECTOR	7
-#define IAP_STATUS_SECTOR_NOT_BLANK	8
-#define IAP_STATUS_SECTOR_NOT_PREPARED	9
-#define IAP_STATUS_COMPARE_ERROR	10
-#define IAP_STATUS_BUSY			11
 
 static const char lpc8xx_driver[] = "lpc8xx";
 static const char lpc11xx_driver[] = "lpc11xx";
@@ -66,6 +40,11 @@ static int lpc11xx_flash_prepare(target *t, uint32_t addr, int len);
 static int lpc11xx_flash_erase(target *t, uint32_t addr, size_t len);
 static int lpc11xx_flash_write(target *t, uint32_t dest, const uint8_t *src,
 			  size_t len);
+
+struct flash_program {
+	struct flash_param p;
+	uint8_t	data[IAP_PGM_CHUNKSIZE];
+};
 
 /*
  * Note that this memory map is actually for the largest of the lpc11xx devices;
@@ -168,8 +147,8 @@ lpc11x_iap_call(target *t, struct flash_param *param, unsigned param_len)
 	uint32_t regs[t->regs_size / sizeof(uint32_t)];
 
 	/* fill out the remainder of the parameters and copy the structure to RAM */
-	param->opcodes[0] = 0xbe00;
-	param->opcodes[1] = 0x0000;
+	param->opcode = ARM_THUMB_BREAKPOINT;
+	param->pad0 = 0x0000;
 	target_mem_write(t, IAP_RAM_BASE, param, param_len);
 
 	/* set up for the call to the IAP ROM */
@@ -179,11 +158,11 @@ lpc11x_iap_call(target *t, struct flash_param *param, unsigned param_len)
 
 	// stack pointer - top of the smallest ram less 32 for IAP usage
 	if (t->driver == lpc8xx_driver)
-		regs[MSP] = IAP_RAM_BASE + MIN_RAM_SIZE_FOR_LPC8xx - RAM_USAGE_FOR_IAP_ROUTINES;
+		regs[REG_MSP] = IAP_RAM_BASE + MIN_RAM_SIZE_FOR_LPC8xx - RAM_USAGE_FOR_IAP_ROUTINES;
 	else
-		regs[MSP] = IAP_RAM_BASE + MIN_RAM_SIZE_FOR_LPC1xxx - RAM_USAGE_FOR_IAP_ROUTINES;
-	regs[14] = IAP_RAM_BASE | 1;
-	regs[15] = IAP_ENTRYPOINT;
+		regs[REG_MSP] = IAP_RAM_BASE + MIN_RAM_SIZE_FOR_LPC1xxx - RAM_USAGE_FOR_IAP_ROUTINES;
+	regs[REG_LR] = IAP_RAM_BASE | 1;
+	regs[REG_PC] = IAP_ENTRYPOINT;
 	target_regs_write(t, regs);
 
 	/* start the target and wait for it to halt again */
@@ -205,11 +184,12 @@ static int flash_page_size(target *t)
 static int
 lpc11xx_flash_prepare(target *t, uint32_t addr, int len)
 {
+	struct flash_program flash_pgm;
 	/* prepare the sector(s) to be erased */
 	memset(&flash_pgm.p, 0, sizeof(flash_pgm.p));
-	flash_pgm.p.command[0] = IAP_CMD_PREPARE;
-	flash_pgm.p.command[1] = addr / flash_page_size(t);
-	flash_pgm.p.command[2] = (addr + len - 1) / flash_page_size(t);
+	flash_pgm.p.command = IAP_CMD_PREPARE;
+	flash_pgm.p.prepare.start_sector = addr / flash_page_size(t);
+	flash_pgm.p.prepare.end_sector = (addr + len - 1) / flash_page_size(t);
 
 	lpc11x_iap_call(t, &flash_pgm.p, sizeof(flash_pgm.p));
 	if (flash_pgm.p.result[0] != IAP_STATUS_CMD_SUCCESS) {
@@ -222,6 +202,7 @@ lpc11xx_flash_prepare(target *t, uint32_t addr, int len)
 static int
 lpc11xx_flash_erase(target *t, uint32_t addr, size_t len)
 {
+	struct flash_program flash_pgm;
 
 	if (addr % flash_page_size(t))
 		return -1;
@@ -231,15 +212,18 @@ lpc11xx_flash_erase(target *t, uint32_t addr, size_t len)
 		return -1;
 
 	/* and now erase them */
-	flash_pgm.p.command[0] = IAP_CMD_ERASE;
-	flash_pgm.p.command[1] = addr / flash_page_size(t);
-	flash_pgm.p.command[2] = (addr + len - 1) / flash_page_size(t);
-	flash_pgm.p.command[3] = 12000;	/* XXX safe to assume this? */
+	flash_pgm.p.command = IAP_CMD_ERASE;
+	flash_pgm.p.erase.start_sector = addr / flash_page_size(t);
+	flash_pgm.p.erase.end_sector = (addr + len - 1) / flash_page_size(t);
+	flash_pgm.p.erase.cpu_clk_khz = CPU_CLK_KHZ;
+	flash_pgm.p.result[0] = IAP_STATUS_CMD_SUCCESS;
 	lpc11x_iap_call(t, &flash_pgm.p, sizeof(flash_pgm.p));
 	if (flash_pgm.p.result[0] != IAP_STATUS_CMD_SUCCESS) {
 		return -1;
 	}
-	flash_pgm.p.command[0] = IAP_CMD_BLANKCHECK;
+
+	/* check erase ok */
+	flash_pgm.p.command = IAP_CMD_BLANKCHECK;
 	lpc11x_iap_call(t, &flash_pgm.p, sizeof(flash_pgm.p));
 	if (flash_pgm.p.result[0] != IAP_STATUS_CMD_SUCCESS) {
 		return -1;
@@ -255,6 +239,7 @@ lpc11xx_flash_write(target *t, uint32_t dest, const uint8_t *src, size_t len)
 	unsigned last_chunk = (dest + len - 1) / IAP_PGM_CHUNKSIZE;
 	unsigned chunk_offset = dest % IAP_PGM_CHUNKSIZE;
 	unsigned chunk;
+	struct flash_program flash_pgm;
 
 	for (chunk = first_chunk; chunk <= last_chunk; chunk++) {
 
@@ -269,8 +254,8 @@ lpc11xx_flash_write(target *t, uint32_t dest, const uint8_t *src, size_t len)
 			size_t copylen = IAP_PGM_CHUNKSIZE - chunk_offset;
 			if (copylen > len)
 				copylen = len;
-			memcpy(&flash_pgm.data[chunk_offset], src, copylen);
 
+			memcpy(flash_pgm.data + chunk_offset, src, copylen);
 			/* if we are programming the vectors, calculate the magic number */
 			if ((chunk == 0) && (chunk_offset == 0)) {
 				if (copylen < 32) {
@@ -290,9 +275,7 @@ lpc11xx_flash_write(target *t, uint32_t dest, const uint8_t *src, size_t len)
 			len -= copylen;
 			src += copylen;
 			chunk_offset = 0;
-
 		} else {
-
 			/* interior chunk, must be aligned and full-sized */
 			memcpy(flash_pgm.data, src, IAP_PGM_CHUNKSIZE);
 			len -= IAP_PGM_CHUNKSIZE;
@@ -304,12 +287,12 @@ lpc11xx_flash_write(target *t, uint32_t dest, const uint8_t *src, size_t len)
 			return -1;
 
 		/* set the destination address and program */
-		flash_pgm.p.command[0] = IAP_CMD_PROGRAM;
-		flash_pgm.p.command[1] = chunk * IAP_PGM_CHUNKSIZE;
-		flash_pgm.p.command[2] = IAP_RAM_BASE + offsetof(struct flash_program, data);
-		flash_pgm.p.command[3] = IAP_PGM_CHUNKSIZE;
-		/* assuming we are running off IRC - safe lower bound */
-		flash_pgm.p.command[4] = 12000;	/* XXX safe to presume this? */
+		flash_pgm.p.command = IAP_CMD_PROGRAM;
+		flash_pgm.p.program.dest = chunk * IAP_PGM_CHUNKSIZE;
+		flash_pgm.p.program.source = IAP_RAM_BASE + offsetof(struct flash_program, data);
+		flash_pgm.p.program.byte_count = IAP_PGM_CHUNKSIZE;
+		flash_pgm.p.program.cpu_clk_khz = CPU_CLK_KHZ;
+		flash_pgm.p.result[0] = IAP_STATUS_CMD_SUCCESS;
 		lpc11x_iap_call(t, &flash_pgm.p, sizeof(flash_pgm));
 		if (flash_pgm.p.result[0] != IAP_STATUS_CMD_SUCCESS) {
 			return -1;

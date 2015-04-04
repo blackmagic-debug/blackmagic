@@ -1,7 +1,8 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2012 Gareth McMullin <gareth@blacksphere.co.nz>
+ * Copyright (C) 2014 Allen Ibara <aibara>
+ * Copyright (C) 2015 Gareth McMullin <gareth@blacksphere.co.nz>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,17 +20,13 @@
 
 #include "general.h"
 #include "command.h"
-#include "adiv5.h"
 #include "target.h"
 #include "gdb_packet.h"
+#include "cortexm.h"
+#include "lpc_common.h"
 
 #define LPC43XX_CHIPID	0x40043200
 #define ARM_CPUID	0xE000ED00
-#define ARM_THUMB_BREAKPOINT 0xBE00
-
-#define R_MSP				17	// Main stack pointer register number
-#define R_PC				15	// Program counter register number
-#define R_LR				14	// Link register number
 
 #define IAP_ENTRYPOINT_LOCATION	0x10400100
 
@@ -47,25 +44,6 @@
 
 #define IAP_PGM_CHUNKSIZE	4096
 
-#define IAP_CMD_INIT		49
-#define IAP_CMD_PREPARE		50
-#define IAP_CMD_PROGRAM		51
-#define IAP_CMD_ERASE		52
-#define IAP_CMD_BLANKCHECK	53
-#define IAP_CMD_SET_ACTIVE_BANK	60
-
-#define IAP_STATUS_CMD_SUCCESS		0
-#define IAP_STATUS_INVALID_COMMAND	1
-#define IAP_STATUS_SRC_ADDR_ERROR	2
-#define IAP_STATUS_DST_ADDR_ERROR	3
-#define IAP_STATUS_SRC_ADDR_NOT_MAPPED	4
-#define IAP_STATUS_DST_ADDR_NOT_MAPPED	5
-#define IAP_STATUS_COUNT_ERROR		6
-#define IAP_STATUS_INVALID_SECTOR	7
-#define IAP_STATUS_SECTOR_NOT_BLANK	8
-#define IAP_STATUS_SECTOR_NOT_PREPARED	9
-#define IAP_STATUS_COMPARE_ERROR	10
-#define IAP_STATUS_BUSY			11
 
 #define FLASH_BANK_A_BASE 0x1A000000
 #define FLASH_BANK_A_SIZE 0x80000
@@ -74,45 +52,6 @@
 #define FLASH_NUM_BANK		2
 #define FLASH_NUM_SECTOR	15
 #define FLASH_LARGE_SECTOR_OFFSET 0x00010000
-
-/* CPU Frequency */
-#define CPU_CLK_KHZ 12000
-
-struct flash_param {
-	uint16_t opcode;			/* opcode to return to after calling the ROM */
-	uint16_t pad0;
-	uint32_t command;		/* IAP command */
-	union {
-		uint32_t words[5];	/* command parameters */
-		struct {
-			uint32_t start_sector;
-			uint32_t end_sector;
-			uint32_t flash_bank;
-		} prepare;
-		struct {
-			uint32_t start_sector;
-			uint32_t end_sector;
-			uint32_t cpu_clk_khz;
-			uint32_t flash_bank;
-		} erase;
-		struct {
-			uint32_t dest;
-			uint32_t source;
-			uint32_t byte_count;
-			uint32_t cpu_clk_khz;
-		} program;
-		struct {
-			uint32_t start_sector;
-			uint32_t end_sector;
-			uint32_t flash_bank;
-		} blank_check;
-		struct {
-			uint32_t flash_bank;
-			uint32_t cpu_clk_khz;
-		} make_active;
-	} params;
-	uint32_t result[5];	/* result data */
-} __attribute__((aligned(4)));
 
 struct flash_program {
 	struct flash_param p;
@@ -242,9 +181,9 @@ static bool lpc43xx_cmd_erase(target *t, int argc, const char *argv[])
 	for (bank = 0; bank < FLASH_NUM_BANK; bank++)
 	{
 		flash_pgm.p.command = IAP_CMD_PREPARE;
-		flash_pgm.p.params.prepare.start_sector = 0;
-		flash_pgm.p.params.prepare.end_sector = FLASH_NUM_SECTOR-1;
-		flash_pgm.p.params.prepare.flash_bank = bank;
+		flash_pgm.p.prepare.start_sector = 0;
+		flash_pgm.p.prepare.end_sector = FLASH_NUM_SECTOR-1;
+		flash_pgm.p.prepare.flash_bank = bank;
 		flash_pgm.p.result[0] = IAP_STATUS_CMD_SUCCESS;
 		lpc43xx_iap_call(t, &flash_pgm.p, sizeof(flash_pgm.p));
 		if (flash_pgm.p.result[0] != IAP_STATUS_CMD_SUCCESS) {
@@ -252,10 +191,10 @@ static bool lpc43xx_cmd_erase(target *t, int argc, const char *argv[])
 		}
 
 		flash_pgm.p.command = IAP_CMD_ERASE;
-		flash_pgm.p.params.erase.start_sector = 0;
-		flash_pgm.p.params.prepare.end_sector = FLASH_NUM_SECTOR-1;
-		flash_pgm.p.params.erase.cpu_clk_khz = CPU_CLK_KHZ;
-		flash_pgm.p.params.erase.flash_bank = bank;
+		flash_pgm.p.erase.start_sector = 0;
+		flash_pgm.p.prepare.end_sector = FLASH_NUM_SECTOR-1;
+		flash_pgm.p.erase.cpu_clk_khz = CPU_CLK_KHZ;
+		flash_pgm.p.erase.flash_bank = bank;
 		flash_pgm.p.result[0] = IAP_STATUS_CMD_SUCCESS;
 		lpc43xx_iap_call(t, &flash_pgm.p, sizeof(flash_pgm.p));
 		if (flash_pgm.p.result[0] != IAP_STATUS_CMD_SUCCESS)
@@ -343,8 +282,8 @@ static void lpc43xx_iap_call(target *t, struct flash_param *param, unsigned para
 	target_mem_read(t, &iap_entry, IAP_ENTRYPOINT_LOCATION, sizeof(iap_entry));
 
 	/* fill out the remainder of the parameters and copy the structure to RAM */
-	param->opcode = ARM_THUMB_BREAKPOINT; /* breakpoint */
-	param->pad0 = 0x0000; /* pad */
+	param->opcode = ARM_THUMB_BREAKPOINT;
+	param->pad0 = 0x0000;
 	target_mem_write(t, IAP_RAM_BASE, param, param_len);
 
 	/* set up for the call to the IAP ROM */
@@ -352,9 +291,9 @@ static void lpc43xx_iap_call(target *t, struct flash_param *param, unsigned para
 	regs[0] = IAP_RAM_BASE + offsetof(struct flash_param, command);
 	regs[1] = IAP_RAM_BASE + offsetof(struct flash_param, result);
 
-	regs[R_MSP] = IAP_RAM_BASE + IAP_RAM_SIZE;
-	regs[R_LR] = IAP_RAM_BASE | 1;
-	regs[R_PC] = iap_entry;
+	regs[REG_MSP] = IAP_RAM_BASE + IAP_RAM_SIZE;
+	regs[REG_LR] = IAP_RAM_BASE | 1;
+	regs[REG_PC] = iap_entry;
 	target_regs_write(t, regs);
 
 	/* start the target and wait for it to halt again */
@@ -370,11 +309,11 @@ static int lpc43xx_flash_prepare(target *t, uint32_t addr, int len)
 	struct flash_program flash_pgm;
 
 	/* prepare the sector(s) to be erased */
+	memset(&flash_pgm.p, 0, sizeof(flash_pgm.p));
 	flash_pgm.p.command = IAP_CMD_PREPARE;
-	flash_pgm.p.params.prepare.start_sector = sector_number(addr);
-	flash_pgm.p.params.prepare.end_sector = sector_number(addr+len);
-	flash_pgm.p.params.prepare.flash_bank = flash_bank(addr);
-	flash_pgm.p.result[0] = IAP_STATUS_CMD_SUCCESS;
+	flash_pgm.p.prepare.start_sector = sector_number(addr);
+	flash_pgm.p.prepare.end_sector = sector_number(addr+len);
+	flash_pgm.p.prepare.flash_bank = flash_bank(addr);
 
 	lpc43xx_iap_call(t, &flash_pgm.p, sizeof(flash_pgm.p));
 	if (flash_pgm.p.result[0] != IAP_STATUS_CMD_SUCCESS) {
@@ -402,10 +341,10 @@ static int lpc43xx_flash_erase(target *t, uint32_t addr, size_t len)
 
 	/* and now erase them */
 	flash_pgm.p.command = IAP_CMD_ERASE;
-	flash_pgm.p.params.erase.start_sector = sector_number(addr);
-	flash_pgm.p.params.erase.end_sector = sector_number(addr+len);
-	flash_pgm.p.params.erase.cpu_clk_khz = CPU_CLK_KHZ;
-	flash_pgm.p.params.erase.flash_bank = flash_bank(addr);
+	flash_pgm.p.erase.start_sector = sector_number(addr);
+	flash_pgm.p.erase.end_sector = sector_number(addr+len);
+	flash_pgm.p.erase.cpu_clk_khz = CPU_CLK_KHZ;
+	flash_pgm.p.erase.flash_bank = flash_bank(addr);
 	flash_pgm.p.result[0] = IAP_STATUS_CMD_SUCCESS;
 	lpc43xx_iap_call(t, &flash_pgm.p, sizeof(flash_pgm.p));
 	if (flash_pgm.p.result[0] != IAP_STATUS_CMD_SUCCESS) {
@@ -414,9 +353,9 @@ static int lpc43xx_flash_erase(target *t, uint32_t addr, size_t len)
 
 	/* check erase ok */
 	flash_pgm.p.command = IAP_CMD_BLANKCHECK;
-	flash_pgm.p.params.blank_check.start_sector = sector_number(addr);
-	flash_pgm.p.params.blank_check.end_sector = sector_number(addr+len);
-	flash_pgm.p.params.blank_check.flash_bank = flash_bank(addr);
+	flash_pgm.p.blank_check.start_sector = sector_number(addr);
+	flash_pgm.p.blank_check.end_sector = sector_number(addr+len);
+	flash_pgm.p.blank_check.flash_bank = flash_bank(addr);
 	flash_pgm.p.result[0] = IAP_STATUS_CMD_SUCCESS;
 	lpc43xx_iap_call(t, &flash_pgm.p, sizeof(flash_pgm.p));
 	if (flash_pgm.p.result[0] != IAP_STATUS_CMD_SUCCESS) {
@@ -437,17 +376,13 @@ static int lpc43xx_flash_write(target *t,
 {
 	unsigned first_chunk = dest / IAP_PGM_CHUNKSIZE;
 	unsigned last_chunk = (dest + len - 1) / IAP_PGM_CHUNKSIZE;
-	unsigned chunk_offset;
+	unsigned chunk_offset = dest % IAP_PGM_CHUNKSIZE;
 	unsigned chunk;
 	struct flash_program flash_pgm;
 
 	for (chunk = first_chunk; chunk <= last_chunk; chunk++) {
-		if (chunk == first_chunk) {
-			chunk_offset = dest % IAP_PGM_CHUNKSIZE;
-		} else {
-			chunk_offset = 0;
-		}
 
+		DEBUG("chunk %u len %zu\n", chunk, len);
 		/* first and last chunk may require special handling */
 		if ((chunk == first_chunk) || (chunk == last_chunk)) {
 
@@ -464,6 +399,7 @@ static int lpc43xx_flash_write(target *t,
 			/* update to suit */
 			len -= copylen;
 			src += copylen;
+			chunk_offset = 0;
 		} else {
 			/* interior chunk, must be aligned and full-sized */
 			memcpy(flash_pgm.data, src, IAP_PGM_CHUNKSIZE);
@@ -472,21 +408,15 @@ static int lpc43xx_flash_write(target *t,
 		}
 
 		/* prepare... */
-		if (lpc43xx_flash_prepare(t, chunk * IAP_PGM_CHUNKSIZE, IAP_PGM_CHUNKSIZE)) {
+		if (lpc43xx_flash_prepare(t, chunk * IAP_PGM_CHUNKSIZE, IAP_PGM_CHUNKSIZE))
 			return -1;
-		}
-
-		/* copy buffer into target memory */
-		target_mem_write(t,
-			IAP_RAM_BASE + offsetof(struct flash_program, data),
-			flash_pgm.data, sizeof(flash_pgm.data));
 
 		/* set the destination address and program */
 		flash_pgm.p.command = IAP_CMD_PROGRAM;
-		flash_pgm.p.params.program.dest = chunk * IAP_PGM_CHUNKSIZE;
-		flash_pgm.p.params.program.source = IAP_RAM_BASE + offsetof(struct flash_program, data);
-		flash_pgm.p.params.program.byte_count = IAP_PGM_CHUNKSIZE;
-		flash_pgm.p.params.program.cpu_clk_khz = CPU_CLK_KHZ;
+		flash_pgm.p.program.dest = chunk * IAP_PGM_CHUNKSIZE;
+		flash_pgm.p.program.source = IAP_RAM_BASE + offsetof(struct flash_program, data);
+		flash_pgm.p.program.byte_count = IAP_PGM_CHUNKSIZE;
+		flash_pgm.p.program.cpu_clk_khz = CPU_CLK_KHZ;
 		flash_pgm.p.result[0] = IAP_STATUS_CMD_SUCCESS;
 		lpc43xx_iap_call(t, &flash_pgm.p, sizeof(flash_pgm));
 		if (flash_pgm.p.result[0] != IAP_STATUS_CMD_SUCCESS) {
@@ -524,8 +454,8 @@ static bool lpc43xx_cmd_mkboot(target *t, int argc, const char *argv[])
 
 	/* special command to compute/write magic vector for signature */
 	flash_pgm.p.command = IAP_CMD_SET_ACTIVE_BANK;
-	flash_pgm.p.params.make_active.flash_bank = bank;
-	flash_pgm.p.params.make_active.cpu_clk_khz = CPU_CLK_KHZ;
+	flash_pgm.p.make_active.flash_bank = bank;
+	flash_pgm.p.make_active.cpu_clk_khz = CPU_CLK_KHZ;
 	flash_pgm.p.result[0] = IAP_STATUS_CMD_SUCCESS;
 	lpc43xx_iap_call(t, &flash_pgm.p, sizeof(flash_pgm));
 	if (flash_pgm.p.result[0] != IAP_STATUS_CMD_SUCCESS) {
