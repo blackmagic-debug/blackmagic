@@ -16,7 +16,6 @@ LDFLAGS = -lopencm3_stm32f4 -Wl,--defsym,_stack=0x20006000 \
 VPATH += platforms/stm32
 
 SRC += 	cdcacm.c	\
-	platform.c	\
 	traceswo.c	\
 	usbuart.c	\
 	serialno.c	\

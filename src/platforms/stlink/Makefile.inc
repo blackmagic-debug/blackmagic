@@ -16,7 +16,6 @@ LDFLAGS = $(LDFLAGS_BOOT) -Wl,-Ttext=0x8002000
 VPATH += platforms/stm32
 
 SRC += 	cdcacm.c	\
-	platform.c	\
 	usbuart.c 	\
 	serialno.c	\
 	timing.c	\

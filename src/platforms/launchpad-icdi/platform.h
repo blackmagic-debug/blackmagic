@@ -20,8 +20,10 @@
 #include <libopencm3/lm4f/gpio.h>
 #include <libopencm3/usb/usbd.h>
 
-#define BOARD_IDENT             "Black Magic Probe (Launchpad ICDI), (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")"
-#define BOARD_IDENT_DFU		"Black Magic (Upgrade) for Launchpad, (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")"
+#include "version.h"
+
+#define BOARD_IDENT             "Black Magic Probe (Launchpad ICDI), (Firmware " FIRMWARE_VERSION ")"
+#define BOARD_IDENT_DFU		"Black Magic (Upgrade) for Launchpad, (Firmware " FIRMWARE_VERSION ")"
 #define DFU_IDENT               "Black Magic Firmware Upgrade (Launchpad)"
 #define DFU_IFACE_STRING	"lolwut"
 
