@@ -47,38 +47,11 @@ const struct command_s stm32f4_cmd_list[] = {
 };
 
 
-static int stm32f4_flash_erase(target *t, uint32_t addr, size_t len);
-static int stm32f4_flash_write(target *t, uint32_t dest,
-                               const uint8_t *src, size_t len);
+static int stm32f4_flash_erase(struct target_flash *f, uint32_t addr, size_t len);
+static int stm32f4_flash_write(struct target_flash *f,
+                               uint32_t dest, const void *src, size_t len);
 
 static const char stm32f4_driver_str[] = "STM32F4xx";
-
-static const char stm32f4_xml_memory_map[] = "<?xml version=\"1.0\"?>"
-/*	"<!DOCTYPE memory-map "
-	"             PUBLIC \"+//IDN gnu.org//DTD GDB Memory Map V1.0//EN\""
-	"                    \"http://sourceware.org/gdb/gdb-memory-map.dtd\">"*/
-	"<memory-map>"
-	"  <memory type=\"flash\" start=\"0x8000000\" length=\"0x10000\">"
-	"    <property name=\"blocksize\">0x4000</property>"
-	"  </memory>"
-	"  <memory type=\"flash\" start=\"0x8010000\" length=\"0x10000\">"
-	"    <property name=\"blocksize\">0x10000</property>"
-	"  </memory>"
-	"  <memory type=\"flash\" start=\"0x8020000\" length=\"0xE0000\">"
-	"    <property name=\"blocksize\">0x20000</property>"
-	"  </memory>"
-	"  <memory type=\"flash\" start=\"0x8100000\" length=\"0x10000\">"
-	"    <property name=\"blocksize\">0x4000</property>"
-	"  </memory>"
-	"  <memory type=\"flash\" start=\"0x8110000\" length=\"0x10000\">"
-	"    <property name=\"blocksize\">0x10000</property>"
-	"  </memory>"
-	"  <memory type=\"flash\" start=\"0x8120000\" length=\"0xE0000\">"
-	"    <property name=\"blocksize\">0x20000</property>"
-	"  </memory>"
-	"  <memory type=\"ram\" start=\"0x20000000\" length=\"0x30000\"/>"
-	"  <memory type=\"ram\" start=\"0x10000000\" length=\"0x10000\"/>"
-	"</memory-map>";
 
 /* Flash Program ad Erase Controller Register Map */
 #define FPEC_BASE	0x40023C00
@@ -127,6 +100,28 @@ static const uint16_t stm32f4_flash_write_stub[] = {
 #define SRAM_BASE 0x20000000
 #define STUB_BUFFER_BASE ALIGN(SRAM_BASE + sizeof(stm32f4_flash_write_stub), 4)
 
+struct stm32f4_flash {
+	struct target_flash f;
+	uint8_t base_sector;
+};
+
+static void stm32f4_add_flash(target *t,
+                              uint32_t addr, size_t length, size_t blocksize,
+                              uint8_t base_sector)
+{
+	struct stm32f4_flash *sf = calloc(1, sizeof(*sf));
+	struct target_flash *f = &sf->f;
+	f->start = addr;
+	f->length = length;
+	f->blocksize = blocksize;
+	f->erase = stm32f4_flash_erase;
+	f->write = stm32f4_flash_write;
+	f->align = 4;
+	f->erased = 0xff;
+	sf->base_sector = base_sector;
+	target_add_flash(t, f);
+}
+
 bool stm32f4_probe(target *t)
 {
 	uint32_t idcode;
@@ -139,10 +134,12 @@ bool stm32f4_probe(target *t)
 	case 0x423: /* F401 B/C RM0368 Rev.3 */
 	case 0x431: /* F411     RM0383 Rev.4 */
 	case 0x433: /* F401 D/E RM0368 Rev.3 */
-		t->xml_mem_map = stm32f4_xml_memory_map;
 		t->driver = stm32f4_driver_str;
-		t->flash_erase = stm32f4_flash_erase;
-		t->flash_write = stm32f4_flash_write;
+		target_add_ram(t, 0x10000000, 0x10000);
+		target_add_ram(t, 0x20000000, 0x30000);
+		stm32f4_add_flash(t, 0x8000000, 0x10000, 0x4000, 0);
+		stm32f4_add_flash(t, 0x8010000, 0x10000, 0x10000, 4);
+		stm32f4_add_flash(t, 0x8020000, 0xE0000, 0x20000, 5);
 		target_add_commands(t, stm32f4_cmd_list, "STM32F4");
 		return true;
 	}
@@ -158,30 +155,18 @@ static void stm32f4_flash_unlock(target *t)
 	}
 }
 
-static int stm32f4_flash_erase(target *t, uint32_t addr, size_t len)
+static int stm32f4_flash_erase(struct target_flash *f, uint32_t addr, size_t len)
 {
+	target *t = f->t;
 	uint16_t sr;
-	uint32_t cr;
-	uint32_t pagesize;
-
-	addr &= 0x07FFC000;
+	uint8_t sector = ((struct stm32f4_flash *)f)->base_sector +
+	                  (addr - f->start)/f->blocksize;
 
 	stm32f4_flash_unlock(t);
 
 	while(len) {
-		if (addr < 0x10000) { /* Sector 0..3 */
-			cr = (addr >> 11);
-			pagesize = 0x4000;
-		} else if (addr < 0x20000) { /* Sector 4 */
-			cr = (4 << 3);
-			pagesize = 0x10000;
-		} else if (addr < 0x100000) { /* Sector 5..11 */
-			cr = (((addr - 0x20000) >> 14) + 0x28);
-			pagesize = 0x20000;
-		} else { /* Sector > 11 ?? */
-			return -1;
-		}
-		cr |= FLASH_CR_EOPIE | FLASH_CR_ERRIE | FLASH_CR_SER;
+		uint32_t cr = FLASH_CR_EOPIE | FLASH_CR_ERRIE | FLASH_CR_SER |
+		              (sector << 3);
 		/* Flash page erase instruction */
 		target_mem_write32(t, FLASH_CR, cr);
 		/* write address to FMA */
@@ -192,8 +177,8 @@ static int stm32f4_flash_erase(target *t, uint32_t addr, size_t len)
 			if(target_check_error(t))
 				return -1;
 
-		len -= pagesize;
-		addr += pagesize;
+		len -= f->blocksize;
+		sector++;
 	}
 
 	/* Check for error */
@@ -204,23 +189,15 @@ static int stm32f4_flash_erase(target *t, uint32_t addr, size_t len)
 	return 0;
 }
 
-static int stm32f4_flash_write(target *t, uint32_t dest,
-                               const uint8_t *src, size_t len)
+static int stm32f4_flash_write(struct target_flash *f,
+                               uint32_t dest, const void *src, size_t len)
 {
-	uint32_t offset = dest % 4;
-	uint8_t data[ALIGN(offset + len, 4)];
-
-	/* Construct data buffer used by stub */
-	/* pad partial words with all 1s to avoid damaging overlapping areas */
-	memset(data, 0xff, sizeof(data));
-	memcpy((uint8_t *)data + offset, src, len);
-
 	/* Write buffer to target ram call stub */
-	target_mem_write(t, SRAM_BASE, stm32f4_flash_write_stub,
+	target_mem_write(f->t, SRAM_BASE, stm32f4_flash_write_stub,
 	                 sizeof(stm32f4_flash_write_stub));
-	target_mem_write(t, STUB_BUFFER_BASE, data, sizeof(data));
-	return cortexm_run_stub(t, SRAM_BASE, dest - offset,
-	                        STUB_BUFFER_BASE, sizeof(data), 0);
+	target_mem_write(f->t, STUB_BUFFER_BASE, src, len);
+	return cortexm_run_stub(f->t, SRAM_BASE, dest,
+	                        STUB_BUFFER_BASE, len, 0);
 }
 
 static bool stm32f4_cmd_erase_mass(target *t)
