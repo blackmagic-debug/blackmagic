@@ -46,38 +46,28 @@
 #define LMI_FLASH_FMC_COMT   (1 << 3)
 #define LMI_FLASH_FMC_WRKEY  0xA4420000
 
-static int lmi_flash_erase(target *t, uint32_t addr, size_t len);
-static int lmi_flash_write(target *t, uint32_t dest,
-			  const uint8_t *src, size_t len);
+static int lmi_flash_erase(struct target_flash *f, uint32_t addr, size_t len);
+static int lmi_flash_write(struct target_flash *f,
+                           uint32_t dest, const void *src, size_t len);
 
 static const char lmi_driver_str[] = "TI Stellaris/Tiva";
-
-static const char lmi_xml_memory_map[] = "<?xml version=\"1.0\"?>"
-/*	"<!DOCTYPE memory-map "
-	"             PUBLIC \"+//IDN gnu.org//DTD GDB Memory Map V1.0//EN\""
-	"                    \"http://sourceware.org/gdb/gdb-memory-map.dtd\">"*/
-	"<memory-map>"
-	"  <memory type=\"flash\" start=\"0\" length=\"0x20000\">"
-	"    <property name=\"blocksize\">0x400</property>"
-	"  </memory>"
-	"  <memory type=\"ram\" start=\"0x20000000\" length=\"0x10000\"/>"
-	"</memory-map>";
-
-static const char tm4c123gh6pm_xml_memory_map[] = "<?xml version=\"1.0\"?>"
-/*	"<!DOCTYPE memory-map "
-	"             PUBLIC \"+//IDN gnu.org//DTD GDB Memory Map V1.0//EN\""
-	"                    \"http://sourceware.org/gdb/gdb-memory-map.dtd\">"*/
-	"<memory-map>"
-	"  <memory type=\"flash\" start=\"0\" length=\"0x40000\">"
-	"    <property name=\"blocksize\">0x400</property>"
-	"  </memory>"
-	"  <memory type=\"ram\" start=\"0x20000000\" length=\"0x8000\"/>"
-	"</memory-map>";
-
 
 static const uint16_t lmi_flash_write_stub[] = {
 #include "../flashstub/lmi.stub"
 };
+
+static void lmi_add_flash(target *t, size_t length)
+{
+	struct target_flash *f = calloc(1, sizeof(*f));
+	f->start = 0;
+	f->length = length;
+	f->blocksize = 0x400;
+	f->erase = lmi_flash_erase;
+	f->write = lmi_flash_write;
+	f->align = 4;
+	f->erased = 0xff;
+	target_add_flash(t, f);
+}
 
 bool lmi_probe(target *t)
 {
@@ -85,26 +75,22 @@ bool lmi_probe(target *t)
 	switch (did1 >> 16) {
 	case 0x1049:	/* LM3S3748 */
 		t->driver = lmi_driver_str;
-		t->xml_mem_map = lmi_xml_memory_map;
-		t->flash_erase = lmi_flash_erase;
-		t->flash_write = lmi_flash_write;
+		target_add_ram(t, 0x20000000, 0x8000);
+		lmi_add_flash(t, 0x40000);
 		return true;
 
 	case 0x10A1:	/* TM4C123GH6PM */
 		t->driver = lmi_driver_str;
-		t->xml_mem_map = tm4c123gh6pm_xml_memory_map;
-		t->flash_erase = lmi_flash_erase;
-		t->flash_write = lmi_flash_write;
+		target_add_ram(t, 0x20000000, 0x10000);
+		lmi_add_flash(t, 0x80000);
 		return true;
 	}
 	return false;
 }
 
-int lmi_flash_erase(target *t, uint32_t addr, size_t len)
+int lmi_flash_erase(struct target_flash *f, uint32_t addr, size_t len)
 {
-	addr &= ~(BLOCK_SIZE - 1);
-	len &= ~(BLOCK_SIZE - 1);
-
+	target  *t = f->t;
 	while(len) {
 		target_mem_write32(t, LMI_FLASH_FMA, addr);
 		target_mem_write32(t, LMI_FLASH_FMC,
@@ -118,8 +104,12 @@ int lmi_flash_erase(target *t, uint32_t addr, size_t len)
 	return 0;
 }
 
-int lmi_flash_write(target *t, uint32_t dest, const uint8_t *src, size_t len)
+int lmi_flash_write(struct target_flash *f,
+                    uint32_t dest, const void *src, size_t len)
 {
+	target  *t = f->t;
+
+	/* FIXME rewrite stub to use register args */
 	uint32_t data[(len>>2)+2];
 	data[0] = dest;
 	data[1] = len >> 2;
