@@ -128,9 +128,14 @@ bool stm32f4_probe(target *t)
 
 	idcode = target_mem_read32(t, DBGMCU_IDCODE);
 	switch(idcode & 0xFFF) {
+	case 0x419: /* 427/437 */
+		/* Second bank for 2M parts. */
+		stm32f4_add_flash(t, 0x8100000, 0x10000, 0x4000, 12);
+		stm32f4_add_flash(t, 0x8110000, 0x10000, 0x10000, 16);
+		stm32f4_add_flash(t, 0x8120000, 0xE0000, 0x20000, 17);
+		/* Fall through for stuff common to F40x/F41x */
 	case 0x411: /* Documented to be 0x413! This is what I read... */
 	case 0x413: /* F407VGT6 */
-	case 0x419: /* 427/437 */
 	case 0x423: /* F401 B/C RM0368 Rev.3 */
 	case 0x431: /* F411     RM0383 Rev.4 */
 	case 0x433: /* F401 D/E RM0368 Rev.3 */
