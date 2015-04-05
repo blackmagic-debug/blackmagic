@@ -28,6 +28,7 @@ SRC =			\
 	jtag_scan.c	\
 	jtagtap.c	\
 	lmi.c		\
+	lpc_common.c	\
 	lpc11xx.c	\
 	lpc43xx.c	\
 	kinetis.c	\
