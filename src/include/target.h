@@ -182,16 +182,9 @@ struct target_s {
 	uint32_t idcode;
 
 	/* Target memory map */
-	const char *xml_mem_map;
 	char *dyn_mem_map;
 	struct target_ram *ram;
 	struct target_flash *flash;
-
-	/* DEPRECATED: Flash memory access functions */
-	int (*flash_erase)(target *t, uint32_t addr, size_t len);
-	int (*flash_write)(target *t, uint32_t dest,
-	                   const uint8_t *src, size_t len);
-	int (*flash_done)(target *t);
 
 	/* Host I/O support */
 	void (*hostio_reply)(target *t, int32_t retcode, uint32_t errcode);

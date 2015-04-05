@@ -131,10 +131,6 @@ static ssize_t map_flash(char *buf, size_t len, struct target_flash *f)
 
 const char *target_mem_map(target *t)
 {
-	/* Deprecated static const memory map */
-	if (t->xml_mem_map)
-		return t->xml_mem_map;
-
 	if (t->dyn_mem_map)
 		return t->dyn_mem_map;
 
@@ -167,9 +163,6 @@ static struct target_flash *flash_for_addr(target *t, uint32_t addr)
 
 int target_flash_erase(target *t, uint32_t addr, size_t len)
 {
-	if (t->flash_write)
-		return t->flash_erase(t, addr, len);
-
 	int ret = 0;
 	while (len) {
 		struct target_flash *f = flash_for_addr(t, addr);
@@ -184,9 +177,6 @@ int target_flash_erase(target *t, uint32_t addr, size_t len)
 int target_flash_write(target *t,
                        uint32_t dest, const void *src, size_t len)
 {
-	if (t->flash_write)
-		return t->flash_write(t, dest, src, len);
-
 	int ret = 0;
 	while (len) {
 		struct target_flash *f = flash_for_addr(t, dest);
