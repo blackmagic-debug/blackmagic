@@ -62,16 +62,16 @@ static const char stm32f05_driver_str[] = "STM32F05x";
 static const char stm32f07_driver_str[] = "STM32F07x";
 static const char stm32f09_driver_str[] = "STM32F09x";
 
-static const char stm32f1_xml_memory_map[] = "<?xml version=\"1.0\"?>"
-/*	"<!DOCTYPE memory-map "
-	"             PUBLIC \"+//IDN gnu.org//DTD GDB Memory Map V1.0//EN\""
-	"                    \"http://sourceware.org/gdb/gdb-memory-map.dtd\">"*/
-	"<memory-map>"
-	"  <memory type=\"flash\" start=\"0x8000000\" length=\"0x20000\">"
-	"    <property name=\"blocksize\">0x400</property>"
-	"  </memory>"
-	"  <memory type=\"ram\" start=\"0x20000000\" length=\"0x5000\"/>"
-	"</memory-map>";
+//static const char stm32f1_xml_memory_map[] = "<?xml version=\"1.0\"?>"
+///*	"<!DOCTYPE memory-map "
+//	"             PUBLIC \"+//IDN gnu.org//DTD GDB Memory Map V1.0//EN\""
+//	"                    \"http://sourceware.org/gdb/gdb-memory-map.dtd\">"*/
+//	"<memory-map>"
+//	"  <memory type=\"flash\" start=\"0x8000000\" length=\"0x20000\">"
+//	"    <property name=\"blocksize\">0x400</property>"
+//	"  </memory>"
+//	"  <memory type=\"ram\" start=\"0x20000000\" length=\"0x5000\"/>"
+//	"</memory-map>";
 
 static const char stm32hd_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 /*	"<!DOCTYPE memory-map "
@@ -83,6 +83,17 @@ static const char stm32hd_xml_memory_map[] = "<?xml version=\"1.0\"?>"
 	"  </memory>"
 	"  <memory type=\"ram\" start=\"0x20000000\" length=\"0x10000\"/>"
 	"</memory-map>";
+
+static const char stm32f1_xml_memory_map[] = "<?xml version=\"1.0\"?>"
+/*	"<!DOCTYPE memory-map "
+ "             PUBLIC \"+//IDN gnu.org//DTD GDB Memory Map V1.0//EN\""
+ "                    \"http://sourceware.org/gdb/gdb-memory-map.dtd\">"*/
+"<memory-map>"
+"  <memory type=\"flash\" start=\"0x8000000\" length=\"0x10000\">"
+"    <property name=\"blocksize\">0x400</property>"
+"  </memory>"
+"  <memory type=\"ram\" start=\"0x20000000\" length=\"0x2000\"/>"
+"</memory-map>";
 
 /* Flash Program ad Erase Controller Register Map */
 #define FPEC_BASE	0x40022000
@@ -132,7 +143,7 @@ bool stm32f1_probe(target *t)
 	t->idcode = target_mem_read32(t, DBGMCU_IDCODE) & 0xfff;
 	switch(t->idcode) {
 	case 0x410:  /* Medium density */
-	case 0x412:  /* Low denisty */
+	case 0x412:  /* Low density */
 	case 0x420:  /* Value Line, Low-/Medium density */
 		t->driver = stm32f1_driver_str;
 		t->xml_mem_map = stm32f1_xml_memory_map;
