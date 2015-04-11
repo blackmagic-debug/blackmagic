@@ -89,6 +89,7 @@ bool lpc43xx_probe(target *t)
 
 	switch(chipid) {
 	case 0x4906002B:	/* Parts with on-chip flash */
+	case 0x7906002B:	/* LM43S?? - Undocumented? */
 		switch (cpuid & 0xFF00FFF0) {
 		case 0x4100C240:
 			t->driver = "LPC43xx Cortex-M4";
