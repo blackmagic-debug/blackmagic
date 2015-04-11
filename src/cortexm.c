@@ -418,8 +418,10 @@ static void cortexm_pc_write(target *t, const uint32_t val)
  * using the core debug registers in the NVIC. */
 static void cortexm_reset(target *t)
 {
-	jtagtap_srst(true);
-	jtagtap_srst(false);
+	if ((t->target_options & CORTEXM_TOPT_INHIBIT_SRST) == 0) {
+		jtagtap_srst(true);
+		jtagtap_srst(false);
+	}
 
 	/* Read DHCSR here to clear S_RESET_ST bit before reset */
 	target_mem_read32(t, CORTEXM_DHCSR);

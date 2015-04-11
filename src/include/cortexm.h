@@ -153,6 +153,8 @@
 
 #define ARM_THUMB_BREAKPOINT 0xBE00
 
+#define	CORTEXM_TOPT_INHIBIT_SRST (1 << 2)
+
 bool cortexm_attach(target *t);
 void cortexm_detach(target *t);
 void cortexm_halt_resume(target *t, bool step);
