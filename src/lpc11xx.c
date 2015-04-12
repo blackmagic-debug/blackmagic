@@ -31,6 +31,9 @@
 #define IAP_ENTRYPOINT	0x1fff1ff1
 #define IAP_RAM_BASE	0x10000000
 
+#define LPC11XX_DEVICE_ID  0x400483F4
+#define LPC8XX_DEVICE_ID   0x400483F8
+
 static int lpc11xx_flash_write(struct target_flash *f,
                                uint32_t dest, const void *src, size_t len);
 
@@ -51,10 +54,8 @@ lpc11xx_probe(target *t)
 	uint32_t idcode;
 
 	/* read the device ID register */
-	idcode = target_mem_read32(t, 0x400483F4);
-
+	idcode = target_mem_read32(t, LPC11XX_DEVICE_ID);
 	switch (idcode) {
-
 	case 0x041E502B:
 	case 0x2516D02B:
 	case 0x0416502B:
@@ -90,8 +91,15 @@ lpc11xx_probe(target *t)
 		target_add_ram(t, 0x10000000, 0x2000);
 		lpc11xx_add_flash(t, 0x00000000, 0x20000, 0x1000);
 		return true;
+	}
 
-	case 0x1812202b:	/* LPC812M101FDH20 */
+	idcode = target_mem_read32(t, LPC8XX_DEVICE_ID);
+	switch (idcode) {
+	case 0x00008100:  /* LPC810M021FN8 */
+	case 0x00008110:  /* LPC811M001JDH16 */
+	case 0x00008120:  /* LPC812M101JDH16 */
+	case 0x00008121:  /* LPC812M101JD20 */
+	case 0x00008122:  /* LPC812M101JDH20 / LPC812M101JTB16 */
 		t->driver = "LPC8xx";
 		target_add_ram(t, 0x10000000, 0x1000);
 		lpc11xx_add_flash(t, 0x00000000, 0x4000, 0x400);
