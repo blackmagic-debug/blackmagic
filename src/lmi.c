@@ -29,7 +29,7 @@
 #include "cortexm.h"
 
 #define SRAM_BASE            0x20000000
-#define STUB_BUFFER_BASE     (SRAM_BASE + 0x30)
+#define STUB_BUFFER_BASE     ALIGN(SRAM_BASE + sizeof(lmi_flash_write_stub), 4)
 
 #define BLOCK_SIZE           0x400
 
@@ -109,15 +109,9 @@ int lmi_flash_write(struct target_flash *f,
 {
 	target  *t = f->t;
 
-	/* FIXME rewrite stub to use register args */
-	uint32_t data[(len>>2)+2];
-	data[0] = dest;
-	data[1] = len >> 2;
-	memcpy(&data[2], src, len);
-
 	target_mem_write(t, SRAM_BASE, lmi_flash_write_stub,
 	                 sizeof(lmi_flash_write_stub));
-	target_mem_write(t, STUB_BUFFER_BASE, data, len + 8);
-	return cortexm_run_stub(t, SRAM_BASE, 0, 0, 0, 0);
+	target_mem_write(t, STUB_BUFFER_BASE, src, len);
+	return cortexm_run_stub(t, SRAM_BASE, dest, STUB_BUFFER_BASE, len, 0);
 }
 
