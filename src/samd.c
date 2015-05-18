@@ -40,9 +40,9 @@
 #include "gdb_packet.h"
 #include "cortexm.h"
 
-static int samd_flash_erase(target *t, uint32_t addr, size_t len);
-static int samd_flash_write(target *t, uint32_t dest,
-                            const uint8_t *src, size_t len);
+static int samd_flash_erase(struct target_flash *t, uint32_t addr, size_t len);
+static int samd_flash_write(struct target_flash *f,
+                            uint32_t dest, const void *src, size_t len);
 
 static bool samd_cmd_erase_all(target *t);
 static bool samd_cmd_lock_flash(target *t);
@@ -62,21 +62,6 @@ const struct command_s samd_cmd_list[] = {
 	{"set_security_bit", (cmd_handler)samd_cmd_ssb, "Sets the Security Bit"},
 	{NULL, NULL, NULL}
 };
-
-/**
- * 256KB Flash Max., 32KB RAM Max. The smallest unit of erase is the
- * one row = 256 bytes.
- */
-static const char samd_xml_memory_map[] = "<?xml version=\"1.0\"?>"
-/*	"<!DOCTYPE memory-map "
-	"             PUBLIC \"+//IDN gnu.org//DTD GDB Memory Map V1.0//EN\""
-	"                    \"http://sourceware.org/gdb/gdb-memory-map.dtd\">"*/
-	"<memory-map>"
-	"  <memory type=\"flash\" start=\"0x0\" length=\"0x40000\">"
-	"    <property name=\"blocksize\">0x100</property>"
-	"  </memory>"
-	"  <memory type=\"ram\" start=\"0x20000000\" length=\"0x8000\"/>"
-	"</memory-map>";
 
 /* Non-Volatile Memory Controller (NVMC) Parameters */
 #define SAMD_ROW_SIZE			256
@@ -361,6 +346,19 @@ struct samd_descr samd_parse_device_id(uint32_t did)
 	return samd;
 }
 
+static void samd_add_flash(target *t, uint32_t addr, size_t length)
+{
+	struct target_flash *f = calloc(1, sizeof(*f));
+	f->start = addr;
+	f->length = length;
+	f->blocksize = SAMD_ROW_SIZE;
+	f->erase = samd_flash_erase;
+	f->write = target_flash_write_buffered;
+	f->done = target_flash_done_buffered;
+	f->write_buf = samd_flash_write;
+	f->buf_size = SAMD_PAGE_SIZE;
+	target_add_flash(t, f);
+}
 
 char variant_string[40];
 bool samd_probe(target *t)
@@ -423,9 +421,8 @@ bool samd_probe(target *t)
 		t->attach = samd_protected_attach;
 	}
 
-	t->xml_mem_map = samd_xml_memory_map;
-	t->flash_erase = samd_flash_erase;
-	t->flash_write = samd_flash_write;
+	target_add_ram(t, 0x20000000, 0x8000);
+	samd_add_flash(t, 0x00000000, 0x40000);
 	target_add_commands(t, samd_cmd_list, "SAMD");
 
 	/* If we're not in reset here */
@@ -463,11 +460,9 @@ static void samd_unlock_current_address(target *t)
 /**
  * Erase flash row by row
  */
-static int samd_flash_erase(target *t, uint32_t addr, size_t len)
+static int samd_flash_erase(struct target_flash *f, uint32_t addr, size_t len)
 {
-	addr &= ~(SAMD_ROW_SIZE - 1);
-	len &= ~(SAMD_ROW_SIZE - 1);
-
+	target *t = f->t;
 	while (len) {
 		/* Write address of first word in row to erase it */
 		/* Must be shifted right for 16-bit address, see Datasheet §20.8.8 Address */
@@ -487,8 +482,8 @@ static int samd_flash_erase(target *t, uint32_t addr, size_t len)
 		/* Lock */
 		samd_lock_current_address(t);
 
-		addr += SAMD_ROW_SIZE;
-		len -= SAMD_ROW_SIZE;
+		addr += f->blocksize;
+		len -= f->blocksize;
 	}
 
 	return 0;
@@ -497,56 +492,28 @@ static int samd_flash_erase(target *t, uint32_t addr, size_t len)
 /**
  * Write flash page by page
  */
-static int samd_flash_write(target *t, uint32_t dest,
-                            const uint8_t *src, size_t len)
+static int samd_flash_write(struct target_flash *f,
+                            uint32_t dest, const void *src, size_t len)
 {
-	/* Find the size of our 32-bit data buffer */
-	uint32_t offset = dest % 4;
-	uint32_t words = (offset + len + 3) / 4;
-	uint32_t data[words], i = 0;
+	target *t = f->t;
 
-	/* Populate the data buffer */
-	memset((uint8_t *)data, 0xFF, words * 4);
-	memcpy((uint8_t *)data + offset, src, len);
+	/* Write within a single page. This may be part or all of the page */
+	target_mem_write(t, dest, src, len);
 
-	/* The address of the first word involved in the write */
-	uint32_t addr = dest & ~0x3;
-	/* The address of the last word involved in the write */
-	uint32_t end = (dest + len - 1) & ~0x3;
+	/* Unlock */
+	samd_unlock_current_address(t);
 
-	/* The start address of the first page involved in the write */
-	uint32_t first_page = dest & ~(SAMD_PAGE_SIZE - 1);
-	/* The start address of the last page involved in the write */
-	uint32_t last_page = (dest + len - 1) & ~(SAMD_PAGE_SIZE - 1);
-	uint32_t next_page;
-	uint32_t length;
+	/* Issue the write page command */
+	target_mem_write32(t, SAMD_NVMC_CTRLA,
+	                   SAMD_CTRLA_CMD_KEY | SAMD_CTRLA_CMD_WRITEPAGE);
 
-	for (uint32_t page = first_page; page <= last_page; page += SAMD_PAGE_SIZE) {
-		next_page = page + SAMD_PAGE_SIZE;
-		length = MIN(end + 4, next_page) - addr;
+	/* Poll for NVM Ready */
+	while ((target_mem_read32(t, SAMD_NVMC_INTFLAG) & SAMD_NVMC_READY) == 0)
+		if (target_check_error(t))
+			return -1;
 
-		/* Write within a single page. This may be part or all of the page */
-		target_mem_write(t, addr, &data[i], length);
-		addr += length; i += (length >> 2);
-
-		/* If MANW=0 (default) we may have triggered an automatic
-		* write. Ignore this */
-
-		/* Unlock */
-		samd_unlock_current_address(t);
-
-		/* Issue the write page command */
-		target_mem_write32(t, SAMD_NVMC_CTRLA,
-		                   SAMD_CTRLA_CMD_KEY | SAMD_CTRLA_CMD_WRITEPAGE);
-
-		/* Poll for NVM Ready */
-		while ((target_mem_read32(t, SAMD_NVMC_INTFLAG) & SAMD_NVMC_READY) == 0)
-			if (target_check_error(t))
-				return -1;
-
-		/* Lock */
-		samd_lock_current_address(t);
-	}
+	/* Lock */
+	samd_lock_current_address(t);
 
 	return 0;
 }

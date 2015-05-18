@@ -28,9 +28,9 @@
 #include "gdb_packet.h"
 #include "cortexm.h"
 
-static int nrf51_flash_erase(target *t, uint32_t addr, size_t len);
-static int nrf51_flash_write(target *t, uint32_t dest,
-                             const uint8_t *src, size_t len);
+static int nrf51_flash_erase(struct target_flash *f, uint32_t addr, size_t len);
+static int nrf51_flash_write(struct target_flash *f,
+                             uint32_t dest, const void *src, size_t len);
 
 static bool nrf51_cmd_erase_all(target *t);
 static bool nrf51_cmd_read_hwid(target *t);
@@ -53,20 +53,6 @@ const struct command_s nrf51_read_cmd_list[] = {
 	{"deviceaddr", (cmd_handler)nrf51_cmd_read_deviceaddr, "Read device address"},
 	{NULL, NULL, NULL}
 };
-
-static const char nrf51_xml_memory_map[] = "<?xml version=\"1.0\"?>"
-/*	"<!DOCTYPE memory-map "
-	"             PUBLIC \"+//IDN gnu.org//DTD GDB Memory Map V1.0//EN\""
-	"                    \"http://sourceware.org/gdb/gdb-memory-map.dtd\">"*/
-	"<memory-map>"
-	"  <memory type=\"flash\" start=\"0x0\" length=\"0x40000\">"
-	"    <property name=\"blocksize\">0x400</property>"
-	"  </memory>"
-	"  <memory type=\"flash\" start=\"0x10001000\" length=\"0x100\">"
-	"    <property name=\"blocksize\">0x400</property>"
-	"  </memory>"
-	"  <memory type=\"ram\" start=\"0x20000000\" length=\"0x4000\"/>"
-	"</memory-map>";
 
 /* Non-Volatile Memory Controller (NVMC) Registers */
 #define NRF51_NVMC					0x4001E000
@@ -103,6 +89,20 @@ static const uint16_t nrf51_flash_write_stub[] = {
 #include "../flashstub/nrf51.stub"
 };
 
+static void nrf51_add_flash(target *t,
+                            uint32_t addr, size_t length, size_t erasesize)
+{
+	struct target_flash *f = calloc(1, sizeof(*f));
+	f->start = addr;
+	f->length = length;
+	f->blocksize = erasesize;
+	f->erase = nrf51_flash_erase;
+	f->write = nrf51_flash_write;
+	f->align = 4;
+	f->erased = 0xff;
+	target_add_flash(t, f);
+}
+
 bool nrf51_probe(target *t)
 {
 	t->idcode = target_mem_read32(t, NRF51_FICR_CONFIGID) & 0xFFFF;
@@ -120,9 +120,9 @@ bool nrf51_probe(target *t)
 	case 0x0026:
 	case 0x004C:
 		t->driver = "Nordic nRF51";
-		t->xml_mem_map = nrf51_xml_memory_map;
-		t->flash_erase = nrf51_flash_erase;
-		t->flash_write = nrf51_flash_write;
+		target_add_ram(t, 0x20000000, 0x4000);
+		nrf51_add_flash(t, 0x00000000, 0x40000, NRF51_PAGE_SIZE);
+		nrf51_add_flash(t, NRF51_UICR, 0x100, 0x100);
 		target_add_commands(t, nrf51_cmd_list, "nRF51");
 		return true;
 	}
@@ -130,11 +130,9 @@ bool nrf51_probe(target *t)
 	return false;
 }
 
-static int nrf51_flash_erase(target *t, uint32_t addr, size_t len)
+static int nrf51_flash_erase(struct target_flash *f, uint32_t addr, size_t len)
 {
-	addr &= ~(NRF51_PAGE_SIZE - 1);
-	len &= ~(NRF51_PAGE_SIZE - 1);
-
+	target *t = f->t;
 	/* Enable erase */
 	target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_EEN);
 
@@ -158,8 +156,8 @@ static int nrf51_flash_erase(target *t, uint32_t addr, size_t len)
 			if(target_check_error(t))
 				return -1;
 
-		addr += NRF51_PAGE_SIZE;
-		len -= NRF51_PAGE_SIZE;
+		addr += f->blocksize;
+		len -= f->blocksize;
 	}
 
 	/* Return to read-only */
@@ -173,19 +171,18 @@ static int nrf51_flash_erase(target *t, uint32_t addr, size_t len)
 	return 0;
 }
 
-static int nrf51_flash_write(target *t, uint32_t dest,
-                             const uint8_t *src, size_t len)
+static int nrf51_flash_write(struct target_flash *f,
+                             uint32_t dest, const void *src, size_t len)
 {
-	uint32_t offset = dest % 4;
-	uint32_t words = (offset + len + 3) / 4;
-	uint32_t data[2 + words];
+	target *t = f->t;
+	uint32_t data[2 + len/4];
+
+	/* FIXME rewrite stub to use register args */
 
 	/* Construct data buffer used by stub */
-	data[0] = dest - offset;
-	data[1] = words * 4;		/* length must always be a multiple of 4 */
-	data[2] = 0xFFFFFFFF;		/* pad partial words with all 1s to avoid */
-	data[words + 1] = 0xFFFFFFFF;	/* damaging overlapping areas */
-	memcpy((uint8_t *)&data[2] + offset, src, len);
+	data[0] = dest;
+	data[1] = len;		/* length must always be a multiple of 4 */
+	memcpy((uint8_t *)&data[2], src, len);
 
 	/* Enable write */
 	target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_WEN);

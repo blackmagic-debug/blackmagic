@@ -150,6 +150,7 @@
 /* Use newlib provided integer only stdio functions */
 #define sscanf siscanf
 #define sprintf siprintf
+#define snprintf sniprintf
 #define vasprintf vasiprintf
 
 #endif

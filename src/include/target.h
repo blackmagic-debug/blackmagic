@@ -95,14 +95,10 @@ target *target_attach(target *t, target_destroy_callback destroy_cb);
 
 
 /* Flash memory access functions */
-#define target_flash_erase(target, addr, len)	\
-	(target)->flash_erase((target), (addr), (len))
-
-#define target_flash_write(target, dest, src, len)	\
-	(target)->flash_write((target), (dest), (src), (len))
-
-#define target_flash_done(target)	\
-	((target)->flash_done ? (target)->flash_done(target) : 0)
+int target_flash_erase(target *t, uint32_t addr, size_t len);
+int target_flash_write(target *t,
+                       uint32_t dest, const void *src, size_t len);
+int target_flash_done(target *t);
 
 /* Host I/O */
 #define target_hostio_reply(target, recode, errcode)	\
@@ -112,11 +108,38 @@ target *target_attach(target *t, target_destroy_callback destroy_cb);
 #define target_regs_size(target) \
 	((target)->regs_size)
 
-#define target_mem_map(target) \
-	((target)->xml_mem_map ? (target)->xml_mem_map : "")
-
 #define target_tdesc(target) \
 	((target)->tdesc ? (target)->tdesc : "")
+
+struct target_ram {
+	uint32_t start;
+	uint32_t length;
+	struct target_ram *next;
+};
+
+struct target_flash;
+typedef int (*flash_erase_func)(struct target_flash *f, uint32_t addr, size_t len);
+typedef int (*flash_write_func)(struct target_flash *f, uint32_t dest,
+                                const void *src, size_t len);
+typedef int (*flash_done_func)(struct target_flash *f);
+struct target_flash {
+	uint32_t start;
+	uint32_t length;
+	uint32_t blocksize;
+	flash_erase_func erase;
+	flash_write_func write;
+	flash_done_func done;
+	target *t;
+	struct target_flash *next;
+	int align;
+	uint8_t erased;
+
+	/* For buffered flash */
+	size_t buf_size;
+	flash_write_func write_buf;
+	uint32_t buf_addr;
+	void *buf;
+};
 
 struct target_s {
 	/* Notify controlling debugger if target is lost */
@@ -158,12 +181,10 @@ struct target_s {
 	unsigned target_options;
 	uint32_t idcode;
 
-	/* Flash memory access functions */
-	const char *xml_mem_map;
-	int (*flash_erase)(target *t, uint32_t addr, size_t len);
-	int (*flash_write)(target *t, uint32_t dest,
-	                   const uint8_t *src, size_t len);
-	int (*flash_done)(target *t);
+	/* Target memory map */
+	char *dyn_mem_map;
+	struct target_ram *ram;
+	struct target_flash *flash;
 
 	/* Host I/O support */
 	void (*hostio_reply)(target *t, int32_t retcode, uint32_t errcode);
@@ -190,6 +211,12 @@ extern bool connect_assert_srst;
 target *target_new(unsigned size);
 void target_list_free(void);
 void target_add_commands(target *t, const struct command_s *cmds, const char *name);
+void target_add_ram(target *t, uint32_t start, uint32_t len);
+void target_add_flash(target *t, struct target_flash *f);
+const char *target_mem_map(target *t);
+int target_flash_write_buffered(struct target_flash *f,
+                                uint32_t dest, const void *src, size_t len);
+int target_flash_done_buffered(struct target_flash *f);
 
 static inline uint32_t target_mem_read32(target *t, uint32_t addr)
 {
