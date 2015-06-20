@@ -87,6 +87,9 @@ static int stm32f1_flash_write(struct target_flash *f,
 #define DBGMCU_IDCODE	0xE0042000
 #define DBGMCU_IDCODE_F0	0x40015800
 
+#define FLASHSIZE     0x1FFFF7E0
+#define FLASHSIZE_F0  0x1FFFF7CC
+
 static const uint16_t stm32f1_flash_write_stub[] = {
 #include "../flashstub/stm32f1.stub"
 };
@@ -110,6 +113,7 @@ static void stm32f1_add_flash(target *t,
 
 bool stm32f1_probe(target *t)
 {
+	size_t flash_size;
 	t->idcode = target_mem_read32(t, DBGMCU_IDCODE) & 0xfff;
 	switch(t->idcode) {
 	case 0x410:  /* Medium density */
@@ -140,13 +144,25 @@ bool stm32f1_probe(target *t)
 	t->idcode = target_mem_read32(t, DBGMCU_IDCODE_F0) & 0xfff;
 	switch(t->idcode) {
 	case 0x444:  /* STM32F03 RM0091 Rev.7 */
+		t->driver = "STM32F03";
+		break;
 	case 0x445:  /* STM32F04 RM0091 Rev.7 */
+		t->driver = "STM32F04";
+		break;
 	case 0x440:  /* STM32F05 RM0091 Rev.7 */
+		t->driver = "STM32F05";
+		break;
 	case 0x448:  /* STM32F07 RM0091 Rev.7 */
+		t->driver = "STM32F07";
+		break;
 	case 0x442:  /* STM32F09 RM0091 Rev.7 */
-		t->driver = "STM32F0";
+		t->driver = "STM32F09";
+		break;
+	}
+	if (t->driver) {
+		flash_size = target_mem_read32(t, FLASHSIZE_F0) *0x400;
 		target_add_ram(t, 0x20000000, 0x5000);
-		stm32f1_add_flash(t, 0x8000000, 0x20000, 0x400);
+		stm32f1_add_flash(t, 0x8000000, flash_size, 0x400);
 		target_add_commands(t, stm32f1_cmd_list, "STM32F0");
 		return true;
 	}
