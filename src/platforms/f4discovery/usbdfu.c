@@ -60,8 +60,8 @@ int main(void)
 
 	/* Set up USB Pins and alternate function*/
 	gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE,
-		GPIO9 | GPIO10 | GPIO11 | GPIO12);
-	gpio_set_af(GPIOA, GPIO_AF10, GPIO9 | GPIO10| GPIO11 | GPIO12);
+                        GPIO10 | GPIO11 | GPIO12);
+	gpio_set_af(GPIOA, GPIO_AF10, GPIO10 | GPIO11 | GPIO12);
 	dfu_init(&stm32f107_usb_driver);
 
 	dfu_main();
