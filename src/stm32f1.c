@@ -162,7 +162,12 @@ bool stm32f1_probe(target *t)
 		block_size = 0x800;
 		break;
 	}
-	if (t->driver) {
+	switch(t->idcode) {
+	case 0x444:  /* STM32F03 RM0091 Rev.7 */
+	case 0x445:  /* STM32F04 RM0091 Rev.7 */
+	case 0x440:  /* STM32F05 RM0091 Rev.7 */
+	case 0x448:  /* STM32F07 RM0091 Rev.7 */
+	case 0x442:  /* STM32F09 RM0091 Rev.7 */
 		flash_size = (target_mem_read32(t, FLASHSIZE_F0) & 0xffff) *0x400;
 		gdb_outf("flash size %d block_size %d\n", flash_size, block_size);
 		target_add_ram(t, 0x20000000, 0x5000);
@@ -353,4 +358,3 @@ static bool stm32f1_cmd_option(target *t, int argc, char *argv[])
 	}
 	return true;
 }
-
