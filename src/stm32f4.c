@@ -136,7 +136,7 @@ bool stm32f4_probe(target *t)
 		/* Fall through for stuff common to F40x/F41x */
 	case 0x411: /* Documented to be 0x413! This is what I read... */
 	case 0x413: /* F407VGT6 */
-        case 0x421: /* F446 */
+	case 0x421: /* F446 */
 	case 0x423: /* F401 B/C RM0368 Rev.3 */
 	case 0x431: /* F411     RM0383 Rev.4 */
 	case 0x433: /* F401 D/E RM0368 Rev.3 */
