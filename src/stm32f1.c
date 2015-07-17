@@ -143,26 +143,33 @@ bool stm32f1_probe(target *t)
 	}
 
 	t->idcode = target_mem_read32(t, DBGMCU_IDCODE_F0) & 0xfff;
+	bool match = false;
 	switch(t->idcode) {
 	case 0x444:  /* STM32F03 RM0091 Rev.7 */
 		t->driver = "STM32F03";
+		match = true;
 		break;
 	case 0x445:  /* STM32F04 RM0091 Rev.7 */
 		t->driver = "STM32F04";
+		match = true;
 		break;
 	case 0x440:  /* STM32F05 RM0091 Rev.7 */
 		t->driver = "STM32F05";
+		match = true;
 		break;
 	case 0x448:  /* STM32F07 RM0091 Rev.7 */
 		t->driver = "STM32F07";
 		block_size = 0x800;
+		match = true;
 		break;
 	case 0x442:  /* STM32F09 RM0091 Rev.7 */
 		t->driver = "STM32F09";
 		block_size = 0x800;
+		match = true;
 		break;
 	}
-	if (t->driver) {
+	if (match) {
+		gdb_outf("stm32f1 idcode %d driver %s\n", (int)t->idcode, t->driver);
 		flash_size = (target_mem_read32(t, FLASHSIZE_F0) & 0xffff) *0x400;
 		gdb_outf("flash size %d block_size %d\n", flash_size, block_size);
 		target_add_ram(t, 0x20000000, 0x5000);
