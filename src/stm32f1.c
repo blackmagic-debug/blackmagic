@@ -161,17 +161,16 @@ bool stm32f1_probe(target *t)
 		t->driver = "STM32F09";
 		block_size = 0x800;
 		break;
-	}
-	if (t->driver) {
-		flash_size = (target_mem_read32(t, FLASHSIZE_F0) & 0xffff) *0x400;
-		gdb_outf("flash size %d block_size %d\n", flash_size, block_size);
-		target_add_ram(t, 0x20000000, 0x5000);
-		stm32f1_add_flash(t, 0x8000000, flash_size, block_size);
-		target_add_commands(t, stm32f1_cmd_list, "STM32F0");
-		return true;
+	default:     /* NONE */
+		return false;
 	}
 
-	return false;
+	flash_size = (target_mem_read32(t, FLASHSIZE_F0) & 0xffff) *0x400;
+	gdb_outf("flash size %d block_size %d\n", flash_size, block_size);
+	target_add_ram(t, 0x20000000, 0x5000);
+	stm32f1_add_flash(t, 0x8000000, flash_size, block_size);
+	target_add_commands(t, stm32f1_cmd_list, "STM32F0");
+	return true;
 }
 
 static void stm32f1_flash_unlock(target *t)
@@ -353,4 +352,3 @@ static bool stm32f1_cmd_option(target *t, int argc, char *argv[])
 	}
 	return true;
 }
-
