@@ -28,6 +28,7 @@ stm32f4_flash_write_stub(uint32_t *dest, uint32_t *src, uint32_t size)
 	for (int i = 0; i < size; i += 4) {
 		FLASH_CR = FLASH_CR_PROGRAM_X32 | FLASH_CR_PG;
 		*dest++ = *src++;
+		__asm("dsb");
 		while (FLASH_SR & FLASH_SR_BSY)
 			;
 	}
