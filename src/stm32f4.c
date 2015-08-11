@@ -52,6 +52,7 @@ static int stm32f4_flash_write(struct target_flash *f,
                                uint32_t dest, const void *src, size_t len);
 
 static const char stm32f4_driver_str[] = "STM32F4xx";
+static const char stm32f7_driver_str[] = "STM32F7xx";
 
 /* Flash Program ad Erase Controller Register Map */
 #define FPEC_BASE	0x40023C00
@@ -92,7 +93,16 @@ static const char stm32f4_driver_str[] = "STM32F4xx";
 
 #define DBGMCU_IDCODE	0xE0042000
 
-/* This routine is uses word access.  Only usable on target voltage >2.7V */
+#define DBGMCU_CR		0xE0042004
+#define DBG_STANDBY		(1 << 0)
+#define DBG_STOP		(1 << 1)
+#define DBG_SLEEP		(1 << 2)
+
+#define DBGMCU_APB1_FZ	0xE0042008
+#define DBG_WWDG_STOP	(1 << 11)
+#define DBG_IWDG_STOP	(1 << 12)
+
+/* This routine uses word access.  Only usable on target voltage >2.7V */
 static const uint16_t stm32f4_flash_write_stub[] = {
 #include "../flashstub/stm32f4.stub"
 };
@@ -127,7 +137,8 @@ bool stm32f4_probe(target *t)
 	uint32_t idcode;
 
 	idcode = target_mem_read32(t, DBGMCU_IDCODE);
-	switch(idcode & 0xFFF) {
+	idcode &= 0xFFF;
+	switch(idcode) {
 	case 0x419: /* 427/437 */
 		/* Second bank for 2M parts. */
 		stm32f4_add_flash(t, 0x8100000, 0x10000, 0x4000, 12);
@@ -147,9 +158,21 @@ bool stm32f4_probe(target *t)
 		stm32f4_add_flash(t, 0x8010000, 0x10000, 0x10000, 4);
 		stm32f4_add_flash(t, 0x8020000, 0xE0000, 0x20000, 5);
 		target_add_commands(t, stm32f4_cmd_list, "STM32F4");
-		return true;
+		break;
+	case 0x449: /* F7x6 RM0385 Rev.2 */
+		t->driver = stm32f7_driver_str;
+		target_add_ram(t, 0x00000000, 0x4000);
+		target_add_ram(t, 0x20000000, 0x50000);
+		stm32f4_add_flash(t, 0x8000000, 0x20000, 0x8000, 0);
+		stm32f4_add_flash(t, 0x8020000, 0x20000, 0x20000, 4);
+		stm32f4_add_flash(t, 0x8040000, 0xC0000, 0x40000, 5);
+		target_add_commands(t, stm32f4_cmd_list, "STM32F7");
+		break;
+	default:
+		return false;
 	}
-	return false;
+	t->idcode = idcode;
+	return true;
 }
 
 static void stm32f4_flash_unlock(target *t)
@@ -258,7 +281,17 @@ static bool stm32f4_option_write(target *t, uint32_t value)
 
 static bool stm32f4_cmd_option(target *t, int argc, char *argv[])
 {
-	uint32_t addr, val;
+	uint32_t start, val;
+	int len;
+
+	if (t->idcode == 0x449) {
+		start = 0x1FFF0000;
+		len = 0x20;
+	}
+	else {
+		start = 0x1FFFC000;
+		len = 0x10;
+	}
 
 	if ((argc == 2) && !strcmp(argv[1], "erase")) {
 		stm32f4_option_write(t, 0x0fffaaed);
@@ -271,8 +304,8 @@ static bool stm32f4_cmd_option(target *t, int argc, char *argv[])
 		gdb_out("usage: monitor option write <value>\n");
 	}
 
-	for (int i = 0; i < 0xf; i += 8) {
-		addr = 0x1fffC000 + i;
+	for (int i = 0; i < len; i += 8) {
+		uint32_t addr =  start + i;
 		val = target_mem_read32(t, addr);
 		gdb_outf("0x%08X: 0x%04X\n", addr, val & 0xFFFF);
 	}
