@@ -119,6 +119,7 @@ bool nrf51_probe(target *t)
 	case 0x004D:
 	case 0x0026:
 	case 0x004C:
+	case 0x0072:
 		t->driver = "Nordic nRF51";
 		target_add_ram(t, 0x20000000, 0x4000);
 		nrf51_add_flash(t, 0x00000000, 0x40000, NRF51_PAGE_SIZE);
