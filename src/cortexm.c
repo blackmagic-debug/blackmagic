@@ -89,6 +89,7 @@ struct cortexm_priv {
 		uint8_t type;
 		uint8_t size;
 	} hw_watchpoint[CORTEXM_MAX_WATCHPOINTS];
+	unsigned flash_patch_revision;
 	unsigned hw_watchpoint_max;
 	/* Breakpoint unit status */
 	uint32_t hw_breakpoint[CORTEXM_MAX_BREAKPOINTS];
@@ -283,6 +284,7 @@ bool cortexm_attach(target *t)
 	r = target_mem_read32(t, CORTEXM_FPB_CTRL);
 	if (((r >> 4) & 0xf) < priv->hw_breakpoint_max)	/* only look at NUM_COMP1 */
 		priv->hw_breakpoint_max = (r >> 4) & 0xf;
+	priv->flash_patch_revision = (r >> 28);
 	priv->hw_watchpoint_max = CORTEXM_MAX_WATCHPOINTS;
 	r = target_mem_read32(t, CORTEXM_DWT_CTRL);
 	if ((r >> 28) > priv->hw_watchpoint_max)
@@ -637,10 +639,13 @@ static int cortexm_set_hw_bp(target *t, uint32_t addr)
 {
 	ADIv5_AP_t *ap = adiv5_target_ap(t);
 	struct cortexm_priv *priv = ap->priv;
-	uint32_t val = addr & 0x1FFFFFFC;
+	uint32_t val = addr;
 	unsigned i;
 
-	val |= (addr & 2)?0x80000000:0x40000000;
+	if (priv->flash_patch_revision == 0) {
+		val = addr & 0x1FFFFFFC;
+		val |= (addr & 2)?0x80000000:0x40000000;
+	}
 	val |= 1;
 
 	for(i = 0; i < priv->hw_breakpoint_max; i++)
