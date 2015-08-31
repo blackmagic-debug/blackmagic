@@ -243,6 +243,7 @@ bool cortexm_probe(target *t)
 	PROBE(stm32f1_probe);
 	PROBE(stm32f4_probe);
 	PROBE(stm32l0_probe);   /* STM32L0xx & STM32L1xx */
+	PROBE(stm32l4_probe);
 	PROBE(lpc11xx_probe);
 	PROBE(lpc43xx_probe);
 	PROBE(sam3x_probe);

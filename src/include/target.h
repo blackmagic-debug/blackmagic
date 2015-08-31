@@ -263,6 +263,7 @@ bool stm32f1_probe(target *t);
 bool stm32f4_probe(target *t);
 bool stm32l0_probe(target *t);
 bool stm32l1_probe(target *t);
+bool stm32l4_probe(target *t);
 bool lmi_probe(target *t);
 bool lpc11xx_probe(target *t);
 bool lpc43xx_probe(target *t);
