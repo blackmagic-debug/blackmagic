@@ -498,7 +498,7 @@ static void cdcacm_set_config(usbd_device *dev, uint16_t wValue)
 	configured = wValue;
 
 	/* GDB interface */
-#ifdef STM32F4
+#if defined(STM32F4) || defined(LM4F)
 	usbd_ep_setup(dev, 0x01, USB_ENDPOINT_ATTR_BULK,
 	              CDCACM_PACKET_SIZE, gdb_usb_out_cb);
 #else
