@@ -96,6 +96,7 @@ extern usbd_driver lm4f_usb_driver;
 #define sscanf siscanf
 #define sprintf siprintf
 #define vasprintf vasiprintf
+#define snprintf sniprintf
 
 #define DEBUG(...)
 
