@@ -261,8 +261,8 @@ bool efm32_probe(target *t)
 	/* Read the part number and family */
 	uint16_t part_number = efm32_read_part_number(t);
 	uint8_t part_family = efm32_read_part_family(t);
-        uint16_t radio_number;  /* optional, for ezr parts */
-        uint32_t flash_page_size;
+        uint16_t radio_number, radio_number_short;  /* optional, for ezr parts */
+        uint32_t flash_page_size; uint16_t flash_kb;
 
         switch(part_family) {
                 case EFM32_DI_PART_FAMILY_GECKO:
@@ -297,19 +297,25 @@ bool efm32_probe(target *t)
                         break;
                 case EFM32_DI_PART_FAMILY_EZR_WONDER_GECKO:
                         radio_number = efm32_read_radio_part_number(t); /* on-chip radio */
+                        radio_number_short = radio_number % 100;
+                        flash_kb = efm32_read_flash_size(t);
 
                         sprintf(variant_string,
-                                "EZR32WG%d (radio si%d)",
-                                part_number, radio_number);
+                                "EZR32WG%dF%dR%d (radio si%d)",
+                                part_number, flash_kb,
+                                radio_number_short, radio_number);
 
                         flash_page_size = 2048;
                         break;
                 case EFM32_DI_PART_FAMILY_EZR_LEOPARD_GECKO:
                         radio_number = efm32_read_radio_part_number(t); /* on-chip radio */
+                        radio_number_short = radio_number % 100;
+                        flash_kb = efm32_read_flash_size(t);
 
                         sprintf(variant_string,
-                                "EZR32LG%d (radio si%d)",
-                                part_number, radio_number);
+                                "EZR32WG%dF%dR%d (radio si%d)",
+                                part_number, flash_kb,
+                                radio_number_short, radio_number);
 
                         flash_page_size = 2048;
                         break;
