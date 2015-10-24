@@ -313,7 +313,7 @@ bool efm32_probe(target *t)
                         flash_kb = efm32_read_flash_size(t);
 
                         sprintf(variant_string,
-                                "EZR32WG%dF%dR%d (radio si%d)",
+                                "EZR32LG%dF%dR%d (radio si%d)",
                                 part_number, flash_kb,
                                 radio_number_short, radio_number);
 
