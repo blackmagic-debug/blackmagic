@@ -53,6 +53,7 @@ static int stm32f4_flash_write(struct target_flash *f,
 
 static const char stm32f4_driver_str[] = "STM32F4xx";
 static const char stm32f7_driver_str[] = "STM32F7xx";
+static const char stm32f2_driver_str[] = "STM32F2xx";
 
 /* Flash Program ad Erase Controller Register Map */
 #define FPEC_BASE	0x40023C00
@@ -92,6 +93,7 @@ static const char stm32f7_driver_str[] = "STM32F7xx";
 #define SR_EOP		0x01
 
 #define DBGMCU_IDCODE	0xE0042000
+#define ARM_CPUID	0xE000ED00
 
 #define DBGMCU_CR		0xE0042004
 #define DBG_STANDBY		(1 << 0)
@@ -134,10 +136,24 @@ static void stm32f4_add_flash(target *t,
 
 bool stm32f4_probe(target *t)
 {
+	bool f2 = false;
 	uint32_t idcode;
 
 	idcode = target_mem_read32(t, DBGMCU_IDCODE);
 	idcode &= 0xFFF;
+
+	if (idcode == 0x411)
+	{
+		/* F405 revision A have a wrong IDCODE, use ARM_CPUID to make the
+		 * distinction with F205. Revision is also wrong (0x2000 instead
+		 * of 0x1000). See F40x/F41x errata. */
+		uint32_t cpuid = target_mem_read32(t, ARM_CPUID);
+		if ((cpuid & 0xFFF0) == 0xC240)
+			idcode = 0x413;
+		else
+			f2 = true;
+	}
+
 	switch(idcode) {
 	case 0x419: /* 427/437 */
 		/* Second bank for 2M parts. */
@@ -145,19 +161,21 @@ bool stm32f4_probe(target *t)
 		stm32f4_add_flash(t, 0x8110000, 0x10000, 0x10000, 16);
 		stm32f4_add_flash(t, 0x8120000, 0xE0000, 0x20000, 17);
 		/* Fall through for stuff common to F40x/F41x */
-	case 0x411: /* Documented to be 0x413! This is what I read... */
-	case 0x413: /* F407VGT6 */
+	case 0x411: /* F205 */
+	case 0x413: /* F405 */
 	case 0x421: /* F446 */
 	case 0x423: /* F401 B/C RM0368 Rev.3 */
 	case 0x431: /* F411     RM0383 Rev.4 */
 	case 0x433: /* F401 D/E RM0368 Rev.3 */
-		t->driver = stm32f4_driver_str;
-		target_add_ram(t, 0x10000000, 0x10000);
+		t->driver = f2 ? stm32f2_driver_str : stm32f4_driver_str;
+		if (!f2)
+			target_add_ram(t, 0x10000000, 0x10000);
 		target_add_ram(t, 0x20000000, 0x30000);
 		stm32f4_add_flash(t, 0x8000000, 0x10000, 0x4000, 0);
 		stm32f4_add_flash(t, 0x8010000, 0x10000, 0x10000, 4);
 		stm32f4_add_flash(t, 0x8020000, 0xE0000, 0x20000, 5);
-		target_add_commands(t, stm32f4_cmd_list, "STM32F4");
+		target_add_commands(t, stm32f4_cmd_list, f2 ? "STM32F2" :
+		                    "STM32F4");
 		break;
 	case 0x449: /* F7x6 RM0385 Rev.2 */
 		t->driver = stm32f7_driver_str;
