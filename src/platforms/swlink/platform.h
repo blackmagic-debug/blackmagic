@@ -131,6 +131,7 @@
 #define sscanf siscanf
 #define sprintf siprintf
 #define vasprintf vasiprintf
+#define snprintf sniprintf
 
 #endif
 
