@@ -138,6 +138,7 @@ extern uint16_t led_idle_run;
 #define sscanf siscanf
 #define sprintf siprintf
 #define vasprintf vasiprintf
+#define snprintf sniprintf
 
 #endif
 
