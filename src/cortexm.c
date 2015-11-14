@@ -975,3 +975,4 @@ static void cortexm_hostio_reply(target *t, int32_t retcode, uint32_t errcode)
 	target_regs_write(t, arm_regs);
 	priv->errno = errcode;
 }
+

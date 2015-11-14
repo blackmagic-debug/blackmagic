@@ -274,3 +274,4 @@ bool kinetis_probe(target *t);
 bool efm32_probe(target *t);
 
 #endif
+

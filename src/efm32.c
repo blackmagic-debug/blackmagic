@@ -49,7 +49,7 @@
 
 static int efm32_flash_erase(struct target_flash *t, uint32_t addr, size_t len);
 static int efm32_flash_write(struct target_flash *f,
-                            uint32_t dest, const void *src, size_t len);
+			     uint32_t dest, const void *src, size_t len);
 
 static const uint16_t efm32_flash_write_stub[] = {
 #include "../flashstub/efm32.stub"
@@ -70,18 +70,18 @@ const struct command_s efm32_cmd_list[] = {
 /* Memory System Controller (MSC) Registers */
 /* -------------------------------------------------------------------------- */
 
-#define EFM32_MSC               	0x400c0000
-#define EFM32_MSC_WRITECTRL             (EFM32_MSC+0x008)
-#define EFM32_MSC_WRITECMD              (EFM32_MSC+0x00c)
-#define EFM32_MSC_ADDRB                 (EFM32_MSC+0x010)
-#define EFM32_MSC_WDATA                 (EFM32_MSC+0x018)
-#define EFM32_MSC_STATUS                (EFM32_MSC+0x01c)
-#define EFM32_MSC_LOCK                  (EFM32_MSC+0x03c)
-#define EFM32_MSC_CMD                   (EFM32_MSC+0x040)
-#define EFM32_MSC_TIMEBASE              (EFM32_MSC+0x050)
-#define EFM32_MSC_MASSLOCK              (EFM32_MSC+0x054)
+#define EFM32_MSC	       		0x400c0000
+#define EFM32_MSC_WRITECTRL	     	(EFM32_MSC+0x008)
+#define EFM32_MSC_WRITECMD	      	(EFM32_MSC+0x00c)
+#define EFM32_MSC_ADDRB		 	(EFM32_MSC+0x010)
+#define EFM32_MSC_WDATA		 	(EFM32_MSC+0x018)
+#define EFM32_MSC_STATUS		(EFM32_MSC+0x01c)
+#define EFM32_MSC_LOCK		  	(EFM32_MSC+0x03c)
+#define EFM32_MSC_CMD		   	(EFM32_MSC+0x040)
+#define EFM32_MSC_TIMEBASE	      	(EFM32_MSC+0x050)
+#define EFM32_MSC_MASSLOCK	      	(EFM32_MSC+0x054)
 
-#define EFM32_MSC_LOCK_LOCKKEY          0x1b71
+#define EFM32_MSC_LOCK_LOCKKEY	  	0x1b71
 #define EFM32_MSC_MASSLOCK_LOCKKEY	0x631a
 
 #define EFM32_MSC_WRITECMD_LADDRIM	(1<<0)
@@ -169,14 +169,14 @@ const struct command_s efm32_cmd_list[] = {
 /* top 24 bits of eui */
 #define EFM32_DI_EUI_SILABS	0x000b57
 
-#define EFM32_DI_PART_FAMILY_GECKO              71
-#define EFM32_DI_PART_FAMILY_GIANT_GECKO        72
-#define EFM32_DI_PART_FAMILY_TINY_GECKO         73
-#define EFM32_DI_PART_FAMILY_LEOPARD_GECKO      74
-#define EFM32_DI_PART_FAMILY_WONDER_GECKO       75
-#define EFM32_DI_PART_FAMILY_ZERO_GECKO         76
-#define EFM32_DI_PART_FAMILY_EZR_WONDER_GECKO   120
-#define EFM32_DI_PART_FAMILY_EZR_LEOPARD_GECKO  121
+#define EFM32_DI_PART_FAMILY_GECKO		71
+#define EFM32_DI_PART_FAMILY_GIANT_GECKO	72
+#define EFM32_DI_PART_FAMILY_TINY_GECKO		73
+#define EFM32_DI_PART_FAMILY_LEOPARD_GECKO	74
+#define EFM32_DI_PART_FAMILY_WONDER_GECKO	75
+#define EFM32_DI_PART_FAMILY_ZERO_GECKO		76
+#define EFM32_DI_PART_FAMILY_EZR_WONDER_GECKO	120
+#define EFM32_DI_PART_FAMILY_EZR_LEOPARD_GECKO	121
 
 /* -------------------------------------------------------------------------- */
 /* Helper functions */
@@ -185,56 +185,56 @@ const struct command_s efm32_cmd_list[] = {
 /**
  * Reads the EFM32 Extended Unique Identifier
  */
-uint64_t efm32_read_eui(target *t)
-{
-	uint64_t eui;
+	uint64_t efm32_read_eui(target *t)
+	{
+		uint64_t eui;
 
-        eui  = (uint64_t)target_mem_read32(t, EFM32_DI_EUI64_1) << 32;
-        eui |= (uint64_t)target_mem_read32(t, EFM32_DI_EUI64_0) <<  0;
+		eui  = (uint64_t)target_mem_read32(t, EFM32_DI_EUI64_1) << 32;
+		eui |= (uint64_t)target_mem_read32(t, EFM32_DI_EUI64_0) <<  0;
 
-	return eui;
-}
+		return eui;
+	}
 /**
  * Reads the EFM32 flash size in kiB
  */
 uint16_t efm32_read_flash_size(target *t)
 {
-        return target_mem_read16(t, EFM32_DI_MEM_INFO_FLASH);
+	return target_mem_read16(t, EFM32_DI_MEM_INFO_FLASH);
 }
 /**
  * Reads the EFM32 RAM size in kiB
  */
 uint16_t efm32_read_ram_size(target *t)
 {
-        return target_mem_read16(t, EFM32_DI_MEM_INFO_RAM);
+	return target_mem_read16(t, EFM32_DI_MEM_INFO_RAM);
 }
 /**
  * Reads the EFM32 Part Number
  */
 uint16_t efm32_read_part_number(target *t)
 {
-        return target_mem_read16(t, EFM32_DI_PART_NUMBER);
+	return target_mem_read16(t, EFM32_DI_PART_NUMBER);
 }
 /**
  * Reads the EFM32 Part Family
  */
 uint8_t efm32_read_part_family(target *t)
 {
-        return target_mem_read8(t, EFM32_DI_PART_FAMILY);
+	return target_mem_read8(t, EFM32_DI_PART_FAMILY);
 }
 /**
  * Reads the EFM32 Radio part number (EZR parts only)
  */
 uint16_t efm32_read_radio_part_number(target *t)
 {
-        return target_mem_read16(t, EFM32_DI_RADIO_OPN);
+	return target_mem_read16(t, EFM32_DI_RADIO_OPN);
 }
 
 
 
 
 static void efm32_add_flash(target *t, uint32_t addr, size_t length,
-                            size_t page_size)
+			    size_t page_size)
 {
 	struct target_flash *f = calloc(1, sizeof(*f));
 	f->start = addr;
@@ -251,85 +251,85 @@ static void efm32_add_flash(target *t, uint32_t addr, size_t length,
 char variant_string[40];
 bool efm32_probe(target *t)
 {
-        /* Read the extended unique identifier */
-        uint64_t eui = efm32_read_eui(t);
+	/* Read the extended unique identifier */
+	uint64_t eui = efm32_read_eui(t);
 
-        /* /\* Check top 24 bits of eui are silabs *\/ */
-        if (((eui >> 40) & 0xFFFFFF) != EFM32_DI_EUI_SILABS)
-                return false;
+	/* /\* Check top 24 bits of eui are silabs *\/ */
+	if (((eui >> 40) & 0xFFFFFF) != EFM32_DI_EUI_SILABS)
+		return false;
 
 	/* Read the part number and family */
 	uint16_t part_number = efm32_read_part_number(t);
 	uint8_t part_family = efm32_read_part_family(t);
-        uint16_t radio_number, radio_number_short;  /* optional, for ezr parts */
-        uint32_t flash_page_size; uint16_t flash_kb;
+	uint16_t radio_number, radio_number_short;  /* optional, for ezr parts */
+	uint32_t flash_page_size; uint16_t flash_kb;
 
-        switch(part_family) {
-                case EFM32_DI_PART_FAMILY_GECKO:
-                        sprintf(variant_string,
-                                "EFM32 Gecko");
+	switch(part_family) {
+		case EFM32_DI_PART_FAMILY_GECKO:
+			sprintf(variant_string,
+				"EFM32 Gecko");
 			flash_page_size = 512;
-                        break;
-                case EFM32_DI_PART_FAMILY_GIANT_GECKO:
-                        sprintf(variant_string,
-                                "EFM32 Giant Gecko");
+			break;
+		case EFM32_DI_PART_FAMILY_GIANT_GECKO:
+			sprintf(variant_string,
+				"EFM32 Giant Gecko");
 			flash_page_size = 2048; /* Could be 2048 or 4096, assume 2048 */
-                        break;
-                case EFM32_DI_PART_FAMILY_TINY_GECKO:
-                        sprintf(variant_string,
-                                "EFM32 Tiny Gecko");
+			break;
+		case EFM32_DI_PART_FAMILY_TINY_GECKO:
+			sprintf(variant_string,
+				"EFM32 Tiny Gecko");
 			flash_page_size = 512;
-                        break;
-                case EFM32_DI_PART_FAMILY_LEOPARD_GECKO:
-                        sprintf(variant_string,
-                                "EFM32 Leopard Gecko");
+			break;
+		case EFM32_DI_PART_FAMILY_LEOPARD_GECKO:
+			sprintf(variant_string,
+				"EFM32 Leopard Gecko");
 			flash_page_size = 2048; /* Could be 2048 or 4096, assume 2048 */
-                        break;
-                case EFM32_DI_PART_FAMILY_WONDER_GECKO:
-                        sprintf(variant_string,
-                                "EFM32 Wonder Gecko");
+			break;
+		case EFM32_DI_PART_FAMILY_WONDER_GECKO:
+			sprintf(variant_string,
+				"EFM32 Wonder Gecko");
 			flash_page_size = 2048;
-                        break;
-                case EFM32_DI_PART_FAMILY_ZERO_GECKO:
-                        sprintf(variant_string,
-                                "EFM32 Zero Gecko");
+			break;
+		case EFM32_DI_PART_FAMILY_ZERO_GECKO:
+			sprintf(variant_string,
+				"EFM32 Zero Gecko");
 			flash_page_size = 1024;
-                        break;
-                case EFM32_DI_PART_FAMILY_EZR_WONDER_GECKO:
-                        radio_number = efm32_read_radio_part_number(t); /* on-chip radio */
-                        radio_number_short = radio_number % 100;
-                        flash_kb = efm32_read_flash_size(t);
+			break;
+		case EFM32_DI_PART_FAMILY_EZR_WONDER_GECKO:
+			radio_number = efm32_read_radio_part_number(t); /* on-chip radio */
+			radio_number_short = radio_number % 100;
+			flash_kb = efm32_read_flash_size(t);
 
-                        sprintf(variant_string,
-                                "EZR32WG%dF%dR%d (radio si%d)",
-                                part_number, flash_kb,
-                                radio_number_short, radio_number);
+			sprintf(variant_string,
+				"EZR32WG%dF%dR%d (radio si%d)",
+				part_number, flash_kb,
+				radio_number_short, radio_number);
 
-                        flash_page_size = 2048;
-                        break;
-                case EFM32_DI_PART_FAMILY_EZR_LEOPARD_GECKO:
-                        radio_number = efm32_read_radio_part_number(t); /* on-chip radio */
-                        radio_number_short = radio_number % 100;
-                        flash_kb = efm32_read_flash_size(t);
+			flash_page_size = 2048;
+			break;
+		case EFM32_DI_PART_FAMILY_EZR_LEOPARD_GECKO:
+			radio_number = efm32_read_radio_part_number(t); /* on-chip radio */
+			radio_number_short = radio_number % 100;
+			flash_kb = efm32_read_flash_size(t);
 
-                        sprintf(variant_string,
-                                "EZR32LG%dF%dR%d (radio si%d)",
-                                part_number, flash_kb,
-                                radio_number_short, radio_number);
+			sprintf(variant_string,
+				"EZR32LG%dF%dR%d (radio si%d)",
+				part_number, flash_kb,
+				radio_number_short, radio_number);
 
-                        flash_page_size = 2048;
-                        break;
-                default:        /* Unknown family */
-                        return false;
-        }
+			flash_page_size = 2048;
+			break;
+		default:	/* Unknown family */
+			return false;
+	}
 
-        /* Read memory sizes, convert to bytes */
-        uint32_t flash_size = efm32_read_flash_size(t) * 0x400;
-        uint32_t ram_size   = efm32_read_ram_size(t)   * 0x400;
+	/* Read memory sizes, convert to bytes */
+	uint32_t flash_size = efm32_read_flash_size(t) * 0x400;
+	uint32_t ram_size   = efm32_read_ram_size(t)   * 0x400;
 
 	/* Setup Target */
 	t->driver = variant_string;
-        gdb_outf("flash size %d page size %d\n", flash_size, flash_page_size);
+	gdb_outf("flash size %d page size %d\n", flash_size, flash_page_size);
 	target_add_ram (t, SRAM_BASE, ram_size);
 	efm32_add_flash(t, 0x00000000, flash_size, flash_page_size);
 	target_add_commands(t, efm32_cmd_list, "EFM32");
@@ -344,8 +344,8 @@ static int efm32_flash_erase(struct target_flash *f, uint32_t addr, size_t len)
 {
 	target *t = f->t;
 
-        /* Set WREN bit to enabel MSC write and erase functionality */
-        target_mem_write32(t, EFM32_MSC_WRITECTRL, 1);
+	/* Set WREN bit to enabel MSC write and erase functionality */
+	target_mem_write32(t, EFM32_MSC_WRITECTRL, 1);
 
 	while (len) {
 		/* Write address of first word in row to erase it */
@@ -372,14 +372,14 @@ static int efm32_flash_erase(struct target_flash *f, uint32_t addr, size_t len)
  * Write flash page by page
  */
 static int efm32_flash_write(struct target_flash *f,
-                            uint32_t dest, const void *src, size_t len)
+			     uint32_t dest, const void *src, size_t len)
 {
 	(void)len;
 	target *t = f->t;
 
 	/* Write flashloader */
 	target_mem_write(t, SRAM_BASE, efm32_flash_write_stub,
-	                 sizeof(efm32_flash_write_stub));
+			 sizeof(efm32_flash_write_stub));
 	/* Write Buffer */
 	target_mem_write(t, STUB_BUFFER_BASE, src, len);
 	/* Run flashloader */
@@ -393,9 +393,8 @@ static int efm32_flash_write(struct target_flash *f,
  */
 static bool efm32_cmd_erase_all(target *t)
 {
-        /* Set WREN bit to enabel MSC write and erase functionality */
-        target_mem_write32(t, EFM32_MSC_WRITECTRL, 1);
-
+	/* Set WREN bit to enabel MSC write and erase functionality */
+	target_mem_write32(t, EFM32_MSC_WRITECTRL, 1);
 
 	/* Unlock mass erase */
 	target_mem_write32(t, EFM32_MSC_MASSLOCK, EFM32_MSC_MASSLOCK_LOCKKEY);
@@ -422,8 +421,8 @@ static bool efm32_cmd_erase_all(target *t)
  */
 static bool efm32_cmd_serial(target *t)
 {
-        /* Read the extended unique identifier */
-        uint64_t eui = efm32_read_eui(t) & 0xFFFFFFFFFF;
+	/* Read the extended unique identifier */
+	uint64_t eui = efm32_read_eui(t) & 0xFFFFFFFFFF;
 
 	/* Bottom 40 bits are unique number */
 	gdb_outf("Unique Number: 0x%010llx\n", eui);

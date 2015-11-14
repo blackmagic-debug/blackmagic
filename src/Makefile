@@ -92,3 +92,4 @@ include/version.h: FORCE
 	$(Q)echo "#define FIRMWARE_VERSION \"`git describe --dirty`\"" > $@
 
 -include *.d
+
