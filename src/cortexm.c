@@ -251,6 +251,7 @@ bool cortexm_probe(target *t)
 	PROBE(samd_probe);
 	PROBE(lmi_probe);
 	PROBE(kinetis_probe);
+	PROBE(efm32_probe);
 #undef PROBE
 
 	return true;
