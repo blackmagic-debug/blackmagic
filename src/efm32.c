@@ -251,12 +251,18 @@ static void efm32_add_flash(target *t, uint32_t addr, size_t length,
 char variant_string[40];
 bool efm32_probe(target *t)
 {
-	/* Read the extended unique identifier */
-	uint64_t eui = efm32_read_eui(t);
+	/* Read the IDCODE register from the SW-DP */
+	ADIv5_AP_t *ap = adiv5_target_ap(t);
+	uint32_t ap_idcode = ap->dp->idcode;
 
-	/* /\* Check top 24 bits of eui are silabs *\/ */
-	if (((eui >> 40) & 0xFFFFFF) != EFM32_DI_EUI_SILABS)
+	/* Check the idcode is silabs. See AN0062 Section 2.2 */
+	if (ap_idcode == 0x2BA01477) {
+		/* Cortex M3, Cortex M4 */
+	} else if (ap_idcode == 0x0BC11477) {
+		/* Cortex M0+ */
+	} else {
 		return false;
+	}
 
 	/* Read the part number and family */
 	uint16_t part_number = efm32_read_part_number(t);
@@ -422,10 +428,10 @@ static bool efm32_cmd_erase_all(target *t)
 static bool efm32_cmd_serial(target *t)
 {
 	/* Read the extended unique identifier */
-	uint64_t eui = efm32_read_eui(t) & 0xFFFFFFFFFF;
+	uint64_t eui = efm32_read_eui(t);
 
-	/* Bottom 40 bits are unique number */
-	gdb_outf("Unique Number: 0x%010llx\n", eui);
+	/* 64 bits of unique number */
+	gdb_outf("Unique Number: 0x%016llx\n", eui);
 
 	return true;
 }
