@@ -108,20 +108,54 @@ bool nrf51_probe(target *t)
 	t->idcode = target_mem_read32(t, NRF51_FICR_CONFIGID) & 0xFFFF;
 
 	switch (t->idcode) {
-	case 0x001D:
-	case 0x002A:
-	case 0x0044:
-	case 0x003C:
-	case 0x0020:
-	case 0x002F:
-	case 0x0040:
-	case 0x0047:
-	case 0x004D:
-	case 0x0026:
-	case 0x004C:
-	case 0x0072:
+	case 0x001D: /* nRF51822 (rev 1) QFAA CA/C0 */
+	case 0x001E: /* nRF51422 (rev 1) QFAA CA */
+	case 0x0020: /* nRF51822 (rev 1) CEAA BA */
+	case 0x0024: /* nRF51422 (rev 1) QFAA C0 */
+	case 0x002A: /* nRF51822 (rev 2) QFAA FA0 */
+	case 0x002D: /* nRF51422 (rev 2) QFAA DAA */
+	case 0x002E: /* nRF51422 (rev 2) QFAA E0 */
+	case 0x002F: /* nRF51822 (rev 1) CEAA B0 */
+	case 0x0031: /* nRF51422 (rev 1) CEAA A0A */
+	case 0x003C: /* nRF51822 (rev 2) QFAA G0 */
+	case 0x0040: /* nRF51822 (rev 2) CEAA CA0 */
+	case 0x0044: /* nRF51822 (rev 2) QFAA GC0 */
+	case 0x0047: /* nRF51822 (rev 2) CEAA DA0 */
+	case 0x004D: /* nRF51822 (rev 2) CEAA D00 */
+	case 0x0050: /* nRF51422 (rev 2) CEAA B0 */
+	case 0x0072: /* nRF51822 (rev 3) QFAA H0 */
+	case 0x0073: /* nRF51422 (rev 3) QFAA F0 */
+	case 0x0079: /* nRF51822 (rev 3) CEAA E0 */
+	case 0x007A: /* nRF51422 (rev 3) CEAA C0 */
 		t->driver = "Nordic nRF51";
 		target_add_ram(t, 0x20000000, 0x4000);
+		nrf51_add_flash(t, 0x00000000, 0x40000, NRF51_PAGE_SIZE);
+		nrf51_add_flash(t, NRF51_UICR, 0x100, 0x100);
+		target_add_commands(t, nrf51_cmd_list, "nRF51");
+		return true;
+	case 0x0026: /* nRF51822 (rev 1) QFAB AA */
+	case 0x0027: /* nRF51822 (rev 1) QFAB A0 */
+	case 0x004C: /* nRF51822 (rev 2) QFAB B0 */
+	case 0x0061: /* nRF51422 (rev 2) QFAB A00 */
+	case 0x007B: /* nRF51822 (rev 3) QFAB C0 */
+	case 0x007C: /* nRF51422 (rev 3) QFAB B0 */
+	case 0x007D: /* nRF51822 (rev 3) CDAB A0 */
+	case 0x007E: /* nRF51422 (rev 3) CDAB A0 */
+		t->driver = "Nordic nRF51";
+		target_add_ram(t, 0x20000000, 0x4000);
+		nrf51_add_flash(t, 0x00000000, 0x20000, NRF51_PAGE_SIZE);
+		nrf51_add_flash(t, NRF51_UICR, 0x100, 0x100);
+		target_add_commands(t, nrf51_cmd_list, "nRF51");
+		return true;
+	case 0x0071: /* nRF51422 (rev 3) QFAC AB */
+	case 0x0083: /* nRF51822 (rev 3) QFAC A0 */
+	case 0x0084: /* nRF51422 (rev 3) QFAC A1 */
+	case 0x0085: /* nRF51422 (rev 3) QFAC A0 */
+	case 0x0086: /* nRF51422 (rev 3) QFAC A1 */
+	case 0x0087: /* nRF51822 (rev 3) CFAC A0 */
+	case 0x0088: /* nRF51422 (rev 3) CFAC A0 */
+		t->driver = "Nordic nRF51";
+		target_add_ram(t, 0x20000000, 0x8000);
 		nrf51_add_flash(t, 0x00000000, 0x40000, NRF51_PAGE_SIZE);
 		nrf51_add_flash(t, NRF51_UICR, 0x100, 0x100);
 		target_add_commands(t, nrf51_cmd_list, "nRF51");
