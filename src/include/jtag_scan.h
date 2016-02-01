@@ -21,7 +21,7 @@
 #ifndef __JTAG_SCAN_H
 #define __JTAG_SCAN_H
 
-#define JTAG_MAX_DEVS	5
+#define JTAG_MAX_DEVS	32
 #define JTAG_MAX_IR_LEN	16
 
 typedef struct jtag_dev_s {
