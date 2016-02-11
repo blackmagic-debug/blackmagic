@@ -81,6 +81,7 @@ const struct command_s nrf51_read_cmd_list[] = {
 #define NRF51_UICR				0x10001000
 
 #define NRF51_PAGE_SIZE 1024
+#define NRF52_PAGE_SIZE 4096
 
 #define SRAM_BASE          0x20000000
 #define STUB_BUFFER_BASE   (SRAM_BASE + 0x28)
@@ -159,6 +160,13 @@ bool nrf51_probe(target *t)
 		nrf51_add_flash(t, 0x00000000, 0x40000, NRF51_PAGE_SIZE);
 		nrf51_add_flash(t, NRF51_UICR, 0x100, 0x100);
 		target_add_commands(t, nrf51_cmd_list, "nRF51");
+		return true;
+	case 0x00AC: /* nRF52832 Preview QFAA BA0 */
+		t->driver = "Nordic nRF52";
+		target_add_ram(t, 0x20000000, 64*1024);
+		nrf51_add_flash(t, 0x00000000, 512*1024, NRF52_PAGE_SIZE);
+		nrf51_add_flash(t, NRF51_UICR, 0x100, 0x100);
+		target_add_commands(t, nrf51_cmd_list, "nRF52");
 		return true;
 	}
 
