@@ -90,9 +90,12 @@
 
 #define LED_PORT	GPIOB
 #define LED_PORT_UART	GPIOB
-#define LED_UART	GPIO2
-#define LED_IDLE_RUN	GPIO10
-#define LED_ERROR	GPIO11
+#define LED_0		GPIO2
+#define LED_1		GPIO10
+#define LED_2		GPIO11
+#define LED_UART	LED_2
+#define LED_IDLE_RUN	LED_1
+#define LED_ERROR	LED_0
 
 #define TMS_SET_MODE() \
 	gpio_set_mode(TMS_PORT, GPIO_MODE_OUTPUT_50_MHZ, \
