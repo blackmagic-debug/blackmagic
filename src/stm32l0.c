@@ -98,58 +98,61 @@ static int stm32lx_nvm_data_write(struct target_flash* f,
 
 static bool stm32lx_cmd_option     (target* t, int argc, char** argv);
 static bool stm32lx_cmd_eeprom     (target* t, int argc, char** argv);
+static bool stm32lx_cmd_info       (target* t, int argc, char** argv);
 
 static const struct command_s stm32lx_cmd_list[] = {
         { "option",		(cmd_handler) stm32lx_cmd_option,
           "Manipulate option bytes"},
         { "eeprom",		(cmd_handler) stm32lx_cmd_eeprom,
           "Manipulate EEPROM(NVM data) memory"},
+        { "info",		(cmd_handler) stm32lx_cmd_info,
+          "Show target info"},
         { 0 },
 };
 
 enum {
         STM32L0_DBGMCU_IDCODE_PHYS = 0x40015800,
         STM32L1_DBGMCU_IDCODE_PHYS = 0xe0042000,
+        STM32L0_FLASHSIZE_PHYS     = 0x1ff8007c,
 };
 
 static bool stm32lx_is_stm32l1(target* t)
 {
-        switch (t->idcode) {
-        case 0x417:                   /* STM32L0xx */
-                return false;
-        default:                      /* STM32L1xx */
-                return true;
+	switch (t->idcode) {
+	case 0x416:                   /* STM32L1 CAT. 1 device */
+	case 0x429:                   /* STM32L1 CAT. 2 device */
+	case 0x427:                   /* STM32L1 CAT. 3 device */
+	case 0x436:                   /* STM32L1 CAT. 4 device */
+	case 0x437:                   /* STM32L1 CAT. 5 device  */
+		return true;
         }
+
+	return false;
 }
 
 static uint32_t stm32lx_nvm_eeprom_size(target *t)
 {
-        switch (t->idcode) {
-        case 0x417:                   /* STM32L0xx */
+	if (stm32lx_is_stm32l1 (t))
+		return STM32L1_NVM_EEPROM_SIZE;
+        else
                 return STM32L0_NVM_EEPROM_SIZE;
-        default:                      /* STM32L1xx */
-                return STM32L1_NVM_EEPROM_SIZE;
-        }
 }
 
 static uint32_t stm32lx_nvm_phys(target *t)
 {
-        switch (t->idcode) {
-        case 0x417:                   /* STM32L0xx */
+	if (stm32lx_is_stm32l1 (t))
+		return STM32L1_NVM_PHYS;
+        else
                 return STM32L0_NVM_PHYS;
-        default:                      /* STM32L1xx */
-                return STM32L1_NVM_PHYS;
-        }
 }
 
 static uint32_t stm32lx_nvm_option_size(target *t)
 {
-        switch (t->idcode) {
-        case 0x417:                   /* STM32L0xx */
+	if (stm32lx_is_stm32l1 (t))
+		return STM32L1_NVM_OPT_SIZE;
+        else
                 return STM32L0_NVM_OPT_SIZE;
-        default:                      /* STM32L1xx */
-                return STM32L1_NVM_OPT_SIZE;
-        }
+
 }
 
 static void stm32l_add_flash(target *t,
@@ -179,37 +182,84 @@ static void stm32l_add_eeprom(target *t, uint32_t addr, size_t length)
 	target_add_flash(t, f);
 }
 
+static uint32_t stm32l_idcode (target* t) {
+	uint32_t idcode = target_mem_read32(t, STM32L1_DBGMCU_IDCODE_PHYS);
+	switch (idcode & 0xfff) {
+	case 0x416:                   /* STM32L1 CAT. 1 device */
+	case 0x429:                   /* STM32L1 CAT. 2 device */
+	case 0x427:                   /* STM32L1 CAT. 3 device */
+	case 0x436:                   /* STM32L1 CAT. 4 device */
+	case 0x437:                   /* STM32L1 CAT. 5 device  */
+		return idcode;
+        }
+
+	idcode = target_mem_read32(t, STM32L0_DBGMCU_IDCODE_PHYS);
+	switch (idcode & 0xfff) {
+	case 0x457:                   /* STM32L0 CAT. 1 */
+	case 0x425:                   /* STM32L0 CAT. 2 */
+	case 0x417:                   /* STM32L0 CAT. 3 */
+	case 0x447:                   /* STM32L0 CAT. 5 */
+		return idcode;
+        }
+
+        return 0;
+}
+
+static size_t stm32l_flash_size (target* t) {
+	uint32_t idcode = stm32l_idcode (t) & 0xfff;
+
+	switch (idcode) {
+	case 0x416:                   /* STM32L1 CAT. 1 device */
+	case 0x429:                   /* STM32L1 CAT. 2 device */
+	case 0x427:                   /* STM32L1 CAT. 3 device */
+	case 0x436:                   /* STM32L1 CAT. 4 device */
+	case 0x437:                   /* STM32L1 CAT. 5 device  */
+		return 0x80000;
+        }
+
+	switch (idcode) {
+	case 0x457:                   /* STM32L0 CAT. 1 */
+	case 0x425:                   /* STM32L0 CAT. 2 */
+	case 0x417:                   /* STM32L0 CAT. 3 */
+	case 0x447:                   /* STM32L0 CAT. 5 */
+		return (target_mem_read16 (t, STM32L0_FLASHSIZE_PHYS)
+                        & 0xffff)*1024;
+        }
+
+        return 0;
+}
+
 /** Query MCU memory for an indication as to whether or not the
     currently attached target is served by this module.  We detect the
     STM32L0xx parts as well as the STM32L1xx's. */
 bool stm32l0_probe(target* t)
 {
-	uint32_t idcode;
+	uint32_t idcode   = stm32l_idcode (t) & 0xfff;
+        size_t flash_size = stm32l_flash_size (t);
 
-	idcode = target_mem_read32(t, STM32L1_DBGMCU_IDCODE_PHYS) & 0xfff;
 	switch (idcode) {
-	case 0x416:                   /* CAT. 1 device */
-	case 0x429:                   /* CAT. 2 device */
-	case 0x427:                   /* CAT. 3 device */
-	case 0x436:                   /* CAT. 4 device */
-	case 0x437:                   /* CAT. 5 device  */
+	case 0x416:                   /* STM32L1 CAT. 1 device */
+	case 0x429:                   /* STM32L1 CAT. 2 device */
+	case 0x427:                   /* STM32L1 CAT. 3 device */
+	case 0x436:                   /* STM32L1 CAT. 4 device */
+	case 0x437:                   /* STM32L1 CAT. 5 device  */
 		t->idcode = idcode;
 		t->driver = "STM32L1x";
 		target_add_ram(t, 0x20000000, 0x14000);
-		stm32l_add_flash(t, 0x8000000, 0x80000, 0x100);
+		stm32l_add_flash(t, 0x8000000, flash_size, 0x100);
 		//stm32l_add_eeprom(t, 0x8080000, 0x4000);
 		target_add_commands(t, stm32lx_cmd_list, "STM32L1x");
 		return true;
-	}
 
-	idcode = target_mem_read32(t, STM32L0_DBGMCU_IDCODE_PHYS) & 0xfff;
-	switch (idcode) {
-	case 0x417:                   /* STM32L0x[123] & probably others */
+	case 0x457:                   /* STM32L0 CAT. 1 */
+	case 0x425:                   /* STM32L0 CAT. 2 */
+	case 0x417:                   /* STM32L0 CAT. 3 */
+	case 0x447:                   /* STM32L0 CAT. 5 */
 		t->idcode = idcode;
 		t->driver = "STM32L0x";
-		target_add_ram(t, 0x20000000, 0x2000);
-		stm32l_add_flash(t, 0x8000000, 0x10000, 0x80);
-		stm32l_add_eeprom(t, 0x8080000, 0x800);
+		target_add_ram     (t, 0x20000000, 0x2000);
+		stm32l_add_flash   (t, 0x08000000, flash_size, 0x80);
+		stm32l_add_eeprom  (t, 0x08080000, 0x800);
 		target_add_commands(t, stm32lx_cmd_list, "STM32L0x");
 		return true;
 	}
@@ -685,4 +735,17 @@ usage:
 done:
         stm32lx_nvm_lock(t, nvm);
         return true;
+}
+
+static bool stm32lx_cmd_info(target* t, int argc, char** argv)
+{
+  (void) argc;
+  (void) argv;
+  gdb_outf ("         mcu: stm32l%cx\n"
+            "      idcode: %04x (%08x)\n"
+            "  flash_size: %dKiB flash\n",
+            stm32lx_is_stm32l1 (t) ? '1' : '0',
+            t->idcode, stm32l_idcode (t),
+            stm32l_flash_size (t)/1024);
+  return true;
 }
