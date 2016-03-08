@@ -334,6 +334,7 @@ bool efm32_probe(target *t)
 	uint32_t ram_size   = efm32_read_ram_size(t)   * 0x400;
 
 	/* Setup Target */
+	t->target_options |= CORTEXM_TOPT_INHIBIT_SRST;
 	t->driver = variant_string;
 	gdb_outf("flash size %d page size %d\n", flash_size, flash_page_size);
 	target_add_ram (t, SRAM_BASE, ram_size);

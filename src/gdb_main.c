@@ -41,7 +41,7 @@
 #define ERROR_IF_NO_TARGET()	\
 	if(!cur_target) { gdb_putpacketz("EFF"); break; }
 
-static char pbuf[BUF_SIZE];
+static char pbuf[BUF_SIZE+1];
 
 static target *cur_target;
 static target *last_target;

@@ -97,13 +97,19 @@ uint32_t crc32_calc(uint32_t crc, uint8_t data)
 uint32_t generic_crc32(target *t, uint32_t base, int len)
 {
 	uint32_t crc = -1;
-	uint8_t byte;
+	static uint8_t bytes[128];
 
-	while (len--) {
-		byte = target_mem_read8(t, base);
+	while (len) {
+		uint32_t i;
+		uint32_t read_len = len >= 128 ? 128 : len;
 
-		crc = crc32_calc(crc, byte);
-		base++;
+		target_mem_read(t, bytes, base, read_len);
+
+		for (i=0; i<read_len; i++)
+			crc = crc32_calc(crc, bytes[i]);
+
+		base += read_len;
+		len -= read_len;
 	}
 	return crc;
 }
