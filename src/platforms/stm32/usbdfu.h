@@ -39,6 +39,7 @@ void dfu_flash_program_buffer(uint32_t baseaddr, void *buf, int len);
 uint32_t dfu_poll_timeout(uint8_t cmd, uint32_t addr, uint16_t blocknum);
 void dfu_protect(dfu_mode_t mode);
 void dfu_jump_app_if_valid(void);
+void dfu_event(void);
 
 /* Platform specific function */
 void dfu_detach(void);

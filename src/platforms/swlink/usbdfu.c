@@ -88,6 +88,10 @@ int main(void)
 	dfu_main();
 }
 
+void dfu_event(void)
+{
+}
+
 void sys_tick_handler(void)
 {
 	gpio_toggle(GPIOA, GPIO8);

@@ -24,8 +24,10 @@
 #include <libopencm3/cm3/scb.h>
 
 #include "usbdfu.h"
+#include "platform.h"
 
 uint32_t app_address = 0x08002000;
+int dfu_activity_counter = 0;
 
 void dfu_detach(void)
 {
@@ -46,6 +48,7 @@ int main(void)
 	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
 	systick_set_reload(900000);
 
+	/* Configure USB related clocks and pins. */
 	rcc_periph_clock_enable(RCC_GPIOA);
 	rcc_periph_clock_enable(RCC_USB);
 	gpio_set_mode(GPIOA, GPIO_MODE_INPUT, 0, GPIO8);
@@ -53,13 +56,13 @@ int main(void)
 	systick_interrupt_enable();
 	systick_counter_enable();
 
-	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ,
-			GPIO_CNF_OUTPUT_PUSHPULL, GPIO11);
-	gpio_set_mode(GPIOB, GPIO_MODE_INPUT,
-			GPIO_CNF_INPUT_FLOAT, GPIO2 | GPIO10);
+	/* Configure the LED pins. */
+	gpio_set_mode(LED_PORT, GPIO_MODE_OUTPUT_2_MHZ,
+			GPIO_CNF_OUTPUT_PUSHPULL, LED_0 | LED_1 | LED_2);
 
 	dfu_init(&stm32f103_usb_driver, DFU_MODE);
 
+	/* Configure the USB pull up pin. */
 	gpio_set(GPIOA, GPIO8);
 	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
 			GPIO_CNF_OUTPUT_PUSHPULL, GPIO8);
@@ -67,8 +70,50 @@ int main(void)
 	dfu_main();
 }
 
+void dfu_event(void)
+{
+	/* If the counter was at 0 before we should reset LED status. */
+	if (dfu_activity_counter == 0) {
+		gpio_clear(LED_PORT, LED_0 | LED_1 | LED_2);
+	}
+
+	/* Prevent the sys_tick_handler from blinking leds for a bit. */
+	dfu_activity_counter = 10;
+
+	/* Toggle the DFU activity LED. */
+	gpio_toggle(LED_PORT, LED_1);
+}
+
 void sys_tick_handler(void)
 {
-	gpio_toggle(GPIOB, GPIO11); /* LED2 on/off */
+	static int count = 0;
+	static bool reset = true;
+
+	/* Run the LED show only if there is no DFU activity. */
+	if (dfu_activity_counter != 0) {
+		dfu_activity_counter--;
+		reset = true;
+	} else {
+		if (reset) {
+			gpio_clear(LED_PORT, LED_0 | LED_1 | LED_2);
+			count = 0;
+			reset = false;
+		}
+
+		switch (count) {
+		case 0:
+			gpio_toggle(LED_PORT, LED_2); /* LED2 on/off */
+			count++;
+			break;
+		case 1:
+			gpio_toggle(LED_PORT, LED_1); /* LED1 on/off */
+			count++;
+			break;
+		case 2:
+			gpio_toggle(LED_PORT, LED_0); /* LED0 on/off */
+			count=0;
+			break;
+		}
+	}
 }
 
