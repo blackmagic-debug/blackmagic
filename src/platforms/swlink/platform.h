@@ -127,6 +127,11 @@
 #define SET_IDLE_STATE(state)	{gpio_set_val(LED_PORT, LED_IDLE_RUN, state);}
 #define SET_ERROR_STATE(x)
 
+static inline int platform_hwversion(void)
+{
+	        return 0;
+}
+
 /* Use newlib provided integer only stdio functions */
 #define sscanf siscanf
 #define sprintf siprintf

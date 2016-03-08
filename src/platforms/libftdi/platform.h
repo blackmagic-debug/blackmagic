@@ -42,5 +42,10 @@ void platform_buffer_flush(void);
 int platform_buffer_write(const uint8_t *data, int size);
 int platform_buffer_read(uint8_t *data, int size);
 
+static inline int platform_hwversion(void)
+{
+	        return 0;
+}
+
 #endif
 
