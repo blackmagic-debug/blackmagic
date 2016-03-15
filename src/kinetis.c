@@ -23,6 +23,8 @@
  *
  * According to Freescale doc KL25P80M48SF0RM:
  *    KL25 Sub-family Reference Manual
+ *
+ * Extended with support for KL02 family
  */
 
 #include "general.h"
@@ -54,21 +56,21 @@
 #define FTFA_CMD_ERASE_ALL         0x44
 #define FTFA_CMD_BACKDOOR_ACCESS   0x45
 
-#define KL25_PAGESIZE 0x400
+#define KL_GEN_PAGESIZE 0x400
 
-static int kl25_flash_erase(struct target_flash *f, uint32_t addr, size_t len);
-static int kl25_flash_write(struct target_flash *f,
+static int kl_gen_flash_erase(struct target_flash *f, uint32_t addr, size_t len);
+static int kl_gen_flash_write(struct target_flash *f,
                             uint32_t dest, const void *src, size_t len);
 
-static void kl25_add_flash(target *t,
+static void kl_gen_add_flash(target *t,
                            uint32_t addr, size_t length, size_t erasesize)
 {
 	struct target_flash *f = calloc(1, sizeof(*f));
 	f->start = addr;
 	f->length = length;
 	f->blocksize = erasesize;
-	f->erase = kl25_flash_erase;
-	f->write = kl25_flash_write;
+	f->erase = kl_gen_flash_erase;
+	f->write = kl_gen_flash_write;
 	f->align = 4;
 	f->erased = 0xff;
 	target_add_flash(t, f);
@@ -82,14 +84,38 @@ bool kinetis_probe(target *t)
 		t->driver = "KL25";
 		target_add_ram(t, 0x1ffff000, 0x1000);
 		target_add_ram(t, 0x20000000, 0x3000);
-		kl25_add_flash(t, 0x00000000, 0x20000, 0x400);
+		kl_gen_add_flash(t, 0x00000000, 0x20000, 0x400);
+		return true;
+	case 0x021: /* KL02 family */
+		switch((sdid>>16) & 0x0f){
+			case 3:
+				t->driver = "KL02x32";
+				target_add_ram(t, 0x1FFFFC00, 0x400);
+				target_add_ram(t, 0x20000000, 0xc00);
+				kl_gen_add_flash(t, 0x00000000, 0x7FFF, 0x400);
+				break;
+			case 2:
+				t->driver = "KL02x16";
+				target_add_ram(t, 0x1FFFFE00, 0x200);
+				target_add_ram(t, 0x20000000, 0x600);
+				kl_gen_add_flash(t, 0x00000000, 0x3FFF, 0x400);
+				break;
+			case 1:
+				t->driver = "KL02x8";
+				target_add_ram(t, 0x1FFFFF00, 0x100);
+				target_add_ram(t, 0x20000000, 0x300);
+				kl_gen_add_flash(t, 0x00000000, 0x1FFF, 0x400);
+				break;
+			default:
+				return false;
+			}
 		return true;
 	}
 	return false;
 }
 
 static bool
-kl25_command(target *t, uint8_t cmd, uint32_t addr, const uint8_t data[8])
+kl_gen_command(target *t, uint8_t cmd, uint32_t addr, const uint8_t data[8])
 {
 	uint8_t fstat;
 
@@ -124,21 +150,21 @@ kl25_command(target *t, uint8_t cmd, uint32_t addr, const uint8_t data[8])
 	return true;
 }
 
-static int kl25_flash_erase(struct target_flash *f, uint32_t addr, size_t len)
+static int kl_gen_flash_erase(struct target_flash *f, uint32_t addr, size_t len)
 {
 	while (len) {
-		kl25_command(f->t, FTFA_CMD_ERASE_SECTOR, addr, NULL);
-		len -= KL25_PAGESIZE;
-		addr += KL25_PAGESIZE;
+		kl_gen_command(f->t, FTFA_CMD_ERASE_SECTOR, addr, NULL);
+		len -= KL_GEN_PAGESIZE;
+		addr += KL_GEN_PAGESIZE;
 	}
 	return 0;
 }
 
-static int kl25_flash_write(struct target_flash *f,
+static int kl_gen_flash_write(struct target_flash *f,
                             uint32_t dest, const void *src, size_t len)
 {
 	while (len) {
-		kl25_command(f->t, FTFA_CMD_PROGRAM_LONGWORD, dest, src);
+		kl_gen_command(f->t, FTFA_CMD_PROGRAM_LONGWORD, dest, src);
 		len -= 4;
 		dest += 4;
 		src += 4;
