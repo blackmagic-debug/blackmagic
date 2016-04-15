@@ -95,6 +95,16 @@ static struct cable_desc_s {
 		.vendor = 0x0403,
 		.product = 0x6014,
 		.interface = INTERFACE_A,
+		.dbus_data = 0x88,
+		.dbus_ddr  = 0x8B,
+		.cbus_data = 0x20,
+		.cbus_ddr  = 0x3f,
+		.name = "digilent"
+	},
+	{
+		.vendor = 0x0403,
+		.product = 0x6014,
+		.interface = INTERFACE_A,
 		.dbus_data = 0x08,
 		.dbus_ddr  = 0x0B,
 		.name = "ft232h"
