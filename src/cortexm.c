@@ -38,6 +38,9 @@
 
 #include <unistd.h>
 
+/* On some systems this is a macro and causes problems */
+#undef errno
+
 static char cortexm_driver_str[] = "ARM Cortex-M";
 
 static bool cortexm_vector_catch(target *t, int argc, char *argv[]);
@@ -819,6 +822,10 @@ static bool cortexm_vector_catch(target *t, int argc, char *argv[])
 	return true;
 }
 
+/* Windows defines this with some other meaning... */
+#ifdef SYS_OPEN
+#	undef SYS_OPEN
+#endif
 
 /* Semihosting support */
 /* ARM Semihosting syscall numbers, from ARM doc DUI0471C, Chapter 8 */

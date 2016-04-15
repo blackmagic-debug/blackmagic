@@ -22,6 +22,7 @@
 #include "version.h"
 
 #include <assert.h>
+#include <unistd.h>
 #include <sys/time.h>
 
 struct ftdi_context *ftdic;

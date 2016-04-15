@@ -26,7 +26,9 @@
 #ifndef WIN32
 #	include <alloca.h>
 #else
-#	define alloca __builtin_alloca
+#	ifndef alloca
+#		define alloca __builtin_alloca
+#	endif
 #endif
 
 #define FT2232_VID	0x0403
