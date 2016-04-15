@@ -41,6 +41,7 @@ static void setup_vbus_irq(void);
 /* Pins PB[7:5] are used to detect hardware revision.
  * 000 - Original production build.
  * 001 - Mini production build.
+ * 010 - Mini V2.0e and later.
  */
 int platform_hwversion(void)
 {
@@ -57,6 +58,10 @@ int platform_hwversion(void)
 
 		/* Enable the weak pull up. */
 		gpio_set(GPIOB, hwversion_pins);
+
+		/* Wait a little to make sure the pull up is in effect... */
+		for(int i = 0; i < 100; i++) asm("nop");
+
 		/* Get all pins that are pulled low in hardware.
 		 * This also sets all the "unused" pins to 1.
 		 */
@@ -64,9 +69,12 @@ int platform_hwversion(void)
 
 		/* Enable the weak pull down. */
 		gpio_clear(GPIOB, hwversion_pins);
+
+		/* Wait a little to make sure the pull down is in effect... */
+		for(int i = 0; i < 100; i++) asm("nop");
+
 		/* Get all the pins that are pulled high in hardware. */
 		uint16_t pins_positive = gpio_get(GPIOB, hwversion_pins);
-
 
 		/* Hardware version is the id defined by the pins that are
 		 * asserted low or high by the hardware. This means that pins

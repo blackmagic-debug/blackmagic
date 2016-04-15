@@ -93,9 +93,9 @@
 #define LED_0		GPIO2
 #define LED_1		GPIO10
 #define LED_2		GPIO11
-#define LED_UART	LED_2
+#define LED_UART	(platform_hwversion() < 2 ? LED_2 : LED_0)
 #define LED_IDLE_RUN	LED_1
-#define LED_ERROR	LED_0
+#define LED_ERROR	(platform_hwversion() < 2 ? LED_0 : LED_2)
 
 #define TMS_SET_MODE() \
 	gpio_set_mode(TMS_PORT, GPIO_MODE_OUTPUT_50_MHZ, \
