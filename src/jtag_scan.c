@@ -28,6 +28,7 @@
 #include "morse.h"
 #include "jtag_scan.h"
 #include "gdb_packet.h"
+#include "target.h"
 #include "adiv5.h"
 #include "arm7tdmi.h"
 

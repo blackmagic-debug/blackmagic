@@ -257,7 +257,6 @@ static inline void target_mem_write8(target *t, uint32_t addr, uint8_t value)
 /* Probe for various targets.
  * Actual functions implemented in their respective drivers.
  */
-bool cortexm_probe(target *t);
 bool stm32f1_probe(target *t);
 bool stm32f4_probe(target *t);
 bool stm32l0_probe(target *t);
