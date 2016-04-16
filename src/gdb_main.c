@@ -452,9 +452,9 @@ handle_z_packet(char *packet, int plen)
 	switch(type) {
 	case 1: /* Hardware breakpoint */
 		if(set)
-			ret = target_set_hw_bp(cur_target, addr);
+			ret = target_set_hw_bp(cur_target, addr, len);
 		else
-			ret = target_clear_hw_bp(cur_target, addr);
+			ret = target_clear_hw_bp(cur_target, addr, len);
 		break;
 
 	case 2:

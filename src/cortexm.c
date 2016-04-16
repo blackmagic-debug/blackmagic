@@ -67,8 +67,8 @@ static int cortexm_halt_wait(target *t);
 static void cortexm_halt_request(target *t);
 static int cortexm_fault_unwind(target *t);
 
-static int cortexm_set_hw_bp(target *t, uint32_t addr);
-static int cortexm_clear_hw_bp(target *t, uint32_t addr);
+static int cortexm_set_hw_bp(target *t, uint32_t addr, uint8_t len);
+static int cortexm_clear_hw_bp(target *t, uint32_t addr, uint8_t len);
 
 static int cortexm_set_hw_wp(target *t, uint8_t type, uint32_t addr, uint8_t len);
 static int cortexm_clear_hw_wp(target *t, uint8_t type, uint32_t addr, uint8_t len);
@@ -669,8 +669,9 @@ int cortexm_run_stub(target *t, uint32_t loadaddr,
 /* The following routines implement hardware breakpoints.
  * The Flash Patch and Breakpoint (FPB) system is used. */
 
-static int cortexm_set_hw_bp(target *t, uint32_t addr)
+static int cortexm_set_hw_bp(target *t, uint32_t addr, uint8_t len)
 {
+	(void)len;
 	struct cortexm_priv *priv = t->priv;
 	uint32_t val = addr;
 	unsigned i;
@@ -693,8 +694,9 @@ static int cortexm_set_hw_bp(target *t, uint32_t addr)
 	return 0;
 }
 
-static int cortexm_clear_hw_bp(target *t, uint32_t addr)
+static int cortexm_clear_hw_bp(target *t, uint32_t addr, uint8_t len)
 {
+	(void)len;
 	struct cortexm_priv *priv = t->priv;
 	unsigned i;
 
