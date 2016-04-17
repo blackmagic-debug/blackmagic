@@ -16,7 +16,6 @@ LDFLAGS = -lopencm3_stm32f4 -Wl,--defsym,_stack=0x20006000 \
 VPATH += platforms/stm32
 
 SRC += 	cdcacm.c	\
-	platform.c	\
 	traceswo.c	\
 	usbuart.c	\
 	serialno.c	\
@@ -24,15 +23,9 @@ SRC += 	cdcacm.c	\
 
 all: blackmagic.bin blackmagic.hex blackmagic.dfu
 
-blackmagic.bin:	blackmagic
-	$(OBJCOPY) -O binary $^ $@
-
-blackmagic.hex:	blackmagic.bin
-	$(OBJCOPY) -O ihex blackmagic $@
-
 blackmagic.dfu: blackmagic.hex
 	@echo Creating $@
 	@python ../scripts/dfu-convert.py -i $< $@
 
 host_clean:
-	-rm blackmagic.bin blackmagic.hex blackmagic.dfu
+	-$(Q)$(RM) blackmagic.bin blackmagic.hex blackmagic.dfu

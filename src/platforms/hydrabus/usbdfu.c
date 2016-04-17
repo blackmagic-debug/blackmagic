@@ -18,15 +18,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <string.h>
+#include "general.h"
+#include "usbdfu.h"
+
 #include <libopencm3/cm3/systick.h>
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/cm3/scb.h>
-
-#include "usbdfu.h"
-
-extern void dfu_protect_enable(void);
 
 void dfu_detach(void)
 {
@@ -65,7 +63,7 @@ int main(void)
 	gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE,
 		GPIO9 | GPIO10 | GPIO11 | GPIO12);
 	gpio_set_af(GPIOA, GPIO_AF10, GPIO9 | GPIO10| GPIO11 | GPIO12);
-	dfu_init(&stm32f107_usb_driver, DFU_MODE);
+	dfu_init(&stm32f107_usb_driver);
 
 	dfu_main();
 }

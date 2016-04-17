@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2015  Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
- * Copyright (C) 2015 Benjamin Vernoux <bvernoux@gmail.com>
+ * Copyright (C) 2016 Benjamin Vernoux <bvernoux@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,18 +25,15 @@
 #ifndef __PLATFORM_H
 #define __PLATFORM_H
 
-#include "gdb_packet.h"
 #include "gpio.h"
-#include "morse.h"
 #include "timing.h"
+#include "version.h"
 
 #include <setjmp.h>
 
-#define INLINE_GPIO
-#define CDCACM_PACKET_SIZE 	64
 #define PLATFORM_HAS_TRACESWO
-#define BOARD_IDENT       "Black Magic Probe (HydraBus), (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")"
-#define BOARD_IDENT_DFU   "Black Magic (Upgrade) for HydraBus, (Firmware 1.5" VERSION_SUFFIX ", build " BUILDDATE ")"
+#define BOARD_IDENT       "Black Magic Probe (HydraBus), (Firmware " FIRMWARE_VERSION ")"
+#define BOARD_IDENT_DFU   "Black Magic (Upgrade) for HydraBus, (Firmware " FIRMWARE_VERSION ")"
 #define DFU_IDENT         "Black Magic Firmware Upgrade (HydraBus)"
 #define DFU_IFACE_STRING  "@Internal Flash   /0x08000000/1*016Ka,3*016Kg,1*064Kg,7*128Kg"
 
@@ -59,26 +56,25 @@
 
 /* Hardware definitions... */
 #define JTAG_PORT 	GPIOC
+#define TDI_PORT	JTAG_PORT
 #define TMS_PORT	JTAG_PORT
 #define TCK_PORT	JTAG_PORT
 #define TDO_PORT	JTAG_PORT
-#define TDI_PORT	JTAG_PORT
 
+#define TDI_PIN		GPIO3
 #define TMS_PIN		GPIO0
 #define TCK_PIN		GPIO1
 #define TDO_PIN		GPIO2
-#define TDI_PIN		GPIO3
 
 #define SWDIO_PORT 	JTAG_PORT
 #define SWCLK_PORT 	JTAG_PORT
 #define SWDIO_PIN	TMS_PIN
 #define SWCLK_PIN	TCK_PIN
 
-#define SRST_PORT	GPIOC
-#define SRST_PIN	GPIO4
-
 #define TRST_PORT	GPIOC
 #define TRST_PIN	GPIO5
+#define SRST_PORT	GPIOC
+#define SRST_PIN	GPIO4
 
 #define LED_PORT	GPIOA
 #define LED_PORT_UART	GPIOA
@@ -141,21 +137,16 @@
 
 #define DEBUG(...)
 
-extern jmp_buf fatal_error_jmpbuf;
+#define gpio_set_val(port, pin, val) do {	\
+	if(val)					\
+		gpio_set((port), (pin));	\
+	else					\
+		gpio_clear((port), (pin));	\
+} while(0)
 
 #define SET_RUN_STATE(state)	{running_status = (state);}
 #define SET_IDLE_STATE(state)	{gpio_set_val(LED_PORT, LED_IDLE_RUN, state);}
 #define SET_ERROR_STATE(state)	{gpio_set_val(LED_PORT, LED_ERROR, state);}
-
-#define PLATFORM_SET_FATAL_ERROR_RECOVERY()	{setjmp(fatal_error_jmpbuf);}
-#define PLATFORM_FATAL_ERROR(error)	{ 		\
-	if(running_status) gdb_putpacketz("X1D");	\
-		else gdb_putpacketz("EFF");		\
-	running_status = 0;				\
-	target_list_free();				\
-	morse("TARGET LOST.", 1);			\
-	longjmp(fatal_error_jmpbuf, (error));		\
-}
 
 static inline int platform_hwversion(void)
 {
@@ -166,6 +157,7 @@ static inline int platform_hwversion(void)
 #define sscanf siscanf
 #define sprintf siprintf
 #define vasprintf vasiprintf
+#define snprintf sniprintf
 
 #endif
 
