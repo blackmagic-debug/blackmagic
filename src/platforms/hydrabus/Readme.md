@@ -19,7 +19,8 @@ Connections
 How to Build
 ============
 ```
-cd blackmagic/src
+cd blackmagic
+make clean
 make PROBE_HOST=hydrabus
 ```
 
