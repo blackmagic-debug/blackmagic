@@ -117,7 +117,7 @@ static uint32_t adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 	bool APnDP = addr & ADIV5_APnDP;
 	addr &= 0xff;
 	uint8_t request = 0x81;
-	uint32_t response;
+	uint32_t response = 0;
 	uint8_t ack;
 
 	if(APnDP && dp->fault) return 0;
