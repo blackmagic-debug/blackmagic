@@ -37,7 +37,7 @@ static bool nrf51_cmd_read_hwid(target *t);
 static bool nrf51_cmd_read_fwid(target *t);
 static bool nrf51_cmd_read_deviceid(target *t);
 static bool nrf51_cmd_read_deviceaddr(target *t);
-static bool nrf51_cmd_read_help();
+static bool nrf51_cmd_read_help(void);
 static bool nrf51_cmd_read(target *t, int argc, const char *argv[]);
 
 const struct command_s nrf51_cmd_list[] = {
@@ -308,7 +308,7 @@ static bool nrf51_cmd_read_deviceaddr(target *t)
 
 	return true;
 }
-static bool nrf51_cmd_read_help()
+static bool nrf51_cmd_read_help(void)
 {
 	const struct command_s *c;
 
@@ -330,6 +330,6 @@ static bool nrf51_cmd_read(target *t, int argc, const char *argv[])
 			return !c->handler(t, argc - 1, &argv[1]);
 	}
 
-	return nrf51_cmd_read_help(t);
+	return nrf51_cmd_read_help();
 }
 

@@ -104,7 +104,7 @@ static const struct command_s stm32lx_cmd_list[] = {
           "Manipulate option bytes"},
         { "eeprom",		(cmd_handler) stm32lx_cmd_eeprom,
           "Manipulate EEPROM(NVM data) memory"},
-        { 0 },
+        { NULL, NULL, NULL },
 };
 
 enum {
