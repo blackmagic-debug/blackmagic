@@ -34,10 +34,14 @@
 /* ROM table CIDR values */
 #define CIDR_ROM_TABLE  0xb105100d
 #define CIDR_GENERIC_IP 0xb105e00d
+#define CIDR_DEBUG      0xb105900d
 
 #define PIDR_REV_MASK 0x0FFF00000ULL
 #define PIDR_ARMv7M   0x4000BB000ULL
 #define PIDR_ARMv7MF  0x4000BB00CULL
+#define PIDR_ARMv7A   0x4000BBC09ULL
+
+extern bool cortexa_probe(ADIv5_AP_t *apb, uint32_t debug_base);
 
 void adiv5_dp_ref(ADIv5_DP_t *dp)
 {
@@ -108,6 +112,13 @@ static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr)
 		case PIDR_ARMv7MF:
 		case PIDR_ARMv7M:
 			cortexm_probe(ap);
+			break;
+		}
+		break;
+	case CIDR_DEBUG:
+		switch (pidr & ~PIDR_REV_MASK) {
+		case PIDR_ARMv7A:
+			cortexa_probe(ap, addr);
 			break;
 		}
 		break;

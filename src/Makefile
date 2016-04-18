@@ -18,6 +18,7 @@ SRC =			\
 	adiv5_jtagdp.c	\
 	adiv5_swdp.c	\
 	command.c	\
+	cortexa.c	\
 	cortexm.c	\
 	crc32.c		\
 	efm32.c		\
