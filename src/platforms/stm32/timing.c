@@ -50,7 +50,7 @@ bool platform_timeout_is_expired(void)
 void platform_delay(uint32_t delay)
 {
 	platform_timeout_set(delay);
-	while (platform_timeout_is_expired());
+	while (!platform_timeout_is_expired());
 }
 
 void sys_tick_handler(void)
