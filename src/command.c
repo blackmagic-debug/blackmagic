@@ -68,6 +68,7 @@ const struct command_s cmd_list[] = {
 	{NULL, NULL, NULL}
 };
 
+static bool connect_assert_srst;
 
 int command_process(target *t, char *cmd)
 {
@@ -151,6 +152,9 @@ static bool cmd_jtag_scan(target *t, int argc, char **argv)
 		irlens[argc-1] = 0;
 	}
 
+	if(connect_assert_srst)
+		platform_srst_set_val(true); /* will be deasserted after attach */
+
 	int devs = -1;
 	volatile struct exception e;
 	TRY_CATCH (e, EXCEPTION_ALL) {
@@ -165,12 +169,9 @@ static bool cmd_jtag_scan(target *t, int argc, char **argv)
 		break;
 	}
 
-	if(devs < 0) {
+	if(devs <= 0) {
+		platform_srst_set_val(false);
 		gdb_out("JTAG device scan failed!\n");
-		return false;
-	}
-	if(devs == 0) {
-		gdb_out("JTAG scan found no devices!\n");
 		return false;
 	}
 	gdb_outf("Device  IR Len  IDCODE      Description\n");
@@ -187,6 +188,9 @@ bool cmd_swdp_scan(void)
 {
 	gdb_outf("Target voltage: %s\n", platform_target_voltage());
 
+	if(connect_assert_srst)
+		platform_srst_set_val(true); /* will be deasserted after attach */
+
 	int devs = -1;
 	volatile struct exception e;
 	TRY_CATCH (e, EXCEPTION_ALL) {
@@ -201,7 +205,8 @@ bool cmd_swdp_scan(void)
 		break;
 	}
 
-	if(devs < 0) {
+	if(devs <= 0) {
+		platform_srst_set_val(false);
 		gdb_out("SW-DP scan failed!\n");
 		return false;
 	}

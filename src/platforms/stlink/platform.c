@@ -118,6 +118,13 @@ void platform_srst_set_val(bool assert)
 		gpio_set(SRST_PORT, pin);
 }
 
+bool platform_srst_get_val()
+{
+	uint16_t pin;
+	pin = platform_hwversion() == 0 ? SRST_PIN_V1 : SRST_PIN_V2;
+	return gpio_get(SRST_PORT, pin) == 0;
+}
+
 const char *platform_target_voltage(void)
 {
 	return "unknown";

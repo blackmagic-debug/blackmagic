@@ -27,8 +27,6 @@
  */
 #include "general.h"
 #include "exception.h"
-#include "jtagtap.h"
-#include "jtag_scan.h"
 #include "adiv5.h"
 #include "target.h"
 #include "command.h"
@@ -273,7 +271,7 @@ bool cortexm_attach(target *t)
 
 	target_halt_request(t);
 	tries = 10;
-	while(!connect_assert_srst && !target_halt_wait(t) && --tries)
+	while(!platform_srst_get_val() && !target_halt_wait(t) && --tries)
 		platform_delay(2);
 	if(!tries)
 		return false;
@@ -318,8 +316,7 @@ bool cortexm_attach(target *t)
 	t->clear_hw_wp = cortexm_clear_hw_wp;
 	t->check_hw_wp = cortexm_check_hw_wp;
 
-	if(connect_assert_srst)
-		jtagtap_srst(false);
+	platform_srst_set_val(false);
 
 	return true;
 }
@@ -426,8 +423,8 @@ static void cortexm_pc_write(target *t, const uint32_t val)
 static void cortexm_reset(target *t)
 {
 	if ((t->target_options & CORTEXM_TOPT_INHIBIT_SRST) == 0) {
-		jtagtap_srst(true);
-		jtagtap_srst(false);
+		platform_srst_set_val(true);
+		platform_srst_set_val(false);
 	}
 
 	/* Read DHCSR here to clear S_RESET_ST bit before reset */

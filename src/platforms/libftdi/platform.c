@@ -229,6 +229,14 @@ void platform_init(int argc, char **argv)
 	assert(gdb_if_init() == 0);
 }
 
+void platform_srst_set_val(bool assert)
+{
+	(void)assert;
+	platform_buffer_flush();
+}
+
+bool platform_srst_get_val(void) { return false; }
+
 void platform_buffer_flush(void)
 {
 	assert(ftdi_write_data(ftdic, outbuf, bufptr) == bufptr);

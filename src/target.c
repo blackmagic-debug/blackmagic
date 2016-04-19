@@ -22,7 +22,6 @@
 #include "target.h"
 
 target *target_list = NULL;
-bool connect_assert_srst;
 
 target *target_new(unsigned size)
 {

@@ -67,15 +67,6 @@ void jtagtap_reset(void)
 	jtagtap_soft_reset();
 }
 
-void jtagtap_srst(bool assert)
-{
-	(void)assert;
-	platform_buffer_flush();
-	//ftdi_write_data(ftdic, "\x80\x88\xAB", 3);
-	//usleep(1000);
-	//ftdi_write_data(ftdic, "\x80\xA8\xAB", 3);
-}
-
 #ifndef PROVIDE_GENERIC_TAP_TMS_SEQ
 void
 jtagtap_tms_seq(uint32_t MS, int ticks)

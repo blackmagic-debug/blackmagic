@@ -80,6 +80,7 @@
 #define PWR_BR_PIN	GPIO1
 #define SRST_PORT	GPIOA
 #define SRST_PIN	GPIO2
+#define SRST_SENSE_PIN	GPIO7
 
 #define USB_PU_PORT	GPIOA
 #define USB_PU_PIN	GPIO8
@@ -110,9 +111,6 @@
 #define UART_PIN_SETUP() \
 	gpio_set_mode(USBUSART_PORT, GPIO_MODE_OUTPUT_2_MHZ, \
 	              GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, USBUSART_TX_PIN);
-
-#define SRST_SET_VAL(x) \
-	platform_srst_set_val(x)
 
 #define USB_DRIVER stm32f103_usb_driver
 #define USB_IRQ    NVIC_USB_LP_CAN_RX0_IRQ
