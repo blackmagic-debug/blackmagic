@@ -440,6 +440,8 @@ static void cortexa_reset(target *t)
 		}
 	} while (e.type == EXCEPTION_ERROR);
 
+	platform_delay(100);
+
 	cortexa_attach(t);
 }
 
