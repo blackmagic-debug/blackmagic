@@ -98,9 +98,6 @@
 	gpio_set_mode(USBUSART_PORT, GPIO_MODE_OUTPUT_2_MHZ, \
 	              GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, USBUSART_TX_PIN);
 
-#define SRST_SET_VAL(x) \
-	platform_srst_set_val(x)
-
 #define USB_DRIVER      stm32f103_usb_driver
 #define USB_IRQ	        NVIC_USB_LP_CAN_RX0_IRQ
 #define USB_ISR	        usb_lp_can_rx0_isr

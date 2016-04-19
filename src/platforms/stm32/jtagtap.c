@@ -50,19 +50,6 @@ void jtagtap_reset(void)
 	jtagtap_soft_reset();
 }
 
-void jtagtap_srst(bool assert)
-{
-	(void)assert;
-#ifdef SRST_SET_VAL
-	SRST_SET_VAL(assert);
-	if(assert) {
-		int i;
-		for(i = 0; i < 10000; i++)
-			asm volatile("nop");
-	}
-#endif
-}
-
 inline uint8_t jtagtap_next(uint8_t dTMS, uint8_t dTDO)
 {
 	uint16_t ret;

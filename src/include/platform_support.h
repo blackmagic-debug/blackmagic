@@ -36,6 +36,7 @@ void platform_timeout_set(uint32_t ms);
 bool platform_timeout_is_expired(void);
 void platform_delay(uint32_t delay);
 void platform_srst_set_val(bool assert);
+bool platform_srst_get_val(void);
 bool platform_target_get_power(void);
 void platform_target_set_power(bool power);
 void platform_request_boot(void);

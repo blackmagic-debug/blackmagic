@@ -105,8 +105,6 @@ int jtag_scan(const uint8_t *irlens)
 	 */
 	DEBUG("Resetting TAP\n");
 	jtagtap_init();
-	if(connect_assert_srst)
-		jtagtap_srst(true); /* will be deasserted after attach */
 	jtagtap_reset();
 
 	if (irlens) {

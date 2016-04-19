@@ -27,8 +27,6 @@ int jtagtap_init(void);
 
 void jtagtap_reset(void);
 
-void jtagtap_srst(bool assert);
-
 uint8_t jtagtap_next(const uint8_t TMS, const uint8_t TDI);
 /* tap_next executes one state transision in the JTAG TAP state machine:
  * - Ensure TCK is low

@@ -206,7 +206,6 @@ struct target_command_s {
 };
 
 extern target *target_list;
-extern bool connect_assert_srst;
 
 target *target_new(unsigned size);
 void target_list_free(void);

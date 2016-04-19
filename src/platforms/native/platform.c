@@ -164,6 +164,18 @@ void platform_srst_set_val(bool assert)
 	} else {
 		gpio_set_val(SRST_PORT, SRST_PIN, !assert);
 	}
+	if (assert) {
+		for(int i = 0; i < 10000; i++) asm("nop");
+	}
+}
+
+bool platform_srst_get_val(void)
+{
+	if (platform_hwversion() == 0) {
+		return gpio_get(SRST_PORT, SRST_SENSE_PIN) == 0;
+	} else {
+		return gpio_get(SRST_PORT, SRST_PIN) == 0;
+	}
 }
 
 bool platform_target_get_power(void)
