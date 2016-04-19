@@ -54,6 +54,8 @@ static void cortexa_halt_resume(target *t, bool step);
 
 static void cortexa_regs_read(target *t, void *data);
 static void cortexa_regs_write(target *t, const void *data);
+static void cortexa_regs_read_internal(target *t);
+static void cortexa_regs_write_internal(target *t);
 
 static void cortexa_reset(target *t);
 static int cortexa_halt_wait(target *t);
@@ -331,12 +333,20 @@ void cortexa_detach(target *t)
 	struct cortexa_priv *priv = t->priv;
 
 	/* Clear any stale breakpoints */
-	for(unsigned i = 0; i < priv->hw_breakpoint_max; i++)
+	for(unsigned i = 0; i < priv->hw_breakpoint_max; i++) {
+		priv->hw_breakpoint[i] = 0;
 		apb_write(t, DBGBCR(i), 0);
+	}
 
-	/* Disable halting debug mode */
+	/* Restore any clobbered registers */
+	cortexa_regs_write_internal(t);
+
 	uint32_t dbgdscr = apb_read(t, DBGDSCR);
-	apb_write(t, DBGDSCR, dbgdscr & ~DBGDSCR_HDBGEN);
+	/* Disable halting debug mode */
+	dbgdscr &= ~(DBGDSCR_HDBGEN | DBGDSCR_ITREN);
+	apb_write(t, DBGDSCR, dbgdscr);
+	/* Clear sticky error and resume */
+	apb_write(t, DBGDRCR, DBGDRCR_CSE | DBGDRCR_RRQ);
 }
 
 
@@ -369,8 +379,53 @@ static void cortexa_regs_read(target *t, void *data)
 static void cortexa_regs_write(target *t, const void *data)
 {
 	struct cortexa_priv *priv = (struct cortexa_priv *)t->priv;
-	/* Save in our register cache, in case we get asked again */
 	memcpy(&priv->reg_cache, data, t->regs_size);
+}
+
+static void cortexa_regs_read_internal(target *t)
+{
+	struct cortexa_priv *priv = (struct cortexa_priv *)t->priv;
+	/* Read general purpose registers */
+	for (int i = 0; i < 16; i++) {
+		priv->reg_cache.r[i] = read_gpreg(t, i);
+	}
+	/* Read CPSR */
+	apb_write(t, DBGITR, 0xE10F0000); /* mrs r0, CPSR */
+	priv->reg_cache.cpsr = read_gpreg(t, 0);
+	/* Read FPSCR */
+	apb_write(t, DBGITR, 0xeef10a10); /* vmrs r0, fpscr */
+	priv->reg_cache.fpscr = read_gpreg(t, 0);
+	/* Read out VFP registers */
+	for (int i = 0; i < 16; i++) {
+		/* Read D[i] to R0/R1 */
+		apb_write(t, DBGITR, 0xEC510B10 | i); /* vmov r0, r1, d0 */
+		priv->reg_cache.d[i] = ((uint64_t)read_gpreg(t, 1) << 32) | read_gpreg(t, 0);
+	}
+	priv->reg_cache.r[15] -= (priv->reg_cache.cpsr & CPSR_THUMB) ? 4 : 8;
+}
+
+static void cortexa_regs_write_internal(target *t)
+{
+	struct cortexa_priv *priv = (struct cortexa_priv *)t->priv;
+	/* First write back floats */
+	for (int i = 0; i < 16; i++) {
+		write_gpreg(t, 1, priv->reg_cache.d[i] >> 32);
+		write_gpreg(t, 0, priv->reg_cache.d[i]);
+		apb_write(t, DBGITR, 0xec410b10 | i); /* vmov d[i], r0, r1 */
+	}
+	/* Write back FPSCR */
+	write_gpreg(t, 0, priv->reg_cache.fpscr);
+	apb_write(t, DBGITR, 0xeee10a10); /* vmsr fpscr, r0 */
+	/* Write back the CPSR */
+	write_gpreg(t, 0, priv->reg_cache.cpsr);
+	apb_write(t, DBGITR, 0xe12ff000); /* msr CPSR_fsxc, r0 */
+	/* Finally the GP registers now that we're done using them */
+	for (int i = 0; i < 15; i++) {
+		write_gpreg(t, i, priv->reg_cache.r[i]);
+	}
+	/* Write back PC with offset */
+	write_gpreg(t, 15, priv->reg_cache.r[15] +
+	                   (priv->reg_cache.cpsr & CPSR_THUMB) ? 4 : 8);
 }
 
 static void cortexa_reset(target *t)
@@ -408,7 +463,6 @@ static void cortexa_halt_request(target *t)
 
 static int cortexa_halt_wait(target *t)
 {
-	struct cortexa_priv *priv = (struct cortexa_priv *)t->priv;
 	volatile uint32_t dbgdscr = 0;
 	volatile struct exception e;
 	TRY_CATCH (e, EXCEPTION_ALL) {
@@ -445,24 +499,7 @@ static int cortexa_halt_wait(target *t)
 		sig = SIGTRAP;
 	}
 
-	/* Read registers to internal cache */
-	memset(&priv->reg_cache, 0, t->regs_size);
-	for (int i = 0; i < 16; i++) {
-		priv->reg_cache.r[i] = read_gpreg(t, i);
-	}
-	/* Read CPSR */
-	apb_write(t, DBGITR, 0xE10F0000); /* mrs r0, CPSR */
-	priv->reg_cache.cpsr = read_gpreg(t, 0);
-	/* Read FPSCR */
-	apb_write(t, DBGITR, 0xeef10a10); /* vmrs r0, fpscr */
-	priv->reg_cache.fpscr = read_gpreg(t, 0);
-	/* Read out VFP registers */
-	for (int i = 0; i < 16; i++) {
-		/* Read D[i] to R0/R1 */
-		apb_write(t, DBGITR, 0xEC510B10 | i); /* vmov r0, r1, d0 */
-		priv->reg_cache.d[i] = ((uint64_t)read_gpreg(t, 1) << 32) | read_gpreg(t, 0);
-	}
-	priv->reg_cache.r[15] -= (priv->reg_cache.cpsr & CPSR_THUMB) ? 4 : 8;
+	cortexa_regs_read_internal(t);
 
 	return sig;
 }
@@ -485,25 +522,7 @@ void cortexa_halt_resume(target *t, bool step)
 	}
 
 	/* Write back register cache */
-	/* First write back floats */
-	for (int i = 0; i < 16; i++) {
-		write_gpreg(t, 1, priv->reg_cache.d[i] >> 32);
-		write_gpreg(t, 0, priv->reg_cache.d[i]);
-		apb_write(t, DBGITR, 0xec410b10 | i); /* vmov d[i], r0, r1 */
-	}
-	/* Write back FPSCR */
-	write_gpreg(t, 0, priv->reg_cache.fpscr);
-	apb_write(t, DBGITR, 0xeee10a10); /* vmsr fpscr, r0 */
-	/* Write back the CPSR */
-	write_gpreg(t, 0, priv->reg_cache.cpsr);
-	apb_write(t, DBGITR, 0xe12ff000); /* msr CPSR_fsxc, r0 */
-	/* Finally the GP registers now that we're done using them */
-	for (int i = 0; i < 15; i++) {
-		write_gpreg(t, i, priv->reg_cache.r[i]);
-	}
-	/* Write back PC with offset */
-	write_gpreg(t, 15, priv->reg_cache.r[15] +
-	                   (priv->reg_cache.cpsr & CPSR_THUMB) ? 4 : 8);
+	cortexa_regs_write_internal(t);
 
 	apb_write(t, DBGITR, MCR | ICIALLU); /* invalidate cache */
 
