@@ -191,10 +191,8 @@ static void apb_write(target *t, uint16_t reg, uint32_t val)
 	struct cortexa_priv *priv = t->priv;
 	ADIv5_AP_t *ap = priv->apb;
 	uint32_t addr = priv->base + 4*reg;
-	uint32_t csw = ap->csw | ADIV5_AP_CSW_ADDRINC_SINGLE | ADIV5_AP_CSW_SIZE_WORD;
-	adiv5_ap_write(ap, ADIV5_AP_CSW, csw);
 	adiv5_ap_write(ap, ADIV5_AP_TAR, addr);
-	adiv5_ap_write(ap, ADIV5_AP_DRW, val);
+	adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DRW, val);
 }
 
 static uint32_t apb_read(target *t, uint16_t reg)
@@ -202,10 +200,9 @@ static uint32_t apb_read(target *t, uint16_t reg)
 	struct cortexa_priv *priv = t->priv;
 	ADIv5_AP_t *ap = priv->apb;
 	uint32_t addr = priv->base + 4*reg;
-	uint32_t csw = ap->csw | ADIV5_AP_CSW_ADDRINC_SINGLE | ADIV5_AP_CSW_SIZE_WORD;
-	adiv5_ap_write(ap, ADIV5_AP_CSW, csw);
 	adiv5_ap_write(ap, ADIV5_AP_TAR, addr);
-	return adiv5_ap_read(ap, ADIV5_AP_DRW);
+	adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_AP_DRW, 0);
+	return adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_DP_RDBUFF, 0);
 }
 
 static void cortexa_mem_read(target *t, void *dest, uint32_t src, size_t len)
@@ -224,18 +221,11 @@ static void cortexa_mem_read(target *t, void *dest, uint32_t src, size_t len)
 static void cortexa_mem_write(target *t, uint32_t dest, const void *src, size_t len)
 {
 	/* Clean and invalidate cache before writing */
-#if 0
-	/* I've taken this out for now because it makes loading painfully
-	 * slow.
-	 * FIXME This can cause data integrity problems if modifying the target
-	 * state from the debugger!
-	 */
 	for (uint32_t cl = dest & ~(CACHE_LINE_LENGTH-1);
 	     cl < dest + len; cl += CACHE_LINE_LENGTH) {
 		write_gpreg(t, 0, cl);
 		apb_write(t, DBGITR, MCR | DCCIMVAC);
 	}
-#endif
 	ADIv5_AP_t *ahb = ((struct cortexa_priv*)t->priv)->ahb;
 	adiv5_mem_write(ahb, dest, src, len);
 }
@@ -265,6 +255,9 @@ bool cortexa_probe(ADIv5_AP_t *apb, uint32_t debug_base)
 	priv->ahb = adiv5_new_ap(apb->dp, 0);
 	adiv5_ap_ref(priv->ahb);
 	priv->base = debug_base;
+	/* Set up APB CSW, we won't touch this again */
+	uint32_t csw = apb->csw | ADIV5_AP_CSW_SIZE_WORD;
+	adiv5_ap_write(apb, ADIV5_AP_CSW, csw);
 	uint32_t dbgdidr = apb_read(t, DBGDIDR);
 	priv->hw_breakpoint_max = ((dbgdidr >> 24) & 15)+1;
 	DEBUG("Target has %d breakpoints\n", priv->hw_breakpoint_max);
