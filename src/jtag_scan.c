@@ -29,7 +29,6 @@
 #include "jtag_scan.h"
 #include "gdb_packet.h"
 #include "adiv5.h"
-#include "arm7tdmi.h"
 
 struct jtag_dev_s jtag_devs[JTAG_MAX_DEVS+1];
 int jtag_dev_count;
