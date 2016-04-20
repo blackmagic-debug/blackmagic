@@ -41,6 +41,7 @@ static uint32_t adiv5_swdp_error(ADIv5_DP_t *dp);
 static uint32_t adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 				      uint16_t addr, uint32_t value);
 
+static void adiv5_swdp_abort(ADIv5_DP_t *dp, uint32_t abort);
 
 int adiv5_swdp_scan(void)
 {
@@ -65,6 +66,7 @@ int adiv5_swdp_scan(void)
 	dp->dp_read = adiv5_swdp_read;
 	dp->error = adiv5_swdp_error;
 	dp->low_access = adiv5_swdp_low_access;
+	dp->abort = adiv5_swdp_abort;
 
 	adiv5_swdp_error(dp);
 	adiv5_dp_init(dp);
@@ -156,5 +158,10 @@ static uint32_t adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 	swdptap_seq_out(0, 8);
 
 	return response;
+}
+
+static void adiv5_swdp_abort(ADIv5_DP_t *dp, uint32_t abort)
+{
+	adiv5_dp_write(dp, ADIV5_DP_ABORT, abort);
 }
 

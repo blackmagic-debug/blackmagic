@@ -110,6 +110,7 @@ typedef struct ADIv5_DP_s {
 	uint32_t (*error)(struct ADIv5_DP_s *dp);
 	uint32_t (*low_access)(struct ADIv5_DP_s *dp, uint8_t RnW,
                                uint16_t addr, uint32_t value);
+	void (*abort)(struct ADIv5_DP_s *dp, uint32_t abort);
 
 	union {
 		jtag_dev_t *dev;
@@ -131,6 +132,11 @@ static inline uint32_t adiv5_dp_low_access(struct ADIv5_DP_s *dp, uint8_t RnW,
                                            uint16_t addr, uint32_t value)
 {
 	return dp->low_access(dp, RnW, addr, value);
+}
+
+static inline void adiv5_dp_abort(struct ADIv5_DP_s *dp, uint32_t abort)
+{
+	return dp->abort(dp, abort);
 }
 
 typedef struct ADIv5_AP_s {
