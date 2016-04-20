@@ -26,6 +26,7 @@
 #include "gdb_packet.h"
 #include "adiv5.h"
 #include "cortexm.h"
+#include "exception.h"
 
 #ifndef DO_RESET_SEQ
 #define DO_RESET_SEQ 0
@@ -157,6 +158,11 @@ ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel)
 	ap->csw = adiv5_ap_read(ap, ADIV5_AP_CSW) &
 		~(ADIV5_AP_CSW_SIZE_MASK | ADIV5_AP_CSW_ADDRINC_MASK);
 
+	if (ap->csw & ADIV5_AP_CSW_TRINPROG) {
+		gdb_out("AP transaction in progress.  Target may not be usable.\n");
+		ap->csw &= ~ADIV5_AP_CSW_TRINPROG;
+	}
+
 	DEBUG("%3d: IDR=%08X CFG=%08X BASE=%08X CSW=%08X\n",
 	      apsel, ap->idr, ap->cfg, ap->base, ap->csw);
 
@@ -166,11 +172,19 @@ ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel)
 
 void adiv5_dp_init(ADIv5_DP_t *dp)
 {
-	uint32_t ctrlstat;
+	uint32_t ctrlstat = 0;
 
 	adiv5_dp_ref(dp);
 
-	ctrlstat = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT);
+	volatile struct exception e;
+	TRY_CATCH (e, EXCEPTION_TIMEOUT) {
+		ctrlstat = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT);
+	}
+	if (e.type) {
+		gdb_out("DP not responding!  Trying abort sequence...\n");
+		adiv5_dp_abort(dp, ADIV5_DP_ABORT_DAPABORT);
+		ctrlstat = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT);
+	}
 
 	/* Write request for system and debug power up */
 	adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT,
