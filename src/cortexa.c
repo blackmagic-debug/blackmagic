@@ -100,6 +100,7 @@ struct cortexa_priv {
 #define DBGDSCR_EXTDCCMODE_MASK  (3 << 20)
 #define DBGDSCR_HDBGEN           (1 << 14)
 #define DBGDSCR_ITREN            (1 << 13)
+#define DBGDSCR_INTDIS           (1 << 11)
 #define DBGDSCR_UND_I            (1 << 8)
 #define DBGDSCR_MOE_MASK         (0xf << 2)
 #define DBGDSCR_MOE_HALT_REQ     (0x0 << 2)
@@ -523,6 +524,10 @@ void cortexa_halt_resume(target *t, bool step)
 
 	/* Disable DBGITR.  Not sure why, but RRQ is ignored otherwise. */
 	uint32_t dbgdscr = apb_read(t, DBGDSCR);
+	if (step)
+		dbgdscr |= DBGDSCR_INTDIS;
+	else
+		dbgdscr &= ~DBGDSCR_INTDIS;
 	dbgdscr &= ~DBGDSCR_ITREN;
 	apb_write(t, DBGDSCR, dbgdscr);
 
