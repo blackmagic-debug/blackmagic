@@ -433,6 +433,10 @@ static void cortexa_reset(target *t)
 	target_mem_write32(t, ZYNQ_SLCR_UNLOCK, ZYNQ_SLCR_UNLOCK_KEY);
 	target_mem_write32(t, ZYNQ_SLCR_PSS_RST_CTRL, 1);
 
+	/* Try hard reset too */
+	platform_srst_set_val(true);
+	platform_srst_set_val(false);
+
 	/* Spin until Xilinx reconnects us */
 	volatile struct exception e;
 	do {
