@@ -412,13 +412,13 @@ static void cortexa_regs_write_internal(target *t)
 	/* Write back the CPSR */
 	write_gpreg(t, 0, priv->reg_cache.cpsr);
 	apb_write(t, DBGITR, 0xe12ff000); /* msr CPSR_fsxc, r0 */
+	/* Write back PC, via r0.  MRC clobbers CPSR instead */
+	write_gpreg(t, 0, priv->reg_cache.r[15]);
+	apb_write(t, DBGITR, 0xe1a0f000); /* mov pc, r0 */
 	/* Finally the GP registers now that we're done using them */
 	for (int i = 0; i < 15; i++) {
 		write_gpreg(t, i, priv->reg_cache.r[i]);
 	}
-	/* Write back PC with offset */
-	write_gpreg(t, 15, priv->reg_cache.r[15] +
-	                   (priv->reg_cache.cpsr & CPSR_THUMB) ? 4 : 8);
 }
 
 static void cortexa_reset(target *t)
