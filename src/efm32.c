@@ -252,7 +252,7 @@ char variant_string[40];
 bool efm32_probe(target *t)
 {
 	/* Read the IDCODE register from the SW-DP */
-	ADIv5_AP_t *ap = adiv5_target_ap(t);
+	ADIv5_AP_t *ap = cortexm_ap(t);
 	uint32_t ap_idcode = ap->dp->idcode;
 
 	/* Check the idcode is silabs. See AN0062 Section 2.2 */

@@ -76,11 +76,11 @@ target *target_attach(target *t, target_destroy_callback destroy_cb);
 	(target)->halt_resume((target), (step))
 
 /* Break-/watchpoint functions */
-#define target_set_hw_bp(target, addr)	\
-	(target)->set_hw_bp((target), (addr))
+#define target_set_hw_bp(target, addr, len)	\
+	(target)->set_hw_bp((target), (addr), (len))
 
-#define target_clear_hw_bp(target, addr)	\
-	(target)->clear_hw_bp((target), (addr))
+#define target_clear_hw_bp(target, addr, len)	\
+	(target)->clear_hw_bp((target), (addr), (len))
 
 
 #define target_set_hw_wp(target, type, addr, len)	\
@@ -169,8 +169,8 @@ struct target_s {
 	void (*halt_resume)(target *t, bool step);
 
 	/* Break-/watchpoint functions */
-	int (*set_hw_bp)(target *t, uint32_t addr);
-	int (*clear_hw_bp)(target *t, uint32_t addr);
+	int (*set_hw_bp)(target *t, uint32_t addr, uint8_t len);
+	int (*clear_hw_bp)(target *t, uint32_t addr, uint8_t len);
 
 	int (*set_hw_wp)(target *t, uint8_t type, uint32_t addr, uint8_t len);
 	int (*clear_hw_wp)(target *t, uint8_t type, uint32_t addr, uint8_t len);
@@ -257,7 +257,6 @@ static inline void target_mem_write8(target *t, uint32_t addr, uint8_t value)
 /* Probe for various targets.
  * Actual functions implemented in their respective drivers.
  */
-bool cortexm_probe(target *t);
 bool stm32f1_probe(target *t);
 bool stm32f4_probe(target *t);
 bool stm32l0_probe(target *t);

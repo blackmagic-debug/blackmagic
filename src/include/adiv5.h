@@ -22,7 +22,6 @@
 #define __ADIV5_H
 
 #include "jtag_scan.h"
-#include "target.h"
 
 #define ADIV5_APnDP       0x100
 #define ADIV5_DP_REG(x)   (x)
@@ -111,6 +110,7 @@ typedef struct ADIv5_DP_s {
 	uint32_t (*error)(struct ADIv5_DP_s *dp);
 	uint32_t (*low_access)(struct ADIv5_DP_s *dp, uint8_t RnW,
                                uint16_t addr, uint32_t value);
+	void (*abort)(struct ADIv5_DP_s *dp, uint32_t abort);
 
 	union {
 		jtag_dev_t *dev;
@@ -134,6 +134,11 @@ static inline uint32_t adiv5_dp_low_access(struct ADIv5_DP_s *dp, uint8_t RnW,
 	return dp->low_access(dp, RnW, addr, value);
 }
 
+static inline void adiv5_dp_abort(struct ADIv5_DP_s *dp, uint32_t abort)
+{
+	return dp->abort(dp, abort);
+}
+
 typedef struct ADIv5_AP_s {
 	int refcnt;
 
@@ -144,14 +149,12 @@ typedef struct ADIv5_AP_s {
 	uint32_t cfg;
 	uint32_t base;
 	uint32_t csw;
-
-	void *priv;
-	void (*priv_free)(void *);
 } ADIv5_AP_t;
 
 void adiv5_dp_init(ADIv5_DP_t *dp);
 void adiv5_dp_write(ADIv5_DP_t *dp, uint16_t addr, uint32_t value);
 
+ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel);
 void adiv5_dp_ref(ADIv5_DP_t *dp);
 void adiv5_ap_ref(ADIv5_AP_t *ap);
 void adiv5_dp_unref(ADIv5_DP_t *dp);
@@ -163,10 +166,8 @@ uint32_t adiv5_ap_read(ADIv5_AP_t *ap, uint16_t addr);
 void adiv5_jtag_dp_handler(jtag_dev_t *dev);
 int adiv5_swdp_scan(void);
 
-static inline ADIv5_AP_t *adiv5_target_ap(target *target)
-{
-	return target->priv;
-}
+void adiv5_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len);
+void adiv5_mem_write(ADIv5_AP_t *ap, uint32_t dest, const void *src, size_t len);
 
 #endif
 

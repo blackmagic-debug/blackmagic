@@ -20,6 +20,7 @@
 #define __CORTEXM_H
 
 #include "target.h"
+#include "adiv5.h"
 
 /* Private peripheral bus base address */
 #define CORTEXM_PPB_BASE	0xE0000000
@@ -154,6 +155,9 @@
 #define ARM_THUMB_BREAKPOINT 0xBE00
 
 #define	CORTEXM_TOPT_INHIBIT_SRST (1 << 2)
+
+bool cortexm_probe(ADIv5_AP_t *ap);
+ADIv5_AP_t *cortexm_ap(target *t);
 
 bool cortexm_attach(target *t);
 void cortexm_detach(target *t);

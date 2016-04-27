@@ -44,6 +44,7 @@ static uint32_t adiv5_jtagdp_error(ADIv5_DP_t *dp);
 static uint32_t adiv5_jtagdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 					uint16_t addr, uint32_t value);
 
+static void adiv5_jtagdp_abort(ADIv5_DP_t *dp, uint32_t abort);
 
 void adiv5_jtag_dp_handler(jtag_dev_t *dev)
 {
@@ -55,6 +56,7 @@ void adiv5_jtag_dp_handler(jtag_dev_t *dev)
 	dp->dp_read = adiv5_jtagdp_read;
 	dp->error = adiv5_jtagdp_error;
 	dp->low_access = adiv5_jtagdp_low_access;
+	dp->abort = adiv5_jtagdp_abort;
 
 	adiv5_dp_init(dp);
 }
@@ -98,5 +100,12 @@ static uint32_t adiv5_jtagdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 		raise_exception(EXCEPTION_ERROR, "JTAG-DP invalid ACK");
 
 	return (uint32_t)(response >> 3);
+}
+
+static void adiv5_jtagdp_abort(ADIv5_DP_t *dp, uint32_t abort)
+{
+	uint64_t request = (uint64_t)abort << 3;
+	jtag_dev_write_ir(dp->dev, IR_ABORT);
+	jtag_dev_shift_dr(dp->dev, NULL, (const uint8_t*)&request, 35);
 }
 

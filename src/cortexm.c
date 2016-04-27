@@ -67,8 +67,8 @@ static int cortexm_halt_wait(target *t);
 static void cortexm_halt_request(target *t);
 static int cortexm_fault_unwind(target *t);
 
-static int cortexm_set_hw_bp(target *t, uint32_t addr);
-static int cortexm_clear_hw_bp(target *t, uint32_t addr);
+static int cortexm_set_hw_bp(target *t, uint32_t addr, uint8_t len);
+static int cortexm_clear_hw_bp(target *t, uint32_t addr, uint8_t len);
 
 static int cortexm_set_hw_wp(target *t, uint8_t type, uint32_t addr, uint8_t len);
 static int cortexm_clear_hw_wp(target *t, uint8_t type, uint32_t addr, uint8_t len);
@@ -82,6 +82,7 @@ static int cortexm_hostio_request(target *t);
 static void cortexm_hostio_reply(target *t, int32_t retcode, uint32_t errcode);
 
 struct cortexm_priv {
+	ADIv5_AP_t *ap;
 	bool stepping;
 	bool on_bkpt;
 	/* Watchpoint unit status */
@@ -197,8 +198,48 @@ static const char tdesc_cortex_mf[] =
 	"  </feature>"
 	"</target>";
 
-bool cortexm_probe(target *t)
+ADIv5_AP_t *cortexm_ap(target *t)
 {
+	return ((struct cortexm_priv *)t->priv)->ap;
+}
+
+static void cortexm_mem_read(target *t, void *dest, uint32_t src, size_t len)
+{
+	adiv5_mem_read(cortexm_ap(t), dest, src, len);
+}
+
+static void cortexm_mem_write(target *t, uint32_t dest, const void *src, size_t len)
+{
+	adiv5_mem_write(cortexm_ap(t), dest, src, len);
+}
+
+static bool cortexm_check_error(target *t)
+{
+	ADIv5_AP_t *ap = cortexm_ap(t);
+	return adiv5_dp_error(ap->dp) != 0;
+}
+
+static void cortexm_priv_free(void *priv)
+{
+	adiv5_ap_unref(((struct cortexm_priv *)priv)->ap);
+	free(priv);
+}
+
+bool cortexm_probe(ADIv5_AP_t *ap)
+{
+	target *t;
+
+	t = target_new(sizeof(*t));
+	adiv5_ap_ref(ap);
+	struct cortexm_priv *priv = calloc(1, sizeof(*priv));
+	t->priv = priv;
+	t->priv_free = cortexm_priv_free;
+	priv->ap = ap;
+
+	t->check_error = cortexm_check_error;
+	t->mem_read = cortexm_mem_read;
+	t->mem_write = cortexm_mem_write;
+
 	t->driver = cortexm_driver_str;
 
 	t->attach = cortexm_attach;
@@ -229,11 +270,6 @@ bool cortexm_probe(target *t)
 		t->tdesc = tdesc_cortex_mf;
 	}
 
-	ADIv5_AP_t *ap = adiv5_target_ap(t);
-	struct cortexm_priv *priv = calloc(1, sizeof(*priv));
-	ap->priv = priv;
-	ap->priv_free = free;
-
 	/* Default vectors to catch */
 	priv->demcr = CORTEXM_DEMCR_TRCENA | CORTEXM_DEMCR_VC_HARDERR |
 			CORTEXM_DEMCR_VC_CORERESET;
@@ -260,8 +296,7 @@ bool cortexm_probe(target *t)
 
 bool cortexm_attach(target *t)
 {
-	ADIv5_AP_t *ap = adiv5_target_ap(t);
-	struct cortexm_priv *priv = ap->priv;
+	struct cortexm_priv *priv = t->priv;
 	unsigned i;
 	uint32_t r;
 	int tries;
@@ -323,8 +358,7 @@ bool cortexm_attach(target *t)
 
 void cortexm_detach(target *t)
 {
-	ADIv5_AP_t *ap = adiv5_target_ap(t);
-	struct cortexm_priv *priv = ap->priv;
+	struct cortexm_priv *priv = t->priv;
 	unsigned i;
 
 	/* Clear any stale breakpoints */
@@ -343,7 +377,7 @@ enum { DB_DHCSR, DB_DCRSR, DB_DCRDR, DB_DEMCR };
 
 static void cortexm_regs_read(target *t, void *data)
 {
-	ADIv5_AP_t *ap = adiv5_target_ap(t);
+	ADIv5_AP_t *ap = cortexm_ap(t);
 	uint32_t *regs = data;
 	unsigned i;
 
@@ -374,7 +408,7 @@ static void cortexm_regs_read(target *t, void *data)
 
 static void cortexm_regs_write(target *t, const void *data)
 {
-	ADIv5_AP_t *ap = adiv5_target_ap(t);
+	ADIv5_AP_t *ap = cortexm_ap(t);
 	const uint32_t *regs = data;
 	unsigned i;
 
@@ -459,8 +493,7 @@ static void cortexm_halt_request(target *t)
 
 static int cortexm_halt_wait(target *t)
 {
-	ADIv5_AP_t *ap = adiv5_target_ap(t);
-	struct cortexm_priv *priv = ap->priv;
+	struct cortexm_priv *priv = t->priv;
 
 	volatile uint32_t dhcsr = 0;
 	volatile struct exception e;
@@ -521,8 +554,7 @@ static int cortexm_halt_wait(target *t)
 
 void cortexm_halt_resume(target *t, bool step)
 {
-	ADIv5_AP_t *ap = adiv5_target_ap(t);
-	struct cortexm_priv *priv = ap->priv;
+	struct cortexm_priv *priv = t->priv;
 	uint32_t dhcsr = CORTEXM_DHCSR_DBGKEY | CORTEXM_DHCSR_C_DEBUGEN;
 
 	if (step)
@@ -637,10 +669,10 @@ int cortexm_run_stub(target *t, uint32_t loadaddr,
 /* The following routines implement hardware breakpoints.
  * The Flash Patch and Breakpoint (FPB) system is used. */
 
-static int cortexm_set_hw_bp(target *t, uint32_t addr)
+static int cortexm_set_hw_bp(target *t, uint32_t addr, uint8_t len)
 {
-	ADIv5_AP_t *ap = adiv5_target_ap(t);
-	struct cortexm_priv *priv = ap->priv;
+	(void)len;
+	struct cortexm_priv *priv = t->priv;
 	uint32_t val = addr;
 	unsigned i;
 
@@ -662,10 +694,10 @@ static int cortexm_set_hw_bp(target *t, uint32_t addr)
 	return 0;
 }
 
-static int cortexm_clear_hw_bp(target *t, uint32_t addr)
+static int cortexm_clear_hw_bp(target *t, uint32_t addr, uint8_t len)
 {
-	ADIv5_AP_t *ap = adiv5_target_ap(t);
-	struct cortexm_priv *priv = ap->priv;
+	(void)len;
+	struct cortexm_priv *priv = t->priv;
 	unsigned i;
 
 	for(i = 0; i < priv->hw_breakpoint_max; i++)
@@ -686,8 +718,7 @@ static int cortexm_clear_hw_bp(target *t, uint32_t addr)
 static int
 cortexm_set_hw_wp(target *t, uint8_t type, uint32_t addr, uint8_t len)
 {
-	ADIv5_AP_t *ap = adiv5_target_ap(t);
-	struct cortexm_priv *priv = ap->priv;
+	struct cortexm_priv *priv = t->priv;
 	unsigned i;
 
 	switch(len) { /* Convert bytes size to mask size */
@@ -728,8 +759,7 @@ cortexm_set_hw_wp(target *t, uint8_t type, uint32_t addr, uint8_t len)
 static int
 cortexm_clear_hw_wp(target *t, uint8_t type, uint32_t addr, uint8_t len)
 {
-	ADIv5_AP_t *ap = adiv5_target_ap(t);
-	struct cortexm_priv *priv = ap->priv;
+	struct cortexm_priv *priv = t->priv;
 	unsigned i;
 
 	switch(len) {
@@ -764,8 +794,7 @@ cortexm_clear_hw_wp(target *t, uint8_t type, uint32_t addr, uint8_t len)
 
 static int cortexm_check_hw_wp(target *t, uint32_t *addr)
 {
-	ADIv5_AP_t *ap = adiv5_target_ap(t);
-	struct cortexm_priv *priv = ap->priv;
+	struct cortexm_priv *priv = t->priv;
 	unsigned i;
 
 	for(i = 0; i < priv->hw_watchpoint_max; i++)
@@ -783,8 +812,7 @@ static int cortexm_check_hw_wp(target *t, uint32_t *addr)
 
 static bool cortexm_vector_catch(target *t, int argc, char *argv[])
 {
-	ADIv5_AP_t *ap = adiv5_target_ap(t);
-	struct cortexm_priv *priv = ap->priv;
+	struct cortexm_priv *priv = t->priv;
 	const char *vectors[] = {"reset", NULL, NULL, NULL, "mm", "nocp",
 				"chk", "stat", "bus", "int", "hard"};
 	uint32_t tmp = 0;
@@ -862,8 +890,7 @@ static bool cortexm_vector_catch(target *t, int argc, char *argv[])
 
 static int cortexm_hostio_request(target *t)
 {
-	ADIv5_AP_t *ap = adiv5_target_ap(t);
-	struct cortexm_priv *priv = ap->priv;
+	struct cortexm_priv *priv = t->priv;
 	uint32_t arm_regs[t->regs_size];
 	uint32_t params[4];
 
@@ -964,8 +991,7 @@ static int cortexm_hostio_request(target *t)
 
 static void cortexm_hostio_reply(target *t, int32_t retcode, uint32_t errcode)
 {
-	ADIv5_AP_t *ap = adiv5_target_ap(t);
-	struct cortexm_priv *priv = ap->priv;
+	struct cortexm_priv *priv = t->priv;
 	uint32_t arm_regs[t->regs_size];
 
 	DEBUG("syscall return ret=%d errno=%d\n", retcode, errcode);

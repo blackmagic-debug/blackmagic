@@ -20,27 +20,29 @@
 
 /* This file implements the transport generic functions of the
  * ARM Debug Interface v5 Architecure Specification, ARM doc IHI0031A.
- *
- * Issues:
- * Currently doesn't use ROM table for introspection, just assumes
- * the device is Cortex-M3.
  */
 #include "general.h"
 #include "jtag_scan.h"
 #include "gdb_packet.h"
 #include "adiv5.h"
-#include "target.h"
+#include "cortexm.h"
+#include "exception.h"
 
 #ifndef DO_RESET_SEQ
 #define DO_RESET_SEQ 0
 #endif
 
-static const char adiv5_driver_str[] = "ARM ADIv5 MEM-AP";
+/* ROM table CIDR values */
+#define CIDR_ROM_TABLE  0xb105100d
+#define CIDR_GENERIC_IP 0xb105e00d
+#define CIDR_DEBUG      0xb105900d
 
-static bool ap_check_error(target *t);
+#define PIDR_REV_MASK 0x0FFF00000ULL
+#define PIDR_ARMv7M   0x4000BB000ULL
+#define PIDR_ARMv7MF  0x4000BB00CULL
+#define PIDR_ARMv7A   0x4000BBC09ULL
 
-static void ap_mem_read(target *t, void *dest, uint32_t src, size_t len);
-static void ap_mem_write(target *t, uint32_t dest, const void *src, size_t len);
+extern bool cortexa_probe(ADIv5_AP_t *apb, uint32_t debug_base);
 
 void adiv5_dp_ref(ADIv5_DP_t *dp)
 {
@@ -62,8 +64,6 @@ void adiv5_ap_unref(ADIv5_AP_t *ap)
 {
 	if (--(ap->refcnt) == 0) {
 		adiv5_dp_unref(ap->dp);
-		if (ap->priv)
-			ap->priv_free(ap->priv);
 		free(ap);
 	}
 }
@@ -73,13 +73,118 @@ void adiv5_dp_write(ADIv5_DP_t *dp, uint16_t addr, uint32_t value)
 	dp->low_access(dp, ADIV5_LOW_WRITE, addr, value);
 }
 
+static uint32_t adiv5_mem_read32(ADIv5_AP_t *ap, uint32_t addr)
+{
+	uint32_t ret;
+	adiv5_mem_read(ap, &ret, addr, sizeof(ret));
+	return ret;
+}
+
+static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr)
+{
+	addr &= ~3;
+	uint64_t pidr = 0;
+	uint32_t cidr = 0;
+	for (int i = 0; i < 4; i++) {
+		uint32_t x = adiv5_mem_read32(ap, addr + 0xfe0 + 4*i);
+		pidr |= (x & 0xff) << (i * 8);
+	}
+	pidr |= (uint64_t)adiv5_mem_read32(ap, addr + 0xfd0) << 32;
+	for (int i = 0; i < 4; i++) {
+		uint32_t x = adiv5_mem_read32(ap, addr + 0xff0 + 4*i);
+		cidr |= ((uint64_t)(x & 0xff)) << (i * 8);
+	}
+
+	switch (cidr) {
+	case CIDR_ROM_TABLE: /* This is a ROM table, probe recursively */
+		for (int i = 0; i < 256; i++) {
+			uint32_t entry = adiv5_mem_read32(ap, addr + i*4);
+			if (entry == 0)
+				break;
+
+			if ((entry & 1) == 0)
+				continue;
+
+			adiv5_component_probe(ap, addr + (entry & ~0xfff));
+		}
+		break;
+	case CIDR_GENERIC_IP:
+		switch (pidr & ~PIDR_REV_MASK) {
+		case PIDR_ARMv7MF:
+		case PIDR_ARMv7M:
+			cortexm_probe(ap);
+			break;
+		}
+		break;
+	case CIDR_DEBUG:
+		switch (pidr & ~PIDR_REV_MASK) {
+		case PIDR_ARMv7A:
+			cortexa_probe(ap, addr);
+			break;
+		}
+		break;
+	}
+}
+
+ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel)
+{
+	ADIv5_AP_t *ap, tmpap;
+
+	/* Assume valid and try to read IDR */
+	memset(&tmpap, 0, sizeof(tmpap));
+	tmpap.dp = dp;
+	tmpap.apsel = apsel;
+	tmpap.idr = adiv5_ap_read(&tmpap, ADIV5_AP_IDR);
+
+	if(!tmpap.idr) /* IDR Invalid - Should we not continue here? */
+		return NULL;
+
+	/* Check for ARM Mem-AP */
+	uint16_t mfg = (tmpap.idr >> 17) & 0x3ff;
+	uint8_t cls = (tmpap.idr >> 13) & 0xf;
+	uint8_t type = tmpap.idr & 0xf;
+	if (mfg != 0x23B) /* Ditch if not ARM */
+		return NULL;
+	if ((cls != 8) || (type == 0)) /* Ditch if not Mem-AP */
+		return NULL;
+
+	/* It's valid to so create a heap copy */
+	ap = malloc(sizeof(*ap));
+	memcpy(ap, &tmpap, sizeof(*ap));
+	adiv5_dp_ref(dp);
+
+	ap->cfg = adiv5_ap_read(ap, ADIV5_AP_CFG);
+	ap->base = adiv5_ap_read(ap, ADIV5_AP_BASE);
+	ap->csw = adiv5_ap_read(ap, ADIV5_AP_CSW) &
+		~(ADIV5_AP_CSW_SIZE_MASK | ADIV5_AP_CSW_ADDRINC_MASK);
+
+	if (ap->csw & ADIV5_AP_CSW_TRINPROG) {
+		gdb_out("AP transaction in progress.  Target may not be usable.\n");
+		ap->csw &= ~ADIV5_AP_CSW_TRINPROG;
+	}
+
+	DEBUG("%3d: IDR=%08X CFG=%08X BASE=%08X CSW=%08X\n",
+	      apsel, ap->idr, ap->cfg, ap->base, ap->csw);
+
+	return ap;
+}
+
+
 void adiv5_dp_init(ADIv5_DP_t *dp)
 {
-	uint32_t ctrlstat;
+	uint32_t ctrlstat = 0;
 
 	adiv5_dp_ref(dp);
 
-	ctrlstat = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT);
+	volatile struct exception e;
+	TRY_CATCH (e, EXCEPTION_TIMEOUT) {
+		ctrlstat = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT);
+	}
+	if (e.type) {
+		gdb_out("DP not responding!  Trying abort sequence...\n");
+		adiv5_dp_abort(dp, ADIV5_DP_ABORT_DAPABORT);
+		ctrlstat = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT);
+	}
 
 	/* Write request for system and debug power up */
 	adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT,
@@ -113,54 +218,24 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 
 	/* Probe for APs on this DP */
 	for(int i = 0; i < 256; i++) {
-		ADIv5_AP_t *ap, tmpap;
-		target *t;
+		ADIv5_AP_t *ap = adiv5_new_ap(dp, i);
+		if (ap == NULL)
+			continue;
 
-		/* Assume valid and try to read IDR */
-		memset(&tmpap, 0, sizeof(tmpap));
-		tmpap.dp = dp;
-		tmpap.apsel = i;
-		tmpap.idr = adiv5_ap_read(&tmpap, ADIV5_AP_IDR);
-
-		if(!tmpap.idr) /* IDR Invalid - Should we not continue here? */
-			break;
-
-		/* It's valid to so create a heap copy */
-		ap = malloc(sizeof(*ap));
-		memcpy(ap, &tmpap, sizeof(*ap));
-		adiv5_dp_ref(dp);
-
-		ap->cfg = adiv5_ap_read(ap, ADIV5_AP_CFG);
-		ap->base = adiv5_ap_read(ap, ADIV5_AP_BASE);
-		ap->csw = adiv5_ap_read(ap, ADIV5_AP_CSW) &
-			~(ADIV5_AP_CSW_SIZE_MASK | ADIV5_AP_CSW_ADDRINC_MASK);
+		if (ap->base == 0xffffffff) {
+			/* No debug entries... useless AP */
+			adiv5_ap_unref(ap);
+			continue;
+		}
 
 		/* Should probe further here to make sure it's a valid target.
 		 * AP should be unref'd if not valid.
 		 */
 
-		/* Prepend to target list... */
-		t = target_new(sizeof(*t));
-		adiv5_ap_ref(ap);
-		t->priv = ap;
-		t->priv_free = (void (*)(void *))adiv5_ap_unref;
-
-		t->driver = adiv5_driver_str;
-		t->check_error = ap_check_error;
-
-		t->mem_read = ap_mem_read;
-		t->mem_write = ap_mem_write;
-
 		/* The rest sould only be added after checking ROM table */
-		cortexm_probe(t);
+		adiv5_component_probe(ap, ap->base);
 	}
 	adiv5_dp_unref(dp);
-}
-
-static bool ap_check_error(target *t)
-{
-	ADIv5_AP_t *ap = adiv5_target_ap(t);
-	return adiv5_dp_error(ap->dp) != 0;
 }
 
 enum align {
@@ -208,10 +283,9 @@ static void * extract(void *dest, uint32_t src, uint32_t val, enum align align)
 	return (uint8_t *)dest + (1 << align);
 }
 
-static void
-ap_mem_read(target *t, void *dest, uint32_t src, size_t len)
+void
+adiv5_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
 {
-	ADIv5_AP_t *ap = adiv5_target_ap(t);
 	uint32_t tmp;
 	uint32_t osrc = src;
 	enum align align = MIN(ALIGNOF(src), ALIGNOF(len));
@@ -237,10 +311,9 @@ ap_mem_read(target *t, void *dest, uint32_t src, size_t len)
 	extract(dest, src, tmp, align);
 }
 
-static void
-ap_mem_write(target *t, uint32_t dest, const void *src, size_t len)
+void
+adiv5_mem_write(ADIv5_AP_t *ap, uint32_t dest, const void *src, size_t len)
 {
-	ADIv5_AP_t *ap = adiv5_target_ap(t);
 	uint32_t odest = dest;
 	enum align align = MIN(ALIGNOF(dest), ALIGNOF(len));
 

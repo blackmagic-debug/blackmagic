@@ -28,6 +28,7 @@
 #include "morse.h"
 #include "jtag_scan.h"
 #include "gdb_packet.h"
+#include "target.h"
 #include "adiv5.h"
 
 struct jtag_dev_s jtag_devs[JTAG_MAX_DEVS+1];
