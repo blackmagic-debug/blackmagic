@@ -11,7 +11,7 @@ OPT_FLAGS ?= -O2
 
 CFLAGS += -Wall -Wextra -Werror -Wno-char-subscripts\
 	$(OPT_FLAGS) -std=gnu99 -g3 -MD \
-	-I. -Iinclude -Iplatforms/common -I$(PLATFORM_DIR) \
+	-I. -Iinclude -Iplatforms/common -I$(PLATFORM_DIR) -DUSBUART_DEBUG #-DDEBUG_CORTEXM -DDEBUG_GDB -DDEBUG_JTAG -DDEBUG_SWD -DDEBUG_GDBPACKET\
 
 SRC =			\
 	adiv5.c		\

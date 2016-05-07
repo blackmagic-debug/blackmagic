@@ -100,6 +100,10 @@ lpc11xx_probe(target *t)
 	case 0x00008120:  /* LPC812M101JDH16 */
 	case 0x00008121:  /* LPC812M101JD20 */
 	case 0x00008122:  /* LPC812M101JDH20 / LPC812M101JTB16 */
+	case 0x00008221:  /* LPC822M101JHI33 */
+	case 0x00008222:  /* LPC822M101JDH20 */
+	case 0x00008241:  /* LPC824M201JHI33 */
+	case 0x00008242:  /* LPC824M201JDH20 */
 		t->driver = "LPC8xx";
 		target_add_ram(t, 0x10000000, 0x1000);
 		lpc11xx_add_flash(t, 0x00000000, 0x4000, 0x400);

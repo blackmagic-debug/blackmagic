@@ -192,6 +192,47 @@ void usbuart_usb_out_cb(usbd_device *dev, uint8_t ep)
 	gpio_clear(LED_PORT_UART, LED_UART);
 }
 
+#ifdef USBUART_DEBUG
+#include <stdarg.h>
+
+/* Function to output debug data to usbuart port (ttyACM1 on linux) */
+void usbuart_debug_outf(const char *fmt, ...)
+{
+	va_list ap;
+	char *buf, *tmp;
+
+	va_start(ap, fmt);
+	if (vasprintf(&buf, fmt, ap) < 0)
+		return;
+	tmp = buf;
+	while( *tmp != 0 )
+	{
+		if( *tmp == '\n' && *(tmp-1) != '\r' )
+		{
+			/* insert into FIFO */
+			buf_rx[buf_rx_in++] = '\r';
+
+			/* wrap out pointer */
+			if (buf_rx_in >= FIFO_SIZE)
+			{
+				buf_rx_in = 0;
+			}
+		}
+		/* insert into FIFO */
+		buf_rx[buf_rx_in++] = *(tmp++);
+
+		/* wrap out pointer */
+		if (buf_rx_in >= FIFO_SIZE)
+		{
+			buf_rx_in = 0;
+		}
+	}
+	/* enable deferred processing if we put data in the FIFO */
+	timer_enable_irq(USBUSART_TIM, TIM_DIER_UIE);
+	free(buf);
+	va_end(ap);
+}
+#endif
 
 void usbuart_usb_in_cb(usbd_device *dev, uint8_t ep)
 {

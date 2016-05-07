@@ -898,8 +898,10 @@ static int cortexm_hostio_request(target *t)
 	target_mem_read(t, params, arm_regs[1], sizeof(params));
 	priv->syscall = arm_regs[0];
 
+#ifdef DEBUG_CORTEXM
 	DEBUG("syscall 0x%x (%x %x %x %x)\n", priv->syscall,
 			params[0], params[1], params[2], params[3]);
+#endif
 	switch (priv->syscall) {
 	case SYS_OPEN:{	/* open */
 		/* Translate stupid fopen modes to open flags.
@@ -994,7 +996,9 @@ static void cortexm_hostio_reply(target *t, int32_t retcode, uint32_t errcode)
 	struct cortexm_priv *priv = t->priv;
 	uint32_t arm_regs[t->regs_size];
 
+#ifdef DEBUG_CORTEXM
 	DEBUG("syscall return ret=%d errno=%d\n", retcode, errcode);
+#endif
 	target_regs_read(t, arm_regs);
 	if (((priv->syscall == SYS_READ) || (priv->syscall == SYS_WRITE)) &&
 	    (retcode > 0))

@@ -97,6 +97,9 @@ static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr)
 
 	switch (cidr) {
 	case CIDR_ROM_TABLE: /* This is a ROM table, probe recursively */
+#ifdef DEBUG_ADIV5
+		DEBUG("Found romtable @0x%x\n", addr);
+#endif
 		for (int i = 0; i < 256; i++) {
 			uint32_t entry = adiv5_mem_read32(ap, addr + i*4);
 			if (entry == 0)
@@ -105,21 +108,41 @@ static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr)
 			if ((entry & 1) == 0)
 				continue;
 
-			adiv5_component_probe(ap, addr + (entry & ~0xfff));
-		}
-		break;
-	case CIDR_GENERIC_IP:
-		switch (pidr & ~PIDR_REV_MASK) {
-		case PIDR_ARMv7MF:
-		case PIDR_ARMv7M:
-			cortexm_probe(ap);
-			break;
+			/* as per ARM Debug Interface v5® Architecture Specification
+			   the entry can be twos complement, thus negative */
+			uint32_t new_addr;
+			if (entry & 0x80000000)
+				new_addr = addr - ~(entry & 0x7FFFF000);
+			else
+				new_addr = addr + (entry & 0x7FFFF000);
+
+#ifdef DEBUG_ADIV5
+			DEBUG("Found romtable entry 0x%x, new_addr:0x%x i:%d\n", entry, new_addr, i);
+#endif
+
+			adiv5_component_probe(ap, new_addr);
 		}
 		break;
 	case CIDR_DEBUG:
+	case CIDR_GENERIC_IP:
+	default:
 		switch (pidr & ~PIDR_REV_MASK) {
+		case PIDR_ARMv7MF:
+		case PIDR_ARMv7M:
+#ifdef DEBUG_ADIV5
+		DEBUG("Found Cortex-M AP with pid:0x%x cid:0x%x @0x%x, ignoring here\n", pidr, cidr, addr);
+#endif
+			break;
 		case PIDR_ARMv7A:
+#ifdef DEBUG_ADIV5
+		DEBUG("Found Cortex-A AP with pid:0x%x cid:0x%x @0x%x\n", pidr, cidr, addr);
+#endif
 			cortexa_probe(ap, addr);
+			break;
+		default:
+#ifdef DEBUG_ADIV5
+		DEBUG("Found unknown AP with pid:0x%x cid:0x%x @0x%x\n", pidr, cidr, addr);
+#endif
 			break;
 		}
 		break;
@@ -233,7 +256,14 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 		 */
 
 		/* The rest sould only be added after checking ROM table */
+#ifdef DEBUG_ADIV5
+		DEBUG("Probing for AP @0x%x\n", ap->base);
+#endif
 		adiv5_component_probe(ap, ap->base);
+#ifdef DEBUG_ADIV5
+		DEBUG("Probing for Cortex-M core on AP @0x%x\n", ap->base);
+#endif
+		cortexm_probe(ap);
 	}
 	adiv5_dp_unref(dp);
 }

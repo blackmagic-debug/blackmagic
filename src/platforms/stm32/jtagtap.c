@@ -60,7 +60,9 @@ inline uint8_t jtagtap_next(uint8_t dTMS, uint8_t dTDO)
 	ret = gpio_get(TDO_PORT, TDO_PIN);
 	gpio_clear(TCK_PORT, TCK_PIN);
 
+#ifdef DEBUG_JTAG
 	DEBUG("jtagtap_next(TMS = %d, TDO = %d) = %d\n", dTMS, dTDO, ret);
+#endif
 
 	return ret != 0;
 }

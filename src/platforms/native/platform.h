@@ -142,7 +142,11 @@
 #define TRACE_IRQ   NVIC_TIM3_IRQ
 #define TRACE_ISR   tim3_isr
 
+#ifdef USBUART_DEBUG
+#define DEBUG	usbuart_debug_outf
+#else
 #define DEBUG(...)
+#endif
 
 #define SET_RUN_STATE(state)	{running_status = (state);}
 #define SET_IDLE_STATE(state)	{gpio_set_val(LED_PORT, LED_IDLE_RUN, state);}
@@ -153,6 +157,10 @@
 #define sprintf siprintf
 #define snprintf sniprintf
 #define vasprintf vasiprintf
+
+#ifdef USBUART_DEBUG
+void usbuart_debug_outf(const char *fmt, ...);
+#endif
 
 #endif
 

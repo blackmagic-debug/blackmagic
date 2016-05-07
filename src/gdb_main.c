@@ -66,7 +66,9 @@ gdb_main(void)
 	bool single_step = false;
 	char last_activity = 0;
 
+#ifdef DEBUG_GDB
 	DEBUG("Entring GDB protocol main loop\n");
+#endif
 	/* GDB protocol main loop */
 	while(1) {
 		SET_IDLE_STATE(1);
@@ -87,7 +89,9 @@ gdb_main(void)
 			uint32_t addr, len;
 			ERROR_IF_NO_TARGET();
 			sscanf(pbuf, "m%" SCNx32 ",%" SCNx32, &addr, &len);
+#ifdef DEBUG_GDB
 			DEBUG("m packet: addr = %" PRIx32 ", len = %" PRIx32 "\n", addr, len);
+#endif
 			uint8_t mem[len];
 			target_mem_read(cur_target, mem, addr, len);
 			if(target_check_error(cur_target))
@@ -109,7 +113,9 @@ gdb_main(void)
 			int hex;
 			ERROR_IF_NO_TARGET();
 			sscanf(pbuf, "M%" SCNx32 ",%" SCNx32 ":%n", &addr, &len, &hex);
+#ifdef DEBUG_GDB
 			DEBUG("M packet: addr = %" PRIx32 ", len = %" PRIx32 "\n", addr, len);
+#endif
 			uint8_t mem[len];
 			unhexify(mem, pbuf + hex, len);
 			target_mem_write(cur_target, addr, mem, len);
@@ -240,7 +246,9 @@ gdb_main(void)
 			int bin;
 			ERROR_IF_NO_TARGET();
 			sscanf(pbuf, "X%" SCNx32 ",%" SCNx32 ":%n", &addr, &len, &bin);
+#ifdef DEBUG_GDB
 			DEBUG("X packet: addr = %" PRIx32 ", len = %" PRIx32 "\n", addr, len);
+#endif
 			target_mem_write(cur_target, addr, pbuf+bin, len);
 			if(target_check_error(cur_target))
 				gdb_putpacketz("E01");
@@ -265,7 +273,9 @@ gdb_main(void)
 			break;
 
 		default: 	/* Packet not implemented */
+#ifdef DEBUG_GDB
 			DEBUG("*** Unsupported packet: %s\n", pbuf);
+#endif
 			gdb_putpacketz("");
 		}
 	}
@@ -354,7 +364,9 @@ handle_q_packet(char *packet, int len)
 		gdb_putpacket_f("C%lx", generic_crc32(cur_target, addr, alen));
 
 	} else {
+#ifdef DEBUG_GDB
 		DEBUG("*** Unsupported packet: %s\n", packet);
+#endif
 		gdb_putpacket("", 0);
 	}
 }
@@ -400,7 +412,9 @@ handle_v_packet(char *packet, int plen)
 
 	} else if (sscanf(packet, "vFlashErase:%08lx,%08lx", &addr, &len) == 2) {
 		/* Erase Flash Memory */
+#ifdef DEBUG_GDB
 		DEBUG("Flash Erase %08lX %08lX\n", addr, len);
+#endif
 		if(!cur_target) { gdb_putpacketz("EFF"); return; }
 
 		if(!flash_mode) {
@@ -417,7 +431,9 @@ handle_v_packet(char *packet, int plen)
 	} else if (sscanf(packet, "vFlashWrite:%08lx:%n", &addr, &bin) == 1) {
 		/* Write Flash Memory */
 		len = plen - bin;
+#ifdef DEBUG_GDB
 		DEBUG("Flash Write %08lX %08lX\n", addr, len);
+#endif
 		if(cur_target && target_flash_write(cur_target, addr, (void*)packet + bin, len) == 0)
 			gdb_putpacketz("OK");
 		else
@@ -429,7 +445,9 @@ handle_v_packet(char *packet, int plen)
 		flash_mode = 0;
 
 	} else {
+#ifdef DEBUG_GDB
 		DEBUG("*** Unsupported packet: %s\n", packet);
+#endif
 		gdb_putpacket("", 0);
 	}
 }
