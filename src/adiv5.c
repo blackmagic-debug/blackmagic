@@ -39,6 +39,7 @@
 
 #define PIDR_REV_MASK 0x0FFF00000ULL
 #define PIDR_ARMv7M   0x4000BB000ULL
+#define PIDR_ARMv6M   0x4000BB008ULL
 #define PIDR_ARMv7MF  0x4000BB00CULL
 #define PIDR_ARMv7A   0x4000BBC09ULL
 
@@ -112,6 +113,7 @@ static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr)
 		switch (pidr & ~PIDR_REV_MASK) {
 		case PIDR_ARMv7MF:
 		case PIDR_ARMv7M:
+		case PIDR_ARMv6M:
 			cortexm_probe(ap);
 			break;
 		}
