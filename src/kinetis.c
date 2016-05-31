@@ -37,7 +37,9 @@
 #define FTFA_FCNFG (FTFA_BASE + 0x01)
 #define FTFA_FSEC  (FTFA_BASE + 0x02)
 #define FTFA_FOPT  (FTFA_BASE + 0x03)
-#define FTFA_FCCOB(x) (FTFA_BASE + 0x04 + ((x) ^ 3))
+#define FTFA_FCCOB_0 (FTFA_BASE + 0x04)
+#define FTFA_FCCOB_1 (FTFA_BASE + 0x08)
+#define FTFA_FCCOB_2 (FTFA_BASE + 0x0C)
 
 #define FTFA_FSTAT_CCIF     (1 << 7)
 #define FTFA_FSTAT_RDCOLERR (1 << 6)
@@ -86,6 +88,12 @@ bool kinetis_probe(target *t)
 		target_add_ram(t, 0x20000000, 0x3000);
 		kl_gen_add_flash(t, 0x00000000, 0x20000, 0x400);
 		return true;
+	case 0x231:
+		t->driver = "KL27";
+		target_add_ram(t, 0x1fffe000, 0x2000);
+		target_add_ram(t, 0x20000000, 0x6000);
+		kl_gen_add_flash(t, 0x00000000, 0x40000, 0x400);
+		return true;
 	case 0x021: /* KL02 family */
 		switch((sdid>>16) & 0x0f){
 			case 3:
@@ -119,21 +127,21 @@ kl_gen_command(target *t, uint8_t cmd, uint32_t addr, const uint8_t data[8])
 {
 	uint8_t fstat;
 
+	/* clear errors unconditionally, so we can start a new operation */
+	target_mem_write8(t,FTFA_FSTAT,(FTFA_FSTAT_ACCERR | FTFA_FSTAT_FPVIOL));
+
 	/* Wait for CCIF to be high */
 	do {
 		fstat = target_mem_read8(t, FTFA_FSTAT);
-		/* Check ACCERR and FPVIOL are zero in FSTAT */
-		if (fstat & (FTFA_FSTAT_ACCERR | FTFA_FSTAT_FPVIOL))
-			return false;
 	} while (!(fstat & FTFA_FSTAT_CCIF));
 
 	/* Write command to FCCOB */
 	addr &= 0xffffff;
 	addr |= (uint32_t)cmd << 24;
-	target_mem_write32(t, FTFA_FCCOB(0), addr);
+	target_mem_write32(t, FTFA_FCCOB_0, addr);
 	if (data) {
-		target_mem_write32(t, FTFA_FCCOB(4), *(uint32_t*)&data[0]);
-		target_mem_write32(t, FTFA_FCCOB(8), *(uint32_t*)&data[4]);
+		target_mem_write32(t, FTFA_FCCOB_1, *(uint32_t*)&data[0]);
+		target_mem_write32(t, FTFA_FCCOB_2, *(uint32_t*)&data[4]);
 	}
 
 	/* Enable execution by clearing CCIF */
@@ -153,9 +161,12 @@ kl_gen_command(target *t, uint8_t cmd, uint32_t addr, const uint8_t data[8])
 static int kl_gen_flash_erase(struct target_flash *f, uint32_t addr, size_t len)
 {
 	while (len) {
-		kl_gen_command(f->t, FTFA_CMD_ERASE_SECTOR, addr, NULL);
-		len -= KL_GEN_PAGESIZE;
-		addr += KL_GEN_PAGESIZE;
+		if (kl_gen_command(f->t, FTFA_CMD_ERASE_SECTOR, addr, NULL)) {
+			len -= KL_GEN_PAGESIZE;
+			addr += KL_GEN_PAGESIZE;
+		} else {
+			return 1;
+		}
 	}
 	return 0;
 }
@@ -164,10 +175,13 @@ static int kl_gen_flash_write(struct target_flash *f,
                             uint32_t dest, const void *src, size_t len)
 {
 	while (len) {
-		kl_gen_command(f->t, FTFA_CMD_PROGRAM_LONGWORD, dest, src);
-		len -= 4;
-		dest += 4;
-		src += 4;
+		if (kl_gen_command(f->t, FTFA_CMD_PROGRAM_LONGWORD, dest, src)) {
+			len -= 4;
+			dest += 4;
+			src += 4;
+		} else {
+			return 1;
+		}
 	}
 	return 0;
 }
