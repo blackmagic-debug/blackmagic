@@ -135,10 +135,14 @@ void platform_init(void)
 
 	/* Enable internal pull-up on PWR_BR so that we don't drive
 	   TPWR locally or inadvertently supply power to the target. */
-	if (platform_hwversion () > 0) {
-		gpio_set (PWR_BR_PORT, PWR_BR_PIN);
+	if (platform_hwversion () == 1) {
+		gpio_set(PWR_BR_PORT, PWR_BR_PIN);
 		gpio_set_mode(PWR_BR_PORT, GPIO_MODE_INPUT,
 		              GPIO_CNF_INPUT_PULL_UPDOWN, PWR_BR_PIN);
+	} else if (platform_hwversion() > 1) {
+		gpio_set(PWR_BR_PORT, PWR_BR_PIN);
+		gpio_set_mode(PWR_BR_PORT, GPIO_MODE_OUTPUT_50_MHZ,
+		              GPIO_CNF_OUTPUT_OPENDRAIN, PWR_BR_PIN);
 	}
 
 	if (platform_hwversion() > 0) {
