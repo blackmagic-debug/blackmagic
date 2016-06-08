@@ -441,12 +441,16 @@ static void cortexa_reset(target *t)
 	platform_srst_set_val(false);
 
 	/* Spin until Xilinx reconnects us */
+	platform_timeout timeout;
+	platform_timeout_set(&timeout, 1000);
 	volatile struct exception e;
 	do {
 		TRY_CATCH (e, EXCEPTION_ALL) {
 			apb_read(t, DBGDIDR);
 		}
-	} while (e.type == EXCEPTION_ERROR);
+	} while (!platform_timeout_is_expired(&timeout) && e.type == EXCEPTION_ERROR);
+	if (e.type == EXCEPTION_ERROR)
+		raise_exception(e.type, e.msg);
 
 	platform_delay(100);
 
