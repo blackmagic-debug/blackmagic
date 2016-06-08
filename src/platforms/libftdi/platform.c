@@ -279,26 +279,15 @@ const char *platform_target_voltage(void)
 	return "not supported";
 }
 
-void platform_delay(uint32_t delay)
+void platform_delay(uint32_t ms)
 {
-	usleep(delay * 100000);
+	usleep(ms * 1000);
 }
 
-static uint32_t timeout_time;
-static uint32_t time_ms(void)
+uint32_t platform_time_ms(void)
 {
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
 	return (tv.tv_sec * 1000) + (tv.tv_usec / 1000);
-}
-
-void platform_timeout_set(uint32_t ms)
-{
-	timeout_time = time_ms() + ms;
-}
-
-bool platform_timeout_is_expired(void)
-{
-	return time_ms() > timeout_time;
 }
 

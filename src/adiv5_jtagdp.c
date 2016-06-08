@@ -82,16 +82,17 @@ static uint32_t adiv5_jtagdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 	addr &= 0xff;
 	uint64_t request, response;
 	uint8_t ack;
+	platform_timeout timeout;
 
 	request = ((uint64_t)value << 3) | ((addr >> 1) & 0x06) | (RnW?1:0);
 
 	jtag_dev_write_ir(dp->dev, APnDP ? IR_APACC : IR_DPACC);
 
-	platform_timeout_set(2000);
+	platform_timeout_set(&timeout, 2000);
 	do {
 		jtag_dev_shift_dr(dp->dev, (uint8_t*)&response, (uint8_t*)&request, 35);
 		ack = response & 0x07;
-	} while(!platform_timeout_is_expired() && (ack == JTAGDP_ACK_WAIT));
+	} while(!platform_timeout_is_expired(&timeout) && (ack == JTAGDP_ACK_WAIT));
 
 	if (ack == JTAGDP_ACK_WAIT)
 		raise_exception(EXCEPTION_TIMEOUT, "JTAG-DP ACK timeout");

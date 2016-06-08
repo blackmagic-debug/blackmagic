@@ -1,7 +1,8 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2015 Gareth McMullin <gareth@blacksphere.co.nz>
+ * Copyright (C) 2016  Black Sphere Technologies Ltd.
+ * Written by Gareth McMullin <gareth@blacksphere.co.nz>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,12 +17,14 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef __TIMING_H
+#ifndef __TIMING__H
 #define __TIMING_H
 
-extern uint8_t running_status;
+struct platform_timeout {
+	uint32_t time;
+};
 
-void platform_timing_init(void);
+uint32_t platform_time_ms(void);
 
 #endif
 

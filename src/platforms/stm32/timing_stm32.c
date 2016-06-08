@@ -23,8 +23,7 @@
 #include <libopencm3/cm3/scb.h>
 
 uint8_t running_status;
-
-static volatile uint32_t timeout_counter;
+static volatile uint32_t time_ms;
 
 void platform_timing_init(void)
 {
@@ -37,20 +36,11 @@ void platform_timing_init(void)
 	systick_counter_enable();
 }
 
-void platform_timeout_set(uint32_t ms)
+void platform_delay(uint32_t ms)
 {
-	timeout_counter = ms / 100;
-}
-
-bool platform_timeout_is_expired(void)
-{
-	return timeout_counter == 0;
-}
-
-void platform_delay(uint32_t delay)
-{
-	platform_timeout_set(delay);
-	while (!platform_timeout_is_expired());
+	platform_timeout timeout;
+	platform_timeout_set(&timeout, ms);
+	while (!platform_timeout_is_expired(&timeout));
 }
 
 void sys_tick_handler(void)
@@ -58,9 +48,13 @@ void sys_tick_handler(void)
 	if(running_status)
 		gpio_toggle(LED_PORT, LED_IDLE_RUN);
 
-	if(timeout_counter)
-		timeout_counter--;
+	time_ms += 100;
 
 	SET_ERROR_STATE(morse_update());
+}
+
+uint32_t platform_time_ms(void)
+{
+	return time_ms;
 }
 

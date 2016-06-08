@@ -307,7 +307,7 @@ bool cortexa_attach(target *t)
 	target_halt_request(t);
 	tries = 10;
 	while(!platform_srst_get_val() && !target_halt_wait(t) && --tries)
-		platform_delay(2);
+		platform_delay(200);
 	if(!tries)
 		return false;
 

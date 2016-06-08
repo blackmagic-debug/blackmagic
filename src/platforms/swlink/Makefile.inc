@@ -19,6 +19,7 @@ SRC += 	cdcacm.c	\
 	usbuart.c 	\
 	serialno.c	\
 	timing.c	\
+	timing_stm32.c	\
 
 all:	blackmagic.bin blackmagic_dfu.bin blackmagic_dfu.hex
 
