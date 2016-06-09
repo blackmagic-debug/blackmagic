@@ -334,6 +334,8 @@ void cortexa_detach(target *t)
 
 	/* Restore any clobbered registers */
 	cortexa_regs_write_internal(t);
+	/* Invalidate cache */
+	apb_write(t, DBGITR, MCR | ICIALLU);
 
 	uint32_t dbgdscr = apb_read(t, DBGDSCR);
 	/* Disable halting debug mode */
