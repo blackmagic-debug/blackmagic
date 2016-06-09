@@ -44,6 +44,7 @@ static bool cmd_swdp_scan(void);
 static bool cmd_targets(target *t);
 static bool cmd_morse(void);
 static bool cmd_connect_srst(target *t, int argc, const char **argv);
+static bool cmd_hard_srst(void);
 #ifdef PLATFORM_HAS_POWER_SWITCH
 static bool cmd_target_power(target *t, int argc, const char **argv);
 #endif
@@ -62,6 +63,7 @@ const struct command_s cmd_list[] = {
 	{"targets", (cmd_handler)cmd_targets, "Display list of available targets" },
 	{"morse", (cmd_handler)cmd_morse, "Display morse error message" },
 	{"connect_srst", (cmd_handler)cmd_connect_srst, "Configure connect under SRST: (enable|disable)" },
+	{"hard_srst", (cmd_handler)cmd_hard_srst, "Force a pulse on the hard SRST line - disconnects target" },
 #ifdef PLATFORM_HAS_POWER_SWITCH
 	{"tpwr", (cmd_handler)cmd_target_power, "Supplies power to the target: (enable|disable)"},
 #endif
@@ -259,6 +261,14 @@ static bool cmd_connect_srst(target *t, int argc, const char **argv)
 			 connect_assert_srst ? "enabled" : "disabled");
 	else
 		connect_assert_srst = !strcmp(argv[1], "enable");
+	return true;
+}
+
+static bool cmd_hard_srst(void)
+{
+	target_list_free();
+	platform_srst_set_val(true);
+	platform_srst_set_val(false);
 	return true;
 }
 
