@@ -24,6 +24,7 @@
 
 #include "general.h"
 #include "jtagtap.h"
+#include "gdb_packet.h"
 
 int jtagtap_init(void)
 {
@@ -60,7 +61,7 @@ inline uint8_t jtagtap_next(uint8_t dTMS, uint8_t dTDO)
 	ret = gpio_get(TDO_PORT, TDO_PIN);
 	gpio_clear(TCK_PORT, TCK_PIN);
 
-	DEBUG("jtagtap_next(TMS = %d, TDO = %d) = %d\n", dTMS, dTDO, ret);
+	//DEBUG("jtagtap_next(TMS = %d, TDO = %d) = %d\n", dTMS, dTDO, ret);
 
 	return ret != 0;
 }
