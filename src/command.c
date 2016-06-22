@@ -68,7 +68,7 @@ const struct command_s cmd_list[] = {
 	{NULL, NULL, NULL}
 };
 
-static bool connect_assert_srst;
+static bool connect_assert_srst = false;
 
 int command_process(target *t, char *cmd)
 {
