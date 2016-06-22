@@ -380,9 +380,12 @@ static void cortexa_regs_read_internal(target *t)
 {
 	struct cortexa_priv *priv = (struct cortexa_priv *)t->priv;
 	/* Read general purpose registers */
-	for (int i = 0; i < 16; i++) {
+	for (int i = 0; i < 15; i++) {
 		priv->reg_cache.r[i] = read_gpreg(t, i);
 	}
+	/* Read PC, via r0.  MCR is UNPREDICTABLE for Rt = r15. */
+	apb_write(t, DBGITR, 0xe1a0000f); /* mov r0, pc */
+	priv->reg_cache.r[15] = read_gpreg(t, 0);
 	/* Read CPSR */
 	apb_write(t, DBGITR, 0xE10F0000); /* mrs r0, CPSR */
 	priv->reg_cache.cpsr = read_gpreg(t, 0);
