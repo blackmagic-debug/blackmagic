@@ -34,6 +34,8 @@
 #define FT2232_VID	0x0403
 #define FT2232_PID	0x6010
 
+#define PLATFORM_HAS_DEBUG
+
 #define SET_RUN_STATE(state)
 #define SET_IDLE_STATE(state)
 #define SET_ERROR_STATE(state)

@@ -295,7 +295,7 @@ static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr)
 		 * any components by other designers.
 		 */
 		if ((pidr & ~(PIDR_REV_MASK | PIDR_PN_MASK)) != PIDR_ARM_BITS) {
-			DEBUG("0x%X: 0x%llX <- does not match ARM JEP-106\n", addr, pidr);
+			DEBUG("0x%X: 0x%"PRIx64" <- does not match ARM JEP-106\n", addr, pidr);
 			return;
 		}
 
