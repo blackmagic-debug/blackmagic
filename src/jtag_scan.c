@@ -67,6 +67,8 @@ static struct jtag_dev_descr_s {
 	{.idcode = 0x8940303F, .idmask = 0xFFFFFFFF, .descr = "ATMEL: ATMega16."},
 	{.idcode = 0x0792603F, .idmask = 0xFFFFFFFF, .descr = "ATMEL: AT91SAM9261."},
 	{.idcode = 0x20270013, .idmask = 0xFFFFFFFF, .descr = "Intel: i80386ex."},
+	{.idcode = 0x07B7617F, .idmask = 0xFFFFFFFF, .descr = "Broadcom: BCM2835."},
+	{.idcode = 0x4BA00477, .idmask = 0xFFFFFFFF, .descr = "Broadcom: BCM2836."},
 	{.idcode = 0, .idmask = 0, .descr = "Unknown"},
 };
 
