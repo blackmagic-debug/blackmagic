@@ -68,6 +68,7 @@ static uint32_t bp_bas(uint32_t addr, uint8_t len);
 static void apb_write(target *t, uint16_t reg, uint32_t val);
 static uint32_t apb_read(target *t, uint16_t reg);
 static void write_gpreg(target *t, uint8_t regno, uint32_t val);
+static uint32_t read_gpreg(target *t, uint8_t regno);
 
 struct cortexa_priv {
 	uint32_t base;
@@ -132,6 +133,10 @@ struct cortexa_priv {
 /* Debug registers CP14 */
 #define DBGDTRRXint CPREG(14, 0, 0, 0, 5, 0)
 #define DBGDTRTXint CPREG(14, 0, 0, 0, 5, 0)
+
+/* Address translation registers CP15 */
+#define PAR         CPREG(15, 0, 0, 7, 4, 0)
+#define ATS1CPR     CPREG(15, 0, 0, 7, 8, 0)
 
 /* Cache management registers CP15 */
 #define ICIALLU     CPREG(15, 0, 0, 7, 5, 0)
@@ -206,6 +211,17 @@ static uint32_t apb_read(target *t, uint16_t reg)
 	return adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_DP_RDBUFF, 0);
 }
 
+static uint32_t va_to_pa(target *t, uint32_t va)
+{
+	write_gpreg(t, 0, va);
+	apb_write(t, DBGITR, MCR | ATS1CPR);
+	apb_write(t, DBGITR, MRC | PAR);
+	uint32_t par = read_gpreg(t, 0);
+	uint32_t pa = (par & ~0xfff) | (va & 0xfff);
+	DEBUG("%s: VA = 0x%08X, PAR = 0x%08X, PA = 0x%08X\n", __func__, va, par, pa);
+	return pa;
+}
+
 static void cortexa_mem_read(target *t, void *dest, uint32_t src, size_t len)
 {
 	/* Clean cache before reading */
@@ -216,7 +232,7 @@ static void cortexa_mem_read(target *t, void *dest, uint32_t src, size_t len)
 	}
 
 	ADIv5_AP_t *ahb = ((struct cortexa_priv*)t->priv)->ahb;
-	adiv5_mem_read(ahb, dest, src, len);
+	adiv5_mem_read(ahb, dest, va_to_pa(t, src), len);
 }
 
 static void cortexa_mem_write(target *t, uint32_t dest, const void *src, size_t len)
@@ -228,7 +244,7 @@ static void cortexa_mem_write(target *t, uint32_t dest, const void *src, size_t 
 		apb_write(t, DBGITR, MCR | DCCIMVAC);
 	}
 	ADIv5_AP_t *ahb = ((struct cortexa_priv*)t->priv)->ahb;
-	adiv5_mem_write(ahb, dest, src, len);
+	adiv5_mem_write(ahb, va_to_pa(t, dest), src, len);
 }
 
 static bool cortexa_check_error(target *t)
