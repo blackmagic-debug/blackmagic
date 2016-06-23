@@ -29,6 +29,7 @@
 #include "jtagtap.h"
 #include "command.h"
 #include "morse.h"
+#include "gdb_packet.h"
 
 #define SWDP_ACK_OK    0x01
 #define SWDP_ACK_WAIT  0x02

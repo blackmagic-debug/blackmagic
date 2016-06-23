@@ -1,6 +1,7 @@
 PROBE_HOST ?= native
 PLATFORM_DIR = platforms/$(PROBE_HOST)
 VPATH += platforms/common $(PLATFORM_DIR)
+ENABLE_DEBUG ?=
 
 ifneq ($(V), 1)
 MAKEFLAGS += --no-print-dir
@@ -11,7 +12,11 @@ OPT_FLAGS ?= -O2
 
 CFLAGS += -Wall -Wextra -Werror -Wno-char-subscripts\
 	$(OPT_FLAGS) -std=gnu99 -g3 -MD \
-	-I. -Iinclude -Iplatforms/common -I$(PLATFORM_DIR) \
+	-I. -Iinclude -Iplatforms/common -I$(PLATFORM_DIR)
+
+ifeq ($(ENABLE_DEBUG), 1)
+CFLAGS += -DENABLE_DEBUG
+endif
 
 SRC =			\
 	adiv5.c		\

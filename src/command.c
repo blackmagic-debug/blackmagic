@@ -50,6 +50,9 @@ static bool cmd_target_power(target *t, int argc, const char **argv);
 #ifdef PLATFORM_HAS_TRACESWO
 static bool cmd_traceswo(void);
 #endif
+#ifdef PLATFORM_HAS_DEBUG
+static bool cmd_debug_bmp(target *t, int argc, const char **argv);
+#endif
 
 const struct command_s cmd_list[] = {
 	{"version", (cmd_handler)cmd_version, "Display firmware version info"},
@@ -65,10 +68,16 @@ const struct command_s cmd_list[] = {
 #ifdef PLATFORM_HAS_TRACESWO
 	{"traceswo", (cmd_handler)cmd_traceswo, "Start trace capture" },
 #endif
+#ifdef PLATFORM_HAS_DEBUG
+	{"debug_bmp", (cmd_handler)cmd_debug_bmp, "Output BMP \"debug\" strings to the second vcom: (enable|disable)"},
+#endif
 	{NULL, NULL, NULL}
 };
 
 static bool connect_assert_srst;
+#ifdef PLATFORM_HAS_DEBUG
+bool debug_bmp;
+#endif
 
 int command_process(target *t, char *cmd)
 {
@@ -276,3 +285,15 @@ static bool cmd_traceswo(void)
 }
 #endif
 
+#ifdef PLATFORM_HAS_DEBUG
+static bool cmd_debug_bmp(target *t, int argc, const char **argv)
+{
+	(void)t;
+	if (argc > 1) {
+		debug_bmp = !strcmp(argv[1], "enable");
+	}
+	gdb_outf("Debug mode is %s\n",
+		 debug_bmp ? "enabled" : "disabled");
+	return true;
+}
+#endif
