@@ -83,6 +83,7 @@ struct cortexa_priv {
 	unsigned hw_breakpoint_max;
 	unsigned hw_breakpoint[16];
 	uint32_t bpc0;
+	bool mmu_fault;
 };
 
 /* This may be specific to Cortex-A9 */
@@ -213,10 +214,13 @@ static uint32_t apb_read(target *t, uint16_t reg)
 
 static uint32_t va_to_pa(target *t, uint32_t va)
 {
+	struct cortexa_priv *priv = t->priv;
 	write_gpreg(t, 0, va);
 	apb_write(t, DBGITR, MCR | ATS1CPR);
 	apb_write(t, DBGITR, MRC | PAR);
 	uint32_t par = read_gpreg(t, 0);
+	if (par & 1)
+		priv->mmu_fault = true;
 	uint32_t pa = (par & ~0xfff) | (va & 0xfff);
 	DEBUG("%s: VA = 0x%08X, PAR = 0x%08X, PA = 0x%08X\n", __func__, va, par, pa);
 	return pa;
@@ -249,8 +253,11 @@ static void cortexa_mem_write(target *t, uint32_t dest, const void *src, size_t 
 
 static bool cortexa_check_error(target *t)
 {
-	ADIv5_AP_t *ahb = ((struct cortexa_priv*)t->priv)->ahb;
-	return adiv5_dp_error(ahb->dp) != 0;
+	struct cortexa_priv *priv = t->priv;
+	ADIv5_AP_t *ahb = priv->ahb;
+	bool err = (adiv5_dp_error(ahb->dp) != 0) || priv->mmu_fault;
+	priv->mmu_fault = false;
+	return err;
 }
 
 
