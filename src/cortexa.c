@@ -104,6 +104,7 @@ struct cortexa_priv {
 #define DBGDSCR_ITREN            (1 << 13)
 #define DBGDSCR_INTDIS           (1 << 11)
 #define DBGDSCR_UND_I            (1 << 8)
+#define DBGDSCR_SDABORT_L        (1 << 6)
 #define DBGDSCR_MOE_MASK         (0xf << 2)
 #define DBGDSCR_MOE_HALT_REQ     (0x0 << 2)
 #define DBGDSCR_RESTARTED        (1 << 1)
@@ -239,6 +240,34 @@ static void cortexa_mem_read(target *t, void *dest, uint32_t src, size_t len)
 	adiv5_mem_read(ahb, dest, va_to_pa(t, src), len);
 }
 
+static void cortexa_slow_mem_read(target *t, void *dest, uint32_t src, size_t len)
+{
+	struct cortexa_priv *priv = t->priv;
+	if ((src & 3) || (len & 3)) {
+		priv->mmu_fault = true;
+		return;
+	}
+
+	/* No AHB :C Do slow read through debug APB */
+	/* Set SP to src address */
+	write_gpreg(t, 13, src);
+	uint32_t *dest32 = dest;
+	do {
+		apb_write(t, DBGITR, 0xe8bd00ff); /* pop {r0, r1, r2, r3, r4, r5, r6, r7} */
+		if (apb_read(t, DBGDSCR) & DBGDSCR_SDABORT_L) {
+			/* Memory access aborted, flag a fault */
+			apb_write(t, DBGDRCR, DBGDRCR_CSE);
+			priv->mmu_fault = true;
+			return;
+		}
+		for (int i = 0; i < 8; i++) {
+			*dest32++ = read_gpreg(t, i);
+			len -= 4;
+			if (len <= 0) break;
+		}
+	} while (len > 0);
+}
+
 static void cortexa_mem_write(target *t, uint32_t dest, const void *src, size_t len)
 {
 	/* Clean and invalidate cache before writing */
@@ -251,11 +280,39 @@ static void cortexa_mem_write(target *t, uint32_t dest, const void *src, size_t 
 	adiv5_mem_write(ahb, va_to_pa(t, dest), src, len);
 }
 
+static void cortexa_slow_mem_write(target *t, uint32_t dest, const void *src, size_t len)
+{
+	struct cortexa_priv *priv = t->priv;
+	if ((dest & 3) || (dest & 3)) {
+		priv->mmu_fault = true;
+		return;
+	}
+
+	/* No AHB :C Do slow write through debug APB */
+	/* Set SP to dest address */
+	write_gpreg(t, 13, dest);
+	const uint32_t *src32 = src;
+	do {
+		for (int i = 0; i < 8; i++) {
+			write_gpreg(t, i, *src32++);
+			len -= 4;
+			if (len <= 0) break;
+		}
+		apb_write(t, DBGITR, 0xe8ad00ff); /* stmia sp!, {r0, r1, r2, r3, r4, r5, r6, r7} */
+		if (apb_read(t, DBGDSCR) & DBGDSCR_SDABORT_L) {
+			/* Memory access aborted, flag a fault */
+			apb_write(t, DBGDRCR, DBGDRCR_CSE);
+			priv->mmu_fault = true;
+			return;
+		}
+	} while (len > 0);
+}
+
 static bool cortexa_check_error(target *t)
 {
 	struct cortexa_priv *priv = t->priv;
 	ADIv5_AP_t *ahb = priv->ahb;
-	bool err = (adiv5_dp_error(ahb->dp) != 0) || priv->mmu_fault;
+	bool err = (ahb && (adiv5_dp_error(ahb->dp)) != 0) || priv->mmu_fault;
 	priv->mmu_fault = false;
 	return err;
 }
@@ -278,6 +335,18 @@ bool cortexa_probe(ADIv5_AP_t *apb, uint32_t debug_base)
 	 * device specific. */
 	priv->ahb = adiv5_new_ap(apb->dp, 0);
 	adiv5_ap_ref(priv->ahb);
+	if ((priv->ahb->idr & 0xfffe00f) == 0x4770001) {
+		/* This is an AHB */
+		t->mem_read = cortexa_mem_read;
+		t->mem_write = cortexa_mem_write;
+	} else {
+		/* This is not an AHB, fall back to slow APB access */
+		adiv5_ap_unref(priv->ahb);
+		priv->ahb = NULL;
+		t->mem_read = cortexa_slow_mem_read;
+		t->mem_write = cortexa_slow_mem_write;
+	}
+
 	priv->base = debug_base;
 	/* Set up APB CSW, we won't touch this again */
 	uint32_t csw = apb->csw | ADIV5_AP_CSW_SIZE_WORD;
@@ -287,9 +356,6 @@ bool cortexa_probe(ADIv5_AP_t *apb, uint32_t debug_base)
 	DEBUG("Target has %d breakpoints\n", priv->hw_breakpoint_max);
 
 	t->check_error = cortexa_check_error;
-
-	t->mem_read = cortexa_mem_read;
-	t->mem_write = cortexa_mem_write;
 
 	t->driver = cortexa_driver_str;
 
