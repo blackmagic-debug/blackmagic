@@ -365,14 +365,7 @@ handle_v_packet(char *packet, int plen)
 
 	if (sscanf(packet, "vAttach;%08lx", &addr) == 1) {
 		/* Attach to remote target processor */
-		target *t;
-		uint32_t i;
-		for(t = target_list, i = 1; t; t = t->next, i++)
-			if(i == addr) {
-				cur_target = target_attach(t,
-						gdb_target_destroy_callback);
-				break;
-			}
+		cur_target = target_attach_n(addr, gdb_target_destroy_callback);
 		if(cur_target)
 			gdb_putpacketz("T05");
 		else

@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2012  Black Sphere Technologies Ltd.
+ * Copyright (C) 2016  Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -78,6 +78,16 @@ void target_add_commands(target *t, const struct command_s *cmds, const char *na
 	tc->specific_name = name;
 	tc->cmds = cmds;
 	tc->next = NULL;
+}
+
+target *target_attach_n(int n, target_destroy_callback destroy_cb)
+{
+	target *t;
+	int i;
+	for(t = target_list, i = 1; t; t = t->next, i++)
+		if(i == n)
+			return target_attach(t, destroy_cb);
+	return NULL;
 }
 
 target *target_attach(target *t, target_destroy_callback destroy_cb)
@@ -254,4 +264,107 @@ int target_flash_done_buffered(struct target_flash *f)
 	return ret;
 }
 
+/* Wrapper functions */
+void target_detach(target *t) { t->detach(t); }
+bool target_check_error(target *t) { return t->check_error(t); }
+
+/* Memory access functions */
+void target_mem_read(target *t, void *dest, uint32_t src, size_t len)
+{
+	t->mem_read(t, dest, src, len);
+}
+
+void target_mem_write(target *t, uint32_t dest, const void *src, size_t len)
+{
+	t->mem_write(t, dest, src, len);
+}
+
+/* Register access functions */
+void target_regs_read(target *t, void *data) { t->regs_read(t, data); }
+void target_regs_write(target *t, const void *data) { t->regs_write(t, data); }
+
+/* Halt/resume functions */
+void target_reset(target *t) { t->reset(t); }
+void target_halt_request(target *t) { t->halt_request(t); }
+int target_halt_wait(target *t) { return t->halt_wait(t); }
+void target_halt_resume(target *t, bool step) { t->halt_resume(t, step); }
+
+/* Break-/watchpoint functions */
+int target_set_hw_bp(target *t, uint32_t addr, uint8_t len)
+{
+	return t->set_hw_bp(t, addr, len);
+}
+
+int target_clear_hw_bp(target *t, uint32_t addr, uint8_t len)
+{
+	return t->clear_hw_bp(t, addr, len);
+}
+
+int target_set_hw_wp(target *t, uint8_t type, uint32_t addr, uint8_t len)
+{
+	return t->set_hw_wp(t, type, addr, len);
+}
+
+int target_clear_hw_wp(target *t, uint8_t type, uint32_t addr, uint8_t len)
+{
+	return t->clear_hw_wp(t, type, addr, len);
+}
+
+int target_check_hw_wp(target *t, uint32_t *addr)
+{
+	return t->check_hw_wp(t, addr);
+}
+
+/* Host I/O */
+void target_hostio_reply(target *t, int32_t retcode, uint32_t errcode)
+{
+	t->hostio_reply(t, retcode, errcode);
+}
+
+/* Accessor functions */
+int target_regs_size(target *t)
+{
+	return t->regs_size;
+}
+
+const char *target_tdesc(target *t)
+{
+	return t->tdesc ? t->tdesc : "";
+}
+
+uint32_t target_mem_read32(target *t, uint32_t addr)
+{
+	uint32_t ret;
+	target_mem_read(t, &ret, addr, sizeof(ret));
+	return ret;
+}
+
+void target_mem_write32(target *t, uint32_t addr, uint32_t value)
+{
+	target_mem_write(t, addr, &value, sizeof(value));
+}
+
+uint16_t target_mem_read16(target *t, uint32_t addr)
+{
+	uint16_t ret;
+	target_mem_read(t, &ret, addr, sizeof(ret));
+	return ret;
+}
+
+void target_mem_write16(target *t, uint32_t addr, uint16_t value)
+{
+	target_mem_write(t, addr, &value, sizeof(value));
+}
+
+uint8_t target_mem_read8(target *t, uint32_t addr)
+{
+	uint8_t ret;
+	target_mem_read(t, &ret, addr, sizeof(ret));
+	return ret;
+}
+
+void target_mem_write8(target *t, uint32_t addr, uint8_t value)
+{
+	target_mem_write(t, addr, &value, sizeof(value));
+}
 
