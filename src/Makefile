@@ -34,6 +34,7 @@ SRC =			\
 	hex_utils.c	\
 	jtag_scan.c	\
 	jtagtap.c	\
+	jtagtap_generic.c	\
 	lmi.c		\
 	lpc_common.c	\
 	lpc11xx.c	\

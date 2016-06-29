@@ -66,11 +66,3 @@ inline uint8_t jtagtap_next(uint8_t dTMS, uint8_t dTDO)
 	return ret != 0;
 }
 
-
-
-#define PROVIDE_GENERIC_JTAGTAP_TMS_SEQ
-#define PROVIDE_GENERIC_JTAGTAP_TDI_TDO_SEQ
-#define PROVIDE_GENERIC_JTAGTAP_TDI_SEQ
-
-#include "jtagtap_generic.c"
-
