@@ -26,7 +26,6 @@
 #include "exception.h"
 #include "adiv5.h"
 #include "swdptap.h"
-#include "jtagtap.h"
 #include "command.h"
 #include "morse.h"
 #include "gdb_packet.h"
