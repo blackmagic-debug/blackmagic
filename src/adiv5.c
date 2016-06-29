@@ -504,6 +504,9 @@ adiv5_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
 	uint32_t osrc = src;
 	enum align align = MIN(ALIGNOF(src), ALIGNOF(len));
 
+	if (len == 0)
+		return;
+
 	len >>= align;
 	ap_mem_access_setup(ap, src, align);
 	adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_AP_DRW, 0);

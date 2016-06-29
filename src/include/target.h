@@ -53,13 +53,6 @@ bool target_check_error(target *t);
 void target_mem_read(target *t, void *dest, uint32_t src, size_t len);
 void target_mem_write(target *t, uint32_t dest, const void *src, size_t len);
 
-uint32_t target_mem_read32(target *t, uint32_t addr);
-uint16_t target_mem_read16(target *t, uint32_t addr);
-uint8_t target_mem_read8(target *t, uint32_t addr);
-void target_mem_write32(target *t, uint32_t addr, uint32_t value);
-void target_mem_write16(target *t, uint32_t addr, uint16_t value);
-void target_mem_write8(target *t, uint32_t addr, uint8_t value);
-
 /* Register access functions */
 void target_regs_read(target *t, void *data);
 void target_regs_write(target *t, const void *data);
