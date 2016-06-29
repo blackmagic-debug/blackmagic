@@ -360,9 +360,6 @@ bool cortexa_probe(ADIv5_AP_t *apb, uint32_t debug_base)
 {
 	target *t;
 
-	DEBUG("%s base=0x%08"PRIx32"\n", __func__, debug_base);
-
-	/* Prepend to target list... */
 	t = target_new(sizeof(*t));
 	adiv5_ap_ref(apb);
 	struct cortexa_priv *priv = calloc(1, sizeof(*priv));
@@ -391,7 +388,6 @@ bool cortexa_probe(ADIv5_AP_t *apb, uint32_t debug_base)
 	adiv5_ap_write(apb, ADIV5_AP_CSW, csw);
 	uint32_t dbgdidr = apb_read(t, DBGDIDR);
 	priv->hw_breakpoint_max = ((dbgdidr >> 24) & 15)+1;
-	DEBUG("Target has %d breakpoints\n", priv->hw_breakpoint_max);
 
 	t->check_error = cortexa_check_error;
 
