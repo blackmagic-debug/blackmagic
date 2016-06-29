@@ -21,6 +21,9 @@
 #ifndef __TARGET_INTERNAL_H
 #define __TARGET_INTERNAL_H
 
+extern target *target_list;
+target *target_new(unsigned size);
+
 struct target_ram {
 	uint32_t start;
 	uint32_t length;

@@ -26,10 +26,8 @@
 #include "exception.h"
 #include "command.h"
 #include "gdb_packet.h"
-#include "jtag_scan.h"
 #include "target.h"
 #include "morse.h"
-#include "adiv5.h"
 #include "version.h"
 
 #ifdef PLATFORM_HAS_TRACESWO
@@ -185,12 +183,6 @@ static bool cmd_jtag_scan(target *t, int argc, char **argv)
 		gdb_out("JTAG device scan failed!\n");
 		return false;
 	}
-	gdb_outf("Device  IR Len  IDCODE      Description\n");
-	for(int i = 0; i < jtag_dev_count; i++)
-		gdb_outf("%d\t%d\t0x%08lX  %s\n", i,
-			 jtag_devs[i].ir_len, jtag_devs[i].idcode,
-			 jtag_devs[i].descr);
-	gdb_out("\n");
 	cmd_targets(NULL);
 	return true;
 }

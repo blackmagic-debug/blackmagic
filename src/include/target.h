@@ -27,6 +27,11 @@
 
 typedef struct target_s target;
 
+int adiv5_swdp_scan(void);
+int jtag_scan(const uint8_t *lrlens);
+
+void target_list_free(void);
+
 /* The destroy callback function will be called by target_list_free() just
  * before the target is free'd.  This may be because we're scanning for new
  * targets, or because of a communication failure.  The target data may
@@ -93,11 +98,6 @@ struct target_command_s {
 	const struct command_s *cmds;
 	struct target_command_s *next;
 };
-
-extern target *target_list;
-
-target *target_new(unsigned size);
-void target_list_free(void);
 
 #include "target_internal.h"
 
