@@ -80,7 +80,68 @@
 #include "gdb_packet.h"
 #include "cortexm.h"
 
-#include "stm32lx-nvm.h"
+#define STM32Lx_NVM_PECR(p)     ((p) + 0x04)
+#define STM32Lx_NVM_PEKEYR(p)   ((p) + 0x0C)
+#define STM32Lx_NVM_PRGKEYR(p)  ((p) + 0x10)
+#define STM32Lx_NVM_OPTKEYR(p)  ((p) + 0x14)
+#define STM32Lx_NVM_SR(p)       ((p) + 0x18)
+#define STM32Lx_NVM_OPTR(p)     ((p) + 0x1C)
+
+#define STM32L0_NVM_PHYS             (0x40022000ul)
+#define STM32L0_NVM_OPT_SIZE         (12)
+#define STM32L0_NVM_EEPROM_SIZE      (2*1024)
+
+#define STM32L1_NVM_PHYS             (0x40023c00ul)
+#define STM32L1_NVM_OPT_SIZE         (32)
+#define STM32L1_NVM_EEPROM_SIZE      (16*1024)
+
+#define STM32Lx_NVM_OPT_PHYS         0x1ff80000ul
+#define STM32Lx_NVM_EEPROM_PHYS      0x08080000ul
+
+#define STM32Lx_NVM_PEKEY1           (0x89abcdeful)
+#define STM32Lx_NVM_PEKEY2           (0x02030405ul)
+#define STM32Lx_NVM_PRGKEY1          (0x8c9daebful)
+#define STM32Lx_NVM_PRGKEY2          (0x13141516ul)
+#define STM32Lx_NVM_OPTKEY1          (0xfbead9c8ul)
+#define STM32Lx_NVM_OPTKEY2          (0x24252627ul)
+
+#define STM32Lx_NVM_PECR_OBL_LAUNCH  (1<<18)
+#define STM32Lx_NVM_PECR_ERRIE       (1<<17)
+#define STM32Lx_NVM_PECR_EOPIE       (1<<16)
+#define STM32Lx_NVM_PECR_FPRG        (1<<10)
+#define STM32Lx_NVM_PECR_ERASE       (1<< 9)
+#define STM32Lx_NVM_PECR_FIX         (1<< 8) /* FTDW */
+#define STM32Lx_NVM_PECR_DATA        (1<< 4)
+#define STM32Lx_NVM_PECR_PROG        (1<< 3)
+#define STM32Lx_NVM_PECR_OPTLOCK     (1<< 2)
+#define STM32Lx_NVM_PECR_PRGLOCK     (1<< 1)
+#define STM32Lx_NVM_PECR_PELOCK      (1<< 0)
+
+#define STM32Lx_NVM_SR_NOTZEROERR    (1<<16)
+#define STM32Lx_NVM_SR_SIZERR        (1<<10)
+#define STM32Lx_NVM_SR_PGAERR        (1<<9)
+#define STM32Lx_NVM_SR_WRPERR        (1<<8)
+#define STM32Lx_NVM_SR_EOP           (1<<1)
+#define STM32Lx_NVM_SR_BSY           (1<<0)
+#define STM32Lx_NVM_SR_ERR_M         (STM32Lx_NVM_SR_WRPERR | \
+                                      STM32Lx_NVM_SR_PGAERR | \
+                                      STM32Lx_NVM_SR_SIZERR | \
+                                      STM32Lx_NVM_SR_NOTZEROERR)
+
+#define STM32L0_NVM_OPTR_BOOT1       (1<<31)
+#define STM32Lx_NVM_OPTR_WDG_SW      (1<<20)
+#define STM32L0_NVM_OPTR_WPRMOD      (1<<8)
+#define STM32Lx_NVM_OPTR_RDPROT_S    (0)
+#define STM32Lx_NVM_OPTR_RDPROT_M    (0xff)
+#define STM32Lx_NVM_OPTR_RDPROT_0    (0xaa)
+#define STM32Lx_NVM_OPTR_RDPROT_2    (0xcc)
+
+#define STM32L1_NVM_OPTR_nBFB2       (1<<23)
+#define STM32L1_NVM_OPTR_nRST_STDBY  (1<<22)
+#define STM32L1_NVM_OPTR_nRST_STOP   (1<<21)
+#define STM32L1_NVM_OPTR_BOR_LEV_S   (16)
+#define STM32L1_NVM_OPTR_BOR_LEV_M   (0xf)
+#define STM32L1_NVM_OPTR_SPRMOD      (1<<8)
 
 static int stm32lx_nvm_prog_erase(struct target_flash* f,
                                   uint32_t addr, size_t len);
@@ -566,11 +627,11 @@ static bool stm32lx_cmd_option(target* t, int argc, char** argv)
 
         if (stm32lx_is_stm32l1(t)) {
                 uint32_t optr   = target_mem_read32(t, STM32Lx_NVM_OPTR(nvm));
-                uint8_t  rdprot = (optr >> STM32L1_NVM_OPTR_RDPROT_S)
-                        & STM32L1_NVM_OPTR_RDPROT_M;
-                if (rdprot == STM32L1_NVM_OPTR_RDPROT_0)
+                uint8_t  rdprot = (optr >> STM32Lx_NVM_OPTR_RDPROT_S)
+                        & STM32Lx_NVM_OPTR_RDPROT_M;
+                if (rdprot == STM32Lx_NVM_OPTR_RDPROT_0)
                         rdprot = 0;
-                else if (rdprot == STM32L1_NVM_OPTR_RDPROT_2)
+                else if (rdprot == STM32Lx_NVM_OPTR_RDPROT_2)
                         rdprot = 2;
                 else
                         rdprot = 1;
@@ -581,18 +642,18 @@ static bool stm32lx_cmd_option(target* t, int argc, char** argv)
                          (optr &  STM32L1_NVM_OPTR_SPRMOD)     ? 1 : 0,
                          (optr >> STM32L1_NVM_OPTR_BOR_LEV_S)
                           & STM32L1_NVM_OPTR_BOR_LEV_M,
-                         (optr &  STM32L1_NVM_OPTR_WDG_SW)     ? 1 : 0,
+                         (optr &  STM32Lx_NVM_OPTR_WDG_SW)     ? 1 : 0,
                          (optr &  STM32L1_NVM_OPTR_nRST_STOP)  ? 1 : 0,
                          (optr &  STM32L1_NVM_OPTR_nRST_STDBY) ? 1 : 0,
                          (optr &  STM32L1_NVM_OPTR_nBFB2)      ? 1 : 0);
         }
         else {
                 uint32_t optr   = target_mem_read32(t, STM32Lx_NVM_OPTR(nvm));
-                uint8_t  rdprot = (optr >> STM32L0_NVM_OPTR_RDPROT_S)
-                        & STM32L0_NVM_OPTR_RDPROT_M;
-                if (rdprot == STM32L0_NVM_OPTR_RDPROT_0)
+                uint8_t  rdprot = (optr >> STM32Lx_NVM_OPTR_RDPROT_S)
+                        & STM32Lx_NVM_OPTR_RDPROT_M;
+                if (rdprot == STM32Lx_NVM_OPTR_RDPROT_0)
                         rdprot = 0;
-                else if (rdprot == STM32L0_NVM_OPTR_RDPROT_2)
+                else if (rdprot == STM32Lx_NVM_OPTR_RDPROT_2)
                         rdprot = 2;
                 else
                         rdprot = 1;
@@ -600,7 +661,7 @@ static bool stm32lx_cmd_option(target* t, int argc, char** argv)
                          "BOOT1 %d\n",
                          optr, rdprot,
                          (optr & STM32L0_NVM_OPTR_WPRMOD) ? 1 : 0,
-                         (optr & STM32L0_NVM_OPTR_WDG_SW) ? 1 : 0,
+                         (optr & STM32Lx_NVM_OPTR_WDG_SW) ? 1 : 0,
                          (optr & STM32L0_NVM_OPTR_BOOT1)  ? 1 : 0);
         }
 
