@@ -308,26 +308,36 @@ void target_halt_resume(target *t, bool step) { t->halt_resume(t, step); }
 /* Break-/watchpoint functions */
 int target_set_hw_bp(target *t, uint32_t addr, uint8_t len)
 {
+	if (t->set_hw_bp == NULL)
+		return 0;
 	return t->set_hw_bp(t, addr, len);
 }
 
 int target_clear_hw_bp(target *t, uint32_t addr, uint8_t len)
 {
+	if (t->clear_hw_bp == NULL)
+		return 0;
 	return t->clear_hw_bp(t, addr, len);
 }
 
 int target_set_hw_wp(target *t, uint8_t type, uint32_t addr, uint8_t len)
 {
+	if (t->set_hw_wp == NULL)
+		return 0;
 	return t->set_hw_wp(t, type, addr, len);
 }
 
 int target_clear_hw_wp(target *t, uint8_t type, uint32_t addr, uint8_t len)
 {
+	if (t->clear_hw_wp == NULL)
+		return 0;
 	return t->clear_hw_wp(t, type, addr, len);
 }
 
 int target_check_hw_wp(target *t, uint32_t *addr)
 {
+	if (t->check_hw_wp == NULL)
+		return 0;
 	return t->check_hw_wp(t, addr);
 }
 
