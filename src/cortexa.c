@@ -99,6 +99,7 @@ struct cortexa_priv {
 #define DBGDSCR_TXFULL           (1 << 29)
 #define DBGDSCR_INSTRCOMPL       (1 << 24)
 #define DBGDSCR_EXTDCCMODE_STALL (1 << 20)
+#define DBGDSCR_EXTDCCMODE_FAST  (2 << 20)
 #define DBGDSCR_EXTDCCMODE_MASK  (3 << 20)
 #define DBGDSCR_HDBGEN           (1 << 14)
 #define DBGDSCR_ITREN            (1 << 13)
@@ -243,29 +244,40 @@ static void cortexa_mem_read(target *t, void *dest, uint32_t src, size_t len)
 static void cortexa_slow_mem_read(target *t, void *dest, uint32_t src, size_t len)
 {
 	struct cortexa_priv *priv = t->priv;
-	if ((src & 3) || (len & 3)) {
-		priv->mmu_fault = true;
-		return;
-	}
+	unsigned words = (len + (src & 3) + 3) / 4;
+	uint32_t dest32[words];
 
-	/* No AHB :C Do slow read through debug APB */
-	/* Set SP to src address */
-	write_gpreg(t, 13, src);
-	uint32_t *dest32 = dest;
-	do {
-		apb_write(t, DBGITR, 0xe8bd00ff); /* pop {r0, r1, r2, r3, r4, r5, r6, r7} */
-		if (apb_read(t, DBGDSCR) & DBGDSCR_SDABORT_L) {
-			/* Memory access aborted, flag a fault */
-			apb_write(t, DBGDRCR, DBGDRCR_CSE);
-			priv->mmu_fault = true;
-			return;
-		}
-		for (int i = 0; i < 8; i++) {
-			*dest32++ = read_gpreg(t, i);
-			len -= 4;
-			if (len <= 0) break;
-		}
-	} while (len > 0);
+	/* Set r0 to aligned src address */
+	write_gpreg(t, 0, src & ~3);
+
+	/* Switch to fast DCC mode */
+	uint32_t dbgdscr = apb_read(t, DBGDSCR);
+	dbgdscr = (dbgdscr & ~DBGDSCR_EXTDCCMODE_MASK) | DBGDSCR_EXTDCCMODE_FAST;
+	apb_write(t, DBGDSCR, dbgdscr);
+
+	apb_write(t, DBGITR, 0xecb05e01); /* ldc 14, cr5, [r0], #4 */
+	/* According to the ARMv7-A ARM, in fast mode, the first read from
+	 * DBGDTRTX is  supposed to block until the instruction is complete,
+	 * but we see the first read returns junk, so it's read here and
+	 * ignored. */
+	apb_read(t, DBGDTRTX);
+
+	for (unsigned i = 0; i < words; i++)
+		dest32[i] = apb_read(t, DBGDTRTX);
+
+	memcpy(dest, (uint8_t*)dest32 + (src & 3), len);
+
+	/* Switch back to stalling DCC mode */
+	dbgdscr = (dbgdscr & ~DBGDSCR_EXTDCCMODE_MASK) | DBGDSCR_EXTDCCMODE_STALL;
+	apb_write(t, DBGDSCR, dbgdscr);
+
+	if (apb_read(t, DBGDSCR) & DBGDSCR_SDABORT_L) {
+		/* Memory access aborted, flag a fault */
+		apb_write(t, DBGDRCR, DBGDRCR_CSE);
+		priv->mmu_fault = true;
+	} else {
+		apb_read(t, DBGDTRTX);
+	}
 }
 
 static void cortexa_mem_write(target *t, uint32_t dest, const void *src, size_t len)
@@ -280,32 +292,58 @@ static void cortexa_mem_write(target *t, uint32_t dest, const void *src, size_t 
 	adiv5_mem_write(ahb, va_to_pa(t, dest), src, len);
 }
 
-static void cortexa_slow_mem_write(target *t, uint32_t dest, const void *src, size_t len)
+static void cortexa_slow_mem_write_bytes(target *t, uint32_t dest, const uint8_t *src, size_t len)
 {
 	struct cortexa_priv *priv = t->priv;
-	if ((dest & 3) || (dest & 3)) {
-		priv->mmu_fault = true;
-		return;
-	}
 
-	/* No AHB :C Do slow write through debug APB */
-	/* Set SP to dest address */
+	/* Set r13 to dest address */
 	write_gpreg(t, 13, dest);
-	const uint32_t *src32 = src;
-	do {
-		for (int i = 0; i < 8; i++) {
-			write_gpreg(t, i, *src32++);
-			len -= 4;
-			if (len <= 0) break;
-		}
-		apb_write(t, DBGITR, 0xe8ad00ff); /* stmia sp!, {r0, r1, r2, r3, r4, r5, r6, r7} */
+
+	while (len--) {
+		write_gpreg(t, 0, *src++);
+		apb_write(t, DBGITR, 0xe4cd0001); /* strb r0, [sp], #1 */
 		if (apb_read(t, DBGDSCR) & DBGDSCR_SDABORT_L) {
 			/* Memory access aborted, flag a fault */
 			apb_write(t, DBGDRCR, DBGDRCR_CSE);
 			priv->mmu_fault = true;
 			return;
 		}
-	} while (len > 0);
+	}
+}
+
+static void cortexa_slow_mem_write(target *t, uint32_t dest, const void *src, size_t len)
+{
+	struct cortexa_priv *priv = t->priv;
+	if (len == 0)
+		return;
+
+	if ((dest & 3) || (len & 3)) {
+		cortexa_slow_mem_write_bytes(t, dest, src, len);
+		return;
+	}
+
+	write_gpreg(t, 0, dest);
+	const uint32_t *src32 = src;
+
+	/* Switch to fast DCC mode */
+	uint32_t dbgdscr = apb_read(t, DBGDSCR);
+	dbgdscr = (dbgdscr & ~DBGDSCR_EXTDCCMODE_MASK) | DBGDSCR_EXTDCCMODE_FAST;
+	apb_write(t, DBGDSCR, dbgdscr);
+
+	apb_write(t, DBGITR, 0xeca05e01); /* stc 14, cr5, [r0], #4 */
+
+	for (; len; len -= 4)
+		apb_write(t, DBGDTRRX, *src32++);
+
+	/* Switch back to stalling DCC mode */
+	dbgdscr = (dbgdscr & ~DBGDSCR_EXTDCCMODE_MASK) | DBGDSCR_EXTDCCMODE_STALL;
+	apb_write(t, DBGDSCR, dbgdscr);
+
+	if (apb_read(t, DBGDSCR) & DBGDSCR_SDABORT_L) {
+		/* Memory access aborted, flag a fault */
+		apb_write(t, DBGDRCR, DBGDRCR_CSE);
+		priv->mmu_fault = true;
+	}
 }
 
 static bool cortexa_check_error(target *t)
