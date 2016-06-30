@@ -22,7 +22,7 @@
 #define __TARGET_INTERNAL_H
 
 extern target *target_list;
-target *target_new(unsigned size);
+target *target_new(void);
 
 struct target_ram {
 	uint32_t start;
@@ -55,6 +55,7 @@ struct target_flash {
 };
 
 struct target_s {
+	bool attached;
 	/* Notify controlling debugger if target is lost */
 	target_destroy_callback destroy_callback;
 

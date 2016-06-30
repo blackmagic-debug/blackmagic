@@ -30,6 +30,7 @@ typedef struct target_s target;
 int adiv5_swdp_scan(void);
 int jtag_scan(const uint8_t *lrlens);
 
+bool target_foreach(void (*cb)(int i, target *t, void *context), void *context);
 void target_list_free(void);
 
 /* The destroy callback function will be called by target_list_free() just
@@ -48,6 +49,7 @@ target *target_attach(target *t, target_destroy_callback destroy_cb);
 target *target_attach_n(int n, target_destroy_callback destroy_cb);
 void target_detach(target *t);
 bool target_check_error(target *t);
+bool target_attached(target *t);
 
 /* Memory access functions */
 void target_mem_read(target *t, void *dest, uint32_t src, size_t len);
@@ -69,13 +71,11 @@ int target_clear_hw_bp(target *t, uint32_t addr, uint8_t len);
 
 int target_set_hw_wp(target *t, uint8_t type, uint32_t addr, uint8_t len);
 int target_clear_hw_wp(target *t, uint8_t type, uint32_t addr, uint8_t len);
-
 int target_check_hw_wp(target *t, uint32_t *addr);
 
 /* Flash memory access functions */
 int target_flash_erase(target *t, uint32_t addr, size_t len);
-int target_flash_write(target *t,
-                       uint32_t dest, const void *src, size_t len);
+int target_flash_write(target *t, uint32_t dest, const void *src, size_t len);
 int target_flash_done(target *t);
 
 /* Host I/O */
@@ -85,6 +85,7 @@ void target_hostio_reply(target *t, int32_t retcode, uint32_t errcode);
 int target_regs_size(target *t);
 const char *target_tdesc(target *t);
 const char *target_mem_map(target *t);
+const char *target_driver_name(target *t);
 
 struct target_command_s {
 	const char *specific_name;

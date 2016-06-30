@@ -360,7 +360,7 @@ bool cortexa_probe(ADIv5_AP_t *apb, uint32_t debug_base)
 {
 	target *t;
 
-	t = target_new(sizeof(*t));
+	t = target_new();
 	adiv5_ap_ref(apb);
 	struct cortexa_priv *priv = calloc(1, sizeof(*priv));
 	t->priv = priv;

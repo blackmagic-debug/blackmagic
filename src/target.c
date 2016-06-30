@@ -23,13 +23,22 @@
 
 target *target_list = NULL;
 
-target *target_new(unsigned size)
+target *target_new(void)
 {
-	target *t = (void*)calloc(1, size);
+	target *t = (void*)calloc(1, sizeof(*t));
 	t->next = target_list;
 	target_list = t;
 
 	return t;
+}
+
+bool target_foreach(void (*cb)(int, target *t, void *context), void *context)
+{
+	int i = 1;
+	target *t = target_list;
+	for (; t; t = t->next, i++)
+		cb(i, t, context);
+	return target_list != NULL;
 }
 
 void target_list_free(void)
@@ -100,6 +109,7 @@ target *target_attach(target *t, target_destroy_callback destroy_cb)
 	if (!t->attach(t))
 		return NULL;
 
+	t->attached = true;
 	return t;
 }
 
@@ -265,8 +275,14 @@ int target_flash_done_buffered(struct target_flash *f)
 }
 
 /* Wrapper functions */
-void target_detach(target *t) { t->detach(t); }
+void target_detach(target *t)
+{
+	t->detach(t);
+	t->attached = false;
+}
+
 bool target_check_error(target *t) { return t->check_error(t); }
+bool target_attached(target *t) { return t->attached; }
 
 /* Memory access functions */
 void target_mem_read(target *t, void *dest, uint32_t src, size_t len)
@@ -330,6 +346,11 @@ int target_regs_size(target *t)
 const char *target_tdesc(target *t)
 {
 	return t->tdesc ? t->tdesc : "";
+}
+
+const char *target_driver_name(target *t)
+{
+	return t->driver;
 }
 
 uint32_t target_mem_read32(target *t, uint32_t addr)

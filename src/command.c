@@ -39,7 +39,7 @@ static bool cmd_help(target *t);
 
 static bool cmd_jtag_scan(target *t, int argc, char **argv);
 static bool cmd_swdp_scan(void);
-static bool cmd_targets(target *t);
+static bool cmd_targets(void);
 static bool cmd_morse(void);
 static bool cmd_connect_srst(target *t, int argc, const char **argv);
 static bool cmd_hard_srst(void);
@@ -183,7 +183,7 @@ static bool cmd_jtag_scan(target *t, int argc, char **argv)
 		gdb_out("JTAG device scan failed!\n");
 		return false;
 	}
-	cmd_targets(NULL);
+	cmd_targets();
 	return true;
 }
 
@@ -214,26 +214,25 @@ bool cmd_swdp_scan(void)
 		return false;
 	}
 
-	cmd_targets(NULL);
+	cmd_targets();
 	return true;
 
 }
 
-bool cmd_targets(target *cur_target)
+static void display_target(int i, target *t, void *context)
 {
-	struct target_s *t;
-	int i;
+	(void)context;
+	gdb_outf("%2d   %c  %s\n", i, target_attached(t)?'*':' ', target_driver_name(t));
+}
 
-	if(!target_list) {
+bool cmd_targets(void)
+{
+	gdb_out("Available Targets:\n");
+	gdb_out("No. Att Driver\n");
+	if (!target_foreach(display_target, NULL)) {
 		gdb_out("No usable targets found.\n");
 		return false;
 	}
-
-	gdb_out("Available Targets:\n");
-	gdb_out("No. Att Driver\n");
-	for(t = target_list, i = 1; t; t = t->next, i++)
-		gdb_outf("%2d   %c  %s\n", i, t==cur_target?'*':' ',
-			 t->driver);
 
 	return true;
 }

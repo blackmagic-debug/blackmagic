@@ -229,7 +229,7 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 {
 	target *t;
 
-	t = target_new(sizeof(*t));
+	t = target_new();
 	adiv5_ap_ref(ap);
 	struct cortexm_priv *priv = calloc(1, sizeof(*priv));
 	t->priv = priv;
