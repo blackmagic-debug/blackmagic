@@ -34,6 +34,15 @@
 #	include "traceswo.h"
 #endif
 
+typedef bool (*cmd_handler)(target *t, int argc, const char **argv);
+
+struct command_s {
+	const char *cmd;
+	cmd_handler handler;
+
+	const char *help;
+};
+
 static bool cmd_version(void);
 static bool cmd_help(target *t);
 
@@ -81,7 +90,6 @@ bool debug_bmp;
 
 int command_process(target *t, char *cmd)
 {
-	struct target_command_s *tc;
 	const struct command_s *c;
 	int argc = 0;
 	const char **argv;
@@ -101,19 +109,14 @@ int command_process(target *t, char *cmd)
 		/* Accept a partial match as GDB does.
 		 * So 'mon ver' will match 'monitor version'
 		 */
-		if(!strncmp(argv[0], c->cmd, strlen(argv[0])))
+		if ((argc == 0) || !strncmp(argv[0], c->cmd, strlen(argv[0])))
 			return !c->handler(t, argc, argv);
 	}
 
 	if (!t)
 		return -1;
 
-	for (tc = t->commands; tc; tc = tc->next)
-		for(c = tc->cmds; c->cmd; c++)
-			if(!strncmp(argv[0], c->cmd, strlen(argv[0])))
-				return !c->handler(t, argc, argv);
-
-	return -1;
+	return target_command(t, argc, argv);
 }
 
 bool cmd_version(void)
@@ -128,7 +131,6 @@ bool cmd_version(void)
 
 bool cmd_help(target *t)
 {
-	struct target_command_s *tc;
 	const struct command_s *c;
 
 	gdb_out("General commands:\n");
@@ -138,11 +140,7 @@ bool cmd_help(target *t)
 	if (!t)
 		return -1;
 
-	for (tc = t->commands; tc; tc = tc->next) {
-		gdb_outf("%s specific commands:\n", tc->specific_name);
-		for(c = tc->cmds; c->cmd; c++)
-			gdb_outf("\t%s -- %s\n", c->cmd, c->help);
-	}
+	target_command_help(t);
 
 	return true;
 }

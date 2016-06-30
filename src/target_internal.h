@@ -54,6 +54,20 @@ struct target_flash {
 	void *buf;
 };
 
+typedef bool (*cmd_handler)(target *t, int argc, const char **argv);
+
+struct command_s {
+	const char *cmd;
+	cmd_handler handler;
+	const char *help;
+};
+
+struct target_command_s {
+	const char *specific_name;
+	const struct command_s *cmds;
+	struct target_command_s *next;
+};
+
 struct target_s {
 	bool attached;
 	/* Notify controlling debugger if target is lost */

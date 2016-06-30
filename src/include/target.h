@@ -87,13 +87,9 @@ const char *target_tdesc(target *t);
 const char *target_mem_map(target *t);
 const char *target_driver_name(target *t);
 
-struct target_command_s {
-	const char *specific_name;
-	const struct command_s *cmds;
-	struct target_command_s *next;
-};
-
-#include "target_internal.h"
+/* Command interpreter */
+void target_command_help(target *t);
+int target_command(target *t, int argc, const char *argv[]);
 
 #endif
 

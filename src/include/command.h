@@ -24,14 +24,6 @@
 #include "target.h"
 
 int command_process(target *t, char *cmd);
-typedef bool (*cmd_handler)(target *t, int argc, const char **argv);
-
-struct command_s {
-	const char *cmd;
-	cmd_handler handler;
-
-	const char *help;
-};
 
 #endif
 

@@ -20,6 +20,7 @@
 
 #include "general.h"
 #include "target.h"
+#include "target_internal.h"
 
 target *target_list = NULL;
 
@@ -397,5 +398,25 @@ uint8_t target_mem_read8(target *t, uint32_t addr)
 void target_mem_write8(target *t, uint32_t addr, uint8_t value)
 {
 	target_mem_write(t, addr, &value, sizeof(value));
+}
+
+#include "gdb_packet.h"
+
+void target_command_help(target *t)
+{
+	for (struct target_command_s *tc = t->commands; tc; tc = tc->next) {
+		gdb_outf("%s specific commands:\n", tc->specific_name);
+		for(const struct command_s *c = tc->cmds; c->cmd; c++)
+			gdb_outf("\t%s -- %s\n", c->cmd, c->help);
+	}
+}
+
+int target_command(target *t, int argc, const char *argv[])
+{
+	for (struct target_command_s *tc = t->commands; tc; tc = tc->next)
+		for(const struct command_s *c = tc->cmds; c->cmd; c++)
+			if(!strncmp(argv[0], c->cmd, strlen(argv[0])))
+				return !c->handler(t, argc, argv);
+	return -1;
 }
 

@@ -29,6 +29,7 @@
 
 #include "general.h"
 #include "target.h"
+#include "target_internal.h"
 
 #define SIM_SDID   0x40048024
 

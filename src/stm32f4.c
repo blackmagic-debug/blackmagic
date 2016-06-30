@@ -31,10 +31,9 @@
  */
 
 #include "general.h"
-#include "adiv5.h"
 #include "target.h"
+#include "target_internal.h"
 #include "cortexm.h"
-#include "command.h"
 #include "gdb_packet.h"
 
 static bool stm32f4_cmd_erase_mass(target *t);

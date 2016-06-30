@@ -20,6 +20,7 @@
 
 #include "general.h"
 #include "target.h"
+#include "target_internal.h"
 #include "cortexm.h"
 #include "lpc_common.h"
 

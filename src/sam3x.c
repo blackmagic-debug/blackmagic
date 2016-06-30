@@ -25,9 +25,8 @@
  */
 
 #include "general.h"
-#include "adiv5.h"
 #include "target.h"
-#include "command.h"
+#include "target_internal.h"
 #include "gdb_packet.h"
 
 static int sam4_flash_erase(struct target_flash *f, uint32_t addr, size_t len);

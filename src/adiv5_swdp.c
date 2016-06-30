@@ -26,9 +26,8 @@
 #include "exception.h"
 #include "adiv5.h"
 #include "swdptap.h"
-#include "command.h"
-#include "morse.h"
-#include "gdb_packet.h"
+#include "target.h"
+#include "target_internal.h"
 
 #define SWDP_ACK_OK    0x01
 #define SWDP_ACK_WAIT  0x02
@@ -58,7 +57,6 @@ int adiv5_swdp_scan(void)
 	ack = swdptap_seq_in(3);
 	if((ack != SWDP_ACK_OK) || swdptap_seq_in_parity(&dp->idcode, 32)) {
 		DEBUG("\n");
-		morse("NO TARGETS.", 1);
 		free(dp);
 		return -1;
 	}
@@ -70,9 +68,6 @@ int adiv5_swdp_scan(void)
 
 	adiv5_swdp_error(dp);
 	adiv5_dp_init(dp);
-
-	if(!target_list) morse("NO TARGETS.", 1);
-	else morse(NULL, 0);
 
 	return target_list?1:0;
 }

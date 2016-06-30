@@ -19,8 +19,8 @@
  */
 
 #include "general.h"
-#include "command.h"
 #include "target.h"
+#include "target_internal.h"
 #include "gdb_packet.h"
 #include "cortexm.h"
 #include "lpc_common.h"

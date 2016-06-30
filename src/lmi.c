@@ -26,6 +26,7 @@
 
 #include "general.h"
 #include "target.h"
+#include "target_internal.h"
 #include "cortexm.h"
 
 #define SRAM_BASE            0x20000000

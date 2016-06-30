@@ -29,14 +29,10 @@
  */
 #include "general.h"
 #include "exception.h"
-#include "jtagtap.h"
-#include "jtag_scan.h"
 #include "adiv5.h"
 #include "target.h"
-#include "command.h"
+#include "target_internal.h"
 #include "gdb_packet.h"
-#include "cortexm.h"
-#include "morse.h"
 
 #include <unistd.h>
 
@@ -606,7 +602,6 @@ static int cortexa_halt_wait(target *t)
 	case EXCEPTION_ERROR:
 		/* Oh crap, there's no recovery from this... */
 		target_list_free();
-		morse("TARGET LOST.", 1);
 		return SIGLOST;
 	case EXCEPTION_TIMEOUT:
 		/* Timeout isn't a problem, target could be in WFI */

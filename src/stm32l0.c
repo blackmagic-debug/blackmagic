@@ -74,9 +74,8 @@
 */
 
 #include "general.h"
-#include "adiv5.h"
 #include "target.h"
-#include "command.h"
+#include "target_internal.h"
 #include "gdb_packet.h"
 #include "cortexm.h"
 
