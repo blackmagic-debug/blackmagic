@@ -50,6 +50,16 @@ int adiv5_swdp_scan(void)
 	ADIv5_DP_t *dp = (void*)calloc(1, sizeof(*dp));
 
 	swdptap_init();
+
+	/* Switch from JTAG to SWD mode */
+	swdptap_seq_out(0xFFFF, 16);
+	for(int i = 0; i < 50; i++)
+		swdptap_bit_out(1);
+	swdptap_seq_out(0xE79E, 16); /* 0b0111100111100111 */
+	for(int i = 0; i < 50; i++)
+		swdptap_bit_out(1);
+	swdptap_seq_out(0, 16);
+
 	/* Read the SW-DP IDCODE register to syncronise */
 	/* This could be done with adiv_swdp_low_access(), but this doesn't
 	 * allow the ack to be checked here. */

@@ -1,6 +1,6 @@
 PROBE_HOST ?= native
 PLATFORM_DIR = platforms/$(PROBE_HOST)
-VPATH += platforms/common $(PLATFORM_DIR)
+VPATH += $(PLATFORM_DIR) platforms/common
 ENABLE_DEBUG ?=
 
 ifneq ($(V), 1)
@@ -53,6 +53,7 @@ SRC =			\
 	stm32l0.c	\
 	stm32l4.c	\
 	swdptap.c	\
+	swdptap_generic.c	\
 	target.c	\
 
 include $(PLATFORM_DIR)/Makefile.inc
