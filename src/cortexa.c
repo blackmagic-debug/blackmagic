@@ -68,6 +68,7 @@ static uint32_t bp_bas(uint32_t addr, uint8_t len);
 static void apb_write(target *t, uint16_t reg, uint32_t val);
 static uint32_t apb_read(target *t, uint16_t reg);
 static void write_gpreg(target *t, uint8_t regno, uint32_t val);
+static uint32_t read_gpreg(target *t, uint8_t regno);
 
 struct cortexa_priv {
 	uint32_t base;
@@ -82,6 +83,7 @@ struct cortexa_priv {
 	unsigned hw_breakpoint_max;
 	unsigned hw_breakpoint[16];
 	uint32_t bpc0;
+	bool mmu_fault;
 };
 
 /* This may be specific to Cortex-A9 */
@@ -97,11 +99,13 @@ struct cortexa_priv {
 #define DBGDSCR_TXFULL           (1 << 29)
 #define DBGDSCR_INSTRCOMPL       (1 << 24)
 #define DBGDSCR_EXTDCCMODE_STALL (1 << 20)
+#define DBGDSCR_EXTDCCMODE_FAST  (2 << 20)
 #define DBGDSCR_EXTDCCMODE_MASK  (3 << 20)
 #define DBGDSCR_HDBGEN           (1 << 14)
 #define DBGDSCR_ITREN            (1 << 13)
 #define DBGDSCR_INTDIS           (1 << 11)
 #define DBGDSCR_UND_I            (1 << 8)
+#define DBGDSCR_SDABORT_L        (1 << 6)
 #define DBGDSCR_MOE_MASK         (0xf << 2)
 #define DBGDSCR_MOE_HALT_REQ     (0x0 << 2)
 #define DBGDSCR_RESTARTED        (1 << 1)
@@ -132,6 +136,10 @@ struct cortexa_priv {
 /* Debug registers CP14 */
 #define DBGDTRRXint CPREG(14, 0, 0, 0, 5, 0)
 #define DBGDTRTXint CPREG(14, 0, 0, 0, 5, 0)
+
+/* Address translation registers CP15 */
+#define PAR         CPREG(15, 0, 0, 7, 4, 0)
+#define ATS1CPR     CPREG(15, 0, 0, 7, 8, 0)
 
 /* Cache management registers CP15 */
 #define ICIALLU     CPREG(15, 0, 0, 7, 5, 0)
@@ -206,6 +214,20 @@ static uint32_t apb_read(target *t, uint16_t reg)
 	return adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_DP_RDBUFF, 0);
 }
 
+static uint32_t va_to_pa(target *t, uint32_t va)
+{
+	struct cortexa_priv *priv = t->priv;
+	write_gpreg(t, 0, va);
+	apb_write(t, DBGITR, MCR | ATS1CPR);
+	apb_write(t, DBGITR, MRC | PAR);
+	uint32_t par = read_gpreg(t, 0);
+	if (par & 1)
+		priv->mmu_fault = true;
+	uint32_t pa = (par & ~0xfff) | (va & 0xfff);
+	DEBUG("%s: VA = 0x%08X, PAR = 0x%08X, PA = 0x%08X\n", __func__, va, par, pa);
+	return pa;
+}
+
 static void cortexa_mem_read(target *t, void *dest, uint32_t src, size_t len)
 {
 	/* Clean cache before reading */
@@ -216,7 +238,46 @@ static void cortexa_mem_read(target *t, void *dest, uint32_t src, size_t len)
 	}
 
 	ADIv5_AP_t *ahb = ((struct cortexa_priv*)t->priv)->ahb;
-	adiv5_mem_read(ahb, dest, src, len);
+	adiv5_mem_read(ahb, dest, va_to_pa(t, src), len);
+}
+
+static void cortexa_slow_mem_read(target *t, void *dest, uint32_t src, size_t len)
+{
+	struct cortexa_priv *priv = t->priv;
+	unsigned words = (len + (src & 3) + 3) / 4;
+	uint32_t dest32[words];
+
+	/* Set r0 to aligned src address */
+	write_gpreg(t, 0, src & ~3);
+
+	/* Switch to fast DCC mode */
+	uint32_t dbgdscr = apb_read(t, DBGDSCR);
+	dbgdscr = (dbgdscr & ~DBGDSCR_EXTDCCMODE_MASK) | DBGDSCR_EXTDCCMODE_FAST;
+	apb_write(t, DBGDSCR, dbgdscr);
+
+	apb_write(t, DBGITR, 0xecb05e01); /* ldc 14, cr5, [r0], #4 */
+	/* According to the ARMv7-A ARM, in fast mode, the first read from
+	 * DBGDTRTX is  supposed to block until the instruction is complete,
+	 * but we see the first read returns junk, so it's read here and
+	 * ignored. */
+	apb_read(t, DBGDTRTX);
+
+	for (unsigned i = 0; i < words; i++)
+		dest32[i] = apb_read(t, DBGDTRTX);
+
+	memcpy(dest, (uint8_t*)dest32 + (src & 3), len);
+
+	/* Switch back to stalling DCC mode */
+	dbgdscr = (dbgdscr & ~DBGDSCR_EXTDCCMODE_MASK) | DBGDSCR_EXTDCCMODE_STALL;
+	apb_write(t, DBGDSCR, dbgdscr);
+
+	if (apb_read(t, DBGDSCR) & DBGDSCR_SDABORT_L) {
+		/* Memory access aborted, flag a fault */
+		apb_write(t, DBGDRCR, DBGDRCR_CSE);
+		priv->mmu_fault = true;
+	} else {
+		apb_read(t, DBGDTRTX);
+	}
 }
 
 static void cortexa_mem_write(target *t, uint32_t dest, const void *src, size_t len)
@@ -228,13 +289,70 @@ static void cortexa_mem_write(target *t, uint32_t dest, const void *src, size_t 
 		apb_write(t, DBGITR, MCR | DCCIMVAC);
 	}
 	ADIv5_AP_t *ahb = ((struct cortexa_priv*)t->priv)->ahb;
-	adiv5_mem_write(ahb, dest, src, len);
+	adiv5_mem_write(ahb, va_to_pa(t, dest), src, len);
+}
+
+static void cortexa_slow_mem_write_bytes(target *t, uint32_t dest, const uint8_t *src, size_t len)
+{
+	struct cortexa_priv *priv = t->priv;
+
+	/* Set r13 to dest address */
+	write_gpreg(t, 13, dest);
+
+	while (len--) {
+		write_gpreg(t, 0, *src++);
+		apb_write(t, DBGITR, 0xe4cd0001); /* strb r0, [sp], #1 */
+		if (apb_read(t, DBGDSCR) & DBGDSCR_SDABORT_L) {
+			/* Memory access aborted, flag a fault */
+			apb_write(t, DBGDRCR, DBGDRCR_CSE);
+			priv->mmu_fault = true;
+			return;
+		}
+	}
+}
+
+static void cortexa_slow_mem_write(target *t, uint32_t dest, const void *src, size_t len)
+{
+	struct cortexa_priv *priv = t->priv;
+	if (len == 0)
+		return;
+
+	if ((dest & 3) || (len & 3)) {
+		cortexa_slow_mem_write_bytes(t, dest, src, len);
+		return;
+	}
+
+	write_gpreg(t, 0, dest);
+	const uint32_t *src32 = src;
+
+	/* Switch to fast DCC mode */
+	uint32_t dbgdscr = apb_read(t, DBGDSCR);
+	dbgdscr = (dbgdscr & ~DBGDSCR_EXTDCCMODE_MASK) | DBGDSCR_EXTDCCMODE_FAST;
+	apb_write(t, DBGDSCR, dbgdscr);
+
+	apb_write(t, DBGITR, 0xeca05e01); /* stc 14, cr5, [r0], #4 */
+
+	for (; len; len -= 4)
+		apb_write(t, DBGDTRRX, *src32++);
+
+	/* Switch back to stalling DCC mode */
+	dbgdscr = (dbgdscr & ~DBGDSCR_EXTDCCMODE_MASK) | DBGDSCR_EXTDCCMODE_STALL;
+	apb_write(t, DBGDSCR, dbgdscr);
+
+	if (apb_read(t, DBGDSCR) & DBGDSCR_SDABORT_L) {
+		/* Memory access aborted, flag a fault */
+		apb_write(t, DBGDRCR, DBGDRCR_CSE);
+		priv->mmu_fault = true;
+	}
 }
 
 static bool cortexa_check_error(target *t)
 {
-	ADIv5_AP_t *ahb = ((struct cortexa_priv*)t->priv)->ahb;
-	return adiv5_dp_error(ahb->dp) != 0;
+	struct cortexa_priv *priv = t->priv;
+	ADIv5_AP_t *ahb = priv->ahb;
+	bool err = (ahb && (adiv5_dp_error(ahb->dp)) != 0) || priv->mmu_fault;
+	priv->mmu_fault = false;
+	return err;
 }
 
 
@@ -255,6 +373,18 @@ bool cortexa_probe(ADIv5_AP_t *apb, uint32_t debug_base)
 	 * device specific. */
 	priv->ahb = adiv5_new_ap(apb->dp, 0);
 	adiv5_ap_ref(priv->ahb);
+	if ((priv->ahb->idr & 0xfffe00f) == 0x4770001) {
+		/* This is an AHB */
+		t->mem_read = cortexa_mem_read;
+		t->mem_write = cortexa_mem_write;
+	} else {
+		/* This is not an AHB, fall back to slow APB access */
+		adiv5_ap_unref(priv->ahb);
+		priv->ahb = NULL;
+		t->mem_read = cortexa_slow_mem_read;
+		t->mem_write = cortexa_slow_mem_write;
+	}
+
 	priv->base = debug_base;
 	/* Set up APB CSW, we won't touch this again */
 	uint32_t csw = apb->csw | ADIV5_AP_CSW_SIZE_WORD;
@@ -264,9 +394,6 @@ bool cortexa_probe(ADIv5_AP_t *apb, uint32_t debug_base)
 	DEBUG("Target has %d breakpoints\n", priv->hw_breakpoint_max);
 
 	t->check_error = cortexa_check_error;
-
-	t->mem_read = cortexa_mem_read;
-	t->mem_write = cortexa_mem_write;
 
 	t->driver = cortexa_driver_str;
 
