@@ -26,6 +26,7 @@
 
 #include "gpio.h"
 #include "timing.h"
+#include "timing_stm32.h"
 #include "version.h"
 
 #define BOARD_IDENT            "Black Magic Probe (SWLINK), (Firmware " FIRMWARE_VERSION ")"

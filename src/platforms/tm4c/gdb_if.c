@@ -84,7 +84,8 @@ unsigned char gdb_if_getchar(void)
 
 unsigned char gdb_if_getchar_to(int timeout)
 {
-	timeout_counter = timeout/100;
+	platform_timeout t;
+	platform_timeout_set(&t, timeout);
 
 	if(head_out == tail_out) do {
 		/* Detach if port closed */
@@ -92,7 +93,7 @@ unsigned char gdb_if_getchar_to(int timeout)
 			return 0x04;
 
 		while(cdcacm_get_config() != 1);
-	} while(timeout_counter && head_out == tail_out);
+	} while(!platform_timeout_is_expired(&t) && head_out == tail_out);
 
 	if(head_out != tail_out)
 		return gdb_if_getchar();

@@ -15,6 +15,7 @@ VPATH += platforms/tm4c
 
 SRC +=	cdcacm.c	\
 	usbuart.c	\
+	timing.c        \
 	traceswo.o
 
 all: blackmagic.bin

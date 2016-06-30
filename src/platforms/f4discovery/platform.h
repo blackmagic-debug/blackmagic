@@ -26,6 +26,7 @@
 
 #include "gpio.h"
 #include "timing.h"
+#include "timing_stm32.h"
 #include "version.h"
 
 #include <setjmp.h>
