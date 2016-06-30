@@ -487,7 +487,7 @@ static void cortexm_halt_request(target *t)
 		                                          CORTEXM_DHCSR_C_DEBUGEN);
 	}
 	if (e.type) {
-		gdb_out("Timeout sending interrupt, is target in WFI?\n");
+		tc_printf(t, "Timeout sending interrupt, is target in WFI?\n");
 	}
 }
 
@@ -818,8 +818,8 @@ static bool cortexm_vector_catch(target *t, int argc, char *argv[])
 	unsigned i;
 
 	if ((argc < 3) || ((argv[1][0] != 'e') && (argv[1][0] != 'd'))) {
-		gdb_out("usage: monitor vector_catch (enable|disable) "
-			"(hard|int|bus|stat|chk|nocp|mm|reset)\n");
+		tc_printf(t, "usage: monitor vector_catch (enable|disable) "
+			     "(hard|int|bus|stat|chk|nocp|mm|reset)\n");
 	} else {
 		for (int j = 0; j < argc; j++)
 			for (i = 0; i < sizeof(vectors) / sizeof(char*); i++) {
@@ -835,14 +835,14 @@ static bool cortexm_vector_catch(target *t, int argc, char *argv[])
 		target_mem_write32(t, CORTEXM_DEMCR, priv->demcr);
 	}
 
-	gdb_out("Catching vectors: ");
+	tc_printf(t, "Catching vectors: ");
 	for (i = 0; i < sizeof(vectors) / sizeof(char*); i++) {
 		if (!vectors[i])
 			continue;
 		if (priv->demcr & (1 << i))
-			gdb_outf("%s ", vectors[i]);
+			tc_printf(t, "%s ", vectors[i]);
 	}
-	gdb_out("\n");
+	tc_printf(t, "\n");
 	return true;
 }
 

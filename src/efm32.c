@@ -39,7 +39,6 @@
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
-#include "gdb_packet.h"
 #include "cortexm.h"
 
 #define SRAM_BASE		0x20000000
@@ -334,7 +333,7 @@ bool efm32_probe(target *t)
 	/* Setup Target */
 	t->target_options |= CORTEXM_TOPT_INHIBIT_SRST;
 	t->driver = variant_string;
-	gdb_outf("flash size %d page size %d\n", flash_size, flash_page_size);
+	tc_printf(t, "flash size %d page size %d\n", flash_size, flash_page_size);
 	target_add_ram (t, SRAM_BASE, ram_size);
 	efm32_add_flash(t, 0x00000000, flash_size, flash_page_size);
 	target_add_commands(t, efm32_cmd_list, "EFM32");
@@ -416,7 +415,7 @@ static bool efm32_cmd_erase_all(target *t)
 	/* Relock mass erase */
 	target_mem_write32(t, EFM32_MSC_MASSLOCK, 0);
 
-	gdb_outf("Erase successful!\n");
+	tc_printf(t, "Erase successful!\n");
 
 	return true;
 }
@@ -430,7 +429,7 @@ static bool efm32_cmd_serial(target *t)
 	uint64_t eui = efm32_read_eui(t);
 
 	/* 64 bits of unique number */
-	gdb_outf("Unique Number: 0x%016llx\n", eui);
+	tc_printf(t, "Unique Number: 0x%016llx\n", eui);
 
 	return true;
 }

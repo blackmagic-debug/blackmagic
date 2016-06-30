@@ -22,8 +22,8 @@
  * ARM Debug Interface v5 Architecure Specification, ARM doc IHI0031A.
  */
 #include "general.h"
-#include "jtag_scan.h"
-#include "gdb_packet.h"
+#include "target.h"
+#include "target_internal.h"
 #include "adiv5.h"
 #include "cortexm.h"
 #include "exception.h"
@@ -373,7 +373,7 @@ ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel)
 		~(ADIV5_AP_CSW_SIZE_MASK | ADIV5_AP_CSW_ADDRINC_MASK);
 
 	if (ap->csw & ADIV5_AP_CSW_TRINPROG) {
-		gdb_out("AP transaction in progress.  Target may not be usable.\n");
+		DEBUG("AP transaction in progress.  Target may not be usable.\n");
 		ap->csw &= ~ADIV5_AP_CSW_TRINPROG;
 	}
 
@@ -395,7 +395,7 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 		ctrlstat = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT);
 	}
 	if (e.type) {
-		gdb_out("DP not responding!  Trying abort sequence...\n");
+		DEBUG("DP not responding!  Trying abort sequence...\n");
 		adiv5_dp_abort(dp, ADIV5_DP_ABORT_DAPABORT);
 		ctrlstat = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT);
 	}

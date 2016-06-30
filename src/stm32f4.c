@@ -34,7 +34,6 @@
 #include "target.h"
 #include "target_internal.h"
 #include "cortexm.h"
-#include "gdb_packet.h"
 
 static bool stm32f4_cmd_erase_mass(target *t);
 static bool stm32f4_cmd_option(target *t, int argc, char *argv[]);
@@ -270,7 +269,7 @@ static bool stm32f4_cmd_erase_mass(target *t)
 	const char spinner[] = "|/-\\";
 	int spinindex = 0;
 
-	gdb_out("Erasing flash... This may take a few seconds.  ");
+	tc_printf(t, "Erasing flash... This may take a few seconds.  ");
 	stm32f4_flash_unlock(t);
 
 	/* Flash mass erase start instruction */
@@ -279,13 +278,13 @@ static bool stm32f4_cmd_erase_mass(target *t)
 
 	/* Read FLASH_SR to poll for BSY bit */
 	while (target_mem_read32(t, FLASH_SR) & FLASH_SR_BSY) {
-		gdb_outf("\b%c", spinner[spinindex++ % 4]);
+		tc_printf(t, "\b%c", spinner[spinindex++ % 4]);
 		if(target_check_error(t)) {
-			gdb_out("\n");
+			tc_printf(t, "\n");
 			return false;
 		}
 	}
-	gdb_out("\n");
+	tc_printf(t, "\n");
 
 	/* Check for error */
 	uint16_t sr = target_mem_read32(t, FLASH_SR);
@@ -336,14 +335,14 @@ static bool stm32f4_cmd_option(target *t, int argc, char *argv[])
 		val = strtoul(argv[2], NULL, 0);
 		stm32f4_option_write(t, val);
 	} else {
-		gdb_out("usage: monitor option erase\n");
-		gdb_out("usage: monitor option write <value>\n");
+		tc_printf(t, "usage: monitor option erase\n");
+		tc_printf(t, "usage: monitor option write <value>\n");
 	}
 
 	for (int i = 0; i < len; i += 8) {
 		uint32_t addr =  start + i;
 		val = target_mem_read32(t, addr);
-		gdb_outf("0x%08X: 0x%04X\n", addr, val & 0xFFFF);
+		tc_printf(t, "0x%08X: 0x%04X\n", addr, val & 0xFFFF);
 	}
 	return true;
 }

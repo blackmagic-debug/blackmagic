@@ -400,14 +400,12 @@ void target_mem_write8(target *t, uint32_t addr, uint8_t value)
 	target_mem_write(t, addr, &value, sizeof(value));
 }
 
-#include "gdb_packet.h"
-
 void target_command_help(target *t)
 {
 	for (struct target_command_s *tc = t->commands; tc; tc = tc->next) {
-		gdb_outf("%s specific commands:\n", tc->specific_name);
+		tc_printf(t, "%s specific commands:\n", tc->specific_name);
 		for(const struct command_s *c = tc->cmds; c->cmd; c++)
-			gdb_outf("\t%s -- %s\n", c->cmd, c->help);
+			tc_printf(t, "\t%s -- %s\n", c->cmd, c->help);
 	}
 }
 
@@ -418,5 +416,15 @@ int target_command(target *t, int argc, const char *argv[])
 			if(!strncmp(argv[0], c->cmd, strlen(argv[0])))
 				return !c->handler(t, argc, argv);
 	return -1;
+}
+
+#include "gdb_packet.h"
+void tc_printf(target *t, const char *fmt, ...)
+{
+	(void)t;
+	va_list ap;
+	va_start(ap, fmt);
+	gdb_voutf(fmt, ap);
+	va_end(ap);
 }
 

@@ -32,9 +32,6 @@
 #include "adiv5.h"
 #include "target.h"
 #include "target_internal.h"
-#include "gdb_packet.h"
-
-#include <unistd.h>
 
 static char cortexa_driver_str[] = "ARM Cortex-A";
 
@@ -585,7 +582,7 @@ static void cortexa_halt_request(target *t)
 		apb_write(t, DBGDRCR, DBGDRCR_HRQ);
 	}
 	if (e.type) {
-		gdb_out("Timeout sending interrupt, is target in WFI?\n");
+		tc_printf(t, "Timeout sending interrupt, is target in WFI?\n");
 	}
 }
 

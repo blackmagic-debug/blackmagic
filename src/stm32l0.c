@@ -76,7 +76,6 @@
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
-#include "gdb_packet.h"
 #include "cortexm.h"
 
 #define STM32Lx_NVM_PECR(p)     ((p) + 0x04)
@@ -576,7 +575,7 @@ static bool stm32lx_cmd_option(target* t, int argc, char** argv)
         const size_t   opt_size = stm32lx_nvm_option_size(t);
 
         if (!stm32lx_nvm_opt_unlock(t, nvm)) {
-                gdb_out("unable to unlock NVM option bytes\n");
+                tc_printf(t, "unable to unlock NVM option bytes\n");
                 return true;
         }
 
@@ -589,25 +588,25 @@ static bool stm32lx_cmd_option(target* t, int argc, char** argv)
         else if (argc == 4 && !strncasecmp(argv[1], "raw", cb)) {
                 uint32_t addr = strtoul(argv[2], NULL, 0);
                 uint32_t val  = strtoul(argv[3], NULL, 0);
-                gdb_outf("raw %08x <- %08x\n", addr, val);
+                tc_printf(t, "raw %08x <- %08x\n", addr, val);
                 if (   addr <  STM32Lx_NVM_OPT_PHYS
                     || addr >= STM32Lx_NVM_OPT_PHYS + opt_size
                     || (addr & 3))
                         goto usage;
                 if (!stm32lx_option_write(t, addr, val))
-                        gdb_out("option write failed\n");
+                        tc_printf(t, "option write failed\n");
         }
         else if (argc == 4 && !strncasecmp(argv[1], "write", cb)) {
                 uint32_t addr = strtoul(argv[2], NULL, 0);
                 uint32_t val  = strtoul(argv[3], NULL, 0);
                 val = (val & 0xffff) | ((~val & 0xffff) << 16);
-                gdb_outf("write %08x <- %08x\n", addr, val);
+                tc_printf(t, "write %08x <- %08x\n", addr, val);
                 if (   addr <  STM32Lx_NVM_OPT_PHYS
                     || addr >= STM32Lx_NVM_OPT_PHYS + opt_size
                     || (addr & 3))
                         goto usage;
                 if (!stm32lx_option_write(t, addr, val))
-                        gdb_out("option write failed\n");
+                        tc_printf(t, "option write failed\n");
         }
         else if (argc == 2 && !strncasecmp(argv[1], "show", cb))
                 ;
@@ -618,10 +617,10 @@ static bool stm32lx_cmd_option(target* t, int argc, char** argv)
         for(unsigned i = 0; i < opt_size; i += sizeof(uint32_t)) {
                 uint32_t addr = STM32Lx_NVM_OPT_PHYS + i;
                 uint32_t val = target_mem_read32(t, addr);
-                gdb_outf("0x%08x: 0x%04x 0x%04x %s\n",
-                         addr, val & 0xffff, (val >> 16) & 0xffff,
-                         ((val & 0xffff) == ((~val >> 16) & 0xffff))
-                         ? "OK" : "ERR");
+                tc_printf(t, "0x%08x: 0x%04x 0x%04x %s\n",
+                          addr, val & 0xffff, (val >> 16) & 0xffff,
+                          ((val & 0xffff) == ((~val >> 16) & 0xffff))
+                          ? "OK" : "ERR");
         }
 
         if (stm32lx_is_stm32l1(t)) {
@@ -634,17 +633,17 @@ static bool stm32lx_cmd_option(target* t, int argc, char** argv)
                         rdprot = 2;
                 else
                         rdprot = 1;
-                gdb_outf("OPTR: 0x%08x, RDPRT %d, SPRMD %d, "
-                         "BOR %d, WDG_SW %d, nRST_STP %d, nRST_STBY %d, "
-                         "nBFB2 %d\n",
-                         optr, rdprot,
-                         (optr &  STM32L1_NVM_OPTR_SPRMOD)     ? 1 : 0,
-                         (optr >> STM32L1_NVM_OPTR_BOR_LEV_S)
-                          & STM32L1_NVM_OPTR_BOR_LEV_M,
-                         (optr &  STM32Lx_NVM_OPTR_WDG_SW)     ? 1 : 0,
-                         (optr &  STM32L1_NVM_OPTR_nRST_STOP)  ? 1 : 0,
-                         (optr &  STM32L1_NVM_OPTR_nRST_STDBY) ? 1 : 0,
-                         (optr &  STM32L1_NVM_OPTR_nBFB2)      ? 1 : 0);
+                tc_printf(t, "OPTR: 0x%08x, RDPRT %d, SPRMD %d, "
+                          "BOR %d, WDG_SW %d, nRST_STP %d, nRST_STBY %d, "
+                          "nBFB2 %d\n",
+                          optr, rdprot,
+                          (optr &  STM32L1_NVM_OPTR_SPRMOD)     ? 1 : 0,
+                          (optr >> STM32L1_NVM_OPTR_BOR_LEV_S)
+                           & STM32L1_NVM_OPTR_BOR_LEV_M,
+                          (optr &  STM32Lx_NVM_OPTR_WDG_SW)     ? 1 : 0,
+                          (optr &  STM32L1_NVM_OPTR_nRST_STOP)  ? 1 : 0,
+                          (optr &  STM32L1_NVM_OPTR_nRST_STDBY) ? 1 : 0,
+                          (optr &  STM32L1_NVM_OPTR_nBFB2)      ? 1 : 0);
         }
         else {
                 uint32_t optr   = target_mem_read32(t, STM32Lx_NVM_OPTR(nvm));
@@ -656,28 +655,28 @@ static bool stm32lx_cmd_option(target* t, int argc, char** argv)
                         rdprot = 2;
                 else
                         rdprot = 1;
-                gdb_outf("OPTR: 0x%08x, RDPROT %d, WPRMOD %d, WDG_SW %d, "
-                         "BOOT1 %d\n",
-                         optr, rdprot,
-                         (optr & STM32L0_NVM_OPTR_WPRMOD) ? 1 : 0,
-                         (optr & STM32Lx_NVM_OPTR_WDG_SW) ? 1 : 0,
-                         (optr & STM32L0_NVM_OPTR_BOOT1)  ? 1 : 0);
+                tc_printf(t, "OPTR: 0x%08x, RDPROT %d, WPRMOD %d, WDG_SW %d, "
+                          "BOOT1 %d\n",
+                          optr, rdprot,
+                          (optr & STM32L0_NVM_OPTR_WPRMOD) ? 1 : 0,
+                          (optr & STM32Lx_NVM_OPTR_WDG_SW) ? 1 : 0,
+                          (optr & STM32L0_NVM_OPTR_BOOT1)  ? 1 : 0);
         }
 
         goto done;
 
 usage:
-        gdb_out("usage: monitor option [ARGS]\n");
-        gdb_out("  show                   - Show options in NVM and as"
-                " loaded\n");
-        gdb_out("  obl_launch             - Reload options from NVM\n");
-        gdb_out("  write <addr> <value16> - Set option half-word; "
-                "complement computed\n");
-        gdb_out("  raw <addr> <value32>   - Set option word\n");
-        gdb_outf("The value of <addr> must be word aligned and from 0x%08x "
-                 "to +0x%x\n",
-                 STM32Lx_NVM_OPT_PHYS,
-                 STM32Lx_NVM_OPT_PHYS + opt_size - sizeof(uint32_t));
+        tc_printf(t, "usage: monitor option [ARGS]\n");
+        tc_printf(t, "  show                   - Show options in NVM and as"
+                  " loaded\n");
+        tc_printf(t, "  obl_launch             - Reload options from NVM\n");
+        tc_printf(t, "  write <addr> <value16> - Set option half-word; "
+                  "complement computed\n");
+        tc_printf(t, "  raw <addr> <value32>   - Set option word\n");
+        tc_printf(t, "The value of <addr> must be word aligned and from 0x%08x "
+                  "to +0x%x\n",
+                  STM32Lx_NVM_OPT_PHYS,
+                  STM32Lx_NVM_OPT_PHYS + opt_size - sizeof(uint32_t));
 
 done:
         stm32lx_nvm_lock(t, nvm);
@@ -690,7 +689,7 @@ static bool stm32lx_cmd_eeprom(target* t, int argc, char** argv)
         const uint32_t nvm = stm32lx_nvm_phys(t);
 
         if (!stm32lx_nvm_prog_data_unlock(t, nvm)) {
-                gdb_out("unable to unlock EEPROM\n");
+                tc_printf(t, "unable to unlock EEPROM\n");
                 return true;
         }
 
@@ -706,23 +705,23 @@ static bool stm32lx_cmd_eeprom(target* t, int argc, char** argv)
                         goto usage;
 
                 if (!strncasecmp(argv[1], "byte", cb)) {
-                        gdb_outf("write byte 0x%08x <- 0x%08x\n", addr, val);
+                        tc_printf(t, "write byte 0x%08x <- 0x%08x\n", addr, val);
                         if (!stm32lx_eeprom_write(t, addr, 1, val))
-                                gdb_out("eeprom write failed\n");
+                                tc_printf(t, "eeprom write failed\n");
                 } else if (!strncasecmp(argv[1], "halfword", cb)) {
                         val &= 0xffff;
-                        gdb_outf("write halfword 0x%08x <- 0x%04x\n",
+                        tc_printf(t, "write halfword 0x%08x <- 0x%04x\n",
                                  addr, val);
                         if (addr & 1)
                                 goto usage;
                         if (!stm32lx_eeprom_write(t, addr, 2, val))
-                                gdb_out("eeprom write failed\n");
+                                tc_printf(t, "eeprom write failed\n");
                 } else if (!strncasecmp(argv[1], "word", cb)) {
-                        gdb_outf("write word 0x%08x <- 0x%08x\n", addr, val);
+                        tc_printf(t, "write word 0x%08x <- 0x%08x\n", addr, val);
                         if (addr & 3)
                                 goto usage;
                         if (!stm32lx_eeprom_write(t, addr, 4, val))
-                                gdb_out("eeprom write failed\n");
+                                tc_printf(t, "eeprom write failed\n");
                 }
                 else
                         goto usage;
@@ -733,14 +732,13 @@ static bool stm32lx_cmd_eeprom(target* t, int argc, char** argv)
         goto done;
 
 usage:
-        gdb_out("usage: monitor eeprom [ARGS]\n");
-        gdb_out("  byte     <addr> <value8>  - Write a byte\n");
-        gdb_out("  halfword <addr> <value16> - Write a half-word\n");
-        gdb_out("  word     <addr> <value32> - Write a word\n");
-        gdb_outf("The value of <addr> must in the interval [0x%08x, 0x%x)\n",
-                 STM32Lx_NVM_EEPROM_PHYS,
-                 STM32Lx_NVM_EEPROM_PHYS
-                 + stm32lx_nvm_eeprom_size(t));
+        tc_printf(t, "usage: monitor eeprom [ARGS]\n");
+        tc_printf(t, "  byte     <addr> <value8>  - Write a byte\n");
+        tc_printf(t, "  halfword <addr> <value16> - Write a half-word\n");
+        tc_printf(t, "  word     <addr> <value32> - Write a word\n");
+        tc_printf(t, "The value of <addr> must in the interval [0x%08x, 0x%x)\n",
+                  STM32Lx_NVM_EEPROM_PHYS,
+                  STM32Lx_NVM_EEPROM_PHYS + stm32lx_nvm_eeprom_size(t));
 
 done:
         stm32lx_nvm_lock(t, nvm);

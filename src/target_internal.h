@@ -141,6 +141,9 @@ void target_mem_write32(target *t, uint32_t addr, uint32_t value);
 void target_mem_write16(target *t, uint32_t addr, uint16_t value);
 void target_mem_write8(target *t, uint32_t addr, uint8_t value);
 
+/* Access to host controller interface */
+void tc_printf(target *t, const char *fmt, ...);
+
 /* Probe for various targets.
  * Actual functions implemented in their respective drivers.
  */

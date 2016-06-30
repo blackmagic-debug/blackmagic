@@ -34,7 +34,6 @@
 #include "target.h"
 #include "target_internal.h"
 #include "cortexm.h"
-#include "gdb_packet.h"
 
 static bool stm32l4_cmd_erase_mass(target *t);
 static bool stm32l4_cmd_erase_bank1(target *t);
@@ -228,7 +227,7 @@ static bool stm32l4_cmd_erase(target *t, uint32_t action)
 	const char spinner[] = "|/-\\";
 	int spinindex = 0;
 
-	gdb_out("Erasing flash... This may take a few seconds.  ");
+	tc_printf(t, "Erasing flash... This may take a few seconds.  ");
 	stm32l4_flash_unlock(t);
 
 	/* Flash erase action start instruction */
@@ -237,13 +236,13 @@ static bool stm32l4_cmd_erase(target *t, uint32_t action)
 
 	/* Read FLASH_SR to poll for BSY bit */
 	while (target_mem_read32(t, FLASH_SR) & FLASH_SR_BSY) {
-		gdb_outf("\b%c", spinner[spinindex++ % 4]);
+		tc_printf(t, "\b%c", spinner[spinindex++ % 4]);
 		if(target_check_error(t)) {
-			gdb_out("\n");
+			tc_printf(t, "\n");
 			return false;
 		}
 	}
-	gdb_out("\n");
+	tc_printf(t, "\n");
 
 	/* Check for error */
 	uint16_t sr = target_mem_read32(t, FLASH_SR);
@@ -276,12 +275,12 @@ static bool stm32l4_cmd_option(target *t, int argc, char *argv[])
 	for (int i = 0; i < 0x23; i += 8) {
 		addr = 0x1fff7800 + i;
 		val = target_mem_read32(t, addr);
-		gdb_outf("0x%08X: 0x%08x\n", addr, val);
+		tc_printf(t, "0x%08X: 0x%08x\n", addr, val);
 	}
 	for (int i = 8; i < 0x23; i += 8) {
 		addr = 0x1ffff800 + i;
 		val = target_mem_read32(t, addr);
-		gdb_outf("0x%08X: 0x%08X\n", addr, val);
+		tc_printf(t, "0x%08X: 0x%08X\n", addr, val);
 	}
 	return true;
 }

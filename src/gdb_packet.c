@@ -153,16 +153,21 @@ void gdb_out(const char *buf)
 	gdb_putpacket(hexdata, i);
 }
 
-void gdb_outf(const char *fmt, ...)
+void gdb_voutf(const char *fmt, va_list ap)
 {
-	va_list ap;
 	char *buf;
 
-	va_start(ap, fmt);
 	if (vasprintf(&buf, fmt, ap) < 0)
 		return;
 	gdb_out(buf);
 	free(buf);
-	va_end(ap);
 }
 
+void gdb_outf(const char *fmt, ...)
+{
+	va_list ap;
+
+	va_start(ap, fmt);
+	gdb_voutf(fmt, ap);
+	va_end(ap);
+}
