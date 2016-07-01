@@ -344,12 +344,6 @@ int target_check_hw_wp(target *t, uint32_t *addr)
 	return t->check_hw_wp(t, addr);
 }
 
-/* Host I/O */
-void target_hostio_reply(target *t, int32_t retcode, uint32_t errcode)
-{
-	t->hostio_reply(t, retcode, errcode);
-}
-
 /* Accessor functions */
 int target_regs_size(target *t)
 {
@@ -427,5 +421,68 @@ void tc_printf(target *t, const char *fmt, ...)
 	va_start(ap, fmt);
 	t->tc->printf(t->tc, fmt, ap);
 	va_end(ap);
+}
+
+/* Interface to host system calls */
+int tc_open(target *t, target_addr path, unsigned plen,
+            enum target_open_flags flags, mode_t mode)
+{
+	return t->tc->open(t->tc, path, plen, flags, mode);
+}
+
+int tc_close(target *t, int fd)
+{
+	return t->tc->close(t->tc, fd);
+}
+
+int tc_read(target *t, int fd, target_addr buf, unsigned int count)
+{
+	return t->tc->read(t->tc, fd, buf, count);
+}
+
+int tc_write(target *t, int fd, target_addr buf, unsigned int count)
+{
+	return t->tc->write(t->tc, fd, buf, count);
+}
+
+long tc_lseek(target *t, int fd, long offset, enum target_seek_flag flag)
+{
+	return t->tc->lseek(t->tc, fd, offset, flag);
+}
+
+int tc_rename(target *t, target_addr oldpath, unsigned oldlen,
+                         target_addr newpath, unsigned newlen)
+{
+	return t->tc->rename(t->tc, oldpath, oldlen, newpath, newlen);
+}
+
+int tc_unlink(target *t, target_addr path, unsigned plen)
+{
+	return t->tc->unlink(t->tc, path, plen);
+}
+
+int tc_stat(target *t, target_addr path, unsigned plen, target_addr buf)
+{
+	return t->tc->stat(t->tc, path, plen, buf);
+}
+
+int tc_fstat(target *t, int fd, target_addr buf)
+{
+	return t->tc->fstat(t->tc, fd, buf);
+}
+
+int tc_gettimeofday(target *t, target_addr tv, target_addr tz)
+{
+	return t->tc->gettimeofday(t->tc, tv, tz);
+}
+
+int tc_isatty(target *t, int fd)
+{
+	return t->tc->isatty(t->tc, fd);
+}
+
+int tc_system(target *t, target_addr cmd, unsigned cmdlen)
+{
+	return t->tc->system(t->tc, cmd, cmdlen);
 }
 

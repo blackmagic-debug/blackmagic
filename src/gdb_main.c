@@ -29,6 +29,7 @@
 #include "gdb_if.h"
 #include "gdb_packet.h"
 #include "gdb_main.h"
+#include "gdb_hostio.h"
 #include "target.h"
 #include "command.h"
 #include "crc32.h"
@@ -67,14 +68,25 @@ static void gdb_target_printf(struct target_controller *tc,
 static struct target_controller gdb_controller = {
 	.destroy_callback = gdb_target_destroy_callback,
 	.printf = gdb_target_printf,
+
+	.open = hostio_open,
+	.close = hostio_close,
+	.read = hostio_read,
+	.write = hostio_write,
+	.lseek = hostio_lseek,
+	.rename = hostio_rename,
+	.unlink = hostio_unlink,
+	.stat = hostio_stat,
+	.fstat = hostio_fstat,
+	.gettimeofday = hostio_gettimeofday,
+	.isatty = hostio_isatty,
+	.system = hostio_system,
 };
 
-void
-gdb_main(void)
+int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 {
 	int size;
 	bool single_step = false;
-	char last_activity = 0;
 
 	DEBUG("Entring GDB protocol main loop\n");
 	/* GDB protocol main loop */
@@ -82,7 +94,6 @@ gdb_main(void)
 		SET_IDLE_STATE(1);
 		size = gdb_getpacket(pbuf, BUF_SIZE);
 		SET_IDLE_STATE(0);
-	continue_activity:
 		switch(pbuf[0]) {
 		/* Implementation of these is mandatory! */
 		case 'g': { /* 'g': Read general registers */
@@ -154,13 +165,11 @@ gdb_main(void)
 				break;
 			}
 
-			last_activity = pbuf[0];
 			/* Wait for target halt */
 			while(!(sig = target_halt_wait(cur_target))) {
 				unsigned char c = gdb_if_getchar_to(0);
 				if((c == '\x03') || (c == '\x04')) {
 					target_halt_request(cur_target);
-					last_activity = 's';
 				}
 			}
 			SET_RUN_STATE(0);
@@ -184,28 +193,14 @@ gdb_main(void)
 			}
 			break;
 			}
-		case 'F': {	/* Semihosting call finished */
-			int retcode, errcode, items;
-			char c, *p;
-			if (pbuf[1] == '-')
-				p = &pbuf[2];
-			else
-				p = &pbuf[1];
-			items = sscanf(p, "%x,%x,%c", &retcode, &errcode, &c);
-			if (pbuf[1] == '-')
-				retcode = -retcode;
-
-			target_hostio_reply(cur_target, retcode, errcode);
-
-			/* if break is requested */
-			if (items == 3 && c == 'C') {
-				gdb_putpacketz("T02");
-				break;
+		case 'F':	/* Semihosting call finished */
+			if (in_syscall) {
+				return hostio_reply(tc, pbuf, size);
+			} else {
+				DEBUG("*** F packet when not in syscall! '%s'\n", pbuf);
+				gdb_putpacketz("");
 			}
-
-			pbuf[0] = last_activity;
-			goto continue_activity;
-		}
+			break;
 
 		/* Optional GDB packet support */
 		case '!':	/* Enable Extended GDB Protocol. */
@@ -478,5 +473,10 @@ handle_z_packet(char *packet, int plen)
 		gdb_putpacketz("OK");
 	else
 		gdb_putpacketz("E01");
+}
+
+void gdb_main(void)
+{
+	gdb_main_loop(&gdb_controller, false);
 }
 

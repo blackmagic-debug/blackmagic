@@ -25,7 +25,10 @@
 #ifndef __TARGET_H
 #define __TARGET_H
 
+#include <stdarg.h>
+
 typedef struct target_s target;
+typedef uint32_t target_addr;
 
 int adiv5_swdp_scan(void);
 int jtag_scan(const uint8_t *lrlens);
@@ -33,9 +36,51 @@ int jtag_scan(const uint8_t *lrlens);
 bool target_foreach(void (*cb)(int i, target *t, void *context), void *context);
 void target_list_free(void);
 
+enum target_open_flags {
+	TARGET_O_RDONLY = 0,
+	TARGET_O_WRONLY = 1,
+	TARGET_O_RDWR = 2,
+	TARGET_O_APPEND = 0x008,
+	TARGET_O_CREAT = 0x200,
+	TARGET_O_TRUNC = 0x400,
+};
+
+enum target_seek_flag {
+	TARGET_SEEK_SET = 0,
+	TARGET_SEEK_CUR = 1,
+	TARGET_SEEK_END = 2,
+};
+
 struct target_controller {
 	void (*destroy_callback)(struct target_controller *, target *t);
 	void (*printf)(struct target_controller *, const char *fmt, va_list);
+
+	/* Interface to host system calls */
+	int (*open)(struct target_controller *,
+	            target_addr path, unsigned path_len,
+	            enum target_open_flags flags, mode_t mode);
+	int (*close)(struct target_controller *, int fd);
+	int (*read)(struct target_controller *,
+	            int fd, target_addr buf, unsigned int count);
+	int (*write)(struct target_controller *,
+	             int fd, target_addr buf, unsigned int count);
+	long (*lseek)(struct target_controller *,
+	              int fd, long offset, enum target_seek_flag flag);
+	int (*rename)(struct target_controller *,
+	              target_addr oldpath, unsigned old_len,
+	              target_addr newpath, unsigned new_len);
+	int (*unlink)(struct target_controller *,
+	              target_addr path, unsigned path_len);
+	int (*stat)(struct target_controller *,
+	            target_addr path, unsigned path_len, target_addr buf);
+	int (*fstat)(struct target_controller *, int fd, target_addr buf);
+	int (*gettimeofday)(struct target_controller *,
+	                    target_addr tv, target_addr tz);
+	int (*isatty)(struct target_controller *, int fd);
+	int (*system)(struct target_controller *,
+	              target_addr cmd, unsigned cmd_len);
+	int errno_;
+	bool interrupted;
 };
 
 /* Halt/resume functions */
@@ -71,9 +116,6 @@ int target_check_hw_wp(target *t, uint32_t *addr);
 int target_flash_erase(target *t, uint32_t addr, size_t len);
 int target_flash_write(target *t, uint32_t dest, const void *src, size_t len);
 int target_flash_done(target *t);
-
-/* Host I/O */
-void target_hostio_reply(target *t, int32_t retcode, uint32_t errcode);
 
 /* Accessor functions */
 int target_regs_size(target *t);

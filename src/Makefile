@@ -31,6 +31,7 @@ SRC =			\
 	exception.c	\
 	gdb_if.c	\
 	gdb_main.c	\
+	gdb_hostio.c	\
 	gdb_packet.c	\
 	hex_utils.c	\
 	jtag_scan.c	\
