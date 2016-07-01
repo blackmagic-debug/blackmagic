@@ -47,14 +47,27 @@ static void handle_q_packet(char *packet, int len);
 static void handle_v_packet(char *packet, int len);
 static void handle_z_packet(char *packet, int len);
 
-static void gdb_target_destroy_callback(target *t)
+static void gdb_target_destroy_callback(struct target_controller *tc, target *t)
 {
+	(void)tc;
 	if (cur_target == t)
 		cur_target = NULL;
 
 	if (last_target == t)
 		last_target = NULL;
 }
+
+static void gdb_target_printf(struct target_controller *tc,
+                              const char *fmt, va_list ap)
+{
+	(void)tc;
+	gdb_voutf(fmt, ap);
+}
+
+static struct target_controller gdb_controller = {
+	.destroy_callback = gdb_target_destroy_callback,
+	.printf = gdb_target_printf,
+};
 
 void
 gdb_main(void)
@@ -227,7 +240,7 @@ gdb_main(void)
 				target_reset(cur_target);
 			else if(last_target) {
 				cur_target = target_attach(last_target,
-						gdb_target_destroy_callback);
+						           &gdb_controller);
 				target_reset(cur_target);
 			}
 			break;
@@ -323,7 +336,7 @@ handle_q_packet(char *packet, int len)
 		if((!cur_target) && last_target) {
 			/* Attach to last target if detached. */
 			cur_target = target_attach(last_target,
-						gdb_target_destroy_callback);
+						   &gdb_controller);
 		}
 		if (!cur_target) {
 			gdb_putpacketz("E01");
@@ -336,7 +349,7 @@ handle_q_packet(char *packet, int len)
 		if((!cur_target) && last_target) {
 			/* Attach to last target if detached. */
 			cur_target = target_attach(last_target,
-						gdb_target_destroy_callback);
+						   &gdb_controller);
 		}
 		if (!cur_target) {
 			gdb_putpacketz("E01");
@@ -365,7 +378,7 @@ handle_v_packet(char *packet, int plen)
 
 	if (sscanf(packet, "vAttach;%08lx", &addr) == 1) {
 		/* Attach to remote target processor */
-		cur_target = target_attach_n(addr, gdb_target_destroy_callback);
+		cur_target = target_attach_n(addr, &gdb_controller);
 		if(cur_target)
 			gdb_putpacketz("T05");
 		else
@@ -378,7 +391,7 @@ handle_v_packet(char *packet, int plen)
 			gdb_putpacketz("T05");
 		} else if(last_target) {
 			cur_target = target_attach(last_target,
-						gdb_target_destroy_callback);
+						   &gdb_controller);
 
                         /* If we were able to attach to the target again */
                         if (cur_target) {

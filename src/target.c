@@ -22,6 +22,8 @@
 #include "target.h"
 #include "target_internal.h"
 
+#include <stdarg.h>
+
 target *target_list = NULL;
 
 target *target_new(void)
@@ -48,8 +50,8 @@ void target_list_free(void)
 
 	while(target_list) {
 		target *t = target_list->next;
-		if (target_list->destroy_callback)
-			target_list->destroy_callback(target_list);
+		if (target_list->tc)
+			target_list->tc->destroy_callback(target_list->tc, target_list);
 		if (target_list->priv)
 			target_list->priv_free(target_list->priv);
 		while (target_list->commands) {
@@ -90,22 +92,22 @@ void target_add_commands(target *t, const struct command_s *cmds, const char *na
 	tc->next = NULL;
 }
 
-target *target_attach_n(int n, target_destroy_callback destroy_cb)
+target *target_attach_n(int n, struct target_controller *tc)
 {
 	target *t;
 	int i;
 	for(t = target_list, i = 1; t; t = t->next, i++)
 		if(i == n)
-			return target_attach(t, destroy_cb);
+			return target_attach(t, tc);
 	return NULL;
 }
 
-target *target_attach(target *t, target_destroy_callback destroy_cb)
+target *target_attach(target *t, struct target_controller *tc)
 {
-	if (t->destroy_callback)
-		t->destroy_callback(t);
+	if (t->tc)
+		t->tc->destroy_callback(t->tc, t);
 
-	t->destroy_callback = destroy_cb;
+	t->tc = tc;
 
 	if (!t->attach(t))
 		return NULL;
@@ -418,13 +420,12 @@ int target_command(target *t, int argc, const char *argv[])
 	return -1;
 }
 
-#include "gdb_packet.h"
 void tc_printf(target *t, const char *fmt, ...)
 {
 	(void)t;
 	va_list ap;
 	va_start(ap, fmt);
-	gdb_voutf(fmt, ap);
+	t->tc->printf(t->tc, fmt, ap);
 	va_end(ap);
 }
 

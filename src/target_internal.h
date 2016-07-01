@@ -70,8 +70,7 @@ struct target_command_s {
 
 struct target_s {
 	bool attached;
-	/* Notify controlling debugger if target is lost */
-	target_destroy_callback destroy_callback;
+	struct target_controller *tc;
 
 	/* Attach/Detach funcitons */
 	bool (*attach)(target *t);

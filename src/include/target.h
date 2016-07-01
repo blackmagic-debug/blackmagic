@@ -33,20 +33,14 @@ int jtag_scan(const uint8_t *lrlens);
 bool target_foreach(void (*cb)(int i, target *t, void *context), void *context);
 void target_list_free(void);
 
-/* The destroy callback function will be called by target_list_free() just
- * before the target is free'd.  This may be because we're scanning for new
- * targets, or because of a communication failure.  The target data may
- * be assumed to be intact, but the communication medium may not be available,
- * so access methods shouldn't be called.
- *
- * The callback is installed by target_attach() and only removed by attaching
- * with a different callback.  It remains intact after target_detach().
- */
-typedef void (*target_destroy_callback)(target *t);
+struct target_controller {
+	void (*destroy_callback)(struct target_controller *, target *t);
+	void (*printf)(struct target_controller *, const char *fmt, va_list);
+};
 
 /* Halt/resume functions */
-target *target_attach(target *t, target_destroy_callback destroy_cb);
-target *target_attach_n(int n, target_destroy_callback destroy_cb);
+target *target_attach(target *t, struct target_controller *);
+target *target_attach_n(int n, struct target_controller *);
 void target_detach(target *t);
 bool target_check_error(target *t);
 bool target_attached(target *t);
