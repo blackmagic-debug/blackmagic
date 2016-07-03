@@ -54,7 +54,7 @@ static int lmi_flash_write(struct target_flash *f,
 static const char lmi_driver_str[] = "TI Stellaris/Tiva";
 
 static const uint16_t lmi_flash_write_stub[] = {
-#include "../flashstub/lmi.stub"
+#include "flashstub/lmi.stub"
 };
 
 static void lmi_add_flash(target *t, size_t length)

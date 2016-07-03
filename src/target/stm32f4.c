@@ -104,7 +104,7 @@ static const char stm32f2_driver_str[] = "STM32F2xx";
 
 /* This routine uses word access.  Only usable on target voltage >2.7V */
 static const uint16_t stm32f4_flash_write_stub[] = {
-#include "../flashstub/stm32f4.stub"
+#include "flashstub/stm32f4.stub"
 };
 
 #define SRAM_BASE 0x20000000

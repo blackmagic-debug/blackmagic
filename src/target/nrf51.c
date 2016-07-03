@@ -85,7 +85,7 @@ const struct command_s nrf51_read_cmd_list[] = {
 #define STUB_BUFFER_BASE   (SRAM_BASE + 0x28)
 
 static const uint16_t nrf51_flash_write_stub[] = {
-#include "../flashstub/nrf51.stub"
+#include "flashstub/nrf51.stub"
 };
 
 static void nrf51_add_flash(target *t,

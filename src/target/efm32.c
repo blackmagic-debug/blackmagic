@@ -49,7 +49,7 @@ static int efm32_flash_write(struct target_flash *f,
 			     uint32_t dest, const void *src, size_t len);
 
 static const uint16_t efm32_flash_write_stub[] = {
-#include "../flashstub/efm32.stub"
+#include "flashstub/efm32.stub"
 };
 
 static bool efm32_cmd_erase_all(target *t);

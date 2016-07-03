@@ -110,7 +110,7 @@ static const char stm32l4_driver_str[] = "STM32L4xx";
 
 /* This routine is uses double word access.*/
 static const uint16_t stm32l4_flash_write_stub[] = {
-#include "../flashstub/stm32l4.stub"
+#include "flashstub/stm32l4.stub"
 };
 
 #define SRAM_BASE 0x20000000

@@ -89,7 +89,7 @@ static int stm32f1_flash_write(struct target_flash *f,
 #define FLASHSIZE_F0  0x1FFFF7CC
 
 static const uint16_t stm32f1_flash_write_stub[] = {
-#include "../flashstub/stm32f1.stub"
+#include "flashstub/stm32f1.stub"
 };
 
 #define SRAM_BASE 0x20000000
