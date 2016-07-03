@@ -1,6 +1,6 @@
 PROBE_HOST ?= native
 PLATFORM_DIR = platforms/$(PROBE_HOST)
-VPATH += $(PLATFORM_DIR) platforms/common
+VPATH += $(PLATFORM_DIR) platforms/common target
 ENABLE_DEBUG ?=
 
 ifneq ($(V), 1)
