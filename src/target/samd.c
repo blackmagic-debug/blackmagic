@@ -37,9 +37,9 @@
 #include "target_internal.h"
 #include "cortexm.h"
 
-static int samd_flash_erase(struct target_flash *t, uint32_t addr, size_t len);
+static int samd_flash_erase(struct target_flash *t, target_addr addr, size_t len);
 static int samd_flash_write(struct target_flash *f,
-                            uint32_t dest, const void *src, size_t len);
+                            target_addr dest, const void *src, size_t len);
 
 static bool samd_cmd_erase_all(target *t);
 static bool samd_cmd_lock_flash(target *t);
@@ -457,7 +457,7 @@ static void samd_unlock_current_address(target *t)
 /**
  * Erase flash row by row
  */
-static int samd_flash_erase(struct target_flash *f, uint32_t addr, size_t len)
+static int samd_flash_erase(struct target_flash *f, target_addr addr, size_t len)
 {
 	target *t = f->t;
 	while (len) {
@@ -490,7 +490,7 @@ static int samd_flash_erase(struct target_flash *f, uint32_t addr, size_t len)
  * Write flash page by page
  */
 static int samd_flash_write(struct target_flash *f,
-                            uint32_t dest, const void *src, size_t len)
+                            target_addr dest, const void *src, size_t len)
 {
 	target *t = f->t;
 

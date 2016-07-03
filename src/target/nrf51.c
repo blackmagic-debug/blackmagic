@@ -26,9 +26,9 @@
 #include "target_internal.h"
 #include "cortexm.h"
 
-static int nrf51_flash_erase(struct target_flash *f, uint32_t addr, size_t len);
+static int nrf51_flash_erase(struct target_flash *f, target_addr addr, size_t len);
 static int nrf51_flash_write(struct target_flash *f,
-                             uint32_t dest, const void *src, size_t len);
+                             target_addr dest, const void *src, size_t len);
 
 static bool nrf51_cmd_erase_all(target *t);
 static bool nrf51_cmd_read_hwid(target *t);
@@ -172,7 +172,7 @@ bool nrf51_probe(target *t)
 	return false;
 }
 
-static int nrf51_flash_erase(struct target_flash *f, uint32_t addr, size_t len)
+static int nrf51_flash_erase(struct target_flash *f, target_addr addr, size_t len)
 {
 	target *t = f->t;
 	/* Enable erase */
@@ -214,7 +214,7 @@ static int nrf51_flash_erase(struct target_flash *f, uint32_t addr, size_t len)
 }
 
 static int nrf51_flash_write(struct target_flash *f,
-                             uint32_t dest, const void *src, size_t len)
+                             target_addr dest, const void *src, size_t len)
 {
 	target *t = f->t;
 	uint32_t data[2 + len/4];

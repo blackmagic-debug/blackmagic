@@ -142,16 +142,16 @@
 #define STM32L1_NVM_OPTR_SPRMOD      (1<<8)
 
 static int stm32lx_nvm_prog_erase(struct target_flash* f,
-                                  uint32_t addr, size_t len);
+                                  target_addr addr, size_t len);
 static int stm32lx_nvm_prog_write(struct target_flash* f,
-                                  uint32_t destination,
+                                  target_addr destination,
                                   const void* src,
                                   size_t size);
 
 static int stm32lx_nvm_data_erase(struct target_flash* f,
-                                  uint32_t addr, size_t len);
+                                  target_addr addr, size_t len);
 static int stm32lx_nvm_data_write(struct target_flash* f,
-                                  uint32_t destination,
+                                  target_addr destination,
                                   const void* source,
                                   size_t size);
 
@@ -322,7 +322,7 @@ static bool stm32lx_nvm_opt_unlock(target *t, uint32_t nvm)
     flash array is erased for all pages from addr to addr+len
     inclusive.  NVM register file address chosen from target. */
 static int stm32lx_nvm_prog_erase(struct target_flash* f,
-                                  uint32_t addr, size_t len)
+                                  target_addr addr, size_t len)
 {
 	target *t = f->t;
 	const size_t page_size = f->blocksize;
@@ -372,7 +372,7 @@ static int stm32lx_nvm_prog_erase(struct target_flash* f,
 /** Write to program flash using operations through the debug
     interface. */
 static int stm32lx_nvm_prog_write(struct target_flash *f,
-                                  uint32_t dest,
+                                  target_addr dest,
                                   const void* src,
                                   size_t size)
 {
@@ -415,7 +415,7 @@ static int stm32lx_nvm_prog_write(struct target_flash *f,
     addr+len, inclusive, on a word boundary.  NVM register file
     address chosen from target. */
 static int stm32lx_nvm_data_erase(struct target_flash *f,
-                                  uint32_t addr, size_t len)
+                                  target_addr addr, size_t len)
 {
 	target *t = f->t;
 	const size_t page_size = f->blocksize;
@@ -467,7 +467,7 @@ static int stm32lx_nvm_data_erase(struct target_flash *f,
     destination writes are supported (though unaligned sources are
     not). */
 static int stm32lx_nvm_data_write(struct target_flash *f,
-                                  uint32_t destination,
+                                  target_addr destination,
                                   const void* src,
                                   size_t size)
 {

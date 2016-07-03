@@ -45,9 +45,9 @@ const struct command_s stm32f4_cmd_list[] = {
 };
 
 
-static int stm32f4_flash_erase(struct target_flash *f, uint32_t addr, size_t len);
+static int stm32f4_flash_erase(struct target_flash *f, target_addr addr, size_t len);
 static int stm32f4_flash_write(struct target_flash *f,
-                               uint32_t dest, const void *src, size_t len);
+                               target_addr dest, const void *src, size_t len);
 
 static const char stm32f4_driver_str[] = "STM32F4xx";
 static const char stm32f7_driver_str[] = "STM32F7xx";
@@ -219,7 +219,7 @@ static void stm32f4_flash_unlock(target *t)
 	}
 }
 
-static int stm32f4_flash_erase(struct target_flash *f, uint32_t addr, size_t len)
+static int stm32f4_flash_erase(struct target_flash *f, target_addr addr, size_t len)
 {
 	target *t = f->t;
 	uint16_t sr;
@@ -254,7 +254,7 @@ static int stm32f4_flash_erase(struct target_flash *f, uint32_t addr, size_t len
 }
 
 static int stm32f4_flash_write(struct target_flash *f,
-                               uint32_t dest, const void *src, size_t len)
+                               target_addr dest, const void *src, size_t len)
 {
 	/* Write buffer to target ram call stub */
 	target_mem_write(f->t, SRAM_BASE, stm32f4_flash_write_stub,

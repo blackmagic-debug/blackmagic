@@ -45,9 +45,9 @@ const struct command_s stm32f1_cmd_list[] = {
 
 
 static int stm32f1_flash_erase(struct target_flash *f,
-                               uint32_t addr, size_t len);
+                               target_addr addr, size_t len);
 static int stm32f1_flash_write(struct target_flash *f,
-                               uint32_t dest, const void *src, size_t len);
+                               target_addr dest, const void *src, size_t len);
 
 /* Flash Program ad Erase Controller Register Map */
 #define FPEC_BASE	0x40022000
@@ -179,7 +179,7 @@ static void stm32f1_flash_unlock(target *t)
 }
 
 static int stm32f1_flash_erase(struct target_flash *f,
-                               uint32_t addr, size_t len)
+                               target_addr addr, size_t len)
 {
 	target *t = f->t;
 	uint16_t sr;
@@ -212,7 +212,7 @@ static int stm32f1_flash_erase(struct target_flash *f,
 }
 
 static int stm32f1_flash_write(struct target_flash *f,
-                               uint32_t dest, const void *src, size_t len)
+                               target_addr dest, const void *src, size_t len)
 {
 	target *t = f->t;
 	/* Write stub and data to target ram and set PC */

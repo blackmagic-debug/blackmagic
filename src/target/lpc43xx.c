@@ -50,7 +50,7 @@ static bool lpc43xx_cmd_erase(target *t, int argc, const char *argv[]);
 static bool lpc43xx_cmd_reset(target *t, int argc, const char *argv[]);
 static bool lpc43xx_cmd_mkboot(target *t, int argc, const char *argv[]);
 static int lpc43xx_flash_init(target *t);
-static int lpc43xx_flash_erase(struct target_flash *f, uint32_t addr, size_t len);
+static int lpc43xx_flash_erase(struct target_flash *f, target_addr addr, size_t len);
 static void lpc43xx_set_internal_clock(target *t);
 static void lpc43xx_wdt_set_period(target *t);
 static void lpc43xx_wdt_pet(target *t);
@@ -194,7 +194,7 @@ static int lpc43xx_flash_init(target *t)
 	return 0;
 }
 
-static int lpc43xx_flash_erase(struct target_flash *f, uint32_t addr, size_t len)
+static int lpc43xx_flash_erase(struct target_flash *f, target_addr addr, size_t len)
 {
 	if (lpc43xx_flash_init(f->t))
 		return -1;

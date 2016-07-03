@@ -116,7 +116,7 @@ target *target_attach(target *t, struct target_controller *tc)
 	return t;
 }
 
-void target_add_ram(target *t, uint32_t start, uint32_t len)
+void target_add_ram(target *t, target_addr start, uint32_t len)
 {
 	struct target_ram *ram = malloc(sizeof(*ram));
 	ram->start = start;
@@ -135,7 +135,7 @@ void target_add_flash(target *t, struct target_flash *f)
 static ssize_t map_ram(char *buf, size_t len, struct target_ram *ram)
 {
 	return snprintf(buf, len, "<memory type=\"ram\" start=\"0x%08"PRIx32
-	                          "\" length=\"0x%08"PRIx32"\"/>",
+	                          "\" length=\"0x%08zx\"/>",
 	                          ram->start, ram->length);
 }
 
@@ -143,9 +143,9 @@ static ssize_t map_flash(char *buf, size_t len, struct target_flash *f)
 {
 	int i = 0;
 	i += snprintf(&buf[i], len - i, "<memory type=\"flash\" start=\"0x%08"PRIx32
-	                                "\" length=\"0x%08"PRIx32"\">",
+	                                "\" length=\"0x%08zx\">",
 	                                f->start, f->length);
-	i += snprintf(&buf[i], len - i, "<property name=\"blocksize\">0x%08"PRIx32
+	i += snprintf(&buf[i], len - i, "<property name=\"blocksize\">0x%08zx"
 	                            "</property></memory>",
 	                            f->blocksize);
 	return i;
@@ -231,7 +231,7 @@ int target_flash_done(target *t)
 }
 
 int target_flash_write_buffered(struct target_flash *f,
-                                uint32_t dest, const void *src, size_t len)
+                                target_addr dest, const void *src, size_t len)
 {
 	int ret = 0;
 

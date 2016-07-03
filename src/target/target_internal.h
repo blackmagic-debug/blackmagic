@@ -25,20 +25,20 @@ extern target *target_list;
 target *target_new(void);
 
 struct target_ram {
-	uint32_t start;
-	uint32_t length;
+	target_addr start;
+	size_t length;
 	struct target_ram *next;
 };
 
 struct target_flash;
-typedef int (*flash_erase_func)(struct target_flash *f, uint32_t addr, size_t len);
-typedef int (*flash_write_func)(struct target_flash *f, uint32_t dest,
+typedef int (*flash_erase_func)(struct target_flash *f, target_addr addr, size_t len);
+typedef int (*flash_write_func)(struct target_flash *f, target_addr dest,
                                 const void *src, size_t len);
 typedef int (*flash_done_func)(struct target_flash *f);
 struct target_flash {
-	uint32_t start;
-	uint32_t length;
-	uint32_t blocksize;
+	target_addr start;
+	size_t length;
+	size_t blocksize;
 	flash_erase_func erase;
 	flash_write_func write;
 	flash_done_func done;
@@ -50,7 +50,7 @@ struct target_flash {
 	/* For buffered flash */
 	size_t buf_size;
 	flash_write_func write_buf;
-	uint32_t buf_addr;
+	target_addr buf_addr;
 	void *buf;
 };
 
@@ -124,10 +124,10 @@ struct target_s {
 };
 
 void target_add_commands(target *t, const struct command_s *cmds, const char *name);
-void target_add_ram(target *t, uint32_t start, uint32_t len);
+void target_add_ram(target *t, target_addr start, uint32_t len);
 void target_add_flash(target *t, struct target_flash *f);
 int target_flash_write_buffered(struct target_flash *f,
-                                uint32_t dest, const void *src, size_t len);
+                                target_addr dest, const void *src, size_t len);
 int target_flash_done_buffered(struct target_flash *f);
 
 /* Convenience function for MMIO access */

@@ -44,9 +44,9 @@
 #define SRAM_BASE		0x20000000
 #define STUB_BUFFER_BASE	ALIGN(SRAM_BASE + sizeof(efm32_flash_write_stub), 4)
 
-static int efm32_flash_erase(struct target_flash *t, uint32_t addr, size_t len);
+static int efm32_flash_erase(struct target_flash *t, target_addr addr, size_t len);
 static int efm32_flash_write(struct target_flash *f,
-			     uint32_t dest, const void *src, size_t len);
+			     target_addr dest, const void *src, size_t len);
 
 static const uint16_t efm32_flash_write_stub[] = {
 #include "flashstub/efm32.stub"
@@ -230,7 +230,7 @@ uint16_t efm32_read_radio_part_number(target *t)
 
 
 
-static void efm32_add_flash(target *t, uint32_t addr, size_t length,
+static void efm32_add_flash(target *t, target_addr addr, size_t length,
 			    size_t page_size)
 {
 	struct target_flash *f = calloc(1, sizeof(*f));
@@ -344,7 +344,7 @@ bool efm32_probe(target *t)
 /**
  * Erase flash row by row
  */
-static int efm32_flash_erase(struct target_flash *f, uint32_t addr, size_t len)
+static int efm32_flash_erase(struct target_flash *f, target_addr addr, size_t len)
 {
 	target *t = f->t;
 
@@ -376,7 +376,7 @@ static int efm32_flash_erase(struct target_flash *f, uint32_t addr, size_t len)
  * Write flash page by page
  */
 static int efm32_flash_write(struct target_flash *f,
-			     uint32_t dest, const void *src, size_t len)
+			     target_addr dest, const void *src, size_t len)
 {
 	(void)len;
 	target *t = f->t;

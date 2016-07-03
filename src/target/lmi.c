@@ -47,9 +47,9 @@
 #define LMI_FLASH_FMC_COMT   (1 << 3)
 #define LMI_FLASH_FMC_WRKEY  0xA4420000
 
-static int lmi_flash_erase(struct target_flash *f, uint32_t addr, size_t len);
+static int lmi_flash_erase(struct target_flash *f, target_addr addr, size_t len);
 static int lmi_flash_write(struct target_flash *f,
-                           uint32_t dest, const void *src, size_t len);
+                           target_addr dest, const void *src, size_t len);
 
 static const char lmi_driver_str[] = "TI Stellaris/Tiva";
 
@@ -89,7 +89,7 @@ bool lmi_probe(target *t)
 	return false;
 }
 
-int lmi_flash_erase(struct target_flash *f, uint32_t addr, size_t len)
+int lmi_flash_erase(struct target_flash *f, target_addr addr, size_t len)
 {
 	target  *t = f->t;
 	while(len) {
@@ -106,7 +106,7 @@ int lmi_flash_erase(struct target_flash *f, uint32_t addr, size_t len)
 }
 
 int lmi_flash_write(struct target_flash *f,
-                    uint32_t dest, const void *src, size_t len)
+                    target_addr dest, const void *src, size_t len)
 {
 	target  *t = f->t;
 
