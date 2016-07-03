@@ -78,9 +78,9 @@ struct target_s {
 	bool (*check_error)(target *t);
 
 	/* Memory access functions */
-	void (*mem_read)(target *t, void *dest, uint32_t src,
+	void (*mem_read)(target *t, void *dest, target_addr src,
 	                 size_t len);
-	void (*mem_write)(target *t, uint32_t dest,
+	void (*mem_write)(target *t, target_addr dest,
 	                  const void *src, size_t len);
 
 	/* Register access functions */
@@ -96,13 +96,13 @@ struct target_s {
 	void (*halt_resume)(target *t, bool step);
 
 	/* Break-/watchpoint functions */
-	int (*set_hw_bp)(target *t, uint32_t addr, uint8_t len);
-	int (*clear_hw_bp)(target *t, uint32_t addr, uint8_t len);
+	int (*set_hw_bp)(target *t, target_addr addr, uint8_t len);
+	int (*clear_hw_bp)(target *t, target_addr addr, uint8_t len);
 
-	int (*set_hw_wp)(target *t, uint8_t type, uint32_t addr, uint8_t len);
-	int (*clear_hw_wp)(target *t, uint8_t type, uint32_t addr, uint8_t len);
+	int (*set_hw_wp)(target *t, uint8_t type, target_addr addr, uint8_t len);
+	int (*clear_hw_wp)(target *t, uint8_t type, target_addr addr, uint8_t len);
 
-	int (*check_hw_wp)(target *t, uint32_t *addr);
+	int (*check_hw_wp)(target *t, target_addr *addr);
 
 	/* target-defined options */
 	unsigned target_options;

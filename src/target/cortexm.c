@@ -62,13 +62,13 @@ static int cortexm_halt_wait(target *t);
 static void cortexm_halt_request(target *t);
 static int cortexm_fault_unwind(target *t);
 
-static int cortexm_set_hw_bp(target *t, uint32_t addr, uint8_t len);
-static int cortexm_clear_hw_bp(target *t, uint32_t addr, uint8_t len);
+static int cortexm_set_hw_bp(target *t, target_addr addr, uint8_t len);
+static int cortexm_clear_hw_bp(target *t, target_addr addr, uint8_t len);
 
-static int cortexm_set_hw_wp(target *t, uint8_t type, uint32_t addr, uint8_t len);
-static int cortexm_clear_hw_wp(target *t, uint8_t type, uint32_t addr, uint8_t len);
+static int cortexm_set_hw_wp(target *t, uint8_t type, target_addr addr, uint8_t len);
+static int cortexm_clear_hw_wp(target *t, uint8_t type, target_addr addr, uint8_t len);
 
-static int cortexm_check_hw_wp(target *t, uint32_t *addr);
+static int cortexm_check_hw_wp(target *t, target_addr *addr);
 
 #define CORTEXM_MAX_WATCHPOINTS	4	/* architecture says up to 15, no implementation has > 4 */
 #define CORTEXM_MAX_BREAKPOINTS	6	/* architecture says up to 127, no implementation has > 6 */
@@ -193,12 +193,12 @@ ADIv5_AP_t *cortexm_ap(target *t)
 	return ((struct cortexm_priv *)t->priv)->ap;
 }
 
-static void cortexm_mem_read(target *t, void *dest, uint32_t src, size_t len)
+static void cortexm_mem_read(target *t, void *dest, target_addr src, size_t len)
 {
 	adiv5_mem_read(cortexm_ap(t), dest, src, len);
 }
 
-static void cortexm_mem_write(target *t, uint32_t dest, const void *src, size_t len)
+static void cortexm_mem_write(target *t, target_addr dest, const void *src, size_t len)
 {
 	adiv5_mem_write(cortexm_ap(t), dest, src, len);
 }
@@ -656,7 +656,7 @@ int cortexm_run_stub(target *t, uint32_t loadaddr,
 /* The following routines implement hardware breakpoints.
  * The Flash Patch and Breakpoint (FPB) system is used. */
 
-static int cortexm_set_hw_bp(target *t, uint32_t addr, uint8_t len)
+static int cortexm_set_hw_bp(target *t, target_addr addr, uint8_t len)
 {
 	(void)len;
 	struct cortexm_priv *priv = t->priv;
@@ -681,7 +681,7 @@ static int cortexm_set_hw_bp(target *t, uint32_t addr, uint8_t len)
 	return 0;
 }
 
-static int cortexm_clear_hw_bp(target *t, uint32_t addr, uint8_t len)
+static int cortexm_clear_hw_bp(target *t, target_addr addr, uint8_t len)
 {
 	(void)len;
 	struct cortexm_priv *priv = t->priv;
@@ -703,7 +703,7 @@ static int cortexm_clear_hw_bp(target *t, uint32_t addr, uint8_t len)
  * The Data Watch and Trace (DWT) system is used. */
 
 static int
-cortexm_set_hw_wp(target *t, uint8_t type, uint32_t addr, uint8_t len)
+cortexm_set_hw_wp(target *t, uint8_t type, target_addr addr, uint8_t len)
 {
 	struct cortexm_priv *priv = t->priv;
 	unsigned i;
@@ -744,7 +744,7 @@ cortexm_set_hw_wp(target *t, uint8_t type, uint32_t addr, uint8_t len)
 }
 
 static int
-cortexm_clear_hw_wp(target *t, uint8_t type, uint32_t addr, uint8_t len)
+cortexm_clear_hw_wp(target *t, uint8_t type, target_addr addr, uint8_t len)
 {
 	struct cortexm_priv *priv = t->priv;
 	unsigned i;
@@ -779,7 +779,7 @@ cortexm_clear_hw_wp(target *t, uint8_t type, uint32_t addr, uint8_t len)
 	return 0;
 }
 
-static int cortexm_check_hw_wp(target *t, uint32_t *addr)
+static int cortexm_check_hw_wp(target *t, target_addr *addr)
 {
 	struct cortexm_priv *priv = t->priv;
 	unsigned i;

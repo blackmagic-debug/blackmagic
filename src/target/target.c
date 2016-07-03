@@ -183,7 +183,7 @@ static struct target_flash *flash_for_addr(target *t, uint32_t addr)
 	return NULL;
 }
 
-int target_flash_erase(target *t, uint32_t addr, size_t len)
+int target_flash_erase(target *t, target_addr addr, size_t len)
 {
 	int ret = 0;
 	while (len) {
@@ -197,7 +197,7 @@ int target_flash_erase(target *t, uint32_t addr, size_t len)
 }
 
 int target_flash_write(target *t,
-                       uint32_t dest, const void *src, size_t len)
+                       target_addr dest, const void *src, size_t len)
 {
 	int ret = 0;
 	while (len) {
@@ -288,12 +288,12 @@ bool target_check_error(target *t) { return t->check_error(t); }
 bool target_attached(target *t) { return t->attached; }
 
 /* Memory access functions */
-void target_mem_read(target *t, void *dest, uint32_t src, size_t len)
+void target_mem_read(target *t, void *dest, target_addr src, size_t len)
 {
 	t->mem_read(t, dest, src, len);
 }
 
-void target_mem_write(target *t, uint32_t dest, const void *src, size_t len)
+void target_mem_write(target *t, target_addr dest, const void *src, size_t len)
 {
 	t->mem_write(t, dest, src, len);
 }
@@ -309,35 +309,35 @@ int target_halt_wait(target *t) { return t->halt_wait(t); }
 void target_halt_resume(target *t, bool step) { t->halt_resume(t, step); }
 
 /* Break-/watchpoint functions */
-int target_set_hw_bp(target *t, uint32_t addr, uint8_t len)
+int target_set_hw_bp(target *t, target_addr addr, uint8_t len)
 {
 	if (t->set_hw_bp == NULL)
 		return 0;
 	return t->set_hw_bp(t, addr, len);
 }
 
-int target_clear_hw_bp(target *t, uint32_t addr, uint8_t len)
+int target_clear_hw_bp(target *t, target_addr addr, uint8_t len)
 {
 	if (t->clear_hw_bp == NULL)
 		return 0;
 	return t->clear_hw_bp(t, addr, len);
 }
 
-int target_set_hw_wp(target *t, uint8_t type, uint32_t addr, uint8_t len)
+int target_set_hw_wp(target *t, uint8_t type, target_addr addr, uint8_t len)
 {
 	if (t->set_hw_wp == NULL)
 		return 0;
 	return t->set_hw_wp(t, type, addr, len);
 }
 
-int target_clear_hw_wp(target *t, uint8_t type, uint32_t addr, uint8_t len)
+int target_clear_hw_wp(target *t, uint8_t type, target_addr addr, uint8_t len)
 {
 	if (t->clear_hw_wp == NULL)
 		return 0;
 	return t->clear_hw_wp(t, type, addr, len);
 }
 
-int target_check_hw_wp(target *t, uint32_t *addr)
+int target_check_hw_wp(target *t, target_addr *addr)
 {
 	if (t->check_hw_wp == NULL)
 		return 0;

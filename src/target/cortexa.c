@@ -54,8 +54,8 @@ static void cortexa_reset(target *t);
 static int cortexa_halt_wait(target *t);
 static void cortexa_halt_request(target *t);
 
-static int cortexa_set_hw_bp(target *t, uint32_t addr, uint8_t len);
-static int cortexa_clear_hw_bp(target *t, uint32_t addr, uint8_t len);
+static int cortexa_set_hw_bp(target *t, target_addr addr, uint8_t len);
+static int cortexa_clear_hw_bp(target *t, target_addr addr, uint8_t len);
 static uint32_t bp_bas(uint32_t addr, uint8_t len);
 
 static void apb_write(target *t, uint16_t reg, uint32_t val);
@@ -221,7 +221,7 @@ static uint32_t va_to_pa(target *t, uint32_t va)
 	return pa;
 }
 
-static void cortexa_mem_read(target *t, void *dest, uint32_t src, size_t len)
+static void cortexa_mem_read(target *t, void *dest, target_addr src, size_t len)
 {
 	/* Clean cache before reading */
 	for (uint32_t cl = src & ~(CACHE_LINE_LENGTH-1);
@@ -234,7 +234,7 @@ static void cortexa_mem_read(target *t, void *dest, uint32_t src, size_t len)
 	adiv5_mem_read(ahb, dest, va_to_pa(t, src), len);
 }
 
-static void cortexa_slow_mem_read(target *t, void *dest, uint32_t src, size_t len)
+static void cortexa_slow_mem_read(target *t, void *dest, target_addr src, size_t len)
 {
 	struct cortexa_priv *priv = t->priv;
 	unsigned words = (len + (src & 3) + 3) / 4;
@@ -273,7 +273,7 @@ static void cortexa_slow_mem_read(target *t, void *dest, uint32_t src, size_t le
 	}
 }
 
-static void cortexa_mem_write(target *t, uint32_t dest, const void *src, size_t len)
+static void cortexa_mem_write(target *t, target_addr dest, const void *src, size_t len)
 {
 	/* Clean and invalidate cache before writing */
 	for (uint32_t cl = dest & ~(CACHE_LINE_LENGTH-1);
@@ -285,7 +285,7 @@ static void cortexa_mem_write(target *t, uint32_t dest, const void *src, size_t 
 	adiv5_mem_write(ahb, va_to_pa(t, dest), src, len);
 }
 
-static void cortexa_slow_mem_write_bytes(target *t, uint32_t dest, const uint8_t *src, size_t len)
+static void cortexa_slow_mem_write_bytes(target *t, target_addr dest, const uint8_t *src, size_t len)
 {
 	struct cortexa_priv *priv = t->priv;
 
@@ -304,7 +304,7 @@ static void cortexa_slow_mem_write_bytes(target *t, uint32_t dest, const uint8_t
 	}
 }
 
-static void cortexa_slow_mem_write(target *t, uint32_t dest, const void *src, size_t len)
+static void cortexa_slow_mem_write(target *t, target_addr dest, const void *src, size_t len)
 {
 	struct cortexa_priv *priv = t->priv;
 	if (len == 0)
@@ -677,7 +677,7 @@ static uint32_t bp_bas(uint32_t addr, uint8_t len)
 		return DBGBCR_BAS_LOW_HW;
 }
 
-static int cortexa_set_hw_bp(target *t, uint32_t addr, uint8_t len)
+static int cortexa_set_hw_bp(target *t, target_addr addr, uint8_t len)
 {
 	struct cortexa_priv *priv = t->priv;
 	unsigned i;
@@ -698,7 +698,7 @@ static int cortexa_set_hw_bp(target *t, uint32_t addr, uint8_t len)
 	return 0;
 }
 
-static int cortexa_clear_hw_bp(target *t, uint32_t addr, uint8_t len)
+static int cortexa_clear_hw_bp(target *t, target_addr addr, uint8_t len)
 {
 	struct cortexa_priv *priv = t->priv;
 	unsigned i;

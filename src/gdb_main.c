@@ -156,7 +156,7 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 		case '?': {	/* '?': Request reason for target halt */
 			/* This packet isn't documented as being mandatory,
 			 * but GDB doesn't work without it. */
-			uint32_t watch_addr;
+			target_addr watch_addr;
 			int sig;
 
 			if(!cur_target) {
