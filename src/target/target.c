@@ -427,62 +427,100 @@ void tc_printf(target *t, const char *fmt, ...)
 int tc_open(target *t, target_addr path, unsigned plen,
             enum target_open_flags flags, mode_t mode)
 {
+	if (t->tc->open == NULL) {
+		t->tc->errno_ = TARGET_ENFILE;
+		return -1;
+	}
 	return t->tc->open(t->tc, path, plen, flags, mode);
 }
 
 int tc_close(target *t, int fd)
 {
+	if (t->tc->close == NULL) {
+		t->tc->errno_ = TARGET_EBADF;
+		return -1;
+	}
 	return t->tc->close(t->tc, fd);
 }
 
 int tc_read(target *t, int fd, target_addr buf, unsigned int count)
 {
+	if (t->tc->read == NULL)
+		return 0;
 	return t->tc->read(t->tc, fd, buf, count);
 }
 
 int tc_write(target *t, int fd, target_addr buf, unsigned int count)
 {
+	if (t->tc->write == NULL)
+		return 0;
 	return t->tc->write(t->tc, fd, buf, count);
 }
 
 long tc_lseek(target *t, int fd, long offset, enum target_seek_flag flag)
 {
+	if (t->tc->lseek == NULL)
+		return 0;
 	return t->tc->lseek(t->tc, fd, offset, flag);
 }
 
 int tc_rename(target *t, target_addr oldpath, unsigned oldlen,
                          target_addr newpath, unsigned newlen)
 {
+	if (t->tc->rename == NULL) {
+		t->tc->errno_ = TARGET_ENOENT;
+		return -1;
+	}
 	return t->tc->rename(t->tc, oldpath, oldlen, newpath, newlen);
 }
 
 int tc_unlink(target *t, target_addr path, unsigned plen)
 {
+	if (t->tc->unlink == NULL) {
+		t->tc->errno_ = TARGET_ENOENT;
+		return -1;
+	}
 	return t->tc->unlink(t->tc, path, plen);
 }
 
 int tc_stat(target *t, target_addr path, unsigned plen, target_addr buf)
 {
+	if (t->tc->stat == NULL) {
+		t->tc->errno_ = TARGET_ENOENT;
+		return -1;
+	}
 	return t->tc->stat(t->tc, path, plen, buf);
 }
 
 int tc_fstat(target *t, int fd, target_addr buf)
 {
+	if (t->tc->fstat == NULL) {
+		return 0;
+	}
 	return t->tc->fstat(t->tc, fd, buf);
 }
 
 int tc_gettimeofday(target *t, target_addr tv, target_addr tz)
 {
+	if (t->tc->gettimeofday == NULL) {
+		return -1;
+	}
 	return t->tc->gettimeofday(t->tc, tv, tz);
 }
 
 int tc_isatty(target *t, int fd)
 {
+	if (t->tc->isatty == NULL) {
+		return 1;
+	}
 	return t->tc->isatty(t->tc, fd);
 }
 
 int tc_system(target *t, target_addr cmd, unsigned cmdlen)
 {
+	if (t->tc->system == NULL) {
+		return -1;
+	}
 	return t->tc->system(t->tc, cmd, cmdlen);
 }
 

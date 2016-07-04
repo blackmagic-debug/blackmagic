@@ -36,6 +36,28 @@ int jtag_scan(const uint8_t *lrlens);
 bool target_foreach(void (*cb)(int i, target *t, void *context), void *context);
 void target_list_free(void);
 
+enum target_errno {
+	TARGET_EPERM = 1,
+	TARGET_ENOENT = 2,
+	TARGET_EINTR = 4,
+	TARGET_EBADF = 9,
+	TARGET_EACCES = 13,
+	TARGET_EFAULT = 14,
+	TARGET_EBUSY = 16,
+	TARGET_EEXIST = 17,
+	TARGET_ENODEV = 19,
+	TARGET_ENOTDIR = 20,
+	TARGET_EISDIR = 21,
+	TARGET_EINVAL = 22,
+	TARGET_EMFILE = 24,
+	TARGET_ENFILE = 23,
+	TARGET_EFBIG = 27,
+	TARGET_ENOSPC = 28,
+	TARGET_ESPIPE = 29,
+	TARGET_EROFS = 30,
+	TARGET_ENAMETOOLONG = 36,
+};
+
 enum target_open_flags {
 	TARGET_O_RDONLY = 0,
 	TARGET_O_WRONLY = 1,
@@ -79,7 +101,7 @@ struct target_controller {
 	int (*isatty)(struct target_controller *, int fd);
 	int (*system)(struct target_controller *,
 	              target_addr cmd, unsigned cmd_len);
-	int errno_;
+	enum target_errno errno_;
 	bool interrupted;
 };
 
