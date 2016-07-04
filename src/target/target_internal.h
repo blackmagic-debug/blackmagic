@@ -142,21 +142,21 @@ void target_mem_write8(target *t, uint32_t addr, uint8_t value);
 void tc_printf(target *t, const char *fmt, ...);
 
 /* Interface to host system calls */
-int tc_open(target *, target_addr path, unsigned plen,
+int tc_open(target *, target_addr path, size_t plen,
             enum target_open_flags flags, mode_t mode);
 int tc_close(target *t, int fd);
 int tc_read(target *t, int fd, target_addr buf, unsigned int count);
 int tc_write(target *t, int fd, target_addr buf, unsigned int count);
 long tc_lseek(target *t, int fd, long offset,
               enum target_seek_flag flag);
-int tc_rename(target *t, target_addr oldpath, unsigned oldlen,
-                         target_addr newpath, unsigned newlen);
-int tc_unlink(target *t, target_addr path, unsigned plen);
-int tc_stat(target *t, target_addr path, unsigned plen, target_addr buf);
+int tc_rename(target *t, target_addr oldpath, size_t oldlen,
+                         target_addr newpath, size_t newlen);
+int tc_unlink(target *t, target_addr path, size_t plen);
+int tc_stat(target *t, target_addr path, size_t plen, target_addr buf);
 int tc_fstat(target *t, int fd, target_addr buf);
 int tc_gettimeofday(target *t, target_addr tv, target_addr tz);
 int tc_isatty(target *t, int fd);
-int tc_system(target *t, target_addr cmd, unsigned cmdlen);
+int tc_system(target *t, target_addr cmd, size_t cmdlen);
 
 /* Probe for various targets.
  * Actual functions implemented in their respective drivers.

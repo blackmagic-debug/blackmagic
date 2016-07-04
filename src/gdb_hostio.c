@@ -29,25 +29,26 @@ int gdb_main_loop(struct target_controller *, bool in_syscall);
 int hostio_reply(struct target_controller *tc, char *pbuf, int len)
 {
 	(void)len;
-	int retcode, items;
+	int retcode, items, errno_;
 	char c, *p;
 	if (pbuf[1] == '-')
 		p = &pbuf[2];
 	else
 		p = &pbuf[1];
-	items = sscanf(p, "%x,%x,%c", &retcode, &tc->errno_, &c);
+	items = sscanf(p, "%x,%x,%c", &retcode, &errno_, &c);
 	if (pbuf[1] == '-')
 		retcode = -retcode;
 
 	/* if break is requested */
 	tc->interrupted = items == 3 && c == 'C';
+	tc->errno_ = errno_;
 
 	return retcode;
 }
 
 /* Interface to host system calls */
 int hostio_open(struct target_controller *tc,
-	        target_addr path, unsigned path_len,
+	        target_addr path, size_t path_len,
                 enum target_open_flags flags, mode_t mode)
 {
 	gdb_putpacket_f("Fopen,%08X/%X,%08X,%08X", path, path_len, flags, mode);;;;
@@ -82,8 +83,8 @@ long hostio_lseek(struct target_controller *tc,
 }
 
 int hostio_rename(struct target_controller *tc,
-	           target_addr oldpath, unsigned old_len,
-	           target_addr newpath, unsigned new_len)
+	           target_addr oldpath, size_t old_len,
+	           target_addr newpath, size_t new_len)
 {
 	gdb_putpacket_f("Frename,%08X/%X,%08X/%X",
 	                oldpath, old_len, newpath, new_len);
@@ -91,14 +92,14 @@ int hostio_rename(struct target_controller *tc,
 }
 
 int hostio_unlink(struct target_controller *tc,
-	           target_addr path, unsigned path_len)
+	           target_addr path, size_t path_len)
 {
 	gdb_putpacket_f("Funlink,%08X/%X", path, path_len);
 	return gdb_main_loop(tc, true);
 }
 
 int hostio_stat(struct target_controller *tc,
-	         target_addr path, unsigned path_len, target_addr buf)
+	         target_addr path, size_t path_len, target_addr buf)
 {
 	gdb_putpacket_f("Fstat,%08X/%X,%08X", path, path_len, buf);
 	return gdb_main_loop(tc, true);
@@ -124,7 +125,7 @@ int hostio_isatty(struct target_controller *tc, int fd)
 }
 
 int hostio_system(struct target_controller *tc,
-	           target_addr cmd, unsigned cmd_len)
+	          target_addr cmd, size_t cmd_len)
 {
 	gdb_putpacket_f("Fsystem,%08X/%X", cmd, cmd_len);
 	return gdb_main_loop(tc, true);

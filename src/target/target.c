@@ -424,7 +424,7 @@ void tc_printf(target *t, const char *fmt, ...)
 }
 
 /* Interface to host system calls */
-int tc_open(target *t, target_addr path, unsigned plen,
+int tc_open(target *t, target_addr path, size_t plen,
             enum target_open_flags flags, mode_t mode)
 {
 	if (t->tc->open == NULL) {
@@ -464,8 +464,8 @@ long tc_lseek(target *t, int fd, long offset, enum target_seek_flag flag)
 	return t->tc->lseek(t->tc, fd, offset, flag);
 }
 
-int tc_rename(target *t, target_addr oldpath, unsigned oldlen,
-                         target_addr newpath, unsigned newlen)
+int tc_rename(target *t, target_addr oldpath, size_t oldlen,
+                         target_addr newpath, size_t newlen)
 {
 	if (t->tc->rename == NULL) {
 		t->tc->errno_ = TARGET_ENOENT;
@@ -474,7 +474,7 @@ int tc_rename(target *t, target_addr oldpath, unsigned oldlen,
 	return t->tc->rename(t->tc, oldpath, oldlen, newpath, newlen);
 }
 
-int tc_unlink(target *t, target_addr path, unsigned plen)
+int tc_unlink(target *t, target_addr path, size_t plen)
 {
 	if (t->tc->unlink == NULL) {
 		t->tc->errno_ = TARGET_ENOENT;
@@ -483,7 +483,7 @@ int tc_unlink(target *t, target_addr path, unsigned plen)
 	return t->tc->unlink(t->tc, path, plen);
 }
 
-int tc_stat(target *t, target_addr path, unsigned plen, target_addr buf)
+int tc_stat(target *t, target_addr path, size_t plen, target_addr buf)
 {
 	if (t->tc->stat == NULL) {
 		t->tc->errno_ = TARGET_ENOENT;
@@ -516,7 +516,7 @@ int tc_isatty(target *t, int fd)
 	return t->tc->isatty(t->tc, fd);
 }
 
-int tc_system(target *t, target_addr cmd, unsigned cmdlen)
+int tc_system(target *t, target_addr cmd, size_t cmdlen)
 {
 	if (t->tc->system == NULL) {
 		return -1;

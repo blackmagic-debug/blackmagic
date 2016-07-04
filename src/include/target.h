@@ -79,7 +79,7 @@ struct target_controller {
 
 	/* Interface to host system calls */
 	int (*open)(struct target_controller *,
-	            target_addr path, unsigned path_len,
+	            target_addr path, size_t path_len,
 	            enum target_open_flags flags, mode_t mode);
 	int (*close)(struct target_controller *, int fd);
 	int (*read)(struct target_controller *,
@@ -89,18 +89,18 @@ struct target_controller {
 	long (*lseek)(struct target_controller *,
 	              int fd, long offset, enum target_seek_flag flag);
 	int (*rename)(struct target_controller *,
-	              target_addr oldpath, unsigned old_len,
-	              target_addr newpath, unsigned new_len);
+	              target_addr oldpath, size_t old_len,
+	              target_addr newpath, size_t new_len);
 	int (*unlink)(struct target_controller *,
-	              target_addr path, unsigned path_len);
+	              target_addr path, size_t path_len);
 	int (*stat)(struct target_controller *,
-	            target_addr path, unsigned path_len, target_addr buf);
+	            target_addr path, size_t path_len, target_addr buf);
 	int (*fstat)(struct target_controller *, int fd, target_addr buf);
 	int (*gettimeofday)(struct target_controller *,
 	                    target_addr tv, target_addr tz);
 	int (*isatty)(struct target_controller *, int fd);
 	int (*system)(struct target_controller *,
-	              target_addr cmd, unsigned cmd_len);
+	              target_addr cmd, size_t cmd_len);
 	enum target_errno errno_;
 	bool interrupted;
 };
