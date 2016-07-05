@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2015 Gareth McMullin <gareth@blacksphere.co.nz>
+ * Copyright (C) 2016 Gareth McMullin <gareth@blacksphere.co.nz>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -63,6 +63,8 @@ enum iap_status lpc_iap_call(struct lpc_flash *f, enum iap_cmd cmd, ...);
 int lpc_flash_erase(struct target_flash *f, uint32_t addr, size_t len);
 int lpc_flash_write(struct target_flash *f,
                     uint32_t dest, const void *src, size_t len);
+int lpc_flash_write_magic_vect(struct target_flash *f,
+                               uint32_t dest, const void *src, size_t len);
 
 #endif
 

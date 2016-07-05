@@ -2,7 +2,7 @@
  * This file is part of the Black Magic Debug project.
  *
  * Copyright (C) 2011 Mike Smith <drziplok@me.com>
- * Copyright (C) 2015 Gareth McMullin <gareth@blacksphere.co.nz>
+ * Copyright (C) 2016 Gareth McMullin <gareth@blacksphere.co.nz>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,15 +34,12 @@
 #define LPC11XX_DEVICE_ID  0x400483F4
 #define LPC8XX_DEVICE_ID   0x400483F8
 
-static int lpc11xx_flash_write(struct target_flash *f,
-                               uint32_t dest, const void *src, size_t len);
-
 void lpc11xx_add_flash(target *t, uint32_t addr, size_t len, size_t erasesize)
 {
 	struct lpc_flash *lf = lpc_add_flash(t, addr, len);
 	lf->f.blocksize = erasesize;
 	lf->f.buf_size = IAP_PGM_CHUNKSIZE;
-	lf->f.write_buf = lpc11xx_flash_write;
+	lf->f.write_buf = lpc_flash_write_magic_vect;
 	lf->iap_entry = IAP_ENTRYPOINT;
 	lf->iap_ram = IAP_RAM_BASE;
 	lf->iap_msp = IAP_RAM_BASE + MIN_RAM_SIZE - RAM_USAGE_FOR_IAP_ROUTINES;
@@ -116,20 +113,5 @@ lpc11xx_probe(target *t)
 	}
 
 	return false;
-}
-
-static int lpc11xx_flash_write(struct target_flash *f,
-                               uint32_t dest, const void *src, size_t len)
-{
-	if (dest == 0) {
-		/* Fill in the magic vector to allow booting the flash */
-		uint32_t *w = (uint32_t *)src;
-		uint32_t sum = 0;
-
-		for (unsigned i = 0; i < 7; i++)
-			sum += w[i];
-		w[7] = ~sum + 1;
-	}
-	return lpc_flash_write(f, dest, src, len);
 }
 

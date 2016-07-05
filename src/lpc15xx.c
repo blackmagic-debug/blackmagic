@@ -1,3 +1,24 @@
+/*
+ * This file is part of the Black Magic Debug project.
+ *
+ * Copyright (C) 2011 Mike Smith <drziplok@me.com>
+ * Copyright (C) 2016 Gareth McMullin <gareth@blacksphere.co.nz>
+ * Copyright (C) 2016 David Lawrence <dlaw@markforged.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "general.h"
 #include "target.h"
 #include "cortexm.h"
@@ -13,15 +34,12 @@
 
 #define LPC15XX_DEVICE_ID  0x400743F8
 
-static int lpc15xx_flash_write(struct target_flash *f,
-                               uint32_t dest, const void *src, size_t len);
-
 void lpc15xx_add_flash(target *t, uint32_t addr, size_t len, size_t erasesize)
 {
 	struct lpc_flash *lf = lpc_add_flash(t, addr, len);
 	lf->f.blocksize = erasesize;
 	lf->f.buf_size = IAP_PGM_CHUNKSIZE;
-	lf->f.write_buf = lpc15xx_flash_write;
+	lf->f.write_buf = lpc_flash_write_magic_vect;
 	lf->iap_entry = IAP_ENTRYPOINT;
 	lf->iap_ram = IAP_RAM_BASE;
 	lf->iap_msp = IAP_RAM_BASE + MIN_RAM_SIZE - RAM_USAGE_FOR_IAP_ROUTINES;
@@ -57,20 +75,5 @@ lpc15xx_probe(target *t)
 	}
 
 	return false;
-}
-
-static int lpc15xx_flash_write(struct target_flash *f,
-                               uint32_t dest, const void *src, size_t len)
-{
-	if (dest == 0) {
-		/* Fill in the magic vector to allow booting the flash */
-		uint32_t *w = (uint32_t *)src;
-		uint32_t sum = 0;
-
-		for (unsigned i = 0; i < 7; i++)
-			sum += w[i];
-		w[7] = ~sum + 1;
-	}
-	return lpc_flash_write(f, dest, src, len);
 }
 

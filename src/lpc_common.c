@@ -133,3 +133,18 @@ int lpc_flash_write(struct target_flash *tf,
 	return 0;
 }
 
+int lpc_flash_write_magic_vect(struct target_flash *f,
+                               uint32_t dest, const void *src, size_t len)
+{
+	if (dest == 0) {
+		/* Fill in the magic vector to allow booting the flash */
+		uint32_t *w = (uint32_t *)src;
+		uint32_t sum = 0;
+
+		for (unsigned i = 0; i < 7; i++)
+			sum += w[i];
+		w[7] = ~sum + 1;
+	}
+	return lpc_flash_write(f, dest, src, len);
+}
+
