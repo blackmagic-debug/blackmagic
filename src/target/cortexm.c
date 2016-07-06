@@ -56,12 +56,8 @@ static enum target_halt_reason cortexm_halt_poll(target *t, target_addr *watch);
 static void cortexm_halt_request(target *t);
 static int cortexm_fault_unwind(target *t);
 
-static int cortexm_set_hw_bp(target *t, target_addr addr, uint8_t len);
-static int cortexm_clear_hw_bp(target *t, target_addr addr, uint8_t len);
-
-static int cortexm_set_hw_wp(target *t, uint8_t type, target_addr addr, uint8_t len);
-static int cortexm_clear_hw_wp(target *t, uint8_t type, target_addr addr, uint8_t len);
-
+static int cortexm_breakwatch_set(target *t, struct breakwatch *);
+static int cortexm_breakwatch_clear(target *t, struct breakwatch *);
 static target_addr cortexm_check_watch(target *t);
 
 #define CORTEXM_MAX_WATCHPOINTS	4	/* architecture says up to 15, no implementation has > 4 */
@@ -74,15 +70,11 @@ struct cortexm_priv {
 	bool stepping;
 	bool on_bkpt;
 	/* Watchpoint unit status */
-	struct wp_unit_s {
-		uint32_t addr;
-		uint8_t type;
-		uint8_t size;
-	} hw_watchpoint[CORTEXM_MAX_WATCHPOINTS];
+	bool hw_watchpoint[CORTEXM_MAX_WATCHPOINTS];
 	unsigned flash_patch_revision;
 	unsigned hw_watchpoint_max;
 	/* Breakpoint unit status */
-	uint32_t hw_breakpoint[CORTEXM_MAX_BREAKPOINTS];
+	bool hw_breakpoint[CORTEXM_MAX_BREAKPOINTS];
 	unsigned hw_breakpoint_max;
 	/* Copy of DEMCR for vector-catch */
 	uint32_t demcr;
@@ -240,6 +232,9 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 	t->halt_resume = cortexm_halt_resume;
 	t->regs_size = sizeof(regnum_cortex_m);
 
+	t->breakwatch_set = cortexm_breakwatch_set;
+	t->breakwatch_clear = cortexm_breakwatch_clear;
+
 	target_add_commands(t, cortexm_cmd_list, cortexm_driver_str);
 
 	/* Probe for FP extension */
@@ -320,18 +315,12 @@ bool cortexm_attach(target *t)
 	/* Clear any stale watchpoints */
 	for(i = 0; i < priv->hw_watchpoint_max; i++) {
 		target_mem_write32(t, CORTEXM_DWT_FUNC(i), 0);
-		priv->hw_watchpoint[i].type = 0;
+		priv->hw_watchpoint[i] = 0;
 	}
 
 	/* Flash Patch Control Register: set ENABLE */
 	target_mem_write32(t, CORTEXM_FPB_CTRL,
 			CORTEXM_FPB_CTRL_KEY | CORTEXM_FPB_CTRL_ENABLE);
-	t->set_hw_bp = cortexm_set_hw_bp;
-	t->clear_hw_bp = cortexm_clear_hw_bp;
-
-	/* Data Watchpoint and Trace */
-	t->set_hw_wp = cortexm_set_hw_wp;
-	t->clear_hw_wp = cortexm_clear_hw_wp;
 
 	platform_srst_set_val(false);
 
@@ -650,130 +639,110 @@ int cortexm_run_stub(target *t, uint32_t loadaddr,
 	return bkpt_instr & 0xff;
 }
 
-/* The following routines implement hardware breakpoints.
- * The Flash Patch and Breakpoint (FPB) system is used. */
+/* The following routines implement hardware breakpoints and watchpoints.
+ * The Flash Patch and Breakpoint (FPB) and Data Watch and Trace (DWT)
+ * systems are used. */
 
-static int cortexm_set_hw_bp(target *t, target_addr addr, uint8_t len)
+static uint32_t dwt_mask(size_t len)
 {
-	(void)len;
-	struct cortexm_priv *priv = t->priv;
-	uint32_t val = addr;
-	unsigned i;
-
-	if (priv->flash_patch_revision == 0) {
-		val = addr & 0x1FFFFFFC;
-		val |= (addr & 2)?0x80000000:0x40000000;
+	switch (len) {
+	case 1:
+		return CORTEXM_DWT_MASK_BYTE;
+	case 2:
+		return CORTEXM_DWT_MASK_HALFWORD;
+	case 4:
+		return CORTEXM_DWT_MASK_WORD;
+	default:
+		return -1;
 	}
-	val |= 1;
-
-	for(i = 0; i < priv->hw_breakpoint_max; i++)
-		if((priv->hw_breakpoint[i] & 1) == 0) break;
-
-	if(i == priv->hw_breakpoint_max) return -1;
-
-	priv->hw_breakpoint[i] = addr | 1;
-
-	target_mem_write32(t, CORTEXM_FPB_COMP(i), val);
-
-	return 0;
 }
 
-static int cortexm_clear_hw_bp(target *t, target_addr addr, uint8_t len)
+static uint32_t dwt_func(target *t, enum target_breakwatch type)
 {
-	(void)len;
-	struct cortexm_priv *priv = t->priv;
-	unsigned i;
+	uint32_t x = 0;
 
-	for(i = 0; i < priv->hw_breakpoint_max; i++)
-		if((priv->hw_breakpoint[i] & ~1) == addr) break;
+	if ((t->target_options & TOPT_FLAVOUR_V6M) == 0)
+		x = CORTEXM_DWT_FUNC_DATAVSIZE_WORD;
 
-	if(i == priv->hw_breakpoint_max) return -1;
-
-	priv->hw_breakpoint[i] = 0;
-
-	target_mem_write32(t, CORTEXM_FPB_COMP(i), 0);
-
-	return 0;
+	switch (type) {
+	case TARGET_WATCH_WRITE:
+		return CORTEXM_DWT_FUNC_FUNC_WRITE | x;
+	case TARGET_WATCH_READ:
+		return CORTEXM_DWT_FUNC_FUNC_READ | x;
+	case TARGET_WATCH_ACCESS:
+		return CORTEXM_DWT_FUNC_FUNC_ACCESS | x;
+	default:
+		return -1;
+	}
 }
 
-/* The following routines implement hardware watchpoints.
- * The Data Watch and Trace (DWT) system is used. */
-
-static int
-cortexm_set_hw_wp(target *t, uint8_t type, target_addr addr, uint8_t len)
+static int cortexm_breakwatch_set(target *t, struct breakwatch *bw)
 {
 	struct cortexm_priv *priv = t->priv;
 	unsigned i;
+	uint32_t val = bw->addr;
 
-	switch(len) { /* Convert bytes size to mask size */
-		case 1: len = CORTEXM_DWT_MASK_BYTE; break;
-		case 2: len = CORTEXM_DWT_MASK_HALFWORD; break;
-		case 4: len = CORTEXM_DWT_MASK_WORD; break;
-		default:
+	switch (bw->type) {
+	case TARGET_BREAK_HARD:
+		if (priv->flash_patch_revision == 0) {
+			val &= 0x1FFFFFFC;
+			val |= (bw->addr & 2)?0x80000000:0x40000000;
+		}
+		val |= 1;
+
+		for(i = 0; i < priv->hw_breakpoint_max; i++)
+			if (!priv->hw_breakpoint[i])
+				break;
+
+		if (i == priv->hw_breakpoint_max)
 			return -1;
-	}
 
-	switch(type) { /* Convert gdb type to function type */
-		case 2: type = CORTEXM_DWT_FUNC_FUNC_WRITE; break;
-		case 3: type = CORTEXM_DWT_FUNC_FUNC_READ; break;
-		case 4: type = CORTEXM_DWT_FUNC_FUNC_ACCESS; break;
-		default:
+		priv->hw_breakpoint[i] = true;
+		target_mem_write32(t, CORTEXM_FPB_COMP(i), val);
+		bw->reserved[0] = i;
+		return 0;
+
+	case TARGET_WATCH_WRITE:
+	case TARGET_WATCH_READ:
+	case TARGET_WATCH_ACCESS:
+		for(i = 0; i < priv->hw_watchpoint_max; i++)
+			if (!priv->hw_watchpoint[i])
+				break;
+
+		if (i == priv->hw_watchpoint_max)
 			return -1;
+
+		priv->hw_watchpoint[i] = true;
+
+		target_mem_write32(t, CORTEXM_DWT_COMP(i), val);
+		target_mem_write32(t, CORTEXM_DWT_MASK(i), dwt_mask(bw->size));
+		target_mem_write32(t, CORTEXM_DWT_FUNC(i), dwt_func(t, bw->type));
+
+		bw->reserved[0] = i;
+		return 0;
+	default:
+		return 1;
 	}
-
-	for(i = 0; i < priv->hw_watchpoint_max; i++)
-		if((priv->hw_watchpoint[i].type == 0) &&
-		   ((target_mem_read32(t, CORTEXM_DWT_FUNC(i)) & 0xF) == 0))
-			break;
-
-	if(i == priv->hw_watchpoint_max) return -2;
-
-	priv->hw_watchpoint[i].type = type;
-	priv->hw_watchpoint[i].addr = addr;
-	priv->hw_watchpoint[i].size = len;
-
-	target_mem_write32(t, CORTEXM_DWT_COMP(i), addr);
-	target_mem_write32(t, CORTEXM_DWT_MASK(i), len);
-	target_mem_write32(t, CORTEXM_DWT_FUNC(i), type |
-			((t->target_options & TOPT_FLAVOUR_V6M) ? 0: CORTEXM_DWT_FUNC_DATAVSIZE_WORD));
-
-	return 0;
 }
 
-static int
-cortexm_clear_hw_wp(target *t, uint8_t type, target_addr addr, uint8_t len)
+static int cortexm_breakwatch_clear(target *t, struct breakwatch *bw)
 {
 	struct cortexm_priv *priv = t->priv;
-	unsigned i;
-
-	switch(len) {
-		case 1: len = CORTEXM_DWT_MASK_BYTE; break;
-		case 2: len = CORTEXM_DWT_MASK_HALFWORD; break;
-		case 4: len = CORTEXM_DWT_MASK_WORD; break;
-		default:
-			return -1;
+	unsigned i = bw->reserved[0];
+	switch (bw->type) {
+	case TARGET_BREAK_HARD:
+		priv->hw_breakpoint[i] = false;
+		target_mem_write32(t, CORTEXM_FPB_COMP(i), 0);
+		return 0;
+	case TARGET_WATCH_WRITE:
+	case TARGET_WATCH_READ:
+	case TARGET_WATCH_ACCESS:
+		priv->hw_watchpoint[i] = false;
+		target_mem_write32(t, CORTEXM_DWT_FUNC(i), 0);
+		return 0;
+	default:
+		return 1;
 	}
-
-	switch(type) {
-		case 2: type = CORTEXM_DWT_FUNC_FUNC_WRITE; break;
-		case 3: type = CORTEXM_DWT_FUNC_FUNC_READ; break;
-		case 4: type = CORTEXM_DWT_FUNC_FUNC_ACCESS; break;
-		default:
-			return -1;
-	}
-
-	for(i = 0; i < priv->hw_watchpoint_max; i++)
-		if((priv->hw_watchpoint[i].addr == addr) &&
-		   (priv->hw_watchpoint[i].type == type) &&
-		   (priv->hw_watchpoint[i].size == len)) break;
-
-	if(i == priv->hw_watchpoint_max) return -2;
-
-	priv->hw_watchpoint[i].type = 0;
-
-	target_mem_write32(t, CORTEXM_DWT_FUNC(i), 0);
-
-	return 0;
 }
 
 static target_addr cortexm_check_watch(target *t)
@@ -783,14 +752,15 @@ static target_addr cortexm_check_watch(target *t)
 
 	for(i = 0; i < priv->hw_watchpoint_max; i++)
 		/* if SET and MATCHED then break */
-		if(priv->hw_watchpoint[i].type &&
+		if(priv->hw_watchpoint[i] &&
 		   (target_mem_read32(t, CORTEXM_DWT_FUNC(i)) &
 					CORTEXM_DWT_FUNC_MATCHED))
 			break;
 
-	if(i == priv->hw_watchpoint_max) return 0;
+	if (i == priv->hw_watchpoint_max)
+		return 0;
 
-	return priv->hw_watchpoint[i].addr;
+	return target_mem_read32(t, CORTEXM_DWT_COMP(i));
 }
 
 static bool cortexm_vector_catch(target *t, int argc, char *argv[])

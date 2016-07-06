@@ -73,6 +73,11 @@ void target_list_free(void)
 			free(target_list->flash);
 			target_list->flash = next;
 		}
+		while (target_list->bw_list) {
+			void * next = target_list->bw_list->next;
+			free(target_list->bw_list);
+			target_list->bw_list = next;
+		}
 		free(target_list);
 		target_list = t;
 	}
@@ -316,37 +321,53 @@ void target_halt_resume(target *t, bool step) { t->halt_resume(t, step); }
 int target_breakwatch_set(target *t,
                           enum target_breakwatch type, target_addr addr, size_t len)
 {
-	switch (type) {
-	case TARGET_BREAK_HARD:
-		if (t->set_hw_bp)
-			return t->set_hw_bp(t, addr, len);
-	case TARGET_WATCH_WRITE:
-	case TARGET_WATCH_READ:
-	case TARGET_WATCH_ACCESS:
-		if (t->set_hw_wp)
-			return t->set_hw_wp(t, type, addr, len);
-	default:
-		break;
+	struct breakwatch bw = {
+		.type = type,
+		.addr = addr,
+		.size = len,
+	};
+	int ret = 1;
+
+	if (t->breakwatch_set)
+		ret = t->breakwatch_set(t, &bw);
+
+	if (ret == 0) {
+		/* Success, make a heap copy and add to list */
+		struct breakwatch *bwm = malloc(sizeof bw);
+		memcpy(bwm, &bw, sizeof(bw));
+		bwm->next = t->bw_list;
+		t->bw_list = bwm;
 	}
-	return 1;
+
+	return ret;
 }
 
 int target_breakwatch_clear(target *t,
                             enum target_breakwatch type, target_addr addr, size_t len)
 {
-	switch (type) {
-	case TARGET_BREAK_HARD:
-		if (t->set_hw_bp)
-			return t->set_hw_bp(t, addr, len);
-	case TARGET_WATCH_WRITE:
-	case TARGET_WATCH_READ:
-	case TARGET_WATCH_ACCESS:
-		if (t->set_hw_wp)
-			return t->set_hw_wp(t, type, addr, len);
-	default:
-		break;
+	struct breakwatch *bwp = NULL, *bw;
+	int ret = 1;
+	for (bw = t->bw_list; bw; bw = bw->next, bwp = bw)
+		if ((bw->type == type) &&
+		    (bw->addr == addr) &&
+		    (bw->size == len))
+			break;
+
+	if (bw == NULL)
+		return -1;
+
+	if (t->breakwatch_clear)
+		ret = t->breakwatch_clear(t, bw);
+
+	if (ret == 0) {
+		if (bwp == NULL) {
+			t->bw_list = bw->next;
+		} else {
+			bwp->next = bw->next;
+		}
+		free(bw);
 	}
-	return 1;
+	return ret;
 }
 
 /* Accessor functions */

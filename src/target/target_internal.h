@@ -68,6 +68,14 @@ struct target_command_s {
 	struct target_command_s *next;
 };
 
+struct breakwatch {
+	struct breakwatch *next;
+	enum target_breakwatch type;
+	target_addr addr;
+	size_t size;
+	uint32_t reserved[4]; /* for use by the implementing driver */
+};
+
 struct target_s {
 	bool attached;
 	struct target_controller *tc;
@@ -96,11 +104,9 @@ struct target_s {
 	void (*halt_resume)(target *t, bool step);
 
 	/* Break-/watchpoint functions */
-	int (*set_hw_bp)(target *t, target_addr addr, uint8_t len);
-	int (*clear_hw_bp)(target *t, target_addr addr, uint8_t len);
-
-	int (*set_hw_wp)(target *t, uint8_t type, target_addr addr, uint8_t len);
-	int (*clear_hw_wp)(target *t, uint8_t type, target_addr addr, uint8_t len);
+	int (*breakwatch_set)(target *t, struct breakwatch*);
+	int (*breakwatch_clear)(target *t, struct breakwatch*);
+	struct breakwatch *bw_list;
 
 	/* target-defined options */
 	unsigned target_options;
