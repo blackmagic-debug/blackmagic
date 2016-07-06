@@ -34,6 +34,13 @@
 #include "command.h"
 #include "crc32.h"
 
+enum gdb_signal {
+	GDB_SIGINT = 2,
+	GDB_SIGTRAP = 5,
+	GDB_SIGSEGV = 11,
+	GDB_SIGLOST = 29,
+};
+
 #define BUF_SIZE	1024
 
 #define ERROR_IF_NO_TARGET()	\
@@ -156,8 +163,8 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 		case '?': {	/* '?': Request reason for target halt */
 			/* This packet isn't documented as being mandatory,
 			 * but GDB doesn't work without it. */
-			target_addr watch_addr;
-			int sig;
+			target_addr watch;
+			enum target_halt_reason reason;
 
 			if(!cur_target) {
 				/* Report "target exited" if no target */
@@ -166,7 +173,7 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 			}
 
 			/* Wait for target halt */
-			while(!(sig = target_halt_wait(cur_target))) {
+			while(!(reason = target_halt_poll(cur_target, &watch))) {
 				unsigned char c = gdb_if_getchar_to(0);
 				if((c == '\x03') || (c == '\x04')) {
 					target_halt_request(cur_target);
@@ -174,22 +181,22 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 			}
 			SET_RUN_STATE(0);
 
-			/* Negative signal indicates we're in a syscall */
-			if (sig < 0)
+			/* Translate reason to GDB signal */
+			switch (reason) {
+			case TARGET_HALT_ERROR:
+				gdb_putpacket_f("X%02X", GDB_SIGLOST);
 				break;
-
-			/* Target disappeared */
-			if (cur_target == NULL) {
-				gdb_putpacket_f("X%02X", sig);
+			case TARGET_HALT_REQUEST:
+				gdb_putpacket_f("T%02X", GDB_SIGINT);
 				break;
-			}
-
-			/* Report reason for halt */
-			if(target_check_hw_wp(cur_target, &watch_addr)) {
-				/* Watchpoint hit */
-				gdb_putpacket_f("T%02Xwatch:%08X;", sig, watch_addr);
-			} else {
-				gdb_putpacket_f("T%02X", sig);
+			case TARGET_HALT_WATCHPOINT:
+				gdb_putpacket_f("T%02Xwatch:%08X;", GDB_SIGTRAP, watch);
+				break;
+			case TARGET_HALT_FAULT:
+				gdb_putpacket_f("T%02X", GDB_SIGSEGV);
+				break;
+			default:
+				gdb_putpacket_f("T%02X", GDB_SIGTRAP);
 			}
 			break;
 			}
@@ -447,32 +454,18 @@ handle_z_packet(char *packet, int plen)
 	//sscanf(packet, "%*[zZ]%hhd,%08lX,%hhd", &type, &addr, &len);
 	type = packet[1] - '0';
 	sscanf(packet + 2, ",%" PRIx32 ",%d", &addr, &len);
-	switch(type) {
-	case 1: /* Hardware breakpoint */
-		if(set)
-			ret = target_set_hw_bp(cur_target, addr, len);
-		else
-			ret = target_clear_hw_bp(cur_target, addr, len);
-		break;
-
-	case 2:
-	case 3:
-	case 4:
-		if(set)
-			ret = target_set_hw_wp(cur_target, type, addr, len);
-		else
-			ret = target_clear_hw_wp(cur_target, type, addr, len);
-		break;
-
-	default:
-		gdb_putpacketz("");
-		return;
-	}
-
-	if(!ret)
-		gdb_putpacketz("OK");
+	if(set)
+		ret = target_breakwatch_set(cur_target, type, addr, len);
 	else
+		ret = target_breakwatch_clear(cur_target, type, addr, len);
+
+	if (ret < 0) {
 		gdb_putpacketz("E01");
+	} else if (ret > 0) {
+		gdb_putpacketz("");
+	} else {
+		gdb_putpacketz("OK");
+	}
 }
 
 void gdb_main(void)

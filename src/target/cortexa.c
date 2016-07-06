@@ -35,12 +35,6 @@
 
 static char cortexa_driver_str[] = "ARM Cortex-A";
 
-/* Signals returned by cortexa_halt_wait() */
-#define SIGINT 2
-#define SIGTRAP 5
-#define SIGSEGV 11
-#define SIGLOST 29
-
 static bool cortexa_attach(target *t);
 static void cortexa_detach(target *t);
 static void cortexa_halt_resume(target *t, bool step);
@@ -51,7 +45,7 @@ static void cortexa_regs_read_internal(target *t);
 static void cortexa_regs_write_internal(target *t);
 
 static void cortexa_reset(target *t);
-static int cortexa_halt_wait(target *t);
+static enum target_halt_reason cortexa_halt_poll(target *t, target_addr *watch);
 static void cortexa_halt_request(target *t);
 
 static int cortexa_set_hw_bp(target *t, target_addr addr, uint8_t len);
@@ -395,7 +389,7 @@ bool cortexa_probe(ADIv5_AP_t *apb, uint32_t debug_base)
 
 	t->reset = cortexa_reset;
 	t->halt_request = cortexa_halt_request;
-	t->halt_wait = cortexa_halt_wait;
+	t->halt_poll = cortexa_halt_poll;
 	t->halt_resume = cortexa_halt_resume;
 	t->regs_size = sizeof(priv->reg_cache);
 
@@ -422,7 +416,7 @@ bool cortexa_attach(target *t)
 
 	target_halt_request(t);
 	tries = 10;
-	while(!platform_srst_get_val() && !target_halt_wait(t) && --tries)
+	while(!platform_srst_get_val() && !target_halt_poll(t, NULL) && --tries)
 		platform_delay(200);
 	if(!tries)
 		return false;
@@ -586,8 +580,10 @@ static void cortexa_halt_request(target *t)
 	}
 }
 
-static int cortexa_halt_wait(target *t)
+static enum target_halt_reason cortexa_halt_poll(target *t, target_addr *watch)
 {
+	(void)watch; /* No watchpoint support yet */
+
 	volatile uint32_t dbgdscr = 0;
 	volatile struct exception e;
 	TRY_CATCH (e, EXCEPTION_ALL) {
@@ -599,14 +595,14 @@ static int cortexa_halt_wait(target *t)
 	case EXCEPTION_ERROR:
 		/* Oh crap, there's no recovery from this... */
 		target_list_free();
-		return SIGLOST;
+		return TARGET_HALT_ERROR;
 	case EXCEPTION_TIMEOUT:
 		/* Timeout isn't a problem, target could be in WFI */
-		return 0;
+		return TARGET_HALT_RUNNING;
 	}
 
 	if (!(dbgdscr & DBGDSCR_HALTED)) /* Not halted */
-		return 0;
+		return TARGET_HALT_RUNNING;
 
 	DEBUG("%s: DBGDSCR = 0x%08x\n", __func__, dbgdscr);
 	/* Reenable DBGITR */
@@ -614,18 +610,18 @@ static int cortexa_halt_wait(target *t)
 	apb_write(t, DBGDSCR, dbgdscr);
 
 	/* Find out why we halted */
-	int sig;
+	enum target_halt_reason reason;
 	switch (dbgdscr & DBGDSCR_MOE_MASK) {
 	case DBGDSCR_MOE_HALT_REQ:
-		sig = SIGINT;
+		reason = TARGET_HALT_REQUEST;
 		break;
 	default:
-		sig = SIGTRAP;
+		reason = TARGET_HALT_BREAKPOINT;
 	}
 
 	cortexa_regs_read_internal(t);
 
-	return sig;
+	return reason;
 }
 
 void cortexa_halt_resume(target *t, bool step)

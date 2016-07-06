@@ -84,7 +84,7 @@ struct target_s {
 	                  const void *src, size_t len);
 
 	/* Register access functions */
-	int regs_size;
+	size_t regs_size;
 	const char *tdesc;
 	void (*regs_read)(target *t, void *data);
 	void (*regs_write)(target *t, const void *data);
@@ -92,7 +92,7 @@ struct target_s {
 	/* Halt/resume functions */
 	void (*reset)(target *t);
 	void (*halt_request)(target *t);
-	int (*halt_wait)(target *t);
+	enum target_halt_reason (*halt_poll)(target *t, target_addr *watch);
 	void (*halt_resume)(target *t, bool step);
 
 	/* Break-/watchpoint functions */
@@ -101,8 +101,6 @@ struct target_s {
 
 	int (*set_hw_wp)(target *t, uint8_t type, target_addr addr, uint8_t len);
 	int (*clear_hw_wp)(target *t, uint8_t type, target_addr addr, uint8_t len);
-
-	int (*check_hw_wp)(target *t, target_addr *addr);
 
 	/* target-defined options */
 	unsigned target_options;

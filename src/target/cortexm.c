@@ -47,18 +47,12 @@ const struct command_s cortexm_cmd_list[] = {
 #define	TOPT_FLAVOUR_V6M	(1<<0)	/* if not set, target is assumed to be v7m */
 #define	TOPT_FLAVOUR_V7MF	(1<<1)	/* if set, floating-point enabled. */
 
-/* Signals returned by cortexm_halt_wait() */
-#define SIGINT 2
-#define SIGTRAP 5
-#define SIGSEGV 11
-#define SIGLOST 29
-
 static void cortexm_regs_read(target *t, void *data);
 static void cortexm_regs_write(target *t, const void *data);
 static uint32_t cortexm_pc_read(target *t);
 
 static void cortexm_reset(target *t);
-static int cortexm_halt_wait(target *t);
+static enum target_halt_reason cortexm_halt_poll(target *t, target_addr *watch);
 static void cortexm_halt_request(target *t);
 static int cortexm_fault_unwind(target *t);
 
@@ -68,7 +62,7 @@ static int cortexm_clear_hw_bp(target *t, target_addr addr, uint8_t len);
 static int cortexm_set_hw_wp(target *t, uint8_t type, target_addr addr, uint8_t len);
 static int cortexm_clear_hw_wp(target *t, uint8_t type, target_addr addr, uint8_t len);
 
-static int cortexm_check_hw_wp(target *t, target_addr *addr);
+static target_addr cortexm_check_watch(target *t);
 
 #define CORTEXM_MAX_WATCHPOINTS	4	/* architecture says up to 15, no implementation has > 4 */
 #define CORTEXM_MAX_BREAKPOINTS	6	/* architecture says up to 127, no implementation has > 6 */
@@ -242,7 +236,7 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 
 	t->reset = cortexm_reset;
 	t->halt_request = cortexm_halt_request;
-	t->halt_wait = cortexm_halt_wait;
+	t->halt_poll = cortexm_halt_poll;
 	t->halt_resume = cortexm_halt_resume;
 	t->regs_size = sizeof(regnum_cortex_m);
 
@@ -295,7 +289,7 @@ bool cortexm_attach(target *t)
 
 	target_halt_request(t);
 	tries = 10;
-	while(!platform_srst_get_val() && !target_halt_wait(t) && --tries)
+	while(!platform_srst_get_val() && !target_halt_poll(t, NULL) && --tries)
 		platform_delay(200);
 	if(!tries)
 		return false;
@@ -338,7 +332,6 @@ bool cortexm_attach(target *t)
 	/* Data Watchpoint and Trace */
 	t->set_hw_wp = cortexm_set_hw_wp;
 	t->clear_hw_wp = cortexm_clear_hw_wp;
-	t->check_hw_wp = cortexm_check_hw_wp;
 
 	platform_srst_set_val(false);
 
@@ -480,7 +473,7 @@ static void cortexm_halt_request(target *t)
 	}
 }
 
-static int cortexm_halt_wait(target *t)
+static enum target_halt_reason cortexm_halt_poll(target *t, target_addr *watch)
 {
 	struct cortexm_priv *priv = t->priv;
 
@@ -495,21 +488,21 @@ static int cortexm_halt_wait(target *t)
 	case EXCEPTION_ERROR:
 		/* Oh crap, there's no recovery from this... */
 		target_list_free();
-		return SIGLOST;
+		return TARGET_HALT_ERROR;
 	case EXCEPTION_TIMEOUT:
 		/* Timeout isn't a problem, target could be in WFI */
-		return 0;
+		return TARGET_HALT_RUNNING;
 	}
 
 	if (!(dhcsr & CORTEXM_DHCSR_S_HALT))
-		return 0;
+		return TARGET_HALT_RUNNING;
 
 	/* We've halted.  Let's find out why. */
 	uint32_t dfsr = target_mem_read32(t, CORTEXM_DFSR);
 	target_mem_write32(t, CORTEXM_DFSR, dfsr); /* write back to reset */
 
 	if ((dfsr & CORTEXM_DFSR_VCATCH) && cortexm_fault_unwind(t))
-		return SIGSEGV;
+		return TARGET_HALT_FAULT;
 
 	/* Remember if we stopped on a breakpoint */
 	priv->on_bkpt = dfsr & (CORTEXM_DFSR_BKPT);
@@ -521,7 +514,7 @@ static int cortexm_halt_wait(target *t)
 		bkpt_instr = target_mem_read16(t, pc);
 		if (bkpt_instr == 0xBEAB) {
 			if (cortexm_hostio_request(t)) {
-				return SIGINT;
+				return TARGET_HALT_REQUEST;
 			} else {
 				target_halt_resume(t, priv->stepping);
 				return 0;
@@ -529,14 +522,18 @@ static int cortexm_halt_wait(target *t)
 		}
 	}
 
-	if (dfsr & (CORTEXM_DFSR_BKPT | CORTEXM_DFSR_DWTTRAP))
-		return SIGTRAP;
+	if (dfsr & CORTEXM_DFSR_DWTTRAP) {
+		if (watch != NULL)
+			*watch = cortexm_check_watch(t);
+		return TARGET_HALT_WATCHPOINT;
+	}
+	if (dfsr & CORTEXM_DFSR_BKPT)
+		return TARGET_HALT_BREAKPOINT;
 
 	if (dfsr & CORTEXM_DFSR_HALTED)
-		return priv->stepping ? SIGTRAP : SIGINT;
+		return priv->stepping ? TARGET_HALT_STEPPING : TARGET_HALT_REQUEST;
 
-	return SIGTRAP;
-
+	return TARGET_HALT_BREAKPOINT;
 }
 
 void cortexm_halt_resume(target *t, bool step)
@@ -642,7 +639,7 @@ int cortexm_run_stub(target *t, uint32_t loadaddr,
 
 	/* Execute the stub */
 	cortexm_halt_resume(t, 0);
-	while (!cortexm_halt_wait(t))
+	while (!cortexm_halt_poll(t, NULL))
 		;
 
 	uint32_t pc = cortexm_pc_read(t);
@@ -779,7 +776,7 @@ cortexm_clear_hw_wp(target *t, uint8_t type, target_addr addr, uint8_t len)
 	return 0;
 }
 
-static int cortexm_check_hw_wp(target *t, target_addr *addr)
+static target_addr cortexm_check_watch(target *t)
 {
 	struct cortexm_priv *priv = t->priv;
 	unsigned i;
@@ -793,8 +790,7 @@ static int cortexm_check_hw_wp(target *t, target_addr *addr)
 
 	if(i == priv->hw_watchpoint_max) return 0;
 
-	*addr = priv->hw_watchpoint[i].addr;
-	return 1;
+	return priv->hw_watchpoint[i].addr;
 }
 
 static bool cortexm_vector_catch(target *t, int argc, char *argv[])

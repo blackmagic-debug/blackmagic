@@ -305,47 +305,52 @@ void target_regs_write(target *t, const void *data) { t->regs_write(t, data); }
 /* Halt/resume functions */
 void target_reset(target *t) { t->reset(t); }
 void target_halt_request(target *t) { t->halt_request(t); }
-int target_halt_wait(target *t) { return t->halt_wait(t); }
+enum target_halt_reason target_halt_poll(target *t, target_addr *watch)
+{
+	return t->halt_poll(t, watch);
+}
+
 void target_halt_resume(target *t, bool step) { t->halt_resume(t, step); }
 
 /* Break-/watchpoint functions */
-int target_set_hw_bp(target *t, target_addr addr, uint8_t len)
+int target_breakwatch_set(target *t,
+                          enum target_breakwatch type, target_addr addr, size_t len)
 {
-	if (t->set_hw_bp == NULL)
-		return 0;
-	return t->set_hw_bp(t, addr, len);
+	switch (type) {
+	case TARGET_BREAK_HARD:
+		if (t->set_hw_bp)
+			return t->set_hw_bp(t, addr, len);
+	case TARGET_WATCH_WRITE:
+	case TARGET_WATCH_READ:
+	case TARGET_WATCH_ACCESS:
+		if (t->set_hw_wp)
+			return t->set_hw_wp(t, type, addr, len);
+	default:
+		break;
+	}
+	return 1;
 }
 
-int target_clear_hw_bp(target *t, target_addr addr, uint8_t len)
+int target_breakwatch_clear(target *t,
+                            enum target_breakwatch type, target_addr addr, size_t len)
 {
-	if (t->clear_hw_bp == NULL)
-		return 0;
-	return t->clear_hw_bp(t, addr, len);
-}
-
-int target_set_hw_wp(target *t, uint8_t type, target_addr addr, uint8_t len)
-{
-	if (t->set_hw_wp == NULL)
-		return 0;
-	return t->set_hw_wp(t, type, addr, len);
-}
-
-int target_clear_hw_wp(target *t, uint8_t type, target_addr addr, uint8_t len)
-{
-	if (t->clear_hw_wp == NULL)
-		return 0;
-	return t->clear_hw_wp(t, type, addr, len);
-}
-
-int target_check_hw_wp(target *t, target_addr *addr)
-{
-	if (t->check_hw_wp == NULL)
-		return 0;
-	return t->check_hw_wp(t, addr);
+	switch (type) {
+	case TARGET_BREAK_HARD:
+		if (t->set_hw_bp)
+			return t->set_hw_bp(t, addr, len);
+	case TARGET_WATCH_WRITE:
+	case TARGET_WATCH_READ:
+	case TARGET_WATCH_ACCESS:
+		if (t->set_hw_wp)
+			return t->set_hw_wp(t, type, addr, len);
+	default:
+		break;
+	}
+	return 1;
 }
 
 /* Accessor functions */
-int target_regs_size(target *t)
+size_t target_regs_size(target *t)
 {
 	return t->regs_size;
 }

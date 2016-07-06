@@ -82,7 +82,7 @@ enum iap_status lpc_iap_call(struct lpc_flash *f, enum iap_cmd cmd, ...)
 
 	/* start the target and wait for it to halt again */
 	target_halt_resume(t, false);
-	while (!target_halt_wait(t));
+	while (!target_halt_poll(t, NULL));
 
 	/* copy back just the parameters structure */
 	target_mem_read(t, &param, f->iap_ram, sizeof(param));

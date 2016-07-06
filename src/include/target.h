@@ -121,18 +121,31 @@ void target_regs_read(target *t, void *data);
 void target_regs_write(target *t, const void *data);
 
 /* Halt/resume functions */
+enum target_halt_reason {
+	TARGET_HALT_RUNNING = 0, /* Target not halted */
+	TARGET_HALT_ERROR,       /* Failed to read target status */
+	TARGET_HALT_REQUEST,
+	TARGET_HALT_STEPPING,
+	TARGET_HALT_BREAKPOINT,
+	TARGET_HALT_WATCHPOINT,
+	TARGET_HALT_FAULT,
+};
+
 void target_reset(target *t);
 void target_halt_request(target *t);
-int target_halt_wait(target *t);
+enum target_halt_reason target_halt_poll(target *t, target_addr *watch);
 void target_halt_resume(target *t, bool step);
 
 /* Break-/watchpoint functions */
-int target_set_hw_bp(target *t, target_addr addr, uint8_t len);
-int target_clear_hw_bp(target *t, target_addr addr, uint8_t len);
-
-int target_set_hw_wp(target *t, uint8_t type, target_addr addr, uint8_t len);
-int target_clear_hw_wp(target *t, uint8_t type, target_addr addr, uint8_t len);
-int target_check_hw_wp(target *t, target_addr *addr);
+enum target_breakwatch {
+	TARGET_BREAK_SOFT,
+	TARGET_BREAK_HARD,
+	TARGET_WATCH_WRITE,
+	TARGET_WATCH_READ,
+	TARGET_WATCH_ACCESS,
+};
+int target_breakwatch_set(target *t, enum target_breakwatch, target_addr, size_t);
+int target_breakwatch_clear(target *t, enum target_breakwatch, target_addr, size_t);
 
 /* Flash memory access functions */
 int target_flash_erase(target *t, target_addr addr, size_t len);
@@ -140,7 +153,7 @@ int target_flash_write(target *t, target_addr dest, const void *src, size_t len)
 int target_flash_done(target *t);
 
 /* Accessor functions */
-int target_regs_size(target *t);
+size_t target_regs_size(target *t);
 const char *target_tdesc(target *t);
 const char *target_mem_map(target *t);
 const char *target_driver_name(target *t);
