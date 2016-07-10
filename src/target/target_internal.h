@@ -141,6 +141,7 @@ uint8_t target_mem_read8(target *t, uint32_t addr);
 void target_mem_write32(target *t, uint32_t addr, uint32_t value);
 void target_mem_write16(target *t, uint32_t addr, uint16_t value);
 void target_mem_write8(target *t, uint32_t addr, uint8_t value);
+bool target_check_error(target *t);
 
 /* Access to host controller interface */
 void tc_printf(target *t, const char *fmt, ...);

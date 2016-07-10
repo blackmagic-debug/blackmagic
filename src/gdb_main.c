@@ -117,8 +117,7 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 			sscanf(pbuf, "m%" SCNx32 ",%" SCNx32, &addr, &len);
 			DEBUG("m packet: addr = %" PRIx32 ", len = %" PRIx32 "\n", addr, len);
 			uint8_t mem[len];
-			target_mem_read(cur_target, mem, addr, len);
-			if(target_check_error(cur_target))
+			if (target_mem_read(cur_target, mem, addr, len))
 				gdb_putpacketz("E01");
 			else
 				gdb_putpacket(hexify(pbuf, mem, len), len*2);
@@ -140,8 +139,7 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 			DEBUG("M packet: addr = %" PRIx32 ", len = %" PRIx32 "\n", addr, len);
 			uint8_t mem[len];
 			unhexify(mem, pbuf + hex, len);
-			target_mem_write(cur_target, addr, mem, len);
-			if(target_check_error(cur_target))
+			if (target_mem_write(cur_target, addr, mem, len))
 				gdb_putpacketz("E01");
 			else
 				gdb_putpacketz("OK");
@@ -253,8 +251,7 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 			ERROR_IF_NO_TARGET();
 			sscanf(pbuf, "X%" SCNx32 ",%" SCNx32 ":%n", &addr, &len, &bin);
 			DEBUG("X packet: addr = %" PRIx32 ", len = %" PRIx32 "\n", addr, len);
-			target_mem_write(cur_target, addr, pbuf+bin, len);
-			if(target_check_error(cur_target))
+			if (target_mem_write(cur_target, addr, pbuf+bin, len))
 				gdb_putpacketz("E01");
 			else
 				gdb_putpacketz("OK");

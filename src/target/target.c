@@ -293,14 +293,16 @@ bool target_check_error(target *t) { return t->check_error(t); }
 bool target_attached(target *t) { return t->attached; }
 
 /* Memory access functions */
-void target_mem_read(target *t, void *dest, target_addr src, size_t len)
+int target_mem_read(target *t, void *dest, target_addr src, size_t len)
 {
 	t->mem_read(t, dest, src, len);
+	return target_check_error(t);
 }
 
-void target_mem_write(target *t, target_addr dest, const void *src, size_t len)
+int target_mem_write(target *t, target_addr dest, const void *src, size_t len)
 {
 	t->mem_write(t, dest, src, len);
+	return target_check_error(t);
 }
 
 /* Register access functions */
@@ -389,37 +391,37 @@ const char *target_driver_name(target *t)
 uint32_t target_mem_read32(target *t, uint32_t addr)
 {
 	uint32_t ret;
-	target_mem_read(t, &ret, addr, sizeof(ret));
+	t->mem_read(t, &ret, addr, sizeof(ret));
 	return ret;
 }
 
 void target_mem_write32(target *t, uint32_t addr, uint32_t value)
 {
-	target_mem_write(t, addr, &value, sizeof(value));
+	t->mem_write(t, addr, &value, sizeof(value));
 }
 
 uint16_t target_mem_read16(target *t, uint32_t addr)
 {
 	uint16_t ret;
-	target_mem_read(t, &ret, addr, sizeof(ret));
+	t->mem_read(t, &ret, addr, sizeof(ret));
 	return ret;
 }
 
 void target_mem_write16(target *t, uint32_t addr, uint16_t value)
 {
-	target_mem_write(t, addr, &value, sizeof(value));
+	t->mem_write(t, addr, &value, sizeof(value));
 }
 
 uint8_t target_mem_read8(target *t, uint32_t addr)
 {
 	uint8_t ret;
-	target_mem_read(t, &ret, addr, sizeof(ret));
+	t->mem_read(t, &ret, addr, sizeof(ret));
 	return ret;
 }
 
 void target_mem_write8(target *t, uint32_t addr, uint8_t value)
 {
-	target_mem_write(t, addr, &value, sizeof(value));
+	t->mem_write(t, addr, &value, sizeof(value));
 }
 
 void target_command_help(target *t)

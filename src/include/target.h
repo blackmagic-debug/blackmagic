@@ -41,14 +41,13 @@ void target_list_free(void);
 target *target_attach(target *t, struct target_controller *);
 target *target_attach_n(int n, struct target_controller *);
 void target_detach(target *t);
-bool target_check_error(target *t);
 bool target_attached(target *t);
 const char *target_driver_name(target *t);
 
 /* Memory access functions */
 const char *target_mem_map(target *t);
-void target_mem_read(target *t, void *dest, target_addr src, size_t len);
-void target_mem_write(target *t, target_addr dest, const void *src, size_t len);
+int target_mem_read(target *t, void *dest, target_addr src, size_t len);
+int target_mem_write(target *t, target_addr dest, const void *src, size_t len);
 /* Flash memory access functions */
 int target_flash_erase(target *t, target_addr addr, size_t len);
 int target_flash_write(target *t, target_addr dest, const void *src, size_t len);
