@@ -29,12 +29,68 @@
 
 typedef struct target_s target;
 typedef uint32_t target_addr;
+struct target_controller;
 
 int adiv5_swdp_scan(void);
 int jtag_scan(const uint8_t *lrlens);
 
 bool target_foreach(void (*cb)(int i, target *t, void *context), void *context);
 void target_list_free(void);
+
+/* Attach/detach functions */
+target *target_attach(target *t, struct target_controller *);
+target *target_attach_n(int n, struct target_controller *);
+void target_detach(target *t);
+bool target_check_error(target *t);
+bool target_attached(target *t);
+const char *target_driver_name(target *t);
+
+/* Memory access functions */
+const char *target_mem_map(target *t);
+void target_mem_read(target *t, void *dest, target_addr src, size_t len);
+void target_mem_write(target *t, target_addr dest, const void *src, size_t len);
+/* Flash memory access functions */
+int target_flash_erase(target *t, target_addr addr, size_t len);
+int target_flash_write(target *t, target_addr dest, const void *src, size_t len);
+int target_flash_done(target *t);
+
+/* Register access functions */
+size_t target_regs_size(target *t);
+const char *target_tdesc(target *t);
+void target_regs_read(target *t, void *data);
+void target_regs_write(target *t, const void *data);
+
+/* Halt/resume functions */
+enum target_halt_reason {
+	TARGET_HALT_RUNNING = 0, /* Target not halted */
+	TARGET_HALT_ERROR,       /* Failed to read target status */
+	TARGET_HALT_REQUEST,
+	TARGET_HALT_STEPPING,
+	TARGET_HALT_BREAKPOINT,
+	TARGET_HALT_WATCHPOINT,
+	TARGET_HALT_FAULT,
+};
+
+void target_reset(target *t);
+void target_halt_request(target *t);
+enum target_halt_reason target_halt_poll(target *t, target_addr *watch);
+void target_halt_resume(target *t, bool step);
+
+/* Break-/watchpoint functions */
+enum target_breakwatch {
+	TARGET_BREAK_SOFT,
+	TARGET_BREAK_HARD,
+	TARGET_WATCH_WRITE,
+	TARGET_WATCH_READ,
+	TARGET_WATCH_ACCESS,
+};
+int target_breakwatch_set(target *t, enum target_breakwatch, target_addr, size_t);
+int target_breakwatch_clear(target *t, enum target_breakwatch, target_addr, size_t);
+
+/* Command interpreter */
+void target_command_help(target *t);
+int target_command(target *t, int argc, const char *argv[]);
+
 
 enum target_errno {
 	TARGET_EPERM = 1,
@@ -104,63 +160,6 @@ struct target_controller {
 	enum target_errno errno_;
 	bool interrupted;
 };
-
-/* Halt/resume functions */
-target *target_attach(target *t, struct target_controller *);
-target *target_attach_n(int n, struct target_controller *);
-void target_detach(target *t);
-bool target_check_error(target *t);
-bool target_attached(target *t);
-
-/* Memory access functions */
-void target_mem_read(target *t, void *dest, target_addr src, size_t len);
-void target_mem_write(target *t, target_addr dest, const void *src, size_t len);
-
-/* Register access functions */
-void target_regs_read(target *t, void *data);
-void target_regs_write(target *t, const void *data);
-
-/* Halt/resume functions */
-enum target_halt_reason {
-	TARGET_HALT_RUNNING = 0, /* Target not halted */
-	TARGET_HALT_ERROR,       /* Failed to read target status */
-	TARGET_HALT_REQUEST,
-	TARGET_HALT_STEPPING,
-	TARGET_HALT_BREAKPOINT,
-	TARGET_HALT_WATCHPOINT,
-	TARGET_HALT_FAULT,
-};
-
-void target_reset(target *t);
-void target_halt_request(target *t);
-enum target_halt_reason target_halt_poll(target *t, target_addr *watch);
-void target_halt_resume(target *t, bool step);
-
-/* Break-/watchpoint functions */
-enum target_breakwatch {
-	TARGET_BREAK_SOFT,
-	TARGET_BREAK_HARD,
-	TARGET_WATCH_WRITE,
-	TARGET_WATCH_READ,
-	TARGET_WATCH_ACCESS,
-};
-int target_breakwatch_set(target *t, enum target_breakwatch, target_addr, size_t);
-int target_breakwatch_clear(target *t, enum target_breakwatch, target_addr, size_t);
-
-/* Flash memory access functions */
-int target_flash_erase(target *t, target_addr addr, size_t len);
-int target_flash_write(target *t, target_addr dest, const void *src, size_t len);
-int target_flash_done(target *t);
-
-/* Accessor functions */
-size_t target_regs_size(target *t);
-const char *target_tdesc(target *t);
-const char *target_mem_map(target *t);
-const char *target_driver_name(target *t);
-
-/* Command interpreter */
-void target_command_help(target *t);
-int target_command(target *t, int argc, const char *argv[]);
 
 #endif
 
