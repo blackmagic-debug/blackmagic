@@ -135,6 +135,7 @@ bool stm32f1_probe(target *t)
 		return true;
 	case 0x422:  /* STM32F30x */
 	case 0x432:  /* STM32F37x */
+	case 0x439:  /* STM32F302C8 */
 		t->driver = "STM32F3";
 		target_add_ram(t, 0x20000000, 0x10000);
 		stm32f1_add_flash(t, 0x8000000, 0x80000, 0x800);
