@@ -67,7 +67,13 @@ static int stlink_test_nrst(void)
 			GPIO_CNF_OUTPUT_PUSHPULL, led_idle_run);
 	rcc_periph_clock_enable(RCC_GPIOB);
 	gpio_set_mode(GPIOB, GPIO_MODE_INPUT,
-			GPIO_CNF_INPUT_PULL_UPDOWN, pin);
+	              GPIO_CNF_INPUT_PULL_UPDOWN, pin | GPIO15);
+	if (gpio_get(GPIOB, GPIO15)) {
+		/* ST890 is active low */
+		gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ,
+		              GPIO_CNF_OUTPUT_PUSHPULL, GPIO15);
+		gpio_clear(GPIOB, GPIO15);
+	}
 	gpio_set(GPIOB, pin);
 	systick_value = systick_get_value();
 	while (systick_get_value() > (systick_value - 20000)); /* Wait 20 msec*/
