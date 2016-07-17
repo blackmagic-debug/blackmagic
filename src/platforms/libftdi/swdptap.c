@@ -29,9 +29,7 @@
 #include "general.h"
 #include "swdptap.h"
 
-static void swdptap_turnaround(uint8_t dir);
-static uint8_t swdptap_bit_in(void);
-static void swdptap_bit_out(uint8_t val);
+static uint8_t olddir = 0;
 
 int swdptap_init(void)
 {
@@ -46,33 +44,17 @@ int swdptap_init(void)
 	}
 
 	assert(ftdi_write_data(ftdic, (void*)"\xAB\xA8", 2) == 2);
-
-	/* This must be investigated in more detail.
-	 * As described in STM32 Reference Manual... */
-	swdptap_seq_out(0xFFFF, 16);
-	swdptap_reset();
-	swdptap_seq_out(0xE79E, 16); /* 0b0111100111100111 */
-	swdptap_reset();
-	swdptap_seq_out(0, 16);
+	olddir = 0;
 
 	return 0;
 }
 
-void swdptap_reset(void)
-{
-	swdptap_turnaround(0);
-	/* 50 clocks with TMS high */
-	for(int i = 0; i < 50; i++)
-		swdptap_bit_out(1);
-}
-
 static void swdptap_turnaround(uint8_t dir)
 {
-	static uint8_t olddir = 0;
-
 	platform_buffer_flush();
 
-	if(dir == olddir) return;
+	if (dir == olddir)
+		return;
 	olddir = dir;
 
 	if(dir)	/* SWDIO goes to input */
@@ -85,9 +67,11 @@ static void swdptap_turnaround(uint8_t dir)
 		assert(ftdi_set_bitmode(ftdic, 0xAB, BITMODE_BITBANG) == 0);
 }
 
-static uint8_t swdptap_bit_in(void)
+bool swdptap_bit_in(void)
 {
 	uint8_t ret;
+
+	swdptap_turnaround(1);
 
 	ftdi_read_pins(ftdic, &ret);
 	ret &= 0x08;
@@ -96,75 +80,16 @@ static uint8_t swdptap_bit_in(void)
 	return ret;
 }
 
-static void swdptap_bit_out(uint8_t val)
+void swdptap_bit_out(bool val)
 {
 	uint8_t buf[3] = "\xA0\xA1\xA0";
 
-	if(val) {
+	swdptap_turnaround(0);
+
+	if (val) {
 		for(int i = 0; i < 3; i++)
 			buf[i] |= 0x08;
 	}
 	platform_buffer_write(buf, 3);
-}
-
-uint32_t swdptap_seq_in(int ticks)
-{
-	uint32_t index = 1;
-	uint32_t ret = 0;
-
-	swdptap_turnaround(1);
-
-	while (ticks--) {
-		if (swdptap_bit_in())
-			ret |= index;
-		index <<= 1;
-	}
-
-	return ret;
-}
-
-uint8_t swdptap_seq_in_parity(uint32_t *ret, int ticks)
-{
-	uint32_t index = 1;
-	uint8_t parity = 0;
-	*ret = 0;
-
-	swdptap_turnaround(1);
-
-	while (ticks--) {
-		if (swdptap_bit_in()) {
-			*ret |= index;
-			parity ^= 1;
-		}
-		index <<= 1;
-	}
-	if (swdptap_bit_in())
-		parity ^= 1;
-
-	return parity;
-}
-
-void swdptap_seq_out(uint32_t MS, int ticks)
-{
-	swdptap_turnaround(0);
-
-	while (ticks--) {
-		swdptap_bit_out(MS & 1);
-		MS >>= 1;
-	}
-}
-
-void swdptap_seq_out_parity(uint32_t MS, int ticks)
-{
-	uint8_t parity = 0;
-
-	swdptap_turnaround(0);
-
-	while (ticks--) {
-		swdptap_bit_out(MS & 1);
-		parity ^= MS;
-		MS >>= 1;
-	}
-	swdptap_bit_out(parity & 1);
 }
 

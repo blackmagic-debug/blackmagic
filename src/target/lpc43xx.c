@@ -19,9 +19,8 @@
  */
 
 #include "general.h"
-#include "command.h"
 #include "target.h"
-#include "gdb_packet.h"
+#include "target_internal.h"
 #include "cortexm.h"
 #include "lpc_common.h"
 
@@ -51,7 +50,7 @@ static bool lpc43xx_cmd_erase(target *t, int argc, const char *argv[]);
 static bool lpc43xx_cmd_reset(target *t, int argc, const char *argv[]);
 static bool lpc43xx_cmd_mkboot(target *t, int argc, const char *argv[]);
 static int lpc43xx_flash_init(target *t);
-static int lpc43xx_flash_erase(struct target_flash *f, uint32_t addr, size_t len);
+static int lpc43xx_flash_erase(struct target_flash *f, target_addr addr, size_t len);
 static void lpc43xx_set_internal_clock(target *t);
 static void lpc43xx_wdt_set_period(target *t);
 static void lpc43xx_wdt_pet(target *t);
@@ -174,7 +173,7 @@ static bool lpc43xx_cmd_erase(target *t, int argc, const char *argv[])
 			return false;
 	}
 
-	gdb_outf("Erase OK.\n");
+	tc_printf(t, "Erase OK.\n");
 
 	return true;
 }
@@ -195,7 +194,7 @@ static int lpc43xx_flash_init(target *t)
 	return 0;
 }
 
-static int lpc43xx_flash_erase(struct target_flash *f, uint32_t addr, size_t len)
+static int lpc43xx_flash_erase(struct target_flash *f, target_addr addr, size_t len)
 {
 	if (lpc43xx_flash_init(f->t))
 		return -1;
@@ -220,14 +219,14 @@ static bool lpc43xx_cmd_mkboot(target *t, int argc, const char *argv[])
 {
 	/* Usage: mkboot 0 or mkboot 1 */
 	if (argc != 2) {
-		gdb_outf("Expected bank argument 0 or 1.\n");
+		tc_printf(t, "Expected bank argument 0 or 1.\n");
 		return false;
 	}
 
 	const long int bank = strtol(argv[1], NULL, 0);
 
 	if ((bank != 0) && (bank != 1)) {
-		gdb_outf("Unexpected bank number, should be 0 or 1.\n");
+		tc_printf(t, "Unexpected bank number, should be 0 or 1.\n");
 		return false;
 	}
 
@@ -236,11 +235,11 @@ static bool lpc43xx_cmd_mkboot(target *t, int argc, const char *argv[])
 	/* special command to compute/write magic vector for signature */
 	struct lpc_flash *f = (struct lpc_flash *)t->flash;
 	if (lpc_iap_call(f, IAP_CMD_SET_ACTIVE_BANK, bank, CPU_CLK_KHZ)) {
-		gdb_outf("Set bootable failed.\n");
+		tc_printf(t, "Set bootable failed.\n");
 		return false;
 	}
 
-	gdb_outf("Set bootable OK.\n");
+	tc_printf(t, "Set bootable OK.\n");
 	return true;
 }
 

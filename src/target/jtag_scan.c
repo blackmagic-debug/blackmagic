@@ -25,9 +25,7 @@
 
 #include "general.h"
 #include "jtagtap.h"
-#include "morse.h"
 #include "jtag_scan.h"
-#include "gdb_packet.h"
 #include "target.h"
 #include "adiv5.h"
 
@@ -187,7 +185,6 @@ int jtag_scan(const uint8_t *irlens)
 	jtagtap_next(1, 1);
 	jtagtap_return_idle();
 	if(!jtag_dev_count) {
-		morse("NO TARGETS.", 1);
 		return 0;
 	}
 
@@ -223,9 +220,6 @@ int jtag_scan(const uint8_t *irlens)
 					dev_descr[j].handler(&jtag_devs[i]);
 				break;
 			}
-
-	if(!target_list) morse("NO TARGETS.", 1);
-	else morse(NULL, 0);
 
 	return jtag_dev_count;
 }

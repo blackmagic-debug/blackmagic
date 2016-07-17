@@ -26,10 +26,8 @@
 #include "exception.h"
 #include "adiv5.h"
 #include "swdptap.h"
-#include "jtagtap.h"
-#include "command.h"
-#include "morse.h"
-#include "gdb_packet.h"
+#include "target.h"
+#include "target_internal.h"
 
 #define SWDP_ACK_OK    0x01
 #define SWDP_ACK_WAIT  0x02
@@ -52,6 +50,16 @@ int adiv5_swdp_scan(void)
 	ADIv5_DP_t *dp = (void*)calloc(1, sizeof(*dp));
 
 	swdptap_init();
+
+	/* Switch from JTAG to SWD mode */
+	swdptap_seq_out(0xFFFF, 16);
+	for(int i = 0; i < 50; i++)
+		swdptap_bit_out(1);
+	swdptap_seq_out(0xE79E, 16); /* 0b0111100111100111 */
+	for(int i = 0; i < 50; i++)
+		swdptap_bit_out(1);
+	swdptap_seq_out(0, 16);
+
 	/* Read the SW-DP IDCODE register to syncronise */
 	/* This could be done with adiv_swdp_low_access(), but this doesn't
 	 * allow the ack to be checked here. */
@@ -59,7 +67,6 @@ int adiv5_swdp_scan(void)
 	ack = swdptap_seq_in(3);
 	if((ack != SWDP_ACK_OK) || swdptap_seq_in_parity(&dp->idcode, 32)) {
 		DEBUG("\n");
-		morse("NO TARGETS.", 1);
 		free(dp);
 		return -1;
 	}
@@ -71,9 +78,6 @@ int adiv5_swdp_scan(void)
 
 	adiv5_swdp_error(dp);
 	adiv5_dp_init(dp);
-
-	if(!target_list) morse("NO TARGETS.", 1);
-	else morse(NULL, 0);
 
 	return target_list?1:0;
 }

@@ -58,13 +58,13 @@ struct lpc_flash {
 	uint32_t iap_msp;
 };
 
-struct lpc_flash *lpc_add_flash(target *t, uint32_t addr, size_t length);
+struct lpc_flash *lpc_add_flash(target *t, target_addr addr, size_t length);
 enum iap_status lpc_iap_call(struct lpc_flash *f, enum iap_cmd cmd, ...);
-int lpc_flash_erase(struct target_flash *f, uint32_t addr, size_t len);
+int lpc_flash_erase(struct target_flash *f, target_addr addr, size_t len);
 int lpc_flash_write(struct target_flash *f,
-                    uint32_t dest, const void *src, size_t len);
+                    target_addr dest, const void *src, size_t len);
 int lpc_flash_write_magic_vect(struct target_flash *f,
-                               uint32_t dest, const void *src, size_t len);
+                               target_addr dest, const void *src, size_t len);
 
 #endif
 

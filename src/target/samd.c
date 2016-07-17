@@ -33,16 +33,13 @@
  */
 
 #include "general.h"
-#include "jtagtap.h"
-#include "adiv5.h"
 #include "target.h"
-#include "command.h"
-#include "gdb_packet.h"
+#include "target_internal.h"
 #include "cortexm.h"
 
-static int samd_flash_erase(struct target_flash *t, uint32_t addr, size_t len);
+static int samd_flash_erase(struct target_flash *t, target_addr addr, size_t len);
 static int samd_flash_write(struct target_flash *f,
-                            uint32_t dest, const void *src, size_t len);
+                            target_addr dest, const void *src, size_t len);
 
 static bool samd_cmd_erase_all(target *t);
 static bool samd_cmd_lock_flash(target *t);
@@ -460,7 +457,7 @@ static void samd_unlock_current_address(target *t)
 /**
  * Erase flash row by row
  */
-static int samd_flash_erase(struct target_flash *f, uint32_t addr, size_t len)
+static int samd_flash_erase(struct target_flash *f, target_addr addr, size_t len)
 {
 	target *t = f->t;
 	while (len) {
@@ -493,7 +490,7 @@ static int samd_flash_erase(struct target_flash *f, uint32_t addr, size_t len)
  * Write flash page by page
  */
 static int samd_flash_write(struct target_flash *f,
-                            uint32_t dest, const void *src, size_t len)
+                            target_addr dest, const void *src, size_t len)
 {
 	target *t = f->t;
 
@@ -540,17 +537,17 @@ static bool samd_cmd_erase_all(target *t)
 
 	/* Test the protection error bit in Status A */
 	if (status & SAMD_STATUSA_PERR) {
-		gdb_outf("Erase failed due to a protection error.\n");
+		tc_printf(t, "Erase failed due to a protection error.\n");
 		return true;
 	}
 
 	/* Test the fail bit in Status A */
 	if (status & SAMD_STATUSA_FAIL) {
-		gdb_outf("Erase failed.\n");
+		tc_printf(t, "Erase failed.\n");
 		return true;
 	}
 
-	gdb_outf("Erase successful!\n");
+	tc_printf(t, "Erase successful!\n");
 
 	return true;
 }
@@ -606,7 +603,7 @@ static bool samd_cmd_unlock_flash(target *t)
 
 static bool samd_cmd_read_userrow(target *t)
 {
-	gdb_outf("User Row: 0x%08x%08x\n",
+	tc_printf(t, "User Row: 0x%08x%08x\n",
 		target_mem_read32(t, SAMD_NVM_USER_ROW_HIGH),
 		target_mem_read32(t, SAMD_NVM_USER_ROW_LOW));
 
@@ -618,13 +615,13 @@ static bool samd_cmd_read_userrow(target *t)
  */
 static bool samd_cmd_serial(target *t)
 {
-	gdb_outf("Serial Number: 0x");
+	tc_printf(t, "Serial Number: 0x");
 
 	for (uint32_t i = 0; i < 4; i++) {
-		gdb_outf("%08x", target_mem_read32(t, SAMD_NVM_SERIAL(i)));
+		tc_printf(t, "%08x", target_mem_read32(t, SAMD_NVM_SERIAL(i)));
 	}
 
-	gdb_outf("\n");
+	tc_printf(t, "\n");
 
 	return true;
 }
@@ -668,16 +665,16 @@ static bool samd_cmd_mbist(target *t)
 
 	/* Test the protection error bit in Status A */
 	if (status & SAMD_STATUSA_PERR) {
-		gdb_outf("MBIST not run due to protection error.\n");
+		tc_printf(t, "MBIST not run due to protection error.\n");
 		return true;
 	}
 
 	/* Test the fail bit in Status A */
 	if (status & SAMD_STATUSA_FAIL) {
-		gdb_outf("MBIST Fail @ 0x%08x\n",
-		         target_mem_read32(t, SAMD_DSU_ADDRESS));
+		tc_printf(t, "MBIST Fail @ 0x%08x\n",
+		          target_mem_read32(t, SAMD_DSU_ADDRESS));
 	} else {
-		gdb_outf("MBIST Passed!\n");
+		tc_printf(t, "MBIST Passed!\n");
 	}
 
 	return true;
@@ -696,8 +693,8 @@ static bool samd_cmd_ssb(target *t)
 		if (target_check_error(t))
 			return -1;
 
-	gdb_outf("Set the security bit! "
-		 "You will need to issue 'monitor erase_mass' to clear this.\n");
+	tc_printf(t, "Set the security bit! "
+		  "You will need to issue 'monitor erase_mass' to clear this.\n");
 
 	return true;
 }

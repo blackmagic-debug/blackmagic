@@ -25,8 +25,6 @@
 #include "general.h"
 #include "gdb_if.h"
 #include "gdb_main.h"
-#include "jtagtap.h"
-#include "jtag_scan.h"
 #include "target.h"
 #include "exception.h"
 #include "gdb_packet.h"

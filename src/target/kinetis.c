@@ -29,6 +29,7 @@
 
 #include "general.h"
 #include "target.h"
+#include "target_internal.h"
 
 #define SIM_SDID   0x40048024
 
@@ -60,9 +61,9 @@
 
 #define KL_GEN_PAGESIZE 0x400
 
-static int kl_gen_flash_erase(struct target_flash *f, uint32_t addr, size_t len);
+static int kl_gen_flash_erase(struct target_flash *f, target_addr addr, size_t len);
 static int kl_gen_flash_write(struct target_flash *f,
-                            uint32_t dest, const void *src, size_t len);
+                              target_addr dest, const void *src, size_t len);
 
 static void kl_gen_add_flash(target *t,
                            uint32_t addr, size_t length, size_t erasesize)
@@ -158,7 +159,7 @@ kl_gen_command(target *t, uint8_t cmd, uint32_t addr, const uint8_t data[8])
 	return true;
 }
 
-static int kl_gen_flash_erase(struct target_flash *f, uint32_t addr, size_t len)
+static int kl_gen_flash_erase(struct target_flash *f, target_addr addr, size_t len)
 {
 	while (len) {
 		if (kl_gen_command(f->t, FTFA_CMD_ERASE_SECTOR, addr, NULL)) {
@@ -172,7 +173,7 @@ static int kl_gen_flash_erase(struct target_flash *f, uint32_t addr, size_t len)
 }
 
 static int kl_gen_flash_write(struct target_flash *f,
-                            uint32_t dest, const void *src, size_t len)
+                              target_addr dest, const void *src, size_t len)
 {
 	while (len) {
 		if (kl_gen_command(f->t, FTFA_CMD_PROGRAM_LONGWORD, dest, src)) {

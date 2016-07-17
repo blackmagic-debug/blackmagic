@@ -21,9 +21,10 @@
 /* This file provides generic forms of the low-level jtagtap functions
  * for platforms that don't require optimised forms.
  */
+#include "general.h"
+#include "jtagtap.h"
 
-#ifdef PROVIDE_GENERIC_JTAGTAP_TMS_SEQ
-void
+void __attribute__((weak))
 jtagtap_tms_seq(uint32_t MS, int ticks)
 {
 	while(ticks--) {
@@ -31,11 +32,8 @@ jtagtap_tms_seq(uint32_t MS, int ticks)
 		MS >>= 1;
 	}
 }
-#endif
 
-
-#ifdef PROVIDE_GENERIC_JTAGTAP_TDI_TDO_SEQ
-void
+void __attribute__((weak))
 jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int ticks)
 {
 	uint8_t index = 1;
@@ -51,11 +49,8 @@ jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int
 		}
 	}
 }
-#endif
 
-
-#ifdef PROVIDE_GENERIC_JTAGTAP_TDI_SEQ
-void
+void __attribute__((weak))
 jtagtap_tdi_seq(const uint8_t final_tms, const uint8_t *DI, int ticks)
 {
 	uint8_t index = 1;
@@ -67,6 +62,4 @@ jtagtap_tdi_seq(const uint8_t final_tms, const uint8_t *DI, int ticks)
 		}
 	}
 }
-#endif
-
 

@@ -37,22 +37,19 @@
  */
 
 #include "general.h"
-#include "jtagtap.h"
-#include "adiv5.h"
 #include "target.h"
-#include "command.h"
-#include "gdb_packet.h"
+#include "target_internal.h"
 #include "cortexm.h"
 
 #define SRAM_BASE		0x20000000
 #define STUB_BUFFER_BASE	ALIGN(SRAM_BASE + sizeof(efm32_flash_write_stub), 4)
 
-static int efm32_flash_erase(struct target_flash *t, uint32_t addr, size_t len);
+static int efm32_flash_erase(struct target_flash *t, target_addr addr, size_t len);
 static int efm32_flash_write(struct target_flash *f,
-			     uint32_t dest, const void *src, size_t len);
+			     target_addr dest, const void *src, size_t len);
 
 static const uint16_t efm32_flash_write_stub[] = {
-#include "../flashstub/efm32.stub"
+#include "flashstub/efm32.stub"
 };
 
 static bool efm32_cmd_erase_all(target *t);
@@ -233,7 +230,7 @@ uint16_t efm32_read_radio_part_number(target *t)
 
 
 
-static void efm32_add_flash(target *t, uint32_t addr, size_t length,
+static void efm32_add_flash(target *t, target_addr addr, size_t length,
 			    size_t page_size)
 {
 	struct target_flash *f = calloc(1, sizeof(*f));
@@ -336,7 +333,7 @@ bool efm32_probe(target *t)
 	/* Setup Target */
 	t->target_options |= CORTEXM_TOPT_INHIBIT_SRST;
 	t->driver = variant_string;
-	gdb_outf("flash size %d page size %d\n", flash_size, flash_page_size);
+	tc_printf(t, "flash size %d page size %d\n", flash_size, flash_page_size);
 	target_add_ram (t, SRAM_BASE, ram_size);
 	efm32_add_flash(t, 0x00000000, flash_size, flash_page_size);
 	target_add_commands(t, efm32_cmd_list, "EFM32");
@@ -347,7 +344,7 @@ bool efm32_probe(target *t)
 /**
  * Erase flash row by row
  */
-static int efm32_flash_erase(struct target_flash *f, uint32_t addr, size_t len)
+static int efm32_flash_erase(struct target_flash *f, target_addr addr, size_t len)
 {
 	target *t = f->t;
 
@@ -379,7 +376,7 @@ static int efm32_flash_erase(struct target_flash *f, uint32_t addr, size_t len)
  * Write flash page by page
  */
 static int efm32_flash_write(struct target_flash *f,
-			     uint32_t dest, const void *src, size_t len)
+			     target_addr dest, const void *src, size_t len)
 {
 	(void)len;
 	target *t = f->t;
@@ -418,7 +415,7 @@ static bool efm32_cmd_erase_all(target *t)
 	/* Relock mass erase */
 	target_mem_write32(t, EFM32_MSC_MASSLOCK, 0);
 
-	gdb_outf("Erase successful!\n");
+	tc_printf(t, "Erase successful!\n");
 
 	return true;
 }
@@ -432,7 +429,7 @@ static bool efm32_cmd_serial(target *t)
 	uint64_t eui = efm32_read_eui(t);
 
 	/* 64 bits of unique number */
-	gdb_outf("Unique Number: 0x%016llx\n", eui);
+	tc_printf(t, "Unique Number: 0x%016llx\n", eui);
 
 	return true;
 }

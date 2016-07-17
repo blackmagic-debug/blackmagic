@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2011  Black Sphere Technologies Ltd.
+ * Copyright (C) 2016  Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -25,252 +25,140 @@
 #ifndef __TARGET_H
 #define __TARGET_H
 
+#include <stdarg.h>
+
 typedef struct target_s target;
+typedef uint32_t target_addr;
+struct target_controller;
 
-/* The destroy callback function will be called by target_list_free() just
- * before the target is free'd.  This may be because we're scanning for new
- * targets, or because of a communication failure.  The target data may
- * be assumed to be intact, but the communication medium may not be available,
- * so access methods shouldn't be called.
- *
- * The callback is installed by target_attach() and only removed by attaching
- * with a different callback.  It remains intact after target_detach().
- */
-typedef void (*target_destroy_callback)(target *t);
+int adiv5_swdp_scan(void);
+int jtag_scan(const uint8_t *lrlens);
 
-/* Halt/resume functions */
-target *target_attach(target *t, target_destroy_callback destroy_cb);
+bool target_foreach(void (*cb)(int i, target *t, void *context), void *context);
+void target_list_free(void);
 
-#define target_detach(target)	\
-	(target)->detach(target)
-
-#define target_check_error(target)	\
-	(target)->check_error(target)
+/* Attach/detach functions */
+target *target_attach(target *t, struct target_controller *);
+target *target_attach_n(int n, struct target_controller *);
+void target_detach(target *t);
+bool target_attached(target *t);
+const char *target_driver_name(target *t);
 
 /* Memory access functions */
-#define target_mem_read(target, dest, src, len)	\
-	(target)->mem_read((target), (dest), (src), (len))
-
-#define target_mem_write(target, dest, src, len)	\
-	(target)->mem_write((target), (dest), (src), (len))
-
-/* Register access functions */
-#define target_regs_read(target, data)	\
-	(target)->regs_read((target), (data))
-
-#define target_regs_write(target, data)	\
-	(target)->regs_write((target), (data))
-
-
-/* Halt/resume functions */
-#define target_reset(target)	\
-	(target)->reset(target)
-
-#define target_halt_request(target)	\
-	(target)->halt_request(target)
-
-#define target_halt_wait(target)	\
-	(target)->halt_wait(target)
-
-#define target_halt_resume(target, step)	\
-	(target)->halt_resume((target), (step))
-
-/* Break-/watchpoint functions */
-#define target_set_hw_bp(target, addr, len)	\
-	(target)->set_hw_bp((target), (addr), (len))
-
-#define target_clear_hw_bp(target, addr, len)	\
-	(target)->clear_hw_bp((target), (addr), (len))
-
-
-#define target_set_hw_wp(target, type, addr, len)	\
-	(target)->set_hw_wp((target), (type), (addr), (len))
-
-#define target_clear_hw_wp(target, type, addr, len)	\
-	(target)->clear_hw_wp((target), (type), (addr), (len))
-
-
-#define target_check_hw_wp(target, addr)	\
-	((target)->check_hw_wp?(target)->check_hw_wp((target), (addr)):0)
-
-
+const char *target_mem_map(target *t);
+int target_mem_read(target *t, void *dest, target_addr src, size_t len);
+int target_mem_write(target *t, target_addr dest, const void *src, size_t len);
 /* Flash memory access functions */
-int target_flash_erase(target *t, uint32_t addr, size_t len);
-int target_flash_write(target *t,
-                       uint32_t dest, const void *src, size_t len);
+int target_flash_erase(target *t, target_addr addr, size_t len);
+int target_flash_write(target *t, target_addr dest, const void *src, size_t len);
 int target_flash_done(target *t);
 
-/* Host I/O */
-#define target_hostio_reply(target, recode, errcode)	\
-	(target)->hostio_reply((target), (retcode), (errcode))
+/* Register access functions */
+size_t target_regs_size(target *t);
+const char *target_tdesc(target *t);
+void target_regs_read(target *t, void *data);
+void target_regs_write(target *t, const void *data);
 
-/* Accessor functions */
-#define target_regs_size(target) \
-	((target)->regs_size)
-
-#define target_tdesc(target) \
-	((target)->tdesc ? (target)->tdesc : "")
-
-struct target_ram {
-	uint32_t start;
-	uint32_t length;
-	struct target_ram *next;
+/* Halt/resume functions */
+enum target_halt_reason {
+	TARGET_HALT_RUNNING = 0, /* Target not halted */
+	TARGET_HALT_ERROR,       /* Failed to read target status */
+	TARGET_HALT_REQUEST,
+	TARGET_HALT_STEPPING,
+	TARGET_HALT_BREAKPOINT,
+	TARGET_HALT_WATCHPOINT,
+	TARGET_HALT_FAULT,
 };
 
-struct target_flash;
-typedef int (*flash_erase_func)(struct target_flash *f, uint32_t addr, size_t len);
-typedef int (*flash_write_func)(struct target_flash *f, uint32_t dest,
-                                const void *src, size_t len);
-typedef int (*flash_done_func)(struct target_flash *f);
-struct target_flash {
-	uint32_t start;
-	uint32_t length;
-	uint32_t blocksize;
-	flash_erase_func erase;
-	flash_write_func write;
-	flash_done_func done;
-	target *t;
-	struct target_flash *next;
-	int align;
-	uint8_t erased;
+void target_reset(target *t);
+void target_halt_request(target *t);
+enum target_halt_reason target_halt_poll(target *t, target_addr *watch);
+void target_halt_resume(target *t, bool step);
 
-	/* For buffered flash */
-	size_t buf_size;
-	flash_write_func write_buf;
-	uint32_t buf_addr;
-	void *buf;
+/* Break-/watchpoint functions */
+enum target_breakwatch {
+	TARGET_BREAK_SOFT,
+	TARGET_BREAK_HARD,
+	TARGET_WATCH_WRITE,
+	TARGET_WATCH_READ,
+	TARGET_WATCH_ACCESS,
+};
+int target_breakwatch_set(target *t, enum target_breakwatch, target_addr, size_t);
+int target_breakwatch_clear(target *t, enum target_breakwatch, target_addr, size_t);
+
+/* Command interpreter */
+void target_command_help(target *t);
+int target_command(target *t, int argc, const char *argv[]);
+
+
+enum target_errno {
+	TARGET_EPERM = 1,
+	TARGET_ENOENT = 2,
+	TARGET_EINTR = 4,
+	TARGET_EBADF = 9,
+	TARGET_EACCES = 13,
+	TARGET_EFAULT = 14,
+	TARGET_EBUSY = 16,
+	TARGET_EEXIST = 17,
+	TARGET_ENODEV = 19,
+	TARGET_ENOTDIR = 20,
+	TARGET_EISDIR = 21,
+	TARGET_EINVAL = 22,
+	TARGET_EMFILE = 24,
+	TARGET_ENFILE = 23,
+	TARGET_EFBIG = 27,
+	TARGET_ENOSPC = 28,
+	TARGET_ESPIPE = 29,
+	TARGET_EROFS = 30,
+	TARGET_ENAMETOOLONG = 36,
 };
 
-struct target_s {
-	/* Notify controlling debugger if target is lost */
-	target_destroy_callback destroy_callback;
-
-	/* Attach/Detach funcitons */
-	bool (*attach)(target *t);
-	void (*detach)(target *t);
-	bool (*check_error)(target *t);
-
-	/* Memory access functions */
-	void (*mem_read)(target *t, void *dest, uint32_t src,
-	                 size_t len);
-	void (*mem_write)(target *t, uint32_t dest,
-	                  const void *src, size_t len);
-
-	/* Register access functions */
-	int regs_size;
-	const char *tdesc;
-	void (*regs_read)(target *t, void *data);
-	void (*regs_write)(target *t, const void *data);
-
-	/* Halt/resume functions */
-	void (*reset)(target *t);
-	void (*halt_request)(target *t);
-	int (*halt_wait)(target *t);
-	void (*halt_resume)(target *t, bool step);
-
-	/* Break-/watchpoint functions */
-	int (*set_hw_bp)(target *t, uint32_t addr, uint8_t len);
-	int (*clear_hw_bp)(target *t, uint32_t addr, uint8_t len);
-
-	int (*set_hw_wp)(target *t, uint8_t type, uint32_t addr, uint8_t len);
-	int (*clear_hw_wp)(target *t, uint8_t type, uint32_t addr, uint8_t len);
-
-	int (*check_hw_wp)(target *t, uint32_t *addr);
-
-	/* target-defined options */
-	unsigned target_options;
-	uint32_t idcode;
-
-	/* Target memory map */
-	char *dyn_mem_map;
-	struct target_ram *ram;
-	struct target_flash *flash;
-
-	/* Host I/O support */
-	void (*hostio_reply)(target *t, int32_t retcode, uint32_t errcode);
-
-	const char *driver;
-	struct target_command_s *commands;
-
-	int size;
-	struct target_s *next;
-
-	void *priv;
-	void (*priv_free)(void *);
+enum target_open_flags {
+	TARGET_O_RDONLY = 0,
+	TARGET_O_WRONLY = 1,
+	TARGET_O_RDWR = 2,
+	TARGET_O_APPEND = 0x008,
+	TARGET_O_CREAT = 0x200,
+	TARGET_O_TRUNC = 0x400,
 };
 
-struct target_command_s {
-	const char *specific_name;
-	const struct command_s *cmds;
-	struct target_command_s *next;
+enum target_seek_flag {
+	TARGET_SEEK_SET = 0,
+	TARGET_SEEK_CUR = 1,
+	TARGET_SEEK_END = 2,
 };
 
-extern target *target_list;
+struct target_controller {
+	void (*destroy_callback)(struct target_controller *, target *t);
+	void (*printf)(struct target_controller *, const char *fmt, va_list);
 
-target *target_new(unsigned size);
-void target_list_free(void);
-void target_add_commands(target *t, const struct command_s *cmds, const char *name);
-void target_add_ram(target *t, uint32_t start, uint32_t len);
-void target_add_flash(target *t, struct target_flash *f);
-const char *target_mem_map(target *t);
-int target_flash_write_buffered(struct target_flash *f,
-                                uint32_t dest, const void *src, size_t len);
-int target_flash_done_buffered(struct target_flash *f);
-
-static inline uint32_t target_mem_read32(target *t, uint32_t addr)
-{
-	uint32_t ret;
-	target_mem_read(t, &ret, addr, sizeof(ret));
-	return ret;
-}
-
-static inline void target_mem_write32(target *t, uint32_t addr, uint32_t value)
-{
-	target_mem_write(t, addr, &value, sizeof(value));
-}
-
-static inline uint16_t target_mem_read16(target *t, uint32_t addr)
-{
-	uint16_t ret;
-	target_mem_read(t, &ret, addr, sizeof(ret));
-	return ret;
-}
-
-static inline void target_mem_write16(target *t, uint32_t addr, uint16_t value)
-{
-	target_mem_write(t, addr, &value, sizeof(value));
-}
-
-static inline uint8_t target_mem_read8(target *t, uint32_t addr)
-{
-	uint8_t ret;
-	target_mem_read(t, &ret, addr, sizeof(ret));
-	return ret;
-}
-
-static inline void target_mem_write8(target *t, uint32_t addr, uint8_t value)
-{
-	target_mem_write(t, addr, &value, sizeof(value));
-}
-
-
-/* Probe for various targets.
- * Actual functions implemented in their respective drivers.
- */
-bool stm32f1_probe(target *t);
-bool stm32f4_probe(target *t);
-bool stm32l0_probe(target *t);
-bool stm32l1_probe(target *t);
-bool stm32l4_probe(target *t);
-bool lmi_probe(target *t);
-bool lpc11xx_probe(target *t);
-bool lpc15xx_probe(target *t);
-bool lpc43xx_probe(target *t);
-bool sam3x_probe(target *t);
-bool nrf51_probe(target *t);
-bool samd_probe(target *t);
-bool kinetis_probe(target *t);
-bool efm32_probe(target *t);
+	/* Interface to host system calls */
+	int (*open)(struct target_controller *,
+	            target_addr path, size_t path_len,
+	            enum target_open_flags flags, mode_t mode);
+	int (*close)(struct target_controller *, int fd);
+	int (*read)(struct target_controller *,
+	            int fd, target_addr buf, unsigned int count);
+	int (*write)(struct target_controller *,
+	             int fd, target_addr buf, unsigned int count);
+	long (*lseek)(struct target_controller *,
+	              int fd, long offset, enum target_seek_flag flag);
+	int (*rename)(struct target_controller *,
+	              target_addr oldpath, size_t old_len,
+	              target_addr newpath, size_t new_len);
+	int (*unlink)(struct target_controller *,
+	              target_addr path, size_t path_len);
+	int (*stat)(struct target_controller *,
+	            target_addr path, size_t path_len, target_addr buf);
+	int (*fstat)(struct target_controller *, int fd, target_addr buf);
+	int (*gettimeofday)(struct target_controller *,
+	                    target_addr tv, target_addr tz);
+	int (*isatty)(struct target_controller *, int fd);
+	int (*system)(struct target_controller *,
+	              target_addr cmd, size_t cmd_len);
+	enum target_errno errno_;
+	bool interrupted;
+};
 
 #endif
 

@@ -30,11 +30,9 @@
  */
 
 #include "general.h"
-#include "adiv5.h"
 #include "target.h"
+#include "target_internal.h"
 #include "cortexm.h"
-#include "command.h"
-#include "gdb_packet.h"
 
 static bool stm32f1_cmd_erase_mass(target *t);
 static bool stm32f1_cmd_option(target *t, int argc, char *argv[]);
@@ -47,9 +45,9 @@ const struct command_s stm32f1_cmd_list[] = {
 
 
 static int stm32f1_flash_erase(struct target_flash *f,
-                               uint32_t addr, size_t len);
+                               target_addr addr, size_t len);
 static int stm32f1_flash_write(struct target_flash *f,
-                               uint32_t dest, const void *src, size_t len);
+                               target_addr dest, const void *src, size_t len);
 
 /* Flash Program ad Erase Controller Register Map */
 #define FPEC_BASE	0x40022000
@@ -91,7 +89,7 @@ static int stm32f1_flash_write(struct target_flash *f,
 #define FLASHSIZE_F0  0x1FFFF7CC
 
 static const uint16_t stm32f1_flash_write_stub[] = {
-#include "../flashstub/stm32f1.stub"
+#include "flashstub/stm32f1.stub"
 };
 
 #define SRAM_BASE 0x20000000
@@ -167,7 +165,7 @@ bool stm32f1_probe(target *t)
 	}
 
 	flash_size = (target_mem_read32(t, FLASHSIZE_F0) & 0xffff) *0x400;
-	gdb_outf("flash size %d block_size %d\n", flash_size, block_size);
+	tc_printf(t, "flash size %d block_size %d\n", flash_size, block_size);
 	target_add_ram(t, 0x20000000, 0x5000);
 	stm32f1_add_flash(t, 0x8000000, flash_size, block_size);
 	target_add_commands(t, stm32f1_cmd_list, "STM32F0");
@@ -181,7 +179,7 @@ static void stm32f1_flash_unlock(target *t)
 }
 
 static int stm32f1_flash_erase(struct target_flash *f,
-                               uint32_t addr, size_t len)
+                               target_addr addr, size_t len)
 {
 	target *t = f->t;
 	uint16_t sr;
@@ -214,7 +212,7 @@ static int stm32f1_flash_erase(struct target_flash *f,
 }
 
 static int stm32f1_flash_write(struct target_flash *f,
-                               uint32_t dest, const void *src, size_t len)
+                               target_addr dest, const void *src, size_t len)
 {
 	target *t = f->t;
 	/* Write stub and data to target ram and set PC */
@@ -324,16 +322,16 @@ static bool stm32f1_cmd_option(target *t, int argc, char *argv[])
 		stm32f1_option_erase(t);
 		stm32f1_option_write_erased(t, FLASH_OBP_RDP, flash_obp_rdp_key);
 	} else if (rdprt) {
-		gdb_out("Device is Read Protected\n");
-		gdb_out("Use \"monitor option erase\" to unprotect, erasing device\n");
+		tc_printf(t, "Device is Read Protected\n");
+		tc_printf(t, "Use \"monitor option erase\" to unprotect, erasing device\n");
 		return true;
 	} else if (argc == 3) {
 		addr = strtol(argv[1], NULL, 0);
 		val = strtol(argv[2], NULL, 0);
 		stm32f1_option_write(t, addr, val);
 	} else {
-		gdb_out("usage: monitor option erase\n");
-		gdb_out("usage: monitor option <addr> <value>\n");
+		tc_printf(t, "usage: monitor option erase\n");
+		tc_printf(t, "usage: monitor option <addr> <value>\n");
 	}
 
 	if (0 && flash_obp_rdp_key == FLASH_OBP_RDP_KEY_F3) {
@@ -348,8 +346,8 @@ static bool stm32f1_cmd_option(target *t, int argc, char *argv[])
 	for (int i = 0; i < 0xf; i += 4) {
 		addr = 0x1ffff800 + i;
 		val = target_mem_read32(t, addr);
-		gdb_outf("0x%08X: 0x%04X\n", addr, val & 0xFFFF);
-		gdb_outf("0x%08X: 0x%04X\n", addr + 2, val >> 16);
+		tc_printf(t, "0x%08X: 0x%04X\n", addr, val & 0xFFFF);
+		tc_printf(t, "0x%08X: 0x%04X\n", addr + 2, val >> 16);
 	}
 	return true;
 }

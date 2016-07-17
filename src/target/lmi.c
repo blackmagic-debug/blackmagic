@@ -26,6 +26,7 @@
 
 #include "general.h"
 #include "target.h"
+#include "target_internal.h"
 #include "cortexm.h"
 
 #define SRAM_BASE            0x20000000
@@ -46,14 +47,14 @@
 #define LMI_FLASH_FMC_COMT   (1 << 3)
 #define LMI_FLASH_FMC_WRKEY  0xA4420000
 
-static int lmi_flash_erase(struct target_flash *f, uint32_t addr, size_t len);
+static int lmi_flash_erase(struct target_flash *f, target_addr addr, size_t len);
 static int lmi_flash_write(struct target_flash *f,
-                           uint32_t dest, const void *src, size_t len);
+                           target_addr dest, const void *src, size_t len);
 
 static const char lmi_driver_str[] = "TI Stellaris/Tiva";
 
 static const uint16_t lmi_flash_write_stub[] = {
-#include "../flashstub/lmi.stub"
+#include "flashstub/lmi.stub"
 };
 
 static void lmi_add_flash(target *t, size_t length)
@@ -88,7 +89,7 @@ bool lmi_probe(target *t)
 	return false;
 }
 
-int lmi_flash_erase(struct target_flash *f, uint32_t addr, size_t len)
+int lmi_flash_erase(struct target_flash *f, target_addr addr, size_t len)
 {
 	target  *t = f->t;
 	while(len) {
@@ -105,7 +106,7 @@ int lmi_flash_erase(struct target_flash *f, uint32_t addr, size_t len)
 }
 
 int lmi_flash_write(struct target_flash *f,
-                    uint32_t dest, const void *src, size_t len)
+                    target_addr dest, const void *src, size_t len)
 {
 	target  *t = f->t;
 

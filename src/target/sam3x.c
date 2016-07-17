@@ -25,14 +25,12 @@
  */
 
 #include "general.h"
-#include "adiv5.h"
 #include "target.h"
-#include "command.h"
-#include "gdb_packet.h"
+#include "target_internal.h"
 
-static int sam4_flash_erase(struct target_flash *f, uint32_t addr, size_t len);
-static int sam3_flash_erase(struct target_flash *f, uint32_t addr, size_t len);
-static int sam3x_flash_write(struct target_flash *f, uint32_t dest,
+static int sam4_flash_erase(struct target_flash *f, target_addr addr, size_t len);
+static int sam3_flash_erase(struct target_flash *f, target_addr addr, size_t len);
+static int sam3x_flash_write(struct target_flash *f, target_addr dest,
                              const void *src, size_t len);
 
 static bool sam3x_cmd_gpnvm_get(target *t);
@@ -283,7 +281,7 @@ static uint32_t sam3x_flash_base(target *t)
 	return SAM3N_EEFC_BASE;
 }
 
-static int sam4_flash_erase(struct target_flash *f, uint32_t addr, size_t len)
+static int sam4_flash_erase(struct target_flash *f, target_addr addr, size_t len)
 {
 	target *t = f->t;
 	uint32_t base = ((struct sam_flash *)f)->eefc_base;
@@ -306,7 +304,7 @@ static int sam4_flash_erase(struct target_flash *f, uint32_t addr, size_t len)
 	return 0;
 }
 
-static int sam3_flash_erase(struct target_flash *f, uint32_t addr, size_t len)
+static int sam3_flash_erase(struct target_flash *f, target_addr addr, size_t len)
 {
 	/* The SAM3X/SAM3N don't really have a page erase function.
 	 * We do nothing here and use Erase/Write page in flash_write.
@@ -315,7 +313,7 @@ static int sam3_flash_erase(struct target_flash *f, uint32_t addr, size_t len)
 	return 0;
 }
 
-static int sam3x_flash_write(struct target_flash *f, uint32_t dest,
+static int sam3x_flash_write(struct target_flash *f, target_addr dest,
                              const void *src, size_t len)
 {
 	target *t = f->t;
@@ -335,7 +333,7 @@ static bool sam3x_cmd_gpnvm_get(target *t)
 	uint32_t base = sam3x_flash_base(t);
 
 	sam3x_flash_cmd(t, base, EEFC_FCR_FCMD_GGPB, 0);
-	gdb_outf("GPNVM: 0x%08X\n", target_mem_read32(t, EEFC_FRR(base)));
+	tc_printf(t, "GPNVM: 0x%08X\n", target_mem_read32(t, EEFC_FRR(base)));
 
 	return true;
 }
@@ -346,7 +344,7 @@ static bool sam3x_cmd_gpnvm_set(target *t, int argc, char *argv[])
 	uint32_t base = sam3x_flash_base(t);
 
 	if (argc != 3) {
-		gdb_out("usage: monitor gpnvm_set <bit> <val>\n");
+		tc_printf(t, "usage: monitor gpnvm_set <bit> <val>\n");
 		return false;
 	}
 	bit = atol(argv[1]);

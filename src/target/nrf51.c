@@ -22,22 +22,20 @@
  */
 
 #include "general.h"
-#include "adiv5.h"
 #include "target.h"
-#include "command.h"
-#include "gdb_packet.h"
+#include "target_internal.h"
 #include "cortexm.h"
 
-static int nrf51_flash_erase(struct target_flash *f, uint32_t addr, size_t len);
+static int nrf51_flash_erase(struct target_flash *f, target_addr addr, size_t len);
 static int nrf51_flash_write(struct target_flash *f,
-                             uint32_t dest, const void *src, size_t len);
+                             target_addr dest, const void *src, size_t len);
 
 static bool nrf51_cmd_erase_all(target *t);
 static bool nrf51_cmd_read_hwid(target *t);
 static bool nrf51_cmd_read_fwid(target *t);
 static bool nrf51_cmd_read_deviceid(target *t);
 static bool nrf51_cmd_read_deviceaddr(target *t);
-static bool nrf51_cmd_read_help(void);
+static bool nrf51_cmd_read_help(target *t);
 static bool nrf51_cmd_read(target *t, int argc, const char *argv[]);
 
 const struct command_s nrf51_cmd_list[] = {
@@ -87,7 +85,7 @@ const struct command_s nrf51_read_cmd_list[] = {
 #define STUB_BUFFER_BASE   (SRAM_BASE + 0x28)
 
 static const uint16_t nrf51_flash_write_stub[] = {
-#include "../flashstub/nrf51.stub"
+#include "flashstub/nrf51.stub"
 };
 
 static void nrf51_add_flash(target *t,
@@ -174,7 +172,7 @@ bool nrf51_probe(target *t)
 	return false;
 }
 
-static int nrf51_flash_erase(struct target_flash *f, uint32_t addr, size_t len)
+static int nrf51_flash_erase(struct target_flash *f, target_addr addr, size_t len)
 {
 	target *t = f->t;
 	/* Enable erase */
@@ -216,7 +214,7 @@ static int nrf51_flash_erase(struct target_flash *f, uint32_t addr, size_t len)
 }
 
 static int nrf51_flash_write(struct target_flash *f,
-                             uint32_t dest, const void *src, size_t len)
+                             target_addr dest, const void *src, size_t len)
 {
 	target *t = f->t;
 	uint32_t data[2 + len/4];
@@ -250,7 +248,7 @@ static int nrf51_flash_write(struct target_flash *f,
 
 static bool nrf51_cmd_erase_all(target *t)
 {
-	gdb_out("erase..\n");
+	tc_printf(t, "erase..\n");
 
 	/* Enable erase */
 	target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_EEN);
@@ -274,14 +272,14 @@ static bool nrf51_cmd_erase_all(target *t)
 static bool nrf51_cmd_read_hwid(target *t)
 {
 	uint32_t hwid = target_mem_read32(t, NRF51_FICR_CONFIGID) & 0xFFFF;
-	gdb_outf("Hardware ID: 0x%04X\n", hwid);
+	tc_printf(t, "Hardware ID: 0x%04X\n", hwid);
 
 	return true;
 }
 static bool nrf51_cmd_read_fwid(target *t)
 {
 	uint32_t fwid = (target_mem_read32(t, NRF51_FICR_CONFIGID) >> 16) & 0xFFFF;
-	gdb_outf("Firmware ID: 0x%04X\n", fwid);
+	tc_printf(t, "Firmware ID: 0x%04X\n", fwid);
 
 	return true;
 }
@@ -290,7 +288,7 @@ static bool nrf51_cmd_read_deviceid(target *t)
 	uint32_t deviceid_low = target_mem_read32(t, NRF51_FICR_DEVICEID_LOW);
 	uint32_t deviceid_high = target_mem_read32(t, NRF51_FICR_DEVICEID_HIGH);
 
-	gdb_outf("Device ID: 0x%08X%08X\n", deviceid_high, deviceid_low);
+	tc_printf(t, "Device ID: 0x%08X%08X\n", deviceid_high, deviceid_low);
 
 	return true;
 }
@@ -301,20 +299,20 @@ static bool nrf51_cmd_read_deviceaddr(target *t)
 	uint32_t addr_high = target_mem_read32(t, NRF51_FICR_DEVICEADDR_HIGH) & 0xFFFF;
 
 	if ((addr_type & 1) == 0) {
-		gdb_outf("Publicly Listed Address: 0x%04X%08X\n", addr_high, addr_low);
+		tc_printf(t, "Publicly Listed Address: 0x%04X%08X\n", addr_high, addr_low);
 	} else {
-		gdb_outf("Randomly Assigned Address: 0x%04X%08X\n", addr_high, addr_low);
+		tc_printf(t, "Randomly Assigned Address: 0x%04X%08X\n", addr_high, addr_low);
 	}
 
 	return true;
 }
-static bool nrf51_cmd_read_help(void)
+static bool nrf51_cmd_read_help(target *t)
 {
 	const struct command_s *c;
 
-	gdb_out("Read commands:\n");
+	tc_printf(t, "Read commands:\n");
 	for(c = nrf51_read_cmd_list; c->cmd; c++)
-		gdb_outf("\t%s -- %s\n", c->cmd, c->help);
+		tc_printf(t, "\t%s -- %s\n", c->cmd, c->help);
 
 	return true;
 }
@@ -330,6 +328,6 @@ static bool nrf51_cmd_read(target *t, int argc, const char *argv[])
 			return !c->handler(t, argc - 1, &argv[1]);
 	}
 
-	return nrf51_cmd_read_help();
+	return nrf51_cmd_read_help(t);
 }
 

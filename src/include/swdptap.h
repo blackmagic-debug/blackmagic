@@ -22,10 +22,14 @@
 #define __SWDPTAP_H
 
 int swdptap_init(void);
-void swdptap_reset(void);
 
+/* Primitive functions */
+bool swdptap_bit_in(void);
+void swdptap_bit_out(bool val);
+
+/* High level functions, provided as weak in swdptap_generic.c */
 uint32_t swdptap_seq_in(int ticks);
-uint8_t swdptap_seq_in_parity(uint32_t *data, int ticks);
+bool swdptap_seq_in_parity(uint32_t *data, int ticks);
 void swdptap_seq_out(uint32_t MS, int ticks);
 void swdptap_seq_out_parity(uint32_t MS, int ticks);
 

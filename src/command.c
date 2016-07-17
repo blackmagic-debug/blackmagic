@@ -26,22 +26,29 @@
 #include "exception.h"
 #include "command.h"
 #include "gdb_packet.h"
-#include "jtag_scan.h"
 #include "target.h"
 #include "morse.h"
-#include "adiv5.h"
 #include "version.h"
 
 #ifdef PLATFORM_HAS_TRACESWO
 #	include "traceswo.h"
 #endif
 
+typedef bool (*cmd_handler)(target *t, int argc, const char **argv);
+
+struct command_s {
+	const char *cmd;
+	cmd_handler handler;
+
+	const char *help;
+};
+
 static bool cmd_version(void);
 static bool cmd_help(target *t);
 
 static bool cmd_jtag_scan(target *t, int argc, char **argv);
 static bool cmd_swdp_scan(void);
-static bool cmd_targets(target *t);
+static bool cmd_targets(void);
 static bool cmd_morse(void);
 static bool cmd_connect_srst(target *t, int argc, const char **argv);
 static bool cmd_hard_srst(void);
@@ -83,7 +90,6 @@ bool debug_bmp;
 
 int command_process(target *t, char *cmd)
 {
-	struct target_command_s *tc;
 	const struct command_s *c;
 	int argc = 0;
 	const char **argv;
@@ -103,19 +109,14 @@ int command_process(target *t, char *cmd)
 		/* Accept a partial match as GDB does.
 		 * So 'mon ver' will match 'monitor version'
 		 */
-		if(!strncmp(argv[0], c->cmd, strlen(argv[0])))
+		if ((argc == 0) || !strncmp(argv[0], c->cmd, strlen(argv[0])))
 			return !c->handler(t, argc, argv);
 	}
 
 	if (!t)
 		return -1;
 
-	for (tc = t->commands; tc; tc = tc->next)
-		for(c = tc->cmds; c->cmd; c++)
-			if(!strncmp(argv[0], c->cmd, strlen(argv[0])))
-				return !c->handler(t, argc, argv);
-
-	return -1;
+	return target_command(t, argc, argv);
 }
 
 bool cmd_version(void)
@@ -130,7 +131,6 @@ bool cmd_version(void)
 
 bool cmd_help(target *t)
 {
-	struct target_command_s *tc;
 	const struct command_s *c;
 
 	gdb_out("General commands:\n");
@@ -140,11 +140,7 @@ bool cmd_help(target *t)
 	if (!t)
 		return -1;
 
-	for (tc = t->commands; tc; tc = tc->next) {
-		gdb_outf("%s specific commands:\n", tc->specific_name);
-		for(c = tc->cmds; c->cmd; c++)
-			gdb_outf("\t%s -- %s\n", c->cmd, c->help);
-	}
+	target_command_help(t);
 
 	return true;
 }
@@ -185,13 +181,7 @@ static bool cmd_jtag_scan(target *t, int argc, char **argv)
 		gdb_out("JTAG device scan failed!\n");
 		return false;
 	}
-	gdb_outf("Device  IR Len  IDCODE      Description\n");
-	for(int i = 0; i < jtag_dev_count; i++)
-		gdb_outf("%d\t%d\t0x%08lX  %s\n", i,
-			 jtag_devs[i].ir_len, jtag_devs[i].idcode,
-			 jtag_devs[i].descr);
-	gdb_out("\n");
-	cmd_targets(NULL);
+	cmd_targets();
 	return true;
 }
 
@@ -222,26 +212,25 @@ bool cmd_swdp_scan(void)
 		return false;
 	}
 
-	cmd_targets(NULL);
+	cmd_targets();
 	return true;
 
 }
 
-bool cmd_targets(target *cur_target)
+static void display_target(int i, target *t, void *context)
 {
-	struct target_s *t;
-	int i;
+	(void)context;
+	gdb_outf("%2d   %c  %s\n", i, target_attached(t)?'*':' ', target_driver_name(t));
+}
 
-	if(!target_list) {
+bool cmd_targets(void)
+{
+	gdb_out("Available Targets:\n");
+	gdb_out("No. Att Driver\n");
+	if (!target_foreach(display_target, NULL)) {
 		gdb_out("No usable targets found.\n");
 		return false;
 	}
-
-	gdb_out("Available Targets:\n");
-	gdb_out("No. Att Driver\n");
-	for(t = target_list, i = 1; t; t = t->next, i++)
-		gdb_outf("%2d   %c  %s\n", i, t==cur_target?'*':' ',
-			 t->driver);
 
 	return true;
 }

@@ -29,24 +29,11 @@
  */
 #include "general.h"
 #include "exception.h"
-#include "jtagtap.h"
-#include "jtag_scan.h"
 #include "adiv5.h"
 #include "target.h"
-#include "command.h"
-#include "gdb_packet.h"
-#include "cortexm.h"
-#include "morse.h"
-
-#include <unistd.h>
+#include "target_internal.h"
 
 static char cortexa_driver_str[] = "ARM Cortex-A";
-
-/* Signals returned by cortexa_halt_wait() */
-#define SIGINT 2
-#define SIGTRAP 5
-#define SIGSEGV 11
-#define SIGLOST 29
 
 static bool cortexa_attach(target *t);
 static void cortexa_detach(target *t);
@@ -58,11 +45,11 @@ static void cortexa_regs_read_internal(target *t);
 static void cortexa_regs_write_internal(target *t);
 
 static void cortexa_reset(target *t);
-static int cortexa_halt_wait(target *t);
+static enum target_halt_reason cortexa_halt_poll(target *t, target_addr *watch);
 static void cortexa_halt_request(target *t);
 
-static int cortexa_set_hw_bp(target *t, uint32_t addr, uint8_t len);
-static int cortexa_clear_hw_bp(target *t, uint32_t addr, uint8_t len);
+static int cortexa_breakwatch_set(target *t, struct breakwatch *);
+static int cortexa_breakwatch_clear(target *t, struct breakwatch *);
 static uint32_t bp_bas(uint32_t addr, uint8_t len);
 
 static void apb_write(target *t, uint16_t reg, uint32_t val);
@@ -81,7 +68,7 @@ struct cortexa_priv {
 		uint64_t d[16];
 	} reg_cache;
 	unsigned hw_breakpoint_max;
-	unsigned hw_breakpoint[16];
+	bool hw_breakpoint[16];
 	uint32_t bpc0;
 	bool mmu_fault;
 };
@@ -228,7 +215,7 @@ static uint32_t va_to_pa(target *t, uint32_t va)
 	return pa;
 }
 
-static void cortexa_mem_read(target *t, void *dest, uint32_t src, size_t len)
+static void cortexa_mem_read(target *t, void *dest, target_addr src, size_t len)
 {
 	/* Clean cache before reading */
 	for (uint32_t cl = src & ~(CACHE_LINE_LENGTH-1);
@@ -241,7 +228,7 @@ static void cortexa_mem_read(target *t, void *dest, uint32_t src, size_t len)
 	adiv5_mem_read(ahb, dest, va_to_pa(t, src), len);
 }
 
-static void cortexa_slow_mem_read(target *t, void *dest, uint32_t src, size_t len)
+static void cortexa_slow_mem_read(target *t, void *dest, target_addr src, size_t len)
 {
 	struct cortexa_priv *priv = t->priv;
 	unsigned words = (len + (src & 3) + 3) / 4;
@@ -280,7 +267,7 @@ static void cortexa_slow_mem_read(target *t, void *dest, uint32_t src, size_t le
 	}
 }
 
-static void cortexa_mem_write(target *t, uint32_t dest, const void *src, size_t len)
+static void cortexa_mem_write(target *t, target_addr dest, const void *src, size_t len)
 {
 	/* Clean and invalidate cache before writing */
 	for (uint32_t cl = dest & ~(CACHE_LINE_LENGTH-1);
@@ -292,7 +279,7 @@ static void cortexa_mem_write(target *t, uint32_t dest, const void *src, size_t 
 	adiv5_mem_write(ahb, va_to_pa(t, dest), src, len);
 }
 
-static void cortexa_slow_mem_write_bytes(target *t, uint32_t dest, const uint8_t *src, size_t len)
+static void cortexa_slow_mem_write_bytes(target *t, target_addr dest, const uint8_t *src, size_t len)
 {
 	struct cortexa_priv *priv = t->priv;
 
@@ -311,7 +298,7 @@ static void cortexa_slow_mem_write_bytes(target *t, uint32_t dest, const uint8_t
 	}
 }
 
-static void cortexa_slow_mem_write(target *t, uint32_t dest, const void *src, size_t len)
+static void cortexa_slow_mem_write(target *t, target_addr dest, const void *src, size_t len)
 {
 	struct cortexa_priv *priv = t->priv;
 	if (len == 0)
@@ -360,10 +347,7 @@ bool cortexa_probe(ADIv5_AP_t *apb, uint32_t debug_base)
 {
 	target *t;
 
-	DEBUG("%s base=0x%08"PRIx32"\n", __func__, debug_base);
-
-	/* Prepend to target list... */
-	t = target_new(sizeof(*t));
+	t = target_new();
 	adiv5_ap_ref(apb);
 	struct cortexa_priv *priv = calloc(1, sizeof(*priv));
 	t->priv = priv;
@@ -391,7 +375,6 @@ bool cortexa_probe(ADIv5_AP_t *apb, uint32_t debug_base)
 	adiv5_ap_write(apb, ADIV5_AP_CSW, csw);
 	uint32_t dbgdidr = apb_read(t, DBGDIDR);
 	priv->hw_breakpoint_max = ((dbgdidr >> 24) & 15)+1;
-	DEBUG("Target has %d breakpoints\n", priv->hw_breakpoint_max);
 
 	t->check_error = cortexa_check_error;
 
@@ -406,12 +389,12 @@ bool cortexa_probe(ADIv5_AP_t *apb, uint32_t debug_base)
 
 	t->reset = cortexa_reset;
 	t->halt_request = cortexa_halt_request;
-	t->halt_wait = cortexa_halt_wait;
+	t->halt_poll = cortexa_halt_poll;
 	t->halt_resume = cortexa_halt_resume;
 	t->regs_size = sizeof(priv->reg_cache);
 
-	t->set_hw_bp = cortexa_set_hw_bp;
-	t->clear_hw_bp = cortexa_clear_hw_bp;
+	t->breakwatch_set = cortexa_breakwatch_set;
+	t->breakwatch_clear = cortexa_breakwatch_clear;
 
 	return true;
 }
@@ -433,7 +416,7 @@ bool cortexa_attach(target *t)
 
 	target_halt_request(t);
 	tries = 10;
-	while(!platform_srst_get_val() && !target_halt_wait(t) && --tries)
+	while(!platform_srst_get_val() && !target_halt_poll(t, NULL) && --tries)
 		platform_delay(200);
 	if(!tries)
 		return false;
@@ -593,12 +576,14 @@ static void cortexa_halt_request(target *t)
 		apb_write(t, DBGDRCR, DBGDRCR_HRQ);
 	}
 	if (e.type) {
-		gdb_out("Timeout sending interrupt, is target in WFI?\n");
+		tc_printf(t, "Timeout sending interrupt, is target in WFI?\n");
 	}
 }
 
-static int cortexa_halt_wait(target *t)
+static enum target_halt_reason cortexa_halt_poll(target *t, target_addr *watch)
 {
+	(void)watch; /* No watchpoint support yet */
+
 	volatile uint32_t dbgdscr = 0;
 	volatile struct exception e;
 	TRY_CATCH (e, EXCEPTION_ALL) {
@@ -610,15 +595,14 @@ static int cortexa_halt_wait(target *t)
 	case EXCEPTION_ERROR:
 		/* Oh crap, there's no recovery from this... */
 		target_list_free();
-		morse("TARGET LOST.", 1);
-		return SIGLOST;
+		return TARGET_HALT_ERROR;
 	case EXCEPTION_TIMEOUT:
 		/* Timeout isn't a problem, target could be in WFI */
-		return 0;
+		return TARGET_HALT_RUNNING;
 	}
 
 	if (!(dbgdscr & DBGDSCR_HALTED)) /* Not halted */
-		return 0;
+		return TARGET_HALT_RUNNING;
 
 	DEBUG("%s: DBGDSCR = 0x%08x\n", __func__, dbgdscr);
 	/* Reenable DBGITR */
@@ -626,18 +610,18 @@ static int cortexa_halt_wait(target *t)
 	apb_write(t, DBGDSCR, dbgdscr);
 
 	/* Find out why we halted */
-	int sig;
+	enum target_halt_reason reason;
 	switch (dbgdscr & DBGDSCR_MOE_MASK) {
 	case DBGDSCR_MOE_HALT_REQ:
-		sig = SIGINT;
+		reason = TARGET_HALT_REQUEST;
 		break;
 	default:
-		sig = SIGTRAP;
+		reason = TARGET_HALT_BREAKPOINT;
 	}
 
 	cortexa_regs_read_internal(t);
 
-	return sig;
+	return reason;
 }
 
 void cortexa_halt_resume(target *t, bool step)
@@ -689,45 +673,75 @@ static uint32_t bp_bas(uint32_t addr, uint8_t len)
 		return DBGBCR_BAS_LOW_HW;
 }
 
-static int cortexa_set_hw_bp(target *t, uint32_t addr, uint8_t len)
+static int cortexa_breakwatch_set(target *t, struct breakwatch *bw)
 {
 	struct cortexa_priv *priv = t->priv;
 	unsigned i;
 
-	for(i = 0; i < priv->hw_breakpoint_max; i++)
-		if((priv->hw_breakpoint[i] & 1) == 0) break;
+	switch (bw->type) {
+	case TARGET_BREAK_SOFT:
+		switch (bw->size) {
+		case 2:
+			bw->reserved[0] = target_mem_read16(t, bw->addr);
+			target_mem_write16(t, bw->addr, 0xBE00);
+			return 0;
+		case 4:
+			bw->reserved[0] = target_mem_read32(t, bw->addr);
+			target_mem_write32(t, bw->addr, 0xE1200070);
+			return 0;
+		default:
+			return -1;
+		}
+	case TARGET_BREAK_HARD:
+		if ((bw->size != 4) && (bw->size != 2))
+			return -1;
 
-	if(i == priv->hw_breakpoint_max) return -1;
+		for (i = 0; i < priv->hw_breakpoint_max; i++)
+			if ((priv->hw_breakpoint[i] & 1) == 0)
+				break;
 
-	priv->hw_breakpoint[i] = addr | 1;
+		if (i == priv->hw_breakpoint_max)
+			return -1;
 
-	apb_write(t, DBGBVR(i), addr & ~3);
-	uint32_t bpc =  bp_bas(addr, len) | DBGBCR_EN;
-	apb_write(t, DBGBCR(i), bpc);
-	if (i == 0)
-		priv->bpc0 = bpc;
+		bw->reserved[0] = i;
 
-	return 0;
+		priv->hw_breakpoint[i] = true;
+
+		apb_write(t, DBGBVR(i), bw->addr & ~3);
+		uint32_t bpc =  bp_bas(bw->addr, bw->size) | DBGBCR_EN;
+		apb_write(t, DBGBCR(i), bpc);
+		if (i == 0)
+			priv->bpc0 = bpc;
+
+		return 0;
+	default:
+		return 1;
+	}
 }
 
-static int cortexa_clear_hw_bp(target *t, uint32_t addr, uint8_t len)
+static int cortexa_breakwatch_clear(target *t, struct breakwatch *bw)
 {
 	struct cortexa_priv *priv = t->priv;
-	unsigned i;
-
-	(void)len;
-
-	for (i = 0; i < priv->hw_breakpoint_max; i++)
-		if ((priv->hw_breakpoint[i] & ~1) == addr)
-			break;
-	if (i == priv->hw_breakpoint_max)
-		return -1;
-
-	priv->hw_breakpoint[i] = 0;
-
-	apb_write(t, DBGBCR(i), 0);
-	if (i == 0)
-		priv->bpc0 = 0;
-
-	return 0;
+	unsigned i = bw->reserved[0];
+	switch (bw->type) {
+	case TARGET_BREAK_SOFT:
+		switch (bw->size) {
+		case 2:
+			target_mem_write16(t, bw->addr, i);
+			return 0;
+		case 4:
+			target_mem_write32(t, bw->addr, i);
+			return 0;
+		default:
+			return -1;
+		}
+	case TARGET_BREAK_HARD:
+		priv->hw_breakpoint[i] = false;
+		apb_write(t, DBGBCR(i), 0);
+		if (i == 0)
+			priv->bpc0 = 0;
+		return 0;
+	default:
+		return 1;
+	}
 }

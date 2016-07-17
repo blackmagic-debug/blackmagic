@@ -29,12 +29,17 @@
 #include "gdb_if.h"
 #include "gdb_packet.h"
 #include "gdb_main.h"
-#include "jtagtap.h"
-#include "jtag_scan.h"
-#include "adiv5.h"
+#include "gdb_hostio.h"
 #include "target.h"
 #include "command.h"
 #include "crc32.h"
+
+enum gdb_signal {
+	GDB_SIGINT = 2,
+	GDB_SIGTRAP = 5,
+	GDB_SIGSEGV = 11,
+	GDB_SIGLOST = 29,
+};
 
 #define BUF_SIZE	1024
 
@@ -50,8 +55,9 @@ static void handle_q_packet(char *packet, int len);
 static void handle_v_packet(char *packet, int len);
 static void handle_z_packet(char *packet, int len);
 
-static void gdb_target_destroy_callback(target *t)
+static void gdb_target_destroy_callback(struct target_controller *tc, target *t)
 {
+	(void)tc;
 	if (cur_target == t)
 		cur_target = NULL;
 
@@ -59,12 +65,35 @@ static void gdb_target_destroy_callback(target *t)
 		last_target = NULL;
 }
 
-void
-gdb_main(void)
+static void gdb_target_printf(struct target_controller *tc,
+                              const char *fmt, va_list ap)
+{
+	(void)tc;
+	gdb_voutf(fmt, ap);
+}
+
+static struct target_controller gdb_controller = {
+	.destroy_callback = gdb_target_destroy_callback,
+	.printf = gdb_target_printf,
+
+	.open = hostio_open,
+	.close = hostio_close,
+	.read = hostio_read,
+	.write = hostio_write,
+	.lseek = hostio_lseek,
+	.rename = hostio_rename,
+	.unlink = hostio_unlink,
+	.stat = hostio_stat,
+	.fstat = hostio_fstat,
+	.gettimeofday = hostio_gettimeofday,
+	.isatty = hostio_isatty,
+	.system = hostio_system,
+};
+
+int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 {
 	int size;
 	bool single_step = false;
-	char last_activity = 0;
 
 	DEBUG("Entring GDB protocol main loop\n");
 	/* GDB protocol main loop */
@@ -72,7 +101,6 @@ gdb_main(void)
 		SET_IDLE_STATE(1);
 		size = gdb_getpacket(pbuf, BUF_SIZE);
 		SET_IDLE_STATE(0);
-	continue_activity:
 		switch(pbuf[0]) {
 		/* Implementation of these is mandatory! */
 		case 'g': { /* 'g': Read general registers */
@@ -89,8 +117,7 @@ gdb_main(void)
 			sscanf(pbuf, "m%" SCNx32 ",%" SCNx32, &addr, &len);
 			DEBUG("m packet: addr = %" PRIx32 ", len = %" PRIx32 "\n", addr, len);
 			uint8_t mem[len];
-			target_mem_read(cur_target, mem, addr, len);
-			if(target_check_error(cur_target))
+			if (target_mem_read(cur_target, mem, addr, len))
 				gdb_putpacketz("E01");
 			else
 				gdb_putpacket(hexify(pbuf, mem, len), len*2);
@@ -112,8 +139,7 @@ gdb_main(void)
 			DEBUG("M packet: addr = %" PRIx32 ", len = %" PRIx32 "\n", addr, len);
 			uint8_t mem[len];
 			unhexify(mem, pbuf + hex, len);
-			target_mem_write(cur_target, addr, mem, len);
-			if(target_check_error(cur_target))
+			if (target_mem_write(cur_target, addr, mem, len))
 				gdb_putpacketz("E01");
 			else
 				gdb_putpacketz("OK");
@@ -135,8 +161,8 @@ gdb_main(void)
 		case '?': {	/* '?': Request reason for target halt */
 			/* This packet isn't documented as being mandatory,
 			 * but GDB doesn't work without it. */
-			uint32_t watch_addr;
-			int sig;
+			target_addr watch;
+			enum target_halt_reason reason;
 
 			if(!cur_target) {
 				/* Report "target exited" if no target */
@@ -144,58 +170,42 @@ gdb_main(void)
 				break;
 			}
 
-			last_activity = pbuf[0];
 			/* Wait for target halt */
-			while(!(sig = target_halt_wait(cur_target))) {
+			while(!(reason = target_halt_poll(cur_target, &watch))) {
 				unsigned char c = gdb_if_getchar_to(0);
 				if((c == '\x03') || (c == '\x04')) {
 					target_halt_request(cur_target);
-					last_activity = 's';
 				}
 			}
 			SET_RUN_STATE(0);
 
-			/* Negative signal indicates we're in a syscall */
-			if (sig < 0)
+			/* Translate reason to GDB signal */
+			switch (reason) {
+			case TARGET_HALT_ERROR:
+				gdb_putpacket_f("X%02X", GDB_SIGLOST);
 				break;
-
-			/* Target disappeared */
-			if (cur_target == NULL) {
-				gdb_putpacket_f("X%02X", sig);
+			case TARGET_HALT_REQUEST:
+				gdb_putpacket_f("T%02X", GDB_SIGINT);
 				break;
-			}
-
-			/* Report reason for halt */
-			if(target_check_hw_wp(cur_target, &watch_addr)) {
-				/* Watchpoint hit */
-				gdb_putpacket_f("T%02Xwatch:%08X;", sig, watch_addr);
-			} else {
-				gdb_putpacket_f("T%02X", sig);
+			case TARGET_HALT_WATCHPOINT:
+				gdb_putpacket_f("T%02Xwatch:%08X;", GDB_SIGTRAP, watch);
+				break;
+			case TARGET_HALT_FAULT:
+				gdb_putpacket_f("T%02X", GDB_SIGSEGV);
+				break;
+			default:
+				gdb_putpacket_f("T%02X", GDB_SIGTRAP);
 			}
 			break;
 			}
-		case 'F': {	/* Semihosting call finished */
-			int retcode, errcode, items;
-			char c, *p;
-			if (pbuf[1] == '-')
-				p = &pbuf[2];
-			else
-				p = &pbuf[1];
-			items = sscanf(p, "%x,%x,%c", &retcode, &errcode, &c);
-			if (pbuf[1] == '-')
-				retcode = -retcode;
-
-			target_hostio_reply(cur_target, retcode, errcode);
-
-			/* if break is requested */
-			if (items == 3 && c == 'C') {
-				gdb_putpacketz("T02");
-				break;
+		case 'F':	/* Semihosting call finished */
+			if (in_syscall) {
+				return hostio_reply(tc, pbuf, size);
+			} else {
+				DEBUG("*** F packet when not in syscall! '%s'\n", pbuf);
+				gdb_putpacketz("");
 			}
-
-			pbuf[0] = last_activity;
-			goto continue_activity;
-		}
+			break;
 
 		/* Optional GDB packet support */
 		case '!':	/* Enable Extended GDB Protocol. */
@@ -230,7 +240,7 @@ gdb_main(void)
 				target_reset(cur_target);
 			else if(last_target) {
 				cur_target = target_attach(last_target,
-						gdb_target_destroy_callback);
+						           &gdb_controller);
 				target_reset(cur_target);
 			}
 			break;
@@ -241,8 +251,7 @@ gdb_main(void)
 			ERROR_IF_NO_TARGET();
 			sscanf(pbuf, "X%" SCNx32 ",%" SCNx32 ":%n", &addr, &len, &bin);
 			DEBUG("X packet: addr = %" PRIx32 ", len = %" PRIx32 "\n", addr, len);
-			target_mem_write(cur_target, addr, pbuf+bin, len);
-			if(target_check_error(cur_target))
+			if (target_mem_write(cur_target, addr, pbuf+bin, len))
 				gdb_putpacketz("E01");
 			else
 				gdb_putpacketz("OK");
@@ -326,7 +335,7 @@ handle_q_packet(char *packet, int len)
 		if((!cur_target) && last_target) {
 			/* Attach to last target if detached. */
 			cur_target = target_attach(last_target,
-						gdb_target_destroy_callback);
+						   &gdb_controller);
 		}
 		if (!cur_target) {
 			gdb_putpacketz("E01");
@@ -339,7 +348,7 @@ handle_q_packet(char *packet, int len)
 		if((!cur_target) && last_target) {
 			/* Attach to last target if detached. */
 			cur_target = target_attach(last_target,
-						gdb_target_destroy_callback);
+						   &gdb_controller);
 		}
 		if (!cur_target) {
 			gdb_putpacketz("E01");
@@ -368,14 +377,7 @@ handle_v_packet(char *packet, int plen)
 
 	if (sscanf(packet, "vAttach;%08lx", &addr) == 1) {
 		/* Attach to remote target processor */
-		target *t;
-		uint32_t i;
-		for(t = target_list, i = 1; t; t = t->next, i++)
-			if(i == addr) {
-				cur_target = target_attach(t,
-						gdb_target_destroy_callback);
-				break;
-			}
+		cur_target = target_attach_n(addr, &gdb_controller);
 		if(cur_target)
 			gdb_putpacketz("T05");
 		else
@@ -388,7 +390,7 @@ handle_v_packet(char *packet, int plen)
 			gdb_putpacketz("T05");
 		} else if(last_target) {
 			cur_target = target_attach(last_target,
-						gdb_target_destroy_callback);
+						   &gdb_controller);
 
                         /* If we were able to attach to the target again */
                         if (cur_target) {
@@ -449,31 +451,22 @@ handle_z_packet(char *packet, int plen)
 	//sscanf(packet, "%*[zZ]%hhd,%08lX,%hhd", &type, &addr, &len);
 	type = packet[1] - '0';
 	sscanf(packet + 2, ",%" PRIx32 ",%d", &addr, &len);
-	switch(type) {
-	case 1: /* Hardware breakpoint */
-		if(set)
-			ret = target_set_hw_bp(cur_target, addr, len);
-		else
-			ret = target_clear_hw_bp(cur_target, addr, len);
-		break;
-
-	case 2:
-	case 3:
-	case 4:
-		if(set)
-			ret = target_set_hw_wp(cur_target, type, addr, len);
-		else
-			ret = target_clear_hw_wp(cur_target, type, addr, len);
-		break;
-
-	default:
-		gdb_putpacketz("");
-		return;
-	}
-
-	if(!ret)
-		gdb_putpacketz("OK");
+	if(set)
+		ret = target_breakwatch_set(cur_target, type, addr, len);
 	else
+		ret = target_breakwatch_clear(cur_target, type, addr, len);
+
+	if (ret < 0) {
 		gdb_putpacketz("E01");
+	} else if (ret > 0) {
+		gdb_putpacketz("");
+	} else {
+		gdb_putpacketz("OK");
+	}
+}
+
+void gdb_main(void)
+{
+	gdb_main_loop(&gdb_controller, false);
 }
 

@@ -18,6 +18,7 @@
  */
 #include "general.h"
 #include "target.h"
+#include "target_internal.h"
 #include "cortexm.h"
 #include "lpc_common.h"
 
@@ -32,7 +33,7 @@ struct flash_param {
 } __attribute__((aligned(4)));
 
 
-struct lpc_flash *lpc_add_flash(target *t, uint32_t addr, size_t length)
+struct lpc_flash *lpc_add_flash(target *t, target_addr addr, size_t length)
 {
 	struct lpc_flash *lf = calloc(1, sizeof(*lf));
 	struct target_flash *f = &lf->f;
@@ -81,7 +82,7 @@ enum iap_status lpc_iap_call(struct lpc_flash *f, enum iap_cmd cmd, ...)
 
 	/* start the target and wait for it to halt again */
 	target_halt_resume(t, false);
-	while (!target_halt_wait(t));
+	while (!target_halt_poll(t, NULL));
 
 	/* copy back just the parameters structure */
 	target_mem_read(t, &param, f->iap_ram, sizeof(param));
@@ -93,7 +94,7 @@ static uint8_t lpc_sector_for_addr(struct lpc_flash *f, uint32_t addr)
 	return f->base_sector + (addr - f->f.start) / f->f.blocksize;
 }
 
-int lpc_flash_erase(struct target_flash *tf, uint32_t addr, size_t len)
+int lpc_flash_erase(struct target_flash *tf, target_addr addr, size_t len)
 {
 	struct lpc_flash *f = (struct lpc_flash *)tf;
 	uint32_t start = lpc_sector_for_addr(f, addr);
@@ -114,7 +115,7 @@ int lpc_flash_erase(struct target_flash *tf, uint32_t addr, size_t len)
 }
 
 int lpc_flash_write(struct target_flash *tf,
-                    uint32_t dest, const void *src, size_t len)
+                    target_addr dest, const void *src, size_t len)
 {
 	struct lpc_flash *f = (struct lpc_flash *)tf;
 	/* prepare... */
@@ -134,7 +135,7 @@ int lpc_flash_write(struct target_flash *tf,
 }
 
 int lpc_flash_write_magic_vect(struct target_flash *f,
-                               uint32_t dest, const void *src, size_t len)
+                               target_addr dest, const void *src, size_t len)
 {
 	if (dest == 0) {
 		/* Fill in the magic vector to allow booting the flash */

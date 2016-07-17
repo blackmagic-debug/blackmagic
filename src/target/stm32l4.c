@@ -31,11 +31,9 @@
  */
 
 #include "general.h"
-#include "adiv5.h"
 #include "target.h"
+#include "target_internal.h"
 #include "cortexm.h"
-#include "command.h"
-#include "gdb_packet.h"
 
 static bool stm32l4_cmd_erase_mass(target *t);
 static bool stm32l4_cmd_erase_bank1(target *t);
@@ -51,9 +49,9 @@ const struct command_s stm32l4_cmd_list[] = {
 };
 
 
-static int stm32l4_flash_erase(struct target_flash *f, uint32_t addr, size_t len);
+static int stm32l4_flash_erase(struct target_flash *f, target_addr addr, size_t len);
 static int stm32l4_flash_write(struct target_flash *f,
-                               uint32_t dest, const void *src, size_t len);
+                               target_addr dest, const void *src, size_t len);
 
 static const char stm32l4_driver_str[] = "STM32L4xx";
 
@@ -112,7 +110,7 @@ static const char stm32l4_driver_str[] = "STM32L4xx";
 
 /* This routine is uses double word access.*/
 static const uint16_t stm32l4_flash_write_stub[] = {
-#include "../flashstub/stm32l4.stub"
+#include "flashstub/stm32l4.stub"
 };
 
 #define SRAM_BASE 0x20000000
@@ -173,7 +171,7 @@ static void stm32l4_flash_unlock(target *t)
 	}
 }
 
-static int stm32l4_flash_erase(struct target_flash *f, uint32_t addr, size_t len)
+static int stm32l4_flash_erase(struct target_flash *f, target_addr addr, size_t len)
 {
 	target *t = f->t;
 	uint16_t sr;
@@ -214,7 +212,7 @@ static int stm32l4_flash_erase(struct target_flash *f, uint32_t addr, size_t len
 }
 
 static int stm32l4_flash_write(struct target_flash *f,
-                               uint32_t dest, const void *src, size_t len)
+                               target_addr dest, const void *src, size_t len)
 {
 	/* Write buffer to target ram call stub */
 	target_mem_write(f->t, SRAM_BASE, stm32l4_flash_write_stub,
@@ -229,7 +227,7 @@ static bool stm32l4_cmd_erase(target *t, uint32_t action)
 	const char spinner[] = "|/-\\";
 	int spinindex = 0;
 
-	gdb_out("Erasing flash... This may take a few seconds.  ");
+	tc_printf(t, "Erasing flash... This may take a few seconds.  ");
 	stm32l4_flash_unlock(t);
 
 	/* Flash erase action start instruction */
@@ -238,13 +236,13 @@ static bool stm32l4_cmd_erase(target *t, uint32_t action)
 
 	/* Read FLASH_SR to poll for BSY bit */
 	while (target_mem_read32(t, FLASH_SR) & FLASH_SR_BSY) {
-		gdb_outf("\b%c", spinner[spinindex++ % 4]);
+		tc_printf(t, "\b%c", spinner[spinindex++ % 4]);
 		if(target_check_error(t)) {
-			gdb_out("\n");
+			tc_printf(t, "\n");
 			return false;
 		}
 	}
-	gdb_out("\n");
+	tc_printf(t, "\n");
 
 	/* Check for error */
 	uint16_t sr = target_mem_read32(t, FLASH_SR);
@@ -277,12 +275,12 @@ static bool stm32l4_cmd_option(target *t, int argc, char *argv[])
 	for (int i = 0; i < 0x23; i += 8) {
 		addr = 0x1fff7800 + i;
 		val = target_mem_read32(t, addr);
-		gdb_outf("0x%08X: 0x%08x\n", addr, val);
+		tc_printf(t, "0x%08X: 0x%08x\n", addr, val);
 	}
 	for (int i = 8; i < 0x23; i += 8) {
 		addr = 0x1ffff800 + i;
 		val = target_mem_read32(t, addr);
-		gdb_outf("0x%08X: 0x%08X\n", addr, val);
+		tc_printf(t, "0x%08X: 0x%08X\n", addr, val);
 	}
 	return true;
 }
