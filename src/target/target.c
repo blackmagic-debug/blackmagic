@@ -140,19 +140,19 @@ void target_add_flash(target *t, struct target_flash *f)
 static ssize_t map_ram(char *buf, size_t len, struct target_ram *ram)
 {
 	return snprintf(buf, len, "<memory type=\"ram\" start=\"0x%08"PRIx32
-	                          "\" length=\"0x%"PRIx64"\"/>",
-	                          ram->start, (uint64_t)ram->length);
+	                          "\" length=\"0x%"PRIx32"\"/>",
+	                          ram->start, (uint32_t)ram->length);
 }
 
 static ssize_t map_flash(char *buf, size_t len, struct target_flash *f)
 {
 	int i = 0;
 	i += snprintf(&buf[i], len - i, "<memory type=\"flash\" start=\"0x%08"PRIx32
-	                                "\" length=\"0x%"PRIx64"\">",
-	                                f->start, (uint64_t)f->length);
-	i += snprintf(&buf[i], len - i, "<property name=\"blocksize\">0x%"PRIx64
+	                                "\" length=\"0x%"PRIx32"\">",
+	                                f->start, (uint32_t)f->length);
+	i += snprintf(&buf[i], len - i, "<property name=\"blocksize\">0x%"PRIx32
 	                            "</property></memory>",
-	                            (uint64_t)f->blocksize);
+	                            (uint32_t)f->blocksize);
 	return i;
 }
 
