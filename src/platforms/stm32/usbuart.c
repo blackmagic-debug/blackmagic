@@ -247,7 +247,10 @@ void usbuart_usb_in_cb(usbd_device *dev, uint8_t ep)
  */
 void USBUSART_ISR(void)
 {
+	uint32_t err = USART_SR(USBUSART);
 	char c = usart_recv(USBUSART);
+	if (err & (USART_SR_ORE | USART_SR_FE))
+		return;
 
 	/* Turn on LED */
 	gpio_set(LED_PORT_UART, LED_UART);
