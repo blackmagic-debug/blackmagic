@@ -165,7 +165,6 @@ bool stm32f1_probe(target *t)
 	}
 
 	flash_size = (target_mem_read32(t, FLASHSIZE_F0) & 0xffff) *0x400;
-	tc_printf(t, "flash size %d block_size %d\n", flash_size, block_size);
 	target_add_ram(t, 0x20000000, 0x5000);
 	stm32f1_add_flash(t, 0x8000000, flash_size, block_size);
 	target_add_commands(t, stm32f1_cmd_list, "STM32F0");

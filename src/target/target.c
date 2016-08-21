@@ -446,6 +446,10 @@ void tc_printf(target *t, const char *fmt, ...)
 {
 	(void)t;
 	va_list ap;
+
+	if (t->tc == NULL)
+		return;
+
 	va_start(ap, fmt);
 	t->tc->printf(t->tc, fmt, ap);
 	va_end(ap);
