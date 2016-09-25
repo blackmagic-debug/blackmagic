@@ -149,9 +149,9 @@
 
 #ifdef ENABLE_DEBUG
 extern bool debug_bmp;
-void usbuart_debug_outf(const char *fmt, ...);
+int usbuart_debug_write(const char *buf, size_t len);
 
-#define DEBUG(...) if (debug_bmp) {usbuart_debug_outf("bmp: ");usbuart_debug_outf(__VA_ARGS__);}
+#define DEBUG printf
 #else
 #define DEBUG(...)
 #endif

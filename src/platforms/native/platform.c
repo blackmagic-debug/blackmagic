@@ -29,6 +29,7 @@
 
 #include <libopencm3/stm32/f1/rcc.h>
 #include <libopencm3/cm3/scb.h>
+#include <libopencm3/cm3/scs.h>
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/stm32/exti.h>
 #include <libopencm3/stm32/usart.h>
@@ -89,6 +90,12 @@ int platform_hwversion(void)
 
 void platform_init(void)
 {
+	SCS_DEMCR |= SCS_DEMCR_VC_MON_EN;
+#ifdef ENABLE_DEBUG
+	void initialise_monitor_handles(void);
+	initialise_monitor_handles();
+#endif
+
 	rcc_clock_setup_in_hse_8mhz_out_72mhz();
 
 	/* Enable peripherals */
@@ -286,4 +293,58 @@ static void setup_vbus_irq(void)
 
 	exti15_10_isr();
 }
+
+#ifdef ENABLE_DEBUG
+enum {
+	RDI_SYS_OPEN = 0x01,
+	RDI_SYS_WRITE = 0x05,
+	RDI_SYS_ISTTY = 0x09,
+};
+
+int rdi_write(int fn, const char *buf, size_t len)
+{
+	(void)fn;
+	if (debug_bmp)
+		return len - usbuart_debug_write(buf, len);
+
+	return 0;
+}
+
+struct ex_frame {
+	union {
+		int syscall;
+		int retval;
+	};
+	const int *params;
+	uint32_t r2, r3, r12, lr, pc;
+};
+
+void debug_monitor_handler_c(struct ex_frame *sp)
+{
+	/* Return to after breakpoint instruction */
+	sp->pc += 2;
+
+	switch (sp->syscall) {
+	case RDI_SYS_OPEN:
+		sp->retval = 1;
+		break;
+	case RDI_SYS_WRITE:
+		sp->retval = rdi_write(sp->params[0], (void*)sp->params[1], sp->params[2]);
+		break;
+	case RDI_SYS_ISTTY:
+		sp->retval = 1;
+		break;
+	default:
+		sp->retval = -1;
+	}
+
+}
+
+asm(".globl debug_monitor_handler\n"
+    ".thumb_func\n"
+    "debug_monitor_handler: \n"
+    "    mov r0, sp\n"
+    "    b debug_monitor_handler_c\n");
+
+#endif
 

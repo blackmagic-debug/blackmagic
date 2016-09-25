@@ -193,44 +193,19 @@ void usbuart_usb_out_cb(usbd_device *dev, uint8_t ep)
 }
 
 #ifdef USBUART_DEBUG
-#include <stdarg.h>
-
-/* Function to output debug data to usbuart port (ttyACM1 on linux) */
-void usbuart_debug_outf(const char *fmt, ...)
+int usbuart_debug_write(const char *buf, size_t len)
 {
-	va_list ap;
-	char *buf, *tmp;
-
-	va_start(ap, fmt);
-	if (vasprintf(&buf, fmt, ap) < 0)
-		return;
-	tmp = buf;
-	while( *tmp != 0 )
-	{
-		if( *tmp == '\n' && *(tmp-1) != '\r' )
-		{
-			/* insert into FIFO */
+	for (size_t i = 0; i < len; i++) {
+		if (buf[i] == '\n') {
 			buf_rx[buf_rx_in++] = '\r';
-
-			/* wrap out pointer */
-			if (buf_rx_in >= FIFO_SIZE)
-			{
-				buf_rx_in = 0;
-			}
+			buf_rx_in %= FIFO_SIZE;
 		}
-		/* insert into FIFO */
-		buf_rx[buf_rx_in++] = *(tmp++);
-
-		/* wrap out pointer */
-		if (buf_rx_in >= FIFO_SIZE)
-		{
-			buf_rx_in = 0;
-		}
+		buf_rx[buf_rx_in++] = buf[i];
+		buf_rx_in %= FIFO_SIZE;
 	}
 	/* enable deferred processing if we put data in the FIFO */
 	timer_enable_irq(USBUSART_TIM, TIM_DIER_UIE);
-	free(buf);
-	va_end(ap);
+	return len;
 }
 #endif
 
