@@ -270,7 +270,8 @@ static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr)
 
 	/* CIDR preamble sanity check */
 	if ((cidr & ~CID_CLASS_MASK) != CID_PREAMBLE) {
-		DEBUG("0x%X: 0x%X <- does not match preamble (0x%X)\n", addr, cidr, CID_PREAMBLE);
+		DEBUG("0x%"PRIx32": 0x%"PRIx32" <- does not match preamble (0x%X)\n",
+                      addr, cidr, CID_PREAMBLE);
 		return;
 	}
 
@@ -293,7 +294,8 @@ static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr)
 		 * any components by other designers.
 		 */
 		if ((pidr & ~(PIDR_REV_MASK | PIDR_PN_MASK)) != PIDR_ARM_BITS) {
-			DEBUG("0x%X: 0x%"PRIx64" <- does not match ARM JEP-106\n", addr, pidr);
+			DEBUG("0x%"PRIx32": 0x%"PRIx64" <- does not match ARM JEP-106\n",
+                              addr, pidr);
 			return;
 		}
 
@@ -305,7 +307,7 @@ static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr)
 		int i;
 		for (i = 0; pidr_pn_bits[i].arch != aa_end; i++) {
 			if (pidr_pn_bits[i].part_number == part_number) {
-				DEBUG("0x%X: %s - %s %s\n", addr,
+				DEBUG("0x%"PRIx32": %s - %s %s\n", addr,
 				      cidc_debug_strings[cid_class],
 				      pidr_pn_bits[i].type,
 				      pidr_pn_bits[i].full);
@@ -334,7 +336,7 @@ static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr)
 			}
 		}
 		if (pidr_pn_bits[i].arch == aa_end) {
-			DEBUG("0x%X: %s - Unknown (PIDR = 0x%"PRIx64")\n", addr,
+			DEBUG("0x%"PRIx32": %s - Unknown (PIDR = 0x%"PRIx64")\n", addr,
 			      cidc_debug_strings[cid_class], pidr);
 		}
 	}
@@ -377,7 +379,7 @@ ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel)
 		ap->csw &= ~ADIV5_AP_CSW_TRINPROG;
 	}
 
-	DEBUG(" AP %3d: IDR=%08X CFG=%08X BASE=%08X CSW=%08X\n",
+	DEBUG(" AP %3d: IDR=%08"PRIx32" CFG=%08"PRIx32" BASE=%08"PRIx32" CSW=%08"PRIx32"\n",
 	      apsel, ap->idr, ap->cfg, ap->base, ap->csw);
 
 	return ap;

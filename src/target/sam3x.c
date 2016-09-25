@@ -254,7 +254,7 @@ bool sam3x_probe(target *t)
 static int
 sam3x_flash_cmd(target *t, uint32_t base, uint8_t cmd, uint16_t arg)
 {
-	DEBUG("%s: base = 0x%08x cmd = 0x%02X, arg = 0x%06X\n",
+	DEBUG("%s: base = 0x%08"PRIx32" cmd = 0x%02X, arg = 0x%06X\n",
 		__func__, base, cmd, arg);
 	target_mem_write32(t, EEFC_FCR(base),
 	                   EEFC_FCR_FKEY | cmd | ((uint32_t)arg << 8));
