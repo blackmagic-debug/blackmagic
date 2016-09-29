@@ -182,6 +182,7 @@ static bool cmd_jtag_scan(target *t, int argc, char **argv)
 		return false;
 	}
 	cmd_targets();
+	morse(NULL, false);
 	return true;
 }
 
@@ -213,6 +214,7 @@ bool cmd_swdp_scan(void)
 	}
 
 	cmd_targets();
+	morse(NULL, false);
 	return true;
 
 }

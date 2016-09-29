@@ -33,6 +33,7 @@
 #include "target.h"
 #include "command.h"
 #include "crc32.h"
+#include "morse.h"
 
 enum gdb_signal {
 	GDB_SIGINT = 2,
@@ -183,6 +184,7 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 			switch (reason) {
 			case TARGET_HALT_ERROR:
 				gdb_putpacket_f("X%02X", GDB_SIGLOST);
+				morse("TARGET LOST.", true);
 				break;
 			case TARGET_HALT_REQUEST:
 				gdb_putpacket_f("T%02X", GDB_SIGINT);
