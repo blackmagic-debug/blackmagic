@@ -841,8 +841,8 @@ static int cortexm_hostio_request(target *t)
 	uint32_t syscall = arm_regs[0];
 	int32_t ret = 0;
 
-	DEBUG("syscall 0x%x (%x %x %x %x)\n", syscall,
-			params[0], params[1], params[2], params[3]);
+	DEBUG("syscall 0"PRIx32"%"PRIx32" (%"PRIx32" %"PRIx32" %"PRIx32" %"PRIx32")\n",
+              syscall, params[0], params[1], params[2], params[3]);
 	switch (syscall) {
 	case SYS_OPEN:{	/* open */
 		/* Translate stupid fopen modes to open flags.
