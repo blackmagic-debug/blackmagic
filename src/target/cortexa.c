@@ -68,8 +68,9 @@ struct cortexa_priv {
 		uint64_t d[16];
 	} reg_cache;
 	unsigned hw_breakpoint_max;
-	bool hw_breakpoint[16];
-	uint32_t bpc0;
+	uint16_t hw_breakpoint_mask;
+	uint32_t bcr0;
+	uint32_t bvr0;
 	bool mmu_fault;
 };
 
@@ -425,8 +426,9 @@ bool cortexa_attach(target *t)
 	/* Clear any stale breakpoints */
 	for(unsigned i = 0; i < priv->hw_breakpoint_max; i++) {
 		apb_write(t, DBGBCR(i), 0);
-		priv->hw_breakpoint[i] = 0;
 	}
+	priv->hw_breakpoint_mask = 0;
+	priv->bcr0 = 0;
 
 	platform_srst_set_val(false);
 
@@ -439,7 +441,6 @@ void cortexa_detach(target *t)
 
 	/* Clear any stale breakpoints */
 	for(unsigned i = 0; i < priv->hw_breakpoint_max; i++) {
-		priv->hw_breakpoint[i] = 0;
 		apb_write(t, DBGBCR(i), 0);
 	}
 
@@ -638,8 +639,8 @@ void cortexa_halt_resume(target *t, bool step)
 		apb_write(t, DBGBCR(0), DBGBCR_INST_MISMATCH | bas |
 		                             DBGBCR_EN);
 	} else {
-		apb_write(t, DBGBVR(0), priv->hw_breakpoint[0] & ~3);
-		apb_write(t, DBGBCR(0), priv->bpc0);
+		apb_write(t, DBGBVR(0), priv->bvr0);
+		apb_write(t, DBGBCR(0), priv->bcr0);
 	}
 
 	/* Write back register cache */
@@ -698,21 +699,23 @@ static int cortexa_breakwatch_set(target *t, struct breakwatch *bw)
 			return -1;
 
 		for (i = 0; i < priv->hw_breakpoint_max; i++)
-			if ((priv->hw_breakpoint[i] & 1) == 0)
+			if ((priv->hw_breakpoint_mask & (1 << i)) == 0)
 				break;
 
 		if (i == priv->hw_breakpoint_max)
 			return -1;
 
 		bw->reserved[0] = i;
+		priv->hw_breakpoint_mask |= (1 << i);
 
-		priv->hw_breakpoint[i] = true;
-
-		apb_write(t, DBGBVR(i), bw->addr & ~3);
-		uint32_t bpc =  bp_bas(bw->addr, bw->size) | DBGBCR_EN;
-		apb_write(t, DBGBCR(i), bpc);
-		if (i == 0)
-			priv->bpc0 = bpc;
+		uint32_t addr = va_to_pa(t, bw->addr);
+		uint32_t bcr =  bp_bas(addr, bw->size) | DBGBCR_EN;
+		apb_write(t, DBGBVR(i), addr & ~3);
+		apb_write(t, DBGBCR(i), bcr);
+		if (i == 0) {
+			priv->bcr0 = bcr;
+			priv->bvr0 = addr & ~3;
+		}
 
 		return 0;
 	default:
@@ -737,10 +740,10 @@ static int cortexa_breakwatch_clear(target *t, struct breakwatch *bw)
 			return -1;
 		}
 	case TARGET_BREAK_HARD:
-		priv->hw_breakpoint[i] = false;
+		priv->hw_breakpoint_mask &= ~(1 << i);
 		apb_write(t, DBGBCR(i), 0);
 		if (i == 0)
-			priv->bpc0 = 0;
+			priv->bcr0 = 0;
 		return 0;
 	default:
 		return 1;
