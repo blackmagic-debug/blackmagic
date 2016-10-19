@@ -185,11 +185,11 @@ jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int
 }
 #endif
 
-uint8_t jtagtap_next(uint8_t dTMS, uint8_t dTDO)
+uint8_t jtagtap_next(uint8_t dTMS, uint8_t dTDI)
 {
 	uint8_t ret;
 	uint8_t tmp[3] = "\x6B\x00\x00";
-	tmp[2] = (dTDO?0x80:0) | (dTMS?0x01:0);
+	tmp[2] = (dTDI?0x80:0) | (dTMS?0x01:0);
 //	assert(ftdi_write_data(ftdic, tmp, 3) == 3);
 //	while(ftdi_read_data(ftdic, &ret, 1) != 1);
 	platform_buffer_write(tmp, 3);
@@ -197,7 +197,7 @@ uint8_t jtagtap_next(uint8_t dTMS, uint8_t dTDO)
 
 	ret &= 0x80;
 
-//	DEBUG("jtagtap_next(TMS = %d, TDO = %d) = %02X\n", dTMS, dTDO, ret);
+//	DEBUG("jtagtap_next(TMS = %d, TDI = %d) = %02X\n", dTMS, dTDI, ret);
 
 	return ret;
 }
