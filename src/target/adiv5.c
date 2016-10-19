@@ -78,7 +78,7 @@ enum cid_class {
 
 #ifdef PLATFORM_HAS_DEBUG
 /* The reserved ones only have an R in them, to save a bit of space. */
-static const char const *cidc_debug_strings[] =
+static const char * const cidc_debug_strings[] =
 {
 	[cidc_gvc] =     "Generic verification component",           /* 0x0 */
 	[cidc_romtab] =  "ROM Table",                                /* 0x1 */
