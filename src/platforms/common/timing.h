@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef __TIMING__H
+#ifndef __TIMING_H
 #define __TIMING_H
 
 struct platform_timeout {
@@ -26,5 +26,5 @@ struct platform_timeout {
 
 uint32_t platform_time_ms(void);
 
-#endif
+#endif /* __TIMING_H */
 
