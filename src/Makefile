@@ -107,6 +107,6 @@ all_platforms:
 
 include/version.h: FORCE
 	$(Q)echo "  GIT     include/version.h"
-	$(Q)echo "#define FIRMWARE_VERSION \"`git describe --dirty`\"" > $@
+	$(Q)echo "#define FIRMWARE_VERSION \"`git describe --always --dirty`\"" > $@
 
 -include *.d
