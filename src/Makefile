@@ -86,7 +86,7 @@ clean:	host_clean
 
 all_platforms:
 	$(Q)set -e ;\
-	mkdir -p artifacts/$(shell git describe) ;\
+	mkdir -p artifacts/$(shell git describe --always) ;\
 	echo "<html><body><ul>" > artifacts/index.html ;\
 	for i in platforms/*/Makefile.inc ; do \
 		export DIRNAME=`dirname $$i` ;\
@@ -102,7 +102,7 @@ all_platforms:
 		fi ;\
 	done ;\
 	echo "</ul></body></html>" >> artifacts/index.html ;\
-	cp artifacts/*.bin artifacts/$(shell git describe)
+	cp artifacts/*.bin artifacts/$(shell git describe --always)
 
 
 include/version.h: FORCE
