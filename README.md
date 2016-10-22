@@ -17,3 +17,4 @@ using the GNU source level debugging software, GDB.
 
 See online documentation at https://github.com/blacksphere/blackmagic/wiki
 
+Binaries from the latest automated build are at http://builds.blacksphere.co.nz/blackmagic
