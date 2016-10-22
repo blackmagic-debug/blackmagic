@@ -16,10 +16,13 @@ deploy:
   provider: s3
   access_key_id: AKIAIDXRMRPEG5OCN5AQ
   secret_access_key:
-    secure: pPm0GQg4Y37teFzJQYsGkwn4QAdgFw+vOmQKw3dtcs0Jok7Jhybu3zr2Q3dEVuUN6EXG6AKHZVVEJA+TPo0VfC9rXZRniukp5ZhVw2capX3bkfXe9AbUQGKs7v6uAD42ZiPLx6i1KjlVcM2qgy9IhZHm6rYAiVN0PKIwY+rduzCpEXdJNkHVvKvKnUKxc+ivNQ8FDUezed83QCCohizFNTHYZkkPwZIy1jeg6KE7/7S2L1nZFacFStPHAvM99wMqxBVO7CqgBmFG3E+EFzd7XtfY7WJy/pdXHvrUpN/vniWRfri//xQAzYIgtthQDcNkyjwKHjHJsFnfcULAH/bPYXF9cxeYiqppDrR6wj3NedU3nXngTuyTO96m9u/aSWNNyvE/yPisgrJ2G5Kf5lbriuK/ftVrQxGyF8gsm0ny5IMisL7k/8CaYi++BFH+JHR3fHSCUWpqNh2nyIdrvphH3grLRUXfGhNoFCUoG3gzEL0OIL/lqNIHStWTCtvk2U+pe5P9oKg/15quUO/+MkN3k2brzpImZuPWwlXwYHSFFx59GcQN/delp+yWOnQmqpwzGltvbdhPtfnk8NCA1mRBzsFqZjQYi3h2LdsfKuiU0MbUZ0YMjWUKf2EjxZvsnO8HL+lDcXkuzDUd3uY7j+IF+K7ZYe0wWYv5JfnRiM9Y+kM=
-  skip_cleanup: true
+    secure: AKGtHD71s7FEfmzSWkrEgW8DT3exDzKPROn4hI4kwuMcI6gYoOHqloEhzqZVi9ok8ynEkGfzzaAAcPYCNjlxOu2zmMJFgCiGegIUacrpJuzo9eknqW281pEpIlSXonrlttW9Hm0gJhl3yLKdMQYKoXvCfR7HgUkcN7QSAZxLgv297u/azMLq2z6rZdTCgZYpD2EIB3BlqChZkoepyczBYEtGOj0tMW4WF79qufIfVnUnQqWr8Lef2tQ9X9MEn7LIsHbBgGJ08TGb2yIiPTF+NyE+2ev3KmVmBdzDLdfAAV3koPtiTsTBdcstNAT51vvPsQhuIXB7gIr91xhquCel84DV285aZn2wOwgQ0KHhbFLVFXb2wv+r1saF1b4/rJTiobavDbIXIDVm/UfAs41AyM/zoclTeixAgyA8BpuhDEP+2dDYk3rehZ1Uhbaf8U9OKyQ6kYg1aFOQU5jYFjIbJmgSTlkJwntk9w3EX7lI8LSInNgdPhM8Ak6IjTCKg8NSKvtDH27X++UNVn1r2vX0eMjcusUNSPktjvilWIFMIvPw8bO2yLgj6bLDQ73WsEUC0LiiqL45r3A5KOMkMO8z1xp0TOz2f3Pxdyr1l2gXC0n/hxutoue7HaaPE2zA08giYdSCwZBxSedcoxxKA8V+E4vwfm0D/sWZS+U7vXm15LE=
   bucket: builds.blacksphere.co.nz
-  acl: public_read
   region: us-west-2
-  local_dir: src/artifacts
-  upload-dir: blackmagic-travis-builds
+  local-dir: src/artifacts
+  upload-dir: blackmagic
+  acl: public_read
+  skip_cleanup: true
+  on:
+    repo: blacksphere/blackmagic
+    branch: master

@@ -86,7 +86,8 @@ clean:	host_clean
 
 all_platforms:
 	$(Q)set -e ;\
-	mkdir -p artifacts ;\
+	mkdir -p artifacts/$(shell git describe) ;\
+	echo "<html><body><ul>" > artifacts/index.html ;\
 	for i in platforms/*/Makefile.inc ; do \
 		export DIRNAME=`dirname $$i` ;\
 		export PROBE_HOST=`basename $$DIRNAME` ;\
@@ -96,8 +97,13 @@ all_platforms:
 		$(MAKE) $(MAKEFLAGS);\
 		if [ -f blackmagic.bin ]; then \
 			mv blackmagic.bin artifacts/blackmagic-$$PROBE_HOST.bin ;\
+			echo "<li><a href='blackmagic-$$PROBE_HOST.bin'>$$PROBE_HOST</a></li>"\
+				>> artifacts/index.html ;\
 		fi ;\
-	done
+	done ;\
+	echo "</ul></body></html>" >> artifacts/index.html ;\
+	cp artifacts/*.bin artifacts/$(shell git describe)
+
 
 include/version.h: FORCE
 	$(Q)echo "  GIT     include/version.h"
