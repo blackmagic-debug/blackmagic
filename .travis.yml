@@ -12,4 +12,14 @@ script:
   - make -C libopencm3 lib
   - make -C src all_platforms
 
-
+deploy:
+  provider: s3
+  access_key_id: AKIAIDXRMRPEG5OCN5AQ
+  secret_access_key:
+    secure: pPm0GQg4Y37teFzJQYsGkwn4QAdgFw+vOmQKw3dtcs0Jok7Jhybu3zr2Q3dEVuUN6EXG6AKHZVVEJA+TPo0VfC9rXZRniukp5ZhVw2capX3bkfXe9AbUQGKs7v6uAD42ZiPLx6i1KjlVcM2qgy9IhZHm6rYAiVN0PKIwY+rduzCpEXdJNkHVvKvKnUKxc+ivNQ8FDUezed83QCCohizFNTHYZkkPwZIy1jeg6KE7/7S2L1nZFacFStPHAvM99wMqxBVO7CqgBmFG3E+EFzd7XtfY7WJy/pdXHvrUpN/vniWRfri//xQAzYIgtthQDcNkyjwKHjHJsFnfcULAH/bPYXF9cxeYiqppDrR6wj3NedU3nXngTuyTO96m9u/aSWNNyvE/yPisgrJ2G5Kf5lbriuK/ftVrQxGyF8gsm0ny5IMisL7k/8CaYi++BFH+JHR3fHSCUWpqNh2nyIdrvphH3grLRUXfGhNoFCUoG3gzEL0OIL/lqNIHStWTCtvk2U+pe5P9oKg/15quUO/+MkN3k2brzpImZuPWwlXwYHSFFx59GcQN/delp+yWOnQmqpwzGltvbdhPtfnk8NCA1mRBzsFqZjQYi3h2LdsfKuiU0MbUZ0YMjWUKf2EjxZvsnO8HL+lDcXkuzDUd3uY7j+IF+K7ZYe0wWYv5JfnRiM9Y+kM=
+  skip_cleanup: true
+  bucket: builds.blacksphere.co.nz
+  acl: public_read
+  region: us-west-2
+  local_dir: src/artifacts
+  upload-dir: blackmagic-travis-builds

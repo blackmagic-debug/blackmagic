@@ -86,6 +86,7 @@ clean:	host_clean
 
 all_platforms:
 	$(Q)set -e ;\
+	mkdir -p artifacts ;\
 	for i in platforms/*/Makefile.inc ; do \
 		export DIRNAME=`dirname $$i` ;\
 		export PROBE_HOST=`basename $$DIRNAME` ;\
@@ -94,7 +95,7 @@ all_platforms:
 		$(MAKE) $(MAKEFLAGS) clean ;\
 		$(MAKE) $(MAKEFLAGS);\
 		if [ -f blackmagic.bin ]; then \
-			mv blackmagic.bin blackmagic-$$PROBE_HOST.bin ;\
+			mv blackmagic.bin artifacts/blackmagic-$$PROBE_HOST.bin ;\
 		fi ;\
 	done
 
@@ -103,4 +104,3 @@ include/version.h: FORCE
 	$(Q)echo "#define FIRMWARE_VERSION \"`git describe --dirty`\"" > $@
 
 -include *.d
-
