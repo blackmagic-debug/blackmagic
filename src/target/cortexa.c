@@ -449,7 +449,16 @@ void cortexa_detach(target *t)
 	/* Invalidate cache */
 	apb_write(t, DBGITR, MCR | ICIALLU);
 
-	uint32_t dbgdscr = apb_read(t, DBGDSCR);
+	platform_timeout to;
+	platform_timeout_set(&to, 200);
+
+	/* Wait for instruction to complete */
+	uint32_t dbgdscr;
+	do {
+		dbgdscr = apb_read(t, DBGDSCR);
+	} while (!(dbgdscr & DBGDSCR_INSTRCOMPL) &&
+	         !platform_timeout_is_expired(&to));
+
 	/* Disable halting debug mode */
 	dbgdscr &= ~(DBGDSCR_HDBGEN | DBGDSCR_ITREN);
 	apb_write(t, DBGDSCR, dbgdscr);
@@ -648,8 +657,17 @@ void cortexa_halt_resume(target *t, bool step)
 
 	apb_write(t, DBGITR, MCR | ICIALLU); /* invalidate cache */
 
-	/* Disable DBGITR.  Not sure why, but RRQ is ignored otherwise. */
-	uint32_t dbgdscr = apb_read(t, DBGDSCR);
+	platform_timeout to;
+	platform_timeout_set(&to, 200);
+
+	/* Wait for instruction to complete */
+	uint32_t dbgdscr;
+	do {
+		dbgdscr = apb_read(t, DBGDSCR);
+	} while (!(dbgdscr & DBGDSCR_INSTRCOMPL) &&
+	         !platform_timeout_is_expired(&to));
+
+	 /* Disable DBGITR.  Not sure why, but RRQ is ignored otherwise. */
 	if (step)
 		dbgdscr |= DBGDSCR_INTDIS;
 	else
@@ -661,7 +679,8 @@ void cortexa_halt_resume(target *t, bool step)
 		apb_write(t, DBGDRCR, DBGDRCR_CSE | DBGDRCR_RRQ);
 		dbgdscr = apb_read(t, DBGDSCR);
 		DEBUG("%s: DBGDSCR = 0x%08"PRIx32"\n", __func__, dbgdscr);
-	} while (!(dbgdscr & DBGDSCR_RESTARTED));
+	} while (!(dbgdscr & DBGDSCR_RESTARTED) &&
+	         !platform_timeout_is_expired(&to));
 }
 
 /* Breakpoints */
