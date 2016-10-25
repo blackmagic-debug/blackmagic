@@ -27,6 +27,7 @@
 #ifndef WIN32
 #   include <sys/socket.h>
 #   include <netinet/in.h>
+#   include <netinet/tcp.h>
 #   include <sys/select.h>
 #else
 #   include <winsock2.h>
@@ -57,6 +58,7 @@ int gdb_if_init(void)
 	assert((gdb_if_serv = socket(PF_INET, SOCK_STREAM, 0)) != -1);
 	opt = 1;
 	assert(setsockopt(gdb_if_serv, SOL_SOCKET, SO_REUSEADDR, (void*)&opt, sizeof(opt)) != -1);
+	assert(setsockopt(gdb_if_serv, IPPROTO_TCP, TCP_NODELAY, (void*)&opt, sizeof(opt)) != -1);
 
 	assert(bind(gdb_if_serv, (void*)&addr, sizeof(addr)) != -1);
 	assert(listen(gdb_if_serv, 1) != -1);
@@ -109,9 +111,13 @@ unsigned char gdb_if_getchar_to(int timeout)
 
 void gdb_if_putchar(unsigned char c, int flush)
 {
-	(void)flush;
-
-	if (gdb_if_conn > 0)
-		send(gdb_if_conn, (void*)&c, 1, 0);
+	static uint8_t buf[2048];
+	static int bufsize = 0;
+	if (gdb_if_conn > 0) {
+		buf[bufsize++] = c;
+		if (flush || (bufsize == sizeof(buf))) {
+			send(gdb_if_conn, buf, bufsize, 0);
+			bufsize = 0;
+		}
+	}
 }
-
