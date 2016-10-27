@@ -359,7 +359,11 @@ bool cortexa_probe(ADIv5_AP_t *apb, uint32_t debug_base)
 	 * device specific. */
 	priv->ahb = adiv5_new_ap(apb->dp, 0);
 	adiv5_ap_ref(priv->ahb);
-	if ((priv->ahb->idr & 0xfffe00f) == 0x4770001) {
+	if (false) {
+		/* FIXME: This used to be if ((priv->ahb->idr & 0xfffe00f) == 0x4770001)
+		 * Accessing memory directly through the AHB is much faster, but can
+		 * result in data inconsistencies if the L2 cache is enabled.
+		 */
 		/* This is an AHB */
 		t->mem_read = cortexa_mem_read;
 		t->mem_write = cortexa_mem_write;
