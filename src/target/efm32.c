@@ -172,6 +172,7 @@ const struct command_s efm32_cmd_list[] = {
 #define EFM32_DI_PART_FAMILY_LEOPARD_GECKO	74
 #define EFM32_DI_PART_FAMILY_WONDER_GECKO	75
 #define EFM32_DI_PART_FAMILY_ZERO_GECKO		76
+#define EFM32_DI_PART_FAMILY_HAPPY_GECKO	77
 #define EFM32_DI_PART_FAMILY_EZR_WONDER_GECKO	120
 #define EFM32_DI_PART_FAMILY_EZR_LEOPARD_GECKO	121
 
@@ -296,6 +297,11 @@ bool efm32_probe(target *t)
 		case EFM32_DI_PART_FAMILY_ZERO_GECKO:
 			sprintf(variant_string,
 				"EFM32 Zero Gecko");
+			flash_page_size = 1024;
+			break;
+		case EFM32_DI_PART_FAMILY_HAPPY_GECKO:
+			sprintf(variant_string,
+				"EFM32 Happy Gecko");
 			flash_page_size = 1024;
 			break;
 		case EFM32_DI_PART_FAMILY_EZR_WONDER_GECKO:
