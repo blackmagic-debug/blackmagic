@@ -99,6 +99,7 @@ struct target_s {
 
 	/* Halt/resume functions */
 	void (*reset)(target *t);
+	void (*extended_reset)(target *t);
 	void (*halt_request)(target *t);
 	enum target_halt_reason (*halt_poll)(target *t, target_addr *watch);
 	void (*halt_resume)(target *t, bool step);
@@ -176,6 +177,7 @@ bool lpc11xx_probe(target *t);
 bool lpc15xx_probe(target *t);
 bool lpc43xx_probe(target *t);
 bool sam3x_probe(target *t);
+bool sam4l_probe(target *t);
 bool nrf51_probe(target *t);
 bool samd_probe(target *t);
 bool kinetis_probe(target *t);

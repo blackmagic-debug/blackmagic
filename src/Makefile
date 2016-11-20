@@ -48,6 +48,7 @@ SRC =			\
 	nrf51.c		\
 	platform.c	\
 	sam3x.c		\
+	sam4l.c	\
 	samd.c		\
 	stm32f1.c	\
 	stm32f4.c	\

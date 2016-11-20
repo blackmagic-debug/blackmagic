@@ -155,6 +155,7 @@
 #define ARM_THUMB_BREAKPOINT 0xBE00
 
 #define	CORTEXM_TOPT_INHIBIT_SRST (1 << 2)
+#define	CORTEXM_TOPT_EXTENDED_RESET (1 << 3)
 
 bool cortexm_probe(ADIv5_AP_t *ap);
 ADIv5_AP_t *cortexm_ap(target *t);
