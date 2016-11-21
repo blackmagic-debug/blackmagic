@@ -164,7 +164,12 @@ void platform_init(void)
 
 	platform_timing_init();
 	cdcacm_init();
-	usbuart_init();
+
+	/* On mini hardware, UART and SWD share connector pins.
+	 * Don't enable UART if we're being debugged. */
+	if ((platform_hwversion() == 0) || !(SCS_DEMCR & SCS_DEMCR_TRCENA))
+		usbuart_init();
+
 	setup_vbus_irq();
 }
 
@@ -347,4 +352,3 @@ asm(".globl debug_monitor_handler\n"
     "    b debug_monitor_handler_c\n");
 
 #endif
-
