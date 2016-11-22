@@ -46,13 +46,6 @@ static void usbuart_run(void);
 
 void usbuart_init(void)
 {
-#if defined(BLACKMAGIC)
-	/* On mini hardware, UART and SWD share connector pins.
-	 * Don't enable UART if we're being debugged. */
-	if ((platform_hwversion() == 1) && (SCS_DEMCR & SCS_DEMCR_TRCENA))
-		return;
-#endif
-
 	rcc_periph_clock_enable(USBUSART_CLK);
 
 	UART_PIN_SETUP();
@@ -257,4 +250,3 @@ void USBUSART_TIM_ISR(void)
 	/* process FIFO */
 	usbuart_run();
 }
-
