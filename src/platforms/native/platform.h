@@ -48,12 +48,13 @@
  * LED2 = 	PB11	(Red LED    : Error)
  *
  * TPWR = 	RB0 (input) -- analogue on mini design ADC1, ch8
- * nTRST = 	PB1 [blackmagic]
- * PWR_BR = 	PB1 [blackmagic_mini] -- supply power to the target, active low
- * SRST_OUT = 	PA2
- * TDI = 	PA3
- * TMS = 	PA4 (input for SWDP)
- * TCK = 	PA5
+ * nTRST = 	PB1 (output) [blackmagic]
+ * PWR_BR = 	PB1 (output) [blackmagic_mini] -- supply power to the target, active low
+ * TMS_DIR =    PA1 (output) [blackmagic_mini v2.1] -- choose direction of the TCK pin, input low, output high
+ * SRST_OUT = 	PA2 (output)
+ * TDI = 	PA3 (output)
+ * TMS = 	PA4 (input/output for SWDIO)
+ * TCK = 	PA5 (output SWCLK)
  * TDO = 	PA6 (input)
  * nSRST = 	PA7 (input)
  *
@@ -66,16 +67,20 @@
 /* Hardware definitions... */
 #define JTAG_PORT 	GPIOA
 #define TDI_PORT	JTAG_PORT
+#define TMS_DIR_PORT	JTAG_PORT
 #define TMS_PORT	JTAG_PORT
 #define TCK_PORT	JTAG_PORT
 #define TDO_PORT	JTAG_PORT
 #define TDI_PIN		GPIO3
+#define TMS_DIR_PIN	GPIO1
 #define TMS_PIN		GPIO4
 #define TCK_PIN		GPIO5
 #define TDO_PIN		GPIO6
 
+#define SWDIO_DIR_PORT	JTAG_PORT
 #define SWDIO_PORT 	JTAG_PORT
 #define SWCLK_PORT 	JTAG_PORT
+#define SWDIO_DIR_PIN	TMS_DIR_PIN
 #define SWDIO_PIN	TMS_PIN
 #define SWCLK_PIN	TCK_PIN
 
@@ -85,6 +90,7 @@
 #define PWR_BR_PIN	GPIO1
 #define SRST_PORT	GPIOA
 #define SRST_PIN	GPIO2
+#define SRST_SENSE_PORT	GPIOA
 #define SRST_SENSE_PIN	GPIO7
 
 #define USB_PU_PORT	GPIOA
@@ -104,12 +110,15 @@
 #define LED_ERROR	LED_2
 
 #define TMS_SET_MODE() \
+	gpio_set(TMS_DIR_PORT, TMS_DIR_PIN); \
 	gpio_set_mode(TMS_PORT, GPIO_MODE_OUTPUT_50_MHZ, \
 	              GPIO_CNF_OUTPUT_PUSHPULL, TMS_PIN);
 #define SWDIO_MODE_FLOAT() \
 	gpio_set_mode(SWDIO_PORT, GPIO_MODE_INPUT, \
-	              GPIO_CNF_INPUT_FLOAT, SWDIO_PIN);
+	              GPIO_CNF_INPUT_FLOAT, SWDIO_PIN); \
+	gpio_clear(SWDIO_DIR_PORT, SWDIO_DIR_PIN);
 #define SWDIO_MODE_DRIVE() \
+	gpio_set(SWDIO_DIR_PORT, SWDIO_DIR_PIN); \
 	gpio_set_mode(SWDIO_PORT, GPIO_MODE_OUTPUT_50_MHZ, \
 	              GPIO_CNF_OUTPUT_PUSHPULL, SWDIO_PIN);
 
