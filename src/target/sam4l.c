@@ -1,5 +1,4 @@
 /*
- * vim: set noexpandtab ts=4:
  *
  * This file is part of the Black Magic Debug project.
  *
@@ -106,11 +105,7 @@
 static void sam4l_extended_reset(target *t);
 static int sam4l_flash_erase(struct target_flash *f, target_addr addr, size_t len);
 static int sam4l_flash_write_buf(struct target_flash *f, target_addr dest,
-                             const void *src, size_t len);
-
-const struct command_s sam4l_cmds[] = {
-	{NULL, NULL, NULL}
-};
+									const void *src, size_t len);
 
 /* why Atmel couldn't make it sequential ... */
 static const size_t __ram_size[16] = {
@@ -152,6 +147,7 @@ static const size_t __nvp_size[16] = {
 };
 
 
+/* All variants of 4L have a 512 byte page */
 #define SAM4L_PAGE_SIZE 512
 #define SAM4L_ARCH		0xb0
 #define SAM4L_CHIPID_CIDR	0x400E0740
@@ -162,8 +158,6 @@ static const size_t __nvp_size[16] = {
 #define CHIPID_CIDR_NVPSIZ_MASK		0xf
 #define CHIPID_CIDR_NVPSIZ_SHIFT	8
 
-/* All variants of 4L have a 512 byte page */
-#define SAM4_PAGE_SIZE				512
 
 /* Arbitrary time to wait for FLASH controller to be ready */
 #define FLASH_TIMEOUT	10000
@@ -177,12 +171,12 @@ static void sam4l_add_flash(target *t, uint32_t addr, size_t length)
 	struct target_flash *f = calloc(1, sizeof(struct target_flash));
 	f->start = addr;
 	f->length = length;
-	f->blocksize = 512;
+	f->blocksize = SAM4L_PAGE_SIZE;
 	f->erase = sam4l_flash_erase;
 	f->write = target_flash_write_buffered;
 	f->done = target_flash_done_buffered;
 	f->write_buf = sam4l_flash_write_buf;
-	f->buf_size = 512;;
+	f->buf_size = SAM4L_PAGE_SIZE;
 	f->erased = 0xff;
 	/* add it into the target structures flash chain */
 	target_add_flash(t, f);
@@ -264,7 +258,7 @@ bool sam4l_probe(target *t)
 /*
  * We've been reset, make sure we take the core out of reset
  */
-void
+static void
 sam4l_extended_reset(target *t)
 {
 	uint32_t	reg;
@@ -307,7 +301,7 @@ sam4l_flash_command(target *t, uint32_t page, uint32_t cmd)
 	uint32_t cmd_reg;
 	uint32_t status;
 	int	timeout;
-	DEBUG("\nSAM4L: sam4l_flash_command: FSR: 0x%08x, page = %d, command = %d\n", 
+	DEBUG("\nSAM4L: sam4l_flash_command: FSR: 0x%08x, page = %d, command = %d\n",
 		(unsigned int)(FLASHCALW_FSR), (int) page, (int) cmd);
 	/* wait for Flash controller ready */
 	for (timeout = 0; timeout < FLASH_TIMEOUT; timeout++) {
@@ -345,38 +339,37 @@ sam4l_flash_write_buf(struct target_flash *f, target_addr addr, const void *src,
 	
 	DEBUG("\nSAM4L: sam4l_flash_write_buf: addr = 0x%08lx, len %d\n", (long unsigned int) addr, (int) len);
 	/* This will fail with unaligned writes, the write_buf version */
-	while (len) {
-		page = addr / SAM4L_PAGE_SIZE;
+	page = addr / SAM4L_PAGE_SIZE;
 
-		/* clear the page buffer */
-		if (sam4l_flash_command(t, 0, FLASH_CMD_CPB)) {
-			return -1;
-		}
+	if (len != SAM4L_PAGE_SIZE) {
+		return -1;
+	}
 
-		/* Now fill page buffer with our 512 bytes of data */
+	/* clear the page buffer */
+	if (sam4l_flash_command(t, 0, FLASH_CMD_CPB)) {
+		return -1;
+	}
 
-		/* I did try to use target_mem_write however that resulted in the
-		 * last 64 bits (8 bytes) to be incorrect on even pages (0, 2, 4, ...)
-		 * since it works this way I've not investigated further.
+	/* Now fill page buffer with our 512 bytes of data */
+
+	/* I did try to use target_mem_write however that resulted in the
+	 * last 64 bits (8 bytes) to be incorrect on even pages (0, 2, 4, ...)
+	 * since it works this way I've not investigated further.
+	 */
+	for (ndx = 0; ndx < SAM4L_PAGE_SIZE; ndx += 4) {
+		/*
+ 		 * the page buffer overlaps flash, its only 512 bytes long
+		 * and no matter where you write it from it goes to the page
+		 * you point it to. So we don't need the specific address here
+		 * instead we just write 0 - pagelen (512) and that fills our
+		 * buffer correctly.
 		 */
-		for (ndx = 0; ndx < SAM4L_PAGE_SIZE; ndx += 4) {
-			/*
- 			 * the page buffer overlaps flash, its only 512 bytes long
-			 * and no matter where you write it from it goes to the page
-			 * you point it to. So we don't need the specific address here
-			 * instead we just write 0 - pagelen (512) and that fills our
-			 * buffer correctly.
-			 */
-			target_mem_write32(t, addr+ndx, *src_data);
-			src_data++;
-		}
-		/* write the page */
-		if (sam4l_flash_command(t, page, FLASH_CMD_WP)) {
-			return -1;
-		}
-		/* it should be done after one page, but in case it isn't */
-		len -= SAM4L_PAGE_SIZE;
-		addr += SAM4L_PAGE_SIZE;
+		target_mem_write32(t, addr+ndx, *src_data);
+		src_data++;
+	}
+	/* write the page */
+	if (sam4l_flash_command(t, page, FLASH_CMD_WP)) {
+		return -1;
 	}
 	return 0;
 }
@@ -390,21 +383,21 @@ sam4l_flash_erase(struct target_flash *f, target_addr addr, size_t len)
 	target *t = f->t;
 	uint16_t page;
 
-	DEBUG("SAM4L: flash erase address 0x%08x for %d bytes\n", 
+	DEBUG("SAM4L: flash erase address 0x%08x for %d bytes\n",
 		(unsigned int) addr, (unsigned int) len);
 	/*
 	 *  NB: if addr isn't aligned to a page boundary, or length
 	 * is not an even multiple of page sizes, we may end up
 	 * erasing data we didn't intend to.
-	 */ 
+	 */
 
 	while (len) {
-		page = addr / SAM4_PAGE_SIZE;
+		page = addr / SAM4L_PAGE_SIZE;
 		if (sam4l_flash_command(t, page, FLASH_CMD_EP)) {
 			return -1;
 		}
-		len -= SAM4_PAGE_SIZE;
-		addr += SAM4_PAGE_SIZE;
+		len -= SAM4L_PAGE_SIZE;
+		addr += SAM4L_PAGE_SIZE;
 	}
 	return 0;
 }

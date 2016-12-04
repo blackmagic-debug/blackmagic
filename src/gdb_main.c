@@ -96,9 +96,6 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 	int size;
 	bool single_step = false;
 
-	/*
-	DEBUG("Entering GDB protocol main loop\n");
-	*/
 	/* GDB protocol main loop */
 	while(1) {
 		SET_IDLE_STATE(1);
