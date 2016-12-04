@@ -444,7 +444,7 @@ static void cortexm_reset(target *t)
 	                   CORTEXM_AIRCR_VECTKEY | CORTEXM_AIRCR_SYSRESETREQ);
 
 	/* If target needs to do something extra (see Atmel SAM4L for example) */
-	if ((t->target_options & CORTEXM_TOPT_EXTENDED_RESET) != 0) {
+	if (t->extended_reset != NULL) {
 		t->extended_reset(t);
 	}
 
