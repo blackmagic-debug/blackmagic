@@ -262,6 +262,7 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 	PROBE(lpc15xx_probe);
 	PROBE(lpc43xx_probe);
 	PROBE(sam3x_probe);
+	PROBE(sam4l_probe);
 	PROBE(nrf51_probe);
 	PROBE(samd_probe);
 	PROBE(lmi_probe);
@@ -441,6 +442,11 @@ static void cortexm_reset(target *t)
 	 */
 	target_mem_write32(t, CORTEXM_AIRCR,
 	                   CORTEXM_AIRCR_VECTKEY | CORTEXM_AIRCR_SYSRESETREQ);
+
+	/* If target needs to do something extra (see Atmel SAM4L for example) */
+	if (t->extended_reset != NULL) {
+		t->extended_reset(t);
+	}
 
 	/* Poll for release from reset */
 	while (target_mem_read32(t, CORTEXM_DHCSR) & CORTEXM_DHCSR_S_RESET_ST);
