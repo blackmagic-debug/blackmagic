@@ -388,7 +388,7 @@ ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel)
 
 void adiv5_dp_init(ADIv5_DP_t *dp)
 {
-	uint32_t ctrlstat = 0;
+	volatile uint32_t ctrlstat = 0;
 
 	adiv5_dp_ref(dp);
 
