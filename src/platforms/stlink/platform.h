@@ -49,11 +49,11 @@
  * TPWR = 	RB0 (input) -- analogue on mini design ADC1, ch8
  * nTRST = 	PB1
  * SRST_OUT = 	PA2
- * TDI = 	PA3
- * TMS = 	PA4 (input for SWDP)
+ * TDI = 	PA7
+ * TMS = 	PB14 (input for SWDP)
  * TCK = 	PA5
  * TDO = 	PA6 (input)
- * nSRST = 	PA7 (input)
+ * nSRST = 	PB0 (input)
  *
  * USB cable pull-up: PA8
  * USB VBUS detect:  PB13 -- New on mini design.
