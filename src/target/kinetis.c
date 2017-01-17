@@ -119,6 +119,12 @@ bool kinetis_probe(target *t)
 				return false;
 			}
 		return true;
+	case 0x031: /* KL03 family */
+		t->driver = "KL03";
+		target_add_ram(t, 0x1ffffe00, 0x200);
+		target_add_ram(t, 0x20000000, 0x600);
+		kl_gen_add_flash(t, 0, 0x8000, 0x400);
+		return true;
 	}
 	return false;
 }
