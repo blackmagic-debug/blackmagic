@@ -87,7 +87,10 @@
 
 #define STM32L0_NVM_PHYS             (0x40022000ul)
 #define STM32L0_NVM_OPT_SIZE         (12)
-#define STM32L0_NVM_EEPROM_SIZE      (2*1024)
+#define STM32L0_NVM_EEPROM_CAT1_SIZE (1*512)
+#define STM32L0_NVM_EEPROM_CAT2_SIZE (1*1024)
+#define STM32L0_NVM_EEPROM_CAT3_SIZE (2*1024)
+#define STM32L0_NVM_EEPROM_CAT5_SIZE (6*1024)
 
 #define STM32L1_NVM_PHYS             (0x40023c00ul)
 #define STM32L1_NVM_OPT_SIZE         (32)
@@ -174,8 +177,11 @@ enum {
 static bool stm32lx_is_stm32l1(target* t)
 {
         switch (t->idcode) {
-        case 0x417:                   /* STM32L0xx */
-                return false;
+        case 0x457:                   /* STM32L0xx Cat1 */
+        case 0x425:                   /* STM32L0xx Cat2 */
+        case 0x417:                   /* STM32L0xx Cat3 */
+        case 0x447:                   /* STM32L0xx Cat5 */
+               return false;
         default:                      /* STM32L1xx */
                 return true;
         }
@@ -184,8 +190,14 @@ static bool stm32lx_is_stm32l1(target* t)
 static uint32_t stm32lx_nvm_eeprom_size(target *t)
 {
         switch (t->idcode) {
-        case 0x417:                   /* STM32L0xx */
-                return STM32L0_NVM_EEPROM_SIZE;
+        case 0x457:                   /* STM32L0xx Cat1 */
+                return STM32L0_NVM_EEPROM_CAT1_SIZE;
+        case 0x425:                   /* STM32L0xx Cat2 */
+                return STM32L0_NVM_EEPROM_CAT2_SIZE;
+        case 0x417:                   /* STM32L0xx Cat3 */
+                return STM32L0_NVM_EEPROM_CAT3_SIZE;
+        case 0x447:                   /* STM32L0xx Cat5 */
+                return STM32L0_NVM_EEPROM_CAT5_SIZE;
         default:                      /* STM32L1xx */
                 return STM32L1_NVM_EEPROM_SIZE;
         }
@@ -194,7 +206,10 @@ static uint32_t stm32lx_nvm_eeprom_size(target *t)
 static uint32_t stm32lx_nvm_phys(target *t)
 {
         switch (t->idcode) {
-        case 0x417:                   /* STM32L0xx */
+        case 0x457:                   /* STM32L0xx Cat1 */
+        case 0x425:                   /* STM32L0xx Cat2 */
+        case 0x417:                   /* STM32L0xx Cat3 */
+        case 0x447:                   /* STM32L0xx Cat5 */
                 return STM32L0_NVM_PHYS;
         default:                      /* STM32L1xx */
                 return STM32L1_NVM_PHYS;
@@ -204,7 +219,10 @@ static uint32_t stm32lx_nvm_phys(target *t)
 static uint32_t stm32lx_nvm_option_size(target *t)
 {
         switch (t->idcode) {
-        case 0x417:                   /* STM32L0xx */
+        case 0x457:                   /* STM32L0xx Cat1 */
+        case 0x425:                   /* STM32L0xx Cat2 */
+        case 0x417:                   /* STM32L0xx Cat3 */
+        case 0x447:                   /* STM32L0xx Cat5 */
                 return STM32L0_NVM_OPT_SIZE;
         default:                      /* STM32L1xx */
                 return STM32L1_NVM_OPT_SIZE;
@@ -263,7 +281,10 @@ bool stm32l0_probe(target* t)
 
 	idcode = target_mem_read32(t, STM32L0_DBGMCU_IDCODE_PHYS) & 0xfff;
 	switch (idcode) {
-	case 0x417:                   /* STM32L0x[123] & probably others */
+	case 0x457:                   /* STM32L0xx Cat1 */
+	case 0x425:                   /* STM32L0xx Cat2 */
+	case 0x417:                   /* STM32L0xx Cat3 */
+	case 0x447:                   /* STM32L0xx Cat5 */
 		t->idcode = idcode;
 		t->driver = "STM32L0x";
 		target_add_ram(t, 0x20000000, 0x2000);
