@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2015  Uwe Bonnes
+ * Copyright (C) 2015, 2017  Uwe Bonnes
  * Written by Uwe Bonnes <bon@elektron.ikp.physik.tu-darmstadt.de>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -106,7 +106,6 @@ static const char stm32l4_driver_str[] = "STM32L4xx";
 
 #define DBGMCU_IDCODE	0xE0042000
 #define FLASH_SIZE_REG  0x1FFF75E0
-#define FLASH_SIZE_REG  0x1FFF75E0
 
 /* This routine is uses double word access.*/
 static const uint16_t stm32l4_flash_write_stub[] = {
@@ -149,7 +148,7 @@ bool stm32l4_probe(target *t)
 
 	idcode = target_mem_read32(t, DBGMCU_IDCODE);
 	switch(idcode & 0xFFF) {
-	case 0x415: /*  */
+	case 0x415: /* L471/RM0392, L475/RM0395, L476/RM0351 */
 		t->driver = stm32l4_driver_str;
 		target_add_ram(t, 0x10000000, 1 << 15);
 		target_add_ram(t, 0x20000000, 3 << 15);
@@ -157,6 +156,14 @@ bool stm32l4_probe(target *t)
 		options =  target_mem_read32(t, FLASH_OPTR);
 		if ((size < 0x400) && (options & OR_DUALBANK))
 			bank1_start =  0x08000000 + (size << 9);
+		stm32l4_add_flash(t, 0x08000000, size << 10, PAGE_SIZE, bank1_start);
+		target_add_commands(t, stm32l4_cmd_list, "STM32L4 Dual bank");
+		return true;
+	case 0x435: /* L432 L442 L452 L462/RM0393, L431 L433 L443 rm0394  */
+		t->driver = stm32l4_driver_str;
+		target_add_ram(t, 0x20000000, 2 << 15);
+		size    = (target_mem_read32(t, FLASH_SIZE_REG) & 0xffff);
+		options =  target_mem_read32(t, FLASH_OPTR);
 		stm32l4_add_flash(t, 0x08000000, size << 10, PAGE_SIZE, bank1_start);
 		target_add_commands(t, stm32l4_cmd_list, "STM32L4");
 		return true;
