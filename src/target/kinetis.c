@@ -125,6 +125,13 @@ bool kinetis_probe(target *t)
 		target_add_ram(t, 0x20000000, 0x600);
 		kl_gen_add_flash(t, 0, 0x8000, 0x400);
 		return true;
+	case 0x220: /* K22F family */
+		t->driver = "K22F";
+		target_add_ram(t, 0x1c000000, 0x4000000);
+		target_add_ram(t, 0x20000000, 0x100000);
+		kl_gen_add_flash(t, 0, 0x40000, 0x800);
+		kl_gen_add_flash(t, 0x40000, 0x40000, 0x800);
+		return true;
 	}
 	return false;
 }
