@@ -338,7 +338,8 @@ static bool stm32f4_cmd_option(target *t, int argc, char *argv[])
 	uint32_t start, val;
 	int len;
 
-	if (t->idcode == 0x449) {
+	if ((t->idcode == 0x449) || (t->idcode == 0x451)){
+		/* F7 Devices have option bytes at 0x1FFF0000. */
 		start = 0x1FFF0000;
 		len = 0x20;
 	}
