@@ -287,9 +287,11 @@ bool stm32l0_probe(target* t)
 	case 0x447:                   /* STM32L0xx Cat5 */
 		t->idcode = idcode;
 		t->driver = "STM32L0x";
-		target_add_ram(t, 0x20000000, 0x2000);
+		target_add_ram(t, 0x20000000, 0x5000);
 		stm32l_add_flash(t, 0x8000000, 0x10000, 0x80);
-		stm32l_add_eeprom(t, 0x8080000, 0x800);
+		stm32l_add_flash(t, 0x8010000, 0x10000, 0x80);
+		stm32l_add_flash(t, 0x8020000, 0x10000, 0x80);
+		stm32l_add_eeprom(t, 0x8080000, 0x1800);
 		target_add_commands(t, stm32lx_cmd_list, "STM32L0x");
 		return true;
 	}

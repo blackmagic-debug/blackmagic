@@ -188,7 +188,7 @@ bool stm32f4_probe(target *t)
 		stm32f4_add_flash(t, 0x8020000, 0x160000, 0x20000, 5);
 		target_add_commands(t, stm32f4_cmd_list, "STM32F413");
 		break;
-	case 0x449: /* F7x6 RM0385 Rev.2 */
+	case 0x449: /* F74x RM0385 Rev.4 */
 		t->driver = stm32f7_driver_str;
 		target_add_ram(t, 0x00000000, 0x4000);
 		target_add_ram(t, 0x20000000, 0x50000);
@@ -196,11 +196,11 @@ bool stm32f4_probe(target *t)
 		stm32f4_add_flash(t, 0x8000000, 0x20000, 0x8000, 0);
 		stm32f4_add_flash(t, 0x8020000, 0x20000, 0x20000, 4);
 		stm32f4_add_flash(t, 0x8040000, 0xC0000, 0x40000, 5);
-		/* ITCM */
+		/* Flash aliased as ITCM */
 		stm32f4_add_flash(t, 0x0200000, 0x20000, 0x8000, 0);
 		stm32f4_add_flash(t, 0x0220000, 0x20000, 0x20000, 4);
 		stm32f4_add_flash(t, 0x0240000, 0xC0000, 0x40000, 5);
-		target_add_commands(t, stm32f4_cmd_list, "STM32F7");
+		target_add_commands(t, stm32f4_cmd_list, "STM32F4x");
 		break;
 	case 0x451: /* F76x F77x RM0410 */
 		t->driver = stm32f7_driver_str;
@@ -210,11 +210,11 @@ bool stm32f4_probe(target *t)
 		stm32f4_add_flash(t, 0x8000000, 0x020000, 0x8000, 0);
 		stm32f4_add_flash(t, 0x8020000, 0x020000, 0x20000, 4);
 		stm32f4_add_flash(t, 0x8040000, 0x1C0000, 0x40000, 5);
-		/* ITCM */
+		/* Flash aliased as ITCM */
 		stm32f4_add_flash(t, 0x200000, 0x020000, 0x8000, 0);
 		stm32f4_add_flash(t, 0x220000, 0x020000, 0x20000, 4);
 		stm32f4_add_flash(t, 0x240000, 0x1C0000, 0x40000, 5);
-		target_add_commands(t, stm32f4_cmd_list, "STM32F7");
+		target_add_commands(t, stm32f4_cmd_list, "STM32F76x");
 		break;
 	default:
 		return false;
