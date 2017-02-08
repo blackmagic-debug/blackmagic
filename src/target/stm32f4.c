@@ -170,14 +170,23 @@ bool stm32f4_probe(target *t)
 	case 0x421: /* F446 */
 	case 0x423: /* F401 B/C RM0368 Rev.3 */
 	case 0x431: /* F411     RM0383 Rev.4 */
+	case 0x441: /* F412     RM0402 Rev.4, 256 kB Ram */
 	case 0x433: /* F401 D/E RM0368 Rev.3 */
 		t->driver = f2 ? stm32f2_driver_str : stm32f4_driver_str;
-		target_add_ram(t, 0x20000000, 0x30000);
+		target_add_ram(t, 0x20000000, 0x40000);
 		stm32f4_add_flash(t, 0x8000000, 0x10000, 0x4000, 0);
 		stm32f4_add_flash(t, 0x8010000, 0x10000, 0x10000, 4);
 		stm32f4_add_flash(t, 0x8020000, 0xE0000, 0x20000, 5);
 		target_add_commands(t, stm32f4_cmd_list, f2 ? "STM32F2" :
 		                    "STM32F4");
+		break;
+	case 0x463: /* F413     RM0430 Rev.2, 320 kB Ram, 1.5 MB flash. */
+		t->driver = stm32f4_driver_str;
+		target_add_ram(t, 0x20000000, 0x50000);
+		stm32f4_add_flash(t, 0x8000000, 0x10000, 0x4000, 0);
+		stm32f4_add_flash(t, 0x8010000, 0x10000, 0x10000, 4);
+		stm32f4_add_flash(t, 0x8020000, 0x160000, 0x20000, 5);
+		target_add_commands(t, stm32f4_cmd_list, "STM32F413");
 		break;
 	case 0x449: /* F7x6 RM0385 Rev.2 */
 		t->driver = stm32f7_driver_str;
