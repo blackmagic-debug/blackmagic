@@ -164,13 +164,14 @@ bool stm32f4_probe(target *t)
 		/* Fall through for stuff common to F40x/F41x */
 	case 0x411: /* F205 */
 	case 0x413: /* F405 */
+		if (!f2)
+			target_add_ram(t, 0x10000000, 0x10000);
+		/* Fall through for devices w/o CCMRAM */
 	case 0x421: /* F446 */
 	case 0x423: /* F401 B/C RM0368 Rev.3 */
 	case 0x431: /* F411     RM0383 Rev.4 */
 	case 0x433: /* F401 D/E RM0368 Rev.3 */
 		t->driver = f2 ? stm32f2_driver_str : stm32f4_driver_str;
-		if (!f2)
-			target_add_ram(t, 0x10000000, 0x10000);
 		target_add_ram(t, 0x20000000, 0x30000);
 		stm32f4_add_flash(t, 0x8000000, 0x10000, 0x4000, 0);
 		stm32f4_add_flash(t, 0x8010000, 0x10000, 0x10000, 4);
