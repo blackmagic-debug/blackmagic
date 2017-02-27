@@ -103,12 +103,19 @@ static const char stm32f2_driver_str[] = "STM32F2xx";
 #define DBG_IWDG_STOP	(1 << 12)
 
 /* This routine uses word access.  Only usable on target voltage >2.7V */
-static const uint16_t stm32f4_flash_write_stub[] = {
-#include "flashstub/stm32f4.stub"
+static const uint16_t stm32f4_flash_write_x32_stub[] = {
+#include "flashstub/stm32f4_x32.stub"
+};
+
+/* This routine uses byte access. Usable on target voltage <2.2V */
+static const uint16_t stm32f4_flash_write_x8_stub[] = {
+#include "flashstub/stm32f4_x8.stub"
 };
 
 #define SRAM_BASE 0x20000000
-#define STUB_BUFFER_BASE ALIGN(SRAM_BASE + sizeof(stm32f4_flash_write_stub), 4)
+#define STUB_BUFFER_BASE \
+	ALIGN(SRAM_BASE + MAX(sizeof(stm32f4_flash_write_x8_stub), \
+			      sizeof(stm32f4_flash_write_x32_stub)), 4)
 
 #define AXIM_BASE 0x8000000
 #define ITCM_BASE 0x0200000
@@ -266,8 +273,8 @@ static int stm32f4_flash_write(struct target_flash *f,
 	}
 
 	/* Write buffer to target ram call stub */
-	target_mem_write(f->t, SRAM_BASE, stm32f4_flash_write_stub,
-	                 sizeof(stm32f4_flash_write_stub));
+	target_mem_write(f->t, SRAM_BASE, stm32f4_flash_write_x8_stub,
+	                 sizeof(stm32f4_flash_write_x8_stub));
 	target_mem_write(f->t, STUB_BUFFER_BASE, src, len);
 	return cortexm_run_stub(f->t, SRAM_BASE, dest,
 	                        STUB_BUFFER_BASE, len, 0);

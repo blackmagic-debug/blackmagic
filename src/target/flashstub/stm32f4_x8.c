@@ -1,8 +1,8 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2011  Black Sphere Technologies Ltd.
- * Written by Gareth McMullin <gareth@blacksphere.co.nz>
+ * Copyright (C) 2017  Black Sphere Technologies Ltd.
+ * Written by Gordon Smith <gordonhj.smith@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,32 +17,28 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+#include "libopencm3/stm32/flash.h"
+#include "stub.h"
 
-#ifndef __GENERAL_H
-#define __GENERAL_H
+#define SR_ERROR_MASK 0xF2
 
-#define _GNU_SOURCE
-#include <stdint.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
-#include <stddef.h>
-#include <inttypes.h>
+void __attribute__((naked))
+stm32f4_flash_write_x8_stub(uint32_t *dest, uint32_t *src, uint32_t size)
+{
+	uint8_t *b_dest, *b_src;
+	b_dest = (void *)dest;
+	b_src = (void *)src;
+	for (int i = 0; i < size; i += 1) {
+		FLASH_CR = FLASH_CR_PROGRAM_X8 | FLASH_CR_PG;
+		*b_dest++ = *b_src++;
+		__asm("dsb");
+		while (FLASH_SR & FLASH_SR_BSY)
+			;
+	}
 
-#include "platform.h"
-#include "platform_support.h"
+	if (FLASH_SR & SR_ERROR_MASK)
+		stub_exit(1);
 
-#ifndef DEBUG
-#include <stdio.h>
-#define DEBUG	printf
-#endif
-
-#define ALIGN(x, n) (((x) + (n) - 1) & ~((n) - 1))
-#undef MIN
-#define MIN(x, y)  (((x) < (y)) ? (x) : (y))
-#undef MAX
-#define MAX(x, y)  (((x) > (y)) ? (x) : (y))
-
-#endif
+	stub_exit(0);
+}
 
