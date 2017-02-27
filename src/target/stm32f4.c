@@ -216,6 +216,15 @@ bool stm32f4_probe(target *t)
 		stm32f4_add_flash(t, 0x240000, 0x1C0000, 0x40000, 5);
 		target_add_commands(t, stm32f4_cmd_list, "STM32F76x");
 		break;
+	case 0x452: /* F72x F73x RM0431 */
+		t->driver = stm32f7_driver_str;
+		target_add_ram(t, 0x00000000, 0x2000);
+		target_add_ram(t, 0x20000000, 0x40000);
+		stm32f4_add_flash(t, 0x8000000, 0x010000, 0x4000,  0);
+		stm32f4_add_flash(t, 0x8010000, 0x010000, 0x10000, 4);
+		stm32f4_add_flash(t, 0x8020000, 0x060000, 0x20000, 3);
+		target_add_commands(t, stm32f4_cmd_list, "STM32F76x");
+		break;
 	default:
 		return false;
 	}
@@ -360,7 +369,7 @@ static bool stm32f4_cmd_option(target *t, int argc, char *argv[])
 	uint32_t start, val;
 	int len;
 
-	if ((t->idcode == 0x449) || (t->idcode == 0x451)){
+	if ((t->idcode == 0x449) || (t->idcode == 0x451) || (t->idcode == 0x452)) {
 		/* F7 Devices have option bytes at 0x1FFF0000. */
 		start = 0x1FFF0000;
 		len = 0x20;
