@@ -313,6 +313,28 @@ static bool stm32f4_cmd_erase_mass(target *t)
 	return true;
 }
 
+/* Dev   | DOC  |Rev|ID |OPTCR    |OPTCR   |OPTCR1   |OPTCR1 | OPTCR2
+                    |hex|default  |reserved|default  |resvd  | default|resvd
+ * F20x  |pm0059|5.1|411|0FFFAAED |F0000010|
+ * F40x  |rm0090|11 |413|0FFFAAED |F0000010|
+ * F42x  |rm0090|11 |419|0FFFAAED |30000000|0FFF0000 |F000FFFF
+ * F446  |rm0390| 2 |421|0FFFAAED |7F000010|
+ * F401BC|rm0368| 3 |423|0FFFAAED |7FC00010|
+ * F411  |rm0383| 2 |431|0FFFAAED |7F000010|
+ * F401DE|rm0368| 3 |433|0FFFAAED |7F000010|
+ * F46x  |rm0386| 2 |434|0FFFAAED |30000000|0FFF0000 |F000FFFF
+ * F412  |rm0402| 4 |441|0FFFAAED*|70000010|
+ * F74x  |rm0385| 4 |449|C0FFAAFD |3F000000|00400080*|00000000
+ * F76x  |rm0410| 2 |451|FFFFAAFD*|00000000|00400080*|00000000
+ * F72x  |rm0431| 1 |452|C0FFAAFD |3F000000|00400080*|00000000|00000000|800000FF
+ * F410  |rm0401| 2 |458|0FFFAAED*|7FE00010|
+ * F413  |rm0430| 2 |463|7FFFAAED*|00000010|
+ *
+ * * Documentation for F7 with OPTCR1 default = 0fff7f0080 seems wrong!
+ * * Documentation for F412 with OPTCR default = 0ffffffed seems wrong!
+ * * Documentation for F413 with OPTCR default = 0ffffffed seems wrong!
+ */
+
 static bool stm32f4_option_write(target *t, uint32_t value)
 {
 	target_mem_write32(t, FLASH_OPTKEYR, OPTKEY1);
