@@ -127,6 +127,17 @@ void target_add_ram(target *t, target_addr start, uint32_t len)
 	ram->start = start;
 	ram->length = len;
 	ram->next = t->ram;
+	ram->readonly = false;
+	t->ram = ram;
+}
+
+void target_add_rom(target *t, target_addr start, uint32_t len)
+{
+	struct target_ram *ram = malloc(sizeof(*ram));
+	ram->start = start;
+	ram->length = len;
+	ram->next = t->ram;
+	ram->readonly = true;
 	t->ram = ram;
 }
 
@@ -139,8 +150,9 @@ void target_add_flash(target *t, struct target_flash *f)
 
 static ssize_t map_ram(char *buf, size_t len, struct target_ram *ram)
 {
-	return snprintf(buf, len, "<memory type=\"ram\" start=\"0x%08"PRIx32
+	return snprintf(buf, len, "<memory type=\"%s\" start=\"0x%08"PRIx32
 	                          "\" length=\"0x%"PRIx32"\"/>",
+							  ram->readonly ? "rom" : "ram",
 	                          ram->start, (uint32_t)ram->length);
 }
 

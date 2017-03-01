@@ -27,6 +27,7 @@ target *target_new(void);
 struct target_ram {
 	target_addr start;
 	size_t length;
+	bool readonly;
 	struct target_ram *next;
 };
 
@@ -130,6 +131,7 @@ struct target_s {
 
 void target_add_commands(target *t, const struct command_s *cmds, const char *name);
 void target_add_ram(target *t, target_addr start, uint32_t len);
+void target_add_rom(target *t, target_addr start, uint32_t len);
 void target_add_flash(target *t, struct target_flash *f);
 int target_flash_write_buffered(struct target_flash *f,
                                 target_addr dest, const void *src, size_t len);
