@@ -364,15 +364,6 @@ ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel)
 	if(!tmpap.idr) /* IDR Invalid - Should we not continue here? */
 		return NULL;
 
-	/* Check for ARM Mem-AP */
-	uint16_t mfg = (tmpap.idr >> 17) & 0x3ff;
-	uint8_t cls = (tmpap.idr >> 13) & 0xf;
-	uint8_t type = tmpap.idr & 0xf;
-	if (mfg != 0x23B) /* Ditch if not ARM */
-		return NULL;
-	if ((cls != 8) || (type == 0)) /* Ditch if not Mem-AP */
-		return NULL;
-
 	/* It's valid to so create a heap copy */
 	ap = malloc(sizeof(*ap));
 	memcpy(ap, &tmpap, sizeof(*ap));
@@ -446,6 +437,9 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 		ADIv5_AP_t *ap = adiv5_new_ap(dp, i);
 		if (ap == NULL)
 			continue;
+
+		extern void kinetis_mdm_probe(ADIv5_AP_t *);
+		kinetis_mdm_probe(ap);
 
 		if (ap->base == 0xffffffff) {
 			/* No debug entries... useless AP */
