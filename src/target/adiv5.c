@@ -268,6 +268,11 @@ static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr)
 		cidr |= ((uint64_t)(x & 0xff)) << (i * 8);
 	}
 
+	if (adiv5_dp_error(ap->dp)) {
+		DEBUG("Fault reading ID registers\n");
+		return;
+	}
+
 	/* CIDR preamble sanity check */
 	if ((cidr & ~CID_CLASS_MASK) != CID_PREAMBLE) {
 		DEBUG("0x%"PRIx32": 0x%"PRIx32" <- does not match preamble (0x%X)\n",
@@ -281,6 +286,10 @@ static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr)
 	if (cid_class == cidc_romtab) { /* ROM table, probe recursively */
 		for (int i = 0; i < 256; i++) {
 			uint32_t entry = adiv5_mem_read32(ap, addr + i*4);
+			if (adiv5_dp_error(ap->dp)) {
+				DEBUG("Fault reading ROM table entry\n");
+			}
+
 			if (entry == 0)
 				break;
 
