@@ -29,8 +29,14 @@ target *target_list = NULL;
 target *target_new(void)
 {
 	target *t = (void*)calloc(1, sizeof(*t));
-	t->next = target_list;
-	target_list = t;
+	if (target_list) {
+		target *c = target_list;
+		while (c->next)
+			c = c->next;
+		c->next = t;
+	} else {
+		target_list = t;
+	}
 
 	return t;
 }
