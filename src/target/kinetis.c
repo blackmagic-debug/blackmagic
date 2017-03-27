@@ -61,6 +61,24 @@
 
 #define KL_GEN_PAGESIZE 0x400
 
+static bool kinetis_cmd_unsafe(target *t, int argc, char *argv[]);
+static bool unsafe_enabled;
+
+const struct command_s kinetis_cmd_list[] = {
+	{"unsafe", (cmd_handler)kinetis_cmd_unsafe, "Allow programming security byte (enable|disable)"},
+	{NULL, NULL, NULL}
+};
+
+static bool kinetis_cmd_unsafe(target *t, int argc, char *argv[])
+{
+	if (argc == 1)
+		tc_printf(t, "Allow programming security byte: %s\n",
+			  unsafe_enabled ? "enabled" : "disabled");
+	else
+		unsafe_enabled = argv[1][0] == 'e';
+	return true;
+}
+
 static int kl_gen_flash_erase(struct target_flash *f, target_addr addr, size_t len);
 static int kl_gen_flash_write(struct target_flash *f,
                               target_addr dest, const void *src, size_t len);
@@ -88,13 +106,13 @@ bool kinetis_probe(target *t)
 		target_add_ram(t, 0x1ffff000, 0x1000);
 		target_add_ram(t, 0x20000000, 0x3000);
 		kl_gen_add_flash(t, 0x00000000, 0x20000, 0x400);
-		return true;
+		break;
 	case 0x231:
 		t->driver = "KL27";
 		target_add_ram(t, 0x1fffe000, 0x2000);
 		target_add_ram(t, 0x20000000, 0x6000);
 		kl_gen_add_flash(t, 0x00000000, 0x40000, 0x400);
-		return true;
+		break;
 	case 0x021: /* KL02 family */
 		switch((sdid>>16) & 0x0f){
 			case 3:
@@ -118,22 +136,26 @@ bool kinetis_probe(target *t)
 			default:
 				return false;
 			}
-		return true;
+		break;
 	case 0x031: /* KL03 family */
 		t->driver = "KL03";
 		target_add_ram(t, 0x1ffffe00, 0x200);
 		target_add_ram(t, 0x20000000, 0x600);
 		kl_gen_add_flash(t, 0, 0x8000, 0x400);
-		return true;
+		break;
 	case 0x220: /* K22F family */
 		t->driver = "K22F";
 		target_add_ram(t, 0x1c000000, 0x4000000);
 		target_add_ram(t, 0x20000000, 0x100000);
 		kl_gen_add_flash(t, 0, 0x40000, 0x800);
 		kl_gen_add_flash(t, 0x40000, 0x40000, 0x800);
-		return true;
+		break;
+	default:
+		return false;
 	}
-	return false;
+	unsafe_enabled = false;
+	target_add_commands(t, kinetis_cmd_list, t->driver);
+	return true;
 }
 
 static bool
@@ -185,9 +207,20 @@ static int kl_gen_flash_erase(struct target_flash *f, target_addr addr, size_t l
 	return 0;
 }
 
+#define FLASH_SECURITY_BYTE_ADDRESS 0x40C
+#define FLASH_SECURITY_BYTE_UNSECURED 0xFE
+
 static int kl_gen_flash_write(struct target_flash *f,
                               target_addr dest, const void *src, size_t len)
 {
+	/* Ensure we don't write something horrible over the security byte */
+	if (!unsafe_enabled &&
+	    (dest <= FLASH_SECURITY_BYTE_ADDRESS) &&
+	    ((dest + len) > FLASH_SECURITY_BYTE_ADDRESS)) {
+		((uint8_t*)src)[FLASH_SECURITY_BYTE_ADDRESS - dest] =
+		    FLASH_SECURITY_BYTE_UNSECURED;
+	}
+
 	while (len) {
 		if (kl_gen_command(f->t, FTFA_CMD_PROGRAM_LONGWORD, dest, src)) {
 			len -= 4;
