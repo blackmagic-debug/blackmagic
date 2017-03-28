@@ -1,0 +1,145 @@
+This is driver support for a Haoyu JTAG board which are sold as 'JTAG Programmers'
+and which historically ran with SEGGER firmware until SEGGER got wise to it and 
+very sensibly added patches to their firmware.  Years ago I bought a couple without
+realising they ran hooky code and so they ended up in a drawer (the SEGGER stuff is
+brilliant if you are doing professional work, highly reccomended, but _Please_ don't
+pirate it, they need to eat too!)
+
+The typical product that this driver applies to is shown at;
+
+http://www.hotmcu.com/usbminijtag-jtagswd-debuggeremula%E2%80%8Btor-p-29.html
+
+Pinouts etc have been found by reverse enginering the board.
+
+ *
+ * LED0 = 	PB12	(Yellow LED : Running)
+ *
+ * SRST_OUT = 	PA2
+ * TDI = 	PB0
+ * TMS = 	PA4 
+ * TCK = 	PA3 
+ * TDO = 	PA6 
+ * nSRST = 	PA2 
+ *
+ * Serial port;
+ * PB6
+ * PB7
+ *
+ * USB cable pull-up: PA9
+ 
+The serial port is not wired in. You need steady hands.
+ 
+Build the firmware by following the standard instructions but with PROBE_HOST=haoyu, like this;
+
+CROSS_COMPILE=~/bin/armgcc/bin/arm-none-eabi- make PROBE_HOST=haoyu
+
+...this will give you the needed output files in the src directory. Now, you will need
+some sort of debug probe (like an existing BM probe) to load the initial bootloader.
+Assuming you've got one then Initial programming of the bootloader can be done via GDB. 
+The 4-pin header on the board is used for this job, using the pinout in the *Connectors* file.  
+You need to remove the protection from the code and re-start the CPU first, so the whole sequence
+goes something like this;
+
+$ ~/bin/armgcc/bin/arm-none-eabi-gdb
+GNU gdb (GNU Tools for ARM Embedded Processors) 7.10.1.20160923-cvs
+Copyright (C) 2015 Free Software Foundation, Inc.
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.  Type "show copying"
+and "show warranty" for details.
+This GDB was configured as "--host=x86_64-apple-darwin10 --target=arm-none-eabi".
+Type "show configuration" for configuration details.
+For bug reporting instructions, please see:
+<http://www.gnu.org/software/gdb/bugs/>.
+Find the GDB manual and other documentation resources online at:
+<http://www.gnu.org/software/gdb/documentation/>.
+For help, type "help".
+Type "apropos word" to search for commands related to "word".
+(gdb) target extended-remote /dev/cu.usbmodemXXXXXXXX
+Remote debugging using /dev/cu.usbmodemXXXXXXXX
+
+(gdb) monitor swdp_scan
+Target voltage: unknown
+Available Targets:
+No. Att Driver
+ 1      STM32F1 medium density
+(gdb) attach 1
+Attaching to Remote target
+0x080074d6 in ?? ()
+(gdb) monitor option erase
+0x1FFFF800: 0x0000
+0x1FFFF802: 0x0000
+0x1FFFF804: 0x0000
+0x1FFFF806: 0x0000
+0x1FFFF808: 0x0000
+0x1FFFF80A: 0x0000
+0x1FFFF80C: 0x0000
+0x1FFFF80E: 0x0000
+
+[Now power cycle the target]
+
+(gdb) monitor swdp_scan
+Target voltage: unknown
+Available Targets:
+No. Att Driver
+ 1      STM32F1 medium density
+(gdb) attach 1
+Attaching to Remote target
+0xfffffffe in ?? ()
+(gdb) load blackmagic_dfu
+Loading section .text, size 0x1928 lma 0x8000000
+Loading section .data, size 0x34 lma 0x8001928
+Start address 0x8001650, load size 6492
+Transfer rate: 11 KB/sec, 811 bytes/write.
+(gdb) q
+A debugging session is active.
+
+  Inferior 1 [Remote target] will be detached.
+
+Quit anyway? (y or n) y
+Detaching from program: , Remote target
+Remote communication error.  Target disconnected.: Device not configured.
+
+[OK, the bootloader is now on the board. Power cycle it again and the yellow
+LED will start flashing showing its in update mode]
+$ dfu-util -d 1d50:6018,:6017 -s 0x08002000:leave -D blackmagic.bin
+dfu-util 0.9
+
+Copyright 2005-2009 Weston Schmidt, Harald Welte and OpenMoko Inc.
+Copyright 2010-2016 Tormod Volden and Stefan Schmidt
+This program is Free Software and has ABSOLUTELY NO WARRANTY
+Please report bugs to http://sourceforge.net/p/dfu-util/tickets/
+
+dfu-util: Invalid DFU suffix signature
+dfu-util: A valid DFU suffix will be required in a future dfu-util release!!!
+Deducing device DFU version from functional descriptor length
+Opening DFU capable USB device...
+ID 1d50:6017
+Run-time device DFU version 011a
+Claiming USB DFU Interface...
+Setting Alternate Setting #0 ...
+Determining device status: state = dfuIDLE, status = 0
+dfuIDLE, continuing
+DFU mode device DFU version 011a
+Device returned transfer size 1024
+DfuSe interface name: "Internal Flash   "
+Downloading to address = 0x08002000, size = 57064
+Download    [=========================] 100%        57064 bytes
+Download done.
+File downloaded successfully
+Transitioning to dfuMANIFEST state
+
+[Power cycle the target one more time for good measure. Yellow LED should be off now]
+
+$ dfu-util -l
+dfu-util 0.9
+
+Copyright 2005-2009 Weston Schmidt, Harald Welte and OpenMoko Inc.
+Copyright 2010-2016 Tormod Volden and Stefan Schmidt
+This program is Free Software and has ABSOLUTELY NO WARRANTY
+Please report bugs to http://sourceforge.net/p/dfu-util/tickets/
+
+Deducing device DFU version from functional descriptor length
+Found Runtime: [1d50:6018] ver=0100, devnum=16, cfg=1, intf=4, path="20-2", alt=0, name="Black Magic Firmware Upgrade (Haoyu)", serial="XXXXXXXX"
+
+...and that's it, you've got a working BM Debugger, complete with SWV support up to about 200kHz.
