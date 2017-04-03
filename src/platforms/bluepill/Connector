@@ -12,10 +12,10 @@ from bottom
    3          5v          Brown    5V USB Derrived Feed
    4          PB9      !* Purple   TMS  / SWDIO
    5          PB8      !* Grey     TCK  / SWCLK
-   6          PB4         Blue     VSense (Target voltage present)
-   7          PB5         Orange   nSRST
-   8          PB6       * Green    TDO   / SWO
-   9          PB7       * Yellow   TDI  
+   6          PB7       * Yellow   TDI  
+   7          PB6       * Green    TDO   / SWO
+   8          PB5         Orange   nSRST
+   9          PB4         Blue     VSense (Target voltage present)
 
 For a minimal SWD interface the connections marked (!) are needed. For a minimal JTAG interface
 the ones marked (*) are needed. Since the debugger only runs at 3v3 the VSense is not
