@@ -47,10 +47,10 @@
  * LED0 = 	PC13	(Yellow LED : Running)
  *
  * SRST_OUT = 	PB5
- * TDI = 	PB7
+ * TDI = 	PB6
  * TMS = 	PB9  (==SWDIO)
  * TCK = 	PB8  (==SWCLK)
- * TDO = 	PB6  (==SDO)
+ * TDO = 	PB7  (==SDO)
  * nSRST = 	PB5 
  * TRST =       PA10
  * VSense =     PB4
@@ -77,10 +77,10 @@
 #define SWCLK_PIN	TCK_PIN
 
 #define TDO_PORT	GPIOB
-#define TDO_PIN		GPIO6
+#define TDO_PIN		GPIO7
 
 #define TDI_PORT	GPIOB
-#define TDI_PIN		GPIO7
+#define TDI_PIN		GPIO6
 
 #define SRST_PORT	GPIOB
 #define SRST_PIN	GPIO5

@@ -12,8 +12,8 @@ from bottom
    3          5v          Brown    5V USB Derrived Feed
    4          PB9      !* Purple   TMS  / SWDIO
    5          PB8      !* Grey     TCK  / SWCLK
-   6          PB7       * Yellow   TDI  
-   7          PB6       * Green    TDO   / SWO
+   6          PB7       * Green    TDO   / SWO
+   7          PB6       * Yellow   TDI  
    8          PB5         Orange   nSRST
    9          PB4         Blue     VSense (Target voltage present)
 
