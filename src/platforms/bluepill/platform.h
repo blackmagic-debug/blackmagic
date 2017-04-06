@@ -60,7 +60,7 @@
  * PA3
  */
 
-#define PLATFORM_HAS_TRACESWO 1
+//#define PLATFORM_HAS_TRACESWO 1
 
 /* Hardware definitions... */
 #define TRST_PORT       GPIOA
