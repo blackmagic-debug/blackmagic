@@ -40,7 +40,7 @@
 #include <libopencm3/stm32/dma.h>
 
 /* For speed the USB_BUF_SIZE is a multiple of the SWO packet and USB transfer size */
-#define TRACE_USB_BUF_SIZE (512)
+#define TRACE_USB_BUF_SIZE (768)
 #define FULL_SWO_PACKET    (64)
 
 #define DEFAULTSPEED       (4500000)
