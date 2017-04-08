@@ -38,9 +38,11 @@
 #include <libopencm3/stm32/timer.h>
 #include <libopencm3/stm32/f1/rcc.h>
 
-void traceswo_init(void)
+void traceswo_init(uint32_t speed)
+
 {
 	TRACE_TIM_CLK_EN();
+	(void)speed;
 
 	timer_reset(TRACE_TIM);
 

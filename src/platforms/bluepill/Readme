@@ -1,5 +1,5 @@
 This is driver support for a STM32C103C8 'Bluepill' development  board which are sold 
-very very cheaply out of China. 
+very very cheaply out of China.  It supports JTAG, SWD and SWO/SWV.
 
 The typical product that this driver applies to is shown at;
 
@@ -10,22 +10,25 @@ http://wiki.stm32duino.com/index.php?title=Blue_Pill
 Pinouts etc have been set to make life easy for creating a breakout lead.
 
  *
- * LED0 = 	PC13	(Yellow LED : Running)
+ * LED0 = 	     PC13	(Yellow LED : Running)
  *
- * SRST_OUT = 	PB5
- * TDI = 	PB7
- * TMS = 	PB9  (==SWDIO)
- * TCK = 	PB8  (==SWCLK)
- * TDO = 	PB6  (==SDO)
- * nSRST = 	PB5 
- * VSense =     PB4
- * TRST =       PB3
+ * SRST_OUT = 	     PB5
+ * TDI = 	     PB6
+ * TMS = 	     PB9  (==SWDIO)
+ * TCK = 	     PB8  (==SWCLK)
+ * TDO = 	     PB7  (==SDO)
+ * nSRST = 	     PB5 
+ * VSense =          PB4
+ * TRST =            PB3
 
 ... and on the other side;
 
  * Serial port;
  * PA2
  * PA3
+
+You can change these pins in the platform.h file if you need to, but TDO _must_ stay on UART1_RX
+if you want to use high speed SWO/SWV.
  
 Build the firmware by following the standard instructions but with PROBE_HOST=bluepill, like this;
 
@@ -114,4 +117,30 @@ Found Runtime: [1d50:6018] ver=0100, devnum=13, cfg=1, intf=4, path="20-4", alt=
 
 ...and that's it, you've got a working BM Debugger. See the Connectors file for pinout info.
 
-Note that at the moment the maximum SWO data rate is about 200kBps, which is a divisor of 12.  Any faster than that and you will miss edges!
+To use SWO
+==========
+
+The SWO data rate that comes out of the chip _must_ match the rate that the debugger expects.
+By default the baudrate is 4.5MBps but that can be changed as an optional parameter to the 
+monitor traceswo command, like this;
+
+monitor traceswo 115200
+
+....would set the swo output at the silly-low speed of 115kbps.  The STM32F103 cannot go faster
+than 4.5Mbps.
+
+Depending on what you're using to wake up SWO on the target side, you may need code to get it 
+into the correct mode and emitting data.  An example for a STM32F103....
+
+    /* STM32 specific configuration to enable the TRACESWO IO pin */
+    RCC->APB2ENR |= RCC_APB2ENR_AFIOEN;
+    AFIO->MAPR |= (2 << 24); // Disable JTAG to release TRACESWO
+    DBGMCU->CR |= DBGMCU_CR_TRACE_IOEN; // Enable IO trace pins
+
+    *((volatile unsigned *)(0xE0040010)) = 15;  // Output bits at 72000000/(15+1)=4.5MHz.
+    *((volatile unsigned *)(0xE00400F0)) = 2;  // Use Async mode
+
+    /* Configure instrumentation trace macroblock */
+    ITM->LAR = 0xC5ACCE55;
+    ITM->TCR = 0x00010005;
+    ITM->TER = 0xFFFFFFFF; // Enable all stimulus ports
