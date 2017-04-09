@@ -40,10 +40,10 @@
 #include <libopencm3/stm32/dma.h>
 
 /* For speed the USB_BUF_SIZE is a multiple of the SWO packet and USB transfer size */
-#define TRACE_USB_BUF_SIZE (768)
+#define TRACE_USB_BUF_SIZE (256)
 #define FULL_SWO_PACKET    (64)
 
-#define DEFAULTSPEED       (4500000)
+#define DEFAULTSPEED       (1800000)
 
 /* Packets waiting to be sent to the USB interface */
 static uint8_t trace_usb_buf[TRACE_USB_BUF_SIZE];
@@ -84,7 +84,6 @@ static void dma_read(char *data, int size)
     nvic_enable_irq(SWODMAIRQ);
 }
 
-
 void traceswo_setspeed(uint32_t speed)
 {
   dma_disable_channel(SWODMABUS, SWDDMACHAN);
@@ -103,23 +102,18 @@ void dma1_channel5_isr(void)
 
 {
     /* If the buffer has overrun there's not much we can do about it, so don't bother ... it takes time to check */
-    while (DMA1_ISR & (DMA_ISR_HTIF5 | DMA_ISR_TCIF5))
+    if (DMA1_ISR & DMA_ISR_HTIF5)
         {
-            if (DMA1_ISR & DMA_ISR_HTIF5)
-                {
-                    tb_wp=(tb_wp+1)%TRACE_USB_BUF_SIZE;
-                    memcpy(&trace_usb_buf[tb_wp],trace_rx_buf,FULL_SWO_PACKET);
-                    tb_wp+=(FULL_SWO_PACKET-1);
-                    DMA1_IFCR |= DMA_ISR_HTIF5;
-                }
+            memcpy(&trace_usb_buf[tb_wp],trace_rx_buf,FULL_SWO_PACKET);
+            tb_wp=(tb_wp+FULL_SWO_PACKET)%TRACE_USB_BUF_SIZE;
+            DMA1_IFCR |= DMA_ISR_HTIF5;
+        }
 
-            if (DMA1_ISR & DMA_ISR_TCIF5)
-                {
-                    tb_wp=(tb_wp+1)%TRACE_USB_BUF_SIZE;
-                    memcpy(&trace_usb_buf[tb_wp],&(trace_rx_buf[FULL_SWO_PACKET]),FULL_SWO_PACKET);
-                    tb_wp+=(FULL_SWO_PACKET-1);
-                    DMA1_IFCR |= DMA_ISR_TCIF5;
-                }
+    if (DMA1_ISR & DMA_ISR_TCIF5)
+        {
+            memcpy(&trace_usb_buf[tb_wp],&(trace_rx_buf[FULL_SWO_PACKET]),FULL_SWO_PACKET);
+            tb_wp=(tb_wp+FULL_SWO_PACKET)%TRACE_USB_BUF_SIZE;
+            DMA1_IFCR |= DMA_ISR_TCIF5;
         }
     trace_buf_drain(usbdev,0x85);
 }

@@ -28,7 +28,7 @@ Pinouts etc have been set to make life easy for creating a breakout lead.
  * PA3
 
 You can change these pins in the platform.h file if you need to, but TDO _must_ stay on UART1_RX
-if you want to use high speed SWO/SWV.
+if you want to use high speed SWO/SWV (above 2.250Mbps).
  
 Build the firmware by following the standard instructions but with PROBE_HOST=bluepill, like this;
 
@@ -121,23 +121,26 @@ To use SWO
 ==========
 
 The SWO data rate that comes out of the chip _must_ match the rate that the debugger expects.
-By default the baudrate is 4.5MBps but that can be changed as an optional parameter to the 
+By default the baudrate is 1.8MBps but that can be changed as an optional parameter to the 
 monitor traceswo command, like this;
 
 monitor traceswo 115200
 
-....would set the swo output at the silly-low speed of 115kbps.  The STM32F103 cannot go faster
-than 4.5Mbps.
+....would set the swo output at the low speed of 115kbps.  
+The STM32F103 cannot go faster than 4.5Mbps, but the USB starts losing
+data much above 1.8Mbps if you're streaming continuously, so we set 
+it to 1.8Mbps....you can safely go higher if your data is bursty.
 
-Depending on what you're using to wake up SWO on the target side, you may need code to get it 
-into the correct mode and emitting data.  An example for a STM32F103....
+Depending on what you're using to wake up SWO on the target side, you 
+may need code to get it into the correct mode and emitting data.  
+An example for a STM32F103....
 
     /* STM32 specific configuration to enable the TRACESWO IO pin */
     RCC->APB2ENR |= RCC_APB2ENR_AFIOEN;
     AFIO->MAPR |= (2 << 24); // Disable JTAG to release TRACESWO
     DBGMCU->CR |= DBGMCU_CR_TRACE_IOEN; // Enable IO trace pins
 
-    *((volatile unsigned *)(0xE0040010)) = 15;  // Output bits at 72000000/(15+1)=4.5MHz.
+    *((volatile unsigned *)(0xE0040010)) = 39;  // Output bits at 72000000/(39+1)=1.8MHz.
     *((volatile unsigned *)(0xE00400F0)) = 2;  // Use Async mode
 
     /* Configure instrumentation trace macroblock */
