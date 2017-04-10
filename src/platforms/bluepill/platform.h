@@ -94,6 +94,10 @@
 #define LED_PORT	    GPIOC
 #define LED_IDLE_RUN    GPIO13
 
+/* The 'force DFU' pin. We use BOOT1 cos that's on a jumper and it's ignored if BOOT0=0 */
+#define DFUFORCE_PORT   GPIOB
+#define DFUFORCE_PIN    GPIO2
+
 /* Use PC14 for a "dummy" uart led. So we can observere at least with scope*/
 #define LED_PORT_UART	GPIOC
 #define LED_UART	    GPIO14

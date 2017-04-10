@@ -1,11 +1,17 @@
 This is driver support for a STM32C103C8 'Bluepill' development  board which are sold 
-very very cheaply out of China.  It supports JTAG, SWD and SWO/SWV.
+very very cheaply out of China.  It supports JTAG, SWD and SWO/SWV. It is nothing like 
+as capable as a full bmp, but it will get you going for cheap.
 
 The typical product that this driver applies to is shown at;
 
 http://wiki.stm32duino.com/index.php?title=Blue_Pill
 
 (Note the comment about R10 having the wrong value....that's important if you want to use USB).
+
+Both the jumpers on the board should be set North (i.e. nearest the USB connector) to give
+logic 0 input and allow regular boot.  BOOT1 (the jumper nearest the reset button) can
+be set south (logic1) for force dfu mode....this is useful if you've flashed a bad application.
+Note that if no jumpers are fitted the behaviour is not determined and is likely to be unreliable.
 
 Pinouts etc have been set to make life easy for creating a breakout lead.
 
@@ -127,6 +133,7 @@ monitor traceswo command, like this;
 monitor traceswo 115200
 
 ....would set the swo output at the low speed of 115kbps.  
+
 The STM32F103 cannot go faster than 4.5Mbps, but the USB starts losing
 data much above 1.8Mbps if you're streaming continuously, so we set 
 it to 1.8Mbps....you can safely go higher if your data is bursty.
@@ -142,8 +149,31 @@ An example for a STM32F103....
 
     *((volatile unsigned *)(0xE0040010)) = 39;  // Output bits at 72000000/(39+1)=1.8MHz.
     *((volatile unsigned *)(0xE00400F0)) = 2;  // Use Async mode
+    *((volatile unsigned *)(0xE0040304)) = 0; // Disable formatter
 
     /* Configure instrumentation trace macroblock */
     ITM->LAR = 0xC5ACCE55;
     ITM->TCR = 0x00010005;
     ITM->TER = 0xFFFFFFFF; // Enable all stimulus ports
+
+The SWO data appears on USB Interface 5, Endpoint 5.
+
+A program swolisten.c is included which will listen to this endpoint, decode the datastream, and output it
+to a set of unix fifos which can then be used as the input to other programs (e.g. cat, or something more
+sophisticated). 
+
+The command line to build the tool is;
+
+gcc -I /usr/local/include/libusb-1.0 -L /usr/local/lib  -lusb-1.0 swolisten.c -O swolisten
+
+...you will obviously need to change the paths to your libusb files.  By default the tool will create
+fifos for the first 32 channels in a directory swo (which you will need to create) as follows;
+
+>ls swo/
+channel0  channel4  channel8	channelC       channelG	  channelK channelO	   channelS
+channel1  channel5  channel9	channelD       channelH	  channelL channelP	   channelT
+channel2  channel6  channelA	channelE       channelI	  channelM channelQ	   channelU
+channel3  channel7  channelB	channelF       channelJ	  channelN channelR	   channelV
+>cat swo/channel0
+<<OUTPUT FROM ITM Channel 0>>
+

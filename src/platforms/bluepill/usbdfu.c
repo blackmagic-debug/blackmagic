@@ -51,7 +51,15 @@ int main(void)
             GPIO_CNF_OUTPUT_PUSHPULL, LED_IDLE_RUN);
     gpio_clear(LED_PORT,LED_IDLE_RUN);
 
-	if((GPIOA_CRL & 0x40) == 0x40)
+    /* Check DFUFORCE....it will be pulled one way or the other by the jumper */
+    /* If the jumper isn't present then what happens here is indeterminate, but we can't */
+    /* put a pull on here 'cos the pin is driven via 100K :-( */
+    gpio_set_mode(DFUFORCE_PORT, GPIO_MODE_INPUT,
+                  GPIO_CNF_INPUT_FLOAT, DFUFORCE_PIN);
+    gpio_clear(DFUFORCE_PORT,DFUFORCE_PIN);
+
+    /* Jump to the app if it's valid, weren't told to stay in DFU and the jumper isn't set */
+	if (((GPIOA_CRL & 0x40) == 0x40) && (!gpio_get(DFUFORCE_PORT,DFUFORCE_PIN)))
 		dfu_jump_app_if_valid();
 
 	dfu_protect(DFU_MODE);
