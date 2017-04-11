@@ -1,0 +1,67 @@
+SWO is a datastream that comes out of a single pin when the debug interface is in SWD mode. It can
+be encoded either using NRZ (UART) or RZ (Manchester) formats.  The pin is a dedicated one that
+would be used for TDO when the debug interface is in JTAG mode. On the STM32F103 it's port B3.
+
+When in NRZ mode the SWO data rate that comes out of the chip _must_ match the rate that the debugger 
+expects. By default on BMP the baudrate is 1.8MBps but that can be changed as an optional parameter to the 
+monitor traceswo command, like this;
+
+monitor traceswo 115200
+
+....would set the swo output at the low speed of 115kbps.  
+
+The STM32F103 SWO _input_ cannot go faster than 4.5Mbps, but the USB starts losing
+data much above 1.8Mbps if you're streaming continuously, so we set 
+it to 1.8Mbps....you can safely go higher if your data is bursty, or if you're using
+a different CPU to the STM32F103 as your BMP host.
+
+Depending on what you're using to wake up SWO on the target side, you 
+may need code to get it into the correct mode and emitting data.  
+An example for a STM32F103 for UART (NRZ) data;
+
+    /* STM32 specific configuration to enable the TRACESWO IO pin */
+    RCC->APB2ENR |= RCC_APB2ENR_AFIOEN;
+    AFIO->MAPR |= (2 << 24); // Disable JTAG to release TRACESWO
+    DBGMCU->CR |= DBGMCU_CR_TRACE_IOEN; // Enable IO trace pins
+
+    *((volatile unsigned *)(0xE0040010)) = 39;  // Output bits at 72000000/(39+1)=1.8MHz.
+    *((volatile unsigned *)(0xE00400F0)) = 2;  // Use Async mode (1 for RZ/Manchester)
+    *((volatile unsigned *)(0xE0040304)) = 0; // Disable formatter
+
+    /* Configure instrumentation trace macroblock */
+    ITM->LAR = 0xC5ACCE55;
+    ITM->TCR = 0x00010005;
+    ITM->TER = 0xFFFFFFFF; // Enable all stimulus ports
+
+If you're using RZ mode (e.g. on a genuine BMP) then you will need the trace output speed to be quite 
+a lot lower...in the order of 200kHz by means of changing the divisor to something like 359.  That's 
+because the STM32F103 doesn't have a dedicated RZ decoder so it all has to be done in software. The 
+advantage of RZ is that the probe can adapt to the speed of the target, so you don't have to set the
+speed on the probe.
+
+The SWO data appears on USB Interface 5, Endpoint 5.
+
+A program swolisten.c is included which will listen to this endpoint, decode the datastream, and output it
+to a set of unix fifos which can then be used as the input to other programs (e.g. cat, or something more
+sophisticated). This program doesn't care if the data originates from a RZ or NRZ port, or at what
+speed.
+
+The command line to build the tool is;
+
+gcc -I /usr/local/include/libusb-1.0 -L /usr/local/lib  -lusb-1.0 swolisten.c -o swolisten
+
+...you will obviously need to change the paths to your libusb files.  By default the tool will create
+fifos for the first 32 channels in a directory swo (which you will need to create) as follows;
+
+>ls swo/
+chan00	chan02	chan04	chan06	chan08	chan0A	chan0C	chan0E	chan10	chan12	chan14	chan16	chan18	chan1A	chan1C	chan1E
+chan01	chan03	chan05	chan07	chan09	chan0B	chan0D	chan0F	chan11	chan13	chan15	chan17	chan19	chan1B	chan1D	chan1F
+
+>cat swo/channel0
+<<OUTPUT FROM ITM Channel 0>>
+
+Information about command line options can be found with the -h option.  swolisten is specifically designed
+to be 'hardy' to probe and target disconnects and restarts (y'know, like you get in the real world). The 
+intention being to give you streams whenever it can get them.  It does _not_ require gdb to be running. You
+do need gdb to send the initial 'monitor traceswo' to the probe, but beyond that there's no requirement for
+gdb to be present.
