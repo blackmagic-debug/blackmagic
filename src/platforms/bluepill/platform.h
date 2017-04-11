@@ -37,7 +37,7 @@
 #define BOARD_IDENT       "Black Magic Probe (Bluepill), (Firmware " FIRMWARE_VERSION ")"
 #define BOARD_IDENT_DFU   "Black Magic (Upgrade) for Bluepill, (Firmware " FIRMWARE_VERSION ")"
 #define BOARD_IDENT_UPD   "Black Magic (DFU Upgrade) for Bluepill, (Firmware " FIRMWARE_VERSION ")"
-#define DFU_IDENT         "Black Magic Firmware Upgrade (Bluepill)"
+#define DFU_IDENT         "Black Magic Firmware Upgrade (Bluepill, Firmware " FIRMWARE_VERSION ")"
 #define DFU_IFACE_STRING  "@Internal Flash   /0x08000000/8*001Ka,56*001Kg"
 #define UPD_IFACE_STRING  "@Internal Flash   /0x08000000/8*001Kg"
 
@@ -126,14 +126,14 @@
 #define USB_DRIVER              stm32f103_usb_driver
 #define USB_IRQ	                NVIC_USB_LP_CAN_RX0_IRQ
 #define USB_ISR	                usb_lp_can_rx0_isr
+
 /* Interrupt priorities.  Low numbers are high priority.
- * For now USARTq preempts USB which may spin while buffer is drained.
  */
-#define IRQ_PRI_USB		        (3 << 4)
-#define IRQ_PRI_USBUSART	    (2 << 4)
-#define IRQ_PRI_USBUSART_TIM	(4 << 4)
-#define IRQ_PRI_USB_VBUS	    (14 << 4)
 #define IRQ_PRI_SWODMA          (1 << 4)
+#define IRQ_PRI_USB		        (2 << 4)
+#define IRQ_PRI_USBUSART	    (3 << 4)
+#define IRQ_PRI_USBUSART_TIM	(4 << 4)
+#define IRQ_PRI_USB_VBUS        (14 << 4)
 
 /* Note that SWO needs to be on USART1 RX to get maximum speed */
 #define SWOUSART                USART1
@@ -161,11 +161,6 @@
 #define USBUSART_TIM_CLK_EN()   rcc_periph_clock_enable(RCC_TIM3)
 #define USBUSART_TIM_IRQ        NVIC_TIM3_IRQ
 #define USBUSART_TIM_ISR        tim3_isr
-
-//#define TRACE_TIM_CLK_EN()      rcc_periph_clock_enable(RCC_TIM4)
-//#define TRACE_TIM               TIM4
-//#define TRACE_IRQ   NVIC_TIM4_IRQ
-//#define TRACE_ISR   tim4_isr
 
 #define DEBUG(...)
 

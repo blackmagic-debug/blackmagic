@@ -39,49 +39,43 @@
 #include <libopencm3/stm32/usart.h>
 #include <libopencm3/stm32/dma.h>
 
-/* For speed the USB_BUF_SIZE is a multiple of the SWO packet and USB transfer size */
-#define TRACE_USB_BUF_SIZE (256)
-#define FULL_SWO_PACKET    (64)
+#define FULL_SWO_PACKET    (64)                             /* For speed this is set to the USB transfer size */
+#define NUM_PACKETS        (192)                            /* This is an 12K buffer */
 
+/* Default line rate....this is only used for setting the UART speed if we get a request without speed set */
 #define DEFAULTSPEED       (1800000)
 
-/* Packets waiting to be sent to the USB interface */
-static uint8_t trace_usb_buf[TRACE_USB_BUF_SIZE];
-static uint32_t tb_wp;
-static uint32_t tb_rp;
+static volatile uint32_t w;                                 /* Which packet we are currently getting */
+static volatile uint32_t r;                                 /* Which packet we are currently waiting to transmit to USB */
+static uint8_t trace_rx_buf[NUM_PACKETS*FULL_SWO_PACKET];   /* Packet arriving from the SWO interface */
 
-/* Packet arriving from the SWO interface */
-static uint8_t trace_rx_buf[2*FULL_SWO_PACKET];
+
 
 void trace_buf_drain(usbd_device *dev, uint8_t ep)
-{
-  if (tb_wp==tb_rp)
-    return;
 
-  /* Attempt to write everything we buffered */
-  if (usbd_ep_write_packet(dev, ep, &trace_usb_buf[tb_rp], 64))
-      tb_rp=(tb_rp+64)%TRACE_USB_BUF_SIZE;
-}
-
-static void dma_read(char *data, int size)
 {
-    /* Reset DMA channel*/
-    dma_channel_reset(SWODMABUS, SWDDMACHAN);
-    dma_set_peripheral_address(SWODMABUS, SWDDMACHAN, (uint32_t)&SWOUSARTDR);
-    dma_set_memory_address(SWODMABUS, SWDDMACHAN, (uint32_t)data);
-    dma_set_number_of_data(SWODMABUS, SWDDMACHAN, size);
-    dma_set_read_from_peripheral(SWODMABUS, SWDDMACHAN);
-    dma_enable_memory_increment_mode(SWODMABUS, SWDDMACHAN);
-    dma_enable_circular_mode(SWODMABUS, SWDDMACHAN);
-    dma_set_peripheral_size(SWODMABUS, SWDDMACHAN, DMA_CCR_PSIZE_8BIT);
-    dma_set_memory_size(SWODMABUS, SWDDMACHAN, DMA_CCR_MSIZE_8BIT);
-    dma_set_priority(SWODMABUS, SWDDMACHAN, DMA_CCR_PL_HIGH);
-    dma_enable_half_transfer_interrupt(SWODMABUS, SWDDMACHAN);
-    dma_enable_transfer_complete_interrupt(SWODMABUS, SWDDMACHAN);
-    dma_enable_channel(SWODMABUS, SWDDMACHAN);
-    usart_enable(SWOUSART);
-    usart_enable_rx_dma(SWOUSART);
-    nvic_enable_irq(SWODMAIRQ);
+    static volatile uint32_t inBufDrain;
+    if  (w==r)
+        {
+            return;
+        }
+
+    /* There are better ways to do this, but it's midnight and I just want to test it */
+    __disable_irq();
+    if (inBufDrain)
+        {
+            __enable_irq();
+            return;
+        }
+    inBufDrain=1;
+    __enable_irq();
+
+    /* Attempt to write everything we buffered */
+  if (usbd_ep_write_packet(dev, ep, &trace_rx_buf[r*FULL_SWO_PACKET], FULL_SWO_PACKET))
+      {
+          r=(r+1)%NUM_PACKETS;
+      }
+  inBufDrain=0;
 }
 
 void traceswo_setspeed(uint32_t speed)
@@ -94,27 +88,38 @@ void traceswo_setspeed(uint32_t speed)
   usart_set_mode(SWOUSART, USART_MODE_RX);
   usart_set_parity(SWOUSART, USART_PARITY_NONE);
   usart_set_flow_control(SWOUSART, USART_FLOWCONTROL_NONE);
-  dma_read((char *)trace_rx_buf, 2*FULL_SWO_PACKET);
-}
 
+  /* Set up DMA channel*/
+  dma_channel_reset(SWODMABUS, SWDDMACHAN);
+  dma_set_peripheral_address(SWODMABUS, SWDDMACHAN, (uint32_t)&SWOUSARTDR);
+  dma_set_read_from_peripheral(SWODMABUS, SWDDMACHAN);
+  dma_enable_memory_increment_mode(SWODMABUS, SWDDMACHAN);
+  dma_set_peripheral_size(SWODMABUS, SWDDMACHAN, DMA_CCR_PSIZE_8BIT);
+  dma_set_memory_size(SWODMABUS, SWDDMACHAN, DMA_CCR_MSIZE_8BIT);
+  dma_set_priority(SWODMABUS, SWDDMACHAN, DMA_CCR_PL_HIGH);
+  dma_enable_transfer_complete_interrupt(SWODMABUS, SWDDMACHAN);
+  usart_enable(SWOUSART);
+  nvic_enable_irq(SWODMAIRQ);
+  w=r=0;
+  dma_set_memory_address(SWODMABUS, SWDDMACHAN, (uint32_t)trace_rx_buf);
+  dma_set_number_of_data(SWODMABUS, SWDDMACHAN, FULL_SWO_PACKET);
+  dma_enable_channel(SWODMABUS, SWDDMACHAN);
+  usart_enable_rx_dma(SWOUSART);
+}
 
 void dma1_channel5_isr(void)
 
 {
-    /* If the buffer has overrun there's not much we can do about it, so don't bother ... it takes time to check */
-    if (DMA1_ISR & DMA_ISR_HTIF5)
-        {
-            memcpy(&trace_usb_buf[tb_wp],trace_rx_buf,FULL_SWO_PACKET);
-            tb_wp=(tb_wp+FULL_SWO_PACKET)%TRACE_USB_BUF_SIZE;
-            DMA1_IFCR |= DMA_ISR_HTIF5;
-        }
-
     if (DMA1_ISR & DMA_ISR_TCIF5)
         {
-            memcpy(&trace_usb_buf[tb_wp],&(trace_rx_buf[FULL_SWO_PACKET]),FULL_SWO_PACKET);
-            tb_wp=(tb_wp+FULL_SWO_PACKET)%TRACE_USB_BUF_SIZE;
-            DMA1_IFCR |= DMA_ISR_TCIF5;
+            w=(w+1)%NUM_PACKETS;
+            dma_disable_channel(SWODMABUS, SWDDMACHAN);
+            dma_set_memory_address(SWODMABUS, SWDDMACHAN, (uint32_t)(&trace_rx_buf[w*FULL_SWO_PACKET]));
+            dma_set_number_of_data(SWODMABUS, SWDDMACHAN, FULL_SWO_PACKET);
+            dma_enable_channel(SWODMABUS, SWDDMACHAN);
+            usart_enable_rx_dma(SWOUSART);
         }
+    DMA1_IFCR |= DMA_ISR_GIF5;
     trace_buf_drain(usbdev,0x85);
 }
 
