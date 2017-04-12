@@ -68,6 +68,9 @@ to a set of unix fifos which can then be used as the input to other programs (e.
 sophisticated like gnuplot, octave or whatever). This program doesn't care if the data originates from a 
 RZ or NRZ port, or at what speed.
 
+Note that swolisten can be used with either BMP firmware, or with a conventional TTL serial dongle. See at
+the bottom of this file for information on how to use a dongle.
+
 The command line to build the swolisten tool is;
 
 gcc -I /usr/local/include/libusb-1.0 -L /usr/local/lib  -lusb-1.0 swolisten.c -o swolisten
@@ -152,3 +155,22 @@ The output was;
 126461 ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ
 
 (On inspection, the last line of recorded data was indeed a 'D' line).
+
+Using a TTL Serial Dongle
+=========================
+
+The NRZ data that comes out of the SWO is just UART formatted, but in a frame.  swolisten has been extended
+to accomodate TTL Serial Dongles that can pick this up.  Success has been had with CP2102 dongles at up to
+921600 baud.
+
+To use this mode just connect SWO to the RX pin of your dongle, and start swolisten with parmeters representing
+the speed and port. An example;
+
+>./swolisten -p /dev/cu.SLAB_USBtoUART -v -b swo/ -s 921600
+
+Any individual dongle will only support certain baudrates (Generally multiples of 115200) so you may have to
+experiment to find the best supported ones.  For the CP2102 dongle 1.3824Mbps wasn't supported and 1.8432Mbps
+returned corrupted data.
+
+Please email dave@marples.net with information about dongles you find work well and at what speed.
+

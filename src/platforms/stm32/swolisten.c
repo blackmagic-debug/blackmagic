@@ -27,12 +27,14 @@
 #include <ctype.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <stdio.h>
 #include <string.h>
 #include <libusb.h>
 #include <stdint.h>
 #include <limits.h>
+#include <termios.h>
 
 #define VID       (0x1d50)
 #define PID       (0x6018)
@@ -55,7 +57,9 @@ struct
   BOOL verbose;
   int nChannels;
   char *chanPath;
-} options = {.nChannels=NUM_FIFOS, .chanPath=""};
+  char *port;
+  int speed;
+} options = {.nChannels=NUM_FIFOS, .chanPath="", .speed=115200};
 
 // Runtime state
 struct
@@ -88,13 +92,13 @@ static BOOL _runFifo(int portNo, int listenHandle, char *fifoName)
       char rxdata[TRANSFER_SIZE];
       int fifo;
       
+      /* Don't kill this sub-process when any reader or writer evaporates */
+      signal(SIGPIPE, SIG_IGN);
+
       while (1)
 	{
 	  /* This is the child */
 	  fifo=open(fifoName,O_WRONLY);
-
-	  /* Don't kill this sub-process when any reader or writer evaporates */
-	  signal(SIGPIPE, SIG_IGN);
 
 	  while (1)
 	    {
@@ -339,23 +343,31 @@ void intHandler(int dummy)
 void _printHelp(char *progName)
 
 {
-  printf("Useage: %s <dhnv> <b basedir>\n",progName);
+  printf("Useage: %s <dhnv> <b basedir> <p port> <s speed>\n",progName);
+  printf("        b: <basedir> for channels\n");
   printf("        h: This help\n");
   printf("        n: <Number> of channels to populate\n");
+  printf("        p: <serialPort> to use\n");
+  printf("        s: <serialSpeed> to use\n");
   printf("        v: Verbose mode\n");
-  printf("        b: <basedir> for channels\n");
 }
 // ====================================================================================================
 int _processOptions(int argc, char *argv[])
 
 {
   int c;
-  while ((c = getopt (argc, argv, "vdn:b:h")) != -1)
+  while ((c = getopt (argc, argv, "vdn:b:hp:s:")) != -1)
     switch (c)
       {
       case 'v':
         options.verbose = 1;
         break;
+      case 'p':
+	options.port=optarg;
+	break;
+      case 's':
+	options.speed=atoi(optarg);
+	break;
       case 'h':
 	_printHelp(argv[0]);
 	return FALSE;
@@ -383,39 +395,29 @@ int _processOptions(int argc, char *argv[])
   if (options.verbose)
     {
       fprintf(stdout,"Verbose: TRUE\nBasePath: %s\n",options.chanPath);
+      if (options.port)
+	{
+	  fprintf(stdout,"Serial Port: %s\nSerial Speed: %d\n",options.port,options.speed);
+	}
     }
   return TRUE;
 }
 // ====================================================================================================
-int main(int argc, char *argv[])
+int usbFeeder(void)
+
 {
+
+  unsigned char cbw[TRANSFER_SIZE];
   libusb_device_handle *handle;
   libusb_device *dev;
   int size;
-  char fifoName[]=CHANNELNAME;
-
-  unsigned char cbw[TRANSFER_SIZE];
-
-  if (!_processOptions(argc,argv))
-    {
-      exit(-1);
-    }
-
-  atexit(_removeFifoTasks);
-  /* This ensures the atexit gets called */
-  signal(SIGINT, intHandler);
-  if (!_makeFifoTasks())
-    {
-      fprintf(stderr,"Failed to make channel devices\n");
-      exit(-1);
-    }
 
   while (1)
     {
       if (libusb_init(NULL) < 0)
 	{
 	  fprintf(stderr,"Failed to initalise USB interface\n");
-	  exit(-1);
+	  return (-1);
 	}
 
       while (!(handle = libusb_open_device_with_vid_pid(NULL, VID, PID)))
@@ -436,14 +438,102 @@ int main(int argc, char *argv[])
 
       while (0==libusb_bulk_transfer(handle, ENDPOINT, cbw, TRANSFER_SIZE, &size, 10))
 	{
-	  uint8_t *c=cbw;
+	  unsigned char *c=cbw;
 	  while (size--)
 	    _protocolPump(c++);
 	}
 
       libusb_close(handle);
     }
+}
+// ====================================================================================================
+int serialFeeder(void)
 
-  return 0;
+{
+  int f;
+  unsigned char cbw[TRANSFER_SIZE];
+  ssize_t t;
+  struct termios settings;
+
+  while (1)
+    {
+      while ((f=open(options.port,O_RDONLY))<0)
+	{
+	  if (options.verbose)
+	    {
+	      fprintf(stderr,"Can't open serial port\n");
+	    }
+	  usleep(500000);
+	}
+
+      if (options.verbose)
+	{
+	  fprintf(stderr,"Port opened\n");
+	}
+
+      if (tcgetattr(f, &settings) <0)
+	{
+	  perror("tcgetattr");
+	  return(-3);
+	}
+
+      if (cfsetspeed(&settings, options.speed)<0)
+	{
+	  perror("Setting input speed");
+	  return -3;
+	}
+      settings.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);
+      settings.c_cflag &= ~PARENB; /* no parity */
+      settings.c_cflag &= ~CSTOPB; /* 1 stop bit */
+      settings.c_cflag &= ~CSIZE;
+      settings.c_cflag |= CS8 | CLOCAL; /* 8 bits */
+      settings.c_oflag &= ~OPOST; /* raw output */
+
+      if (tcsetattr(f, TCSANOW, &settings)<0)
+	{
+	  fprintf(stderr,"Unsupported baudrate\n");
+	  exit(-3);
+	}
+
+      tcflush(f, TCOFLUSH);
+
+      while ((t=read(f,cbw,TRANSFER_SIZE))>0)
+	{
+	  unsigned char *c=cbw;
+	  while (t--)
+	    _protocolPump(c++);
+	}
+      if (options.verbose)
+	{
+	  fprintf(stderr,"Read failed\n");
+	}
+      close(f);
+    }
+}
+// ====================================================================================================
+int main(int argc, char *argv[])
+
+{
+  if (!_processOptions(argc,argv))
+    {
+      exit(-1);
+    }
+
+  atexit(_removeFifoTasks);
+  /* This ensures the atexit gets called */
+  signal(SIGINT, intHandler);
+  if (!_makeFifoTasks())
+    {
+      fprintf(stderr,"Failed to make channel devices\n");
+      exit(-1);
+    }
+
+  /* Using the exit construct rather than return ensures the atexit gets called */
+  if (!options.port)
+    exit(usbFeeder());
+  else
+    exit(serialFeeder());
+  fprintf(stderr,"Returned\n");
+  exit(0);
 }
 // ====================================================================================================

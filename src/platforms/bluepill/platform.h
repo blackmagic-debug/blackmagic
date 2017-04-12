@@ -79,8 +79,6 @@
 
 #define TDO_PORT	    GPIOB
 #define TDO_PIN		    GPIO7
-#define SWO_PORT        TDO_PORT
-#define SWO_PIN         TDO_PIN
 
 #define TDI_PORT	    GPIOB
 #define TDI_PIN		    GPIO6
@@ -120,8 +118,8 @@
 
 #define SWO_PIN_SETUP()						     \
         AFIO_MAPR |= AFIO_MAPR_USART1_REMAP;     \
-        gpio_set_mode(SWO_PORT, GPIO_MODE_INPUT, \
-        GPIO_CNF_INPUT_FLOAT, SWO_PIN);
+        gpio_set_mode(SWOUSART_PORT, GPIO_MODE_INPUT, \
+        GPIO_CNF_INPUT_FLOAT, SWOUSART_RX_PIN);
 
 
 #define USB_DRIVER              stm32f103_usb_driver
@@ -143,7 +141,7 @@
 #define SWOUSART_IRQ            NVIC_USART1_IRQ
 #define SWOUSART_CLK            RCC_USART1
 #define SWOUSART_PORT           GPIOB
-#define SWOUSART_TX_PIN         GPIO7
+#define SWOUSART_RX_PIN         GPIO7
 #define SWOUSART_ISR            usart1_isr
 
 /* This DMA channel is set by the USART in use */

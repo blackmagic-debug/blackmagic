@@ -76,8 +76,6 @@
 #define SWCLK_PORT 	TCK_PORT
 #define SWDIO_PIN	TMS_PIN
 #define SWCLK_PIN	TCK_PIN
-#define SWO_PORT        GPIOA
-#define SWO_PIN         GPIO10
 
 #define SRST_PORT	GPIOB
 #define SRST_PIN_V1	GPIO1
@@ -133,8 +131,8 @@
 #define USBUSART_TIM_ISR tim4_isr
 
 #define SWO_PIN_SETUP()						     \
-        gpio_set_mode(SWO_PORT, GPIO_MODE_INPUT, \
-        GPIO_CNF_INPUT_FLOAT, SWO_PIN);
+        gpio_set_mode(SWOUSART_PORT, GPIO_MODE_INPUT, \
+        GPIO_CNF_INPUT_FLOAT, SWOUSART_RX_PIN);
 
 /* Note that SWO needs to be on USART1 RX to get maximum speed */
 #define SWOUSART                USART1
@@ -143,7 +141,7 @@
 #define SWOUSART_IRQ            NVIC_USART1_IRQ
 #define SWOUSART_CLK            RCC_USART1
 #define SWOUSART_PORT           GPIOA
-#define SWOUSART_TX_PIN         GPIO10
+#define SWOUSART_RX_PIN         GPIO10
 #define SWOUSART_ISR            usart1_isr
 
 /* This DMA channel is set by the USART in use */
