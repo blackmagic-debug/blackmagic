@@ -84,6 +84,9 @@ bool lmi_probe(target *t)
 		t->driver = lmi_driver_str;
 		target_add_ram(t, 0x20000000, 0x10000);
 		lmi_add_flash(t, 0x80000);
+		/* On Tiva targets, asserting SRST results in the debug
+		 * logic also being reset.  We can't assert SRST and must
+		 * only use the AIRCR SYSRESETREQ. */
 		t->target_options |= CORTEXM_TOPT_INHIBIT_SRST;
 		return true;
 	}
