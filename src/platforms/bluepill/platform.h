@@ -61,6 +61,7 @@
  */
 
 #define PLATFORM_HAS_TRACESWO 1
+#define TRACESWO_ASYNC 1
 
 /* Hardware definitions... */
 #define TRST_PORT       GPIOA

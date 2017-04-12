@@ -18,7 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file implements capture of the TRACESWO output.
+/* This file implements capture of the TRACESWO output using ASYNC signalling.
  *
  * ARM DDI 0403D - ARMv7M Architecture Reference Manual
  * ARM DDI 0337I - Cortex-M3 Technical Reference Manual
@@ -31,6 +31,8 @@
 #include "general.h"
 #include "cdcacm.h"
 #include "platform.h"
+
+#ifdef TRACESWO_ASYNC
 
 #include <libopencmsis/core_cm3.h>
 #include <libopencm3/cm3/nvic.h>
@@ -127,3 +129,4 @@ void traceswo_init(uint32_t speed)
   nvic_enable_irq(SWODMAIRQ);
   traceswo_setspeed(speed);
 }
+#endif

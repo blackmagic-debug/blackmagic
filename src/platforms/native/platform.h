@@ -29,6 +29,8 @@
 #include "timing_stm32.h"
 
 #define PLATFORM_HAS_TRACESWO
+#define TRACESWO_SYNC
+
 #define PLATFORM_HAS_POWER_SWITCH
 #ifdef ENABLE_DEBUG
 #define PLATFORM_HAS_DEBUG

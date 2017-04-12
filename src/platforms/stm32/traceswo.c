@@ -31,6 +31,8 @@
  * These can be capture directly to RAM by DMA.
  * The core can then process the buffer to extract the frame.
  */
+
+#ifdef TRACESWO_SYNC
 #include "general.h"
 #include "cdcacm.h"
 
@@ -185,3 +187,4 @@ flush_and_reset:
 	decbuf_pos = 0;
 	memset(decbuf, 0, sizeof(decbuf));
 }
+#endif
