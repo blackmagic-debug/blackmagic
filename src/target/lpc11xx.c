@@ -35,6 +35,26 @@
 #define LPC11XX_DEVICE_ID  0x400483F4
 #define LPC8XX_DEVICE_ID   0x400483F8
 
+static bool lpc11xx_read_uid(target *t, int argc, const char *argv[])
+{
+	(void)argc;
+	(void)argv;
+	struct lpc_flash *f = (struct lpc_flash *)t->flash;
+	uint8_t uid[16];
+	if (lpc_iap_call(f, uid, IAP_CMD_READUID))
+		return false;
+	tc_printf(t, "UID: 0x");
+	for (uint32_t i = 0; i < sizeof(uid); ++i)
+		tc_printf(t, "%02x", uid[i]);
+	tc_printf(t, "\n");
+	return true;
+}
+
+const struct command_s lpc11xx_cmd_list[] = {
+	{"readuid", lpc11xx_read_uid, "Read out the 16-byte UID."},
+	{NULL, NULL, NULL}
+};
+
 void lpc11xx_add_flash(target *t, uint32_t addr, size_t len, size_t erasesize)
 {
 	struct lpc_flash *lf = lpc_add_flash(t, addr, len);
@@ -89,6 +109,7 @@ lpc11xx_probe(target *t)
 		t->driver = "LPC11xx";
 		target_add_ram(t, 0x10000000, 0x2000);
 		lpc11xx_add_flash(t, 0x00000000, 0x20000, 0x1000);
+		target_add_commands(t, lpc11xx_cmd_list, "LPC11xx");
 		return true;
 
 	case 0x0A24902B:
@@ -109,6 +130,7 @@ lpc11xx_probe(target *t)
 		t->driver = "LPC81x";
 		target_add_ram(t, 0x10000000, 0x1000);
 		lpc11xx_add_flash(t, 0x00000000, 0x4000, 0x400);
+		target_add_commands(t, lpc11xx_cmd_list, "LPC81x");
 		return true;
 	case 0x00008221:  /* LPC822M101JHI33 */
 	case 0x00008222:  /* LPC822M101JDH20 */
@@ -117,6 +139,7 @@ lpc11xx_probe(target *t)
 		t->driver = "LPC82x";
 		target_add_ram(t, 0x10000000, 0x2000);
 		lpc11xx_add_flash(t, 0x00000000, 0x8000, 0x400);
+		target_add_commands(t, lpc11xx_cmd_list, "LPC82x");
 		return true;
 	case 0x0003D440:	/* LPC11U34/311  */
 	case 0x0001cc40:	/* LPC11U34/421  */

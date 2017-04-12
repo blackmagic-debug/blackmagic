@@ -164,11 +164,11 @@ static bool lpc43xx_cmd_erase(target *t, int argc, const char *argv[])
 	for (int bank = 0; bank < FLASH_NUM_BANK; bank++)
 	{
 		struct lpc_flash *f = (struct lpc_flash *)t->flash;
-		if (lpc_iap_call(f, IAP_CMD_PREPARE,
+		if (lpc_iap_call(f, NULL, IAP_CMD_PREPARE,
 		                 0, FLASH_NUM_SECTOR-1, bank))
 			return false;
 
-		if (lpc_iap_call(f, IAP_CMD_ERASE,
+		if (lpc_iap_call(f, NULL, IAP_CMD_ERASE,
 		                 0, FLASH_NUM_SECTOR-1, CPU_CLK_KHZ, bank))
 			return false;
 	}
@@ -188,7 +188,7 @@ static int lpc43xx_flash_init(target *t)
 
 	/* Initialize flash IAP */
 	struct lpc_flash *f = (struct lpc_flash *)t->flash;
-	if (lpc_iap_call(f, IAP_CMD_INIT))
+	if (lpc_iap_call(f, NULL, IAP_CMD_INIT))
 		return -1;
 
 	return 0;
@@ -234,7 +234,7 @@ static bool lpc43xx_cmd_mkboot(target *t, int argc, const char *argv[])
 
 	/* special command to compute/write magic vector for signature */
 	struct lpc_flash *f = (struct lpc_flash *)t->flash;
-	if (lpc_iap_call(f, IAP_CMD_SET_ACTIVE_BANK, bank, CPU_CLK_KHZ)) {
+	if (lpc_iap_call(f, NULL, IAP_CMD_SET_ACTIVE_BANK, bank, CPU_CLK_KHZ)) {
 		tc_printf(t, "Set bootable failed.\n");
 		return false;
 	}
