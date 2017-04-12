@@ -633,9 +633,16 @@ int cortexm_run_stub(target *t, uint32_t loadaddr,
 		return -1;
 
 	/* Execute the stub */
+	enum target_halt_reason reason;
 	cortexm_halt_resume(t, 0);
-	while (!cortexm_halt_poll(t, NULL))
+	while ((reason = cortexm_halt_poll(t, NULL)) == TARGET_HALT_RUNNING)
 		;
+
+	if (reason == TARGET_HALT_ERROR)
+		raise_exception(EXCEPTION_ERROR, "Target lost in stub");
+
+	if (reason != TARGET_HALT_BREAKPOINT)
+		return -2;
 
 	uint32_t pc = cortexm_pc_read(t);
 	uint16_t bkpt_instr = target_mem_read16(t, pc);
