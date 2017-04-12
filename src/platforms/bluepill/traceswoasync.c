@@ -43,7 +43,7 @@
 #define NUM_PACKETS        (192)                            /* This is an 12K buffer */
 
 /* Default line rate....this is only used for setting the UART speed if we get a request without speed set */
-#define DEFAULTSPEED       (1800000)
+#define DEFAULTSPEED       (2250000)
 
 static volatile uint32_t w;                                 /* Which packet we are currently getting */
 static volatile uint32_t r;                                 /* Which packet we are currently waiting to transmit to USB */
@@ -54,29 +54,20 @@ static uint8_t trace_rx_buf[NUM_PACKETS*FULL_SWO_PACKET];   /* Packet arriving f
 void trace_buf_drain(usbd_device *dev, uint8_t ep)
 
 {
-    static volatile uint32_t inBufDrain;
-    if  (w==r)
-        {
-            return;
-        }
+    static volatile char inBufDrain;
 
-    /* There are better ways to do this, but it's midnight and I just want to test it */
-    __disable_irq();
-    if (inBufDrain)
-        {
-            __enable_irq();
-            return;
-        }
-    inBufDrain=1;
-    __enable_irq();
+    /* If we are already in this routine then we don't need to come in again */
+    if (__atomic_test_and_set (&inBufDrain, __ATOMIC_RELAXED))
+        return;
 
     /* Attempt to write everything we buffered */
-  if (usbd_ep_write_packet(dev, ep, &trace_rx_buf[r*FULL_SWO_PACKET], FULL_SWO_PACKET))
+  if ((w!=r) && (usbd_ep_write_packet(dev, ep, &trace_rx_buf[r*FULL_SWO_PACKET], FULL_SWO_PACKET)))
       {
           r=(r+1)%NUM_PACKETS;
       }
-  inBufDrain=0;
+  __atomic_clear (&inBufDrain, __ATOMIC_RELAXED);
 }
+
 
 void traceswo_setspeed(uint32_t speed)
 {
