@@ -34,6 +34,8 @@
 #include <libopencm3/stm32/usart.h>
 #include <libopencm3/stm32/syscfg.h>
 #include <libopencm3/usb/usbd.h>
+#include <libopencm3/cm3/systick.h>
+#include <libopencm3/cm3/cortex.h>
 
 jmp_buf fatal_error_jmpbuf;
 
@@ -88,16 +90,35 @@ const char *platform_target_voltage(void)
 void platform_request_boot(void)
 {
 	/* Disconnect USB cable */
-	usbd_disconnect(usbdev, 1);
-	nvic_disable_irq(USB_IRQ);
+	if (RCC_AHB2ENR & RCC_AHB2ENR_OTGFSEN) {
+		usbd_disconnect(usbdev, 1);
+		nvic_disable_irq(USB_IRQ);
+		rcc_peripheral_disable_clock(&RCC_AHB2ENR, RCC_AHB2ENR_OTGFSEN);
+	}
 
 	/* Assert blue LED as indicator we are in the bootloader */
 	rcc_peripheral_enable_clock(&RCC_AHB1ENR, RCC_AHB1ENR_IOPDEN);
 	gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT,
 		GPIO_PUPD_NONE, LED_BOOTLOADER);
 	gpio_set(LED_PORT, LED_BOOTLOADER);
+	/* Disable used ports beside PORTD.*/
+	rcc_peripheral_disable_clock(&RCC_AHB1ENR, RCC_AHB1ENR_IOPAEN);
+	rcc_peripheral_disable_clock(&RCC_AHB1ENR, RCC_AHB1ENR_IOPCEN);
+	rcc_periph_clock_disable(USBUSART_CLK);
+	/* Reset Systick.*/
+	systick_interrupt_disable();
+	STK_CSR = 0;
+	STK_RVR = 0;
+	STK_CVR = 0;
+	/*Disable Interrupts.*/
+	cm_disable_interrupts();
+	/* Switch back to HSI.*/
+	while (!(RCC_CR & RCC_CR_HSIRDY))
+		RCC_CR |= RCC_CR_HSION;
+	while (RCC_CFGR & (RCC_CFGR_SWS_HSE | RCC_CFGR_SWS_PLL))
+		RCC_CFGR &= ~(RCC_CFGR_SWS_HSE | RCC_CFGR_SWS_PLL);
 
-	/* Jump to the built in bootloader by mapping System flash */
+	/* Map System flash at 0.*/
 	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_SYSCFGEN);
 	SYSCFG_MEMRM &= ~3;
 	SYSCFG_MEMRM |=  1;
