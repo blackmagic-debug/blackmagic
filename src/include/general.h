@@ -42,5 +42,7 @@
 #undef MIN
 #define MIN(x, y)  (((x) < (y)) ? (x) : (y))
 
+#define BOOTMAGIC0 0xdeadbeef
+#define BOOTMAGIC1 0xbaadfeed
 #endif
 
