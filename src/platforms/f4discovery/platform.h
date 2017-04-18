@@ -80,6 +80,8 @@
 #define LED_IDLE_RUN	GPIO13
 #define LED_ERROR	GPIO14
 #define LED_BOOTLOADER	GPIO15
+#define BOOTMAGIC0 0xb007da7a
+#define BOOTMAGIC1 0xbaadfeed
 
 #define TMS_SET_MODE() \
 	gpio_mode_setup(TMS_PORT, GPIO_MODE_OUTPUT, \
