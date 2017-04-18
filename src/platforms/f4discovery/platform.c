@@ -42,7 +42,7 @@ jmp_buf fatal_error_jmpbuf;
 void platform_init(void)
 {
 	/* Check the USER button*/
-	rcc_peripheral_enable_clock(&RCC_AHB1ENR, RCC_AHB1ENR_IOPAEN);
+	rcc_periph_clock_enable(RCC_GPIOA);
 	if(gpio_get(GPIOA, GPIO0)) {
 		platform_request_boot();
 		scb_reset_core();
@@ -51,10 +51,10 @@ void platform_init(void)
 	rcc_clock_setup_hse_3v3(&hse_8mhz_3v3[CLOCK_3V3_48MHZ]);
 
 	/* Enable peripherals */
-	rcc_peripheral_enable_clock(&RCC_AHB2ENR, RCC_AHB2ENR_OTGFSEN);
-	rcc_peripheral_enable_clock(&RCC_AHB1ENR, RCC_AHB1ENR_IOPCEN);
-	rcc_peripheral_enable_clock(&RCC_AHB1ENR, RCC_AHB1ENR_IOPDEN);
-	rcc_peripheral_enable_clock(&RCC_AHB1ENR, RCC_AHB1ENR_CRCEN);
+	rcc_periph_clock_enable(RCC_OTGFS);
+	rcc_periph_clock_enable(RCC_GPIOC);
+	rcc_periph_clock_enable(RCC_GPIOD);
+	rcc_periph_clock_enable(RCC_CRC);
 
 	/* Set up USB Pins and alternate function*/
 	gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO11 | GPIO12);
@@ -93,17 +93,16 @@ void platform_request_boot(void)
 	if (RCC_AHB2ENR & RCC_AHB2ENR_OTGFSEN) {
 		usbd_disconnect(usbdev, 1);
 		nvic_disable_irq(USB_IRQ);
-		rcc_peripheral_disable_clock(&RCC_AHB2ENR, RCC_AHB2ENR_OTGFSEN);
+		rcc_periph_clock_disable(RCC_OTGFS);
 	}
 
 	/* Assert blue LED as indicator we are in the bootloader */
-	rcc_peripheral_enable_clock(&RCC_AHB1ENR, RCC_AHB1ENR_IOPDEN);
 	gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT,
 		GPIO_PUPD_NONE, LED_BOOTLOADER);
 	gpio_set(LED_PORT, LED_BOOTLOADER);
 	/* Disable used ports beside PORTD.*/
-	rcc_peripheral_disable_clock(&RCC_AHB1ENR, RCC_AHB1ENR_IOPAEN);
-	rcc_peripheral_disable_clock(&RCC_AHB1ENR, RCC_AHB1ENR_IOPCEN);
+	rcc_periph_clock_disable(RCC_GPIOA);
+	rcc_periph_clock_disable(RCC_GPIOC);
 	rcc_periph_clock_disable(USBUSART_CLK);
 	/* Reset Systick.*/
 	systick_interrupt_disable();
@@ -119,7 +118,7 @@ void platform_request_boot(void)
 		RCC_CFGR &= ~(RCC_CFGR_SWS_HSE | RCC_CFGR_SWS_PLL);
 
 	/* Map System flash at 0.*/
-	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_SYSCFGEN);
+	rcc_periph_clock_enable(RCC_SYSCFG);
 	SYSCFG_MEMRM &= ~3;
 	SYSCFG_MEMRM |=  1;
 }
