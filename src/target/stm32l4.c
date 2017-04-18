@@ -146,12 +146,18 @@ bool stm32l4_probe(target *t)
 	uint32_t options;
 	uint32_t bank1_start = 0x08040000;
 
-	idcode = target_mem_read32(t, DBGMCU_IDCODE);
-	switch(idcode & 0xFFF) {
+	idcode = target_mem_read32(t, DBGMCU_IDCODE) & 0xFFF;
+	switch(idcode) {
+	case 0x461: /* L496/RM0351 */
 	case 0x415: /* L471/RM0392, L475/RM0395, L476/RM0351 */
 		t->driver = stm32l4_driver_str;
-		target_add_ram(t, 0x10000000, 1 << 15);
-		target_add_ram(t, 0x20000000, 3 << 15);
+		if (idcode == 0x415) {
+			target_add_ram(t, 0x10000000, 0x08000);
+			target_add_ram(t, 0x20000000, 0x18000);
+		} else {
+			target_add_ram(t, 0x10000000, 0x10000);
+			target_add_ram(t, 0x20000000, 0x40000);
+		}
 		size    = (target_mem_read32(t, FLASH_SIZE_REG) & 0xffff);
 		options =  target_mem_read32(t, FLASH_OPTR);
 		if ((size < 0x400) && (options & OR_DUALBANK))
@@ -159,9 +165,16 @@ bool stm32l4_probe(target *t)
 		stm32l4_add_flash(t, 0x08000000, size << 10, PAGE_SIZE, bank1_start);
 		target_add_commands(t, stm32l4_cmd_list, "STM32L4 Dual bank");
 		return true;
-	case 0x435: /* L432 L442 L452 L462/RM0393, L431 L433 L443 rm0394  */
+	case 0x462: /* L45x L46x / RM0394  */
+	case 0x435: /* L43x L44x / RM0394  */
 		t->driver = stm32l4_driver_str;
-		target_add_ram(t, 0x20000000, 2 << 15);
+		if (idcode == 0x452) {
+			target_add_ram(t, 0x10000000, 0x08000);
+			target_add_ram(t, 0x20000000, 0x20000);
+		} else {
+			target_add_ram(t, 0x10000000, 0x04000);
+			target_add_ram(t, 0x20000000, 0x0c000);
+		}
 		size    = (target_mem_read32(t, FLASH_SIZE_REG) & 0xffff);
 		options =  target_mem_read32(t, FLASH_OPTR);
 		stm32l4_add_flash(t, 0x08000000, size << 10, PAGE_SIZE, bank1_start);
