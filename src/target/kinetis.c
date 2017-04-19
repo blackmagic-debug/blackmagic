@@ -82,6 +82,7 @@ static bool kinetis_cmd_unsafe(target *t, int argc, char *argv[])
 static int kl_gen_flash_erase(struct target_flash *f, target_addr addr, size_t len);
 static int kl_gen_flash_write(struct target_flash *f,
                               target_addr dest, const void *src, size_t len);
+static int kl_gen_flash_done(struct target_flash *f);
 
 static void kl_gen_add_flash(target *t,
                            uint32_t addr, size_t length, size_t erasesize)
@@ -92,6 +93,7 @@ static void kl_gen_add_flash(target *t,
 	f->blocksize = erasesize;
 	f->erase = kl_gen_flash_erase;
 	f->write = kl_gen_flash_write;
+	f->done = kl_gen_flash_done;
 	f->align = 4;
 	f->erased = 0xff;
 	target_add_flash(t, f);
@@ -230,6 +232,24 @@ static int kl_gen_flash_write(struct target_flash *f,
 			return 1;
 		}
 	}
+	return 0;
+}
+
+static int kl_gen_flash_done(struct target_flash *f)
+{
+
+	if (unsafe_enabled)
+		return 0;
+
+	if (target_mem_read8(f->t, FLASH_SECURITY_BYTE_ADDRESS) ==
+	    FLASH_SECURITY_BYTE_UNSECURED)
+		return 0;
+
+	uint32_t val = target_mem_read32(f->t, FLASH_SECURITY_BYTE_ADDRESS);
+	val = (val & 0xffffff00) | FLASH_SECURITY_BYTE_UNSECURED;
+	kl_gen_command(f->t, FTFA_CMD_PROGRAM_LONGWORD,
+	               FLASH_SECURITY_BYTE_ADDRESS, (uint8_t*)&val);
+
 	return 0;
 }
 
