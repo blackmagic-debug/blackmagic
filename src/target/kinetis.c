@@ -107,8 +107,6 @@ static void kl_gen_add_flash(target *t,
 static int mk_gen_flash_erase(struct target_flash *f, target_addr addr, size_t len);
 static int mk_gen_flash_write(struct target_flash *f,
                               target_addr dest, const void *src, size_t len);
-static int mk_gen_flash_done(struct target_flash *f);
-
 static void mk_gen_add_flash(target *t,
                            uint32_t addr, size_t length, size_t erasesize);
 
@@ -170,8 +168,18 @@ bool kinetis_probe(target *t)
 		/* MK20 has 0x1 in FAMID (bits 4-6) */
 		if(((sdid >> 4) & 0x7) == 0x1){
 			t->driver = "MK20";
-			/* TODO define memory maps */
-			mk_gen_add_flash(t, 0, 0x100000, MK_GEN_SECTOR_SIZE);
+			const uint32_t sram_l_start = 0x1C000000;
+			const uint32_t sram_l_end   = 0x1FFFFFFF;
+			target_add_ram(t, sram_l_start, sram_l_end - sram_l_start);
+
+			const uint32_t sram_h_start = 0x20000000;
+			const uint32_t sram_h_end   = 0x200FFFFF;
+			target_add_ram(t, sram_h_start, sram_h_end - sram_h_start);
+
+			const uint32_t flash_start  = 0x00000000;
+			const uint32_t flash_stop   = 0x07FFFFFF;
+			mk_gen_add_flash(t, flash_start, flash_stop-flash_start, MK_GEN_SECTOR_SIZE);
+
 			break;
 		}
 
@@ -313,12 +321,6 @@ static int mk_gen_flash_write(struct target_flash *f,
 	return 0;
 }
 
-static int mk_gen_flash_done(struct target_flash *f){
-	/* TODO */
-	(void) f;
-	return 1;
-}
-
 static void mk_gen_add_flash(target *t,
                            uint32_t addr, size_t length, size_t erasesize){
 
@@ -329,7 +331,7 @@ static void mk_gen_add_flash(target *t,
 	f->blocksize = erasesize;
 	f->erase = mk_gen_flash_erase;
 	f->write = mk_gen_flash_write;
-	f->done = mk_gen_flash_done;
+	f->done = kl_gen_flash_done;
 	f->align = 8;
 	f->erased = 0xff;
 
