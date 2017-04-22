@@ -99,6 +99,15 @@ static void kl_gen_add_flash(target *t,
 	target_add_flash(t, f);
 }
 
+/* Functions for flash access on devices with FTFE module */
+static int mk_gen_flash_erase(struct target_flash *f, target_addr addr, size_t len);
+static int mk_gen_flash_write(struct target_flash *f,
+                              target_addr dest, const void *src, size_t len);
+static int mk_gen_flash_done(struct target_flash *f);
+
+static void mk_gen_add_flash(target *t,
+                           uint32_t addr, size_t length, size_t erasesize);
+
 bool kinetis_probe(target *t)
 {
 	uint32_t sdid = target_mem_read32(t, SIM_SDID);
@@ -158,8 +167,11 @@ bool kinetis_probe(target *t)
 		if(((sdid >> 4) & 0x7) == 0x1){
 			t->driver = "MK20";
 			/* TODO define memory maps */
+			mk_gen_add_flash(t, 0, 0x100000, 0x1000);
 			break;
 		}
+
+		// fallthrough to default and fail
 
 	default:
 		return false;
@@ -260,6 +272,49 @@ static int kl_gen_flash_done(struct target_flash *f)
 	               FLASH_SECURITY_BYTE_ADDRESS, (uint8_t*)&val);
 
 	return 0;
+}
+
+
+static int mk_gen_flash_erase(struct target_flash *f, target_addr addr, size_t len){
+	(void) f;
+	(void) addr;
+	(void) len;
+	/* TODO */
+	return 1;
+}
+
+static int mk_gen_flash_write(struct target_flash *f,
+                              target_addr dest, const void *src, size_t len){
+	(void) f;
+	(void) dest;
+	(void) src;
+	(void) len;
+	/* TODO */
+
+	return 1;
+}
+
+static int mk_gen_flash_done(struct target_flash *f){
+	/* TODO */
+	(void) f;
+	return 1;
+}
+
+static void mk_gen_add_flash(target *t,
+                           uint32_t addr, size_t length, size_t erasesize){
+
+	struct target_flash *f = calloc(1, sizeof(*f));
+
+	f->start = addr;
+	f->length = length;
+	f->blocksize = erasesize;
+	f->erase = mk_gen_flash_erase;
+	f->write = mk_gen_flash_write;
+	f->done = mk_gen_flash_done;
+	f->align = 8;
+	f->erased = 0xff;
+
+	target_add_flash(t, f);
 }
 
 /*** Kinetis recovery mode using the MDM-AP ***/
