@@ -112,15 +112,14 @@ void dma1_channel5_isr(void)
         {
             DMA1_IFCR |= DMA_ISR_HTIF5;
             memcpy(&trace_rx_buf[w*FULL_SWO_PACKET],pingpong_buf,FULL_SWO_PACKET);
-            w=(w+1)%NUM_PACKETS;
         }
 
     if (DMA1_ISR & DMA_ISR_TCIF5)
         {
             DMA1_IFCR |= DMA_ISR_TCIF5;
             memcpy(&trace_rx_buf[w*FULL_SWO_PACKET],&pingpong_buf[FULL_SWO_PACKET],FULL_SWO_PACKET);
-            w=(w+1)%NUM_PACKETS;
         }
+    w=(w+1)%NUM_PACKETS;
     trace_buf_drain(usbdev,0x85);
 }
 
