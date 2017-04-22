@@ -59,6 +59,8 @@
 #define FTFA_CMD_ERASE_ALL         0x44
 #define FTFA_CMD_BACKDOOR_ACCESS   0x45
 
+#define FTFE_CMD_PROGRAM_PHRASE    0x07
+
 #define KL_GEN_PAGESIZE 0x400
 
 static bool kinetis_cmd_unsafe(target *t, int argc, char *argv[]);
@@ -285,13 +287,24 @@ static int mk_gen_flash_erase(struct target_flash *f, target_addr addr, size_t l
 
 static int mk_gen_flash_write(struct target_flash *f,
                               target_addr dest, const void *src, size_t len){
-	(void) f;
-	(void) dest;
-	(void) src;
-	(void) len;
-	/* TODO */
+	/* Ensure we don't write something horrible over the security byte */
+	if (!unsafe_enabled &&
+		(dest <= FLASH_SECURITY_BYTE_ADDRESS) &&
+		((dest + len) > FLASH_SECURITY_BYTE_ADDRESS)) {
+		((uint8_t*)src)[FLASH_SECURITY_BYTE_ADDRESS - dest] =
+			FLASH_SECURITY_BYTE_UNSECURED;
+	}
 
-	return 1;
+	while (len) {
+		if (kl_gen_command(f->t, FTFE_CMD_PROGRAM_PHRASE, dest, src)) {
+			len -= 8;
+			dest += 8;
+			src += 8;
+		} else {
+			return 1;
+		}
+	}
+	return 0;
 }
 
 static int mk_gen_flash_done(struct target_flash *f){
