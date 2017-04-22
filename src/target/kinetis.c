@@ -152,6 +152,15 @@ bool kinetis_probe(target *t)
 		kl_gen_add_flash(t, 0, 0x40000, 0x800);
 		kl_gen_add_flash(t, 0x40000, 0x40000, 0x800);
 		break;
+	case 0x0: /* Chips that do not support [FAMILYID SUBFAMID SERIESID] fields. */
+
+		/* MK20 has 0x1 in FAMID (bits 4-6) */
+		if(((sdid >> 4) & 0x7) == 0x1){
+			t->driver = "MK20";
+			/* TODO define memory maps */
+			break;
+		}
+
 	default:
 		return false;
 	}
