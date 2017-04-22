@@ -121,5 +121,5 @@ Please report bugs to http://sourceforge.net/p/dfu-util/tickets/
 Deducing device DFU version from functional descriptor length
 Found Runtime: [1d50:6018] ver=0100, devnum=13, cfg=1, intf=4, path="20-4", alt=0, name="Black Magic Firmware Upgrade (Bluepill)", serial="XXXXXXXX"
 
-...and that's it, you've got a working BM Debugger. See the Connectors file for pinout info, and the UsingSWO file 
-for more information about debug trace output.
+...and that's it, you've got a working BM Debugger. See the Connectors file for pinout info, and the Orbuculum 
+project for more information about debug trace output.

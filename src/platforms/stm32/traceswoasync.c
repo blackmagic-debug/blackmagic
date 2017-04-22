@@ -49,7 +49,9 @@
 
 static volatile uint32_t w;                                 /* Which packet we are currently getting */
 static volatile uint32_t r;                                 /* Which packet we are currently waiting to transmit to USB */
-static uint8_t trace_rx_buf[NUM_PACKETS*FULL_SWO_PACKET];   /* Packet arriving from the SWO interface */
+static uint8_t trace_rx_buf[NUM_PACKETS*FULL_SWO_PACKET];   /* Packets arrived from the SWO interface */
+
+static uint8_t pingpong_buf[2*FULL_SWO_PACKET];             /* Packet pingpong buffer used for receiving packets */
 
 
 
@@ -91,11 +93,14 @@ void traceswo_setspeed(uint32_t speed)
   dma_set_memory_size(SWODMABUS, SWDDMACHAN, DMA_CCR_MSIZE_8BIT);
   dma_set_priority(SWODMABUS, SWDDMACHAN, DMA_CCR_PL_HIGH);
   dma_enable_transfer_complete_interrupt(SWODMABUS, SWDDMACHAN);
+  dma_enable_half_transfer_interrupt(SWODMABUS, SWDDMACHAN);
+  dma_enable_circular_mode(SWODMABUS,SWDDMACHAN);
+
   usart_enable(SWOUSART);
   nvic_enable_irq(SWODMAIRQ);
   w=r=0;
-  dma_set_memory_address(SWODMABUS, SWDDMACHAN, (uint32_t)trace_rx_buf);
-  dma_set_number_of_data(SWODMABUS, SWDDMACHAN, FULL_SWO_PACKET);
+  dma_set_memory_address(SWODMABUS, SWDDMACHAN, (uint32_t)pingpong_buf);
+  dma_set_number_of_data(SWODMABUS, SWDDMACHAN, 2*FULL_SWO_PACKET);
   dma_enable_channel(SWODMABUS, SWDDMACHAN);
   usart_enable_rx_dma(SWOUSART);
 }
@@ -103,16 +108,19 @@ void traceswo_setspeed(uint32_t speed)
 void dma1_channel5_isr(void)
 
 {
+    if (DMA1_ISR & DMA_ISR_HTIF5)
+        {
+            DMA1_IFCR |= DMA_ISR_HTIF5;
+            memcpy(&trace_rx_buf[w*FULL_SWO_PACKET],pingpong_buf,FULL_SWO_PACKET);
+            w=(w+1)%NUM_PACKETS;
+        }
+
     if (DMA1_ISR & DMA_ISR_TCIF5)
         {
+            DMA1_IFCR |= DMA_ISR_TCIF5;
+            memcpy(&trace_rx_buf[w*FULL_SWO_PACKET],&pingpong_buf[FULL_SWO_PACKET],FULL_SWO_PACKET);
             w=(w+1)%NUM_PACKETS;
-            dma_disable_channel(SWODMABUS, SWDDMACHAN);
-            dma_set_memory_address(SWODMABUS, SWDDMACHAN, (uint32_t)(&trace_rx_buf[w*FULL_SWO_PACKET]));
-            dma_set_number_of_data(SWODMABUS, SWDDMACHAN, FULL_SWO_PACKET);
-            dma_enable_channel(SWODMABUS, SWDDMACHAN);
-            usart_enable_rx_dma(SWOUSART);
         }
-    DMA1_IFCR |= DMA_ISR_GIF5;
     trace_buf_drain(usbdev,0x85);
 }
 
