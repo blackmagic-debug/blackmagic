@@ -62,6 +62,8 @@
 #define FTFE_CMD_PROGRAM_PHRASE    0x07
 
 #define KL_GEN_PAGESIZE 0x400
+#define MK_GEN_SECTOR_SIZE 0x1000
+
 
 static bool kinetis_cmd_unsafe(target *t, int argc, char *argv[]);
 static bool unsafe_enabled;
@@ -169,7 +171,7 @@ bool kinetis_probe(target *t)
 		if(((sdid >> 4) & 0x7) == 0x1){
 			t->driver = "MK20";
 			/* TODO define memory maps */
-			mk_gen_add_flash(t, 0, 0x100000, 0x1000);
+			mk_gen_add_flash(t, 0, 0x100000, MK_GEN_SECTOR_SIZE);
 			break;
 		}
 
@@ -278,11 +280,15 @@ static int kl_gen_flash_done(struct target_flash *f)
 
 
 static int mk_gen_flash_erase(struct target_flash *f, target_addr addr, size_t len){
-	(void) f;
-	(void) addr;
-	(void) len;
-	/* TODO */
-	return 1;
+	while (len) {
+		if (kl_gen_command(f->t, FTFA_CMD_ERASE_SECTOR, addr, NULL)) {
+			len -= MK_GEN_SECTOR_SIZE;
+			addr += MK_GEN_SECTOR_SIZE;
+		} else {
+			return 1;
+		}
+	}
+	return 0;
 }
 
 static int mk_gen_flash_write(struct target_flash *f,
