@@ -61,9 +61,28 @@
 
 #define KL_GEN_PAGESIZE 0x400
 
+static bool kinetis_cmd_unsafe(target *t, int argc, char *argv[]);
+static bool unsafe_enabled;
+
+const struct command_s kinetis_cmd_list[] = {
+	{"unsafe", (cmd_handler)kinetis_cmd_unsafe, "Allow programming security byte (enable|disable)"},
+	{NULL, NULL, NULL}
+};
+
+static bool kinetis_cmd_unsafe(target *t, int argc, char *argv[])
+{
+	if (argc == 1)
+		tc_printf(t, "Allow programming security byte: %s\n",
+			  unsafe_enabled ? "enabled" : "disabled");
+	else
+		unsafe_enabled = argv[1][0] == 'e';
+	return true;
+}
+
 static int kl_gen_flash_erase(struct target_flash *f, target_addr addr, size_t len);
 static int kl_gen_flash_write(struct target_flash *f,
                               target_addr dest, const void *src, size_t len);
+static int kl_gen_flash_done(struct target_flash *f);
 
 static void kl_gen_add_flash(target *t,
                            uint32_t addr, size_t length, size_t erasesize)
@@ -74,6 +93,7 @@ static void kl_gen_add_flash(target *t,
 	f->blocksize = erasesize;
 	f->erase = kl_gen_flash_erase;
 	f->write = kl_gen_flash_write;
+	f->done = kl_gen_flash_done;
 	f->align = 4;
 	f->erased = 0xff;
 	target_add_flash(t, f);
@@ -88,13 +108,13 @@ bool kinetis_probe(target *t)
 		target_add_ram(t, 0x1ffff000, 0x1000);
 		target_add_ram(t, 0x20000000, 0x3000);
 		kl_gen_add_flash(t, 0x00000000, 0x20000, 0x400);
-		return true;
+		break;
 	case 0x231:
 		t->driver = "KL27";
 		target_add_ram(t, 0x1fffe000, 0x2000);
 		target_add_ram(t, 0x20000000, 0x6000);
 		kl_gen_add_flash(t, 0x00000000, 0x40000, 0x400);
-		return true;
+		break;
 	case 0x021: /* KL02 family */
 		switch((sdid>>16) & 0x0f){
 			case 3:
@@ -118,9 +138,26 @@ bool kinetis_probe(target *t)
 			default:
 				return false;
 			}
-		return true;
+		break;
+	case 0x031: /* KL03 family */
+		t->driver = "KL03";
+		target_add_ram(t, 0x1ffffe00, 0x200);
+		target_add_ram(t, 0x20000000, 0x600);
+		kl_gen_add_flash(t, 0, 0x8000, 0x400);
+		break;
+	case 0x220: /* K22F family */
+		t->driver = "K22F";
+		target_add_ram(t, 0x1c000000, 0x4000000);
+		target_add_ram(t, 0x20000000, 0x100000);
+		kl_gen_add_flash(t, 0, 0x40000, 0x800);
+		kl_gen_add_flash(t, 0x40000, 0x40000, 0x800);
+		break;
+	default:
+		return false;
 	}
-	return false;
+	unsafe_enabled = false;
+	target_add_commands(t, kinetis_cmd_list, t->driver);
+	return true;
 }
 
 static bool
@@ -172,9 +209,20 @@ static int kl_gen_flash_erase(struct target_flash *f, target_addr addr, size_t l
 	return 0;
 }
 
+#define FLASH_SECURITY_BYTE_ADDRESS 0x40C
+#define FLASH_SECURITY_BYTE_UNSECURED 0xFE
+
 static int kl_gen_flash_write(struct target_flash *f,
                               target_addr dest, const void *src, size_t len)
 {
+	/* Ensure we don't write something horrible over the security byte */
+	if (!unsafe_enabled &&
+	    (dest <= FLASH_SECURITY_BYTE_ADDRESS) &&
+	    ((dest + len) > FLASH_SECURITY_BYTE_ADDRESS)) {
+		((uint8_t*)src)[FLASH_SECURITY_BYTE_ADDRESS - dest] =
+		    FLASH_SECURITY_BYTE_UNSECURED;
+	}
+
 	while (len) {
 		if (kl_gen_command(f->t, FTFA_CMD_PROGRAM_LONGWORD, dest, src)) {
 			len -= 4;
@@ -185,4 +233,132 @@ static int kl_gen_flash_write(struct target_flash *f,
 		}
 	}
 	return 0;
+}
+
+static int kl_gen_flash_done(struct target_flash *f)
+{
+
+	if (unsafe_enabled)
+		return 0;
+
+	if (target_mem_read8(f->t, FLASH_SECURITY_BYTE_ADDRESS) ==
+	    FLASH_SECURITY_BYTE_UNSECURED)
+		return 0;
+
+	uint32_t val = target_mem_read32(f->t, FLASH_SECURITY_BYTE_ADDRESS);
+	val = (val & 0xffffff00) | FLASH_SECURITY_BYTE_UNSECURED;
+	kl_gen_command(f->t, FTFA_CMD_PROGRAM_LONGWORD,
+	               FLASH_SECURITY_BYTE_ADDRESS, (uint8_t*)&val);
+
+	return 0;
+}
+
+/*** Kinetis recovery mode using the MDM-AP ***/
+
+/* Kinetis security bits are stored in regular flash, so it is possible
+ * to enable protection by accident when flashing a bad binary.
+ * a backdoor AP is provided which may allow a mass erase to recover the
+ * device.  This provides a fake target to allow a monitor command interface
+ */
+#include "adiv5.h"
+
+#define KINETIS_MDM_IDR_K22F 0x1c0000
+#define KINETIS_MDM_IDR_KZ03 0x1c0020
+
+static bool kinetis_mdm_cmd_erase_mass(target *t);
+
+const struct command_s kinetis_mdm_cmd_list[] = {
+	{"erase_mass", (cmd_handler)kinetis_mdm_cmd_erase_mass, "Erase entire flash memory"},
+	{NULL, NULL, NULL}
+};
+
+bool nop_function(void)
+{
+	return true;
+}
+
+enum target_halt_reason mdm_halt_poll(target *t, target_addr *watch)
+{
+	(void)t; (void)watch;
+	return TARGET_HALT_REQUEST;
+}
+
+void kinetis_mdm_probe(ADIv5_AP_t *ap)
+{
+	switch(ap->idr) {
+	case KINETIS_MDM_IDR_KZ03:
+	case KINETIS_MDM_IDR_K22F:
+		break;
+	default:
+		return;
+	}
+
+	target *t = target_new();
+	adiv5_ap_ref(ap);
+	t->priv = ap;
+	t->priv_free = (void*)adiv5_ap_unref;
+
+	t->driver = "Kinetis Recovery (MDM-AP)";
+	t->attach = (void*)nop_function;
+	t->detach = (void*)nop_function;
+	t->check_error = (void*)nop_function;
+	t->mem_read = (void*)nop_function;
+	t->mem_write = (void*)nop_function;
+	t->regs_size = 4;
+	t->regs_read = (void*)nop_function;
+	t->regs_write = (void*)nop_function;
+	t->reset = (void*)nop_function;
+	t->halt_request = (void*)nop_function;
+	t->halt_poll = mdm_halt_poll;
+	t->halt_resume = (void*)nop_function;
+
+	target_add_commands(t, kinetis_mdm_cmd_list, t->driver);
+}
+
+#define MDM_STATUS  ADIV5_AP_REG(0x00)
+#define MDM_CONTROL ADIV5_AP_REG(0x04)
+
+#define MDM_STATUS_MASS_ERASE_ACK (1 << 0)
+#define MDM_STATUS_FLASH_READY (1 << 1)
+#define MDM_STATUS_MASS_ERASE_ENABLED (1 << 5)
+
+#define MDM_CONTROL_MASS_ERASE (1 << 0)
+
+static bool kinetis_mdm_cmd_erase_mass(target *t)
+{
+	ADIv5_AP_t *ap = t->priv;
+
+	uint32_t status, control;
+	status = adiv5_ap_read(ap, MDM_STATUS);
+	control = adiv5_ap_read(ap, MDM_CONTROL);
+	tc_printf(t, "Requesting mass erase (status = 0x%"PRIx32")\n", status);
+
+	if (!(status & MDM_STATUS_MASS_ERASE_ENABLED)) {
+		tc_printf(t, "ERROR: Mass erase disabled!\n");
+		return false;
+	}
+
+	if (!(status & MDM_STATUS_FLASH_READY)) {
+		tc_printf(t, "ERROR: Flash not ready!\n");
+		return false;
+	}
+
+	if (status & MDM_STATUS_MASS_ERASE_ACK) {
+		tc_printf(t, "ERROR: Mass erase already in progress!\n");
+		return false;
+	}
+
+	adiv5_ap_write(ap, MDM_CONTROL, MDM_CONTROL_MASS_ERASE);
+
+	do {
+		status = adiv5_ap_read(ap, MDM_STATUS);
+	} while (!(status & MDM_STATUS_MASS_ERASE_ACK));
+	tc_printf(t, "Mass erase acknowledged\n");
+
+	do {
+		control = adiv5_ap_read(ap, MDM_CONTROL);
+	} while (!(control & MDM_CONTROL_MASS_ERASE));
+	tc_printf(t, "Mass erase complete\n");
+
+	return true;
 }

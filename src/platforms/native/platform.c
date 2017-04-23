@@ -176,6 +176,7 @@ void platform_init(void)
 
 void platform_srst_set_val(bool assert)
 {
+	gpio_set_val(TMS_PORT, TMS_PIN, 1);
 	if ((platform_hwversion() == 0) ||
 	    (platform_hwversion() >= 3)) {
 		gpio_set_val(SRST_PORT, SRST_PIN, assert);

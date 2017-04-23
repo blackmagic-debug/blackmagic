@@ -268,6 +268,11 @@ static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr)
 		cidr |= ((uint64_t)(x & 0xff)) << (i * 8);
 	}
 
+	if (adiv5_dp_error(ap->dp)) {
+		DEBUG("Fault reading ID registers\n");
+		return;
+	}
+
 	/* CIDR preamble sanity check */
 	if ((cidr & ~CID_CLASS_MASK) != CID_PREAMBLE) {
 		DEBUG("0x%"PRIx32": 0x%"PRIx32" <- does not match preamble (0x%X)\n",
@@ -281,6 +286,10 @@ static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr)
 	if (cid_class == cidc_romtab) { /* ROM table, probe recursively */
 		for (int i = 0; i < 256; i++) {
 			uint32_t entry = adiv5_mem_read32(ap, addr + i*4);
+			if (adiv5_dp_error(ap->dp)) {
+				DEBUG("Fault reading ROM table entry\n");
+			}
+
 			if (entry == 0)
 				break;
 
@@ -353,15 +362,6 @@ ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel)
 	tmpap.idr = adiv5_ap_read(&tmpap, ADIV5_AP_IDR);
 
 	if(!tmpap.idr) /* IDR Invalid - Should we not continue here? */
-		return NULL;
-
-	/* Check for ARM Mem-AP */
-	uint16_t mfg = (tmpap.idr >> 17) & 0x3ff;
-	uint8_t cls = (tmpap.idr >> 13) & 0xf;
-	uint8_t type = tmpap.idr & 0xf;
-	if (mfg != 0x23B) /* Ditch if not ARM */
-		return NULL;
-	if ((cls != 8) || (type == 0)) /* Ditch if not Mem-AP */
 		return NULL;
 
 	/* It's valid to so create a heap copy */
@@ -437,6 +437,9 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 		ADIv5_AP_t *ap = adiv5_new_ap(dp, i);
 		if (ap == NULL)
 			continue;
+
+		extern void kinetis_mdm_probe(ADIv5_AP_t *);
+		kinetis_mdm_probe(ap);
 
 		if (ap->base == 0xffffffff) {
 			/* No debug entries... useless AP */

@@ -110,6 +110,9 @@ static const uint16_t stm32f4_flash_write_stub[] = {
 #define SRAM_BASE 0x20000000
 #define STUB_BUFFER_BASE ALIGN(SRAM_BASE + sizeof(stm32f4_flash_write_stub), 4)
 
+#define AXIM_BASE 0x8000000
+#define ITCM_BASE 0x0200000
+
 struct stm32f4_flash {
 	struct target_flash f;
 	uint8_t base_sector;
@@ -179,7 +182,7 @@ bool stm32f4_probe(target *t)
 		t->driver = stm32f7_driver_str;
 		target_add_ram(t, 0x00000000, 0x4000);
 		target_add_ram(t, 0x20000000, 0x50000);
-		/* DTCM */
+		/* AXIM Flash access */
 		stm32f4_add_flash(t, 0x8000000, 0x20000, 0x8000, 0);
 		stm32f4_add_flash(t, 0x8020000, 0x20000, 0x20000, 4);
 		stm32f4_add_flash(t, 0x8040000, 0xC0000, 0x40000, 5);
@@ -193,7 +196,7 @@ bool stm32f4_probe(target *t)
 		t->driver = stm32f7_driver_str;
 		target_add_ram(t, 0x00000000, 0x4000);
 		target_add_ram(t, 0x20000000, 0x80000);
-		/* DTCM */
+		/* AXIM Flash access */
 		stm32f4_add_flash(t, 0x8000000, 0x020000, 0x8000, 0);
 		stm32f4_add_flash(t, 0x8020000, 0x020000, 0x20000, 4);
 		stm32f4_add_flash(t, 0x8040000, 0x1C0000, 0x40000, 5);
@@ -223,6 +226,7 @@ static int stm32f4_flash_erase(struct target_flash *f, target_addr addr, size_t 
 {
 	target *t = f->t;
 	uint16_t sr;
+	/* No address translation is needed here, as we erase by sector number */
 	uint8_t sector = ((struct stm32f4_flash *)f)->base_sector +
 	                  (addr - f->start)/f->blocksize;
 
@@ -256,6 +260,11 @@ static int stm32f4_flash_erase(struct target_flash *f, target_addr addr, size_t 
 static int stm32f4_flash_write(struct target_flash *f,
                                target_addr dest, const void *src, size_t len)
 {
+	/* Translate ITCM addresses to AXIM */
+	if ((dest >= ITCM_BASE) && (dest < AXIM_BASE)) {
+		dest = AXIM_BASE + (dest - ITCM_BASE);
+	}
+
 	/* Write buffer to target ram call stub */
 	target_mem_write(f->t, SRAM_BASE, stm32f4_flash_write_stub,
 	                 sizeof(stm32f4_flash_write_stub));
