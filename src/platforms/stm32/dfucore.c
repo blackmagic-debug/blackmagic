@@ -48,6 +48,7 @@ static struct {
 	uint32_t addr;
 	uint16_t blocknum;
 } prog;
+static uint8_t current_error;
 
 const struct usb_device_descriptor dev = {
 	.bLength = USB_DT_DEVICE_SIZE,
@@ -69,7 +70,7 @@ const struct usb_device_descriptor dev = {
 const struct usb_dfu_descriptor dfu_function = {
 	.bLength = sizeof(struct usb_dfu_descriptor),
 	.bDescriptorType = DFU_FUNCTIONAL,
-	.bmAttributes = USB_DFU_CAN_DOWNLOAD | USB_DFU_WILL_DETACH,
+	.bmAttributes = USB_DFU_CAN_DOWNLOAD | USB_DFU_CAN_UPLOAD | USB_DFU_WILL_DETACH,
 	.wDetachTimeout = 255,
 	.wTransferSize = 1024,
 	.bcdDFUVersion = 0x011A,
@@ -149,7 +150,8 @@ static uint8_t usbdfu_getstatus(uint32_t *bwPollTimeout)
 		/* Device will reset when read is complete */
 		usbdfu_state = STATE_DFU_MANIFEST;
 		return DFU_STATUS_OK;
-
+	case STATE_DFU_ERROR:
+		return current_error;
 	default:
 		return DFU_STATUS_OK;
 	}
@@ -159,23 +161,17 @@ static void
 usbdfu_getstatus_complete(usbd_device *dev, struct usb_setup_data *req)
 {
 	(void)req;
+	(void)dev;
 
 	switch(usbdfu_state) {
 	case STATE_DFU_DNBUSY:
 
 		flash_unlock();
 		if(prog.blocknum == 0) {
-			uint32_t addr = get_le32(prog.buf + 1);
-			if ((addr < app_address) || (addr >= max_address)) {
-				flash_lock();
-				usbd_ep_stall_set(dev, 0, 1);
-				return;
-			}
+			int32_t addr = get_le32(prog.buf + 1);
 			switch(prog.buf[0]) {
 			case CMD_ERASE:
 				dfu_check_and_do_sector_erase(addr);
-			case CMD_SETADDR:
-				prog.addr = addr;
 			}
 		} else {
 			uint32_t baseaddr = prog.addr +
@@ -218,6 +214,15 @@ static int usbdfu_control_request(usbd_device *dev,
 			prog.blocknum = req->wValue;
 			prog.len = *len;
 			memcpy(prog.buf, *buf, *len);
+			if ((req->wValue == 0) && (prog.buf[0] == CMD_SETADDR)) {
+				uint32_t addr = get_le32(prog.buf + 1);
+				if ((addr < app_address) || (addr >= max_address)) {
+					current_error = DFU_STATUS_ERR_TARGET;
+					usbdfu_state = STATE_DFU_ERROR;
+					return 1;
+				} else
+					prog.addr = addr;
+			}
 			usbdfu_state = STATE_DFU_DNLOAD_SYNC;
 			return 1;
 		}
@@ -231,8 +236,22 @@ static int usbdfu_control_request(usbd_device *dev,
 		usbdfu_state = STATE_DFU_IDLE;
 		return 1;
 	case DFU_UPLOAD:
-		/* Upload not supported for now */
-		return 0;
+		if ((usbdfu_state == STATE_DFU_IDLE) ||
+			(usbdfu_state == STATE_DFU_DNLOAD_IDLE) ||
+			(usbdfu_state == STATE_DFU_UPLOAD_IDLE)) {
+			prog.blocknum = req->wValue;
+			usbdfu_state = STATE_DFU_UPLOAD_IDLE;
+			if(prog.blocknum > 1) {
+				uint32_t baseaddr = prog.addr +
+					((prog.blocknum - 2) *
+					 dfu_function.wTransferSize);
+				memcpy(*buf, (void*)baseaddr, *len);
+			}
+			return 1;
+		} else {
+			usbd_ep_stall_set(dev, 0, 1);
+			return 0;
+		}
 	case DFU_GETSTATUS: {
 		uint32_t bwPollTimeout = 0; /* 24-bit integer in DFU class spec */
 
