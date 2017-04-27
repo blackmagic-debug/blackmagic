@@ -33,7 +33,7 @@
 #include "target.h"
 #include "target_internal.h"
 
-static char cortexa_driver_str[] = "ARM Cortex-A";
+static const char cortexa_driver_str[] = "ARM Cortex-A";
 
 static bool cortexa_attach(target *t);
 static void cortexa_detach(target *t);

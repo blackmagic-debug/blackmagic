@@ -36,7 +36,7 @@ typedef struct jtag_dev_s {
 	uint8_t ir_postscan;
 
 	uint32_t idcode;
-	char *descr;
+	const char *descr;
 
 	uint32_t current_ir;
 
