@@ -364,9 +364,9 @@ ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel)
 	if(!tmpap.idr) /* IDR Invalid - Should we not continue here? */
 		return NULL;
 
-	/* It's valid to so create a heap copy */
+	/* Create a heap copy */
 	ap = malloc(sizeof(*ap));
-	memcpy(ap, &tmpap, sizeof(*ap));
+	*ap = tmpap;
 	adiv5_dp_ref(dp);
 
 	ap->cfg = adiv5_ap_read(ap, ADIV5_AP_CFG);
