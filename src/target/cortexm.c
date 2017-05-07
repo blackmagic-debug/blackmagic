@@ -254,6 +254,10 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 #define PROBE(x) \
 	do { if ((x)(t)) return true; else target_check_error(t); } while (0)
 
+	/* imx7m4_probe needs to be before stm32f1_probe since the i.MX 7
+	 * crashes when stm32f1_probe tries to identify itself
+	 */
+	PROBE(imx7m4_probe);
 	PROBE(stm32f1_probe);
 	PROBE(stm32f4_probe);
 	PROBE(stm32l0_probe);   /* STM32L0xx & STM32L1xx */
