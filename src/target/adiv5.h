@@ -116,6 +116,8 @@ typedef struct ADIv5_DP_s {
 		jtag_dev_t *dev;
 		uint8_t fault;
 	};
+
+	bool (*rom_table_filter)(uint32_t addr);
 } ADIv5_DP_t;
 
 static inline uint32_t adiv5_dp_read(ADIv5_DP_t *dp, uint16_t addr)

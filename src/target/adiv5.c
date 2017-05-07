@@ -239,7 +239,7 @@ void adiv5_dp_write(ADIv5_DP_t *dp, uint16_t addr, uint32_t value)
 	dp->low_access(dp, ADIV5_LOW_WRITE, addr, value);
 }
 
-static uint32_t adiv5_mem_read32(ADIv5_AP_t *ap, uint32_t addr)
+uint32_t adiv5_mem_read32(ADIv5_AP_t *ap, uint32_t addr)
 {
 	uint32_t ret;
 	adiv5_mem_read(ap, &ret, addr, sizeof(ret));
@@ -294,6 +294,10 @@ static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr)
 				break;
 
 			if ((entry & 1) == 0)
+				continue;
+
+			if (ap->dp->rom_table_filter &&
+			    ap->dp->rom_table_filter(addr + (entry & ~0xfff)))
 				continue;
 
 			adiv5_component_probe(ap, addr + (entry & ~0xfff));
@@ -440,6 +444,9 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 
 		extern void kinetis_mdm_probe(ADIv5_AP_t *);
 		kinetis_mdm_probe(ap);
+
+		extern void imx7_ahb_probe(ADIv5_AP_t *);
+		imx7_ahb_probe(ap);
 
 		if (ap->base == 0xffffffff) {
 			/* No debug entries... useless AP */
