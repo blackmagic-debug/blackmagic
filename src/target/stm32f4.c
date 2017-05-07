@@ -206,6 +206,20 @@ bool stm32f4_probe(target *t)
 		stm32f4_add_flash(t, 0x240000, 0x1C0000, 0x40000, 5);
 		target_add_commands(t, stm32f4_cmd_list, "STM32F7");
 		break;
+	case 0x452: /* F72x/73x RM0431 */
+		t->driver = stm32f7_driver_str;
+		target_add_ram(t, 0x00000000, 0x4000);
+		target_add_ram(t, 0x20000000, 0x40000);
+		/* AXIM Flash access */
+		stm32f4_add_flash(t, 0x8000000, 0x010000, 0x4000, 0);
+		stm32f4_add_flash(t, 0x8010000, 0x010000, 0x10000, 4);
+		stm32f4_add_flash(t, 0x8020000, 0x060000, 0x20000, 5);
+		/* ITCM */
+		stm32f4_add_flash(t, 0x200000, 0x010000, 0x4000, 0);
+		stm32f4_add_flash(t, 0x210000, 0x010000, 0x10000, 4);
+		stm32f4_add_flash(t, 0x220000, 0x060000, 0x20000, 5);
+		target_add_commands(t, stm32f4_cmd_list, "STM32F7");
+		break;	
 	default:
 		return false;
 	}
