@@ -22,10 +22,11 @@
 #include <string.h>
 #if defined(STM32F1)
 #	include <libopencm3/stm32/f1/flash.h>
-#elif defined(STM32F2)
-#	include <libopencm3/stm32/f2/flash.h>
+#	define DFU_IFACE_STRING  "@Internal Flash   /0x08000000/8*001Ka,000*001Kg"
+#   define DFU_IFACE_STRING_OFFSET 38
 #elif defined(STM32F4)
 #	include <libopencm3/stm32/f4/flash.h>
+#	define DFU_IFACE_STRING  "/0x08000000/1*016Ka,3*016Kg,1*064Kg,7*128Kg"
 #endif
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/dfu.h>
@@ -113,21 +114,23 @@ const struct usb_config_descriptor config = {
 };
 
 static char serial_no[9];
+static char if_string[] = DFU_IFACE_STRING;
 
 static const char *usb_strings[] = {
 	"Black Sphere Technologies",
 	BOARD_IDENT_DFU,
 	serial_no,
 	/* This string is used by ST Microelectronics' DfuSe utility */
-	DFU_IFACE_STRING,
+	if_string,
 };
 
+static char upd_if_string[] = UPD_IFACE_STRING;
 static const char *usb_strings_upd[] = {
 	"Black Sphere Technologies",
 	BOARD_IDENT_UPD,
 	serial_no,
 	/* This string is used by ST Microelectronics' DfuSe utility */
-	UPD_IFACE_STRING,
+	upd_if_string,
 };
 
 static uint32_t get_le32(const void *vp)
@@ -297,6 +300,33 @@ void dfu_main(void)
 		usbd_poll(usbdev);
 }
 
+#if defined(DFU_IFACE_STRING_OFFSET)
+static void set_dfu_iface_string(uint32_t size)
+{
+	uint32_t res;
+	char *p = if_string + DFU_IFACE_STRING_OFFSET;
+	/* We do not want the whole printf library in the bootloader.
+	 * Fill the size digits by hand.
+	 */
+	res = size / 100;
+	if (res > 9) {
+		*p++ = '9';
+		*p++ = '9';
+		*p++ = '9';
+		return;
+	} else {
+		*p++ = res + '0';
+		size -= res * 100;
+	}
+	res = size / 10;
+	*p++ = res + '0';
+	size -= res * 10;
+	*p++ = size + '0';
+}
+#else
+# define set_dfu_iface_string()
+#endif
+
 static char *get_dev_unique_id(char *s)
 {
 #if defined(STM32F4) || defined(STM32F2)
@@ -317,10 +347,21 @@ static char *get_dev_unique_id(char *s)
 			*(unique_id_p + 1) +
 			*(unique_id_p + 2);
 	int i;
+	uint32_t fuse_flash_size;
 
 	/* Calculated the upper flash limit from the exported data
 	   in theparameter block*/
-	max_address = (*(uint32_t *) FLASH_SIZE_R) <<10;
+	fuse_flash_size = *(uint32_t *) FLASH_SIZE_R & 0xfff;
+	set_dfu_iface_string(fuse_flash_size - 8);
+	if (fuse_flash_size == 0x40) /* Handle F103x8 as F103xC! */
+		fuse_flash_size = 0x80;
+	max_address = FLASH_BASE + (fuse_flash_size << 10);
+	/* If bootloader pages are write protected or device is read
+	 * protected, deny bootloader update.
+	 * User can still force updates, at his own risk!
+	 */
+	if (((FLASH_WRPR & 0x03) != 0x03) || (FLASH_OBR & FLASH_OBR_RDPRT_EN))
+		upd_if_string[30] = '0';
 	/* Fetch serial number from chip's unique ID */
 	for(i = 0; i < 8; i++) {
 		s[7-i] = ((unique_id >> (4*i)) & 0xF) + '0';
