@@ -21,11 +21,17 @@
 
 char *serialno_read(char *s)
 {
-#if defined(STM32F4)
-	volatile uint32_t *unique_id_p = (volatile uint32_t *)0x1FFF7A10;
+#if defined(STM32L0) || defined(STM32F3) || defined(STM32F4)
+	volatile uint16_t *uid = (volatile uint16_t *)DESIG_UNIQUE_ID_BASE;
+# if defined(STM32F4)
+	int offset = 3;
+# elif defined(STM32L0) || defined(STM32F4)
+	int offset = 5;
+#endif
+	sprintf(s, "%04X%04X%04X",
+            uid[1] + uid[5], uid[0] + uid[4], uid[offset]);
 #else
 	volatile uint32_t *unique_id_p = (volatile uint32_t *)0x1FFFF7E8;
-#endif
 	uint32_t unique_id = *unique_id_p +
 			*(unique_id_p + 1) +
 			*(unique_id_p + 2);
@@ -40,6 +46,7 @@ char *serialno_read(char *s)
 			s[i] += 'A' - '9' - 1;
 	s[8] = 0;
 
+#endif
 	return s;
 }
 
