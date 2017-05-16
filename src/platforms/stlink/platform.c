@@ -36,21 +36,29 @@
 uint8_t running_status;
 volatile uint32_t timeout_counter;
 
+#ifdef BAITE
+#pragma message "Compiled for Baite stlink"
+#endif
+
 uint16_t led_idle_run;
 /* Pins PC[14:13] are used to detect hardware revision. Read
  * 11 for STLink V1 e.g. on VL Discovery, tag as hwversion 0
  * 10 for STLink V2 e.g. on F4 Discovery, tag as hwversion 1
+ * CFLAGS += -DBAITE for Baite branded stlink v2, tag as hwversion 2
  */
 int platform_hwversion(void)
 {
 	static int hwversion = -1;
-	int i;
 	if (hwversion == -1) {
+		#ifdef BAITE
+		hwversion = 2;
+		#else
 		gpio_set_mode(GPIOC, GPIO_MODE_INPUT,
 		              GPIO_CNF_INPUT_PULL_UPDOWN, GPIO14 | GPIO13);
 		gpio_set(GPIOC, GPIO14 | GPIO13);
-		for (i = 0; i<10; i++)
+		for (int i = 0; i<10; i++)
 			hwversion = ~(gpio_get(GPIOC, GPIO14 | GPIO13) >> 13) & 3;
+		#endif
 		switch (hwversion)
 		{
 		case 0:
