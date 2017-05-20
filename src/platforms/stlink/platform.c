@@ -36,9 +36,12 @@
 uint8_t running_status;
 volatile uint32_t timeout_counter;
 
-#ifdef BAITE
-#pragma message "Compiled for Baite stlink"
-#endif
+typedef enum {
+	V1 = 0,
+	V2,
+	Baite,
+	detect = -1
+} hwversion_t;
 
 uint16_t led_idle_run;
 /* Pins PC[14:13] are used to detect hardware revision. Read
@@ -48,25 +51,15 @@ uint16_t led_idle_run;
  */
 int platform_hwversion(void)
 {
-	static int hwversion = -1;
-	if (hwversion == -1) {
-		#ifdef BAITE
-		hwversion = 2;
-		#else
+	// HWVERSION is set in Makefile.inc
+	static hwversion_t hwversion = HWVERSION;
+
+	if (hwversion == detect) {
 		gpio_set_mode(GPIOC, GPIO_MODE_INPUT,
 		              GPIO_CNF_INPUT_PULL_UPDOWN, GPIO14 | GPIO13);
 		gpio_set(GPIOC, GPIO14 | GPIO13);
 		for (int i = 0; i<10; i++)
 			hwversion = ~(gpio_get(GPIOC, GPIO14 | GPIO13) >> 13) & 3;
-		#endif
-		switch (hwversion)
-		{
-		case 0:
-			led_idle_run = GPIO8;
-			break;
-		default:
-			led_idle_run = GPIO9;
-		}
 	}
 	return hwversion;
 }
@@ -83,16 +76,24 @@ void platform_init(void)
 	rcc_periph_clock_enable(RCC_AFIO);
 	rcc_periph_clock_enable(RCC_CRC);
 
-	/* On Rev 1 unconditionally activate MCO on PORTA8 with HSE
-	 * platform_hwversion() also needed to initialize led_idle_run!
-	 */
-	if (platform_hwversion() == 1)
+	
+	/* Set LED gpio pin */
+	switch (platform_hwversion())
 	{
+	case V1:
+		led_idle_run = GPIO8;
+		break;
+	case V2:
+	case Baite:
+	default:
+		led_idle_run = GPIO9;
+		/* On Rev 1 unconditionally activate MCO on PORTA8 with HSE */
 		RCC_CFGR &= ~(0xf << 24);
 		RCC_CFGR |= (RCC_CFGR_MCO_HSECLK << 24);
 		gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ,
 		GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO8);
 	}
+
 	/* Setup GPIO ports */
 	gpio_set_mode(TMS_PORT, GPIO_MODE_OUTPUT_50_MHZ,
 	              GPIO_CNF_OUTPUT_PUSHPULL, TMS_PIN);
@@ -100,7 +101,7 @@ void platform_init(void)
 	              GPIO_CNF_OUTPUT_PUSHPULL, TCK_PIN);
 	gpio_set_mode(TDI_PORT, GPIO_MODE_OUTPUT_50_MHZ,
 	              GPIO_CNF_OUTPUT_PUSHPULL, TDI_PIN);
-	uint16_t srst_pin = platform_hwversion() == 0 ?
+	uint16_t srst_pin = platform_hwversion() == V1 ?
 	                    SRST_PIN_V1 : SRST_PIN_V2;
 	gpio_set(SRST_PORT, srst_pin);
 	gpio_set_mode(SRST_PORT, GPIO_MODE_OUTPUT_50_MHZ,
@@ -129,7 +130,7 @@ void platform_srst_set_val(bool assert)
 bool platform_srst_get_val()
 {
 	uint16_t pin;
-	pin = platform_hwversion() == 0 ? SRST_PIN_V1 : SRST_PIN_V2;
+	pin = platform_hwversion() == V1 ? SRST_PIN_V1 : SRST_PIN_V2;
 	return gpio_get(SRST_PORT, pin) == 0;
 }
 
