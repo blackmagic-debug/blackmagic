@@ -47,7 +47,6 @@ uint16_t led_idle_run;
 /* Pins PC[14:13] are used to detect hardware revision. Read
  * 11 for STLink V1 e.g. on VL Discovery, tag as hwversion 0
  * 10 for STLink V2 e.g. on F4 Discovery, tag as hwversion 1
- * CFLAGS += -DBAITE for Baite branded stlink v2, tag as hwversion 2
  */
 int platform_hwversion(void)
 {
@@ -84,14 +83,15 @@ void platform_init(void)
 		led_idle_run = GPIO8;
 		break;
 	case V2:
-	case Baite:
-	default:
 		led_idle_run = GPIO9;
-		/* On Rev 1 unconditionally activate MCO on PORTA8 with HSE */
+		/* On stlink V2 unconditionally activate MCO on PORTA8 with HSE */
 		RCC_CFGR &= ~(0xf << 24);
 		RCC_CFGR |= (RCC_CFGR_MCO_HSECLK << 24);
 		gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ,
 		GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO8);
+	case Baite:
+		led_idle_run = GPIO9;
+	default:
 	}
 
 	/* Setup GPIO ports */
