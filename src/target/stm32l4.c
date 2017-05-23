@@ -23,10 +23,14 @@
  *
  * On L4, flash and options are written in DWORDs (8-Byte) only.
  *
- * Refereces:
- * ST doc - RM0351
- *    Reference manual
- *    STM32L4x6 advanced ARM®-based 32-bit MCUs
+ * References:
+ * RM0351 STM32L4x5 and STM32L4x6 advanced ARM®-based 32-bit MCUs Rev. 5
+ * RM0392 STM32L4x1 advanced ARM®-based 32-bit MCUs Rev. 2
+ * RM0393 STM32L4x2 advanced ARM®-based 32-bit MCUs Rev. 2
+ * RM0394 STM32L431xx STM32L433xx STM32L443xx advanced ARM®-based 32-bit MCUs
+ *        Rev.3
+ * RM0395 STM32L4x5 advanced ARM®-based 32-bit MCUs Rev.1
+ *
  *
  */
 
@@ -77,6 +81,7 @@ static const char stm32l4_driver_str[] = "STM32L4xx";
 #define FLASH_CR_FSTPG	 	(1 << 18)
 #define FLASH_CR_EOPIE		(1 << 24)
 #define FLASH_CR_ERRIE		(1 << 25)
+#define FLASH_CR_OBL_LAUNCH	(1 << 27)
 #define FLASH_CR_OPTLOCK	(1 << 30)
 #define FLASH_CR_LOCK		(1 << 31)
 
@@ -146,12 +151,18 @@ bool stm32l4_probe(target *t)
 	uint32_t options;
 	uint32_t bank1_start = 0x08040000;
 
-	idcode = target_mem_read32(t, DBGMCU_IDCODE);
-	switch(idcode & 0xFFF) {
+	idcode = target_mem_read32(t, DBGMCU_IDCODE) & 0xFFF;
+	switch(idcode) {
+	case 0x461: /* L496/RM0351 */
 	case 0x415: /* L471/RM0392, L475/RM0395, L476/RM0351 */
 		t->driver = stm32l4_driver_str;
-		target_add_ram(t, 0x10000000, 1 << 15);
-		target_add_ram(t, 0x20000000, 3 << 15);
+		if (idcode == 0x415) {
+			target_add_ram(t, 0x10000000, 0x08000);
+			target_add_ram(t, 0x20000000, 0x18000);
+		} else {
+			target_add_ram(t, 0x10000000, 0x10000);
+			target_add_ram(t, 0x20000000, 0x40000);
+		}
 		size    = (target_mem_read32(t, FLASH_SIZE_REG) & 0xffff);
 		options =  target_mem_read32(t, FLASH_OPTR);
 		if ((size < 0x400) && (options & OR_DUALBANK))
@@ -159,9 +170,16 @@ bool stm32l4_probe(target *t)
 		stm32l4_add_flash(t, 0x08000000, size << 10, PAGE_SIZE, bank1_start);
 		target_add_commands(t, stm32l4_cmd_list, "STM32L4 Dual bank");
 		return true;
-	case 0x435: /* L432 L442 L452 L462/RM0393, L431 L433 L443 rm0394  */
+	case 0x462: /* L45x L46x / RM0394  */
+	case 0x435: /* L43x L44x / RM0394  */
 		t->driver = stm32l4_driver_str;
-		target_add_ram(t, 0x20000000, 2 << 15);
+		if (idcode == 0x452) {
+			target_add_ram(t, 0x10000000, 0x08000);
+			target_add_ram(t, 0x20000000, 0x20000);
+		} else {
+			target_add_ram(t, 0x10000000, 0x04000);
+			target_add_ram(t, 0x20000000, 0x0c000);
+		}
 		size    = (target_mem_read32(t, FLASH_SIZE_REG) & 0xffff);
 		options =  target_mem_read32(t, FLASH_OPTR);
 		stm32l4_add_flash(t, 0x08000000, size << 10, PAGE_SIZE, bank1_start);
@@ -275,20 +293,84 @@ static bool stm32l4_cmd_erase_bank2(target *t)
 	return stm32l4_cmd_erase(t, FLASH_CR_MER2);
 }
 
+static const uint8_t i2offset[9] = {
+	0x20, 0x24, 0x28, 0x2c, 0x30, 0x44, 0x48, 0x4c, 0x50
+};
+
+static bool stm32l4_option_write(target *t, const uint32_t *values, int len)
+{
+	stm32l4_flash_unlock(t);
+	target_mem_write32(t, FLASH_OPTKEYR, OPTKEY1);
+	target_mem_write32(t, FLASH_OPTKEYR, OPTKEY2);
+	while (target_mem_read32(t, FLASH_SR) & FLASH_SR_BSY)
+		if(target_check_error(t))
+			return true;
+	for (int i = 0; i < len; i++)
+		target_mem_write32(t, FPEC_BASE + i2offset[i], values[i]);
+	target_mem_write32(t, FLASH_CR, FLASH_CR_OPTSTRT);
+	while (target_mem_read32(t, FLASH_SR) & FLASH_SR_BSY)
+		if(target_check_error(t))
+			return true;
+	target_mem_write32(t, FLASH_CR, FLASH_CR_LOCK);
+	target_mem_write32(t, FLASH_CR, FLASH_CR_OBL_LAUNCH);
+	while (target_mem_read32(t, FLASH_CR) & FLASH_CR_OBL_LAUNCH)
+		if(target_check_error(t))
+			return true;
+	return false;
+}
+
+/* Chip       L43X/mask  L43x/def   L47x/mask  L47x/def
+ *                                  L49x/mask  L49x/def
+ * Option
+ * 0X1FFF7800 0x0f8f77ff 0xFFEFF8AA 0x0FDF77FF 0xFFEFF8AA
+ * 0X1FFF7808 0x0000FFFF 0xFFFFFFFF 0x0000FFFF 0xFFFFFFFF
+ * 0X1FFF7810 0x8000FFFF 0          0x8000FFFF 0
+ * 0X1FFF7818 0x00FF00FF 0x000000ff 0x00FF00FF 0x000000ff
+ * 0X1FFF7820 0x00FF00FF 0x000000ff 0x00FF00FF 0x000000ff
+ * 0X1FFFF808 0          0          0x8000FFFF 0xffffffff
+ * 0X1FFFF810 0          0          0x8000FFFF 0
+ * 0X1FFFF818 0          0          0x00FF00FF 0
+ * 0X1FFFF820 0          0          0x00FF00FF 0x000000ff
+ */
+
 static bool stm32l4_cmd_option(target *t, int argc, char *argv[])
 {
-	uint32_t addr, val;
+	uint32_t val;
+	uint32_t values[9] = { 0xFFEFF8AA, 0xFFFFFFFF, 0, 0x000000ff,
+						   0x000000ff, 0xffffffff, 0, 0, 0x000000ff};
+	int len;
+	bool res = false;
 
-	(void) argc;
-	(void) argv;
-	for (int i = 0; i < 0x23; i += 8) {
-		addr = 0x1fff7800 + i;
-		val = target_mem_read32(t, addr);
-		tc_printf(t, "0x%08X: 0x%08x\n", addr, val);
+	if (t->idcode == 0x435) /* L43x */
+		len = 5;
+	else
+		len = 9;
+	if ((argc == 2) && !strcmp(argv[1], "erase")) {
+		res = stm32l4_option_write(t, values, len);
+	} else if ((argc >  2) && !strcmp(argv[1], "write")) {
+		int i;
+		for (i = 2; i < argc; i++)
+			values[i - 2] = strtoul(argv[i], NULL, 0);
+		for (i = i - 2; i < len; i++) {
+			uint32_t addr = FPEC_BASE + i2offset[i];
+			values[i] = target_mem_read32(t, addr);
+		}
+		if ((values[0] & 0xff) == 0xCC) {
+			values[0]++;
+			tc_printf(t, "Changing Level 2 request to Level 1!");
+		}
+		res = stm32l4_option_write(t, values, len);
+	} else {
+		tc_printf(t, "usage: monitor option erase\n");
+		tc_printf(t, "usage: monitor option write <value> ...\n");
 	}
-	for (int i = 8; i < 0x23; i += 8) {
-		addr = 0x1ffff800 + i;
-		val = target_mem_read32(t, addr);
+	if (res) {
+		tc_printf(t, "Writing options failed!\n");
+		return false;
+	}
+	for (int i = 0; i < len; i ++) {
+		uint32_t addr = FPEC_BASE + i2offset[i];
+		val = target_mem_read32(t, FPEC_BASE + i2offset[i]);
 		tc_printf(t, "0x%08X: 0x%08X\n", addr, val);
 	}
 	return true;
