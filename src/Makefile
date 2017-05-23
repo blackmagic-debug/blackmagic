@@ -83,7 +83,7 @@ blackmagic: include/version.h $(OBJ)
 clean:	host_clean
 	$(Q)echo "  CLEAN"
 	-$(Q)$(RM) -f *.o *.d *~ blackmagic $(HOSTFILES)
-	-$(Q)$(RM) -f platforms/*/*.o platforms/*/*.d mapfile
+	-$(Q)$(RM) -f platforms/*/*.o platforms/*/*.d mapfile include/version.h
 
 all_platforms:
 	$(Q)set -e ;\
@@ -105,6 +105,7 @@ all_platforms:
 	echo "</ul></body></html>" >> artifacts/index.html ;\
 	cp artifacts/*.bin artifacts/$(shell git describe --always)
 
+command.c: include/version.h
 
 include/version.h: FORCE
 	$(Q)echo "  GIT     include/version.h"
