@@ -36,7 +36,6 @@
 #define BOARD_IDENT       "Black Magic Probe (HydraBus), (Firmware " FIRMWARE_VERSION ")"
 #define BOARD_IDENT_DFU   "Black Magic (Upgrade) for HydraBus, (Firmware " FIRMWARE_VERSION ")"
 #define DFU_IDENT         "Black Magic Firmware Upgrade (HydraBus)"
-#define DFU_IFACE_STRING  "@Internal Flash   /0x08000000/1*016Ka,3*016Kg,1*064Kg,7*128Kg"
 
 /* Important pin mappings for STM32 implementation:
  *

@@ -32,11 +32,11 @@
 struct jtag_dev_s jtag_devs[JTAG_MAX_DEVS+1];
 int jtag_dev_count;
 
-static struct jtag_dev_descr_s {
-	uint32_t idcode;
-	uint32_t idmask;
-	char *descr;
-	void (*handler)(jtag_dev_t *dev);
+static const struct jtag_dev_descr_s {
+	const uint32_t idcode;
+	const uint32_t idmask;
+	const char * const descr;
+	void (*const handler)(jtag_dev_t *dev);
 } dev_descr[] = {
 	{.idcode = 0x0BA00477, .idmask = 0x0FFF0FFF,
 		.descr = "ARM Limited: ADIv5 JTAG-DP port.",

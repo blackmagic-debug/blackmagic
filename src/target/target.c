@@ -355,7 +355,7 @@ int target_breakwatch_clear(target *t,
 {
 	struct breakwatch *bwp = NULL, *bw;
 	int ret = 1;
-	for (bw = t->bw_list; bw; bw = bw->next, bwp = bw)
+	for (bw = t->bw_list; bw; bwp = bw, bw = bw->next)
 		if ((bw->type == type) &&
 		    (bw->addr == addr) &&
 		    (bw->size == len))

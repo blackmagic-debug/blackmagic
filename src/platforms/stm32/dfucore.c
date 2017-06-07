@@ -22,10 +22,11 @@
 #include <string.h>
 #if defined(STM32F1)
 #	include <libopencm3/stm32/f1/flash.h>
-#elif defined(STM32F2)
-#	include <libopencm3/stm32/f2/flash.h>
+#	define DFU_IFACE_STRING  "@Internal Flash   /0x08000000/8*001Ka,000*001Kg"
+#   define DFU_IFACE_STRING_OFFSET 38
 #elif defined(STM32F4)
 #	include <libopencm3/stm32/f4/flash.h>
+#	define DFU_IFACE_STRING  "/0x08000000/1*016Ka,3*016Kg,1*064Kg,7*128Kg"
 #endif
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/dfu.h>
@@ -48,6 +49,7 @@ static struct {
 	uint32_t addr;
 	uint16_t blocknum;
 } prog;
+static uint8_t current_error;
 
 const struct usb_device_descriptor dev = {
 	.bLength = USB_DT_DEVICE_SIZE,
@@ -69,7 +71,7 @@ const struct usb_device_descriptor dev = {
 const struct usb_dfu_descriptor dfu_function = {
 	.bLength = sizeof(struct usb_dfu_descriptor),
 	.bDescriptorType = DFU_FUNCTIONAL,
-	.bmAttributes = USB_DFU_CAN_DOWNLOAD | USB_DFU_WILL_DETACH,
+	.bmAttributes = USB_DFU_CAN_DOWNLOAD | USB_DFU_CAN_UPLOAD | USB_DFU_WILL_DETACH,
 	.wDetachTimeout = 255,
 	.wTransferSize = 1024,
 	.bcdDFUVersion = 0x011A,
@@ -112,21 +114,23 @@ const struct usb_config_descriptor config = {
 };
 
 static char serial_no[9];
+static char if_string[] = DFU_IFACE_STRING;
 
 static const char *usb_strings[] = {
 	"Black Sphere Technologies",
 	BOARD_IDENT_DFU,
 	serial_no,
 	/* This string is used by ST Microelectronics' DfuSe utility */
-	DFU_IFACE_STRING,
+	if_string,
 };
 
+static char upd_if_string[] = UPD_IFACE_STRING;
 static const char *usb_strings_upd[] = {
 	"Black Sphere Technologies",
 	BOARD_IDENT_UPD,
 	serial_no,
 	/* This string is used by ST Microelectronics' DfuSe utility */
-	UPD_IFACE_STRING,
+	upd_if_string,
 };
 
 static uint32_t get_le32(const void *vp)
@@ -149,7 +153,8 @@ static uint8_t usbdfu_getstatus(uint32_t *bwPollTimeout)
 		/* Device will reset when read is complete */
 		usbdfu_state = STATE_DFU_MANIFEST;
 		return DFU_STATUS_OK;
-
+	case STATE_DFU_ERROR:
+		return current_error;
 	default:
 		return DFU_STATUS_OK;
 	}
@@ -159,23 +164,17 @@ static void
 usbdfu_getstatus_complete(usbd_device *dev, struct usb_setup_data *req)
 {
 	(void)req;
+	(void)dev;
 
 	switch(usbdfu_state) {
 	case STATE_DFU_DNBUSY:
 
 		flash_unlock();
 		if(prog.blocknum == 0) {
-			uint32_t addr = get_le32(prog.buf + 1);
-			if ((addr < app_address) || (addr >= max_address)) {
-				flash_lock();
-				usbd_ep_stall_set(dev, 0, 1);
-				return;
-			}
+			int32_t addr = get_le32(prog.buf + 1);
 			switch(prog.buf[0]) {
 			case CMD_ERASE:
 				dfu_check_and_do_sector_erase(addr);
-			case CMD_SETADDR:
-				prog.addr = addr;
 			}
 		} else {
 			uint32_t baseaddr = prog.addr +
@@ -218,6 +217,15 @@ static int usbdfu_control_request(usbd_device *dev,
 			prog.blocknum = req->wValue;
 			prog.len = *len;
 			memcpy(prog.buf, *buf, *len);
+			if ((req->wValue == 0) && (prog.buf[0] == CMD_SETADDR)) {
+				uint32_t addr = get_le32(prog.buf + 1);
+				if ((addr < app_address) || (addr >= max_address)) {
+					current_error = DFU_STATUS_ERR_TARGET;
+					usbdfu_state = STATE_DFU_ERROR;
+					return 1;
+				} else
+					prog.addr = addr;
+			}
 			usbdfu_state = STATE_DFU_DNLOAD_SYNC;
 			return 1;
 		}
@@ -231,8 +239,22 @@ static int usbdfu_control_request(usbd_device *dev,
 		usbdfu_state = STATE_DFU_IDLE;
 		return 1;
 	case DFU_UPLOAD:
-		/* Upload not supported for now */
-		return 0;
+		if ((usbdfu_state == STATE_DFU_IDLE) ||
+			(usbdfu_state == STATE_DFU_DNLOAD_IDLE) ||
+			(usbdfu_state == STATE_DFU_UPLOAD_IDLE)) {
+			prog.blocknum = req->wValue;
+			usbdfu_state = STATE_DFU_UPLOAD_IDLE;
+			if(prog.blocknum > 1) {
+				uint32_t baseaddr = prog.addr +
+					((prog.blocknum - 2) *
+					 dfu_function.wTransferSize);
+				memcpy(*buf, (void*)baseaddr, *len);
+			}
+			return 1;
+		} else {
+			usbd_ep_stall_set(dev, 0, 1);
+			return 0;
+		}
 	case DFU_GETSTATUS: {
 		uint32_t bwPollTimeout = 0; /* 24-bit integer in DFU class spec */
 
@@ -278,6 +300,33 @@ void dfu_main(void)
 		usbd_poll(usbdev);
 }
 
+#if defined(DFU_IFACE_STRING_OFFSET)
+static void set_dfu_iface_string(uint32_t size)
+{
+	uint32_t res;
+	char *p = if_string + DFU_IFACE_STRING_OFFSET;
+	/* We do not want the whole printf library in the bootloader.
+	 * Fill the size digits by hand.
+	 */
+	res = size / 100;
+	if (res > 9) {
+		*p++ = '9';
+		*p++ = '9';
+		*p++ = '9';
+		return;
+	} else {
+		*p++ = res + '0';
+		size -= res * 100;
+	}
+	res = size / 10;
+	*p++ = res + '0';
+	size -= res * 10;
+	*p++ = size + '0';
+}
+#else
+# define set_dfu_iface_string()
+#endif
+
 static char *get_dev_unique_id(char *s)
 {
 #if defined(STM32F4) || defined(STM32F2)
@@ -298,10 +347,21 @@ static char *get_dev_unique_id(char *s)
 			*(unique_id_p + 1) +
 			*(unique_id_p + 2);
 	int i;
+	uint32_t fuse_flash_size;
 
 	/* Calculated the upper flash limit from the exported data
 	   in theparameter block*/
-	max_address = (*(uint32_t *) FLASH_SIZE_R) <<10;
+	fuse_flash_size = *(uint32_t *) FLASH_SIZE_R & 0xfff;
+	set_dfu_iface_string(fuse_flash_size - 8);
+	if (fuse_flash_size == 0x40) /* Handle F103x8 as F103xC! */
+		fuse_flash_size = 0x80;
+	max_address = FLASH_BASE + (fuse_flash_size << 10);
+	/* If bootloader pages are write protected or device is read
+	 * protected, deny bootloader update.
+	 * User can still force updates, at his own risk!
+	 */
+	if (((FLASH_WRPR & 0x03) != 0x03) || (FLASH_OBR & FLASH_OBR_RDPRT_EN))
+		upd_if_string[30] = '0';
 	/* Fetch serial number from chip's unique ID */
 	for(i = 0; i < 8; i++) {
 		s[7-i] = ((unique_id >> (4*i)) & 0xF) + '0';

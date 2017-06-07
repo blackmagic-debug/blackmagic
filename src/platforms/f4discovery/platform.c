@@ -34,25 +34,41 @@
 #include <libopencm3/stm32/usart.h>
 #include <libopencm3/stm32/syscfg.h>
 #include <libopencm3/usb/usbd.h>
+#include <libopencm3/cm3/systick.h>
+#include <libopencm3/cm3/cortex.h>
 
 jmp_buf fatal_error_jmpbuf;
+extern uint32_t _ebss;
 
 void platform_init(void)
 {
+	volatile uint32_t *magic = (uint32_t *) &_ebss;
 	/* Check the USER button*/
-	rcc_peripheral_enable_clock(&RCC_AHB1ENR, RCC_AHB1ENR_IOPAEN);
-	if(gpio_get(GPIOA, GPIO0)) {
-		platform_request_boot();
+	rcc_periph_clock_enable(RCC_GPIOA);
+	if (gpio_get(GPIOA, GPIO0) ||
+	   ((magic[0] == BOOTMAGIC0) && (magic[1] == BOOTMAGIC1))) {
+		magic[0] = 0;
+		magic[1] = 0;
+		/* Assert blue LED as indicator we are in the bootloader */
+		rcc_periph_clock_enable(RCC_GPIOD);
+		gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT,
+						GPIO_PUPD_NONE, LED_BOOTLOADER);
+		gpio_set(LED_PORT, LED_BOOTLOADER);
+		/* Jump to the built in bootloader by mapping System flash.
+		   As we just come out of reset, no other deinit is needed!*/
+		rcc_periph_clock_enable(RCC_SYSCFG);
+		SYSCFG_MEMRM &= ~3;
+		SYSCFG_MEMRM |=  1;
 		scb_reset_core();
 	}
 
 	rcc_clock_setup_hse_3v3(&hse_8mhz_3v3[CLOCK_3V3_48MHZ]);
 
 	/* Enable peripherals */
-	rcc_peripheral_enable_clock(&RCC_AHB2ENR, RCC_AHB2ENR_OTGFSEN);
-	rcc_peripheral_enable_clock(&RCC_AHB1ENR, RCC_AHB1ENR_IOPCEN);
-	rcc_peripheral_enable_clock(&RCC_AHB1ENR, RCC_AHB1ENR_IOPDEN);
-	rcc_peripheral_enable_clock(&RCC_AHB1ENR, RCC_AHB1ENR_CRCEN);
+	rcc_periph_clock_enable(RCC_OTGFS);
+	rcc_periph_clock_enable(RCC_GPIOC);
+	rcc_periph_clock_enable(RCC_GPIOD);
+	rcc_periph_clock_enable(RCC_CRC);
 
 	/* Set up USB Pins and alternate function*/
 	gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO11 | GPIO12);
@@ -87,18 +103,8 @@ const char *platform_target_voltage(void)
 
 void platform_request_boot(void)
 {
-	/* Disconnect USB cable */
-	usbd_disconnect(usbdev, 1);
-	nvic_disable_irq(USB_IRQ);
-
-	/* Assert blue LED as indicator we are in the bootloader */
-	rcc_peripheral_enable_clock(&RCC_AHB1ENR, RCC_AHB1ENR_IOPDEN);
-	gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT,
-		GPIO_PUPD_NONE, LED_BOOTLOADER);
-	gpio_set(LED_PORT, LED_BOOTLOADER);
-
-	/* Jump to the built in bootloader by mapping System flash */
-	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_SYSCFGEN);
-	SYSCFG_MEMRM &= ~3;
-	SYSCFG_MEMRM |=  1;
+	uint32_t *magic = (uint32_t *) &_ebss;
+	magic[0] = BOOTMAGIC0;
+	magic[1] = BOOTMAGIC1;
+	scb_reset_system();
 }

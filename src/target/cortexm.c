@@ -34,7 +34,7 @@
 
 #include <unistd.h>
 
-static char cortexm_driver_str[] = "ARM Cortex-M";
+static const char cortexm_driver_str[] = "ARM Cortex-M";
 
 static bool cortexm_vector_catch(target *t, int argc, char *argv[]);
 

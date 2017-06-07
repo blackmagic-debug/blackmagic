@@ -32,10 +32,8 @@
 #include <setjmp.h>
 
 #define PLATFORM_HAS_TRACESWO
-#define BOARD_IDENT       "Black Magic Probe (F4Discovery), (Firmware " FIRMWARE_VERSION ")"
-#define BOARD_IDENT_DFU   "Black Magic (Upgrade) for F4Discovery, (Firmware " FIRMWARE_VERSION ")"
-#define DFU_IDENT         "Black Magic Firmware Upgrade (F4Discovery"
-#define DFU_IFACE_STRING  "@Internal Flash   /0x08000000/1*016Ka,3*016Kg,1*064Kg,7*128Kg"
+#define BOARD_IDENT "Black Magic Probe (F4Discovery), (Firmware " FIRMWARE_VERSION ")"
+#define DFU_IDENT   "Black Magic Firmware Upgrade (F4Discovery)"
 
 /* Important pin mappings for STM32 implementation:
  *
@@ -44,7 +42,6 @@
  * LED2 = 	PD12	(Red LED    : Error)
  * LED3 = 	PD15	(Blue LED   : Bootloader active)
  *
- * TPWR = 	XXX (input) -- analogue on mini design ADC1, ch8
  * nTRST = 	PC1
  * SRST_OUT =   PC8
  * TDI = 	PC2
@@ -53,10 +50,7 @@
  * TDO = 	PC6 (input for TRACESWO
  * nSRST =
  *
- * USB cable pull-up: PA8
- * USB VBUS detect:  PB13 -- New on mini design.
- *                           Enable pull up for compatibility.
- * Force DFU mode button: PB12
+ * Force DFU mode button: PA0
  */
 
 /* Hardware definitions... */
@@ -86,6 +80,8 @@
 #define LED_IDLE_RUN	GPIO13
 #define LED_ERROR	GPIO14
 #define LED_BOOTLOADER	GPIO15
+#define BOOTMAGIC0 0xb007da7a
+#define BOOTMAGIC1 0xbaadfeed
 
 #define TMS_SET_MODE() \
 	gpio_mode_setup(TMS_PORT, GPIO_MODE_OUTPUT, \
