@@ -38,7 +38,6 @@
 #define BOARD_IDENT_DFU   "Black Magic (Upgrade) for Bluepill, (Firmware " FIRMWARE_VERSION ")"
 #define BOARD_IDENT_UPD   "Black Magic (DFU Upgrade) for Bluepill, (Firmware " FIRMWARE_VERSION ")"
 #define DFU_IDENT         "Black Magic Firmware Upgrade (Bluepill, Firmware " FIRMWARE_VERSION ")"
-#define DFU_IFACE_STRING  "@Internal Flash   /0x08000000/8*001Ka,56*001Kg"
 #define UPD_IFACE_STRING  "@Internal Flash   /0x08000000/8*001Kg"
 
 /* Important pin mappings for STM32 Bluepill implementation:
