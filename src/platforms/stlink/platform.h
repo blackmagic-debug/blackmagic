@@ -39,27 +39,6 @@
 #define DFU_IDENT         "Black Magic Firmware Upgrade (STLINK)"
 #define UPD_IFACE_STRING  "@Internal Flash   /0x08000000/8*001Kg"
 
-/* Important pin mappings for STM32 implementation:
- *
- * LED0 = 	PB2	(Yellow LED : Running)
- * LED1 = 	PB10	(Yellow LED : Idle)
- * LED2 = 	PB11	(Red LED    : Error)
- *
- * TPWR = 	RB0 (input) -- analogue on mini design ADC1, ch8
- * nTRST = 	PB1
- * SRST_OUT = 	PA2
- * TDI = 	PA7
- * TMS = 	PB14 (input for SWDP)
- * TCK = 	PA5
- * TDO = 	PA6 (input)
- * nSRST = 	PB0 (input)
- *
- * USB cable pull-up: PA8
- * USB VBUS detect:  PB13 -- New on mini design.
- *                           Enable pull up for compatibility.
- * Force DFU mode button: PB12
- */
-
 /* Hardware definitions... */
 #define TDI_PORT	GPIOA
 #define TMS_PORT	GPIOB
