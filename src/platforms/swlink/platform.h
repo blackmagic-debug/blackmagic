@@ -35,21 +35,6 @@
 #define DFU_IDENT              "Black Magic Firmware Upgrade (SWLINK)"
 #define UPD_IFACE_STRING       "@Internal Flash   /0x08000000/8*001Kg"
 
-/* Pin mappings:
- *
- * nTRST = 	PB1
- * TDI = 	PA3
- * TMS = 	PA4 (input for SWDP)
- * TCK = 	PA5
- * TDO = 	PA6 (input)
- * nSRST = 	PA7 (input)
- *
- * USB cable pull-up: PA8
- * USB VBUS detect:  PB13 -- New on mini design.
- *                           Enable pull up for compatibility.
- * Force DFU mode button: PB9 Low
- */
-
 /* Hardware definitions... */
 #define TMS_PORT	GPIOA
 #define TCK_PORT	GPIOA
