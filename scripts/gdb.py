@@ -291,7 +291,7 @@ class Target:
 
 	def flash_write_prepare(self, address, data):
 		for m in self.mem:
-			if (address >= m.offset) and (address + len(data) < m.offset + m.length):
+			if (address >= m.offset) and (address + len(data) <= m.offset + m.length):
 				m.prog(address, data)
 
 	def flash_commit(self, progress_cb=None):
