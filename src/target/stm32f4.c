@@ -216,7 +216,7 @@ bool stm32f4_probe(target *t)
 		stm32f4_add_flash(t, 0x0200000, 0x20000, 0x8000, 0);
 		stm32f4_add_flash(t, 0x0220000, 0x20000, 0x20000, 4);
 		stm32f4_add_flash(t, 0x0240000, 0xC0000, 0x40000, 5);
-		target_add_commands(t, stm32f4_cmd_list, "STM32F4x");
+		target_add_commands(t, stm32f4_cmd_list, "STM32F74x");
 		break;
 	case ID_STM32F76X: /* F76x F77x RM0410 */
 		t->driver = stm32f7_driver_str;
@@ -239,7 +239,7 @@ bool stm32f4_probe(target *t)
 		stm32f4_add_flash(t, 0x8000000, 0x010000, 0x4000,  0);
 		stm32f4_add_flash(t, 0x8010000, 0x010000, 0x10000, 4);
 		stm32f4_add_flash(t, 0x8020000, 0x060000, 0x20000, 3);
-		target_add_commands(t, stm32f4_cmd_list, "STM32F76x");
+		target_add_commands(t, stm32f4_cmd_list, "STM32F72x");
 		break;
 	default:
 		return false;
