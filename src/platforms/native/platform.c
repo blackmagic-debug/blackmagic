@@ -161,7 +161,8 @@ void platform_init(void)
 				GPIO_CNF_INPUT_PULL_UPDOWN, GPIO0);
 	}
 	/* Relocate interrupt vector table here */
-	SCB_VTOR = 0x2000;
+	extern int vector_table;
+	SCB_VTOR = (uint32_t)&vector_table;
 
 	platform_timing_init();
 	cdcacm_init();

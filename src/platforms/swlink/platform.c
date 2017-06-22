@@ -77,7 +77,9 @@ void platform_init(void)
 	data |=  AFIO_MAPR_TIM2_REMAP_PARTIAL_REMAP1;
 	AFIO_MAPR = data;
 
-	SCB_VTOR = 0x2000;	// Relocate interrupt vector table here
+	/* Relocate interrupt vector table here */
+	extern int vector_table;
+	SCB_VTOR = (uint32_t)&vector_table;
 
 	platform_timing_init();
 	cdcacm_init();
