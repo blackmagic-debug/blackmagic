@@ -173,6 +173,7 @@ bool stm32f4_probe(target *t)
 
 	switch(idcode) {
 	case ID_STM32F42X: /* 427/437 */
+	case ID_STM32F46X: /* 469/479 */
 		/* Second bank for 2M parts. */
 		stm32f4_add_flash(t, 0x8100000, 0x10000, 0x4000, 12);
 		stm32f4_add_flash(t, 0x8110000, 0x10000, 0x10000, 16);
