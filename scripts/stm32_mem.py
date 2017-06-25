@@ -39,6 +39,16 @@ def stm32_erase(dev, addr):
 		if status.bState == dfu.STATE_DFU_DOWNLOAD_IDLE:
 			break
 
+def stm32_set_address(dev, addr):
+	set_address_cmd = struct.pack("<BL", CMD_SETADDRESSPOINTER, addr)
+	dev.download(0, set_address_cmd)
+	while True:
+		status = dev.get_status()
+		if status.bState == dfu.STATE_DFU_DOWNLOAD_BUSY:
+			sleep(status.bwPollTimeout / 1000.0)
+		if status.bState == dfu.STATE_DFU_DOWNLOAD_IDLE:
+			break
+
 def stm32_write(dev, data):
 	dev.download(2, data)
 	while True:
@@ -119,6 +129,11 @@ if __name__ == "__main__":
 			stm32_erase(dfudev, addr)
                 except:
 			print "\nErase Timed out\n"
+			break
+		try:
+			stm32_set_address(dfudev, addr)
+		except:
+			print "\nSet Address Timed out\n"
 			break
 		stm32_write(dfudev, bin[:1024])
 
