@@ -23,7 +23,7 @@
 #define SR_ERROR_MASK 0xF2
 
 void __attribute__((naked))
-stm32f4_flash_write_stub(uint32_t *dest, uint32_t *src, uint32_t size)
+stm32f4_flash_write_x32_stub(uint32_t *dest, uint32_t *src, uint32_t size)
 {
 	for (int i = 0; i < size; i += 4) {
 		FLASH_CR = FLASH_CR_PROGRAM_X32 | FLASH_CR_PG;
