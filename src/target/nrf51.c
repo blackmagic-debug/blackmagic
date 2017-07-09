@@ -112,6 +112,7 @@ bool nrf51_probe(target *t)
 	case 0x0020: /* nRF51822 (rev 1) CEAA BA */
 	case 0x0024: /* nRF51422 (rev 1) QFAA C0 */
 	case 0x002A: /* nRF51822 (rev 2) QFAA FA0 */
+	case 0x004A: /* nRF51822 (rev 3) QFAA G1 */ 			
 	case 0x002D: /* nRF51422 (rev 2) QFAA DAA */
 	case 0x002E: /* nRF51422 (rev 2) QFAA E0 */
 	case 0x002F: /* nRF51822 (rev 1) CEAA B0 */
