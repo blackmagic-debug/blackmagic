@@ -89,6 +89,13 @@ lpc11xx_probe(target *t)
 		target_add_ram(t, 0x10000000, 0x2000);
 		lpc11xx_add_flash(t, 0x00000000, 0x20000, 0x1000);
 		return true;
+
+	case 0x0A24902B:
+	case 0x1A24902B:
+		t->driver = "LPC1112";
+		target_add_ram(t, 0x10000000, 0x1000);
+		lpc11xx_add_flash(t, 0x00000000, 0x10000, 0x1000);
+		return true;
 	}
 
 	idcode = target_mem_read32(t, LPC8XX_DEVICE_ID);
