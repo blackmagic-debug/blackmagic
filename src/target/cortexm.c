@@ -181,11 +181,43 @@ ADIv5_AP_t *cortexm_ap(target *t)
 
 static void cortexm_mem_read(target *t, void *dest, target_addr src, size_t len)
 {
+	/* flush data cache for RAM regions that intersect requested region */
+	target_addr src_end = src + len; /* following code is NOP if wraparound */
+	/* requested region is [src, src_end) */
+	for (struct target_ram *r = t->ram; r; r = r->next) {
+		target_addr ram = r->start;
+		target_addr ram_end = r->start + r->length;
+		/* RAM region is [ram, ram_end) */
+                if (src > ram)
+			ram = src;
+		if (src_end < ram_end)
+			ram_end = src_end;
+		/* intersection is [ram, ram_end) */
+		for (ram &= ~0x1f; ram < ram_end; ram += 0x20)
+			adiv5_mem_write(cortexm_ap(t), CORTEXM_DCCIMVAC, &ram, 4);
+	}
+
 	adiv5_mem_read(cortexm_ap(t), dest, src, len);
 }
 
 static void cortexm_mem_write(target *t, target_addr dest, const void *src, size_t len)
 {
+	/* flush data cache for RAM regions that intersect requested region */
+	target_addr dest_end = dest + len; /* following code is NOP if wraparound */
+	/* requested region is [dest, dest_end) */
+	for (struct target_ram *r = t->ram; r; r = r->next) {
+		target_addr ram = r->start;
+		target_addr ram_end = r->start + r->length;
+		/* RAM region is [ram, ram_end) */
+                if (dest > ram)
+			ram = dest;
+		if (dest_end < ram_end)
+			ram_end = dest_end;
+		/* intersection is [ram, ram_end) */
+		for (ram &= ~0x1f; ram < ram_end; ram += 0x20)
+			adiv5_mem_write(cortexm_ap(t), CORTEXM_DCCIMVAC, &ram, 4);
+	}
+
 	adiv5_mem_write(cortexm_ap(t), dest, src, len);
 }
 

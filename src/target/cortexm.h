@@ -37,6 +37,9 @@
 #define CORTEXM_DCRDR		(CORTEXM_SCS_BASE + 0xDF8)
 #define CORTEXM_DEMCR		(CORTEXM_SCS_BASE + 0xDFC)
 
+/* Data cache clean and invalidate by address to the PoC=Point of Coherency */
+#define CORTEXM_DCCIMVAC	(CORTEXM_SCS_BASE + 0xF70)
+
 #define CORTEXM_FPB_BASE	(CORTEXM_PPB_BASE + 0x2000)
 
 /* ARM Literature uses FP_*, we use CORTEXM_FPB_* consistently */
