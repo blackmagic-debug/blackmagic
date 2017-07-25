@@ -176,6 +176,45 @@ const struct command_s efm32_cmd_list[] = {
 #define EFM32_DI_PART_FAMILY_EZR_WONDER_GECKO	120
 #define EFM32_DI_PART_FAMILY_EZR_LEOPARD_GECKO	121
 
+/* These devices seem to share a different DI layout than the above, but
+ * the part number, family are in the same location as the GIANT_GECKO etc.
+ */
+enum {
+	EFM32_DI_PART_FAMILY_EFR32MG1P = 16,
+	EFM32_DI_PART_FAMILY_EFR32MG1B = 17,
+	EFM32_DI_PART_FAMILY_EFR32MG1V = 18,
+	EFM32_DI_PART_FAMILY_EFR32BG1P = 19,
+	EFM32_DI_PART_FAMILY_EFR32BG1B = 20,
+	EFM32_DI_PART_FAMILY_EFR32BG1V = 21,
+	EFM32_DI_PART_FAMILY_EFR32FG1P = 25,
+	EFM32_DI_PART_FAMILY_EFR32FG1B = 26,
+	EFM32_DI_PART_FAMILY_EFR32FG1V = 27,
+	EFM32_DI_PART_FAMILY_EFR32MG12P = 28,
+	EFM32_DI_PART_FAMILY_EFR32MG2P = 28,
+	EFM32_DI_PART_FAMILY_EFR32MG12B = 29,
+	EFM32_DI_PART_FAMILY_EFR32MG12V = 30,
+	EFM32_DI_PART_FAMILY_EFR32BG12P = 31,
+	EFM32_DI_PART_FAMILY_EFR32BG12B = 32,
+	EFM32_DI_PART_FAMILY_EFR32BG12V = 33,
+	EFM32_DI_PART_FAMILY_EFR32FG12P = 37,
+	EFM32_DI_PART_FAMILY_EFR32FG12B = 38,
+	EFM32_DI_PART_FAMILY_EFR32FG12V = 39,
+	EFM32_DI_PART_FAMILY_EFR32MG13P = 40,
+	EFM32_DI_PART_FAMILY_EFR32MG13B = 41,
+	EFM32_DI_PART_FAMILY_EFR32MG13V = 42,
+	EFM32_DI_PART_FAMILY_EFR32BG13P = 43,
+	EFM32_DI_PART_FAMILY_EFR32BG13B = 44,
+	EFM32_DI_PART_FAMILY_EFR32BG13V = 45,
+	EFM32_DI_PART_FAMILY_EFR32FG13P = 49,
+	EFM32_DI_PART_FAMILY_EFR32FG13B = 50,
+	EFM32_DI_PART_FAMILY_EFR32FG13V = 51,
+};
+
+enum {
+	EFR32_DI_BASE = 0x0FE081B0,
+	EFR32_DI_MEM_INFO_PAGE_SIZE = EFR32_DI_BASE + 0x34,
+};
+
 /* -------------------------------------------------------------------------- */
 /* Helper functions */
 /* -------------------------------------------------------------------------- */
@@ -183,15 +222,15 @@ const struct command_s efm32_cmd_list[] = {
 /**
  * Reads the EFM32 Extended Unique Identifier
  */
-	uint64_t efm32_read_eui(target *t)
-	{
-		uint64_t eui;
+uint64_t efm32_read_eui(target *t)
+{
+	uint64_t eui;
 
-		eui  = (uint64_t)target_mem_read32(t, EFM32_DI_EUI64_1) << 32;
-		eui |= (uint64_t)target_mem_read32(t, EFM32_DI_EUI64_0) <<  0;
+	eui  = (uint64_t)target_mem_read32(t, EFM32_DI_EUI64_1) << 32;
+	eui |= (uint64_t)target_mem_read32(t, EFM32_DI_EUI64_0) <<  0;
 
-		return eui;
-	}
+	return eui;
+}
 /**
  * Reads the EFM32 flash size in kiB
  */
@@ -227,9 +266,15 @@ uint16_t efm32_read_radio_part_number(target *t)
 {
 	return target_mem_read16(t, EFM32_DI_RADIO_OPN);
 }
-
-
-
+/**
+ * Reads the EFR32 flash page size in bytes
+ */
+uint32_t efr32_read_flash_page_size(target *t)
+{
+	// This register also contains PINCOUNT, PKGTYPE and TEMPGRADE
+	uint32_t page_info = target_mem_read32(t, EFR32_DI_MEM_INFO_PAGE_SIZE);
+	return 1 << (((page_info >> 24) + 10) & 0xFF);
+}
 
 static void efm32_add_flash(target *t, target_addr addr, size_t length,
 			    size_t page_size)
@@ -328,6 +373,40 @@ bool efm32_probe(target *t)
 
 			flash_page_size = 2048;
 			break;
+		case EFM32_DI_PART_FAMILY_EFR32MG1P:
+		case EFM32_DI_PART_FAMILY_EFR32MG1B:
+		case EFM32_DI_PART_FAMILY_EFR32MG1V:
+		case EFM32_DI_PART_FAMILY_EFR32BG1P:
+		case EFM32_DI_PART_FAMILY_EFR32BG1B:
+		case EFM32_DI_PART_FAMILY_EFR32BG1V:
+		case EFM32_DI_PART_FAMILY_EFR32FG1P:
+		case EFM32_DI_PART_FAMILY_EFR32FG1B:
+		case EFM32_DI_PART_FAMILY_EFR32FG1V:
+		case EFM32_DI_PART_FAMILY_EFR32MG2P:
+		case EFM32_DI_PART_FAMILY_EFR32MG12B:
+		case EFM32_DI_PART_FAMILY_EFR32MG12V:
+		case EFM32_DI_PART_FAMILY_EFR32BG12P:
+		case EFM32_DI_PART_FAMILY_EFR32BG12B:
+		case EFM32_DI_PART_FAMILY_EFR32BG12V:
+		case EFM32_DI_PART_FAMILY_EFR32FG12P:
+		case EFM32_DI_PART_FAMILY_EFR32FG12B:
+		case EFM32_DI_PART_FAMILY_EFR32FG12V:
+		case EFM32_DI_PART_FAMILY_EFR32MG13P:
+		case EFM32_DI_PART_FAMILY_EFR32MG13B:
+		case EFM32_DI_PART_FAMILY_EFR32MG13V:
+		case EFM32_DI_PART_FAMILY_EFR32BG13P:
+		case EFM32_DI_PART_FAMILY_EFR32BG13B:
+		case EFM32_DI_PART_FAMILY_EFR32BG13V:
+		case EFM32_DI_PART_FAMILY_EFR32FG13P:
+		case EFM32_DI_PART_FAMILY_EFR32FG13B:
+		case EFM32_DI_PART_FAMILY_EFR32FG13V:
+			sprintf(variant_string,
+				"EFR32??%dF...",
+				part_number);
+			flash_page_size = efr32_read_flash_page_size(t);
+			// memory, ram size appear to be in the same place as the other geckoes
+			break;
+
 		default:	/* Unknown family */
 			return false;
 	}
