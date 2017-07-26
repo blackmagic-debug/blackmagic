@@ -19,7 +19,7 @@
 #include <stdint.h>
 #include "stub.h"
 
-#define EFM32_MSC                       ((volatile uint32_t *)0x400c0000)
+#define EFM32_MSC                       ((volatile uint32_t *)0x400e0000)
 #define EFM32_MSC_WRITECTRL             EFM32_MSC[2]
 #define EFM32_MSC_WRITECMD              EFM32_MSC[3]
 #define EFM32_MSC_ADDRB                 EFM32_MSC[4]
