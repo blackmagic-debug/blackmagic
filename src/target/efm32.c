@@ -75,8 +75,8 @@ const struct command_s efm32_cmd_list[] = {
 #define EFM32_MSC_ADDRB		 	(EFM32_MSC+0x010)
 #define EFM32_MSC_WDATA		 	(EFM32_MSC+0x018)
 #define EFM32_MSC_STATUS		(EFM32_MSC+0x01c)
-#define EFM32_MSC_LOCK		  	(EFM32_MSC+0x03c)
-#define EFM32_MSC_CMD		   	(EFM32_MSC+0x040)
+#define EFM32_MSC_LOCK		  	(EFM32_MSC+0x040)
+#define EFM32_MSC_CMD		   	(EFM32_MSC+0x074)
 #define EFM32_MSC_TIMEBASE	      	(EFM32_MSC+0x050)
 #define EFM32_MSC_MASSLOCK	      	(EFM32_MSC+0x054)
 
@@ -311,14 +311,8 @@ uint16_t efm32_read_radio_part_number(target *t)
 	return target_mem_read16(t, EFM32_DI_RADIO_OPN);
 }
 /**
- * Reads the EFR32 flash page size in bytes
+ * Reads the EFR32 flash page size in bytes, plus package info
  */
-uint32_t efr32_read_flash_page_size(target *t)
-{
-	// This register also contains PINCOUNT, PKGTYPE and TEMPGRADE
-	uint32_t page_info = target_mem_read32(t, EFR32_DI_MEM_INFO_PAGE_SIZE);
-	return 1 << (((page_info >> 24) + 10) & 0xFF);
-}
 void efr32_read_mem_info(target *t, uint32_t *pagesize, uint8_t *pincount, uint8_t *pkgtype) {
 	// This register also contains PINCOUNT, PKGTYPE and TEMPGRADE
 	uint32_t page_info = target_mem_read32(t, EFR32_DI_MEM_INFO_PAGE_SIZE);

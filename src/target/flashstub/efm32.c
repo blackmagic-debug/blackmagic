@@ -25,7 +25,10 @@
 #define EFM32_MSC_ADDRB                 EFM32_MSC[4]
 #define EFM32_MSC_WDATA                 EFM32_MSC[6]
 #define EFM32_MSC_STATUS                EFM32_MSC[7]
+
 #define EFM32_MSC_LOCK			EFM32_MSC[15]
+
+#define EFR32_MSC_LOCK			EFM32_MSC[16]
 
 #define EFM32_MSC_LOCK_LOCKKEY          0x1b71
 
@@ -47,11 +50,12 @@ efm32_flash_write_stub(uint32_t *dest, uint32_t *src, uint32_t size)
 {
 	uint32_t i;
 
-	EFM32_MSC_LOCK = EFM32_MSC_LOCK_LOCKKEY;
+	EFR32_MSC_LOCK = EFM32_MSC_LOCK_LOCKKEY;
+
 	EFM32_MSC_WRITECTRL = 1;
 
 	for (i = 0; i < size/4; i++) {
-		EFM32_MSC_ADDRB = (uint32_t)&dest[i];;
+		EFM32_MSC_ADDRB = (uint32_t)&dest[i];
 		EFM32_MSC_WRITECMD = EFM32_MSC_WRITECMD_LADDRIM;
 
 		/* Wait for WDATAREADY */
