@@ -180,6 +180,7 @@ const struct command_s efm32_cmd_list[] = {
  * the part number, family are in the same location as the GIANT_GECKO etc.
  */
 enum {
+	EFM32_DI_PART_FAMILY_FIRST = 16,
 	EFM32_DI_PART_FAMILY_EFR32MG1P = 16,
 	EFM32_DI_PART_FAMILY_EFR32MG1B = 17,
 	EFM32_DI_PART_FAMILY_EFR32MG1V = 18,
@@ -210,9 +211,50 @@ enum {
 	EFM32_DI_PART_FAMILY_EFR32FG13V = 51,
 };
 
+static char *efr32_names[] =  {
+	"MG1P",
+	"MG1B",
+	"MG1V",
+	"BG1P",
+	"BG1B",
+	"BG1V",
+	NULL,
+	NULL,
+	NULL,
+	"FG1P",
+	"FG1B",
+	"FG1V",
+	"MG12P", // "MG2P", duplicate code
+	"MG12B",
+	"MG12V",
+	"BG12P",
+	"BG12B",
+	"BG12V",
+	NULL,
+	NULL,
+	NULL,
+	"FG12P",
+	"FG12B",
+	"FG12V",
+	"MG13P",
+	"MG13B",
+	"MG13V",
+	"BG13P",
+	"BG13B",
+	"BG13V",
+	NULL,
+	NULL,
+	NULL,
+	"FG13P",
+	"FG13B",
+	"FG13V",
+};
+
 enum {
 	EFR32_DI_BASE = 0x0FE081B0,
 	EFR32_DI_MEM_INFO_PAGE_SIZE = EFR32_DI_BASE + 0x34,
+	EFR32_DI_PINCOUNT_SHIFT = 16,
+	EFR32_DI_PKGTYPE_SHIFT = 8,
 };
 
 /* -------------------------------------------------------------------------- */
@@ -275,6 +317,13 @@ uint32_t efr32_read_flash_page_size(target *t)
 	uint32_t page_info = target_mem_read32(t, EFR32_DI_MEM_INFO_PAGE_SIZE);
 	return 1 << (((page_info >> 24) + 10) & 0xFF);
 }
+void efr32_read_mem_info(target *t, uint32_t *pagesize, uint8_t *pincount, uint8_t *pkgtype) {
+	// This register also contains PINCOUNT, PKGTYPE and TEMPGRADE
+	uint32_t page_info = target_mem_read32(t, EFR32_DI_MEM_INFO_PAGE_SIZE);
+	*pagesize = 1 << (((page_info >> 24) + 10) & 0xFF);
+	*pincount = (page_info >> EFR32_DI_PINCOUNT_SHIFT) & 0xFF;
+	*pkgtype = (page_info >> EFR32_DI_PKGTYPE_SHIFT) & 0xFF;
+}
 
 static void efm32_add_flash(target *t, target_addr addr, size_t length,
 			    size_t page_size)
@@ -312,6 +361,7 @@ bool efm32_probe(target *t)
 	uint8_t part_family = efm32_read_part_family(t);
 	uint16_t radio_number, radio_number_short;  /* optional, for ezr parts */
 	uint32_t flash_page_size; uint16_t flash_kb;
+	uint8_t pincount; uint8_t pkgtype;
 
 	switch(part_family) {
 		case EFM32_DI_PART_FAMILY_GECKO:
@@ -400,10 +450,16 @@ bool efm32_probe(target *t)
 		case EFM32_DI_PART_FAMILY_EFR32FG13P:
 		case EFM32_DI_PART_FAMILY_EFR32FG13B:
 		case EFM32_DI_PART_FAMILY_EFR32FG13V:
+			flash_kb = efm32_read_flash_size(t);
+			efr32_read_mem_info(t, &flash_page_size, &pincount, &pkgtype);
 			sprintf(variant_string,
-				"EFR32??%dF...",
-				part_number);
-			flash_page_size = efr32_read_flash_page_size(t);
+				"EFR32%s%dF%dG%c%d",
+				efr32_names[part_family - EFM32_DI_PART_FAMILY_FIRST],
+				part_number,
+				flash_kb,
+				pkgtype,
+				pincount
+				);
 			// memory, ram size appear to be in the same place as the other geckoes
 			break;
 
