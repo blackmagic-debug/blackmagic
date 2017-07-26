@@ -67,7 +67,9 @@ const struct command_s efm32_cmd_list[] = {
 /* Memory System Controller (MSC) Registers */
 /* -------------------------------------------------------------------------- */
 
-#define EFM32_MSC	       		0x400c0000
+// #define EFM32_MSC	       		0x400c0000
+// EFR32, other newer parts move from c to e:
+#define EFM32_MSC	       		0x400e0000
 #define EFM32_MSC_WRITECTRL	     	(EFM32_MSC+0x008)
 #define EFM32_MSC_WRITECMD	      	(EFM32_MSC+0x00c)
 #define EFM32_MSC_ADDRB		 	(EFM32_MSC+0x010)
@@ -96,7 +98,7 @@ const struct command_s efm32_cmd_list[] = {
 
 
 /* -------------------------------------------------------------------------- */
-/* Flash Infomation Area */
+/* Flash Information Area */
 /* -------------------------------------------------------------------------- */
 
 #define EFM32_INFO			0x0fe00000
@@ -211,7 +213,7 @@ enum {
 	EFM32_DI_PART_FAMILY_EFR32FG13V = 51,
 };
 
-static char *efr32_names[] =  {
+static const char *efr32_names[] =  {
 	"MG1P",
 	"MG1B",
 	"MG1V",
@@ -460,6 +462,11 @@ bool efm32_probe(target *t)
 				pkgtype,
 				pincount
 				);
+			// For EFR32BG, EFR32MG, EFR32FG:
+			// MSC_BASE 0x400E0000
+			// IDR LOCK/UNLOCK 0x26E60011/0x24770011
+			// (flash lock/unlock codes still 0x631A, 0x1b71)
+			// TAR wrap boundary 0xFFF
 			// memory, ram size appear to be in the same place as the other geckoes
 			break;
 
