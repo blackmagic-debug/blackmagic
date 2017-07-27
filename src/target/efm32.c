@@ -52,6 +52,8 @@ static const uint16_t efm32_flash_write_stub[] = {
 #include "flashstub/efm32.stub"
 };
 
+// add efr32_flash_write_stub?
+
 static bool efm32_cmd_erase_all(target *t);
 static bool efm32_cmd_serial(target *t);
 
