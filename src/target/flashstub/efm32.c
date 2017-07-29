@@ -16,6 +16,37 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
+/* This file is derived from the Silicon Labs SDK:
+ *
+ *******************************************************************************
+ * @section License
+ * <b>Copyright 2016 Silicon Laboratories, Inc. http://www.silabs.com</b>
+ *******************************************************************************
+ *
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute it
+ * freely, subject to the following restrictions:
+ *
+ * 1. The origin of this software must not be misrepresented; you must not
+ *    claim that you wrote the original software.
+ * 2. Altered source versions must be plainly marked as such, and must not be
+ *    misrepresented as being the original software.
+ * 3. This notice may not be removed or altered from any source distribution.
+ *
+ * DISCLAIMER OF WARRANTY/LIMITATION OF REMEDIES: Silicon Labs has no
+ * obligation to support this Software. Silicon Labs is providing the
+ * Software "AS IS", with no express or implied warranties of any kind,
+ * including, but not limited to, any implied warranties of merchantability
+ * or fitness for any particular purpose or warranties against infringement
+ * of any proprietary rights of a third party.
+ *
+ * Silicon Labs will not be liable for any consequential, incidental, or
+ * special damages, or any other relief, or for any claim by any third party,
+ * arising from your use of this Software.
+ *
+ ******************************************************************************/
+
 #include "stub.h"
 #include <stdint.h>
 
@@ -73,34 +104,36 @@ typedef struct {
 
   uint32_t RESERVED4[5]; /**< Reserved for future use **/
   volatile uint32_t CMD; /**< Command Register  */
+  volatile uint32_t BOOTLOADERCTRL; /**< Unlock writes to bootloader area */
 } MSC_TypeDef;           /** @} */
 
 #define MSC ((MSC_TypeDef *)(0x400E0000UL))
 
-/*
-void MSC_LoadWriteData(uint32_t *data, uint32_t numWords,
-                       uint8_t writeStrategy);
-void MSC_LoadVerifyAddress(uint32_t *address);
-*/
-
 void __attribute__((naked))
 efm32_flash_write_stub(uint32_t *dest, uint32_t *src, uint32_t size) {
+  asm("ldr r0, =_estack; mov   sp, r0;" ::: "r0");
+
   uint32_t wordCount;
   uint32_t numWords;
   uint32_t pageWords;
   uint32_t *pData;
 
-  /* Unlock the MSC */
+  // Unlock the MSC
   MSC->LOCK = EFM32_MSC_LOCK_LOCKKEY;
 
+  // Enable writes
   MSC->WRITECTRL |= (0x1UL << 0);
+
+  MSC->BOOTLOADERCTRL |= (0x1UL << 1);  // we're in like Flynn
+
+  // Apparently you can brick the device by erasing 'reserved' pages
+  // while BOOTLOADERCTRL is unlocked.
 
   numWords = size >> 2;
 
   for (wordCount = 0, pData = (uint32_t *)src; wordCount < numWords;) {
 
     { // MSC_LoadVerifyAddress(dest + wordCount);
-      uint32_t *address = dest + wordCount;
       uint32_t status;
       uint32_t timeOut;
 
@@ -113,8 +146,8 @@ efm32_flash_write_stub(uint32_t *dest, uint32_t *src, uint32_t size) {
         stub_exit(1);
       }
 
-      MSC->ADDRB = (uint32_t)address;
-      MSC->WRITECMD = (0x1UL << 0);
+      MSC->ADDRB = (uint32_t)(dest+wordCount);
+      MSC->WRITECMD = (0x1UL << 0); // erase page
     }
 
     // for parts with 2048b pages
@@ -126,12 +159,13 @@ efm32_flash_write_stub(uint32_t *dest, uint32_t *src, uint32_t size) {
 
     // MSC_LoadWriteData(pData, pageWords, 0);
     {
-      uint32_t *data = pData;
+      uint32_t *data;
+      data = pData;
       uint32_t numWords = pageWords;
       uint8_t writeStrategy = 0;
       uint32_t timeOut;
       uint32_t wordIndex;
-      _Bool useWDouble = 0;
+      int useWDouble = 0;
 
       uint32_t irqState;
 
@@ -206,90 +240,3 @@ efm32_flash_write_stub(uint32_t *dest, uint32_t *src, uint32_t size) {
 
   stub_exit(0);
 }
-
-/*
-void MSC_LoadVerifyAddress(uint32_t *address) {
-  uint32_t status;
-  uint32_t timeOut;
-
-  timeOut = 10000000ul;
-  while ((MSC->STATUS & (0x1UL << 0)) && (timeOut != 0)) {
-    timeOut--;
-  }
-
-  if (timeOut == 0) {
-    stub_exit(1);
-  }
-
-  MSC->ADDRB = (uint32_t)address;
-  MSC->WRITECMD = (0x1UL << 0);
-}
-
-void MSC_LoadWriteData(uint32_t *data, uint32_t numWords,
-                       uint8_t writeStrategy) {
-  uint32_t timeOut;
-  uint32_t wordIndex;
-  _Bool useWDouble = 0;
-
-  uint32_t irqState;
-
-  if (numWords > 0) {
-
-    if (writeStrategy == 0) { // writeintsafe
-
-      wordIndex = 0;
-      while (wordIndex < numWords) {
-        if (!useWDouble) {
-          MSC->WDATA = *data++;
-          wordIndex++;
-          MSC->WRITECMD = (0x1UL << 3);
-        }
-
-        timeOut = 10000000ul;
-        while ((MSC->STATUS & (0x1UL << 0)) && (timeOut != 0)) {
-          timeOut--;
-        }
-
-        if (timeOut == 0) {
-          stub_exit(1);
-        }
-      }
-    }
-
-    else {
-
-      wordIndex = 0;
-      while (wordIndex < numWords) {
-
-        while (!(MSC->STATUS & (0x1UL << 3))) {
-
-          if ((MSC->STATUS & ((0x1UL << 4) | (0x1UL << 0) | (0x1UL << 3))) ==
-              (0x1UL << 4)) {
-            MSC->WRITECMD = (0x1UL << 4);
-          }
-        }
-
-        if (!useWDouble) {
-          MSC->WDATA = *data;
-          MSC->WRITECMD = (0x1UL << 4);
-          data++;
-          wordIndex++;
-        }
-
-        else // useWDouble == 1
-        {
-        }
-      }
-
-      timeOut = 10000000ul;
-      while ((MSC->STATUS & (0x1UL << 0)) && (timeOut != 0)) {
-        timeOut--;
-      }
-
-      if (timeOut == 0) {
-        stub_exit(1);
-      }
-    }
-  }
-}
-*/
