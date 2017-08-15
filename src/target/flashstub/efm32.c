@@ -82,7 +82,7 @@ typedef struct {
   uint32_t RESERVED4[5]; /**< Reserved for future use **/
   volatile uint32_t CMD; /**< Command Register  */
   volatile uint32_t BOOTLOADERCTRL; /**< Unlock writes to bootloader area */
-} MSC_TypeDef;           /** @} */
+} MSC_TypeDef;
 
 #define MSC ((MSC_TypeDef *)(0x400E0000UL))
 
@@ -108,8 +108,9 @@ void _efm32_flash_write_stub(uint32_t *dest, uint32_t *src, uint32_t size) {
 
   // MSC->BOOTLOADERCTRL |= (0x1UL << 1);  // we're in like Flynn
 
-  // Apparently you can brick the device by erasing 'reserved' pages
-  // while BOOTLOADERCTRL is unlocked.
+  // According to the manual you can brick the device by erasing 'reserved'
+  // pages while BOOTLOADERCTRL is unlocked.
+  // Managed to write to 0x0 anyway without setting this bit...
 
   numWords = size >> 2;
 
@@ -132,7 +133,8 @@ void _efm32_flash_write_stub(uint32_t *dest, uint32_t *src, uint32_t size) {
       }
 
       MSC->ADDRB = (uint32_t)(dest+wordCount);
-      MSC->WRITECMD = (0x1UL << 0); // erase page
+      // gdb issues a separate 'erase page' command
+      // MSC->WRITECMD = (0x1UL << 0); // erase page
     }
 
     // for parts with 2048b pages

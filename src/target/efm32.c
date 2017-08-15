@@ -26,7 +26,7 @@
  *
  * Tested with:
  * * EZR32LG230 (EZR Leopard Gecko M3)
- * *
+ * * EFR32BG1B132F256GM32 (BGM113)
  */
 
 /* Refer to the family reference manuals:
@@ -69,18 +69,39 @@ const struct command_s efm32_cmd_list[] = {
 /* Memory System Controller (MSC) Registers */
 /* -------------------------------------------------------------------------- */
 
-// #define EFM32_MSC	       		0x400c0000
-// EFR32, other newer parts move from c to e:
-#define EFM32_MSC	       		0x400e0000
-#define EFM32_MSC_WRITECTRL	     	(EFM32_MSC+0x008)
-#define EFM32_MSC_WRITECMD	      	(EFM32_MSC+0x00c)
-#define EFM32_MSC_ADDRB		 	(EFM32_MSC+0x010)
-#define EFM32_MSC_WDATA		 	(EFM32_MSC+0x018)
-#define EFM32_MSC_STATUS		(EFM32_MSC+0x01c)
-#define EFM32_MSC_LOCK		  	(EFM32_MSC+0x040)
-#define EFM32_MSC_CMD		   	(EFM32_MSC+0x074)
-#define EFM32_MSC_TIMEBASE	      	(EFM32_MSC+0x050)
-#define EFM32_MSC_MASSLOCK	      	(EFM32_MSC+0x054)
+#define EFM32_MSC	       		0x400c0000
+#define EFR32_MSC	       		0x400e0000
+
+typedef struct {
+	volatile uint32_t CTRL;      /**< Memory System Control Register  */
+	volatile uint32_t READCTRL;  /**< Read Control Register  */
+	volatile uint32_t WRITECTRL; /**< Write Control Register  */
+	volatile uint32_t WRITECMD;  /**< Write Command Register  */
+	volatile uint32_t ADDRB;     /**< Page Erase/Write Address Buffer  */
+	uint32_t RESERVED0[1];       /**< Reserved for future use **/
+	volatile uint32_t WDATA;     /**< Write Data Register  */
+	volatile uint32_t STATUS;    /**< Status Register  */
+
+	uint32_t RESERVED1[4];         /**< Reserved for future use **/
+	volatile uint32_t IF;          /**< Interrupt Flag Register  */
+	volatile uint32_t IFS;         /**< Interrupt Flag Set Register  */
+	volatile uint32_t IFC;         /**< Interrupt Flag Clear Register  */
+	volatile uint32_t IEN;         /**< Interrupt Enable Register  */
+	volatile uint32_t LOCK;        /**< Configuration Lock Register  */
+	volatile uint32_t CACHECMD;    /**< Flash Cache Command Register  */
+	volatile uint32_t CACHEHITS;   /**< Cache Hits Performance Counter  */
+	volatile uint32_t CACHEMISSES; /**< Cache Misses Performance Counter  */
+
+	uint32_t RESERVED2[1];      /**< Reserved for future use **/
+	volatile uint32_t MASSLOCK; /**< Mass Erase Lock Register  */
+
+	uint32_t RESERVED3[1];     /**< Reserved for future use **/
+	volatile uint32_t STARTUP; /**< Startup Control  */
+
+	uint32_t RESERVED4[5]; /**< Reserved for future use **/
+	volatile uint32_t CMD; /**< Command Register  */
+	volatile uint32_t BOOTLOADERCTRL; /**< Unlock writes to bootloader area */
+} MSC_TypeDef;
 
 #define EFM32_MSC_LOCK_LOCKKEY	  	0x1b71
 #define EFM32_MSC_MASSLOCK_LOCKKEY	0x631a
@@ -338,6 +359,12 @@ static void efm32_add_flash(target *t, target_addr addr, size_t length,
 	target_add_flash(t, f);
 }
 
+/* because we store a single integer in t->priv */
+void nop_free(void *p) {
+	p = p;
+	return;
+}
+
 char variant_string[40];
 bool efm32_probe(target *t)
 {
@@ -360,6 +387,9 @@ bool efm32_probe(target *t)
 	uint16_t radio_number, radio_number_short;  /* optional, for ezr parts */
 	uint32_t flash_page_size; uint16_t flash_kb;
 	uint8_t pincount; uint8_t pkgtype;
+
+	t->priv = (void *)EFM32_MSC;
+	t->priv_free = nop_free;
 
 	switch(part_family) {
 		case EFM32_DI_PART_FAMILY_GECKO:
@@ -464,6 +494,7 @@ bool efm32_probe(target *t)
 			// (flash lock/unlock codes still 0x631A, 0x1b71)
 			// TAR wrap boundary 0xFFF
 			// memory, ram size appear to be in the same place as the other geckoes
+			t->priv = (void *)EFR32_MSC;
 			break;
 
 		default:	/* Unknown family */
@@ -492,19 +523,21 @@ static int efm32_flash_erase(struct target_flash *f, target_addr addr, size_t le
 {
 	target *t = f->t;
 
+	MSC_TypeDef *MSC = (MSC_TypeDef*)t->priv;
+
 	/* Set WREN bit to enabel MSC write and erase functionality */
-	target_mem_write32(t, EFM32_MSC_WRITECTRL, 1);
+	target_mem_write32(t, (uint32_t)&MSC->WRITECTRL, 1);
 
 	while (len) {
 		/* Write address of first word in row to erase it */
-		target_mem_write32(t, EFM32_MSC_ADDRB, addr);
-		target_mem_write32(t, EFM32_MSC_WRITECMD, EFM32_MSC_WRITECMD_LADDRIM);
+		target_mem_write32(t, (uint32_t)&MSC->ADDRB, addr);
+		target_mem_write32(t, (uint32_t)&MSC->WRITECMD, EFM32_MSC_WRITECMD_LADDRIM);
 
 		/* Issue the erase command */
-		target_mem_write32(t, EFM32_MSC_WRITECMD, EFM32_MSC_WRITECMD_ERASEPAGE );
+		target_mem_write32(t, (uint32_t)&MSC->WRITECMD, EFM32_MSC_WRITECMD_ERASEPAGE );
 
 		/* Poll MSC Busy */
-		while ((target_mem_read32(t, EFM32_MSC_STATUS) & EFM32_MSC_STATUS_BUSY)) {
+		while ((target_mem_read32(t, (uint32_t)&MSC->STATUS) & EFM32_MSC_STATUS_BUSY)) {
 			if (target_check_error(t))
 				return -1;
 		}
@@ -543,23 +576,25 @@ static int efm32_flash_write(struct target_flash *f,
  */
 static bool efm32_cmd_erase_all(target *t)
 {
+	MSC_TypeDef *MSC = (MSC_TypeDef*)t->priv;
+
 	/* Set WREN bit to enabel MSC write and erase functionality */
-	target_mem_write32(t, EFM32_MSC_WRITECTRL, 1);
+	target_mem_write32(t, (uint32_t)&MSC->WRITECTRL, 1);
 
 	/* Unlock mass erase */
-	target_mem_write32(t, EFM32_MSC_MASSLOCK, EFM32_MSC_MASSLOCK_LOCKKEY);
+	target_mem_write32(t, (uint32_t)&MSC->MASSLOCK, EFM32_MSC_MASSLOCK_LOCKKEY);
 
 	/* Erase operation */
-	target_mem_write32(t, EFM32_MSC_WRITECMD, EFM32_MSC_WRITECMD_ERASEMAIN0);
+	target_mem_write32(t, (uint32_t)&MSC->WRITECMD, EFM32_MSC_WRITECMD_ERASEMAIN0);
 
 	/* Poll MSC Busy */
-	while ((target_mem_read32(t, EFM32_MSC_STATUS) & EFM32_MSC_STATUS_BUSY)) {
+	while ((target_mem_read32(t, (uint32_t)&MSC->STATUS) & EFM32_MSC_STATUS_BUSY)) {
 		if (target_check_error(t))
 			return false;
 	}
 
 	/* Relock mass erase */
-	target_mem_write32(t, EFM32_MSC_MASSLOCK, 0);
+	target_mem_write32(t, (uint32_t)&MSC->MASSLOCK, 0);
 
 	tc_printf(t, "Erase successful!\n");
 
