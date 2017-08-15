@@ -50,31 +50,8 @@
 #include "stub.h"
 #include <stdint.h>
 
-#define EFM32_MSC ((volatile uint32_t *)0x400e0000)
-#define EFM32_MSC_WRITECTRL EFM32_MSC[2]
-#define EFM32_MSC_WRITECMD EFM32_MSC[3]
-#define EFM32_MSC_ADDRB EFM32_MSC[4]
-#define EFM32_MSC_WDATA EFM32_MSC[6]
-#define EFM32_MSC_STATUS EFM32_MSC[7]
-
-#define EFM32_MSC_LOCK EFM32_MSC[15]
-
-#define EFR32_MSC_LOCK EFM32_MSC[16]
-
 #define EFM32_MSC_LOCK_LOCKKEY 0x1b71
-
-#define EFM32_MSC_WRITECMD_LADDRIM (1 << 0)
-#define EFM32_MSC_WRITECMD_ERASEPAGE (1 << 1)
-#define EFM32_MSC_WRITECMD_WRITEEND (1 << 2)
-#define EFM32_MSC_WRITECMD_WRITEONCE (1 << 3)
-#define EFM32_MSC_WRITECMD_WRITETRIG (1 << 4)
-#define EFM32_MSC_WRITECMD_ERASEABORT (1 << 5)
-
-#define EFM32_MSC_STATUS_BUSY (1 << 0)
-#define EFM32_MSC_STATUS_LOCKED (1 << 1)
-#define EFM32_MSC_STATUS_INVADDR (1 << 2)
-#define EFM32_MSC_STATUS_WDATAREADY (1 << 3)
-#define EFM32_MSC_STATUS_WORDTIMEOUT (1 << 4)
+#define EFM32_FLASH_WRITE_TIMEOUT 10000000ul
 
 typedef struct {
   volatile uint32_t CTRL;      /**< Memory System Control Register  */
@@ -109,10 +86,15 @@ typedef struct {
 
 #define MSC ((MSC_TypeDef *)(0x400E0000UL))
 
+void _efm32_flash_write_stub(uint32_t *dest, uint32_t *src, uint32_t size);
+
 void __attribute__((naked))
 efm32_flash_write_stub(uint32_t *dest, uint32_t *src, uint32_t size) {
   asm("ldr r0, =_estack; mov   sp, r0;" ::: "r0");
+  _efm32_flash_write_stub(dest, src, size);
+};
 
+void _efm32_flash_write_stub(uint32_t *dest, uint32_t *src, uint32_t size) {
   uint32_t wordCount;
   uint32_t numWords;
   uint32_t pageWords;
@@ -124,12 +106,15 @@ efm32_flash_write_stub(uint32_t *dest, uint32_t *src, uint32_t size) {
   // Enable writes
   MSC->WRITECTRL |= (0x1UL << 0);
 
-  MSC->BOOTLOADERCTRL |= (0x1UL << 1);  // we're in like Flynn
+  // MSC->BOOTLOADERCTRL |= (0x1UL << 1);  // we're in like Flynn
 
   // Apparently you can brick the device by erasing 'reserved' pages
   // while BOOTLOADERCTRL is unlocked.
 
   numWords = size >> 2;
+
+  // check dest, src, size for (in flash), (in ram), (<= block size?)
+  // stub_exit(1);
 
   for (wordCount = 0, pData = (uint32_t *)src; wordCount < numWords;) {
 
@@ -137,7 +122,7 @@ efm32_flash_write_stub(uint32_t *dest, uint32_t *src, uint32_t size) {
       uint32_t status;
       uint32_t timeOut;
 
-      timeOut = 10000000ul;
+      timeOut = EFM32_FLASH_WRITE_TIMEOUT;
       while ((MSC->STATUS & (0x1UL << 0)) && (timeOut != 0)) {
         timeOut--;
       }
@@ -181,7 +166,7 @@ efm32_flash_write_stub(uint32_t *dest, uint32_t *src, uint32_t size) {
               MSC->WRITECMD = (0x1UL << 3);
             }
 
-            timeOut = 10000000ul;
+            timeOut = EFM32_FLASH_WRITE_TIMEOUT;
             while ((MSC->STATUS & (0x1UL << 0)) && (timeOut != 0)) {
               timeOut--;
             }
@@ -193,6 +178,9 @@ efm32_flash_write_stub(uint32_t *dest, uint32_t *src, uint32_t size) {
         }
 
         else {
+          // non-interrupt-safe write.
+          // must continue writing to MSC->WDATA before a short time limit.
+          // great for DMA for example.
 
           wordIndex = 0;
           while (wordIndex < numWords) {
@@ -211,13 +199,9 @@ efm32_flash_write_stub(uint32_t *dest, uint32_t *src, uint32_t size) {
               data++;
               wordIndex++;
             }
-
-            else // useWDouble == 1
-            {
-            }
           }
 
-          timeOut = 10000000ul;
+          timeOut = EFM32_FLASH_WRITE_TIMEOUT;
           while ((MSC->STATUS & (0x1UL << 0)) && (timeOut != 0)) {
             timeOut--;
           }

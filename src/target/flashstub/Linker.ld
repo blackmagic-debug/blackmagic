@@ -1,7 +1,7 @@
 ENTRY(efm32_flash_write_stub)
 
-/* End of 8Kb SRAM */
-_estack = 0x20002000;
+/* End of 16Kb SRAM */
+_estack = 0x20004000;
 
 /* Generate a link error if heap and stack don't fit into RAM */
 

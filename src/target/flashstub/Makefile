@@ -29,7 +29,7 @@ stm32f4_x32.o: CFLAGS += -DSTM32F4
 	$(Q)echo "  AS      $<"
 	$(Q)$(AS) $(ASFLAGS) -o $@ $<
 
-%.bin:	%.o
+%.bin:	%.elf
 	$(Q)echo "  OBJCOPY $@"
 	$(Q)$(OBJCOPY) -O binary $< $@
 

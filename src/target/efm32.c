@@ -531,9 +531,11 @@ static int efm32_flash_write(struct target_flash *f,
 	/* Write Buffer */
 	target_mem_write(t, STUB_BUFFER_BASE, src, len);
 	/* Run flashloader */
-	return cortexm_run_stub(t, SRAM_BASE, dest, STUB_BUFFER_BASE, len, 0);
-
-	return 0;
+	DEBUG("efm32_flash_write(%p, %p, %p, %p)",
+		(void*)SRAM_BASE, (void*)dest, (void*)STUB_BUFFER_BASE, (void*)len);
+	int rc = cortexm_run_stub(t, SRAM_BASE, dest, STUB_BUFFER_BASE, len, 0);
+	DEBUG(" -> %d\n", rc);
+	return rc;
 }
 
 /**
