@@ -40,9 +40,10 @@
 #include "target.h"
 #include "target_internal.h"
 #include "cortexm.h"
+#include "flashstub/efr32.h"
 
 #define SRAM_BASE		0x20000000
-#define STUB_BUFFER_BASE	ALIGN(SRAM_BASE + sizeof(efm32_flash_write_stub), 4)
+#define STUB_BUFFER_BASE	ALIGN(SRAM_BASE + MAX(sizeof(efr32_flash_write_stub), sizeof(efm32_flash_write_stub)), 4)
 
 static int efm32_flash_erase(struct target_flash *t, target_addr addr, size_t len);
 static int efm32_flash_write(struct target_flash *f,
@@ -52,7 +53,9 @@ static const uint16_t efm32_flash_write_stub[] = {
 #include "flashstub/efm32.stub"
 };
 
-// add efr32_flash_write_stub?
+static const uint16_t efr32_flash_write_stub[] = {
+#include "flashstub/efr32.stub"
+};
 
 static bool efm32_cmd_erase_all(target *t);
 static bool efm32_cmd_serial(target *t);
@@ -71,37 +74,6 @@ const struct command_s efm32_cmd_list[] = {
 
 #define EFM32_MSC	       		0x400c0000
 #define EFR32_MSC	       		0x400e0000
-
-typedef struct {
-	volatile uint32_t CTRL;      /**< Memory System Control Register  */
-	volatile uint32_t READCTRL;  /**< Read Control Register  */
-	volatile uint32_t WRITECTRL; /**< Write Control Register  */
-	volatile uint32_t WRITECMD;  /**< Write Command Register  */
-	volatile uint32_t ADDRB;     /**< Page Erase/Write Address Buffer  */
-	uint32_t RESERVED0[1];       /**< Reserved for future use **/
-	volatile uint32_t WDATA;     /**< Write Data Register  */
-	volatile uint32_t STATUS;    /**< Status Register  */
-
-	uint32_t RESERVED1[4];         /**< Reserved for future use **/
-	volatile uint32_t IF;          /**< Interrupt Flag Register  */
-	volatile uint32_t IFS;         /**< Interrupt Flag Set Register  */
-	volatile uint32_t IFC;         /**< Interrupt Flag Clear Register  */
-	volatile uint32_t IEN;         /**< Interrupt Enable Register  */
-	volatile uint32_t LOCK;        /**< Configuration Lock Register  */
-	volatile uint32_t CACHECMD;    /**< Flash Cache Command Register  */
-	volatile uint32_t CACHEHITS;   /**< Cache Hits Performance Counter  */
-	volatile uint32_t CACHEMISSES; /**< Cache Misses Performance Counter  */
-
-	uint32_t RESERVED2[1];      /**< Reserved for future use **/
-	volatile uint32_t MASSLOCK; /**< Mass Erase Lock Register  */
-
-	uint32_t RESERVED3[1];     /**< Reserved for future use **/
-	volatile uint32_t STARTUP; /**< Startup Control  */
-
-	uint32_t RESERVED4[5]; /**< Reserved for future use **/
-	volatile uint32_t CMD; /**< Command Register  */
-	volatile uint32_t BOOTLOADERCTRL; /**< Unlock writes to bootloader area */
-} MSC_TypeDef;
 
 #define EFM32_MSC_LOCK_LOCKKEY	  	0x1b71
 #define EFM32_MSC_MASSLOCK_LOCKKEY	0x631a
@@ -344,10 +316,17 @@ void efr32_read_mem_info(target *t, uint32_t *pagesize, uint8_t *pincount, uint8
 	*pkgtype = (page_info >> EFR32_DI_PKGTYPE_SHIFT) & 0xFF;
 }
 
+struct efm32_flash {
+	struct target_flash f;
+	MSC_TypeDef *msc;
+};
+
 static void efm32_add_flash(target *t, target_addr addr, size_t length,
-			    size_t page_size)
+			    size_t page_size, MSC_TypeDef *msc)
 {
-	struct target_flash *f = calloc(1, sizeof(*f));
+	struct efm32_flash *ef = calloc(1, sizeof(*ef));
+	struct target_flash *f = &ef->f;
+	ef->msc = msc;
 	f->start = addr;
 	f->length = length;
 	f->blocksize = page_size;
@@ -357,12 +336,6 @@ static void efm32_add_flash(target *t, target_addr addr, size_t length,
 	f->write_buf = efm32_flash_write;
 	f->buf_size = page_size;
 	target_add_flash(t, f);
-}
-
-/* because we store a single integer in t->priv */
-void nop_free(void *p) {
-	p = p;
-	return;
 }
 
 char variant_string[40];
@@ -388,8 +361,7 @@ bool efm32_probe(target *t)
 	uint32_t flash_page_size; uint16_t flash_kb;
 	uint8_t pincount; uint8_t pkgtype;
 
-	t->priv = (void *)EFM32_MSC;
-	t->priv_free = nop_free;
+	MSC_TypeDef *msc = (MSC_TypeDef *)EFM32_MSC;
 
 	switch(part_family) {
 		case EFM32_DI_PART_FAMILY_GECKO:
@@ -494,7 +466,7 @@ bool efm32_probe(target *t)
 			// (flash lock/unlock codes still 0x631A, 0x1b71)
 			// TAR wrap boundary 0xFFF
 			// memory, ram size appear to be in the same place as the other geckoes
-			t->priv = (void *)EFR32_MSC;
+			msc = (void *)EFR32_MSC;
 			break;
 
 		default:	/* Unknown family */
@@ -510,7 +482,7 @@ bool efm32_probe(target *t)
 	t->driver = variant_string;
 	tc_printf(t, "flash size %d page size %d\n", flash_size, flash_page_size);
 	target_add_ram (t, SRAM_BASE, ram_size);
-	efm32_add_flash(t, 0x00000000, flash_size, flash_page_size);
+	efm32_add_flash(t, 0x00000000, flash_size, flash_page_size, msc);
 	target_add_commands(t, efm32_cmd_list, "EFM32");
 
 	return true;
@@ -523,7 +495,7 @@ static int efm32_flash_erase(struct target_flash *f, target_addr addr, size_t le
 {
 	target *t = f->t;
 
-	MSC_TypeDef *MSC = (MSC_TypeDef*)t->priv;
+	MSC_TypeDef *MSC = ((struct efm32_flash *)f)->msc;
 
 	/* Set WREN bit to enabel MSC write and erase functionality */
 	target_mem_write32(t, (uint32_t)&MSC->WRITECTRL, 1);
@@ -557,11 +529,18 @@ static int efm32_flash_write(struct target_flash *f,
 {
 	(void)len;
 	target *t = f->t;
+	MSC_TypeDef *MSC = ((struct efm32_flash *)f)->msc;
 
 	/* Write flashloader */
-	target_mem_write(t, SRAM_BASE, efm32_flash_write_stub,
-			 sizeof(efm32_flash_write_stub));
-	/* Write Buffer */
+	if((uint32_t)MSC == EFR32_MSC) {
+		target_mem_write(t, SRAM_BASE, efr32_flash_write_stub,
+				sizeof(efr32_flash_write_stub));
+	} else {
+		target_mem_write(t, SRAM_BASE, efm32_flash_write_stub,
+			sizeof(efm32_flash_write_stub));
+	}
+
+	/* Write buffer */
 	target_mem_write(t, STUB_BUFFER_BASE, src, len);
 	/* Run flashloader */
 	DEBUG("efm32_flash_write(%p, %p, %p, %p)",
@@ -576,7 +555,7 @@ static int efm32_flash_write(struct target_flash *f,
  */
 static bool efm32_cmd_erase_all(target *t)
 {
-	MSC_TypeDef *MSC = (MSC_TypeDef*)t->priv;
+	MSC_TypeDef *MSC = ((struct efm32_flash *)t->flash)->msc;
 
 	/* Set WREN bit to enabel MSC write and erase functionality */
 	target_mem_write32(t, (uint32_t)&MSC->WRITECTRL, 1);

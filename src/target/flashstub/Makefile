@@ -12,14 +12,14 @@ CFLAGS=-O0 -std=gnu99 -mcpu=cortex-m0 -mthumb -g3 -I../../../libopencm3/include
 ASFLAGS=-mcpu=cortex-m3 -mthumb
 
 all:	lmi.stub stm32f4_x8.stub stm32f4_x32.stub stm32l4.stub nrf51.stub \
-	stm32f1.stub efm32.stub
+	stm32f1.stub efm32.stub efr32.stub
 
 stm32f1.o: CFLAGS += -DSTM32F1
 stm32f4_x8.o: CFLAGS += -DSTM32F4
 stm32f4_x32.o: CFLAGS += -DSTM32F4
 
 %.elf: %.o
-	arm-none-eabi-g++ -mcpu=cortex-m0 -mthumb -O0 -fmessage-length=0 -ffunction-sections -fdata-sections -Wall -Wextra  -g3 -T "Linker.ld" -Xlinker --gc-sections -Wl,-Map,"efm32.map" --specs=nano.specs -Wl,-wrap,__aeabi_unwind_cpp_pr0 -Wl,-wrap,__aeabi_unwind_cpp_pr1 -Wl,-wrap,__aeabi_unwind_cpp_pr2 -o $@ $<
+	arm-none-eabi-g++ -mcpu=cortex-m0 -mthumb -O0 -fmessage-length=0 -ffunction-sections -fdata-sections -Wall -Wextra  -g3 -T "efr32.ld" -Xlinker --gc-sections -Wl,-Map,"efr32.map" --specs=nano.specs -Wl,-wrap,__aeabi_unwind_cpp_pr0 -Wl,-wrap,__aeabi_unwind_cpp_pr1 -Wl,-wrap,__aeabi_unwind_cpp_pr2 -o $@ $<
 
 %.o:    %.c
 	$(Q)echo "  CC      $<"
@@ -29,8 +29,12 @@ stm32f4_x32.o: CFLAGS += -DSTM32F4
 	$(Q)echo "  AS      $<"
 	$(Q)$(AS) $(ASFLAGS) -o $@ $<
 
-%.bin:	%.elf
+%.bin: 	%.o
 	$(Q)echo "  OBJCOPY $@"
+	$(Q)$(OBJCOPY) -O binary $< $@
+
+%.bin:	%.elf
+	$(Q)echo "  OBJCOPY ELF $@"
 	$(Q)$(OBJCOPY) -O binary $< $@
 
 %.stub:	%.bin
