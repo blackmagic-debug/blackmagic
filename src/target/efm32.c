@@ -497,6 +497,10 @@ static int efm32_flash_erase(struct target_flash *f, target_addr addr, size_t le
 
 	MSC_TypeDef *MSC = ((struct efm32_flash *)f)->msc;
 
+	if((uint32_t)MSC != EFR32_MSC && (uint32_t)MSC != EFM32_MSC) {
+		return -1;
+	}
+
 	/* Set WREN bit to enabel MSC write and erase functionality */
 	target_mem_write32(t, (uint32_t)&MSC->WRITECTRL, 1);
 
@@ -536,10 +540,12 @@ static int efm32_flash_write(struct target_flash *f,
 		target_mem_write(t, SRAM_BASE, efr32_flash_write_stub,
 				sizeof(efr32_flash_write_stub));
 		DEBUG("efr32_flash_write");
-	} else {
+	} else if((uint32_t)MSC == EFM32_MSC) {
 		target_mem_write(t, SRAM_BASE, efm32_flash_write_stub,
 			sizeof(efm32_flash_write_stub));
 		DEBUG("efm32_flash_write");
+	} else {
+		return -1;
 	}
 
 	/* Write buffer */
@@ -547,7 +553,7 @@ static int efm32_flash_write(struct target_flash *f,
 	/* Run flashloader */
 	DEBUG("(%p, %p, %p, %p)",
 		(void*)SRAM_BASE, (void*)dest, (void*)STUB_BUFFER_BASE, (void*)len);
-	int rc = 0; // cortexm_run_stub(t, SRAM_BASE, dest, STUB_BUFFER_BASE, len, 0);
+	int rc = cortexm_run_stub(t, SRAM_BASE, dest, STUB_BUFFER_BASE, len, 0);
 	DEBUG(" -> %d\n", rc);
 	return rc;
 }

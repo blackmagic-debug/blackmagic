@@ -18,16 +18,9 @@ stm32f1.o: CFLAGS += -DSTM32F1
 stm32f4_x8.o: CFLAGS += -DSTM32F4
 stm32f4_x32.o: CFLAGS += -DSTM32F4
 
-%.elf: %.o
-	arm-none-eabi-g++ -mcpu=cortex-m0 -mthumb -O0 -fmessage-length=0 -ffunction-sections -fdata-sections -Wall -Wextra  -g3 -T "efr32.ld" -Xlinker --gc-sections -Wl,-Map,"efr32.map" --specs=nano.specs -Wl,-wrap,__aeabi_unwind_cpp_pr0 -Wl,-wrap,__aeabi_unwind_cpp_pr1 -Wl,-wrap,__aeabi_unwind_cpp_pr2 -o $@ $<
+.INTERMEDIATE: efr32.elf efr32.bin
 
-%.o:    %.c
-	$(Q)echo "  CC      $<"
-	$(Q)$(CC) $(CFLAGS) -o $@ -c $<
-
-%.o:	%.s
-	$(Q)echo "  AS      $<"
-	$(Q)$(AS) $(ASFLAGS) -o $@ $<
+efr32.bin: efr32.elf
 
 %.bin: 	%.o
 	$(Q)echo "  OBJCOPY $@"
@@ -40,6 +33,17 @@ stm32f4_x32.o: CFLAGS += -DSTM32F4
 %.stub:	%.bin
 	$(Q)echo "  HEXDUMP $@"
 	$(Q)$(HEXDUMP) -v -e '/2 "0x%04X, "' $< > $@
+
+%.elf: %.o
+	$(Q)arm-none-eabi-g++ -mcpu=cortex-m0 -mthumb -O0 -fmessage-length=0 -ffunction-sections -fdata-sections -Wall -Wextra  -g3 -T "efr32.ld" -Xlinker --gc-sections -Wl,-Map,"efr32.map" --specs=nano.specs -Wl,-wrap,__aeabi_unwind_cpp_pr0 -Wl,-wrap,__aeabi_unwind_cpp_pr1 -Wl,-wrap,__aeabi_unwind_cpp_pr2 -o $@ $<
+
+%.o:    %.c
+	$(Q)echo "  CC      $<"
+	$(Q)$(CC) $(CFLAGS) -o $@ -c $<
+
+%.o:	%.s
+	$(Q)echo "  AS      $<"
+	$(Q)$(AS) $(ASFLAGS) -o $@ $<
 
 .PHONY: clean
 
