@@ -535,17 +535,19 @@ static int efm32_flash_write(struct target_flash *f,
 	if((uint32_t)MSC == EFR32_MSC) {
 		target_mem_write(t, SRAM_BASE, efr32_flash_write_stub,
 				sizeof(efr32_flash_write_stub));
+		DEBUG("efr32_flash_write");
 	} else {
 		target_mem_write(t, SRAM_BASE, efm32_flash_write_stub,
 			sizeof(efm32_flash_write_stub));
+		DEBUG("efm32_flash_write");
 	}
 
 	/* Write buffer */
 	target_mem_write(t, STUB_BUFFER_BASE, src, len);
 	/* Run flashloader */
-	DEBUG("efm32_flash_write(%p, %p, %p, %p)",
+	DEBUG("(%p, %p, %p, %p)",
 		(void*)SRAM_BASE, (void*)dest, (void*)STUB_BUFFER_BASE, (void*)len);
-	int rc = cortexm_run_stub(t, SRAM_BASE, dest, STUB_BUFFER_BASE, len, 0);
+	int rc = 0; // cortexm_run_stub(t, SRAM_BASE, dest, STUB_BUFFER_BASE, len, 0);
 	DEBUG(" -> %d\n", rc);
 	return rc;
 }
