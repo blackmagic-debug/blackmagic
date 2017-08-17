@@ -98,7 +98,7 @@ void _efm32_flash_write_stub(uint32_t *dest, uint32_t *src, uint32_t size) {
       MSC->ADDRB = (uint32_t)(dest + wordCount);
 
       // gdb issues a separate 'erase page' command
-      // MSC->WRITECMD = (0x1UL << 0); // erase page
+      MSC->WRITECMD = (0x1UL << 0); // erase page
     }
 
     // for parts with 2048b pages
