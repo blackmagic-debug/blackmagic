@@ -32,7 +32,8 @@
 /* Refer to the family reference manuals:
  *
  *
- * Also refer to AN0062 "Programming Internal Flash Over the Serial Wire Debug Interface"
+ * Also refer to AN0062 "Programming Internal Flash Over the Serial Wire Debug
+ * Interface"
  * http://www.silabs.com/Support%20Documents/TechnicalDocs/an0062.pdf
  */
 
@@ -42,217 +43,213 @@
 #include "cortexm.h"
 #include "flashstub/efr32.h"
 
-#define SRAM_BASE		0x20000000
-#define STUB_BUFFER_BASE	ALIGN(SRAM_BASE + MAX(sizeof(efr32_flash_write_stub), sizeof(efm32_flash_write_stub)), 4)
+#define SRAM_BASE 0x20000000
+#define STUB_BUFFER_BASE ALIGN(SRAM_BASE + MAX(sizeof(efm32_g2_flash_write_stub), sizeof(efm32_flash_write_stub)), 4)
 
-static int efm32_flash_erase(struct target_flash *t, target_addr addr, size_t len);
-static int efm32_flash_write(struct target_flash *f,
-			     target_addr dest, const void *src, size_t len);
+static int efm32_flash_erase(struct target_flash *t, target_addr addr,
+			     size_t len);
+static int efm32_flash_write(struct target_flash *f, target_addr dest,
+			     const void *src, size_t len);
+
+static int efm32_g2_flash_erase(struct target_flash *t, target_addr addr,
+				size_t len);
+static int efm32_g2_flash_write(struct target_flash *f, target_addr dest,
+				const void *src, size_t len);
 
 static const uint16_t efm32_flash_write_stub[] = {
 #include "flashstub/efm32.stub"
 };
 
-static const uint16_t efr32_flash_write_stub[] = {
+static const uint16_t efm32_g2_flash_write_stub[] = {
 #include "flashstub/efr32.stub"
 };
 
 static bool efm32_cmd_erase_all(target *t);
+static bool efm32_g2_cmd_erase_all(target *t);
 static bool efm32_cmd_serial(target *t);
 
 const struct command_s efm32_cmd_list[] = {
-	{"erase_mass", (cmd_handler)efm32_cmd_erase_all, "Erase entire flash memory"},
-	{"serial", (cmd_handler)efm32_cmd_serial, "Prints unique number"},
-	{NULL, NULL, NULL}
-};
+    {"erase_mass", (cmd_handler)efm32_cmd_erase_all,
+     "Erase entire flash memory"},
+    {"serial", (cmd_handler)efm32_cmd_serial, "Prints unique number"},
+    {NULL, NULL, NULL}};
 
-
+const struct command_s efm32_g2_cmd_list[] = {
+    {"erase_mass", (cmd_handler)efm32_g2_cmd_erase_all,
+     "Erase entire flash memory"},
+    {"serial", (cmd_handler)efm32_cmd_serial, "Prints unique number"},
+    {NULL, NULL, NULL}};
 
 /* -------------------------------------------------------------------------- */
 /* Memory System Controller (MSC) Registers */
 /* -------------------------------------------------------------------------- */
 
-#define EFM32_MSC	       		0x400c0000
-#define EFR32_MSC	       		0x400e0000
+/* -------------------------------------------------------------------------- */
+/* Memory System Controller (MSC) Registers */
+/* -------------------------------------------------------------------------- */
 
-#define EFM32_MSC_LOCK_LOCKKEY	  	0x1b71
-#define EFM32_MSC_MASSLOCK_LOCKKEY	0x631a
+#define EFM32_MSC 0x400c0000
+#define EFM32_G2_MSC 0x400e0000
+#define MSC ((MSC_TypeDef *)(EFM32_G2_MSC))
 
-#define EFM32_MSC_WRITECMD_LADDRIM	(1<<0)
-#define EFM32_MSC_WRITECMD_ERASEPAGE	(1<<1)
-#define EFM32_MSC_WRITECMD_WRITEEND	(1<<2)
-#define EFM32_MSC_WRITECMD_WRITEONCE	(1<<3)
-#define EFM32_MSC_WRITECMD_WRITETRIG	(1<<4)
-#define EFM32_MSC_WRITECMD_ERASEABORT	(1<<5)
-#define EFM32_MSC_WRITECMD_ERASEMAIN0	(1<<8)
+#define EFM32_MSC_WRITECTRL (EFM32_MSC + 0x008)
+#define EFM32_MSC_WRITECMD (EFM32_MSC + 0x00c)
+#define EFM32_MSC_ADDRB (EFM32_MSC + 0x010)
+#define EFM32_MSC_WDATA (EFM32_MSC + 0x018)
+#define EFM32_MSC_STATUS (EFM32_MSC + 0x01c)
+#define EFM32_MSC_LOCK (EFM32_MSC + 0x03c)
+#define EFM32_MSC_CMD (EFM32_MSC + 0x040)
+#define EFM32_MSC_TIMEBASE (EFM32_MSC + 0x050)
+#define EFM32_MSC_MASSLOCK (EFM32_MSC + 0x054)
 
-#define EFM32_MSC_STATUS_BUSY		(1<<0)
-#define EFM32_MSC_STATUS_LOCKED		(1<<1)
-#define EFM32_MSC_STATUS_INVADDR	(1<<2)
-#define EFM32_MSC_STATUS_WDATAREADY	(1<<3)
+#define EFM32_MSC_LOCK_LOCKKEY 0x1b71
+#define EFM32_MSC_MASSLOCK_LOCKKEY 0x631a
 
+#define EFM32_MSC_WRITECMD_LADDRIM (1 << 0)
+#define EFM32_MSC_WRITECMD_ERASEPAGE (1 << 1)
+#define EFM32_MSC_WRITECMD_WRITEEND (1 << 2)
+#define EFM32_MSC_WRITECMD_WRITEONCE (1 << 3)
+#define EFM32_MSC_WRITECMD_WRITETRIG (1 << 4)
+#define EFM32_MSC_WRITECMD_ERASEABORT (1 << 5)
+#define EFM32_MSC_WRITECMD_ERASEMAIN0 (1 << 8)
+
+#define EFM32_MSC_STATUS_BUSY (1 << 0)
+#define EFM32_MSC_STATUS_LOCKED (1 << 1)
+#define EFM32_MSC_STATUS_INVADDR (1 << 2)
+#define EFM32_MSC_STATUS_WDATAREADY (1 << 3)
 
 /* -------------------------------------------------------------------------- */
 /* Flash Information Area */
 /* -------------------------------------------------------------------------- */
 
-#define EFM32_INFO			0x0fe00000
-#define EFM32_USER_DATA			(EFM32_INFO+0x0000)
-#define EFM32_LOCK_BITS			(EFM32_INFO+0x4000)
-#define EFM32_DI			(EFM32_INFO+0x8000)
-
+#define EFM32_INFO 0x0fe00000
+#define EFM32_USER_DATA (EFM32_INFO + 0x0000)
+#define EFM32_LOCK_BITS (EFM32_INFO + 0x4000)
+#define EFM32_DI (EFM32_INFO + 0x8000)
 
 /* -------------------------------------------------------------------------- */
 /* Device Information (DI) Area */
 /* -------------------------------------------------------------------------- */
 
-#define EFM32_DI_CMU_LFRCOCTRL 		(EFM32_DI+0x020)
-#define EFM32_DI_CMU_HFRCOCTRL 		(EFM32_DI+0x028)
-#define EFM32_DI_CMU_AUXHFRCOCTRL 	(EFM32_DI+0x030)
-#define EFM32_DI_ADC0_CAL 		(EFM32_DI+0x040)
-#define EFM32_DI_ADC0_BIASPROG 		(EFM32_DI+0x048)
-#define EFM32_DI_DAC0_CAL 		(EFM32_DI+0x050)
-#define EFM32_DI_DAC0_BIASPROG 		(EFM32_DI+0x058)
-#define EFM32_DI_ACMP0_CTRL 		(EFM32_DI+0x060)
-#define EFM32_DI_ACMP1_CTRL 		(EFM32_DI+0x068)
-#define EFM32_DI_CMU_LCDCTRL 		(EFM32_DI+0x078)
-#define EFM32_DI_DAC0_OPACTRL 		(EFM32_DI+0x0A0)
-#define EFM32_DI_DAC0_OPAOFFSET 	(EFM32_DI+0x0A8)
-#define EFM32_DI_EMU_BUINACT 		(EFM32_DI+0x0B0)
-#define EFM32_DI_EMU_BUACT 		(EFM32_DI+0x0B8)
-#define EFM32_DI_EMU_BUBODBUVINCAL 	(EFM32_DI+0x0C0)
-#define EFM32_DI_EMU_BUBODUNREGCAL 	(EFM32_DI+0x0C8)
-#define EFM32_DI_MCM_REV_MIN 		(EFM32_DI+0x1AA)
-#define EFM32_DI_MCM_REV_MAJ 		(EFM32_DI+0x1AB)
-#define EFM32_DI_RADIO_REV_MIN 		(EFM32_DI+0x1AC)
-#define EFM32_DI_RADIO_REV_MAJ 		(EFM32_DI+0x1AD)
-#define EFM32_DI_RADIO_OPN 		(EFM32_DI+0x1AE)
-#define EFM32_DI_DI_CRC 		(EFM32_DI+0x1B0)
-#define EFM32_DI_CAL_TEMP_0 		(EFM32_DI+0x1B2)
-#define EFM32_DI_ADC0_CAL_1V25 		(EFM32_DI+0x1B4)
-#define EFM32_DI_ADC0_CAL_2V5 		(EFM32_DI+0x1B6)
-#define EFM32_DI_ADC0_CAL_VDD 		(EFM32_DI+0x1B8)
-#define EFM32_DI_ADC0_CAL_5VDIFF 	(EFM32_DI+0x1BA)
-#define EFM32_DI_ADC0_CAL_2XVDD 	(EFM32_DI+0x1BC)
-#define EFM32_DI_ADC0_TEMP_0_READ_1V25	(EFM32_DI+0x1BE)
-#define EFM32_DI_DAC0_CAL_1V25 		(EFM32_DI+0x1C8)
-#define EFM32_DI_DAC0_CAL_2V5 		(EFM32_DI+0x1CC)
-#define EFM32_DI_DAC0_CAL_VDD 		(EFM32_DI+0x1D0)
-#define EFM32_DI_AUXHFRCO_CALIB_BAND_1 	(EFM32_DI+0x1D4)
-#define EFM32_DI_AUXHFRCO_CALIB_BAND_7 	(EFM32_DI+0x1D5)
-#define EFM32_DI_AUXHFRCO_CALIB_BAND_11 (EFM32_DI+0x1D6)
-#define EFM32_DI_AUXHFRCO_CALIB_BAND_14 (EFM32_DI+0x1D7)
-#define EFM32_DI_AUXHFRCO_CALIB_BAND_21 (EFM32_DI+0x1D8)
-#define EFM32_DI_AUXHFRCO_CALIB_BAND_28 (EFM32_DI+0x1D9)
-#define EFM32_DI_HFRCO_CALIB_BAND_1 	(EFM32_DI+0x1DC)
-#define EFM32_DI_HFRCO_CALIB_BAND_7 	(EFM32_DI+0x1DD)
-#define EFM32_DI_HFRCO_CALIB_BAND_11 	(EFM32_DI+0x1DE)
-#define EFM32_DI_HFRCO_CALIB_BAND_14 	(EFM32_DI+0x1DF)
-#define EFM32_DI_HFRCO_CALIB_BAND_21 	(EFM32_DI+0x1E0)
-#define EFM32_DI_HFRCO_CALIB_BAND_28 	(EFM32_DI+0x1E1)
-#define EFM32_DI_MEM_INFO_PAGE_SIZE 	(EFM32_DI+0x1E7)
-#define EFM32_DI_RADIO_ID 		(EFM32_DI+0x1EE)
-#define EFM32_DI_EUI64_0 		(EFM32_DI+0x1F0)
-#define EFM32_DI_EUI64_1 		(EFM32_DI+0x1F4)
-#define EFM32_DI_MEM_INFO_FLASH 	(EFM32_DI+0x1F8)
-#define EFM32_DI_MEM_INFO_RAM 		(EFM32_DI+0x1FA)
-#define EFM32_DI_PART_NUMBER 		(EFM32_DI+0x1FC)
-#define EFM32_DI_PART_FAMILY 		(EFM32_DI+0x1FE)
-#define EFM32_DI_PROD_REV 		(EFM32_DI+0x1FF)
+#define EFM32_DI_CMU_LFRCOCTRL (EFM32_DI + 0x020)
+#define EFM32_DI_CMU_HFRCOCTRL (EFM32_DI + 0x028)
+#define EFM32_DI_CMU_AUXHFRCOCTRL (EFM32_DI + 0x030)
+#define EFM32_DI_ADC0_CAL (EFM32_DI + 0x040)
+#define EFM32_DI_ADC0_BIASPROG (EFM32_DI + 0x048)
+#define EFM32_DI_DAC0_CAL (EFM32_DI + 0x050)
+#define EFM32_DI_DAC0_BIASPROG (EFM32_DI + 0x058)
+#define EFM32_DI_ACMP0_CTRL (EFM32_DI + 0x060)
+#define EFM32_DI_ACMP1_CTRL (EFM32_DI + 0x068)
+#define EFM32_DI_CMU_LCDCTRL (EFM32_DI + 0x078)
+#define EFM32_DI_DAC0_OPACTRL (EFM32_DI + 0x0A0)
+#define EFM32_DI_DAC0_OPAOFFSET (EFM32_DI + 0x0A8)
+#define EFM32_DI_EMU_BUINACT (EFM32_DI + 0x0B0)
+#define EFM32_DI_EMU_BUACT (EFM32_DI + 0x0B8)
+#define EFM32_DI_EMU_BUBODBUVINCAL (EFM32_DI + 0x0C0)
+#define EFM32_DI_EMU_BUBODUNREGCAL (EFM32_DI + 0x0C8)
+#define EFM32_DI_MCM_REV_MIN (EFM32_DI + 0x1AA)
+#define EFM32_DI_MCM_REV_MAJ (EFM32_DI + 0x1AB)
+#define EFM32_DI_RADIO_REV_MIN (EFM32_DI + 0x1AC)
+#define EFM32_DI_RADIO_REV_MAJ (EFM32_DI + 0x1AD)
+#define EFM32_DI_RADIO_OPN (EFM32_DI + 0x1AE)
+#define EFM32_DI_DI_CRC (EFM32_DI + 0x1B0)
+#define EFM32_DI_CAL_TEMP_0 (EFM32_DI + 0x1B2)
+#define EFM32_DI_ADC0_CAL_1V25 (EFM32_DI + 0x1B4)
+#define EFM32_DI_ADC0_CAL_2V5 (EFM32_DI + 0x1B6)
+#define EFM32_DI_ADC0_CAL_VDD (EFM32_DI + 0x1B8)
+#define EFM32_DI_ADC0_CAL_5VDIFF (EFM32_DI + 0x1BA)
+#define EFM32_DI_ADC0_CAL_2XVDD (EFM32_DI + 0x1BC)
+#define EFM32_DI_ADC0_TEMP_0_READ_1V25 (EFM32_DI + 0x1BE)
+#define EFM32_DI_DAC0_CAL_1V25 (EFM32_DI + 0x1C8)
+#define EFM32_DI_DAC0_CAL_2V5 (EFM32_DI + 0x1CC)
+#define EFM32_DI_DAC0_CAL_VDD (EFM32_DI + 0x1D0)
+#define EFM32_DI_AUXHFRCO_CALIB_BAND_1 (EFM32_DI + 0x1D4)
+#define EFM32_DI_AUXHFRCO_CALIB_BAND_7 (EFM32_DI + 0x1D5)
+#define EFM32_DI_AUXHFRCO_CALIB_BAND_11 (EFM32_DI + 0x1D6)
+#define EFM32_DI_AUXHFRCO_CALIB_BAND_14 (EFM32_DI + 0x1D7)
+#define EFM32_DI_AUXHFRCO_CALIB_BAND_21 (EFM32_DI + 0x1D8)
+#define EFM32_DI_AUXHFRCO_CALIB_BAND_28 (EFM32_DI + 0x1D9)
+#define EFM32_DI_HFRCO_CALIB_BAND_1 (EFM32_DI + 0x1DC)
+#define EFM32_DI_HFRCO_CALIB_BAND_7 (EFM32_DI + 0x1DD)
+#define EFM32_DI_HFRCO_CALIB_BAND_11 (EFM32_DI + 0x1DE)
+#define EFM32_DI_HFRCO_CALIB_BAND_14 (EFM32_DI + 0x1DF)
+#define EFM32_DI_HFRCO_CALIB_BAND_21 (EFM32_DI + 0x1E0)
+#define EFM32_DI_HFRCO_CALIB_BAND_28 (EFM32_DI + 0x1E1)
+#define EFM32_DI_MEM_INFO_PAGE_SIZE (EFM32_DI + 0x1E7)
+#define EFM32_DI_RADIO_ID (EFM32_DI + 0x1EE)
+#define EFM32_DI_EUI64_0 (EFM32_DI + 0x1F0)
+#define EFM32_DI_EUI64_1 (EFM32_DI + 0x1F4)
+#define EFM32_DI_MEM_INFO_FLASH (EFM32_DI + 0x1F8)
+#define EFM32_DI_MEM_INFO_RAM (EFM32_DI + 0x1FA)
+#define EFM32_DI_PART_NUMBER (EFM32_DI + 0x1FC)
+#define EFM32_DI_PART_FAMILY (EFM32_DI + 0x1FE)
+#define EFM32_DI_PROD_REV (EFM32_DI + 0x1FF)
 
 /* top 24 bits of eui */
-#define EFM32_DI_EUI_SILABS	0x000b57
+#define EFM32_DI_EUI_SILABS 0x000b57
 
-#define EFM32_DI_PART_FAMILY_GECKO		71
-#define EFM32_DI_PART_FAMILY_GIANT_GECKO	72
-#define EFM32_DI_PART_FAMILY_TINY_GECKO		73
-#define EFM32_DI_PART_FAMILY_LEOPARD_GECKO	74
-#define EFM32_DI_PART_FAMILY_WONDER_GECKO	75
-#define EFM32_DI_PART_FAMILY_ZERO_GECKO		76
-#define EFM32_DI_PART_FAMILY_HAPPY_GECKO	77
-#define EFM32_DI_PART_FAMILY_EZR_WONDER_GECKO	120
-#define EFM32_DI_PART_FAMILY_EZR_LEOPARD_GECKO	121
+#define EFM32_DI_PART_FAMILY_GECKO 71
+#define EFM32_DI_PART_FAMILY_GIANT_GECKO 72
+#define EFM32_DI_PART_FAMILY_TINY_GECKO 73
+#define EFM32_DI_PART_FAMILY_LEOPARD_GECKO 74
+#define EFM32_DI_PART_FAMILY_WONDER_GECKO 75
+#define EFM32_DI_PART_FAMILY_ZERO_GECKO 76
+#define EFM32_DI_PART_FAMILY_HAPPY_GECKO 77
+#define EFM32_DI_PART_FAMILY_EZR_WONDER_GECKO 120
+#define EFM32_DI_PART_FAMILY_EZR_LEOPARD_GECKO 121
 
 /* These devices seem to share a different DI layout than the above, but
  * the part number, family are in the same location as the GIANT_GECKO etc.
  */
-enum {
-	EFM32_DI_PART_FAMILY_FIRST = 16,
-	EFM32_DI_PART_FAMILY_EFR32MG1P = 16,
-	EFM32_DI_PART_FAMILY_EFR32MG1B = 17,
-	EFM32_DI_PART_FAMILY_EFR32MG1V = 18,
-	EFM32_DI_PART_FAMILY_EFR32BG1P = 19,
-	EFM32_DI_PART_FAMILY_EFR32BG1B = 20,
-	EFM32_DI_PART_FAMILY_EFR32BG1V = 21,
-	EFM32_DI_PART_FAMILY_EFR32FG1P = 25,
-	EFM32_DI_PART_FAMILY_EFR32FG1B = 26,
-	EFM32_DI_PART_FAMILY_EFR32FG1V = 27,
-	EFM32_DI_PART_FAMILY_EFR32MG12P = 28,
-	EFM32_DI_PART_FAMILY_EFR32MG2P = 28,
-	EFM32_DI_PART_FAMILY_EFR32MG12B = 29,
-	EFM32_DI_PART_FAMILY_EFR32MG12V = 30,
-	EFM32_DI_PART_FAMILY_EFR32BG12P = 31,
-	EFM32_DI_PART_FAMILY_EFR32BG12B = 32,
-	EFM32_DI_PART_FAMILY_EFR32BG12V = 33,
-	EFM32_DI_PART_FAMILY_EFR32FG12P = 37,
-	EFM32_DI_PART_FAMILY_EFR32FG12B = 38,
-	EFM32_DI_PART_FAMILY_EFR32FG12V = 39,
-	EFM32_DI_PART_FAMILY_EFR32MG13P = 40,
-	EFM32_DI_PART_FAMILY_EFR32MG13B = 41,
-	EFM32_DI_PART_FAMILY_EFR32MG13V = 42,
-	EFM32_DI_PART_FAMILY_EFR32BG13P = 43,
-	EFM32_DI_PART_FAMILY_EFR32BG13B = 44,
-	EFM32_DI_PART_FAMILY_EFR32BG13V = 45,
-	EFM32_DI_PART_FAMILY_EFR32FG13P = 49,
-	EFM32_DI_PART_FAMILY_EFR32FG13B = 50,
-	EFM32_DI_PART_FAMILY_EFR32FG13V = 51,
+enum { EFM32_DI_PART_FAMILY_FIRST = 16,
+       EFM32_DI_PART_FAMILY_EFR32MG1P = 16,
+       EFM32_DI_PART_FAMILY_EFR32MG1B = 17,
+       EFM32_DI_PART_FAMILY_EFR32MG1V = 18,
+       EFM32_DI_PART_FAMILY_EFR32BG1P = 19,
+       EFM32_DI_PART_FAMILY_EFR32BG1B = 20,
+       EFM32_DI_PART_FAMILY_EFR32BG1V = 21,
+       EFM32_DI_PART_FAMILY_EFR32FG1P = 25,
+       EFM32_DI_PART_FAMILY_EFR32FG1B = 26,
+       EFM32_DI_PART_FAMILY_EFR32FG1V = 27,
+       EFM32_DI_PART_FAMILY_EFR32MG12P = 28,
+       EFM32_DI_PART_FAMILY_EFR32MG2P = 28,
+       EFM32_DI_PART_FAMILY_EFR32MG12B = 29,
+       EFM32_DI_PART_FAMILY_EFR32MG12V = 30,
+       EFM32_DI_PART_FAMILY_EFR32BG12P = 31,
+       EFM32_DI_PART_FAMILY_EFR32BG12B = 32,
+       EFM32_DI_PART_FAMILY_EFR32BG12V = 33,
+       EFM32_DI_PART_FAMILY_EFR32FG12P = 37,
+       EFM32_DI_PART_FAMILY_EFR32FG12B = 38,
+       EFM32_DI_PART_FAMILY_EFR32FG12V = 39,
+       EFM32_DI_PART_FAMILY_EFR32MG13P = 40,
+       EFM32_DI_PART_FAMILY_EFR32MG13B = 41,
+       EFM32_DI_PART_FAMILY_EFR32MG13V = 42,
+       EFM32_DI_PART_FAMILY_EFR32BG13P = 43,
+       EFM32_DI_PART_FAMILY_EFR32BG13B = 44,
+       EFM32_DI_PART_FAMILY_EFR32BG13V = 45,
+       EFM32_DI_PART_FAMILY_EFR32FG13P = 49,
+       EFM32_DI_PART_FAMILY_EFR32FG13B = 50,
+       EFM32_DI_PART_FAMILY_EFR32FG13V = 51,
 };
 
-static const char *efr32_names[] =  {
-	"MG1P",
-	"MG1B",
-	"MG1V",
-	"BG1P",
-	"BG1B",
-	"BG1V",
-	NULL,
-	NULL,
-	NULL,
-	"FG1P",
-	"FG1B",
-	"FG1V",
-	"MG12P", // "MG2P", duplicate code
-	"MG12B",
-	"MG12V",
-	"BG12P",
-	"BG12B",
-	"BG12V",
-	NULL,
-	NULL,
-	NULL,
-	"FG12P",
-	"FG12B",
-	"FG12V",
-	"MG13P",
-	"MG13B",
-	"MG13V",
-	"BG13P",
-	"BG13B",
-	"BG13V",
-	NULL,
-	NULL,
-	NULL,
-	"FG13P",
-	"FG13B",
-	"FG13V",
+static const char *efr32_names[] = {
+    "MG1P",  "MG1B",  "MG1V",  "BG1P",  "BG1B",  "BG1V",  NULL,    NULL,
+    NULL,    "FG1P",  "FG1B",  "FG1V",
+    "MG12P", // "MG2P", duplicate code
+    "MG12B", "MG12V", "BG12P", "BG12B", "BG12V", NULL,    NULL,    NULL,
+    "FG12P", "FG12B", "FG12V", "MG13P", "MG13B", "MG13V", "BG13P", "BG13B",
+    "BG13V", NULL,    NULL,    NULL,    "FG13P", "FG13B", "FG13V",
 };
 
-enum {
-	EFR32_DI_BASE = 0x0FE081B0,
-	EFR32_DI_MEM_INFO_PAGE_SIZE = EFR32_DI_BASE + 0x34,
-	EFR32_DI_PINCOUNT_SHIFT = 16,
-	EFR32_DI_PKGTYPE_SHIFT = 8,
+enum { EFR32_DI_BASE = 0x0FE081B0,
+       EFR32_DI_MEM_INFO_PAGE_SIZE = EFR32_DI_BASE + 0x34,
+       EFR32_DI_PINCOUNT_SHIFT = 16,
+       EFR32_DI_PKGTYPE_SHIFT = 8,
 };
+
+// but this is the last byte...
+_Static_assert(0x0FE081E7 == EFR32_DI_MEM_INFO_PAGE_SIZE + 3,
+	       "page size differs");
 
 /* -------------------------------------------------------------------------- */
 /* Helper functions */
@@ -265,8 +262,8 @@ uint64_t efm32_read_eui(target *t)
 {
 	uint64_t eui;
 
-	eui  = (uint64_t)target_mem_read32(t, EFM32_DI_EUI64_1) << 32;
-	eui |= (uint64_t)target_mem_read32(t, EFM32_DI_EUI64_0) <<  0;
+	eui = (uint64_t)target_mem_read32(t, EFM32_DI_EUI64_1) << 32;
+	eui |= (uint64_t)target_mem_read32(t, EFM32_DI_EUI64_0) << 0;
 
 	return eui;
 }
@@ -306,9 +303,12 @@ uint16_t efm32_read_radio_part_number(target *t)
 	return target_mem_read16(t, EFM32_DI_RADIO_OPN);
 }
 /**
- * Reads the EFR32 flash page size in bytes, plus package info
+ * Reads the EFR32 or EFM32 flash page size in bytes, plus package info.
+ * Only the newer generation parts report pagesize and pincount.
  */
-void efr32_read_mem_info(target *t, uint32_t *pagesize, uint8_t *pincount, uint8_t *pkgtype) {
+void efm32_read_mem_info(target *t, uint32_t *pagesize, uint8_t *pincount,
+			 uint8_t *pkgtype)
+{
 	// This register also contains PINCOUNT, PKGTYPE and TEMPGRADE
 	uint32_t page_info = target_mem_read32(t, EFR32_DI_MEM_INFO_PAGE_SIZE);
 	*pagesize = 1 << (((page_info >> 24) + 10) & 0xFF);
@@ -316,17 +316,10 @@ void efr32_read_mem_info(target *t, uint32_t *pagesize, uint8_t *pincount, uint8
 	*pkgtype = (page_info >> EFR32_DI_PKGTYPE_SHIFT) & 0xFF;
 }
 
-struct efm32_flash {
-	struct target_flash f;
-	MSC_TypeDef *msc;
-};
-
 static void efm32_add_flash(target *t, target_addr addr, size_t length,
-			    size_t page_size, MSC_TypeDef *msc)
+			    size_t page_size)
 {
-	struct efm32_flash *ef = calloc(1, sizeof(*ef));
-	struct target_flash *f = &ef->f;
-	ef->msc = msc;
+	struct target_flash *f = calloc(1, sizeof(*f));
 	f->start = addr;
 	f->length = length;
 	f->blocksize = page_size;
@@ -334,6 +327,21 @@ static void efm32_add_flash(target *t, target_addr addr, size_t length,
 	f->write = target_flash_write_buffered;
 	f->done = target_flash_done_buffered;
 	f->write_buf = efm32_flash_write;
+	f->buf_size = page_size;
+	target_add_flash(t, f);
+}
+
+static void efm32_g2_add_flash(target *t, target_addr addr, size_t length,
+			       size_t page_size)
+{
+	struct target_flash *f = calloc(1, sizeof(*f));
+	f->start = addr;
+	f->length = length;
+	f->blocksize = page_size;
+	f->erase = efm32_g2_flash_erase;
+	f->write = target_flash_write_buffered;
+	f->done = target_flash_done_buffered;
+	f->write_buf = efm32_g2_flash_write;
 	f->buf_size = page_size;
 	target_add_flash(t, f);
 }
@@ -348,80 +356,67 @@ bool efm32_probe(target *t)
 	/* Check the idcode is silabs. See AN0062 Section 2.2 */
 	if (ap_idcode == 0x2BA01477) {
 		/* Cortex M3, Cortex M4 */
-	} else if (ap_idcode == 0x0BC11477) {
+	}
+	else if (ap_idcode == 0x0BC11477) {
 		/* Cortex M0+ */
-	} else {
+	}
+	else {
 		return false;
 	}
 
 	/* Read the part number and family */
 	uint16_t part_number = efm32_read_part_number(t);
 	uint8_t part_family = efm32_read_part_family(t);
-	uint16_t radio_number, radio_number_short;  /* optional, for ezr parts */
-	uint32_t flash_page_size; uint16_t flash_kb;
-	uint8_t pincount; uint8_t pkgtype;
+	uint16_t radio_number, radio_number_short; /* optional, for ezr parts */
+	uint32_t flash_page_size;
+	uint16_t flash_kb;
+	uint8_t pincount;
+	uint8_t pkgtype;
+	uint8_t gen = 1;
 
-	MSC_TypeDef *msc = (MSC_TypeDef *)EFM32_MSC;
+	efm32_read_mem_info(t, &flash_page_size, &pincount, &pkgtype);
 
-	switch(part_family) {
+	switch (part_family) {
 		case EFM32_DI_PART_FAMILY_GECKO:
-			sprintf(variant_string,
-				"EFM32 Gecko");
-			flash_page_size = 512;
+			sprintf(variant_string, "EFM32 Gecko");
 			break;
 		case EFM32_DI_PART_FAMILY_GIANT_GECKO:
-			sprintf(variant_string,
-				"EFM32 Giant Gecko");
-			flash_page_size = 2048; /* Could be 2048 or 4096, assume 2048 */
+			sprintf(variant_string, "EFM32 Giant Gecko");
 			break;
 		case EFM32_DI_PART_FAMILY_TINY_GECKO:
-			sprintf(variant_string,
-				"EFM32 Tiny Gecko");
-			flash_page_size = 512;
+			sprintf(variant_string, "EFM32 Tiny Gecko");
 			break;
 		case EFM32_DI_PART_FAMILY_LEOPARD_GECKO:
-			sprintf(variant_string,
-				"EFM32 Leopard Gecko");
-			flash_page_size = 2048; /* Could be 2048 or 4096, assume 2048 */
+			sprintf(variant_string, "EFM32 Leopard Gecko");
 			break;
 		case EFM32_DI_PART_FAMILY_WONDER_GECKO:
-			sprintf(variant_string,
-				"EFM32 Wonder Gecko");
-			flash_page_size = 2048;
+			sprintf(variant_string, "EFM32 Wonder Gecko");
 			break;
 		case EFM32_DI_PART_FAMILY_ZERO_GECKO:
-			sprintf(variant_string,
-				"EFM32 Zero Gecko");
-			flash_page_size = 1024;
+			sprintf(variant_string, "EFM32 Zero Gecko");
 			break;
 		case EFM32_DI_PART_FAMILY_HAPPY_GECKO:
-			sprintf(variant_string,
-				"EFM32 Happy Gecko");
-			flash_page_size = 1024;
+			sprintf(variant_string, "EFM32 Happy Gecko");
 			break;
 		case EFM32_DI_PART_FAMILY_EZR_WONDER_GECKO:
-			radio_number = efm32_read_radio_part_number(t); /* on-chip radio */
+			radio_number =
+			    efm32_read_radio_part_number(t); /* on-chip radio */
 			radio_number_short = radio_number % 100;
 			flash_kb = efm32_read_flash_size(t);
 
-			sprintf(variant_string,
-				"EZR32WG%dF%dR%d (radio si%d)",
-				part_number, flash_kb,
-				radio_number_short, radio_number);
-
-			flash_page_size = 2048;
+			sprintf(variant_string, "EZR32WG%dF%dR%d (radio si%d)",
+				part_number, flash_kb, radio_number_short,
+				radio_number);
 			break;
 		case EFM32_DI_PART_FAMILY_EZR_LEOPARD_GECKO:
-			radio_number = efm32_read_radio_part_number(t); /* on-chip radio */
+			radio_number =
+			    efm32_read_radio_part_number(t); /* on-chip radio */
 			radio_number_short = radio_number % 100;
 			flash_kb = efm32_read_flash_size(t);
 
-			sprintf(variant_string,
-				"EZR32LG%dF%dR%d (radio si%d)",
-				part_number, flash_kb,
-				radio_number_short, radio_number);
-
-			flash_page_size = 2048;
+			sprintf(variant_string, "EZR32LG%dF%dR%d (radio si%d)",
+				part_number, flash_kb, radio_number_short,
+				radio_number);
 			break;
 		case EFM32_DI_PART_FAMILY_EFR32MG1P:
 		case EFM32_DI_PART_FAMILY_EFR32MG1B:
@@ -450,40 +445,36 @@ bool efm32_probe(target *t)
 		case EFM32_DI_PART_FAMILY_EFR32FG13P:
 		case EFM32_DI_PART_FAMILY_EFR32FG13B:
 		case EFM32_DI_PART_FAMILY_EFR32FG13V:
+			gen = 2;
 			flash_kb = efm32_read_flash_size(t);
-			efr32_read_mem_info(t, &flash_page_size, &pincount, &pkgtype);
-			sprintf(variant_string,
-				"EFR32%s%dF%dG%c%d",
-				efr32_names[part_family - EFM32_DI_PART_FAMILY_FIRST],
-				part_number,
-				flash_kb,
-				pkgtype,
-				pincount
-				);
-			// For EFR32BG, EFR32MG, EFR32FG:
-			// MSC_BASE 0x400E0000
-			// IDR LOCK/UNLOCK 0x26E60011/0x24770011
-			// (flash lock/unlock codes still 0x631A, 0x1b71)
-			// TAR wrap boundary 0xFFF
-			// memory, ram size appear to be in the same place as the other geckoes
-			msc = (void *)EFR32_MSC;
+			sprintf(variant_string, "EFR32%s%dF%dG%c%d",
+				efr32_names[part_family -
+					    EFM32_DI_PART_FAMILY_FIRST],
+				part_number, flash_kb, pkgtype, pincount);
 			break;
 
-		default:	/* Unknown family */
+		default: /* Unknown family */
 			return false;
 	}
 
 	/* Read memory sizes, convert to bytes */
 	uint32_t flash_size = efm32_read_flash_size(t) * 0x400;
-	uint32_t ram_size   = efm32_read_ram_size(t)   * 0x400;
+	uint32_t ram_size = efm32_read_ram_size(t) * 0x400;
 
 	/* Setup Target */
 	t->target_options |= CORTEXM_TOPT_INHIBIT_SRST;
 	t->driver = variant_string;
-	tc_printf(t, "flash size %d page size %d\n", flash_size, flash_page_size);
-	target_add_ram (t, SRAM_BASE, ram_size);
-	efm32_add_flash(t, 0x00000000, flash_size, flash_page_size, msc);
-	target_add_commands(t, efm32_cmd_list, "EFM32");
+	tc_printf(t, "flash size %d page size %d\n", flash_size,
+		  flash_page_size);
+	target_add_ram(t, SRAM_BASE, ram_size);
+	if (gen == 1) {
+		efm32_add_flash(t, 0x00000000, flash_size, flash_page_size);
+		target_add_commands(t, efm32_cmd_list, "EFM32");
+	}
+	else {
+		efm32_g2_add_flash(t, 0x00000000, flash_size, flash_page_size);
+		target_add_commands(t, efm32_g2_cmd_list, "EFM32");
+	}
 
 	return true;
 }
@@ -491,15 +482,10 @@ bool efm32_probe(target *t)
 /**
  * Erase flash row by row
  */
-static int efm32_flash_erase(struct target_flash *f, target_addr addr, size_t len)
+static int efm32_flash_erase(struct target_flash *f, target_addr addr,
+			     size_t len)
 {
 	target *t = f->t;
-
-	MSC_TypeDef *MSC = ((struct efm32_flash *)f)->msc;
-
-	if((uintptr_t)MSC != EFR32_MSC && (uintptr_t)MSC != EFM32_MSC) {
-		return -1;
-	}
 
 	/* Set WREN bit to enabel MSC write and erase functionality */
 	target_mem_write32(t, (uintptr_t)&MSC->WRITECTRL, 1);
@@ -507,13 +493,51 @@ static int efm32_flash_erase(struct target_flash *f, target_addr addr, size_t le
 	while (len) {
 		/* Write address of first word in row to erase it */
 		target_mem_write32(t, (uintptr_t)&MSC->ADDRB, addr);
-		target_mem_write32(t, (uintptr_t)&MSC->WRITECMD, EFM32_MSC_WRITECMD_LADDRIM);
+		target_mem_write32(t, (uintptr_t)&MSC->WRITECMD,
+				   EFM32_MSC_WRITECMD_LADDRIM);
 
 		/* Issue the erase command */
-		target_mem_write32(t, (uintptr_t)&MSC->WRITECMD, EFM32_MSC_WRITECMD_ERASEPAGE );
+		target_mem_write32(t, (uintptr_t)&MSC->WRITECMD,
+				   EFM32_MSC_WRITECMD_ERASEPAGE);
 
 		/* Poll MSC Busy */
-		while ((target_mem_read32(t, (uintptr_t)&MSC->STATUS) & EFM32_MSC_STATUS_BUSY)) {
+		while ((target_mem_read32(t, (uintptr_t)&MSC->STATUS) &
+			EFM32_MSC_STATUS_BUSY)) {
+			if (target_check_error(t))
+				return -1;
+		}
+
+		addr += f->blocksize;
+		len -= f->blocksize;
+	}
+
+	return 0;
+}
+
+/**
+ * Erase flash row by row
+ */
+static int efm32_g2_flash_erase(struct target_flash *f, target_addr addr,
+				size_t len)
+{
+	target *t = f->t;
+
+	/* Set WREN bit to enabel MSC write and erase functionality */
+	target_mem_write32(t, (uintptr_t)&MSC->WRITECTRL, 1);
+
+	while (len) {
+		/* Write address of first word in row to erase it */
+		target_mem_write32(t, (uintptr_t)&MSC->ADDRB, addr);
+		target_mem_write32(t, (uintptr_t)&MSC->WRITECMD,
+				   EFM32_MSC_WRITECMD_LADDRIM);
+
+		/* Issue the erase command */
+		target_mem_write32(t, (uintptr_t)&MSC->WRITECMD,
+				   EFM32_MSC_WRITECMD_ERASEPAGE);
+
+		/* Poll MSC Busy */
+		while ((target_mem_read32(t, (uintptr_t)&MSC->STATUS) &
+			EFM32_MSC_STATUS_BUSY)) {
 			if (target_check_error(t))
 				return -1;
 		}
@@ -528,34 +552,36 @@ static int efm32_flash_erase(struct target_flash *f, target_addr addr, size_t le
 /**
  * Write flash page by page
  */
-static int efm32_flash_write(struct target_flash *f,
-			     target_addr dest, const void *src, size_t len)
+static int efm32_flash_write(struct target_flash *f, target_addr dest,
+			     const void *src, size_t len)
 {
 	(void)len;
 	target *t = f->t;
-	MSC_TypeDef *MSC = ((struct efm32_flash *)f)->msc;
 
 	/* Write flashloader */
-	if((uintptr_t)MSC == EFR32_MSC) {
-		target_mem_write(t, SRAM_BASE, efr32_flash_write_stub,
-				sizeof(efr32_flash_write_stub));
-		DEBUG("efr32_flash_write");
-	} else if((uintptr_t)MSC == EFM32_MSC) {
-		target_mem_write(t, SRAM_BASE, efm32_flash_write_stub,
-			sizeof(efm32_flash_write_stub));
-		DEBUG("efm32_flash_write");
-	} else {
-		return -1;
-	}
+	target_mem_write(t, SRAM_BASE, efm32_flash_write_stub,
+			 sizeof(efm32_flash_write_stub));
+	/* Write Buffer */
+	target_mem_write(t, STUB_BUFFER_BASE, src, len);
+	/* Run flashloader */
+	return cortexm_run_stub(t, SRAM_BASE, dest, STUB_BUFFER_BASE, len, 0);
+}
 
+/**
+ * Write flash page by page (gen 2)
+ */
+static int efm32_g2_flash_write(struct target_flash *f, target_addr dest,
+				const void *src, size_t len)
+{
+	(void)len;
+	target *t = f->t;
+
+	/* Write flashloader */
+	target_mem_write(t, SRAM_BASE, efm32_g2_flash_write_stub, sizeof(efm32_g2_flash_write_stub));
 	/* Write buffer */
 	target_mem_write(t, STUB_BUFFER_BASE, src, len);
 	/* Run flashloader */
-	DEBUG("(%p, %p, %p, %p)",
-		(void*)SRAM_BASE, (void*)dest, (void*)STUB_BUFFER_BASE, (void*)len);
-	int rc = cortexm_run_stub(t, SRAM_BASE, dest, STUB_BUFFER_BASE, len, 0);
-	DEBUG(" -> %d\n", rc);
-	return rc;
+	return cortexm_run_stub(t, SRAM_BASE, dest, STUB_BUFFER_BASE, len, 0);
 }
 
 /**
@@ -563,19 +589,50 @@ static int efm32_flash_write(struct target_flash *f,
  */
 static bool efm32_cmd_erase_all(target *t)
 {
-	MSC_TypeDef *MSC = ((struct efm32_flash *)t->flash)->msc;
+	/* Set WREN bit to enabel MSC write and erase functionality */
+	target_mem_write32(t, EFM32_MSC_WRITECTRL, 1);
 
+	/* Unlock mass erase */
+	target_mem_write32(t, EFM32_MSC_MASSLOCK, EFM32_MSC_MASSLOCK_LOCKKEY);
+
+	/* Erase operation */
+	target_mem_write32(t, EFM32_MSC_WRITECMD,
+			   EFM32_MSC_WRITECMD_ERASEMAIN0);
+
+	/* Poll MSC Busy */
+	while (
+	    (target_mem_read32(t, EFM32_MSC_STATUS) & EFM32_MSC_STATUS_BUSY)) {
+		if (target_check_error(t))
+			return false;
+	}
+
+	/* Relock mass erase */
+	target_mem_write32(t, EFM32_MSC_MASSLOCK, 0);
+
+	tc_printf(t, "Erase successful!\n");
+
+	return true;
+}
+
+/**
+ * Uses the MSC ERASEMAIN0 command to erase the entire flash
+ */
+static bool efm32_g2_cmd_erase_all(target *t)
+{
 	/* Set WREN bit to enabel MSC write and erase functionality */
 	target_mem_write32(t, (uintptr_t)&MSC->WRITECTRL, 1);
 
 	/* Unlock mass erase */
-	target_mem_write32(t, (uintptr_t)&MSC->MASSLOCK, EFM32_MSC_MASSLOCK_LOCKKEY);
+	target_mem_write32(t, (uintptr_t)&MSC->MASSLOCK,
+			   EFM32_MSC_MASSLOCK_LOCKKEY);
 
 	/* Erase operation */
-	target_mem_write32(t, (uintptr_t)&MSC->WRITECMD, EFM32_MSC_WRITECMD_ERASEMAIN0);
+	target_mem_write32(t, (uintptr_t)&MSC->WRITECMD,
+			   EFM32_MSC_WRITECMD_ERASEMAIN0);
 
 	/* Poll MSC Busy */
-	while ((target_mem_read32(t, (uintptr_t)&MSC->STATUS) & EFM32_MSC_STATUS_BUSY)) {
+	while ((target_mem_read32(t, (uintptr_t)&MSC->STATUS) &
+		EFM32_MSC_STATUS_BUSY)) {
 		if (target_check_error(t))
 			return false;
 	}
