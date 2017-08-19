@@ -482,27 +482,23 @@ bool efm32_probe(target *t)
 /**
  * Erase flash row by row
  */
-static int efm32_flash_erase(struct target_flash *f, target_addr addr,
-			     size_t len)
+static int efm32_flash_erase(struct target_flash *f, target_addr addr, size_t len)
 {
 	target *t = f->t;
 
 	/* Set WREN bit to enabel MSC write and erase functionality */
-	target_mem_write32(t, (uintptr_t)&MSC->WRITECTRL, 1);
+	target_mem_write32(t, EFM32_MSC_WRITECTRL, 1);
 
 	while (len) {
 		/* Write address of first word in row to erase it */
-		target_mem_write32(t, (uintptr_t)&MSC->ADDRB, addr);
-		target_mem_write32(t, (uintptr_t)&MSC->WRITECMD,
-				   EFM32_MSC_WRITECMD_LADDRIM);
+		target_mem_write32(t, EFM32_MSC_ADDRB, addr);
+		target_mem_write32(t, EFM32_MSC_WRITECMD, EFM32_MSC_WRITECMD_LADDRIM);
 
 		/* Issue the erase command */
-		target_mem_write32(t, (uintptr_t)&MSC->WRITECMD,
-				   EFM32_MSC_WRITECMD_ERASEPAGE);
+		target_mem_write32(t, EFM32_MSC_WRITECMD, EFM32_MSC_WRITECMD_ERASEPAGE );
 
 		/* Poll MSC Busy */
-		while ((target_mem_read32(t, (uintptr_t)&MSC->STATUS) &
-			EFM32_MSC_STATUS_BUSY)) {
+		while ((target_mem_read32(t, EFM32_MSC_STATUS) & EFM32_MSC_STATUS_BUSY)) {
 			if (target_check_error(t))
 				return -1;
 		}
