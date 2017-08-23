@@ -44,7 +44,10 @@
 #include "flashstub/efr32.h"
 
 #define SRAM_BASE 0x20000000
-#define STUB_BUFFER_BASE ALIGN(SRAM_BASE + MAX(sizeof(efm32_g2_flash_write_stub), sizeof(efm32_flash_write_stub)), 4)
+#define STUB_BUFFER_BASE ALIGN(SRAM_BASE + sizeof(efm32_flash_write_stub), 4)
+
+#define STUB_BUFFER_BASE_G2                                                    \
+	ALIGN(SRAM_BASE + sizeof(efm32_g2_flash_write_stub), 4)
 
 static int efm32_flash_erase(struct target_flash *t, target_addr addr,
 			     size_t len);
@@ -356,11 +359,9 @@ bool efm32_probe(target *t)
 	/* Check the idcode is silabs. See AN0062 Section 2.2 */
 	if (ap_idcode == 0x2BA01477) {
 		/* Cortex M3, Cortex M4 */
-	}
-	else if (ap_idcode == 0x0BC11477) {
+	} else if (ap_idcode == 0x0BC11477) {
 		/* Cortex M0+ */
-	}
-	else {
+	} else {
 		return false;
 	}
 
@@ -470,8 +471,7 @@ bool efm32_probe(target *t)
 	if (gen == 1) {
 		efm32_add_flash(t, 0x00000000, flash_size, flash_page_size);
 		target_add_commands(t, efm32_cmd_list, "EFM32");
-	}
-	else {
+	} else {
 		efm32_g2_add_flash(t, 0x00000000, flash_size, flash_page_size);
 		target_add_commands(t, efm32_g2_cmd_list, "EFM32");
 	}
@@ -482,7 +482,8 @@ bool efm32_probe(target *t)
 /**
  * Erase flash row by row
  */
-static int efm32_flash_erase(struct target_flash *f, target_addr addr, size_t len)
+static int efm32_flash_erase(struct target_flash *f, target_addr addr,
+			     size_t len)
 {
 	target *t = f->t;
 
@@ -492,13 +493,16 @@ static int efm32_flash_erase(struct target_flash *f, target_addr addr, size_t le
 	while (len) {
 		/* Write address of first word in row to erase it */
 		target_mem_write32(t, EFM32_MSC_ADDRB, addr);
-		target_mem_write32(t, EFM32_MSC_WRITECMD, EFM32_MSC_WRITECMD_LADDRIM);
+		target_mem_write32(t, EFM32_MSC_WRITECMD,
+				   EFM32_MSC_WRITECMD_LADDRIM);
 
 		/* Issue the erase command */
-		target_mem_write32(t, EFM32_MSC_WRITECMD, EFM32_MSC_WRITECMD_ERASEPAGE );
+		target_mem_write32(t, EFM32_MSC_WRITECMD,
+				   EFM32_MSC_WRITECMD_ERASEPAGE);
 
 		/* Poll MSC Busy */
-		while ((target_mem_read32(t, EFM32_MSC_STATUS) & EFM32_MSC_STATUS_BUSY)) {
+		while ((target_mem_read32(t, EFM32_MSC_STATUS) &
+			EFM32_MSC_STATUS_BUSY)) {
 			if (target_check_error(t))
 				return -1;
 		}
@@ -573,11 +577,13 @@ static int efm32_g2_flash_write(struct target_flash *f, target_addr dest,
 	target *t = f->t;
 
 	/* Write flashloader */
-	target_mem_write(t, SRAM_BASE, efm32_g2_flash_write_stub, sizeof(efm32_g2_flash_write_stub));
+	target_mem_write(t, SRAM_BASE, efm32_g2_flash_write_stub,
+			 sizeof(efm32_g2_flash_write_stub));
 	/* Write buffer */
-	target_mem_write(t, STUB_BUFFER_BASE, src, len);
+	target_mem_write(t, STUB_BUFFER_BASE_G2, src, len);
 	/* Run flashloader */
-	return cortexm_run_stub(t, SRAM_BASE, dest, STUB_BUFFER_BASE, len, 0);
+	return cortexm_run_stub(t, SRAM_BASE, dest, STUB_BUFFER_BASE_G2, len,
+				0);
 }
 
 /**
