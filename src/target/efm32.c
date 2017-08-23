@@ -522,6 +522,9 @@ static int efm32_g2_flash_erase(struct target_flash *f, target_addr addr,
 {
 	target *t = f->t;
 
+	/* Unlock MSC */
+	target_mem_write32(t, (uintptr_t)&MSC->LOCK, EFM32_MSC_LOCK_LOCKKEY);
+
 	/* Set WREN bit to enabel MSC write and erase functionality */
 	target_mem_write32(t, (uintptr_t)&MSC->WRITECTRL, 1);
 
@@ -621,6 +624,9 @@ static bool efm32_cmd_erase_all(target *t)
  */
 static bool efm32_g2_cmd_erase_all(target *t)
 {
+	/* Unlock MSC */
+	target_mem_write32(t, (uintptr_t)&MSC->LOCK, EFM32_MSC_LOCK_LOCKKEY);
+
 	/* Set WREN bit to enabel MSC write and erase functionality */
 	target_mem_write32(t, (uintptr_t)&MSC->WRITECTRL, 1);
 
