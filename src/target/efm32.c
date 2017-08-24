@@ -373,7 +373,7 @@ bool efm32_probe(target *t)
 	uint16_t flash_kb;
 	uint8_t pincount;
 	uint8_t pkgtype;
-	uint8_t gen = 1;
+	uint8_t series = 0;
 
 	efm32_read_mem_info(t, &flash_page_size, &pincount, &pkgtype);
 
@@ -383,12 +383,16 @@ bool efm32_probe(target *t)
 			break;
 		case EFM32_DI_PART_FAMILY_GIANT_GECKO:
 			sprintf(variant_string, "EFM32 Giant Gecko");
+			// Errata DI_E101 MEM_INFO_PAGE_SIZE is incorrect when PROD_REV < 18
+			flash_page_size = 4096;
 			break;
 		case EFM32_DI_PART_FAMILY_TINY_GECKO:
 			sprintf(variant_string, "EFM32 Tiny Gecko");
 			break;
 		case EFM32_DI_PART_FAMILY_LEOPARD_GECKO:
 			sprintf(variant_string, "EFM32 Leopard Gecko");
+			// Errata DI_E101 MEM_INFO_PAGE_SIZE is incorrect when PROD_REV < 18
+			flash_page_size = 2048;
 			break;
 		case EFM32_DI_PART_FAMILY_WONDER_GECKO:
 			sprintf(variant_string, "EFM32 Wonder Gecko");
@@ -446,7 +450,7 @@ bool efm32_probe(target *t)
 		case EFM32_DI_PART_FAMILY_EFR32FG13P:
 		case EFM32_DI_PART_FAMILY_EFR32FG13B:
 		case EFM32_DI_PART_FAMILY_EFR32FG13V:
-			gen = 2;
+			series = 1;
 			flash_kb = efm32_read_flash_size(t);
 			sprintf(variant_string, "EFR32%s%dF%dG%c%d",
 				efr32_names[part_family -
@@ -468,7 +472,7 @@ bool efm32_probe(target *t)
 	tc_printf(t, "flash size %d page size %d\n", flash_size,
 		  flash_page_size);
 	target_add_ram(t, SRAM_BASE, ram_size);
-	if (gen == 1) {
+	if (series == 0) {
 		efm32_add_flash(t, 0x00000000, flash_size, flash_page_size);
 		target_add_commands(t, efm32_cmd_list, "EFM32");
 	} else {
