@@ -190,11 +190,13 @@ bool stm32f4_probe(target *t)
 		stm32f4_add_flash(t, 0x8110000, 0x10000, 0x10000, 16);
 		stm32f4_add_flash(t, 0x8120000, 0xE0000, 0x20000, 17);
 		/* Fall through for stuff common to F40x/F41x */
+		/* fall through */
 	case ID_STM32F20X: /* F205 */
 	case ID_STM32F40X: /* F405 */
 		if (!f2)
 			target_add_ram(t, 0x10000000, 0x10000);
 		/* Fall through for devices w/o CCMRAM */
+		/* fall through */
 	case ID_STM32F446: /* F446 */
 	case ID_STM32F401C: /* F401 B/C RM0368 Rev.3 */
 	case ID_STM32F411: /* F411     RM0383 Rev.4 */
