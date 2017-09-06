@@ -1,0 +1,41 @@
+This adapts the Black Magic firmware for the ST-Link v2 clone from Baite (betemcu.cn).
+It is based on a STM32F103C8.
+
+connector
+=========
+
+Black Magic Probe (Baite) pinout:
+     _____
+SRST |1 2| +3.3V
+ +5V |3 4| JTCK/SWCLK
+  RX  5 6| JTMS/SWDIO
+ GND |7 8| JTDO/TRACESWO
+  TX |910| JTDI
+     -----
+
+flashing
+========
+
+Program the adapter using the UART port on the back through the serial bootloader.
+
+UART port:
+1 RX (square)
+2 TX
+3 BOOT0 (set high when powering the board to start the serial bootloader)
+4 +5V
+5 GND
+
+Disable flash read/write protection to be able to write firmware.
+
+notes
+=====
+
+All connector pins have 220 ohms inline protection resistors.
+RX is pulled high using a 620 ohms resistor, thus the TX on the target board needs to pull low strong enough to successfully transmit data.
+PB6/PB7 (UART1) are remapped in the firmware to provide TX/RX.
+TRACESWO (TIM3_CH1) should be supported but has not been tested.
+
+Since this adapter is based on an STM32F103C8 micro-controller with 64 kB of flash the DFU bootloader only advertises 56 kB of flash available for the main application.
+Because the blackmagic firmware exceeds this size it will not be possible to flash it through if the DFU software doesn't ignore this restriction.
+STM32F103C8 micro-controllers often have 128 kB of flash though, thus it is still possible to flash the blackmagic firmware using the serial bootloader (at address 0x08002000).
+Enable verification when flashing to ensure the whole firmware has been written successfully.
