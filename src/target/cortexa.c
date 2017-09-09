@@ -344,6 +344,14 @@ static bool cortexa_check_error(target *t)
 	return err;
 }
 
+static void cortexa_priv_free(void *p)
+{
+	struct cortexa_priv *priv = p;
+	if (priv->ahb) {
+		adiv5_ap_unref(priv->ahb);
+	}
+	free(priv);
+}
 
 bool cortexa_probe(ADIv5_AP_t *apb, uint32_t debug_base)
 {
@@ -353,14 +361,13 @@ bool cortexa_probe(ADIv5_AP_t *apb, uint32_t debug_base)
 	adiv5_ap_ref(apb);
 	struct cortexa_priv *priv = calloc(1, sizeof(*priv));
 	t->priv = priv;
-	t->priv_free = free;
+	t->priv_free = cortexa_priv_free;
 	priv->apb = apb;
 
 	/* FIXME Find a better way to find the AHB.  This is likely to be
 	 * device specific. */
 	priv->ahb = adiv5_new_ap(apb->dp, 0);
 	if (priv->ahb) {
-		adiv5_ap_ref(priv->ahb);
 		if (false) {
 			/* FIXME: This used to be if ((priv->ahb->idr & 0xfffe00f) == 0x4770001)
 			 * Accessing memory directly through the AHB is much faster, but can
