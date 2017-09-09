@@ -265,7 +265,7 @@ static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr)
 	/* Assemble logical Component ID register value. */
 	for (int i = 0; i < 4; i++) {
 		uint32_t x = adiv5_mem_read32(ap, addr + CIDR0_OFFSET + 4*i);
-		cidr |= ((uint64_t)(x & 0xff)) << (i * 8);
+		cidr |= (x & 0xff) << (i * 8);
 	}
 
 	if (adiv5_dp_error(ap->dp)) {
