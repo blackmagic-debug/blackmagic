@@ -344,6 +344,14 @@ static bool cortexa_check_error(target *t)
 	return err;
 }
 
+static void cortexa_priv_free(void *p)
+{
+	struct cortexa_priv *priv = p;
+	if (priv->ahb) {
+		adiv5_ap_unref(priv->ahb);
+	}
+	free(priv);
+}
 
 bool cortexa_probe(ADIv5_AP_t *apb, uint32_t debug_base)
 {
@@ -353,24 +361,30 @@ bool cortexa_probe(ADIv5_AP_t *apb, uint32_t debug_base)
 	adiv5_ap_ref(apb);
 	struct cortexa_priv *priv = calloc(1, sizeof(*priv));
 	t->priv = priv;
-	t->priv_free = free;
+	t->priv_free = cortexa_priv_free;
 	priv->apb = apb;
+
 	/* FIXME Find a better way to find the AHB.  This is likely to be
 	 * device specific. */
 	priv->ahb = adiv5_new_ap(apb->dp, 0);
-	adiv5_ap_ref(priv->ahb);
-	if (false) {
-		/* FIXME: This used to be if ((priv->ahb->idr & 0xfffe00f) == 0x4770001)
-		 * Accessing memory directly through the AHB is much faster, but can
-		 * result in data inconsistencies if the L2 cache is enabled.
-		 */
-		/* This is an AHB */
-		t->mem_read = cortexa_mem_read;
-		t->mem_write = cortexa_mem_write;
-	} else {
-		/* This is not an AHB, fall back to slow APB access */
-		adiv5_ap_unref(priv->ahb);
-		priv->ahb = NULL;
+	if (priv->ahb) {
+		if (false) {
+			/* FIXME: This used to be if ((priv->ahb->idr & 0xfffe00f) == 0x4770001)
+			 * Accessing memory directly through the AHB is much faster, but can
+			 * result in data inconsistencies if the L2 cache is enabled.
+			 */
+			/* This is an AHB */
+			DEBUG("using AHB access\n");
+			t->mem_read = cortexa_mem_read;
+			t->mem_write = cortexa_mem_write;
+		} else {
+			/* This is not an AHB, fall back to slow APB access */
+			adiv5_ap_unref(priv->ahb);
+			priv->ahb = NULL;
+		}
+	}
+	if (!priv->ahb) {
+		DEBUG("using APB access\n");
 		t->mem_read = cortexa_slow_mem_read;
 		t->mem_write = cortexa_slow_mem_write;
 	}
