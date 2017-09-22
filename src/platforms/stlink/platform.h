@@ -110,6 +110,8 @@ extern uint16_t led_idle_run;
 #define SET_IDLE_STATE(state)	{gpio_set_val(LED_PORT, led_idle_run, state);}
 #define SET_ERROR_STATE(x)
 
+extern uint32_t detect_rev(void);
+
 /* Use newlib provided integer only stdio functions */
 #define sscanf siscanf
 #define sprintf siprintf
