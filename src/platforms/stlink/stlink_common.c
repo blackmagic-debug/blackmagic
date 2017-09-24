@@ -75,7 +75,7 @@ uint32_t detect_rev(void)
 			rev = 1;
 		/* On Rev > 0 unconditionally activate MCO on PORTA8 with HSE! */
 		RCC_CFGR &= ~(0xf << 24);
-		RCC_CFGR |= (RCC_CFGR_MCO_HSECLK << 24);
+		RCC_CFGR |= (RCC_CFGR_MCO_HSE << 24);
 		gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ,
 		GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO8);
 	}

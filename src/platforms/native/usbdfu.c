@@ -60,7 +60,7 @@ int main(void)
 	gpio_set_mode(LED_PORT, GPIO_MODE_OUTPUT_2_MHZ,
 			GPIO_CNF_OUTPUT_PUSHPULL, LED_0 | LED_1 | LED_2);
 
-	dfu_init(&stm32f103_usb_driver, DFU_MODE);
+	dfu_init(&st_usbfs_v1_usb_driver, DFU_MODE);
 
 	/* Configure the USB pull up pin. */
 	gpio_set(GPIOA, GPIO8);

@@ -59,7 +59,7 @@ void traceswo_init(void)
 	timer_ic_set_polarity(TRACE_TIM, TIM_IC2, TIM_IC_FALLING);
 
 	/* Trigger on Filtered Timer Input 1 (TI1FP1) */
-	timer_slave_set_trigger(TRACE_TIM, TIM_SMCR_TS_IT1FP1);
+	timer_slave_set_trigger(TRACE_TIM, TIM_SMCR_TS_TI1FP1);
 
 	/* Slave reset mode: reset counter on trigger */
 	timer_slave_set_mode(TRACE_TIM, TIM_SMCR_SMS_RM);

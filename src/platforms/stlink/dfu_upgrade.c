@@ -58,7 +58,7 @@ int main(void)
 
 	if (rev > 1) /* Reconnect USB */
 		gpio_set(GPIOA, GPIO15);
-	dfu_init(&stm32f103_usb_driver, UPD_MODE);
+	dfu_init(&st_usbfs_v1_usb_driver, UPD_MODE);
 
 	dfu_main();
 }
