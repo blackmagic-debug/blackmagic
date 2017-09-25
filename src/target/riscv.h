@@ -24,6 +24,6 @@
 #include "jtag_scan.h"
 #include "target.h"
 
-void riscv_jtag_handler(jtag_dev_t *dev);
+void riscv_jtag_handler(jtag_dev_t *jd);
 
 #endif
