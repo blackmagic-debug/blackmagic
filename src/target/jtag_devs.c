@@ -22,11 +22,15 @@
 #include "jtag_scan.h"
 #include "adiv5.h"
 #include "jtag_devs.h"
+#include "riscv.h"
 
 jtag_dev_descr_t dev_descr[] = {
 	{.idcode = 0x0BA00477, .idmask = 0x0FFF0FFF,
 		.descr = "ARM Limited: ADIv5 JTAG-DP port.",
 		.handler = adiv5_jtag_dp_handler},
+	{.idcode = 0x10e31913, .idmask = 0xFFFFFFFF,
+	 .descr = "SiFive: E310-G000.",
+ 	 .handler = riscv_jtag_handler},
 	{.idcode = 0x06410041, .idmask = 0x0FFFFFFF,
 		.descr = "ST Microelectronics: STM32, Medium density."},
 	{.idcode = 0x06412041, .idmask = 0x0FFFFFFF,
