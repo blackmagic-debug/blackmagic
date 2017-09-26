@@ -81,29 +81,52 @@ if __name__ == "__main__":
 	parser.add_argument("-s", "--serial_target", help="Match Serial Number")
 	args = parser.parse_args()
 	devs = dfu.finddevs()
+	bmp = 0
 	if not devs:
-		print "No devices found!"
+		print "No DFU devices found!"
 		exit(-1)
 
 	for dev in devs:
 		dfudev = dfu.dfu_device(*dev)
 		man = dfudev.handle.getString(dfudev.dev.iManufacturer, 30)
-		product = dfudev.handle.getString(dfudev.dev.iProduct, 64)
+		if man == "Black Sphere Technologies": bmp = bmp + 1
+		if man == "STMicroelectronics": bmp = bmp + 1
+	if bmp == 0 :
+		print "No compatible device found\n"
+		exit(-1)
+	if bmp > 1 and not args.serial_target :
+		print "Found multiple devices:\n"
+		for dev in devs:
+			dfudev = dfu.dfu_device(*dev)
+			man = dfudev.handle.getString(dfudev.dev.iManufacturer, 30)
+			product = dfudev.handle.getString(dfudev.dev.iProduct, 96)
+			serial_no = dfudev.handle.getString(dfudev.dev.iSerialNumber, 30)
+			print "Device ID:\t %04x:%04x" % (dfudev.dev.idVendor, dfudev.dev.idProduct)
+			print "Manufacturer:\t %s" % man
+			print "Product:\t %s" % product
+			print "Serial:\t\t %s\n" % serial_no
+		print "Select device with serial number!"
+		exit (-1)
+
+	for dev in devs:
+		dfudev = dfu.dfu_device(*dev)
+		man = dfudev.handle.getString(dfudev.dev.iManufacturer, 30)
+		product = dfudev.handle.getString(dfudev.dev.iProduct, 96)
 		serial_no = dfudev.handle.getString(dfudev.dev.iSerialNumber, 30)
 		if args.serial_target:
-			if man == "Black Sphere Technologies" and serial_no ==  args.serial_target: break
+			if man == "Black Sphere Technologies" and serial_no ==	args.serial_target: break
 			if man == "STMicroelectronics" and serial_no == args.serial_target: break
-                else:
+		else:
 			if man == "Black Sphere Technologies": break
 			if man == "STMicroelectronics": break
 
-	print "Device %s: ID %04x:%04x %s - %s\n\tSerial %s" % (
-                dfudev.dev.filename, dfudev.dev.idVendor,
-                dfudev.dev.idProduct, man, product, serial_no)
-
-	if args.serial_target and serial_no !=  args.serial_target:
-                print "Serial number doesn't match!\n"
-                exit(-2)
+	print "Device ID:\t %04x:%04x" % (dfudev.dev.idVendor, dfudev.dev.idProduct)
+	print "Manufacturer:\t %s" % man
+	print "Product:\t %s" % product
+	print "Serial:\t\t %s\n" % serial_no
+	if args.serial_target and serial_no !=	args.serial_target:
+		print "Serial number doesn't match!\n"
+		exit(-2)
 	try:
 		state = dfudev.get_state()
 	except:
@@ -118,6 +141,7 @@ if __name__ == "__main__":
 
 	bin = open(args.progfile, "rb").read()
 
+        product = dfudev.handle.getString(dfudev.dev.iProduct, 64)
 	if "F4" in product:
 		addr = 0x8004000
 	else:
