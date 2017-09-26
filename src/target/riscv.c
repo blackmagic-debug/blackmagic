@@ -48,11 +48,16 @@
 #define RISCV_DMCONTROL_INTERRUPT (1ull << 33)
 #define RISCV_DMCONTROL_HALTNOT (1ull << 32)
 
+#define RISCV_DCSR     0x7b0
+#define RISCV_DPC      0x7b1
+#define RISCV_DSCRATCH 0x7b2
+
 struct riscv_dtm {
 	uint8_t dtm_index;
 	uint8_t version; /* As read from dmtcontrol */
 	uint8_t abits; /* Debug bus address bits (6 bits wide) */
 	uint8_t idle; /* Number of cycles required in run-test/idle */
+	uint8_t dramsize; /* Size of debug ram in words - 1 */
 	bool error;
 	uint64_t lastdbus;
 };
@@ -173,6 +178,21 @@ static uint32_t riscv_gpreg_read(struct riscv_dtm *dtm, uint8_t reg)
 	return val;
 }
 
+static uint32_t riscv_csreg_read(struct riscv_dtm *dtm, uint16_t csr)
+{
+	/* Debug RAM stub
+	 * 400:   xxx02473   csrr  s0, <csr>
+	 * 404:   40802623   sw    s0, 0x40c(zero)
+	 * 408:   3fc0006f   j     0 <resume>
+	 * 40c:              dw    data
+	 */
+	uint32_t ram[] = {0x00002473, 0x40802623, 0x3fc0006f};
+	ram[0] |= (uint32_t)csr << 20;
+	uint32_t val = riscv_debug_ram_exec(dtm, ram, 3);
+	DEBUG("CSR(%03x) = 0x%x\n", csr, val);
+	return val;
+}
+
 static void riscv_gpreg_write(struct riscv_dtm *dtm, uint8_t reg, uint32_t val)
 {
 	/* Debug RAM stub
@@ -261,9 +281,26 @@ static void riscv_detach(target *t)
 
 static void riscv_regs_read(target *t, void *data)
 {
+	struct riscv_dtm *dtm = t->priv;
 	uint32_t *reg = data;
-	for (int i = 0; i < 32; i++)
-		*reg++ = riscv_gpreg_read(t->priv, i);
+	for (int i = 0; i < 33; i++) {
+		switch (i) {
+		case 0:
+			reg[i] = 0;
+			break;
+		case 8:
+			reg[i] = riscv_csreg_read(dtm, RISCV_DSCRATCH);
+			break;
+		case 9:
+			reg[i] = riscv_dtm_read(dtm, dtm->dramsize);
+			break;
+		case 32:
+			reg[i] = riscv_csreg_read(dtm, RISCV_DPC);
+			break;
+		default:
+			reg[i] = riscv_gpreg_read(dtm, i);
+		}
+	}
 }
 
 static void riscv_regs_write(target *t, const void *data)
@@ -333,14 +370,14 @@ void riscv_jtag_handler(jtag_dev_t *jd)
 		return;
 
 #if defined(ENABLE_DEBUG) && defined(PLATFORM_HAS_DEBUG)
-	uint8_t dramsize = (dminfo >> 10) & 0x3f;
-	DEBUG("\tdramsize = %d (%d bytes)\n", dramsize, (dramsize + 1) * 4);
+	dtm->dramsize = (dminfo >> 10) & 0x3f;
+	DEBUG("\tdramsize = %d (%d bytes)\n", dtm->dramsize, (dtm->dramsize + 1) * 4);
 
 	riscv_dtm_write(dtm, 0, 0xbeefcafe);
 	riscv_dtm_write(dtm, 1, 0xdeadbeef);
 	DEBUG("%"PRIx32"\n", (uint32_t)riscv_dtm_read(dtm, 0));
 	DEBUG("%"PRIx32"\n", (uint32_t)riscv_dtm_read(dtm, 1));
-	for (int i = 0; i < dramsize + 1; i++) {
+	for (int i = 0; i < 	dtm->dramsize + 1; i++) {
 		DEBUG("DebugRAM[%d] = %08"PRIx32"\n", i,
 			  riscv_mem_read32(dtm, 0x400 + i*4));
 	}
