@@ -58,7 +58,17 @@ def stm32_write(dev, data):
 			sleep(status.bwPollTimeout / 1000.0)
 		if status.bState == dfu.STATE_DFU_DOWNLOAD_IDLE:
 			break
-	
+
+def stm32_read(dev):
+	data = dev.upload(2, 1024)
+	while True:
+		status = dev.get_status()
+		if status.bState == dfu.STATE_DFU_DOWNLOAD_BUSY:
+			sleep(status.bwPollTimeout / 1000.0)
+		if status.bState == dfu.STATE_DFU_UPLOAD_IDLE:
+			break
+	return data
+
 def stm32_manifest(dev):
 	dev.download(0, "")
 	while True:
@@ -152,13 +162,15 @@ if __name__ == "__main__":
 		print "Invoking Application Device"
 		exit(0)
 	dfudev.make_idle()
-	bin = open(args.progfile, "rb").read()
+	file = open(args.progfile, "rb")
+	bin = file.read()
 
 	product = dfudev.handle.getString(dfudev.dev.iProduct, 64)
 	if "F4" in product:
-		addr = 0x8004000
+		start = 0x8004000
 	else:
-		addr = 0x8002000
+		start = 0x8002000
+	addr = start
 	while bin:
 		print ("Programming memory at 0x%08X\r" % addr),
 		stdout.flush()
@@ -179,7 +191,32 @@ if __name__ == "__main__":
 		stm32_write(dfudev, bin[:1024])
 		bin = bin[1024:]
 		addr += 1024
-
+	file.seek(0)
+	bin = file.read()
+	len = len(bin)
+	addr = start
+        print
+        while bin:
+		try:
+			stm32_set_address(dfudev, addr)
+			data = stm32_read(dfudev)
+		except:
+# Abort silent if bootloader does not support upload
+			break
+		print ("Verifying memory at   0x%08X\r" % addr),
+                stdout.flush()
+		if len > 1024 :
+			size = 1024
+		else :
+			size = len
+		if bin[:size] != bytearray(data[:size]) :
+			print ("\nMitmatch in block at	0x%08X" % addr)
+			break;
+		bin = bin[1024:]
+		addr += 1024
+		len -= 1024
+		if len <= 0 :
+			print "\nVerified!"
 	stm32_manifest(dfudev)
 
-	print "\nAll operations complete!\n"
+	print "All operations complete!\n"
