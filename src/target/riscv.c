@@ -194,6 +194,19 @@ static uint32_t riscv_csreg_read(struct riscv_dtm *dtm, uint16_t csr)
 	return val;
 }
 
+static void riscv_csreg_write(struct riscv_dtm *dtm, uint16_t csr, uint32_t val)
+{
+	/* Debug RAM stub
+	 * 404:   40c02403   lw    s0, 0x40c(zero)
+	 * 400:   xxx41073   csrw  s0, <csr>
+	 * 408:   3fc0006f   j     0 <resume>
+	 * 40c:              dw    data
+	 */
+	uint32_t ram[] = {0x40c02403, 0x00041073, 0x3fc0006f, val};
+	ram[1] |= (uint32_t)csr << 20;
+	riscv_debug_ram_exec(dtm, ram, 4);
+}
+
 static void riscv_gpreg_write(struct riscv_dtm *dtm, uint8_t reg, uint32_t val)
 {
 	/* Debug RAM stub
@@ -314,9 +327,25 @@ static void riscv_regs_read(target *t, void *data)
 
 static void riscv_regs_write(target *t, const void *data)
 {
+	struct riscv_dtm *dtm = t->priv;
 	const uint32_t *reg = data;
-	for (int i = 0; i < 32; i++)
-		riscv_gpreg_write(t->priv, i, *reg++);
+	for (int i = 0; i < 33; i++) {
+		switch (i) {
+		case 0:
+			break;
+		case 8:
+			riscv_csreg_write(dtm, RISCV_DSCRATCH, reg[i]);
+			break;
+		case 9:
+			riscv_dtm_write(dtm, dtm->dramsize, reg[i]);
+			break;
+		case 32:
+			riscv_csreg_write(dtm, RISCV_DPC, reg[i]);
+			break;
+		default:
+			riscv_gpreg_write(dtm, i, reg[i]);
+		}
+	}
 }
 
 static enum target_halt_reason riscv_halt_poll(target *t, target_addr *watch)
