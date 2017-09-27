@@ -60,6 +60,7 @@ struct riscv_dtm {
 	uint8_t dramsize; /* Size of debug ram in words - 1 */
 	bool error;
 	uint64_t lastdbus;
+	bool halt_requested;
 };
 
 static void riscv_dtm_reset(struct riscv_dtm *dtm)
@@ -206,25 +207,33 @@ static void riscv_gpreg_write(struct riscv_dtm *dtm, uint8_t reg, uint32_t val)
 
 static void riscv_halt_request(target *t)
 {
+	DEBUG("Halt requested!\n");
 	struct riscv_dtm *dtm = t->priv;
 	/* Debug RAM stub
-	 * 400:   7b026073   csrsi dcsr,4
-	 * 40c:   4000006f   j     0 <resume>
+	 * 400:   7b046073   csrsi dcsr, halt
+	 * 404:   4000006f   j     0 <resume>
 	 */
-	uint32_t ram[] = {0x7b026073, 0x4000006f};
+	uint32_t ram[] = {0x7b046073, 0x4000006f};
 	riscv_debug_ram_exec(dtm, ram, 2);
+	dtm->halt_requested = true;
 }
 
 static void riscv_halt_resume(target *t, bool step)
 {
-	assert(!step);
+	DEBUG("Resume requested! step=%d\n", step);
 	struct riscv_dtm *dtm = t->priv;
-	/* Debug RAM stub
-	 * 400:   7b027073   csrci dcsr,4
-	 * 40c:   4000006f   j     0 <resume>
+	/* Debug RAM stub - we patch in step bit as needed
+	 * 400:   7b006073   csrsi dcsr, 0
+	 * 404:   7b047073   csrci dcsr, halt
+	 * 408:   4000006f   j     0 <resume>
 	 */
-	uint32_t ram[] = {0x7b027073, 0x4000006f};
-	riscv_debug_ram_exec(dtm, ram, 2);
+	uint32_t ram[] = {0x7b006073, 0x7b047073, 0x3fc0006f};
+	if (step)
+		ram[0] |= 4 << 15;
+	else
+		ram[1] |= 4 << 15;
+	riscv_debug_ram_exec(dtm, ram, 3);
+	dtm->halt_requested = false;
 }
 
 static void riscv_mem_read(target *t, void *dest, target_addr src, size_t len)
@@ -315,9 +324,23 @@ static enum target_halt_reason riscv_halt_poll(target *t, target_addr *watch)
 	(void)watch;
 	struct riscv_dtm *dtm = t->priv;
 	uint64_t dmcontrol = riscv_dtm_read(dtm, RISCV_DMCONTROL);
-	if (dmcontrol & RISCV_DMCONTROL_HALTNOT)
-		return TARGET_HALT_REQUEST;
-	return TARGET_HALT_RUNNING;
+	DEBUG("dmcontrol = 0x%"PRIx64"\n", dmcontrol);
+	if (!dtm->halt_requested && (dmcontrol & RISCV_DMCONTROL_HALTNOT) == 0)
+		return TARGET_HALT_RUNNING;
+
+	uint32_t dcsr = riscv_csreg_read(dtm, RISCV_DCSR);
+	DEBUG_WARN("cause = %d\n", (dcsr >> 6) & 7);
+	switch ((dcsr >> 6) & 7) {
+	case 0: return TARGET_HALT_RUNNING;
+	case 1: /* Software breakpoint */
+	case 2: /* Hardware trigger breakpoint */
+		return TARGET_HALT_BREAKPOINT;
+	case 3: return TARGET_HALT_REQUEST;
+	case 4: return TARGET_HALT_STEPPING;
+	case 5: return TARGET_HALT_REQUEST;
+	default:
+		return TARGET_HALT_ERROR;
+	}
 }
 
 void riscv_jtag_handler(jtag_dev_t *jd)
