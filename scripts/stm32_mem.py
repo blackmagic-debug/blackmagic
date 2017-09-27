@@ -2,6 +2,7 @@
 #
 # stm32_mem.py: STM32 memory access using USB DFU class
 # Copyright (C) 2011  Black Sphere Technologies 
+# Copyright (C) 2017  Uwe Bonnes (bon@elektron.ikp.physik.tu-darmstadt.de)
 # Written by Gareth McMullin <gareth@blacksphere.co.nz>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -90,7 +91,6 @@ if __name__ == "__main__":
 		dfudev = dfu.dfu_device(*dev)
 		man = dfudev.handle.getString(dfudev.dev.iManufacturer, 30)
 		if man == "Black Sphere Technologies": bmp = bmp + 1
-		if man == "STMicroelectronics": bmp = bmp + 1
 	if bmp == 0 :
 		print "No compatible device found\n"
 		exit(-1)
@@ -115,11 +115,8 @@ if __name__ == "__main__":
 		serial_no = dfudev.handle.getString(dfudev.dev.iSerialNumber, 30)
 		if args.serial_target:
 			if man == "Black Sphere Technologies" and serial_no ==	args.serial_target: break
-			if man == "STMicroelectronics" and serial_no == args.serial_target: break
 		else:
 			if man == "Black Sphere Technologies": break
-			if man == "STMicroelectronics": break
-
 	print "Device ID:\t %04x:%04x" % (dfudev.dev.idVendor, dfudev.dev.idProduct)
 	print "Manufacturer:\t %s" % man
 	print "Product:\t %s" % product
@@ -141,7 +138,7 @@ if __name__ == "__main__":
 
 	bin = open(args.progfile, "rb").read()
 
-        product = dfudev.handle.getString(dfudev.dev.iProduct, 64)
+	product = dfudev.handle.getString(dfudev.dev.iProduct, 64)
 	if "F4" in product:
 		addr = 0x8004000
 	else:
@@ -150,6 +147,10 @@ if __name__ == "__main__":
 		print ("Programming memory at 0x%08X\r" % addr),
 		stdout.flush()
 		try:
+# STM DFU bootloader erases always.
+# BPM Bootloader only erases once per sector
+# To support the STM DFU bootloader, the interface descriptor must
+# get evaluated and erase called only once per sector!
 			stm32_erase(dfudev, addr)
                 except:
 			print "\nErase Timed out\n"
@@ -160,7 +161,6 @@ if __name__ == "__main__":
 			print "\nSet Address Timed out\n"
 			break
 		stm32_write(dfudev, bin[:1024])
-
 		bin = bin[1024:]
 		addr += 1024
 
