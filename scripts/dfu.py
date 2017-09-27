@@ -84,6 +84,8 @@ class dfu_device(object):
 			self.index = self.iface.interfaceNumber
 		else:	self.index = self.iface
 
+	def release(self):
+		self.handle.releaseInterface()
 	def detach(self, wTimeout=255):
 		self.handle.controlMsg(usb.ENDPOINT_OUT | usb.TYPE_CLASS | 
 			usb.RECIP_INTERFACE, DFU_DETACH, 

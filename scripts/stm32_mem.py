@@ -69,18 +69,7 @@ def stm32_manifest(dev):
 		sleep(status.bwPollTimeout / 1000.0)
 		if status.bState == dfu.STATE_DFU_MANIFEST:
 			break
-
-if __name__ == "__main__":
-	print
-	print "USB Device Firmware Upgrade - Host Utility -- version 1.2"
-	print "Copyright (C) 2011  Black Sphere Technologies"
-	print "License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>"
-	print
-
-	parser = argparse.ArgumentParser()
-	parser.add_argument("progfile", help="Binary file to program")
-	parser.add_argument("-s", "--serial_target", help="Match Serial Number")
-	args = parser.parse_args()
+def stm32_scan(args):
 	devs = dfu.finddevs()
 	bmp = 0
 	if not devs:
@@ -120,10 +109,24 @@ if __name__ == "__main__":
 	print "Device ID:\t %04x:%04x" % (dfudev.dev.idVendor, dfudev.dev.idProduct)
 	print "Manufacturer:\t %s" % man
 	print "Product:\t %s" % product
-	print "Serial:\t\t %s\n" % serial_no
+	print "Serial:\t\t %s" % serial_no
 	if args.serial_target and serial_no !=	args.serial_target:
 		print "Serial number doesn't match!\n"
 		exit(-2)
+	return dfudev
+
+if __name__ == "__main__":
+	print
+	print "USB Device Firmware Upgrade - Host Utility -- version 1.2"
+	print "Copyright (C) 2011  Black Sphere Technologies"
+	print "License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>"
+	print
+
+	parser = argparse.ArgumentParser()
+	parser.add_argument("progfile", help="Binary file to program")
+	parser.add_argument("-s", "--serial_target", help="Match Serial Number")
+	args = parser.parse_args()
+	dfudev = stm32_scan(args)
 	try:
 		state = dfudev.get_state()
 	except:
@@ -131,11 +134,18 @@ if __name__ == "__main__":
 		state = dfu.STATE_APP_IDLE
 	if state == dfu.STATE_APP_IDLE:
 		dfudev.detach()
-		print "Run again to upgrade firmware."
-		exit(0)
-	
+		dfudev.release()
+		print "Invoking DFU Device"
+		timeout = 0
+		while True :
+			sleep(0.5)
+			timeout = timeout + 0.5
+			dfudev = stm32_scan(args)
+			if dfudev: break
+			if timeout > 5 :
+				print "Error: DFU device did not appear"
+				exit(-1)
 	dfudev.make_idle()
-
 	bin = open(args.progfile, "rb").read()
 
 	product = dfudev.handle.getString(dfudev.dev.iProduct, 64)
@@ -152,7 +162,7 @@ if __name__ == "__main__":
 # To support the STM DFU bootloader, the interface descriptor must
 # get evaluated and erase called only once per sector!
 			stm32_erase(dfudev, addr)
-                except:
+		except:
 			print "\nErase Timed out\n"
 			break
 		try:
