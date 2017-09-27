@@ -595,8 +595,9 @@ static bool stm32f4_cmd_option(target *t, int argc, char *argv[])
 	val[0] |= (target_mem_read32(t, start    ) & 0xffff);
 	if (readcount > 1) {
 		if (start == 0x1FFFC000) /* F4 */ {
-			val[1] = target_mem_read32(t, start +  8 - 0x10000);
+			val[1] = target_mem_read32(t, 0x1ffec008);
 			val[1] &= 0xffff;
+			val[1] <<= 16;
 		} else {
 			val[1] =  (target_mem_read32(t, start + 0x18) & 0xffff) << 16;
 			val[1] |= (target_mem_read32(t, start + 0x10) & 0xffff);
@@ -609,9 +610,9 @@ static bool stm32f4_cmd_option(target *t, int argc, char *argv[])
 	optcr_mask(t, val);
 	tc_printf(t, "OPTCR: 0x%08X ", val[0]);
 	if (readcount > 1)
-		tc_printf(t, "OPTCR1: 0x%08X ", val[1]);
+		tc_printf(t, "OPTCR1: 0x%08lx ", val[1]);
 	if (readcount > 2)
-		tc_printf(t, "OPTCR2: 0x%08X" , val[2]);
+		tc_printf(t, "OPTCR2: 0x%08lx" , val[2]);
 	tc_printf(t, "\n");
 	return true;
 }
