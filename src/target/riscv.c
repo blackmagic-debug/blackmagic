@@ -52,6 +52,13 @@
 #define RISCV_DPC      0x7b1
 #define RISCV_DSCRATCH 0x7b2
 
+/* GDB register map / target description */
+static const char tdesc_rv32[] =
+"<?xml version=\"1.0\"?>"
+"<target>"
+"  <architecture>riscv:rv32</architecture>"
+"</target>";
+
 struct riscv_dtm {
 	uint8_t dtm_index;
 	uint8_t version; /* As read from dmtcontrol */
@@ -456,4 +463,5 @@ void riscv_jtag_handler(jtag_dev_t *jd)
 	t->halt_poll = riscv_halt_poll;
 	t->halt_resume = riscv_halt_resume;
 	t->regs_size = 33 * 4;
+	t->tdesc = tdesc_rv32;
 }
