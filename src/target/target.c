@@ -312,6 +312,16 @@ int target_mem_write(target *t, target_addr dest, const void *src, size_t len)
 }
 
 /* Register access functions */
+ssize_t target_reg_read(target *t, int reg, void *data, size_t max)
+{
+	return t->reg_read(t, reg, data, max);
+}
+
+ssize_t target_reg_write(target *t, int reg, const void *data, size_t size)
+{
+	return t->reg_write(t, reg, data, size);
+}
+
 void target_regs_read(target *t, void *data) { t->regs_read(t, data); }
 void target_regs_write(target *t, const void *data) { t->regs_write(t, data); }
 
