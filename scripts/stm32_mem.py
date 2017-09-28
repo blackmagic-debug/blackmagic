@@ -125,11 +125,13 @@ if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
 	parser.add_argument("progfile", help="Binary file to program")
 	parser.add_argument("-s", "--serial_target", help="Match Serial Number")
+	parser.add_argument("-m", "--manifest", help="Start application, if in DFU mode", action='store_true')
 	args = parser.parse_args()
 	dfudev = stm32_scan(args)
 	try:
 		state = dfudev.get_state()
 	except:
+		if args.manifest : exit(0)
 		print "Failed to read device state! Assuming APP_IDLE"
 		state = dfu.STATE_APP_IDLE
 	if state == dfu.STATE_APP_IDLE:
@@ -145,6 +147,10 @@ if __name__ == "__main__":
 			if timeout > 5 :
 				print "Error: DFU device did not appear"
 				exit(-1)
+	if args.manifest :
+		stm32_manifest(dfudev)
+		print "Invoking Application Device"
+		exit(0)
 	dfudev.make_idle()
 	bin = open(args.progfile, "rb").read()
 
