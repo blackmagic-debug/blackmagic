@@ -92,6 +92,8 @@ struct target_s {
 	const char *tdesc;
 	void (*regs_read)(target *t, void *data);
 	void (*regs_write)(target *t, const void *data);
+	ssize_t (*reg_read)(target *t, int reg, void *data, size_t max);
+	ssize_t (*reg_write)(target *t, int reg, const void *data, size_t size);
 
 	/* Halt/resume functions */
 	void (*reset)(target *t);
