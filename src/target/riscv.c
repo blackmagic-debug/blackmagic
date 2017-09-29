@@ -31,37 +31,37 @@
 
 #include <assert.h>
 
-#define RISCV_IR_IDCODE     0x01
-#define RISCV_IR_DTMCONTROL 0x10
-#define RISCV_IR_DBUS       0x11
-#define RISCV_IR_BYPASS     0x1f
+#define IR_IDCODE     0x01
+#define IR_DTMCONTROL 0x10
+#define IR_DBUS       0x11
+#define IR_BYPASS     0x1f
 
-#define RISCV_DTMCONTROL_DBUSRESET (1 << 16)
+#define DTMCONTROL_DBUSRESET (1 << 16)
 
-#define RISCV_DBUS_NOP   0
-#define RISCV_DBUS_READ  1
-#define RISCV_DBUS_WRITE 2
+#define DBUS_NOP   0
+#define DBUS_READ  1
+#define DBUS_WRITE 2
 
-#define RISCV_DMCONTROL 0x10
-#define RISCV_DMINFO    0x11
+#define DBUS_DMCONTROL 0x10
+#define DBUS_DMINFO    0x11
 
-#define RISCV_DMCONTROL_INTERRUPT (1ull << 33)
-#define RISCV_DMCONTROL_HALTNOT (1ull << 32)
+#define DMCONTROL_INTERRUPT (1ull << 33)
+#define DMCONTROL_HALTNOT (1ull << 32)
 
-#define RISCV_TSELECT  0x7a0
-#define RISCV_MCONTROL 0x7a1
-#define RISCV_TDATA2    0x7a2
+#define CSR_TSELECT  0x7a0
+#define CSR_MCONTROL 0x7a1
+#define CSR_TDATA2   0x7a2
 
-#define RISCV_DCSR     0x7b0
-#define RISCV_DPC      0x7b1
-#define RISCV_DSCRATCH 0x7b2
+#define CSR_DCSR     0x7b0
+#define CSR_DPC      0x7b1
+#define CSR_DSCRATCH 0x7b2
 
-#define RISCV_MCONTROL_DMODE        (1<<(32-5))
-#define RISCV_MCONTROL_ENABLE_MASK  (0xf << 3)
-#define RISCV_MCONTROL_LOAD         (1 << 0)
-#define RISCV_MCONTROL_STORE        (1 << 1)
-#define RISCV_MCONTROL_EXECUTE      (1 << 2)
-#define RISCV_MCONTROL_ACTION_DEBUG (1 << 12)
+#define CSR_MCONTROL_DMODE        (1<<(32-5))
+#define CSR_MCONTROL_ENABLE_MASK  (0xf << 3)
+#define CSR_MCONTROL_LOAD         (1 << 0)
+#define CSR_MCONTROL_STORE        (1 << 1)
+#define CSR_MCONTROL_EXECUTE      (1 << 2)
+#define CSR_MCONTROL_ACTION_DEBUG (1 << 12)
 
 /* GDB register map / target description */
 static const char tdesc_rv32[] =
@@ -86,8 +86,8 @@ static int riscv_breakwatch_clear(target *t, struct breakwatch *);
 
 static void riscv_dtm_reset(struct riscv_dtm *dtm)
 {
-	jtag_dev_write_ir(&jtag_proc, dtm->dtm_index, RISCV_IR_DTMCONTROL);
-	uint32_t dtmcontrol = RISCV_DTMCONTROL_DBUSRESET;
+	jtag_dev_write_ir(&jtag_proc, dtm->dtm_index, IR_DTMCONTROL);
+	uint32_t dtmcontrol = DTMCONTROL_DBUSRESET;
 	jtag_dev_shift_dr(&jtag_proc, dtm->dtm_index, (void*)&dtmcontrol, (void*)&dtmcontrol, 32);
 	DEBUG("after dbusreset: dtmcontrol = 0x%08x\n", dtmcontrol);
 }
@@ -110,7 +110,7 @@ retry:
 	switch (ret & 3) {
 	case 3:
 		riscv_dtm_reset(dtm);
-		jtag_dev_write_ir(&jtag_proc, dtm->dtm_index, RISCV_IR_DBUS);
+		jtag_dev_write_ir(&jtag_proc, dtm->dtm_index, IR_DBUS);
 		DEBUG("retry out %"PRIx64"\n", dbus);
 		jtag_dev_shift_dr(&jtag_proc, dtm->dtm_index,
 		                  (void*)&ret, (const void*)&dtm->lastdbus,
@@ -134,15 +134,16 @@ retry:
 static void riscv_dtm_write(struct riscv_dtm *dtm, uint32_t addr, uint64_t data)
 {
 	uint64_t dbus = ((uint64_t)addr << 36) |
-	                ((data & 0x3ffffffffull) << 2) | RISCV_DBUS_WRITE;
+	                ((data & 0x3ffffffffull) << 2) | DBUS_WRITE;
 	riscv_dtm_low_access(dtm, dbus);
 }
 
 static uint64_t riscv_dtm_read(struct riscv_dtm *dtm, uint32_t addr)
 {
-	riscv_dtm_low_access(dtm, ((uint64_t)addr << 36) | RISCV_DBUS_READ);
-	return riscv_dtm_low_access(dtm, RISCV_DBUS_NOP);
+	riscv_dtm_low_access(dtm, ((uint64_t)addr << 36) | DBUS_READ);
+	return riscv_dtm_low_access(dtm, DBUS_NOP);
 }
+
 static uint32_t riscv_debug_ram_exec(struct riscv_dtm *dtm,
                                      const uint32_t code[], int count)
 {
@@ -150,11 +151,11 @@ static uint32_t riscv_debug_ram_exec(struct riscv_dtm *dtm,
 	for (i = 0; i < count - 1; i++) {
 		riscv_dtm_write(dtm, i, code[i]);
 	}
-	riscv_dtm_write(dtm, i, code[i] | RISCV_DMCONTROL_INTERRUPT);
+	riscv_dtm_write(dtm, i, code[i] | DMCONTROL_INTERRUPT);
 	uint64_t ret;
 	do {
 		ret = riscv_dtm_read(dtm, count);
-	} while (ret & RISCV_DMCONTROL_INTERRUPT);
+	} while (ret & DMCONTROL_INTERRUPT);
 	return ret;
 }
 
@@ -297,7 +298,7 @@ static void riscv_mem_write(target *t, target_addr dest, const void *src, size_t
 static void riscv_reset(target *t)
 {
 	DEBUG("Resetting!\n");
-	riscv_csreg_write(t->priv, RISCV_DCSR, 1 << 29);
+	riscv_csreg_write(t->priv, CSR_DCSR, 1 << 29);
 }
 
 bool riscv_check_error(target *t)
@@ -332,13 +333,13 @@ static ssize_t riscv_reg_read(target *t, int reg, void *data, size_t s)
 		*val = 0;
 		break;
 	case 8:
-		*val = riscv_csreg_read(dtm, RISCV_DSCRATCH);
+		*val = riscv_csreg_read(dtm, CSR_DSCRATCH);
 		break;
 	case 9:
 		*val = riscv_dtm_read(dtm, dtm->dramsize);
 		break;
 	case 32:
-		*val = riscv_csreg_read(dtm, RISCV_DPC);
+		*val = riscv_csreg_read(dtm, CSR_DPC);
 		break;
 	case 65 ... 65 + 4095:
 		*val = riscv_csreg_read(dtm, reg - 65);
@@ -360,13 +361,13 @@ static void riscv_regs_write(target *t, const void *data)
 		case 0:
 			break;
 		case 8:
-			riscv_csreg_write(dtm, RISCV_DSCRATCH, reg[i]);
+			riscv_csreg_write(dtm, CSR_DSCRATCH, reg[i]);
 			break;
 		case 9:
 			riscv_dtm_write(dtm, dtm->dramsize, reg[i]);
 			break;
 		case 32:
-			riscv_csreg_write(dtm, RISCV_DPC, reg[i]);
+			riscv_csreg_write(dtm, CSR_DPC, reg[i]);
 			break;
 		default:
 			riscv_gpreg_write(dtm, i, reg[i]);
@@ -378,12 +379,12 @@ static enum target_halt_reason riscv_halt_poll(target *t, target_addr *watch)
 {
 	(void)watch;
 	struct riscv_dtm *dtm = t->priv;
-	uint64_t dmcontrol = riscv_dtm_read(dtm, RISCV_DMCONTROL);
+	uint64_t dmcontrol = riscv_dtm_read(dtm, DBUS_DMCONTROL);
 	DEBUG("dmcontrol = 0x%"PRIx64"\n", dmcontrol);
-	if (!dtm->halt_requested && (dmcontrol & RISCV_DMCONTROL_HALTNOT) == 0)
+	if (!dtm->halt_requested && (dmcontrol & DMCONTROL_HALTNOT) == 0)
 		return TARGET_HALT_RUNNING;
 
-	uint32_t dcsr = riscv_csreg_read(dtm, RISCV_DCSR);
+	uint32_t dcsr = riscv_csreg_read(dtm, CSR_DCSR);
 	uint8_t cause = (dcsr >> 6) & 7;
 	DEBUG_WARN("cause = %d\n", cause);
 	switch (cause) {
@@ -404,7 +405,7 @@ void riscv_jtag_handler(jtag_dev_t *jd)
 	uint32_t dtmcontrol = 0;
 	DEBUG("Scanning RISC-V jtag dev at pos %d, idcode %08" PRIx32 "\n",
 		  jd->jd_dev, jd->jd_idcode);
-	jtag_dev_write_ir(&jtag_proc, jd->jd_dev, RISCV_IR_DTMCONTROL);
+	jtag_dev_write_ir(&jtag_proc, jd->jd_dev, IR_DTMCONTROL);
 	jtag_dev_shift_dr(&jtag_proc, jd->jd_dev, (void*)&dtmcontrol, (void*)&dtmcontrol, 32);
 	DEBUG("dtmcontrol = 0x%08x\n", dtmcontrol);
 	uint8_t version = dtmcontrol & 0xf;
@@ -425,9 +426,10 @@ void riscv_jtag_handler(jtag_dev_t *jd)
 	DEBUG("dbusstat = %d\n", (dtmcontrol >> 8) & 3);
 	riscv_dtm_reset(dtm);
 
-	jtag_dev_write_ir(&jtag_proc, jd->jd_dev, RISCV_IR_DBUS);
+	jtag_dev_write_ir(&jtag_proc, jd->jd_dev, IR_DBUS);
 
-	uint32_t dminfo = riscv_dtm_read(dtm, RISCV_DMINFO);
+	uint32_t dminfo = riscv_dtm_read(dtm, DBUS_DMINFO);
+	DEBUG("dminfo = %"PRIx32"\n", dminfo);
 	uint8_t dmversion = ((dminfo >> 4) & 0xc) | (dminfo & 3);
 	DEBUG("dminfo = %"PRIx32"\n", dminfo);
 	DEBUG("\tloversion = %d\n", dmversion);
@@ -484,48 +486,48 @@ static int riscv_breakwatch_set(target *t, struct breakwatch *bw)
 {
 	struct riscv_dtm *dtm = t->priv;
 	unsigned i;
-	uint32_t mcontrol = RISCV_MCONTROL_DMODE | RISCV_MCONTROL_ACTION_DEBUG |
-	                    RISCV_MCONTROL_ENABLE_MASK;
+	uint32_t mcontrol = CSR_MCONTROL_DMODE | CSR_MCONTROL_ACTION_DEBUG |
+	                    CSR_MCONTROL_ENABLE_MASK;
 
 	switch (bw->type) {
 	case TARGET_BREAK_HARD:
-		mcontrol |= RISCV_MCONTROL_EXECUTE;
+		mcontrol |= CSR_MCONTROL_EXECUTE;
 		break;
 	case TARGET_WATCH_WRITE:
-		mcontrol |= RISCV_MCONTROL_STORE;
+		mcontrol |= CSR_MCONTROL_STORE;
 		break;
 	case TARGET_WATCH_READ:
-		mcontrol |= RISCV_MCONTROL_LOAD;
+		mcontrol |= CSR_MCONTROL_LOAD;
 		break;
 	case TARGET_WATCH_ACCESS:
-		mcontrol |= RISCV_MCONTROL_LOAD | RISCV_MCONTROL_STORE;
+		mcontrol |= CSR_MCONTROL_LOAD | CSR_MCONTROL_STORE;
 		break;
 	default:
 		return 1;
 	}
 
-	uint32_t tselect_saved = riscv_csreg_read(dtm, RISCV_TSELECT);
+	uint32_t tselect_saved = riscv_csreg_read(dtm, CSR_TSELECT);
 
 	for (i = 0; ; i++) {
-		riscv_csreg_write(dtm, RISCV_TSELECT, i);
-		if (riscv_csreg_read(dtm, RISCV_TSELECT) != i)
+		riscv_csreg_write(dtm, CSR_TSELECT, i);
+		if (riscv_csreg_read(dtm, CSR_TSELECT) != i)
 			return -1;
-		uint32_t tdata1 = riscv_csreg_read(dtm, RISCV_MCONTROL);
+		uint32_t tdata1 = riscv_csreg_read(dtm, CSR_MCONTROL);
 		uint8_t type = (tdata1 >> (32-4)) & 0xf;
 		if ((type == 0))
 			return -1;
 		if ((type == 2)  &&
-		    ((tdata1 & RISCV_MCONTROL_ENABLE_MASK) == 0))
+		    ((tdata1 & CSR_MCONTROL_ENABLE_MASK) == 0))
 			break;
 	}
 	/* if we get here tselect = i is the index of our trigger */
 	bw->reserved[0] = i;
 
-	riscv_csreg_write(dtm, RISCV_MCONTROL, mcontrol);
-	riscv_csreg_write(dtm, RISCV_TDATA2, bw->addr);
+	riscv_csreg_write(dtm, CSR_MCONTROL, mcontrol);
+	riscv_csreg_write(dtm, CSR_TDATA2, bw->addr);
 
 	/* Restore saved tselect */
-	riscv_csreg_write(dtm, RISCV_TSELECT, tselect_saved);
+	riscv_csreg_write(dtm, CSR_TSELECT, tselect_saved);
 	return 0;
 }
 
@@ -533,12 +535,12 @@ static int riscv_breakwatch_clear(target *t, struct breakwatch *bw)
 {
 	struct riscv_dtm *dtm = t->priv;
 	unsigned i = bw->reserved[0];
-	uint32_t tselect_saved = riscv_csreg_read(dtm, RISCV_TSELECT);
+	uint32_t tselect_saved = riscv_csreg_read(dtm, CSR_TSELECT);
 
-	riscv_csreg_write(dtm, RISCV_TSELECT, i);
-	riscv_csreg_write(dtm, RISCV_MCONTROL, 0);
+	riscv_csreg_write(dtm, CSR_TSELECT, i);
+	riscv_csreg_write(dtm, CSR_MCONTROL, 0);
 
 	/* Restore saved tselect */
-	riscv_csreg_write(dtm, RISCV_TSELECT, tselect_saved);
+	riscv_csreg_write(dtm, CSR_TSELECT, tselect_saved);
 	return 0;
 }
