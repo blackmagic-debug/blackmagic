@@ -77,6 +77,7 @@ struct riscv_dtm {
 	uint8_t idle; /* Number of cycles required in run-test/idle */
 	uint8_t dramsize; /* Size of debug ram in words - 1 */
 	bool error;
+	bool exception;
 	uint64_t lastdbus;
 	bool halt_requested;
 };
@@ -152,11 +153,16 @@ static uint32_t riscv_debug_ram_exec(struct riscv_dtm *dtm,
 		riscv_dtm_write(dtm, i, code[i]);
 	}
 	riscv_dtm_write(dtm, i, code[i] | DMCONTROL_INTERRUPT);
-	uint64_t ret;
+	uint64_t ex;
 	do {
-		ret = riscv_dtm_read(dtm, count);
-	} while (ret & DMCONTROL_INTERRUPT);
-	return ret;
+		ex = riscv_dtm_read(dtm, dtm->dramsize);
+	} while (ex & DMCONTROL_INTERRUPT);
+	if ((uint32_t)ex != 0) {
+		DEBUG("%s exception 0x%"PRIx32"\n", __func__, (uint32_t)ex);
+		dtm->exception = true;
+		return 0;
+	}
+	return riscv_dtm_read(dtm, count);
 }
 
 static uint32_t riscv_mem_read32(struct riscv_dtm *dtm, uint32_t addr)
@@ -307,6 +313,11 @@ bool riscv_check_error(target *t)
 	if (dtm->error) {
 		riscv_dtm_reset(dtm);
 		dtm->error = false;
+		dtm->exception = false;
+		return true;
+	}
+	if (dtm->exception) {
+		dtm->exception = false;
 		return true;
 	}
 	return false;
