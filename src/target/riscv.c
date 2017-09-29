@@ -322,28 +322,33 @@ static void riscv_detach(target *t)
 	target_halt_resume(t, false);
 }
 
-static void riscv_regs_read(target *t, void *data)
+static ssize_t riscv_reg_read(target *t, int reg, void *data, size_t s)
 {
+	(void)s;
 	struct riscv_dtm *dtm = t->priv;
-	uint32_t *reg = data;
-	for (int i = 0; i < 33; i++) {
-		switch (i) {
-		case 0:
-			reg[i] = 0;
-			break;
-		case 8:
-			reg[i] = riscv_csreg_read(dtm, RISCV_DSCRATCH);
-			break;
-		case 9:
-			reg[i] = riscv_dtm_read(dtm, dtm->dramsize);
-			break;
-		case 32:
-			reg[i] = riscv_csreg_read(dtm, RISCV_DPC);
-			break;
-		default:
-			reg[i] = riscv_gpreg_read(dtm, i);
-		}
+	uint32_t *val = data;
+	switch (reg) {
+	case 0:
+		*val = 0;
+		break;
+	case 8:
+		*val = riscv_csreg_read(dtm, RISCV_DSCRATCH);
+		break;
+	case 9:
+		*val = riscv_dtm_read(dtm, dtm->dramsize);
+		break;
+	case 32:
+		*val = riscv_csreg_read(dtm, RISCV_DPC);
+		break;
+	case 65 ... 65 + 4095:
+		*val = riscv_csreg_read(dtm, reg - 65);
+		break;
+	case 1 ... 7:
+	case 10 ... 31:
+		*val = riscv_gpreg_read(dtm, reg);
+		break;
 	}
+	return sizeof(*val);
 }
 
 static void riscv_regs_write(target *t, const void *data)
@@ -462,7 +467,7 @@ void riscv_jtag_handler(jtag_dev_t *jd)
 	t->attach = riscv_attach;
 	t->detach = riscv_detach;
 	t->check_error = riscv_check_error;
-	t->regs_read = riscv_regs_read;
+	t->reg_read = riscv_reg_read;
 	t->regs_write = riscv_regs_write;
 	t->reset = riscv_reset;
 	t->halt_request = riscv_halt_request;
