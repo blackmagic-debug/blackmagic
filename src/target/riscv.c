@@ -315,8 +315,7 @@ static void riscv_mem_read(target *t, void *dest, target_addr src, size_t len)
 		load = LH(S1, 0, T0);
 		size = 2;
 		break;
-	case 1:
-	case 3:
+	default:
 		load = LB(S1, 0, T0);
 		size = 1;
 		break;
