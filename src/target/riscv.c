@@ -81,9 +81,11 @@
 
 #define CSR_MCONTROL_DMODE        (1<<(32-5))
 #define CSR_MCONTROL_ENABLE_MASK  (0xf << 3)
-#define CSR_MCONTROL_LOAD         (1 << 0)
-#define CSR_MCONTROL_STORE        (1 << 1)
-#define CSR_MCONTROL_EXECUTE      (1 << 2)
+#define CSR_MCONTROL_R            (1 << 0)
+#define CSR_MCONTROL_W            (1 << 1)
+#define CSR_MCONTROL_X            (1 << 2)
+#define CSR_MCONTROL_RW           (CSR_MCONTROL_R | CSR_MCONTROL_W)
+#define CSR_MCONTROL_RWX          (CSR_MCONTROL_RW | CSR_MCONTROL_X)
 #define CSR_MCONTROL_ACTION_DEBUG (1 << 12)
 
 /* GDB register map / target description */
@@ -552,16 +554,16 @@ static int riscv_breakwatch_set(target *t, struct breakwatch *bw)
 
 	switch (bw->type) {
 	case TARGET_BREAK_HARD:
-		mcontrol |= CSR_MCONTROL_EXECUTE;
+		mcontrol |= CSR_MCONTROL_X;
 		break;
 	case TARGET_WATCH_WRITE:
-		mcontrol |= CSR_MCONTROL_STORE;
+		mcontrol |= CSR_MCONTROL_W;
 		break;
 	case TARGET_WATCH_READ:
-		mcontrol |= CSR_MCONTROL_LOAD;
+		mcontrol |= CSR_MCONTROL_R;
 		break;
 	case TARGET_WATCH_ACCESS:
-		mcontrol |= CSR_MCONTROL_LOAD | CSR_MCONTROL_STORE;
+		mcontrol |= CSR_MCONTROL_RW;
 		break;
 	default:
 		return 1;
@@ -578,7 +580,8 @@ static int riscv_breakwatch_set(target *t, struct breakwatch *bw)
 		if ((type == 0))
 			return -1;
 		if ((type == 2)  &&
-		    ((tdata1 & CSR_MCONTROL_ENABLE_MASK) == 0))
+		    (((tdata1 & CSR_MCONTROL_RWX) == 0) ||
+		     ((tdata1 & CSR_MCONTROL_ENABLE_MASK) == 0)))
 			break;
 	}
 	/* if we get here tselect = i is the index of our trigger */
