@@ -48,6 +48,29 @@
 #define DMCONTROL_INTERRUPT (1ull << 33)
 #define DMCONTROL_HALTNOT (1ull << 32)
 
+#define OP_ITYPE(opcode, funct, rd, imm, rs1) \
+                 ((opcode) | ((funct) << 12) | ((rd) << 7) | ((rs1) << 15) | ((imm) << 20))
+#define OP_STYPE(opcode, funct, rs1, imm, rs2) \
+                 ((opcode) | ((funct) << 12) | ((rs1) << 15) | ((rs2) << 20) | \
+		  (((imm) & 0x1f) << 7) | (((imm) & 0xfe0) << 20))
+#define OPCODE_LOAD   0x03
+#define OPCODE_STORE  0x23
+#define OPCODE_OP_IMM 0x13
+#define OPCODE_JUMP   0x6f
+#define OP_ADDI       0
+#define LB(rd, imm, base) OP_ITYPE(OPCODE_LOAD, 0, rd, imm, base)
+#define LH(rd, imm, base) OP_ITYPE(OPCODE_LOAD, 1, rd, imm, base)
+#define LW(rd, imm, base) OP_ITYPE(OPCODE_LOAD, 2, rd, imm, base)
+#define SB(rs, imm, base) OP_STYPE(OPCODE_STORE, 0, base, imm, rs)
+#define SH(rs, imm, base) OP_STYPE(OPCODE_STORE, 1, base, imm, rs)
+#define SW(rs, imm, base) OP_STYPE(OPCODE_STORE, 2, base, imm, rs)
+#define J(imm)            (OPCODE_JUMP | ((imm) << 20))
+#define ADDI(rd, rs, imm) OP_ITYPE(OPCODE_OP_IMM, OP_ADDI, rd, imm, rs)
+#define S0 8
+#define S1 9
+#define T0 5
+#define JRESUME(n)        (J(0x804 - (0x400 + ((n) * 4))))
+
 #define CSR_TSELECT  0x7a0
 #define CSR_MCONTROL 0x7a1
 #define CSR_TDATA2   0x7a2
@@ -145,14 +168,13 @@ static uint64_t riscv_dtm_read(struct riscv_dtm *dtm, uint32_t addr)
 	return riscv_dtm_low_access(dtm, DBUS_NOP);
 }
 
-static uint32_t riscv_debug_ram_exec(struct riscv_dtm *dtm,
-                                     const uint32_t code[], int count)
+static void ram_stub_write(struct riscv_dtm *dtm, int i, uint32_t inst, bool run)
 {
-	int i;
-	for (i = 0; i < count - 1; i++) {
-		riscv_dtm_write(dtm, i, code[i]);
-	}
-	riscv_dtm_write(dtm, i, code[i] | DMCONTROL_INTERRUPT);
+	riscv_dtm_write(dtm, i, run ? DMCONTROL_INTERRUPT | inst : inst);
+}
+
+static uint32_t ram_stub_result(struct riscv_dtm *dtm, int i)
+{
 	uint64_t ex;
 	do {
 		ex = riscv_dtm_read(dtm, dtm->dramsize);
@@ -162,21 +184,18 @@ static uint32_t riscv_debug_ram_exec(struct riscv_dtm *dtm,
 		dtm->exception = true;
 		return 0;
 	}
-	return riscv_dtm_read(dtm, count);
+	return riscv_dtm_read(dtm, i);
 }
 
-static uint32_t riscv_mem_read32(struct riscv_dtm *dtm, uint32_t addr)
+static uint32_t riscv_debug_ram_exec(struct riscv_dtm *dtm,
+                                     const uint32_t code[], int count)
 {
-	/* Debug RAM stub
-	 * 400:   41002403   lw   s0, 0x410(zero)
-	 * 404:   00042483   lw   s1, 0(s0)
-	 * 408:   40902a23   sw   s1, 0x414(zero)
-	 * 40c:   3f80006f   j    0 <resume>
-	 * 410:              dw   addr
-	 * 414:              dw   data
-	 */
-	uint32_t ram[] = {0x41002403, 0x42483, 0x40902a23, 0x3f80006f, addr};
-	return riscv_debug_ram_exec(dtm, ram, 5);
+	int i;
+	for (i = 0; i < count - 1; i++) {
+		ram_stub_write(dtm, i, code[i], false);
+	}
+	ram_stub_write(dtm, i, code[i], true);
+	return ram_stub_result(dtm, count);
 }
 
 static void riscv_mem_write32(struct riscv_dtm *dtm,
@@ -241,8 +260,11 @@ static void riscv_gpreg_write(struct riscv_dtm *dtm, uint8_t reg, uint32_t val)
 	 * 400:   40802403   lw    <rx>, 0x408(zero)
 	 * 40c:   4000006f   j     0 <resume>
 	 */
-	uint32_t ram[] = {0x40002423, 0x4000006f, val};
-	ram[0] |= reg << 7;
+	uint32_t ram[] = {
+		LW(reg, 0x408, 0),
+		JRESUME(1),
+		val
+	};
 	riscv_debug_ram_exec(dtm, ram, 3);
 }
 
@@ -279,14 +301,43 @@ static void riscv_halt_resume(target *t, bool step)
 
 static void riscv_mem_read(target *t, void *dest, target_addr src, size_t len)
 {
-	uint32_t *d = dest;
-	assert((src & 3) == 0);
-	assert((len & 3) == 0);
-	while (len) {
-		*d++ = riscv_mem_read32(t->priv, src);
-		src += 4;
-		len -= 4;
+	struct riscv_dtm *dtm = t->priv;
+	int size = 0;
+	uint32_t load = 0;
+	switch ((src | len) & 3) {
+	case 0:
+		load = LW(S1, 0, T0);
+		size = 4;
+		break;
+	case 2:
+		load = LH(S1, 0, T0);
+		size = 2;
+		break;
+	case 1:
+	case 3:
+		load = LB(S1, 0, T0);
+		size = 1;
+		break;
 	}
+	uint32_t t0 = riscv_gpreg_read(dtm, T0);
+	ram_stub_write(dtm, 0, LW(T0, 0x410, 0), false);
+	ram_stub_write(dtm, 1, load, false);
+	ram_stub_write(dtm, 2, SW(S1, 0x410, 0), false);
+	ram_stub_write(dtm, 3, JRESUME(3), false);
+	ram_stub_write(dtm, 4, src, true);
+	while (len) {
+		uint32_t r = ram_stub_result(dtm, 4);
+		switch (size) {
+		case 1: *(uint8_t*)dest = r;  break;
+		case 2: *(uint16_t*)dest = r; break;
+		case 4: *(uint32_t*)dest = r; break;
+		}
+		len -= size;
+		dest += size;
+		if (len)
+			ram_stub_write(dtm, 0, ADDI(T0, T0, size), true);
+	}
+	riscv_gpreg_write(dtm, T0, t0);
 }
 
 static void riscv_mem_write(target *t, target_addr dest, const void *src, size_t len)
@@ -461,12 +512,11 @@ void riscv_jtag_handler(jtag_dev_t *jd)
 	DEBUG("%"PRIx32"\n", (uint32_t)riscv_dtm_read(dtm, 0));
 	DEBUG("%"PRIx32"\n", (uint32_t)riscv_dtm_read(dtm, 1));
 	for (int i = 0; i < 	dtm->dramsize + 1; i++) {
-		DEBUG("DebugRAM[%d] = %08"PRIx32"\n", i,
-			  riscv_mem_read32(dtm, 0x400 + i*4));
+		DEBUG("DebugRAM[%d] = %08"PRIx64"\n", i,
+			  riscv_dtm_read(dtm, 0x400 + i*4));
 	}
 #else
 	(void)riscv_dtm_write;
-	(void)riscv_mem_read32;
 #endif
 	/* Allocate and set up new target */
 	target *t = target_new();
