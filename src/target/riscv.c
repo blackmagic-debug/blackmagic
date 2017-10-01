@@ -105,6 +105,7 @@ struct riscv_dtm {
 	bool exception;
 	uint64_t lastdbus;
 	bool halt_requested;
+	uint32_t saved_s1;
 };
 
 static int riscv_breakwatch_set(target *t, struct breakwatch *);
@@ -200,21 +201,6 @@ static uint32_t riscv_debug_ram_exec(struct riscv_dtm *dtm,
 	return ram_stub_result(dtm, count);
 }
 
-static void riscv_mem_write32(struct riscv_dtm *dtm,
-                              uint32_t addr, uint32_t val)
-{
-	/* Debug RAM stub
-	 * 400:   41002403   lw   s0, 0x410(zero)
-	 * 408:   41402483   lw   s1, 0x414(zero)
-	 * 404:   00942023   sw   s1, 0(s0)
-	 * 40c:   3f80006f   j    0 <resume>
-	 * 410:              dw   addr
-	 * 414:              dw   data
-	 */
-	uint32_t ram[] = {0x41002403, 0x41402483, 0x942023, 0x3f80006f, addr, val};
-	riscv_debug_ram_exec(dtm, ram, 5);
-}
-
 static uint32_t riscv_gpreg_read(struct riscv_dtm *dtm, uint8_t reg)
 {
 	/* Debug RAM stub
@@ -287,6 +273,7 @@ static void riscv_halt_resume(target *t, bool step)
 {
 	DEBUG("Resume requested! step=%d\n", step);
 	struct riscv_dtm *dtm = t->priv;
+	riscv_dtm_write(dtm, dtm->dramsize, dtm->saved_s1);
 	/* Debug RAM stub - we patch in step bit as needed
 	 * 400:   7b006073   csrsi dcsr, 0
 	 * 404:   7b047073   csrci dcsr, halt
@@ -343,14 +330,47 @@ static void riscv_mem_read(target *t, void *dest, target_addr src, size_t len)
 
 static void riscv_mem_write(target *t, target_addr dest, const void *src, size_t len)
 {
-	const uint32_t *s = src;
-	assert((dest & 3) == 0);
-	assert((len & 3) == 0);
-	while (len) {
-		riscv_mem_write32(t->priv, dest, *s++);
-		dest += 4;
-		len -= 4;
+	struct riscv_dtm *dtm = t->priv;
+	int size;
+	uint32_t store;
+	bool first = false;
+	switch ((dest | len) & 3) {
+	case 0:
+		store = SW(S1, 0, T0);
+		size = 4;
+		break;
+	case 2:
+		store = SH(S1, 0, T0);
+		size = 2;
+		break;
+	default:
+		store = SB(S1, 0, T0);
+		size = 1;
+		break;
 	}
+	uint32_t t0 = riscv_gpreg_read(dtm, T0);
+	ram_stub_write(dtm, 0, LW(T0, 0x410, 0), false);
+	ram_stub_write(dtm, 1, LW(S1, 0x414, 0), false);
+	ram_stub_write(dtm, 2, store, false);
+	ram_stub_write(dtm, 3, JRESUME(3), false);
+	ram_stub_write(dtm, 4, dest, false);
+	while (len) {
+		uint32_t r = 0;
+		switch (size) {
+		case 1: r = *(uint8_t*)src;  break;
+		case 2: r = *(uint16_t*)src; break;
+		case 4: r = *(uint32_t*)src; break;
+		}
+		ram_stub_write(dtm, 5, r, true);
+		ram_stub_result(dtm, 5);
+		len -= size;
+		src += size;
+		if (first) {
+			ram_stub_write(dtm, 0, ADDI(T0, T0, size), false);
+			first = false;
+		}
+	}
+	riscv_gpreg_write(dtm, T0, t0);
 }
 
 static void riscv_reset(target *t)
@@ -399,7 +419,7 @@ static ssize_t riscv_reg_read(target *t, int reg, void *data, size_t s)
 		*val = riscv_csreg_read(dtm, CSR_DSCRATCH);
 		break;
 	case 9:
-		*val = riscv_dtm_read(dtm, dtm->dramsize);
+		*val = dtm->saved_s1;
 		break;
 	case 32:
 		*val = riscv_csreg_read(dtm, CSR_DPC);
@@ -415,27 +435,32 @@ static ssize_t riscv_reg_read(target *t, int reg, void *data, size_t s)
 	return sizeof(*val);
 }
 
-static void riscv_regs_write(target *t, const void *data)
+static ssize_t riscv_reg_write(target *t, int reg, const void *data, size_t s)
 {
+	(void)s;
 	struct riscv_dtm *dtm = t->priv;
-	const uint32_t *reg = data;
-	for (int i = 0; i < 33; i++) {
-		switch (i) {
-		case 0:
-			break;
-		case 8:
-			riscv_csreg_write(dtm, CSR_DSCRATCH, reg[i]);
-			break;
-		case 9:
-			riscv_dtm_write(dtm, dtm->dramsize, reg[i]);
-			break;
-		case 32:
-			riscv_csreg_write(dtm, CSR_DPC, reg[i]);
-			break;
-		default:
-			riscv_gpreg_write(dtm, i, reg[i]);
-		}
+	uint32_t val = *(uint32_t*)data;
+	switch (reg) {
+	case 0:
+		break;
+	case 1 ... 7:
+	case 10 ... 31:
+		riscv_gpreg_write(dtm, reg, val);
+		break;
+	case 8:
+		riscv_csreg_write(dtm, CSR_DSCRATCH, val);
+		break;
+	case 9:
+		dtm->saved_s1 = val;
+		break;
+	case 32:
+		riscv_csreg_write(dtm, CSR_DPC, val);
+		break;
+	case 65 ... 65 + 4095:
+		riscv_csreg_write(dtm, reg - 65, val);
+		break;
 	}
+	return sizeof(val);
 }
 
 static enum target_halt_reason riscv_halt_poll(target *t, target_addr *watch)
@@ -450,8 +475,10 @@ static enum target_halt_reason riscv_halt_poll(target *t, target_addr *watch)
 	uint32_t dcsr = riscv_csreg_read(dtm, CSR_DCSR);
 	uint8_t cause = (dcsr >> 6) & 7;
 	DEBUG_WARN("cause = %d\n", cause);
+	if (cause == 0)
+		return TARGET_HALT_RUNNING;
+	dtm->saved_s1 = riscv_dtm_read(dtm, dtm->dramsize);
 	switch (cause) {
-	case 0: return TARGET_HALT_RUNNING;
 	case 1: /* Software breakpoint */
 	case 2: /* Hardware trigger breakpoint */
 		return TARGET_HALT_BREAKPOINT;
@@ -532,7 +559,7 @@ void riscv_jtag_handler(jtag_dev_t *jd)
 	t->detach = riscv_detach;
 	t->check_error = riscv_check_error;
 	t->reg_read = riscv_reg_read;
-	t->regs_write = riscv_regs_write;
+	t->reg_write = riscv_reg_write;
 	t->reset = riscv_reset;
 	t->halt_request = riscv_halt_request;
 	t->halt_poll = riscv_halt_poll;
