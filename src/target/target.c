@@ -322,8 +322,26 @@ ssize_t target_reg_write(target *t, int reg, const void *data, size_t size)
 	return t->reg_write(t, reg, data, size);
 }
 
-void target_regs_read(target *t, void *data) { t->regs_read(t, data); }
-void target_regs_write(target *t, const void *data) { t->regs_write(t, data); }
+void target_regs_read(target *t, void *data)
+{
+	if (t->regs_read) {
+		t->regs_read(t, data);
+		return;
+	}
+	for (size_t x = 0, i = 0; x < t->regs_size; ) {
+		x += t->reg_read(t, i++, data + x, t->regs_size - x);
+	}
+}
+void target_regs_write(target *t, const void *data)
+{
+	if (t->regs_write) {
+		t->regs_write(t, data);
+		return;
+	}
+	for (size_t x = 0, i = 0; x < t->regs_size; ) {
+		x += t->reg_write(t, i++, data + x, t->regs_size - x);
+	}
+}
 
 /* Halt/resume functions */
 void target_reset(target *t) { t->reset(t); }
