@@ -88,6 +88,10 @@
 #define CSR_MCONTROL_RWX          (CSR_MCONTROL_RW | CSR_MCONTROL_X)
 #define CSR_MCONTROL_ACTION_DEBUG (1 << 12)
 
+#define CSR_DCSR_STEP    (1 << 2)
+#define CSR_DCSR_HALT    (1 << 3)
+#define CSR_DCSR_NDRESET (1 << 29)
+
 /* GDB register map / target description */
 static const char tdesc_rv32[] =
 "<?xml version=\"1.0\"?>"
@@ -376,7 +380,7 @@ static void riscv_mem_write(target *t, target_addr dest, const void *src, size_t
 static void riscv_reset(target *t)
 {
 	DEBUG("Resetting!\n");
-	riscv_csreg_write(t->priv, CSR_DCSR, 1 << 29);
+	riscv_csreg_write(t->priv, CSR_DCSR, CSR_DCSR_NDRESET | CSR_DCSR_HALT);
 }
 
 bool riscv_check_error(target *t)
