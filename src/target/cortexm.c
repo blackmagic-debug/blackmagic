@@ -53,6 +53,8 @@ const struct command_s cortexm_cmd_list[] = {
 static void cortexm_regs_read(target *t, void *data);
 static void cortexm_regs_write(target *t, const void *data);
 static uint32_t cortexm_pc_read(target *t);
+ssize_t cortexm_reg_read(target *t, int reg, void *data, size_t max);
+ssize_t cortexm_reg_write(target *t, int reg, const void *data, size_t max);
 
 static void cortexm_reset(target *t);
 static enum target_halt_reason cortexm_halt_poll(target *t, target_addr *watch);
@@ -308,6 +310,8 @@ bool cortexm_probe(ADIv5_AP_t *ap, bool forced)
 	t->tdesc = tdesc_cortex_m;
 	t->regs_read = cortexm_regs_read;
 	t->regs_write = cortexm_regs_write;
+	t->reg_read = cortexm_reg_read;
+	t->reg_write = cortexm_reg_write;
 
 	t->reset = cortexm_reset;
 	t->halt_request = cortexm_halt_request;
@@ -542,6 +546,39 @@ int cortexm_mem_write_sized(
 	cortexm_cache_clean(t, dest, len, true);
 	adiv5_mem_write_sized(cortexm_ap(t), dest, src, len, align);
 	return target_check_error(t);
+}
+
+int dcrsr_regnum(target *t, unsigned reg)
+{
+	if (reg < sizeof(regnum_cortex_m) / 4) {
+		return regnum_cortex_m[reg];
+	} else if ((t->target_options & TOPT_FLAVOUR_V7MF) &&
+	           (reg < (sizeof(regnum_cortex_m) +
+	                   sizeof(regnum_cortex_mf) / 4))) {
+		return regnum_cortex_mf[reg - sizeof(regnum_cortex_m)/4];
+	} else {
+		return -1;
+	}
+}
+ssize_t cortexm_reg_read(target *t, int reg, void *data, size_t max)
+{
+	if (max < 4)
+		return -1;
+	uint32_t *r = data;
+	target_mem_write32(t, CORTEXM_DCRSR, dcrsr_regnum(t, reg));
+	*r = target_mem_read32(t, CORTEXM_DCRDR);
+	return 4;
+}
+
+ssize_t cortexm_reg_write(target *t, int reg, const void *data, size_t max)
+{
+	if (max < 4)
+		return -1;
+	const uint32_t *r = data;
+	target_mem_write32(t, CORTEXM_DCRDR, *r);
+	target_mem_write32(t, CORTEXM_DCRSR, CORTEXM_DCRSR_REGWnR |
+	                                     dcrsr_regnum(t, reg));
+	return 4;
 }
 
 static uint32_t cortexm_pc_read(target *t)
