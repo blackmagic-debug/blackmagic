@@ -135,6 +135,7 @@ if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
 	parser.add_argument("progfile", help="Binary file to program")
 	parser.add_argument("-s", "--serial_target", help="Match Serial Number")
+	parser.add_argument("-a", "--address", help="Start address for firmware")
 	parser.add_argument("-m", "--manifest", help="Start application, if in DFU mode", action='store_true')
 	args = parser.parse_args()
 	dfudev = stm32_scan(args)
@@ -166,10 +167,13 @@ if __name__ == "__main__":
 	bin = file.read()
 
 	product = dfudev.handle.getString(dfudev.dev.iProduct, 64)
-	if "F4" in product:
-		start = 0x8004000
-	else:
-		start = 0x8002000
+	if args.address :
+		start = int(args.address, 0)
+	else :
+		if "F4" in product:
+			start = 0x8004000
+		else:
+			start = 0x8002000
 	addr = start
 	while bin:
 		print ("Programming memory at 0x%08X\r" % addr),
