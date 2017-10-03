@@ -46,7 +46,7 @@ void platform_init(void)
 		scb_reset_core();
 	}
 
-	rcc_clock_setup_hse_3v3(&hse_8mhz_3v3[CLOCK_3V3_48MHZ]);
+	rcc_clock_setup_hse_3v3(&rcc_hse_8mhz_3v3[RCC_CLOCK_3V3_48MHZ]);
 
 	/* Enable peripherals */
 	rcc_peripheral_enable_clock(&RCC_AHB2ENR, RCC_AHB2ENR_OTGFSEN);
@@ -103,4 +103,3 @@ void platform_request_boot(void)
 	SYSCFG_MEMRM &= ~3;
 	SYSCFG_MEMRM |=  1;
 }
-

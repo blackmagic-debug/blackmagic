@@ -75,7 +75,7 @@ int main(void)
 
 	if (rev > 1)
 		gpio_set(GPIOA, GPIO15);
-	dfu_init(&stm32f103_usb_driver, DFU_MODE);
+	dfu_init(&st_usbfs_v1_usb_driver, DFU_MODE);
 
 	dfu_main();
 }

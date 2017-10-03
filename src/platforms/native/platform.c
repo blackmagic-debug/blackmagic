@@ -222,7 +222,7 @@ static void adc_init(void)
 	gpio_set_mode(GPIOB, GPIO_MODE_INPUT,
 			GPIO_CNF_INPUT_ANALOG, GPIO0);
 
-	adc_off(ADC1);
+	adc_power_off(ADC1);
 	adc_disable_scan_mode(ADC1);
 	adc_set_single_conversion_mode(ADC1);
 	adc_disable_external_trigger_regular(ADC1);
@@ -236,7 +236,7 @@ static void adc_init(void)
 		__asm__("nop");
 
 	adc_reset_calibration(ADC1);
-	adc_calibration(ADC1);
+	adc_calibrate(ADC1);
 }
 
 const char *platform_target_voltage(void)
