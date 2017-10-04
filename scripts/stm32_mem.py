@@ -79,10 +79,12 @@ def stm32_manifest(dev):
 		sleep(status.bwPollTimeout / 1000.0)
 		if status.bState == dfu.STATE_DFU_MANIFEST:
 			break
-def stm32_scan(args):
+def stm32_scan(args, test):
 	devs = dfu.finddevs()
 	bmp = 0
 	if not devs:
+                if test == True:
+                        return
 		print "No DFU devices found!"
 		exit(-1)
 
@@ -91,9 +93,13 @@ def stm32_scan(args):
 		man = dfudev.handle.getString(dfudev.dev.iManufacturer, 30)
 		if man == "Black Sphere Technologies": bmp = bmp + 1
 	if bmp == 0 :
+                if test == True:
+                        return
 		print "No compatible device found\n"
 		exit(-1)
 	if bmp > 1 and not args.serial_target :
+                if test == True:
+                        return
 		print "Found multiple devices:\n"
 		for dev in devs:
 			dfudev = dfu.dfu_device(*dev)
@@ -138,7 +144,7 @@ if __name__ == "__main__":
 	parser.add_argument("-a", "--address", help="Start address for firmware")
 	parser.add_argument("-m", "--manifest", help="Start application, if in DFU mode", action='store_true')
 	args = parser.parse_args()
-	dfudev = stm32_scan(args)
+	dfudev = stm32_scan(args, False)
 	try:
 		state = dfudev.get_state()
 	except:
@@ -153,7 +159,7 @@ if __name__ == "__main__":
 		while True :
 			sleep(0.5)
 			timeout = timeout + 0.5
-			dfudev = stm32_scan(args)
+			dfudev = stm32_scan(args, True)
 			if dfudev: break
 			if timeout > 5 :
 				print "Error: DFU device did not appear"
