@@ -213,7 +213,8 @@ int target_flash_write(target *t,
 	int ret = 0;
 	while (len) {
 		struct target_flash *f = flash_for_addr(t, dest);
-		size_t tmplen = MIN(len, f->length - (dest % f->length));
+		size_t tmptarget = MIN(dest + len, f->start + f->length);
+		size_t tmplen = tmptarget - dest;
 		if (f->align > 1) {
 			uint32_t offset = dest % f->align;
 			uint8_t data[ALIGN(offset + tmplen, f->align)];
