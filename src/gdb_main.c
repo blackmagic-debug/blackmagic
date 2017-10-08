@@ -155,7 +155,7 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 			}
 		case 's':	/* 's [addr]': Single step [start at addr] */
 			single_step = true;
-			// Fall through to resume target
+			/* fall through */
 		case 'c':	/* 'c [addr]': Continue [at addr] */
 			if(!cur_target) {
 				gdb_putpacketz("X1D");
@@ -165,7 +165,7 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 			target_halt_resume(cur_target, single_step);
 			SET_RUN_STATE(1);
 			single_step = false;
-			// Fall through to wait for target halt
+			/* fall through */
 		case '?': {	/* '?': Request reason for target halt */
 			/* This packet isn't documented as being mandatory,
 			 * but GDB doesn't work without it. */
@@ -482,4 +482,3 @@ void gdb_main(void)
 {
 	gdb_main_loop(&gdb_controller, false);
 }
-

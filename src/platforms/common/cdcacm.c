@@ -445,6 +445,7 @@ static int cdcacm_control_request(usbd_device *dev,
 		switch(req->wIndex) {
 		case 2:
 			usbuart_set_line_coding((struct usb_cdc_line_coding*)*buf);
+			return 1;
 		case 0:
 			return 1; /* Ignore on GDB Port */
 		default:
@@ -462,6 +463,7 @@ static int cdcacm_control_request(usbd_device *dev,
 
 			return 1;
 		}
+		return 0;
 	case DFU_DETACH:
 		if(req->wIndex == DFU_IF_NO) {
 			*complete = dfu_detach_complete;
@@ -561,4 +563,3 @@ void USB_ISR(void)
 {
 	usbd_poll(usbdev);
 }
-
