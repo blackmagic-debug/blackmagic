@@ -172,6 +172,7 @@ static const struct command_s stm32lx_cmd_list[] = {
 enum {
         STM32L0_DBGMCU_IDCODE_PHYS = 0x40015800,
         STM32L1_DBGMCU_IDCODE_PHYS = 0xe0042000,
+        STM32L0_FLASHSIZE_PHYS     = 0x1ff8007c,
 };
 
 static bool stm32lx_is_stm32l1(target* t)
@@ -288,10 +289,17 @@ bool stm32l0_probe(target* t)
 		t->idcode = idcode;
 		t->driver = "STM32L0x";
 		target_add_ram(t, 0x20000000, 0x5000);
-		stm32l_add_flash(t, 0x8000000, 0x10000, 0x80);
-		stm32l_add_flash(t, 0x8010000, 0x10000, 0x80);
-		stm32l_add_flash(t, 0x8020000, 0x10000, 0x80);
-		stm32l_add_eeprom(t, 0x8080000, 0x1800);
+		size_t flash_size_kb = target_mem_read16(
+			t, STM32L0_FLASHSIZE_PHYS);
+		size_t flash_addr = 0x8000000;
+		while (flash_size_kb)
+		{
+			size_t size_kb = MIN(64, flash_size_kb);
+			stm32l_add_flash(t, flash_addr, size_kb * 1024, 0x80);
+			flash_addr += size_kb * 1024;
+			flash_size_kb -= size_kb;
+		}
+		stm32l_add_eeprom(t, 0x8080000, stm32lx_nvm_eeprom_size (t));
 		target_add_commands(t, stm32lx_cmd_list, "STM32L0x");
 		return true;
 	}
