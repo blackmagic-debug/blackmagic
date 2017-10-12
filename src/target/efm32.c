@@ -239,9 +239,7 @@ static void efm32_add_flash(target *t, target_addr addr, size_t length,
 	f->length = length;
 	f->blocksize = page_size;
 	f->erase = efm32_flash_erase;
-	f->write = target_flash_write_buffered;
-	f->done = target_flash_done_buffered;
-	f->write_buf = efm32_flash_write;
+	f->write = efm32_flash_write;
 	f->buf_size = page_size;
 	target_add_flash(t, f);
 }

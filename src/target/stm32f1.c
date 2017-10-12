@@ -109,7 +109,6 @@ static void stm32f1_add_flash(target *t,
 	f->blocksize = erasesize;
 	f->erase = stm32f1_flash_erase;
 	f->write = stm32f1_flash_write;
-	f->align = 2;
 	f->erased = 0xff;
 	target_add_flash(t, f);
 }

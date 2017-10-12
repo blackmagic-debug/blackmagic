@@ -26,6 +26,10 @@
 
 target *target_list = NULL;
 
+static int target_flash_write_buffered(struct target_flash *f,
+                                       target_addr dest, const void *src, size_t len);
+static int target_flash_done_buffered(struct target_flash *f);
+
 target *target_new(void)
 {
 	target *t = (void*)calloc(1, sizeof(*t));
@@ -138,6 +142,8 @@ void target_add_ram(target *t, target_addr start, uint32_t len)
 
 void target_add_flash(target *t, struct target_flash *f)
 {
+	if (f->buf_size == 0)
+		f->buf_size = MIN(f->blocksize, 0x400);
 	f->t = t;
 	f->next = t->flash;
 	t->flash = f;
@@ -216,15 +222,7 @@ int target_flash_write(target *t,
 		struct target_flash *f = flash_for_addr(t, dest);
 		size_t tmptarget = MIN(dest + len, f->start + f->length);
 		size_t tmplen = tmptarget - dest;
-		if (f->align > 1) {
-			uint32_t offset = dest % f->align;
-			uint8_t data[ALIGN(offset + tmplen, f->align)];
-			memset(data, f->erased, sizeof(data));
-			memcpy((uint8_t *)data + offset, src, tmplen);
-			ret |= f->write(f, dest - offset, data, sizeof(data));
-		} else {
-			ret |= f->write(f, dest, src, tmplen);
-		}
+		ret |= target_flash_write_buffered(f, dest, src, tmplen);
 		dest += tmplen;
 		src += tmplen;
 		len -= tmplen;
@@ -235,6 +233,9 @@ int target_flash_write(target *t,
 int target_flash_done(target *t)
 {
 	for (struct target_flash *f = t->flash; f; f = f->next) {
+		int tmp = target_flash_done_buffered(f);
+		if (tmp)
+			return tmp;
 		if (f->done) {
 			int tmp = f->done(f);
 			if (tmp)
@@ -260,8 +261,8 @@ int target_flash_write_buffered(struct target_flash *f,
 		if (base != f->buf_addr) {
 			if (f->buf_addr != (uint32_t)-1) {
 				/* Write sector to flash if valid */
-				ret |= f->write_buf(f, f->buf_addr,
-				                    f->buf, f->buf_size);
+				ret |= f->write(f, f->buf_addr,
+				                f->buf, f->buf_size);
 			}
 			/* Setup buffer for a new sector */
 			f->buf_addr = base;
@@ -282,7 +283,7 @@ int target_flash_done_buffered(struct target_flash *f)
 	int ret = 0;
 	if ((f->buf != NULL) &&(f->buf_addr != (uint32_t)-1)) {
 		/* Write sector to flash if valid */
-		ret = f->write_buf(f, f->buf_addr, f->buf, f->buf_size);
+		ret = f->write(f, f->buf_addr, f->buf, f->buf_size);
 		f->buf_addr = -1;
 		free(f->buf);
 		f->buf = NULL;
@@ -564,4 +565,3 @@ int tc_system(target *t, target_addr cmd, size_t cmdlen)
 	}
 	return t->tc->system(t->tc, cmd, cmdlen);
 }
-

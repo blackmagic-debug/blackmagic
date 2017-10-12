@@ -65,7 +65,6 @@ static void lmi_add_flash(target *t, size_t length)
 	f->blocksize = 0x400;
 	f->erase = lmi_flash_erase;
 	f->write = lmi_flash_write;
-	f->align = 4;
 	f->erased = 0xff;
 	target_add_flash(t, f);
 }

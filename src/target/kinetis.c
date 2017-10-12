@@ -94,7 +94,6 @@ static void kl_gen_add_flash(target *t,
 	f->erase = kl_gen_flash_erase;
 	f->write = kl_gen_flash_write;
 	f->done = kl_gen_flash_done;
-	f->align = 4;
 	f->erased = 0xff;
 	target_add_flash(t, f);
 }

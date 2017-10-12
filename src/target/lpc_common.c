@@ -40,9 +40,7 @@ struct lpc_flash *lpc_add_flash(target *t, target_addr addr, size_t length)
 	f->start = addr;
 	f->length = length;
 	f->erase = lpc_flash_erase;
-	f->write = target_flash_write_buffered;
-	f->done = target_flash_done_buffered;
-	f->write_buf = lpc_flash_write;
+	f->write = lpc_flash_write;
 	f->erased = 0xff;
 	target_add_flash(t, f);
 	return lf;
@@ -148,4 +146,3 @@ int lpc_flash_write_magic_vect(struct target_flash *f,
 	}
 	return lpc_flash_write(f, dest, src, len);
 }
-
