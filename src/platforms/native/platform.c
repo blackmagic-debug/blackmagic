@@ -161,7 +161,8 @@ void platform_init(void)
 				GPIO_CNF_INPUT_PULL_UPDOWN, GPIO0);
 	}
 	/* Relocate interrupt vector table here */
-	SCB_VTOR = 0x2000;
+	extern int vector_table;
+	SCB_VTOR = (uint32_t)&vector_table;
 
 	platform_timing_init();
 	cdcacm_init();
@@ -221,7 +222,7 @@ static void adc_init(void)
 	gpio_set_mode(GPIOB, GPIO_MODE_INPUT,
 			GPIO_CNF_INPUT_ANALOG, GPIO0);
 
-	adc_off(ADC1);
+	adc_power_off(ADC1);
 	adc_disable_scan_mode(ADC1);
 	adc_set_single_conversion_mode(ADC1);
 	adc_disable_external_trigger_regular(ADC1);
@@ -235,7 +236,7 @@ static void adc_init(void)
 		__asm__("nop");
 
 	adc_reset_calibration(ADC1);
-	adc_calibration(ADC1);
+	adc_calibrate(ADC1);
 }
 
 const char *platform_target_voltage(void)
@@ -303,57 +304,3 @@ static void setup_vbus_irq(void)
 
 	exti15_10_isr();
 }
-
-#ifdef ENABLE_DEBUG
-enum {
-	RDI_SYS_OPEN = 0x01,
-	RDI_SYS_WRITE = 0x05,
-	RDI_SYS_ISTTY = 0x09,
-};
-
-int rdi_write(int fn, const char *buf, size_t len)
-{
-	(void)fn;
-	if (debug_bmp)
-		return len - usbuart_debug_write(buf, len);
-
-	return 0;
-}
-
-struct ex_frame {
-	union {
-		int syscall;
-		int retval;
-	};
-	const int *params;
-	uint32_t r2, r3, r12, lr, pc;
-};
-
-void debug_monitor_handler_c(struct ex_frame *sp)
-{
-	/* Return to after breakpoint instruction */
-	sp->pc += 2;
-
-	switch (sp->syscall) {
-	case RDI_SYS_OPEN:
-		sp->retval = 1;
-		break;
-	case RDI_SYS_WRITE:
-		sp->retval = rdi_write(sp->params[0], (void*)sp->params[1], sp->params[2]);
-		break;
-	case RDI_SYS_ISTTY:
-		sp->retval = 1;
-		break;
-	default:
-		sp->retval = -1;
-	}
-
-}
-
-asm(".globl debug_monitor_handler\n"
-    ".thumb_func\n"
-    "debug_monitor_handler: \n"
-    "    mov r0, sp\n"
-    "    b debug_monitor_handler_c\n");
-
-#endif

@@ -35,21 +35,6 @@
 #define DFU_IDENT              "Black Magic Firmware Upgrade (SWLINK)"
 #define UPD_IFACE_STRING       "@Internal Flash   /0x08000000/8*001Kg"
 
-/* Pin mappings:
- *
- * nTRST = 	PB1
- * TDI = 	PA3
- * TMS = 	PA4 (input for SWDP)
- * TCK = 	PA5
- * TDO = 	PA6 (input)
- * nSRST = 	PA7 (input)
- *
- * USB cable pull-up: PA8
- * USB VBUS detect:  PB13 -- New on mini design.
- *                           Enable pull up for compatibility.
- * Force DFU mode button: PB9 Low
- */
-
 /* Hardware definitions... */
 #define TMS_PORT	GPIOA
 #define TCK_PORT	GPIOA
@@ -89,7 +74,7 @@
 	              GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, USBUSART_TX_PIN); \
 } while (0)
 
-#define USB_DRIVER      stm32f103_usb_driver
+#define USB_DRIVER      st_usbfs_v1_usb_driver
 #define USB_IRQ         NVIC_USB_LP_CAN_RX0_IRQ
 #define USB_ISR         usb_lp_can_rx0_isr
 /* Interrupt priorities.  Low numbers are high priority.
@@ -121,7 +106,15 @@
 #define TRACE_IC_IN TIM_IC_IN_TI2
 #define TRACE_TRIG_IN TIM_SMCR_TS_IT1FP2
 
-#define DEBUG(...)
+#ifdef ENABLE_DEBUG
+# define PLATFORM_HAS_DEBUG
+# define USBUART_DEBUG
+extern bool debug_bmp;
+int usbuart_debug_write(const char *buf, size_t len);
+# define DEBUG printf
+#else
+# define DEBUG(...)
+#endif
 
 #define SET_RUN_STATE(state)	{running_status = (state);}
 #define SET_IDLE_STATE(state)	{gpio_set_val(LED_PORT, LED_IDLE_RUN, state);}

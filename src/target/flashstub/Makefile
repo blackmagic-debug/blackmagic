@@ -11,10 +11,12 @@ endif
 CFLAGS=-Os -std=gnu99 -mcpu=cortex-m0 -mthumb -I../../../libopencm3/include
 ASFLAGS=-mcpu=cortex-m3 -mthumb
 
-all:	lmi.stub stm32f4.stub stm32l4.stub nrf51.stub stm32f1.stub efm32.stub
+all:	lmi.stub stm32f4_x8.stub stm32f4_x32.stub stm32l4.stub nrf51.stub \
+	stm32f1.stub efm32.stub
 
 stm32f1.o: CFLAGS += -DSTM32F1
-stm32f4.o: CFLAGS += -DSTM32F4
+stm32f4_x8.o: CFLAGS += -DSTM32F4
+stm32f4_x32.o: CFLAGS += -DSTM32F4
 
 %.o:    %.c
 	$(Q)echo "  CC      $<"
