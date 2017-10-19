@@ -121,7 +121,7 @@
         GPIO_CNF_INPUT_FLOAT, SWOUSART_RX_PIN);
 
 
-#define USB_DRIVER              stm32f103_usb_driver
+#define USB_DRIVER              st_usbfs_v1_usb_driver
 #define USB_IRQ	                NVIC_USB_LP_CAN_RX0_IRQ
 #define USB_ISR	                usb_lp_can_rx0_isr
 
