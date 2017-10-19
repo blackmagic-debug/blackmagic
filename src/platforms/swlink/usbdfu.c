@@ -83,7 +83,7 @@ int main(void)
 	systick_interrupt_enable();
 	systick_counter_enable();
 
-	dfu_init(&stm32f103_usb_driver, DFU_MODE);
+	dfu_init(&st_usbfs_v1_usb_driver, DFU_MODE);
 
 	dfu_main();
 }

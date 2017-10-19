@@ -173,6 +173,8 @@ jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int
 		/*if(rsize) printf("%02X ", tmp[index]);*/
 		*DO++ = tmp[index++];
 	}
+	if (rticks == 0)
+		*DO++ = 0;
 	if(final_tms) {
 		rticks++;
 		*(--DO) >>= 1;

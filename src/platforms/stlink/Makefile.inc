@@ -8,10 +8,16 @@ CFLAGS += -mcpu=cortex-m3 -mthumb \
 	-I platforms/stm32
 LDFLAGS_BOOT := $(LDFLAGS) --specs=nano.specs \
 	-lopencm3_stm32f1 -Wl,--defsym,_stack=0x20005000 \
-	-Wl,-T,platforms/stm32/stlink.ld -nostartfiles -lc -lnosys \
+	-Wl,-T,platforms/stm32/stlink.ld -nostartfiles -lc \
 	-Wl,-Map=mapfile -mthumb -mcpu=cortex-m3 -Wl,-gc-sections \
 	-L../libopencm3/lib
 LDFLAGS = $(LDFLAGS_BOOT) -Wl,-Ttext=0x8002000
+
+ifeq ($(ENABLE_DEBUG), 1)
+LDFLAGS += --specs=rdimon.specs
+else
+LDFLAGS += --specs=nosys.specs
+endif
 
 VPATH += platforms/stm32
 
@@ -20,14 +26,15 @@ SRC += 	cdcacm.c	\
 	serialno.c	\
 	timing.c	\
 	timing_stm32.c	\
+	stlink_common.c \
 
 all:	blackmagic.bin blackmagic_dfu.bin blackmagic_dfu.hex dfu_upgrade.bin dfu_upgrade.hex
 
-blackmagic_dfu: usbdfu.o dfucore.o dfu_f1.o
+blackmagic_dfu: usbdfu.o dfucore.o dfu_f1.o stlink_common.o
 	@echo "  LD      $@"
 	$(Q)$(CC) $^ -o $@ $(LDFLAGS_BOOT)
 
-dfu_upgrade: dfu_upgrade.o dfucore.o dfu_f1.o
+dfu_upgrade: dfu_upgrade.o dfucore.o dfu_f1.o  stlink_common.o
 	@echo "  LD      $@"
 	$(Q)$(CC) $^ -o $@ $(LDFLAGS)
 

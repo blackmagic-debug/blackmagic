@@ -1,10 +1,11 @@
+dist: trusty
 sudo: required
 
 before_install:
   - sudo add-apt-repository -y ppa:team-gcc-arm-embedded/ppa
   - sudo apt-get update -qq
   - sudo apt-get install -y build-essential libftdi-dev gcc-arm-embedded
-  - sudo pip install intelhex
+  - pip install --user intelhex
 
 install: true
 
