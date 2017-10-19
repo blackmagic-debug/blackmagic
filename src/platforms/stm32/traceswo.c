@@ -33,6 +33,7 @@
  */
 
 #ifdef TRACESWO_SYNC
+
 #include "general.h"
 #include "cdcacm.h"
 

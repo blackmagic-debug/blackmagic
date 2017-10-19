@@ -279,16 +279,17 @@ static bool cmd_target_power(target *t, int argc, const char **argv)
 #ifdef PLATFORM_HAS_TRACESWO
 static bool cmd_traceswo(target *t, int argc, const char **argv)
 {
-	extern char serial_no[9];
-    uint32_t speed=0;
-    (void)t;
+  extern char serial_no[9];
+  uint32_t speed=0;
+  (void)t;
 
-    if (argc>1)
-        speed=atoi(argv[1]);
+  if (argc>1)
+    speed=atoi(argv[1]);
 
-    traceswo_init(speed);
-    gdb_outf("%s:%02X:%02X\n", serial_no, 5, 0x85);
-    return true;
+  traceswo_init(speed);
+  gdb_outf("%s:%02X:%02X\n", serial_no, 5, 0x85);
+
+  return true;
 }
 #endif
 

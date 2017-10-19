@@ -1,3 +1,4 @@
+TRACESWO_ASYNC=1
 CROSS_COMPILE ?= arm-none-eabi-
 CC = $(CROSS_COMPILE)gcc
 OBJCOPY = $(CROSS_COMPILE)objcopy
@@ -21,11 +22,16 @@ endif
 VPATH += platforms/stm32
 
 SRC += 	cdcacm.c	\
-	traceswo.c	\
 	usbuart.c	\
 	serialno.c	\
 	timing.c	\
 	timing_stm32.c	\
+
+ifeq ($(TRACESWO_ASYNC),1)
+SRC += 	traceswoasync.c
+else
+SRC += 	traceswo.c
+endif
 
 all:	blackmagic.bin blackmagic_dfu.bin blackmagic_dfu.hex
 
