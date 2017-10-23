@@ -112,6 +112,11 @@ static const char stm32l4_driver_str[] = "STM32L4xx";
 #define DBGMCU_IDCODE	0xE0042000
 #define FLASH_SIZE_REG  0x1FFF75E0
 
+#define DBGMCU_CR		0xE0042004
+#define DBG_STANDBY		(1 << 0)
+#define DBG_STOP		(1 << 1)
+#define DBG_SLEEP		(1 << 2)
+
 /* This routine is uses double word access.*/
 static const uint16_t stm32l4_flash_write_stub[] = {
 #include "flashstub/stm32l4.stub"
@@ -169,6 +174,7 @@ bool stm32l4_probe(target *t)
 			bank1_start =  0x08000000 + (size << 9);
 		stm32l4_add_flash(t, 0x08000000, size << 10, PAGE_SIZE, bank1_start);
 		target_add_commands(t, stm32l4_cmd_list, "STM32L4 Dual bank");
+		target_mem_write32(t, DBGMCU_CR, DBG_STANDBY| DBG_STOP | DBG_SLEEP);
 		return true;
 	case 0x462: /* L45x L46x / RM0394  */
 	case 0x435: /* L43x L44x / RM0394  */
@@ -184,6 +190,7 @@ bool stm32l4_probe(target *t)
 		options =  target_mem_read32(t, FLASH_OPTR);
 		stm32l4_add_flash(t, 0x08000000, size << 10, PAGE_SIZE, bank1_start);
 		target_add_commands(t, stm32l4_cmd_list, "STM32L4");
+		target_mem_write32(t, DBGMCU_CR, DBG_STANDBY| DBG_STOP | DBG_SLEEP);
 		return true;
 	}
 	return false;

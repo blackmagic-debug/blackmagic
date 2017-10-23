@@ -90,6 +90,11 @@ static int stm32f1_flash_write(struct target_flash *f,
 #define DBGMCU_IDCODE	0xE0042000
 #define DBGMCU_IDCODE_F0	0x40015800
 
+#define DBGMCU_CR		0xE0042004
+#define DBG_STANDBY		(1 << 0)
+#define DBG_STOP		(1 << 1)
+#define DBG_SLEEP		(1 << 2)
+
 #define FLASHSIZE     0x1FFFF7E0
 #define FLASHSIZE_F0  0x1FFFF7CC
 
@@ -127,6 +132,7 @@ bool stm32f1_probe(target *t)
 		target_add_ram(t, 0x20000000, 0x5000);
 		stm32f1_add_flash(t, 0x8000000, 0x20000, 0x400);
 		target_add_commands(t, stm32f1_cmd_list, "STM32 LD/MD");
+		target_mem_write32(t, DBGMCU_CR, DBG_STANDBY| DBG_STOP | DBG_SLEEP);
 		return true;
 	case 0x414:	 /* High density */
 	case 0x418:  /* Connectivity Line */
@@ -135,6 +141,7 @@ bool stm32f1_probe(target *t)
 		target_add_ram(t, 0x20000000, 0x10000);
 		stm32f1_add_flash(t, 0x8000000, 0x80000, 0x800);
 		target_add_commands(t, stm32f1_cmd_list, "STM32 HD/CL");
+		target_mem_write32(t, DBGMCU_CR, DBG_STANDBY| DBG_STOP | DBG_SLEEP);
 		return true;
 	case 0x422:  /* STM32F30x */
 	case 0x432:  /* STM32F37x */
@@ -145,6 +152,7 @@ bool stm32f1_probe(target *t)
 		target_add_ram(t, 0x20000000, 0x10000);
 		stm32f1_add_flash(t, 0x8000000, 0x80000, 0x800);
 		target_add_commands(t, stm32f1_cmd_list, "STM32F3");
+		target_mem_write32(t, DBGMCU_CR, DBG_STANDBY| DBG_STOP | DBG_SLEEP);
 		return true;
 	}
 
@@ -175,6 +183,7 @@ bool stm32f1_probe(target *t)
 	target_add_ram(t, 0x20000000, 0x5000);
 	stm32f1_add_flash(t, 0x8000000, flash_size, block_size);
 	target_add_commands(t, stm32f1_cmd_list, "STM32F0");
+	target_mem_write32(t, DBGMCU_CR, DBG_STANDBY| DBG_STOP | DBG_SLEEP);
 	return true;
 }
 
