@@ -37,6 +37,17 @@
 #define CORTEXM_DCRDR		(CORTEXM_SCS_BASE + 0xDF8)
 #define CORTEXM_DEMCR		(CORTEXM_SCS_BASE + 0xDFC)
 
+/* Cache identification */
+#define CORTEXM_CLIDR		(CORTEXM_SCS_BASE + 0xD78)
+#define CORTEXM_CTR		(CORTEXM_SCS_BASE + 0xD7C)
+#define CORTEXM_CCSIDR		(CORTEXM_SCS_BASE + 0xD80)
+#define CORTEXM_CSSELR		(CORTEXM_SCS_BASE + 0xD84)
+
+/* Cache maintenance operations */
+#define CORTEXM_ICIALLU		(CORTEXM_SCS_BASE + 0xF50)
+#define CORTEXM_DCCMVAC		(CORTEXM_SCS_BASE + 0xF68)
+#define CORTEXM_DCCIMVAC	(CORTEXM_SCS_BASE + 0xF70)
+
 #define CORTEXM_FPB_BASE	(CORTEXM_PPB_BASE + 0x2000)
 
 /* ARM Literature uses FP_*, we use CORTEXM_FPB_* consistently */

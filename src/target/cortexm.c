@@ -78,6 +78,9 @@ struct cortexm_priv {
 	unsigned hw_breakpoint_max;
 	/* Copy of DEMCR for vector-catch */
 	uint32_t demcr;
+	/* Cache parameters */
+	bool has_cache;
+	uint32_t dcache_minline;
 };
 
 /* Register number tables */
@@ -179,13 +182,40 @@ ADIv5_AP_t *cortexm_ap(target *t)
 	return ((struct cortexm_priv *)t->priv)->ap;
 }
 
+static void cortexm_cache_clean(target *t, target_addr addr, size_t len, bool invalidate)
+{
+	struct cortexm_priv *priv = t->priv;
+	if (!priv->has_cache || (priv->dcache_minline == 0))
+		return;
+	uint32_t cache_reg = invalidate ? CORTEXM_DCCIMVAC : CORTEXM_DCCMVAC;
+	size_t minline = priv->dcache_minline;
+
+	/* flush data cache for RAM regions that intersect requested region */
+	target_addr mem_end = addr + len; /* following code is NOP if wraparound */
+	/* requested region is [src, src_end) */
+	for (struct target_ram *r = t->ram; r; r = r->next) {
+		target_addr ram = r->start;
+		target_addr ram_end = r->start + r->length;
+		/* RAM region is [ram, ram_end) */
+		if (addr > ram)
+			ram = addr;
+		if (mem_end < ram_end)
+			ram_end = mem_end;
+		/* intersection is [ram, ram_end) */
+		for (ram &= ~(minline-1); ram < ram_end; ram += minline)
+			adiv5_mem_write(cortexm_ap(t), cache_reg, &ram, 4);
+	}
+}
+
 static void cortexm_mem_read(target *t, void *dest, target_addr src, size_t len)
 {
+	cortexm_cache_clean(t, src, len, false);
 	adiv5_mem_read(cortexm_ap(t), dest, src, len);
 }
 
 static void cortexm_mem_write(target *t, target_addr dest, const void *src, size_t len)
 {
+	cortexm_cache_clean(t, dest, len, true);
 	adiv5_mem_write(cortexm_ap(t), dest, src, len);
 }
 
@@ -250,6 +280,15 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 	/* Default vectors to catch */
 	priv->demcr = CORTEXM_DEMCR_TRCENA | CORTEXM_DEMCR_VC_HARDERR |
 			CORTEXM_DEMCR_VC_CORERESET;
+
+	/* Check cache type */
+	uint32_t ctr = target_mem_read32(t, CORTEXM_CTR);
+	if ((ctr >> 29) == 4) {
+		priv->has_cache = true;
+		priv->dcache_minline = 4 << (ctr & 0xf);
+	} else {
+		target_check_error(t);
+	}
 
 #define PROBE(x) \
 	do { if ((x)(t)) return true; else target_check_error(t); } while (0)
@@ -550,6 +589,9 @@ void cortexm_halt_resume(target *t, bool step)
 		if ((target_mem_read16(t, pc) & 0xFF00) == 0xBE00)
 			cortexm_pc_write(t, pc + 2);
 	}
+
+	if (priv->has_cache)
+		target_mem_write32(t, CORTEXM_ICIALLU, 0);
 
 	target_mem_write32(t, CORTEXM_DHCSR, dhcsr);
 }
