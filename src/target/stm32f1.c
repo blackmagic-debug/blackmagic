@@ -140,6 +140,7 @@ bool stm32f1_probe(target *t)
 	case 0x422:  /* STM32F30x */
 	case 0x446:  /* STM32F303xD/E and STM32F398xE */
 		target_add_ram(t, 0x10000000, 0x4000);
+		/* fall through */
 	case 0x432:  /* STM32F37x */
 	case 0x439:  /* STM32F302C8 */
 		t->driver = "STM32F3";
