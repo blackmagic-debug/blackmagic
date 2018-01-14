@@ -217,7 +217,7 @@ void USBUSART_ISR(void)
 {
 	uint32_t err = USART_SR(USBUSART);
 	char c = usart_recv(USBUSART);
-	if (err & (USART_SR_ORE | USART_SR_FE))
+	if (err & (USART_SR_ORE | USART_SR_FE | USART_SR_NE))
 		return;
 
 	/* Turn on LED */
