@@ -112,7 +112,7 @@ bool kinetis_probe(target *t)
 		kl_gen_add_flash(t, 0x00000000, 0x20000, 0x400);
 		break;
 	case 0x231:
-		t->driver = "KL27x128-256"; // MKL27 >=128kb
+		t->driver = "KL27x128"; // MKL27 >=128kb
 		target_add_ram(t, 0x1fffe000, 0x2000);
 		target_add_ram(t, 0x20000000, 0x6000);
 		kl_gen_add_flash(t, 0x00000000, 0x40000, 0x400);
