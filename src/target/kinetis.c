@@ -59,7 +59,11 @@
 #define FTFA_CMD_ERASE_ALL         0x44
 #define FTFA_CMD_BACKDOOR_ACCESS   0x45
 
+#define FTFE_CMD_PROGRAM_PHRASE    0x07
+
 #define KL_GEN_PAGESIZE 0x400
+#define MK_GEN_SECTOR_SIZE 0x1000
+
 
 static bool kinetis_cmd_unsafe(target *t, int argc, char *argv[]);
 static bool unsafe_enabled;
@@ -98,6 +102,13 @@ static void kl_gen_add_flash(target *t,
 	f->erased = 0xff;
 	target_add_flash(t, f);
 }
+
+/* Functions for flash access on devices with FTFE module */
+static int mk_gen_flash_erase(struct target_flash *f, target_addr addr, size_t len);
+static int mk_gen_flash_write(struct target_flash *f,
+                              target_addr dest, const void *src, size_t len);
+static void mk_gen_add_flash(target *t,
+                           uint32_t addr, size_t length, size_t erasesize);
 
 bool kinetis_probe(target *t)
 {
@@ -152,6 +163,28 @@ bool kinetis_probe(target *t)
 		kl_gen_add_flash(t, 0, 0x40000, 0x800);
 		kl_gen_add_flash(t, 0x40000, 0x40000, 0x800);
 		break;
+	case 0x0: /* Chips that do not support [FAMILYID SUBFAMID SERIESID] fields. */
+
+		/* MK20 has 0x1 in FAMID (bits 4-6) */
+		if(((sdid >> 4) & 0x7) == 0x1){
+			t->driver = "MK20";
+			const uint32_t sram_l_start = 0x1C000000;
+			const uint32_t sram_l_end   = 0x1FFFFFFF;
+			target_add_ram(t, sram_l_start, sram_l_end - sram_l_start);
+
+			const uint32_t sram_h_start = 0x20000000;
+			const uint32_t sram_h_end   = 0x200FFFFF;
+			target_add_ram(t, sram_h_start, sram_h_end - sram_h_start);
+
+			const uint32_t flash_start  = 0x00000000;
+			const uint32_t flash_stop   = 0x07FFFFFF;
+			mk_gen_add_flash(t, flash_start, flash_stop-flash_start, MK_GEN_SECTOR_SIZE);
+
+			break;
+		}
+
+		// fallthrough to default and fail
+
 	default:
 		return false;
 	}
@@ -251,6 +284,58 @@ static int kl_gen_flash_done(struct target_flash *f)
 	               FLASH_SECURITY_BYTE_ADDRESS, (uint8_t*)&val);
 
 	return 0;
+}
+
+
+static int mk_gen_flash_erase(struct target_flash *f, target_addr addr, size_t len){
+	while (len) {
+		if (kl_gen_command(f->t, FTFA_CMD_ERASE_SECTOR, addr, NULL)) {
+			len -= MK_GEN_SECTOR_SIZE;
+			addr += MK_GEN_SECTOR_SIZE;
+		} else {
+			return 1;
+		}
+	}
+	return 0;
+}
+
+static int mk_gen_flash_write(struct target_flash *f,
+                              target_addr dest, const void *src, size_t len){
+	/* Ensure we don't write something horrible over the security byte */
+	if (!unsafe_enabled &&
+		(dest <= FLASH_SECURITY_BYTE_ADDRESS) &&
+		((dest + len) > FLASH_SECURITY_BYTE_ADDRESS)) {
+		((uint8_t*)src)[FLASH_SECURITY_BYTE_ADDRESS - dest] =
+			FLASH_SECURITY_BYTE_UNSECURED;
+	}
+
+	while (len) {
+		if (kl_gen_command(f->t, FTFE_CMD_PROGRAM_PHRASE, dest, src)) {
+			len -= 8;
+			dest += 8;
+			src += 8;
+		} else {
+			return 1;
+		}
+	}
+	return 0;
+}
+
+static void mk_gen_add_flash(target *t,
+                           uint32_t addr, size_t length, size_t erasesize){
+
+	struct target_flash *f = calloc(1, sizeof(*f));
+
+	f->start = addr;
+	f->length = length;
+	f->blocksize = erasesize;
+	f->erase = mk_gen_flash_erase;
+	f->write = mk_gen_flash_write;
+	f->done = kl_gen_flash_done;
+	f->align = 8;
+	f->erased = 0xff;
+
+	target_add_flash(t, f);
 }
 
 /*** Kinetis recovery mode using the MDM-AP ***/
