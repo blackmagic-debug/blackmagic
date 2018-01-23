@@ -134,6 +134,7 @@ void swdptap_bit_out(bool val)
 	swdptap_turnaround(0);
 
 	gpio_set_val(SWDIO_PORT, SWDIO_PIN, val);
+	gpio_clear(SWCLK_PORT, SWCLK_PIN);
 	gpio_set(SWCLK_PORT, SWCLK_PIN);
 	gpio_set(SWCLK_PORT, SWCLK_PIN);
 	gpio_clear(SWCLK_PORT, SWCLK_PIN);
@@ -149,9 +150,10 @@ swdptap_seq_out(uint32_t MS, int ticks)
 	swdptap_turnaround(0);
 	while (ticks--) {
 		gpio_set_val(SWDIO_PORT, SWDIO_PIN, data);
-		gpio_set(SWCLK_PORT, SWCLK_PIN);
 		MS >>= 1;
 		data = MS & 1;
+		gpio_set(SWCLK_PORT, SWCLK_PIN);
+		gpio_set(SWCLK_PORT, SWCLK_PIN);
 		gpio_clear(SWCLK_PORT, SWCLK_PIN);
 	}
 }
@@ -169,13 +171,14 @@ swdptap_seq_out_parity(uint32_t MS, int ticks)
 
 	while (ticks--) {
 		gpio_set_val(SWDIO_PORT, SWDIO_PIN, data);
-		gpio_set(SWCLK_PORT, SWCLK_PIN);
 		parity ^= MS;
 		MS >>= 1;
+		gpio_set(SWCLK_PORT, SWCLK_PIN);
 		data = MS & 1;
 		gpio_clear(SWCLK_PORT, SWCLK_PIN);
 	}
 	gpio_set_val(SWDIO_PORT, SWDIO_PIN, parity & 1);
+	gpio_clear(SWCLK_PORT, SWCLK_PIN);
 	gpio_set(SWCLK_PORT, SWCLK_PIN);
 	gpio_set(SWCLK_PORT, SWCLK_PIN);
 	gpio_clear(SWCLK_PORT, SWCLK_PIN);
