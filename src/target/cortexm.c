@@ -299,6 +299,7 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 	PROBE(stm32l4_probe);
 	PROBE(lpc11xx_probe);
 	PROBE(lpc15xx_probe);
+	PROBE(lpc17xx_probe);
 	PROBE(lpc43xx_probe);
 	PROBE(sam3x_probe);
 	PROBE(sam4l_probe);
