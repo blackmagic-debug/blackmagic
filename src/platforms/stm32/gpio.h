@@ -3,6 +3,8 @@
  *
  * Copyright (C) 2015  Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
+ * 
+ * Copyright (c) 2018, Elias Oenal <bmp@eliasoenal.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,6 +23,7 @@
 #define __GPIO_H
 
 #include <libopencm3/cm3/common.h>
+#include "delay.h"
 
 #ifndef STM32F4
 #	include <libopencm3/stm32/f1/memorymap.h>
@@ -59,6 +62,13 @@ static inline void _gpio_clear(uint32_t gpioport, uint16_t gpios)
 #endif
 }
 #define gpio_clear _gpio_clear
+
+static inline void gpio_clock(uint32_t gpioport, uint16_t gpios)
+{
+	_gpio_set(gpioport, gpios);
+	udelay(1);
+	_gpio_clear(gpioport, gpios);
+}
 
 static inline uint16_t _gpio_get(uint32_t gpioport, uint16_t gpios)
 {

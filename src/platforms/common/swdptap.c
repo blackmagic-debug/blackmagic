@@ -4,6 +4,8 @@
  * Copyright (C) 2011  Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
  *
+ * Copyright (c) 2018, Elias Oenal <bmp@eliasoenal.com>
+ * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -22,6 +24,10 @@
 
 #include "general.h"
 #include "swdptap.h"
+
+#ifndef INLINE_GPIO
+#define gpio_clock(port, pin) gpio_set(port, pin); gpio_clear(port,pin)
+#endif
 
 int swdptap_init(void)
 {
@@ -42,8 +48,7 @@ static void swdptap_turnaround(uint8_t dir)
 
 	if(dir)
 		SWDIO_MODE_FLOAT();
-	gpio_set(SWCLK_PORT, SWCLK_PIN);
-	gpio_clear(SWCLK_PORT, SWCLK_PIN);
+	gpio_clock(SWCLK_PORT, SWCLK_PIN);
 	if(!dir)
 		SWDIO_MODE_DRIVE();
 }
@@ -55,8 +60,7 @@ bool swdptap_bit_in(void)
 	swdptap_turnaround(1);
 
 	ret = gpio_get(SWDIO_PORT, SWDIO_PIN);
-	gpio_set(SWCLK_PORT, SWCLK_PIN);
-	gpio_clear(SWCLK_PORT, SWCLK_PIN);
+	gpio_clock(SWCLK_PORT, SWCLK_PIN);
 
 #ifdef DEBUG_SWD_BITS
 	DEBUG("%d", ret?1:0);
@@ -74,7 +78,6 @@ void swdptap_bit_out(bool val)
 	swdptap_turnaround(0);
 
 	gpio_set_val(SWDIO_PORT, SWDIO_PIN, val);
-	gpio_set(SWCLK_PORT, SWCLK_PIN);
-	gpio_clear(SWCLK_PORT, SWCLK_PIN);
+	gpio_clock(SWCLK_PORT, SWCLK_PIN);
 }
 
