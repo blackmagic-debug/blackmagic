@@ -68,6 +68,7 @@ static inline void gpio_clock(uint32_t gpioport, uint16_t gpios)
 	_gpio_set(gpioport, gpios);
 	udelay(1);
 	_gpio_clear(gpioport, gpios);
+	udelay(1);
 }
 
 static inline uint16_t _gpio_get(uint32_t gpioport, uint16_t gpios)
