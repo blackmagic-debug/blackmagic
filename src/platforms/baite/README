@@ -35,7 +35,8 @@ RX is pulled high using a 620 ohms resistor, thus the TX on the target board nee
 PB6/PB7 (UART1) are remapped in the firmware to provide TX/RX.
 TRACESWO (TIM3_CH1) should be supported but has not been tested.
 
-Since this adapter is based on an STM32F103C8 micro-controller with 64 kB of flash the DFU bootloader only advertises 56 kB of flash available for the main application.
-Because the blackmagic firmware exceeds this size it will not be possible to flash it through if the DFU software doesn't ignore this restriction.
-STM32F103C8 micro-controllers often have 128 kB of flash though, thus it is still possible to flash the blackmagic firmware using the serial bootloader (at address 0x08002000).
-Enable verification when flashing to ensure the whole firmware has been written successfully.
+Since this adapter is based on an STM32F103C8 micro-controller with 64 kB of flash the DFU bootloader only advertises 56 kB of flash available for the main application (through a DFuSe name visible using dfu-util -l).
+STM32F103C8 micro-controllers often have 128 kB of flash though, despite what the datasheet or the internal flash size register advertise.
+Because the blackmagic firmware exceeds the 56 kB size it will not be possible to flash it through DFU if the DFU software doesn't ignore this restriction.
+dfu-util complies to the advertised size, but the blackmagic stm32_mem.py script does not, allowing to flash the main binary using DFU.
+Alternatively is also possible to flash the blackmagic firmware using the serial bootloader (at address 0x08002000, and enable verification when flashing to ensure the whole firmware has been written successfully).
