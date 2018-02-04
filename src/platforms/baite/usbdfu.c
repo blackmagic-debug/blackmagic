@@ -43,7 +43,9 @@ void dfu_detach(void)
 
 int main(void)
 {
-	dfu_jump_app_if_valid();
+	if((GPIOA_CRL & 0x40) == 0x40) {
+		dfu_jump_app_if_valid();
+	}
 	dfu_protect(DFU_MODE);
 
 	rcc_clock_setup_in_hse_8mhz_out_72mhz();
