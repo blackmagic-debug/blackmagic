@@ -53,11 +53,11 @@
 #define TDO_PORT	GPIOA
 #define TDI_PORT	GPIOA
 #define TMS_PORT	GPIOB
-#define TCK_PORT	GPIOB
+#define TCK_PORT	GPIOA
 #define TDO_PIN		GPIO6
 #define TDI_PIN		GPIO7
-#define TMS_PIN		GPIO12
-#define TCK_PIN		GPIO13
+#define TMS_PIN		GPIO14
+#define TCK_PIN		GPIO5
 
 #define SWDIO_PORT 	TMS_PORT
 #define SWCLK_PORT 	TCK_PORT
