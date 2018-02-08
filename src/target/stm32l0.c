@@ -144,6 +144,11 @@
 #define STM32L1_NVM_OPTR_BOR_LEV_M   (0xf)
 #define STM32L1_NVM_OPTR_SPRMOD      (1<<8)
 
+#define DBGMCU_CR		0xE0042004
+#define DBG_STANDBY		(1 << 0)
+#define DBG_STOP		(1 << 1)
+#define DBG_SLEEP		(1 << 2)
+
 static int stm32lx_nvm_prog_erase(struct target_flash* f,
                                   target_addr addr, size_t len);
 static int stm32lx_nvm_prog_write(struct target_flash* f,
@@ -276,6 +281,7 @@ bool stm32l0_probe(target* t)
 		stm32l_add_flash(t, 0x8000000, 0x80000, 0x100);
 		//stm32l_add_eeprom(t, 0x8080000, 0x4000);
 		target_add_commands(t, stm32lx_cmd_list, "STM32L1x");
+		target_mem_write32(t, DBGMCU_CR, DBG_STANDBY| DBG_STOP | DBG_SLEEP);
 		return true;
 	}
 
@@ -293,6 +299,7 @@ bool stm32l0_probe(target* t)
 		stm32l_add_flash(t, 0x8020000, 0x10000, 0x80);
 		stm32l_add_eeprom(t, 0x8080000, 0x1800);
 		target_add_commands(t, stm32lx_cmd_list, "STM32L0x");
+		target_mem_write32(t, DBGMCU_CR, DBG_STANDBY| DBG_STOP | DBG_SLEEP);
 		return true;
 	}
 
