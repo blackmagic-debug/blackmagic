@@ -136,11 +136,13 @@ bool stm32f1_probe(target *t)
 		stm32f1_add_flash(t, 0x8000000, 0x80000, 0x800);
 		target_add_commands(t, stm32f1_cmd_list, "STM32 HD/CL");
 		return true;
-	case 0x422:  /* STM32F30x */
-	case 0x432:  /* STM32F37x */
 	case 0x438:  /* STM32F303x6/8 and STM32F328 */
-	case 0x439:  /* STM32F302C8 */
+	case 0x422:  /* STM32F30x */
 	case 0x446:  /* STM32F303xD/E and STM32F398xE */
+		target_add_ram(t, 0x10000000, 0x4000);
+		/* fall through */
+	case 0x432:  /* STM32F37x */
+	case 0x439:  /* STM32F302C8 */
 		t->driver = "STM32F3";
 		target_add_ram(t, 0x20000000, 0x10000);
 		stm32f1_add_flash(t, 0x8000000, 0x80000, 0x800);
