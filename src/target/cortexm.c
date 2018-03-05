@@ -125,7 +125,10 @@ static const char tdesc_cortex_m[] =
 	"    <reg name=\"xpsr\" bitsize=\"32\"/>"
 	"    <reg name=\"msp\" bitsize=\"32\" save-restore=\"no\" type=\"data_ptr\"/>"
 	"    <reg name=\"psp\" bitsize=\"32\" save-restore=\"no\" type=\"data_ptr\"/>"
-	"    <reg name=\"special\" bitsize=\"32\" save-restore=\"no\"/>"
+	"    <reg name=\"PRIMASK\" bitsize=\"8\" save-restore=\"no\"/>"
+  	"    <reg name=\"BASEPRI\" bitsize=\"8\" save-restore=\"no\"/>"
+  	"    <reg name=\"FAULTMASK\" bitsize=\"8\" save-restore=\"no\"/>"
+  	"    <reg name=\"Control\" bitsize=\"8\" save-restore=\"no\"/>"
 	"  </feature>"
 	"</target>";
 
