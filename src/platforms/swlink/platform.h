@@ -58,16 +58,24 @@
 #define LED_PORT_UART	GPIOC
 #define LED_UART	GPIO14
 
+# define SWD_CR   GPIO_CRH(SWDIO_PORT)
+# define SWD_CR_MULT (1 << ((13 - 8) << 2))
+
 #define TMS_SET_MODE() \
 	gpio_set_mode(TMS_PORT, GPIO_MODE_OUTPUT_50_MHZ, \
 	              GPIO_CNF_OUTPUT_PUSHPULL, TMS_PIN);
-#define SWDIO_MODE_FLOAT() \
-	gpio_set_mode(SWDIO_PORT, GPIO_MODE_INPUT, \
-	              GPIO_CNF_INPUT_FLOAT, SWDIO_PIN);
-#define SWDIO_MODE_DRIVE() \
-	gpio_set_mode(SWDIO_PORT, GPIO_MODE_OUTPUT_50_MHZ, \
-	              GPIO_CNF_OUTPUT_PUSHPULL, SWDIO_PIN);
-
+#define SWDIO_MODE_FLOAT() 	do { \
+	uint32_t cr = SWD_CR; \
+	cr  &= ~(0xf * SWD_CR_MULT); \
+	cr  |=  (0x4 * SWD_CR_MULT); \
+	SWD_CR = cr; \
+} while(0)
+#define SWDIO_MODE_DRIVE() 	do { \
+	uint32_t cr = SWD_CR; \
+	cr  &= ~(0xf * SWD_CR_MULT); \
+	cr  |=  (0x1 * SWD_CR_MULT); \
+	SWD_CR = cr; \
+} while(0)
 #define UART_PIN_SETUP() do { \
 	AFIO_MAPR |= AFIO_MAPR_USART1_REMAP; \
 	gpio_set_mode(USBUSART_PORT, GPIO_MODE_OUTPUT_2_MHZ, \
