@@ -219,7 +219,7 @@ void platform_init(int argc, char **argv)
 		abort();
 	}
 
-	if((err = ftdi_set_bitmode(ftdic, 0xAB, BITMODE_MPSSE)) != 0) {
+	if((err = ftdi_set_bitmode(ftdic, cable_desc[index].dbus_ddr, BITMODE_MPSSE)) != 0) {
 		fprintf(stderr, "ftdi_set_bitmode: %d: %s\n",
 			err, ftdi_get_error_string(ftdic));
 		abort();
