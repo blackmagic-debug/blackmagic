@@ -255,6 +255,7 @@ int platform_buffer_write(const uint8_t *data, int size)
 int platform_buffer_read(uint8_t *data, int size)
 {
 	int index = 0;
+	outbuf[bufptr++] = SEND_IMMEDIATE;
 	platform_buffer_flush();
 	while((index += ftdi_read_data(ftdic, data + index, size-index)) != size);
 	return size;
