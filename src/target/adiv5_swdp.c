@@ -44,7 +44,7 @@ static void adiv5_swdp_abort(ADIv5_DP_t *dp, uint32_t abort);
 
 int adiv5_swdp_scan(void)
 {
-	uint8_t ack;
+	uint32_t ack;
 
 	target_list_free();
 	ADIv5_DP_t *dp = (void*)calloc(1, sizeof(*dp));
@@ -122,9 +122,9 @@ static uint32_t adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 {
 	bool APnDP = addr & ADIV5_APnDP;
 	addr &= 0xff;
-	uint8_t request = 0x81;
+	uint32_t request = 0x81;
 	uint32_t response = 0;
-	uint8_t ack;
+	uint32_t ack;
 	platform_timeout timeout;
 
 	if(APnDP && dp->fault) return 0;
@@ -141,7 +141,7 @@ static uint32_t adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 	do {
 		swdptap_seq_out(request, 8);
 		ack = swdptap_seq_in(3);
-	} while (!platform_timeout_is_expired(&timeout) && ack == SWDP_ACK_WAIT);
+	} while (ack == SWDP_ACK_WAIT && !platform_timeout_is_expired(&timeout));
 
 	if (ack == SWDP_ACK_WAIT)
 		raise_exception(EXCEPTION_TIMEOUT, "SWDP ACK timeout");
@@ -160,9 +160,6 @@ static uint32_t adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 	} else {
 		swdptap_seq_out_parity(value, 32);
 	}
-
-	/* REMOVE THIS */
-	swdptap_seq_out(0, 8);
 
 	return response;
 }

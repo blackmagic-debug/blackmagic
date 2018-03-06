@@ -28,9 +28,9 @@ int swdptap_init(void)
 	return 0;
 }
 
-static void swdptap_turnaround(uint8_t dir)
+static void swdptap_turnaround(int dir)
 {
-	static uint8_t olddir = 0;
+	static int olddir = 0;
 
 	/* Don't turnaround if direction not changing */
 	if(dir == olddir) return;
