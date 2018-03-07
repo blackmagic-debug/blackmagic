@@ -23,6 +23,11 @@
 #include "general.h"
 #include "swdptap.h"
 
+enum {
+	SWDIO_STATUS_FLOAT = 0,
+	SWDIO_STATUS_DRIVE
+};
+
 int swdptap_init(void)
 {
 	return 0;
@@ -30,7 +35,7 @@ int swdptap_init(void)
 
 static void swdptap_turnaround(int dir)
 {
-	static int olddir = 0;
+	static int olddir = SWDIO_STATUS_FLOAT;
 
 	/* Don't turnaround if direction not changing */
 	if(dir == olddir) return;
@@ -40,12 +45,12 @@ static void swdptap_turnaround(int dir)
 	DEBUG("%s", dir ? "\n-> ":"\n<- ");
 #endif
 
-	if(dir)
+	if(dir == SWDIO_STATUS_FLOAT)
 		SWDIO_MODE_FLOAT();
 	gpio_set(SWCLK_PORT, SWCLK_PIN);
 	gpio_set(SWCLK_PORT, SWCLK_PIN);
 	gpio_clear(SWCLK_PORT, SWCLK_PIN);
-	if(!dir)
+	if(dir == SWDIO_STATUS_DRIVE)
 		SWDIO_MODE_DRIVE();
 }
 
@@ -53,7 +58,7 @@ bool swdptap_bit_in(void)
 {
 	uint16_t ret;
 
-	swdptap_turnaround(1);
+	swdptap_turnaround(SWDIO_STATUS_FLOAT);
 
 	ret = gpio_get(SWDIO_PORT, SWDIO_PIN);
 	gpio_set(SWCLK_PORT, SWCLK_PIN);
@@ -74,7 +79,7 @@ swdptap_seq_in(int ticks)
 	uint32_t ret = 0;
 	int len = ticks;
 
-	swdptap_turnaround(1);
+	swdptap_turnaround(SWDIO_STATUS_FLOAT);
 	while (len--) {
 		int res;
 		res = gpio_get(SWDIO_PORT, SWDIO_PIN);
@@ -101,7 +106,7 @@ swdptap_seq_in_parity(uint32_t *ret, int ticks)
 	bool bit;
 	int len = ticks;
 
-	swdptap_turnaround(1);
+	swdptap_turnaround(SWDIO_STATUS_FLOAT);
 	while (len--) {
 		bit = gpio_get(SWDIO_PORT, SWDIO_PIN);
 		gpio_set(SWCLK_PORT, SWCLK_PIN);
@@ -131,7 +136,7 @@ void swdptap_bit_out(bool val)
 	DEBUG("%d", val);
 #endif
 
-	swdptap_turnaround(0);
+	swdptap_turnaround(SWDIO_STATUS_DRIVE);
 
 	gpio_set_val(SWDIO_PORT, SWDIO_PIN, val);
 	gpio_clear(SWCLK_PORT, SWCLK_PIN);
@@ -147,7 +152,7 @@ swdptap_seq_out(uint32_t MS, int ticks)
 	for (int i = 0; i < ticks; i++)
 		DEBUG("%d", (MS & (1 << i)) ? 1 : 0);
 #endif
-	swdptap_turnaround(0);
+	swdptap_turnaround(SWDIO_STATUS_DRIVE);
 	while (ticks--) {
 		gpio_set_val(SWDIO_PORT, SWDIO_PIN, data);
 		MS >>= 1;
@@ -167,7 +172,7 @@ swdptap_seq_out_parity(uint32_t MS, int ticks)
 	for (int i = 0; i < ticks; i++)
 		DEBUG("%d", (MS & (1 << i)) ? 1 : 0);
 #endif
-	swdptap_turnaround(0);
+	swdptap_turnaround(SWDIO_STATUS_DRIVE);
 
 	while (ticks--) {
 		gpio_set_val(SWDIO_PORT, SWDIO_PIN, data);
