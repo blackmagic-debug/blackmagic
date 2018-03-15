@@ -209,7 +209,7 @@ static void cortexm_cache_clean(target *t, target_addr addr, size_t len, bool in
 			ram_end = mem_end;
 		/* intersection is [ram, ram_end) */
 		for (ram &= ~(minline-1); ram < ram_end; ram += minline)
-			adiv5_mem_write(cortexm_ap(t), cache_reg, &ram, 4);
+			adiv5_mem_write(cortexm_ap(t), cache_reg, &ram, 4, MAX_ACCESS_WORD);
 	}
 }
 
@@ -222,7 +222,7 @@ static void cortexm_mem_read(target *t, void *dest, target_addr src, size_t len)
 static void cortexm_mem_write(target *t, target_addr dest, const void *src, size_t len)
 {
 	cortexm_cache_clean(t, dest, len, true);
-	adiv5_mem_write(cortexm_ap(t), dest, src, len);
+	adiv5_mem_write(cortexm_ap(t), dest, src, len, t->mem_write_access);
 }
 
 static bool cortexm_check_error(target *t)
