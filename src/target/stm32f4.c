@@ -46,7 +46,7 @@ const struct command_s stm32f4_cmd_list[] = {
 	 "Erase entire flash memory"},
 	{"option", (cmd_handler)stm32f4_cmd_option, "Manipulate option bytes"},
 	{"psize", (cmd_handler)stm32f4_cmd_psize,
-	 "Configure flash write parallelism: (x8|x16|x32(default))"},
+	 "Configure flash write parallelism: (x8|x16|x32(default)|x64)"},
 	{NULL, NULL, NULL}
 };
 
@@ -415,7 +415,7 @@ static int stm32f4_flash_write(struct target_flash *f,
 	enum mem_access psize = ((struct stm32f4_flash *)f)->psize;
 	target_mem_write32(t, FLASH_CR,
 					   ((2 - psize) * FLASH_CR_PSIZE16) | FLASH_CR_PG);
-	t->mem_write_access = psize;
+	t->mem_write_access = (psize < 0) ?   MAX_ACCESS_WORD : psize;
 	target_mem_write(t, dest, src, len);
 	t->mem_write_access = MAX_ACCESS_WORD;
 	/* Read FLASH_SR to poll for BSY bit */
@@ -677,7 +677,8 @@ static bool stm32f4_cmd_psize(target *t, int argc, char *argv[])
 			}
 		}
 		tc_printf(t, "Flash write parallelism: %s\n",
-		          psize == MAX_ACCESS_WORD ? "x32" :
+		          psize == MAX_ACCESS_DWORD    ? "x64" :
+		          psize == MAX_ACCESS_WORD     ? "x32" :
 				  psize == MAX_ACCESS_HALFWORD ? "x16" : "x8");
 	} else {
 		enum mem_access psize;
@@ -687,8 +688,10 @@ static bool stm32f4_cmd_psize(target *t, int argc, char *argv[])
 			psize = MAX_ACCESS_HALFWORD;
 		} else if (!strcmp(argv[1], "x32")) {
 			psize = MAX_ACCESS_WORD;
+		} else if (!strcmp(argv[1], "x64")) {
+			psize = MAX_ACCESS_DWORD;
 		} else {
-			tc_printf(t, "usage: monitor psize (x8|x16|x32)\n");
+			tc_printf(t, "usage: monitor psize (x8|x16|x32|x32)\n");
 			return false;
 		}
 		for (struct target_flash *f = t->flash; f; f = f->next) {
