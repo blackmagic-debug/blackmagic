@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2015, 2017  Uwe Bonnes
+ * Copyright (C) 2015, 2017, 2018  Uwe Bonnes
  * Written by Uwe Bonnes <bon@elektron.ikp.physik.tu-darmstadt.de>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -111,14 +111,6 @@ static const char stm32l4_driver_str[] = "STM32L4xx";
 
 #define DBGMCU_IDCODE	0xE0042000
 #define FLASH_SIZE_REG  0x1FFF75E0
-
-/* This routine is uses double word access.*/
-static const uint16_t stm32l4_flash_write_stub[] = {
-#include "flashstub/stm32l4.stub"
-};
-
-#define SRAM_BASE 0x20000000
-#define STUB_BUFFER_BASE ALIGN(SRAM_BASE + sizeof(stm32l4_flash_write_stub), 8)
 
 struct stm32l4_flash {
 	struct target_flash f;
@@ -258,12 +250,24 @@ static int stm32l4_flash_erase(struct target_flash *f, target_addr addr, size_t 
 static int stm32l4_flash_write(struct target_flash *f,
                                target_addr dest, const void *src, size_t len)
 {
-	/* Write buffer to target ram call stub */
-	target_mem_write(f->t, SRAM_BASE, stm32l4_flash_write_stub,
-	                 sizeof(stm32l4_flash_write_stub));
-	target_mem_write(f->t, STUB_BUFFER_BASE, src, len);
-	return cortexm_run_stub(f->t, SRAM_BASE, dest,
-	                        STUB_BUFFER_BASE, len, 0);
+	target *t = f->t;
+	target_mem_write32(t, FLASH_CR, FLASH_CR_PG);
+	target_mem_write(t, dest, src, len);
+	/* Wait for completion or an error */
+	uint32_t sr;
+	do {
+		sr = target_mem_read32(t, FLASH_SR);
+		if (target_check_error(t)) {
+			DEBUG("stm32l4 flash write: comm error\n");
+			return -1;
+		}
+	} while (sr & FLASH_SR_BSY);
+
+	if(sr & FLASH_SR_ERROR_MASK) {
+		DEBUG("stm32l4 flash write error: sr 0x%" PRIu32 "\n", sr);
+		return -1;
+	}
+	return 0;
 }
 
 static bool stm32l4_cmd_erase(target *t, uint32_t action)
