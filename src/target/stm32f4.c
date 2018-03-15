@@ -369,9 +369,15 @@ static int stm32f4_flash_erase(struct target_flash *f, target_addr addr,
 	uint8_t sector = sf->base_sector + (addr - f->start)/f->blocksize;
 	stm32f4_flash_unlock(t);
 
+	enum align psize = ALIGN_WORD;
+	for (struct target_flash *f = t->flash; f; f = f->next) {
+		if (f->write == stm32f4_flash_write) {
+			psize = ((struct stm32f4_flash *)f)->psize;
+		}
+	}
 	while(len) {
 		uint32_t cr = FLASH_CR_EOPIE | FLASH_CR_ERRIE | FLASH_CR_SER |
-		              (sector << 3);
+			(psize * FLASH_CR_PSIZE16) | (sector << 3);
 		/* Flash page erase instruction */
 		target_mem_write32(t, FLASH_CR, cr);
 		/* write address to FMA */
