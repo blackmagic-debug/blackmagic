@@ -174,6 +174,7 @@ usbdfu_getstatus_complete(usbd_device *dev, struct usb_setup_data *req)
 			switch(prog.buf[0]) {
 			case CMD_ERASE:
 				dfu_check_and_do_sector_erase(addr);
+				/* Falls through. */
 			case CMD_SETADDR:
 				prog.addr = addr;
 			}

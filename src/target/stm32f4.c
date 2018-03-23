@@ -161,7 +161,8 @@ bool stm32f4_probe(target *t)
 		stm32f4_add_flash(t, 0x8100000, 0x10000, 0x4000, 12);
 		stm32f4_add_flash(t, 0x8110000, 0x10000, 0x10000, 16);
 		stm32f4_add_flash(t, 0x8120000, 0xE0000, 0x20000, 17);
-		/* Fall through for stuff common to F40x/F41x */
+		/* Fall through */
+		/* for stuff common to F40x/F41x */
 	case 0x411: /* F205 */
 	case 0x413: /* F405 */
 	case 0x421: /* F446 */
