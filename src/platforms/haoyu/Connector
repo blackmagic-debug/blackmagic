@@ -1,0 +1,29 @@
+The connector appears to be a standard ARM JTAG 20 way connector but chances are there has been more than
+one build state so, if in doubt, buzz it out. 
+
+Pin 1 is marked with a white triangle on the top side of the board,  as follows;
+
+1 - Sense (Only connects to the Red Led...but at least tells you the target has power)  [Red]
+3 - nTRST 
+5 - TDI          [Yellow]
+7 -TMS / SWDIO   [Purple]
+9 - TCK / SWCLK  [Grey]
+11 - N.C.     
+13 - TDO / SWO   [Green]
+15 - nSRST       [Orange]
+17 - N.C.
+19 - N.C.
+
+2 - N.C.
+4,6,8,10,12,14,16,18,20 Gnd [Black]
+
+I normally use [White] for voltage feed (3v3 or whatever).
+
+I have successfully connected with both JTAG and SWO.
+
+The 4-pin header you will need to initially program the board;
+
+1 - 3v3  (Nearest 20 pin connector)
+2 - SWDIO
+3 - SWCLK
+4 - Gnd

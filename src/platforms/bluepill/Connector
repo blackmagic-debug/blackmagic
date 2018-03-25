@@ -1,0 +1,26 @@
+The connector used for debug is the 0.1" header to the West side of the board with the USB
+connector pointing North. You can get a pinout from;
+
+http://reblag.dk/wordpress/wp-content/uploads/2016/07/The-Generic-STM32F103-Pinout-Diagram.pdf
+
+My pinning and colours are;
+
+Pin number    Name        Colour   Purpose
+from bottom
+   1          3v3	  White    3v3 Feed
+   2          Gnd      !* Black    Ground Connection
+   3          5v          Brown    5V USB Derrived Feed
+   4          PB9      !* Purple   TMS  / SWDIO
+   5          PB8      !* Grey     TCK  / SWCLK
+   6          PB7       * Green    TDO   / SWO
+   7          PB6       * Yellow   TDI  
+   8          PB5         Orange   nSRST
+   9          PB4         Blue     VSense (Target voltage present)
+
+For a minimal SWD interface the connections marked (!) are needed. For a minimal JTAG interface
+the ones marked (*) are needed. Since the debugger only runs at 3v3 the VSense is not
+needed for operation, but bear in mind that providing voltage through port connections to
+an unpowered CPU is eventually going to cause trouble with latch-up and similar....so in 
+general make sure your target is powered, or interface to it via 47R resistors or larger.
+
+I have successfully connected with both JTAG and SWD.

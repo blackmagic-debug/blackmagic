@@ -188,14 +188,14 @@ static const struct usb_endpoint_descriptor uart_data_endp[] = {{
 	.bDescriptorType = USB_DT_ENDPOINT,
 	.bEndpointAddress = 0x03,
 	.bmAttributes = USB_ENDPOINT_ATTR_BULK,
-	.wMaxPacketSize = CDCACM_PACKET_SIZE,
+	.wMaxPacketSize = 48, //CDCACM_PACKET_SIZE,
 	.bInterval = 1,
 }, {
 	.bLength = USB_DT_ENDPOINT_SIZE,
 	.bDescriptorType = USB_DT_ENDPOINT,
 	.bEndpointAddress = 0x83,
 	.bmAttributes = USB_ENDPOINT_ATTR_BULK,
-	.wMaxPacketSize = CDCACM_PACKET_SIZE,
+	.wMaxPacketSize = 48, //CDCACM_PACKET_SIZE,
 	.bInterval = 1,
 }};
 
@@ -517,9 +517,9 @@ static void cdcacm_set_config(usbd_device *dev, uint16_t wValue)
 
 	/* Serial interface */
 	usbd_ep_setup(dev, 0x03, USB_ENDPOINT_ATTR_BULK,
-	              CDCACM_PACKET_SIZE, usbuart_usb_out_cb);
+	              48 /*CDCACM_PACKET_SIZE*/, usbuart_usb_out_cb);
 	usbd_ep_setup(dev, 0x83, USB_ENDPOINT_ATTR_BULK,
-	              CDCACM_PACKET_SIZE, usbuart_usb_in_cb);
+	              48 /*CDCACM_PACKET_SIZE*/, usbuart_usb_in_cb);
 	usbd_ep_setup(dev, 0x84, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
 
 #if defined(PLATFORM_HAS_TRACESWO)

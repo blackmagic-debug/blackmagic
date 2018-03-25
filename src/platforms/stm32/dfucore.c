@@ -352,9 +352,9 @@ static char *get_dev_unique_id(char *s)
 	/* Calculated the upper flash limit from the exported data
 	   in theparameter block*/
 	fuse_flash_size = *(uint32_t *) FLASH_SIZE_R & 0xfff;
-	set_dfu_iface_string(fuse_flash_size - 8);
 	if (fuse_flash_size == 0x40) /* Handle F103x8 as F103xC! */
 		fuse_flash_size = 0x80;
+	set_dfu_iface_string(fuse_flash_size - 8);
 	max_address = FLASH_BASE + (fuse_flash_size << 10);
 	/* If bootloader pages are write protected or device is read
 	 * protected, deny bootloader update.

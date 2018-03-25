@@ -29,6 +29,8 @@
 #include "timing_stm32.h"
 
 #define PLATFORM_HAS_TRACESWO
+#define TRACESWO_SYNC
+
 #define PLATFORM_HAS_POWER_SWITCH
 #ifdef ENABLE_DEBUG
 #define PLATFORM_HAS_DEBUG
@@ -107,6 +109,28 @@
 #define LED_UART	LED_0
 #define LED_IDLE_RUN	LED_1
 #define LED_ERROR	LED_2
+
+#define SWO_PIN_SETUP()                                              \
+        AFIO_MAPR |= AFIO_MAPR_USART1_REMAP;     \
+        gpio_set_mode(SWOUSART_PORT, GPIO_MODE_INPUT, \
+        GPIO_CNF_INPUT_FLOAT, SWOUSART_RX_PIN);
+
+#define IRQ_PRI_SWODMA          (1 << 4)
+
+/* Note that SWO needs to be on USART1 RX to get maximum speed */
+#define SWOUSART                USART1
+#define SWOUSARTDR              USART1_DR
+#define SWOUSART_CR1            USART1_CR1
+#define SWOUSART_IRQ            NVIC_USART1_IRQ
+#define SWOUSART_CLK            RCC_USART1
+#define SWOUSART_PORT           GPIOB
+#define SWOUSART_RX_PIN         GPIO7
+#define SWOUSART_ISR            usart1_isr
+
+/* This DMA channel is set by the USART in use */
+#define SWODMABUS               DMA1
+#define SWDDMACHAN              DMA_CHANNEL5
+#define SWODMAIRQ               NVIC_DMA1_CHANNEL5_IRQ
 
 #define TMS_SET_MODE() do { \
 	gpio_set(TMS_DIR_PORT, TMS_DIR_PIN); \
