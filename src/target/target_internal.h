@@ -175,6 +175,7 @@ bool stm32l4_probe(target *t);
 bool lmi_probe(target *t);
 bool lpc11xx_probe(target *t);
 bool lpc15xx_probe(target *t);
+bool lpc17xx_probe(target *t);
 bool lpc43xx_probe(target *t);
 bool sam3x_probe(target *t);
 bool sam4l_probe(target *t);

@@ -61,6 +61,8 @@ static const struct jtag_dev_descr_s {
 		.descr = "ST Microelectronics: STM32F4xx."},
 	{.idcode = 0x0BB11477 , .idmask = 0xFFFFFFFF,
 		.descr = "NPX: LPC11C24."},
+	{.idcode = 0x4BA00477 , .idmask = 0xFFFFFFFF,
+		.descr = "NXP: LPC17xx family."},
 /* Just for fun, unsupported */
 	{.idcode = 0x8940303F, .idmask = 0xFFFFFFFF, .descr = "ATMEL: ATMega16."},
 	{.idcode = 0x0792603F, .idmask = 0xFFFFFFFF, .descr = "ATMEL: AT91SAM9261."},
