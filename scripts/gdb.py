@@ -241,7 +241,7 @@ class Target:
 			block = 0
 			for i in range(len(self.blocks)):
 				block += 1
-				if callable(progress_cb):
+				if callable(progress_cb) and totalblocks > 0:
 					progress_cb(block*100/totalblocks)
 
 				# Erase the block
