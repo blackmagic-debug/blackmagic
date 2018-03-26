@@ -41,10 +41,10 @@ static uint8_t buf_rx_out;
 void usbuart_init(void)
 {
 	UART_PIN_SETUP();
-	
+
 	periph_clock_enable(USBUART_CLK);
 	__asm__("nop"); __asm__("nop"); __asm__("nop");
-	
+
 	uart_disable(USBUART);
 
 	/* Setup UART parameters. */
@@ -71,6 +71,20 @@ void usbuart_init(void)
 
 	//nvic_set_priority(USBUSART_IRQ, IRQ_PRI_USBUSART);
 	nvic_enable_irq(USBUART_IRQ);
+}
+
+void usbuart_send_stdout(const uint8_t *data, uint32_t len)
+{
+	while (len) {
+		uint32_t cnt = CDCACM_PACKET_SIZE;
+		if (cnt > len)
+			cnt = len;
+		nvic_disable_irq(USBUART_IRQ);
+		cnt = usbd_ep_write_packet(usbdev, CDCACM_UART_ENDPOINT, data, cnt);
+		nvic_enable_irq(USBUART_IRQ);
+		data += cnt;
+		len -= cnt;
+	}
 }
 
 void usbuart_set_line_coding(struct usb_cdc_line_coding *coding)
@@ -180,4 +194,3 @@ void USBUART_ISR(void)
 		buf_rx_out %= FIFO_SIZE;
 	}
 }
-

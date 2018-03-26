@@ -74,6 +74,8 @@ enum BMP_DEBUG {
 # define DEBUG_PROBE(...) do {} while(0)
 # define DEBUG_WIRE(...) do {} while(0)
 # define DEBUG_GDB_WIRE(...) do {} while(0)
+
+void usbuart_send_stdout(const uint8_t *data, uint32_t len);
 #else
 # include <stdarg.h>
 extern int cl_debuglevel;
@@ -171,4 +173,3 @@ static inline void DEBUG_WIRE(const char *format, ...)
 #define MORSECNT ((SYSTICKHZ / 10) - 1)
 
 #endif
-

@@ -58,9 +58,15 @@
 static const char cortexm_driver_str[] = "ARM Cortex-M";
 
 static bool cortexm_vector_catch(target *t, int argc, char *argv[]);
+#ifdef PLATFORM_HAS_USBUART
+static bool cortexm_redirect_stdout(target *t, int argc, const char **argv);
+#endif
 
 const struct command_s cortexm_cmd_list[] = {
 	{"vector_catch", (cmd_handler)cortexm_vector_catch, "Catch exception vectors"},
+#ifdef PLATFORM_HAS_USBUART
+	{"redirect_stdout", (cmd_handler)cortexm_redirect_stdout, "Redirect semihosting stdout to USB UART"},
+#endif
 	{NULL, NULL, NULL}
 };
 
@@ -1207,6 +1213,17 @@ static bool cortexm_vector_catch(target *t, int argc, char *argv[])
 #define SYS_WRITEC	0x03
 #define SYS_WRITE0	0x04
 
+#ifdef PLATFORM_HAS_USBUART
+static bool cortexm_redirect_stdout(target *t, int argc, const char **argv)
+{
+	if (argc == 1)
+		gdb_outf("Semihosting stdout redirection: %s\n", t->stdout_redirected ? "enabled" : "disabled");
+	else
+		t->stdout_redirected = !strncmp(argv[1], "enable", strlen(argv[1]));
+	return true;
+}
+#endif
+
 #if PC_HOSTED == 0
 /* probe memory access functions */
 static void probe_mem_read(target *t __attribute__((unused)), void *probe_dest, target_addr target_src, size_t len)
@@ -1216,7 +1233,6 @@ static void probe_mem_read(target *t __attribute__((unused)), void *probe_dest, 
 
 	DEBUG_INFO("probe_mem_read\n");
 	while (len--) *dst++=*src++;
-	return;
 }
 
 static void probe_mem_write(target *t __attribute__((unused)), target_addr target_dest, const void *probe_src, size_t len)
@@ -1226,7 +1242,6 @@ static void probe_mem_write(target *t __attribute__((unused)), target_addr targe
 
 	DEBUG_INFO("probe_mem_write\n");
 	while (len--) *dst++=*src++;
-	return;
 }
 #endif
 
