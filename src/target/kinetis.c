@@ -121,10 +121,28 @@ bool kinetis_probe(target *t)
 		kl_gen_add_flash(t, 0x00000000, 0x20000, 0x400, KL_WRITE_LEN);
 		break;
 	case 0x231:
-		t->driver = "KL27";
+		t->driver = "KL27x128"; // MKL27 >=128kb
 		target_add_ram(t, 0x1fffe000, 0x2000);
 		target_add_ram(t, 0x20000000, 0x6000);
 		kl_gen_add_flash(t, 0x00000000, 0x40000, 0x400, KL_WRITE_LEN);
+		break;
+	case 0x271:
+		switch((sdid>>16)&0x0f){
+			case 4:
+				t->driver = "KL27x32";
+				target_add_ram(t, 0x1ffff800, 0x0800);
+				target_add_ram(t, 0x20000000, 0x1800);
+				kl_gen_add_flash(t, 0x00000000, 0x8000, 0x400, KL_WRITE_LEN);
+				break;
+			case 5:
+				t->driver = "KL27x64";
+				target_add_ram(t, 0x1ffff000, 0x1000);
+				target_add_ram(t, 0x20000000, 0x3000);
+				kl_gen_add_flash(t, 0x00000000, 0x10000, 0x400, KL_WRITE_LEN);
+				break;
+			default:
+				return false;
+		}
 		break;
 	case 0x021: /* KL02 family */
 		switch((sdid>>16) & 0x0f){
