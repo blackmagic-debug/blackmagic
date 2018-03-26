@@ -129,6 +129,9 @@ struct target_s {
 	char cmdline[MAX_CMDLINE];
 	target_addr heapinfo[4];
 	struct target_command_s *commands;
+#ifdef PLATFORM_HAS_USBUART
+	bool stdout_redirected;
+#endif
 
 	struct target_s *next;
 

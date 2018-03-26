@@ -22,8 +22,11 @@
 #include "target_internal.h"
 
 #include <stdarg.h>
+#include <unistd.h>
 
 target *target_list = NULL;
+
+#define STDOUT_READ_BUF_SIZE	64
 
 static int target_flash_write_buffered(struct target_flash *f,
                                        target_addr dest, const void *src, size_t len);
@@ -630,6 +633,22 @@ int tc_read(target *t, int fd, target_addr buf, unsigned int count)
 
 int tc_write(target *t, int fd, target_addr buf, unsigned int count)
 {
+#ifdef PLATFORM_HAS_USBUART
+	if (t->stdout_redirected && (fd == STDOUT_FILENO || fd == STDERR_FILENO)) {
+		while (count) {
+			uint8_t tmp[STDOUT_READ_BUF_SIZE];
+			unsigned int cnt = sizeof(tmp);
+			if (cnt > count)
+				cnt = count;
+			target_mem_read(t, tmp, buf, cnt);
+			usbuart_send_stdout(tmp, cnt);
+			count -= cnt;
+			buf += cnt;
+		}
+		return 0;
+	}
+#endif
+
 	if (t->tc->write == NULL)
 		return 0;
 	return t->tc->write(t->tc, fd, buf, count);
