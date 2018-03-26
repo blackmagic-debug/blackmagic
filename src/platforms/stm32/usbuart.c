@@ -129,6 +129,19 @@ static void usbuart_run(void)
 	}
 }
 
+void usbuart_send_stdout(uint8_t *data, uint32_t len) {
+	while (len) {
+		uint16_t cnt = CDCACM_PACKET_SIZE;
+		if (cnt > len) cnt = len;
+		nvic_disable_irq(USBUSART_TIM_IRQ);
+		cnt = usbd_ep_write_packet(usbdev,
+				CDCACM_UART_ENDPOINT, data, cnt);
+		nvic_enable_irq(USBUSART_TIM_IRQ);
+		data += cnt;
+		len -= cnt;
+	}
+}
+
 void usbuart_set_line_coding(struct usb_cdc_line_coding *coding)
 {
 	usart_set_baudrate(USBUSART, coding->dwDTERate);

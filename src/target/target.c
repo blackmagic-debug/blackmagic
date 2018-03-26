@@ -21,10 +21,22 @@
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
+#include "usbuart.h"
 
 #include <stdarg.h>
+#include <unistd.h>
 
 target *target_list = NULL;
+
+#define STDOUT_READ_BUF_SIZE	64
+
+#ifdef PLATFORM_HAS_USBUART
+static bool cmd_redirect_stdout(target *t, int argc, const char **argv);
+const struct command_s semihost_cmd_list[] = {
+	{"redirect_stdout", (cmd_handler)cmd_redirect_stdout, "Redirect semihosting stdout to USB UART"},
+	{NULL, NULL, NULL}
+};
+#endif
 
 target *target_new(void)
 {
@@ -37,7 +49,9 @@ target *target_new(void)
 	} else {
 		target_list = t;
 	}
-
+#ifdef PLATFORM_HAS_USBUART
+	target_add_commands(t, semihost_cmd_list, "Semihosting");
+#endif
 	return t;
 }
 
@@ -451,6 +465,18 @@ int target_command(target *t, int argc, const char *argv[])
 	return -1;
 }
 
+#ifdef PLATFORM_HAS_USBUART
+static bool cmd_redirect_stdout(target *t, int argc, const char **argv)
+{
+	if (argc == 1)
+		tc_printf(t, "Semihosting stdout redirection: %s\n",
+			 t->stdout_redirected ? "enabled" : "disabled");
+	else
+		t->stdout_redirected = !strncmp(argv[1], "enable", strlen(argv[1]));
+	return true;
+}
+#endif
+
 void tc_printf(target *t, const char *fmt, ...)
 {
 	(void)t;
@@ -493,6 +519,22 @@ int tc_read(target *t, int fd, target_addr buf, unsigned int count)
 
 int tc_write(target *t, int fd, target_addr buf, unsigned int count)
 {
+#ifdef PLATFORM_HAS_USBUART
+	if (t->stdout_redirected &&
+			(fd == STDOUT_FILENO || fd == STDERR_FILENO)) {
+		while(count) {
+			uint8_t tmp[STDOUT_READ_BUF_SIZE];
+			unsigned int cnt = sizeof(tmp);
+			if (cnt > count) cnt = count;
+			target_mem_read(t, tmp, buf, cnt);
+			usbuart_send_stdout(tmp, cnt);
+			count -= cnt;
+			buf += cnt;
+		}
+		return 0;
+	}
+#endif
+
 	if (t->tc->write == NULL)
 		return 0;
 	return t->tc->write(t->tc, fd, buf, count);

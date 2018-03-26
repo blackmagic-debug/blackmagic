@@ -29,4 +29,6 @@ void usbuart_set_line_coding(struct usb_cdc_line_coding *coding);
 void usbuart_usb_out_cb(usbd_device *dev, uint8_t ep);
 void usbuart_usb_in_cb(usbd_device *dev, uint8_t ep);
 
+void usbuart_send_stdout(uint8_t *data, uint32_t len);
+
 #endif

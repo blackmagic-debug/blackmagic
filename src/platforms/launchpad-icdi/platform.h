@@ -23,6 +23,7 @@
 #include "timing.h"
 #include "version.h"
 
+#define PLATFORM_HAS_USBUART
 #define BOARD_IDENT             "Black Magic Probe (Launchpad ICDI), (Firmware " FIRMWARE_VERSION ")"
 #define BOARD_IDENT_DFU		"Black Magic (Upgrade) for Launchpad, (Firmware " FIRMWARE_VERSION ")"
 #define DFU_IDENT               "Black Magic Firmware Upgrade (Launchpad)"

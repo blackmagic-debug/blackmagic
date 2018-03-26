@@ -32,6 +32,7 @@
 
 #include <setjmp.h>
 
+#define PLATFORM_HAS_USBUART
 #define PLATFORM_HAS_TRACESWO
 #define BOARD_IDENT       "Black Magic Probe (HydraBus), (Firmware " FIRMWARE_VERSION ")"
 #define BOARD_IDENT_DFU   "Black Magic (Upgrade) for HydraBus, (Firmware " FIRMWARE_VERSION ")"

@@ -29,6 +29,7 @@
 #include "timing_stm32.h"
 #include "version.h"
 
+#define PLATFORM_HAS_USBUART
 #define BOARD_IDENT            "Black Magic Probe (SWLINK), (Firmware " FIRMWARE_VERSION ")"
 #define BOARD_IDENT_DFU	       "Black Magic (Upgrade), STM8S Discovery, (Firmware " FIRMWARE_VERSION ")"
 #define BOARD_IDENT_UPD	       "Black Magic (DFU Upgrade), STM8S Discovery, (Firmware " FIRMWARE_VERSION ")"

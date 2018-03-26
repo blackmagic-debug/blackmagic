@@ -121,6 +121,9 @@ struct target_s {
 	/* Other stuff */
 	const char *driver;
 	struct target_command_s *commands;
+#ifdef PLATFORM_HAS_USBUART
+	bool stdout_redirected;
+#endif
 
 	struct target_s *next;
 

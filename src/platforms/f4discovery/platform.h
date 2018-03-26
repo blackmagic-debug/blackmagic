@@ -32,6 +32,7 @@
 #include <setjmp.h>
 
 #define PLATFORM_HAS_TRACESWO
+#define PLATFORM_HAS_USBUART
 #define BOARD_IDENT "Black Magic Probe (F4Discovery), (Firmware " FIRMWARE_VERSION ")"
 #define DFU_IDENT   "Black Magic Firmware Upgrade (F4Discovery)"
 
