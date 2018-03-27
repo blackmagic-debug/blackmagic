@@ -125,7 +125,10 @@ static const char tdesc_cortex_m[] =
 	"    <reg name=\"xpsr\" bitsize=\"32\"/>"
 	"    <reg name=\"msp\" bitsize=\"32\" save-restore=\"no\" type=\"data_ptr\"/>"
 	"    <reg name=\"psp\" bitsize=\"32\" save-restore=\"no\" type=\"data_ptr\"/>"
-	"    <reg name=\"special\" bitsize=\"32\" save-restore=\"no\"/>"
+	"    <reg name=\"primask\" bitsize=\"8\" save-restore=\"no\"/>"
+	"    <reg name=\"basepri\" bitsize=\"8\" save-restore=\"no\"/>"
+	"    <reg name=\"faultmask\" bitsize=\"8\" save-restore=\"no\"/>"
+	"    <reg name=\"control\" bitsize=\"8\" save-restore=\"no\"/>"
 	"  </feature>"
 	"</target>";
 
@@ -154,7 +157,10 @@ static const char tdesc_cortex_mf[] =
 	"    <reg name=\"xpsr\" bitsize=\"32\"/>"
 	"    <reg name=\"msp\" bitsize=\"32\" save-restore=\"no\" type=\"data_ptr\"/>"
 	"    <reg name=\"psp\" bitsize=\"32\" save-restore=\"no\" type=\"data_ptr\"/>"
-	"    <reg name=\"special\" bitsize=\"32\" save-restore=\"no\"/>"
+	"    <reg name=\"primask\" bitsize=\"8\" save-restore=\"no\"/>"
+	"    <reg name=\"basepri\" bitsize=\"8\" save-restore=\"no\"/>"
+	"    <reg name=\"faultmask\" bitsize=\"8\" save-restore=\"no\"/>"
+	"    <reg name=\"control\" bitsize=\"8\" save-restore=\"no\"/>"
 	"  </feature>"
 	"  <feature name=\"org.gnu.gdb.arm.vfp\">"
 	"    <reg name=\"fpscr\" bitsize=\"32\"/>"
