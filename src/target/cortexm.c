@@ -401,7 +401,10 @@ void cortexm_detach(target *t)
 	/* Clear any stale watchpoints */
 	for(i = 0; i < priv->hw_watchpoint_max; i++)
 		target_mem_write32(t, CORTEXM_DWT_FUNC(i), 0);
-
+	/* Release exception catch .*/
+	target_mem_write32(t, CORTEXM_DEMCR, 0);
+	/* Continue running target where stopped.*/
+	cortexm_halt_resume(t, 0);
 	/* Disable debug */
 	target_mem_write32(t, CORTEXM_DHCSR, CORTEXM_DHCSR_DBGKEY);
 }
