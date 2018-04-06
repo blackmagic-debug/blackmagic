@@ -144,14 +144,16 @@ void platform_init(void)
 	/* Enable internal pull-up on PWR_BR so that we don't drive
 	   TPWR locally or inadvertently supply power to the target. */
 	if (platform_hwversion () == 1) {
-		gpio_set(PWR_BR_PORT, PWR_BR_PIN);
+//		gpio_set(PWR_BR_PORT, PWR_BR_PIN);
 		gpio_set_mode(PWR_BR_PORT, GPIO_MODE_INPUT,
 		              GPIO_CNF_INPUT_PULL_UPDOWN, PWR_BR_PIN);
 	} else if (platform_hwversion() > 1) {
-		gpio_set(PWR_BR_PORT, PWR_BR_PIN);
+//		gpio_set(PWR_BR_PORT, PWR_BR_PIN);
 		gpio_set_mode(PWR_BR_PORT, GPIO_MODE_OUTPUT_50_MHZ,
 		              GPIO_CNF_OUTPUT_OPENDRAIN, PWR_BR_PIN);
 	}
+
+platform_target_set_power(0);		// to be sure
 
 	if (platform_hwversion() > 0) {
 		adc_init();
@@ -203,7 +205,11 @@ bool platform_srst_get_val(void)
 bool platform_target_get_power(void)
 {
 	if (platform_hwversion() > 0) {
+#ifdef POWERINVERTED
+		return gpio_get(PWR_BR_PORT, PWR_BR_PIN);
+#else
 		return !gpio_get(PWR_BR_PORT, PWR_BR_PIN);
+#endif
   	}
 	return 0;
 }
@@ -211,7 +217,11 @@ bool platform_target_get_power(void)
 void platform_target_set_power(bool power)
 {
 	if (platform_hwversion() > 0) {
+#ifdef POWERINVERTED
+		gpio_set_val(PWR_BR_PORT, PWR_BR_PIN, power);
+#else
 		gpio_set_val(PWR_BR_PORT, PWR_BR_PIN, !power);
+#endif
 	}
 }
 
