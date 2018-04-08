@@ -22,7 +22,7 @@
 
 #include <libopencm3/usb/usbd.h>
 
-void traceswo_init(void);
+void traceswo_init(uint32_t baudrate);
 void trace_buf_drain(usbd_device *dev, uint8_t ep);
 
 #endif
