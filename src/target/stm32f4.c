@@ -197,6 +197,7 @@ bool stm32f4_probe(target *t)
 		t->idcode = idcode;
 		t->driver = "STM32F4";
 		t->attach = stm32f4_attach;
+		target_add_commands(t, stm32f4_cmd_list, "stm32f4");
 		return true;
 	default:
 		return false;
@@ -273,8 +274,8 @@ static bool stm32f4_attach(target *t)
 	}
 	target_mem_write32(t, DBGMCU_CR, DBG_STANDBY| DBG_STOP | DBG_SLEEP);
 	t->driver = designator;
-	target_add_commands(t, stm32f4_cmd_list, designator);
 	bool use_dual_bank = false;
+	target_mem_map_free(t);
 	uint32_t flashsize = target_mem_read32(t, flashsize_base) & 0xffff;
 	if (is_f7) {
 		target_add_ram(t, 0x00000000, 0x4000);  /* 16 k ITCM Ram */
