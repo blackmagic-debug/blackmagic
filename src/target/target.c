@@ -54,6 +54,26 @@ bool target_foreach(void (*cb)(int, target *t, void *context), void *context)
 	return target_list != NULL;
 }
 
+void target_mem_map_free(target *t)
+{
+	if (t->dyn_mem_map) {
+		free(t->dyn_mem_map);
+		t->dyn_mem_map = NULL;
+	}
+	while (t->ram) {
+		void * next = t->ram->next;
+		free(t->ram);
+		t->ram = next;
+	}
+	while (t->flash) {
+		void * next = t->flash->next;
+		if (t->flash->buf)
+			free(t->flash->buf);
+		free(t->flash);
+		t->flash = next;
+	}
+}
+
 void target_list_free(void)
 {
 	struct target_command_s *tc;
@@ -69,20 +89,7 @@ void target_list_free(void)
 			free(target_list->commands);
 			target_list->commands = tc;
 		}
-		if (target_list->dyn_mem_map)
-			free(target_list->dyn_mem_map);
-		while (target_list->ram) {
-			void * next = target_list->ram->next;
-			free(target_list->ram);
-			target_list->ram = next;
-		}
-		while (target_list->flash) {
-			void * next = target_list->flash->next;
-			if (target_list->flash->buf)
-				free(target_list->flash->buf);
-			free(target_list->flash);
-			target_list->flash = next;
-		}
+		target_mem_map_free(target_list);
 		while (target_list->bw_list) {
 			void * next = target_list->bw_list->next;
 			free(target_list->bw_list);
