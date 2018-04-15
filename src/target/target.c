@@ -56,10 +56,6 @@ bool target_foreach(void (*cb)(int, target *t, void *context), void *context)
 
 void target_mem_map_free(target *t)
 {
-	if (t->dyn_mem_map) {
-		free(t->dyn_mem_map);
-		t->dyn_mem_map = NULL;
-	}
 	while (t->ram) {
 		void * next = t->ram->next;
 		free(t->ram);
@@ -175,14 +171,8 @@ static ssize_t map_flash(char *buf, size_t len, struct target_flash *f)
 	return i;
 }
 
-const char *target_mem_map(target *t)
+bool target_mem_map(target *t, char *tmp, size_t len)
 {
-	if (t->dyn_mem_map)
-		return t->dyn_mem_map;
-
-	/* FIXME size buffer */
-	size_t len = 1024;
-	char *tmp = malloc(len);
 	size_t i = 0;
 	i = snprintf(&tmp[i], len - i, "<memory-map>");
 	/* Map each defined RAM */
@@ -193,9 +183,9 @@ const char *target_mem_map(target *t)
 		i += map_flash(&tmp[i], len - i, f);
 	i += snprintf(&tmp[i], len - i, "</memory-map>");
 
-	t->dyn_mem_map = tmp;
-
-	return t->dyn_mem_map;
+	if (i > (len -2))
+		return false;
+	return true;
 }
 
 static struct target_flash *flash_for_addr(target *t, uint32_t addr)

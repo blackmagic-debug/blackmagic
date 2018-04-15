@@ -109,8 +109,6 @@ struct target_s {
 	unsigned target_options;
 	uint32_t idcode;
 
-	/* Target memory map */
-	char *dyn_mem_map;
 	struct target_ram *ram;
 	struct target_flash *flash;
 

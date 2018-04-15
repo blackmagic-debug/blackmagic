@@ -354,7 +354,9 @@ handle_q_packet(char *packet, int len)
 			gdb_putpacketz("E01");
 			return;
 		}
-		handle_q_string_reply(target_mem_map(cur_target), packet + 23);
+		char buf[1024];
+		target_mem_map(cur_target, buf, sizeof(buf)); /* Fixme: Check size!*/
+		handle_q_string_reply(buf, packet + 23);
 
 	} else if (strncmp (packet, "qXfer:features:read:target.xml:", 31) == 0) {
 		/* Read target description */
