@@ -335,7 +335,7 @@ static bool stm32l4_cmd_option(target *t, int argc, char *argv[])
 {
 	uint32_t val;
 	uint32_t values[9] = { 0xFFEFF8AA, 0xFFFFFFFF, 0, 0x000000ff,
-						   0x000000ff, 0xffffffff, 0, 0, 0x000000ff};
+						   0x000000ff, 0xffffffff, 0, 0xff, 0x000000ff};
 	int len;
 	bool res = false;
 
