@@ -297,6 +297,7 @@ static const uint8_t i2offset[9] = {
 
 static bool stm32l4_option_write(target *t, const uint32_t *values, int len)
 {
+	tc_printf(t, "Device will loose connection. Rescan!\n");
 	stm32l4_flash_unlock(t);
 	target_mem_write32(t, FLASH_OPTKEYR, OPTKEY1);
 	target_mem_write32(t, FLASH_OPTKEYR, OPTKEY2);
@@ -309,11 +310,11 @@ static bool stm32l4_option_write(target *t, const uint32_t *values, int len)
 	while (target_mem_read32(t, FLASH_SR) & FLASH_SR_BSY)
 		if(target_check_error(t))
 			return true;
-	target_mem_write32(t, FLASH_CR, FLASH_CR_LOCK);
 	target_mem_write32(t, FLASH_CR, FLASH_CR_OBL_LAUNCH);
 	while (target_mem_read32(t, FLASH_CR) & FLASH_CR_OBL_LAUNCH)
 		if(target_check_error(t))
 			return true;
+	target_mem_write32(t, FLASH_CR, FLASH_CR_LOCK);
 	return false;
 }
 
