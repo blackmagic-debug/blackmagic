@@ -40,6 +40,7 @@ SRC =			\
 	lmi.c		\
 	lpc_common.c	\
 	lpc11xx.c	\
+	lpc17xx.c	\
 	lpc15xx.c	\
 	lpc43xx.c	\
 	kinetis.c	\
