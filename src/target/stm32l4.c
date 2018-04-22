@@ -135,9 +135,7 @@ static void stm32l4_add_flash(target *t,
 	f->length = length;
 	f->blocksize = blocksize;
 	f->erase = stm32l4_flash_erase;
-	f->write = target_flash_write_buffered;
-	f->done = target_flash_done_buffered;
-	f->write_buf = stm32l4_flash_write;
+	f->write = stm32l4_flash_write;
 	f->buf_size = 2048;
 	f->erased = 0xff;
 	sf->bank1_start = bank1_start;

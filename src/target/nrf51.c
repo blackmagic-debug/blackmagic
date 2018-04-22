@@ -97,7 +97,6 @@ static void nrf51_add_flash(target *t,
 	f->blocksize = erasesize;
 	f->erase = nrf51_flash_erase;
 	f->write = nrf51_flash_write;
-	f->align = 4;
 	f->erased = 0xff;
 	target_add_flash(t, f);
 }
@@ -112,7 +111,7 @@ bool nrf51_probe(target *t)
 	case 0x0020: /* nRF51822 (rev 1) CEAA BA */
 	case 0x0024: /* nRF51422 (rev 1) QFAA C0 */
 	case 0x002A: /* nRF51822 (rev 2) QFAA FA0 */
-	case 0x004A: /* nRF51822 (rev 3) QFAA G1 */ 			
+	case 0x004A: /* nRF51822 (rev 3) QFAA G1 */
 	case 0x002D: /* nRF51422 (rev 2) QFAA DAA */
 	case 0x002E: /* nRF51422 (rev 2) QFAA E0 */
 	case 0x002F: /* nRF51822 (rev 1) CEAA B0 */
@@ -129,7 +128,7 @@ bool nrf51_probe(target *t)
 	case 0x0079: /* nRF51822 (rev 3) CEAA E0 */
 	case 0x007A: /* nRF51422 (rev 3) CEAA C0 */
 	case 0x008F: /* nRF51822 (rev 3) QFAA H1 See https://devzone.nordicsemi.com/question/97769/can-someone-conform-the-config-id-code-for-the-nrf51822qfaah1/ */
-	case 0x00D1: /* nRF51822 (rev 3) QFAA H2 */		
+	case 0x00D1: /* nRF51822 (rev 3) QFAA H2 */
 	case 0x0114: /* nRF51802 (rev ?) QFAA A1 */
 		t->driver = "Nordic nRF51";
 		target_add_ram(t, 0x20000000, 0x4000);

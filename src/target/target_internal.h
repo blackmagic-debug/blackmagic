@@ -43,13 +43,9 @@ struct target_flash {
 	flash_write_func write;
 	flash_done_func done;
 	target *t;
-	struct target_flash *next;
-	int align;
 	uint8_t erased;
-
-	/* For buffered flash */
 	size_t buf_size;
-	flash_write_func write_buf;
+	struct target_flash *next;
 	target_addr buf_addr;
 	void *buf;
 };
@@ -131,9 +127,6 @@ struct target_s {
 void target_add_commands(target *t, const struct command_s *cmds, const char *name);
 void target_add_ram(target *t, target_addr start, uint32_t len);
 void target_add_flash(target *t, struct target_flash *f);
-int target_flash_write_buffered(struct target_flash *f,
-                                target_addr dest, const void *src, size_t len);
-int target_flash_done_buffered(struct target_flash *f);
 
 /* Convenience function for MMIO access */
 uint32_t target_mem_read32(target *t, uint32_t addr);
@@ -185,4 +178,3 @@ bool kinetis_probe(target *t);
 bool efm32_probe(target *t);
 
 #endif
-

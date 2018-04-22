@@ -63,7 +63,7 @@ void lpc17xx_add_flash(target *t, uint32_t addr, size_t len, size_t erasesize, u
 	lf->f.blocksize = erasesize;
 	lf->base_sector = base_sector;
 	lf->f.buf_size = IAP_PGM_CHUNKSIZE;
-	lf->f.write_buf = lpc_flash_write_magic_vect;
+	lf->f.write = lpc_flash_write_magic_vect;
 	lf->iap_entry = IAP_ENTRYPOINT;
 	lf->iap_ram = IAP_RAM_BASE;
 	lf->iap_msp = IAP_RAM_BASE + MIN_RAM_SIZE - RAM_USAGE_FOR_IAP_ROUTINES;

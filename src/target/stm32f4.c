@@ -161,7 +161,6 @@ static void stm32f4_add_flash(target *t,
 	f->blocksize = blocksize;
 	f->erase = stm32f4_flash_erase;
 	f->write = stm32f4_flash_write;
-	f->align = 4;
 	f->erased = 0xff;
 	sf->base_sector = base_sector;
 	sf->psize = 32;

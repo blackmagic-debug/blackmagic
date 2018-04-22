@@ -25,10 +25,10 @@
  *    KL25 Sub-family Reference Manual
  *
  * Extended with support for KL02 family
- * 
+ *
  * Extended with support for K64 family with info from K22P64M50SF4RM:
  * 		K22 Sub-Family Reference Manual
- * 
+ *
  * Extended with support for K64 family with info from K64P144M120SF5RM:
  * 		K64 Sub-Family Reference Manual, Rev. 2,
  */
@@ -57,9 +57,9 @@
 #define FTFA_CMD_CHECK_ERASE       0x01
 #define FTFA_CMD_PROGRAM_CHECK     0x02
 #define FTFA_CMD_READ_RESOURCE     0x03
-#define FTFA_CMD_PROGRAM_LONGWORD  0x06 
+#define FTFA_CMD_PROGRAM_LONGWORD  0x06
 /* Part of the FTFE module for K64 */
-#define FTFE_CMD_PROGRAM_PHRASE    0x07 
+#define FTFE_CMD_PROGRAM_PHRASE    0x07
 #define FTFA_CMD_ERASE_SECTOR      0x09
 #define FTFA_CMD_CHECK_ERASE_ALL   0x40
 #define FTFA_CMD_READ_ONCE         0x41
@@ -94,19 +94,24 @@ static int kl_gen_flash_write(struct target_flash *f,
                               target_addr dest, const void *src, size_t len);
 static int kl_gen_flash_done(struct target_flash *f);
 
-static void kl_gen_add_flash(target *t,
-						   uint32_t addr, size_t length, size_t erasesize, 
-						   size_t write_len)
+struct kinetis_flash {
+	struct target_flash f;
+	uint8_t write_len;
+};
+
+static void kl_gen_add_flash(target *t, uint32_t addr, size_t length,
+                             size_t erasesize, size_t write_len)
 {
-	struct target_flash *f = calloc(1, sizeof(*f));
+	struct kinetis_flash *kf = calloc(1, sizeof(*kf));
+	struct target_flash *f = &kf->f;
 	f->start = addr;
 	f->length = length;
 	f->blocksize = erasesize;
 	f->erase = kl_gen_flash_erase;
 	f->write = kl_gen_flash_write;
 	f->done = kl_gen_flash_done;
-	f->align = write_len;
 	f->erased = 0xff;
+	kf->write_len = write_len;
 	target_add_flash(t, f);
 }
 
@@ -182,9 +187,9 @@ bool kinetis_probe(target *t)
 		kl_gen_add_flash(t, 0x40000, 0x40000, 0x800, KL_WRITE_LEN);
 		break;
 	case 0x620: /* K64F family. */
-		/* This should be 0x640, but according to the  errata sheet 
-		 * (KINETIS_1N83J) K64 and K24's will show up with the 
-		 * subfamily nibble as 2 
+		/* This should be 0x640, but according to the  errata sheet
+		 * (KINETIS_1N83J) K64 and K24's will show up with the
+		 * subfamily nibble as 2
 		 */
 		t->driver = "K64";
 		target_add_ram(t, 0x1FFF0000,  0x10000);
@@ -241,7 +246,7 @@ static int kl_gen_flash_erase(struct target_flash *f, target_addr addr, size_t l
 	while (len) {
 		if (kl_gen_command(f->t, FTFA_CMD_ERASE_SECTOR, addr, NULL)) {
 			/* Different targets have different flash erase sizes */
-			len -= f->blocksize; 
+			len -= f->blocksize;
 			addr += f->blocksize;
 		} else {
 			return 1;
@@ -256,6 +261,8 @@ static int kl_gen_flash_erase(struct target_flash *f, target_addr addr, size_t l
 static int kl_gen_flash_write(struct target_flash *f,
                               target_addr dest, const void *src, size_t len)
 {
+	struct kinetis_flash *kf = (struct kinetis_flash *)f;
+
 	/* Ensure we don't write something horrible over the security byte */
 	if (!unsafe_enabled &&
 	    (dest <= FLASH_SECURITY_BYTE_ADDRESS) &&
@@ -266,17 +273,17 @@ static int kl_gen_flash_write(struct target_flash *f,
 
 	/* Determine write command based on the alignment. */
 	uint8_t write_cmd;
-	if (f->align == K64_WRITE_LEN) {
-		write_cmd = FTFE_CMD_PROGRAM_PHRASE;		
+	if (kf->write_len == K64_WRITE_LEN) {
+		write_cmd = FTFE_CMD_PROGRAM_PHRASE;
 	} else {
 		write_cmd = FTFA_CMD_PROGRAM_LONGWORD;
 	}
-	
+
 	while (len) {
 		if (kl_gen_command(f->t, write_cmd, dest, src)) {
-			len -= f->align;
-			dest += f->align;
-			src += f->align;
+			len -= kf->write_len;
+			dest += kf->write_len;
+			src += kf->write_len;
 		} else {
 			return 1;
 		}
@@ -286,6 +293,7 @@ static int kl_gen_flash_write(struct target_flash *f,
 
 static int kl_gen_flash_done(struct target_flash *f)
 {
+	struct kinetis_flash *kf = (struct kinetis_flash *)f;
 
 	if (unsafe_enabled)
 		return 0;
@@ -297,18 +305,18 @@ static int kl_gen_flash_done(struct target_flash *f)
 	/* Load the security byte based on the alignment (determine 8 byte phrases
 	 * vs 4 byte phrases).
 	 */
-	if (f->align == 8) {
+	if (kf->write_len == 8) {
 		uint32_t vals[2];
 		vals[0] = target_mem_read32(f->t, FLASH_SECURITY_BYTE_ADDRESS-4);
 		vals[1] = target_mem_read32(f->t, FLASH_SECURITY_BYTE_ADDRESS);
 		vals[1] = (vals[1] & 0xffffff00) | FLASH_SECURITY_BYTE_UNSECURED;
 		kl_gen_command(f->t, FTFE_CMD_PROGRAM_PHRASE,
-					   FLASH_SECURITY_BYTE_ADDRESS - 4, (uint8_t*)vals);	
+					   FLASH_SECURITY_BYTE_ADDRESS - 4, (uint8_t*)vals);
 	} else {
 		uint32_t val = target_mem_read32(f->t, FLASH_SECURITY_BYTE_ADDRESS);
 		val = (val & 0xffffff00) | FLASH_SECURITY_BYTE_UNSECURED;
 		kl_gen_command(f->t, FTFA_CMD_PROGRAM_LONGWORD,
-					   FLASH_SECURITY_BYTE_ADDRESS, (uint8_t*)&val);	
+					   FLASH_SECURITY_BYTE_ADDRESS, (uint8_t*)&val);
 	}
 
 	return 0;
