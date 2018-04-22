@@ -296,6 +296,16 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 		target_check_error(t);
 	}
 
+	bool connect_srst = platform_srst_get_val();
+	/* Enable debug access for probing.*/
+	target_halt_request(t);
+	if (connect_srst) {
+		/* Connect_srst is active. Request halt on reset to inhibit
+		   start of the target CPU when releasing nRST.*/
+		target_mem_write32(t, CORTEXM_DEMCR, priv->demcr);
+	}
+	/* Always wait until nRST is released.*/
+	platform_srst_set_val(false);
 #define PROBE(x) \
 	do { if ((x)(t)) return true; else target_check_error(t); } while (0)
 
@@ -315,7 +325,12 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 	PROBE(kinetis_probe);
 	PROBE(efm32_probe);
 #undef PROBE
-
+	if (connect_srst) {
+		platform_srst_set_val(true);
+		target_mem_write32(t, CORTEXM_DEMCR, 0);
+	}
+	/* Disable Debug access.*/
+	target_mem_write32(t, CORTEXM_DHCSR, CORTEXM_DHCSR_DBGKEY);
 	return true;
 }
 
@@ -386,7 +401,10 @@ void cortexm_detach(target *t)
 	/* Clear any stale watchpoints */
 	for(i = 0; i < priv->hw_watchpoint_max; i++)
 		target_mem_write32(t, CORTEXM_DWT_FUNC(i), 0);
-
+	/* Release exception catch .*/
+	target_mem_write32(t, CORTEXM_DEMCR, 0);
+	/* Continue running target where stopped.*/
+	cortexm_halt_resume(t, 0);
 	/* Disable debug */
 	target_mem_write32(t, CORTEXM_DHCSR, CORTEXM_DHCSR_DBGKEY);
 }
