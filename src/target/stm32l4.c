@@ -142,46 +142,65 @@ static void stm32l4_add_flash(target *t,
 	target_add_flash(t, f);
 }
 
+static bool stm32l4_attach(target *t);
+
 bool stm32l4_probe(target *t)
 {
 	uint32_t idcode;
-	uint32_t size;
-	uint32_t options;
-	uint32_t bank1_start = 0x08040000;
 
 	idcode = target_mem_read32(t, DBGMCU_IDCODE) & 0xFFF;
 	switch(idcode) {
 	case 0x461: /* L496/RM0351 */
 	case 0x415: /* L471/RM0392, L475/RM0395, L476/RM0351 */
+	case 0x462: /* L45x L46x / RM0394  */
+	case 0x435: /* L43x L44x / RM0394  */
+		t->idcode = idcode;
+		t->driver = "STM32L4";
+		t->attach = stm32l4_attach;
+		target_add_commands(t, stm32l4_cmd_list, "STM32L4");
+		return true;
+	default:
+		return false;
+	}
+}
+
+static bool stm32l4_attach(target *t)
+{
+	uint32_t size = (target_mem_read32(t, FLASH_SIZE_REG) & 0xffff);
+	uint32_t bank1_start = 0x08080000; /* default split on 1MiB devices*/
+
+	if (!cortexm_attach(t))
+		return false;
+
+	target_mem_map_free(t);
+	switch(t->idcode) {
+	case 0x461: /* L496/RM0351 */
+	case 0x415: /* L471/RM0392, L475/RM0395, L476/RM0351 */
 		t->driver = stm32l4_driver_str;
-		if (idcode == 0x415) {
+		if (t->idcode == 0x415) {
 			target_add_ram(t, 0x10000000, 0x08000);
 			target_add_ram(t, 0x20000000, 0x18000);
 		} else {
 			target_add_ram(t, 0x10000000, 0x10000);
 			target_add_ram(t, 0x20000000, 0x40000);
 		}
-		size    = (target_mem_read32(t, FLASH_SIZE_REG) & 0xffff);
-		options =  target_mem_read32(t, FLASH_OPTR);
+		uint32_t options =  target_mem_read32(t, FLASH_OPTR);
+		/* Only  256 and 512 kiB devices evaluate OR_DUALBANK*/
 		if ((size < 0x400) && (options & OR_DUALBANK))
 			bank1_start =  0x08000000 + (size << 9);
 		stm32l4_add_flash(t, 0x08000000, size << 10, PAGE_SIZE, bank1_start);
-		target_add_commands(t, stm32l4_cmd_list, "STM32L4 Dual bank");
 		return true;
 	case 0x462: /* L45x L46x / RM0394  */
 	case 0x435: /* L43x L44x / RM0394  */
 		t->driver = stm32l4_driver_str;
-		if (idcode == 0x452) {
+		if (t->idcode == 0x452) {
 			target_add_ram(t, 0x10000000, 0x08000);
 			target_add_ram(t, 0x20000000, 0x20000);
 		} else {
 			target_add_ram(t, 0x10000000, 0x04000);
 			target_add_ram(t, 0x20000000, 0x0c000);
 		}
-		size    = (target_mem_read32(t, FLASH_SIZE_REG) & 0xffff);
-		options =  target_mem_read32(t, FLASH_OPTR);
 		stm32l4_add_flash(t, 0x08000000, size << 10, PAGE_SIZE, bank1_start);
-		target_add_commands(t, stm32l4_cmd_list, "STM32L4");
 		return true;
 	}
 	return false;

@@ -48,7 +48,7 @@ const struct command_s stm32f4_cmd_list[] = {
 	{NULL, NULL, NULL}
 };
 
-
+static bool stm32f4_attach(target *t);
 static int stm32f4_flash_erase(struct target_flash *f, target_addr addr,
 							   size_t len);
 static int stm32f4_flash_write(struct target_flash *f,
@@ -170,16 +170,7 @@ static void stm32f4_add_flash(target *t,
 
 bool stm32f4_probe(target *t)
 {
-	uint32_t idcode;
-	const char* designator = NULL;
-	bool dual_bank = false;
-	bool has_ccmram = false;
-	bool is_f7  = false;
-	bool large_sectors = false;
-	uint32_t flashsize_base = F4_FLASHSIZE;
-
-	idcode = target_mem_read32(t, DBGMCU_IDCODE);
-	idcode &= 0xFFF;
+	uint32_t idcode = target_mem_read32(t, DBGMCU_IDCODE) & 0xFFF;
 
 	if (idcode == ID_STM32F20X) {
 		/* F405 revision A have a wrong IDCODE, use ARM_CPUID to make the
@@ -190,6 +181,42 @@ bool stm32f4_probe(target *t)
 			idcode = ID_STM32F40X;
 	}
 	switch(idcode) {
+	case ID_STM32F40X:
+	case ID_STM32F42X: /* 427/437 */
+	case ID_STM32F46X: /* 469/479 */
+	case ID_STM32F20X: /* F205 */
+	case ID_STM32F446: /* F446 */
+	case ID_STM32F401C: /* F401 B/C RM0368 Rev.3 */
+	case ID_STM32F411: /* F411     RM0383 Rev.4 */
+	case ID_STM32F412: /* F412     RM0402 Rev.4, 256 kB Ram */
+	case ID_STM32F401E: /* F401 D/E RM0368 Rev.3 */
+	case ID_STM32F413: /* F413     RM0430 Rev.2, 320 kB Ram, 1.5 MB flash. */
+	case ID_STM32F74X: /* F74x RM0385 Rev.4 */
+	case ID_STM32F76X: /* F76x F77x RM0410 */
+	case ID_STM32F72X: /* F72x F73x RM0431 */
+		t->idcode = idcode;
+		t->driver = "STM32F4";
+		t->attach = stm32f4_attach;
+		target_add_commands(t, stm32f4_cmd_list, "stm32f4");
+		return true;
+	default:
+		return false;
+	}
+}
+
+static bool stm32f4_attach(target *t)
+{
+	const char* designator = NULL;
+	bool dual_bank = false;
+	bool has_ccmram = false;
+	bool is_f7  = false;
+	bool large_sectors = false;
+	uint32_t flashsize_base = F4_FLASHSIZE;
+
+	if (!cortexm_attach(t))
+		return false;
+
+	switch(t->idcode) {
 	case ID_STM32F40X:
 		designator = "STM32F40x";
 		has_ccmram = true;
@@ -247,9 +274,8 @@ bool stm32f4_probe(target *t)
 	}
 	target_mem_write32(t, DBGMCU_CR, DBG_STANDBY| DBG_STOP | DBG_SLEEP);
 	t->driver = designator;
-	target_add_commands(t, stm32f4_cmd_list, designator);
-	t->idcode = idcode;
 	bool use_dual_bank = false;
+	target_mem_map_free(t);
 	uint32_t flashsize = target_mem_read32(t, flashsize_base) & 0xffff;
 	if (is_f7) {
 		target_add_ram(t, 0x00000000, 0x4000);  /* 16 k ITCM Ram */

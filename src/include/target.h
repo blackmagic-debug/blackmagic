@@ -45,7 +45,7 @@ bool target_attached(target *t);
 const char *target_driver_name(target *t);
 
 /* Memory access functions */
-const char *target_mem_map(target *t);
+bool target_mem_map(target *t, char *buf, size_t len);
 int target_mem_read(target *t, void *dest, target_addr src, size_t len);
 int target_mem_write(target *t, target_addr dest, const void *src, size_t len);
 /* Flash memory access functions */

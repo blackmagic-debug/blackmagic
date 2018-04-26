@@ -69,7 +69,7 @@
 #define LED_UART	GPIO14
 
 #define PLATFORM_HAS_TRACESWO	1
-#define NUM_TRACE_PACKETS		(192)		/* This is an 12K buffer */
+#define NUM_TRACE_PACKETS		(128)		/* This is an 8K buffer */
 
 #define TMS_SET_MODE() \
 	gpio_set_mode(TMS_PORT, GPIO_MODE_OUTPUT_50_MHZ, \
