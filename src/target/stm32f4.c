@@ -279,7 +279,8 @@ static bool stm32f4_attach(target *t)
 	uint32_t flashsize = target_mem_read32(t, flashsize_base) & 0xffff;
 	if (is_f7) {
 		target_add_ram(t, 0x00000000, 0x4000);  /* 16 k ITCM Ram */
-		target_add_ram(t, 0x20000000, 0x10000); /* 64 k DTCM Ram */
+		target_add_ram(t, 0x20000000, 0x20000); /* 128 k DTCM Ram */
+		target_add_ram(t, 0x20020000, 0x60000); /* 384 k Ram */
 		if (dual_bank) {
 			uint32_t optcr;
 			optcr = target_mem_read32(t, FLASH_OPTCR);
@@ -288,7 +289,7 @@ static bool stm32f4_attach(target *t)
 	} else {
 		if (has_ccmram)
 			target_add_ram(t, 0x10000000, 0x10000); /* 64 k CCM Ram*/
-		target_add_ram(t, 0x20000000, 0x10000);     /* 64 k RAM */
+		target_add_ram(t, 0x20000000, 0x50000);     /* 320 k RAM */
 		if (dual_bank) {
 			use_dual_bank = true;
 			if (flashsize < 0x800) {
