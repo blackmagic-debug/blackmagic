@@ -24,7 +24,7 @@
  * On L4, flash and options are written in DWORDs (8-Byte) only.
  *
  * References:
- * RM0351 STM32L4x5 and STM32L4x6 advanced ARM®-based 32-bit MCUs Rev. 5
+ * RM0351 STM32L4x5 and STM32L4x6 advanced ARM®-based 32-bit MCUs Rev. 6
  * RM0392 STM32L4x1 advanced ARM®-based 32-bit MCUs Rev. 2
  * RM0393 STM32L4x2 advanced ARM®-based 32-bit MCUs Rev. 2
  * RM0394 STM32L431xx STM32L433xx STM32L443xx advanced ARM®-based 32-bit MCUs
@@ -323,20 +323,28 @@ static bool stm32l4_option_write(target *t, const uint32_t *values, int len)
  * Option
  * 0X1FFF7800 0x0f8f77ff 0xFFEFF8AA 0x0FDF77FF 0xFFEFF8AA
  * 0X1FFF7808 0x0000FFFF 0xFFFFFFFF 0x0000FFFF 0xFFFFFFFF
- * 0X1FFF7810 0x8000FFFF 0          0x8000FFFF 0
- * 0X1FFF7818 0x00FF00FF 0x000000ff 0x00FF00FF 0x000000ff
- * 0X1FFF7820 0x00FF00FF 0x000000ff 0x00FF00FF 0x000000ff
- * 0X1FFFF808 0          0          0x8000FFFF 0xffffffff
- * 0X1FFFF810 0          0          0x8000FFFF 0
- * 0X1FFFF818 0          0          0x00FF00FF 0
- * 0X1FFFF820 0          0          0x00FF00FF 0x000000ff
+ * 0X1FFF7810 0x8000FFFF 0          0x8000FFFF 0xFFFF0000
+ * 0X1FFF7818 0x00FF00FF 0x000000ff 0x00FF00FF 0xFF00FFFF
+ * 0X1FFF7820 0x00FF00FF 0x000000ff 0x00FF00FF 0xFF00FFFF
+ * 0X1FFFF808 0          0          0x8000FFFF 0xFFFFFFFF
+ * 0X1FFFF810 0          0          0x8000FFFF 0xFFFF0000
+ * 0X1FFFF818 0          0          0x00FF00FF 0xFF00FFFF
+ * 0X1FFFF820 0          0          0x00FF00FF 0xFF00FFFF
  */
 
 static bool stm32l4_cmd_option(target *t, int argc, char *argv[])
 {
 	uint32_t val;
-	uint32_t values[9] = { 0xFFEFF8AA, 0xFFFFFFFF, 0, 0x000000ff,
-						   0x000000ff, 0xffffffff, 0, 0xff, 0x000000ff};
+	uint32_t values[9] = {
+		0xFFEFF8AA, /* User and read protection option bytes */
+		0xFFFFFFFF, /* Bank 1 PCROP Start address option bytes */
+		0xFFFF0000, /* Bank 1 PCROP End address option bytes*/
+		0xFF00FFFF, /* Bank 1 WRP Area A address option bytes*/
+		0xFF00FFFF, /* Bank 1 WRP Area B address option bytes*/
+		0xFFFFFFFF, /* Bank 2 PCROP Start address option bytes*/
+		0xFFFF0000, /* Bank 2 PCROP End address option bytes*/
+		0xFF00FFFF, /* Bank 2 WRP Area A address option bytes*/
+		0xFF00FFFF};/* Bank 2 WRP Area B address option bytes*/
 	int len;
 	bool res = false;
 
