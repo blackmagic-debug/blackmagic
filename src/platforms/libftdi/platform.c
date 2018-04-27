@@ -31,17 +31,9 @@ struct ftdi_context *ftdic;
 static uint8_t outbuf[BUF_SIZE];
 static uint16_t bufptr = 0;
 
-static struct cable_desc_s {
-	int vendor;
-	int product;
-	int interface;
-	uint8_t dbus_data;
-	uint8_t dbus_ddr;
-	uint8_t cbus_data;
-	uint8_t cbus_ddr;
-	char *description;
-	char * name;
-} cable_desc[] = {
+cable_desc_t *active_cable;
+
+cable_desc_t cable_desc[] = {
 	{
 		.vendor = 0x0403,
 		.product = 0x6010,
@@ -182,14 +174,16 @@ void platform_init(int argc, char **argv)
 		exit(-1);
 	}
 
-	if (cable_desc[index].dbus_data)
-		ftdi_init[4]= cable_desc[index].dbus_data;
-	if (cable_desc[index].dbus_ddr)
-		ftdi_init[5]= cable_desc[index].dbus_ddr;
-	if (cable_desc[index].cbus_data)
-		ftdi_init[7]= cable_desc[index].cbus_data;
-	if(cable_desc[index].cbus_ddr)
-		ftdi_init[8]= cable_desc[index].cbus_ddr;
+	active_cable = &cable_desc[index];
+
+	if (active_cable->dbus_data)
+		ftdi_init[4]= active_cable->dbus_data;
+	if (active_cable->dbus_ddr)
+		ftdi_init[5]= active_cable->dbus_ddr;
+	if (active_cable->cbus_data)
+		ftdi_init[7]= active_cable->cbus_data;
+	if(active_cable->cbus_ddr)
+		ftdi_init[8]= active_cable->cbus_ddr;
 
 	printf("\nBlack Magic Probe (" FIRMWARE_VERSION ")\n");
 	printf("Copyright (C) 2015  Black Sphere Technologies Ltd.\n");
@@ -206,14 +200,14 @@ void platform_init(int argc, char **argv)
 			ftdi_get_error_string(ftdic));
 		abort();
 	}
-	if((err = ftdi_set_interface(ftdic, cable_desc[index].interface)) != 0) {
+	if((err = ftdi_set_interface(ftdic, active_cable->interface)) != 0) {
 		fprintf(stderr, "ftdi_set_interface: %d: %s\n",
 			err, ftdi_get_error_string(ftdic));
 		abort();
 	}
 	if((err = ftdi_usb_open_desc(
-		ftdic, cable_desc[index].vendor, cable_desc[index].product,
-		cable_desc[index].description, serial)) != 0) {
+		ftdic, active_cable->vendor, active_cable->product,
+		active_cable->description, serial)) != 0) {
 		fprintf(stderr, "unable to open ftdi device: %d (%s)\n",
 			err, ftdi_get_error_string(ftdic));
 		abort();
