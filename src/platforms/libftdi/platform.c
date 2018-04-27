@@ -61,6 +61,27 @@ static struct cable_desc_s {
 		.name = "ftdijtag"
 	},
 	{
+/* UART/SWO on Interface A
+ * JTAG and control on INTERFACE_B
+ * Bit 5 high selects SWD-READ (TMS routed to TDO)
+ * Bit 6 high selects JTAG vs SWD (TMS routed to TDI/TDO)
+ * BCBUS 1 (Output) N_SRST
+ * BCBUS 2 (Input) V_ISO available
+ *
+ * TDO is routed to Interface 0 RXD as SWO or with Uart
+ * Connector pin 10 pulled to ground will connect Interface 0 RXD
+ * to UART connector RXD
+ */
+		.vendor = 0x0403,
+		.product = 0x6010,
+		.interface = INTERFACE_B,
+		.dbus_data = 0x6A,
+		.dbus_ddr  = 0x6B,
+		.cbus_data = 0x02,
+		.cbus_ddr  = 0x02,
+		.name = "ftdiswd"
+	},
+	{
 		.vendor = 0x15b1,
 		.product = 0x0003,
 		.interface = INTERFACE_A,
