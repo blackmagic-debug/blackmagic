@@ -38,6 +38,26 @@
 int jtagtap_init(void)
 {
 	assert(ftdic != NULL);
+	int err = ftdi_usb_purge_buffers(ftdic);
+	if (err != 0) {
+		fprintf(stderr, "ftdi_usb_purge_buffer: %d: %s\n",
+			err, ftdi_get_error_string(ftdic));
+		abort();
+	}
+	err = ftdi_set_bitmode(ftdic, active_cable->dbus_ddr, BITMODE_MPSSE);
+	if (err != 0) {
+		fprintf(stderr, "ftdi_set_bitmode: %d: %s\n",
+			err, ftdi_get_error_string(ftdic));
+		return -1;;
+	}
+	uint8_t ftdi_init[9] = {TCK_DIVISOR, 0x00, 0x00, SET_BITS_LOW, 0,0,
+				SET_BITS_HIGH, 0,0};
+	ftdi_init[4]= active_cable->dbus_data;
+	ftdi_init[5]= active_cable->dbus_ddr;
+	ftdi_init[7]= active_cable->cbus_data;
+	ftdi_init[8]= active_cable->cbus_ddr;
+	platform_buffer_write(ftdi_init, 9);
+	platform_buffer_flush();
 
 	/* Go to JTAG mode for SWJ-DP */
 	for (int i = 0; i <= 50; i++)
