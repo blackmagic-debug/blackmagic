@@ -21,7 +21,6 @@
 /* Low level JTAG implementation using FT2232 with libftdi.
  *
  * Issues:
- * This code is old, rotten and unsupported.
  * Should share interface with swdptap.c or at least clean up...
  */
 
@@ -34,19 +33,7 @@
 #include <ftdi.h>
 
 #include "general.h"
-
-#define PROVIDE_GENERIC_TAP_SEQ
-//#define PROVIDE_GENERIC_TAP_TMS_SEQ
-//#define PROVIDE_GENERIC_TAP_TDI_TDO_SEQ
-//#define PROVIDE_GENERIC_TAP_TDI_SEQ
 #include "jtagtap.h"
-
-#define ALL_ZERO 0xA0
-#define TCK 	0x01
-#define TDI 	0x02
-#define TDO 	0x04
-#define TMS 	0x08
-#define nSRST 	0x20
 
 int jtagtap_init(void)
 {
@@ -66,24 +53,19 @@ void jtagtap_reset(void)
 	jtagtap_soft_reset();
 }
 
-#ifndef PROVIDE_GENERIC_TAP_TMS_SEQ
 void
 jtagtap_tms_seq(uint32_t MS, int ticks)
 {
 	uint8_t tmp[3] = {MPSSE_WRITE_TMS | MPSSE_LSB | MPSSE_BITMODE| MPSSE_READ_NEG, 0, 0};
 	while(ticks >= 0) {
-		//jtagtap_next(MS & 1, 1);
 		tmp[1] = ticks<7?ticks-1:6;
 		tmp[2] = 0x80 | (MS & 0x7F);
 
-//		assert(ftdi_write_data(ftdic, tmp, 3) == 3);
 		platform_buffer_write(tmp, 3);
 		MS >>= 7; ticks -= 7;
 	}
 }
-#endif
 
-#ifndef PROVIDE_GENERIC_TAP_TDI_SEQ
 void
 jtagtap_tdi_seq(const uint8_t final_tms, const uint8_t *DI, int ticks)
 {
@@ -116,12 +98,9 @@ jtagtap_tdi_seq(const uint8_t final_tms, const uint8_t *DI, int ticks)
 		tmp[index++] = 0;
 		tmp[index++] = (*DI)>>rticks?0x81:0x01;
 	}
-//	assert(ftdi_write_data(ftdic, tmp, index) == index);
 	platform_buffer_write(tmp, index);
 }
-#endif
 
-#ifndef PROVIDE_GENERIC_TAP_TDI_TDO_SEQ
 void
 jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int ticks)
 {
@@ -157,12 +136,9 @@ jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int
 		tmp[index++] = 0;
 		tmp[index++] = (*DI)>>rticks?0x81:0x01;
 	}
-//	assert(ftdi_write_data(ftdic, tmp, index) == index);
 	platform_buffer_write(tmp, index);
-//	index = 0;
-//	while((index += ftdi_read_data(ftdic, tmp + index, rsize-index)) != rsize);
 	platform_buffer_read(tmp, rsize);
-	/*for(index = 0; index < rsize; index++)
+	/*for(int index = 0; index < rsize; index++)
 		printf("%02X ", tmp[index]);
 	printf("\n");*/
 	index = 0;
@@ -184,15 +160,12 @@ jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int
 	}
 	/*printf("%02X\n", *DO);*/
 }
-#endif
 
 uint8_t jtagtap_next(uint8_t dTMS, uint8_t dTDI)
 {
 	uint8_t ret;
 	uint8_t tmp[3] = {MPSSE_WRITE_TMS | MPSSE_DO_READ | MPSSE_LSB | MPSSE_BITMODE | MPSSE_WRITE_NEG, 0, 0};
 	tmp[2] = (dTDI?0x80:0) | (dTMS?0x01:0);
-//	assert(ftdi_write_data(ftdic, tmp, 3) == 3);
-//	while(ftdi_read_data(ftdic, &ret, 1) != 1);
 	platform_buffer_write(tmp, 3);
 	platform_buffer_read(&ret, 1);
 
