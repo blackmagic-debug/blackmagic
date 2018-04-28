@@ -22,7 +22,6 @@
  *
  * Issues:
  * This code is old, rotten and unsupported.
- * Magic numbers everywhere.
  * Should share interface with swdptap.c or at least clean up...
  */
 
@@ -71,7 +70,7 @@ void jtagtap_reset(void)
 void
 jtagtap_tms_seq(uint32_t MS, int ticks)
 {
-	uint8_t tmp[3] = "\x4B";
+	uint8_t tmp[3] = {MPSSE_WRITE_TMS | MPSSE_LSB | MPSSE_BITMODE| MPSSE_READ_NEG, 0, 0};
 	while(ticks >= 0) {
 		//jtagtap_next(MS & 1, 1);
 		tmp[1] = ticks<7?ticks-1:6;
@@ -100,20 +99,20 @@ jtagtap_tdi_seq(const uint8_t final_tms, const uint8_t *DI, int ticks)
 	tmp = alloca(ticks + 9);
 
 	if(ticks) {
-		tmp[index++] = 0x19;
+		tmp[index++] = MPSSE_DO_WRITE |  MPSSE_LSB | MPSSE_WRITE_NEG;
 		tmp[index++] = ticks - 1;
 		tmp[index++] = 0;
 		while(ticks--) tmp[index++] = *DI++;
 	}
 
 	if(rticks) {
-		tmp[index++] = 0x1B;
+		tmp[index++] = MPSSE_DO_WRITE | MPSSE_LSB | MPSSE_BITMODE | MPSSE_WRITE_NEG;
 		tmp[index++] = rticks - 1;
 		tmp[index++] = *DI;
 	}
 
 	if(final_tms) {
-		tmp[index++] = 0x4B;
+		tmp[index++] = MPSSE_WRITE_TMS | MPSSE_LSB | MPSSE_BITMODE | MPSSE_WRITE_NEG;
 		tmp[index++] = 0;
 		tmp[index++] = (*DI)>>rticks?0x81:0x01;
 	}
@@ -139,7 +138,7 @@ jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int
 	tmp = alloca(ticks + 9);
 	rsize = ticks;
 	if(ticks) {
-		tmp[index++] = 0x39;
+		tmp[index++] = MPSSE_DO_READ | MPSSE_DO_WRITE | MPSSE_LSB | MPSSE_WRITE_NEG;
 		tmp[index++] = ticks - 1;
 		tmp[index++] = 0;
 		while(ticks--) tmp[index++] = *DI++;
@@ -147,14 +146,14 @@ jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int
 
 	if(rticks) {
 		rsize++;
-		tmp[index++] = 0x3B;
+		tmp[index++] = MPSSE_DO_READ | MPSSE_DO_WRITE | MPSSE_LSB | MPSSE_BITMODE | MPSSE_WRITE_NEG;
 		tmp[index++] = rticks - 1;
 		tmp[index++] = *DI;
 	}
 
 	if(final_tms) {
 		rsize++;
-		tmp[index++] = 0x6B;
+		tmp[index++] = MPSSE_WRITE_TMS | MPSSE_DO_READ | MPSSE_LSB | MPSSE_BITMODE | MPSSE_WRITE_NEG;
 		tmp[index++] = 0;
 		tmp[index++] = (*DI)>>rticks?0x81:0x01;
 	}
@@ -190,7 +189,7 @@ jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int
 uint8_t jtagtap_next(uint8_t dTMS, uint8_t dTDI)
 {
 	uint8_t ret;
-	uint8_t tmp[3] = "\x6B\x00\x00";
+	uint8_t tmp[3] = {MPSSE_WRITE_TMS | MPSSE_DO_READ | MPSSE_LSB | MPSSE_BITMODE | MPSSE_WRITE_NEG, 0, 0};
 	tmp[2] = (dTDI?0x80:0) | (dTMS?0x01:0);
 //	assert(ftdi_write_data(ftdic, tmp, 3) == 3);
 //	while(ftdi_read_data(ftdic, &ret, 1) != 1);
