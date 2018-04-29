@@ -71,6 +71,8 @@ cable_desc_t cable_desc[] = {
 		.dbus_ddr  = 0x6B,
 		.cbus_data = 0x02,
 		.cbus_ddr  = 0x02,
+		.swd_read  = {SET_BITS_LOW, 0x0a, 0x6B},
+		.swd_write = {SET_BITS_LOW, 0x2a, 0x6B},
 		.name = "ftdiswd"
 	},
 	{

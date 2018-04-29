@@ -56,6 +56,8 @@ typedef struct cable_desc_s {
 	uint8_t dbus_ddr;
 	uint8_t cbus_data;
 	uint8_t cbus_ddr;
+	uint8_t swd_read[3];
+	uint8_t swd_write[3];
 	char *description;
 	char * name;
 }cable_desc_t;
