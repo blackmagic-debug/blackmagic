@@ -97,8 +97,6 @@ jtagtap_tms_seq(uint32_t MS, int ticks)
 void
 jtagtap_tdi_seq(const uint8_t final_tms, const uint8_t *DI, int ticks)
 {
-	uint8_t *tmp;
-	int index = 0;
 	int rticks;
 
 	if(!ticks) return;
@@ -106,35 +104,35 @@ jtagtap_tdi_seq(const uint8_t final_tms, const uint8_t *DI, int ticks)
 	if(final_tms) ticks--;
 	rticks = ticks & 7;
 	ticks >>= 3;
-	tmp = alloca(ticks + 9);
+	uint8_t data[3];
 
 	if(ticks) {
-		tmp[index++] = MPSSE_DO_WRITE |  MPSSE_LSB | MPSSE_WRITE_NEG;
-		tmp[index++] = ticks - 1;
-		tmp[index++] = 0;
-		while(ticks--) tmp[index++] = *DI++;
+		data[0] = MPSSE_DO_WRITE |  MPSSE_LSB | MPSSE_WRITE_NEG;
+		data[1] = ticks - 1;
+		data[2] = 0;
+		platform_buffer_write(data, 3);
+		platform_buffer_write(DI, ticks);
 	}
 
 	if(rticks) {
-		tmp[index++] = MPSSE_DO_WRITE | MPSSE_LSB | MPSSE_BITMODE | MPSSE_WRITE_NEG;
-		tmp[index++] = rticks - 1;
-		tmp[index++] = *DI;
+		data[0] = MPSSE_DO_WRITE | MPSSE_LSB | MPSSE_BITMODE | MPSSE_WRITE_NEG;
+		data[1] = rticks - 1;
+		data[2] = DI[ticks];
+		platform_buffer_write(data, 3);
 	}
 
 	if(final_tms) {
-		tmp[index++] = MPSSE_WRITE_TMS | MPSSE_LSB | MPSSE_BITMODE | MPSSE_WRITE_NEG;
-		tmp[index++] = 0;
-		tmp[index++] = (*DI)>>rticks?0x81:0x01;
+		data[0] = MPSSE_WRITE_TMS | MPSSE_LSB | MPSSE_BITMODE | MPSSE_WRITE_NEG;
+		data[1] = 0;
+		data[2] = (*DI)>>rticks?0x81:0x01;
+		platform_buffer_write(data, 3);
 	}
-	platform_buffer_write(tmp, index);
 }
 
 void
 jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int ticks)
 {
-	uint8_t *tmp;
-	int index = 0, rsize;
-	int rticks;
+	int rsize, rticks;
 
 	if(!ticks) return;
 
@@ -142,34 +140,34 @@ jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int
 	if(final_tms) ticks--;
 	rticks = ticks & 7;
 	ticks >>= 3;
-	tmp = alloca(ticks + 9);
+	uint8_t data[3];
 	rsize = ticks;
 	if(ticks) {
-		tmp[index++] = MPSSE_DO_READ | MPSSE_DO_WRITE | MPSSE_LSB | MPSSE_WRITE_NEG;
-		tmp[index++] = ticks - 1;
-		tmp[index++] = 0;
-		while(ticks--) tmp[index++] = *DI++;
+		data[0] = MPSSE_DO_READ | MPSSE_DO_WRITE | MPSSE_LSB | MPSSE_WRITE_NEG;
+		data[1] = ticks - 1;
+		data[2] = 0;
+		platform_buffer_write(data, 3);
+		platform_buffer_write(DI, ticks);
 	}
 
 	if(rticks) {
 		rsize++;
-		tmp[index++] = MPSSE_DO_READ | MPSSE_DO_WRITE | MPSSE_LSB | MPSSE_BITMODE | MPSSE_WRITE_NEG;
-		tmp[index++] = rticks - 1;
-		tmp[index++] = *DI;
+		data[0] = MPSSE_DO_READ | MPSSE_DO_WRITE | MPSSE_LSB | MPSSE_BITMODE | MPSSE_WRITE_NEG;
+		data[1] = rticks - 1;
+		data[2] = DI[ticks];
+		platform_buffer_write(data, 3);
 	}
 
 	if(final_tms) {
 		rsize++;
-		tmp[index++] = MPSSE_WRITE_TMS | MPSSE_DO_READ | MPSSE_LSB | MPSSE_BITMODE | MPSSE_WRITE_NEG;
-		tmp[index++] = 0;
-		tmp[index++] = (*DI)>>rticks?0x81:0x01;
+		data[0] = MPSSE_WRITE_TMS | MPSSE_DO_READ | MPSSE_LSB | MPSSE_BITMODE | MPSSE_WRITE_NEG;
+		data[1] = 0;
+		data[2] = (*DI)>>rticks?0x81:0x01;
+		platform_buffer_write(data, 3);
 	}
-	platform_buffer_write(tmp, index);
+	uint8_t *tmp = alloca(ticks);
+	int index = 0;
 	platform_buffer_read(tmp, rsize);
-	/*for(int index = 0; index < rsize; index++)
-		printf("%02X ", tmp[index]);
-	printf("\n");*/
-	index = 0;
 	if(final_tms) rsize--;
 
 	while(rsize--) {
