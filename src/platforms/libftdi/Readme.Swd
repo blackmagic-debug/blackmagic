@@ -1,0 +1,23 @@
+While connecting an MPSSE enabled FTDI chip in Jtag mode is straightforward,
+doing Swd can be done in several ways:
+
+- Ftdi is connected without any buffers to the JTAG Pins:
+  As now TMS does data I/O, transfer needs to be done by bitbang.
+  This should be possible also with MPSSE bitbang but will be
+  very slow. Not implemented here.
+- SWDIO is directly connected to TDO and TDI is connected by a resistor
+  to SWDIO:
+  By the resistor, tristating TDI is simulate.
+  JTAG is not possible.
+  Should be possible with this implementation. Just do not define swd_read
+  and swd_write
+- Some FTDI pin allows to route TDI/TDO to DO/DI/TMS as needed. In
+  SWD mode some other pin routes SWDIO to DI or DO to SWDIO.
+  Tested with the FTDISWD cable.
+  An isolation resistor may remove the need for the read/write switch.
+
+Programming speed examples:
+STM32F405         ftdi       swd
+branch ftdi:  6 kB/sec  4 kB/sec
+ftdi+asyn  :  6 kB/sec  9 kB/sec
+ftdi+access: 10 kB/sec 16 kB/sec
