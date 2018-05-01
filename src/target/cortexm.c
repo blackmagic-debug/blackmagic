@@ -379,6 +379,9 @@ void cortexm_detach(target *t)
 	struct cortexm_priv *priv = t->priv;
 	unsigned i;
 
+	/* Clear halt on reset */
+	target_mem_write32(t, CORTEXM_DEMCR, 0);
+
 	/* Clear any stale breakpoints */
 	for(i = 0; i < priv->hw_breakpoint_max; i++)
 		target_mem_write32(t, CORTEXM_FPB_COMP(i), 0);
