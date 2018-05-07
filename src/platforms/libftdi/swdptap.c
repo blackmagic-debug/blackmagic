@@ -37,6 +37,13 @@ int swdptap_init(void)
 
 	assert(ftdic != NULL);
 
+	/* Reset MPSSE controller. */
+	if((err = ftdi_set_bitmode(ftdic, 0, BITMODE_RESET)) != 0) {
+		fprintf(stderr, "ftdi_set_bitmode: %d: %s\n",
+			err, ftdi_get_error_string(ftdic));
+		abort();
+	}
+
 	if((err = ftdi_set_bitmode(ftdic, 0xAB, BITMODE_BITBANG)) != 0) {
 		fprintf(stderr, "ftdi_set_bitmode: %d: %s\n",
 			err, ftdi_get_error_string(ftdic));

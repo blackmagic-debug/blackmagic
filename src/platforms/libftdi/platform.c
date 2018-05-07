@@ -150,9 +150,6 @@ void platform_init(int argc, char **argv)
 	unsigned index = 0;
 	char *serial = NULL;
 	char * cablename =  "ftdi";
-	uint8_t ftdi_init[9] = {TCK_DIVISOR, 0x01, 0x00, SET_BITS_LOW, 0,0,
-				SET_BITS_HIGH, 0,0};
-
 	while((c = getopt(argc, argv, "c:s:")) != -1) {
 		switch(c) {
 		case 'c':
@@ -175,15 +172,6 @@ void platform_init(int argc, char **argv)
 	}
 
 	active_cable = &cable_desc[index];
-
-	if (active_cable->dbus_data)
-		ftdi_init[4]= active_cable->dbus_data;
-	if (active_cable->dbus_ddr)
-		ftdi_init[5]= active_cable->dbus_ddr;
-	if (active_cable->cbus_data)
-		ftdi_init[7]= active_cable->cbus_data;
-	if(active_cable->cbus_ddr)
-		ftdi_init[8]= active_cable->cbus_ddr;
 
 	printf("\nBlack Magic Probe (" FIRMWARE_VERSION ")\n");
 	printf("Copyright (C) 2015  Black Sphere Technologies Ltd.\n");
@@ -223,24 +211,11 @@ void platform_init(int argc, char **argv)
 			err, ftdi_get_error_string(ftdic));
 		abort();
 	}
-	if((err = ftdi_usb_purge_buffers(ftdic)) != 0) {
-		fprintf(stderr, "ftdi_set_baudrate: %d: %s\n",
-			err, ftdi_get_error_string(ftdic));
-		abort();
-	}
 	if((err = ftdi_write_data_set_chunksize(ftdic, BUF_SIZE)) != 0) {
 		fprintf(stderr, "ftdi_write_data_set_chunksize: %d: %s\n",
 			err, ftdi_get_error_string(ftdic));
 		abort();
 	}
-
-	if((err = ftdi_set_bitmode(ftdic, 0, BITMODE_MPSSE)) != 0) {
-		fprintf(stderr, "ftdi_set_bitmode: %d: %s\n",
-			err, ftdi_get_error_string(ftdic));
-		abort();
-	}
-
-	assert(ftdi_write_data(ftdic, ftdi_init, 9) == 9);
 	assert(gdb_if_init() == 0);
 }
 
