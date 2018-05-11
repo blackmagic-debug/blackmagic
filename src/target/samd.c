@@ -128,11 +128,11 @@ const struct command_s samd_cmd_list[] = {
 /* Device Identification Register (DID) */
 #define SAMD_DID_MASK			0xFF3C0000
 #define SAMD_DID_CONST_VALUE		0x10000000
-#define SAMD_DID_DEVSEL_MASK		0x0F
+#define SAMD_DID_DEVSEL_MASK		0xFF
 #define SAMD_DID_DEVSEL_POS		0
 #define SAMD_DID_REVISION_MASK		0x0F
 #define SAMD_DID_REVISION_POS		8
-#define SAMD_DID_SERIES_MASK		0x03
+#define SAMD_DID_SERIES_MASK		0x1F
 #define SAMD_DID_SERIES_POS		16
 #define SAMD_DID_FAMILY_MASK		0x1F
 #define SAMD_DID_FAMILY_POS		23
