@@ -18,8 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* MPSSE bit-banging SW-DP interface over FTDI.
- * Slow, but usable.
+/* MPSSE bit-banging SW-DP interface over FTDI with loop unrolled.
+ * Speed is sensible.
  */
 
 #include <stdio.h>
@@ -125,3 +125,107 @@ void swdptap_bit_out(bool val)
 	platform_buffer_write(cmd, 3);
 }
 
+bool swdptap_seq_in_parity(uint32_t *res, int ticks)
+{
+	int index = ticks + 1;
+	uint8_t cmd[4];
+	unsigned int parity = 0;
+
+	cmd[0] = MPSSE_TMS_IN_PORT;
+	cmd[1] = MPSSE_TMS_SHIFT;
+	cmd[2] = 0;
+	cmd[3] = 0;
+	swdptap_turnaround(1);
+	while (index--) {
+		platform_buffer_write(cmd, 4);
+	}
+	uint8_t data[33];
+	unsigned int ret = 0;
+	platform_buffer_read(data, ticks + 1);
+	if (data[ticks] & 0x08)
+		parity ^= 1;
+	while (ticks--) {
+		if (data[ticks] & MPSSE_TMS_IN_PIN) {
+			parity ^= 1;
+			ret |= (1 << ticks);
+		}
+	}
+	*res = ret;
+	return parity;
+}
+
+uint32_t swdptap_seq_in(int ticks)
+{
+	int index = ticks;
+	uint8_t cmd[4];
+
+	cmd[0] = MPSSE_TMS_IN_PORT;
+	cmd[1] = MPSSE_TMS_SHIFT;
+	cmd[2] = 0;
+	cmd[3] = 0;
+
+	swdptap_turnaround(1);
+	while (index--) {
+		platform_buffer_write(cmd, 4);
+	}
+	uint8_t data[32];
+	uint32_t ret = 0;
+	platform_buffer_read(data, ticks);
+	while (ticks--) {
+		if (data[ticks] & MPSSE_TMS_IN_PIN)
+			ret |= (1 << ticks);
+	}
+	return ret;
+}
+
+void swdptap_seq_out(uint32_t MS, int ticks)
+{
+	uint8_t cmd[15];
+	uint index = 0;
+	swdptap_turnaround(0);
+	while (ticks) {
+		cmd[index++] = MPSSE_TMS_SHIFT;
+		if (ticks >= 7) {
+			cmd[index++] = 6;
+			cmd[index++] = MS & 0x7f;
+			MS >>= 7;
+			ticks -= 7;
+		} else {
+			cmd[index++] = ticks - 1;
+			cmd[index++] = MS & 0x7f;
+			ticks = 0;
+		}
+	}
+	platform_buffer_write(cmd, index);
+}
+
+void swdptap_seq_out_parity(uint32_t MS, int ticks)
+{
+	uint8_t parity = 0;
+	int steps = ticks;
+	uint8_t cmd[18];
+	uint index = 0;
+	uint32_t data = MS;
+	swdptap_turnaround(0);
+	while (steps) {
+		cmd[index++] = MPSSE_TMS_SHIFT;
+		if (steps >= 7) {
+			cmd[index++] = 6;
+			cmd[index++] = data & 0x7f;
+			data >>= 7;
+			steps -= 7;
+		} else {
+			cmd[index++] = steps - 1;
+			cmd[index++] = data & 0x7f;
+			steps = 0;
+		}
+	}
+	while (ticks--) {
+		parity ^= MS;
+		MS >>= 1;
+	}
+	cmd[index++] = MPSSE_TMS_SHIFT;
+	cmd[index++] = 0;
+	cmd[index++] = parity;
+	platform_buffer_write(cmd, index);
+}
