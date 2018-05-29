@@ -67,5 +67,9 @@ static inline int platform_hwversion(void)
 	        return 0;
 }
 
+#define MPSSE_TDI 2
+#define MPSSE_TDO 4
+#define MPSSE_TMS 8
+
 #endif
 
