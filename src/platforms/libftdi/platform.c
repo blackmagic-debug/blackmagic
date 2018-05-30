@@ -83,6 +83,7 @@ cable_desc_t cable_desc[] = {
 		.cbus_ddr  = 0x02,
 		.bitbang_tms_in_port_cmd = GET_BITS_LOW,
 		.bitbang_tms_in_pin = MPSSE_TDO, /* keep bit 5 low*/
+		.bitbang_swd_dbus_read_data = 0x02,
 		.name = "ftdiswd"
 	},
 	{

@@ -84,8 +84,12 @@ static void swdptap_turnaround(uint8_t dir)
 
 	if(dir)	  { /* SWDIO goes to input */
 		cmd[index++] = SET_BITS_LOW;
-		cmd[index++] = active_cable->dbus_data |  MPSSE_MASK;
-		cmd[index++] = active_cable->dbus_ddr  & ~MPSSE_MASK;
+		if (active_cable->bitbang_swd_dbus_read_data)
+			cmd[index] = active_cable->bitbang_swd_dbus_read_data;
+		else
+			cmd[index] = active_cable->dbus_data;
+		index++;
+		cmd[index++] = active_cable->dbus_ddr & ~MPSSE_MASK;
 	}
 	/* One clock cycle */
 	cmd[index++] = MPSSE_TMS_SHIFT;

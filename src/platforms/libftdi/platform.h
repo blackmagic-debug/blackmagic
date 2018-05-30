@@ -58,6 +58,9 @@ typedef struct cable_desc_s {
 	uint8_t cbus_ddr;
 	uint8_t bitbang_tms_in_port_cmd;
 	uint8_t bitbang_tms_in_pin;
+	uint8_t bitbang_swd_dbus_read_data;
+	/* bitbang_swd_dbus_read_data is same as dbus_data,
+	 * as long as CBUS is not involved.*/
 	char *description;
 	char * name;
 }cable_desc_t;
