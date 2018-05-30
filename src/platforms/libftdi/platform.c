@@ -20,6 +20,7 @@
 #include "general.h"
 #include "gdb_if.h"
 #include "version.h"
+#include "platform.h"
 
 #include <assert.h>
 #include <unistd.h>
@@ -35,15 +36,21 @@ cable_desc_t *active_cable;
 
 cable_desc_t cable_desc[] = {
 	{
+		/* Direct connection from FTDI to Jtag/Swd.*/
 		.vendor = 0x0403,
 		.product = 0x6010,
 		.interface = INTERFACE_A,
 		.dbus_data = 0x08,
 		.dbus_ddr  = 0x1B,
+		.bitbang_tms_in_port_cmd = GET_BITS_LOW,
+		.bitbang_tms_in_pin = MPSSE_TMS,
 		.description = "FLOSS-JTAG",
 		.name = "flossjtag"
 	},
 	{
+		/* Buffered connection from FTDI to Jtag/Swd.
+		 * TCK and TMS not independant switchable!
+		 * SWD not possible. */
 		.vendor = 0x0403,
 		.product = 0x6010,
 		.interface = INTERFACE_A,
@@ -60,6 +67,9 @@ cable_desc_t cable_desc[] = {
  * BCBUS 1 (Output) N_SRST
  * BCBUS 2 (Input) V_ISO available
  *
+ * For bitbanged SWD, set Bit 5 low and select SWD read with
+ * Bit 6 low. Read Connector TMS as FTDI TDO.
+ *
  * TDO is routed to Interface 0 RXD as SWO or with Uart
  * Connector pin 10 pulled to ground will connect Interface 0 RXD
  * to UART connector RXD
@@ -71,6 +81,8 @@ cable_desc_t cable_desc[] = {
 		.dbus_ddr  = 0x6B,
 		.cbus_data = 0x02,
 		.cbus_ddr  = 0x02,
+		.bitbang_tms_in_port_cmd = GET_BITS_LOW,
+		.bitbang_tms_in_pin = MPSSE_TDO, /* keep bit 5 low*/
 		.name = "ftdiswd"
 	},
 	{
@@ -82,6 +94,9 @@ cable_desc_t cable_desc[] = {
 		.name = "olimex"
 	},
 	{
+		/* Buffered connection from FTDI to Jtag/Swd.
+		 * TCK and TMS not independant switchable!
+		 * => SWD not possible. */
 		.vendor = 0x0403,
 		.product = 0xbdc8,
 		.interface = INTERFACE_A,
@@ -90,6 +105,11 @@ cable_desc_t cable_desc[] = {
 		.name = "turtelizer"
 	},
 	{
+		/* https://reference.digilentinc.com/jtag_hs1/jtag_hs1
+		 * No schmeatics available.
+		 * Buffered from FTDI to Jtag/Swd announced
+		 * Independant switch for TMS not known
+		 * => SWD not possible. */
 		.vendor = 0x0403,
 		.product = 0xbdc8,
 		.interface = INTERFACE_A,
@@ -98,14 +118,18 @@ cable_desc_t cable_desc[] = {
 		.name = "jtaghs1"
 	},
 	{
+		/* Direct connection from FTDI to Jtag/Swd assumed.*/
 		.vendor = 0x0403,
 		.product = 0xbdc8,
 		.interface = INTERFACE_A,
 		.dbus_data = 0xA8,
 		.dbus_ddr  = 0xAB,
+		.bitbang_tms_in_port_cmd = GET_BITS_LOW,
+		.bitbang_tms_in_pin = MPSSE_TMS,
 		.name = "ftdi"
 	},
 	{
+		/* Product name not unique! Assume SWD not possible.*/
 		.vendor = 0x0403,
 		.product = 0x6014,
 		.interface = INTERFACE_A,
@@ -116,22 +140,32 @@ cable_desc_t cable_desc[] = {
 		.name = "digilent"
 	},
 	{
+		/* Direct connection from FTDI to Jtag/Swd assumed.*/
 		.vendor = 0x0403,
 		.product = 0x6014,
 		.interface = INTERFACE_A,
 		.dbus_data = 0x08,
 		.dbus_ddr  = 0x0B,
+		.bitbang_tms_in_port_cmd = GET_BITS_LOW,
+		.bitbang_tms_in_pin = MPSSE_TMS,
 		.name = "ft232h"
 	},
 	{
+		/* Direct connection from FTDI to Jtag/Swd assumed.*/
 		.vendor = 0x0403,
 		.product = 0x6011,
 		.interface = INTERFACE_A,
 		.dbus_data = 0x08,
 		.dbus_ddr  = 0x0B,
+		.bitbang_tms_in_port_cmd = GET_BITS_LOW,
+		.bitbang_tms_in_pin = MPSSE_TMS,
 		.name = "ft4232h"
 	},
 	{
+		/* http://www.olimex.com/dev/pdf/ARM-USB-OCD.pdf.
+		 * BDUS 4 global enables JTAG Buffer.
+		 * => TCK and TMS not independant switchable!
+		 * => SWD not possible. */
 		.vendor = 0x15ba,
 		.product = 0x002b,
 		.interface = INTERFACE_A,

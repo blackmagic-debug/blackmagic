@@ -49,7 +49,8 @@ int adiv5_swdp_scan(void)
 	target_list_free();
 	ADIv5_DP_t *dp = (void*)calloc(1, sizeof(*dp));
 
-	swdptap_init();
+	if (swdptap_init())
+		return -1;
 
 	/* Switch from JTAG to SWD mode */
 	swdptap_seq_out(0xFFFF, 16);

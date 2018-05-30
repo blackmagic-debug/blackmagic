@@ -36,11 +36,12 @@ static uint8_t olddir = 0;
 #define MPSSE_TMS_SHIFT (MPSSE_WRITE_TMS | MPSSE_LSB |\
 						 MPSSE_BITMODE | MPSSE_WRITE_NEG)
 
-#define MPSSE_TMS_IN_PORT GET_BITS_LOW
-#define MPSSE_TMS_IN_PIN MPSSE_TMS
-
 int swdptap_init(void)
 {
+	if (!active_cable->bitbang_tms_in_pin) {
+		DEBUG("SWD not possible or missing item in cable description.\n");
+		return -1;
+	}
 	int err = ftdi_usb_purge_buffers(ftdic);
 	if (err != 0) {
 		fprintf(stderr, "ftdi_usb_purge_buffer: %d: %s\n",
@@ -104,14 +105,14 @@ bool swdptap_bit_in(void)
 	uint8_t cmd[4];
 	int index = 0;
 
-	cmd[index++] = MPSSE_TMS_IN_PORT;
+	cmd[index++] = active_cable->bitbang_tms_in_port_cmd;
 	cmd[index++] = MPSSE_TMS_SHIFT;
 	cmd[index++] = 0;
 	cmd[index++] = 0;
 	platform_buffer_write(cmd, index);
 	uint8_t data[1];
 	platform_buffer_read(data, 1);
-	return (data[0] &=  MPSSE_TMS_IN_PIN);
+	return (data[0] &= active_cable->bitbang_tms_in_pin);
 }
 
 void swdptap_bit_out(bool val)
@@ -131,7 +132,7 @@ bool swdptap_seq_in_parity(uint32_t *res, int ticks)
 	uint8_t cmd[4];
 	unsigned int parity = 0;
 
-	cmd[0] = MPSSE_TMS_IN_PORT;
+	cmd[0] = active_cable->bitbang_tms_in_port_cmd;
 	cmd[1] = MPSSE_TMS_SHIFT;
 	cmd[2] = 0;
 	cmd[3] = 0;
@@ -142,10 +143,10 @@ bool swdptap_seq_in_parity(uint32_t *res, int ticks)
 	uint8_t data[33];
 	unsigned int ret = 0;
 	platform_buffer_read(data, ticks + 1);
-	if (data[ticks] & 0x08)
+	if (data[ticks] & active_cable->bitbang_tms_in_pin)
 		parity ^= 1;
 	while (ticks--) {
-		if (data[ticks] & MPSSE_TMS_IN_PIN) {
+		if (data[ticks] & active_cable->bitbang_tms_in_pin) {
 			parity ^= 1;
 			ret |= (1 << ticks);
 		}
@@ -159,7 +160,7 @@ uint32_t swdptap_seq_in(int ticks)
 	int index = ticks;
 	uint8_t cmd[4];
 
-	cmd[0] = MPSSE_TMS_IN_PORT;
+	cmd[0] = active_cable->bitbang_tms_in_port_cmd;
 	cmd[1] = MPSSE_TMS_SHIFT;
 	cmd[2] = 0;
 	cmd[3] = 0;
@@ -172,7 +173,7 @@ uint32_t swdptap_seq_in(int ticks)
 	uint32_t ret = 0;
 	platform_buffer_read(data, ticks);
 	while (ticks--) {
-		if (data[ticks] & MPSSE_TMS_IN_PIN)
+		if (data[ticks] & active_cable->bitbang_tms_in_pin)
 			ret |= (1 << ticks);
 	}
 	return ret;
