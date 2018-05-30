@@ -21,8 +21,6 @@
 /* Low level JTAG implementation using FT2232 with libftdi.
  *
  * Issues:
- * This code is old, rotten and unsupported.
- * Magic numbers everywhere.
  * Should share interface with swdptap.c or at least clean up...
  */
 
@@ -35,23 +33,39 @@
 #include <ftdi.h>
 
 #include "general.h"
-
-#define PROVIDE_GENERIC_TAP_SEQ
-//#define PROVIDE_GENERIC_TAP_TMS_SEQ
-//#define PROVIDE_GENERIC_TAP_TDI_TDO_SEQ
-//#define PROVIDE_GENERIC_TAP_TDI_SEQ
 #include "jtagtap.h"
-
-#define ALL_ZERO 0xA0
-#define TCK 	0x01
-#define TDI 	0x02
-#define TDO 	0x04
-#define TMS 	0x08
-#define nSRST 	0x20
 
 int jtagtap_init(void)
 {
 	assert(ftdic != NULL);
+	int err = ftdi_usb_purge_buffers(ftdic);
+	if (err != 0) {
+		fprintf(stderr, "ftdi_usb_purge_buffer: %d: %s\n",
+			err, ftdi_get_error_string(ftdic));
+		abort();
+	}
+	/* Reset MPSSE controller. */
+	err = ftdi_set_bitmode(ftdic, 0,  BITMODE_RESET);
+	if (err != 0) {
+		fprintf(stderr, "ftdi_set_bitmode: %d: %s\n",
+			err, ftdi_get_error_string(ftdic));
+		return -1;;
+	}
+	/* Enable MPSSE controller. Pin directions are set later.*/
+	err = ftdi_set_bitmode(ftdic, 0, BITMODE_MPSSE);
+	if (err != 0) {
+		fprintf(stderr, "ftdi_set_bitmode: %d: %s\n",
+			err, ftdi_get_error_string(ftdic));
+		return -1;;
+	}
+	uint8_t ftdi_init[9] = {TCK_DIVISOR, 0x00, 0x00, SET_BITS_LOW, 0,0,
+				SET_BITS_HIGH, 0,0};
+	ftdi_init[4]= active_cable->dbus_data;
+	ftdi_init[5]= active_cable->dbus_ddr;
+	ftdi_init[7]= active_cable->cbus_data;
+	ftdi_init[8]= active_cable->cbus_ddr;
+	platform_buffer_write(ftdi_init, 9);
+	platform_buffer_flush();
 
 	/* Go to JTAG mode for SWJ-DP */
 	for (int i = 0; i <= 50; i++)
@@ -67,133 +81,94 @@ void jtagtap_reset(void)
 	jtagtap_soft_reset();
 }
 
-#ifndef PROVIDE_GENERIC_TAP_TMS_SEQ
 void
 jtagtap_tms_seq(uint32_t MS, int ticks)
 {
-	uint8_t tmp[3] = "\x4B";
+	uint8_t tmp[3] = {MPSSE_WRITE_TMS | MPSSE_LSB | MPSSE_BITMODE| MPSSE_READ_NEG, 0, 0};
 	while(ticks >= 0) {
-		//jtagtap_next(MS & 1, 1);
 		tmp[1] = ticks<7?ticks-1:6;
 		tmp[2] = 0x80 | (MS & 0x7F);
 
-//		assert(ftdi_write_data(ftdic, tmp, 3) == 3);
 		platform_buffer_write(tmp, 3);
 		MS >>= 7; ticks -= 7;
 	}
 }
-#endif
 
-#ifndef PROVIDE_GENERIC_TAP_TDI_SEQ
-void
-jtagtap_tdi_seq(const uint8_t final_tms, const uint8_t *DI, int ticks)
-{
-	uint8_t *tmp;
-	int index = 0;
-	int rticks;
-
-	if(!ticks) return;
-
-	if(final_tms) ticks--;
-	rticks = ticks & 7;
-	ticks >>= 3;
-	tmp = alloca(ticks + 9);
-
-	if(ticks) {
-		tmp[index++] = 0x19;
-		tmp[index++] = ticks - 1;
-		tmp[index++] = 0;
-		while(ticks--) tmp[index++] = *DI++;
-	}
-
-	if(rticks) {
-		tmp[index++] = 0x1B;
-		tmp[index++] = rticks - 1;
-		tmp[index++] = *DI;
-	}
-
-	if(final_tms) {
-		tmp[index++] = 0x4B;
-		tmp[index++] = 0;
-		tmp[index++] = (*DI)>>rticks?0x81:0x01;
-	}
-//	assert(ftdi_write_data(ftdic, tmp, index) == index);
-	platform_buffer_write(tmp, index);
-}
-#endif
-
-#ifndef PROVIDE_GENERIC_TAP_TDI_TDO_SEQ
 void
 jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int ticks)
 {
-	uint8_t *tmp;
-	int index = 0, rsize;
-	int rticks;
+	int rsize, rticks;
 
 	if(!ticks) return;
+	if (!DI && !DO) return;
 
 //	printf("ticks: %d\n", ticks);
 	if(final_tms) ticks--;
 	rticks = ticks & 7;
 	ticks >>= 3;
-	tmp = alloca(ticks + 9);
+	uint8_t data[3];
+	uint8_t cmd =  ((DO)? MPSSE_DO_READ : 0) | ((DI)? (MPSSE_DO_WRITE | MPSSE_WRITE_NEG) : 0) | MPSSE_LSB;
 	rsize = ticks;
 	if(ticks) {
-		tmp[index++] = 0x39;
-		tmp[index++] = ticks - 1;
-		tmp[index++] = 0;
-		while(ticks--) tmp[index++] = *DI++;
+		data[0] = cmd;
+		data[1] = ticks - 1;
+		data[2] = 0;
+		platform_buffer_write(data, 3);
+		if (DI)
+			platform_buffer_write(DI, ticks);
 	}
-
 	if(rticks) {
+		int index = 0;
 		rsize++;
-		tmp[index++] = 0x3B;
-		tmp[index++] = rticks - 1;
-		tmp[index++] = *DI;
+		data[index++] = cmd | MPSSE_BITMODE;
+		data[index++] = rticks - 1;
+		if (DI)
+			data[index++] = DI[ticks];
+		platform_buffer_write(data, index);
 	}
-
 	if(final_tms) {
+		int index = 0;
 		rsize++;
-		tmp[index++] = 0x6B;
-		tmp[index++] = 0;
-		tmp[index++] = (*DI)>>rticks?0x81:0x01;
+		data[index++] = MPSSE_WRITE_TMS | ((DO)? MPSSE_DO_READ : 0) | MPSSE_LSB | MPSSE_BITMODE | MPSSE_WRITE_NEG;
+		data[index++] = 0;
+		if (DI)
+			data[index++] = (*DI)>>rticks?0x81:0x01;
+		platform_buffer_write(data, index);
 	}
-//	assert(ftdi_write_data(ftdic, tmp, index) == index);
-	platform_buffer_write(tmp, index);
-//	index = 0;
-//	while((index += ftdi_read_data(ftdic, tmp + index, rsize-index)) != rsize);
-	platform_buffer_read(tmp, rsize);
-	/*for(index = 0; index < rsize; index++)
-		printf("%02X ", tmp[index]);
-	printf("\n");*/
-	index = 0;
-	if(final_tms) rsize--;
+	if (DO) {
+		int index = 0;
+		uint8_t *tmp = alloca(ticks);
+		platform_buffer_read(tmp, rsize);
+		if(final_tms) rsize--;
 
-	while(rsize--) {
-		/*if(rsize) printf("%02X ", tmp[index]);*/
-		*DO++ = tmp[index++];
+		while(rsize--) {
+			/*if(rsize) printf("%02X ", tmp[index]);*/
+			*DO++ = tmp[index++];
+		}
+		if (rticks == 0)
+			*DO++ = 0;
+		if(final_tms) {
+			rticks++;
+			*(--DO) >>= 1;
+			*DO |= tmp[index] & 0x80;
+		} else DO--;
+		if(rticks) {
+			*DO >>= (8-rticks);
+		}
+		/*printf("%02X\n", *DO);*/
 	}
-	if (rticks == 0)
-		*DO++ = 0;
-	if(final_tms) {
-		rticks++;
-		*(--DO) >>= 1;
-		*DO |= tmp[index] & 0x80;
-	} else DO--;
-	if(rticks) {
-		*DO >>= (8-rticks);
-	}
-	/*printf("%02X\n", *DO);*/
 }
-#endif
+
+void jtagtap_tdi_seq(const uint8_t final_tms, const uint8_t *DI, int ticks)
+{
+	return jtagtap_tdi_tdo_seq(NULL,  final_tms, DI, ticks);
+}
 
 uint8_t jtagtap_next(uint8_t dTMS, uint8_t dTDI)
 {
 	uint8_t ret;
-	uint8_t tmp[3] = "\x6B\x00\x00";
+	uint8_t tmp[3] = {MPSSE_WRITE_TMS | MPSSE_DO_READ | MPSSE_LSB | MPSSE_BITMODE | MPSSE_WRITE_NEG, 0, 0};
 	tmp[2] = (dTDI?0x80:0) | (dTMS?0x01:0);
-//	assert(ftdi_write_data(ftdic, tmp, 3) == 3);
-//	while(ftdi_read_data(ftdic, &ret, 1) != 1);
 	platform_buffer_write(tmp, 3);
 	platform_buffer_read(&ret, 1);
 

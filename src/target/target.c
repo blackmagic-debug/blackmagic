@@ -294,6 +294,10 @@ void target_detach(target *t)
 {
 	t->detach(t);
 	t->attached = false;
+#if defined(LIBFTDI)
+# include "platform.h"
+	platform_buffer_flush();
+#endif
 }
 
 bool target_check_error(target *t) { return t->check_error(t); }
