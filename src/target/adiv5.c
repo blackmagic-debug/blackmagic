@@ -457,11 +457,6 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 	adiv5_dp_unref(dp);
 }
 
-enum align {
-	ALIGN_BYTE =  0,
-	ALIGN_HALFWORD = 1,
-	ALIGN_WORD = 2
-};
 #define ALIGNOF(x) (((x) & 3) == 0 ? ALIGN_WORD : \
                     (((x) & 1) == 0 ? ALIGN_HALFWORD : ALIGN_BYTE))
 
@@ -477,6 +472,7 @@ static void ap_mem_access_setup(ADIv5_AP_t *ap, uint32_t addr, enum align align)
 	case ALIGN_HALFWORD:
 		csw |= ADIV5_AP_CSW_SIZE_HALFWORD;
 		break;
+	case ALIGN_DWORD:
 	case ALIGN_WORD:
 		csw |= ADIV5_AP_CSW_SIZE_WORD;
 		break;
@@ -495,6 +491,7 @@ static void * extract(void *dest, uint32_t src, uint32_t val, enum align align)
 	case ALIGN_HALFWORD:
 		*(uint16_t *)dest = (val >> ((src & 0x2) << 3) & 0xFFFF);
 		break;
+	case ALIGN_DWORD:
 	case ALIGN_WORD:
 		*(uint32_t *)dest = val;
 		break;
@@ -534,10 +531,10 @@ adiv5_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
 }
 
 void
-adiv5_mem_write(ADIv5_AP_t *ap, uint32_t dest, const void *src, size_t len)
+adiv5_mem_write_sized(ADIv5_AP_t *ap, uint32_t dest, const void *src,
+					  size_t len, enum align align)
 {
 	uint32_t odest = dest;
-	enum align align = MIN(ALIGNOF(dest), ALIGNOF(len));
 
 	len >>= align;
 	ap_mem_access_setup(ap, dest, align);
@@ -551,6 +548,7 @@ adiv5_mem_write(ADIv5_AP_t *ap, uint32_t dest, const void *src, size_t len)
 		case ALIGN_HALFWORD:
 			tmp = ((uint32_t)*(uint16_t *)src) << ((dest & 2) << 3);
 			break;
+		case ALIGN_DWORD:
 		case ALIGN_WORD:
 			tmp = *(uint32_t *)src;
 			break;
@@ -566,6 +564,13 @@ adiv5_mem_write(ADIv5_AP_t *ap, uint32_t dest, const void *src, size_t len)
 					ADIV5_LOW_WRITE, ADIV5_AP_TAR, dest);
 		}
 	}
+}
+
+void
+adiv5_mem_write(ADIv5_AP_t *ap, uint32_t dest, const void *src, size_t len)
+{
+	enum align align = MIN(ALIGNOF(dest), ALIGNOF(len));
+	adiv5_mem_write_sized(ap, dest, src, len, align);
 }
 
 void adiv5_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value)
