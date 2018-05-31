@@ -343,8 +343,15 @@ bool libftdi_srst_get_val(void)
 
 void libftdi_buffer_flush(void)
 {
+#if defined(USE_USB_VERSION_BIT)
+static struct ftdi_transfer_control *tc_write = NULL;
+    if (tc_write)
+		ftdi_transfer_data_done(tc_write);
+	tc_write = ftdi_write_data_submit(ftdic, outbuf, bufptr);
+#else
 	assert(ftdi_write_data(ftdic, outbuf, bufptr) == bufptr);
 	DEBUG_WIRE("FT2232 libftdi_buffer flush: %d bytes\n", bufptr);
+#endif
 	bufptr = 0;
 }
 
@@ -358,10 +365,18 @@ int libftdi_buffer_write(const uint8_t *data, int size)
 
 int libftdi_buffer_read(uint8_t *data, int size)
 {
+#if defined(USE_USB_VERSION_BIT)
+	struct ftdi_transfer_control *tc;
+	outbuf[bufptr++] = SEND_IMMEDIATE;
+	libftdi_buffer_flush();
+	tc = ftdi_read_data_submit(ftdic, data, size);
+	ftdi_transfer_data_done(tc);
+#else
 	int index = 0;
 	outbuf[bufptr++] = SEND_IMMEDIATE;
 	libftdi_buffer_flush();
 	while((index += ftdi_read_data(ftdic, data + index, size-index)) != size);
+#endif
 	return size;
 }
 
