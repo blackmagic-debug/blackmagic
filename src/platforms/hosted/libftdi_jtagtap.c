@@ -38,14 +38,17 @@ extern struct ftdi_context *ftdic;
 
 static void jtagtap_reset(void);
 static void jtagtap_tms_seq(uint32_t MS, int ticks);
-static void jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms,
-								const uint8_t *DI, int ticks);
 static void jtagtap_tdi_seq(
 	const uint8_t final_tms, const uint8_t *DI, int ticks);
 static uint8_t jtagtap_next(uint8_t dTMS, uint8_t dTDI);
 
 int libftdi_jtagtap_init(jtag_proc_t *jtag_proc)
 {
+	if ((active_cable->swd_read.set_data_low == MPSSE_DO) &&
+		(active_cable->swd_write.set_data_low == MPSSE_DO)) {
+		printf("Jtag not possible with resistor SWD!\n");
+			return -1;
+	}
 	assert(ftdic != NULL);
 	/* select new buffer flush function if libftdi 1.5 */
 #ifdef _Ftdi_Pragma
@@ -84,7 +87,7 @@ int libftdi_jtagtap_init(jtag_proc_t *jtag_proc)
 	jtag_proc->jtagtap_reset = jtagtap_reset;
 	jtag_proc->jtagtap_next =jtagtap_next;
 	jtag_proc->jtagtap_tms_seq = jtagtap_tms_seq;
-	jtag_proc->jtagtap_tdi_tdo_seq = jtagtap_tdi_tdo_seq;
+	jtag_proc->jtagtap_tdi_tdo_seq = libftdi_jtagtap_tdi_tdo_seq;
 	jtag_proc->jtagtap_tdi_seq = jtagtap_tdi_seq;
 
 	return 0;
@@ -108,75 +111,10 @@ static void jtagtap_tms_seq(uint32_t MS, int ticks)
 	}
 }
 
-static void jtagtap_tdi_tdo_seq(
-	uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int ticks)
-{
-	int rsize, rticks;
-
-	if(!ticks) return;
-	if (!DI && !DO) return;
-
-//	DEBUG_PROBE("ticks: %d\n", ticks);
-	if(final_tms) ticks--;
-	rticks = ticks & 7;
-	ticks >>= 3;
-	uint8_t data[3];
-	uint8_t cmd =  ((DO)? MPSSE_DO_READ : 0) |
-		((DI)? (MPSSE_DO_WRITE | MPSSE_WRITE_NEG) : 0) | MPSSE_LSB;
-	rsize = ticks;
-	if(ticks) {
-		data[0] = cmd;
-		data[1] = ticks - 1;
-		data[2] = 0;
-		libftdi_buffer_write(data, 3);
-		if (DI)
-			libftdi_buffer_write(DI, ticks);
-	}
-	if(rticks) {
-		int index = 0;
-		rsize++;
-		data[index++] = cmd | MPSSE_BITMODE;
-		data[index++] = rticks - 1;
-		if (DI)
-			data[index++] = DI[ticks];
-		libftdi_buffer_write(data, index);
-	}
-	if(final_tms) {
-		int index = 0;
-		rsize++;
-		data[index++] = MPSSE_WRITE_TMS | ((DO)? MPSSE_DO_READ : 0) |
-			MPSSE_LSB | MPSSE_BITMODE | MPSSE_WRITE_NEG;
-		data[index++] = 0;
-		if (DI)
-			data[index++] = (DI[ticks]) >> rticks?0x81 : 0x01;
-		libftdi_buffer_write(data, index);
-	}
-	if (DO) {
-		int index = 0;
-		uint8_t *tmp = alloca(ticks);
-		libftdi_buffer_read(tmp, rsize);
-		if(final_tms) rsize--;
-
-		while(rsize--) {
-			if(rsize) DEBUG_WIRE("%02X ", tmp[index]);
-			*DO++ = tmp[index++];
-		}
-		if(final_tms) {
-			rticks++;
-			*(--DO) >>= 1;
-			*DO |= tmp[index] & 0x80;
-		} else DO--;
-		if(rticks) {
-			*DO >>= (8-rticks);
-		}
-		DEBUG_WIRE("%02X\n", *DO);
-	}
-}
-
 static void jtagtap_tdi_seq(
 	const uint8_t final_tms, const uint8_t *DI, int ticks)
 {
-	return jtagtap_tdi_tdo_seq(NULL,  final_tms, DI, ticks);
+	return libftdi_jtagtap_tdi_tdo_seq(NULL,  final_tms, DI, ticks);
 }
 
 static uint8_t jtagtap_next(uint8_t dTMS, uint8_t dTDI)

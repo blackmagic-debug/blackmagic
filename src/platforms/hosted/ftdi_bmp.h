@@ -32,16 +32,40 @@ typedef struct data_desc_s {
 	int16_t ddr_high;
 }data_desc_t;
 
+typedef struct pin_settings_s {
+	uint8_t set_data_low;
+	uint8_t clr_data_low;
+	uint8_t set_data_high;
+	uint8_t clr_data_high;
+}pin_settings_t;
+
 typedef struct cable_desc_s {
 	int vendor;
 	int product;
 	int interface;
+	/* Needed level on DBUS output pins to drive the JTAG signals and for
+	 * other functionality like SRST, TRST. etc.*/
 	uint8_t dbus_data;
+	/* Write '1' for DBUS pins needed as output in JTAG mode and for
+	 * other functionality like SRST, TRST. etc..*/
 	uint8_t dbus_ddr;
+	/* Needed level on CBUS output pins to drive the JTAG signals and for
+	 * other functionality like SRST, TRST. etc.
+	 * Often not needed at all.*/
 	uint8_t cbus_data;
+	/* Write '1' for CBUS pins needed as output in JTAG mode and for
+	 * other functionality like SRST, TRST. etc.
+	 * Often not needed at all.*/
 	uint8_t cbus_ddr;
+	/* MPSSE command to read TMS/SWDIO Port in bitbanging SWD.
+	 * In many cases this is the TMS port of the FTDI and
+	 * so "GET_BITS_LOW" */
 	uint8_t bitbang_tms_in_port_cmd;
+	/* Pin mask where TMS/SWDIO can be read in bitbanging SWD.
+	 * In many cases this is the TMS port of the FTDI
+	 * and so "MPSSE_TMS".*/
 	uint8_t bitbang_tms_in_pin;
+	/* Dbus data to allow bitbanging SWD read.*/
 	uint8_t bitbang_swd_dbus_read_data;
 	uint8_t bitbang_swd_direct;
 	/* dbus_data, dbus_ddr, cbus_data, cbus_ddr value to assert SRST.
@@ -57,7 +81,23 @@ typedef struct cable_desc_s {
 	/* PIN to read back as SRST. if 0 port from assert_srst is ised.
 	*  Use PINX if active high, use Complement (~PINX) if active low*/
 	uint8_t srst_get_pin;
+	/* dbus data for pure MPSSE SWD read.
+	 * Use together with swd_write if by some bits on DBUS,
+	 * SWDIO can be routed to TDI and TDO.
+	 * If both swd_read|write and
+	 * bitbang_swd_dbus_read_data/bitbang_tms_in_port_cmd/bitbang_tms_in_pin
+	 * are provided, pure MPSSE SWD is choosen.
+	 * If neither a complete set of swd_read|write or
+	 * bitbang_swd_dbus_read_data/bitbang_tms_in_port_cmd/bitbang_tms_in_pin
+	 * are provided, SWD can not be done.
+	 * swd_read.set_data_low ==  swd_write.set_data_low == MPSSE_DO
+	 * indicated resistor SWD and inhibits Jtag.*/
+	pin_settings_t swd_read;
+	/* dbus data for pure MPSSE SWD write.*/
+	pin_settings_t swd_write;
+	/* USB readable description of the device.*/
 	char *description;
+	/* Command line argument to -c option to select this device.*/
 	char * name;
 }cable_desc_t;
 
@@ -72,17 +112,19 @@ void libftdi_buffer_flush(void);
 int libftdi_buffer_write(const uint8_t *data, int size);
 int libftdi_buffer_read(uint8_t *data, int size);
 const char *libftdi_target_voltage(void);
+void libftdi_jtagtap_tdi_tdo_seq(
+	uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int ticks);
 
-#define MPSSE_TCK 1
-#define PIN0      1
-#define MPSSE_TDI 2
-#define PIN1      2
-#define MPSSE_TDO 4
-#define PIN2      4
-#define MPSSE_TMS 8
-#define PIN3      8
-#define PIN4      0x10
-#define PIN5      0x20
-#define PIN6      0x40
-#define PIN7      0x80
+#define MPSSE_SK 1
+#define PIN0     1
+#define MPSSE_DO 2
+#define PIN1     2
+#define MPSSE_DI 4
+#define PIN2     4
+#define MPSSE_CS 8
+#define PIN3     8
+#define PIN4     0x10
+#define PIN5     0x20
+#define PIN6     0x40
+#define PIN7     0x80
 #endif
