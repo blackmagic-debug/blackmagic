@@ -43,6 +43,12 @@ struct command_s {
 	const char *help;
 };
 
+enum assert_srst_t{
+	ASSERT_NEVER = 0,
+	ASSERT_UNTIL_SCAN,
+	ASSERT_UNTIL_ATTACH
+};
+
 static bool cmd_version(void);
 static bool cmd_help(target *t);
 
@@ -50,7 +56,7 @@ static bool cmd_jtag_scan(target *t, int argc, char **argv);
 static bool cmd_swdp_scan(void);
 static bool cmd_targets(void);
 static bool cmd_morse(void);
-static bool cmd_connect_srst(target *t, int argc, const char **argv);
+static bool cmd_assert_srst(target *t, int argc, const char **argv);
 static bool cmd_hard_srst(void);
 #ifdef PLATFORM_HAS_POWER_SWITCH
 static bool cmd_target_power(target *t, int argc, const char **argv);
@@ -69,7 +75,7 @@ const struct command_s cmd_list[] = {
 	{"swdp_scan", (cmd_handler)cmd_swdp_scan, "Scan SW-DP for devices" },
 	{"targets", (cmd_handler)cmd_targets, "Display list of available targets" },
 	{"morse", (cmd_handler)cmd_morse, "Display morse error message" },
-	{"connect_srst", (cmd_handler)cmd_connect_srst, "Configure connect under SRST: (enable|disable)" },
+	{"assert_srst", (cmd_handler)cmd_assert_srst, "Assert SRST until:(never(default)| scan | attach)" },
 	{"hard_srst", (cmd_handler)cmd_hard_srst, "Force a pulse on the hard SRST line - disconnects target" },
 #ifdef PLATFORM_HAS_POWER_SWITCH
 	{"tpwr", (cmd_handler)cmd_target_power, "Supplies power to the target: (enable|disable)"},
@@ -83,7 +89,7 @@ const struct command_s cmd_list[] = {
 	{NULL, NULL, NULL}
 };
 
-static bool connect_assert_srst;
+static enum assert_srst_t assert_srst;
 #ifdef PLATFORM_HAS_DEBUG
 bool debug_bmp;
 #endif
@@ -159,8 +165,10 @@ static bool cmd_jtag_scan(target *t, int argc, char **argv)
 		irlens[argc-1] = 0;
 	}
 
-	if(connect_assert_srst)
-		platform_srst_set_val(true); /* will be deasserted after attach */
+	if(assert_srst != ASSERT_NEVER)
+		platform_srst_set_val(true);
+	if(assert_srst == ASSERT_UNTIL_SCAN)
+		platform_srst_set_val(false);
 
 	int devs = -1;
 	volatile struct exception e;
@@ -190,8 +198,10 @@ bool cmd_swdp_scan(void)
 {
 	gdb_outf("Target voltage: %s\n", platform_target_voltage());
 
-	if(connect_assert_srst)
-		platform_srst_set_val(true); /* will be deasserted after attach */
+	if(assert_srst != ASSERT_NEVER)
+		platform_srst_set_val(true);
+	if(assert_srst == ASSERT_UNTIL_SCAN)
+		platform_srst_set_val(false);
 
 	int devs = -1;
 	volatile struct exception e;
@@ -244,14 +254,20 @@ bool cmd_morse(void)
 	return true;
 }
 
-static bool cmd_connect_srst(target *t, int argc, const char **argv)
+static bool cmd_assert_srst(target *t, int argc, const char **argv)
 {
 	(void)t;
-	if (argc == 1)
-		gdb_outf("Assert SRST during connect: %s\n",
-			 connect_assert_srst ? "enabled" : "disabled");
-	else
-		connect_assert_srst = !strcmp(argv[1], "enable");
+	if (argc > 1) {
+		if (!strcmp(argv[1], "attach"))
+			assert_srst = ASSERT_UNTIL_ATTACH;
+		else if (!strcmp(argv[1], "scan"))
+			assert_srst = ASSERT_UNTIL_SCAN;
+		else
+			assert_srst = ASSERT_NEVER;
+	}
+	gdb_outf("Assert SRST %s\n",
+			 (assert_srst == ASSERT_UNTIL_ATTACH) ? "until attach" :
+			 (assert_srst == ASSERT_UNTIL_SCAN) ? "until scan" : "never");
 	return true;
 }
 
