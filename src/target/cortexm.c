@@ -252,7 +252,7 @@ static bool cortexm_forced_halt(target *t)
 	start_time = platform_time_ms();
 	/* Try hard to halt the target. STM32F7 in  WFI
 	   needs multiple writes!*/
-	while (platform_time_ms() < start_time + 2000) {
+	while (platform_time_ms() < start_time + cortexm_wait_timeout) {
 		dhcsr = target_mem_read32(t, CORTEXM_DHCSR);
 		if (dhcsr == (CORTEXM_DHCSR_S_HALT | CORTEXM_DHCSR_S_REGRDY |
 					  CORTEXM_DHCSR_C_HALT | CORTEXM_DHCSR_C_DEBUGEN))

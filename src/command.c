@@ -57,6 +57,7 @@ static bool cmd_swdp_scan(void);
 static bool cmd_targets(void);
 static bool cmd_morse(void);
 static bool cmd_assert_srst(target *t, int argc, const char **argv);
+static bool cmd_halt_timeout(target *t, int argc, const char **argv);
 static bool cmd_hard_srst(void);
 #ifdef PLATFORM_HAS_POWER_SWITCH
 static bool cmd_target_power(target *t, int argc, const char **argv);
@@ -76,6 +77,7 @@ const struct command_s cmd_list[] = {
 	{"targets", (cmd_handler)cmd_targets, "Display list of available targets" },
 	{"morse", (cmd_handler)cmd_morse, "Display morse error message" },
 	{"assert_srst", (cmd_handler)cmd_assert_srst, "Assert SRST until:(never(default)| scan | attach)" },
+	{"halt_timeout", (cmd_handler)cmd_halt_timeout, "Timeout (ms) to wait until Cortex-M is halted: (Default 2000)" },
 	{"hard_srst", (cmd_handler)cmd_hard_srst, "Force a pulse on the hard SRST line - disconnects target" },
 #ifdef PLATFORM_HAS_POWER_SWITCH
 	{"tpwr", (cmd_handler)cmd_target_power, "Supplies power to the target: (enable|disable)"},
@@ -93,6 +95,7 @@ static enum assert_srst_t assert_srst;
 #ifdef PLATFORM_HAS_DEBUG
 bool debug_bmp;
 #endif
+long cortexm_wait_timeout = 2000; /* Timeout to wait for Cortex to react on halt command. */
 
 int command_process(target *t, char *cmd)
 {
@@ -268,6 +271,16 @@ static bool cmd_assert_srst(target *t, int argc, const char **argv)
 	gdb_outf("Assert SRST %s\n",
 			 (assert_srst == ASSERT_UNTIL_ATTACH) ? "until attach" :
 			 (assert_srst == ASSERT_UNTIL_SCAN) ? "until scan" : "never");
+	return true;
+}
+
+static bool cmd_halt_timeout(target *t, int argc, const char **argv)
+{
+	(void)t;
+	if (argc > 1)
+		cortexm_wait_timeout = atol(argv[1]);
+	gdb_outf("Cortex-M timeout to wait for device haltes: %d\n",
+				 cortexm_wait_timeout);
 	return true;
 }
 

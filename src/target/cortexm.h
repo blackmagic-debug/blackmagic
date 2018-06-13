@@ -22,6 +22,7 @@
 #include "target.h"
 #include "adiv5.h"
 
+extern long cortexm_wait_timeout;
 /* Private peripheral bus base address */
 #define CORTEXM_PPB_BASE	0xE0000000
 
