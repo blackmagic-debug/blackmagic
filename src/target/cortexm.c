@@ -237,6 +237,33 @@ static void cortexm_priv_free(void *priv)
 	free(priv);
 }
 
+static bool cortexm_forced_halt(target *t)
+{
+	uint32_t start_time = platform_time_ms();
+	platform_srst_set_val(false);
+	/* Wait until SRST is released.*/
+	while (platform_time_ms() < start_time + 2000) {
+		if (!platform_srst_get_val())
+			break;
+	}
+	if (platform_srst_get_val())
+		return false;
+	uint32_t dhcsr = 0;
+	start_time = platform_time_ms();
+	/* Try hard to halt the target. STM32F7 in  WFI
+	   needs multiple writes!*/
+	while (platform_time_ms() < start_time + 2000) {
+		dhcsr = target_mem_read32(t, CORTEXM_DHCSR);
+		if (dhcsr == (CORTEXM_DHCSR_S_HALT | CORTEXM_DHCSR_S_REGRDY |
+					  CORTEXM_DHCSR_C_HALT | CORTEXM_DHCSR_C_DEBUGEN))
+			break;
+		target_halt_request(t);
+	}
+	if (dhcsr != 0x00030003)
+		return false;
+	return true;
+}
+
 bool cortexm_probe(ADIv5_AP_t *ap)
 {
 	target *t;
@@ -296,8 +323,10 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 		target_check_error(t);
 	}
 
+	if (!cortexm_forced_halt(t))
+		return false;
 #define PROBE(x) \
-	do { if ((x)(t)) return true; else target_check_error(t); } while (0)
+	do { if ((x)(t)) {target_halt_resume(t, 0); return true;} else target_check_error(t); } while (0)
 
 	PROBE(stm32f1_probe);
 	PROBE(stm32f4_probe);
@@ -325,16 +354,12 @@ bool cortexm_attach(target *t)
 	struct cortexm_priv *priv = t->priv;
 	unsigned i;
 	uint32_t r;
-	int tries;
 
 	/* Clear any pending fault condition */
 	target_check_error(t);
 
 	target_halt_request(t);
-	tries = 10;
-	while(!platform_srst_get_val() && !target_halt_poll(t, NULL) && --tries)
-		platform_delay(200);
-	if(!tries)
+	if (!cortexm_forced_halt(t))
 		return false;
 
 	/* Request halt on reset */
@@ -369,8 +394,6 @@ bool cortexm_attach(target *t)
 	/* Flash Patch Control Register: set ENABLE */
 	target_mem_write32(t, CORTEXM_FPB_CTRL,
 			CORTEXM_FPB_CTRL_KEY | CORTEXM_FPB_CTRL_ENABLE);
-
-	platform_srst_set_val(false);
 
 	return true;
 }
