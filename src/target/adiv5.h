@@ -151,6 +151,13 @@ typedef struct ADIv5_AP_s {
 	uint32_t csw;
 } ADIv5_AP_t;
 
+enum mem_access {
+	MAX_ACCESS_DWORD = -1,
+	MAX_ACCESS_WORD = 0, /* target struct initialized to 0 defaults to word!*/
+	MAX_ACCESS_HALFWORD = 1,
+	MAX_ACCESS_BYTE = 2
+};
+
 void adiv5_dp_init(ADIv5_DP_t *dp);
 void adiv5_dp_write(ADIv5_DP_t *dp, uint16_t addr, uint32_t value);
 
@@ -166,7 +173,8 @@ uint32_t adiv5_ap_read(ADIv5_AP_t *ap, uint16_t addr);
 void adiv5_jtag_dp_handler(jtag_dev_t *dev);
 
 void adiv5_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len);
-void adiv5_mem_write(ADIv5_AP_t *ap, uint32_t dest, const void *src, size_t len);
+void adiv5_mem_write(ADIv5_AP_t *ap, uint32_t dest, const void *src,
+					 size_t len, enum mem_access  max_access);
 
 #endif
 

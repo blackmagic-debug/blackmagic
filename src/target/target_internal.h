@@ -86,6 +86,7 @@ struct target_s {
 	                 size_t len);
 	void (*mem_write)(target *t, target_addr dest,
 	                  const void *src, size_t len);
+	int mem_write_access; /* -1 = DWORD, 0 = WORD, 1 = HALFWORD, 2 = BYTE*/
 
 	/* Register access functions */
 	size_t regs_size;

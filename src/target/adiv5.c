@@ -534,11 +534,25 @@ adiv5_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
 }
 
 void
-adiv5_mem_write(ADIv5_AP_t *ap, uint32_t dest, const void *src, size_t len)
+adiv5_mem_write(ADIv5_AP_t *ap, uint32_t dest, const void *src,
+				size_t len, enum mem_access max_access)
 {
 	uint32_t odest = dest;
+	enum align access_align = MAX_ACCESS_DWORD;
 	enum align align = MIN(ALIGNOF(dest), ALIGNOF(len));
-
+	switch (max_access) {
+	case MAX_ACCESS_DWORD:
+	case MAX_ACCESS_WORD:
+		access_align = ALIGN_WORD;
+		break;
+	case MAX_ACCESS_HALFWORD:
+		access_align = ALIGN_HALFWORD;
+		break;
+	case MAX_ACCESS_BYTE:
+		access_align = ALIGN_BYTE;
+		break;
+	}
+	align = MIN(align, access_align);
 	len >>= align;
 	ap_mem_access_setup(ap, dest, align);
 	while (len--) {
