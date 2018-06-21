@@ -246,11 +246,12 @@ static uint32_t adiv5_mem_read32(ADIv5_AP_t *ap, uint32_t addr)
 	return ret;
 }
 
-static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr)
+static bool adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr)
 {
 	addr &= ~3;
 	uint64_t pidr = 0;
 	uint32_t cidr = 0;
+	bool res = false;
 
 	/* Assemble logical Product ID register value. */
 	for (int i = 0; i < 4; i++) {
@@ -270,14 +271,14 @@ static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr)
 
 	if (adiv5_dp_error(ap->dp)) {
 		DEBUG("Fault reading ID registers\n");
-		return;
+		return false;
 	}
 
 	/* CIDR preamble sanity check */
 	if ((cidr & ~CID_CLASS_MASK) != CID_PREAMBLE) {
 		DEBUG("0x%"PRIx32": 0x%"PRIx32" <- does not match preamble (0x%X)\n",
                       addr, cidr, CID_PREAMBLE);
-		return;
+		return false;
 	}
 
 	/* Extract Component ID class nibble */
@@ -296,7 +297,7 @@ static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr)
 			if ((entry & 1) == 0)
 				continue;
 
-			adiv5_component_probe(ap, addr + (entry & ~0xfff));
+			res |= adiv5_component_probe(ap, addr + (entry & ~0xfff));
 		}
 	} else {
 		/* Check if the component was designed by ARM, we currently do not support,
@@ -305,7 +306,7 @@ static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr)
 		if ((pidr & ~(PIDR_REV_MASK | PIDR_PN_MASK)) != PIDR_ARM_BITS) {
 			DEBUG("0x%"PRIx32": 0x%"PRIx64" <- does not match ARM JEP-106\n",
                               addr, pidr);
-			return;
+			return false;
 		}
 
 		/* Extract part number from the part id register. */
@@ -329,6 +330,7 @@ static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr)
 					      cidc_debug_strings[cid_class],
 					      cidc_debug_strings[pidr_pn_bits[i].cidc]);
 				}
+				res = true;
 				switch (pidr_pn_bits[i].arch) {
 				case aa_cortexm:
 					DEBUG("-> cortexm_probe\n");
@@ -349,6 +351,7 @@ static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr)
 			      cidc_debug_strings[cid_class], pidr);
 		}
 	}
+	return res;
 }
 
 ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel)
@@ -388,6 +391,7 @@ ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel)
 
 void adiv5_dp_init(ADIv5_DP_t *dp)
 {
+	volatile bool probed = false;
 	volatile uint32_t ctrlstat = 0;
 
 	adiv5_dp_ref(dp);
@@ -452,7 +456,11 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 		 */
 
 		/* The rest sould only be added after checking ROM table */
-		adiv5_component_probe(ap, ap->base);
+		probed |= adiv5_component_probe(ap, ap->base);
+		if (!probed && (dp->idcode & 0xfff) == 0x477) {
+			DEBUG("-> cortexm_probe forced\n");
+			cortexm_probe(ap);
+		}
 	}
 	adiv5_dp_unref(dp);
 }
