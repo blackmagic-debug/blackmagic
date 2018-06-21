@@ -100,6 +100,13 @@
 #define ADIV5_LOW_WRITE		0
 #define ADIV5_LOW_READ		1
 
+enum align {
+	ALIGN_BYTE     = 0,
+	ALIGN_HALFWORD = 1,
+	ALIGN_WORD     = 2,
+	ALIGN_DWORD    = 3
+};
+
 /* Try to keep this somewhat absract for later adding SW-DP */
 typedef struct ADIv5_DP_s {
 	int refcnt;
@@ -167,6 +174,8 @@ void adiv5_jtag_dp_handler(jtag_dev_t *dev);
 
 void adiv5_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len);
 void adiv5_mem_write(ADIv5_AP_t *ap, uint32_t dest, const void *src, size_t len);
+void adiv5_mem_write_sized(ADIv5_AP_t *ap, uint32_t dest, const void *src,
+						   size_t len, enum align align);
 
 #endif
 

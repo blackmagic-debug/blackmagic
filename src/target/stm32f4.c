@@ -3,6 +3,8 @@
  *
  * Copyright (C) 2011  Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
+ * Copyright (C) 2017, 2018  Uwe Bonnes
+ *                           <bon@elektron.ikp.physik.tu-darmstadt.de>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -44,7 +46,7 @@ const struct command_s stm32f4_cmd_list[] = {
 	 "Erase entire flash memory"},
 	{"option", (cmd_handler)stm32f4_cmd_option, "Manipulate option bytes"},
 	{"psize", (cmd_handler)stm32f4_cmd_psize,
-	 "Configure flash write parallelism: (x8|x32(default))"},
+	 "Configure flash write parallelism: (x8|x16|x32(default)|x64)"},
 	{NULL, NULL, NULL}
 };
 
@@ -108,28 +110,13 @@ static int stm32f4_flash_write(struct target_flash *f,
 #define DBG_WWDG_STOP	(1 << 11)
 #define DBG_IWDG_STOP	(1 << 12)
 
-/* This routine uses word access.  Only usable on target voltage >2.7V */
-static const uint16_t stm32f4_flash_write_x32_stub[] = {
-#include "flashstub/stm32f4_x32.stub"
-};
-
-/* This routine uses byte access. Usable on target voltage <2.2V */
-static const uint16_t stm32f4_flash_write_x8_stub[] = {
-#include "flashstub/stm32f4_x8.stub"
-};
-
-#define SRAM_BASE 0x20000000
-#define STUB_BUFFER_BASE \
-	ALIGN(SRAM_BASE + MAX(sizeof(stm32f4_flash_write_x8_stub), \
-			      sizeof(stm32f4_flash_write_x32_stub)), 4)
-
 #define AXIM_BASE 0x8000000
 #define ITCM_BASE 0x0200000
 
 struct stm32f4_flash {
 	struct target_flash f;
+	enum align psize;
 	uint8_t base_sector;
-	uint8_t psize;
 	uint8_t bank_split;
 };
 
@@ -161,10 +148,11 @@ static void stm32f4_add_flash(target *t,
 	f->blocksize = blocksize;
 	f->erase = stm32f4_flash_erase;
 	f->write = stm32f4_flash_write;
+	f->buf_size = 1024;
 	f->erased = 0xff;
 	sf->base_sector = base_sector;
-	sf->psize = 32;
 	sf->bank_split = split;
+	sf->psize = ALIGN_WORD;
 	target_add_flash(t, f);
 }
 
@@ -381,9 +369,15 @@ static int stm32f4_flash_erase(struct target_flash *f, target_addr addr,
 	uint8_t sector = sf->base_sector + (addr - f->start)/f->blocksize;
 	stm32f4_flash_unlock(t);
 
+	enum align psize = ALIGN_WORD;
+	for (struct target_flash *f = t->flash; f; f = f->next) {
+		if (f->write == stm32f4_flash_write) {
+			psize = ((struct stm32f4_flash *)f)->psize;
+		}
+	}
 	while(len) {
 		uint32_t cr = FLASH_CR_EOPIE | FLASH_CR_ERRIE | FLASH_CR_SER |
-		              (sector << 3);
+			(psize * FLASH_CR_PSIZE16) | (sector << 3);
 		/* Flash page erase instruction */
 		target_mem_write32(t, FLASH_CR, cr);
 		/* write address to FMA */
@@ -417,17 +411,27 @@ static int stm32f4_flash_write(struct target_flash *f,
 	if ((dest >= ITCM_BASE) && (dest < AXIM_BASE)) {
 		dest = AXIM_BASE + (dest - ITCM_BASE);
 	}
+	target *t = f->t;
+	uint32_t sr;
+	enum align psize = ((struct stm32f4_flash *)f)->psize;
+	target_mem_write32(t, FLASH_CR,
+					   (psize * FLASH_CR_PSIZE16) | FLASH_CR_PG);
+	cortexm_mem_write_sized(t, dest, src, len, psize);
+	/* Read FLASH_SR to poll for BSY bit */
+	/* Wait for completion or an error */
+	do {
+		sr = target_mem_read32(t, FLASH_SR);
+		if(target_check_error(t)) {
+			DEBUG("stm32f4 flash write: comm error\n");
+			return -1;
+		}
+	} while (sr & FLASH_SR_BSY);
 
-	/* Write buffer to target ram call stub */
-	if (((struct stm32f4_flash *)f)->psize == 32)
-		target_mem_write(f->t, SRAM_BASE, stm32f4_flash_write_x32_stub,
-		                 sizeof(stm32f4_flash_write_x32_stub));
-	else
-		target_mem_write(f->t, SRAM_BASE, stm32f4_flash_write_x8_stub,
-		                 sizeof(stm32f4_flash_write_x8_stub));
-	target_mem_write(f->t, STUB_BUFFER_BASE, src, len);
-	return cortexm_run_stub(f->t, SRAM_BASE, dest,
-	                        STUB_BUFFER_BASE, len, 0);
+	if (sr & SR_ERROR_MASK) {
+		DEBUG("stm32f4 flash write error 0x%" PRIx32 "\n", sr);
+			return -1;
+	}
+	return 0;
 }
 
 static bool stm32f4_cmd_erase_mass(target *t)
@@ -665,22 +669,28 @@ static bool stm32f4_cmd_option(target *t, int argc, char *argv[])
 static bool stm32f4_cmd_psize(target *t, int argc, char *argv[])
 {
 	if (argc == 1) {
-		uint8_t psize = 8;
+		enum align psize = ALIGN_WORD;
 		for (struct target_flash *f = t->flash; f; f = f->next) {
 			if (f->write == stm32f4_flash_write) {
 				psize = ((struct stm32f4_flash *)f)->psize;
 			}
 		}
 		tc_printf(t, "Flash write parallelism: %s\n",
-		          psize == 32 ? "x32" : "x8");
+		          psize == ALIGN_DWORD ? "x64" :
+		          psize == ALIGN_WORD ? "x32" :
+				  psize == ALIGN_HALFWORD ? "x16" : "x8");
 	} else {
-		uint8_t psize;
+		enum align psize;
 		if (!strcmp(argv[1], "x8")) {
-			psize = 8;
+			psize = ALIGN_BYTE;
+		} else if (!strcmp(argv[1], "x16")) {
+			psize = ALIGN_HALFWORD;
 		} else if (!strcmp(argv[1], "x32")) {
-			psize = 32;
+			psize = ALIGN_WORD;
+		} else if (!strcmp(argv[1], "x64")) {
+			psize = ALIGN_DWORD;
 		} else {
-			tc_printf(t, "usage: monitor psize (x8|x32)\n");
+			tc_printf(t, "usage: monitor psize (x8|x16|x32|x32)\n");
 			return false;
 		}
 		for (struct target_flash *f = t->flash; f; f = f->next) {

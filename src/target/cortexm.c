@@ -459,6 +459,14 @@ static void cortexm_regs_write(target *t, const void *data)
 		}
 }
 
+int cortexm_mem_write_sized(
+	target *t, target_addr dest, const void *src, size_t len, enum align align)
+{
+	cortexm_cache_clean(t, dest, len, true);
+	adiv5_mem_write_sized(cortexm_ap(t), dest, src, len, align);
+	return target_check_error(t);
+}
+
 static uint32_t cortexm_pc_read(target *t)
 {
 	target_mem_write32(t, CORTEXM_DCRSR, 0x0F);
