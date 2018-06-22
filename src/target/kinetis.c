@@ -335,9 +335,11 @@ static int kl_gen_flash_done(struct target_flash *f)
 #define KINETIS_MDM_IDR_KZ03 0x1c0020
 
 static bool kinetis_mdm_cmd_erase_mass(target *t);
+static bool kinetis_mdm_cmd_ke04_mode(target *t);
 
 const struct command_s kinetis_mdm_cmd_list[] = {
 	{"erase_mass", (cmd_handler)kinetis_mdm_cmd_erase_mass, "Erase entire flash memory"},
+	{"ke04_mode", (cmd_handler)kinetis_mdm_cmd_ke04_mode, "Allow erase for KE04"},
 	{NULL, NULL, NULL}
 };
 
@@ -355,7 +357,7 @@ enum target_halt_reason mdm_halt_poll(target *t, target_addr *watch)
 void kinetis_mdm_probe(ADIv5_AP_t *ap)
 {
 	switch(ap->idr) {
-	case KINETIS_MDM_IDR_KZ03:
+	case KINETIS_MDM_IDR_KZ03: /* Also valid for KE04, no way to check! */
 	case KINETIS_MDM_IDR_K22F:
 		break;
 	default:
@@ -392,20 +394,39 @@ void kinetis_mdm_probe(ADIv5_AP_t *ap)
 #define MDM_STATUS_MASS_ERASE_ENABLED (1 << 5)
 
 #define MDM_CONTROL_MASS_ERASE (1 << 0)
+#define MDM_CONTROL_SYS_RESET  (1 << 3)
 
+/* This is needed as a separate command, as there's no way to  *
+ * tell a KE04 from other kinetis in kinetis_mdm_probe()       */
+static bool ke04_mode = false;
+static bool kinetis_mdm_cmd_ke04_mode(target *t)
+{
+	/* Set a flag to ignore part of the status and assert reset */
+	ke04_mode = true;
+	tc_printf(t, "Mass erase for KE04 now allowed\n");
+	return true;
+}
 static bool kinetis_mdm_cmd_erase_mass(target *t)
 {
 	ADIv5_AP_t *ap = t->priv;
+
+	/* Keep the MCU in reset as stated in KL25PxxM48SF0RM */
+	if(ke04_mode)
+		adiv5_ap_write(ap, MDM_CONTROL, MDM_CONTROL_SYS_RESET);
 
 	uint32_t status, control;
 	status = adiv5_ap_read(ap, MDM_STATUS);
 	control = adiv5_ap_read(ap, MDM_CONTROL);
 	tc_printf(t, "Requesting mass erase (status = 0x%"PRIx32")\n", status);
 
-	if (!(status & MDM_STATUS_MASS_ERASE_ENABLED)) {
+	/* This flag does not exist on KE04 */
+	if (!(status & MDM_STATUS_MASS_ERASE_ENABLED) && !ke04_mode) {
 		tc_printf(t, "ERROR: Mass erase disabled!\n");
 		return false;
 	}
+
+	/* Flag is not persistent */
+	ke04_mode = false;
 
 	if (!(status & MDM_STATUS_FLASH_READY)) {
 		tc_printf(t, "ERROR: Flash not ready!\n");
