@@ -132,7 +132,7 @@ jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int
 		data[index++] = MPSSE_WRITE_TMS | ((DO)? MPSSE_DO_READ : 0) | MPSSE_LSB | MPSSE_BITMODE | MPSSE_WRITE_NEG;
 		data[index++] = 0;
 		if (DI)
-			data[index++] = (*DI)>>rticks?0x81:0x01;
+			data[index++] = (DI[ticks]) >> rticks?0x81 : 0x01;
 		platform_buffer_write(data, index);
 	}
 	if (DO) {
