@@ -271,6 +271,7 @@ static bool stm32f4_attach(target *t)
 	case ID_STM32F76X: /* F76x F77x RM0410 */
 		is_f7 = true;
 		dual_bank = true;
+		large_sectors = true;
 		flashsize_base = F7_FLASHSIZE;
 		break;
 	case ID_STM32F72X: /* F72x F73x RM0431 */
@@ -310,7 +311,7 @@ static bool stm32f4_attach(target *t)
 	int split = 0;
 	uint32_t banksize;
 	if (use_dual_bank) {
-		banksize = flashsize << 9; /* flas split on two sectors. */
+		banksize = flashsize << 9; /* flash split on two sectors. */
 		split = (flashsize == 0x400) ? 8 : 12;
 	}
 	else
