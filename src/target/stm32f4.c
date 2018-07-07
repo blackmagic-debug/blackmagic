@@ -101,15 +101,6 @@ static int stm32f4_flash_write(struct target_flash *f,
 #define DBGMCU_IDCODE	0xE0042000
 #define ARM_CPUID	0xE000ED00
 
-#define DBGMCU_CR		0xE0042004
-#define DBG_STANDBY		(1 << 0)
-#define DBG_STOP		(1 << 1)
-#define DBG_SLEEP		(1 << 2)
-
-#define DBGMCU_APB1_FZ	0xE0042008
-#define DBG_WWDG_STOP	(1 << 11)
-#define DBG_IWDG_STOP	(1 << 12)
-
 #define AXIM_BASE 0x8000000
 #define ITCM_BASE 0x0200000
 
@@ -280,7 +271,6 @@ static bool stm32f4_attach(target *t)
 	default:
 		return false;
 	}
-	target_mem_write32(t, DBGMCU_CR, DBG_STANDBY| DBG_STOP | DBG_SLEEP);
 	bool use_dual_bank = false;
 	target_mem_map_free(t);
 	uint32_t flashsize = target_mem_read32(t, flashsize_base) & 0xffff;
