@@ -66,3 +66,63 @@ inline uint8_t jtagtap_next(uint8_t dTMS, uint8_t dTDI)
 	return ret != 0;
 }
 
+void jtagtap_tms_seq(uint32_t MS, int ticks)
+{
+	gpio_set_val(TDI_PORT, TDI_PIN, 1);
+	int data = MS & 1;
+	while(ticks) {
+		gpio_set_val(TMS_PORT, TMS_PIN, data);
+		gpio_set(TCK_PORT, TCK_PIN);
+		MS >>= 1;
+		data = MS & 1;
+		ticks--;
+		gpio_clear(TCK_PORT, TCK_PIN);
+	}
+}
+
+void
+jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int ticks)
+{
+	uint8_t index = 1;
+	gpio_set_val(TMS_PORT, TMS_PIN, 0);
+	uint8_t res = 0;
+	while(ticks > 1) {
+		gpio_set_val(TDI_PORT, TDI_PIN, *DI & index);
+		gpio_set(TCK_PORT, TCK_PIN);
+		if (gpio_get(TDO_PORT, TDO_PIN)) {
+			res |= index;
+		}
+		if(!(index <<= 1)) {
+			*DO = res;
+			res = 0;
+			index = 1;
+			DI++; DO++;
+		}
+		ticks--;
+		gpio_clear(TCK_PORT, TCK_PIN);
+	}
+	gpio_set_val(TMS_PORT, TMS_PIN, final_tms);
+	gpio_set_val(TDI_PORT, TDI_PIN, *DI & index);
+	gpio_set(TCK_PORT, TCK_PIN);
+	if (gpio_get(TDO_PORT, TDO_PIN)) {
+		res |= index;
+	}
+	*DO = res;
+	gpio_clear(TCK_PORT, TCK_PIN);
+}
+
+void
+jtagtap_tdi_seq(const uint8_t final_tms, const uint8_t *DI, int ticks)
+{
+	uint8_t index = 1;
+	while(ticks--) {
+		gpio_set_val(TMS_PORT, TMS_PIN, ticks? 0 : final_tms);
+		gpio_set_val(TDI_PORT, TDI_PIN, *DI & index);
+		gpio_set(TCK_PORT, TCK_PIN);
+		if(!(index <<= 1)) {
+			index = 1;
+			DI++;
+		}
+		gpio_clear(TCK_PORT, TCK_PIN);
+	}
+}
