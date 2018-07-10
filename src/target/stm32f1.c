@@ -330,6 +330,9 @@ static bool stm32f1_cmd_option(target *t, int argc, char *argv[])
 	case 0x438:  /* STM32F303x6/8 and STM32F328 */
 	case 0x440:  /* STM32F0 */
 	case 0x446:  /* STM32F303xD/E and STM32F398xE */
+	case 0x445:  /* STM32F04 RM0091 Rev.7, STM32F070x6 RM0360 Rev. 4*/
+	case 0x448:  /* STM32F07 RM0091 Rev.7, STM32F070xB RM0360 Rev. 4*/
+	case 0x442:  /* STM32F09 RM0091 Rev.7, STM32F030xC RM0360 Rev. 4*/
 		flash_obp_rdp_key = FLASH_OBP_RDP_KEY_F3;
 		break;
 	default: flash_obp_rdp_key = FLASH_OBP_RDP_KEY;
