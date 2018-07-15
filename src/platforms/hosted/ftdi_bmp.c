@@ -2,6 +2,7 @@
  * This file is part of the Black Magic Debug project.
  *
  * Copyright (C) 2011  Black Sphere Technologies Ltd.
+ * Copyright (C) 2018  Uwe Bonnes(bon@elektron.ikp.physik.tu-darmstadt.de)
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -47,18 +48,32 @@ cable_desc_t cable_desc[] = {
 		.dbus_ddr  = 0x1B,
 		.bitbang_tms_in_port_cmd = GET_BITS_LOW,
 		.bitbang_tms_in_pin = MPSSE_TMS,
+		.assert_srst.data_low   = ~0x40,
+		.assert_srst.ddr_low    =  0x40,
+		.deassert_srst.data_low =  0x40,
+		.deassert_srst.ddr_low  = ~0x40,
 		.description = "FLOSS-JTAG",
 		.name = "flossjtag"
 	},
 	{
 		/* Buffered connection from FTDI to Jtag/Swd.
 		 * TCK and TMS not independant switchable!
-		 * SWD not possible. */
+		 * SWD not possible.
+		 * DBUS PIN6 : SRST readback.
+		 * CBUS PIN1 : Drive SRST
+		 * CBUS PIN4 : not tristate SRST
+		 */
 		.vendor = 0x0403,
 		.product = 0x6010,
 		.interface = INTERFACE_A,
 		.dbus_data = 0x08,
 		.dbus_ddr  = 0x1B,
+		.cbus_data = 0x1c,
+		.cbus_ddr  = 0x1f,
+		.assert_srst.data_high  =  ~0x08,
+		.deassert_srst.data_high =  0x08,
+		.srst_get_port_cmd = GET_BITS_LOW,
+		.srst_get_pin = 0x40,
 		.description = "FTDIJTAG",
 		.name = "ftdijtag"
 	},
@@ -87,6 +102,10 @@ cable_desc_t cable_desc[] = {
 		.bitbang_tms_in_port_cmd = GET_BITS_LOW,
 		.bitbang_tms_in_pin = MPSSE_TDO, /* keep bit 5 low*/
 		.bitbang_swd_dbus_read_data = 0x02,
+		.assert_srst.data_high   = ~PIN1,
+		.assert_srst.ddr_high    =  PIN1,
+		.deassert_srst.data_high =  PIN1,
+		.deassert_srst.ddr_high  = ~PIN1,
 		.name = "ftdiswd"
 	},
 	{
@@ -106,6 +125,10 @@ cable_desc_t cable_desc[] = {
 		.interface = INTERFACE_A,
 		.dbus_data = 0x08,
 		.dbus_ddr  = 0x1B,
+		.assert_srst.data_low = 0x40,
+		.deassert_srst.data_low = ~0x40,
+		.srst_get_port_cmd = GET_BITS_HIGH,
+		.srst_get_pin = 0x01,
 		.name = "turtelizer"
 	},
 	{
@@ -245,13 +268,78 @@ int ftdi_bmp_init(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info)
 	return -1;
 }
 
-void libftdi_srst_set_val(bool assert)
+static void libftdi_set_data(data_desc_t* data)
 {
-	(void)assert;
-	libftdi_buffer_flush();
+	uint8_t cmd[6];
+	int index = 0;
+	if ((data->data_low) || (data->ddr_low)) {
+		if (data->data_low > 0)
+			active_cable->dbus_data |= (data->data_low & 0xff);
+		else
+			active_cable->dbus_data &= (data->data_low & 0xff);
+		if (data->ddr_low > 0)
+			active_cable->dbus_ddr  |= (data->ddr_low  & 0xff);
+		else
+			active_cable->dbus_ddr  &= (data->ddr_low  & 0xff);
+		cmd[index++] = SET_BITS_LOW;
+		cmd[index++] = active_cable->dbus_data;
+		cmd[index++] = active_cable->dbus_ddr;
+	}
+	if ((data->data_high) || (data->ddr_high)) {
+		if (data->data_high > 0)
+			active_cable->cbus_data |= (data->data_high & 0xff);
+		else
+			active_cable->cbus_data &= (data->data_high & 0xff);
+		if (data->ddr_high > 0)
+			active_cable->cbus_ddr  |= (data->ddr_high  & 0xff);
+		else
+			active_cable->cbus_ddr  &= (data->ddr_high  & 0xff);
+		cmd[index++] = SET_BITS_HIGH;
+		cmd[index++] = active_cable->cbus_data;
+		cmd[index++] = active_cable->cbus_ddr;
+	}
+	if (index) {
+		libftdi_buffer_write(cmd, index);
+		libftdi_buffer_flush();
+	}
 }
 
-bool libftdi_srst_get_val(void) { return false; }
+void libftdi_srst_set_val(bool assert)
+{
+	if (assert)
+		libftdi_set_data(&active_cable->assert_srst);
+	else
+		libftdi_set_data(&active_cable->deassert_srst);
+}
+
+bool libftdi_srst_get_val(void)
+{
+	uint8_t cmd[1] = {0};
+	uint8_t pin = 0;
+	if (active_cable->srst_get_port_cmd && active_cable->srst_get_pin) {
+		cmd[0]= active_cable->srst_get_port_cmd;
+		pin   =  active_cable->srst_get_pin;
+	} else if (active_cable->assert_srst.data_low &&
+			   active_cable->assert_srst.ddr_low) {
+		cmd[0]= GET_BITS_LOW;
+		pin   = active_cable->assert_srst.data_low;
+	} else if (active_cable->assert_srst.data_high &&
+			   active_cable->assert_srst.ddr_high) {
+		cmd[0]= GET_BITS_HIGH;
+		pin   = active_cable->assert_srst.data_high;
+	}else {
+		return false;
+	}
+	libftdi_buffer_write(cmd, 1);
+	uint8_t data[1];
+	libftdi_buffer_read(data, 1);
+	bool res = false;
+	if (((pin < 0x7f) || (pin == PIN7)))
+		res = data[0] & pin;
+	else
+		res = !(data[0] & ~pin);
+	return res;
+}
 
 void libftdi_buffer_flush(void)
 {

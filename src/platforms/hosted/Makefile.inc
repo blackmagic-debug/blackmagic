@@ -25,6 +25,7 @@ endif
 LDFLAGS += -lusb-1.0
 CFLAGS += $(shell pkg-config --cflags libftdi1)
 LDFLAGS += $(shell pkg-config --libs libftdi1)
+CFLAGS += -Wno-missing-field-initializers
 
 ifneq (, $(findstring mingw, $(SYS)))
  SRC += cmsis_dap.c dap.c hid.c
