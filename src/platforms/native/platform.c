@@ -136,12 +136,12 @@ void platform_init(void)
 			GPIO_CNF_OUTPUT_PUSHPULL, GPIO7);
 	/* Enable SRST output. Original uses a NPN to pull down, so setting the
 	 * output HIGH asserts. Mini is directly connected so use open drain output
-	 * and set LOW to assert.
+	 * and set LOW to assert. Note: mini v2 uses buffer so use push pull on it.
 	 */
 	platform_srst_set_val(false);
 	gpio_set_mode(SRST_PORT, GPIO_MODE_OUTPUT_50_MHZ,
 			(((platform_hwversion() == 0) ||
-			  (platform_hwversion() >= 3))
+			  (platform_hwversion() >= 2))
 			 ? GPIO_CNF_OUTPUT_PUSHPULL
 			 : GPIO_CNF_OUTPUT_OPENDRAIN),
 			SRST_PIN);

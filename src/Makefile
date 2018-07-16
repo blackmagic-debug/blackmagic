@@ -11,6 +11,7 @@ endif
 OPT_FLAGS ?= -O2
 
 CFLAGS += -Wall -Wextra -Werror -Wno-char-subscripts\
+	-Wno-error=cast-function-type \
 	$(OPT_FLAGS) -std=gnu99 -g3 -MD \
 	-I. -Iinclude -Iplatforms/common -I$(PLATFORM_DIR)
 LDFLAGS += $(OPT_FLAGS)
