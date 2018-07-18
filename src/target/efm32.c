@@ -257,62 +257,64 @@ typedef struct efm32_device_t {
 	uint32_t flash_page_size;	/* Flash page size */
 	uint32_t msc_addr;			/* MSC Address */
 	bool has_radio;		   /* Indicates a device has attached radio */
+	uint32_t user_data_size;	/* User Data (UD) region size */
+	uint32_t bootloader_size;	/* Bootloader (BL) region size (may be 0 for no BL region) */
 	char* description;	   /* Human-readable description */
 } efm32_device_t;
 
 efm32_device_t const efm32_devices[] = {
 	/*  First gen micros */
-	{71, "EFM32G", 512, 0x400c0000, false, "Gecko"},
-	{72, "EFM32GG", 2048, 0x400c0000, false, "Giant Gecko"},
-	{73, "EFM32TG", 512, 0x400c0000, false, "Tiny Gecko"},
-	{74, "EFM32LG", 2048, 0x400c0000, false, "Leopard Gecko"},
-	{75, "EFM32WG", 2048, 0x400c0000, false, "Wonder Gecko"},
-	{76, "EFM32ZG", 1024, 0x400c0000, false, "Zero Gecko"},
-	{77, "EFM32HG", 1024, 0x400c0000, false, "Happy Gecko"},
+	{71, "EFM32G", 512, 0x400c0000, false, 512, 0, "Gecko"},
+	{72, "EFM32GG", 2048, 0x400c0000, false, 4096, 0, "Giant Gecko"},
+	{73, "EFM32TG", 512, 0x400c0000, false, 512, 0, "Tiny Gecko"},
+	{74, "EFM32LG", 2048, 0x400c0000, false, 2048, 0, "Leopard Gecko"},
+	{75, "EFM32WG", 2048, 0x400c0000, false, 2048, 0, "Wonder Gecko"},
+	{76, "EFM32ZG", 1024, 0x400c0000, false, 1024, 0, "Zero Gecko"},
+	{77, "EFM32HG", 1024, 0x400c0000, false, 1024, 0, "Happy Gecko"},
 	/*  First (1.5) gen micro + radio */
-	{120, "EZR32WG", 2048, 0x400c0000, true, "EZR Wonder Gecko"},
-	{121, "EZR32LG", 2048, 0x400c0000, true, "EZR Leopard Gecko"},
-	{122, "EZR32HG", 2048, 0x400c0000, true, "EZR Happy Gecko"},
+	{120, "EZR32WG", 2048, 0x400c0000, true, 2048, 0, "EZR Wonder Gecko"},
+	{121, "EZR32LG", 2048, 0x400c0000, true, 2048, 0, "EZR Leopard Gecko"},
+	{122, "EZR32HG", 1024, 0x400c0000, true, 1024, 0, "EZR Happy Gecko"},
 	/*  Second gen micros */
-	{81, "EFM32PG1B", 2048, 0x400e0000, false, "Pearl Gecko"},
-	{83, "EFM32JG1B", 2048, 0x400e0000, false, "Jade Gecko"},
+	{81, "EFM32PG1B", 2048, 0x400e0000, false, 2048, 10240, "Pearl Gecko"},
+	{83, "EFM32JG1B", 2048, 0x400e0000, false, 2048, 10240, "Jade Gecko"},
 	/*  Second gen devices micro + radio */
-	{16, "EFR32MG1P", 2048, 0x400e0000, true, "Mighty Gecko"},
-	{17, "EFR32MG1B", 2048, 0x400e0000, true, "Mighty Gecko"},
-	{18, "EFR32MG1V", 2048, 0x400e0000, true, "Mighty Gecko"},
-	{19, "EFR32BG1P", 2048, 0x400e0000, true, "Blue Gecko"},
-	{20, "EFR32BG1B", 2048, 0x400e0000, true, "Blue Gecko"},
-	{21, "EFR32BG1V", 2048, 0x400e0000, true, "Blue Gecko"},
-	{25, "EFR32FG1P", 2048, 0x400e0000, true, "Flex Gecko"},
-	{26, "EFR32FG1B", 2048, 0x400e0000, true, "Flex Gecko"},
-	{27, "EFR32FG1V", 2048, 0x400e0000, true, "Flex Gecko"},
-	{28, "EFR32MG12P", 2048, 0x400e0000, true, "Mighty Gecko"},
-	{29, "EFR32MG12B", 2048, 0x400e0000, true, "Mighty Gecko"},
-	{30, "EFR32MG12V", 2048, 0x400e0000, true, "Mighty Gecko"},
-	{31, "EFR32BG12P", 2048, 0x400e0000, true, "Blue Gecko"},
-	{32, "EFR32BG12B", 2048, 0x400e0000, true, "Blue Gecko"},
-	{33, "EFR32BG12V", 2048, 0x400e0000, true, "Blue Gecko"},
-	{37, "EFR32FG12P", 2048, 0x400e0000, true, "Flex Gecko"},
-	{38, "EFR32FG12B", 2048, 0x400e0000, true, "Flex Gecko"},
-	{39, "EFR32FG12V", 2048, 0x400e0000, true, "Flex Gecko"},
-	{40, "EFR32MG13P", 2048, 0x400e0000, true, "Mighty Gecko"},
-	{41, "EFR32MG13B", 2048, 0x400e0000, true, "Mighty Gecko"},
-	{42, "EFR32MG13V", 2048, 0x400e0000, true, "Mighty Gecko"},
-	{43, "EFR32BG13P", 2048, 0x400e0000, true, "Blue Gecko"},
-	{44, "EFR32BG13B", 2048, 0x400e0000, true, "Blue Gecko"},
-	{45, "EFR32BG13V", 2048, 0x400e0000, true, "Blue Gecko"},
-	{49, "EFR32FG13P", 2048, 0x400e0000, true, "Flex Gecko"},
-	{50, "EFR32FG13B", 2048, 0x400e0000, true, "Flex Gecko"},
-	{51, "EFR32FG13V", 2048, 0x400e0000, true, "Flex Gecko"},
-	{52, "EFR32MG14P", 2048, 0x400e0000, true, "Mighty Gecko"},
-	{53, "EFR32MG14B", 2048, 0x400e0000, true, "Mighty Gecko"},
-	{54, "EFR32MG14V", 2048, 0x400e0000, true, "Mighty Gecko"},
-	{55, "EFR32BG14P", 2048, 0x400e0000, true, "Blue Gecko"},
-	{56, "EFR32BG14B", 2048, 0x400e0000, true, "Blue Gecko"},
-	{57, "EFR32BG14V", 2048, 0x400e0000, true, "Blue Gecko"},
-	{61, "EFR32FG14P", 2048, 0x400e0000, true, "Flex Gecko"},
-	{62, "EFR32FG14B", 2048, 0x400e0000, true, "Flex Gecko"},
-	{63, "EFR32FG14V", 2048, 0x400e0000, true, "Flex Gecko"},
+	{16, "EFR32MG1P", 2048, 0x400e0000, true, 2048, 10240, "Mighty Gecko"},
+	{17, "EFR32MG1B", 2048, 0x400e0000, true, 2048, 10240, "Mighty Gecko"},
+	{18, "EFR32MG1V", 2048, 0x400e0000, true, 2048, 10240, "Mighty Gecko"},
+	{19, "EFR32BG1P", 2048, 0x400e0000, true, 2048, 10240, "Blue Gecko"},
+	{20, "EFR32BG1B", 2048, 0x400e0000, true, 2048, 10240, "Blue Gecko"},
+	{21, "EFR32BG1V", 2048, 0x400e0000, true, 2048, 10240, "Blue Gecko"},
+	{25, "EFR32FG1P", 2048, 0x400e0000, true, 2048, 10240, "Flex Gecko"},
+	{26, "EFR32FG1B", 2048, 0x400e0000, true, 2048, 10240, "Flex Gecko"},
+	{27, "EFR32FG1V", 2048, 0x400e0000, true, 2048, 10240, "Flex Gecko"},
+	{28, "EFR32MG12P", 2048, 0x400e0000, true, 2048, 32768, "Mighty Gecko"},
+	{29, "EFR32MG12B", 2048, 0x400e0000, true, 2048, 32768, "Mighty Gecko"},
+	{30, "EFR32MG12V", 2048, 0x400e0000, true, 2048, 32768, "Mighty Gecko"},
+	{31, "EFR32BG12P", 2048, 0x400e0000, true, 2048, 32768, "Blue Gecko"},
+	{32, "EFR32BG12B", 2048, 0x400e0000, true, 2048, 32768, "Blue Gecko"},
+	{33, "EFR32BG12V", 2048, 0x400e0000, true, 2048, 32768, "Blue Gecko"},
+	{37, "EFR32FG12P", 2048, 0x400e0000, true, 2048, 32768, "Flex Gecko"},
+	{38, "EFR32FG12B", 2048, 0x400e0000, true, 2048, 32768, "Flex Gecko"},
+	{39, "EFR32FG12V", 2048, 0x400e0000, true, 2048, 32768, "Flex Gecko"},
+	{40, "EFR32MG13P", 2048, 0x400e0000, true, 2048, 16384, "Mighty Gecko"},
+	{41, "EFR32MG13B", 2048, 0x400e0000, true, 2048, 16384, "Mighty Gecko"},
+	{42, "EFR32MG13V", 2048, 0x400e0000, true, 2048, 16384, "Mighty Gecko"},
+	{43, "EFR32BG13P", 2048, 0x400e0000, true, 2048, 16384, "Blue Gecko"},
+	{44, "EFR32BG13B", 2048, 0x400e0000, true, 2048, 16384, "Blue Gecko"},
+	{45, "EFR32BG13V", 2048, 0x400e0000, true, 2048, 16384, "Blue Gecko"},
+	{49, "EFR32FG13P", 2048, 0x400e0000, true, 2048, 16384, "Flex Gecko"},
+	{50, "EFR32FG13B", 2048, 0x400e0000, true, 2048, 16384, "Flex Gecko"},
+	{51, "EFR32FG13V", 2048, 0x400e0000, true, 2048, 16384, "Flex Gecko"},
+	{52, "EFR32MG14P", 2048, 0x400e0000, true, 2048, 16384, "Mighty Gecko"},
+	{53, "EFR32MG14B", 2048, 0x400e0000, true, 2048, 16384, "Mighty Gecko"},
+	{54, "EFR32MG14V", 2048, 0x400e0000, true, 2048, 16384, "Mighty Gecko"},
+	{55, "EFR32BG14P", 2048, 0x400e0000, true, 2048, 16384, "Blue Gecko"},
+	{56, "EFR32BG14B", 2048, 0x400e0000, true, 2048, 16384, "Blue Gecko"},
+	{57, "EFR32BG14V", 2048, 0x400e0000, true, 2048, 16384, "Blue Gecko"},
+	{61, "EFR32FG14P", 2048, 0x400e0000, true, 2048, 16384, "Flex Gecko"},
+	{62, "EFR32FG14B", 2048, 0x400e0000, true, 2048, 16384, "Flex Gecko"},
+	{63, "EFR32FG14V", 2048, 0x400e0000, true, 2048, 16384, "Flex Gecko"},
 };
 
 
@@ -614,6 +616,12 @@ bool efm32_probe(target *t)
 	tc_printf(t, "flash size %d page size %d\n", flash_size, flash_page_size);
 	target_add_ram (t, SRAM_BASE, ram_size);
 	efm32_add_flash(t, 0x00000000, flash_size, flash_page_size);
+	if (device->user_data_size) { /* optional User Data (UD) section */
+		efm32_add_flash(t, 0x0fe00000, device->user_data_size, flash_page_size);
+	}
+	if (device->bootloader_size) { /* optional Bootloader (BL) section */
+		efm32_add_flash(t, 0x0fe10000, device->bootloader_size, flash_page_size);
+	}
 	target_add_commands(t, efm32_cmd_list, "EFM32");
 
 	return true;
