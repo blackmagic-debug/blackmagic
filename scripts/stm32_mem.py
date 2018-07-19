@@ -89,7 +89,10 @@ def stm32_scan(args, test):
 		exit(-1)
 
 	for dev in devs:
-		dfudev = dfu.dfu_device(*dev)
+                try:
+                        dfudev = dfu.dfu_device(*dev)
+                except:
+                        return 0
 		man = dfudev.handle.getString(dfudev.dev.iManufacturer, 30)
 		if man == "Black Sphere Technologies": bmp = bmp + 1
 	if bmp == 0 :
