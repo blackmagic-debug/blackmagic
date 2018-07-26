@@ -25,11 +25,9 @@
  *
  * References:
  * RM0351 STM32L4x5 and STM32L4x6 advanced ARM®-based 32-bit MCUs Rev. 5
- * RM0392 STM32L4x1 advanced ARM®-based 32-bit MCUs Rev. 2
- * RM0393 STM32L4x2 advanced ARM®-based 32-bit MCUs Rev. 2
- * RM0394 STM32L431xx STM32L433xx STM32L443xx advanced ARM®-based 32-bit MCUs
- *        Rev.3
- * RM0395 STM32L4x5 advanced ARM®-based 32-bit MCUs Rev.1
+ * RM0394 STM32L43xxx STM32L44xxx STM32L45xxx STM32L46xxxx advanced
+ *  ARM®-based 32-bit MCUs Rev.3
+ * RM0432 STM32L4Rxxx and STM32L4Sxxx advanced Arm®-based 32-bit MCU. Rev 1
  *
  *
  */
@@ -57,9 +55,6 @@ static int stm32l4_flash_erase(struct target_flash *f, target_addr addr, size_t 
 static int stm32l4_flash_write(struct target_flash *f,
                                target_addr dest, const void *src, size_t len);
 
-static const char stm32l4_driver_str[] = "STM32L4xx";
-
-#define PAGE_SIZE   0x800
 /* Flash Program ad Erase Controller Register Map */
 #define FPEC_BASE			0x40022000
 #define FLASH_ACR			(FPEC_BASE+0x00)
@@ -107,7 +102,11 @@ static const char stm32l4_driver_str[] = "STM32L4xx";
 
 #define SR_ERROR_MASK	0xF2
 
+/* Used in STM32L47*/
 #define OR_DUALBANK		(1 << 21)
+/* Used in STM32L47R*/
+#define OR_DB1M 		(1 << 21)
+#define OR_DBANK 		(1 << 22)
 
 #define DBGMCU_IDCODE	0xE0042000
 #define FLASH_SIZE_REG  0x1FFF75E0
@@ -134,68 +133,90 @@ static void stm32l4_add_flash(target *t,
 	target_add_flash(t, f);
 }
 
-static bool stm32l4_attach(target *t);
+enum ID_STM32L4 {
+	ID_STM32L43  = 0x435, /* RM0394, Rev.3 */
+	ID_STM32L45  = 0x462, /* RM0394, Rev.3 */
+	ID_STM32L47  = 0x415, /* RM0351, Rev.5 */
+	ID_STM32L49  = 0x461, /* RM0351, Rev.5 */
+	ID_STM32L4R  = 0x470, /* RM0432, Rev.5 */
+};
 
 bool stm32l4_probe(target *t)
 {
-	uint32_t idcode;
+	const char* designator = NULL;
+	bool dual_bank = false;
+	uint32_t size;
+	uint16_t sram1_size = 0;
+	uint16_t sram2_size = 0;
+	uint16_t sram3_size = 0;
 
-	idcode = target_mem_read32(t, DBGMCU_IDCODE) & 0xFFF;
+	uint32_t idcode = target_mem_read32(t, DBGMCU_IDCODE) & 0xFFF;
 	switch(idcode) {
-	case 0x461: /* L496/RM0351 */
-	case 0x415: /* L471/RM0392, L475/RM0395, L476/RM0351 */
-	case 0x462: /* L45x L46x / RM0394  */
-	case 0x435: /* L43x L44x / RM0394  */
-		t->idcode = idcode;
-		t->driver = "STM32L4";
-		t->attach = stm32l4_attach;
-		target_add_commands(t, stm32l4_cmd_list, "STM32L4");
-		return true;
+	case ID_STM32L43:
+		designator = "STM32L43x";
+		sram1_size =  48;
+		sram2_size =  16;
+		break;
+	case ID_STM32L45:
+		designator = "STM32L45x";
+		sram1_size = 128;
+		sram2_size =  32;
+		break;
+	case ID_STM32L47:
+		designator = "STM32L47x";
+		sram1_size =  96;
+		sram2_size =  32;
+		dual_bank = true;
+		break;
+	case ID_STM32L49:
+		designator = "STM32L49x";
+		sram1_size = 256;
+		sram2_size =  64;
+		dual_bank = true;
+		break;
+	case ID_STM32L4R:
+		designator = "STM32L4Rx";
+		sram1_size = 192;
+		sram2_size =  64;
+		sram3_size = 384;
+		/* 4 k block in dual bank, 8 k in single bank.*/
+		dual_bank = true;
+		break;
 	default:
 		return false;
 	}
-}
-
-static bool stm32l4_attach(target *t)
-{
-	uint32_t size = (target_mem_read32(t, FLASH_SIZE_REG) & 0xffff);
-	uint32_t bank1_start = 0x08080000; /* default split on 1MiB devices*/
-
-	if (!cortexm_attach(t))
-		return false;
-
-	target_mem_map_free(t);
-	switch(t->idcode) {
-	case 0x461: /* L496/RM0351 */
-	case 0x415: /* L471/RM0392, L475/RM0395, L476/RM0351 */
-		t->driver = stm32l4_driver_str;
-		if (t->idcode == 0x415) {
-			target_add_ram(t, 0x10000000, 0x08000);
-			target_add_ram(t, 0x20000000, 0x18000);
-		} else {
-			target_add_ram(t, 0x10000000, 0x10000);
-			target_add_ram(t, 0x20000000, 0x40000);
-		}
+	t->driver = designator;
+	target_add_ram(t, 0x10000000, sram2_size << 10);
+	/* All L4 beside L47 alias SRAM2 after SRAM1.*/
+	uint32_t ramsize = (idcode == ID_STM32L47)?
+		sram1_size : (sram1_size + sram2_size + sram3_size);
+	target_add_ram(t, 0x20000000, ramsize << 10);
+	size = (target_mem_read32(t, FLASH_SIZE_REG) & 0xffff);
+	if (dual_bank) {
 		uint32_t options =  target_mem_read32(t, FLASH_OPTR);
-		/* Only  256 and 512 kiB devices evaluate OR_DUALBANK*/
-		if ((size < 0x400) && (options & OR_DUALBANK))
-			bank1_start =  0x08000000 + (size << 9);
-		stm32l4_add_flash(t, 0x08000000, size << 10, PAGE_SIZE, bank1_start);
-		return true;
-	case 0x462: /* L45x L46x / RM0394  */
-	case 0x435: /* L43x L44x / RM0394  */
-		t->driver = stm32l4_driver_str;
-		if (t->idcode == 0x452) {
-			target_add_ram(t, 0x10000000, 0x08000);
-			target_add_ram(t, 0x20000000, 0x20000);
+		if (idcode == ID_STM32L4R) {
+			/* rm0432 Rev. 2 does not mention 1 MB devices or explain DB1M.*/
+			if (options & OR_DBANK) {
+				stm32l4_add_flash(t, 0x08000000, 0x00100000, 0x1000, 0x08100000);
+				stm32l4_add_flash(t, 0x08100000, 0x00100000, 0x1000, 0x08100000);
+			} else
+				stm32l4_add_flash(t, 0x08000000, 0x00200000, 0x2000, -1);
 		} else {
-			target_add_ram(t, 0x10000000, 0x04000);
-			target_add_ram(t, 0x20000000, 0x0c000);
+			if (options & OR_DUALBANK) {
+				uint32_t banksize = size << 9;
+				stm32l4_add_flash(t, 0x08000000           , banksize, 0x0800, 0x08000000 + banksize);
+				stm32l4_add_flash(t, 0x08000000 + banksize, banksize, 0x0800, 0x08000000 + banksize);
+			} else {
+				uint32_t banksize = size << 10;
+				stm32l4_add_flash(t, 0x08000000           , banksize, 0x0800, -1);
+			}
 		}
-		stm32l4_add_flash(t, 0x08000000, size << 10, PAGE_SIZE, bank1_start);
-		return true;
-	}
-	return false;
+	} else
+		stm32l4_add_flash(t, 0x08000000, size << 10, 0x800, -1);
+	target_add_commands(t, stm32l4_cmd_list, designator);
+	/* Clear all errors in the status register. */
+	target_mem_write32(t, FLASH_SR, target_mem_read32(t, FLASH_SR));
+	return true;
 }
 
 static void stm32l4_flash_unlock(target *t)
@@ -213,10 +234,17 @@ static int stm32l4_flash_erase(struct target_flash *f, target_addr addr, size_t 
 	uint16_t sr;
 	uint32_t bank1_start = ((struct stm32l4_flash *)f)->bank1_start;
 	uint32_t page;
+	uint32_t blocksize = f->blocksize;
 
 	stm32l4_flash_unlock(t);
 
-	page = (addr - 0x08000000) / PAGE_SIZE;
+	/* Read FLASH_SR to poll for BSY bit */
+	while(target_mem_read32(t, FLASH_SR) & FLASH_SR_BSY)
+		if(target_check_error(t))
+			return -1;
+	/* Fixme: OPTVER always set after reset! Wrong option defaults?*/
+	target_mem_write32(t, FLASH_SR, target_mem_read32(t, FLASH_SR));
+	page = (addr - 0x08000000) / blocksize;
 	while(len) {
 		uint32_t cr;
 
@@ -234,8 +262,8 @@ static int stm32l4_flash_erase(struct target_flash *f, target_addr addr, size_t 
 			if(target_check_error(t))
 				return -1;
 
-		len  -= PAGE_SIZE;
-		addr += PAGE_SIZE;
+		len  -= blocksize;
+		addr += blocksize;
 		page++;
 	}
 
@@ -272,25 +300,18 @@ static int stm32l4_flash_write(struct target_flash *f,
 
 static bool stm32l4_cmd_erase(target *t, uint32_t action)
 {
-	const char spinner[] = "|/-\\";
-	int spinindex = 0;
-
-	tc_printf(t, "Erasing flash... This may take a few seconds.  ");
 	stm32l4_flash_unlock(t);
-
+	/* Erase time is 25 ms. No need for a spinner.*/
 	/* Flash erase action start instruction */
 	target_mem_write32(t, FLASH_CR, action);
 	target_mem_write32(t, FLASH_CR, action | FLASH_CR_STRT);
 
 	/* Read FLASH_SR to poll for BSY bit */
 	while (target_mem_read32(t, FLASH_SR) & FLASH_SR_BSY) {
-		tc_printf(t, "\b%c", spinner[spinindex++ % 4]);
 		if(target_check_error(t)) {
-			tc_printf(t, "\n");
 			return false;
 		}
 	}
-	tc_printf(t, "\n");
 
 	/* Check for error */
 	uint16_t sr = target_mem_read32(t, FLASH_SR);
@@ -320,6 +341,7 @@ static const uint8_t i2offset[9] = {
 
 static bool stm32l4_option_write(target *t, const uint32_t *values, int len)
 {
+	tc_printf(t, "Device will loose connection. Rescan!\n");
 	stm32l4_flash_unlock(t);
 	target_mem_write32(t, FLASH_OPTKEYR, OPTKEY1);
 	target_mem_write32(t, FLASH_OPTKEYR, OPTKEY2);
@@ -332,11 +354,11 @@ static bool stm32l4_option_write(target *t, const uint32_t *values, int len)
 	while (target_mem_read32(t, FLASH_SR) & FLASH_SR_BSY)
 		if(target_check_error(t))
 			return true;
-	target_mem_write32(t, FLASH_CR, FLASH_CR_LOCK);
 	target_mem_write32(t, FLASH_CR, FLASH_CR_OBL_LAUNCH);
 	while (target_mem_read32(t, FLASH_CR) & FLASH_CR_OBL_LAUNCH)
 		if(target_check_error(t))
 			return true;
+	target_mem_write32(t, FLASH_CR, FLASH_CR_LOCK);
 	return false;
 }
 
@@ -358,7 +380,7 @@ static bool stm32l4_cmd_option(target *t, int argc, char *argv[])
 {
 	uint32_t val;
 	uint32_t values[9] = { 0xFFEFF8AA, 0xFFFFFFFF, 0, 0x000000ff,
-						   0x000000ff, 0xffffffff, 0, 0, 0x000000ff};
+						   0x000000ff, 0xffffffff, 0, 0xff, 0x000000ff};
 	int len;
 	bool res = false;
 
