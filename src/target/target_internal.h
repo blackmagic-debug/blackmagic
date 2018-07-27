@@ -161,6 +161,7 @@ int tc_system(target *t, target_addr cmd, size_t cmdlen);
  */
 bool stm32f1_probe(target *t);
 bool stm32f4_probe(target *t);
+bool stm32h7_probe(target *t);
 bool stm32l0_probe(target *t);
 bool stm32l1_probe(target *t);
 bool stm32l4_probe(target *t);

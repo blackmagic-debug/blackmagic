@@ -99,6 +99,8 @@ static int stm32f4_flash_write(struct target_flash *f,
 #define F7_FLASHSIZE	0x1FF0F442
 #define F72X_FLASHSIZE	0x1FF07A22
 #define DBGMCU_IDCODE	0xE0042000
+#define DBGMCU_CR		0xE0042004
+#define DBG_SLEEP		(1 <<  0)
 #define ARM_CPUID	0xE000ED00
 
 #define AXIM_BASE 0x8000000
@@ -194,6 +196,11 @@ bool stm32f4_probe(target *t)
 			idcode = ID_STM32F40X;
 	}
 	switch(idcode) {
+	case ID_STM32F74X: /* F74x RM0385 Rev.4 */
+	case ID_STM32F76X: /* F76x F77x RM0410 */
+	case ID_STM32F72X: /* F72x F73x RM0431 */
+		target_mem_write32(t, DBGMCU_CR, DBG_SLEEP);
+		/* fallthrough */
 	case ID_STM32F40X:
 	case ID_STM32F42X: /* 427/437 */
 	case ID_STM32F46X: /* 469/479 */
@@ -204,9 +211,6 @@ bool stm32f4_probe(target *t)
 	case ID_STM32F412: /* F412     RM0402 Rev.4, 256 kB Ram */
 	case ID_STM32F401E: /* F401 D/E RM0368 Rev.3 */
 	case ID_STM32F413: /* F413     RM0430 Rev.2, 320 kB Ram, 1.5 MB flash. */
-	case ID_STM32F74X: /* F74x RM0385 Rev.4 */
-	case ID_STM32F76X: /* F76x F77x RM0410 */
-	case ID_STM32F72X: /* F72x F73x RM0431 */
 		t->idcode = idcode;
 		t->driver = stm32f4_get_chip_name(idcode);
 		t->attach = stm32f4_attach;
