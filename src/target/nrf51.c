@@ -164,8 +164,9 @@ bool nrf51_probe(target *t)
 		target_add_commands(t, nrf51_cmd_list, "nRF51");
 		return true;
 	case 0x00AC: /* nRF52832 Preview QFAA BA0 */
-	case 0x00C7: /* nRF52832 Revision 1 QFAA B00 */
-	case 0x00E3: /* nRF52832-CIAA CSP */
+	case 0x00C7: /* nRF52832 (rev 1) QFAA B00 */
+	case 0x00E3: /* nRF52832 (rev 1) CIAA B?? */
+	case 0x0139: /* nRF82832 (rev 2) ??AA B?0 */
 		t->driver = "Nordic nRF52";
 		target_add_ram(t, 0x20000000, 64*1024);
 		nrf51_add_flash(t, 0x00000000, 512*1024, NRF52_PAGE_SIZE);
