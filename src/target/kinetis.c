@@ -341,7 +341,7 @@ const struct command_s kinetis_mdm_cmd_list[] = {
 	{NULL, NULL, NULL}
 };
 
-bool nop_function(void)
+static bool nop_function(void)
 {
 	return true;
 }
