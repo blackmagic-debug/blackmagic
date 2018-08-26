@@ -521,6 +521,8 @@ static void cortexa_reset(target *t)
 
 	/* Try hard reset too */
 	platform_srst_set_val(true);
+	for(int i = 0; i < 10000; i++)
+		asm("nop");
 	platform_srst_set_val(false);
 
 	/* Spin until Xilinx reconnects us */

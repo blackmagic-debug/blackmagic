@@ -511,6 +511,8 @@ static void cortexm_reset(target *t)
 {
 	if ((t->target_options & CORTEXM_TOPT_INHIBIT_SRST) == 0) {
 		platform_srst_set_val(true);
+		for(int i = 0; i < 10000; i++)
+			asm("nop");
 		platform_srst_set_val(false);
 	}
 

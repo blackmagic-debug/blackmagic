@@ -92,13 +92,10 @@ platform_init(void)
 
 void platform_srst_set_val(bool assert)
 {
-	volatile int i;
-	if (assert) {
+	if (assert)
 		gpio_clear(SRST_PORT, SRST_PIN);
-		for(i = 0; i < 10000; i++) asm("nop");
-	} else {
+	else
 		gpio_set(SRST_PORT, SRST_PIN);
-	}
 }
 
 bool platform_srst_get_val(void)
