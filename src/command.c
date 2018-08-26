@@ -170,8 +170,11 @@ static bool cmd_jtag_scan(target *t, int argc, char **argv)
 
 	if(assert_srst != ASSERT_NEVER)
 		platform_srst_set_val(true);
-	if(assert_srst == ASSERT_UNTIL_SCAN)
+	if(assert_srst == ASSERT_UNTIL_SCAN) {
+		for (int i = 0; i < 10000; i++)
+			asm("nop");
 		platform_srst_set_val(false);
+	}
 
 	int devs = -1;
 	volatile struct exception e;
@@ -203,9 +206,11 @@ bool cmd_swdp_scan(void)
 
 	if(assert_srst != ASSERT_NEVER)
 		platform_srst_set_val(true);
-	if(assert_srst == ASSERT_UNTIL_SCAN)
+	if(assert_srst == ASSERT_UNTIL_SCAN) {
+		for (int i = 0; i < 10000; i++)
+			asm("nop");
 		platform_srst_set_val(false);
-
+	}
 	int devs = -1;
 	volatile struct exception e;
 	TRY_CATCH (e, EXCEPTION_ALL) {
@@ -288,6 +293,8 @@ static bool cmd_hard_srst(void)
 {
 	target_list_free();
 	platform_srst_set_val(true);
+	for (int i = 0; i < 10000; i++)
+		asm("nop");
 	platform_srst_set_val(false);
 	return true;
 }

@@ -189,9 +189,6 @@ void platform_srst_set_val(bool assert)
 	} else {
 		gpio_set_val(SRST_PORT, SRST_PIN, !assert);
 	}
-	if (assert) {
-		for(int i = 0; i < 10000; i++) asm("nop");
-	}
 }
 
 bool platform_srst_get_val(void)
