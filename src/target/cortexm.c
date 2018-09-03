@@ -330,7 +330,7 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 		return false;
 
 #define PROBE(x) \
-	do { if ((x)(t)) {/*target_halt_resume(t, 0);*/ return true;} else target_check_error(t); } while (0)
+	do { if ((x)(t)) return true; else target_check_error(t); } while (0)
 
 	PROBE(stm32f1_probe);
 	PROBE(stm32f4_probe);
