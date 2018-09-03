@@ -323,10 +323,14 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 		target_check_error(t);
 	}
 
+	/* Request halt on reset */
+	target_mem_write32(t, CORTEXM_DEMCR, priv->demcr);
+
 	if (!cortexm_forced_halt(t))
 		return false;
+
 #define PROBE(x) \
-	do { if ((x)(t)) {target_halt_resume(t, 0); return true;} else target_check_error(t); } while (0)
+	do { if ((x)(t)) {/*target_halt_resume(t, 0);*/ return true;} else target_check_error(t); } while (0)
 
 	PROBE(stm32f1_probe);
 	PROBE(stm32f4_probe);
@@ -359,12 +363,11 @@ bool cortexm_attach(target *t)
 	/* Clear any pending fault condition */
 	target_check_error(t);
 
-	target_halt_request(t);
-	if (!cortexm_forced_halt(t))
-		return false;
-
 	/* Request halt on reset */
 	target_mem_write32(t, CORTEXM_DEMCR, priv->demcr);
+
+	if (!cortexm_forced_halt(t))
+	  return false;
 
 	/* Reset DFSR flags */
 	target_mem_write32(t, CORTEXM_DFSR, CORTEXM_DFSR_RESETALL);
