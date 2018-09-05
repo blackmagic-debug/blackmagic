@@ -240,14 +240,23 @@ static void cortexm_priv_free(void *priv)
 static bool cortexm_forced_halt(target *t)
 {
 	uint32_t start_time = platform_time_ms();
-	platform_srst_set_val(false);
-	/* Wait until SRST is released.*/
-	while (platform_time_ms() < start_time + 2000) {
-		if (!platform_srst_get_val())
-			break;
+	struct cortexm_priv *priv = t->priv;
+
+	if (platform_srst_get_val()) { //Is target under reset?
+	  /* Request halt on reset */
+	  target_mem_write32(t, CORTEXM_DEMCR, priv->demcr);
+
+	  platform_srst_set_val(false);
+
+	  /* Wait until SRST is released.*/
+	  while (platform_time_ms() < start_time + 5000) {
+	    if (!platform_srst_get_val())
+	      break;
+	  }
+	  if (platform_srst_get_val())
+	    return false;
 	}
-	if (platform_srst_get_val())
-		return false;
+
 	uint32_t dhcsr = 0;
 	start_time = platform_time_ms();
 	/* Try hard to halt the target. STM32F7 in  WFI
@@ -323,9 +332,6 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 		target_check_error(t);
 	}
 
-	/* Request halt on reset */
-	target_mem_write32(t, CORTEXM_DEMCR, priv->demcr);
-
 	if (!cortexm_forced_halt(t))
 		return false;
 
@@ -362,9 +368,6 @@ bool cortexm_attach(target *t)
 
 	/* Clear any pending fault condition */
 	target_check_error(t);
-
-	/* Request halt on reset */
-	target_mem_write32(t, CORTEXM_DEMCR, priv->demcr);
 
 	if (!cortexm_forced_halt(t))
 	  return false;
