@@ -159,6 +159,17 @@ static uint32_t adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 			raise_exception(EXCEPTION_ERROR, "SWDP Parity error");
 	} else {
 		swdptap_seq_out_parity(value, 32);
+		/* RM0377 Rev. 8 Chapter 27.5.4 for STM32L0x1 states:
+		 * Because of the asynchronous clock domains SWCLK and HCLK,
+		 * two extra SWCLK cycles are needed after a write transaction
+		 * (after the parity bit) to make the write effective
+		 * internally. These cycles should be applied while driving
+		 * the line low (IDLE state)
+		 * This is particularly important when writing the CTRL/STAT
+		 * for a power-up request. If the next transaction (requiring
+		 * a power-up) occurs immediately, it will fail.
+		 */
+		swdptap_seq_out(0, 2);
 	}
 
 	return response;
