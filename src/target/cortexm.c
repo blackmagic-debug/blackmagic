@@ -239,17 +239,10 @@ static void cortexm_priv_free(void *priv)
 
 static bool cortexm_forced_halt(target *t)
 {
-	uint32_t start_time = platform_time_ms();
+	target_halt_request(t);
 	platform_srst_set_val(false);
-	/* Wait until SRST is released.*/
-	while (platform_time_ms() < start_time + 2000) {
-		if (!platform_srst_get_val())
-			break;
-	}
-	if (platform_srst_get_val())
-		return false;
 	uint32_t dhcsr = 0;
-	start_time = platform_time_ms();
+	uint32_t start_time = platform_time_ms();
 	/* Try hard to halt the target. STM32F7 in  WFI
 	   needs multiple writes!*/
 	while (platform_time_ms() < start_time + cortexm_wait_timeout) {
