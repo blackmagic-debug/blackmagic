@@ -439,6 +439,14 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 				ADIV5_DP_CTRLSTAT_CDBGRSTACK);
 	}
 
+	dp->dp_idcode =  adiv5_dp_read(dp, ADIV5_DP_IDCODE);
+	if ((dp->dp_idcode & ADIV5_DP_VERSION_MASK) == ADIV5_DPv2) {
+		/* Read TargetID. Can be done with device in WFI, sleep or reset!*/
+		adiv5_dp_write(dp, ADIV5_DP_SELECT, ADIV5_DP_BANK2);
+		dp->targetid = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT);
+		adiv5_dp_write(dp, ADIV5_DP_SELECT, ADIV5_DP_BANK0);
+		DEBUG("TARGETID %08" PRIx32 "\n", dp->targetid);
+	}
 	/* Probe for APs on this DP */
 	for(int i = 0; i < 256; i++) {
 		ADIv5_AP_t *ap = adiv5_new_ap(dp, i);

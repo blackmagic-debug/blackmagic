@@ -34,6 +34,16 @@
 #define ADIV5_DP_SELECT   ADIV5_DP_REG(0x8)
 #define ADIV5_DP_RDBUFF   ADIV5_DP_REG(0xC)
 
+#define ADIV5_DP_BANK0    0
+#define ADIV5_DP_BANK1    1
+#define ADIV5_DP_BANK2    2
+#define ADIV5_DP_BANK3    3
+#define ADIV5_DP_BANK4    4
+
+#define ADIV5_DP_VERSION_MASK 0xf000
+#define ADIV5_DPv1            0x1000
+#define ADIV5_DPv2            0x2000
+
 /* AP Abort Register (ABORT) */
 /* Bits 31:5 - Reserved */
 #define ADIV5_DP_ABORT_ORUNERRCLR	(1 << 4)
@@ -112,6 +122,8 @@ typedef struct ADIv5_DP_s {
 	int refcnt;
 
 	uint32_t idcode;
+	uint32_t dp_idcode; /* Contains DPvX revision*/
+	uint32_t targetid;  /* Contains IDCODE for DPv2 devices.*/
 
 	uint32_t (*dp_read)(struct ADIv5_DP_s *dp, uint16_t addr);
 	uint32_t (*error)(struct ADIv5_DP_s *dp);
