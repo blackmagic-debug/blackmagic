@@ -264,7 +264,7 @@ static bool cortexm_forced_halt(target *t)
 	return true;
 }
 
-bool cortexm_probe(ADIv5_AP_t *ap)
+bool cortexm_probe(ADIv5_AP_t *ap, bool forced)
 {
 	target *t;
 
@@ -323,8 +323,10 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 		target_check_error(t);
 	}
 
-	if (!cortexm_forced_halt(t))
-		return false;
+	if (forced)
+		if (!cortexm_forced_halt(t))
+			return false;
+
 #define PROBE(x) \
 	do { if ((x)(t)) {target_halt_resume(t, 0); return true;} else target_check_error(t); } while (0)
 
