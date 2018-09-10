@@ -337,7 +337,7 @@ static bool adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr)
 				switch (pidr_pn_bits[i].arch) {
 				case aa_cortexm:
 					DEBUG("-> cortexm_probe\n");
-					cortexm_probe(ap);
+					cortexm_probe(ap, false);
 					break;
 				case aa_cortexa:
 					DEBUG("-> cortexa_probe\n");
@@ -473,7 +473,7 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 		probed |= adiv5_component_probe(ap, ap->base);
 		if (!probed && (dp->idcode & 0xfff) == 0x477) {
 			DEBUG("-> cortexm_probe forced\n");
-			cortexm_probe(ap);
+			cortexm_probe(ap, true);
 			probed = true;
 		}
 	}

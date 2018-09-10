@@ -168,7 +168,7 @@ extern long cortexm_wait_timeout;
 
 #define	CORTEXM_TOPT_INHIBIT_SRST (1 << 2)
 
-bool cortexm_probe(ADIv5_AP_t *ap);
+bool cortexm_probe(ADIv5_AP_t *ap, bool forced);
 ADIv5_AP_t *cortexm_ap(target *t);
 
 bool cortexm_attach(target *t);
