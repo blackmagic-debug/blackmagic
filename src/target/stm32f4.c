@@ -204,8 +204,6 @@ bool stm32f4_probe(target *t)
 	case ID_STM32F74X: /* F74x RM0385 Rev.4 */
 	case ID_STM32F76X: /* F76x F77x RM0410 */
 	case ID_STM32F72X: /* F72x F73x RM0431 */
-		target_mem_write32(t, DBGMCU_CR, DBG_SLEEP);
-		/* fallthrough */
 	case ID_STM32F40X:
 	case ID_STM32F42X: /* 427/437 */
 	case ID_STM32F46X: /* 469/479 */
@@ -285,6 +283,7 @@ static bool stm32f4_attach(target *t)
 	target_mem_map_free(t);
 	uint32_t flashsize = target_mem_read32(t, flashsize_base) & 0xffff;
 	if (is_f7) {
+		target_mem_write32(t, DBGMCU_CR, DBG_SLEEP);
 		target_add_ram(t, 0x00000000, 0x4000);  /* 16 k ITCM Ram */
 		target_add_ram(t, 0x20000000, 0x20000); /* 128 k DTCM Ram */
 		target_add_ram(t, 0x20020000, 0x60000); /* 384 k Ram */
