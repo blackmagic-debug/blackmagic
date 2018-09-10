@@ -469,11 +469,12 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 		 * AP should be unref'd if not valid.
 		 */
 
-		/* The rest sould only be added after checking ROM table */
+		/* The rest should only be added after checking ROM table */
 		probed |= adiv5_component_probe(ap, ap->base);
 		if (!probed && (dp->idcode & 0xfff) == 0x477) {
 			DEBUG("-> cortexm_probe forced\n");
 			cortexm_probe(ap);
+			probed = true;
 		}
 	}
 	adiv5_dp_unref(dp);
