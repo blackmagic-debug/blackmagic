@@ -345,7 +345,6 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 	PROBE(stm32l4_probe);
 	PROBE(lpc11xx_probe);
 	PROBE(lpc15xx_probe);
-	PROBE(lpc17xx_probe);
 	PROBE(lpc43xx_probe);
 	PROBE(sam3x_probe);
 	PROBE(sam4l_probe);
@@ -355,6 +354,7 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 	PROBE(kinetis_probe);
 	PROBE(efm32_probe);
 	PROBE(msp432_probe);
+	PROBE(lpc17xx_probe);
 #undef PROBE
 
 	return true;
@@ -420,8 +420,6 @@ void cortexm_detach(target *t)
 
 	/* Disable debug */
 	target_mem_write32(t, CORTEXM_DHCSR, CORTEXM_DHCSR_DBGKEY);
-	/* Add some clock cycles to get the CPU running again.*/
-	target_mem_read32(t, 0);
 }
 
 enum { DB_DHCSR, DB_DCRSR, DB_DCRDR, DB_DEMCR };
