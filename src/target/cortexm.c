@@ -323,7 +323,11 @@ bool cortexm_probe(ADIv5_AP_t *ap, bool forced)
 		target_check_error(t);
 	}
 
-	if (forced)
+	/* Only force halt if read ROM Table failed and there is no DPv2
+	 * targetid!
+	 * So long, only STM32L0 is expected to enter this cause.
+	 */
+	if (forced && !ap->dp->targetid)
 		if (!cortexm_forced_halt(t))
 			return false;
 
