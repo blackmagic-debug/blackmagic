@@ -174,7 +174,8 @@ static void stm32h7_add_flash(target *t,
 
 bool stm32h7_probe(target *t)
 {
-	uint32_t idcode = target_mem_read32(t, DBGMCU_IDCODE) & 0xFFF;
+	ADIv5_AP_t *ap = cortexm_ap(t);
+	uint32_t idcode = (ap->dp->targetid >> 16) & 0xfff;
 	if (idcode == ID_STM32H74x) {
 		/* RM0433 Rev 4 is not really clear, what bits are needed.
 		 * Set all possible relevant bits for now. */
