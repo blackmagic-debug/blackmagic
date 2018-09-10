@@ -172,16 +172,30 @@ static void stm32h7_add_flash(target *t,
 	target_add_flash(t, f);
 }
 
+static bool stm32h7_attach(target *t)
+{
+	if (!cortexm_attach(t))
+		return false;
+	/* RM0433 Rev 4 is not really clear, what bits are needed.
+	 * Set all possible relevant bits for now. */
+	target_mem_write32(t, DBGMCU_CR, DBGSLEEP_D1 | D1DBGCKEN);
+	/* If IWDG runs as HARDWARE watchdog (44.3.4) erase
+	 * will be aborted by the Watchdog and erase fails!
+	 * Setting IWDG_KR to 0xaaaa does not seem to help!*/
+	uint32_t optsr = target_mem_read32(t, FPEC1_BASE + FLASH_OPTSR);
+	if (!(optsr & FLASH_OPTSR_IWDG1_SW))
+		tc_printf(t, "Hardware IWDG running. Expect failure. Set IWDG1_SW!");
+	return true;
+}
+
 bool stm32h7_probe(target *t)
 {
 	ADIv5_AP_t *ap = cortexm_ap(t);
 	uint32_t idcode = (ap->dp->targetid >> 16) & 0xfff;
 	if (idcode == ID_STM32H74x) {
-		/* RM0433 Rev 4 is not really clear, what bits are needed.
-		 * Set all possible relevant bits for now. */
-		target_mem_write32(t, DBGMCU_CR, DBGSLEEP_D1 | D1DBGCKEN);
 		t->idcode = idcode;
 		t->driver = stm32h74_driver_str;
+		t->attach = stm32h7_attach;
 		target_add_commands(t, stm32h7_cmd_list, stm32h74_driver_str);
 		target_add_ram(t, 0x00000000, 0x10000); /* ITCM Ram,  64 k */
 		target_add_ram(t, 0x20000000, 0x20000); /* DTCM Ram, 128 k */
@@ -192,12 +206,6 @@ bool stm32h7_probe(target *t)
 		target_add_ram(t, 0x38000000, 0x01000); /* AHB SRAM4,  32 k */
 		stm32h7_add_flash(t, 0x8000000, 0x100000, FLASH_SECTOR_SIZE);
 		stm32h7_add_flash(t, 0x8100000, 0x100000, FLASH_SECTOR_SIZE);
-	/* If IWDG runs as HARDWARE watchdog (44.3.4) erase
-	 * will be aborted by the Watchdog and erase fails!
-	 * Setting IWDG_KR to 0xaaaa does not seem to help!*/
-		uint32_t optsr = target_mem_read32(t, FPEC1_BASE + FLASH_OPTSR);
-		if (!(optsr & FLASH_OPTSR_IWDG1_SW))
-			tc_printf(t, "Hardware IWDG running. Expect failure. Set IWDG1_SW!");
 		return true;
 	}
 	return false;
