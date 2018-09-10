@@ -185,7 +185,12 @@ char *stm32f4_get_chip_name(uint32_t idcode)
 
 bool stm32f4_probe(target *t)
 {
-	uint32_t idcode = target_mem_read32(t, DBGMCU_IDCODE) & 0xFFF;
+	ADIv5_AP_t *ap = cortexm_ap(t);
+	uint32_t idcode;
+
+	idcode = (ap->dp->targetid >> 16) & 0xfff;
+	if (!idcode)
+		idcode = target_mem_read32(t, DBGMCU_IDCODE) & 0xFFF;
 
 	if (idcode == ID_STM32F20X) {
 		/* F405 revision A have a wrong IDCODE, use ARM_CPUID to make the
