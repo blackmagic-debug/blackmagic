@@ -447,6 +447,7 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 		} else if (ap->ap_partno == 0x471)  { /* Cortex-M0 ROM */
 			PROBE(lpc11xx_probe); /* LPC24C11 */
 			PROBE(lpc43xx_probe);
+			PROBE(synwit_probe);
 		} else if (ap->ap_partno == 0x4c4) { /* Cortex-M4 ROM */
 			/* The LPC546xx and LPC43xx parts present with the same AP ROM Part
 			Number, so we need to probe both. Unfortunately, when probing for

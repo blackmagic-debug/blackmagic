@@ -59,6 +59,7 @@ SRC =			\
 	stm32l4.c	\
 	stm32g0.c	\
 	target.c	\
+	synwit.c	\
 
 include $(PLATFORM_DIR)/Makefile.inc
 
