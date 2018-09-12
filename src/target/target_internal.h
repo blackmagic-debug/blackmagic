@@ -182,6 +182,7 @@ bool nrf51_probe(target *t);
 bool samd_probe(target *t);
 bool kinetis_probe(target *t);
 bool efm32_probe(target *t);
+bool synwit_probe(target *t);
 
 #endif
 
