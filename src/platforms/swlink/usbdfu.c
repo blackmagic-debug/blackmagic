@@ -24,6 +24,7 @@
 #include <libopencm3/cm3/scb.h>
 
 #include "usbdfu.h"
+#include "platform.h"
 
 uint32_t app_address = 0x08002000;
 
@@ -43,20 +44,34 @@ void dfu_detach(void)
 int main(void)
 {
 	/* Check the force bootloader pin*/
-	uint16_t pin_b;
-	rcc_periph_clock_enable(RCC_GPIOA);
-	rcc_periph_clock_enable(RCC_GPIOB);
-/* Switch PB5 (SWIM_RST_IN) up */
-	gpio_set(GPIOB, GPIO5);
-	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ,
-	              GPIO_CNF_OUTPUT_PUSHPULL, GPIO5);
-	gpio_set(GPIOB, GPIO5);
-	pin_b = gpio_get(GPIOB, GPIO6);
-/* Check state on PB6 ((SWIM_RST) and release PB5*/
-	pin_b = gpio_get(GPIOB, GPIO6);
-	gpio_set_mode(GPIOB, GPIO_MODE_INPUT,
-	              GPIO_CNF_INPUT_FLOAT, GPIO5);
-	if(((GPIOA_CRL & 0x40) == 0x40) && pin_b)
+	bool normal_boot = 0;
+	int rev = detect_rev();
+	switch (rev) {
+	case 0:
+		/* For Stlink on  STM8S check that CN7 PIN 4 RESET# is
+		 * forced to GND, Jumper CN7 PIN3/4 is plugged).
+		 * Switch PB5 high. Read PB6 low means jumper plugged.
+		 */
+		gpio_set_mode(GPIOB, GPIO_MODE_INPUT,
+					  GPIO_CNF_INPUT_PULL_UPDOWN, GPIO6);
+		gpio_set(GPIOB, GPIO6);
+		gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ,
+					  GPIO_CNF_OUTPUT_PUSHPULL, GPIO5);
+		while (gpio_get(GPIOB, GPIO5))
+			gpio_clear(GPIOB, GPIO5);
+		while (!gpio_get(GPIOB, GPIO5))
+			gpio_set(GPIOB, GPIO5);
+		normal_boot = (gpio_get(GPIOB, GPIO6));
+		break;
+	case 1:
+		/* Boot0/1 pins have 100k between Jumper and MCU
+		 * and are jumperd to low by default.
+		 * If we read PB2 high, force bootloader entry.*/
+		gpio_set_mode(GPIOB, GPIO_MODE_INPUT,
+					  GPIO_CNF_INPUT_FLOAT, GPIO2);
+		normal_boot = !(gpio_get(GPIOB, GPIO2));
+	}
+	if(((GPIOA_CRL & 0x40) == 0x40) && normal_boot)
 		dfu_jump_app_if_valid();
 
 	dfu_protect(DFU_MODE);
