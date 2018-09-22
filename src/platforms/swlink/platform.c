@@ -137,26 +137,3 @@ const char *platform_target_voltage(void)
 {
 	return "unknown";
 }
-
-void platform_request_boot(void)
-{
-	/* Disconnect USB cable by resetting USB Device and pulling USB_DP low*/
-	rcc_periph_reset_pulse(RST_USB);
-	rcc_periph_clock_enable(RCC_USB);
-	rcc_periph_clock_enable(RCC_GPIOA);
-	gpio_clear(GPIOA, GPIO12);
-	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
-		GPIO_CNF_OUTPUT_OPENDRAIN, GPIO12);
-
-	/* Assert bootloader pin */
-	uint32_t crl = GPIOA_CRL;
-	rcc_periph_clock_enable(RCC_GPIOA);
-	/* Enable Pull on GPIOA1. We don't rely on the external pin
-	 * really pulled, but only on the value of the CNF register
-	 * changed from the reset value
-	 */
-	crl &= 0xffffff0f;
-	crl |= 0x80;
-	GPIOA_CRL = crl;
-}
-
