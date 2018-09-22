@@ -18,8 +18,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file implements the platform specific functions for the ST-Link
- * implementation.
+/* This file implements the platform specific functions for ST-Link
+ * on the STM8S discovery and STM32F103 Minimum System Development Board, also
+ * known as bluepill.
  */
 
 #include "general.h"
@@ -34,6 +35,13 @@
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/stm32/f1/adc.h>
 
+static uint8_t rev;
+
+int platform_hwversion(void)
+{
+	return rev;
+}
+
 void platform_init(void)
 {
 	uint32_t data;
@@ -44,10 +52,8 @@ void platform_init(void)
 #endif
 	rcc_clock_setup_in_hse_8mhz_out_72mhz();
 
+	rev =  detect_rev();
 	/* Enable peripherals */
-	rcc_periph_clock_enable(RCC_USB);
-	rcc_periph_clock_enable(RCC_GPIOA);
-	rcc_periph_clock_enable(RCC_GPIOB);
 	rcc_periph_clock_enable(RCC_AFIO);
 	rcc_periph_clock_enable(RCC_CRC);
 
@@ -66,6 +72,14 @@ void platform_init(void)
 
 	gpio_set_mode(TDO_PORT, GPIO_MODE_INPUT,
 			GPIO_CNF_INPUT_FLOAT, TDO_PIN);
+
+	if (rev == 1) {
+		/* Enable MCO Out on PA8*/
+		RCC_CFGR &= ~(0xf << 24);
+		RCC_CFGR |= (RCC_CFGR_MCO_HSE << 24);
+		gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ,
+					  GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO8);
+	}
 
 	gpio_set(NRST_PORT,NRST_PIN);
 	gpio_set_mode(NRST_PORT, GPIO_MODE_INPUT,

@@ -65,21 +65,6 @@ int main(void)
 	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
 	systick_set_reload(900000);
 
-	/* Handle USB disconnect/connect */
-	/* Just in case: Disconnect USB cable by resetting USB Device
-	 * and pulling USB_DP low
-	 * Device will reconnect automatically as Pull-Up is hard wired*/
-	rcc_periph_reset_pulse(RST_USB);
-	rcc_periph_clock_enable(RCC_USB);
-	rcc_periph_clock_enable(RCC_GPIOA);
-	gpio_clear(GPIOA, GPIO12);
-	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
-		GPIO_CNF_OUTPUT_OPENDRAIN, GPIO12);
-
-	/* Handle LED*/
-	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
-		GPIO_CNF_OUTPUT_PUSHPULL, GPIO8);
-
 	systick_interrupt_enable();
 	systick_counter_enable();
 

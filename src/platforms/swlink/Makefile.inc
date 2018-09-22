@@ -26,6 +26,7 @@ SRC += 	cdcacm.c	\
 	serialno.c	\
 	timing.c	\
 	timing_stm32.c	\
+	platform_common.c \
 
 all:	blackmagic.bin blackmagic_dfu.bin blackmagic_dfu.hex
 

@@ -3,6 +3,7 @@
  *
  * Copyright (C) 2011  Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
+ * Copyright (C) 2018  Uwe Bonnes (bon@elektron.ikp.physik.tu-darmstadt.de)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,11 +30,11 @@
 #include "timing_stm32.h"
 #include "version.h"
 
-#define BOARD_IDENT            "Black Magic Probe (SWLINK), (Firmware " FIRMWARE_VERSION ")"
-#define BOARD_IDENT_DFU	       "Black Magic (Upgrade), STM8S Discovery, (Firmware " FIRMWARE_VERSION ")"
-#define BOARD_IDENT_UPD	       "Black Magic (DFU Upgrade), STM8S Discovery, (Firmware " FIRMWARE_VERSION ")"
-#define DFU_IDENT              "Black Magic Firmware Upgrade (SWLINK)"
-#define UPD_IFACE_STRING       "@Internal Flash   /0x08000000/8*001Kg"
+#define BOARD_IDENT			"Black Magic Probe (SWLINK), (Firmware " FIRMWARE_VERSION ")"
+#define BOARD_IDENT_DFU		"Black Magic (Upgrade), SWLINK, (Firmware " FIRMWARE_VERSION ")"
+#define BOARD_IDENT_UPD		"Black Magic (DFU Upgrade), SWLINK, (Firmware " FIRMWARE_VERSION ")"
+#define DFU_IDENT			"Black Magic Firmware Upgrade (SWLINK)"
+#define UPD_IFACE_STRING	"@Internal Flash   /0x08000000/8*001Kg"
 
 /* Hardware definitions... */
 #define TMS_PORT	GPIOA
@@ -128,10 +129,7 @@ int usbuart_debug_write(const char *buf, size_t len);
 #define SET_IDLE_STATE(state)	{gpio_set_val(LED_PORT, LED_IDLE_RUN, state);}
 #define SET_ERROR_STATE(x)
 
-static inline int platform_hwversion(void)
-{
-	        return 0;
-}
+extern uint8_t detect_rev(void);
 
 /* Use newlib provided integer only stdio functions */
 #define sscanf siscanf
