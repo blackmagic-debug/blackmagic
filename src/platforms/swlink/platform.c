@@ -73,17 +73,18 @@ void platform_init(void)
 	gpio_set_mode(TDO_PORT, GPIO_MODE_INPUT,
 			GPIO_CNF_INPUT_FLOAT, TDO_PIN);
 
-	if (rev == 1) {
+	switch (rev) {
+	case 0:
+		break;
+	case 1:
 		/* Enable MCO Out on PA8*/
 		RCC_CFGR &= ~(0xf << 24);
 		RCC_CFGR |= (RCC_CFGR_MCO_HSE << 24);
 		gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ,
 					  GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO8);
+		break;
 	}
-
-	gpio_set(NRST_PORT,NRST_PIN);
-	gpio_set_mode(NRST_PORT, GPIO_MODE_INPUT,
-			GPIO_CNF_INPUT_PULL_UPDOWN, NRST_PIN);
+	platform_srst_set_val(false);
 
 	gpio_set_mode(LED_PORT, GPIO_MODE_OUTPUT_2_MHZ,
 			GPIO_CNF_OUTPUT_PUSHPULL, LED_IDLE_RUN);
@@ -109,8 +110,28 @@ void platform_init(void)
 	usbuart_init();
 }
 
-void platform_srst_set_val(bool assert) { (void)assert; }
-bool platform_srst_get_val(void) { return false; }
+void platform_srst_set_val(bool assert)
+{
+	/* We reuse JSRST as SRST.*/
+	if (assert) {
+		gpio_set_mode(JRST_PORT, GPIO_MODE_OUTPUT_50_MHZ,
+		              GPIO_CNF_OUTPUT_OPENDRAIN, JRST_PIN);
+		/* Wait until requested value is active.*/
+		while (gpio_get(JRST_PORT, JRST_PIN))
+			gpio_clear(JRST_PORT, JRST_PIN);
+	} else {
+		gpio_set_mode(JRST_PORT, GPIO_MODE_INPUT,
+					  GPIO_CNF_INPUT_PULL_UPDOWN, JRST_PIN);
+		/* Wait until requested value is active.*/
+		while (!gpio_get(JRST_PORT, JRST_PIN))
+			gpio_set(JRST_PORT, JRST_PIN);
+	}
+}
+
+bool platform_srst_get_val(void)
+{
+	return gpio_get(JRST_PORT, JRST_PIN) == 0;
+}
 
 const char *platform_target_voltage(void)
 {
