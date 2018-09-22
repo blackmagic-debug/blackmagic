@@ -27,6 +27,7 @@
 #include "platform.h"
 
 uint32_t app_address = 0x08002000;
+uint32_t rev;
 
 void dfu_detach(void)
 {
@@ -45,7 +46,7 @@ int main(void)
 {
 	/* Check the force bootloader pin*/
 	bool normal_boot = 0;
-	int rev = detect_rev();
+	rev = detect_rev();
 	switch (rev) {
 	case 0:
 		/* For Stlink on  STM8S check that CN7 PIN 4 RESET# is
@@ -94,5 +95,12 @@ void dfu_event(void)
 
 void sys_tick_handler(void)
 {
-	gpio_toggle(GPIOA, GPIO8);
+	switch (rev) {
+	case 0:
+		gpio_toggle(GPIOA, GPIO8);
+		break;
+	case 1:
+		gpio_toggle(GPIOC, GPIO13);
+		break;
+	}
 }

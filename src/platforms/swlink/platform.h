@@ -53,8 +53,6 @@
 #define SWDIO_PIN	TMS_PIN
 #define SWCLK_PIN	TCK_PIN
 
-#define LED_PORT	GPIOA
-#define LED_IDLE_RUN    GPIO8
 /* Use PC14 for a "dummy" uart led. So we can observere at least with scope*/
 #define LED_PORT_UART	GPIOC
 #define LED_UART	GPIO14
@@ -125,9 +123,12 @@ int usbuart_debug_write(const char *buf, size_t len);
 # define DEBUG(...)
 #endif
 
-#define SET_RUN_STATE(state)	{running_status = (state);}
-#define SET_IDLE_STATE(state)	{gpio_set_val(LED_PORT, LED_IDLE_RUN, state);}
-#define SET_ERROR_STATE(x)
+#define LED_PORT GPIOC
+#define LED_IDLE_RUN GPIO15
+#define SET_RUN_STATE(state)
+#define SET_ERROR_STATE(state)
+extern void set_idle_state(int state);
+#define SET_IDLE_STATE(state) set_idle_state(state)
 
 extern uint8_t detect_rev(void);
 

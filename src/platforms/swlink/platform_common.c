@@ -51,6 +51,7 @@ uint8_t detect_rev()
 	gpio_set(GPIOB, GPIO9);
 	switch (rev) {
 	case 0:
+		gpio_clear(GPIOA, GPIO8);
 		gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
 					  GPIO_CNF_OUTPUT_PUSHPULL, GPIO8);
 		break;

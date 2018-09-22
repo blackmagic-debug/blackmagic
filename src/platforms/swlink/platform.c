@@ -35,6 +35,8 @@
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/stm32/f1/adc.h>
 
+uint32_t led_error_port;
+uint16_t led_error_pin;
 static uint8_t rev;
 
 int platform_hwversion(void)
@@ -75,8 +77,13 @@ void platform_init(void)
 
 	switch (rev) {
 	case 0:
+		/* LED GPIO already set in detect_rev()*/
+		led_error_port = GPIOA;
+		led_error_pin = GPIO8;
 		break;
 	case 1:
+		led_error_port = GPIOC;
+		led_error_pin = GPIO13;
 		/* Enable MCO Out on PA8*/
 		RCC_CFGR &= ~(0xf << 24);
 		RCC_CFGR |= (RCC_CFGR_MCO_HSE << 24);
@@ -85,9 +92,6 @@ void platform_init(void)
 		break;
 	}
 	platform_srst_set_val(false);
-
-	gpio_set_mode(LED_PORT, GPIO_MODE_OUTPUT_2_MHZ,
-			GPIO_CNF_OUTPUT_PUSHPULL, LED_IDLE_RUN);
 
 	/* Remap TIM2 TIM2_REMAP[1]
 	 * TIM2_CH1_ETR -> PA15 (TDI, set as output above)
@@ -136,4 +140,16 @@ bool platform_srst_get_val(void)
 const char *platform_target_voltage(void)
 {
 	return "unknown";
+}
+
+void set_idle_state(int state)
+{
+	switch (rev) {
+	case 0:
+		gpio_set_val(GPIOA, GPIO8, state);
+		break;
+	case 1:
+		gpio_set_val(GPIOC, GPIO13, (!state));
+		break;
+	}
 }
