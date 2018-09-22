@@ -30,6 +30,11 @@
 #include "timing_stm32.h"
 #include "version.h"
 
+#ifdef ENABLE_DEBUG
+# define PLATFORM_HAS_DEBUG
+# define USBUART_DEBUG
+#endif
+
 #define BOARD_IDENT			"Black Magic Probe (SWLINK), (Firmware " FIRMWARE_VERSION ")"
 #define BOARD_IDENT_DFU		"Black Magic (Upgrade), SWLINK, (Firmware " FIRMWARE_VERSION ")"
 #define BOARD_IDENT_UPD		"Black Magic (DFU Upgrade), SWLINK, (Firmware " FIRMWARE_VERSION ")"
@@ -114,8 +119,6 @@
 #define TRACE_TRIG_IN TIM_SMCR_TS_IT1FP2
 
 #ifdef ENABLE_DEBUG
-# define PLATFORM_HAS_DEBUG
-# define USBUART_DEBUG
 extern bool debug_bmp;
 int usbuart_debug_write(const char *buf, size_t len);
 # define DEBUG printf
