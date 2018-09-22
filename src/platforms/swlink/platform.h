@@ -41,12 +41,12 @@
 #define TCK_PORT	GPIOA
 #define TDI_PORT	GPIOA
 #define TDO_PORT	GPIOB
-#define NRST_PORT	GPIOB
+#define JRST_PORT	GPIOB
 #define TMS_PIN		GPIO13
 #define TCK_PIN		GPIO14
 #define TDI_PIN		GPIO15
 #define TDO_PIN		GPIO3
-#define NRST_PIN	GPIO4
+#define JRST_PIN	GPIO4
 
 #define SWDIO_PORT 	TMS_PORT
 #define SWCLK_PORT 	TCK_PORT
