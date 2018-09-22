@@ -73,3 +73,16 @@ uint8_t detect_rev()
 	return rev;
 }
 
+void platform_request_boot(void)
+{
+	uint32_t crl = GPIOA_CRL;
+	/* Assert bootloader marker.
+	 * Enable Pull on GPIOA1. We don't rely on the external pin
+	 * really pulled, but only on the value of the CNF register
+	 * changed from the reset value
+	 */
+	crl &= 0xffffff0f;
+	crl |= 0x80;
+	GPIOA_CRL = crl;
+	SCB_VTOR = 0;
+}
