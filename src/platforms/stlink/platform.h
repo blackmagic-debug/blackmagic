@@ -105,15 +105,24 @@ int usbuart_debug_write(const char *buf, size_t len);
 #define IRQ_PRI_USB_VBUS	(14 << 4)
 #define IRQ_PRI_SWO_DMA			(0 << 4)
 
+#ifdef SWIM_AS_UART
+#define USBUSART USART1
+#define USBUSART_CR1 USART1_CR1
+#define USBUSART_DR USART1_DR
+#define USBUSART_IRQ NVIC_USART1_IRQ
+#define USBUSART_CLK RCC_USART1
+#define USBUSART_ISR(x) usart1_isr(x)
+#else
 #define USBUSART USART2
 #define USBUSART_CR1 USART2_CR1
 #define USBUSART_DR USART2_DR
 #define USBUSART_IRQ NVIC_USART2_IRQ
 #define USBUSART_CLK RCC_USART2
+#define USBUSART_ISR(x) usart2_isr(x)
+#endif
 #define USBUSART_PORT GPIOA
 #define USBUSART_TX_PIN GPIO2
 #define USBUSART_RX_PIN GPIO3
-#define USBUSART_ISR(x) usart2_isr(x)
 
 #define USBUSART_DMA_BUS DMA1
 #define USBUSART_DMA_CLK RCC_DMA1
@@ -178,6 +187,5 @@ extern uint32_t detect_rev(void);
 #else
 #define snprintf sniprintf
 #endif
-
 
 #endif
