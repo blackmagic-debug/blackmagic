@@ -25,6 +25,10 @@ else
 LDFLAGS += --specs=nosys.specs
 endif
 
+ifeq ($(SWIM_AS_UART), 1)
+CFLAGS += -DSWIM_AS_UART=1
+endif
+
 VPATH += platforms/stm32
 
 SRC += 	cdcacm.c	\
@@ -47,4 +51,3 @@ blackmagic_dfu.elf: usbdfu.o dfucore.o dfu_f1.o stlink_common.o serialno.o
 
 host_clean:
 	-$(Q)$(RM) *.bin *elf *hex
-
