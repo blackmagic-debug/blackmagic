@@ -19,6 +19,10 @@ else
 LDFLAGS += --specs=nosys.specs
 endif
 
+ifeq ($(SWIM_AS_UART), 1)
+CFLAGS += -DSWIM_AS_UART=1
+endif
+
 VPATH += platforms/stm32
 
 SRC += 	cdcacm.c	\
@@ -41,4 +45,3 @@ dfu_upgrade: dfu_upgrade.o dfucore.o dfu_f1.o  stlink_common.o
 
 host_clean:
 	-$(Q)$(RM) blackmagic.bin blackmagic_dfu blackmagic_dfu.bin blackmagic_dfu.hex dfu_upgrade dfu_upgrade.bin dfu_upgrade.hex
-

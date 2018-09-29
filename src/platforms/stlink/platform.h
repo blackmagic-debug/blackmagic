@@ -105,13 +105,21 @@
 #define IRQ_PRI_USB_VBUS	(14 << 4)
 #define IRQ_PRI_SWO_DMA			(1 << 4)
 
+#ifdef SWIM_AS_UART
+#define USBUSART USART1
+#define USBUSART_CR1 USART1_CR1
+#define USBUSART_IRQ NVIC_USART1_IRQ
+#define USBUSART_CLK RCC_USART1
+#define USBUSART_ISR usart1_isr
+#else
 #define USBUSART USART2
 #define USBUSART_CR1 USART2_CR1
 #define USBUSART_IRQ NVIC_USART2_IRQ
 #define USBUSART_CLK RCC_USART2
+#define USBUSART_ISR usart2_isr
+#endif
 #define USBUSART_PORT GPIOA
 #define USBUSART_TX_PIN GPIO2
-#define USBUSART_ISR usart2_isr
 #define USBUSART_TIM TIM4
 #define USBUSART_TIM_CLK_EN() rcc_periph_clock_enable(RCC_TIM4)
 #define USBUSART_TIM_IRQ NVIC_TIM4_IRQ
@@ -154,4 +162,3 @@ extern uint32_t detect_rev(void);
 #define snprintf sniprintf
 
 #endif
-
