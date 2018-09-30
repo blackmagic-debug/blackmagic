@@ -62,6 +62,9 @@
 #define LED_PORT_UART	GPIOC
 #define LED_UART	GPIO14
 
+#define PLATFORM_HAS_TRACESWO	1
+#define NUM_TRACE_PACKETS		(128)		/* This is an 8K buffer */
+
 # define SWD_CR   GPIO_CRH(SWDIO_PORT)
 # define SWD_CR_MULT (1 << ((13 - 8) << 2))
 
@@ -97,7 +100,7 @@
 #define IRQ_PRI_USBUSART	(1 << 4)
 #define IRQ_PRI_USBUSART_TIM	(3 << 4)
 #define IRQ_PRI_USB_VBUS	(14 << 4)
-#define IRQ_PRI_TRACE		(0 << 4)
+#define IRQ_PRI_SWO_DMA		(0 << 4)
 
 #define USBUSART USART1
 #define USBUSART_CR1 USART1_CR1
@@ -125,6 +128,21 @@ int usbuart_debug_write(const char *buf, size_t len);
 #else
 # define DEBUG(...)
 #endif
+
+/* On F103, only USART1 is on AHB2 and can reach 4.5 MBaud at 72 MHz.
+ * USART1 is already used. sp maximum speed is 2.25 MBaud. */
+#define SWO_UART				USART2
+#define SWO_UART_DR				USART2_DR
+#define SWO_UART_CLK			RCC_USART2
+#define SWO_UART_PORT			GPIOA
+#define SWO_UART_RX_PIN			GPIO3
+
+/* This DMA channel is set by the USART in use */
+#define SWO_DMA_BUS				DMA1
+#define SWO_DMA_CLK				RCC_DMA1
+#define SWO_DMA_CHAN			DMA_CHANNEL6
+#define SWO_DMA_IRQ				NVIC_DMA1_CHANNEL6_IRQ
+#define SWO_DMA_ISR(x)			dma1_channel6_isr(x)
 
 #define LED_PORT GPIOC
 #define LED_IDLE_RUN GPIO15
