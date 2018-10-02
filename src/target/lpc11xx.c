@@ -52,6 +52,7 @@ lpc11xx_probe(target *t)
 	uint32_t idcode;
 
 	/* read the device ID register */
+	/* See UM10462 Rev. 5.5 Chapter 20.13.11 Table 377 */
 	idcode = target_mem_read32(t, LPC11XX_DEVICE_ID);
 	switch (idcode) {
 	case 0x041E502B:
@@ -109,15 +110,26 @@ lpc11xx_probe(target *t)
 		target_add_ram(t, 0x10000000, 0x1000);
 		lpc11xx_add_flash(t, 0x00000000, 0x4000, 0x400);
 		return true;
-        case 0x00008221:  /* LPC822M101JHI33 */
-        case 0x00008222:  /* LPC822M101JDH20 */
-        case 0x00008241:  /* LPC824M201JHI33 */
-        case 0x00008242:  /* LPC824M201JDH20 */
+	case 0x00008221:  /* LPC822M101JHI33 */
+	case 0x00008222:  /* LPC822M101JDH20 */
+	case 0x00008241:  /* LPC824M201JHI33 */
+	case 0x00008242:  /* LPC824M201JDH20 */
 		t->driver = "LPC82x";
 		target_add_ram(t, 0x10000000, 0x2000);
 		lpc11xx_add_flash(t, 0x00000000, 0x8000, 0x400);
 		return true;
-
+	case 0x0003D440:	/* LPC11U34/311  */
+	case 0x0001cc40:	/* LPC11U34/421  */
+	case 0x0001BC40:	/* LPC11U35/401  */
+	case 0x0000BC40:	/* LPC11U35/501  */
+	case 0x00019C40:	/* LPC11U36/401  */
+	case 0x00017C40:	/* LPC11U37FBD48/401  */
+	case 0x00007C44:	/* LPC11U37HFBD64/401  */
+	case 0x00007C40:	/* LPC11U37FBD64/501  */
+		t->driver = "LPC11U3x";
+		target_add_ram(t, 0x10000000, 0x2000);
+		lpc11xx_add_flash(t, 0x00000000, 0x20000, 0x1000);
+		return true;
 	}
 
 	return false;
