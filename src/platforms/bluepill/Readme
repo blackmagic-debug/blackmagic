@@ -1,0 +1,3 @@
+Modified from STLink platform to use different pins. SWDIO/TMS and SWCLK/TCK are now on PA13 and PA14, the Blue Pill's own SWD pins, allowing one to connect the debug pins straight across from the debugger to a target Blue Pill, and allowing the debugger to be used without soldering any header pins. This means the debugger device has its own SWD/JTAG hardware disabled, but setting the boot jumper to run the serial bootloader will enable it again.
+
+Finally, rather than using the DFU bootloader, blackmagic.bin is built for a base address of 0x8000000 and is meant to be flashed directly.

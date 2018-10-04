@@ -1,0 +1,117 @@
+/*
+ * This file is part of the Black Magic Debug project.
+ *
+ * Copyright (C) 2011  Black Sphere Technologies Ltd.
+ * Written by Gareth McMullin <gareth@blacksphere.co.nz>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/* This file implements the platform specific functions for the ST-Link
+ * implementation.
+ */
+
+#include "general.h"
+#include "cdcacm.h"
+#include "usbuart.h"
+
+#include <libopencm3/stm32/rcc.h>
+#include <libopencm3/cm3/scb.h>
+#include <libopencm3/cm3/scs.h>
+#include <libopencm3/cm3/nvic.h>
+#include <libopencm3/stm32/usart.h>
+#include <libopencm3/usb/usbd.h>
+#include <libopencm3/stm32/adc.h>
+
+uint8_t running_status;
+
+uint16_t led_idle_run;
+uint16_t srst_pin;
+static uint32_t rev;
+
+int platform_hwversion(void)
+{
+	return rev;
+}
+
+void platform_init(void)
+{
+	rev = detect_rev();
+	SCS_DEMCR |= SCS_DEMCR_VC_MON_EN;
+#ifdef ENABLE_DEBUG
+	void initialise_monitor_handles(void);
+	initialise_monitor_handles();
+#endif
+	rcc_clock_setup_in_hse_8mhz_out_72mhz();
+
+	led_idle_run = GPIO13;
+	srst_pin = SRST_PIN_V2;
+
+	gpio_primary_remap(AFIO_MAPR_SWJ_CFG_JTAG_OFF_SW_OFF, 0);
+
+	/* Setup GPIO ports */
+	gpio_set_mode(TMS_PORT, GPIO_MODE_OUTPUT_50_MHZ,
+	              GPIO_CNF_OUTPUT_PUSHPULL, TMS_PIN);
+	gpio_set_mode(TCK_PORT, GPIO_MODE_OUTPUT_50_MHZ,
+	              GPIO_CNF_OUTPUT_PUSHPULL, TCK_PIN);
+	gpio_set_mode(TDI_PORT, GPIO_MODE_OUTPUT_50_MHZ,
+	              GPIO_CNF_OUTPUT_PUSHPULL, TDI_PIN);
+	gpio_set(SRST_PORT, srst_pin);
+	gpio_set_mode(SRST_PORT, GPIO_MODE_OUTPUT_50_MHZ,
+	              GPIO_CNF_OUTPUT_OPENDRAIN, srst_pin);
+
+	gpio_set_mode(LED_PORT, GPIO_MODE_OUTPUT_2_MHZ,
+	              GPIO_CNF_OUTPUT_PUSHPULL, led_idle_run);
+
+	/* Relocate interrupt vector table here */
+	extern int vector_table;
+	SCB_VTOR = (uint32_t)&vector_table;
+
+	platform_timing_init();
+	if (rev > 1) /* Reconnect USB */
+		gpio_set(GPIOA, GPIO15);
+	cdcacm_init();
+	/* Don't enable UART if we're being debugged. */
+	if (!(SCS_DEMCR & SCS_DEMCR_TRCENA))
+		usbuart_init();
+}
+
+void platform_srst_set_val(bool assert)
+{
+	uint32_t crl = GPIOB_CRL;
+	uint32_t shift = (srst_pin == GPIO0) ? 0 : 4;
+	uint32_t mask = 0xf << shift;
+	crl &= ~mask;
+	if (assert) {
+		/* Set SRST as Open-Drain, 50 Mhz, low.*/
+		GPIOB_BRR = srst_pin;
+		GPIOB_CRL = crl | (7 << shift);
+	} else {
+		/* Set SRST as input, pull-up.
+		 * SRST might be unconnected, e.g on Nucleo-P!*/
+		GPIOB_CRL = crl | (8 << shift);
+		GPIOB_BSRR = srst_pin;
+	}
+	while (gpio_get(SRST_PORT, srst_pin) == assert) {};
+}
+
+bool platform_srst_get_val()
+{
+	return gpio_get(SRST_PORT, srst_pin) == 0;
+}
+
+const char *platform_target_voltage(void)
+{
+	return "unknown";
+}
