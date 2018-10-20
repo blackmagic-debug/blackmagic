@@ -572,7 +572,8 @@ bool efm32_probe(target *t)
 		return false;
 	}
 
-	/* Check the EUI is silabs. Identify the Device Identification (DI) version */
+	/* Check the OUI in the EUI is silabs or energymicro.
+	 * Use this to identify the Device Identification (DI) version */
 	if (((efm32_v1_read_eui64(t) >> 40) & 0xFFFFFF) == EFM32_V1_DI_EUI_SILABS) {
 		/* Device Identification (DI) version 1 */
 		di_version = 1;
@@ -580,7 +581,10 @@ bool efm32_probe(target *t)
 		/* Device Identification (DI) version 2 */
 		di_version = 2;
 	} else {
-		/* unknown device */
+		/* Unknown OUI */
+		DEBUG("EFM32: Unknown EUI 0x%016llx", efm32_v1_read_eui64(t));
+		DEBUG("EFM32: Assuming V1 Device Identification (DI) page (silabs remix?)");
+		di_version = 1;
 		/* sprintf(variant_string, */
 		/* 		"EFM32 DI Version ?? 0x%016llx 0x%016llx", */
 		/* 		efm32_v1_read_eui64(t), efm32_v2_read_eui48(t)); */
@@ -590,6 +594,10 @@ bool efm32_probe(target *t)
 	/* Read the part number and family */
 	uint16_t part_number = efm32_read_part_number(t, di_version);
 	size_t device_index  = efm32_lookup_device_index(t, di_version);
+	if (device_index == 9999) {
+		/* unknown device family */
+		return false;
+	}
 	if (device_index > (127-32)) {
 		/* too big to encode in printable ascii */
 		return false;
