@@ -22,19 +22,19 @@
  * Serial Debugging protocol is implemented.  This implementation for Linux
  * uses a TCP server on port 2000.
  */
-#include <stdio.h>
 
-#ifndef WIN32
+#if defined(_WIN32) || defined(__CYGWIN__)
+#   include <winsock2.h>
+#   include <windows.h>
+#   include <ws2tcpip.h>
+#else
 #   include <sys/socket.h>
 #   include <netinet/in.h>
 #   include <netinet/tcp.h>
 #   include <sys/select.h>
-#else
-#   include <winsock2.h>
-#   include <windows.h>
-#   include <ws2tcpip.h>
 #endif
 
+#include <stdio.h>
 #include <assert.h>
 
 #include "general.h"
@@ -44,7 +44,7 @@ static int gdb_if_serv, gdb_if_conn;
 
 int gdb_if_init(void)
 {
-#ifdef WIN32
+#if defined(_WIN32) || defined(__CYGWIN__)
 	WSADATA wsaData;
 	WSAStartup(MAKEWORD(2, 2), &wsaData);
 #endif
@@ -93,7 +93,11 @@ unsigned char gdb_if_getchar(void)
 unsigned char gdb_if_getchar_to(int timeout)
 {
 	fd_set fds;
+# if defined(__CYGWIN__)
+        TIMEVAL tv;
+#else
 	struct timeval tv;
+#endif
 
 	if(gdb_if_conn == -1) return -1;
 
@@ -111,7 +115,11 @@ unsigned char gdb_if_getchar_to(int timeout)
 
 void gdb_if_putchar(unsigned char c, int flush)
 {
+#if defined(__WIN32__) || defined(__CYGWIN__)
+	static char buf[2048];
+#else
 	static uint8_t buf[2048];
+#endif
 	static int bufsize = 0;
 	if (gdb_if_conn > 0) {
 		buf[bufsize++] = c;

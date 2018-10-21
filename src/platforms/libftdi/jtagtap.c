@@ -30,8 +30,6 @@
 
 #include <assert.h>
 
-#include <ftdi.h>
-
 #include "general.h"
 #include "jtagtap.h"
 
