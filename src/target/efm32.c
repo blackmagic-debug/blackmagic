@@ -582,7 +582,8 @@ bool efm32_probe(target *t)
 		di_version = 2;
 	} else {
 		/* Unknown OUI */
-		DEBUG("EFM32: Unknown EUI 0x%016llx", efm32_v1_read_eui64(t));
+		DEBUG("EFM32: Unknown EUI 0x%016llx",
+			  (long long unsigned int)efm32_v1_read_eui64(t));
 		DEBUG("EFM32: Assuming V1 Device Identification (DI) page (silabs remix?)");
 		di_version = 1;
 		/* sprintf(variant_string, */
