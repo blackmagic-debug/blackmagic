@@ -97,7 +97,6 @@ static void nrf51_add_flash(target *t,
 	f->blocksize = erasesize;
 	f->erase = nrf51_flash_erase;
 	f->write = nrf51_flash_write;
-	f->align = 4;
 	f->erased = 0xff;
 	target_add_flash(t, f);
 }
@@ -112,7 +111,7 @@ bool nrf51_probe(target *t)
 	case 0x0020: /* nRF51822 (rev 1) CEAA BA */
 	case 0x0024: /* nRF51422 (rev 1) QFAA C0 */
 	case 0x002A: /* nRF51822 (rev 2) QFAA FA0 */
-	case 0x004A: /* nRF51822 (rev 3) QFAA G1 */ 			
+	case 0x004A: /* nRF51822 (rev 3) QFAA G1 */
 	case 0x002D: /* nRF51422 (rev 2) QFAA DAA */
 	case 0x002E: /* nRF51422 (rev 2) QFAA E0 */
 	case 0x002F: /* nRF51822 (rev 1) CEAA B0 */
@@ -129,7 +128,8 @@ bool nrf51_probe(target *t)
 	case 0x0079: /* nRF51822 (rev 3) CEAA E0 */
 	case 0x007A: /* nRF51422 (rev 3) CEAA C0 */
 	case 0x008F: /* nRF51822 (rev 3) QFAA H1 See https://devzone.nordicsemi.com/question/97769/can-someone-conform-the-config-id-code-for-the-nrf51822qfaah1/ */
-	case 0x00D1: /* nRF51822 (rev 3) QFAA H2 */		
+	case 0x00D1: /* nRF51822 (rev 3) QFAA H2 */
+	case 0x0114: /* nRF51802 (rev ?) QFAA A1 */
 		t->driver = "Nordic nRF51";
 		target_add_ram(t, 0x20000000, 0x4000);
 		nrf51_add_flash(t, 0x00000000, 0x40000, NRF51_PAGE_SIZE);
@@ -164,7 +164,10 @@ bool nrf51_probe(target *t)
 		target_add_commands(t, nrf51_cmd_list, "nRF51");
 		return true;
 	case 0x00AC: /* nRF52832 Preview QFAA BA0 */
-	case 0x00C7: /* nRF52832 Revision 1 QFAA B00 */
+	case 0x00C7: /* nRF52832 (rev 1) QFAA B00 */
+	case 0x00E3: /* nRF52832 (rev 1) CIAA B?? */
+	case 0x0139: /* nRF52832 (rev 2) ??AA B?0 */
+	case 0x014F: /* nRF52832 (rev 2) CIAA E1  */
 		t->driver = "Nordic nRF52";
 		target_add_ram(t, 0x20000000, 64*1024);
 		nrf51_add_flash(t, 0x00000000, 512*1024, NRF52_PAGE_SIZE);
@@ -172,6 +175,7 @@ bool nrf51_probe(target *t)
 		target_add_commands(t, nrf51_cmd_list, "nRF52");
 		return true;
 	case 0x00EB: /* nRF52840 Preview QIAA AA0 */
+	case 0x0150: /* nRF52840 QIAA C0 */
 		t->driver = "Nordic nRF52";
 		target_add_ram(t, 0x20000000, 256*1024);
 		nrf51_add_flash(t, 0x00000000, 1024*1024, NRF52_PAGE_SIZE);
@@ -332,4 +336,82 @@ static bool nrf51_cmd_read(target *t, int argc, const char *argv[])
 	}
 
 	return nrf51_cmd_read_help(t);
+}
+
+#include "adiv5.h"
+#define NRF52_MDM_IDR 0x02880000
+
+static bool nrf51_mdm_cmd_erase_mass(target *t);
+
+const struct command_s nrf51_mdm_cmd_list[] = {
+	{"erase_mass", (cmd_handler)nrf51_mdm_cmd_erase_mass, "Erase entire flash memory"},
+	{NULL, NULL, NULL}
+};
+
+static bool nop_function(void)
+{
+	return true;
+}
+
+void nrf51_mdm_probe(ADIv5_AP_t *ap)
+{
+	switch(ap->idr) {
+	case NRF52_MDM_IDR:
+		break;
+	default:
+		return;
+	}
+
+	target *t = target_new();
+	adiv5_ap_ref(ap);
+	t->priv = ap;
+	t->priv_free = (void*)adiv5_ap_unref;
+
+	t->driver = "Nordic nRF52 Access Port";
+	t->attach = (void*)nop_function;
+	t->detach = (void*)nop_function;
+	t->check_error = (void*)nop_function;
+	t->mem_read = (void*)nop_function;
+	t->mem_write = (void*)nop_function;
+	t->regs_size = 4;
+	t->regs_read = (void*)nop_function;
+	t->regs_write = (void*)nop_function;
+	t->reset = (void*)nop_function;
+	t->halt_request = (void*)nop_function;
+	//t->halt_poll = mdm_halt_poll;
+	t->halt_resume = (void*)nop_function;
+
+	target_add_commands(t, nrf51_mdm_cmd_list, t->driver);
+}
+
+#define MDM_POWER_EN ADIV5_DP_REG(0x01)
+#define MDM_SELECT_AP ADIV5_DP_REG(0x02)
+#define MDM_STATUS  ADIV5_AP_REG(0x08)
+#define MDM_CONTROL ADIV5_AP_REG(0x04)
+#define MDM_PROT_EN  ADIV5_AP_REG(0x0C)
+
+
+static bool nrf51_mdm_cmd_erase_mass(target *t)
+{
+	ADIv5_AP_t *ap = t->priv;
+
+	uint32_t status = adiv5_ap_read(ap, MDM_STATUS);
+
+	adiv5_dp_write(ap->dp, MDM_POWER_EN, 0x50000000);
+
+	adiv5_dp_write(ap->dp, MDM_SELECT_AP, 0x01000000);
+
+	adiv5_ap_write(ap, MDM_CONTROL, 0x00000001);
+
+	// Read until 0, probably should have a timeout here...
+	do {
+		status = adiv5_ap_read(ap, MDM_STATUS);
+	} while (status);
+
+	// The second read will provide true prot status
+	status = adiv5_ap_read(ap, MDM_PROT_EN);
+	status = adiv5_ap_read(ap, MDM_PROT_EN);
+
+	// should we return the prot status here?
+	return true;
 }

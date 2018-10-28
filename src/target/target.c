@@ -26,6 +26,10 @@
 
 target *target_list = NULL;
 
+static int target_flash_write_buffered(struct target_flash *f,
+                                       target_addr dest, const void *src, size_t len);
+static int target_flash_done_buffered(struct target_flash *f);
+
 target *target_new(void)
 {
 	target *t = (void*)calloc(1, sizeof(*t));
@@ -50,6 +54,22 @@ bool target_foreach(void (*cb)(int, target *t, void *context), void *context)
 	return target_list != NULL;
 }
 
+void target_mem_map_free(target *t)
+{
+	while (t->ram) {
+		void * next = t->ram->next;
+		free(t->ram);
+		t->ram = next;
+	}
+	while (t->flash) {
+		void * next = t->flash->next;
+		if (t->flash->buf)
+			free(t->flash->buf);
+		free(t->flash);
+		t->flash = next;
+	}
+}
+
 void target_list_free(void)
 {
 	struct target_command_s *tc;
@@ -65,20 +85,7 @@ void target_list_free(void)
 			free(target_list->commands);
 			target_list->commands = tc;
 		}
-		if (target_list->dyn_mem_map)
-			free(target_list->dyn_mem_map);
-		while (target_list->ram) {
-			void * next = target_list->ram->next;
-			free(target_list->ram);
-			target_list->ram = next;
-		}
-		while (target_list->flash) {
-			void * next = target_list->flash->next;
-			if (target_list->flash->buf)
-				free(target_list->flash->buf);
-			free(target_list->flash);
-			target_list->flash = next;
-		}
+		target_mem_map_free(target_list);
 		while (target_list->bw_list) {
 			void * next = target_list->bw_list->next;
 			free(target_list->bw_list);
@@ -138,6 +145,8 @@ void target_add_ram(target *t, target_addr start, uint32_t len)
 
 void target_add_flash(target *t, struct target_flash *f)
 {
+	if (f->buf_size == 0)
+		f->buf_size = MIN(f->blocksize, 0x400);
 	f->t = t;
 	f->next = t->flash;
 	t->flash = f;
@@ -162,14 +171,8 @@ static ssize_t map_flash(char *buf, size_t len, struct target_flash *f)
 	return i;
 }
 
-const char *target_mem_map(target *t)
+bool target_mem_map(target *t, char *tmp, size_t len)
 {
-	if (t->dyn_mem_map)
-		return t->dyn_mem_map;
-
-	/* FIXME size buffer */
-	size_t len = 1024;
-	char *tmp = malloc(len);
 	size_t i = 0;
 	i = snprintf(&tmp[i], len - i, "<memory-map>");
 	/* Map each defined RAM */
@@ -180,9 +183,9 @@ const char *target_mem_map(target *t)
 		i += map_flash(&tmp[i], len - i, f);
 	i += snprintf(&tmp[i], len - i, "</memory-map>");
 
-	t->dyn_mem_map = tmp;
-
-	return t->dyn_mem_map;
+	if (i > (len -2))
+		return false;
+	return true;
 }
 
 static struct target_flash *flash_for_addr(target *t, uint32_t addr)
@@ -216,15 +219,7 @@ int target_flash_write(target *t,
 		struct target_flash *f = flash_for_addr(t, dest);
 		size_t tmptarget = MIN(dest + len, f->start + f->length);
 		size_t tmplen = tmptarget - dest;
-		if (f->align > 1) {
-			uint32_t offset = dest % f->align;
-			uint8_t data[ALIGN(offset + tmplen, f->align)];
-			memset(data, f->erased, sizeof(data));
-			memcpy((uint8_t *)data + offset, src, tmplen);
-			ret |= f->write(f, dest - offset, data, sizeof(data));
-		} else {
-			ret |= f->write(f, dest, src, tmplen);
-		}
+		ret |= target_flash_write_buffered(f, dest, src, tmplen);
 		dest += tmplen;
 		src += tmplen;
 		len -= tmplen;
@@ -235,6 +230,9 @@ int target_flash_write(target *t,
 int target_flash_done(target *t)
 {
 	for (struct target_flash *f = t->flash; f; f = f->next) {
+		int tmp = target_flash_done_buffered(f);
+		if (tmp)
+			return tmp;
 		if (f->done) {
 			int tmp = f->done(f);
 			if (tmp)
@@ -260,8 +258,8 @@ int target_flash_write_buffered(struct target_flash *f,
 		if (base != f->buf_addr) {
 			if (f->buf_addr != (uint32_t)-1) {
 				/* Write sector to flash if valid */
-				ret |= f->write_buf(f, f->buf_addr,
-				                    f->buf, f->buf_size);
+				ret |= f->write(f, f->buf_addr,
+				                f->buf, f->buf_size);
 			}
 			/* Setup buffer for a new sector */
 			f->buf_addr = base;
@@ -282,7 +280,7 @@ int target_flash_done_buffered(struct target_flash *f)
 	int ret = 0;
 	if ((f->buf != NULL) &&(f->buf_addr != (uint32_t)-1)) {
 		/* Write sector to flash if valid */
-		ret = f->write_buf(f, f->buf_addr, f->buf, f->buf_size);
+		ret = f->write(f, f->buf_addr, f->buf, f->buf_size);
 		f->buf_addr = -1;
 		free(f->buf);
 		f->buf = NULL;
@@ -296,6 +294,10 @@ void target_detach(target *t)
 {
 	t->detach(t);
 	t->attached = false;
+#if defined(LIBFTDI)
+# include "platform.h"
+	platform_buffer_flush();
+#endif
 }
 
 bool target_check_error(target *t) { return t->check_error(t); }
@@ -564,4 +566,3 @@ int tc_system(target *t, target_addr cmd, size_t cmdlen)
 	}
 	return t->tc->system(t->tc, cmd, cmdlen);
 }
-

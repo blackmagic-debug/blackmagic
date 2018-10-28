@@ -63,14 +63,13 @@ void platform_init(void)
 	}
 	/* Setup GPIO ports */
 	gpio_set_mode(TMS_PORT, GPIO_MODE_OUTPUT_50_MHZ,
-	              GPIO_CNF_OUTPUT_PUSHPULL, TMS_PIN);
+	              GPIO_CNF_INPUT_FLOAT, TMS_PIN);
 	gpio_set_mode(TCK_PORT, GPIO_MODE_OUTPUT_50_MHZ,
 	              GPIO_CNF_OUTPUT_PUSHPULL, TCK_PIN);
 	gpio_set_mode(TDI_PORT, GPIO_MODE_OUTPUT_50_MHZ,
 	              GPIO_CNF_OUTPUT_PUSHPULL, TDI_PIN);
-	gpio_set(SRST_PORT, srst_pin);
-	gpio_set_mode(SRST_PORT, GPIO_MODE_OUTPUT_50_MHZ,
-	              GPIO_CNF_OUTPUT_OPENDRAIN, srst_pin);
+
+	platform_srst_set_val(false);
 
 	gpio_set_mode(LED_PORT, GPIO_MODE_OUTPUT_2_MHZ,
 	              GPIO_CNF_OUTPUT_PUSHPULL, led_idle_run);
@@ -90,10 +89,17 @@ void platform_init(void)
 
 void platform_srst_set_val(bool assert)
 {
-	if (assert)
+	if (assert) {
+		gpio_set_mode(SRST_PORT, GPIO_MODE_OUTPUT_50_MHZ,
+		              GPIO_CNF_OUTPUT_OPENDRAIN, srst_pin);
 		gpio_clear(SRST_PORT, srst_pin);
-	else
+		while (gpio_get(SRST_PORT, srst_pin)) {};
+	} else {
+		gpio_set_mode(SRST_PORT, GPIO_MODE_INPUT,
+			GPIO_CNF_INPUT_PULL_UPDOWN, srst_pin);
 		gpio_set(SRST_PORT, srst_pin);
+		while (!gpio_get(SRST_PORT, srst_pin)) {};
+	}
 }
 
 bool platform_srst_get_val()

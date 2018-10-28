@@ -125,7 +125,10 @@ static const char tdesc_cortex_m[] =
 	"    <reg name=\"xpsr\" bitsize=\"32\"/>"
 	"    <reg name=\"msp\" bitsize=\"32\" save-restore=\"no\" type=\"data_ptr\"/>"
 	"    <reg name=\"psp\" bitsize=\"32\" save-restore=\"no\" type=\"data_ptr\"/>"
-	"    <reg name=\"special\" bitsize=\"32\" save-restore=\"no\"/>"
+	"    <reg name=\"primask\" bitsize=\"8\" save-restore=\"no\"/>"
+	"    <reg name=\"basepri\" bitsize=\"8\" save-restore=\"no\"/>"
+	"    <reg name=\"faultmask\" bitsize=\"8\" save-restore=\"no\"/>"
+	"    <reg name=\"control\" bitsize=\"8\" save-restore=\"no\"/>"
 	"  </feature>"
 	"</target>";
 
@@ -154,7 +157,10 @@ static const char tdesc_cortex_mf[] =
 	"    <reg name=\"xpsr\" bitsize=\"32\"/>"
 	"    <reg name=\"msp\" bitsize=\"32\" save-restore=\"no\" type=\"data_ptr\"/>"
 	"    <reg name=\"psp\" bitsize=\"32\" save-restore=\"no\" type=\"data_ptr\"/>"
-	"    <reg name=\"special\" bitsize=\"32\" save-restore=\"no\"/>"
+	"    <reg name=\"primask\" bitsize=\"8\" save-restore=\"no\"/>"
+	"    <reg name=\"basepri\" bitsize=\"8\" save-restore=\"no\"/>"
+	"    <reg name=\"faultmask\" bitsize=\"8\" save-restore=\"no\"/>"
+	"    <reg name=\"control\" bitsize=\"8\" save-restore=\"no\"/>"
 	"  </feature>"
 	"  <feature name=\"org.gnu.gdb.arm.vfp\">"
 	"    <reg name=\"fpscr\" bitsize=\"32\"/>"
@@ -231,6 +237,33 @@ static void cortexm_priv_free(void *priv)
 	free(priv);
 }
 
+static bool cortexm_forced_halt(target *t)
+{
+	uint32_t start_time = platform_time_ms();
+	platform_srst_set_val(false);
+	/* Wait until SRST is released.*/
+	while (platform_time_ms() < start_time + 2000) {
+		if (!platform_srst_get_val())
+			break;
+	}
+	if (platform_srst_get_val())
+		return false;
+	uint32_t dhcsr = 0;
+	start_time = platform_time_ms();
+	/* Try hard to halt the target. STM32F7 in  WFI
+	   needs multiple writes!*/
+	while (platform_time_ms() < start_time + cortexm_wait_timeout) {
+		dhcsr = target_mem_read32(t, CORTEXM_DHCSR);
+		if (dhcsr == (CORTEXM_DHCSR_S_HALT | CORTEXM_DHCSR_S_REGRDY |
+					  CORTEXM_DHCSR_C_HALT | CORTEXM_DHCSR_C_DEBUGEN))
+			break;
+		target_halt_request(t);
+	}
+	if (dhcsr != 0x00030003)
+		return false;
+	return true;
+}
+
 bool cortexm_probe(ADIv5_AP_t *ap)
 {
 	target *t;
@@ -290,11 +323,14 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 		target_check_error(t);
 	}
 
+	if (!cortexm_forced_halt(t))
+		return false;
 #define PROBE(x) \
-	do { if ((x)(t)) return true; else target_check_error(t); } while (0)
+	do { if ((x)(t)) {target_halt_resume(t, 0); return true;} else target_check_error(t); } while (0)
 
 	PROBE(stm32f1_probe);
 	PROBE(stm32f4_probe);
+	PROBE(stm32h7_probe);
 	PROBE(stm32l0_probe);   /* STM32L0xx & STM32L1xx */
 	PROBE(stm32l4_probe);
 	PROBE(lpc11xx_probe);
@@ -307,8 +343,9 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 	PROBE(lmi_probe);
 	PROBE(kinetis_probe);
 	PROBE(efm32_probe);
-
 	PROBE(synwit_probe);
+	PROBE(msp432_probe);
+	PROBE(lpc17xx_probe);
 #undef PROBE
 
 	return true;
@@ -319,16 +356,12 @@ bool cortexm_attach(target *t)
 	struct cortexm_priv *priv = t->priv;
 	unsigned i;
 	uint32_t r;
-	int tries;
 
 	/* Clear any pending fault condition */
 	target_check_error(t);
 
 	target_halt_request(t);
-	tries = 10;
-	while(!platform_srst_get_val() && !target_halt_poll(t, NULL) && --tries)
-		platform_delay(200);
-	if(!tries)
+	if (!cortexm_forced_halt(t))
 		return false;
 
 	/* Request halt on reset */
@@ -363,8 +396,6 @@ bool cortexm_attach(target *t)
 	/* Flash Patch Control Register: set ENABLE */
 	target_mem_write32(t, CORTEXM_FPB_CTRL,
 			CORTEXM_FPB_CTRL_KEY | CORTEXM_FPB_CTRL_ENABLE);
-
-	platform_srst_set_val(false);
 
 	return true;
 }
@@ -451,6 +482,14 @@ static void cortexm_regs_write(target *t, const void *data)
 			                    ADIV5_AP_DB(DB_DCRSR),
 			                    0x10000 | regnum_cortex_mf[i]);
 		}
+}
+
+int cortexm_mem_write_sized(
+	target *t, target_addr dest, const void *src, size_t len, enum align align)
+{
+	cortexm_cache_clean(t, dest, len, true);
+	adiv5_mem_write_sized(cortexm_ap(t), dest, src, len, align);
+	return target_check_error(t);
 }
 
 static uint32_t cortexm_pc_read(target *t)

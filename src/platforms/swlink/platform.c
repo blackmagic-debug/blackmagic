@@ -18,8 +18,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file implements the platform specific functions for the ST-Link
- * implementation.
+/* This file implements the platform specific functions for ST-Link
+ * on the STM8S discovery and STM32F103 Minimum System Development Board, also
+ * known as bluepill.
  */
 
 #include "general.h"
@@ -34,6 +35,17 @@
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/stm32/f1/adc.h>
 
+uint32_t led_error_port;
+uint16_t led_error_pin;
+static uint8_t rev;
+
+static void adc_init(void);
+
+int platform_hwversion(void)
+{
+	return rev;
+}
+
 void platform_init(void)
 {
 	uint32_t data;
@@ -44,10 +56,8 @@ void platform_init(void)
 #endif
 	rcc_clock_setup_in_hse_8mhz_out_72mhz();
 
+	rev =  detect_rev();
 	/* Enable peripherals */
-	rcc_periph_clock_enable(RCC_USB);
-	rcc_periph_clock_enable(RCC_GPIOA);
-	rcc_periph_clock_enable(RCC_GPIOB);
 	rcc_periph_clock_enable(RCC_AFIO);
 	rcc_periph_clock_enable(RCC_CRC);
 
@@ -57,22 +67,34 @@ void platform_init(void)
 	data |= AFIO_MAPR_SWJ_CFG_JTAG_OFF_SW_OFF;
 	AFIO_MAPR = data;
 	/* Setup JTAG GPIO ports */
-	gpio_set_mode(TMS_PORT, GPIO_MODE_OUTPUT_10_MHZ,
-			GPIO_CNF_OUTPUT_PUSHPULL, TMS_PIN);
-	gpio_set_mode(TCK_PORT, GPIO_MODE_OUTPUT_10_MHZ,
+	gpio_set_mode(TMS_PORT, GPIO_MODE_OUTPUT_50_MHZ,
+			GPIO_CNF_INPUT_FLOAT, TMS_PIN);
+	gpio_set_mode(TCK_PORT, GPIO_MODE_OUTPUT_50_MHZ,
 			GPIO_CNF_OUTPUT_PUSHPULL, TCK_PIN);
-	gpio_set_mode(TDI_PORT, GPIO_MODE_OUTPUT_10_MHZ,
+	gpio_set_mode(TDI_PORT, GPIO_MODE_OUTPUT_50_MHZ,
 			GPIO_CNF_OUTPUT_PUSHPULL, TDI_PIN);
 
 	gpio_set_mode(TDO_PORT, GPIO_MODE_INPUT,
 			GPIO_CNF_INPUT_FLOAT, TDO_PIN);
 
-	gpio_set(NRST_PORT,NRST_PIN);
-	gpio_set_mode(NRST_PORT, GPIO_MODE_INPUT,
-			GPIO_CNF_INPUT_PULL_UPDOWN, NRST_PIN);
-
-	gpio_set_mode(LED_PORT, GPIO_MODE_OUTPUT_2_MHZ,
-			GPIO_CNF_OUTPUT_PUSHPULL, LED_IDLE_RUN);
+	switch (rev) {
+	case 0:
+		/* LED GPIO already set in detect_rev()*/
+		led_error_port = GPIOA;
+		led_error_pin = GPIO8;
+		adc_init();
+		break;
+	case 1:
+		led_error_port = GPIOC;
+		led_error_pin = GPIO13;
+		/* Enable MCO Out on PA8*/
+		RCC_CFGR &= ~(0xf << 24);
+		RCC_CFGR |= (RCC_CFGR_MCO_HSE << 24);
+		gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ,
+					  GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO8);
+		break;
+	}
+	platform_srst_set_val(false);
 
 	/* Remap TIM2 TIM2_REMAP[1]
 	 * TIM2_CH1_ETR -> PA15 (TDI, set as output above)
@@ -95,33 +117,80 @@ void platform_init(void)
 	usbuart_init();
 }
 
-void platform_srst_set_val(bool assert) { (void)assert; }
-bool platform_srst_get_val(void) { return false; }
+void platform_srst_set_val(bool assert)
+{
+	/* We reuse JSRST as SRST.*/
+	if (assert) {
+		gpio_set_mode(JRST_PORT, GPIO_MODE_OUTPUT_50_MHZ,
+		              GPIO_CNF_OUTPUT_OPENDRAIN, JRST_PIN);
+		/* Wait until requested value is active.*/
+		while (gpio_get(JRST_PORT, JRST_PIN))
+			gpio_clear(JRST_PORT, JRST_PIN);
+	} else {
+		gpio_set_mode(JRST_PORT, GPIO_MODE_INPUT,
+					  GPIO_CNF_INPUT_PULL_UPDOWN, JRST_PIN);
+		/* Wait until requested value is active.*/
+		while (!gpio_get(JRST_PORT, JRST_PIN))
+			gpio_set(JRST_PORT, JRST_PIN);
+	}
+}
+
+bool platform_srst_get_val(void)
+{
+	return gpio_get(JRST_PORT, JRST_PIN) == 0;
+}
+
+static void adc_init(void)
+{
+	rcc_periph_clock_enable(RCC_ADC1);
+	/* PA0 measures CN7 Pin 1 VDD divided by two.*/
+	gpio_set_mode(GPIOA, GPIO_MODE_INPUT,
+				  GPIO_CNF_INPUT_ANALOG, GPIO0);
+	adc_power_off(ADC1);
+	adc_disable_scan_mode(ADC1);
+	adc_set_single_conversion_mode(ADC1);
+	adc_disable_external_trigger_regular(ADC1);
+	adc_set_right_aligned(ADC1);
+	adc_set_sample_time_on_all_channels(ADC1, ADC_SMPR_SMP_28DOT5CYC);
+
+	adc_power_on(ADC1);
+
+	/* Wait for ADC starting up. */
+	for (int i = 0; i < 800000; i++)	/* Wait a bit. */
+		__asm__("nop");
+
+	adc_reset_calibration(ADC1);
+	adc_calibrate(ADC1);
+}
 
 const char *platform_target_voltage(void)
 {
-	return "unknown";
+	static char ret[] = "0.0V";
+	const uint8_t channel = 0;
+	switch (rev) {
+	case 0:
+		adc_set_regular_sequence(ADC1, 1, (uint8_t*)&channel);
+		adc_start_conversion_direct(ADC1);
+		/* Wait for end of conversion. */
+		while (!adc_eoc(ADC1));
+		/* Referencevoltage is 3.3 Volt, measured voltage is half of
+		 * actual voltag. */
+		uint32_t val_in_100mV = (adc_read_regular(ADC1) * 33 * 2) / 4096;
+		ret[0] = '0' + val_in_100mV / 10;
+		ret[2] = '0' + val_in_100mV % 10;
+		return ret;
+	}
+	return "ABSENT!";
 }
 
-void platform_request_boot(void)
+void set_idle_state(int state)
 {
-	/* Disconnect USB cable by resetting USB Device and pulling USB_DP low*/
-	rcc_periph_reset_pulse(RST_USB);
-	rcc_periph_clock_enable(RCC_USB);
-	rcc_periph_clock_enable(RCC_GPIOA);
-	gpio_clear(GPIOA, GPIO12);
-	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
-		GPIO_CNF_OUTPUT_OPENDRAIN, GPIO12);
-
-	/* Assert bootloader pin */
-	uint32_t crl = GPIOA_CRL;
-	rcc_periph_clock_enable(RCC_GPIOA);
-	/* Enable Pull on GPIOA1. We don't rely on the external pin
-	 * really pulled, but only on the value of the CNF register
-	 * changed from the reset value
-	 */
-	crl &= 0xffffff0f;
-	crl |= 0x80;
-	GPIOA_CRL = crl;
+	switch (rev) {
+	case 0:
+		gpio_set_val(GPIOA, GPIO8, state);
+		break;
+	case 1:
+		gpio_set_val(GPIOC, GPIO13, (!state));
+		break;
+	}
 }
-

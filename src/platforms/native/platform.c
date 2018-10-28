@@ -113,6 +113,11 @@ void platform_init(void)
 	gpio_set_mode(JTAG_PORT, GPIO_MODE_OUTPUT_50_MHZ,
 			GPIO_CNF_OUTPUT_PUSHPULL,
 			TMS_DIR_PIN | TMS_PIN | TCK_PIN | TDI_PIN);
+	gpio_set_mode(JTAG_PORT, GPIO_MODE_OUTPUT_50_MHZ,
+			GPIO_CNF_OUTPUT_PUSHPULL,
+			TMS_DIR_PIN | TCK_PIN | TDI_PIN);
+	gpio_set_mode(JTAG_PORT, GPIO_MODE_OUTPUT_50_MHZ,
+			GPIO_CNF_INPUT_FLOAT, TMS_PIN);
 	/* This needs some fixing... */
 	/* Toggle required to sort out line drivers... */
 	gpio_port_write(GPIOA, 0x8102);

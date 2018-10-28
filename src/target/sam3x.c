@@ -131,9 +131,7 @@ static void sam3_add_flash(target *t,
 	f->length = length;
 	f->blocksize = SAM3_PAGE_SIZE;
 	f->erase = sam3_flash_erase;
-	f->write = target_flash_write_buffered;
-	f->done = target_flash_done_buffered;
-	f->write_buf = sam3x_flash_write;
+	f->write = sam3x_flash_write;
 	f->buf_size = SAM3_PAGE_SIZE;
 	sf->eefc_base = eefc_base;
 	sf->write_cmd = EEFC_FCR_FCMD_EWP;
@@ -149,9 +147,7 @@ static void sam4_add_flash(target *t,
 	f->length = length;
 	f->blocksize = SAM4_PAGE_SIZE * 8;
 	f->erase = sam4_flash_erase;
-	f->write = target_flash_write_buffered;
-	f->done = target_flash_done_buffered;
-	f->write_buf = sam3x_flash_write;
+	f->write = sam3x_flash_write;
 	f->buf_size = SAM4_PAGE_SIZE;
 	sf->eefc_base = eefc_base;
 	sf->write_cmd = EEFC_FCR_FCMD_WP;
@@ -355,4 +351,3 @@ static bool sam3x_cmd_gpnvm_set(target *t, int argc, char *argv[])
 
 	return true;
 }
-

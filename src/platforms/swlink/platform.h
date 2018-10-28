@@ -3,6 +3,7 @@
  *
  * Copyright (C) 2011  Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
+ * Copyright (C) 2018  Uwe Bonnes (bon@elektron.ikp.physik.tu-darmstadt.de)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,45 +30,59 @@
 #include "timing_stm32.h"
 #include "version.h"
 
-#define BOARD_IDENT            "Black Magic Probe (SWLINK), (Firmware " FIRMWARE_VERSION ")"
-#define BOARD_IDENT_DFU	       "Black Magic (Upgrade), STM8S Discovery, (Firmware " FIRMWARE_VERSION ")"
-#define BOARD_IDENT_UPD	       "Black Magic (DFU Upgrade), STM8S Discovery, (Firmware " FIRMWARE_VERSION ")"
-#define DFU_IDENT              "Black Magic Firmware Upgrade (SWLINK)"
-#define UPD_IFACE_STRING       "@Internal Flash   /0x08000000/8*001Kg"
+#ifdef ENABLE_DEBUG
+# define PLATFORM_HAS_DEBUG
+# define USBUART_DEBUG
+#endif
+
+#define BOARD_IDENT			"Black Magic Probe (SWLINK), (Firmware " FIRMWARE_VERSION ")"
+#define BOARD_IDENT_DFU		"Black Magic (Upgrade), SWLINK, (Firmware " FIRMWARE_VERSION ")"
+#define BOARD_IDENT_UPD		"Black Magic (DFU Upgrade), SWLINK, (Firmware " FIRMWARE_VERSION ")"
+#define DFU_IDENT			"Black Magic Firmware Upgrade (SWLINK)"
+#define UPD_IFACE_STRING	"@Internal Flash   /0x08000000/8*001Kg"
 
 /* Hardware definitions... */
 #define TMS_PORT	GPIOA
 #define TCK_PORT	GPIOA
 #define TDI_PORT	GPIOA
 #define TDO_PORT	GPIOB
-#define NRST_PORT	GPIOB
+#define JRST_PORT	GPIOB
 #define TMS_PIN		GPIO13
 #define TCK_PIN		GPIO14
 #define TDI_PIN		GPIO15
 #define TDO_PIN		GPIO3
-#define NRST_PIN	GPIO4
+#define JRST_PIN	GPIO4
 
 #define SWDIO_PORT 	TMS_PORT
 #define SWCLK_PORT 	TCK_PORT
 #define SWDIO_PIN	TMS_PIN
 #define SWCLK_PIN	TCK_PIN
 
-#define LED_PORT	GPIOA
-#define LED_IDLE_RUN    GPIO8
 /* Use PC14 for a "dummy" uart led. So we can observere at least with scope*/
 #define LED_PORT_UART	GPIOC
 #define LED_UART	GPIO14
 
+#define PLATFORM_HAS_TRACESWO	1
+#define NUM_TRACE_PACKETS		(128)		/* This is an 8K buffer */
+
+# define SWD_CR   GPIO_CRH(SWDIO_PORT)
+# define SWD_CR_MULT (1 << ((13 - 8) << 2))
+
 #define TMS_SET_MODE() \
 	gpio_set_mode(TMS_PORT, GPIO_MODE_OUTPUT_50_MHZ, \
 	              GPIO_CNF_OUTPUT_PUSHPULL, TMS_PIN);
-#define SWDIO_MODE_FLOAT() \
-	gpio_set_mode(SWDIO_PORT, GPIO_MODE_INPUT, \
-	              GPIO_CNF_INPUT_FLOAT, SWDIO_PIN);
-#define SWDIO_MODE_DRIVE() \
-	gpio_set_mode(SWDIO_PORT, GPIO_MODE_OUTPUT_50_MHZ, \
-	              GPIO_CNF_OUTPUT_PUSHPULL, SWDIO_PIN);
-
+#define SWDIO_MODE_FLOAT() 	do { \
+	uint32_t cr = SWD_CR; \
+	cr  &= ~(0xf * SWD_CR_MULT); \
+	cr  |=  (0x4 * SWD_CR_MULT); \
+	SWD_CR = cr; \
+} while(0)
+#define SWDIO_MODE_DRIVE() 	do { \
+	uint32_t cr = SWD_CR; \
+	cr  &= ~(0xf * SWD_CR_MULT); \
+	cr  |=  (0x1 * SWD_CR_MULT); \
+	SWD_CR = cr; \
+} while(0)
 #define UART_PIN_SETUP() do { \
 	AFIO_MAPR |= AFIO_MAPR_USART1_REMAP; \
 	gpio_set_mode(USBUSART_PORT, GPIO_MODE_OUTPUT_2_MHZ, \
@@ -85,7 +100,7 @@
 #define IRQ_PRI_USBUSART	(1 << 4)
 #define IRQ_PRI_USBUSART_TIM	(3 << 4)
 #define IRQ_PRI_USB_VBUS	(14 << 4)
-#define IRQ_PRI_TRACE		(0 << 4)
+#define IRQ_PRI_SWO_DMA		(0 << 4)
 
 #define USBUSART USART1
 #define USBUSART_CR1 USART1_CR1
@@ -107,8 +122,6 @@
 #define TRACE_TRIG_IN TIM_SMCR_TS_IT1FP2
 
 #ifdef ENABLE_DEBUG
-# define PLATFORM_HAS_DEBUG
-# define USBUART_DEBUG
 extern bool debug_bmp;
 int usbuart_debug_write(const char *buf, size_t len);
 # define DEBUG printf
@@ -116,14 +129,29 @@ int usbuart_debug_write(const char *buf, size_t len);
 # define DEBUG(...)
 #endif
 
-#define SET_RUN_STATE(state)	{running_status = (state);}
-#define SET_IDLE_STATE(state)	{gpio_set_val(LED_PORT, LED_IDLE_RUN, state);}
-#define SET_ERROR_STATE(x)
+/* On F103, only USART1 is on AHB2 and can reach 4.5 MBaud at 72 MHz.
+ * USART1 is already used. sp maximum speed is 2.25 MBaud. */
+#define SWO_UART				USART2
+#define SWO_UART_DR				USART2_DR
+#define SWO_UART_CLK			RCC_USART2
+#define SWO_UART_PORT			GPIOA
+#define SWO_UART_RX_PIN			GPIO3
 
-static inline int platform_hwversion(void)
-{
-	        return 0;
-}
+/* This DMA channel is set by the USART in use */
+#define SWO_DMA_BUS				DMA1
+#define SWO_DMA_CLK				RCC_DMA1
+#define SWO_DMA_CHAN			DMA_CHANNEL6
+#define SWO_DMA_IRQ				NVIC_DMA1_CHANNEL6_IRQ
+#define SWO_DMA_ISR(x)			dma1_channel6_isr(x)
+
+#define LED_PORT GPIOC
+#define LED_IDLE_RUN GPIO15
+#define SET_RUN_STATE(state)
+#define SET_ERROR_STATE(state)
+extern void set_idle_state(int state);
+#define SET_IDLE_STATE(state) set_idle_state(state)
+
+extern uint8_t detect_rev(void);
 
 /* Use newlib provided integer only stdio functions */
 #define sscanf siscanf

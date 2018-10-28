@@ -68,16 +68,27 @@
 #define LED_PORT_UART	GPIOC
 #define LED_UART	GPIO14
 
+#define PLATFORM_HAS_TRACESWO	1
+#define NUM_TRACE_PACKETS		(128)		/* This is an 8K buffer */
+
+# define SWD_CR   GPIO_CRH(SWDIO_PORT)
+# define SWD_CR_MULT (1 << ((14 - 8) << 2))
+
 #define TMS_SET_MODE() \
 	gpio_set_mode(TMS_PORT, GPIO_MODE_OUTPUT_50_MHZ, \
 	              GPIO_CNF_OUTPUT_PUSHPULL, TMS_PIN);
-#define SWDIO_MODE_FLOAT() \
-	gpio_set_mode(SWDIO_PORT, GPIO_MODE_INPUT, \
-	              GPIO_CNF_INPUT_FLOAT, SWDIO_PIN);
-#define SWDIO_MODE_DRIVE() \
-	gpio_set_mode(SWDIO_PORT, GPIO_MODE_OUTPUT_50_MHZ, \
-	              GPIO_CNF_OUTPUT_PUSHPULL, SWDIO_PIN);
-
+#define SWDIO_MODE_FLOAT() 	do { \
+	uint32_t cr = SWD_CR; \
+	cr  &= ~(0xf * SWD_CR_MULT); \
+	cr  |=  (0x4 * SWD_CR_MULT); \
+	SWD_CR = cr; \
+} while(0)
+#define SWDIO_MODE_DRIVE() 	do { \
+	uint32_t cr = SWD_CR; \
+	cr  &= ~(0xf * SWD_CR_MULT); \
+	cr  |=  (0x1 * SWD_CR_MULT); \
+	SWD_CR = cr; \
+} while(0)
 #define UART_PIN_SETUP() \
 	gpio_set_mode(USBUSART_PORT, GPIO_MODE_OUTPUT_2_MHZ, \
 	              GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, USBUSART_TX_PIN);
@@ -87,13 +98,12 @@
 #define USB_ISR	        usb_lp_can_rx0_isr
 /* Interrupt priorities.  Low numbers are high priority.
  * For now USART2 preempts USB which may spin while buffer is drained.
- * TIM3 is used for traceswo capture and must be highest priority.
  */
 #define IRQ_PRI_USB		(2 << 4)
 #define IRQ_PRI_USBUSART	(1 << 4)
 #define IRQ_PRI_USBUSART_TIM	(3 << 4)
 #define IRQ_PRI_USB_VBUS	(14 << 4)
-#define IRQ_PRI_TIM3		(0 << 4)
+#define IRQ_PRI_SWO_DMA			(1 << 4)
 
 #define USBUSART USART2
 #define USBUSART_CR1 USART2_CR1
@@ -114,6 +124,20 @@ int usbuart_debug_write(const char *buf, size_t len);
 #else
 # define DEBUG(...)
 #endif
+
+/* On F103, only USART1 is on AHB2 and can reach 4.5 MBaud at 72 MHz.*/
+#define SWO_UART				USART1
+#define SWO_UART_DR				USART1_DR
+#define SWO_UART_CLK			RCC_USART1
+#define SWO_UART_PORT			GPIOA
+#define SWO_UART_RX_PIN			GPIO10
+
+/* This DMA channel is set by the USART in use */
+#define SWO_DMA_BUS				DMA1
+#define SWO_DMA_CLK				RCC_DMA1
+#define SWO_DMA_CHAN			DMA_CHANNEL5
+#define SWO_DMA_IRQ				NVIC_DMA1_CHANNEL5_IRQ
+#define SWO_DMA_ISR(x)			dma1_channel5_isr(x)
 
 extern uint16_t led_idle_run;
 #define LED_IDLE_RUN            led_idle_run

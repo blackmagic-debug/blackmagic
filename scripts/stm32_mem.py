@@ -79,29 +79,45 @@ def stm32_manifest(dev):
 		sleep(status.bwPollTimeout / 1000.0)
 		if status.bState == dfu.STATE_DFU_MANIFEST:
 			break
+
 def stm32_scan(args, test):
 	devs = dfu.finddevs()
+	bmp_devs = []
 	bmp = 0
 	if not devs:
-                if test == True:
-                        return
+		if test == True:
+			return
+
 		print "No DFU devices found!"
 		exit(-1)
 
 	for dev in devs:
-		dfudev = dfu.dfu_device(*dev)
+		try:
+			dfudev = dfu.dfu_device(*dev)
+		except:
+			# Exceptions are raised when current user doesn't have permissions
+			# for the specified USB device, but the device scan needs to
+			# continue
+			continue
+
 		man = dfudev.handle.getString(dfudev.dev.iManufacturer, 30)
-		if man == "Black Sphere Technologies": bmp = bmp + 1
-	if bmp == 0 :
-                if test == True:
-                        return
+		if man == "Black Sphere Technologies":
+			bmp = bmp + 1
+			bmp_devs.append(dev)
+
+	if bmp == 0:
+		if test == True:
+			return
+
 		print "No compatible device found\n"
 		exit(-1)
-	if bmp > 1 and not args.serial_target :
-                if test == True:
-                        return
+
+	if bmp > 1 and not args.serial_target:
+		if test == True:
+			return
+
 		print "Found multiple devices:\n"
-		for dev in devs:
+		for dev in bmp_devs:
 			dfudev = dfu.dfu_device(*dev)
 			man = dfudev.handle.getString(dfudev.dev.iManufacturer, 30)
 			product = dfudev.handle.getString(dfudev.dev.iProduct, 96)
@@ -110,25 +126,31 @@ def stm32_scan(args, test):
 			print "Manufacturer:\t %s" % man
 			print "Product:\t %s" % product
 			print "Serial:\t\t %s\n" % serial_no
+
 		print "Select device with serial number!"
 		exit (-1)
 
-	for dev in devs:
+	for dev in bmp_devs:
 		dfudev = dfu.dfu_device(*dev)
 		man = dfudev.handle.getString(dfudev.dev.iManufacturer, 30)
 		product = dfudev.handle.getString(dfudev.dev.iProduct, 96)
 		serial_no = dfudev.handle.getString(dfudev.dev.iSerialNumber, 30)
 		if args.serial_target:
-			if man == "Black Sphere Technologies" and serial_no ==	args.serial_target: break
+			if man == "Black Sphere Technologies" and serial_no ==	args.serial_target:
+				break
 		else:
-			if man == "Black Sphere Technologies": break
+			if man == "Black Sphere Technologies":
+				break
+
 	print "Device ID:\t %04x:%04x" % (dfudev.dev.idVendor, dfudev.dev.idProduct)
 	print "Manufacturer:\t %s" % man
 	print "Product:\t %s" % product
 	print "Serial:\t\t %s" % serial_no
-	if args.serial_target and serial_no !=	args.serial_target:
+
+	if args.serial_target and serial_no != args.serial_target:
 		print "Serial number doesn't match!\n"
 		exit(-2)
+
 	return dfudev
 
 if __name__ == "__main__":

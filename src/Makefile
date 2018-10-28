@@ -42,11 +42,13 @@ SRC =			\
 	lmi.c		\
 	lpc_common.c	\
 	lpc11xx.c	\
+	lpc17xx.c	\
 	lpc15xx.c	\
 	lpc43xx.c	\
 	kinetis.c	\
 	main.c		\
 	morse.c		\
+	msp432.c	\
 	nrf51.c		\
 	platform.c	\
 	sam3x.c		\
@@ -54,6 +56,7 @@ SRC =			\
 	samd.c		\
 	stm32f1.c	\
 	stm32f4.c	\
+	stm32h7.c	\
 	stm32l0.c	\
 	stm32l4.c	\
 	swdptap.c	\

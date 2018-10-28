@@ -173,9 +173,7 @@ static void sam4l_add_flash(target *t, uint32_t addr, size_t length)
 	f->length = length;
 	f->blocksize = SAM4L_PAGE_SIZE;
 	f->erase = sam4l_flash_erase;
-	f->write = target_flash_write_buffered;
-	f->done = target_flash_done_buffered;
-	f->write_buf = sam4l_flash_write_buf;
+	f->write = sam4l_flash_write_buf;
 	f->buf_size = SAM4L_PAGE_SIZE;
 	f->erased = 0xff;
 	/* add it into the target structures flash chain */
@@ -238,7 +236,7 @@ bool sam4l_probe(target *t)
 		DEBUG("\nSAM4L: RAM = 0x%x (%dK), FLASH = 0x%x (%dK)\n",
 			(unsigned int) ram_size, (unsigned int) (ram_size / 1024),
 					(unsigned int) flash_size, (unsigned int)(flash_size / 1024));
-			
+
 		/* enable SMAP if not, check for HCR and reset if set */
 		sam4l_extended_reset(t);
 		DEBUG("\nSAM4L: SAM4L Selected.\n");
@@ -331,7 +329,7 @@ sam4l_flash_write_buf(struct target_flash *f, target_addr addr, const void *src,
 	uint32_t *src_data = (uint32_t *)src;
 	uint32_t ndx;
 	uint16_t page;
-	
+
 	DEBUG("\nSAM4L: sam4l_flash_write_buf: addr = 0x%08lx, len %d\n", (long unsigned int) addr, (int) len);
 	/* This will fail with unaligned writes, the write_buf version */
 	page = addr / SAM4L_PAGE_SIZE;

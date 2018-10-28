@@ -20,6 +20,7 @@
 #include "general.h"
 #include "gdb_if.h"
 #include "version.h"
+#include "platform.h"
 
 #include <assert.h>
 #include <unistd.h>
@@ -31,27 +32,25 @@ struct ftdi_context *ftdic;
 static uint8_t outbuf[BUF_SIZE];
 static uint16_t bufptr = 0;
 
-static struct cable_desc_s {
-	int vendor;
-	int product;
-	int interface;
-	uint8_t dbus_data;
-	uint8_t dbus_ddr;
-	uint8_t cbus_data;
-	uint8_t cbus_ddr;
-	char *description;
-	char * name;
-} cable_desc[] = {
+cable_desc_t *active_cable;
+
+cable_desc_t cable_desc[] = {
 	{
+		/* Direct connection from FTDI to Jtag/Swd.*/
 		.vendor = 0x0403,
 		.product = 0x6010,
 		.interface = INTERFACE_A,
 		.dbus_data = 0x08,
 		.dbus_ddr  = 0x1B,
+		.bitbang_tms_in_port_cmd = GET_BITS_LOW,
+		.bitbang_tms_in_pin = MPSSE_TMS,
 		.description = "FLOSS-JTAG",
 		.name = "flossjtag"
 	},
 	{
+		/* Buffered connection from FTDI to Jtag/Swd.
+		 * TCK and TMS not independant switchable!
+		 * SWD not possible. */
 		.vendor = 0x0403,
 		.product = 0x6010,
 		.interface = INTERFACE_A,
@@ -59,6 +58,33 @@ static struct cable_desc_s {
 		.dbus_ddr  = 0x1B,
 		.description = "FTDIJTAG",
 		.name = "ftdijtag"
+	},
+	{
+/* UART/SWO on Interface A
+ * JTAG and control on INTERFACE_B
+ * Bit 5 high selects SWD-READ (TMS routed to TDO)
+ * Bit 6 high selects JTAG vs SWD (TMS routed to TDI/TDO)
+ * BCBUS 1 (Output) N_SRST
+ * BCBUS 2 (Input) V_ISO available
+ *
+ * For bitbanged SWD, set Bit 5 low and select SWD read with
+ * Bit 6 low. Read Connector TMS as FTDI TDO.
+ *
+ * TDO is routed to Interface 0 RXD as SWO or with Uart
+ * Connector pin 10 pulled to ground will connect Interface 0 RXD
+ * to UART connector RXD
+ */
+		.vendor = 0x0403,
+		.product = 0x6010,
+		.interface = INTERFACE_B,
+		.dbus_data = 0x6A,
+		.dbus_ddr  = 0x6B,
+		.cbus_data = 0x02,
+		.cbus_ddr  = 0x02,
+		.bitbang_tms_in_port_cmd = GET_BITS_LOW,
+		.bitbang_tms_in_pin = MPSSE_TDO, /* keep bit 5 low*/
+		.bitbang_swd_dbus_read_data = 0x02,
+		.name = "ftdiswd"
 	},
 	{
 		.vendor = 0x15b1,
@@ -69,6 +95,9 @@ static struct cable_desc_s {
 		.name = "olimex"
 	},
 	{
+		/* Buffered connection from FTDI to Jtag/Swd.
+		 * TCK and TMS not independant switchable!
+		 * => SWD not possible. */
 		.vendor = 0x0403,
 		.product = 0xbdc8,
 		.interface = INTERFACE_A,
@@ -77,6 +106,11 @@ static struct cable_desc_s {
 		.name = "turtelizer"
 	},
 	{
+		/* https://reference.digilentinc.com/jtag_hs1/jtag_hs1
+		 * No schmeatics available.
+		 * Buffered from FTDI to Jtag/Swd announced
+		 * Independant switch for TMS not known
+		 * => SWD not possible. */
 		.vendor = 0x0403,
 		.product = 0xbdc8,
 		.interface = INTERFACE_A,
@@ -85,14 +119,18 @@ static struct cable_desc_s {
 		.name = "jtaghs1"
 	},
 	{
+		/* Direct connection from FTDI to Jtag/Swd assumed.*/
 		.vendor = 0x0403,
 		.product = 0xbdc8,
 		.interface = INTERFACE_A,
 		.dbus_data = 0xA8,
 		.dbus_ddr  = 0xAB,
+		.bitbang_tms_in_port_cmd = GET_BITS_LOW,
+		.bitbang_tms_in_pin = MPSSE_TMS,
 		.name = "ftdi"
 	},
 	{
+		/* Product name not unique! Assume SWD not possible.*/
 		.vendor = 0x0403,
 		.product = 0x6014,
 		.interface = INTERFACE_A,
@@ -103,22 +141,32 @@ static struct cable_desc_s {
 		.name = "digilent"
 	},
 	{
+		/* Direct connection from FTDI to Jtag/Swd assumed.*/
 		.vendor = 0x0403,
 		.product = 0x6014,
 		.interface = INTERFACE_A,
 		.dbus_data = 0x08,
 		.dbus_ddr  = 0x0B,
+		.bitbang_tms_in_port_cmd = GET_BITS_LOW,
+		.bitbang_tms_in_pin = MPSSE_TMS,
 		.name = "ft232h"
 	},
 	{
+		/* Direct connection from FTDI to Jtag/Swd assumed.*/
 		.vendor = 0x0403,
 		.product = 0x6011,
 		.interface = INTERFACE_A,
 		.dbus_data = 0x08,
 		.dbus_ddr  = 0x0B,
+		.bitbang_tms_in_port_cmd = GET_BITS_LOW,
+		.bitbang_tms_in_pin = MPSSE_TMS,
 		.name = "ft4232h"
 	},
 	{
+		/* http://www.olimex.com/dev/pdf/ARM-USB-OCD.pdf.
+		 * BDUS 4 global enables JTAG Buffer.
+		 * => TCK and TMS not independant switchable!
+		 * => SWD not possible. */
 		.vendor = 0x15ba,
 		.product = 0x002b,
 		.interface = INTERFACE_A,
@@ -137,9 +185,6 @@ void platform_init(int argc, char **argv)
 	unsigned index = 0;
 	char *serial = NULL;
 	char * cablename =  "ftdi";
-	uint8_t ftdi_init[9] = {TCK_DIVISOR, 0x01, 0x00, SET_BITS_LOW, 0,0,
-				SET_BITS_HIGH, 0,0};
-
 	while((c = getopt(argc, argv, "c:s:")) != -1) {
 		switch(c) {
 		case 'c':
@@ -161,14 +206,7 @@ void platform_init(int argc, char **argv)
 		exit(-1);
 	}
 
-	if (cable_desc[index].dbus_data)
-		ftdi_init[4]= cable_desc[index].dbus_data;
-	if (cable_desc[index].dbus_ddr)
-		ftdi_init[5]= cable_desc[index].dbus_ddr;
-	if (cable_desc[index].cbus_data)
-		ftdi_init[7]= cable_desc[index].cbus_data;
-	if(cable_desc[index].cbus_ddr)
-		ftdi_init[8]= cable_desc[index].cbus_ddr;
+	active_cable = &cable_desc[index];
 
 	printf("\nBlack Magic Probe (" FIRMWARE_VERSION ")\n");
 	printf("Copyright (C) 2015  Black Sphere Technologies Ltd.\n");
@@ -185,14 +223,14 @@ void platform_init(int argc, char **argv)
 			ftdi_get_error_string(ftdic));
 		abort();
 	}
-	if((err = ftdi_set_interface(ftdic, cable_desc[index].interface)) != 0) {
+	if((err = ftdi_set_interface(ftdic, active_cable->interface)) != 0) {
 		fprintf(stderr, "ftdi_set_interface: %d: %s\n",
 			err, ftdi_get_error_string(ftdic));
 		abort();
 	}
 	if((err = ftdi_usb_open_desc(
-		ftdic, cable_desc[index].vendor, cable_desc[index].product,
-		cable_desc[index].description, serial)) != 0) {
+		ftdic, active_cable->vendor, active_cable->product,
+		active_cable->description, serial)) != 0) {
 		fprintf(stderr, "unable to open ftdi device: %d (%s)\n",
 			err, ftdi_get_error_string(ftdic));
 		abort();
@@ -208,24 +246,11 @@ void platform_init(int argc, char **argv)
 			err, ftdi_get_error_string(ftdic));
 		abort();
 	}
-	if((err = ftdi_usb_purge_buffers(ftdic)) != 0) {
-		fprintf(stderr, "ftdi_set_baudrate: %d: %s\n",
-			err, ftdi_get_error_string(ftdic));
-		abort();
-	}
 	if((err = ftdi_write_data_set_chunksize(ftdic, BUF_SIZE)) != 0) {
 		fprintf(stderr, "ftdi_write_data_set_chunksize: %d: %s\n",
 			err, ftdi_get_error_string(ftdic));
 		abort();
 	}
-
-	if((err = ftdi_set_bitmode(ftdic, 0xAB, BITMODE_MPSSE)) != 0) {
-		fprintf(stderr, "ftdi_set_bitmode: %d: %s\n",
-			err, ftdi_get_error_string(ftdic));
-		abort();
-	}
-
-	assert(ftdi_write_data(ftdic, ftdi_init, 9) == 9);
 	assert(gdb_if_init() == 0);
 }
 
@@ -255,6 +280,7 @@ int platform_buffer_write(const uint8_t *data, int size)
 int platform_buffer_read(uint8_t *data, int size)
 {
 	int index = 0;
+	outbuf[bufptr++] = SEND_IMMEDIATE;
 	platform_buffer_flush();
 	while((index += ftdi_read_data(ftdic, data + index, size-index)) != size);
 	return size;
