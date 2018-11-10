@@ -62,8 +62,8 @@ int usbuart_debug_write(const char *buf, size_t len);
 
 #define LED_PORT	GPIOA
 /* Use PC14 for a "dummy" uart led. So we can observere at least with scope*/
-#define LED_PORT_UART	GPIOC
-#define LED_UART	GPIO14
+#define LED_PORT_UART	GPIOA
+#define LED_UART	GPIO9
 
 #define PLATFORM_HAS_TRACESWO	1
 #define NUM_TRACE_PACKETS		(128)		/* This is an 8K buffer */
