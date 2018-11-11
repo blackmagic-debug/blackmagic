@@ -91,7 +91,7 @@
 } while(0)
 #define UART_PIN_SETUP() \
 	gpio_set_mode(USBUSART_PORT, GPIO_MODE_OUTPUT_2_MHZ, \
-	              GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, USBUSART_TX_PIN);
+	              GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, USBUSART_TX_PIN | USBUSART_RX_PIN);
 
 #define USB_DRIVER      st_usbfs_v1_usb_driver
 #define USB_IRQ	        NVIC_USB_LP_CAN_RX0_IRQ
@@ -111,6 +111,7 @@
 #define USBUSART_CLK RCC_USART2
 #define USBUSART_PORT GPIOA
 #define USBUSART_TX_PIN GPIO2
+#define USBUSART_RX_PIN GPIO3
 #define USBUSART_ISR usart2_isr
 #define USBUSART_TIM TIM4
 #define USBUSART_TIM_CLK_EN() rcc_periph_clock_enable(RCC_TIM4)
