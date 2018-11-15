@@ -31,6 +31,7 @@
 #include "target.h"
 #include "target_internal.h"
 #include "cortexm.h"
+#include "platform.h"
 
 #include <unistd.h>
 
@@ -532,6 +533,11 @@ static void cortexm_reset(target *t)
 
 	/* Reset DFSR flags */
 	target_mem_write32(t, CORTEXM_DFSR, CORTEXM_DFSR_RESETALL);
+
+	/* 1ms delay to ensure that things such as the stm32f1 HSI clock have started
+	 * up fully.
+	 */
+	platform_delay(1);
 }
 
 static void cortexm_halt_request(target *t)
