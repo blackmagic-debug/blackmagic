@@ -202,8 +202,10 @@ static int stm32f1_flash_erase(struct target_flash *f,
 
 		/* Read FLASH_SR to poll for BSY bit */
 		while (target_mem_read32(t, FLASH_SR) & FLASH_SR_BSY)
-			if(target_check_error(t))
+			if(target_check_error(t)) {
+				DEBUG("stm32f1 flash erase: comm error\n");
 				return -1;
+			}
 
 		len -= f->blocksize;
 		addr += f->blocksize;
@@ -211,8 +213,10 @@ static int stm32f1_flash_erase(struct target_flash *f,
 
 	/* Check for error */
 	sr = target_mem_read32(t, FLASH_SR);
-	if ((sr & SR_ERROR_MASK) || !(sr & SR_EOP))
+	if ((sr & SR_ERROR_MASK) || !(sr & SR_EOP)) {
+		DEBUG("stm32f1 flash erase error 0x%" PRIx32 "\n", sr);
 		return -1;
+	}
 
 	return 0;
 }
