@@ -26,12 +26,18 @@ SRC += 	cdcacm.c	\
 	serialno.c	\
 	timing.c	\
 	timing_stm32.c	\
+	traceswoasync.c	\
+	platform_common.c \
 
-all:	blackmagic.bin blackmagic_dfu.bin blackmagic_dfu.hex
+all:	blackmagic.bin blackmagic_dfu.bin blackmagic_dfu.hex dfu_upgrade.bin dfu_upgrade.hex
 
-blackmagic_dfu: usbdfu.o dfucore.o dfu_f1.o
+blackmagic_dfu: usbdfu.o dfucore.o dfu_f1.o platform_common.o
 	@echo "  LD      $@"
 	$(Q)$(CC) $^ -o $@ $(LDFLAGS_BOOT)
+
+dfu_upgrade: dfu_upgrade.o dfucore.o dfu_f1.o platform_common.o
+	@echo "  LD      $@"
+	$(Q)$(CC) $^ -o $@ $(LDFLAGS)
 
 host_clean:
 	-$(Q)$(RM) blackmagic.bin blackmagic_dfu blackmagic_dfu.bin blackmagic_dfu.hex

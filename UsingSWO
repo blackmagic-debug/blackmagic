@@ -25,13 +25,13 @@ the it is a pretty long run before it becomes a problem).
 
 Note that the baudrate equation means there are only certain speeds
 available. The highest half dozen are;
-
-1    	   4.50  Mbps
-2	   2.25  Mbps
-3	   1.50  Mbps
-4	   1.125 Mbps
-5	   0.900 Mbps
-6          0.750 Mbps
+SWO uses   USART1(stlink)  USART2(swlink)
+1    	   4.50  Mbps      2.25   Mbps
+2	   2.25  Mbps 	   1.125  Mbps
+3	   1.50  Mbps 	   0.75   Mbps
+4	   1.125 Mbps 	   0.5635 Mbps
+5	   0.900 Mbps 	   0.45   Mbps
+6	   0.750 Mbps      0.375  Mbps
 
 ...the USART will cope with some timing slip, but it's advisible to stay as
 close to these values as you can. As the speed comes down the spread between
@@ -50,13 +50,14 @@ An example for a STM32F103 for the UART (NRZ) data format that we use;
     AFIO->MAPR |= (2 << 24); // Disable JTAG to release TRACESWO
     DBGMCU->CR |= DBGMCU_CR_TRACE_IOEN; // Enable IO trace pins
 
-    *((volatile unsigned *)(0xE0040010)) = 31;  // Output bits at 72000000/(31+1)=2.25MHz.
-    *((volatile unsigned *)(0xE00400F0)) = 2;   // Use Async mode (1 for RZ/Manchester)
-    *((volatile unsigned *)(0xE0040304)) = 0;   // Disable formatter
+    TPI->ACPR = 31;  // Output bits at 72000000/(31+1)=2.25MHz.
+    TPI->SPPR = 2;   // Use Async mode (1 for RZ/Manchester)
+    TPI-FFCR  = 0;   // Disable formatter
 
     /* Configure instrumentation trace macroblock */
     ITM->LAR = 0xC5ACCE55;
-    ITM->TCR = 0x00010005;
+    ITM->TCR = 1 << ITM_TCR_TraceBusID_Pos | ITM_TCR_SYNCENA_Msk |
+               ITM_TCR_ITMENA_Msk;
     ITM->TER = 0xFFFFFFFF; // Enable all stimulus ports
 
 Code for the STM32L476 might look like:
@@ -234,7 +235,7 @@ can pick this up.  Success has been had with CP2102 dongles at up to 921600
 baud.
 
 To use this mode just connect SWO to the RX pin of your dongle, and start
-swolisten with parmeters representing the speed and port. An example;
+swolisten with parameters representing the speed and port. An example;
 
 >./swolisten -p /dev/cu.SLAB_USBtoUART -v -b swo/ -s 921600
 
