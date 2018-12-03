@@ -136,5 +136,6 @@ lpc11xx_probe(target *t)
 		lpc11xx_add_flash(t, 0x00000000, 0x20000, 0x1000);
 		return true;
 	}
+
 	return false;
 }
