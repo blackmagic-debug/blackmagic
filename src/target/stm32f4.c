@@ -134,6 +134,7 @@ static void stm32f4_add_flash(target *t,
                               uint32_t addr, size_t length, size_t blocksize,
                               unsigned int base_sector, int split)
 {
+	if (length == 0) return;
 	struct stm32f4_flash *sf = calloc(1, sizeof(*sf));
 	struct target_flash *f = &sf->f;
 	f->start = addr;
@@ -333,7 +334,9 @@ static bool stm32f4_attach(target *t)
 		stm32f4_add_flash(t, 0x8020000, 0x20000, 0x20000, 4, split);
 		stm32f4_add_flash(t, 0x8040000, remains, 0x40000, 5, split);
 	} else {
-		uint32_t remains = banksize - 0x20000; /* 128 k in small sectors.*/
+		uint32_t remains = 0;
+		if (banksize > 0x20000)
+			remains = banksize - 0x20000; /* 128 k in small sectors.*/
 		if (is_f7) {
 			stm32f4_add_flash(t, ITCM_BASE, 0x10000,  0x4000,  0, split);
 			stm32f4_add_flash(t, 0x0210000, 0x10000, 0x10000,  4, split);
