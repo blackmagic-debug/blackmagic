@@ -74,6 +74,8 @@ const struct command_s nrf51_read_cmd_list[] = {
 #define NRF51_FICR_DEVICEADDRTYPE		(NRF51_FICR + 0x0A0)
 #define NRF51_FICR_DEVICEADDR_LOW		(NRF51_FICR + 0x0A4)
 #define NRF51_FICR_DEVICEADDR_HIGH		(NRF51_FICR + 0x0A8)
+#define NRF52_PART_INFO					(NRF51_FICR + 0x100)
+#define NRF52_INFO_RAM					(NRF51_FICR + 0x10C)
 
 /* User Information Configuration Registers (UICR) */
 #define NRF51_UICR				0x10001000
@@ -103,87 +105,42 @@ static void nrf51_add_flash(target *t,
 
 bool nrf51_probe(target *t)
 {
-	t->idcode = target_mem_read32(t, NRF51_FICR_CONFIGID) & 0xFFFF;
-
-	switch (t->idcode) {
-	case 0x001D: /* nRF51822 (rev 1) QFAA CA/C0 */
-	case 0x001E: /* nRF51422 (rev 1) QFAA CA */
-	case 0x0020: /* nRF51822 (rev 1) CEAA BA */
-	case 0x0024: /* nRF51422 (rev 1) QFAA C0 */
-	case 0x002A: /* nRF51822 (rev 2) QFAA FA0 */
-	case 0x004A: /* nRF51822 (rev 3) QFAA G1 */
-	case 0x002D: /* nRF51422 (rev 2) QFAA DAA */
-	case 0x002E: /* nRF51422 (rev 2) QFAA E0 */
-	case 0x002F: /* nRF51822 (rev 1) CEAA B0 */
-	case 0x0031: /* nRF51422 (rev 1) CEAA A0A */
-	case 0x003C: /* nRF51822 (rev 2) QFAA G0 */
-	case 0x0057: /* nRF51422 (rev 2) QFAA G2 */
-	case 0x0040: /* nRF51822 (rev 2) CEAA CA0 */
-	case 0x0044: /* nRF51822 (rev 2) QFAA GC0 */
-	case 0x0047: /* nRF51822 (rev 2) CEAA DA0 */
-	case 0x004D: /* nRF51822 (rev 2) CEAA D00 */
-	case 0x0050: /* nRF51422 (rev 2) CEAA B0 */
-	case 0x0072: /* nRF51822 (rev 3) QFAA H0 */
-	case 0x0073: /* nRF51422 (rev 3) QFAA F0 */
-	case 0x0079: /* nRF51822 (rev 3) CEAA E0 */
-	case 0x007A: /* nRF51422 (rev 3) CEAA C0 */
-	case 0x008F: /* nRF51822 (rev 3) QFAA H1 See https://devzone.nordicsemi.com/question/97769/can-someone-conform-the-config-id-code-for-the-nrf51822qfaah1/ */
-	case 0x00D1: /* nRF51822 (rev 3) QFAA H2 */
-	case 0x0114: /* nRF51802 (rev ?) QFAA A1 */
-		t->driver = "Nordic nRF51";
-		target_add_ram(t, 0x20000000, 0x4000);
-		nrf51_add_flash(t, 0x00000000, 0x40000, NRF51_PAGE_SIZE);
-		nrf51_add_flash(t, NRF51_UICR, 0x100, 0x100);
-		target_add_commands(t, nrf51_cmd_list, "nRF51");
+	uint32_t page_size = target_mem_read32(t, NRF51_FICR_CODEPAGESIZE);
+	uint32_t code_size = target_mem_read32(t, NRF51_FICR_CODESIZE);
+	/* Check that page_size and code_size makes sense */
+	if ((page_size == 0xffffffff) || (code_size == 0xffffffff) ||
+		(page_size ==  0) || (code_size ==  0) ||
+		(page_size > 0x10000) || (code_size > 0x10000))
+		return false;
+	/* Check that device identifier makes sense */
+	uint32_t uid0 = target_mem_read32(t, NRF51_FICR_DEVICEID_LOW);
+	uint32_t uid1 = target_mem_read32(t, NRF51_FICR_DEVICEID_HIGH);
+	if ((uid0 == 0xffffffff) || (uid1 == 0xffffffff) ||
+		(uid0 ==  0) || (uid1 ==  0))
+		return false;
+	/* Test for NRF52 device*/
+	uint32_t info_part = target_mem_read32(t, NRF52_PART_INFO);
+	if ((info_part != 0xffffffff) && (info_part != 0) &&
+		((info_part & 0x00ff000) == 0x52000)) {
+		uint32_t ram_size = target_mem_read32(t, NRF52_INFO_RAM);
+		t->idcode = info_part;
+		t->driver = "Nordic nRF52";
+		target_add_ram(t, 0x20000000, ram_size * 1024);
+		nrf51_add_flash(t, 0, page_size * code_size, page_size);
+		nrf51_add_flash(t, NRF51_UICR, page_size, page_size);
+		target_add_commands(t, nrf51_cmd_list, "nRF52");
 		return true;
-	case 0x0026: /* nRF51822 (rev 1) QFAB AA */
-	case 0x0027: /* nRF51822 (rev 1) QFAB A0 */
-	case 0x004C: /* nRF51822 (rev 2) QFAB B0 */
-	case 0x0061: /* nRF51422 (rev 2) QFAB A00 */
-	case 0x007B: /* nRF51822 (rev 3) QFAB C0 */
-	case 0x007C: /* nRF51422 (rev 3) QFAB B0 */
-	case 0x007D: /* nRF51822 (rev 3) CDAB A0 */
-	case 0x007E: /* nRF51422 (rev 3) CDAB A0 */
+	} else {
 		t->driver = "Nordic nRF51";
-		target_add_ram(t, 0x20000000, 0x4000);
-		nrf51_add_flash(t, 0x00000000, 0x20000, NRF51_PAGE_SIZE);
-		nrf51_add_flash(t, NRF51_UICR, 0x100, 0x100);
-		target_add_commands(t, nrf51_cmd_list, "nRF51");
-		return true;
-	case 0x0071: /* nRF51422 (rev 3) QFAC AB */
-	case 0x0083: /* nRF51822 (rev 3) QFAC A0 */
-	case 0x0084: /* nRF51422 (rev 3) QFAC A1 */
-	case 0x0085: /* nRF51422 (rev 3) QFAC A0 */
-	case 0x0086: /* nRF51422 (rev 3) QFAC A1 */
-	case 0x0087: /* nRF51822 (rev 3) CFAC A0 */
-	case 0x0088: /* nRF51422 (rev 3) CFAC A0 */
-		t->driver = "Nordic nRF51";
+		/* Use the biggest RAM size seen in NRF51 fammily.
+		 * IDCODE is kept as '0', as deciphering is hard and
+		 * there is later no usage.*/
 		target_add_ram(t, 0x20000000, 0x8000);
-		nrf51_add_flash(t, 0x00000000, 0x40000, NRF51_PAGE_SIZE);
-		nrf51_add_flash(t, NRF51_UICR, 0x100, 0x100);
+		nrf51_add_flash(t, 0, page_size * code_size, page_size);
+		nrf51_add_flash(t, NRF51_UICR, page_size, page_size);
 		target_add_commands(t, nrf51_cmd_list, "nRF51");
-		return true;
-	case 0x00AC: /* nRF52832 Preview QFAA BA0 */
-	case 0x00C7: /* nRF52832 (rev 1) QFAA B00 */
-	case 0x00E3: /* nRF52832 (rev 1) CIAA B?? */
-	case 0x0139: /* nRF52832 (rev 2) ??AA B?0 */
-	case 0x014F: /* nRF52832 (rev 2) CIAA E1  */
-		t->driver = "Nordic nRF52";
-		target_add_ram(t, 0x20000000, 64*1024);
-		nrf51_add_flash(t, 0x00000000, 512*1024, NRF52_PAGE_SIZE);
-		nrf51_add_flash(t, NRF51_UICR, 0x100, 0x100);
-		target_add_commands(t, nrf51_cmd_list, "nRF52");
-		return true;
-	case 0x00EB: /* nRF52840 Preview QIAA AA0 */
-	case 0x0150: /* nRF52840 QIAA C0 */
-		t->driver = "Nordic nRF52";
-		target_add_ram(t, 0x20000000, 256*1024);
-		nrf51_add_flash(t, 0x00000000, 1024*1024, NRF52_PAGE_SIZE);
-		nrf51_add_flash(t, NRF51_UICR, 0x100, 0x100);
-		target_add_commands(t, nrf51_cmd_list, "nRF52");
 		return true;
 	}
-
 	return false;
 }
 
