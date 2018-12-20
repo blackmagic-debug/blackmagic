@@ -223,7 +223,6 @@ bool sam4l_probe(target *t)
 {
 	size_t	ram_size, flash_size;
 
-	DEBUG("\nSAM4L: Probe function called\n");
 	t->idcode = target_mem_read32(t, SAM4L_CHIPID_CIDR);
 	if (((t->idcode >> CHIPID_CIDR_ARCH_SHIFT) & CHIPID_CIDR_ARCH_MASK) == SAM4L_ARCH) {
 		t->driver = "Atmel SAM4L";
