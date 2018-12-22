@@ -83,13 +83,6 @@ const struct command_s nrf51_read_cmd_list[] = {
 #define NRF51_PAGE_SIZE 1024
 #define NRF52_PAGE_SIZE 4096
 
-#define SRAM_BASE          0x20000000
-#define STUB_BUFFER_BASE   ALIGN(SRAM_BASE + sizeof(nrf51_flash_write_stub), 4)
-
-static const uint16_t nrf51_flash_write_stub[] = {
-#include "flashstub/nrf51.stub"
-};
-
 static void nrf51_add_flash(target *t,
                             uint32_t addr, size_t length, size_t erasesize)
 {
@@ -192,22 +185,18 @@ static int nrf51_flash_write(struct target_flash *f,
 
 	/* Enable write */
 	target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_WEN);
-
 	/* Poll for NVMC_READY */
 	while (target_mem_read32(t, NRF51_NVMC_READY) == 0)
 		if(target_check_error(t))
 			return -1;
-
-	/* Write stub and data to target ram and call stub */
-	target_mem_write(t, SRAM_BASE, nrf51_flash_write_stub,
-	                 sizeof(nrf51_flash_write_stub));
-	target_mem_write(t, STUB_BUFFER_BASE, src, len);
-	int ret = cortexm_run_stub(t, SRAM_BASE, dest,
-	                           STUB_BUFFER_BASE, len, 0);
+	target_mem_write(t, dest, src, len);
+	/* Poll for NVMC_READY */
+	while (target_mem_read32(t, NRF51_NVMC_READY) == 0)
+		if(target_check_error(t))
+			return -1;
 	/* Return to read-only */
 	target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_REN);
-
-	return ret;
+	return 0;
 }
 
 static bool nrf51_cmd_erase_all(target *t)
