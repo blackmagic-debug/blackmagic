@@ -281,15 +281,15 @@ static bool nrf51_cmd_read_help(target *t)
 static bool nrf51_cmd_read(target *t, int argc, const char *argv[])
 {
 	const struct command_s *c;
-
-	for(c = nrf51_read_cmd_list; c->cmd; c++) {
-		/* Accept a partial match as GDB does.
-		 * So 'mon ver' will match 'monitor version'
-		 */
-		if(!strncmp(argv[1], c->cmd, strlen(argv[1])))
-			return !c->handler(t, argc - 1, &argv[1]);
+	if (argc > 1) {
+		for(c = nrf51_read_cmd_list; c->cmd; c++) {
+			/* Accept a partial match as GDB does.
+			 * So 'mon ver' will match 'monitor version'
+			 */
+			if(!strncmp(argv[1], c->cmd, strlen(argv[1])))
+				return !c->handler(t, argc - 1, &argv[1]);
+		}
 	}
-
 	return nrf51_cmd_read_help(t);
 }
 
