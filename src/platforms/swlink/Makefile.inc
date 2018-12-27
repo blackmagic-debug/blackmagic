@@ -21,6 +21,7 @@ endif
 VPATH += platforms/stm32
 
 SRC += 	cdcacm.c	\
+        fifo.c          \
 	usbuart.c 	\
 	serialno.c	\
 	timing.c	\

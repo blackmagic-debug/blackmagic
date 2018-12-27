@@ -14,6 +14,7 @@ LDFLAGS = -nostartfiles -lc $(CPU_FLAGS) -nodefaultlibs -T$(LINKER_SCRIPT) -Wl,-
 VPATH += platforms/tm4c
 
 SRC +=	cdcacm.c	\
+        fifo.c          \
 	usbuart.c	\
 	timing.c        \
 	traceswo.o
