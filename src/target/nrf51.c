@@ -168,6 +168,7 @@ bool nrf51_probe(target *t)
 	case 0x00E3: /* nRF52832 (rev 1) CIAA B?? */
 	case 0x0139: /* nRF52832 (rev 2) ??AA B?0 */
 	case 0x014F: /* nRF52832 (rev 2) CIAA E1  */
+	case 0x0159: /* nRF52832 (?) CIAA ?  */
 		t->driver = "Nordic nRF52";
 		target_add_ram(t, 0x20000000, 64*1024);
 		nrf51_add_flash(t, 0x00000000, 512*1024, NRF52_PAGE_SIZE);
