@@ -137,8 +137,9 @@ static void stm32l4_add_flash(target *t,
 }
 
 enum ID_STM32L4 {
-	ID_STM32L43  = 0x435, /* RM0394, Rev.3 */
-	ID_STM32L45  = 0x462, /* RM0394, Rev.3 */
+	ID_STM32L43  = 0x435, /* RM0394, Rev.4 */
+	ID_STM32L45  = 0x462, /* RM0394, Rev.4 */
+	ID_STM32L41  = 0x464, /* RM0394, Rev.4 */
 	ID_STM32L47  = 0x415, /* RM0351, Rev.5 */
 	ID_STM32G07  = 0x460, /* RM0444/454, Rev.1 */
 	ID_STM32L49  = 0x461, /* RM0351, Rev.5 */
@@ -165,6 +166,11 @@ bool stm32l4_probe(target *t)
 		designator = "STM32G07";
 		is_stm32g0 = true;
 		sram1_size =  36;
+		break;
+	case ID_STM32L41:
+		designator = "STM32L41x";
+		sram1_size =  32;
+		sram2_size =  8;
 		break;
 	case ID_STM32L43:
 		designator = "STM32L43x";
