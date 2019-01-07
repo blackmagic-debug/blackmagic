@@ -74,7 +74,7 @@ lpc11xx_probe(target *t)
 	case 0x1440102B:	/* lpc1114 */
 	case 0x0A40902B:
 	case 0x1A40902B:
-	case 0x2058002B:	/* lpc1115 */
+	case 0x00050080:	/* lpc1115 and lpc1115L (not the XL version. See UM10398 Rev12.4 Chapter 3.1  ) */
 	case 0x1431102B:	/* lpc11c22 */
 	case 0x1430102B:	/* lpc11c24 */
 	case 0x095C802B:	/* lpc11u12x/201 */
@@ -127,6 +127,11 @@ lpc11xx_probe(target *t)
 	case 0x00007C44:	/* LPC11U37HFBD64/401  */
 	case 0x00007C40:	/* LPC11U37FBD64/501  */
 		t->driver = "LPC11U3x";
+		target_add_ram(t, 0x10000000, 0x2000);
+		lpc11xx_add_flash(t, 0x00000000, 0x20000, 0x1000);
+		return true;
+	case 0x00050080:	/* lpc1115XL */
+		t->driver = "LPC1100XL";
 		target_add_ram(t, 0x10000000, 0x2000);
 		lpc11xx_add_flash(t, 0x00000000, 0x20000, 0x1000);
 		return true;
