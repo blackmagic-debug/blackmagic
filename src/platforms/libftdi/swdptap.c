@@ -24,7 +24,6 @@
 
 #include <stdio.h>
 #include <assert.h>
-#include <ftdi.h>
 
 #include "general.h"
 #include "swdptap.h"
@@ -186,7 +185,7 @@ uint32_t swdptap_seq_in(int ticks)
 void swdptap_seq_out(uint32_t MS, int ticks)
 {
 	uint8_t cmd[15];
-	uint index = 0;
+	unsigned int index = 0;
 	swdptap_turnaround(0);
 	while (ticks) {
 		cmd[index++] = MPSSE_TMS_SHIFT;
@@ -209,7 +208,7 @@ void swdptap_seq_out_parity(uint32_t MS, int ticks)
 	uint8_t parity = 0;
 	int steps = ticks;
 	uint8_t cmd[18];
-	uint index = 0;
+	unsigned int index = 0;
 	uint32_t data = MS;
 	swdptap_turnaround(0);
 	while (steps) {

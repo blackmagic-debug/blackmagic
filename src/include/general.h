@@ -29,6 +29,7 @@
 #include <stdio.h>
 #include <stddef.h>
 #include <inttypes.h>
+#include <sys/types.h>
 
 #include "platform.h"
 #include "platform_support.h"
@@ -43,6 +44,16 @@
 #define MIN(x, y)  (((x) < (y)) ? (x) : (y))
 #undef MAX
 #define MAX(x, y)  (((x) > (y)) ? (x) : (y))
+
+#ifdef _WIN32
+#  ifdef _WIN64
+#    define PRI_SIZET PRIu64
+#  else
+#    define PRI_SIZET PRIu32
+#  endif
+#else
+#  define PRI_SIZET "zu"
+#endif
 
 #endif
 

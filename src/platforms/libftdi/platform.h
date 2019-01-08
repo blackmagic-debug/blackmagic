@@ -21,11 +21,11 @@
 #ifndef __PLATFORM_H
 #define __PLATFORM_H
 
-#include <ftdi.h>
+#include <libftdi1/ftdi.h>
 
 #include "timing.h"
 
-#ifndef WIN32
+#ifndef _WIN32
 #	include <alloca.h>
 #else
 #	ifndef alloca

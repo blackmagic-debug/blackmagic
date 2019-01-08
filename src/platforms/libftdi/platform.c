@@ -286,7 +286,7 @@ int platform_buffer_read(uint8_t *data, int size)
 	return size;
 }
 
-#ifdef WIN32
+#if defined(_WIN32) && !defined(__MINGW32__)
 #warning "This vasprintf() is dubious!"
 int vasprintf(char **strp, const char *fmt, va_list ap)
 {
