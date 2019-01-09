@@ -108,7 +108,10 @@ static int stm32l4_flash_write(struct target_flash *f,
 #define OR_DB1M 		(1 << 21)
 #define OR_DBANK 		(1 << 22)
 
-#define DBGMCU_IDCODE	0xE0042000
+enum {
+        STM32G0_DBGMCU_IDCODE_PHYS = 0x40015800,
+        STM32L4_DBGMCU_IDCODE_PHYS = 0xe0042000,
+};
 #define FLASH_SIZE_REG  0x1FFF75E0
 
 struct stm32l4_flash {
@@ -134,9 +137,11 @@ static void stm32l4_add_flash(target *t,
 }
 
 enum ID_STM32L4 {
-	ID_STM32L43  = 0x435, /* RM0394, Rev.3 */
-	ID_STM32L45  = 0x462, /* RM0394, Rev.3 */
+	ID_STM32L43  = 0x435, /* RM0394, Rev.4 */
+	ID_STM32L45  = 0x462, /* RM0394, Rev.4 */
+	ID_STM32L41  = 0x464, /* RM0394, Rev.4 */
 	ID_STM32L47  = 0x415, /* RM0351, Rev.5 */
+	ID_STM32G07  = 0x460, /* RM0444/454, Rev.1 */
 	ID_STM32L49  = 0x461, /* RM0351, Rev.5 */
 	ID_STM32L4R  = 0x470, /* RM0432, Rev.5 */
 };
@@ -145,13 +150,28 @@ bool stm32l4_probe(target *t)
 {
 	const char* designator = NULL;
 	bool dual_bank = false;
+	bool is_stm32g0 = false;
 	uint32_t size;
 	uint16_t sram1_size = 0;
 	uint16_t sram2_size = 0;
 	uint16_t sram3_size = 0;
 
-	uint32_t idcode = target_mem_read32(t, DBGMCU_IDCODE) & 0xFFF;
+	uint32_t idcode_reg = STM32L4_DBGMCU_IDCODE_PHYS;
+	ADIv5_AP_t *ap = cortexm_ap(t);
+	if (ap->dp->idcode == 0x0BC11477)
+		idcode_reg = STM32G0_DBGMCU_IDCODE_PHYS;
+	uint32_t idcode = target_mem_read32(t, idcode_reg) & 0xfff;
 	switch(idcode) {
+	case ID_STM32G07:
+		designator = "STM32G07";
+		is_stm32g0 = true;
+		sram1_size =  36;
+		break;
+	case ID_STM32L41:
+		designator = "STM32L41x";
+		sram1_size =  32;
+		sram2_size =  8;
+		break;
 	case ID_STM32L43:
 		designator = "STM32L43x";
 		sram1_size =  48;
@@ -186,11 +206,15 @@ bool stm32l4_probe(target *t)
 		return false;
 	}
 	t->driver = designator;
-	target_add_ram(t, 0x10000000, sram2_size << 10);
-	/* All L4 beside L47 alias SRAM2 after SRAM1.*/
-	uint32_t ramsize = (idcode == ID_STM32L47)?
-		sram1_size : (sram1_size + sram2_size + sram3_size);
-	target_add_ram(t, 0x20000000, ramsize << 10);
+	if (is_stm32g0) {
+		target_add_ram(t, 0x20000000, sram1_size << 10);
+	} else {
+		target_add_ram(t, 0x10000000, sram2_size << 10);
+		/* All L4 beside L47 alias SRAM2 after SRAM1.*/
+		uint32_t ramsize = (idcode == ID_STM32L47)?
+			sram1_size : (sram1_size + sram2_size + sram3_size);
+		target_add_ram(t, 0x20000000, ramsize << 10);
+	}
 	size = (target_mem_read32(t, FLASH_SIZE_REG) & 0xffff);
 	if (dual_bank) {
 		uint32_t options =  target_mem_read32(t, FLASH_OPTR);
@@ -335,11 +359,16 @@ static bool stm32l4_cmd_erase_bank2(target *t)
 	return stm32l4_cmd_erase(t, FLASH_CR_MER2);
 }
 
-static const uint8_t i2offset[9] = {
+static const uint8_t l4_i2offset[9] = {
 	0x20, 0x24, 0x28, 0x2c, 0x30, 0x44, 0x48, 0x4c, 0x50
 };
 
-static bool stm32l4_option_write(target *t, const uint32_t *values, int len)
+static const uint8_t g0_i2offset[7] = {
+	0x20, 0x24, 0x28, 0x2c, 0x30, 0x34, 0x38
+};
+
+static bool stm32l4_option_write(
+	target *t,const uint32_t *values, int len, const uint8_t *i2offset)
 {
 	tc_printf(t, "Device will loose connection. Rescan!\n");
 	stm32l4_flash_unlock(t);
@@ -384,12 +413,17 @@ static bool stm32l4_cmd_option(target *t, int argc, char *argv[])
 	int len;
 	bool res = false;
 
-	if (t->idcode == 0x435) /* L43x */
+	const uint8_t *i2offset = l4_i2offset;
+	if (t->idcode == 0x435) {/* L43x */
 		len = 5;
-	else
+	} else if (t->idcode == 0x460) {/* G07x */
+		i2offset = g0_i2offset;
+		len = 7;
+	} else {
 		len = 9;
+	}
 	if ((argc == 2) && !strcmp(argv[1], "erase")) {
-		res = stm32l4_option_write(t, values, len);
+		res = stm32l4_option_write(t, values, len, i2offset);
 	} else if ((argc >  2) && !strcmp(argv[1], "write")) {
 		int i;
 		for (i = 2; i < argc; i++)
@@ -402,7 +436,7 @@ static bool stm32l4_cmd_option(target *t, int argc, char *argv[])
 			values[0]++;
 			tc_printf(t, "Changing Level 2 request to Level 1!");
 		}
-		res = stm32l4_option_write(t, values, len);
+		res = stm32l4_option_write(t, values, len, i2offset);
 	} else {
 		tc_printf(t, "usage: monitor option erase\n");
 		tc_printf(t, "usage: monitor option write <value> ...\n");
