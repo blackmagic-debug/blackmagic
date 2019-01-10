@@ -70,6 +70,8 @@ struct cortexa_priv {
 	uint16_t hw_breakpoint_mask;
 	uint32_t bcr0;
 	uint32_t bvr0;
+	unsigned hw_watchpoint_max;
+	uint16_t hw_watchpoint_mask;
 	bool mmu_fault;
 };
 
@@ -112,6 +114,17 @@ struct cortexa_priv {
 #define DBGBCR_BAS_LOW_HW        (0x3 << 5)
 #define DBGBCR_BAS_HIGH_HW       (0xc << 5)
 #define DBGBCR_EN                (1 << 0)
+
+#define DBGWVR(i)                (96+(i))
+#define DBGWCR(i)                (112+(i))
+#define DBGWCR_LSC_LOAD          (0b01 << 3)
+#define DBGWCR_LSC_STORE         (0b10 << 3)
+#define DBGWCR_LSC_ANY           (0b11 << 3)
+#define DBGWCR_BAS_BYTE          (0b0001 << 5)
+#define DBGWCR_BAS_HALFWORD      (0b0011 << 5)
+#define DBGWCR_BAS_WORD          (0b1111 << 5)
+#define DBGWCR_PAC_ANY           (0b11 << 1)
+#define DBGWCR_EN                (1 << 0)
 
 /* Instruction encodings for accessing the coprocessor interface */
 #define MCR 0xee000010
@@ -337,6 +350,7 @@ bool cortexa_probe(ADIv5_AP_t *apb, uint32_t debug_base)
 	adiv5_ap_write(apb, ADIV5_AP_CSW, csw);
 	uint32_t dbgdidr = apb_read(t, DBGDIDR);
 	priv->hw_breakpoint_max = ((dbgdidr >> 24) & 15)+1;
+	priv->hw_watchpoint_max = ((dbgdidr >> 28) & 15)+1;
 
 	t->check_error = cortexa_check_error;
 
@@ -697,6 +711,49 @@ static int cortexa_breakwatch_set(target *t, struct breakwatch *bw)
 		}
 
 		return 0;
+
+	case TARGET_WATCH_WRITE:
+	case TARGET_WATCH_READ:
+	case TARGET_WATCH_ACCESS:
+		for (i = 0; i < priv->hw_watchpoint_max; i++)
+			if ((priv->hw_watchpoint_mask & (1 << i)) == 0)
+				break;
+
+		if (i == priv->hw_watchpoint_max)
+			return -1;
+
+		bw->reserved[0] = i;
+		priv->hw_watchpoint_mask |= (1 << i);
+
+		{
+			uint32_t wcr = DBGWCR_PAC_ANY | DBGWCR_EN;
+			uint32_t bas = 0;
+			switch(bw->size) { /* Convert bytes size to BAS bits */
+				case 1: bas = DBGWCR_BAS_BYTE; break;
+				case 2: bas = DBGWCR_BAS_HALFWORD; break;
+				case 4: bas = DBGWCR_BAS_WORD; break;
+				default:
+					return -1;
+			}
+			/* Apply shift based on address LSBs */
+			wcr |= bas << (bw->addr & 3);
+
+			switch (bw->type) { /* Convert gdb type */
+				case TARGET_WATCH_WRITE: wcr |= DBGWCR_LSC_STORE; break;
+				case TARGET_WATCH_READ: wcr |= DBGWCR_LSC_LOAD; break;
+				case TARGET_WATCH_ACCESS: wcr |= DBGWCR_LSC_ANY; break;
+				default:
+					return -1;
+			}
+
+			apb_write(t, DBGWCR(i), wcr);
+			apb_write(t, DBGWVR(i), bw->addr & ~3);
+			DEBUG("Watchpoint set WCR = 0x%08x, WVR = %08x\n",
+				apb_read(t, DBGWCR(i)),
+				apb_read(t, DBGWVR(i)));
+		}
+		return 0;
+
 	default:
 		return 1;
 	}
@@ -723,6 +780,12 @@ static int cortexa_breakwatch_clear(target *t, struct breakwatch *bw)
 		apb_write(t, DBGBCR(i), 0);
 		if (i == 0)
 			priv->bcr0 = 0;
+		return 0;
+	case TARGET_WATCH_WRITE:
+	case TARGET_WATCH_READ:
+	case TARGET_WATCH_ACCESS:
+		priv->hw_watchpoint_mask &= ~(1 << i);
+		apb_write(t, DBGWCR(i), 0);
 		return 0;
 	default:
 		return 1;
