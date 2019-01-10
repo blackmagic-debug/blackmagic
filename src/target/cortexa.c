@@ -97,6 +97,8 @@ struct cortexa_priv {
 #define DBGDSCR_SDABORT_L        (1 << 6)
 #define DBGDSCR_MOE_MASK         (0xf << 2)
 #define DBGDSCR_MOE_HALT_REQ     (0x0 << 2)
+#define DBGDSCR_MOE_WATCH_ASYNC  (0x2 << 2)
+#define DBGDSCR_MOE_WATCH_SYNC   (0xa << 2)
 #define DBGDSCR_RESTARTED        (1 << 1)
 #define DBGDSCR_HALTED           (1 << 0)
 
@@ -567,8 +569,6 @@ static void cortexa_halt_request(target *t)
 
 static enum target_halt_reason cortexa_halt_poll(target *t, target_addr *watch)
 {
-	(void)watch; /* No watchpoint support yet */
-
 	volatile uint32_t dbgdscr = 0;
 	volatile struct exception e;
 	TRY_CATCH (e, EXCEPTION_ALL) {
@@ -595,10 +595,29 @@ static enum target_halt_reason cortexa_halt_poll(target *t, target_addr *watch)
 	apb_write(t, DBGDSCR, dbgdscr);
 
 	/* Find out why we halted */
-	enum target_halt_reason reason;
+	enum target_halt_reason reason = TARGET_HALT_BREAKPOINT;
 	switch (dbgdscr & DBGDSCR_MOE_MASK) {
 	case DBGDSCR_MOE_HALT_REQ:
 		reason = TARGET_HALT_REQUEST;
+		break;
+	case DBGDSCR_MOE_WATCH_ASYNC:
+	case DBGDSCR_MOE_WATCH_SYNC:
+		/* How do we know which watchpoint was hit? */
+		/* If there is only one set, it's that */
+		for (struct breakwatch *bw = t->bw_list; bw; bw = bw->next) {
+			if ((bw->type != TARGET_WATCH_READ) &&
+			    (bw->type != TARGET_WATCH_WRITE) &&
+			    (bw->type != TARGET_WATCH_ACCESS))
+				continue;
+			if (reason == TARGET_HALT_WATCHPOINT) {
+				/* More than one watchpoint set,
+				 * we can't tell which triggered. */
+				reason = TARGET_HALT_BREAKPOINT;
+				break;
+			}
+			*watch = bw->addr;
+			reason = TARGET_HALT_WATCHPOINT;
+		}
 		break;
 	default:
 		reason = TARGET_HALT_BREAKPOINT;
