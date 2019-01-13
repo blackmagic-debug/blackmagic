@@ -22,15 +22,8 @@ bool synwit_probe(target *t);
 
 static bool synwit_cmd_erase_mass(target *t);
 
-static bool synwit_cmd_write_test(target *t);
-static bool synwit_cmd_erase_test(target *t);
-
-
-
 const struct command_s synwit_cmd_list[] = {
 	{"erase_mass", (cmd_handler)synwit_cmd_erase_mass, "Erase entire flash memory"},
-	{"test1", (cmd_handler)synwit_cmd_write_test, "write test"},
-	{"test2", (cmd_handler)synwit_cmd_erase_test, "erase test"},
 	{NULL, NULL, NULL}
 };
 
@@ -44,10 +37,7 @@ static void synwit_add_flash(target *t, uint32_t addr, size_t length, size_t era
 	f->blocksize = erasesize;
 	f->erase = synwit_flash_erase;
 	f->write = synwit_flash_write;
-//	f->done	= target_flash_done_buffered;
 	f->buf_size = erasesize;
-	f->write_buf = synwit_flash_write;
-	f->align = 4;
 	f->erased = 0xff;
 	target_add_flash(t, f);
 
@@ -98,8 +88,8 @@ static int synwit_flash_write(struct target_flash *f, target_addr dest, const vo
 		target_mem_write32(t, dest, *source);
 
 		source++;
-		dest+=f->align;
-		len-=f->align;
+		dest+=4;
+		len-=4;
 	}
 
 	// close flashinterface
@@ -137,7 +127,7 @@ static bool synwit_cmd_erase_mass(target *t)
 	target_mem_write32(t, 0x0, FLASHKEY);
 
 	// delay 2170 on 18Mhz
-	// appros 1ms
+	// approx 1ms
 	platform_delay(1);
 
 	// close flashinterface
@@ -145,45 +135,6 @@ static bool synwit_cmd_erase_mass(target *t)
 
 	// success?
 	tc_printf(t, "Device is erased\n");
-
-	return true;
-}
-
-static bool synwit_cmd_write_test(target *t)
-{
-	uint32_t i;
-
-	// 18Mhz
-	target_mem_write32(t, SYS_CFG_0, 1);
-	target_mem_write32(t, SYS_DBLF, 0);
-
-	// write bytes
-	target_mem_write32(t, FLASHREG1, 1);
-
-	for(i=0; i<2048; i++)
-		target_mem_write32(t, 0x00000000+(4*i), i);
-
-	// close flashinterface
-	target_mem_write32(t, FLASHREG1, 0);
-
-	return true;
-}
-
-static bool synwit_cmd_erase_test(target *t)
-{
-	// 18Mhz
-	target_mem_write32(t, SYS_CFG_0, 1);
-	target_mem_write32(t, SYS_DBLF, 0);
-
-	// erase page
-	target_mem_write32(t, FLASHREG1, 4);
-
-	// select right page
-	target_mem_write32(t, 0x00000000, FLASHKEY);
-	platform_delay(1);
-
-	// close flashinterface
-	target_mem_write32(t, FLASHREG1, 0);
 
 	return true;
 }
