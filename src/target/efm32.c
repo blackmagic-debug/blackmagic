@@ -563,7 +563,7 @@ bool efm32_probe(target *t)
 	ADIv5_AP_t *ap = cortexm_ap(t);
 	uint32_t ap_idcode = ap->dp->idcode;
 
-	/* Check the idcode is silabs. See AN0062 Section 2.2 */
+	/* Check the idcode. See AN0062 Section 2.2 */
 	if (ap_idcode == 0x2BA01477) {
 		/* Cortex M3, Cortex M4 */
 	} else if (ap_idcode == 0x0BC11477) {
@@ -572,32 +572,32 @@ bool efm32_probe(target *t)
 		return false;
 	}
 
-	/* Check the EUI is silabs. Identify the Device Identification (DI) version */
-	if (((efm32_v1_read_eui64(t) >> 40) & 0xFFFFFF) == EFM32_V1_DI_EUI_SILABS) {
+	/* Check the OUI in the EUI is silabs or energymicro.
+	 * Use this to identify the Device Identification (DI) version */
+	uint64_t oui24 = ((efm32_v1_read_eui64(t) >> 40) & 0xFFFFFF);
+	if (oui24 == EFM32_V1_DI_EUI_SILABS) {
 		/* Device Identification (DI) version 1 */
 		di_version = 1;
-	} else if (((efm32_v2_read_eui48(t) >> 24) & 0xFFFFFF) == EFM32_V2_DI_EUI_ENERGYMICRO) {
+	} else if (oui24 == EFM32_V2_DI_EUI_ENERGYMICRO) {
 		/* Device Identification (DI) version 2 */
 		di_version = 2;
 	} else {
-		/* unknown device */
-		/* sprintf(variant_string, */
-		/* 		"EFM32 DI Version ?? 0x%016llx 0x%016llx", */
-		/* 		efm32_v1_read_eui64(t), efm32_v2_read_eui48(t)); */
-		return false;
+		/* Unknown OUI - assume version 1 */
+		di_version = 1;
 	}
 
-	/* Read the part number and family */
-	uint16_t part_number = efm32_read_part_number(t, di_version);
+	/* Read the part family, and reject if unknown */
 	size_t device_index  = efm32_lookup_device_index(t, di_version);
 	if (device_index > (127-32)) {
-		/* too big to encode in printable ascii */
+		/* unknown device family */
 		return false;
 	}
 	efm32_device_t const* device = &efm32_devices[device_index];
 	if (device == NULL) {
 		return false;
 	}
+
+	uint16_t part_number = efm32_read_part_number(t, di_version);
 
 	/* Read memory sizes, convert to bytes */
 	uint16_t flash_kib  = efm32_read_flash_size(t, di_version);
