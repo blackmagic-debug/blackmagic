@@ -24,7 +24,7 @@
 #define EFM32_MSC_ADDRB(msc)			*((volatile uint32_t *)(msc+0x010))
 #define EFM32_MSC_WDATA(msc)			*((volatile uint32_t *)(msc+0x018))
 #define EFM32_MSC_STATUS(msc)			*((volatile uint32_t *)(msc+0x01c))
-#define EFM32_MSC_LOCK(msc)				*((volatile uint32_t *)(msc+(msc == 0x400e0000?0x40:0x3c)))
+#define EFM32_MSC_LOCK(msc)				*((volatile uint32_t *)(msc+(msc == 0x400c0000?0x3c:0x40)))
 #define EFM32_MSC_MASSLOCK(msc)	    	*((volatile uint32_t *)(msc+0x054))
 
 #define EFM32_MSC_LOCK_LOCKKEY          0x1b71
