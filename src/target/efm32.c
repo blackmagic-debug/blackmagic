@@ -75,7 +75,7 @@ const struct command_s efm32_cmd_list[] = {
 #define EFM32_MSC_ADDRB(msc)		 	(msc+0x010)
 #define EFM32_MSC_WDATA(msc)		 	(msc+0x018)
 #define EFM32_MSC_STATUS(msc)			(msc+0x01c)
-#define EFM32_MSC_LOCK(msc)				(msc+(msc == 0x400e0000?0x40:0x3c))
+#define EFM32_MSC_LOCK(msc)				(msc+(msc == 0x400c0000?0x3c:0x40))
 #define EFM32_MSC_MASSLOCK(msc)	      	(msc+0x054)
 
 #define EFM32_MSC_LOCK_LOCKKEY	  	0x1b71
@@ -278,6 +278,12 @@ efm32_device_t const efm32_devices[] = {
 	/*  Second gen micros */
 	{81, "EFM32PG1B", 2048, 0x400e0000, false, 2048, 10240, "Pearl Gecko"},
 	{83, "EFM32JG1B", 2048, 0x400e0000, false, 2048, 10240, "Jade Gecko"},
+	{85, "EFM32PG12B", 2048, 0x400e0000, false, 2048, 32768,"Pearl Gecko 12"},
+	{87, "EFM32JG12B", 2048, 0x400e0000, false, 2048, 32768, "Jade Gecko 12"},
+	/*  Second (2.5) gen micros, with re-located MSC */
+	{100, "EFM32GG11B", 4096, 0x40000000, false, 4096, 32768, "Giant Gecko 11"},
+	{103, "EFM32TG11B", 2048, 0x40000000, false, 2048, 18432, "Tiny Gecko 11"},
+	{106, "EFM32GG12B", 2048, 0x40000000, false, 2048, 32768, "Giant Gecko 12"},
 	/*  Second gen devices micro + radio */
 	{16, "EFR32MG1P", 2048, 0x400e0000, true, 2048, 10240, "Mighty Gecko"},
 	{17, "EFR32MG1B", 2048, 0x400e0000, true, 2048, 10240, "Mighty Gecko"},
