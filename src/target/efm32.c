@@ -75,6 +75,7 @@ const struct command_s efm32_cmd_list[] = {
 #define EFM32_MSC_ADDRB(msc)		 	(msc+0x010)
 #define EFM32_MSC_WDATA(msc)		 	(msc+0x018)
 #define EFM32_MSC_STATUS(msc)			(msc+0x01c)
+#define EFM32_MSC_IF(msc)				(msc+0x030)
 #define EFM32_MSC_LOCK(msc)				(msc+(msc == 0x400c0000?0x3c:0x40))
 #define EFM32_MSC_MASSLOCK(msc)	      	(msc+0x054)
 
@@ -684,6 +685,7 @@ static int efm32_flash_write(struct target_flash *f,
 	if (device == NULL) {
 		return true;
 	}
+	uint32_t msc = device->msc_addr;
 
 	/* Write flashloader */
 	target_mem_write(t, SRAM_BASE, efm32_flash_write_stub,
@@ -691,9 +693,14 @@ static int efm32_flash_write(struct target_flash *f,
 	/* Write Buffer */
 	target_mem_write(t, STUB_BUFFER_BASE, src, len);
 	/* Run flashloader */
-	return cortexm_run_stub(t, SRAM_BASE, dest, STUB_BUFFER_BASE, len, device->msc_addr);
+	int ret = cortexm_run_stub(t, SRAM_BASE, dest, STUB_BUFFER_BASE, len,
+							   device->msc_addr);
 
-	return 0;
+	/* Check the MSC_IF */
+	uint32_t msc_if = target_mem_read32(t, EFM32_MSC_IF(msc));
+	DEBUG("EFM32: Flash write done MSC_IF=%08"PRIx32"\n", msc_if);
+
+	return ret;
 }
 
 /**
