@@ -56,11 +56,13 @@ static const uint16_t efm32_flash_write_stub[] = {
 static bool efm32_cmd_erase_all(target *t, int argc, const char **argv);
 static bool efm32_cmd_serial(target *t, int argc, const char **argv);
 static bool efm32_cmd_efm_info(target *t, int argc, const char **argv);
+static bool efm32_cmd_bootloader(target *t, int argc, const char **argv);
 
 const struct command_s efm32_cmd_list[] = {
 	{"erase_mass", (cmd_handler)efm32_cmd_erase_all, "Erase entire flash memory"},
 	{"serial", (cmd_handler)efm32_cmd_serial, "Prints unique number"},
 	{"efm_info", (cmd_handler)efm32_cmd_efm_info, "Prints information about the device"},
+	{"bootloader", (cmd_handler)efm32_cmd_bootloader, "Bootloader status in CLW0"},
 	{NULL, NULL, NULL}
 };
 
@@ -106,6 +108,18 @@ const struct command_s efm32_cmd_list[] = {
 #define EFM32_V1_DI			(EFM32_INFO+0x8000)
 #define EFM32_V2_DI			(EFM32_INFO+0x81B0)
 
+
+/* -------------------------------------------------------------------------- */
+/* Lock Bits (LB) */
+/* -------------------------------------------------------------------------- */
+
+#define EFM32_LOCK_BITS_DLW		(EFM32_LOCK_BITS+(4*127))
+#define EFM32_LOCK_BITS_ULW		(EFM32_LOCK_BITS+(4*126))
+#define EFM32_LOCK_BITS_MLW		(EFM32_LOCK_BITS+(4*125))
+#define EFM32_LOCK_BITS_CLW0	(EFM32_LOCK_BITS+(4*122))
+
+#define EFM32_CLW0_BOOTLOADER_ENABLE	(1<<1)
+#define EFM32_CLW0_PINRESETSOFT			(1<<2)
 
 /* -------------------------------------------------------------------------- */
 /* Device Information (DI) Area - Version 1 V1 */
@@ -840,6 +854,62 @@ static bool efm32_cmd_efm_info(target *t, int argc, const char **argv)
 		uint16_t radio_number = efm32_read_radio_part_number(t, di_version); /* on-chip radio */
 		tc_printf(t, "Radio si%d\n", radio_number);
 		tc_printf(t, "\n");
+	}
+
+	return true;
+}
+
+/**
+ * Bootloader status in CLW0, if applicable.
+ *
+ * This is a bit in flash, so it is possible to clear it only once.
+ */
+static bool efm32_cmd_bootloader(target *t, int argc, const char **argv)
+{
+	/* lookup device and part number */
+	efm32_device_t const* device = efm32_get_device(t->driver[2] - 32);
+	if (device == NULL) {
+		return true;
+	}
+	uint32_t msc = device->msc_addr;
+
+	if (device->bootloader_size == 0) {
+		tc_printf(t, "This device has no bootloader.\n");
+		return false;
+	}
+
+	uint32_t clw0 = target_mem_read32(t, EFM32_LOCK_BITS_CLW0);
+	bool bootloader_status = (clw0 & EFM32_CLW0_BOOTLOADER_ENABLE)?1:0;
+
+	if (argc == 1) {
+		tc_printf(t, "Bootloader %s\n",
+			  bootloader_status ? "enabled" : "disabled");
+		return true;
+	} else {
+		bootloader_status = (argv[1][0] == 'e');
+	}
+
+	/* Modify bootloader enable bit */
+	clw0 &= bootloader_status?~0:~EFM32_CLW0_BOOTLOADER_ENABLE;
+
+	/* Unlock */
+	target_mem_write32(t, EFM32_MSC_LOCK(msc), EFM32_MSC_LOCK_LOCKKEY);
+
+	/* Set WREN bit to enabel MSC write and erase functionality */
+	target_mem_write32(t, EFM32_MSC_WRITECTRL(msc), 1);
+
+	/* Write address of CLW0 */
+	target_mem_write32(t, EFM32_MSC_ADDRB(msc), EFM32_LOCK_BITS_CLW0);
+	target_mem_write32(t, EFM32_MSC_WRITECMD(msc), EFM32_MSC_WRITECMD_LADDRIM);
+
+	/* Issue the write */
+	target_mem_write32(t, EFM32_MSC_WDATA(msc), clw0);
+	target_mem_write32(t, EFM32_MSC_WRITECMD(msc), EFM32_MSC_WRITECMD_WRITEONCE);
+
+	/* Poll MSC Busy */
+	while ((target_mem_read32(t, EFM32_MSC_STATUS(msc)) & EFM32_MSC_STATUS_BUSY)) {
+		if (target_check_error(t))
+			return false;
 	}
 
 	return true;
