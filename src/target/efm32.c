@@ -699,7 +699,6 @@ static int efm32_flash_write(struct target_flash *f,
 	if (device == NULL) {
 		return true;
 	}
-	uint32_t msc = device->msc_addr;
 
 	/* Write flashloader */
 	target_mem_write(t, SRAM_BASE, efm32_flash_write_stub,
@@ -710,9 +709,12 @@ static int efm32_flash_write(struct target_flash *f,
 	int ret = cortexm_run_stub(t, SRAM_BASE, dest, STUB_BUFFER_BASE, len,
 							   device->msc_addr);
 
+#ifdef ENABLE_DEBUG
 	/* Check the MSC_IF */
+	uint32_t msc = device->msc_addr;
 	uint32_t msc_if = target_mem_read32(t, EFM32_MSC_IF(msc));
 	DEBUG("EFM32: Flash write done MSC_IF=%08"PRIx32"\n", msc_if);
+#endif
 
 	return ret;
 }
@@ -981,12 +983,12 @@ void efm32_aap_probe(ADIv5_AP_t *ap)
 	t->priv = ap;
 	t->priv_free = (void*)adiv5_ap_unref;
 
-	//efm32_aap_cmd_device_erase(t);
-
+#ifdef ENABLE_DEBUG
 	/* Read status */
 	uint32_t status;
 	status = adiv5_ap_read(ap, AAP_STATUS);
 	DEBUG("EFM32: AAP STATUS=%08"PRIx32"\n", status);
+#endif
 
 	sprintf(aap_driver_string,
 			"EFM32 Authentication Access Port rev.%d",
