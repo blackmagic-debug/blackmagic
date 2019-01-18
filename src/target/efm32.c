@@ -903,3 +903,137 @@ static bool efm32_cmd_bootloader(target *t, int argc, const char **argv)
 
 	return true;
 }
+
+
+/*** Authentication Access Port (AAP) **/
+
+/* There's an additional AP on the SW-DP is accessable when the part
+ * is almost entirely locked.
+ *
+ * The AAP can be used to issue a DEVICEERASE command, which erases:
+ * * Flash
+ * * SRAM
+ * * Lock Bit (LB) page
+ *
+ * It does _not_ erase:
+ * * User Data (UD) page
+ * * Bootloader (BL) if present
+ *
+ * Once the DEVICEERASE command has completed, the main AP will be
+ * accessable again. If the device has a bootloader, it will attempt
+ * to boot from this. If you have just unlocked the device the
+ * bootloader could be anything (even garbage, if the bootloader
+ * wasn't used before the DEVICEERASE). Therefore you may want to
+ * connect under srst and use the bootloader command to disable it.
+ *
+ * It is possible to lock the AAP itself by clearing the AAP Lock Word
+ * (ALW). In this case the part is unrecoverable (unless you glitch
+ * it, please try glitching it).
+ */
+
+#include "adiv5.h"
+
+/* IDR revision [31:28] jes106 [27:17] class [16:13] res [12:8]
+ * variant [7:4] type [3:0] */
+#define EFM32_AAP_IDR      0x06E60001
+#define EFM32_APP_IDR_MASK 0x0FFFFF0F
+
+#define AAP_CMD      ADIV5_AP_REG(0x00)
+#define AAP_CMDKEY   ADIV5_AP_REG(0x04)
+#define AAP_STATUS   ADIV5_AP_REG(0x08)
+
+#define AAP_STATUS_LOCKED    (1 << 1)
+#define AAP_STATUS_ERASEBUSY (1 << 0)
+
+#define CMDKEY 0xCFACC118
+
+static bool efm32_aap_cmd_device_erase(target *t);
+
+const struct command_s efm32_aap_cmd_list[] = {
+	{"erase_mass", (cmd_handler)efm32_aap_cmd_device_erase, "Erase entire flash memory"},
+	{NULL, NULL, NULL}
+};
+
+static bool nop_function(void)
+{
+	return true;
+}
+
+/**
+ * AAP Probe
+ */
+char aap_driver_string[42];
+void efm32_aap_probe(ADIv5_AP_t *ap)
+{
+	if ((ap->idr & EFM32_APP_IDR_MASK) == EFM32_AAP_IDR) {
+		/* It's an EFM32 AAP! */
+		DEBUG("EFM32: Found EFM32 AAP\n");
+	} else {
+		return;
+	}
+
+	/* Both revsion 1 and revision 2 devices seen in the wild */
+	uint16_t aap_revision = (uint16_t)((ap->idr & 0xF0000000) >> 28);
+
+	/* New target */
+	target *t = target_new();
+	adiv5_ap_ref(ap);
+	t->priv = ap;
+	t->priv_free = (void*)adiv5_ap_unref;
+
+	//efm32_aap_cmd_device_erase(t);
+
+	/* Read status */
+	uint32_t status;
+	status = adiv5_ap_read(ap, AAP_STATUS);
+	DEBUG("EFM32: AAP STATUS=%08"PRIx32"\n", status);
+
+	sprintf(aap_driver_string,
+			"EFM32 Authentication Access Port rev.%d",
+			aap_revision);
+	t->driver = aap_driver_string;
+	t->attach = (void*)nop_function;
+	t->detach = (void*)nop_function;
+	t->check_error = (void*)nop_function;
+	t->mem_read = (void*)nop_function;
+	t->mem_write = (void*)nop_function;
+	t->regs_size = 4;
+	t->regs_read = (void*)nop_function;
+	t->regs_write = (void*)nop_function;
+	t->reset = (void*)nop_function;
+	t->halt_request = (void*)nop_function;
+	t->halt_resume = (void*)nop_function;
+
+	target_add_commands(t, efm32_aap_cmd_list, t->driver);
+}
+
+static bool efm32_aap_cmd_device_erase(target *t)
+{
+	ADIv5_AP_t *ap = t->priv;
+	uint32_t status;
+
+	/* Read status */
+	status = adiv5_ap_read(ap, AAP_STATUS);
+	DEBUG("EFM32: AAP STATUS=%08"PRIx32"\n", status);
+
+	if (status & AAP_STATUS_ERASEBUSY) {
+		DEBUG("EFM32: AAP Erase in progress\n");
+		DEBUG("EFM32: -> ABORT\n");
+		return false;
+	}
+
+	DEBUG("EFM32: Issuing DEVICEERASE...\n");
+	adiv5_ap_write(ap, AAP_CMDKEY, CMDKEY);
+	adiv5_ap_write(ap, AAP_CMD, 1);
+
+	/* Read until 0, probably should have a timeout here... */
+	do {
+		status = adiv5_ap_read(ap, AAP_STATUS);
+	} while (status & AAP_STATUS_ERASEBUSY);
+
+	/* Read status */
+	status = adiv5_ap_read(ap, AAP_STATUS);
+	DEBUG("EFM32: AAP STATUS=%08"PRIx32"\n", status);
+
+	return true;
+}
