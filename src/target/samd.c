@@ -44,6 +44,8 @@ static int samd_flash_write(struct target_flash *f,
 static bool samd_cmd_erase_all(target *t);
 static bool samd_cmd_lock_flash(target *t);
 static bool samd_cmd_unlock_flash(target *t);
+static bool samd_cmd_unlock_bootprot(target *t);
+static bool samd_cmd_lock_bootprot(target *t);
 static bool samd_cmd_read_userrow(target *t);
 static bool samd_cmd_serial(target *t);
 static bool samd_cmd_mbist(target *t);
@@ -53,6 +55,8 @@ const struct command_s samd_cmd_list[] = {
 	{"erase_mass", (cmd_handler)samd_cmd_erase_all, "Erase entire flash memory"},
 	{"lock_flash", (cmd_handler)samd_cmd_lock_flash, "Locks flash against spurious commands"},
 	{"unlock_flash", (cmd_handler)samd_cmd_unlock_flash, "Unlocks flash"},
+	{"lock_bootprot", (cmd_handler)samd_cmd_lock_bootprot, "Lock the boot protections to maximum"},
+	{"unlock_bootprot", (cmd_handler)samd_cmd_unlock_bootprot, "Unlock the boot protections to minimum"},
 	{"user_row", (cmd_handler)samd_cmd_read_userrow, "Prints user row from flash"},
 	{"serial", (cmd_handler)samd_cmd_serial, "Prints serial number"},
 	{"mbist", (cmd_handler)samd_cmd_mbist, "Runs the built-in memory test"},
@@ -597,6 +601,48 @@ static bool samd_cmd_lock_flash(target *t)
 static bool samd_cmd_unlock_flash(target *t)
 {
 	return samd_set_flashlock(t, 0xFFFF);
+}
+
+static bool samd_set_bootprot(target *t, uint16_t value)
+{
+	uint32_t high = target_mem_read32(t, SAMD_NVM_USER_ROW_HIGH);
+	uint32_t low = target_mem_read32(t, SAMD_NVM_USER_ROW_LOW);
+
+	/* Write address of a word in the row to erase it */
+	/* Must be shifted right for 16-bit address, see Datasheet §20.8.8 Address */
+	target_mem_write32(t, SAMD_NVMC_ADDRESS, SAMD_NVM_USER_ROW_LOW >> 1);
+
+	/* Issue the erase command */
+	target_mem_write32(t, SAMD_NVMC_CTRLA,
+	                   SAMD_CTRLA_CMD_KEY | SAMD_CTRLA_CMD_ERASEAUXROW);
+
+	/* Poll for NVM Ready */
+	while ((target_mem_read32(t, SAMD_NVMC_INTFLAG) & SAMD_NVMC_READY) == 0)
+		if (target_check_error(t))
+			return -1;
+
+	/* Modify the low word of the user row */
+	low = (low & 0xFFFFFFF8) | ((value << 0 ) & 0x00000007);
+
+	/* Write back */
+	target_mem_write32(t, SAMD_NVM_USER_ROW_LOW, low);
+	target_mem_write32(t, SAMD_NVM_USER_ROW_HIGH, high);
+
+	/* Issue the page write command */
+	target_mem_write32(t, SAMD_NVMC_CTRLA,
+	                   SAMD_CTRLA_CMD_KEY | SAMD_CTRLA_CMD_WRITEAUXPAGE);
+
+	return true;
+}
+
+static bool samd_cmd_lock_bootprot(target *t)
+{
+	return samd_set_bootprot(t, 0);
+}
+
+static bool samd_cmd_unlock_bootprot(target *t)
+{
+	return samd_set_bootprot(t, 7);
 }
 
 static bool samd_cmd_read_userrow(target *t)
