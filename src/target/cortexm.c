@@ -344,6 +344,7 @@ bool cortexm_probe(ADIv5_AP_t *ap, bool forced)
 	PROBE(kinetis_probe);
 	PROBE(efm32_probe);
 	PROBE(msp432_probe);
+	PROBE(ke04_probe);
 	PROBE(lpc17xx_probe);
 #undef PROBE
 
