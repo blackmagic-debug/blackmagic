@@ -125,6 +125,7 @@ typedef struct cortexa_priv {
 #define DBGBCR_BAS_LOW_HW    (0x3U << 5U)
 #define DBGBCR_BAS_HIGH_HW   (0xcU << 5U)
 #define DBGBCR_EN            (1U << 0U)
+#define DBGBCR_PMC_ANY       (0b11U << 1U)
 
 #define DBGWVR(i)           (96U + (i))
 #define DBGWCR(i)           (112U + (i))
@@ -810,7 +811,7 @@ void cortexa_halt_resume(target_s *t, bool step)
 		DEBUG_INFO("step 0x%08" PRIx32 "  %" PRIx32 "\n", addr, bas);
 		/* Set match any breakpoint */
 		apb_write(t, DBGBVR(0), priv->reg_cache.r[15] & ~3);
-		apb_write(t, DBGBCR(0), DBGBCR_INST_MISMATCH | bas | DBGBCR_EN);
+		apb_write(t, DBGBCR(0), DBGBCR_INST_MISMATCH | bas | DBGBCR_PMC_ANY | DBGBCR_EN);
 	} else {
 		apb_write(t, DBGBVR(0), priv->bvr0);
 		apb_write(t, DBGBCR(0), priv->bcr0);
@@ -889,7 +890,7 @@ static int cortexa_breakwatch_set(target_s *t, breakwatch_s *bw)
 		priv->hw_breakpoint_mask |= (1 << i);
 
 		uint32_t addr = va_to_pa(t, bw->addr);
-		uint32_t bcr = bp_bas(addr, bw->size) | DBGBCR_EN;
+		uint32_t bcr = bp_bas(addr, bw->size) | DBGBCR_PMC_ANY | DBGBCR_EN;
 		apb_write(t, DBGBVR(i), addr & ~3);
 		apb_write(t, DBGBCR(i), bcr);
 		if (i == 0) {
