@@ -339,12 +339,17 @@ static bool stm32f4_attach(target *t)
 			remains = banksize - 0x20000; /* 128 k in small sectors.*/
 		if (is_f7) {
 			stm32f4_add_flash(t, ITCM_BASE, 0x10000,  0x4000,  0, split);
-			stm32f4_add_flash(t, 0x0210000, 0x10000, 0x10000,  4, split);
-			stm32f4_add_flash(t, 0x0220000, remains, 0x20000,  5, split);
+			if (banksize > 0x10000) {
+				/* STM32F730 has only 64 kiB flash! */
+				stm32f4_add_flash(t, 0x0210000, 0x10000, 0x10000,  4, split);
+				stm32f4_add_flash(t, 0x0220000, remains, 0x20000,  5, split);
+			}
 		}
 		stm32f4_add_flash(t, 0x8000000, 0x10000,  0x4000,  0, split);
-		stm32f4_add_flash(t, 0x8010000, 0x10000, 0x10000,  4, split);
-		stm32f4_add_flash(t, 0x8020000, remains, 0x20000,  5, split);
+		if (banksize > 0x10000) {
+			stm32f4_add_flash(t, 0x8010000, 0x10000, 0x10000,  4, split);
+			stm32f4_add_flash(t, 0x8020000, remains, 0x20000,  5, split);
+		}
 		if (use_dual_bank) {
 			if (is_f7) {
 				uint32_t bk1 = ITCM_BASE + banksize;

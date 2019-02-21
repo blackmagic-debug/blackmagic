@@ -187,6 +187,14 @@ static bool stm32h7_attach(target *t)
 	uint32_t optsr = target_mem_read32(t, FPEC1_BASE + FLASH_OPTSR);
 	if (!(optsr & FLASH_OPTSR_IWDG1_SW))
 		tc_printf(t, "Hardware IWDG running. Expect failure. Set IWDG1_SW!");
+	uint32_t flashsize = target_mem_read32(t,  FLASH_SIZE_REG);
+	flashsize &= 0xffff;
+	if (flashsize == 128) { /* H750 has only 128 kByte!*/
+		stm32h7_add_flash(t, 0x8000000, FLASH_SECTOR_SIZE, FLASH_SECTOR_SIZE);
+	} else {
+		stm32h7_add_flash(t, 0x8000000, 0x100000, FLASH_SECTOR_SIZE);
+		stm32h7_add_flash(t, 0x8100000, 0x100000, FLASH_SECTOR_SIZE);
+	}
 	return true;
 }
 
@@ -213,8 +221,6 @@ bool stm32h7_probe(target *t)
 		target_add_ram(t, 0x32000000, 0x20000); /* AHB SRAM2, 128 k */
 		target_add_ram(t, 0x34000000, 0x08000); /* AHB SRAM3,  32 k */
 		target_add_ram(t, 0x38000000, 0x01000); /* AHB SRAM4,  32 k */
-		stm32h7_add_flash(t, 0x8000000, 0x100000, FLASH_SECTOR_SIZE);
-		stm32h7_add_flash(t, 0x8100000, 0x100000, FLASH_SECTOR_SIZE);
 		return true;
 	}
 	return false;
