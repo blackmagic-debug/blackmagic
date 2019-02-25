@@ -12,6 +12,8 @@ OBJ =	bindata.o	\
 
 all: $(OUTFILE)
 
+bindata.o: ../src/blackmagic.bin
+
 $(OUTFILE) $(OUTFILE).exe: $(OBJ)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
