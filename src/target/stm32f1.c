@@ -188,7 +188,6 @@ static int stm32f1_flash_erase(struct target_flash *f,
                                target_addr addr, size_t len)
 {
 	target *t = f->t;
-	uint16_t sr;
 
 	stm32f1_flash_unlock(t);
 
@@ -212,7 +211,7 @@ static int stm32f1_flash_erase(struct target_flash *f,
 	}
 
 	/* Check for error */
-	sr = target_mem_read32(t, FLASH_SR);
+	uint32_t sr = target_mem_read32(t, FLASH_SR);
 	if ((sr & SR_ERROR_MASK) || !(sr & SR_EOP)) {
 		DEBUG("stm32f1 flash erase error 0x%" PRIx32 "\n", sr);
 		return -1;
