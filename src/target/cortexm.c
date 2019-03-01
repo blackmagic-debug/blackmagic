@@ -632,6 +632,30 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 	/* Default vectors to catch */
 	priv->demcr = CORTEXM_DEMCR_TRCENA | CORTEXM_DEMCR_VC_HARDERR | CORTEXM_DEMCR_VC_CORERESET;
 
+	/*
+	 * Some devices, such as the STM32F0, will not correctly
+	 * respond to probes under reset. Therefore, if we're
+	 * attempting to connect under reset, we should first write to
+	 * the debug register to catch the reset vector so that we
+	 * immediately halt when reset is released, then request a
+	 * halt and release reset. This will prevent any user code
+	 * from running on the target.
+	 */
+	bool conn_reset = false;
+	if (platform_nrst_get_val()) {
+		conn_reset = true;
+
+		/* Request halt when reset is de-asseted */
+		target_mem_write32(t, CORTEXM_DEMCR, priv->demcr);
+		/* Force a halt */
+		cortexm_halt_request(t);
+		/* Release reset */
+		platform_nrst_set_val(false);
+		/* Poll for release from reset */
+		while (target_mem_read32(t, CORTEXM_DHCSR) & CORTEXM_DHCSR_S_RESET_ST)
+			continue;
+	}
+
 	/* Check cache type */
 	uint32_t ctr = target_mem_read32(t, CORTEXM_CTR);
 	if (ctr >> 29U == 4U) {
@@ -639,6 +663,10 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 		priv->dcache_minline = 4U << (ctr & 0xfU);
 	} else
 		target_check_error(t);
+
+	/* If we set the interrupt catch vector earlier, clear it. */
+	if (conn_reset)
+		target_mem_write32(t, CORTEXM_DEMCR, 0);
 
 #if PC_HOSTED
 #define STRINGIFY(x) #x
