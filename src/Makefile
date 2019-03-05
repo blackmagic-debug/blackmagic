@@ -63,10 +63,13 @@ SRC =			\
 	target.c	\
 
 include $(PLATFORM_DIR)/Makefile.inc
+ifndef TARGET
+TARGET=blackmagic
+endif
 
 OBJ = $(SRC:.c=.o)
 
-blackmagic: include/version.h $(OBJ)
+$(TARGET): include/version.h $(OBJ)
 	@echo "  LD      $@"
 	$(Q)$(CC) -o $@ $(OBJ) $(LDFLAGS)
 
