@@ -34,6 +34,7 @@
 
 #include "general.h"
 #include "target.h"
+#include "command.h"
 #include "target_internal.h"
 #include "cortexm.h"
 
@@ -43,6 +44,7 @@ static bool stm32l4_cmd_erase_bank2(target *t);
 static bool stm32l4_cmd_option(target *t, int argc, char *argv[]);
 
 const struct command_s stm32l4_cmd_list[] = {
+	{"erase_page", (cmd_handler)monitor_cmd_erase_page, "Erase one or more pages"},
 	{"erase_mass", (cmd_handler)stm32l4_cmd_erase_mass, "Erase entire flash memory"},
 	{"erase_bank1", (cmd_handler)stm32l4_cmd_erase_bank1, "Erase entire bank1 flash memory"},
 	{"erase_bank2", (cmd_handler)stm32l4_cmd_erase_bank2, "Erase entire bank2 flash memory"},
@@ -53,7 +55,7 @@ const struct command_s stm32l4_cmd_list[] = {
 
 static int stm32l4_flash_erase(struct target_flash *f, target_addr addr, size_t len);
 static int stm32l4_flash_write(struct target_flash *f,
-                               target_addr dest, const void *src, size_t len);
+			       target_addr dest, const void *src, size_t len);
 
 /* Flash Program ad Erase Controller Register Map */
 #define FPEC_BASE			0x40022000
@@ -114,8 +116,8 @@ static int stm32l4_flash_write(struct target_flash *f,
 #define DBGMCU_CR_DBG_STANDBY	(0x1U << 2U)
 
 enum {
-        STM32G0_DBGMCU_IDCODE_PHYS = 0x40015800,
-        STM32L4_DBGMCU_IDCODE_PHYS = 0xe0042000,
+	STM32G0_DBGMCU_IDCODE_PHYS = 0x40015800,
+	STM32L4_DBGMCU_IDCODE_PHYS = 0xe0042000,
 };
 #define FLASH_SIZE_REG  0x1FFF75E0
 
@@ -141,8 +143,16 @@ enum FAM_STM32L4 {
 	FAM_STM32WBxx = 4,
 };
 
+/** The flags field:
+ * +----+----+----+----+----+----+----+----+
+ * | DB |Ofs.|    |    |   Option Count    |
+ * +-+--+-+--+----+----+----+----+----+----+
+ *   |    + Option offset values
+ *   + Dual Bank flash flag
+ **/
 #define DUAL_BANK	0x80u
-#define RAM_COUNT_MSK	0x07u
+#define OPT_OFFS_G0	0x40u
+#define OPT_COUNT_MSK	0x0Fu
 
 struct stm32l4_info {
 	char designator[10];
@@ -161,7 +171,7 @@ struct stm32l4_info const L4info[] = {
 		.designator = "STM32L41x",
 		.sram1 = 32,
 		.sram2 = 8,
-		.flags = 2,
+		.flags = 9,
 	},
 	{
 		.idcode = ID_STM32L43,
@@ -169,7 +179,7 @@ struct stm32l4_info const L4info[] = {
 		.designator = "STM32L43x",
 		.sram1 = 48,
 		.sram2 = 16,
-		.flags = 2,
+		.flags = 5,
 	},
 	{
 		.idcode = ID_STM32L45,
@@ -185,7 +195,7 @@ struct stm32l4_info const L4info[] = {
 		.designator = "STM32L47x",
 		.sram1 = 96,
 		.sram2 = 32,
-		.flags = 2 | DUAL_BANK,
+		.flags = 9 | DUAL_BANK,
 	},
 	{
 		.idcode = ID_STM32L49,
@@ -193,7 +203,7 @@ struct stm32l4_info const L4info[] = {
 		.designator = "STM32L49x",
 		.sram1 = 256,
 		.sram2 = 64,
-		.flags = 2 | DUAL_BANK,
+		.flags = 9 | DUAL_BANK,
 	},
 	{
 		.idcode = ID_STM32L4R,
@@ -202,14 +212,14 @@ struct stm32l4_info const L4info[] = {
 		.sram1 = 192,
 		.sram2 = 64,
 		.sram3 = 384,
-		.flags = 3 | DUAL_BANK,
+		.flags = 9 | DUAL_BANK,
 	},
 	{
 		.idcode = ID_STM32G07,
 		.family = FAM_STM32G0x,
 		.designator = "STM32G07",
 		.sram1 = 36,
-		.flags = 1,
+		.flags = 7 | OPT_OFFS_G0,
 	},
 	{
 		/* Terminator */
@@ -248,7 +258,7 @@ static bool stm32l4_attach(target *t)
 	if (!cortexm_attach(t))
 		return false;
 
-	/* Retrive chip information, no need to check return */
+	/* Retrieve chip information, no need to check return */
 	struct stm32l4_info const *chip = stm32l4_get_chip_info(t->idcode);
 
 
@@ -487,6 +497,53 @@ static bool stm32l4_option_write(
 	return false;
 }
 
+/* Result type for the option parsing function */
+typedef enum {
+	OptDefaults = -2,
+	OptRead = -1,
+	OptFail = 0
+	/* Anything greater than OptFail(0) is a number of values to write */
+} OptParseResult;
+
+/** Option parsing function: read option command and, in case, values.
+ *  Error checking on syntax and number format.
+ *  Return the action to be performed, or a number of values to write */
+OptParseResult stm32_option_parse(target * t, int argc, char *argv[],
+				  uint32_t values[], int len)
+{
+	if(argc == 1) {
+		/* No parameters: read and print the options bytes */
+		return OptRead;
+	} else if ((argc == 2) && !strcmp(argv[1], "erase")) {
+		/* Restore factory defaults if parameter is "erase" */
+		return OptDefaults;
+	} else if ((argc > 2) && !strcmp(argv[1], "write")) {
+		/** If param is "write", read values and return their number.
+		 *  Basic error checking is performed:
+		 *      Number of parameters not exceeding max
+		 *      Correct number syntax
+		 **/
+		if (argc - 2 > len) {
+			tc_printf(t, "Too many values!\n");
+			return OptFail;
+		}
+		for (int i = 2; i < argc; i++) {
+			char *eos;
+			values[i - 2] = strtoul(argv[i], &eos, 0);
+			if (*eos) {
+				tc_printf(t, "Unrecognized value\n");
+				return OptFail;
+			}
+		}
+		/* return the number of correctly read parameters */
+		return argc - 2;
+	}
+	tc_printf(t, "usage:  monitor %s\n", argv[0]);
+	tc_printf(t, "\tmonitor %s erase\n", argv[0]);
+	tc_printf(t, "\tmonitor %s write <value> ...\n", argv[0]);
+	return OptFail;
+}
+
 /* Chip       L43X/mask  L43x/def   L47x/mask  L47x/def
  *                                  L49x/mask  L49x/def
  * Option
@@ -503,48 +560,50 @@ static bool stm32l4_option_write(
 
 static bool stm32l4_cmd_option(target *t, int argc, char *argv[])
 {
-	uint32_t val;
-	uint32_t values[9] = { 0xFFEFF8AA, 0xFFFFFFFF, 0, 0x000000ff,
-						   0x000000ff, 0xffffffff, 0, 0xff, 0x000000ff};
-	int len;
-	bool res = false;
+	struct stm32l4_info const *chip = stm32l4_get_chip_info(t->idcode);
+	int len = chip->flags & OPT_COUNT_MSK;
 
-	const uint8_t *i2offset = l4_i2offset;
-	if (t->idcode == 0x435) {/* L43x */
-		len = 5;
-	} else if (t->idcode == ID_STM32G07) {/* G07x */
-		i2offset = g0_i2offset;
-		len = 7;
-	} else {
-		len = 9;
-	}
-	if ((argc == 2) && !strcmp(argv[1], "erase")) {
-		res = stm32l4_option_write(t, values, len, i2offset);
-	} else if ((argc >  2) && !strcmp(argv[1], "write")) {
-		int i;
-		for (i = 2; i < argc; i++)
-			values[i - 2] = strtoul(argv[i], NULL, 0);
-		for (i = i - 2; i < len; i++) {
-			uint32_t addr = FPEC_BASE + i2offset[i];
-			values[i] = target_mem_read32(t, addr);
-		}
-		if ((values[0] & 0xff) == 0xCC) {
-			values[0]++;
-			tc_printf(t, "Changing Level 2 request to Level 1!");
-		}
-		res = stm32l4_option_write(t, values, len, i2offset);
-	} else {
-		tc_printf(t, "usage: monitor option erase\n");
-		tc_printf(t, "usage: monitor option write <value> ...\n");
-	}
-	if (res) {
-		tc_printf(t, "Writing options failed!\n");
+	/* Init default value array */
+	uint32_t values[9] = {0xFFEFF8AAu, 0xFFFFFFFFu, 0x00000000u,
+			      0x000000FFu, 0x000000FFu, 0xFFFFFFFFu,
+			      0x00000000u, 0x000000FFu, 0x000000FFu};
+
+	uint8_t const *offset =
+		(chip->flags & OPT_OFFS_G0) ? g0_i2offset : l4_i2offset;
+
+	/* Read and interpret the command line */
+	OptParseResult cmd = stm32_option_parse(t, argc, argv, values, len);
+
+	/* Execute the command */
+	switch (cmd) {
+	case OptFail: /* Not much to do, just exit */
 		return false;
+
+	case OptRead:
+		/* Read and display the options from memory */
+		for (int i = 0; i < len; i++) {
+			uint32_t addr = FPEC_BASE + offset[i];
+			uint32_t val = target_mem_read32(t, addr);
+			tc_printf(t, "0x%08"PRIX32": 0x%08"PRIX32"\n", addr, val);
+		};
+		break;
+
+	default: /* Anything greater than OptFail is a number of options */
+		/* Do not touch unchanged options */
+		len = cmd;
+		if ((values[0] & 0xFF) == 0xCC) {
+			values[0]++;
+			tc_printf(t, "Changing Level 2 request to Level 1!\n");
+		}
+		/* fall through */
+	case OptDefaults:
+		/* Program the array */
+		if (stm32l4_option_write(t, values, len, offset)) {
+			tc_printf(t, "Option writing failed!");
+			return false;
+		}
+		break;
 	}
-	for (int i = 0; i < len; i ++) {
-		uint32_t addr = FPEC_BASE + i2offset[i];
-		val = target_mem_read32(t, FPEC_BASE + i2offset[i]);
-		tc_printf(t, "0x%08X: 0x%08X\n", addr, val);
-	}
+
 	return true;
 }
