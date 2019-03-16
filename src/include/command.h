@@ -24,6 +24,8 @@
 #include "target.h"
 
 int command_process(target *t, char *cmd);
+/* Erase one or more flash pages */
+extern bool monitor_cmd_erase_page(target *t, int argc, char *argv[]);
 
 #endif
 

@@ -27,21 +27,13 @@
 #include "command.h"
 #include "gdb_packet.h"
 #include "target.h"
+#include "target/target_internal.h"
 #include "morse.h"
 #include "version.h"
 
 #ifdef PLATFORM_HAS_TRACESWO
 #	include "traceswo.h"
 #endif
-
-typedef bool (*cmd_handler)(target *t, int argc, const char **argv);
-
-struct command_s {
-	const char *cmd;
-	cmd_handler handler;
-
-	const char *help;
-};
 
 static bool cmd_version(void);
 static bool cmd_help(target *t);
@@ -321,3 +313,58 @@ static bool cmd_debug_bmp(target *t, int argc, const char **argv)
 	return true;
 }
 #endif
+
+/**
+ * This command relies on data in the flash structure linked list.
+ * With one argument, it erases the page that contains the specified address,
+ * a second argument can be used to specify the end address (reduced modulo
+ * blocksize, so LSBs are lost).
+ * It checks for right number of arguments, correct number format and correct
+ * range.
+ **/
+bool monitor_cmd_erase_page(target *t, int argc, char *argv[])
+{
+	if ((argc != 2) && (argc != 3))
+	{
+		tc_printf(t, "usage: monitor erase_page <start> [<end>]\n");
+		return false;
+	}
+
+	char *eos;
+	uint32_t addr = strtoul(argv[1], &eos, 0);
+	if (*eos)
+		goto errorout;
+
+	/* Finds the right flash for addr. Should be exported from target.c */
+	struct target_flash *f;
+	for (f = t->flash; f; f = f->next)
+		if ((f->start <= addr) && (addr < (f->start + f->length)))
+			break;
+	if (!f)
+		goto errorout;
+
+	uint32_t length = f->blocksize; /* Default to one page */
+
+	/* Normalize address, assume a page is a power of 2 */
+	addr &= ~(f->blocksize - 1);
+
+	/* Check whether we have a end address, otherwise just one page */
+	if (argc == 3)
+	{
+		uint32_t endaddr = strtoul(argv[2], &eos, 0);
+		if (*eos)
+			goto errorout;
+		/* Normalize end address */
+		endaddr &= ~(f->blocksize - 1);
+		if (endaddr > f->start + f->length)
+			goto errorout;
+		length = endaddr - addr;
+	}
+	if (f->erase(f, addr, length) == 0)
+		return true;
+
+/* Exit here if an error found */
+errorout:
+	tc_printf(t, "Command Failed\n");
+	return false;
+}
