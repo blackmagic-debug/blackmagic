@@ -64,7 +64,7 @@
 #define LED_PIN					GPIO12
 // Software Reset
 #define SRST_PORT				GPIOA
-#define SRST_PIN				GPIO6
+#define SRST_PIN				GPIO15
 // Uart LED (without led, attach something to monitor it)
 #define LED_PORT_UART			GPIOB
 #define LED_UART				GPIO1

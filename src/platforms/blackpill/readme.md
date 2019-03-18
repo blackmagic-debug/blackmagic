@@ -13,13 +13,13 @@
 	         TMS - A8           A7 - 
 	      SWO TX - A9           A6 - 
 	      SWO RX - A10          A5 - 
-	             - A11          A4 - 
-	             - A12          A3 - 
-	             - A15          A2 - 
+	Reserved USB - A11          A4 - 
+	Reserved USB - A12          A3 - 
+	        SRST - A15          A2 - 
 	             - B3           A1 - 
 	             - B4           A0 - 
 	             - B5          RST - 
-	        SRST - B6         PC13 - 
+	             - B6         PC13 - 
 	             - B7           B9 - 
 	             - 3.3V         B8 - 
 	             - GND         GND - 
