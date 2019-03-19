@@ -21,9 +21,19 @@
 #ifndef __COMMAND_H
 #define __COMMAND_H
 
+#include <stdbool.h>
+
 #include "target.h"
 
 int command_process(target *t, char *cmd);
+
+/*
+ * Attempts to parse a string as either being "enable" or "disable".
+ * If the parse is successful, returns true and sets the out param to
+ * indicate what was parsed. If not successful, emits a warning to the
+ * gdb port, returns false and leaves out untouched.
+ */
+bool parse_enable_or_disable(const char *s, bool *out);
 
 #endif
 
