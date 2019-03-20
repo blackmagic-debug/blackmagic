@@ -33,6 +33,7 @@
  * 		K64 Sub-Family Reference Manual, Rev. 2,
  */
 
+#include "command.h"
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
@@ -81,11 +82,12 @@ const struct command_s kinetis_cmd_list[] = {
 
 static bool kinetis_cmd_unsafe(target *t, int argc, char *argv[])
 {
-	if (argc == 1)
+	if (argc == 1) {
 		tc_printf(t, "Allow programming security byte: %s\n",
 			  unsafe_enabled ? "enabled" : "disabled");
-	else
-		unsafe_enabled = argv[1][0] == 'e';
+	} else {
+		parse_enable_or_disable(argv[1], &unsafe_enabled);
+	}
 	return true;
 }
 
