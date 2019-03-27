@@ -86,8 +86,12 @@ blackmagic: include/version.h $(OBJ)
 
 clean:	host_clean
 	$(Q)echo "  CLEAN"
-	-$(Q)$(RM) -f *.o *.d *~ blackmagic $(HOSTFILES)
-	-$(Q)$(RM) -f platforms/*/*.o platforms/*/*.d mapfile include/version.h
+ifeq ($(OS), Windows_NT)
+	-$(Q)$(shell del *.o, *.d, blackmagic*, $(HOSTFILES))
+else
+	-$(Q)$(RM) *.o *.d *~ blackmagic $(HOSTFILES)
+	-$(Q)$(RM) platforms/*/*.o platforms/*/*.d mapfile include/version.h
+endif
 
 all_platforms:
 	$(Q)set -e ;\
@@ -112,7 +116,10 @@ all_platforms:
 command.c: include/version.h
 
 include/version.h: FORCE
-	$(Q)echo "  GIT     include/version.h"
-	$(Q)echo "#define FIRMWARE_VERSION \"`git describe --always --dirty`\"" > $@
-
+	$(Q)echo " GIT include/version.h"
+ifeq ($(OS), Windows_NT)
+	$(Q)echo #define FIRMWARE_VERSION "$(shell git describe --always --dirty)" > $@
+else
+	$(Q)echo "#define FIRMWARE_VERSION \"$(shell git describe --always --dirty)\"" > $@
+endif
 -include *.d
