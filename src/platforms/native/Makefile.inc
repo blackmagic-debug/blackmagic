@@ -34,5 +34,8 @@ blackmagic_dfu: usbdfu.o dfucore.o dfu_f1.o
 	$(Q)$(CC) $^ -o $@ $(LDFLAGS_BOOT)
 
 host_clean:
-	-$(Q)$(RM) -f blackmagic.bin blackmagic_dfu blackmagic_dfu.bin blackmagic_dfu.hex
-
+ifeq ($(OS), Windows_NT)
+	-$(Q)$(shell del blackmagic.bin blackmagic_dfu blackmagic_dfu.bin blackmagic_dfu.hex)
+else
+	-$(Q)$(RM) blackmagic.bin blackmagic_dfu blackmagic_dfu.bin blackmagic_dfu.hex
+endif
