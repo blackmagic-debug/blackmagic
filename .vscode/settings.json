@@ -1,6 +1,9 @@
 {
     "files.associations": {
         "command.h": "c",
-        "general.h": "c"
+        "general.h": "c",
+        "platform_support.h": "c",
+        "platform.h": "c",
+        "timing_stm32.h": "c"
     }
 }

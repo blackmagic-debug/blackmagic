@@ -27,7 +27,7 @@
 #include "gpio.h"
 #include "timing.h"
 #include "timing_stm32.h"
-#include "wdbp_version.h"
+#include "version.h"
 
 #include "wdbp_mode_led.h"
 

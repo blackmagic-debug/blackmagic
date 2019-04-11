@@ -12,6 +12,17 @@
             "problemMatcher": "$gcc"
         },
         {
+            "label": "Make WDBP",
+            "type": "shell",
+            "group": "build",
+            "command": "make ",
+            "args": [
+                "PROBE_HOST=WDBP"
+            ],
+            "options": { "cwd": "${workspaceFolder}/src"},
+            "problemMatcher": "$gcc"
+        },
+        {
             "label": "Clean",
             "type": "shell",
             "group": "build",

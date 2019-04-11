@@ -50,15 +50,6 @@ static void adc_init( void );
 int usbuart_debug_write(const char *buf, size_t len);
 void gdb_if_putchar(unsigned char c, int flush);
 
-static bool fMenuIsActive = false;  ///< True if menu is active
-static char	szMenuInputBuffer[128] = { 0 }; ///< The menu input buffer[ 128]
-static char	szMenuInputForProcessing[128] = { 0 };  ///< The menu input for processing[ 128]
-static u_int32_t	inputCount = 0; ///< Number of inputs
-static bool fShowMenu = false;  ///< True to show, false to hide the menu
-static char	cEscapePipeline[4] = { 0 }; ///< The escape pipeline[ 4]
-static int	iEscapeIndex = 0;   ///< Zero-based index of the escape index
-static char szPassPhrase[128] = { 0 };  ///< The pass phrase[ 128]
-
 #if 0
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -94,21 +85,14 @@ int _write(int fd, char *ptr, int len)
 /// <param name="waitTime"> The wait time.</param>
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static void platform_WaitmS( u_int32_t waitTime )
-{
-	u_int32_t	theTargetTime = platform_time_ms() + waitTime;
-	while ( theTargetTime > platform_time_ms() )
-		;
-}
+// static void platform_WaitmS( u_int32_t waitTime )
+// {
+// 	u_int32_t	theTargetTime = platform_time_ms() + waitTime;
+// 	while ( theTargetTime > platform_time_ms() )
+// 		;
+// }
 
 jmp_buf fatal_error_jmpbuf; ///< The fatal error jmpbuf
-//
-// Send the command menu to the debug UASRT
-//
-static const char *lpszMenu = "\nWifi Config\n1. - Select SSID for connection\n2. - Enable DHCP Client mode\n3. - Enter static IP address\n4. - Exit\n";	///< The menu
-static uint8_t uiMenuItem = UINT8_MAX;  ///< The menu item
-static const char *lpszExitMessage = " <- Configuration exit\n";	///< Message describing the exit
-static const char *lpszClearScreen = "\f";  ///< The clear screen
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 /// <summary> Values that represent tag select SSID states.</summary>
@@ -123,14 +107,6 @@ typedef enum tagSelectSSID_States
 	ePassPhrase,	///< An enum constant representing the pass phrase option
 	eConnect	///< An enum constant representing the connect option
 } SelectSSID_States;
-
-static SelectSSID_States SSID_State = eStart;   ///< State of the SSID
-static u_int32_t	numberOfSSIDs = 0;  ///< Number of ssi ds
-static u_int32_t	selectedSSID = -1;  ///< The selected SSID
-
-static const char *lpszBadInput = " <-Invalid selection\n"; ///< The bad input
-static const char *lpszOutOfRange = "<-Selection is out of range\n";	///< The out of range
-static const char *lpszConnecting = "\nConnecting ..."; ///< The connecting
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 /// <summary> WiFi initialize.</summary>
@@ -321,8 +297,6 @@ static bool fStartup = true;	///< True to startup
 
 void platform_tasks(void)
 {
-	uint32_t	uiSize = 0;
-
 	APP_Task();					// WiFi Server app tasks
 	if(fStartup == true)
 	{
@@ -438,8 +412,6 @@ static uint8_t	adcChannels[] = { WDBP_BATTERY_INPUT ,WDBP_BATTERY_INPUT , WDBP_B
 /// 			Sid Price, 11/4/2018.</remarks>
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static uint32_t whichChannel = WDBP_ADC_BATTERY;
-
 void platform_adc_read (void)
 {
 	// PROBE_PIN;
@@ -462,14 +434,6 @@ void platform_adc_read (void)
 	while (!adc_eoc (ADC1))
 		;
 	inputVoltages[WDBP_ADC_TARGET] = adc_read_regular (ADC1);
-	//if (whichChannel == WDBP_ADC_BATTERY)
-	//{
-	//	whichChannel = WDBP_ADC_TARGET;
-	//}
-	//else
-	//{
-	//	whichChannel = WDBP_ADC_BATTERY;
-	//}
 }
 
 //
@@ -667,8 +631,12 @@ bool platform_wifi_client( void )
 /// <returns> An int.</returns>
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-int  platform_wifi_getpacket( char * pBuf, int bufSize )
+#define	UNUSED(x) (void)(x)
+
+int  platform_wifi_getpacket( char * pBuf,  int bufSize )
 {
+	UNUSED(pBuf) ;
+	UNUSED(bufSize) ;
 	int iResult = 0;
 	//iResult  = WiFi_GetPacket( pBuf, bufSize );
 	return ( iResult ) ;
