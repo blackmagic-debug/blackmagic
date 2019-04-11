@@ -1,0 +1,40 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug blackmagic_stlinkv2.exe ",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/blackmagic_stlinkv2.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": true,
+            "MIMode": "gdb",
+            "miDebuggerPath": "C:/Strawberry/c/bin/gdb.exe",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "Make BlackSTLink"
+        },
+        {
+            "name": "Debug BMP Native ",
+            "type": "cortex-debug",
+            "request": "launch",
+            "servertype": "jlink",
+            "executable": "./blackmagic",
+            "showDevDebugOutput": true,
+            "interface": "swd",
+            "device": "STM32F411RE",
+            "preLaunchTask": "Make BMP Native"
+        }
+    ]
+}
