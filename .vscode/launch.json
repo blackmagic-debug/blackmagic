@@ -24,6 +24,17 @@
                 }
             ],
             "preLaunchTask": "Make BlackSTLink"
+        },
+        {
+            "name": "Debug BMP Native ",
+            "type": "cortex-debug",
+            "request": "launch",
+            "servertype": "jlink",
+            "executable": "./blackmagic",
+            "showDevDebugOutput": true,
+            "interface": "swd",
+            "device": "STM32F411RE",
+            "preLaunchTask": "Make BMP Native"
         }
     ]
 }
