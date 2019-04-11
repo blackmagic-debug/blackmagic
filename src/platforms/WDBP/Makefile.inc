@@ -3,9 +3,10 @@ CC = $(CROSS_COMPILE)gcc
 OBJCOPY = $(CROSS_COMPILE)objcopy
 
 CFLAGS += -Istm32/include -mcpu=cortex-m4 -mthumb \
-	-mfloat-abi=hard -mfpu=fpv4-sp-d16 \
+	-mfloat-abi=hard -mfpu=fpv4-sp-d16 -Wno-unused-value -Wno-unused-parameter \
+	-Wimplicit-fallthrough=0 \
 	-DSTM32F4 -DF4DISCOVERY -I../libopencm3/include \
-	-I./platforms/wdbp/winc1500 -I./platforms/wdbp/winc1500/src \
+	-I./platforms/winc1500 -I./platforms/winc1500/src \
 	-Iplatforms/stm32
 
 LDFLAGS = -lopencm3_stm32f4 -Wl,--defsym,_stack=0x20006000 \
@@ -14,7 +15,7 @@ LDFLAGS = -lopencm3_stm32f4 -Wl,--defsym,_stack=0x20006000 \
 	-mfloat-abi=hard -mfpu=fpv4-sp-d16 \
 	-L../libopencm3/lib
 
-VPATH += platforms/stm32
+VPATH += platforms/stm32 platforms/winc1500/src
 
 SRC += 	cdcacm.c	\
 	traceswo.c	\
@@ -22,6 +23,15 @@ SRC += 	cdcacm.c	\
 	serialno.c	\
 	timing.c	\
 	timing_stm32.c	\
+	Wifi_Server.c \
+	wf_asic.c \
+	wf_hif.c \
+	wf_ota.c \
+	wf_socket.c \
+	wf_spi.c \
+	wf_spi_flash.c \
+	wf_utils.c \
+	wf_wifi.c \
 
 all:	blackmagic.bin
 

@@ -350,11 +350,6 @@ struct sockaddr_in addr = { 0 } ;
 
 void TCPServer(void)
 {
-	uint8_t i;
-	uint16_t w, w2;
-	uint8_t AppBuffer[32];
-	uint16_t wMaxGet, wMaxPut, wCurrentChunk;
-
 	switch ( TCPServerState )
 	{
 	case SM_IDLE:
@@ -516,7 +511,7 @@ static void AppWifiCallback(uint8_t msgType, void *pvMsg)
 			tstrM2MProvisionInfo	*provisionInfo = (tstrM2MProvisionInfo *) pvMsg;
 			if ( provisionInfo->u8Status == M2M_SUCCESS )
 			{
-				m2m_wifi_connect_sc ((char *) provisionInfo->au8SSID, strlen (provisionInfo->au8SSID),
+				m2m_wifi_connect_sc ((char *) provisionInfo->au8SSID, strlen ((char const *)provisionInfo->au8SSID),
 					provisionInfo->u8SecType, provisionInfo->au8Password, M2M_WIFI_CH_ALL);
 			}
 			else
@@ -528,7 +523,7 @@ static void AppWifiCallback(uint8_t msgType, void *pvMsg)
 		}
 		case M2M_WIFI_DEFAULT_CONNNECT_EVENT:
 		{
-			tstrM2MDefaultConnResp *pDefaultConnResp = (tstrM2MDefaultConnResp *) pvMsg;
+			//tstrM2MDefaultConnResp *pDefaultConnResp = (tstrM2MDefaultConnResp *) pvMsg;
 			dprintf ("APP_WIFI_CB[%d]: Un-implemented state\r\n", msgType);
 			break ;
 		}
@@ -1064,7 +1059,7 @@ void APP_Task(void)
 		{
 			tstrM2MAPConfig	apConfig;
 			uint8_t			enableRedirect = 1;
-			strcpy (apConfig.au8SSID, "WDBP-AP");
+			strcpy ((char *)apConfig.au8SSID, "WDBP-AP");
 			apConfig.u8ListenChannel = 1;
 			apConfig.u8SecType = M2M_WIFI_SEC_OPEN;
 			apConfig.u8SsidHide = 0;
