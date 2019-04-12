@@ -45,6 +45,7 @@
 #define DFU_IDENT         "Black Magic Firmware Upgrade (WDBP"
 #define DFU_IFACE_STRING  "@Internal Flash   /0x08000000/1*016Ka,3*016Kg,1*064Kg,7*128Kg"
 
+bool platform_check_battery_voltage (void) ;
 //
 // Define the network name for the probe
 //

@@ -310,10 +310,14 @@ void m2m_wifi_console_write_data(uint16_t length, uint8_t *p_buf)
     //     console_byte_write(p_buf[i]);
     // }
 }
-
+//
+// These functions are not used and return dummy values
+// to avoid a compiler error (-Werror-return)
+//
 uint8_t m2m_wifi_console_read_data(void)
 {	
     //return console_byte_read();
+    return 0 ;
 }
 
 bool m2m_wifi_console_is_read_data(void)
@@ -321,6 +325,7 @@ bool m2m_wifi_console_is_read_data(void)
 	// true => Receive buffer has data, at least one more character can be read from console
     // false => Receive buffer is empty
     // return isConsoleDataAvaiable();
+    return false ;
 }
 
 #endif // M2M_ENABLE_SPI_FLASH

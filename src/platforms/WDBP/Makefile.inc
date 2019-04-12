@@ -15,7 +15,7 @@ LDFLAGS = -lopencm3_stm32f4 -Wl,--defsym,_stack=0x20006000 \
 	-mfloat-abi=hard -mfpu=fpv4-sp-d16 \
 	-L../libopencm3/lib
 
-VPATH += platforms/stm32 platforms/winc1500/src
+VPATH += platforms/stm32 platforms/winc1500 platforms/winc1500/src
 
 SRC += 	cdcacm.c	\
 	traceswo.c	\
@@ -24,6 +24,8 @@ SRC += 	cdcacm.c	\
 	timing.c	\
 	timing_stm32.c	\
 	Wifi_Server.c \
+	wdbp_mode_led.c \
+	winc1500_driver_stub_api.c \
 	wf_asic.c \
 	wf_hif.c \
 	wf_ota.c \
