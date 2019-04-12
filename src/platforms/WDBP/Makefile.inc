@@ -5,7 +5,7 @@ OBJCOPY = $(CROSS_COMPILE)objcopy
 CFLAGS += -Istm32/include -mcpu=cortex-m4 -mthumb \
 	-mfloat-abi=hard -mfpu=fpv4-sp-d16 -Wno-unused-value -Wno-unused-parameter \
 	-Wimplicit-fallthrough=0 \
-	-DSTM32F4 -DF4DISCOVERY -I../libopencm3/include \
+	-DWDBP -DSTM32F4 -DF4DISCOVERY -I../libopencm3/include \
 	-I./platforms/winc1500 -I./platforms/winc1500/src \
 	-Iplatforms/stm32
 
