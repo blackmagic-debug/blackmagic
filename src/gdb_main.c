@@ -38,7 +38,7 @@
 #ifdef WDBP
 #include "cdcacm.h"
 #include "WiFi_Server.h"
-#include "winc1500/winc1500_api.h"
+#include "winc1500_api.h"
 #endif
 
 enum gdb_signal {
