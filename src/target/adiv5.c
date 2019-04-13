@@ -234,6 +234,7 @@ void adiv5_dp_unref(ADIv5_DP_t *dp)
 void adiv5_ap_unref(ADIv5_AP_t *ap)
 {
 	if (--(ap->refcnt) == 0) {
+		DEBUG("Unref AP\n");
 		adiv5_dp_unref(ap->dp);
 		free(ap);
 	}
@@ -381,10 +382,12 @@ static bool adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr)
 	return res;
 }
 
+bool __attribute__((weak)) adiv5_ap_setup(int i) {(void)i; return true;}
+void __attribute__((weak)) adiv5_ap_cleanup(int i) {(void)i;}
+
 ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel)
 {
 	ADIv5_AP_t *ap, tmpap;
-
 	/* Assume valid and try to read IDR */
 	memset(&tmpap, 0, sizeof(tmpap));
 	tmpap.dp = dp;
@@ -394,7 +397,6 @@ ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel)
 
 	if(!tmpap.idr) /* IDR Invalid */
 		return NULL;
-
 	/* It's valid to so create a heap copy */
 	ap = malloc(sizeof(*ap));
 	if (!ap) {			/* malloc failed: heap exhaustion */
@@ -417,16 +419,13 @@ ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel)
 
 	DEBUG(" AP %3d: IDR=%08"PRIx32" CFG=%08"PRIx32" BASE=%08"PRIx32" CSW=%08"PRIx32"\n",
 	      apsel, ap->idr, ap->cfg, ap->base, ap->csw);
-
 	return ap;
 }
-
 
 void adiv5_dp_init(ADIv5_DP_t *dp)
 {
 	volatile bool probed = false;
 	volatile uint32_t ctrlstat = 0;
-
 	adiv5_dp_ref(dp);
 
 	volatile struct exception e;
@@ -479,10 +478,13 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 	}
 	/* Probe for APs on this DP */
 	for(int i = 0; i < 256; i++) {
-		ADIv5_AP_t *ap = adiv5_new_ap(dp, i);
-		if (ap == NULL)
+		ADIv5_AP_t *ap = NULL;
+		if (adiv5_ap_setup(i))
+			ap = adiv5_new_ap(dp, i);
+		if (ap == NULL) {
+			adiv5_ap_cleanup(i);
 			continue;
-
+		}
 		extern void kinetis_mdm_probe(ADIv5_AP_t *);
 		kinetis_mdm_probe(ap);
 
@@ -556,7 +558,7 @@ static void * extract(void *dest, uint32_t src, uint32_t val, enum align align)
 	return (uint8_t *)dest + (1 << align);
 }
 
-void
+void  __attribute__((weak))
 adiv5_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
 {
 	uint32_t tmp;
@@ -587,7 +589,7 @@ adiv5_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
 	extract(dest, src, tmp, align);
 }
 
-void
+void  __attribute__((weak))
 adiv5_mem_write_sized(ADIv5_AP_t *ap, uint32_t dest, const void *src,
 					  size_t len, enum align align)
 {
@@ -623,25 +625,26 @@ adiv5_mem_write_sized(ADIv5_AP_t *ap, uint32_t dest, const void *src,
 	}
 }
 
-void
-adiv5_mem_write(ADIv5_AP_t *ap, uint32_t dest, const void *src, size_t len)
-{
-	enum align align = MIN(ALIGNOF(dest), ALIGNOF(len));
-	adiv5_mem_write_sized(ap, dest, src, len, align);
-}
-
-void adiv5_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value)
+void  __attribute__((weak))
+adiv5_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value)
 {
 	adiv5_dp_write(ap->dp, ADIV5_DP_SELECT,
 			((uint32_t)ap->apsel << 24)|(addr & 0xF0));
 	adiv5_dp_write(ap->dp, addr, value);
 }
 
-uint32_t adiv5_ap_read(ADIv5_AP_t *ap, uint16_t addr)
+uint32_t  __attribute__((weak))
+adiv5_ap_read(ADIv5_AP_t *ap, uint16_t addr)
 {
 	uint32_t ret;
 	adiv5_dp_write(ap->dp, ADIV5_DP_SELECT,
 			((uint32_t)ap->apsel << 24)|(addr & 0xF0));
 	ret = adiv5_dp_read(ap->dp, addr);
 	return ret;
+}
+
+void adiv5_mem_write(ADIv5_AP_t *ap, uint32_t dest, const void *src, size_t len)
+{
+	enum align align = MIN(ALIGNOF(dest), ALIGNOF(len));
+	adiv5_mem_write_sized(ap, dest, src, len, align);
 }
