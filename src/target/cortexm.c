@@ -433,8 +433,17 @@ enum { DB_DHCSR, DB_DCRSR, DB_DCRDR, DB_DEMCR };
 
 static void cortexm_regs_read(target *t, void *data)
 {
-	ADIv5_AP_t *ap = cortexm_ap(t);
 	uint32_t *regs = data;
+#if defined(STLINKV2)
+	extern void stlink_regs_read(void *data);
+	extern uint32_t stlink_reg_read(int idx);
+	stlink_regs_read(data);
+	regs += sizeof(regnum_cortex_m);
+	if (t->target_options & TOPT_FLAVOUR_V7MF)
+		for(size_t t = 0; t < sizeof(regnum_cortex_mf) / 4; t++)
+			*regs++ = stlink_reg_read(regnum_cortex_mf[t]);
+#else
+	ADIv5_AP_t *ap = cortexm_ap(t);
 	unsigned i;
 
 	/* FIXME: Describe what's really going on here */
@@ -460,12 +469,25 @@ static void cortexm_regs_read(target *t, void *data)
 			                    regnum_cortex_mf[i]);
 			*regs++ = adiv5_dp_read(ap->dp, ADIV5_AP_DB(DB_DCRDR));
 		}
+#endif
 }
 
 static void cortexm_regs_write(target *t, const void *data)
 {
-	ADIv5_AP_t *ap = cortexm_ap(t);
 	const uint32_t *regs = data;
+#if defined(STLINKV2)
+	extern void stlink_reg_write(int num, uint32_t val);
+	for(size_t z = 1; z < sizeof(regnum_cortex_m) / 4; z++) {
+		stlink_reg_write(regnum_cortex_m[z], *regs);
+		regs++;
+	if (t->target_options & TOPT_FLAVOUR_V7MF)
+		for(size_t z = 0; z < sizeof(regnum_cortex_mf) / 4; z++) {
+			stlink_reg_write(regnum_cortex_mf[z], *regs);
+			regs++;
+		}
+	}
+#else
+	ADIv5_AP_t *ap = cortexm_ap(t);
 	unsigned i;
 
 	/* FIXME: Describe what's really going on here */
@@ -494,6 +516,7 @@ static void cortexm_regs_write(target *t, const void *data)
 			                    ADIV5_AP_DB(DB_DCRSR),
 			                    0x10000 | regnum_cortex_mf[i]);
 		}
+#endif
 }
 
 int cortexm_mem_write_sized(
