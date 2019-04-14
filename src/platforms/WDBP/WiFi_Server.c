@@ -1375,7 +1375,8 @@ unsigned char WiFi_GetNext_to( uint32_t timeout )
 		//
 		// We must run the platform tasks or incomming data will not be transferred
 		// to the input buffers
-		//  
+		//
+		
 		platform_tasks ();
 		
 	} while (!platform_timeout_is_expired (&t)) ;

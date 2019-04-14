@@ -26,16 +26,16 @@
             "preLaunchTask": "Make BlackSTLink"
         },
         {
-            "name": "Debug BMP Native ",
+            "name": "Debug WDBP",
             "type": "cortex-debug",
             "request": "launch",
-            "cwd": "${workspaceroot}/src",
+            "svdFile": "${workspaceFolder}/SVD/STM32F411xx.svd",
+            "cwd": "${workspaceFolder}/src",
             "servertype": "jlink",
             "executable": "blackmagic",
             "showDevDebugOutput": true,
             "interface": "swd",
             "device": "STM32F411RE",
-            "preLaunchTask": "Make BMP Native"
         }
     ]
 }
