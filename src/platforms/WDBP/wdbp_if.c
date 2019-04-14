@@ -16,7 +16,7 @@
 #undef gdb_if_getchar_to
 void gdb_if_putchar(unsigned char c, int flush);
 unsigned char gdb_if_getchar(void);
-unsigned gdb_if_getchar_to(int timeout);
+unsigned char gdb_if_getchar_to(int timeout);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 /// <summary> Gdb shim putchar.</summary>

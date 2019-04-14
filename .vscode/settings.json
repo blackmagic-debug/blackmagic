@@ -4,6 +4,7 @@
         "general.h": "c",
         "platform_support.h": "c",
         "platform.h": "c",
-        "timing_stm32.h": "c"
+        "timing_stm32.h": "c",
+        "gdb_if.h": "c"
     }
 }
