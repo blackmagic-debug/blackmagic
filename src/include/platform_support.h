@@ -36,7 +36,6 @@ bool platform_timeout_is_expired(platform_timeout *t);
 void platform_delay(uint32_t ms);
 
 const char *platform_target_voltage (void);
-bool platform_check_battery_voltage (void);
 int platform_hwversion(void);
 void platform_srst_set_val(bool assert);
 bool platform_srst_get_val(void);
