@@ -36,6 +36,7 @@
             "showDevDebugOutput": true,
             "interface": "swd",
             "device": "STM32F411RE",
+            "preLaunchTask": "Make WDBP"
         }
     ]
 }

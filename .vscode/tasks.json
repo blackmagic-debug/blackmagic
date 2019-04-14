@@ -12,6 +12,19 @@
             "problemMatcher": "$gcc"
         },
         {
+            "label": "Make BlackSTLink",
+            "type": "shell",
+            "group": "build",
+            "command": "mingw32-make.exe ",
+            "args": [
+                "PROBE_HOST=stlinkv2",
+                "CC=gcc",
+                "OPT_FLAGS=-IC:\\mingw64\\mingw32\\include -LC:\\libusb\\MinGW64\\static -Og -g"
+            ],
+            "options": { "cwd": "${workspaceFolder}/src"},
+            "problemMatcher": "$gcc"
+        },
+        {
             "label": "Make WDBP",
             "type": "shell",
             "group": "build",
