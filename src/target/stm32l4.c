@@ -131,7 +131,8 @@ enum ID_STM32L4 {
 	ID_STM32L47  = 0x415u, /* RM0351, Rev.5 */
 	ID_STM32L49  = 0x461u, /* RM0351, Rev.5 */
 	ID_STM32L4R  = 0x470u, /* RM0432, Rev.5 */
-	ID_STM32G07  = 0x460u, /* RM0444/454, Rev.1 */
+	ID_STM32G03  = 0x468u, /* RM0444/454, Rev.2 */
+	ID_STM32G07  = 0x460u, /* RM0444/454, Rev.2 */
 };
 
 enum FAM_STM32L4 {
@@ -151,7 +152,7 @@ struct stm32l4_info {
 	uint16_t sram3;
 	enum ID_STM32L4 idcode;
 	enum FAM_STM32L4 family;
-	uint8_t flags;
+	uint8_t flags;          /* Only DUAL_BANK is evaluated for now.*/
 };
 
 struct stm32l4_info const L4info[] = {
@@ -209,6 +210,13 @@ struct stm32l4_info const L4info[] = {
 		.family = FAM_STM32G0x,
 		.designator = "STM32G07",
 		.sram1 = 36,
+		.flags = 1,
+	},
+	{
+		.idcode = ID_STM32G03,
+		.family = FAM_STM32G0x,
+		.designator = "STM32G03",
+		.sram1 = 8,
 		.flags = 1,
 	},
 	{
