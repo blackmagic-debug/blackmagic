@@ -129,7 +129,8 @@ enum stm32h7_regs
 #define OPTKEY2 0x4C5D6E7F
 
 #define DBGMCU_IDCODE	0x5c001000
-/* Access via 0xe00e1000 does not show device! */
+/* Access from processor address space.
+ * Access via the APB-D is at 0xe00e1000 */
 #define DBGMCU_IDC		(DBGMCU_IDCODE + 0)
 #define DBGMCU_CR		(DBGMCU_IDCODE + 4)
 #define DBGSLEEP_D1		(1 << 0)
