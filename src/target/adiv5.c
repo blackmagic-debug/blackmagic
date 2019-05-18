@@ -18,8 +18,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file implements the transport generic functions of the
- * ARM Debug Interface v5 Architecure Specification, ARM doc IHI0031A.
+/* This file implements the transport generic functions.
+ * See the following ARM Reference Documents:
+ *
+ * ARM Debug Interface v5 Architecure Specification, ARM IHI 0031E
  */
 #include "general.h"
 #include "target.h"
@@ -287,8 +289,22 @@ static bool adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr)
 	/* Extract Component ID class nibble */
 	uint32_t cid_class = (cidr & CID_CLASS_MASK) >> CID_CLASS_SHIFT;
 
-	if (cid_class == cidc_romtab) { /* ROM table, probe recursively */
-		for (int i = 0; i < 256; i++) {
+	/* ROM table */
+	if (cid_class == cidc_romtab) {
+		/* Check SYSMEM bit */
+#ifdef ENABLE_DEBUG
+		uint32_t memtype = adiv5_mem_read32(ap, addr | ADIV5_ROM_MEMTYPE) &
+			ADIV5_ROM_MEMTYPE_SYSMEM;
+
+		if (adiv5_dp_error(ap->dp)) {
+			DEBUG("Fault reading ROM table entry\n");
+		}
+
+		DEBUG("\nROM: Table BASE=0x%"PRIx32" SYSMEM=0x%"PRIx32"\n",
+			  addr, memtype);
+#endif
+
+		for (int i = 0; i < 960; i++) {
 			uint32_t entry = adiv5_mem_read32(ap, addr + i*4);
 			if (adiv5_dp_error(ap->dp)) {
 				DEBUG("Fault reading ROM table entry\n");
@@ -297,11 +313,19 @@ static bool adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr)
 			if (entry == 0)
 				break;
 
-			if ((entry & 1) == 0)
+			if (!(entry & ADIV5_ROM_ROMENTRY_PRESENT)) {
+				DEBUG("%d Entry 0x%"PRIx32" -> Not present\n", i, entry);
 				continue;
+			}
 
-			res |= adiv5_component_probe(ap, addr + (entry & ~0xfff));
+			DEBUG("%d Entry 0x%"PRIx32" -> 0x%"PRIx32"\n",
+				  i, entry, addr + (entry & ADIV5_ROM_ROMENTRY_OFFSET));
+
+			/* Probe recursively */
+			res |= adiv5_component_probe(ap,
+										 addr + (entry & ADIV5_ROM_ROMENTRY_OFFSET));
 		}
+		DEBUG("ROM: Table END\n\n");
 	} else {
 		/* Check if the component was designed by ARM, we currently do not support,
 		 * any components by other designers.
@@ -320,10 +344,10 @@ static bool adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr)
 		int i;
 		for (i = 0; pidr_pn_bits[i].arch != aa_end; i++) {
 			if (pidr_pn_bits[i].part_number == part_number) {
-				DEBUG("0x%"PRIx32": %s - %s %s\n", addr,
+				DEBUG("0x%"PRIx32": %s - %s %s (PIDR = 0x%"PRIx64")\n", addr,
 				      cidc_debug_strings[cid_class],
 				      pidr_pn_bits[i].type,
-				      pidr_pn_bits[i].full);
+				      pidr_pn_bits[i].full, pidr);
 				/* Perform sanity check, if we know what to expect as component ID
 				 * class.
 				 */
@@ -366,8 +390,9 @@ ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel)
 	tmpap.dp = dp;
 	tmpap.apsel = apsel;
 	tmpap.idr = adiv5_ap_read(&tmpap, ADIV5_AP_IDR);
+	tmpap.base = adiv5_ap_read(&tmpap, ADIV5_AP_BASE);
 
-	if(!tmpap.idr) /* IDR Invalid - Should we not continue here? */
+	if(!tmpap.idr) /* IDR Invalid */
 		return NULL;
 
 	/* It's valid to so create a heap copy */
@@ -459,7 +484,11 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 		extern void nrf51_mdm_probe(ADIv5_AP_t *);
 		nrf51_mdm_probe(ap);
 
-		if (ap->base == 0xffffffff) {
+		/* Check the Debug Base Address register. See ADIv5
+		 * Specification C2.6.1 */
+		if (!(ap->base & ADIV5_AP_BASE_PRESENT) ||
+			(ap->base == 0xffffffff)) {
+			/* Debug Base Address not present in this MEM-AP */
 			/* No debug entries... useless AP */
 			adiv5_ap_unref(ap);
 			continue;
