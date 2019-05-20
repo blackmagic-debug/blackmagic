@@ -187,6 +187,20 @@ static bool stm32h7_attach(target *t)
 	uint32_t optsr = target_mem_read32(t, FPEC1_BASE + FLASH_OPTSR);
 	if (!(optsr & FLASH_OPTSR_IWDG1_SW))
 		tc_printf(t, "Hardware IWDG running. Expect failure. Set IWDG1_SW!");
+
+	/* Free previously loaded memory map */
+	target_mem_map_free(t);
+
+	/* Add RAM to memory map */
+	target_add_ram(t, 0x00000000, 0x10000); /* ITCM Ram,  64 k */
+	target_add_ram(t, 0x20000000, 0x20000); /* DTCM Ram, 128 k */
+	target_add_ram(t, 0x24000000, 0x80000); /* AXI Ram,  512 k */
+	target_add_ram(t, 0x30000000, 0x20000); /* AHB SRAM1, 128 k */
+	target_add_ram(t, 0x32000000, 0x20000); /* AHB SRAM2, 128 k */
+	target_add_ram(t, 0x34000000, 0x08000); /* AHB SRAM3,  32 k */
+	target_add_ram(t, 0x38000000, 0x01000); /* AHB SRAM4,  32 k */
+
+	/* Add the flash to memory map. */
 	uint32_t flashsize = target_mem_read32(t,  FLASH_SIZE_REG);
 	flashsize &= 0xffff;
 	if (flashsize == 128) { /* H750 has only 128 kByte!*/
@@ -214,13 +228,6 @@ bool stm32h7_probe(target *t)
 		t->attach = stm32h7_attach;
 		t->detach = stm32h7_detach;
 		target_add_commands(t, stm32h7_cmd_list, stm32h74_driver_str);
-		target_add_ram(t, 0x00000000, 0x10000); /* ITCM Ram,  64 k */
-		target_add_ram(t, 0x20000000, 0x20000); /* DTCM Ram, 128 k */
-		target_add_ram(t, 0x24000000, 0x80000); /* AXI Ram,  512 k */
-		target_add_ram(t, 0x30000000, 0x20000); /* AHB SRAM1, 128 k */
-		target_add_ram(t, 0x32000000, 0x20000); /* AHB SRAM2, 128 k */
-		target_add_ram(t, 0x34000000, 0x08000); /* AHB SRAM3,  32 k */
-		target_add_ram(t, 0x38000000, 0x01000); /* AHB SRAM4,  32 k */
 		return true;
 	}
 	return false;
