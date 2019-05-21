@@ -35,6 +35,7 @@ static bool stm32h7_cmd_erase_mass(target *t);
 static bool stm32h7_uid(target *t);
 static bool stm32h7_crc(target *t);
 static bool stm32h7_cmd_psize(target *t, int argc, char *argv[]);
+static bool stm32h7_cmd_rev(target *t);
 
 const struct command_s stm32h7_cmd_list[] = {
 	{"erase_mass", (cmd_handler)stm32h7_cmd_erase_mass,
@@ -45,6 +46,8 @@ const struct command_s stm32h7_cmd_list[] = {
 	 "Configure flash write parallelism: (x8|x16|x32|x64(default))"},
 	{"uid", (cmd_handler)stm32h7_uid, "Print unique device ID"},
 	{"crc", (cmd_handler)stm32h7_crc, "Print CRC of both banks"},
+	{"revision", (cmd_handler)stm32h7_cmd_rev,
+	 "Returns the Device ID and Revision"},
 	{NULL, NULL, NULL}
 };
 
@@ -127,6 +130,7 @@ enum stm32h7_regs
 
 #define DBGMCU_IDCODE	0x5c001000
 /* Access via 0xe00e1000 does not show device! */
+#define DBGMCU_IDC		(DBGMCU_IDCODE + 0)
 #define DBGMCU_CR		(DBGMCU_IDCODE + 4)
 #define DBGSLEEP_D1		(1 << 0)
 #define DBGSTOP_D1		(1 << 1)
@@ -513,5 +517,45 @@ static bool stm32h7_cmd_psize(target *t, int argc, char *argv[])
 			}
 		}
 	}
+	return true;
+}
+
+static const struct stm32h7xx_rev {
+	uint32_t rev_id;
+	char revision;
+} stm32h7xx_revisions[] = {
+	{ 0x1000, 'A' },
+	{ 0x1001, 'Z' },
+	{ 0x1003, 'Y' },
+	{ 0x2001, 'X' },
+	{ 0x2003, 'V' }
+};
+static bool stm32h7_cmd_rev(target *t)
+{
+	/* DBGMCU identity code register */
+	uint32_t dbgmcu_idc = target_mem_read32(t, DBGMCU_IDC);
+	uint16_t rev_id = (dbgmcu_idc >> 16) & 0xFFFF;
+	uint16_t dev_id = dbgmcu_idc & 0xFFF;
+
+	/* Print device */
+	switch (dev_id) {
+	case 0x450:
+		tc_printf(t, "STM32H742/743/753/750\n");
+		break;
+	default:
+		tc_printf(t, "Unknown STM32H7. This driver may not support it!\n");
+	}
+
+	/* Print revision */
+	char rev = '?';
+	for (size_t i = 0;
+		 i < sizeof(stm32h7xx_revisions)/sizeof(struct stm32h7xx_rev); i++) {
+		/* Check for matching revision */
+		if (stm32h7xx_revisions[i].rev_id == rev_id) {
+			rev = stm32h7xx_revisions[i].revision;
+		}
+	}
+	tc_printf(t, "Revision %c\n", rev);
+
 	return true;
 }
