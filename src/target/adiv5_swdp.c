@@ -48,6 +48,10 @@ int adiv5_swdp_scan(void)
 
 	target_list_free();
 	ADIv5_DP_t *dp = (void*)calloc(1, sizeof(*dp));
+	if (!dp) {			/* calloc failed: heap exhaustion */
+		DEBUG("calloc: failed in %s\n", __func__);
+		return -1;
+	}
 
 	if (swdptap_init())
 		return -1;
@@ -179,4 +183,3 @@ static void adiv5_swdp_abort(ADIv5_DP_t *dp, uint32_t abort)
 {
 	adiv5_dp_write(dp, ADIV5_DP_ABORT, abort);
 }
-

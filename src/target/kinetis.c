@@ -105,7 +105,14 @@ static void kl_gen_add_flash(target *t, uint32_t addr, size_t length,
                              size_t erasesize, size_t write_len)
 {
 	struct kinetis_flash *kf = calloc(1, sizeof(*kf));
-	struct target_flash *f = &kf->f;
+	struct target_flash *f;
+
+	if (!kf) {			/* calloc failed: heap exhaustion */
+		DEBUG("calloc: failed in %s\n", __func__);
+		return;
+	}
+
+	f = &kf->f;
 	f->start = addr;
 	f->length = length;
 	f->blocksize = erasesize;
@@ -367,6 +374,10 @@ void kinetis_mdm_probe(ADIv5_AP_t *ap)
 	}
 
 	target *t = target_new();
+	if (!t) {
+		return;
+	}
+
 	adiv5_ap_ref(ap);
 	t->priv = ap;
 	t->priv_free = (void*)adiv5_ap_unref;

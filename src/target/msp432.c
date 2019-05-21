@@ -148,7 +148,13 @@ const struct command_s msp432_cmd_list[] = {
 static void msp432_add_flash(target *t, uint32_t addr, size_t length, target_addr prot_reg)
 {
 	struct msp432_flash *mf = calloc(1, sizeof(*mf));
-	struct target_flash *f = &mf->f;
+	struct target_flash *f;
+	if (!mf) {			/* calloc failed: heap exhaustion */
+		DEBUG("calloc: failed in %s\n", __func__);
+		return;
+	}
+
+	f = &mf->f;
 	f->start = addr;
 	f->length = length;
 	f->blocksize = SECTOR_SIZE;
@@ -183,7 +189,7 @@ bool msp432_probe(target *t)
 
 	/* If we got till this point, we are most probably looking at a real TLV  */
 	/* Device Information structure. Now check for the correct device         */
-	switch (target_mem_read32(t, DEVID_ADDR)) { 
+	switch (target_mem_read32(t, DEVID_ADDR)) {
 	case DEVID_MSP432P401RIPZ:
 	case DEVID_MSP432P401RIZXH:
 	case DEVID_MSP432P401RIRGC:
