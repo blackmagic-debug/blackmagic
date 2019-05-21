@@ -264,8 +264,17 @@ bool cortexm_probe(ADIv5_AP_t *ap, bool forced)
 	target *t;
 
 	t = target_new();
+	if (!t) {
+		return false;
+	}
+
 	adiv5_ap_ref(ap);
 	struct cortexm_priv *priv = calloc(1, sizeof(*priv));
+	if (!priv) {			/* calloc failed: heap exhaustion */
+		DEBUG("calloc: failed in %s\n", __func__);
+		return false;
+	}
+
 	t->priv = priv;
 	t->priv_free = cortexm_priv_free;
 	priv->ap = ap;
@@ -1035,4 +1044,3 @@ static int cortexm_hostio_request(target *t)
 
 	return t->tc->interrupted;
 }
-

@@ -49,6 +49,10 @@ static void adiv5_jtagdp_abort(ADIv5_DP_t *dp, uint32_t abort);
 void adiv5_jtag_dp_handler(jtag_dev_t *dev)
 {
 	ADIv5_DP_t *dp = (void*)calloc(1, sizeof(*dp));
+	if (!dp) {			/* calloc failed: heap exhaustion */
+		DEBUG("calloc: failed in %s\n", __func__);
+		return;
+	}
 
 	dp->dev = dev;
 	dp->idcode = dev->idcode;
@@ -109,4 +113,3 @@ static void adiv5_jtagdp_abort(ADIv5_DP_t *dp, uint32_t abort)
 	jtag_dev_write_ir(dp->dev, IR_ABORT);
 	jtag_dev_shift_dr(dp->dev, NULL, (const uint8_t*)&request, 35);
 }
-
