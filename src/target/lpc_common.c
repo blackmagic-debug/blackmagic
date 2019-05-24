@@ -66,6 +66,14 @@ enum iap_status lpc_iap_call(struct lpc_flash *f, void *result, enum iap_cmd cmd
 	if (f->wdt_kick)
 		f->wdt_kick(t);
 
+	/* save IAP RAM to restore after IAP call */
+	struct flash_param backup_param;
+	target_mem_read(t, &backup_param, f->iap_ram, sizeof(backup_param));
+
+	/* save registers to restore after IAP call */
+	uint32_t backup_regs[t->regs_size / sizeof(uint32_t)];
+	target_regs_read(t, backup_regs);
+
 	/* fill out the remainder of the parameters */
 	va_list ap;
 	va_start(ap, cmd);
@@ -92,6 +100,10 @@ enum iap_status lpc_iap_call(struct lpc_flash *f, void *result, enum iap_cmd cmd
 
 	/* copy back just the parameters structure */
 	target_mem_read(t, &param, f->iap_ram, sizeof(param));
+
+	/* restore the original data in RAM and registers */
+	target_mem_write(t, f->iap_ram, &backup_param, sizeof(param));
+	target_regs_write(t, backup_regs);
 
 	/* if the user expected a result, set the result (16 bytes). */
 	if (result != NULL)
