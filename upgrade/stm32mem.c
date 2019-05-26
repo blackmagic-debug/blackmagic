@@ -69,8 +69,13 @@ int stm32_mem_erase(usb_dev_handle *dev, uint16_t iface, uint32_t addr)
 	return stm32_download(dev, iface, 0, request, sizeof(request));
 }
 
-int stm32_mem_write(usb_dev_handle *dev, uint16_t iface, void *data, int size)
+int stm32_mem_write(usb_dev_handle *dev, uint16_t iface, void *data, int size, uint32_t addr)
 {
+	uint8_t request[5];
+
+	request[0] = STM32_CMD_SETADDRESSPOINTER;
+	memcpy(request+1, &addr, sizeof(addr));
+	stm32_download(dev, iface, 0, request, sizeof(request));
 	return stm32_download(dev, iface, 2, data, size);
 }
 

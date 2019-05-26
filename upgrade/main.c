@@ -157,7 +157,7 @@ retry:
 		printf("Progress: %d%%\r", (offset*100)/bindatalen);
 		fflush(stdout);
 		assert(stm32_mem_erase(handle, iface, LOAD_ADDRESS + offset) == 0);
-		stm32_mem_write(handle, iface, (void*)&bindata[offset], 1024);
+		stm32_mem_write(handle, iface, (void*)&bindata[offset], 1024, LOAD_ADDRESS + offset);
 	}
 	stm32_mem_manifest(handle, iface);
 
