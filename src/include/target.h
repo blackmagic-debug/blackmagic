@@ -29,7 +29,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <sys/types.h>
-#include <unistd.h>
 
 typedef struct target_s target;
 typedef uint32_t target_addr;
