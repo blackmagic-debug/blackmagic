@@ -318,16 +318,24 @@ bool cortexm_probe(ADIv5_AP_t *ap, bool forced)
 		target_check_error(t);
 	}
 
+#define PROBE(x) \
+	do { if ((x)(t)) {target_halt_resume(t, 0); return true;} else target_check_error(t); } while (0)
+
 	/* Only force halt if read ROM Table failed and there is no DPv2
 	 * targetid!
 	 * So long, only STM32L0 is expected to enter this cause.
 	 */
 	if (forced && !ap->dp->targetid)
-		if (!cortexm_forced_halt(t))
+		if (!cortexm_forced_halt(t)) {
+			/* Protected Atmel SAM D also enters this clause, so probing for it is done here.
+			 * target_check_error is needed to clear pending error, then samd_probe checks
+			 * for the right manufacturer/part number in CoreSight ROM first and exits if
+			 * the correct part is not detected.
+			 */
+			target_check_error(t);
+			PROBE(samd_probe);
 			return false;
-
-#define PROBE(x) \
-	do { if ((x)(t)) {target_halt_resume(t, 0); return true;} else target_check_error(t); } while (0)
+		}
 
 	PROBE(stm32f1_probe);
 	PROBE(stm32f4_probe);
