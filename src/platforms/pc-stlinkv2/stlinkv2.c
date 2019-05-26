@@ -311,7 +311,7 @@ static int submit_wait(struct libusb_transfer * trans) {
 
 	return 0;
 }
-
+#define STLINK_ERROR_DP_FAULT -2
 static int send_recv(uint8_t *txbuf, size_t txsize,
 					 uint8_t *rxbuf, size_t rxsize)
 {
@@ -421,7 +421,7 @@ static int stlink_usb_error_check(uint8_t *data, bool verbose)
 			 */
 			if (verbose)
 				DEBUG("STLINK_SWD_AP_FAULT\n");
-			return STLINK_ERROR_FAIL;
+			return STLINK_ERROR_DP_FAULT;
 		case STLINK_SWD_AP_ERROR:
 			if (verbose)
 				DEBUG("STLINK_SWD_AP_ERROR\n");
@@ -1015,10 +1015,13 @@ uint32_t stlink_dp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 	if (res == STLINK_ERROR_WAIT)
 		raise_exception(EXCEPTION_TIMEOUT, "DP ACK timeout");
 
-	if(res == STLINK_ERROR_FAIL) {
+	if(res == STLINK_ERROR_DP_FAULT) {
 		dp->fault = 1;
 		return 0;
 	}
+	if(res == STLINK_ERROR_FAIL)
+		raise_exception(EXCEPTION_ERROR, "SWDP invalid ACK");
+
 	return response;
 }
 
