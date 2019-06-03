@@ -787,6 +787,9 @@ void stlink_init(int argc, char **argv)
 	if (Stlink.ver_stlink < 3 && Stlink.ver_jtag < 32) {
 		DEBUG("Please update Firmware\n");
 		goto error_1;
+	} else if (Stlink.ver_stlink == 3 && Stlink.ver_jtag < 3) {
+		DEBUG("Please update Firmware\n");
+		goto error_1;
 	}
 	stlink_resetsys();
 	stlink_leave_state();
