@@ -1074,7 +1074,7 @@ int stlink_usb_get_rw_status(void)
 	return stlink_usb_error_check(data, true);
 }
 
-void stlink_readmem(void *dest, uint32_t src, size_t len)
+void stlink_readmem(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
 {
 	uint8_t type;
 	char *CMD;
@@ -1093,13 +1093,14 @@ void stlink_readmem(void *dest, uint32_t src, size_t len)
 		type = STLINK_DEBUG_READMEM_32BIT;
 
 	}
-	DEBUG_STLINK("%s len %" PRI_SIZET " addr 0x%08" PRIx32 ": ", CMD, len, src);
+	DEBUG_STLINK("%s len %" PRI_SIZET " addr 0x%08" PRIx32 " AP %d : ",
+				 CMD, len, src, ap->apsel);
 	uint8_t cmd[16] = {
 		STLINK_DEBUG_COMMAND,
 		type,
 		src & 0xff, (src >>  8) & 0xff, (src >> 16) & 0xff,
 		(src >> 24) & 0xff,
-		len & 0xff, len >> 8};
+		len & 0xff, len >> 8, ap->apsel};
 	int res = read_retry(cmd, 16, dest, len);
 	if (res == STLINK_ERROR_OK) {
 		uint8_t *p = (uint8_t*)dest;
@@ -1110,9 +1111,11 @@ void stlink_readmem(void *dest, uint32_t src, size_t len)
 	DEBUG_STLINK("\n");
 }
 
-void stlink_writemem8(uint32_t addr, size_t len, uint8_t *buffer)
+void stlink_writemem8(ADIv5_AP_t *ap, uint32_t addr, size_t len,
+					  uint8_t *buffer)
 {
-	DEBUG_STLINK("Mem Write8 len %" PRI_SIZET " addr 0x%08" PRIx32 ": ", len, addr);
+	DEBUG_STLINK("Mem Write8 AP %d len %" PRI_SIZET " addr 0x%08" PRIx32 ": ",
+				 ap->apsel, len, addr);
 	for (size_t t = 0; t < len; t++) {
 		DEBUG_STLINK("%02x", buffer[t]);
 	}
@@ -1128,7 +1131,7 @@ void stlink_writemem8(uint32_t addr, size_t len, uint8_t *buffer)
 			STLINK_DEBUG_WRITEMEM_8BIT,
 			addr & 0xff, (addr >>  8) & 0xff, (addr >> 16) & 0xff,
 			(addr >> 24) & 0xff,
-			length & 0xff, length >> 8};
+			length & 0xff, length >> 8, ap->apsel};
 		send_recv(cmd, 16, NULL, 0);
 		send_recv((void*)buffer, length, NULL, 0);
 		stlink_usb_get_rw_status();
@@ -1137,9 +1140,11 @@ void stlink_writemem8(uint32_t addr, size_t len, uint8_t *buffer)
 	}
 }
 
-void stlink_writemem16(uint32_t addr, size_t len, uint16_t *buffer)
+void stlink_writemem16(ADIv5_AP_t *ap, uint32_t addr, size_t len,
+					   uint16_t *buffer)
 {
-	DEBUG_STLINK("Mem Write16 len %" PRI_SIZET " addr 0x%08" PRIx32 ": ", len, addr);
+	DEBUG_STLINK("Mem Write16 AP %d len %" PRI_SIZET " addr 0x%08" PRIx32 ": ",
+				 ap->apsel, len, addr);
 	for (size_t t = 0; t < len; t+=2) {
 		DEBUG_STLINK("%04x", buffer[t]);
 	}
@@ -1149,15 +1154,17 @@ void stlink_writemem16(uint32_t addr, size_t len, uint16_t *buffer)
 		STLINK_DEBUG_APIV2_WRITEMEM_16BIT,
 		addr & 0xff, (addr >>  8) & 0xff, (addr >> 16) & 0xff,
 		(addr >> 24) & 0xff,
-		len & 0xff, len >> 8};
+		len & 0xff, len >> 8, ap->apsel};
 	send_recv(cmd, 16, NULL, 0);
 	send_recv((void*)buffer, len, NULL, 0);
 	stlink_usb_get_rw_status();
 }
 
-void stlink_writemem32(uint32_t addr, size_t len, uint32_t *buffer)
+void stlink_writemem32(ADIv5_AP_t *ap, uint32_t addr, size_t len,
+					   uint32_t *buffer)
 {
-	DEBUG_STLINK("Mem Write32 len %" PRI_SIZET " addr 0x%08" PRIx32 ": ", len, addr);
+	DEBUG_STLINK("Mem Write32 AP %d len %" PRI_SIZET " addr 0x%08" PRIx32 ": ",
+				 ap->apsel, len, addr);
 	for (size_t t = 0; t < len; t+=4) {
 		DEBUG_STLINK("%04x", buffer[t]);
 	}
@@ -1167,7 +1174,7 @@ void stlink_writemem32(uint32_t addr, size_t len, uint32_t *buffer)
 		STLINK_DEBUG_WRITEMEM_32BIT,
 		addr & 0xff, (addr >>  8) & 0xff, (addr >> 16) & 0xff,
 		(addr >> 24) & 0xff,
-		len & 0xff, len >> 8};
+		len & 0xff, len >> 8, ap->apsel};
 	write_retry(cmd, 16, (void*)buffer, len);
 }
 
@@ -1208,23 +1215,21 @@ void stlink_reg_write(int num, uint32_t val)
 void
 adiv5_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
 {
-	(void)ap;
-	stlink_readmem(dest, src, len);
+	stlink_readmem(ap, dest, src, len);
 }
 
 void
 adiv5_mem_write_sized(ADIv5_AP_t *ap, uint32_t dest, const void *src,
 					  size_t len, enum align align)
 {
-	(void)ap;
 	switch(align) {
-	case ALIGN_BYTE: stlink_writemem8(dest, len, (uint8_t *) src);
+	case ALIGN_BYTE: stlink_writemem8(ap, dest, len, (uint8_t *) src);
 		break;
-	case ALIGN_HALFWORD: stlink_writemem16(dest, len, (uint16_t *) src);
+	case ALIGN_HALFWORD: stlink_writemem16(ap, dest, len, (uint16_t *) src);
 		break;
-	case ALIGN_WORD: stlink_writemem32(dest, len, (uint32_t *) src);
+	case ALIGN_WORD: stlink_writemem32(ap, dest, len, (uint32_t *) src);
 		break;
-	case ALIGN_DWORD: stlink_writemem32(dest, len, (uint32_t *) src);
+	case ALIGN_DWORD: stlink_writemem32(ap, dest, len, (uint32_t *) src);
 		break;
 	}
 }
