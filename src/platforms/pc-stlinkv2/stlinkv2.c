@@ -56,6 +56,7 @@
 #define PRODUCT_ID_STLINKV21	0x374b
 #define PRODUCT_ID_STLINKV21_MSD 0x3752
 #define PRODUCT_ID_STLINKV3		0x374f
+#define PRODUCT_ID_STLINKV3E	0x374e
 
 #define STLINK_SWIM_ERR_OK             0x00
 #define STLINK_SWIM_BUSY               0x01
@@ -732,10 +733,16 @@ void stlink_init(int argc, char **argv)
 						DEBUG("STLINKV21 serial %s\n", Stlink.serial);
 						Stlink.ver_hw = 21;
 						Stlink.ep_tx = 1;
+					} else if (desc.idProduct == PRODUCT_ID_STLINKV3E) {
+						DEBUG("STLINKV3E serial %s\n", Stlink.serial);
+						Stlink.ver_hw = 30;
+						Stlink.ep_tx = 1;
 					} else if (desc.idProduct == PRODUCT_ID_STLINKV3) {
 						DEBUG("STLINKV3  serial %s\n", Stlink.serial);
 						Stlink.ver_hw = 30;
 						Stlink.ep_tx = 1;
+					} else {
+						DEBUG("Unknown STLINK variant, serial %s\n", Stlink.serial);
 					}
 				}
 				if (serial && (!strncmp((char*)Stlink.serial, serial, strlen(serial))))
