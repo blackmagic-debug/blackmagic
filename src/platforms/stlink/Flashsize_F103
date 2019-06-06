@@ -2,52 +2,63 @@ Announced versus available Flash size on F103
 ============================================
 Up to Stlink V2, the CPU soldered on the board was a F103C8 with 64 kiByte
 flash. Up to about version 280 of BMP, this limit was not hit when linked
-against nanolib.
-
-StlinkV2-1 has a STM32F103CB, like a genuine BMP.
+against nanolib. 
 
 However with more and more devices supported, BMP at about version 282 hit
-this limit. There are two ways to work around:
-- Branch STlink V2-1 as separate platform and and care for the original STlink
-  platform by restricting/ommitting features.
+the 64kb flash limit. It will still fit on a StlinkV2-1, which uses a 
+STM32F103CB like a genuine BMP. For older platforms, there are two ways to 
+work around flash size:
+- Branch STlink V2-1 as separate platform and restrict/omit features
 - Rely on uncertain upper flash on F103C8
 
-The first option needs more care as an additional platform is introduced and
-will restrict usage of older STlinks as BMPs.
+F103C8 and F103CB share their chip architecture and most users report that 
+undocumented upper flash exists on the F103C8. However, this flash may have 
+been tested bad, or not have been tested at all, or, in the best case, was 
+tested good but market requirements made STM sell it as the F103C8.
 
-However F103C8 and F103CB have the same chip and upper flash exists on F103C8.
-This flash may have been tested bad, or not have been tested at all,
-or, in the best case, was tested good but market requirements made STM sell
-it as F103C8.
+Ignoring the chip markings and using an F103C8 blindly as a F103Cb has been 
+done already with few problems on many china boards (e.g. blue pill). This 
+second approach will work for many of the older STLinks. 
 
-Ignoring the chip marking and using an F103C8 blindly as a F103Cb is done
-already with few problems on many china boards (e.g. blue pill). Probably
-this second approach will work for many of the older STLinks.
+However, The F103C8 will report its own flash size as 64kb, preventing dfu-util 
+from using it, as it will not allow upload past announced flash. 
 
-dfu-util cares for the size and refuses to programm above the announced size:
  > dfu-util -S E4D078EA -s 0x08002000:leave -D blackmagic.bin
  dfu-util 0.9
  ...
  dfu-util: Last page at 0x0801093f is not writeable
 
-Flash above the announced size with recent bootloader/BMP:
-==========================================================
-script/stm32_mem.py does not care for the announced size:
+To flash above the announced size of the chip, use the dfu bootloader and the 
+included stm32_mem.py script. This script does not care about the announced 
+flash size and will attempt to flash the full binary regardless of whether the 
+upper flash is functional or not. It will then read back the chip flash and 
+compare to the original on the host machine, to confirm whether the entire 
+binary was successfully uploaded or whether problematic upper flash corrupted 
+the upload. 
+
+First, you must flash the blackmagic_dfu.bin using a separate blackmagic, 
+stm32loader, stlink, or some other method. This binary is small and will easily 
+fit in the Bluepill's announced flash. 
+
+Once the blackmagic_dfu.bin is flashed, attach to the board via USB. Navigate 
+to the src folder, and run the following python script to flash the 
+blackmagic.bin binary to the chip. This script requires libusb and the pyusb 
+python library. 
  > ../scripts/stm32_mem.py blackmagic.bin
  ...
  USB Device Firmware Upgrade - Host Utility -- version 1.2
  ...
- Programming memory at 0x08010800
+ Programming memory at 0x08013C00
+ Verifying memory at 0x08013C00
+ Verified!
  All operations complete!
 
-Get length of binary
-  > ls -l blackmagic.bin
- -rwxr-xr-x 1 bon users 59712 21. Sep 22:47 blackmagic.bin
-Actual file size may differ!
+The verification steps indicate whether the flashed binary, when read back, is 
+identical to the original. If the binaries do not match, this indicates the 
+upper flash on the target F103C8 is not viable and another chip should be used. 
 
-Upload binary from flash with the exact size
-  > dfu-util -s 0x08002000:leave:force:59712 -U blackmagic.bin.1
-
-Compare
-  > diff blackmagic.bin*
-No differences should get reported!
+TLDR;
+- some F103's have more flash than the 64K they report
+- current BMP builds need more than 64K flash
+- the dfu_util code refuses to upload firmware which exceeds the reported size
+- use ../scripts/stm32_mem.py blackmagic.bin instead of dfu_util to avoid issue
