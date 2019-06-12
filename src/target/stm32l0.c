@@ -609,6 +609,8 @@ static bool stm32lx_cmd_option(target* t, int argc, char** argv)
                 return true;
         }
 
+        if (argc < 2 )
+                 goto usage;
         size_t cb = strlen(argv[1]);
 
         if (argc == 2 && !strncasecmp(argv[1], "obl_launch", cb)) {
@@ -638,10 +640,6 @@ static bool stm32lx_cmd_option(target* t, int argc, char** argv)
                 if (!stm32lx_option_write(t, addr, val))
                         tc_printf(t, "option write failed\n");
         }
-        else if (argc == 2 && !strncasecmp(argv[1], "show", cb))
-                ;
-        else
-                goto usage;
 
         /* Report the current option values */
         for(unsigned i = 0; i < opt_size; i += sizeof(uint32_t)) {
