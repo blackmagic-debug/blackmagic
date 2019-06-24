@@ -110,8 +110,9 @@ void target_add_commands(target *t, const struct command_s *cmds, const char *na
 	}
 
 	if (t->commands) {
-		for (tc = t->commands; tc->next; tc = tc->next);
-		tc->next = tc;
+		struct target_command_s *tail;
+		for (tail = t->commands; tail->next; tail = tail->next);
+		tail->next = tc;
 	} else {
 		t->commands = tc;
 	}
