@@ -253,12 +253,19 @@ static uint32_t adiv5_mem_read32(ADIv5_AP_t *ap, uint32_t addr)
 	return ret;
 }
 
-static bool adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr)
+static bool adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, int recursion, int num_entry)
 {
+	(void) num_entry;
 	addr &= ~3;
 	uint64_t pidr = 0;
 	uint32_t cidr = 0;
 	bool res = false;
+#if defined(ENABLE_DEBUG)
+	char indent[recursion];
+
+	for(int i = 0; i < recursion; i++) indent[i] = ' ';
+	indent[recursion] = 0;
+#endif
 
 	/* Assemble logical Product ID register value. */
 	for (int i = 0; i < 4; i++) {
@@ -277,14 +284,15 @@ static bool adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr)
 	}
 
 	if (adiv5_dp_error(ap->dp)) {
-		DEBUG("Fault reading ID registers\n");
+		DEBUG("%sFault reading ID registers\n", indent);
 		return false;
 	}
 
 	/* CIDR preamble sanity check */
 	if ((cidr & ~CID_CLASS_MASK) != CID_PREAMBLE) {
-		DEBUG("0x%"PRIx32": 0x%"PRIx32" <- does not match preamble (0x%X)\n",
-                      addr, cidr, CID_PREAMBLE);
+		DEBUG("%s%d 0x%08" PRIx32": 0x%08" PRIx32
+			  " <- does not match preamble (0x%X)\n",
+			  indent + 1, num_entry, addr, cidr, CID_PREAMBLE);
 		return false;
 	}
 
@@ -302,39 +310,37 @@ static bool adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr)
 			DEBUG("Fault reading ROM table entry\n");
 		}
 
-		DEBUG("\nROM: Table BASE=0x%"PRIx32" SYSMEM=0x%"PRIx32"\n",
+		DEBUG("ROM: Table BASE=0x%"PRIx32" SYSMEM=0x%"PRIx32"\n",
 			  addr, memtype);
 #endif
 
 		for (int i = 0; i < 960; i++) {
 			uint32_t entry = adiv5_mem_read32(ap, addr + i*4);
 			if (adiv5_dp_error(ap->dp)) {
-				DEBUG("Fault reading ROM table entry\n");
+				DEBUG("%sFault reading ROM table entry\n", indent);
 			}
 
 			if (entry == 0)
 				break;
 
 			if (!(entry & ADIV5_ROM_ROMENTRY_PRESENT)) {
-				DEBUG("%d Entry 0x%"PRIx32" -> Not present\n", i, entry);
+				DEBUG("%s%d Entry 0x%"PRIx32" -> Not present\n", indent, i, entry);
 				continue;
 			}
 
-			DEBUG("%d Entry 0x%"PRIx32" -> 0x%"PRIx32"\n",
-				  i, entry, addr + (entry & ADIV5_ROM_ROMENTRY_OFFSET));
-
 			/* Probe recursively */
-			res |= adiv5_component_probe(ap,
-										 addr + (entry & ADIV5_ROM_ROMENTRY_OFFSET));
+			res |= adiv5_component_probe(
+				ap, addr + (entry & ADIV5_ROM_ROMENTRY_OFFSET),
+				recursion + 1, i);
 		}
-		DEBUG("ROM: Table END\n\n");
+		DEBUG("%sROM: Table END\n", indent);
 	} else {
 		/* Check if the component was designed by ARM, we currently do not support,
 		 * any components by other designers.
 		 */
 		if ((pidr & ~(PIDR_REV_MASK | PIDR_PN_MASK)) != PIDR_ARM_BITS) {
-			DEBUG("0x%"PRIx32": 0x%"PRIx64" <- does not match ARM JEP-106\n",
-                              addr, pidr);
+			DEBUG("%s0x%"PRIx32": 0x%"PRIx64" <- does not match ARM JEP-106\n",
+				  indent, addr, pidr);
 			return false;
 		}
 
@@ -346,38 +352,38 @@ static bool adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr)
 		int i;
 		for (i = 0; pidr_pn_bits[i].arch != aa_end; i++) {
 			if (pidr_pn_bits[i].part_number == part_number) {
-				DEBUG("0x%"PRIx32": %s - %s %s (PIDR = 0x%"PRIx64")\n", addr,
-				      cidc_debug_strings[cid_class],
-				      pidr_pn_bits[i].type,
-				      pidr_pn_bits[i].full, pidr);
+				DEBUG("%s%d 0x%"PRIx32": %s - %s %s (PIDR = 0x%"PRIx64")",
+					  indent + 1, num_entry, addr, cidc_debug_strings[cid_class],
+				      pidr_pn_bits[i].type, pidr_pn_bits[i].full, pidr);
 				/* Perform sanity check, if we know what to expect as component ID
 				 * class.
 				 */
 				if ((pidr_pn_bits[i].cidc != cidc_unknown) &&
 				    (cid_class != pidr_pn_bits[i].cidc)) {
-					DEBUG("WARNING: \"%s\" !match expected \"%s\"\n",
+					DEBUG("%sWARNING: \"%s\" !match expected \"%s\"\n", indent + 1,
 					      cidc_debug_strings[cid_class],
 					      cidc_debug_strings[pidr_pn_bits[i].cidc]);
 				}
 				res = true;
 				switch (pidr_pn_bits[i].arch) {
 				case aa_cortexm:
-					DEBUG("-> cortexm_probe\n");
+					DEBUG("%s-> cortexm_probe\n", indent + 1);
 					cortexm_probe(ap, false);
 					break;
 				case aa_cortexa:
-					DEBUG("-> cortexa_probe\n");
+					DEBUG("%s-> cortexa_probe\n", indent + 1);
 					cortexa_probe(ap, addr);
 					break;
 				default:
+					DEBUG("\n");
 					break;
 				}
 				break;
 			}
 		}
 		if (pidr_pn_bits[i].arch == aa_end) {
-			DEBUG("0x%"PRIx32": %s - Unknown (PIDR = 0x%"PRIx64")\n", addr,
-			      cidc_debug_strings[cid_class], pidr);
+			DEBUG("%s0x%"PRIx32": %s - Unknown (PIDR = 0x%"PRIx64")\n",
+				  indent, addr, cidc_debug_strings[cid_class], pidr);
 		}
 	}
 	return res;
@@ -418,7 +424,7 @@ ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel)
 		ap->csw &= ~ADIV5_AP_CSW_TRINPROG;
 	}
 
-	DEBUG(" AP %3d: IDR=%08"PRIx32" CFG=%08"PRIx32" BASE=%08"PRIx32" CSW=%08"PRIx32"\n",
+	DEBUG("AP %3d: IDR=%08"PRIx32" CFG=%08"PRIx32" BASE=%08"PRIx32" CSW=%08"PRIx32"\n",
 	      apsel, ap->idr, ap->cfg, ap->base, ap->csw);
 	return ap;
 }
@@ -507,7 +513,7 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 		 */
 
 		/* The rest should only be added after checking ROM table */
-		probed |= adiv5_component_probe(ap, ap->base);
+		probed |= adiv5_component_probe(ap, ap->base, 0, 0);
 		if (!probed && (dp->idcode & 0xfff) == 0x477) {
 			DEBUG("-> cortexm_probe forced\n");
 			cortexm_probe(ap, true);
