@@ -5,7 +5,8 @@
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
  *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
+ * it under tSchreibe Objekte: 100% (21/21), 3.20 KiB | 3.20 MiB/s, Fertig.
+he terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
@@ -269,6 +270,7 @@ bool cortexm_probe(ADIv5_AP_t *ap, bool forced)
 	}
 
 	adiv5_ap_ref(ap);
+	uint32_t identity = ap->idr & 0xff;
 	struct cortexm_priv *priv = calloc(1, sizeof(*priv));
 	if (!priv) {			/* calloc failed: heap exhaustion */
 		DEBUG("calloc: failed in %s\n", __func__);
@@ -284,6 +286,20 @@ bool cortexm_probe(ADIv5_AP_t *ap, bool forced)
 	t->mem_write = cortexm_mem_write;
 
 	t->driver = cortexm_driver_str;
+	switch (identity) {
+	case 0x11: /* M3/M4 */
+		t->core = "M3/M4";
+		break;
+	case 0x21: /* M0 */
+		t->core = "M0";
+		break;
+	case 0x31: /* M0+ */
+		t->core = "M0+";
+		break;
+	case 0x01: /* M7 */
+		t->core = "M7";
+		break;
+	}
 
 	t->attach = cortexm_attach;
 	t->detach = cortexm_detach;

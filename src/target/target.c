@@ -425,6 +425,11 @@ const char *target_driver_name(target *t)
 	return t->driver;
 }
 
+const char *target_core_name(target *t)
+{
+	return t->core;
+}
+
 uint32_t target_mem_read32(target *t, uint32_t addr)
 {
 	uint32_t ret;

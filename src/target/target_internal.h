@@ -115,6 +115,7 @@ struct target_s {
 
 	/* Other stuff */
 	const char *driver;
+	const char *core;
 	struct target_command_s *commands;
 
 	struct target_s *next;
