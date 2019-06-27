@@ -49,7 +49,7 @@
 #endif
 
 #define VENDOR_ID_STLINK		0x483
-#define PRODUCT_ID_STLINK_MASK	0xfff0
+#define PRODUCT_ID_STLINK_MASK	0xffe0
 #define PRODUCT_ID_STLINK_GROUP 0x3740
 #define PRODUCT_ID_STLINKV1		0x3744
 #define PRODUCT_ID_STLINKV2		0x3748
@@ -731,6 +731,10 @@ void stlink_init(int argc, char **argv)
 						Stlink.ep_tx = 2;
 					} else if (desc.idProduct == PRODUCT_ID_STLINKV21) {
 						DEBUG("STLINKV21 serial %s\n", Stlink.serial);
+						Stlink.ver_hw = 21;
+						Stlink.ep_tx = 1;
+					} else if (desc.idProduct == PRODUCT_ID_STLINKV21_MSD) {
+						DEBUG("STLINKV21_MSD serial %s\n", Stlink.serial);
 						Stlink.ver_hw = 21;
 						Stlink.ep_tx = 1;
 					} else if (desc.idProduct == PRODUCT_ID_STLINKV3E) {
