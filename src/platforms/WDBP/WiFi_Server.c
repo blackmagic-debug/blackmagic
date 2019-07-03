@@ -962,6 +962,13 @@ void APP_Task(void)
 				// Set default device name
 				//
 				m2m_wifi_set_device_name(WDBP_NetName, strlen(WDBP_NetName));
+				//
+				// Select the "Deep Automatic" power mode
+				//
+				m2m_wifi_set_sleep_mode(M2M_WIFI_PS_DEEP_AUTOMATIC, 1) ;
+				//
+				// Move to reading the MAC address state
+				//
 				appState = APP_STATE_READ_MAC_ADDR;   //APP_STATE_CONNECT_TO_WIFI;
 			}
 			break;
