@@ -28,6 +28,7 @@
  * RM0394 STM32L43xxx STM32L44xxx STM32L45xxx STM32L46xxxx advanced
  *  ARM®-based 32-bit MCUs Rev.3
  * RM0432 STM32L4Rxxx and STM32L4Sxxx advanced Arm®-based 32-bit MCU. Rev 1
+ * RM0440 STM32G4 Series advanced Arm®-based 32-bit MCU. Rev 1
  *
  *
  */
@@ -106,6 +107,7 @@ static int stm32l4_flash_write(struct target_flash *f,
 #define OR_DUALBANK		(1 << 21)
 /* Used in STM32L47R*/
 #define OR_DB1M 		(1 << 21)
+/* Used in STM32L47R and STM32G47 */
 #define OR_DBANK 		(1 << 22)
 
 #define DBGMCU_CR(dbgmcureg)	(dbgmcureg + 0x04)
@@ -131,8 +133,10 @@ enum ID_STM32L4 {
 	ID_STM32L47  = 0x415u, /* RM0351, Rev.5 */
 	ID_STM32L49  = 0x461u, /* RM0351, Rev.5 */
 	ID_STM32L4R  = 0x470u, /* RM0432, Rev.5 */
-	ID_STM32G03  = 0x468u, /* RM0444/454, Rev.2 */
+	ID_STM32G03  = 0x466u, /* RM0444/454, Rev.2 */
 	ID_STM32G07  = 0x460u, /* RM0444/454, Rev.2 */
+	ID_STM32G43  = 0x468u, /* RM0440, Rev.1 */
+	ID_STM32G47  = 0x469u, /* RM0440, Rev.1 */
 };
 
 enum FAM_STM32L4 {
@@ -140,6 +144,7 @@ enum FAM_STM32L4 {
 	FAM_STM32L4Rx = 2,
 	FAM_STM32G0x = 3,
 	FAM_STM32WBxx = 4,
+	FAM_STM32G4xx = 5,
 };
 
 #define DUAL_BANK	0x80u
@@ -147,9 +152,9 @@ enum FAM_STM32L4 {
 
 struct stm32l4_info {
 	char designator[10];
-	uint16_t sram1;
-	uint16_t sram2;
-	uint16_t sram3;
+	uint16_t sram1; /* Normal SRAM mapped at 0x20000000*/
+	uint16_t sram2; /* SRAM at 0x10000000, mapped after sram1 (not L47) */
+	uint16_t sram3; /* SRAM mapped after SRAM1 and SRAM2 */
 	enum ID_STM32L4 idcode;
 	enum FAM_STM32L4 family;
 	uint8_t flags;          /* Only DUAL_BANK is evaluated for now.*/
@@ -218,6 +223,21 @@ struct stm32l4_info const L4info[] = {
 		.designator = "STM32G03",
 		.sram1 = 8,
 		.flags = 1,
+	},
+	{
+		.idcode = ID_STM32G43,
+		.family = FAM_STM32G4xx,
+		.designator = "STM32G43",
+		.sram1 = 22,
+		.sram2 = 10,
+	},
+	{
+		.idcode = ID_STM32G47,
+		.family = FAM_STM32G4xx,
+		.designator = "STM32G47",
+		.sram1 = 96, /* SRAM1 and SRAM2 are mapped contigiously */
+		.sram2 = 32, /* CCM SRAM is mapped as per SRAM2 on G4 */
+		.flags = 2,
 	},
 	{
 		/* Terminator */
@@ -305,6 +325,15 @@ static bool stm32l4_attach(target *t)
 			stm32l4_add_flash(t, 0x08100000, 0x00100000, 0x1000, 0x08100000);
 		} else
 			stm32l4_add_flash(t, 0x08000000, 0x00200000, 0x2000, -1);
+	} else if (chip->family == FAM_STM32G4xx) {
+		if (options & OR_DBANK) {
+			uint32_t banksize = size << 9;
+			stm32l4_add_flash(t, 0x08000000           , banksize, 0x0800, 0x08000000 + banksize);
+			stm32l4_add_flash(t, 0x08000000 + banksize, banksize, 0x0800, 0x08000000 + banksize);
+		} else {
+			uint32_t banksize = size << 10;
+			stm32l4_add_flash(t, 0x08000000           , banksize, 0x1000, -1);
+		}
 	} else if (chip->flags & DUAL_BANK) {
 		if (options & OR_DUALBANK) {
 			uint32_t banksize = size << 9;
@@ -478,6 +507,10 @@ static const uint8_t g0_i2offset[7] = {
 	0x20, 0x24, 0x28, 0x2c, 0x30, 0x34, 0x38
 };
 
+static const uint8_t g4_i2offset[11] = {
+	0x20, 0x24, 0x28, 0x2c, 0x30, 0x70, 0x44, 0x48, 0x4c, 0x50, 0x74
+};
+
 static bool stm32l4_option_write(
 	target *t,const uint32_t *values, int len, const uint8_t *i2offset)
 {
@@ -502,34 +535,46 @@ static bool stm32l4_option_write(
 	return false;
 }
 
-/* Chip       L43X/mask  L43x/def   L47x/mask  L47x/def
- *                                  L49x/mask  L49x/def
+/* Chip       L43X/mask  L43x/def   L47x/mask  L47x/def   G47x/mask  G47x/def
+ *                                  L49x/mask  L49x/def   G48x/mask  G48x/def
  * Option
- * 0X1FFF7800 0x0f8f77ff 0xFFEFF8AA 0x0FDF77FF 0xFFEFF8AA
- * 0X1FFF7808 0x0000FFFF 0xFFFFFFFF 0x0000FFFF 0xFFFFFFFF
- * 0X1FFF7810 0x8000FFFF 0          0x8000FFFF 0
- * 0X1FFF7818 0x00FF00FF 0x000000ff 0x00FF00FF 0x000000ff
- * 0X1FFF7820 0x00FF00FF 0x000000ff 0x00FF00FF 0x000000ff
- * 0X1FFFF808 0          0          0x8000FFFF 0xffffffff
- * 0X1FFFF810 0          0          0x8000FFFF 0
- * 0X1FFFF818 0          0          0x00FF00FF 0
- * 0X1FFFF820 0          0          0x00FF00FF 0x000000ff
+ * 0X1FFF7800 0x0f8f77ff 0xFFEFF8AA 0x0FDF77FF 0xFFEFF8AA 0x0FDF77FF 0xFFEFF8AA
+ * 0X1FFF7808 0x0000FFFF 0xFFFFFFFF 0x0000FFFF 0xFFFFFFFF 0x00007FFF 0xFFFFFFFF
+ * 0X1FFF7810 0x8000FFFF 0          0x8000FFFF 0          0x80007FFF 0x00FF0000
+ * 0X1FFF7818 0x00FF00FF 0x000000ff 0x00FF00FF 0x000000ff 0x007F007F 0xFF00FFFF
+ * 0X1FFF7820 0x00FF00FF 0x000000ff 0x00FF00FF 0x000000ff 0x007F007F 0xFF00FFFF
+ * 0X1FFF7828 0          0          0          0          0x000100FF 0xFF00FF00
+ * 0X1FFFF808 0          0          0x8000FFFF 0xffffffff 0x00007FFF 0xFFFFFFFF
+ * 0X1FFFF810 0          0          0x8000FFFF 0          0x00007FFF 0xFFFFFFFF
+ * 0X1FFFF818 0          0          0x00FF00FF 0          0x00FF00FF 0xFF00FFFF
+ * 0X1FFFF820 0          0          0x00FF00FF 0x000000ff 0x00FF00FF 0xFF00FFFF
+ * 0X1FFFF828 0          0          0          0          0x000000FF 0xFF00FF00
  */
 
 static bool stm32l4_cmd_option(target *t, int argc, char *argv[])
 {
+	static const uint32_t g4_values[11] = {
+		0xFFEFF8AA, 0xFFFFFFFF, 0x00FF0000, 0xFF00FFFF, 0xFF00FFFF, 0xFF00FF00,
+		0xFFFFFFFF, 0xFFFFFFFF, 0xFF00FFFF, 0xFF00FFFF, 0xFF00FF00
+	};
+
 	uint32_t val;
-	uint32_t values[9] = { 0xFFEFF8AA, 0xFFFFFFFF, 0, 0x000000ff,
-						   0x000000ff, 0xffffffff, 0, 0xff, 0x000000ff};
+	uint32_t values[11] = { 0xFFEFF8AA, 0xFFFFFFFF, 0, 0x000000ff,
+							0x000000ff, 0xffffffff, 0, 0x000000ff, 0x000000ff };
 	int len;
 	bool res = false;
 
 	const uint8_t *i2offset = l4_i2offset;
-	if (t->idcode == 0x435) {/* L43x */
+	if (t->idcode == ID_STM32L43) {/* L43x */
 		len = 5;
 	} else if (t->idcode == ID_STM32G07) {/* G07x */
 		i2offset = g0_i2offset;
 		len = 7;
+	} else if (t->idcode == ID_STM32G47) {/* G47 */
+		i2offset = g4_i2offset;
+		len = 11;
+		for (int i = 0; i < len; i++)
+			values[i] = g4_values[i];
 	} else {
 		len = 9;
 	}
