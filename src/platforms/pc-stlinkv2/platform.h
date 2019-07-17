@@ -18,41 +18,29 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __GENERAL_H
-#define __GENERAL_H
+#ifndef __PLATFORM_H
+#define __PLATFORM_H
 
-#define _GNU_SOURCE
-#include <stdint.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
-#include <stddef.h>
-#include <inttypes.h>
-#include <sys/types.h>
+#include <libusb-1.0/libusb.h>
 
-#include "platform.h"
-#include "platform_support.h"
+#include "timing.h"
 
-#ifndef DEBUG
-#define DEBUG	printf
-#endif
-
-#define ALIGN(x, n) (((x) + (n) - 1) & ~((n) - 1))
-#undef MIN
-#define MIN(x, y)  (((x) < (y)) ? (x) : (y))
-#undef MAX
-#define MAX(x, y)  (((x) > (y)) ? (x) : (y))
-
-#ifdef _WIN32
-#  ifdef _WIN64
-#    define PRI_SIZET PRIu64
-#  else
-#    define PRI_SIZET PRIu32
-#  endif
+#ifndef _WIN32
+#	include <alloca.h>
 #else
-#  define PRI_SIZET "zu"
+#	ifndef alloca
+#		define alloca __builtin_alloca
+#	endif
 #endif
 
-#endif
+#define PLATFORM_HAS_DEBUG
 
+#define SET_RUN_STATE(state)
+#define SET_IDLE_STATE(state)
+//#define SET_ERROR_STATE(state)
+
+void platform_buffer_flush(void);
+int platform_buffer_write(const uint8_t *data, int size);
+int platform_buffer_read(uint8_t *data, int size);
+
+#endif

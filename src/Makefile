@@ -34,9 +34,7 @@ SRC =			\
 	gdb_hostio.c	\
 	gdb_packet.c	\
 	hex_utils.c	\
-	jtag_scan.c	\
-	jtagtap.c	\
-	jtagtap_generic.c	\
+	jtag_devs.c	\
 	lmi.c		\
 	lpc_common.c	\
 	lpc11xx.c	\
@@ -58,15 +56,25 @@ SRC =			\
 	stm32h7.c	\
 	stm32l0.c	\
 	stm32l4.c	\
-	swdptap.c	\
-	swdptap_generic.c	\
 	target.c	\
 
 include $(PLATFORM_DIR)/Makefile.inc
 
+ifndef TARGET
+TARGET=blackmagic
+endif
+
+ifndef SWD_HL
+SRC += swdptap.c swdptap_generic.c
+endif
+
+ifndef JTAG_HL
+SRC += jtag_scan.c jtagtap.c jtagtap_generic.c
+endif
+
 OBJ = $(SRC:.c=.o)
 
-blackmagic: include/version.h $(OBJ)
+$(TARGET): include/version.h $(OBJ)
 	@echo "  LD      $@"
 	$(Q)$(CC) -o $@ $(OBJ) $(LDFLAGS)
 
