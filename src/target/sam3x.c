@@ -44,7 +44,7 @@ const struct command_s sam3x_cmd_list[] = {
 
 /* Enhanced Embedded Flash Controller (EEFC) Register Map */
 #define SAM3N_EEFC_BASE 	0x400E0A00
-#define SAM3X_EEFC_BASE(x)	(0x400E0A00+((x)*0x400))
+#define SAM3X_EEFC_BASE(x)	(0x400E0A00+((x)*0x200))
 #define SAM3U_EEFC_BASE(x)	(0x400E0800+((x)*0x200))
 #define SAM4S_EEFC_BASE(x)	(0x400E0A00+((x)*0x200))
 #define EEFC_FMR(base)		((base)+0x00)
