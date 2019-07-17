@@ -225,7 +225,8 @@ bool cmd_swdp_scan(void)
 static void display_target(int i, target *t, void *context)
 {
 	(void)context;
-	gdb_outf("%2d   %c  %s\n", i, target_attached(t)?'*':' ', target_driver_name(t));
+	gdb_outf("%2d   %c  %s %s\n", i, target_attached(t)?'*':' ',
+			 target_driver_name(t), target_core_name(t));
 }
 
 bool cmd_targets(void)
