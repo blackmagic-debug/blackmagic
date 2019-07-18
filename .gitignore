@@ -16,4 +16,4 @@ tags
 *.b#*
 blackmagic_upgrade
 *.exe
-
+.vscode

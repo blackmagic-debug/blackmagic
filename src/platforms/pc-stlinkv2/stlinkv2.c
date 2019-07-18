@@ -82,6 +82,7 @@
 #define STLINK_SWD_AP_WDATA_ERROR      0x18
 #define STLINK_SWD_AP_STICKY_ERROR     0x19
 #define STLINK_SWD_AP_STICKYORUN_ERROR 0x1a
+#define STLINK_BAD_AP_ERROR            0x1d
 #define STLINK_JTAG_UNKNOWN_CMD        0x42
 
 #define STLINK_CORE_RUNNING            0x80
@@ -454,6 +455,9 @@ static int stlink_usb_error_check(uint8_t *data, bool verbose)
 		case STLINK_SWD_AP_STICKYORUN_ERROR:
 			if (verbose)
 				DEBUG("STLINK_SWD_AP_STICKYORUN_ERROR\n");
+			return STLINK_ERROR_FAIL;
+		case STLINK_BAD_AP_ERROR:
+			/* ADIV5 probe 256 APs, most of them are non exisitant.*/
 			return STLINK_ERROR_FAIL;
 		case STLINK_JTAG_UNKNOWN_CMD :
 			if (verbose)
@@ -1055,7 +1059,7 @@ bool adiv5_ap_setup(int ap)
 	return true;
 }
 
-void div5_ap_cleanup(int ap)
+void adiv5_ap_cleanup(int ap)
 {
        uint8_t cmd[16] = {
                STLINK_DEBUG_COMMAND,

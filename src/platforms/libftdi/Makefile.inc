@@ -1,5 +1,5 @@
 SYS = $(shell $(CC) -dumpmachine)
-CFLAGS += -DLIBFTDI -DENABLE_DEBUG
+CFLAGS += -DPC_HOSTED -DENABLE_DEBUG
 LDFLAGS += -lftdi1
 ifneq (, $(findstring mingw, $(SYS)))
 LDFLAGS +=  -lusb-1.0 -lws2_32

@@ -390,9 +390,8 @@ static bool adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, int recursion, 
 	}
 	return res;
 }
-
-bool __attribute__((weak)) adiv5_ap_setup(int i) {(void)i; return true;}
-void __attribute__((weak)) adiv5_ap_cleanup(int i) {(void)i;}
+bool adiv5_ap_setup(int i);
+void adiv5_ap_cleanup(int i);
 
 ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel)
 {
@@ -528,6 +527,11 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 #define ALIGNOF(x) (((x) & 3) == 0 ? ALIGN_WORD : \
                     (((x) & 1) == 0 ? ALIGN_HALFWORD : ALIGN_BYTE))
 
+#if !defined(JTAG_HL)
+
+bool adiv5_ap_setup(int i) {(void)i; return true;}
+void adiv5_ap_cleanup(int i) {(void)i;}
+
 /* Program the CSW and TAR for sequencial access at a given width */
 static void ap_mem_access_setup(ADIv5_AP_t *ap, uint32_t addr, enum align align)
 {
@@ -567,8 +571,7 @@ static void * extract(void *dest, uint32_t src, uint32_t val, enum align align)
 	return (uint8_t *)dest + (1 << align);
 }
 
-void  __attribute__((weak))
-adiv5_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
+void adiv5_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
 {
 	uint32_t tmp;
 	uint32_t osrc = src;
@@ -598,8 +601,7 @@ adiv5_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
 	extract(dest, src, tmp, align);
 }
 
-void  __attribute__((weak))
-adiv5_mem_write_sized(ADIv5_AP_t *ap, uint32_t dest, const void *src,
+void adiv5_mem_write_sized(ADIv5_AP_t *ap, uint32_t dest, const void *src,
 					  size_t len, enum align align)
 {
 	uint32_t odest = dest;
@@ -634,16 +636,14 @@ adiv5_mem_write_sized(ADIv5_AP_t *ap, uint32_t dest, const void *src,
 	}
 }
 
-void  __attribute__((weak))
-adiv5_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value)
+void adiv5_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value)
 {
 	adiv5_dp_write(ap->dp, ADIV5_DP_SELECT,
 			((uint32_t)ap->apsel << 24)|(addr & 0xF0));
 	adiv5_dp_write(ap->dp, addr, value);
 }
 
-uint32_t  __attribute__((weak))
-adiv5_ap_read(ADIv5_AP_t *ap, uint16_t addr)
+uint32_t adiv5_ap_read(ADIv5_AP_t *ap, uint16_t addr)
 {
 	uint32_t ret;
 	adiv5_dp_write(ap->dp, ADIV5_DP_SELECT,
@@ -651,6 +651,7 @@ adiv5_ap_read(ADIv5_AP_t *ap, uint16_t addr)
 	ret = adiv5_dp_read(ap->dp, addr);
 	return ret;
 }
+#endif
 
 void adiv5_mem_write(ADIv5_AP_t *ap, uint32_t dest, const void *src, size_t len)
 {
