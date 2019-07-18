@@ -64,12 +64,12 @@ ifndef TARGET
 TARGET=blackmagic
 endif
 
-ifndef SWD_HL
-SRC += swdptap.c swdptap_generic.c
+ifdef NO_OWN_LL
+SRC += jtagtap_generic.c swdptap_generic.c
 endif
 
-ifndef JTAG_HL
-SRC += jtag_scan.c jtagtap.c jtagtap_generic.c
+ifndef OWN_HL
+SRC += jtag_scan.c jtagtap.c swdptap.c
 endif
 
 OBJ = $(SRC:.c=.o)

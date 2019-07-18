@@ -314,7 +314,7 @@ void target_detach(target *t)
 {
 	t->detach(t);
 	t->attached = false;
-#if defined(LIBFTDI)
+#if defined(PC_HOSTED)
 # include "platform.h"
 	platform_buffer_flush();
 #endif
