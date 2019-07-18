@@ -34,6 +34,14 @@
 #define DO_RESET_SEQ 0
 #endif
 
+/* The following MACRO removes the "weak" attribute when building
+ * the LIBFTDI host
+ */
+#ifdef NO_WEAK
+#define	WEAK_ATTRIBUTE
+#else
+#define WEAK_ATTRIBUTE __attribute__((weak))
+#endif
 /* All this should probably be defined in a dedicated ADIV5 header, so that they
  * are consistently named and accessible when needed in the codebase.
  */
@@ -390,9 +398,8 @@ static bool adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, int recursion, 
 	}
 	return res;
 }
-
-bool __attribute__((weak)) adiv5_ap_setup(int i) {(void)i; return true;}
-void __attribute__((weak)) adiv5_ap_cleanup(int i) {(void)i;}
+bool WEAK_ATTRIBUTE adiv5_ap_setup(int i) {(void)i; return true;}
+void WEAK_ATTRIBUTE adiv5_ap_cleanup(int i) {(void)i;}
 
 ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel)
 {
@@ -567,8 +574,7 @@ static void * extract(void *dest, uint32_t src, uint32_t val, enum align align)
 	return (uint8_t *)dest + (1 << align);
 }
 
-void  __attribute__((weak))
-adiv5_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
+void WEAK_ATTRIBUTE adiv5_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
 {
 	uint32_t tmp;
 	uint32_t osrc = src;
@@ -598,8 +604,7 @@ adiv5_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
 	extract(dest, src, tmp, align);
 }
 
-void  __attribute__((weak))
-adiv5_mem_write_sized(ADIv5_AP_t *ap, uint32_t dest, const void *src,
+void WEAK_ATTRIBUTE adiv5_mem_write_sized(ADIv5_AP_t *ap, uint32_t dest, const void *src,
 					  size_t len, enum align align)
 {
 	uint32_t odest = dest;
@@ -634,16 +639,14 @@ adiv5_mem_write_sized(ADIv5_AP_t *ap, uint32_t dest, const void *src,
 	}
 }
 
-void  __attribute__((weak))
-adiv5_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value)
+void WEAK_ATTRIBUTE adiv5_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value)
 {
 	adiv5_dp_write(ap->dp, ADIV5_DP_SELECT,
 			((uint32_t)ap->apsel << 24)|(addr & 0xF0));
 	adiv5_dp_write(ap->dp, addr, value);
 }
 
-uint32_t  __attribute__((weak))
-adiv5_ap_read(ADIv5_AP_t *ap, uint16_t addr)
+uint32_t WEAK_ATTRIBUTE adiv5_ap_read(ADIv5_AP_t *ap, uint16_t addr)
 {
 	uint32_t ret;
 	adiv5_dp_write(ap->dp, ADIV5_DP_SELECT,
