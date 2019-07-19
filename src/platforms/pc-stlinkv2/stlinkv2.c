@@ -33,6 +33,7 @@
 #include <assert.h>
 #include <unistd.h>
 #include <signal.h>
+#include <ctype.h>
 #include <sys/time.h>
 
 #if !defined(timersub)
@@ -206,7 +207,7 @@ typedef struct {
 	uint16_t     vid;
 	uint16_t     pid;
 	uint8_t      transport_mode;
-	uint8_t      serial[32];
+	char         serial[32];
 	uint8_t      dap_select;
 	uint8_t      ep_tx;
 	uint8_t      ver_hw;     /* 20, 21 or 31 deciphered from USB PID.*/
@@ -719,16 +720,38 @@ void stlink_init(int argc, char **argv)
 			}
 			r = libusb_open(dev, &Stlink.handle);
 			if (r == LIBUSB_SUCCESS) {
+				uint8_t data[32];
+				uint16_t lang;
+				libusb_get_string_descriptor(
+					Stlink.handle, 0, 0, data, sizeof(data));
+				lang = data[2] << 8 | data[3];
+				unsigned char sernum[32];
 				if (desc.iSerialNumber) {
-					r = libusb_get_string_descriptor_ascii
-						(Stlink.handle,desc.iSerialNumber, Stlink.serial,
-						 sizeof(Stlink.serial));
+					r = libusb_get_string_descriptor
+						(Stlink.handle, desc.iSerialNumber, lang,
+						  sernum, sizeof(sernum));
 				} else {
 					DEBUG("No serial number\n");
 				}
-				if (serial && (!strncmp((char*)Stlink.serial, serial, strlen(serial))))
+				/* Older devices have hex values instead of ascii
+				 * in the serial string. Recode eventually!*/
+				bool readable = true;
+				uint16_t *p = (uint16_t *)sernum;
+				for (p += 1; *p; p++) {
+					bool isr = isalnum(*p);
+					readable &= isr;
+				}
+				char *s = Stlink.serial;
+				p = (uint16_t *)sernum;
+				for (p += 1; *p; p++, s++) {
+					if (readable)
+						*s = *p;
+					else
+						snprintf(s, 3, "%02x", *p & 0xff);
+				}
+				if (serial && (!strncmp(Stlink.serial, serial, strlen(serial))))
 					DEBUG("Found ");
-				if (!serial || (!strncmp((char*)Stlink.serial, serial, strlen(serial)))) {
+				if (!serial || (!strncmp(Stlink.serial, serial, strlen(serial)))) {
 					if (desc.idProduct == PRODUCT_ID_STLINKV2) {
 						DEBUG("STLINKV20 serial %s\n", Stlink.serial);
 						Stlink.ver_hw = 20;
@@ -753,7 +776,7 @@ void stlink_init(int argc, char **argv)
 						DEBUG("Unknown STLINK variant, serial %s\n", Stlink.serial);
 					}
 				}
-				if (serial && (!strncmp((char*)Stlink.serial, serial, strlen(serial))))
+				if (serial && (!strncmp(Stlink.serial, serial, strlen(serial))))
 					break;
 			} else {
 				DEBUG("Open failed %s\n", libusb_strerror(r));
