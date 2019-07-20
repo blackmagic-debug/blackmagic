@@ -1093,6 +1093,8 @@ int stlink_usb_get_rw_status(void)
 
 void stlink_readmem(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
 {
+	if (len == 0)
+		return;
 	uint8_t type;
 	char *CMD;
 	if (src & 1 || len & 1) {
@@ -1239,6 +1241,8 @@ void
 adiv5_mem_write_sized(ADIv5_AP_t *ap, uint32_t dest, const void *src,
 					  size_t len, enum align align)
 {
+	if (len == 0)
+		return;
 	switch(align) {
 	case ALIGN_BYTE: stlink_writemem8(ap, dest, len, (uint8_t *) src);
 		break;
