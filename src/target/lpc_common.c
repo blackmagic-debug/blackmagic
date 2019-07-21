@@ -36,7 +36,14 @@ struct flash_param {
 struct lpc_flash *lpc_add_flash(target *t, target_addr addr, size_t length)
 {
 	struct lpc_flash *lf = calloc(1, sizeof(*lf));
-	struct target_flash *f = &lf->f;
+	struct target_flash *f;
+
+	if (!lf) {			/* calloc failed: heap exhaustion */
+		DEBUG("calloc: failed in %s\n", __func__);
+		return NULL;
+	}
+
+	f = &lf->f;
 	f->start = addr;
 	f->length = length;
 	f->erase = lpc_flash_erase;

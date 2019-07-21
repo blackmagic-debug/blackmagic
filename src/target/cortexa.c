@@ -323,8 +323,17 @@ bool cortexa_probe(ADIv5_AP_t *apb, uint32_t debug_base)
 	target *t;
 
 	t = target_new();
+	if (!t) {
+		return false;
+	}
+
 	adiv5_ap_ref(apb);
 	struct cortexa_priv *priv = calloc(1, sizeof(*priv));
+	if (!priv) {			/* calloc failed: heap exhaustion */
+		DEBUG("calloc: failed in %s\n", __func__);
+		return false;
+	}
+
 	t->priv = priv;
 	t->priv_free = free;
 	priv->apb = apb;

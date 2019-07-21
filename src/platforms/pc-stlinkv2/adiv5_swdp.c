@@ -3,6 +3,7 @@
  *
  * Copyright (C) 2011  Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
+ * Copyright (C) 2019 Uwe Bonnes (bon@elektron.ikp.physik.tu-darmstadt.de)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,45 +19,31 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file provides generic forms of the low-level jtagtap functions
- * for platforms that don't require optimised forms.
+/* This file implements the SW-DP specific functions of the
+ * ARM Debug Interface v5 Architecure Specification, ARM doc IHI0031A.
  */
+
 #include "general.h"
-#include "jtagtap.h"
+#include "target.h"
+#include "target_internal.h"
+#include "adiv5.h"
+#include "stlinkv2.h"
 
-void jtagtap_tms_seq(uint32_t MS, int ticks)
+int adiv5_swdp_scan(void)
 {
-	while(ticks--) {
-		jtagtap_next(MS & 1, 1);
-		MS >>= 1;
-	}
-}
+	target_list_free();
+	ADIv5_DP_t *dp = (void*)calloc(1, sizeof(*dp));
+	if (stlink_enter_debug_swd())
+		return 0;
+	dp->idcode = stlink_read_coreid();
+	dp->dp_read = stlink_dp_read;
+	dp->error = stlink_dp_error;
+	dp->low_access = stlink_dp_low_access;
+	dp->abort = stlink_dp_abort;
 
-void jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int ticks)
-{
-	uint8_t index = 1;
-	while(ticks--) {
-		if(jtagtap_next(ticks?0:final_tms, *DI & index)) {
-			*DO |= index;
-		} else {
-			*DO &= ~index;
-		}
-		if(!(index <<= 1)) {
-			index = 1;
-			DI++; DO++;
-		}
-	}
-}
+	stlink_dp_error(dp);
+	adiv5_dp_init(dp);
 
-void jtagtap_tdi_seq(const uint8_t final_tms, const uint8_t *DI, int ticks)
-{
-	uint8_t index = 1;
-	while(ticks--) {
-		jtagtap_next(ticks?0:final_tms, *DI & index);
-		if(!(index <<= 1)) {
-			index = 1;
-			DI++;
-		}
-	}
+	return target_list?1:0;
+	return 0;
 }
-

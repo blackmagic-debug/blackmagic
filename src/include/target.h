@@ -46,6 +46,7 @@ target *target_attach_n(int n, struct target_controller *);
 void target_detach(target *t);
 bool target_attached(target *t);
 const char *target_driver_name(target *t);
+const char *target_core_name(target *t);
 
 /* Memory access functions */
 bool target_mem_map(target *t, char *buf, size_t len);

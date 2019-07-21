@@ -98,6 +98,11 @@ static void nrf51_add_flash(target *t,
                             uint32_t addr, size_t length, size_t erasesize)
 {
 	struct target_flash *f = calloc(1, sizeof(*f));
+	if (!f) {			/* calloc failed: heap exhaustion */
+		DEBUG("calloc: failed in %s\n", __func__);
+		return;
+	}
+
 	f->start = addr;
 	f->length = length;
 	f->blocksize = erasesize;
@@ -370,6 +375,10 @@ void nrf51_mdm_probe(ADIv5_AP_t *ap)
 	}
 
 	target *t = target_new();
+	if (!t) {
+		return;
+	}
+
 	adiv5_ap_ref(ap);
 	t->priv = ap;
 	t->priv_free = (void*)adiv5_ap_unref;

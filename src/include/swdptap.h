@@ -27,7 +27,9 @@ int swdptap_init(void);
 bool swdptap_bit_in(void);
 void swdptap_bit_out(bool val);
 
-/* High level functions, provided as weak in swdptap_generic.c */
+/* Low level functions, provided in swdptap_generic.c from the primitives
+   (indicate NO_OWN_LL in the Makefile.inc or libopencm specific in 
+   platforms/common*/
 uint32_t swdptap_seq_in(int ticks);
 bool swdptap_seq_in_parity(uint32_t *data, int ticks);
 void swdptap_seq_out(uint32_t MS, int ticks);

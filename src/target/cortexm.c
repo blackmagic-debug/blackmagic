@@ -5,7 +5,8 @@
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
  *
  * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
+ * it under tSchreibe Objekte: 100% (21/21), 3.20 KiB | 3.20 MiB/s, Fertig.
+he terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
@@ -264,8 +265,18 @@ bool cortexm_probe(ADIv5_AP_t *ap, bool forced)
 	target *t;
 
 	t = target_new();
+	if (!t) {
+		return false;
+	}
+
 	adiv5_ap_ref(ap);
+	uint32_t identity = ap->idr & 0xff;
 	struct cortexm_priv *priv = calloc(1, sizeof(*priv));
+	if (!priv) {			/* calloc failed: heap exhaustion */
+		DEBUG("calloc: failed in %s\n", __func__);
+		return false;
+	}
+
 	t->priv = priv;
 	t->priv_free = cortexm_priv_free;
 	priv->ap = ap;
@@ -275,6 +286,20 @@ bool cortexm_probe(ADIv5_AP_t *ap, bool forced)
 	t->mem_write = cortexm_mem_write;
 
 	t->driver = cortexm_driver_str;
+	switch (identity) {
+	case 0x11: /* M3/M4 */
+		t->core = "M3/M4";
+		break;
+	case 0x21: /* M0 */
+		t->core = "M0";
+		break;
+	case 0x31: /* M0+ */
+		t->core = "M0+";
+		break;
+	case 0x01: /* M7 */
+		t->core = "M7";
+		break;
+	}
 
 	t->attach = cortexm_attach;
 	t->detach = cortexm_detach;
@@ -424,8 +449,17 @@ enum { DB_DHCSR, DB_DCRSR, DB_DCRDR, DB_DEMCR };
 
 static void cortexm_regs_read(target *t, void *data)
 {
-	ADIv5_AP_t *ap = cortexm_ap(t);
 	uint32_t *regs = data;
+#if defined(STLINKV2)
+	extern void stlink_regs_read(void *data);
+	extern uint32_t stlink_reg_read(int idx);
+	stlink_regs_read(data);
+	regs += sizeof(regnum_cortex_m);
+	if (t->target_options & TOPT_FLAVOUR_V7MF)
+		for(size_t t = 0; t < sizeof(regnum_cortex_mf) / 4; t++)
+			*regs++ = stlink_reg_read(regnum_cortex_mf[t]);
+#else
+	ADIv5_AP_t *ap = cortexm_ap(t);
 	unsigned i;
 
 	/* FIXME: Describe what's really going on here */
@@ -451,12 +485,25 @@ static void cortexm_regs_read(target *t, void *data)
 			                    regnum_cortex_mf[i]);
 			*regs++ = adiv5_dp_read(ap->dp, ADIV5_AP_DB(DB_DCRDR));
 		}
+#endif
 }
 
 static void cortexm_regs_write(target *t, const void *data)
 {
-	ADIv5_AP_t *ap = cortexm_ap(t);
 	const uint32_t *regs = data;
+#if defined(STLINKV2)
+	extern void stlink_reg_write(int num, uint32_t val);
+	for(size_t z = 1; z < sizeof(regnum_cortex_m) / 4; z++) {
+		stlink_reg_write(regnum_cortex_m[z], *regs);
+		regs++;
+	if (t->target_options & TOPT_FLAVOUR_V7MF)
+		for(size_t z = 0; z < sizeof(regnum_cortex_mf) / 4; z++) {
+			stlink_reg_write(regnum_cortex_mf[z], *regs);
+			regs++;
+		}
+	}
+#else
+	ADIv5_AP_t *ap = cortexm_ap(t);
 	unsigned i;
 
 	/* FIXME: Describe what's really going on here */
@@ -485,6 +532,7 @@ static void cortexm_regs_write(target *t, const void *data)
 			                    ADIV5_AP_DB(DB_DCRSR),
 			                    0x10000 | regnum_cortex_mf[i]);
 		}
+#endif
 }
 
 int cortexm_mem_write_sized(
@@ -1035,4 +1083,3 @@ static int cortexm_hostio_request(target *t)
 
 	return t->tc->interrupted;
 }
-

@@ -238,6 +238,11 @@ bool ke04_probe(target *t)
 
 	/* Add flash, all KE04 have same write and erase size */
 	struct target_flash *f = calloc(1, sizeof(*f));
+	if (!f) {			/* calloc failed: heap exhaustion */
+		DEBUG("calloc: failed in %s\n", __func__);
+		return false;
+	}
+
 	f->start     = FLASH_BASE_ADDR;
 	f->length    = flashsize;
 	f->blocksize = KE04_SECTOR_SIZE;

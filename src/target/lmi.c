@@ -60,6 +60,11 @@ static const uint16_t lmi_flash_write_stub[] = {
 static void lmi_add_flash(target *t, size_t length)
 {
 	struct target_flash *f = calloc(1, sizeof(*f));
+	if (!f) {			/* calloc failed: heap exhaustion */
+		DEBUG("calloc: failed in %s\n", __func__);
+		return;
+	}
+
 	f->start = 0;
 	f->length = length;
 	f->blocksize = 0x400;

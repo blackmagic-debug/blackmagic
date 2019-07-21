@@ -44,7 +44,7 @@ const struct command_s sam3x_cmd_list[] = {
 
 /* Enhanced Embedded Flash Controller (EEFC) Register Map */
 #define SAM3N_EEFC_BASE 	0x400E0A00
-#define SAM3X_EEFC_BASE(x)	(0x400E0A00+((x)*0x400))
+#define SAM3X_EEFC_BASE(x)	(0x400E0A00+((x)*0x200))
 #define SAM3U_EEFC_BASE(x)	(0x400E0800+((x)*0x200))
 #define SAM4S_EEFC_BASE(x)	(0x400E0A00+((x)*0x200))
 #define EEFC_FMR(base)		((base)+0x00)
@@ -126,7 +126,14 @@ static void sam3_add_flash(target *t,
                            uint32_t eefc_base, uint32_t addr, size_t length)
 {
 	struct sam_flash *sf = calloc(1, sizeof(*sf));
-	struct target_flash *f = &sf->f;
+	struct target_flash *f;
+
+	if (!sf) {			/* calloc failed: heap exhaustion */
+		DEBUG("calloc: failed in %s\n", __func__);
+		return;
+	}
+
+	f = &sf->f;
 	f->start = addr;
 	f->length = length;
 	f->blocksize = SAM3_PAGE_SIZE;
@@ -142,7 +149,14 @@ static void sam4_add_flash(target *t,
                            uint32_t eefc_base, uint32_t addr, size_t length)
 {
 	struct sam_flash *sf = calloc(1, sizeof(*sf));
-	struct target_flash *f = &sf->f;
+	struct target_flash *f;
+
+	if (!sf) {			/* calloc failed: heap exhaustion */
+		DEBUG("calloc: failed in %s\n", __func__);
+		return;
+	}
+
+	f = &sf->f;
 	f->start = addr;
 	f->length = length;
 	f->blocksize = SAM4_PAGE_SIZE * 8;
