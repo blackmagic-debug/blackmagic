@@ -36,12 +36,16 @@
 
 #include <stdio.h>
 #include <assert.h>
+#include <errno.h>
+#include <string.h>
+#include <unistd.h>
 
 #include "general.h"
 #include "gdb_if.h"
 
 static int gdb_if_serv, gdb_if_conn;
-
+#define DEFAULT_PORT 2000
+#define NUM_GDB_SERVER 4
 int gdb_if_init(void)
 {
 #if defined(_WIN32) || defined(__CYGWIN__)
@@ -50,20 +54,40 @@ int gdb_if_init(void)
 #endif
 	struct sockaddr_in addr;
 	int opt;
+	int port = DEFAULT_PORT - 1;
 
-	addr.sin_family = AF_INET;
-	addr.sin_port = htons(2000);
-	addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	do {
+		port ++;
+		if (port > DEFAULT_PORT + NUM_GDB_SERVER)
+			return - 1;
+		addr.sin_family = AF_INET;
+		addr.sin_port = htons(port);
+		addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
-	assert((gdb_if_serv = socket(PF_INET, SOCK_STREAM, 0)) != -1);
-	opt = 1;
-	assert(setsockopt(gdb_if_serv, SOL_SOCKET, SO_REUSEADDR, (void*)&opt, sizeof(opt)) != -1);
-	assert(setsockopt(gdb_if_serv, IPPROTO_TCP, TCP_NODELAY, (void*)&opt, sizeof(opt)) != -1);
+		gdb_if_serv = socket(PF_INET, SOCK_STREAM, 0);
+		if (gdb_if_serv == -1)
+			continue;
 
-	assert(bind(gdb_if_serv, (void*)&addr, sizeof(addr)) != -1);
-	assert(listen(gdb_if_serv, 1) != -1);
-
-	DEBUG("Listening on TCP:2000\n");
+		opt = 1;
+		if (setsockopt(gdb_if_serv, SOL_SOCKET, SO_REUSEADDR, (void*)&opt, sizeof(opt)) == -1) {
+			close(gdb_if_serv);
+			continue;
+		}
+		if (setsockopt(gdb_if_serv, IPPROTO_TCP, TCP_NODELAY, (void*)&opt, sizeof(opt)) == -1) {
+			close(gdb_if_serv);
+			continue;
+		}
+		if (bind(gdb_if_serv, (void*)&addr, sizeof(addr)) == -1) {
+			close(gdb_if_serv);
+			continue;
+		}
+		if (listen(gdb_if_serv, 1) == -1) {
+			close(gdb_if_serv);
+			continue;
+		}
+		break;
+	} while(1);
+	DEBUG("Listening on TCP: %4d\n", port);
 
 	return 0;
 }

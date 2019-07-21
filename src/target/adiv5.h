@@ -106,6 +106,18 @@
 #define ADIV5_AP_CSW_SIZE_WORD		(2u << 0)
 #define ADIV5_AP_CSW_SIZE_MASK		(7u << 0)
 
+/* AP Debug Base Address Register (BASE) */
+#define ADIV5_AP_BASE_BASEADDR		(0xFFFFF000u)
+#define ADIV5_AP_BASE_PRESENT		(1u << 0)
+
+
+/* ADIv5 Class 0x1 ROM Table Registers */
+#define ADIV5_ROM_MEMTYPE			0xFCC
+#define ADIV5_ROM_MEMTYPE_SYSMEM	(1u << 0)
+#define ADIV5_ROM_ROMENTRY_PRESENT  (1u << 0)
+#define ADIV5_ROM_ROMENTRY_OFFSET	(0xFFFFF000u)
+
+
 /* Constants to make RnW parameters more clear in code */
 #define ADIV5_LOW_WRITE		0
 #define ADIV5_LOW_READ		1
@@ -190,4 +202,3 @@ void adiv5_mem_write_sized(ADIv5_AP_t *ap, uint32_t dest, const void *src,
 						   size_t len, enum align align);
 
 #endif
-

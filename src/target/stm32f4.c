@@ -136,7 +136,13 @@ static void stm32f4_add_flash(target *t,
 {
 	if (length == 0) return;
 	struct stm32f4_flash *sf = calloc(1, sizeof(*sf));
-	struct target_flash *f = &sf->f;
+	struct target_flash *f;
+	if (!sf) {			/* calloc failed: heap exhaustion */
+		DEBUG("calloc: failed in %s\n", __func__);
+		return;
+	}
+
+	f = &sf->f;
 	f->start = addr;
 	f->length = length;
 	f->blocksize = blocksize;

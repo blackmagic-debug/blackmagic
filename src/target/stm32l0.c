@@ -233,6 +233,11 @@ static void stm32l_add_flash(target *t,
                              uint32_t addr, size_t length, size_t erasesize)
 {
 	struct target_flash *f = calloc(1, sizeof(*f));
+	if (!f) {			/* calloc failed: heap exhaustion */
+		DEBUG("calloc: failed in %s\n", __func__);
+		return;
+	}
+
 	f->start = addr;
 	f->length = length;
 	f->blocksize = erasesize;
@@ -245,6 +250,11 @@ static void stm32l_add_flash(target *t,
 static void stm32l_add_eeprom(target *t, uint32_t addr, size_t length)
 {
 	struct target_flash *f = calloc(1, sizeof(*f));
+	if (!f) {			/* calloc failed: heap exhaustion */
+		DEBUG("calloc: failed in %s\n", __func__);
+		return;
+	}
+
 	f->start = addr;
 	f->length = length;
 	f->blocksize = 4;
@@ -599,6 +609,8 @@ static bool stm32lx_cmd_option(target* t, int argc, char** argv)
                 return true;
         }
 
+        if (argc < 2 )
+                 goto usage;
         size_t cb = strlen(argv[1]);
 
         if (argc == 2 && !strncasecmp(argv[1], "obl_launch", cb)) {
@@ -628,10 +640,6 @@ static bool stm32lx_cmd_option(target* t, int argc, char** argv)
                 if (!stm32lx_option_write(t, addr, val))
                         tc_printf(t, "option write failed\n");
         }
-        else if (argc == 2 && !strncasecmp(argv[1], "show", cb))
-                ;
-        else
-                goto usage;
 
         /* Report the current option values */
         for(unsigned i = 0; i < opt_size; i += sizeof(uint32_t)) {

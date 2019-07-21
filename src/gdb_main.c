@@ -129,57 +129,52 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 					uint32_t addr, len;
 					ERROR_IF_NO_TARGET();
 					sscanf(pbuf, "m%" SCNx32 ",%" SCNx32, &addr, &len);
-					if ( len > sizeof(pbuf) / 2 )
-					{
-						gdb_putpacketz("E02");
-						break;
-					}
-					DEBUG("m packet: addr = %" PRIx32 ", len = %" PRIx32 "\n", addr, len);
-					uint8_t mem[len];
-					if ( target_mem_read(cur_target, mem, addr, len) )
-						gdb_putpacketz("E01");
-					else
-						gdb_putpacket(hexify(pbuf, mem, len), len * 2);
-					break;
-				}
-			case 'G': {
-					/* 'G XX': Write general registers */
-					ERROR_IF_NO_TARGET();
-					uint8_t arm_regs[target_regs_size(cur_target)];
-					unhexify(arm_regs, &pbuf[1], sizeof(arm_regs));
-					target_regs_write(cur_target, arm_regs);
-					gdb_putpacketz("OK");
-					break;
-				}
-			case 'M': {
-					/* 'M addr,len:XX': Write len bytes to addr */
-					uint32_t addr, len;
-					int hex;
-					ERROR_IF_NO_TARGET();
-					sscanf(pbuf, "M%" SCNx32 ",%" SCNx32 ":%n", &addr, &len, &hex);
-					if ( len > (unsigned) (size - hex) / 2 )
-					{
-						gdb_putpacketz("E02");
-						break;
-					}
-					DEBUG("M packet: addr = %" PRIx32 ", len = %" PRIx32 "\n", addr, len);
-					uint8_t mem[len];
-					unhexify(mem, pbuf + hex, len);
-					if ( target_mem_write(cur_target, addr, mem, len) )
-						gdb_putpacketz("E01");
-					else
-						gdb_putpacketz("OK");
-					break;
-				}
-			case 's':	/* 's [addr]': Single step [start at addr] */
-				single_step = true;
-				/* fall through */
-			case 'c':	/* 'c [addr]': Continue [at addr] */
-				if ( !cur_target )
-				{
-					gdb_putpacketz("X1D");
-					break;
-				}
+			if (len > sizeof(pbuf) / 2) {
+				gdb_putpacketz("E02");
+				break;
+			}
+			DEBUG("m packet: addr = %" PRIx32 ", len = %" PRIx32 "\n", addr, len);
+			uint8_t mem[len];
+			if (target_mem_read(cur_target, mem, addr, len))
+				gdb_putpacketz("E01");
+			else
+				gdb_putpacket(hexify(pbuf, mem, len), len*2);
+			break;
+			}
+		case 'G': {	/* 'G XX': Write general registers */
+			ERROR_IF_NO_TARGET();
+			uint8_t arm_regs[target_regs_size(cur_target)];
+			unhexify(arm_regs, &pbuf[1], sizeof(arm_regs));
+			target_regs_write(cur_target, arm_regs);
+			gdb_putpacketz("OK");
+			break;
+			}
+		case 'M': { /* 'M addr,len:XX': Write len bytes to addr */
+			uint32_t addr, len;
+			int hex;
+			ERROR_IF_NO_TARGET();
+			sscanf(pbuf, "M%" SCNx32 ",%" SCNx32 ":%n", &addr, &len, &hex);
+			if (len > (unsigned)(size - hex) / 2) {
+				gdb_putpacketz("E02");
+				break;
+			}
+			DEBUG("M packet: addr = %" PRIx32 ", len = %" PRIx32 "\n", addr, len);
+			uint8_t mem[len];
+			unhexify(mem, pbuf + hex, len);
+			if (target_mem_write(cur_target, addr, mem, len))
+				gdb_putpacketz("E01");
+			else
+				gdb_putpacketz("OK");
+			break;
+			}
+		case 's':	/* 's [addr]': Single step [start at addr] */
+			single_step = true;
+			/* fall through */
+		case 'c':	/* 'c [addr]': Continue [at addr] */
+			if(!cur_target) {
+				gdb_putpacketz("X1D");
+				break;
+			}
 
 			target_halt_resume(cur_target, single_step);
 			SET_RUN_STATE(1);
@@ -246,8 +241,10 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 
 		case 0x04:
 		case 'D':	/* GDB 'detach' command. */
-			if(cur_target)
+			if(cur_target) {
+				SET_RUN_STATE(1);
 				target_detach(cur_target);
+			}
 			last_target = cur_target;
 			cur_target = NULL;
 			gdb_putpacketz("OK");
@@ -305,10 +302,10 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 			handle_z_packet(pbuf, size);
 			break;
 
-			default: 	/* Packet not implemented */
-				DEBUG("*** Unsupported packet: %s\n", pbuf);
-				gdb_putpacketz("");
-			}
+		default: 	/* Packet not implemented */
+			DEBUG("*** Unsupported packet: %s\n", pbuf);
+			gdb_putpacketz("");
+		}
 #ifdef WDBP
 		}
 #endif

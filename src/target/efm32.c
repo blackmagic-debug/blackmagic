@@ -518,6 +518,11 @@ static void efm32_add_flash(target *t, target_addr addr, size_t length,
 			    size_t page_size)
 {
 	struct target_flash *f = calloc(1, sizeof(*f));
+	if (!f) {			/* calloc failed: heap exhaustion */
+		DEBUG("calloc: failed in %s\n", __func__);
+		return;
+	}
+
 	f->start = addr;
 	f->length = length;
 	f->blocksize = page_size;

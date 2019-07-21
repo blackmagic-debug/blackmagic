@@ -18,45 +18,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file provides generic forms of the low-level jtagtap functions
- * for platforms that don't require optimised forms.
- */
-#include "general.h"
-#include "jtagtap.h"
-
-void jtagtap_tms_seq(uint32_t MS, int ticks)
-{
-	while(ticks--) {
-		jtagtap_next(MS & 1, 1);
-		MS >>= 1;
-	}
-}
-
-void jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int ticks)
-{
-	uint8_t index = 1;
-	while(ticks--) {
-		if(jtagtap_next(ticks?0:final_tms, *DI & index)) {
-			*DO |= index;
-		} else {
-			*DO &= ~index;
-		}
-		if(!(index <<= 1)) {
-			index = 1;
-			DI++; DO++;
-		}
-	}
-}
-
-void jtagtap_tdi_seq(const uint8_t final_tms, const uint8_t *DI, int ticks)
-{
-	uint8_t index = 1;
-	while(ticks--) {
-		jtagtap_next(ticks?0:final_tms, *DI & index);
-		if(!(index <<= 1)) {
-			index = 1;
-			DI++;
-		}
-	}
-}
+typedef const struct jtag_dev_descr_s {
+	const uint32_t idcode;
+	const uint32_t idmask;
+	const char * const descr;
+	void (*const handler)(jtag_dev_t *dev);
+} jtag_dev_descr_t;
+extern jtag_dev_descr_t dev_descr[];
 

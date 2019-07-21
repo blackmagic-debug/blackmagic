@@ -33,7 +33,7 @@
 int
 main(int argc, char **argv)
 {
-#if defined(LIBFTDI)
+#if defined(PC_HOSTED)
 	platform_init(argc, argv);
 #else
 	(void) argc;

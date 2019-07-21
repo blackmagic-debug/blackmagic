@@ -33,6 +33,11 @@ static int target_flash_done_buffered(struct target_flash *f);
 target *target_new(void)
 {
 	target *t = (void*)calloc(1, sizeof(*t));
+	if (!t) {			/* calloc failed: heap exhaustion */
+		DEBUG("calloc: failed in %s\n", __func__);
+		return NULL;
+	}
+
 	if (target_list) {
 		target *c = target_list;
 		while (c->next)
@@ -98,12 +103,18 @@ void target_list_free(void)
 
 void target_add_commands(target *t, const struct command_s *cmds, const char *name)
 {
-	struct target_command_s *tc;
+	struct target_command_s *tc = malloc(sizeof(*tc));
+	if (!tc) {			/* malloc failed: heap exhaustion */
+		DEBUG("malloc: failed in %s\n", __func__);
+		return;
+	}
+
 	if (t->commands) {
-		for (tc = t->commands; tc->next; tc = tc->next);
-		tc = tc->next = malloc(sizeof(*tc));
+		struct target_command_s *tail;
+		for (tail = t->commands; tail->next; tail = tail->next);
+		tail->next = tc;
 	} else {
-		t->commands = tc = malloc(sizeof(*tc));
+		t->commands = tc;
 	}
 	tc->specific_name = name;
 	tc->cmds = cmds;
@@ -137,6 +148,11 @@ target *target_attach(target *t, struct target_controller *tc)
 void target_add_ram(target *t, target_addr start, uint32_t len)
 {
 	struct target_ram *ram = malloc(sizeof(*ram));
+	if (!ram) {			/* malloc failed: heap exhaustion */
+		DEBUG("malloc: failed in %s\n", __func__);
+		return;
+	}
+
 	ram->start = start;
 	ram->length = len;
 	ram->next = t->ram;
@@ -250,6 +266,10 @@ int target_flash_write_buffered(struct target_flash *f,
 	if (f->buf == NULL) {
 		/* Allocate flash sector buffer */
 		f->buf = malloc(f->buf_size);
+		if (!f->buf) {			/* malloc failed: heap exhaustion */
+			DEBUG("malloc: failed in %s\n", __func__);
+			return 1;
+		}
 		f->buf_addr = -1;
 	}
 	while (len) {
@@ -294,7 +314,7 @@ void target_detach(target *t)
 {
 	t->detach(t);
 	t->attached = false;
-#if defined(LIBFTDI)
+#if defined(PC_HOSTED)
 # include "platform.h"
 	platform_buffer_flush();
 #endif
@@ -345,9 +365,15 @@ int target_breakwatch_set(target *t,
 		ret = t->breakwatch_set(t, &bw);
 
 	if (ret == 0) {
-		/* Success, make a heap copy and add to list */
+		/* Success, make a heap copy */
 		struct breakwatch *bwm = malloc(sizeof bw);
+		if (!bwm) {			/* malloc failed: heap exhaustion */
+			DEBUG("malloc: failed in %s\n", __func__);
+			return 1;
+		}
 		memcpy(bwm, &bw, sizeof(bw));
+
+		/* Add to list */
 		bwm->next = t->bw_list;
 		t->bw_list = bwm;
 	}
@@ -397,6 +423,11 @@ const char *target_tdesc(target *t)
 const char *target_driver_name(target *t)
 {
 	return t->driver;
+}
+
+const char *target_core_name(target *t)
+{
+	return t->core;
 }
 
 uint32_t target_mem_read32(target *t, uint32_t addr)

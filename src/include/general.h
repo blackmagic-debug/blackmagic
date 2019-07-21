@@ -35,7 +35,6 @@
 #include "platform_support.h"
 
 #ifndef DEBUG
-#include <stdio.h>
 #define DEBUG	printf
 #endif
 
