@@ -563,7 +563,7 @@ void platform_request_boot(void)
 	typedef void (*pFunction)(void);
 	const uint32_t ApplicationAddress = 0x1FFF0000;
 	register uint32_t JumpAddress = 0;
-	register uint32_t addr = 0x20018000;
+	register uint32_t addr = 0;
 	static pFunction Jump_To_Application;
 
 	/* We start here */
@@ -591,6 +591,7 @@ void platform_request_boot(void)
 	__asm volatile ("isb");
 	__asm volatile ("dsb");
 	cm_enable_interrupts ();
+	addr = *((uint32_t  *)ApplicationAddress) ;
 	JumpAddress = *((uint32_t  *) (ApplicationAddress + 4));
 	Jump_To_Application = (pFunction) JumpAddress;
 	/*
