@@ -46,9 +46,23 @@ uint32_t detect_rev(void)
 	gpio_set(GPIOC, GPIO14 | GPIO13);
 	for (int i = 0; i < 100; i ++)
 		res = gpio_get(GPIOC, GPIO13);
-	if (res)
-		rev = 0;
-	else {
+	if (res) {
+		/* Some clones (e.g. betemcu/baite) forgot to pull PC13 down,
+		 * but still use V2 connections.
+		 * Check using PA9, unconnected on V1, connected to LED cathode on V2
+		 */
+		gpio_set_mode(GPIOA, GPIO_MODE_INPUT,
+		              GPIO_CNF_INPUT_PULL_UPDOWN, GPIO9);
+		gpio_clear(GPIOA, GPIO9);
+		for (int i = 0; i < 100; i ++) {
+			res = gpio_get(GPIOA, GPIO9);
+		}
+		if (res) {
+			rev = 1;
+		} else {
+			rev = 0;
+		}
+	} else {
 		/* Check for V2.1 boards.
 		 * PA15/TDI is USE_RENUM, pulled with 10 k to U5V on V2.1,
 		 * Otherwise unconnected. Enable pull low. If still high.
