@@ -40,6 +40,12 @@ uint16_t led_idle_run;
 uint16_t srst_pin;
 static uint32_t rev;
 
+uint32_t USBUSART;
+uint32_t USBUSART_IRQ;
+uint32_t USBUSART_CLK;
+uint32_t USBUSART_PORT;
+uint32_t USBUSART_TX_PIN;
+
 int platform_hwversion(void)
 {
 	return rev;
@@ -82,6 +88,43 @@ void platform_init(void)
 	if (rev > 1) /* Reconnect USB */
 		gpio_set(GPIOA, GPIO15);
 	cdcacm_init();
+	/* Check for SWIM pins and use then as UART if present
+	 * SWIM is connected as follows (from STM8S-DISCOVERY ST-LINK):
+	 * - PB5: SWIM_RST_IN
+	 * - PB6: SWIM_RST
+	 * - PB7: SWIM_IN
+	 * - PB8: SWIM
+	 * - PB9: SWIM_IN
+	 * - PB10: SWIM_IN
+	 * - PB11: SWIM
+	 *
+	 * SWIM_RST_IN is connected through 220R to SWIM_RST
+	 * SWIM_IN is connected through 220R to SWIM
+	 * SWIM is pulled up by 680R
+	 */
+	gpio_set_mode(GPIOB, GPIO_MODE_INPUT,
+	              GPIO_CNF_INPUT_PULL_UPDOWN, GPIO11);
+	gpio_clear(GPIOB, GPIO11);
+	if (!gpio_get(GPIOB, GPIO11)) { /* SWIM pins are absent */
+		/* Use USART2 as UART, as used on some embedded ST-LINK/V2-1,
+		such as the Nucleo 64 development board */
+		USBUSART = USART2;
+		USBUSART_IRQ = NVIC_USART2_IRQ;
+		USBUSART_CLK = RCC_USART2;
+		USBUSART_PORT = GPIOA;
+		USBUSART_TX_PIN = GPIO2;
+	} else { /* SWIM pins are present */
+		/* Use USART1 REMAP as UART */
+		USBUSART = USART1;
+		USBUSART_IRQ = NVIC_USART1_IRQ;
+		USBUSART_CLK = RCC_USART1;
+		USBUSART_PORT = GPIOB;
+		USBUSART_TX_PIN = GPIO6; /* SWIM_RST */
+		/* SWIM/PB7 is already an input */
+		AFIO_MAPR |= AFIO_MAPR_USART1_REMAP; /* use USART1 REMAP */
+	}
+	gpio_set_mode(GPIOB, GPIO_MODE_INPUT,
+	              GPIO_CNF_INPUT_FLOAT, GPIO11);
 	/* Don't enable UART if we're being debugged. */
 	if (!(SCS_DEMCR & SCS_DEMCR_TRCENA))
 		usbuart_init();
@@ -110,4 +153,10 @@ bool platform_srst_get_val()
 const char *platform_target_voltage(void)
 {
 	return "unknown";
+}
+
+/* Be sure USART1 (from SWIM) ISR also calls the default USB UART ISR */
+void usart1_isr(void)
+{
+	USBUSART_ISR();
 }

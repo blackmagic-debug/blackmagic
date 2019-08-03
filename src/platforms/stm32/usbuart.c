@@ -62,7 +62,7 @@ void usbuart_init(void)
 	usart_enable(USBUSART);
 
 	/* Enable interrupts */
-	USBUSART_CR1 |= USART_CR1_RXNEIE;
+	usart_enable_rx_interrupt(USBUSART);
 	nvic_set_priority(USBUSART_IRQ, IRQ_PRI_USBUSART);
 	nvic_enable_irq(USBUSART_IRQ);
 

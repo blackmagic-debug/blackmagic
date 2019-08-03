@@ -106,12 +106,11 @@
 #define IRQ_PRI_USB_VBUS	(14 << 4)
 #define IRQ_PRI_SWO_DMA			(1 << 4)
 
-#define USBUSART USART2
-#define USBUSART_CR1 USART2_CR1
-#define USBUSART_IRQ NVIC_USART2_IRQ
-#define USBUSART_CLK RCC_USART2
-#define USBUSART_PORT GPIOA
-#define USBUSART_TX_PIN GPIO2
+extern uint32_t USBUSART;
+extern uint32_t USBUSART_IRQ;
+extern uint32_t USBUSART_CLK;
+extern uint32_t USBUSART_PORT;
+extern uint32_t USBUSART_TX_PIN;
 #define USBUSART_ISR usart2_isr
 #define USBUSART_TIM TIM4
 #define USBUSART_TIM_CLK_EN() rcc_periph_clock_enable(RCC_TIM4)
