@@ -15,3 +15,8 @@ NUCLEO-L452RE-P (64 pins), by default nRst is not connected. To reach the
 target nRST pin with the "mon connect_srst enable" option, the right NRST
 jumper must be placed. On Nucleo144-P boards it is JP3, on NUCLEO64-P
 boards it is JP4.
+
+If the stlink dongle offers SWIM pins on the connector (often the case for 
+clones), these become the UART pins for the USB to UART interface.
+SWIM_RST/RST becomes TX, and SWIM becomes RX.
+Note that RX is strongly pulled up by a 680 Ohms resistor.
