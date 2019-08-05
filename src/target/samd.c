@@ -364,7 +364,7 @@ static void samd_add_flash(target *t, uint32_t addr, size_t length)
 	target_add_flash(t, f);
 }
 
-char variant_string[40];
+char variant_string[60];
 bool samd_probe(target *t)
 {
 	uint32_t cid = samd_read_cid(t);
