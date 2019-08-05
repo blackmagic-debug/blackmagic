@@ -8,12 +8,9 @@ MAKEFLAGS += --no-print-dir
 Q := @
 endif
 
-OPT_FLAGS ?= -O2
-
 CFLAGS += -Wall -Wextra -Werror -Wno-char-subscripts -Wno-cast-function-type \
-	$(OPT_FLAGS) -std=gnu99 -g3 -MD \
+	-std=gnu99 -g3 -MD \
 	-I. -Iinclude -Iplatforms/common -I$(PLATFORM_DIR)
-LDFLAGS += $(OPT_FLAGS)
 
 ifeq ($(ENABLE_DEBUG), 1)
 CFLAGS += -DENABLE_DEBUG
@@ -59,6 +56,10 @@ SRC =			\
 	target.c	\
 
 include $(PLATFORM_DIR)/Makefile.inc
+
+OPT_FLAGS ?= -O2
+CFLAGS += $(OPT_FLAGS)
+LDFLAGS += $(OPT_FLAGS)
 
 ifndef TARGET
 TARGET=blackmagic
