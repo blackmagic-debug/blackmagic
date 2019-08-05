@@ -390,15 +390,15 @@ bool samd_probe(target *t)
 
 	/* Part String */
 	if (protected) {
-		sprintf(variant_string,
-		        "Atmel SAMD%d%c%dA%s (rev %c) (PROT=1)",
-		        samd.series, samd.pin, samd.mem,
-		        samd.package, samd.revision);
+		snprintf(variant_string, sizeof(variant_string),
+		         "Atmel SAMD%d%c%dA%s (rev %c) (PROT=1)",
+		         samd.series, samd.pin, samd.mem,
+		         samd.package, samd.revision);
 	} else {
-		sprintf(variant_string,
-		        "Atmel SAMD%d%c%dA%s (rev %c)",
-		        samd.series, samd.pin, samd.mem,
-		        samd.package, samd.revision);
+		snprintf(variant_string, sizeof(variant_string),
+		         "Atmel SAMD%d%c%dA%s (rev %c)",
+		         samd.series, samd.pin, samd.mem,
+		         samd.package, samd.revision);
 	}
 
 	/* Setup Target */
