@@ -73,7 +73,7 @@ ifndef OWN_HL
 SRC += jtag_scan.c jtagtap.c swdptap.c
 endif
 
-OBJ = $(SRC:.c=.o)
+OBJ = $(patsubst %.S,%.o,$(patsubst %.c,%.o,$(SRC)))
 
 $(TARGET): include/version.h $(OBJ)
 	@echo "  LD      $@"
@@ -81,6 +81,10 @@ $(TARGET): include/version.h $(OBJ)
 
 %.o:	%.c
 	@echo "  CC      $<"
+	$(Q)$(CC) $(CFLAGS) -c $< -o $@
+
+%.o:	%.S
+	@echo "  AS      $<"
 	$(Q)$(CC) $(CFLAGS) -c $< -o $@
 
 %.bin:	%
