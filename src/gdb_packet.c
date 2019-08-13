@@ -120,7 +120,7 @@ void gdb_putpacket(const char *packet, int size)
 			}
 		}
 		gdb_if_putchar('#', 0);
-		sprintf(xmit_csum, "%02X", csum);
+		snprintf(xmit_csum, sizeof(xmit_csum), "%02X", csum);
 		gdb_if_putchar(xmit_csum[0], 0);
 		gdb_if_putchar(xmit_csum[1], 1);
 #ifdef DEBUG_GDBPACKET

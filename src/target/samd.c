@@ -364,7 +364,7 @@ static void samd_add_flash(target *t, uint32_t addr, size_t length)
 	target_add_flash(t, f);
 }
 
-char variant_string[40];
+char variant_string[60];
 bool samd_probe(target *t)
 {
 	uint32_t cid = samd_read_cid(t);
@@ -390,15 +390,15 @@ bool samd_probe(target *t)
 
 	/* Part String */
 	if (protected) {
-		sprintf(variant_string,
-		        "Atmel SAMD%d%c%dA%s (rev %c) (PROT=1)",
-		        samd.series, samd.pin, samd.mem,
-		        samd.package, samd.revision);
+		snprintf(variant_string, sizeof(variant_string),
+		         "Atmel SAMD%d%c%dA%s (rev %c) (PROT=1)",
+		         samd.series, samd.pin, samd.mem,
+		         samd.package, samd.revision);
 	} else {
-		sprintf(variant_string,
-		        "Atmel SAMD%d%c%dA%s (rev %c)",
-		        samd.series, samd.pin, samd.mem,
-		        samd.package, samd.revision);
+		snprintf(variant_string, sizeof(variant_string),
+		         "Atmel SAMD%d%c%dA%s (rev %c)",
+		         samd.series, samd.pin, samd.mem,
+		         samd.package, samd.revision);
 	}
 
 	/* Setup Target */
