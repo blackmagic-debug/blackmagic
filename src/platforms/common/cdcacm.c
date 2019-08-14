@@ -419,7 +419,7 @@ static void dfu_detach_complete(usbd_device *dev, struct usb_setup_data *req)
 	scb_reset_core();
 }
 
-static int cdcacm_control_request(usbd_device *dev,
+static enum usbd_request_return_codes  cdcacm_control_request(usbd_device *dev,
 		struct usb_setup_data *req, uint8_t **buf, uint16_t *len,
 		void (**complete)(usbd_device *dev, struct usb_setup_data *req))
 {
@@ -433,23 +433,23 @@ static int cdcacm_control_request(usbd_device *dev,
 		cdcacm_set_modem_state(dev, req->wIndex, true, true);
 		/* Ignore if not for GDB interface */
 		if(req->wIndex != 0)
-			return 1;
+			return USBD_REQ_HANDLED;
 
 		cdcacm_gdb_dtr = req->wValue & 1;
 
-		return 1;
+		return USBD_REQ_HANDLED;
 	case USB_CDC_REQ_SET_LINE_CODING:
 		if(*len < sizeof(struct usb_cdc_line_coding))
-			return 0;
+			return USBD_REQ_NOTSUPP;
 
 		switch(req->wIndex) {
 		case 2:
 			usbuart_set_line_coding((struct usb_cdc_line_coding*)*buf);
-			return 1;
+			return USBD_REQ_HANDLED;
 		case 0:
-			return 1; /* Ignore on GDB Port */
+			return USBD_REQ_HANDLED; /* Ignore on GDB Port */
 		default:
-			return 0;
+			return USBD_REQ_NOTSUPP;
 		}
 	case DFU_GETSTATUS:
 		if(req->wIndex == DFU_IF_NO) {
@@ -461,17 +461,17 @@ static int cdcacm_control_request(usbd_device *dev,
 			(*buf)[5] = 0;	/* iString not used here */
 			*len = 6;
 
-			return 1;
+			return USBD_REQ_HANDLED;
 		}
-		return 0;
+		return USBD_REQ_NOTSUPP;
 	case DFU_DETACH:
 		if(req->wIndex == DFU_IF_NO) {
 			*complete = dfu_detach_complete;
-			return 1;
+			return USBD_REQ_HANDLED;
 		}
-		return 0;
+		return USBD_REQ_NOTSUPP;
 	}
-	return 0;
+	return USBD_REQ_NOTSUPP;
 }
 
 int cdcacm_get_config(void)
