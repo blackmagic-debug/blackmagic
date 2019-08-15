@@ -68,7 +68,6 @@ void usbuart_init(void)
 
 	/* Setup timer for running deferred FIFO processing */
 	USBUSART_TIM_CLK_EN();
-	timer_reset(USBUSART_TIM);
 	timer_set_mode(USBUSART_TIM, TIM_CR1_CKD_CK_INT,
 			TIM_CR1_CMS_EDGE, TIM_CR1_DIR_UP);
 	timer_set_prescaler(USBUSART_TIM,

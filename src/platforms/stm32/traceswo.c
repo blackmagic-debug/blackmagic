@@ -42,8 +42,6 @@ void traceswo_init(void)
 {
 	TRACE_TIM_CLK_EN();
 
-	timer_reset(TRACE_TIM);
-
 	/* Refer to ST doc RM0008 - STM32F10xx Reference Manual.
 	 * Section 14.3.4 - 14.3.6 (General Purpose Timer - Input Capture)
 	 *
