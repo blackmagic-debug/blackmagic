@@ -99,12 +99,8 @@ $(TARGET): include/version.h $(OBJ)
 
 clean:	host_clean
 	$(Q)echo "  CLEAN"
-ifeq ($(OS), Windows_NT)
-	-$(Q)$(shell del *.o, *.d, blackmagic*, $(HOSTFILES))
-else
 	-$(Q)$(RM) *.o *.d *~ blackmagic $(HOSTFILES)
 	-$(Q)$(RM) platforms/*/*.o platforms/*/*.d mapfile include/version.h
-endif
 
 all_platforms:
 	$(Q)set -e ;\
@@ -130,9 +126,5 @@ command.c: include/version.h
 
 include/version.h: FORCE
 	$(Q)echo " GIT include/version.h"
-ifeq ($(OS), Windows_NT)
-	$(Q)echo #define FIRMWARE_VERSION "$(shell git describe --always --dirty)" > $@
-else
 	$(Q)echo "#define FIRMWARE_VERSION \"$(shell git describe --always --dirty)\"" > $@
-endif
 -include *.d
