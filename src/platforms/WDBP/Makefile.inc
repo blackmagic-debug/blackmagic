@@ -25,7 +25,7 @@ SRC += 	cdcacm.c	\
 	serialno.c	\
 	timing.c	\
 	timing_stm32.c	\
-	Wifi_Server.c \
+	WiFi_Server.c \
 	wdbp_if.c \
 	wdbp_mode_led.c \
 	winc1500_driver_stub_api.c \
