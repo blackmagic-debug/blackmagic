@@ -1197,37 +1197,40 @@ void stlink_writemem32(ADIv5_AP_t *ap, uint32_t addr, size_t len,
 	write_retry(cmd, 16, (void*)buffer, len);
 }
 
-void stlink_regs_read(void *data)
+void stlink_regs_read(ADIv5_AP_t *ap, void *data)
 {
-	uint8_t cmd[16] = {STLINK_DEBUG_COMMAND, STLINK_DEBUG_APIV2_READALLREGS};
+	uint8_t cmd[16] = {STLINK_DEBUG_COMMAND, STLINK_DEBUG_APIV2_READALLREGS,
+					   ap->apsel};
 	uint8_t res[88];
-	DEBUG_STLINK("Read all core registers\n");
+	DEBUG_STLINK("AP %d: Read all core registers\n", ap->apsel);
 	send_recv(cmd, 16, res, 88);
 	stlink_usb_error_check(res, true);
 	memcpy(data, res + 4, 84);
 }
 
-uint32_t stlink_reg_read(int num)
+uint32_t stlink_reg_read(ADIv5_AP_t *ap, int num)
 {
-	uint8_t cmd[16] = {STLINK_DEBUG_COMMAND, STLINK_DEBUG_APIV2_READREG, num};
+	uint8_t cmd[16] = {STLINK_DEBUG_COMMAND, STLINK_DEBUG_APIV2_READREG, num,
+					   ap->apsel};
 	uint8_t res[8];
 	send_recv(cmd, 16, res, 8);
 	stlink_usb_error_check(res, true);
 	uint32_t ret = res[0] | res[1] << 8 | res[2] << 16 | res[3] << 24;
-	DEBUG_STLINK("Read reg %02" PRId32 " val 0x%08" PRIx32 "\n", num, ret);
+	DEBUG_STLINK("AP %d: Read reg %02" PRId32 " val 0x%08" PRIx32 "\n",
+				 ap->apsel, num, ret);
 	return ret;
 }
 
-void stlink_reg_write(int num, uint32_t val)
+void stlink_reg_write(ADIv5_AP_t *ap, int num, uint32_t val)
 {
 	uint8_t cmd[16] = {
 		STLINK_DEBUG_COMMAND, STLINK_DEBUG_APIV2_WRITEREG, num,
 		val & 0xff, (val >>  8) & 0xff, (val >> 16) & 0xff,
-		(val >> 24) & 0xff
-	};
+		(val >> 24) & 0xff, ap->apsel};
 	uint8_t res[2];
 	send_recv(cmd, 16, res, 2);
-	DEBUG_STLINK("Write reg %02" PRId32 " val 0x%08" PRIx32 "\n", num, val);
+	DEBUG_STLINK("AP %d: Write reg %02" PRId32 " val 0x%08" PRIx32 "\n",
+				 ap->apsel, num, val);
 	stlink_usb_error_check(res, true);
 }
 
