@@ -59,7 +59,7 @@ static bool cmd_target_power(target *t, int argc, const char **argv);
 #ifdef PLATFORM_HAS_TRACESWO
 static bool cmd_traceswo(target *t, int argc, const char **argv);
 #endif
-#ifdef PLATFORM_HAS_DEBUG
+#if defined(PLATFORM_HAS_DEBUG) && !defined(PC_HOSTED)
 static bool cmd_debug_bmp(target *t, int argc, const char **argv);
 #endif
 
@@ -79,7 +79,7 @@ const struct command_s cmd_list[] = {
 #ifdef PLATFORM_HAS_TRACESWO
 	{"traceswo", (cmd_handler)cmd_traceswo, "Start trace capture [(baudrate) for async swo]" },
 #endif
-#ifdef PLATFORM_HAS_DEBUG
+#if defined(PLATFORM_HAS_DEBUG) && !defined(PC_HOSTED)
 	{"debug_bmp", (cmd_handler)cmd_debug_bmp, "Output BMP \"debug\" strings to the second vcom: (enable|disable)"},
 #endif
 	{NULL, NULL, NULL}
@@ -344,7 +344,7 @@ static bool cmd_traceswo(target *t, int argc, const char **argv)
 }
 #endif
 
-#ifdef PLATFORM_HAS_DEBUG
+#if defined(PLATFORM_HAS_DEBUG) && !defined(PC_HOSTED)
 static bool cmd_debug_bmp(target *t, int argc, const char **argv)
 {
 	(void)t;
