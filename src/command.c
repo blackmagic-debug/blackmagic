@@ -124,7 +124,12 @@ int command_process(target *t, char *cmd)
 
 bool cmd_version(void)
 {
+#if defined PC_HOSTED
+	gdb_outf("Black Magic Probe, PC-Hosted for " PLATFORM_IDENT
+			 ", Version " FIRMWARE_VERSION "\n");
+#else
 	gdb_outf("Black Magic Probe (Firmware " FIRMWARE_VERSION ") (Hardware Version %d)\n", platform_hwversion());
+#endif
 	gdb_out("Copyright (C) 2015  Black Sphere Technologies Ltd.\n");
 	gdb_out("License GPLv3+: GNU GPL version 3 or later "
 		"<http://gnu.org/licenses/gpl.html>\n\n");
