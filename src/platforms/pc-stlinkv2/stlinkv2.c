@@ -1095,6 +1095,7 @@ void stlink_readmem(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
 {
 	if (len == 0)
 		return;
+	size_t read_len = len;
 	uint8_t type;
 	char *CMD;
 	if (src & 1 || len & 1) {
@@ -1104,6 +1105,8 @@ void stlink_readmem(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
 			DEBUG(" Too large!\n");
 			return;
 		}
+		if (len == 1)
+			read_len ++; /* Fix read length as in openocd*/
 	} else if (src & 3 || len & 3) {
 		CMD = "READMEM_16BIT";
 		type = STLINK_DEBUG_APIV2_READMEM_16BIT;
@@ -1120,7 +1123,7 @@ void stlink_readmem(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
 		src & 0xff, (src >>  8) & 0xff, (src >> 16) & 0xff,
 		(src >> 24) & 0xff,
 		len & 0xff, len >> 8, ap->apsel};
-	int res = read_retry(cmd, 16, dest, len);
+	int res = read_retry(cmd, 16, dest, read_len);
 	if (res == STLINK_ERROR_OK) {
 		uint8_t *p = (uint8_t*)dest;
 		for (size_t i = 0; i < len ; i++) {
