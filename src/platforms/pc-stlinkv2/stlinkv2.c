@@ -800,10 +800,23 @@ void stlink_init(int argc, char **argv)
 	Stlink.req_trans = libusb_alloc_transfer(0);
 	Stlink.rep_trans = libusb_alloc_transfer(0);
 	stlink_version();
-	if (Stlink.ver_stlink < 3 && Stlink.ver_jtag < 32) {
-		DEBUG("Please update Firmware\n");
-		goto error_1;
-	} else if (Stlink.ver_stlink == 3 && Stlink.ver_jtag < 3) {
+	if ((Stlink.ver_stlink < 3 && Stlink.ver_jtag < 32) ||
+		(Stlink.ver_stlink == 3 && Stlink.ver_jtag < 3)) {
+		/* Maybe the adapter is in some strange state. Try to reset */
+        int result = libusb_reset_device(Stlink.handle);
+		DEBUG("Trying reset\n");
+		if (result == LIBUSB_ERROR_BUSY) { /* Try again */
+			platform_delay(50);
+			result = libusb_reset_device(Stlink.handle);
+		}
+        if (result != LIBUSB_SUCCESS) {
+			DEBUG("libusb_reset_device failed\n");
+			goto error_1;
+		}
+		stlink_version();
+    }
+	if ((Stlink.ver_stlink < 3 && Stlink.ver_jtag < 32) ||
+		(Stlink.ver_stlink == 3 && Stlink.ver_jtag < 3)) {
 		DEBUG("Please update Firmware\n");
 		goto error_1;
 	}
