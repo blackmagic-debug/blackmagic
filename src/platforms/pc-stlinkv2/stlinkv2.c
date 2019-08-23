@@ -488,7 +488,6 @@ static int send_recv_retry(uint8_t *txbuf, size_t txsize,
 		timersub(&now, &start, &diff);
 		if ((diff.tv_sec >= 1) || (res != STLINK_ERROR_WAIT)) {
 			DEBUG_STLINK("Failed: ");
-			stlink_usb_error_check(rxbuf, true);
 			return res;
 		}
 	}
@@ -503,22 +502,15 @@ static int read_retry(uint8_t *txbuf, size_t txsize,
 	struct timeval diff;
 	gettimeofday(&start, NULL);
 	int res;
-	uint8_t cmd[16] = {
-		STLINK_DEBUG_COMMAND,
-		STLINK_DEBUG_APIV2_GETLASTRWSTATUS2
-	};
-	uint8_t data[12];
 	while(1) {
 		send_recv(txbuf, txsize, rxbuf, rxsize);
-		send_recv(cmd, 16, data, 12);
-		res = stlink_usb_error_check(data, false);
+		res = stlink_usb_get_rw_status();
 		if (res == STLINK_ERROR_OK)
 			return res;
 		gettimeofday(&now, NULL);
 		timersub(&now, &start, &diff);
 		if ((diff.tv_sec >= 1) || (res != STLINK_ERROR_WAIT)) {
 			DEBUG_STLINK("Failed: ");
-			stlink_usb_error_check(data, true);
 			return res;
 		}
 	}
@@ -533,23 +525,16 @@ static int write_retry(uint8_t *cmdbuf, size_t cmdsize,
 	struct timeval diff;
 	gettimeofday(&start, NULL);
 	int res;
-	uint8_t cmd[16] = {
-		STLINK_DEBUG_COMMAND,
-		STLINK_DEBUG_APIV2_GETLASTRWSTATUS2
-	};
-	uint8_t data[12];
 	while(1) {
 		send_recv(cmdbuf, cmdsize, NULL, 0);
 		send_recv(txbuf, txsize, NULL, 0);
-		send_recv(cmd, 16, data, 12);
-		res = stlink_usb_error_check(data, false);
+		res = stlink_usb_get_rw_status();
 		if (res == STLINK_ERROR_OK)
 			return res;
 		gettimeofday(&now, NULL);
 		timersub(&now, &start, &diff);
 		if ((diff.tv_sec >= 1) || (res != STLINK_ERROR_WAIT)) {
 			DEBUG_STLINK("failed");
-			stlink_usb_error_check(data, true);
 			return res;
 		}
 	}
@@ -985,7 +970,8 @@ uint32_t stlink_dp_error(ADIv5_DP_t *dp)
 
 	adiv5_dp_write(dp, ADIV5_DP_ABORT, clr);
 	dp->fault = 0;
-
+	if (err)
+		DEBUG("stlink_dp_error %d\n", err);
 	return err;
 }
 
@@ -1107,6 +1093,8 @@ int stlink_usb_get_rw_status(void)
 
 void stlink_readmem(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
 {
+	if (len == 0)
+		return;
 	uint8_t type;
 	char *CMD;
 	if (src & 1 || len & 1) {
@@ -1253,6 +1241,8 @@ void
 adiv5_mem_write_sized(ADIv5_AP_t *ap, uint32_t dest, const void *src,
 					  size_t len, enum align align)
 {
+	if (len == 0)
+		return;
 	switch(align) {
 	case ALIGN_BYTE: stlink_writemem8(ap, dest, len, (uint8_t *) src);
 		break;
