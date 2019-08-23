@@ -198,20 +198,20 @@ usbdfu_getstatus_complete(usbd_device *dev, struct usb_setup_data *req)
 	}
 }
 
-static int usbdfu_control_request(usbd_device *dev,
+static enum usbd_request_return_codes usbdfu_control_request(usbd_device *dev,
 		struct usb_setup_data *req, uint8_t **buf, uint16_t *len,
 		void (**complete)(usbd_device *dev, struct usb_setup_data *req))
 {
 	(void)dev;
 
 	if((req->bmRequestType & 0x7F) != 0x21)
-		return 0; /* Only accept class request */
+		return USBD_REQ_NOTSUPP; /* Only accept class request */
 
 	switch(req->bRequest) {
 	case DFU_DNLOAD:
 		if((len == NULL) || (*len == 0)) {
 			usbdfu_state = STATE_DFU_MANIFEST_SYNC;
-			return 1;
+			return USBD_REQ_HANDLED;
 		} else {
 			/* Copy download data for use on GET_STATUS */
 			prog.blocknum = req->wValue;
@@ -222,22 +222,22 @@ static int usbdfu_control_request(usbd_device *dev,
 				if ((addr < app_address) || (addr >= max_address)) {
 					current_error = DFU_STATUS_ERR_TARGET;
 					usbdfu_state = STATE_DFU_ERROR;
-					return 1;
+					return USBD_REQ_HANDLED;
 				} else
 					prog.addr = addr;
 			}
 			usbdfu_state = STATE_DFU_DNLOAD_SYNC;
-			return 1;
+			return USBD_REQ_HANDLED;
 		}
 	case DFU_CLRSTATUS:
 		/* Clear error and return to dfuIDLE */
 		if(usbdfu_state == STATE_DFU_ERROR)
 			usbdfu_state = STATE_DFU_IDLE;
-		return 1;
+		return USBD_REQ_HANDLED;
 	case DFU_ABORT:
 		/* Abort returns to dfuIDLE state */
 		usbdfu_state = STATE_DFU_IDLE;
-		return 1;
+		return USBD_REQ_HANDLED;
 	case DFU_UPLOAD:
 		if ((usbdfu_state == STATE_DFU_IDLE) ||
 			(usbdfu_state == STATE_DFU_DNLOAD_IDLE) ||
@@ -250,10 +250,10 @@ static int usbdfu_control_request(usbd_device *dev,
 					 dfu_function.wTransferSize);
 				memcpy(*buf, (void*)baseaddr, *len);
 			}
-			return 1;
+			return USBD_REQ_HANDLED;
 		} else {
 			usbd_ep_stall_set(dev, 0, 1);
-			return 0;
+			return USBD_REQ_NOTSUPP;
 		}
 	case DFU_GETSTATUS: {
 		uint32_t bwPollTimeout = 0; /* 24-bit integer in DFU class spec */
@@ -268,16 +268,16 @@ static int usbdfu_control_request(usbd_device *dev,
 
 		*complete = usbdfu_getstatus_complete;
 
-		return 1;
+		return USBD_REQ_HANDLED;
 		}
 	case DFU_GETSTATE:
 		/* Return state with no state transision */
 		*buf[0] = usbdfu_state;
 		*len = 1;
-		return 1;
+		return USBD_REQ_HANDLED;
 	}
 
-	return 0;
+	return USBD_REQ_NOTSUPP;
 }
 
 void dfu_init(const usbd_driver *driver, dfu_mode_t mode)

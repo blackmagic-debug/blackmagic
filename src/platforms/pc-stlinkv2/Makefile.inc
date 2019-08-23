@@ -1,6 +1,6 @@
 TARGET=blackmagic_stlinkv2
 SYS = $(shell $(CC) -dumpmachine)
-CFLAGS += -DPC_HOSTED  -DSTLINKV2 -DJTAG_HL -DENABLE_DEBUG
+CFLAGS += -DPC_HOSTED -DNO_LIBOPENCM3 -DSTLINKV2 -DJTAG_HL -DENABLE_DEBUG
 CFLAGS +=-I ./target
 LDFLAGS += -lusb-1.0
 ifneq (, $(findstring mingw, $(SYS)))

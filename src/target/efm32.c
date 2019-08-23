@@ -611,7 +611,7 @@ bool efm32_probe(target *t)
 	uint32_t ram_size   = ram_kib   * 0x400;
 	uint32_t flash_page_size = device->flash_page_size;
 
-	sprintf(variant_string, "%c\b%c\b%s %d F%d %s",
+	snprintf(variant_string, sizeof(variant_string), "%c\b%c\b%s %d F%d %s",
 			di_version + 48, (uint8_t)device_index + 32,
 			device->name, part_number, flash_kib, device->description);
 
