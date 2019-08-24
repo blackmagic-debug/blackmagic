@@ -8,12 +8,9 @@ MAKEFLAGS += --no-print-dir
 Q := @
 endif
 
-OPT_FLAGS ?= -O2
-
 CFLAGS += -Wall -Wextra -Werror -Wno-char-subscripts -Wno-cast-function-type \
-	$(OPT_FLAGS) -std=gnu99 -g3 -MD \
+	-std=gnu99 -g3 -MD \
 	-I. -Iinclude -Iplatforms/common -I$(PLATFORM_DIR)
-LDFLAGS += $(OPT_FLAGS)
 
 ifeq ($(ENABLE_DEBUG), 1)
 CFLAGS += -DENABLE_DEBUG
@@ -60,6 +57,10 @@ SRC =			\
 
 include $(PLATFORM_DIR)/Makefile.inc
 
+OPT_FLAGS ?= -O2
+CFLAGS += $(OPT_FLAGS)
+LDFLAGS += $(OPT_FLAGS)
+
 ifndef TARGET
 TARGET=blackmagic
 endif
@@ -72,7 +73,7 @@ ifndef OWN_HL
 SRC += jtag_scan.c jtagtap.c swdptap.c
 endif
 
-OBJ = $(SRC:.c=.o)
+OBJ = $(patsubst %.S,%.o,$(patsubst %.c,%.o,$(SRC)))
 
 $(TARGET): include/version.h $(OBJ)
 	@echo "  LD      $@"
@@ -80,6 +81,10 @@ $(TARGET): include/version.h $(OBJ)
 
 %.o:	%.c
 	@echo "  CC      $<"
+	$(Q)$(CC) $(CFLAGS) -c $< -o $@
+
+%.o:	%.S
+	@echo "  AS      $<"
 	$(Q)$(CC) $(CFLAGS) -c $< -o $@
 
 %.bin:	%
@@ -94,12 +99,8 @@ $(TARGET): include/version.h $(OBJ)
 
 clean:	host_clean
 	$(Q)echo "  CLEAN"
-ifeq ($(OS), Windows_NT)
-	-$(Q)$(shell del *.o, *.d, blackmagic*, $(HOSTFILES))
-else
 	-$(Q)$(RM) *.o *.d *~ blackmagic $(HOSTFILES)
 	-$(Q)$(RM) platforms/*/*.o platforms/*/*.d mapfile include/version.h
-endif
 
 all_platforms:
 	$(Q)set -e ;\
@@ -125,9 +126,5 @@ command.c: include/version.h
 
 include/version.h: FORCE
 	$(Q)echo " GIT include/version.h"
-ifeq ($(OS), Windows_NT)
-	$(Q)echo #define FIRMWARE_VERSION "$(shell git describe --always --dirty)" > $@
-else
 	$(Q)echo "#define FIRMWARE_VERSION \"$(shell git describe --always --dirty)\"" > $@
-endif
 -include *.d
