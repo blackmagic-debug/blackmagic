@@ -54,12 +54,12 @@ bool platform_check_battery_voltage (void) ;
 
 #define ctxLink_NetName	"ctxLink_0001"
 
-/* Important pin mappings for WDBP implementation:
+/* Important pin mappings for ctxLink implementation:
  *
  * LED0 = 	PB2				:	(Blue  LED	: LED_UART)
  * LED1 = 	PC7				:	(Green LED	: Idle)
  * LED2 = 	PC8				:	(Red LED	: Error)
- * LED3 =	PC9				:	(Green LED	: WDBP Mode)
+ * LED3 =	PC9				:	(Green LED	: ctxLink Mode)
  *
  * VTGT		= 	PB0 (analog)	ADC1_8 input
  *
