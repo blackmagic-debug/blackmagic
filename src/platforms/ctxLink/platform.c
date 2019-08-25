@@ -395,17 +395,17 @@ static void adc_init( void )
 		__asm__( "nop" );
 }
 
-#define	WDBP_BATTERY_INPUT			0	// ADC Channel for battery input
-#define	WDBP_TARGET_VOLTAGE_INPUT	8	// ADC Chanmel for target voltage
+#define	CTXLINK_BATTERY_INPUT			0	// ADC Channel for battery input
+#define	CTXLINK_TARGET_VOLTAGE_INPUT	8	// ADC Chanmel for target voltage
 
-#define	WDBP_ADC_BATTERY	0
-#define	WDBP_ADC_TARGET		1
+#define	CTXLINK_ADC_BATTERY	0
+#define	CTXLINK_ADC_TARGET		1
 
 static uint32_t	inputVoltages[2] = { 0 };
-static uint8_t	adcChannels[] = { WDBP_BATTERY_INPUT ,WDBP_BATTERY_INPUT , WDBP_BATTERY_INPUT ,WDBP_BATTERY_INPUT , WDBP_TARGET_VOLTAGE_INPUT };
+static uint8_t	adcChannels[] = { CTXLINK_BATTERY_INPUT ,CTXLINK_BATTERY_INPUT , CTXLINK_BATTERY_INPUT ,CTXLINK_BATTERY_INPUT , CTXLINK_TARGET_VOLTAGE_INPUT };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-/// <summary> Read all the ADC channels used by WDBP</summary>
+/// <summary> Read all the ADC channels used by ctxLink</summary>
 ///
 /// <remarks>
 /// 		  Because of the high impedance of the battery input circuit it is necessary
@@ -417,25 +417,25 @@ static uint8_t	adcChannels[] = { WDBP_BATTERY_INPUT ,WDBP_BATTERY_INPUT , WDBP_B
 void platform_adc_read (void)
 {
 	// PROBE_PIN;
-	adc_set_regular_sequence (ADC1, 1, &(adcChannels[WDBP_ADC_BATTERY]));
+	adc_set_regular_sequence (ADC1, 1, &(adcChannels[CTXLINK_ADC_BATTERY]));
 	adc_start_conversion_regular (ADC1);
 	/* Wait for end of conversion. */
 	while (!adc_eoc (ADC1))
 		;
-	inputVoltages[WDBP_ADC_BATTERY] = adc_read_regular (ADC1);
-	adc_set_regular_sequence (ADC1, 1, &(adcChannels[WDBP_ADC_BATTERY]));
+	inputVoltages[CTXLINK_ADC_BATTERY] = adc_read_regular (ADC1);
+	adc_set_regular_sequence (ADC1, 1, &(adcChannels[CTXLINK_ADC_BATTERY]));
 	adc_start_conversion_regular (ADC1);
 	/* Wait for end of conversion. */
 	while (!adc_eoc (ADC1))
 		;
-	inputVoltages[WDBP_ADC_BATTERY] = adc_read_regular (ADC1);
+	inputVoltages[CTXLINK_ADC_BATTERY] = adc_read_regular (ADC1);
 
 	adc_set_regular_sequence (ADC1, 1, &(adcChannels[4]));
 	adc_start_conversion_regular (ADC1);
 	/* Wait for end of conversion. */
 	while (!adc_eoc (ADC1))
 		;
-	inputVoltages[WDBP_ADC_TARGET] = adc_read_regular (ADC1);
+	inputVoltages[CTXLINK_ADC_TARGET] = adc_read_regular (ADC1);
 }
 
 //
@@ -484,7 +484,7 @@ bool platform_check_battery_voltage (void)
 {
 	bool	fResult;
 	platform_adc_read ();
-	retVal = inputVoltages[WDBP_ADC_BATTERY];
+	retVal = inputVoltages[CTXLINK_ADC_BATTERY];
 	//
 	// Running average
 	// 
@@ -546,7 +546,7 @@ const char *platform_target_voltage( void )
 	static char ret[] = "0.0V";
 	static uint32_t	retVal;
 
-	retVal =inputVoltages[WDBP_ADC_TARGET] * 99; /* 0-4095 */
+	retVal =inputVoltages[CTXLINK_ADC_TARGET] * 99; /* 0-4095 */
 	ret[0] = '0' + retVal / 62200;
 	ret[2] = '0' + ( retVal / 6220 ) % 10;
 	strcpy (&voltages[0], &ret[0]);

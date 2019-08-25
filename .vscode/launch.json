@@ -26,7 +26,7 @@
             "preLaunchTask": "Make BlackSTLink"
         },
         {
-            "name": "Debug WDBP",
+            "name": "Debug ctxLink",
             "type": "cortex-debug",
             "request": "launch",
             "svdFile": "${workspaceFolder}/SVD/STM32F411xx.svd",
@@ -36,7 +36,7 @@
             "showDevDebugOutput": true,
             "interface": "swd",
             "device": "STM32F401RE",
-            "preLaunchTask": "Make WDBP",
+            "preLaunchTask": "Make ctxLink",
             // "postLaunchCommands": ["continue"],  // uncomment to just run target
             "runToMain": true   // Will not be used if "postLaunchCommands" has "continue"
         }

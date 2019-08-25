@@ -36,7 +36,7 @@ static volatile uint32_t count_new;
 static uint8_t double_buffer_out[CDCACM_PACKET_SIZE];
 #endif
 
-#ifdef WDBP
+#ifdef ctxLink
 #undef gdb_if_putchar
 #undef gdb_if_getchar
 #undef gdb_if_getchar_to

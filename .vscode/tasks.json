@@ -24,12 +24,12 @@
             "problemMatcher": "$gcc"
         },
         {
-            "label": "Make WDBP",
+            "label": "Make ctxLink",
             "type": "shell",
             "group": "build",
             "command": "make ",
             "args": [
-                "PROBE_HOST=WDBP"
+                "PROBE_HOST=ctxLink"
             ],
             "options": { "cwd": "${workspaceFolder}/src"},
             "problemMatcher": "$gcc"

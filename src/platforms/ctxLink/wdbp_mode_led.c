@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-// file:	src\platforms\WDBP\wdbp_mode_led.c
+// file:	src\platforms\ctxLink\wdbp_mode_led.c
 //
-// summary:	Wdbp mode LED class, provides support for indicating the mode of WDBP using a single LED
+// summary:	Wdbp mode LED class, provides support for indicating the mode of ctxLink using a single LED
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "general.h"
