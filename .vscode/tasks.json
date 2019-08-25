@@ -12,14 +12,13 @@
             "problemMatcher": "$gcc"
         },
         {
-            "label": "Make BlackSTLink",
+            "label": "Make PC-STLinkV2",
             "type": "shell",
             "group": "build",
-            "command": "mingw32-make.exe ",
+            "command": "make ",
             "args": [
-                "PROBE_HOST=stlinkv2",
-                "CC=gcc",
-                "OPT_FLAGS=-IC:\\mingw64\\mingw32\\include -LC:\\libusb\\MinGW64\\static -Og -g"
+                "PROBE_HOST=pc-stlinkv2",
+                "CC=gcc"
             ],
             "options": { "cwd": "${workspaceFolder}/src"},
             "problemMatcher": "$gcc"
