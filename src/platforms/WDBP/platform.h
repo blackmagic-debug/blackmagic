@@ -40,10 +40,10 @@
 #define USBUART_DEBUG
 #endif
 
-#define BOARD_IDENT       "Wireless Debug Probe, (Firmware " FIRMWARE_VERSION ")"
-#define BOARD_IDENT_DFU   "Black Magic (Upgrade) for WDBP, (Firmware " FIRMWARE_VERSION ")"
-#define DFU_IDENT         "Black Magic Firmware Upgrade (WDBP"
-#define DFU_IFACE_STRING  "@Internal Flash   /0x08000000/1*016Ka,3*016Kg,1*064Kg,7*128Kg"
+#define BOARD_IDENT       "CtxLink - Wireless Debug Probe, (Firmware " FIRMWARE_VERSION ")"
+// #define BOARD_IDENT_DFU   "ctxLink (Upgrade), (Firmware " FIRMWARE_VERSION ")"
+#define DFU_IDENT         "ctxLink Firmware Upgrade ("
+// #define DFU_IFACE_STRING  "@Internal Flash   /0x08000000/1*016Ka,3*016Kg,1*064Kg,7*128Kg"
 
 bool platform_check_battery_voltage (void) ;
 //
@@ -52,7 +52,7 @@ bool platform_check_battery_voltage (void) ;
 //	TODO, use part or all of the MAC address to make this unique.
 //
 
-#define WDBP_NetName	"WDBP_0001"
+#define ctxLink_NetName	"ctxLink_0001"
 
 /* Important pin mappings for WDBP implementation:
  *

@@ -961,7 +961,7 @@ void APP_Task(void)
 				//
 				// Set default device name
 				//
-				m2m_wifi_set_device_name(WDBP_NetName, strlen(WDBP_NetName));
+				m2m_wifi_set_device_name(ctxLink_NetName, strlen(ctxLink_NetName));
 				//
 				// Select the "Deep Automatic" power mode
 				//
