@@ -25,7 +25,7 @@
 
 #include "platform.h"
 
-#include "wdbp_mode_led.h"
+#include "ctxLink_mode_led.h"
 
 #include "winc1500_api.h"
 #include "winc1500_driver_api_helpers.h"
@@ -961,7 +961,7 @@ void APP_Task(void)
 				//
 				// Set default device name
 				//
-				m2m_wifi_set_device_name(WDBP_NetName, strlen(WDBP_NetName));
+				m2m_wifi_set_device_name(ctxLink_NetName, strlen(ctxLink_NetName));
 				//
 				// Select the "Deep Automatic" power mode
 				//
@@ -1066,7 +1066,7 @@ void APP_Task(void)
 		{
 			tstrM2MAPConfig	apConfig;
 			uint8_t			enableRedirect = 1;
-			strcpy ((char *)apConfig.au8SSID, "WDBP-AP");
+			strcpy ((char *)apConfig.au8SSID, "ctxLink-AP");
 			apConfig.u8ListenChannel = 1;
 			apConfig.u8SecType = M2M_WIFI_SEC_OPEN;
 			apConfig.u8SsidHide = 0;
@@ -1076,7 +1076,7 @@ void APP_Task(void)
 			apConfig.au8DHCPServerIP[1] = 168;
 			apConfig.au8DHCPServerIP[2] = 1;
 			apConfig.au8DHCPServerIP[3] = 1;
-			m2m_wifi_start_provision_mode (&apConfig, "WDBP_Config.com", enableRedirect);
+			m2m_wifi_start_provision_mode (&apConfig, "ctxLink_Config.com", enableRedirect);
 			httpActive = true;
 			appState = APP_STATE_WAIT_PROVISION_EVENT;
 			break;

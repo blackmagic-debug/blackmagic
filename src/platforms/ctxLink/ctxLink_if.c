@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-/// @file	src\platforms\WDBP\wdbp_if.c.
+/// @file	src\platforms\ctxLink\wdbp_if.c.
 ///
 /// THis file contains a set of "shims" that are used to direct GDB I/O to the connected
 /// debugger. If there is a network connection all I/O is directed through that connection

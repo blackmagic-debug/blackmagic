@@ -1,11 +1,11 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-// file:	src\platforms\WDBP\wdbp_mode_led.c
+// file:	src\platforms\ctxLink\wdbp_mode_led.c
 //
-// summary:	Wdbp mode LED class, provides support for indicating the mode of WDBP using a single LED
+// summary:	Wdbp mode LED class, provides support for indicating the mode of ctxLink using a single LED
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "general.h"
-#include "wdbp_mode_led.h"
+#include "ctxLink_mode_led.h"
 
 MODE_LED_MODES	led_mode = MODE_LED_IDLE;	// Initial state of the mode led
 MODE_LED_TASK_STATES modeTaskState = MODE_LED_STATE_IDLE;

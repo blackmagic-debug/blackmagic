@@ -29,7 +29,7 @@ void platform_timing_init(void)
 {
 	/* Setup heartbeat timer */
 	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
-#ifdef WDBP
+#ifdef ctxLink
 	systick_set_reload (1050000);	/* Interrupt us at 10 Hz */
 #else
 	systick_set_reload (900000);	/* Interrupt us at 10 Hz */
