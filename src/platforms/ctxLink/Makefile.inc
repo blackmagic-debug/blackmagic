@@ -7,7 +7,7 @@ CFLAGS += -Istm32/include -mcpu=cortex-m4 -mthumb \
 	-Wimplicit-fallthrough=0 \
 	-Dgdb_if_putchar=gdb_shim_putchar -Dgdb_if_getchar=gdb_shim_getchar \
 	-Dgdb_if_getchar_to=gdb_shim_getchar_to \
-	-DctxLink -DSTM32F4 -DF4DISCOVERY -I../libopencm3/include \
+	-DctxLink -DSTM32F4  -I../libopencm3/include \
 	-I./platforms/winc1500 -I./platforms/winc1500/src \
 	-Iplatforms/stm32
 
