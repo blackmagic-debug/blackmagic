@@ -59,7 +59,7 @@ static bool cmd_target_power(target *t, int argc, const char **argv);
 #ifdef PLATFORM_HAS_TRACESWO
 static bool cmd_traceswo(target *t, int argc, const char **argv);
 #endif
-#ifdef PLATFORM_HAS_DEBUG
+#if defined(PLATFORM_HAS_DEBUG) && !defined(PC_HOSTED)
 static bool cmd_debug_bmp(target *t, int argc, const char **argv);
 #endif
 
@@ -79,7 +79,7 @@ const struct command_s cmd_list[] = {
 #ifdef PLATFORM_HAS_TRACESWO
 	{"traceswo", (cmd_handler)cmd_traceswo, "Start trace capture [(baudrate) for async swo]" },
 #endif
-#ifdef PLATFORM_HAS_DEBUG
+#if defined(PLATFORM_HAS_DEBUG) && !defined(PC_HOSTED)
 	{"debug_bmp", (cmd_handler)cmd_debug_bmp, "Output BMP \"debug\" strings to the second vcom: (enable|disable)"},
 #endif
 	{NULL, NULL, NULL}
@@ -124,7 +124,12 @@ int command_process(target *t, char *cmd)
 
 bool cmd_version(void)
 {
+#if defined PC_HOSTED
+	gdb_outf("Black Magic Probe, PC-Hosted for " PLATFORM_IDENT
+			 ", Version " FIRMWARE_VERSION "\n");
+#else
 	gdb_outf("Black Magic Probe (Firmware " FIRMWARE_VERSION ") (Hardware Version %d)\n", platform_hwversion());
+#endif
 	gdb_out("Copyright (C) 2015  Black Sphere Technologies Ltd.\n");
 	gdb_out("License GPLv3+: GNU GPL version 3 or later "
 		"<http://gnu.org/licenses/gpl.html>\n\n");
@@ -344,7 +349,7 @@ static bool cmd_traceswo(target *t, int argc, const char **argv)
 }
 #endif
 
-#ifdef PLATFORM_HAS_DEBUG
+#if defined(PLATFORM_HAS_DEBUG) && !defined(PC_HOSTED)
 static bool cmd_debug_bmp(target *t, int argc, const char **argv)
 {
 	(void)t;

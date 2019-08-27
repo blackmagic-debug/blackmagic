@@ -450,16 +450,16 @@ enum { DB_DHCSR, DB_DCRSR, DB_DCRDR, DB_DEMCR };
 static void cortexm_regs_read(target *t, void *data)
 {
 	uint32_t *regs = data;
+	ADIv5_AP_t *ap = cortexm_ap(t);
 #if defined(STLINKV2)
-	extern void stlink_regs_read(void *data);
-	extern uint32_t stlink_reg_read(int idx);
-	stlink_regs_read(data);
+	extern void stlink_regs_read(ADIv5_AP_t *ap, void *data);
+	extern uint32_t stlink_reg_read(ADIv5_AP_t *ap, int idx);
+	stlink_regs_read(ap, data);
 	regs += sizeof(regnum_cortex_m);
 	if (t->target_options & TOPT_FLAVOUR_V7MF)
 		for(size_t t = 0; t < sizeof(regnum_cortex_mf) / 4; t++)
-			*regs++ = stlink_reg_read(regnum_cortex_mf[t]);
+			*regs++ = stlink_reg_read(ap, regnum_cortex_mf[t]);
 #else
-	ADIv5_AP_t *ap = cortexm_ap(t);
 	unsigned i;
 
 	/* FIXME: Describe what's really going on here */
@@ -491,19 +491,19 @@ static void cortexm_regs_read(target *t, void *data)
 static void cortexm_regs_write(target *t, const void *data)
 {
 	const uint32_t *regs = data;
+	ADIv5_AP_t *ap = cortexm_ap(t);
 #if defined(STLINKV2)
-	extern void stlink_reg_write(int num, uint32_t val);
+	extern void stlink_reg_write(ADIv5_AP_t *ap, int num, uint32_t val);
 	for(size_t z = 1; z < sizeof(regnum_cortex_m) / 4; z++) {
-		stlink_reg_write(regnum_cortex_m[z], *regs);
+		stlink_reg_write(ap, regnum_cortex_m[z], *regs);
 		regs++;
 	if (t->target_options & TOPT_FLAVOUR_V7MF)
 		for(size_t z = 0; z < sizeof(regnum_cortex_mf) / 4; z++) {
-			stlink_reg_write(regnum_cortex_mf[z], *regs);
+			stlink_reg_write(ap, regnum_cortex_mf[z], *regs);
 			regs++;
 		}
 	}
 #else
-	ADIv5_AP_t *ap = cortexm_ap(t);
 	unsigned i;
 
 	/* FIXME: Describe what's really going on here */

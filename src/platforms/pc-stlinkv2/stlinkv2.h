@@ -44,9 +44,9 @@ void stlink_dp_abort(ADIv5_DP_t *dp, uint32_t abort);
 int stlink_open_ap(uint8_t ap);
 void stlink_close_ap(uint8_t ap);
 int stlink_usb_get_rw_status(void);
-void stlink_regs_read(void *data);
-uint32_t stlink_reg_read(int idx);
-void stlink_reg_write(int num, uint32_t val);
+void stlink_regs_read(ADIv5_AP_t *ap, void *data);
+uint32_t stlink_reg_read(ADIv5_AP_t *ap, int idx);
+void stlink_reg_write(ADIv5_AP_t *ap, int num, uint32_t val);
 extern  int debug_level;
 # define DEBUG_STLINK if (debug_level > 0) printf
 # define DEBUG_USB    if (debug_level > 1) printf
