@@ -111,9 +111,6 @@ void platform_init(void)
 
 	platform_timing_init();
 	cdcacm_init();
-	/* Don't enable UART if we're being debugged. */
-	if (!(SCS_DEMCR & SCS_DEMCR_TRCENA))
-		usbuart_init();
 	usbuart_init();
 }
 
