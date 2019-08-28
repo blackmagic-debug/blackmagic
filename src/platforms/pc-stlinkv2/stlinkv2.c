@@ -1079,8 +1079,7 @@ bool adiv5_ap_setup(int ap)
 	uint8_t data[2];
 	send_recv_retry(cmd, 16, data, 2);
 	DEBUG_STLINK("Open AP %d\n", ap);
-	stlink_usb_error_check(data, true);
-	return true;
+	return (stlink_usb_error_check(data, true))? false: true;
 }
 
 void adiv5_ap_cleanup(int ap)
