@@ -440,6 +440,7 @@ static int stlink_usb_error_check(uint8_t *data, bool verbose)
 		case STLINK_SWD_DP_ERROR:
 			if (verbose)
 				DEBUG("STLINK_SWD_DP_ERROR\n");
+			raise_exception(EXCEPTION_ERROR, "STLINK_SWD_DP_ERROR");
 			return STLINK_ERROR_FAIL;
 		case STLINK_SWD_DP_PARITY_ERROR:
 			if (verbose)
@@ -487,7 +488,7 @@ static int send_recv_retry(uint8_t *txbuf, size_t txsize,
 		gettimeofday(&now, NULL);
 		timersub(&now, &start, &diff);
 		if ((diff.tv_sec >= 1) || (res != STLINK_ERROR_WAIT)) {
-			DEBUG_STLINK("Failed: ");
+			DEBUG("write_retry failed");
 			return res;
 		}
 	}
@@ -510,7 +511,7 @@ static int read_retry(uint8_t *txbuf, size_t txsize,
 		gettimeofday(&now, NULL);
 		timersub(&now, &start, &diff);
 		if ((diff.tv_sec >= 1) || (res != STLINK_ERROR_WAIT)) {
-			DEBUG_STLINK("Failed: ");
+			DEBUG("read_retry failed");
 			return res;
 		}
 	}
@@ -534,7 +535,6 @@ static int write_retry(uint8_t *cmdbuf, size_t cmdsize,
 		gettimeofday(&now, NULL);
 		timersub(&now, &start, &diff);
 		if ((diff.tv_sec >= 1) || (res != STLINK_ERROR_WAIT)) {
-			DEBUG_STLINK("failed");
 			return res;
 		}
 	}
