@@ -900,14 +900,8 @@ int stlink_enter_debug_swd(void)
 					  STLINK_DEBUG_ENTER_SWD_NO_RESET};
 	uint8_t data[2];
 	DEBUG("Enter SWD\n");
-	if (send_recv_retry(cmd, 16, data, 2) != STLINK_ERROR_OK)
-		return -1;
-	uint8_t cmd1[16] = {STLINK_DEBUG_COMMAND,
-						STLINK_DEBUG_READCOREID};
-	uint8_t data1[4];
-	send_recv(cmd1, 16, data1, 4);
-	stlink_usb_error_check(data, false);
-	return 0;
+	send_recv(cmd, 16, data, 2);
+	return stlink_usb_error_check(data, true);
 }
 
 int stlink_enter_debug_jtag(void)
