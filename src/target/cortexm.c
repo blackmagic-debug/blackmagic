@@ -451,17 +451,18 @@ static void cortexm_regs_read(target *t, void *data)
 {
 	uint32_t *regs = data;
 	ADIv5_AP_t *ap = cortexm_ap(t);
+	unsigned i;
 #if defined(STLINKV2)
+	uint32_t base_regs[21];
 	extern void stlink_regs_read(ADIv5_AP_t *ap, void *data);
 	extern uint32_t stlink_reg_read(ADIv5_AP_t *ap, int idx);
-	stlink_regs_read(ap, data);
-	regs += sizeof(regnum_cortex_m);
+	stlink_regs_read(ap, base_regs);
+	for(i = 0; i < sizeof(regnum_cortex_m) / 4; i++)
+		*regs++ = base_regs[regnum_cortex_m[i]];
 	if (t->target_options & TOPT_FLAVOUR_V7MF)
 		for(size_t t = 0; t < sizeof(regnum_cortex_mf) / 4; t++)
 			*regs++ = stlink_reg_read(ap, regnum_cortex_mf[t]);
 #else
-	unsigned i;
-
 	/* FIXME: Describe what's really going on here */
 	adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw | ADIV5_AP_CSW_SIZE_WORD);
 
@@ -494,14 +495,14 @@ static void cortexm_regs_write(target *t, const void *data)
 	ADIv5_AP_t *ap = cortexm_ap(t);
 #if defined(STLINKV2)
 	extern void stlink_reg_write(ADIv5_AP_t *ap, int num, uint32_t val);
-	for(size_t z = 1; z < sizeof(regnum_cortex_m) / 4; z++) {
+	for(size_t z = 0; z < sizeof(regnum_cortex_m) / 4; z++) {
 		stlink_reg_write(ap, regnum_cortex_m[z], *regs);
 		regs++;
+	}
 	if (t->target_options & TOPT_FLAVOUR_V7MF)
 		for(size_t z = 0; z < sizeof(regnum_cortex_mf) / 4; z++) {
 			stlink_reg_write(ap, regnum_cortex_mf[z], *regs);
 			regs++;
-		}
 	}
 #else
 	unsigned i;
