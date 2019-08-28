@@ -491,7 +491,10 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 			ap = adiv5_new_ap(dp, i);
 		if (ap == NULL) {
 			adiv5_ap_cleanup(i);
-			continue;
+			if (i == 0)
+				return;
+			else
+				continue;
 		}
 		extern void kinetis_mdm_probe(ADIv5_AP_t *);
 		kinetis_mdm_probe(ap);
