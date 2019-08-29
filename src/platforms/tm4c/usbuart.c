@@ -64,7 +64,7 @@ void usbuart_init(void)
 	uart_clear_interrupt_flag(USBUART, UART_INT_RX | UART_INT_RT);
 
 	/* Enable interrupts */
-	uart_enable_interrupts(UART0, UART_INT_RX| UART_INT_RT);
+	uart_enable_interrupts(USBUART, UART_INT_RX| UART_INT_RT);
 
 	/* Finally enable the USART. */
 	uart_enable(USBUART);
