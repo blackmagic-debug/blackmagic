@@ -74,8 +74,6 @@ void traceswo_init(void)
 
 	/* Un-stall USB endpoint */
 	usbd_ep_stall_set(usbdev, 0x85, 0);
-
-	gpio_mode_setup(GPIOD, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO3);
 }
 
 void traceswo_baud(unsigned int baud)
