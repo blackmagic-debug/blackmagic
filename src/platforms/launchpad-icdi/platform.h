@@ -89,6 +89,7 @@ extern const usbd_driver lm4f_usb_driver;
 
 #define TRACEUART	UART2
 #define TRACEUART_CLK	RCC_UART2
+#define TRACEUART_PORT_CLK	RCC_GPIOD
 #define TRACEUART_IRQ	NVIC_UART2_IRQ
 #define TRACEUART_ISR	uart2_isr
 

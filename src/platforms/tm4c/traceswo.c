@@ -38,12 +38,12 @@
 
 void traceswo_init(void)
 {
-	periph_clock_enable(RCC_GPIOD);
+	periph_clock_enable(TRACEUART_PORT_CLK);
 	periph_clock_enable(TRACEUART_CLK);
 	__asm__("nop"); __asm__("nop"); __asm__("nop");
 
 	gpio_mode_setup(SWO_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, SWO_PIN);
-	gpio_set_af(SWO_PORT, 1, SWO_PIN); /* U2RX */
+	gpio_set_af(SWO_PORT, 1, SWO_PIN); /* UART */
 
 	uart_disable(TRACEUART);
 
@@ -158,4 +158,3 @@ void TRACEUART_ISR(void)
 		trace_buf_push();
 	}
 }
-
