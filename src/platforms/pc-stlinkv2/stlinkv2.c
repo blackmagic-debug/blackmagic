@@ -245,6 +245,19 @@ struct trans_ctx {
 };
 
 int debug_level = 0;
+bool has_attached = false;
+
+static int LIBUSB_CALL hotplug_callback_attach(
+	libusb_context *ctx, libusb_device *dev, libusb_hotplug_event event,
+	void *user_data)
+{
+	(void)ctx;
+	(void)dev;
+	(void)event;
+	(void)user_data;
+	has_attached = true;
+	return 0;
+}
 
 static void LIBUSB_CALL on_trans_done(struct libusb_transfer * trans)
 {
@@ -645,6 +658,7 @@ void stlink_help(char **argv)
 	DEBUG("\t-v[1|2]\t\t: Increasing verbosity\n");
 	DEBUG("\t-s \"string\"\t: Use Stlink with (partial) "
 		  "serial number \"string\"\n");
+	DEBUG("\t-n\t\t: Exit immediate if no device found\n");
 	DEBUG("\t-h\t\t: This help.\n");
 	exit(0);
 }
@@ -659,8 +673,12 @@ void stlink_init(int argc, char **argv)
 	libusb_init(&Stlink.libusb_ctx);
 	char *serial = NULL;
 	int c;
-	while((c = getopt(argc, argv, "s:v:h")) != -1) {
+	bool wait_for_attach = true;
+	while((c = getopt(argc, argv, "ns:v:h")) != -1) {
 		switch(c) {
+		case 'n':
+			wait_for_attach = false;
+			break;
 		case 's':
 			serial = optarg;
 			break;
@@ -676,9 +694,17 @@ void stlink_init(int argc, char **argv)
 	r = libusb_init(NULL);
 	if (r < 0)
 		DEBUG("Failed: %s", libusb_strerror(r));
-	ssize_t cnt = libusb_get_device_list(NULL, &devs);
+	bool hotplug = true;
+	if (!libusb_has_capability (LIBUSB_CAP_HAS_HOTPLUG)) {
+		printf("Hotplug capabilites are not supported on this platform\n");
+		hotplug = false;
+	}
+	ssize_t cnt;
+  rescan:
+	has_attached = 0;
+	memset(&Stlink, 0, sizeof(Stlink));
+	cnt = libusb_get_device_list(NULL, &devs);
 	if (cnt < 0) {
-		libusb_exit(NULL);
 		DEBUG("Failed: %s", libusb_strerror(r));
 		goto error;
 	}
@@ -769,13 +795,40 @@ void stlink_init(int argc, char **argv)
 			}
 		}
 	}
+	libusb_free_device_list(devs, 1);
 	if (!Stlink.handle) {
-		if (nr_stlinks && serial)
+		if (nr_stlinks && serial) {
 			DEBUG("No Stlink with given serial number %s\n", serial);
-		else if (nr_stlinks > 1)
+		} else if (nr_stlinks > 1) {
 			DEBUG("Multiple Stlinks. Please specify serial number\n");
-		else
+			goto error;
+		} else {
 			DEBUG("No Stlink device found!\n");
+		}
+		if (hotplug && wait_for_attach) {
+			libusb_hotplug_callback_handle hp;
+			int rc = libusb_hotplug_register_callback
+				(NULL, LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED, 0,
+				 VENDOR_ID_STLINK, LIBUSB_HOTPLUG_MATCH_ANY,
+				 LIBUSB_HOTPLUG_MATCH_ANY,
+				 hotplug_callback_attach, NULL, &hp);
+			if (LIBUSB_SUCCESS != rc) {
+				DEBUG("Error registering attach callback\n");
+				goto error;
+			}
+			DEBUG("Waiting for %sST device%s%s to attach\n",
+				  (serial)? "" : "some ",
+				  (serial)? " with serial ": "",
+				  (serial)? serial: "");
+			DEBUG("Terminate with ^C\n");
+			while (has_attached == 0) {
+				rc = libusb_handle_events (NULL);
+                if (rc < 0)
+					printf("libusb_handle_events() failed: %s\n",
+						   libusb_error_name(rc));
+			}
+			goto rescan;
+		}
 		goto error;
 	}
 	int config;
@@ -829,7 +882,7 @@ void stlink_init(int argc, char **argv)
   error_1:
 	libusb_close(Stlink.handle);
   error:
-	libusb_free_device_list(devs, 1);
+	libusb_exit(Stlink.libusb_ctx);
 	exit(-1);
 }
 
