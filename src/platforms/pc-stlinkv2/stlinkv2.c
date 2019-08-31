@@ -228,7 +228,7 @@ stlink Stlink;
 static void exit_function(void)
 {
 	libusb_exit(NULL);
-	DEBUG_STLINK("Cleanup\n");
+	DEBUG("\nCleanup\n");
 }
 
 /* SIGTERM handler. */
@@ -256,7 +256,34 @@ static int LIBUSB_CALL hotplug_callback_attach(
 	(void)event;
 	(void)user_data;
 	has_attached = true;
-	return 0;
+	return 1; /* deregister Callback*/
+}
+
+int device_detached = 0;
+static int LIBUSB_CALL hotplug_callback_detach(
+	libusb_context *ctx, libusb_device *dev, libusb_hotplug_event event,
+	void *user_data)
+{
+	(void)ctx;
+	(void)dev;
+	(void)event;
+	(void)user_data;
+	device_detached = 1;
+	return 1;  /* deregister Callback*/
+}
+
+void stlink_check_detach(int state)
+{
+	if (state == 1) {
+		/* Check for hotplug events */
+		struct timeval tv = {0,0};
+		libusb_handle_events_timeout_completed(
+			Stlink.libusb_ctx, &tv, &device_detached);
+		if (device_detached) {
+			DEBUG("Dongle was detached\n");
+			exit(0);
+		}
+	}
 }
 
 static void LIBUSB_CALL on_trans_done(struct libusb_transfer * trans)
@@ -332,6 +359,7 @@ static int send_recv(uint8_t *txbuf, size_t txsize,
 					 uint8_t *rxbuf, size_t rxsize)
 {
 	int res = 0;
+	stlink_check_detach(1);
 	if( txsize) {
 		int txlen = txsize;
 		libusb_fill_bulk_transfer(Stlink.req_trans, Stlink.handle,
@@ -725,6 +753,8 @@ void stlink_init(int argc, char **argv)
 				DEBUG("STLINKV1 not supported\n");
 				continue;
 			}
+			Stlink.vid = desc.idVendor;
+			Stlink.pid = desc.idProduct;
 			r = libusb_open(dev, &Stlink.handle);
 			if (r == LIBUSB_SUCCESS) {
 				uint8_t data[32];
@@ -851,6 +881,16 @@ void stlink_init(int argc, char **argv)
 	{
 		DEBUG("libusb_claim_interface failed %s\n", libusb_strerror(r));
 		goto error_1;
+	}
+	if (hotplug) { /* Allow gracefully exit when stlink is unplugged*/
+		libusb_hotplug_callback_handle hp;
+		int rc = libusb_hotplug_register_callback
+			(NULL, LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT, 0, Stlink.vid, Stlink.pid,
+			 LIBUSB_HOTPLUG_MATCH_ANY, hotplug_callback_detach, NULL, &hp);
+		if (LIBUSB_SUCCESS != rc) {
+			DEBUG("Error registering detach callback\n");
+			goto error;
+		}
 	}
 	Stlink.req_trans = libusb_alloc_transfer(0);
 	Stlink.rep_trans = libusb_alloc_transfer(0);
