@@ -683,7 +683,7 @@ void stlink_init(int argc, char **argv)
 		goto error;
 	}
 	int i = 0;
-	bool multiple_devices = false;
+	int nr_stlinks = 0;
 	while ((dev = devs[i++]) != NULL) {
 		struct libusb_device_descriptor desc;
 		int r = libusb_get_device_descriptor(dev, &desc);
@@ -698,10 +698,6 @@ void stlink_init(int argc, char **argv)
 			if (desc.idProduct == PRODUCT_ID_STLINKV1)  { /* Reject V1 devices.*/
 				DEBUG("STLINKV1 not supported\n");
 				continue;
-			}
-			if (Stlink.handle) {
-				libusb_close(Stlink.handle);
-				multiple_devices = (serial)? false : true;
 			}
 			r = libusb_open(dev, &Stlink.handle);
 			if (r == LIBUSB_SUCCESS) {
@@ -736,44 +732,50 @@ void stlink_init(int argc, char **argv)
 				}
 				if (serial && (!strncmp(Stlink.serial, serial, strlen(serial))))
 					DEBUG("Found ");
-				if (!serial || (!strncmp(Stlink.serial, serial, strlen(serial)))) {
-					if (desc.idProduct == PRODUCT_ID_STLINKV2) {
-						DEBUG("STLINKV20 serial %s\n", Stlink.serial);
-						Stlink.ver_hw = 20;
-						Stlink.ep_tx = 2;
-					} else if (desc.idProduct == PRODUCT_ID_STLINKV21) {
-						DEBUG("STLINKV21 serial %s\n", Stlink.serial);
-						Stlink.ver_hw = 21;
-						Stlink.ep_tx = 1;
-					} else if (desc.idProduct == PRODUCT_ID_STLINKV21_MSD) {
-						DEBUG("STLINKV21_MSD serial %s\n", Stlink.serial);
-						Stlink.ver_hw = 21;
-						Stlink.ep_tx = 1;
-					} else if (desc.idProduct == PRODUCT_ID_STLINKV3E) {
-						DEBUG("STLINKV3E serial %s\n", Stlink.serial);
-						Stlink.ver_hw = 30;
-						Stlink.ep_tx = 1;
-					} else if (desc.idProduct == PRODUCT_ID_STLINKV3) {
-						DEBUG("STLINKV3  serial %s\n", Stlink.serial);
-						Stlink.ver_hw = 30;
-						Stlink.ep_tx = 1;
+				if (desc.idProduct == PRODUCT_ID_STLINKV2) {
+					DEBUG("STLINKV20 serial %s\n", Stlink.serial);
+					Stlink.ver_hw = 20;
+					Stlink.ep_tx = 2;
+				} else if (desc.idProduct == PRODUCT_ID_STLINKV21) {
+					DEBUG("STLINKV21 serial %s\n", Stlink.serial);
+					Stlink.ver_hw = 21;
+					Stlink.ep_tx = 1;
+				} else if (desc.idProduct == PRODUCT_ID_STLINKV21_MSD) {
+					DEBUG("STLINKV21_MSD serial %s\n", Stlink.serial);
+					Stlink.ver_hw = 21;
+					Stlink.ep_tx = 1;
+				} else if (desc.idProduct == PRODUCT_ID_STLINKV3E) {
+					DEBUG("STLINKV3E serial %s\n", Stlink.serial);
+					Stlink.ver_hw = 30;
+					Stlink.ep_tx = 1;
+				} else if (desc.idProduct == PRODUCT_ID_STLINKV3) {
+					DEBUG("STLINKV3  serial %s\n", Stlink.serial);
+					Stlink.ver_hw = 30;
+					Stlink.ep_tx = 1;
+				} else {
+					DEBUG("Unknown STLINK variant, serial %s\n", Stlink.serial);
+				}
+				nr_stlinks++;
+				if (serial) {
+					if (!strncmp(Stlink.serial, serial, strlen(serial))) {
+						break;
 					} else {
-						DEBUG("Unknown STLINK variant, serial %s\n", Stlink.serial);
+						libusb_close(Stlink.handle);
+						Stlink.handle = 0;
 					}
 				}
-				if (serial && (!strncmp(Stlink.serial, serial, strlen(serial))))
-					break;
 			} else {
 				DEBUG("Open failed %s\n", libusb_strerror(r));
 			}
 		}
 	}
-	if (multiple_devices) {
-		DEBUG("Multiple Stlinks. Please specify serial number\n");
-		goto error_1;
-	}
 	if (!Stlink.handle) {
-		DEBUG("No Stlink device found!\n");
+		if (nr_stlinks && serial)
+			DEBUG("No Stlink with given serial number %s\n", serial);
+		else if (nr_stlinks > 1)
+			DEBUG("Multiple Stlinks. Please specify serial number\n");
+		else
+			DEBUG("No Stlink device found!\n");
 		goto error;
 	}
 	int config;
