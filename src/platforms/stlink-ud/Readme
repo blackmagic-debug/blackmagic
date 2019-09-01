@@ -1,0 +1,17 @@
+Find a description how to modify a Discovery Board to use it's Stlink as
+black magic debug at
+http://embdev.net/articles/STM_Discovery_as_Black_Magic_Probe
+
+Differences between V1/V2
+
+                V1                V2
+ID Pins PC13/14 unconnected       PC 13 pulled low
+LED STLINK      PA8, active High  PA9, Dual Led
+MCO Out         NA                PA8
+RESET(Target)   T_JRST(PB1)       NRST (PB0)
+
+On the NucleoXXXP boards, e.g. NUCLEO-L4R5ZI (144 pin) or
+NUCLEO-L452RE-P (64 pins), by default nRst is not connected. To reach the
+target nRST pin with the "mon connect_srst enable" option, the right NRST
+jumper must be placed. On Nucleo144-P boards it is JP3, on NUCLEO64-P
+boards it is JP4.
