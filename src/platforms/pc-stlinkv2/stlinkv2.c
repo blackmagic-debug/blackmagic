@@ -228,7 +228,7 @@ stlink Stlink;
 static void exit_function(void)
 {
 	libusb_exit(NULL);
-	DEBUG_STLINK("Cleanup\n");
+	DEBUG("\nCleanup\n");
 }
 
 /* SIGTERM handler. */
@@ -245,6 +245,46 @@ struct trans_ctx {
 };
 
 int debug_level = 0;
+bool has_attached = false;
+
+static int LIBUSB_CALL hotplug_callback_attach(
+	libusb_context *ctx, libusb_device *dev, libusb_hotplug_event event,
+	void *user_data)
+{
+	(void)ctx;
+	(void)dev;
+	(void)event;
+	(void)user_data;
+	has_attached = true;
+	return 1; /* deregister Callback*/
+}
+
+int device_detached = 0;
+static int LIBUSB_CALL hotplug_callback_detach(
+	libusb_context *ctx, libusb_device *dev, libusb_hotplug_event event,
+	void *user_data)
+{
+	(void)ctx;
+	(void)dev;
+	(void)event;
+	(void)user_data;
+	device_detached = 1;
+	return 1;  /* deregister Callback*/
+}
+
+void stlink_check_detach(int state)
+{
+	if (state == 1) {
+		/* Check for hotplug events */
+		struct timeval tv = {0,0};
+		libusb_handle_events_timeout_completed(
+			Stlink.libusb_ctx, &tv, &device_detached);
+		if (device_detached) {
+			DEBUG("Dongle was detached\n");
+			exit(0);
+		}
+	}
+}
 
 static void LIBUSB_CALL on_trans_done(struct libusb_transfer * trans)
 {
@@ -319,6 +359,7 @@ static int send_recv(uint8_t *txbuf, size_t txsize,
 					 uint8_t *rxbuf, size_t rxsize)
 {
 	int res = 0;
+	stlink_check_detach(1);
 	if( txsize) {
 		int txlen = txsize;
 		libusb_fill_bulk_transfer(Stlink.req_trans, Stlink.handle,
@@ -440,6 +481,7 @@ static int stlink_usb_error_check(uint8_t *data, bool verbose)
 		case STLINK_SWD_DP_ERROR:
 			if (verbose)
 				DEBUG("STLINK_SWD_DP_ERROR\n");
+			raise_exception(EXCEPTION_ERROR, "STLINK_SWD_DP_ERROR");
 			return STLINK_ERROR_FAIL;
 		case STLINK_SWD_DP_PARITY_ERROR:
 			if (verbose)
@@ -487,7 +529,7 @@ static int send_recv_retry(uint8_t *txbuf, size_t txsize,
 		gettimeofday(&now, NULL);
 		timersub(&now, &start, &diff);
 		if ((diff.tv_sec >= 1) || (res != STLINK_ERROR_WAIT)) {
-			DEBUG_STLINK("Failed: ");
+			DEBUG("write_retry failed");
 			return res;
 		}
 	}
@@ -510,7 +552,7 @@ static int read_retry(uint8_t *txbuf, size_t txsize,
 		gettimeofday(&now, NULL);
 		timersub(&now, &start, &diff);
 		if ((diff.tv_sec >= 1) || (res != STLINK_ERROR_WAIT)) {
-			DEBUG_STLINK("Failed: ");
+			DEBUG("read_retry failed");
 			return res;
 		}
 	}
@@ -534,7 +576,6 @@ static int write_retry(uint8_t *cmdbuf, size_t cmdsize,
 		gettimeofday(&now, NULL);
 		timersub(&now, &start, &diff);
 		if ((diff.tv_sec >= 1) || (res != STLINK_ERROR_WAIT)) {
-			DEBUG_STLINK("failed");
 			return res;
 		}
 	}
@@ -645,6 +686,7 @@ void stlink_help(char **argv)
 	DEBUG("\t-v[1|2]\t\t: Increasing verbosity\n");
 	DEBUG("\t-s \"string\"\t: Use Stlink with (partial) "
 		  "serial number \"string\"\n");
+	DEBUG("\t-n\t\t: Exit immediate if no device found\n");
 	DEBUG("\t-h\t\t: This help.\n");
 	exit(0);
 }
@@ -659,8 +701,12 @@ void stlink_init(int argc, char **argv)
 	libusb_init(&Stlink.libusb_ctx);
 	char *serial = NULL;
 	int c;
-	while((c = getopt(argc, argv, "s:v:h")) != -1) {
+	bool wait_for_attach = true;
+	while((c = getopt(argc, argv, "ns:v:h")) != -1) {
 		switch(c) {
+		case 'n':
+			wait_for_attach = false;
+			break;
 		case 's':
 			serial = optarg;
 			break;
@@ -676,14 +722,22 @@ void stlink_init(int argc, char **argv)
 	r = libusb_init(NULL);
 	if (r < 0)
 		DEBUG("Failed: %s", libusb_strerror(r));
-	ssize_t cnt = libusb_get_device_list(NULL, &devs);
+	bool hotplug = true;
+	if (!libusb_has_capability (LIBUSB_CAP_HAS_HOTPLUG)) {
+		printf("Hotplug capabilites are not supported on this platform\n");
+		hotplug = false;
+	}
+	ssize_t cnt;
+  rescan:
+	has_attached = 0;
+	memset(&Stlink, 0, sizeof(Stlink));
+	cnt = libusb_get_device_list(NULL, &devs);
 	if (cnt < 0) {
-		libusb_exit(NULL);
 		DEBUG("Failed: %s", libusb_strerror(r));
 		goto error;
 	}
 	int i = 0;
-	bool multiple_devices = false;
+	int nr_stlinks = 0;
 	while ((dev = devs[i++]) != NULL) {
 		struct libusb_device_descriptor desc;
 		int r = libusb_get_device_descriptor(dev, &desc);
@@ -699,10 +753,8 @@ void stlink_init(int argc, char **argv)
 				DEBUG("STLINKV1 not supported\n");
 				continue;
 			}
-			if (Stlink.handle) {
-				libusb_close(Stlink.handle);
-				multiple_devices = (serial)? false : true;
-			}
+			Stlink.vid = desc.idVendor;
+			Stlink.pid = desc.idProduct;
 			r = libusb_open(dev, &Stlink.handle);
 			if (r == LIBUSB_SUCCESS) {
 				uint8_t data[32];
@@ -736,44 +788,77 @@ void stlink_init(int argc, char **argv)
 				}
 				if (serial && (!strncmp(Stlink.serial, serial, strlen(serial))))
 					DEBUG("Found ");
-				if (!serial || (!strncmp(Stlink.serial, serial, strlen(serial)))) {
-					if (desc.idProduct == PRODUCT_ID_STLINKV2) {
-						DEBUG("STLINKV20 serial %s\n", Stlink.serial);
-						Stlink.ver_hw = 20;
-						Stlink.ep_tx = 2;
-					} else if (desc.idProduct == PRODUCT_ID_STLINKV21) {
-						DEBUG("STLINKV21 serial %s\n", Stlink.serial);
-						Stlink.ver_hw = 21;
-						Stlink.ep_tx = 1;
-					} else if (desc.idProduct == PRODUCT_ID_STLINKV21_MSD) {
-						DEBUG("STLINKV21_MSD serial %s\n", Stlink.serial);
-						Stlink.ver_hw = 21;
-						Stlink.ep_tx = 1;
-					} else if (desc.idProduct == PRODUCT_ID_STLINKV3E) {
-						DEBUG("STLINKV3E serial %s\n", Stlink.serial);
-						Stlink.ver_hw = 30;
-						Stlink.ep_tx = 1;
-					} else if (desc.idProduct == PRODUCT_ID_STLINKV3) {
-						DEBUG("STLINKV3  serial %s\n", Stlink.serial);
-						Stlink.ver_hw = 30;
-						Stlink.ep_tx = 1;
+				if (desc.idProduct == PRODUCT_ID_STLINKV2) {
+					DEBUG("STLINKV20 serial %s\n", Stlink.serial);
+					Stlink.ver_hw = 20;
+					Stlink.ep_tx = 2;
+				} else if (desc.idProduct == PRODUCT_ID_STLINKV21) {
+					DEBUG("STLINKV21 serial %s\n", Stlink.serial);
+					Stlink.ver_hw = 21;
+					Stlink.ep_tx = 1;
+				} else if (desc.idProduct == PRODUCT_ID_STLINKV21_MSD) {
+					DEBUG("STLINKV21_MSD serial %s\n", Stlink.serial);
+					Stlink.ver_hw = 21;
+					Stlink.ep_tx = 1;
+				} else if (desc.idProduct == PRODUCT_ID_STLINKV3E) {
+					DEBUG("STLINKV3E serial %s\n", Stlink.serial);
+					Stlink.ver_hw = 30;
+					Stlink.ep_tx = 1;
+				} else if (desc.idProduct == PRODUCT_ID_STLINKV3) {
+					DEBUG("STLINKV3  serial %s\n", Stlink.serial);
+					Stlink.ver_hw = 30;
+					Stlink.ep_tx = 1;
+				} else {
+					DEBUG("Unknown STLINK variant, serial %s\n", Stlink.serial);
+				}
+				nr_stlinks++;
+				if (serial) {
+					if (!strncmp(Stlink.serial, serial, strlen(serial))) {
+						break;
 					} else {
-						DEBUG("Unknown STLINK variant, serial %s\n", Stlink.serial);
+						libusb_close(Stlink.handle);
+						Stlink.handle = 0;
 					}
 				}
-				if (serial && (!strncmp(Stlink.serial, serial, strlen(serial))))
-					break;
 			} else {
 				DEBUG("Open failed %s\n", libusb_strerror(r));
 			}
 		}
 	}
-	if (multiple_devices) {
-		DEBUG("Multiple Stlinks. Please specify serial number\n");
-		goto error_1;
-	}
+	libusb_free_device_list(devs, 1);
 	if (!Stlink.handle) {
-		DEBUG("No Stlink device found!\n");
+		if (nr_stlinks && serial) {
+			DEBUG("No Stlink with given serial number %s\n", serial);
+		} else if (nr_stlinks > 1) {
+			DEBUG("Multiple Stlinks. Please specify serial number\n");
+			goto error;
+		} else {
+			DEBUG("No Stlink device found!\n");
+		}
+		if (hotplug && wait_for_attach) {
+			libusb_hotplug_callback_handle hp;
+			int rc = libusb_hotplug_register_callback
+				(NULL, LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED, 0,
+				 VENDOR_ID_STLINK, LIBUSB_HOTPLUG_MATCH_ANY,
+				 LIBUSB_HOTPLUG_MATCH_ANY,
+				 hotplug_callback_attach, NULL, &hp);
+			if (LIBUSB_SUCCESS != rc) {
+				DEBUG("Error registering attach callback\n");
+				goto error;
+			}
+			DEBUG("Waiting for %sST device%s%s to attach\n",
+				  (serial)? "" : "some ",
+				  (serial)? " with serial ": "",
+				  (serial)? serial: "");
+			DEBUG("Terminate with ^C\n");
+			while (has_attached == 0) {
+				rc = libusb_handle_events (NULL);
+                if (rc < 0)
+					printf("libusb_handle_events() failed: %s\n",
+						   libusb_error_name(rc));
+			}
+			goto rescan;
+		}
 		goto error;
 	}
 	int config;
@@ -796,6 +881,16 @@ void stlink_init(int argc, char **argv)
 	{
 		DEBUG("libusb_claim_interface failed %s\n", libusb_strerror(r));
 		goto error_1;
+	}
+	if (hotplug) { /* Allow gracefully exit when stlink is unplugged*/
+		libusb_hotplug_callback_handle hp;
+		int rc = libusb_hotplug_register_callback
+			(NULL, LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT, 0, Stlink.vid, Stlink.pid,
+			 LIBUSB_HOTPLUG_MATCH_ANY, hotplug_callback_detach, NULL, &hp);
+		if (LIBUSB_SUCCESS != rc) {
+			DEBUG("Error registering detach callback\n");
+			goto error;
+		}
 	}
 	Stlink.req_trans = libusb_alloc_transfer(0);
 	Stlink.rep_trans = libusb_alloc_transfer(0);
@@ -827,7 +922,7 @@ void stlink_init(int argc, char **argv)
   error_1:
 	libusb_close(Stlink.handle);
   error:
-	libusb_free_device_list(devs, 1);
+	libusb_exit(Stlink.libusb_ctx);
 	exit(-1);
 }
 
@@ -898,14 +993,8 @@ int stlink_enter_debug_swd(void)
 					  STLINK_DEBUG_ENTER_SWD_NO_RESET};
 	uint8_t data[2];
 	DEBUG("Enter SWD\n");
-	if (send_recv_retry(cmd, 16, data, 2) != STLINK_ERROR_OK)
-		return -1;
-	uint8_t cmd1[16] = {STLINK_DEBUG_COMMAND,
-						STLINK_DEBUG_READCOREID};
-	uint8_t data1[4];
-	send_recv(cmd1, 16, data1, 4);
-	stlink_usb_error_check(data, false);
-	return 0;
+	send_recv(cmd, 16, data, 2);
+	return stlink_usb_error_check(data, true);
 }
 
 int stlink_enter_debug_jtag(void)
@@ -1077,8 +1166,7 @@ bool adiv5_ap_setup(int ap)
 	uint8_t data[2];
 	send_recv_retry(cmd, 16, data, 2);
 	DEBUG_STLINK("Open AP %d\n", ap);
-	stlink_usb_error_check(data, true);
-	return true;
+	return (stlink_usb_error_check(data, true))? false: true;
 }
 
 void adiv5_ap_cleanup(int ap)

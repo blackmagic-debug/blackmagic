@@ -37,7 +37,8 @@
 
 #define PLATFORM_IDENT "StlinkV2/3"
 #define SET_RUN_STATE(state)
-#define SET_IDLE_STATE(state)
+void stlink_check_detach(int state);
+#define SET_IDLE_STATE(state) stlink_check_detach(state)
 //#define SET_ERROR_STATE(state)
 
 void platform_buffer_flush(void);

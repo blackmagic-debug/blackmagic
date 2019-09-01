@@ -32,6 +32,7 @@
 #   include <netinet/in.h>
 #   include <netinet/tcp.h>
 #   include <sys/select.h>
+#   include <fcntl.h>
 #endif
 
 #include <stdio.h>
@@ -100,7 +101,33 @@ unsigned char gdb_if_getchar(void)
 
 	while(i <= 0) {
 		if(gdb_if_conn <= 0) {
-			gdb_if_conn = accept(gdb_if_serv, NULL, NULL);
+#if defined(_WIN32) || defined(__CYGWIN__)
+			unsigned long opt = 1;
+			ioctlsocket(gdb_if_serv, FIONBIO, &opt);
+#else
+			int flags = fcntl(gdb_if_serv, F_GETFL);
+			fcntl(gdb_if_serv, F_SETFL, flags | O_NONBLOCK);
+#endif
+			while(1) {
+				gdb_if_conn = accept(gdb_if_serv, NULL, NULL);
+				if (gdb_if_conn == -1) {
+					if (errno == EWOULDBLOCK) {
+						SET_IDLE_STATE(1);
+						platform_delay(100);
+					} else {
+						DEBUG("error when accepting connection");
+						exit(1);
+					}
+				} else {
+#if defined(_WIN32) || defined(__CYGWIN__)
+					unsigned long opt = 0;
+					ioctlsocket(gdb_if_serv, FIONBIO, &opt);
+#else
+					fcntl(gdb_if_serv, F_SETFL, flags);
+#endif
+					break;
+				}
+			}
 			DEBUG("Got connection\n");
 		}
 		i = recv(gdb_if_conn, (void*)&ret, 1, 0);
