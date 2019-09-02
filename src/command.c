@@ -85,8 +85,8 @@ const struct command_s cmd_list[] = {
 	{NULL, NULL, NULL}
 };
 
-static bool connect_assert_srst;
-#ifdef PLATFORM_HAS_DEBUG
+bool connect_assert_srst;
+#if defined(PLATFORM_HAS_DEBUG) && !defined(PC_HOSTED)
 bool debug_bmp;
 #endif
 long cortexm_wait_timeout = 2000; /* Timeout to wait for Cortex to react on halt command. */

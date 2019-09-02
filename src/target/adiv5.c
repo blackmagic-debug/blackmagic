@@ -262,7 +262,7 @@ static bool adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, int recursion, 
 	uint64_t pidr = 0;
 	uint32_t cidr = 0;
 	bool res = false;
-#if defined(ENABLE_DEBUG)
+#if defined(ENABLE_DEBUG) && defined(PLATFORM_HAS_DEBUG)
 	char indent[recursion];
 
 	for(int i = 0; i < recursion; i++) indent[i] = ' ';
@@ -304,7 +304,7 @@ static bool adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, int recursion, 
 	/* ROM table */
 	if (cid_class == cidc_romtab) {
 		/* Check SYSMEM bit */
-#ifdef ENABLE_DEBUG
+#if defined(ENABLE_DEBUG) && defined(PLATFORM_HAS_DEBUG)
 		uint32_t memtype = adiv5_mem_read32(ap, addr | ADIV5_ROM_MEMTYPE) &
 			ADIV5_ROM_MEMTYPE_SYSMEM;
 
