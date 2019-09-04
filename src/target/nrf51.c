@@ -395,6 +395,7 @@ void nrf51_mdm_probe(ADIv5_AP_t *ap)
 	t->reset = (void*)nop_function;
 	t->halt_request = (void*)nop_function;
 	//t->halt_poll = mdm_halt_poll;
+	t->halt_poll = (void*)nop_function;
 	t->halt_resume = (void*)nop_function;
 
 	target_add_commands(t, nrf51_mdm_cmd_list, t->driver);
