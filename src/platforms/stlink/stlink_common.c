@@ -38,16 +38,20 @@ uint32_t detect_rev(void)
 	rcc_periph_clock_enable(RCC_CRC);
 	/* First, get Board revision by pulling PC13/14 up. Read
 	 *  11 for ST-Link V1, e.g. on VL Discovery, tag as rev 0
+	 *  11 for Baite, PB11 pulled high,          tag as rev 1
 	 *  00 for ST-Link V2, e.g. on F4 Discovery, tag as rev 1
 	 *  01 for ST-Link V2, else,                 tag as rev 1
 	 */
 	gpio_set_mode(GPIOC, GPIO_MODE_INPUT,
 				  GPIO_CNF_INPUT_PULL_UPDOWN, GPIO14 | GPIO13);
 	gpio_set(GPIOC, GPIO14 | GPIO13);
+	gpio_set_mode(GPIOB, GPIO_MODE_INPUT,
+				  GPIO_CNF_INPUT_PULL_UPDOWN, GPIO11);
+	gpio_clear(GPIOB, GPIO11);
 	for (int i = 0; i < 100; i ++)
 		res = gpio_get(GPIOC, GPIO13);
 	if (res)
-		rev = 0;
+		rev = (gpio_get(GPIOB, GPIO11))? 1 : 0;
 	else {
 		/* Check for V2.1 boards.
 		 * PA15/TDI is USE_RENUM, pulled with 10 k to U5V on V2.1,
