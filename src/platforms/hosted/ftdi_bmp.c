@@ -123,6 +123,8 @@ cable_desc_t cable_desc[] = {
 		.mpsse_swd_write.set_data_low = PIN5,
 		.mpsse_swd_write.clr_data_low = PIN6,
 		.jtag.set_data_low            = PIN6,
+		.target_voltage_cmd  = GET_BITS_HIGH,
+		.target_voltage_pin  = ~PIN2,
 		.name = "ftdiswd"
 	},
 	{
@@ -519,5 +521,20 @@ void libftdi_jtagtap_tdi_tdo_seq(
 
 const char *libftdi_target_voltage(void)
 {
+	uint8_t pin = active_cable->target_voltage_pin;
+	if (active_cable->target_voltage_cmd && pin) {
+		libftdi_buffer_write(&active_cable->target_voltage_cmd, 1);
+		uint8_t data[1];
+		libftdi_buffer_read(data, 1);
+		bool res = false;
+		if (((pin < 0x7f) || (pin == PIN7)))
+			res = data[0] & pin;
+		else
+			res = !(data[0] & ~pin);
+		if (res)
+			return "Present";
+		else
+			return "Absent";
+	}
 	return "not supported";
 }
