@@ -20,8 +20,6 @@
 
 /* Low level JTAG implementation using FT2232 with libftdi.
  *
- * Issues:
- * Should share interface with swdptap.c or at least clean up...
  */
 
 #include <stdio.h>
@@ -44,51 +42,36 @@ static uint8_t jtagtap_next(uint8_t dTMS, uint8_t dTDI);
 
 int libftdi_jtagtap_init(jtag_proc_t *jtag_proc)
 {
-	if ((active_cable->swd_read.set_data_low == MPSSE_DO) &&
-		(active_cable->swd_write.set_data_low == MPSSE_DO)) {
+	if ((active_cable->mpsse_swd_read.set_data_low == MPSSE_DO) &&
+		(active_cable->mpsse_swd_write.set_data_low == MPSSE_DO)) {
 		printf("Jtag not possible with resistor SWD!\n");
 			return -1;
 	}
-	assert(ftdic != NULL);
-	/* select new buffer flush function if libftdi 1.5 */
-#ifdef _Ftdi_Pragma
-	int err = ftdi_tcioflush(ftdic);
-#else
-	int err = ftdi_usb_purge_buffers(ftdic);
-#endif
-	if (err != 0) {
-		DEBUG_WARN("ftdi_usb_purge_buffer: %d: %s\n",
-			err, ftdi_get_error_string(ftdic));
-		abort();
-	}
-	/* Reset MPSSE controller. */
-	err = ftdi_set_bitmode(ftdic, 0,  BITMODE_RESET);
-	if (err != 0) {
-		DEBUG_WARN("ftdi_set_bitmode: %d: %s\n",
-			err, ftdi_get_error_string(ftdic));
-		return -1;
-	}
-	/* Enable MPSSE controller. Pin directions are set later.*/
-	err = ftdi_set_bitmode(ftdic, 0, BITMODE_MPSSE);
-	if (err != 0) {
-		DEBUG_WARN("ftdi_set_bitmode: %d: %s\n",
-			err, ftdi_get_error_string(ftdic));
-		return -1;
-	}
-	uint8_t ftdi_init[9] = {TCK_DIVISOR, 0x00, 0x00, SET_BITS_LOW, 0,0,
-				SET_BITS_HIGH, 0,0};
-	ftdi_init[4]= active_cable->dbus_data;
-	ftdi_init[5]= active_cable->dbus_ddr;
-	ftdi_init[7]= active_cable->cbus_data;
-	ftdi_init[8]= active_cable->cbus_ddr;
-	libftdi_buffer_write(ftdi_init, 9);
-	libftdi_buffer_flush();
-
 	jtag_proc->jtagtap_reset = jtagtap_reset;
 	jtag_proc->jtagtap_next =jtagtap_next;
 	jtag_proc->jtagtap_tms_seq = jtagtap_tms_seq;
 	jtag_proc->jtagtap_tdi_tdo_seq = libftdi_jtagtap_tdi_tdo_seq;
 	jtag_proc->jtagtap_tdi_seq = jtagtap_tdi_seq;
+
+	active_state.data_low  |=   active_cable->jtag.set_data_low |
+		MPSSE_CS | MPSSE_DI | MPSSE_DO;
+	active_state.data_low  &= ~(active_cable->jtag.clr_data_low | MPSSE_SK);
+	active_state.ddr_low   |=   MPSSE_CS | MPSSE_DO | MPSSE_SK;
+	active_state.ddr_low   &= ~(MPSSE_DI);
+	active_state.data_high |=   active_cable->jtag.set_data_high;
+	active_state.data_high &= ~(active_cable->jtag.clr_data_high);
+	DEBUG_PROBE("%02x %02x %02x %02x\n", active_state.data_low ,
+		  active_state.ddr_low, active_state.data_high,
+		  active_state.ddr_high);uint8_t cmd_write[6] = {
+		SET_BITS_LOW,  active_state.data_low,
+		active_state.ddr_low,
+		SET_BITS_HIGH, active_state.data_high, active_state.ddr_high};
+	libftdi_buffer_write(cmd_write, 6);
+	/* Go to JTAG mode for SWJ-DP */
+	for (int i = 0; i <= 50; i++)
+		jtag_proc->jtagtap_next(1, 0);		/* Reset SW-DP */
+	jtag_proc->jtagtap_tms_seq(0xE73C, 16);		/* SWD to JTAG sequence */
+	jtag_proc->jtagtap_tms_seq(0x1F, 6);
 
 	return 0;
 }
@@ -127,8 +110,6 @@ static uint8_t jtagtap_next(uint8_t dTMS, uint8_t dTDI)
 	libftdi_buffer_read(&ret, 1);
 
 	ret &= 0x80;
-
-//	DEBUG("jtagtap_next(TMS = %d, TDI = %d) = %02X\n", dTMS, dTDI, ret);
 
 	return ret;
 }
