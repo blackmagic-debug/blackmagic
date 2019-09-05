@@ -135,6 +135,8 @@ static void cl_help(char **argv, BMP_CL_OPTIONS_t *opt)
 	DEBUG_WARN("\t-C\t\t: Connect under reset\n");
 	DEBUG_WARN("\t-t\t\t: Scan SWD or JTAG and display information about \n"
 			   "\t\t\t  connected devices\n");
+	DEBUG_WARN("\t-e\t\t: Assume \"resistor SWD connection\" on FTDI: TDI\n"
+               "\t\t\t  connected to TMS, TDO to TDI with eventual resistor\n");
 	DEBUG_WARN("\t-E\t\t: Erase flash until flash end or for given size\n");
 	DEBUG_WARN("\t-V\t\t: Verify flash against binary file\n");
 	DEBUG_WARN("\t-r\t\t: Read flash and write to binary file\n");
@@ -154,7 +156,7 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 	int c;
 	opt->opt_target_dev = 1;
 	opt->opt_flash_size = 16 * 1024 *1024;
-	while((c = getopt(argc, argv, "Ehv:d:s:I:c:CnltVta:S:jpP:rR")) != -1) {
+	while((c = getopt(argc, argv, "eEhv:d:s:I:c:CnltVta:S:jpP:rR")) != -1) {
 		switch(c) {
 		case 'c':
 			if (optarg)
@@ -176,6 +178,9 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 			break;
 		case 'C':
 			opt->opt_connect_under_reset = true;
+			break;
+		case 'e':
+			opt->external_resistor_swd = true;
 			break;
 		case 'd':
 			if (optarg)

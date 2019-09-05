@@ -238,6 +238,22 @@ int ftdi_bmp_init(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info)
 
 	active_cable = &cable_desc[index];
 	memcpy(&active_state, &active_cable->init, sizeof(data_desc_t));
+	/* If swd_(read|write) is not given for the selected cable and
+	   the 'r' command line argument is give, assume resistor SWD
+	   connection.*/
+	if (cl_opts->external_resistor_swd &&
+		(active_cable->mpsse_swd_read.set_data_low  == 0) &&
+		(active_cable->mpsse_swd_read.clr_data_low  == 0) &&
+		(active_cable->mpsse_swd_read.set_data_high == 0) &&
+		(active_cable->mpsse_swd_read.clr_data_high == 0) &&
+		(active_cable->mpsse_swd_write.set_data_low  == 0) &&
+		(active_cable->mpsse_swd_write.clr_data_low  == 0) &&
+		(active_cable->mpsse_swd_write.set_data_high == 0) &&
+		(active_cable->mpsse_swd_write.clr_data_high == 0)) {
+			DEBUG_INFO("Using external resistor SWD\n");
+			active_cable->mpsse_swd_read.set_data_low = MPSSE_DO;
+			active_cable->mpsse_swd_write.set_data_low = MPSSE_DO;
+		}
 
 	DEBUG_WARN("Black Magic Probe for FTDI/MPSSE\n");
 	if(ftdic) {
