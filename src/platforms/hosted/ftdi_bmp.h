@@ -88,6 +88,10 @@ typedef struct cable_desc_s {
 	pin_settings_t mpsse_swd_write;
 	/* dbus data for jtag.*/
 	pin_settings_t jtag;
+	/* Command to read port to check target voltage.*/
+	uint8_t target_voltage_cmd;
+	/* Pin to check target voltage.*/
+	uint8_t target_voltage_pin;
 	/* USB readable description of the device.*/
 	char *description;
 	/* Command line argument to -c option to select this device.*/
