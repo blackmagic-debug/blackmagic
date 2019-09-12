@@ -34,7 +34,7 @@
 
 #define	GDBServerPort	2159
 
-#define INPUT_BUFFER_SIZE	1024
+#define INPUT_BUFFER_SIZE	2048
 static unsigned char inputBuffer[INPUT_BUFFER_SIZE] = { 0 }; ///< The input buffer[ input buffer size]
 static volatile u_int32_t	uiInputIndex = 0;				 ///< Zero-based index of the input
 static volatile u_int32_t	uiOutputIndex = 0;				 ///< Zero-based index of the output
