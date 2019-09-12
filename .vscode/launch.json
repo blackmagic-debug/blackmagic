@@ -39,6 +39,24 @@
             "preLaunchTask": "Make ctxLink",
             // "postLaunchCommands": ["continue"],  // uncomment to just run target
             "runToMain": true   // Will not be used if "postLaunchCommands" has "continue"
+        },
+        {
+            "name": "Debug ctxLink WiFi",
+            "type": "cortex-debug",
+            "request": "launch",
+            "svdFile": "${workspaceFolder}/SVD/STM32F411xx.svd",
+            "cwd": "${workspaceFolder}/src",
+            "servertype": "bmp",
+            "BMPGDBSerialPort": "192.168.0.26:2159",
+            "powerOverBMP": "enable",
+            "executable": "blackmagic",
+            "showDevDebugOutput": true,
+            "interface": "swd",
+            "device": "STM32F401RE",
+            "targetId": "1",
+            //"preLaunchTask": "Make ctxLink",
+            // "postLaunchCommands": ["continue"],  // uncomment to just run target
+            "runToMain": true   // Will not be used if "postLaunchCommands" has "continue"
         }
     ]
 }
