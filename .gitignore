@@ -18,3 +18,7 @@ blackmagic_upgrade
 *.exe
 *.ipch
 
+
+Bad_net_startup.txt
+
+Good_net_startup.txt

@@ -604,6 +604,10 @@ bool isIpAddressAssigned(void)
 /// <param name="pvMsg">   [in,out] If non-null, message describing the pv.</param>
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+static volatile bool aFlag = false ;
+static volatile uint32_t c1 = 0 ;
+static volatile uint32_t c2 = 0 ;
+
 static void AppSocketCallback(SOCKET sock, uint8_t msgType, void *pvMsg)
 {
 	// if multiple sockets are present, use "sock" parameter to know the
@@ -730,8 +734,13 @@ static void AppSocketCallback(SOCKET sock, uint8_t msgType, void *pvMsg)
 						inputBuffer[uiInputIndex] = localBuffer[i];
 					}
 					uiBufferCount += pRecvData->bufSize;
+					if ( uiBufferCount > INPUT_BUFFER_SIZE ) {
+						aFlag = true ;
+						c1 = c2 ;
+						c2++ ;
+					}
 					// dprintf ("APP_SOCK_CB[%d]: Received %d bytes, queued %d bytes\r\n", msgType, pRecvData->bufSize, uiBufferCount);
-					dprintf ("Received -> %d, queued -> %d\r\n", pRecvData->bufSize, uiBufferCount);
+					dprintf ("Received -> %d, queued -> %ld\r\n", pRecvData->bufSize, uiBufferCount);
 				}
 				//
 				// Start another receive operation so we always get data

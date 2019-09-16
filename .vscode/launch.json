@@ -36,7 +36,7 @@
             "showDevDebugOutput": true,
             "interface": "swd",
             "device": "STM32F401RE",
-            "preLaunchTask": "Make ctxLink",
+            // "preLaunchTask": "Make ctxLink",
             // "postLaunchCommands": ["continue"],  // uncomment to just run target
             "runToMain": true   // Will not be used if "postLaunchCommands" has "continue"
         },
