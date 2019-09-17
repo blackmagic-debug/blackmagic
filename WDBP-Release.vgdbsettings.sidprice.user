@@ -45,7 +45,7 @@
       <LiveVariable>
         <Expression>batteryAverage</Expression>
         <Type>UInt32</Type>
-        <Enabled>true</Enabled>
+        <Enabled>false</Enabled>
         <Breakpoint>
           <ComparisonMode>Equals</ComparisonMode>
           <Enabled>false</Enabled>
@@ -125,6 +125,28 @@
         <Expression>(inputVoltages)[0]</Expression>
         <Type>UInt32</Type>
         <Enabled>true</Enabled>
+        <Breakpoint>
+          <ComparisonMode>Equals</ComparisonMode>
+          <Enabled>false</Enabled>
+        </Breakpoint>
+        <Plot>false</Plot>
+        <IsCollapsed>false</IsCollapsed>
+      </LiveVariable>
+      <LiveVariable>
+        <Expression>(inputVoltages)[1]</Expression>
+        <Type>UInt32</Type>
+        <Enabled>false</Enabled>
+        <Breakpoint>
+          <ComparisonMode>Equals</ComparisonMode>
+          <Enabled>false</Enabled>
+        </Breakpoint>
+        <Plot>false</Plot>
+        <IsCollapsed>false</IsCollapsed>
+      </LiveVariable>
+      <LiveVariable>
+        <Expression>(inputVoltages)[0]</Expression>
+        <Type>UInt32</Type>
+        <Enabled>false</Enabled>
         <Breakpoint>
           <ComparisonMode>Equals</ComparisonMode>
           <Enabled>false</Enabled>

@@ -60,7 +60,7 @@
     <Link>
       <LibrarySearchDirectories>libopencm3/lib;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
       <AdditionalLibraryNames>opencm3_stm32f4;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
-      <LinkerScript>C:\DataRoot\Projects\blackmagic\libopencm3\lib\cortex-m-generic.ld</LinkerScript>
+      <LinkerScript>C:\DataRoot\Projects\blackmagic\src\platforms\stm32\ctxLink.ld</LinkerScript>
       <AdditionalOptions>-nostartfiles -Wl,--defsym,_stack=0x20018000 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalLinkerInputs>;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
     </Link>
