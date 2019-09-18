@@ -10,7 +10,7 @@
 	<ItemDefinitionGroup>
 		<ClCompile>
 			<PreprocessorDefinitions>ARM_MATH_CM4;flash_layout;STM32F401RE;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
-			<AdditionalIncludeDirectories>$(ProjectDir);%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+			<AdditionalIncludeDirectories>%(ClCompile.AdditionalIncludeDirectories);$(ProjectDir)</AdditionalIncludeDirectories>
 		</ClCompile>
 	</ItemDefinitionGroup>
 	<ItemDefinitionGroup>
@@ -25,10 +25,10 @@
 
 	<ItemDefinitionGroup>
 		<ToolchainSettingsContainer>
-			<ARMCPU>cortex-m4</ARMCPU>
-			<InstructionSet>THUMB</InstructionSet>
-			<ARMFPU>fpv4-sp-d16</ARMFPU>
-			<FloatABI>hard</FloatABI>
+			<ARMCPU  Condition="'%(ToolchainSettingsContainer.ARMCPU)' == ''">cortex-m4</ARMCPU>
+			<InstructionSet  Condition="'%(ToolchainSettingsContainer.InstructionSet)' == ''">THUMB</InstructionSet>
+			<ARMFPU  Condition="'%(ToolchainSettingsContainer.ARMFPU)' == ''">fpv4-sp-d16</ARMFPU>
+			<FloatABI  Condition="'%(ToolchainSettingsContainer.FloatABI)' == ''">hard</FloatABI>
 		</ToolchainSettingsContainer>
 	</ItemDefinitionGroup>
 </Project>

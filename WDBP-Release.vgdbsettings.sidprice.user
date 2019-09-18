@@ -30,30 +30,7 @@
       </MemoryWindowPreferences>
     </MemoryWindowPreferences>
     <FavoriteEmbeddedRegisters />
-    <LiveVariables>
-      <LiveVariable>
-        <Expression>inputVoltages</Expression>
-        <Type>Invalid</Type>
-        <Enabled>false</Enabled>
-        <Breakpoint>
-          <ComparisonMode>Equals</ComparisonMode>
-          <Enabled>false</Enabled>
-        </Breakpoint>
-        <Plot>false</Plot>
-        <IsCollapsed>false</IsCollapsed>
-      </LiveVariable>
-      <LiveVariable>
-        <Expression>batteryAverage</Expression>
-        <Type>UInt32</Type>
-        <Enabled>false</Enabled>
-        <Breakpoint>
-          <ComparisonMode>Equals</ComparisonMode>
-          <Enabled>false</Enabled>
-        </Breakpoint>
-        <Plot>false</Plot>
-        <IsCollapsed>false</IsCollapsed>
-      </LiveVariable>
-    </LiveVariables>
+    <LiveVariables />
     <NestedLiveVariableSettings>
       <LiveVariable>
         <Expression>(inputVoltages)[0]</Expression>

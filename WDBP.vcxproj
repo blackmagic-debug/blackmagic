@@ -69,9 +69,9 @@
       <SupportExceptions>false</SupportExceptions>
       <SupportRTTI>false</SupportRTTI>
       <AdditionalIncludeDirectories>src/include;libopencm3/include;src/platforms/common;src/platforms/stm32;src/SimpleLink/include;src/platforms/WDBP;src/platforms/winc1500;src/platforms/winc1500/src;src/platforms/ctxLink;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NDEBUG=1;RELEASE=1;STM32F4;ctxLink;USBUART_DEBUG;gdb_if_putchar=gdb_shim_putchar;gdb_if_getchar=gdb_shim_getchar;gdb_if_getchar_to=gdb_shim_getchar_to;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG=1;RELEASE=1;STM32F4;ENABLE_DEBUG;ctxLink;gdb_if_putchar=gdb_shim_putchar;gdb_if_getchar=gdb_shim_getchar;gdb_if_getchar_to=gdb_shim_getchar_to;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>-mthumb -mcpu=cortex-m4  -mfpu=fpv4-sp-d16 %(AdditionalOptions)</AdditionalOptions>
-      <Optimization>Og</Optimization>
+      <Optimization>O2</Optimization>
       <VerboseMode>false</VerboseMode>
     </ClCompile>
   </ItemDefinitionGroup>
@@ -92,7 +92,6 @@
     <ClCompile Include="src\platforms\ctxLink\ctxLink_if.c" />
     <ClCompile Include="src\platforms\ctxLink\ctxLink_mode_led.c" />
     <ClCompile Include="src\platforms\ctxLink\platform.c" />
-    <ClCompile Include="src\platforms\ctxLink\startup_stm32f401xe.c" />
     <ClCompile Include="src\platforms\ctxLink\WiFi_Server.c" />
     <ClCompile Include="src\platforms\stm32\gdb_if.c" />
     <ClCompile Include="src\platforms\stm32\serialno.c" />
@@ -135,6 +134,7 @@
     <ClCompile Include="src\target\stm32l0.c" />
     <ClCompile Include="src\target\stm32l4.c" />
     <ClCompile Include="src\target\target.c" />
+    <ClCompile Include="$(BSP_ROOT)\STM32F4xxxx\StartupFiles\startup_stm32f401xe.c" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

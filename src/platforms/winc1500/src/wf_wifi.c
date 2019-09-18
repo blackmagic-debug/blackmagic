@@ -31,6 +31,8 @@ limitations under the License.
 //============================================================================
 // INCLUDES
 //============================================================================
+#define DEBUG_ENABLE
+
 #include "winc1500_api.h"
 #include "wf_hif.h"
 #include "wf_asic.h"

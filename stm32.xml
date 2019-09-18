@@ -38,7 +38,44 @@
   <MCUMakFile>stm32.mak</MCUMakFile>
   <ReferencedFrameworks />
   <FrameworkProperties>
-    <Entries />
+    <Entries>
+      <KeyValue>
+        <Key>com.sysprogs.efp.semihosting.buffer_size</Key>
+        <Value>4096</Value>
+      </KeyValue>
+      <KeyValue>
+        <Key>com.sysprogs.efp.semihosting.stdio</Key>
+        <Value>1</Value>
+      </KeyValue>
+      <KeyValue>
+        <Key>com.sysprogs.efp.semihosting.blocking_mode</Key>
+        <Value>1</Value>
+      </KeyValue>
+      <KeyValue>
+        <Key>com.sysprogs.efp.profiling.semihosting_driver</Key>
+        <Value>1</Value>
+      </KeyValue>
+      <KeyValue>
+        <Key>com.sysprogs.efp.profiling.counter</Key>
+        <Value />
+      </KeyValue>
+      <KeyValue>
+        <Key>com.sysprogs.efp.profiling.address_validators</Key>
+        <Value />
+      </KeyValue>
+      <KeyValue>
+        <Key>com.sysprogs.efp.profiling.nosampling</Key>
+        <Value>1</Value>
+      </KeyValue>
+      <KeyValue>
+        <Key>com.sysprogs.efp.profiling.debugger_check</Key>
+        <Value>SYSPROGS_PROFILER_DEBUGGER_CHECK_MODE=1</Value>
+      </KeyValue>
+      <KeyValue>
+        <Key>com.sysprogs.efp.profiling.rtos</Key>
+        <Value />
+      </KeyValue>
+    </Entries>
   </FrameworkProperties>
   <TestFrameworkProperties>
     <Entries />

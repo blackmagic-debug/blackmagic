@@ -57,6 +57,9 @@
     <None Include="stm32.xml">
       <Filter>VisualGDB settings</Filter>
     </None>
+    <ClCompile Include="$(BSP_ROOT)\STM32F4xxxx\StartupFiles\startup_stm32f401xe.c">
+      <Filter>Source files\Device-specific files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\platforms\common\cdcacm.c">
@@ -232,9 +235,6 @@
     </ClCompile>
     <ClCompile Include="src\target\jtag_scan.c">
       <Filter>target</Filter>
-    </ClCompile>
-    <ClCompile Include="src\platforms\ctxLink\startup_stm32f401xe.c">
-      <Filter>Source files\Device-specific files</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
