@@ -604,7 +604,7 @@ bool isIpAddressAssigned(void)
 /// <param name="pvMsg">   [in,out] If non-null, message describing the pv.</param>
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static volatile bool aFlag = false ;
+bool aFlag = false ;
 static volatile uint32_t c1 = 0 ;
 static volatile uint32_t c2 = 0 ;
 
@@ -1457,9 +1457,6 @@ void WiFi_SendPacket(unsigned char * lpPacket, int len)
 static unsigned char sendBuffer[1024] = { 0 };  ///< The send buffer[ 1024]
 static unsigned int sendCount = 0;  ///< Number of sends
 
-static unsigned int volatile Counts[32] = { 0 } ;   ///< The counts[ 32]
-static unsigned int	countIndex = 0; ///< Zero-based index of the count
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 /// <summary> WiFi putchar.</summary>
 ///
@@ -1479,7 +1476,6 @@ void WiFi_putchar( unsigned char theChar, int flush )
 		{
 			dprintf("WiFi_putchar bad count\r\n");
 		}
-		Counts[countIndex++] = len;
 		sendCount = 0;
 		dprintf("Wifi_putchar %c\r\n", sendBuffer[0]);
 		send(clientSocket, &sendBuffer[0], len, 0);
