@@ -1,0 +1,176 @@
+<?xml version="1.0"?>
+<EmbeddedProfile xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <ToolchainID>com.visualgdb.arm-eabi</ToolchainID>
+  <ToolchainVersion>
+    <GCC>7.2.0</GCC>
+    <GDB>8.0.1</GDB>
+    <Revision>2</Revision>
+  </ToolchainVersion>
+  <BspID>com.visualgdb.bsp.in-place</BspID>
+  <BspVersion>1.0</BspVersion>
+  <McuID>STM32F411RE</McuID>
+  <MCUDefinitionFile>src\platforms\WDBP\stm32f401xe.xml</MCUDefinitionFile>
+  <MCUProperties>
+    <Entries />
+  </MCUProperties>
+  <BSPSourceFolderName>Device-specific files</BSPSourceFolderName>
+  <InPlaceMCU>
+    <ID>STM32F411RE</ID>
+    <UserFriendlyName>STM32F411RE</UserFriendlyName>
+    <CompilationFlags>
+      <PreprocessorMacros>
+        <string>STM32F4;WDBP;USBUART_DEBUG</string>
+      </PreprocessorMacros>
+      <IncludeDirectories>
+        <string>.</string>
+      </IncludeDirectories>
+      <CFLAGS>-mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -ggdb  -fno-inline-small-functions -O0</CFLAGS>
+      <CXXFLAGS>-mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -ggdb  -fno-inline-small-functions -O0</CXXFLAGS>
+      <LDFLAGS>-Wl,--defsym,_stack=0x20006000  -Wl,-T,src/platforms/stm32/f4discovery.ld -nostartfiles  -lc -lnosys -Wl,-Map=mapfile -mthumb -mcpu=cortex-m4 -Wl,-gc-sections -mfloat-abi=hard -mfpu=fpv4-sp-d16 </LDFLAGS>
+      <ASFLAGS>-mfpu=fpv4-sp-d16</ASFLAGS>
+      <LinkerScript />
+      <COMMONFLAGS>-mcpu=cortex-m4 -mthumb</COMMONFLAGS>
+      <EnableLinkerGroups>true</EnableLinkerGroups>
+    </CompilationFlags>
+    <AdditionalSourceFiles />
+    <AdditionalHeaderFiles />
+    <AdditionalSystemVars>
+      <SysVarEntry>
+        <Key>com.sysprogs.bspoptions.arm.core</Key>
+        <Value>M4</Value>
+      </SysVarEntry>
+      <SysVarEntry>
+        <Key>com.sysprogs.stm32.hal_header_prefix</Key>
+        <Value>stm32f4xx</Value>
+      </SysVarEntry>
+      <SysVarEntry>
+        <Key>com.sysprogs.bspoptions.stm32.hal_system_file</Key>
+        <Value>STM32F4xxxx/CMSIS_HAL/Device/ST/STM32F4xx/Source/Templates/system_stm32f4xx.c</Value>
+      </SysVarEntry>
+      <SysVarEntry>
+        <Key>com.sysprogs.bspoptions.stm32.hal_config_template_file</Key>
+        <Value>STM32F4xxxx/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_conf_template.h</Value>
+      </SysVarEntry>
+      <SysVarEntry>
+        <Key>com.sysprogs.stm32.hal_device_family</Key>
+        <Value>STM32F411xE</Value>
+      </SysVarEntry>
+      <SysVarEntry>
+        <Key>com.sysprogs.stm32.legacy_device_family</Key>
+        <Value>STM32F411xE</Value>
+      </SysVarEntry>
+    </AdditionalSystemVars>
+    <ConfigurableProperties>
+      <PropertyGroups>
+        <PropertyGroup>
+          <Properties>
+            <PropertyEntry xsi:type="Enumerated">
+              <Name>Execute from</Name>
+              <UniqueID>com.sysprogs.bspoptions.primary_memory</UniqueID>
+              <OmitPrefixIfEmpty>false</OmitPrefixIfEmpty>
+              <SuggestionList>
+                <Suggestion>
+                  <UserFriendlyName>FLASH</UserFriendlyName>
+                  <InternalValue>flash</InternalValue>
+                </Suggestion>
+                <Suggestion>
+                  <UserFriendlyName>SRAM</UserFriendlyName>
+                  <InternalValue>sram</InternalValue>
+                </Suggestion>
+              </SuggestionList>
+              <DefaultEntryIndex>0</DefaultEntryIndex>
+              <AllowFreeEntry>false</AllowFreeEntry>
+            </PropertyEntry>
+            <PropertyEntry xsi:type="Enumerated">
+              <Name>Floating point support</Name>
+              <UniqueID>com.sysprogs.bspoptions.arm.floatmode</UniqueID>
+              <OmitPrefixIfEmpty>false</OmitPrefixIfEmpty>
+              <SuggestionList>
+                <Suggestion>
+                  <UserFriendlyName>Software</UserFriendlyName>
+                  <InternalValue>-mfloat-abi=soft</InternalValue>
+                </Suggestion>
+                <Suggestion>
+                  <UserFriendlyName>Hardware</UserFriendlyName>
+                  <InternalValue>-mfloat-abi=hard</InternalValue>
+                </Suggestion>
+                <Suggestion>
+                  <UserFriendlyName>Unspecified</UserFriendlyName>
+                  <InternalValue />
+                </Suggestion>
+              </SuggestionList>
+              <DefaultEntryIndex>0</DefaultEntryIndex>
+              <AllowFreeEntry>false</AllowFreeEntry>
+            </PropertyEntry>
+            <PropertyEntry xsi:type="Enumerated">
+              <Name>C Library Type</Name>
+              <UniqueID>com.sysprogs.toolchainoptions.arm.libctype</UniqueID>
+              <OmitPrefixIfEmpty>false</OmitPrefixIfEmpty>
+              <SuggestionList>
+                <Suggestion>
+                  <UserFriendlyName>Default</UserFriendlyName>
+                  <InternalValue />
+                </Suggestion>
+                <Suggestion>
+                  <UserFriendlyName>Newlib-nano</UserFriendlyName>
+                  <InternalValue>--specs=nano.specs</InternalValue>
+                </Suggestion>
+                <Suggestion>
+                  <UserFriendlyName>Newlib-nano with floating point support in printf()</UserFriendlyName>
+                  <InternalValue>--specs=nano.specs -u _printf_float</InternalValue>
+                </Suggestion>
+                <Suggestion>
+                  <UserFriendlyName>Newlib-nano with floating point support in printf() and scanf()</UserFriendlyName>
+                  <InternalValue>--specs=nano.specs -u _printf_float -u _scanf_float</InternalValue>
+                </Suggestion>
+              </SuggestionList>
+              <DefaultEntryIndex>0</DefaultEntryIndex>
+              <AllowFreeEntry>false</AllowFreeEntry>
+            </PropertyEntry>
+            <PropertyEntry xsi:type="Enumerated">
+              <Name>Syscall support</Name>
+              <UniqueID>com.sysprogs.toolchainoptions.arm.syscallspecs</UniqueID>
+              <OmitPrefixIfEmpty>false</OmitPrefixIfEmpty>
+              <SuggestionList>
+                <Suggestion>
+                  <UserFriendlyName>None (your code must provide them)</UserFriendlyName>
+                  <InternalValue />
+                </Suggestion>
+                <Suggestion>
+                  <UserFriendlyName>Minimal (support malloc()/free())</UserFriendlyName>
+                  <InternalValue>--specs=nosys.specs</InternalValue>
+                </Suggestion>
+                <Suggestion>
+                  <UserFriendlyName>Semihosting (printf() output to debug console)</UserFriendlyName>
+                  <InternalValue>--specs=rdimon.specs</InternalValue>
+                </Suggestion>
+                <Suggestion>
+                  <UserFriendlyName>Redboot</UserFriendlyName>
+                  <InternalValue>--specs=redboot.specs</InternalValue>
+                </Suggestion>
+              </SuggestionList>
+              <DefaultEntryIndex>2</DefaultEntryIndex>
+              <AllowFreeEntry>false</AllowFreeEntry>
+            </PropertyEntry>
+          </Properties>
+          <CollapsedByDefault>false</CollapsedByDefault>
+        </PropertyGroup>
+      </PropertyGroups>
+    </ConfigurableProperties>
+    <HierarchicalPath>STM32\STM32F4</HierarchicalPath>
+    <FamilyID>STM32F4</FamilyID>
+    <FLASHSize>524288</FLASHSize>
+    <RAMSize>131072</RAMSize>
+    <FLASHBase>134217728</FLASHBase>
+    <RAMBase>536870912</RAMBase>
+    <MCUDefinitionFile>src\platforms\WDBP\stm32f401xe.xml</MCUDefinitionFile>
+    <AdditionalSourcesRequiredForTesting>false</AdditionalSourcesRequiredForTesting>
+  </InPlaceMCU>
+  <MCUMakFile>mcu.mak</MCUMakFile>
+  <FrameworkProperties>
+    <Entries />
+  </FrameworkProperties>
+  <TestFrameworkProperties>
+    <Entries />
+  </TestFrameworkProperties>
+</EmbeddedProfile>

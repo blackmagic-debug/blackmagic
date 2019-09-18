@@ -1,0 +1,240 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source files">
+      <UniqueIdentifier>{8d4bed13-3895-452f-a912-d7e9f913fc07}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header files">
+      <UniqueIdentifier>{0928f916-136a-4127-b6a5-d335182b3580}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource files">
+      <UniqueIdentifier>{da88388a-9089-4eb7-b816-972f1534e608}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav</Extensions>
+    </Filter>
+    <Filter Include="Source files\Device-specific files">
+      <UniqueIdentifier>{f7a1e2ab-d4a5-4ad9-a2e8-46dcb814fa96}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header files\Device-specific files">
+      <UniqueIdentifier>{34ac4fa3-d6d9-4469-ae20-1901681c4d70}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="VisualGDB settings">
+      <UniqueIdentifier>{26618686-7c57-4cf3-b52f-f1040ee1df55}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="platforms">
+      <UniqueIdentifier>{3b61d943-08a1-4025-a758-69c27fc784a6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="platforms\common">
+      <UniqueIdentifier>{95847e05-41d5-4b8e-8dfa-fbd2dcc8987d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="platforms\stm32">
+      <UniqueIdentifier>{d0854d55-cd31-4fbb-aada-fbc5988b7144}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="target">
+      <UniqueIdentifier>{8d19e7c1-46b0-45fe-aacf-d0a42b64b895}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="platforms\ctxLink">
+      <UniqueIdentifier>{bd599f9a-2a72-440d-9b15-acdff78c1c7a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="platforms\winc1500">
+      <UniqueIdentifier>{09626716-b557-4456-86b5-bd8ab01c8dc2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="platforms\winc1500\src">
+      <UniqueIdentifier>{65b4fdf8-0824-4b38-9762-66be92660ec1}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="stm32.props">
+      <Filter>Source files\Device-specific files</Filter>
+    </None>
+    <None Include="WDBP-Debug.vgdbsettings">
+      <Filter>VisualGDB settings</Filter>
+    </None>
+    <None Include="WDBP-Release.vgdbsettings">
+      <Filter>VisualGDB settings</Filter>
+    </None>
+    <None Include="stm32.xml">
+      <Filter>VisualGDB settings</Filter>
+    </None>
+    <ClCompile Include="$(BSP_ROOT)\STM32F4xxxx\StartupFiles\startup_stm32f401xe.c">
+      <Filter>Source files\Device-specific files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\platforms\common\cdcacm.c">
+      <Filter>platforms\common</Filter>
+    </ClCompile>
+    <ClCompile Include="src\platforms\common\timing.c">
+      <Filter>platforms\common</Filter>
+    </ClCompile>
+    <ClCompile Include="src\platforms\stm32\gdb_if.c">
+      <Filter>platforms\stm32</Filter>
+    </ClCompile>
+    <ClCompile Include="src\platforms\stm32\serialno.c">
+      <Filter>platforms\stm32</Filter>
+    </ClCompile>
+    <ClCompile Include="src\platforms\stm32\timing_stm32.c">
+      <Filter>platforms\stm32</Filter>
+    </ClCompile>
+    <ClCompile Include="src\platforms\stm32\traceswo.c">
+      <Filter>platforms\stm32</Filter>
+    </ClCompile>
+    <ClCompile Include="src\platforms\stm32\usbuart.c">
+      <Filter>platforms\stm32</Filter>
+    </ClCompile>
+    <ClCompile Include="src\target\adiv5.c">
+      <Filter>target</Filter>
+    </ClCompile>
+    <ClCompile Include="src\target\adiv5_jtagdp.c">
+      <Filter>target</Filter>
+    </ClCompile>
+    <ClCompile Include="src\target\adiv5_swdp.c">
+      <Filter>target</Filter>
+    </ClCompile>
+    <ClCompile Include="src\target\cortexa.c">
+      <Filter>target</Filter>
+    </ClCompile>
+    <ClCompile Include="src\target\cortexm.c">
+      <Filter>target</Filter>
+    </ClCompile>
+    <ClCompile Include="src\target\efm32.c">
+      <Filter>target</Filter>
+    </ClCompile>
+    <ClCompile Include="src\target\kinetis.c">
+      <Filter>target</Filter>
+    </ClCompile>
+    <ClCompile Include="src\target\lmi.c">
+      <Filter>target</Filter>
+    </ClCompile>
+    <ClCompile Include="src\target\lpc_common.c">
+      <Filter>target</Filter>
+    </ClCompile>
+    <ClCompile Include="src\target\lpc11xx.c">
+      <Filter>target</Filter>
+    </ClCompile>
+    <ClCompile Include="src\target\lpc15xx.c">
+      <Filter>target</Filter>
+    </ClCompile>
+    <ClCompile Include="src\target\lpc43xx.c">
+      <Filter>target</Filter>
+    </ClCompile>
+    <ClCompile Include="src\target\nrf51.c">
+      <Filter>target</Filter>
+    </ClCompile>
+    <ClCompile Include="src\target\sam3x.c">
+      <Filter>target</Filter>
+    </ClCompile>
+    <ClCompile Include="src\target\sam4l.c">
+      <Filter>target</Filter>
+    </ClCompile>
+    <ClCompile Include="src\target\samd.c">
+      <Filter>target</Filter>
+    </ClCompile>
+    <ClCompile Include="src\target\stm32f1.c">
+      <Filter>target</Filter>
+    </ClCompile>
+    <ClCompile Include="src\target\stm32f4.c">
+      <Filter>target</Filter>
+    </ClCompile>
+    <ClCompile Include="src\target\stm32l0.c">
+      <Filter>target</Filter>
+    </ClCompile>
+    <ClCompile Include="src\target\stm32l4.c">
+      <Filter>target</Filter>
+    </ClCompile>
+    <ClCompile Include="src\target\target.c">
+      <Filter>target</Filter>
+    </ClCompile>
+    <ClCompile Include="src\command.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\crc32.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\exception.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gdb_hostio.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gdb_main.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\gdb_packet.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\hex_utils.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\morse.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\main.c">
+      <Filter>Source files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\target\lpc17xx.c">
+      <Filter>target</Filter>
+    </ClCompile>
+    <ClCompile Include="src\target\msp432.c">
+      <Filter>target</Filter>
+    </ClCompile>
+    <ClCompile Include="src\target\stm32h7.c">
+      <Filter>target</Filter>
+    </ClCompile>
+    <ClCompile Include="src\platforms\ctxLink\ctxLink_if.c">
+      <Filter>platforms\ctxLink</Filter>
+    </ClCompile>
+    <ClCompile Include="src\platforms\ctxLink\ctxLink_mode_led.c">
+      <Filter>platforms\ctxLink</Filter>
+    </ClCompile>
+    <ClCompile Include="src\platforms\ctxLink\platform.c">
+      <Filter>platforms\ctxLink</Filter>
+    </ClCompile>
+    <ClCompile Include="src\platforms\ctxLink\WiFi_Server.c">
+      <Filter>platforms\ctxLink</Filter>
+    </ClCompile>
+    <ClCompile Include="src\platforms\winc1500\winc1500_driver_stub_api.c">
+      <Filter>platforms\winc1500</Filter>
+    </ClCompile>
+    <ClCompile Include="src\platforms\winc1500\src\wf_asic.c">
+      <Filter>platforms\winc1500\src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\platforms\winc1500\src\wf_hif.c">
+      <Filter>platforms\winc1500\src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\platforms\winc1500\src\wf_ota.c">
+      <Filter>platforms\winc1500\src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\platforms\winc1500\src\wf_socket.c">
+      <Filter>platforms\winc1500\src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\platforms\winc1500\src\wf_spi.c">
+      <Filter>platforms\winc1500\src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\platforms\winc1500\src\wf_spi_flash.c">
+      <Filter>platforms\winc1500\src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\platforms\winc1500\src\wf_utils.c">
+      <Filter>platforms\winc1500\src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\platforms\winc1500\src\wf_wifi.c">
+      <Filter>platforms\winc1500\src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\target\jtag_devs.c">
+      <Filter>target</Filter>
+    </ClCompile>
+    <ClCompile Include="src\target\nxpke04.c">
+      <Filter>target</Filter>
+    </ClCompile>
+    <ClCompile Include="src\platforms\common\jtagtap.c">
+      <Filter>platforms\common</Filter>
+    </ClCompile>
+    <ClCompile Include="src\platforms\common\swdptap.c">
+      <Filter>platforms\common</Filter>
+    </ClCompile>
+    <ClCompile Include="src\target\jtag_scan.c">
+      <Filter>target</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>
