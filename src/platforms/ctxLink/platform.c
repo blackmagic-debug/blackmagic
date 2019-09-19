@@ -458,21 +458,19 @@ volatile uint32_t	sampleCount = 0;
 bool	fLastState = true;
 bool	fBatteryPresent = false;
 #define	SAMPLES	2000
+#define voltagePerBit	0.000806
 
 const char *platform_battery_voltage (void)
 {
 	static char ret[64] = { 0 };
 	if (fBatteryPresent == true) {
-		uint32_t	temp;
-		char voltage[] = "0.00V";
-		temp = batteryAverage;
-		temp *= 100;
-		voltage[0] = '0' + temp / 62525;
-		temp = (temp / 625) % 100;
-		voltage[2] = '0' + temp / 10;
-		voltage[3] = '0' + temp % 10;
-		//sprintf (&ret[0], "\n          Count: %d -> Battery : %s", batteryAverage, &voltage[0]);
-		sprintf (&ret[0], "\n      Battery : %s", &voltage[0]);
+		double	batteryVoltage = (batteryAverage * voltagePerBit) * 2 ;
+		sprintf (&ret[0], "\n      Battery : %.3f", batteryVoltage);
+		//
+		// Let's truncate to 2 places
+		//
+		ret[21] = '\n';
+		ret[22] = 0x00;
 	}
 	else {
 		sprintf (&ret[0], "\n      Battery : Not present");
