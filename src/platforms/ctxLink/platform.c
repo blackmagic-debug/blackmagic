@@ -469,8 +469,9 @@ const char *platform_battery_voltage (void)
 		//
 		// Let's truncate to 2 places
 		//
-		ret[21] = '\n';
-		ret[22] = 0x00;
+		ret[21] = 'V';
+		ret[22] = '\n';
+		ret[23] = 0x00;
 	}
 	else {
 		sprintf (&ret[0], "\n      Battery : Not present");
@@ -541,12 +542,22 @@ static char voltages[32] = { 0 };
 
 const char *platform_target_voltage( void )
 {
-	static char ret[] = "0.0V";
-	static uint32_t	retVal;
+	//static char ret[] = "0.0V";
+	//static uint32_t	retVal;
 
-	retVal =inputVoltages[CTXLINK_ADC_TARGET] * 99; /* 0-4095 */
-	ret[0] = '0' + retVal / 62200;
-	ret[2] = '0' + ( retVal / 6220 ) % 10;
+	//retVal =inputVoltages[CTXLINK_ADC_TARGET] * 99; /* 0-4095 */
+	//ret[0] = '0' + retVal / 62200;
+	//ret[2] = '0' + ( retVal / 6220 ) % 10;
+	//strcpy (&voltages[0], &ret[0]);
+	//strcat (&voltages[0], platform_battery_voltage());
+	double targetVoltage = inputVoltages[CTXLINK_ADC_TARGET] * voltagePerBit;
+	char	ret[64];
+	sprintf (&ret[0], "%.3f", targetVoltage * 2 );
+	//
+	// Let's truncate to 2 places
+	//
+	ret[4] = 'V';
+	ret[5] = 0x00;
 	strcpy (&voltages[0], &ret[0]);
 	strcat (&voltages[0], platform_battery_voltage());
 	return voltages;
