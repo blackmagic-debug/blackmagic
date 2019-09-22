@@ -399,19 +399,17 @@ static void adc_init( void )
 #define	CTXLINK_TARGET_VOLTAGE_INPUT	8	// ADC Chanmel for target voltage
 
 #define	CTXLINK_ADC_BATTERY	0
-#define	CTXLINK_ADC_TARGET		1
+#define	CTXLINK_ADC_TARGET	1
 
 static uint32_t	inputVoltages[2] = { 0 };
-static uint8_t	adcChannels[] = { CTXLINK_BATTERY_INPUT ,CTXLINK_BATTERY_INPUT , CTXLINK_BATTERY_INPUT ,CTXLINK_BATTERY_INPUT , CTXLINK_TARGET_VOLTAGE_INPUT };
+
+static uint8_t	adcChannels[] = { CTXLINK_BATTERY_INPUT, CTXLINK_TARGET_VOLTAGE_INPUT };	/// ADC channels used by ctxLink
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 /// <summary> Read all the ADC channels used by ctxLink</summary>
 ///
 /// <remarks>
-/// 		  Because of the high impedance of the battery input circuit it is necessary
-/// 		  to samople that input multiple times. The regular read method returns the
-/// 		  last converted value, this is the one the battery monitor uses.
-/// 			Sid Price, 11/4/2018.</remarks>
+/// 		  </remarks>
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void platform_adc_read (void)
@@ -423,14 +421,7 @@ void platform_adc_read (void)
 	while (!adc_eoc (ADC1))
 		;
 	inputVoltages[CTXLINK_ADC_BATTERY] = adc_read_regular (ADC1);
-	adc_set_regular_sequence (ADC1, 1, &(adcChannels[CTXLINK_ADC_BATTERY]));
-	adc_start_conversion_regular (ADC1);
-	/* Wait for end of conversion. */
-	while (!adc_eoc (ADC1))
-		;
-	inputVoltages[CTXLINK_ADC_BATTERY] = adc_read_regular (ADC1);
-
-	adc_set_regular_sequence (ADC1, 1, &(adcChannels[4]));
+	adc_set_regular_sequence (ADC1, 1, &(adcChannels[CTXLINK_ADC_TARGET]));
 	adc_start_conversion_regular (ADC1);
 	/* Wait for end of conversion. */
 	while (!adc_eoc (ADC1))
@@ -452,20 +443,19 @@ void platform_adc_read (void)
 #define uiLowBattery	2250
 
 volatile uint32_t	retVal;
-volatile uint32_t	batteryAverage = 0;
-volatile uint32_t	batteryTemp = 0;
-volatile uint32_t	sampleCount = 0;
+volatile uint32_t	batteryVoltage = 0;
+
 bool	fLastState = true;
 bool	fBatteryPresent = false;
-#define	SAMPLES	2000
+
 #define voltagePerBit	0.000806
 
 const char *platform_battery_voltage (void)
 {
 	static char ret[64] = { 0 };
 	if (fBatteryPresent == true) {
-		double	batteryVoltage = (batteryAverage * voltagePerBit) * 2 ;
-		sprintf (&ret[0], "\n      Battery : %.3f", batteryVoltage);
+		double	batteryVoltageAsDouble = (batteryVoltage * voltagePerBit) * 2 ;
+		sprintf (&ret[0], "\n      Battery : %.3f", batteryVoltageAsDouble);
 		//
 		// Let's truncate to 2 places
 		//
@@ -483,47 +473,29 @@ bool platform_check_battery_voltage (void)
 {
 	bool	fResult;
 	platform_adc_read ();
-	retVal = inputVoltages[CTXLINK_ADC_BATTERY];
+	batteryVoltage = inputVoltages[CTXLINK_ADC_BATTERY];
+	fResult = fLastState; 
 	//
-	// Running average
+	// Is battery connected?
 	// 
-	if (batteryTemp == 0)	// First sample? 
-	{
-		batteryTemp = retVal;
+	if ((batteryVoltage <= uiBattVoltage_1) || (batteryVoltage >= uiBattVoltage_2)) {
+		fBatteryPresent = false;
+		fLastState = fResult = true;
 	}
 	else {
-		batteryTemp += retVal;
-	}
-	if (++sampleCount == SAMPLES) {
-		sampleCount = 0;
-		batteryTemp /= SAMPLES;
-		batteryAverage = batteryTemp;
+		fBatteryPresent = true;
 		//
-		// Is battery connected?
-		// 
-		if ((batteryAverage <= uiBattVoltage_1) || (batteryAverage >= uiBattVoltage_2)) {
-			fBatteryPresent = false;
+		// Is the voltage good?
+		//  
+		if (batteryVoltage <= uiLowBattery)
+		{
+			fLastState = fResult = false;
+		}
+		else
+		{
 			fLastState = fResult = true;
 		}
-		else {
-			fBatteryPresent = true;
-			//
-			// Is the voltage good?
-			//  
-			if (batteryAverage <= uiLowBattery)
-			{
-				fLastState = fResult = false;
-			}
-			else
-			{
-				fLastState = fResult = true;
-			}
 		}
-	}
-	else
-	{
-		fResult = fLastState;
-	}
 	return fResult;
 }
 
