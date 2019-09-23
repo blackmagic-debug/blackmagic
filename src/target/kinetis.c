@@ -352,11 +352,6 @@ const struct command_s kinetis_mdm_cmd_list[] = {
 	{NULL, NULL, NULL}
 };
 
-static bool nop_function(void)
-{
-	return true;
-}
-
 enum target_halt_reason mdm_halt_poll(target *t, target_addr *watch)
 {
 	(void)t; (void)watch;
@@ -383,19 +378,7 @@ void kinetis_mdm_probe(ADIv5_AP_t *ap)
 	t->priv_free = (void*)adiv5_ap_unref;
 
 	t->driver = "Kinetis Recovery (MDM-AP)";
-	t->attach = (void*)nop_function;
-	t->detach = (void*)nop_function;
-	t->check_error = (void*)nop_function;
-	t->mem_read = (void*)nop_function;
-	t->mem_write = (void*)nop_function;
 	t->regs_size = 4;
-	t->regs_read = (void*)nop_function;
-	t->regs_write = (void*)nop_function;
-	t->reset = (void*)nop_function;
-	t->halt_request = (void*)nop_function;
-	t->halt_poll = mdm_halt_poll;
-	t->halt_resume = (void*)nop_function;
-
 	target_add_commands(t, kinetis_mdm_cmd_list, t->driver);
 }
 

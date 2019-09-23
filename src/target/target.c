@@ -30,6 +30,11 @@ static int target_flash_write_buffered(struct target_flash *f,
                                        target_addr dest, const void *src, size_t len);
 static int target_flash_done_buffered(struct target_flash *f);
 
+static bool nop_function(void)
+{
+	return true;
+}
+
 target *target_new(void)
 {
 	target *t = (void*)calloc(1, sizeof(*t));
@@ -46,6 +51,20 @@ target *target_new(void)
 	} else {
 		target_list = t;
 	}
+
+	t->attach = (void*)nop_function;
+	t->detach = (void*)nop_function;
+	t->check_error = (void*)nop_function;
+	t->mem_read = (void*)nop_function;
+	t->mem_write = (void*)nop_function;
+	t->reg_read = (void*)nop_function;
+	t->reg_write = (void*)nop_function;
+	t->regs_read = (void*)nop_function;
+	t->regs_write = (void*)nop_function;
+	t->reset = (void*)nop_function;
+	t->halt_request = (void*)nop_function;
+	t->halt_poll = (void*)nop_function;
+	t->halt_resume = (void*)nop_function;
 
 	return t;
 }
