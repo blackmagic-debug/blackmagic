@@ -174,7 +174,10 @@ if __name__ == "__main__":
 		print("Failed to read device state! Assuming APP_IDLE")
 		state = dfu.STATE_APP_IDLE
 	if state == dfu.STATE_APP_IDLE:
-		dfudev.detach()
+		try:
+			dfudev.detach()
+		except:
+			pass
 		dfudev.release()
 		print("Invoking DFU Device")
 		timeout = 0
