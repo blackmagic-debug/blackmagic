@@ -37,7 +37,7 @@
 #include "target_internal.h"
 #include "cortexm.h"
 
-static bool stm32f4_cmd_erase_mass(target *t);
+static bool stm32f4_cmd_erase_mass(target *t, int argc, const char **argv);
 static bool stm32f4_cmd_option(target *t, int argc, char *argv[]);
 static bool stm32f4_cmd_psize(target *t, int argc, char *argv[]);
 
@@ -456,8 +456,10 @@ static int stm32f4_flash_write(struct target_flash *f,
 	return 0;
 }
 
-static bool stm32f4_cmd_erase_mass(target *t)
+static bool stm32f4_cmd_erase_mass(target *t, int argc, const char **argv)
 {
+	(void)argc;
+	(void)argv;
 	const char spinner[] = "|/-\\";
 	int spinindex = 0;
 	struct target_flash *f = t->flash;

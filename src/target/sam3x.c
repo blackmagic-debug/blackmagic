@@ -33,8 +33,8 @@ static int sam3_flash_erase(struct target_flash *f, target_addr addr, size_t len
 static int sam3x_flash_write(struct target_flash *f, target_addr dest,
                              const void *src, size_t len);
 
-static bool sam3x_cmd_gpnvm_get(target *t);
-static bool sam3x_cmd_gpnvm_set(target *t, int argc, char *argv[]);
+static bool sam3x_cmd_gpnvm_get(target *t, int argc, const char **argv);
+static bool sam3x_cmd_gpnvm_set(target *t, int argc, const char **argv);
 
 const struct command_s sam3x_cmd_list[] = {
 	{"gpnvm_get", (cmd_handler)sam3x_cmd_gpnvm_get, "Get GPVNM value"},
@@ -338,8 +338,10 @@ static int sam3x_flash_write(struct target_flash *f, target_addr dest,
 	return 0;
 }
 
-static bool sam3x_cmd_gpnvm_get(target *t)
+static bool sam3x_cmd_gpnvm_get(target *t, int argc, const char **argv)
 {
+	(void)argc;
+	(void)argv;
 	uint32_t base = sam3x_flash_base(t);
 
 	sam3x_flash_cmd(t, base, EEFC_FCR_FCMD_GGPB, 0);
@@ -348,7 +350,7 @@ static bool sam3x_cmd_gpnvm_get(target *t)
 	return true;
 }
 
-static bool sam3x_cmd_gpnvm_set(target *t, int argc, char *argv[])
+static bool sam3x_cmd_gpnvm_set(target *t, int argc, const char **argv)
 {
 	uint32_t bit, cmd;
 	uint32_t base = sam3x_flash_base(t);
@@ -361,7 +363,7 @@ static bool sam3x_cmd_gpnvm_set(target *t, int argc, char *argv[])
 	cmd = atol(argv[2]) ? EEFC_FCR_FCMD_SGPB : EEFC_FCR_FCMD_CGPB;
 
 	sam3x_flash_cmd(t, base, cmd, bit);
-	sam3x_cmd_gpnvm_get(t);
+	sam3x_cmd_gpnvm_get(t, 0, NULL);
 
 	return true;
 }

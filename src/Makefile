@@ -8,7 +8,7 @@ MAKEFLAGS += --no-print-dir
 Q := @
 endif
 
-CFLAGS += -Wall -Wextra -Werror -Wno-char-subscripts -Wno-cast-function-type \
+CFLAGS += -Wall -Wextra -Werror -Wno-char-subscripts \
 	-std=gnu99 -g3 -MD \
 	-I. -Iinclude -Iplatforms/common -I$(PLATFORM_DIR)
 
