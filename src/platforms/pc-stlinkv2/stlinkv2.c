@@ -84,6 +84,7 @@
 #define STLINK_SWD_AP_STICKY_ERROR     0x19
 #define STLINK_SWD_AP_STICKYORUN_ERROR 0x1a
 #define STLINK_BAD_AP_ERROR            0x1d
+#define STLINK_TOO_MANY_AP_ERROR       0x29
 #define STLINK_JTAG_UNKNOWN_CMD        0x42
 
 #define STLINK_CORE_RUNNING            0x80
@@ -501,6 +502,11 @@ static int stlink_usb_error_check(uint8_t *data, bool verbose)
 			return STLINK_ERROR_FAIL;
 		case STLINK_BAD_AP_ERROR:
 			/* ADIV5 probe 256 APs, most of them are non exisitant.*/
+			return STLINK_ERROR_FAIL;
+		case STLINK_TOO_MANY_AP_ERROR:
+			/* TI TM4C duplicates AP. Error happens at AP9.*/
+			if (verbose)
+				DEBUG("STLINK_TOO_MANY_AP_ERROR\n");
 			return STLINK_ERROR_FAIL;
 		case STLINK_JTAG_UNKNOWN_CMD :
 			if (verbose)
@@ -1230,6 +1236,15 @@ void stlink_readmem(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
 		for (size_t i = 0; i < len ; i++) {
 			DEBUG_STLINK("%02x", *p++);
 		}
+	} else {
+		/* FIXME: What is the right measure when failing?
+		 *
+		 * E.g. TM4C129 gets here when NRF probe reads 0x10000010
+		 * Approach taken:
+		 * Fill the memory with some fixed pattern so hopefully
+		 * the caller notices the error*/
+		DEBUG("stlink_readmem failed\n");
+		memset(dest, 0xff, len);
 	}
 	DEBUG_STLINK("\n");
 }
