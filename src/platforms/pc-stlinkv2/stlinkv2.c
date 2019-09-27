@@ -535,7 +535,7 @@ static int send_recv_retry(uint8_t *txbuf, size_t txsize,
 		gettimeofday(&now, NULL);
 		timersub(&now, &start, &diff);
 		if ((diff.tv_sec >= 1) || (res != STLINK_ERROR_WAIT)) {
-			DEBUG("write_retry failed");
+			DEBUG("write_retry failed. ");
 			return res;
 		}
 	}
@@ -558,7 +558,7 @@ static int read_retry(uint8_t *txbuf, size_t txsize,
 		gettimeofday(&now, NULL);
 		timersub(&now, &start, &diff);
 		if ((diff.tv_sec >= 1) || (res != STLINK_ERROR_WAIT)) {
-			DEBUG("read_retry failed");
+			DEBUG("read_retry failed. ");
 			return res;
 		}
 	}
@@ -1172,7 +1172,14 @@ bool adiv5_ap_setup(int ap)
 	uint8_t data[2];
 	send_recv_retry(cmd, 16, data, 2);
 	DEBUG_STLINK("Open AP %d\n", ap);
-	return (stlink_usb_error_check(data, true))? false: true;
+	int res = stlink_usb_error_check(data, true);
+	if (res) {
+		if (Stlink.ver_hw == 30) {
+			DEBUG("STLINKV3 only connects to STM8/32!\n");
+		}
+		return false;
+	}
+	return true;
 }
 
 void adiv5_ap_cleanup(int ap)
