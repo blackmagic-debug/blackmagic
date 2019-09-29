@@ -84,6 +84,7 @@
 #define STLINK_SWD_AP_STICKY_ERROR     0x19
 #define STLINK_SWD_AP_STICKYORUN_ERROR 0x1a
 #define STLINK_BAD_AP_ERROR            0x1d
+#define STLINK_TOO_MANY_AP_ERROR       0x29
 #define STLINK_JTAG_UNKNOWN_CMD        0x42
 
 #define STLINK_CORE_RUNNING            0x80
@@ -502,6 +503,11 @@ static int stlink_usb_error_check(uint8_t *data, bool verbose)
 		case STLINK_BAD_AP_ERROR:
 			/* ADIV5 probe 256 APs, most of them are non exisitant.*/
 			return STLINK_ERROR_FAIL;
+		case STLINK_TOO_MANY_AP_ERROR:
+			/* TI TM4C duplicates AP. Error happens at AP9.*/
+			if (verbose)
+				DEBUG("STLINK_TOO_MANY_AP_ERROR\n");
+			return STLINK_ERROR_FAIL;
 		case STLINK_JTAG_UNKNOWN_CMD :
 			if (verbose)
 				DEBUG("STLINK_JTAG_UNKNOWN_CMD\n");
@@ -529,7 +535,7 @@ static int send_recv_retry(uint8_t *txbuf, size_t txsize,
 		gettimeofday(&now, NULL);
 		timersub(&now, &start, &diff);
 		if ((diff.tv_sec >= 1) || (res != STLINK_ERROR_WAIT)) {
-			DEBUG("write_retry failed");
+			DEBUG("write_retry failed. ");
 			return res;
 		}
 	}
@@ -552,7 +558,7 @@ static int read_retry(uint8_t *txbuf, size_t txsize,
 		gettimeofday(&now, NULL);
 		timersub(&now, &start, &diff);
 		if ((diff.tv_sec >= 1) || (res != STLINK_ERROR_WAIT)) {
-			DEBUG("read_retry failed");
+			DEBUG("read_retry failed. ");
 			return res;
 		}
 	}
@@ -1166,7 +1172,14 @@ bool adiv5_ap_setup(int ap)
 	uint8_t data[2];
 	send_recv_retry(cmd, 16, data, 2);
 	DEBUG_STLINK("Open AP %d\n", ap);
-	return (stlink_usb_error_check(data, true))? false: true;
+	int res = stlink_usb_error_check(data, true);
+	if (res) {
+		if (Stlink.ver_hw == 30) {
+			DEBUG("STLINKV3 only connects to STM8/32!\n");
+		}
+		return false;
+	}
+	return true;
 }
 
 void adiv5_ap_cleanup(int ap)
@@ -1230,6 +1243,15 @@ void stlink_readmem(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
 		for (size_t i = 0; i < len ; i++) {
 			DEBUG_STLINK("%02x", *p++);
 		}
+	} else {
+		/* FIXME: What is the right measure when failing?
+		 *
+		 * E.g. TM4C129 gets here when NRF probe reads 0x10000010
+		 * Approach taken:
+		 * Fill the memory with some fixed pattern so hopefully
+		 * the caller notices the error*/
+		DEBUG("stlink_readmem failed\n");
+		memset(dest, 0xff, len);
 	}
 	DEBUG_STLINK("\n");
 }

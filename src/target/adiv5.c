@@ -485,6 +485,7 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 		DEBUG("TARGETID %08" PRIx32 "\n", dp->targetid);
 	}
 	/* Probe for APs on this DP */
+	uint32_t last_base = 0;
 	for(int i = 0; i < 256; i++) {
 		ADIv5_AP_t *ap = NULL;
 		if (adiv5_ap_setup(i))
@@ -496,6 +497,13 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 			else
 				continue;
 		}
+		if (ap->base == last_base) {
+			DEBUG("AP %d: Duplicate base\n", i);
+			adiv5_ap_cleanup(i);
+			/* FIXME: Should we expect valid APs behind duplicate ones? */
+			return;
+		}
+		last_base = ap->base;
 		extern void kinetis_mdm_probe(ADIv5_AP_t *);
 		kinetis_mdm_probe(ap);
 
