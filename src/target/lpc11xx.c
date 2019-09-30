@@ -100,6 +100,7 @@ lpc11xx_probe(target *t)
 	}
 
 	idcode = target_mem_read32(t, LPC8XX_DEVICE_ID);
+	DEBUG("LPC11/84: IDCODE 0x%08" PRIx32 "\n", idcode);
 	switch (idcode) {
 	case 0x00008100:  /* LPC810M021FN8 */
 	case 0x00008110:  /* LPC811M001JDH16 */
@@ -117,6 +118,22 @@ lpc11xx_probe(target *t)
 		t->driver = "LPC82x";
 		target_add_ram(t, 0x10000000, 0x2000);
 		lpc11xx_add_flash(t, 0x00000000, 0x8000, 0x400);
+		return true;
+	case 0x00008441:
+	case 0x00008442:
+	case 0x00008443: /* UM11029 Rev.1.4 list 8442 */
+	case 0x00008444:
+		t->driver = "LPC844";
+		target_add_ram(t, 0x10000000, 0x2000);
+		lpc11xx_add_flash(t, 0x00000000, 0x10000, 0x400);
+		return true;
+	case 0x00008451:
+	case 0x00008452:
+	case 0x00008453:
+	case 0x00008454:
+		t->driver = "LPC845";
+		target_add_ram(t, 0x10000000, 0x4000);
+		lpc11xx_add_flash(t, 0x00000000, 0x10000, 0x400);
 		return true;
 	case 0x0003D440:	/* LPC11U34/311  */
 	case 0x0001cc40:	/* LPC11U34/421  */
