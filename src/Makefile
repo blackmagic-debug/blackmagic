@@ -46,7 +46,7 @@ SRC =			\
 	nxpke04.c	\
 	platform.c	\
 	sam3x.c		\
-	sam4l.c	\
+	sam4l.c		\
 	samd.c		\
 	stm32f1.c	\
 	stm32f4.c	\
@@ -71,6 +71,9 @@ endif
 
 ifndef OWN_HL
 SRC += jtag_scan.c jtagtap.c swdptap.c
+SRC += remote.c
+else
+CFLAGS += -DOWN_HL
 endif
 
 OBJ = $(patsubst %.S,%.o,$(patsubst %.c,%.o,$(SRC)))
