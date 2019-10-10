@@ -178,6 +178,7 @@ bool sam3x_probe(target *t);
 bool sam4l_probe(target *t);
 bool nrf51_probe(target *t);
 bool samd_probe(target *t);
+bool samx5x_probe(target *t);
 bool kinetis_probe(target *t);
 bool efm32_probe(target *t);
 bool msp432_probe(target *t);
