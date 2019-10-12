@@ -280,11 +280,5 @@ static inline int platform_hwversion(void)
 void platform_tasks(void);  			// Must be called from GDB main loop
 const char *platform_battery_voltage (void);
 
-/* Use newlib provided integer only stdio functions */
-#define sscanf siscanf
-#define sprintf siprintf
-#define vasprintf vasiprintf
-#define snprintf sniprintf
-
 #endif
 
