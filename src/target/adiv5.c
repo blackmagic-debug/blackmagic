@@ -263,7 +263,7 @@ static bool adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, int recursion, 
 	uint32_t cidr = 0;
 	bool res = false;
 #if defined(ENABLE_DEBUG) && defined(PLATFORM_HAS_DEBUG)
-	char indent[recursion];
+	char indent[recursion + 1];
 
 	for(int i = 0; i < recursion; i++) indent[i] = ' ';
 	indent[recursion] = 0;
