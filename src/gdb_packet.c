@@ -44,7 +44,7 @@ int gdb_getpacket(char *packet, int size)
 		while ( (packet[0] = gdb_if_getchar()) != '$' )
 #ifdef ctxLink
 		{
-			if ( isClientConnected() == true )
+			if ( isGDBClientConnected() == true )
 			{
 				if ( packet[0] == 0x00 ) return 0 ;
 			}

@@ -29,9 +29,9 @@ unsigned char gdb_if_getchar_to(int timeout);
 
 void gdb_shim_putchar(unsigned char c, int flush)
 {
-	if ( isClientConnected() == true )
+	if ( isGDBClientConnected() == true )
 	{
-		WiFi_putchar(c, flush);
+		WiFi_gdb_putchar(c, flush);
 	}
 	else
 	{
@@ -49,7 +49,7 @@ void gdb_shim_putchar(unsigned char c, int flush)
 
 unsigned char gdb_shim_getchar(void)
 {
-	if ( isClientConnected() == true )
+	if ( isGDBClientConnected() == true )
 	{
 		return WiFi_GetNext() ;
 	}
@@ -78,7 +78,7 @@ unsigned char gdb_shim_getchar(void)
 
 unsigned char gdb_shim_getchar_to(int timeout)
 {
-	if ( isClientConnected() == true )
+	if ( isGDBClientConnected() == true )
 	{
 		return WiFi_GetNext_to(timeout) ;
 	}

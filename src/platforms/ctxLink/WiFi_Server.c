@@ -46,12 +46,12 @@ static bool g_driverInitComplete = false; ///< True to driver initialize complet
 static bool g_wifi_connected = false;	  ///< True if WiFi connected
 static bool g_ipAddressAssigned = false;  ///< True if IP address assigned
 static bool g_dnsResolved = false;		  ///< True if DNS resolved
-static bool g_clientConnected = false;	  ///< True if client connected
-static bool g_serverIsRunning = false;	  ///< True if server is running
-static bool g_newClientConnected = false; ///< True if new client connected
+static bool g_gdbClientConnected = false;	  ///< True if client connected
+static bool g_gdbServerIsRunning = false;	  ///< True if server is running
+static bool g_newGDBClientConnected = false; ///< True if new client connected
 
-static SOCKET gdbServerSocket = SOCK_ERR_INVALID;  ///< The server socket
-static SOCKET clientSocket = SOCK_ERR_INVALID;  ///< The client socket
+static SOCKET gdbServerSocket = SOCK_ERR_INVALID;  ///< The main gdb server socket
+static SOCKET gdbClientSocket = SOCK_ERR_INVALID;  ///< The gdb client socket
 
 #define	WPS_LOCAL_TIMEOUT	30			// Timeout value in seconds
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -103,12 +103,12 @@ typedef struct tagSendQueueEntry
 	unsigned		len;						  ///< The length
 } SEND_QUEUE_ENTRY ;
 
-SEND_QUEUE_ENTRY SendQueue[SEND_QUEUE_SIZE] = { 0 }; ///< The send queue[ send queue size]
-unsigned volatile	uiSendQueueIn = 0;				 ///< The send queue in
-unsigned volatile	uiSendQueueOut = 0;				 ///< The send queue out
-unsigned volatile	uiSendQueueLength = 0;			 ///< Length of the send queue
+SEND_QUEUE_ENTRY gdbSendQueue[SEND_QUEUE_SIZE] = { 0 }; ///< The send queue[ send queue size]
+unsigned volatile	uiGDBSendQueueIn = 0;				 ///< The send queue in
+unsigned volatile	uiGDBSendQueueOut = 0;				 ///< The send queue out
+unsigned volatile	uiGDBSendQueueLength = 0;			 ///< Length of the send queue
 // bool		fWaitingForAck = false;
-void DoSend(void);
+void DoGDBSend(void);
 
 static bool pressActive = false; ///< True to press active
 bool wpsActive = false;			 ///< True to wps active
@@ -605,12 +605,10 @@ bool isIpAddressAssigned(void)
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool aFlag = false ;
-
+static volatile SOCKET sktParam = 0;
 static void AppSocketCallback(SOCKET sock, uint8_t msgType, void *pvMsg)
 {
-	// if multiple sockets are present, use "sock" parameter to know the
-	// associated socket for this instance of callback. 
-
+	sktParam = sock;
 	switch(msgType)
 	{
 		case M2M_SOCKET_DNS_RESOLVE_EVENT:
@@ -622,82 +620,108 @@ static void AppSocketCallback(SOCKET sock, uint8_t msgType, void *pvMsg)
 		case M2M_SOCKET_CONNECT_EVENT:
 		{
 			t_socketConnect *pSockConnResp = (t_socketConnect *) pvMsg;
-			if (pSockConnResp && pSockConnResp->error >= SOCK_ERR_NO_ERROR)
-			{
-				g_clientConnected = true;
-				g_newClientConnected = true;
-				dprintf("APP_SOCK_CB[%d]: Successfully connected\r\n", msgType);
-			}
-			else
-			{
-				dprintf("APP_SOCK_CB[%d]: Connect error! code(%d)\r\n", msgType, pSockConnResp->error);
-			}
+			//
+			// This event occurs when ctxLink establishes a connection back to
+			// a client.
+			//
+			// At this time it is not used
+			// 
 			break;
 		}
 
 		case M2M_SOCKET_BIND_EVENT:
 		{
-			// 
-			// Did the bind succeed?
-			//
-			if(m2m_wifi_get_socket_event_data()->bindStatus == 0) 
+			if (sock == gdbServerSocket)
 			{
-				listen(gdbServerSocket, 0);
+				if (m2m_wifi_get_socket_event_data ()->bindStatus == 0)
+				{
+					listen (gdbServerSocket, 0);
+				}
+				else
+				{
+					close (gdbServerSocket);
+					g_gdbServerIsRunning = false;
+					gdbServerSocket = -1;
+				}
 			}
 			else
 			{
-				close(gdbServerSocket);
-				g_serverIsRunning = false;
-				gdbServerSocket = -1;
+				//
+				// Unknown server ... TODO
+				//
+				dprintf ("APP_SOCK_CB[%d]: Bind for unknown server\r\n", msgType);
 			}
-			
 			break ;
 		}
 		case M2M_SOCKET_LISTEN_EVENT:
 		{
-			if ( m2m_wifi_get_socket_event_data()->listenStatus == 0 ) 
+			if (sock == gdbServerSocket)
 			{
-				g_serverIsRunning = true;
-				accept(gdbServerSocket, NULL, NULL);
+				if (m2m_wifi_get_socket_event_data ()->listenStatus == 0)
+				{
+					g_gdbServerIsRunning = true;
+					accept (gdbServerSocket, NULL, NULL);
+				}
+				else
+				{
+					close (gdbServerSocket);
+					g_gdbServerIsRunning = false;
+					gdbServerSocket = -1;
+				}
 			}
 			else
 			{
-				close(gdbServerSocket);
-				g_serverIsRunning = false;
-				gdbServerSocket = -1;
+				//
+				// Unknown server ... TODO
+				//
+				dprintf ("APP_SOCK_CB[%d]: Listen event for unknown server\r\n", msgType);
 			}
-				break;
+			break;
 		}
 		case M2M_SOCKET_ACCEPT_EVENT:
 		{
 			t_socketAccept *pAcceptData = (t_socketAccept *)pvMsg;	// recover the message data
 			//
-			// Good client socket?
-			//
-			if(pAcceptData->sock >= 0)
-			{
+			// Process for the specific server
+			// 
+			if (sock == gdbServerSocket) {
 				//
-				// Only allow a single client connection
+				// Good client socket?
 				//
-				if(clientSocket >= 0)
+				if (pAcceptData->sock >= 0)
 				{
-					/*
-					 * close the new client socket, refusing connection
-					 * 
-					 */
-					dprintf("APP_SOCK_CB[%d]: Second connection rejected\r\n", msgType);
-					close(pAcceptData->sock);
+					//
+					// Only allow a single client connection
+					//
+					if (gdbClientSocket >= 0)
+					{
+						/*
+						 * close the new client socket, refusing connection
+						 *
+						 */
+						dprintf ("APP_SOCK_CB[%d]: Second connection rejected\r\n", msgType);
+						close (pAcceptData->sock);
+					}
+					else
+					{
+						gdbClientSocket = pAcceptData->sock;
+						g_gdbClientConnected = true;
+						g_newGDBClientConnected = true;
+					}
 				}
 				else
 				{
-					clientSocket = pAcceptData->sock;
-					g_clientConnected = true;
-					}
+					gdbClientSocket = SOCK_ERR_INVALID;
+					g_gdbClientConnected = false;
+				}
 			}
 			else
 			{
-				clientSocket = SOCK_ERR_INVALID;
-				g_clientConnected = false;
+				//
+				// Unknown server ... TODO
+				//
+				dprintf ("APP_SOCK_CB[%d]: Connection from unknown server\r\n", msgType);
+				close (pAcceptData->sock);
 			}
 			break ;
 		}
@@ -705,20 +729,15 @@ static void AppSocketCallback(SOCKET sock, uint8_t msgType, void *pvMsg)
 		{
 			t_socketRecv *pRecvData = (t_socketRecv *)pvMsg;
 			//
-			// if we have good data copy it to the inputBuffer
-			// circular buffer
-			//
-			if(pRecvData->bufSize > 0)
+			// Process the data for the specific server's client
+			// 
+			if (sock == gdbClientSocket)
 			{
-				////
-				//// JUst ignore any ACK ("+")
-				////
-				//if(pRecvData->bufSize == 1 && localBuffer[0] == '+')
-				//{
-				//	// Just skip an ACK
-				//	dprintf("APP_SOCK_CB[%d]: Received ACK\r\n", msgType);
-				//}
-				//else
+				//
+				// if we have good data copy it to the inputBuffer
+				// circular buffer
+				//
+				if (pRecvData->bufSize > 0)
 				{
 					//
 					// Got good data, copy to circular buffer
@@ -727,49 +746,56 @@ static void AppSocketCallback(SOCKET sock, uint8_t msgType, void *pvMsg)
 					//
 					// Copy data to circular input buffer
 					//
-					for(int i = 0 ; iLocalCount != 0 ; i++, iLocalCount--, uiInputIndex = (uiInputIndex + 1) % INPUT_BUFFER_SIZE)
+					for (int i = 0; iLocalCount != 0; i++, iLocalCount--, uiInputIndex = (uiInputIndex + 1) % INPUT_BUFFER_SIZE)
 					{
 						inputBuffer[uiInputIndex] = localBuffer[i];
 					}
 					uiBufferCount += pRecvData->bufSize;
 					dprintf ("Received -> %d, queued -> %ld\r\n", pRecvData->bufSize, uiBufferCount);
+					//
+					// Start another receive operation so we always get data
+					//
+					recv (gdbClientSocket, &localBuffer[0], INPUT_BUFFER_SIZE, 0);
 				}
-				//
-				// Start another receive operation so we always get data
-				//
-				recv(clientSocket, &localBuffer[0], INPUT_BUFFER_SIZE, 0);
+				else
+				{
+					//
+					// Process socket recv errors
+					//
+					switch (pRecvData->bufSize)	// error is in the buffer size element
+					{
+						case SOCK_ERR_CONN_ABORTED:		// Peer closed connection
+						{
+							dprintf ("APP_SOCK_CB[%d]: Connection closed by peer\r\n", msgType);
+							close (gdbClientSocket);
+							gdbClientSocket = SOCK_ERR_INVALID;	// Mark socket invalid
+							g_gdbClientConnected = false;			// No longer connected
+							break;
+						}
+						case SOCK_ERR_INVALID_ADDRESS:
+						case SOCK_ERR_ADDR_ALREADY_IN_USE:
+						case SOCK_ERR_MAX_TCP_SOCK:
+						case SOCK_ERR_MAX_UDP_SOCK:
+						case SOCK_ERR_INVALID_ARG:
+						case SOCK_ERR_MAX_LISTEN_SOCK:
+						case SOCK_ERR_INVALID:
+						case SOCK_ERR_ADDR_IS_REQUIRED:
+						case SOCK_ERR_TIMEOUT:
+						case SOCK_ERR_BUFFER_FULL:
+						default:
+						{
+							dprintf ("APP_SOCK_CB[%d]: Unknown/unhandled error code %d bytes\r\n", msgType, pRecvData->bufSize);
+							break;
+						}
+					}
+				}
 			}
 			else
 			{
 				//
-				// Process socket recv errors
+				// Unknown server ... TODO
 				//
-				switch(pRecvData->bufSize)	// error is in the buffer size element
-				{
-					case SOCK_ERR_CONN_ABORTED:		// Peer closed connection
-					{
-						dprintf("APP_SOCK_CB[%d]: Connection closed by peer\r\n", msgType);
-						close (clientSocket);
-						clientSocket = SOCK_ERR_INVALID;	// Mark socket invalid
-						g_clientConnected = false;			// No longer connected
-						break ;
-					}
-					case SOCK_ERR_INVALID_ADDRESS:
-					case SOCK_ERR_ADDR_ALREADY_IN_USE:
-					case SOCK_ERR_MAX_TCP_SOCK:
-					case SOCK_ERR_MAX_UDP_SOCK:
-					case SOCK_ERR_INVALID_ARG:
-					case SOCK_ERR_MAX_LISTEN_SOCK:
-					case SOCK_ERR_INVALID:
-					case SOCK_ERR_ADDR_IS_REQUIRED:
-					case SOCK_ERR_TIMEOUT:
-					case SOCK_ERR_BUFFER_FULL:
-					default:
-					{
-						dprintf("APP_SOCK_CB[%d]: Unknown/unhandled error code %d bytes\r\n", msgType, pRecvData->bufSize);
-						break ;
-					}
-				}
+				dprintf ("APP_SOCK_CB[%d]: Data from unknown server\r\n", msgType);
 			}
 			break ;
 		}
@@ -781,9 +807,14 @@ static void AppSocketCallback(SOCKET sock, uint8_t msgType, void *pvMsg)
 			//
 			m2mStub_EintDisable();
 			//
-			if(uiSendQueueLength != 0)
+			// Process for the specific server
+			//
+			if (sock == gdbServerSocket)
 			{
-				DoSend();
+				if (uiGDBSendQueueLength != 0)
+				{
+					DoGDBSend ();
+				}
 			}
 
 			//
@@ -816,9 +847,9 @@ static void AppSocketCallback(SOCKET sock, uint8_t msgType, void *pvMsg)
 /// <returns> True if server running, false if not.</returns>
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-bool isServerRunning(void)
+bool isGDBServerRunning(void)
 {
-	return g_serverIsRunning ;
+	return g_gdbServerIsRunning ;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -844,9 +875,9 @@ bool isDnsResolved(void)
 /// <returns> True if client connected, false if not.</returns>
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-bool isClientConnected(void)
+bool isGDBClientConnected(void)
 {
-	bool res = g_clientConnected;
+	bool res = g_gdbClientConnected;
 	// no need to reset flag "g_clientConnected" to false. App will do that.
 	return res;
 }
@@ -1157,7 +1188,7 @@ void APP_Task(void)
 		}
 		case APP_STATE_WAIT_FOR_SERVER:
 		{
-			if ( isServerRunning() == true )
+			if ( isGDBServerRunning() == true )
 			{
 				appState = APP_STATE_SPIN;				
 			}
@@ -1176,15 +1207,15 @@ void APP_Task(void)
 		case APP_STATE_SPIN:
 		{
 			//
-			// Check for a new client connection, if found start the receive process for the client
+			// Check for a new GDB client connection, if found start the receive process for the client
 			//
-			if(g_newClientConnected == true)
+			if(g_newGDBClientConnected == true)
 			{
-				g_newClientConnected = false;
+				g_newGDBClientConnected = false;
 				//
-				// Set up a recv call, data will be 
+				// Set up a recv call 
 				//
-				recv(clientSocket, &localBuffer[0], INPUT_BUFFER_SIZE, 0);
+				recv(gdbClientSocket, &localBuffer[0], INPUT_BUFFER_SIZE, 0);
 			}
 			break;
 		}
@@ -1305,19 +1336,6 @@ void APP_Task(void)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-/// <summary> Determines if we can WiFi got client.</summary>
-///
-/// <remarks> Sid Price, 3/22/2018.</remarks>
-///
-/// <returns> True if it succeeds, false if it fails.</returns>
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-bool WiFi_GotClient( void )
-{
-	return ( g_clientConnected ) ;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
 /// <summary> WiFi have input.</summary>
 ///
 /// <remarks> Sid Price, 3/22/2018.</remarks>
@@ -1401,12 +1419,12 @@ unsigned char WiFi_GetNext_to( uint32_t timeout )
 /// <remarks> Sid Price, 3/22/2018.</remarks>
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void DoSend(void)
+void DoGDBSend(void)
 {
-	send(clientSocket, &(SendQueue[uiSendQueueOut].packet[0]), SendQueue[uiSendQueueOut].len, 0);
+	send(gdbClientSocket, &(gdbSendQueue[uiGDBSendQueueOut].packet[0]), gdbSendQueue[uiGDBSendQueueOut].len, 0);
 	m2mStub_EintDisable();
-	uiSendQueueOut = (uiSendQueueOut + 1) % SEND_QUEUE_SIZE;
-	uiSendQueueLength -= 1;
+	uiGDBSendQueueOut = (uiGDBSendQueueOut + 1) % SEND_QUEUE_SIZE;
+	uiGDBSendQueueLength -= 1;
 	m2mStub_EintEnable(); 
 }
 
@@ -1426,21 +1444,21 @@ void WiFi_SendPacket(unsigned char * lpPacket, int len)
 	// Check there is room in queue
 	// This check should be used to evaluate how large the queue needs to be
 	//
-	if(uiSendQueueLength == SEND_QUEUE_SIZE)
+	if(uiGDBSendQueueLength == SEND_QUEUE_SIZE)
 	{
 		dprintf("Wifi_SendPacket: Send queue is full\r\n");
 	}
 	else
 	{
-		memcpy(&(SendQueue[uiSendQueueIn].packet[0]), lpPacket, SendQueue[uiSendQueueIn].len);
-		uiSendQueueIn = (uiSendQueueIn + 1) % SEND_QUEUE_SIZE;
-		uiSendQueueLength += 1;
+		memcpy(&(gdbSendQueue[uiGDBSendQueueIn].packet[0]), lpPacket, gdbSendQueue[uiGDBSendQueueIn].len);
+		uiGDBSendQueueIn = (uiGDBSendQueueIn + 1) % SEND_QUEUE_SIZE;
+		uiGDBSendQueueLength += 1;
 		//
 		// If this is the only entry in the queue send it now
 		//
-		if(uiSendQueueLength == 1)
+		if(uiGDBSendQueueLength == 1)
 		{
-			DoSend();
+			DoGDBSend();
 		}
 	}
 	m2mStub_EintEnable();		// Re-enable interrupts
@@ -1458,7 +1476,7 @@ static unsigned int sendCount = 0;  ///< Number of sends
 /// <param name="flush">   The flush.</param>
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void WiFi_putchar( unsigned char theChar, int flush )
+void WiFi_gdb_putchar( unsigned char theChar, int flush )
 {
 	sendBuffer[sendCount++] = theChar;
 	if ( flush != 0 )
@@ -1470,7 +1488,7 @@ void WiFi_putchar( unsigned char theChar, int flush )
 		}
 		sendCount = 0;
 		dprintf("Wifi_putchar %c\r\n", sendBuffer[0]);
-		send(clientSocket, &sendBuffer[0], len, 0);
+		send(gdbClientSocket, &sendBuffer[0], len, 0);
 		memset(&sendBuffer[0], 0x00, sizeof(sendBuffer));
 	}
 }
