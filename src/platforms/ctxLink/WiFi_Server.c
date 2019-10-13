@@ -50,7 +50,7 @@ static bool g_clientConnected = false;	  ///< True if client connected
 static bool g_serverIsRunning = false;	  ///< True if server is running
 static bool g_newClientConnected = false; ///< True if new client connected
 
-static SOCKET serverSocket = SOCK_ERR_INVALID;  ///< The server socket
+static SOCKET gdbServerSocket = SOCK_ERR_INVALID;  ///< The server socket
 static SOCKET clientSocket = SOCK_ERR_INVALID;  ///< The client socket
 
 #define	WPS_LOCAL_TIMEOUT	30			// Timeout value in seconds
@@ -358,8 +358,8 @@ void TCPServer(void)
 		//
 		// Allocate a socket for this server to listen and accept connections on
 		//
-		serverSocket = socket(AF_INET, SOCK_STREAM, 0);
-		if ( serverSocket != SOCK_ERR_NO_ERROR )
+		gdbServerSocket = socket(AF_INET, SOCK_STREAM, 0);
+		if ( gdbServerSocket != SOCK_ERR_NO_ERROR )
 		{
 			return ;
 		}
@@ -369,7 +369,7 @@ void TCPServer(void)
 		addr.sin_addr.s_addr = 0;
 		addr.sin_family = AF_INET;
 		addr.sin_port = _htons(GDBServerPort);
-		int8_t result = bind(serverSocket, (struct sockaddr *)&addr, sizeof(addr));
+		int8_t result = bind(gdbServerSocket, (struct sockaddr *)&addr, sizeof(addr));
 		if ( result != SOCK_ERR_NO_ERROR )
 		{
 			return ;
@@ -428,7 +428,7 @@ void TCPServer(void)
 
 	case SM_CLOSING:
 		// Close the socket connection.
-		close(serverSocket);
+		close(gdbServerSocket);
 		TCPServerState = SM_HOME;
 		break;
 	}
@@ -605,8 +605,6 @@ bool isIpAddressAssigned(void)
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool aFlag = false ;
-static volatile uint32_t c1 = 0 ;
-static volatile uint32_t c2 = 0 ;
 
 static void AppSocketCallback(SOCKET sock, uint8_t msgType, void *pvMsg)
 {
@@ -644,13 +642,13 @@ static void AppSocketCallback(SOCKET sock, uint8_t msgType, void *pvMsg)
 			//
 			if(m2m_wifi_get_socket_event_data()->bindStatus == 0) 
 			{
-				listen(serverSocket, 0);
+				listen(gdbServerSocket, 0);
 			}
 			else
 			{
-				close(serverSocket);
+				close(gdbServerSocket);
 				g_serverIsRunning = false;
-				serverSocket = -1;
+				gdbServerSocket = -1;
 			}
 			
 			break ;
@@ -660,13 +658,13 @@ static void AppSocketCallback(SOCKET sock, uint8_t msgType, void *pvMsg)
 			if ( m2m_wifi_get_socket_event_data()->listenStatus == 0 ) 
 			{
 				g_serverIsRunning = true;
-				accept(serverSocket, NULL, NULL);
+				accept(gdbServerSocket, NULL, NULL);
 			}
 			else
 			{
-				close(serverSocket);
+				close(gdbServerSocket);
 				g_serverIsRunning = false;
-				serverSocket = -1;
+				gdbServerSocket = -1;
 			}
 				break;
 		}
@@ -734,12 +732,6 @@ static void AppSocketCallback(SOCKET sock, uint8_t msgType, void *pvMsg)
 						inputBuffer[uiInputIndex] = localBuffer[i];
 					}
 					uiBufferCount += pRecvData->bufSize;
-					if ( uiBufferCount > INPUT_BUFFER_SIZE ) {
-						aFlag = true ;
-						c1 = c2 ;
-						c2++ ;
-					}
-					// dprintf ("APP_SOCK_CB[%d]: Received %d bytes, queued %d bytes\r\n", msgType, pRecvData->bufSize, uiBufferCount);
 					dprintf ("Received -> %d, queued -> %ld\r\n", pRecvData->bufSize, uiBufferCount);
 				}
 				//
