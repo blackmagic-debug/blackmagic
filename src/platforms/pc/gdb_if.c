@@ -98,14 +98,18 @@ unsigned char gdb_if_getchar(void)
 {
 	unsigned char ret;
 	int i = 0;
-
+#if defined(_WIN32) || defined(__CYGWIN__)
+	unsigned long opt;
+#else
+	int flags;
+#endif
 	while(i <= 0) {
 		if(gdb_if_conn <= 0) {
 #if defined(_WIN32) || defined(__CYGWIN__)
-			unsigned long opt = 1;
+			opt = 1;
 			ioctlsocket(gdb_if_serv, FIONBIO, &opt);
 #else
-			int flags = fcntl(gdb_if_serv, F_GETFL);
+			flags = fcntl(gdb_if_serv, F_GETFL);
 			fcntl(gdb_if_serv, F_SETFL, flags | O_NONBLOCK);
 #endif
 			while(1) {
@@ -115,12 +119,12 @@ unsigned char gdb_if_getchar(void)
 						SET_IDLE_STATE(1);
 						platform_delay(100);
 					} else {
-						DEBUG("error when accepting connection");
+						DEBUG("error when accepting connection: %s", strerror(errno));
 						exit(1);
 					}
 				} else {
 #if defined(_WIN32) || defined(__CYGWIN__)
-					unsigned long opt = 0;
+					opt = 0;
 					ioctlsocket(gdb_if_serv, FIONBIO, &opt);
 #else
 					fcntl(gdb_if_serv, F_SETFL, flags);
@@ -129,11 +133,18 @@ unsigned char gdb_if_getchar(void)
 				}
 			}
 			DEBUG("Got connection\n");
+#if defined(_WIN32) || defined(__CYGWIN__)
+			opt = 0;
+			ioctlsocket(gdb_if_conn, FIONBIO, &opt);
+#else
+			flags = fcntl(gdb_if_conn, F_GETFL);
+			fcntl(gdb_if_conn, F_SETFL, flags & ~O_NONBLOCK);
+#endif
 		}
 		i = recv(gdb_if_conn, (void*)&ret, 1, 0);
 		if(i <= 0) {
 			gdb_if_conn = -1;
-			DEBUG("Dropped broken connection\n");
+			DEBUG("Dropped broken connection: %s\n", strerror(errno));
 			/* Return '+' in case we were waiting for an ACK */
 			return '+';
 		}
