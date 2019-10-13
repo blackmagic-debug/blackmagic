@@ -581,7 +581,7 @@ static int samx5x_check_nvm_error(target *t)
 
 #define NVM_ERROR_BITS_MSG						\
 	"Warning: Found NVM error bits set while preparing to %s\n"	\
-	"         flash block at 0x%08"PRIx32" (length 0x%x).\n"	\
+	"         flash block at 0x%08"PRIx32" (length 0x%zx).\n"	\
 	"         Clearing these before proceeding:\n"			\
 	"             "
 
@@ -680,7 +680,7 @@ static int samx5x_flash_write(struct target_flash *f,
 
 	if (error || target_check_error(t) || samx5x_check_nvm_error(t)) {
 		DEBUG("Error writing flash page at 0x%08"PRIx32
-		      " (len 0x%08x)\n",
+		      " (len 0x%08zx)\n",
 		      dest, len);
 		return -1;
 	}
@@ -739,7 +739,8 @@ static int samx5x_write_user_page(target *t, uint8_t *buffer)
 	uint16_t errs = samx5x_read_nvm_error(t);
 	if (errs) {
 		DEBUG(NVM_ERROR_BITS_MSG, "erase and write",
-		      (uint32_t)SAMX5X_NVM_USER_PAGE, SAMX5X_PAGE_SIZE);
+		      (uint32_t)SAMX5X_NVM_USER_PAGE,
+		      (size_t)SAMX5X_PAGE_SIZE);
 		samx5x_print_nvm_error(errs);
 		samx5x_clear_nvm_error(t);
 	}
