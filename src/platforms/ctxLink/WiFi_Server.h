@@ -5,7 +5,7 @@ extern "C" {
 #endif
 	void APP_Initialize(void);
 	void APP_Task(void);
-	void TCPServer(void);
+	void GDB_TCPServer(void);
 	bool isGDBClientConnected(void);
 	void WiFi_gdb_putchar(unsigned char c, int flush);
 	bool WiFi_GotClient( void );

@@ -321,18 +321,7 @@ static enum WiFi_TCPServerStates
 	SM_LISTENING,   ///< An enum constant representing the sm listening option
 	SM_CLOSING, ///< An enum constant representing the sm closing option
 	SM_IDLE,	///< An enum constant representing the sm idle option
-} TCPServerState = SM_IDLE;
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-/// <summary> TCP server initialize.</summary>
-///
-/// <remarks> Sid Price, 3/22/2018.</remarks>
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-void TCPServerInit(void)
-{
-	TCPServerState = SM_CLOSING;
-}
+} GDB_TCPServerState = SM_IDLE;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 /// <summary> A sockaddr in.</summary>
@@ -348,9 +337,9 @@ struct sockaddr_in addr = { 0 } ;
 /// <remarks> Sid Price, 3/22/2018.</remarks>
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void TCPServer(void)
+void GDB_TCPServer(void)
 {
-	switch ( TCPServerState )
+	switch ( GDB_TCPServerState )
 	{
 	case SM_IDLE:
 		break ;		// Startup and testing do nothing state
@@ -374,62 +363,21 @@ void TCPServer(void)
 		{
 			return ;
 		}
-		TCPServerState = SM_LISTENING;
+		GDB_TCPServerState = SM_LISTENING;
 		break;
 
 	case SM_LISTENING:
-		//		// See if anyone is connected to us
-		//		if(!TCPIsConnected(MySocket))
-		//		    return;
-		//
-		//		// Figure out how many bytes have been received and how many we can transmit.
-		//		wMaxGet = TCPIsGetReady(MySocket);  // Get TCP RX FIFO byte count
-		//		wMaxPut = TCPIsPutReady(MySocket);  // Get TCP TX FIFO free space
-		//
-		//		// Make sure we don't take more bytes out of the RX FIFO than we can put into the TX FIFO
-		//		if(wMaxPut < wMaxGet)
-		//		    wMaxGet = wMaxPut;
-		//
-		//		// Process all bytes that we can
-		//		// This is implemented as a loop, processing up to sizeof(AppBuffer) bytes at a time.
-		//		// This limits memory usage while maximizing performance.  Single byte Gets and Puts are a lot slower than multibyte GetArrays and PutArrays.
-		//		wCurrentChunk = sizeof(AppBuffer);
-		//		for ( w = 0; w < wMaxGet; w += sizeof(AppBuffer) )
-		//		{
-		//			// Make sure the last chunk, which will likely be smaller than sizeof(AppBuffer), is treated correctly.
-		//			if(w + sizeof(AppBuffer) > wMaxGet)
-		//			    wCurrentChunk = wMaxGet - w;
-		//
-		//			// Transfer the data out of the TCP RX FIFO and into our local processing buffer.
-		//			TCPGetArray(MySocket, AppBuffer, wCurrentChunk);
-		//
-		//			// Perform the "ToUpper" operation on each data byte
-		//			for(w2 = 0 ; w2 < wCurrentChunk ; w2++)
-		//			{
-		//				i = AppBuffer[w2];
-		//				if ( i >= 'a' && i <= 'z' )
-		//				{
-		//					i -= ('a' - 'A');
-		//					AppBuffer[w2] = i;
-		//				}
-		//				else if ( i == 0x1B ) // Escape
-		//					{
-		//						TCPServerState = SM_CLOSING;
-		//					}
-		//			}
-		//
-		//			// Transfer the data out of our local processing buffer and into the TCP TX FIFO.
-		//			TCPPutArray(MySocket, AppBuffer, wCurrentChunk);
-		//		}
-
-				// No need to perform any flush.  TCP data in TX FIFO will automatically transmit itself after it accumulates for a while.  If you want to decrease latency (at the expense of wasting network bandwidth on TCP overhead), perform and explicit flush via the TCPFlush() API.
-
+				// 
+				// No need to perform any flush. 
+				// TCP data in TX FIFO will automatically transmit itself after it accumulates for a while.  
+				// If you want to decrease latency (at the expense of wasting network bandwidth on TCP overhead), 
+				// perform and explicit flush via the TCPFlush() API.
 				break;
 
 	case SM_CLOSING:
 		// Close the socket connection.
 		close(gdbServerSocket);
-		TCPServerState = SM_HOME;
+		GDB_TCPServerState = SM_HOME;
 		break;
 	}
 }
@@ -1179,7 +1127,7 @@ void APP_Task(void)
 		}
 		case APP_STATE_START_SERVER:
 		{
-			TCPServerState = SM_HOME;
+			GDB_TCPServerState = SM_HOME;
 			//
 			// Wait for the server to come up
 			//
