@@ -54,8 +54,14 @@ static bool g_newGDBClientConnected = false; ///< True if new client connected
 static SOCKET gdbServerSocket = SOCK_ERR_INVALID;  ///< The main gdb server socket
 static SOCKET gdbClientSocket = SOCK_ERR_INVALID;  ///< The gdb client socket
 
+#define UART_DEBUG_INPUT_BUFFER_SIZE	32
+static unsigned char localUartDebugBuffer[UART_DEBUG_INPUT_BUFFER_SIZE] = { 0 };	///< The local buffer[ input buffer size]
+
 static SOCKET uartDebugServerSocket = SOCK_ERR_INVALID; 
 static SOCKET uartDebugClientSocket = SOCK_ERR_INVALID;
+static bool	g_uartDebugClientConnected = false;
+static bool g_uartDebugServerIsRunning = false;
+static bool	g_newUartDebugClientconncted = false;
 
 #define	WPS_LOCAL_TIMEOUT	30			// Timeout value in seconds
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -111,8 +117,13 @@ SEND_QUEUE_ENTRY gdbSendQueue[SEND_QUEUE_SIZE] = { 0 }; ///< The send queue[ sen
 unsigned volatile	uiGDBSendQueueIn = 0;				 ///< The send queue in
 unsigned volatile	uiGDBSendQueueOut = 0;				 ///< The send queue out
 unsigned volatile	uiGDBSendQueueLength = 0;			 ///< Length of the send queue
-// bool		fWaitingForAck = false;
 void DoGDBSend(void);
+
+SEND_QUEUE_ENTRY	uartDebugSendQueue[SEND_QUEUE_SIZE] = { 0 }; ///< The send queue[ send queue size]
+unsigned volatile	uiUartDebugSendQueueIn = 0;				///< The send queue in
+unsigned volatile	uiUartDebugSendQueueOut = 0;			///< The send queue out
+unsigned volatile	uiUartDebugSendQueueLength = 0;			///< Length of the send queue
+void DoUartDebugSend (void);
 
 static bool pressActive = false; ///< True to press active
 bool wpsActive = false;			 ///< True to wps active
@@ -599,6 +610,64 @@ bool isIpAddressAssigned(void)
 	return res;
 }
 
+void handleSocketBindEvent (SOCKET * lpSocket, bool * lpRunningState)
+{
+	if (m2m_wifi_get_socket_event_data ()->bindStatus == 0)
+	{
+		listen (*lpSocket, 0);
+	}
+	else
+	{
+		close (*lpSocket);
+		*lpSocket = SOCK_ERR_INVALID;
+		*lpRunningState = false;
+	}
+}
+
+void handleSocketListenEvent (SOCKET * lpSocket, bool * lpRunningState)
+{
+	if (m2m_wifi_get_socket_event_data ()->listenStatus == 0)
+	{
+		accept (*lpSocket, NULL, NULL);
+		*lpRunningState = true;
+	}
+	else
+	{
+		close (*lpSocket);
+		*lpSocket = SOCK_ERR_INVALID;
+		*lpRunningState = false;
+	}
+}
+
+void handleSocketAcceptEvent (t_socketAccept * lpAcceptData, SOCKET * lpClientSocket, bool * lpClientConnectedState, bool * lpNewClientConnected, uint8_t msgType)
+{
+	if (lpAcceptData->sock >= 0)
+	{
+		//
+		// Only allow a single client connection
+		//
+		if (*lpClientSocket >= 0)
+		{
+			/*
+			 * close the new client socket, refusing connection
+			 *
+			 */
+			dprintf ("APP_SOCK_CB[%d]: Second connection rejected\r\n", msgType);
+			close (lpAcceptData->sock);
+		}
+		else
+		{
+			*lpClientSocket = lpAcceptData->sock;
+			*lpClientConnectedState = true;
+			*lpNewClientConnected = true;
+		}
+	}
+	else
+	{
+		*lpClientSocket = SOCK_ERR_INVALID;
+		*lpClientConnectedState = false;
+	}
+}
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 /// <summary> Callback, called when the application socket.</summary>
 ///
@@ -636,18 +705,16 @@ static void AppSocketCallback(SOCKET sock, uint8_t msgType, void *pvMsg)
 
 		case M2M_SOCKET_BIND_EVENT:
 		{
+			//
+			// Route the evenbt according to which server sent it
+			//
 			if (sock == gdbServerSocket)
 			{
-				if (m2m_wifi_get_socket_event_data ()->bindStatus == 0)
-				{
-					listen (gdbServerSocket, 0);
-				}
-				else
-				{
-					close (gdbServerSocket);
-					g_gdbServerIsRunning = false;
-					gdbServerSocket = -1;
-				}
+				handleSocketBindEvent (&gdbServerSocket, &g_gdbClientConnected);
+			}
+			else if (sock == uartDebugServerSocket)
+			{
+				handleSocketBindEvent (&uartDebugServerSocket, &g_uartDebugServerIsRunning) ;
 			}
 			else
 			{
@@ -660,19 +727,16 @@ static void AppSocketCallback(SOCKET sock, uint8_t msgType, void *pvMsg)
 		}
 		case M2M_SOCKET_LISTEN_EVENT:
 		{
+			//
+			// Route the event according to which server sent it
+			//
 			if (sock == gdbServerSocket)
 			{
-				if (m2m_wifi_get_socket_event_data ()->listenStatus == 0)
-				{
-					g_gdbServerIsRunning = true;
-					accept (gdbServerSocket, NULL, NULL);
-				}
-				else
-				{
-					close (gdbServerSocket);
-					g_gdbServerIsRunning = false;
-					gdbServerSocket = -1;
-				}
+				handleSocketListenEvent (&gdbServerSocket, &g_gdbServerIsRunning) ;
+			}
+			else if (sock == uartDebugServerSocket)
+			{
+				handleSocketListenEvent (&uartDebugServerSocket, &g_uartDebugServerIsRunning);
 			}
 			else
 			{
@@ -690,35 +754,11 @@ static void AppSocketCallback(SOCKET sock, uint8_t msgType, void *pvMsg)
 			// Process for the specific server
 			// 
 			if (sock == gdbServerSocket) {
-				//
-				// Good client socket?
-				//
-				if (pAcceptData->sock >= 0)
-				{
-					//
-					// Only allow a single client connection
-					//
-					if (gdbClientSocket >= 0)
-					{
-						/*
-						 * close the new client socket, refusing connection
-						 *
-						 */
-						dprintf ("APP_SOCK_CB[%d]: Second connection rejected\r\n", msgType);
-						close (pAcceptData->sock);
-					}
-					else
-					{
-						gdbClientSocket = pAcceptData->sock;
-						g_gdbClientConnected = true;
-						g_newGDBClientConnected = true;
-					}
-				}
-				else
-				{
-					gdbClientSocket = SOCK_ERR_INVALID;
-					g_gdbClientConnected = false;
-				}
+				handleSocketAcceptEvent (pAcceptData, &gdbClientSocket, &g_gdbClientConnected, &g_newGDBClientConnected, msgType);
+			}
+			else if (sock == uartDebugServerSocket)
+			{
+				handleSocketAcceptEvent (pAcceptData, &uartDebugClientSocket, &g_uartDebugClientConnected, &g_newUartDebugClientconncted, msgType);
 			}
 			else
 			{
@@ -761,6 +801,15 @@ static void AppSocketCallback(SOCKET sock, uint8_t msgType, void *pvMsg)
 					// Start another receive operation so we always get data
 					//
 					recv (gdbClientSocket, &localBuffer[0], INPUT_BUFFER_SIZE, 0);
+				}
+				else if (sock == uartDebugClientSocket)
+				{
+					//
+					// There should be no input data, at least
+					// nothing ctxLink is interested in so ignore it
+					// and just set up to recieve more, unwanted data
+					//
+					recv (uartDebugClientSocket, &localUartDebugBuffer[0], UART_DEBUG_INPUT_BUFFER_SIZE, 0);
 				}
 				else
 				{
@@ -821,7 +870,20 @@ static void AppSocketCallback(SOCKET sock, uint8_t msgType, void *pvMsg)
 					DoGDBSend ();
 				}
 			}
-
+			else if (sock == uartDebugClientSocket)
+			{
+				if (uiUartDebugSendQueueLength != 0)
+				{
+					DoUartDebugSend ();
+				}
+			}
+			else
+			{
+				//
+				// Unknown server ... TODO
+				//
+				dprintf ("APP_SOCK_CB[%d]: Send event from unknown server\r\n", msgType);
+			}
 			//
 			// Re-enable interrupts
 			//
@@ -1222,6 +1284,11 @@ void APP_Task(void)
 				//
 				recv(gdbClientSocket, &localBuffer[0], INPUT_BUFFER_SIZE, 0);
 			}
+			if (g_newUartDebugClientconncted == true)
+			{
+				g_newUartDebugClientconncted = false;
+				recv (uartDebugClientSocket, &localUartDebugBuffer[0], UART_DEBUG_INPUT_BUFFER_SIZE, 0);
+			}
 			break;
 		}
 		
@@ -1433,40 +1500,13 @@ void DoGDBSend(void)
 	m2mStub_EintEnable(); 
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-/// <summary> WiFi send packet.</summary>
-///
-/// <remarks> Sid Price, 3/22/2018.</remarks>
-///
-/// <param name="lpPacket"> [in,out] If non-null, the packet.</param>
-/// <param name="len">	    The length.</param>
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-void WiFi_SendPacket(unsigned char * lpPacket, int len)
+void DoUartDebugSend (void)
 {
-	m2mStub_EintDisable();	// Disable interrupts from the WINC1500 while we paly with the queue
-	//
-	// Check there is room in queue
-	// This check should be used to evaluate how large the queue needs to be
-	//
-	if(uiGDBSendQueueLength == SEND_QUEUE_SIZE)
-	{
-		dprintf("Wifi_SendPacket: Send queue is full\r\n");
-	}
-	else
-	{
-		memcpy(&(gdbSendQueue[uiGDBSendQueueIn].packet[0]), lpPacket, gdbSendQueue[uiGDBSendQueueIn].len);
-		uiGDBSendQueueIn = (uiGDBSendQueueIn + 1) % SEND_QUEUE_SIZE;
-		uiGDBSendQueueLength += 1;
-		//
-		// If this is the only entry in the queue send it now
-		//
-		if(uiGDBSendQueueLength == 1)
-		{
-			DoGDBSend();
-		}
-	}
-	m2mStub_EintEnable();		// Re-enable interrupts
+	send (uartDebugClientSocket, &(uartDebugSendQueue[uiUartDebugSendQueueOut].packet[0]), uartDebugSendQueue[uiUartDebugSendQueueOut].len, 0);
+	m2mStub_EintDisable ();
+	uiUartDebugSendQueueOut = (uiUartDebugSendQueueOut + 1) % SEND_QUEUE_SIZE;
+	uiUartDebugSendQueueLength -= 1;
+	m2mStub_EintEnable ();
 }
 
 static unsigned char sendBuffer[1024] = { 0 };  ///< The send buffer[ 1024]
