@@ -306,7 +306,8 @@ void platform_tasks(void)
 		platform_delay(1000);
 	}
 	m2m_wifi_task();			// WINC1500 tasks
-	GDB_TCPServer();				// Run the TCP sever state machine
+	GDB_TCPServer();			// Run the TCP sever state machine
+	UART_TCPServer ();			// Run the Uart/Debug TCP server
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////

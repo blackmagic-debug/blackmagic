@@ -363,7 +363,7 @@ void GDB_TCPServer(void)
 		// Allocate a socket for this server to listen and accept connections on
 		//
 		gdbServerSocket = socket(AF_INET, SOCK_STREAM, 0);
-		if ( gdbServerSocket != SOCK_ERR_NO_ERROR )
+		if ( gdbServerSocket < SOCK_ERR_NO_ERROR )
 		{
 			return ;
 		}
@@ -407,7 +407,7 @@ struct sockaddr_in uart_debug_addr = { 0 };
 
 void UART_TCPServer (void)
 {
-	switch (GDB_TCPServerState)
+	switch (UART_DEBUG_TCPServerState)
 	{
 	case SM_IDLE:
 		break;		// Startup and testing do nothing state
@@ -416,7 +416,7 @@ void UART_TCPServer (void)
 		// Allocate a socket for this server to listen and accept connections on
 		//
 		uartDebugServerSocket = socket (AF_INET, SOCK_STREAM, 0);
-		if (uartDebugServerSocket != SOCK_ERR_NO_ERROR)
+		if (uartDebugServerSocket < SOCK_ERR_NO_ERROR)
 		{
 			return;
 		}
@@ -759,6 +759,7 @@ static void AppSocketCallback(SOCKET sock, uint8_t msgType, void *pvMsg)
 			else if (sock == uartDebugServerSocket)
 			{
 				handleSocketAcceptEvent (pAcceptData, &uartDebugClientSocket, &g_uartDebugClientConnected, &g_newUartDebugClientconncted, msgType);
+				send (uartDebugClientSocket, "Hello from ctx\n", 15, 0);
 			}
 			else
 			{
@@ -820,10 +821,20 @@ static void AppSocketCallback(SOCKET sock, uint8_t msgType, void *pvMsg)
 					{
 						case SOCK_ERR_CONN_ABORTED:		// Peer closed connection
 						{
+							//
+							// Process depending upon the client that called the event
+							//
+							if (sock == gdbClientSocket) {
+								close (gdbClientSocket);
+								gdbClientSocket = SOCK_ERR_INVALID;	// Mark socket invalid
+								g_gdbClientConnected = false;			// No longer connected
+							}
+							else if (sock == uartDebugClientSocket) {
+								close (uartDebugClientSocket);
+								uartDebugClientSocket = SOCK_ERR_INVALID;	// Mark socket invalid
+								g_uartDebugClientConnected = false;			// No longer connected
+							}
 							dprintf ("APP_SOCK_CB[%d]: Connection closed by peer\r\n", msgType);
-							close (gdbClientSocket);
-							gdbClientSocket = SOCK_ERR_INVALID;	// Mark socket invalid
-							g_gdbClientConnected = false;			// No longer connected
 							break;
 						}
 						case SOCK_ERR_INVALID_ADDRESS:
@@ -1247,6 +1258,7 @@ void APP_Task(void)
 		case APP_STATE_START_SERVER:
 		{
 			GDB_TCPServerState = SM_HOME;
+			UART_DEBUG_TCPServerState = SM_HOME;
 			//
 			// Wait for the server to come up
 			//
