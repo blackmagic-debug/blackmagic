@@ -32,7 +32,8 @@
 #include "wf_socket.h"
 
 
-#define	GDBServerPort	2159
+#define	GDBServerPort			2159
+#define UART_DebugServerPort	2160
 
 #define INPUT_BUFFER_SIZE	2048
 static unsigned char inputBuffer[INPUT_BUFFER_SIZE] = { 0 }; ///< The input buffer[ input buffer size]
@@ -52,6 +53,9 @@ static bool g_newGDBClientConnected = false; ///< True if new client connected
 
 static SOCKET gdbServerSocket = SOCK_ERR_INVALID;  ///< The main gdb server socket
 static SOCKET gdbClientSocket = SOCK_ERR_INVALID;  ///< The gdb client socket
+
+static SOCKET uartDebugServerSocket = SOCK_ERR_INVALID; 
+static SOCKET uartDebugClientSocket = SOCK_ERR_INVALID;
 
 #define	WPS_LOCAL_TIMEOUT	30			// Timeout value in seconds
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -321,7 +325,7 @@ static enum WiFi_TCPServerStates
 	SM_LISTENING,   ///< An enum constant representing the sm listening option
 	SM_CLOSING, ///< An enum constant representing the sm closing option
 	SM_IDLE,	///< An enum constant representing the sm idle option
-} GDB_TCPServerState = SM_IDLE;
+} GDB_TCPServerState = SM_IDLE, UART_DEBUG_TCPServerState = SM_IDLE;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 /// <summary> A sockaddr in.</summary>
@@ -329,10 +333,10 @@ static enum WiFi_TCPServerStates
 /// <remarks> Sid Price, 3/22/2018.</remarks>
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-struct sockaddr_in addr = { 0 } ;
+struct sockaddr_in gdb_addr = { 0 } ;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-/// <summary> TCP server.</summary>
+/// <summary> GDB TCP server.</summary>
 ///
 /// <remarks> Sid Price, 3/22/2018.</remarks>
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -355,10 +359,10 @@ void GDB_TCPServer(void)
 		//
 		// Bind the socket
 		//
-		addr.sin_addr.s_addr = 0;
-		addr.sin_family = AF_INET;
-		addr.sin_port = _htons(GDBServerPort);
-		int8_t result = bind(gdbServerSocket, (struct sockaddr *)&addr, sizeof(addr));
+		gdb_addr.sin_addr.s_addr = 0;
+		gdb_addr.sin_family = AF_INET;
+		gdb_addr.sin_port = _htons(GDBServerPort);
+		int8_t result = bind(gdbServerSocket, (struct sockaddr *)&gdb_addr, sizeof(gdb_addr));
 		if ( result != SOCK_ERR_NO_ERROR )
 		{
 			return ;
@@ -378,6 +382,59 @@ void GDB_TCPServer(void)
 		// Close the socket connection.
 		close(gdbServerSocket);
 		GDB_TCPServerState = SM_HOME;
+		break;
+	}
+}
+
+struct sockaddr_in uart_debug_addr = { 0 };
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+/// <summary> UART/Debug TCP Server
+/// 		  
+/// <remarks> Default for ctxLink, will be killed if user enables SWO trace
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void UART_TCPServer (void)
+{
+	switch (GDB_TCPServerState)
+	{
+	case SM_IDLE:
+		break;		// Startup and testing do nothing state
+	case SM_HOME:
+		//
+		// Allocate a socket for this server to listen and accept connections on
+		//
+		uartDebugServerSocket = socket (AF_INET, SOCK_STREAM, 0);
+		if (uartDebugServerSocket != SOCK_ERR_NO_ERROR)
+		{
+			return;
+		}
+		//
+		// Bind the socket
+		//
+		uart_debug_addr.sin_addr.s_addr = 0;
+		uart_debug_addr.sin_family = AF_INET;
+		uart_debug_addr.sin_port = _htons (UART_DebugServerPort);
+		int8_t result = bind (uartDebugServerSocket, (struct sockaddr *)&uart_debug_addr, sizeof (uart_debug_addr));
+		if (result != SOCK_ERR_NO_ERROR)
+		{
+			return;
+		}
+		UART_DEBUG_TCPServerState = SM_LISTENING;
+		break;
+
+	case SM_LISTENING:
+		// 
+		// No need to perform any flush. 
+		// TCP data in TX FIFO will automatically transmit itself after it accumulates for a while.  
+		// If you want to decrease latency (at the expense of wasting network bandwidth on TCP overhead), 
+		// perform and explicit flush via the TCPFlush() API.
+		break;
+
+	case SM_CLOSING:
+		// Close the socket connection.
+		close (uartDebugServerSocket);
+		UART_DEBUG_TCPServerState = SM_HOME;
 		break;
 	}
 }
