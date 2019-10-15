@@ -668,6 +668,49 @@ void handleSocketAcceptEvent (t_socketAccept * lpAcceptData, SOCKET * lpClientSo
 		*lpClientConnectedState = false;
 	}
 }
+void processRecvError (SOCKET socket, t_socketRecv *lpRecvData, uint8_t msgType)
+{
+	//
+// Process socket recv errors
+//
+	switch (lpRecvData->bufSize)	// error is in the buffer size element
+	{
+		case SOCK_ERR_CONN_ABORTED:		// Peer closed connection
+		{
+			//
+			// Process depending upon the client that called the event
+			//
+			if (socket == gdbClientSocket) {
+				close (gdbClientSocket);
+				gdbClientSocket = SOCK_ERR_INVALID;	// Mark socket invalid
+				g_gdbClientConnected = false;			// No longer connected
+			}
+			else if (socket == uartDebugClientSocket) {
+				close (uartDebugClientSocket);
+				uartDebugClientSocket = SOCK_ERR_INVALID;	// Mark socket invalid
+				g_uartDebugClientConnected = false;			// No longer connected
+			}
+			dprintf ("APP_SOCK_CB[%d]: Connection closed by peer\r\n", msgType);
+			break;
+		}
+		case SOCK_ERR_INVALID_ADDRESS:
+		case SOCK_ERR_ADDR_ALREADY_IN_USE:
+		case SOCK_ERR_MAX_TCP_SOCK:
+		case SOCK_ERR_MAX_UDP_SOCK:
+		case SOCK_ERR_INVALID_ARG:
+		case SOCK_ERR_MAX_LISTEN_SOCK:
+		case SOCK_ERR_INVALID:
+		case SOCK_ERR_ADDR_IS_REQUIRED:
+		case SOCK_ERR_TIMEOUT:
+		case SOCK_ERR_BUFFER_FULL:
+		default:
+		{
+			dprintf ("APP_SOCK_CB[%d]: Unknown/unhandled error code %d bytes\r\n", msgType, lpRecvData->bufSize);
+			break;
+		}
+	}
+
+}
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 /// <summary> Callback, called when the application socket.</summary>
 ///
@@ -803,56 +846,25 @@ static void AppSocketCallback(SOCKET sock, uint8_t msgType, void *pvMsg)
 					//
 					recv (gdbClientSocket, &localBuffer[0], INPUT_BUFFER_SIZE, 0);
 				}
-				else if (sock == uartDebugClientSocket)
+				else
 				{
-					//
-					// There should be no input data, at least
-					// nothing ctxLink is interested in so ignore it
-					// and just set up to recieve more, unwanted data
-					//
+					processRecvError (sock, pRecvData,msgType);
+				}
+			}
+			else if (sock == uartDebugClientSocket)
+			{
+				if (pRecvData->bufSize > 0)
+				{
+				//
+				// There should be no input data, at least
+				// nothing ctxLink is interested in so ignore it
+				// and just set up to recieve more, unwanted data
+				//
 					recv (uartDebugClientSocket, &localUartDebugBuffer[0], UART_DEBUG_INPUT_BUFFER_SIZE, 0);
 				}
 				else
 				{
-					//
-					// Process socket recv errors
-					//
-					switch (pRecvData->bufSize)	// error is in the buffer size element
-					{
-						case SOCK_ERR_CONN_ABORTED:		// Peer closed connection
-						{
-							//
-							// Process depending upon the client that called the event
-							//
-							if (sock == gdbClientSocket) {
-								close (gdbClientSocket);
-								gdbClientSocket = SOCK_ERR_INVALID;	// Mark socket invalid
-								g_gdbClientConnected = false;			// No longer connected
-							}
-							else if (sock == uartDebugClientSocket) {
-								close (uartDebugClientSocket);
-								uartDebugClientSocket = SOCK_ERR_INVALID;	// Mark socket invalid
-								g_uartDebugClientConnected = false;			// No longer connected
-							}
-							dprintf ("APP_SOCK_CB[%d]: Connection closed by peer\r\n", msgType);
-							break;
-						}
-						case SOCK_ERR_INVALID_ADDRESS:
-						case SOCK_ERR_ADDR_ALREADY_IN_USE:
-						case SOCK_ERR_MAX_TCP_SOCK:
-						case SOCK_ERR_MAX_UDP_SOCK:
-						case SOCK_ERR_INVALID_ARG:
-						case SOCK_ERR_MAX_LISTEN_SOCK:
-						case SOCK_ERR_INVALID:
-						case SOCK_ERR_ADDR_IS_REQUIRED:
-						case SOCK_ERR_TIMEOUT:
-						case SOCK_ERR_BUFFER_FULL:
-						default:
-						{
-							dprintf ("APP_SOCK_CB[%d]: Unknown/unhandled error code %d bytes\r\n", msgType, pRecvData->bufSize);
-							break;
-						}
-					}
+					processRecvError (sock, pRecvData, msgType);
 				}
 			}
 			else
