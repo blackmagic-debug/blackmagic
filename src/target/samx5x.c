@@ -42,20 +42,26 @@ static int samx5x_flash_erase(struct target_flash *t, target_addr addr,
 			      size_t len);
 static int samx5x_flash_write(struct target_flash *f,
 			      target_addr dest, const void *src, size_t len);
-
-static bool samx5x_cmd_erase_all(target *t, int argc, const char **argv);
 static bool samx5x_cmd_lock_flash(target *t, int argc, const char **argv);
 static bool samx5x_cmd_unlock_flash(target *t, int argc, const char **argv);
 static bool samx5x_cmd_unlock_bootprot(target *t, int argc, const char **argv);
 static bool samx5x_cmd_lock_bootprot(target *t, int argc, const char **argv);
 static bool samx5x_cmd_read_userpage(target *t, int argc, const char **argv);
 static bool samx5x_cmd_serial(target *t, int argc, const char **argv);
-static bool samx5x_cmd_mbist(target *t, int argc, const char **argv);
 static bool samx5x_cmd_ssb(target *t, int argc, const char **argv);
 static bool samx5x_cmd_update_user_word(target *t, int argc, const char **argv);
+
+/* (The SAM D1x/2x implementation of erase_all is reused as it's identical)*/
+extern bool samd_cmd_erase_all(target *t, int argc, const char **argv);
+#define samx5x_cmd_erase_all samd_cmd_erase_all
+
+
+#ifdef SAMX5X_EXTRA_CMDS
+static bool samx5x_cmd_mbist(target *t, int argc, const char **argv);
 static bool samx5x_cmd_write8(target *t, int argc, const char **argv);
 static bool samx5x_cmd_write16(target *t, int argc, const char **argv);
 static bool samx5x_cmd_write32(target *t, int argc, const char **argv);
+#endif
 
 const struct command_s samx5x_cmd_list[] = {
 	{"erase_mass", (cmd_handler)samx5x_cmd_erase_all,
@@ -72,18 +78,20 @@ const struct command_s samx5x_cmd_list[] = {
 	 "Prints user page from flash"},
 	{"serial", (cmd_handler)samx5x_cmd_serial,
 	 "Prints serial number"},
-	{"mbist", (cmd_handler)samx5x_cmd_mbist,
-	 "Runs the built-in memory test"},
 	{"set_security_bit", (cmd_handler)samx5x_cmd_ssb,
 	 "Sets the security bit"},
 	{"update_user_word", (cmd_handler)samx5x_cmd_update_user_word,
 	 "Sets 32-bits in the user page: <addr> <value>"},
+#ifdef SAMX5X_EXTRA_CMDS
+	{"mbist", (cmd_handler)samx5x_cmd_mbist,
+	 "Runs the built-in memory test"},
 	{"write8", (cmd_handler)samx5x_cmd_write8,
 	 "Writes an 8-bit word: write8 <addr> <value>"},
 	{"write16", (cmd_handler)samx5x_cmd_write16,
 	 "Writes a 16-bit word: write16 <addr> <value>"},
 	{"write32", (cmd_handler)samx5x_cmd_write32,
 	 "Writes a 32-bit word: write32 <addr> <value>"},
+#endif
 	{NULL, NULL, NULL}
 };
 
@@ -213,83 +221,29 @@ const struct command_s samx5x_protected_cmd_list[] = {
 
 /**
  * Reads the SAM D5x/E5x Peripheral ID
+ *
+ * (Reuses the SAM D1x/2x implementation as it is identical)
  */
-uint64_t samx5x_read_pid(target *t)
-{
-	uint64_t pid = 0;
-	uint8_t i, j;
+extern uint64_t samd_read_pid(target *t);
+#define samx5x_read_pid samd_read_pid
 
-	/* Five PID registers to read LSB first */
-	for (i = 0, j = 0; i < 5; i++, j += 8)
-		pid |= (target_mem_read32(t, SAMX5X_DSU_PID(i)) & 0xFF) << j;
-
-	return pid;
-}
 /**
  * Reads the SAM D5x/E5x Component ID
+ *
+ * (Reuses the SAM D1x/2x implementation as it is identical)
  */
-uint32_t samx5x_read_cid(target *t)
-{
-	uint64_t cid = 0;
-	uint8_t i, j;
+extern uint32_t samd_read_cid(target *t);
+#define samx5x_read_cid samd_read_cid
 
-	/* Four CID registers to read LSB first */
-	for (i = 0, j = 0; i < 4; i++, j += 8)
-		cid |= (target_mem_read32(t, SAMX5X_DSU_CID(i)) & 0xFF) << j;
-
-	return cid;
-}
 
 /**
  * Overloads the default cortexm reset function with a version that
  * removes the target from extended reset where required.
+ *
+ * (Reuses the SAM D1x/2x implementation as it is identical)
  */
-static void
-samx5x_reset(target *t)
-{
-	/**
-	 * SRST is not asserted here as it appears to reset the adiv5
-	 * logic, meaning that subsequent adiv5_* calls PLATFORM_FATAL_ERROR.
-	 *
-	 * This is ok as normally you can just connect the debugger and go,
-	 * but if that's not possible (protection or SWCLK being used for
-	 * something else) then having SWCLK low on reset should get you
-	 * debug access (cold-plugging). TODO: Confirm this
-	 *
-	 * See the SAM D5x/E5x datasheet §12.6 Debug Operation for more
-	 * details.
-	 *
-	 * jtagtap_srst(true);
-	 * jtagtap_srst(false);
-	 */
-
-	/* Read DHCSR here to clear S_RESET_ST bit before reset */
-	target_mem_read32(t, CORTEXM_DHCSR);
-
-	/* Request system reset from NVIC: SRST doesn't work correctly */
-	/* This could be VECTRESET: 0x05FA0001 (reset only core)
-	 *          or SYSRESETREQ: 0x05FA0004 (system reset)
-	 */
-	target_mem_write32(t, CORTEXM_AIRCR,
-			   CORTEXM_AIRCR_VECTKEY | CORTEXM_AIRCR_SYSRESETREQ);
-
-	/* Exit extended reset */
-	if (target_mem_read32(t, SAMX5X_DSU_CTRLSTAT) &
-	    SAMX5X_STATUSA_CRSTEXT) {
-		/* Write bit to clear from extended reset */
-		target_mem_write32(t, SAMX5X_DSU_CTRLSTAT,
-				   SAMX5X_STATUSA_CRSTEXT);
-	}
-
-	/* Poll for release from reset */
-	while (target_mem_read32(t, CORTEXM_DHCSR) & CORTEXM_DHCSR_S_RESET_ST);
-
-	/* Reset DFSR flags */
-	target_mem_write32(t, CORTEXM_DFSR, CORTEXM_DFSR_RESETALL);
-
-	/* Clear any target errors */
-	target_check_error(t);
-}
+extern void samd_reset(target *t);
+#define samx5x_reset samd_reset
 
 /**
  * Overload the default cortexm attach for when the samd is protected.
@@ -298,21 +252,11 @@ samx5x_reset(target *t)
  * fail as the S_HALT bit in the DHCSR will never go high. This
  * function allows users to attach on a temporary basis so they can
  * rescue the device.
+ *
+ * (Reuses the SAM D1x/2x implementation as it is identical)
  */
-static bool samx5x_protected_attach(target *t)
-{
-	/**
-	 * TODO: Notify the user that we're not really attached and
-	 * they should issue the 'monitor erase_mass' command to
-	 * regain access to the chip.
-	 */
-
-	/* Patch back in the normal cortexm attach for next time */
-	t->attach = cortexm_attach;
-
-	/* Allow attach this time */
-	return true;
-}
+extern bool samd_protected_attach(target *t);
+#define samx5x_protected_attach samd_protected_attach
 
 /**
  * Use the DSU Device Indentification Register to populate a struct
@@ -692,46 +636,6 @@ static int samx5x_flash_write(struct target_flash *f,
 }
 
 /**
- * Uses the Device Service Unit to erase the entire flash
- */
-static bool samx5x_cmd_erase_all(target *t, int argc, const char **argv)
-{
-	(void)argc;
-	(void)argv;
-	/* Clear the DSU status bits */
-	target_mem_write32(t, SAMX5X_DSU_CTRLSTAT,
-			   SAMX5X_STATUSA_DONE | SAMX5X_STATUSA_PERR |
-			   SAMX5X_STATUSA_FAIL);
-
-	/* Erase all */
-	target_mem_write32(t, SAMX5X_DSU_CTRLSTAT, SAMX5X_CTRL_CHIP_ERASE);
-
-	/* Poll for DSU Ready */
-	uint32_t status;
-	while (((status = target_mem_read32(t, SAMX5X_DSU_CTRLSTAT)) &
-		(SAMX5X_STATUSA_DONE | SAMX5X_STATUSA_PERR |
-		 SAMX5X_STATUSA_FAIL)) == 0)
-		if (target_check_error(t))
-			return false;
-
-	/* Test the protection error bit in Status A */
-	if (status & SAMX5X_STATUSA_PERR) {
-		tc_printf(t, "Erase failed due to a protection error.\n");
-		return false;
-	}
-
-	/* Test the fail bit in Status A */
-	if (status & SAMX5X_STATUSA_FAIL) {
-		tc_printf(t, "Erase failed.\n");
-		return false;
-	}
-
-	tc_printf(t, "Erase successful!\n");
-
-	return true;
-}
-
-/**
  * Erase and write the NVM user page
  */
 static int samx5x_write_user_page(target *t, uint8_t *buffer)
@@ -959,76 +863,6 @@ static bool samx5x_cmd_serial(target *t, int argc, const char **argv)
 }
 
 /**
- * Returns the size (in bytes) of the RAM.
- */
-static uint32_t samx5x_ram_size(target *t)
-{
-	/* Read the Device ID */
-	uint32_t did = target_mem_read32(t, SAMX5X_DSU_DID);
-
-	/* Mask off the device select bits */
-	struct samx5x_descr samx5x = samx5x_parse_device_id(did);
-
-	/* Adjust the maximum ram size (256KB) down as appropriate */
-	return (0x40000 - 0x10000 * (20 - samx5x.mem));
-}
-
-/**
- * Runs the Memory Built In Self Test (MBIST)
- */
-static bool samx5x_cmd_mbist(target *t, int argc, const char **argv)
-{
-	(void)argc;
-	(void)argv;
-
-	DEBUG("Running MBIST for memory range 0x%08x-%08"PRIx32"\n",
-	      SAMX5X_RAM_START, samx5x_ram_size(t));
-
-	/* Write the memory parameters to the DSU
-	 * Note that the two least significant bits of the address are
-	 * the access mode, so the actual starting address should be
-	 * left shifted by 2
-	 *
-	 * Similarly, the length must also be left shifted by 2 as the
-	 * two least significant bits of that register are unused */
-	target_mem_write32(t, SAMX5X_DSU_ADDRESS, SAMX5X_RAM_START);
-	target_mem_write32(t, SAMX5X_DSU_LENGTH, samx5x_ram_size(t) << 2);
-
-	/* Clear the fail and protection error bits */
-	target_mem_write32(t, SAMX5X_DSU_CTRLSTAT, SAMX5X_STATUSA_FAIL |
-			   SAMX5X_STATUSA_PERR);
-
-	/* Write the MBIST command */
-	target_mem_write32(t, SAMX5X_DSU_CTRLSTAT, SAMX5X_CTRL_MBIST);
-
-	/* Poll for DSU Ready */
-	uint32_t status;
-	while (((status = target_mem_read32(t, SAMX5X_DSU_CTRLSTAT)) &
-		(SAMX5X_STATUSA_DONE | SAMX5X_STATUSA_PERR |
-		 SAMX5X_STATUSA_FAIL)) == 0)
-		if (target_check_error(t))
-			return false;
-
-	/* Test the protection error bit in Status A */
-	if (status & SAMX5X_STATUSA_PERR) {
-		tc_printf(t, "MBIST not run due to protection error.\n");
-		return true;
-	}
-
-	/* Test the fail bit in Status A */
-	if (status & SAMX5X_STATUSA_FAIL) {
-		uint32_t data = target_mem_read32(t, SAMX5X_DSU_DATA);
-		tc_printf(t, "MBIST Fail @ 0x%08x (bit %d in phase %d)\n",
-			  target_mem_read32(t, SAMX5X_DSU_ADDRESS),
-			  data & 0x1f, data >> 8);
-	} else {
-		tc_printf(t, "MBIST Passed!\n");
-	}
-
-	return true;
-}
-
-/**
  * Sets the security bit
  */
 static bool samx5x_cmd_ssb(target *t, int argc, const char **argv)
@@ -1103,6 +937,78 @@ static bool samx5x_cmd_update_user_word(target *t, int argc, const char **argv)
 			  "settings\n"
 			  "(bootprot, wdt, etc.) to take effect.");
 	tc_printf(t, "\n");
+
+	return true;
+}
+
+#ifdef SAMX5X_EXTRA_CMDS
+
+/**
+ * Returns the size (in bytes) of the RAM.
+ */
+static uint32_t samx5x_ram_size(target *t)
+{
+	/* Read the Device ID */
+	uint32_t did = target_mem_read32(t, SAMX5X_DSU_DID);
+
+	/* Mask off the device select bits */
+	struct samx5x_descr samx5x = samx5x_parse_device_id(did);
+
+	/* Adjust the maximum ram size (256KB) down as appropriate */
+	return (0x40000 - 0x10000 * (20 - samx5x.mem));
+}
+
+/**
+ * Runs the Memory Built In Self Test (MBIST)
+ */
+static bool samx5x_cmd_mbist(target *t, int argc, const char **argv)
+{
+	(void)argc;
+	(void)argv;
+
+	DEBUG("Running MBIST for memory range 0x%08x-%08"PRIx32"\n",
+	      SAMX5X_RAM_START, samx5x_ram_size(t));
+
+	/* Write the memory parameters to the DSU
+	 * Note that the two least significant bits of the address are
+	 * the access mode, so the actual starting address should be
+	 * left shifted by 2
+	 *
+	 * Similarly, the length must also be left shifted by 2 as the
+	 * two least significant bits of that register are unused */
+	target_mem_write32(t, SAMX5X_DSU_ADDRESS, SAMX5X_RAM_START);
+	target_mem_write32(t, SAMX5X_DSU_LENGTH, samx5x_ram_size(t) << 2);
+
+	/* Clear the fail and protection error bits */
+	target_mem_write32(t, SAMX5X_DSU_CTRLSTAT, SAMX5X_STATUSA_FAIL |
+			   SAMX5X_STATUSA_PERR);
+
+	/* Write the MBIST command */
+	target_mem_write32(t, SAMX5X_DSU_CTRLSTAT, SAMX5X_CTRL_MBIST);
+
+	/* Poll for DSU Ready */
+	uint32_t status;
+	while (((status = target_mem_read32(t, SAMX5X_DSU_CTRLSTAT)) &
+		(SAMX5X_STATUSA_DONE | SAMX5X_STATUSA_PERR |
+		 SAMX5X_STATUSA_FAIL)) == 0)
+		if (target_check_error(t))
+			return false;
+
+	/* Test the protection error bit in Status A */
+	if (status & SAMX5X_STATUSA_PERR) {
+		tc_printf(t, "MBIST not run due to protection error.\n");
+		return true;
+	}
+
+	/* Test the fail bit in Status A */
+	if (status & SAMX5X_STATUSA_FAIL) {
+		uint32_t data = target_mem_read32(t, SAMX5X_DSU_DATA);
+		tc_printf(t, "MBIST Fail @ 0x%08x (bit %d in phase %d)\n",
+			  target_mem_read32(t, SAMX5X_DSU_ADDRESS),
+			  data & 0x1f, data >> 8);
+	} else {
+		tc_printf(t, "MBIST Passed!\n");
+	}
 
 	return true;
 }
@@ -1197,3 +1103,5 @@ static bool samx5x_cmd_write32(target *t, int argc, const char **argv)
 
 	return true;
 }
+
+#endif

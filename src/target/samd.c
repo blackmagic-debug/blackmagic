@@ -42,7 +42,7 @@ static int samd_flash_erase(struct target_flash *t, target_addr addr, size_t len
 static int samd_flash_write(struct target_flash *f,
                             target_addr dest, const void *src, size_t len);
 
-static bool samd_cmd_erase_all(target *t, int argc, const char **argv);
+bool samd_cmd_erase_all(target *t, int argc, const char **argv);
 static bool samd_cmd_lock_flash(target *t, int argc, const char **argv);
 static bool samd_cmd_unlock_flash(target *t, int argc, const char **argv);
 static bool samd_cmd_unlock_bootprot(target *t, int argc, const char **argv);
@@ -254,8 +254,7 @@ uint32_t samd_read_cid(target *t)
  * Overloads the default cortexm reset function with a version that
  * removes the target from extended reset where required.
  */
-static void
-samd_reset(target *t)
+void samd_reset(target *t)
 {
 	/**
 	 * SRST is not asserted here as it appears to reset the adiv5
@@ -349,7 +348,7 @@ samd20_revB_halt_resume(target *t, bool step)
  * function allows users to attach on a temporary basis so they can
  * rescue the device.
  */
-static bool samd_protected_attach(target *t)
+bool samd_protected_attach(target *t)
 {
 	/**
 	 * TODO: Notify the user that we're not really attached and
@@ -637,7 +636,7 @@ static int samd_flash_write(struct target_flash *f,
 /**
  * Uses the Device Service Unit to erase the entire flash
  */
-static bool samd_cmd_erase_all(target *t, int argc, const char **argv)
+bool samd_cmd_erase_all(target *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
