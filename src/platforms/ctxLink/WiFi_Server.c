@@ -817,6 +817,9 @@ static void AppSocketCallback(SOCKET sock, uint8_t msgType, void *pvMsg)
 		case M2M_SOCKET_RECV_EVENT:
 		{
 			t_socketRecv *pRecvData = (t_socketRecv *)pvMsg;
+#ifdef INSTRUMENT
+			gpio_toggle (LED_PORT, LED_3);
+#endif
 			//
 			// Process the data for the specific server's client
 			// 
