@@ -37,7 +37,7 @@
 // Define the following symbol to disable the Mode LED
 // and allow it to be used for instrumentation
 //
-#define	INSTRUMENT	1
+//#define	INSTRUMENT	1
 
 #define PLATFORM_HAS_TRACESWO
 #define PLATFORM_HAS_POWER_SWITCH
