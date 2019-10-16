@@ -706,6 +706,9 @@ static void AppSocketCallback(SOCKET sock, uint8_t msgType, void *pvMsg)
 		case M2M_SOCKET_RECV_EVENT:
 		{
 			t_socketRecv *pRecvData = (t_socketRecv *)pvMsg;
+#ifdef INSTRUMENT
+			gpio_toggle (LED_PORT, LED_3);
+#endif
 			//
 			// if we have good data copy it to the inputBuffer
 			// circular buffer

@@ -112,7 +112,9 @@ void mode_led_task(void)
 				 * Set up the led control registers according to the requested mode
 				 */
 				modeTaskState = MODE_LED_STATE_ON;
+#ifndef INSTRUMENT
 				gpio_set(LED_PORT, LED_MODE);
+#endif
 			}
 			mode_setparameters (led_mode);
 			break;	
@@ -137,7 +139,9 @@ void mode_led_task(void)
 					modeTaskState = MODE_LED_STATE_PULSE_OFF;
 					ledModeTimeout = MODE_LED_PULSE_OFF_TIME;
 				}
+#ifndef INSTRUMENT
 				gpio_clear(LED_PORT, LED_MODE);
+#endif
 			}
 			break;	
 		}
@@ -147,7 +151,9 @@ void mode_led_task(void)
 			{
 				modeTaskState = MODE_LED_STATE_ON;
 				ledModeTimeout = MODE_LED_ON_TIME;
+#ifndef INSTRUMENT
 				gpio_set(LED_PORT, LED_MODE);
+#endif
 			}
 			break;	
 		}
@@ -158,7 +164,9 @@ void mode_led_task(void)
 				modeTaskState = MODE_LED_STATE_ON;
 				ledModeTimeout = MODE_LED_ON_TIME;
 				mode_setparameters(led_mode); 		// Reset registers for next cycle
+#ifndef INSTRUMENT
 				gpio_set(LED_PORT, LED_MODE);		// LED on
+#endif
 			}
 			break;	
 		}
