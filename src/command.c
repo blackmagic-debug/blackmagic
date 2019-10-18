@@ -94,8 +94,9 @@ long cortexm_wait_timeout = 2000; /* Timeout to wait for Cortex to react on halt
 int command_process(target *t, char *cmd)
 {
 	const struct command_s *c;
-	int argc = 0;
+	int argc = 1;
 	const char **argv;
+	const char *part;
 
 	/* Initial estimate for argc */
 	for(char *s = cmd; *s; s++)
@@ -104,8 +105,9 @@ int command_process(target *t, char *cmd)
 	argv = alloca(sizeof(const char *) * argc);
 
 	/* Tokenize cmd to find argv */
-	for(argc = 0, argv[argc] = strtok(cmd, " \t");
-		argv[argc]; argv[++argc] = strtok(NULL, " \t"));
+	argc = 0;
+	for (part = strtok(cmd, " \t"); part; part = strtok(NULL, " \t"))
+		argv[argc++] = part;
 
 	/* Look for match and call handler */
 	for(c = cmd_list; c->cmd; c++) {
