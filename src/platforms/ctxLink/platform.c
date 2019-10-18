@@ -511,7 +511,7 @@ bool platform_check_battery_voltage (void)
 //
 // This char array receives both the target and battrey voltages
 //  
-static char voltages[32] = { 0 };
+static char voltages[64] = { 0 };
 
 const char *platform_target_voltage( void )
 {

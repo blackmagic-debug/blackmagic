@@ -736,7 +736,7 @@ static void AppSocketCallback(SOCKET sock, uint8_t msgType, void *pvMsg)
 
 		case M2M_SOCKET_CONNECT_EVENT:
 		{
-			t_socketConnect *pSockConnResp = (t_socketConnect *) pvMsg;
+			// t_socketConnect *pSockConnResp = (t_socketConnect *) pvMsg;
 			//
 			// This event occurs when ctxLink establishes a connection back to
 			// a client.
