@@ -654,9 +654,9 @@ void stlink_leave_state(void)
 		DEBUG("Leaving DEBUG Mode\n");
 		send_recv(dbg_cmd, 16, NULL, 0);
 	} else if (data[0] == STLINK_DEV_BOOTLOADER_MODE) {
-		DEBUG("BOOTLOADER Mode\n");
+		DEBUG("Leaving BOOTLOADER Mode\n");
 	} else if (data[0] == STLINK_DEV_MASS_MODE) {
-		DEBUG("MASS Mode\n");
+		DEBUG("Leaving MASS Mode\n");
 	} else {
 		DEBUG("Unknown Mode %02x\n", data[0]);
 	}
@@ -921,8 +921,8 @@ void stlink_init(int argc, char **argv)
 		DEBUG("Please update Firmware\n");
 		goto error_1;
 	}
-	stlink_resetsys();
 	stlink_leave_state();
+	stlink_resetsys();
 	assert(gdb_if_init() == 0);
 	return;
   error_1:
