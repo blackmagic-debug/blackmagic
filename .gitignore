@@ -27,3 +27,5 @@ Good_net_startup.txt
 .vs/WDBP/v15/.suo
 
 WDBP-Release.vgdbsettings.sidprice.user
+
+.vscode/.cortex-debug.peripherals.state.json

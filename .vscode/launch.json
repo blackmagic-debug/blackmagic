@@ -41,6 +41,21 @@
             "runToMain": true   // Will not be used if "postLaunchCommands" has "continue"
         },
         {
+            "name": "Debug BMP",
+            "type": "cortex-debug",
+            "request": "launch",
+            //"svdFile": "${workspaceFolder}/SVD/STM32F411xx.svd",
+            "cwd": "${workspaceFolder}/src",
+            "servertype": "bmp",
+            "BMPGDBSerialPort": "//./COM32",
+            "executable": "blackmagic",
+            "powerOverBMP": "enable",
+            "showDevDebugOutput": true,
+            "interface": "swd",
+            "device": "STM32F103CB",
+            "runToMain": true   // Will not be used if "postLaunchCommands" has "continue"
+        },
+        {
             "name": "Debug ctxLink WiFi",
             "type": "cortex-debug",
             "request": "launch",
