@@ -90,42 +90,49 @@ void usbuart_init(void)
  */
 static void usbuart_run(void)
 {
-	/* forcibly empty fifo if no USB endpoint */
-	if (cdcacm_get_config() != 1)
+#ifdef ctxLink
+	if (platform_has_network_client (&buf_rx[0], &buf_rx_in, &buf_rx_out, FIFO_SIZE) == false)
 	{
-		buf_rx_out = buf_rx_in;
-	}
-
-	/* if fifo empty, nothing further to do */
-	if (buf_rx_in == buf_rx_out) {
-		/* turn off LED, disable IRQ */
-		timer_disable_irq(USBUSART_TIM, TIM_DIER_UIE);
-		gpio_clear(LED_PORT_UART, LED_UART);
-	}
-	else
-	{
-		uint8_t packet_buf[CDCACM_PACKET_SIZE];
-		uint8_t packet_size = 0;
-		uint8_t buf_out = buf_rx_out;
-
-		/* copy from uart FIFO into local usb packet buffer */
-		while (buf_rx_in != buf_out && packet_size < CDCACM_PACKET_SIZE)
+#endif
+		/* forcibly empty fifo if no USB endpoint */
+		if (cdcacm_get_config () != 1)
 		{
-			packet_buf[packet_size++] = buf_rx[buf_out++];
-
-			/* wrap out pointer */
-			if (buf_out >= FIFO_SIZE)
-			{
-				buf_out = 0;
-			}
-
+			buf_rx_out = buf_rx_in;
 		}
 
-		/* advance fifo out pointer by amount written */
-		buf_rx_out += usbd_ep_write_packet(usbdev,
+		/* if fifo empty, nothing further to do */
+		if (buf_rx_in == buf_rx_out) {
+			/* turn off LED, disable IRQ */
+			timer_disable_irq (USBUSART_TIM, TIM_DIER_UIE);
+			gpio_clear (LED_PORT_UART, LED_UART);
+		}
+		else
+		{
+			uint8_t packet_buf[CDCACM_PACKET_SIZE];
+			uint8_t packet_size = 0;
+			uint8_t buf_out = buf_rx_out;
+
+			/* copy from uart FIFO into local usb packet buffer */
+			while (buf_rx_in != buf_out && packet_size < CDCACM_PACKET_SIZE)
+			{
+				packet_buf[packet_size++] = buf_rx[buf_out++];
+
+				/* wrap out pointer */
+				if (buf_out >= FIFO_SIZE)
+				{
+					buf_out = 0;
+				}
+
+			}
+
+			/* advance fifo out pointer by amount written */
+			buf_rx_out += usbd_ep_write_packet (usbdev,
 				CDCACM_UART_ENDPOINT, packet_buf, packet_size);
-		buf_rx_out %= FIFO_SIZE;
+			buf_rx_out %= FIFO_SIZE;
+		}
+#ifdef ctxLink
 	}
+#endif
 }
 
 void usbuart_set_line_coding(struct usb_cdc_line_coding *coding)
@@ -212,13 +219,24 @@ void usbuart_usb_in_cb(usbd_device *dev, uint8_t ep)
  * Allowed to read from FIFO out pointer, but not write to it.
  * Allowed to write to FIFO in pointer.
  */
+static uint32_t uartError = 0;
+static volatile uint32_t isrCount = 0;
 void USBUSART_ISR(void)
 {
 	uint32_t err = USART_SR(USBUSART);
+	isrCount++;
 	char c = usart_recv(USBUSART);
 	if (err & (USART_SR_ORE | USART_SR_FE | USART_SR_NE))
+	{
+		uartError = err;
+		if ((uartError & USART_SR_LBD) != 0)
+		{
+			uartError &= ~USART_SR_LBD;
+			USART_SR (USBUSART) = uartError;
+		}
 		return;
-
+	}
+	uartError = 0;
 	/* Turn on LED */
 	gpio_set(LED_PORT_UART, LED_UART);
 

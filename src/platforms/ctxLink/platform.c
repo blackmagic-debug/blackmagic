@@ -27,6 +27,7 @@
 #include "usbuart.h"
 #include "morse.h"
 
+#include "platform.h"
 #include "WiFi_Server.h"
 
 #include <libopencm3/stm32/f4/rcc.h>
@@ -41,6 +42,8 @@
 #include <libopencm3/cm3/cortex.h>
 #include <libopencm3/stm32/f4/adc.h>
 #include <libopencm3/stm32/f4/spi.h>
+#include <libopencm3/stm32/timer.h>
+
 
 #include "winc1500_api.h"
 
@@ -627,6 +630,48 @@ int  platform_wifi_getpacket( char * pBuf,  int bufSize )
 	return ( iResult ) ;
 }
 
+#define PACKET_SIZE	64
+
+bool platform_has_network_client(uint8_t * lpBuf_rx, uint8_t * lpBuf_rx_in, uint8_t * lpBuf_rx_out, unsigned fifoSize)
+{
+	bool fResult = false ;
+	if ( (fResult = isUARTClientConnected()) == false)
+	{
+		return fResult ;
+	}
+		/* if fifo empty, nothing further to do */
+	if (*lpBuf_rx_in == *lpBuf_rx_out) {
+		/* turn off LED, disable IRQ */
+		timer_disable_irq(USBUSART_TIM, TIM_DIER_UIE);
+		gpio_clear(LED_PORT_UART, LED_UART);
+	}
+	else
+	{
+		uint8_t packet_buf[PACKET_SIZE];
+		uint8_t packet_size = 0;
+		uint8_t buf_out = *lpBuf_rx_out;
+
+		/* copy from uart FIFO into local network packet buffer */
+		while (*lpBuf_rx_in != buf_out && packet_size < PACKET_SIZE)
+		{
+			packet_buf[packet_size++] = lpBuf_rx[buf_out++];
+
+			/* wrap out pointer */
+			if (buf_out >= fifoSize)
+			{
+				buf_out = 0;
+			}
+
+		}
+		//
+		// Send the data to the client
+		//
+		SendUartData(&packet_buf[0], packet_size) ;
+		*lpBuf_rx_out += packet_size ;
+		*lpBuf_rx_out %= fifoSize;
+	}
+	return fResult ;
+}
 //#ifdef ENABLE_DEBUG
 //enum
 //{

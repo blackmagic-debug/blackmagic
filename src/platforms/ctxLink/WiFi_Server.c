@@ -975,6 +975,10 @@ bool isGDBClientConnected(void)
 	return res;
 }
 
+bool isUARTClientConnected(void)
+{
+	return g_uartDebugClientConnected ;
+}
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 /// <summary> Application initialize.</summary>
 ///
@@ -1534,6 +1538,17 @@ void DoUartDebugSend (void)
 	uiUartDebugSendQueueOut = (uiUartDebugSendQueueOut + 1) % SEND_QUEUE_SIZE;
 	uiUartDebugSendQueueLength -= 1;
 	m2mStub_EintEnable ();
+}
+
+void SendUartData(uint8_t *lpBuffer, uint8_t length)
+{
+	m2mStub_EintDisable ();
+	memcpy(uartDebugSendQueue[uiUartDebugSendQueueIn].packet, lpBuffer, length) ;
+	uartDebugSendQueue[uiUartDebugSendQueueIn].len = length ;
+	uiUartDebugSendQueueIn = (uiUartDebugSendQueueIn + 1) % SEND_QUEUE_SIZE ;
+	uiUartDebugSendQueueLength += 1 ;
+	m2mStub_EintEnable ();
+	DoUartDebugSend() ;
 }
 
 static unsigned char sendBuffer[1024] = { 0 };  ///< The send buffer[ 1024]
