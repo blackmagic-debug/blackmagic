@@ -32,7 +32,8 @@
 #include "wf_socket.h"
 
 
-#define	GDBServerPort	2159
+#define	GDBServerPort			2159
+#define UART_DebugServerPort	2160
 
 #define INPUT_BUFFER_SIZE	2048
 static unsigned char inputBuffer[INPUT_BUFFER_SIZE] = { 0 }; ///< The input buffer[ input buffer size]
@@ -46,14 +47,30 @@ static bool g_driverInitComplete = false; ///< True to driver initialize complet
 static bool g_wifi_connected = false;	  ///< True if WiFi connected
 static bool g_ipAddressAssigned = false;  ///< True if IP address assigned
 static bool g_dnsResolved = false;		  ///< True if DNS resolved
-static bool g_clientConnected = false;	  ///< True if client connected
-static bool g_serverIsRunning = false;	  ///< True if server is running
-static bool g_newClientConnected = false; ///< True if new client connected
+static bool g_gdbClientConnected = false;	  ///< True if client connected
+static bool g_gdbServerIsRunning = false;	  ///< True if server is running
+static bool g_newGDBClientConnected = false; ///< True if new client connected
 
-static SOCKET serverSocket = SOCK_ERR_INVALID;  ///< The server socket
-static SOCKET clientSocket = SOCK_ERR_INVALID;  ///< The client socket
+static SOCKET gdbServerSocket = SOCK_ERR_INVALID;  ///< The main gdb server socket
+static SOCKET gdbClientSocket = SOCK_ERR_INVALID;  ///< The gdb client socket
+
+#define UART_DEBUG_INPUT_BUFFER_SIZE	32
+static unsigned char localUartDebugBuffer[UART_DEBUG_INPUT_BUFFER_SIZE] = { 0 };	///< The local buffer[ input buffer size]
+
+static SOCKET uartDebugServerSocket = SOCK_ERR_INVALID; 
+static SOCKET uartDebugClientSocket = SOCK_ERR_INVALID;
+static bool	g_uartDebugClientConnected = false;
+static bool g_userConfiguredUart = false;
+static bool g_uartDebugServerIsRunning = false;
+static bool	g_newUartDebugClientconncted = false;
 
 #define	WPS_LOCAL_TIMEOUT	30			// Timeout value in seconds
+
+//
+// Sign-on message for new UART data clients
+//
+static char uartClientSignon[] = "\r\nctxLink UART connection.\r\nPlease enter the UART setup as baud, bits, parity, stop.\r\ne.g. 38400,8,N,1\r\n\r\n";
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 /// <summary> Values that represent Application states.</summary>
 ///
@@ -103,12 +120,17 @@ typedef struct tagSendQueueEntry
 	unsigned		len;						  ///< The length
 } SEND_QUEUE_ENTRY ;
 
-SEND_QUEUE_ENTRY SendQueue[SEND_QUEUE_SIZE] = { 0 }; ///< The send queue[ send queue size]
-unsigned volatile	uiSendQueueIn = 0;				 ///< The send queue in
-unsigned volatile	uiSendQueueOut = 0;				 ///< The send queue out
-unsigned volatile	uiSendQueueLength = 0;			 ///< Length of the send queue
-// bool		fWaitingForAck = false;
-void DoSend(void);
+SEND_QUEUE_ENTRY gdbSendQueue[SEND_QUEUE_SIZE] = { 0 }; ///< The send queue[ send queue size]
+unsigned volatile	uiGDBSendQueueIn = 0;				 ///< The send queue in
+unsigned volatile	uiGDBSendQueueOut = 0;				 ///< The send queue out
+unsigned volatile	uiGDBSendQueueLength = 0;			 ///< Length of the send queue
+void DoGDBSend(void);
+
+SEND_QUEUE_ENTRY	uartDebugSendQueue[SEND_QUEUE_SIZE] = { 0 }; ///< The send queue[ send queue size]
+unsigned volatile	uiUartDebugSendQueueIn = 0;				///< The send queue in
+unsigned volatile	uiUartDebugSendQueueOut = 0;			///< The send queue out
+unsigned volatile	uiUartDebugSendQueueLength = 0;			///< Length of the send queue
+void DoUartDebugSend (void);
 
 static bool pressActive = false; ///< True to press active
 bool wpsActive = false;			 ///< True to wps active
@@ -321,18 +343,7 @@ static enum WiFi_TCPServerStates
 	SM_LISTENING,   ///< An enum constant representing the sm listening option
 	SM_CLOSING, ///< An enum constant representing the sm closing option
 	SM_IDLE,	///< An enum constant representing the sm idle option
-} TCPServerState = SM_IDLE;
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-/// <summary> TCP server initialize.</summary>
-///
-/// <remarks> Sid Price, 3/22/2018.</remarks>
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-void TCPServerInit(void)
-{
-	TCPServerState = SM_CLOSING;
-}
+} GDB_TCPServerState = SM_IDLE, UART_DEBUG_TCPServerState = SM_IDLE;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 /// <summary> A sockaddr in.</summary>
@@ -340,17 +351,17 @@ void TCPServerInit(void)
 /// <remarks> Sid Price, 3/22/2018.</remarks>
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-struct sockaddr_in addr = { 0 } ;
+struct sockaddr_in gdb_addr = { 0 } ;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-/// <summary> TCP server.</summary>
+/// <summary> GDB TCP server.</summary>
 ///
 /// <remarks> Sid Price, 3/22/2018.</remarks>
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void TCPServer(void)
+void GDB_TCPServer(void)
 {
-	switch ( TCPServerState )
+	switch ( GDB_TCPServerState )
 	{
 	case SM_IDLE:
 		break ;		// Startup and testing do nothing state
@@ -358,78 +369,90 @@ void TCPServer(void)
 		//
 		// Allocate a socket for this server to listen and accept connections on
 		//
-		serverSocket = socket(AF_INET, SOCK_STREAM, 0);
-		if ( serverSocket != SOCK_ERR_NO_ERROR )
+		gdbServerSocket = socket(AF_INET, SOCK_STREAM, 0);
+		if ( gdbServerSocket < SOCK_ERR_NO_ERROR )
 		{
 			return ;
 		}
 		//
 		// Bind the socket
 		//
-		addr.sin_addr.s_addr = 0;
-		addr.sin_family = AF_INET;
-		addr.sin_port = _htons(GDBServerPort);
-		int8_t result = bind(serverSocket, (struct sockaddr *)&addr, sizeof(addr));
+		gdb_addr.sin_addr.s_addr = 0;
+		gdb_addr.sin_family = AF_INET;
+		gdb_addr.sin_port = _htons(GDBServerPort);
+		int8_t result = bind(gdbServerSocket, (struct sockaddr *)&gdb_addr, sizeof(gdb_addr));
 		if ( result != SOCK_ERR_NO_ERROR )
 		{
 			return ;
 		}
-		TCPServerState = SM_LISTENING;
+		GDB_TCPServerState = SM_LISTENING;
 		break;
 
 	case SM_LISTENING:
-		//		// See if anyone is connected to us
-		//		if(!TCPIsConnected(MySocket))
-		//		    return;
-		//
-		//		// Figure out how many bytes have been received and how many we can transmit.
-		//		wMaxGet = TCPIsGetReady(MySocket);  // Get TCP RX FIFO byte count
-		//		wMaxPut = TCPIsPutReady(MySocket);  // Get TCP TX FIFO free space
-		//
-		//		// Make sure we don't take more bytes out of the RX FIFO than we can put into the TX FIFO
-		//		if(wMaxPut < wMaxGet)
-		//		    wMaxGet = wMaxPut;
-		//
-		//		// Process all bytes that we can
-		//		// This is implemented as a loop, processing up to sizeof(AppBuffer) bytes at a time.
-		//		// This limits memory usage while maximizing performance.  Single byte Gets and Puts are a lot slower than multibyte GetArrays and PutArrays.
-		//		wCurrentChunk = sizeof(AppBuffer);
-		//		for ( w = 0; w < wMaxGet; w += sizeof(AppBuffer) )
-		//		{
-		//			// Make sure the last chunk, which will likely be smaller than sizeof(AppBuffer), is treated correctly.
-		//			if(w + sizeof(AppBuffer) > wMaxGet)
-		//			    wCurrentChunk = wMaxGet - w;
-		//
-		//			// Transfer the data out of the TCP RX FIFO and into our local processing buffer.
-		//			TCPGetArray(MySocket, AppBuffer, wCurrentChunk);
-		//
-		//			// Perform the "ToUpper" operation on each data byte
-		//			for(w2 = 0 ; w2 < wCurrentChunk ; w2++)
-		//			{
-		//				i = AppBuffer[w2];
-		//				if ( i >= 'a' && i <= 'z' )
-		//				{
-		//					i -= ('a' - 'A');
-		//					AppBuffer[w2] = i;
-		//				}
-		//				else if ( i == 0x1B ) // Escape
-		//					{
-		//						TCPServerState = SM_CLOSING;
-		//					}
-		//			}
-		//
-		//			// Transfer the data out of our local processing buffer and into the TCP TX FIFO.
-		//			TCPPutArray(MySocket, AppBuffer, wCurrentChunk);
-		//		}
-
-				// No need to perform any flush.  TCP data in TX FIFO will automatically transmit itself after it accumulates for a while.  If you want to decrease latency (at the expense of wasting network bandwidth on TCP overhead), perform and explicit flush via the TCPFlush() API.
-
+				// 
+				// No need to perform any flush. 
+				// TCP data in TX FIFO will automatically transmit itself after it accumulates for a while.  
+				// If you want to decrease latency (at the expense of wasting network bandwidth on TCP overhead), 
+				// perform and explicit flush via the TCPFlush() API.
 				break;
 
 	case SM_CLOSING:
 		// Close the socket connection.
-		close(serverSocket);
-		TCPServerState = SM_HOME;
+		close(gdbServerSocket);
+		GDB_TCPServerState = SM_HOME;
+		break;
+	}
+}
+
+struct sockaddr_in uart_debug_addr = { 0 };
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+/// <summary> UART/Debug TCP Server
+/// 		  
+/// <remarks> Default for ctxLink, will be killed if user enables SWO trace
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void UART_TCPServer (void)
+{
+	switch (UART_DEBUG_TCPServerState)
+	{
+	case SM_IDLE:
+		break;		// Startup and testing do nothing state
+	case SM_HOME:
+		//
+		// Allocate a socket for this server to listen and accept connections on
+		//
+		uartDebugServerSocket = socket (AF_INET, SOCK_STREAM, 0);
+		if (uartDebugServerSocket < SOCK_ERR_NO_ERROR)
+		{
+			return;
+		}
+		//
+		// Bind the socket
+		//
+		uart_debug_addr.sin_addr.s_addr = 0;
+		uart_debug_addr.sin_family = AF_INET;
+		uart_debug_addr.sin_port = _htons (UART_DebugServerPort);
+		int8_t result = bind (uartDebugServerSocket, (struct sockaddr *)&uart_debug_addr, sizeof (uart_debug_addr));
+		if (result != SOCK_ERR_NO_ERROR)
+		{
+			return;
+		}
+		UART_DEBUG_TCPServerState = SM_LISTENING;
+		break;
+
+	case SM_LISTENING:
+		// 
+		// No need to perform any flush. 
+		// TCP data in TX FIFO will automatically transmit itself after it accumulates for a while.  
+		// If you want to decrease latency (at the expense of wasting network bandwidth on TCP overhead), 
+		// perform and explicit flush via the TCPFlush() API.
+		break;
+
+	case SM_CLOSING:
+		// Close the socket connection.
+		close (uartDebugServerSocket);
+		UART_DEBUG_TCPServerState = SM_HOME;
 		break;
 	}
 }
@@ -594,6 +617,108 @@ bool isIpAddressAssigned(void)
 	return res;
 }
 
+void handleSocketBindEvent (SOCKET * lpSocket, bool * lpRunningState)
+{
+	if (m2m_wifi_get_socket_event_data ()->bindStatus == 0)
+	{
+		listen (*lpSocket, 0);
+	}
+	else
+	{
+		close (*lpSocket);
+		*lpSocket = SOCK_ERR_INVALID;
+		*lpRunningState = false;
+	}
+}
+
+void handleSocketListenEvent (SOCKET * lpSocket, bool * lpRunningState)
+{
+	if (m2m_wifi_get_socket_event_data ()->listenStatus == 0)
+	{
+		accept (*lpSocket, NULL, NULL);
+		*lpRunningState = true;
+	}
+	else
+	{
+		close (*lpSocket);
+		*lpSocket = SOCK_ERR_INVALID;
+		*lpRunningState = false;
+	}
+}
+
+void handleSocketAcceptEvent (t_socketAccept * lpAcceptData, SOCKET * lpClientSocket, bool * lpClientConnectedState, bool * lpNewClientConnected, uint8_t msgType)
+{
+	if (lpAcceptData->sock >= 0)
+	{
+		//
+		// Only allow a single client connection
+		//
+		if (*lpClientSocket >= 0)
+		{
+			/*
+			 * close the new client socket, refusing connection
+			 *
+			 */
+			dprintf ("APP_SOCK_CB[%d]: Second connection rejected\r\n", msgType);
+			close (lpAcceptData->sock);
+		}
+		else
+		{
+			*lpClientSocket = lpAcceptData->sock;
+			*lpClientConnectedState = true;
+			*lpNewClientConnected = true;
+		}
+	}
+	else
+	{
+		*lpClientSocket = SOCK_ERR_INVALID;
+		*lpClientConnectedState = false;
+	}
+}
+void processRecvError (SOCKET socket, t_socketRecv *lpRecvData, uint8_t msgType)
+{
+	//
+// Process socket recv errors
+//
+	switch (lpRecvData->bufSize)	// error is in the buffer size element
+	{
+		case SOCK_ERR_CONN_ABORTED:		// Peer closed connection
+		{
+			//
+			// Process depending upon the client that called the event
+			//
+			if (socket == gdbClientSocket) {
+				close (gdbClientSocket);
+				gdbClientSocket = SOCK_ERR_INVALID;	// Mark socket invalid
+				g_gdbClientConnected = false;			// No longer connected
+			}
+			else if (socket == uartDebugClientSocket) {
+				close (uartDebugClientSocket);
+				uartDebugClientSocket = SOCK_ERR_INVALID;	// Mark socket invalid
+				g_uartDebugClientConnected = false;			// No longer connected
+				g_userConfiguredUart = false;
+			}
+			dprintf ("APP_SOCK_CB[%d]: Connection closed by peer\r\n", msgType);
+			break;
+		}
+		case SOCK_ERR_INVALID_ADDRESS:
+		case SOCK_ERR_ADDR_ALREADY_IN_USE:
+		case SOCK_ERR_MAX_TCP_SOCK:
+		case SOCK_ERR_MAX_UDP_SOCK:
+		case SOCK_ERR_INVALID_ARG:
+		case SOCK_ERR_MAX_LISTEN_SOCK:
+		case SOCK_ERR_INVALID:
+		case SOCK_ERR_ADDR_IS_REQUIRED:
+		case SOCK_ERR_TIMEOUT:
+		case SOCK_ERR_BUFFER_FULL:
+		default:
+		{
+			dprintf ("APP_SOCK_CB[%d]: Unknown/unhandled error code %d bytes\r\n", msgType, lpRecvData->bufSize);
+			break;
+		}
+	}
+
+}
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 /// <summary> Callback, called when the application socket.</summary>
 ///
@@ -605,14 +730,10 @@ bool isIpAddressAssigned(void)
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 bool aFlag = false ;
-static volatile uint32_t c1 = 0 ;
-static volatile uint32_t c2 = 0 ;
-
+static volatile SOCKET sktParam = 0;
 static void AppSocketCallback(SOCKET sock, uint8_t msgType, void *pvMsg)
 {
-	// if multiple sockets are present, use "sock" parameter to know the
-	// associated socket for this instance of callback. 
-
+	sktParam = sock;
 	switch(msgType)
 	{
 		case M2M_SOCKET_DNS_RESOLVE_EVENT:
@@ -623,83 +744,85 @@ static void AppSocketCallback(SOCKET sock, uint8_t msgType, void *pvMsg)
 
 		case M2M_SOCKET_CONNECT_EVENT:
 		{
-			t_socketConnect *pSockConnResp = (t_socketConnect *) pvMsg;
-			if (pSockConnResp && pSockConnResp->error >= SOCK_ERR_NO_ERROR)
-			{
-				g_clientConnected = true;
-				g_newClientConnected = true;
-				dprintf("APP_SOCK_CB[%d]: Successfully connected\r\n", msgType);
-			}
-			else
-			{
-				dprintf("APP_SOCK_CB[%d]: Connect error! code(%d)\r\n", msgType, pSockConnResp->error);
-			}
+			// t_socketConnect *pSockConnResp = (t_socketConnect *) pvMsg;
+			//
+			// This event occurs when ctxLink establishes a connection back to
+			// a client.
+			//
+			// At this time it is not used
+			// 
 			break;
 		}
 
 		case M2M_SOCKET_BIND_EVENT:
 		{
-			// 
-			// Did the bind succeed?
 			//
-			if(m2m_wifi_get_socket_event_data()->bindStatus == 0) 
+			// Route the evenbt according to which server sent it
+			//
+			if (sock == gdbServerSocket)
 			{
-				listen(serverSocket, 0);
+				handleSocketBindEvent (&gdbServerSocket, &g_gdbClientConnected);
+			}
+			else if (sock == uartDebugServerSocket)
+			{
+				handleSocketBindEvent (&uartDebugServerSocket, &g_uartDebugServerIsRunning) ;
 			}
 			else
 			{
-				close(serverSocket);
-				g_serverIsRunning = false;
-				serverSocket = -1;
+				//
+				// Unknown server ... TODO
+				//
+				dprintf ("APP_SOCK_CB[%d]: Bind for unknown server\r\n", msgType);
 			}
-			
 			break ;
 		}
 		case M2M_SOCKET_LISTEN_EVENT:
 		{
-			if ( m2m_wifi_get_socket_event_data()->listenStatus == 0 ) 
+			//
+			// Route the event according to which server sent it
+			//
+			if (sock == gdbServerSocket)
 			{
-				g_serverIsRunning = true;
-				accept(serverSocket, NULL, NULL);
+				handleSocketListenEvent (&gdbServerSocket, &g_gdbServerIsRunning) ;
+			}
+			else if (sock == uartDebugServerSocket)
+			{
+				handleSocketListenEvent (&uartDebugServerSocket, &g_uartDebugServerIsRunning);
 			}
 			else
 			{
-				close(serverSocket);
-				g_serverIsRunning = false;
-				serverSocket = -1;
+				//
+				// Unknown server ... TODO
+				//
+				dprintf ("APP_SOCK_CB[%d]: Listen event for unknown server\r\n", msgType);
 			}
-				break;
+			break;
 		}
 		case M2M_SOCKET_ACCEPT_EVENT:
 		{
 			t_socketAccept *pAcceptData = (t_socketAccept *)pvMsg;	// recover the message data
 			//
-			// Good client socket?
-			//
-			if(pAcceptData->sock >= 0)
+			// Process for the specific server
+			// 
+			if (sock == gdbServerSocket) {
+				handleSocketAcceptEvent (pAcceptData, &gdbClientSocket, &g_gdbClientConnected, &g_newGDBClientConnected, msgType);
+			}
+			else if (sock == uartDebugServerSocket)
 			{
 				//
-				// Only allow a single client connection
+				// Disable any active UART setup by killing the baud rate
 				//
-				if(clientSocket >= 0)
-				{
-					/*
-					 * close the new client socket, refusing connection
-					 * 
-					 */
-					dprintf("APP_SOCK_CB[%d]: Second connection rejected\r\n", msgType);
-					close(pAcceptData->sock);
-				}
-				else
-				{
-					clientSocket = pAcceptData->sock;
-					g_clientConnected = true;
-					}
+				usart_set_baudrate (USBUSART, 0);
+				handleSocketAcceptEvent (pAcceptData, &uartDebugClientSocket, &g_uartDebugClientConnected, &g_newUartDebugClientconncted, msgType);
+				send (uartDebugClientSocket, &uartClientSignon[0], strlen(&uartClientSignon[0]), 0);
 			}
 			else
 			{
-				clientSocket = SOCK_ERR_INVALID;
-				g_clientConnected = false;
+				//
+				// Unknown server ... TODO
+				//
+				dprintf ("APP_SOCK_CB[%d]: Connection from unknown server\r\n", msgType);
+				close (pAcceptData->sock);
 			}
 			break ;
 		}
@@ -710,20 +833,15 @@ static void AppSocketCallback(SOCKET sock, uint8_t msgType, void *pvMsg)
 			gpio_toggle (LED_PORT, LED_3);
 #endif
 			//
-			// if we have good data copy it to the inputBuffer
-			// circular buffer
-			//
-			if(pRecvData->bufSize > 0)
+			// Process the data for the specific server's client
+			// 
+			if (sock == gdbClientSocket)
 			{
-				////
-				//// JUst ignore any ACK ("+")
-				////
-				//if(pRecvData->bufSize == 1 && localBuffer[0] == '+')
-				//{
-				//	// Just skip an ACK
-				//	dprintf("APP_SOCK_CB[%d]: Received ACK\r\n", msgType);
-				//}
-				//else
+				//
+				// if we have good data copy it to the inputBuffer
+				// circular buffer
+				//
+				if (pRecvData->bufSize > 0)
 				{
 					//
 					// Got good data, copy to circular buffer
@@ -732,55 +850,57 @@ static void AppSocketCallback(SOCKET sock, uint8_t msgType, void *pvMsg)
 					//
 					// Copy data to circular input buffer
 					//
-					for(int i = 0 ; iLocalCount != 0 ; i++, iLocalCount--, uiInputIndex = (uiInputIndex + 1) % INPUT_BUFFER_SIZE)
+					for (int i = 0; iLocalCount != 0; i++, iLocalCount--, uiInputIndex = (uiInputIndex + 1) % INPUT_BUFFER_SIZE)
 					{
 						inputBuffer[uiInputIndex] = localBuffer[i];
 					}
 					uiBufferCount += pRecvData->bufSize;
-					if ( uiBufferCount > INPUT_BUFFER_SIZE ) {
-						aFlag = true ;
-						c1 = c2 ;
-						c2++ ;
-					}
-					// dprintf ("APP_SOCK_CB[%d]: Received %d bytes, queued %d bytes\r\n", msgType, pRecvData->bufSize, uiBufferCount);
 					dprintf ("Received -> %d, queued -> %ld\r\n", pRecvData->bufSize, uiBufferCount);
+					//
+					// Start another receive operation so we always get data
+					//
+					recv (gdbClientSocket, &localBuffer[0], INPUT_BUFFER_SIZE, 0);
 				}
-				//
-				// Start another receive operation so we always get data
-				//
-				recv(clientSocket, &localBuffer[0], INPUT_BUFFER_SIZE, 0);
+				else
+				{
+					processRecvError (sock, pRecvData,msgType);
+				}
+			}
+			else if (sock == uartDebugClientSocket)
+			{
+				if (pRecvData->bufSize > 0)
+				{
+					//
+					// The only data we expect is the UART configuration, so pass of the data for parsing and use
+					//
+					if (platform_configure_uart (&localUartDebugBuffer[0]) == false)
+					{
+						//
+						// Setup failed, tell user
+						//
+						send (uartDebugClientSocket, "Syntax error in setup string\r\n", strlen ("Syntax error in setup string\r\n"), 0);
+					}
+					else
+					{
+						g_userConfiguredUart = true;
+					}
+					memset (&localUartDebugBuffer[0], 0x00, sizeof (localUartDebugBuffer));
+					//
+					// Setup to receive future data
+					// 
+					recv (uartDebugClientSocket, &localUartDebugBuffer[0], UART_DEBUG_INPUT_BUFFER_SIZE, 0);
+				}
+				else
+				{
+					processRecvError (sock, pRecvData, msgType);
+				}
 			}
 			else
 			{
 				//
-				// Process socket recv errors
+				// Unknown server ... TODO
 				//
-				switch(pRecvData->bufSize)	// error is in the buffer size element
-				{
-					case SOCK_ERR_CONN_ABORTED:		// Peer closed connection
-					{
-						dprintf("APP_SOCK_CB[%d]: Connection closed by peer\r\n", msgType);
-						close (clientSocket);
-						clientSocket = SOCK_ERR_INVALID;	// Mark socket invalid
-						g_clientConnected = false;			// No longer connected
-						break ;
-					}
-					case SOCK_ERR_INVALID_ADDRESS:
-					case SOCK_ERR_ADDR_ALREADY_IN_USE:
-					case SOCK_ERR_MAX_TCP_SOCK:
-					case SOCK_ERR_MAX_UDP_SOCK:
-					case SOCK_ERR_INVALID_ARG:
-					case SOCK_ERR_MAX_LISTEN_SOCK:
-					case SOCK_ERR_INVALID:
-					case SOCK_ERR_ADDR_IS_REQUIRED:
-					case SOCK_ERR_TIMEOUT:
-					case SOCK_ERR_BUFFER_FULL:
-					default:
-					{
-						dprintf("APP_SOCK_CB[%d]: Unknown/unhandled error code %d bytes\r\n", msgType, pRecvData->bufSize);
-						break ;
-					}
-				}
+				dprintf ("APP_SOCK_CB[%d]: Data from unknown server\r\n", msgType);
 			}
 			break ;
 		}
@@ -792,11 +912,29 @@ static void AppSocketCallback(SOCKET sock, uint8_t msgType, void *pvMsg)
 			//
 			m2mStub_EintDisable();
 			//
-			if(uiSendQueueLength != 0)
+			// Process for the specific server
+			//
+			if (sock == gdbServerSocket)
 			{
-				DoSend();
+				if (uiGDBSendQueueLength != 0)
+				{
+					DoGDBSend ();
+				}
 			}
-
+			else if (sock == uartDebugClientSocket)
+			{
+				if (uiUartDebugSendQueueLength != 0)
+				{
+					DoUartDebugSend ();
+				}
+			}
+			else
+			{
+				//
+				// Unknown server ... TODO
+				//
+				dprintf ("APP_SOCK_CB[%d]: Send event from unknown server\r\n", msgType);
+			}
 			//
 			// Re-enable interrupts
 			//
@@ -827,9 +965,9 @@ static void AppSocketCallback(SOCKET sock, uint8_t msgType, void *pvMsg)
 /// <returns> True if server running, false if not.</returns>
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-bool isServerRunning(void)
+bool isGDBServerRunning(void)
 {
-	return g_serverIsRunning ;
+	return g_gdbServerIsRunning ;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -855,13 +993,17 @@ bool isDnsResolved(void)
 /// <returns> True if client connected, false if not.</returns>
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-bool isClientConnected(void)
+bool isGDBClientConnected(void)
 {
-	bool res = g_clientConnected;
+	bool res = g_gdbClientConnected;
 	// no need to reset flag "g_clientConnected" to false. App will do that.
 	return res;
 }
 
+bool isUARTClientConnected(void)
+{
+	return g_userConfiguredUart;
+}
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 /// <summary> Application initialize.</summary>
 ///
@@ -1159,7 +1301,8 @@ void APP_Task(void)
 		}
 		case APP_STATE_START_SERVER:
 		{
-			TCPServerState = SM_HOME;
+			GDB_TCPServerState = SM_HOME;
+			UART_DEBUG_TCPServerState = SM_HOME;
 			//
 			// Wait for the server to come up
 			//
@@ -1168,7 +1311,7 @@ void APP_Task(void)
 		}
 		case APP_STATE_WAIT_FOR_SERVER:
 		{
-			if ( isServerRunning() == true )
+			if ( isGDBServerRunning() == true )
 			{
 				appState = APP_STATE_SPIN;				
 			}
@@ -1187,15 +1330,20 @@ void APP_Task(void)
 		case APP_STATE_SPIN:
 		{
 			//
-			// Check for a new client connection, if found start the receive process for the client
+			// Check for a new GDB client connection, if found start the receive process for the client
 			//
-			if(g_newClientConnected == true)
+			if(g_newGDBClientConnected == true)
 			{
-				g_newClientConnected = false;
+				g_newGDBClientConnected = false;
 				//
-				// Set up a recv call, data will be 
+				// Set up a recv call 
 				//
-				recv(clientSocket, &localBuffer[0], INPUT_BUFFER_SIZE, 0);
+				recv(gdbClientSocket, &localBuffer[0], INPUT_BUFFER_SIZE, 0);
+			}
+			if (g_newUartDebugClientconncted == true)
+			{
+				g_newUartDebugClientconncted = false;
+				recv (uartDebugClientSocket, &localUartDebugBuffer[0], UART_DEBUG_INPUT_BUFFER_SIZE, 0);
 			}
 			break;
 		}
@@ -1316,19 +1464,6 @@ void APP_Task(void)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-/// <summary> Determines if we can WiFi got client.</summary>
-///
-/// <remarks> Sid Price, 3/22/2018.</remarks>
-///
-/// <returns> True if it succeeds, false if it fails.</returns>
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-bool WiFi_GotClient( void )
-{
-	return ( g_clientConnected ) ;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
 /// <summary> WiFi have input.</summary>
 ///
 /// <remarks> Sid Price, 3/22/2018.</remarks>
@@ -1412,49 +1547,33 @@ unsigned char WiFi_GetNext_to( uint32_t timeout )
 /// <remarks> Sid Price, 3/22/2018.</remarks>
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void DoSend(void)
+void DoGDBSend(void)
 {
-	send(clientSocket, &(SendQueue[uiSendQueueOut].packet[0]), SendQueue[uiSendQueueOut].len, 0);
+	send(gdbClientSocket, &(gdbSendQueue[uiGDBSendQueueOut].packet[0]), gdbSendQueue[uiGDBSendQueueOut].len, 0);
 	m2mStub_EintDisable();
-	uiSendQueueOut = (uiSendQueueOut + 1) % SEND_QUEUE_SIZE;
-	uiSendQueueLength -= 1;
+	uiGDBSendQueueOut = (uiGDBSendQueueOut + 1) % SEND_QUEUE_SIZE;
+	uiGDBSendQueueLength -= 1;
 	m2mStub_EintEnable(); 
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-/// <summary> WiFi send packet.</summary>
-///
-/// <remarks> Sid Price, 3/22/2018.</remarks>
-///
-/// <param name="lpPacket"> [in,out] If non-null, the packet.</param>
-/// <param name="len">	    The length.</param>
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-void WiFi_SendPacket(unsigned char * lpPacket, int len)
+void DoUartDebugSend (void)
 {
-	m2mStub_EintDisable();	// Disable interrupts from the WINC1500 while we paly with the queue
-	//
-	// Check there is room in queue
-	// This check should be used to evaluate how large the queue needs to be
-	//
-	if(uiSendQueueLength == SEND_QUEUE_SIZE)
-	{
-		dprintf("Wifi_SendPacket: Send queue is full\r\n");
-	}
-	else
-	{
-		memcpy(&(SendQueue[uiSendQueueIn].packet[0]), lpPacket, SendQueue[uiSendQueueIn].len);
-		uiSendQueueIn = (uiSendQueueIn + 1) % SEND_QUEUE_SIZE;
-		uiSendQueueLength += 1;
-		//
-		// If this is the only entry in the queue send it now
-		//
-		if(uiSendQueueLength == 1)
-		{
-			DoSend();
-		}
-	}
-	m2mStub_EintEnable();		// Re-enable interrupts
+	send (uartDebugClientSocket, &(uartDebugSendQueue[uiUartDebugSendQueueOut].packet[0]), uartDebugSendQueue[uiUartDebugSendQueueOut].len, 0);
+	m2mStub_EintDisable ();
+	uiUartDebugSendQueueOut = (uiUartDebugSendQueueOut + 1) % SEND_QUEUE_SIZE;
+	uiUartDebugSendQueueLength -= 1;
+	m2mStub_EintEnable ();
+}
+
+void SendUartData(uint8_t *lpBuffer, uint8_t length)
+{
+	m2mStub_EintDisable ();
+	memcpy(uartDebugSendQueue[uiUartDebugSendQueueIn].packet, lpBuffer, length) ;
+	uartDebugSendQueue[uiUartDebugSendQueueIn].len = length ;
+	uiUartDebugSendQueueIn = (uiUartDebugSendQueueIn + 1) % SEND_QUEUE_SIZE ;
+	uiUartDebugSendQueueLength += 1 ;
+	m2mStub_EintEnable ();
+	DoUartDebugSend() ;
 }
 
 static unsigned char sendBuffer[1024] = { 0 };  ///< The send buffer[ 1024]
@@ -1469,7 +1588,7 @@ static unsigned int sendCount = 0;  ///< Number of sends
 /// <param name="flush">   The flush.</param>
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void WiFi_putchar( unsigned char theChar, int flush )
+void WiFi_gdb_putchar( unsigned char theChar, int flush )
 {
 	sendBuffer[sendCount++] = theChar;
 	if ( flush != 0 )
@@ -1481,7 +1600,7 @@ void WiFi_putchar( unsigned char theChar, int flush )
 		}
 		sendCount = 0;
 		dprintf("Wifi_putchar %c\r\n", sendBuffer[0]);
-		send(clientSocket, &sendBuffer[0], len, 0);
+		send(gdbClientSocket, &sendBuffer[0], len, 0);
 		memset(&sendBuffer[0], 0x00, sizeof(sendBuffer));
 	}
 }

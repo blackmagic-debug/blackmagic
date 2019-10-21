@@ -27,6 +27,7 @@
 #include "usbuart.h"
 #include "morse.h"
 
+#include "platform.h"
 #include "WiFi_Server.h"
 
 #include <libopencm3/stm32/f4/rcc.h>
@@ -41,6 +42,8 @@
 #include <libopencm3/cm3/cortex.h>
 #include <libopencm3/stm32/f4/adc.h>
 #include <libopencm3/stm32/f4/spi.h>
+#include <libopencm3/stm32/timer.h>
+
 
 #include "winc1500_api.h"
 
@@ -278,6 +281,58 @@ void platform_init(void)
 	cdcacm_init();
 }
 
+//
+// Use the passed string to configure the USB UART
+//
+// e.g. 38400,8,N,1
+bool platform_configure_uart (char * configurationString)
+{
+	bool fResult ;
+	uint32_t baudRate;
+	uint32_t bits;
+	uint32_t stopBits;
+	char	parity;
+	uint32_t count;
+	if (strlen (configurationString) > 5)
+	{
+		count = sscanf (configurationString, "%d,%d,%c,%d", &baudRate, &bits, &parity, &stopBits);
+		if (count == 4)
+		{
+			uint32_t parityValue;
+			usart_set_baudrate (USBUSART, baudRate);
+			usart_set_databits (USBUSART, bits);
+			usart_set_stopbits (USBUSART, stopBits);
+			switch (parity)
+			{
+				default:
+				case 'N':
+				{
+					parityValue = USART_PARITY_NONE;
+					break;
+				}
+
+				case 'O':
+				{
+					parityValue = USART_PARITY_ODD;
+					break;
+				}
+
+				case 'E':
+				{
+					parityValue = USART_PARITY_EVEN;
+					break;
+				}
+				usart_set_parity (USBUSART, parityValue);
+			}
+			fResult = true;
+		}
+	}
+	else
+	{
+		fResult = true;		// ignore possible newline strings
+	}
+	return fResult;
+}
 
 //
 // The following method is called in the main gdb loop in order to run 
@@ -306,7 +361,8 @@ void platform_tasks(void)
 		platform_delay(1000);
 	}
 	m2m_wifi_task();			// WINC1500 tasks
-	TCPServer();				// Run the TCP sever state machine
+	GDB_TCPServer();			// Run the TCP sever state machine
+	UART_TCPServer ();			// Run the Uart/Debug TCP server
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -510,7 +566,7 @@ bool platform_check_battery_voltage (void)
 //
 // This char array receives both the target and battrey voltages
 //  
-static char voltages[32] = { 0 };
+static char voltages[64] = { 0 };
 
 const char *platform_target_voltage( void )
 {
@@ -626,6 +682,48 @@ int  platform_wifi_getpacket( char * pBuf,  int bufSize )
 	return ( iResult ) ;
 }
 
+#define PACKET_SIZE	64
+
+bool platform_has_network_client(uint8_t * lpBuf_rx, uint8_t * lpBuf_rx_in, uint8_t * lpBuf_rx_out, unsigned fifoSize)
+{
+	bool fResult = false ;
+	if ( (fResult = isUARTClientConnected()) == false)
+	{
+		return fResult ;
+	}
+		/* if fifo empty, nothing further to do */
+	if (*lpBuf_rx_in == *lpBuf_rx_out) {
+		/* turn off LED, disable IRQ */
+		timer_disable_irq(USBUSART_TIM, TIM_DIER_UIE);
+		gpio_clear(LED_PORT_UART, LED_UART);
+	}
+	else
+	{
+		uint8_t packet_buf[PACKET_SIZE];
+		uint8_t packet_size = 0;
+		uint8_t buf_out = *lpBuf_rx_out;
+
+		/* copy from uart FIFO into local network packet buffer */
+		while (*lpBuf_rx_in != buf_out && packet_size < PACKET_SIZE)
+		{
+			packet_buf[packet_size++] = lpBuf_rx[buf_out++];
+
+			/* wrap out pointer */
+			if (buf_out >= fifoSize)
+			{
+				buf_out = 0;
+			}
+
+		}
+		//
+		// Send the data to the client
+		//
+		SendUartData(&packet_buf[0], packet_size) ;
+		*lpBuf_rx_out += packet_size ;
+		*lpBuf_rx_out %= fifoSize;
+	}
+	return fResult ;
+}
 //#ifdef ENABLE_DEBUG
 //enum
 //{
