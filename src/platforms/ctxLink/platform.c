@@ -281,6 +281,58 @@ void platform_init(void)
 	cdcacm_init();
 }
 
+//
+// Use the passed string to configure the USB UART
+//
+// e.g. 38400,8,N,1
+bool platform_configure_uart (char * configurationString)
+{
+	bool fResult ;
+	uint32_t baudRate;
+	uint32_t bits;
+	uint32_t stopBits;
+	char	parity;
+	uint32_t count;
+	if (strlen (configurationString) > 5)
+	{
+		count = sscanf (configurationString, "%d,%d,%c,%d", &baudRate, &bits, &parity, &stopBits);
+		if (count == 4)
+		{
+			uint32_t parityValue;
+			usart_set_baudrate (USBUSART, baudRate);
+			usart_set_databits (USBUSART, bits);
+			usart_set_stopbits (USBUSART, stopBits);
+			switch (parity)
+			{
+				default:
+				case 'N':
+				{
+					parityValue = USART_PARITY_NONE;
+					break;
+				}
+
+				case 'O':
+				{
+					parityValue = USART_PARITY_ODD;
+					break;
+				}
+
+				case 'E':
+				{
+					parityValue = USART_PARITY_EVEN;
+					break;
+				}
+				usart_set_parity (USBUSART, parityValue);
+			}
+			fResult = true;
+		}
+	}
+	else
+	{
+		fResult = true;		// ignore possible newline strings
+	}
+	return fResult;
+}
 
 //
 // The following method is called in the main gdb loop in order to run 

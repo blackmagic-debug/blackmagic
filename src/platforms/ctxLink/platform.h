@@ -286,6 +286,7 @@ static inline int platform_hwversion(void)
 void platform_tasks(void);  			// Must be called from GDB main loop
 const char *platform_battery_voltage (void);
 bool platform_has_network_client(uint8_t * lpBuf_rx, uint8_t * lpBuf_rx_in, uint8_t * lpBuf_rx_out, unsigned fifoSize) ;
+bool platform_configure_uart (char * configurationString);
 
 #endif
 

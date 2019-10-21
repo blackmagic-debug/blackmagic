@@ -60,10 +60,17 @@ static unsigned char localUartDebugBuffer[UART_DEBUG_INPUT_BUFFER_SIZE] = { 0 };
 static SOCKET uartDebugServerSocket = SOCK_ERR_INVALID; 
 static SOCKET uartDebugClientSocket = SOCK_ERR_INVALID;
 static bool	g_uartDebugClientConnected = false;
+static bool g_userConfiguredUart = false;
 static bool g_uartDebugServerIsRunning = false;
 static bool	g_newUartDebugClientconncted = false;
 
 #define	WPS_LOCAL_TIMEOUT	30			// Timeout value in seconds
+
+//
+// Sign-on message for new UART data clients
+//
+static char uartClientSignon[] = "\r\nctxLink UART connection.\r\nPlease enter the UART setup as baud, bits, parity, stop.\r\ne.g. 38400,8,N,1\r\n\r\n";
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 /// <summary> Values that represent Application states.</summary>
 ///
@@ -689,6 +696,7 @@ void processRecvError (SOCKET socket, t_socketRecv *lpRecvData, uint8_t msgType)
 				close (uartDebugClientSocket);
 				uartDebugClientSocket = SOCK_ERR_INVALID;	// Mark socket invalid
 				g_uartDebugClientConnected = false;			// No longer connected
+				g_userConfiguredUart = false;
 			}
 			dprintf ("APP_SOCK_CB[%d]: Connection closed by peer\r\n", msgType);
 			break;
@@ -801,8 +809,12 @@ static void AppSocketCallback(SOCKET sock, uint8_t msgType, void *pvMsg)
 			}
 			else if (sock == uartDebugServerSocket)
 			{
+				//
+				// Disable any active UART setup by killing the baud rate
+				//
+				usart_set_baudrate (USBUSART, 0);
 				handleSocketAcceptEvent (pAcceptData, &uartDebugClientSocket, &g_uartDebugClientConnected, &g_newUartDebugClientconncted, msgType);
-				send (uartDebugClientSocket, "Hello from ctx\n", 15, 0);
+				send (uartDebugClientSocket, &uartClientSignon[0], strlen(&uartClientSignon[0]), 0);
 			}
 			else
 			{
@@ -858,11 +870,24 @@ static void AppSocketCallback(SOCKET sock, uint8_t msgType, void *pvMsg)
 			{
 				if (pRecvData->bufSize > 0)
 				{
-				//
-				// There should be no input data, at least
-				// nothing ctxLink is interested in so ignore it
-				// and just set up to recieve more, unwanted data
-				//
+					//
+					// The only data we expect is the UART configuration, so pass of the data for parsing and use
+					//
+					if (platform_configure_uart (&localUartDebugBuffer[0]) == false)
+					{
+						//
+						// Setup failed, tell user
+						//
+						send (uartDebugClientSocket, "Syntax error in setup string\r\n", strlen ("Syntax error in setup string\r\n"), 0);
+					}
+					else
+					{
+						g_userConfiguredUart = true;
+					}
+					memset (&localUartDebugBuffer[0], 0x00, sizeof (localUartDebugBuffer));
+					//
+					// Setup to receive future data
+					// 
 					recv (uartDebugClientSocket, &localUartDebugBuffer[0], UART_DEBUG_INPUT_BUFFER_SIZE, 0);
 				}
 				else
@@ -977,7 +1002,7 @@ bool isGDBClientConnected(void)
 
 bool isUARTClientConnected(void)
 {
-	return g_uartDebugClientConnected ;
+	return g_userConfiguredUart;
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 /// <summary> Application initialize.</summary>
