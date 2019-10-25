@@ -873,7 +873,7 @@ static void AppSocketCallback(SOCKET sock, uint8_t msgType, void *pvMsg)
 					//
 					// The only data we expect is the UART configuration, so pass of the data for parsing and use
 					//
-					if (platform_configure_uart (&localUartDebugBuffer[0]) == false)
+					if (platform_configure_uart ((char*)&localUartDebugBuffer[0]) == false)
 					{
 						//
 						// Setup failed, tell user

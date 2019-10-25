@@ -295,7 +295,7 @@ bool platform_configure_uart (char * configurationString)
 	uint32_t count;
 	if (strlen (configurationString) > 5)
 	{
-		count = sscanf (configurationString, "%d,%d,%c,%d", &baudRate, &bits, &parity, &stopBits);
+		count = sscanf (configurationString, "%ld,%ld,%c,%ld", &baudRate, &bits, &parity, &stopBits);
 		if (count == 4)
 		{
 			uint32_t parityValue;
