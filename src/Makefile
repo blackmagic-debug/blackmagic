@@ -121,6 +121,11 @@ all_platforms:
 			echo "<li><a href='blackmagic-$$PROBE_HOST.bin'>$$PROBE_HOST</a></li>"\
 				>> artifacts/index.html ;\
 		fi ;\
+		if [ -f blackmagic_dfu.bin ]; then \
+			mv blackmagic_dfu.bin artifacts/blackmagic_dfu-$$PROBE_HOST.bin ;\
+			echo "<li><a href='blackmagic_dfu-$$PROBE_HOST.bin'>$$PROBE_HOST DFU</a></li>"\
+				>> artifacts/index.html ;\
+		fi ;\
 	done ;\
 	echo "</ul></body></html>" >> artifacts/index.html ;\
 	cp artifacts/*.bin artifacts/$(shell git describe --always)
