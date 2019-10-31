@@ -27,32 +27,28 @@
 #include "general.h"
 #include "platform.h"
 
-static uint32_t rev;
-static uint16_t led_bootloader;
-static uint16_t pin_nrst;
-static uint32_t led2_state = 0;
-
 uint32_t app_address = 0x08002000;
-
-static bool stlink_test_nrst(void)
-{
-	uint16_t nrst;
-	gpio_set_mode(GPIOB, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, pin_nrst);
-	gpio_set(GPIOB, pin_nrst);
-	for (int i = 0; i < 10000; i++)
-		nrst = gpio_get(GPIOB, pin_nrst);
-	return (nrst) ? true : false;
-}
 
 void dfu_detach(void)
 {
+	/* Disconnect USB cable by resetting USB Device and pulling USB_DP low*/
+	rcc_periph_reset_pulse(RST_USB);
+	rcc_periph_clock_enable(RCC_USB);
+	rcc_periph_clock_enable(RCC_GPIOA);
+
+	gpio_clear(GPIOA, GPIO12);
+	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_OPENDRAIN, GPIO12);
+
 	scb_reset_system();
 }
 
 int main(void)
 {
-	if(((GPIOA_CRL & 0x40) == 0x40) && stlink_test_nrst())
+	gpio_set_mode(GPIOB, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, GPIO2);
+
+	if (((GPIOA_CRL & 0x40) == 0x40) && !gpio_get(GPIOB, GPIO2))
 		dfu_jump_app_if_valid();
+
 	dfu_protect(DFU_MODE);
 
 	rcc_clock_setup_in_hse_8mhz_out_72mhz();
@@ -73,15 +69,5 @@ void dfu_event(void)
 
 void sys_tick_handler(void)
 {
-	if (rev == 0) {
-		gpio_toggle(GPIOA, led_bootloader);
-	} else {
-		if (led2_state & 1) {
-			gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, led_bootloader);
-			gpio_clear(GPIOA, led_bootloader);
-		} else {
-			gpio_set_mode(GPIOA, GPIO_MODE_INPUT, GPIO_CNF_INPUT_ANALOG, led_bootloader);
-		}
-		led2_state++;
-	}
+	gpio_toggle(LED_PORT, LED_PIN);
 }

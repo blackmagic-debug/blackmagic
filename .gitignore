@@ -1,3 +1,4 @@
+/scripts/env
 src/include/version.h
 blackmagic
 *.bin
