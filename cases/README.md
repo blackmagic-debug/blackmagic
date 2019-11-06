@@ -15,6 +15,15 @@ The Fusion 360 design files have a `.f3z` extension,
 This case is open on top.  It allows unobstructed access to all the
 components.
 
+There are two versions of this case, "loose" and "snug".  Depending
+on your printer and the PCB's manufacturing tolerances, your ctxLink
+board may not fit in the snug case.  The loose case adds 0.2mm of
+clearance on every side of the PCB.
+
+If neither fits, you can edit the Fusion 360 file and adjust the
+`case_pcb_clearance` user parameter.  Snug uses 0.0mm clearance;
+loose uses 0.2mm.
+
 
 ## Two Piece Case
 
