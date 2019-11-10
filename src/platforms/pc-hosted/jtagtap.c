@@ -94,7 +94,6 @@ void jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms, const uint8_t *DI
   int s;
 
   uint64_t DIl=*(uint64_t *)DI;
-  uint64_t *DOl=(uint64_t *)DO;
 
   if(!ticks) return;
   if (!DI && !DO) return;
@@ -112,8 +111,14 @@ void jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms, const uint8_t *DI
       exit(-1);
     }
 
-  if (DO)
-    *DOl=remotehston(-1,(char *)&construct[1]);
+  if (DO) {
+	  int i = 1;
+	  while (ticks) {
+		  *DO = (uint8_t)remotehston(2,(char *)&construct[i]);
+		  DO++;
+		  i += 2;
+	  }
+  }
 }
 
 void jtagtap_tdi_seq(const uint8_t final_tms, const uint8_t *DI, int ticks)
