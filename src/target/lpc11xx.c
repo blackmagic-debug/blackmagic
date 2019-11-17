@@ -104,9 +104,10 @@ lpc11xx_probe(target *t)
 		lpc11xx_add_flash(t, 0x00000000, 0x8000, 0x1000);
 		return true;
 	}
-
+	if (idcode) {
+		DEBUG("LPC11xx: Unknown IDCODE 0x%08" PRIx32 "\n", idcode);
+	}
 	idcode = target_mem_read32(t, LPC8XX_DEVICE_ID);
-	DEBUG("LPC11/84: IDCODE 0x%08" PRIx32 "\n", idcode);
 	switch (idcode) {
 	case 0x00008100:  /* LPC810M021FN8 */
 	case 0x00008110:  /* LPC811M001JDH16 */
@@ -159,6 +160,9 @@ lpc11xx_probe(target *t)
 		target_add_ram(t, 0x10000000, 0x2000);
 		lpc11xx_add_flash(t, 0x00000000, 0x20000, 0x1000);
 		return true;
+	}
+	if (idcode) {
+		DEBUG("LPC8xx: Unknown IDCODE 0x%08" PRIx32 "\n", idcode);
 	}
 
 	return false;
