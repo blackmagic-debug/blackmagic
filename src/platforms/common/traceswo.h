@@ -22,7 +22,12 @@
 
 #include <libopencm3/usb/usbd.h>
 
+#if defined TRACESWO_PROTOCOL && TRACESWO_PROTOCOL == 2
 void traceswo_init(uint32_t baudrate);
+#else
+void traceswo_init(void);
+#endif
+
 void trace_buf_drain(usbd_device *dev, uint8_t ep);
 
 #endif

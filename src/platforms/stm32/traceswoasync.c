@@ -30,7 +30,7 @@
 
 #include "general.h"
 #include "cdcacm.h"
-#include "platform.h"
+#include "traceswo.h"
 
 #include <libopencmsis/core_cm3.h>
 #include <libopencm3/cm3/nvic.h>
