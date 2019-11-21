@@ -39,6 +39,7 @@
 #include "target_internal.h"
 
 #define SIM_SDID   0x40048024
+#define SIM_FCFG1  0x4004804C
 
 #define FTFA_BASE  0x40020000
 #define FTFA_FSTAT (FTFA_BASE + 0x00)
@@ -127,7 +128,61 @@ static void kl_gen_add_flash(target *t, uint32_t addr, size_t length,
 bool kinetis_probe(target *t)
 {
 	uint32_t sdid = target_mem_read32(t, SIM_SDID);
+	uint32_t fcfg1 = target_mem_read32(t, SIM_FCFG1);
+
 	switch (sdid >> 20) {
+	case 0x161:
+		/* sram memory size */
+		switch((sdid >> 16) & 0x0f) {
+			case 0x03:/* 4 KB */
+				target_add_ram(t, 0x1ffffc00, 0x0400);
+				target_add_ram(t, 0x20000000, 0x0C00);
+				break;
+			case 0x04:/* 8 KB */
+				target_add_ram(t, 0x1ffff800, 0x0800);
+				target_add_ram(t, 0x20000000, 0x1800);
+				break;
+			case 0x05:/* 16 KB */
+				target_add_ram(t, 0x1ffff000, 0x1000);
+				target_add_ram(t, 0x20000000, 0x3000);
+				break;
+			case 0x06:/* 32 KB */
+				target_add_ram(t, 0x1fffe000, 0x2000);
+				target_add_ram(t, 0x20000000, 0x6000);
+				break;
+			default:
+				return false;
+				break;
+		}
+
+		/* flash memory size */
+		switch((fcfg1 >> 24) & 0x0f) {
+			case 0x03: /* 32 KB */
+				t->driver = "KL16Z32Vxxx";
+				kl_gen_add_flash(t, 0x00000000, 0x08000, 0x400, KL_WRITE_LEN);
+				break;
+
+			case 0x05: /* 64 KB */
+				t->driver = "KL16Z64Vxxx";
+				kl_gen_add_flash(t, 0x00000000, 0x10000, 0x400, KL_WRITE_LEN);
+				break;
+
+			case 0x07: /* 128 KB */
+				t->driver = "KL16Z128Vxxx";
+				kl_gen_add_flash(t, 0x00000000, 0x20000, 0x400, KL_WRITE_LEN);
+				break;
+
+			case 0x09: /* 256 KB */
+				t->driver = "KL16Z256Vxxx";
+				kl_gen_add_flash(t, 0x00000000, 0x40000, 0x400, KL_WRITE_LEN);
+				break;
+			default:
+				return false;
+				break;
+		}
+
+		break;
+
 	case 0x251:
 		t->driver = "KL25";
 		target_add_ram(t, 0x1ffff000, 0x1000);
