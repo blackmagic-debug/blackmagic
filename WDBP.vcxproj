@@ -69,7 +69,7 @@
       <SupportExceptions>false</SupportExceptions>
       <SupportRTTI>false</SupportRTTI>
       <AdditionalIncludeDirectories>src/include;libopencm3/include;src/platforms/common;src/platforms/stm32;src/SimpleLink/include;src/platforms/WDBP;src/platforms/winc1500;src/platforms/winc1500/src;src/platforms/ctxLink;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>NDEBUG=1;RELEASE=1;STM32F4;ENABLE_DEBUG;ctxLink;gdb_if_putchar=gdb_shim_putchar;gdb_if_getchar=gdb_shim_getchar;gdb_if_getchar_to=gdb_shim_getchar_to;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>STM32F4;ENABLE_DEBUG;ctxLink;gdb_if_putchar=gdb_shim_putchar;RELEASE=1;gdb_if_getchar=gdb_shim_getchar;NDEBUG=1;gdb_if_getchar_to=gdb_shim_getchar_to;INSTRUMENT=1;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>-mthumb -mcpu=cortex-m4  -mfpu=fpv4-sp-d16 %(AdditionalOptions)</AdditionalOptions>
       <Optimization>O0</Optimization>
       <VerboseMode>false</VerboseMode>

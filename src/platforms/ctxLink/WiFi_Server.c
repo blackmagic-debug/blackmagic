@@ -829,9 +829,6 @@ static void AppSocketCallback(SOCKET sock, uint8_t msgType, void *pvMsg)
 		case M2M_SOCKET_RECV_EVENT:
 		{
 			t_socketRecv *pRecvData = (t_socketRecv *)pvMsg;
-#ifdef INSTRUMENT
-			gpio_toggle (LED_PORT, LED_3);
-#endif
 			//
 			// Process the data for the specific server's client
 			// 
@@ -855,6 +852,9 @@ static void AppSocketCallback(SOCKET sock, uint8_t msgType, void *pvMsg)
 						inputBuffer[uiInputIndex] = localBuffer[i];
 					}
 					uiBufferCount += pRecvData->bufSize;
+#ifdef INSTRUMENT
+					gpio_set (LED_PORT, LED_3);
+#endif
 					dprintf ("Received -> %d, queued -> %ld\r\n", pRecvData->bufSize, uiBufferCount);
 					//
 					// Start another receive operation so we always get data
@@ -1520,7 +1520,7 @@ unsigned char WiFi_GetNext_to( uint32_t timeout )
 	platform_timeout t;
 	unsigned char c = 0 ;
 	int	inputCount = 0;
-	platform_timeout_set( &t, timeout );
+	platform_timeout_set( &t, 10 );
 
 	do {
 		if ((inputCount = WiFi_HaveInput ()) != 0) {
@@ -1533,7 +1533,7 @@ unsigned char WiFi_GetNext_to( uint32_t timeout )
 		
 		platform_tasks ();
 		
-	} while (!platform_timeout_is_expired (&t)) ;
+	} while (1) ;
 
 	if (inputCount != 0) {
 		c = WiFi_GetNext ();

@@ -88,6 +88,9 @@ int gdb_getpacket(char *packet, int size)
 		/* get here if checksum fails */
 		gdb_if_putchar('-', 1); /* send nack */
 	}
+#ifdef INSTRUMENT
+	gpio_clear (LED_PORT, LED_3);
+#endif
 	gdb_if_putchar('+', 1); /* send ack */
 	packet[i] = 0;
 
