@@ -47,7 +47,14 @@ int gdb_getpacket(char *packet, int size)
 				packet[0] = gdb_if_getchar();
 				if (packet[0]==0x04) return 1;
 			} while ((packet[0] != '$') && (packet[0] != REMOTE_SOM));
-#ifndef OWN_HL
+			//
+			// The following section of code implements a low-level API
+			// for those host, e.g. pc-hosted, that support low-level
+			// SWD and JTAG commands. Thos hosts that do not have support
+			// for low-level commands should define LOWLEVEL_UNAVAILABLE
+			// in the platform makefile.inc
+			//
+#ifndef LOWLEVEL_UNAVAILABLE
 			if (packet[0]==REMOTE_SOM) {
 				/* This is probably a remote control packet
 				 * - get and handle it */

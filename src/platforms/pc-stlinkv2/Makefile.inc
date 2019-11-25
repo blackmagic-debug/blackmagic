@@ -10,4 +10,4 @@ LDFLAGS += -lws2_32
 endif
 VPATH += platforms/pc
 SRC += 	timing.c stlinkv2.c
-OWN_HL = 1
+LOWLEVEL_UNAVAILABLE = 1

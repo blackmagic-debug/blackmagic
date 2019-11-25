@@ -66,15 +66,15 @@ ifndef TARGET
 TARGET=blackmagic
 endif
 
-ifdef NO_OWN_LL
+ifdef LOWLEVEL_UNAVAILABLE
 SRC += jtagtap_generic.c swdptap_generic.c
 endif
 
-ifndef OWN_HL
+ifndef LOWLEVEL_UNAVAILABLE
 SRC += jtag_scan.c jtagtap.c swdptap.c
 SRC += remote.c
 else
-CFLAGS += -DOWN_HL
+CFLAGS += -LOWLEVEL_UNAVAILABLE
 endif
 
 OBJ = $(patsubst %.S,%.o,$(patsubst %.c,%.o,$(SRC)))
