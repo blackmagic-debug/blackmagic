@@ -112,12 +112,14 @@ void jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms, const uint8_t *DI
     }
 
   if (DO) {
-	  int i = 1;
-	  while (ticks) {
-		  *DO = (uint8_t)remotehston(2,(char *)&construct[i]);
-		  DO++;
-		  i += 2;
-	  }
+      uint64_t Dol;
+      int i = 8;
+      while (ticks > 0) {
+          Dol = remotehston(8 , (char *)&construct[s - i]);
+          memcpy (DO, &Dol, (ticks + 7) / 8);
+          ticks -= 64;
+          i += 8;
+      }
   }
 }
 
