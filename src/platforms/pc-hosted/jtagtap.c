@@ -113,10 +113,11 @@ void jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms, const uint8_t *DI
 
   if (DO) {
 	  int i = 1;
-	  while (ticks) {
+	  while (ticks > 0) {
 		  *DO = (uint8_t)remotehston(2,(char *)&construct[i]);
 		  DO++;
 		  i += 2;
+		  ticks -= 8;
 	  }
   }
 }
