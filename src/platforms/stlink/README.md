@@ -1,32 +1,30 @@
 # Blackmagic for ST -Link Adapters
 
-For STlinkV3 and StlinkV2/1, as found on all Nucleo and recent Discovery
+For ST-LINK V3 and ST-LINKV 2/1, as found on all Nucleo and recent Discovery
 boards, use the pc-stlinkv2 branch, running on the PC and with original,
 recent ST firmware.
 
-Only if you have a Stlinkv2 with STM32F103C8 versus the STM32F103CB on V2/1
+Only if you have a ST-LINK V22 with STM32F103C8 versus the STM32F103CB on V2/1
 and you want to rewire and use the UART, consider reflashing the the Stlink
 firmware.
 
-On StlinkV2, the original ST Bootloader can also be used with
+On ST-LINK V2, the original ST Bootloader can also be used with
 
 - Compile firmware with "make PROBE_HOST=stlink ST_BOOTLOADER=1"
 
 - Upload firmware with stlink-tool from [stlink-tool](https://github.com/jeanthom/stlink-tool.git).
   Before upload, replug the stlink to enter the bootloader.
 
-- After each stlink replug, use call "stlink-tool" without arguments
-  to enter BMP
-
-Drawback: After each USB replug, DFU needs to be left explicit!
-On Linux, add someting like :
+- After each stlink replug, call "stlink-tool" without arguments
+  to enter BMP or on Linux use some udev rule like
 
 `> cat /etc/udev/rules.d/98-stlink.rules`
 
  `SUBSYSTEM=="usb", ATTRS{idVendor}=="0483", ATTRS{idProduct}=="3748", ACTION=="add", RUN+="<path-to>/stlink-tool"`
 
-for automatic switch to BMP on replug. However this defeats reflashing further
-BMP reflash as long as this rule is active.
+- To enter Bootloader again either replug or use "dfu-util -e".
+  With more than one DFU device connected, you need to specify
+  the needed device
 
 ## Versions
 
@@ -75,7 +73,7 @@ the 2 jumper shortening the 4-pin connector like this:
 
 
 ## BMP version detection and handling
-All stlink variants
+All ST-LINK variants
 PC13/14 open -> Standalone ST-LINKV2 or baite, some STM32 Disco w/o accessible
 UART RX/TX
 
@@ -83,8 +81,13 @@ PC13 low -> SWIM internal connection
 
 PC13/PC14 both low -> ST-LinkV2 on some F4_Diso boards.
 
-## Reflashing BMP back to ST-LINKv2 original firmware
+## Reflashing BMP back to ST-LINK V2 original firmware
 
 If you built the firmware to use ST-Link v2's bootloader (with `ST_BOOTLOADER=1`), you should be able to reflash back to original firmware using the [STLinkUpgrade utility](https://www.st.com/en/development-tools/stsw-link007.html). Do not check the "Change type" checkbox unless you know what you are doing, as it will change the USB VID:PID and change how it operates.
 
-Replug STLink before flashing if the utility doesn't detect it.
+Replug ST-LINK before flashing if the utility doesn't detect it.
+##ST-LINK V2.1 Force Bootloader entry
+On ST-LINK V2/2-1 boards with the original bootloader, you can force
+bootloader entry with asserting NRST of the STM32F103CB of the USB
+powered board. Serveral attempts may be needed.
+https://www.carminenoviello.com/2016/02/26/restore-st-link-interface-bad-update-2-26-15-firmware/
