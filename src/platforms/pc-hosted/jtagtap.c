@@ -95,8 +95,7 @@ void jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms, const uint8_t *DI
 
   uint64_t DIl=*(uint64_t *)DI;
 
-  if(!ticks) return;
-  if (!DI && !DO) return;
+  if(!ticks || !DI) return;
 
   /* Reduce the length of DI according to the bits we're transmitting */
   DIl&=(1L<<(ticks+1))-1;
@@ -112,14 +111,8 @@ void jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms, const uint8_t *DI
     }
 
   if (DO) {
-      uint64_t Dol;
-      int i = 8;
-      while (ticks > 0) {
-          Dol = remotehston(8 , (char *)&construct[s - i]);
-          memcpy (DO, &Dol, (ticks + 7) / 8);
-          ticks -= 64;
-          i += 8;
-      }
+      for (unsigned int i = 1; i*8 <= (unsigned int)ticks; i++)
+          DO[i - 1] = remotehston(2 , (char *)&construct[s - (i * 2)]);
   }
 }
 
