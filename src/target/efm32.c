@@ -829,7 +829,7 @@ static bool efm32_cmd_efm_info(target *t, int argc, const char **argv)
 
 	if (di_version == 2) {
 		efm32_v2_di_miscchip_t miscchip = efm32_v2_read_miscchip(t, di_version);
-		efm32_v2_di_pkgtype_t const* pkgtype;
+		efm32_v2_di_pkgtype_t const* pkgtype = NULL;
 		efm32_v2_di_tempgrade_t const* tempgrade;
 
 		for (size_t i = 0; i < (sizeof(efm32_v2_di_pkgtypes) /
