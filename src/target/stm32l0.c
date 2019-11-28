@@ -377,8 +377,10 @@ static int stm32lx_nvm_prog_erase(struct target_flash* f,
 	while (len > 0) {
 		/* Write first word of page to 0 */
 		target_mem_write32(t, addr, 0);
-
-		len  -= page_size;
+		if (len > page_size)
+			len  -= page_size;
+		else
+			len = 0;
 		addr += page_size;
 	}
 
@@ -439,7 +441,6 @@ static int stm32lx_nvm_prog_write(struct target_flash *f,
 	return 0;
 }
 
-
 /** Erase a region of data flash using operations through the debug
     interface .  The flash is erased for all pages from addr to
     addr+len, inclusive, on a word boundary.  NVM register file
@@ -471,7 +472,10 @@ static int stm32lx_nvm_data_erase(struct target_flash *f,
 		/* Write first word of page to 0 */
 		target_mem_write32(t, addr, 0);
 
-		len  -= page_size;
+		if (len > page_size)
+			len  -= page_size;
+		else
+			len = 0;
 		addr += page_size;
 	}
 

@@ -210,8 +210,10 @@ static int stm32f1_flash_erase(struct target_flash *f,
 				DEBUG("stm32f1 flash erase: comm error\n");
 				return -1;
 			}
-
-		len -= f->blocksize;
+		if (len > f->blocksize)
+			len -= f->blocksize;
+		else
+			len = 0;
 		addr += f->blocksize;
 	}
 

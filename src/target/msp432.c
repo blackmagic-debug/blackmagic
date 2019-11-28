@@ -267,7 +267,10 @@ static int msp432_flash_erase(struct target_flash *f, target_addr addr, size_t l
 
 		/* update len and addr */
 		len -= f->blocksize;
-		addr += f->blocksize;
+		if (len > f->blocksize)
+			len -= f->blocksize;
+		else
+			len = 0;
 	}
 
 	return ret;
