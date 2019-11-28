@@ -36,6 +36,8 @@
 #include <ctype.h>
 #include <sys/time.h>
 
+#include "cl_utils.h"
+
 #if !defined(timersub)
 /* This is a copy from GNU C Library (GNU LGPL 2.1), sys/time.h. */
 # define timersub(a, b, result)					\
@@ -687,46 +689,18 @@ static void stlink_resetsys(void)
 	send_recv(cmd, 16, data, 2);
 }
 
-void stlink_help(char **argv)
-{
-	DEBUG("Blackmagic Debug Probe on STM StlinkV2 and 3\n\n");
-	DEBUG("Usage: %s [options]\n", argv[0]);
-	DEBUG("\t-v[1|2]\t\t: Increasing verbosity\n");
-	DEBUG("\t-s \"string\"\t: Use Stlink with (partial) "
-		  "serial number \"string\"\n");
-	DEBUG("\t-n\t\t: Exit immediate if no device found\n");
-	DEBUG("\t-h\t\t: This help.\n");
-	exit(0);
-}
-
 void stlink_init(int argc, char **argv)
 {
+	BMP_CL_OPTIONS_t cl_opts = {0};
+	cl_opts.opt_idstring = "Blackmagic Debug Probe on StlinkV2/3";
+	cl_init(&cl_opts, argc, argv);
 	libusb_device **devs, *dev;
 	int r;
+	int ret = -1;
 	atexit(exit_function);
 	signal(SIGTERM, sigterm_handler);
 	signal(SIGINT, sigterm_handler);
 	libusb_init(&Stlink.libusb_ctx);
-	char *serial = NULL;
-	int c;
-	bool wait_for_attach = true;
-	while((c = getopt(argc, argv, "ns:v:h")) != -1) {
-		switch(c) {
-		case 'n':
-			wait_for_attach = false;
-			break;
-		case 's':
-			serial = optarg;
-			break;
-		case 'v':
-			if (optarg)
-				debug_level = atoi(optarg);
-			break;
-		case 'h':
-			stlink_help(argv);
-			break;
-		}
-	}
 	r = libusb_init(NULL);
 	if (r < 0)
 		DEBUG("Failed: %s", libusb_strerror(r));
@@ -794,7 +768,8 @@ void stlink_init(int argc, char **argv)
 					else
 						snprintf(s, 3, "%02x", *p & 0xff);
 				}
-				if (serial && (!strncmp(Stlink.serial, serial, strlen(serial))))
+				if (cl_opts.opt_serial && (!strncmp(Stlink.serial, cl_opts.opt_serial,
+													strlen(cl_opts.opt_serial))))
 					DEBUG("Found ");
 				if (desc.idProduct == PRODUCT_ID_STLINKV2) {
 					DEBUG("STLINKV20 serial %s\n", Stlink.serial);
@@ -820,8 +795,9 @@ void stlink_init(int argc, char **argv)
 					DEBUG("Unknown STLINK variant, serial %s\n", Stlink.serial);
 				}
 				nr_stlinks++;
-				if (serial) {
-					if (!strncmp(Stlink.serial, serial, strlen(serial))) {
+				if (cl_opts.opt_serial) {
+					if (!strncmp(Stlink.serial, cl_opts.opt_serial,
+								 strlen(cl_opts.opt_serial))) {
 						break;
 					} else {
 						libusb_close(Stlink.handle);
@@ -835,15 +811,15 @@ void stlink_init(int argc, char **argv)
 	}
 	libusb_free_device_list(devs, 1);
 	if (!Stlink.handle) {
-		if (nr_stlinks && serial) {
-			DEBUG("No Stlink with given serial number %s\n", serial);
+		if (nr_stlinks && cl_opts.opt_serial) {
+			DEBUG("No Stlink with given serial number %s\n",  cl_opts.opt_serial);
 		} else if (nr_stlinks > 1) {
 			DEBUG("Multiple Stlinks. Please specify serial number\n");
 			goto error;
 		} else {
 			DEBUG("No Stlink device found!\n");
 		}
-		if (hotplug && wait_for_attach) {
+		if (hotplug && !cl_opts.opt_no_wait) {
 			libusb_hotplug_callback_handle hp;
 			int rc = libusb_hotplug_register_callback
 				(NULL, LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED, 0,
@@ -855,9 +831,9 @@ void stlink_init(int argc, char **argv)
 				goto error;
 			}
 			DEBUG("Waiting for %sST device%s%s to attach\n",
-				  (serial)? "" : "some ",
-				  (serial)? " with serial ": "",
-				  (serial)? serial: "");
+				  (cl_opts.opt_serial)? "" : "some ",
+				  (cl_opts.opt_serial)? " with serial ": "",
+				  (cl_opts.opt_serial)? cl_opts.opt_serial: "");
 			DEBUG("Terminate with ^C\n");
 			while (has_attached == 0) {
 				rc = libusb_handle_events (NULL);
@@ -925,13 +901,17 @@ void stlink_init(int argc, char **argv)
 	}
 	stlink_leave_state();
 	stlink_resetsys();
-	assert(gdb_if_init() == 0);
-	return;
+	if (cl_opts.opt_mode != BMP_MODE_DEBUG) {
+		ret = cl_execute(&cl_opts);
+	} else {
+		assert(gdb_if_init() == 0);
+		return;
+	}
   error_1:
 	libusb_close(Stlink.handle);
   error:
 	libusb_exit(Stlink.libusb_ctx);
-	exit(-1);
+	exit(ret);
 }
 
 void stlink_srst_set_val(bool assert)
