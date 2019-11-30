@@ -31,6 +31,8 @@
  * particularly Sections 12. DSU and 25. NVMCTRL
  */
 
+#define __USE_MINGW_ANSI_STDIO 1
+
 #include <ctype.h>
 
 #include "general.h"
