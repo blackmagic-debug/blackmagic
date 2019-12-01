@@ -153,6 +153,7 @@ unsigned char gdb_if_getchar_to(int timeout)
 {
 	if ( isGDBClientConnected() == true )
 	{
+        platform_tasks() ;
 		return WiFi_GetNext_to(timeout) ;
 	}
 	return usb_if_getchar_to(timeout) ;
