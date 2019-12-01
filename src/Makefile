@@ -2,6 +2,7 @@ PROBE_HOST ?= native
 PLATFORM_DIR = platforms/$(PROBE_HOST)
 VPATH += $(PLATFORM_DIR) target
 ENABLE_DEBUG ?=
+ENABLE_SRTT ?=
 
 ifneq ($(V), 1)
 MAKEFLAGS += --no-print-dir
@@ -16,10 +17,15 @@ ifeq ($(ENABLE_DEBUG), 1)
 CFLAGS += -DENABLE_DEBUG
 endif
 
+ifeq ($(ENABLE_SRTT), 1)
+CFLAGS += -DENABLE_SRTT
+endif
+
 SRC =			\
 	adiv5.c		\
 	adiv5_jtagdp.c	\
 	adiv5_swdp.c	\
+        srtt.c          \
 	command.c	\
 	cortexa.c	\
 	cortexm.c	\

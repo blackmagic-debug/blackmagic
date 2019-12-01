@@ -34,6 +34,10 @@
 #include "version.h"
 #include "serialno.h"
 
+#ifdef ENABLE_SRTT
+#include "srtt.h"
+#endif
+
 #ifdef PLATFORM_HAS_TRACESWO
 #	include "traceswo.h"
 #endif
@@ -46,6 +50,9 @@ static bool cmd_help(target *t, int argc, char **argv);
 static bool cmd_jtag_scan(target *t, int argc, char **argv);
 static bool cmd_swdp_scan(target *t, int argc, char **argv);
 static bool cmd_frequency(target *t, int argc, char **argv);
+#ifdef ENABLE_SRTT
+static bool cmd_srtt_scan(target *t, int argc, char **argv);
+#endif
 static bool cmd_targets(target *t, int argc, char **argv);
 static bool cmd_morse(target *t, int argc, char **argv);
 static bool cmd_halt_timeout(target *t, int argc, const char **argv);
@@ -68,6 +75,9 @@ const struct command_s cmd_list[] = {
 	{"jtag_scan", (cmd_handler)cmd_jtag_scan, "Scan JTAG chain for devices" },
 	{"swdp_scan", (cmd_handler)cmd_swdp_scan, "Scan SW-DP for devices" },
 	{"frequency", (cmd_handler)cmd_frequency, "set minimum high and low times" },
+#ifdef ENABLE_SRTT
+	{"srtt_scan", (cmd_handler)cmd_srtt_scan, "Scan Segger Real-Time Transfer"},
+#endif
 	{"targets", (cmd_handler)cmd_targets, "Display list of available targets" },
 	{"morse", (cmd_handler)cmd_morse, "Display morse error message" },
 	{"halt_timeout", (cmd_handler)cmd_halt_timeout, "Timeout (ms) to wait until Cortex-M is halted: (Default 2000)" },
@@ -126,6 +136,11 @@ int command_process(target *t, char *cmd)
 	if (!t)
 		return -1;
 
+#ifdef ENABLE_SRTT
+	if (srtt_available() && argc > 0 && !strncmp(argv[0], "srtt", 4))
+		return srtt_command(t, argc, argv);
+#endif
+
 	return target_command(t, argc, argv);
 }
 
@@ -166,6 +181,11 @@ bool cmd_help(target *t, int argc, char **argv)
 		return -1;
 
 	target_command_help(t);
+
+#ifdef ENABLE_SRTT
+	if (srtt_available())
+		srtt_command_help();
+#endif
 
 	return true;
 }
@@ -280,8 +300,22 @@ bool cmd_frequency(target *t, int argc, char **argv)
 	else
 		gdb_outf("Max SWJ freq %08" PRIx32 "\n", freq);
 	return true;
-
 }
+
+#ifdef ENABLE_SRTT
+bool cmd_srtt_scan(target *t, int argc, char **argv)
+{
+	(void)argc;
+	(void)argv;
+
+	if (!target_attached(t)) {
+		gdb_out("You should attach to target first.\n");
+		return false;
+	}
+
+	return srtt_scan(t);
+}
+#endif
 
 static void display_target(int i, target *t, void *context)
 {

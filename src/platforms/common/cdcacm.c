@@ -29,6 +29,9 @@
 #include "general.h"
 #include "gdb_if.h"
 #include "cdcacm.h"
+#ifdef ENABLE_SRTT
+#  include "srtt.h"
+#endif
 #if defined(PLATFORM_HAS_TRACESWO)
 #	include "traceswo.h"
 #endif
