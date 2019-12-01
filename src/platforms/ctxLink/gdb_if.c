@@ -25,18 +25,17 @@
 #include "general.h"
 #include "cdcacm.h"
 #include "gdb_if.h"
+#include "WiFi_Server.h"
 
 static uint32_t count_out;
 static uint32_t count_in;
 static uint32_t out_ptr;
 static uint8_t buffer_out[CDCACM_PACKET_SIZE];
 static uint8_t buffer_in[CDCACM_PACKET_SIZE];
-#ifdef STM32F4
 static volatile uint32_t count_new;
 static uint8_t double_buffer_out[CDCACM_PACKET_SIZE];
-#endif
 
-void gdb_if_putchar(unsigned char c, int flush)
+void usb_if_putchar(unsigned char c, int flush)
 {
 	buffer_in[count_in++] = c;
 	if(flush || (count_in == CDCACM_PACKET_SIZE)) {
@@ -64,7 +63,15 @@ void gdb_if_putchar(unsigned char c, int flush)
 	}
 }
 
-#ifdef STM32F4
+void gdb_if_putchar(unsigned char c, int flush)
+{
+	if ( isGDBClientConnected() == true )
+	{
+		WiFi_gdb_putchar(c, flush);
+	}
+	usb_if_putchar(c, flush);
+}
+
 void gdb_usb_out_cb(usbd_device *dev, uint8_t ep)
 {
 	(void)ep;
@@ -75,12 +82,10 @@ void gdb_usb_out_cb(usbd_device *dev, uint8_t ep)
 		usbd_ep_nak_set(dev, CDCACM_GDB_ENDPOINT, 0);
 	}
 }
-#endif
 
 static void gdb_if_update_buf(void)
 {
 	while (cdcacm_get_config() != 1);
-#ifdef STM32F4
 	asm volatile ("cpsid i; isb");
 	if (count_new) {
 		memcpy(buffer_out, double_buffer_out, count_new);
@@ -90,14 +95,9 @@ static void gdb_if_update_buf(void)
 		usbd_ep_nak_set(usbdev, CDCACM_GDB_ENDPOINT, 0);
 	}
 	asm volatile ("cpsie i; isb");
-#else
-	count_out = usbd_ep_read_packet(usbdev, CDCACM_GDB_ENDPOINT,
-	                                buffer_out, CDCACM_PACKET_SIZE);
-	out_ptr = 0;
-#endif
 }
 
-unsigned char gdb_if_getchar(void)
+unsigned char usb_if_getchar(void)
 {
 
 	while (!(out_ptr < count_out)) {
@@ -111,7 +111,26 @@ unsigned char gdb_if_getchar(void)
 	return buffer_out[out_ptr++];
 }
 
-unsigned char gdb_if_getchar_to(int timeout)
+unsigned char gdb_if_getchar(void)
+{
+	if ( isGDBClientConnected() == true )
+	{
+		return WiFi_GetNext() ;
+	}
+	else
+	{
+		if ( cdcacm_get_config() == 1 )
+		{
+			return usb_if_getchar() ;
+		}
+		else
+		{
+			return (0xFF) ;
+		}
+	}
+}
+
+unsigned char usb_if_getchar_to(int timeout)
 {
 	platform_timeout t;
 	platform_timeout_set(&t, timeout);
@@ -129,4 +148,14 @@ unsigned char gdb_if_getchar_to(int timeout)
 
 	return -1;
 }
+
+unsigned char gdb_if_getchar_to(int timeout)
+{
+	if ( isGDBClientConnected() == true )
+	{
+		return WiFi_GetNext_to(timeout) ;
+	}
+	return usb_if_getchar_to(timeout) ;
+}
+
 
