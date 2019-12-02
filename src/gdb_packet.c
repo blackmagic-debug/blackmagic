@@ -27,9 +27,6 @@
 #include "gdb_packet.h"
 #include "hex_utils.h"
 
-#ifdef ctxLink
-#include "WiFi_Server.h"
-#endif
 #include <stdarg.h>
 
 int gdb_getpacket(char *packet, int size)
@@ -42,21 +39,7 @@ int gdb_getpacket(char *packet, int size)
 	while(1) {
 		/* Wait for packet start */
 		while ( (packet[0] = gdb_if_getchar()) != '$' )
-#ifdef ctxLink
-		{
-			if ( isGDBClientConnected() == true )
-			{
-				if ( packet[0] == 0x00 ) return 0 ;
-			}
-			else
-			{
-				if ( packet[0] == 0x04 ) return 1;
-				if ( packet[0] == 0xFF ) return 0 ;
-			}
-		}
-#else
 			if(packet[0] == 0x04) return 1;
-#endif
 
 		i = 0; csum = 0;
 		/* Capture packet data into buffer */

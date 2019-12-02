@@ -35,12 +35,6 @@
 #include "crc32.h"
 #include "morse.h"
 
-#ifdef ctxLink
-#include "cdcacm.h"
-#include "WiFi_Server.h"
-#include "winc1500_api.h"
-#endif
-
 enum gdb_signal {
 	GDB_SIGINT = 2,
 	GDB_SIGTRAP = 5,
@@ -105,16 +99,9 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 	/* GDB protocol main loop */
 	while(1) {
 		SET_IDLE_STATE(1);
-#ifdef ctxLink
-		platform_tasks();
-#endif
 		size = gdb_getpacket(pbuf, BUF_SIZE);
 		SET_IDLE_STATE(0);
-#ifdef ctxLink
-		if ( size != 0 )
-		{
-#endif
-			switch ( pbuf[0] ) { /* Implementation of these is mandatory! */
+		switch ( pbuf[0] ) { /* Implementation of these is mandatory! */
 			case 'g': {
 					/* 'g': Read general registers */
 					ERROR_IF_NO_TARGET();
@@ -306,9 +293,6 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 			DEBUG("*** Unsupported packet: %s\n", pbuf);
 			gdb_putpacketz("");
 		}
-#ifdef ctxLink
-		}
-#endif
 	}
 }
 

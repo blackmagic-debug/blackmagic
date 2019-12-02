@@ -5,8 +5,6 @@ OBJCOPY = $(CROSS_COMPILE)objcopy
 CFLAGS += -Istm32/include -mcpu=cortex-m4 -mthumb \
 	-mfloat-abi=hard -mfpu=fpv4-sp-d16 -Wno-unused-value -Wno-unused-parameter \
 	-Wimplicit-fallthrough=0 \
-	-Dgdb_if_putchar=gdb_shim_putchar -Dgdb_if_getchar=gdb_shim_getchar \
-	-Dgdb_if_getchar_to=gdb_shim_getchar_to \
 	-DctxLink -DSTM32F4  -I../libopencm3/include \
 	-I./platforms/winc1500 -I./platforms/winc1500/src \
 	-Iplatforms/stm32
@@ -18,7 +16,7 @@ LDFLAGS = -lopencm3_stm32f4  \
 	-mfloat-abi=hard -mfpu=fpv4-sp-d16 \
 	-L../libopencm3/lib
 
-VPATH += platforms/stm32 platforms/winc1500 platforms/winc1500/src
+VPATH += platforms/ctxLink platforms/stm32 platforms/winc1500 platforms/winc1500/src
 
 SRC += 	cdcacm.c	\
 	traceswo.c	\
@@ -27,7 +25,6 @@ SRC += 	cdcacm.c	\
 	timing.c	\
 	timing_stm32.c	\
 	WiFi_Server.c \
-	ctxLink_if.c \
 	ctxLink_mode_led.c \
 	winc1500_driver_stub_api.c \
 	wf_asic.c \

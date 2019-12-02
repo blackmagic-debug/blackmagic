@@ -47,8 +47,6 @@
 
 #include "winc1500_api.h"
 
-#undef gdb_if_putchar
-
 static void adc_init( void );
 int usbuart_debug_write(const char *buf, size_t len);
 void gdb_if_putchar(unsigned char c, int flush);
