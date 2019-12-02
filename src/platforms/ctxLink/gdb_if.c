@@ -111,25 +111,6 @@ unsigned char usb_if_getchar(void)
 	return buffer_out[out_ptr++];
 }
 
-unsigned char gdb_if_getchar(void)
-{
-	if ( isGDBClientConnected() == true )
-	{
-		return WiFi_GetNext() ;
-	}
-	else
-	{
-		if ( cdcacm_get_config() == 1 )
-		{
-			return usb_if_getchar() ;
-		}
-		else
-		{
-			return (0xFF) ;
-		}
-	}
-}
-
 unsigned char usb_if_getchar_to(int timeout)
 {
 	platform_timeout t;
@@ -144,9 +125,29 @@ unsigned char usb_if_getchar_to(int timeout)
 	} while (!platform_timeout_is_expired(&t) && !(out_ptr < count_out));
 
 	if(out_ptr < count_out)
-		return gdb_if_getchar();
+		return buffer_out[out_ptr++];
 
 	return -1;
+}
+
+unsigned char gdb_if_getchar(void)
+{
+    platform_tasks() ;
+	if ( isGDBClientConnected() == true )
+	{
+		return WiFi_GetNext() ;
+	}
+	else
+	{
+		if ( cdcacm_get_config() == 1 )
+		{
+			return usb_if_getchar_to(1) ;
+		}
+		else
+		{
+			return (0xFF) ;
+		}
+	}
 }
 
 unsigned char gdb_if_getchar_to(int timeout)
