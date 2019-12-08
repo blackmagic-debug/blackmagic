@@ -219,6 +219,7 @@ typedef struct {
 	uint8_t      ver_swim;
 	uint8_t      ver_bridge;
 	uint16_t     block_size;
+	bool         ap_error;
 	libusb_device_handle *handle;
 	struct libusb_transfer* req_trans;
 	struct libusb_transfer* rep_trans;
@@ -464,6 +465,7 @@ static int stlink_usb_error_check(uint8_t *data, bool verbose)
 			 * Change in error status when reading outside RAM.
 			 * This fix allows CDT plugin to visualize memory.
 			 */
+			Stlink.ap_error = true;
 			if (verbose)
 				DEBUG("STLINK_SWD_AP_FAULT\n");
 			return STLINK_ERROR_DP_FAULT;
@@ -1080,6 +1082,8 @@ uint32_t stlink_dp_error(ADIv5_DP_t *dp)
 	dp->fault = 0;
 	if (err)
 		DEBUG("stlink_dp_error %d\n", err);
+	err |= Stlink.ap_error;
+	Stlink.ap_error = false;
 	return err;
 }
 
