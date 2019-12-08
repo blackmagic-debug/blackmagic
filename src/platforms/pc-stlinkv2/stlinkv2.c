@@ -398,7 +398,7 @@ static int send_recv(uint8_t *txbuf, size_t txsize,
 		if (res >0) {
 			int i;
 			uint8_t *p = rxbuf;
-			DEBUG_USB(" Rec (%" PRI_SIZET "/%d)", rxsize, res);
+			DEBUG_USB(" Rec (%zu/%d)", rxsize, res);
 			for (i = 0; i < res && i < 32 ; i++) {
 				if ( i && ((i & 7) == 0))
 					DEBUG_USB(".");
@@ -1233,7 +1233,7 @@ void stlink_readmem(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
 		type = STLINK_DEBUG_READMEM_32BIT;
 
 	}
-	DEBUG_STLINK("%s len %" PRI_SIZET " addr 0x%08" PRIx32 " AP %d : ",
+	DEBUG_STLINK("%s len %zu addr 0x%08" PRIx32 " AP %d : ",
 				 CMD, len, src, ap->apsel);
 	uint8_t cmd[16] = {
 		STLINK_DEBUG_COMMAND,
@@ -1263,7 +1263,7 @@ void stlink_readmem(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
 void stlink_writemem8(ADIv5_AP_t *ap, uint32_t addr, size_t len,
 					  uint8_t *buffer)
 {
-	DEBUG_STLINK("Mem Write8 AP %d len %" PRI_SIZET " addr 0x%08" PRIx32 ": ",
+	DEBUG_STLINK("Mem Write8 AP %d len %zu addr 0x%08" PRIx32 ": ",
 				 ap->apsel, len, addr);
 	for (size_t t = 0; t < len; t++) {
 		DEBUG_STLINK("%02x", buffer[t]);
@@ -1292,7 +1292,7 @@ void stlink_writemem8(ADIv5_AP_t *ap, uint32_t addr, size_t len,
 void stlink_writemem16(ADIv5_AP_t *ap, uint32_t addr, size_t len,
 					   uint16_t *buffer)
 {
-	DEBUG_STLINK("Mem Write16 AP %d len %" PRI_SIZET " addr 0x%08" PRIx32 ": ",
+	DEBUG_STLINK("Mem Write16 AP %d len %zu addr 0x%08" PRIx32 ": ",
 				 ap->apsel, len, addr);
 	for (size_t t = 0; t < len; t+=2) {
 		DEBUG_STLINK("%04x", buffer[t]);
@@ -1312,7 +1312,7 @@ void stlink_writemem16(ADIv5_AP_t *ap, uint32_t addr, size_t len,
 void stlink_writemem32(ADIv5_AP_t *ap, uint32_t addr, size_t len,
 					   uint32_t *buffer)
 {
-	DEBUG_STLINK("Mem Write32 AP %d len %" PRI_SIZET " addr 0x%08" PRIx32 ": ",
+	DEBUG_STLINK("Mem Write32 AP %d len %zu addr 0x%08" PRIx32 ": ",
 				 ap->apsel, len, addr);
 	for (size_t t = 0; t < len; t+=4) {
 		DEBUG_STLINK("%04x", buffer[t]);
