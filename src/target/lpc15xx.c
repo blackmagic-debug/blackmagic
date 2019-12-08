@@ -35,6 +35,26 @@
 
 #define LPC15XX_DEVICE_ID  0x400743F8
 
+static bool lpc15xx_read_uid(target *t, int argc, const char *argv[])
+{
+	(void)argc;
+	(void)argv;
+	struct lpc_flash *f = (struct lpc_flash *)t->flash;
+	uint8_t uid[16];
+	if (lpc_iap_call(f, uid, IAP_CMD_READUID))
+		return false;
+	tc_printf(t, "UID: 0x");
+	for (uint32_t i = 0; i < sizeof(uid); ++i)
+		tc_printf(t, "%02x", uid[i]);
+	tc_printf(t, "\n");
+	return true;
+}
+
+const struct command_s lpc15xx_cmd_list[] = {
+	{"readuid", lpc15xx_read_uid, "Read out the 16-byte UID."},
+	{NULL, NULL, NULL}
+};
+
 void lpc15xx_add_flash(target *t, uint32_t addr, size_t len, size_t erasesize)
 {
 	struct lpc_flash *lf = lpc_add_flash(t, addr, len);
@@ -72,6 +92,7 @@ lpc15xx_probe(target *t)
 		t->driver = "LPC15xx";
 		target_add_ram(t, 0x02000000, ram_size);
 		lpc15xx_add_flash(t, 0x00000000, 0x40000, 0x1000);
+		target_add_commands(t, lpc15xx_cmd_list, "LPC15xx");
 		return true;
 	}
 
