@@ -425,8 +425,10 @@ static int stm32l4_flash_erase(struct target_flash *f, target_addr addr, size_t 
 		while(target_mem_read32(t, FLASH_SR) & FLASH_SR_BSY)
 			if(target_check_error(t))
 				return -1;
-
-		len  -= blocksize;
+		if (len > blocksize)
+			len  -= blocksize;
+		else
+			len = 0;
 		addr += blocksize;
 		page++;
 	}

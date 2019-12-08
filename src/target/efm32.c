@@ -686,7 +686,10 @@ static int efm32_flash_erase(struct target_flash *f, target_addr addr, size_t le
 		}
 
 		addr += f->blocksize;
-		len -= f->blocksize;
+		if (len > f->blocksize)
+			len -= f->blocksize;
+		else
+			len = 0;
 	}
 
 	return 0;
@@ -829,7 +832,7 @@ static bool efm32_cmd_efm_info(target *t, int argc, const char **argv)
 
 	if (di_version == 2) {
 		efm32_v2_di_miscchip_t miscchip = efm32_v2_read_miscchip(t, di_version);
-		efm32_v2_di_pkgtype_t const* pkgtype;
+		efm32_v2_di_pkgtype_t const* pkgtype = NULL;
 		efm32_v2_di_tempgrade_t const* tempgrade;
 
 		for (size_t i = 0; i < (sizeof(efm32_v2_di_pkgtypes) /

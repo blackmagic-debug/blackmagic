@@ -310,7 +310,10 @@ static int kl_gen_flash_erase(struct target_flash *f, target_addr addr, size_t l
 	while (len) {
 		if (kl_gen_command(f->t, FTFA_CMD_ERASE_SECTOR, addr, NULL)) {
 			/* Different targets have different flash erase sizes */
-			len -= f->blocksize;
+			if (len > f->blocksize)
+				len -= f->blocksize;
+			else
+				len = 0;
 			addr += f->blocksize;
 		} else {
 			return 1;
@@ -345,7 +348,10 @@ static int kl_gen_flash_write(struct target_flash *f,
 
 	while (len) {
 		if (kl_gen_command(f->t, write_cmd, dest, src)) {
-			len -= kf->write_len;
+			if (len > kf->write_len)
+				len -= kf->write_len;
+			else
+				len = 0;
 			dest += kf->write_len;
 			src += kf->write_len;
 		} else {

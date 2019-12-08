@@ -267,7 +267,10 @@ static int msp432_flash_erase(struct target_flash *f, target_addr addr, size_t l
 
 		/* update len and addr */
 		len -= f->blocksize;
-		addr += f->blocksize;
+		if (len > f->blocksize)
+			len -= f->blocksize;
+		else
+			len = 0;
 	}
 
 	return ret;
@@ -295,7 +298,7 @@ static int msp432_flash_write(struct target_flash *f, target_addr dest,
 	regs[1] = dest;              // Flash address to be write to in R1
 	regs[2] = len;               // Size of buffer to be flashed in R2
 
-	DEBUG("Writing 0x%04" PRIX32 " bytes at 0x%08" PRI_SIZET "\n", dest, len);
+	DEBUG("Writing 0x%04" PRIX32 " bytes at 0x%08zu\n", dest, len);
 	/* Call ROM */
 	msp432_call_ROM(t, mf->FlashCtl_programMemory, regs);
 

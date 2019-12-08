@@ -308,7 +308,10 @@ static int sam4_flash_erase(struct target_flash *f, target_addr addr, size_t len
 		if(sam3x_flash_cmd(t, base, EEFC_FCR_FCMD_EPA, arg))
 			return -1;
 
-		len -= f->blocksize;
+		if (len > f->blocksize)
+			len -= f->blocksize;
+		else
+			len = 0;
 		chunk += 8;
 	}
 	return 0;
