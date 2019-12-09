@@ -308,7 +308,8 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 				   " bytes to %s\n", opt->opt_flash_start,  opt->opt_flash_size,
 				   opt->opt_flash_file);
 		uint32_t flash_src = opt->opt_flash_start;
-		size_t size = opt->opt_flash_size;
+		size_t size = (opt->opt_mode == BMP_MODE_FLASH_READ) ? opt->opt_flash_size:
+			map.size;
 		int bytes_read = 0;
 		void *flash = map.data;
 		while (size) {
