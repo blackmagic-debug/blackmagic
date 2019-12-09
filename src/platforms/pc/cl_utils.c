@@ -123,6 +123,7 @@ static void cl_help(char **argv, BMP_CL_OPTIONS_t *opt)
 	printf("\t-t\t\t: Scan SWD, with no target found scan jtag and exit\n");
 	printf("\t-V\t\t: Verify flash against binary file\n");
 	printf("\t-r\t\t: Read flash and write to binary file\n");
+	printf("\t-R\t\t: Reset device\n");
 	printf("\t\tDefault mode is starting the debug server\n");
 	printf("\tFlash operation modifiers options:\n");
 	printf("\t-a <num>\t: Start flash operation at flash address <num>\n"
@@ -140,7 +141,7 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 	opt->opt_target_dev = 1;
 	opt->opt_flash_start = 0x08000000;
 	opt->opt_flash_size = 16 * 1024 *1024;
-	while((c = getopt(argc, argv, "hv::s:c:nN:tVta:S:jr")) != -1) {
+	while((c = getopt(argc, argv, "hv::s:c:nN:tVta:S:jrR")) != -1) {
 		switch(c) {
 		case 'c':
 			if (optarg)
@@ -171,6 +172,9 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 			break;
 		case 'r':
 			opt->opt_mode = BMP_MODE_FLASH_READ;
+			break;
+		case 'R':
+			opt->opt_mode = BMP_MODE_RESET;
 			break;
 		case 'a':
 			if (optarg)
@@ -205,8 +209,9 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 		opt->opt_flash_file = argv[optind];
 	}
 	/* Checks */
-	if ((opt->opt_flash_file) && (opt->opt_mode == BMP_MODE_TEST)) {
-		printf("Ignoring filename in test mode\n");
+	if ((opt->opt_flash_file) && ((opt->opt_mode == BMP_MODE_TEST ) ||
+								  (opt->opt_mode == BMP_MODE_RESET))) {
+		printf("Ignoring filename in reset/test mode\n");
 		opt->opt_flash_file = NULL;
 	}
 }
@@ -253,7 +258,7 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 			DEBUG("Can not map file: %s. Aborting!\n", strerror(errno));
 			goto target_detach;
 		}
-	} else {
+	} else if (opt->opt_mode == BMP_MODE_FLASH_READ) {
 		/* Open as binary */
 		read_file = open(opt->opt_flash_file, O_CREAT | O_RDWR | O_BINARY,
 						 S_IRUSR | S_IWUSR);
@@ -266,7 +271,9 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 	if (opt->opt_flash_size < map.size)
 		/* restrict to size given on command line */
 		map.size = opt->opt_flash_size;
-	if (opt->opt_mode == BMP_MODE_FLASH_WRITE) {
+	if (opt->opt_mode == BMP_MODE_RESET) {
+		target_reset(t);
+	} else if (opt->opt_mode == BMP_MODE_FLASH_WRITE) {
 		DEBUG("Erase    %zu bytes at 0x%08" PRIx32 "\n", map.size,
 			  opt->opt_flash_start);
 		unsigned int erased = target_flash_erase(t, opt->opt_flash_start,
@@ -288,6 +295,7 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 			}
 		}
 		target_flash_done(t);
+		target_reset(t);
 	} else {
 #define WORKSIZE 1024
 		uint8_t *data = malloc(WORKSIZE);
@@ -344,7 +352,6 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 			close(read_file);
 		printf("Read/Verifed succeeded for %d bytes\n", bytes_read);
 	}
-	target_reset(t);
   free_map:
 	if (map.size)
 		bmp_munmap(&map);
