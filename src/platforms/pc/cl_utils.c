@@ -121,6 +121,7 @@ static void cl_help(char **argv, BMP_CL_OPTIONS_t *opt)
 	printf("\t-n\t\t:  Exit immediate if no device found\n");
 	printf("\tRun mode related options:\n");
 	printf("\t-t\t\t: Scan SWD, with no target found scan jtag and exit\n");
+	printf("\t-E\t\t: Erase flash until flash end or for given size\n");
 	printf("\t-V\t\t: Verify flash against binary file\n");
 	printf("\t-r\t\t: Read flash and write to binary file\n");
 	printf("\t-R\t\t: Reset device\n");
@@ -141,7 +142,7 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 	opt->opt_target_dev = 1;
 	opt->opt_flash_start = 0x08000000;
 	opt->opt_flash_size = 16 * 1024 *1024;
-	while((c = getopt(argc, argv, "hv::s:c:nN:tVta:S:jrR")) != -1) {
+	while((c = getopt(argc, argv, "Ehv::s:c:nN:tVta:S:jrR")) != -1) {
 		switch(c) {
 		case 'c':
 			if (optarg)
@@ -163,6 +164,9 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 		case 's':
 			if (optarg)
 				opt->opt_serial = optarg;
+			break;
+		case 'E':
+			opt->opt_mode = BMP_MODE_FLASH_ERASE;
 			break;
 		case 't':
 			opt->opt_mode = BMP_MODE_TEST;
@@ -272,6 +276,16 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 		/* restrict to size given on command line */
 		map.size = opt->opt_flash_size;
 	if (opt->opt_mode == BMP_MODE_RESET) {
+		target_reset(t);
+	} else if (opt->opt_mode == BMP_MODE_FLASH_ERASE) {
+		DEBUG("Erase %zu bytes at 0x%08" PRIx32 "\n", opt->opt_flash_size,
+			  opt->opt_flash_start);
+		unsigned int erased = target_flash_erase(t, opt->opt_flash_start,
+												 opt->opt_flash_size);
+		if (erased) {
+			DEBUG("Erased failed!\n");
+			goto free_map;
+		}
 		target_reset(t);
 	} else if (opt->opt_mode == BMP_MODE_FLASH_WRITE) {
 		DEBUG("Erase    %zu bytes at 0x%08" PRIx32 "\n", map.size,
