@@ -18,7 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file allows pc-hosted BMP platforms to erase and flash a
+/* This file allows pc-hosted BMP platforms to erase or read/verify/flash a
  * binary file from the command line.
  */
 
