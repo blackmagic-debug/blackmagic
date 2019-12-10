@@ -37,6 +37,8 @@
 #include <termios.h>
 #include <unistd.h>
 
+#include "cl_utils.h"
+
 /* Allow 100mS for responses to reach us */
 #define RESP_TIMEOUT (100)
 
@@ -93,29 +95,20 @@ int set_interface_attribs (int fd, int speed, int parity)
 
 void platform_init(int argc, char **argv)
 {
-  int c;
+  BMP_CL_OPTIONS_t cl_opts = {0};
+  cl_opts.opt_idstring = "Blackmagic Debug Probe Remote";
+  cl_init(&cl_opts, argc, argv);
   char construct[PLATFORM_MAX_MSG_SIZE];
-  char *serial = NULL;
-  while((c = getopt(argc, argv, "s:")) != -1) {
-    switch(c)
-      {
-      case 's':
-	serial = optarg;
-	break;
-      }
-  }
 
   printf("\nBlack Magic Probe (" FIRMWARE_VERSION ")\n");
   printf("Copyright (C) 2019  Black Sphere Technologies Ltd.\n");
   printf("License GPLv3+: GNU GPL version 3 or later "
 	 "<http://gnu.org/licenses/gpl.html>\n\n");
 
-  assert(gdb_if_init() == 0);
-
-  f=open(serial,O_RDWR|O_SYNC|O_NOCTTY);
+  f=open(cl_opts.opt_serial,O_RDWR|O_SYNC|O_NOCTTY);
   if (f<0)
     {
-      fprintf(stderr,"Couldn't open serial port %s\n",serial);
+      fprintf(stderr,"Couldn't open serial port %s\n", cl_opts.opt_serial);
       exit(-1);
     }
 
@@ -124,7 +117,7 @@ void platform_init(int argc, char **argv)
       exit(-1);
     }
 
-  c=snprintf(construct,PLATFORM_MAX_MSG_SIZE,"%s",REMOTE_START_STR);
+  int c=snprintf(construct,PLATFORM_MAX_MSG_SIZE,"%s",REMOTE_START_STR);
   platform_buffer_write((uint8_t *)construct,c);
   c=platform_buffer_read((uint8_t *)construct, PLATFORM_MAX_MSG_SIZE);
 
@@ -135,6 +128,13 @@ void platform_init(int argc, char **argv)
     }
 
   printf("Remote is %s\n",&construct[1]);
+  if (cl_opts.opt_mode != BMP_MODE_DEBUG) {
+	  int ret = cl_execute(&cl_opts);
+	  close(f);
+	  exit(ret);
+  } else {
+	  assert(gdb_if_init() == 0);
+  }
 }
 
 bool platform_target_get_power(void)
