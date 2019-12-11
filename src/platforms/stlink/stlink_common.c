@@ -93,6 +93,9 @@ uint32_t detect_rev(void)
 
 void platform_request_boot(void)
 {
+#if defined(DST_BOOTLOADER)
+	scb_reset_system();
+#else
 	uint32_t crl = GPIOA_CRL;
 	/* Assert bootloader marker.
 	 * Enable Pull on GPIOA1. We don't rely on the external pin
@@ -103,4 +106,5 @@ void platform_request_boot(void)
 	crl |= 0x80;
 	GPIOA_CRL = crl;
 	SCB_VTOR = 0;
+#endif
 }

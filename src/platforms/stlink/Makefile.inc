@@ -13,6 +13,7 @@ LDFLAGS_BOOT := $(LDFLAGS) --specs=nano.specs -lopencm3_stm32f1 \
 	-L../libopencm3/lib
 ifeq ($(ST_BOOTLOADER), 1)
 $(info  Load address 0x08004000 for original ST-LinkV2 Bootloader)
+CFLAGS += -DST_BOOTLOADER
 LDFLAGS = $(LDFLAGS_BOOT) -Wl,-Ttext=0x8004000
 else
 LDFLAGS = $(LDFLAGS_BOOT) -Wl,-Ttext=0x8002000
@@ -34,8 +35,11 @@ SRC += 	cdcacm.c	\
 	traceswoasync.c	\
 	stlink_common.c \
 
+ifeq ($(ST_BOOTLOADER), 1)
+all:	blackmagic.bin blackmagic_dfu.bin blackmagic_dfu.hex
+else
 all:	blackmagic.bin blackmagic_dfu.bin blackmagic_dfu.hex dfu_upgrade.bin dfu_upgrade.hex
-
+endif
 blackmagic_dfu: usbdfu.o dfucore.o dfu_f1.o stlink_common.o
 	@echo "  LD      $@"
 	$(Q)$(CC) $^ -o $@ $(LDFLAGS_BOOT)
