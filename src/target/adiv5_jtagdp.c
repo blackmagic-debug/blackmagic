@@ -37,12 +37,7 @@
 #define IR_DPACC	0xA
 #define IR_APACC	0xB
 
-static uint32_t adiv5_jtagdp_read(ADIv5_DP_t *dp, uint16_t addr);
-
 static uint32_t adiv5_jtagdp_error(ADIv5_DP_t *dp);
-
-static uint32_t adiv5_jtagdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
-					uint16_t addr, uint32_t value);
 
 static void adiv5_jtagdp_abort(ADIv5_DP_t *dp, uint32_t abort);
 
@@ -57,29 +52,29 @@ void adiv5_jtag_dp_handler(jtag_dev_t *dev)
 	dp->dev = dev;
 	if ((PC_HOSTED == 0 ) || (!platform_jtag_dp_init(dp))) {
 		dp->idcode = dev->idcode;
-		dp->dp_read = adiv5_jtagdp_read;
+		dp->dp_read = fw_adiv5_jtagdp_read;
 		dp->error = adiv5_jtagdp_error;
-		dp->low_access = adiv5_jtagdp_low_access;
+		dp->low_access = fw_adiv5_jtagdp_low_access;
 		dp->abort = adiv5_jtagdp_abort;
 	}
 	adiv5_dp_init(dp);
 }
 
-static uint32_t adiv5_jtagdp_read(ADIv5_DP_t *dp, uint16_t addr)
+uint32_t fw_adiv5_jtagdp_read(ADIv5_DP_t *dp, uint16_t addr)
 {
-	adiv5_jtagdp_low_access(dp, ADIV5_LOW_READ, addr, 0);
-	return adiv5_jtagdp_low_access(dp, ADIV5_LOW_READ,
+	fw_adiv5_jtagdp_low_access(dp, ADIV5_LOW_READ, addr, 0);
+	return fw_adiv5_jtagdp_low_access(dp, ADIV5_LOW_READ,
 					ADIV5_DP_RDBUFF, 0);
 }
 
 static uint32_t adiv5_jtagdp_error(ADIv5_DP_t *dp)
 {
-	adiv5_jtagdp_low_access(dp, ADIV5_LOW_READ, ADIV5_DP_CTRLSTAT, 0);
-	return adiv5_jtagdp_low_access(dp, ADIV5_LOW_WRITE,
+	fw_adiv5_jtagdp_low_access(dp, ADIV5_LOW_READ, ADIV5_DP_CTRLSTAT, 0);
+	return fw_adiv5_jtagdp_low_access(dp, ADIV5_LOW_WRITE,
 				ADIV5_DP_CTRLSTAT, 0xF0000032) & 0x32;
 }
 
-static uint32_t adiv5_jtagdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
+uint32_t fw_adiv5_jtagdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 					uint16_t addr, uint32_t value)
 {
 	bool APnDP = addr & ADIV5_APnDP;

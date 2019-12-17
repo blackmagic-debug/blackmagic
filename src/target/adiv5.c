@@ -439,11 +439,6 @@ ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel)
 	return ap;
 }
 
-static void ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value);
-static uint32_t ap_read(ADIv5_AP_t *ap, uint16_t addr);
-static void mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len);
-static void mem_write_sized(ADIv5_AP_t *ap, uint32_t dest, const void *src,
-							size_t len, enum align align);
 void adiv5_dp_init(ADIv5_DP_t *dp)
 {
 	volatile bool probed = false;
@@ -452,18 +447,18 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 #if PC_HOSTED  == 1
 	platform_adiv5_dp_defaults(dp);
 	if (!dp->ap_write)
-		dp->ap_write = ap_write;
+		dp->ap_write = firmware_ap_write;
 	if (!dp->ap_read)
-		dp->ap_read = ap_read;
+		dp->ap_read = firmware_ap_read;
 	if (!dp->mem_read)
-		dp->mem_read = mem_read;
+		dp->mem_read = firmware_mem_read;
 	if (!dp->mem_write_sized)
-		dp->mem_write_sized = mem_write_sized;
+		dp->mem_write_sized = firmware_mem_write_sized;
 #else
-	dp->ap_write = ap_write;
-	dp->ap_read = ap_read;
-	dp->mem_read = mem_read;
-	dp->mem_write_sized = mem_write_sized;
+	dp->ap_write = firmware_ap_write;
+	dp->ap_read = firmware_ap_read;
+	dp->mem_read = firmware_mem_read;
+	dp->mem_write_sized = firmware_mem_write_sized;
 #endif
 	volatile struct exception e;
 	TRY_CATCH (e, EXCEPTION_TIMEOUT) {
@@ -629,7 +624,7 @@ void * extract(void *dest, uint32_t src, uint32_t val, enum align align)
 	return (uint8_t *)dest + (1 << align);
 }
 
-static void mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
+void firmware_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
 {
 	uint32_t tmp;
 	uint32_t osrc = src;
@@ -659,7 +654,7 @@ static void mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
 	extract(dest, src, tmp, align);
 }
 
-static void mem_write_sized(ADIv5_AP_t *ap, uint32_t dest, const void *src,
+void firmware_mem_write_sized(ADIv5_AP_t *ap, uint32_t dest, const void *src,
 							size_t len, enum align align)
 {
 	uint32_t odest = dest;
@@ -694,14 +689,14 @@ static void mem_write_sized(ADIv5_AP_t *ap, uint32_t dest, const void *src,
 	}
 }
 
-static void ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value)
+void firmware_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value)
 {
 	adiv5_dp_write(ap->dp, ADIV5_DP_SELECT,
 			((uint32_t)ap->apsel << 24)|(addr & 0xF0));
 	adiv5_dp_write(ap->dp, addr, value);
 }
 
-static uint32_t ap_read(ADIv5_AP_t *ap, uint16_t addr)
+uint32_t firmware_ap_read(ADIv5_AP_t *ap, uint16_t addr)
 {
 	uint32_t ret;
 	adiv5_dp_write(ap->dp, ADIV5_DP_SELECT,

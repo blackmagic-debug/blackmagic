@@ -20,13 +20,16 @@
 #define      __BMP_REMOTE_H_
 #include "swdptap.h"
 #include "jtagtap.h"
+#include "adiv5.h"
+#include "target.h"
+#include "target_internal.h"
 
-#define REMOTE_MAX_MSG_SIZE (256)
+#define REMOTE_MAX_MSG_SIZE (1024)
 
 int platform_buffer_write(const uint8_t *data, int size);
 int platform_buffer_read(uint8_t *data, int size);
 
-int remote_init(void);
+int remote_init(bool verbose);
 int remote_swdptap_init(swd_proc_t *swd_proc);
 int remote_jtagtap_init(jtag_proc_t *jtag_proc);
 bool remote_target_get_power(void);
@@ -35,5 +38,6 @@ void remote_target_set_power(bool power);
 void remote_srst_set_val(bool assert);
 bool remote_srst_get_val(void);
 const char *platform_target_voltage(void);
+void remote_adiv5_dp_defaults(ADIv5_DP_t *dp);
 #define __BMP_REMOTE_H_
 #endif

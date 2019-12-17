@@ -244,7 +244,7 @@ void platform_init(int argc, char **argv)
 	case BMP_TYPE_BMP:
 		if (serial_open(&cl_opts, info.serial))
 			exit(-1);
-		remote_init();
+		remote_init(true);
 		break;
 	case BMP_TYPE_STLINKV2:
 		if (stlink_init( &info))
@@ -367,6 +367,8 @@ int platform_jtagtap_init(void)
 void platform_adiv5_dp_defaults(ADIv5_DP_t *dp)
 {
 	switch (info.bmp_type) {
+	case BMP_TYPE_BMP:
+		return remote_adiv5_dp_defaults(dp);
 	case BMP_TYPE_STLINKV2:
 		return stlink_adiv5_dp_defaults(dp);
 	case BMP_TYPE_CMSIS_DAP:

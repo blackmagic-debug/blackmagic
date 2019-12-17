@@ -26,6 +26,8 @@
 #include "remote.h"
 #include "target.h"
 #include "bmp_remote.h"
+#include "cl_utils.h"
+#include "hex_utils.h"
 
 #include <assert.h>
 #include <sys/time.h>
@@ -35,7 +37,7 @@
 
 #include "adiv5.h"
 
-int remote_init(void)
+int remote_init(bool verbose)
 {
 	char construct[REMOTE_MAX_MSG_SIZE];
 	int c = snprintf(construct, REMOTE_MAX_MSG_SIZE, "%s", REMOTE_START_STR);
@@ -47,8 +49,19 @@ int remote_init(void)
 				c ? (char *)&(construct[1]) : "unknown");
       return -1;
     }
-
-	printf("Remote is %s\n", &construct[1]);
+	if (verbose)
+		printf("Remote is %s\n", &construct[1]);
+	char *p = strstr(&construct[1], "(Firmware v");
+	if (!p)
+		return -1;
+	int major = 0, minor = 0, step  = 0;
+	int res = sscanf(p, "(Firmware v%d.%d.%d", &major, &minor, &step);
+	if (res !=3)
+		return -1;
+	uint32_t version = major * 10000 + minor * 100 + step;
+	/* check that firmare is > 1.6.1 */
+	if (version < 10602)
+		return -1;
 	return 0;
 }
 
@@ -144,4 +157,217 @@ const char *remote_target_voltage(void)
       exit(- 1);
     }
 	return (char *)&construct[1];
+}
+
+static uint32_t remote_adiv5_dp_read(ADIv5_DP_t *dp, uint16_t addr)
+{
+	(void)dp;
+	uint8_t construct[REMOTE_MAX_MSG_SIZE];
+	int s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE, REMOTE_DP_READ_STR,
+					 addr);
+	platform_buffer_write(construct, s);
+	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
+	if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
+		printf("%s error %d\n", __func__, s);
+	}
+    uint32_t dest[1];
+	unhexify(dest, (const char*)&construct[1], 4);
+	if (cl_debuglevel & BMP_DEBUG_PLATFORM)
+		printf("dp_read @ %04x: 0x%08" PRIx32 "\n", addr, dest[0]);
+	return dest[0];
+}
+
+static uint32_t remote_adiv5_low_access(ADIv5_DP_t *dp, uint8_t RnW, uint16_t addr, uint32_t value)
+{
+	(void)dp;
+	uint8_t construct[REMOTE_MAX_MSG_SIZE];
+	int s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE, REMOTE_LOW_ACCESS_STR,
+					 RnW, addr, value);
+	if (cl_debuglevel & BMP_DEBUG_PLATFORM)
+		printf("Dp_write @ %04x: 0x%08" PRIx32 "\n", addr, value);
+	platform_buffer_write(construct, s);
+	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
+	if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
+		printf("%s error %d\n", __func__, s);
+	}
+    uint32_t dest[1];
+	unhexify(dest, (const char*)&construct[1], 4);
+	if (cl_debuglevel & BMP_DEBUG_PLATFORM)
+		printf("dp_read @ %04x: 0x%08" PRIx32 "\n", addr, dest[0]);
+	return dest[0];
+}
+
+static uint32_t remote_adiv5_ap_read(ADIv5_AP_t *ap, uint16_t addr)
+{
+	uint8_t construct[REMOTE_MAX_MSG_SIZE];
+	int s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE,REMOTE_AP_READ_STR,
+					 ap->apsel, addr);
+	platform_buffer_write(construct, s);
+	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
+	if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
+		printf("%s error %d\n", __func__, s);
+	}
+    uint32_t dest[1];
+	unhexify(dest, (const char*)&construct[1], 4);
+	if (cl_debuglevel & BMP_DEBUG_PLATFORM)
+		printf("ap_read @ %04x: 0x%08" PRIx32 "\n", addr, dest[0]);
+	return dest[0];
+}
+
+static void remote_adiv5_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value)
+{
+	uint8_t construct[REMOTE_MAX_MSG_SIZE];
+	int s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE,REMOTE_AP_WRITE_STR,
+					 ap->apsel, addr, value);
+	if (cl_debuglevel & BMP_DEBUG_PLATFORM)
+		printf("ap_write @ %04x: 0x%08" PRIx32 "\n", addr, value);
+	platform_buffer_write(construct, s);
+	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
+	if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
+		printf("%s error %d\n", __func__, s);
+	}
+	return;
+}
+
+#if 0
+static void remote_mem_read(
+	ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
+{
+	(void)ap;
+	if (len == 0)
+		return;
+	if (cl_debuglevel & BMP_DEBUG_PLATFORM)
+		printf("memread @ %" PRIx32 " len %ld, start: \n",
+			   src, len);
+	uint8_t construct[REMOTE_MAX_MSG_SIZE];
+	int s;
+	int batchsize = (REMOTE_MAX_MSG_SIZE - 32) / 2;
+	while(len) {
+		int count = len;
+		if (count > batchsize)
+			count = batchsize;
+		s = snprintf(construct, REMOTE_MAX_MSG_SIZE,
+					 REMOTE_MEM_READ_STR, src, count);
+		platform_buffer_write(construct, s);
+
+		s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
+		if ((s > 0) && (construct[0] == REMOTE_RESP_OK)) {
+			unhexify(dest, (const char*)&construct[1], count);
+			src += count;
+			dest += count;
+			len -= count;
+
+			continue;
+		} else {
+			if(construct[0] == REMOTE_RESP_ERR) {
+				ap->dp->fault = 1;
+				printf("%s returned REMOTE_RESP_ERR at addr: 0x%08x\n",
+					   __func__, src);
+				break;
+			} else {
+				printf("%s error %d\n", __func__, s);
+				break;
+			}
+		}
+	}
+}
+#endif
+
+static void remote_ap_mem_read(
+	ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
+{
+	(void)ap;
+	if (len == 0)
+		return;
+	if (cl_debuglevel & BMP_DEBUG_PLATFORM)
+		printf("ap_memread @ %" PRIx32 " len %ld\n", src, len);
+	char construct[REMOTE_MAX_MSG_SIZE];
+	int batchsize = (REMOTE_MAX_MSG_SIZE - 0x20) / 2;
+	while(len) {
+		int s;
+		int count = len;
+		if (count > batchsize)
+			count = batchsize;
+		s = snprintf(construct, REMOTE_MAX_MSG_SIZE,
+					 REMOTE_AP_MEM_READ_STR, ap->apsel, ap->csw, src, count);
+		platform_buffer_write((uint8_t*)construct, s);
+		s = platform_buffer_read((uint8_t*)construct, REMOTE_MAX_MSG_SIZE);
+		if ((s > 0) && (construct[0] == REMOTE_RESP_OK)) {
+			unhexify(dest, (const char*)&construct[1], count);
+			src  += count;
+			dest += count;
+			len  -= count;
+			continue;
+		} else {
+			if(construct[0] == REMOTE_RESP_ERR) {
+				ap->dp->fault = 1;
+				printf("%s returned REMOTE_RESP_ERR at apsel %d, "
+					   "addr: 0x%08" PRIx32 "\n", __func__, ap->apsel, src);
+				break;
+			} else {
+				printf("%s error %d around 0x%08" PRIx32 "\n",
+					   __func__, s, src);
+				break;
+			}
+		}
+	}
+}
+
+static void remote_ap_mem_write_sized(
+	ADIv5_AP_t *ap, uint32_t dest, const void *src, size_t len,
+	enum align align)
+{
+	(void)ap;
+	if (len == 0)
+		return;
+	if (cl_debuglevel & BMP_DEBUG_PLATFORM)
+		printf("ap_mem_write_sized @ %" PRIx32 " len %ld, align %d\n",
+			   dest, len, 1 << align);
+	char construct[REMOTE_MAX_MSG_SIZE];
+	/* (5 * 1 (char)) + (2 * 2 (bytes)) + (3 * 8 (words)) */
+	int batchsize = (REMOTE_MAX_MSG_SIZE - 0x30) / 2;
+	while (len) {
+		int count = len;
+		if (count > batchsize)
+			count = batchsize;
+		int s = snprintf(construct, REMOTE_MAX_MSG_SIZE,
+						 REMOTE_AP_MEM_WRITE_SIZED_STR,
+						 ap->apsel, ap->csw, align, dest, count);
+		char *p = construct + s;
+		hexify(p, src, count);
+		p += 2 * count;
+		src  += count;
+		dest += count;
+		len  -= count;
+		*p++ = REMOTE_EOM;
+		*p   = 0;
+		platform_buffer_write((uint8_t*)construct, p - construct);
+
+		s = platform_buffer_read((uint8_t*)construct, REMOTE_MAX_MSG_SIZE);
+		if ((s > 0) && (construct[0] == REMOTE_RESP_OK))
+			continue;
+		if ((s > 0) && (construct[0] == REMOTE_RESP_ERR)) {
+			ap->dp->fault = 1;
+			printf("%s returned REMOTE_RESP_ERR at apsel %d, "
+				   "addr: 0x%08x\n", __func__, ap->apsel, dest);
+		} else {
+			printf("%s error %d around address 0x%08" PRIx32 "\n",
+				   __func__, s, dest);
+			break;
+		}
+	}
+}
+
+void remote_adiv5_dp_defaults(ADIv5_DP_t *dp)
+{
+	if (remote_init(false)) {
+		printf("Please update BMP firmware for substantial speed increase!\n");
+		return;
+	}
+	dp->low_access = remote_adiv5_low_access;
+	dp->dp_read    = remote_adiv5_dp_read;
+	dp->ap_write   = remote_adiv5_ap_write;
+	dp->ap_read    = remote_adiv5_ap_read;
+	dp->mem_read   = remote_ap_mem_read;
+	dp->mem_write_sized = remote_ap_mem_write_sized;
 }
