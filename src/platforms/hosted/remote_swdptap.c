@@ -39,7 +39,6 @@ int remote_swdptap_init(swd_proc_t *swd_proc)
 {
 	uint8_t construct[REMOTE_MAX_MSG_SIZE];
 	int s;
-
 	s = sprintf((char *)construct,"%s", REMOTE_SWDP_INIT_STR);
 	platform_buffer_write(construct, s);
 

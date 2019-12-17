@@ -33,15 +33,6 @@
 #define SWDP_ACK_WAIT  0x02
 #define SWDP_ACK_FAULT 0x04
 
-static uint32_t adiv5_swdp_read(ADIv5_DP_t *dp, uint16_t addr);
-
-static uint32_t adiv5_swdp_error(ADIv5_DP_t *dp);
-
-static uint32_t adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
-				      uint16_t addr, uint32_t value);
-
-static void adiv5_swdp_abort(ADIv5_DP_t *dp, uint32_t abort);
-
 int adiv5_swdp_scan(void)
 {
 	uint32_t ack;
@@ -80,33 +71,33 @@ int adiv5_swdp_scan(void)
 		return -1;
 	}
 
-	dp->dp_read = adiv5_swdp_read;
-	dp->error = adiv5_swdp_error;
-	dp->low_access = adiv5_swdp_low_access;
-	dp->abort = adiv5_swdp_abort;
+	dp->dp_read = firmware_swdp_read;
+	dp->error = firmware_swdp_error;
+	dp->low_access = firmware_swdp_low_access;
+	dp->abort = firmware_swdp_abort;
 
-	adiv5_swdp_error(dp);
+	firmware_swdp_error(dp);
 	adiv5_dp_init(dp);
 
 	return target_list?1:0;
 }
 
-static uint32_t adiv5_swdp_read(ADIv5_DP_t *dp, uint16_t addr)
+uint32_t firmware_swdp_read(ADIv5_DP_t *dp, uint16_t addr)
 {
 	if (addr & ADIV5_APnDP) {
 		adiv5_dp_low_access(dp, ADIV5_LOW_READ, addr, 0);
 		return adiv5_dp_low_access(dp, ADIV5_LOW_READ,
 		                           ADIV5_DP_RDBUFF, 0);
 	} else {
-		return adiv5_swdp_low_access(dp, ADIV5_LOW_READ, addr, 0);
+		return firmware_swdp_low_access(dp, ADIV5_LOW_READ, addr, 0);
 	}
 }
 
-static uint32_t adiv5_swdp_error(ADIv5_DP_t *dp)
+ uint32_t firmware_swdp_error(ADIv5_DP_t *dp)
 {
 	uint32_t err, clr = 0;
 
-	err = adiv5_swdp_read(dp, ADIV5_DP_CTRLSTAT) &
+	err = firmware_swdp_read(dp, ADIV5_DP_CTRLSTAT) &
 		(ADIV5_DP_CTRLSTAT_STICKYORUN | ADIV5_DP_CTRLSTAT_STICKYCMP |
 		ADIV5_DP_CTRLSTAT_STICKYERR | ADIV5_DP_CTRLSTAT_WDATAERR);
 
@@ -125,7 +116,7 @@ static uint32_t adiv5_swdp_error(ADIv5_DP_t *dp)
 	return err;
 }
 
-static uint32_t adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
+uint32_t firmware_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 				      uint16_t addr, uint32_t value)
 {
 	bool APnDP = addr & ADIV5_APnDP;
@@ -183,7 +174,7 @@ static uint32_t adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 	return response;
 }
 
-static void adiv5_swdp_abort(ADIv5_DP_t *dp, uint32_t abort)
+void firmware_swdp_abort(ADIv5_DP_t *dp, uint32_t abort)
 {
 	adiv5_dp_write(dp, ADIV5_DP_ABORT, abort);
 }

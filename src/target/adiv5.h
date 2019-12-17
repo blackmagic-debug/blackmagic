@@ -240,4 +240,22 @@ int platform_jtag_dp_init(ADIv5_DP_t *dp);
 void adiv5_mem_write(ADIv5_AP_t *ap, uint32_t dest, const void *src, size_t len);
 uint64_t adiv5_ap_read_pidr(ADIv5_AP_t *ap, uint32_t addr);
 void * extract(void *dest, uint32_t src, uint32_t val, enum align align);
+
+void firmware_mem_write_sized(ADIv5_AP_t *ap, uint32_t dest, const void *src,
+							  size_t len, enum align align);
+void firmware_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src,
+					   size_t len);
+void firmware_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value);
+uint32_t firmware_ap_read(ADIv5_AP_t *ap, uint16_t addr);
+uint32_t firmware_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
+								  uint16_t addr, uint32_t value);
+uint32_t fw_adiv5_jtagdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
+					uint16_t addr, uint32_t value);
+uint32_t firmware_swdp_read(ADIv5_DP_t *dp, uint16_t addr);
+uint32_t fw_adiv5_jtagdp_read(ADIv5_DP_t *dp, uint16_t addr);
+
+uint32_t firmware_swdp_error(ADIv5_DP_t *dp);
+
+void firmware_swdp_abort(ADIv5_DP_t *dp, uint32_t abort);
+
 #endif
