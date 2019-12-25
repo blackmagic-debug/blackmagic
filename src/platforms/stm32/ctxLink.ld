@@ -24,6 +24,9 @@ MEMORY
 	ram (rwx) : ORIGIN = 0x20000000, LENGTH = 96K
 }
 
+/* define the systick reload value */
+systick_reload = 1050000 ;
+
 /* Include the common ld script from libopenstm32. */
 INCLUDE cortex-m-generic.ld
 

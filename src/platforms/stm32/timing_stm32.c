@@ -22,6 +22,8 @@
 #include <libopencm3/cm3/systick.h>
 #include <libopencm3/cm3/scb.h>
 
+extern uint32_t systick_reload ;
+
 uint8_t running_status;
 static volatile uint32_t time_ms;
 
@@ -29,11 +31,7 @@ void platform_timing_init(void)
 {
 	/* Setup heartbeat timer */
 	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
-#ifdef ctxLink
-	systick_set_reload (1050000);	/* Interrupt us at 10 Hz */
-#else
-	systick_set_reload (900000);	/* Interrupt us at 10 Hz */
-#endif
+	systick_set_reload (systick_reload);	/* Interrupt us at 10 Hz */
 	SCB_SHPR(11) &= ~((15 << 4) & 0xff);
 	SCB_SHPR(11) |= ((14 << 4) & 0xff);
 	systick_interrupt_enable();
