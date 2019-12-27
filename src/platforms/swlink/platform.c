@@ -40,6 +40,8 @@ uint16_t led_error_pin;
 static uint8_t rev;
 
 static void adc_init(void);
+static void wait_for_jrst(void);
+
 
 int platform_hwversion(void)
 {
@@ -120,15 +122,36 @@ void platform_srst_set_val(bool assert)
 	if (assert) {
 		gpio_set_mode(JRST_PORT, GPIO_MODE_OUTPUT_50_MHZ,
 		              GPIO_CNF_OUTPUT_OPENDRAIN, JRST_PIN);
-		/* Wait until requested value is active.*/
-		while (gpio_get(JRST_PORT, JRST_PIN))
-			gpio_clear(JRST_PORT, JRST_PIN);
+		/* Hold JSRST low for about 1ms */
+		for(int i = 0; i < 10000; i++) asm("nop");
 	} else {
 		gpio_set_mode(JRST_PORT, GPIO_MODE_INPUT,
 					  GPIO_CNF_INPUT_PULL_UPDOWN, JRST_PIN);
-		/* Wait until requested value is active.*/
-		while (!gpio_get(JRST_PORT, JRST_PIN))
-			gpio_set(JRST_PORT, JRST_PIN);
+		/* Wait until requested value is active and some more */
+		wait_for_jrst();
+	}
+}
+
+void wait_for_jrst(void)
+{
+	uint32_t start = platform_time_ms();
+	/* Prerequisite: timer must have been initialized */
+	if (start == 0)
+		return;
+
+	/* Wait for SRST to go high
+	   but no longer than 400ms */
+	platform_timeout timeout;
+	platform_timeout_set(&timeout, 400);
+	while (platform_srst_get_val() && !platform_timeout_is_expired(&timeout));
+
+	if (platform_timeout_is_expired(&timeout)) {
+		DEBUG("Timeout waiting for SRST to go high\n");
+	} else {
+		/* Wait for the same duration again as the high/low
+		   thresholds of the BMP and the target might not match.
+		   Increase by 1ms to make up for the timer granularity.  */
+		platform_delay(platform_time_ms() - start + 1);
 	}
 }
 
