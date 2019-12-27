@@ -23,13 +23,14 @@
 #include <libopencm3/cm3/scb.h>
 
 uint8_t running_status;
+uint8_t led_update_counter;
 static volatile uint32_t time_ms;
 
 void platform_timing_init(void)
 {
 	/* Setup heartbeat timer */
 	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
-	systick_set_reload(900000);	/* Interrupt us at 10 Hz */
+	systick_set_reload(9000);	/* Interrupt us at 1000 Hz */
 	SCB_SHPR(11) &= ~((15 << 4) & 0xff);
 	SCB_SHPR(11) |= ((14 << 4) & 0xff);
 	systick_interrupt_enable();
@@ -45,12 +46,16 @@ void platform_delay(uint32_t ms)
 
 void sys_tick_handler(void)
 {
-	if(running_status)
-		gpio_toggle(LED_PORT, LED_IDLE_RUN);
+	time_ms++;
+	led_update_counter++;
+	if (led_update_counter == 100) {
+		led_update_counter = 0;
 
-	time_ms += 100;
+		if(running_status)
+			gpio_toggle(LED_PORT, LED_IDLE_RUN);
 
-	SET_ERROR_STATE(morse_update());
+		SET_ERROR_STATE(morse_update());
+	}
 }
 
 uint32_t platform_time_ms(void)
