@@ -219,24 +219,16 @@ void usbuart_usb_in_cb(usbd_device *dev, uint8_t ep)
  * Allowed to read from FIFO out pointer, but not write to it.
  * Allowed to write to FIFO in pointer.
  */
-static uint32_t uartError = 0;
-static volatile uint32_t isrCount = 0;
 void USBUSART_ISR(void)
 {
 	uint32_t err = USART_SR(USBUSART);
-	isrCount++;
 	char c = usart_recv(USBUSART);
-	if (err & (USART_SR_ORE | USART_SR_FE | USART_SR_NE))
-	{
-		uartError = err;
-		if ((uartError & USART_SR_LBD) != 0)
-		{
-			uartError &= ~USART_SR_LBD;
-			USART_SR (USBUSART) = uartError;
-		}
+#if !defined(USART_SR_NE) && defined(USART_ISR_NF)
+# define USART_SR_NE USART_ISR_NF
+#endif
+	if (err & (USART_FLAG_ORE | USART_FLAG_FE | USART_SR_NE))
 		return;
-	}
-	uartError = 0;
+
 	/* Turn on LED */
 	gpio_set(LED_PORT_UART, LED_UART);
 
@@ -278,9 +270,13 @@ enum {
 int rdi_write(int fn, const char *buf, size_t len)
 {
 	(void)fn;
+#if defined(PLATFORM_HAS_DEBUG) && !defined(PC_HOSTED)
 	if (debug_bmp)
 		return len - usbuart_debug_write(buf, len);
-
+#else
+	(void)buf;
+	(void)len;
+#endif
 	return 0;
 }
 
