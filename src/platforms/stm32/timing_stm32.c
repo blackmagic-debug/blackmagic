@@ -22,8 +22,6 @@
 #include <libopencm3/cm3/systick.h>
 #include <libopencm3/cm3/scb.h>
 
-extern uint32_t systick_reload ;
-
 uint8_t running_status;
 static volatile uint32_t time_ms;
 
