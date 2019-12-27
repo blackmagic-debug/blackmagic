@@ -601,16 +601,13 @@ static void cortexm_reset(target *t)
 	if ((t->target_options & CORTEXM_TOPT_INHIBIT_SRST) == 0) {
 		platform_srst_set_val(true);
 		platform_srst_set_val(false);
-
-		/* Wait for 1ms as the reset takes a long time to
-		 * return to high state on certain boards,
-		 * and the MCU is not working during that time.
-		 */ 
-		platform_delay(1);
 	}
 
 	/* Read DHCSR here to clear S_RESET_ST bit before reset */
 	target_mem_read32(t, CORTEXM_DHCSR);
+	if (target_check_error(t)) {
+		DEBUG("Reading CORTEXM_DHCSR failed\n");
+	}
 
 	/* Request system reset from NVIC: SRST doesn't work correctly */
 	/* This could be VECTRESET: 0x05FA0001 (reset only core)
