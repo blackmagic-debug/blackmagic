@@ -2,10 +2,12 @@ CROSS_COMPILE ?= arm-none-eabi-
 CC = $(CROSS_COMPILE)gcc
 OBJCOPY = $(CROSS_COMPILE)objcopy
 
+override SYSTICK_RELOAD_VALUE = 1050000
+
 CFLAGS += -Istm32/include -mcpu=cortex-m4 -mthumb \
 	-mfloat-abi=hard -mfpu=fpv4-sp-d16 -Wno-unused-value -Wno-unused-parameter \
 	-Wimplicit-fallthrough=0 \
-	-DctxLink -DSTM32F4  -I../libopencm3/include \
+	-DctxLink -DSTM32F4 -Dsystick_reload=$(SYSTICK_RELOAD_VALUE) -I../libopencm3/include \
 	-I./platforms/winc1500 -I./platforms/winc1500/src \
 	-Iplatforms/stm32
 
