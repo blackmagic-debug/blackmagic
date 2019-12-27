@@ -3,7 +3,7 @@ PLATFORM_DIR = platforms/$(PROBE_HOST)
 VPATH += $(PLATFORM_DIR) platforms/common target
 ENABLE_DEBUG ?=
 
-SYSTICK_RELOAD_VALUE = 90000
+SYSTICK_RELOAD_VALUE = 900000
 
 ifneq ($(V), 1)
 MAKEFLAGS += --no-print-dir
