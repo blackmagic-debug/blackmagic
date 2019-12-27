@@ -38,6 +38,7 @@
 
 static void adc_init(void);
 static void setup_vbus_irq(void);
+static void wait_for_srst(void);
 
 /* Pins PB[7:5] are used to detect hardware revision.
  * 000 - Original production build.
@@ -190,7 +191,33 @@ void platform_srst_set_val(bool assert)
 		gpio_set_val(SRST_PORT, SRST_PIN, !assert);
 	}
 	if (assert) {
+		/* Hold SRST low for about 1ms */
 		for(int i = 0; i < 10000; i++) asm("nop");
+	} else {
+		/* Wait for SRST to go high */
+		wait_for_srst();
+	}
+}
+
+void wait_for_srst(void)
+{
+	uint32_t start = platform_time_ms();
+	/* Prerequisite: timer must have been initialized */
+	if (start == 0)
+		return;
+
+	/* Wait for SRST to go high
+	   but no longer than 400ms */
+	platform_timeout timeout;
+	platform_timeout_set(&timeout, 400);
+	while (platform_srst_get_val() && !platform_timeout_is_expired(&timeout));
+
+	if (platform_timeout_is_expired(&timeout)) {
+	} else {
+		/* Wait for the same duration again as the high/low
+		   thresholds of the BMP and the target might not match.
+		   Increase by 1ms to make up for the timer granularity.  */
+		platform_delay(platform_time_ms() - start + 1);
 	}
 }
 
