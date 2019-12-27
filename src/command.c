@@ -62,7 +62,7 @@ static bool cmd_traceswo(target *t, int argc, const char **argv);
 #ifdef PLATFORM_HAS_DEBUG
 static bool cmd_debug_bmp(target *t, int argc, const char **argv);
 #endif
-#ifdef ctxLink
+#ifdef PLATFORM_HAS_BATTERY
 static bool cmd_battery (void);
 #endif
 
@@ -85,7 +85,7 @@ const struct command_s cmd_list[] = {
 #ifdef PLATFORM_HAS_DEBUG
 	{"debug_bmp", (cmd_handler)cmd_debug_bmp, "Output BMP \"debug\" strings to the second vcom: (enable|disable)"},
 #endif
-#ifdef ctxLink
+#ifdef PLATFORM_HAS_BATTERY
 { "battery", (cmd_handler)cmd_battery, "Read the battery voltage" },
 #endif
 	{NULL, NULL, NULL}
@@ -130,21 +130,21 @@ int command_process(target *t, char *cmd)
 
 bool cmd_version(void)
 {
-#ifdef ctxLink
+#if defined PC_HOSTED
+	gdb_outf("Black Magic Probe, PC-Hosted for " PLATFORM_IDENT
+			 ", Version " FIRMWARE_VERSION "\n");
+#elif ctxLink
 	gdb_outf ("Wireless Debug Probe (Firmware " FIRMWARE_VERSION ") (Hardware Version %d)\n", platform_hwversion ());
 	gdb_out ("Copyright (C) 2019  Sid Price Software Design and\n");
-	gdb_out ("Copyright (C) 2015  Black Sphere Technologies Ltd.\n");
-	gdb_out ("License GPLv3+: GNU GPL version 3 or later "
-		"<http://gnu.org/licenses/gpl.html>\n\n");
 #else
 	gdb_outf("Black Magic Probe (Firmware " FIRMWARE_VERSION ") (Hardware Version %d)\n", platform_hwversion());
+#endif
 	gdb_out("Copyright (C) 2015  Black Sphere Technologies Ltd.\n");
 	gdb_out("License GPLv3+: GNU GPL version 3 or later "
 		"<http://gnu.org/licenses/gpl.html>\n\n");
-#endif
+
 	return true;
 }
-
 bool cmd_help(target *t)
 {
 	const struct command_s *c;
