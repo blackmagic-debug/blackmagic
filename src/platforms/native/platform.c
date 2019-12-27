@@ -213,6 +213,7 @@ void wait_for_srst(void)
 	while (platform_srst_get_val() && !platform_timeout_is_expired(&timeout));
 
 	if (platform_timeout_is_expired(&timeout)) {
+		DEBUG("Timeout waiting for SRST to go high\n");
 	} else {
 		/* Wait for the same duration again as the high/low
 		   thresholds of the BMP and the target might not match.
