@@ -13,6 +13,10 @@ ifeq ($(PROBE_HOST), pc-stlinkv2)
 	PC_HOSTED = true
 	NO_LIBOPENCM3 = true
 endif
+ifeq ($(PROBE_HOST), pc-hosted)
+	PC_HOSTED = true
+	NO_LIBOPENCM3 = true
+endif
 
 all:
 ifndef NO_LIBOPENCM3

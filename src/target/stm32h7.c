@@ -30,12 +30,12 @@
 #include "target_internal.h"
 #include "cortexm.h"
 
-static bool stm32h7_cmd_erase_mass(target *t);
+static bool stm32h7_cmd_erase_mass(target *t, int argc, const char **argv);
 /* static bool stm32h7_cmd_option(target *t, int argc, char *argv[]); */
-static bool stm32h7_uid(target *t);
-static bool stm32h7_crc(target *t);
+static bool stm32h7_uid(target *t, int argc, const char **argv);
+static bool stm32h7_crc(target *t, int argc, const char **argv);
 static bool stm32h7_cmd_psize(target *t, int argc, char *argv[]);
-static bool stm32h7_cmd_rev(target *t);
+static bool stm32h7_cmd_rev(target *t, int argc, const char **argv);
 
 const struct command_s stm32h7_cmd_list[] = {
 	{"erase_mass", (cmd_handler)stm32h7_cmd_erase_mass,
@@ -430,8 +430,10 @@ static bool stm32h7_cmd_erase(target *t, int bank_mask)
 	return result;
 }
 
-static bool stm32h7_cmd_erase_mass(target *t)
+static bool stm32h7_cmd_erase_mass(target *t, int argc, const char **argv)
 {
+	(void)argc;
+	(void)argv;
 	tc_printf(t, "Erasing flash... This may take a few seconds.  ");
 	return stm32h7_cmd_erase(t, 3);
 }
@@ -439,8 +441,10 @@ static bool stm32h7_cmd_erase_mass(target *t)
 /* Print the Unique device ID.
  * Can be reused for other STM32 devices With uid as parameter.
  */
-static bool stm32h7_uid(target *t)
+static bool stm32h7_uid(target *t, int argc, const char **argv)
 {
+	(void)argc;
+	(void)argv;
 	uint32_t uid = 0x1ff1e800;
 	int i;
 	tc_printf(t, "0x");
@@ -483,8 +487,10 @@ static int stm32h7_crc_bank(target *t, uint32_t bank)
 	return 0;
 }
 
-static bool stm32h7_crc(target *t)
+static bool stm32h7_crc(target *t, int argc, const char **argv)
 {
+	(void)argc;
+	(void)argv;
 	if (stm32h7_crc_bank(t, BANK1_START) ) return false;
 	uint32_t crc1 = target_mem_read32(t, FPEC1_BASE + FLASH_CRCDATA);
 	if (stm32h7_crc_bank(t, BANK2_START) ) return false;
@@ -494,6 +500,8 @@ static bool stm32h7_crc(target *t)
 }
 static bool stm32h7_cmd_psize(target *t, int argc, char *argv[])
 {
+	(void)argc;
+	(void)argv;
 	if (argc == 1) {
 		enum align psize = ALIGN_DWORD;
 		for (struct target_flash *f = t->flash; f; f = f->next) {
@@ -538,8 +546,10 @@ static const struct stm32h7xx_rev {
 	{ 0x2001, 'X' },
 	{ 0x2003, 'V' }
 };
-static bool stm32h7_cmd_rev(target *t)
+static bool stm32h7_cmd_rev(target *t, int argc, const char **argv)
 {
+	(void)argc;
+	(void)argv;
 	/* DBGMCU identity code register */
 	uint32_t dbgmcu_idc = target_mem_read32(t, DBGMCU_IDC);
 	uint16_t rev_id = (dbgmcu_idc >> 16) & 0xFFFF;

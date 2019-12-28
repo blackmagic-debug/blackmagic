@@ -135,9 +135,9 @@ static inline uint32_t msp432_sector_unprotect(struct msp432_flash *mf, target_a
 
 /* Optional commands handlers */
 /* Erase all of main flash */
-static bool msp432_cmd_erase_main(target *t);
+static bool msp432_cmd_erase_main(target *t, int argc, const char **argv);
 /* Erase a single (4KB) sector */
-static bool msp432_cmd_sector_erase(target *t, int argc, char *argv[]);
+static bool msp432_cmd_sector_erase(target *t, int argc, const char **argv);
 
 /* Optional commands structure*/
 const struct command_s msp432_cmd_list[] = {
@@ -308,8 +308,10 @@ static int msp432_flash_write(struct target_flash *f, target_addr dest,
 }
 
 /* Optional commands handlers */
-static bool msp432_cmd_erase_main(target *t)
+static bool msp432_cmd_erase_main(target *t, int argc, const char **argv)
 {
+	(void)argc;
+	(void)argv;
 	/* The mass erase routine in ROM will also erase the Info Flash. */
 	/* Usually, this is not wanted, so go sector by sector...        */
 
@@ -327,7 +329,7 @@ static bool msp432_cmd_erase_main(target *t)
 	return ret;
 }
 
-static bool msp432_cmd_sector_erase(target *t, int argc, char *argv[])
+static bool msp432_cmd_sector_erase(target *t, int argc, const char **argv)
 {
 	if (argc < 2)
 		tc_printf(t, "usage: monitor sector_erase <addr>\n");
