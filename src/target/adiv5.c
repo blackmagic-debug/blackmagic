@@ -489,11 +489,13 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 	}
 	/* Probe for APs on this DP */
 	uint32_t last_base = 0;
-	for(int i = 0; i < 256; i++) {
+	int void_aps = 0;
+	for(int i = 0; (i < 256) && (void_aps < 8); i++) {
 		ADIv5_AP_t *ap = NULL;
 		if (adiv5_ap_setup(i))
 			ap = adiv5_new_ap(dp, i);
 		if (ap == NULL) {
+			void_aps++;
 			adiv5_ap_cleanup(i);
 			if (i == 0)
 				return;
@@ -512,6 +514,9 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 
 		extern void nrf51_mdm_probe(ADIv5_AP_t *);
 		nrf51_mdm_probe(ap);
+
+		extern void efm32_aap_probe(ADIv5_AP_t *);
+		efm32_aap_probe(ap);
 
 		/* Check the Debug Base Address register. See ADIv5
 		 * Specification C2.6.1 */

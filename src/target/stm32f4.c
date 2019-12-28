@@ -411,7 +411,10 @@ static int stm32f4_flash_erase(struct target_flash *f, target_addr addr,
 				DEBUG("stm32f4 flash erase: comm error\n");
 				return -1;
 			}
-		len -= f->blocksize;
+		if (len > f->blocksize)
+			len -= f->blocksize;
+		else
+			len = 0;
 		sector++;
 		if ((sf->bank_split) && (sector == sf->bank_split))
 			sector = 16;

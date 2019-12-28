@@ -56,11 +56,13 @@ static const uint16_t efm32_flash_write_stub[] = {
 static bool efm32_cmd_erase_all(target *t, int argc, const char **argv);
 static bool efm32_cmd_serial(target *t, int argc, const char **argv);
 static bool efm32_cmd_efm_info(target *t, int argc, const char **argv);
+static bool efm32_cmd_bootloader(target *t, int argc, const char **argv);
 
 const struct command_s efm32_cmd_list[] = {
 	{"erase_mass", (cmd_handler)efm32_cmd_erase_all, "Erase entire flash memory"},
 	{"serial", (cmd_handler)efm32_cmd_serial, "Prints unique number"},
 	{"efm_info", (cmd_handler)efm32_cmd_efm_info, "Prints information about the device"},
+	{"bootloader", (cmd_handler)efm32_cmd_bootloader, "Bootloader status in CLW0"},
 	{NULL, NULL, NULL}
 };
 
@@ -75,7 +77,8 @@ const struct command_s efm32_cmd_list[] = {
 #define EFM32_MSC_ADDRB(msc)		 	(msc+0x010)
 #define EFM32_MSC_WDATA(msc)		 	(msc+0x018)
 #define EFM32_MSC_STATUS(msc)			(msc+0x01c)
-#define EFM32_MSC_LOCK(msc)				(msc+(msc == 0x400e0000?0x40:0x3c))
+#define EFM32_MSC_IF(msc)				(msc+0x030)
+#define EFM32_MSC_LOCK(msc)				(msc+(msc == 0x400c0000?0x3c:0x40))
 #define EFM32_MSC_MASSLOCK(msc)	      	(msc+0x054)
 
 #define EFM32_MSC_LOCK_LOCKKEY	  	0x1b71
@@ -105,6 +108,18 @@ const struct command_s efm32_cmd_list[] = {
 #define EFM32_V1_DI			(EFM32_INFO+0x8000)
 #define EFM32_V2_DI			(EFM32_INFO+0x81B0)
 
+
+/* -------------------------------------------------------------------------- */
+/* Lock Bits (LB) */
+/* -------------------------------------------------------------------------- */
+
+#define EFM32_LOCK_BITS_DLW		(EFM32_LOCK_BITS+(4*127))
+#define EFM32_LOCK_BITS_ULW		(EFM32_LOCK_BITS+(4*126))
+#define EFM32_LOCK_BITS_MLW		(EFM32_LOCK_BITS+(4*125))
+#define EFM32_LOCK_BITS_CLW0	(EFM32_LOCK_BITS+(4*122))
+
+#define EFM32_CLW0_BOOTLOADER_ENABLE	(1<<1)
+#define EFM32_CLW0_PINRESETSOFT			(1<<2)
 
 /* -------------------------------------------------------------------------- */
 /* Device Information (DI) Area - Version 1 V1 */
@@ -278,6 +293,12 @@ efm32_device_t const efm32_devices[] = {
 	/*  Second gen micros */
 	{81, "EFM32PG1B", 2048, 0x400e0000, false, 2048, 10240, "Pearl Gecko"},
 	{83, "EFM32JG1B", 2048, 0x400e0000, false, 2048, 10240, "Jade Gecko"},
+	{85, "EFM32PG12B", 2048, 0x400e0000, false, 2048, 32768,"Pearl Gecko 12"},
+	{87, "EFM32JG12B", 2048, 0x400e0000, false, 2048, 32768, "Jade Gecko 12"},
+	/*  Second (2.5) gen micros, with re-located MSC */
+	{100, "EFM32GG11B", 4096, 0x40000000, false, 4096, 32768, "Giant Gecko 11"},
+	{103, "EFM32TG11B", 2048, 0x40000000, false, 2048, 18432, "Tiny Gecko 11"},
+	{106, "EFM32GG12B", 2048, 0x40000000, false, 2048, 32768, "Giant Gecko 12"},
 	/*  Second gen devices micro + radio */
 	{16, "EFR32MG1P", 2048, 0x400e0000, true, 2048, 10240, "Mighty Gecko"},
 	{17, "EFR32MG1B", 2048, 0x400e0000, true, 2048, 10240, "Mighty Gecko"},
@@ -665,7 +686,10 @@ static int efm32_flash_erase(struct target_flash *f, target_addr addr, size_t le
 		}
 
 		addr += f->blocksize;
-		len -= f->blocksize;
+		if (len > f->blocksize)
+			len -= f->blocksize;
+		else
+			len = 0;
 	}
 
 	return 0;
@@ -683,16 +707,22 @@ static int efm32_flash_write(struct target_flash *f,
 	if (device == NULL) {
 		return true;
 	}
-
 	/* Write flashloader */
 	target_mem_write(t, SRAM_BASE, efm32_flash_write_stub,
 			 sizeof(efm32_flash_write_stub));
 	/* Write Buffer */
 	target_mem_write(t, STUB_BUFFER_BASE, src, len);
 	/* Run flashloader */
-	return cortexm_run_stub(t, SRAM_BASE, dest, STUB_BUFFER_BASE, len, device->msc_addr);
+	int ret = cortexm_run_stub(t, SRAM_BASE, dest, STUB_BUFFER_BASE, len,
+							   device->msc_addr);
 
-	return 0;
+#ifdef PLATFORM_HAS_DEBUG
+	/* Check the MSC_IF */
+	uint32_t msc = device->msc_addr;
+	uint32_t msc_if = target_mem_read32(t, EFM32_MSC_IF(msc));
+	DEBUG("EFM32: Flash write done MSC_IF=%08"PRIx32"\n", msc_if);
+#endif
+	return ret;
 }
 
 /**
@@ -802,7 +832,7 @@ static bool efm32_cmd_efm_info(target *t, int argc, const char **argv)
 
 	if (di_version == 2) {
 		efm32_v2_di_miscchip_t miscchip = efm32_v2_read_miscchip(t, di_version);
-		efm32_v2_di_pkgtype_t const* pkgtype;
+		efm32_v2_di_pkgtype_t const* pkgtype = NULL;
 		efm32_v2_di_tempgrade_t const* tempgrade;
 
 		for (size_t i = 0; i < (sizeof(efm32_v2_di_pkgtypes) /
@@ -828,6 +858,196 @@ static bool efm32_cmd_efm_info(target *t, int argc, const char **argv)
 		tc_printf(t, "Radio si%d\n", radio_number);
 		tc_printf(t, "\n");
 	}
+
+	return true;
+}
+
+/**
+ * Bootloader status in CLW0, if applicable.
+ *
+ * This is a bit in flash, so it is possible to clear it only once.
+ */
+static bool efm32_cmd_bootloader(target *t, int argc, const char **argv)
+{
+	/* lookup device and part number */
+	efm32_device_t const* device = efm32_get_device(t->driver[2] - 32);
+	if (device == NULL) {
+		return true;
+	}
+	uint32_t msc = device->msc_addr;
+
+	if (device->bootloader_size == 0) {
+		tc_printf(t, "This device has no bootloader.\n");
+		return false;
+	}
+
+	uint32_t clw0 = target_mem_read32(t, EFM32_LOCK_BITS_CLW0);
+	bool bootloader_status = (clw0 & EFM32_CLW0_BOOTLOADER_ENABLE)?1:0;
+
+	if (argc == 1) {
+		tc_printf(t, "Bootloader %s\n",
+			  bootloader_status ? "enabled" : "disabled");
+		return true;
+	} else {
+		bootloader_status = (argv[1][0] == 'e');
+	}
+
+	/* Modify bootloader enable bit */
+	clw0 &= bootloader_status?~0:~EFM32_CLW0_BOOTLOADER_ENABLE;
+
+	/* Unlock */
+	target_mem_write32(t, EFM32_MSC_LOCK(msc), EFM32_MSC_LOCK_LOCKKEY);
+
+	/* Set WREN bit to enabel MSC write and erase functionality */
+	target_mem_write32(t, EFM32_MSC_WRITECTRL(msc), 1);
+
+	/* Write address of CLW0 */
+	target_mem_write32(t, EFM32_MSC_ADDRB(msc), EFM32_LOCK_BITS_CLW0);
+	target_mem_write32(t, EFM32_MSC_WRITECMD(msc), EFM32_MSC_WRITECMD_LADDRIM);
+
+	/* Issue the write */
+	target_mem_write32(t, EFM32_MSC_WDATA(msc), clw0);
+	target_mem_write32(t, EFM32_MSC_WRITECMD(msc), EFM32_MSC_WRITECMD_WRITEONCE);
+
+	/* Poll MSC Busy */
+	while ((target_mem_read32(t, EFM32_MSC_STATUS(msc)) & EFM32_MSC_STATUS_BUSY)) {
+		if (target_check_error(t))
+			return false;
+	}
+
+	return true;
+}
+
+
+/*** Authentication Access Port (AAP) **/
+
+/* There's an additional AP on the SW-DP is accessable when the part
+ * is almost entirely locked.
+ *
+ * The AAP can be used to issue a DEVICEERASE command, which erases:
+ * * Flash
+ * * SRAM
+ * * Lock Bit (LB) page
+ *
+ * It does _not_ erase:
+ * * User Data (UD) page
+ * * Bootloader (BL) if present
+ *
+ * Once the DEVICEERASE command has completed, the main AP will be
+ * accessable again. If the device has a bootloader, it will attempt
+ * to boot from this. If you have just unlocked the device the
+ * bootloader could be anything (even garbage, if the bootloader
+ * wasn't used before the DEVICEERASE). Therefore you may want to
+ * connect under srst and use the bootloader command to disable it.
+ *
+ * It is possible to lock the AAP itself by clearing the AAP Lock Word
+ * (ALW). In this case the part is unrecoverable (unless you glitch
+ * it, please try glitching it).
+ */
+
+#include "adiv5.h"
+
+/* IDR revision [31:28] jes106 [27:17] class [16:13] res [12:8]
+ * variant [7:4] type [3:0] */
+#define EFM32_AAP_IDR      0x06E60001
+#define EFM32_APP_IDR_MASK 0x0FFFFF0F
+
+#define AAP_CMD      ADIV5_AP_REG(0x00)
+#define AAP_CMDKEY   ADIV5_AP_REG(0x04)
+#define AAP_STATUS   ADIV5_AP_REG(0x08)
+
+#define AAP_STATUS_LOCKED    (1 << 1)
+#define AAP_STATUS_ERASEBUSY (1 << 0)
+
+#define CMDKEY 0xCFACC118
+
+static bool efm32_aap_cmd_device_erase(target *t, int argc, const char **argv);
+
+const struct command_s efm32_aap_cmd_list[] = {
+	{"erase_mass", (cmd_handler)efm32_aap_cmd_device_erase, "Erase entire flash memory"},
+	{NULL, NULL, NULL}
+};
+
+static bool nop_function(void)
+{
+	return true;
+}
+
+/**
+ * AAP Probe
+ */
+char aap_driver_string[42];
+void efm32_aap_probe(ADIv5_AP_t *ap)
+{
+	if ((ap->idr & EFM32_APP_IDR_MASK) == EFM32_AAP_IDR) {
+		/* It's an EFM32 AAP! */
+		DEBUG("EFM32: Found EFM32 AAP\n");
+	} else {
+		return;
+	}
+
+	/* Both revsion 1 and revision 2 devices seen in the wild */
+	uint16_t aap_revision = (uint16_t)((ap->idr & 0xF0000000) >> 28);
+
+	/* New target */
+	target *t = target_new();
+	adiv5_ap_ref(ap);
+	t->priv = ap;
+	t->priv_free = (void*)adiv5_ap_unref;
+
+	//efm32_aap_cmd_device_erase(t);
+
+	/* Read status */
+	DEBUG("EFM32: AAP STATUS=%08"PRIx32"\n", adiv5_ap_read(ap, AAP_STATUS));
+
+	sprintf(aap_driver_string,
+			"EFM32 Authentication Access Port rev.%d",
+			aap_revision);
+	t->driver = aap_driver_string;
+	t->attach = (void*)nop_function;
+	t->detach = (void*)nop_function;
+	t->check_error = (void*)nop_function;
+	t->mem_read = (void*)nop_function;
+	t->mem_write = (void*)nop_function;
+	t->regs_size = 4;
+	t->regs_read = (void*)nop_function;
+	t->regs_write = (void*)nop_function;
+	t->reset = (void*)nop_function;
+	t->halt_request = (void*)nop_function;
+	t->halt_resume = (void*)nop_function;
+
+	target_add_commands(t, efm32_aap_cmd_list, t->driver);
+}
+
+static bool efm32_aap_cmd_device_erase(target *t, int argc, const char **argv)
+{
+	(void)argc;
+	(void)argv;
+	ADIv5_AP_t *ap = t->priv;
+	uint32_t status;
+
+	/* Read status */
+	status = adiv5_ap_read(ap, AAP_STATUS);
+	DEBUG("EFM32: AAP STATUS=%08"PRIx32"\n", status);
+
+	if (status & AAP_STATUS_ERASEBUSY) {
+		DEBUG("EFM32: AAP Erase in progress\n");
+		DEBUG("EFM32: -> ABORT\n");
+		return false;
+	}
+
+	DEBUG("EFM32: Issuing DEVICEERASE...\n");
+	adiv5_ap_write(ap, AAP_CMDKEY, CMDKEY);
+	adiv5_ap_write(ap, AAP_CMD, 1);
+
+	/* Read until 0, probably should have a timeout here... */
+	do {
+		status = adiv5_ap_read(ap, AAP_STATUS);
+	} while (status & AAP_STATUS_ERASEBUSY);
+
+	/* Read status */
+	status = adiv5_ap_read(ap, AAP_STATUS);
+	DEBUG("EFM32: AAP STATUS=%08"PRIx32"\n", status);
 
 	return true;
 }

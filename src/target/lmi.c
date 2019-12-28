@@ -119,8 +119,10 @@ int lmi_flash_erase(struct target_flash *f, target_addr addr, size_t len)
 
 		if (target_check_error(t))
 			return -1;
-
-		len -= BLOCK_SIZE;
+		if (len > BLOCK_SIZE)
+			len -= BLOCK_SIZE;
+		else
+			len = 0;
 		addr += BLOCK_SIZE;
 	}
 	return 0;

@@ -393,7 +393,10 @@ sam4l_flash_erase(struct target_flash *f, target_addr addr, size_t len)
 		if (sam4l_flash_command(t, page, FLASH_CMD_EP)) {
 			return -1;
 		}
-		len -= SAM4L_PAGE_SIZE;
+		if (len > SAM4L_PAGE_SIZE)
+			len -= SAM4L_PAGE_SIZE;
+		else
+			len = 0;
 		addr += SAM4L_PAGE_SIZE;
 	}
 	return 0;

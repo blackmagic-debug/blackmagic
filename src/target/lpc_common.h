@@ -27,6 +27,7 @@ enum iap_cmd {
 	IAP_CMD_ERASE = 52,
 	IAP_CMD_BLANKCHECK = 53,
 	IAP_CMD_PARTID = 54,
+	IAP_CMD_READUID = 58,
 	IAP_CMD_SET_ACTIVE_BANK = 60,
 };
 
@@ -60,7 +61,7 @@ struct lpc_flash {
 };
 
 struct lpc_flash *lpc_add_flash(target *t, target_addr addr, size_t length);
-enum iap_status lpc_iap_call(struct lpc_flash *f, enum iap_cmd cmd, ...);
+enum iap_status lpc_iap_call(struct lpc_flash *f, void *result, enum iap_cmd cmd, ...);
 int lpc_flash_erase(struct target_flash *f, target_addr addr, size_t len);
 int lpc_flash_write(struct target_flash *f,
                     target_addr dest, const void *src, size_t len);

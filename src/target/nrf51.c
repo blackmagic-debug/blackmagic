@@ -180,7 +180,10 @@ static int nrf51_flash_erase(struct target_flash *f, target_addr addr, size_t le
 				return -1;
 
 		addr += f->blocksize;
-		len -= f->blocksize;
+		if (len > f->blocksize)
+			len -= f->blocksize;
+		else
+			len = 0;
 	}
 
 	/* Return to read-only */
