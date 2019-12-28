@@ -53,6 +53,8 @@ const struct command_s cortexm_cmd_list[] = {
 static void cortexm_regs_read(target *t, void *data);
 static void cortexm_regs_write(target *t, const void *data);
 static uint32_t cortexm_pc_read(target *t);
+ssize_t cortexm_reg_read(target *t, int reg, void *data, size_t max);
+ssize_t cortexm_reg_write(target *t, int reg, const void *data, size_t max);
 
 static void cortexm_reset(target *t);
 static enum target_halt_reason cortexm_halt_poll(target *t, target_addr *watch);
@@ -308,6 +310,8 @@ bool cortexm_probe(ADIv5_AP_t *ap, bool forced)
 	t->tdesc = tdesc_cortex_m;
 	t->regs_read = cortexm_regs_read;
 	t->regs_write = cortexm_regs_write;
+	t->reg_read = cortexm_reg_read;
+	t->reg_write = cortexm_reg_write;
 
 	t->reset = cortexm_reset;
 	t->halt_request = cortexm_halt_request;
@@ -366,6 +370,7 @@ bool cortexm_probe(ADIv5_AP_t *ap, bool forced)
 	PROBE(sam4l_probe);
 	PROBE(nrf51_probe);
 	PROBE(samd_probe);
+	PROBE(samx5x_probe);
 	PROBE(lmi_probe);
 	PROBE(kinetis_probe);
 	PROBE(efm32_probe);
@@ -450,18 +455,19 @@ enum { DB_DHCSR, DB_DCRSR, DB_DCRDR, DB_DEMCR };
 static void cortexm_regs_read(target *t, void *data)
 {
 	uint32_t *regs = data;
-#if defined(STLINKV2)
-	extern void stlink_regs_read(void *data);
-	extern uint32_t stlink_reg_read(int idx);
-	stlink_regs_read(data);
-	regs += sizeof(regnum_cortex_m);
-	if (t->target_options & TOPT_FLAVOUR_V7MF)
-		for(size_t t = 0; t < sizeof(regnum_cortex_mf) / 4; t++)
-			*regs++ = stlink_reg_read(regnum_cortex_mf[t]);
-#else
 	ADIv5_AP_t *ap = cortexm_ap(t);
 	unsigned i;
-
+#if defined(STLINKV2)
+	uint32_t base_regs[21];
+	extern void stlink_regs_read(ADIv5_AP_t *ap, void *data);
+	extern uint32_t stlink_reg_read(ADIv5_AP_t *ap, int idx);
+	stlink_regs_read(ap, base_regs);
+	for(i = 0; i < sizeof(regnum_cortex_m) / 4; i++)
+		*regs++ = base_regs[regnum_cortex_m[i]];
+	if (t->target_options & TOPT_FLAVOUR_V7MF)
+		for(size_t t = 0; t < sizeof(regnum_cortex_mf) / 4; t++)
+			*regs++ = stlink_reg_read(ap, regnum_cortex_mf[t]);
+#else
 	/* FIXME: Describe what's really going on here */
 	adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw | ADIV5_AP_CSW_SIZE_WORD);
 
@@ -491,19 +497,19 @@ static void cortexm_regs_read(target *t, void *data)
 static void cortexm_regs_write(target *t, const void *data)
 {
 	const uint32_t *regs = data;
+	ADIv5_AP_t *ap = cortexm_ap(t);
 #if defined(STLINKV2)
-	extern void stlink_reg_write(int num, uint32_t val);
-	for(size_t z = 1; z < sizeof(regnum_cortex_m) / 4; z++) {
-		stlink_reg_write(regnum_cortex_m[z], *regs);
+	extern void stlink_reg_write(ADIv5_AP_t *ap, int num, uint32_t val);
+	for(size_t z = 0; z < sizeof(regnum_cortex_m) / 4; z++) {
+		stlink_reg_write(ap, regnum_cortex_m[z], *regs);
 		regs++;
+	}
 	if (t->target_options & TOPT_FLAVOUR_V7MF)
 		for(size_t z = 0; z < sizeof(regnum_cortex_mf) / 4; z++) {
-			stlink_reg_write(regnum_cortex_mf[z], *regs);
+			stlink_reg_write(ap, regnum_cortex_mf[z], *regs);
 			regs++;
-		}
 	}
 #else
-	ADIv5_AP_t *ap = cortexm_ap(t);
 	unsigned i;
 
 	/* FIXME: Describe what's really going on here */
@@ -541,6 +547,39 @@ int cortexm_mem_write_sized(
 	cortexm_cache_clean(t, dest, len, true);
 	adiv5_mem_write_sized(cortexm_ap(t), dest, src, len, align);
 	return target_check_error(t);
+}
+
+int dcrsr_regnum(target *t, unsigned reg)
+{
+	if (reg < sizeof(regnum_cortex_m) / 4) {
+		return regnum_cortex_m[reg];
+	} else if ((t->target_options & TOPT_FLAVOUR_V7MF) &&
+	           (reg < (sizeof(regnum_cortex_m) +
+	                   sizeof(regnum_cortex_mf) / 4))) {
+		return regnum_cortex_mf[reg - sizeof(regnum_cortex_m)/4];
+	} else {
+		return -1;
+	}
+}
+ssize_t cortexm_reg_read(target *t, int reg, void *data, size_t max)
+{
+	if (max < 4)
+		return -1;
+	uint32_t *r = data;
+	target_mem_write32(t, CORTEXM_DCRSR, dcrsr_regnum(t, reg));
+	*r = target_mem_read32(t, CORTEXM_DCRDR);
+	return 4;
+}
+
+ssize_t cortexm_reg_write(target *t, int reg, const void *data, size_t max)
+{
+	if (max < 4)
+		return -1;
+	const uint32_t *r = data;
+	target_mem_write32(t, CORTEXM_DCRDR, *r);
+	target_mem_write32(t, CORTEXM_DCRSR, CORTEXM_DCRSR_REGWnR |
+	                                     dcrsr_regnum(t, reg));
+	return 4;
 }
 
 static uint32_t cortexm_pc_read(target *t)

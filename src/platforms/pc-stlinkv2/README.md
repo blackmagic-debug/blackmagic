@@ -5,11 +5,13 @@ functionality that BMP needs. This branch implements blackmagic debug probe
 for the STM Stlink as a proof of concept.
 Use at your own risk, but report or better fix problems.
 
-Run the resulting blackmagic_stlinkv2 executabel to start the gdb server
+Run the resulting blackmagic_stlinkv2 executable to start the gdb server
 
-CrosscCompling for windows with mingw succeeds.
+Crosscompling for windows with mingw succeeds.
 
-Drawback: JTAG does not work for chains with multiple devices.
+Drawback:
+- JTAG does not work for chains with multiple devices.
+- STLinkV3 does only work on STM32 devices.
 
 This branch may get forced push. In case of problems:
 - git reset --hard master

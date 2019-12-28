@@ -36,7 +36,7 @@ endif
 
 bindata.o: $(PROBE_HOST).d
 
-$(PROBE_HOST).d: ../src/blackmagic.bin
+$(PROBE_HOST).d: $(wildcard ../src/blackmagic.bin)
 	-rm *.d
 	make -C ../src $0 clean
 	make -C ../src $0

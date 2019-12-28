@@ -92,6 +92,8 @@ struct target_s {
 	const char *tdesc;
 	void (*regs_read)(target *t, void *data);
 	void (*regs_write)(target *t, const void *data);
+	ssize_t (*reg_read)(target *t, int reg, void *data, size_t max);
+	ssize_t (*reg_write)(target *t, int reg, const void *data, size_t size);
 
 	/* Halt/resume functions */
 	void (*reset)(target *t);
@@ -176,6 +178,7 @@ bool sam3x_probe(target *t);
 bool sam4l_probe(target *t);
 bool nrf51_probe(target *t);
 bool samd_probe(target *t);
+bool samx5x_probe(target *t);
 bool kinetis_probe(target *t);
 bool efm32_probe(target *t);
 bool msp432_probe(target *t);

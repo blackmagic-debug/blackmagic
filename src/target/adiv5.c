@@ -30,10 +30,6 @@
 #include "cortexm.h"
 #include "exception.h"
 
-#ifndef DO_RESET_SEQ
-#define DO_RESET_SEQ 0
-#endif
-
 /* All this should probably be defined in a dedicated ADIV5 header, so that they
  * are consistently named and accessible when needed in the codebase.
  */
@@ -262,8 +258,8 @@ static bool adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, int recursion, 
 	uint64_t pidr = 0;
 	uint32_t cidr = 0;
 	bool res = false;
-#if defined(ENABLE_DEBUG)
-	char indent[recursion];
+#if defined(ENABLE_DEBUG) && defined(PLATFORM_HAS_DEBUG)
+	char indent[recursion + 1];
 
 	for(int i = 0; i < recursion; i++) indent[i] = ' ';
 	indent[recursion] = 0;
@@ -304,7 +300,7 @@ static bool adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, int recursion, 
 	/* ROM table */
 	if (cid_class == cidc_romtab) {
 		/* Check SYSMEM bit */
-#ifdef ENABLE_DEBUG
+#if defined(ENABLE_DEBUG) && defined(PLATFORM_HAS_DEBUG)
 		uint32_t memtype = adiv5_mem_read32(ap, addr | ADIV5_ROM_MEMTYPE) &
 			ADIV5_ROM_MEMTYPE_SYSMEM;
 
@@ -455,26 +451,33 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 		(ADIV5_DP_CTRLSTAT_CSYSPWRUPACK | ADIV5_DP_CTRLSTAT_CDBGPWRUPACK)) !=
 		(ADIV5_DP_CTRLSTAT_CSYSPWRUPACK | ADIV5_DP_CTRLSTAT_CDBGPWRUPACK));
 
-	if(DO_RESET_SEQ) {
-		/* This AP reset logic is described in ADIv5, but fails to work
-		 * correctly on STM32.  CDBGRSTACK is never asserted, and we
-		 * just wait forever.
-		 */
+	/* This AP reset logic is described in ADIv5, but fails to work
+	 * correctly on STM32.	CDBGRSTACK is never asserted, and we
+	 * just wait forever.  This scenario is described in B2.4.1
+	 * so we have a timeout mechanism in addition to the sensing one.
+	 */
 
-		/* Write request for debug reset */
-		adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT,
-				ctrlstat |= ADIV5_DP_CTRLSTAT_CDBGRSTREQ);
-		/* Wait for acknowledge */
-		while(!((ctrlstat = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT)) &
-				ADIV5_DP_CTRLSTAT_CDBGRSTACK));
+	/* Write request for debug reset */
+	adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT,
+				   ctrlstat |= ADIV5_DP_CTRLSTAT_CDBGRSTREQ);
 
-		/* Write request for debug reset release */
-		adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT,
-				ctrlstat &= ~ADIV5_DP_CTRLSTAT_CDBGRSTREQ);
-		/* Wait for acknowledge */
-		while(adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT) &
-				ADIV5_DP_CTRLSTAT_CDBGRSTACK);
-	}
+	platform_timeout timeout;
+	platform_timeout_set(&timeout,200);
+	/* Wait for acknowledge */
+	while ((!platform_timeout_is_expired(&timeout)) &&
+		   (!((ctrlstat = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT)) & ADIV5_DP_CTRLSTAT_CDBGRSTACK))
+		);
+
+	/* Write request for debug reset release */
+	adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT,
+				   ctrlstat &= ~ADIV5_DP_CTRLSTAT_CDBGRSTREQ);
+
+	platform_timeout_set(&timeout,200);
+	/* Wait for acknowledge */
+	while ((!platform_timeout_is_expired(&timeout)) &&
+		   (adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT) & ADIV5_DP_CTRLSTAT_CDBGRSTACK)
+		);
+	DEBUG("RESET_SEQ %s\n", (platform_timeout_is_expired(&timeout)) ? "failed": "succeeded");
 
 	dp->dp_idcode =  adiv5_dp_read(dp, ADIV5_DP_IDCODE);
 	if ((dp->dp_idcode & ADIV5_DP_VERSION_MASK) == ADIV5_DPv2) {
@@ -485,14 +488,25 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 		DEBUG("TARGETID %08" PRIx32 "\n", dp->targetid);
 	}
 	/* Probe for APs on this DP */
+	uint32_t last_base = 0;
 	for(int i = 0; i < 256; i++) {
 		ADIv5_AP_t *ap = NULL;
 		if (adiv5_ap_setup(i))
 			ap = adiv5_new_ap(dp, i);
 		if (ap == NULL) {
 			adiv5_ap_cleanup(i);
-			continue;
+			if (i == 0)
+				return;
+			else
+				continue;
 		}
+		if (ap->base == last_base) {
+			DEBUG("AP %d: Duplicate base\n", i);
+			adiv5_ap_cleanup(i);
+			/* FIXME: Should we expect valid APs behind duplicate ones? */
+			return;
+		}
+		last_base = ap->base;
 		extern void kinetis_mdm_probe(ADIv5_AP_t *);
 		kinetis_mdm_probe(ap);
 

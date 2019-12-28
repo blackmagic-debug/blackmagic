@@ -39,8 +39,8 @@
 #include "target_internal.h"
 #include "cortexm.h"
 
-static bool stm32f1_cmd_erase_mass(target *t);
-static bool stm32f1_cmd_option(target *t, int argc, char *argv[]);
+static bool stm32f1_cmd_erase_mass(target *t, int argc, const char **argv);
+static bool stm32f1_cmd_option(target *t, int argc, const char **argv);
 
 const struct command_s stm32f1_cmd_list[] = {
 	{"erase_mass", (cmd_handler)stm32f1_cmd_erase_mass, "Erase entire flash memory"},
@@ -249,8 +249,10 @@ static int stm32f1_flash_write(struct target_flash *f,
 	return 0;
 }
 
-static bool stm32f1_cmd_erase_mass(target *t)
+static bool stm32f1_cmd_erase_mass(target *t, int argc, const char **argv)
 {
+	(void)argc;
+	(void)argv;
 	stm32f1_flash_unlock(t);
 
 	/* Flash mass erase start instruction */
@@ -326,7 +328,7 @@ static bool stm32f1_option_write(target *t, uint32_t addr, uint16_t value)
 	return true;
 }
 
-static bool stm32f1_cmd_option(target *t, int argc, char *argv[])
+static bool stm32f1_cmd_option(target *t, int argc, const char **argv)
 {
 	uint32_t addr, val;
 	uint32_t flash_obp_rdp_key;

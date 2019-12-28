@@ -97,8 +97,16 @@ lpc11xx_probe(target *t)
 		target_add_ram(t, 0x10000000, 0x1000);
 		lpc11xx_add_flash(t, 0x00000000, 0x10000, 0x1000);
 		return true;
+	case 0x3000002B:
+	case 0x3D00002B:
+		t->driver = "LPC1343";
+		target_add_ram(t, 0x10000000, 0x2000);
+		lpc11xx_add_flash(t, 0x00000000, 0x8000, 0x1000);
+		return true;
 	}
-
+	if (idcode) {
+		DEBUG("LPC11xx: Unknown IDCODE 0x%08" PRIx32 "\n", idcode);
+	}
 	idcode = target_mem_read32(t, LPC8XX_DEVICE_ID);
 	switch (idcode) {
 	case 0x00008100:  /* LPC810M021FN8 */
@@ -118,6 +126,22 @@ lpc11xx_probe(target *t)
 		target_add_ram(t, 0x10000000, 0x2000);
 		lpc11xx_add_flash(t, 0x00000000, 0x8000, 0x400);
 		return true;
+	case 0x00008441:
+	case 0x00008442:
+	case 0x00008443: /* UM11029 Rev.1.4 list 8442 */
+	case 0x00008444:
+		t->driver = "LPC844";
+		target_add_ram(t, 0x10000000, 0x2000);
+		lpc11xx_add_flash(t, 0x00000000, 0x10000, 0x400);
+		return true;
+	case 0x00008451:
+	case 0x00008452:
+	case 0x00008453:
+	case 0x00008454:
+		t->driver = "LPC845";
+		target_add_ram(t, 0x10000000, 0x4000);
+		lpc11xx_add_flash(t, 0x00000000, 0x10000, 0x400);
+		return true;
 	case 0x0003D440:	/* LPC11U34/311  */
 	case 0x0001cc40:	/* LPC11U34/421  */
 	case 0x0001BC40:	/* LPC11U35/401  */
@@ -130,11 +154,15 @@ lpc11xx_probe(target *t)
 		target_add_ram(t, 0x10000000, 0x2000);
 		lpc11xx_add_flash(t, 0x00000000, 0x20000, 0x1000);
 		return true;
+	case 0x00040070:	/* LPC1114/333 */
 	case 0x00050080:	/* lpc1115XL */
 		t->driver = "LPC1100XL";
 		target_add_ram(t, 0x10000000, 0x2000);
 		lpc11xx_add_flash(t, 0x00000000, 0x20000, 0x1000);
 		return true;
+	}
+	if (idcode) {
+		DEBUG("LPC8xx: Unknown IDCODE 0x%08" PRIx32 "\n", idcode);
 	}
 
 	return false;

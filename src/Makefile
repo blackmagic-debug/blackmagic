@@ -10,7 +10,7 @@ MAKEFLAGS += --no-print-dir
 Q := @
 endif
 
-CFLAGS += -Wall -Wextra -Werror -Wno-char-subscripts -Wno-cast-function-type \
+CFLAGS += -Wall -Wextra -Werror -Wno-char-subscripts \
 	-std=gnu99 -g3 -MD \
 	-I. -Iinclude -Iplatforms/common -I$(PLATFORM_DIR)
 
@@ -48,8 +48,9 @@ SRC =			\
 	nxpke04.c	\
 	platform.c	\
 	sam3x.c		\
-	sam4l.c	\
+	sam4l.c		\
 	samd.c		\
+	samx5x.c	\
 	stm32f1.c	\
 	stm32f4.c	\
 	stm32h7.c	\
@@ -73,6 +74,9 @@ endif
 
 ifndef OWN_HL
 SRC += jtag_scan.c jtagtap.c swdptap.c
+SRC += remote.c
+else
+CFLAGS += -DOWN_HL
 endif
 
 OBJ = $(patsubst %.S,%.o,$(patsubst %.c,%.o,$(SRC)))
@@ -118,6 +122,11 @@ all_platforms:
 		if [ -f blackmagic.bin ]; then \
 			mv blackmagic.bin artifacts/blackmagic-$$PROBE_HOST.bin ;\
 			echo "<li><a href='blackmagic-$$PROBE_HOST.bin'>$$PROBE_HOST</a></li>"\
+				>> artifacts/index.html ;\
+		fi ;\
+		if [ -f blackmagic_dfu.bin ]; then \
+			mv blackmagic_dfu.bin artifacts/blackmagic_dfu-$$PROBE_HOST.bin ;\
+			echo "<li><a href='blackmagic_dfu-$$PROBE_HOST.bin'>$$PROBE_HOST DFU</a></li>"\
 				>> artifacts/index.html ;\
 		fi ;\
 	done ;\

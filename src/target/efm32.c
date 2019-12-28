@@ -53,9 +53,9 @@ static const uint16_t efm32_flash_write_stub[] = {
 #include "flashstub/efm32.stub"
 };
 
-static bool efm32_cmd_erase_all(target *t);
-static bool efm32_cmd_serial(target *t);
-static bool efm32_cmd_efm_info(target *t);
+static bool efm32_cmd_erase_all(target *t, int argc, const char **argv);
+static bool efm32_cmd_serial(target *t, int argc, const char **argv);
+static bool efm32_cmd_efm_info(target *t, int argc, const char **argv);
 
 const struct command_s efm32_cmd_list[] = {
 	{"erase_mass", (cmd_handler)efm32_cmd_erase_all, "Erase entire flash memory"},
@@ -698,8 +698,10 @@ static int efm32_flash_write(struct target_flash *f,
 /**
  * Uses the MSC ERASEMAIN0 command to erase the entire flash
  */
-static bool efm32_cmd_erase_all(target *t)
+static bool efm32_cmd_erase_all(target *t, int argc, const char **argv)
 {
+	(void)argc;
+	(void)argv;
 	efm32_device_t const* device = efm32_get_device(t->driver[2] - 32);
 	if (device == NULL) {
 		return true;
@@ -732,8 +734,10 @@ static bool efm32_cmd_erase_all(target *t)
 /**
  * Reads the 40-bit unique number
  */
-static bool efm32_cmd_serial(target *t)
+static bool efm32_cmd_serial(target *t, int argc, const char **argv)
 {
+	(void)argc;
+	(void)argv;
 	uint64_t unique = 0;
 	uint8_t di_version = t->driver[0] - 48; /* di version hidden in driver str */
 
@@ -755,8 +759,10 @@ static bool efm32_cmd_serial(target *t)
 /**
  * Prints various information we know about the device
  */
-static bool efm32_cmd_efm_info(target *t)
+static bool efm32_cmd_efm_info(target *t, int argc, const char **argv)
 {
+	(void)argc;
+	(void)argv;
 	uint8_t di_version  = t->driver[0] - 48; /* hidden in driver str */
 
 	switch (di_version) {

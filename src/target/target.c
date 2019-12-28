@@ -30,6 +30,11 @@ static int target_flash_write_buffered(struct target_flash *f,
                                        target_addr dest, const void *src, size_t len);
 static int target_flash_done_buffered(struct target_flash *f);
 
+static bool nop_function(void)
+{
+	return true;
+}
+
 target *target_new(void)
 {
 	target *t = (void*)calloc(1, sizeof(*t));
@@ -46,6 +51,20 @@ target *target_new(void)
 	} else {
 		target_list = t;
 	}
+
+	t->attach = (void*)nop_function;
+	t->detach = (void*)nop_function;
+	t->check_error = (void*)nop_function;
+	t->mem_read = (void*)nop_function;
+	t->mem_write = (void*)nop_function;
+	t->reg_read = (void*)nop_function;
+	t->reg_write = (void*)nop_function;
+	t->regs_read = (void*)nop_function;
+	t->regs_write = (void*)nop_function;
+	t->reset = (void*)nop_function;
+	t->halt_request = (void*)nop_function;
+	t->halt_poll = (void*)nop_function;
+	t->halt_resume = (void*)nop_function;
 
 	return t;
 }
@@ -337,8 +356,36 @@ int target_mem_write(target *t, target_addr dest, const void *src, size_t len)
 }
 
 /* Register access functions */
-void target_regs_read(target *t, void *data) { t->regs_read(t, data); }
-void target_regs_write(target *t, const void *data) { t->regs_write(t, data); }
+ssize_t target_reg_read(target *t, int reg, void *data, size_t max)
+{
+	return t->reg_read(t, reg, data, max);
+}
+
+ssize_t target_reg_write(target *t, int reg, const void *data, size_t size)
+{
+	return t->reg_write(t, reg, data, size);
+}
+
+void target_regs_read(target *t, void *data)
+{
+	if (t->regs_read) {
+		t->regs_read(t, data);
+		return;
+	}
+	for (size_t x = 0, i = 0; x < t->regs_size; ) {
+		x += t->reg_read(t, i++, data + x, t->regs_size - x);
+	}
+}
+void target_regs_write(target *t, const void *data)
+{
+	if (t->regs_write) {
+		t->regs_write(t, data);
+		return;
+	}
+	for (size_t x = 0, i = 0; x < t->regs_size; ) {
+		x += t->reg_write(t, i++, data + x, t->regs_size - x);
+	}
+}
 
 /* Halt/resume functions */
 void target_reset(target *t) { t->reset(t); }
