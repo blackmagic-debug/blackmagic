@@ -25,7 +25,7 @@
 #include <libopencm3/cm3/systick.h>
 #include <libopencm3/lm4f/usb.h>
 
-#define SYSTICKHZ	100
+#define SYSTICKHZ	1000
 #define SYSTICKMS	(1000 / SYSTICKHZ)
 
 #define PLL_DIV_80MHZ	5
@@ -35,12 +35,17 @@ extern void trace_tick(void);
 
 volatile platform_timeout * volatile head_timeout;
 uint8_t running_status;
+uint8_t trace_counter;
 static volatile uint32_t time_ms;
 
 void sys_tick_handler(void)
 {
-	trace_tick();
-	time_ms += 10;
+	trace_counter++;
+	if (trace_counter == 10) {
+		trace_counter = 0;
+		trace_tick();
+	}
+	time_ms++;
 }
 
 uint32_t platform_time_ms(void)
