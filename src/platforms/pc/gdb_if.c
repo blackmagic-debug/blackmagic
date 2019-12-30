@@ -115,11 +115,19 @@ unsigned char gdb_if_getchar(void)
 			while(1) {
 				gdb_if_conn = accept(gdb_if_serv, NULL, NULL);
 				if (gdb_if_conn == -1) {
+#if defined(_WIN32) || defined(__CYGWIN__)
+					if (WSAGetLastError() == WSAEWOULDBLOCK) {
+#else
 					if (errno == EWOULDBLOCK) {
+#endif
 						SET_IDLE_STATE(1);
 						platform_delay(100);
 					} else {
+#if defined(_WIN32) || defined(__CYGWIN__)
+						DEBUG("error when accepting connection: %d", WSAGetLastError());
+#else
 						DEBUG("error when accepting connection: %s", strerror(errno));
+#endif
 						exit(1);
 					}
 				} else {
@@ -144,7 +152,11 @@ unsigned char gdb_if_getchar(void)
 		i = recv(gdb_if_conn, (void*)&ret, 1, 0);
 		if(i <= 0) {
 			gdb_if_conn = -1;
+#if defined(_WIN32) || defined(__CYGWIN__)
+			DEBUG("Dropped broken connection: %d\n", WSAGetLastError());
+#else
 			DEBUG("Dropped broken connection: %s\n", strerror(errno));
+#endif
 			/* Return '+' in case we were waiting for an ACK */
 			return '+';
 		}
