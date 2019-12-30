@@ -404,7 +404,7 @@ bool cortexa_attach(target *t)
 	priv->hw_breakpoint_mask = 0;
 	priv->bcr0 = 0;
 
-	platform_srst_set_val(false);
+	platform_srst_release();
 
 	return true;
 }
@@ -575,8 +575,7 @@ static void cortexa_reset(target *t)
 	target_mem_write32(t, ZYNQ_SLCR_PSS_RST_CTRL, 1);
 
 	/* Try hard reset too */
-	platform_srst_set_val(true);
-	platform_srst_set_val(false);
+	platform_srst_reset();
 
 	/* Spin until Xilinx reconnects us */
 	platform_timeout timeout;

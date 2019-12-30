@@ -93,12 +93,10 @@ void platform_srst_set_val(bool assert)
 		gpio_set_mode(SRST_PORT, GPIO_MODE_OUTPUT_50_MHZ,
 		              GPIO_CNF_OUTPUT_OPENDRAIN, srst_pin);
 		gpio_clear(SRST_PORT, srst_pin);
-		while (gpio_get(SRST_PORT, srst_pin)) {};
 	} else {
 		gpio_set_mode(SRST_PORT, GPIO_MODE_INPUT,
 			GPIO_CNF_INPUT_PULL_UPDOWN, srst_pin);
 		gpio_set(SRST_PORT, srst_pin);
-		while (!gpio_get(SRST_PORT, srst_pin)) {};
 	}
 }
 

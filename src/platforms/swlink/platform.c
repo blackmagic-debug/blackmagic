@@ -120,15 +120,11 @@ void platform_srst_set_val(bool assert)
 	if (assert) {
 		gpio_set_mode(JRST_PORT, GPIO_MODE_OUTPUT_50_MHZ,
 		              GPIO_CNF_OUTPUT_OPENDRAIN, JRST_PIN);
-		/* Wait until requested value is active.*/
-		while (gpio_get(JRST_PORT, JRST_PIN))
-			gpio_clear(JRST_PORT, JRST_PIN);
+		gpio_clear(JRST_PORT, JRST_PIN);
 	} else {
 		gpio_set_mode(JRST_PORT, GPIO_MODE_INPUT,
 					  GPIO_CNF_INPUT_PULL_UPDOWN, JRST_PIN);
-		/* Wait until requested value is active.*/
-		while (!gpio_get(JRST_PORT, JRST_PIN))
-			gpio_set(JRST_PORT, JRST_PIN);
+		gpio_set(JRST_PORT, JRST_PIN);
 	}
 }
 

@@ -11,4 +11,4 @@ else ifneq (, $(findstring cygwin, $(SYS)))
 LDFLAGS +=  -lusb-1.0 -lws2_32
 endif
 VPATH += platforms/pc
-SRC += 	cl_utils.c timing.c
+SRC += 	cl_utils.c srst.c timing.c

@@ -19,6 +19,7 @@ SRC += 	cdcacm.c	\
 	traceswo.c	\
 	usbuart.c	\
 	serialno.c	\
+	srst.c	\
 	timing.c	\
 	timing_stm32.c	\
 

@@ -179,7 +179,7 @@ static bool cmd_jtag_scan(target *t, int argc, char **argv)
 	}
 
 	if(connect_assert_srst)
-		platform_srst_set_val(true); /* will be deasserted after attach */
+		platform_srst_assert(); /* will be deasserted after attach */
 
 	int devs = -1;
 	volatile struct exception e;
@@ -196,7 +196,7 @@ static bool cmd_jtag_scan(target *t, int argc, char **argv)
 	}
 
 	if(devs <= 0) {
-		platform_srst_set_val(false);
+		platform_srst_release();
 		gdb_out("JTAG device scan failed!\n");
 		return false;
 	}
@@ -213,7 +213,7 @@ bool cmd_swdp_scan(target *t, int argc, char **argv)
 	gdb_outf("Target voltage: %s\n", platform_target_voltage());
 
 	if(connect_assert_srst)
-		platform_srst_set_val(true); /* will be deasserted after attach */
+		platform_srst_assert(); /* will be deasserted after attach */
 
 	int devs = -1;
 	volatile struct exception e;
@@ -230,7 +230,7 @@ bool cmd_swdp_scan(target *t, int argc, char **argv)
 	}
 
 	if(devs <= 0) {
-		platform_srst_set_val(false);
+		platform_srst_release();
 		gdb_out("SW-DP scan failed!\n");
 		return false;
 	}
@@ -327,8 +327,7 @@ static bool cmd_hard_srst(target *t, int argc, const char **argv)
 	(void)argc;
 	(void)argv;
 	target_list_free();
-	platform_srst_set_val(true);
-	platform_srst_set_val(false);
+	platform_srst_reset();
 	return true;
 }
 

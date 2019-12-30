@@ -39,6 +39,22 @@ const char *platform_target_voltage(void);
 int platform_hwversion(void);
 void platform_srst_set_val(bool assert);
 bool platform_srst_get_val(void);
+
+/**
+ * @brief Perform a hard SRST reset (incl. necessary waiting).
+ */
+void platform_srst_reset();
+
+/**
+ * @brief Assert SRST for at least 1ms.
+ */
+void platform_srst_assert(void);
+
+/**
+ * @brief Release SRST and wait until the SRST level has fully recovered.
+ */
+void platform_srst_release(void);
+
 bool platform_target_get_power(void);
 void platform_target_set_power(bool power);
 void platform_request_boot(void);

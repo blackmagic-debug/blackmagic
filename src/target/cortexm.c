@@ -245,7 +245,7 @@ static void cortexm_priv_free(void *priv)
 static bool cortexm_forced_halt(target *t)
 {
 	target_halt_request(t);
-	platform_srst_set_val(false);
+	platform_srst_release();
 	uint32_t dhcsr = 0;
 	uint32_t start_time = platform_time_ms();
 	/* Try hard to halt the target. STM32F7 in  WFI
@@ -397,6 +397,11 @@ bool cortexm_attach(target *t)
 
 	/* Request halt on reset */
 	target_mem_write32(t, CORTEXM_DEMCR, priv->demcr);
+
+	if (target_check_error(t)) {
+		DEBUG("Reading DEMCR register failed (target still under reset?)\n");
+		return false;
+	}
 
 	/* Reset DFSR flags */
 	target_mem_write32(t, CORTEXM_DFSR, CORTEXM_DFSR_RESETALL);
@@ -598,10 +603,8 @@ static void cortexm_pc_write(target *t, const uint32_t val)
  * using the core debug registers in the NVIC. */
 static void cortexm_reset(target *t)
 {
-	if ((t->target_options & CORTEXM_TOPT_INHIBIT_SRST) == 0) {
-		platform_srst_set_val(true);
-		platform_srst_set_val(false);
-	}
+	if ((t->target_options & CORTEXM_TOPT_INHIBIT_SRST) == 0)
+		platform_srst_reset();
 
 	/* Read DHCSR here to clear S_RESET_ST bit before reset */
 	target_mem_read32(t, CORTEXM_DHCSR);
