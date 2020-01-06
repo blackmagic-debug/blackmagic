@@ -1,0 +1,95 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Make BMP Native",
+            "type": "shell",
+            "group": "build",
+            "command": "make ",
+            "options": { "cwd": "${workspaceFolder}/src"},
+            "problemMatcher": "$gcc"
+        },
+        {
+            "label": "Make PC-STLinkV2",
+            "type": "shell",
+            "group": "build",
+            "command": "make ",
+            "args": [
+                "PROBE_HOST=pc-stlinkv2",
+                "CC=gcc"
+            ],
+            "options": { "cwd": "${workspaceFolder}/src"},
+            "problemMatcher": "$gcc"
+        },
+        {
+            "label": "Make libftdi",
+            "type": "shell",
+            "group": "build",
+            "command": "make ",
+            "args": [
+                "PROBE_HOST=libftdi",
+                "CC=gcc"
+            ],
+            "options": { "cwd": "${workspaceFolder}/src"},
+            "problemMatcher": "$gcc"
+        },
+        {
+            "label": "Make ctxLink",
+            "type": "shell",
+            "group": "build",
+            "command": "make ",
+            "args": [
+                "PROBE_HOST=ctxLink"
+            ],
+            "options": { "cwd": "${workspaceFolder}/src"},
+            "problemMatcher": "$gcc"
+        },
+        {
+            "label": "Make F4 Discovery",
+            "type": "shell",
+            "group": "build",
+            "command": "make ",
+            "args": [
+                "PROBE_HOST=f4discovery"
+            ],
+            "options": { "cwd": "${workspaceFolder}/src"},
+            "problemMatcher": "$gcc"
+        },
+        {
+            "label": "Make STLink",
+            "type": "shell",
+            "group": "build",
+            "command": "make ",
+            "args": [
+                "PROBE_HOST=stlink"
+            ],
+            "options": { "cwd": "${workspaceFolder}/src"},
+            "problemMatcher": "$gcc"
+        },
+        {
+            "label": "Make SWLink",
+            "type": "shell",
+            "group": "build",
+            "command": "make ",
+            "args": [
+                "PROBE_HOST=swlink"
+            ],
+            "options": { "cwd": "${workspaceFolder}/src"},
+            "problemMatcher": "$gcc"
+        },
+        {
+            "label": "Clean",
+            "type": "shell",
+            "group": "build",
+            "command": "make ",
+            "args": [
+                "clean"
+            ],
+            "options": { "cwd": "${workspaceFolder}/src"},
+            "problemMatcher": "$gcc"
+        }
+
+    ]
+}

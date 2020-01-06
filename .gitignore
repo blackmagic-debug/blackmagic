@@ -16,4 +16,8 @@ tags
 *.b#*
 blackmagic_upgrade
 *.exe
-.vscode
+*.ipch
+VisualGDB/
+WDBP-Release.vgdbsettings.sidprice.user
+.vs/
+.vscode/.cortex-debug.peripherals.state.json

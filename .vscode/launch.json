@@ -1,0 +1,76 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug blackmagic_stlinkv2.exe ",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/blackmagic_stlinkv2.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": true,
+            "MIMode": "gdb",
+            "miDebuggerPath": "gdb.exe",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "Debug ctxLink",
+            "type": "cortex-debug",
+            "request": "launch",
+            "svdFile": "${workspaceFolder}/SVD/STM32F411xx.svd",
+            "cwd": "${workspaceFolder}/src",
+            "servertype": "jlink",
+            "executable": "blackmagic",
+            "showDevDebugOutput": true,
+            "interface": "swd",
+            "device": "STM32F401RE",
+            // "preLaunchTask": "Make ctxLink",
+            // "postLaunchCommands": ["continue"],  // uncomment to just run target
+            "runToMain": true   // Will not be used if "postLaunchCommands" has "continue"
+        },
+        {
+            "name": "Debug BMP",
+            "type": "cortex-debug",
+            "request": "launch",
+            //"svdFile": "${workspaceFolder}/SVD/STM32F411xx.svd",
+            "cwd": "${workspaceFolder}/src",
+            "servertype": "bmp",
+            "BMPGDBSerialPort": "//./COM32",
+            "executable": "blackmagic",
+            "powerOverBMP": "enable",
+            "showDevDebugOutput": true,
+            "interface": "swd",
+            "device": "STM32F103CB",
+            "runToMain": true   // Will not be used if "postLaunchCommands" has "continue"
+        },
+        {
+            "name": "Debug ctxLink WiFi",
+            "type": "cortex-debug",
+            "request": "launch",
+            "svdFile": "${workspaceFolder}/SVD/STM32F411xx.svd",
+            "cwd": "${workspaceFolder}/src",
+            "servertype": "bmp",
+            "BMPGDBSerialPort": "192.168.0.26:2159",
+            "powerOverBMP": "enable",
+            "executable": "blackmagic",
+            "showDevDebugOutput": true,
+            "interface": "swd",
+            "device": "STM32F401RE",
+            "targetId": "1",
+            //"preLaunchTask": "Make ctxLink",
+            // "postLaunchCommands": ["continue"],  // uncomment to just run target
+            "runToMain": true   // Will not be used if "postLaunchCommands" has "continue"
+        }
+    ]
+}

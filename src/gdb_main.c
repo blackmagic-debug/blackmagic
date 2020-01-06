@@ -101,20 +101,21 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 		SET_IDLE_STATE(1);
 		size = gdb_getpacket(pbuf, BUF_SIZE);
 		SET_IDLE_STATE(0);
-		switch(pbuf[0]) {
-		/* Implementation of these is mandatory! */
-		case 'g': { /* 'g': Read general registers */
-			ERROR_IF_NO_TARGET();
-			uint8_t arm_regs[target_regs_size(cur_target)];
-			target_regs_read(cur_target, arm_regs);
-			gdb_putpacket(hexify(pbuf, arm_regs, sizeof(arm_regs)),
-			              sizeof(arm_regs) * 2);
-			break;
-			}
-		case 'm': {	/* 'm addr,len': Read len bytes from addr */
-			uint32_t addr, len;
-			ERROR_IF_NO_TARGET();
-			sscanf(pbuf, "m%" SCNx32 ",%" SCNx32, &addr, &len);
+		switch ( pbuf[0] ) { /* Implementation of these is mandatory! */
+			case 'g': {
+					/* 'g': Read general registers */
+					ERROR_IF_NO_TARGET();
+					uint8_t arm_regs[target_regs_size(cur_target)];
+					target_regs_read(cur_target, arm_regs);
+					gdb_putpacket(hexify(pbuf, arm_regs, sizeof(arm_regs)),
+						sizeof(arm_regs) * 2);
+					break;
+				}
+			case 'm': {
+					/* 'm addr,len': Read len bytes from addr */
+					uint32_t addr, len;
+					ERROR_IF_NO_TARGET();
+					sscanf(pbuf, "m%" SCNx32 ",%" SCNx32, &addr, &len);
 			if (len > sizeof(pbuf) / 2) {
 				gdb_putpacketz("E02");
 				break;

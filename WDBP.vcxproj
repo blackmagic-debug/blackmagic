@@ -1,0 +1,148 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|VisualGDB">
+      <Configuration>Debug</Configuration>
+      <Platform>VisualGDB</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|VisualGDB">
+      <Configuration>Release</Configuration>
+      <Platform>VisualGDB</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>15.0</VCProjectVersion>
+    <ProjectGuid>{EC81D76E-7342-4CC1-ABAE-F8115E56C76B}</ProjectGuid>
+    <BSP_ID>com.sysprogs.arm.stm32</BSP_ID>
+    <BSP_VERSION>2019.06</BSP_VERSION>
+    <InPlaceBSPSubdir />
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Debug|VisualGDB'">
+    <MCUPropertyListFile>$(ProjectDir)stm32.props</MCUPropertyListFile>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration" Condition="'$(Configuration)|$(Platform)'=='Release|VisualGDB'">
+    <MCUPropertyListFile>$(ProjectDir)stm32.props</MCUPropertyListFile>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|VisualGDB'">
+    <GNUConfigurationType>Debug</GNUConfigurationType>
+    <ToolchainID>com.visualgdb.arm-eabi</ToolchainID>
+    <ToolchainVersion>7.2.0/8.0.1/r3</ToolchainVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|VisualGDB'">
+    <ToolchainID>com.visualgdb.arm-eabi</ToolchainID>
+    <ToolchainVersion>7.2.0/8.0.1/r3</ToolchainVersion>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|VisualGDB'">
+    <Link>
+      <LibrarySearchDirectories>libopencm3/lib;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
+      <AdditionalLibraryNames>opencm3_stm32f4;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
+      <LinkerScript>C:\DataRoot\Projects\blackmagic\libopencm3\lib\cortex-m-generic.ld</LinkerScript>
+      <AdditionalOptions>-nostartfiles %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalLinkerInputs>;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
+    </Link>
+    <ClCompile>
+      <CLanguageStandard>GNU99</CLanguageStandard>
+      <SupportExceptions>false</SupportExceptions>
+      <SupportRTTI>false</SupportRTTI>
+      <AdditionalIncludeDirectories>src/include;libopencm3/include;src/platforms/common;src/platforms/stm32;src/SimpleLink/include;src/platforms/WDBP;src/platforms/winc1500;src/platforms/winc1500/src;src/platforms/ctxLink;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>STM32F4=1;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>-mthumb -mcpu=cortex-m4  -mfpu=fpv4-sp-d16 %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|VisualGDB'">
+    <Link>
+      <LibrarySearchDirectories>libopencm3/lib;%(Link.LibrarySearchDirectories)</LibrarySearchDirectories>
+      <AdditionalLibraryNames>opencm3_stm32f4;%(Link.AdditionalLibraryNames)</AdditionalLibraryNames>
+      <LinkerScript>C:\DataRoot\Projects\blackmagic\src\platforms\stm32\ctxLink.ld</LinkerScript>
+      <AdditionalOptions>-nostartfiles -Wl,--defsym,_stack=0x20018000 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalLinkerInputs>;%(Link.AdditionalLinkerInputs)</AdditionalLinkerInputs>
+    </Link>
+    <ClCompile>
+      <CLanguageStandard>GNU99</CLanguageStandard>
+      <SupportExceptions>false</SupportExceptions>
+      <SupportRTTI>false</SupportRTTI>
+      <AdditionalIncludeDirectories>src/include;libopencm3/include;src/platforms/common;src/platforms/stm32;src/SimpleLink/include;src/platforms/WDBP;src/platforms/winc1500;src/platforms/winc1500/src;src/platforms/ctxLink;%(ClCompile.AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>STM32F4;ENABLE_DEBUG;ctxLink;gdb_if_putchar=gdb_shim_putchar;RELEASE=1;gdb_if_getchar=gdb_shim_getchar;NDEBUG=1;gdb_if_getchar_to=gdb_shim_getchar_to;INSTRUMENT=1;%(ClCompile.PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>-mthumb -mcpu=cortex-m4  -mfpu=fpv4-sp-d16 %(AdditionalOptions)</AdditionalOptions>
+      <Optimization>O0</Optimization>
+      <VerboseMode>false</VerboseMode>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="src\command.c" />
+    <ClCompile Include="src\crc32.c" />
+    <ClCompile Include="src\exception.c" />
+    <ClCompile Include="src\gdb_hostio.c" />
+    <ClCompile Include="src\gdb_main.c" />
+    <ClCompile Include="src\gdb_packet.c" />
+    <ClCompile Include="src\hex_utils.c" />
+    <ClCompile Include="src\main.c" />
+    <ClCompile Include="src\morse.c" />
+    <ClCompile Include="src\platforms\common\cdcacm.c" />
+    <ClCompile Include="src\platforms\common\jtagtap.c" />
+    <ClCompile Include="src\platforms\common\swdptap.c" />
+    <ClCompile Include="src\platforms\common\timing.c" />
+    <ClCompile Include="src\platforms\ctxLink\ctxLink_if.c" />
+    <ClCompile Include="src\platforms\ctxLink\ctxLink_mode_led.c" />
+    <ClCompile Include="src\platforms\ctxLink\platform.c" />
+    <ClCompile Include="src\platforms\ctxLink\WiFi_Server.c" />
+    <ClCompile Include="src\platforms\stm32\gdb_if.c" />
+    <ClCompile Include="src\platforms\stm32\serialno.c" />
+    <ClCompile Include="src\platforms\stm32\timing_stm32.c" />
+    <ClCompile Include="src\platforms\stm32\traceswo.c" />
+    <ClCompile Include="src\platforms\stm32\usbuart.c" />
+    <ClCompile Include="src\platforms\winc1500\src\wf_asic.c" />
+    <ClCompile Include="src\platforms\winc1500\src\wf_hif.c" />
+    <ClCompile Include="src\platforms\winc1500\src\wf_ota.c" />
+    <ClCompile Include="src\platforms\winc1500\src\wf_socket.c" />
+    <ClCompile Include="src\platforms\winc1500\src\wf_spi.c" />
+    <ClCompile Include="src\platforms\winc1500\src\wf_spi_flash.c" />
+    <ClCompile Include="src\platforms\winc1500\src\wf_utils.c" />
+    <ClCompile Include="src\platforms\winc1500\src\wf_wifi.c" />
+    <ClCompile Include="src\platforms\winc1500\winc1500_driver_stub_api.c" />
+    <ClCompile Include="src\target\adiv5.c" />
+    <ClCompile Include="src\target\adiv5_jtagdp.c" />
+    <ClCompile Include="src\target\adiv5_swdp.c" />
+    <ClCompile Include="src\target\cortexa.c" />
+    <ClCompile Include="src\target\cortexm.c" />
+    <ClCompile Include="src\target\efm32.c" />
+    <ClCompile Include="src\target\jtag_devs.c" />
+    <ClCompile Include="src\target\jtag_scan.c" />
+    <ClCompile Include="src\target\kinetis.c" />
+    <ClCompile Include="src\target\lmi.c" />
+    <ClCompile Include="src\target\lpc11xx.c" />
+    <ClCompile Include="src\target\lpc15xx.c" />
+    <ClCompile Include="src\target\lpc17xx.c" />
+    <ClCompile Include="src\target\lpc43xx.c" />
+    <ClCompile Include="src\target\lpc_common.c" />
+    <ClCompile Include="src\target\msp432.c" />
+    <ClCompile Include="src\target\nrf51.c" />
+    <ClCompile Include="src\target\nxpke04.c" />
+    <ClCompile Include="src\target\sam3x.c" />
+    <ClCompile Include="src\target\sam4l.c" />
+    <ClCompile Include="src\target\samd.c" />
+    <ClCompile Include="src\target\stm32f1.c" />
+    <ClCompile Include="src\target\stm32f4.c" />
+    <ClCompile Include="src\target\stm32h7.c" />
+    <ClCompile Include="src\target\stm32l0.c" />
+    <ClCompile Include="src\target\stm32l4.c" />
+    <ClCompile Include="src\target\target.c" />
+    <ClCompile Include="$(BSP_ROOT)\STM32F4xxxx\StartupFiles\startup_stm32f401xe.c" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+  <ItemGroup>
+    <None Include="stm32.props" />
+    <None Include="WDBP-Debug.vgdbsettings" />
+    <None Include="WDBP-Release.vgdbsettings" />
+    <None Include="stm32.xml" />
+  </ItemGroup>
+</Project>

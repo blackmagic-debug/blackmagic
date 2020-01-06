@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.27130.2003
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WDBP", "WDBP.vcxproj", "{23FB8051-15F0-4477-BDCA-F0533C5A09A5}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|VisualGDB = Debug|VisualGDB
+		Release|VisualGDB = Release|VisualGDB
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{23FB8051-15F0-4477-BDCA-F0533C5A09A5}.Debug|VisualGDB.ActiveCfg = Debug|VisualGDB
+		{23FB8051-15F0-4477-BDCA-F0533C5A09A5}.Debug|VisualGDB.Build.0 = Debug|VisualGDB
+		{23FB8051-15F0-4477-BDCA-F0533C5A09A5}.Release|VisualGDB.ActiveCfg = Release|VisualGDB
+		{23FB8051-15F0-4477-BDCA-F0533C5A09A5}.Release|VisualGDB.Build.0 = Release|VisualGDB
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {ABD284D9-9AF1-4563-9FC9-C2FDDC1A3644}
+	EndGlobalSection
+EndGlobal

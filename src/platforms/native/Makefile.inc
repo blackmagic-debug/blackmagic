@@ -3,7 +3,7 @@ CC = $(CROSS_COMPILE)gcc
 OBJCOPY = $(CROSS_COMPILE)objcopy
 
 CFLAGS += -Istm32/include -mcpu=cortex-m3 -mthumb \
-	-DSTM32F1 -DBLACKMAGIC -I../libopencm3/include \
+	-DSTM32F1 -DBLACKMAGIC -Dsystick_reload=$(SYSTICK_RELOAD_VALUE) -I../libopencm3/include \
 	-Iplatforms/stm32
 
 LDFLAGS_BOOT := $(LDFLAGS) --specs=nano.specs -lopencm3_stm32f1 \
