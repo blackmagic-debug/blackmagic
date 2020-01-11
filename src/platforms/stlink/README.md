@@ -83,3 +83,8 @@ PC13 low -> SWIM internal connection
 
 PC13/PC14 both low -> ST-LinkV2 on some F4_Diso boards.
 
+## Reflashing BMP back to ST-LINKv2 original firmware
+
+If you built the firmware to use ST-Link v2's bootloader (with `ST_BOOTLOADER=1`), you should be able to reflash back to original firmware using the [STLinkUpgrade utility](https://www.st.com/en/development-tools/stsw-link007.html). Do not check the "Change type" checkbox unless you know what you are doing, as it will change the USB VID:PID and change how it operates.
+
+Replug STLink before flashing if the utility doesn't detect it.
