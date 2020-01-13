@@ -21,13 +21,13 @@
 
 #include <string.h>
 #if defined(STM32F1)
-#	include <libopencm3/stm32/f1/flash.h>
 #	define DFU_IFACE_STRING  "@Internal Flash   /0x08000000/8*001Ka,000*001Kg"
 #   define DFU_IFACE_STRING_OFFSET 38
 #elif defined(STM32F4)
-#	include <libopencm3/stm32/f4/flash.h>
 #	define DFU_IFACE_STRING  "/0x08000000/1*016Ka,3*016Kg,1*064Kg,7*128Kg"
 #endif
+#include <libopencm3/stm32/flash.h>
+
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/dfu.h>
 
