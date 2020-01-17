@@ -224,16 +224,8 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 {
 	int res = -1;
 	int num_targets;
-	if (opt->opt_mode == BMP_MODE_TEST) {
+	if (opt->opt_mode == BMP_MODE_TEST)
 		printf("Running in Test Mode\n");
-		num_targets = adiv5_swdp_scan();
-		if (num_targets == 0)
-			num_targets = jtag_scan(NULL);
-		if (num_targets)
-			return 0;
-		else
-			return res;
-	}
 	if (opt->opt_usejtag) {
 		num_targets = jtag_scan(NULL);
 	} else {
@@ -243,6 +235,8 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 		DEBUG("No target found\n");
 		return res;
 	}
+	if (opt->opt_mode == BMP_MODE_TEST)
+			return 0;
 	if (opt->opt_target_dev > num_targets) {
 		DEBUG("Given target nummer %d not available\n", opt->opt_target_dev);
 		return res;
