@@ -86,6 +86,13 @@ const struct command_s nrf51_read_cmd_list[] = {
 #define NRF51_FICR_DEVICE_INFO_RAM		(NRF51_FICR_DEVICE_INFO_BASE + 12)
 #define NRF51_FICR_DEVICE_INFO_FLASH	(NRF51_FICR_DEVICE_INFO_BASE + 16)
 
+/* nRF51 temperature sensor */
+#define NRF51_TEMP					0x4000c000
+#define NRF51_TEMP_START			(NRF51_TEMP + 0x000)
+#define NRF51_TEMP_STOP				(NRF51_TEMP + 0x004)
+#define NRF51_TEMP_DATARDY			(NRF51_TEMP + 0x100)
+#define NRF51_TEMP_TIMEOUT			10000
+
 #define NRF51_FIELD_UNSPECIFIED				(0xFFFFFFFF)
 
 /* User Information Configuration Registers (UICR) */
@@ -140,15 +147,36 @@ bool nrf51_probe(target *t)
 		target_add_commands(t, nrf51_cmd_list, "nRF52");
 		return true;
 	} else {
-		t->driver = "Nordic nRF51";
-		/* Use the biggest RAM size seen in NRF51 fammily.
-		 * IDCODE is kept as '0', as deciphering is hard and
-		 * there is later no usage.*/
-		target_add_ram(t, 0x20000000, 0x8000);
-		nrf51_add_flash(t, 0, page_size * code_size, page_size);
-		nrf51_add_flash(t, NRF51_UICR, page_size, page_size);
-		target_add_commands(t, nrf51_cmd_list, "nRF51");
-		return true;
+		/* Test for nRF51 device. We use the temperature sensor as the nRF51
+		   has no part number register nowadays and the FICR registers share
+		   the address space of the EFR32 SRAM leading to confused EFR32 users.
+		 */
+
+		/* Save TEMP.START */
+		uint32_t temp = target_mem_read32(t, NRF51_TEMP_START);
+		/* Start temperature sensor */
+		target_mem_write32(t, NRF51_TEMP_START, 1);
+		/* @todo: trim timeout, refman says */
+		volatile uint32_t timeout = NRF51_TEMP_TIMEOUT;
+		/* Until timeout or TEMP.DATARDY */
+		while(timeout-- && target_mem_read32(t, NRF51_TEMP_DATARDY) == 0);
+		/* @todo: is this correct? Refman does not say */
+		if (target_mem_read32(t, NRF51_TEMP_DATARDY) == 1) {
+			/* Stop temperature sensor */
+			target_mem_write32(t, NRF51_TEMP_STOP, 1);
+			t->driver = "Nordic nRF51";
+			/* Use the biggest RAM size seen in NRF51 fammily.
+			 * IDCODE is kept as '0', as deciphering is hard and
+			 * there is later no usage.*/
+			target_add_ram(t, 0x20000000, 0x8000);
+			nrf51_add_flash(t, 0, page_size * code_size, page_size);
+			nrf51_add_flash(t, NRF51_UICR, page_size, page_size);
+			target_add_commands(t, nrf51_cmd_list, "nRF51");
+			return true;
+		} else {
+			/* Not an nRF51, restore memory */
+			target_mem_write32(t, NRF51_TEMP_START, temp);
+		}
 	}
 	return false;
 }
