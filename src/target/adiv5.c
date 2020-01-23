@@ -308,8 +308,8 @@ static bool adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, int recursion, 
 			DEBUG("Fault reading ROM table entry\n");
 		}
 
-		DEBUG("ROM: Table BASE=0x%"PRIx32" SYSMEM=0x%"PRIx32"\n",
-			  addr, memtype);
+		DEBUG("ROM: Table BASE=0x%"PRIx32" SYSMEM=0x%"PRIx32", PIDR 0x%010"
+			  PRIx64 "\n", addr, memtype, pidr);
 #endif
 
 		for (int i = 0; i < 960; i++) {
