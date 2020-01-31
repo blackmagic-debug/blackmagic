@@ -22,6 +22,8 @@
 
 #include <libopencm3/usb/usbd.h>
 
+#define USB_TRACESWO_ENDPOINT   0x83
+
 #if defined TRACESWO_PROTOCOL && TRACESWO_PROTOCOL == 2
 void traceswo_init(uint32_t baudrate);
 #else

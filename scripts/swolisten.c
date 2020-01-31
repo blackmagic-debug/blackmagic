@@ -38,10 +38,12 @@
 #include <termios.h>
 #include <signal.h>
 
+#include "traceswo.h"
+
 #define VID       (0x1d50)
 #define PID       (0x6018)
 #define INTERFACE (5)
-#define ENDPOINT  (0x85)
+#define ENDPOINT  (USB_TRACESWO_ENDPOINT)
 
 #define TRANSFER_SIZE (64)
 #define NUM_FIFOS     32

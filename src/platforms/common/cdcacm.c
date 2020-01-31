@@ -74,7 +74,7 @@ static const struct usb_device_descriptor dev = {
 static const struct usb_endpoint_descriptor gdb_comm_endp[] = {{
 	.bLength = USB_DT_ENDPOINT_SIZE,
 	.bDescriptorType = USB_DT_ENDPOINT,
-	.bEndpointAddress = 0x82,
+	.bEndpointAddress = CDCACM_GDB_COMM_ENDPOINT,
 	.bmAttributes = USB_ENDPOINT_ATTR_INTERRUPT,
 	.wMaxPacketSize = 16,
 	.bInterval = 255,
@@ -83,14 +83,14 @@ static const struct usb_endpoint_descriptor gdb_comm_endp[] = {{
 static const struct usb_endpoint_descriptor gdb_data_endp[] = {{
 	.bLength = USB_DT_ENDPOINT_SIZE,
 	.bDescriptorType = USB_DT_ENDPOINT,
-	.bEndpointAddress = 0x01,
+	.bEndpointAddress = CDCACM_GDB_ENDPOINT,
 	.bmAttributes = USB_ENDPOINT_ATTR_BULK,
 	.wMaxPacketSize = CDCACM_PACKET_SIZE,
 	.bInterval = 1,
 }, {
 	.bLength = USB_DT_ENDPOINT_SIZE,
 	.bDescriptorType = USB_DT_ENDPOINT,
-	.bEndpointAddress = 0x81,
+	.bEndpointAddress = CDCACM_GDB_DATA_ENDPOINT,
 	.bmAttributes = USB_ENDPOINT_ATTR_BULK,
 	.wMaxPacketSize = CDCACM_PACKET_SIZE,
 	.bInterval = 1,
@@ -177,7 +177,7 @@ static const struct usb_iface_assoc_descriptor gdb_assoc = {
 static const struct usb_endpoint_descriptor uart_comm_endp[] = {{
 	.bLength = USB_DT_ENDPOINT_SIZE,
 	.bDescriptorType = USB_DT_ENDPOINT,
-	.bEndpointAddress = 0x84,
+	.bEndpointAddress = CDCACM_UART_COMM_ENDPOINT,
 	.bmAttributes = USB_ENDPOINT_ATTR_INTERRUPT,
 	.wMaxPacketSize = 16,
 	.bInterval = 255,
@@ -186,14 +186,14 @@ static const struct usb_endpoint_descriptor uart_comm_endp[] = {{
 static const struct usb_endpoint_descriptor uart_data_endp[] = {{
 	.bLength = USB_DT_ENDPOINT_SIZE,
 	.bDescriptorType = USB_DT_ENDPOINT,
-	.bEndpointAddress = 0x03,
+	.bEndpointAddress = CDCACM_UART_ENDPOINT,
 	.bmAttributes = USB_ENDPOINT_ATTR_BULK,
 	.wMaxPacketSize = CDCACM_PACKET_SIZE,
 	.bInterval = 1,
 }, {
 	.bLength = USB_DT_ENDPOINT_SIZE,
 	.bDescriptorType = USB_DT_ENDPOINT,
-	.bEndpointAddress = 0x83,
+	.bEndpointAddress = CDCACM_UART_DATA_ENDPOINT,
 	.bmAttributes = USB_ENDPOINT_ATTR_BULK,
 	.wMaxPacketSize = CDCACM_PACKET_SIZE,
 	.bInterval = 1,
@@ -315,7 +315,7 @@ static const struct usb_iface_assoc_descriptor dfu_assoc = {
 static const struct usb_endpoint_descriptor trace_endp[] = {{
 	.bLength = USB_DT_ENDPOINT_SIZE,
 	.bDescriptorType = USB_DT_ENDPOINT,
-	.bEndpointAddress = 0x85,
+	.bEndpointAddress = USB_TRACESWO_ENDPOINT,
 	.bmAttributes = USB_ENDPOINT_ATTR_BULK,
 	.wMaxPacketSize = 64,
 	.bInterval = 0,
@@ -496,7 +496,7 @@ static void cdcacm_set_modem_state(usbd_device *dev, int iface, bool dsr, bool d
 	notif->wLength = 2;
 	buf[8] = (dsr ? 2 : 0) | (dcd ? 1 : 0);
 	buf[9] = 0;
-	usbd_ep_write_packet(dev, 0x82 + iface, buf, 10);
+	usbd_ep_write_packet(dev, CDCACM_GDB_COMM_ENDPOINT + iface, buf, 10);
 }
 
 static void cdcacm_set_config(usbd_device *dev, uint16_t wValue)
@@ -508,23 +508,23 @@ static void cdcacm_set_config(usbd_device *dev, uint16_t wValue)
 	usbd_ep_setup(dev, 0x01, USB_ENDPOINT_ATTR_BULK,
 	              CDCACM_PACKET_SIZE, gdb_usb_out_cb);
 #else
-	usbd_ep_setup(dev, 0x01, USB_ENDPOINT_ATTR_BULK,
+	usbd_ep_setup(dev, CDCACM_GDB_ENDPOINT, USB_ENDPOINT_ATTR_BULK,
 	              CDCACM_PACKET_SIZE, NULL);
 #endif
-	usbd_ep_setup(dev, 0x81, USB_ENDPOINT_ATTR_BULK,
+	usbd_ep_setup(dev, CDCACM_GDB_DATA_ENDPOINT, USB_ENDPOINT_ATTR_BULK,
 	              CDCACM_PACKET_SIZE, NULL);
-	usbd_ep_setup(dev, 0x82, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
+	usbd_ep_setup(dev, CDCACM_GDB_COMM_ENDPOINT, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
 
 	/* Serial interface */
-	usbd_ep_setup(dev, 0x03, USB_ENDPOINT_ATTR_BULK,
+	usbd_ep_setup(dev, CDCACM_UART_ENDPOINT, USB_ENDPOINT_ATTR_BULK,
 	              CDCACM_PACKET_SIZE / 2, usbuart_usb_out_cb);
-	usbd_ep_setup(dev, 0x83, USB_ENDPOINT_ATTR_BULK,
+	usbd_ep_setup(dev, CDCACM_UART_DATA_ENDPOINT, USB_ENDPOINT_ATTR_BULK,
 	              CDCACM_PACKET_SIZE, usbuart_usb_in_cb);
-	usbd_ep_setup(dev, 0x84, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
+	usbd_ep_setup(dev, CDCACM_UART_COMM_ENDPOINT, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
 
 #if defined(PLATFORM_HAS_TRACESWO)
 	/* Trace interface */
-	usbd_ep_setup(dev, 0x85, USB_ENDPOINT_ATTR_BULK,
+	usbd_ep_setup(dev, USB_TRACESWO_ENDPOINT, USB_ENDPOINT_ATTR_BULK,
 					64, trace_buf_drain);
 #endif
 
