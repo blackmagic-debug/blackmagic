@@ -124,6 +124,7 @@ static void cl_help(char **argv, BMP_CL_OPTIONS_t *opt)
 	printf("\t-E\t\t: Erase flash until flash end or for given size\n");
 	printf("\t-V\t\t: Verify flash against binary file\n");
 	printf("\t-r\t\t: Read flash and write to binary file\n");
+	printf("\t-p\t\t: Supplies power to the target (where applicable)\n");
 	printf("\t-R\t\t: Reset device\n");
 	printf("\t\tDefault mode is starting the debug server\n");
 	printf("\tFlash operation modifiers options:\n");
@@ -142,7 +143,7 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 	opt->opt_target_dev = 1;
 	opt->opt_flash_start = 0x08000000;
 	opt->opt_flash_size = 16 * 1024 *1024;
-	while((c = getopt(argc, argv, "Ehv::s:c:nN:tVta:S:jrR")) != -1) {
+	while((c = getopt(argc, argv, "Ehv::s:c:nN:tVta:S:jprR")) != -1) {
 		switch(c) {
 		case 'c':
 			if (optarg)
@@ -179,6 +180,9 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 			break;
 		case 'R':
 			opt->opt_mode = BMP_MODE_RESET;
+			break;
+		case 'p':
+			opt->opt_tpwr = true;
 			break;
 		case 'a':
 			if (optarg)
@@ -224,6 +228,13 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 {
 	int res = -1;
 	int num_targets;
+#if defined(PLATFORM_HAS_POWER_SWITCH)
+	if (opt->opt_tpwr) {
+		printf("Powering up device");
+		platform_target_set_power(true);
+		platform_delay(500);
+	}
+#endif
 	if (opt->opt_mode == BMP_MODE_TEST)
 		printf("Running in Test Mode\n");
 	if (opt->opt_usejtag) {
