@@ -379,7 +379,7 @@ efm32_v2_di_tempgrade_t const efm32_v2_di_tempgrades[] = {
 /**
  * Reads the EFM32 Extended Unique Identifier EUI64 (V1)
  */
-uint64_t efm32_v1_read_eui64(target *t)
+static uint64_t efm32_v1_read_eui64(target *t)
 {
 	uint64_t eui;
 
@@ -388,10 +388,12 @@ uint64_t efm32_v1_read_eui64(target *t)
 
 	return eui;
 }
+
+#if 0
 /**
  * Reads the EFM32 Extended Unique Identifier EUI48 (V2)
  */
-uint64_t efm32_v2_read_eui48(target *t)
+static uint64_t efm32_v2_read_eui48(target *t)
 {
 	uint64_t eui;
 
@@ -400,10 +402,11 @@ uint64_t efm32_v2_read_eui48(target *t)
 
 	return eui;
 }
+#endif
 /**
  * Reads the Unique Number (DI V2 only)
  */
-uint64_t efm32_v2_read_unique(target *t, uint8_t di_version)
+static uint64_t efm32_v2_read_unique(target *t, uint8_t di_version)
 {
 	uint64_t unique;
 	switch (di_version) {
@@ -419,7 +422,7 @@ uint64_t efm32_v2_read_unique(target *t, uint8_t di_version)
 /**
  * Reads the EFM32 flash size in kiB
  */
-uint16_t efm32_read_flash_size(target *t, uint8_t di_version)
+static uint16_t efm32_read_flash_size(target *t, uint8_t di_version)
 {
 	switch (di_version) {
 	case 1:
@@ -433,7 +436,7 @@ uint16_t efm32_read_flash_size(target *t, uint8_t di_version)
 /**
  * Reads the EFM32 RAM size in kiB
  */
-uint16_t efm32_read_ram_size(target *t, uint8_t di_version)
+static uint16_t efm32_read_ram_size(target *t, uint8_t di_version)
 {
 	switch (di_version) {
 	case 1:
@@ -450,7 +453,7 @@ uint16_t efm32_read_ram_size(target *t, uint8_t di_version)
  * value. There are errata on the value reported by the EFM32
  * eg. DI_101
  */
-uint32_t efm32_flash_page_size(target *t, uint8_t di_version)
+static uint32_t efm32_flash_page_size(target *t, uint8_t di_version)
 {
 	uint8_t mem_info_page_size;
 
@@ -472,7 +475,7 @@ uint32_t efm32_flash_page_size(target *t, uint8_t di_version)
 /**
  * Reads the EFM32 Part Number
  */
-uint16_t efm32_read_part_number(target *t, uint8_t di_version)
+static uint16_t efm32_read_part_number(target *t, uint8_t di_version)
 {
 	switch (di_version) {
 	case 1:
@@ -486,7 +489,7 @@ uint16_t efm32_read_part_number(target *t, uint8_t di_version)
 /**
  * Reads the EFM32 Part Family
  */
-uint8_t efm32_read_part_family(target *t, uint8_t di_version)
+static uint8_t efm32_read_part_family(target *t, uint8_t di_version)
 {
 	switch (di_version) {
 	case 1:
@@ -500,7 +503,7 @@ uint8_t efm32_read_part_family(target *t, uint8_t di_version)
 /**
  * Reads the EFM32 Radio part number (EZR parts with V1 DI only)
  */
-uint16_t efm32_read_radio_part_number(target *t, uint8_t di_version)
+static uint16_t efm32_read_radio_part_number(target *t, uint8_t di_version)
 {
 	switch (di_version) {
 	case 1:
@@ -513,7 +516,7 @@ uint16_t efm32_read_radio_part_number(target *t, uint8_t di_version)
 /**
  * Reads the EFM32 Misc. Chip definitions
  */
-efm32_v2_di_miscchip_t efm32_v2_read_miscchip(target *t, uint8_t di_version)
+static efm32_v2_di_miscchip_t efm32_v2_read_miscchip(target *t, uint8_t di_version)
 {
 	uint32_t meminfo;
 	efm32_v2_di_miscchip_t miscchip;
@@ -556,7 +559,7 @@ static void efm32_add_flash(target *t, target_addr addr, size_t length,
 /**
  * Lookup device
  */
-size_t efm32_lookup_device_index(target *t, uint8_t di_version)
+static size_t efm32_lookup_device_index(target *t, uint8_t di_version)
 {
 	uint8_t part_family = efm32_read_part_family(t, di_version);
 
@@ -569,7 +572,8 @@ size_t efm32_lookup_device_index(target *t, uint8_t di_version)
 	/* Unknown family */
 	return 9999;
 }
-efm32_device_t const * efm32_get_device(size_t index)
+
+static efm32_device_t const * efm32_get_device(size_t index)
 {
 	if (index >= (sizeof(efm32_devices) / sizeof(efm32_device_t))) {
 		return NULL;
