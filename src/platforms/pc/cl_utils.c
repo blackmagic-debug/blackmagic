@@ -252,8 +252,7 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 		DEBUG("Given target nummer %d not available\n", opt->opt_target_dev);
 		return res;
 	}
-	struct target_controller tc = {NULL};
-	target *t = target_attach_n(opt->opt_target_dev, &tc);
+	target *t = target_attach_n(opt->opt_target_dev, NULL);
 	if (!t) {
 		DEBUG("Can not attach to target %d\n", opt->opt_target_dev);
 		goto target_detach;
