@@ -606,6 +606,9 @@ static void cortexm_reset(target *t)
 		platform_srst_set_val(false);
 	}
 
+        /* Give the platform time to complete its reset */
+	platform_delay(50);
+
         /* Check to see if this reset worked */
 	if ((target_mem_read32(t, CORTEXM_DHCSR) & CORTEXM_DHCSR_S_RESET_ST) == 0)
           {
