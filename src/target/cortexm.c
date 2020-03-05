@@ -598,28 +598,32 @@ static void cortexm_pc_write(target *t, const uint32_t val)
  * using the core debug registers in the NVIC. */
 static void cortexm_reset(target *t)
 {
+	/* Read DHCSR here to clear S_RESET_ST bit before reset */
+	target_mem_read32(t, CORTEXM_DHCSR);
+
 	if ((t->target_options & CORTEXM_TOPT_INHIBIT_SRST) == 0) {
 		platform_srst_set_val(true);
 		platform_srst_set_val(false);
 	}
 
-	/* Read DHCSR here to clear S_RESET_ST bit before reset */
-	target_mem_read32(t, CORTEXM_DHCSR);
+        /* Check to see if this reset worked */
+	if ((target_mem_read32(t, CORTEXM_DHCSR) & CORTEXM_DHCSR_S_RESET_ST) == 0)
+          {
+            /* Request system reset from NVIC: SRST doesn't work correctly */
+            /* This could be VECTRESET: 0x05FA0001 (reset only core)
+             *          or SYSRESETREQ: 0x05FA0004 (system reset)
+             */
+            target_mem_write32(t, CORTEXM_AIRCR,
+                               CORTEXM_AIRCR_VECTKEY | CORTEXM_AIRCR_SYSRESETREQ);
 
-	/* Request system reset from NVIC: SRST doesn't work correctly */
-	/* This could be VECTRESET: 0x05FA0001 (reset only core)
-	 *          or SYSRESETREQ: 0x05FA0004 (system reset)
-	 */
-	target_mem_write32(t, CORTEXM_AIRCR,
-	                   CORTEXM_AIRCR_VECTKEY | CORTEXM_AIRCR_SYSRESETREQ);
+            /* If target needs to do something extra (see Atmel SAM4L for example) */
+            if (t->extended_reset != NULL) {
+              t->extended_reset(t);
+            }
 
-	/* If target needs to do something extra (see Atmel SAM4L for example) */
-	if (t->extended_reset != NULL) {
-		t->extended_reset(t);
-	}
-
-	/* Poll for release from reset */
-	while (target_mem_read32(t, CORTEXM_DHCSR) & CORTEXM_DHCSR_S_RESET_ST);
+            /* Poll for release from reset */
+            while (target_mem_read32(t, CORTEXM_DHCSR) & CORTEXM_DHCSR_S_RESET_ST);
+          }
 
 	/* Reset DFSR flags */
 	target_mem_write32(t, CORTEXM_DFSR, CORTEXM_DFSR_RESETALL);
@@ -627,7 +631,10 @@ static void cortexm_reset(target *t)
 	/* 1ms delay to ensure that things such as the stm32f1 HSI clock have started
 	 * up fully.
 	 */
-	platform_delay(1);
+	platform_delay(10);
+
+        /* Make sure we ignore any initial DAP error */
+        target_check_error(t);
 }
 
 static void cortexm_halt_request(target *t)
