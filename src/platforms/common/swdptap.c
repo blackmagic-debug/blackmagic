@@ -24,18 +24,23 @@
 #include "swdptap.h"
 
 enum {
-	SWDIO_STATUS_FLOAT = 0,
-	SWDIO_STATUS_DRIVE
+       SWDIO_STATUS_FLOAT = 0,
+       SWDIO_STATUS_DRIVE
 };
+
+#define SWCLK_SET       gpio_set(SWCLK_PORT, SWCLK_PIN)
+#define SWCLK_CLR       gpio_clear(SWCLK_PORT, SWCLK_PIN)
+#define SWDAT_READ      gpio_get(SWDIO_PORT, SWDIO_PIN)
+#define SWDAT_WRITE(x)  gpio_set_val(SWDIO_PORT, SWDIO_PIN, x)
 
 int swdptap_init(void)
 {
-	return 0;
+       return 0;
 }
 
 static void swdptap_turnaround(int dir)
 {
-	static int olddir = SWDIO_STATUS_FLOAT;
+        static int olddir = SWDIO_STATUS_FLOAT;
 
 	/* Don't turnaround if direction not changing */
 	if(dir == olddir) return;
@@ -45,12 +50,11 @@ static void swdptap_turnaround(int dir)
 	DEBUG("%s", dir ? "\n-> ":"\n<- ");
 #endif
 
-	if(dir == SWDIO_STATUS_FLOAT)
+	if (dir == SWDIO_STATUS_FLOAT)
 		SWDIO_MODE_FLOAT();
-	gpio_set(SWCLK_PORT, SWCLK_PIN);
-	gpio_set(SWCLK_PORT, SWCLK_PIN);
-	gpio_clear(SWCLK_PORT, SWCLK_PIN);
-	if(dir == SWDIO_STATUS_DRIVE)
+        SWCLK_SET;
+        SWCLK_CLR;
+	if (dir == SWDIO_STATUS_DRIVE)
 		SWDIO_MODE_DRIVE();
 }
 
@@ -60,10 +64,9 @@ bool swdptap_bit_in(void)
 
 	swdptap_turnaround(SWDIO_STATUS_FLOAT);
 
-	ret = gpio_get(SWDIO_PORT, SWDIO_PIN);
-	gpio_set(SWCLK_PORT, SWCLK_PIN);
-	gpio_set(SWCLK_PORT, SWCLK_PIN);
-	gpio_clear(SWCLK_PORT, SWCLK_PIN);
+	ret = SWDAT_READ;
+        SWCLK_SET;
+        SWCLK_CLR;
 
 #ifdef DEBUG_SWD_BITS
 	DEBUG("%d", ret?1:0);
@@ -77,17 +80,17 @@ swdptap_seq_in(int ticks)
 {
 	uint32_t index = 1;
 	uint32_t ret = 0;
+#ifdef DEBUG_SWD_BITS
 	int len = ticks;
+#endif
 
 	swdptap_turnaround(SWDIO_STATUS_FLOAT);
-	while (len--) {
-		int res;
-		res = gpio_get(SWDIO_PORT, SWDIO_PIN);
-		gpio_set(SWCLK_PORT, SWCLK_PIN);
-		if (res)
-			ret |= index;
-		index <<= 1;
-		gpio_clear(SWCLK_PORT, SWCLK_PIN);
+	while (ticks--) {
+          if (SWDAT_READ)
+            ret |= index;
+          SWCLK_SET;
+          index <<= 1;
+          SWCLK_CLR;
 	}
 
 #ifdef DEBUG_SWD_BITS
@@ -97,36 +100,37 @@ swdptap_seq_in(int ticks)
 	return ret;
 }
 
+
 bool
 swdptap_seq_in_parity(uint32_t *ret, int ticks)
 {
 	uint32_t index = 1;
 	uint8_t parity = 0;
-	uint32_t res = 0;
-	bool bit;
+#ifdef DEBUG_SWD_BITS
 	int len = ticks;
-
+#endif
+        *ret=0;
 	swdptap_turnaround(SWDIO_STATUS_FLOAT);
-	while (len--) {
-		bit = gpio_get(SWDIO_PORT, SWDIO_PIN);
-		gpio_set(SWCLK_PORT, SWCLK_PIN);
-		if (bit) {
-			res |= index;
-			parity ^= 1;
-		}
-		index <<= 1;
-		gpio_clear(SWCLK_PORT, SWCLK_PIN);
+	while (ticks--) {
+          if (SWDAT_READ)
+            {
+              *ret |= index;
+              parity=!parity;
+            }
+          SWCLK_SET;
+          index <<= 1;
+          SWCLK_CLR;
 	}
-	bit = gpio_get(SWDIO_PORT, SWDIO_PIN);
-	gpio_set(SWCLK_PORT, SWCLK_PIN);
-	if (bit)
-		parity ^= 1;
-	gpio_clear(SWCLK_PORT, SWCLK_PIN);
+
+        if (SWDAT_READ)
+          parity=!parity;
+        SWCLK_SET;
+        SWCLK_CLR;
+        
 #ifdef DEBUG_SWD_BITS
 	for (int i = 0; i < len; i++)
 		DEBUG("%d", (res & (1 << i)) ? 1 : 0);
 #endif
-	*ret = res;
 	return parity;
 }
 
@@ -135,56 +139,46 @@ void swdptap_bit_out(bool val)
 #ifdef DEBUG_SWD_BITS
 	DEBUG("%d", val);
 #endif
-
 	swdptap_turnaround(SWDIO_STATUS_DRIVE);
-
-	gpio_set_val(SWDIO_PORT, SWDIO_PIN, val);
-	gpio_clear(SWCLK_PORT, SWCLK_PIN);
-	gpio_set(SWCLK_PORT, SWCLK_PIN);
-	gpio_set(SWCLK_PORT, SWCLK_PIN);
-	gpio_clear(SWCLK_PORT, SWCLK_PIN);
+	SWDAT_WRITE(val);
+        SWCLK_SET;
+        SWCLK_CLR;
 }
+
 void
 swdptap_seq_out(uint32_t MS, int ticks)
 {
-	int data = MS & 1;
 #ifdef DEBUG_SWD_BITS
 	for (int i = 0; i < ticks; i++)
 		DEBUG("%d", (MS & (1 << i)) ? 1 : 0);
 #endif
 	swdptap_turnaround(SWDIO_STATUS_DRIVE);
 	while (ticks--) {
-		gpio_set_val(SWDIO_PORT, SWDIO_PIN, data);
-		MS >>= 1;
-		data = MS & 1;
-		gpio_set(SWCLK_PORT, SWCLK_PIN);
-		gpio_set(SWCLK_PORT, SWCLK_PIN);
-		gpio_clear(SWCLK_PORT, SWCLK_PIN);
-	}
+               SWDAT_WRITE(MS & 1);
+               SWCLK_SET;
+               SWCLK_CLR;
+               MS >>= 1;
+        }
 }
 
 void
 swdptap_seq_out_parity(uint32_t MS, int ticks)
 {
-	uint8_t parity = 0;
-	int data = MS & 1;
+        uint8_t parity = 0;
 #ifdef DEBUG_SWD_BITS
-	for (int i = 0; i < ticks; i++)
-		DEBUG("%d", (MS & (1 << i)) ? 1 : 0);
+        for (int i = 0; i < ticks; i++)
+                DEBUG("%d", (MS & (1 << i)) ? 1 : 0);
 #endif
-	swdptap_turnaround(SWDIO_STATUS_DRIVE);
+        swdptap_turnaround(SWDIO_STATUS_DRIVE);
 
-	while (ticks--) {
-		gpio_set_val(SWDIO_PORT, SWDIO_PIN, data);
-		parity ^= MS;
-		MS >>= 1;
-		gpio_set(SWCLK_PORT, SWCLK_PIN);
-		data = MS & 1;
-		gpio_clear(SWCLK_PORT, SWCLK_PIN);
+        while (ticks--) {
+               SWDAT_WRITE(MS & 1);
+               SWCLK_SET;
+               parity ^= MS;
+               MS >>= 1;
+               SWCLK_CLR;
 	}
-	gpio_set_val(SWDIO_PORT, SWDIO_PIN, parity & 1);
-	gpio_clear(SWCLK_PORT, SWCLK_PIN);
-	gpio_set(SWCLK_PORT, SWCLK_PIN);
-	gpio_set(SWCLK_PORT, SWCLK_PIN);
-	gpio_clear(SWCLK_PORT, SWCLK_PIN);
+	SWDAT_WRITE(parity & 1);
+        SWCLK_SET;
+        SWCLK_CLR;
 }

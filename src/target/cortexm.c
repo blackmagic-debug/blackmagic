@@ -604,10 +604,15 @@ static void cortexm_reset(target *t)
 	if ((t->target_options & CORTEXM_TOPT_INHIBIT_SRST) == 0) {
 		platform_srst_set_val(true);
 		platform_srst_set_val(false);
-	}
 
-        /* Give the platform time to complete its reset */
-	platform_delay(50);
+                /* Wait for SRST to go high but no longer than 400ms */
+                platform_timeout timeout;
+                platform_timeout_set(&timeout, 400);
+                while (platform_srst_get_val() && !platform_timeout_is_expired(&timeout));
+
+                /* Give the platform time to complete its reset */
+                platform_delay(100);
+        }
 
         /* Check to see if this reset worked */
 	if ((target_mem_read32(t, CORTEXM_DHCSR) & CORTEXM_DHCSR_S_RESET_ST) == 0)
