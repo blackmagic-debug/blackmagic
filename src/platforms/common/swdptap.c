@@ -31,11 +31,13 @@ enum {
 static inline void swclk_set(void)
 {
   gpio_set(SWCLK_PORT, SWCLK_PIN);
+  gpio_set(SWCLK_PORT, SWCLK_PIN);  
 }
 
 static inline void swclk_clr(void)
 {
   gpio_clear(SWCLK_PORT, SWCLK_PIN);
+  gpio_clear(SWCLK_PORT, SWCLK_PIN);  
 }
 
 static inline uint32_t swdat_read(void)
