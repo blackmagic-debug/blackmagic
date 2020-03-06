@@ -20,9 +20,14 @@
 #include "general.h"
 
 #include <string.h>
-#if defined(STM32F1)
+#if defined(STM32F1HD)
+#	define DFU_IFACE_STRING  "@Internal Flash   /0x08000000/4*002Ka,000*002Kg"
+#   define DFU_IFACE_STRING_OFFSET 38
+#   define DFU_IFACE_PAGESIZE 2
+#elif defined(STM32F1)
 #	define DFU_IFACE_STRING  "@Internal Flash   /0x08000000/8*001Ka,000*001Kg"
 #   define DFU_IFACE_STRING_OFFSET 38
+#   define DFU_IFACE_PAGESIZE 1
 #elif defined(STM32F4)
 #	define DFU_IFACE_STRING  "/0x08000000/1*016Ka,3*016Kg,1*064Kg,7*128Kg"
 #endif
@@ -305,6 +310,7 @@ static void set_dfu_iface_string(uint32_t size)
 {
 	uint32_t res;
 	char *p = if_string + DFU_IFACE_STRING_OFFSET;
+	size /= DFU_IFACE_PAGESIZE;
 	/* We do not want the whole printf library in the bootloader.
 	 * Fill the size digits by hand.
 	 */
