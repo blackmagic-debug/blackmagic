@@ -600,44 +600,46 @@ static void cortexm_reset(target *t)
 {
 	/* Read DHCSR here to clear S_RESET_ST bit before reset */
 	target_mem_read32(t, CORTEXM_DHCSR);
-
+	platform_timeout to;
 	if ((t->target_options & CORTEXM_TOPT_INHIBIT_SRST) == 0) {
 		platform_srst_set_val(true);
 		platform_srst_set_val(false);
 	}
 
-        /* Give the platform time to complete its reset */
-	platform_delay(50);
-
-        /* Check to see if this reset worked */
-	if ((target_mem_read32(t, CORTEXM_DHCSR) & CORTEXM_DHCSR_S_RESET_ST) == 0)
-          {
-            /* Request system reset from NVIC: SRST doesn't work correctly */
-            /* This could be VECTRESET: 0x05FA0001 (reset only core)
-             *          or SYSRESETREQ: 0x05FA0004 (system reset)
-             */
-            target_mem_write32(t, CORTEXM_AIRCR,
-                               CORTEXM_AIRCR_VECTKEY | CORTEXM_AIRCR_SYSRESETREQ);
-
-            /* If target needs to do something extra (see Atmel SAM4L for example) */
-            if (t->extended_reset != NULL) {
-              t->extended_reset(t);
-            }
-
-            /* Poll for release from reset */
-            while (target_mem_read32(t, CORTEXM_DHCSR) & CORTEXM_DHCSR_S_RESET_ST);
-          }
-
-	/* Reset DFSR flags */
-	target_mem_write32(t, CORTEXM_DFSR, CORTEXM_DFSR_RESETALL);
-
-	/* 1ms delay to ensure that things such as the stm32f1 HSI clock have started
+	if ((target_mem_read32(t, CORTEXM_DHCSR) & CORTEXM_DHCSR_S_RESET_ST) == 0) {
+		/* Request system reset from NVIC: SRST doesn't work correctly, maybe
+         * not connected 
+		 * This could be VECTRESET: 0x05FA0001 (reset only core)
+		 *          or SYSRESETREQ: 0x05FA0004 (system reset)
+         * We uses system reset here!
+		 */
+		target_mem_write32(t, CORTEXM_AIRCR,
+						   CORTEXM_AIRCR_VECTKEY | CORTEXM_AIRCR_SYSRESETREQ);
+		
+		/* If target needs to do something extra (see Atmel SAM4L for example) */
+		if (t->extended_reset != NULL) {
+			t->extended_reset(t);
+		}
+		
+	}
+	
+	/* Poll for release from reset.  CORTEXM_DHCSR_S_RESET_ST set means that
+	*  Reset was active since last read of DHCSR or is still active*/
+	platform_timeout_set(&to, 1000);
+	while ((target_mem_read32(t, CORTEXM_DHCSR) & CORTEXM_DHCSR_S_RESET_ST) &&
+		   !platform_timeout_is_expired(&to));
+#if defined(PLATFORM_HAS_DEBUG)
+	if (platform_timeout_is_expired(&to))
+		DEBUG("Reset seem to be stuck low!\n");
+#endif
+	/* 10 ms delay to ensure that things such as the stm32f1 HSI clock have started
 	 * up fully.
 	 */
 	platform_delay(10);
-
-        /* Make sure we ignore any initial DAP error */
-        target_check_error(t);
+	/* Reset DFSR flags */
+	target_mem_write32(t, CORTEXM_DFSR, CORTEXM_DFSR_RESETALL);
+    /* Make sure we ignore any initial DAP error */
+	target_check_error(t);
 }
 
 static void cortexm_halt_request(target *t)
