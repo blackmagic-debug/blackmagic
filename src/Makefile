@@ -3,6 +3,17 @@ PLATFORM_DIR = platforms/$(PROBE_HOST)
 VPATH += $(PLATFORM_DIR) platforms/common target
 ENABLE_DEBUG ?=
 
+# Specify directories containing files to be kept pretty automatically here
+# ...any directories not specified will not be touched.
+PRETTIFY_DIRS =
+PRETTIFY_DIRS += target target/flashstub
+PRETTIFY_DIRS += platforms/common platforms/hydrabus platforms/libftdi
+PRETTIFY_DIRS += platforms/pc platforms/pc-stlinkv2 platforms/stm32
+PRETTIFY_DIRS += platforms/tm4c platforms/f4discovery  platforms/launchpad-icdi
+PRETTIFY_DIRS += platforms/native platforms/pc-hosted platforms/stlink
+PRETTIFY_DIRS += platforms/swlink
+PRETTIFY_DIRS += include
+
 ifneq ($(V), 1)
 MAKEFLAGS += --no-print-dir
 Q := @
@@ -77,7 +88,9 @@ else
 CFLAGS += -DOWN_HL
 endif
 
+COMMA := ,
 OBJ = $(patsubst %.S,%.o,$(patsubst %.c,%.o,$(SRC)))
+PRETTIFY_TGTS = $(patsubst %,"%/*.h$(COMMA)*.c",$(PRETTIFY_DIRS))
 
 $(TARGET): include/version.h $(OBJ)
 	@echo "  LD      $@"
@@ -136,4 +149,9 @@ command.c: include/version.h
 include/version.h: FORCE
 	$(Q)echo " GIT include/version.h"
 	$(Q)echo "#define FIRMWARE_VERSION \"$(shell git describe --always --dirty)\"" > $@
+
+
+pretty:
+	$(Q)-astyle --options=../scripts/astyle.conf $(PRETTIFY_TGTS)
+
 -include *.d
