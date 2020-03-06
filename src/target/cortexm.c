@@ -604,6 +604,7 @@ static void cortexm_reset(target *t)
 	if ((t->target_options & CORTEXM_TOPT_INHIBIT_SRST) == 0) {
 		platform_srst_set_val(true);
 		platform_srst_set_val(false);
+                platform_delay(10);
 	}
 
 	if ((target_mem_read32(t, CORTEXM_DHCSR) & CORTEXM_DHCSR_S_RESET_ST) == 0) {
@@ -620,9 +621,8 @@ static void cortexm_reset(target *t)
 		if (t->extended_reset != NULL) {
 			t->extended_reset(t);
 		}
-		
 	}
-	
+
 	/* Reset DFSR flags */
 	target_mem_write32(t, CORTEXM_DFSR, CORTEXM_DFSR_RESETALL);
 
