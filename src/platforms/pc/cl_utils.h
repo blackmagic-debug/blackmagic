@@ -39,6 +39,7 @@ typedef struct BMP_CL_OPTIONS_s {
 	bool opt_usejtag;
 	bool opt_no_wait;
 	bool opt_tpwr;
+	bool opt_connect_under_reset;
 	char *opt_flash_file;
 	char *opt_serial;
 	char *opt_cable;
