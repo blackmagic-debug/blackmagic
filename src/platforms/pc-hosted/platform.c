@@ -130,6 +130,8 @@ void platform_init(int argc, char **argv)
   printf("Remote is %s\n",&construct[1]);
   if (cl_opts.opt_mode != BMP_MODE_DEBUG) {
 	  int ret = cl_execute(&cl_opts);
+	  if (cl_opts.opt_tpwr)
+		  platform_target_set_power(0);
 	  close(f);
 	  exit(ret);
   } else {
