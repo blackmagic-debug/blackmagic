@@ -235,7 +235,6 @@ void adiv5_dp_unref(ADIv5_DP_t *dp)
 void adiv5_ap_unref(ADIv5_AP_t *ap)
 {
 	if (--(ap->refcnt) == 0) {
-		DEBUG("Unref AP\n");
 		adiv5_dp_unref(ap->dp);
 		free(ap);
 	}

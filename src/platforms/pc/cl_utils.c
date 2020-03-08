@@ -228,6 +228,14 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 	}
 }
 
+static void display_target(int i, target *t, void *context)
+{
+	(void)context;
+	DEBUG("*** %2d   %c  %s %s\n", i, target_attached(t)?'*':' ',
+		  target_driver_name(t),
+		  (target_core_name(t)) ? target_core_name(t): "");
+}
+
 int cl_execute(BMP_CL_OPTIONS_t *opt)
 {
 	int res = -1;
@@ -253,6 +261,8 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 	if (!num_targets) {
 		DEBUG("No target found\n");
 		return res;
+	} else {
+		target_foreach(display_target, NULL);
 	}
 	if (opt->opt_mode == BMP_MODE_TEST)
 			return 0;
