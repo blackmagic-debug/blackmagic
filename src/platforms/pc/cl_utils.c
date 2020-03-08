@@ -241,6 +241,7 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 #endif
 	if (opt->opt_connect_under_reset)
 		printf("Connecting under reset\n");
+	connect_assert_srst = opt->opt_connect_under_reset;
 	platform_srst_set_val(opt->opt_connect_under_reset);
 	if (opt->opt_mode == BMP_MODE_TEST)
 		printf("Running in Test Mode\n");

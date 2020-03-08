@@ -35,6 +35,7 @@ void platform_timeout_set(platform_timeout *t, uint32_t ms);
 bool platform_timeout_is_expired(platform_timeout *t);
 void platform_delay(uint32_t ms);
 
+extern bool connect_assert_srst;
 const char *platform_target_voltage(void);
 int platform_hwversion(void);
 void platform_srst_set_val(bool assert);
