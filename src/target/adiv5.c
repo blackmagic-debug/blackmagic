@@ -216,7 +216,7 @@ static const struct {
 
 extern bool cortexa_probe(ADIv5_AP_t *apb, uint32_t debug_base);
 
-void adiv5_dp_ref(ADIv5_DP_t *dp)
+static void adiv5_dp_ref(ADIv5_DP_t *dp)
 {
 	dp->refcnt++;
 }
@@ -226,7 +226,7 @@ void adiv5_ap_ref(ADIv5_AP_t *ap)
 	ap->refcnt++;
 }
 
-void adiv5_dp_unref(ADIv5_DP_t *dp)
+static void adiv5_dp_unref(ADIv5_DP_t *dp)
 {
 	if (--(dp->refcnt) == 0)
 		free(dp);

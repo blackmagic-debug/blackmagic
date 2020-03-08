@@ -186,9 +186,7 @@ void adiv5_dp_init(ADIv5_DP_t *dp);
 void adiv5_dp_write(ADIv5_DP_t *dp, uint16_t addr, uint32_t value);
 
 ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel);
-void adiv5_dp_ref(ADIv5_DP_t *dp);
 void adiv5_ap_ref(ADIv5_AP_t *ap);
-void adiv5_dp_unref(ADIv5_DP_t *dp);
 void adiv5_ap_unref(ADIv5_AP_t *ap);
 
 void adiv5_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value);
