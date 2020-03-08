@@ -38,6 +38,7 @@
 
 #include <unistd.h>
 
+#include <errno.h>
 #if PC_HOSTED == 1
 
 /*
@@ -48,7 +49,6 @@
  */
 
 #define TARGET_NULL ((target_addr)0)
-#include <errno.h>
 #include <time.h>
 #include <sys/time.h>
 #include <sys/stat.h>
@@ -58,8 +58,10 @@
 static const char cortexm_driver_str[] = "ARM Cortex-M";
 
 static bool cortexm_vector_catch(target *t, int argc, char *argv[]);
+static bool cortexm_cmd_erase_range(target *t, int argc, char *argv[]);
 
 const struct command_s cortexm_cmd_list[] = {
+	{"erase_range", (cmd_handler)cortexm_cmd_erase_range, "Erase pages including start and end"},
 	{"vector_catch", (cmd_handler)cortexm_vector_catch, "Catch exception vectors"},
 	{NULL, NULL, NULL}
 };
@@ -1582,4 +1584,63 @@ static int cortexm_hostio_request(target *t)
 	target_regs_write(t, arm_regs);
 
 	return t->tc->interrupted;
+}
+
+/**
+ * This command relies on data in the flash structure linked list.
+ * With one argument, it erases the page that contains the specified address,
+ * a second argument can be used to specify guaranteed length erased from start
+ * It checks for right number of arguments, correct number format and correct
+ * range.
+ **/
+bool cortexm_cmd_erase_range(target *t, int argc, char *argv[])
+{
+	if ((argc != 2) && (argc != 3))
+		{
+			tc_printf(t, "usage: monitor erase_range <start> [<end>]\n");
+			return false;
+		}
+
+	errno = 0;
+	uint32_t addr = strtoul(argv[1], NULL, 0);
+	if ((addr == 0) && (errno))
+		goto errorout;
+
+	/* Finds the right page for addr. Should be exported from target.c */
+	struct target_flash *f;
+	for (f = t->flash; f; f = f->next) {
+		if ((f->start <= addr) && (addr < (f->start + f->length)))
+			break;
+	}
+	if (!f)
+		goto errorout;
+	/* Normalize address, assume a page is a power of 2 */
+	uint32_t start_addr = addr & ~(f->blocksize - 1);
+	uint32_t length = f->blocksize; /* Default to one page */
+
+	/* Check whether we have a length given*/
+	if (argc == 3) {
+		errno = 0;
+		length = strtoul(argv[2], NULL, 0);
+		if ((addr == 0) && (errno))
+			goto errorout;
+		uint32_t end = addr + length - 1;
+		for (f = t->flash; f; f = f->next) {
+			if ((f->start <= end) && (end < (f->start + f->length)))
+				break;
+		}
+		if (!f)
+			goto errorout;
+		/* Normalize end address to include end, assume a page is a power of 2 */
+		end |= (f->blocksize - 1);
+		length = end - start_addr + 1;
+	}
+	DEBUG("erase at %08" PRIx32 " to %08" PRIx32 "\n", start_addr, start_addr + length - 1);
+	if (f->erase(f, addr, length) == 0)
+		return true;
+
+/* Exit here if an error found */
+errorout:
+	tc_printf(t, "Command Failed\n");
+	return false;
 }

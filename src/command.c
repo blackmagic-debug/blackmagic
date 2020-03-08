@@ -27,6 +27,7 @@
 #include "command.h"
 #include "gdb_packet.h"
 #include "target.h"
+#include "target/target_internal.h"
 #include "morse.h"
 #include "version.h"
 
@@ -35,13 +36,6 @@
 #endif
 
 typedef bool (*cmd_handler)(target *t, int argc, const char **argv);
-
-struct command_s {
-	const char *cmd;
-	cmd_handler handler;
-
-	const char *help;
-};
 
 static bool cmd_version(target *t, int argc, char **argv);
 static bool cmd_help(target *t, int argc, char **argv);
