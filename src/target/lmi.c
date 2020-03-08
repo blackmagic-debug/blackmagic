@@ -104,7 +104,7 @@ bool lmi_probe(target *t)
 	return false;
 }
 
-int lmi_flash_erase(struct target_flash *f, target_addr addr, size_t len)
+static int lmi_flash_erase(struct target_flash *f, target_addr addr, size_t len)
 {
 	target  *t = f->t;
 
@@ -128,7 +128,7 @@ int lmi_flash_erase(struct target_flash *f, target_addr addr, size_t len)
 	return 0;
 }
 
-int lmi_flash_write(struct target_flash *f,
+static int lmi_flash_write(struct target_flash *f,
                     target_addr dest, const void *src, size_t len)
 {
 	target  *t = f->t;

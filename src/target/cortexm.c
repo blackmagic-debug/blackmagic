@@ -53,11 +53,12 @@ const struct command_s cortexm_cmd_list[] = {
 static void cortexm_regs_read(target *t, void *data);
 static void cortexm_regs_write(target *t, const void *data);
 static uint32_t cortexm_pc_read(target *t);
-ssize_t cortexm_reg_read(target *t, int reg, void *data, size_t max);
-ssize_t cortexm_reg_write(target *t, int reg, const void *data, size_t max);
+static ssize_t cortexm_reg_read(target *t, int reg, void *data, size_t max);
+static ssize_t cortexm_reg_write(target *t, int reg, const void *data, size_t max);
 
 static void cortexm_reset(target *t);
 static enum target_halt_reason cortexm_halt_poll(target *t, target_addr *watch);
+static void cortexm_halt_resume(target *t, bool step);
 static void cortexm_halt_request(target *t);
 static int cortexm_fault_unwind(target *t);
 
@@ -549,7 +550,7 @@ int cortexm_mem_write_sized(
 	return target_check_error(t);
 }
 
-int dcrsr_regnum(target *t, unsigned reg)
+static int dcrsr_regnum(target *t, unsigned reg)
 {
 	if (reg < sizeof(regnum_cortex_m) / 4) {
 		return regnum_cortex_m[reg];
@@ -561,7 +562,7 @@ int dcrsr_regnum(target *t, unsigned reg)
 		return -1;
 	}
 }
-ssize_t cortexm_reg_read(target *t, int reg, void *data, size_t max)
+static ssize_t cortexm_reg_read(target *t, int reg, void *data, size_t max)
 {
 	if (max < 4)
 		return -1;
@@ -571,7 +572,7 @@ ssize_t cortexm_reg_read(target *t, int reg, void *data, size_t max)
 	return 4;
 }
 
-ssize_t cortexm_reg_write(target *t, int reg, const void *data, size_t max)
+static ssize_t cortexm_reg_write(target *t, int reg, const void *data, size_t max)
 {
 	if (max < 4)
 		return -1;
@@ -713,7 +714,7 @@ static enum target_halt_reason cortexm_halt_poll(target *t, target_addr *watch)
 	return TARGET_HALT_BREAKPOINT;
 }
 
-void cortexm_halt_resume(target *t, bool step)
+static void cortexm_halt_resume(target *t, bool step)
 {
 	struct cortexm_priv *priv = t->priv;
 	uint32_t dhcsr = CORTEXM_DHCSR_DBGKEY | CORTEXM_DHCSR_C_DEBUGEN;

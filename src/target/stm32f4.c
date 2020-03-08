@@ -518,7 +518,7 @@ static bool stm32f4_cmd_erase_mass(target *t, int argc, const char **argv)
  * * Documentation for F413 with OPTCR default = 0ffffffed seems wrong!
  */
 
-bool optcr_mask(target *t, uint32_t *val)
+static bool optcr_mask(target *t, uint32_t *val)
 {
 	switch (t->idcode) {
 	case ID_STM32F20X:

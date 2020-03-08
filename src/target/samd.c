@@ -329,7 +329,7 @@ samd20_revB_detach(target *t)
 static void
 samd20_revB_halt_resume(target *t, bool step)
 {
-	cortexm_halt_resume(t, step);
+	target_halt_resume(t, step);
 
 	/* ---- Additional ---- */
 	/* Exit extended reset */
