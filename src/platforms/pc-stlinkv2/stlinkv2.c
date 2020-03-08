@@ -232,7 +232,7 @@ stlink Stlink;
 static void exit_function(void)
 {
 	libusb_exit(NULL);
-	DEBUG("\nCleanup\n");
+	DEBUG("Cleanup\n");
 }
 
 /* SIGTERM handler. */
