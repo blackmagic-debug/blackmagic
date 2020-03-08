@@ -169,11 +169,8 @@ const struct command_s samx5x_protected_cmd_list[] = {
 #define SAMX5X_DSU_LENGTH			(SAMX5X_DSU_EXT_ACCESS + 0x08)
 #define SAMX5X_DSU_DATA				(SAMX5X_DSU_EXT_ACCESS + 0x0C)
 #define SAMX5X_DSU_DID				(SAMX5X_DSU_EXT_ACCESS + 0x18)
-#define SAMX5X_DSU_PID(n)			(SAMX5X_DSU + 0x1FE0 + \
-						(0x4 * (n % 4)) - \
-						 (0x10 * (n / 4)))
-#define SAMX5X_DSU_CID(n)			(SAMX5X_DSU + 0x1FF0 + \
-						 (0x4 * (n % 4)))
+#define SAMX5X_DSU_PID  			(SAMX5X_DSU + 0x1000)
+#define SAMX5X_DSU_CID  			(SAMX5X_DSU + 0x1010)
 
 /* Control and Status Register (CTRLSTAT) */
 #define SAMX5X_CTRL_CHIP_ERASE			(1 << 4)
@@ -218,23 +215,6 @@ const struct command_s samx5x_protected_cmd_list[] = {
 
 /* Component ID */
 #define SAMX5X_CID_VALUE			0xB105100D
-
-/**
- * Reads the SAM D5x/E5x Peripheral ID
- *
- * (Reuses the SAM D1x/2x implementation as it is identical)
- */
-extern uint64_t samd_read_pid(target *t);
-#define samx5x_read_pid samd_read_pid
-
-/**
- * Reads the SAM D5x/E5x Component ID
- *
- * (Reuses the SAM D1x/2x implementation as it is identical)
- */
-extern uint32_t samd_read_cid(target *t);
-#define samx5x_read_cid samd_read_cid
-
 
 /**
  * Overloads the default cortexm reset function with a version that
@@ -367,8 +347,9 @@ static void samx5x_add_flash(target *t, uint32_t addr, size_t length,
 char variant_string[60];
 bool samx5x_probe(target *t)
 {
-	uint32_t cid = samx5x_read_cid(t);
-	uint32_t pid = samx5x_read_pid(t);
+	ADIv5_AP_t *ap = cortexm_ap(t);
+	uint32_t cid = adiv5_ap_read_pidr(ap, SAMX5X_DSU_CID);
+	uint32_t pid = adiv5_ap_read_pidr(ap, SAMX5X_DSU_PID);
 
 	/* Check the ARM Coresight Component and Perhiperal IDs */
 	if ((cid != SAMX5X_CID_VALUE) ||

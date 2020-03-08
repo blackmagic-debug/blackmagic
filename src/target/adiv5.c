@@ -210,6 +210,7 @@ static const struct {
 	{0xc09, aa_cortexa,   cidc_dc,      PIDR_PN_BIT_STRINGS("Cortex-A9 Debug", "(Debug Unit)")},
 	{0xc0f, aa_nosupport, cidc_unknown, PIDR_PN_BIT_STRINGS("Cortex-A15 Debug", "(Debug Unit)")}, /* support? */
 	{0xc14, aa_nosupport, cidc_unknown, PIDR_PN_BIT_STRINGS("Cortex-R4 Debug", "(Debug Unit)")}, /* support? */
+	{0xcd0, aa_nosupport, cidc_unknown, PIDR_PN_BIT_STRINGS("Atmel DSU", "(Device Service Unit)")},
 	{0xd21, aa_nosupport, cidc_unknown, PIDR_PN_BIT_STRINGS("Cortex-M33", "()")}, /* support? */
 	{0xfff, aa_end,       cidc_unknown, PIDR_PN_BIT_STRINGS("end", "end")}
 };
@@ -252,12 +253,29 @@ static uint32_t adiv5_mem_read32(ADIv5_AP_t *ap, uint32_t addr)
 	return ret;
 }
 
+static uint32_t adiv5_ap_read_id(ADIv5_AP_t *ap, uint32_t addr)
+{
+	uint32_t res = 0;
+	for (int i = 0; i < 4; i++) {
+		uint32_t x = adiv5_mem_read32(ap, addr + 4 * i);
+		res |= (x & 0xff) << (i * 8);
+	}
+	return res;
+}
+
+uint64_t adiv5_ap_read_pidr(ADIv5_AP_t *ap, uint32_t addr)
+{
+	uint64_t pidr = adiv5_ap_read_id(ap, addr + PIDR4_OFFSET);
+	pidr = pidr << 32 |     adiv5_ap_read_id(ap, addr + PIDR0_OFFSET);
+	return pidr;
+}
+
 static bool adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, int recursion, int num_entry)
 {
 	(void) num_entry;
 	addr &= ~3;
-	uint64_t pidr = 0;
-	uint32_t cidr = 0;
+	uint64_t pidr = adiv5_ap_read_pidr(ap, addr);
+	uint32_t cidr = adiv5_ap_read_id(ap, addr + CIDR0_OFFSET);
 	bool res = false;
 #if defined(ENABLE_DEBUG) && defined(PLATFORM_HAS_DEBUG)
 	char indent[recursion + 1];
@@ -265,22 +283,6 @@ static bool adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, int recursion, 
 	for(int i = 0; i < recursion; i++) indent[i] = ' ';
 	indent[recursion] = 0;
 #endif
-
-	/* Assemble logical Product ID register value. */
-	for (int i = 0; i < 4; i++) {
-		uint32_t x = adiv5_mem_read32(ap, addr + PIDR0_OFFSET + 4*i);
-		pidr |= (x & 0xff) << (i * 8);
-	}
-	{
-		uint32_t x = adiv5_mem_read32(ap, addr + PIDR4_OFFSET);
-		pidr |= (uint64_t)x << 32;
-	}
-
-	/* Assemble logical Component ID register value. */
-	for (int i = 0; i < 4; i++) {
-		uint32_t x = adiv5_mem_read32(ap, addr + CIDR0_OFFSET + 4*i);
-		cidr |= ((uint64_t)(x & 0xff)) << (i * 8);
-	}
 
 	if (adiv5_dp_error(ap->dp)) {
 		DEBUG("%sFault reading ID registers\n", indent);
@@ -376,7 +378,7 @@ static bool adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, int recursion, 
 					cortexm_probe(ap, false);
 					break;
 				case aa_cortexa:
-					DEBUG("%s-> cortexa_probe\n", indent + 1);
+					DEBUG("\n -> cortexa_probe\n");
 					cortexa_probe(ap, addr);
 					break;
 				default:
