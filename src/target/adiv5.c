@@ -310,8 +310,9 @@ static bool adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, int recursion, 
 			DEBUG("Fault reading ROM table entry\n");
 		}
 
-		DEBUG("ROM: Table BASE=0x%"PRIx32" SYSMEM=0x%"PRIx32", PIDR 0x%010"
-			  PRIx64 "\n", addr, memtype, pidr);
+		DEBUG("ROM: Table BASE=0x%" PRIx32 " SYSMEM=0x%" PRIx32 ", PIDR 0x%02"
+			  PRIx32 "%08" PRIx32 "\n", addr, memtype, (uint32_t)(pidr >> 32),
+			  (uint32_t)pidr);
 #endif
 
 		for (int i = 0; i < 960; i++) {
@@ -324,7 +325,8 @@ static bool adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, int recursion, 
 				break;
 
 			if (!(entry & ADIV5_ROM_ROMENTRY_PRESENT)) {
-				DEBUG("%s%d Entry 0x%"PRIx32" -> Not present\n", indent, i, entry);
+				DEBUG("%s%d Entry 0x%" PRIx32 " -> Not present\n", indent,
+					  i, entry);
 				continue;
 			}
 
@@ -339,8 +341,9 @@ static bool adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, int recursion, 
 		 * any components by other designers.
 		 */
 		if ((pidr & ~(PIDR_REV_MASK | PIDR_PN_MASK)) != PIDR_ARM_BITS) {
-			DEBUG("%s0x%"PRIx32": 0x%"PRIx64" <- does not match ARM JEP-106\n",
-				  indent, addr, pidr);
+			DEBUG("%s0x%" PRIx32 ": 0x%02" PRIx32 "%08" PRIx32
+				  " <- does not match ARM JEP-106\n",
+				  indent, addr, (uint32_t)(pidr >> 32), (uint32_t)pidr);
 			return false;
 		}
 
@@ -352,11 +355,14 @@ static bool adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, int recursion, 
 		int i;
 		for (i = 0; pidr_pn_bits[i].arch != aa_end; i++) {
 			if (pidr_pn_bits[i].part_number == part_number) {
-				DEBUG("%s%d 0x%"PRIx32": %s - %s %s (PIDR = 0x%"PRIx64")",
-					  indent + 1, num_entry, addr, cidc_debug_strings[cid_class],
-				      pidr_pn_bits[i].type, pidr_pn_bits[i].full, pidr);
-				/* Perform sanity check, if we know what to expect as component ID
-				 * class.
+				DEBUG("%s%d 0x%" PRIx32 ": %s - %s %s (PIDR = 0x%02" PRIx32
+					  "%08" PRIx32 ")",
+					  indent + 1, num_entry, addr,
+					  cidc_debug_strings[cid_class],
+					  pidr_pn_bits[i].type, pidr_pn_bits[i].full,
+					  (uint32_t)(pidr >> 32), (uint32_t)pidr);
+				/* Perform sanity check, if we know what to expect as
+				 * component ID class.
 				 */
 				if ((pidr_pn_bits[i].cidc != cidc_unknown) &&
 				    (cid_class != pidr_pn_bits[i].cidc)) {
@@ -382,8 +388,10 @@ static bool adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, int recursion, 
 			}
 		}
 		if (pidr_pn_bits[i].arch == aa_end) {
-			DEBUG("%s0x%"PRIx32": %s - Unknown (PIDR = 0x%"PRIx64")\n",
-				  indent, addr, cidc_debug_strings[cid_class], pidr);
+			DEBUG("%s0x%" PRIx32 ": %s - Unknown (PIDR = 0x%02" PRIx32
+				  "%08" PRIx32 ")\n",
+				  indent, addr, cidc_debug_strings[cid_class],
+				  (uint32_t)(pidr >> 32), (uint32_t)pidr);
 		}
 	}
 	return res;
