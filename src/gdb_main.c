@@ -490,19 +490,23 @@ handle_v_packet(char *packet, int plen)
 			target_reset(cur_target);
 			flash_mode = 1;
 		}
-		if(target_flash_erase(cur_target, addr, len) == 0)
+		if(target_flash_erase(cur_target, addr, len) == 0) {
 			gdb_putpacketz("OK");
-		else
+		} else {
+			flash_mode = 0;
 			gdb_putpacketz("EFF");
+		}
 
 	} else if (sscanf(packet, "vFlashWrite:%08lx:%n", &addr, &bin) == 1) {
 		/* Write Flash Memory */
 		len = plen - bin;
 		DEBUG_GDB("Flash Write %08lX %08lX\n", addr, len);
-		if(cur_target && target_flash_write(cur_target, addr, (void*)packet + bin, len) == 0)
+		if(cur_target && target_flash_write(cur_target, addr, (void*)packet + bin, len) == 0) {
 			gdb_putpacketz("OK");
-		else
+		} else {
+			flash_mode = 0;
 			gdb_putpacketz("EFF");
+		}
 
 	} else if (!strcmp(packet, "vFlashDone")) {
 		/* Commit flash operations. */
