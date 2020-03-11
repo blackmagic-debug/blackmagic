@@ -229,6 +229,8 @@ typedef struct {
 
 stlink Stlink;
 
+static int stlink_usb_get_rw_status(bool verbose);
+
 static void exit_function(void)
 {
 	libusb_exit(NULL);
@@ -556,13 +558,14 @@ static int read_retry(uint8_t *txbuf, size_t txsize,
 	int res;
 	while(1) {
 		send_recv(txbuf, txsize, rxbuf, rxsize);
-		res = stlink_usb_get_rw_status();
+		res = stlink_usb_get_rw_status(false);
 		if (res == STLINK_ERROR_OK)
 			return res;
 		gettimeofday(&now, NULL);
 		timersub(&now, &start, &diff);
 		if ((diff.tv_sec >= 1) || (res != STLINK_ERROR_WAIT)) {
 			DEBUG("read_retry failed. ");
+			stlink_usb_get_rw_status(true);
 			return res;
 		}
 	}
@@ -580,12 +583,13 @@ static int write_retry(uint8_t *cmdbuf, size_t cmdsize,
 	while(1) {
 		send_recv(cmdbuf, cmdsize, NULL, 0);
 		send_recv(txbuf, txsize, NULL, 0);
-		res = stlink_usb_get_rw_status();
+		res = stlink_usb_get_rw_status(false);
 		if (res == STLINK_ERROR_OK)
 			return res;
 		gettimeofday(&now, NULL);
 		timersub(&now, &start, &diff);
 		if ((diff.tv_sec >= 1) || (res != STLINK_ERROR_WAIT)) {
+			stlink_usb_get_rw_status(true);
 			return res;
 		}
 	}
@@ -981,7 +985,7 @@ int stlink_enter_debug_swd(void)
 					  STLINK_DEBUG_ENTER_SWD_NO_RESET};
 	uint8_t data[2];
 	DEBUG("Enter SWD\n");
-	send_recv(cmd, 16, data, 2);
+	send_recv_retry(cmd, 16, data, 2);
 	return stlink_usb_error_check(data, true);
 }
 
@@ -1178,7 +1182,7 @@ void adiv5_ap_cleanup(int ap)
        DEBUG_STLINK("Close AP %d\n", ap);
        stlink_usb_error_check(data, true);
 }
-int stlink_usb_get_rw_status(void)
+static int stlink_usb_get_rw_status(bool verbose)
 {
 	uint8_t cmd[16] = {
 		STLINK_DEBUG_COMMAND,
@@ -1186,7 +1190,7 @@ int stlink_usb_get_rw_status(void)
 	};
 	uint8_t data[12];
 	send_recv(cmd, 16, data, 12);
-	return stlink_usb_error_check(data, true);
+	return stlink_usb_error_check(data, verbose);
 }
 
 void stlink_readmem(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
@@ -1263,7 +1267,7 @@ void stlink_writemem8(ADIv5_AP_t *ap, uint32_t addr, size_t len,
 			length & 0xff, length >> 8, ap->apsel};
 		send_recv(cmd, 16, NULL, 0);
 		send_recv((void*)buffer, length, NULL, 0);
-		stlink_usb_get_rw_status();
+		stlink_usb_get_rw_status(true);
 		len -= length;
 		addr += length;
 	}
@@ -1286,7 +1290,7 @@ void stlink_writemem16(ADIv5_AP_t *ap, uint32_t addr, size_t len,
 		len & 0xff, len >> 8, ap->apsel};
 	send_recv(cmd, 16, NULL, 0);
 	send_recv((void*)buffer, len, NULL, 0);
-	stlink_usb_get_rw_status();
+	stlink_usb_get_rw_status(true);
 }
 
 void stlink_writemem32(ADIv5_AP_t *ap, uint32_t addr, size_t len,
