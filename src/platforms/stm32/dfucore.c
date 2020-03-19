@@ -176,9 +176,14 @@ usbdfu_getstatus_complete(usbd_device *dev, struct usb_setup_data *req)
 
 		flash_unlock();
 		if(prog.blocknum == 0) {
-			int32_t addr = get_le32(prog.buf + 1);
+			uint32_t addr = get_le32(prog.buf + 1);
 			switch(prog.buf[0]) {
 			case CMD_ERASE:
+				if ((addr <  app_address) || (addr >= max_address)) {
+					usbdfu_state = 	STATE_DFU_ERROR;
+					flash_lock();
+					return;
+				}
 				dfu_check_and_do_sector_erase(addr);
 			}
 		} else {
