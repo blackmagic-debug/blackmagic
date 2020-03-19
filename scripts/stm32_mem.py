@@ -20,6 +20,7 @@
 
 from time import sleep
 import struct
+import os
 from sys import stdout, argv
 
 import argparse
@@ -195,6 +196,10 @@ if __name__ == "__main__":
 		exit(0)
 	dfudev.make_idle()
 	file = open(args.progfile, "rb")
+        if (os.path.getsize(args.progfile) > 0x1f800):
+		print("File too large")
+		exit(0)
+
 	bin = file.read()
 
 	product = dfudev.handle.getString(dfudev.dev.iProduct, 64)
