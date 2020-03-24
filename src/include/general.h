@@ -22,7 +22,9 @@
 #define __GENERAL_H
 
 #define _GNU_SOURCE
-#define __USE_MINGW_ANSI_STDIO 1
+#if !defined(__USE_MINGW_ANSI_STDIO)
+# define __USE_MINGW_ANSI_STDIO 1
+#endif
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
