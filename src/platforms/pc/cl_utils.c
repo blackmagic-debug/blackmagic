@@ -22,13 +22,13 @@
  * binary file from the command line.
  */
 
+#include "general.h"
 #include <unistd.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 
-#include "general.h"
 #include "target.h"
 #include "target_internal.h"
 

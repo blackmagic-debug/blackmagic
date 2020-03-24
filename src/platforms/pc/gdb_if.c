@@ -24,6 +24,7 @@
  */
 
 #if defined(_WIN32) || defined(__CYGWIN__)
+#   define __USE_MINGW_ANSI_STDIO 1
 #   include <winsock2.h>
 #   include <windows.h>
 #   include <ws2tcpip.h>

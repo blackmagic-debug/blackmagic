@@ -31,9 +31,9 @@
  * particularly Sections 12. DSU and 25. NVMCTRL
  */
 
+#include "general.h"
 #include <ctype.h>
 
-#include "general.h"
 #include "target.h"
 #include "target_internal.h"
 #include "cortexm.h"
