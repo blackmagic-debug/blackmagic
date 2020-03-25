@@ -170,9 +170,9 @@ static void sam4_add_flash(target *t,
 	target_add_flash(t, f);
 }
 
-static size_t sam_flash_size(uint32_t idcode)
+static size_t sam_flash_size(uint32_t cidr)
 {
-	switch (idcode & CHIPID_CIDR_NVPSIZ_MASK) {
+	switch (cidr & CHIPID_CIDR_NVPSIZ_MASK) {
 	case CHIPID_CIDR_NVPSIZ_8K:
 		return 0x2000;
 	case CHIPID_CIDR_NVPSIZ_16K:
@@ -197,9 +197,9 @@ static size_t sam_flash_size(uint32_t idcode)
 
 bool sam3x_probe(target *t)
 {
-	t->idcode = target_mem_read32(t, SAM3X_CHIPID_CIDR);
-	size_t size = sam_flash_size(t->idcode);
-	switch (t->idcode & (CHIPID_CIDR_ARCH_MASK | CHIPID_CIDR_EPROC_MASK)) {
+	uint32_t cidr = target_mem_read32(t, SAM3X_CHIPID_CIDR);
+	size_t size = sam_flash_size(cidr);
+	switch (cidr & (CHIPID_CIDR_ARCH_MASK | CHIPID_CIDR_EPROC_MASK)) {
 	case CHIPID_CIDR_ARCH_SAM3XxC | CHIPID_CIDR_EPROC_CM3:
 	case CHIPID_CIDR_ARCH_SAM3XxE | CHIPID_CIDR_EPROC_CM3:
 	case CHIPID_CIDR_ARCH_SAM3XxG | CHIPID_CIDR_EPROC_CM3:
@@ -212,9 +212,9 @@ bool sam3x_probe(target *t)
 		return true;
 	}
 
-	t->idcode = target_mem_read32(t, SAM34NSU_CHIPID_CIDR);
-	size = sam_flash_size(t->idcode);
-	switch (t->idcode & (CHIPID_CIDR_ARCH_MASK | CHIPID_CIDR_EPROC_MASK)) {
+	cidr = target_mem_read32(t, SAM34NSU_CHIPID_CIDR);
+	size = sam_flash_size(cidr);
+	switch (cidr & (CHIPID_CIDR_ARCH_MASK | CHIPID_CIDR_EPROC_MASK)) {
 	case CHIPID_CIDR_ARCH_SAM3NxA | CHIPID_CIDR_EPROC_CM3:
 	case CHIPID_CIDR_ARCH_SAM3NxB | CHIPID_CIDR_EPROC_CM3:
 	case CHIPID_CIDR_ARCH_SAM3NxC | CHIPID_CIDR_EPROC_CM3:
@@ -224,7 +224,7 @@ bool sam3x_probe(target *t)
 		t->driver = "Atmel SAM3N/S";
 		target_add_ram(t, 0x20000000, 0x200000);
 		/* These devices only have a single bank */
-		size = sam_flash_size(t->idcode);
+		size = sam_flash_size(cidr);
 		sam3_add_flash(t, SAM3N_EEFC_BASE, 0x400000, size);
 		target_add_commands(t, sam3x_cmd_list, "SAM3N/S");
 		return true;
@@ -248,7 +248,7 @@ bool sam3x_probe(target *t)
 	case CHIPID_CIDR_ARCH_SAM4SDC | CHIPID_CIDR_EPROC_CM4:
 		t->driver = "Atmel SAM4S";
 		target_add_ram(t, 0x20000000, 0x400000);
-		size_t size = sam_flash_size(t->idcode);
+		size_t size = sam_flash_size(cidr);
 		if (size <= 0x80000) {
 			/* Smaller devices have a single bank */
 			sam4_add_flash(t, SAM4S_EEFC_BASE(0), 0x400000, size);

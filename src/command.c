@@ -257,9 +257,18 @@ bool cmd_swdp_scan(target *t, int argc, char **argv)
 static void display_target(int i, target *t, void *context)
 {
 	(void)context;
-	gdb_outf("%2d   %c  %s %s\n", i, target_attached(t)?'*':' ',
-			 target_driver_name(t),
-			 (target_core_name(t)) ? target_core_name(t): "");
+	if (!strcmp(target_driver_name(t), "ARM Cortex-M")) {
+		gdb_outf("***%2d%sUnknown %s Designer %3x Partno %3x %s\n",
+				 i, target_attached(t)?" * ":" ",
+				 target_driver_name(t),
+				 target_designer(t),
+				 target_idcode(t),
+				 (target_core_name(t)) ? target_core_name(t): "");
+	} else {
+		gdb_outf("%2d   %c  %s %s\n", i, target_attached(t)?'*':' ',
+				 target_driver_name(t),
+				 (target_core_name(t)) ? target_core_name(t): "");
+	}
 }
 
 bool cmd_targets(target *t, int argc, char **argv)

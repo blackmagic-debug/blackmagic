@@ -111,7 +111,8 @@ struct target_s {
 
 	/* target-defined options */
 	unsigned target_options;
-	uint32_t idcode;
+	uint16_t t_designer;
+	uint16_t idcode;
 	uint32_t target_storage;
 
 	struct target_ram *ram;

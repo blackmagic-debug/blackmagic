@@ -502,6 +502,16 @@ const char *target_core_name(target *t)
 	return t->core;
 }
 
+unsigned int target_designer(target *t)
+{
+	return t->t_designer;
+}
+
+unsigned int target_idcode(target *t)
+{
+	return t->idcode;
+}
+
 uint32_t target_mem_read32(target *t, uint32_t addr)
 {
 	uint32_t ret;

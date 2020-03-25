@@ -186,13 +186,13 @@ static void sam4l_add_flash(target *t, uint32_t addr, size_t length)
 }
 
 /* Return size of RAM */
-static size_t sam_ram_size(uint32_t idcode) {
-	return __ram_size[((idcode >> CHIPID_CIDR_SRAMSIZ_SHIFT) & CHIPID_CIDR_SRAMSIZ_MASK)];
+static size_t sam_ram_size(uint32_t cidr) {
+	return __ram_size[((cidr >> CHIPID_CIDR_SRAMSIZ_SHIFT) & CHIPID_CIDR_SRAMSIZ_MASK)];
 }
 
 /* Return size of FLASH */
-static size_t sam_nvp_size(uint32_t idcode) {
-	return __nvp_size[((idcode >> CHIPID_CIDR_NVPSIZ_SHIFT) & CHIPID_CIDR_NVPSIZ_MASK)];
+static size_t sam_nvp_size(uint32_t cidr) {
+	return __nvp_size[((cidr >> CHIPID_CIDR_NVPSIZ_SHIFT) & CHIPID_CIDR_NVPSIZ_MASK)];
 }
 
 #define SMAP_BASE	0x400a3000
@@ -228,14 +228,14 @@ bool sam4l_probe(target *t)
 {
 	size_t	ram_size, flash_size;
 
-	t->idcode = target_mem_read32(t, SAM4L_CHIPID_CIDR);
-	if (((t->idcode >> CHIPID_CIDR_ARCH_SHIFT) & CHIPID_CIDR_ARCH_MASK) == SAM4L_ARCH) {
+	uint32_t cidr = target_mem_read32(t, SAM4L_CHIPID_CIDR);
+	if (((cidr >> CHIPID_CIDR_ARCH_SHIFT) & CHIPID_CIDR_ARCH_MASK) == SAM4L_ARCH) {
 		t->driver = "Atmel SAM4L";
 		/* this function says we need to do "extra" stuff after reset */
 		t->extended_reset = sam4l_extended_reset;
-		ram_size = sam_ram_size(t->idcode);
+		ram_size = sam_ram_size(cidr);
 		target_add_ram(t, 0x20000000, ram_size);
-		flash_size = sam_nvp_size(t->idcode);
+		flash_size = sam_nvp_size(cidr);
 		sam4l_add_flash(t, 0x0, flash_size);
 		DEBUG_INFO("\nSAM4L: RAM = 0x%x (%dK), FLASH = 0x%x (%dK)\n",
 			(unsigned int) ram_size, (unsigned int) (ram_size / 1024),
