@@ -38,6 +38,7 @@
 #define O_BINARY 0
 #endif
 #if defined(_WIN32) || defined(__CYGWIN__)
+# include <windows.h>
 #else
 # include <sys/mman.h>
 #endif
