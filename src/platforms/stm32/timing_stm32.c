@@ -20,7 +20,8 @@
 #include "morse.h"
 
 #include <libopencm3/cm3/systick.h>
-#include <libopencm3/cm3/scb.h>
+#include <libopencm3/cm3/nvic.h>
+#include <libopencm3/stm32/rcc.h>
 
 uint8_t running_status;
 static volatile uint32_t time_ms;
@@ -29,9 +30,10 @@ void platform_timing_init(void)
 {
 	/* Setup heartbeat timer */
 	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
-	systick_set_reload(900000);	/* Interrupt us at 10 Hz */
-	SCB_SHPR(11) &= ~((15 << 4) & 0xff);
-	SCB_SHPR(11) |= ((14 << 4) & 0xff);
+	/* Interrupt us at 10 Hz */
+	systick_set_reload(rcc_ahb_frequency / (8 * 10) );
+	/* SYSTICK_IRQ with low priority */
+	nvic_set_priority(NVIC_SYSTICK_IRQ, 14 << 4);
 	systick_interrupt_enable();
 	systick_counter_enable();
 }
