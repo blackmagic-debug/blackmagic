@@ -41,10 +41,12 @@
 #define SET_IDLE_STATE(state)
 #define SET_ERROR_STATE(state)
 
+/* Allow 100mS for responses to reach us */
+#define RESP_TIMEOUT (100)
+
 void platform_buffer_flush(void);
 int platform_buffer_write(const uint8_t *data, int size);
 int platform_buffer_read(uint8_t *data, int size);
-
 static inline int platform_hwversion(void)
 {
   return 0;

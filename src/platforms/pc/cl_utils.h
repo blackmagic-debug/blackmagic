@@ -41,6 +41,7 @@ typedef struct BMP_CL_OPTIONS_s {
 	bool opt_tpwr;
 	bool opt_connect_under_reset;
 	char *opt_flash_file;
+	char *opt_device;
 	char *opt_serial;
 	char *opt_cable;
 	int opt_debuglevel;
@@ -52,4 +53,6 @@ typedef struct BMP_CL_OPTIONS_s {
 
 void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv);
 int cl_execute(BMP_CL_OPTIONS_t *opt);
+int serial_open(BMP_CL_OPTIONS_t *opt);
+void serial_close(void);
 #endif

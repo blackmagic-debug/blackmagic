@@ -25,77 +25,16 @@
 #include "remote.h"
 
 #include <assert.h>
-#include <unistd.h>
 #include <sys/time.h>
-#include <sys/types.h>
 #include <sys/time.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 #include <errno.h>
-#include <fcntl.h>
 #include <string.h>
-#include <termios.h>
-#include <unistd.h>
 
 #include "cl_utils.h"
-
-/* Allow 100mS for responses to reach us */
-#define RESP_TIMEOUT (100)
-
-/* Define this to see the transactions across the link */
-//#define DUMP_TRANSACTIONS
-
-static int f;  /* File descriptor for connection to GDB remote */
-
-int set_interface_attribs (int fd, int speed, int parity)
-
-/* A nice routine grabbed from
- * https://stackoverflow.com/questions/6947413/how-to-open-read-and-write-from-serial-port-in-c
- */
-
-{
-  struct termios tty;
-  memset (&tty, 0, sizeof tty);
-  if (tcgetattr (fd, &tty) != 0)
-    {
-      fprintf(stderr,"error %d from tcgetattr", errno);
-      return -1;
-    }
-
-  cfsetospeed (&tty, speed);
-  cfsetispeed (&tty, speed);
-
-  tty.c_cflag = (tty.c_cflag & ~CSIZE) | CS8;     // 8-bit chars
-  // disable IGNBRK for mismatched speed tests; otherwise receive break
-  // as \000 chars
-  tty.c_iflag &= ~IGNBRK;         // disable break processing
-  tty.c_lflag = 0;                // no signaling chars, no echo,
-  // no canonical processing
-  tty.c_oflag = 0;                // no remapping, no delays
-  tty.c_cc[VMIN]  = 0;            // read doesn't block
-  tty.c_cc[VTIME] = 5;            // 0.5 seconds read timeout
-
-  tty.c_iflag &= ~(IXON | IXOFF | IXANY); // shut off xon/xoff ctrl
-
-  tty.c_cflag |= (CLOCAL | CREAD);// ignore modem controls,
-  // enable reading
-  tty.c_cflag &= ~(PARENB | PARODD);      // shut off parity
-  tty.c_cflag |= parity;
-  tty.c_cflag &= ~CSTOPB;
-  tty.c_cflag &= ~CRTSCTS;
-
-  if (tcsetattr (fd, TCSANOW, &tty) != 0)
-    {
-      fprintf(stderr,"error %d from tcsetattr", errno);
-      return -1;
-    }
-  return 0;
-}
-
+static BMP_CL_OPTIONS_t cl_opts; /* Portable way to nullify the struct*/
 
 void platform_init(int argc, char **argv)
 {
-  BMP_CL_OPTIONS_t cl_opts = {0};
   cl_opts.opt_idstring = "Blackmagic Debug Probe Remote";
   cl_init(&cl_opts, argc, argv);
   char construct[PLATFORM_MAX_MSG_SIZE];
@@ -105,18 +44,8 @@ void platform_init(int argc, char **argv)
   printf("License GPLv3+: GNU GPL version 3 or later "
 	 "<http://gnu.org/licenses/gpl.html>\n\n");
 
-  f=open(cl_opts.opt_serial,O_RDWR|O_SYNC|O_NOCTTY);
-  if (f<0)
-    {
-      fprintf(stderr,"Couldn't open serial port %s\n", cl_opts.opt_serial);
-      exit(-1);
-    }
-
-  if (set_interface_attribs (f, 115000, 0)<0)
-    {
-      exit(-1);
-    }
-
+  if (serial_open(&cl_opts))
+	  exit(-1);
   int c=snprintf(construct,PLATFORM_MAX_MSG_SIZE,"%s",REMOTE_START_STR);
   platform_buffer_write((uint8_t *)construct,c);
   c=platform_buffer_read((uint8_t *)construct, PLATFORM_MAX_MSG_SIZE);
@@ -132,7 +61,7 @@ void platform_init(int argc, char **argv)
 	  int ret = cl_execute(&cl_opts);
 	  if (cl_opts.opt_tpwr)
 		  platform_target_set_power(0);
-	  close(f);
+	  serial_close();
 	  exit(ret);
   } else {
 	  assert(gdb_if_init() == 0);
@@ -215,96 +144,6 @@ bool platform_srst_get_val(void)
 void platform_buffer_flush(void)
 {
 
-}
-
-int platform_buffer_write(const uint8_t *data, int size)
-{
-  int s;
-
-#ifdef DUMP_TRANSACTIONS
-  printf("%s\n",data);
-#endif
-  s=write(f,data,size);
-  if (s<0)
-    {
-      fprintf(stderr,"Failed to write\n");
-      exit(-2);
-    }
-
-  return size;
-}
-
-int platform_buffer_read(uint8_t *data, int maxsize)
-
-{
-  uint8_t *c;
-  int s;
-  int ret;
-  uint32_t endTime;
-  fd_set  rset;
-  struct timeval tv;
-
-  c=data;
-  tv.tv_sec=0;
-
-  endTime=platform_time_ms()+RESP_TIMEOUT;
-  tv.tv_usec=1000*(endTime-platform_time_ms());
-
-  /* Look for start of response */
-  do
-    {
-      FD_ZERO(&rset);
-      FD_SET(f, &rset);
-
-      ret = select(f + 1, &rset, NULL, NULL, &tv);
-      if (ret < 0)
-	{
-	  fprintf(stderr,"Failed on select\n");
-	  exit(-4);
-	}
-      if(ret == 0)
-	{
-	  fprintf(stderr,"Timeout on read\n");
-	  exit(-3);
-	}
-
-      s=read(f,c,1);
-    }
-  while ((s>0) && (*c!=REMOTE_RESP));
-
-  /* Now collect the response */
-  do
-    {
-      FD_ZERO(&rset);
-      FD_SET(f, &rset);
-      ret = select(f + 1, &rset, NULL, NULL, &tv);
-      if (ret < 0)
-	{
-	  fprintf(stderr,"Failed on select\n");
-	  exit(-4);
-	}
-      if(ret == 0)
-	{
-	  fprintf(stderr,"Timeout on read\n");
-	  exit(-3);
-	}
-      s=read(f,c,1);
-      if (*c==REMOTE_EOM)
-	{
-	  *c=0;
-#ifdef DUMP_TRANSACTIONS
-	  printf("       %s\n",data);
-#endif
-	  return (c-data);
-	}
-      else
-	c++;
-    }
-  while ((s>=0) && (c-data<maxsize));
-
-  fprintf(stderr,"Failed to read\n");
-  exit(-3);
-  return 0;
 }
 
 const char *platform_target_voltage(void)
