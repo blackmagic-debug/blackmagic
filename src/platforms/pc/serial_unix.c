@@ -71,7 +71,7 @@ static int set_interface_attribs(void)
 #define DEVICE_BY_ID "/dev/serial/by-id/"
 int serial_open(BMP_CL_OPTIONS_t *opt)
 {
-	char name[256];
+	char name[4096];
 	if (!opt->opt_device) {
 		/* Try to find some BMP if0*/
 		struct dirent *dp;
@@ -212,4 +212,3 @@ int platform_buffer_read(uint8_t *data, int maxsize)
 	exit(-3);
 	return 0;
 }
-
