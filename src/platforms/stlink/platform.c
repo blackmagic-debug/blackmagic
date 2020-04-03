@@ -39,6 +39,7 @@ uint8_t running_status;
 uint16_t led_idle_run;
 uint16_t srst_pin;
 static uint32_t rev;
+static void adc_init(void);
 
 int platform_hwversion(void)
 {
@@ -85,6 +86,7 @@ void platform_init(void)
 	/* Don't enable UART if we're being debugged. */
 	if (!(SCS_DEMCR & SCS_DEMCR_TRCENA))
 		usbuart_init();
+        adc_init();
 }
 
 void platform_srst_set_val(bool assert)
@@ -105,7 +107,52 @@ bool platform_srst_get_val()
 	return gpio_get(SRST_PORT, srst_pin) == 0;
 }
 
+static void adc_init(void)
+{
+	rcc_periph_clock_enable(RCC_ADC1);
+
+	gpio_set_mode(GPIOA, GPIO_MODE_INPUT,
+			GPIO_CNF_INPUT_ANALOG, GPIO0);
+
+	adc_power_off(ADC1);
+	adc_disable_scan_mode(ADC1);
+	adc_set_single_conversion_mode(ADC1);
+	adc_disable_external_trigger_regular(ADC1);
+	adc_set_right_aligned(ADC1);
+	adc_set_sample_time_on_all_channels(ADC1, ADC_SMPR_SMP_28DOT5CYC);
+        adc_enable_temperature_sensor();
+	adc_power_on(ADC1);
+
+	/* Wait for ADC starting up. */
+	for (int i = 0; i < 800000; i++)    /* Wait a bit. */
+		__asm__("nop");
+
+	adc_reset_calibration(ADC1);
+	adc_calibrate(ADC1);
+}
+
 const char *platform_target_voltage(void)
 {
-	return "unknown";
+	static char ret[] = "0.00V";
+	const uint8_t channel = 0;
+	adc_set_regular_sequence(ADC1, 1, (uint8_t*)&channel);
+	adc_start_conversion_direct(ADC1);
+	/* Wait for end of conversion. */
+	while (!adc_eoc(ADC1));
+	uint32_t platform_adc_value = adc_read_regular(ADC1);
+
+	const uint8_t ref_channel = 17;
+	adc_set_regular_sequence(ADC1, 1, (uint8_t*)&ref_channel);
+	adc_start_conversion_direct(ADC1);
+	/* Wait for end of conversion. */
+	while (!adc_eoc(ADC1));
+	uint32_t vrefint_value = adc_read_regular(ADC1);
+
+	/* Value in mV*/
+	uint32_t val = (platform_adc_value * 2400) / vrefint_value;
+	ret[0] = '0' +	val / 1000;
+	ret[2] = '0' + (val /  100) % 10;
+	ret[3] = '0' + (val /	10) % 10;
+
+	return ret;
 }
