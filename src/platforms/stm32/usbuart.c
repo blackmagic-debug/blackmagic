@@ -219,7 +219,7 @@ void USBUSART_ISR(void)
 #if !defined(USART_SR_NE) && defined(USART_ISR_NF)
 # define USART_SR_NE USART_ISR_NF
 #endif
-	if (err & (USART_FLAG_ORE | USART_FLAG_FE | USART_SR_NE))
+	if (err & (USART_SR_ORE | USART_SR_FE | USART_SR_NE))
 		return;
 
 	/* Turn on LED */
