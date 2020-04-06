@@ -212,13 +212,22 @@ static bool stm32h7_attach(target *t)
 	target_add_ram(t, 0x34000000, 0x08000); /* AHB SRAM3,  32 k */
 	target_add_ram(t, 0x38000000, 0x01000); /* AHB SRAM4,  32 k */
 
+
 	/* Add the flash to memory map. */
 	uint32_t flashsize = target_mem_read32(t,  FLASH_SIZE_REG);
 	flashsize &= 0xffff;
-	if (flashsize == 128) { /* H750 has only 128 kByte!*/
-		stm32h7_add_flash(t, 0x8000000, FLASH_SECTOR_SIZE, FLASH_SECTOR_SIZE);
+
+	stm32h7_add_flash(t, 0x8000000, 0x100000, FLASH_SECTOR_SIZE);
+
+	if (flashsize == 128) {
+	    /* H750 officially has 1x128 kByte sector and 1 bank
+	     * However in practice it's possible to flash up to 1MB
+	     * and run code from it.  Only the first sector is
+	     * manufacturer supported.
+	     * Verified on Revision Y and V silicon */
+	    DEBUG("H750 Device officially has only 1x128 kByte flash sector.\n"
+	          "Using flash above 128kByte is at your own risk.\n")
 	} else {
-		stm32h7_add_flash(t, 0x8000000, 0x100000, FLASH_SECTOR_SIZE);
 		stm32h7_add_flash(t, 0x8100000, 0x100000, FLASH_SECTOR_SIZE);
 	}
 	return true;
