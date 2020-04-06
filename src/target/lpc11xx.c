@@ -118,6 +118,11 @@ lpc11xx_probe(target *t)
 		target_add_ram(t, 0x10000000, 0x1000);
 		lpc11xx_add_flash(t, 0x00000000, 0x10000, 0x1000);
 		return true;
+    case 0x1000002b: // FX LPC11U6 32 kB SRAM/256 kB flash (max)
+		t->driver = "LPC11U6";
+		target_add_ram(t, 0x10000000, 0x8000);
+		lpc11xx_add_flash(t, 0x00000000, 0x40000, 0x1000);
+		return true;
 	case 0x3000002B:
 	case 0x3D00002B:
 		t->driver = "LPC1343";
