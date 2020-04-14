@@ -127,7 +127,6 @@ bool nrf51_probe(target *t)
 	if ((uid0 == 0xffffffff) || (uid1 == 0xffffffff) ||
 		(uid0 ==  0) || (uid1 ==  0))
 		return false;
-	t->target_options |= CORTEXM_TOPT_INHIBIT_SRST;
 	/* Test for NRF52 device*/
 	uint32_t info_part = target_mem_read32(t, NRF52_PART_INFO);
 	if ((info_part != 0xffffffff) && (info_part != 0) &&
@@ -135,6 +134,7 @@ bool nrf51_probe(target *t)
 		uint32_t ram_size = target_mem_read32(t, NRF52_INFO_RAM);
 		t->idcode = info_part;
 		t->driver = "Nordic nRF52";
+		t->target_options |= CORTEXM_TOPT_INHIBIT_SRST;
 		target_add_ram(t, 0x20000000, ram_size * 1024);
 		nrf51_add_flash(t, 0, page_size * code_size, page_size);
 		nrf51_add_flash(t, NRF51_UICR, page_size, page_size);
@@ -146,12 +146,12 @@ bool nrf51_probe(target *t)
 		 * IDCODE is kept as '0', as deciphering is hard and
 		 * there is later no usage.*/
 		target_add_ram(t, 0x20000000, 0x8000);
+		t->target_options |= CORTEXM_TOPT_INHIBIT_SRST;
 		nrf51_add_flash(t, 0, page_size * code_size, page_size);
 		nrf51_add_flash(t, NRF51_UICR, page_size, page_size);
 		target_add_commands(t, nrf51_cmd_list, "nRF51");
 		return true;
 	}
-	t->target_options = 0;
 	return false;
 }
 
