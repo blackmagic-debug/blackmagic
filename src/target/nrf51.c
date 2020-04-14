@@ -127,6 +127,7 @@ bool nrf51_probe(target *t)
 	if ((uid0 == 0xffffffff) || (uid1 == 0xffffffff) ||
 		(uid0 ==  0) || (uid1 ==  0))
 		return false;
+	t->target_options |= CORTEXM_TOPT_INHIBIT_SRST;
 	/* Test for NRF52 device*/
 	uint32_t info_part = target_mem_read32(t, NRF52_PART_INFO);
 	if ((info_part != 0xffffffff) && (info_part != 0) &&
@@ -150,6 +151,7 @@ bool nrf51_probe(target *t)
 		target_add_commands(t, nrf51_cmd_list, "nRF51");
 		return true;
 	}
+	t->target_options = 0;
 	return false;
 }
 
