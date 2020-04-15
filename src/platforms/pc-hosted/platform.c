@@ -23,6 +23,7 @@
 #include "version.h"
 #include "platform.h"
 #include "remote.h"
+#include "target.h"
 
 #include <assert.h>
 #include <sys/time.h>
@@ -32,6 +33,16 @@
 
 #include "cl_utils.h"
 static BMP_CL_OPTIONS_t cl_opts; /* Portable way to nullify the struct*/
+
+int platform_adiv5_swdp_scan(void)
+{
+	return adiv5_swdp_scan();
+}
+
+int platform_jtag_scan(const uint8_t *lrlens)
+{
+	return jtag_scan(lrlens);
+}
 
 void platform_init(int argc, char **argv)
 {

@@ -31,7 +31,7 @@
 struct jtag_dev_s jtag_devs[JTAG_MAX_DEVS+1];
 int jtag_dev_count;
 
-int jtag_scan(const uint8_t *irlens)
+int jtag_scan_stlinkv2(const uint8_t *irlens)
 {
 	uint32_t idcodes[JTAG_MAX_DEVS+1];
 	(void) *irlens;

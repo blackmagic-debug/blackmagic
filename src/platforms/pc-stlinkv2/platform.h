@@ -44,5 +44,5 @@ void stlink_check_detach(int state);
 void platform_buffer_flush(void);
 int platform_buffer_write(const uint8_t *data, int size);
 int platform_buffer_read(uint8_t *data, int size);
-
+int jtag_scan_stlinkv2(const uint8_t *irlens);
 #endif

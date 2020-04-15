@@ -20,6 +20,8 @@
 #include "gdb_if.h"
 #include "version.h"
 #include "platform.h"
+#include "target.h"
+#include "target_internal.h"
 
 #include <assert.h>
 #include <unistd.h>
@@ -37,6 +39,34 @@ int platform_hwversion(void)
 const char *platform_target_voltage(void)
 {
 	return stlink_target_voltage();
+}
+
+static int adiv5_swdp_scan_stlinkv2(void)
+{
+	target_list_free();
+	ADIv5_DP_t *dp = (void*)calloc(1, sizeof(*dp));
+	if (stlink_enter_debug_swd())
+		return 0;
+	dp->idcode = stlink_read_coreid();
+	dp->dp_read = stlink_dp_read;
+	dp->error = stlink_dp_error;
+	dp->low_access = stlink_dp_low_access;
+	dp->abort = stlink_dp_abort;
+
+	stlink_dp_error(dp);
+	adiv5_dp_init(dp);
+
+	return target_list?1:0;
+	return 0;
+}
+int platform_adiv5_swdp_scan(void)
+{
+	return adiv5_swdp_scan_stlinkv2();
+}
+
+int platform_jtag_scan(const uint8_t *lrlens)
+{
+	return jtag_scan_stlinkv2(lrlens);
 }
 
 void platform_init(int argc, char **argv)
