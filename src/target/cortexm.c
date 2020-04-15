@@ -38,7 +38,7 @@
 
 #include <unistd.h>
 
-#ifdef PC_HOSTED
+#if PC_HOSTED == 1
 
 /*
  * pc-hosted semihosting does keyboard, file and screen i/o on the system
@@ -1067,7 +1067,7 @@ static bool cortexm_vector_catch(target *t, int argc, char *argv[])
 #define SYS_WRITEC	0x03
 #define SYS_WRITE0	0x04
 
-#if !defined(PC_HOSTED)
+#if PC_HOSTED == 0
 /* probe memory access functions */
 static void probe_mem_read(target *t __attribute__((unused)), void *probe_dest, target_addr target_src, size_t len)
 {
@@ -1104,7 +1104,7 @@ static int cortexm_hostio_request(target *t)
 	DEBUG("syscall 0"PRIx32"%"PRIx32" (%"PRIx32" %"PRIx32" %"PRIx32" %"PRIx32")\n",
               syscall, params[0], params[1], params[2], params[3]);
 	switch (syscall) {
-#if defined(PC_HOSTED)
+#if PC_HOSTED == 1
 
 	/* code that runs in pc-hosted process. use linux system calls. */
 

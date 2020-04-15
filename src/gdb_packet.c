@@ -47,7 +47,7 @@ int gdb_getpacket(char *packet, int size)
 				packet[0] = gdb_if_getchar();
 				if (packet[0]==0x04) return 1;
 			} while ((packet[0] != '$') && (packet[0] != REMOTE_SOM));
-#ifndef OWN_HL
+#if PC_HOSTED == 0
 			if (packet[0]==REMOTE_SOM) {
 				/* This is probably a remote control packet
 				 * - get and handle it */

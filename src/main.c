@@ -33,7 +33,7 @@
 int
 main(int argc, char **argv)
 {
-#if defined(PC_HOSTED)
+#if PC_HOSTED == 1
 	platform_init(argc, argv);
 #else
 	(void) argc;

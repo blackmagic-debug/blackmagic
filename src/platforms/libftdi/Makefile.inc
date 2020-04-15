@@ -1,5 +1,5 @@
 SYS = $(shell $(CC) -dumpmachine)
-CFLAGS += -DPC_HOSTED -DNO_LIBOPENCM3 -DENABLE_DEBUG
+CFLAGS += -DENABLE_DEBUG
 CFLAGS += $(shell pkg-config --cflags libftdi1)
 LDFLAGS += $(shell pkg-config --libs libftdi1)
 ifneq (, $(findstring mingw, $(SYS)))
@@ -10,3 +10,4 @@ endif
 VPATH += platforms/pc
 SRC += 	timing.c cl_utils.c utils.c
 CFLAGS +=-I ./target -I./platforms/pc
+PC_HOSTED = 1

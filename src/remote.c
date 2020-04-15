@@ -56,6 +56,7 @@ uint64_t remotehston(uint32_t limit, char *s)
 	return ret;
 }
 
+#if PC_HOSTED == 0
 static void _respond(char respCode, uint64_t param)
 
 /* Send response to far end */
@@ -274,3 +275,4 @@ void remotePacketProcess(uint8_t i, char *packet)
 		break;
     }
 }
+#endif

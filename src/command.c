@@ -60,7 +60,7 @@ static bool cmd_target_power(target *t, int argc, const char **argv);
 static bool cmd_traceswo(target *t, int argc, const char **argv);
 #endif
 static bool cmd_heapinfo(target *t, int argc, const char **argv);
-#if defined(PLATFORM_HAS_DEBUG) && !defined(PC_HOSTED)
+#if defined(PLATFORM_HAS_DEBUG) && (PC_HOSTED == 0)
 static bool cmd_debug_bmp(target *t, int argc, const char **argv);
 #endif
 
@@ -85,14 +85,14 @@ const struct command_s cmd_list[] = {
 #endif
 #endif
 	{"heapinfo", (cmd_handler)cmd_heapinfo, "Set semihosting heapinfo" },
-#if defined(PLATFORM_HAS_DEBUG) && !defined(PC_HOSTED)
+#if defined(PLATFORM_HAS_DEBUG) && (PC_HOSTED == 0)
 	{"debug_bmp", (cmd_handler)cmd_debug_bmp, "Output BMP \"debug\" strings to the second vcom: (enable|disable)"},
 #endif
 	{NULL, NULL, NULL}
 };
 
 bool connect_assert_srst;
-#if defined(PLATFORM_HAS_DEBUG) && !defined(PC_HOSTED)
+#if defined(PLATFORM_HAS_DEBUG) && (PC_HOSTED == 0)
 bool debug_bmp;
 #endif
 long cortexm_wait_timeout = 2000; /* Timeout to wait for Cortex to react on halt command. */
@@ -135,7 +135,7 @@ bool cmd_version(target *t, int argc, char **argv)
 	(void)t;
 	(void)argc;
 	(void)argv;
-#if defined PC_HOSTED
+#if PC_HOSTED == 1
 	gdb_outf("Black Magic Probe, PC-Hosted for " PLATFORM_IDENT
 			 ", Version " FIRMWARE_VERSION "\n");
 #else
@@ -389,7 +389,7 @@ static bool cmd_traceswo(target *t, int argc, const char **argv)
 			}
 		}
 	}
-#if defined(PLATFORM_HAS_DEBUG) && !defined(PC_HOSTED) && defined(ENABLE_DEBUG)
+#if defined(PLATFORM_HAS_DEBUG) && (PC_HOSTED == 0) && defined(ENABLE_DEBUG)
 	if (debug_bmp) {
 #if TRACESWO_PROTOCOL == 2
 		gdb_outf("baudrate: %lu ", baudrate);
@@ -412,7 +412,7 @@ static bool cmd_traceswo(target *t, int argc, const char **argv)
 }
 #endif
 
-#if defined(PLATFORM_HAS_DEBUG) && !defined(PC_HOSTED)
+#if defined(PLATFORM_HAS_DEBUG) && (PC_HOSTED == 0)
 static bool cmd_debug_bmp(target *t, int argc, const char **argv)
 {
 	(void)t;
