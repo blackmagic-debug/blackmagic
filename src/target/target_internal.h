@@ -72,6 +72,8 @@ struct breakwatch {
 	uint32_t reserved[4]; /* for use by the implementing driver */
 };
 
+#define MAX_CMDLINE 81
+
 struct target_s {
 	bool attached;
 	struct target_controller *tc;
@@ -118,6 +120,7 @@ struct target_s {
 	/* Other stuff */
 	const char *driver;
 	const char *core;
+	char cmdline[MAX_CMDLINE];
 	struct target_command_s *commands;
 
 	struct target_s *next;
