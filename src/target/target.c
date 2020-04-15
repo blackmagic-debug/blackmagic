@@ -337,7 +337,7 @@ void target_detach(target *t)
 {
 	t->detach(t);
 	t->attached = false;
-#if defined(PC_HOSTED)
+#if PC_HOSTED == 1
 # include "platform.h"
 	platform_buffer_flush();
 #endif
