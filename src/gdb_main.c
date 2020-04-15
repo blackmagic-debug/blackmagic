@@ -25,6 +25,7 @@
  */
 
 #include "general.h"
+#include "ctype.h"
 #include "hex_utils.h"
 #include "gdb_if.h"
 #include "gdb_packet.h"
@@ -429,9 +430,37 @@ handle_v_packet(char *packet, int plen)
 		else
 			gdb_putpacketz("E01");
 
-	} else if (!strcmp(packet, "vRun;")) {
+	} else if (!strncmp(packet, "vRun", 4)) {
+		/* Parse command line for get_cmdline semihosting call */
+		char cmdline[83];
+		char *pbuf = cmdline;
+		char *tok = packet + 4;
+		if (*tok == ';') tok++;
+		*cmdline='\0';
+		while(*tok != '\0') {
+			if(strlen(cmdline)+3 >= sizeof(cmdline)) break;
+			if (*tok == ';') {
+				*pbuf++=' ';
+				*pbuf='\0';
+				tok++;
+				continue;
+			}
+			if (isxdigit(*tok) && isxdigit(*(tok+1))) {
+				unhexify(pbuf, tok, 2);
+				if ((*pbuf == ' ') || (*pbuf == '\\')) {
+					*(pbuf+1)=*pbuf;
+					*pbuf++='\\';
+				}
+				pbuf++;
+				tok+=2;
+				*pbuf='\0';
+				continue;
+			}
+			break;
+		}
 		/* Run target program. For us (embedded) this means reset. */
 		if(cur_target) {
+			target_set_cmdline(cur_target, cmdline);
 			target_reset(cur_target);
 			gdb_putpacketz("T05");
 		} else if(last_target) {
@@ -440,6 +469,7 @@ handle_v_packet(char *packet, int plen)
 
                         /* If we were able to attach to the target again */
                         if (cur_target) {
+				target_set_cmdline(cur_target, cmdline);
                         	target_reset(cur_target);
                         	gdb_putpacketz("T05");
                         } else	gdb_putpacketz("E01");

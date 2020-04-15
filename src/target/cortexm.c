@@ -34,6 +34,7 @@ he terms of the GNU General Public License as published by
 #include "cortexm.h"
 #include "platform.h"
 #include "command.h"
+#include "gdb_hostio.h"
 
 #include <unistd.h>
 
@@ -1009,11 +1010,14 @@ static bool cortexm_vector_catch(target *t, int argc, char *argv[])
 #endif
 
 /* Semihosting support */
-/* ARM Semihosting syscall numbers, from ARM doc DUI0471C, Chapter 8 */
-#define SYS_CLOSE	0x02
+/* ARM Semihosting syscall numbers, from "Semihosting for AArch32 and AArch64 Version 2.0" */
+
 #define SYS_CLOCK	0x10
+#define SYS_CLOSE	0x02
 #define SYS_ELAPSED	0x30
 #define SYS_ERRNO	0x13
+#define SYS_EXIT	0x18
+#define SYS_EXIT_EXTENDED	0x20
 #define SYS_FLEN	0x0C
 #define SYS_GET_CMDLINE	0x15
 #define SYS_HEAPINFO	0x16
@@ -1095,6 +1099,16 @@ static int cortexm_hostio_request(target *t)
 	case SYS_WRITEC: /* writec */
 		ret = tc_write(t, 2, arm_regs[1], 1);
 		break;
+	case SYS_WRITE0:{ /* write0 */
+		target_addr addr = arm_regs[1];
+		ret = -1;
+		while (target_mem_read8(t, addr) != 0) {
+			if (target_check_error(t)) break;
+			if (tc_write(t, STDERR_FILENO, addr++, 1) != 1) break;
+			}
+		ret = 0;
+		break;
+		}
 	case SYS_ISTTY:	/* isatty */
 		ret = tc_isatty(t, params[0] - 1);
 		break;
@@ -1120,9 +1134,55 @@ static int cortexm_hostio_request(target *t)
 		ret = t->tc->errno_;
 		break;
 
-	case SYS_TIME:	/* gettimeofday */
-		/* FIXME How do we use gdb's gettimeofday? */
+	case SYS_EXIT: /* _exit() */
+		tc_printf(t, "_exit(%lu)\n", params[0]);
+		target_halt_resume(t, 1);
+		ret = 0;
 		break;
+
+	case SYS_GET_CMDLINE: { /* get_cmdline */
+		uint32_t retval[2];
+		ret = -1;
+		target_addr buf_ptr = params[0];
+		target_addr buf_len = params[1];
+		if (strlen(t->cmdline)+1 > buf_len) break;
+		if(target_mem_write(t, buf_ptr, t->cmdline, strlen(t->cmdline)+1)) break;
+		retval[0] = buf_ptr;
+		retval[1] = strlen(t->cmdline)+1;
+		if(target_mem_write(t, arm_regs[1], retval, sizeof(retval))) break;
+		ret = 0;
+		break;
+		}
+
+	case SYS_HEAPINFO: { /* heapinfo */
+		struct heapinfo_block {
+			uint32_t heap_base;
+			uint32_t heap_limit;
+			uint32_t stack_base;
+			uint32_t stack_limit;
+		} heapinfo;
+		ret = -1;
+		/* XXX FIXME put real values */
+		heapinfo.heap_base = 0;
+		heapinfo.heap_limit=-1;
+		heapinfo.stack_base=0;
+		heapinfo.stack_limit=-1;
+		if(target_mem_write(t, arm_regs[1], &heapinfo, sizeof(heapinfo))) break;
+		ret = 0;
+		break;
+		}
+
+	// not implemented yet:
+	case SYS_TIME: /* gettimeofday */
+	case SYS_CLOCK: /* clock */
+	case SYS_ELAPSED: /* elapsed */
+	case SYS_ISERROR: /* iserror */
+	case SYS_READC: /* readc */
+	case SYS_TICKFREQ: /* tickfreq */
+	case SYS_TMPNAM: /* tmpnam */
+		ret = -1;
+		break;
+
 	}
 
 	arm_regs[0] = ret;
