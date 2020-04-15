@@ -21,6 +21,7 @@
 #include "gdb_if.h"
 #include "version.h"
 #include "platform.h"
+#include "target.h"
 
 #include <assert.h>
 #include <unistd.h>
@@ -179,6 +180,16 @@ cable_desc_t cable_desc[] = {
 		.name = "arm-usb-ocd-h"
 	},
 };
+
+int platform_adiv5_swdp_scan(void)
+{
+	return adiv5_swdp_scan();
+}
+
+int platform_jtag_scan(const uint8_t *lrlens)
+{
+	return jtag_scan(lrlens);
+}
 
 void platform_init(int argc, char **argv)
 {

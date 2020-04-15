@@ -275,9 +275,9 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 		printf("Running in Test Mode\n");
 	printf("Target voltage: %s Volt\n", platform_target_voltage());
 	if (opt->opt_usejtag) {
-		num_targets = jtag_scan(NULL);
+		num_targets = platform_jtag_scan(NULL);
 	} else {
-		num_targets = adiv5_swdp_scan();
+		num_targets = platform_adiv5_swdp_scan();
 	}
 	if (!num_targets) {
 		DEBUG("No target found\n");

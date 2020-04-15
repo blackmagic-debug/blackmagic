@@ -186,7 +186,11 @@ static bool cmd_jtag_scan(target *t, int argc, char **argv)
 	int devs = -1;
 	volatile struct exception e;
 	TRY_CATCH (e, EXCEPTION_ALL) {
+#if PC_HOSTED == 1
+		devs = platform_jtag_scan(argc > 1 ? irlens : NULL);
+#else
 		devs = jtag_scan(argc > 1 ? irlens : NULL);
+#endif
 	}
 	switch (e.type) {
 	case EXCEPTION_TIMEOUT:
@@ -220,8 +224,12 @@ bool cmd_swdp_scan(target *t, int argc, char **argv)
 	int devs = -1;
 	volatile struct exception e;
 	TRY_CATCH (e, EXCEPTION_ALL) {
+#if PC_HOSTED == 1
+		devs = platform_adiv5_swdp_scan();
+#else
 		devs = adiv5_swdp_scan();
-	}
+#endif
+		}
 	switch (e.type) {
 	case EXCEPTION_TIMEOUT:
 		gdb_outf("Timeout during scan. Is target stuck in WFI?\n");
