@@ -115,27 +115,27 @@ void remotePacketProcessSWD(uint8_t i, char *packet)
 
     case REMOTE_IN_PAR: /* = In parity ================================== */
 		ticks=remotehston(2,&packet[2]);
-		badParity=swdptap_seq_in_parity(&param, ticks);
+		badParity = swd_proc.swdptap_seq_in_parity(&param, ticks);
 		_respond(badParity?REMOTE_RESP_PARERR:REMOTE_RESP_OK,param);
 		break;
 
     case REMOTE_IN: /* = In ========================================= */
 		ticks=remotehston(2,&packet[2]);
-		param=swdptap_seq_in(ticks);
+		param = swd_proc.swdptap_seq_in(ticks);
 		_respond(REMOTE_RESP_OK,param);
 		break;
 
     case REMOTE_OUT: /* = Out ======================================== */
 		ticks=remotehston(2,&packet[2]);
 		param=remotehston(-1, &packet[4]);
-		swdptap_seq_out(param, ticks);
+		swd_proc.swdptap_seq_out(param, ticks);
 		_respond(REMOTE_RESP_OK, 0);
 		break;
 
     case REMOTE_OUT_PAR: /* = Out parity ================================= */
 		ticks=remotehston(2,&packet[2]);
 		param=remotehston(-1, &packet[4]);
-		swdptap_seq_out_parity(param, ticks);
+		swd_proc.swdptap_seq_out_parity(param, ticks);
 		_respond(REMOTE_RESP_OK, 0);
 		break;
 

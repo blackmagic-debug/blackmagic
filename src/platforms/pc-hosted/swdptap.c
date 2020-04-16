@@ -30,7 +30,14 @@
 #include "swdptap.h"
 #include "remote.h"
 
-int swdptap_init(void)
+static bool swdptap_seq_in_parity(uint32_t *res, int ticks);
+static uint32_t swdptap_seq_in(int ticks);
+static void swdptap_seq_out(uint32_t MS, int ticks);
+static void swdptap_seq_out_parity(uint32_t MS, int ticks);
+
+swd_proc_t swd_proc;
+
+int platform_swdptap_init(void)
 
 {
   uint8_t construct[PLATFORM_MAX_MSG_SIZE];
@@ -46,11 +53,15 @@ int swdptap_init(void)
       exit(-1);
     }
 
+	swd_proc.swdptap_seq_in  = swdptap_seq_in;
+	swd_proc.swdptap_seq_in_parity  = swdptap_seq_in_parity;
+	swd_proc.swdptap_seq_out = swdptap_seq_out;
+	swd_proc.swdptap_seq_out_parity  = swdptap_seq_out_parity;
+
   return 0;
 }
 
-
-bool swdptap_seq_in_parity(uint32_t *res, int ticks)
+static bool swdptap_seq_in_parity(uint32_t *res, int ticks)
 
 {
   uint8_t construct[PLATFORM_MAX_MSG_SIZE];
@@ -70,8 +81,7 @@ bool swdptap_seq_in_parity(uint32_t *res, int ticks)
   return (construct[0]!=REMOTE_RESP_OK);
 }
 
-
-uint32_t swdptap_seq_in(int ticks)
+static uint32_t swdptap_seq_in(int ticks)
 {
   uint8_t construct[PLATFORM_MAX_MSG_SIZE];
   int s;
@@ -89,7 +99,7 @@ uint32_t swdptap_seq_in(int ticks)
   return remotehston(-1,(char *)&construct[1]);
 }
 
-void swdptap_seq_out(uint32_t MS, int ticks)
+static void swdptap_seq_out(uint32_t MS, int ticks)
 {
   uint8_t construct[PLATFORM_MAX_MSG_SIZE];
   int s;
@@ -106,7 +116,7 @@ void swdptap_seq_out(uint32_t MS, int ticks)
 }
 
 
-void swdptap_seq_out_parity(uint32_t MS, int ticks)
+static void swdptap_seq_out_parity(uint32_t MS, int ticks)
 {
   uint8_t construct[PLATFORM_MAX_MSG_SIZE];
   int s;
