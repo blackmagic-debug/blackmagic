@@ -35,7 +35,14 @@ static uint8_t olddir = 0;
 #define MPSSE_TMS_SHIFT (MPSSE_WRITE_TMS | MPSSE_LSB |\
 						 MPSSE_BITMODE | MPSSE_WRITE_NEG)
 
-int swdptap_init(void)
+static bool swdptap_seq_in_parity(uint32_t *res, int ticks);
+static uint32_t swdptap_seq_in(int ticks);
+static void swdptap_seq_out(uint32_t MS, int ticks);
+static void swdptap_seq_out_parity(uint32_t MS, int ticks);
+
+swd_proc_t swd_proc;
+
+int platform_swdptap_init(void)
 {
 	if (!active_cable->bitbang_tms_in_pin) {
 		DEBUG("SWD not possible or missing item in cable description.\n");
@@ -70,6 +77,11 @@ int swdptap_init(void)
 	platform_buffer_write(ftdi_init, 9);
 	platform_buffer_flush();
 
+	swd_proc.swdptap_seq_in  = swdptap_seq_in;
+	swd_proc.swdptap_seq_in_parity  = swdptap_seq_in_parity;
+	swd_proc.swdptap_seq_out = swdptap_seq_out;
+	swd_proc.swdptap_seq_out_parity  = swdptap_seq_out_parity;
+
 	return 0;
 }
 
@@ -102,34 +114,7 @@ static void swdptap_turnaround(uint8_t dir)
 	platform_buffer_write(cmd, index);
 }
 
-bool swdptap_bit_in(void)
-{
-	swdptap_turnaround(1);
-	uint8_t cmd[4];
-	int index = 0;
-
-	cmd[index++] = active_cable->bitbang_tms_in_port_cmd;
-	cmd[index++] = MPSSE_TMS_SHIFT;
-	cmd[index++] = 0;
-	cmd[index++] = 0;
-	platform_buffer_write(cmd, index);
-	uint8_t data[1];
-	platform_buffer_read(data, 1);
-	return (data[0] &= active_cable->bitbang_tms_in_pin);
-}
-
-void swdptap_bit_out(bool val)
-{
-	swdptap_turnaround(0);
-	uint8_t cmd[3];
-
-	cmd[0] = MPSSE_TMS_SHIFT;
-	cmd[1] = 0;
-	cmd[2] = (val)? 1 : 0;
-	platform_buffer_write(cmd, 3);
-}
-
-bool swdptap_seq_in_parity(uint32_t *res, int ticks)
+static bool swdptap_seq_in_parity(uint32_t *res, int ticks)
 {
 	int index = ticks + 1;
 	uint8_t cmd[4];
@@ -158,7 +143,7 @@ bool swdptap_seq_in_parity(uint32_t *res, int ticks)
 	return parity;
 }
 
-uint32_t swdptap_seq_in(int ticks)
+static uint32_t swdptap_seq_in(int ticks)
 {
 	int index = ticks;
 	uint8_t cmd[4];
@@ -182,7 +167,7 @@ uint32_t swdptap_seq_in(int ticks)
 	return ret;
 }
 
-void swdptap_seq_out(uint32_t MS, int ticks)
+static void swdptap_seq_out(uint32_t MS, int ticks)
 {
 	uint8_t cmd[15];
 	unsigned int index = 0;
@@ -203,7 +188,7 @@ void swdptap_seq_out(uint32_t MS, int ticks)
 	platform_buffer_write(cmd, index);
 }
 
-void swdptap_seq_out_parity(uint32_t MS, int ticks)
+static void swdptap_seq_out_parity(uint32_t MS, int ticks)
 {
 	uint8_t parity = 0;
 	int steps = ticks;

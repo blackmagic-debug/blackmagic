@@ -22,6 +22,7 @@
 #include "platform.h"
 #include "target.h"
 #include "target_internal.h"
+#include "swdptap.h"
 
 #include <assert.h>
 #include <unistd.h>
@@ -40,6 +41,13 @@ const char *platform_target_voltage(void)
 {
 	return stlink_target_voltage();
 }
+
+int platform_swdptap_init(void)
+{
+	return 0;
+}
+
+swd_proc_t swd_proc;
 
 static int adiv5_swdp_scan_stlinkv2(void)
 {

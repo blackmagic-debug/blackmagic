@@ -28,4 +28,3 @@ bool platform_timeout_is_expired(platform_timeout *t)
 {
 	return platform_time_ms() > t->time;
 }
-

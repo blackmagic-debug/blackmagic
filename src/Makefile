@@ -1,6 +1,6 @@
 PROBE_HOST ?= native
 PLATFORM_DIR = platforms/$(PROBE_HOST)
-VPATH += $(PLATFORM_DIR) platforms/common target
+VPATH += $(PLATFORM_DIR) target
 ENABLE_DEBUG ?=
 
 ifneq ($(V), 1)
@@ -9,8 +9,8 @@ Q := @
 endif
 
 CFLAGS += -Wall -Wextra -Werror -Wno-char-subscripts \
-	-std=gnu99 -g3 -MD \
-	-I. -Iinclude -Iplatforms/common -I$(PLATFORM_DIR)
+	-std=gnu99 -g3 -MD -I./target \
+	-I. -Iinclude -I$(PLATFORM_DIR)
 
 ifeq ($(ENABLE_DEBUG), 1)
 CFLAGS += -DENABLE_DEBUG
@@ -55,6 +55,7 @@ SRC =			\
 	stm32h7.c	\
 	stm32l0.c	\
 	stm32l4.c	\
+	swdptap.c	\
 	target.c	\
 
 include $(PLATFORM_DIR)/Makefile.inc
@@ -72,7 +73,7 @@ SRC += jtagtap_generic.c swdptap_generic.c
 endif
 
 ifndef OWN_HL
-SRC += jtag_scan.c jtagtap.c swdptap.c
+SRC += jtag_scan.c jtagtap.c
 else
 CFLAGS += -DOWN_HL
 endif
@@ -81,6 +82,8 @@ ifdef PC_HOSTED
 CFLAGS += -DPC_HOSTED=1
 else
 CFLAGS += -DPC_HOSTED=0
+VPATH += platforms/common
+CFLAGS += -Iplatforms/common
 endif
 
 OBJ = $(patsubst %.S,%.o,$(patsubst %.c,%.o,$(SRC)))

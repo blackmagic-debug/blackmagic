@@ -34,13 +34,10 @@ typedef struct target_s target;
 typedef uint32_t target_addr;
 struct target_controller;
 
-#if defined(PC_HOSTED)
+#if PC_HOSTED == 1
 int platform_adiv5_swdp_scan(void);
 int platform_jtag_scan(const uint8_t *lrlens);
 #endif
-int adiv5_swdp_scan(void);
-int jtag_scan(const uint8_t *lrlens);
-
 int adiv5_swdp_scan(void);
 int jtag_scan(const uint8_t *lrlens);
 

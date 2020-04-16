@@ -28,11 +28,6 @@ enum {
 	SWDIO_STATUS_DRIVE
 };
 
-int swdptap_init(void)
-{
-	return 0;
-}
-
 static void swdptap_turnaround(int dir)
 {
 	static int olddir = SWDIO_STATUS_FLOAT;
@@ -54,26 +49,7 @@ static void swdptap_turnaround(int dir)
 		SWDIO_MODE_DRIVE();
 }
 
-bool swdptap_bit_in(void)
-{
-	uint16_t ret;
-
-	swdptap_turnaround(SWDIO_STATUS_FLOAT);
-
-	ret = gpio_get(SWDIO_PORT, SWDIO_PIN);
-	gpio_set(SWCLK_PORT, SWCLK_PIN);
-	gpio_set(SWCLK_PORT, SWCLK_PIN);
-	gpio_clear(SWCLK_PORT, SWCLK_PIN);
-
-#ifdef DEBUG_SWD_BITS
-	DEBUG("%d", ret?1:0);
-#endif
-
-	return ret != 0;
-}
-
-uint32_t
-swdptap_seq_in(int ticks)
+static uint32_t swdptap_seq_in(int ticks)
 {
 	uint32_t index = 1;
 	uint32_t ret = 0;
@@ -97,8 +73,7 @@ swdptap_seq_in(int ticks)
 	return ret;
 }
 
-bool
-swdptap_seq_in_parity(uint32_t *ret, int ticks)
+static bool swdptap_seq_in_parity(uint32_t *ret, int ticks)
 {
 	uint32_t index = 1;
 	uint8_t parity = 0;
@@ -130,22 +105,7 @@ swdptap_seq_in_parity(uint32_t *ret, int ticks)
 	return parity;
 }
 
-void swdptap_bit_out(bool val)
-{
-#ifdef DEBUG_SWD_BITS
-	DEBUG("%d", val);
-#endif
-
-	swdptap_turnaround(SWDIO_STATUS_DRIVE);
-
-	gpio_set_val(SWDIO_PORT, SWDIO_PIN, val);
-	gpio_clear(SWCLK_PORT, SWCLK_PIN);
-	gpio_set(SWCLK_PORT, SWCLK_PIN);
-	gpio_set(SWCLK_PORT, SWCLK_PIN);
-	gpio_clear(SWCLK_PORT, SWCLK_PIN);
-}
-void
-swdptap_seq_out(uint32_t MS, int ticks)
+static void swdptap_seq_out(uint32_t MS, int ticks)
 {
 	int data = MS & 1;
 #ifdef DEBUG_SWD_BITS
@@ -163,8 +123,7 @@ swdptap_seq_out(uint32_t MS, int ticks)
 	}
 }
 
-void
-swdptap_seq_out_parity(uint32_t MS, int ticks)
+static void swdptap_seq_out_parity(uint32_t MS, int ticks)
 {
 	uint8_t parity = 0;
 	int data = MS & 1;
@@ -187,4 +146,16 @@ swdptap_seq_out_parity(uint32_t MS, int ticks)
 	gpio_set(SWCLK_PORT, SWCLK_PIN);
 	gpio_set(SWCLK_PORT, SWCLK_PIN);
 	gpio_clear(SWCLK_PORT, SWCLK_PIN);
+}
+
+swd_proc_t swd_proc;
+
+int swdptap_init(void)
+{
+	swd_proc.swdptap_seq_in  = swdptap_seq_in;
+	swd_proc.swdptap_seq_in_parity  = swdptap_seq_in_parity;
+	swd_proc.swdptap_seq_out = swdptap_seq_out;
+	swd_proc.swdptap_seq_out_parity  = swdptap_seq_out_parity;
+
+	return 0;
 }

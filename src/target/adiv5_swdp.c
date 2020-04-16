@@ -53,24 +53,28 @@ int adiv5_swdp_scan(void)
 		return -1;
 	}
 
+#if PC_HOSTED == 1
+	if (platform_swdptap_init())
+#else
 	if (swdptap_init())
+#endif
 		return -1;
 
 	/* Switch from JTAG to SWD mode */
-	swdptap_seq_out(0xFFFFFFFF, 16);
-	swdptap_seq_out(0xFFFFFFFF, 32);
-	swdptap_seq_out(0xFFFFFFFF, 18);
-	swdptap_seq_out(0xE79E, 16); /* 0b0111100111100111 */
-	swdptap_seq_out(0xFFFFFFFF, 32);
-	swdptap_seq_out(0xFFFFFFFF, 18);
-	swdptap_seq_out(0, 16);
+	swd_proc.swdptap_seq_out(0xFFFFFFFF, 16);
+	swd_proc.swdptap_seq_out(0xFFFFFFFF, 32);
+	swd_proc.swdptap_seq_out(0xFFFFFFFF, 18);
+	swd_proc.swdptap_seq_out(0xE79E, 16); /* 0b0111100111100111 */
+	swd_proc.swdptap_seq_out(0xFFFFFFFF, 32);
+	swd_proc.swdptap_seq_out(0xFFFFFFFF, 18);
+	swd_proc.swdptap_seq_out(0, 16);
 
 	/* Read the SW-DP IDCODE register to syncronise */
 	/* This could be done with adiv_swdp_low_access(), but this doesn't
 	 * allow the ack to be checked here. */
-	swdptap_seq_out(0xA5, 8);
-	ack = swdptap_seq_in(3);
-	if((ack != SWDP_ACK_OK) || swdptap_seq_in_parity(&dp->idcode, 32)) {
+	swd_proc.swdptap_seq_out(0xA5, 8);
+	ack = swd_proc.swdptap_seq_in(3);
+	if((ack != SWDP_ACK_OK) || swd_proc.swdptap_seq_in_parity(&dp->idcode, 32)) {
 		DEBUG("\n");
 		free(dp);
 		return -1;
@@ -143,8 +147,8 @@ static uint32_t adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 
 	platform_timeout_set(&timeout, 2000);
 	do {
-		swdptap_seq_out(request, 8);
-		ack = swdptap_seq_in(3);
+		swd_proc.swdptap_seq_out(request, 8);
+		ack = swd_proc.swdptap_seq_in(3);
 	} while (ack == SWDP_ACK_WAIT && !platform_timeout_is_expired(&timeout));
 
 	if (ack == SWDP_ACK_WAIT)
@@ -159,10 +163,10 @@ static uint32_t adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 		raise_exception(EXCEPTION_ERROR, "SWDP invalid ACK");
 
 	if(RnW) {
-		if(swdptap_seq_in_parity(&response, 32))  /* Give up on parity error */
+		if(swd_proc.swdptap_seq_in_parity(&response, 32))  /* Give up on parity error */
 			raise_exception(EXCEPTION_ERROR, "SWDP Parity error");
 	} else {
-		swdptap_seq_out_parity(value, 32);
+		swd_proc.swdptap_seq_out_parity(value, 32);
 		/* RM0377 Rev. 8 Chapter 27.5.4 for STM32L0x1 states:
 		 * Because of the asynchronous clock domains SWCLK and HCLK,
 		 * two extra SWCLK cycles are needed after a write transaction
@@ -173,7 +177,7 @@ static uint32_t adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 		 * for a power-up request. If the next transaction (requiring
 		 * a power-up) occurs immediately, it will fail.
 		 */
-		swdptap_seq_out(0, 2);
+		swd_proc.swdptap_seq_out(0, 2);
 	}
 
 	return response;
