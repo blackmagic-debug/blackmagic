@@ -33,7 +33,17 @@
 #include "general.h"
 #include "jtagtap.h"
 
-int jtagtap_init(void)
+jtag_proc_t jtag_proc;
+
+static void jtagtap_reset(void);
+static void jtagtap_tms_seq(uint32_t MS, int ticks);
+static void jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms,
+								const uint8_t *DI, int ticks);
+static void jtagtap_tdi_seq(
+	const uint8_t final_tms, const uint8_t *DI, int ticks);
+static uint8_t jtagtap_next(uint8_t dTMS, uint8_t dTDI);
+
+int platform_jtagtap_init(void)
 {
 	assert(ftdic != NULL);
 	int err = ftdi_usb_purge_buffers(ftdic);
@@ -65,6 +75,12 @@ int jtagtap_init(void)
 	platform_buffer_write(ftdi_init, 9);
 	platform_buffer_flush();
 
+	jtag_proc.jtagtap_reset = jtagtap_reset;
+	jtag_proc.jtagtap_next =jtagtap_next;
+	jtag_proc.jtagtap_tms_seq = jtagtap_tms_seq;
+	jtag_proc.jtagtap_tdi_tdo_seq = jtagtap_tdi_tdo_seq;
+	jtag_proc.jtagtap_tdi_seq = jtagtap_tdi_seq;
+
 	/* Go to JTAG mode for SWJ-DP */
 	for (int i = 0; i <= 50; i++)
 		jtagtap_next(1, 0);		/* Reset SW-DP */
@@ -79,8 +95,7 @@ void jtagtap_reset(void)
 	jtagtap_soft_reset();
 }
 
-void
-jtagtap_tms_seq(uint32_t MS, int ticks)
+static void jtagtap_tms_seq(uint32_t MS, int ticks)
 {
 	uint8_t tmp[3] = {MPSSE_WRITE_TMS | MPSSE_LSB | MPSSE_BITMODE| MPSSE_READ_NEG, 0, 0};
 	while(ticks >= 0) {
@@ -92,8 +107,8 @@ jtagtap_tms_seq(uint32_t MS, int ticks)
 	}
 }
 
-void
-jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int ticks)
+static void jtagtap_tdi_tdo_seq(
+	uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int ticks)
 {
 	int rsize, rticks;
 
@@ -157,12 +172,13 @@ jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int
 	}
 }
 
-void jtagtap_tdi_seq(const uint8_t final_tms, const uint8_t *DI, int ticks)
+static void jtagtap_tdi_seq(
+	const uint8_t final_tms, const uint8_t *DI, int ticks)
 {
 	return jtagtap_tdi_tdo_seq(NULL,  final_tms, DI, ticks);
 }
 
-uint8_t jtagtap_next(uint8_t dTMS, uint8_t dTDI)
+static uint8_t jtagtap_next(uint8_t dTMS, uint8_t dTDI)
 {
 	uint8_t ret;
 	uint8_t tmp[3] = {MPSSE_WRITE_TMS | MPSSE_DO_READ | MPSSE_LSB | MPSSE_BITMODE | MPSSE_WRITE_NEG, 0, 0};

@@ -17,6 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+#include <jtagtap.h>
 
 #ifndef __JTAG_SCAN_H
 #define __JTAG_SCAN_H
@@ -25,7 +26,6 @@
 #define JTAG_MAX_IR_LEN	16
 
 typedef struct jtag_dev_s {
-#if !defined(JTAG_HL)
 	union {
 		uint8_t dev;
 		uint8_t dr_prescan;
@@ -35,20 +35,16 @@ typedef struct jtag_dev_s {
 	uint8_t ir_len;
 	uint8_t ir_prescan;
 	uint8_t ir_postscan;
-#endif
 	uint32_t idcode;
 	const char *descr;
-#if !defined(JTAG_HL)
 	uint32_t current_ir;
-#endif
-
 } jtag_dev_t;
 
 extern struct jtag_dev_s jtag_devs[JTAG_MAX_DEVS+1];
 extern int jtag_dev_count;
 
-void jtag_dev_write_ir(jtag_dev_t *dev, uint32_t ir);
-void jtag_dev_shift_dr(jtag_dev_t *dev, uint8_t *dout, const uint8_t *din, int ticks);
+void jtag_dev_write_ir(jtag_proc_t *jp, jtag_dev_t *dev, uint32_t ir);
+void jtag_dev_shift_dr(jtag_proc_t *jp, jtag_dev_t *dev, uint8_t *dout, const uint8_t *din, int ticks);
 
 #endif
 

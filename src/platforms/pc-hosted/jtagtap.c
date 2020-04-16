@@ -35,9 +35,17 @@
 #include "remote.h"
 #include "jtagtap.h"
 
-/* See remote.c/.h for protocol information */
+jtag_proc_t jtag_proc;
 
-int jtagtap_init(void)
+static void jtagtap_reset(void);
+static void jtagtap_tms_seq(uint32_t MS, int ticks);
+static void jtagtap_tdi_tdo_seq(
+	uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int ticks);
+static void jtagtap_tdi_seq(
+	const uint8_t final_tms, const uint8_t *DI, int ticks);
+static uint8_t jtagtap_next(uint8_t dTMS, uint8_t dTDI);
+
+int platform_jtagtap_init(void)
 {
   uint8_t construct[PLATFORM_MAX_MSG_SIZE];
   int s;
@@ -52,10 +60,18 @@ int jtagtap_init(void)
       exit(-1);
     }
 
+  jtag_proc.jtagtap_reset = jtagtap_reset;
+  jtag_proc.jtagtap_next =jtagtap_next;
+  jtag_proc.jtagtap_tms_seq = jtagtap_tms_seq;
+  jtag_proc.jtagtap_tdi_tdo_seq = jtagtap_tdi_tdo_seq;
+  jtag_proc.jtagtap_tdi_seq = jtagtap_tdi_seq;
+
   return 0;
 }
 
-void jtagtap_reset(void)
+/* See remote.c/.h for protocol information */
+
+static void jtagtap_reset(void)
 {
   uint8_t construct[PLATFORM_MAX_MSG_SIZE];
   int s;
@@ -71,7 +87,7 @@ void jtagtap_reset(void)
     }
 }
 
-void jtagtap_tms_seq(uint32_t MS, int ticks)
+static void jtagtap_tms_seq(uint32_t MS, int ticks)
 
 {
   uint8_t construct[PLATFORM_MAX_MSG_SIZE];
@@ -88,7 +104,8 @@ void jtagtap_tms_seq(uint32_t MS, int ticks)
     }
 }
 
-void jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int ticks)
+static void jtagtap_tdi_tdo_seq(
+	uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int ticks)
 {
   uint8_t construct[PLATFORM_MAX_MSG_SIZE];
   int s;
@@ -116,14 +133,14 @@ void jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms, const uint8_t *DI
   }
 }
 
-void jtagtap_tdi_seq(const uint8_t final_tms, const uint8_t *DI, int ticks)
-
+static void jtagtap_tdi_seq(
+	const uint8_t final_tms, const uint8_t *DI, int ticks)
 {
   return jtagtap_tdi_tdo_seq(NULL,  final_tms, DI, ticks);
 }
 
 
-uint8_t jtagtap_next(uint8_t dTMS, uint8_t dTDI)
+static uint8_t jtagtap_next(uint8_t dTMS, uint8_t dTDI)
 
 {
   uint8_t construct[PLATFORM_MAX_MSG_SIZE];

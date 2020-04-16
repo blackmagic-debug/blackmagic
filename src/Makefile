@@ -32,6 +32,8 @@ SRC =			\
 	gdb_packet.c	\
 	hex_utils.c	\
 	jtag_devs.c	\
+	jtag_scan.c	\
+	jtagtap.c	\
 	lmi.c		\
 	lpc_common.c	\
 	lpc11xx.c	\
@@ -70,12 +72,6 @@ endif
 
 ifdef NO_OWN_LL
 SRC += jtagtap_generic.c swdptap_generic.c
-endif
-
-ifndef OWN_HL
-SRC += jtag_scan.c jtagtap.c
-else
-CFLAGS += -DOWN_HL
 endif
 
 ifdef PC_HOSTED

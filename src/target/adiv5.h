@@ -142,10 +142,15 @@ typedef struct ADIv5_DP_s {
                                uint16_t addr, uint32_t value);
 	void (*abort)(struct ADIv5_DP_s *dp, uint32_t abort);
 
+#if PC_HOSTED == 1
+	jtag_dev_t *dev;
+	uint8_t fault;
+#else
 	union {
 		jtag_dev_t *dev;
 		uint8_t fault;
 	};
+#endif
 } ADIv5_DP_t;
 
 static inline uint32_t adiv5_dp_read(ADIv5_DP_t *dp, uint16_t addr)
@@ -191,6 +196,7 @@ void adiv5_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value);
 uint32_t adiv5_ap_read(ADIv5_AP_t *ap, uint16_t addr);
 
 void adiv5_jtag_dp_handler(jtag_dev_t *dev);
+int platform_jtag_dp_init(ADIv5_DP_t *dp);
 
 void adiv5_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len);
 void adiv5_mem_write(ADIv5_AP_t *ap, uint32_t dest, const void *src, size_t len);
