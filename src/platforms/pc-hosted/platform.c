@@ -44,6 +44,11 @@ int platform_jtag_scan(const uint8_t *lrlens)
 	return jtag_scan(lrlens);
 }
 
+int platform_jtag_dp_init()
+{
+	return 0;
+}
+
 void platform_init(int argc, char **argv)
 {
   cl_opts.opt_idstring = "Blackmagic Debug Probe Remote";

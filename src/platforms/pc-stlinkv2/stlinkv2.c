@@ -29,6 +29,8 @@
 #include "adiv5.h"
 #include "stlinkv2.h"
 #include "exception.h"
+#include "jtag_devs.h"
+#include "target.h"
 
 #include <assert.h>
 #include <unistd.h>
@@ -1382,4 +1384,45 @@ uint32_t adiv5_ap_read(ADIv5_AP_t *ap, uint16_t addr)
 	uint32_t ret;
 	stlink_read_dp_register(ap->apsel, addr, &ret);
 	return ret;
+}
+
+struct jtag_dev_s jtag_devs[JTAG_MAX_DEVS+1];
+int jtag_dev_count;
+jtag_proc_t jtag_proc;
+
+int jtag_scan_stlinkv2(const uint8_t *irlens)
+{
+	uint32_t idcodes[JTAG_MAX_DEVS+1];
+	(void) *irlens;
+	target_list_free();
+
+	jtag_dev_count = 0;
+	memset(&jtag_devs, 0, sizeof(jtag_devs));
+	if (stlink_enter_debug_jtag())
+		return 0;
+	jtag_dev_count = stlink_read_idcodes(idcodes);
+	/* Check for known devices and handle accordingly */
+	for(int i = 0; i < jtag_dev_count; i++)
+		jtag_devs[i].idcode = idcodes[i];
+	for(int i = 0; i < jtag_dev_count; i++)
+		for(int j = 0; dev_descr[j].idcode; j++)
+			if((jtag_devs[i].idcode & dev_descr[j].idmask) ==
+			   dev_descr[j].idcode) {
+				if(dev_descr[j].handler)
+					dev_descr[j].handler(&jtag_devs[i]);
+				break;
+			}
+
+	return jtag_dev_count;
+}
+
+int platform_jtag_dp_init(ADIv5_DP_t *dp)
+{
+	dp->dp_read = stlink_dp_read;
+	dp->error = stlink_dp_error;
+	dp->low_access = stlink_dp_low_access;
+	dp->abort = stlink_dp_abort;
+
+	return true;
+
 }

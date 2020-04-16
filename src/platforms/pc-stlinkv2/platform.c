@@ -48,6 +48,7 @@ int platform_swdptap_init(void)
 }
 
 swd_proc_t swd_proc;
+jtag_proc_t jtag_proc;
 
 static int adiv5_swdp_scan_stlinkv2(void)
 {
@@ -106,4 +107,9 @@ int platform_buffer_read(uint8_t *data, int size)
 {
 	(void) data;
 	return size;
+}
+
+int platform_jtagtap_init(void)
+{
+	return 0;
 }
