@@ -1,5 +1,5 @@
 SYS = $(shell $(CC) -dumpmachine)
-CFLAGS += -DSTLINKV2 -DJTAG_HL -DENABLE_DEBUG
+CFLAGS += -DENABLE_DEBUG -DPLATFORM_HAS_DEBUG
 CFLAGS +=-I ./target -I./platforms/pc
 LDFLAGS += -lusb-1.0
 ifneq (, $(findstring mingw, $(SYS)))
