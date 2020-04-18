@@ -43,6 +43,8 @@ typedef struct BMP_CL_OPTIONS_s {
 	char *opt_flash_file;
 	char *opt_device;
 	char *opt_serial;
+	char *opt_ident_string;
+	int  opt_position;
 	char *opt_cable;
 	int opt_debuglevel;
 	int opt_target_dev;
