@@ -74,7 +74,7 @@ enum cid_class {
 	cidc_unknown = 0x10
 };
 
-#ifdef PLATFORM_HAS_DEBUG
+#ifdef ENABLE_DEBUG
 /* The reserved ones only have an R in them, to save a bit of space. */
 static const char * const cidc_debug_strings[] =
 {
@@ -111,7 +111,7 @@ enum arm_arch {
 	aa_end
 };
 
-#ifdef PLATFORM_HAS_DEBUG
+#ifdef ENABLE_DEBUG
 #define PIDR_PN_BIT_STRINGS(...) __VA_ARGS__
 #else
 #define PIDR_PN_BIT_STRINGS(...)
@@ -155,7 +155,7 @@ static const struct {
 	uint16_t part_number;
 	enum arm_arch arch;
 	enum cid_class cidc;
-#ifdef PLATFORM_HAS_DEBUG
+#ifdef ENABLE_DEBUG
 	const char *type;
 	const char *full;
 #endif
@@ -277,7 +277,7 @@ static bool adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, int recursion, 
 	uint64_t pidr = adiv5_ap_read_pidr(ap, addr);
 	uint32_t cidr = adiv5_ap_read_id(ap, addr + CIDR0_OFFSET);
 	bool res = false;
-#if defined(ENABLE_DEBUG) && defined(PLATFORM_HAS_DEBUG)
+#if defined(ENABLE_DEBUG)
 	char indent[recursion + 1];
 
 	for(int i = 0; i < recursion; i++) indent[i] = ' ';
@@ -303,7 +303,7 @@ static bool adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, int recursion, 
 	/* ROM table */
 	if (cid_class == cidc_romtab) {
 		/* Check SYSMEM bit */
-#if defined(ENABLE_DEBUG) && defined(PLATFORM_HAS_DEBUG)
+#if defined(ENABLE_DEBUG)
 		uint32_t memtype = adiv5_mem_read32(ap, addr | ADIV5_ROM_MEMTYPE) &
 			ADIV5_ROM_MEMTYPE_SYSMEM;
 

@@ -36,8 +36,6 @@
 #define FT2232_VID	0x0403
 #define FT2232_PID	0x6010
 
-#define PLATFORM_HAS_DEBUG
-
 #define PLATFORM_IDENT() "FTDI/MPSSE"
 #define SET_RUN_STATE(state)
 #define SET_IDLE_STATE(state)
