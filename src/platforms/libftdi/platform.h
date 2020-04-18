@@ -38,7 +38,7 @@
 
 #define PLATFORM_HAS_DEBUG
 
-#define PLATFORM_IDENT "FTDI/MPSSE"
+#define PLATFORM_IDENT() "FTDI/MPSSE"
 #define SET_RUN_STATE(state)
 #define SET_IDLE_STATE(state)
 #define SET_ERROR_STATE(state)

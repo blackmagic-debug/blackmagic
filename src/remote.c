@@ -243,7 +243,7 @@ void remotePacketProcessGEN(uint8_t i, char *packet)
 		break;
 
 #if !defined(BOARD_IDENT) && defined(PLATFORM_IDENT)
-# define BOARD_IDENT PLATFORM_IDENT
+# define BOARD_IDENT() PLATFORM_IDENT
 #endif
 	case REMOTE_START:
 		_respondS(REMOTE_RESP_OK, BOARD_IDENT " " FIRMWARE_VERSION);
