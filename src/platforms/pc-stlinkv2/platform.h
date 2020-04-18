@@ -35,7 +35,7 @@
 
 #define PLATFORM_HAS_DEBUG
 
-#define PLATFORM_IDENT "StlinkV2/3"
+#define PLATFORM_IDENT() "StlinkV2/3"
 #define SET_RUN_STATE(state)
 void stlink_check_detach(int state);
 #define SET_IDLE_STATE(state) stlink_check_detach(state)

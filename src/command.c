@@ -136,7 +136,7 @@ bool cmd_version(target *t, int argc, char **argv)
 	(void)argc;
 	(void)argv;
 #if PC_HOSTED == 1
-	gdb_outf("Black Magic Probe, PC-Hosted for " PLATFORM_IDENT
+	gdb_outf("Black Magic Probe, PC-Hosted for " PLATFORM_IDENT()
 			 ", Version " FIRMWARE_VERSION "\n");
 #else
 	gdb_outf("Black Magic Probe (Firmware " FIRMWARE_VERSION ") (Hardware Version %d)\n", platform_hwversion());
