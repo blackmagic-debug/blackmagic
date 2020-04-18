@@ -120,12 +120,13 @@ static void cl_help(char **argv, BMP_CL_OPTIONS_t *opt)
 	printf("\t-h\t\t: This help.\n");
 	printf("\t-v[1|2]\t\t: Increasing verbosity\n");
 	printf("\t-d \"path\"\t: Use serial device at \"path\"\n");
+	printf("\t-P <num>\t: Use device found as <num>");
 	printf("\t-s \"string\"\t: Use dongle with (partial) "
 		  "serial number \"string\"\n");
 	printf("\t-c \"string\"\t: Use ftdi dongle with type \"string\"\n");
-	printf("\t-C\t\t: Connect under reset\n");
 	printf("\t-n\t\t: Exit immediate if no device found\n");
 	printf("\tRun mode related options:\n");
+	printf("\t-C\t\t: Connect under reset\n");
 	printf("\t-t\t\t: Scan SWD, with no target found scan jtag and exit\n");
 	printf("\t-E\t\t: Erase flash until flash end or for given size\n");
 	printf("\t-V\t\t: Verify flash against binary file\n");
@@ -149,7 +150,7 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 	opt->opt_target_dev = 1;
 	opt->opt_flash_start = 0x08000000;
 	opt->opt_flash_size = 16 * 1024 *1024;
-	while((c = getopt(argc, argv, "Ehv::d:s:c:CnN:tVta:S:jprR")) != -1) {
+	while((c = getopt(argc, argv, "Ehv::d:s:I:c:CnN:tVta:S:jpP:rR")) != -1) {
 		switch(c) {
 		case 'c':
 			if (optarg)
@@ -181,6 +182,10 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 			if (optarg)
 				opt->opt_serial = optarg;
 			break;
+		case 'I':
+			if (optarg)
+				opt->opt_ident_string = optarg;
+			break;
 		case 'E':
 			opt->opt_mode = BMP_MODE_FLASH_ERASE;
 			break;
@@ -206,6 +211,10 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 		case 'N':
 			if (optarg)
 				opt->opt_target_dev = strtol(optarg, NULL, 0);
+			break;
+		case 'P':
+			if (optarg)
+				opt->opt_position = atoi(optarg);
 			break;
 		case 'S':
 			if (optarg) {
@@ -398,7 +407,7 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 		}
 		if (read_file != -1)
 			close(read_file);
-		printf("Read/Verifed succeeded for %d bytes\n", bytes_read);
+		printf("Read/Verified succeeded for %d bytes\n", bytes_read);
 	}
   free_map:
 	if (map.size)
