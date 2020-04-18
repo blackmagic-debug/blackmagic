@@ -310,3 +310,8 @@ const char *platform_target_voltage(void)
 {
 	return "not supported";
 }
+
+void platform_adiv5_dp_defaults(void *arg)
+{
+	(void) arg;
+}

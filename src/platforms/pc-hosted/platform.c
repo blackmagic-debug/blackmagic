@@ -181,3 +181,8 @@ const char *platform_target_voltage(void)
 
   return (char *)&construct[1];
 }
+
+void platform_adiv5_dp_defaults(void *arg)
+{
+	(void) arg;
+}

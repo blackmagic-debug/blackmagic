@@ -1150,7 +1150,7 @@ uint32_t stlink_dp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 	return response;
 }
 
-bool adiv5_ap_setup(int ap)
+static bool stlink_ap_setup(int ap)
 {
 	if (ap > 7)
 		return false;
@@ -1172,7 +1172,7 @@ bool adiv5_ap_setup(int ap)
 	return true;
 }
 
-void adiv5_ap_cleanup(int ap)
+static void stlink_ap_cleanup(int ap)
 {
        uint8_t cmd[16] = {
                STLINK_DEBUG_COMMAND,
@@ -1195,7 +1195,7 @@ static int stlink_usb_get_rw_status(bool verbose)
 	return stlink_usb_error_check(data, verbose);
 }
 
-void stlink_readmem(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
+static void stlink_readmem(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
 {
 	if (len == 0)
 		return;
@@ -1246,7 +1246,7 @@ void stlink_readmem(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
 	DEBUG_STLINK("\n");
 }
 
-void stlink_writemem8(ADIv5_AP_t *ap, uint32_t addr, size_t len,
+static void stlink_writemem8(ADIv5_AP_t *ap, uint32_t addr, size_t len,
 					  uint8_t *buffer)
 {
 	DEBUG_STLINK("Mem Write8 AP %d len %zu addr 0x%08" PRIx32 ": ",
@@ -1275,7 +1275,7 @@ void stlink_writemem8(ADIv5_AP_t *ap, uint32_t addr, size_t len,
 	}
 }
 
-void stlink_writemem16(ADIv5_AP_t *ap, uint32_t addr, size_t len,
+static void stlink_writemem16(ADIv5_AP_t *ap, uint32_t addr, size_t len,
 					   uint16_t *buffer)
 {
 	DEBUG_STLINK("Mem Write16 AP %d len %zu addr 0x%08" PRIx32 ": ",
@@ -1295,7 +1295,7 @@ void stlink_writemem16(ADIv5_AP_t *ap, uint32_t addr, size_t len,
 	stlink_usb_get_rw_status(true);
 }
 
-void stlink_writemem32(ADIv5_AP_t *ap, uint32_t addr, size_t len,
+static void stlink_writemem32(ADIv5_AP_t *ap, uint32_t addr, size_t len,
 					   uint32_t *buffer)
 {
 	DEBUG_STLINK("Mem Write32 AP %d len %zu addr 0x%08" PRIx32 ": ",
@@ -1350,15 +1350,9 @@ void stlink_reg_write(ADIv5_AP_t *ap, int num, uint32_t val)
 	stlink_usb_error_check(res, true);
 }
 
-void
-adiv5_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
-{
-	stlink_readmem(ap, dest, src, len);
-}
-
-void
-adiv5_mem_write_sized(ADIv5_AP_t *ap, uint32_t dest, const void *src,
-					  size_t len, enum align align)
+static void stlink_mem_write_sized(	ADIv5_AP_t *ap, uint32_t dest,
+									const void *src, size_t len,
+									enum align align)
 {
 	if (len == 0)
 		return;
@@ -1374,12 +1368,12 @@ adiv5_mem_write_sized(ADIv5_AP_t *ap, uint32_t dest, const void *src,
 	}
 }
 
-void adiv5_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value)
+static void stlink_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value)
 {
-	stlink_write_dp_register(ap->apsel, addr, value);
+       stlink_write_dp_register(ap->apsel, addr, value);
 }
 
-uint32_t adiv5_ap_read(ADIv5_AP_t *ap, uint16_t addr)
+static uint32_t stlink_ap_read(ADIv5_AP_t *ap, uint16_t addr)
 {
 	uint32_t ret;
 	stlink_read_dp_register(ap->apsel, addr, &ret);
@@ -1425,4 +1419,17 @@ int platform_jtag_dp_init(ADIv5_DP_t *dp)
 
 	return true;
 
+}
+
+void platform_adiv5_dp_defaults(ADIv5_DP_t *dp)
+{
+	dp->ap_regs_read = stlink_regs_read;
+	dp->ap_reg_read = stlink_reg_read;
+	dp->ap_reg_write = stlink_reg_write;
+	dp->ap_setup = stlink_ap_setup;
+	dp->ap_cleanup = stlink_ap_cleanup;
+	dp->ap_write = stlink_ap_write;
+	dp->ap_read = stlink_ap_read;
+	dp->mem_read = stlink_readmem;
+	dp->mem_write_sized = stlink_mem_write_sized;
 }
