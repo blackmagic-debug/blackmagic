@@ -478,88 +478,98 @@ static void cortexm_regs_read(target *t, void *data)
 	uint32_t *regs = data;
 	ADIv5_AP_t *ap = cortexm_ap(t);
 	unsigned i;
-#if defined(STLINKV2)
-	uint32_t base_regs[21];
-	extern void stlink_regs_read(ADIv5_AP_t *ap, void *data);
-	extern uint32_t stlink_reg_read(ADIv5_AP_t *ap, int idx);
-	stlink_regs_read(ap, base_regs);
-	for(i = 0; i < sizeof(regnum_cortex_m) / 4; i++)
-		*regs++ = base_regs[regnum_cortex_m[i]];
-	if (t->target_options & TOPT_FLAVOUR_V7MF)
-		for(size_t t = 0; t < sizeof(regnum_cortex_mf) / 4; t++)
-			*regs++ = stlink_reg_read(ap, regnum_cortex_mf[t]);
-#else
-	/* FIXME: Describe what's really going on here */
-	adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw | ADIV5_AP_CSW_SIZE_WORD);
-
-	/* Map the banked data registers (0x10-0x1c) to the
-	 * debug registers DHCSR, DCRSR, DCRDR and DEMCR respectively */
-	adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR, CORTEXM_DHCSR);
-
-	/* Walk the regnum_cortex_m array, reading the registers it
-	 * calls out. */
-	adiv5_ap_write(ap, ADIV5_AP_DB(DB_DCRSR), regnum_cortex_m[0]); /* Required to switch banks */
-	*regs++ = adiv5_dp_read(ap->dp, ADIV5_AP_DB(DB_DCRDR));
-	for(i = 1; i < sizeof(regnum_cortex_m) / 4; i++) {
-		adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DB(DB_DCRSR),
-		                    regnum_cortex_m[i]);
-		*regs++ = adiv5_dp_read(ap->dp, ADIV5_AP_DB(DB_DCRDR));
+#if PC_HOSTED == 1
+	if ((ap->dp->ap_reg_read) && (ap->dp->ap_regs_read)) {
+		uint32_t base_regs[21];
+		ap->dp->ap_regs_read(ap, base_regs);
+		for(i = 0; i < sizeof(regnum_cortex_m) / 4; i++)
+			*regs++ = base_regs[regnum_cortex_m[i]];
+		if (t->target_options & TOPT_FLAVOUR_V7MF)
+			for(size_t t = 0; t < sizeof(regnum_cortex_mf) / 4; t++)
+			*regs++ = ap->dp->ap_reg_read(ap, regnum_cortex_mf[t]);
 	}
-	if (t->target_options & TOPT_FLAVOUR_V7MF)
-		for(i = 0; i < sizeof(regnum_cortex_mf) / 4; i++) {
-			adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE,
-			                    ADIV5_AP_DB(DB_DCRSR),
-			                    regnum_cortex_mf[i]);
-			*regs++ = adiv5_dp_read(ap->dp, ADIV5_AP_DB(DB_DCRDR));
-		}
+#else
+	if (0) {}
 #endif
+	else {
+		/* FIXME: Describe what's really going on here */
+		adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw | ADIV5_AP_CSW_SIZE_WORD);
+
+		/* Map the banked data registers (0x10-0x1c) to the
+		 * debug registers DHCSR, DCRSR, DCRDR and DEMCR respectively */
+		adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR,
+							CORTEXM_DHCSR);
+
+		/* Walk the regnum_cortex_m array, reading the registers it
+		 * calls out. */
+		adiv5_ap_write(ap, ADIV5_AP_DB(DB_DCRSR), regnum_cortex_m[0]);
+       /* Required to switch banks */
+		*regs++ = adiv5_dp_read(ap->dp, ADIV5_AP_DB(DB_DCRDR));
+		for(i = 1; i < sizeof(regnum_cortex_m) / 4; i++) {
+		adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DB(DB_DCRSR),
+			regnum_cortex_m[i]);
+		*regs++ = adiv5_dp_read(ap->dp, ADIV5_AP_DB(DB_DCRDR));
+		}
+		if (t->target_options & TOPT_FLAVOUR_V7MF)
+			for(i = 0; i < sizeof(regnum_cortex_mf) / 4; i++) {
+				adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE,
+									ADIV5_AP_DB(DB_DCRSR),
+									regnum_cortex_mf[i]);
+				*regs++ = adiv5_dp_read(ap->dp, ADIV5_AP_DB(DB_DCRDR));
+			}
+		}
 }
 
 static void cortexm_regs_write(target *t, const void *data)
 {
 	const uint32_t *regs = data;
 	ADIv5_AP_t *ap = cortexm_ap(t);
-#if defined(STLINKV2)
-	extern void stlink_reg_write(ADIv5_AP_t *ap, int num, uint32_t val);
-	for(size_t z = 0; z < sizeof(regnum_cortex_m) / 4; z++) {
-		stlink_reg_write(ap, regnum_cortex_m[z], *regs);
-		regs++;
-	}
-	if (t->target_options & TOPT_FLAVOUR_V7MF)
-		for(size_t z = 0; z < sizeof(regnum_cortex_mf) / 4; z++) {
-			stlink_reg_write(ap, regnum_cortex_mf[z], *regs);
+#if PC_HOSTED == 1
+	if (ap->dp->ap_reg_write) {
+		for (size_t z = 0; z < sizeof(regnum_cortex_m) / 4; z++) {
+			ap->dp->ap_reg_write(ap, regnum_cortex_m[z], *regs);
 			regs++;
+		}
+		if (t->target_options & TOPT_FLAVOUR_V7MF)
+			for(size_t z = 0; z < sizeof(regnum_cortex_mf) / 4; z++) {
+				ap->dp->ap_reg_write(ap, regnum_cortex_mf[z], *regs);
+				regs++;
+			}
 	}
 #else
-	unsigned i;
-
-	/* FIXME: Describe what's really going on here */
-	adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw | ADIV5_AP_CSW_SIZE_WORD);
-
-	/* Map the banked data registers (0x10-0x1c) to the
-	 * debug registers DHCSR, DCRSR, DCRDR and DEMCR respectively */
-	adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR, CORTEXM_DHCSR);
-
-	/* Walk the regnum_cortex_m array, writing the registers it
-	 * calls out. */
-	adiv5_ap_write(ap, ADIV5_AP_DB(DB_DCRDR), *regs++); /* Required to switch banks */
-	adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DB(DB_DCRSR),
-	                    0x10000 | regnum_cortex_m[0]);
-	for(i = 1; i < sizeof(regnum_cortex_m) / 4; i++) {
-		adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE,
-		                    ADIV5_AP_DB(DB_DCRDR), *regs++);
-		adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DB(DB_DCRSR),
-		                    0x10000 | regnum_cortex_m[i]);
-	}
-	if (t->target_options & TOPT_FLAVOUR_V7MF)
-		for(i = 0; i < sizeof(regnum_cortex_mf) / 4; i++) {
-			adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE,
-			                    ADIV5_AP_DB(DB_DCRDR), *regs++);
-			adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE,
-			                    ADIV5_AP_DB(DB_DCRSR),
-			                    0x10000 | regnum_cortex_mf[i]);
-		}
+	if (0) {}
 #endif
+	else {
+		unsigned i;
+
+		/* FIXME: Describe what's really going on here */
+		adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw | ADIV5_AP_CSW_SIZE_WORD);
+
+		/* Map the banked data registers (0x10-0x1c) to the
+		 * debug registers DHCSR, DCRSR, DCRDR and DEMCR respectively */
+		adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR,
+							CORTEXM_DHCSR);
+		/* Walk the regnum_cortex_m array, writing the registers it
+		 * calls out. */
+		adiv5_ap_write(ap, ADIV5_AP_DB(DB_DCRDR), *regs++);
+        /* Required to switch banks */
+		adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DB(DB_DCRSR),
+							0x10000 | regnum_cortex_m[0]);
+		for(i = 1; i < sizeof(regnum_cortex_m) / 4; i++) {
+			adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE,
+								ADIV5_AP_DB(DB_DCRDR), *regs++);
+			adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DB(DB_DCRSR),
+								0x10000 | regnum_cortex_m[i]);
+		}
+		if (t->target_options & TOPT_FLAVOUR_V7MF)
+			for(i = 0; i < sizeof(regnum_cortex_mf) / 4; i++) {
+				adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE,
+									ADIV5_AP_DB(DB_DCRDR), *regs++);
+				adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE,
+									ADIV5_AP_DB(DB_DCRSR),
+									0x10000 | regnum_cortex_mf[i]);
+			}
+	}
 }
 
 int cortexm_mem_write_sized(

@@ -399,8 +399,6 @@ static bool adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, int recursion, 
 	}
 	return res;
 }
-bool adiv5_ap_setup(int i);
-void adiv5_ap_cleanup(int i);
 
 ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel)
 {
@@ -441,12 +439,32 @@ ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel)
 	return ap;
 }
 
+static void ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value);
+static uint32_t ap_read(ADIv5_AP_t *ap, uint16_t addr);
+static void mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len);
+static void mem_write_sized(ADIv5_AP_t *ap, uint32_t dest, const void *src,
+							size_t len, enum align align);
 void adiv5_dp_init(ADIv5_DP_t *dp)
 {
 	volatile bool probed = false;
 	volatile uint32_t ctrlstat = 0;
 	adiv5_dp_ref(dp);
-
+#if PC_HOSTED  == 1
+	platform_adiv5_dp_defaults(dp);
+	if (!dp->ap_write)
+		dp->ap_write = ap_write;
+	if (!dp->ap_read)
+		dp->ap_read = ap_read;
+	if (!dp->mem_read)
+		dp->mem_read = mem_read;
+	if (!dp->mem_write_sized)
+		dp->mem_write_sized = mem_write_sized;
+#else
+	dp->ap_write = ap_write;
+	dp->ap_read = ap_read;
+	dp->mem_read = mem_read;
+	dp->mem_write_sized = mem_write_sized;
+#endif
 	volatile struct exception e;
 	TRY_CATCH (e, EXCEPTION_TIMEOUT) {
 		ctrlstat = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT);
@@ -507,11 +525,18 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 	int void_aps = 0;
 	for(int i = 0; (i < 256) && (void_aps < 8); i++) {
 		ADIv5_AP_t *ap = NULL;
-		if (adiv5_ap_setup(i))
+#if PC_HOSTED == 1
+		if ((!dp->ap_setup) || dp->ap_setup(i))
 			ap = adiv5_new_ap(dp, i);
+#else
+		ap = adiv5_new_ap(dp, i);
+#endif
 		if (ap == NULL) {
 			void_aps++;
-			adiv5_ap_cleanup(i);
+#if PC_HOSTED == 1
+			if (dp->ap_cleanup)
+				dp->ap_cleanup(i);
+#endif
 			if (i == 0)
 				return;
 			else
@@ -519,7 +544,10 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 		}
 		if (ap->base == last_base) {
 			DEBUG("AP %d: Duplicate base\n", i);
-			adiv5_ap_cleanup(i);
+#if PC_HOSTED == 1
+			if (dp->ap_cleanup)
+				dp->ap_cleanup(i);
+#endif
 			free(ap);
 			/* FIXME: Should we expect valid APs behind duplicate ones? */
 			return;
@@ -562,11 +590,6 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 #define ALIGNOF(x) (((x) & 3) == 0 ? ALIGN_WORD : \
                     (((x) & 1) == 0 ? ALIGN_HALFWORD : ALIGN_BYTE))
 
-#if !defined(JTAG_HL)
-
-bool adiv5_ap_setup(int i) {(void)i; return true;}
-void adiv5_ap_cleanup(int i) {(void)i;}
-
 /* Program the CSW and TAR for sequencial access at a given width */
 static void ap_mem_access_setup(ADIv5_AP_t *ap, uint32_t addr, enum align align)
 {
@@ -606,7 +629,7 @@ void * extract(void *dest, uint32_t src, uint32_t val, enum align align)
 	return (uint8_t *)dest + (1 << align);
 }
 
-void adiv5_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
+static void mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
 {
 	uint32_t tmp;
 	uint32_t osrc = src;
@@ -636,8 +659,8 @@ void adiv5_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
 	extract(dest, src, tmp, align);
 }
 
-void adiv5_mem_write_sized(ADIv5_AP_t *ap, uint32_t dest, const void *src,
-					  size_t len, enum align align)
+static void mem_write_sized(ADIv5_AP_t *ap, uint32_t dest, const void *src,
+							size_t len, enum align align)
 {
 	uint32_t odest = dest;
 
@@ -671,14 +694,14 @@ void adiv5_mem_write_sized(ADIv5_AP_t *ap, uint32_t dest, const void *src,
 	}
 }
 
-void adiv5_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value)
+static void ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value)
 {
 	adiv5_dp_write(ap->dp, ADIV5_DP_SELECT,
 			((uint32_t)ap->apsel << 24)|(addr & 0xF0));
 	adiv5_dp_write(ap->dp, addr, value);
 }
 
-uint32_t adiv5_ap_read(ADIv5_AP_t *ap, uint16_t addr)
+static uint32_t ap_read(ADIv5_AP_t *ap, uint16_t addr)
 {
 	uint32_t ret;
 	adiv5_dp_write(ap->dp, ADIV5_DP_SELECT,
@@ -686,7 +709,6 @@ uint32_t adiv5_ap_read(ADIv5_AP_t *ap, uint16_t addr)
 	ret = adiv5_dp_read(ap->dp, addr);
 	return ret;
 }
-#endif
 
 void adiv5_mem_write(ADIv5_AP_t *ap, uint32_t dest, const void *src, size_t len)
 {
