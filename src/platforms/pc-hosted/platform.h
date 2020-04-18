@@ -32,7 +32,6 @@
 #	endif
 #endif
 
-#define PLATFORM_HAS_DEBUG
 #define PLATFORM_HAS_POWER_SWITCH
 #define PLATFORM_MAX_MSG_SIZE (256)
 #define PLATFORM_IDENT() "PC-HOSTED"

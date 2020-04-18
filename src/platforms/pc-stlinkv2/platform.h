@@ -33,8 +33,6 @@
 #	endif
 #endif
 
-#define PLATFORM_HAS_DEBUG
-
 #define PLATFORM_IDENT() "StlinkV2/3"
 #define SET_RUN_STATE(state)
 void stlink_check_detach(int state);

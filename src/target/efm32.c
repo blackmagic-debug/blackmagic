@@ -720,7 +720,7 @@ static int efm32_flash_write(struct target_flash *f,
 	int ret = cortexm_run_stub(t, SRAM_BASE, dest, STUB_BUFFER_BASE, len,
 							   device->msc_addr);
 
-#ifdef PLATFORM_HAS_DEBUG
+#ifdef ENABLE_DEBUG
 	/* Check the MSC_IF */
 	uint32_t msc = device->msc_addr;
 	uint32_t msc_if = target_mem_read32(t, EFM32_MSC_IF(msc));
