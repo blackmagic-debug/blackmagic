@@ -33,7 +33,6 @@ SRC =			\
 	hex_utils.c	\
 	jtag_devs.c	\
 	jtag_scan.c	\
-	jtagtap.c	\
 	lmi.c		\
 	lpc_common.c	\
 	lpc11xx.c	\
@@ -57,7 +56,6 @@ SRC =			\
 	stm32h7.c	\
 	stm32l0.c	\
 	stm32l4.c	\
-	swdptap.c	\
 	target.c	\
 
 include $(PLATFORM_DIR)/Makefile.inc
@@ -81,6 +79,7 @@ endif
 ifdef PC_HOSTED
 CFLAGS += -DPC_HOSTED=1
 else
+SRC += swdptap.c jtagtap.c
 CFLAGS += -DPC_HOSTED=0
 VPATH += platforms/common
 CFLAGS += -Iplatforms/common
