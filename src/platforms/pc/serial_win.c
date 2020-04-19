@@ -25,18 +25,20 @@
 
 HANDLE hComm;
 
-int serial_open(BMP_CL_OPTIONS_t *opt)
+int serial_open(BMP_CL_OPTIONS_t *cl_opts, char * serial)
 {
-	if (!opt->opt_device) {
+	(void) serial; /* FIXME: Does Windows allow open with USB serial no? */
+	if (!cl_opts->opt_device) {
 		fprintf(stderr,"Specify the serial device to use!\n");
 		return -1;
 	}
 	char device[256];
-	if (strstr(opt->opt_device, "\\\\.\\")) {
-		strncpy(device, opt->opt_device, sizeof(device) - 1);
+	if (strstr(device, "\\\\.\\")) {
+		strncpy(device, cl_opts->opt_device, sizeof(cl_opts->opt_device) - 1);
 	} else {
 		strcpy(device,  "\\\\.\\");
-		strncat(device, opt->opt_device, sizeof(device) - strlen(device) - 1);
+		strncat(device, cl_opts->opt_device,
+				sizeof(cl_opts->opt_device) - strlen(cl_opts->opt_device) - 1);
 	}
 	hComm = CreateFile(device,                //port name
                       GENERIC_READ | GENERIC_WRITE, //Read/Write
