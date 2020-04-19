@@ -31,6 +31,8 @@
 #include "cl_utils.h"
 #include "gdb_if.h"
 #include <signal.h>
+
+#include "bmp_remote.h"
 #include "stlinkv2.h"
 
 #define VENDOR_ID_BMP            0x1d50
@@ -220,6 +222,11 @@ void platform_init(int argc, char **argv)
 		   info.manufacturer,
 		   info.product);
 	switch (info.bmp_type) {
+	case BMP_TYPE_BMP:
+		if (serial_open(&cl_opts, info.serial))
+			exit(-1);
+		remote_init();
+		break;
 	case BMP_TYPE_STLINKV2:
 		if (stlink_init( &info))
 			exit(-1);
@@ -240,6 +247,7 @@ void platform_init(int argc, char **argv)
 int platform_adiv5_swdp_scan(void)
 {
 	switch (info.bmp_type) {
+	case BMP_TYPE_BMP:
 	case BMP_TYPE_STLINKV2:
 	{
 		target_list_free();
@@ -261,6 +269,8 @@ int platform_adiv5_swdp_scan(void)
 int platform_swdptap_init(void)
 {
 	switch (info.bmp_type) {
+	case BMP_TYPE_BMP:
+		return remote_swdptap_init(&swd_proc);
 	case BMP_TYPE_STLINKV2:
 		return 0;
 		break;
@@ -273,6 +283,7 @@ int platform_swdptap_init(void)
 int platform_jtag_scan(const uint8_t *lrlens)
 {
 	switch (info.bmp_type) {
+	case BMP_TYPE_BMP:
 	case BMP_TYPE_STLINKV2:
 		return jtag_scan_stlinkv2(&info, lrlens);
 	default:
@@ -284,6 +295,8 @@ int platform_jtag_scan(const uint8_t *lrlens)
 int platform_jtagtap_init(void)
 {
 	switch (info.bmp_type) {
+	case BMP_TYPE_BMP:
+		return remote_jtagtap_init(&jtag_proc);
 	case BMP_TYPE_STLINKV2:
 		return 0;
 	default:
@@ -305,10 +318,11 @@ void platform_adiv5_dp_defaults(ADIv5_DP_t *dp)
 int platform_jtag_dp_init(ADIv5_DP_t *dp)
 {
 	switch (info.bmp_type) {
+	case BMP_TYPE_BMP:
 	case BMP_TYPE_STLINKV2:
 		return stlink_jtag_dp_init(dp);
 	default:
-		return -1;
+		return 0;
 	}
 	return 0;
 }
@@ -322,7 +336,7 @@ char *platform_ident(void)
 		return "BMP";
 	  case BMP_TYPE_STLINKV2:
 		return "STLINKV2";
-	  case BMP_TYPE_LIBFTDI:
+	case BMP_TYPE_LIBFTDI:
 		return "LIBFTDI";
 	  case BMP_TYPE_CMSIS_DAP:
 		return "CMSIS_DAP";
@@ -335,10 +349,12 @@ char *platform_ident(void)
 const char *platform_target_voltage(void)
 {
 	switch (info.bmp_type) {
+	case BMP_TYPE_BMP:
+		return remote_target_voltage();
 	case BMP_TYPE_STLINKV2:
 		return stlink_target_voltage(&info);
 	default:
-		break;;
+		break;
 	}
 	return NULL;
 }
@@ -348,6 +364,8 @@ void platform_srst_set_val(bool assert)
 	switch (info.bmp_type) {
 	case BMP_TYPE_STLINKV2:
 		return stlink_srst_set_val(&info, assert);
+	case BMP_TYPE_BMP:
+		return remote_srst_set_val(assert);
 	default:
 		break;
 	}
@@ -356,6 +374,8 @@ void platform_srst_set_val(bool assert)
 bool platform_srst_get_val(void)
 {
 	switch (info.bmp_type) {
+	case BMP_TYPE_BMP:
+		return remote_srst_get_val();
 	case BMP_TYPE_STLINKV2:
 		return stlink_srst_get_val();
 	default:
@@ -364,4 +384,10 @@ bool platform_srst_get_val(void)
 	return false;
 }
 
-void platform_buffer_flush(void) {}
+void platform_buffer_flush(void)
+{
+	switch (info.bmp_type) {
+	default:
+		break;
+	}
+}
