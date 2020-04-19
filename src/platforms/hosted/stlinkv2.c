@@ -40,19 +40,6 @@
 
 #include "cl_utils.h"
 
-#if !defined(timersub)
-/* This is a copy from GNU C Library (GNU LGPL 2.1), sys/time.h. */
-# define timersub(a, b, result)					\
-	do {										\
-		(result)->tv_sec = (a)->tv_sec - (b)->tv_sec;	\
-		(result)->tv_usec = (a)->tv_usec - (b)->tv_usec;	\
-		if ((result)->tv_usec < 0) {						\
-			--(result)->tv_sec;								\
-			(result)->tv_usec += 1000000;					\
-		}													\
-	} while (0)
-#endif
-
 #define VENDOR_ID_STLINK		0x483
 #define PRODUCT_ID_STLINK_MASK	0xffe0
 #define PRODUCT_ID_STLINK_GROUP 0x3740
@@ -212,7 +199,7 @@ typedef struct {
 	uint16_t     vid;
 	uint16_t     pid;
 	uint8_t      transport_mode;
-	char         serial[32];
+	bool         srst;
 	uint8_t      dap_select;
 	uint8_t      ep_tx;
 	uint8_t      ver_hw;     /* 20, 21 or 31 deciphered from USB PID.*/
@@ -224,197 +211,15 @@ typedef struct {
 	uint8_t      ver_bridge;
 	uint16_t     block_size;
 	bool         ap_error;
-	libusb_device_handle *handle;
-	struct libusb_transfer* req_trans;
-	struct libusb_transfer* rep_trans;
 } stlink;
 
 stlink Stlink;
 
 static int stlink_usb_get_rw_status(bool verbose);
 
-static void exit_function(void)
-{
-	libusb_exit(NULL);
-	DEBUG("Cleanup\n");
-}
-
-/* SIGTERM handler. */
-static void sigterm_handler(int sig)
-{
-	(void)sig;
-	exit(0);
-}
-
-struct trans_ctx {
-#define TRANS_FLAGS_IS_DONE (1 << 0)
-#define TRANS_FLAGS_HAS_ERROR (1 << 1)
-    volatile unsigned long flags;
-};
-
 int debug_level = 0;
-bool has_attached = false;
 
-static int LIBUSB_CALL hotplug_callback_attach(
-	libusb_context *ctx, libusb_device *dev, libusb_hotplug_event event,
-	void *user_data)
-{
-	(void)ctx;
-	(void)dev;
-	(void)event;
-	(void)user_data;
-	has_attached = true;
-	return 1; /* deregister Callback*/
-}
-
-int device_detached = 0;
-static int LIBUSB_CALL hotplug_callback_detach(
-	libusb_context *ctx, libusb_device *dev, libusb_hotplug_event event,
-	void *user_data)
-{
-	(void)ctx;
-	(void)dev;
-	(void)event;
-	(void)user_data;
-	device_detached = 1;
-	return 1;  /* deregister Callback*/
-}
-
-void stlink_check_detach(int state)
-{
-	if (state == 1) {
-		/* Check for hotplug events */
-		struct timeval tv = {0,0};
-		libusb_handle_events_timeout_completed(
-			Stlink.libusb_ctx, &tv, &device_detached);
-		if (device_detached) {
-			DEBUG("Dongle was detached\n");
-			exit(0);
-		}
-	}
-}
-
-static void LIBUSB_CALL on_trans_done(struct libusb_transfer * trans)
-{
-    struct trans_ctx * const ctx = trans->user_data;
-
-    if (trans->status != LIBUSB_TRANSFER_COMPLETED)
-    {
-		DEBUG("on_trans_done: ");
-        if(trans->status == LIBUSB_TRANSFER_TIMED_OUT)
-        {
-            DEBUG("Timeout\n");
-        } else if (trans->status == LIBUSB_TRANSFER_CANCELLED) {
-            DEBUG("cancelled\n");
-        } else if (trans->status == LIBUSB_TRANSFER_NO_DEVICE) {
-            DEBUG("no device\n");
-        } else {
-            DEBUG("unknown\n");
-		}
-        ctx->flags |= TRANS_FLAGS_HAS_ERROR;
-    }
-    ctx->flags |= TRANS_FLAGS_IS_DONE;
-}
-
-static int submit_wait(struct libusb_transfer * trans) {
-	struct timeval start;
-	struct timeval now;
-	struct timeval diff;
-	struct trans_ctx trans_ctx;
-	enum libusb_error error;
-
-	trans_ctx.flags = 0;
-
-	/* brief intrusion inside the libusb interface */
-	trans->callback = on_trans_done;
-	trans->user_data = &trans_ctx;
-
-	if ((error = libusb_submit_transfer(trans))) {
-		DEBUG("libusb_submit_transfer(%d): %s\n", error,
-			  libusb_strerror(error));
-		exit(-1);
-	}
-
-	gettimeofday(&start, NULL);
-
-	while (trans_ctx.flags == 0) {
-		struct timeval timeout;
-		timeout.tv_sec = 1;
-		timeout.tv_usec = 0;
-		if (libusb_handle_events_timeout(Stlink.libusb_ctx, &timeout)) {
-			DEBUG("libusb_handle_events()\n");
-			return -1;
-		}
-
-		gettimeofday(&now, NULL);
-		timersub(&now, &start, &diff);
-		if (diff.tv_sec >= 1) {
-			libusb_cancel_transfer(trans);
-			DEBUG("libusb_handle_events() timeout\n");
-			return -1;
-		}
-	}
-
-	if (trans_ctx.flags & TRANS_FLAGS_HAS_ERROR) {
-		DEBUG("libusb_handle_events() | has_error\n");
-		return -1;
-	}
-
-	return 0;
-}
 #define STLINK_ERROR_DP_FAULT -2
-static int send_recv(uint8_t *txbuf, size_t txsize,
-					 uint8_t *rxbuf, size_t rxsize)
-{
-	int res = 0;
-	stlink_check_detach(1);
-	if( txsize) {
-		int txlen = txsize;
-		libusb_fill_bulk_transfer(Stlink.req_trans, Stlink.handle,
-								  Stlink.ep_tx | LIBUSB_ENDPOINT_OUT,
-								  txbuf, txlen,
-								  NULL, NULL,
-								  0
-			);
-		DEBUG_USB("  Send (%d): ", txlen);
-		for (int i = 0; i < txlen && i < 32 ; i++) {
-			DEBUG_USB("%02x", txbuf[i]);
-			if ((i & 7) == 7)
-				DEBUG_USB(".");
-		}
-		if (submit_wait(Stlink.req_trans)) {
-			DEBUG_USB("clear 2\n");
-			libusb_clear_halt(Stlink.handle,2);
-			return -1;
-		}
-	}
-	/* send_only */
-	if (rxsize != 0) {
-		/* read the response */
-		libusb_fill_bulk_transfer(Stlink.rep_trans, Stlink.handle,
-								  0x01| LIBUSB_ENDPOINT_IN,
-								  rxbuf, rxsize, NULL, NULL, 0);
-
-		if (submit_wait(Stlink.rep_trans)) {
-			DEBUG("clear 1\n");
-			libusb_clear_halt(Stlink.handle,1);
-			return -1;
-		}
-		res = Stlink.rep_trans->actual_length;
-		if (res >0) {
-			int i;
-			uint8_t *p = rxbuf;
-			DEBUG_USB(" Rec (%zu/%d)", rxsize, res);
-			for (i = 0; i < res && i < 32 ; i++) {
-				if ( i && ((i & 7) == 0))
-					DEBUG_USB(".");
-				DEBUG_USB("%02x", p[i]);
-			}
-		}
-	}
-	DEBUG_USB("\n");
-	return res;
-}
 
 /**
     Converts an STLINK status code held in the first byte of a response to
@@ -530,19 +335,16 @@ static int stlink_usb_error_check(uint8_t *data, bool verbose)
 static int send_recv_retry(uint8_t *txbuf, size_t txsize,
 					 uint8_t *rxbuf, size_t rxsize)
 {
-	struct timeval start;
-	struct timeval now;
-	struct timeval diff;
-	gettimeofday(&start, NULL);
+	uint32_t start = platform_time_ms();
 	int res;
+	usb_link_t *link = info.usb_link;
 	while(1) {
-		send_recv(txbuf, txsize, rxbuf, rxsize);
+		send_recv(link, txbuf, txsize, rxbuf, rxsize);
 		res = stlink_usb_error_check(rxbuf, false);
 		if (res == STLINK_ERROR_OK)
 			return res;
-		gettimeofday(&now, NULL);
-		timersub(&now, &start, &diff);
-		if ((diff.tv_sec >= 1) || (res != STLINK_ERROR_WAIT)) {
+		uint32_t now = platform_time_ms();
+		if (((now - start) > 1000) || (res != STLINK_ERROR_WAIT)) {
 			DEBUG("write_retry failed. ");
 			return res;
 		}
@@ -553,19 +355,15 @@ static int send_recv_retry(uint8_t *txbuf, size_t txsize,
 static int read_retry(uint8_t *txbuf, size_t txsize,
 					 uint8_t *rxbuf, size_t rxsize)
 {
-	struct timeval start;
-	struct timeval now;
-	struct timeval diff;
-	gettimeofday(&start, NULL);
+	uint32_t start = platform_time_ms();
 	int res;
 	while(1) {
-		send_recv(txbuf, txsize, rxbuf, rxsize);
+		send_recv(info.usb_link, txbuf, txsize, rxbuf, rxsize);
 		res = stlink_usb_get_rw_status(false);
 		if (res == STLINK_ERROR_OK)
 			return res;
-		gettimeofday(&now, NULL);
-		timersub(&now, &start, &diff);
-		if ((diff.tv_sec >= 1) || (res != STLINK_ERROR_WAIT)) {
+		uint32_t now = platform_time_ms();
+		if (((now -start) > 1000) || (res != STLINK_ERROR_WAIT)) {
 			DEBUG("read_retry failed. ");
 			stlink_usb_get_rw_status(true);
 			return res;
@@ -577,20 +375,17 @@ static int read_retry(uint8_t *txbuf, size_t txsize,
 static int write_retry(uint8_t *cmdbuf, size_t cmdsize,
 					 uint8_t *txbuf, size_t txsize)
 {
-	struct timeval start;
-	struct timeval now;
-	struct timeval diff;
-	gettimeofday(&start, NULL);
+	uint32_t start = platform_time_ms();
 	int res;
+	usb_link_t *link = info.usb_link;
 	while(1) {
-		send_recv(cmdbuf, cmdsize, NULL, 0);
-		send_recv(txbuf, txsize, NULL, 0);
+		send_recv(link, cmdbuf, cmdsize, NULL, 0);
+		send_recv(link, txbuf, txsize, NULL, 0);
 		res = stlink_usb_get_rw_status(false);
 		if (res == STLINK_ERROR_OK)
 			return res;
-		gettimeofday(&now, NULL);
-		timersub(&now, &start, &diff);
-		if ((diff.tv_sec >= 1) || (res != STLINK_ERROR_WAIT)) {
+		uint32_t now = platform_time_ms();
+		if (((now - start) > 1000) || (res != STLINK_ERROR_WAIT)) {
 			stlink_usb_get_rw_status(true);
 			return res;
 		}
@@ -598,12 +393,12 @@ static int write_retry(uint8_t *cmdbuf, size_t cmdsize,
 	return res;
 }
 
-static void stlink_version(void)
+static void stlink_version(bmp_info_t *info)
 {
 	if (Stlink.ver_hw == 30) {
 		uint8_t cmd[16] = {STLINK_APIV3_GET_VERSION_EX};
 		uint8_t data[12];
-		int size = send_recv(cmd, 16, data, 12);
+		int size = send_recv(info->usb_link, cmd, 16, data, 12);
 		if (size == -1) {
 			printf("[!] send_recv STLINK_APIV3_GET_VERSION_EX\n");
 		}
@@ -618,7 +413,7 @@ static void stlink_version(void)
 	} else {
 		uint8_t cmd[16] = {STLINK_GET_VERSION};
 		uint8_t data[6];
-		int size = send_recv(cmd, 16, data, 6);
+		int size = send_recv(info->usb_link, cmd, 16, data, 6);
 		if (size == -1) {
 			printf("[!] send_recv STLINK_GET_VERSION_EX\n");
 		}
@@ -646,23 +441,24 @@ static void stlink_version(void)
 	DEBUG("\n");
 }
 
-void stlink_leave_state(void)
+static bool stlink_leave_state(bmp_info_t *info)
 {
 	uint8_t cmd[16] = {STLINK_GET_CURRENT_MODE};
 	uint8_t data[2];
-	send_recv(cmd, 16, data, 2);
+	send_recv(info->usb_link,cmd, 16, data, 2);
 	if (data[0] == STLINK_DEV_DFU_MODE) {
 		uint8_t dfu_cmd[16] = {STLINK_DFU_COMMAND, STLINK_DFU_EXIT};
 		DEBUG("Leaving DFU Mode\n");
-		send_recv(dfu_cmd, 16, NULL, 0);
+		send_recv(info->usb_link, dfu_cmd, 16, NULL, 0);
+		return true;
 	} else if (data[0] == STLINK_DEV_SWIM_MODE) {
 		uint8_t swim_cmd[16] = {STLINK_SWIM_COMMAND, STLINK_SWIM_EXIT};
 		DEBUG("Leaving SWIM Mode\n");
-		send_recv(swim_cmd, 16, NULL, 0);
+		send_recv(info->usb_link, swim_cmd, 16, NULL, 0);
 	} else if (data[0] == STLINK_DEV_DEBUG_MODE) {
 		uint8_t dbg_cmd[16] = {STLINK_DEBUG_COMMAND, STLINK_DEBUG_EXIT};
 		DEBUG("Leaving DEBUG Mode\n");
-		send_recv(dbg_cmd, 16, NULL, 0);
+		send_recv(info->usb_link, dbg_cmd, 16, NULL, 0);
 	} else if (data[0] == STLINK_DEV_BOOTLOADER_MODE) {
 		DEBUG("Leaving BOOTLOADER Mode\n");
 	} else if (data[0] == STLINK_DEV_MASS_MODE) {
@@ -670,13 +466,14 @@ void stlink_leave_state(void)
 	} else {
 		DEBUG("Unknown Mode %02x\n", data[0]);
 	}
+	return false;
 }
 
-const char *stlink_target_voltage(void)
+const char *stlink_target_voltage(bmp_info_t *info)
 {
 	uint8_t cmd[16] = {STLINK_GET_TARGET_VOLTAGE};
 	uint8_t data[8];
-	send_recv(cmd, 16, data, 8);
+	send_recv(info->usb_link, cmd, 16, data, 8);
 	uint16_t adc[2];
 	adc[0] = data[0] | data[1] << 8; /* Calibration value? */
 	adc[1] = data[4] | data[5] << 8; /* Measured value?*/
@@ -688,268 +485,161 @@ const char *stlink_target_voltage(void)
 	return res;
 }
 
-static void stlink_resetsys(void)
+static void stlink_resetsys(bmp_info_t *info)
 {
 	uint8_t cmd[16] = {STLINK_DEBUG_COMMAND ,STLINK_DEBUG_APIV2_RESETSYS};
 	uint8_t data[2];
-	send_recv(cmd, 16, data, 2);
+	send_recv(info->usb_link, cmd, 16, data, 2);
 }
 
-void stlink_init(int argc, char **argv)
+int stlink_init(bmp_info_t *info)
 {
-	BMP_CL_OPTIONS_t cl_opts = {0};
-	cl_opts.opt_idstring = "Blackmagic Debug Probe on StlinkV2/3";
-	cl_init(&cl_opts, argc, argv);
+	usb_link_t *sl = calloc(1, sizeof(usb_link_t));
+	if (!sl)
+		return -1;
+	info->usb_link = sl;
+	sl->ul_libusb_ctx = info->libusb_ctx;
 	libusb_device **devs, *dev;
-	int r;
-	int ret = -1;
-	atexit(exit_function);
-	signal(SIGTERM, sigterm_handler);
-	signal(SIGINT, sigterm_handler);
-	libusb_init(&Stlink.libusb_ctx);
-	r = libusb_init(NULL);
-	if (r < 0)
-		DEBUG("Failed: %s", libusb_strerror(r));
-	bool hotplug = true;
-	if (!libusb_has_capability (LIBUSB_CAP_HAS_HOTPLUG)) {
-		printf("Hotplug capabilites are not supported on this platform\n");
-		hotplug = false;
-	}
 	ssize_t cnt;
-  rescan:
-	has_attached = 0;
-	memset(&Stlink, 0, sizeof(Stlink));
-	cnt = libusb_get_device_list(NULL, &devs);
+	cnt = libusb_get_device_list(info->libusb_ctx, &devs);
 	if (cnt < 0) {
-		DEBUG("Failed: %s", libusb_strerror(r));
-		goto error;
+		fprintf(stderr, "FATAL: Stlink libusb_get_device_list failed\n");
+		return -1;
 	}
 	int i = 0;
-	int nr_stlinks = 0;
+	bool found = false;
 	while ((dev = devs[i++]) != NULL) {
 		struct libusb_device_descriptor desc;
 		int r = libusb_get_device_descriptor(dev, &desc);
 		if (r < 0) {
 			fprintf(stderr, "libusb_get_device_descriptor failed %s",
 					libusb_strerror(r));
-			goto error;
+			return -1;
 		}
-		if ((desc.idVendor == VENDOR_ID_STLINK) &&
-			((desc.idProduct & PRODUCT_ID_STLINK_MASK) ==
-			 PRODUCT_ID_STLINK_GROUP)) {
-			if (desc.idProduct == PRODUCT_ID_STLINKV1)  { /* Reject V1 devices.*/
-				DEBUG("STLINKV1 not supported\n");
-				continue;
-			}
-			Stlink.vid = desc.idVendor;
-			Stlink.pid = desc.idProduct;
-			r = libusb_open(dev, &Stlink.handle);
-			if (r == LIBUSB_SUCCESS) {
-				uint8_t data[32];
-				uint16_t lang;
-				libusb_get_string_descriptor(
-					Stlink.handle, 0, 0, data, sizeof(data));
-				lang = data[2] << 8 | data[3];
-				unsigned char sernum[32];
-				if (desc.iSerialNumber) {
-					r = libusb_get_string_descriptor
-						(Stlink.handle, desc.iSerialNumber, lang,
-						  sernum, sizeof(sernum));
-				} else {
-					DEBUG("No serial number\n");
-				}
-				/* Older devices have hex values instead of ascii
-				 * in the serial string. Recode eventually!*/
-				bool readable = true;
-				uint16_t *p = (uint16_t *)sernum;
-				for (p += 1; *p; p++) {
-					bool isr = isalnum(*p);
-					readable &= isr;
-				}
-				char *s = Stlink.serial;
-				p = (uint16_t *)sernum;
-				for (p += 1; *p; p++, s++) {
-					if (readable)
-						*s = *p;
-					else
-						snprintf(s, 3, "%02x", *p & 0xff);
-				}
-				if (cl_opts.opt_serial && (!strncmp(Stlink.serial, cl_opts.opt_serial,
-													strlen(cl_opts.opt_serial))))
-					DEBUG("Found ");
-				if (desc.idProduct == PRODUCT_ID_STLINKV2) {
-					DEBUG("STLINKV20 serial %s\n", Stlink.serial);
-					Stlink.ver_hw = 20;
-					Stlink.ep_tx = 2;
-				} else if (desc.idProduct == PRODUCT_ID_STLINKV21) {
-					DEBUG("STLINKV21 serial %s\n", Stlink.serial);
-					Stlink.ver_hw = 21;
-					Stlink.ep_tx = 1;
-				} else if (desc.idProduct == PRODUCT_ID_STLINKV21_MSD) {
-					DEBUG("STLINKV21_MSD serial %s\n", Stlink.serial);
-					Stlink.ver_hw = 21;
-					Stlink.ep_tx = 1;
-				} else if (desc.idProduct == PRODUCT_ID_STLINKV3E) {
-					DEBUG("STLINKV3E serial %s\n", Stlink.serial);
-					Stlink.ver_hw = 30;
-					Stlink.ep_tx = 1;
-				} else if (desc.idProduct == PRODUCT_ID_STLINKV3) {
-					DEBUG("STLINKV3  serial %s\n", Stlink.serial);
-					Stlink.ver_hw = 30;
-					Stlink.ep_tx = 1;
-				} else {
-					DEBUG("Unknown STLINK variant, serial %s\n", Stlink.serial);
-				}
-				nr_stlinks++;
-				if (cl_opts.opt_serial) {
-					if (!strncmp(Stlink.serial, cl_opts.opt_serial,
-								 strlen(cl_opts.opt_serial))) {
-						break;
-					} else {
-						libusb_close(Stlink.handle);
-						Stlink.handle = 0;
-					}
-				}
-			} else {
-				DEBUG("Open failed %s\n", libusb_strerror(r));
-			}
+		if ((desc.idVendor != info->vid) ||
+			(desc.idProduct != info->pid) ||
+			(libusb_open(dev, &sl->ul_libusb_device_handle)
+			 != LIBUSB_SUCCESS)) {
+			continue;
 		}
+		char serial[64];
+		r = libusb_get_string_descriptor_ascii(
+			sl->ul_libusb_device_handle, desc.iSerialNumber,
+			(uint8_t*)serial,sizeof(serial));
+		if (r <= 0 || !strstr(serial, info->serial)) {
+			libusb_close(sl->ul_libusb_device_handle);
+			continue;
+		}
+		found = true;
+		break;
 	}
 	libusb_free_device_list(devs, 1);
-	if (!Stlink.handle) {
-		if (nr_stlinks && cl_opts.opt_serial) {
-			DEBUG("No Stlink with given serial number %s\n",  cl_opts.opt_serial);
-		} else if (nr_stlinks > 1) {
-			DEBUG("Multiple Stlinks. Please specify serial number\n");
-			goto error;
-		} else {
-			DEBUG("No Stlink device found!\n");
-		}
-		if (hotplug && !cl_opts.opt_no_wait) {
-			libusb_hotplug_callback_handle hp;
-			int rc = libusb_hotplug_register_callback
-				(NULL, LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED, 0,
-				 VENDOR_ID_STLINK, LIBUSB_HOTPLUG_MATCH_ANY,
-				 LIBUSB_HOTPLUG_MATCH_ANY,
-				 hotplug_callback_attach, NULL, &hp);
-			if (LIBUSB_SUCCESS != rc) {
-				DEBUG("Error registering attach callback\n");
-				goto error;
-			}
-			DEBUG("Waiting for %sST device%s%s to attach\n",
-				  (cl_opts.opt_serial)? "" : "some ",
-				  (cl_opts.opt_serial)? " with serial ": "",
-				  (cl_opts.opt_serial)? cl_opts.opt_serial: "");
-			DEBUG("Terminate with ^C\n");
-			while (has_attached == 0) {
-				rc = libusb_handle_events (NULL);
-                if (rc < 0)
-					printf("libusb_handle_events() failed: %s\n",
-						   libusb_error_name(rc));
-			}
-			goto rescan;
-		}
-		goto error;
+	if (!found)
+		return 0;
+	if (info->pid == PRODUCT_ID_STLINKV2) {
+		Stlink.ver_hw = 20;
+		info->usb_link->ep_tx = 2;
+		Stlink.ep_tx = 2;
+	} else if ((info->pid == PRODUCT_ID_STLINKV21)||
+			   (info->pid == PRODUCT_ID_STLINKV21_MSD)) {
+		Stlink.ver_hw = 21;
+		info->usb_link->ep_tx = 1;
+		Stlink.ep_tx = 1;
+	} else if ((info->pid == PRODUCT_ID_STLINKV3) ||
+			   (info->pid == PRODUCT_ID_STLINKV3E)) {
+		Stlink.ver_hw = 30;
+		info->usb_link->ep_tx = 1;
+		Stlink.ep_tx = 1;
 	}
+	info->usb_link->ep_rx = 1;
 	int config;
-	r = libusb_get_configuration(Stlink.handle, &config);
+	int r = libusb_get_configuration(sl->ul_libusb_device_handle, &config);
 	if (r) {
-		DEBUG("libusb_get_configuration failed %d: %s", r, libusb_strerror(r));
-		goto error_1;
+		fprintf(stderr, "FATAL: Stlink libusb_get_configuration failed %d: %s",
+				 r, libusb_strerror(r));
+		return -1;
 	}
-	DEBUG("Config %d\n", config);
 	if (config != 1) {
-		r = libusb_set_configuration(Stlink.handle, 0);
+		r = libusb_set_configuration(sl->ul_libusb_device_handle, 0);
 		if (r) {
-			DEBUG("libusb_set_configuration failed %d: %s",
-				  r, libusb_strerror(r));
-			goto error_1;
+			fprintf(stderr, "FATAL: Stlinklibusb_set_configuration "
+				   "failed %d: %s", r, libusb_strerror(r));
+			return -1;
 		}
 	}
-	r = libusb_claim_interface(Stlink.handle, 0);
-	if (r)
-	{
-		DEBUG("libusb_claim_interface failed %s\n", libusb_strerror(r));
-		goto error_1;
+	r = libusb_claim_interface(sl->ul_libusb_device_handle, 0);
+	if (r) 	{
+		fprintf(stderr, "FATAL: Stlink libusb_claim_interface failed %s\n",
+				libusb_strerror(r));
+		return -1;
 	}
-	if (hotplug) { /* Allow gracefully exit when stlink is unplugged*/
-		libusb_hotplug_callback_handle hp;
-		int rc = libusb_hotplug_register_callback
-			(NULL, LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT, 0, Stlink.vid, Stlink.pid,
-			 LIBUSB_HOTPLUG_MATCH_ANY, hotplug_callback_detach, NULL, &hp);
-		if (LIBUSB_SUCCESS != rc) {
-			DEBUG("Error registering detach callback\n");
-			goto error;
-		}
-	}
-	Stlink.req_trans = libusb_alloc_transfer(0);
-	Stlink.rep_trans = libusb_alloc_transfer(0);
-	stlink_version();
+	sl->req_trans = libusb_alloc_transfer(0);
+	sl->rep_trans = libusb_alloc_transfer(0);
+	stlink_version(info);
 	if ((Stlink.ver_stlink < 3 && Stlink.ver_jtag < 32) ||
 		(Stlink.ver_stlink == 3 && Stlink.ver_jtag < 3)) {
 		/* Maybe the adapter is in some strange state. Try to reset */
-        int result = libusb_reset_device(Stlink.handle);
-		DEBUG("Trying reset\n");
+        int result = libusb_reset_device(sl->ul_libusb_device_handle);
+		fprintf(stderr, "INFO: Trying Stlink reset\n");
 		if (result == LIBUSB_ERROR_BUSY) { /* Try again */
 			platform_delay(50);
-			result = libusb_reset_device(Stlink.handle);
+			result = libusb_reset_device(sl->ul_libusb_device_handle);
 		}
         if (result != LIBUSB_SUCCESS) {
-			DEBUG("libusb_reset_device failed\n");
-			goto error_1;
+			fprintf(stderr, "FATAL: Stlink libusb_reset_device failed\n");
+			return -1;
 		}
-		stlink_version();
+		stlink_version(info);
     }
 	if ((Stlink.ver_stlink < 3 && Stlink.ver_jtag < 32) ||
 		(Stlink.ver_stlink == 3 && Stlink.ver_jtag < 3)) {
 		DEBUG("Please update Firmware\n");
-		goto error_1;
+		return -1;
 	}
-	stlink_leave_state();
-	stlink_resetsys();
-	if (cl_opts.opt_mode != BMP_MODE_DEBUG) {
-		ret = cl_execute(&cl_opts);
-	} else {
-		assert(gdb_if_init() == 0);
-		return;
+	if (stlink_leave_state(info)) {
+		printf("Stlink board was in DFU mode. Restart\n");
+		return -1;
 	}
-  error_1:
-	libusb_close(Stlink.handle);
-  error:
-	libusb_exit(Stlink.libusb_ctx);
-	exit(ret);
+	stlink_resetsys(info);
+	return 0;
 }
 
-void stlink_srst_set_val(bool assert)
+void stlink_srst_set_val(bmp_info_t *info, bool assert)
 {
 	uint8_t cmd[16] = {STLINK_DEBUG_COMMAND,
 					  STLINK_DEBUG_APIV2_DRIVE_NRST,
 					  (assert)? STLINK_DEBUG_APIV2_DRIVE_NRST_LOW
 					  : STLINK_DEBUG_APIV2_DRIVE_NRST_HIGH};
 	uint8_t data[2];
-	send_recv(cmd, 16, data, 2);
+	Stlink.srst = assert;
+	send_recv(info->usb_link, cmd, 16, data, 2);
 	stlink_usb_error_check(data, true);
 }
 
-bool stlink_set_freq_divisor(uint16_t divisor)
+bool stlink_srst_get_val(void)
+{
+	return Stlink.srst;
+}
+
+static bool stlink_set_freq_divisor(bmp_info_t *info, uint16_t divisor)
 {
 	uint8_t cmd[16] = {STLINK_DEBUG_COMMAND,
 					  STLINK_DEBUG_APIV2_SWD_SET_FREQ,
 					  divisor & 0xff, divisor >> 8};
 	uint8_t data[2];
-	send_recv(cmd, 16, data, 2);
+	send_recv(info->usb_link, cmd, 16, data, 2);
 	if (stlink_usb_error_check(data, false))
 		return false;
 	return true;
 }
 
-bool stlink3_set_freq_divisor(uint16_t divisor)
+static bool stlink3_set_freq_divisor(bmp_info_t *info, uint16_t divisor)
 {
 	uint8_t cmd[16] = {STLINK_DEBUG_COMMAND,
 					  STLINK_APIV3_GET_COM_FREQ,
 					  Stlink.transport_mode};
 	uint8_t data[52];
-	send_recv(cmd, 16, data, 52);
+	send_recv(info->usb_link, cmd, 16, data, 52);
 	stlink_usb_error_check(data, true);
 	int size = data[8];
 	if (divisor > size)
@@ -965,7 +655,7 @@ bool stlink3_set_freq_divisor(uint16_t divisor)
 	cmd[5] = p[1];
 	cmd[6] = p[2];
 	cmd[7] = p[3];
-	send_recv(cmd, 16, data, 8);
+	send_recv(info->usb_link, cmd, 16, data, 8);
 	return true;
 }
 
@@ -974,57 +664,40 @@ int stlink_hwversion(void)
 	return Stlink.ver_stlink;
 }
 
-int stlink_enter_debug_swd(void)
+static int stlink_enter_debug_jtag(bmp_info_t *info)
 {
-	stlink_leave_state();
-	Stlink.transport_mode = STLINK_MODE_SWD;
-	if (Stlink.ver_stlink == 3)
-		stlink3_set_freq_divisor(2);
-	else
-		stlink_set_freq_divisor(1);
-	uint8_t cmd[16] = {STLINK_DEBUG_COMMAND,
-					  STLINK_DEBUG_APIV2_ENTER,
-					  STLINK_DEBUG_ENTER_SWD_NO_RESET};
-	uint8_t data[2];
-	DEBUG("Enter SWD\n");
-	send_recv_retry(cmd, 16, data, 2);
-	return stlink_usb_error_check(data, true);
-}
-
-int stlink_enter_debug_jtag(void)
-{
-	stlink_leave_state();
+	stlink_leave_state(info);
 	Stlink.transport_mode = STLINK_MODE_JTAG;
 	if (Stlink.ver_stlink == 3)
-		stlink3_set_freq_divisor(4);
+		stlink3_set_freq_divisor(info, 4);
 	else
-		stlink_set_freq_divisor(1);
+		stlink_set_freq_divisor(info, 1);
 	uint8_t cmd[16] = {STLINK_DEBUG_COMMAND,
 					  STLINK_DEBUG_APIV2_ENTER,
 					  STLINK_DEBUG_ENTER_JTAG_NO_RESET};
 	uint8_t data[2];
 	DEBUG("Enter JTAG\n");
-	send_recv(cmd, 16, data, 2);
+	send_recv(info->usb_link, cmd, 16, data, 2);
 	return stlink_usb_error_check(data, true);
 }
 
-uint32_t stlink_read_coreid(void)
+static uint32_t stlink_read_coreid(void)
 {
 	uint8_t cmd[16] = {STLINK_DEBUG_COMMAND,
 					  STLINK_DEBUG_READCOREID};
 	uint8_t data[4];
-	send_recv(cmd, 16, data, 4);
+	send_recv(info.usb_link, cmd, 16, data, 4);
 	uint32_t id =  data[0] | data[1] << 8 | data[2] << 16 | data[3] << 24;
 	DEBUG("Read Core ID: 0x%08" PRIx32 "\n", id);
 	return id;
 }
 
-int stlink_read_idcodes(uint32_t *idcodes)
+static int stlink_read_idcodes(bmp_info_t *info, uint32_t *idcodes)
 {
 	uint8_t cmd[16] = {STLINK_DEBUG_COMMAND,
 					   STLINK_DEBUG_APIV2_READ_IDCODES};
 	uint8_t data[12];
-	send_recv(cmd, 16, data, 12);
+	send_recv(info->usb_link, cmd, 16, data, 12);
 	if (stlink_usb_error_check(data, true))
 		return 0;
 	uint8_t *p = data + 4;
@@ -1034,7 +707,10 @@ int stlink_read_idcodes(uint32_t *idcodes)
 	return 2;
 }
 
-uint32_t stlink_dp_read(ADIv5_DP_t *dp, uint16_t addr)
+uint32_t stlink_dp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
+							  uint16_t addr, uint32_t value);
+
+	static uint32_t stlink_dp_read(ADIv5_DP_t *dp, uint16_t addr)
 {
 	if (addr & ADIV5_APnDP) {
 		DEBUG_STLINK("AP read addr 0x%04" PRIx16 "\n", addr);
@@ -1078,7 +754,7 @@ void stlink_dp_abort(ADIv5_DP_t *dp, uint32_t abort)
 	adiv5_dp_write(dp, ADIV5_DP_ABORT, abort);
 }
 
-int stlink_read_dp_register(uint16_t port, uint16_t addr, uint32_t *reg)
+static int stlink_read_dp_register(uint16_t port, uint16_t addr, uint32_t *reg)
 {
 	uint8_t cmd[16] = {STLINK_DEBUG_COMMAND,
 					  STLINK_DEBUG_APIV2_READ_DAP_REG,
@@ -1101,7 +777,7 @@ int stlink_read_dp_register(uint16_t port, uint16_t addr, uint32_t *reg)
 	return res;
 }
 
-int stlink_write_dp_register(uint16_t port, uint16_t addr, uint32_t val)
+static int stlink_write_dp_register(uint16_t port, uint16_t addr, uint32_t val)
 {
 	if (port == STLINK_DEBUG_PORT_ACCESS && addr == 8) {
 		Stlink.dap_select = val;
@@ -1160,7 +836,7 @@ static bool stlink_ap_setup(int ap)
 		ap,
 	};
 	uint8_t data[2];
-	send_recv_retry(cmd, 16, data, 2);
+	send_recv(info.usb_link, cmd, 16, data, 2);
 	DEBUG_STLINK("Open AP %d\n", ap);
 	int res = stlink_usb_error_check(data, true);
 	if (res) {
@@ -1180,7 +856,7 @@ static void stlink_ap_cleanup(int ap)
                ap,
        };
        uint8_t data[2];
-       send_recv(cmd, 16, data, 2);
+       send_recv(info.usb_link, cmd, 16, data, 2);
        DEBUG_STLINK("Close AP %d\n", ap);
        stlink_usb_error_check(data, true);
 }
@@ -1191,7 +867,7 @@ static int stlink_usb_get_rw_status(bool verbose)
 		STLINK_DEBUG_APIV2_GETLASTRWSTATUS2
 	};
 	uint8_t data[12];
-	send_recv(cmd, 16, data, 12);
+	send_recv(info.usb_link, cmd, 16, data, 12);
 	return stlink_usb_error_check(data, verbose);
 }
 
@@ -1246,9 +922,10 @@ static void stlink_readmem(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
 	DEBUG_STLINK("\n");
 }
 
-static void stlink_writemem8(ADIv5_AP_t *ap, uint32_t addr, size_t len,
-					  uint8_t *buffer)
+static void stlink_writemem8(usb_link_t *link, ADIv5_AP_t *ap, uint32_t addr,
+							 size_t len, uint8_t *buffer)
 {
+	(void)link;
 	DEBUG_STLINK("Mem Write8 AP %d len %zu addr 0x%08" PRIx32 ": ",
 				 ap->apsel, len, addr);
 	for (size_t t = 0; t < len; t++) {
@@ -1257,6 +934,7 @@ static void stlink_writemem8(ADIv5_AP_t *ap, uint32_t addr, size_t len,
 	DEBUG_STLINK("\n");
 	while (len) {
 		size_t length;
+		/* OpenOCD has some note about writemem8*/
 		if (len > Stlink.block_size)
 			length = Stlink.block_size;
 		else
@@ -1267,17 +945,18 @@ static void stlink_writemem8(ADIv5_AP_t *ap, uint32_t addr, size_t len,
 			addr & 0xff, (addr >>  8) & 0xff, (addr >> 16) & 0xff,
 			(addr >> 24) & 0xff,
 			length & 0xff, length >> 8, ap->apsel};
-		send_recv(cmd, 16, NULL, 0);
-		send_recv((void*)buffer, length, NULL, 0);
+		send_recv(link, cmd, 16, NULL, 0);
+		send_recv(link, (void*)buffer, length, NULL, 0);
 		stlink_usb_get_rw_status(true);
 		len -= length;
 		addr += length;
 	}
 }
 
-static void stlink_writemem16(ADIv5_AP_t *ap, uint32_t addr, size_t len,
-					   uint16_t *buffer)
+static void stlink_writemem16(usb_link_t *link, ADIv5_AP_t *ap, uint32_t addr,
+							  size_t len, uint16_t *buffer)
 {
+	(void)link;
 	DEBUG_STLINK("Mem Write16 AP %d len %zu addr 0x%08" PRIx32 ": ",
 				 ap->apsel, len, addr);
 	for (size_t t = 0; t < len; t+=2) {
@@ -1290,14 +969,15 @@ static void stlink_writemem16(ADIv5_AP_t *ap, uint32_t addr, size_t len,
 		addr & 0xff, (addr >>  8) & 0xff, (addr >> 16) & 0xff,
 		(addr >> 24) & 0xff,
 		len & 0xff, len >> 8, ap->apsel};
-	send_recv(cmd, 16, NULL, 0);
-	send_recv((void*)buffer, len, NULL, 0);
+	send_recv(link, cmd, 16, NULL, 0);
+	send_recv(link, (void*)buffer, len, NULL, 0);
 	stlink_usb_get_rw_status(true);
 }
 
-static void stlink_writemem32(ADIv5_AP_t *ap, uint32_t addr, size_t len,
-					   uint32_t *buffer)
+static void stlink_writemem32(usb_link_t * link, ADIv5_AP_t *ap, uint32_t addr,
+							  size_t len, uint32_t *buffer)
 {
+	(void)link;
 	DEBUG_STLINK("Mem Write32 AP %d len %zu addr 0x%08" PRIx32 ": ",
 				 ap->apsel, len, addr);
 	for (size_t t = 0; t < len; t+=4) {
@@ -1313,23 +993,23 @@ static void stlink_writemem32(ADIv5_AP_t *ap, uint32_t addr, size_t len,
 	write_retry(cmd, 16, (void*)buffer, len);
 }
 
-void stlink_regs_read(ADIv5_AP_t *ap, void *data)
+static void stlink_regs_read(ADIv5_AP_t *ap, void *data)
 {
 	uint8_t cmd[16] = {STLINK_DEBUG_COMMAND, STLINK_DEBUG_APIV2_READALLREGS,
 					   ap->apsel};
 	uint8_t res[88];
 	DEBUG_STLINK("AP %d: Read all core registers\n", ap->apsel);
-	send_recv(cmd, 16, res, 88);
+	send_recv(info.usb_link, cmd, 16, res, 88);
 	stlink_usb_error_check(res, true);
 	memcpy(data, res + 4, 84);
 }
 
-uint32_t stlink_reg_read(ADIv5_AP_t *ap, int num)
+static uint32_t stlink_reg_read(ADIv5_AP_t *ap, int num)
 {
 	uint8_t cmd[16] = {STLINK_DEBUG_COMMAND, STLINK_DEBUG_APIV2_READREG, num,
 					   ap->apsel};
 	uint8_t res[8];
-	send_recv(cmd, 16, res, 8);
+	send_recv(info.usb_link, cmd, 16, res, 8);
 	stlink_usb_error_check(res, true);
 	uint32_t ret = res[0] | res[1] << 8 | res[2] << 16 | res[3] << 24;
 	DEBUG_STLINK("AP %d: Read reg %02" PRId32 " val 0x%08" PRIx32 "\n",
@@ -1337,14 +1017,14 @@ uint32_t stlink_reg_read(ADIv5_AP_t *ap, int num)
 	return ret;
 }
 
-void stlink_reg_write(ADIv5_AP_t *ap, int num, uint32_t val)
+static void stlink_reg_write(ADIv5_AP_t *ap, int num, uint32_t val)
 {
 	uint8_t cmd[16] = {
 		STLINK_DEBUG_COMMAND, STLINK_DEBUG_APIV2_WRITEREG, num,
 		val & 0xff, (val >>  8) & 0xff, (val >> 16) & 0xff,
 		(val >> 24) & 0xff, ap->apsel};
 	uint8_t res[2];
-	send_recv(cmd, 16, res, 2);
+	send_recv(info.usb_link, cmd, 16, res, 2);
 	DEBUG_STLINK("AP %d: Write reg %02" PRId32 " val 0x%08" PRIx32 "\n",
 				 ap->apsel, num, val);
 	stlink_usb_error_check(res, true);
@@ -1356,14 +1036,17 @@ static void stlink_mem_write_sized(	ADIv5_AP_t *ap, uint32_t dest,
 {
 	if (len == 0)
 		return;
+	usb_link_t *link = info.usb_link;
 	switch(align) {
-	case ALIGN_BYTE: stlink_writemem8(ap, dest, len, (uint8_t *) src);
+	case ALIGN_BYTE:
+		stlink_writemem8(link, ap, dest, len, (uint8_t *) src);
 		break;
-	case ALIGN_HALFWORD: stlink_writemem16(ap, dest, len, (uint16_t *) src);
+	case ALIGN_HALFWORD:
+		stlink_writemem16(link,ap, dest, len, (uint16_t *) src);
 		break;
-	case ALIGN_WORD: stlink_writemem32(ap, dest, len, (uint32_t *) src);
-		break;
-	case ALIGN_DWORD: stlink_writemem32(ap, dest, len, (uint32_t *) src);
+	case ALIGN_WORD:
+	case ALIGN_DWORD:
+		stlink_writemem32(link, ap, dest, len, (uint32_t *) src);
 		break;
 	}
 }
@@ -1384,7 +1067,7 @@ struct jtag_dev_s jtag_devs[JTAG_MAX_DEVS+1];
 int jtag_dev_count;
 jtag_proc_t jtag_proc;
 
-int jtag_scan_stlinkv2(const uint8_t *irlens)
+int jtag_scan_stlinkv2(bmp_info_t *info, const uint8_t *irlens)
 {
 	uint32_t idcodes[JTAG_MAX_DEVS+1];
 	(void) *irlens;
@@ -1392,9 +1075,9 @@ int jtag_scan_stlinkv2(const uint8_t *irlens)
 
 	jtag_dev_count = 0;
 	memset(&jtag_devs, 0, sizeof(jtag_devs));
-	if (stlink_enter_debug_jtag())
+	if (stlink_enter_debug_jtag(info))
 		return 0;
-	jtag_dev_count = stlink_read_idcodes(idcodes);
+	jtag_dev_count = stlink_read_idcodes(info, idcodes);
 	/* Check for known devices and handle accordingly */
 	for(int i = 0; i < jtag_dev_count; i++)
 		jtag_devs[i].idcode = idcodes[i];
@@ -1410,7 +1093,7 @@ int jtag_scan_stlinkv2(const uint8_t *irlens)
 	return jtag_dev_count;
 }
 
-int platform_jtag_dp_init(ADIv5_DP_t *dp)
+int stlink_jtag_dp_init(ADIv5_DP_t *dp)
 {
 	dp->dp_read = stlink_dp_read;
 	dp->error = stlink_dp_error;
@@ -1421,7 +1104,7 @@ int platform_jtag_dp_init(ADIv5_DP_t *dp)
 
 }
 
-int platform_adiv5_dp_defaults(ADIv5_DP_t *dp)
+void stlink_adiv5_dp_defaults(ADIv5_DP_t *dp)
 {
 	dp->ap_regs_read = stlink_regs_read;
 	dp->ap_reg_read = stlink_reg_read;
@@ -1432,6 +1115,30 @@ int platform_adiv5_dp_defaults(ADIv5_DP_t *dp)
 	dp->ap_read = stlink_ap_read;
 	dp->mem_read = stlink_readmem;
 	dp->mem_write_sized = stlink_mem_write_sized;
+}
 
+int stlink_enter_debug_swd(bmp_info_t *info, ADIv5_DP_t *dp)
+{
+	stlink_leave_state(info);
+	Stlink.transport_mode = STLINK_MODE_SWD;
+	if (Stlink.ver_stlink == 3)
+		stlink3_set_freq_divisor(info, 2);
+	else
+		stlink_set_freq_divisor(info, 1);
+	uint8_t cmd[16] = {STLINK_DEBUG_COMMAND,
+					  STLINK_DEBUG_APIV2_ENTER,
+					  STLINK_DEBUG_ENTER_SWD_NO_RESET};
+	uint8_t data[2];
+	DEBUG("Enter SWD\n");
+	send_recv(info->usb_link, cmd, 16, data, 2);
+	if (stlink_usb_error_check(data, true))
+		return -1;
+	dp->idcode = stlink_read_coreid();
+	dp->dp_read = stlink_dp_read;
+	dp->error = stlink_dp_error;
+	dp->low_access = stlink_dp_low_access;
+	dp->abort = stlink_dp_abort;
+
+	stlink_dp_error(dp);
 	return 0;
 }

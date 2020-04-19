@@ -120,27 +120,29 @@ static void cl_help(char **argv, BMP_CL_OPTIONS_t *opt)
 	printf("\t-h\t\t: This help.\n");
 	printf("\t-v[1|2]\t\t: Increasing verbosity\n");
 	printf("\t-d \"path\"\t: Use serial device at \"path\"\n");
-	printf("\t-P <num>\t: Use device found as <num>");
+	printf("\t-P <num>\t: Use debugger found at position <num>\n");
+	printf("\t-n <num>\t: Use target device found at position <num>\n");
 	printf("\t-s \"string\"\t: Use dongle with (partial) "
 		  "serial number \"string\"\n");
 	printf("\t-c \"string\"\t: Use ftdi dongle with type \"string\"\n");
-	printf("\t-n\t\t: Exit immediate if no device found\n");
 	printf("\tRun mode related options:\n");
+	printf("\tDefault mode is to start the debug server at :2000\n");
+	printf("\t-j\t\t: Use JTAG. SWD is default.\n");
 	printf("\t-C\t\t: Connect under reset\n");
-	printf("\t-t\t\t: Scan SWD, with no target found scan jtag and exit\n");
+	printf("\t-t\t\t: Scan SWD and display information about connected"
+		   "devices\n");
 	printf("\t-E\t\t: Erase flash until flash end or for given size\n");
 	printf("\t-V\t\t: Verify flash against binary file\n");
 	printf("\t-r\t\t: Read flash and write to binary file\n");
 	printf("\t-p\t\t: Supplies power to the target (where applicable)\n");
 	printf("\t-R\t\t: Reset device\n");
-	printf("\t\tDefault mode is starting the debug server\n");
 	printf("\tFlash operation modifiers options:\n");
 	printf("\t-a <num>\t: Start flash operation at flash address <num>\n"
-		"\t\t\tDefault start is 0x08000000\n");
+		"\t\t\t  Default start is 0x08000000\n");
 	printf("\t-S <num>\t: Read <num> bytes. Default is until read fails.\n");
-	printf("\t-j\t\t: Use JTAG. SWD is default.\n");
 	printf("\t <file>\t\t: Use (binary) file <file> for flash operation\n"
-		   "\t\t\tGiven <file> writes to flash if neither -r or -V is given\n");
+		   "\t\t\t  Given <file> writes to flash if neither -r or -V is "
+		   "given\n");
 	exit(0);
 }
 
@@ -150,7 +152,7 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 	opt->opt_target_dev = 1;
 	opt->opt_flash_start = 0x08000000;
 	opt->opt_flash_size = 16 * 1024 *1024;
-	while((c = getopt(argc, argv, "Ehv::d:s:I:c:CnN:tVta:S:jpP:rR")) != -1) {
+	while((c = getopt(argc, argv, "Ehv::d:s:I:c:Cn:tVta:S:jpP:rR")) != -1) {
 		switch(c) {
 		case 'c':
 			if (optarg)
@@ -170,9 +172,6 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 			break;
 		case 'C':
 			opt->opt_connect_under_reset = true;
-			break;
-		case 'n':
-			opt->opt_no_wait = true;
 			break;
 		case 'd':
 			if (optarg)
@@ -208,7 +207,7 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 			if (optarg)
 				opt->opt_flash_start = strtol(optarg, NULL, 0);
 			break;
-		case 'N':
+		case 'n':
 			if (optarg)
 				opt->opt_target_dev = strtol(optarg, NULL, 0);
 			break;

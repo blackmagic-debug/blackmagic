@@ -1,6 +1,8 @@
 #ifndef __PLATFORM_H
 #define __PLATFORM_H
 #include <libusb-1.0/libusb.h>
+#include "libusb_utils.h"
+
 #include "timing.h"
 
 char *platform_ident(void);
@@ -22,6 +24,8 @@ typedef enum bmp_type_s {
 typedef struct bmp_info_s {
 	bmp_type_t bmp_type;
 	libusb_context *libusb_ctx;
+	struct ftdi_context *ftdic;
+	usb_link_t *usb_link;
 	unsigned int vid;
 	unsigned int pid;
 	char dev;
@@ -29,5 +33,7 @@ typedef struct bmp_info_s {
 	char manufacturer[128];
 	char product[128];
 } bmp_info_t;
+
+extern bmp_info_t info;
 
 #endif
