@@ -1,7 +1,9 @@
 #ifndef __PLATFORM_H
 #define __PLATFORM_H
+
 #include <libusb-1.0/libusb.h>
 #include "libusb_utils.h"
+#include <libftdi1/ftdi.h>
 
 #include "timing.h"
 
