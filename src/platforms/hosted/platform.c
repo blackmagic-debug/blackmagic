@@ -194,7 +194,9 @@ void platform_init(int argc, char **argv)
 				libusb_strerror(res));
 		exit(-1);
 	}
-	if (find_debuggers(&cl_opts, &info)) {
+	if (cl_opts.opt_device) {
+		info.bmp_type = BMP_TYPE_BMP;
+	} else if (find_debuggers(&cl_opts, &info)) {
 		exit(-1);
 	}
 	printf("Using %s %s %s\n", info.serial,

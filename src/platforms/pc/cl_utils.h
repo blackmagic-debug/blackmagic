@@ -24,6 +24,8 @@
 #if !defined(__CL_UTILS_H)
 #define __CL_UTILS_H
 
+#define RESP_TIMEOUT (100)
+
 enum bmp_cl_mode {
 	BMP_MODE_DEBUG,
 	BMP_MODE_TEST,
@@ -56,6 +58,6 @@ typedef struct BMP_CL_OPTIONS_s {
 extern int cl_debuglevel;
 void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv);
 int cl_execute(BMP_CL_OPTIONS_t *opt);
-int serial_open(BMP_CL_OPTIONS_t *opt);
+int serial_open(BMP_CL_OPTIONS_t *opt, char *serial);
 void serial_close(void);
 #endif

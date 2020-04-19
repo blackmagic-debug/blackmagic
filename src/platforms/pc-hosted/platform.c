@@ -60,7 +60,7 @@ void platform_init(int argc, char **argv)
   printf("License GPLv3+: GNU GPL version 3 or later "
 	 "<http://gnu.org/licenses/gpl.html>\n\n");
 
-  if (serial_open(&cl_opts))
+  if (serial_open(cl_opts.opt_device, cl_opts.opt_serial))
 	  exit(-1);
   int c=snprintf(construct,PLATFORM_MAX_MSG_SIZE,"%s",REMOTE_START_STR);
   platform_buffer_write((uint8_t *)construct,c);
