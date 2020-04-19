@@ -9,4 +9,5 @@ LDFLAGS += -lws2_32
 endif
 VPATH += platforms/pc
 SRC += timing.c cl_utils.c utils.c libusb_utils.c
+SRC += stlinkv2.c
 PC_HOSTED = 1

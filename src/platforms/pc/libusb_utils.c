@@ -18,7 +18,6 @@
  */
 #include "general.h"
 #include "cl_utils.h"
-#include <libusb_utils.h>
 
 static void LIBUSB_CALL on_trans_done(struct libusb_transfer *trans)
 {
