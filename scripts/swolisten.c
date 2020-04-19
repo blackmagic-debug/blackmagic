@@ -442,7 +442,10 @@ int usbFeeder(void)
 	{
 	  unsigned char *c=cbw;
           if (options.dump)
-              printf(cbw);
+          {
+              cbw[size] = 0;
+              printf("%s", (char*)cbw);
+          }
           else
               while (size--)
                   _protocolPump(c++);
