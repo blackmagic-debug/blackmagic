@@ -331,29 +331,14 @@ static bool stm32f4_attach(target *t)
 	else
 		banksize = flashsize << 10;
 	if (large_sectors) {
-		// The F750 has the same id code as a F74x, but has a significantly
-		// different memory capacity. If we treat it the same, we will underflow the
-		// size of the final memory region, and generate a close to 4GiB mapping.
-		// To avoid this, match on it's flash size (64KiB)
-		const bool is_stm32f750 = flashsize == 0x40;
-		if (is_stm32f750) {
-			// On STM32F750xx devices, a main memory block divided into 2 sectors of
-			// 32 Kbyte
-			stm32f4_add_flash(t, ITCM_BASE, 0x10000, 0x8000, 0, split);
-			stm32f4_add_flash(t, AXIM_BASE, 0x10000, 0x8000, 0, split);
-		} else {
-			// On STM32F756xx and STM32F74xx devices, a main memory block divided into
-			// 4 sectors of 32 Kbytes, 1 sector of 128 Kbytes and 3 sectors of 256
-			// Kbytes
-			/* 256 k in small sectors.*/
-			uint32_t remains = banksize - 0x40000;
-			stm32f4_add_flash(t, ITCM_BASE, 0x20000, 0x8000, 0, split);
-			stm32f4_add_flash(t, 0x0220000, 0x20000, 0x20000, 4, split);
-			stm32f4_add_flash(t, 0x0240000, remains, 0x40000, 5, split);
-			stm32f4_add_flash(t, AXIM_BASE, 0x20000, 0x8000, 0, split);
-			stm32f4_add_flash(t, 0x8020000, 0x20000, 0x20000, 4, split);
-			stm32f4_add_flash(t, 0x8040000, remains, 0x40000, 5, split);
-		}
+		uint32_t remains = banksize >= 0x40000 ? banksize - 0x40000 : 0;
+		/* 256 k in small sectors.*/
+		stm32f4_add_flash(t, ITCM_BASE, 0x20000,  0x8000, 0, split);
+		stm32f4_add_flash(t, 0x0220000, 0x20000, 0x20000, 4, split);
+		stm32f4_add_flash(t, 0x0240000, remains, 0x40000, 5, split);
+		stm32f4_add_flash(t, AXIM_BASE, 0x20000,  0x8000, 0, split);
+		stm32f4_add_flash(t, 0x8020000, 0x20000, 0x20000, 4, split);
+		stm32f4_add_flash(t, 0x8040000, remains, 0x40000, 5, split);
 	} else {
 		uint32_t remains = 0;
 		if (banksize > 0x20000)
