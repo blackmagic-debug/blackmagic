@@ -67,7 +67,11 @@ CFLAGS += $(OPT_FLAGS)
 LDFLAGS += $(OPT_FLAGS)
 
 ifndef TARGET
-TARGET=blackmagic
+ifdef PC_HOSTED
+TARGET = blackmagic
+else
+TARGET = blackmagic.elf
+endif
 endif
 
 ifdef NO_OWN_LL
@@ -96,19 +100,21 @@ $(TARGET): include/version.h $(OBJ)
 	@echo "  AS      $<"
 	$(Q)$(CC) $(CFLAGS) -c $< -o $@
 
-%.bin:	%
+ifndef PC_HOSTED
+%.bin:	%.elf
 	@echo "  OBJCOPY $@"
 	$(Q)$(OBJCOPY) -O binary $^ $@
 
-%.hex:	%
+%.hex:	%.elf
 	@echo "  OBJCOPY $@"
 	$(Q)$(OBJCOPY) -O ihex $^ $@
+endif
 
 .PHONY:	clean host_clean all_platforms FORCE
 
 clean:	host_clean
 	$(Q)echo "  CLEAN"
-	-$(Q)$(RM) *.o *.d *~ blackmagic $(HOSTFILES)
+	-$(Q)$(RM) *.o *.d *.elf *~ $(TARGET) $(HOSTFILES)
 	-$(Q)$(RM) platforms/*/*.o platforms/*/*.d mapfile include/version.h
 
 all_platforms:

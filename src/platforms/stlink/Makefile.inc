@@ -37,18 +37,18 @@ SRC += 	cdcacm.c	\
 	stlink_common.c \
 
 ifeq ($(ST_BOOTLOADER), 1)
-all:	blackmagic.bin blackmagic_dfu.bin blackmagic_dfu.hex
+all:	blackmagic.bin
 else
 all:	blackmagic.bin blackmagic_dfu.bin blackmagic_dfu.hex dfu_upgrade.bin dfu_upgrade.hex
 endif
-blackmagic_dfu: usbdfu.o dfucore.o dfu_f1.o stlink_common.o
+blackmagic_dfu.elf: usbdfu.o dfucore.o dfu_f1.o stlink_common.o
 	@echo "  LD      $@"
 	$(Q)$(CC) $^ -o $@ $(LDFLAGS_BOOT)
 
-dfu_upgrade: dfu_upgrade.o dfucore.o dfu_f1.o  stlink_common.o
+dfu_upgrade.elf: dfu_upgrade.o dfucore.o dfu_f1.o  stlink_common.o
 	@echo "  LD      $@"
 	$(Q)$(CC) $^ -o $@ $(LDFLAGS)
 
 host_clean:
-	-$(Q)$(RM) blackmagic.bin blackmagic_dfu blackmagic_dfu.bin blackmagic_dfu.hex dfu_upgrade dfu_upgrade.bin dfu_upgrade.hex
+	-$(Q)$(RM) *.bin *elf *hex
 
