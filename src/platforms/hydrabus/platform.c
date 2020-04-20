@@ -85,7 +85,7 @@ bool platform_srst_get_val(void) { return false; }
 
 const char *platform_target_voltage(void)
 {
-	return "ABSENT!";
+	return NULL;
 }
 
 void platform_request_boot(void)

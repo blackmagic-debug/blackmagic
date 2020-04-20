@@ -177,7 +177,7 @@ const char *platform_target_voltage(void)
 		ret[2] = '0' + val_in_100mV % 10;
 		return ret;
 	}
-	return "ABSENT!";
+	return NULL;
 }
 
 void set_idle_state(int state)
