@@ -171,7 +171,8 @@ static bool cmd_jtag_scan(target *t, int argc, char **argv)
 	(void)t;
 	uint8_t irlens[argc];
 
-	gdb_outf("Target voltage: %s\n", platform_target_voltage());
+	if (platform_target_voltage())
+		gdb_outf("Target voltage: %s\n", platform_target_voltage());
 
 	if (argc > 1) {
 		/* Accept a list of IR lengths on command line */
@@ -216,7 +217,8 @@ bool cmd_swdp_scan(target *t, int argc, char **argv)
 	(void)t;
 	(void)argc;
 	(void)argv;
-	gdb_outf("Target voltage: %s\n", platform_target_voltage());
+	if (platform_target_voltage())
+		gdb_outf("Target voltage: %s\n", platform_target_voltage());
 
 	if(connect_assert_srst)
 		platform_srst_set_val(true); /* will be deasserted after attach */
