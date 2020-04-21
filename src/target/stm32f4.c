@@ -159,31 +159,31 @@ static void stm32f4_add_flash(target *t,
 char *stm32f4_get_chip_name(uint32_t idcode)
 {
 	switch(idcode){
-	case ID_STM32F40X:
+	case ID_STM32F40X: /* F40XxE/G */
 		return "STM32F40x";
-	case ID_STM32F42X: /* 427/437 */
+	case ID_STM32F42X: /* F42XxG/I */
 		return "STM32F42x";
-	case ID_STM32F46X: /* 469/479 */
+	case ID_STM32F46X: /* 469/479 xG/I*/
 		return "STM32F47x";
-	case ID_STM32F20X: /* F205 */
+	case ID_STM32F20X: /* F205 xB/C/E/G*/
 		return "STM32F2";
-	case ID_STM32F446: /* F446 */
+	case ID_STM32F446: /* F446 xC/E*/
 		return "STM32F446";
 	case ID_STM32F401C: /* F401 B/C RM0368 Rev.3 */
 		return "STM32F401C";
-	case ID_STM32F411: /* F411     RM0383 Rev.4 */
+	case ID_STM32F411: /* F411 xC/E  RM0383 Rev.4 */
 		return "STM32F411";
-	case ID_STM32F412: /* F412     RM0402 Rev.4, 256 kB Ram */
+	case ID_STM32F412: /* F412 xG/I  RM0402 Rev.4, 256 kB Ram */
 		return "STM32F412";
 	case ID_STM32F401E: /* F401 D/E RM0368 Rev.3 */
 		return "STM32F401E";
-	case ID_STM32F413: /* F413     RM0430 Rev.2, 320 kB Ram, 1.5 MB flash. */
+	case ID_STM32F413: /* F413xG/H  RM0430 Rev.2, 320 kB Ram, 1.5 MB flash. */
 		return "STM32F413";
-	case ID_STM32F74X: /* F74x RM0385 Rev.4 */
+	case ID_STM32F74X: /* F74XxG/I RM0385 Rev.4 */
 		return "STM32F74x";
-	case ID_STM32F76X: /* F76x F77x RM0410 */
+	case ID_STM32F76X: /* F76XxE/G F77x RM0410 */
 		return "STM32F76x";
-	case ID_STM32F72X: /* F72x F73x RM0431 */
+	case ID_STM32F72X: /* F72/3xC/E RM0431 */
 		return "STM32F72x";
 	default:
 		return NULL;
@@ -245,7 +245,7 @@ static bool stm32f4_attach(target *t)
 	bool has_ccmram = false;
 	bool is_f7  = false;
 	bool large_sectors = false;
-	uint32_t flashsize_base = F4_FLASHSIZE;
+	uint16_t max_flashsize;
 
 	if (!cortexm_attach(t))
 		return false;
@@ -253,50 +253,53 @@ static bool stm32f4_attach(target *t)
 	switch(t->idcode) {
 	case ID_STM32F40X:
 		has_ccmram = true;
+		max_flashsize = 1024;
 		break;
 	case ID_STM32F42X: /* 427/437 */
 		has_ccmram = true;
 		dual_bank  = true;
+		max_flashsize = 2048;
 		break;
 	case ID_STM32F46X: /* 469/479 */
 		has_ccmram = true;
 		dual_bank  = true;
-		break;
-	case ID_STM32F20X: /* F205 */
-		break;
-	case ID_STM32F446: /* F446 */
+		max_flashsize = 512;
 		break;
 	case ID_STM32F401C: /* F401 B/C RM0368 Rev.3 */
-		break;
-	case ID_STM32F411: /* F411     RM0383 Rev.4 */
-		break;
-	case ID_STM32F412: /* F412     RM0402 Rev.4, 256 kB Ram */
+		max_flashsize = 256;
 		break;
 	case ID_STM32F401E: /* F401 D/E RM0368 Rev.3 */
+	case ID_STM32F411:  /* F411      RM0383 Rev.4 */
+	case ID_STM32F446:  /* F446 */
+		max_flashsize = 512;
+		break;
+	case ID_STM32F20X:  /* F205xB/C/E/G */
+	case ID_STM32F412:  /* F412xE/G  RM0402 Rev.4, 256 kB Ram */
+		max_flashsize = 1024;
 		break;
 	case ID_STM32F413: /* F413     RM0430 Rev.2, 320 kB Ram, 1.5 MB flash. */
+		max_flashsize = 1536;
 		break;
 	case ID_STM32F74X: /* F74x RM0385 Rev.4 */
 		is_f7 = true;
 		large_sectors = true;
-		flashsize_base = F7_FLASHSIZE;
+		max_flashsize = 1024;
 		break;
 	case ID_STM32F76X: /* F76x F77x RM0410 */
 		is_f7 = true;
 		dual_bank = true;
 		large_sectors = true;
-		flashsize_base = F7_FLASHSIZE;
+		max_flashsize = 2048;
 		break;
 	case ID_STM32F72X: /* F72x F73x RM0431 */
 		is_f7 = true;
-		flashsize_base = F72X_FLASHSIZE;
+		max_flashsize = 512;
 		break;
 	default:
 		return false;
 	}
 	bool use_dual_bank = false;
 	target_mem_map_free(t);
-	uint32_t flashsize = target_mem_read32(t, flashsize_base) & 0xffff;
 	if (is_f7) {
 		t->target_storage = target_mem_read32(t, DBGMCU_CR);
 		target_mem_write32(t, DBGMCU_CR, DBG_SLEEP);
@@ -314,7 +317,7 @@ static bool stm32f4_attach(target *t)
 		target_add_ram(t, 0x20000000, 0x50000);     /* 320 k RAM */
 		if (dual_bank) {
 			use_dual_bank = true;
-			if (flashsize < 0x800) {
+			if (max_flashsize < 0x800) {
 				/* Check Dual-bank on 1 Mbyte Flash memory devices*/
 				uint32_t optcr;
 				optcr = target_mem_read32(t, FLASH_OPTCR);
@@ -325,11 +328,11 @@ static bool stm32f4_attach(target *t)
 	int split = 0;
 	uint32_t banksize;
 	if (use_dual_bank) {
-		banksize = flashsize << 9; /* flash split on two sectors. */
-		split = (flashsize == 0x400) ? 8 : 12;
+		banksize = max_flashsize << 9; /* flash split on two sectors. */
+		split = (max_flashsize == 0x400) ? 8 : 12;
 	}
 	else
-		banksize = flashsize << 10;
+		banksize = max_flashsize << 10;
 	if (large_sectors) {
 		uint32_t remains = banksize - 0x40000;
 		/* 256 k in small sectors.*/
@@ -345,11 +348,6 @@ static bool stm32f4_attach(target *t)
 			remains = banksize - 0x20000; /* 128 k in small sectors.*/
 		if (is_f7) {
 			stm32f4_add_flash(t, ITCM_BASE, 0x10000,  0x4000,  0, split);
-			if (banksize > 0x10000) {
-				/* STM32F730 has only 64 kiB flash! */
-				stm32f4_add_flash(t, 0x0210000, 0x10000, 0x10000,  4, split);
-				stm32f4_add_flash(t, 0x0220000, remains, 0x20000,  5, split);
-			}
 		}
 		stm32f4_add_flash(t, 0x8000000, 0x10000,  0x4000,  0, split);
 		if (banksize > 0x10000) {
