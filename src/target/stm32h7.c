@@ -213,14 +213,8 @@ static bool stm32h7_attach(target *t)
 	target_add_ram(t, 0x38000000, 0x01000); /* AHB SRAM4,  32 k */
 
 	/* Add the flash to memory map. */
-	uint32_t flashsize = target_mem_read32(t,  FLASH_SIZE_REG);
-	flashsize &= 0xffff;
-	if (flashsize == 128) { /* H750 has only 128 kByte!*/
-		stm32h7_add_flash(t, 0x8000000, FLASH_SECTOR_SIZE, FLASH_SECTOR_SIZE);
-	} else {
-		stm32h7_add_flash(t, 0x8000000, 0x100000, FLASH_SECTOR_SIZE);
-		stm32h7_add_flash(t, 0x8100000, 0x100000, FLASH_SECTOR_SIZE);
-	}
+	stm32h7_add_flash(t, 0x8000000, 0x100000, FLASH_SECTOR_SIZE);
+	stm32h7_add_flash(t, 0x8100000, 0x100000, FLASH_SECTOR_SIZE);
 	return true;
 }
 
