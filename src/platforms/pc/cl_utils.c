@@ -354,7 +354,7 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 		target_reset(t);
 	} else {
 #define WORKSIZE 1024
-		uint8_t *data = malloc(WORKSIZE);
+		uint8_t *data = alloca(WORKSIZE);
 		if (!data) {
 			printf("Can not malloc memory for flash read/verify operation\n");
 			return res;
