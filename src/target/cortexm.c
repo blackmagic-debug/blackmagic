@@ -1281,7 +1281,6 @@ static int cortexm_hostio_request(target *t)
 
 	// not implemented yet:
 	case SYS_HEAPINFO: /* heapinfo */
-	case SYS_CLOCK: /* clock */
 	case SYS_ELAPSED: /* elapsed */
 	case SYS_TICKFREQ: /* tickfreq */
 	case SYS_TMPNAM: /* tmpnam */
