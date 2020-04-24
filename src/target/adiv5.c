@@ -586,7 +586,7 @@ static void ap_mem_access_setup(ADIv5_AP_t *ap, uint32_t addr, enum align align)
 }
 
 /* Extract read data from data lane based on align and src address */
-static void * extract(void *dest, uint32_t src, uint32_t val, enum align align)
+void * extract(void *dest, uint32_t src, uint32_t val, enum align align)
 {
 	switch (align) {
 	case ALIGN_BYTE:
