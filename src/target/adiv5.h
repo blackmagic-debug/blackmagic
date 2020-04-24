@@ -197,4 +197,5 @@ void adiv5_mem_write(ADIv5_AP_t *ap, uint32_t dest, const void *src, size_t len)
 void adiv5_mem_write_sized(ADIv5_AP_t *ap, uint32_t dest, const void *src,
 						   size_t len, enum align align);
 uint64_t adiv5_ap_read_pidr(ADIv5_AP_t *ap, uint32_t addr);
+void * extract(void *dest, uint32_t src, uint32_t val, enum align align);
 #endif
