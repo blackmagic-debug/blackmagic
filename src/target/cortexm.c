@@ -1180,22 +1180,34 @@ static int cortexm_hostio_request(target *t)
 			 break;
 		 }
 
-	case SYS_TIME: { /* gettimeofday */
+	case SYS_CLOCK: /* clock */
+	case SYS_TIME: { /* time */
+		/* use same code for SYS_CLOCK and SYS_TIME, more compact */
 		ret = -1;
-		uint32_t fio_timeval[3]; /* same size as fio_timeval in gdb/include/gdb/fileio.h */
-		//DEBUG("SYS_TIME fio_timeval addr %p\n", fio_timeval);
+		struct __attribute__((packed, aligned(4))) {
+			uint32_t ftv_sec;
+			uint64_t ftv_usec;
+		} fio_timeval;
+		//DEBUG("SYS_TIME fio_timeval addr %p\n", &fio_timeval);
 		void (*saved_mem_read)(target *t, void *dest, target_addr src, size_t len);
 		void (*saved_mem_write)(target *t, target_addr dest, const void *src, size_t len);
 		saved_mem_read = t->mem_read;
 		saved_mem_write = t->mem_write;
 		t->mem_read = probe_mem_read;
 		t->mem_write = probe_mem_write;
-		int rc = tc_gettimeofday(t, (target_addr) fio_timeval, (target_addr) NULL); /* write gettimeofday() result in fio_timeval[] */
+		int rc = tc_gettimeofday(t, (target_addr) &fio_timeval, (target_addr) NULL); /* write gettimeofday() result in fio_timeval[] */
 		t->mem_read = saved_mem_read;
 		t->mem_write = saved_mem_write;
 		if (rc) break; /* tc_gettimeofday() failed */
-		uint32_t ftv_sec = fio_timeval[0]; /* time in seconds, first field in fio_timeval */
-		ret = __builtin_bswap32(ftv_sec); /* convert from bigendian to target order */
+		uint32_t sec = __builtin_bswap32(fio_timeval.ftv_sec); /* convert from bigendian to target order */
+		uint64_t usec = __builtin_bswap64(fio_timeval.ftv_usec);
+		if (syscall == SYS_TIME) { /* SYS_TIME: time in seconds */
+			ret = sec;
+		} else { /* SYS_CLOCK: time in hundredths of seconds */
+			uint64_t csec64 = (sec * 1000000ull + usec)/10000ull;
+			uint32_t csec = csec64 & 0x7fffffff;
+			ret = csec;
+		}
 		break;
 		}
 
