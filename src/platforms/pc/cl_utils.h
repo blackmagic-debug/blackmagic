@@ -36,6 +36,13 @@ enum bmp_cl_mode {
 	BMP_MODE_FLASH_VERIFY
 };
 
+enum BMP_DEBUG {
+	BMP_DEBUG_NONE = 0,
+	BMP_DEBUG_INFO = 1,
+	BMP_DEBUG_PLATFORM = 2,
+	BMP_DEBUG_WIRE = 4
+};
+
 typedef struct BMP_CL_OPTIONS_s {
 	enum bmp_cl_mode opt_mode;
 	bool opt_usejtag;
