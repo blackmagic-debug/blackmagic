@@ -53,6 +53,7 @@ typedef struct BMP_CL_OPTIONS_s {
 	char     *opt_idstring;
 }BMP_CL_OPTIONS_t;
 
+extern int cl_debuglevel;
 void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv);
 int cl_execute(BMP_CL_OPTIONS_t *opt);
 int serial_open(BMP_CL_OPTIONS_t *opt);

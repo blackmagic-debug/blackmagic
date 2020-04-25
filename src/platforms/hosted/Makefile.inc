@@ -8,5 +8,5 @@ else ifneq (, $(findstring cygwin, $(SYS)))
 LDFLAGS += -lws2_32
 endif
 VPATH += platforms/pc
-SRC += timing.c cl_utils.c utils.c
+SRC += timing.c cl_utils.c utils.c libusb_utils.c
 PC_HOSTED = 1
