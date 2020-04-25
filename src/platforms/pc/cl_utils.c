@@ -306,7 +306,7 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 		}
 	} else if (opt->opt_mode == BMP_MODE_FLASH_READ) {
 		/* Open as binary */
-		read_file = open(opt->opt_flash_file, O_CREAT | O_RDWR | O_BINARY,
+		read_file = open(opt->opt_flash_file, O_TRUNC | O_CREAT | O_RDWR | O_BINARY,
 						 S_IRUSR | S_IWUSR);
 		if (read_file == -1) {
 			printf("Error opening flashfile %s for read: %s\n",
