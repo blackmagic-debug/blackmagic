@@ -10,7 +10,7 @@ before_install:
   - wget http://www.intra2net.com/en/developer/libftdi/download/libftdi1-1.2.tar.bz2.sig
   - gpg --trust-model always --verify libftdi1-1.2.tar.bz2.sig
   - tar -xjf libftdi1-1.2.tar.bz2
-  - sudo apt-get install -y build-essential libboost-all-dev gcc-arm-embedded libusb-1.0-0-dev
+  - sudo apt-get install -y build-essential libboost-all-dev gcc-arm-embedded libusb-1.0-0-dev libhidapi-dev
 
 install:
   - cd libftdi1-1.2

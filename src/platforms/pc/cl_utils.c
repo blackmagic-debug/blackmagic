@@ -165,7 +165,7 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 			if (optarg)
 				cl_debuglevel = strtol(optarg, NULL, 0);
 			else
-				cl_debuglevel = -1;
+				cl_debuglevel = 1;
 			break;
 		case 'j':
 			opt->opt_usejtag = true;

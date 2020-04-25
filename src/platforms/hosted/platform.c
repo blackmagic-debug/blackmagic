@@ -36,6 +36,7 @@
 #include "stlinkv2.h"
 #include "ftdi_bmp.h"
 #include "jlink.h"
+#include "cmsis_dap.h"
 
 #define VENDOR_ID_BMP            0x1d50
 #define PRODUCT_ID_BMP           0x6018
@@ -69,6 +70,9 @@ static void exit_function(void)
 		}
 	}
 	switch (info.bmp_type) {
+	case BMP_TYPE_CMSIS_DAP:
+		dap_exit_function();
+		break;
 	default:
 		break;
 	}
@@ -169,6 +173,8 @@ static int find_debuggers(	BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 					fprintf(stderr, "INFO: STLINKV1 not supported\n");
 				continue;
 			}
+		} else if ((strstr(manufacturer, "CMSIS")) || (strstr(product, "CMSIS"))) {
+			type = BMP_TYPE_CMSIS_DAP;
 		} else if (desc.idVendor ==  VENDOR_ID_SEGGER) {
 			type = BMP_TYPE_JLINK;
 		} else{
@@ -244,6 +250,10 @@ void platform_init(int argc, char **argv)
 		if (stlink_init( &info))
 			exit(-1);
 		break;
+	case BMP_TYPE_CMSIS_DAP:
+		if (dap_init( &info))
+			exit(-1);
+		break;
 	case BMP_TYPE_LIBFTDI:
 		break;
 	case BMP_TYPE_JLINK:
@@ -282,6 +292,18 @@ int platform_adiv5_swdp_scan(void)
 		free(dp);
 		break;
 	}
+	case BMP_TYPE_CMSIS_DAP:
+	{
+		target_list_free();
+		ADIv5_DP_t *dp = (void*)calloc(1, sizeof(*dp));
+		if (!dap_enter_debug_swd(dp)) {
+			adiv5_dp_init(dp);
+			if (target_list)
+				return 1;
+		}
+		free(dp);
+		break;
+	}
 	case BMP_TYPE_JLINK:
 		return jlink_swdp_scan(&info);
 	default:
@@ -296,6 +318,7 @@ int platform_swdptap_init(void)
 	case BMP_TYPE_BMP:
 		return remote_swdptap_init(&swd_proc);
 	case BMP_TYPE_STLINKV2:
+	case BMP_TYPE_CMSIS_DAP:
 	case BMP_TYPE_JLINK:
 		return 0;
 	case BMP_TYPE_LIBFTDI:
@@ -312,6 +335,7 @@ int platform_jtag_scan(const uint8_t *lrlens)
 	case BMP_TYPE_BMP:
 	case BMP_TYPE_LIBFTDI:
 	case BMP_TYPE_JLINK:
+	case BMP_TYPE_CMSIS_DAP:
 		return jtag_scan(lrlens);
 	case BMP_TYPE_STLINKV2:
 		return jtag_scan_stlinkv2(&info, lrlens);
@@ -332,6 +356,8 @@ int platform_jtagtap_init(void)
 		return libftdi_jtagtap_init(&jtag_proc);
 	case BMP_TYPE_JLINK:
 		return jlink_jtagtap_init(&info, &jtag_proc);
+	case BMP_TYPE_CMSIS_DAP:
+		return cmsis_dap_jtagtap_init(&jtag_proc);
 	default:
 		return -1;
 	}
@@ -343,6 +369,8 @@ void platform_adiv5_dp_defaults(ADIv5_DP_t *dp)
 	switch (info.bmp_type) {
 	case BMP_TYPE_STLINKV2:
 		return stlink_adiv5_dp_defaults(dp);
+	case BMP_TYPE_CMSIS_DAP:
+		return dap_adiv5_dp_defaults(dp);
 	default:
 		break;
 	}
@@ -357,6 +385,8 @@ int platform_jtag_dp_init(ADIv5_DP_t *dp)
 		return 0;
 	case BMP_TYPE_STLINKV2:
 		return stlink_jtag_dp_init(dp);
+	case BMP_TYPE_CMSIS_DAP:
+		return dap_jtag_dp_init(dp);
 	default:
 		return 0;
 	}
