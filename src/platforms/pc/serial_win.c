@@ -24,7 +24,6 @@
 #include "cl_utils.h"
 
 HANDLE hComm;
-extern int cl_debuglevel;
 
 int serial_open(BMP_CL_OPTIONS_t *opt)
 {

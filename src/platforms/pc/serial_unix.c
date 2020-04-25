@@ -31,7 +31,7 @@
 #include "cl_utils.h"
 
 static int fd;  /* File descriptor for connection to GDB remote */
-extern int cl_debuglevel;
+
 /* A nice routine grabbed from
  * https://stackoverflow.com/questions/6947413/how-to-open-read-and-write-from-serial-port-in-c
  */
