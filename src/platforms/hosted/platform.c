@@ -35,6 +35,7 @@
 #include "bmp_remote.h"
 #include "stlinkv2.h"
 #include "ftdi_bmp.h"
+#include "jlink.h"
 
 #define VENDOR_ID_BMP            0x1d50
 #define PRODUCT_ID_BMP           0x6018
@@ -48,6 +49,8 @@
 #define PRODUCT_ID_STLINKV21_MSD 0x3752
 #define PRODUCT_ID_STLINKV3      0x374f
 #define PRODUCT_ID_STLINKV3E     0x374e
+
+#define VENDOR_ID_SEGGER         0x1366
 
 bmp_info_t info;
 
@@ -166,7 +169,9 @@ static int find_debuggers(	BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 					fprintf(stderr, "INFO: STLINKV1 not supported\n");
 				continue;
 			}
-		} else {
+		} else if (desc.idVendor ==  VENDOR_ID_SEGGER) {
+			type = BMP_TYPE_JLINK;
+		} else{
 			continue;
 		}
 		found_debuggers ++;
@@ -226,7 +231,7 @@ void platform_init(int argc, char **argv)
 	} else if (find_debuggers(&cl_opts, &info)) {
 		exit(-1);
 	}
-	printf("Using %s %s %s\n", info.serial,
+	printf("Using %04x:%04x %s %s %s\n", info.vid, info.pid, info.serial,
 		   info.manufacturer,
 		   info.product);
 	switch (info.bmp_type) {
@@ -240,6 +245,10 @@ void platform_init(int argc, char **argv)
 			exit(-1);
 		break;
 	case BMP_TYPE_LIBFTDI:
+		break;
+	case BMP_TYPE_JLINK:
+		if (jlink_init(&info))
+			exit(-1);
 		break;
 	default:
 		exit(-1);
@@ -273,6 +282,8 @@ int platform_adiv5_swdp_scan(void)
 		free(dp);
 		break;
 	}
+	case BMP_TYPE_JLINK:
+		return jlink_swdp_scan(&info);
 	default:
 		return 0;
 	}
@@ -285,8 +296,8 @@ int platform_swdptap_init(void)
 	case BMP_TYPE_BMP:
 		return remote_swdptap_init(&swd_proc);
 	case BMP_TYPE_STLINKV2:
+	case BMP_TYPE_JLINK:
 		return 0;
-		break;
 	case BMP_TYPE_LIBFTDI:
 		return libftdi_swdptap_init(&swd_proc);
 	default:
@@ -300,6 +311,7 @@ int platform_jtag_scan(const uint8_t *lrlens)
 	switch (info.bmp_type) {
 	case BMP_TYPE_BMP:
 	case BMP_TYPE_LIBFTDI:
+	case BMP_TYPE_JLINK:
 		return jtag_scan(lrlens);
 	case BMP_TYPE_STLINKV2:
 		return jtag_scan_stlinkv2(&info, lrlens);
@@ -318,6 +330,8 @@ int platform_jtagtap_init(void)
 		return 0;
 	case BMP_TYPE_LIBFTDI:
 		return libftdi_jtagtap_init(&jtag_proc);
+	case BMP_TYPE_JLINK:
+		return jlink_jtagtap_init(&info, &jtag_proc);
 	default:
 		return -1;
 	}
@@ -339,6 +353,7 @@ int platform_jtag_dp_init(ADIv5_DP_t *dp)
 	switch (info.bmp_type) {
 	case BMP_TYPE_BMP:
 	case BMP_TYPE_LIBFTDI:
+	case BMP_TYPE_JLINK:
 		return 0;
 	case BMP_TYPE_STLINKV2:
 		return stlink_jtag_dp_init(dp);
@@ -376,6 +391,8 @@ const char *platform_target_voltage(void)
 		return stlink_target_voltage(&info);
 	case BMP_TYPE_LIBFTDI:
 		return libftdi_target_voltage();
+	case BMP_TYPE_JLINK:
+		return jlink_target_voltage(&info);
 	default:
 		break;
 	}
@@ -389,6 +406,8 @@ void platform_srst_set_val(bool assert)
 		return stlink_srst_set_val(&info, assert);
 	case BMP_TYPE_BMP:
 		return remote_srst_set_val(assert);
+	case BMP_TYPE_JLINK:
+		return jlink_srst_set_val(&info, assert);
 	default:
 		break;
 	}
@@ -401,6 +420,8 @@ bool platform_srst_get_val(void)
 		return remote_srst_get_val();
 	case BMP_TYPE_STLINKV2:
 		return stlink_srst_get_val();
+	case BMP_TYPE_JLINK:
+		return jlink_srst_get_val(&info);
 	default:
 		break;
 	}

@@ -332,7 +332,7 @@ static int stlink_usb_error_check(uint8_t *data, bool verbose)
 	}
 }
 
-static int send_recv_retry(uint8_t *txbuf, size_t txsize,
+static int stlink_send_recv_retry(uint8_t *txbuf, size_t txsize,
 					 uint8_t *rxbuf, size_t rxsize)
 {
 	uint32_t start = platform_time_ms();
@@ -400,7 +400,7 @@ static void stlink_version(bmp_info_t *info)
 		uint8_t data[12];
 		int size = send_recv(info->usb_link, cmd, 16, data, 12);
 		if (size == -1) {
-			printf("[!] send_recv STLINK_APIV3_GET_VERSION_EX\n");
+			printf("[!] stlink_send_recv STLINK_APIV3_GET_VERSION_EX\n");
 		}
 		Stlink.ver_stlink = data[0];
 		Stlink.ver_swim  =  data[1];
@@ -415,7 +415,7 @@ static void stlink_version(bmp_info_t *info)
 		uint8_t data[6];
 		int size = send_recv(info->usb_link, cmd, 16, data, 6);
 		if (size == -1) {
-			printf("[!] send_recv STLINK_GET_VERSION_EX\n");
+			printf("[!] stlink_send_recv STLINK_GET_VERSION_EX\n");
 		}
 		Stlink.vid = data[3] << 8 | data[2];
 		Stlink.pid = data[5] << 8 | data[4];
@@ -766,7 +766,7 @@ static int stlink_read_dp_register(uint16_t port, uint16_t addr, uint32_t *reg)
 		cmd[4] = addr & 0xff;
 	DEBUG_STLINK("Read DP, Addr 0x%04" PRIx16 ": \n", addr);
 	uint8_t data[8];
-	int res = send_recv_retry(cmd, 16, data, 8);
+	int res = stlink_send_recv_retry(cmd, 16, data, 8);
 	if (res == STLINK_ERROR_OK) {
 		uint32_t ret = data[4] | data[5] << 8 | data[6] << 16 | data[7] << 24;
 		DEBUG_STLINK("0x%08" PRIx32" \n", ret);
@@ -791,7 +791,7 @@ static int stlink_write_dp_register(uint16_t port, uint16_t addr, uint32_t val)
 			val & 0xff, (val >>  8) & 0xff, (val >> 16) & 0xff,
 			(val >> 24) & 0xff};
 		uint8_t data[2];
-		send_recv_retry(cmd, 16, data, 2);
+		stlink_send_recv_retry(cmd, 16, data, 2);
 		DEBUG_STLINK("Write DP, Addr 0x%04" PRIx16 ": 0x%08" PRIx32
 			  " \n", addr, val);
 		return stlink_usb_error_check(data, true);
