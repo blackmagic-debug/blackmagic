@@ -317,9 +317,11 @@ static bool adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, int recursion, 
 #endif
 
 		for (int i = 0; i < 960; i++) {
+			adiv5_dp_error(ap->dp);
 			uint32_t entry = adiv5_mem_read32(ap, addr + i*4);
 			if (adiv5_dp_error(ap->dp)) {
-				DEBUG("%sFault reading ROM table entry\n", indent);
+				DEBUG("%sFault reading ROM table entry %d\n", indent, i);
+				break;
 			}
 
 			if (entry == 0)
@@ -518,6 +520,7 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 		if (ap->base == last_base) {
 			DEBUG("AP %d: Duplicate base\n", i);
 			adiv5_ap_cleanup(i);
+			free(ap);
 			/* FIXME: Should we expect valid APs behind duplicate ones? */
 			return;
 		}
