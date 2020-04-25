@@ -256,6 +256,8 @@ int target_flash_write(target *t,
 	int ret = 0;
 	while (len) {
 		struct target_flash *f = flash_for_addr(t, dest);
+		if (!f)
+			return 1;
 		size_t tmptarget = MIN(dest + len, f->start + f->length);
 		size_t tmplen = tmptarget - dest;
 		ret |= target_flash_write_buffered(f, dest, src, tmplen);
