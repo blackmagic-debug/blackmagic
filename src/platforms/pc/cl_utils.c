@@ -332,6 +332,7 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 	} else if (opt->opt_mode == BMP_MODE_FLASH_WRITE) {
 		DEBUG("Erase    %zu bytes at 0x%08" PRIx32 "\n", map.size,
 			  opt->opt_flash_start);
+		uint32_t start_time = platform_time_ms();
 		unsigned int erased = target_flash_erase(t, opt->opt_flash_start,
 												 map.size);
 		if (erased) {
@@ -352,6 +353,9 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 		}
 		target_flash_done(t);
 		target_reset(t);
+		uint32_t end_time = platform_time_ms();
+		printf("Flash Write succeeded for %d bytes, %8.3f kiB/s\n",
+			   (int)map.size, (((map.size * 1.0)/(end_time - start_time))));
 	} else {
 #define WORKSIZE 1024
 		uint8_t *data = alloca(WORKSIZE);
@@ -368,6 +372,7 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 			map.size;
 		int bytes_read = 0;
 		void *flash = map.data;
+		uint32_t start_time = platform_time_ms();
 		while (size) {
 			int worksize = (size > WORKSIZE) ? WORKSIZE : size;
 			int n_read = target_mem_read(t, data, flash_src, worksize);
@@ -405,9 +410,11 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 			if (size <= 0)
 				res = 0;
 		}
+		uint32_t end_time = platform_time_ms();
 		if (read_file != -1)
 			close(read_file);
-		printf("Read/Verified succeeded for %d bytes\n", bytes_read);
+		printf("Read/Verified succeeded for %d bytes, %8.3f kiB/s\n",
+			   bytes_read, (((bytes_read * 1.0)/(end_time - start_time))));
 	}
   free_map:
 	if (map.size)
