@@ -184,8 +184,10 @@ bool msp432_probe(target *t)
 		return false;
 
 	/* Check for the right HW revision: at least C, as no flash support for B */
-	if (target_mem_read32(t, HWREV_ADDR) < HWREV_MIN_VALUE)
+	if (target_mem_read32(t, HWREV_ADDR) < HWREV_MIN_VALUE) {
+		DEBUG("MSP432 Version not handled\n");
 		return false;
+	}
 
 	/* If we got till this point, we are most probably looking at a real TLV  */
 	/* Device Information structure. Now check for the correct device         */
