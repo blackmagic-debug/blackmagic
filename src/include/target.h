@@ -81,6 +81,8 @@ void target_halt_request(target *t);
 enum target_halt_reason target_halt_poll(target *t, target_addr *watch);
 void target_halt_resume(target *t, bool step);
 void target_set_cmdline(target *t, char *cmdline);
+void target_set_heapinfo(target *t, target_addr heap_base, target_addr heap_limit,
+	target_addr stack_base, target_addr stack_limit);
 
 /* Break-/watchpoint functions */
 enum target_breakwatch {
