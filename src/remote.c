@@ -61,7 +61,7 @@ static void _respond(char respCode, uint64_t param)
 /* Send response to far end */
 
 {
-	char buf[34];
+	char buf[35]; /*Response, code, EOM and 2*16 hex nibbles*/
 	char *p=buf;
 
 	gdb_if_putchar(REMOTE_RESP,0);
@@ -185,7 +185,7 @@ void remotePacketProcessJTAG(uint8_t i, char *packet)
 			jtagtap_tdi_tdo_seq((void *)&DO, (packet[1]==REMOTE_TDITDO_TMS), (void *)&DI, ticks);
 
 			/* Mask extra bits on return value... */
-			DO&=(1<<(ticks+1))-1;
+			DO &= (1LL << (ticks + 1)) - 1;
 
 			_respond(REMOTE_RESP_OK, DO);
 		}
