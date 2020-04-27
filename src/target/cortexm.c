@@ -1110,12 +1110,12 @@ static int cortexm_hostio_request(target *t)
 		break;
 	case SYS_READ:	/* read */
 		ret = tc_read(t, params[0] - 1, params[1], params[2]);
-		if (ret > 0)
+		if (ret >= 0)
 			ret = params[2] - ret;
 		break;
 	case SYS_WRITE:	/* write */
 		ret = tc_write(t, params[0] - 1, params[1], params[2]);
-		if (ret > 0)
+		if (ret >= 0)
 			ret = params[2] - ret;
 		break;
 	case SYS_WRITEC: /* writec */
@@ -1237,7 +1237,11 @@ static int cortexm_hostio_request(target *t)
 	case SYS_EXIT: /* _exit() */
 		tc_printf(t, "_exit(0x%x)\n", params[0]);
 		target_halt_resume(t, 1);
-		ret = 0;
+		break;
+
+	case SYS_EXIT_EXTENDED: /* _exit() */
+		tc_printf(t, "_exit(0x%x%08x)\n", params[1], params[0]); /* exit() with 64bit exit value */
+		target_halt_resume(t, 1);
 		break;
 
 	case SYS_GET_CMDLINE: { /* get_cmdline */
