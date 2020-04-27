@@ -98,7 +98,7 @@ void jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms, const uint8_t *DI
   if(!ticks || !DI) return;
 
   /* Reduce the length of DI according to the bits we're transmitting */
-  DIl&=(1L<<(ticks+1))-1;
+  DIl &= (1LL << (ticks + 1)) - 1;
 
   s=snprintf((char *)construct,PLATFORM_MAX_MSG_SIZE,REMOTE_JTAG_TDIDO_STR,final_tms?REMOTE_TDITDO_TMS:REMOTE_TDITDO_NOTMS,ticks,DIl);
   platform_buffer_write(construct,s);
@@ -111,8 +111,8 @@ void jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms, const uint8_t *DI
     }
 
   if (DO) {
-      for (unsigned int i = 1; i*8 <= (unsigned int)ticks; i++)
-          DO[i - 1] = remotehston(2 , (char *)&construct[s - (i * 2)]);
+      uint64_t DOl = remotehston(-1, (char *)&construct[1]);
+      *(uint64_t *)DO = DOl;
   }
 }
 
