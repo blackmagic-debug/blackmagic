@@ -18,34 +18,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __PLATFORM_H
-#define __PLATFORM_H
+#ifndef __FTDI_BMP_H
+#define __FTDI_BMP_H
 
-#include <libftdi1/ftdi.h>
-
-#include "timing.h"
-
-#ifndef _WIN32
-#	include <alloca.h>
-#else
-#	ifndef alloca
-#		define alloca __builtin_alloca
-#	endif
-#endif
-
-#define FT2232_VID	0x0403
-#define FT2232_PID	0x6010
-
-#define PLATFORM_IDENT() "FTDI/MPSSE"
-#define SET_RUN_STATE(state)
-#define SET_IDLE_STATE(state)
-#define SET_ERROR_STATE(state)
-
-extern struct ftdi_context *ftdic;
-
-void platform_buffer_flush(void);
-int platform_buffer_write(const uint8_t *data, int size);
-int platform_buffer_read(uint8_t *data, int size);
+#include "cl_utils.h"
+#include "swdptap.h"
+#include "jtagtap.h"
 
 typedef struct cable_desc_s {
 	int vendor;
@@ -65,15 +43,19 @@ typedef struct cable_desc_s {
 }cable_desc_t;
 
 extern cable_desc_t *active_cable;
+extern struct ftdi_context *ftdic;
 
-static inline int platform_hwversion(void)
-{
-	        return 0;
-}
+int ftdi_bmp_init(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info);
+
+int libftdi_swdptap_init(swd_proc_t *swd_proc);
+int libftdi_jtagtap_init(jtag_proc_t *jtag_proc);
+void libftdi_buffer_flush(void);
+int libftdi_buffer_write(const uint8_t *data, int size);
+int libftdi_buffer_read(uint8_t *data, int size);
+const char *libftdi_target_voltage(void);
 
 #define MPSSE_TDI 2
 #define MPSSE_TDO 4
 #define MPSSE_TMS 8
 
 #endif
-
