@@ -34,6 +34,7 @@
 
 #include "bmp_remote.h"
 #include "stlinkv2.h"
+#include "ftdi_bmp.h"
 
 #define VENDOR_ID_BMP            0x1d50
 #define PRODUCT_ID_BMP           0x6018
@@ -215,6 +216,13 @@ void platform_init(int argc, char **argv)
 	}
 	if (cl_opts.opt_device) {
 		info.bmp_type = BMP_TYPE_BMP;
+	} else if (cl_opts.opt_cable) {
+		/* check for libftdi devices*/
+		res = ftdi_bmp_init(&cl_opts, &info);
+		if (res)
+			exit(-1);
+		else
+			info.bmp_type = BMP_TYPE_LIBFTDI;
 	} else if (find_debuggers(&cl_opts, &info)) {
 		exit(-1);
 	}
@@ -230,6 +238,8 @@ void platform_init(int argc, char **argv)
 	case BMP_TYPE_STLINKV2:
 		if (stlink_init( &info))
 			exit(-1);
+		break;
+	case BMP_TYPE_LIBFTDI:
 		break;
 	default:
 		exit(-1);
@@ -248,6 +258,9 @@ int platform_adiv5_swdp_scan(void)
 {
 	switch (info.bmp_type) {
 	case BMP_TYPE_BMP:
+	case BMP_TYPE_LIBFTDI:
+		return adiv5_swdp_scan();
+		break;
 	case BMP_TYPE_STLINKV2:
 	{
 		target_list_free();
@@ -274,6 +287,8 @@ int platform_swdptap_init(void)
 	case BMP_TYPE_STLINKV2:
 		return 0;
 		break;
+	case BMP_TYPE_LIBFTDI:
+		return libftdi_swdptap_init(&swd_proc);
 	default:
 		return -1;
 	}
@@ -284,6 +299,8 @@ int platform_jtag_scan(const uint8_t *lrlens)
 {
 	switch (info.bmp_type) {
 	case BMP_TYPE_BMP:
+	case BMP_TYPE_LIBFTDI:
+		return jtag_scan(lrlens);
 	case BMP_TYPE_STLINKV2:
 		return jtag_scan_stlinkv2(&info, lrlens);
 	default:
@@ -299,6 +316,8 @@ int platform_jtagtap_init(void)
 		return remote_jtagtap_init(&jtag_proc);
 	case BMP_TYPE_STLINKV2:
 		return 0;
+	case BMP_TYPE_LIBFTDI:
+		return libftdi_jtagtap_init(&jtag_proc);
 	default:
 		return -1;
 	}
@@ -319,6 +338,8 @@ int platform_jtag_dp_init(ADIv5_DP_t *dp)
 {
 	switch (info.bmp_type) {
 	case BMP_TYPE_BMP:
+	case BMP_TYPE_LIBFTDI:
+		return 0;
 	case BMP_TYPE_STLINKV2:
 		return stlink_jtag_dp_init(dp);
 	default:
@@ -336,7 +357,7 @@ char *platform_ident(void)
 		return "BMP";
 	  case BMP_TYPE_STLINKV2:
 		return "STLINKV2";
-	case BMP_TYPE_LIBFTDI:
+	  case BMP_TYPE_LIBFTDI:
 		return "LIBFTDI";
 	  case BMP_TYPE_CMSIS_DAP:
 		return "CMSIS_DAP";
@@ -353,6 +374,8 @@ const char *platform_target_voltage(void)
 		return remote_target_voltage();
 	case BMP_TYPE_STLINKV2:
 		return stlink_target_voltage(&info);
+	case BMP_TYPE_LIBFTDI:
+		return libftdi_target_voltage();
 	default:
 		break;
 	}
@@ -387,6 +410,8 @@ bool platform_srst_get_val(void)
 void platform_buffer_flush(void)
 {
 	switch (info.bmp_type) {
+	case BMP_TYPE_LIBFTDI:
+		return libftdi_buffer_flush();
 	default:
 		break;
 	}
