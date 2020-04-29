@@ -1141,17 +1141,19 @@ static int cortexm_hostio_request(target *t)
 		ret = tc_isatty(t, params[0] - 1);
 		break;
 	case SYS_SEEK:	/* lseek */
-		ret = tc_lseek(t, params[0] - 1, params[1], TARGET_SEEK_SET);
+		if (tc_lseek(t, params[0] - 1, params[1], TARGET_SEEK_SET) == (long)params[1]) ret = 0;
+		else ret = -1;
 		break;
 	case SYS_RENAME:/* rename */
-		ret = tc_rename(t, params[0] - 1, params[1] + 1,
+		ret = tc_rename(t, params[0], params[1] + 1,
 				params[2], params[3] + 1);
 		break;
 	case SYS_REMOVE:/* unlink */
-		ret = tc_unlink(t, params[0] - 1, params[1] + 1);
+		ret = tc_unlink(t, params[0], params[1] + 1);
 		break;
 	case SYS_SYSTEM:/* system */
-		ret = tc_system(t, params[0] - 1, params[1] + 1);
+		/* before use first enable system calls with the following gdb command: 'set remote system-call-allowed 1' */
+		ret = tc_system(t, params[0], params[1] + 1);
 		break;
 
 	case SYS_FLEN:
@@ -1220,7 +1222,7 @@ static int cortexm_hostio_request(target *t)
 		saved_mem_write = t->mem_write;
 		t->mem_read = probe_mem_read;
 		t->mem_write = probe_mem_write;
-		int rc = tc_read(t, params[0] - 1, (target_addr) &ch, 1); /* read a character in ch */
+		int rc = tc_read(t, STDIN_FILENO, (target_addr) &ch, 1); /* read a character in ch */
 		t->mem_read = saved_mem_read;
 		t->mem_write = saved_mem_write;
 		if (rc == 1) ret = ch;
