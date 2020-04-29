@@ -422,7 +422,6 @@ ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel)
 	memcpy(ap, &tmpap, sizeof(*ap));
 	adiv5_dp_ref(dp);
 
-	ap->cfg = adiv5_ap_read(ap, ADIV5_AP_CFG);
 	ap->base = adiv5_ap_read(ap, ADIV5_AP_BASE);
 	ap->csw = adiv5_ap_read(ap, ADIV5_AP_CSW) &
 		~(ADIV5_AP_CSW_SIZE_MASK | ADIV5_AP_CSW_ADDRINC_MASK);
@@ -432,8 +431,11 @@ ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel)
 		ap->csw &= ~ADIV5_AP_CSW_TRINPROG;
 	}
 
+#if defined(ENABLE_DEBUG)
+	uint32_t cfg = adiv5_ap_read(ap, ADIV5_AP_CFG);
 	DEBUG("AP %3d: IDR=%08"PRIx32" CFG=%08"PRIx32" BASE=%08"PRIx32" CSW=%08"PRIx32"\n",
-	      apsel, ap->idr, ap->cfg, ap->base, ap->csw);
+	      apsel, ap->idr, cfg, ap->base, ap->csw);
+#endif
 	return ap;
 }
 
