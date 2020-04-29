@@ -285,8 +285,6 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 	} else {
 		target_foreach(display_target, NULL);
 	}
-	if (opt->opt_mode == BMP_MODE_TEST)
-			return 0;
 	if (opt->opt_target_dev > num_targets) {
 		DEBUG("Given target nummer %d not available\n", opt->opt_target_dev);
 		return res;
@@ -294,6 +292,44 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 	target *t = target_attach_n(opt->opt_target_dev, NULL);
 	if (!t) {
 		DEBUG("Can not attach to target %d\n", opt->opt_target_dev);
+		goto target_detach;
+	}
+	if (opt->opt_mode == BMP_MODE_TEST) {
+		char map [1024], *p = map;
+		if (target_mem_map(t, map, sizeof(map))) {
+			while (*p && (*p == '<')) {
+				unsigned int start, size;
+				char *res;
+				int match;
+				match = strncmp(p, "<memory-map>", strlen("<memory-map>"));
+				if (!match) {
+					p  += strlen("<memory-map>");
+					continue;
+				}
+				match = strncmp(p, "<memory type=\"flash\" ", strlen("<memory type=\"flash\" "));
+				if (!match) {
+					unsigned int blocksize;
+					if (sscanf(p, "<memory type=\"flash\" start=\"%x\" length=\"%x\">"
+							  "<property name=\"blocksize\">%x</property></memory>",
+							  &start, &size, &blocksize))
+						printf("Flash Start: 0x%08x, length %#9x, blocksize %#8x\n",
+							   start, size, blocksize);
+					res = strstr(p, "</memory>");
+					p = res + strlen("</memory>");
+					continue;
+				}
+				match = strncmp(p, "<memory type=\"ram\" ", strlen("<memory type=\"ram\" "));
+				if (!match) {
+					if (sscanf(p, "<memory type=\"ram\" start=\"%x\" length=\"%x\"/",
+							   &start, &size))
+						printf("Ram   Start: 0x%08x, length %#9x\n", start, size);
+					res = strstr(p, "/>");
+					p = res + strlen("/>");
+					continue;
+				}
+				break;
+			}
+		}
 		goto target_detach;
 	}
 	int read_file = -1;
