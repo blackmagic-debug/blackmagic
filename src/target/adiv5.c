@@ -492,8 +492,8 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 		);
 	DEBUG("RESET_SEQ %s\n", (platform_timeout_is_expired(&timeout)) ? "failed": "succeeded");
 
-	dp->dp_idcode =  adiv5_dp_read(dp, ADIV5_DP_IDCODE);
-	if ((dp->dp_idcode & ADIV5_DP_VERSION_MASK) == ADIV5_DPv2) {
+	uint32_t dp_idcode = adiv5_dp_read(dp, ADIV5_DP_IDCODE);
+	if ((dp_idcode & ADIV5_DP_VERSION_MASK) == ADIV5_DPv2) {
 		/* Read TargetID. Can be done with device in WFI, sleep or reset!*/
 		adiv5_dp_write(dp, ADIV5_DP_SELECT, ADIV5_DP_BANK2);
 		dp->targetid = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT);
