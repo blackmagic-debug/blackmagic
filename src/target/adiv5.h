@@ -177,7 +177,6 @@ typedef struct ADIv5_AP_s {
 	uint8_t apsel;
 
 	uint32_t idr;
-	uint32_t cfg;
 	uint32_t base;
 	uint32_t csw;
 } ADIv5_AP_t;
