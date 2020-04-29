@@ -1240,11 +1240,37 @@ static int cortexm_hostio_request(target *t)
 		break;
 		}
 
+	case SYS_ISERROR: { /* iserror */
+		int errno = params[0];
+		ret = (errno == TARGET_EPERM) ||
+		      (errno == TARGET_ENOENT) ||
+		      (errno == TARGET_EINTR) ||
+		      (errno == TARGET_EIO) ||
+		      (errno == TARGET_EBADF) ||
+		      (errno == TARGET_EACCES) ||
+		      (errno == TARGET_EFAULT) ||
+		      (errno == TARGET_EBUSY) ||
+		      (errno == TARGET_EEXIST) ||
+		      (errno == TARGET_ENODEV) ||
+		      (errno == TARGET_ENOTDIR) ||
+		      (errno == TARGET_EISDIR) ||
+		      (errno == TARGET_EINVAL) ||
+		      (errno == TARGET_ENFILE) ||
+		      (errno == TARGET_EMFILE) ||
+		      (errno == TARGET_EFBIG) ||
+		      (errno == TARGET_ENOSPC) ||
+		      (errno == TARGET_ESPIPE) ||
+		      (errno == TARGET_EROFS) ||
+		      (errno == TARGET_ENOSYS) ||
+		      (errno == TARGET_ENAMETOOLONG) ||
+		      (errno == TARGET_EUNKNOWN);
+		break;
+		}
+
 	// not implemented yet:
 	case SYS_HEAPINFO: /* heapinfo */
 	case SYS_CLOCK: /* clock */
 	case SYS_ELAPSED: /* elapsed */
-	case SYS_ISERROR: /* iserror */
 	case SYS_TICKFREQ: /* tickfreq */
 	case SYS_TMPNAM: /* tmpnam */
 		ret = -1;
