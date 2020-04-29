@@ -1214,7 +1214,7 @@ static int cortexm_hostio_request(target *t)
 		}
 
 	case SYS_READC: { /* readc */
-		uint8_t ch;
+		uint8_t ch='?';
 		//DEBUG("SYS_READC ch addr %p\n", &ch);
 		void (*saved_mem_read)(target *t, void *dest, target_addr src, size_t len);
 		void (*saved_mem_write)(target *t, target_addr dest, const void *src, size_t len);
@@ -1285,8 +1285,11 @@ static int cortexm_hostio_request(target *t)
 		break;
 		}
 
-	// not implemented yet:
 	case SYS_HEAPINFO: /* heapinfo */
+		target_mem_write(t, arm_regs[1], &t->heapinfo, sizeof(t->heapinfo)); /* See newlib/libc/sys/arm/crt0.S */
+		break;
+
+	// not implemented yet:
 	case SYS_ELAPSED: /* elapsed */
 	case SYS_TICKFREQ: /* tickfreq */
 	case SYS_TMPNAM: /* tmpnam */
