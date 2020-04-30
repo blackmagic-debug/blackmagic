@@ -188,7 +188,7 @@ static const struct usb_endpoint_descriptor uart_data_endp[] = {{
 	.bDescriptorType = USB_DT_ENDPOINT,
 	.bEndpointAddress = 0x03,
 	.bmAttributes = USB_ENDPOINT_ATTR_BULK,
-	.wMaxPacketSize = CDCACM_PACKET_SIZE,
+	.wMaxPacketSize = CDCACM_PACKET_SIZE / 2,
 	.bInterval = 1,
 }, {
 	.bLength = USB_DT_ENDPOINT_SIZE,
