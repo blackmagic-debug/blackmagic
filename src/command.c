@@ -59,6 +59,7 @@ static bool cmd_target_power(target *t, int argc, const char **argv);
 #ifdef PLATFORM_HAS_TRACESWO
 static bool cmd_traceswo(target *t, int argc, const char **argv);
 #endif
+static bool cmd_heapinfo(target *t, int argc, const char **argv);
 #if defined(PLATFORM_HAS_DEBUG) && !defined(PC_HOSTED)
 static bool cmd_debug_bmp(target *t, int argc, const char **argv);
 #endif
@@ -83,6 +84,7 @@ const struct command_s cmd_list[] = {
 	{"traceswo", (cmd_handler)cmd_traceswo, "Start trace capture, Manchester mode" },
 #endif
 #endif
+	{"heapinfo", (cmd_handler)cmd_heapinfo, "Set semihosting heapinfo" },
 #if defined(PLATFORM_HAS_DEBUG) && !defined(PC_HOSTED)
 	{"debug_bmp", (cmd_handler)cmd_debug_bmp, "Output BMP \"debug\" strings to the second vcom: (enable|disable)"},
 #endif
@@ -402,3 +404,17 @@ static bool cmd_debug_bmp(target *t, int argc, const char **argv)
 	return true;
 }
 #endif
+static bool cmd_heapinfo(target *t, int argc, const char **argv)
+{
+	if (t == NULL) gdb_out("not attached\n");
+	else if (argc == 5) {
+		target_addr heap_base = strtoul(argv[1], NULL, 16);
+		target_addr heap_limit = strtoul(argv[2], NULL, 16);
+		target_addr stack_base = strtoul(argv[3], NULL, 16);
+		target_addr stack_limit = strtoul(argv[4], NULL, 16);
+		gdb_outf("heapinfo heap_base: %p heap_limit: %p stack_base: %p stack_limit: %p\n",
+			heap_base, heap_limit, stack_base, stack_limit);
+		target_set_heapinfo(t, heap_base, heap_limit, stack_base, stack_limit);
+	} else gdb_outf("heapinfo heap_base heap_limit stack_base stack_limit\n");
+	return true;
+}

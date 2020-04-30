@@ -121,6 +121,7 @@ struct target_s {
 	const char *driver;
 	const char *core;
 	char cmdline[MAX_CMDLINE];
+	target_addr heapinfo[4];
 	struct target_command_s *commands;
 
 	struct target_s *next;
