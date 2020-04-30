@@ -1110,12 +1110,12 @@ static int cortexm_hostio_request(target *t)
 		break;
 	case SYS_READ:	/* read */
 		ret = tc_read(t, params[0] - 1, params[1], params[2]);
-		if (ret > 0)
+		if (ret >= 0)
 			ret = params[2] - ret;
 		break;
 	case SYS_WRITE:	/* write */
 		ret = tc_write(t, params[0] - 1, params[1], params[2]);
-		if (ret > 0)
+		if (ret >= 0)
 			ret = params[2] - ret;
 		break;
 	case SYS_WRITEC: /* writec */
@@ -1141,17 +1141,19 @@ static int cortexm_hostio_request(target *t)
 		ret = tc_isatty(t, params[0] - 1);
 		break;
 	case SYS_SEEK:	/* lseek */
-		ret = tc_lseek(t, params[0] - 1, params[1], TARGET_SEEK_SET);
+		if (tc_lseek(t, params[0] - 1, params[1], TARGET_SEEK_SET) == (long)params[1]) ret = 0;
+		else ret = -1;
 		break;
 	case SYS_RENAME:/* rename */
-		ret = tc_rename(t, params[0] - 1, params[1] + 1,
+		ret = tc_rename(t, params[0], params[1] + 1,
 				params[2], params[3] + 1);
 		break;
 	case SYS_REMOVE:/* unlink */
-		ret = tc_unlink(t, params[0] - 1, params[1] + 1);
+		ret = tc_unlink(t, params[0], params[1] + 1);
 		break;
 	case SYS_SYSTEM:/* system */
-		ret = tc_system(t, params[0] - 1, params[1] + 1);
+		/* before use first enable system calls with the following gdb command: 'set remote system-call-allowed 1' */
+		ret = tc_system(t, params[0], params[1] + 1);
 		break;
 
 	case SYS_FLEN:
@@ -1180,27 +1182,39 @@ static int cortexm_hostio_request(target *t)
 			 break;
 		 }
 
-	case SYS_TIME: { /* gettimeofday */
+	case SYS_CLOCK: /* clock */
+	case SYS_TIME: { /* time */
+		/* use same code for SYS_CLOCK and SYS_TIME, more compact */
 		ret = -1;
-		uint32_t fio_timeval[3]; /* same size as fio_timeval in gdb/include/gdb/fileio.h */
-		//DEBUG("SYS_TIME fio_timeval addr %p\n", fio_timeval);
+		struct __attribute__((packed, aligned(4))) {
+			uint32_t ftv_sec;
+			uint64_t ftv_usec;
+		} fio_timeval;
+		//DEBUG("SYS_TIME fio_timeval addr %p\n", &fio_timeval);
 		void (*saved_mem_read)(target *t, void *dest, target_addr src, size_t len);
 		void (*saved_mem_write)(target *t, target_addr dest, const void *src, size_t len);
 		saved_mem_read = t->mem_read;
 		saved_mem_write = t->mem_write;
 		t->mem_read = probe_mem_read;
 		t->mem_write = probe_mem_write;
-		int rc = tc_gettimeofday(t, (target_addr) fio_timeval, (target_addr) NULL); /* write gettimeofday() result in fio_timeval[] */
+		int rc = tc_gettimeofday(t, (target_addr) &fio_timeval, (target_addr) NULL); /* write gettimeofday() result in fio_timeval[] */
 		t->mem_read = saved_mem_read;
 		t->mem_write = saved_mem_write;
 		if (rc) break; /* tc_gettimeofday() failed */
-		uint32_t ftv_sec = fio_timeval[0]; /* time in seconds, first field in fio_timeval */
-		ret = __builtin_bswap32(ftv_sec); /* convert from bigendian to target order */
+		uint32_t sec = __builtin_bswap32(fio_timeval.ftv_sec); /* convert from bigendian to target order */
+		uint64_t usec = __builtin_bswap64(fio_timeval.ftv_usec);
+		if (syscall == SYS_TIME) { /* SYS_TIME: time in seconds */
+			ret = sec;
+		} else { /* SYS_CLOCK: time in hundredths of seconds */
+			uint64_t csec64 = (sec * 1000000ull + usec)/10000ull;
+			uint32_t csec = csec64 & 0x7fffffff;
+			ret = csec;
+		}
 		break;
 		}
 
 	case SYS_READC: { /* readc */
-		uint8_t ch;
+		uint8_t ch='?';
 		//DEBUG("SYS_READC ch addr %p\n", &ch);
 		void (*saved_mem_read)(target *t, void *dest, target_addr src, size_t len);
 		void (*saved_mem_write)(target *t, target_addr dest, const void *src, size_t len);
@@ -1208,7 +1222,7 @@ static int cortexm_hostio_request(target *t)
 		saved_mem_write = t->mem_write;
 		t->mem_read = probe_mem_read;
 		t->mem_write = probe_mem_write;
-		int rc = tc_read(t, params[0] - 1, (target_addr) &ch, 1); /* read a character in ch */
+		int rc = tc_read(t, STDIN_FILENO, (target_addr) &ch, 1); /* read a character in ch */
 		t->mem_read = saved_mem_read;
 		t->mem_write = saved_mem_write;
 		if (rc == 1) ret = ch;
@@ -1223,7 +1237,11 @@ static int cortexm_hostio_request(target *t)
 	case SYS_EXIT: /* _exit() */
 		tc_printf(t, "_exit(0x%x)\n", params[0]);
 		target_halt_resume(t, 1);
-		ret = 0;
+		break;
+
+	case SYS_EXIT_EXTENDED: /* _exit() */
+		tc_printf(t, "_exit(0x%x%08x)\n", params[1], params[0]); /* exit() with 64bit exit value */
+		target_halt_resume(t, 1);
 		break;
 
 	case SYS_GET_CMDLINE: { /* get_cmdline */
@@ -1240,13 +1258,59 @@ static int cortexm_hostio_request(target *t)
 		break;
 		}
 
-	// not implemented yet:
+	case SYS_ISERROR: { /* iserror */
+		int errno = params[0];
+		ret = (errno == TARGET_EPERM) ||
+		      (errno == TARGET_ENOENT) ||
+		      (errno == TARGET_EINTR) ||
+		      (errno == TARGET_EIO) ||
+		      (errno == TARGET_EBADF) ||
+		      (errno == TARGET_EACCES) ||
+		      (errno == TARGET_EFAULT) ||
+		      (errno == TARGET_EBUSY) ||
+		      (errno == TARGET_EEXIST) ||
+		      (errno == TARGET_ENODEV) ||
+		      (errno == TARGET_ENOTDIR) ||
+		      (errno == TARGET_EISDIR) ||
+		      (errno == TARGET_EINVAL) ||
+		      (errno == TARGET_ENFILE) ||
+		      (errno == TARGET_EMFILE) ||
+		      (errno == TARGET_EFBIG) ||
+		      (errno == TARGET_ENOSPC) ||
+		      (errno == TARGET_ESPIPE) ||
+		      (errno == TARGET_EROFS) ||
+		      (errno == TARGET_ENOSYS) ||
+		      (errno == TARGET_ENAMETOOLONG) ||
+		      (errno == TARGET_EUNKNOWN);
+		break;
+		}
+
 	case SYS_HEAPINFO: /* heapinfo */
-	case SYS_CLOCK: /* clock */
+		target_mem_write(t, arm_regs[1], &t->heapinfo, sizeof(t->heapinfo)); /* See newlib/libc/sys/arm/crt0.S */
+		break;
+
+	case SYS_TMPNAM: { /* tmpnam */
+		/* Given a target identifier between 0 and 255, returns a temporary name.
+		 * FIXME: add directory prefix */
+		target_addr buf_ptr = params[0];
+		int target_id = params[1];
+		int buf_size = params[2];
+		char fnam[]="tempXX.tmp";
+		ret = -1;
+		if (buf_ptr == 0) break;
+		if (buf_size <= 0) break;
+		if ((target_id < 0) || (target_id > 255)) break; /* target id out of range */
+		fnam[5]='A'+(target_id&0xF); /* create filename */
+		fnam[4]='A'+(target_id>>4&0xF);
+		if (strlen(fnam)+1>(uint32_t)buf_size) break; /* target buffer too small */
+		if(target_mem_write(t, buf_ptr, fnam, strlen(fnam)+1)) break; /* copy filename to target */
+		ret = 0;
+		break;
+		}
+
+	// not implemented yet:
 	case SYS_ELAPSED: /* elapsed */
-	case SYS_ISERROR: /* iserror */
 	case SYS_TICKFREQ: /* tickfreq */
-	case SYS_TMPNAM: /* tmpnam */
 		ret = -1;
 		break;
 

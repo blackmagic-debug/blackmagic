@@ -81,6 +81,8 @@ void target_halt_request(target *t);
 enum target_halt_reason target_halt_poll(target *t, target_addr *watch);
 void target_halt_resume(target *t, bool step);
 void target_set_cmdline(target *t, char *cmdline);
+void target_set_heapinfo(target *t, target_addr heap_base, target_addr heap_limit,
+	target_addr stack_base, target_addr stack_limit);
 
 /* Break-/watchpoint functions */
 enum target_breakwatch {
@@ -97,11 +99,12 @@ int target_breakwatch_clear(target *t, enum target_breakwatch, target_addr, size
 void target_command_help(target *t);
 int target_command(target *t, int argc, const char *argv[]);
 
-
+/* keep target_errno in sync with errno values in gdb/include/gdb/fileio.h */
 enum target_errno {
 	TARGET_EPERM = 1,
 	TARGET_ENOENT = 2,
 	TARGET_EINTR = 4,
+	TARGET_EIO = 5,
 	TARGET_EBADF = 9,
 	TARGET_EACCES = 13,
 	TARGET_EFAULT = 14,
@@ -111,13 +114,15 @@ enum target_errno {
 	TARGET_ENOTDIR = 20,
 	TARGET_EISDIR = 21,
 	TARGET_EINVAL = 22,
-	TARGET_EMFILE = 24,
 	TARGET_ENFILE = 23,
+	TARGET_EMFILE = 24,
 	TARGET_EFBIG = 27,
 	TARGET_ENOSPC = 28,
 	TARGET_ESPIPE = 29,
 	TARGET_EROFS = 30,
-	TARGET_ENAMETOOLONG = 36,
+	TARGET_ENOSYS = 88,
+	TARGET_ENAMETOOLONG = 91,
+	TARGET_EUNKNOWN = 9999,
 };
 
 enum target_open_flags {
