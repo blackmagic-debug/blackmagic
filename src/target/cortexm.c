@@ -1259,29 +1259,29 @@ static int cortexm_hostio_request(target *t)
 		}
 
 	case SYS_ISERROR: { /* iserror */
-		int errno = params[0];
-		ret = (errno == TARGET_EPERM) ||
-		      (errno == TARGET_ENOENT) ||
-		      (errno == TARGET_EINTR) ||
-		      (errno == TARGET_EIO) ||
-		      (errno == TARGET_EBADF) ||
-		      (errno == TARGET_EACCES) ||
-		      (errno == TARGET_EFAULT) ||
-		      (errno == TARGET_EBUSY) ||
-		      (errno == TARGET_EEXIST) ||
-		      (errno == TARGET_ENODEV) ||
-		      (errno == TARGET_ENOTDIR) ||
-		      (errno == TARGET_EISDIR) ||
-		      (errno == TARGET_EINVAL) ||
-		      (errno == TARGET_ENFILE) ||
-		      (errno == TARGET_EMFILE) ||
-		      (errno == TARGET_EFBIG) ||
-		      (errno == TARGET_ENOSPC) ||
-		      (errno == TARGET_ESPIPE) ||
-		      (errno == TARGET_EROFS) ||
-		      (errno == TARGET_ENOSYS) ||
-		      (errno == TARGET_ENAMETOOLONG) ||
-		      (errno == TARGET_EUNKNOWN);
+		int errorNo = params[0];
+		ret = (errorNo == TARGET_EPERM) ||
+			  (errorNo == TARGET_ENOENT) ||
+			  (errorNo == TARGET_EINTR) ||
+			  (errorNo == TARGET_EIO) ||
+			  (errorNo == TARGET_EBADF) ||
+			  (errorNo == TARGET_EACCES) ||
+			  (errorNo == TARGET_EFAULT) ||
+			  (errorNo == TARGET_EBUSY) ||
+			  (errorNo == TARGET_EEXIST) ||
+			  (errorNo == TARGET_ENODEV) ||
+			  (errorNo == TARGET_ENOTDIR) ||
+			  (errorNo == TARGET_EISDIR) ||
+			  (errorNo == TARGET_EINVAL) ||
+			  (errorNo == TARGET_ENFILE) ||
+			  (errorNo == TARGET_EMFILE) ||
+			  (errorNo == TARGET_EFBIG) ||
+			  (errorNo == TARGET_ENOSPC) ||
+			  (errorNo == TARGET_ESPIPE) ||
+			  (errorNo == TARGET_EROFS) ||
+			  (errorNo == TARGET_ENOSYS) ||
+			  (errorNo == TARGET_ENAMETOOLONG) ||
+			  (errorNo == TARGET_EUNKNOWN);
 		break;
 		}
 
