@@ -139,8 +139,8 @@ int platform_buffer_write(const uint8_t *data, int size)
 {
 	int s;
 
-	if (cl_debuglevel)
-		printf("%s\n",data);
+	if (cl_debuglevel &  BMP_DEBUG_WIRE)
+		printf("%s\n", data);
 	s = write(fd, data, size);
 	if (s < 0) {
 		printf("Failed to write\n");
@@ -197,7 +197,7 @@ int platform_buffer_read(uint8_t *data, int maxsize)
 		s = read(fd, c, 1);
 		if (*c==REMOTE_EOM) {
 			*c = 0;
-			if (cl_debuglevel)
+			if (cl_debuglevel &  BMP_DEBUG_WIRE)
 				printf("       %s\n",data);
 			return (c - data);
 		} else {

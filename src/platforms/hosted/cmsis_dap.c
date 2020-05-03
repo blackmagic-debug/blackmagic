@@ -41,8 +41,6 @@
 #include "target.h"
 #include "target_internal.h"
 
-#define MAX_DEBUGGERS     20
-
 uint8_t dap_caps;
 uint8_t mode;
 

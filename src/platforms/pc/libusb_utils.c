@@ -93,7 +93,7 @@ int send_recv(usb_link_t *link,
 								  link->ep_tx | LIBUSB_ENDPOINT_OUT,
 								  txbuf, txlen,
 								  NULL, NULL, 0);
-		if (cl_debuglevel > 0) {
+		if (cl_debuglevel & BMP_DEBUG_WIRE) {
 			int i = 0;
 			printf(" Send (%3d): ", txlen);
 			for (; i < txlen; i++) {
@@ -127,7 +127,7 @@ int send_recv(usb_link_t *link,
 		if (res >0) {
 			int i;
 			uint8_t *p = rxbuf;
-			if (cl_debuglevel > 0) {
+			if (cl_debuglevel & BMP_DEBUG_WIRE) {
 				printf(" Rec (%zu/%d)", rxsize, res);
 				for (i = 0; i < res && i < 32 ; i++) {
 					if ( i && ((i & 7) == 0))
@@ -137,7 +137,7 @@ int send_recv(usb_link_t *link,
 			}
 		}
 	}
-	if (cl_debuglevel > 0)
+	if (cl_debuglevel & BMP_DEBUG_WIRE)
 		printf("\n");
 	return res;
 }

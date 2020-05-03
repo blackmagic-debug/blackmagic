@@ -241,11 +241,6 @@ void adiv5_ap_unref(ADIv5_AP_t *ap)
 	}
 }
 
-void adiv5_dp_write(ADIv5_DP_t *dp, uint16_t addr, uint32_t value)
-{
-	dp->low_access(dp, ADIV5_LOW_WRITE, addr, value);
-}
-
 static uint32_t adiv5_mem_read32(ADIv5_AP_t *ap, uint32_t addr)
 {
 	uint32_t ret;
@@ -483,29 +478,29 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 	 * correctly on STM32.	CDBGRSTACK is never asserted, and we
 	 * just wait forever.  This scenario is described in B2.4.1
 	 * so we have a timeout mechanism in addition to the sensing one.
-	 */
-
-	/* Write request for debug reset */
+	 *
+	 * Write request for debug reset */
 	adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT,
 				   ctrlstat |= ADIV5_DP_CTRLSTAT_CDBGRSTREQ);
 
 	platform_timeout timeout;
-	platform_timeout_set(&timeout,200);
-	/* Wait for acknowledge */
-	while ((!platform_timeout_is_expired(&timeout)) &&
-		   (!((ctrlstat = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT)) & ADIV5_DP_CTRLSTAT_CDBGRSTACK))
-		);
-
+	platform_timeout_set(&timeout, 101);
 	/* Write request for debug reset release */
 	adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT,
 				   ctrlstat &= ~ADIV5_DP_CTRLSTAT_CDBGRSTREQ);
-
-	platform_timeout_set(&timeout,200);
 	/* Wait for acknowledge */
-	while ((!platform_timeout_is_expired(&timeout)) &&
-		   (adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT) & ADIV5_DP_CTRLSTAT_CDBGRSTACK)
-		);
-	DEBUG("RESET_SEQ %s\n", (platform_timeout_is_expired(&timeout)) ? "failed": "succeeded");
+	while(1) {
+		platform_delay(20);
+		ctrlstat = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT);
+		if (ctrlstat & ADIV5_DP_CTRLSTAT_CDBGRSTACK) {
+			DEBUG("RESET_SEQ succeeded.\n");
+			break;
+		}
+		if (platform_timeout_is_expired(&timeout)) {
+			DEBUG("RESET_SEQ failed\n");
+			break;
+		}
+	}
 
 	uint32_t dp_idcode = adiv5_dp_read(dp, ADIV5_DP_IDCODE);
 	if ((dp_idcode & ADIV5_DP_VERSION_MASK) == ADIV5_DPv2) {
