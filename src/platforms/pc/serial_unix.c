@@ -155,15 +155,13 @@ int platform_buffer_read(uint8_t *data, int maxsize)
 	uint8_t *c;
 	int s;
 	int ret;
-	uint32_t endTime;
 	fd_set  rset;
 	struct timeval tv;
 
 	c = data;
 	tv.tv_sec = 0;
 
-	endTime = platform_time_ms() + RESP_TIMEOUT;
-	tv.tv_usec = 1000 * (endTime - platform_time_ms());
+	tv.tv_usec = 1000 * RESP_TIMEOUT;
 
 	/* Look for start of response */
 	do {
