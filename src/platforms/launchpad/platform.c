@@ -1,6 +1,8 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
+ * Copyright (C) 2020 Francesco Valla <valla.francesco@gmail.com>
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -56,9 +58,8 @@ platform_init(void)
 
 	rcc_sysclk_config(OSCSRC_MOSC, XTAL_16M, PLL_DIV_80MHZ);
 
-	// Enable all JTAG ports and set pins to output
-	periph_clock_enable(RCC_GPIOA);
-	periph_clock_enable(RCC_GPIOB);
+	// Enable JTAG port and set pins to output
+	periph_clock_enable(JTAG_PORT_CLOCK);
 
 	gpio_enable_ahb_aperture();
 
@@ -70,6 +71,15 @@ platform_init(void)
 	gpio_set_output_config(SRST_PORT, GPIO_OTYPE_OD, GPIO_DRIVE_2MA, SRST_PIN);
 	gpio_set(SRST_PORT, SRST_PIN);
 
+#ifdef LED_PORT
+	// Enable all LED ports and set pins to output
+	periph_clock_enable(LED_PORT_CLOCK);
+
+	gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_PULLDOWN, LED_ERROR);
+	gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_PULLDOWN, LED_IDLE);
+	gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_PULLDOWN, LED_RUN);
+#endif
+
 	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
 	systick_set_reload(rcc_get_system_clock_frequency() / (SYSTICKHZ * 8));
 
@@ -77,17 +87,23 @@ platform_init(void)
 	systick_counter_enable();
 
 	nvic_enable_irq(NVIC_SYSTICK_IRQ);
-	nvic_enable_irq(NVIC_UART0_IRQ);
+	nvic_enable_irq(USBUART_IRQ);
 
-	periph_clock_enable(RCC_GPIOD);
+	// Enable and setup USB pins
+	periph_clock_enable(USB_PORT_CLOCK);
 	__asm__("nop"); __asm__("nop"); __asm__("nop");
-	gpio_mode_setup(GPIOD_BASE, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, GPIO4|GPIO5);
+	gpio_mode_setup(USB_PORT, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, USB_DN|USB_DP);
+
 	usbuart_init();
 	cdcacm_init();
 
+#ifdef ENABLE_DEBUG
+	debuguart_init();
+#endif
+
 	usb_enable_interrupts(USB_INT_RESET | USB_INT_DISCON |
-	                      USB_INT_RESUME | USB_INT_SUSPEND,
-	                      0xff, 0xff);
+						  USB_INT_RESUME | USB_INT_SUSPEND,
+						  0xff, 0xff);
 }
 
 void platform_srst_set_val(bool assert)
@@ -120,17 +136,13 @@ const char *platform_target_voltage(void)
 
 char *serialno_read(char *s)
 {
-	/* FIXME: Store a unique serial number somewhere and retreive here */
-	uint32_t unique_id = 1;
-        int i;
+	/* No unique ID on Tiva microcontrollers */
+	int i;
 
-        /* Fetch serial number from chip's unique ID */
-        for(i = 0; i < 8; i++) {
-                s[7-i] = ((unique_id >> (4*i)) & 0xF) + '0';
-        }
-        for(i = 0; i < 8; i++)
-                if(s[i] > '9')
-                        s[i] += 'A' - '9' - 1;
+	for(i = 0; i < 8; i++) {
+		s[i] = '0';
+	}
+
 	s[8] = 0;
 
 	return s;

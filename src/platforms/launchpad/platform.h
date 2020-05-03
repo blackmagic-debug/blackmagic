@@ -1,6 +1,8 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
+ * Copyright (C) 2020 Francesco Valla <valla.francesco@gmail.com>
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -23,12 +25,22 @@
 #include "timing.h"
 #include "version.h"
 
-#define BOARD_IDENT             "Black Magic Probe (Launchpad ICDI), (Firmware " FIRMWARE_VERSION ")"
+#if defined(LAUNCHPAD_TARGET)
+#define LAUNCHPAD_VARIANT       "Target"
+#elif defined(LAUNCHPAD_ICDI)
+#define LAUNCHPAD_VARIANT       "ICDI"
+#else
+#error "Launchpad variant not defined."
+#endif
+
+#define BOARD_IDENT             "Black Magic Probe (Launchpad " LAUNCHPAD_VARIANT "), (Firmware " FIRMWARE_VERSION ")"
 #define BOARD_IDENT_DFU		"Black Magic (Upgrade) for Launchpad, (Firmware " FIRMWARE_VERSION ")"
-#define DFU_IDENT               "Black Magic Firmware Upgrade (Launchpad)"
+#define DFU_IDENT               "Black Magic Firmware Upgrade (Launchpad " LAUNCHPAD_VARIANT ")"
 #define DFU_IFACE_STRING	"lolwut"
 
 extern uint8_t running_status;
+
+#define JTAG_PORT_CLOCK	RCC_GPIOA
 
 #define TMS_PORT	GPIOA_BASE
 #define TMS_PIN		GPIO3
@@ -42,8 +54,15 @@ extern uint8_t running_status;
 #define TDO_PORT	GPIOA_BASE
 #define TDO_PIN		GPIO4
 
+#if defined(LAUNCHPAD_TARGET)
+#define SWO_PORT_CLOCK	RCC_GPIOE
+#define SWO_PORT	GPIOE_BASE
+#define SWO_PIN		GPIO0
+#elif defined(LAUNCHPAD_ICDI)
+#define SWO_PORT_CLOCK	RCC_GPIOD
 #define SWO_PORT	GPIOD_BASE
 #define SWO_PIN		GPIO6
+#endif
 
 #define SWDIO_PORT	TMS_PORT
 #define SWDIO_PIN	TMS_PIN
@@ -53,6 +72,19 @@ extern uint8_t running_status;
 
 #define SRST_PORT	GPIOA_BASE
 #define SRST_PIN	GPIO6
+
+#define USB_PORT_CLOCK	RCC_GPIOD
+#define USB_PORT	GPIOD_BASE
+#define USB_DN		GPIO4
+#define USB_DP		GPIO5
+
+#if defined(LAUNCHPAD_TARGET)
+#define LED_PORT_CLOCK	RCC_GPIOF
+#define LED_PORT	GPIOF_BASE
+#define LED_ERROR	GPIO1
+#define LED_IDLE	GPIO2
+#define LED_RUN		GPIO3
+#endif
 
 #define TMS_SET_MODE()	{								\
 	gpio_mode_setup(TMS_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TMS_PIN);		\
@@ -75,6 +107,48 @@ extern const usbd_driver lm4f_usb_driver;
 
 #define IRQ_PRI_USB	(2 << 4)
 
+#if defined(LAUNCHPAD_TARGET)
+
+#define USBUART		UART5
+#define USBUART_CLK	RCC_UART5
+#define USBUART_IRQ	NVIC_UART5_IRQ
+#define USBUART_ISR	uart5_isr
+#define UART_PIN_SETUP() do {								\
+	periph_clock_enable(RCC_GPIOE);							\
+	__asm__("nop"); __asm__("nop"); __asm__("nop");					\
+	gpio_set_af(GPIOE_BASE, 0x1, GPIO4 | GPIO5);				\
+	gpio_mode_setup(GPIOE_BASE, GPIO_MODE_INPUT, GPIO_PUPD_NONE, GPIO4);	\
+	gpio_mode_setup(GPIOE_BASE, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO5);	\
+	} while (0)
+
+#define TRACEUART	UART7
+#define TRACEUART_CLK	RCC_UART7
+#define TRACEUART_PORT_CLK	RCC_GPIOE
+#define TRACEUART_IRQ	NVIC_UART7_IRQ
+#define TRACEUART_ISR	uart7_isr
+
+#define SET_RUN_STATE(state)	{gpio_set_val(LED_PORT, LED_RUN, state);running_status = (state);}
+#define SET_IDLE_STATE(state)	{gpio_set_val(LED_PORT, LED_IDLE, state);}
+#define SET_ERROR_STATE(state)	{gpio_set_val(LED_PORT, LED_ERROR, state);}
+
+#ifdef ENABLE_DEBUG
+
+#define DEBUGUART	UART0
+#define DEBUGUART_CLK	RCC_UART0
+#define DEBUGUART_IRQ	NVIC_UART0_IRQ
+#define DEBUGUART_ISR	uart0_isr
+#define DEBUGUART_PIN_SETUP() do {						\
+	periph_clock_enable(RCC_GPIOA);						\
+	__asm__("nop"); __asm__("nop"); __asm__("nop");				\
+	gpio_set_af(GPIOA_BASE, 0x1, GPIO0 | GPIO1);				\
+	gpio_mode_setup(GPIOA_BASE, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO0);	\
+	gpio_mode_setup(GPIOA_BASE, GPIO_MODE_INPUT, GPIO_PUPD_NONE, GPIO1);	\
+	} while (0)
+
+#endif
+
+#elif defined(LAUNCHPAD_ICDI)
+
 #define USBUART		UART0
 #define USBUART_CLK	RCC_UART0
 #define USBUART_IRQ	NVIC_UART0_IRQ
@@ -93,17 +167,29 @@ extern const usbd_driver lm4f_usb_driver;
 #define TRACEUART_IRQ	NVIC_UART2_IRQ
 #define TRACEUART_ISR	uart2_isr
 
+#define SET_RUN_STATE(state)	{running_status = (state);}
+#define SET_IDLE_STATE(state)	{}
+#define SET_ERROR_STATE(state)	SET_IDLE_STATE(state)
+
+#endif
+
 /* Use newlib provided integer only stdio functions */
 #define sscanf siscanf
 #define sprintf siprintf
 #define vasprintf vasiprintf
 #define snprintf sniprintf
 
-#define DEBUG(...)
+#ifdef ENABLE_DEBUG
 
-#define SET_RUN_STATE(state)	{running_status = (state);}
-#define SET_IDLE_STATE(state)	{}
-#define SET_ERROR_STATE(state)	SET_IDLE_STATE(state)
+#define PLATFORM_HAS_DEBUG
+#define DEBUG printf
+
+void debuguart_init(void);
+void debuguart_test(void);
+
+#else
+#define DEBUG(...)
+#endif
 
 #define PLATFORM_HAS_TRACESWO
 
@@ -115,11 +201,9 @@ inline static uint8_t gpio_get(uint32_t port, uint8_t pin) {
 	return !(gpio_read(port, pin) == 0);
 }
 
-#define disconnect_usb() do { usbd_disconnect(usbdev,1); nvic_disable_irq(USB_IRQ);} while(0)
-
 static inline int platform_hwversion(void)
 {
-	        return 0;
+	return 0;
 }
 
 #endif
