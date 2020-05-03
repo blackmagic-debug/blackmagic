@@ -104,8 +104,6 @@ static int line_reset(bmp_info_t *info)
 
 static int swdptap_init(bmp_info_t *info)
 {
-	if (cl_debuglevel)
-		printf("swdptap_init\n");
 	uint8_t cmd[2] = {CMD_GET_SELECT_IF, JLINK_IF_GET_AVAILABLE};
 	uint8_t res[4];
 	send_recv(info->usb_link, cmd, 2, res, sizeof(res));
@@ -190,46 +188,8 @@ int jlink_swdp_scan(bmp_info_t *info)
 	return target_list?1:0;
 }
 
-void ap_decode_access(uint16_t addr, uint8_t RnW)
-{
-	if (RnW)
-		printf("Read ");
-	else
-		printf("Write ");
-	switch(addr) {
-	case 0x00:
-		if (RnW)
-			printf("DP_DPIDR: ");
-		else
-			printf("DP_ABORT: ");
-		break;
-	case 0x004: printf("CTRL/STAT: ");
-		break;
-	case 0x008:
-		if (RnW)
-			printf("RESEND: ");
-		else
-			printf("DP_SELECT: ");
-		break;
-	case 0x00c: printf("DP_RDBUFF: ");
-		break;
-	case 0x100: printf("AP_CSW: ");
-		break;
-	case 0x104: printf("AP_TAR: ");
-		break;
-	case 0x10c: printf("AP_DRW: ");
-		break;
-	case 0x1f8: printf("AP_BASE: ");
-		break;
-	case 0x1fc: printf("AP_IDR: ");
-		break;
-	}
-}
-
 static uint32_t jlink_adiv5_swdp_read(ADIv5_DP_t *dp, uint16_t addr)
 {
-	if (cl_debuglevel)
-		printf("jlink_adiv5_swdp_read 0x%04x\n", addr);
 	if (addr & ADIV5_APnDP) {
 		adiv5_dp_low_access(dp, ADIV5_LOW_READ, addr, 0);
 		return adiv5_dp_low_access(dp, ADIV5_LOW_READ,
@@ -266,17 +226,6 @@ static uint32_t jlink_adiv5_swdp_error(ADIv5_DP_t *dp)
 static uint32_t jlink_adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 				      uint16_t addr, uint32_t value)
 {
-	if (cl_debuglevel) {
-		if (RnW) {
-			if (cl_debuglevel > 0) {
-				ap_decode_access(addr, RnW);
-				printf(" start:\n");
-			}
-		}else{
-			ap_decode_access(addr, RnW);
-			printf(" %08" PRIx32 "\n", value);
-		}
-	}
 	bool APnDP = addr & ADIV5_APnDP;
 	uint8_t addr8 = addr & 0xff;
 	uint8_t request = 0x81;
@@ -316,14 +265,14 @@ static uint32_t jlink_adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 		raise_exception(EXCEPTION_TIMEOUT, "SWDP ACK timeout");
 
 	if(ack == SWDP_ACK_FAULT) {
-		if (cl_debuglevel)
+		if (cl_debuglevel & BMP_DEBUG_PLATFORM)
 			fprintf(stderr, "Fault\n");
 		dp->fault = 1;
 		return 0;
 	}
 
 	if(ack != SWDP_ACK_OK) {
-		if (cl_debuglevel)
+		if (cl_debuglevel & BMP_DEBUG_PLATFORM)
 			fprintf(stderr, "Protocol\n");
 		line_reset(&info);
 		return 0;
@@ -342,10 +291,6 @@ static uint32_t jlink_adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 		response = res[0] | res[1] << 8 | res[2] << 16 | res[3] << 24;
 		int parity = res[4] & 1;
 		int bit_count  = __builtin_popcount (response) + parity;
-		if (cl_debuglevel ) {
-			ap_decode_access(addr, RnW);;
-			printf("0x%08" PRIx32 "\n", response);
-		}
 		if (bit_count & 1)  /* Give up on parity error */
 			raise_exception(EXCEPTION_ERROR, "SWDP Parity error");
 	} else {

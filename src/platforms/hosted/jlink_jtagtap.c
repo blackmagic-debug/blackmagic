@@ -40,7 +40,7 @@ static void jtagtap_reset(void)
 
 static void jtagtap_tms_seq(uint32_t MS, int ticks)
 {
-	if (cl_debuglevel)
+	if (cl_debuglevel & BMP_DEBUG_PLATFORM)
 		printf("jtagtap_tms_seq 0x%08" PRIx32 ", ticks %d\n", MS, ticks);
 	int len = (ticks + 7) / 8;
 	uint8_t cmd[12];
@@ -68,7 +68,7 @@ static void jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms,
 	if (!ticks)
 		return;
 	int len = (ticks + 7) / 8;
-	if (cl_debuglevel) {
+	if (cl_debuglevel & BMP_DEBUG_PLATFORM) {
 		printf("jtagtap_tdi_tdo %s, ticks %d, DI: ",
 			   (final_tms) ? "Final TMS" : "", ticks);
 		for (int i = 0; i < len; i++) {
@@ -103,12 +103,24 @@ static void jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms,
 static void jtagtap_tdi_seq(const uint8_t final_tms, const uint8_t *DI,
 							int ticks)
 {
+	if (cl_debuglevel & BMP_DEBUG_PLATFORM) {
+		printf("jtagtap_tdi_seq %s:", (final_tms)? "final_tms" : "");
+		const uint8_t *p = DI;
+		unsigned int i = (ticks & 7) & ~7 ;
+		if (i > 16)
+			i = 16;
+		while (i--)
+			printf(" %02x", *p++);
+		if (ticks > (16 * 8))
+			printf(" ...");
+		printf("\n");
+	}
 	return jtagtap_tdi_tdo_seq(NULL,  final_tms, DI, ticks);
 }
 
 static uint8_t jtagtap_next(uint8_t dTMS, uint8_t dTDI)
 {
-	if (cl_debuglevel)
+	if (cl_debuglevel & BMP_DEBUG_PLATFORM)
 		printf("jtagtap_next TMS 0x%02x, TDI %02x\n", dTMS, dTDI);
 	uint8_t cmd[6];
 	cmd[0] = CMD_HW_JTAG3;
@@ -128,7 +140,7 @@ static uint8_t jtagtap_next(uint8_t dTMS, uint8_t dTDI)
 
 int jlink_jtagtap_init(bmp_info_t *info, jtag_proc_t *jtag_proc)
 {
-	if (cl_debuglevel)
+	if (cl_debuglevel & BMP_DEBUG_PLATFORM)
 		printf("jtap_init\n");
 	uint8_t cmd_switch[2] = {CMD_GET_SELECT_IF, JLINK_IF_GET_AVAILABLE};
 	uint8_t res[4];

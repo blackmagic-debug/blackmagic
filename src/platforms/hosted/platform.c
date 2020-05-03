@@ -469,3 +469,140 @@ void platform_buffer_flush(void)
 		break;
 	}
 }
+
+static void ap_decode_access(uint16_t addr, uint8_t RnW)
+{
+	if (RnW)
+		printf("Read  ");
+	else
+		printf("Write ");
+	switch(addr) {
+	case 0x00:
+		if (RnW)
+			printf("DP_DPIDR :");
+		else
+			printf("DP_ABORT :");
+		break;
+	case 0x004: printf("CTRL/STAT:");
+		break;
+	case 0x008:
+		if (RnW)
+			printf("RESEND   :");
+		else
+			printf("DP_SELECT:");
+		break;
+	case 0x00c: printf("DP_RDBUFF:");
+		break;
+	case 0x100: printf("AP_CSW   :");
+		break;
+	case 0x104: printf("AP_TAR   :");
+		break;
+	case 0x10c: printf("AP_DRW   :");
+		break;
+	case 0x1f8: printf("AP_BASE  :");
+		break;
+	case 0x1fc: printf("AP_IDR   :");
+		break;
+	}
+}
+
+void adiv5_dp_write(ADIv5_DP_t *dp, uint16_t addr, uint32_t value)
+{
+	if (cl_debuglevel & BMP_DEBUG_PLATFORM) {
+		ap_decode_access(addr, ADIV5_LOW_WRITE);
+		printf(" 0x%08" PRIx32 "\n", value);
+	}
+	dp->low_access(dp, ADIV5_LOW_WRITE, addr, value);
+}
+
+uint32_t adiv5_dp_read(ADIv5_DP_t *dp, uint16_t addr)
+{
+	uint32_t ret = dp->dp_read(dp, addr);
+	if (cl_debuglevel & BMP_DEBUG_PLATFORM) {
+		ap_decode_access(addr, ADIV5_LOW_READ);
+		printf(" 0x%08" PRIx32 "\n", ret);
+	}
+	return ret;
+}
+
+uint32_t adiv5_dp_error(ADIv5_DP_t *dp)
+{
+	uint32_t ret = dp->error(dp);
+	if (cl_debuglevel & BMP_DEBUG_PLATFORM) {
+		printf("DP Error 0x%08" PRIx32 "\n", ret);
+	}
+	return ret;
+}
+
+uint32_t adiv5_dp_low_access(struct ADIv5_DP_s *dp, uint8_t RnW,
+							 uint16_t addr, uint32_t value)
+{
+	uint32_t ret = dp->low_access(dp, RnW, addr, value);
+	if (cl_debuglevel & BMP_DEBUG_PLATFORM) {
+		ap_decode_access(addr, RnW);
+		printf(" 0x%08" PRIx32 "\n", (RnW)? ret : value);
+	}
+	return ret;
+}
+
+uint32_t adiv5_ap_read(ADIv5_AP_t *ap, uint16_t addr)
+{
+	uint32_t ret = ap->dp->ap_read(ap, addr);
+	if (cl_debuglevel & BMP_DEBUG_PLATFORM) {
+		ap_decode_access(addr, ADIV5_LOW_READ);
+		printf(" 0x%08" PRIx32 "\n", ret);
+	}
+	return ret;
+}
+
+void adiv5_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value)
+{
+	if (cl_debuglevel & BMP_DEBUG_PLATFORM) {
+		ap_decode_access(addr, ADIV5_LOW_WRITE);
+		printf(" 0x%08" PRIx32 "\n", value);
+	}
+	return ap->dp->ap_write(ap, addr, value);
+}
+
+void adiv5_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
+{
+	ap->dp->mem_read(ap, dest, src, len);
+	if (cl_debuglevel & BMP_DEBUG_PLATFORM) {
+		printf("ap_memread @ %" PRIx32 " len %" PRIx32 ":", src, (uint32_t)len);
+		uint8_t *p = (uint8_t *) dest;
+		unsigned int i = len;
+		if (i > 16)
+			i = 16;
+		while (i--)
+			printf(" %02x", *p++);
+		if (len > 16)
+			printf(" ...");
+		printf("\n");
+	}
+	return;
+}
+void adiv5_mem_write_sized(	ADIv5_AP_t *ap, uint32_t dest, const void *src,
+							size_t len, enum align align)
+{
+	if (cl_debuglevel & BMP_DEBUG_PLATFORM) {
+		printf("ap_mem_write_sized @ %" PRIx32 " len %" PRIx32 ", align %d:",
+			   dest, (uint32_t)len, 1 << align);
+		uint8_t *p = (uint8_t *) src;
+		unsigned int i = len;
+		if (i > 16)
+			i = 16;
+		while (i--)
+			printf(" %02x", *p++);
+		if (len > 16)
+			printf(" ...");
+		printf("\n");
+	}
+	return ap->dp->mem_write_sized(ap, dest, src, len, align);
+}
+
+void adiv5_dp_abort(struct ADIv5_DP_s *dp, uint32_t abort)
+{
+	if (cl_debuglevel & BMP_DEBUG_PLATFORM)
+		printf("Abort: %08" PRIx32 "\n", abort);
+	return dp->abort(dp, abort);
+}
