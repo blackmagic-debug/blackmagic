@@ -83,8 +83,13 @@ static int stm32f4_flash_write(struct target_flash *f,
 
 #define FLASH_OPTCR_OPTLOCK	(1 << 0)
 #define FLASH_OPTCR_OPTSTRT	(1 << 1)
+#define FLASH_OPTCR_WDG_SW	(1 << 5)
 #define FLASH_OPTCR_nDBANK	(1 << 29)
 #define FLASH_OPTCR_DB1M	(1 << 30)
+
+#define FLASH_OPTCR_PROT_MASK	0xff00
+#define FLASH_OPTCR_PROT_L0  	0xaa00
+#define FLASH_OPTCR_PROT_L1  	0xbb00
 
 #define KEY1 0x45670123
 #define KEY2 0xCDEF89AB
@@ -561,6 +566,19 @@ static bool optcr_mask(target *t, uint32_t *val)
 
 static bool stm32f4_option_write(target *t, uint32_t *val, int count)
 {
+	val[0] &= ~(FLASH_OPTCR_OPTSTRT | FLASH_OPTCR_OPTLOCK);
+	uint32_t optcr = target_mem_read32(t, FLASH_OPTCR);
+	/* Check if watchdog and read protection is active.
+	 * When both are active, watchdog will trigger when erasing
+	 * to get back to level 0 protection and operation aborts!
+	 */
+	if (!(optcr & FLASH_OPTCR_WDG_SW) &&
+		((optcr & FLASH_OPTCR_PROT_MASK) != FLASH_OPTCR_PROT_L0) &&
+		((val[0] & FLASH_OPTCR_PROT_MASK) != FLASH_OPTCR_PROT_L1)) {
+		val[0] &= ~FLASH_OPTCR_PROT_MASK;
+		val[0] |=  FLASH_OPTCR_PROT_L1;
+		tc_printf(t, "Keeping L1 protection while HW Watchdog fuse is set!\n");
+	}
 	target_mem_write32(t, FLASH_OPTKEYR, OPTKEY1);
 	target_mem_write32(t, FLASH_OPTKEYR, OPTKEY2);
 	while (target_mem_read32(t, FLASH_SR) & FLASH_SR_BSY)
@@ -578,11 +596,22 @@ static bool stm32f4_option_write(target *t, uint32_t *val, int count)
 
 	target_mem_write32(t, FLASH_OPTCR, val[0]);
 	target_mem_write32(t, FLASH_OPTCR, val[0] | FLASH_OPTCR_OPTSTRT);
+	const char spinner[] = "|/-\\";
+	int spinindex = 0;
+	tc_printf(t, "Erasing flash... This may take a few seconds.  ");
 	/* Read FLASH_SR to poll for BSY bit */
-	while(target_mem_read32(t, FLASH_SR) & FLASH_SR_BSY)
-		if(target_check_error(t))
+	while(target_mem_read32(t, FLASH_SR) & FLASH_SR_BSY) {
+		platform_delay(100);
+		tc_printf(t, "\b%c", spinner[spinindex++ % 4]);
+		if(target_check_error(t)) {
+			tc_printf(t, " failed\n");
 			return false;
+		}
+	}
+	tc_printf(t, "\n");
 	target_mem_write32(t, FLASH_OPTCR, FLASH_OPTCR_OPTLOCK);
+	/* Reset target to reload option bits.*/
+	target_reset(t);
 	return true;
 }
 
@@ -619,7 +648,7 @@ static bool stm32f4_option_write_default(target *t)
 
 static bool stm32f4_cmd_option(target *t, int argc, char *argv[])
 {
-	uint32_t start = 0x1FFFC000, val[3];
+	uint32_t val[3];
 	int count = 0, readcount = 1;
 
 	switch (t->idcode) {
@@ -628,8 +657,6 @@ static bool stm32f4_cmd_option(target *t, int argc, char *argv[])
 		/* fall through.*/
 	case ID_STM32F74X:
 	case ID_STM32F76X:
-		/* F7 Devices have option bytes at 0x1FFF0000. */
-		start = 0x1FFF0000;
 		readcount++;
 		break;
 	case ID_STM32F42X:
@@ -637,17 +664,17 @@ static bool stm32f4_cmd_option(target *t, int argc, char *argv[])
 		readcount++;
 	}
 
-	if ((argc == 2) && !strcmp(argv[1], "erase")) {
+	if ((argc == 2) && !strncasecmp(argv[1], "erase", 1)) {
 		stm32f4_option_write_default(t);
 	}
-	else if ((argc > 1) && !strcmp(argv[1], "write")) {
+	else if ((argc > 2) && !strncasecmp(argv[1], "write", 1)) {
 		val[0] = strtoul(argv[2], NULL, 0);
 		count++;
-		if (argc > 2) {
+		if (argc > 3) {
 			val[1] = strtoul(argv[3], NULL, 0);
 			count ++;
 		}
-		if (argc > 3) {
+		if (argc > 4) {
 			val[2] = strtoul(argv[4], NULL, 0);
 			count ++;
 		}
@@ -665,22 +692,11 @@ static bool stm32f4_cmd_option(target *t, int argc, char *argv[])
 		tc_printf(t, "\n");
 	}
 
-	val[0]  = (target_mem_read32(t, start + 8) & 0xffff) << 16;
-	val[0] |= (target_mem_read32(t, start    ) & 0xffff);
-	if (readcount > 1) {
-		if (start == 0x1FFFC000) /* F4 */ {
-			val[1] = target_mem_read32(t, 0x1ffec008);
-			val[1] &= 0xffff;
-			val[1] <<= 16;
-		} else {
-			val[1] =  (target_mem_read32(t, start + 0x18) & 0xffff) << 16;
-			val[1] |= (target_mem_read32(t, start + 0x10) & 0xffff);
-		}
-	}
-	if (readcount > 2) {
-			val[2] =  (target_mem_read32(t, start + 0x28) & 0xffff) << 16;
-			val[2] |= (target_mem_read32(t, start + 0x20) & 0xffff);
-	}
+	val[0]  = target_mem_read32(t, FLASH_OPTCR);
+	if (readcount > 1)
+		val[1] = target_mem_read32(t, FLASH_OPTCR + 4);
+	if (readcount > 2)
+		val[2] = target_mem_read32(t, FLASH_OPTCR + 8);
 	optcr_mask(t, val);
 	tc_printf(t, "OPTCR: 0x%08X ", val[0]);
 	if (readcount > 1)
