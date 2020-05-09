@@ -120,12 +120,21 @@ bool stm32f1_probe(target *t)
 	t->idcode = target_mem_read32(t, DBGMCU_IDCODE) & 0xfff;
 	switch(t->idcode) {
 	case 0x410:  /* Medium density */
-	case 0x412:  /* Low denisty */
+	case 0x412:  /* Low density */
 	case 0x420:  /* Value Line, Low-/Medium density */
-		t->driver = "STM32F1 medium density";
 		target_add_ram(t, 0x20000000, 0x5000);
 		stm32f1_add_flash(t, 0x8000000, 0x20000, 0x400);
 		target_add_commands(t, stm32f1_cmd_list, "STM32 LD/MD");
+		/* Test for non-genuine parts with Core rev 2*/
+		ADIv5_AP_t *ap = cortexm_ap(t);
+		if ((ap->idr >> 28) > 1) {
+			t->driver = "STM32F1 (clone) medium density";
+#if defined(PLATFORM_HAS_DEBUG)
+			DEBUG("Non-genuine STM32F1\n");
+#endif
+		} else {
+			t->driver = "STM32F1 medium density";
+		}
 		return true;
 	case 0x414:	 /* High density */
 	case 0x418:  /* Connectivity Line */
