@@ -154,11 +154,38 @@ extern void set_idle_state(int state);
 
 extern uint8_t detect_rev(void);
 
-/* Use newlib provided integer only stdio functions */
+/*
+ * Use newlib provided integer only stdio functions
+ */
+
+/* sscanf */
+#ifdef sscanf
+#undef sscanf
 #define sscanf siscanf
+#else
+#define sscanf siscanf
+#endif
+/* sprintf */
+#ifdef sprintf
+#undef sprintf
 #define sprintf siprintf
+#else
+#define sprintf siprintf
+#endif
+/* vasprintf */
+#ifdef vasprintf
+#undef vasprintf
 #define vasprintf vasiprintf
+#else
+#define vasprintf vasiprintf
+#endif
+/* snprintf */
+#ifdef snprintf
+#undef snprintf
 #define snprintf sniprintf
+#else
+#define snprintf sniprintf
+#endif
 
 #endif
 
