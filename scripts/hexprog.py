@@ -1,9 +1,9 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # hexprog.py: Python application to flash a target with an Intel hex file
 # Copyright (C) 2011  Black Sphere Technologies
 # Written by Gareth McMullin <gareth@blacksphere.co.nz>
-# 
+#
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
@@ -35,11 +35,11 @@ def flash_write_hex(target, hexfile, progress_cb=None):
 		reclen = int(line[1:3], 16)
 		addrlo = int(line[3:7], 16)
 		rectype = int(line[7:9], 16);
-		if sum(ord(x) for x in gdb.unhexify(line[1:11+reclen*2])) & 0xff != 0:
-			raise Exception("Checksum error in hex file") 
+		if sum(x for x in bytes.fromhex(line[1:11+reclen*2])) & 0xff != 0:
+			raise Exception("Checksum error in hex file")
 		if rectype == 0: # Data record
 			addr = (addrhi << 16) + addrlo
-			data = gdb.unhexify(line[9:9+reclen*2])
+			data = bytes.fromhex(line[9:9+reclen*2])
 			target.flash_write_prepare(addr, data)
 			pass
 		elif rectype == 4: # High address record
@@ -48,16 +48,16 @@ def flash_write_hex(target, hexfile, progress_cb=None):
 		elif rectype == 5: # Entry record
 			pass
 		elif rectype == 1: # End of file record
-			break 
+			break
 		else:
 			raise Exception("Invalid record in hex file")
 
 	try:
 		target.flash_commit(progress_cb)
 	except:
-		print "Flash write failed! Is device protected?\n"
+		print("Flash write failed! Is device protected?\n")
 		exit(-1)
-	
+
 
 if __name__ == "__main__":
 	from serial import Serial, SerialException
@@ -67,8 +67,8 @@ if __name__ == "__main__":
 	if platform == "linux2":
 		print ("\x1b\x5b\x48\x1b\x5b\x32\x4a") # clear terminal screen
 	print("Black Magic Probe -- Target Production Programming Tool -- version 1.0")
-	print "Copyright (C) 2011  Black Sphere Technologies"
-	print "License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>"
+	print("Copyright (C) 2011  Black Sphere Technologies")
+	print("License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>")
 	print("")
 
 	dev = "COM1" if platform == "win32" else "/dev/ttyACM0"
@@ -90,48 +90,50 @@ if __name__ == "__main__":
 
 		hexfile = args[0]
 	except:
-		print("Usage %s [-s] [-d <dev>] [-b <baudrate>] [-t <n>] <filename>" % argv[0])
+		print(("Usage %s [-s] [-d <dev>] [-b <baudrate>] [-t <n>] <filename>" % argv[0]))
 		print("\t-s : Use SW-DP instead of JTAG-DP")
-		print("\t-d : Use target on interface <dev> (default: %s)" % dev)
-		print("\t-b : Set device baudrate (default: %d)" % baud)
-		print("\t-t : Connect to target #n (default: %d)" % targetno)
+		print(("\t-d : Use target on interface <dev> (default: %s)" % dev))
+		print(("\t-b : Set device baudrate (default: %d)" % baud))
+		print(("\t-t : Connect to target #n (default: %d)" % targetno))
 		print("\t-r : Clear flash read protection before programming")
 		print("\t-R : Enable flash read protection after programming (requires power-on reset)")
 		print("")
 		exit(-1)
 
 	try:
-		s = Serial(dev, baud, timeout=3)
-		s.setDTR(1)
-		while s.read(1024):
-			pass
+		s = Serial(dev) #, baud, timeout=0.1)
+		#s.setDTR(1)
+		#s.flushInput()
+
+		#while s.read(1024):
+	        #		pass
 
 		target = gdb.Target(s)
-		
-	except SerialException, e:
-		print("FATAL: Failed to open serial device!\n%s\n" % e[0])
+
+	except SerialException as e:
+		print(("FATAL: Failed to open serial device!\n%s\n" % e[0]))
 		exit(-1)
 
 	try:
 		r = target.monitor("version")
-		for s in r: print s,
-	except SerialException, e:
-		print("FATAL: Serial communication failure!\n%s\n" % e[0])
+		for s in r: print(s.decode(), end=' ')
+	except SerialException as e:
+		print(("FATAL: Serial communication failure!\n%s\n" % e[0]))
 		exit(-1)
-	except: pass
+	#except: pass
 
-	print "Target device scan:"
+	print("Target device scan:")
 	targetlist = None
 	r = target.monitor(scan)
-	for s in r: 
-		print s,
-	print
+	for s in r:
+		print(s.decode(), end=' ')
+	print()
 
 	r = target.monitor("targets")
-	for s in r: 
-		if s.startswith("No. Att Driver"): targetlist = []
+	for s in r:
+		if s.startswith(b"No. Att Driver"): targetlist = []
 		try:
-			if type(targetlist) is list: 
+			if type(targetlist) is list:
 				targetlist.append(int(s[:2]))
 		except: pass
 
@@ -140,10 +142,10 @@ if __name__ == "__main__":
 	#	exit(-1)
 
 	if targetlist and (targetno not in targetlist):
-		print("WARNING: Selected target %d not available, using %d" % (targetno, targetlist[0]))
+		print(("WARNING: Selected target %d not available, using %d" % (targetno, targetlist[0])))
 		targetno = targetlist[0]
 
-	print("Attaching to target %d." % targetno)
+	print(("Attaching to target %d." % targetno))
 	target.attach(targetno)
 	time.sleep(0.1)
 
@@ -158,10 +160,10 @@ if __name__ == "__main__":
 		time.sleep(0.1)
 
 	for m in target.flash_probe():
-		print("FLASH memory -- Offset: 0x%X  BlockSize:0x%X\n" % (m.offset, m.blocksize))
+		print(("FLASH memory -- Offset: 0x%X  BlockSize:0x%X\n" % (m.offset, m.blocksize)))
 
 	def progress(percent):
-		print ("Progress: %d%%\r" % percent),
+		print(("Progress: %d%%\r" % percent), end=' ')
 		stdout.flush()
 
 	print("Programming target")
@@ -179,4 +181,3 @@ if __name__ == "__main__":
 	target.detach()
 
 	print("\nAll operations complete!\n")
-
