@@ -584,7 +584,7 @@ static efm32_device_t const * efm32_get_device(size_t index)
 /**
  * Probe
  */
-char efm32_variant_string[60];
+static char efm32_variant_string[60];
 bool efm32_probe(target *t)
 {
 	uint8_t di_version = 1;

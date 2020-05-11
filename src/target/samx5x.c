@@ -344,7 +344,7 @@ static void samx5x_add_flash(target *t, uint32_t addr, size_t length,
 	target_add_flash(t, f);
 }
 
-char samx5x_variant_string[60];
+static char samx5x_variant_string[60];
 bool samx5x_probe(target *t)
 {
 	ADIv5_AP_t *ap = cortexm_ap(t);

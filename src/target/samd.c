@@ -441,7 +441,7 @@ static void samd_add_flash(target *t, uint32_t addr, size_t length)
 	target_add_flash(t, f);
 }
 
-char samd_variant_string[60];
+static char samd_variant_string[60];
 bool samd_probe(target *t)
 {
 	ADIv5_AP_t *ap = cortexm_ap(t);
