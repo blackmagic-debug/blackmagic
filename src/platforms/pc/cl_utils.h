@@ -40,6 +40,7 @@ typedef struct BMP_CL_OPTIONS_s {
 	enum bmp_cl_mode opt_mode;
 	bool opt_usejtag;
 	bool opt_tpwr;
+	bool opt_list_only;
 	bool opt_connect_under_reset;
 	char *opt_flash_file;
 	char *opt_device;

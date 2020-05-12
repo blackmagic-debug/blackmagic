@@ -124,10 +124,10 @@ static void cl_help(char **argv, BMP_CL_OPTIONS_t *opt)
 	DEBUG_WARN("\t\t\t  1 = INFO, 2 = GDB, 4 = TARGET, 8 = PROBE, 16 = WIRE\n");
 	DEBUG_WARN("Probe selection arguments:\n");
 	DEBUG_WARN("\t-d \"path\"\t: Use serial device at \"path\"\n");
-	DEBUG_WARN("\t-P <num>\t: Use debugger found at position <num>\n");
+	DEBUG_WARN("\t-P <pos>\t: Use debugger found at position <pos>\n");
 	DEBUG_WARN("\t-n <num>\t: Use target device found at position <num>\n");
-	DEBUG_WARN("\t-s \"string\"\t: Use dongle with (partial) "
-		  "serial number \"string\"\n");
+	DEBUG_WARN("\t-s \"serial\"\t: Use dongle with (partial) "
+		  "serial number \"serial\"\n");
 	DEBUG_WARN("\t-c \"string\"\t: Use ftdi dongle with type \"string\"\n");
 	DEBUG_WARN("Run mode related options:\n");
 	DEBUG_WARN("\tDefault mode is to start the debug server at :2000\n");
@@ -155,7 +155,7 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 	opt->opt_target_dev = 1;
 	opt->opt_flash_start = 0x08000000;
 	opt->opt_flash_size = 16 * 1024 *1024;
-	while((c = getopt(argc, argv, "Ehv:d:s:I:c:Cn:tVta:S:jpP:rR")) != -1) {
+	while((c = getopt(argc, argv, "Ehv:d:s:I:c:CnltVta:S:jpP:rR")) != -1) {
 		switch(c) {
 		case 'c':
 			if (optarg)
@@ -170,6 +170,10 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 			break;
 		case 'j':
 			opt->opt_usejtag = true;
+			break;
+		case 'l':
+			opt->opt_list_only = true;
+			cl_debuglevel |= BMP_DEBUG_STDOUT;
 			break;
 		case 'C':
 			opt->opt_connect_under_reset = true;
