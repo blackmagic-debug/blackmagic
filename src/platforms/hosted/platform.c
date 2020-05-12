@@ -100,6 +100,7 @@ static int find_debuggers(	BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 	char manufacturer[128];
 	char product[128];
 	bmp_type_t type = BMP_TYPE_NONE;
+	bool access_problems = false;
   rescan:
 	found_debuggers = 0;
 	for (int i = 0;  devs[i]; i++) {
@@ -114,8 +115,11 @@ static int find_debuggers(	BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 		libusb_device_handle *handle;
 		res = libusb_open(dev, &handle);
 		if (res != LIBUSB_SUCCESS) {
-			DEBUG_INFO("INFO: Open USB %04x:%04x failed\n",
-					   desc.idVendor, desc.idProduct);
+			if (!access_problems) {
+				DEBUG_INFO("INFO: Open USB %04x:%04x failed\n",
+						   desc.idVendor, desc.idProduct);
+				access_problems = true;
+			}
 			continue;
 		}
 		res = libusb_get_string_descriptor_ascii(
@@ -198,15 +202,23 @@ static int find_debuggers(	BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 			break;
 		}
 	}
-	if (found_debuggers > 1) {
+	if ((found_debuggers > 1) ||
+		((found_debuggers == 1) && (cl_opts->opt_list_only))) {
 		if (!report) {
-			DEBUG_WARN("%d debuggers found! Select with -P <num>, -s <string> "
-				   "and/or -S <string>\n",
-				   found_debuggers);
+			if (found_debuggers > 1)
+				DEBUG_WARN("%d debuggers found!\nSelect with -P <pos>, "
+						   "-s <(partial)serial no.> "
+						   "and/or -S <(partial)description>\n",
+						   found_debuggers);
 			report = true;
 			goto rescan;
+		} else {
+			found_debuggers = 0;
 		}
 	}
+	if (!found_debuggers && access_problems)
+		DEBUG_WARN(
+			"No debugger found. Please check access rights to USB devices!\n");
 	libusb_free_device_list(devs, 1);
 	return (found_debuggers == 1) ? 0 : -1;
 }
