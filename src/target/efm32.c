@@ -584,7 +584,7 @@ static efm32_device_t const * efm32_get_device(size_t index)
 /**
  * Probe
  */
-char variant_string[60];
+static char efm32_variant_string[60];
 bool efm32_probe(target *t)
 {
 	uint8_t di_version = 1;
@@ -636,13 +636,13 @@ bool efm32_probe(target *t)
 	uint32_t ram_size   = ram_kib   * 0x400;
 	uint32_t flash_page_size = device->flash_page_size;
 
-	snprintf(variant_string, sizeof(variant_string), "%c\b%c\b%s %d F%d %s",
+	snprintf(efm32_variant_string, sizeof(efm32_variant_string), "%c\b%c\b%s %d F%d %s",
 			di_version + 48, (uint8_t)device_index + 32,
 			device->name, part_number, flash_kib, device->description);
 
 	/* Setup Target */
 	t->target_options |= CORTEXM_TOPT_INHIBIT_SRST;
-	t->driver = variant_string;
+	t->driver = efm32_variant_string;
 	tc_printf(t, "flash size %d page size %d\n", flash_size, flash_page_size);
 	target_add_ram (t, SRAM_BASE, ram_size);
 	efm32_add_flash(t, 0x00000000, flash_size, flash_page_size);

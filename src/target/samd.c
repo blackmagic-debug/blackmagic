@@ -380,6 +380,7 @@ struct samd_descr samd_parse_device_id(uint32_t did)
 			}
 			break;
 		case 3: samd.series = 11; break;
+		default: samd.series = 0; break;
 	}
 	/* Revision */
 	samd.revision = 'A' + revision;
@@ -440,7 +441,7 @@ static void samd_add_flash(target *t, uint32_t addr, size_t length)
 	target_add_flash(t, f);
 }
 
-char variant_string[60];
+static char samd_variant_string[60];
 bool samd_probe(target *t)
 {
 	ADIv5_AP_t *ap = cortexm_ap(t);
@@ -467,14 +468,14 @@ bool samd_probe(target *t)
 
 	/* Part String */
 	if (protected) {
-		sprintf(variant_string,
+		sprintf(samd_variant_string,
 		        "Atmel SAM%c%d%c%d%c%s (rev %c) (PROT=1)",
 		        samd.family,
 		        samd.series, samd.pin, samd.mem,
 		        samd.variant,
 		        samd.package, samd.revision);
 	} else {
-		sprintf(variant_string,
+		sprintf(samd_variant_string,
 		        "Atmel SAM%c%d%c%d%c%s (rev %c)",
 		        samd.family,
 		        samd.series, samd.pin, samd.mem,
@@ -483,7 +484,7 @@ bool samd_probe(target *t)
 	}
 
 	/* Setup Target */
-	t->driver = variant_string;
+	t->driver = samd_variant_string;
 	t->reset = samd_reset;
 
 	if (samd.series == 20 && samd.revision == 'B') {
