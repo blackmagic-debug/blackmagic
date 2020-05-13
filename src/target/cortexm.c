@@ -71,6 +71,10 @@ static target_addr cortexm_check_watch(target *t);
 
 static int cortexm_hostio_request(target *t);
 
+#if !defined(PC_HOSTED)
+static uint32_t time0_sec = UINT32_MAX; /* sys_clock time origin */
+#endif
+
 struct cortexm_priv {
 	ADIv5_AP_t *ap;
 	bool stepping;
@@ -1206,6 +1210,8 @@ static int cortexm_hostio_request(target *t)
 		if (syscall == SYS_TIME) { /* SYS_TIME: time in seconds */
 			ret = sec;
 		} else { /* SYS_CLOCK: time in hundredths of seconds */
+			if (time0_sec > sec) time0_sec = sec; /* set sys_clock time origin */
+			sec -= time0_sec;
 			uint64_t csec64 = (sec * 1000000ull + usec)/10000ull;
 			uint32_t csec = csec64 & 0x7fffffff;
 			ret = csec;
