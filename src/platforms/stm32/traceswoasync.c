@@ -41,8 +41,6 @@
 
 /* For speed this is set to the USB transfer size */
 #define FULL_SWO_PACKET	(64)
-/* Default line rate....used as default for a request without baudrate */
-#define DEFAULTSPEED	(2250000)
 
 static volatile uint32_t w;	/* Packet currently received via UART */
 static volatile uint32_t r;	/* Packet currently waiting to transmit to USB */
@@ -50,6 +48,8 @@ static volatile uint32_t r;	/* Packet currently waiting to transmit to USB */
 static uint8_t trace_rx_buf[NUM_TRACE_PACKETS * FULL_SWO_PACKET];
 /* Packet pingpong buffer used for receiving packets */
 static uint8_t pingpong_buf[2 * FULL_SWO_PACKET];
+/* SWO decoding */
+static bool decoding = false;
 
 void trace_buf_drain(usbd_device *dev, uint8_t ep)
 {
@@ -59,10 +59,20 @@ void trace_buf_drain(usbd_device *dev, uint8_t ep)
 	if (__atomic_test_and_set (&inBufDrain, __ATOMIC_RELAXED))
 		return;
 	/* Attempt to write everything we buffered */
-	if ((w != r) && (usbd_ep_write_packet(dev, ep,
+	if (w != r) {
+		uint16_t rc;
+		if (decoding)
+			/* write decoded swo packets to the uart port */
+			rc = traceswo_decode(dev, CDCACM_UART_ENDPOINT,
 										  &trace_rx_buf[r * FULL_SWO_PACKET],
-										  FULL_SWO_PACKET)))
-		r =(r + 1) % NUM_TRACE_PACKETS;
+										  FULL_SWO_PACKET);
+		else
+			/* write raw swo packets to the trace port */
+			rc = usbd_ep_write_packet(dev, ep,
+										  &trace_rx_buf[r * FULL_SWO_PACKET],
+										  FULL_SWO_PACKET);
+		if (rc) r = (r + 1) % NUM_TRACE_PACKETS;
+	}
 	__atomic_clear (&inBufDrain, __ATOMIC_RELAXED);
 }
 
@@ -115,10 +125,10 @@ void SWO_DMA_ISR(void)
 	trace_buf_drain(usbdev, 0x85);
 }
 
-void traceswo_init(uint32_t baudrate)
+void traceswo_init(uint32_t baudrate, uint32_t swo_chan_bitmask)
 {
 	if (!baudrate)
-		baudrate = DEFAULTSPEED;
+		baudrate = SWO_DEFAULT_BAUD;
 
 	rcc_periph_clock_enable(SWO_UART_CLK);
 	rcc_periph_clock_enable(SWO_DMA_CLK);
@@ -130,4 +140,6 @@ void traceswo_init(uint32_t baudrate)
 	nvic_set_priority(SWO_DMA_IRQ, IRQ_PRI_SWO_DMA);
 	nvic_enable_irq(SWO_DMA_IRQ);
 	traceswo_setspeed(baudrate);
+	traceswo_setmask(swo_chan_bitmask);
+	decoding = (swo_chan_bitmask != 0);
 }
