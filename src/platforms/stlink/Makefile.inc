@@ -32,6 +32,7 @@ SRC += 	cdcacm.c	\
 	serialno.c	\
 	timing.c	\
 	timing_stm32.c	\
+	traceswodecode.c	\
 	traceswoasync.c	\
 	stlink_common.c \
 

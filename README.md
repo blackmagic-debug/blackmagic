@@ -16,6 +16,9 @@ JTAG or Serial Wire Debugging (SWD) port and on-chip debug logic provided
 by the microprocessor. The probe connects to a host computer using a
 standard USB interface. The user is able to control exactly what happens
 using the GNU source level debugging software, GDB.
+Serial Wire Output (SWO) allows the target to write tracing and logging to the host
+without using usb or serial port. Decoding SWO in the probe itself
+makes [SWO viewing as simple as connecting to a serial port](https://github.com/blacksphere/blackmagic/wiki/Serial-Wire-Output).
 
 See online documentation at https://github.com/blacksphere/blackmagic/wiki
 

@@ -79,9 +79,9 @@ const struct command_s cmd_list[] = {
 #endif
 #ifdef PLATFORM_HAS_TRACESWO
 #if defined TRACESWO_PROTOCOL && TRACESWO_PROTOCOL == 2
-	{"traceswo", (cmd_handler)cmd_traceswo, "Start trace capture, NRZ mode: (baudrate)" },
+	{"traceswo", (cmd_handler)cmd_traceswo, "Start trace capture, NRZ mode: (baudrate) (decode channel ...)" },
 #else
-	{"traceswo", (cmd_handler)cmd_traceswo, "Start trace capture, Manchester mode" },
+	{"traceswo", (cmd_handler)cmd_traceswo, "Start trace capture, Manchester mode: (decode channel ...)" },
 #endif
 #endif
 	{"heapinfo", (cmd_handler)cmd_heapinfo, "Set semihosting heapinfo" },
@@ -363,19 +363,49 @@ static bool cmd_traceswo(target *t, int argc, const char **argv)
 	extern char serial_no[9];
 #endif
 	(void)t;
-#if defined TRACESWO_PROTOCOL && TRACESWO_PROTOCOL == 2
-	if (argc > 1) {
-		uint32_t baudrate = atoi(argv[1]);
-		traceswo_init(baudrate);
-	} else {
-		gdb_outf("Missing baudrate parameter in command\n");
+#if TRACESWO_PROTOCOL == 2
+	uint32_t baudrate = SWO_DEFAULT_BAUD;
+#endif
+	uint32_t swo_channelmask = 0; /* swo decoding off */
+	uint8_t decode_arg = 1;
+#if TRACESWO_PROTOCOL == 2
+	/* argument: optional baud rate for async mode */
+	if ((argc > 1) && (*argv[1] >= '0') && (*argv[1] <= '9')) {
+		baudrate = atoi(argv[1]);
+		if (baudrate == 0) baudrate = SWO_DEFAULT_BAUD;
+		decode_arg = 2;
 	}
+#endif
+	/* argument: 'decode' literal */
+	if((argc > decode_arg) &&  !strncmp(argv[decode_arg], "decode", strlen(argv[decode_arg]))) {
+		swo_channelmask = 0xFFFFFFFF; /* decoding all channels */
+		/* arguments: channels to decode */
+		if (argc > decode_arg + 1) {
+			swo_channelmask = 0x0;
+			for (int i = decode_arg+1; i < argc; i++) { /* create bitmask of channels to decode */
+				int channel = atoi(argv[i]);
+				if ((channel >= 0) && (channel <= 31))
+					swo_channelmask |= (uint32_t)0x1 << channel;
+			}
+		}
+	}
+#if defined(PLATFORM_HAS_DEBUG) && !defined(PC_HOSTED) && defined(ENABLE_DEBUG)
+	if (debug_bmp) {
+#if TRACESWO_PROTOCOL == 2
+		gdb_outf("baudrate: %lu ", baudrate);
+#endif
+		gdb_outf("channel mask: ");
+		for (int8_t i=31;i>=0;i--) {
+			uint8_t bit = (swo_channelmask >> i) & 0x1;
+			gdb_outf("%u", bit);
+		}
+		gdb_outf("\n");
+	}
+#endif
+#if TRACESWO_PROTOCOL == 2
+	traceswo_init(baudrate, swo_channelmask);
 #else
-	(void)argv;
-	traceswo_init();
-	if (argc > 1) {
-		gdb_outf("Superfluous parameter(s) ignored\n");
-	}
+	traceswo_init(swo_channelmask);
 #endif
 	gdb_outf("%s:%02X:%02X\n", serial_no, 5, 0x85);
 	return true;
