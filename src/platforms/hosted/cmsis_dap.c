@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2019-20 Uwe Bonnes
+ * Copyright (C) 2019-20 Uwe Bonnes <bon@elektron,ikp.physik.tu-darmstadt.de>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,7 +62,7 @@ int dap_init(bmp_info_t *info)
 	 * FIXME: Find a solution to decipher from the device.
 	 */
 	if ((info->vid == 0x1fc9) && (info->pid == 0x0132)) {
-		printf("Blacklist\n");
+		DEBUG_WARN("Blacklist\n");
 		report_size = 64 + 1;
 	}
 	handle = hid_open(info->vid, info->pid, serial);
@@ -71,17 +71,17 @@ int dap_init(bmp_info_t *info)
 	dap_disconnect();
 	size = dap_info(DAP_INFO_CAPABILITIES, hid_buffer, sizeof(hid_buffer));
 	dap_caps = hid_buffer[0];
-	printf(" Cap (0x%2x): %s%s%s", hid_buffer[0],
+	DEBUG_INFO(" Cap (0x%2x): %s%s%s", hid_buffer[0],
 		   (hid_buffer[0] & 1)? "SWD" : "",
 		   ((hid_buffer[0] & 3) == 3) ? "/" : "",
 		   (hid_buffer[0] & 2)? "JTAG" : "");
 	if (hid_buffer[0] & 4)
-		printf(", SWO_UART");
+		DEBUG_INFO(", SWO_UART");
 	if (hid_buffer[0] & 8)
-		printf(", SWO_MANCHESTER");
+		DEBUG_INFO(", SWO_MANCHESTER");
 	if (hid_buffer[0] & 0x10)
-		printf(", Atomic Cmds");
-	printf("\n");
+		DEBUG_INFO(", Atomic Cmds");
+	DEBUG_INFO("\n");
 	return 0;
 }
 
@@ -155,35 +155,31 @@ int dbg_dap_cmd(uint8_t *data, int size, int rsize)
 	hid_buffer[0] = 0x00; // Report ID??
 	memcpy(&hid_buffer[1], data, rsize);
 
-	if (cl_debuglevel & BMP_DEBUG_WIRE) {
-		printf("cmd :   ");
-		for(int i = 0; (i < 16) && (i < rsize + 1); i++)
-			printf("%02x.",	hid_buffer[i]);
-		printf("\n");
-	}
+	DEBUG_WIRE("cmd :   ");
+	for(int i = 0; (i < 16) && (i < rsize + 1); i++)
+		DEBUG_WIRE("%02x.",	hid_buffer[i]);
+	DEBUG_WIRE("\n");
 	res = hid_write(handle, hid_buffer, rsize + 1);
 	if (res < 0) {
-		fprintf(stderr, "Error: %ls\n", hid_error(handle));
+		DEBUG_WARN( "Error: %ls\n", hid_error(handle));
 		exit(-1);
 	}
 	if (size) {
 		res = hid_read(handle, hid_buffer, report_size + 1);
 		if (res < 0) {
-			fprintf(stderr, "debugger read(): %ls\n", hid_error(handle));
+			DEBUG_WARN( "debugger read(): %ls\n", hid_error(handle));
 			exit(-1);
 		}
 		if (size && hid_buffer[0] != cmd) {
-			printf("cmd %02x invalid response received %02x\n",
+			DEBUG_WARN("cmd %02x invalid response received %02x\n",
 				   cmd, hid_buffer[0]);
 		}
 		res--;
 		memcpy(data, &hid_buffer[1], (size < res) ? size : res);
-		if (cl_debuglevel & BMP_DEBUG_WIRE) {
-			printf("cmd res:");
-			for(int i = 0; (i < 16) && (i < size + 4); i++)
-				printf("%02x.",	hid_buffer[i]);
-			printf("\n");
-		}
+		DEBUG_WIRE("cmd res:");
+		for(int i = 0; (i < 16) && (i < size + 4); i++)
+			DEBUG_WIRE("%02x.",	hid_buffer[i]);
+		DEBUG_WIRE("\n");
 	}
 
 	return res;
@@ -196,10 +192,8 @@ static void dap_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
 	if (len == 0)
 		return;
 	enum align align = MIN(ALIGNOF(src), ALIGNOF(len));
-#if 0
-	printf("memread @ %" PRIx32 " len %ld, align %d , start: \n",
+	DEBUG_WIRE("memread @ %" PRIx32 " len %ld, align %d , start: \n",
 		   src, len, align);
-#endif
 	if (((unsigned)(1 << align)) == len)
 		return dap_read_single(ap, dest, src, align);
 	/* One word transfer for every byte/halfword/word
@@ -218,7 +212,7 @@ static void dap_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
 			unsigned int res = dap_read_block(ap, dest, src, transfersize,
 											  align);
 			if (res) {
-//			    printf("mem_read failed %02x\n", res);
+			    DEBUG_WIRE("mem_read failed %02x\n", res);
 				ap->dp->fault = 1;
 				return;
 			}
@@ -228,7 +222,7 @@ static void dap_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
 			src       += transfersize;
 		}
 	}
-//	printf("memread res last data %08" PRIx32 "\n", ((uint32_t*)dest)[-1]);
+    DEBUG_WIRE("memread res last data %08" PRIx32 "\n", ((uint32_t*)dest)[-1]);
 }
 
 static void dap_mem_write_sized(
@@ -237,10 +231,8 @@ static void dap_mem_write_sized(
 {
 	if (len == 0)
 		return;
-#if 0
-	printf("memwrite @ %" PRIx32 " len %ld, align %d , %08x start: \n",
-		   dest, len, align, *(uint32_t *)src);
-#endif
+	DEBUG_WIRE("memwrite @ %" PRIx32 " len %ld, align %d , %08x start: \n",
+		dest, len, align, *(uint32_t *)src);
 	if (((unsigned)(1 << align)) == len)
 		return dap_write_single(ap, dest, src, align);
 	unsigned int max_size = (dbg_get_report_size() - 5) >> (2 - align);
@@ -256,7 +248,7 @@ static void dap_mem_write_sized(
 			unsigned int res = dap_write_block(ap, dest, src, transfersize,
 											   align);
 			if (res) {
-				printf("mem_write failed %02x\n", res);
+				DEBUG_WARN("mem_write failed %02x\n", res);
 				ap->dp->fault = 1;
 				return;
 			}
@@ -266,7 +258,7 @@ static void dap_mem_write_sized(
 			src       += transfersize;
 		}
 	}
-//	printf("memwrite done\n");
+	DEBUG_WIRE("memwrite done\n");
 }
 
 int dap_enter_debug_swd(ADIv5_DP_t *dp)
@@ -311,39 +303,34 @@ static void cmsis_dap_jtagtap_tms_seq(uint32_t MS, int ticks)
 	uint8_t TMS[4] = {MS & 0xff, (MS >> 8) & 0xff, (MS >> 16) & 0xff,
 					  (MS >> 24) & 0xff};
 	dap_jtagtap_tdi_tdo_seq(NULL, false, TMS, NULL, ticks);
-	if (cl_debuglevel & BMP_DEBUG_PLATFORM)
-		printf("tms_seq DI %08x %d\n", MS, ticks);
+	DEBUG_PROBE("tms_seq DI %08x %d\n", MS, ticks);
 }
 
 static void cmsis_dap_jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms,
 										  const uint8_t *DI, int ticks)
 {
 	dap_jtagtap_tdi_tdo_seq(DO, (final_tms), NULL, DI, ticks);
-	if (cl_debuglevel & BMP_DEBUG_PLATFORM)
-		printf("jtagtap_tdi_tdo_seq %d, %02x-> %02x\n", ticks, DI[0], DO[0]);
+	DEBUG_PROBE("jtagtap_tdi_tdo_seq %d, %02x-> %02x\n", ticks, DI[0], DO[0]);
 }
 
 static void  cmsis_dap_jtagtap_tdi_seq(const uint8_t final_tms,
 									   const uint8_t *DI, int ticks)
 {
 	dap_jtagtap_tdi_tdo_seq(NULL, (final_tms), NULL, DI, ticks);
-	if (cl_debuglevel & BMP_DEBUG_PLATFORM)
-		printf("jtagtap_tdi_seq %d, %02x\n", ticks, DI[0]);
+	DEBUG_PROBE("jtagtap_tdi_seq %d, %02x\n", ticks, DI[0]);
 }
 
 static uint8_t cmsis_dap_jtagtap_next(uint8_t dTMS, uint8_t dTDI)
 {
 	uint8_t tdo[1];
 	dap_jtagtap_tdi_tdo_seq(tdo, false, &dTMS, &dTDI, 1);
-	if (cl_debuglevel & BMP_DEBUG_PLATFORM)
-		printf("next tms %02x tdi %02x tdo %02x\n", dTMS, dTDI, tdo[0]);
+	DEBUG_PROBE("next tms %02x tdi %02x tdo %02x\n", dTMS, dTDI, tdo[0]);
 	return (tdo[0] & 1);
 }
 
 int cmsis_dap_jtagtap_init(jtag_proc_t *jtag_proc)
 {
-	if (cl_debuglevel)
-		printf("jtap_init\n");
+	DEBUG_PROBE("jtap_init\n");
 	if (!(dap_caps & DAP_CAP_JTAG))
 		return -1;
 	mode =  DAP_CAP_JTAG;

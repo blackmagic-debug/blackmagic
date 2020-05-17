@@ -150,7 +150,7 @@ static void msp432_add_flash(target *t, uint32_t addr, size_t length, target_add
 	struct msp432_flash *mf = calloc(1, sizeof(*mf));
 	struct target_flash *f;
 	if (!mf) {			/* calloc failed: heap exhaustion */
-		DEBUG("calloc: failed in %s\n", __func__);
+		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return;
 	}
 
@@ -185,7 +185,7 @@ bool msp432_probe(target *t)
 
 	/* Check for the right HW revision: at least C, as no flash support for B */
 	if (target_mem_read32(t, HWREV_ADDR) < HWREV_MIN_VALUE) {
-		DEBUG("MSP432 Version not handled\n");
+		DEBUG_INFO("MSP432 Version not handled\n");
 		return false;
 	}
 
@@ -239,20 +239,21 @@ static bool msp432_sector_erase(struct target_flash *f, target_addr addr)
 
 	/* Unprotect sector */
 	uint32_t old_prot = msp432_sector_unprotect(mf, addr);
-	DEBUG("Flash protect: 0x%08"PRIX32"\n", target_mem_read32(t, mf->flash_protect_register));
+	DEBUG_WARN("Flash protect: 0x%08"PRIX32"\n",
+			   target_mem_read32(t, mf->flash_protect_register));
 
 	/* Prepare input data */
 	uint32_t regs[t->regs_size / sizeof(uint32_t)]; // Use of VLA
 	target_regs_read(t, regs);
 	regs[0] = addr; // Address of sector to erase in R0
 
-	DEBUG("Erasing sector at 0x%08"PRIX32"\n", addr);
+	DEBUG_INFO("Erasing sector at 0x%08"PRIX32"\n", addr);
 
 	/* Call ROM */
 	msp432_call_ROM(t, mf->FlashCtl_eraseSector, regs);
 
 	// Result value in R0 is true for success
-	DEBUG("ROM return value: %"PRIu32"\n", regs[0]);
+	DEBUG_INFO("ROM return value: %"PRIu32"\n", regs[0]);
 
 	/* Restore original protection */
 	target_mem_write32(t, mf->flash_protect_register, old_prot);
@@ -291,7 +292,8 @@ static int msp432_flash_write(struct target_flash *f, target_addr dest,
 	/* Unprotect sector, len is always < SECTOR_SIZE */
 	uint32_t old_prot = msp432_sector_unprotect(mf, dest);
 
-	DEBUG("Flash protect: 0x%08"PRIX32"\n", target_mem_read32(t, mf->flash_protect_register));
+	DEBUG_WARN("Flash protect: 0x%08"PRIX32"\n",
+			   target_mem_read32(t, mf->flash_protect_register));
 
 	/* Prepare input data */
 	uint32_t regs[t->regs_size / sizeof(uint32_t)]; // Use of VLA
@@ -300,14 +302,14 @@ static int msp432_flash_write(struct target_flash *f, target_addr dest,
 	regs[1] = dest;              // Flash address to be write to in R1
 	regs[2] = len;               // Size of buffer to be flashed in R2
 
-	DEBUG("Writing 0x%04" PRIX32 " bytes at 0x%08zu\n", dest, len);
+	DEBUG_INFO("Writing 0x%04" PRIX32 " bytes at 0x%08zu\n", dest, len);
 	/* Call ROM */
 	msp432_call_ROM(t, mf->FlashCtl_programMemory, regs);
 
 	/* Restore original protection */
 	target_mem_write32(t, mf->flash_protect_register, old_prot);
 
-	DEBUG("ROM return value: %"PRIu32"\n", regs[0]);
+	DEBUG_INFO("ROM return value: %"PRIu32"\n", regs[0]);
 	// Result value in R0 is true for success
 	return !regs[0];
 }
@@ -321,7 +323,7 @@ static bool msp432_cmd_erase_main(target *t, int argc, const char **argv)
 	/* Usually, this is not wanted, so go sector by sector...        */
 
 	uint32_t banksize = target_mem_read32(t, SYS_FLASH_SIZE) / 2;
-	DEBUG("Bank Size: 0x%08"PRIX32"\n", banksize);
+	DEBUG_INFO("Bank Size: 0x%08"PRIX32"\n", banksize);
 
 	/* Erase first bank */
 	struct target_flash *f = get_target_flash(t, MAIN_FLASH_BASE);

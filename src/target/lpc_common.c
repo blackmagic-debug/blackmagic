@@ -40,7 +40,7 @@ struct lpc_flash *lpc_add_flash(target *t, target_addr addr, size_t length)
 	struct target_flash *f;
 
 	if (!lf) {			/* calloc failed: heap exhaustion */
-		DEBUG("calloc: failed in %s\n", __func__);
+		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return NULL;
 	}
 

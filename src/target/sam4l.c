@@ -170,7 +170,7 @@ static void sam4l_add_flash(target *t, uint32_t addr, size_t length)
 {
 	struct target_flash *f = calloc(1, sizeof(struct target_flash));
 	if (!f) {			/* calloc failed: heap exhaustion */
-		DEBUG("calloc: failed in %s\n", __func__);
+		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return;
 	}
 
@@ -237,15 +237,15 @@ bool sam4l_probe(target *t)
 		target_add_ram(t, 0x20000000, ram_size);
 		flash_size = sam_nvp_size(t->idcode);
 		sam4l_add_flash(t, 0x0, flash_size);
-		DEBUG("\nSAM4L: RAM = 0x%x (%dK), FLASH = 0x%x (%dK)\n",
+		DEBUG_INFO("\nSAM4L: RAM = 0x%x (%dK), FLASH = 0x%x (%dK)\n",
 			(unsigned int) ram_size, (unsigned int) (ram_size / 1024),
 					(unsigned int) flash_size, (unsigned int)(flash_size / 1024));
 
 		/* enable SMAP if not, check for HCR and reset if set */
 		sam4l_extended_reset(t);
-		DEBUG("\nSAM4L: SAM4L Selected.\n");
+		DEBUG_INFO("\nSAM4L: SAM4L Selected.\n");
 		if (target_check_error(t)) {
-			DEBUG("SAM4L: target_check_error returned true\n");
+			DEBUG_WARN("SAM4L: target_check_error returned true\n");
 		}
 		return true;
 	}
@@ -261,11 +261,11 @@ sam4l_extended_reset(target *t)
 	uint32_t	reg;
 	int i;
 
-	DEBUG("SAM4L: Extended Reset\n");
+	DEBUG_INFO("SAM4L: Extended Reset\n");
 	/* enable SMAP in case we're dealing with a non-TCK SRST */
 	target_mem_write32(t, SMAP_CR, 0x1); /* enable SMAP */
 	reg = target_mem_read32(t, SMAP_SR);
-	DEBUG("\nSAM4L: SMAP_SR has 0x%08lx\n", (long unsigned int) reg);
+	DEBUG_INFO("\nSAM4L: SMAP_SR has 0x%08lx\n", (long unsigned int) reg);
 	if ((reg & SMAP_SR_HCR) != 0) {
 		/* write '1' bit to the status clear register */
 		target_mem_write32(t, SMAP_SCR, SMAP_SR_HCR);
@@ -275,7 +275,8 @@ sam4l_extended_reset(target *t)
 		}
 		/* not sure what to do if we can't reset that bit */
 		if (i > 249) {
-			DEBUG("\nSAM4L: Reset failed. SMAP_SR has 0x%08lx\n", (long unsigned int) reg);
+			DEBUG_INFO("\nSAM4L: Reset failed. SMAP_SR has 0x%08lx\n",
+					   (long unsigned int) reg);
 		}
 	}
 	/* reset bus error if for some reason SMAP was disabled */
@@ -298,8 +299,9 @@ sam4l_flash_command(target *t, uint32_t page, uint32_t cmd)
 	uint32_t cmd_reg;
 	uint32_t status;
 	int	timeout;
-	DEBUG("\nSAM4L: sam4l_flash_command: FSR: 0x%08x, page = %d, command = %d\n",
-		(unsigned int)(FLASHCALW_FSR), (int) page, (int) cmd);
+	DEBUG_INFO("\nSAM4L: sam4l_flash_command: FSR: 0x%08x, page = %d, "
+			   "command = %d\n", (unsigned int)(FLASHCALW_FSR),
+			   (int) page, (int) cmd);
 	/* wait for Flash controller ready */
 	for (timeout = 0; timeout < FLASH_TIMEOUT; timeout++) {
 		status = target_mem_read32(t, FLASHCALW_FSR);
@@ -308,14 +310,16 @@ sam4l_flash_command(target *t, uint32_t page, uint32_t cmd)
 		}
 	}
 	if (timeout == FLASH_TIMEOUT) {
-		DEBUG("\nSAM4L: sam4l_flash_command: Not ready! Status = 0x%08x\n", (unsigned int) status);
+		DEBUG_WARN("\nSAM4L: sam4l_flash_command: Not ready! "
+				   "Status = 0x%08x\n", (unsigned int) status);
 		return -1; /* Failed */
 	}
 	/* load up the new command */
 	cmd_reg = (cmd & FLASHCALW_FCMD_CMD_MASK) |
 			  ((page & FLASHCALW_FCMD_PAGEN_MASK) << FLASHCALW_FCMD_PAGEN_SHIFT) |
 		  	  (0xA5 << FLASHCALW_FCMD_KEY_SHIFT);
-	DEBUG("\nSAM4L: sam4l_flash_command: Wrting command word 0x%08x\n", (unsigned int) cmd_reg);
+	DEBUG_INFO("\nSAM4L: sam4l_flash_command: Wrting command word 0x%08x\n",
+			   (unsigned int) cmd_reg);
 	/* and kick it off */
 	target_mem_write32(t, FLASHCALW_FCMD, cmd_reg);
 	/* don't actually wait for it to finish, the next command will stall if it is not done */
@@ -334,7 +338,8 @@ sam4l_flash_write_buf(struct target_flash *f, target_addr addr, const void *src,
 	uint32_t ndx;
 	uint16_t page;
 
-	DEBUG("\nSAM4L: sam4l_flash_write_buf: addr = 0x%08lx, len %d\n", (long unsigned int) addr, (int) len);
+	DEBUG_INFO("\nSAM4L: sam4l_flash_write_buf: addr = 0x%08lx, len %d\n",
+			   (long unsigned int) addr, (int) len);
 	/* This will fail with unaligned writes, the write_buf version */
 	page = addr / SAM4L_PAGE_SIZE;
 
@@ -380,7 +385,7 @@ sam4l_flash_erase(struct target_flash *f, target_addr addr, size_t len)
 	target *t = f->t;
 	uint16_t page;
 
-	DEBUG("SAM4L: flash erase address 0x%08x for %d bytes\n",
+	DEBUG_INFO("SAM4L: flash erase address 0x%08x for %d bytes\n",
 		(unsigned int) addr, (unsigned int) len);
 	/*
 	 *  NB: if addr isn't aligned to a page boundary, or length

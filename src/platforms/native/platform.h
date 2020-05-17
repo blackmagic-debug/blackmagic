@@ -30,10 +30,14 @@
 
 #define PLATFORM_HAS_TRACESWO
 #define PLATFORM_HAS_POWER_SWITCH
+
 #ifdef ENABLE_DEBUG
-#define PLATFORM_HAS_DEBUG
-#define USBUART_DEBUG
+# define PLATFORM_HAS_DEBUG
+# define USBUART_DEBUG
+extern bool debug_bmp;
+int usbuart_debug_write(const char *buf, size_t len);
 #endif
+
 #define BOARD_IDENT             "Black Magic Probe"
 #define BOARD_IDENT_DFU	        "Black Magic Probe (Upgrade)"
 #define BOARD_IDENT_UPD	        "Black Magic Probe (DFU Upgrade)"
@@ -164,15 +168,6 @@
 #define TRACE_TIM_CLK_EN() rcc_periph_clock_enable(RCC_TIM3)
 #define TRACE_IRQ   NVIC_TIM3_IRQ
 #define TRACE_ISR   tim3_isr
-
-#ifdef ENABLE_DEBUG
-extern bool debug_bmp;
-int usbuart_debug_write(const char *buf, size_t len);
-
-#define DEBUG printf
-#else
-#define DEBUG(...)
-#endif
 
 #define SET_RUN_STATE(state)	{running_status = (state);}
 #define SET_IDLE_STATE(state)	{gpio_set_val(LED_PORT, LED_IDLE_RUN, state);}

@@ -33,6 +33,8 @@
 #ifdef ENABLE_DEBUG
 # define PLATFORM_HAS_DEBUG
 # define USBUART_DEBUG
+extern bool debug_bmp;
+int usbuart_debug_write(const char *buf, size_t len);
 #endif
 
 #define BOARD_IDENT			"Black Magic Probe (SWLINK), (Firmware " FIRMWARE_VERSION ")"
@@ -121,14 +123,6 @@
 #define TRACE_ISR   tim2_isr
 #define TRACE_IC_IN TIM_IC_IN_TI2
 #define TRACE_TRIG_IN TIM_SMCR_TS_IT1FP2
-
-#ifdef ENABLE_DEBUG
-extern bool debug_bmp;
-int usbuart_debug_write(const char *buf, size_t len);
-# define DEBUG printf
-#else
-# define DEBUG(...)
-#endif
 
 /* On F103, only USART1 is on AHB2 and can reach 4.5 MBaud at 72 MHz.
  * USART1 is already used. sp maximum speed is 2.25 MBaud. */

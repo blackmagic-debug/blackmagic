@@ -25,15 +25,15 @@ static void LIBUSB_CALL on_trans_done(struct libusb_transfer *trans)
 
     if (trans->status != LIBUSB_TRANSFER_COMPLETED)
     {
-		fprintf(stderr, "on_trans_done: ");
+		DEBUG_WARN("on_trans_done: ");
         if(trans->status == LIBUSB_TRANSFER_TIMED_OUT)  {
-            fprintf(stderr, " Timeout\n");
+            DEBUG_WARN(" Timeout\n");
         } else if (trans->status == LIBUSB_TRANSFER_CANCELLED) {
-            fprintf(stderr, " cancelled\n");
+            DEBUG_WARN(" cancelled\n");
         } else if (trans->status == LIBUSB_TRANSFER_NO_DEVICE) {
-            fprintf(stderr, " no device\n");
+            DEBUG_WARN(" no device\n");
         } else {
-            fprintf(stderr, " unknown\n");
+            DEBUG_WARN(" unknown\n");
 		}
         ctx->flags |= TRANS_FLAGS_HAS_ERROR;
     }
@@ -51,7 +51,7 @@ static int submit_wait(usb_link_t *link, struct libusb_transfer *trans) {
 	trans->user_data = &trans_ctx;
 
 	if ((error = libusb_submit_transfer(trans))) {
-		fprintf(stderr, "libusb_submit_transfer(%d): %s\n", error,
+		DEBUG_WARN("libusb_submit_transfer(%d): %s\n", error,
 			  libusb_strerror(error));
 		exit(-1);
 	}
@@ -62,18 +62,18 @@ static int submit_wait(usb_link_t *link, struct libusb_transfer *trans) {
 		timeout.tv_sec = 1;
 		timeout.tv_usec = 0;
 		if (libusb_handle_events_timeout(link->ul_libusb_ctx, &timeout)) {
-			fprintf(stderr, "libusb_handle_events()\n");
+			DEBUG_WARN("libusb_handle_events()\n");
 			return -1;
 		}
 		uint32_t now = platform_time_ms();
 		if (now - start_time > 1000) {
 			libusb_cancel_transfer(trans);
-			fprintf(stderr, "libusb_handle_events() timeout\n");
+			DEBUG_WARN("libusb_handle_events() timeout\n");
 			return -1;
 		}
 	}
 	if (trans_ctx.flags & TRANS_FLAGS_HAS_ERROR) {
-		fprintf(stderr, "libusb_handle_events() | has_error\n");
+		DEBUG_WARN("libusb_handle_events() | has_error\n");
 		return -1;
 	}
 
@@ -93,19 +93,17 @@ int send_recv(usb_link_t *link,
 								  link->ep_tx | LIBUSB_ENDPOINT_OUT,
 								  txbuf, txlen,
 								  NULL, NULL, 0);
-		if (cl_debuglevel & BMP_DEBUG_WIRE) {
-			int i = 0;
-			printf(" Send (%3d): ", txlen);
-			for (; i < txlen; i++) {
-				printf("%02x", txbuf[i]);
-				if ((i & 7) == 7)
-					printf(".");
-				if ((i & 31) == 31)
-					printf("\n             ");
-			}
-			if (!(i & 31))
-				printf("\n");
+		int i = 0;
+		DEBUG_WIRE(" Send (%3d): ", txlen);
+		for (; i < txlen; i++) {
+			DEBUG_WIRE("%02x", txbuf[i]);
+			if ((i & 7) == 7)
+				DEBUG_WIRE(".");
+			if ((i & 31) == 31)
+				DEBUG_WIRE("\n             ");
 		}
+		if (!(i & 31))
+			DEBUG_WIRE("\n");
 		if (submit_wait(link, link->req_trans)) {
 			libusb_clear_halt(link->ul_libusb_device_handle, link->ep_tx);
 			return -1;
@@ -119,7 +117,7 @@ int send_recv(usb_link_t *link,
 								  rxbuf, rxsize, NULL, NULL, 0);
 
 		if (submit_wait(link, link->rep_trans)) {
-			DEBUG("clear 1\n");
+			DEBUG_WARN("clear 1\n");
 			libusb_clear_halt(link->ul_libusb_device_handle, link->ep_rx);
 			return -1;
 		}
@@ -127,17 +125,14 @@ int send_recv(usb_link_t *link,
 		if (res >0) {
 			int i;
 			uint8_t *p = rxbuf;
-			if (cl_debuglevel & BMP_DEBUG_WIRE) {
-				printf(" Rec (%zu/%d)", rxsize, res);
-				for (i = 0; i < res && i < 32 ; i++) {
-					if ( i && ((i & 7) == 0))
-						printf(".");
-					printf("%02x", p[i]);
-				}
+			DEBUG_WIRE(" Rec (%zu/%d)", rxsize, res);
+			for (i = 0; i < res && i < 32 ; i++) {
+				if ( i && ((i & 7) == 0))
+					DEBUG_WIRE(".");
+				DEBUG_WIRE("%02x", p[i]);
 			}
 		}
 	}
-	if (cl_debuglevel & BMP_DEBUG_WIRE)
-		printf("\n");
+	DEBUG_WIRE("\n");
 	return res;
 }

@@ -190,54 +190,50 @@ int ftdi_bmp_init(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info)
 		 if (strcmp(cable_desc[index].name, cl_opts->opt_cable) == 0)
 		 break;
 
-	if (index == sizeof(cable_desc)/sizeof(cable_desc[0])){
-		fprintf(stderr, "No cable matching %s found\n", cl_opts->opt_cable);
+	if (index == sizeof(cable_desc)/sizeof(cable_desc[0])) {
+		DEBUG_WARN( "No cable matching %s found\n", cl_opts->opt_cable);
 		return -1;
 	}
 
 	active_cable = &cable_desc[index];
 
-	printf("\nBlack Magic Probe (" FIRMWARE_VERSION ")\n");
-	printf("Copyright (C) 2015  Black Sphere Technologies Ltd.\n");
-	printf("License GPLv3+: GNU GPL version 3 or later "
-	       "<http://gnu.org/licenses/gpl.html>\n\n");
-
+	DEBUG_WARN("Black Magic Probe for FTDI/MPSSE\n");
 	if(ftdic) {
 		ftdi_usb_close(ftdic);
 		ftdi_free(ftdic);
 		ftdic = NULL;
 	}
 	if((ftdic = ftdi_new()) == NULL) {
-		fprintf(stderr, "ftdi_new: %s\n",
+		DEBUG_WARN( "ftdi_new: %s\n",
 			ftdi_get_error_string(ftdic));
 		abort();
 	}
 	info->ftdic = ftdic;
 	if((err = ftdi_set_interface(ftdic, active_cable->interface)) != 0) {
-		fprintf(stderr, "ftdi_set_interface: %d: %s\n",
+		DEBUG_WARN( "ftdi_set_interface: %d: %s\n",
 			err, ftdi_get_error_string(ftdic));
 		goto error_1;
 	}
 	if((err = ftdi_usb_open_desc(
 		ftdic, active_cable->vendor, active_cable->product,
 		active_cable->description, cl_opts->opt_serial)) != 0) {
-		fprintf(stderr, "unable to open ftdi device: %d (%s)\n",
+		DEBUG_WARN( "unable to open ftdi device: %d (%s)\n",
 			err, ftdi_get_error_string(ftdic));
 		goto error_1;
 	}
 
 	if((err = ftdi_set_latency_timer(ftdic, 1)) != 0) {
-		fprintf(stderr, "ftdi_set_latency_timer: %d: %s\n",
+		DEBUG_WARN( "ftdi_set_latency_timer: %d: %s\n",
 			err, ftdi_get_error_string(ftdic));
 		goto error_2;
 	}
 	if((err = ftdi_set_baudrate(ftdic, 1000000)) != 0) {
-		fprintf(stderr, "ftdi_set_baudrate: %d: %s\n",
+		DEBUG_WARN( "ftdi_set_baudrate: %d: %s\n",
 			err, ftdi_get_error_string(ftdic));
 		goto error_2;
 	}
 	if((err = ftdi_write_data_set_chunksize(ftdic, BUF_SIZE)) != 0) {
-		fprintf(stderr, "ftdi_write_data_set_chunksize: %d: %s\n",
+		DEBUG_WARN( "ftdi_write_data_set_chunksize: %d: %s\n",
 			err, ftdi_get_error_string(ftdic));
 		goto error_2;
 	}
@@ -260,7 +256,7 @@ bool libftdi_srst_get_val(void) { return false; }
 void libftdi_buffer_flush(void)
 {
 	assert(ftdi_write_data(ftdic, outbuf, bufptr) == bufptr);
-//	printf("FT2232 libftdi_buffer flush: %d bytes\n", bufptr);
+	DEBUG_WIRE("FT2232 libftdi_buffer flush: %d bytes\n", bufptr);
 	bufptr = 0;
 }
 

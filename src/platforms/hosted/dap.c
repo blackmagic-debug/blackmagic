@@ -31,11 +31,8 @@
  */
 
 /*- Includes ----------------------------------------------------------------*/
-#include <stdio.h>
+#include <general.h>
 #include <stdlib.h>
-#include <stdint.h>
-#include <stdbool.h>
-#include <string.h>
 #include "dap.h"
 #include "jtag_scan.h"
 
@@ -312,7 +309,7 @@ static void dap_line_reset(void)
 	};
 	dbg_dap_cmd(buf, sizeof(buf), 10);
 	if (buf[0])
-		printf("line reset failed\n");
+		DEBUG_WARN("line reset failed\n");
 }
 
 static uint32_t wait_word(uint8_t *buf, int size, int len, uint8_t *dp_fault)
@@ -324,11 +321,11 @@ static uint32_t wait_word(uint8_t *buf, int size, int len, uint8_t *dp_fault)
 	} while (buf[1] == DAP_TRANSFER_WAIT);
 
 	if (buf[1] > DAP_TRANSFER_WAIT) {
-//	  printf("dap_read_reg fault\n");
+//	  DEBUG_WARN("dap_read_reg fault\n");
 		*dp_fault = 1;
 	}
 	if (buf[1] == DAP_TRANSFER_ERROR) {
-		printf("dap_read_reg, protocoll error\n");
+		DEBUG_WARN("dap_read_reg, protocoll error\n");
 		dap_line_reset();
 	}
 	uint32_t res =
@@ -349,7 +346,7 @@ uint32_t dap_read_reg(ADIv5_DP_t *dp, uint8_t reg)
 	buf[2] = 0x01; // Request size
 	buf[3] = reg | DAP_TRANSFER_RnW;
 	uint32_t res = wait_word(buf, 8, 4, &dp->fault);
-//  printf("\tdap_read_reg %02x %08x\n", reg, res);
+	DEBUG_WIRE("\tdap_read_reg %02x %08x\n", reg, res);
 	return res;
 }
 
@@ -357,7 +354,7 @@ uint32_t dap_read_reg(ADIv5_DP_t *dp, uint8_t reg)
 void dap_write_reg(ADIv5_DP_t *dp, uint8_t reg, uint32_t data)
 {
 	uint8_t buf[8];
-	// printf("\tdap_write_reg %02x %08x\n", reg, data);
+	DEBUG_PROBE("\tdap_write_reg %02x %08x\n", reg, data);
 
 	buf[0] = ID_DAP_TRANSFER;
 	uint8_t dap_index = 0;
@@ -377,11 +374,12 @@ void dap_write_reg(ADIv5_DP_t *dp, uint8_t reg, uint32_t data)
 	} while (buf[1] == DAP_TRANSFER_WAIT);
 
 	if (buf[1] > DAP_TRANSFER_WAIT) {
-//	  printf("dap_write_reg %02x data %08x:fault\n", reg, data);
+		DEBUG_PROBE("dap_write_reg %02x data %08x:fault\n", reg, data);
 		dp->fault = 1;
 	}
 	if (buf[1] == DAP_TRANSFER_ERROR) {
-//	  printf("dap_write_reg %02x data %08x: protocoll error\n", reg, data);
+		DEBUG_PROBE("dap_write_reg %02x data %08x: protocoll error\n",
+					reg, data);
 		dap_line_reset();
 	}
 }
@@ -402,7 +400,7 @@ unsigned int dap_read_block(ADIv5_AP_t *ap, void *dest, uint32_t src,
     dbg_dap_cmd(buf, 1023, 5 + 1);
 	unsigned int transferred = buf[0] + (buf[1] << 8);
 	if (buf[2] > DAP_TRANSFER_FAULT) {
-		printf("line_reset\n");
+		DEBUG_PROBE("line_reset\n");
 		dap_line_reset();
 	}
 	if (sz != transferred) {
@@ -561,7 +559,7 @@ void dap_ap_mem_access_setup(ADIv5_AP_t *ap, uint32_t addr, enum align align)
 
 uint32_t dap_ap_read(ADIv5_AP_t *ap, uint16_t addr)
 {
-//	printf("dap_ap_read_start\n");
+	DEBUG_PROBE("dap_ap_read_start\n");
 	uint8_t buf[63], *p = buf;
 	buf[0] = ID_DAP_TRANSFER;
 	uint8_t dap_index = 0;
@@ -583,7 +581,7 @@ uint32_t dap_ap_read(ADIv5_AP_t *ap, uint16_t addr)
 
 void dap_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value)
 {
-//	printf("dap_ap_write addr %04x value %08x\n", addr, value);
+	DEBUG_PROBE("dap_ap_write addr %04x value %08x\n", addr, value);
 	uint8_t buf[63], *p = buf;
 	uint8_t dap_index = 0;
 	if (ap->dp->dev)
@@ -602,7 +600,6 @@ void dap_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value)
 	*p++ = (value >> 16) & 0xff;
 	*p++ = (value >> 24) & 0xff;
 	dbg_dap_cmd(buf, sizeof(buf), p - buf);
-//	printf("dap_ap_write done\n");
 }
 
 void dap_read_single(ADIv5_AP_t *ap, void *dest, uint32_t src, enum align align)
@@ -673,7 +670,7 @@ void dap_jtagtap_tdi_tdo_seq(uint8_t *DO, bool final_tms, const uint8_t *TMS,
 			p += n_di_bytes;
 			dbg_dap_cmd(buf, sizeof(buf), p - buf);
 			if (buf[0] != DAP_OK)
-				printf("Failed %02x\n", buf[0]);
+				DEBUG_WARN("dap_jtagtap_tdi_tdo_seq failed %02x\n", buf[0]);
 			if (DO) {
 				memcpy(DO, &buf[1], (transfers + 7) >> 3);
 				DO += (transfers + 7) >> 3;
@@ -692,7 +689,7 @@ void dap_jtagtap_tdi_tdo_seq(uint8_t *DO, bool final_tms, const uint8_t *TMS,
 			}
 			dbg_dap_cmd(buf, sizeof(buf), p - buf);
 			if (buf[0] == DAP_ERROR)
-				printf("Failed %02x\n", buf[0]);
+				DEBUG_WARN("dap_jtagtap_tdi_tdo_seq failed %02x\n", buf[0]);
 			if (DO) {
 				if (buf[1] & 1)
 					DO[last_byte] |= (1 << last_bit);
@@ -719,7 +716,7 @@ void dap_jtagtap_tdi_tdo_seq(uint8_t *DO, bool final_tms, const uint8_t *TMS,
 			}
 			dbg_dap_cmd(buf, sizeof(buf), p - buf);
 			if (buf[0] == DAP_ERROR)
-				printf("Failed %02x\n", buf[0]);
+				DEBUG_WARN("dap_jtagtap_tdi_tdo_seq failed %02x\n", buf[0]);
 			if (DO) {
 				for (int i = 0; i < transfers; i++) {
 					if (buf[i + 1])
@@ -740,7 +737,7 @@ int dap_jtag_configure(void)
 	for (; i < jtag_dev_count; i++) {
 		struct jtag_dev_s *jtag_dev = &jtag_devs[i];
 		*p++ = jtag_dev->ir_len;
-		printf("irlen %d\n", jtag_dev->ir_len);
+		DEBUG_PROBE("irlen %d\n", jtag_dev->ir_len);
 	}
 	if ((!i || i >= JTAG_MAX_DEVS))
 		return -1;
@@ -748,6 +745,6 @@ int dap_jtag_configure(void)
 	buf[1] = i;
 	dbg_dap_cmd(buf, sizeof(buf), p - buf);
 	if (buf[0] != DAP_OK)
-		printf("dap_jtag_configure Failed %02x\n", buf[0]);
+		DEBUG_WARN("dap_jtag_configure Failed %02x\n", buf[0]);
 	return 0;
 }

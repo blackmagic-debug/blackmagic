@@ -2,7 +2,7 @@
  * This file is part of the Black Magic Debug project.
  *
  * Copyright (C) 2019  Dave Marples <dave@marples.net>
- * with additions from Uwe Bonnes (bon@elektron.ikp.physik.tu-darmstadt.de)
+ * Modifications (C) 2020 Uwe Bonnes (bon@elektron.ikp.physik.tu-darmstadt.de)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -40,7 +40,7 @@ static int set_interface_attribs(void)
 	struct termios tty;
 	memset (&tty, 0, sizeof tty);
 	if (tcgetattr (fd, &tty) != 0) {
-      printf("error %d from tcgetattr", errno);
+      DEBUG_WARN("error %d from tcgetattr", errno);
       return -1;
     }
 
@@ -62,7 +62,7 @@ static int set_interface_attribs(void)
 	tty.c_cflag &= ~CRTSCTS;
 
 	if (tcsetattr (fd, TCSANOW, &tty) != 0) {
-		printf("error %d from tcsetattr", errno);
+		DEBUG_WARN("error %d from tcsetattr", errno);
 		return -1;
     }
 	return 0;
@@ -77,7 +77,7 @@ int serial_open(BMP_CL_OPTIONS_t *cl_opts, char *serial)
 		struct dirent *dp;
 		DIR *dir = opendir(DEVICE_BY_ID);
 		if (!dir) {
-			printf("No serial device found\n");
+			DEBUG_WARN("No serial device found\n");
 			return -1;
 		}
 		int num_devices = 0;
@@ -95,24 +95,25 @@ int serial_open(BMP_CL_OPTIONS_t *cl_opts, char *serial)
 		}
 		closedir(dir);
 		if ((num_devices == 0) && (num_total == 0)){
-			printf("No BMP probe found\n");
+			DEBUG_WARN("No BMP probe found\n");
 			return -1;
 		} else if (num_devices != 1) {
-			printf("Available Probes:\n");
+			DEBUG_INFO("Available Probes:\n");
 			dir = opendir(DEVICE_BY_ID);
 			if (dir) {
 				while ((dp = readdir(dir)) != NULL) {
 					if ((strstr(dp->d_name, BMP_IDSTRING)) &&
 						(strstr(dp->d_name, "-if00")))
-						printf("%s\n", dp->d_name);
+						DEBUG_WARN("%s\n", dp->d_name);
 				}
 				closedir(dir);
 				if (serial)
-					printf("Do no match given serial \"%s\"\n", serial);
+					DEBUG_WARN("Do no match given serial \"%s\"\n", serial);
 				else
-					printf("Select Probe with -s <(Partial) Serial Number\n");
+					DEBUG_WARN("Select Probe with -s <(Partial) Serial "
+							   "Number\n");
 			} else {
-				printf("Could not opendir %s: %s\n", name, strerror(errno));
+				DEBUG_WARN("Could not opendir %s: %s\n", name, strerror(errno));
 			}
 			return -1;
 		}
@@ -121,7 +122,7 @@ int serial_open(BMP_CL_OPTIONS_t *cl_opts, char *serial)
 	}
 	fd = open(name, O_RDWR | O_SYNC | O_NOCTTY);
 	if (fd < 0) {
-		printf("Couldn't open serial port %s\n", name);
+		DEBUG_WARN("Couldn't open serial port %s\n", name);
 		return -1;
     }
 	/* BMP only offers an USB-Serial connection with no real serial
@@ -139,11 +140,10 @@ int platform_buffer_write(const uint8_t *data, int size)
 {
 	int s;
 
-	if (cl_debuglevel &  BMP_DEBUG_WIRE)
-		printf("%s\n", data);
+	DEBUG_WIRE("%s\n", data);
 	s = write(fd, data, size);
 	if (s < 0) {
-		printf("Failed to write\n");
+		DEBUG_WARN("Failed to write\n");
 		return(-2);
     }
 
@@ -170,11 +170,11 @@ int platform_buffer_read(uint8_t *data, int maxsize)
 
 		ret = select(fd + 1, &rset, NULL, NULL, &tv);
 		if (ret < 0) {
-			printf("Failed on select\n");
+			DEBUG_WARN("Failed on select\n");
 			return(-3);
 		}
 		if(ret == 0) {
-			printf("Timeout on read RESP\n");
+			DEBUG_WARN("Timeout on read RESP\n");
 			return(-4);
 		}
 
@@ -187,25 +187,24 @@ int platform_buffer_read(uint8_t *data, int maxsize)
 		FD_SET(fd, &rset);
 		ret = select(fd + 1, &rset, NULL, NULL, &tv);
 		if (ret < 0) {
-			printf("Failed on select\n");
+			DEBUG_WARN("Failed on select\n");
 			exit(-4);
 		}
 		if(ret == 0) {
-			printf("Timeout on read\n");
+			DEBUG_WARN("Timeout on read\n");
 			return(-5);
 		}
 		s = read(fd, c, 1);
 		if (*c==REMOTE_EOM) {
 			*c = 0;
-			if (cl_debuglevel &  BMP_DEBUG_WIRE)
-				printf("       %s\n",data);
+			DEBUG_WIRE("       %s\n",data);
 			return (c - data);
 		} else {
 			c++;
 		}
 	}while ((s >= 0) && ((c - data) < maxsize));
 
-	printf("Failed to read\n");
+	DEBUG_WARN("Failed to read\n");
 	return(-6);
 	return 0;
 }

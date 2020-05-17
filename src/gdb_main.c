@@ -120,7 +120,8 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 				gdb_putpacketz("E02");
 				break;
 			}
-			DEBUG("m packet: addr = %" PRIx32 ", len = %" PRIx32 "\n", addr, len);
+			DEBUG_GDB("m packet: addr = %" PRIx32 ", len = %" PRIx32 "\n",
+					  addr, len);
 			uint8_t mem[len];
 			if (target_mem_read(cur_target, mem, addr, len))
 				gdb_putpacketz("E01");
@@ -145,7 +146,8 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 				gdb_putpacketz("E02");
 				break;
 			}
-			DEBUG("M packet: addr = %" PRIx32 ", len = %" PRIx32 "\n", addr, len);
+			DEBUG_GDB("M packet: addr = %" PRIx32 ", len = %" PRIx32 "\n",
+					  addr, len);
 			uint8_t mem[len];
 			unhexify(mem, pbuf + hex, len);
 			if (target_mem_write(cur_target, addr, mem, len))
@@ -242,7 +244,7 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 			if (in_syscall) {
 				return hostio_reply(tc, pbuf, size);
 			} else {
-				DEBUG("*** F packet when not in syscall! '%s'\n", pbuf);
+				DEBUG_GDB("*** F packet when not in syscall! '%s'\n", pbuf);
 				gdb_putpacketz("");
 			}
 			break;
@@ -295,7 +297,8 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 				gdb_putpacketz("E02");
 				break;
 			}
-			DEBUG("X packet: addr = %" PRIx32 ", len = %" PRIx32 "\n", addr, len);
+			DEBUG_GDB("X packet: addr = %" PRIx32 ", len = %" PRIx32 "\n",
+					  addr, len);
 			if (target_mem_write(cur_target, addr, pbuf+bin, len))
 				gdb_putpacketz("E01");
 			else
@@ -319,7 +322,7 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 			break;
 
 		default: 	/* Packet not implemented */
-			DEBUG("*** Unsupported packet: %s\n", pbuf);
+			DEBUG_GDB("*** Unsupported packet: %s\n", pbuf);
 			gdb_putpacketz("");
 		}
 	}
@@ -410,7 +413,7 @@ handle_q_packet(char *packet, int len)
 		gdb_putpacket_f("C%lx", generic_crc32(cur_target, addr, alen));
 
 	} else {
-		DEBUG("*** Unsupported packet: %s\n", packet);
+		DEBUG_GDB("*** Unsupported packet: %s\n", packet);
 		gdb_putpacket("", 0);
 	}
 }
@@ -478,7 +481,7 @@ handle_v_packet(char *packet, int plen)
 
 	} else if (sscanf(packet, "vFlashErase:%08lx,%08lx", &addr, &len) == 2) {
 		/* Erase Flash Memory */
-		DEBUG("Flash Erase %08lX %08lX\n", addr, len);
+		DEBUG_GDB("Flash Erase %08lX %08lX\n", addr, len);
 		if(!cur_target) { gdb_putpacketz("EFF"); return; }
 
 		if(!flash_mode) {
@@ -495,7 +498,7 @@ handle_v_packet(char *packet, int plen)
 	} else if (sscanf(packet, "vFlashWrite:%08lx:%n", &addr, &bin) == 1) {
 		/* Write Flash Memory */
 		len = plen - bin;
-		DEBUG("Flash Write %08lX %08lX\n", addr, len);
+		DEBUG_GDB("Flash Write %08lX %08lX\n", addr, len);
 		if(cur_target && target_flash_write(cur_target, addr, (void*)packet + bin, len) == 0)
 			gdb_putpacketz("OK");
 		else
@@ -507,7 +510,7 @@ handle_v_packet(char *packet, int plen)
 		flash_mode = 0;
 
 	} else {
-		DEBUG("*** Unsupported packet: %s\n", packet);
+		DEBUG_GDB("*** Unsupported packet: %s\n", packet);
 		gdb_putpacket("", 0);
 	}
 }

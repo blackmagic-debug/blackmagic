@@ -36,7 +36,4 @@ void stlink_adiv5_dp_defaults(ADIv5_DP_t *dp);
 int stlink_jtag_dp_init(ADIv5_DP_t *dp);
 int jtag_scan_stlinkv2(bmp_info_t *info, const uint8_t *irlens);
 void stlink_exit_function(bmp_info_t *info);
-extern  int debug_level;
-# define DEBUG_STLINK if (debug_level > 0) printf
-# define DEBUG_USB    if (debug_level > 1) printf
 #endif

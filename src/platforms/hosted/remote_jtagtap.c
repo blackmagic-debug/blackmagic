@@ -4,6 +4,7 @@
  * Copyright (C) 2008  Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
  * Modified by Dave Marples <dave@marples.net>
+ * Modified (c) 2020 Uwe Bonnes <bon@elektron.ikp.physik.tu-darmstadt.de>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -55,7 +56,7 @@ int remote_jtagtap_init(jtag_proc_t *jtag_proc)
 
 	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
 	if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
-      fprintf(stderr, "jtagtap_init failed, error %s\n",
+      DEBUG_WARN("jtagtap_init failed, error %s\n",
 			  s ? (char *)&(construct[1]) : "unknown");
       exit(-1);
     }
@@ -82,7 +83,7 @@ static void jtagtap_reset(void)
 
 	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
 	if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
-		fprintf(stderr, "jtagtap_reset failed, error %s\n",
+		DEBUG_WARN("jtagtap_reset failed, error %s\n",
 				s ? (char *)&(construct[1]) : "unknown");
 		exit(-1);
     }
@@ -99,7 +100,7 @@ static void jtagtap_tms_seq(uint32_t MS, int ticks)
 
 	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
 	if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
-		fprintf(stderr, "jtagtap_tms_seq failed, error %s\n",
+		DEBUG_WARN("jtagtap_tms_seq failed, error %s\n",
 				s ? (char *)&(construct[1]) : "unknown");
 		exit(-1);
     }
@@ -126,7 +127,7 @@ static void jtagtap_tdi_tdo_seq(
 
 	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
 	if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
-		fprintf(stderr, "jtagtap_tms_seq failed, error %s\n",
+		DEBUG_WARN("jtagtap_tms_seq failed, error %s\n",
 				s ? (char *)&(construct[1]) : "unknown");
 		exit(-1);
     }
@@ -156,7 +157,7 @@ static uint8_t jtagtap_next(uint8_t dTMS, uint8_t dTDI)
 
 	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
 	if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
-		fprintf(stderr, "jtagtap_next failed, error %s\n",
+		DEBUG_WARN("jtagtap_next failed, error %s\n",
 				s ? (char *)&(construct[1]) : "unknown");
 		exit(-1);
     }

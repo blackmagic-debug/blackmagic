@@ -45,7 +45,7 @@ void adiv5_jtag_dp_handler(jtag_dev_t *dev)
 {
 	ADIv5_DP_t *dp = (void*)calloc(1, sizeof(*dp));
 	if (!dp) {			/* calloc failed: heap exhaustion */
-		DEBUG("calloc: failed in %s\n", __func__);
+		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return;
 	}
 

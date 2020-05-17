@@ -40,7 +40,7 @@ int adiv5_swdp_scan(void)
 	target_list_free();
 	ADIv5_DP_t *dp = (void*)calloc(1, sizeof(*dp));
 	if (!dp) {			/* calloc failed: heap exhaustion */
-		DEBUG("calloc: failed in %s\n", __func__);
+		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return -1;
 	}
 
@@ -66,7 +66,7 @@ int adiv5_swdp_scan(void)
 	swd_proc.swdptap_seq_out(0xA5, 8);
 	ack = swd_proc.swdptap_seq_in(3);
 	if((ack != SWDP_ACK_OK) || swd_proc.swdptap_seq_in_parity(&dp->idcode, 32)) {
-		DEBUG("\n");
+		DEBUG_WARN("Read SW-DP IDCODE failed %1" PRIx32 "\n", ack);
 		free(dp);
 		return -1;
 	}
