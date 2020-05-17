@@ -26,6 +26,7 @@
  *
  * Also supports Cortex-M0 / ARMv6-M
  */
+
 #include "general.h"
 #include "exception.h"
 #include "adiv5.h"
@@ -36,6 +37,23 @@
 #include "command.h"
 
 #include <unistd.h>
+
+#ifdef PC_HOSTED
+
+/*
+ * pc-hosted semihosting does keyboard, file and screen i/o on the system
+ * where blackmagic_hosted runs, using linux system calls.
+ * semihosting in the probe does keyboard, file and screen i/o on the system
+ * where gdb runs, using gdb file i/o calls.
+ */
+
+#define TARGET_NULL ((target_addr)0)
+#include <errno.h>
+#include <time.h>
+#include <sys/time.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#endif
 
 static const char cortexm_driver_str[] = "ARM Cortex-M";
 
@@ -71,9 +89,7 @@ static target_addr cortexm_check_watch(target *t);
 
 static int cortexm_hostio_request(target *t);
 
-#if !defined(PC_HOSTED)
 static uint32_t time0_sec = UINT32_MAX; /* sys_clock time origin */
-#endif
 
 struct cortexm_priv {
 	ADIv5_AP_t *ap;
@@ -1013,6 +1029,17 @@ static bool cortexm_vector_catch(target *t, int argc, char *argv[])
 #endif
 
 /* Semihosting support */
+
+/*
+ * If the target wants to read the special filename ":semihosting-features"
+ * to know what semihosting features are supported, it's easiest to create
+ * that file on the host in the directory where gdb runs,
+ * or, if using pc-hosted, where blackmagic_hosted runs.
+ *
+ * $ echo -e 'SHFB\x03' > ":semihosting-features"
+ * $ chmod 0444 ":semihosting-features"
+ */
+
 /* ARM Semihosting syscall numbers, from "Semihosting for AArch32 and AArch64 Version 3.0" */
 
 #define SYS_CLOCK	0x10
@@ -1062,6 +1089,7 @@ static void probe_mem_write(target *t __attribute__((unused)), target_addr targe
 	return;
 }
 #endif
+
 static int cortexm_hostio_request(target *t)
 {
 	uint32_t arm_regs[t->regs_size];
@@ -1076,6 +1104,227 @@ static int cortexm_hostio_request(target *t)
 	DEBUG("syscall 0"PRIx32"%"PRIx32" (%"PRIx32" %"PRIx32" %"PRIx32" %"PRIx32")\n",
               syscall, params[0], params[1], params[2], params[3]);
 	switch (syscall) {
+#if defined(PC_HOSTED)
+
+	/* code that runs in pc-hosted process. use linux system calls. */
+
+	case SYS_OPEN:{	/* open */
+		target_addr fnam_taddr =  params[0];
+		uint32_t fnam_len = params[2];
+		ret = -1;
+		if ((fnam_taddr == TARGET_NULL) || (fnam_len == 0)) break;
+
+		/* Translate stupid fopen modes to open flags.
+		 * See DUI0471C, Table 8-3 */
+		const uint32_t flags[] = {
+			O_RDONLY,	/* r, rb */
+			O_RDWR,		/* r+, r+b */
+			O_WRONLY | O_CREAT | O_TRUNC,/*w*/
+			O_RDWR | O_CREAT | O_TRUNC,/*w+*/
+			O_WRONLY | O_CREAT | O_APPEND,/*a*/
+			O_RDWR | O_CREAT | O_APPEND,/*a+*/
+		};
+		uint32_t pflag = flags[params[1] >> 1];
+		char filename[4];
+
+		target_mem_read(t, filename, fnam_taddr, sizeof(filename));
+		/* handle requests for console i/o */
+		if (!strcmp(filename, ":tt")) {
+			if (pflag == TARGET_O_RDONLY)
+				ret = STDIN_FILENO;
+			else if (pflag & TARGET_O_TRUNC)
+				ret = STDOUT_FILENO;
+			else
+				ret = STDERR_FILENO;
+			ret++;
+			break;
+		}
+
+		char *fnam = malloc(fnam_len + 1);
+		if (fnam == NULL) break;
+		target_mem_read(t, fnam, fnam_taddr, fnam_len + 1);
+		if (target_check_error(t)) {free(fnam); break;}
+		fnam[fnam_len]='\0';
+		ret = open(fnam, pflag, 0644);
+		free(fnam);
+		if (ret != -1)
+			ret++;
+		break;
+		}
+
+	case SYS_CLOSE:	/* close */
+		ret = close(params[0] - 1);
+		break;
+
+	case SYS_READ: { /* read */
+		ret = -1;
+		target_addr buf_taddr = params[1];
+		uint32_t buf_len = params[2];
+		if (buf_taddr == TARGET_NULL) break;
+		if (buf_len == 0) {ret = 0; break;}
+		uint8_t *buf = malloc(buf_len);
+		if (buf == NULL) break;
+		ssize_t rc = read(params[0] - 1, buf, buf_len);
+		if (rc >= 0)
+			rc = buf_len - rc;
+		target_mem_write(t, buf_taddr, buf, buf_len);
+		free(buf);
+		if (target_check_error(t)) break;
+		ret = rc;
+		break;
+		}
+
+	case SYS_WRITE:	{ /* write */
+		ret = -1;
+		target_addr buf_taddr = params[1];
+		uint32_t buf_len = params[2];
+		if (buf_taddr == TARGET_NULL) break;
+		if (buf_len == 0) {ret = 0; break;}
+		uint8_t *buf = malloc(buf_len);
+		if (buf == NULL) break;
+		target_mem_read(t, buf, buf_taddr, buf_len);
+		if (target_check_error(t)) {free(buf); break;}
+		ret = write(params[0] - 1, buf, buf_len);
+		free(buf);
+		if (ret >= 0)
+			ret = buf_len - ret;
+		break;
+		}
+
+	case SYS_WRITEC: { /* writec */
+		ret = -1;
+		uint8_t ch;
+		target_addr ch_taddr = arm_regs[1];
+		if (ch_taddr == TARGET_NULL) break;
+		ch = target_mem_read8(t, ch_taddr);
+		if (target_check_error(t)) break;
+		fputc(ch, stderr);
+		ret = 0;
+		break;
+		}
+
+	case SYS_WRITE0:{ /* write0 */
+		ret = -1;
+		uint8_t ch;
+		target_addr str = arm_regs[1];
+		if (str == TARGET_NULL) break;
+		while ((ch = target_mem_read8(t, str++)) != '\0') {
+			if (target_check_error(t)) break;
+			fputc(ch, stderr);
+			}
+		ret = 0;
+		break;
+		}
+
+	case SYS_ISTTY:	/* isatty */
+		ret = isatty(params[0] - 1);
+		break;
+
+	case SYS_SEEK:{	/* lseek */
+		off_t pos = params[1];
+		if (lseek(params[0] - 1, pos, SEEK_SET) == (off_t)pos) ret = 0;
+		else ret = -1;
+		break;
+		}
+
+	case SYS_RENAME: { /* rename */
+		ret = -1;
+		target_addr fnam1_taddr = params[0];
+		uint32_t fnam1_len = params[1];
+		if (fnam1_taddr == TARGET_NULL) break;
+		if (fnam1_len == 0) break;
+		target_addr fnam2_taddr = params[2];
+		uint32_t fnam2_len = params[3];
+		if (fnam2_taddr == TARGET_NULL) break;
+		if (fnam2_len == 0) break;
+		char *fnam1 = malloc(fnam1_len + 1);
+		if (fnam1 == NULL) break;
+		target_mem_read(t, fnam1, fnam1_taddr, fnam1_len + 1);
+		if (target_check_error(t)) {free(fnam1); break;}
+		fnam1[fnam1_len]='\0';
+		char *fnam2 = malloc(fnam2_len + 1);
+		if (fnam2 == NULL) {free(fnam1); break;}
+		target_mem_read(t, fnam2, fnam2_taddr, fnam2_len + 1);
+		if (target_check_error(t)) {free(fnam1); free(fnam2); break;}
+		fnam2[fnam2_len]='\0';
+		ret = rename(fnam1, fnam2);
+		free(fnam1);
+		free(fnam2);
+		break;
+		}
+
+	case SYS_REMOVE: { /* unlink */
+		ret = -1;
+		target_addr fnam_taddr = params[0];
+		if (fnam_taddr == TARGET_NULL) break;
+		uint32_t fnam_len = params[1];
+		if (fnam_len == 0) break;
+		char *fnam = malloc(fnam_len + 1);
+		if (fnam == NULL) break;
+		target_mem_read(t, fnam, fnam_taddr, fnam_len + 1);
+		if (target_check_error(t)) {free(fnam); break;}
+		fnam[fnam_len]='\0';
+		ret = remove(fnam);
+		free(fnam);
+		break;
+		}
+
+	case SYS_SYSTEM: { /* system */
+		ret = -1;
+		target_addr cmd_taddr = params[0];
+		if (cmd_taddr == TARGET_NULL) break;
+		uint32_t cmd_len = params[1];
+		if (cmd_len == 0) break;
+		char *cmd = malloc(cmd_len + 1);
+		if (cmd == NULL) break;
+		target_mem_read(t, cmd, cmd_taddr, cmd_len + 1);
+		if (target_check_error(t)) {free(cmd); break;}
+		cmd[cmd_len]='\0';
+		ret = system(cmd);
+		free(cmd);
+		break;
+		}
+
+	case SYS_FLEN: { /* file length */
+		ret = -1;
+		struct stat stat_buf;
+		if (fstat(params[0]-1, &stat_buf) != 0) break;
+		if (stat_buf.st_size > INT32_MAX) break;
+		ret = stat_buf.st_size;
+		break;
+		}
+
+	case SYS_CLOCK: { /* clock */
+		/* can't use clock() because that would give cpu time of pc-hosted process */
+		ret = -1;
+		struct timeval timeval_buf;
+		if(gettimeofday(&timeval_buf, NULL) != 0) break;
+		uint32_t sec = timeval_buf.tv_sec;
+		uint64_t usec = timeval_buf.tv_usec;
+		if (time0_sec > sec) time0_sec = sec;
+		sec -= time0_sec;
+		uint64_t csec64 = (sec * 1000000ull + usec)/10000ull;
+		uint32_t csec = csec64 & 0x7fffffff;
+		ret = csec;
+		break;
+		}
+
+	case SYS_TIME: /* time */
+		ret = time(NULL);
+		break;
+
+	case SYS_READC: /* readc */
+		ret = getchar();
+		break;
+
+	case SYS_ERRNO: /* errno */
+		ret = errno;
+		break;
+
+#else
+
+	/* code that runs in probe. use gdb fileio calls. */
+
 	case SYS_OPEN:{	/* open */
 		/* Translate stupid fopen modes to open flags.
 		 * See DUI0471C, Table 8-3 */
@@ -1102,13 +1351,13 @@ static int cortexm_hostio_request(target *t)
 			ret++;
 			break;
 		}
-		/* FIXME handle requests for special filename ':semihosting-features' */
 
 		ret = tc_open(t, params[0], params[2] + 1, pflag, 0644);
 		if (ret != -1)
 			ret++;
 		break;
 		}
+
 	case SYS_CLOSE:	/* close */
 		ret = tc_close(t, params[0] - 1);
 		break;
@@ -1161,10 +1410,6 @@ static int cortexm_hostio_request(target *t)
 		break;
 
 	case SYS_FLEN:
-#if defined(PC_HOSTED)
-		 t->tc->errno_ = 0;
-		 break;
-#else
 		 {	/* file length */
 			 ret = -1;
 			 uint32_t fio_stat[16]; /* same size as fio_stat in gdb/include/gdb/fileio.h */
@@ -1181,8 +1426,9 @@ static int cortexm_hostio_request(target *t)
 			 if (rc) break; /* tc_fstat() failed */
 			 uint32_t fst_size_msw = fio_stat[7]; /* most significant 32 bits of fst_size in fio_stat */
 			 uint32_t fst_size_lsw = fio_stat[8]; /* least significant 32 bits of fst_size in fio_stat */
-			 if (fst_size_msw != 0) break; /* file size too large for uint32_t return type */
+			 if (fst_size_msw != 0) break; /* file size too large for int32_t return type */
 			 ret = __builtin_bswap32(fst_size_lsw); /* convert from bigendian to target order */
+			 if (ret < 0) ret = -1; /* file size too large for int32_t return type */
 			 break;
 		 }
 
@@ -1235,10 +1481,11 @@ static int cortexm_hostio_request(target *t)
 		else ret = -1;
 		break;
 		}
-#endif
+
 	case SYS_ERRNO: /* Return last errno from GDB */
 		ret = t->tc->errno_;
 		break;
+#endif
 
 	case SYS_EXIT: /* _exit() */
 		tc_printf(t, "_exit(0x%x)\n", params[0]);
@@ -1296,8 +1543,7 @@ static int cortexm_hostio_request(target *t)
 		break;
 
 	case SYS_TMPNAM: { /* tmpnam */
-		/* Given a target identifier between 0 and 255, returns a temporary name.
-		 * FIXME: add directory prefix */
+		/* Given a target identifier between 0 and 255, returns a temporary name */
 		target_addr buf_ptr = params[0];
 		int target_id = params[1];
 		int buf_size = params[2];
