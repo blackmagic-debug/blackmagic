@@ -131,7 +131,7 @@ lpc11xx_probe(target *t)
 		return true;
 	}
 	if (idcode) {
-		DEBUG("LPC11xx: Unknown IDCODE 0x%08" PRIx32 "\n", idcode);
+		DEBUG_INFO("LPC11xx: Unknown IDCODE 0x%08" PRIx32 "\n", idcode);
 	}
 	idcode = target_mem_read32(t, LPC8XX_DEVICE_ID);
 	switch (idcode) {
@@ -190,7 +190,7 @@ lpc11xx_probe(target *t)
 		return true;
 	}
 	if (idcode) {
-		DEBUG("LPC8xx: Unknown IDCODE 0x%08" PRIx32 "\n", idcode);
+		DEBUG_INFO("LPC8xx: Unknown IDCODE 0x%08" PRIx32 "\n", idcode);
 	}
 
 	return false;

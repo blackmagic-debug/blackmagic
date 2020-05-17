@@ -49,21 +49,21 @@ int libftdi_jtagtap_init(jtag_proc_t *jtag_proc)
 	assert(ftdic != NULL);
 	int err = ftdi_usb_purge_buffers(ftdic);
 	if (err != 0) {
-		printf("ftdi_usb_purge_buffer: %d: %s\n",
+		DEBUG_WARN("ftdi_usb_purge_buffer: %d: %s\n",
 			err, ftdi_get_error_string(ftdic));
 		abort();
 	}
 	/* Reset MPSSE controller. */
 	err = ftdi_set_bitmode(ftdic, 0,  BITMODE_RESET);
 	if (err != 0) {
-		printf("ftdi_set_bitmode: %d: %s\n",
+		DEBUG_WARN("ftdi_set_bitmode: %d: %s\n",
 			err, ftdi_get_error_string(ftdic));
 		return -1;
 	}
 	/* Enable MPSSE controller. Pin directions are set later.*/
 	err = ftdi_set_bitmode(ftdic, 0, BITMODE_MPSSE);
 	if (err != 0) {
-		printf("ftdi_set_bitmode: %d: %s\n",
+		DEBUG_WARN("ftdi_set_bitmode: %d: %s\n",
 			err, ftdi_get_error_string(ftdic));
 		return -1;
 	}
@@ -111,7 +111,7 @@ static void jtagtap_tdi_tdo_seq(
 	if(!ticks) return;
 	if (!DI && !DO) return;
 
-//	printf("ticks: %d\n", ticks);
+//	DEBUG_PROBE("ticks: %d\n", ticks);
 	if(final_tms) ticks--;
 	rticks = ticks & 7;
 	ticks >>= 3;
@@ -153,7 +153,7 @@ static void jtagtap_tdi_tdo_seq(
 		if(final_tms) rsize--;
 
 		while(rsize--) {
-			/*if(rsize) printf("%02X ", tmp[index]);*/
+			if(rsize) DEBUG_WIRE("%02X ", tmp[index]);
 			*DO++ = tmp[index++];
 		}
 		if (rticks == 0)
@@ -166,7 +166,7 @@ static void jtagtap_tdi_tdo_seq(
 		if(rticks) {
 			*DO >>= (8-rticks);
 		}
-		/*printf("%02X\n", *DO);*/
+		DEBUG_WIRE("%02X\n", *DO);
 	}
 }
 

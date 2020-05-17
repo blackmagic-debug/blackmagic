@@ -1,8 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2020
- * Written by Uwe Bonnes (bon@elektron.ikp.physik.tu-darmstadt.de)
+ * Copyright (C) 2020 Uwe Bonnes (bon@elektron.ikp.physik.tu-darmstadt.de)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -91,7 +90,7 @@ static int find_debuggers(	BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 	libusb_device **devs;
 	int n_devs = libusb_get_device_list(info->libusb_ctx, &devs);
     if (n_devs < 0) {
-        fprintf(stderr, "WARN:libusb_get_device_list() failed");
+        DEBUG_WARN( "WARN:libusb_get_device_list() failed");
 		return -1;
 	}
 	bool report = false;
@@ -107,7 +106,7 @@ static int find_debuggers(	BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 		libusb_device *dev =  devs[i];
 		int res = libusb_get_device_descriptor(dev, &desc);
 		if (res < 0) {
-            fprintf(stderr, "WARN: libusb_get_device_descriptor() failed: %s",
+            DEBUG_WARN( "WARN: libusb_get_device_descriptor() failed: %s",
 					libusb_strerror(res));
 			libusb_free_device_list(devs, 1);
 			continue;
@@ -115,7 +114,8 @@ static int find_debuggers(	BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 		libusb_device_handle *handle;
 		res = libusb_open(dev, &handle);
 		if (res != LIBUSB_SUCCESS) {
-			fprintf(stderr,"WARN: Open failed\n");
+			DEBUG_INFO("INFO: Open USB %04x:%04x failed\n",
+					   desc.idVendor, desc.idProduct);
 			continue;
 		}
 		res = libusb_get_string_descriptor_ascii(
@@ -138,7 +138,7 @@ static int find_debuggers(	BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 				handle, desc.iProduct, (uint8_t*)product,
 				sizeof(product));
 			if (res <= 0) {
-				fprintf(stderr, "WARN:"
+				DEBUG_WARN( "WARN:"
 						"libusb_get_string_descriptor_ascii "
 						"for ident_string failed: %s\n",
 						libusb_strerror(res));
@@ -170,7 +170,7 @@ static int find_debuggers(	BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 				type = BMP_TYPE_STLINKV2;
 			} else {
 				if (desc.idProduct == PRODUCT_ID_STLINKV1)
-					fprintf(stderr, "INFO: STLINKV1 not supported\n");
+					DEBUG_WARN( "INFO: STLINKV1 not supported\n");
 				continue;
 			}
 		} else if ((strstr(manufacturer, "CMSIS")) || (strstr(product, "CMSIS"))) {
@@ -182,7 +182,7 @@ static int find_debuggers(	BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 		}
 		found_debuggers ++;
 		if (report) {
-			printf("%2d: %s, %s, %s\n", found_debuggers,
+			DEBUG_WARN("%2d: %s, %s, %s\n", found_debuggers,
 				   serial,
 				   manufacturer,product);
 		}
@@ -200,7 +200,7 @@ static int find_debuggers(	BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 	}
 	if (found_debuggers > 1) {
 		if (!report) {
-			printf("%d debuggers found! Select with -P <num>, -s <string> "
+			DEBUG_WARN("%d debuggers found! Select with -P <num>, -s <string> "
 				   "and/or -S <string>\n",
 				   found_debuggers);
 			report = true;
@@ -221,7 +221,7 @@ void platform_init(int argc, char **argv)
 	signal(SIGINT, sigterm_handler);
 	int res = libusb_init(&info.libusb_ctx);
 	if (res) {
-		fprintf(stderr, "Fatal: Failed to get USB context: %s\n",
+		DEBUG_WARN( "Fatal: Failed to get USB context: %s\n",
 				libusb_strerror(res));
 		exit(-1);
 	}
@@ -237,7 +237,7 @@ void platform_init(int argc, char **argv)
 	} else if (find_debuggers(&cl_opts, &info)) {
 		exit(-1);
 	}
-	printf("Using %04x:%04x %s %s %s\n", info.vid, info.pid, info.serial,
+	DEBUG_WARN("Using %04x:%04x %s %s %s\n", info.vid, info.pid, info.serial,
 		   info.manufacturer,
 		   info.product);
 	switch (info.bmp_type) {
@@ -473,44 +473,44 @@ void platform_buffer_flush(void)
 static void ap_decode_access(uint16_t addr, uint8_t RnW)
 {
 	if (RnW)
-		printf("Read  ");
+		fprintf(stderr, "Read  ");
 	else
-		printf("Write ");
+		fprintf(stderr, "Write ");
 	switch(addr) {
 	case 0x00:
 		if (RnW)
-			printf("DP_DPIDR :");
+			fprintf(stderr, "DP_DPIDR :");
 		else
-			printf("DP_ABORT :");
+			fprintf(stderr, "DP_ABORT :");
 		break;
-	case 0x004: printf("CTRL/STAT:");
+	case 0x004: fprintf(stderr, "CTRL/STAT:");
 		break;
 	case 0x008:
 		if (RnW)
-			printf("RESEND   :");
+			fprintf(stderr, "RESEND   :");
 		else
-			printf("DP_SELECT:");
+			fprintf(stderr, "DP_SELECT:");
 		break;
-	case 0x00c: printf("DP_RDBUFF:");
+	case 0x00c: fprintf(stderr, "DP_RDBUFF:");
 		break;
-	case 0x100: printf("AP_CSW   :");
+	case 0x100: fprintf(stderr, "AP_CSW   :");
 		break;
-	case 0x104: printf("AP_TAR   :");
+	case 0x104: fprintf(stderr, "AP_TAR   :");
 		break;
-	case 0x10c: printf("AP_DRW   :");
+	case 0x10c: fprintf(stderr, "AP_DRW   :");
 		break;
-	case 0x1f8: printf("AP_BASE  :");
+	case 0x1f8: fprintf(stderr, "AP_BASE  :");
 		break;
-	case 0x1fc: printf("AP_IDR   :");
+	case 0x1fc: fprintf(stderr, "AP_IDR   :");
 		break;
 	}
 }
 
 void adiv5_dp_write(ADIv5_DP_t *dp, uint16_t addr, uint32_t value)
 {
-	if (cl_debuglevel & BMP_DEBUG_PLATFORM) {
+	if (cl_debuglevel & BMP_DEBUG_TARGET) {
 		ap_decode_access(addr, ADIV5_LOW_WRITE);
-		printf(" 0x%08" PRIx32 "\n", value);
+		fprintf(stderr, " 0x%08" PRIx32 "\n", value);
 	}
 	dp->low_access(dp, ADIV5_LOW_WRITE, addr, value);
 }
@@ -518,9 +518,9 @@ void adiv5_dp_write(ADIv5_DP_t *dp, uint16_t addr, uint32_t value)
 uint32_t adiv5_dp_read(ADIv5_DP_t *dp, uint16_t addr)
 {
 	uint32_t ret = dp->dp_read(dp, addr);
-	if (cl_debuglevel & BMP_DEBUG_PLATFORM) {
+	if (cl_debuglevel & BMP_DEBUG_TARGET) {
 		ap_decode_access(addr, ADIV5_LOW_READ);
-		printf(" 0x%08" PRIx32 "\n", ret);
+		fprintf(stderr, " 0x%08" PRIx32 "\n", ret);
 	}
 	return ret;
 }
@@ -528,9 +528,7 @@ uint32_t adiv5_dp_read(ADIv5_DP_t *dp, uint16_t addr)
 uint32_t adiv5_dp_error(ADIv5_DP_t *dp)
 {
 	uint32_t ret = dp->error(dp);
-	if (cl_debuglevel & BMP_DEBUG_PLATFORM) {
-		printf("DP Error 0x%08" PRIx32 "\n", ret);
-	}
+	DEBUG_TARGET( "DP Error 0x%08" PRIx32 "\n", ret);
 	return ret;
 }
 
@@ -538,9 +536,9 @@ uint32_t adiv5_dp_low_access(struct ADIv5_DP_s *dp, uint8_t RnW,
 							 uint16_t addr, uint32_t value)
 {
 	uint32_t ret = dp->low_access(dp, RnW, addr, value);
-	if (cl_debuglevel & BMP_DEBUG_PLATFORM) {
+	if (cl_debuglevel & BMP_DEBUG_TARGET) {
 		ap_decode_access(addr, RnW);
-		printf(" 0x%08" PRIx32 "\n", (RnW)? ret : value);
+		fprintf(stderr, " 0x%08" PRIx32 "\n", (RnW)? ret : value);
 	}
 	return ret;
 }
@@ -548,18 +546,18 @@ uint32_t adiv5_dp_low_access(struct ADIv5_DP_s *dp, uint8_t RnW,
 uint32_t adiv5_ap_read(ADIv5_AP_t *ap, uint16_t addr)
 {
 	uint32_t ret = ap->dp->ap_read(ap, addr);
-	if (cl_debuglevel & BMP_DEBUG_PLATFORM) {
+	if (cl_debuglevel & BMP_DEBUG_TARGET) {
 		ap_decode_access(addr, ADIV5_LOW_READ);
-		printf(" 0x%08" PRIx32 "\n", ret);
+		fprintf(stderr, " 0x%08" PRIx32 "\n", ret);
 	}
 	return ret;
 }
 
 void adiv5_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value)
 {
-	if (cl_debuglevel & BMP_DEBUG_PLATFORM) {
+	if (cl_debuglevel & BMP_DEBUG_TARGET) {
 		ap_decode_access(addr, ADIV5_LOW_WRITE);
-		printf(" 0x%08" PRIx32 "\n", value);
+		fprintf(stderr, " 0x%08" PRIx32 "\n", value);
 	}
 	return ap->dp->ap_write(ap, addr, value);
 }
@@ -567,42 +565,42 @@ void adiv5_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value)
 void adiv5_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
 {
 	ap->dp->mem_read(ap, dest, src, len);
-	if (cl_debuglevel & BMP_DEBUG_PLATFORM) {
-		printf("ap_memread @ %" PRIx32 " len %" PRIx32 ":", src, (uint32_t)len);
+	if (cl_debuglevel & BMP_DEBUG_TARGET) {
+		fprintf(stderr, "ap_memread @ %" PRIx32 " len %" PRIx32 ":",
+				src, (uint32_t)len);
 		uint8_t *p = (uint8_t *) dest;
 		unsigned int i = len;
 		if (i > 16)
 			i = 16;
 		while (i--)
-			printf(" %02x", *p++);
+			fprintf(stderr, " %02x", *p++);
 		if (len > 16)
-			printf(" ...");
-		printf("\n");
+			fprintf(stderr, " ...");
+		fprintf(stderr, "\n");
 	}
 	return;
 }
 void adiv5_mem_write_sized(	ADIv5_AP_t *ap, uint32_t dest, const void *src,
 							size_t len, enum align align)
 {
-	if (cl_debuglevel & BMP_DEBUG_PLATFORM) {
-		printf("ap_mem_write_sized @ %" PRIx32 " len %" PRIx32 ", align %d:",
-			   dest, (uint32_t)len, 1 << align);
+	if (cl_debuglevel & BMP_DEBUG_TARGET) {
+		fprintf(stderr, "ap_mem_write_sized @ %" PRIx32 " len %" PRIx32
+				", align %d:", dest, (uint32_t)len, 1 << align);
 		uint8_t *p = (uint8_t *) src;
 		unsigned int i = len;
 		if (i > 16)
 			i = 16;
 		while (i--)
-			printf(" %02x", *p++);
+			fprintf(stderr, " %02x", *p++);
 		if (len > 16)
-			printf(" ...");
-		printf("\n");
+			fprintf(stderr, " ...");
+		fprintf(stderr, "\n");
 	}
 	return ap->dp->mem_write_sized(ap, dest, src, len, align);
 }
 
 void adiv5_dp_abort(struct ADIv5_DP_s *dp, uint32_t abort)
 {
-	if (cl_debuglevel & BMP_DEBUG_PLATFORM)
-		printf("Abort: %08" PRIx32 "\n", abort);
+	DEBUG_TARGET("Abort: %08" PRIx32 "\n", abort);
 	return dp->abort(dp, abort);
 }

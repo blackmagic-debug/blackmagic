@@ -239,7 +239,7 @@ bool ke04_probe(target *t)
 	/* Add flash, all KE04 have same write and erase size */
 	struct target_flash *f = calloc(1, sizeof(*f));
 	if (!f) {			/* calloc failed: heap exhaustion */
-		DEBUG("calloc: failed in %s\n", __func__);
+		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return false;
 	}
 

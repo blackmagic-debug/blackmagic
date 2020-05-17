@@ -3,7 +3,8 @@
  *
  * Copyright (C) 2011  Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
- * Copyright (C) 2019 Uwe Bonnes (bon@elektron.ikp.physik.tu-darmstadt.de)
+ * Copyright (C) 2019 - 2020 Uwe Bonnes
+ *                           (bon@elektron.ikp.physik.tu-darmstadt.de)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -96,7 +97,7 @@ static int line_reset(bmp_info_t *info)
         send_recv(info->usb_link, NULL, 0, res,  1);
 
         if (res[0] != 0) {
-                fprintf(stderr, "Line reset failed\n");
+                DEBUG_WARN( "Line reset failed\n");
                 return -1;
         }
         return 0;
@@ -174,7 +175,7 @@ int jlink_swdp_scan(bmp_info_t *info)
 	send_recv(info->usb_link, NULL, 0, res,  1);
 
 	if (res[0] != 0) {
-		fprintf(stderr, "Line reset failed\n");
+		DEBUG_WARN( "Line reset failed\n");
 		return 0;
 	}
 	dp->idcode = jlink_adiv5_swdp_low_access(dp, 1, ADIV5_DP_IDCODE, 0);
@@ -265,15 +266,15 @@ static uint32_t jlink_adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 		raise_exception(EXCEPTION_TIMEOUT, "SWDP ACK timeout");
 
 	if(ack == SWDP_ACK_FAULT) {
-		if (cl_debuglevel & BMP_DEBUG_PLATFORM)
-			fprintf(stderr, "Fault\n");
+		if (cl_debuglevel & BMP_DEBUG_TARGET)
+			DEBUG_WARN( "Fault\n");
 		dp->fault = 1;
 		return 0;
 	}
 
 	if(ack != SWDP_ACK_OK) {
-		if (cl_debuglevel & BMP_DEBUG_PLATFORM)
-			fprintf(stderr, "Protocol\n");
+		if (cl_debuglevel & BMP_DEBUG_TARGET)
+			DEBUG_WARN( "Protocol\n");
 		line_reset(&info);
 		return 0;
 	}

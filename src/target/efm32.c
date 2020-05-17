@@ -543,7 +543,7 @@ static void efm32_add_flash(target *t, target_addr addr, size_t length,
 {
 	struct target_flash *f = calloc(1, sizeof(*f));
 	if (!f) {			/* calloc failed: heap exhaustion */
-		DEBUG("calloc: failed in %s\n", __func__);
+		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return;
 	}
 
@@ -724,7 +724,7 @@ static int efm32_flash_write(struct target_flash *f,
 	/* Check the MSC_IF */
 	uint32_t msc = device->msc_addr;
 	uint32_t msc_if = target_mem_read32(t, EFM32_MSC_IF(msc));
-	DEBUG("EFM32: Flash write done MSC_IF=%08"PRIx32"\n", msc_if);
+	DEBUG_INFO("EFM32: Flash write done MSC_IF=%08"PRIx32"\n", msc_if);
 #endif
 	return ret;
 }
@@ -985,7 +985,7 @@ void efm32_aap_probe(ADIv5_AP_t *ap)
 {
 	if ((ap->idr & EFM32_APP_IDR_MASK) == EFM32_AAP_IDR) {
 		/* It's an EFM32 AAP! */
-		DEBUG("EFM32: Found EFM32 AAP\n");
+		DEBUG_INFO("EFM32: Found EFM32 AAP\n");
 	} else {
 		return;
 	}
@@ -1002,7 +1002,7 @@ void efm32_aap_probe(ADIv5_AP_t *ap)
 	//efm32_aap_cmd_device_erase(t);
 
 	/* Read status */
-	DEBUG("EFM32: AAP STATUS=%08"PRIx32"\n", adiv5_ap_read(ap, AAP_STATUS));
+	DEBUG_INFO("EFM32: AAP STATUS=%08"PRIx32"\n", adiv5_ap_read(ap, AAP_STATUS));
 
 	sprintf(aap_driver_string,
 			"EFM32 Authentication Access Port rev.%d",
@@ -1032,15 +1032,15 @@ static bool efm32_aap_cmd_device_erase(target *t, int argc, const char **argv)
 
 	/* Read status */
 	status = adiv5_ap_read(ap, AAP_STATUS);
-	DEBUG("EFM32: AAP STATUS=%08"PRIx32"\n", status);
+	DEBUG_INFO("EFM32: AAP STATUS=%08"PRIx32"\n", status);
 
 	if (status & AAP_STATUS_ERASEBUSY) {
-		DEBUG("EFM32: AAP Erase in progress\n");
-		DEBUG("EFM32: -> ABORT\n");
+		DEBUG_WARN("EFM32: AAP Erase in progress\n");
+		DEBUG_WARN("EFM32: -> ABORT\n");
 		return false;
 	}
 
-	DEBUG("EFM32: Issuing DEVICEERASE...\n");
+	DEBUG_INFO("EFM32: Issuing DEVICEERASE...\n");
 	adiv5_ap_write(ap, AAP_CMDKEY, CMDKEY);
 	adiv5_ap_write(ap, AAP_CMD, 1);
 
@@ -1051,7 +1051,7 @@ static bool efm32_aap_cmd_device_erase(target *t, int argc, const char **argv)
 
 	/* Read status */
 	status = adiv5_ap_read(ap, AAP_STATUS);
-	DEBUG("EFM32: AAP STATUS=%08"PRIx32"\n", status);
+	DEBUG_INFO("EFM32: AAP STATUS=%08"PRIx32"\n", status);
 
 	return true;
 }

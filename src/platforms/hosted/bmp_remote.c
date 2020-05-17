@@ -4,7 +4,7 @@
  * Copyright (C) 2011  Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
  * Additions by Dave Marples <dave@marples.net>
- * Additions by Uwe Bonnes (bon@elektron.ikp.physik.tu-darmstadt.de)
+ * Modifications (C) 2020 Uwe Bonnes (bon@elektron.ikp.physik.tu-darmstadt.de)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -45,12 +45,12 @@ int remote_init(bool verbose)
 	c = platform_buffer_read((uint8_t *)construct, REMOTE_MAX_MSG_SIZE);
 
 	if ((!c) || (construct[0] == REMOTE_RESP_ERR)) {
-		fprintf(stderr,"Remote Start failed, error %s\n",
+		DEBUG_WARN("Remote Start failed, error %s\n",
 				c ? (char *)&(construct[1]) : "unknown");
       return -1;
     }
 	if (verbose)
-		printf("Remote is %s\n", &construct[1]);
+		DEBUG_WARN("Remote is %s\n", &construct[1]);
 	char *p = strstr(&construct[1], "(Firmware v");
 	if (!p)
 		return -1;
@@ -77,8 +77,8 @@ bool remote_target_get_power(void)
 	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
 
 	if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
-      fprintf(stderr," platform_target_get_power failed, error %s\n",
-			  s ? (char *)&(construct[1]) : "unknown");
+      DEBUG_WARN(" platform_target_get_power failed, error %s\n",
+				 s ? (char *)&(construct[1]) : "unknown");
       exit (-1);
     }
 
@@ -97,7 +97,7 @@ void remote_target_set_power(bool power)
 	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
 
 	if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
-		fprintf(stderr, "platform_target_set_power failed, error %s\n",
+		DEBUG_WARN("platform_target_set_power failed, error %s\n",
 				s ? (char *)&(construct[1]) : "unknown");
       exit(-1);
     }
@@ -115,8 +115,8 @@ void remote_srst_set_val(bool assert)
 	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
 
 	if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
-		fprintf(stderr, "platform_srst_set_val failed, error %s\n",
-				s ? (char *)&(construct[1]) : "unknown");
+		DEBUG_WARN("platform_srst_set_val failed, error %s\n",
+				   s ? (char *)&(construct[1]) : "unknown");
       exit(-1);
     }
 }
@@ -133,8 +133,8 @@ bool remote_srst_get_val(void)
 	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
 
 	if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
-      fprintf(stderr, "platform_srst_set_val failed, error %s\n",
-			  s ? (char *)&(construct[1]) : "unknown");
+		DEBUG_WARN("platform_srst_set_val failed, error %s\n",
+				   s ? (char *)&(construct[1]) : "unknown");
       exit(-1);
     }
 	return (construct[1] == '1');
@@ -152,7 +152,7 @@ const char *remote_target_voltage(void)
 	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
 
 	if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
-      fprintf(stderr, "platform_target_voltage failed, error %s\n",
+      DEBUG_WARN("platform_target_voltage failed, error %s\n",
 			  s ? (char *)&(construct[1]) : "unknown");
       exit(- 1);
     }
@@ -168,10 +168,11 @@ static uint32_t remote_adiv5_dp_read(ADIv5_DP_t *dp, uint16_t addr)
 	platform_buffer_write(construct, s);
 	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
 	if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
-		printf("%s error %d\n", __func__, s);
+		DEBUG_WARN("%s error %d\n", __func__, s);
 	}
     uint32_t dest[1];
 	unhexify(dest, (const char*)&construct[1], 4);
+	DEBUG_PROBE("dp_read addr %04x: %08" PRIx32 "\n", dest[0]);
 	return dest[0];
 }
 
@@ -180,12 +181,12 @@ static uint32_t remote_adiv5_low_access(
 {
 	(void)dp;
 	uint8_t construct[REMOTE_MAX_MSG_SIZE];
-	int s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE, REMOTE_LOW_ACCESS_STR,
-					 RnW, addr, value);
+	int s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE,
+					 REMOTE_LOW_ACCESS_STR, RnW, addr, value);
 	platform_buffer_write(construct, s);
 	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
 	if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
-		printf("%s error %d\n", __func__, s);
+		DEBUG_WARN("%s error %d\n", __func__, s);
 	}
     uint32_t dest[1];
 	unhexify(dest, (const char*)&construct[1], 4);
@@ -200,7 +201,7 @@ static uint32_t remote_adiv5_ap_read(ADIv5_AP_t *ap, uint16_t addr)
 	platform_buffer_write(construct, s);
 	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
 	if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
-		printf("%s error %d\n", __func__, s);
+		DEBUG_WARN("%s error %d\n", __func__, s);
 	}
     uint32_t dest[1];
 	unhexify(dest, (const char*)&construct[1], 4);
@@ -215,7 +216,7 @@ static void remote_adiv5_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value)
 	platform_buffer_write(construct, s);
 	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
 	if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
-		printf("%s error %d\n", __func__, s);
+		DEBUG_WARN("%s error %d\n", __func__, s);
 	}
 	return;
 }
@@ -227,8 +228,7 @@ static void remote_mem_read(
 	(void)ap;
 	if (len == 0)
 		return;
-	if (cl_debuglevel & BMP_DEBUG_PLATFORM)
-		printf("memread @ %" PRIx32 " len %ld, start: \n",
+	DEBUG_WIRE("memread @ %" PRIx32 " len %ld, start: \n",
 			   src, len);
 	uint8_t construct[REMOTE_MAX_MSG_SIZE];
 	int s;
@@ -252,11 +252,11 @@ static void remote_mem_read(
 		} else {
 			if(construct[0] == REMOTE_RESP_ERR) {
 				ap->dp->fault = 1;
-				printf("%s returned REMOTE_RESP_ERR at addr: 0x%08x\n",
+				DEBUG_WARN("%s returned REMOTE_RESP_ERR at addr: 0x%08x\n",
 					   __func__, src);
 				break;
 			} else {
-				printf("%s error %d\n", __func__, s);
+				DEBUG_WARN("%s error %d\n", __func__, s);
 				break;
 			}
 		}
@@ -290,11 +290,11 @@ static void remote_ap_mem_read(
 		} else {
 			if(construct[0] == REMOTE_RESP_ERR) {
 				ap->dp->fault = 1;
-				printf("%s returned REMOTE_RESP_ERR at apsel %d, "
+				DEBUG_WARN("%s returned REMOTE_RESP_ERR at apsel %d, "
 					   "addr: 0x%08" PRIx32 "\n", __func__, ap->apsel, src);
 				break;
 			} else {
-				printf("%s error %d around 0x%08" PRIx32 "\n",
+				DEBUG_WARN("%s error %d around 0x%08" PRIx32 "\n",
 					   __func__, s, src);
 				break;
 			}
@@ -334,10 +334,10 @@ static void remote_ap_mem_write_sized(
 			continue;
 		if ((s > 0) && (construct[0] == REMOTE_RESP_ERR)) {
 			ap->dp->fault = 1;
-			printf("%s returned REMOTE_RESP_ERR at apsel %d, "
+			DEBUG_WARN("%s returned REMOTE_RESP_ERR at apsel %d, "
 				   "addr: 0x%08x\n", __func__, ap->apsel, dest);
 		} else {
-			printf("%s error %d around address 0x%08" PRIx32 "\n",
+			DEBUG_WARN("%s error %d around address 0x%08" PRIx32 "\n",
 				   __func__, s, dest);
 			break;
 		}
@@ -347,7 +347,8 @@ static void remote_ap_mem_write_sized(
 void remote_adiv5_dp_defaults(ADIv5_DP_t *dp)
 {
 	if (remote_init(false)) {
-		printf("Please update BMP firmware for substantial speed increase!\n");
+		DEBUG_WARN(
+			"Please update BMP firmware for substantial speed increase!\n");
 		return;
 	}
 	dp->low_access = remote_adiv5_low_access;

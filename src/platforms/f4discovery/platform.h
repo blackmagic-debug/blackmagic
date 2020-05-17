@@ -135,8 +135,6 @@
 #define TRACE_IRQ   NVIC_TIM3_IRQ
 #define TRACE_ISR   tim3_isr
 
-#define DEBUG(...)
-
 #define gpio_set_val(port, pin, val) do {	\
 	if(val)					\
 		gpio_set((port), (pin));	\

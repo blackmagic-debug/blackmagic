@@ -61,7 +61,7 @@ static void lmi_add_flash(target *t, size_t length)
 {
 	struct target_flash *f = calloc(1, sizeof(*f));
 	if (!f) {			/* calloc failed: heap exhaustion */
-		DEBUG("calloc: failed in %s\n", __func__);
+		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return;
 	}
 
