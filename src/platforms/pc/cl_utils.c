@@ -143,7 +143,7 @@ static void cl_help(char **argv, BMP_CL_OPTIONS_t *opt)
 	DEBUG_WARN("Flash operation modifiers options:\n");
 	DEBUG_WARN("\tDefault action with given file is to write to flash\n");
 	DEBUG_WARN("\t-a <addr>\t: Start flash operation at flash address <addr>\n"
-		"\t\t\t  Default start is 0x08000000\n");
+		"\t\t\t  Default start is start of flash in memory map\n");
 	DEBUG_WARN("\t-S <num>\t: Read <num> bytes. Default is until read fails.\n");
 	DEBUG_WARN("\t <file>\t\t: Use (binary) file <file> for flash operation\n");
 	exit(0);
@@ -153,7 +153,6 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 {
 	int c;
 	opt->opt_target_dev = 1;
-	opt->opt_flash_start = 0x08000000;
 	opt->opt_flash_size = 16 * 1024 *1024;
 	while((c = getopt(argc, argv, "Ehv:d:s:I:c:CnltVta:S:jpP:rR")) != -1) {
 		switch(c) {
@@ -301,45 +300,53 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 		DEBUG_WARN("Can not attach to target %d\n", opt->opt_target_dev);
 		goto target_detach;
 	}
-	if (opt->opt_mode == BMP_MODE_TEST) {
-		char map [1024], *p = map;
-		if (target_mem_map(t, map, sizeof(map))) {
-			while (*p && (*p == '<')) {
-				unsigned int start, size;
-				char *res;
-				int match;
-				match = strncmp(p, "<memory-map>", strlen("<memory-map>"));
-				if (!match) {
-					p  += strlen("<memory-map>");
-					continue;
-				}
-				match = strncmp(p, "<memory type=\"flash\" ", strlen("<memory type=\"flash\" "));
-				if (!match) {
-					unsigned int blocksize;
-					if (sscanf(p, "<memory type=\"flash\" start=\"%x\" length=\"%x\">"
-							  "<property name=\"blocksize\">%x</property></memory>",
-							  &start, &size, &blocksize))
+	/* Always scan memory map to find lowest flash */
+	char memory_map [1024], *p = memory_map;
+	uint32_t flash_start = 0xffffffff;
+	if (target_mem_map(t, memory_map, sizeof(memory_map))) {
+		while (*p && (*p == '<')) {
+			unsigned int start, size;
+			char *res;
+			int match;
+			match = strncmp(p, "<memory-map>", strlen("<memory-map>"));
+			if (!match) {
+				p  += strlen("<memory-map>");
+				continue;
+			}
+			match = strncmp(p, "<memory type=\"flash\" ", strlen("<memory type=\"flash\" "));
+			if (!match) {
+				unsigned int blocksize;
+				if (sscanf(p, "<memory type=\"flash\" start=\"%x\" length=\"%x\">"
+						   "<property name=\"blocksize\">%x</property></memory>",
+						   &start, &size, &blocksize)) {
+					if (opt->opt_mode == BMP_MODE_TEST)
 						DEBUG_INFO("Flash Start: 0x%08x, length %#9x, "
 								   "blocksize %#8x\n", start, size, blocksize);
-					res = strstr(p, "</memory>");
-					p = res + strlen("</memory>");
-					continue;
+					if (start < flash_start)
+						flash_start = start;
 				}
-				match = strncmp(p, "<memory type=\"ram\" ", strlen("<memory type=\"ram\" "));
-				if (!match) {
-					if (sscanf(p, "<memory type=\"ram\" start=\"%x\" length=\"%x\"/",
-							   &start, &size))
+				res = strstr(p, "</memory>");
+				p = res + strlen("</memory>");
+				continue;
+			}
+			match = strncmp(p, "<memory type=\"ram\" ", strlen("<memory type=\"ram\" "));
+			if (!match) {
+				if (sscanf(p, "<memory type=\"ram\" start=\"%x\" length=\"%x\"/",
+						   &start, &size))
+					if (opt->opt_mode == BMP_MODE_TEST)
 						DEBUG_INFO("Ram   Start: 0x%08x, length %#9x\n",
 								   start, size);
-					res = strstr(p, "/>");
-					p = res + strlen("/>");
-					continue;
-				}
-				break;
+				res = strstr(p, "/>");
+				p = res + strlen("/>");
+				continue;
 			}
+			break;
 		}
-		goto target_detach;
 	}
+	if (opt->opt_flash_start < flash_start)
+		opt->opt_flash_start = flash_start;
+	if (opt->opt_mode == BMP_MODE_TEST)
+		goto target_detach;
 	int read_file = -1;
 	if ((opt->opt_mode == BMP_MODE_FLASH_WRITE) ||
 		(opt->opt_mode == BMP_MODE_FLASH_VERIFY)) {
