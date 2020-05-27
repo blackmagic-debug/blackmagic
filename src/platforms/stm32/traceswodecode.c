@@ -29,8 +29,10 @@ static int swo_buf_len = 0;
 static uint32_t swo_decode = 0; /* bitmask of channels to print */
 static int swo_pkt_len = 0; /* decoder state */
 static bool swo_print = false;
+static bool swo_flush = false;
 
 /* print decoded swo packet on usb serial */
+/* stimulus channel 0: user 30: unbuffered 31: operating system */
 uint16_t traceswo_decode(usbd_device *usbd_dev, uint8_t addr,
 				const void *buf, uint16_t len) {
 	if (usbd_dev == NULL) return 0;
@@ -38,6 +40,7 @@ uint16_t traceswo_decode(usbd_device *usbd_dev, uint8_t addr,
 		uint8_t ch=((uint8_t*)buf)[i];
 		if (swo_pkt_len == 0) { /* header */
 			uint32_t channel = (uint32_t)ch >> 3; /* channel number */
+			if (channel == 30) swo_flush = true; /* a write to channel 30 flushes output buffer */
 			uint32_t size = ch & 0x7; /* drop channel number */
 			if (size == 0x01) swo_pkt_len = 1;      /* SWO packet 0x01XX */
 			else if (size == 0x02) swo_pkt_len = 2; /* SWO packet 0x02XXXX */
@@ -50,13 +53,21 @@ uint16_t traceswo_decode(usbd_device *usbd_dev, uint8_t addr,
 					if (cdcacm_get_config() && cdcacm_get_dtr()) /* silently drop if usb not ready */
 						usbd_ep_write_packet(usbd_dev, addr, swo_buf, swo_buf_len);
 					swo_buf_len=0;
+					swo_flush=false;
 				}
 			}
 			--swo_pkt_len;
 		} else { /* recover */
 			swo_buf_len=0;
 			swo_pkt_len=0;
+			swo_flush = false;
 		}
+	}
+	if (swo_flush && (swo_buf_len != 0) && \
+		cdcacm_get_config() && cdcacm_get_dtr() && \
+		usbd_ep_write_packet(usbd_dev, addr, swo_buf, swo_buf_len)) {
+		swo_buf_len=0;
+		swo_flush = false;
 	}
 	return len;
 }
