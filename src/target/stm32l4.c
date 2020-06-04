@@ -326,13 +326,22 @@ static bool stm32l4_attach(target *t)
 		} else
 			stm32l4_add_flash(t, 0x08000000, 0x00200000, 0x2000, -1);
 	} else if (chip->family == FAM_STM32G4xx) {
-		if (options & OR_DBANK) {
-			uint32_t banksize = size << 9;
-			stm32l4_add_flash(t, 0x08000000           , banksize, 0x0800, 0x08000000 + banksize);
-			stm32l4_add_flash(t, 0x08000000 + banksize, banksize, 0x0800, 0x08000000 + banksize);
-		} else {
+		// RM0440 describes G43x as Category 2, G47x/G48x as Category 3 devices
+		// Cat 2 is always 128k with 2k pages, single bank
+		// Cat 3 is dual bank with an option bit to choose single 512k bank with 4k pages or dual bank as 2x256k with 2k pages
+		if (chip->idcode == ID_STM32G43) {
 			uint32_t banksize = size << 10;
-			stm32l4_add_flash(t, 0x08000000           , banksize, 0x1000, -1);
+			stm32l4_add_flash(t, 0x08000000, banksize, 0x0800, -1);
+		}
+		else {
+			if (options & OR_DBANK) {
+				uint32_t banksize = size << 9;
+				stm32l4_add_flash(t, 0x08000000           , banksize, 0x0800, 0x08000000 + banksize);
+				stm32l4_add_flash(t, 0x08000000 + banksize, banksize, 0x0800, 0x08000000 + banksize);
+			} else {
+				uint32_t banksize = size << 10;
+				stm32l4_add_flash(t, 0x08000000           , banksize, 0x1000, -1);
+			}
 		}
 	} else if (chip->flags & DUAL_BANK) {
 		if (options & OR_DUALBANK) {
