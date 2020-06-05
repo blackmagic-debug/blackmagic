@@ -26,7 +26,7 @@
 #include <assert.h>
 
 #include "general.h"
-#include "swdptap.h"
+#include "ftdi_bmp.h"
 
 static uint8_t olddir = 0;
 
@@ -35,31 +35,36 @@ static uint8_t olddir = 0;
 #define MPSSE_TMS_SHIFT (MPSSE_WRITE_TMS | MPSSE_LSB |\
 						 MPSSE_BITMODE | MPSSE_WRITE_NEG)
 
-int swdptap_init(void)
+static bool swdptap_seq_in_parity(uint32_t *res, int ticks);
+static uint32_t swdptap_seq_in(int ticks);
+static void swdptap_seq_out(uint32_t MS, int ticks);
+static void swdptap_seq_out_parity(uint32_t MS, int ticks);
+
+int libftdi_swdptap_init(swd_proc_t *swd_proc)
 {
 	if (!active_cable->bitbang_tms_in_pin) {
-		DEBUG("SWD not possible or missing item in cable description.\n");
+		DEBUG_WARN("SWD not possible or missing item in cable description.\n");
 		return -1;
 	}
 	int err = ftdi_usb_purge_buffers(ftdic);
 	if (err != 0) {
-		fprintf(stderr, "ftdi_usb_purge_buffer: %d: %s\n",
+		DEBUG_WARN("ftdi_usb_purge_buffer: %d: %s\n",
 			err, ftdi_get_error_string(ftdic));
-		abort();
+		return -1;
 	}
 	/* Reset MPSSE controller. */
 	err = ftdi_set_bitmode(ftdic, 0,  BITMODE_RESET);
 	if (err != 0) {
-		fprintf(stderr, "ftdi_set_bitmode: %d: %s\n",
+		DEBUG_WARN("ftdi_set_bitmode: %d: %s\n",
 			err, ftdi_get_error_string(ftdic));
-		return -1;;
+		return -1;
 	}
 	/* Enable MPSSE controller. Pin directions are set later.*/
 	err = ftdi_set_bitmode(ftdic, 0, BITMODE_MPSSE);
 	if (err != 0) {
-		fprintf(stderr, "ftdi_set_bitmode: %d: %s\n",
+		DEBUG_WARN("ftdi_set_bitmode: %d: %s\n",
 			err, ftdi_get_error_string(ftdic));
-		return -1;;
+		return -1;
 	}
 	uint8_t ftdi_init[9] = {TCK_DIVISOR, 0x01, 0x00, SET_BITS_LOW, 0,0,
 				SET_BITS_HIGH, 0,0};
@@ -67,8 +72,13 @@ int swdptap_init(void)
 	ftdi_init[5]= active_cable->dbus_ddr   & ~MPSSE_TD_MASK;
 	ftdi_init[7]= active_cable->cbus_data;
 	ftdi_init[8]= active_cable->cbus_ddr;
-	platform_buffer_write(ftdi_init, 9);
-	platform_buffer_flush();
+	libftdi_buffer_write(ftdi_init, 9);
+	libftdi_buffer_flush();
+
+	swd_proc->swdptap_seq_in  = swdptap_seq_in;
+	swd_proc->swdptap_seq_in_parity  = swdptap_seq_in_parity;
+	swd_proc->swdptap_seq_out = swdptap_seq_out;
+	swd_proc->swdptap_seq_out_parity  = swdptap_seq_out_parity;
 
 	return 0;
 }
@@ -99,37 +109,10 @@ static void swdptap_turnaround(uint8_t dir)
 		cmd[index++] = active_cable->dbus_data |  MPSSE_MASK;
 		cmd[index++] = active_cable->dbus_ddr  & ~MPSSE_TD_MASK;
 	}
-	platform_buffer_write(cmd, index);
+	libftdi_buffer_write(cmd, index);
 }
 
-bool swdptap_bit_in(void)
-{
-	swdptap_turnaround(1);
-	uint8_t cmd[4];
-	int index = 0;
-
-	cmd[index++] = active_cable->bitbang_tms_in_port_cmd;
-	cmd[index++] = MPSSE_TMS_SHIFT;
-	cmd[index++] = 0;
-	cmd[index++] = 0;
-	platform_buffer_write(cmd, index);
-	uint8_t data[1];
-	platform_buffer_read(data, 1);
-	return (data[0] &= active_cable->bitbang_tms_in_pin);
-}
-
-void swdptap_bit_out(bool val)
-{
-	swdptap_turnaround(0);
-	uint8_t cmd[3];
-
-	cmd[0] = MPSSE_TMS_SHIFT;
-	cmd[1] = 0;
-	cmd[2] = (val)? 1 : 0;
-	platform_buffer_write(cmd, 3);
-}
-
-bool swdptap_seq_in_parity(uint32_t *res, int ticks)
+static bool swdptap_seq_in_parity(uint32_t *res, int ticks)
 {
 	int index = ticks + 1;
 	uint8_t cmd[4];
@@ -141,11 +124,11 @@ bool swdptap_seq_in_parity(uint32_t *res, int ticks)
 	cmd[3] = 0;
 	swdptap_turnaround(1);
 	while (index--) {
-		platform_buffer_write(cmd, 4);
+		libftdi_buffer_write(cmd, 4);
 	}
 	uint8_t data[33];
 	unsigned int ret = 0;
-	platform_buffer_read(data, ticks + 1);
+	libftdi_buffer_read(data, ticks + 1);
 	if (data[ticks] & active_cable->bitbang_tms_in_pin)
 		parity ^= 1;
 	while (ticks--) {
@@ -158,7 +141,7 @@ bool swdptap_seq_in_parity(uint32_t *res, int ticks)
 	return parity;
 }
 
-uint32_t swdptap_seq_in(int ticks)
+static uint32_t swdptap_seq_in(int ticks)
 {
 	int index = ticks;
 	uint8_t cmd[4];
@@ -170,11 +153,11 @@ uint32_t swdptap_seq_in(int ticks)
 
 	swdptap_turnaround(1);
 	while (index--) {
-		platform_buffer_write(cmd, 4);
+		libftdi_buffer_write(cmd, 4);
 	}
 	uint8_t data[32];
 	uint32_t ret = 0;
-	platform_buffer_read(data, ticks);
+	libftdi_buffer_read(data, ticks);
 	while (ticks--) {
 		if (data[ticks] & active_cable->bitbang_tms_in_pin)
 			ret |= (1 << ticks);
@@ -182,7 +165,7 @@ uint32_t swdptap_seq_in(int ticks)
 	return ret;
 }
 
-void swdptap_seq_out(uint32_t MS, int ticks)
+static void swdptap_seq_out(uint32_t MS, int ticks)
 {
 	uint8_t cmd[15];
 	unsigned int index = 0;
@@ -200,10 +183,10 @@ void swdptap_seq_out(uint32_t MS, int ticks)
 			ticks = 0;
 		}
 	}
-	platform_buffer_write(cmd, index);
+	libftdi_buffer_write(cmd, index);
 }
 
-void swdptap_seq_out_parity(uint32_t MS, int ticks)
+static void swdptap_seq_out_parity(uint32_t MS, int ticks)
 {
 	uint8_t parity = 0;
 	int steps = ticks;
@@ -231,5 +214,5 @@ void swdptap_seq_out_parity(uint32_t MS, int ticks)
 	cmd[index++] = MPSSE_TMS_SHIFT;
 	cmd[index++] = 0;
 	cmd[index++] = parity;
-	platform_buffer_write(cmd, index);
+	libftdi_buffer_write(cmd, index);
 }

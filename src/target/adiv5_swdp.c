@@ -33,15 +33,6 @@
 #define SWDP_ACK_WAIT  0x02
 #define SWDP_ACK_FAULT 0x04
 
-static uint32_t adiv5_swdp_read(ADIv5_DP_t *dp, uint16_t addr);
-
-static uint32_t adiv5_swdp_error(ADIv5_DP_t *dp);
-
-static uint32_t adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
-				      uint16_t addr, uint32_t value);
-
-static void adiv5_swdp_abort(ADIv5_DP_t *dp, uint32_t abort);
-
 int adiv5_swdp_scan(void)
 {
 	uint32_t ack;
@@ -49,60 +40,64 @@ int adiv5_swdp_scan(void)
 	target_list_free();
 	ADIv5_DP_t *dp = (void*)calloc(1, sizeof(*dp));
 	if (!dp) {			/* calloc failed: heap exhaustion */
-		DEBUG("calloc: failed in %s\n", __func__);
+		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return -1;
 	}
 
+#if PC_HOSTED == 1
+	if (platform_swdptap_init())
+#else
 	if (swdptap_init())
+#endif
 		return -1;
 
 	/* Switch from JTAG to SWD mode */
-	swdptap_seq_out(0xFFFFFFFF, 16);
-	swdptap_seq_out(0xFFFFFFFF, 32);
-	swdptap_seq_out(0xFFFFFFFF, 18);
-	swdptap_seq_out(0xE79E, 16); /* 0b0111100111100111 */
-	swdptap_seq_out(0xFFFFFFFF, 32);
-	swdptap_seq_out(0xFFFFFFFF, 18);
-	swdptap_seq_out(0, 16);
+	swd_proc.swdptap_seq_out(0xFFFFFFFF, 16);
+	swd_proc.swdptap_seq_out(0xFFFFFFFF, 32);
+	swd_proc.swdptap_seq_out(0xFFFFFFFF, 18);
+	swd_proc.swdptap_seq_out(0xE79E, 16); /* 0b0111100111100111 */
+	swd_proc.swdptap_seq_out(0xFFFFFFFF, 32);
+	swd_proc.swdptap_seq_out(0xFFFFFFFF, 18);
+	swd_proc.swdptap_seq_out(0, 16);
 
 	/* Read the SW-DP IDCODE register to syncronise */
 	/* This could be done with adiv_swdp_low_access(), but this doesn't
 	 * allow the ack to be checked here. */
-	swdptap_seq_out(0xA5, 8);
-	ack = swdptap_seq_in(3);
-	if((ack != SWDP_ACK_OK) || swdptap_seq_in_parity(&dp->idcode, 32)) {
-		DEBUG("\n");
+	swd_proc.swdptap_seq_out(0xA5, 8);
+	ack = swd_proc.swdptap_seq_in(3);
+	if((ack != SWDP_ACK_OK) || swd_proc.swdptap_seq_in_parity(&dp->idcode, 32)) {
+		DEBUG_WARN("Read SW-DP IDCODE failed %1" PRIx32 "\n", ack);
 		free(dp);
 		return -1;
 	}
 
-	dp->dp_read = adiv5_swdp_read;
-	dp->error = adiv5_swdp_error;
-	dp->low_access = adiv5_swdp_low_access;
-	dp->abort = adiv5_swdp_abort;
+	dp->dp_read = firmware_swdp_read;
+	dp->error = firmware_swdp_error;
+	dp->low_access = firmware_swdp_low_access;
+	dp->abort = firmware_swdp_abort;
 
-	adiv5_swdp_error(dp);
+	firmware_swdp_error(dp);
 	adiv5_dp_init(dp);
 
 	return target_list?1:0;
 }
 
-static uint32_t adiv5_swdp_read(ADIv5_DP_t *dp, uint16_t addr)
+uint32_t firmware_swdp_read(ADIv5_DP_t *dp, uint16_t addr)
 {
 	if (addr & ADIV5_APnDP) {
 		adiv5_dp_low_access(dp, ADIV5_LOW_READ, addr, 0);
 		return adiv5_dp_low_access(dp, ADIV5_LOW_READ,
 		                           ADIV5_DP_RDBUFF, 0);
 	} else {
-		return adiv5_swdp_low_access(dp, ADIV5_LOW_READ, addr, 0);
+		return firmware_swdp_low_access(dp, ADIV5_LOW_READ, addr, 0);
 	}
 }
 
-static uint32_t adiv5_swdp_error(ADIv5_DP_t *dp)
+ uint32_t firmware_swdp_error(ADIv5_DP_t *dp)
 {
 	uint32_t err, clr = 0;
 
-	err = adiv5_swdp_read(dp, ADIV5_DP_CTRLSTAT) &
+	err = firmware_swdp_read(dp, ADIV5_DP_CTRLSTAT) &
 		(ADIV5_DP_CTRLSTAT_STICKYORUN | ADIV5_DP_CTRLSTAT_STICKYCMP |
 		ADIV5_DP_CTRLSTAT_STICKYERR | ADIV5_DP_CTRLSTAT_WDATAERR);
 
@@ -121,7 +116,7 @@ static uint32_t adiv5_swdp_error(ADIv5_DP_t *dp)
 	return err;
 }
 
-static uint32_t adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
+uint32_t firmware_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 				      uint16_t addr, uint32_t value)
 {
 	bool APnDP = addr & ADIV5_APnDP;
@@ -143,8 +138,8 @@ static uint32_t adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 
 	platform_timeout_set(&timeout, 2000);
 	do {
-		swdptap_seq_out(request, 8);
-		ack = swdptap_seq_in(3);
+		swd_proc.swdptap_seq_out(request, 8);
+		ack = swd_proc.swdptap_seq_in(3);
 	} while (ack == SWDP_ACK_WAIT && !platform_timeout_is_expired(&timeout));
 
 	if (ack == SWDP_ACK_WAIT)
@@ -159,10 +154,10 @@ static uint32_t adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 		raise_exception(EXCEPTION_ERROR, "SWDP invalid ACK");
 
 	if(RnW) {
-		if(swdptap_seq_in_parity(&response, 32))  /* Give up on parity error */
+		if(swd_proc.swdptap_seq_in_parity(&response, 32))  /* Give up on parity error */
 			raise_exception(EXCEPTION_ERROR, "SWDP Parity error");
 	} else {
-		swdptap_seq_out_parity(value, 32);
+		swd_proc.swdptap_seq_out_parity(value, 32);
 		/* RM0377 Rev. 8 Chapter 27.5.4 for STM32L0x1 states:
 		 * Because of the asynchronous clock domains SWCLK and HCLK,
 		 * two extra SWCLK cycles are needed after a write transaction
@@ -173,13 +168,13 @@ static uint32_t adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 		 * for a power-up request. If the next transaction (requiring
 		 * a power-up) occurs immediately, it will fail.
 		 */
-		swdptap_seq_out(0, 2);
+		swd_proc.swdptap_seq_out(0, 2);
 	}
 
 	return response;
 }
 
-static void adiv5_swdp_abort(ADIv5_DP_t *dp, uint32_t abort)
+void firmware_swdp_abort(ADIv5_DP_t *dp, uint32_t abort)
 {
 	adiv5_dp_write(dp, ADIV5_DP_ABORT, abort);
 }

@@ -21,14 +21,15 @@
 #include "gdb_if.h"
 #include "version.h"
 #include "platform.h"
+#include "target.h"
 
 #include <assert.h>
 #include <unistd.h>
 #include <sys/time.h>
 
-struct ftdi_context *ftdic;
+#include "ftdi_bmp.h"
 
-#include "cl_utils.h"
+struct ftdi_context *ftdic;
 
 #define BUF_SIZE 4096
 static uint8_t outbuf[BUF_SIZE];
@@ -180,117 +181,103 @@ cable_desc_t cable_desc[] = {
 	},
 };
 
-void platform_init(int argc, char **argv)
+int ftdi_bmp_init(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info)
 {
-	BMP_CL_OPTIONS_t cl_opts = {0};
-	cl_opts.opt_idstring = "Blackmagic Debug Probe for FTDI/MPSSE";
-	cl_opts.opt_cable = "ftdi";
-	cl_init(&cl_opts, argc, argv);
-
 	int err;
 	unsigned index = 0;
-	int ret = -1;
 	for(index = 0; index < sizeof(cable_desc)/sizeof(cable_desc[0]);
 		index++)
-		 if (strcmp(cable_desc[index].name, cl_opts.opt_cable) == 0)
+		 if (strcmp(cable_desc[index].name, cl_opts->opt_cable) == 0)
 		 break;
 
-	if (index == sizeof(cable_desc)/sizeof(cable_desc[0])){
-		fprintf(stderr, "No cable matching %s found\n", cl_opts.opt_cable);
-		exit(-1);
+	if (index == sizeof(cable_desc)/sizeof(cable_desc[0])) {
+		DEBUG_WARN( "No cable matching %s found\n", cl_opts->opt_cable);
+		return -1;
 	}
 
 	active_cable = &cable_desc[index];
 
-	printf("\nBlack Magic Probe (" FIRMWARE_VERSION ")\n");
-	printf("Copyright (C) 2015  Black Sphere Technologies Ltd.\n");
-	printf("License GPLv3+: GNU GPL version 3 or later "
-	       "<http://gnu.org/licenses/gpl.html>\n\n");
-
+	DEBUG_WARN("Black Magic Probe for FTDI/MPSSE\n");
 	if(ftdic) {
 		ftdi_usb_close(ftdic);
 		ftdi_free(ftdic);
 		ftdic = NULL;
 	}
 	if((ftdic = ftdi_new()) == NULL) {
-		fprintf(stderr, "ftdi_new: %s\n",
+		DEBUG_WARN( "ftdi_new: %s\n",
 			ftdi_get_error_string(ftdic));
 		abort();
 	}
+	info->ftdic = ftdic;
 	if((err = ftdi_set_interface(ftdic, active_cable->interface)) != 0) {
-		fprintf(stderr, "ftdi_set_interface: %d: %s\n",
+		DEBUG_WARN( "ftdi_set_interface: %d: %s\n",
 			err, ftdi_get_error_string(ftdic));
 		goto error_1;
 	}
 	if((err = ftdi_usb_open_desc(
 		ftdic, active_cable->vendor, active_cable->product,
-		active_cable->description, cl_opts.opt_serial)) != 0) {
-		fprintf(stderr, "unable to open ftdi device: %d (%s)\n",
+		active_cable->description, cl_opts->opt_serial)) != 0) {
+		DEBUG_WARN( "unable to open ftdi device: %d (%s)\n",
 			err, ftdi_get_error_string(ftdic));
 		goto error_1;
 	}
 
 	if((err = ftdi_set_latency_timer(ftdic, 1)) != 0) {
-		fprintf(stderr, "ftdi_set_latency_timer: %d: %s\n",
+		DEBUG_WARN( "ftdi_set_latency_timer: %d: %s\n",
 			err, ftdi_get_error_string(ftdic));
 		goto error_2;
 	}
 	if((err = ftdi_set_baudrate(ftdic, 1000000)) != 0) {
-		fprintf(stderr, "ftdi_set_baudrate: %d: %s\n",
+		DEBUG_WARN( "ftdi_set_baudrate: %d: %s\n",
 			err, ftdi_get_error_string(ftdic));
 		goto error_2;
 	}
 	if((err = ftdi_write_data_set_chunksize(ftdic, BUF_SIZE)) != 0) {
-		fprintf(stderr, "ftdi_write_data_set_chunksize: %d: %s\n",
+		DEBUG_WARN( "ftdi_write_data_set_chunksize: %d: %s\n",
 			err, ftdi_get_error_string(ftdic));
 		goto error_2;
 	}
-	if (cl_opts.opt_mode != BMP_MODE_DEBUG) {
-		ret = cl_execute(&cl_opts);
-	} else {
-		assert(gdb_if_init() == 0);
-		return;
-	}
+	return 0;
   error_2:
 	ftdi_usb_close(ftdic);
   error_1:
 	ftdi_free(ftdic);
-	exit(ret);
+	return -1;
 }
 
-void platform_srst_set_val(bool assert)
+void libftdi_srst_set_val(bool assert)
 {
 	(void)assert;
-	platform_buffer_flush();
+	libftdi_buffer_flush();
 }
 
-bool platform_srst_get_val(void) { return false; }
+bool libftdi_srst_get_val(void) { return false; }
 
-void platform_buffer_flush(void)
+void libftdi_buffer_flush(void)
 {
 	assert(ftdi_write_data(ftdic, outbuf, bufptr) == bufptr);
-//	printf("FT2232 platform_buffer flush: %d bytes\n", bufptr);
+	DEBUG_WIRE("FT2232 libftdi_buffer flush: %d bytes\n", bufptr);
 	bufptr = 0;
 }
 
-int platform_buffer_write(const uint8_t *data, int size)
+int libftdi_buffer_write(const uint8_t *data, int size)
 {
-	if((bufptr + size) / BUF_SIZE > 0) platform_buffer_flush();
+	if((bufptr + size) / BUF_SIZE > 0) libftdi_buffer_flush();
 	memcpy(outbuf + bufptr, data, size);
 	bufptr += size;
 	return size;
 }
 
-int platform_buffer_read(uint8_t *data, int size)
+int libftdi_buffer_read(uint8_t *data, int size)
 {
 	int index = 0;
 	outbuf[bufptr++] = SEND_IMMEDIATE;
-	platform_buffer_flush();
+	libftdi_buffer_flush();
 	while((index += ftdi_read_data(ftdic, data + index, size-index)) != size);
 	return size;
 }
 
-const char *platform_target_voltage(void)
+const char *libftdi_target_voltage(void)
 {
 	return "not supported";
 }

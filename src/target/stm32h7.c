@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2017-2018 Uwe Bonnes bon@elektron.ikp.physik.tu-darmstadt.de
+ * Copyright (C) 2017-2020 Uwe Bonnes bon@elektron.ikp.physik.tu-darmstadt.de
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -165,7 +165,7 @@ static void stm32h7_add_flash(target *t,
 	struct target_flash *f;
 
 	if (!sf) {			/* calloc failed: heap exhaustion */
-		DEBUG("calloc: failed in %s\n", __func__);
+		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return;
 	}
 
@@ -288,19 +288,19 @@ static int stm32h7_flash_erase(struct target_flash *f, target_addr addr,
 		target_mem_write32(t, sf->regbase + FLASH_CR, cr);
 		cr |= FLASH_CR_START;
 		target_mem_write32(t, sf->regbase + FLASH_CR, cr);
-		DEBUG(" started cr %08" PRIx32 " sr %08" PRIx32 "\n",
-			  target_mem_read32(t, sf->regbase + FLASH_CR),
-			  target_mem_read32(t, sf->regbase + FLASH_SR));
+		DEBUG_INFO(" started cr %08" PRIx32 " sr %08" PRIx32 "\n",
+				   target_mem_read32(t, sf->regbase + FLASH_CR),
+				   target_mem_read32(t, sf->regbase + FLASH_SR));
 		do {
 			sr = target_mem_read32(t, sf->regbase + FLASH_SR);
 			if (target_check_error(t)) {
-				DEBUG("stm32h7_flash_erase: comm failed\n");
+				DEBUG_WARN("stm32h7_flash_erase: comm failed\n");
 				return -1;
 			}
 //			target_mem_write32(t, H7_IWDG_BASE, 0x0000aaaa);
 		}while (sr & (FLASH_SR_QW | FLASH_SR_BSY));
 		if (sr & FLASH_SR_ERROR_MASK) {
-			DEBUG("stm32h7_flash_erase: error, sr: %08" PRIx32 "\n", sr);
+			DEBUG_WARN("stm32h7_flash_erase: error, sr: %08" PRIx32 "\n", sr);
 			return -1;
 		}
 		start_sector++;
@@ -326,12 +326,12 @@ static int stm32h7_flash_write(struct target_flash *f, target_addr dest,
 	target_mem_write(t, dest, src, len);
 	while ((sr = target_mem_read32(t, sr_reg)) & FLASH_SR_BSY) {
 		if(target_check_error(t)) {
-			DEBUG("stm32h7_flash_write: BSY comm failed\n");
+			DEBUG_WARN("stm32h7_flash_write: BSY comm failed\n");
 			return -1;
 		}
 	}
 	if (sr & FLASH_SR_ERROR_MASK) {
-		DEBUG("stm32h7_flash_write: error sr %08" PRIx32 "\n", sr);
+		DEBUG_WARN("stm32h7_flash_write: error sr %08" PRIx32 "\n", sr);
 		return -1;
 	}
 	/* Close write windows.*/
@@ -357,23 +357,23 @@ static bool stm32h7_cmd_erase(target *t, int bank_mask)
 	/* Flash mass erase start instruction */
 	if (do_bank1) {
 		if (stm32h7_flash_unlock(t, BANK1_START) == false) {
-			DEBUG("ME: Unlock bank1 failed\n");
+			DEBUG_WARN("ME: Unlock bank1 failed\n");
 			goto done;
 		}
 		uint32_t regbase = FPEC1_BASE;
 		/* BER and start can be merged (3.3.10).*/
 		target_mem_write32(t, regbase + FLASH_CR, cr);
-		DEBUG("ME bank1 started\n");
+		DEBUG_INFO("ME bank1 started\n");
 	}
 	if (do_bank2) {
 		if (stm32h7_flash_unlock(t, BANK2_START) == false) {
-			DEBUG("ME: Unlock bank2 failed\n");
+			DEBUG_WARN("ME: Unlock bank2 failed\n");
 			goto done;
 		}
 		uint32_t regbase = FPEC2_BASE;
 		/* BER and start can be merged (3.3.10).*/
 		target_mem_write32(t, regbase + FLASH_CR, cr);
-		DEBUG("ME bank2 started\n");
+		DEBUG_INFO("ME bank2 started\n");
 	}
 
 	/* Read FLASH_SR to poll for QW bit */
@@ -383,7 +383,7 @@ static bool stm32h7_cmd_erase(target *t, int bank_mask)
 //			target_mem_write32(t, H7_IWDG_BASE, 0x0000aaaa);
 			tc_printf(t, "\b%c", spinner[spinindex++ % 4]);
 			if(target_check_error(t)) {
-				DEBUG("ME bank1: comm failed\n");
+				DEBUG_WARN("ME bank1: comm failed\n");
 				goto done;
 			}
 		}
@@ -394,7 +394,7 @@ static bool stm32h7_cmd_erase(target *t, int bank_mask)
 //			target_mem_write32(t, H7_IWDG_BASE 0x0000aaaa);
 			tc_printf(t, "\b%c", spinner[spinindex++ % 4]);
 			if(target_check_error(t)) {
-				DEBUG("ME bank2: comm failed\n");
+				DEBUG_WARN("ME bank2: comm failed\n");
 				goto done;
 			}
 		}
@@ -405,7 +405,7 @@ static bool stm32h7_cmd_erase(target *t, int bank_mask)
 		uint32_t regbase = FPEC1_BASE;
 		uint32_t sr = target_mem_read32(t, regbase + FLASH_SR);
 		if (sr & FLASH_SR_ERROR_MASK) {
-			DEBUG("ME bank1: sr %" PRIx32 "\n", sr);
+			DEBUG_WARN("ME bank1, error sr %" PRIx32 "\n", sr);
 			goto done;
 		}
 	}
@@ -414,7 +414,7 @@ static bool stm32h7_cmd_erase(target *t, int bank_mask)
 		uint32_t regbase = FPEC2_BASE;
 		uint32_t sr = target_mem_read32(t, regbase + FLASH_SR);
 		if (sr & FLASH_SR_ERROR_MASK) {
-			DEBUG("ME bank2: sr %" PRIx32 "\n", sr);
+			DEBUG_WARN("ME bank2, error: sr %" PRIx32 "\n", sr);
 			goto done;
 		}
 	}
@@ -467,13 +467,15 @@ static int stm32h7_crc_bank(target *t, uint32_t bank)
 	target_mem_write32(t, regbase + FLASH_CRCCR, crccr);
 	target_mem_write32(t, regbase + FLASH_CRCCR, crccr | FLASH_CRCCR_START_CRC);
 	uint32_t sr;
-	while ((sr = target_mem_read32(t, regbase + FLASH_SR)) & FLASH_SR_CRC_BUSY) {
+	while ((sr = target_mem_read32(t, regbase + FLASH_SR)) &
+		   FLASH_SR_CRC_BUSY) {
 		if(target_check_error(t)) {
-			DEBUG("CRC bank %d: comm failed\n", (bank < BANK2_START) ? 1 : 2);
+			DEBUG_WARN("CRC bank %d: comm failed\n",
+					   (bank < BANK2_START) ? 1 : 2);
 			return -1;
 		}
 		if (sr & FLASH_SR_ERROR_READ) {
-			DEBUG("CRC bank %d: error sr %08" PRIx32 "\n",
+			DEBUG_WARN("CRC bank %d: error sr %08" PRIx32 "\n",
 				  (bank < BANK2_START) ? 1 : 2, sr);
 			return -1;
 		}

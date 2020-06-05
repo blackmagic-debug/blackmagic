@@ -143,7 +143,7 @@ static void stm32f4_add_flash(target *t,
 	struct stm32f4_flash *sf = calloc(1, sizeof(*sf));
 	struct target_flash *f;
 	if (!sf) {			/* calloc failed: heap exhaustion */
-		DEBUG("calloc: failed in %s\n", __func__);
+		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return;
 	}
 
@@ -411,7 +411,7 @@ static int stm32f4_flash_erase(struct target_flash *f, target_addr addr,
 		/* Read FLASH_SR to poll for BSY bit */
 		while(target_mem_read32(t, FLASH_SR) & FLASH_SR_BSY)
 			if(target_check_error(t)) {
-				DEBUG("stm32f4 flash erase: comm error\n");
+				DEBUG_WARN("stm32f4 flash erase: comm error\n");
 				return -1;
 			}
 		if (len > f->blocksize)
@@ -426,7 +426,7 @@ static int stm32f4_flash_erase(struct target_flash *f, target_addr addr,
 	/* Check for error */
 	sr = target_mem_read32(t, FLASH_SR);
 	if(sr & SR_ERROR_MASK) {
-		DEBUG("stm32f4 flash erase: sr error: 0x%" PRIu32 "\n", sr);
+		DEBUG_WARN("stm32f4 flash erase: sr error: 0x%" PRIu32 "\n", sr);
 		return -1;
 	}
 	return 0;
@@ -450,13 +450,13 @@ static int stm32f4_flash_write(struct target_flash *f,
 	do {
 		sr = target_mem_read32(t, FLASH_SR);
 		if(target_check_error(t)) {
-			DEBUG("stm32f4 flash write: comm error\n");
+			DEBUG_WARN("stm32f4 flash write: comm error\n");
 			return -1;
 		}
 	} while (sr & FLASH_SR_BSY);
 
 	if (sr & SR_ERROR_MASK) {
-		DEBUG("stm32f4 flash write error 0x%" PRIx32 "\n", sr);
+		DEBUG_WARN("stm32f4 flash write error 0x%" PRIx32 "\n", sr);
 			return -1;
 	}
 	return 0;

@@ -89,7 +89,7 @@ int gdb_if_init(void)
 		}
 		break;
 	} while(1);
-	DEBUG("Listening on TCP: %4d\n", port);
+	DEBUG_WARN("Listening on TCP: %4d\n", port);
 
 	return 0;
 }
@@ -125,9 +125,11 @@ unsigned char gdb_if_getchar(void)
 						platform_delay(100);
 					} else {
 #if defined(_WIN32) || defined(__CYGWIN__)
-						DEBUG("error when accepting connection: %d", WSAGetLastError());
+						DEBUG_WARN("error when accepting connection: %d",
+								   WSAGetLastError());
 #else
-						DEBUG("error when accepting connection: %s", strerror(errno));
+						DEBUG_WARN("error when accepting connection: %s",
+								   strerror(errno));
 #endif
 						exit(1);
 					}
@@ -141,7 +143,7 @@ unsigned char gdb_if_getchar(void)
 					break;
 				}
 			}
-			DEBUG("Got connection\n");
+			DEBUG_INFO("Got connection\n");
 #if defined(_WIN32) || defined(__CYGWIN__)
 			opt = 0;
 			ioctlsocket(gdb_if_conn, FIONBIO, &opt);
@@ -154,9 +156,9 @@ unsigned char gdb_if_getchar(void)
 		if(i <= 0) {
 			gdb_if_conn = -1;
 #if defined(_WIN32) || defined(__CYGWIN__)
-			DEBUG("Dropped broken connection: %d\n", WSAGetLastError());
+			DEBUG_INFO("Dropped broken connection: %d\n", WSAGetLastError());
 #else
-			DEBUG("Dropped broken connection: %s\n", strerror(errno));
+			DEBUG_INFO("Dropped broken connection: %s\n", strerror(errno));
 #endif
 			/* Return '+' in case we were waiting for an ACK */
 			return '+';

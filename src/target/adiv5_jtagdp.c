@@ -37,12 +37,7 @@
 #define IR_DPACC	0xA
 #define IR_APACC	0xB
 
-static uint32_t adiv5_jtagdp_read(ADIv5_DP_t *dp, uint16_t addr);
-
 static uint32_t adiv5_jtagdp_error(ADIv5_DP_t *dp);
-
-static uint32_t adiv5_jtagdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
-					uint16_t addr, uint32_t value);
 
 static void adiv5_jtagdp_abort(ADIv5_DP_t *dp, uint32_t abort);
 
@@ -50,36 +45,36 @@ void adiv5_jtag_dp_handler(jtag_dev_t *dev)
 {
 	ADIv5_DP_t *dp = (void*)calloc(1, sizeof(*dp));
 	if (!dp) {			/* calloc failed: heap exhaustion */
-		DEBUG("calloc: failed in %s\n", __func__);
+		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return;
 	}
 
 	dp->dev = dev;
-	dp->idcode = dev->idcode;
-
-	dp->dp_read = adiv5_jtagdp_read;
-	dp->error = adiv5_jtagdp_error;
-	dp->low_access = adiv5_jtagdp_low_access;
-	dp->abort = adiv5_jtagdp_abort;
-
+	if ((PC_HOSTED == 0 ) || (!platform_jtag_dp_init(dp))) {
+		dp->idcode = dev->idcode;
+		dp->dp_read = fw_adiv5_jtagdp_read;
+		dp->error = adiv5_jtagdp_error;
+		dp->low_access = fw_adiv5_jtagdp_low_access;
+		dp->abort = adiv5_jtagdp_abort;
+	}
 	adiv5_dp_init(dp);
 }
 
-static uint32_t adiv5_jtagdp_read(ADIv5_DP_t *dp, uint16_t addr)
+uint32_t fw_adiv5_jtagdp_read(ADIv5_DP_t *dp, uint16_t addr)
 {
-	adiv5_jtagdp_low_access(dp, ADIV5_LOW_READ, addr, 0);
-	return adiv5_jtagdp_low_access(dp, ADIV5_LOW_READ,
+	fw_adiv5_jtagdp_low_access(dp, ADIV5_LOW_READ, addr, 0);
+	return fw_adiv5_jtagdp_low_access(dp, ADIV5_LOW_READ,
 					ADIV5_DP_RDBUFF, 0);
 }
 
 static uint32_t adiv5_jtagdp_error(ADIv5_DP_t *dp)
 {
-	adiv5_jtagdp_low_access(dp, ADIV5_LOW_READ, ADIV5_DP_CTRLSTAT, 0);
-	return adiv5_jtagdp_low_access(dp, ADIV5_LOW_WRITE,
+	fw_adiv5_jtagdp_low_access(dp, ADIV5_LOW_READ, ADIV5_DP_CTRLSTAT, 0);
+	return fw_adiv5_jtagdp_low_access(dp, ADIV5_LOW_WRITE,
 				ADIV5_DP_CTRLSTAT, 0xF0000032) & 0x32;
 }
 
-static uint32_t adiv5_jtagdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
+uint32_t fw_adiv5_jtagdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 					uint16_t addr, uint32_t value)
 {
 	bool APnDP = addr & ADIV5_APnDP;
@@ -90,11 +85,12 @@ static uint32_t adiv5_jtagdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 
 	request = ((uint64_t)value << 3) | ((addr >> 1) & 0x06) | (RnW?1:0);
 
-	jtag_dev_write_ir(dp->dev, APnDP ? IR_APACC : IR_DPACC);
+	jtag_dev_write_ir(&jtag_proc, dp->dev, APnDP ? IR_APACC : IR_DPACC);
 
 	platform_timeout_set(&timeout, 2000);
 	do {
-		jtag_dev_shift_dr(dp->dev, (uint8_t*)&response, (uint8_t*)&request, 35);
+		jtag_dev_shift_dr(&jtag_proc, dp->dev, (uint8_t*)&response,
+						  (uint8_t*)&request, 35);
 		ack = response & 0x07;
 	} while(!platform_timeout_is_expired(&timeout) && (ack == JTAGDP_ACK_WAIT));
 
@@ -110,6 +106,6 @@ static uint32_t adiv5_jtagdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 static void adiv5_jtagdp_abort(ADIv5_DP_t *dp, uint32_t abort)
 {
 	uint64_t request = (uint64_t)abort << 3;
-	jtag_dev_write_ir(dp->dev, IR_ABORT);
-	jtag_dev_shift_dr(dp->dev, NULL, (const uint8_t*)&request, 35);
+	jtag_dev_write_ir(&jtag_proc, dp->dev, IR_ABORT);
+	jtag_dev_shift_dr(&jtag_proc, dp->dev, NULL, (const uint8_t*)&request, 35);
 }

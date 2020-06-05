@@ -37,8 +37,116 @@
 #include "platform.h"
 #include "platform_support.h"
 
-#ifndef DEBUG
-#define DEBUG	printf
+enum BMP_DEBUG {
+	BMP_DEBUG_NONE   =  0,
+	BMP_DEBUG_INFO   =  1,
+	BMP_DEBUG_GDB    =  2,
+	BMP_DEBUG_TARGET =  4,
+	BMP_DEBUG_PROBE =  8,
+	BMP_DEBUG_WIRE   = 0x10,
+	BMP_DEBUG_MAX    = 0x20,
+	BMP_DEBUG_STDOUT = 0x8000,
+};
+
+#if PC_HOSTED == 0
+/* For BMP debug output on a firmware BMP platform, using
+ * BMP PC-Hosted is the preferred way. Printing DEBUG_WARN
+ * and DEBUG_INFO is kept for comptibiluty.
+ */
+# if defined(ENABLE_DEBUG)
+#  define DEBUG_WARN printf
+#  define DEBUG_INFO printf
+# else
+#  define DEBUG_WARN(...)
+#  define DEBUG_INFO(...)
+# endif
+# define DEBUG_GDB(...)
+# define DEBUG_TARGET(...)
+# define DEBUG_PROBE(...)
+# define DEBUG_WIRE(...)
+# define DEBUG_GDB_WIRE(...)
+#else
+# include <stdarg.h>
+extern int cl_debuglevel;
+
+static inline void DEBUG_WARN(const char *format, ...)
+{
+	va_list ap;
+    va_start(ap, format);
+    vfprintf(stderr, format, ap);
+    va_end(ap);
+	return;
+}
+
+static inline void DEBUG_INFO(const char *format, ...)
+{
+	if (~cl_debuglevel & BMP_DEBUG_INFO)
+		return;
+	va_list ap;
+    va_start(ap, format);
+	if (cl_debuglevel & BMP_DEBUG_STDOUT)
+		vfprintf(stdout, format, ap);
+	else
+		vfprintf(stderr, format, ap);
+    va_end(ap);
+	return;
+}
+
+static inline void DEBUG_GDB(const char *format, ...)
+{
+	if (~cl_debuglevel & BMP_DEBUG_GDB)
+		return;
+	va_list ap;
+    va_start(ap, format);
+    vfprintf(stderr, format, ap);
+    va_end(ap);
+	return;
+}
+
+static inline void DEBUG_GDB_WIRE(const char *format, ...)
+{
+	if ((cl_debuglevel & (BMP_DEBUG_GDB | BMP_DEBUG_WIRE)) !=
+		(BMP_DEBUG_GDB | BMP_DEBUG_WIRE))
+		return;
+	va_list ap;
+    va_start(ap, format);
+    vfprintf(stderr, format, ap);
+    va_end(ap);
+	return;
+}
+
+static inline void DEBUG_TARGET(const char *format, ...)
+{
+	if (~cl_debuglevel & BMP_DEBUG_TARGET)
+		return;
+	va_list ap;
+    va_start(ap, format);
+    vfprintf(stderr, format, ap);
+    va_end(ap);
+	return;
+}
+
+static inline void DEBUG_PROBE(const char *format, ...)
+{
+	if (~cl_debuglevel & BMP_DEBUG_PROBE)
+		return;
+	va_list ap;
+    va_start(ap, format);
+    vfprintf(stderr, format, ap);
+    va_end(ap);
+	return;
+}
+
+static inline void DEBUG_WIRE(const char *format, ...)
+{
+	if (~cl_debuglevel & BMP_DEBUG_WIRE)
+		return;
+	va_list ap;
+    va_start(ap, format);
+    vfprintf(stderr, format, ap);
+    va_end(ap);
+	return;
+}
 #endif
 
 #define ALIGN(x, n) (((x) + (n) - 1) & ~((n) - 1))

@@ -26,7 +26,7 @@ struct exception *innermost_exception;
 void raise_exception(uint32_t type, const char *msg)
 {
 	struct exception *e;
-	DEBUG("Exception: %s\n", msg);
+	DEBUG_WARN("Exception: %s\n", msg);
 	for (e = innermost_exception; e; e = e->outer) {
 		if (e->mask & type) {
 			e->type = type;

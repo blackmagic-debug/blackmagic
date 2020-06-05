@@ -263,7 +263,7 @@ enum {
 int rdi_write(int fn, const char *buf, size_t len)
 {
 	(void)fn;
-#if defined(PLATFORM_HAS_DEBUG) && !defined(PC_HOSTED)
+#if defined(PLATFORM_HAS_DEBUG)
 	if (debug_bmp)
 		return len - usbuart_debug_write(buf, len);
 #else

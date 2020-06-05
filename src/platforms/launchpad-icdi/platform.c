@@ -115,7 +115,7 @@ void platform_delay(uint32_t ms)
 
 const char *platform_target_voltage(void)
 {
-	return "not supported";
+	return NULL;
 }
 
 char *serialno_read(char *s)

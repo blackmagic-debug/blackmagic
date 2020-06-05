@@ -99,7 +99,7 @@ static void stm32f1_add_flash(target *t,
 {
 	struct target_flash *f = calloc(1, sizeof(*f));
 	if (!f) {			/* calloc failed: heap exhaustion */
-		DEBUG("calloc: failed in %s\n", __func__);
+		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return;
 	}
 
@@ -130,7 +130,7 @@ bool stm32f1_probe(target *t)
 		if ((ap->idr >> 28) > 1) {
 			t->driver = "STM32F1 (clone) medium density";
 #if defined(PLATFORM_HAS_DEBUG)
-			DEBUG("Non-genuine STM32F1\n");
+			DEBUG_WARN("Non-genuine STM32F1\n");
 #endif
 		} else {
 			t->driver = "STM32F1 medium density";
@@ -216,7 +216,7 @@ static int stm32f1_flash_erase(struct target_flash *f,
 		/* Read FLASH_SR to poll for BSY bit */
 		while (target_mem_read32(t, FLASH_SR) & FLASH_SR_BSY)
 			if(target_check_error(t)) {
-				DEBUG("stm32f1 flash erase: comm error\n");
+				DEBUG_WARN("stm32f1 flash erase: comm error\n");
 				return -1;
 			}
 		if (len > f->blocksize)
@@ -229,7 +229,7 @@ static int stm32f1_flash_erase(struct target_flash *f,
 	/* Check for error */
 	uint32_t sr = target_mem_read32(t, FLASH_SR);
 	if ((sr & SR_ERROR_MASK) || !(sr & SR_EOP)) {
-		DEBUG("stm32f1 flash erase error 0x%" PRIx32 "\n", sr);
+		DEBUG_INFO("stm32f1 flash erase error 0x%" PRIx32 "\n", sr);
 		return -1;
 	}
 
@@ -248,14 +248,14 @@ static int stm32f1_flash_write(struct target_flash *f,
 	do {
 		sr = target_mem_read32(t, FLASH_SR);
 		if(target_check_error(t)) {
-			DEBUG("stm32f1 flash write: comm error\n");
+			DEBUG_WARN("stm32f1 flash write: comm error\n");
 			return -1;
 		}
 	} while (sr & FLASH_SR_BSY);
 
 	if (sr & SR_ERROR_MASK) {
-		DEBUG("stm32f1 flash write error 0x%" PRIx32 "\n", sr);
-			return -1;
+		DEBUG_WARN("stm32f1 flash write error 0x%" PRIx32 "\n", sr);
+		return -1;
 	}
 	return 0;
 }

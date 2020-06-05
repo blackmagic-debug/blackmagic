@@ -24,7 +24,9 @@
 #	error "Include 'general.h' instead"
 #endif
 
-#if defined(PC_HOSTED)
+#include "target.h"
+
+#if PC_HOSTED == 1
 void platform_init(int argc, char **argv);
 #else
 void platform_init(void);

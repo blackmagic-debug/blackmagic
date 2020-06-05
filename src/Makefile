@@ -1,6 +1,6 @@
 PROBE_HOST ?= native
 PLATFORM_DIR = platforms/$(PROBE_HOST)
-VPATH += $(PLATFORM_DIR) platforms/common target
+VPATH += $(PLATFORM_DIR) target
 ENABLE_DEBUG ?=
 
 ifneq ($(V), 1)
@@ -9,8 +9,8 @@ Q := @
 endif
 
 CFLAGS += -Wall -Wextra -Werror -Wno-char-subscripts \
-	-std=gnu99 -g3 -MD \
-	-I. -Iinclude -Iplatforms/common -I$(PLATFORM_DIR)
+	-std=gnu99 -g3 -MD -I./target \
+	-I. -Iinclude -I$(PLATFORM_DIR)
 
 ifeq ($(ENABLE_DEBUG), 1)
 CFLAGS += -DENABLE_DEBUG
@@ -32,6 +32,7 @@ SRC =			\
 	gdb_packet.c	\
 	hex_utils.c	\
 	jtag_devs.c	\
+	jtag_scan.c	\
 	lmi.c		\
 	lpc_common.c	\
 	lpc11xx.c	\
@@ -45,6 +46,7 @@ SRC =			\
 	nrf51.c		\
 	nxpke04.c	\
 	platform.c	\
+	remote.c	\
 	sam3x.c		\
 	sam4l.c		\
 	samd.c		\
@@ -58,23 +60,29 @@ SRC =			\
 
 include $(PLATFORM_DIR)/Makefile.inc
 
-OPT_FLAGS ?= -O2
+OPT_FLAGS ?= -Og
 CFLAGS += $(OPT_FLAGS)
 LDFLAGS += $(OPT_FLAGS)
 
 ifndef TARGET
-TARGET=blackmagic
+ifdef PC_HOSTED
+TARGET = blackmagic
+else
+TARGET = blackmagic.elf
+endif
 endif
 
 ifdef NO_OWN_LL
 SRC += jtagtap_generic.c swdptap_generic.c
 endif
 
-ifndef OWN_HL
-SRC += jtag_scan.c jtagtap.c swdptap.c
-SRC += remote.c
+ifdef PC_HOSTED
+CFLAGS += -DPC_HOSTED=1
 else
-CFLAGS += -DOWN_HL
+SRC += swdptap.c jtagtap.c
+CFLAGS += -DPC_HOSTED=0
+VPATH += platforms/common
+CFLAGS += -Iplatforms/common
 endif
 
 OBJ = $(patsubst %.S,%.o,$(patsubst %.c,%.o,$(SRC)))
@@ -91,19 +99,21 @@ $(TARGET): include/version.h $(OBJ)
 	@echo "  AS      $<"
 	$(Q)$(CC) $(CFLAGS) -c $< -o $@
 
-%.bin:	%
+ifndef PC_HOSTED
+%.bin:	%.elf
 	@echo "  OBJCOPY $@"
 	$(Q)$(OBJCOPY) -O binary $^ $@
 
-%.hex:	%
+%.hex:	%.elf
 	@echo "  OBJCOPY $@"
 	$(Q)$(OBJCOPY) -O ihex $^ $@
+endif
 
 .PHONY:	clean host_clean all_platforms FORCE
 
 clean:	host_clean
 	$(Q)echo "  CLEAN"
-	-$(Q)$(RM) *.o *.d *~ blackmagic $(HOSTFILES)
+	-$(Q)$(RM) *.o *.d *.elf *~ $(TARGET) $(HOSTFILES)
 	-$(Q)$(RM) platforms/*/*.o platforms/*/*.d mapfile include/version.h
 
 all_platforms:

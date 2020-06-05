@@ -24,20 +24,21 @@
 #include "cl_utils.h"
 
 HANDLE hComm;
-extern int cl_debuglevel;
 
-int serial_open(BMP_CL_OPTIONS_t *opt)
+int serial_open(BMP_CL_OPTIONS_t *cl_opts, char * serial)
 {
-	if (!opt->opt_device) {
-		fprintf(stderr,"Specify the serial device to use!\n");
+	(void) serial; /* FIXME: Does Windows allow open with USB serial no? */
+	if (!cl_opts->opt_device) {
+		DEBUG_WARN("Specify the serial device to use!\n");
 		return -1;
 	}
 	char device[256];
-	if (strstr(opt->opt_device, "\\\\.\\")) {
-		strncpy(device, opt->opt_device, sizeof(device) - 1);
+	if (strstr(device, "\\\\.\\")) {
+		strncpy(device, cl_opts->opt_device, sizeof(cl_opts->opt_device) - 1);
 	} else {
 		strcpy(device,  "\\\\.\\");
-		strncat(device, opt->opt_device, sizeof(device) - strlen(device) - 1);
+		strncat(device, cl_opts->opt_device,
+				sizeof(cl_opts->opt_device) - strlen(cl_opts->opt_device) - 1);
 	}
 	hComm = CreateFile(device,                //port name
                       GENERIC_READ | GENERIC_WRITE, //Read/Write
@@ -47,19 +48,19 @@ int serial_open(BMP_CL_OPTIONS_t *opt)
                       0,            // Non Overlapped I/O
                       NULL);        // Null for Comm Devices}
 	if (hComm == INVALID_HANDLE_VALUE) {
-		fprintf(stderr, "Could not open %s: %ld\n", device,
+		DEBUG_WARN("Could not open %s: %ld\n", device,
 				GetLastError());
 		return -1;
 	}
 	DCB dcbSerialParams;
 	dcbSerialParams.DCBlength = sizeof(dcbSerialParams);
 	if (!GetCommState(hComm, &dcbSerialParams)) {
-		fprintf(stderr, "GetCommState failed %ld\n", GetLastError());
+		DEBUG_WARN("GetCommState failed %ld\n", GetLastError());
 		return -1;
 	}
 	dcbSerialParams.ByteSize = 8;
 	if (!SetCommState(hComm, &dcbSerialParams)) {
-		fprintf(stderr, "SetCommState failed %ld\n", GetLastError());
+		DEBUG_WARN("SetCommState failed %ld\n", GetLastError());
 		return -1;
 	}
 	COMMTIMEOUTS timeouts = {0};
@@ -69,7 +70,7 @@ int serial_open(BMP_CL_OPTIONS_t *opt)
 	timeouts.WriteTotalTimeoutConstant   = 10;
 	timeouts.WriteTotalTimeoutMultiplier = 10;
 	if (!SetCommTimeouts(hComm, &timeouts)) {
-		fprintf(stderr, "SetCommTimeouts failed %ld\n", GetLastError());
+		DEBUG_WARN("SetCommTimeouts failed %ld\n", GetLastError());
 		return -1;
 	}
 	return 0;
@@ -82,14 +83,13 @@ void serial_close(void)
 
 int platform_buffer_write(const uint8_t *data, int size)
 {
-	if (cl_debuglevel)
-		printf("%s\n",data);
+	DEBUG_WIRE("%s\n",data);
 	int s = 0;
 
 	do {
 		DWORD written;
 		if (!WriteFile(hComm, data + s, size - s, &written, NULL)) {
-			fprintf(stderr, "Serial write failed %ld, written %d\n",
+			DEBUG_WARN("Serial write failed %ld, written %d\n",
 					GetLastError(), s);
 			return -1;
 		}
@@ -105,34 +105,32 @@ int platform_buffer_read(uint8_t *data, int maxsize)
 	uint32_t endTime = platform_time_ms() + RESP_TIMEOUT;
 	do {
 		if (!ReadFile(hComm, &response, 1, &s, NULL)) {
-			fprintf(stderr,"ERROR on read RESP\n");
+			DEBUG_WARN("ERROR on read RESP\n");
 			exit(-3);
 		}
 		if (platform_time_ms() > endTime) {
-			fprintf(stderr,"Timeout on read RESP\n");
+			DEBUG_WARN("Timeout on read RESP\n");
 			exit(-4);
 		}
 	} while (response != REMOTE_RESP);
 	uint8_t *c = data;
 	do {
 		if (!ReadFile(hComm, c, 1, &s, NULL)) {
-			fprintf(stderr,"Error on read\n");
+			DEBUG_WARN("Error on read\n");
 			exit(-3);
 		}
 		if (s > 0 ) {
-			if (cl_debuglevel)
-				printf("%c", *c);
+			DEBUG_WIRE("%c", *c);
 			if (*c == REMOTE_EOM) {
 				*c = 0;
-				if (cl_debuglevel)
-					printf("\n");
+				DEBUG_WIRE("\n");
 				return (c - data);
 			} else {
 				c++;
 			}
 		}
 	} while (((c - data) < maxsize) && (platform_time_ms() < endTime));
-	fprintf(stderr,"Failed to read EOM at %d\n",
+	DEBUG_WARN("Failed to read EOM at %d\n",
 			platform_time_ms() - startTime);
 	exit(-3);
 	return 0;
