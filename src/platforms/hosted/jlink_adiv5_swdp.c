@@ -92,7 +92,7 @@ static int line_reset(bmp_info_t *info)
         data[13] = 0xa5;
         data[18] = 0;
 
-        uint8_t res[18];
+        uint8_t res[19];
         send_recv(info->usb_link, cmd, 42, res, 19);
         send_recv(info->usb_link, NULL, 0, res,  1);
 
