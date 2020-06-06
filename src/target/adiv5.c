@@ -468,14 +468,25 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 		ctrlstat = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT);
 	}
 
+	platform_timeout timeout;
+	platform_timeout_set(&timeout, 201);
 	/* Write request for system and debug power up */
 	adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT,
 			ctrlstat |= ADIV5_DP_CTRLSTAT_CSYSPWRUPREQ |
 				ADIV5_DP_CTRLSTAT_CDBGPWRUPREQ);
 	/* Wait for acknowledge */
-	while(((ctrlstat = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT)) &
-		(ADIV5_DP_CTRLSTAT_CSYSPWRUPACK | ADIV5_DP_CTRLSTAT_CDBGPWRUPACK)) !=
-		(ADIV5_DP_CTRLSTAT_CSYSPWRUPACK | ADIV5_DP_CTRLSTAT_CDBGPWRUPACK));
+	while(1) {
+		ctrlstat = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT);
+		uint32_t check = ctrlstat & (ADIV5_DP_CTRLSTAT_CSYSPWRUPACK |
+									 ADIV5_DP_CTRLSTAT_CDBGPWRUPACK);
+		if (check == (ADIV5_DP_CTRLSTAT_CSYSPWRUPACK |
+					  ADIV5_DP_CTRLSTAT_CDBGPWRUPACK))
+			break;
+		if (platform_timeout_is_expired(&timeout)) {
+			DEBUG_INFO("DEBUG Power-Up failed\n");
+			return;
+		}
+	}
 
 	/* This AP reset logic is described in ADIv5, but fails to work
 	 * correctly on STM32.	CDBGRSTACK is never asserted, and we
@@ -486,8 +497,6 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 	adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT,
 				   ctrlstat |= ADIV5_DP_CTRLSTAT_CDBGRSTREQ);
 
-	platform_timeout timeout;
-	platform_timeout_set(&timeout, 101);
 	/* Write request for debug reset release */
 	adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT,
 				   ctrlstat &= ~ADIV5_DP_CTRLSTAT_CDBGRSTREQ);
