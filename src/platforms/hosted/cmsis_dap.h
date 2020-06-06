@@ -30,7 +30,12 @@ void dap_adiv5_dp_defaults(ADIv5_DP_t *dp);
 int cmsis_dap_jtagtap_init(jtag_proc_t *jtag_proc);
 int dap_jtag_dp_init(ADIv5_DP_t *dp);
 #else
-int dap_init(bmp_info_t *info) {(void)info; return -1;}
+int dap_init(bmp_info_t *info)
+{
+	DEBUG_WARN("FATAL: Missing hidapi-libusb\n");
+	(void)info;
+	return -1;
+}
 int dap_enter_debug_swd(ADIv5_DP_t *dp) {(void)dp; return -1;}
 void dap_exit_function(void) {return;};
 void dap_adiv5_dp_defaults(ADIv5_DP_t *dp) {(void)dp; return; }
