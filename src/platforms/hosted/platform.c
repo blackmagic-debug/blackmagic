@@ -213,6 +213,8 @@ static int find_debuggers(	BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 			report = true;
 			goto rescan;
 		} else {
+			if (found_debuggers > 0)
+				access_problems = false;
 			found_debuggers = 0;
 		}
 	}
