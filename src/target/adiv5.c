@@ -302,7 +302,9 @@ uint64_t adiv5_ap_read_pidr(ADIv5_AP_t *ap, uint32_t addr)
 static bool adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, int recursion, int num_entry)
 {
 	(void) num_entry;
-	addr &= ~3;
+	addr &= 0xfffff000; /* Mask out base address */
+	if (addr == 0) /* No rom table on this AP */
+		return false;
 	uint64_t pidr = adiv5_ap_read_pidr(ap, addr);
 	uint32_t cidr = adiv5_ap_read_id(ap, addr + CIDR0_OFFSET);
 	bool res = false;
@@ -454,6 +456,14 @@ ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel)
 	tmpap.apsel = apsel;
 	tmpap.idr = adiv5_ap_read(&tmpap, ADIV5_AP_IDR);
 	tmpap.base = adiv5_ap_read(&tmpap, ADIV5_AP_BASE);
+	/* Check the Debug Base Address register. See ADIv5
+		 * Specification C2.6.1 */
+	if (tmpap.base == 0xffffffff) {
+		/* Debug Base Address not present in this MEM-AP */
+		/* No debug entries... useless AP */
+		/* AP0 on STM32MP157C reads 0x00000002 */
+		return NULL;
+	}
 
 	if(!tmpap.idr) /* IDR Invalid */
 		return NULL;
@@ -467,7 +477,6 @@ ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel)
 	memcpy(ap, &tmpap, sizeof(*ap));
 	adiv5_dp_ref(dp);
 
-	ap->base = adiv5_ap_read(ap, ADIV5_AP_BASE);
 	ap->csw = adiv5_ap_read(ap, ADIV5_AP_CSW) &
 		~(ADIV5_AP_CSW_SIZE_MASK | ADIV5_AP_CSW_ADDRINC_MASK);
 
@@ -610,16 +619,6 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 
 		extern void efm32_aap_probe(ADIv5_AP_t *);
 		efm32_aap_probe(ap);
-
-		/* Check the Debug Base Address register. See ADIv5
-		 * Specification C2.6.1 */
-		if (!(ap->base & ADIV5_AP_BASE_PRESENT) ||
-			(ap->base == 0xffffffff)) {
-			/* Debug Base Address not present in this MEM-AP */
-			/* No debug entries... useless AP */
-			adiv5_ap_unref(ap);
-			continue;
-		}
 
 		/* Should probe further here to make sure it's a valid target.
 		 * AP should be unref'd if not valid.
