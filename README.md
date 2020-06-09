@@ -24,6 +24,37 @@ See online documentation at https://github.com/blacksphere/blackmagic/wiki
 
 Binaries from the latest automated build are at http://builds.blacksphere.co.nz/blackmagic
 
+Sample Session
+=============
+```console
+> arm-none-eabi-gdb gpio.elf
+...<GDB Copyright message>
+(gdb) tar ext /dev/ttyACM0
+Remote debugging using /dev/ttyACM0
+(gdb) mon s
+Target voltage: 2.94V
+Available Targets:
+No. Att Driver
+ 1      STM32F40x M3/M4
+(gdb) att 1
+Attaching to program: /devel/en_apps/gpio/f4_discovery/gpio.elf, Remote target
+0x08002298 in UsartIOCtl ()
+(gdb) load
+Loading section .text, size 0x5868 lma 0x8000000
+Loading section .data, size 0x9e0 lma 0x8005868
+Loading section .rodata, size 0x254 lma 0x8006248
+Start address 0x800007c, load size 25756
+Transfer rate: 31 KB/sec, 919 bytes/write.
+(gdb) b main
+Breakpoint 1 at 0x80000e8: file /devel/en_apps/gpio/f4_discovery/../gpio.c, line 70.
+(gdb) r
+Starting program: /devel/en_apps/gpio/f4_discovery/gpio.elf 
+Note: automatically using hardware breakpoints for read-only addresses.
+
+Breakpoint 1, main () at /devel/en_apps/gpio/f4_discovery/../gpio.c:70
+70      {
+```
+
 BLACKMAGIC
 ==========
 
@@ -35,14 +66,32 @@ While connection to the Black Magic Probe GDB server is via serial line,
 connection to the PC-Hosted GDB server is via TCP port 2000 for the first
 GDB server and higher for more invokations. Use "tar(get) ext(ented) :2000"
 to connect.
-PC-hosted BMP GDB server can talk to the Black Magic Probe itself,
-ST-LinkV2 and V3, CMSIS-DAP, JLINK and FTDI MPSSE based debuggers.
+PC-hosted BMP GDB server can talk to
+- Black Magic Probe firmware probes via the USB-serial port
+- ST-LinkV2 and V3 with recent firmware
+- CMSIS-DAP compatible probes
+- JLINK probes
+- FTDI MPSSE based probe.
 
 When connected to a single BMP supported probe, starting "blackmagic" w/o any
 arguments starts the server. When several BMP supported probes are connected,
 their types, position and serial number is displayed and the program exits.
-Add "-P (position)" to the next invokation to select one.
+Add "-P (position)" to the next invocation to select one.
+For the setup from the sample session above:
+In another terminal:
+```console
+> blackmagic 
+Using 1d50:6018 E2E489E7 Black Sphere Technologies Black Magic Probe (STLINK), (Firmware v1.6.1-477-g70bb131-dirty)
+Remote is Black Magic Probe (STLINK), (Firmware v1.6.1-477-g70bb131-dirty) v1.6.1-477-g70bb131-dirty
+Listening on TCP: 2000
+And in the GDB terminal:
+(gdb) target ext :2000
+Remote debugging using :2000
+(gdb) mon s
+...
+```
 
 PC hosted BMP also allows to flash, read and verify a binary file, by default
-starting at 0x08000000. The "-t" argument displays information about the
+starting at lowest flash address. The "-t" argument displays information about the
 connected target. Use "-h " to get a list of supported options.
+
