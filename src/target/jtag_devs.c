@@ -21,12 +21,16 @@
 #include "general.h"
 #include "jtag_scan.h"
 #include "adiv5.h"
+#include "riscv/rvdbg.h"
 #include "jtag_devs.h"
 
 jtag_dev_descr_t dev_descr[] = {
 	{.idcode = 0x0BA00477, .idmask = 0x0FFF0FFF,
 		.descr = "ARM Limited: ADIv5 JTAG-DP port.",
 		.handler = adiv5_jtag_dp_handler},
+	{.idcode = 0x1000563D, .idmask = 0xFFFFFFFF,
+	 .descr = "GigaDevice: GD32VF103CBT6.",
+	 .handler = rvdbg013_jtag_dp_handler},
 	{.idcode = 0x06410041, .idmask = 0x0FFFFFFF,
 		.descr = "ST Microelectronics: STM32, Medium density."},
 	{.idcode = 0x06412041, .idmask = 0x0FFFFFFF,
@@ -57,5 +61,6 @@ jtag_dev_descr_t dev_descr[] = {
 	{.idcode = 0x20270013, .idmask = 0xFFFFFFFF, .descr = "Intel: i80386ex."},
 	{.idcode = 0x07B7617F, .idmask = 0xFFFFFFFF, .descr = "Broadcom: BCM2835."},
 	{.idcode = 0x4BA00477, .idmask = 0xFFFFFFFF, .descr = "Broadcom: BCM2836."},
+	{.idcode = 0x790007A3 , .idmask = 0xFFFFFFFF, .descr = "GigaDevice: GD32VF103CBT6 (BSD)."},
 	{.idcode = 0, .idmask = 0, .descr = "Unknown"},
 };

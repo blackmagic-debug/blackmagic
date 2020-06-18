@@ -1,6 +1,6 @@
 PROBE_HOST ?= native
 PLATFORM_DIR = platforms/$(PROBE_HOST)
-VPATH += $(PLATFORM_DIR) target
+VPATH += $(PLATFORM_DIR) target target/riscv
 ENABLE_DEBUG ?=
 
 ifneq ($(V), 1)
@@ -48,6 +48,8 @@ SRC =			\
 	platform.c	\
 	remote.c	\
 	rp.c		\
+	rvdbg013.c	\
+	rvdbg013_jtag.c \
 	sam3x.c		\
 	sam4l.c		\
 	samd.c		\

@@ -28,6 +28,7 @@
 #include "jtagtap.h"
 #include "target.h"
 #include "adiv5.h"
+#include "target/riscv/rvdbg.h"
 
 jtag_dev_t jtag_devs[JTAG_MAX_DEVS+1];
 int jtag_dev_count;
@@ -161,6 +162,7 @@ int jtag_scan(const uint8_t *irlens)
 		case DESIGNER_XAMBALA:
 			expected_irlen = 5;
 			jtag_devs[i].jd_descr = "RVDBG013";
+			jd_handlers[i] = rvdbg013_jtag_dp_handler;
 			break;
 		case AP_DESIGNER_GIGADEVICE:
 			expected_irlen = 5;
