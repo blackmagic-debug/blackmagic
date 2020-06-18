@@ -156,8 +156,6 @@ static void jtagtap_tdi_tdo_seq(
 			if(rsize) DEBUG_WIRE("%02X ", tmp[index]);
 			*DO++ = tmp[index++];
 		}
-		if (rticks == 0)
-			*DO++ = 0;
 		if(final_tms) {
 			rticks++;
 			*(--DO) >>= 1;
