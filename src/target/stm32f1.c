@@ -65,6 +65,9 @@ static int stm32f1_flash_write(struct target_flash *f,
 #define FLASH_OBR	(FPEC_BASE+0x1C)
 #define FLASH_WRPR	(FPEC_BASE+0x20)
 
+#define FLASH_BANK2_OFFSET 0x40
+#define FLASH_BANK_SPLIT   0x08080000
+
 #define FLASH_CR_OBL_LAUNCH (1<<13)
 #define FLASH_CR_OPTWRE	(1 << 9)
 #define FLASH_CR_STRT	(1 << 6)
@@ -124,7 +127,7 @@ bool stm32f1_probe(target *t)
 	case 0x420:  /* Value Line, Low-/Medium density */
 		target_add_ram(t, 0x20000000, 0x5000);
 		stm32f1_add_flash(t, 0x8000000, 0x20000, 0x400);
-		target_add_commands(t, stm32f1_cmd_list, "STM32 LD/MD");
+		target_add_commands(t, stm32f1_cmd_list, "STM32 LD/MD/VL-LD/VL-MD");
 		/* Test for non-genuine parts with Core rev 2*/
 		ADIv5_AP_t *ap = cortexm_ap(t);
 		if ((ap->idr >> 28) > 1) {
@@ -139,11 +142,19 @@ bool stm32f1_probe(target *t)
 	case 0x414:	 /* High density */
 	case 0x418:  /* Connectivity Line */
 	case 0x428:	 /* Value Line, High Density */
-		t->driver = "STM32F1 high density";
+		t->driver = "STM32F1  VL density";
 		target_add_ram(t, 0x20000000, 0x10000);
 		stm32f1_add_flash(t, 0x8000000, 0x80000, 0x800);
-		target_add_commands(t, stm32f1_cmd_list, "STM32 HD/CL");
+		target_add_commands(t, stm32f1_cmd_list, "STM32 HF/CL/VL-HD");
 		return true;
+	case 0x430:  /* XL-density */
+		t->driver = "STM32F1  XL density";
+		target_add_ram(t, 0x20000000, 0x18000);
+		stm32f1_add_flash(t, 0x8000000, 0x80000, 0x800);
+		stm32f1_add_flash(t, 0x8080000, 0x80000, 0x800);
+		target_add_commands(t, stm32f1_cmd_list, "STM32 XL/VL-XL");
+		return true;
+
 	case 0x438:  /* STM32F303x6/8 and STM32F328 */
 	case 0x422:  /* STM32F30x */
 	case 0x446:  /* STM32F303xD/E and STM32F398xE */
@@ -192,29 +203,37 @@ bool stm32f1_probe(target *t)
 	return true;
 }
 
-static void stm32f1_flash_unlock(target *t)
+static void stm32f1_flash_unlock(target *t, uint32_t bank_offset)
 {
-	target_mem_write32(t, FLASH_KEYR, KEY1);
-	target_mem_write32(t, FLASH_KEYR, KEY2);
+	target_mem_write32(t, FLASH_KEYR + bank_offset, KEY1);
+	target_mem_write32(t, FLASH_KEYR + bank_offset, KEY2);
 }
 
 static int stm32f1_flash_erase(struct target_flash *f,
                                target_addr addr, size_t len)
 {
 	target *t = f->t;
+	target_addr end = addr + len - 1;
+	target_addr start = addr;
 
-	stm32f1_flash_unlock(t);
-
+	if ((t->idcode == 0x430) && (end >= FLASH_BANK_SPLIT))
+		stm32f1_flash_unlock(t, FLASH_BANK2_OFFSET);
+	if (addr < FLASH_BANK_SPLIT)
+		stm32f1_flash_unlock(t, 0);
 	while(len) {
+		uint32_t bank_offset = 0;
+		if (addr >= FLASH_BANK_SPLIT)
+			bank_offset = FLASH_BANK2_OFFSET;
 		/* Flash page erase instruction */
-		target_mem_write32(t, FLASH_CR, FLASH_CR_PER);
+		target_mem_write32(t, FLASH_CR + bank_offset, FLASH_CR_PER);
 		/* write address to FMA */
-		target_mem_write32(t, FLASH_AR, addr);
+		target_mem_write32(t, FLASH_AR + bank_offset, addr);
 		/* Flash page erase start instruction */
-		target_mem_write32(t, FLASH_CR, FLASH_CR_STRT | FLASH_CR_PER);
+		target_mem_write32(t, FLASH_CR + bank_offset,
+						   FLASH_CR_STRT | FLASH_CR_PER);
 
 		/* Read FLASH_SR to poll for BSY bit */
-		while (target_mem_read32(t, FLASH_SR) & FLASH_SR_BSY)
+		while (target_mem_read32(t, FLASH_SR + bank_offset) & FLASH_SR_BSY)
 			if(target_check_error(t)) {
 				DEBUG_WARN("stm32f1 flash erase: comm error\n");
 				return -1;
@@ -227,12 +246,20 @@ static int stm32f1_flash_erase(struct target_flash *f,
 	}
 
 	/* Check for error */
-	uint32_t sr = target_mem_read32(t, FLASH_SR);
-	if ((sr & SR_ERROR_MASK) || !(sr & SR_EOP)) {
-		DEBUG_INFO("stm32f1 flash erase error 0x%" PRIx32 "\n", sr);
-		return -1;
+	if (start < FLASH_BANK_SPLIT) {
+		uint32_t sr = target_mem_read32(t, FLASH_SR);
+		if ((sr & SR_ERROR_MASK) || !(sr & SR_EOP)) {
+			DEBUG_INFO("stm32f1 flash erase error 0x%" PRIx32 "\n", sr);
+			return -1;
+		}
 	}
-
+	if ((t->idcode == 0x430) && (end >= FLASH_BANK_SPLIT)) {
+		uint32_t sr = target_mem_read32(t, FLASH_SR + FLASH_BANK2_OFFSET);
+		if ((sr & SR_ERROR_MASK) || !(sr & SR_EOP)) {
+			DEBUG_INFO("stm32f1 bank 2 flash erase error 0x%" PRIx32 "\n", sr);
+			return -1;
+		}
+	}
 	return 0;
 }
 
@@ -241,21 +268,49 @@ static int stm32f1_flash_write(struct target_flash *f,
 {
 	target *t = f->t;
 	uint32_t sr;
-	target_mem_write32(t, FLASH_CR, FLASH_CR_PG);
-	cortexm_mem_write_sized(t, dest, src, len, ALIGN_HALFWORD);
-	/* Read FLASH_SR to poll for BSY bit */
-	/* Wait for completion or an error */
-	do {
-		sr = target_mem_read32(t, FLASH_SR);
-		if(target_check_error(t)) {
-			DEBUG_WARN("stm32f1 flash write: comm error\n");
+	size_t length = 0;
+	if (dest < FLASH_BANK_SPLIT) {
+		if ((dest + len - 1) >= FLASH_BANK_SPLIT)
+			length = FLASH_BANK_SPLIT - dest;
+		else
+			length = len;
+		target_mem_write32(t, FLASH_CR, FLASH_CR_PG);
+		cortexm_mem_write_sized(t, dest, src, length, ALIGN_HALFWORD);
+		/* Read FLASH_SR to poll for BSY bit */
+		/* Wait for completion or an error */
+		do {
+			sr = target_mem_read32(t, FLASH_SR);
+			if(target_check_error(t)) {
+				DEBUG_WARN("stm32f1 flash write: comm error\n");
+				return -1;
+			}
+		} while (sr & FLASH_SR_BSY);
+
+		if (sr & SR_ERROR_MASK) {
+			DEBUG_WARN("stm32f1 flash write error 0x%" PRIx32 "\n", sr);
 			return -1;
 		}
-	} while (sr & FLASH_SR_BSY);
+		dest += length;
+		src += length;
+	}
+	length = len - length;
+	if ((t->idcode == 0x430) && length) { /* Write on bank 2 */
+		target_mem_write32(t, FLASH_CR + FLASH_BANK2_OFFSET, FLASH_CR_PG);
+		cortexm_mem_write_sized(t, dest, src, length, ALIGN_HALFWORD);
+		/* Read FLASH_SR to poll for BSY bit */
+		/* Wait for completion or an error */
+		do {
+			sr = target_mem_read32(t, FLASH_SR + FLASH_BANK2_OFFSET);
+			if(target_check_error(t)) {
+				DEBUG_WARN("stm32f1 flash bank2 write: comm error\n");
+				return -1;
+			}
+		} while (sr & FLASH_SR_BSY);
 
-	if (sr & SR_ERROR_MASK) {
-		DEBUG_WARN("stm32f1 flash write error 0x%" PRIx32 "\n", sr);
-		return -1;
+		if (sr & SR_ERROR_MASK) {
+			DEBUG_WARN("stm32f1 flash bank2 write error 0x%" PRIx32 "\n", sr);
+			return -1;
+		}
 	}
 	return 0;
 }
@@ -264,7 +319,7 @@ static bool stm32f1_cmd_erase_mass(target *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
-	stm32f1_flash_unlock(t);
+	stm32f1_flash_unlock(t, 0);
 
 	/* Flash mass erase start instruction */
 	target_mem_write32(t, FLASH_CR, FLASH_CR_MER);
@@ -279,7 +334,23 @@ static bool stm32f1_cmd_erase_mass(target *t, int argc, const char **argv)
 	uint16_t sr = target_mem_read32(t, FLASH_SR);
 	if ((sr & SR_ERROR_MASK) || !(sr & SR_EOP))
 		return false;
+	if (t->idcode == 0x430) {
+		stm32f1_flash_unlock(t, FLASH_BANK2_OFFSET);
 
+		/* Flash mass erase start instruction on bank 2*/
+		target_mem_write32(t, FLASH_CR + FLASH_BANK2_OFFSET, FLASH_CR_MER);
+		target_mem_write32(t, FLASH_CR + FLASH_BANK2_OFFSET,
+						   FLASH_CR_STRT | FLASH_CR_MER);
+
+		/* Read FLASH_SR to poll for BSY bit */
+		while (target_mem_read32(t, FLASH_SR + FLASH_BANK2_OFFSET) & FLASH_SR_BSY)
+			if(target_check_error(t))
+				return false;
+		/* Check for error */
+		uint16_t sr = target_mem_read32(t, FLASH_SR + FLASH_BANK2_OFFSET);
+		if ((sr & SR_ERROR_MASK) || !(sr & SR_EOP))
+			return false;
+	}
 	return true;
 }
 
@@ -359,7 +430,7 @@ static bool stm32f1_cmd_option(target *t, int argc, const char **argv)
 	default: flash_obp_rdp_key = FLASH_OBP_RDP_KEY;
 	}
 	rdprt = target_mem_read32(t, FLASH_OBR) & FLASH_OBR_RDPRT;
-	stm32f1_flash_unlock(t);
+	stm32f1_flash_unlock(t, 0);
 	target_mem_write32(t, FLASH_OPTKEYR, KEY1);
 	target_mem_write32(t, FLASH_OPTKEYR, KEY2);
 
