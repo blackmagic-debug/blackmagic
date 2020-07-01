@@ -34,8 +34,6 @@
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/stm32/adc.h>
 
-uint8_t running_status;
-
 uint16_t led_idle_run;
 uint16_t srst_pin;
 static uint32_t rev;
