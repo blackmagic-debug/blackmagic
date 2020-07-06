@@ -98,6 +98,8 @@ static int find_debuggers(	BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 	char product[128];
 	bmp_type_t type = BMP_TYPE_NONE;
 	bool access_problems = false;
+	char *active_cable = NULL;
+	bool ftdi_unknown = false;
   rescan:
 	found_debuggers = 0;
 	for (int i = 0;  devs[i]; i++) {
@@ -178,12 +180,43 @@ static int find_debuggers(	BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 			}
 		} else if (desc.idVendor ==  VENDOR_ID_SEGGER) {
 			type = BMP_TYPE_JLINK;
-		} else{
-			continue;
+		} else {
+			cable_desc_t *cable = &cable_desc[0];
+			for (; cable->name; cable++) {
+				bool found = false;
+				if ((cable->vendor != desc.idVendor) || (cable->product != desc.idProduct))
+					continue; /* VID/PID do not match*/
+				if (cl_opts->opt_cable) {
+					if (strcmp(cable->name, cl_opts->opt_cable))
+						continue; /* cable names do not match*/
+					else
+						found = true;
+				}
+				if (cable->description) {
+					if (strcmp(cable->description, product))
+						continue; /* discriptions do not match*/
+					else
+						found = true;
+				} else { /* VID/PID fits, but no cl_opts->opt_cable and no description*/
+					if ((cable->vendor == 0x0403) && /* FTDI*/
+						((cable->product == 0x6010) || /* FT2232C/D/H*/
+						 (cable->product == 0x6011) || /* FT4232H Quad HS USB-UART/FIFO IC */
+						 (cable->product == 0x6014))) {  /* FT232H Single HS USB-UART/FIFO IC */
+						ftdi_unknown = true;
+						continue; /* Cable name is needed */
+					}
+				}
+				if (found) {
+					active_cable = cable->name;
+					type = BMP_TYPE_LIBFTDI;
+					break;
+				}
+			}
+			if (!cable->name)
+				continue;
 		}
-		found_debuggers ++;
 		if (report) {
-			DEBUG_WARN("%2d: %s, %s, %s\n", found_debuggers,
+			DEBUG_WARN("%2d: %s, %s, %s\n", found_debuggers + 1,
 				   serial,
 				   manufacturer,product);
 		}
@@ -194,11 +227,19 @@ static int find_debuggers(	BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 		strncpy(info->product, product, sizeof(info->product));
 		strncpy(info->manufacturer, manufacturer, sizeof(info->manufacturer));
 		if (cl_opts->opt_position &&
-			(cl_opts->opt_position == found_debuggers)) {
+			(cl_opts->opt_position == (found_debuggers + 1))) {
 			found_debuggers = 1;
 			break;
+		} else {
+			found_debuggers++;
 		}
 	}
+	if ((found_debuggers == 0) && ftdi_unknown)
+		DEBUG_WARN("Generic FTDI MPSSE VID/PID found. Please specify exact type with \"-c <cable>\" !\n");
+	if ((found_debuggers == 1) && !cl_opts->opt_cable && (type == BMP_TYPE_LIBFTDI))
+		cl_opts->opt_cable = active_cable;
+	if (!found_debuggers && cl_opts->opt_list_only)
+		DEBUG_WARN("No usable debugger found\n");
 	if ((found_debuggers > 1) ||
 		((found_debuggers == 1) && (cl_opts->opt_list_only))) {
 		if (!report) {
@@ -266,6 +307,8 @@ void platform_init(int argc, char **argv)
 			exit(-1);
 		break;
 	case BMP_TYPE_LIBFTDI:
+		if (ftdi_bmp_init(&cl_opts, &info))
+			exit(-1);
 		break;
 	case BMP_TYPE_JLINK:
 		if (jlink_init(&info))

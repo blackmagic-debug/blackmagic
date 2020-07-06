@@ -98,6 +98,7 @@ typedef struct cable_desc_s {
 	char * name;
 }cable_desc_t;
 
+extern cable_desc_t cable_desc[];
 extern cable_desc_t *active_cable;
 extern struct ftdi_context *ftdic;
 extern data_desc_t active_state;

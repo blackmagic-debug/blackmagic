@@ -150,7 +150,8 @@ cable_desc_t cable_desc[] = {
 		.jtag.set_data_low            = PIN6,
 		.target_voltage_cmd  = GET_BITS_HIGH,
 		.target_voltage_pin  = ~PIN2,
-		.name = "ftdiswd"
+		.name = "ftdiswd",
+		.description = "FTDISWD"
 	},
 	{
 		.vendor = 0x15b1,
@@ -179,7 +180,8 @@ cable_desc_t cable_desc[] = {
 		.deassert_srst.data_low = ~PIN6,
 		.srst_get_port_cmd = GET_BITS_HIGH,
 		.srst_get_pin = PIN0,
-		.name = "turtelizer"
+		.name = "turtelizer",
+		.description = "Turtelizer JTAG/RS232 Adapter"
 	},
 	{
 		/* https://reference.digilentinc.com/jtag_hs1/jtag_hs1
@@ -247,23 +249,25 @@ cable_desc_t cable_desc[] = {
 		.init.ddr_high =  PIN4 | PIN3 | PIN1 | PIN0,
 		.name = "arm-usb-ocd-h"
 	},
+	{
+	}
 };
 
 int ftdi_bmp_init(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info)
 {
 	int err;
-	unsigned index = 0;
-	for(index = 0; index < sizeof(cable_desc)/sizeof(cable_desc[0]);
-		index++)
-		 if (strcmp(cable_desc[index].name, cl_opts->opt_cable) == 0)
+	cable_desc_t *cable = &cable_desc[0];
+	for(;  cable->name; cable++) {
+		if (strcmp(cable->name, cl_opts->opt_cable) == 0)
 		 break;
+	}
 
-	if (index == sizeof(cable_desc)/sizeof(cable_desc[0])) {
-		DEBUG_WARN( "No cable matching %s found\n", cl_opts->opt_cable);
+	if (!cable->name ) {
+		DEBUG_WARN( "No cable matching found for %s\n", cl_opts->opt_cable);
 		return -1;
 	}
 
-	active_cable = &cable_desc[index];
+	active_cable = cable;
 	memcpy(&active_state, &active_cable->init, sizeof(data_desc_t));
 	/* If swd_(read|write) is not given for the selected cable and
 	   the 'r' command line argument is give, assume resistor SWD
@@ -282,7 +286,6 @@ int ftdi_bmp_init(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info)
 			active_cable->mpsse_swd_write.set_data_low = MPSSE_DO;
 		}
 
-	DEBUG_WARN("Black Magic Probe for FTDI/MPSSE\n");
 	if(ftdic) {
 		ftdi_usb_close(ftdic);
 		ftdi_free(ftdic);
