@@ -84,6 +84,7 @@
 #define REMOTE_RESP_NOTSUP 'N'
 
 /* High level protocol elements */
+#define REMOTE_HL_CHECK     'C'
 #define REMOTE_HL_PACKET 'H'
 #define REMOTE_DP_READ      'd'
 #define REMOTE_LOW_ACCESS   'L'
@@ -142,6 +143,7 @@
 #define HEX_U32(x) '%', '0', '8', 'x'
 #define CHR(x) '%', 'c'
 
+#define REMOTE_HL_CHECK_STR (char []){ REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_HL_CHECK, REMOTE_EOM, 0 }
 #define REMOTE_MEM_READ_STR (char []){ REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_MEM_READ, \
 			HEX_U32(address), HEX_U32(count), REMOTE_EOM, 0 }
 #define REMOTE_DP_READ_STR (char []){ REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_DP_READ, \
