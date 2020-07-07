@@ -51,18 +51,7 @@ int remote_init(bool verbose)
     }
 	if (verbose)
 		DEBUG_WARN("Remote is %s\n", &construct[1]);
-	char *p = strstr(&construct[1], "(Firmware v");
-	if (!p)
-		return -1;
-	int major = 0, minor = 0, step  = 0;
-	int res = sscanf(p, "(Firmware v%d.%d.%d", &major, &minor, &step);
-	if (res !=3)
-		return -1;
-	uint32_t version = major * 10000 + minor * 100 + step;
-	/* check that firmare is > 1.6.1 */
-	if (version < 10602)
-		return -1;
-	return 0;
+        return 0;
 }
 
 bool remote_target_get_power(void)
@@ -346,7 +335,12 @@ static void remote_ap_mem_write_sized(
 
 void remote_adiv5_dp_defaults(ADIv5_DP_t *dp)
 {
-	if (remote_init(false)) {
+	uint8_t construct[REMOTE_MAX_MSG_SIZE];
+	int s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE, "%s",
+					 REMOTE_HL_CHECK_STR);
+	platform_buffer_write(construct, s);
+	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
+	if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
 		DEBUG_WARN(
 			"Please update BMP firmware for substantial speed increase!\n");
 		return;

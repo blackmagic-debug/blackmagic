@@ -309,6 +309,9 @@ void remotePacketProcessHL(uint8_t i, char *packet)
 	remote_ap.apsel = remotehston(2, packet);
 	remote_ap.dp = &remote_dp;
 	switch (index) {
+	case REMOTE_HL_CHECK:
+		_respond(REMOTE_RESP_OK, 0);
+		break;
 	case REMOTE_DP_READ:
 		packet += 2;
 		uint16_t addr16 = remotehston(4, packet);
