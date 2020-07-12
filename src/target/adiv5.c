@@ -159,6 +159,15 @@ enum arm_arch {
  *
  * We left out some of the Part numbers included in OpenOCD, we only include
  * the ones that have ARM as the designer.
+ *
+ * To properly identify ADIv6 CoreSight components, two additional fields,
+ * DEVTYPE and ARCHID are read.
+ * The dev_type and arch_id values in the table below were found in the
+ * corresponding logic in pyOCD:
+ * https://github.com/mbedmicro/pyOCD/blob/master/pyocd/coresight/component_ids.py
+ *
+ * Additional reference on the DEVTYPE and DEVARCH registers can be found in the
+ * ARM CoreSight Architecture Specification v3.0, sections B2.3.4 and B2.3.8.
  */
 static const struct {
 	uint16_t part_number;
