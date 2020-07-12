@@ -310,6 +310,11 @@ bool cortexm_probe(ADIv5_AP_t *ap, bool forced)
 
 	t->driver = cortexm_driver_str;
 
+	/* The CPUID register is defined in the ARMv7-M and ARMv8-M
+	 * architecture manuals. The PARTNO field is implementation defined,
+	 * that is, the actual values are found in the Technical Reference Manual
+	 * for each Cortex-M core.
+	 */
 	uint32_t cpuid = target_mem_read32(t, CORTEXM_CPUID);
 	uint16_t partno = (cpuid >> 4) & 0xfff;
 
