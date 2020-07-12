@@ -1027,10 +1027,6 @@ static uint32_t stlink_ap_read(ADIv5_AP_t *ap, uint16_t addr)
 	return ret;
 }
 
-struct jtag_dev_s jtag_devs[JTAG_MAX_DEVS+1];
-int jtag_dev_count;
-jtag_proc_t jtag_proc;
-
 int jtag_scan_stlinkv2(bmp_info_t *info, const uint8_t *irlens)
 {
 	uint32_t idcodes[JTAG_MAX_DEVS+1];
