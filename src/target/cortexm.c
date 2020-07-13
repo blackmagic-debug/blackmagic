@@ -269,16 +269,17 @@ static bool cortexm_forced_halt(target *t)
 	platform_srst_set_val(false);
 	uint32_t dhcsr = 0;
 	uint32_t start_time = platform_time_ms();
+	const uint32_t dhcsr_halted_bits = CORTEXM_DHCSR_S_HALT | CORTEXM_DHCSR_S_REGRDY |
+									   CORTEXM_DHCSR_C_HALT | CORTEXM_DHCSR_C_DEBUGEN;
 	/* Try hard to halt the target. STM32F7 in  WFI
 	   needs multiple writes!*/
 	while (platform_time_ms() < start_time + cortexm_wait_timeout) {
 		dhcsr = target_mem_read32(t, CORTEXM_DHCSR);
-		if (dhcsr == (CORTEXM_DHCSR_S_HALT | CORTEXM_DHCSR_S_REGRDY |
-					  CORTEXM_DHCSR_C_HALT | CORTEXM_DHCSR_C_DEBUGEN))
+		if ((dhcsr & dhcsr_halted_bits) == dhcsr_halted_bits)
 			break;
 		target_halt_request(t);
 	}
-	if (dhcsr != 0x00030003)
+	if ((dhcsr & dhcsr_halted_bits) != dhcsr_halted_bits)
 		return false;
 	return true;
 }
@@ -293,7 +294,6 @@ bool cortexm_probe(ADIv5_AP_t *ap, bool forced)
 	}
 
 	adiv5_ap_ref(ap);
-	uint32_t identity = ap->idr & 0xff;
 	struct cortexm_priv *priv = calloc(1, sizeof(*priv));
 	if (!priv) {			/* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
@@ -309,18 +309,42 @@ bool cortexm_probe(ADIv5_AP_t *ap, bool forced)
 	t->mem_write = cortexm_mem_write;
 
 	t->driver = cortexm_driver_str;
-	switch (identity) {
-	case 0x11: /* M3/M4 */
-		t->core = "M3/M4";
+
+	/* The CPUID register is defined in the ARMv7-M and ARMv8-M
+	 * architecture manuals. The PARTNO field is implementation defined,
+	 * that is, the actual values are found in the Technical Reference Manual
+	 * for each Cortex-M core.
+	 */
+	uint32_t cpuid = target_mem_read32(t, CORTEXM_CPUID);
+	uint16_t partno = (cpuid >> 4) & 0xfff;
+
+	switch (partno) {
+	case 0xd21:
+		t->core = "M33";
 		break;
-	case 0x21: /* M0 */
-		t->core = "M0";
+
+	case 0xd20:
+		t->core = "M23";
 		break;
-	case 0x31: /* M0+ */
+
+	case 0xc23:
+		t->core = "M3";
+		break;
+
+	case 0xc24:
+		t->core = "M4";
+		break;
+
+	case 0xc27:
+		t->core = "M7";
+		break;
+
+	case 0xc60:
 		t->core = "M0+";
 		break;
-	case 0x01: /* M7 */
-		t->core = "M7";
+
+	case 0xc20:
+		t->core = "M0";
 		break;
 	}
 
