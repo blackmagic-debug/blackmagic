@@ -129,6 +129,7 @@ static void cl_help(char **argv, BMP_CL_OPTIONS_t *opt)
 	DEBUG_WARN("\t-s \"serial\"\t: Use dongle with (partial) "
 		  "serial number \"serial\"\n");
 	DEBUG_WARN("\t-c \"string\"\t: Use ftdi dongle with type \"string\"\n");
+	DEBUG_WARN("\t\t Use \"list\" to list available cables\n");
 	DEBUG_WARN("Run mode related options:\n");
 	DEBUG_WARN("\tDefault mode is to start the debug server at :2000\n");
 	DEBUG_WARN("\t-j\t\t: Use JTAG. SWD is default.\n");
