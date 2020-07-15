@@ -280,6 +280,15 @@ void platform_init(int argc, char **argv)
 	if (cl_opts.opt_device) {
 		info.bmp_type = BMP_TYPE_BMP;
 	} else if (cl_opts.opt_cable) {
+		if ((!strcmp(cl_opts.opt_cable, "list")) ||
+			(!strcmp(cl_opts.opt_cable, "l"))) {
+			cable_desc_t *cable = &cable_desc[0];
+			DEBUG_WARN("Available cables:\n");
+			for (; cable->name; cable++) {
+				DEBUG_WARN("\t%s\n", cable->name);
+			}
+			exit(0);
+		}
 		/* check for libftdi devices*/
 		res = ftdi_bmp_init(&cl_opts, &info);
 		if (res)
