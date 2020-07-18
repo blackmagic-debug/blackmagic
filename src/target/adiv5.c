@@ -205,7 +205,7 @@ static const struct {
 	{0x921, 0x00, 0,      aa_nosupport, cidc_unknown, PIDR_PN_BIT_STRINGS("Cortex-A8 ETM",  "(Embedded Trace)")},
 	{0x922, 0x00, 0,      aa_nosupport, cidc_unknown, PIDR_PN_BIT_STRINGS("Cortex-A8 CTI",  "(Cross Trigger)")},
 	{0x923, 0x11, 0,      aa_nosupport, cidc_unknown, PIDR_PN_BIT_STRINGS("Cortex-M3 TPIU", "(Trace Port Interface Unit)")},
-	{0x924, 0x00, 0,      aa_nosupport, cidc_unknown, PIDR_PN_BIT_STRINGS("Cortex-M3 ETM",  "(Embedded Trace)")},
+	{0x924, 0x13, 0,      aa_nosupport, cidc_unknown, PIDR_PN_BIT_STRINGS("Cortex-M3 ETM",  "(Embedded Trace)")},
 	{0x925, 0x13, 0,      aa_nosupport, cidc_unknown, PIDR_PN_BIT_STRINGS("Cortex-M4 ETM",  "(Embedded Trace)")},
 	{0x930, 0x00, 0,      aa_nosupport, cidc_unknown, PIDR_PN_BIT_STRINGS("Cortex-R4 ETM",  "(Embedded Trace)")},
 	{0x932, 0x00, 0,      aa_nosupport, cidc_unknown, PIDR_PN_BIT_STRINGS("CoreSight MTB-M0+",  "(Simple Execution Trace)")},
