@@ -403,7 +403,7 @@ static bool adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, int recursion, 
 				&& (pidr_pn_bits[i].dev_type == dev_type)
 				&& (pidr_pn_bits[i].arch_id == arch_id)) {
 				DEBUG_INFO("%s%d 0x%" PRIx32 ": %s - %s %s (PIDR = 0x%02" PRIx32
-					  "%08" PRIx32 "  DEVTYPE = 0x%02" PRIx32 " ARCHID = 0x%04" PRIx16 ")",
+					  "%08" PRIx32 "  DEVTYPE = 0x%02" PRIx8 " ARCHID = 0x%04" PRIx16 ")",
 					  indent + 1, num_entry, addr,
 					  cidc_debug_strings[cid_class],
 					  pidr_pn_bits[i].type, pidr_pn_bits[i].full,
@@ -437,7 +437,7 @@ static bool adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, int recursion, 
 		}
 		if (pidr_pn_bits[i].arch == aa_end) {
 			DEBUG_WARN("%s0x%" PRIx32 ": %s - Unknown (PIDR = 0x%02" PRIx32
-				  "%08" PRIx32 " DEVTYPE = 0x%02" PRIx32 " ARCHID = 0x%04" PRIx16 ")\n",
+				  "%08" PRIx32 " DEVTYPE = 0x%02" PRIx8 " ARCHID = 0x%04" PRIx16 ")\n",
 				  indent, addr, cidc_debug_strings[cid_class],
 				  (uint32_t)(pidr >> 32), (uint32_t)pidr, dev_type, arch_id);
 		}
