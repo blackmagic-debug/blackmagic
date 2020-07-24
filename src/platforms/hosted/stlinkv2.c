@@ -1089,7 +1089,7 @@ int stlink_enter_debug_swd(bmp_info_t *info, ADIv5_DP_t *dp)
 					  STLINK_DEBUG_ENTER_SWD_NO_RESET};
 	uint8_t data[2];
 	DEBUG_INFO("Enter SWD\n");
-	send_recv(info->usb_link, cmd, 16, data, 2);
+	stlink_send_recv_retry(cmd, 16, data, 2);
 	if (stlink_usb_error_check(data, true))
 		return -1;
 	dp->idcode = stlink_read_coreid();
