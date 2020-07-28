@@ -26,11 +26,16 @@ LDFLAGS += -lusb-1.0
 CFLAGS += $(shell pkg-config --cflags libftdi1)
 LDFLAGS += $(shell pkg-config --libs libftdi1)
 
-ifeq ($(shell pkg-config --exists hidapi-libusb && echo 0), 0)
-CFLAGS += $(shell pkg-config --cflags hidapi-libusb)
-LDFLAGS += $(shell pkg-config --libs hidapi-libusb)
-CFLAGS  +=  -DCMSIS_DAP
-SRC += cmsis_dap.c dap.c
+ifneq (, $(findstring mingw, $(SYS)))
+ SRC += cmsis_dap.c dap.c hid.c
+ CFLAGS  +=  -DCMSIS_DAP
+else
+ ifeq ($(shell pkg-config --exists hidapi-libusb && echo 0), 0)
+  CFLAGS += $(shell pkg-config --cflags hidapi-libusb)
+  LDFLAGS += $(shell pkg-config --libs hidapi-libusb)
+  CFLAGS  +=  -DCMSIS_DAP
+  SRC += cmsis_dap.c dap.c
+ endif
 endif
 
 VPATH += platforms/pc
