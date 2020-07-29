@@ -34,11 +34,11 @@ int serial_open(BMP_CL_OPTIONS_t *cl_opts, char * serial)
 	}
 	char device[256];
 	if (strstr(device, "\\\\.\\")) {
-		strncpy(device, cl_opts->opt_device, sizeof(cl_opts->opt_device) - 1);
+		strncpy(device, cl_opts->opt_device, sizeof(device) - 1);
 	} else {
 		strcpy(device,  "\\\\.\\");
 		strncat(device, cl_opts->opt_device,
-				sizeof(cl_opts->opt_device) - strlen(cl_opts->opt_device) - 1);
+				sizeof(device) - strlen(device) - 1);
 	}
 	hComm = CreateFile(device,                //port name
                       GENERIC_READ | GENERIC_WRITE, //Read/Write
