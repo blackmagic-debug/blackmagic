@@ -689,7 +689,7 @@ static uint32_t stlink_read_coreid(void)
 	uint8_t cmd[16] = {STLINK_DEBUG_COMMAND, STLINK_DEBUG_APIV2_READ_IDCODES};
 	uint8_t data[12];
 	send_recv(info.usb_link, cmd, 16, data, 12);
-	uint32_t id =  data[4] | data[5] << 8 | data[6] << 16 | data[6] << 24;
+	uint32_t id =  data[4] | data[5] << 8 | data[6] << 16 | data[7] << 24;
 	DEBUG_INFO("Read Core ID: 0x%08" PRIx32 "\n", id);
 	return id;
 }
