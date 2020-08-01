@@ -37,9 +37,6 @@
 #include "jlink.h"
 #include "cmsis_dap.h"
 
-#define VENDOR_ID_BMP            0x1d50
-#define PRODUCT_ID_BMP           0x6018
-
 #define VENDOR_ID_STLINK         0x0483
 #define PRODUCT_ID_STLINK_MASK   0xffe0
 #define PRODUCT_ID_STLINK_GROUP  0x3740
