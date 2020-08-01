@@ -59,6 +59,7 @@ int serial_open(BMP_CL_OPTIONS_t *cl_opts, char * serial)
 		return -1;
 	}
 	dcbSerialParams.ByteSize = 8;
+	dcbSerialParams.fDtrControl = DTR_CONTROL_ENABLE;
 	if (!SetCommState(hComm, &dcbSerialParams)) {
 		DEBUG_WARN("SetCommState failed %ld\n", GetLastError());
 		return -1;
