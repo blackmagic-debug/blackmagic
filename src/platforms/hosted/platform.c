@@ -289,12 +289,7 @@ void platform_init(int argc, char **argv)
 			}
 			exit(0);
 		}
-		/* check for libftdi devices*/
-		res = ftdi_bmp_init(&cl_opts, &info);
-		if (res)
-			exit(-1);
-		else
-			info.bmp_type = BMP_TYPE_LIBFTDI;
+		info.bmp_type = BMP_TYPE_LIBFTDI;
 	} else if (find_debuggers(&cl_opts, &info)) {
 		exit(-1);
 	}
