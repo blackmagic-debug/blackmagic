@@ -151,7 +151,7 @@ int libftdi_swdptap_init(swd_proc_t *swd_proc)
 			active_cable->bb_swd_write.set_data_high ||
 			active_cable->bb_swd_write.clr_data_high;
 		bool bb_direct_possible =
-			active_cable->bb_swdio_in_port_cmd == SET_BITS_LOW &&
+			active_cable->bb_swdio_in_port_cmd == GET_BITS_LOW &&
 			active_cable->bb_swdio_in_pin == MPSSE_CS;
 		if (!bb_swd_read && !bb_swd_write) {
 			if (bb_direct_possible)
@@ -173,7 +173,9 @@ int libftdi_swdptap_init(swd_proc_t *swd_proc)
 		active_state.data_high |=   active_cable->mpsse_swd_read.set_data_high;
 		active_state.data_high &= ~(active_cable->mpsse_swd_read.clr_data_high);
 	} else if (direct_bb_swd) {
-		DEBUG_INFO("Using direct bitbang for SWD.\n");
+		DEBUG_INFO("Using direct bitbang with SWDIO %cBUS%d.\n",
+				   (active_cable->bb_swdio_in_port_cmd == GET_BITS_LOW) ? 'C' : 'D',
+				   __builtin_ctz(active_cable->bb_swdio_in_pin));
 	} else {
 		DEBUG_INFO("Using switched bitbang for SWD.\n");
 		active_state.data_low  |=   active_cable->bb_swd_read.set_data_low;
