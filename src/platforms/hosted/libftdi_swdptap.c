@@ -48,6 +48,7 @@ static void swdptap_turnaround(enum swdio_status dir)
 	if (dir == olddir)
 		return;
 	olddir = dir;
+	DEBUG_PROBE("Turnaround %s\n", (dir == SWDIO_STATUS_FLOAT) ? "float": "drive");
 	if (do_mpsse) {
 		if (dir == SWDIO_STATUS_FLOAT)	/* SWDIO goes to input */ {
 			active_state.data_low |=  active_cable->mpsse_swd_read.set_data_low | MPSSE_DO;
@@ -255,9 +256,7 @@ bool swdptap_seq_in_parity(uint32_t *res, int ticks)
 		uint8_t DO[5];
 		libftdi_jtagtap_tdi_tdo_seq(DO, 0, NULL, ticks + 1);
 		result = DO[0] + (DO[1] << 8) + (DO[2] << 16) + (DO[3] << 24);
-		for (int i = 0; i < 32; i++) {
-			parity ^= (result >> i) & 1;
-		}
+		parity =  __builtin_parity(result & ((1LL << ticks) - 1)) & 1;
 		parity ^= DO[4] & 1;
 	} else {
 		int index = ticks + 1;
@@ -328,14 +327,13 @@ static void swdptap_seq_out(uint32_t MS, int ticks)
 	swdptap_turnaround(SWDIO_STATUS_DRIVE);
 	if (do_mpsse) {
 		uint8_t DI[4];
-		swdptap_turnaround(0);
 		DI[0] = (MS >>  0) & 0xff;
 		DI[1] = (MS >>  8) & 0xff;
 		DI[2] = (MS >> 16) & 0xff;
 		DI[3] = (MS >> 24) & 0xff;
 		libftdi_jtagtap_tdi_tdo_seq(NULL, 0, DI, ticks);
 	} else {
-		uint8_t cmd[15];
+		uint8_t cmd[16];
 		unsigned int index = 0;
 		while (ticks) {
 			cmd[index++] = MPSSE_TMS_SHIFT;
@@ -356,53 +354,36 @@ static void swdptap_seq_out(uint32_t MS, int ticks)
 
 static void swdptap_seq_out_parity(uint32_t MS, int ticks)
 {
-	unsigned int parity = 0;
-	uint8_t cmd[18];
+	int parity = __builtin_parity(MS & ((1LL << ticks) - 1)) & 1;
 	unsigned int index = 0;
-	swdptap_turnaround(0);
+	swdptap_turnaround(SWDIO_STATUS_DRIVE);
 	if (do_mpsse) {
-		uint8_t DI[5];
+		uint8_t DI[8];
 		DI[0] = (MS >>  0) & 0xff;
 		DI[1] = (MS >>  8) & 0xff;
 		DI[2] = (MS >> 16) & 0xff;
 		DI[3] = (MS >> 24) & 0xff;
-		while(MS) {
-			parity ^= (MS & 1);
-			MS >>= 1;
-		}
 		DI[4] = parity;
 		libftdi_jtagtap_tdi_tdo_seq(NULL, 0, DI, ticks + 1);
 	} else {
+		uint8_t cmd[32];
 		int steps = ticks;
-		unsigned int data = MS;
 		while (steps) {
 			cmd[index++] = MPSSE_TMS_SHIFT;
 			if (steps >= 7) {
 				cmd[index++] = 6;
-				cmd[index++] = data & 0x7f;
-				data >>= 7;
+				cmd[index++] = MS & 0x7f;
+				MS >>= 7;
 				steps -= 7;
 			} else {
 				cmd[index++] = steps - 1;
-				cmd[index++] = data & 0x7f;
+				cmd[index++] = MS & 0x7f;
 				steps = 0;
 			}
-		}
-		while (ticks--) {
-			parity ^= MS;
-			MS >>= 1;
 		}
 		cmd[index++] = MPSSE_TMS_SHIFT;
 		cmd[index++] = 0;
 		cmd[index++] = parity;
 		libftdi_buffer_write(cmd, index);
 	}
-	while (ticks--) {
-		parity ^= MS;
-		MS >>= 1;
-	}
-	cmd[index++] = MPSSE_TMS_SHIFT;
-	cmd[index++] = 0;
-	cmd[index++] = parity;
-	libftdi_buffer_write(cmd, index);
 }
