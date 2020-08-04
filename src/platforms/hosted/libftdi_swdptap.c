@@ -127,7 +127,7 @@ static uint32_t swdptap_seq_in(int ticks);
 static void swdptap_seq_out(uint32_t MS, int ticks);
 static void swdptap_seq_out_parity(uint32_t MS, int ticks);
 
-int libftdi_swdptap_init(swd_proc_t *swd_proc)
+bool libftdi_swd_possible(bool *do_mpsse, bool *direct_bb_swd)
 {
 	bool swd_read =
 		active_cable->mpsse_swd_read.set_data_low ||
@@ -139,8 +139,10 @@ int libftdi_swdptap_init(swd_proc_t *swd_proc)
 		active_cable->mpsse_swd_write.clr_data_low ||
 		active_cable->mpsse_swd_write.set_data_high ||
 		active_cable->mpsse_swd_write.clr_data_high;
-	do_mpsse = swd_read && swd_write;
-	if (!do_mpsse) {
+	bool mpsse = swd_read && swd_write;
+	if (do_mpsse)
+		*do_mpsse = mpsse;
+	if (!mpsse) {
 		bool bb_swd_read =
 			active_cable->bb_swd_read.set_data_low ||
 			active_cable->bb_swd_read.clr_data_low ||
@@ -155,13 +157,20 @@ int libftdi_swdptap_init(swd_proc_t *swd_proc)
 			active_cable->bb_swdio_in_port_cmd == GET_BITS_LOW &&
 			active_cable->bb_swdio_in_pin == MPSSE_CS;
 		if (!bb_swd_read && !bb_swd_write) {
-			if (bb_direct_possible)
-				direct_bb_swd = true;
-			else {
-				DEBUG_WARN("SWD not possible or missing item in cable description.\n");
-				return -1;
-			}
+			if (!bb_direct_possible)
+				return false;
 		}
+		if (direct_bb_swd)
+			*direct_bb_swd = true;
+	}
+	return true;
+}
+
+int libftdi_swdptap_init(swd_proc_t *swd_proc)
+{
+	if (!libftdi_swd_possible(&do_mpsse, &direct_bb_swd)) {
+		DEBUG_WARN("SWD not possible or missing item in cable description.\n");
+		return -1;
 	}
 	active_state.data_low |=   MPSSE_CS | MPSSE_DI | MPSSE_DO;
 	active_state.data_low &=   MPSSE_SK;

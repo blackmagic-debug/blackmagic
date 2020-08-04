@@ -296,8 +296,11 @@ int ftdi_bmp_init(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info)
 			DEBUG_INFO("Using external resistor SWD\n");
 			active_cable->mpsse_swd_read.set_data_low = MPSSE_DO;
 			active_cable->mpsse_swd_write.set_data_low = MPSSE_DO;
-		}
-
+	} else if (!libftdi_swd_possible(NULL, NULL) &&
+			   !cl_opts->opt_usejtag) {
+		DEBUG_WARN("SWD with cable not possible, trying JTAG\n");
+		cl_opts->opt_usejtag = true;
+	}
 	if(ftdic) {
 		ftdi_usb_close(ftdic);
 		ftdi_free(ftdic);
@@ -457,7 +460,7 @@ void libftdi_buffer_flush(void)
 {
 	if (!bufptr)
 		return;
-	DEBUG_WIRE("Flush\n");
+	DEBUG_WIRE("Flush %d\n", bufptr);
 #if defined(USE_USB_VERSION_BIT)
 static struct ftdi_transfer_control *tc_write = NULL;
     if (tc_write)
