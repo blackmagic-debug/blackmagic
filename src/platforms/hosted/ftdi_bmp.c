@@ -44,6 +44,18 @@ cable_desc_t cable_desc[] = {
 		/* Direct connection from FTDI to Jtag/Swd.
 		 Pin 6 direct connected to RST.*/
 		.vendor = 0x0403,
+		.product = 0x6014,
+		.interface = INTERFACE_A,
+		// No explicit reset
+		.bb_swdio_in_port_cmd = GET_BITS_LOW,
+		.bb_swdio_in_pin = MPSSE_CS,
+		.description = "UM232H",
+		.name = "um232h"
+	},
+	{
+		/* Direct connection from FTDI to Jtag/Swd.
+		 Pin 6 direct connected to RST.*/
+		.vendor = 0x0403,
 		.product = 0x6010,
 		.interface = INTERFACE_A,
 		.init.data_low = PIN6, /* PULL nRST high*/
