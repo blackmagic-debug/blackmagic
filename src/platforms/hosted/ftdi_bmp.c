@@ -185,7 +185,7 @@ cable_desc_t cable_desc[] = {
 		.product = 0xbdc8,
 		.interface = INTERFACE_A,
 		/* Drive low to activate JTAGOE and deassert TRST/RST.*/
-		.init.data_low  = PIN6,
+		.init.data_low  = 0,
 		.init.ddr_low  = PIN6 | PIN5 | PIN4,
 		.init.ddr_high = PIN2, /* ONE LED */
 		.assert_srst.data_low = PIN6,
@@ -361,20 +361,36 @@ int ftdi_bmp_init(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info)
 			err, ftdi_get_error_string(ftdic));
 		goto error_2;
 	}
-	uint8_t ftdi_init[9];
-	ftdi_init[0]= TCK_DIVISOR;
+	uint8_t ftdi_init[16];
+	/* Test for pending garbage.*/
+	int garbage =  ftdi_read_data(ftdic, ftdi_init, sizeof(ftdi_init));
+	if (garbage > 0) {
+		DEBUG_WARN("FTDI init garbage at start:");
+		for (int i = 0; i < garbage; i++)
+			DEBUG_WARN(" %02x", ftdi_init[i]);
+		DEBUG_WARN("\n");
+	}
+	int index = 0;
+	ftdi_init[index++]= LOOPBACK_END; /* FT2232D gets upset otherwise*/
+	ftdi_init[index++]= TCK_DIVISOR;
 	/* Use CLK/2 for about 50 % SWDCLK duty cycle on FT2232c.*/
-	ftdi_init[1]= 1;
-	ftdi_init[2]= 0;
-	ftdi_init[3]= SET_BITS_LOW;
-	ftdi_init[4]= active_state.data_low;
-	ftdi_init[5]= active_state.ddr_low;
-	ftdi_init[6]= SET_BITS_HIGH;
-	ftdi_init[7]= active_state.data_high;
-	ftdi_init[8]= active_state.ddr_high;
-	libftdi_buffer_write(ftdi_init, 9);
+	ftdi_init[index++]= 1;
+	ftdi_init[index++]= 0;
+	ftdi_init[index++]= SET_BITS_LOW;
+	ftdi_init[index++]= active_state.data_low;
+	ftdi_init[index++]= active_state.ddr_low;
+	ftdi_init[index++]= SET_BITS_HIGH;
+	ftdi_init[index++]= active_state.data_high;
+	ftdi_init[index++]= active_state.ddr_high;
+	libftdi_buffer_write(ftdi_init, index);
 	libftdi_buffer_flush();
-	return 0;
+	garbage =  ftdi_read_data(ftdic, ftdi_init, sizeof(ftdi_init));
+	if (garbage > 0) {
+		DEBUG_WARN("FTDI init garbage at end:");
+		for (int i = 0; i < garbage; i++)
+			DEBUG_WARN(" %02x", ftdi_init[i]);
+		DEBUG_WARN("\n");
+	}	return 0;
 
   error_2:
 	ftdi_usb_close(ftdic);
@@ -596,5 +612,5 @@ const char *libftdi_target_voltage(void)
 		else
 			return "Absent";
 	}
-	return "not supported";
+	return NULL;
 }

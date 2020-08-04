@@ -60,16 +60,32 @@ int libftdi_jtagtap_init(jtag_proc_t *jtag_proc)
 	active_state.ddr_low   &= ~(MPSSE_DI);
 	active_state.data_high |=   active_cable->jtag.set_data_high;
 	active_state.data_high &= ~(active_cable->jtag.clr_data_high);
-	DEBUG_PROBE("%02x %02x %02x %02x\n", active_state.data_low ,
-		  active_state.ddr_low, active_state.data_high,
-		  active_state.ddr_high);uint8_t cmd_write[6] = {
+	uint8_t gab[16];
+	int garbage =  ftdi_read_data(ftdic, gab, sizeof(gab));
+	if (garbage > 0) {
+		DEBUG_WARN("FTDI JTAG init got garbage:");
+		for (int i = 0; i < garbage; i++)
+			DEBUG_WARN(" %02x", gab[i]);
+		DEBUG_WARN("\n");
+	}
+	uint8_t cmd_write[16] = {
 		SET_BITS_LOW,  active_state.data_low,
 		active_state.ddr_low,
 		SET_BITS_HIGH, active_state.data_high, active_state.ddr_high};
 	libftdi_buffer_write(cmd_write, 6);
+	libftdi_buffer_flush();
+	/* Write out start condition and pull garbage from read buffer.
+	 * FT2232D otherwise misbehaves on runs follwoing the first run.*/
+	garbage =  ftdi_read_data(ftdic, cmd_write, sizeof(cmd_write));
+	if (garbage > 0) {
+		DEBUG_WARN("FTDI JTAG end init got garbage:");
+		for (int i = 0; i < garbage; i++)
+			DEBUG_WARN(" %02x", cmd_write[i]);
+		DEBUG_WARN("\n");
+	}
 	/* Go to JTAG mode for SWJ-DP */
 	for (int i = 0; i <= 50; i++)
-		jtag_proc->jtagtap_next(1, 0);		/* Reset SW-DP */
+		jtag_proc->jtagtap_next(1, 0);          /* Reset SW-DP */
 	jtag_proc->jtagtap_tms_seq(0xE73C, 16);		/* SWD to JTAG sequence */
 	jtag_proc->jtagtap_tms_seq(0x1F, 6);
 
@@ -84,7 +100,7 @@ static void jtagtap_reset(void)
 static void jtagtap_tms_seq(uint32_t MS, int ticks)
 {
 	uint8_t tmp[3] = {
-		MPSSE_WRITE_TMS | MPSSE_LSB | MPSSE_BITMODE| MPSSE_READ_NEG, 0, 0};
+		MPSSE_WRITE_TMS | MPSSE_LSB | MPSSE_BITMODE | MPSSE_WRITE_NEG, 0, 0};
 	while(ticks >= 0) {
 		tmp[1] = ticks<7?ticks-1:6;
 		tmp[2] = 0x80 | (MS & 0x7F);
