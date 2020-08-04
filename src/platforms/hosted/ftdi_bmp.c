@@ -455,6 +455,8 @@ bool libftdi_srst_get_val(void)
 
 void libftdi_buffer_flush(void)
 {
+	if (!bufptr)
+		return;
 	DEBUG_WIRE("Flush\n");
 #if defined(USE_USB_VERSION_BIT)
 static struct ftdi_transfer_control *tc_write = NULL;
