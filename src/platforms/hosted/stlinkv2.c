@@ -311,6 +311,7 @@ static int stlink_usb_error_check(uint8_t *data, bool verbose)
 		case STLINK_SWD_AP_STICKY_ERROR:
 			if (verbose)
 				DEBUG_WARN("STLINK_SWD_AP_STICKY_ERROR\n");
+			Stlink.ap_error = true;
 			return STLINK_ERROR_FAIL;
 		case STLINK_SWD_AP_STICKYORUN_ERROR:
 			if (verbose)
@@ -896,7 +897,8 @@ static void stlink_readmem(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
 		 * Approach taken:
 		 * Fill the memory with some fixed pattern so hopefully
 		 * the caller notices the error*/
-		DEBUG_WARN("stlink_readmem failed\n");
+		DEBUG_WARN("stlink_readmem from  %" PRIx32 " to %" PRIx32 ", len %"
+				   PRIx32 "failed\n", src, dest, (uint32_t) len);
 		memset(dest, 0xff, len);
 	}
 	DEBUG_PROBE("stlink_readmem from %" PRIx32 " to %" PRIx32 ", len %" PRIx32
