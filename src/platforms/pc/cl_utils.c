@@ -143,6 +143,7 @@ static void cl_help(char **argv, BMP_CL_OPTIONS_t *opt)
 	DEBUG_WARN("\t-r\t\t: Read flash and write to binary file\n");
 	DEBUG_WARN("\t-p\t\t: Supplies power to the target (where applicable)\n");
 	DEBUG_WARN("\t-R\t\t: Reset device\n");
+	DEBUG_WARN("\t-H\t\t: Do not use high level commands (BMP-Remote)\n");
 	DEBUG_WARN("Flash operation modifiers options:\n");
 	DEBUG_WARN("\tDefault action with given file is to write to flash\n");
 	DEBUG_WARN("\t-a <addr>\t: Start flash operation at flash address <addr>\n"
@@ -157,7 +158,7 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 	int c;
 	opt->opt_target_dev = 1;
 	opt->opt_flash_size = 16 * 1024 *1024;
-	while((c = getopt(argc, argv, "eEhv:d:s:I:c:CnltVta:S:jpP:rR")) != -1) {
+	while((c = getopt(argc, argv, "eEhHv:d:s:I:c:CnltVta:S:jpP:rR")) != -1) {
 		switch(c) {
 		case 'c':
 			if (optarg)
@@ -165,6 +166,9 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 			break;
 		case 'h':
 			cl_help(argv, opt);
+			break;
+		case 'H':
+			opt->opt_no_hl = true;
 			break;
 		case 'v':
 			if (optarg)
