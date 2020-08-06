@@ -43,6 +43,7 @@ typedef struct BMP_CL_OPTIONS_s {
 	bool opt_list_only;
 	bool opt_connect_under_reset;
 	bool external_resistor_swd;
+	bool opt_no_hl;
 	char *opt_flash_file;
 	char *opt_device;
 	char *opt_serial;

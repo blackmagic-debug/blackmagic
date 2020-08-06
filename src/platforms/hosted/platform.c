@@ -263,9 +263,10 @@ static int find_debuggers(	BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 	return (found_debuggers == 1) ? 0 : -1;
 }
 
+static	BMP_CL_OPTIONS_t cl_opts;
+
 void platform_init(int argc, char **argv)
 {
-	BMP_CL_OPTIONS_t cl_opts = {0};
 	cl_opts.opt_idstring = "Blackmagic PC-Hosted";
 	cl_init(&cl_opts, argc, argv);
 	atexit(exit_function);
@@ -426,6 +427,10 @@ void platform_adiv5_dp_defaults(ADIv5_DP_t *dp)
 {
 	switch (info.bmp_type) {
 	case BMP_TYPE_BMP:
+		if (cl_opts.opt_no_hl) {
+			DEBUG_WARN("Not using HL commands\n");
+			return;
+		}
 		return remote_adiv5_dp_defaults(dp);
 	case BMP_TYPE_STLINKV2:
 		return stlink_adiv5_dp_defaults(dp);
