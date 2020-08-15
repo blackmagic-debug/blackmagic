@@ -487,33 +487,51 @@ static void ap_decode_access(uint16_t addr, uint8_t RnW)
 		fprintf(stderr, "Read  ");
 	else
 		fprintf(stderr, "Write ");
-	switch(addr) {
-	case 0x00:
-		if (RnW)
-			fprintf(stderr, "DP_DPIDR :");
-		else
-			fprintf(stderr, "DP_ABORT :");
-		break;
-	case 0x004: fprintf(stderr, "CTRL/STAT:");
-		break;
-	case 0x008:
-		if (RnW)
-			fprintf(stderr, "RESEND   :");
-		else
-			fprintf(stderr, "DP_SELECT:");
-		break;
-	case 0x00c: fprintf(stderr, "DP_RDBUFF:");
-		break;
-	case 0x100: fprintf(stderr, "AP_CSW   :");
-		break;
-	case 0x104: fprintf(stderr, "AP_TAR   :");
-		break;
-	case 0x10c: fprintf(stderr, "AP_DRW   :");
-		break;
-	case 0x1f8: fprintf(stderr, "AP_BASE  :");
-		break;
-	case 0x1fc: fprintf(stderr, "AP_IDR   :");
-		break;
+	if (addr < 0x100) {
+		switch(addr) {
+		case 0x00:
+			if (RnW)
+				fprintf(stderr, "DP_DPIDR :");
+			else
+				fprintf(stderr, "DP_ABORT :");
+			break;
+		case 0x04: fprintf(stderr, "CTRL/STAT:");
+			break;
+		case 0x08:
+			if (RnW)
+				fprintf(stderr, "RESEND   :");
+			else
+				fprintf(stderr, "DP_SELECT:");
+			break;
+		case 0x0c: fprintf(stderr, "DP_RDBUFF:");
+			break;
+		default: fprintf(stderr, "Unknown %02x   :", addr);
+		}
+	} else {
+		fprintf(stderr, "AP 0x%02x ", addr >> 8);
+		switch (addr & 0xff) {
+		case 0x00: fprintf(stderr, "CSW   :");
+			break;
+		case 0x04: fprintf(stderr, "TAR   :");
+			break;
+		case 0x0c: fprintf(stderr, "DRW   :");
+			break;
+		case 0x10: fprintf(stderr, "DB0   :");
+			break;
+		case 0x14: fprintf(stderr, "DB1   :");
+			break;
+		case 0x18: fprintf(stderr, "DB2   :");
+			break;
+		case 0x1c: fprintf(stderr, "DB3   :");
+			break;
+		case 0xf8: fprintf(stderr, "BASE  :");
+			break;
+		case 0xf4: fprintf(stderr, "CFG   :");
+			break;
+		case 0xfc: fprintf(stderr, "IDR   :");
+			break;
+		default:   fprintf(stderr, "RSVD%02x:", addr & 0xff);
+		}
 	}
 }
 
