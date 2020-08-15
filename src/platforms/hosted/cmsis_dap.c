@@ -111,7 +111,7 @@ static uint32_t dap_dp_error(ADIv5_DP_t *dp)
 	return err;
 }
 
-static uint32_t  dap_dp_low_access(struct ADIv5_DP_s *dp, uint8_t RnW,
+static uint32_t dap_dp_low_access(struct ADIv5_DP_s *dp, uint8_t RnW,
                                uint16_t addr, uint32_t value)
 {
 	bool APnDP = addr & ADIV5_APnDP;
@@ -128,7 +128,16 @@ static uint32_t  dap_dp_low_access(struct ADIv5_DP_s *dp, uint8_t RnW,
 
 static uint32_t dap_dp_read_reg(ADIv5_DP_t *dp, uint16_t addr)
 {
-	return dap_read_reg(dp, addr);
+	uint32_t res;
+	if (addr & ADIV5_APnDP) {
+		dap_dp_low_access(dp, ADIV5_LOW_READ, addr, 0);
+		res = dap_dp_low_access(dp, ADIV5_LOW_READ,
+		                           ADIV5_DP_RDBUFF, 0);
+	} else {
+		res = dap_dp_low_access(dp, ADIV5_LOW_READ, addr, 0);
+	}
+	DEBUG_PROBE("dp_read %04x %08" PRIx32 "\n", addr, res);
+	return res;
 }
 
 void dap_exit_function(void)
