@@ -162,6 +162,8 @@ static int find_debuggers(	BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 		if ((desc.idVendor == VENDOR_ID_BMP) &&
 			(desc.idProduct == PRODUCT_ID_BMP)) {
 			type = BMP_TYPE_BMP;
+		} else if ((strstr(manufacturer, "CMSIS")) || (strstr(product, "CMSIS"))) {
+			type = BMP_TYPE_CMSIS_DAP;
 		} else if (desc.idVendor ==  VENDOR_ID_STLINK) {
 			if ((desc.idProduct == PRODUCT_ID_STLINKV2) ||
 				(desc.idProduct == PRODUCT_ID_STLINKV21) ||
@@ -174,8 +176,6 @@ static int find_debuggers(	BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 					DEBUG_WARN( "INFO: STLINKV1 not supported\n");
 				continue;
 			}
-		} else if ((strstr(manufacturer, "CMSIS")) || (strstr(product, "CMSIS"))) {
-			type = BMP_TYPE_CMSIS_DAP;
 		} else if (desc.idVendor ==  VENDOR_ID_SEGGER) {
 			type = BMP_TYPE_JLINK;
 		} else{
