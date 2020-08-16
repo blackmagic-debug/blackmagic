@@ -374,11 +374,11 @@ void dap_write_reg(ADIv5_DP_t *dp, uint8_t reg, uint32_t data)
 	} while (buf[1] == DAP_TRANSFER_WAIT);
 
 	if (buf[1] > DAP_TRANSFER_WAIT) {
-		DEBUG_PROBE("dap_write_reg %02x data %08x:fault\n", reg, data);
+		DEBUG_WARN("dap_write_reg %02x data %08x:fault\n", reg, data);
 		dp->fault = 1;
 	}
 	if (buf[1] == DAP_TRANSFER_ERROR) {
-		DEBUG_PROBE("dap_write_reg %02x data %08x: protocoll error\n",
+		DEBUG_WARN("dap_write_reg %02x data %08x: protocoll error\n",
 					reg, data);
 		dap_line_reset();
 	}
@@ -399,8 +399,8 @@ unsigned int dap_read_block(ADIv5_AP_t *ap, void *dest, uint32_t src,
     buf[4] = SWD_AP_DRW | DAP_TRANSFER_RnW;
     dbg_dap_cmd(buf, 1023, 5 + 1);
 	unsigned int transferred = buf[0] + (buf[1] << 8);
-	if (buf[2] > DAP_TRANSFER_FAULT) {
-		DEBUG_PROBE("line_reset\n");
+	if (buf[2] >= DAP_TRANSFER_FAULT) {
+		DEBUG_WARN("dap_read_block @ %08 "PRIx32 " fault -> line reset\n", src);
 		dap_line_reset();
 	}
 	if (sz != transferred) {
