@@ -47,7 +47,12 @@ static uint8_t jtagtap_next(uint8_t dTMS, uint8_t dTDI);
 int libftdi_jtagtap_init(jtag_proc_t *jtag_proc)
 {
 	assert(ftdic != NULL);
+	/* select new buffer flush function if libftdi 1.5 */
+#ifdef _Ftdi_Pragma
+	int err = ftdi_tcioflush(ftdic);
+#else
 	int err = ftdi_usb_purge_buffers(ftdic);
+#endif
 	if (err != 0) {
 		DEBUG_WARN("ftdi_usb_purge_buffer: %d: %s\n",
 			err, ftdi_get_error_string(ftdic));
