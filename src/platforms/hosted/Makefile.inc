@@ -15,10 +15,10 @@ SRC += 	 serial_win.c
 LDFLAGS += -lws2_32
 LDFLAGS += -lsetupapi
 #https://github.com/dmlc/xgboost/issues/1945 indicates macosx as indicator
-else ifneq (filter, macosx darwin, $(SYS)))
-LDFLAGS += -lsetupapi
-LDFLAGS += hidapi/mac/.libs/libhidapi.a -framework IOKit
-LDFLAGS += -framework CoreFoundation hidapi/mac/.libs/libhidapi.a
+else ifneq (filter, macosx darwin, $(SYS))
+SRC += serial_unix.c
+LDFLAGS += -lhidapi
+LDFLAGS += -framework CoreFoundation
 CFLAGS += -Ihidapi/hidapi
 endif
 
