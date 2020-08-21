@@ -67,6 +67,33 @@ static int set_interface_attribs(void)
     }
 	return 0;
 }
+
+#ifdef __APPLE__
+int serial_open(BMP_CL_OPTIONS_t *cl_opts, char *serial)
+{
+    char name[4096];
+    if (!cl_opts->opt_device) {
+        /* Try to find some BMP if0*/
+        if (!serial) {
+            DEBUG_WARN("No serial device found\n");
+            return -1;
+        } else {
+            sprintf(name, "/dev/tty.usbmodem%s1", serial);
+        }
+    } else {
+        strncpy(name, cl_opts->opt_device, sizeof(name) - 1);
+    }
+    fd = open(name, O_RDWR | O_SYNC | O_NOCTTY);
+    if (fd < 0) {
+        DEBUG_WARN("Couldn't open serial port %s\n", name);
+        return -1;
+    }
+    /* BMP only offers an USB-Serial connection with no real serial
+     * line in between. No need for baudrate or parity.!
+     */
+    return set_interface_attribs();
+}
+#else
 #define BMP_IDSTRING "usb-Black_Sphere_Technologies_Black_Magic_Probe"
 #define DEVICE_BY_ID "/dev/serial/by-id/"
 int serial_open(BMP_CL_OPTIONS_t *cl_opts, char *serial)
@@ -130,6 +157,7 @@ int serial_open(BMP_CL_OPTIONS_t *cl_opts, char *serial)
 	 */
 	return set_interface_attribs();
 }
+#endif
 
 void serial_close(void)
 {
