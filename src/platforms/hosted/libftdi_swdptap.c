@@ -46,7 +46,12 @@ int libftdi_swdptap_init(swd_proc_t *swd_proc)
 		DEBUG_WARN("SWD not possible or missing item in cable description.\n");
 		return -1;
 	}
+	/* select new buffer flush function if libftdi 1.5 */
+#ifdef _Ftdi_Pragma
+	int err = ftdi_tcioflush(ftdic);
+#else
 	int err = ftdi_usb_purge_buffers(ftdic);
+#endif
 	if (err != 0) {
 		DEBUG_WARN("ftdi_usb_purge_buffer: %d: %s\n",
 			err, ftdi_get_error_string(ftdic));
