@@ -111,7 +111,7 @@ information on how to use a dongle.
 
 The command line to build the swolisten tool is;
 
-gcc -I /usr/local/include/libusb-1.0 -L /usr/local/lib  -lusb-1.0 swolisten.c -o swolisten
+gcc -I /usr/local/include/libusb-1.0 -L /usr/local/lib swolisten.c -o swolisten -lusb-1.0
 
 For Opensuse:
 gcc -I /usr/include/libusb-1.0 -lusb-1.0 swolisten.c  swolisten -std=gnu99 -g -Og
