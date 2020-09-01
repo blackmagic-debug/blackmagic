@@ -73,7 +73,7 @@ REMOTE_BMP is a "normal" BMP usb connected
 
 ## Device matching
 As other USB dongles already connected to the host PC may use FTDI chips,
-cable descriptions are provided to match with the dongle.
+cable descriptions must be provided to match with the dongle.
 To match the dongle, at least USB VID/PID  that must match.
 If a description is given, the USB device must provide that string. If a
 serial number string is given on the command line, that number must match
@@ -125,6 +125,11 @@ together with the 'r' argument.
 As the FTDI has more pins, these pins may be used to control
 enables of buffers and multiplexer selection in many variants.
 
+### FTDI SWD speed
+SWD read needs two USB round trip, one for the acknowledge and one
+round-trip after the data phase, while JTAG only needs one round-trip.
+For that, SWD read speed is about half the JTAG read speed.
+
 ### Reset, Target voltage readback etc
 The additional pins may also control Reset functionality, provide
 information if target voltage is applied. etc.
@@ -139,11 +144,3 @@ is welcome.
 ### Discussions on Discord.
 You can find the Discord link here: https://1bitsquared.com/pages/chat
 ### Blackmagic mailing list http://sourceforge.net/mail/?group_id=407419
-
-## Known deficiencies
-### For REMOTE_BMP
-#### On windows, the device node must be given on the command line
-Finding the device from USB VID/PID/Serial in not yet implemented
-### FTDI MPSSE
-#### No auto detection
-Cable description must be given on the command line
