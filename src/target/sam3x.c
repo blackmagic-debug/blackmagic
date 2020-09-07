@@ -108,6 +108,8 @@ const struct command_s sam3x_cmd_list[] = {
 #define CHIPID_CIDR_ARCH_SAM4SxA	(0x88 << 20)
 #define CHIPID_CIDR_ARCH_SAM4SxB	(0x89 << 20)
 #define CHIPID_CIDR_ARCH_SAM4SxC	(0x8A << 20)
+#define CHIPID_CIDR_ARCH_SAM4SDB	(0x99 << 20)
+#define CHIPID_CIDR_ARCH_SAM4SDC	(0x9A << 20)
 #define CHIPID_CIDR_NVPTYP_MASK		(0x07 << 28)
 #define CHIPID_CIDR_NVPTYP_FLASH	(0x02 << 28)
 #define CHIPID_CIDR_NVPTYP_ROM_FLASH	(0x03 << 28)
@@ -242,6 +244,8 @@ bool sam3x_probe(target *t)
 	case CHIPID_CIDR_ARCH_SAM4SxA | CHIPID_CIDR_EPROC_CM4:
 	case CHIPID_CIDR_ARCH_SAM4SxB | CHIPID_CIDR_EPROC_CM4:
 	case CHIPID_CIDR_ARCH_SAM4SxC | CHIPID_CIDR_EPROC_CM4:
+	case CHIPID_CIDR_ARCH_SAM4SDB | CHIPID_CIDR_EPROC_CM4:
+	case CHIPID_CIDR_ARCH_SAM4SDC | CHIPID_CIDR_EPROC_CM4:
 		t->driver = "Atmel SAM4S";
 		target_add_ram(t, 0x20000000, 0x400000);
 		size_t size = sam_flash_size(t->idcode);
