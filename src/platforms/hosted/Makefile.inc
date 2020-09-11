@@ -5,8 +5,10 @@ CFLAGS +=-I ./target -I./platforms/pc
 
 ifneq (, $(findstring linux, $(SYS)))
 SRC += serial_unix.c
+ifeq ($(ASAN), 1)
 CFLAGS += -fsanitize=address
 LDFLAGS += -lasan
+endif
 else ifneq (, $(findstring mingw, $(SYS)))
 SRC += 	 serial_win.c
 LDFLAGS += -lws2_32
