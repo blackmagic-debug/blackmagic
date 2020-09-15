@@ -29,7 +29,7 @@ on STM8S-Disco on CN5/3
     Use first number!
 
 [Blue Pill Schematics 2
-    ](https://wiki.stm32duino.com/images/a/ae/Bluepillpinout.gif) :
+    ](https://stm32duinoforum.com/forum/images/a/ae/wiki_subdomain/Bluepillpinout.gif) :
     Use second number!
 
 Distinguish boards by checking the SWIM_IN connection PB9/PB10 seen on
