@@ -43,6 +43,7 @@ static void setup_vbus_irq(void);
  * 000 - Original production build.
  * 001 - Mini production build.
  * 010 - Mini V2.0e and later.
+ * 011 - Mini V2.1e and later.
  */
 int platform_hwversion(void)
 {
