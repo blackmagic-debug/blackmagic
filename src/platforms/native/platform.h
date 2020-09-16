@@ -50,7 +50,7 @@ int usbuart_debug_write(const char *buf, size_t len);
  * LED1 = 	PB10	(Yellow LED : Idle)
  * LED2 = 	PB11	(Red LED    : Error)
  *
- * TPWR = 	RB0 (input) -- analogue on mini design ADC1, ch8
+ * TPWR = 	PB0 (input) -- analogue on mini design ADC1, ch8
  * nTRST = 	PB1 (output) [blackmagic]
  * PWR_BR = 	PB1 (output) [blackmagic_mini] -- supply power to the target, active low
  * TMS_DIR =    PA1 (output) [blackmagic_mini v2.1] -- choose direction of the TCK pin, input low, output high
