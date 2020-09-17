@@ -146,6 +146,12 @@ uint32_t firmware_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 	do {
 		swd_proc.swdptap_seq_out(request, 8);
 		ack = swd_proc.swdptap_seq_in(3);
+		if (ack == SWDP_ACK_FAULT) {
+			/* On fault, abort() and repeat the command once.*/
+			firmware_swdp_error(dp);
+			swd_proc.swdptap_seq_out(request, 8);
+			ack = swd_proc.swdptap_seq_in(3);
+		}
 	} while (ack == SWDP_ACK_WAIT && !platform_timeout_is_expired(&timeout));
 
 	if (ack == SWDP_ACK_WAIT)
