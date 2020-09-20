@@ -1,6 +1,5 @@
 SYS = $(shell $(CC) -dumpmachine)
 CFLAGS += -DENABLE_DEBUG -DPLATFORM_HAS_DEBUG
-CFLAGS += -DUSE_USB_VERSION_BIT
 CFLAGS +=-I ./target -I./platforms/pc
 
 ifneq (, $(findstring linux, $(SYS)))
