@@ -391,9 +391,9 @@ static const struct usb_config_descriptor config = {
 };
 
 #if defined(STM32L0) || defined(STM32F3) || defined(STM32F4)
-char serial_no[13];
+static char serial_no[13];
 #else
-char serial_no[9];
+static char serial_no[9];
 #endif
 
 static const char *usb_strings[] = {
@@ -547,7 +547,7 @@ void cdcacm_init(void)
 {
 	void exti15_10_isr(void);
 
-	serialno_read(serial_no);
+	serial_no_read(serial_no, sizeof(serial_no));
 
 	usbdev = usbd_init(&USB_DRIVER, &dev, &config, usb_strings,
 			    sizeof(usb_strings)/sizeof(char *),

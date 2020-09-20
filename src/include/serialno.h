@@ -20,7 +20,7 @@
 #ifndef __SERIALNO_H
 #define __SERIALNO_H
 
-char *serialno_read(char *s);
+char *serial_no_read(char *s, int max);
 
 #endif
 
