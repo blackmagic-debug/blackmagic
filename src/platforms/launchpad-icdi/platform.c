@@ -118,20 +118,20 @@ const char *platform_target_voltage(void)
 	return NULL;
 }
 
-char *serialno_read(char *s)
+char *serial_no_read(char *s, int max)
 {
 	/* FIXME: Store a unique serial number somewhere and retreive here */
-	uint32_t unique_id = 1;
+	uint32_t unique_id = SERIAL_NO;
         int i;
 
         /* Fetch serial number from chip's unique ID */
         for(i = 0; i < 8; i++) {
                 s[7-i] = ((unique_id >> (4*i)) & 0xF) + '0';
         }
-        for(i = 0; i < 8; i++)
+        for(i = 0; i < max - 1; i++)
                 if(s[i] > '9')
                         s[i] += 'A' - '9' - 1;
-	s[8] = 0;
+	s[max] = 0;
 
 	return s;
 }
