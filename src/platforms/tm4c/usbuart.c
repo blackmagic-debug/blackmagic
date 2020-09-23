@@ -104,7 +104,7 @@ void usbuart_usb_out_cb(usbd_device *dev, uint8_t ep)
 	(void)ep;
 
 	char buf[CDCACM_PACKET_SIZE];
-	int len = usbd_ep_read_packet(dev, CDCACM_UART_ENDPOINT,
+	int len = usbd_ep_read_packet(dev, CDCACM_UART_EPT_IN,
 					buf, CDCACM_PACKET_SIZE);
 
 	for(int i = 0; i < len; i++)
@@ -175,7 +175,7 @@ void USBUART_ISR(void)
 
 		/* advance fifo out pointer by amount written */
 		buf_rx_out += usbd_ep_write_packet(usbdev,
-				CDCACM_UART_ENDPOINT, packet_buf, packet_size);
+				CDCACM_UART_EPT_IN, packet_buf, packet_size);
 		buf_rx_out %= FIFO_SIZE;
 	}
 }

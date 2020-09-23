@@ -22,6 +22,10 @@
 
 #include <libopencm3/usb/usbd.h>
 
+#ifndef USB_TRACESWO_EPT_OUT
+#define USB_TRACESWO_EPT_OUT 0x85
+#endif
+
 #if defined TRACESWO_PROTOCOL && TRACESWO_PROTOCOL == 2
 /* Default line rate, used as default for a request without baudrate */
 #define SWO_DEFAULT_BAUD (2250000)

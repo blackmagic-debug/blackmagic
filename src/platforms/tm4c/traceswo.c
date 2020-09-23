@@ -36,6 +36,9 @@
 #include <libopencm3/lm4f/uart.h>
 #include <libopencm3/usb/usbd.h>
 
+#ifndef USB_TRACESWO_EPT_OUT
+#define USB_TRACESWO_EPT_OUT 0x85
+#endif
 void traceswo_init(void)
 {
 	periph_clock_enable(RCC_GPIOD);
@@ -73,7 +76,7 @@ void traceswo_init(void)
 	nvic_enable_irq(TRACEUART_IRQ);
 
 	/* Un-stall USB endpoint */
-	usbd_ep_stall_set(usbdev, 0x85, 0);
+	usbd_ep_stall_set(usbdev, USB_TRACESWO_EPT_OUT, 0);
 
 	gpio_mode_setup(GPIOD, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, GPIO3);
 }
@@ -109,7 +112,8 @@ void trace_buf_push(void)
 		len = 64;
 	}
 
-	if (usbd_ep_write_packet(usbdev, 0x85, (uint8_t *)&buf_rx[buf_rx_out], len) == len) {
+	if (usbd_ep_write_packet(usbdev, USB_TRACESWO_EPT_OUT, (uint8_t *)&buf_rx[buf_rx_out], len) == len)
+	{
 		buf_rx_out += len;
 		buf_rx_out %= FIFO_SIZE;
 	}

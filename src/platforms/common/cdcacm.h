@@ -32,8 +32,28 @@
 
 #define CDCACM_PACKET_SIZE 	64
 
-#define CDCACM_GDB_ENDPOINT	1
-#define CDCACM_UART_ENDPOINT	3
+/*
+ *	Define the USB endpoints
+ */
+#ifndef CDCACM_GDB_EPT_IN
+#define CDCACM_GDB_EPT_IN 1
+#endif
+#ifndef CDCACM_UART_EPT_IN
+#define CDCACM_UART_EPT_IN 3
+#endif
+
+#ifndef CDCACM_GDB_DATA_EPT_OUT
+#define CDCACM_GDB_DATA_EPT_OUT 0x81
+#endif
+#ifndef CDCACM_GDB_COMM_EPT_OUT
+#define CDCACM_GDB_COMM_EPT_OUT 0x82
+#endif
+#ifndef CDCACM_UART_DATA_EPT_OUT
+#define CDCACM_UART_DATA_EPT_OUT 0x83
+#endif
+#ifndef CDCACM_UART_COMM_EPT_OUT
+#define CDCACM_UART_COMM_EPT_OUT 0x84
+#endif
 
 extern usbd_device *usbdev;
 
