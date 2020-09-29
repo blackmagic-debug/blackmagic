@@ -305,7 +305,6 @@ static bool adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, int recursion, 
 	addr &= 0xfffff000; /* Mask out base address */
 	if (addr == 0) /* No rom table on this AP */
 		return false;
-	uint64_t pidr = adiv5_ap_read_pidr(ap, addr);
 	uint32_t cidr = adiv5_ap_read_id(ap, addr + CIDR0_OFFSET);
 	bool res = false;
 #if defined(ENABLE_DEBUG)
@@ -328,6 +327,7 @@ static bool adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, int recursion, 
 		return false;
 	}
 
+	uint64_t pidr = adiv5_ap_read_pidr(ap, addr);
 	/* Extract Component ID class nibble */
 	uint32_t cid_class = (cidr & CID_CLASS_MASK) >> CID_CLASS_SHIFT;
 
