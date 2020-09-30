@@ -86,6 +86,9 @@
 #define ADIV5_AP_BASE		ADIV5_AP_REG(0xF8)
 #define ADIV5_AP_IDR		ADIV5_AP_REG(0xFC)
 
+/* Known designers seen in SYSROM-PIDR. Ignore Bit 7 from the designer bits*/
+#define AP_DESIGNER_ARM          0x43b
+
 /* AP Control and Status Word (CSW) */
 #define ADIV5_AP_CSW_DBGSWENABLE	(1u << 31)
 /* Bits 30:24 - Prot, Implementation defined, for Cortex-M3: */
