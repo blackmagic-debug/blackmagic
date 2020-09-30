@@ -39,6 +39,7 @@ SRC =			\
 	lpc17xx.c	\
 	lpc15xx.c	\
 	lpc43xx.c	\
+	lpc546xx.c	\
 	kinetis.c	\
 	main.c		\
 	morse.c		\
