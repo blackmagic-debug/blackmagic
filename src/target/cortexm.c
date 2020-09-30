@@ -263,29 +263,7 @@ static void cortexm_priv_free(void *priv)
 	free(priv);
 }
 
-static bool cortexm_forced_halt(target *t)
-{
-	DEBUG_WARN("cortexm_forced_halt\n");
-	target_halt_request(t);
-	platform_srst_set_val(false);
-	uint32_t dhcsr = 0;
-	uint32_t start_time = platform_time_ms();
-	const uint32_t dhcsr_halted_bits = CORTEXM_DHCSR_S_HALT | CORTEXM_DHCSR_S_REGRDY |
-									   CORTEXM_DHCSR_C_HALT | CORTEXM_DHCSR_C_DEBUGEN;
-	/* Try hard to halt the target. STM32F7 in  WFI
-	   needs multiple writes!*/
-	while (platform_time_ms() < start_time + cortexm_wait_timeout) {
-		dhcsr = target_mem_read32(t, CORTEXM_DHCSR);
-		if ((dhcsr & dhcsr_halted_bits) == dhcsr_halted_bits)
-			break;
-		target_halt_request(t);
-	}
-	if ((dhcsr & dhcsr_halted_bits) != dhcsr_halted_bits)
-		return false;
-	return true;
-}
-
-bool cortexm_probe(ADIv5_AP_t *ap, bool forced)
+bool cortexm_probe(ADIv5_AP_t *ap)
 {
 	target *t;
 
@@ -393,14 +371,6 @@ bool cortexm_probe(ADIv5_AP_t *ap, bool forced)
 		target_check_error(t);
 	}
 
-	/* Only force halt if read ROM Table failed and there is no DPv2
-	 * targetid!
-	 * So long, only STM32L0 is expected to enter this cause.
-	 */
-	if (forced && !ap->dp->targetid)
-		if (!cortexm_forced_halt(t))
-			return false;
-
 #define PROBE(x) \
 	do { if ((x)(t)) {target_halt_resume(t, 0); return true;} else target_check_error(t); } while (0)
 
@@ -439,9 +409,6 @@ bool cortexm_attach(target *t)
 	target_check_error(t);
 
 	target_halt_request(t);
-	if (!cortexm_forced_halt(t))
-		return false;
-
 	/* Request halt on reset */
 	target_mem_write32(t, CORTEXM_DEMCR, priv->demcr);
 
@@ -475,6 +442,22 @@ bool cortexm_attach(target *t)
 	target_mem_write32(t, CORTEXM_FPB_CTRL,
 			CORTEXM_FPB_CTRL_KEY | CORTEXM_FPB_CTRL_ENABLE);
 
+	uint32_t dhcsr = target_mem_read32(t, CORTEXM_DHCSR);
+	dhcsr = target_mem_read32(t, CORTEXM_DHCSR);
+	if (dhcsr & CORTEXM_DHCSR_S_RESET_ST) {
+		platform_srst_set_val(false);
+		platform_timeout timeout;
+		platform_timeout_set(&timeout, 1000);
+		while (1) {
+			uint32_t dhcsr = target_mem_read32(t, CORTEXM_DHCSR);
+			if (!(dhcsr & CORTEXM_DHCSR_S_RESET_ST))
+				break;
+			if (platform_timeout_is_expired(&timeout)) {
+				DEBUG_WARN("Error releasing from srst\n");
+				return false;
+			}
+		}
+	}
 	return true;
 }
 
