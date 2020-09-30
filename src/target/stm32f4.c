@@ -197,7 +197,8 @@ char *stm32f4_get_chip_name(uint32_t idcode)
 
 static void stm32f7_detach(target *t)
 {
-	target_mem_write32(t, DBGMCU_CR, t->target_storage);
+	ADIv5_AP_t *ap = cortexm_ap(t);
+	target_mem_write32(t, DBGMCU_CR, ap->ap_storage);
 	cortexm_detach(t);
 }
 
@@ -306,8 +307,6 @@ static bool stm32f4_attach(target *t)
 	bool use_dual_bank = false;
 	target_mem_map_free(t);
 	if (is_f7) {
-		t->target_storage = target_mem_read32(t, DBGMCU_CR);
-		target_mem_write32(t, DBGMCU_CR, DBG_SLEEP);
 		target_add_ram(t, 0x00000000, 0x4000);  /* 16 k ITCM Ram */
 		target_add_ram(t, 0x20000000, 0x20000); /* 128 k DTCM Ram */
 		target_add_ram(t, 0x20020000, 0x60000); /* 384 k Ram */

@@ -181,6 +181,8 @@ struct ADIv5_AP_s {
 	uint32_t idr;
 	uint32_t base;
 	uint32_t csw;
+	uint32_t ap_cortexm_demcr; /* Copy of demcr when starting */
+	uint32_t ap_storage; /* E.g to hold STM32F7 initial DBGMCU_CR value.*/
 };
 
 #if PC_HOSTED == 0

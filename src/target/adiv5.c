@@ -36,6 +36,13 @@
  * are consistently named and accessible when needed in the codebase.
  */
 
+/* Values from ST RM0436 (STM32MP157), 66.9 APx_IDR
+ * and ST RM0438 (STM32L5) 52.3.1, AP_IDR */
+#define ARM_AP_TYPE_AHB  1
+#define ARM_AP_TYPE_APB  3
+#define ARM_AP_TYPE_AXI  4
+#define ARM_AP_TYPE_AHB5 5
+
 /* ROM table CIDR values */
 #define CIDR0_OFFSET    0xFF0 /* DBGCID0 */
 #define CIDR1_OFFSET    0xFF4 /* DBGCID1 */
@@ -299,6 +306,99 @@ uint64_t adiv5_ap_read_pidr(ADIv5_AP_t *ap, uint32_t addr)
 	return pidr;
 }
 
+/* Prepare to read SYSROM and SYSROM PIDR
+ *
+ * Try hard to halt, if not connecting under reset
+ * Request TRCENA and default vector catch
+ * release from reset when connecting under reset.
+ *
+ * E.g. Stm32F7
+ * - fails reading romtable in WFI
+ * - fails with some AP accesses when romtable is read under reset.
+ * - fails reading some ROMTABLE entries w/o TRCENA
+ * - fails reading outside SYSROM when halted from WFI and
+ *   DBGMCU_CR not set.
+ *
+ * Keep a copy of DEMCR at startup to restore with exit, to
+ * not interrupt tracing initialed by the CPU.
+ */
+static bool cortexm_prepare(ADIv5_AP_t *ap)
+{
+	platform_timeout to ;
+	platform_timeout_set(&to, cortexm_wait_timeout);
+	uint32_t dhcsr_ctl = CORTEXM_DHCSR_DBGKEY |	CORTEXM_DHCSR_C_DEBUGEN |
+		CORTEXM_DHCSR_C_HALT;
+	uint32_t dhcsr_valid = CORTEXM_DHCSR_S_HALT | CORTEXM_DHCSR_C_DEBUGEN;
+#ifdef PLATFORM_HAS_DEBUG
+	uint32_t start_time = platform_time_ms();
+#endif
+	uint32_t dhcsr;
+	bool reset_seen = false;
+	while (true) {
+		adiv5_mem_write(ap, CORTEXM_DHCSR, &dhcsr_ctl, sizeof(dhcsr_ctl));
+		dhcsr = adiv5_mem_read32(ap, CORTEXM_DHCSR);
+		/* On a sleeping STM32F7, invalid DHCSR reads with e.g. 0xffffffff and
+		 * 0x0xA05F0000  may happen.
+		 * M23/33 will have S_SDE set when debug is allowed
+		 */
+		if ((dhcsr != 0xffffffff) && /* Invalid read */
+			((dhcsr & 0xf000fff0) == 0)) {/* Check RAZ bits */
+			if ((dhcsr & CORTEXM_DHCSR_S_RESET_ST)  && !reset_seen) {
+				if (connect_assert_srst)
+					break;
+				reset_seen = true;
+				continue;
+			}
+			if ((dhcsr & dhcsr_valid) == dhcsr_valid) { /* Halted */
+				DEBUG_INFO("Halt via DHCSR: success %08" PRIx32 " after %"
+						   PRId32 "ms\n",
+						   dhcsr, platform_time_ms() - start_time);
+			break;
+			}
+		}
+		if (platform_timeout_is_expired(&to)) {
+			DEBUG_WARN("Halt via DHCSR: Failure DHCSR %08" PRIx32 " after % "
+					   PRId32 "ms\nTry again, evt. with longer timeout or "
+					   "connect under reset\n",
+					   dhcsr, platform_time_ms() - start_time);
+			return false;
+		}
+	}
+	ap->ap_cortexm_demcr = adiv5_mem_read32(ap, CORTEXM_DEMCR);
+	uint32_t demcr = CORTEXM_DEMCR_TRCENA | CORTEXM_DEMCR_VC_HARDERR |
+		CORTEXM_DEMCR_VC_CORERESET;
+	adiv5_mem_write(ap, CORTEXM_DEMCR, &demcr, sizeof(demcr));
+	platform_timeout_set(&to, cortexm_wait_timeout);
+	platform_srst_set_val(false);
+	while (1) {
+		dhcsr = adiv5_mem_read32(ap, CORTEXM_DHCSR);
+		if (!(dhcsr & CORTEXM_DHCSR_S_RESET_ST))
+			break;
+		if (platform_timeout_is_expired(&to)) {
+			DEBUG_WARN("Error releasing from srst\n");
+			return false;
+		}
+	}
+	/* Apply device specific settings for successfull Romtable scan
+	 *
+	 * STM32F7 in WFI will not read ROMTABLE when using WFI
+	 */
+	if ((ap->dp->targetid >> 1 & 0x7ff) == 0x20) {
+		uint32_t dbgmcu_cr = 7;
+		uint32_t dbgmcu_cr_addr = 0xE0042004;
+		switch ((ap->dp->targetid >> 16) & 0xfff) {
+		case 0x449:
+		case 0x451:
+		case 0x452:
+			ap->ap_storage = adiv5_mem_read32(ap, dbgmcu_cr_addr);
+			dbgmcu_cr = ap->ap_storage | 7;
+			adiv5_mem_write(ap, dbgmcu_cr_addr, &dbgmcu_cr, sizeof(dbgmcu_cr));
+			break;
+		}
+	}
+	return true;
+}
+
 static bool adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, int recursion, int num_entry)
 {
 	(void) num_entry;
@@ -490,6 +590,26 @@ ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel)
 	DEBUG_INFO("AP %3d: IDR=%08"PRIx32" CFG=%08"PRIx32" BASE=%08" PRIx32
 			   " CSW=%08"PRIx32"\n", apsel, ap->idr, cfg, ap->base, ap->csw);
 #endif
+	if (!apsel && ((ap->idr & 0xf) == ARM_AP_TYPE_AHB)) {
+		/* Test for protected Atmel devices. Access outside DSU fails.
+		 * For protected device, continue with Rom Table anyways.
+		 */
+		adiv5_dp_error(ap->dp);
+		adiv5_mem_read32(ap, CORTEXM_DHCSR);
+		if ( adiv5_dp_error(ap->dp) & ADIV5_DP_CTRLSTAT_STICKYERR) {
+			uint32_t err = adiv5_dp_error(ap->dp);
+			if (err & ADIV5_DP_CTRLSTAT_STICKYERR) {
+				DEBUG_WARN("...\nHit error on DHCSR read. Suspect protected Atmel "
+						   "part, skipping to PIDR check.\n");
+			}
+		} else {
+			if (!cortexm_prepare(ap)) {
+				free(ap);
+				return NULL;
+			}
+		}
+	}
+	adiv5_ap_ref(ap);
 	return ap;
 }
 

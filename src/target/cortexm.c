@@ -265,6 +265,7 @@ static void cortexm_priv_free(void *priv)
 
 static bool cortexm_forced_halt(target *t)
 {
+	DEBUG_WARN("cortexm_forced_halt\n");
 	target_halt_request(t);
 	platform_srst_set_val(false);
 	uint32_t dhcsr = 0;
@@ -490,6 +491,9 @@ void cortexm_detach(target *t)
 	for(i = 0; i < priv->hw_watchpoint_max; i++)
 		target_mem_write32(t, CORTEXM_DWT_FUNC(i), 0);
 
+	/* Restort DEMCR*/
+	ADIv5_AP_t *ap = cortexm_ap(t);
+	target_mem_write32(t, CORTEXM_DEMCR, ap->ap_cortexm_demcr);
 	/* Disable debug */
 	target_mem_write32(t, CORTEXM_DHCSR, CORTEXM_DHCSR_DBGKEY);
 	/* Add some clock cycles to get the CPU running again.*/
