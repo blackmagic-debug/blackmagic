@@ -81,10 +81,13 @@ void platform_init(void)
 			TCK_PIN | TDI_PIN);
 	gpio_mode_setup(JTAG_PORT, GPIO_MODE_INPUT,
 			GPIO_PUPD_NONE, TMS_PIN);
-
+	gpio_set_output_options(JTAG_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ,
+							TCK_PIN | TDI_PIN | TMS_PIN);
 	gpio_mode_setup(TDO_PORT, GPIO_MODE_INPUT,
 			GPIO_PUPD_NONE,
 			TDO_PIN);
+	gpio_set_output_options(TDO_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ,
+							 TDO_PIN| TMS_PIN);
 
 	gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT,
 			GPIO_PUPD_NONE,
