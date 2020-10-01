@@ -252,7 +252,6 @@ static bool stm32h7_flash_unlock(target *t, uint32_t addr)
 	}
 	uint32_t sr = target_mem_read32(t, regbase + FLASH_SR);
 	if (sr & FLASH_SR_ERROR_MASK) {
-		tc_printf(t, "Error 0x%08lx", sr & FLASH_SR_ERROR_MASK);
 		target_mem_write32(t, regbase + FLASH_CCR, sr & FLASH_SR_ERROR_MASK);
 		return false;
 	}
