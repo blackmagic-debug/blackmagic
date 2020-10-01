@@ -117,6 +117,8 @@ static bool swdptap_seq_in_parity(uint32_t *ret, int ticks)
 		DEBUG("%d", (res & (1 << i)) ? 1 : 0);
 #endif
 	*ret = res;
+	/* Terminate the read cycle now */
+	swdptap_turnaround(SWDIO_STATUS_DRIVE);
 	return (parity & 1);
 }
 
