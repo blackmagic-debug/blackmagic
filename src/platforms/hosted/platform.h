@@ -15,6 +15,7 @@ void platform_buffer_flush(void);
 #define SET_RUN_STATE(x)
 
 #define VENDOR_ID_BMP            0x1d50
+#define PRODUCT_ID_BMP_BL        0x6017
 #define PRODUCT_ID_BMP           0x6018
 
 typedef enum bmp_type_s {
