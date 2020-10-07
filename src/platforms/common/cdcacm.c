@@ -58,7 +58,11 @@ static const struct usb_device_descriptor dev = {
 	.bDeviceClass = 0xEF,		/* Miscellaneous Device */
 	.bDeviceSubClass = 2,		/* Common Class */
 	.bDeviceProtocol = 1,		/* Interface Association */
+#ifdef LM4F
+	.bMaxPacketSize0 = 64,		/*Fixed for icdi*/
+#else
 	.bMaxPacketSize0 = 32,
+#endif
 	.idVendor = 0x1D50,
 	.idProduct = 0x6018,
 	.bcdDevice = 0x0100,
