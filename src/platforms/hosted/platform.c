@@ -161,9 +161,13 @@ static int find_debuggers(	BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 		}
 		/* Either serial and/or ident_string match or are not given.
 		 * Check type.*/
-		if ((desc.idVendor == VENDOR_ID_BMP) &&
-			(desc.idProduct == PRODUCT_ID_BMP)) {
-			type = BMP_TYPE_BMP;
+		if (desc.idVendor == VENDOR_ID_BMP) {
+			if (desc.idProduct == PRODUCT_ID_BMP) {
+				type = BMP_TYPE_BMP;
+			} else if (desc.idProduct == PRODUCT_ID_BMP_BL) {
+				DEBUG_WARN("BMP in botloader mode found. Restart or reflash!\n");
+				continue;
+			}
 		} else if ((strstr(manufacturer, "CMSIS")) || (strstr(product, "CMSIS"))) {
 			type = BMP_TYPE_CMSIS_DAP;
 		} else if (desc.idVendor ==  VENDOR_ID_STLINK) {
