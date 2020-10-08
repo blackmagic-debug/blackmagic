@@ -265,9 +265,18 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 static void display_target(int i, target *t, void *context)
 {
 	(void)context;
-	DEBUG_INFO("*** %2d   %c  %s %s\n", i, target_attached(t)?'*':' ',
-		  target_driver_name(t),
-		  (target_core_name(t)) ? target_core_name(t): "");
+	if (!strcmp(target_driver_name(t), "ARM Cortex-M")) {
+		DEBUG_INFO("***%2d%sUnknown %s Designer %3x Partno %3x %s\n",
+			  i, target_attached(t)?" * ":" ",
+			  target_driver_name(t),
+			  target_designer(t),
+			  target_idcode(t),
+			  (target_core_name(t)) ? target_core_name(t): "");
+	} else {
+		DEBUG_INFO("*** %2d   %c  %s %s\n", i, target_attached(t)?'*':' ',
+			  target_driver_name(t),
+			  (target_core_name(t)) ? target_core_name(t): "");
+	}
 }
 
 int cl_execute(BMP_CL_OPTIONS_t *opt)

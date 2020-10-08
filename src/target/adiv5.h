@@ -86,6 +86,19 @@
 #define ADIV5_AP_BASE		ADIV5_AP_REG(0xF8)
 #define ADIV5_AP_IDR		ADIV5_AP_REG(0xFC)
 
+/* Known designers seen in SYSROM-PIDR. Ignore Bit 7 from the designer bits*/
+#define AP_DESIGNER_FREESCALE    0x00e
+#define AP_DESIGNER_TEXAS        0x017
+#define AP_DESIGNER_ATMEL        0x01f
+#define AP_DESIGNER_STM          0x020
+#define AP_DESIGNER_CYPRESS      0x034
+#define AP_DESIGNER_INFINEON     0x041
+#define AP_DESIGNER_NORDIC       0x244
+#define AP_DESIGNER_ARM          0x43b
+/*LPC845 with designer 501. Strange!? */
+#define AP_DESIGNER_SPECULAR     0x501
+#define AP_DESIGNER_ENERGY_MICRO 0x673
+
 /* AP Control and Status Word (CSW) */
 #define ADIV5_AP_CSW_DBGSWENABLE	(1u << 31)
 /* Bits 30:24 - Prot, Implementation defined, for Cortex-M3: */
@@ -181,6 +194,10 @@ struct ADIv5_AP_s {
 	uint32_t idr;
 	uint32_t base;
 	uint32_t csw;
+	uint32_t ap_cortexm_demcr; /* Copy of demcr when starting */
+	uint32_t ap_storage; /* E.g to hold STM32F7 initial DBGMCU_CR value.*/
+	uint16_t ap_designer;
+	uint16_t ap_partno;
 };
 
 #if PC_HOSTED == 0

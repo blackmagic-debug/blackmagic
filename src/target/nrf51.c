@@ -132,7 +132,6 @@ bool nrf51_probe(target *t)
 	if ((info_part != 0xffffffff) && (info_part != 0) &&
 		((info_part & 0x00ff000) == 0x52000)) {
 		uint32_t ram_size = target_mem_read32(t, NRF52_INFO_RAM);
-		t->idcode = info_part;
 		t->driver = "Nordic nRF52";
 		t->target_options |= CORTEXM_TOPT_INHIBIT_SRST;
 		target_add_ram(t, 0x20000000, ram_size * 1024);
