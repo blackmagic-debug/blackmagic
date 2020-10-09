@@ -345,7 +345,7 @@ void remote_adiv5_dp_defaults(ADIv5_DP_t *dp)
 			"Please update BMP firmware for substantial speed increase!\n");
 		return;
 	}
-	if (dp->dev) {
+	if (dp->dp_jd_index < JTAG_MAX_DEVS) {
 		DEBUG_WARN("Falling back to ll as high level JTAG is not yet possible!\n");
 		return;
 	}

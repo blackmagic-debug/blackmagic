@@ -188,15 +188,16 @@ int jtag_scan(const uint8_t *irlens)
 				jtag_devs[i].jd_descr = dev_descr[j].descr;
 				/* Call handler to initialise/probe device further */
 				if(dev_descr[j].handler)
-					dev_descr[j].handler(&jtag_devs[i]);
+					dev_descr[j].handler(i, dev_descr[j].idcode);
 				break;
 			}
 
 	return jtag_dev_count;
 }
 
-void jtag_dev_write_ir(jtag_proc_t *jp, jtag_dev_t *d, uint32_t ir)
+void jtag_dev_write_ir(jtag_proc_t *jp, uint8_t jd_index, uint32_t ir)
 {
+	jtag_dev_t *d = &jtag_devs[jd_index];
 	if(ir == d->current_ir) return;
 	for(int i = 0; i < jtag_dev_count; i++)
 		jtag_devs[i].current_ir = -1;
@@ -209,8 +210,9 @@ void jtag_dev_write_ir(jtag_proc_t *jp, jtag_dev_t *d, uint32_t ir)
 	jtagtap_return_idle();
 }
 
-void jtag_dev_shift_dr(jtag_proc_t *jp, jtag_dev_t *d, uint8_t *dout, const uint8_t *din, int ticks)
+void jtag_dev_shift_dr(jtag_proc_t *jp, uint8_t jd_index, uint8_t *dout, const uint8_t *din, int ticks)
 {
+	jtag_dev_t *d = &jtag_devs[jd_index];
 	jtagtap_shift_dr();
 	jp->jtagtap_tdi_seq(0, ones, d->dr_prescan);
 	if(dout)

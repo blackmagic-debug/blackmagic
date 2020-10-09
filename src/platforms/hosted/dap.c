@@ -339,8 +339,7 @@ uint32_t dap_read_reg(ADIv5_DP_t *dp, uint8_t reg)
 {
 	uint8_t buf[8];
 	uint8_t dap_index = 0;
-	if (dp->dev)
-		dap_index = dp->dev->jd_dev;
+	dap_index = dp->dp_jd_index;
 	buf[0] = ID_DAP_TRANSFER;
 	buf[1] = dap_index;
 	buf[2] = 0x01; // Request size
@@ -358,8 +357,7 @@ void dap_write_reg(ADIv5_DP_t *dp, uint8_t reg, uint32_t data)
 
 	buf[0] = ID_DAP_TRANSFER;
 	uint8_t dap_index = 0;
-	if (dp->dev)
-		dap_index = dp->dev->jd_dev;
+	dap_index = dp->dp_jd_index;
 	buf[1] = dap_index;
 	buf[2] = 0x01; // Request size
 	buf[3] = reg & ~DAP_TRANSFER_RnW;;
@@ -390,8 +388,7 @@ unsigned int dap_read_block(ADIv5_AP_t *ap, void *dest, uint32_t src,
 	uint8_t buf[1024];
 	unsigned int sz = len >> align;
 	uint8_t dap_index = 0;
-	if (ap->dp->dev)
-		dap_index = ap->dp->dev->jd_dev;
+	dap_index = ap->dp->dp_jd_index;
     buf[0] = ID_DAP_TRANSFER_BLOCK;
     buf[1] = dap_index;
     buf[2] =  sz & 0xff;
@@ -426,8 +423,7 @@ unsigned int dap_write_block(ADIv5_AP_t *ap, uint32_t dest, const void *src,
 	uint8_t buf[1024];
 	unsigned int sz = len >> align;
 	uint8_t dap_index = 0;
-	if (ap->dp->dev)
-		dap_index = ap->dp->dev->jd_dev;
+	dap_index = ap->dp->dp_jd_index;
     buf[0] = ID_DAP_TRANSFER_BLOCK;
     buf[1] = dap_index;
     buf[2] =  sz & 0xff;
@@ -527,8 +523,7 @@ static uint8_t *mem_access_setup(ADIv5_AP_t *ap, uint8_t *p,
 		break;
 	}
 	uint8_t dap_index = 0;
-	if (ap->dp->dev)
-		dap_index = ap->dp->dev->jd_dev;
+	dap_index = ap->dp->dp_jd_index;
 	*p++ = ID_DAP_TRANSFER;
 	*p++ = dap_index;
 	*p++ = 3; /* Nr transfers */
@@ -563,8 +558,7 @@ uint32_t dap_ap_read(ADIv5_AP_t *ap, uint16_t addr)
 	uint8_t buf[63], *p = buf;
 	buf[0] = ID_DAP_TRANSFER;
 	uint8_t dap_index = 0;
-	if (ap->dp->dev)
-		dap_index = ap->dp->dev->jd_dev;
+	dap_index = ap->dp->dp_jd_index;
 	*p++ = ID_DAP_TRANSFER;
 	*p++ = dap_index;
 	*p++ = 2; /* Nr transfers */
@@ -584,8 +578,7 @@ void dap_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value)
 	DEBUG_PROBE("dap_ap_write addr %04x value %08x\n", addr, value);
 	uint8_t buf[63], *p = buf;
 	uint8_t dap_index = 0;
-	if (ap->dp->dev)
-		dap_index = ap->dp->dev->jd_dev;
+	dap_index = ap->dp->dp_jd_index;
 	*p++ = ID_DAP_TRANSFER;
 	*p++ = dap_index;
 	*p++ = 2; /* Nr transfers */
