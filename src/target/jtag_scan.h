@@ -27,7 +27,7 @@
 
 typedef struct jtag_dev_s {
 	union {
-		uint8_t dev;
+		uint8_t jd_dev;
 		uint8_t dr_prescan;
 	};
 	uint8_t dr_postscan;
@@ -35,8 +35,8 @@ typedef struct jtag_dev_s {
 	uint8_t ir_len;
 	uint8_t ir_prescan;
 	uint8_t ir_postscan;
-	uint32_t idcode;
-	const char *descr;
+	uint32_t jd_idcode;
+	const char *jd_descr;
 	uint32_t current_ir;
 } jtag_dev_t;
 

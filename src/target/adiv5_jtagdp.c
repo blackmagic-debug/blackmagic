@@ -51,7 +51,7 @@ void adiv5_jtag_dp_handler(jtag_dev_t *dev)
 
 	dp->dev = dev;
 	if ((PC_HOSTED == 0 ) || (!platform_jtag_dp_init(dp))) {
-		dp->idcode = dev->idcode;
+		dp->idcode = dev->jd_idcode;
 		dp->dp_read = fw_adiv5_jtagdp_read;
 		dp->error = adiv5_jtagdp_error;
 		dp->low_access = fw_adiv5_jtagdp_low_access;

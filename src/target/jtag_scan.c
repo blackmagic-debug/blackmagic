@@ -94,7 +94,7 @@ int jtag_scan(const uint8_t *irlens)
 			}
 			jtag_devs[jtag_dev_count].ir_len = *irlens;
 			jtag_devs[jtag_dev_count].ir_prescan = j;
-			jtag_devs[jtag_dev_count].dev = jtag_dev_count;
+			jtag_devs[jtag_dev_count].jd_dev = jtag_dev_count;
 			j += *irlens;
 			irlens++;
 			jtag_dev_count++;
@@ -117,7 +117,7 @@ int jtag_scan(const uint8_t *irlens)
 				if(jtag_devs[jtag_dev_count].ir_len == 1) break;
 				jtag_devs[++jtag_dev_count].ir_len = 1;
 				jtag_devs[jtag_dev_count].ir_prescan = j;
-				jtag_devs[jtag_dev_count].dev = jtag_dev_count;
+				jtag_devs[jtag_dev_count].jd_dev = jtag_dev_count;
 			} else jtag_devs[jtag_dev_count].ir_len++;
 			j++;
 		}
@@ -169,9 +169,9 @@ int jtag_scan(const uint8_t *irlens)
 	jtagtap_shift_dr();
 	for(i = 0; i < jtag_dev_count; i++) {
 		if(!jtag_proc.jtagtap_next(0, 1)) continue;
-		jtag_devs[i].idcode = 1;
+		jtag_devs[i].jd_idcode = 1;
 		for(j = 2; j; j <<= 1)
-			if(jtag_proc.jtagtap_next(0, 1)) jtag_devs[i].idcode |= j;
+			if(jtag_proc.jtagtap_next(0, 1)) jtag_devs[i].jd_idcode |= j;
 
 	}
 	DEBUG_INFO("Return to Run-Test/Idle\n");
@@ -181,11 +181,11 @@ int jtag_scan(const uint8_t *irlens)
 	/* Check for known devices and handle accordingly */
 	for(i = 0; i < jtag_dev_count; i++)
 		for(j = 0; dev_descr[j].idcode; j++)
-			if((jtag_devs[i].idcode & dev_descr[j].idmask) ==
+			if((jtag_devs[i].jd_idcode & dev_descr[j].idmask) ==
 			   dev_descr[j].idcode) {
 				jtag_devs[i].current_ir = -1;
 				/* Save description in table */
-				jtag_devs[i].descr = dev_descr[j].descr;
+				jtag_devs[i].jd_descr = dev_descr[j].descr;
 				/* Call handler to initialise/probe device further */
 				if(dev_descr[j].handler)
 					dev_descr[j].handler(&jtag_devs[i]);
