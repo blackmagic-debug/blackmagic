@@ -126,12 +126,10 @@ static void _respondS(char respCode, const char *s)
 }
 
 static ADIv5_DP_t remote_dp = {
-	.dp_read = firmware_swdp_read,
 	.ap_read = firmware_ap_read,
 	.ap_write = firmware_ap_write,
 	.mem_read = firmware_mem_read,
 	.mem_write_sized = firmware_mem_write_sized,
-	.low_access = firmware_swdp_low_access,
 };
 
 
@@ -144,6 +142,8 @@ void remotePacketProcessSWD(uint8_t i, char *packet)
 	switch (packet[1]) {
     case REMOTE_INIT: /* SS = initialise =============================== */
 		if (i==2) {
+			remote_dp.dp_read = firmware_swdp_read;
+			remote_dp.low_access = firmware_swdp_low_access;
 			swdptap_init();
 			_respond(REMOTE_RESP_OK, 0);
 		} else {
@@ -192,9 +192,9 @@ void remotePacketProcessJTAG(uint8_t i, char *packet)
 
 	switch (packet[1]) {
     case REMOTE_INIT: /* JS = initialise ============================= */
-		jtagtap_init();
 		remote_dp.dp_read = fw_adiv5_jtagdp_read;
 		remote_dp.low_access = fw_adiv5_jtagdp_low_access;
+		jtagtap_init();
 		_respond(REMOTE_RESP_OK, 0);
 		break;
 
