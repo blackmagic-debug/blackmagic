@@ -260,8 +260,10 @@ void adiv5_dp_write(ADIv5_DP_t *dp, uint16_t addr, uint32_t value);
 void adiv5_dp_init(ADIv5_DP_t *dp);
 void platform_adiv5_dp_defaults(ADIv5_DP_t *dp);
 ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel);
+void remote_jtag_dev(const jtag_dev_t *jtag_dev);
 void adiv5_ap_ref(ADIv5_AP_t *ap);
 void adiv5_ap_unref(ADIv5_AP_t *ap);
+void platform_add_jtag_dev(const int dev_index, const jtag_dev_t *jtag_dev);
 
 void adiv5_jtag_dp_handler(uint8_t jd_index, uint32_t j_idcode);
 int platform_jtag_dp_init(ADIv5_DP_t *dp);

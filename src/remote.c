@@ -189,7 +189,7 @@ void remotePacketProcessJTAG(uint8_t i, char *packet)
 	uint64_t DO;
 	uint8_t ticks;
 	uint64_t DI;
-
+	jtag_dev_t jtag_dev;
 	switch (packet[1]) {
     case REMOTE_INIT: /* JS = initialise ============================= */
 		remote_dp.dp_read = fw_adiv5_jtagdp_read;
@@ -238,6 +238,23 @@ void remotePacketProcessJTAG(uint8_t i, char *packet)
 		} else {
 			uint32_t dat=jtag_proc.jtagtap_next( (packet[2]=='1'), (packet[3]=='1'));
 			_respond(REMOTE_RESP_OK,dat);
+		}
+		break;
+
+    case REMOTE_ADD_JTAG_DEV: /* JJ = fill firmware jtag_devs */
+		if (i < 22) {
+			_respond(REMOTE_RESP_ERR,REMOTE_ERROR_WRONGLEN);
+		} else {
+			memset(&jtag_dev, 0, sizeof(jtag_dev));
+			uint8_t index        = remotehston(2, &packet[ 2]);
+			jtag_dev.dr_prescan  = remotehston(2, &packet[ 4]);
+			jtag_dev.dr_postscan = remotehston(2, &packet[ 6]);
+			jtag_dev.ir_len      = remotehston(2, &packet[ 8]);
+			jtag_dev.ir_prescan  = remotehston(2, &packet[10]);
+			jtag_dev.ir_postscan = remotehston(2, &packet[12]);
+			jtag_dev.current_ir  = remotehston(8, &packet[14]);
+			jtag_add_device(index, &jtag_dev);
+			_respond(REMOTE_RESP_OK, 0);
 		}
 		break;
 
@@ -311,6 +328,14 @@ void remotePacketProcessHL(uint8_t i, char *packet)
 	switch (index) {
 	case REMOTE_HL_CHECK: /* HC = Check availability of HL commands*/
 		_respond(REMOTE_RESP_OK, 0);
+		break;
+    case REMOTE_HL_JTAG_DEV: /* HJ for jtag device to use */
+		if (i < 4) {
+			_respond(REMOTE_RESP_ERR,REMOTE_ERROR_WRONGLEN);
+		} else {
+			remote_dp.dp_jd_index = remotehston(2, &packet[2]);
+			_respond(REMOTE_RESP_OK, 0);
+		}
 		break;
 	case REMOTE_DP_READ:  /* Hd = Read from DP register */
 		packet += 2;

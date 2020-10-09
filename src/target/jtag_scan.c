@@ -36,6 +36,16 @@ int jtag_dev_count;
 /* bucket of ones for don't care TDI */
 static const uint8_t ones[] = "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF";
 
+#if PC_HOSTED == 0
+void jtag_add_device(const int dev_index, const jtag_dev_t *jtag_dev)
+{
+	if (dev_index == 0)
+		memset(&jtag_devs, 0, sizeof(jtag_devs));
+	memcpy(&jtag_devs[dev_index], jtag_dev, sizeof(jtag_dev_t));
+	jtag_dev_count = dev_index + 1;
+}
+#endif
+
 /* Scan JTAG chain for devices, store IR length and IDCODE (if present).
  * Reset TAP state machine.
  * Select Shift-IR state.
@@ -177,6 +187,11 @@ int jtag_scan(const uint8_t *irlens)
 	DEBUG_INFO("Return to Run-Test/Idle\n");
 	jtag_proc.jtagtap_next(1, 1);
 	jtagtap_return_idle();
+#if PC_HOSTED == 1
+	/*Transfer needed device information to firmware jtag_devs*/
+	for(i = 0; i < jtag_dev_count; i++)
+		platform_add_jtag_dev(i, &jtag_devs[i]);
+#endif
 
 	/* Check for known devices and handle accordingly */
 	for(i = 0; i < jtag_dev_count; i++)
