@@ -57,7 +57,7 @@ static int stm32h7_flash_erase(struct target_flash *f, target_addr addr,
 static int stm32h7_flash_write(struct target_flash *f,
                                target_addr dest, const void *src, size_t len);
 
-static const char stm32h74_driver_str[] = "STM32H74x";
+static const char stm32h7_driver_str[] = "STM32H7";
 
 enum stm32h7_regs
 {
@@ -142,14 +142,14 @@ enum stm32h7_regs
 #define D3DBGCKEN		(1 << 22)
 
 
-#define FLASH_SIZE_REG 	0x1ff1e880
-
 #define BANK1_START 		0x08000000
 #define NUM_SECTOR_PER_BANK 8
 #define FLASH_SECTOR_SIZE 	0x20000
 #define BANK2_START         0x08100000
 enum ID_STM32H7 {
-	ID_STM32H74x  = 0x450,
+	ID_STM32H74x  = 0x450,      /* RM0433, RM0399 */
+	ID_STM32H7Bx  = 0x480,      /* RM0455 */
+	ID_STM32H72x  = 0x483,      /* RM0468 */
 };
 
 struct stm32h7_flash {
@@ -221,11 +221,12 @@ static void stm32h7_detach(target *t)
 
 bool stm32h7_probe(target *t)
 {
-	if (t->idcode == ID_STM32H74x) {
-		t->driver = stm32h74_driver_str;
+	uint32_t idcode = t->idcode;
+	if (idcode == ID_STM32H74x || idcode == ID_STM32H7Bx || idcode == ID_STM32H72x) {
+		t->driver = stm32h7_driver_str;
 		t->attach = stm32h7_attach;
 		t->detach = stm32h7_detach;
-		target_add_commands(t, stm32h7_cmd_list, stm32h74_driver_str);
+		target_add_commands(t, stm32h7_cmd_list, stm32h7_driver_str);
 		t->target_storage = target_mem_read32(t, DBGMCU_CR);
 		/* RM0433 Rev 4 is not really clear, what bits are needed in DBGMCU_CR.
 		 * Maybe more flags needed?
@@ -437,7 +438,12 @@ static bool stm32h7_uid(target *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
+
 	uint32_t uid = 0x1ff1e800;
+	if (t->idcode == ID_STM32H7Bx) {
+		uid = 0x08fff800;  /* 7B3/7A3/7B0 */
+	}
+
 	int i;
 	tc_printf(t, "0x");
 	for (i = 0; i < 12; i = i + 4) {
@@ -553,21 +559,28 @@ static bool stm32h7_cmd_rev(target *t, int argc, const char **argv)
 	switch (dev_id) {
 	case 0x450:
 		tc_printf(t, "STM32H742/743/753/750\n");
+
+		/* Print revision */
+		char rev = '?';
+		for (size_t i = 0;
+			 i < sizeof(stm32h7xx_revisions)/sizeof(struct stm32h7xx_rev); i++) {
+			/* Check for matching revision */
+			if (stm32h7xx_revisions[i].rev_id == rev_id) {
+				rev = stm32h7xx_revisions[i].revision;
+			}
+		}
+		tc_printf(t, "Revision %c\n", rev);
+		break;
+
+	case 0x480:
+		tc_printf(t, "STM32H7B3/7A3/7B0\n");
+		break;
+	case 0x483:
+		tc_printf(t, "STM32H723/733/725/735/730\n");
 		break;
 	default:
 		tc_printf(t, "Unknown STM32H7. This driver may not support it!\n");
 	}
-
-	/* Print revision */
-	char rev = '?';
-	for (size_t i = 0;
-		 i < sizeof(stm32h7xx_revisions)/sizeof(struct stm32h7xx_rev); i++) {
-		/* Check for matching revision */
-		if (stm32h7xx_revisions[i].rev_id == rev_id) {
-			rev = stm32h7xx_revisions[i].revision;
-		}
-	}
-	tc_printf(t, "Revision %c\n", rev);
 
 	return true;
 }
