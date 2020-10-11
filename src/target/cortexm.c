@@ -55,6 +55,13 @@
 #include <fcntl.h>
 #endif
 
+static bool NoHalt = false;
+void target_set_no_halt(bool enable) {
+	NoHalt = enable;
+}
+bool target_get_no_halt(void) {
+	return NoHalt;
+}
 static const char cortexm_driver_str[] = "ARM Cortex-M";
 
 static bool cortexm_vector_catch(target *t, int argc, char *argv[]);
@@ -488,7 +495,9 @@ bool cortexm_attach(target *t)
 	/* Clear any pending fault condition */
 	target_check_error(t);
 
-	target_halt_request(t);
+	if ( !NoHalt ) {
+		target_halt_request(t);
+	}
 	/* Request halt on reset */
 	target_mem_write32(t, CORTEXM_DEMCR, priv->demcr);
 

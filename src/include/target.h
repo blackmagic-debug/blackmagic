@@ -49,6 +49,8 @@ target *target_attach(target *t, struct target_controller *);
 target *target_attach_n(int n, struct target_controller *);
 void target_detach(target *t);
 bool target_attached(target *t);
+void target_set_no_halt(bool enable);
+bool target_get_no_halt(void);
 const char *target_driver_name(target *t);
 const char *target_core_name(target *t);
 unsigned int target_designer(target *t);

@@ -47,6 +47,7 @@ static bool cmd_frequency(target *t, int argc, char **argv);
 static bool cmd_targets(target *t, int argc, char **argv);
 static bool cmd_morse(target *t, int argc, char **argv);
 static bool cmd_halt_timeout(target *t, int argc, const char **argv);
+static bool cmd_no_halt(target *t, int argc, const char **argv);
 static bool cmd_connect_srst(target *t, int argc, const char **argv);
 static bool cmd_hard_srst(target *t, int argc, const char **argv);
 #ifdef PLATFORM_HAS_POWER_SWITCH
@@ -69,6 +70,7 @@ const struct command_s cmd_list[] = {
 	{"targets", (cmd_handler)cmd_targets, "Display list of available targets" },
 	{"morse", (cmd_handler)cmd_morse, "Display morse error message" },
 	{"halt_timeout", (cmd_handler)cmd_halt_timeout, "Timeout (ms) to wait until Cortex-M is halted: (Default 2000)" },
+	{"no_halt", (cmd_handler)cmd_no_halt, "Do not halt target on attach: (enable|disable)"},
 	{"connect_srst", (cmd_handler)cmd_connect_srst, "Configure connect under SRST: (enable|disable)" },
 	{"hard_srst", (cmd_handler)cmd_hard_srst, "Force a pulse on the hard SRST line - disconnects target" },
 #ifdef PLATFORM_HAS_POWER_SWITCH
@@ -372,6 +374,29 @@ static bool cmd_halt_timeout(target *t, int argc, const char **argv)
 	return true;
 }
 
+static bool cmd_no_halt(target *t, int argc, const char **argv)
+{
+	(void)t;
+	if (argc == 1)
+	{
+		gdb_outf("No halt: %s\n",
+				 target_get_no_halt() ? "enabled" : "disabled");
+	}
+	else if (argc == 2)
+	{
+		bool want_enable = false;
+		if (parse_enable_or_disable(argv[1], &want_enable))
+		{
+			target_set_no_halt(want_enable);
+			gdb_outf("%s no halt\n", want_enable ? "Enabling" : "Disabling");
+		}
+	}
+	else
+	{
+		gdb_outf("Unrecognized command format\n");
+	}
+	return true;
+}
 static bool cmd_hard_srst(target *t, int argc, const char **argv)
 {
 	(void)t;
