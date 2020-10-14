@@ -409,6 +409,15 @@ static bool adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, int recursion, 
 	if (addr == 0) /* No rom table on this AP */
 		return false;
 	uint32_t cidr = adiv5_ap_read_id(ap, addr + CIDR0_OFFSET);
+	if ((cidr & ~CID_CLASS_MASK) != CID_PREAMBLE) {
+		/* Maybe caused by a not halted CortexM */
+		if (!ap->apsel && ((ap->idr & 0xf) == ARM_AP_TYPE_AHB)) {
+			if (!cortexm_prepare(ap))
+				return false; /* Halting failed! */
+			/* CPU now halted, read cidr again. */
+			cidr = adiv5_ap_read_id(ap, addr + CIDR0_OFFSET);
+		}
+	}
 	bool res = false;
 #if defined(ENABLE_DEBUG)
 	char indent[recursion + 1];
@@ -454,6 +463,10 @@ static bool adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, int recursion, 
 		if (recursion == 0) {
 			ap->ap_designer = designer;
 			ap->ap_partno   = partno;
+			if ((ap->ap_designer == AP_DESIGNER_ATMEL) && (ap->ap_partno == 0xcd0)) {
+				cortexm_probe(ap);
+				return true;
+			}
 		}
 		for (int i = 0; i < 960; i++) {
 			adiv5_dp_error(ap->dp);
@@ -598,25 +611,6 @@ ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel)
 	DEBUG_INFO("AP %3d: IDR=%08"PRIx32" CFG=%08"PRIx32" BASE=%08" PRIx32
 			   " CSW=%08"PRIx32"\n", apsel, ap->idr, cfg, ap->base, ap->csw);
 #endif
-	if (!apsel && ((ap->idr & 0xf) == ARM_AP_TYPE_AHB)) {
-		/* Test for protected Atmel devices. Access outside DSU fails.
-		 * For protected device, continue with Rom Table anyways.
-		 */
-		adiv5_dp_error(ap->dp);
-		adiv5_mem_read32(ap, CORTEXM_DHCSR);
-		if ( adiv5_dp_error(ap->dp) & ADIV5_DP_CTRLSTAT_STICKYERR) {
-			uint32_t err = adiv5_dp_error(ap->dp);
-			if (err & ADIV5_DP_CTRLSTAT_STICKYERR) {
-				DEBUG_WARN("...\nHit error on DHCSR read. Suspect protected Atmel "
-						   "part, skipping to PIDR check.\n");
-			}
-		} else {
-			if (!cortexm_prepare(ap)) {
-				free(ap);
-				return NULL;
-			}
-		}
-	}
 	adiv5_ap_ref(ap);
 	return ap;
 }
