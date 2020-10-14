@@ -847,8 +847,9 @@ static bool samd_cmd_ssb(target *t, int argc, const char **argv)
 		if (target_check_error(t))
 			return -1;
 
-	tc_printf(t, "Set the security bit! "
-		  "You will need to issue 'monitor erase_mass' to clear this.\n");
+	tc_printf(t, "Security bit set! "
+		  "Scan again, attach and issue 'monitor erase_mass' to reset.\n");
 
+	target_reset(t);
 	return true;
 }
