@@ -174,15 +174,8 @@ typedef struct ADIv5_DP_s {
 	void (*mem_read)(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len);
 	void (*mem_write_sized)(ADIv5_AP_t *ap, uint32_t dest, const void *src,
 							size_t len, enum align align);
-#if PC_HOSTED == 1
-	jtag_dev_t *dev;
+	uint8_t dp_jd_index;
 	uint8_t fault;
-#else
-	union {
-		jtag_dev_t *dev;
-		uint8_t fault;
-	};
-#endif
 } ADIv5_DP_t;
 
 struct ADIv5_AP_s {
@@ -267,10 +260,12 @@ void adiv5_dp_write(ADIv5_DP_t *dp, uint16_t addr, uint32_t value);
 void adiv5_dp_init(ADIv5_DP_t *dp);
 void platform_adiv5_dp_defaults(ADIv5_DP_t *dp);
 ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel);
+void remote_jtag_dev(const jtag_dev_t *jtag_dev);
 void adiv5_ap_ref(ADIv5_AP_t *ap);
 void adiv5_ap_unref(ADIv5_AP_t *ap);
+void platform_add_jtag_dev(const int dev_index, const jtag_dev_t *jtag_dev);
 
-void adiv5_jtag_dp_handler(jtag_dev_t *dev);
+void adiv5_jtag_dp_handler(uint8_t jd_index, uint32_t j_idcode);
 int platform_jtag_dp_init(ADIv5_DP_t *dp);
 
 void adiv5_mem_write(ADIv5_AP_t *ap, uint32_t dest, const void *src, size_t len);

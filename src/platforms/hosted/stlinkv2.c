@@ -1041,13 +1041,13 @@ int jtag_scan_stlinkv2(bmp_info_t *info, const uint8_t *irlens)
 	jtag_dev_count = stlink_read_idcodes(info, idcodes);
 	/* Check for known devices and handle accordingly */
 	for(int i = 0; i < jtag_dev_count; i++)
-		jtag_devs[i].idcode = idcodes[i];
+		jtag_devs[i].jd_idcode = idcodes[i];
 	for(int i = 0; i < jtag_dev_count; i++)
 		for(int j = 0; dev_descr[j].idcode; j++)
-			if((jtag_devs[i].idcode & dev_descr[j].idmask) ==
+			if((jtag_devs[i].jd_idcode & dev_descr[j].idmask) ==
 			   dev_descr[j].idcode) {
 				if(dev_descr[j].handler)
-					dev_descr[j].handler(&jtag_devs[i]);
+					dev_descr[j].handler(i, dev_descr[j].idcode);
 				break;
 			}
 

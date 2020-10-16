@@ -76,6 +76,7 @@
 #define REMOTE_VOLTAGE      'V'
 #define REMOTE_SRST_SET     'Z'
 #define REMOTE_SRST_GET     'z'
+#define REMOTE_ADD_JTAG_DEV 'J'
 
 /* Protocol response options */
 #define REMOTE_RESP_OK     'K'
@@ -85,6 +86,7 @@
 
 /* High level protocol elements */
 #define REMOTE_HL_CHECK     'C'
+#define REMOTE_HL_JTAG_DEV  'J'
 #define REMOTE_HL_PACKET 'H'
 #define REMOTE_DP_READ      'd'
 #define REMOTE_LOW_ACCESS   'L'
@@ -137,17 +139,29 @@
 
 #define REMOTE_JTAG_NEXT (char []){ REMOTE_SOM, REMOTE_JTAG_PACKET, REMOTE_NEXT, \
                                        '%','c','%','c',REMOTE_EOM, 0 }
-
 /* HL protocol elements */
 #define HEX '%', '0', '2', 'x'
 #define HEX_U32(x) '%', '0', '8', 'x'
 #define CHR(x) '%', 'c'
 
+#define REMOTE_JTAG_ADD_DEV_STR (char []){ REMOTE_SOM, REMOTE_JTAG_PACKET,\
+			REMOTE_ADD_JTAG_DEV,											\
+			'%','0','2','x', /* index */								\
+			'%','0','2','x', /* dr_prescan */							\
+			'%','0','2','x', /*	dr_postscan	*/							\
+			'%','0','2','x', /* ir_len */								\
+			'%','0','2','x', /* ir_prescan */							\
+			'%','0','2','x', /* ir_postscan */							\
+			HEX_U32(current_ir), /* current_ir */						\
+			REMOTE_EOM, 0}
+
 #define REMOTE_HL_CHECK_STR (char []){ REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_HL_CHECK, REMOTE_EOM, 0 }
+#define REMOTE_HL_JTAG_DEV_STR (char []){ REMOTE_SOM, REMOTE_HL_PACKET, \
+			REMOTE_HL_JTAG_DEV, '%', '0', '2', 'x', REMOTE_EOM, 0 }
 #define REMOTE_MEM_READ_STR (char []){ REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_MEM_READ, \
 			HEX_U32(address), HEX_U32(count), REMOTE_EOM, 0 }
 #define REMOTE_DP_READ_STR (char []){ REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_DP_READ, \
-			'f', 'f','%', '0', '4', 'x', REMOTE_EOM, 0 }
+			'%', '0', '4', 'x', REMOTE_EOM, 0 }
 #define REMOTE_LOW_ACCESS_STR (char []){ REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_LOW_ACCESS, \
 			'%','0', '2', 'x', '%', '0', '4', 'x', HEX_U32(csw), REMOTE_EOM, 0 }
 #define REMOTE_AP_READ_STR (char []){ REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_AP_READ, \

@@ -392,6 +392,12 @@ int platform_swdptap_init(void)
 	return -1;
 }
 
+void platform_add_jtag_dev(int i, const jtag_dev_t *jtag_dev)
+{
+	if (info.bmp_type == BMP_TYPE_BMP)
+		remote_add_jtag_dev(i, jtag_dev);
+}
+
 int platform_jtag_scan(const uint8_t *lrlens)
 {
 	switch (info.bmp_type) {

@@ -45,6 +45,5 @@ bool platform_srst_get_val(void);
 bool platform_target_get_power(void);
 void platform_target_set_power(bool power);
 void platform_request_boot(void);
-
 #endif
 

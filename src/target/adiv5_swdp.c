@@ -39,6 +39,7 @@ int adiv5_swdp_scan(void)
 
 	target_list_free();
 	ADIv5_DP_t *dp = (void*)calloc(1, sizeof(*dp));
+	dp->dp_jd_index = JTAG_MAX_DEVS; /* Tag for BMP_REMOTE */
 	if (!dp) {			/* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return -1;

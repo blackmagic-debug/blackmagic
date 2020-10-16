@@ -336,8 +336,7 @@ static void remote_ap_mem_write_sized(
 void remote_adiv5_dp_defaults(ADIv5_DP_t *dp)
 {
 	uint8_t construct[REMOTE_MAX_MSG_SIZE];
-	int s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE, "%s",
-					 REMOTE_HL_CHECK_STR);
+	int s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE, REMOTE_HL_CHECK_STR);
 	platform_buffer_write(construct, s);
 	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
 	if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
@@ -345,10 +344,38 @@ void remote_adiv5_dp_defaults(ADIv5_DP_t *dp)
 			"Please update BMP firmware for substantial speed increase!\n");
 		return;
 	}
+	if (dp->dp_jd_index < JTAG_MAX_DEVS) {
+		s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE, REMOTE_HL_JTAG_DEV_STR,
+				 dp->dp_jd_index);
+		platform_buffer_write(construct, s);
+		s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
+		if ((!s) || (construct[0] != REMOTE_RESP_OK)) {
+			DEBUG_WARN(
+				"Please update BMP firmware to allow high level jtag commands!\n");
+			return;
+		}
+	}
 	dp->low_access = remote_adiv5_low_access;
 	dp->dp_read    = remote_adiv5_dp_read;
 	dp->ap_write   = remote_adiv5_ap_write;
 	dp->ap_read    = remote_adiv5_ap_read;
 	dp->mem_read   = remote_ap_mem_read;
 	dp->mem_write_sized = remote_ap_mem_write_sized;
+}
+
+void remote_add_jtag_dev(int i, const jtag_dev_t *jtag_dev)
+{
+	uint8_t construct[REMOTE_MAX_MSG_SIZE];
+	int s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE,
+					 REMOTE_JTAG_ADD_DEV_STR,
+					 i,
+					 jtag_dev->dr_prescan,
+					 jtag_dev->dr_postscan,
+					 jtag_dev->ir_len,
+					 jtag_dev->ir_prescan,
+					 jtag_dev->ir_postscan,
+					 jtag_dev->current_ir);
+	platform_buffer_write(construct, s);
+	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
+	/* No check for error here. Done in remote_adiv5_dp_defaults!*/
 }
