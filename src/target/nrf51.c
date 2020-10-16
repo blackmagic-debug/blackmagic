@@ -378,6 +378,12 @@ const struct command_s nrf51_mdm_cmd_list[] = {
 	{NULL, NULL, NULL}
 };
 
+#define MDM_POWER_EN ADIV5_DP_REG(0x01)
+#define MDM_SELECT_AP ADIV5_DP_REG(0x02)
+#define MDM_STATUS  ADIV5_AP_REG(0x08)
+#define MDM_CONTROL ADIV5_AP_REG(0x04)
+#define MDM_PROT_EN  ADIV5_AP_REG(0x0C)
+
 void nrf51_mdm_probe(ADIv5_AP_t *ap)
 {
 	switch(ap->idr) {
@@ -396,17 +402,15 @@ void nrf51_mdm_probe(ADIv5_AP_t *ap)
 	t->priv = ap;
 	t->priv_free = (void*)adiv5_ap_unref;
 
-	t->driver = "Nordic nRF52 Access Port";
+	uint32_t status = adiv5_ap_read(ap, MDM_PROT_EN);
+	status = adiv5_ap_read(ap, MDM_PROT_EN);
+	if (status)
+		t->driver = "Nordic nRF52 Access Port";
+	else
+		t->driver = "Nordic nRF52 Access Port (protected)";
 	t->regs_size = 4;
 	target_add_commands(t, nrf51_mdm_cmd_list, t->driver);
 }
-
-#define MDM_POWER_EN ADIV5_DP_REG(0x01)
-#define MDM_SELECT_AP ADIV5_DP_REG(0x02)
-#define MDM_STATUS  ADIV5_AP_REG(0x08)
-#define MDM_CONTROL ADIV5_AP_REG(0x04)
-#define MDM_PROT_EN  ADIV5_AP_REG(0x0C)
-
 
 static bool nrf51_mdm_cmd_erase_mass(target *t, int argc, const char **argv)
 {
