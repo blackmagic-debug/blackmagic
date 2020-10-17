@@ -397,7 +397,7 @@ unsigned int dap_read_block(ADIv5_AP_t *ap, void *dest, uint32_t src,
     dbg_dap_cmd(buf, 1023, 5 + 1);
 	unsigned int transferred = buf[0] + (buf[1] << 8);
 	if (buf[2] >= DAP_TRANSFER_FAULT) {
-		DEBUG_WARN("dap_read_block @ %08 "PRIx32 " fault -> line reset\n", src);
+		DEBUG_WARN("dap_read_block @ %08" PRIx32 " fault -> line reset\n", src);
 		dap_line_reset();
 	}
 	if (sz != transferred) {

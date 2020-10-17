@@ -379,6 +379,10 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 	switch (ap->ap_designer) {
 	case AP_DESIGNER_FREESCALE:
 		PROBE(kinetis_probe);
+		if (ap->ap_partno == 0x88c) {
+			t->driver = "MIMXRT10xx(no flash)";
+			target_halt_resume(t, 0);
+		}
 		break;
 	case AP_DESIGNER_STM:
 		PROBE(stm32f1_probe);
@@ -386,6 +390,10 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 		PROBE(stm32h7_probe);
 		PROBE(stm32l0_probe);
 		PROBE(stm32l4_probe);
+		if (ap->ap_partno == 0x472) {
+			t->driver = "STM32L552(no flash)";
+			target_halt_resume(t, 0);
+		}
 		break;
 	case AP_DESIGNER_CYPRESS:
 		DEBUG_WARN("Unhandled Cypress device\n");
@@ -432,6 +440,8 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 		PROBE(lpc17xx_probe);
 	}
 #undef PROBE
+	/* Restart the CortexM we stopped for Romtable scan. Allow pure debug.*/
+	target_halt_resume(t, 0);
 	return true;
 }
 
