@@ -161,7 +161,7 @@
 #define REMOTE_MEM_READ_STR (char []){ REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_MEM_READ, \
 			HEX_U32(address), HEX_U32(count), REMOTE_EOM, 0 }
 #define REMOTE_DP_READ_STR (char []){ REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_DP_READ, \
-			'%', '0', '4', 'x', REMOTE_EOM, 0 }
+			'f', 'f', '%', '0', '4', 'x', REMOTE_EOM, 0 }
 #define REMOTE_LOW_ACCESS_STR (char []){ REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_LOW_ACCESS, \
 			'%','0', '2', 'x', '%', '0', '4', 'x', HEX_U32(csw), REMOTE_EOM, 0 }
 #define REMOTE_AP_READ_STR (char []){ REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_AP_READ, \
