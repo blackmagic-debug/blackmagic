@@ -336,7 +336,8 @@ static void remote_ap_mem_write_sized(
 void remote_adiv5_dp_defaults(ADIv5_DP_t *dp)
 {
 	uint8_t construct[REMOTE_MAX_MSG_SIZE];
-	int s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE, REMOTE_HL_CHECK_STR);
+	int s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE, "%s",
+					 REMOTE_HL_CHECK_STR);
 	platform_buffer_write(construct, s);
 	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
 	if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
