@@ -158,6 +158,7 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 	int c;
 	opt->opt_target_dev = 1;
 	opt->opt_flash_size = 16 * 1024 *1024;
+	opt->opt_flash_start = 0xffffffff;
 	while((c = getopt(argc, argv, "eEhHv:d:s:I:c:CnltVta:S:jpP:rR")) != -1) {
 		switch(c) {
 		case 'c':
@@ -362,7 +363,7 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 			break;
 		}
 	}
-	if (opt->opt_flash_start < flash_start)
+	if (opt->opt_flash_start == 0xffffffff)
 		opt->opt_flash_start = flash_start;
 	if (opt->opt_mode == BMP_MODE_TEST)
 		goto target_detach;

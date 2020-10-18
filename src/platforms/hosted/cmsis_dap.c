@@ -51,7 +51,7 @@ static int report_size = 512 + 1; // TODO: read actual report size
 /* LPC845 Breakout Board Rev. 0 report invalid response with > 65 bytes */
 int dap_init(bmp_info_t *info)
 {
-	printf("dap_init\n");
+	DEBUG_INFO("dap_init\n");
 	if (hid_init())
 		return -1;
 	int size = strlen(info->serial);
