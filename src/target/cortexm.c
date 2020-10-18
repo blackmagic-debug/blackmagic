@@ -409,12 +409,6 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 		PROBE(samd_probe);
 		PROBE(samx5x_probe);
 		break;
-	case AP_DESIGNER_ARM:
-		if (ap->ap_partno == 0x4c3)  /* Care for STM32F1 clones */
-			PROBE(stm32f1_probe);
-		PROBE(sam3x_probe);
-		PROBE(lpc11xx_probe); /* LPC24C11 */
-		break;
 	case AP_DESIGNER_ENERGY_MICRO:
 		PROBE(efm32_probe);
 		break;
@@ -425,16 +419,27 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 		PROBE(lpc11xx_probe); /* LPC845 */
 		break;
 	default:
+		if (ap->ap_designer != AP_DESIGNER_ARM) {
+			/* Report unexpected designers */
 #if PC_HOSTED == 0
-        gdb_outf("Please report Designer %3x and Partno %3x and the probed "
-				 "device\n", ap->ap_designer, ap->ap_partno);
+				gdb_outf("Please report Designer %3x and Partno %3x and the "
+						 "probed device\n", ap->ap_designer, ap->ap_partno);
 #else
-		DEBUG_WARN("Please report Designer %3x and Partno %3x and the probed "
-				 "device\n", ap->ap_designer, ap->ap_partno);
+				DEBUG_WARN("Please report Designer %3x and Partno %3x and the "
+						   "probed device\n", ap->ap_designer, ap->ap_partno);
 #endif
-		PROBE(lpc11xx_probe); /* Let's get feedback if LPC11 is also Specular*/
+		}
+		if (ap->ap_partno == 0x4c3)  /* Cortex-M3 ROM */
+			PROBE(stm32f1_probe); /* Care for STM32F1 clones */
+		else if (ap->ap_partno == 0x471)  { /* Cortex-M0 ROM */
+			PROBE(lpc11xx_probe); /* LPC24C11 */
+			PROBE(lpc43xx_probe);
+		}
+		else if (ap->ap_partno == 0x4c4) /* Cortex-M4 ROM */
+			PROBE(lpc43xx_probe);
+		/* Info on PIDR of these parts wanted! */
+		PROBE(sam3x_probe);
 		PROBE(lpc15xx_probe);
-		PROBE(lpc43xx_probe);
 		PROBE(lmi_probe);
 		PROBE(ke04_probe);
 		PROBE(lpc17xx_probe);
