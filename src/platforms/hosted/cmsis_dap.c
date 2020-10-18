@@ -47,7 +47,7 @@ uint8_t mode;
 /*- Variables ---------------------------------------------------------------*/
 static hid_device *handle = NULL;
 static uint8_t hid_buffer[1024 + 1];
-static int report_size = 512 + 1; // TODO: read actual report size
+static int report_size = 64 + 1; // TODO: read actual report size
 /* LPC845 Breakout Board Rev. 0 report invalid response with > 65 bytes */
 int dap_init(bmp_info_t *info)
 {
@@ -129,14 +129,7 @@ static uint32_t dap_dp_low_access(struct ADIv5_DP_s *dp, uint8_t RnW,
 
 static uint32_t dap_dp_read_reg(ADIv5_DP_t *dp, uint16_t addr)
 {
-	uint32_t res;
-	if (addr & ADIV5_APnDP) {
-		dap_dp_low_access(dp, ADIV5_LOW_READ, addr, 0);
-		res = dap_dp_low_access(dp, ADIV5_LOW_READ,
-		                           ADIV5_DP_RDBUFF, 0);
-	} else {
-		res = dap_dp_low_access(dp, ADIV5_LOW_READ, addr, 0);
-	}
+	uint32_t res = dap_dp_low_access(dp, ADIV5_LOW_READ, addr, 0);
 	DEBUG_PROBE("dp_read %04x %08" PRIx32 "\n", addr, res);
 	return res;
 }
