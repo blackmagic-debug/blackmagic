@@ -333,7 +333,7 @@ void remotePacketProcessHL(uint8_t i, char *packet)
 		if (i < 4) {
 			_respond(REMOTE_RESP_ERR,REMOTE_ERROR_WRONGLEN);
 		} else {
-			remote_dp.dp_jd_index = remotehston(2, &packet[2]);
+			remote_dp.dp_jd_index = remotehston(2, packet);
 			_respond(REMOTE_RESP_OK, 0);
 		}
 		break;
@@ -411,7 +411,7 @@ void remotePacketProcessHL(uint8_t i, char *packet)
 			remote_ap.dp->fault = 0;
 			break;
 		}
-		_respond_buf(REMOTE_RESP_OK, src, len);
+		_respond(REMOTE_RESP_OK, 0);
 		break;
 	default:
 		_respond(REMOTE_RESP_ERR,REMOTE_ERROR_UNRECOGNISED);
