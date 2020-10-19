@@ -153,7 +153,7 @@ static uint32_t remote_adiv5_dp_read(ADIv5_DP_t *dp, uint16_t addr)
 	(void)dp;
 	uint8_t construct[REMOTE_MAX_MSG_SIZE];
 	int s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE, REMOTE_DP_READ_STR,
-					 addr);
+					 dp->dp_jd_index, addr);
 	platform_buffer_write(construct, s);
 	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
 	if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
@@ -171,7 +171,7 @@ static uint32_t remote_adiv5_low_access(
 	(void)dp;
 	uint8_t construct[REMOTE_MAX_MSG_SIZE];
 	int s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE,
-					 REMOTE_LOW_ACCESS_STR, RnW, addr, value);
+					 REMOTE_LOW_ACCESS_STR, dp->dp_jd_index, RnW, addr, value);
 	platform_buffer_write(construct, s);
 	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
 	if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
@@ -186,7 +186,7 @@ static uint32_t remote_adiv5_ap_read(ADIv5_AP_t *ap, uint16_t addr)
 {
 	uint8_t construct[REMOTE_MAX_MSG_SIZE];
 	int s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE,REMOTE_AP_READ_STR,
-					 ap->apsel, addr);
+					 ap->dp->dp_jd_index, ap->apsel, addr);
 	platform_buffer_write(construct, s);
 	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
 	if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
@@ -201,7 +201,7 @@ static void remote_adiv5_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value)
 {
 	uint8_t construct[REMOTE_MAX_MSG_SIZE];
 	int s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE,REMOTE_AP_WRITE_STR,
-					 ap->apsel, addr, value);
+					ap->dp->dp_jd_index,  ap->apsel, addr, value);
 	platform_buffer_write(construct, s);
 	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
 	if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
@@ -267,7 +267,7 @@ static void remote_ap_mem_read(
 		if (count > batchsize)
 			count = batchsize;
 		s = snprintf(construct, REMOTE_MAX_MSG_SIZE,
-					 REMOTE_AP_MEM_READ_STR, ap->apsel, ap->csw, src, count);
+					 REMOTE_AP_MEM_READ_STR, ap->dp->dp_jd_index, ap->apsel, ap->csw, src, count);
 		platform_buffer_write((uint8_t*)construct, s);
 		s = platform_buffer_read((uint8_t*)construct, REMOTE_MAX_MSG_SIZE);
 		if ((s > 0) && (construct[0] == REMOTE_RESP_OK)) {
@@ -307,7 +307,7 @@ static void remote_ap_mem_write_sized(
 			count = batchsize;
 		int s = snprintf(construct, REMOTE_MAX_MSG_SIZE,
 						 REMOTE_AP_MEM_WRITE_SIZED_STR,
-						 ap->apsel, ap->csw, align, dest, count);
+						 ap->dp->dp_jd_index, ap->apsel, ap->csw, align, dest, count);
 		char *p = construct + s;
 		hexify(p, src, count);
 		p += 2 * count;
@@ -340,21 +340,11 @@ void remote_adiv5_dp_defaults(ADIv5_DP_t *dp)
 					 REMOTE_HL_CHECK_STR);
 	platform_buffer_write(construct, s);
 	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
-	if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
+	if ((!s) || (construct[0] == REMOTE_RESP_ERR) ||
+		((construct[1] - '0') <  REMOTE_HL_VERSION)) {
 		DEBUG_WARN(
 			"Please update BMP firmware for substantial speed increase!\n");
 		return;
-	}
-	if (dp->dp_jd_index < JTAG_MAX_DEVS) {
-		s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE, REMOTE_HL_JTAG_DEV_STR,
-				 dp->dp_jd_index);
-		platform_buffer_write(construct, s);
-		s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
-		if ((!s) || (construct[0] != REMOTE_RESP_OK)) {
-			DEBUG_WARN(
-				"Please update BMP firmware to allow high level jtag commands!\n");
-			return;
-		}
 	}
 	dp->low_access = remote_adiv5_low_access;
 	dp->dp_read    = remote_adiv5_dp_read;

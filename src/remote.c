@@ -322,21 +322,16 @@ void remotePacketProcessHL(uint8_t i, char *packet)
 	/* Re-use packet buffer. Align to DWORD! */
 	void *src = (void *)(((uint32_t)packet + 7) & ~7);
 	char index = packet[1];
+	if (index == REMOTE_HL_CHECK) {
+		_respond(REMOTE_RESP_OK, REMOTE_HL_VERSION);
+		return;
+	}
+	packet += 2;
+	remote_dp.dp_jd_index = remotehston(2, packet);
 	packet += 2;
 	remote_ap.apsel = remotehston(2, packet);
 	remote_ap.dp = &remote_dp;
 	switch (index) {
-	case REMOTE_HL_CHECK: /* HC = Check availability of HL commands*/
-		_respond(REMOTE_RESP_OK, 0);
-		break;
-    case REMOTE_HL_JTAG_DEV: /* HJ for jtag device to use */
-		if (i < 4) {
-			_respond(REMOTE_RESP_ERR,REMOTE_ERROR_WRONGLEN);
-		} else {
-			remote_dp.dp_jd_index = remotehston(2, packet);
-			_respond(REMOTE_RESP_OK, 0);
-		}
-		break;
 	case REMOTE_DP_READ:  /* Hd = Read from DP register */
 		packet += 2;
 		uint16_t addr16 = remotehston(4, packet);
