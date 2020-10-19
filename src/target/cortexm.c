@@ -319,6 +319,10 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 
 	case 0xc27:
 		t->core = "M7";
+		if ((((cpuid >> 20) & 0xf) == 0) && (((cpuid >> 0) & 0xf) < 2)) {
+			DEBUG_WARN("Silicon bug: Single stepping will enter pending "
+					   "exception handler with this M7 core revision!\n");
+		}
 		break;
 
 	case 0xc60:
