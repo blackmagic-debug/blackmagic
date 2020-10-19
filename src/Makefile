@@ -119,7 +119,7 @@ clean:	host_clean
 
 all_platforms:
 	$(Q)set -e ;\
-	mkdir -p artifacts/$(shell git describe --always) ;\
+	mkdir -p artifacts/$(shell git describe --always --dirty --tags) ;\
 	echo "<html><body><ul>" > artifacts/index.html ;\
 	for i in platforms/*/Makefile.inc ; do \
 		export DIRNAME=`dirname $$i` ;\
@@ -140,7 +140,7 @@ all_platforms:
 		fi ;\
 	done ;\
 	echo "</ul></body></html>" >> artifacts/index.html ;\
-	cp artifacts/*.bin artifacts/$(shell git describe --always)
+	cp artifacts/*.bin artifacts/$(shell git describe --always --dirty --tags)
 
 command.c: include/version.h
 
