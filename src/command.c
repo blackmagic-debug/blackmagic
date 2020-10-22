@@ -291,8 +291,10 @@ bool cmd_morse(target *t, int argc, char **argv)
 	(void)t;
 	(void)argc;
 	(void)argv;
-	if(morse_msg)
+	if(morse_msg) {
 		gdb_outf("%s\n", morse_msg);
+		DEBUG_WARN("%s\n", morse_msg);
+	}
 	return true;
 }
 
