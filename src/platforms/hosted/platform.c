@@ -352,7 +352,6 @@ int platform_adiv5_swdp_scan(void)
 			if (target_list)
 				return 1;
 		}
-		free(dp);
 		break;
 	}
 	case BMP_TYPE_CMSIS_DAP:
@@ -364,7 +363,6 @@ int platform_adiv5_swdp_scan(void)
 			if (target_list)
 				return 1;
 		}
-		free(dp);
 		break;
 	}
 	case BMP_TYPE_JLINK:

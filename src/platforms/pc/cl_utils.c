@@ -494,5 +494,6 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
   target_detach:
 	if (t)
 		target_detach(t);
+	target_list_free();
 	return res;
 }

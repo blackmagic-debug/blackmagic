@@ -38,21 +38,12 @@ int adiv5_swdp_scan(void)
 	uint32_t ack;
 
 	target_list_free();
-	ADIv5_DP_t *dp = (void*)calloc(1, sizeof(*dp));
-	dp->dp_jd_index = JTAG_MAX_DEVS; /* Tag for BMP_REMOTE */
-	if (!dp) {			/* calloc failed: heap exhaustion */
-		DEBUG_WARN("calloc: failed in %s\n", __func__);
-		return -1;
-	}
-
 #if PC_HOSTED == 1
 	if (platform_swdptap_init()) {
-		free(dp);
 		exit(-1);
 	}
 #else
 	if (swdptap_init()) {
-		free(dp);
 		return -1;
 	}
 #endif
@@ -71,12 +62,19 @@ int adiv5_swdp_scan(void)
 	 * allow the ack to be checked here. */
 	swd_proc.swdptap_seq_out(0xA5, 8);
 	ack = swd_proc.swdptap_seq_in(3);
-	if((ack != SWDP_ACK_OK) || swd_proc.swdptap_seq_in_parity(&dp->idcode, 32)) {
+	uint32_t idcode;
+	if((ack != SWDP_ACK_OK) || swd_proc.swdptap_seq_in_parity(&idcode, 32)) {
 		DEBUG_WARN("Read SW-DP IDCODE failed %1" PRIx32 "\n", ack);
-		free(dp);
 		return -1;
 	}
 
+	ADIv5_DP_t *dp = (void*)calloc(1, sizeof(*dp));
+	if (!dp) {			/* calloc failed: heap exhaustion */
+		DEBUG_WARN("calloc: failed in %s\n", __func__);
+		return -1;
+	}
+
+	dp->idcode = idcode;
 	dp->dp_read = firmware_swdp_read;
 	dp->error = firmware_swdp_error;
 	dp->low_access = firmware_swdp_low_access;
@@ -84,8 +82,6 @@ int adiv5_swdp_scan(void)
 
 	firmware_swdp_error(dp);
 	adiv5_dp_init(dp);
-	if (!target_list)
-		free(dp);
 	return target_list?1:0;
 }
 
