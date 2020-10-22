@@ -411,7 +411,7 @@ static bool adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, int recursion, 
 	uint32_t cidr = adiv5_ap_read_id(ap, addr + CIDR0_OFFSET);
 	if ((cidr & ~CID_CLASS_MASK) != CID_PREAMBLE) {
 		/* Maybe caused by a not halted CortexM */
-		if (!ap->apsel && ((ap->idr & 0xf) == ARM_AP_TYPE_AHB)) {
+		if ((ap->idr & 0xf) == ARM_AP_TYPE_AHB) {
 			if (!cortexm_prepare(ap))
 				return false; /* Halting failed! */
 			/* CPU now halted, read cidr again. */
