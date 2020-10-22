@@ -750,6 +750,10 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 		/* The rest should only be added after checking ROM table */
 		adiv5_component_probe(ap, ap->base, 0, 0);
 	}
+	/* We halted at least CortexM for Romtable scan.
+	 * Release the devices now. Attach() will halt them again.*/
+	for (target *t = target_list; t; t = t->next)
+		target_halt_resume(t, false);
 	adiv5_dp_unref(dp);
 }
 
