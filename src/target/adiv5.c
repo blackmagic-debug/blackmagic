@@ -263,13 +263,10 @@ static const struct {
 
 extern bool cortexa_probe(ADIv5_AP_t *apb, uint32_t debug_base);
 
-static void adiv5_dp_ref(ADIv5_DP_t *dp)
-{
-	dp->refcnt++;
-}
-
 void adiv5_ap_ref(ADIv5_AP_t *ap)
 {
+	if (ap->refcnt == 0)
+		ap->dp->refcnt++;
 	ap->refcnt++;
 }
 
@@ -404,6 +401,7 @@ static bool cortexm_prepare(ADIv5_AP_t *ap)
 	return true;
 }
 
+/* Return true if we find a debuggable device.*/
 static bool adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, int recursion, int num_entry)
 {
 	(void) num_entry;
@@ -488,7 +486,7 @@ static bool adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, int recursion, 
 			}
 
 			/* Probe recursively */
-			adiv5_component_probe(
+			res = adiv5_component_probe(
 				ap, addr + (entry & ADIV5_ROM_ROMENTRY_OFFSET),
 				recursion + 1, i);
 		}
@@ -543,15 +541,14 @@ static bool adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, int recursion, 
 							   cidc_debug_strings[cid_class],
 							   cidc_debug_strings[pidr_pn_bits[i].cidc]);
 				}
-				res = true;
 				switch (pidr_pn_bits[i].arch) {
 				case aa_cortexm:
 					DEBUG_INFO("%s-> cortexm_probe\n", indent + 1);
-					cortexm_probe(ap);
+					res = cortexm_probe(ap);
 					break;
 				case aa_cortexa:
 					DEBUG_INFO("\n -> cortexa_probe\n");
-					cortexa_probe(ap, addr);
+					res = cortexa_probe(ap, addr);
 					break;
 				default:
 					DEBUG_INFO("\n");
@@ -598,7 +595,6 @@ ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel)
 	}
 
 	memcpy(ap, &tmpap, sizeof(*ap));
-	adiv5_dp_ref(dp);
 
 	ap->csw = adiv5_ap_read(ap, ADIV5_AP_CSW) &
 		~(ADIV5_AP_CSW_SIZE_MASK | ADIV5_AP_CSW_ADDRINC_MASK);
@@ -620,7 +616,6 @@ ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel)
 void adiv5_dp_init(ADIv5_DP_t *dp)
 {
 	volatile uint32_t ctrlstat = 0;
-	adiv5_dp_ref(dp);
 #if PC_HOSTED  == 1
 	platform_adiv5_dp_defaults(dp);
 	if (!dp->ap_write)
@@ -693,6 +688,7 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 		}
 	}
 
+	bool res = false;
 	uint32_t dp_idcode = adiv5_dp_read(dp, ADIV5_DP_IDCODE);
 	if ((dp_idcode & ADIV5_DP_VERSION_MASK) == ADIV5_DPv2) {
 		/* Read TargetID. Can be done with device in WFI, sleep or reset!*/
@@ -729,7 +725,7 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 			if (dp->ap_cleanup)
 				dp->ap_cleanup(i);
 #endif
-			free(ap);
+			adiv5_ap_unref(ap);
 			/* FIXME: Should we expect valid APs behind duplicate ones? */
 			return;
 		}
@@ -748,13 +744,14 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 		 */
 
 		/* The rest should only be added after checking ROM table */
-		adiv5_component_probe(ap, ap->base, 0, 0);
+		res = adiv5_component_probe(ap, ap->base, 0, 0);
+		if (!res)
+			adiv5_ap_unref(ap);
 	}
 	/* We halted at least CortexM for Romtable scan.
 	 * Release the devices now. Attach() will halt them again.*/
 	for (target *t = target_list; t; t = t->next)
 		target_halt_resume(t, false);
-	adiv5_dp_unref(dp);
 }
 
 #define ALIGNOF(x) (((x) & 3) == 0 ? ALIGN_WORD : \
