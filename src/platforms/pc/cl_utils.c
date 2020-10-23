@@ -298,8 +298,7 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 	platform_srst_set_val(opt->opt_connect_under_reset);
 	if (opt->opt_mode == BMP_MODE_TEST)
 		DEBUG_INFO("Running in Test Mode\n");
-	if (platform_target_voltage())
-		DEBUG_INFO("Target voltage: %s Volt\n", platform_target_voltage());
+	DEBUG_INFO("Target voltage: %s Volt\n", platform_target_voltage());
 	if (opt->opt_usejtag) {
 		num_targets = platform_jtag_scan(NULL);
 	} else {
