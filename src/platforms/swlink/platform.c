@@ -67,11 +67,11 @@ void platform_init(void)
 	data |= AFIO_MAPR_SWJ_CFG_JTAG_OFF_SW_OFF;
 	AFIO_MAPR = data;
 	/* Setup JTAG GPIO ports */
-	gpio_set_mode(TMS_PORT, GPIO_MODE_OUTPUT_50_MHZ,
+	gpio_set_mode(TMS_PORT, GPIO_MODE_OUTPUT_2_MHZ,
 			GPIO_CNF_INPUT_FLOAT, TMS_PIN);
-	gpio_set_mode(TCK_PORT, GPIO_MODE_OUTPUT_50_MHZ,
+	gpio_set_mode(TCK_PORT, GPIO_MODE_OUTPUT_2_MHZ,
 			GPIO_CNF_OUTPUT_PUSHPULL, TCK_PIN);
-	gpio_set_mode(TDI_PORT, GPIO_MODE_OUTPUT_50_MHZ,
+	gpio_set_mode(TDI_PORT, GPIO_MODE_OUTPUT_2_MHZ,
 			GPIO_CNF_OUTPUT_PUSHPULL, TDI_PIN);
 
 	gpio_set_mode(TDO_PORT, GPIO_MODE_INPUT,
@@ -118,7 +118,7 @@ void platform_srst_set_val(bool assert)
 {
 	/* We reuse JSRST as SRST.*/
 	if (assert) {
-		gpio_set_mode(JRST_PORT, GPIO_MODE_OUTPUT_50_MHZ,
+		gpio_set_mode(JRST_PORT, GPIO_MODE_OUTPUT_2_MHZ,
 		              GPIO_CNF_OUTPUT_OPENDRAIN, JRST_PIN);
 		/* Wait until requested value is active.*/
 		while (gpio_get(JRST_PORT, JRST_PIN))
