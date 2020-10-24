@@ -124,9 +124,6 @@ int jlink_swdp_scan(bmp_info_t *info)
 {
 	swdptap_init(info);
 	target_list_free();
-	ADIv5_DP_t *dp = (void*)calloc(1, sizeof(*dp));
-	if (!dp) /* calloc failed: heap exhaustion */
-		return 0;
 	uint8_t cmd[44];
 	cmd[0]  = CMD_HW_JTAG3;
 	cmd[1]  = 0;
@@ -178,6 +175,9 @@ int jlink_swdp_scan(bmp_info_t *info)
 		DEBUG_WARN( "Line reset failed\n");
 		return 0;
 	}
+	ADIv5_DP_t *dp = (void*)calloc(1, sizeof(*dp));
+	if (!dp) /* calloc failed: heap exhaustion */
+		return 0;
 	dp->idcode = jlink_adiv5_swdp_low_access(dp, 1, ADIV5_DP_IDCODE, 0);
 	dp->dp_read = jlink_adiv5_swdp_read;
 	dp->error = jlink_adiv5_swdp_error;
@@ -186,6 +186,8 @@ int jlink_swdp_scan(bmp_info_t *info)
 
 	jlink_adiv5_swdp_error(dp);
 	adiv5_dp_init(dp);
+	if (!target_list)
+		free(dp);
 	return target_list?1:0;
 }
 
