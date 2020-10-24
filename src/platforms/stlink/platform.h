@@ -78,7 +78,7 @@ int usbuart_debug_write(const char *buf, size_t len);
 # define SWD_CR_MULT (1 << ((14 - 8) << 2))
 
 #define TMS_SET_MODE() \
-	gpio_set_mode(TMS_PORT, GPIO_MODE_OUTPUT_50_MHZ, \
+	gpio_set_mode(TMS_PORT, GPIO_MODE_OUTPUT_2_MHZ, \
 	              GPIO_CNF_OUTPUT_PUSHPULL, TMS_PIN);
 #define SWDIO_MODE_FLOAT() 	do { \
 	uint32_t cr = SWD_CR; \
