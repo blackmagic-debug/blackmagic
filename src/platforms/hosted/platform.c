@@ -111,12 +111,16 @@ static int find_debuggers(	BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 			libusb_free_device_list(devs, 1);
 			continue;
 		}
+		/* Exclude hubs from testing. Probably more classes could be excluded here!*/
+		if (desc.bDeviceClass == LIBUSB_CLASS_HUB) {
+			continue;
+		}
 		libusb_device_handle *handle;
 		res = libusb_open(dev, &handle);
 		if (res != LIBUSB_SUCCESS) {
 			if (!access_problems) {
-				DEBUG_INFO("INFO: Open USB %04x:%04x failed\n",
-						   desc.idVendor, desc.idProduct);
+				DEBUG_INFO("INFO: Open USB %04x:%04x class %2x failed\n",
+						   desc.idVendor, desc.idProduct, desc.bDeviceClass);
 				access_problems = true;
 			}
 			continue;
