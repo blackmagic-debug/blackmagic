@@ -123,7 +123,7 @@ static void cl_help(char **argv, BMP_CL_OPTIONS_t *opt)
 	DEBUG_WARN("\t-v[bitmask]\t: Increasing verbosity. Bitmask:\n");
 	DEBUG_WARN("\t\t\t  1 = INFO, 2 = GDB, 4 = TARGET, 8 = PROBE, 16 = WIRE\n");
 	DEBUG_WARN("Probe selection arguments:\n");
-	DEBUG_WARN("\t-d \"path\"\t: Use serial device at \"path\"\n");
+	DEBUG_WARN("\t-d \"path\"\t: Use serial BMP device at \"path\"(Deprecated)\n");
 	DEBUG_WARN("\t-P <pos>\t: Use debugger found at position <pos>\n");
 	DEBUG_WARN("\t-n <num>\t: Use target device found at position <num>\n");
 	DEBUG_WARN("\t-s \"serial\"\t: Use dongle with (partial) "
@@ -189,6 +189,7 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 			opt->external_resistor_swd = true;
 			break;
 		case 'd':
+			DEBUG_WARN("Deprecated!\n");
 			if (optarg)
 				opt->opt_device = optarg;
 			break;
