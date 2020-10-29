@@ -38,9 +38,11 @@ blackmagic -V <file>.bin
 ```
 blackmagic -h"
 ```
-## Used libraries:
+## Used shared libraries:
 ### libusb
 ### libftdi, for FTDI support
+
+## Other used libraries:
 ### hidapi-libusb, for CMSIS-DAP support
 
 ## Compiling on windows
@@ -51,8 +53,21 @@ needed. For running, libftdi1.dll and libusb-1.0.dll are needed and
 the executable must be able to find them. Mingw on cygwin does not provide
 a libftdi package yet.
 
-To prepare libusb access to the ftdi device, run zadig https://zadig.akeo.ie/.
-Choose WinUSB(libusb-1.0) for the BMP Ftdi device.
+PC-hosted BMP for windows can also be built with [MSYS2](https://www.msys2.org/),
+in windows. Make sure to use the `mingw64` shell from msys2, otherwise,
+you may get compilation errors. You will need to install the libusb
+and libftdi libraries, and have the correct mingw compiler.
+You can use these commands to install dependencies, and build PC-hosted BMP
+from a mingw64 shell, from within the `src` directory:
+```
+pacman -S mingw-w64-x86_64-libusb --needed
+pacman -S mingw-w64-x86_64-libftdi --needed
+pacman -S mingw-w64-x86_64-gcc --needed
+PROBE_HOST=hosted make
+```
+
+To prepare libusb access to the ftdi/stlink/jlink/cmsis-dap devices, run zadig
+https://zadig.akeo.ie/. Choose WinUSB(libusb-1.0).
 
 Running cygwin/blackmagic in a cygwin console, the program does not react
 on ^C. In another console, run "ps ax" to find the WINPID of the process
