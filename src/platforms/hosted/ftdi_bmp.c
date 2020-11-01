@@ -341,23 +341,27 @@ int ftdi_bmp_init(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info)
 		goto error_2;
 	}
 	assert(ftdic != NULL);
-	err = ftdi_usb_purge_buffers(ftdic);
+#ifdef _Ftdi_Pragma
+	err = ftdi_tcioflush(ftdic);
+#else
+	 err = ftdi_usb_purge_buffers(ftdic);
+#endif
 	if (err != 0) {
-		fprintf(stderr, "ftdi_usb_purge_buffer: %d: %s\n",
+		DEBUG_WARN("ftdi_tcioflush(ftdi_usb_purge_buffer): %d: %s\n",
 			err, ftdi_get_error_string(ftdic));
 		goto error_2;
 	}
 	/* Reset MPSSE controller. */
 	err = ftdi_set_bitmode(ftdic, 0,  BITMODE_RESET);
 	if (err != 0) {
-		fprintf(stderr, "ftdi_set_bitmode: %d: %s\n",
+		DEBUG_WARN("ftdi_set_bitmode: %d: %s\n",
 			err, ftdi_get_error_string(ftdic));
 		goto error_2;
 	}
 	/* Enable MPSSE controller. Pin directions are set later.*/
 	err = ftdi_set_bitmode(ftdic, 0, BITMODE_MPSSE);
 	if (err != 0) {
-		fprintf(stderr, "ftdi_set_bitmode: %d: %s\n",
+		DEBUG_WARN("ftdi_set_bitmode: %d: %s\n",
 			err, ftdi_get_error_string(ftdic));
 		goto error_2;
 	}
