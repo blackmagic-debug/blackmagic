@@ -835,6 +835,8 @@ static void cortexm_halt_resume(target *t, bool step)
 		target_mem_write32(t, CORTEXM_ICIALLU, 0);
 
 	target_mem_write32(t, CORTEXM_DHCSR, dhcsr);
+	/* Add some clock cycles to get the CPU running again.*/
+	target_mem_read32(t, 0);
 }
 
 static int cortexm_fault_unwind(target *t)
