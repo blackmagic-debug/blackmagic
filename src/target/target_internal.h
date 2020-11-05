@@ -120,7 +120,8 @@ struct target_s {
 
 	/* Other stuff */
 	const char *driver;
-	const char *core;
+	uint32_t cpuid;
+	char *core;
 	char cmdline[MAX_CMDLINE];
 	target_addr heapinfo[4];
 	struct target_command_s *commands;
