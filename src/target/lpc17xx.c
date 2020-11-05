@@ -32,9 +32,6 @@
 #define IAP_ENTRYPOINT				0x1FFF1FF1
 #define IAP_RAM_BASE				0x10000000
 
-#define ARM_CPUID					0xE000ED00
-#define CORTEX_M3_CPUID				0x412FC230	// Cortex-M3 r2p0
-#define CORTEX_M3_CPUID_MASK		0xFF00FFF0
 #define MEMMAP						0x400FC040
 #define LPC17xx_JTAG_IDCODE			0x4BA00477
 #define LPC17xx_SWDP_IDCODE			0x2BA01477
@@ -82,8 +79,7 @@ lpc17xx_probe(target *t)
 		return false;
 	}
 
-	uint32_t cpuid = target_mem_read32(t, ARM_CPUID);
-	if (((cpuid & CORTEX_M3_CPUID_MASK) == (CORTEX_M3_CPUID & CORTEX_M3_CPUID_MASK))) {
+	if ((t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M3)  {
 		/*
 		 * Now that we're sure it's a Cortex-M3, we need to halt the
 		 * target and make an IAP call to get the part number.

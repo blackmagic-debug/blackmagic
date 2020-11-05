@@ -106,7 +106,6 @@ static int stm32f4_flash_write(struct target_flash *f,
 #define DBGMCU_IDCODE	0xE0042000
 #define DBGMCU_CR		0xE0042004
 #define DBG_SLEEP		(1 <<  0)
-#define ARM_CPUID	0xE000ED00
 
 #define AXIM_BASE 0x8000000
 #define ITCM_BASE 0x0200000
@@ -208,8 +207,7 @@ bool stm32f4_probe(target *t)
 		/* F405 revision A have a wrong IDCODE, use ARM_CPUID to make the
 		 * distinction with F205. Revision is also wrong (0x2000 instead
 		 * of 0x1000). See F40x/F41x errata. */
-		uint32_t cpuid = target_mem_read32(t, ARM_CPUID);
-		if ((cpuid & 0xFFF0) == 0xC240)
+		if ((t->cpuid & 0xFFF0) == CORTEX_M4)
 			t->idcode = ID_STM32F40X;
 	}
 	switch(t->idcode) {
