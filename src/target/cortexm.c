@@ -435,12 +435,14 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 		}
 		if (ap->ap_partno == 0x4c3)  /* Cortex-M3 ROM */
 			PROBE(stm32f1_probe); /* Care for STM32F1 clones */
-		else if (ap->ap_partno == 0x471)  { /* Cortex-M0 ROM */
+		else if (ap->ap_partno == 0x471) { /* Cortex-M0 ROM */
 			PROBE(lpc11xx_probe); /* LPC24C11 */
 			PROBE(lpc43xx_probe);
 		}
-		else if (ap->ap_partno == 0x4c4) /* Cortex-M4 ROM */
+		else if (ap->ap_partno == 0x4c4) { /* Cortex-M4 ROM */
 			PROBE(lpc43xx_probe);
+			PROBE(kinetis_probe); /* Older K-series */
+		}
 		/* Info on PIDR of these parts wanted! */
 		PROBE(sam3x_probe);
 		PROBE(lpc15xx_probe);

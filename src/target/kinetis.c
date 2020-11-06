@@ -196,7 +196,7 @@ bool kinetis_probe(target *t)
 		kl_gen_add_flash(t, 0x00000000, 0x40000, 0x400, KL_WRITE_LEN);
 		break;
 	case 0x271:
-		switch((sdid>>16)&0x0f){
+		switch((sdid >> 16) & 0x0f) {
 			case 4:
 				t->driver = "KL27x32";
 				target_add_ram(t, 0x1ffff800, 0x0800);
@@ -214,7 +214,7 @@ bool kinetis_probe(target *t)
 		}
 		break;
 	case 0x021: /* KL02 family */
-		switch((sdid>>16) & 0x0f){
+		switch((sdid >> 16) & 0x0f) {
 			case 3:
 				t->driver = "KL02x32";
 				target_add_ram(t, 0x1FFFFC00, 0x400);
@@ -235,7 +235,7 @@ bool kinetis_probe(target *t)
 				break;
 			default:
 				return false;
-			}
+		}
 		break;
 	case 0x031: /* KL03 family */
 		t->driver = "KL03";
@@ -260,6 +260,64 @@ bool kinetis_probe(target *t)
 		target_add_ram(t, 0x20000000,  0x30000);
 		kl_gen_add_flash(t, 0, 0x80000, 0x1000, K64_WRITE_LEN);
 		kl_gen_add_flash(t, 0x80000, 0x80000, 0x1000, K64_WRITE_LEN);
+		break;
+	case 0x000: /* Older K-series */
+		switch(sdid & 0xff0) {
+			case 0x000: /* K10 Family, DIEID=0x0 */
+			case 0x080: /* K10 Family, DIEID=0x1 */
+			case 0x100: /* K10 Family, DIEID=0x2 */
+			case 0x180: /* K10 Family, DIEID=0x3 */
+			case 0x220: /* K11 Family, DIEID=0x4 */
+				return false;
+			case 0x200: /* K12 Family, DIEID=0x4 */
+				switch((fcfg1 >> 24) & 0x0f) {
+					/* K12 Sub-Family Reference Manual, K12P80M50SF4RM, Rev. 4, February 2013 */
+					case 0x7:
+						t->driver = "MK12DX128Vxx5";
+						target_add_ram(t, 0x1fffc000, 0x00004000); /* SRAM_L, 16 KB */
+						target_add_ram(t, 0x20000000, 0x00004000); /* SRAM_H, 16 KB */
+						kl_gen_add_flash(t, 0x00000000, 0x00020000, 0x800, KL_WRITE_LEN); /* P-Flash, 128 KB, 2 KB Sectors */
+						kl_gen_add_flash(t, 0x10000000, 0x00010000, 0x800, KL_WRITE_LEN); /* FlexNVM, 64 KB, 2 KB Sectors */
+						break;
+					case 0x9:
+						t->driver = "MK12DX256Vxx5";
+						target_add_ram(t, 0x1fffc000, 0x00004000); /* SRAM_L, 16 KB */
+						target_add_ram(t, 0x20000000, 0x00004000); /* SRAM_H, 16 KB */
+						kl_gen_add_flash(t, 0x00000000, 0x00040000, 0x800, KL_WRITE_LEN); /* P-Flash, 256 KB, 2 KB Sectors */
+						kl_gen_add_flash(t, 0x10000000, 0x00010000, 0x800, KL_WRITE_LEN); /* FlexNVM, 64 KB, 2 KB Sectors */
+						break;
+					case 0xb:
+						t->driver = "MK12DN512Vxx5";
+						target_add_ram(t, 0x1fff8000, 0x00008000); /* SRAM_L, 32 KB */
+						target_add_ram(t, 0x20000000, 0x00008000); /* SRAM_H, 32 KB */
+						kl_gen_add_flash(t, 0x00000000, 0x00040000, 0x800, KL_WRITE_LEN); /* P-Flash, 256 KB, 2 KB Sectors */
+						kl_gen_add_flash(t, 0x00040000, 0x00040000, 0x800, KL_WRITE_LEN); /* FlexNVM, 256 KB, 2 KB Sectors */
+						break;
+					default:
+						return false;
+				}
+				break;
+			case 0x010: /* K20 Family, DIEID=0x0 */
+			case 0x090: /* K20 Family, DIEID=0x1 */
+			case 0x110: /* K20 Family, DIEID=0x2 */
+			case 0x190: /* K20 Family, DIEID=0x3 */
+			case 0x230: /* K21 Family, DIEID=0x4 */
+			case 0x330: /* K21 Family, DIEID=0x6 */
+			case 0x210: /* K22 Family, DIEID=0x4 */
+			case 0x310: /* K22 Family, DIEID=0x6 */
+			case 0x0a0: /* K30 Family, DIEID=0x1 */
+			case 0x120: /* K30 Family, DIEID=0x2 */
+			case 0x0b0: /* K40 Family, DIEID=0x1 */
+			case 0x130: /* K40 Family, DIEID=0x2 */
+			case 0x0e0: /* K50 Family, DIEID=0x1 */
+			case 0x0f0: /* K51 Family, DIEID=0x1 */
+			case 0x170: /* K53 Family, DIEID=0x2 */
+			case 0x140: /* K60 Family, DIEID=0x2 */
+			case 0x1c0: /* K60 Family, DIEID=0x3 */
+			case 0x1d0: /* K70 Family, DIEID=0x3 */
+			default:
+				return false;
+		}
 		break;
 	default:
 		return false;
