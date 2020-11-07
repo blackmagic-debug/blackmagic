@@ -31,6 +31,7 @@
 #include "exception.h"
 #include "jtag_devs.h"
 #include "target.h"
+#include "cortexm.h"
 
 #include <assert.h>
 #include <unistd.h>
@@ -348,7 +349,8 @@ static int stlink_send_recv_retry(uint8_t *txbuf, size_t txsize,
 		if (res == STLINK_ERROR_OK)
 			return res;
 		uint32_t now = platform_time_ms();
-		if (((now - start) > 1000) || (res != STLINK_ERROR_WAIT)) {
+		if (((now - start) > cortexm_wait_timeout) ||
+			(res != STLINK_ERROR_WAIT)) {
 			DEBUG_WARN("write_retry failed. ");
 			return res;
 		}
@@ -829,8 +831,8 @@ static bool stlink_ap_setup(int ap)
 		ap,
 	};
 	uint8_t data[2];
-	send_recv(info.usb_link, cmd, 16, data, 2);
 	DEBUG_PROBE("Open AP %d\n", ap);
+	stlink_send_recv_retry(cmd, 16, data, 2);
 	int res = stlink_usb_error_check(data, true);
 	if (res) {
 		if (Stlink.ver_hw == 30) {
