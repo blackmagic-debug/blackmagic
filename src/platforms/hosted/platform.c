@@ -351,7 +351,9 @@ int platform_adiv5_swdp_scan(void)
 	{
 		target_list_free();
 		ADIv5_DP_t *dp = (void*)calloc(1, sizeof(*dp));
-		if (!stlink_enter_debug_swd(&info, dp)) {
+		if (stlink_enter_debug_swd(&info, dp)) {
+			free(dp);
+		} else {
 			adiv5_dp_init(dp);
 			if (target_list)
 				return 1;
@@ -363,7 +365,9 @@ int platform_adiv5_swdp_scan(void)
 	{
 		target_list_free();
 		ADIv5_DP_t *dp = (void*)calloc(1, sizeof(*dp));
-		if (!dap_enter_debug_swd(dp)) {
+		if (dap_enter_debug_swd(dp)) {
+			free(dp);
+		} else {
 			adiv5_dp_init(dp);
 			if (target_list)
 				return 1;
