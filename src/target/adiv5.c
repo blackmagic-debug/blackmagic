@@ -608,6 +608,8 @@ ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel)
 	uint32_t cfg = adiv5_ap_read(ap, ADIV5_AP_CFG);
 	DEBUG_INFO("AP %3d: IDR=%08"PRIx32" CFG=%08"PRIx32" BASE=%08" PRIx32
 			   " CSW=%08"PRIx32"\n", apsel, ap->idr, cfg, ap->base, ap->csw);
+	DEBUG_INFO("AP#0 IDR = 0x%08" PRIx32 " (AHB-AP var%x rev%x)\n",
+			   ap->idr, (ap->idr >> 4) & 0xf, ap->idr >> 28);
 #endif
 	adiv5_ap_ref(ap);
 	return ap;
@@ -615,6 +617,9 @@ ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel)
 
 void adiv5_dp_init(ADIv5_DP_t *dp)
 {
+	DEBUG_INFO("DPIDR 0x%08" PRIx32 " (v%d %srev%d)\n", dp->idcode,
+			   (dp->idcode >> 12) & 0xf,
+			   (dp->idcode & 0x10000) ? "MINDP " : "", dp->idcode >> 28);
 	volatile uint32_t ctrlstat = 0;
 #if PC_HOSTED  == 1
 	platform_adiv5_dp_defaults(dp);

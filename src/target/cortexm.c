@@ -329,6 +329,9 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 	default:
 		DEBUG_WARN("Unexpected CortexM CPUID partno %04x\n", cpuid_partno);
 	}
+	DEBUG_INFO("CPUID 0x%08" PRIx32 " (%s var %x rev %x)\n", t->cpuid,
+			   t->core, (t->cpuid & CPUID_REVISION_MASK) >> 20,
+			   t->cpuid & CPUID_PATCH_MASK);
 
 	t->attach = cortexm_attach;
 	t->detach = cortexm_detach;
