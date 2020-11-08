@@ -24,7 +24,7 @@
 #if !defined(__CL_UTILS_H)
 #define __CL_UTILS_H
 
-#define RESP_TIMEOUT (100)
+#include "cortexm.h"
 
 enum bmp_cl_mode {
 	BMP_MODE_DEBUG,
