@@ -29,6 +29,7 @@
 #include "general.h"
 #include "remote.h"
 #include "cl_utils.h"
+#include "cortexm.h"
 
 static int fd;  /* File descriptor for connection to GDB remote */
 
@@ -189,7 +190,7 @@ int platform_buffer_read(uint8_t *data, int maxsize)
 	c = data;
 	tv.tv_sec = 0;
 
-	tv.tv_usec = 1000 * RESP_TIMEOUT;
+	tv.tv_usec = 1000 * cortexm_wait_timeout;
 
 	/* Look for start of response */
 	do {
