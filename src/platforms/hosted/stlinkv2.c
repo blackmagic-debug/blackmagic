@@ -436,7 +436,8 @@ static void stlink_version(bmp_info_t *info)
 			Stlink.ver_swim = (version >> 0) & 0x3f;
 		}
 	}
-	DEBUG_INFO("V%dJ%d",Stlink.ver_stlink, Stlink.ver_jtag);
+	DEBUG_INFO("STLink firmware version: V%dJ%d",Stlink.ver_stlink,
+			   Stlink.ver_jtag);
 	if (Stlink.ver_hw == 30) {
 		DEBUG_INFO("M%dB%dS%d", Stlink.ver_mass, Stlink.ver_bridge, Stlink.ver_swim);
 	} else if (Stlink.ver_hw == 20) {

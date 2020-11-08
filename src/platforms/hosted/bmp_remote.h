@@ -29,7 +29,7 @@
 int platform_buffer_write(const uint8_t *data, int size);
 int platform_buffer_read(uint8_t *data, int size);
 
-int remote_init(bool verbose);
+int remote_init(void);
 int remote_swdptap_init(swd_proc_t *swd_proc);
 int remote_jtagtap_init(jtag_proc_t *jtag_proc);
 bool remote_target_get_power(void);
