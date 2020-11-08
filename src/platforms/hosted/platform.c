@@ -36,6 +36,7 @@
 #include "ftdi_bmp.h"
 #include "jlink.h"
 #include "cmsis_dap.h"
+#include "version.h"
 
 #define VENDOR_ID_STLINK         0x0483
 #define PRODUCT_ID_STLINK_MASK   0xffe0
@@ -302,14 +303,16 @@ void platform_init(int argc, char **argv)
 	} else if (find_debuggers(&cl_opts, &info)) {
 		exit(-1);
 	}
-	DEBUG_WARN("Using %04x:%04x %s %s %s\n", info.vid, info.pid, info.serial,
+	DEBUG_INFO("BMP hosted %s\n for ST-Link V2/3, CMSIS_DAP, JLINK and "
+			   "LIBFTDI/MPSSE\n", FIRMWARE_VERSION);
+	DEBUG_INFO("Using %04x:%04x %s %s\n %s\n", info.vid, info.pid, info.serial,
 		   info.manufacturer,
 		   info.product);
 	switch (info.bmp_type) {
 	case BMP_TYPE_BMP:
 		if (serial_open(&cl_opts, info.serial))
 			exit(-1);
-		remote_init(true);
+		remote_init();
 		break;
 	case BMP_TYPE_STLINKV2:
 		if (stlink_init( &info))
