@@ -249,20 +249,19 @@ static uint32_t jlink_adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 	uint8_t res[8];
 	cmd[0] = CMD_HW_JTAG3;
 	cmd[1] = 0;
-	cmd[2] = 13;
+	cmd[2] = (RnW) ? 11 : 13; /* Turnaround inserted automatically? */
 	cmd[3] = 0;
 	cmd[4] = 0xff;
-	cmd[5] = 0xe3;
-	cmd[6] = request << 2;
-	cmd[7] = request >> 6;
+	cmd[5] = 0xfe;
+	cmd[6] = request;
+	cmd[7] = 0x00;
 	platform_timeout_set(&timeout, 2000);
 	do {
 		send_recv(info.usb_link, cmd,  8, res, 2);
-		send_recv(info.usb_link, NULL, 0, res, 1);
-		if (res[0] != 0)
+		send_recv(info.usb_link, NULL, 0, res + 2 , 1);
+		if (res[2] != 0)
 			raise_exception(EXCEPTION_ERROR, "Low access setup failed");
-		ack = res[1] >> 2;
-		ack &= 7;
+		ack = res[1] & 7;
 	} while (ack == SWDP_ACK_WAIT && !platform_timeout_is_expired(&timeout));
 	if (ack == SWDP_ACK_WAIT)
 		raise_exception(EXCEPTION_TIMEOUT, "SWDP ACK timeout");
@@ -276,17 +275,15 @@ static uint32_t jlink_adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 
 	if(ack != SWDP_ACK_OK) {
 		if (cl_debuglevel & BMP_DEBUG_TARGET)
-			DEBUG_WARN( "Protocol\n");
+			DEBUG_WARN( "Protocol %d\n", ack);
 		line_reset(&info);
 		return 0;
 	}
-	cmd[3] = 0;
-	/* Always prepend an idle cycle (SWDIO = 0)!*/
+	/* Always append 8 idle cycle (SWDIO = 0)!*/
 	if(RnW) {
 		memset(cmd + 4, 0, 10);
-		cmd[2] = 34;
+		cmd[2] = 33 + 2; /* 2 idle cycles */
 		cmd[8] = 0xfe;
-		cmd[13] = 0;
 		send_recv(info.usb_link, cmd, 14, res, 5);
 		send_recv(info.usb_link, NULL, 0, res + 5, 1);
 		if (res[5] != 0)
@@ -294,19 +291,19 @@ static uint32_t jlink_adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 		response = res[0] | res[1] << 8 | res[2] << 16 | res[3] << 24;
 		int parity = res[4] & 1;
 		int bit_count  = __builtin_popcount (response) + parity;
-		if (bit_count & 1)  /* Give up on parity error */
+		if (bit_count & 1)	/* Give up on parity error */
 			raise_exception(EXCEPTION_ERROR, "SWDP Parity error");
 	} else {
-		cmd[2] = 35;
-		memset(cmd + 4, 0xff, 5);
-		cmd[ 9] = ((value <<  2) & 0xfc);
-		cmd[10] = ((value >>  6) & 0xff);
-		cmd[11] = ((value >> 14) & 0xff);
-		cmd[12] = ((value >> 22) & 0xff);
-		cmd[13] = ((value >> 30) & 0x03);
+		cmd[2] = 33 + 8; /* 8 idle cycle  to move data through SW-DP */
+		memset(cmd + 4, 0xff, 6);
+		cmd[10] = ((value >>  0) & 0xff);
+		cmd[11] = ((value >>  8) & 0xff);
+		cmd[12] = ((value >> 16) & 0xff);
+		cmd[13] = ((value >> 24) & 0xff);
 		int bit_count  = __builtin_popcount(value);
-		cmd[13] |= ((bit_count & 1) ? 4 : 0);
-		send_recv(info.usb_link, cmd, 14, res, 5);
+		cmd[14] = bit_count & 1;
+		cmd[15] = 0;
+		send_recv(info.usb_link, cmd, 16, res, 6);
 		send_recv(info.usb_link, NULL, 0, res, 1);
 		if (res[0] != 0)
 			raise_exception(EXCEPTION_ERROR, "Low access write failed");

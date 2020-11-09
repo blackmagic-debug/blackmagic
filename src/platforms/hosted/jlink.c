@@ -90,7 +90,7 @@ static void jlink_print_interfaces(bmp_info_t *info)
 		DEBUG_INFO(", %s available\n",
 			   (other_interface == JLINK_IF_SWD) ? "SWD": "JTAG");
 	else
-		DEBUG_WARN(", %s not available\n",
+		DEBUG_INFO(", %s not available\n",
 			   ((res[0] + 1) == JLINK_IF_SWD) ? "JTAG": "SWD");
 }
 

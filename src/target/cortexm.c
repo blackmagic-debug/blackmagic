@@ -535,8 +535,6 @@ void cortexm_detach(target *t)
 	target_mem_write32(t, CORTEXM_DEMCR, ap->ap_cortexm_demcr);
 	/* Disable debug */
 	target_mem_write32(t, CORTEXM_DHCSR, CORTEXM_DHCSR_DBGKEY);
-	/* Add some clock cycles to get the CPU running again.*/
-	target_mem_read32(t, 0);
 }
 
 enum { DB_DHCSR, DB_DCRSR, DB_DCRDR, DB_DEMCR };
@@ -836,8 +834,6 @@ static void cortexm_halt_resume(target *t, bool step)
 		target_mem_write32(t, CORTEXM_ICIALLU, 0);
 
 	target_mem_write32(t, CORTEXM_DHCSR, dhcsr);
-	/* Add some clock cycles to get the CPU running again.*/
-	target_mem_read32(t, 0);
 }
 
 static int cortexm_fault_unwind(target *t)
