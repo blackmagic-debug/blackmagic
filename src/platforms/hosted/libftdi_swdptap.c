@@ -361,9 +361,19 @@ static void swdptap_seq_out(uint32_t MS, int ticks)
 	}
 }
 
+/* ARM Debug Interface Architecture Specification ADIv5.0 to ADIv5.2
+ * tells to clock the data through SW-DP to either :
+ * - immediate start a new transaction
+ * - continue to drive idle cycles
+ * - or clock at least 8 idle cycles
+ *
+ * Implement last option to favour correctness over
+ *   slight speed decrease
+ */
 static void swdptap_seq_out_parity(uint32_t MS, int ticks)
 {
-	int parity = __builtin_parity(MS & ((1LL << ticks) - 1)) & 1;
+	(void) ticks;
+	int parity = __builtin_parity(MS) & 1;
 	unsigned int index = 0;
 	swdptap_turnaround(SWDIO_STATUS_DRIVE);
 	if (do_mpsse) {
@@ -373,26 +383,26 @@ static void swdptap_seq_out_parity(uint32_t MS, int ticks)
 		DI[2] = (MS >> 16) & 0xff;
 		DI[3] = (MS >> 24) & 0xff;
 		DI[4] = parity;
-		libftdi_jtagtap_tdi_tdo_seq(NULL, 0, DI, ticks + 1);
+		DI[5] = 0;
+		libftdi_jtagtap_tdi_tdo_seq(NULL, 0, DI, 32 + 1 + 8);
 	} else {
 		uint8_t cmd[32];
 		int steps = ticks;
 		while (steps) {
 			cmd[index++] = MPSSE_TMS_SHIFT;
+			cmd[index++] = 6;
 			if (steps >= 7) {
-				cmd[index++] = 6;
 				cmd[index++] = MS & 0x7f;
 				MS >>= 7;
 				steps -= 7;
 			} else {
-				cmd[index++] = steps - 1;
-				cmd[index++] = MS & 0x7f;
+				cmd[index++] = (MS & 0x7f) | (parity << 4);
 				steps = 0;
 			}
 		}
 		cmd[index++] = MPSSE_TMS_SHIFT;
+		cmd[index++] = 4;
 		cmd[index++] = 0;
-		cmd[index++] = parity;
 		libftdi_buffer_write(cmd, index);
 	}
 }
