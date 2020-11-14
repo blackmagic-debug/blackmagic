@@ -2,6 +2,15 @@ SYS = $(shell $(CC) -dumpmachine)
 CFLAGS += -DENABLE_DEBUG -DPLATFORM_HAS_DEBUG
 CFLAGS +=-I ./target -I./platforms/pc
 
+# Define HOSTED_BMP_ONLY to '1' in order to build the hosted blackmagic
+# executable with support for native BMP probes only. This makes
+# linking against the libftdi and libusb libraries unnecessary. This can
+# be useful to minimize external dependencies, and make building on
+# windows systems easier.
+ifeq ($(HOSTED_BMP_ONLY), 1)
+ CFLAGS  +=  -DHOSTED_BMP_ONLY
+endif
+
 ifneq (, $(findstring linux, $(SYS)))
 SRC += serial_unix.c
 ifeq ($(ASAN), 1)
@@ -24,6 +33,7 @@ LDFLAGS += -framework CoreFoundation
 CFLAGS += -Ihidapi/hidapi
 endif
 
+ifneq ($(HOSTED_BMP_ONLY), 1)
 LDFLAGS += -lusb-1.0
 CFLAGS += $(shell pkg-config --cflags libftdi1)
 LDFLAGS += $(shell pkg-config --libs libftdi1)
@@ -40,11 +50,16 @@ else
   SRC += cmsis_dap.c dap.c
  endif
 endif
+endif
 
 VPATH += platforms/pc
-SRC += timing.c cl_utils.c utils.c libusb_utils.c
-SRC += stlinkv2.c
+SRC += timing.c cl_utils.c utils.c
 SRC += bmp_remote.c remote_swdptap.c remote_jtagtap.c
+ifneq ($(HOSTED_BMP_ONLY), 1)
+SRC += libusb_utils.c
+SRC += stlinkv2.c
 SRC += ftdi_bmp.c libftdi_swdptap.c libftdi_jtagtap.c
 SRC += jlink.c jlink_adiv5_swdp.c jlink_jtagtap.c
+endif
+
 PC_HOSTED = 1

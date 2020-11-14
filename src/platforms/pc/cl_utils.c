@@ -115,21 +115,52 @@ static void bmp_munmap(struct mmap_data *map)
 
 static void cl_help(char **argv, BMP_CL_OPTIONS_t *opt)
 {
+#ifndef HOSTED_BMP_ONLY
 	DEBUG_WARN("%s for: \n", opt->opt_idstring);
 	DEBUG_WARN("\tBMP hosted %s\n\t\tfor ST-Link V2/3, CMSIS_DAP, JLINK and "
 			   "LIBFTDI/MPSSE\n\n", FIRMWARE_VERSION);
+#else
+	DEBUG_WARN("%s for BMP Firmware.\n", opt->opt_idstring);
+#endif /* HOSTED_BMP_ONLY */
 	DEBUG_WARN("Usage: %s [options]\n", argv[0]);
 	DEBUG_WARN("\t-h\t\t: This help.\n");
 	DEBUG_WARN("\t-v[bitmask]\t: Increasing verbosity. Bitmask:\n");
 	DEBUG_WARN("\t\t\t  1 = INFO, 2 = GDB, 4 = TARGET, 8 = PROBE, 16 = WIRE\n");
 	DEBUG_WARN("Probe selection arguments:\n");
-	DEBUG_WARN("\t-d \"path\"\t: Use serial BMP device at \"path\"(Deprecated)\n");
+
+#if defined(_WIN32) || defined(__CYGWIN__)
+	DEBUG_WARN("\t-d \"path\"\t: Use serial device at \"path\" (e.g. \"com5\", \"\\\\.\\com12\")(Deprecated)\\n");
+#else
+	DEBUG_WARN("\t-d \"path\"\t: Use serial device at \"path\"(Deprecated)\\n");
+#endif
+
+#ifndef HOSTED_BMP_ONLY
 	DEBUG_WARN("\t-P <pos>\t: Use debugger found at position <pos>\n");
+#endif /* HOSTED_BMP_ONLY */
 	DEBUG_WARN("\t-n <num>\t: Use target device found at position <num>\n");
+#if defined(_WIN32) || defined(__CYGWIN__)
+  #ifdef HOSTED_BMP_ONLY
+	/* The '-l' option is not documented. It is recycled here for
+	 * the special case of running hosted in windows, with support
+	 * for BMP probes only. */
+	DEBUG_WARN("\t-l\t\t: List serial numbers of known BMP probes.\n"
+		   "\t\t\t  This is useful for getting a probe's serial number,\n"
+		   "\t\t\t  and passing it to the '-s' option\n");
+  #endif /* HOSTED_BMP_ONLY */
+	DEBUG_WARN("\t-s \"serial\"\t: Use BMP probe with serial number \"serial\".\n"
+		   "\t\t\t  This is useful for opening a specific probe,\n"
+		   "\t\t\t  regardless of which serial port number has been\n"
+		   "\t\t\t  assigned to it, which is especially useful if\n"
+		   "\t\t\t  several probes are attached simultaneously\n");
+#else
 	DEBUG_WARN("\t-s \"serial\"\t: Use dongle with (partial) "
 		  "serial number \"serial\"\n");
+#endif
+
+#ifndef HOSTED_BMP_ONLY
 	DEBUG_WARN("\t-c \"string\"\t: Use ftdi dongle with type \"string\"\n");
-	DEBUG_WARN("\t\t Use \"list\" to list available cables\n");
+	DEBUG_WARN("\t\t\t  Use \"list\" to list available cables\n");
+#endif /* HOSTED_BMP_ONLY */
 	DEBUG_WARN("Run mode related options:\n");
 	DEBUG_WARN("\tDefault mode is to start the debug server at :2000\n");
 	DEBUG_WARN("\t-j\t\t: Use JTAG. SWD is default.\n");
@@ -161,10 +192,12 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 	opt->opt_flash_start = 0xffffffff;
 	while((c = getopt(argc, argv, "eEhHv:d:s:I:c:CnltVta:S:jpP:rR")) != -1) {
 		switch(c) {
+#ifndef HOSTED_BMP_ONLY
 		case 'c':
 			if (optarg)
 				opt->opt_cable = optarg;
 			break;
+#endif /* HOSTED_BMP_ONLY */
 		case 'h':
 			cl_help(argv, opt);
 			break;
@@ -228,10 +261,12 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 			if (optarg)
 				opt->opt_target_dev = strtol(optarg, NULL, 0);
 			break;
+#ifndef HOSTED_BMP_ONLY
 		case 'P':
 			if (optarg)
 				opt->opt_position = atoi(optarg);
 			break;
+#endif /* HOSTED_BMP_ONLY */
 		case 'S':
 			if (optarg) {
 				char *endptr;

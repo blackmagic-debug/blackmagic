@@ -25,6 +25,54 @@
 
 static HANDLE hComm;
 
+enum
+{
+	MAX_KEY_LENGTH	= 255,
+	MAX_VALUE_NAME	= 16383,
+};
+
+/* This function lists the serial numbers of BMP probes that have at some time
+ * been attached to the machine, by looking up the windows registry. */
+void list_known_bmp_devices(void)
+{
+	char regpath[258];
+	/* First find the containers of the BMP comports */
+	sprintf(regpath,
+			"SYSTEM\\CurrentControlSet\\Enum\\USB\\VID_%04X&PID_%04X",
+			VENDOR_ID_BMP, PRODUCT_ID_BMP);
+	HKEY hkeySection;
+	LSTATUS res;
+	res = RegOpenKeyEx(HKEY_LOCAL_MACHINE, regpath, 0, KEY_READ, &hkeySection);
+	if (res != ERROR_SUCCESS) {
+		printf("Error querying registry for listing known BMP devices.\n");
+		return;
+	}
+
+	TCHAR    subkey_name[MAX_KEY_LENGTH];
+	DWORD    subkey_name_len;
+	DWORD    subkey_count = 0;
+
+	DWORD i, retCode;
+
+	/* Get the subkey count. */
+	retCode = RegQueryInfoKey( hkeySection, 0, 0, NULL, &subkey_count, 0, 0, 0, 0, 0, 0, 0);
+
+	/* Enumerate the subkeys, until RegEnumKeyEx fails. */
+	if (subkey_count)
+	{
+		printf( "Known BMP devices serial numbers:\n");
+		for (i = 0; i < subkey_count; i ++) {
+			subkey_name_len = MAX_KEY_LENGTH;
+			retCode = RegEnumKeyEx(hkeySection, i, subkey_name, &subkey_name_len, 0, 0, 0, 0);
+			if (retCode == ERROR_SUCCESS)
+				printf("[%lu] %s\n", i + 1, subkey_name);
+		}
+	}
+	else
+		printf("No BMP devices found.\n");
+	RegCloseKey(hkeySection);
+}
+
 static char *find_bmp_by_serial(const char *serial)
 {
 	char regpath[258];
@@ -52,7 +100,7 @@ static char *find_bmp_by_serial(const char *serial)
 	printf("%s\n", regpath);
 	res = RegOpenKeyEx(HKEY_LOCAL_MACHINE, regpath, 0, KEY_READ, &hkeySection);
 	if (res != ERROR_SUCCESS) {
-		printf("Failuere\n");
+		printf("Failure\n");
 		return NULL;
 	}
 	BYTE port[128];
@@ -67,7 +115,6 @@ static char *find_bmp_by_serial(const char *serial)
 
 int serial_open(BMP_CL_OPTIONS_t *cl_opts, char * serial)
 {
-	(void) serial; /* FIXME: Does Windows allow open with USB serial no? */
 	char device[256];
 	if (!cl_opts->opt_device)
 		cl_opts->opt_device = find_bmp_by_serial(serial);

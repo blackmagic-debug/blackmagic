@@ -1,5 +1,15 @@
 # PC-Hosted BMP
-Compile in src with "make PROBE_HOST=hosted"
+Compile in src with "make PROBE_HOST=hosted".
+
+The configuration option 'HOSTED_BMP_ONLY=1'
+("make PROBE_HOST=hosted HOSTED_BMP_ONLY=1 make")
+can be used to build the hosted version with support for
+BMP probes only, without libusb and libftdi support.
+This option excludes support for stlink probes, FTDI-based probes,
+CMSIS-DAP probes, and j-link probes, but can be useful in order
+to minimize external dependencies for building the hosted version,
+and make it easier to build on windows systems, where linking
+against the libusb and libftdi libraries is not always straightforward.
 
 ## Description
 PC-hosted BMP run on the PC and compiles as "blackmagic". When started,
@@ -65,6 +75,9 @@ pacman -S mingw-w64-x86_64-libftdi --needed
 pacman -S mingw-w64-x86_64-gcc --needed
 PROBE_HOST=hosted make
 ```
+Alternatively, the "HOSTED_BMP_ONLY=1" option can be used to build the hosted
+version with support for BMP probes only, without the need to link against
+the libusb and libftdi libraries.
 
 To prepare libusb access to the ftdi/stlink/jlink/cmsis-dap devices, run zadig
 https://zadig.akeo.ie/. Choose WinUSB(libusb-1.0).
