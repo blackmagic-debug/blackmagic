@@ -319,6 +319,13 @@ bool kinetis_probe(target *t)
 				return false;
 		}
 		break;
+	case 0x118: /* S32K118 */
+		t->driver = "S32K118";
+		target_add_ram(t, 0x1ffffc00, 0x00000400); /* SRAM_L, 1 KB */
+		target_add_ram(t, 0x20000000, 0x00005800); /* SRAM_H, 22 KB */
+		kl_gen_add_flash(t, 0x00000000, 0x00040000, 0x800, K64_WRITE_LEN); /* P-Flash, 256 KB, 2 KB Sectors */
+		kl_gen_add_flash(t, 0x10000000, 0x00008000, 0x800, K64_WRITE_LEN); /* FlexNVM, 32 KB, 2 KB Sectors */
+		break;
 	default:
 		return false;
 	}
