@@ -132,15 +132,6 @@ static const char *usb_strings[] = {
 	if_string,
 };
 
-static char upd_if_string[] = UPD_IFACE_STRING;
-static const char *usb_strings_upd[] = {
-	"Black Sphere Technologies",
-	BOARD_IDENT_UPD,
-	serial_no,
-	/* This string is used by ST Microelectronics' DfuSe utility */
-	upd_if_string,
-};
-
 static uint32_t get_le32(const void *vp)
 {
 	const uint8_t *p = vp;
@@ -293,12 +284,12 @@ static enum usbd_request_return_codes usbdfu_control_request(usbd_device *dev,
 	return USBD_REQ_NOTSUPP;
 }
 
-void dfu_init(const usbd_driver *driver, dfu_mode_t mode)
+void dfu_init(const usbd_driver *driver)
 {
 	get_dev_unique_id(serial_no);
 
 	usbdev = usbd_init(driver, &dev, &config,
-			   (mode == DFU_MODE)?usb_strings:usb_strings_upd, 4,
+			   usb_strings, 4,
 			   usbd_control_buffer, sizeof(usbd_control_buffer));
 
 	usbd_register_control_callback(usbdev,
@@ -357,12 +348,6 @@ static char *get_dev_unique_id(char *s)
 		fuse_flash_size = 0x80;
 	set_dfu_iface_string(fuse_flash_size - 8);
 	max_address = FLASH_BASE + (fuse_flash_size << 10);
-	/* If bootloader pages are write protected or device is read
-	 * protected, deny bootloader update.
-	 * User can still force updates, at his own risk!
-	 */
-	if (((FLASH_WRPR & 0x03) != 0x03) || (FLASH_OBR & FLASH_OBR_RDPRT_EN))
-		upd_if_string[30] = '0';
 	/* Fetch serial number from chip's unique ID */
 	for(i = 0; i < 8; i++) {
 		s[7-i] = ((unique_id >> (4*i)) & 0xF) + '0';

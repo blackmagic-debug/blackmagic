@@ -62,9 +62,9 @@ uint32_t dfu_poll_timeout(uint8_t cmd, uint32_t addr, uint16_t blocknum)
 	return 100;
 }
 
-void dfu_protect(dfu_mode_t mode)
+void dfu_protect(bool enable)
 {
-    if (mode == DFU_MODE) {
+    if (enable) {
 #ifdef DFU_SELF_PROTECT
 	if ((FLASH_WRPR & 0x03) != 0x00) {
 		flash_unlock();

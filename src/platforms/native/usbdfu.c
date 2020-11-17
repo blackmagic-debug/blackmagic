@@ -42,7 +42,7 @@ int main(void)
 	if(gpio_get(GPIOB, GPIO12))
 		dfu_jump_app_if_valid();
 
-	dfu_protect(DFU_MODE);
+	dfu_protect(false);
 
 	rcc_clock_setup_in_hse_8mhz_out_72mhz();
 	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
@@ -60,7 +60,7 @@ int main(void)
 	gpio_set_mode(LED_PORT, GPIO_MODE_OUTPUT_2_MHZ,
 			GPIO_CNF_OUTPUT_PUSHPULL, LED_0 | LED_1 | LED_2);
 
-	dfu_init(&st_usbfs_v1_usb_driver, DFU_MODE);
+	dfu_init(&st_usbfs_v1_usb_driver);
 
 	/* Configure the USB pull up pin. */
 	gpio_set(GPIOA, GPIO8);
