@@ -29,10 +29,11 @@
 #	define DFU_IFACE_STRING  "@Internal Flash   /0x08000000/8*001Ka,000*001Kg"
 #   define DFU_IFACE_STRING_OFFSET 38
 #   define DFU_IFACE_PAGESIZE 1
-#elif defined(STM32F4)
-#	define DFU_IFACE_STRING  "/0x08000000/1*016Ka,3*016Kg,1*064Kg,7*128Kg"
-#elif defined(STM32F7)
-#	define DFU_IFACE_STRING  "/0x08000000/1*016Ka,3*016Kg,1*064Kg,3*128Kg"
+#elif defined(STM32F4) ||  defined(STM32F7)
+#   define FLASH_BASE         0x08000000U
+#   define DFU_IFACE_PAGESIZE 128
+#   define DFU_IFACE_STRING_OFFSET 54
+#	define DFU_IFACE_STRING  "@Internal Flash   /0x08000000/1*016Ka,3*016Kg,1*064Kg,000*128Kg"
 #endif
 #include <libopencm3/stm32/flash.h>
 
@@ -329,7 +330,7 @@ static void set_dfu_iface_string(uint32_t size)
 	*p++ = size + '0';
 }
 #else
-# define set_dfu_iface_string()
+# define set_dfu_iface_string(x)
 #endif
 
 static char *get_dev_unique_id(char *s)
