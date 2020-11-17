@@ -18,6 +18,7 @@
  */
 
 #include "general.h"
+#include <libopencm3/stm32/desig.h>
 
 #include <string.h>
 #if defined(STM32F1HD)
@@ -30,6 +31,8 @@
 #   define DFU_IFACE_PAGESIZE 1
 #elif defined(STM32F4)
 #	define DFU_IFACE_STRING  "/0x08000000/1*016Ka,3*016Kg,1*064Kg,7*128Kg"
+#elif defined(STM32F7)
+#	define DFU_IFACE_STRING  "/0x08000000/1*016Ka,3*016Kg,1*064Kg,3*128Kg"
 #endif
 #include <libopencm3/stm32/flash.h>
 
@@ -340,20 +343,7 @@ static void set_dfu_iface_string(uint32_t size)
 
 static char *get_dev_unique_id(char *s)
 {
-#if defined(STM32F4) || defined(STM32F2)
-#	define UNIQUE_SERIAL_R 0x1FFF7A10
-#	define FLASH_SIZE_R    0x1fff7A22
-#elif defined(STM32F3)
-#	define UNIQUE_SERIAL_R 0x1FFFF7AC
-#	define FLASH_SIZE_R    0x1fff77cc
-#elif defined(STM32L1)
-#	define UNIQUE_SERIAL_R 0x1ff80050
-#	define FLASH_SIZE_R    0x1FF8004C
-#else
-#	define UNIQUE_SERIAL_R 0x1FFFF7E8;
-#	define FLASH_SIZE_R    0x1ffff7e0
-#endif
-	volatile uint32_t *unique_id_p = (volatile uint32_t *)UNIQUE_SERIAL_R;
+	volatile uint32_t *unique_id_p = (volatile uint32_t *)DESIG_UNIQUE_ID_BASE;
 	uint32_t unique_id = *unique_id_p +
 			*(unique_id_p + 1) +
 			*(unique_id_p + 2);
@@ -362,7 +352,7 @@ static char *get_dev_unique_id(char *s)
 
 	/* Calculated the upper flash limit from the exported data
 	   in theparameter block*/
-	fuse_flash_size = *(uint32_t *) FLASH_SIZE_R & 0xfff;
+	fuse_flash_size = desig_get_flash_size();
 	if (fuse_flash_size == 0x40) /* Handle F103x8 as F103xB! */
 		fuse_flash_size = 0x80;
 	set_dfu_iface_string(fuse_flash_size - 8);
