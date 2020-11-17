@@ -53,15 +53,14 @@ static void get_sector_num(uint32_t addr)
 void dfu_check_and_do_sector_erase(uint32_t addr)
 {
 	if(addr == sector_addr[sector_num]) {
-		flash_erase_sector((sector_num & 0x1f)<<3, FLASH_PROGRAM_X32);
+		flash_erase_sector((sector_num & 0x1f)<<3, FLASH_CR_PROGRAM_X32);
 	}
 }
 
 void dfu_flash_program_buffer(uint32_t baseaddr, void *buf, int len)
 {
 	for(int i = 0; i < len; i += 4)
-		flash_program_word(baseaddr + i, *(uint32_t*)(buf+i),
-		                   FLASH_PROGRAM_X32);
+		flash_program_word(baseaddr + i, *(uint32_t*)(buf+i));
 }
 
 uint32_t dfu_poll_timeout(uint8_t cmd, uint32_t addr, uint16_t blocknum)
@@ -78,14 +77,16 @@ uint32_t dfu_poll_timeout(uint8_t cmd, uint32_t addr, uint16_t blocknum)
 	return 26;
 }
 
-void dfu_protect_enable(void)
+void dfu_protect(bool enable)
 {
+	if (enable) {
 #ifdef DFU_SELF_PROTECT
-	if ((FLASH_OPTCR & 0x10000) != 0) {
-		flash_program_option_bytes(FLASH_OPTCR & ~0x10000);
-		flash_lock_option_bytes();
-	}
+		if ((FLASH_OPTCR & 0x10000) != 0) {
+			flash_program_option_bytes(FLASH_OPTCR & ~0x10000);
+			flash_lock_option_bytes();
+		}
 #endif
+	}
 }
 
 void dfu_jump_app_if_valid(void)
@@ -93,14 +94,17 @@ void dfu_jump_app_if_valid(void)
 	/* Boot the application if it's valid */
 	/* Vector table may be anywhere in 128 kByte RAM
 	   CCM not handled*/
-	if((*(volatile uint32_t*)APP_ADDRESS & 0x2FFC0000) == 0x20000000) {
-		/* Set vector table base address */
-		SCB_VTOR = APP_ADDRESS & 0x1FFFFF; /* Max 2 MByte Flash*/
+	if((*(volatile uint32_t*)app_address & 0x2FFC0000) == 0x20000000) {
+#if defined(STM32F7)		/* Set vector table base address */
+		SCB_VTOR = app_address & 0xFFFFFF00;
+#else
+		SCB_VTOR = app_address & 0x1FFFFF; /* Max 2 MByte Flash*/
+#endif
 		/* Initialise master stack pointer */
 		asm volatile ("msr msp, %0"::"g"
-		              (*(volatile uint32_t*)APP_ADDRESS));
+		              (*(volatile uint32_t*)app_address));
 		/* Jump to application */
-		(*(void(**)())(APP_ADDRESS + 4))();
+		(*(void(**)())(app_address + 4))();
 	}
 }
 
