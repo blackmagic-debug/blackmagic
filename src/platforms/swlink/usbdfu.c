@@ -75,7 +75,7 @@ int main(void)
 	if(((GPIOA_CRL & 0x40) == 0x40) && normal_boot)
 		dfu_jump_app_if_valid();
 
-	dfu_protect(DFU_MODE);
+	dfu_protect(false);
 
 	rcc_clock_setup_in_hse_8mhz_out_72mhz();
 	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
@@ -84,7 +84,7 @@ int main(void)
 	systick_interrupt_enable();
 	systick_counter_enable();
 
-	dfu_init(&st_usbfs_v1_usb_driver, DFU_MODE);
+	dfu_init(&st_usbfs_v1_usb_driver);
 
 	dfu_main();
 }

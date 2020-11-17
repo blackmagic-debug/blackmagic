@@ -39,9 +39,7 @@ int usbuart_debug_write(const char *buf, size_t len);
 
 #define BOARD_IDENT			"Black Magic Probe (SWLINK), (Firmware " FIRMWARE_VERSION ")"
 #define BOARD_IDENT_DFU		"Black Magic (Upgrade), SWLINK, (Firmware " FIRMWARE_VERSION ")"
-#define BOARD_IDENT_UPD		"Black Magic (DFU Upgrade), SWLINK, (Firmware " FIRMWARE_VERSION ")"
 #define DFU_IDENT			"Black Magic Firmware Upgrade (SWLINK)"
-#define UPD_IFACE_STRING	"@Internal Flash   /0x08000000/8*001Kg"
 
 /* Hardware definitions... */
 #define TMS_PORT	GPIOA
