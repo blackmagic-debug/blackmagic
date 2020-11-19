@@ -138,6 +138,7 @@ static void cl_help(char **argv)
 	DEBUG_WARN("Run mode related options:\n");
 	DEBUG_WARN("\tDefault mode is to start the debug server at :2000\n");
 	DEBUG_WARN("\t-j\t\t: Use JTAG. SWD is default.\n");
+	DEBUG_WARN("\t-f\t\t: Set minimum high and low times of SWJ waveform.\n");
 	DEBUG_WARN("\t-C\t\t: Connect under reset\n");
 	DEBUG_WARN("\t-t\t\t: Scan SWD or JTAG and display information about \n"
 			   "\t\t\t  connected devices\n");
@@ -166,7 +167,8 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 	opt->opt_target_dev = 1;
 	opt->opt_flash_size = 16 * 1024 *1024;
 	opt->opt_flash_start = 0xffffffff;
-	while((c = getopt(argc, argv, "eEhHv:d:s:I:c:CnltVtTa:S:jpP:rR")) != -1) {
+	opt->opt_max_swj_frequency = 4000000;
+	while((c = getopt(argc, argv, "eEhHv:d:f:s:I:c:CnltVtTa:S:jpP:rR")) != -1) {
 		switch(c) {
 		case 'c':
 			if (optarg)
@@ -199,6 +201,21 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 		case 'd':
 			if (optarg)
 				opt->opt_device = optarg;
+			break;
+		case 'f':
+			if (optarg) {
+				char *p;
+				uint32_t frequency = strtol(optarg, &p, 10);
+				switch(*p) {
+				case 'k':
+					frequency *= 1000;
+					break;
+				case 'M':
+					frequency *= 1000*1000;
+					break;
+				}
+				opt->opt_max_swj_frequency = frequency;
+			}
 			break;
 		case 's':
 			if (optarg)
@@ -273,6 +290,7 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 		DEBUG_WARN("Ignoring filename in reset/test mode\n");
 		opt->opt_flash_file = NULL;
 	}
+	DEBUG_WARN("opt freq %" PRIu32 "\n", opt->opt_max_swj_frequency);
 }
 
 static void display_target(int i, target *t, void *context)

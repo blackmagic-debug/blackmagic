@@ -54,6 +54,7 @@ typedef struct BMP_CL_OPTIONS_s {
 	int opt_debuglevel;
 	int opt_target_dev;
 	uint32_t opt_flash_start;
+	uint32_t opt_max_swj_frequency;
 	size_t opt_flash_size;
 }BMP_CL_OPTIONS_t;
 

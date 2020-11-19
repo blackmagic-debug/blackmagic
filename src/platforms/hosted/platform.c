@@ -109,6 +109,8 @@ void platform_init(int argc, char **argv)
 	default:
 		exit(-1);
 	}
+	if (cl_opts.opt_max_swj_frequency)
+		platform_max_frequency_set(cl_opts.opt_max_swj_frequency);
 	int ret = -1;
 	if (cl_opts.opt_mode != BMP_MODE_DEBUG) {
 		ret = cl_execute(&cl_opts);
@@ -313,6 +315,32 @@ bool platform_srst_get_val(void)
 	case BMP_TYPE_JLINK:
 		return jlink_srst_get_val(&info);
 	default:
+		break;
+	}
+	return false;
+}
+
+void platform_max_frequency_set(uint32_t freq)
+{
+	if (!freq)
+		return;
+	switch (info.bmp_type) {
+	case BMP_TYPE_BMP:
+		remote_max_frequency_set(freq);
+		break;
+	default:
+		DEBUG_WARN("Setting max SWJ frequency not yet implemented\n");
+		break;
+	}
+}
+
+uint32_t platform_max_frequency_get(void)
+{
+	switch (info.bmp_type) {
+	case BMP_TYPE_BMP:
+		return remote_max_frequency_get();
+	default:
+		DEBUG_WARN("Reading max SWJ frequency not yet implemented\n");
 		break;
 	}
 	return false;

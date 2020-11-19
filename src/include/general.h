@@ -37,6 +37,8 @@
 #include "platform.h"
 #include "platform_support.h"
 
+extern uint32_t delay_cnt;
+
 enum BMP_DEBUG {
 	BMP_DEBUG_NONE   =  0,
 	BMP_DEBUG_INFO   =  1,
@@ -47,6 +49,8 @@ enum BMP_DEBUG {
 	BMP_DEBUG_MAX    = 0x20,
 	BMP_DEBUG_STDOUT = 0x8000,
 };
+
+#define FREQ_FIXED 0xffffffff
 
 #if PC_HOSTED == 0
 /* For BMP debug output on a firmware BMP platform, using

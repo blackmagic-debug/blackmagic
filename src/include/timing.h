@@ -24,6 +24,7 @@ struct platform_timeout {
 	uint32_t time;
 };
 
+extern int32_t swj_delay_cnt;
 uint32_t platform_time_ms(void);
 
 #endif /* __TIMING_H */
