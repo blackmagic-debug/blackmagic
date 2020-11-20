@@ -31,6 +31,7 @@
 #include "version.h"
 #include "target.h"
 #include "target_internal.h"
+#include "cortexm.h"
 
 #include "cl_utils.h"
 #include "bmp_hosted.h"
@@ -140,6 +141,8 @@ static void cl_help(char **argv)
 	DEBUG_WARN("\t-C\t\t: Connect under reset\n");
 	DEBUG_WARN("\t-t\t\t: Scan SWD or JTAG and display information about \n"
 			   "\t\t\t  connected devices\n");
+	DEBUG_WARN("\t-T\t\t: Continious read/write-back some value to allow\n"
+			   "\t\t\t  timing insection of SWJ. Abort with ^C\n");
 	DEBUG_WARN("\t-e\t\t: Assume \"resistor SWD connection\" on FTDI: TDI\n"
                "\t\t\t  connected to TMS, TDO to TDI with eventual resistor\n");
 	DEBUG_WARN("\t-E\t\t: Erase flash until flash end or for given size\n");
@@ -163,7 +166,7 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 	opt->opt_target_dev = 1;
 	opt->opt_flash_size = 16 * 1024 *1024;
 	opt->opt_flash_start = 0xffffffff;
-	while((c = getopt(argc, argv, "eEhHv:d:s:I:c:CnltVta:S:jpP:rR")) != -1) {
+	while((c = getopt(argc, argv, "eEhHv:d:s:I:c:CnltVtTa:S:jpP:rR")) != -1) {
 		switch(c) {
 		case 'c':
 			if (optarg)
@@ -211,6 +214,9 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 		case 't':
 			opt->opt_mode = BMP_MODE_TEST;
 			cl_debuglevel |= BMP_DEBUG_INFO | BMP_DEBUG_STDOUT;
+			break;
+		case 'T':
+			opt->opt_mode = BMP_MODE_SWJ_TEST;
 			break;
 		case 'V':
 			opt->opt_mode = BMP_MODE_FLASH_VERIFY;
@@ -262,6 +268,7 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 	}
 	/* Checks */
 	if ((opt->opt_flash_file) && ((opt->opt_mode == BMP_MODE_TEST ) ||
+								  (opt->opt_mode == BMP_MODE_SWJ_TEST) ||
 								  (opt->opt_mode == BMP_MODE_RESET))) {
 		DEBUG_WARN("Ignoring filename in reset/test mode\n");
 		opt->opt_flash_file = NULL;
@@ -369,7 +376,22 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 	}
 	if (opt->opt_flash_start == 0xffffffff)
 		opt->opt_flash_start = flash_start;
-	if (opt->opt_mode == BMP_MODE_TEST)
+	if (opt->opt_mode == BMP_MODE_SWJ_TEST) {
+		switch (t->core[0]) {
+		case 'M':
+			DEBUG_WARN("Continious read/write-back DEMCR. Abort with ^C\n");
+			while(1) {
+				uint32_t demcr;
+				target_mem_read(t, &demcr, CORTEXM_DEMCR, 4);
+				target_mem_write32(t, CORTEXM_DEMCR, demcr);
+				platform_delay(1); /* To allow trigger*/
+			}
+		default:
+			DEBUG_WARN("No test for this core type yet\n");
+		}
+	}
+	if ((opt->opt_mode == BMP_MODE_TEST) ||
+		(opt->opt_mode == BMP_MODE_SWJ_TEST))
 		goto target_detach;
 	int read_file = -1;
 	if ((opt->opt_mode == BMP_MODE_FLASH_WRITE) ||
