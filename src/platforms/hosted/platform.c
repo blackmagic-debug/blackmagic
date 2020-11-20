@@ -328,6 +328,9 @@ void platform_max_frequency_set(uint32_t freq)
 	case BMP_TYPE_BMP:
 		remote_max_frequency_set(freq);
 		break;
+	case BMP_TYPE_CMSIS_DAP:
+		dap_swj_clock(freq);
+		break;
 	default:
 		DEBUG_WARN("Setting max SWJ frequency not yet implemented\n");
 		break;
@@ -339,6 +342,9 @@ uint32_t platform_max_frequency_get(void)
 	switch (info.bmp_type) {
 	case BMP_TYPE_BMP:
 		return remote_max_frequency_get();
+	case BMP_TYPE_CMSIS_DAP:
+		return dap_swj_clock(0);
+		break;
 	default:
 		DEBUG_WARN("Reading max SWJ frequency not yet implemented\n");
 		break;

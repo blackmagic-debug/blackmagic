@@ -290,7 +290,6 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 		DEBUG_WARN("Ignoring filename in reset/test mode\n");
 		opt->opt_flash_file = NULL;
 	}
-	DEBUG_WARN("opt freq %" PRIu32 "\n", opt->opt_max_swj_frequency);
 }
 
 static void display_target(int i, target *t, void *context)
