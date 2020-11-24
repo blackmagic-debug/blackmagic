@@ -140,7 +140,7 @@ bool lpc546xx_probe(target *t)
 	target_add_commands(t, lpc546xx_cmd_list, "Lpc546xx");
 	t->target_options |= CORTEXM_TOPT_INHIBIT_SRST;
 
-	return false;
+	return true;
 }
 
 /* Reset all major systems _except_ debug */
