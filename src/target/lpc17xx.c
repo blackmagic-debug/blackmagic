@@ -138,17 +138,20 @@ lpc17xx_cmd_erase(target *t, int argc, const char *argv[])
 	struct flash_param param;
 
 	if (lpc17xx_iap_call(t, &param, IAP_CMD_PREPARE, 0, FLASH_NUM_SECTOR-1)) {
-		DEBUG("lpc17xx_cmd_erase: prepare failed %d\n", (unsigned int)param.result[0]);
+		DEBUG_WARN("lpc17xx_cmd_erase: prepare failed %d\n",
+				   (unsigned int)param.result[0]);
 		return false;
 	}
 
 	if (lpc17xx_iap_call(t, &param, IAP_CMD_ERASE, 0, FLASH_NUM_SECTOR-1, CPU_CLK_KHZ)) {
-		DEBUG("lpc17xx_cmd_erase: erase failed %d\n", (unsigned int)param.result[0]);
+		DEBUG_WARN("lpc17xx_cmd_erase: erase failed %d\n",
+				   (unsigned int)param.result[0]);
 		return false;
 	}
 
 	if (lpc17xx_iap_call(t, &param, IAP_CMD_BLANKCHECK, 0, FLASH_NUM_SECTOR-1)) {
-		DEBUG("lpc17xx_cmd_erase: blankcheck failed %d\n", (unsigned int)param.result[0]);
+		DEBUG_WARN("lpc17xx_cmd_erase: blankcheck failed %d\n",
+				   (unsigned int)param.result[0]);
 		return false;
 	}
 	tc_printf(t, "Erase OK.\n");

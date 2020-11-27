@@ -143,7 +143,7 @@ static void stm32f4_add_flash(target *t,
 	struct stm32f4_flash *sf = calloc(1, sizeof(*sf));
 	struct target_flash *f;
 	if (!sf) {			/* calloc failed: heap exhaustion */
-		DEBUG("calloc: failed in %s\n", __func__);
+		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return;
 	}
 
@@ -197,28 +197,22 @@ char *stm32f4_get_chip_name(uint32_t idcode)
 
 static void stm32f7_detach(target *t)
 {
-	target_mem_write32(t, DBGMCU_CR, t->target_storage);
+	ADIv5_AP_t *ap = cortexm_ap(t);
+	target_mem_write32(t, DBGMCU_CR, ap->ap_storage);
 	cortexm_detach(t);
 }
 
 bool stm32f4_probe(target *t)
 {
-	ADIv5_AP_t *ap = cortexm_ap(t);
-	uint32_t idcode;
-
-	idcode = (ap->dp->targetid >> 16) & 0xfff;
-	if (!idcode)
-		idcode = target_mem_read32(t, DBGMCU_IDCODE) & 0xFFF;
-
-	if (idcode == ID_STM32F20X) {
+	if (t->idcode == ID_STM32F20X) {
 		/* F405 revision A have a wrong IDCODE, use ARM_CPUID to make the
 		 * distinction with F205. Revision is also wrong (0x2000 instead
 		 * of 0x1000). See F40x/F41x errata. */
 		uint32_t cpuid = target_mem_read32(t, ARM_CPUID);
 		if ((cpuid & 0xFFF0) == 0xC240)
-			idcode = ID_STM32F40X;
+			t->idcode = ID_STM32F40X;
 	}
-	switch(idcode) {
+	switch(t->idcode) {
 	case ID_STM32F74X: /* F74x RM0385 Rev.4 */
 	case ID_STM32F76X: /* F76x F77x RM0410 */
 	case ID_STM32F72X: /* F72x F73x RM0431 */
@@ -234,8 +228,7 @@ bool stm32f4_probe(target *t)
 	case ID_STM32F412: /* F412     RM0402 Rev.4, 256 kB Ram */
 	case ID_STM32F401E: /* F401 D/E RM0368 Rev.3 */
 	case ID_STM32F413: /* F413     RM0430 Rev.2, 320 kB Ram, 1.5 MB flash. */
-		t->idcode = idcode;
-		t->driver = stm32f4_get_chip_name(idcode);
+		t->driver = stm32f4_get_chip_name(t->idcode);
 		t->attach = stm32f4_attach;
 		target_add_commands(t, stm32f4_cmd_list, t->driver);
 		return true;
@@ -306,8 +299,6 @@ static bool stm32f4_attach(target *t)
 	bool use_dual_bank = false;
 	target_mem_map_free(t);
 	if (is_f7) {
-		t->target_storage = target_mem_read32(t, DBGMCU_CR);
-		target_mem_write32(t, DBGMCU_CR, DBG_SLEEP);
 		target_add_ram(t, 0x00000000, 0x4000);  /* 16 k ITCM Ram */
 		target_add_ram(t, 0x20000000, 0x20000); /* 128 k DTCM Ram */
 		target_add_ram(t, 0x20020000, 0x60000); /* 384 k Ram */
@@ -411,7 +402,7 @@ static int stm32f4_flash_erase(struct target_flash *f, target_addr addr,
 		/* Read FLASH_SR to poll for BSY bit */
 		while(target_mem_read32(t, FLASH_SR) & FLASH_SR_BSY)
 			if(target_check_error(t)) {
-				DEBUG("stm32f4 flash erase: comm error\n");
+				DEBUG_WARN("stm32f4 flash erase: comm error\n");
 				return -1;
 			}
 		if (len > f->blocksize)
@@ -426,7 +417,7 @@ static int stm32f4_flash_erase(struct target_flash *f, target_addr addr,
 	/* Check for error */
 	sr = target_mem_read32(t, FLASH_SR);
 	if(sr & SR_ERROR_MASK) {
-		DEBUG("stm32f4 flash erase: sr error: 0x%" PRIu32 "\n", sr);
+		DEBUG_WARN("stm32f4 flash erase: sr error: 0x%" PRIu32 "\n", sr);
 		return -1;
 	}
 	return 0;
@@ -450,13 +441,13 @@ static int stm32f4_flash_write(struct target_flash *f,
 	do {
 		sr = target_mem_read32(t, FLASH_SR);
 		if(target_check_error(t)) {
-			DEBUG("stm32f4 flash write: comm error\n");
+			DEBUG_WARN("stm32f4 flash write: comm error\n");
 			return -1;
 		}
 	} while (sr & FLASH_SR_BSY);
 
 	if (sr & SR_ERROR_MASK) {
-		DEBUG("stm32f4 flash write error 0x%" PRIx32 "\n", sr);
+		DEBUG_WARN("stm32f4 flash write error 0x%" PRIx32 "\n", sr);
 			return -1;
 	}
 	return 0;

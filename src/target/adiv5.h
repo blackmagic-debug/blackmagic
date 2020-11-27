@@ -86,6 +86,19 @@
 #define ADIV5_AP_BASE		ADIV5_AP_REG(0xF8)
 #define ADIV5_AP_IDR		ADIV5_AP_REG(0xFC)
 
+/* Known designers seen in SYSROM-PIDR. Ignore Bit 7 from the designer bits*/
+#define AP_DESIGNER_FREESCALE    0x00e
+#define AP_DESIGNER_TEXAS        0x017
+#define AP_DESIGNER_ATMEL        0x01f
+#define AP_DESIGNER_STM          0x020
+#define AP_DESIGNER_CYPRESS      0x034
+#define AP_DESIGNER_INFINEON     0x041
+#define AP_DESIGNER_NORDIC       0x244
+#define AP_DESIGNER_ARM          0x43b
+/*LPC845 with designer 501. Strange!? */
+#define AP_DESIGNER_SPECULAR     0x501
+#define AP_DESIGNER_ENERGY_MICRO 0x673
+
 /* AP Control and Status Word (CSW) */
 #define ADIV5_AP_CSW_DBGSWENABLE	(1u << 31)
 /* Bits 30:24 - Prot, Implementation defined, for Cortex-M3: */
@@ -129,12 +142,13 @@ enum align {
 	ALIGN_DWORD    = 3
 };
 
+typedef struct ADIv5_AP_s ADIv5_AP_t;
+
 /* Try to keep this somewhat absract for later adding SW-DP */
 typedef struct ADIv5_DP_s {
 	int refcnt;
 
 	uint32_t idcode;
-	uint32_t dp_idcode; /* Contains DPvX revision*/
 	uint32_t targetid;  /* Contains IDCODE for DPv2 devices.*/
 
 	uint32_t (*dp_read)(struct ADIv5_DP_s *dp, uint16_t addr);
@@ -143,12 +157,43 @@ typedef struct ADIv5_DP_s {
                                uint16_t addr, uint32_t value);
 	void (*abort)(struct ADIv5_DP_s *dp, uint32_t abort);
 
-	union {
-		jtag_dev_t *dev;
-		uint8_t fault;
-	};
+#if PC_HOSTED == 1
+	bool (*ap_setup)(int i);
+	void (*ap_cleanup)(int i);
+    void (*ap_regs_read)(ADIv5_AP_t *ap, void *data);
+    uint32_t(*ap_reg_read)(ADIv5_AP_t *ap, int num);
+    void (*ap_reg_write)(ADIv5_AP_t *ap, int num, uint32_t value);
+	void (*read_block)(uint32_t addr, uint8_t *data, int size);
+	void (*dap_write_block_sized)(uint32_t addr, uint8_t *data,
+								  int size, enum align align);
+
+#endif
+	uint32_t (*ap_read)(ADIv5_AP_t *ap, uint16_t addr);
+	void (*ap_write)(ADIv5_AP_t *ap, uint16_t addr, uint32_t value);
+
+	void (*mem_read)(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len);
+	void (*mem_write_sized)(ADIv5_AP_t *ap, uint32_t dest, const void *src,
+							size_t len, enum align align);
+	uint8_t dp_jd_index;
+	uint8_t fault;
 } ADIv5_DP_t;
 
+struct ADIv5_AP_s {
+	int refcnt;
+
+	ADIv5_DP_t *dp;
+	uint8_t apsel;
+
+	uint32_t idr;
+	uint32_t base;
+	uint32_t csw;
+	uint32_t ap_cortexm_demcr; /* Copy of demcr when starting */
+	uint32_t ap_storage; /* E.g to hold STM32F7 initial DBGMCU_CR value.*/
+	uint16_t ap_designer;
+	uint16_t ap_partno;
+};
+
+#if PC_HOSTED == 0
 static inline uint32_t adiv5_dp_read(ADIv5_DP_t *dp, uint16_t addr)
 {
 	return dp->dp_read(dp, addr);
@@ -170,33 +215,77 @@ static inline void adiv5_dp_abort(struct ADIv5_DP_s *dp, uint32_t abort)
 	return dp->abort(dp, abort);
 }
 
-typedef struct ADIv5_AP_s {
-	int refcnt;
+static inline uint32_t adiv5_ap_read(ADIv5_AP_t *ap, uint16_t addr)
+{
+	return ap->dp->ap_read(ap, addr);
+}
 
-	ADIv5_DP_t *dp;
-	uint8_t apsel;
+static inline void adiv5_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value)
+{
+	return ap->dp->ap_write(ap, addr, value);
+}
 
-	uint32_t idr;
-	uint32_t cfg;
-	uint32_t base;
-	uint32_t csw;
-} ADIv5_AP_t;
+static inline void adiv5_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src,
+								  size_t len)
+{
+	return ap->dp->mem_read(ap, dest, src, len);
+}
+
+static inline void adiv5_mem_write_sized(
+	ADIv5_AP_t *ap, uint32_t dest, const void *src, size_t len,
+	enum align align)
+{
+	return ap->dp->mem_write_sized(ap, dest, src, len, align);
+}
+
+static inline void adiv5_dp_write(ADIv5_DP_t *dp, uint16_t addr, uint32_t value)
+{
+	dp->low_access(dp, ADIV5_LOW_WRITE, addr, value);
+}
+
+#else
+uint32_t adiv5_dp_read(ADIv5_DP_t *dp, uint16_t addr);
+uint32_t adiv5_dp_error(ADIv5_DP_t *dp);
+uint32_t adiv5_dp_low_access(struct ADIv5_DP_s *dp, uint8_t RnW,
+							 uint16_t addr, uint32_t value);
+void adiv5_dp_abort(struct ADIv5_DP_s *dp, uint32_t abort);
+uint32_t adiv5_ap_read(ADIv5_AP_t *ap, uint16_t addr);
+void adiv5_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value);
+void adiv5_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len);
+void adiv5_mem_write_sized(ADIv5_AP_t *ap, uint32_t dest,
+						   const void *src, size_t len, enum align align);
+void adiv5_dp_write(ADIv5_DP_t *dp, uint16_t addr, uint32_t value);
+#endif
 
 void adiv5_dp_init(ADIv5_DP_t *dp);
-void adiv5_dp_write(ADIv5_DP_t *dp, uint16_t addr, uint32_t value);
-
+void platform_adiv5_dp_defaults(ADIv5_DP_t *dp);
 ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel);
+void remote_jtag_dev(const jtag_dev_t *jtag_dev);
 void adiv5_ap_ref(ADIv5_AP_t *ap);
 void adiv5_ap_unref(ADIv5_AP_t *ap);
+void platform_add_jtag_dev(const int dev_index, const jtag_dev_t *jtag_dev);
 
-void adiv5_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value);
-uint32_t adiv5_ap_read(ADIv5_AP_t *ap, uint16_t addr);
+void adiv5_jtag_dp_handler(uint8_t jd_index, uint32_t j_idcode);
+int platform_jtag_dp_init(ADIv5_DP_t *dp);
 
-void adiv5_jtag_dp_handler(jtag_dev_t *dev);
-
-void adiv5_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len);
 void adiv5_mem_write(ADIv5_AP_t *ap, uint32_t dest, const void *src, size_t len);
-void adiv5_mem_write_sized(ADIv5_AP_t *ap, uint32_t dest, const void *src,
-						   size_t len, enum align align);
 uint64_t adiv5_ap_read_pidr(ADIv5_AP_t *ap, uint32_t addr);
+void * extract(void *dest, uint32_t src, uint32_t val, enum align align);
+
+void firmware_mem_write_sized(ADIv5_AP_t *ap, uint32_t dest, const void *src,
+							  size_t len, enum align align);
+void firmware_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src,
+					   size_t len);
+void firmware_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value);
+uint32_t firmware_ap_read(ADIv5_AP_t *ap, uint16_t addr);
+uint32_t firmware_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
+								  uint16_t addr, uint32_t value);
+uint32_t fw_adiv5_jtagdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
+					uint16_t addr, uint32_t value);
+uint32_t firmware_swdp_read(ADIv5_DP_t *dp, uint16_t addr);
+uint32_t fw_adiv5_jtagdp_read(ADIv5_DP_t *dp, uint16_t addr);
+
+uint32_t firmware_swdp_error(ADIv5_DP_t *dp);
+
+void firmware_swdp_abort(ADIv5_DP_t *dp, uint32_t abort);
 #endif

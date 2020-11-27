@@ -20,20 +20,17 @@
 
 #ifndef __SWDPTAP_H
 #define __SWDPTAP_H
+typedef struct swd_proc_s {
+	uint32_t (*swdptap_seq_in)(int ticks);
+	bool (*swdptap_seq_in_parity)(uint32_t *data, int ticks);
+	void (*swdptap_seq_out)(uint32_t MS, int ticks);
+	void (*swdptap_seq_out_parity)(uint32_t MS, int ticks);
+} swd_proc_t;
+extern swd_proc_t swd_proc;
 
+# if PC_HOSTED == 1
+int platform_swdptap_init(void);
+# else
 int swdptap_init(void);
-
-/* Primitive functions */
-bool swdptap_bit_in(void);
-void swdptap_bit_out(bool val);
-
-/* Low level functions, provided in swdptap_generic.c from the primitives
-   (indicate NO_OWN_LL in the Makefile.inc or libopencm specific in 
-   platforms/common*/
-uint32_t swdptap_seq_in(int ticks);
-bool swdptap_seq_in_parity(uint32_t *data, int ticks);
-void swdptap_seq_out(uint32_t MS, int ticks);
-void swdptap_seq_out_parity(uint32_t MS, int ticks);
-
+# endif
 #endif
-

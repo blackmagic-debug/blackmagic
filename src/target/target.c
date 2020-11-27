@@ -39,7 +39,7 @@ target *target_new(void)
 {
 	target *t = (void*)calloc(1, sizeof(*t));
 	if (!t) {			/* calloc failed: heap exhaustion */
-		DEBUG("calloc: failed in %s\n", __func__);
+		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return NULL;
 	}
 
@@ -124,7 +124,7 @@ void target_add_commands(target *t, const struct command_s *cmds, const char *na
 {
 	struct target_command_s *tc = malloc(sizeof(*tc));
 	if (!tc) {			/* malloc failed: heap exhaustion */
-		DEBUG("malloc: failed in %s\n", __func__);
+		DEBUG_WARN("malloc: failed in %s\n", __func__);
 		return;
 	}
 
@@ -168,7 +168,7 @@ void target_add_ram(target *t, target_addr start, uint32_t len)
 {
 	struct target_ram *ram = malloc(sizeof(*ram));
 	if (!ram) {			/* malloc failed: heap exhaustion */
-		DEBUG("malloc: failed in %s\n", __func__);
+		DEBUG_WARN("malloc: failed in %s\n", __func__);
 		return;
 	}
 
@@ -238,7 +238,7 @@ int target_flash_erase(target *t, target_addr addr, size_t len)
 	while (len) {
 		struct target_flash *f = flash_for_addr(t, addr);
 		if (!f) {
-			DEBUG("Erase stopped at 0x%06" PRIx32 "\n", addr);
+			DEBUG_WARN("Erase stopped at 0x%06" PRIx32 "\n", addr);
 			return ret;
 		}
 		size_t tmptarget = MIN(addr + len, f->start + f->length);
@@ -256,6 +256,8 @@ int target_flash_write(target *t,
 	int ret = 0;
 	while (len) {
 		struct target_flash *f = flash_for_addr(t, dest);
+		if (!f)
+			return 1;
 		size_t tmptarget = MIN(dest + len, f->start + f->length);
 		size_t tmplen = tmptarget - dest;
 		ret |= target_flash_write_buffered(f, dest, src, tmplen);
@@ -290,7 +292,7 @@ int target_flash_write_buffered(struct target_flash *f,
 		/* Allocate flash sector buffer */
 		f->buf = malloc(f->buf_size);
 		if (!f->buf) {			/* malloc failed: heap exhaustion */
-			DEBUG("malloc: failed in %s\n", __func__);
+			DEBUG_WARN("malloc: failed in %s\n", __func__);
 			return 1;
 		}
 		f->buf_addr = -1;
@@ -337,7 +339,7 @@ void target_detach(target *t)
 {
 	t->detach(t);
 	t->attached = false;
-#if defined(PC_HOSTED)
+#if PC_HOSTED == 1
 # include "platform.h"
 	platform_buffer_flush();
 #endif
@@ -407,7 +409,7 @@ void target_set_cmdline(target *t, char *cmdline) {
 	len_dst = sizeof(t->cmdline)-1;
 	strncpy(t->cmdline, cmdline, len_dst -1);
 	t->cmdline[strlen(t->cmdline)]='\0';
-	DEBUG("cmdline: >%s<\n", t->cmdline);
+	DEBUG_INFO("cmdline: >%s<\n", t->cmdline);
 	}
 
 /* Set heapinfo for semihosting */
@@ -438,7 +440,7 @@ int target_breakwatch_set(target *t,
 		/* Success, make a heap copy */
 		struct breakwatch *bwm = malloc(sizeof bw);
 		if (!bwm) {			/* malloc failed: heap exhaustion */
-			DEBUG("malloc: failed in %s\n", __func__);
+			DEBUG_WARN("malloc: failed in %s\n", __func__);
 			return 1;
 		}
 		memcpy(bwm, &bw, sizeof(bw));
@@ -498,6 +500,16 @@ const char *target_driver_name(target *t)
 const char *target_core_name(target *t)
 {
 	return t->core;
+}
+
+unsigned int target_designer(target *t)
+{
+	return t->t_designer;
+}
+
+unsigned int target_idcode(target *t)
+{
+	return t->idcode;
 }
 
 uint32_t target_mem_read32(target *t, uint32_t addr)

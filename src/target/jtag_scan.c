@@ -36,6 +36,16 @@ int jtag_dev_count;
 /* bucket of ones for don't care TDI */
 static const uint8_t ones[] = "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF";
 
+#if PC_HOSTED == 0
+void jtag_add_device(const int dev_index, const jtag_dev_t *jtag_dev)
+{
+	if (dev_index == 0)
+		memset(&jtag_devs, 0, sizeof(jtag_devs));
+	memcpy(&jtag_devs[dev_index], jtag_dev, sizeof(jtag_dev_t));
+	jtag_dev_count = dev_index + 1;
+}
+#endif
+
 /* Scan JTAG chain for devices, store IR length and IDCODE (if present).
  * Reset TAP state machine.
  * Select Shift-IR state.
@@ -66,13 +76,20 @@ int jtag_scan(const uint8_t *irlens)
 	/* Run throught the SWD to JTAG sequence for the case where an attached SWJ-DP is
 	 * in SW-DP mode.
 	 */
-	DEBUG("Resetting TAP\n");
+	DEBUG_INFO("Resetting TAP\n");
+#if PC_HOSTED == 1
+	if (platform_jtagtap_init()) {
+		DEBUG_WARN("JTAG not available\n");
+		return 0;
+	}
+#else
 	jtagtap_init();
-	jtagtap_reset();
+#endif
+	jtag_proc.jtagtap_reset();
 
 	if (irlens) {
-		DEBUG("Given list of IR lengths, skipping probe\n");
-		DEBUG("Change state to Shift-IR\n");
+		DEBUG_WARN("Given list of IR lengths, skipping probe\n");
+		DEBUG_INFO("Change state to Shift-IR\n");
 		jtagtap_shift_ir();
 		j = 0;
 		while((jtag_dev_count <= JTAG_MAX_DEVS) &&
@@ -80,72 +97,73 @@ int jtag_scan(const uint8_t *irlens)
 			uint32_t irout;
 			if(*irlens == 0)
 				break;
-			jtagtap_tdi_tdo_seq((uint8_t*)&irout, 0, ones, *irlens);
+			jtag_proc.jtagtap_tdi_tdo_seq((uint8_t*)&irout, 0, ones, *irlens);
 			if (!(irout & 1)) {
-				DEBUG("check failed: IR[0] != 1\n");
+				DEBUG_WARN("check failed: IR[0] != 1\n");
 				return -1;
 			}
 			jtag_devs[jtag_dev_count].ir_len = *irlens;
 			jtag_devs[jtag_dev_count].ir_prescan = j;
-			jtag_devs[jtag_dev_count].dev = jtag_dev_count;
+			jtag_devs[jtag_dev_count].jd_dev = jtag_dev_count;
 			j += *irlens;
 			irlens++;
 			jtag_dev_count++;
 		}
 	} else {
-		DEBUG("Change state to Shift-IR\n");
+		DEBUG_INFO("Change state to Shift-IR\n");
 		jtagtap_shift_ir();
 
-		DEBUG("Scanning out IRs\n");
-		if(!jtagtap_next(0, 1)) {
-			DEBUG("jtag_scan: Sanity check failed: IR[0] shifted out as 0\n");
+		DEBUG_INFO("Scanning out IRs\n");
+		if(!jtag_proc.jtagtap_next(0, 1)) {
+			DEBUG_WARN("jtag_scan: Sanity check failed: IR[0] shifted out "
+					   "as 0\n");
 			jtag_dev_count = -1;
 			return -1; /* must be 1 */
 		}
 		jtag_devs[0].ir_len = 1; j = 1;
 		while((jtag_dev_count <= JTAG_MAX_DEVS) &&
 		      (jtag_devs[jtag_dev_count].ir_len <= JTAG_MAX_IR_LEN)) {
-			if(jtagtap_next(0, 1)) {
+			if(jtag_proc.jtagtap_next(0, 1)) {
 				if(jtag_devs[jtag_dev_count].ir_len == 1) break;
 				jtag_devs[++jtag_dev_count].ir_len = 1;
 				jtag_devs[jtag_dev_count].ir_prescan = j;
-				jtag_devs[jtag_dev_count].dev = jtag_dev_count;
+				jtag_devs[jtag_dev_count].jd_dev = jtag_dev_count;
 			} else jtag_devs[jtag_dev_count].ir_len++;
 			j++;
 		}
 		if(jtag_dev_count > JTAG_MAX_DEVS) {
-			DEBUG("jtag_scan: Maximum device count exceeded\n");
+			DEBUG_WARN("jtag_scan: Maximum device count exceeded\n");
 			jtag_dev_count = -1;
 			return -1;
 		}
 		if(jtag_devs[jtag_dev_count].ir_len > JTAG_MAX_IR_LEN) {
-			DEBUG("jtag_scan: Maximum IR length exceeded\n");
+			DEBUG_WARN("jtag_scan: Maximum IR length exceeded\n");
 			jtag_dev_count = -1;
 			return -1;
 		}
 	}
 
-	DEBUG("Return to Run-Test/Idle\n");
-	jtagtap_next(1, 1);
+	DEBUG_INFO("Return to Run-Test/Idle\n");
+	jtag_proc.jtagtap_next(1, 1);
 	jtagtap_return_idle();
 
 	/* All devices should be in BYPASS now */
 
 	/* Count device on chain */
-	DEBUG("Change state to Shift-DR\n");
+	DEBUG_INFO("Change state to Shift-DR\n");
 	jtagtap_shift_dr();
-	for(i = 0; (jtagtap_next(0, 1) == 0) && (i <= jtag_dev_count); i++)
+	for(i = 0; (jtag_proc.jtagtap_next(0, 1) == 0) && (i <= jtag_dev_count); i++)
 		jtag_devs[i].dr_postscan = jtag_dev_count - i - 1;
 
 	if(i != jtag_dev_count) {
-		DEBUG("jtag_scan: Sanity check failed: "
+		DEBUG_WARN("jtag_scan: Sanity check failed: "
 			"BYPASS dev count doesn't match IR scan\n");
 		jtag_dev_count = -1;
 		return -1;
 	}
 
-	DEBUG("Return to Run-Test/Idle\n");
-	jtagtap_next(1, 1);
+	DEBUG_INFO("Return to Run-Test/Idle\n");
+	jtag_proc.jtagtap_next(1, 1);
 	jtagtap_return_idle();
 	if(!jtag_dev_count) {
 		return 0;
@@ -157,59 +175,66 @@ int jtag_scan(const uint8_t *irlens)
 					jtag_devs[i].ir_len;
 
 	/* Reset jtagtap: should take all devs to IDCODE */
-	jtagtap_reset();
+	jtag_proc.jtagtap_reset();
 	jtagtap_shift_dr();
 	for(i = 0; i < jtag_dev_count; i++) {
-		if(!jtagtap_next(0, 1)) continue;
-		jtag_devs[i].idcode = 1;
+		if(!jtag_proc.jtagtap_next(0, 1)) continue;
+		jtag_devs[i].jd_idcode = 1;
 		for(j = 2; j; j <<= 1)
-			if(jtagtap_next(0, 1)) jtag_devs[i].idcode |= j;
+			if(jtag_proc.jtagtap_next(0, 1)) jtag_devs[i].jd_idcode |= j;
 
 	}
-	DEBUG("Return to Run-Test/Idle\n");
-	jtagtap_next(1, 1);
+	DEBUG_INFO("Return to Run-Test/Idle\n");
+	jtag_proc.jtagtap_next(1, 1);
 	jtagtap_return_idle();
+#if PC_HOSTED == 1
+	/*Transfer needed device information to firmware jtag_devs*/
+	for(i = 0; i < jtag_dev_count; i++)
+		platform_add_jtag_dev(i, &jtag_devs[i]);
+#endif
 
 	/* Check for known devices and handle accordingly */
 	for(i = 0; i < jtag_dev_count; i++)
 		for(j = 0; dev_descr[j].idcode; j++)
-			if((jtag_devs[i].idcode & dev_descr[j].idmask) ==
+			if((jtag_devs[i].jd_idcode & dev_descr[j].idmask) ==
 			   dev_descr[j].idcode) {
 				jtag_devs[i].current_ir = -1;
 				/* Save description in table */
-				jtag_devs[i].descr = dev_descr[j].descr;
+				jtag_devs[i].jd_descr = dev_descr[j].descr;
 				/* Call handler to initialise/probe device further */
 				if(dev_descr[j].handler)
-					dev_descr[j].handler(&jtag_devs[i]);
+					dev_descr[j].handler(i, dev_descr[j].idcode);
 				break;
 			}
 
 	return jtag_dev_count;
 }
 
-void jtag_dev_write_ir(jtag_dev_t *d, uint32_t ir)
+void jtag_dev_write_ir(jtag_proc_t *jp, uint8_t jd_index, uint32_t ir)
 {
+	jtag_dev_t *d = &jtag_devs[jd_index];
 	if(ir == d->current_ir) return;
 	for(int i = 0; i < jtag_dev_count; i++)
 		jtag_devs[i].current_ir = -1;
 	d->current_ir = ir;
 
 	jtagtap_shift_ir();
-	jtagtap_tdi_seq(0, ones, d->ir_prescan);
-	jtagtap_tdi_seq(d->ir_postscan?0:1, (void*)&ir, d->ir_len);
-	jtagtap_tdi_seq(1, ones, d->ir_postscan);
+	jp->jtagtap_tdi_seq(0, ones, d->ir_prescan);
+	jp->jtagtap_tdi_seq(d->ir_postscan?0:1, (void*)&ir, d->ir_len);
+	jp->jtagtap_tdi_seq(1, ones, d->ir_postscan);
 	jtagtap_return_idle();
 }
 
-void jtag_dev_shift_dr(jtag_dev_t *d, uint8_t *dout, const uint8_t *din, int ticks)
+void jtag_dev_shift_dr(jtag_proc_t *jp, uint8_t jd_index, uint8_t *dout, const uint8_t *din, int ticks)
 {
+	jtag_dev_t *d = &jtag_devs[jd_index];
 	jtagtap_shift_dr();
-	jtagtap_tdi_seq(0, ones, d->dr_prescan);
+	jp->jtagtap_tdi_seq(0, ones, d->dr_prescan);
 	if(dout)
-		jtagtap_tdi_tdo_seq((void*)dout, d->dr_postscan?0:1, (void*)din, ticks);
+		jp->jtagtap_tdi_tdo_seq((void*)dout, d->dr_postscan?0:1, (void*)din, ticks);
 	else
-		jtagtap_tdi_seq(d->dr_postscan?0:1, (void*)din, ticks);
-	jtagtap_tdi_seq(1, ones, d->dr_postscan);
+		jp->jtagtap_tdi_seq(d->dr_postscan?0:1, (void*)din, ticks);
+	jp->jtagtap_tdi_seq(1, ones, d->dr_postscan);
 	jtagtap_return_idle();
 }
 

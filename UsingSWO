@@ -109,12 +109,13 @@ Note that swolisten can be used with either BMP firmware, or with a
 conventional TTL serial dongle. See at the bottom of this file for
 information on how to use a dongle.
 
-The command line to build the swolisten tool is;
+The command line to build the swolisten tool may look like:
 
-gcc -I /usr/local/include/libusb-1.0 -L /usr/local/lib  -lusb-1.0 swolisten.c -o swolisten
+E.g. for Ubuntu
+gcc -I /usr/local/include/libusb-1.0 -L /usr/local/lib swolisten.c -o swolisten -lusb-1.0
 
-For Opensuse:
-gcc -I /usr/include/libusb-1.0 -lusb-1.0 swolisten.c  swolisten -std=gnu99 -g -Og
+E.g. For Opensuse:
+gcc -I /usr/include/libusb-1.0 swolisten.c  swolisten -std=gnu99 -g -Og -lusb-1.0
 
 ...you will obviously need to change the paths to your libusb files.
 

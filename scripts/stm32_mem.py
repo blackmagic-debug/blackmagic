@@ -18,6 +18,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import print_function
 from time import sleep
 import struct
 import os
@@ -27,9 +28,9 @@ import argparse
 import usb
 import dfu
 
-CMD_GETCOMMANDS =            0x00
-CMD_SETADDRESSPOINTER =      0x21
-CMD_ERASE =                  0x41
+CMD_GETCOMMANDS =       0x00
+CMD_SETADDRESSPOINTER = 0x21
+CMD_ERASE =             0x41
 
 def stm32_erase(dev, addr):
 	erase_cmd = struct.pack("<BL", CMD_ERASE, addr)
@@ -196,7 +197,7 @@ if __name__ == "__main__":
 		exit(0)
 	dfudev.make_idle()
 	file = open(args.progfile, "rb")
-        if (os.path.getsize(args.progfile) > 0x1f800):
+	if (os.path.getsize(args.progfile) > 0x1f800):
 		print("File too large")
 		exit(0)
 
@@ -212,7 +213,7 @@ if __name__ == "__main__":
 			start = 0x8002000
 	addr = start
 	while bin:
-		print ("Programming memory at 0x%08X\r" % addr),
+		print ("Programming memory at 0x%08X" % addr, end="\r")
 		stdout.flush()
 		try:
 # STM DFU bootloader erases always.
@@ -243,7 +244,7 @@ if __name__ == "__main__":
 		except:
 # Abort silent if bootloader does not support upload
 			break
-		print ("Verifying memory at   0x%08X\r" % addr),
+		print ("Verifying memory at 0x%08X" % addr, end="\r")
 		stdout.flush()
 		if len > 1024 :
 			size = 1024

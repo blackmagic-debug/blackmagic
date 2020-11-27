@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2011  Black Sphere Technologies Ltd.
+ * Copyright (C) 2016  Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -17,32 +17,13 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+#ifndef __TIMING_H
+#define __TIMING_H
 
-#ifndef __PLATFORM_H
-#define __PLATFORM_H
+struct platform_timeout {
+	uint32_t time;
+};
 
-#include <libusb-1.0/libusb.h>
+uint32_t platform_time_ms(void);
 
-#include "timing.h"
-
-#ifndef _WIN32
-#	include <alloca.h>
-#else
-#	ifndef alloca
-#		define alloca __builtin_alloca
-#	endif
-#endif
-
-#define PLATFORM_HAS_DEBUG
-
-#define PLATFORM_IDENT "StlinkV2/3"
-#define SET_RUN_STATE(state)
-void stlink_check_detach(int state);
-#define SET_IDLE_STATE(state) stlink_check_detach(state)
-//#define SET_ERROR_STATE(state)
-
-void platform_buffer_flush(void);
-int platform_buffer_write(const uint8_t *data, int size);
-int platform_buffer_read(uint8_t *data, int size);
-
-#endif
+#endif /* __TIMING_H */

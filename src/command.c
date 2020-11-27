@@ -29,6 +29,7 @@
 #include "target.h"
 #include "morse.h"
 #include "version.h"
+#include "serialno.h"
 
 #ifdef PLATFORM_HAS_TRACESWO
 #	include "traceswo.h"
@@ -60,7 +61,7 @@ static bool cmd_target_power(target *t, int argc, const char **argv);
 static bool cmd_traceswo(target *t, int argc, const char **argv);
 #endif
 static bool cmd_heapinfo(target *t, int argc, const char **argv);
-#if defined(PLATFORM_HAS_DEBUG) && !defined(PC_HOSTED)
+#if defined(PLATFORM_HAS_DEBUG) && (PC_HOSTED == 0)
 static bool cmd_debug_bmp(target *t, int argc, const char **argv);
 #endif
 
@@ -85,14 +86,14 @@ const struct command_s cmd_list[] = {
 #endif
 #endif
 	{"heapinfo", (cmd_handler)cmd_heapinfo, "Set semihosting heapinfo" },
-#if defined(PLATFORM_HAS_DEBUG) && !defined(PC_HOSTED)
+#if defined(PLATFORM_HAS_DEBUG) && (PC_HOSTED == 0)
 	{"debug_bmp", (cmd_handler)cmd_debug_bmp, "Output BMP \"debug\" strings to the second vcom: (enable|disable)"},
 #endif
 	{NULL, NULL, NULL}
 };
 
 bool connect_assert_srst;
-#if defined(PLATFORM_HAS_DEBUG) && !defined(PC_HOSTED)
+#if defined(PLATFORM_HAS_DEBUG) && (PC_HOSTED == 0)
 bool debug_bmp;
 #endif
 long cortexm_wait_timeout = 2000; /* Timeout to wait for Cortex to react on halt command. */
@@ -135,8 +136,8 @@ bool cmd_version(target *t, int argc, char **argv)
 	(void)t;
 	(void)argc;
 	(void)argv;
-#if defined PC_HOSTED
-	gdb_outf("Black Magic Probe, PC-Hosted for " PLATFORM_IDENT
+#if PC_HOSTED == 1
+	gdb_outf("Black Magic Probe, PC-Hosted for " PLATFORM_IDENT()
 			 ", Version " FIRMWARE_VERSION "\n");
 #else
 	gdb_outf("Black Magic Probe (Firmware " FIRMWARE_VERSION ") (Hardware Version %d)\n", platform_hwversion());
@@ -171,7 +172,8 @@ static bool cmd_jtag_scan(target *t, int argc, char **argv)
 	(void)t;
 	uint8_t irlens[argc];
 
-	gdb_outf("Target voltage: %s\n", platform_target_voltage());
+	if (platform_target_voltage())
+		gdb_outf("Target voltage: %s\n", platform_target_voltage());
 
 	if (argc > 1) {
 		/* Accept a list of IR lengths on command line */
@@ -186,7 +188,11 @@ static bool cmd_jtag_scan(target *t, int argc, char **argv)
 	int devs = -1;
 	volatile struct exception e;
 	TRY_CATCH (e, EXCEPTION_ALL) {
+#if PC_HOSTED == 1
+		devs = platform_jtag_scan(argc > 1 ? irlens : NULL);
+#else
 		devs = jtag_scan(argc > 1 ? irlens : NULL);
+#endif
 	}
 	switch (e.type) {
 	case EXCEPTION_TIMEOUT:
@@ -212,7 +218,8 @@ bool cmd_swdp_scan(target *t, int argc, char **argv)
 	(void)t;
 	(void)argc;
 	(void)argv;
-	gdb_outf("Target voltage: %s\n", platform_target_voltage());
+	if (platform_target_voltage())
+		gdb_outf("Target voltage: %s\n", platform_target_voltage());
 
 	if(connect_assert_srst)
 		platform_srst_set_val(true); /* will be deasserted after attach */
@@ -220,8 +227,12 @@ bool cmd_swdp_scan(target *t, int argc, char **argv)
 	int devs = -1;
 	volatile struct exception e;
 	TRY_CATCH (e, EXCEPTION_ALL) {
+#if PC_HOSTED == 1
+		devs = platform_adiv5_swdp_scan();
+#else
 		devs = adiv5_swdp_scan();
-	}
+#endif
+		}
 	switch (e.type) {
 	case EXCEPTION_TIMEOUT:
 		gdb_outf("Timeout during scan. Is target stuck in WFI?\n");
@@ -246,9 +257,18 @@ bool cmd_swdp_scan(target *t, int argc, char **argv)
 static void display_target(int i, target *t, void *context)
 {
 	(void)context;
-	gdb_outf("%2d   %c  %s %s\n", i, target_attached(t)?'*':' ',
-			 target_driver_name(t),
-			 (target_core_name(t)) ? target_core_name(t): "");
+	if (!strcmp(target_driver_name(t), "ARM Cortex-M")) {
+		gdb_outf("***%2d%sUnknown %s Designer %3x Partno %3x %s\n",
+				 i, target_attached(t)?" * ":" ",
+				 target_driver_name(t),
+				 target_designer(t),
+				 target_idcode(t),
+				 (target_core_name(t)) ? target_core_name(t): "");
+	} else {
+		gdb_outf("%2d   %c  %s %s\n", i, target_attached(t)?'*':' ',
+				 target_driver_name(t),
+				 (target_core_name(t)) ? target_core_name(t): "");
+	}
 }
 
 bool cmd_targets(target *t, int argc, char **argv)
@@ -271,8 +291,10 @@ bool cmd_morse(target *t, int argc, char **argv)
 	(void)t;
 	(void)argc;
 	(void)argv;
-	if(morse_msg)
+	if(morse_msg) {
 		gdb_outf("%s\n", morse_msg);
+		DEBUG_WARN("%s\n", morse_msg);
+	}
 	return true;
 }
 
@@ -357,11 +379,7 @@ static bool cmd_target_power(target *t, int argc, const char **argv)
 #ifdef PLATFORM_HAS_TRACESWO
 static bool cmd_traceswo(target *t, int argc, const char **argv)
 {
-#if defined(STM32L0) || defined(STM32F3) || defined(STM32F4)
-	extern char serial_no[13];
-#else
-	extern char serial_no[9];
-#endif
+	char serial_no[13];
 	(void)t;
 #if TRACESWO_PROTOCOL == 2
 	uint32_t baudrate = SWO_DEFAULT_BAUD;
@@ -389,7 +407,7 @@ static bool cmd_traceswo(target *t, int argc, const char **argv)
 			}
 		}
 	}
-#if defined(PLATFORM_HAS_DEBUG) && !defined(PC_HOSTED) && defined(ENABLE_DEBUG)
+#if defined(PLATFORM_HAS_DEBUG) && (PC_HOSTED == 0) && defined(ENABLE_DEBUG)
 	if (debug_bmp) {
 #if TRACESWO_PROTOCOL == 2
 		gdb_outf("baudrate: %lu ", baudrate);
@@ -407,12 +425,13 @@ static bool cmd_traceswo(target *t, int argc, const char **argv)
 #else
 	traceswo_init(swo_channelmask);
 #endif
+	serial_no_read(serial_no, sizeof(serial_no));
 	gdb_outf("%s:%02X:%02X\n", serial_no, 5, 0x85);
 	return true;
 }
 #endif
 
-#if defined(PLATFORM_HAS_DEBUG) && !defined(PC_HOSTED)
+#if defined(PLATFORM_HAS_DEBUG) && (PC_HOSTED == 0)
 static bool cmd_debug_bmp(target *t, int argc, const char **argv)
 {
 	(void)t;

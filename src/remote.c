@@ -25,7 +25,11 @@
 #include "jtagtap.h"
 #include "gdb_if.h"
 #include "version.h"
+#include "exception.h"
 #include <stdarg.h>
+#include "target/adiv5.h"
+#include "target.h"
+#include "hex_utils.h"
 
 
 #define NTOH(x) ((x<=9)?x+'0':'a'+x-10)
@@ -55,6 +59,31 @@ uint64_t remotehston(uint32_t limit, char *s)
 
 	return ret;
 }
+
+#if PC_HOSTED == 0
+static void _send_buf(uint8_t* buffer, size_t len)
+{
+	uint8_t* p = buffer;
+	char hex[2];
+	do {
+		hexify(hex, (const void*)p++, 1);
+
+		gdb_if_putchar(hex[0], 0);
+		gdb_if_putchar(hex[1], 0);
+
+	} while (p<(buffer+len));
+}
+
+static void _respond_buf(char respCode, uint8_t* buffer, size_t len)
+{
+	gdb_if_putchar(REMOTE_RESP, 0);
+	gdb_if_putchar(respCode, 0);
+
+	_send_buf(buffer, len);
+
+	gdb_if_putchar(REMOTE_EOM, 1);
+}
+
 
 static void _respond(char respCode, uint64_t param)
 
@@ -96,6 +125,14 @@ static void _respondS(char respCode, const char *s)
 	gdb_if_putchar(REMOTE_EOM,1);
 }
 
+static ADIv5_DP_t remote_dp = {
+	.ap_read = firmware_ap_read,
+	.ap_write = firmware_ap_write,
+	.mem_read = firmware_mem_read,
+	.mem_write_sized = firmware_mem_write_sized,
+};
+
+
 void remotePacketProcessSWD(uint8_t i, char *packet)
 {
 	uint8_t ticks;
@@ -103,8 +140,10 @@ void remotePacketProcessSWD(uint8_t i, char *packet)
 	bool badParity;
 
 	switch (packet[1]) {
-    case REMOTE_INIT: /* SS = initialise ================================= */
+    case REMOTE_INIT: /* SS = initialise =============================== */
 		if (i==2) {
+			remote_dp.dp_read = firmware_swdp_read;
+			remote_dp.low_access = firmware_swdp_low_access;
 			swdptap_init();
 			_respond(REMOTE_RESP_OK, 0);
 		} else {
@@ -112,29 +151,29 @@ void remotePacketProcessSWD(uint8_t i, char *packet)
 		}
 		break;
 
-    case REMOTE_IN_PAR: /* = In parity ================================== */
+    case REMOTE_IN_PAR: /* SI = In parity ============================= */
 		ticks=remotehston(2,&packet[2]);
-		badParity=swdptap_seq_in_parity(&param, ticks);
+		badParity = swd_proc.swdptap_seq_in_parity(&param, ticks);
 		_respond(badParity?REMOTE_RESP_PARERR:REMOTE_RESP_OK,param);
 		break;
 
-    case REMOTE_IN: /* = In ========================================= */
+    case REMOTE_IN: /* Si = In ======================================= */
 		ticks=remotehston(2,&packet[2]);
-		param=swdptap_seq_in(ticks);
+		param = swd_proc.swdptap_seq_in(ticks);
 		_respond(REMOTE_RESP_OK,param);
 		break;
 
-    case REMOTE_OUT: /* = Out ======================================== */
+    case REMOTE_OUT: /* So= Out ====================================== */
 		ticks=remotehston(2,&packet[2]);
 		param=remotehston(-1, &packet[4]);
-		swdptap_seq_out(param, ticks);
+		swd_proc.swdptap_seq_out(param, ticks);
 		_respond(REMOTE_RESP_OK, 0);
 		break;
 
-    case REMOTE_OUT_PAR: /* = Out parity ================================= */
+    case REMOTE_OUT_PAR: /* SO = Out parity ========================== */
 		ticks=remotehston(2,&packet[2]);
 		param=remotehston(-1, &packet[4]);
-		swdptap_seq_out_parity(param, ticks);
+		swd_proc.swdptap_seq_out_parity(param, ticks);
 		_respond(REMOTE_RESP_OK, 0);
 		break;
 
@@ -150,31 +189,33 @@ void remotePacketProcessJTAG(uint8_t i, char *packet)
 	uint64_t DO;
 	uint8_t ticks;
 	uint64_t DI;
-
+	jtag_dev_t jtag_dev;
 	switch (packet[1]) {
-    case REMOTE_INIT: /* = initialise ================================= */
+    case REMOTE_INIT: /* JS = initialise ============================= */
+		remote_dp.dp_read = fw_adiv5_jtagdp_read;
+		remote_dp.low_access = fw_adiv5_jtagdp_low_access;
 		jtagtap_init();
 		_respond(REMOTE_RESP_OK, 0);
 		break;
 
-    case REMOTE_RESET: /* = reset ================================= */
-		jtagtap_reset();
+    case REMOTE_RESET: /* JR = reset ================================= */
+		jtag_proc.jtagtap_reset();
 		_respond(REMOTE_RESP_OK, 0);
 		break;
 
-    case REMOTE_TMS: /* = TMS Sequence ================================== */
+    case REMOTE_TMS: /* JT = TMS Sequence ============================ */
 		ticks=remotehston(2,&packet[2]);
 		MS=remotehston(2,&packet[4]);
 
 		if (i<4) {
 			_respond(REMOTE_RESP_ERR,REMOTE_ERROR_WRONGLEN);
 		} else {
-			jtagtap_tms_seq( MS, ticks);
+			jtag_proc.jtagtap_tms_seq( MS, ticks);
 			_respond(REMOTE_RESP_OK, 0);
 		}
 		break;
 
-    case REMOTE_TDITDO_TMS: /* = TDI/TDO  ========================================= */
+    case REMOTE_TDITDO_TMS: /* JD = TDI/TDO  ========================================= */
     case REMOTE_TDITDO_NOTMS:
 
 		if (i<5) {
@@ -182,7 +223,7 @@ void remotePacketProcessJTAG(uint8_t i, char *packet)
 		} else {
 			ticks=remotehston(2,&packet[2]);
 			DI=remotehston(-1,&packet[4]);
-			jtagtap_tdi_tdo_seq((void *)&DO, (packet[1]==REMOTE_TDITDO_TMS), (void *)&DI, ticks);
+			jtag_proc.jtagtap_tdi_tdo_seq((void *)&DO, (packet[1]==REMOTE_TDITDO_TMS), (void *)&DI, ticks);
 
 			/* Mask extra bits on return value... */
 			DO &= (1LL << (ticks + 1)) - 1;
@@ -191,12 +232,29 @@ void remotePacketProcessJTAG(uint8_t i, char *packet)
 		}
 		break;
 
-    case REMOTE_NEXT: /* = NEXT ======================================== */
+    case REMOTE_NEXT: /* JN = NEXT ======================================== */
 		if (i!=4) {
 			_respond(REMOTE_RESP_ERR,REMOTE_ERROR_WRONGLEN);
 		} else {
-			uint32_t dat=jtagtap_next( (packet[2]=='1'), (packet[3]=='1'));
+			uint32_t dat=jtag_proc.jtagtap_next( (packet[2]=='1'), (packet[3]=='1'));
 			_respond(REMOTE_RESP_OK,dat);
+		}
+		break;
+
+    case REMOTE_ADD_JTAG_DEV: /* JJ = fill firmware jtag_devs */
+		if (i < 22) {
+			_respond(REMOTE_RESP_ERR,REMOTE_ERROR_WRONGLEN);
+		} else {
+			memset(&jtag_dev, 0, sizeof(jtag_dev));
+			uint8_t index        = remotehston(2, &packet[ 2]);
+			jtag_dev.dr_prescan  = remotehston(2, &packet[ 4]);
+			jtag_dev.dr_postscan = remotehston(2, &packet[ 6]);
+			jtag_dev.ir_len      = remotehston(2, &packet[ 8]);
+			jtag_dev.ir_prescan  = remotehston(2, &packet[10]);
+			jtag_dev.ir_postscan = remotehston(2, &packet[12]);
+			jtag_dev.current_ir  = remotehston(8, &packet[14]);
+			jtag_add_device(index, &jtag_dev);
+			_respond(REMOTE_RESP_OK, 0);
 		}
 		break;
 
@@ -242,7 +300,7 @@ void remotePacketProcessGEN(uint8_t i, char *packet)
 		break;
 
 #if !defined(BOARD_IDENT) && defined(PLATFORM_IDENT)
-# define BOARD_IDENT PLATFORM_IDENT
+# define BOARD_IDENT() PLATFORM_IDENT
 #endif
 	case REMOTE_START:
 		_respondS(REMOTE_RESP_OK, BOARD_IDENT " " FIRMWARE_VERSION);
@@ -253,6 +311,110 @@ void remotePacketProcessGEN(uint8_t i, char *packet)
 		break;
     }
 }
+
+void remotePacketProcessHL(uint8_t i, char *packet)
+
+{
+	(void)i;
+	SET_IDLE_STATE(0);
+
+	ADIv5_AP_t remote_ap;
+	/* Re-use packet buffer. Align to DWORD! */
+	void *src = (void *)(((uint32_t)packet + 7) & ~7);
+	char index = packet[1];
+	if (index == REMOTE_HL_CHECK) {
+		_respond(REMOTE_RESP_OK, REMOTE_HL_VERSION);
+		return;
+	}
+	packet += 2;
+	remote_dp.dp_jd_index = remotehston(2, packet);
+	packet += 2;
+	remote_ap.apsel = remotehston(2, packet);
+	remote_ap.dp = &remote_dp;
+	switch (index) {
+	case REMOTE_DP_READ:  /* Hd = Read from DP register */
+		packet += 2;
+		uint16_t addr16 = remotehston(4, packet);
+		uint32_t data = adiv5_dp_read(&remote_dp, addr16);
+		_respond_buf(REMOTE_RESP_OK, (uint8_t*)&data, 4);
+		break;
+	case REMOTE_LOW_ACCESS: /* HL = Low level access */
+		packet += 2;
+		addr16 = remotehston(4, packet);
+		packet += 4;
+		uint32_t value = remotehston(8, packet);
+		data = remote_dp.low_access(&remote_dp, remote_ap.apsel, addr16, value);
+		_respond_buf(REMOTE_RESP_OK, (uint8_t*)&data, 4);
+		break;
+	case REMOTE_AP_READ: /* Ha = Read from AP register*/
+		packet += 2;
+		addr16 = remotehston(4, packet);
+		data = adiv5_ap_read(&remote_ap, addr16);
+		_respond_buf(REMOTE_RESP_OK, (uint8_t*)&data, 4);
+		break;
+	case REMOTE_AP_WRITE:  /* Ha = Write to AP register*/
+		packet += 2;
+		addr16 = remotehston(4, packet);
+		packet += 4;
+		value = remotehston(8, packet);
+		adiv5_ap_write(&remote_ap, addr16, value);
+		_respond(REMOTE_RESP_OK, 0);
+		break;
+	case REMOTE_AP_MEM_READ: /* HM = Read from Mem and set csw */
+		packet += 2;
+		remote_ap.csw = remotehston(8, packet);
+		packet += 6;
+		/*fall through*/
+	case REMOTE_MEM_READ:   /* Hh = Read from Mem */
+		packet += 2;
+		uint32_t address = remotehston(8, packet);
+		packet += 8;
+		uint32_t count = remotehston(8, packet);
+		packet += 8;
+		adiv5_mem_read(&remote_ap, src, address, count);
+		if (remote_ap.dp->fault == 0) {
+			_respond_buf(REMOTE_RESP_OK, src, count);
+			break;
+		}
+		_respond(REMOTE_RESP_ERR, 0);
+		remote_ap.dp->fault = 0;
+		break;
+	case REMOTE_AP_MEM_WRITE_SIZED: /* Hm = Write to memory and set csw */
+		packet += 2;
+		remote_ap.csw = remotehston(8, packet);
+		packet += 6;
+		/*fall through*/
+	case REMOTE_MEM_WRITE_SIZED: /* HH = Write to memory*/
+		packet += 2;
+		enum align align = remotehston(2, packet);
+		packet += 2;
+		uint32_t dest = remotehston(8, packet);
+		packet+= 8;
+		size_t len = remotehston(8, packet);
+		packet += 8;
+		if (len & ((1 << align) - 1)) {
+			/* len  and align do not fit*/
+			_respond(REMOTE_RESP_ERR, 0);
+			break;
+		}
+		/* Read as stream of hexified bytes*/
+		unhexify(src, packet, len);
+		adiv5_mem_write_sized(&remote_ap, dest, src, len, align);
+		if (remote_ap.dp->fault) {
+			/* Errors handles on hosted side.*/
+			_respond(REMOTE_RESP_ERR, 0);
+			remote_ap.dp->fault = 0;
+			break;
+		}
+		_respond(REMOTE_RESP_OK, 0);
+		break;
+	default:
+		_respond(REMOTE_RESP_ERR,REMOTE_ERROR_UNRECOGNISED);
+		break;
+	}
+	SET_IDLE_STATE(1);
+}
+
 
 void remotePacketProcess(uint8_t i, char *packet)
 {
@@ -269,8 +431,13 @@ void remotePacketProcess(uint8_t i, char *packet)
 		remotePacketProcessGEN(i,packet);
 		break;
 
+    case REMOTE_HL_PACKET:
+		remotePacketProcessHL(i, packet);
+		break;
+
     default: /* Oh dear, unrecognised, return an error */
 		_respond(REMOTE_RESP_ERR,REMOTE_ERROR_UNRECOGNISED);
 		break;
     }
 }
+#endif

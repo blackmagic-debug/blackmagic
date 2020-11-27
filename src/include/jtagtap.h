@@ -21,13 +21,12 @@
 #ifndef __JTAGTAP_H
 #define __JTAGTAP_H
 
+typedef struct jtag_proc_s {
 /* Note: Signal names are as for the device under test. */
 
-int jtagtap_init(void);
+	void (*jtagtap_reset)(void);
 
-void jtagtap_reset(void);
-
-uint8_t jtagtap_next(const uint8_t TMS, const uint8_t TDI);
+	uint8_t (*jtagtap_next)(const uint8_t TMS, const uint8_t TDI);
 /* tap_next executes one state transision in the JTAG TAP state machine:
  * - Ensure TCK is low
  * - Assert the values of TMS and TDI
@@ -36,30 +35,39 @@ uint8_t jtagtap_next(const uint8_t TMS, const uint8_t TDI);
  * - Release TCK.
  */
 
-void jtagtap_tms_seq(uint32_t MS, int ticks);
-void jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int ticks);
-void jtagtap_tdi_seq(const uint8_t final_tms, const uint8_t *DI, int ticks);
+	void (*jtagtap_tms_seq)(uint32_t MS, int ticks);
+	void (*jtagtap_tdi_tdo_seq)
+	(uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int ticks);
 /* Shift out a sequence on MS and DI, capture data to DO.
  * - This is not endian safe: First byte will always be first shifted out.
  * - DO may be NULL to ignore captured data.
  * - DO may be point to the same address as DI.
  */
+	void (*jtagtap_tdi_seq)
+	(const uint8_t final_tms, const uint8_t *DI, int ticks);
+} jtag_proc_t;
+extern jtag_proc_t jtag_proc;
 
 /* generic soft reset: 1, 1, 1, 1, 1, 0 */
 #define jtagtap_soft_reset()	\
-	jtagtap_tms_seq(0x1F, 6)
+	jtag_proc.jtagtap_tms_seq(0x1F, 6)
 
 /* Goto Shift-IR: 1, 1, 0, 0 */
 #define jtagtap_shift_ir()		\
-	jtagtap_tms_seq(0x03, 4)
+	jtag_proc.jtagtap_tms_seq(0x03, 4)
 
 /* Goto Shift-DR: 1, 0, 0 */
 #define jtagtap_shift_dr()		\
-	jtagtap_tms_seq(0x01, 3)
+	jtag_proc.jtagtap_tms_seq(0x01, 3)
 
 /* Goto Run-test/Idle: 1, 1, 0 */
 #define jtagtap_return_idle()	\
-	jtagtap_tms_seq(0x01, 2)
+	jtag_proc.jtagtap_tms_seq(0x01, 2)
 
+# if PC_HOSTED == 1
+int platform_jtagtap_init(void);
+# else
+int jtagtap_init(void);
+# endif
 #endif
 

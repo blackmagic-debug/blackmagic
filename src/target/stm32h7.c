@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2017-2018 Uwe Bonnes bon@elektron.ikp.physik.tu-darmstadt.de
+ * Copyright (C) 2017-2020 Uwe Bonnes bon@elektron.ikp.physik.tu-darmstadt.de
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -57,7 +57,7 @@ static int stm32h7_flash_erase(struct target_flash *f, target_addr addr,
 static int stm32h7_flash_write(struct target_flash *f,
                                target_addr dest, const void *src, size_t len);
 
-static const char stm32h74_driver_str[] = "STM32H74x";
+static const char stm32h7_driver_str[] = "STM32H7";
 
 enum stm32h7_regs
 {
@@ -142,14 +142,14 @@ enum stm32h7_regs
 #define D3DBGCKEN		(1 << 22)
 
 
-#define FLASH_SIZE_REG 	0x1ff1e880
-
 #define BANK1_START 		0x08000000
 #define NUM_SECTOR_PER_BANK 8
 #define FLASH_SECTOR_SIZE 	0x20000
 #define BANK2_START         0x08100000
 enum ID_STM32H7 {
-	ID_STM32H74x  = 0x450,
+	ID_STM32H74x  = 0x450,      /* RM0433, RM0399 */
+	ID_STM32H7Bx  = 0x480,      /* RM0455 */
+	ID_STM32H72x  = 0x483,      /* RM0468 */
 };
 
 struct stm32h7_flash {
@@ -165,7 +165,7 @@ static void stm32h7_add_flash(target *t,
 	struct target_flash *f;
 
 	if (!sf) {			/* calloc failed: heap exhaustion */
-		DEBUG("calloc: failed in %s\n", __func__);
+		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return;
 	}
 
@@ -188,11 +188,6 @@ static bool stm32h7_attach(target *t)
 {
 	if (!cortexm_attach(t))
 		return false;
-	/* RM0433 Rev 4 is not really clear, what bits are needed.
-	 * Set all possible relevant bits for now. */
-	uint32_t dbgmcu_cr = target_mem_read32(t, DBGMCU_CR);
-	t->target_storage = dbgmcu_cr;
-	target_mem_write32(t, DBGMCU_CR, DBGSLEEP_D1 | D1DBGCKEN);
 	/* If IWDG runs as HARDWARE watchdog (44.3.4) erase
 	 * will be aborted by the Watchdog and erase fails!
 	 * Setting IWDG_KR to 0xaaaa does not seem to help!*/
@@ -226,14 +221,18 @@ static void stm32h7_detach(target *t)
 
 bool stm32h7_probe(target *t)
 {
-	ADIv5_AP_t *ap = cortexm_ap(t);
-	uint32_t idcode = (ap->dp->targetid >> 16) & 0xfff;
-	if (idcode == ID_STM32H74x) {
-		t->idcode = idcode;
-		t->driver = stm32h74_driver_str;
+	uint32_t idcode = t->idcode;
+	if (idcode == ID_STM32H74x || idcode == ID_STM32H7Bx || idcode == ID_STM32H72x) {
+		t->driver = stm32h7_driver_str;
 		t->attach = stm32h7_attach;
 		t->detach = stm32h7_detach;
-		target_add_commands(t, stm32h7_cmd_list, stm32h74_driver_str);
+		target_add_commands(t, stm32h7_cmd_list, stm32h7_driver_str);
+		t->target_storage = target_mem_read32(t, DBGMCU_CR);
+		/* RM0433 Rev 4 is not really clear, what bits are needed in DBGMCU_CR.
+		 * Maybe more flags needed?
+		 */
+		uint32_t dbgmcu_cr = DBGSLEEP_D1 | D1DBGCKEN;
+		target_mem_write32(t, DBGMCU_CR,  dbgmcu_cr);
 		return true;
 	}
 	return false;
@@ -250,10 +249,10 @@ static bool stm32h7_flash_unlock(target *t, uint32_t addr)
 		if(target_check_error(t))
 			return false;
 	}
-	uint32_t sr = target_mem_read32(t, regbase + FLASH_SR);
-	if (sr & FLASH_SR_ERROR_MASK) {
-		tc_printf(t, "Error 0x%08lx", sr & FLASH_SR_ERROR_MASK);
-		target_mem_write32(t, regbase + FLASH_CCR, sr & FLASH_SR_ERROR_MASK);
+	uint32_t sr = target_mem_read32(t, regbase + FLASH_SR) & FLASH_SR_ERROR_MASK;
+	if (sr) {
+		DEBUG_WARN("%s error 0x%08" PRIx32, __func__, sr);
+		target_mem_write32(t, regbase + FLASH_CCR, sr);
 		return false;
 	}
 	if (target_mem_read32(t, regbase + FLASH_CR) & FLASH_CR_LOCK) {
@@ -288,19 +287,19 @@ static int stm32h7_flash_erase(struct target_flash *f, target_addr addr,
 		target_mem_write32(t, sf->regbase + FLASH_CR, cr);
 		cr |= FLASH_CR_START;
 		target_mem_write32(t, sf->regbase + FLASH_CR, cr);
-		DEBUG(" started cr %08" PRIx32 " sr %08" PRIx32 "\n",
-			  target_mem_read32(t, sf->regbase + FLASH_CR),
-			  target_mem_read32(t, sf->regbase + FLASH_SR));
+		DEBUG_INFO(" started cr %08" PRIx32 " sr %08" PRIx32 "\n",
+				   target_mem_read32(t, sf->regbase + FLASH_CR),
+				   target_mem_read32(t, sf->regbase + FLASH_SR));
 		do {
 			sr = target_mem_read32(t, sf->regbase + FLASH_SR);
 			if (target_check_error(t)) {
-				DEBUG("stm32h7_flash_erase: comm failed\n");
+				DEBUG_WARN("stm32h7_flash_erase: comm failed\n");
 				return -1;
 			}
 //			target_mem_write32(t, H7_IWDG_BASE, 0x0000aaaa);
 		}while (sr & (FLASH_SR_QW | FLASH_SR_BSY));
 		if (sr & FLASH_SR_ERROR_MASK) {
-			DEBUG("stm32h7_flash_erase: error, sr: %08" PRIx32 "\n", sr);
+			DEBUG_WARN("stm32h7_flash_erase: error, sr: %08" PRIx32 "\n", sr);
 			return -1;
 		}
 		start_sector++;
@@ -326,12 +325,12 @@ static int stm32h7_flash_write(struct target_flash *f, target_addr dest,
 	target_mem_write(t, dest, src, len);
 	while ((sr = target_mem_read32(t, sr_reg)) & FLASH_SR_BSY) {
 		if(target_check_error(t)) {
-			DEBUG("stm32h7_flash_write: BSY comm failed\n");
+			DEBUG_WARN("stm32h7_flash_write: BSY comm failed\n");
 			return -1;
 		}
 	}
 	if (sr & FLASH_SR_ERROR_MASK) {
-		DEBUG("stm32h7_flash_write: error sr %08" PRIx32 "\n", sr);
+		DEBUG_WARN("stm32h7_flash_write: error sr %08" PRIx32 "\n", sr);
 		return -1;
 	}
 	/* Close write windows.*/
@@ -357,23 +356,23 @@ static bool stm32h7_cmd_erase(target *t, int bank_mask)
 	/* Flash mass erase start instruction */
 	if (do_bank1) {
 		if (stm32h7_flash_unlock(t, BANK1_START) == false) {
-			DEBUG("ME: Unlock bank1 failed\n");
+			DEBUG_WARN("ME: Unlock bank1 failed\n");
 			goto done;
 		}
 		uint32_t regbase = FPEC1_BASE;
 		/* BER and start can be merged (3.3.10).*/
 		target_mem_write32(t, regbase + FLASH_CR, cr);
-		DEBUG("ME bank1 started\n");
+		DEBUG_INFO("ME bank1 started\n");
 	}
 	if (do_bank2) {
 		if (stm32h7_flash_unlock(t, BANK2_START) == false) {
-			DEBUG("ME: Unlock bank2 failed\n");
+			DEBUG_WARN("ME: Unlock bank2 failed\n");
 			goto done;
 		}
 		uint32_t regbase = FPEC2_BASE;
 		/* BER and start can be merged (3.3.10).*/
 		target_mem_write32(t, regbase + FLASH_CR, cr);
-		DEBUG("ME bank2 started\n");
+		DEBUG_INFO("ME bank2 started\n");
 	}
 
 	/* Read FLASH_SR to poll for QW bit */
@@ -383,7 +382,7 @@ static bool stm32h7_cmd_erase(target *t, int bank_mask)
 //			target_mem_write32(t, H7_IWDG_BASE, 0x0000aaaa);
 			tc_printf(t, "\b%c", spinner[spinindex++ % 4]);
 			if(target_check_error(t)) {
-				DEBUG("ME bank1: comm failed\n");
+				DEBUG_WARN("ME bank1: comm failed\n");
 				goto done;
 			}
 		}
@@ -394,7 +393,7 @@ static bool stm32h7_cmd_erase(target *t, int bank_mask)
 //			target_mem_write32(t, H7_IWDG_BASE 0x0000aaaa);
 			tc_printf(t, "\b%c", spinner[spinindex++ % 4]);
 			if(target_check_error(t)) {
-				DEBUG("ME bank2: comm failed\n");
+				DEBUG_WARN("ME bank2: comm failed\n");
 				goto done;
 			}
 		}
@@ -405,7 +404,7 @@ static bool stm32h7_cmd_erase(target *t, int bank_mask)
 		uint32_t regbase = FPEC1_BASE;
 		uint32_t sr = target_mem_read32(t, regbase + FLASH_SR);
 		if (sr & FLASH_SR_ERROR_MASK) {
-			DEBUG("ME bank1: sr %" PRIx32 "\n", sr);
+			DEBUG_WARN("ME bank1, error sr %" PRIx32 "\n", sr);
 			goto done;
 		}
 	}
@@ -414,7 +413,7 @@ static bool stm32h7_cmd_erase(target *t, int bank_mask)
 		uint32_t regbase = FPEC2_BASE;
 		uint32_t sr = target_mem_read32(t, regbase + FLASH_SR);
 		if (sr & FLASH_SR_ERROR_MASK) {
-			DEBUG("ME bank2: sr %" PRIx32 "\n", sr);
+			DEBUG_WARN("ME bank2, error: sr %" PRIx32 "\n", sr);
 			goto done;
 		}
 	}
@@ -439,7 +438,12 @@ static bool stm32h7_uid(target *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
+
 	uint32_t uid = 0x1ff1e800;
+	if (t->idcode == ID_STM32H7Bx) {
+		uid = 0x08fff800;  /* 7B3/7A3/7B0 */
+	}
+
 	int i;
 	tc_printf(t, "0x");
 	for (i = 0; i < 12; i = i + 4) {
@@ -467,13 +471,15 @@ static int stm32h7_crc_bank(target *t, uint32_t bank)
 	target_mem_write32(t, regbase + FLASH_CRCCR, crccr);
 	target_mem_write32(t, regbase + FLASH_CRCCR, crccr | FLASH_CRCCR_START_CRC);
 	uint32_t sr;
-	while ((sr = target_mem_read32(t, regbase + FLASH_SR)) & FLASH_SR_CRC_BUSY) {
+	while ((sr = target_mem_read32(t, regbase + FLASH_SR)) &
+		   FLASH_SR_CRC_BUSY) {
 		if(target_check_error(t)) {
-			DEBUG("CRC bank %d: comm failed\n", (bank < BANK2_START) ? 1 : 2);
+			DEBUG_WARN("CRC bank %d: comm failed\n",
+					   (bank < BANK2_START) ? 1 : 2);
 			return -1;
 		}
 		if (sr & FLASH_SR_ERROR_READ) {
-			DEBUG("CRC bank %d: error sr %08" PRIx32 "\n",
+			DEBUG_WARN("CRC bank %d: error sr %08" PRIx32 "\n",
 				  (bank < BANK2_START) ? 1 : 2, sr);
 			return -1;
 		}
@@ -553,21 +559,28 @@ static bool stm32h7_cmd_rev(target *t, int argc, const char **argv)
 	switch (dev_id) {
 	case 0x450:
 		tc_printf(t, "STM32H742/743/753/750\n");
+
+		/* Print revision */
+		char rev = '?';
+		for (size_t i = 0;
+			 i < sizeof(stm32h7xx_revisions)/sizeof(struct stm32h7xx_rev); i++) {
+			/* Check for matching revision */
+			if (stm32h7xx_revisions[i].rev_id == rev_id) {
+				rev = stm32h7xx_revisions[i].revision;
+			}
+		}
+		tc_printf(t, "Revision %c\n", rev);
+		break;
+
+	case 0x480:
+		tc_printf(t, "STM32H7B3/7A3/7B0\n");
+		break;
+	case 0x483:
+		tc_printf(t, "STM32H723/733/725/735/730\n");
 		break;
 	default:
 		tc_printf(t, "Unknown STM32H7. This driver may not support it!\n");
 	}
-
-	/* Print revision */
-	char rev = '?';
-	for (size_t i = 0;
-		 i < sizeof(stm32h7xx_revisions)/sizeof(struct stm32h7xx_rev); i++) {
-		/* Check for matching revision */
-		if (stm32h7xx_revisions[i].rev_id == rev_id) {
-			rev = stm32h7xx_revisions[i].revision;
-		}
-	}
-	tc_printf(t, "Revision %c\n", rev);
 
 	return true;
 }

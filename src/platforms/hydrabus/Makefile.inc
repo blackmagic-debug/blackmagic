@@ -23,7 +23,7 @@ SRC += 	cdcacm.c	\
 	timing.c	\
 	timing_stm32.c	\
 
-all: blackmagic.bin blackmagic.hex blackmagic.dfu
+all: blackmagic.bin blackmagic.hex
 
 blackmagic.dfu: blackmagic.hex
 	@echo Creating $@

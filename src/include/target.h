@@ -34,6 +34,10 @@ typedef struct target_s target;
 typedef uint32_t target_addr;
 struct target_controller;
 
+#if PC_HOSTED == 1
+int platform_adiv5_swdp_scan(void);
+int platform_jtag_scan(const uint8_t *lrlens);
+#endif
 int adiv5_swdp_scan(void);
 int jtag_scan(const uint8_t *lrlens);
 
@@ -47,6 +51,8 @@ void target_detach(target *t);
 bool target_attached(target *t);
 const char *target_driver_name(target *t);
 const char *target_core_name(target *t);
+unsigned int target_designer(target *t);
+unsigned int target_idcode(target *t);
 
 /* Memory access functions */
 bool target_mem_map(target *t, char *buf, size_t len);

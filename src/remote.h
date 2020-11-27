@@ -24,6 +24,8 @@
 #include <inttypes.h>
 #include "general.h"
 
+#define REMOTE_HL_VERSION 1
+
 /*
  * Commands to remote end, and responses
  * =====================================
@@ -76,12 +78,26 @@
 #define REMOTE_VOLTAGE      'V'
 #define REMOTE_SRST_SET     'Z'
 #define REMOTE_SRST_GET     'z'
+#define REMOTE_ADD_JTAG_DEV 'J'
 
 /* Protocol response options */
 #define REMOTE_RESP_OK     'K'
 #define REMOTE_RESP_PARERR 'P'
 #define REMOTE_RESP_ERR    'E'
 #define REMOTE_RESP_NOTSUP 'N'
+
+/* High level protocol elements */
+#define REMOTE_HL_CHECK     'C'
+#define REMOTE_HL_PACKET 'H'
+#define REMOTE_DP_READ      'd'
+#define REMOTE_LOW_ACCESS   'L'
+#define REMOTE_AP_READ      'a'
+#define REMOTE_AP_WRITE     'A'
+#define REMOTE_AP_MEM_READ  'M'
+#define REMOTE_MEM_READ           'h'
+#define REMOTE_MEM_WRITE_SIZED    'H'
+#define REMOTE_AP_MEM_WRITE_SIZED 'm'
+
 
 /* Generic protocol elements */
 #define REMOTE_GEN_PACKET  'G'
@@ -124,6 +140,38 @@
 
 #define REMOTE_JTAG_NEXT (char []){ REMOTE_SOM, REMOTE_JTAG_PACKET, REMOTE_NEXT, \
                                        '%','c','%','c',REMOTE_EOM, 0 }
+/* HL protocol elements */
+#define HEX '%', '0', '2', 'x'
+#define HEX_U32(x) '%', '0', '8', 'x'
+#define CHR(x) '%', 'c'
+
+#define REMOTE_JTAG_ADD_DEV_STR (char []){ REMOTE_SOM, REMOTE_JTAG_PACKET,\
+			REMOTE_ADD_JTAG_DEV,											\
+			'%','0','2','x', /* index */								\
+			'%','0','2','x', /* dr_prescan */							\
+			'%','0','2','x', /*	dr_postscan	*/							\
+			'%','0','2','x', /* ir_len */								\
+			'%','0','2','x', /* ir_prescan */							\
+			'%','0','2','x', /* ir_postscan */							\
+			HEX_U32(current_ir), /* current_ir */						\
+			REMOTE_EOM, 0}
+
+#define REMOTE_HL_CHECK_STR (char []){ REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_HL_CHECK, REMOTE_EOM, 0 }
+#define REMOTE_DP_READ_STR (char []){ REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_DP_READ, \
+			'%','0', '2', 'x', 'f', 'f', '%', '0', '4', 'x', REMOTE_EOM, 0 }
+#define REMOTE_LOW_ACCESS_STR (char []){ REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_LOW_ACCESS, \
+			'%','0', '2', 'x', '%','0', '2', 'x', '%', '0', '4', 'x', HEX_U32(csw), REMOTE_EOM, 0 }
+#define REMOTE_AP_READ_STR (char []){ REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_AP_READ, \
+			'%','0', '2', 'x', '%','0','2','x', '%', '0', '4', 'x', REMOTE_EOM, 0 }
+#define REMOTE_AP_WRITE_STR (char []){ REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_AP_WRITE, \
+			'%','0', '2', 'x', '%','0','2','x', '%', '0', '4', 'x', HEX_U32(csw), REMOTE_EOM, 0 }
+#define REMOTE_AP_MEM_READ_STR (char []){ REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_AP_MEM_READ, \
+			'%','0', '2', 'x', '%','0','2','x',HEX_U32(csw), HEX_U32(address), HEX_U32(count), \
+			REMOTE_EOM, 0 }
+#define REMOTE_AP_MEM_WRITE_SIZED_STR (char []){ REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_AP_MEM_WRITE_SIZED, \
+			'%','0', '2', 'x', '%', '0', '2', 'x', HEX_U32(csw), '%', '0', '2', 'x', HEX_U32(address), HEX_U32(count), 0}
+#define REMOTE_MEM_WRITE_SIZED_STR (char []){ REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_AP_MEM_WRITE_SIZED, \
+			'%','0', '2', 'x', '%','0','2','x', HEX_U32(address), HEX_U32(count), 0}
 
 uint64_t remotehston(uint32_t limit, char *s);
 void remotePacketProcess(uint8_t i, char *packet);

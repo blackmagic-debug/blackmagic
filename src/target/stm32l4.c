@@ -1,8 +1,8 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2015, 2017, 2018  Uwe Bonnes
- * Written by Uwe Bonnes <bon@elektron.ikp.physik.tu-darmstadt.de>
+ * Copyright (C) 2015, 2017 - 2020  Uwe Bonnes
+ *                             <bon@elektron.ikp.physik.tu-darmstadt.de>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -262,7 +262,7 @@ static void stm32l4_add_flash(target *t,
 	struct target_flash *f;
 
 	if (!sf) {			/* calloc failed: heap exhaustion */
-		DEBUG("calloc: failed in %s\n", __func__);
+		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return;
 	}
 
@@ -326,13 +326,22 @@ static bool stm32l4_attach(target *t)
 		} else
 			stm32l4_add_flash(t, 0x08000000, 0x00200000, 0x2000, -1);
 	} else if (chip->family == FAM_STM32G4xx) {
-		if (options & OR_DBANK) {
-			uint32_t banksize = size << 9;
-			stm32l4_add_flash(t, 0x08000000           , banksize, 0x0800, 0x08000000 + banksize);
-			stm32l4_add_flash(t, 0x08000000 + banksize, banksize, 0x0800, 0x08000000 + banksize);
-		} else {
+		// RM0440 describes G43x as Category 2, G47x/G48x as Category 3 devices
+		// Cat 2 is always 128k with 2k pages, single bank
+		// Cat 3 is dual bank with an option bit to choose single 512k bank with 4k pages or dual bank as 2x256k with 2k pages
+		if (chip->idcode == ID_STM32G43) {
 			uint32_t banksize = size << 10;
-			stm32l4_add_flash(t, 0x08000000           , banksize, 0x1000, -1);
+			stm32l4_add_flash(t, 0x08000000, banksize, 0x0800, -1);
+		}
+		else {
+			if (options & OR_DBANK) {
+				uint32_t banksize = size << 9;
+				stm32l4_add_flash(t, 0x08000000           , banksize, 0x0800, 0x08000000 + banksize);
+				stm32l4_add_flash(t, 0x08000000 + banksize, banksize, 0x0800, 0x08000000 + banksize);
+			} else {
+				uint32_t banksize = size << 10;
+				stm32l4_add_flash(t, 0x08000000           , banksize, 0x1000, -1);
+			}
 		}
 	} else if (chip->flags & DUAL_BANK) {
 		if (options & OR_DUALBANK) {
@@ -364,18 +373,11 @@ static void stm32l4_detach(target *t)
 
 bool stm32l4_probe(target *t)
 {
-	uint32_t idcode_reg = STM32L4_DBGMCU_IDCODE_PHYS;
-	ADIv5_AP_t *ap = cortexm_ap(t);
-	if (ap->dp->idcode == 0x0BC11477)
-		idcode_reg = STM32G0_DBGMCU_IDCODE_PHYS;
-	uint32_t idcode = target_mem_read32(t, idcode_reg) & 0xfff;
-
-	struct stm32l4_info const *chip = stm32l4_get_chip_info(idcode);
+	struct stm32l4_info const *chip = stm32l4_get_chip_info(t->idcode);
 
 	if( !chip->idcode )	/* Not found */
 		return false;
 
-	t->idcode = idcode;
 	t->driver = chip->designator;
 	t->attach = stm32l4_attach;
 	t->detach = stm32l4_detach;
@@ -452,13 +454,13 @@ static int stm32l4_flash_write(struct target_flash *f,
 	do {
 		sr = target_mem_read32(t, FLASH_SR);
 		if (target_check_error(t)) {
-			DEBUG("stm32l4 flash write: comm error\n");
+			DEBUG_WARN("stm32l4 flash write: comm error\n");
 			return -1;
 		}
 	} while (sr & FLASH_SR_BSY);
 
 	if(sr & FLASH_SR_ERROR_MASK) {
-		DEBUG("stm32l4 flash write error: sr 0x%" PRIu32 "\n", sr);
+		DEBUG_WARN("stm32l4 flash write error: sr 0x%" PRIu32 "\n", sr);
 		return -1;
 	}
 	return 0;

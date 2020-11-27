@@ -26,9 +26,25 @@
 #include "jtagtap.h"
 #include "gdb_packet.h"
 
-int jtagtap_init(void)
+jtag_proc_t jtag_proc;
+
+static void jtagtap_reset(void);
+static void jtagtap_tms_seq(uint32_t MS, int ticks);
+static void jtagtap_tdi_tdo_seq(
+	uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int ticks);
+static void jtagtap_tdi_seq(
+	const uint8_t final_tms, const uint8_t *DI, int ticks);
+static uint8_t jtagtap_next(uint8_t dTMS, uint8_t dTDI);
+
+int jtagtap_init()
 {
 	TMS_SET_MODE();
+
+	jtag_proc.jtagtap_reset = jtagtap_reset;
+	jtag_proc.jtagtap_next =jtagtap_next;
+	jtag_proc.jtagtap_tms_seq = jtagtap_tms_seq;
+	jtag_proc.jtagtap_tdi_tdo_seq = jtagtap_tdi_tdo_seq;
+	jtag_proc.jtagtap_tdi_seq = jtagtap_tdi_seq;
 
 	/* Go to JTAG mode for SWJ-DP */
 	for(int i = 0; i <= 50; i++) jtagtap_next(1, 0); /* Reset SW-DP */
@@ -38,7 +54,7 @@ int jtagtap_init(void)
 	return 0;
 }
 
-void jtagtap_reset(void)
+static void jtagtap_reset(void)
 {
 #ifdef TRST_PORT
 	if (platform_hwversion() == 0) {
@@ -51,7 +67,7 @@ void jtagtap_reset(void)
 	jtagtap_soft_reset();
 }
 
-inline uint8_t jtagtap_next(uint8_t dTMS, uint8_t dTDI)
+static uint8_t jtagtap_next(uint8_t dTMS, uint8_t dTDI)
 {
 	uint16_t ret;
 
@@ -66,7 +82,7 @@ inline uint8_t jtagtap_next(uint8_t dTMS, uint8_t dTDI)
 	return ret != 0;
 }
 
-void jtagtap_tms_seq(uint32_t MS, int ticks)
+static void jtagtap_tms_seq(uint32_t MS, int ticks)
 {
 	gpio_set_val(TDI_PORT, TDI_PIN, 1);
 	int data = MS & 1;
@@ -80,8 +96,8 @@ void jtagtap_tms_seq(uint32_t MS, int ticks)
 	}
 }
 
-void
-jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int ticks)
+static void jtagtap_tdi_tdo_seq(
+	uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int ticks)
 {
 	uint8_t index = 1;
 	gpio_set_val(TMS_PORT, TMS_PIN, 0);
@@ -111,8 +127,7 @@ jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int
 	gpio_clear(TCK_PORT, TCK_PIN);
 }
 
-void
-jtagtap_tdi_seq(const uint8_t final_tms, const uint8_t *DI, int ticks)
+static void jtagtap_tdi_seq(const uint8_t final_tms, const uint8_t *DI, int ticks)
 {
 	uint8_t index = 1;
 	while(ticks--) {

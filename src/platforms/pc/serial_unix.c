@@ -2,7 +2,7 @@
  * This file is part of the Black Magic Debug project.
  *
  * Copyright (C) 2019  Dave Marples <dave@marples.net>
- * with additions from Uwe Bonnes (bon@elektron.ikp.physik.tu-darmstadt.de)
+ * Modifications (C) 2020 Uwe Bonnes (bon@elektron.ikp.physik.tu-darmstadt.de)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,7 +31,7 @@
 #include "cl_utils.h"
 
 static int fd;  /* File descriptor for connection to GDB remote */
-extern int cl_debuglevel;
+
 /* A nice routine grabbed from
  * https://stackoverflow.com/questions/6947413/how-to-open-read-and-write-from-serial-port-in-c
  */
@@ -40,7 +40,7 @@ static int set_interface_attribs(void)
 	struct termios tty;
 	memset (&tty, 0, sizeof tty);
 	if (tcgetattr (fd, &tty) != 0) {
-      fprintf(stderr,"error %d from tcgetattr", errno);
+      DEBUG_WARN("error %d from tcgetattr", errno);
       return -1;
     }
 
@@ -62,22 +62,49 @@ static int set_interface_attribs(void)
 	tty.c_cflag &= ~CRTSCTS;
 
 	if (tcsetattr (fd, TCSANOW, &tty) != 0) {
-		fprintf(stderr,"error %d from tcsetattr", errno);
+		DEBUG_WARN("error %d from tcsetattr", errno);
 		return -1;
     }
 	return 0;
 }
+
+#ifdef __APPLE__
+int serial_open(BMP_CL_OPTIONS_t *cl_opts, char *serial)
+{
+    char name[4096];
+    if (!cl_opts->opt_device) {
+        /* Try to find some BMP if0*/
+        if (!serial) {
+            DEBUG_WARN("No serial device found\n");
+            return -1;
+        } else {
+            sprintf(name, "/dev/tty.usbmodem%s1", serial);
+        }
+    } else {
+        strncpy(name, cl_opts->opt_device, sizeof(name) - 1);
+    }
+    fd = open(name, O_RDWR | O_SYNC | O_NOCTTY);
+    if (fd < 0) {
+        DEBUG_WARN("Couldn't open serial port %s\n", name);
+        return -1;
+    }
+    /* BMP only offers an USB-Serial connection with no real serial
+     * line in between. No need for baudrate or parity.!
+     */
+    return set_interface_attribs();
+}
+#else
 #define BMP_IDSTRING "usb-Black_Sphere_Technologies_Black_Magic_Probe"
 #define DEVICE_BY_ID "/dev/serial/by-id/"
-int serial_open(BMP_CL_OPTIONS_t *opt)
+int serial_open(BMP_CL_OPTIONS_t *cl_opts, char *serial)
 {
 	char name[4096];
-	if (!opt->opt_device) {
+	if (!cl_opts->opt_device) {
 		/* Try to find some BMP if0*/
 		struct dirent *dp;
 		DIR *dir = opendir(DEVICE_BY_ID);
 		if (!dir) {
-			fprintf(stderr, "No serial device found\n");
+			DEBUG_WARN("No serial device found\n");
 			return -1;
 		}
 		int num_devices = 0;
@@ -86,8 +113,7 @@ int serial_open(BMP_CL_OPTIONS_t *opt)
 			if ((strstr(dp->d_name, BMP_IDSTRING)) &&
 				(strstr(dp->d_name, "-if00"))) {
 				num_total++;
-				if (((opt->opt_serial) &&
-				 (!strstr(dp->d_name, opt->opt_serial))))
+				if ((serial) && (!strstr(dp->d_name, serial)))
 					continue;
 				num_devices++;
 				strcpy(name, DEVICE_BY_ID);
@@ -96,33 +122,34 @@ int serial_open(BMP_CL_OPTIONS_t *opt)
 		}
 		closedir(dir);
 		if ((num_devices == 0) && (num_total == 0)){
-			fprintf(stderr, "No BMP probe found\n");
+			DEBUG_WARN("No BMP probe found\n");
 			return -1;
 		} else if (num_devices != 1) {
-			fprintf(stderr, "Available Probes:\n");
+			DEBUG_INFO("Available Probes:\n");
 			dir = opendir(DEVICE_BY_ID);
 			if (dir) {
 				while ((dp = readdir(dir)) != NULL) {
 					if ((strstr(dp->d_name, BMP_IDSTRING)) &&
 						(strstr(dp->d_name, "-if00")))
-						fprintf(stderr, "%s\n", dp->d_name);
+						DEBUG_WARN("%s\n", dp->d_name);
 				}
 				closedir(dir);
-				if (opt->opt_serial)
-					fprintf(stderr, "Do no match given serial \"%s\"\n", opt->opt_serial);
+				if (serial)
+					DEBUG_WARN("Do no match given serial \"%s\"\n", serial);
 				else
-					fprintf(stderr, "Select Probe with -s <(Partial) Serial Number\n");
+					DEBUG_WARN("Select Probe with -s <(Partial) Serial "
+							   "Number\n");
 			} else {
-				fprintf(stderr, "Could not opendir %s: %s\n", name, strerror(errno));
+				DEBUG_WARN("Could not opendir %s: %s\n", name, strerror(errno));
 			}
 			return -1;
 		}
 	} else {
-		strncpy(name, opt->opt_device, sizeof(name) - 1);
+		strncpy(name, cl_opts->opt_device, sizeof(name) - 1);
 	}
 	fd = open(name, O_RDWR | O_SYNC | O_NOCTTY);
 	if (fd < 0) {
-		fprintf(stderr,"Couldn't open serial port %s\n", name);
+		DEBUG_WARN("Couldn't open serial port %s\n", name);
 		return -1;
     }
 	/* BMP only offers an USB-Serial connection with no real serial
@@ -130,6 +157,7 @@ int serial_open(BMP_CL_OPTIONS_t *opt)
 	 */
 	return set_interface_attribs();
 }
+#endif
 
 void serial_close(void)
 {
@@ -140,12 +168,11 @@ int platform_buffer_write(const uint8_t *data, int size)
 {
 	int s;
 
-	if (cl_debuglevel)
-		printf("%s\n",data);
+	DEBUG_WIRE("%s\n", data);
 	s = write(fd, data, size);
 	if (s < 0) {
-		fprintf(stderr, "Failed to write\n");
-		exit(-2);
+		DEBUG_WARN("Failed to write\n");
+		return(-2);
     }
 
 	return size;
@@ -156,15 +183,13 @@ int platform_buffer_read(uint8_t *data, int maxsize)
 	uint8_t *c;
 	int s;
 	int ret;
-	uint32_t endTime;
 	fd_set  rset;
 	struct timeval tv;
 
 	c = data;
 	tv.tv_sec = 0;
 
-	endTime = platform_time_ms() + RESP_TIMEOUT;
-	tv.tv_usec = 1000 * (endTime - platform_time_ms());
+	tv.tv_usec = 1000 * RESP_TIMEOUT;
 
 	/* Look for start of response */
 	do {
@@ -173,12 +198,12 @@ int platform_buffer_read(uint8_t *data, int maxsize)
 
 		ret = select(fd + 1, &rset, NULL, NULL, &tv);
 		if (ret < 0) {
-			fprintf(stderr,"Failed on select\n");
-			exit(-4);
+			DEBUG_WARN("Failed on select\n");
+			return(-3);
 		}
 		if(ret == 0) {
-			fprintf(stderr,"Timeout on read RESP\n");
-			exit(-3);
+			DEBUG_WARN("Timeout on read RESP\n");
+			return(-4);
 		}
 
 		s = read(fd, c, 1);
@@ -190,25 +215,24 @@ int platform_buffer_read(uint8_t *data, int maxsize)
 		FD_SET(fd, &rset);
 		ret = select(fd + 1, &rset, NULL, NULL, &tv);
 		if (ret < 0) {
-			fprintf(stderr,"Failed on select\n");
+			DEBUG_WARN("Failed on select\n");
 			exit(-4);
 		}
 		if(ret == 0) {
-			fprintf(stderr,"Timeout on read\n");
-			exit(-3);
+			DEBUG_WARN("Timeout on read\n");
+			return(-5);
 		}
 		s = read(fd, c, 1);
 		if (*c==REMOTE_EOM) {
 			*c = 0;
-			if (cl_debuglevel)
-				printf("       %s\n",data);
+			DEBUG_WIRE("       %s\n",data);
 			return (c - data);
 		} else {
 			c++;
 		}
 	}while ((s >= 0) && ((c - data) < maxsize));
 
-	fprintf(stderr,"Failed to read\n");
-	exit(-3);
+	DEBUG_WARN("Failed to read\n");
+	return(-6);
 	return 0;
 }

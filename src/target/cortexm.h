@@ -28,6 +28,7 @@ extern long cortexm_wait_timeout;
 
 #define CORTEXM_SCS_BASE	(CORTEXM_PPB_BASE + 0xE000)
 
+#define CORTEXM_CPUID		(CORTEXM_SCS_BASE + 0xD00)
 #define CORTEXM_AIRCR		(CORTEXM_SCS_BASE + 0xD0C)
 #define CORTEXM_CFSR		(CORTEXM_SCS_BASE + 0xD28)
 #define CORTEXM_HFSR		(CORTEXM_SCS_BASE + 0xD2C)
@@ -170,7 +171,7 @@ extern long cortexm_wait_timeout;
 
 #define	CORTEXM_TOPT_INHIBIT_SRST (1 << 2)
 
-bool cortexm_probe(ADIv5_AP_t *ap, bool forced);
+bool cortexm_probe(ADIv5_AP_t *ap);
 ADIv5_AP_t *cortexm_ap(target *t);
 
 bool cortexm_attach(target *t);

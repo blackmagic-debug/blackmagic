@@ -331,7 +331,7 @@ static void samx5x_add_flash(target *t, uint32_t addr, size_t length,
 {
 	struct target_flash *f = calloc(1, sizeof(*f));
 	if (!f) {			/* calloc failed: heap exhaustion */
-		DEBUG("calloc: failed in %s\n", __func__);
+		DEBUG_INFO("calloc: failed in %s\n", __func__);
 		return;
 	}
 
@@ -462,19 +462,19 @@ static void samx5x_unlock_current_address(target *t)
 static void samx5x_print_nvm_error(uint16_t errs)
 {
 	if (errs & SAMX5X_INTFLAG_ADDRE) {
-		DEBUG(" ADDRE");
+		DEBUG_WARN(" ADDRE");
 	}
 	if (errs & SAMX5X_INTFLAG_PROGE) {
-		DEBUG(" PROGE");
+		DEBUG_WARN(" PROGE");
 	}
 	if (errs & SAMX5X_INTFLAG_LOCKE) {
-		DEBUG(" LOCKE");
+		DEBUG_WARN(" LOCKE");
 	}
 	if (errs & SAMX5X_INTFLAG_NVME) {
-		DEBUG(" NVME");
+		DEBUG_WARN(" NVME");
 	}
 
-	DEBUG("\n");
+	DEBUG_WARN("\n");
 }
 
 static int samx5x_read_nvm_error(target *t)
@@ -499,7 +499,7 @@ static int samx5x_check_nvm_error(target *t)
 	if (!errs)
 		return 0;
 
-	DEBUG("NVM error(s) detected:");
+	DEBUG_WARN("NVM error(s) detected:");
 	samx5x_print_nvm_error(errs);
 	return -1;
 }
@@ -519,7 +519,7 @@ static int samx5x_flash_erase(struct target_flash *f, target_addr addr,
 	target *t = f->t;
 	uint16_t errs = samx5x_read_nvm_error(t);
 	if (errs) {
-		DEBUG(NVM_ERROR_BITS_MSG, "erase", addr, len);
+		DEBUG_INFO(NVM_ERROR_BITS_MSG, "erase", addr, len);
 		samx5x_print_nvm_error(errs);
 		samx5x_clear_nvm_error(t);
 	}
@@ -579,7 +579,7 @@ static int samx5x_flash_write(struct target_flash *f,
 	bool error = false;
 	uint16_t errs = samx5x_read_nvm_error(t);
 	if (errs) {
-		DEBUG(NVM_ERROR_BITS_MSG, "write", dest, len);
+		DEBUG_INFO(NVM_ERROR_BITS_MSG, "write", dest, len);
 		samx5x_print_nvm_error(errs);
 		samx5x_clear_nvm_error(t);
 	}
@@ -604,9 +604,8 @@ static int samx5x_flash_write(struct target_flash *f,
 		}
 
 	if (error || target_check_error(t) || samx5x_check_nvm_error(t)) {
-		DEBUG("Error writing flash page at 0x%08"PRIx32
-		      " (len 0x%08zx)\n",
-		      dest, len);
+		DEBUG_WARN("Error writing flash page at 0x%08"PRIx32
+		      " (len 0x%08zx)\n",  dest, len);
 		return -1;
 	}
 
@@ -623,9 +622,9 @@ static int samx5x_write_user_page(target *t, uint8_t *buffer)
 {
 	uint16_t errs = samx5x_read_nvm_error(t);
 	if (errs) {
-		DEBUG(NVM_ERROR_BITS_MSG, "erase and write",
-		      (uint32_t)SAMX5X_NVM_USER_PAGE,
-		      (size_t)SAMX5X_PAGE_SIZE);
+		DEBUG_INFO(NVM_ERROR_BITS_MSG, "erase and write",
+				   (uint32_t)SAMX5X_NVM_USER_PAGE,
+				   (size_t)SAMX5X_PAGE_SIZE);
 		samx5x_print_nvm_error(errs);
 		samx5x_clear_nvm_error(t);
 	}
@@ -692,13 +691,13 @@ static int samx5x_update_user_word(target *t, uint32_t addr, uint32_t value,
 		*value_written = new_word;
 
 	if (new_word != current_word) {
-		DEBUG("Writing user page word 0x%08"PRIx32
-		      " at offset 0x%03"PRIx32"\n", new_word, addr);
+		DEBUG_INFO("Writing user page word 0x%08"PRIx32
+				   " at offset 0x%03"PRIx32"\n", new_word, addr);
 		memcpy(buffer + addr, &new_word, 4);
 		return samx5x_write_user_page(t, buffer);
 	}
 	else {
-		DEBUG("Skipping user page write as no change would be made");
+		DEBUG_INFO("Skipping user page write as no change would be made");
 	}
 
 	return 0;
@@ -947,8 +946,8 @@ static bool samx5x_cmd_mbist(target *t, int argc, const char **argv)
 	(void)argc;
 	(void)argv;
 
-	DEBUG("Running MBIST for memory range 0x%08x-%08"PRIx32"\n",
-	      SAMX5X_RAM_START, samx5x_ram_size(t));
+	DEBUG_INFO("Running MBIST for memory range 0x%08x-%08"PRIx32"\n",
+			   SAMX5X_RAM_START, samx5x_ram_size(t));
 
 	/* Write the memory parameters to the DSU
 	 * Note that the two least significant bits of the address are
@@ -1019,8 +1018,8 @@ static bool samx5x_cmd_write8(target *t, int argc, const char **argv)
 		return false;
 	}
 
-	DEBUG("Writing 8-bit value 0x%02"PRIx32" at address 0x%08"PRIx32"\n",
-	      value, addr);
+	DEBUG_INFO("Writing 8-bit value 0x%02"PRIx32" at address 0x%08"PRIx32"\n",
+			   value, addr);
 	target_mem_write8(t, addr, (uint8_t)value);
 
 	return true;
@@ -1051,8 +1050,8 @@ static bool samx5x_cmd_write16(target *t, int argc, const char **argv)
 		return false;
 	}
 
-	DEBUG("Writing 16-bit value 0x%04"PRIx32" at address 0x%08"PRIx32"\n",
-	      value, addr);
+	DEBUG_INFO("Writing 16-bit value 0x%04"PRIx32" at address 0x%08"PRIx32"\n",
+			   value, addr);
 	target_mem_write16(t, addr, (uint16_t)value);
 
 	return true;
@@ -1078,8 +1077,8 @@ static bool samx5x_cmd_write32(target *t, int argc, const char **argv)
 		return false;
 	}
 
-	DEBUG("Writing 32-bit value 0x%08"PRIx32" at address 0x%08"PRIx32"\n",
-	      value, addr);
+	DEBUG_INFO("Writing 32-bit value 0x%08"PRIx32" at address 0x%08"PRIx32"\n",
+			   value, addr);
 	target_mem_write32(t, addr, value);
 
 	return true;

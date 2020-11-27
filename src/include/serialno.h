@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2016  Black Sphere Technologies Ltd.
+ * Copyright (C) 2015  Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -17,15 +17,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include "general.h"
+#ifndef __SERIALNO_H
+#define __SERIALNO_H
 
-void platform_timeout_set(platform_timeout *t, uint32_t ms)
-{
-	t->time = platform_time_ms() + ms;
-}
+char *serial_no_read(char *s, int max);
 
-bool platform_timeout_is_expired(platform_timeout *t)
-{
-	return platform_time_ms() > t->time;
-}
+#endif
 
