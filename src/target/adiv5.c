@@ -614,6 +614,12 @@ ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel)
 
 void adiv5_dp_init(ADIv5_DP_t *dp)
 {
+	/* Check IDCODE for a valid designer*/
+	if ((dp->idcode & 0xfff) == 0) {
+		DEBUG_WARN("Invalid DP idcode %08" PRIx32 "\n", dp->idcode);
+		free(dp);
+		return;
+	}
 	DEBUG_INFO("DPIDR 0x%08" PRIx32 " (v%d %srev%d)\n", dp->idcode,
 			   (dp->idcode >> 12) & 0xf,
 			   (dp->idcode & 0x10000) ? "MINDP " : "", dp->idcode >> 28);
