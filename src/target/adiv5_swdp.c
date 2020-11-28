@@ -82,8 +82,6 @@ int adiv5_swdp_scan(void)
 
 	firmware_swdp_error(dp);
 	adiv5_dp_init(dp);
-	if (!target_list)
-		free(dp);
 	return target_list?1:0;
 }
 
