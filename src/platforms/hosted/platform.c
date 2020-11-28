@@ -339,10 +339,21 @@ void platform_max_frequency_set(uint32_t freq)
 	case BMP_TYPE_STLINKV2:
 		stlink_max_frequency_set(&info, freq);
 		break;
+	case BMP_TYPE_JLINK:
+		jlink_max_frequency_set(&info, freq);
+		break;
 	default:
 		DEBUG_WARN("Setting max SWJ frequency not yet implemented\n");
 		break;
 	}
+	uint32_t max_freq = platform_max_frequency_get();
+	if (max_freq == FREQ_FIXED)
+		DEBUG_INFO("Device has fixed frequency for %s\n",
+				   (info.is_jtag) ? "JTAG" : "SWD" );
+	else
+		DEBUG_INFO("Speed set to %7.4f MHz for %s\n",
+				   platform_max_frequency_get() / 1000000.0,
+				   (info.is_jtag) ? "JTAG" : "SWD" );
 }
 
 uint32_t platform_max_frequency_get(void)
@@ -357,6 +368,8 @@ uint32_t platform_max_frequency_get(void)
 		return libftdi_max_frequency_get();
 	case BMP_TYPE_STLINKV2:
 		return stlink_max_frequency_get(&info);
+	case BMP_TYPE_JLINK:
+		return jlink_max_frequency_get(&info);
 	default:
 		DEBUG_WARN("Reading max SWJ frequency not yet implemented\n");
 		break;

@@ -24,8 +24,9 @@
 
 /** @cond PRIVATE */
 #define CMD_GET_VERSION         0x01
+#define CMD_SET_SPEED           0x05
 #define CMD_GET_HW_STATUS       0x07
-#define CMD_GET_SPEED           0xc0
+#define CMD_GET_SPEEDS          0xc0
 #define CMD_GET_SELECT_IF       0xc7
 #define CMD_HW_JTAG3            0xcf
 #define CMD_HW_RESET0           0xdc
@@ -37,7 +38,8 @@
 #define JLINK_IF_GET_ACTIVE    0xfe
 #define JLINK_IF_GET_AVAILABLE 0xff
 
-#define JLINK_CAP_GET_HW_VERSION  2
+#define JLINK_CAP_GET_SPEEDS     (1 <<  9)
+#define JLINK_CAP_GET_HW_VERSION (1 <<  1)
 #define JLINK_IF_JTAG             1
 #define JLINK_IF_SWD              2
 
@@ -53,13 +55,54 @@ int jlink_jtagtap_init(bmp_info_t *info, jtag_proc_t *jtag_proc) {return 0;};
 const char *jlink_target_voltage(bmp_info_t *info) {return "ERROR";};
 void jlink_srst_set_val(bmp_info_t *info, bool assert) {};
 bool jlink_srst_get_val(bmp_info_t *info) {return true;};
+void jlink_max_frequency_set(bmp_info_t *info, uint32_t freq) {};
+uint32_t jlink_max_frequency_get(bmp_info_t *info) {return 0;};
 # pragma GCC diagnostic pop
 #else
+/** Device capabilities. (from openocd*/
+enum jaylink_device_capability {
+        /** Device supports retrieval of the hardware version. */
+        JAYLINK_DEV_CAP_GET_HW_VERSION = 1,
+        /** Device supports adaptive clocking. */
+        JAYLINK_DEV_CAP_ADAPTIVE_CLOCKING = 3,
+        /** Device supports reading configuration data. */
+        JAYLINK_DEV_CAP_READ_CONFIG = 4,
+        /** Device supports writing configuration data. */
+        JAYLINK_DEV_CAP_WRITE_CONFIG = 5,
+        /** Device supports retrieval of target interface speeds. */
+        JAYLINK_DEV_CAP_GET_SPEEDS = 9,
+        /** Device supports retrieval of free memory size. */
+        JAYLINK_DEV_CAP_GET_FREE_MEMORY = 11,
+        /** Device supports retrieval of hardware information. */
+        JAYLINK_DEV_CAP_GET_HW_INFO = 12,
+        /** Device supports the setting of the target power supply. */
+        JAYLINK_DEV_CAP_SET_TARGET_POWER = 13,
+        /** Device supports target interface selection. */
+        JAYLINK_DEV_CAP_SELECT_TIF = 17,
+        /** Device supports retrieval of counter values. */
+        JAYLINK_DEV_CAP_GET_COUNTERS = 19,
+        /** Device supports capturing of SWO trace data. */
+        JAYLINK_DEV_CAP_SWO = 23,
+        /** Device supports file I/O operations. */
+        JAYLINK_DEV_CAP_FILE_IO = 26,
+        /** Device supports registration of connections. */
+        JAYLINK_DEV_CAP_REGISTER = 27,
+        /** Device supports retrieval of extended capabilities. */
+        JAYLINK_DEV_CAP_GET_EXT_CAPS = 31,
+        /** Device supports EMUCOM. */
+        JAYLINK_DEV_CAP_EMUCOM = 33,
+        /** Device supports ethernet connectivity. */
+        JAYLINK_DEV_CAP_ETHERNET = 38
+};
+
+
 int jlink_init(bmp_info_t *info);
 int jlink_swdp_scan(bmp_info_t *info);
 int jlink_jtagtap_init(bmp_info_t *info, jtag_proc_t *jtag_proc);
 const char *jlink_target_voltage(bmp_info_t *info);
 void jlink_srst_set_val(bmp_info_t *info, bool assert);
 bool jlink_srst_get_val(bmp_info_t *info);
+void jlink_max_frequency_set(bmp_info_t *info, uint32_t freq);
+uint32_t jlink_max_frequency_get(bmp_info_t *info);
 #endif
 #endif
