@@ -186,8 +186,6 @@ int jlink_swdp_scan(bmp_info_t *info)
 
 	jlink_adiv5_swdp_error(dp);
 	adiv5_dp_init(dp);
-	if (!target_list)
-		free(dp);
 	return target_list?1:0;
 }
 
