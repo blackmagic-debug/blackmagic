@@ -178,7 +178,15 @@ int jlink_swdp_scan(bmp_info_t *info)
 	ADIv5_DP_t *dp = (void*)calloc(1, sizeof(*dp));
 	if (!dp) /* calloc failed: heap exhaustion */
 		return 0;
-	dp->idcode = jlink_adiv5_swdp_low_access(dp, 1, ADIV5_DP_IDCODE, 0);
+	volatile struct exception e;
+	TRY_CATCH (e, EXCEPTION_ALL) {
+		dp->idcode = jlink_adiv5_swdp_low_access(dp, 1, ADIV5_DP_IDCODE, 0);
+	}
+	if (e.type) {
+		DEBUG_WARN("DP not responding for IDCODE! Reset stuck low?\n");
+		free(dp);
+		return 0;
+	}
 	dp->dp_read = jlink_adiv5_swdp_read;
 	dp->error = jlink_adiv5_swdp_error;
 	dp->low_access = jlink_adiv5_swdp_low_access;
