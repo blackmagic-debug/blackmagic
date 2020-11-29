@@ -123,6 +123,7 @@ void platform_init(int argc, char **argv)
 
 int platform_adiv5_swdp_scan(void)
 {
+	info.is_jtag = false;
 	switch (info.bmp_type) {
 	case BMP_TYPE_BMP:
 	case BMP_TYPE_LIBFTDI:
@@ -187,6 +188,7 @@ void platform_add_jtag_dev(int i, const jtag_dev_t *jtag_dev)
 
 int platform_jtag_scan(const uint8_t *lrlens)
 {
+	info.is_jtag = true;
 	switch (info.bmp_type) {
 	case BMP_TYPE_BMP:
 	case BMP_TYPE_LIBFTDI:

@@ -31,6 +31,7 @@ typedef struct bmp_info_s {
 	char manufacturer[128];
 	char product[128];
 	char version[128];
+	bool is_jtag;
 #if HOSTED_BMP_ONLY != 1
 	libusb_context *libusb_ctx;
 	struct ftdi_context *ftdic;
