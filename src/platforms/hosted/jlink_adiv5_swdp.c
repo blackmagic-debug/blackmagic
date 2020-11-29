@@ -252,10 +252,17 @@ static uint32_t jlink_adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 	uint8_t res[8];
 	cmd[0] = CMD_HW_JTAG3;
 	cmd[1] = 0;
-	cmd[2] = (RnW) ? 11 : 13; /* Turnaround inserted automatically? */
+	/* It seems, JLINK samples read data at end of previous clock.
+	 * So target data read must start at the 12'th clock, while
+	 * write starts as expected at the 14'th clock (8 cmd, 3 response,
+	 * 2 turn around.
+	 */
+	cmd[2] = (RnW) ? 11 : 13;
 	cmd[3] = 0;
-	cmd[4] = 0xff;
-	cmd[5] = 0xfe;
+	cmd[4] = 0xff; /* 8 bits command OUT */
+	cmd[5] = 0xf0; /* one IN bit to turn around to read, read 2
+					  (read) or 3 (write) IN bits for response and
+					  and one OUT bit to turn around to write on write*/
 	cmd[6] = request;
 	cmd[7] = 0x00;
 	platform_timeout_set(&timeout, 2000);
