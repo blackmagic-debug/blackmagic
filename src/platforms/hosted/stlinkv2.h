@@ -37,6 +37,8 @@ void stlink_adiv5_dp_defaults(ADIv5_DP_t *dp) {};
 int stlink_jtag_dp_init(ADIv5_DP_t *dp) {return false;};
 int jtag_scan_stlinkv2(bmp_info_t *info, const uint8_t *irlens) {return 0;};
 void stlink_exit_function(bmp_info_t *info) {};
+void stlink_max_frequency_set(bmp_info_t *info, uint32_t freq) {};
+uint32_t stlink_max_frequency_get(bmp_info_t *info) {return 0;};
 # pragma GCC diagnostic pop
 #else
 int stlink_init(bmp_info_t *info);
@@ -49,5 +51,7 @@ void stlink_adiv5_dp_defaults(ADIv5_DP_t *dp);
 int stlink_jtag_dp_init(ADIv5_DP_t *dp);
 int jtag_scan_stlinkv2(bmp_info_t *info, const uint8_t *irlens);
 void stlink_exit_function(bmp_info_t *info);
+void stlink_max_frequency_set(bmp_info_t *info, uint32_t freq);
+uint32_t stlink_max_frequency_get(bmp_info_t *info);
 #endif
 #endif
