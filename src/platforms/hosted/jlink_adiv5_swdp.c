@@ -113,10 +113,7 @@ static int swdptap_init(bmp_info_t *info)
 	cmd[1] = SELECT_IF_SWD;
 	send_recv(info->usb_link, cmd, 2, res, sizeof(res));
 	platform_delay(10);
-	/* Set speed 256 kHz*/
-	unsigned int speed = 2000;
-	uint8_t jtag_speed[3] = {5, speed & 0xff, speed >> 8};
-	send_recv(info->usb_link, jtag_speed, 3, NULL, 0);
+	/* SWD speed is fixed. Do not set it here*/
 	return 0;
 }
 
