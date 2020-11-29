@@ -670,7 +670,6 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 			return;
 		}
 	}
-
 	/* This AP reset logic is described in ADIv5, but fails to work
 	 * correctly on STM32.	CDBGRSTACK is never asserted, and we
 	 * just wait forever.  This scenario is described in B2.4.1
@@ -736,6 +735,7 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 				dp->ap_cleanup(i);
 #endif
 			adiv5_ap_unref(ap);
+			adiv5_dp_unref(dp);
 			/* FIXME: Should we expect valid APs behind duplicate ones? */
 			return;
 		}
