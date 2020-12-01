@@ -2,7 +2,7 @@
 #
 # stm32_mem.py: STM32 memory access using USB DFU class
 # Copyright (C) 2011  Black Sphere Technologies
-# Copyright (C) 2017  Uwe Bonnes (bon@elektron.ikp.physik.tu-darmstadt.de)
+# Copyright (C) 2017, 2020  Uwe Bonnes (bon@elektron.ikp.physik.tu-darmstadt.de)
 # Written by Gareth McMullin <gareth@blacksphere.co.nz>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -121,9 +121,9 @@ def stm32_scan(args, test):
 		print("Found multiple devices:\n")
 		for dev in bmp_devs:
 			dfudev = dfu.dfu_device(*dev)
-			man = dfudev.handle.getString(dfudev.dev.iManufacturer, 30)
-			product = dfudev.handle.getString(dfudev.dev.iProduct, 96)
-			serial_no = dfudev.handle.getString(dfudev.dev.iSerialNumber, 30)
+			man = dfudev.handle.getString(dfudev.dev.iManufacturer, 30).decode('utf8')
+			product = dfudev.handle.getString(dfudev.dev.iProduct, 96).decode('utf8')
+			serial_no = dfudev.handle.getString(dfudev.dev.iSerialNumber, 30).decode('utf8')
 			print("Device ID:\t %04x:%04x" % (dfudev.dev.idVendor, dfudev.dev.idProduct))
 			print("Manufacturer:\t %s" % man)
 			print("Product:\t %s" % product)
@@ -134,9 +134,9 @@ def stm32_scan(args, test):
 
 	for dev in bmp_devs:
 		dfudev = dfu.dfu_device(*dev)
-		man = dfudev.handle.getString(dfudev.dev.iManufacturer, 30)
-		product = dfudev.handle.getString(dfudev.dev.iProduct, 96)
-		serial_no = dfudev.handle.getString(dfudev.dev.iSerialNumber, 30)
+		man = dfudev.handle.getString(dfudev.dev.iManufacturer, 30).decode('utf8')
+		product = dfudev.handle.getString(dfudev.dev.iProduct, 96).decode('utf8')
+		serial_no = dfudev.handle.getString(dfudev.dev.iSerialNumber, 30).decode('utf8')
 		if args.serial_target:
 			if man == "Black Sphere Technologies" and serial_no ==	args.serial_target:
 				break
@@ -150,7 +150,7 @@ def stm32_scan(args, test):
 	print("Serial:\t\t %s" % serial_no)
 
 	if args.serial_target and serial_no != args.serial_target:
-		print("Serial number doesn't match!\n")
+		print("Serial number doesn't match %s vs %s!\n" % (serial_no, args.serial_target))
 		exit(-2)
 
 	return dfudev
@@ -203,11 +203,11 @@ if __name__ == "__main__":
 
 	bin = file.read()
 
-	product = dfudev.handle.getString(dfudev.dev.iProduct, 64)
+	product = dfudev.handle.getString(dfudev.dev.iProduct, 64).decode('utf8')
 	if args.address :
 		start = int(args.address, 0)
 	else :
-		if b"F4" in product:
+		if "F4" in product or "STLINK-V3" in product:
 			start = 0x8004000
 		else:
 			start = 0x8002000
