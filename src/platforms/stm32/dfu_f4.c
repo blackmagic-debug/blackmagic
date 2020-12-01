@@ -47,13 +47,13 @@ static void get_sector_num(uint32_t addr)
 	}
 	if (!sector_addr[i])
 		return;
-	sector_num = i;
+	sector_num = i & 0x1f;
 }
 
 void dfu_check_and_do_sector_erase(uint32_t addr)
 {
 	if(addr == sector_addr[sector_num]) {
-		flash_erase_sector((sector_num & 0x1f)<<3, FLASH_CR_PROGRAM_X32);
+		flash_erase_sector(sector_num, FLASH_CR_PROGRAM_X32);
 	}
 }
 
