@@ -131,16 +131,18 @@ int command_process(target *t, char *cmd)
 	return target_command(t, argc, argv);
 }
 
+#define BOARD_IDENT "Black Magic Probe" PLATFORM_IDENT FIRMWARE_VERSION
+
 bool cmd_version(target *t, int argc, char **argv)
 {
 	(void)t;
 	(void)argc;
 	(void)argv;
+	gdb_out(BOARD_IDENT);
 #if PC_HOSTED == 1
-	gdb_outf("Black Magic Probe, PC-Hosted for " PLATFORM_IDENT()
-			 ", Version " FIRMWARE_VERSION "\n");
+	gdb_outf("\n for %s, %s\n", info.manufacturer, info.product);
 #else
-	gdb_outf("Black Magic Probe (Firmware " FIRMWARE_VERSION ") (Hardware Version %d)\n", platform_hwversion());
+	gdb_outf(", Hardware Version %d\n", platform_hwversion());
 #endif
 	gdb_out("Copyright (C) 2015  Black Sphere Technologies Ltd.\n");
 	gdb_out("License GPLv3+: GNU GPL version 3 or later "
