@@ -395,8 +395,8 @@ static const struct usb_config_descriptor config = {
 	.interface = ifaces,
 };
 
-#if defined(STM32L0) || defined(STM32F3) || defined(STM32F4)
-static char serial_no[13];
+#if defined(DUSE_ST_SERIAL)
+char serial_no[13];
 #else
 static char serial_no[9];
 #endif
