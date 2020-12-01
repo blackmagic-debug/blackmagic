@@ -17,9 +17,9 @@ LDFLAGS_BOOT = -lopencm3_stm32f4 \
 ifeq ($(BMP_BOOTLOADER), 1)
 $(info  Load address 0x08004000 for BMPBootloader)
 LDFLAGS = $(LDFLAGS_BOOT) -Wl,-Ttext=0x8004000
-CFLAGS += -DUSE_BMP_SERIAL
 else
-LDFLAGS = $(LDFLAGS_BOOT)
+LDFLAGS += $(LDFLAGS_BOOT)
+CFLAGS += -DUSE_ST_SERIAL
 endif
 
 VPATH += platforms/stm32
