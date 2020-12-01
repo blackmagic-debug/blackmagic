@@ -126,6 +126,7 @@ bool stm32f1_probe(target *t)
 	size_t flash_size;
 	size_t block_size = 0x400;
 	switch(t->idcode) {
+	case 0x29b: /* CS clone */
 	case 0x410:  /* Medium density */
 	case 0x412:  /* Low density */
 	case 0x420:  /* Value Line, Low-/Medium density */
