@@ -34,6 +34,7 @@
 #endif
 #include "usbuart.h"
 #include "serialno.h"
+#include "version.h"
 
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/usb/usbd.h>
@@ -399,6 +400,9 @@ static char serial_no[13];
 #else
 static char serial_no[9];
 #endif
+
+#define BOARD_IDENT "Black Magic Probe" PLATFORM_IDENT FIRMWARE_VERSION
+#define DFU_IDENT   "Black Magic Firmware Upgrade" PLATFORM_IDENT FIRMWARE_VERSION
 
 static const char *usb_strings[] = {
 	"Black Sphere Technologies",

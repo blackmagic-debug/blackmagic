@@ -20,7 +20,6 @@
  */
 #include "general.h"
 #include "gdb_if.h"
-#include "version.h"
 #include "platform.h"
 #include "target.h"
 

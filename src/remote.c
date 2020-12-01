@@ -24,6 +24,7 @@
 #include "swdptap.h"
 #include "jtagtap.h"
 #include "gdb_if.h"
+#include "platform.h"
 #include "version.h"
 #include "exception.h"
 #include <stdarg.h>
@@ -299,11 +300,11 @@ void remotePacketProcessGEN(uint8_t i, char *packet)
 #endif
 		break;
 
-#if !defined(BOARD_IDENT) && defined(PLATFORM_IDENT)
-# define BOARD_IDENT() PLATFORM_IDENT
+#if !defined(BOARD_IDENT) && defined(BOARD_IDENT)
+# define PLATFORM_IDENT() BOARD_IDENT
 #endif
 	case REMOTE_START:
-		_respondS(REMOTE_RESP_OK, BOARD_IDENT " " FIRMWARE_VERSION);
+		_respondS(REMOTE_RESP_OK, PLATFORM_IDENT ""  FIRMWARE_VERSION);
 		break;
 
     default:

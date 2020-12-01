@@ -28,14 +28,11 @@
 #include "gpio.h"
 #include "timing.h"
 #include "timing_stm32.h"
-#include "version.h"
 
 #include <setjmp.h>
 
 #define PLATFORM_HAS_TRACESWO
-#define BOARD_IDENT       "Black Magic Probe (HydraBus), (Firmware " FIRMWARE_VERSION ")"
-#define BOARD_IDENT_DFU   "Black Magic (Upgrade) for HydraBus, (Firmware " FIRMWARE_VERSION ")"
-#define DFU_IDENT         "Black Magic Firmware Upgrade (HydraBus)"
+#define PLATFORM_IDENT        " (HydraBus))"
 
 /* Important pin mappings for STM32 implementation:
  *

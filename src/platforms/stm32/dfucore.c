@@ -18,6 +18,8 @@
  */
 
 #include "general.h"
+#include "version.h"
+
 #include <libopencm3/stm32/desig.h>
 
 #include <string.h>
@@ -124,10 +126,11 @@ const struct usb_config_descriptor config = {
 
 static char serial_no[9];
 static char if_string[] = DFU_IFACE_STRING;
+#define BOARD_IDENT_DFU(BOARD_TYPE) "Black Magic Probe DFU " PLATFORM_IDENT  "" FIRMWARE_VERSION
 
 static const char *usb_strings[] = {
 	"Black Sphere Technologies",
-	BOARD_IDENT_DFU,
+	BOARD_IDENT_DFU(PLATFORM_IDENT),
 	serial_no,
 	/* This string is used by ST Microelectronics' DfuSe utility */
 	if_string,

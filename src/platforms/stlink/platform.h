@@ -27,7 +27,6 @@
 #include "gpio.h"
 #include "timing.h"
 #include "timing_stm32.h"
-#include "version.h"
 
 #include <libopencm3/cm3/common.h>
 #include <libopencm3/stm32/f1/memorymap.h>
@@ -40,9 +39,7 @@ extern bool debug_bmp;
 int usbuart_debug_write(const char *buf, size_t len);
 #endif
 
-#define BOARD_IDENT       "Black Magic Probe (STLINK), (Firmware " FIRMWARE_VERSION ")"
-#define BOARD_IDENT_DFU   "Black Magic (Upgrade) for STLink/Discovery, (Firmware " FIRMWARE_VERSION ")"
-#define DFU_IDENT         "Black Magic Firmware Upgrade (STLINK)"
+#define PLATFORM_IDENT   "(STLINK/V2) "
 
 /* Hardware definitions... */
 #define TDI_PORT	GPIOA
