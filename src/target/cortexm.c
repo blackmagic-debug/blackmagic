@@ -442,8 +442,8 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 			PROBE(lpc11xx_probe); /* LPC24C11 */
 			PROBE(lpc43xx_probe);
 		} else if (ap->ap_partno == 0x4c4) { /* Cortex-M4 ROM */
+			PROBE(lpc546xx_probe); /* Probe LPC546xx first to avoid hang */
 			PROBE(lpc43xx_probe);
-			PROBE(lpc546xx_probe);
 			PROBE(kinetis_probe); /* Older K-series */
 		}
 		/* Info on PIDR of these parts wanted! */
