@@ -387,6 +387,9 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 			target_halt_resume(t, 0);
 		}
 		break;
+	case AP_DESIGNER_CS:
+		PROBE(stm32f1_probe);
+		break;
 	case AP_DESIGNER_STM:
 		PROBE(stm32f1_probe);
 		PROBE(stm32f4_probe);
