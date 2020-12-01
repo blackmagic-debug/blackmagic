@@ -27,14 +27,11 @@
 #include "gpio.h"
 #include "timing.h"
 #include "timing_stm32.h"
-#include "version.h"
 
 #include <setjmp.h>
 
 #define PLATFORM_HAS_TRACESWO
-#define BOARD_IDENT "Black Magic Probe (F4Discovery), (Firmware " FIRMWARE_VERSION ")"
-#define  BOARD_IDENT_DFU  "Black Magic Firmware Upgrade (F4Discovery)"
-#define DFU_IDENT   "Black Magic Firmware Upgrade (F4Discovery)"
+#define PLATFORM_IDENT "(F4Discovery) "
 
 /* Important pin mappings for STM32 implementation:
  *

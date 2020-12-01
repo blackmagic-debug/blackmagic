@@ -21,12 +21,8 @@
 #include <libopencm3/usb/usbd.h>
 
 #include "timing.h"
-#include "version.h"
 
-#define BOARD_IDENT             "Black Magic Probe (Launchpad ICDI), (Firmware " FIRMWARE_VERSION ")"
-#define BOARD_IDENT_DFU		"Black Magic (Upgrade) for Launchpad, (Firmware " FIRMWARE_VERSION ")"
-#define DFU_IDENT               "Black Magic Firmware Upgrade (Launchpad)"
-#define DFU_IFACE_STRING	"lolwut"
+#define PLATFORM_IDENT      "(Launchpad ICDI) "
 
 extern uint8_t running_status;
 
