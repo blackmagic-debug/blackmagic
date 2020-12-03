@@ -116,6 +116,38 @@ static void stm32f1_add_flash(target *t,
 	target_add_flash(t, f);
 }
 
+/**
+    \brief identify the correct gd32 f1/f3 chip
+    GD32 : STM32 compatible chip
+*/
+bool gd32f1_probe(target *t)
+{
+	uint16_t stored_idcode = t->idcode;
+	// M3 & M4 & riscV only afaik
+	t->idcode = target_mem_read32(t, DBGMCU_IDCODE) & 0xfff;
+	uint32_t signature= target_mem_read32(t, FLASHSIZE);
+	uint32_t flashSize=signature & 0xFFFF;
+	uint32_t ramSize=signature >>16 ;
+	switch(t->idcode) {
+	case 0x414:  /* Gigadevice gd32f303 */
+		t->driver = "GD32F3";
+		break;
+	case 0x410:  /* Gigadevice gd32f103 */
+        t->driver = "GD32F1";
+		break;
+	default:
+        t->idcode = stored_idcode;
+		return false;
+	}
+	target_add_ram(t, 0x20000000, ramSize*1024);
+	stm32f1_add_flash(t, 0x8000000, flashSize*1024, 0x400);
+	target_add_commands(t, stm32f1_cmd_list, t->driver);
+	return true;
+}
+/**
+    \brief identify the stm32f1 chip
+*/
+
 bool stm32f1_probe(target *t)
 {
 	uint16_t stored_idcode = t->idcode;
