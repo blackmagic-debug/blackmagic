@@ -31,6 +31,120 @@ enum
 	MAX_VALUE_NAME	= 16383,
 };
 
+
+void print_portname(const char * serial_number)
+{
+	char regpath[258];
+	/* First find the containers of the BMP comports */
+	sprintf(regpath,
+			"SYSTEM\\CurrentControlSet\\Enum\\USB\\VID_%04X&PID_%04X&MI_00\\"
+			"%s\\Device Parameters",
+			VENDOR_ID_BMP, PRODUCT_ID_BMP, serial_number);
+	HKEY hkeySection;
+	LSTATUS res;
+
+	res = RegOpenKeyEx(HKEY_LOCAL_MACHINE, regpath, 0, KEY_READ, &hkeySection);
+	if (res != ERROR_SUCCESS) {
+		printf("Failure\n");
+		return;
+	}
+	BYTE port[128];
+	DWORD maxlen = sizeof(port);
+	res = RegQueryValueEx(hkeySection, "PortName", NULL, NULL, port, &maxlen);
+	RegCloseKey(hkeySection);
+	if (res != ERROR_SUCCESS)
+		return;
+	printf("Portname %s\n", port);
+}
+
+void list_known_bmp_ports(void)
+{
+	char regpath[258];
+	/* First find the containers of the BMP comports */
+	sprintf(regpath,
+			"SYSTEM\\CurrentControlSet\\Enum\\USB\\VID_%04X&PID_%04X&MI_00",
+			VENDOR_ID_BMP, PRODUCT_ID_BMP);
+	HKEY hkeySection;
+	LSTATUS res;
+	res = RegOpenKeyEx(HKEY_LOCAL_MACHINE, regpath, 0, KEY_READ, &hkeySection);
+	if (res != ERROR_SUCCESS) {
+		printf("Error querying registry for listing known BMP devices.\n");
+		return;
+	}
+
+	TCHAR    subkey_name[MAX_KEY_LENGTH];
+	DWORD    subkey_name_len;
+	DWORD    subkey_count = 0;
+
+	DWORD i, retCode;
+
+	/* Get the subkey count. */
+	retCode = RegQueryInfoKey( hkeySection, 0, 0, NULL, &subkey_count, 0, 0, 0, 0, 0, 0, 0);
+
+	/* Enumerate the subkeys, until RegEnumKeyEx fails. */
+	if (subkey_count)
+	{
+		printf( "Known BMP devices serial numbers:\n");
+		for (i = 0; i < subkey_count; i ++) {
+			subkey_name_len = MAX_KEY_LENGTH;
+			retCode = RegEnumKeyEx(hkeySection, i, subkey_name, &subkey_name_len, 0, 0, 0, 0);
+			if (retCode == ERROR_SUCCESS)
+				printf("[%lu] %s\n", i + 1, subkey_name);
+			print_portname(subkey_name);
+		}
+	}
+	else
+		printf("No BMP devices found.\n");
+	RegCloseKey(hkeySection);
+}
+
+void print_available_com_ports(void)
+{
+	char regpath[258] = "HARDWARE\\DEVICEMAP\\SERIALCOMM";
+	HKEY hkeySection;
+	LSTATUS res;
+	res = RegOpenKeyEx(HKEY_LOCAL_MACHINE, regpath, 0, KEY_READ, &hkeySection);
+	if (res != ERROR_SUCCESS) {
+		printf("Error querying registry for listing available serial ports.\n");
+		return;
+	}
+
+	TCHAR    subkey_name[MAX_KEY_LENGTH];
+	DWORD    subkey_name_len;
+	DWORD    subkey_count = 0;
+
+	DWORD i, retCode;
+	/* Get the subkey count. */
+	retCode = RegQueryInfoKey( hkeySection, 0, 0, NULL, 0, 0, 0, &subkey_count, 0, 0, 0, 0);
+	if (retCode != ERROR_SUCCESS)
+	{
+		printf("ERROR!\n");
+		return;
+	}
+
+	/* Enumerate the subkeys, until RegEnumKeyEx fails. */
+	if (subkey_count)
+	{
+		printf( "Known BMP devices serial numbers:\n");
+		for (i = 0; i < subkey_count; i ++) {
+			subkey_name_len = MAX_KEY_LENGTH;
+			retCode = RegEnumValueA(hkeySection, i, subkey_name, &subkey_name_len, 0, 0, 0, 0);
+			if (retCode == ERROR_SUCCESS)
+			{
+				printf("[%lu] %s\n", i + 1, subkey_name);
+				BYTE prefix[128];
+				DWORD maxlen = sizeof(prefix);
+				res = RegQueryValueEx(hkeySection, subkey_name, NULL, NULL, prefix,
+						&maxlen);
+				printf("[%lu] %s\n", i + 1, prefix);
+			}
+		}
+	}
+	else
+		printf("No serial ports found.");
+	RegCloseKey(hkeySection);
+}
+
 /* This function lists the serial numbers of BMP probes that have at some time
  * been attached to the machine, by looking up the windows registry. */
 void list_known_bmp_devices(void)

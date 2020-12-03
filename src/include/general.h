@@ -74,6 +74,7 @@ static inline void DEBUG_WARN(const char *format, ...)
 	va_list ap;
     va_start(ap, format);
     vfprintf(stderr, format, ap);
+    fflush(stderr);
     va_end(ap);
 	return;
 }
@@ -85,9 +86,15 @@ static inline void DEBUG_INFO(const char *format, ...)
 	va_list ap;
     va_start(ap, format);
 	if (cl_debuglevel & BMP_DEBUG_STDOUT)
+	{
 		vfprintf(stdout, format, ap);
+		fflush(stdout);
+	}
 	else
+	{
 		vfprintf(stderr, format, ap);
+		fflush(stderr);
+	}
     va_end(ap);
 	return;
 }
@@ -99,6 +106,7 @@ static inline void DEBUG_GDB(const char *format, ...)
 	va_list ap;
     va_start(ap, format);
     vfprintf(stderr, format, ap);
+    fflush(stderr);
     va_end(ap);
 	return;
 }
@@ -111,6 +119,7 @@ static inline void DEBUG_GDB_WIRE(const char *format, ...)
 	va_list ap;
     va_start(ap, format);
     vfprintf(stderr, format, ap);
+    fflush(stderr);
     va_end(ap);
 	return;
 }
@@ -122,6 +131,7 @@ static inline void DEBUG_TARGET(const char *format, ...)
 	va_list ap;
     va_start(ap, format);
     vfprintf(stderr, format, ap);
+    fflush(stderr);
     va_end(ap);
 	return;
 }
@@ -133,6 +143,7 @@ static inline void DEBUG_PROBE(const char *format, ...)
 	va_list ap;
     va_start(ap, format);
     vfprintf(stderr, format, ap);
+    fflush(stderr);
     va_end(ap);
 	return;
 }
@@ -144,6 +155,7 @@ static inline void DEBUG_WIRE(const char *format, ...)
 	va_list ap;
     va_start(ap, format);
     vfprintf(stderr, format, ap);
+    fflush(stderr);
     va_end(ap);
 	return;
 }

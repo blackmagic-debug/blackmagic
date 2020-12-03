@@ -55,6 +55,7 @@ endif
 VPATH += platforms/pc
 SRC += timing.c cl_utils.c utils.c
 SRC += bmp_remote.c remote_swdptap.c remote_jtagtap.c
+SRC += stubs.c
 ifneq ($(HOSTED_BMP_ONLY), 1)
 SRC += libusb_utils.c
 SRC += stlinkv2.c

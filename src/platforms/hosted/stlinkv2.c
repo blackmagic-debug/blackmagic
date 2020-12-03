@@ -349,7 +349,7 @@ static int stlink_send_recv_retry(uint8_t *txbuf, size_t txsize,
 		if (res == STLINK_ERROR_OK)
 			return res;
 		uint32_t now = platform_time_ms();
-		if (((now - start) > cortexm_wait_timeout) ||
+		if (((now - start) > (uint32_t) cortexm_wait_timeout) ||
 			(res != STLINK_ERROR_WAIT)) {
 			DEBUG_WARN("write_retry failed. ");
 			return res;

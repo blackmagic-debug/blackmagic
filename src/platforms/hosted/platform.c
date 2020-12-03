@@ -32,23 +32,6 @@
 #include <signal.h>
 
 #include "bmp_remote.h"
-
-bmp_info_t info;
-
-swd_proc_t swd_proc;
-jtag_proc_t jtag_proc;
-
-static	BMP_CL_OPTIONS_t cl_opts;
-
-/* SIGTERM handler. */
-static void sigterm_handler(int sig)
-{
-	(void)sig;
-	exit(0);
-}
-
-
-#ifndef HOSTED_BMP_ONLY
 #include "stlinkv2.h"
 #include "ftdi_bmp.h"
 #include "jlink.h"
@@ -66,6 +49,11 @@ static void sigterm_handler(int sig)
 #define PRODUCT_ID_STLINKV3E     0x374e
 
 #define VENDOR_ID_SEGGER         0x1366
+
+bmp_info_t info;
+
+swd_proc_t swd_proc;
+jtag_proc_t jtag_proc;
 
 static void exit_function(void)
 {
@@ -86,6 +74,13 @@ static void exit_function(void)
 		break;
 	}
 	fflush(stdout);
+}
+
+/* SIGTERM handler. */
+static void sigterm_handler(int sig)
+{
+	(void)sig;
+	exit(0);
 }
 
 static int find_debuggers(	BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
@@ -277,6 +272,11 @@ static int find_debuggers(	BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 	return (found_debuggers == 1) ? 0 : -1;
 }
 
+static	BMP_CL_OPTIONS_t cl_opts;
+
+void list_known_bmp_devices(void);
+void list_known_bmp_ports(void);
+void print_available_com_ports(void);
 void platform_init(int argc, char **argv)
 {
 	cl_opts.opt_idstring = "Blackmagic PC-Hosted";
@@ -284,11 +284,14 @@ void platform_init(int argc, char **argv)
 	atexit(exit_function);
 	signal(SIGTERM, sigterm_handler);
 	signal(SIGINT, sigterm_handler);
+
+	list_known_bmp_ports();
+	print_available_com_ports();
+
 	int res = libusb_init(&info.libusb_ctx);
 	if (res) {
 		DEBUG_WARN( "Fatal: Failed to get USB context: %s\n",
 				libusb_strerror(res));
-		exit(-1);
 	}
 	if (cl_opts.opt_device) {
 		info.bmp_type = BMP_TYPE_BMP;
@@ -535,106 +538,6 @@ void platform_buffer_flush(void)
 		break;
 	}
 }
-
-#else /* HOSTED_BMP_ONLY */
-
-static void exit_function(void)
-{
-	fflush(stdout);
-}
-
-void platform_init(int argc, char **argv)
-{
-	cl_opts.opt_idstring = "Blackmagic PC-Hosted";
-	cl_init(&cl_opts, argc, argv);
-	atexit(exit_function);
-	signal(SIGTERM, sigterm_handler);
-	signal(SIGINT, sigterm_handler);
-#if defined(_WIN32) || defined(__CYGWIN__)
-	extern void list_known_bmp_devices(void);
-	/* Only list the known BMP probes, and exit. This is a special case for
-	 * windows, when not using libusb, as in this case the list of known
-	 * BMP probes is fetched from the windows registry, and not by using
-	 * libusb. */
-	if (cl_opts.opt_list_only)
-	{
-		list_known_bmp_devices();
-		exit(0);
-	}
-#endif
-	if (serial_open(&cl_opts, cl_opts.opt_serial))
-		exit(-1);
-	remote_init();
-	int ret = -1;
-	if (cl_opts.opt_mode != BMP_MODE_DEBUG) {
-		ret = cl_execute(&cl_opts);
-	} else {
-		gdb_if_init();
-		return;
-	}
-	exit(ret);
-}
-
-int platform_adiv5_swdp_scan(void)
-{
-	return adiv5_swdp_scan();
-}
-
-int platform_swdptap_init(void)
-{
-	return remote_swdptap_init(&swd_proc);
-}
-
-void platform_add_jtag_dev(int i, const jtag_dev_t *jtag_dev)
-{
-	remote_add_jtag_dev(i, jtag_dev);
-}
-
-int platform_jtag_scan(const uint8_t *lrlens)
-{
-	return jtag_scan(lrlens);
-}
-
-int platform_jtagtap_init(void)
-{
-	return remote_jtagtap_init(&jtag_proc);
-}
-
-void platform_adiv5_dp_defaults(ADIv5_DP_t *dp)
-{
-	if (cl_opts.opt_no_hl) {
-		DEBUG_WARN("Not using HL commands\n");
-		return;
-	}
-	return remote_adiv5_dp_defaults(dp);
-}
-
-int platform_jtag_dp_init(ADIv5_DP_t *dp)
-{
-	(void)dp;
-	return 0;
-}
-
-const char *platform_target_voltage(void)
-{
-	return remote_target_voltage();
-}
-
-void platform_srst_set_val(bool assert)
-{
-	return remote_srst_set_val(assert);
-}
-
-bool platform_srst_get_val(void)
-{
-	return remote_srst_get_val();
-}
-
-void platform_buffer_flush(void)
-{
-}
-
-#endif /* HOSTED_BMP_ONLY */
 
 static void ap_decode_access(uint16_t addr, uint8_t RnW)
 {
