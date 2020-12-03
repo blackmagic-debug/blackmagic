@@ -97,8 +97,9 @@
 #define AP_DESIGNER_ARM          0x43b
 /*LPC845 with designer 501. Strange!? */
 #define AP_DESIGNER_SPECULAR     0x501
+#define AP_DESIGNER_CS           0x555
 #define AP_DESIGNER_ENERGY_MICRO 0x673
-#define AP_DESIGNER_CS		 0x555
+#define AP_DESIGNER_GIGADEVICE   0x751
 
 /* AP Control and Status Word (CSW) */
 #define ADIV5_AP_CSW_DBGSWENABLE	(1u << 31)
