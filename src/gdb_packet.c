@@ -81,6 +81,12 @@ int gdb_getpacket(char *packet, int size)
 						break;
 					}
 				}
+				/* Reset the packet buffer start character to zero, because function
+				 * 'remotePacketProcess()' above overwrites this buffer, and
+				 * an arbitrary character may have been placed there. If this is a '$'
+				 * character, this will cause this loop to be terminated, which is wrong.
+				 */
+				packet[0] = 0;
 			}
 #endif
 	    } while (packet[0] != '$');
