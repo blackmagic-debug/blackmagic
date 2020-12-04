@@ -191,6 +191,18 @@ int jtag_scan(const uint8_t *irlens)
 	/*Transfer needed device information to firmware jtag_devs*/
 	for(i = 0; i < jtag_dev_count; i++)
 		platform_add_jtag_dev(i, &jtag_devs[i]);
+	for(i = 0; i < jtag_dev_count; i++) {
+		DEBUG_INFO("Idcode 0x%08" PRIx32, jtag_devs[i].jd_idcode);
+		for(j = 0; dev_descr[j].idcode; j++) {
+			if((jtag_devs[i].jd_idcode & dev_descr[j].idmask) ==
+			   dev_descr[j].idcode) {
+				DEBUG_INFO(": %s",
+						  (dev_descr[j].descr) ? dev_descr[j].descr : "unknown");
+				break;
+			}
+		}
+		DEBUG_INFO("\n");
+	}
 #endif
 
 	/* Check for known devices and handle accordingly */

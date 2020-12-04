@@ -43,6 +43,8 @@ jtag_dev_descr_t dev_descr[] = {
 		.descr = "ST Microelectronics: STM32, Value Line, High density."},
 	{.idcode = 0x06411041, .idmask = 0xFFFFFFFF,
 		.descr = "ST Microelectronics: STM32F2xx."},
+	{.idcode = 0x06422041, .idmask = 0xFFFFFFFF,
+		.descr = "ST Microelectronics: STM32F3xx."},
 	{.idcode = 0x06413041 , .idmask = 0xFFFFFFFF,
 		.descr = "ST Microelectronics: STM32F4xx."},
 	{.idcode = 0x0BB11477 , .idmask = 0xFFFFFFFF,
