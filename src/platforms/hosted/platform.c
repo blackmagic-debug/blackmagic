@@ -85,11 +85,7 @@ void platform_init(int argc, char **argv)
 	} else if (find_debuggers(&cl_opts, &info)) {
 		exit(-1);
 	}
-	DEBUG_INFO("BMP hosted %s\n for ST-Link V2/3, CMSIS_DAP, JLINK and "
-			   "LIBFTDI/MPSSE\n", FIRMWARE_VERSION);
-	DEBUG_INFO("Using %04x:%04x %s %s\n %s\n", info.vid, info.pid, info.serial,
-		   info.manufacturer,
-		   info.product);
+	bmp_ident(&info);
 	switch (info.bmp_type) {
 	case BMP_TYPE_BMP:
 		if (serial_open(&cl_opts, info.serial))

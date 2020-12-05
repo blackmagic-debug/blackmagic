@@ -22,6 +22,7 @@
 #include "libusb-1.0/libusb.h"
 #include "cl_utils.h"
 #include "ftdi_bmp.h"
+#include "version.h"
 
 #define VENDOR_ID_STLINK         0x0483
 #define PRODUCT_ID_STLINK_MASK   0xffe0
@@ -34,6 +35,17 @@
 #define PRODUCT_ID_STLINKV3E     0x374e
 
 #define VENDOR_ID_SEGGER         0x1366
+
+void bmp_ident(bmp_info_t *info)
+{
+	DEBUG_INFO("BMP hosted %s\n for ST-Link V2/3, CMSIS_DAP, JLINK and "
+			   "LIBFTDI/MPSSE\n", FIRMWARE_VERSION);
+	if (info && info->vid && info->pid)
+		DEBUG_INFO("Using %04x:%04x %s %s\n %s\n", info->vid, info->pid,
+				   info->serial,
+				   info->manufacturer,
+				   info->product);
+}
 
 void libusb_exit_function(bmp_info_t *info)
 {
