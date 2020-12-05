@@ -34,6 +34,7 @@
 #include <hidapi.h>
 #include <wchar.h>
 
+#include "bmp_hosted.h"
 #include "dap.h"
 #include "cmsis_dap.h"
 

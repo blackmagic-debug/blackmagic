@@ -26,6 +26,8 @@
 #include <assert.h>
 
 #include "general.h"
+#include <libftdi1/ftdi.h>
+#include "platform.h"
 #include "ftdi_bmp.h"
 
 enum  swdio_status{

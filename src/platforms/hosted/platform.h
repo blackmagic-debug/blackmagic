@@ -1,10 +1,6 @@
 #ifndef __PLATFORM_H
 #define __PLATFORM_H
 
-#include <libusb-1.0/libusb.h>
-#include "libusb_utils.h"
-#include <libftdi1/ftdi.h>
-
 #include "timing.h"
 
 char *platform_ident(void);
@@ -27,19 +23,5 @@ typedef enum bmp_type_s {
 	BMP_TYPE_JLINK
 } bmp_type_t;
 
-typedef struct bmp_info_s {
-	bmp_type_t bmp_type;
-	libusb_context *libusb_ctx;
-	struct ftdi_context *ftdic;
-	usb_link_t *usb_link;
-	unsigned int vid;
-	unsigned int pid;
-	char dev;
-	char serial[64];
-	char manufacturer[128];
-	char product[128];
-} bmp_info_t;
-
-extern bmp_info_t info;
-
+void gdb_ident(char *p, int count);
 #endif

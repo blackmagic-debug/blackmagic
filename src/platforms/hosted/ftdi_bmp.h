@@ -26,6 +26,9 @@
 #include "swdptap.h"
 #include "jtagtap.h"
 
+#include "bmp_hosted.h"
+#include <libftdi1/ftdi.h>
+
 typedef struct data_desc_s {
 	int16_t data_low;
 	int16_t ddr_low;

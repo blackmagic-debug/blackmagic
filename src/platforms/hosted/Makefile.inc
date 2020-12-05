@@ -42,8 +42,8 @@ else
 endif
 
 VPATH += platforms/pc
-SRC += timing.c cl_utils.c utils.c libusb_utils.c
-SRC += stlinkv2.c
+SRC += timing.c cl_utils.c utils.c
+SRC += stlinkv2.c bmp_libusb.c
 SRC += bmp_remote.c remote_swdptap.c remote_jtagtap.c
 SRC += ftdi_bmp.c libftdi_swdptap.c libftdi_jtagtap.c
 SRC += jlink.c jlink_adiv5_swdp.c jlink_jtagtap.c

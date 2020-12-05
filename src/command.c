@@ -140,7 +140,9 @@ bool cmd_version(target *t, int argc, char **argv)
 	(void)argv;
 	gdb_out(BOARD_IDENT);
 #if PC_HOSTED == 1
-	gdb_outf("\n for %s, %s\n", info.manufacturer, info.product);
+	char ident[256];
+	gdb_ident(ident, sizeof(ident));
+	gdb_outf("\n for %s\n", ident);
 #else
 	gdb_outf(", Hardware Version %d\n", platform_hwversion());
 #endif

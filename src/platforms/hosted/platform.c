@@ -32,40 +32,28 @@
 #include <signal.h>
 
 #include "bmp_remote.h"
+#include "bmp_hosted.h"
 #include "stlinkv2.h"
 #include "ftdi_bmp.h"
 #include "jlink.h"
 #include "cmsis_dap.h"
 #include "version.h"
-
-#define VENDOR_ID_STLINK         0x0483
-#define PRODUCT_ID_STLINK_MASK   0xffe0
-#define PRODUCT_ID_STLINK_GROUP  0x3740
-#define PRODUCT_ID_STLINKV1      0x3744
-#define PRODUCT_ID_STLINKV2      0x3748
-#define PRODUCT_ID_STLINKV21     0x374b
-#define PRODUCT_ID_STLINKV21_MSD 0x3752
-#define PRODUCT_ID_STLINKV3      0x374f
-#define PRODUCT_ID_STLINKV3E     0x374e
-
-#define VENDOR_ID_SEGGER         0x1366
+#include "cl_utils.h"
 
 bmp_info_t info;
 
 swd_proc_t swd_proc;
 jtag_proc_t jtag_proc;
 
+void gdb_ident(char *p, int count)
+{
+	snprintf(p, count, "\n for %s (%s), %s\n", info.manufacturer, info.product,
+			 info.version);
+}
+
 static void exit_function(void)
 {
-	if(info.usb_link) {
-		libusb_free_transfer(info.usb_link->req_trans);
-		libusb_free_transfer(info.usb_link->rep_trans);
-		if (info.usb_link->ul_libusb_device_handle) {
-			libusb_release_interface (
-				info.usb_link->ul_libusb_device_handle, 0);
-			libusb_close(info.usb_link->ul_libusb_device_handle);
-		}
-	}
+	libusb_exit_function(&info);
 	switch (info.bmp_type) {
 	case BMP_TYPE_CMSIS_DAP:
 		dap_exit_function();
@@ -83,195 +71,6 @@ static void sigterm_handler(int sig)
 	exit(0);
 }
 
-static int find_debuggers(	BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
-{
-	libusb_device **devs;
-	int n_devs = libusb_get_device_list(info->libusb_ctx, &devs);
-    if (n_devs < 0) {
-        DEBUG_WARN( "WARN:libusb_get_device_list() failed");
-		return -1;
-	}
-	bool report = false;
-	int found_debuggers;
-	struct libusb_device_descriptor desc;
-	char serial[64];
-	char manufacturer[128];
-	char product[128];
-	bmp_type_t type = BMP_TYPE_NONE;
-	bool access_problems = false;
-	char *active_cable = NULL;
-	bool ftdi_unknown = false;
-  rescan:
-	found_debuggers = 0;
-	for (int i = 0;  devs[i]; i++) {
-		libusb_device *dev =  devs[i];
-		int res = libusb_get_device_descriptor(dev, &desc);
-		if (res < 0) {
-            DEBUG_WARN( "WARN: libusb_get_device_descriptor() failed: %s",
-					libusb_strerror(res));
-			libusb_free_device_list(devs, 1);
-			continue;
-		}
-		/* Exclude hubs from testing. Probably more classes could be excluded here!*/
-		if (desc.bDeviceClass == LIBUSB_CLASS_HUB) {
-			continue;
-		}
-		libusb_device_handle *handle;
-		res = libusb_open(dev, &handle);
-		if (res != LIBUSB_SUCCESS) {
-			if (!access_problems) {
-				DEBUG_INFO("INFO: Open USB %04x:%04x class %2x failed\n",
-						   desc.idVendor, desc.idProduct, desc.bDeviceClass);
-				access_problems = true;
-			}
-			continue;
-		}
-		res = libusb_get_string_descriptor_ascii(
-			handle, desc.iSerialNumber, (uint8_t*)serial,
-			sizeof(serial));
-		if (res <= 0) {
-			/* This can fail for many devices. Continue silent!*/
-			libusb_close(handle);
-			continue;
-		}
-		if (cl_opts->opt_serial && !strstr(serial, cl_opts->opt_serial)) {
-			libusb_close(handle);
-			continue;
-		}
-		res = libusb_get_string_descriptor_ascii(
-			handle, desc.iManufacturer, (uint8_t*)manufacturer,
-			sizeof(manufacturer));
-		if (res > 0) {
-			res = libusb_get_string_descriptor_ascii(
-				handle, desc.iProduct, (uint8_t*)product,
-				sizeof(product));
-			if (res <= 0) {
-				DEBUG_WARN( "WARN:"
-						"libusb_get_string_descriptor_ascii "
-						"for ident_string failed: %s\n",
-						libusb_strerror(res));
-				libusb_close(handle);
-				continue;
-			}
-		}
-		libusb_close(handle);
-		if (cl_opts->opt_ident_string) {
-			char *match_manu = NULL;
-			char *match_product = NULL;
-			match_manu = strstr(manufacturer,	cl_opts->opt_ident_string);
-			match_product = strstr(product, cl_opts->opt_ident_string);
-			if (!match_manu && !match_product) {
-				continue;
-			}
-		}
-		/* Either serial and/or ident_string match or are not given.
-		 * Check type.*/
-		if (desc.idVendor == VENDOR_ID_BMP) {
-			if (desc.idProduct == PRODUCT_ID_BMP) {
-				type = BMP_TYPE_BMP;
-			} else if (desc.idProduct == PRODUCT_ID_BMP_BL) {
-				DEBUG_WARN("BMP in botloader mode found. Restart or reflash!\n");
-				continue;
-			}
-		} else if ((strstr(manufacturer, "CMSIS")) || (strstr(product, "CMSIS"))) {
-			type = BMP_TYPE_CMSIS_DAP;
-		} else if (desc.idVendor ==  VENDOR_ID_STLINK) {
-			if ((desc.idProduct == PRODUCT_ID_STLINKV2) ||
-				(desc.idProduct == PRODUCT_ID_STLINKV21) ||
-				(desc.idProduct == PRODUCT_ID_STLINKV21_MSD) ||
-				(desc.idProduct == PRODUCT_ID_STLINKV3) ||
-				(desc.idProduct == PRODUCT_ID_STLINKV3E)) {
-				type = BMP_TYPE_STLINKV2;
-			} else {
-				if (desc.idProduct == PRODUCT_ID_STLINKV1)
-					DEBUG_WARN( "INFO: STLINKV1 not supported\n");
-				continue;
-			}
-		} else if (desc.idVendor ==  VENDOR_ID_SEGGER) {
-			type = BMP_TYPE_JLINK;
-		} else {
-			cable_desc_t *cable = &cable_desc[0];
-			for (; cable->name; cable++) {
-				bool found = false;
-				if ((cable->vendor != desc.idVendor) || (cable->product != desc.idProduct))
-					continue; /* VID/PID do not match*/
-				if (cl_opts->opt_cable) {
-					if (strcmp(cable->name, cl_opts->opt_cable))
-						continue; /* cable names do not match*/
-					else
-						found = true;
-				}
-				if (cable->description) {
-					if (strcmp(cable->description, product))
-						continue; /* discriptions do not match*/
-					else
-						found = true;
-				} else { /* VID/PID fits, but no cl_opts->opt_cable and no description*/
-					if ((cable->vendor == 0x0403) && /* FTDI*/
-						((cable->product == 0x6010) || /* FT2232C/D/H*/
-						 (cable->product == 0x6011) || /* FT4232H Quad HS USB-UART/FIFO IC */
-						 (cable->product == 0x6014))) {  /* FT232H Single HS USB-UART/FIFO IC */
-						ftdi_unknown = true;
-						continue; /* Cable name is needed */
-					}
-				}
-				if (found) {
-					active_cable = cable->name;
-					type = BMP_TYPE_LIBFTDI;
-					break;
-				}
-			}
-			if (!cable->name)
-				continue;
-		}
-		if (report) {
-			DEBUG_WARN("%2d: %s, %s, %s\n", found_debuggers + 1,
-				   serial,
-				   manufacturer,product);
-		}
-		info->vid = desc.idVendor;
-		info->pid = desc.idProduct;
-		info->bmp_type = type;
-		strncpy(info->serial, serial, sizeof(info->serial));
-		strncpy(info->product, product, sizeof(info->product));
-		strncpy(info->manufacturer, manufacturer, sizeof(info->manufacturer));
-		if (cl_opts->opt_position &&
-			(cl_opts->opt_position == (found_debuggers + 1))) {
-			found_debuggers = 1;
-			break;
-		} else {
-			found_debuggers++;
-		}
-	}
-	if ((found_debuggers == 0) && ftdi_unknown)
-		DEBUG_WARN("Generic FTDI MPSSE VID/PID found. Please specify exact type with \"-c <cable>\" !\n");
-	if ((found_debuggers == 1) && !cl_opts->opt_cable && (type == BMP_TYPE_LIBFTDI))
-		cl_opts->opt_cable = active_cable;
-	if (!found_debuggers && cl_opts->opt_list_only)
-		DEBUG_WARN("No usable debugger found\n");
-	if ((found_debuggers > 1) ||
-		((found_debuggers == 1) && (cl_opts->opt_list_only))) {
-		if (!report) {
-			if (found_debuggers > 1)
-				DEBUG_WARN("%d debuggers found!\nSelect with -P <pos>, "
-						   "-s <(partial)serial no.> "
-						   "and/or -S <(partial)description>\n",
-						   found_debuggers);
-			report = true;
-			goto rescan;
-		} else {
-			if (found_debuggers > 0)
-				access_problems = false;
-			found_debuggers = 0;
-		}
-	}
-	if (!found_debuggers && access_problems)
-		DEBUG_WARN(
-			"No debugger found. Please check access rights to USB devices!\n");
-	libusb_free_device_list(devs, 1);
-	return (found_debuggers == 1) ? 0 : -1;
-}
-
 static	BMP_CL_OPTIONS_t cl_opts;
 
 void platform_init(int argc, char **argv)
@@ -281,25 +80,8 @@ void platform_init(int argc, char **argv)
 	atexit(exit_function);
 	signal(SIGTERM, sigterm_handler);
 	signal(SIGINT, sigterm_handler);
-	int res = libusb_init(&info.libusb_ctx);
-	if (res) {
-		DEBUG_WARN( "Fatal: Failed to get USB context: %s\n",
-				libusb_strerror(res));
-		exit(-1);
-	}
 	if (cl_opts.opt_device) {
 		info.bmp_type = BMP_TYPE_BMP;
-	} else if (cl_opts.opt_cable) {
-		if ((!strcmp(cl_opts.opt_cable, "list")) ||
-			(!strcmp(cl_opts.opt_cable, "l"))) {
-			cable_desc_t *cable = &cable_desc[0];
-			DEBUG_WARN("Available cables:\n");
-			for (; cable->name; cable++) {
-				DEBUG_WARN("\t%s\n", cable->name);
-			}
-			exit(0);
-		}
-		info.bmp_type = BMP_TYPE_LIBFTDI;
 	} else if (find_debuggers(&cl_opts, &info)) {
 		exit(-1);
 	}

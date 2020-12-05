@@ -19,6 +19,7 @@
 #if !defined(__JLINK_H_)
 #define __JLINK_H_
 
+#include "bmp_hosted.h"
 #include "jtagtap.h"
 
 /** @cond PRIVATE */
