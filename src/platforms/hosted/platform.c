@@ -37,7 +37,6 @@
 #include "ftdi_bmp.h"
 #include "jlink.h"
 #include "cmsis_dap.h"
-#include "version.h"
 #include "cl_utils.h"
 
 bmp_info_t info;
@@ -75,7 +74,6 @@ static	BMP_CL_OPTIONS_t cl_opts;
 
 void platform_init(int argc, char **argv)
 {
-	cl_opts.opt_idstring = "Blackmagic PC-Hosted";
 	cl_init(&cl_opts, argc, argv);
 	atexit(exit_function);
 	signal(SIGTERM, sigterm_handler);
