@@ -123,8 +123,10 @@ static void stm32f1_add_flash(target *t,
 bool gd32f1_probe(target *t)
 {
 	uint16_t stored_idcode = t->idcode;
-	// M3 & M4 & riscV only afaik
-	t->idcode = target_mem_read32(t, DBGMCU_IDCODE) & 0xfff;
+	if ((t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M23)
+		t->idcode = target_mem_read32(t, DBGMCU_IDCODE_F0) & 0xfff;
+	else
+		t->idcode = target_mem_read32(t, DBGMCU_IDCODE) & 0xfff;
 	uint32_t signature= target_mem_read32(t, FLASHSIZE);
 	uint32_t flashSize=signature & 0xFFFF;
 	uint32_t ramSize=signature >>16 ;
@@ -132,11 +134,14 @@ bool gd32f1_probe(target *t)
 	case 0x414:  /* Gigadevice gd32f303 */
 		t->driver = "GD32F3";
 		break;
-	case 0x410:  /* Gigadevice gd32f103 */
-        t->driver = "GD32F1";
+	case 0x410:  /* Gigadevice gd32f103, gd32e230 */
+		if ((t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M23)
+			t->driver = "GD32E230";
+		else
+			t->driver = "GD32F1";
 		break;
 	default:
-        t->idcode = stored_idcode;
+		t->idcode = stored_idcode;
 		return false;
 	}
 	target_add_ram(t, 0x20000000, ramSize*1024);
