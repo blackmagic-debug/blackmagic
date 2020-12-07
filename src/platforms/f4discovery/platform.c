@@ -27,7 +27,7 @@
 #include "usbuart.h"
 #include "morse.h"
 
-#include <libopencm3/stm32/f4/rcc.h>
+#include <libopencm3/stm32/rcc.h>
 #include <libopencm3/cm3/scb.h>
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/stm32/exti.h>

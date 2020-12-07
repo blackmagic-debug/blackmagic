@@ -52,7 +52,7 @@ void platform_init(void)
 	void initialise_monitor_handles(void);
 	initialise_monitor_handles();
 #endif
-	rcc_clock_setup_in_hse_8mhz_out_72mhz();
+	rcc_clock_setup_pll(&rcc_hse_configs[RCC_CLOCK_HSE8_72MHZ]);
 	if (rev == 0) {
 		led_idle_run = GPIO8;
 		srst_pin = SRST_PIN_V1;
