@@ -27,13 +27,13 @@
 #include "cdcacm.h"
 #include "usbuart.h"
 
-#include <libopencm3/stm32/f1/rcc.h>
+#include <libopencm3/stm32/rcc.h>
 #include <libopencm3/cm3/scb.h>
 #include <libopencm3/cm3/scs.h>
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/stm32/usart.h>
 #include <libopencm3/usb/usbd.h>
-#include <libopencm3/stm32/f1/adc.h>
+#include <libopencm3/stm32/adc.h>
 
 uint32_t led_error_port;
 uint16_t led_error_pin;
@@ -54,8 +54,7 @@ void platform_init(void)
 	void initialise_monitor_handles(void);
 	initialise_monitor_handles();
 #endif
-	rcc_clock_setup_in_hse_8mhz_out_72mhz();
-
+	rcc_clock_setup_pll(&rcc_hse_configs[RCC_CLOCK_HSE8_72MHZ]);
 	rev =  detect_rev();
 	/* Enable peripherals */
 	rcc_periph_clock_enable(RCC_AFIO);

@@ -29,7 +29,7 @@
 #include "timing_stm32.h"
 
 #include <libopencm3/cm3/common.h>
-#include <libopencm3/stm32/f1/memorymap.h>
+#include <libopencm3/stm32/memorymap.h>
 #include <libopencm3/usb/usbd.h>
 
 #ifdef ENABLE_DEBUG
