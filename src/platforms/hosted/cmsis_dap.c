@@ -56,18 +56,18 @@ int dap_init(bmp_info_t *info)
 	if (hid_init())
 		return -1;
 	int size = strlen(info->serial);
-	wchar_t serial[size + 1], *wc = serial;
+	wchar_t serial[64] = {0}, *wc = serial;
 	for (int i = 0; i < size; i++)
 		*wc++ = info->serial[i];
 	*wc = 0;
-	/* Blacklist devices that do not wirk with 513 byte report length
+	/* Blacklist devices that do not work with 513 byte report length
 	 * FIXME: Find a solution to decipher from the device.
 	 */
 	if ((info->vid == 0x1fc9) && (info->pid == 0x0132)) {
 		DEBUG_WARN("Blacklist\n");
 		report_size = 64 + 1;
 	}
-	handle = hid_open(info->vid, info->pid, serial);
+	handle = hid_open(info->vid, info->pid,  (serial[0]) ? serial : NULL);
 	if (!handle)
 		return -1;
 	dap_disconnect();

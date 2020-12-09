@@ -98,12 +98,19 @@ int find_debuggers(BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 	char serial[64];
 	char manufacturer[128];
 	char product[128];
-	bmp_type_t type = BMP_TYPE_NONE;
+	bmp_type_t type;
 	bool access_problems = false;
 	char *active_cable = NULL;
 	bool ftdi_unknown = false;
   rescan:
+	type = BMP_TYPE_NONE;
 	found_debuggers = 0;
+	serial[0] = 0;
+	manufacturer[0] = 0;
+	product[0] = 0;
+	access_problems = false;
+	active_cable = NULL;
+	ftdi_unknown = false;
 	for (int i = 0;  devs[i]; i++) {
 		libusb_device *dev =  devs[i];
 		int res = libusb_get_device_descriptor(dev, &desc);
@@ -130,12 +137,8 @@ int find_debuggers(BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 		res = libusb_get_string_descriptor_ascii(
 			handle, desc.iSerialNumber, (uint8_t*)serial,
 			sizeof(serial));
-		if (res <= 0) {
-			/* This can fail for many devices. Continue silent!*/
-			libusb_close(handle);
-			continue;
-		}
-		if (cl_opts->opt_serial && !strstr(serial, cl_opts->opt_serial)) {
+		if (cl_opts->opt_serial && ((res <= 0) ||
+			!strstr(serial, cl_opts->opt_serial))) {
 			libusb_close(handle);
 			continue;
 		}
@@ -154,6 +157,9 @@ int find_debuggers(BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 				libusb_close(handle);
 				continue;
 			}
+		} else {
+			libusb_close(handle);
+			continue;
 		}
 		libusb_close(handle);
 		if (cl_opts->opt_ident_string) {
