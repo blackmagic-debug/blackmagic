@@ -127,7 +127,7 @@ int find_debuggers(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info)
 				DEBUG_WARN("Unexpected device name found \"%s\"\n",
 						   dp->d_name);
 			}
-			if ((cl_opts->opt_serial && !strstr(cl_opts->opt_serial, serial)) ||
+			if ((cl_opts->opt_serial && strstr(serial, cl_opts->opt_serial)) ||
 				(cl_opts->opt_position && cl_opts->opt_position == i)) {
 				/* With serial number given and partial match, we are done!*/
 				strncpy(info->serial, serial, sizeof(info->serial));
