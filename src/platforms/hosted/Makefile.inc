@@ -17,10 +17,16 @@ CFLAGS += -fsanitize=address
 LDFLAGS += -lasan
 endif
 else ifneq (, $(findstring mingw, $(SYS)))
+# Build for windows versions Vista, and above, where the
+# 'SetupDiGetDevicePropertyW()' function is available
+CFLAGS += -D_WIN32_WINNT=0x600
 SRC += 	 serial_win.c
 LDFLAGS += -lws2_32
 LDFLAGS += -lsetupapi
 else ifneq (, $(findstring cygwin, $(SYS)))
+# Build for windows versions Vista, and above, where the
+# 'SetupDiGetDevicePropertyW()' function is available
+CFLAGS += -D_WIN32_WINNT=0x600
 SRC += 	 serial_win.c
 LDFLAGS += -lws2_32
 LDFLAGS += -lsetupapi
