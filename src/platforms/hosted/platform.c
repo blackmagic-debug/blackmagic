@@ -333,6 +333,13 @@ void platform_init(int argc, char **argv)
 	default:
 		exit(-1);
 	}
+
+	if (cl_opts.opt_hard_srst) {
+		DEBUG_INFO("hard reset\n");
+		platform_srst_set_val(true);
+		platform_srst_set_val(false);
+	}
+
 	int ret = -1;
 	if (cl_opts.opt_mode != BMP_MODE_DEBUG) {
 		ret = cl_execute(&cl_opts);

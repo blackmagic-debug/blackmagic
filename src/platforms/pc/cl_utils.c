@@ -143,6 +143,7 @@ static void cl_help(char **argv, BMP_CL_OPTIONS_t *opt)
 	DEBUG_WARN("\t-r\t\t: Read flash and write to binary file\n");
 	DEBUG_WARN("\t-p\t\t: Supplies power to the target (where applicable)\n");
 	DEBUG_WARN("\t-R\t\t: Reset device\n");
+	DEBUG_WARN("\t-x\t\t: Hard reset target before other commands\n");
 	DEBUG_WARN("\t-H\t\t: Do not use high level commands (BMP-Remote)\n");
 	DEBUG_WARN("Flash operation modifiers options:\n");
 	DEBUG_WARN("\tDefault action with given file is to write to flash\n");
@@ -159,7 +160,7 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 	opt->opt_target_dev = 1;
 	opt->opt_flash_size = 16 * 1024 *1024;
 	opt->opt_flash_start = 0xffffffff;
-	while((c = getopt(argc, argv, "eEhHv:d:s:I:c:CnltVta:S:jpP:rR")) != -1) {
+	while((c = getopt(argc, argv, "eEhHv:d:s:I:c:CnltVta:S:jpP:rRx")) != -1) {
 		switch(c) {
 		case 'c':
 			if (optarg)
