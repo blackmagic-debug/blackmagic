@@ -27,6 +27,7 @@
 #include "gpio.h"
 #include "timing.h"
 #include "timing_stm32.h"
+#include "version.h"
 
 #define PLATFORM_HAS_TRACESWO
 #define PLATFORM_HAS_POWER_SWITCH
@@ -38,11 +39,9 @@ extern bool debug_bmp;
 int usbuart_debug_write(const char *buf, size_t len);
 #endif
 
-#define BOARD_IDENT             "Black Magic Probe"
-#define BOARD_IDENT_DFU	        "Black Magic Probe (Upgrade)"
-#define BOARD_IDENT_UPD	        "Black Magic Probe (DFU Upgrade)"
-#define DFU_IDENT               "Black Magic Firmware Upgrade"
-#define UPD_IFACE_STRING        "@Internal Flash   /0x08000000/8*001Kg"
+#define BOARD_IDENT		"Black Magic Probe, Firmware " FIRMWARE_VERSION
+#define BOARD_IDENT_DFU		"Black Magic Probe (Upgrade), Firmware " FIRMWARE_VERSION
+#define DFU_IDENT		"Black Magic Firmware Upgrade"
 
 /* Important pin mappings for STM32 implementation:
  *
