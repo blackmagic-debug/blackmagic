@@ -126,8 +126,8 @@ all_platforms:
 		export PROBE_HOST=`basename $$DIRNAME` ;\
 		export CFLAGS=-Werror ;\
 		echo "Building for hardware platform: $$PROBE_HOST" ;\
-		$(MAKE) $(MAKEFLAGS) clean ;\
-		$(MAKE) $(MAKEFLAGS);\
+		$(MAKE) clean ;\
+		$(MAKE);\
 		if [ -f blackmagic.bin ]; then \
 			mv blackmagic.bin artifacts/blackmagic-$$PROBE_HOST.bin ;\
 			echo "<li><a href='blackmagic-$$PROBE_HOST.bin'>$$PROBE_HOST</a></li>"\
