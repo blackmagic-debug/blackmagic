@@ -18,3 +18,5 @@ blackmagic_upgrade
 *.exe
 *.elf
 .vscode
+.gdb_history
+src/artifacts/
