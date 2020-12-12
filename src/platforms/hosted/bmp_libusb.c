@@ -142,6 +142,8 @@ int find_debuggers(BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 			libusb_close(handle);
 			continue;
 		}
+		if (res < 0)
+			serial[0] = 0;
 		res = libusb_get_string_descriptor_ascii(
 			handle, desc.iManufacturer, (uint8_t*)manufacturer,
 			sizeof(manufacturer));
@@ -231,6 +233,8 @@ int find_debuggers(BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 			if (!cable->name)
 				continue;
 		}
+		if (!serial[0])
+			strcpy(serial, "<no serial number>");
 		if (report) {
 			DEBUG_WARN("%2d: %s, %s, %s\n", found_debuggers + 1,
 				   serial,
