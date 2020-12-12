@@ -271,7 +271,6 @@ int dap_enter_debug_swd(ADIv5_DP_t *dp)
 	if (!(dap_caps & DAP_CAP_SWD))
 		return -1;
 	mode =  DAP_CAP_SWD;
-	dap_swj_clock(2000000);
 	dap_transfer_configure(2, 128, 128);
 	dap_swd_configure(0);
 	dap_connect(false);
@@ -340,7 +339,6 @@ int cmsis_dap_jtagtap_init(jtag_proc_t *jtag_proc)
 	mode =  DAP_CAP_JTAG;
 	dap_disconnect();
 	dap_connect(true);
-	dap_swj_clock(2000000);
 	jtag_proc->jtagtap_reset       = cmsis_dap_jtagtap_reset;
 	jtag_proc->jtagtap_next        = cmsis_dap_jtagtap_next;
 	jtag_proc->jtagtap_tms_seq     = cmsis_dap_jtagtap_tms_seq;

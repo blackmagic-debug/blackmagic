@@ -33,7 +33,8 @@ enum bmp_cl_mode {
 	BMP_MODE_FLASH_ERASE,
 	BMP_MODE_FLASH_WRITE,
 	BMP_MODE_FLASH_READ,
-	BMP_MODE_FLASH_VERIFY
+	BMP_MODE_FLASH_VERIFY,
+	BMP_MODE_SWJ_TEST,
 };
 
 typedef struct BMP_CL_OPTIONS_s {
@@ -53,6 +54,7 @@ typedef struct BMP_CL_OPTIONS_s {
 	int opt_debuglevel;
 	int opt_target_dev;
 	uint32_t opt_flash_start;
+	uint32_t opt_max_swj_frequency;
 	size_t opt_flash_size;
 }BMP_CL_OPTIONS_t;
 

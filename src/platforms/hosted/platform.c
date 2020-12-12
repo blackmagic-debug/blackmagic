@@ -121,6 +121,8 @@ void platform_init(int argc, char **argv)
 
 int platform_adiv5_swdp_scan(void)
 {
+	info.is_jtag = false;
+	platform_max_frequency_set(cl_opts.opt_max_swj_frequency);
 	switch (info.bmp_type) {
 	case BMP_TYPE_BMP:
 	case BMP_TYPE_LIBFTDI:
@@ -185,6 +187,8 @@ void platform_add_jtag_dev(int i, const jtag_dev_t *jtag_dev)
 
 int platform_jtag_scan(const uint8_t *lrlens)
 {
+	info.is_jtag = true;
+	platform_max_frequency_set(cl_opts.opt_max_swj_frequency);
 	switch (info.bmp_type) {
 	case BMP_TYPE_BMP:
 	case BMP_TYPE_LIBFTDI:
@@ -313,6 +317,61 @@ bool platform_srst_get_val(void)
 	case BMP_TYPE_JLINK:
 		return jlink_srst_get_val(&info);
 	default:
+		break;
+	}
+	return false;
+}
+
+void platform_max_frequency_set(uint32_t freq)
+{
+	if (!freq)
+		return;
+	switch (info.bmp_type) {
+	case BMP_TYPE_BMP:
+		remote_max_frequency_set(freq);
+		break;
+	case BMP_TYPE_CMSIS_DAP:
+		dap_swj_clock(freq);
+		break;
+	case BMP_TYPE_LIBFTDI:
+		libftdi_max_frequency_set(freq);
+		break;
+	case BMP_TYPE_STLINKV2:
+		stlink_max_frequency_set(&info, freq);
+		break;
+	case BMP_TYPE_JLINK:
+		jlink_max_frequency_set(&info, freq);
+		break;
+	default:
+		DEBUG_WARN("Setting max SWJ frequency not yet implemented\n");
+		break;
+	}
+	uint32_t max_freq = platform_max_frequency_get();
+	if (max_freq == FREQ_FIXED)
+		DEBUG_INFO("Device has fixed frequency for %s\n",
+				   (info.is_jtag) ? "JTAG" : "SWD" );
+	else
+		DEBUG_INFO("Speed set to %7.4f MHz for %s\n",
+				   platform_max_frequency_get() / 1000000.0,
+				   (info.is_jtag) ? "JTAG" : "SWD" );
+}
+
+uint32_t platform_max_frequency_get(void)
+{
+	switch (info.bmp_type) {
+	case BMP_TYPE_BMP:
+		return remote_max_frequency_get();
+	case BMP_TYPE_CMSIS_DAP:
+		return dap_swj_clock(0);
+		break;
+	case BMP_TYPE_LIBFTDI:
+		return libftdi_max_frequency_get();
+	case BMP_TYPE_STLINKV2:
+		return stlink_max_frequency_get(&info);
+	case BMP_TYPE_JLINK:
+		return jlink_max_frequency_get(&info);
+	default:
+		DEBUG_WARN("Reading max SWJ frequency not yet implemented\n");
 		break;
 	}
 	return false;

@@ -128,6 +128,40 @@ bool remote_srst_get_val(void)
 	return (construct[1] == '1');
 }
 
+void remote_max_frequency_set(uint32_t freq)
+{
+	uint8_t construct[REMOTE_MAX_MSG_SIZE];
+	int s;
+	s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE, REMOTE_FREQ_SET_STR,
+				 freq);
+	platform_buffer_write(construct, s);
+
+	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
+
+	if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
+		DEBUG_WARN("Update Firmware to allow to set max SWJ frequency\n");
+    }
+}
+
+uint32_t remote_max_frequency_get(void)
+{
+	uint8_t construct[REMOTE_MAX_MSG_SIZE];
+	int s;
+
+	s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE,"%s",
+				 REMOTE_FREQ_GET_STR);
+	platform_buffer_write(construct, s);
+
+	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
+
+	if ((!s) || (construct[0] == REMOTE_RESP_ERR))
+		return FREQ_FIXED;
+
+	uint32_t freq[1];
+	unhexify(freq, (const char*)&construct[1], 4);
+	return freq[0];
+}
+
 const char *remote_target_voltage(void)
 {
 	static uint8_t construct[REMOTE_MAX_MSG_SIZE];

@@ -203,18 +203,27 @@ void dap_disconnect(void)
 	dbg_dap_cmd(buf, sizeof(buf), 1);
 }
 
-//-----------------------------------------------------------------------------
-void dap_swj_clock(uint32_t clock)
+static uint32_t swj_clock;
+/* Set/Get JTAG/SWD clock frequency
+ *
+ * With clock == 0, return last set value.
+ */
+uint32_t dap_swj_clock(uint32_t clock)
 {
+	if (clock == 0)
+		return swj_clock;
 	uint8_t buf[5];
-
 	buf[0] = ID_DAP_SWJ_CLOCK;
 	buf[1] = clock & 0xff;
 	buf[2] = (clock >> 8) & 0xff;
 	buf[3] = (clock >> 16) & 0xff;
 	buf[4] = (clock >> 24) & 0xff;
 	dbg_dap_cmd(buf, sizeof(buf), 5);
-
+	if (buf[0])
+		DEBUG_WARN("dap_swj_clock failed\n");
+	else
+		swj_clock = clock;
+	return swj_clock;
 }
 
 //-----------------------------------------------------------------------------

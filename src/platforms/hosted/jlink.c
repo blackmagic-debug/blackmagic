@@ -40,14 +40,19 @@
 #define USB_VID_SEGGER_0105  0x0105
 #define USB_VID_SEGGER_1020  0x1020
 
+static uint32_t emu_caps;
+static uint32_t emu_speed_kHz;
+static uint16_t emu_min_divisor;
+static uint16_t emu_current_divisor;
+
 static void jlink_print_caps(bmp_info_t *info)
 {
 	uint8_t cmd[1] = {CMD_GET_CAPS};
 	uint8_t res[4];
 	send_recv(info->usb_link, cmd, 1, res, sizeof(res));
-	uint32_t caps = res[0] | (res[1] << 8) | (res[2] << 16) | (res[3] << 24);
-	DEBUG_INFO("Caps %" PRIx32 "\n", caps);
-	if (caps & JLINK_CAP_GET_HW_VERSION) {
+	emu_caps = res[0] | (res[1] << 8) | (res[2] << 16) | (res[3] << 24);
+	DEBUG_INFO("Caps %" PRIx32 "\n", emu_caps);
+	if (emu_caps & JLINK_CAP_GET_HW_VERSION) {
 		uint8_t cmd[1] = {CMD_GET_HW_VERSION};
 		send_recv(info->usb_link, cmd, 1, NULL, 0);
 		send_recv(info->usb_link, NULL, 0, res, sizeof(res));
@@ -57,13 +62,15 @@ static void jlink_print_caps(bmp_info_t *info)
 }
 static void jlink_print_speed(bmp_info_t *info)
 {
-	uint8_t cmd[1] = {CMD_GET_SPEED};
+	uint8_t cmd[1] = {CMD_GET_SPEEDS};
 	uint8_t res[6];
 	send_recv(info->usb_link, cmd, 1, res, sizeof(res));
-	uint32_t speed = res[0] | (res[1] << 8) | (res[2] << 16) | (res[3] << 24);
-	double freq_mhz = speed / 1000000.0;
-	uint16_t divisor = res[4] | (res[5] << 8);
-	DEBUG_INFO("Emulator speed %3.1f MHz, Mindiv %d\n", freq_mhz, divisor);
+	emu_speed_kHz = (res[0] | (res[1] << 8) | (res[2] << 16) | (res[3] << 24)) /
+					 1000;
+	emu_min_divisor = res[4] | (res[5] << 8);
+	DEBUG_INFO("Emulator speed %d kHz, Mindiv %d%s\n", emu_speed_kHz,
+			   emu_min_divisor,
+			   (emu_caps & JLINK_CAP_GET_SPEEDS) ? "" : ", fixed");
 }
 
 static void jlink_print_version(bmp_info_t *info)
@@ -98,8 +105,8 @@ static void jlink_print_interfaces(bmp_info_t *info)
 static void jlink_info(bmp_info_t *info)
 {
 	jlink_print_version(info);
-	jlink_print_speed(info);
 	jlink_print_caps(info);
+	jlink_print_speed(info);
 	jlink_print_interfaces(info);
 }
 
@@ -214,7 +221,7 @@ int jlink_init(bmp_info_t *info)
 const char *jlink_target_voltage(bmp_info_t *info)
 {
         uint8_t cmd[1] = {CMD_GET_HW_STATUS};
-        uint8_t res[8];
+		uint8_t res[8];
         send_recv(info->usb_link, cmd, 1, res, sizeof(res));
         uint16_t mVolt = res[0] | (res[1] << 8);
         static char ret[7];
@@ -237,4 +244,28 @@ bool jlink_srst_get_val(bmp_info_t *info) {
         uint8_t res[8];
         send_recv(info->usb_link, cmd, 1, res, sizeof(res));
         return !(res[6]);
+}
+
+void jlink_max_frequency_set(bmp_info_t *info, uint32_t freq)
+{
+	if (!(emu_caps &  JLINK_CAP_GET_SPEEDS))
+		return;
+	if (!info->is_jtag)
+		return;
+	uint16_t freq_kHz = freq /1000;
+	uint16_t divisor = (emu_speed_kHz + freq_kHz - 1) / freq_kHz;
+	if (divisor < emu_min_divisor)
+		divisor = emu_min_divisor;
+	emu_current_divisor = divisor;
+	uint16_t speed_kHz = emu_speed_kHz / divisor;
+	uint8_t cmd[3] = {CMD_SET_SPEED, speed_kHz & 0xff, speed_kHz >> 8};
+	DEBUG_WARN("Set Speed %d\n", speed_kHz);
+	send_recv(info->usb_link, cmd, 3, NULL, 0);
+}
+
+uint32_t jlink_max_frequency_get(bmp_info_t *info)
+{
+	if ((emu_caps & JLINK_CAP_GET_SPEEDS) && (info->is_jtag))
+		return (emu_speed_kHz * 1000L)/ emu_current_divisor;
+	return FREQ_FIXED;
 }

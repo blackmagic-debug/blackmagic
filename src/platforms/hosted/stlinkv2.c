@@ -200,7 +200,6 @@ typedef struct {
 	libusb_context* libusb_ctx;
 	uint16_t     vid;
 	uint16_t     pid;
-	uint8_t      transport_mode;
 	bool         srst;
 	uint8_t      dap_select;
 	uint8_t      ep_tx;
@@ -629,44 +628,6 @@ bool stlink_srst_get_val(void)
 	return Stlink.srst;
 }
 
-static bool stlink_set_freq_divisor(bmp_info_t *info, uint16_t divisor)
-{
-	uint8_t cmd[16] = {STLINK_DEBUG_COMMAND,
-					  STLINK_DEBUG_APIV2_SWD_SET_FREQ,
-					  divisor & 0xff, divisor >> 8};
-	uint8_t data[2];
-	send_recv(info->usb_link, cmd, 16, data, 2);
-	if (stlink_usb_error_check(data, false))
-		return false;
-	return true;
-}
-
-static bool stlink3_set_freq_divisor(bmp_info_t *info, uint16_t divisor)
-{
-	uint8_t cmd[16] = {STLINK_DEBUG_COMMAND,
-					  STLINK_APIV3_GET_COM_FREQ,
-					  Stlink.transport_mode};
-	uint8_t data[52];
-	send_recv(info->usb_link, cmd, 16, data, 52);
-	stlink_usb_error_check(data, true);
-	int size = data[8];
-	if (divisor > size)
-		divisor = size;
-	uint8_t *p = data + 12 + divisor * sizeof(uint32_t);
-	uint32_t freq = p[0] | p[1] << 8 | p[2] << 16 | p[3] << 24;
-	DEBUG_INFO("Selected %" PRId32 " khz\n", freq);
-	cmd[1] = STLINK_APIV3_SET_COM_FREQ;
-	cmd[2] = Stlink.transport_mode;
-	cmd[3] = 0;
-	p = data + 12 + divisor * sizeof(uint32_t);
-	cmd[4] = p[0];
-	cmd[5] = p[1];
-	cmd[6] = p[2];
-	cmd[7] = p[3];
-	send_recv(info->usb_link, cmd, 16, data, 8);
-	return true;
-}
-
 int stlink_hwversion(void)
 {
 	return Stlink.ver_stlink;
@@ -675,16 +636,10 @@ int stlink_hwversion(void)
 static int stlink_enter_debug_jtag(bmp_info_t *info)
 {
 	stlink_leave_state(info);
-	Stlink.transport_mode = STLINK_MODE_JTAG;
-	if (Stlink.ver_stlink == 3)
-		stlink3_set_freq_divisor(info, 4);
-	else
-		stlink_set_freq_divisor(info, 1);
 	uint8_t cmd[16] = {STLINK_DEBUG_COMMAND,
 					  STLINK_DEBUG_APIV2_ENTER,
 					  STLINK_DEBUG_ENTER_JTAG_NO_RESET};
 	uint8_t data[2];
-	DEBUG_INFO("Enter JTAG\n");
 	send_recv(info->usb_link, cmd, 16, data, 2);
 	return stlink_usb_error_check(data, true);
 }
@@ -1085,16 +1040,10 @@ void stlink_adiv5_dp_defaults(ADIv5_DP_t *dp)
 int stlink_enter_debug_swd(bmp_info_t *info, ADIv5_DP_t *dp)
 {
 	stlink_leave_state(info);
-	Stlink.transport_mode = STLINK_MODE_SWD;
-	if (Stlink.ver_stlink == 3)
-		stlink3_set_freq_divisor(info, 2);
-	else
-		stlink_set_freq_divisor(info, 1);
 	uint8_t cmd[16] = {STLINK_DEBUG_COMMAND,
 					  STLINK_DEBUG_APIV2_ENTER,
 					  STLINK_DEBUG_ENTER_SWD_NO_RESET};
 	uint8_t data[2];
-	DEBUG_INFO("Enter SWD\n");
 	stlink_send_recv_retry(cmd, 16, data, 2);
 	if (stlink_usb_error_check(data, true))
 		return -1;
@@ -1106,4 +1055,110 @@ int stlink_enter_debug_swd(bmp_info_t *info, ADIv5_DP_t *dp)
 
 	stlink_dp_error(dp);
 	return 0;
+}
+
+#define V2_USED_SWD_CYCLES       20
+#define V2_CYCLES_PER_CNT        20
+#define V2_CLOCK_RATE      (72*1000*1000)
+/* Above values reproduce the known values for V2
+#include <stdio.h>
+
+int main(void)
+{
+    int divs[] = {0, 1,2,3,7,15,31,40,79,158,265,798};
+    for (int i = 0; i < (sizeof(divs) /sizeof(divs[0])); i++) {
+        float ret = 72.0 * 1000 * 1000 / (20 + 20 * divs[i]);
+        printf("%3d: %6.4f MHz\n", divs[i], ret/ 1000000);
+    }
+    return 0;
+}
+*/
+
+static int divisor;
+static unsigned int v3_freq[2];
+void stlink_max_frequency_set(bmp_info_t *info, uint32_t freq)
+{
+	if (Stlink.ver_hw == 30) {
+		uint8_t cmd[16] = {STLINK_DEBUG_COMMAND,
+						   STLINK_APIV3_GET_COM_FREQ,
+						   info->is_jtag ? STLINK_MODE_JTAG : STLINK_MODE_SWD};
+		uint8_t data[52];
+		send_recv(info->usb_link, cmd, 16, data, 52);
+		stlink_usb_error_check(data, true);
+		volatile uint8_t *p = data + 12;
+		int i;
+		unsigned int last_freq = 0;
+		DEBUG_INFO("Available speed settings: ");
+		for (i = 0; i < STLINK_V3_MAX_FREQ_NB; i++) {
+			unsigned int new_freq = *p++;
+			new_freq |= *p++ <<  8;
+			new_freq |= *p++ << 16;
+			new_freq |= *p++ << 24;
+			if (!new_freq)
+				break;
+			else
+				last_freq = new_freq;
+			DEBUG_INFO("%s%d", (i)? "/": "", last_freq);
+			if ((freq / 1000) >= last_freq)
+				break;
+		}
+		DEBUG_INFO(" kHz for %s\n", (info->is_jtag) ? "JTAG" : "SWD");
+		cmd[1] = STLINK_APIV3_SET_COM_FREQ;
+		cmd[3] = 0;
+		cmd[4] = (last_freq >>  0) & 0xff;
+		cmd[5] = (last_freq >>  8) & 0xff;
+		cmd[6] = (last_freq >> 16) & 0xff;
+		cmd[7] = (last_freq >> 24) & 0xff;
+		send_recv(info->usb_link, cmd, 16, data, 8);
+		stlink_usb_error_check(data, true);
+		v3_freq[(info->is_jtag) ? 1 : 0] = last_freq * 1000;
+	} else {
+		uint8_t cmd[16];
+		cmd[0] = STLINK_DEBUG_COMMAND;
+		if (info->is_jtag) {
+			cmd[1] = STLINK_DEBUG_APIV2_JTAG_SET_FREQ;
+			/*  V2_CLOCK_RATE / (4, 8, 16, ... 256)*/
+			int div  = (V2_CLOCK_RATE + (2 * freq) - 1) / (2 * freq);
+			if (div & (div -1)) {/* Round up */
+				int clz = __builtin_clz(div);
+				divisor = 1 << (32 - clz);
+			} else
+				divisor = div;
+			if (divisor < 4)
+				divisor = 4;
+			else if (divisor > 256)
+				divisor = 256;
+		} else {
+			cmd[1] = STLINK_DEBUG_APIV2_SWD_SET_FREQ;
+			divisor = V2_CLOCK_RATE + freq - 1;
+			divisor /= freq;
+			divisor -= V2_USED_SWD_CYCLES;
+			if (divisor < 0)
+				divisor = 0;
+			divisor /= V2_CYCLES_PER_CNT;
+		}
+		DEBUG_WARN("Divisor for %6.4f MHz is %" PRIu32 "\n",
+					   freq/1000000.0, divisor);
+		cmd[2] = divisor & 0xff;
+		cmd[3] = (divisor >> 8) & 0xff;
+		uint8_t data[2];
+		send_recv(info->usb_link, cmd, 16, data, 2);
+		if (stlink_usb_error_check(data, false))
+			DEBUG_WARN("Set frequency failed!\n");
+	}
+}
+
+uint32_t stlink_max_frequency_get(bmp_info_t *info)
+{
+	uint32_t ret = 0;
+	if (Stlink.ver_hw == 30) {
+		ret = v3_freq[(info->is_jtag) ? STLINK_MODE_JTAG : STLINK_MODE_SWD];
+	} else {
+		ret = V2_CLOCK_RATE;
+		if (info->is_jtag)
+			ret /= (2 * divisor);
+		else
+			ret /= (V2_USED_SWD_CYCLES + (V2_CYCLES_PER_CNT * divisor));
+	}
+	return ret;
 }

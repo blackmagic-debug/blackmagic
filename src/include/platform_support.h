@@ -45,5 +45,8 @@ bool platform_srst_get_val(void);
 bool platform_target_get_power(void);
 void platform_target_set_power(bool power);
 void platform_request_boot(void);
+void platform_max_frequency_set(uint32_t frequency);
+uint32_t platform_max_frequency_get(void);
+
 #endif
 

@@ -37,6 +37,8 @@ volatile platform_timeout * volatile head_timeout;
 uint8_t running_status;
 static volatile uint32_t time_ms;
 
+uint32_t swd_delay_cnt = 0;
+
 void sys_tick_handler(void)
 {
 	trace_tick();
@@ -140,3 +142,12 @@ void platform_request_boot(void)
 {
 }
 
+void platform_max_frequency_set(uint32_t freq)
+{
+	(void)freq;
+}
+
+uint32_t platform_max_frequency_get(void)
+{
+	return 0;
+}
