@@ -209,15 +209,12 @@ static int scan_linux_id(char *name, char *type, char *version, char  *serial)
 
 int find_debuggers(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info)
 {
-	char name[4096];
 	if (cl_opts->opt_device)
 		return 1;
 	info->bmp_type = BMP_TYPE_BMP;
 	DIR *dir = opendir(DEVICE_BY_ID);
-	if (!dir) {
-		DEBUG_WARN("Could not opendir %s: %s\n", name, strerror(errno));
-		return -1;
-	}
+	if (!dir) /* No serial device connected!*/
+		return 0;
 	int found_bmps = 0;
 	struct dirent *dp;
 	int i = 0;
