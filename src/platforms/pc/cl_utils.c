@@ -33,6 +33,7 @@
 #include "target_internal.h"
 
 #include "cl_utils.h"
+#include "bmp_hosted.h"
 
 #ifndef O_BINARY
 #define O_BINARY 0
@@ -113,17 +114,20 @@ static void bmp_munmap(struct mmap_data *map)
 #endif
 }
 
-static void cl_help(char **argv, BMP_CL_OPTIONS_t *opt)
+static void cl_help(char **argv)
 {
-	DEBUG_WARN("%s for: \n", opt->opt_idstring);
-	DEBUG_WARN("\tBMP hosted %s\n\t\tfor ST-Link V2/3, CMSIS_DAP, JLINK and "
-			   "LIBFTDI/MPSSE\n\n", FIRMWARE_VERSION);
+	bmp_ident(NULL);
 	DEBUG_WARN("Usage: %s [options]\n", argv[0]);
 	DEBUG_WARN("\t-h\t\t: This help.\n");
 	DEBUG_WARN("\t-v[bitmask]\t: Increasing verbosity. Bitmask:\n");
 	DEBUG_WARN("\t\t\t  1 = INFO, 2 = GDB, 4 = TARGET, 8 = PROBE, 16 = WIRE\n");
 	DEBUG_WARN("Probe selection arguments:\n");
-	DEBUG_WARN("\t-d \"path\"\t: Use serial BMP device at \"path\"(Deprecated)\n");
+	DEBUG_WARN("\t-d \"path\"\t: Use serial BMP device at <path>");
+#if HOSTED_BMP_ONLY == 1 && defined(__APPLE__)
+	DEBUG_WARN("\n");
+#else
+	DEBUG_WARN(". Deprecated!\n");
+#endif
 	DEBUG_WARN("\t-P <pos>\t: Use debugger found at position <pos>\n");
 	DEBUG_WARN("\t-n <num>\t: Use target device found at position <num>\n");
 	DEBUG_WARN("\t-s \"serial\"\t: Use dongle with (partial) "
@@ -166,7 +170,8 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 				opt->opt_cable = optarg;
 			break;
 		case 'h':
-			cl_help(argv, opt);
+			cl_debuglevel = 3;
+			cl_help(argv);
 			break;
 		case 'H':
 			opt->opt_no_hl = true;
@@ -189,7 +194,6 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 			opt->external_resistor_swd = true;
 			break;
 		case 'd':
-			DEBUG_WARN("Deprecated!\n");
 			if (optarg)
 				opt->opt_device = optarg;
 			break;

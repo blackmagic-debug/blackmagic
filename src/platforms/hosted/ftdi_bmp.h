@@ -26,6 +26,9 @@
 #include "swdptap.h"
 #include "jtagtap.h"
 
+#include "bmp_hosted.h"
+#include <libftdi1/ftdi.h>
+
 typedef struct data_desc_s {
 	int16_t data_low;
 	int16_t ddr_low;
@@ -103,8 +106,22 @@ extern cable_desc_t *active_cable;
 extern struct ftdi_context *ftdic;
 extern data_desc_t active_state;
 
+#if HOSTED_BMP_ONLY == 1
+# pragma GCC diagnostic push
+# pragma GCC diagnostic ignored "-Wunused-parameter"
+int ftdi_bmp_init(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info) {return -1;};
+int libftdi_swdptap_init(swd_proc_t *swd_proc) {return -1;};
+int libftdi_jtagtap_init(jtag_proc_t *jtag_proc) {return 0;};
+void libftdi_buffer_flush(void) {};
+int libftdi_buffer_write(const uint8_t *data, int size) {return size;};
+int libftdi_buffer_read(uint8_t *data, int size) {return size;};
+const char *libftdi_target_voltage(void) {return "ERROR";};
+void libftdi_jtagtap_tdi_tdo_seq(
+	uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int ticks) {};
+bool  libftdi_swd_possible(bool *do_mpsse, bool *direct_bb_swd) {return false;};
+# pragma GCC diagnostic pop
+#else
 int ftdi_bmp_init(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info);
-
 int libftdi_swdptap_init(swd_proc_t *swd_proc);
 int libftdi_jtagtap_init(jtag_proc_t *jtag_proc);
 void libftdi_buffer_flush(void);
@@ -114,6 +131,7 @@ const char *libftdi_target_voltage(void);
 void libftdi_jtagtap_tdi_tdo_seq(
 	uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int ticks);
 bool  libftdi_swd_possible(bool *do_mpsse, bool *direct_bb_swd);
+#endif
 
 #define MPSSE_SK 1
 #define PIN0     1

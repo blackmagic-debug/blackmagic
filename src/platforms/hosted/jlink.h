@@ -19,6 +19,7 @@
 #if !defined(__JLINK_H_)
 #define __JLINK_H_
 
+#include "bmp_hosted.h"
 #include "jtagtap.h"
 
 /** @cond PRIVATE */
@@ -43,11 +44,22 @@
 #define SELECT_IF_JTAG            0
 #define SELECT_IF_SWD             1
 
-
+#if HOSTED_BMP_ONLY == 1
+# pragma GCC diagnostic push
+# pragma GCC diagnostic ignored "-Wunused-parameter"
+int jlink_init(bmp_info_t *info) {return -1;};
+int jlink_swdp_scan(bmp_info_t *info) {return 0;};
+int jlink_jtagtap_init(bmp_info_t *info, jtag_proc_t *jtag_proc) {return 0;};
+const char *jlink_target_voltage(bmp_info_t *info) {return "ERROR";};
+void jlink_srst_set_val(bmp_info_t *info, bool assert) {};
+bool jlink_srst_get_val(bmp_info_t *info) {return true;};
+# pragma GCC diagnostic pop
+#else
 int jlink_init(bmp_info_t *info);
 int jlink_swdp_scan(bmp_info_t *info);
 int jlink_jtagtap_init(bmp_info_t *info, jtag_proc_t *jtag_proc);
 const char *jlink_target_voltage(bmp_info_t *info);
 void jlink_srst_set_val(bmp_info_t *info, bool assert);
 bool jlink_srst_get_val(bmp_info_t *info);
+#endif
 #endif

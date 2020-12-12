@@ -27,6 +27,7 @@
 #include "general.h"
 #include "gdb_if.h"
 #include "adiv5.h"
+#include "bmp_hosted.h"
 #include "stlinkv2.h"
 #include "exception.h"
 #include "jtag_devs.h"

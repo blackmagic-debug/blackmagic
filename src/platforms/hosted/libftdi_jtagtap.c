@@ -25,11 +25,12 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
-
 #include <assert.h>
+#include <libftdi1/ftdi.h>
+#include "platform.h"
+#include "ftdi_bmp.h"
 
 #include "general.h"
-#include "ftdi_bmp.h"
 
 extern cable_desc_t *active_cable;
 extern struct ftdi_context *ftdic;

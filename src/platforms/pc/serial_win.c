@@ -67,7 +67,6 @@ static char *find_bmp_by_serial(const char *serial)
 
 int serial_open(BMP_CL_OPTIONS_t *cl_opts, char * serial)
 {
-	(void) serial; /* FIXME: Does Windows allow open with USB serial no? */
 	char device[256];
 	if (!cl_opts->opt_device)
 		cl_opts->opt_device = find_bmp_by_serial(serial);

@@ -54,7 +54,6 @@ typedef struct BMP_CL_OPTIONS_s {
 	int opt_target_dev;
 	uint32_t opt_flash_start;
 	size_t opt_flash_size;
-	char     *opt_idstring;
 }BMP_CL_OPTIONS_t;
 
 void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv);
