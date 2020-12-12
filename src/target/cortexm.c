@@ -445,8 +445,16 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 			PROBE(lpc11xx_probe); /* LPC24C11 */
 			PROBE(lpc43xx_probe);
 		} else if (ap->ap_partno == 0x4c4) { /* Cortex-M4 ROM */
-			PROBE(lpc43xx_probe);
+			/* The LPC546xx and LPC43xx parts present with the same AP ROM Part
+			Number, so we need to probe both. Unfortunately, when probing for
+			the LPC43xx when the target is actually an LPC546xx, the memory
+			location checked is illegal for the LPC546xx and puts the chip into
+			Lockup, requiring a RST pulse to recover. Instead, make sure to
+			probe for the LPC546xx first, which experimentally doesn't harm
+			LPC43xx detection. */
 			PROBE(lpc546xx_probe);
+
+			PROBE(lpc43xx_probe);
 			PROBE(kinetis_probe); /* Older K-series */
 		} else if (ap->ap_partno == 0x4cb) { /* Cortex-M23 ROM */
 			PROBE(gd32f1_probe); /* GD32E23x uses GD32F1 peripherals */

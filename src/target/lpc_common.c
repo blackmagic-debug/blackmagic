@@ -109,6 +109,11 @@ enum iap_status lpc_iap_call(struct lpc_flash *f, void *result, enum iap_cmd cmd
 	if (result != NULL)
 		memcpy(result, param.result, sizeof(param.result));
 
+	if (param.status != IAP_STATUS_CMD_SUCCESS) {
+		DEBUG_WARN("IAP failure code %d for cmd %d\n",
+			   (enum iap_status)param.status, cmd);
+	}
+
 	return param.status;
 }
 
@@ -165,8 +170,10 @@ int lpc_flash_write_magic_vect(struct target_flash *f,
 		uint32_t *w = (uint32_t *)src;
 		uint32_t sum = 0;
 
+		/* compute checksum of first 7 vectors */
 		for (unsigned i = 0; i < 7; i++)
 			sum += w[i];
+		/* two's complement is written to 8'th vector */
 		w[7] = ~sum + 1;
 	}
 	return lpc_flash_write(f, dest, src, len);
