@@ -36,13 +36,15 @@
 
 #define VENDOR_ID_SEGGER         0x1366
 
+#define NO_SERIAL_NUMBER "<no serial number>"
+
 void bmp_ident(bmp_info_t *info)
 {
 	DEBUG_INFO("BMP hosted %s\n for ST-Link V2/3, CMSIS_DAP, JLINK and "
 			   "LIBFTDI/MPSSE\n", FIRMWARE_VERSION);
 	if (info && info->vid && info->pid)
 		DEBUG_INFO("Using %04x:%04x %s %s\n %s\n", info->vid, info->pid,
-				   info->serial,
+				   (info->serial[0]) ? info->serial : NO_SERIAL_NUMBER,
 				   info->manufacturer,
 				   info->product);
 }
@@ -233,11 +235,9 @@ int find_debuggers(BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 			if (!cable->name)
 				continue;
 		}
-		if (!serial[0])
-			strcpy(serial, "<no serial number>");
 		if (report) {
 			DEBUG_WARN("%2d: %s, %s, %s\n", found_debuggers + 1,
-				   serial,
+					   (serial[0]) ? serial :  NO_SERIAL_NUMBER,
 				   manufacturer,product);
 		}
 		info->vid = desc.idVendor;
