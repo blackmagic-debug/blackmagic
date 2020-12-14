@@ -326,6 +326,13 @@ bool kinetis_probe(target *t)
 		kl_gen_add_flash(t, 0x00000000, 0x00040000, 0x800, K64_WRITE_LEN); /* P-Flash, 256 KB, 2 KB Sectors */
 		kl_gen_add_flash(t, 0x10000000, 0x00008000, 0x800, K64_WRITE_LEN); /* FlexNVM, 32 KB, 2 KB Sectors */
 		break;
+	case 0x148: /* S32K148 */
+		t->driver = "S32K148";
+		target_add_ram(t, 0x1FFE0000, 0x20000); /* SRAM_L, 128 KB */
+		target_add_ram(t, 0x20000000, 0x1f000); /* SRAM_H, 124 KB */
+		kl_gen_add_flash(t, 0x00000000, 0x00180000, 0x1000, K64_WRITE_LEN); /* P-Flash, 1536 KB, 4 KB Sectors */
+		kl_gen_add_flash(t, 0x10000000, 0x80000, 0x1000, K64_WRITE_LEN); /* FlexNVM, 512 KB, 4 KB Sectors */
+		break;
 	default:
 		return false;
 	}
