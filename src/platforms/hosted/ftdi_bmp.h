@@ -27,7 +27,6 @@
 #include "jtagtap.h"
 
 #include "bmp_hosted.h"
-#include <libftdi1/ftdi.h>
 
 typedef struct data_desc_s {
 	int16_t data_low;
@@ -101,11 +100,6 @@ typedef struct cable_desc_s {
 	char * name;
 }cable_desc_t;
 
-extern cable_desc_t cable_desc[];
-extern cable_desc_t *active_cable;
-extern struct ftdi_context *ftdic;
-extern data_desc_t active_state;
-
 #if HOSTED_BMP_ONLY == 1
 # pragma GCC diagnostic push
 # pragma GCC diagnostic ignored "-Wunused-parameter"
@@ -123,6 +117,12 @@ void libftdi_max_frequency_set(uint32_t freq) {};
 uint32_t libftdi_max_frequency_get(void) {return 0;};
 # pragma GCC diagnostic pop
 #else
+#include <libftdi1/ftdi.h>
+extern cable_desc_t cable_desc[];
+extern cable_desc_t *active_cable;
+extern struct ftdi_context *ftdic;
+extern data_desc_t active_state;
+
 int ftdi_bmp_init(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info);
 int libftdi_swdptap_init(swd_proc_t *swd_proc);
 int libftdi_jtagtap_init(jtag_proc_t *jtag_proc);
