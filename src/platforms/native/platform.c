@@ -131,10 +131,6 @@ void platform_init(void)
 			GPIO_CNF_OUTPUT_PUSHPULL,
 			LED_UART | LED_IDLE_RUN | LED_ERROR);
 
-	/* FIXME: This pin in intended to be input, but the TXS0108 fails
-	 * to release the device from reset if this floats. */
-	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
-			GPIO_CNF_OUTPUT_PUSHPULL, GPIO7);
 	/* Enable SRST output. Original uses a NPN to pull down, so setting the
 	 * output HIGH asserts. Mini is directly connected so use open drain output
 	 * and set LOW to assert.
@@ -146,7 +142,17 @@ void platform_init(void)
 			 ? GPIO_CNF_OUTPUT_PUSHPULL
 			 : GPIO_CNF_OUTPUT_OPENDRAIN),
 			SRST_PIN);
-
+	/* FIXME: Gareth, Esden, what versions need this fix? */
+	if (platform_hwversion() < 3) {
+		/* FIXME: This pin in intended to be input, but the TXS0108 fails
+		 * to release the device from reset if this floats. */
+		gpio_set_mode(SRST_SENSE_PORT, GPIO_MODE_OUTPUT_2_MHZ,
+					  GPIO_CNF_OUTPUT_PUSHPULL, SRST_SENSE_PIN);
+	} else {
+		gpio_set(SRST_SENSE_PORT, SRST_SENSE_PIN);
+		gpio_set_mode(SRST_SENSE_PORT, GPIO_MODE_INPUT,
+		              GPIO_CNF_INPUT_PULL_UPDOWN, SRST_SENSE_PIN);
+	}
 	/* Enable internal pull-up on PWR_BR so that we don't drive
 	   TPWR locally or inadvertently supply power to the target. */
 	if (platform_hwversion () == 1) {
