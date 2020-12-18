@@ -21,8 +21,8 @@
 
 char *serial_no_read(char *s, int max)
 {
-#if defined(STM32F1) || defined(USE_BMP_SERIAL)
-/* Only STM32F103 has no DFU Bootloader. Generate a ID comatible
+#if defined(STM32F1) || defined(USE_ST_SERIAL)
+/* Only STM32F103 has no DFU Bootloader. Generate a ID compatible
  * with the BMP Bootloader since ages.
  */
 	uint32_t *unique_id_p = (uint32_t *)DESIG_UNIQUE_ID_BASE;

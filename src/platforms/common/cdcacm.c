@@ -395,11 +395,7 @@ static const struct usb_config_descriptor config = {
 	.interface = ifaces,
 };
 
-#if defined(DUSE_ST_SERIAL)
-char serial_no[13];
-#else
-static char serial_no[9];
-#endif
+static char serial_no[13];
 
 #define BOARD_IDENT "Black Magic Probe" PLATFORM_IDENT FIRMWARE_VERSION
 #define DFU_IDENT   "Black Magic Firmware Upgrade" PLATFORM_IDENT FIRMWARE_VERSION
