@@ -313,13 +313,10 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 {
 	int res = -1;
 	int num_targets;
-#if defined(PLATFORM_HAS_POWER_SWITCH)
 	if (opt->opt_tpwr) {
-		DEBUG_INFO("Powering up device");
 		platform_target_set_power(true);
 		platform_delay(500);
 	}
-#endif
 	if (opt->opt_connect_under_reset)
 		DEBUG_INFO("Connecting under reset\n");
 	connect_assert_srst = opt->opt_connect_under_reset;
