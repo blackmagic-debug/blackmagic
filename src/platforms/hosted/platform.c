@@ -377,6 +377,20 @@ uint32_t platform_max_frequency_get(void)
 	return false;
 }
 
+void platform_target_set_power(bool power)
+{
+	switch (info.bmp_type) {
+	case BMP_TYPE_BMP:
+		if (remote_target_set_power(power))
+			DEBUG_INFO("Powering up device!\n");
+		else
+			DEBUG_WARN("Powering up device unimplemented or failed\n");
+	   break;
+	default:
+		break;
+	}
+}
+
 void platform_buffer_flush(void)
 {
 	switch (info.bmp_type) {

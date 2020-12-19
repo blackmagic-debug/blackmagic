@@ -73,7 +73,7 @@ bool remote_target_get_power(void)
 	return (construct[1] == '1');
 }
 
-void remote_target_set_power(bool power)
+bool remote_target_set_power(bool power)
 {
 	uint8_t construct[REMOTE_MAX_MSG_SIZE];
 	int s;
@@ -87,8 +87,9 @@ void remote_target_set_power(bool power)
 	if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
 		DEBUG_WARN("platform_target_set_power failed, error %s\n",
 				s ? (char *)&(construct[1]) : "unknown");
-      exit(-1);
+		return false;
     }
+	return true;
 }
 
 void remote_srst_set_val(bool assert)
