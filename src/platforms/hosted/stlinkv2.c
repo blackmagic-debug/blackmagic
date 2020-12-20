@@ -42,16 +42,6 @@
 
 #include "cl_utils.h"
 
-#define VENDOR_ID_STLINK		0x483
-#define PRODUCT_ID_STLINK_MASK	0xffe0
-#define PRODUCT_ID_STLINK_GROUP 0x3740
-#define PRODUCT_ID_STLINKV1		0x3744
-#define PRODUCT_ID_STLINKV2		0x3748
-#define PRODUCT_ID_STLINKV21	0x374b
-#define PRODUCT_ID_STLINKV21_MSD 0x3752
-#define PRODUCT_ID_STLINKV3		0x374f
-#define PRODUCT_ID_STLINKV3E	0x374e
-
 #define STLINK_SWIM_ERR_OK             0x00
 #define STLINK_SWIM_BUSY               0x01
 #define STLINK_DEBUG_ERR_OK            0x80
@@ -399,6 +389,9 @@ static int write_retry(uint8_t *cmdbuf, size_t cmdsize,
 	return res;
 }
 
+/* Version data is at 0x080103f8 with STLINKV3 bootloader flashed with
+ * STLinkUpgrade_v3[3|5].jar
+ */
 static void stlink_version(bmp_info_t *info)
 {
 	if (Stlink.ver_hw == 30) {
@@ -543,20 +536,29 @@ int stlink_init(bmp_info_t *info)
 	libusb_free_device_list(devs, 1);
 	if (!found)
 		return 0;
-	if (info->pid == PRODUCT_ID_STLINKV2) {
+	if (info->vid != VENDOR_ID_STLINK)
+		return 0;
+	switch (info->pid) {
+	case PRODUCT_ID_STLINKV2:
 		Stlink.ver_hw = 20;
 		info->usb_link->ep_tx = 2;
 		Stlink.ep_tx = 2;
-	} else if ((info->pid == PRODUCT_ID_STLINKV21)||
-			   (info->pid == PRODUCT_ID_STLINKV21_MSD)) {
+		break;
+	case PRODUCT_ID_STLINKV21 :
+	case PRODUCT_ID_STLINKV21_MSD:
 		Stlink.ver_hw = 21;
 		info->usb_link->ep_tx = 1;
 		Stlink.ep_tx = 1;
-	} else if ((info->pid == PRODUCT_ID_STLINKV3) ||
-			   (info->pid == PRODUCT_ID_STLINKV3E)) {
+		break;
+	case PRODUCT_ID_STLINKV3_BL:
+	case PRODUCT_ID_STLINKV3:
+	case PRODUCT_ID_STLINKV3E:
 		Stlink.ver_hw = 30;
 		info->usb_link->ep_tx = 1;
 		Stlink.ep_tx = 1;
+		break;
+	default:
+		DEBUG_INFO("Unhandled STM32 device\n");
 	}
 	info->usb_link->ep_rx = 1;
 	int config;

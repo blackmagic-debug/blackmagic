@@ -24,18 +24,6 @@
 #include "ftdi_bmp.h"
 #include "version.h"
 
-#define VENDOR_ID_STLINK         0x0483
-#define PRODUCT_ID_STLINK_MASK   0xffe0
-#define PRODUCT_ID_STLINK_GROUP  0x3740
-#define PRODUCT_ID_STLINKV1      0x3744
-#define PRODUCT_ID_STLINKV2      0x3748
-#define PRODUCT_ID_STLINKV21     0x374b
-#define PRODUCT_ID_STLINKV21_MSD 0x3752
-#define PRODUCT_ID_STLINKV3      0x374f
-#define PRODUCT_ID_STLINKV3E     0x374e
-
-#define VENDOR_ID_SEGGER         0x1366
-
 #define NO_SERIAL_NUMBER "<no serial number>"
 
 void bmp_ident(bmp_info_t *info)
@@ -177,6 +165,7 @@ int find_debuggers(BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 			if ((desc.idProduct == PRODUCT_ID_STLINKV2) ||
 				(desc.idProduct == PRODUCT_ID_STLINKV21) ||
 				(desc.idProduct == PRODUCT_ID_STLINKV21_MSD) ||
+				(desc.idProduct == PRODUCT_ID_STLINKV3_BL) ||
 				(desc.idProduct == PRODUCT_ID_STLINKV3) ||
 				(desc.idProduct == PRODUCT_ID_STLINKV3E)) {
 				type = BMP_TYPE_STLINKV2;
