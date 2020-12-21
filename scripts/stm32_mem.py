@@ -211,8 +211,10 @@ if __name__ == "__main__":
 	if args.address:
 		start = int(args.address, 0)
 	else:
-		if "F4" in product or "STLINK-V3" in product:
+		if "F4" in product:
 			start = 0x8004000
+		elif "STLINK-V3" in product:
+			start = 0x8020000
 		else:
 			start = 0x8002000
 	addr = start

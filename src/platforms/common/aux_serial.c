@@ -18,7 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
+#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7)
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/usart.h>
 #include <libopencm3/stm32/dma.h>
@@ -43,7 +43,7 @@ static uint8_t aux_serial_receive_write_index = 0;
 /* Fifo out pointer, writes assumed to be atomic, should be only incremented outside RX ISR */
 static uint8_t aux_serial_receive_read_index = 0;
 
-#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
+#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7)
 static char aux_serial_transmit_buffer[2U][AUX_UART_BUFFER_SIZE];
 static uint8_t aux_serial_transmit_buffer_index = 0;
 static uint8_t aux_serial_transmit_buffer_consumed = 0;
@@ -77,12 +77,14 @@ static char aux_serial_transmit_buffer[AUX_UART_BUFFER_SIZE];
 #define USART_PARITY_ODD   UART_PARITY_ODD
 #define USART_PARITY_EVEN  UART_PARITY_EVEN
 
+#define usart_enable(uart)                 uart_enable(uart)
+#define usart_disable(uart)                uart_disable(uart)
 #define usart_set_baudrate(uart, baud)     uart_set_baudrate(uart, baud)
 #define usart_set_stopbits(uart, stopbits) uart_set_stopbits(uart, stopbits)
 #define usart_set_parity(uart, parity)     uart_set_parity(uart, parity)
 #endif
 
-#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
+#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7)
 void aux_serial_init(void)
 {
 	/* Enable clocks */
@@ -210,9 +212,12 @@ void aux_serial_init(void)
 
 void aux_serial_set_encoding(usb_cdc_line_coding_s *coding)
 {
+	/* Some devices require that the usart is disabled before
+	 * changing the usart registers. */
+	usart_disable(USBUSART);
 	usart_set_baudrate(USBUSART, coding->dwDTERate);
 
-#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
+#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7)
 	if (coding->bParityType)
 		usart_set_databits(USBUSART, coding->bDataBits + 1U <= 8U ? 8 : 9);
 	else
@@ -246,9 +251,10 @@ void aux_serial_set_encoding(usb_cdc_line_coding_s *coding)
 		usart_set_parity(USBUSART, USART_PARITY_EVEN);
 		break;
 	}
+	usart_enable(USBUSART);
 }
 
-#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
+#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7)
 void aux_serial_set_led(const aux_serial_led_e led)
 {
 	aux_serial_led_state |= led;
@@ -334,7 +340,7 @@ static void aux_serial_receive_isr(const uint32_t usart, const uint8_t dma_irq)
 
 	/* If line is now idle, then transmit a packet */
 	if (is_idle) {
-#ifdef USART_ICR
+#ifdef USART_ICR_IDLECF
 		USART_ICR(usart) = USART_ICR_IDLECF;
 #endif
 		debug_serial_run();

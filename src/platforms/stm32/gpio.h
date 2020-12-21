@@ -29,7 +29,7 @@ static inline void bmp_gpio_set(const uint32_t gpioport, const uint16_t gpios)
 {
 	/* NOLINTNEXTLINE(clang-diagnostic-int-to-pointer-cast) */
 	GPIO_BSRR(gpioport) = gpios;
-#ifdef STM32F4
+#if defined(STM32F4) || defined(STM32F7)
 	/* FIXME: Check if doubling is still needed */
 	/* NOLINTNEXTLINE(clang-diagnostic-int-to-pointer-cast) */
 	GPIO_BSRR(gpioport) = gpios;
@@ -44,7 +44,7 @@ static inline void bmp_gpio_clear(const uint32_t gpioport, const uint16_t gpios)
 	/* NOLINTNEXTLINE(clang-diagnostic-int-to-pointer-cast) */
 	GPIO_BRR(gpioport) = gpios;
 #else
-#ifdef STM32F4
+#if defined(STM32F4) || defined(STM32F7)
 	/* NOLINTNEXTLINE(clang-diagnostic-int-to-pointer-cast) */
 	GPIO_BSRR(gpioport) = gpios << 16U;
 #endif
