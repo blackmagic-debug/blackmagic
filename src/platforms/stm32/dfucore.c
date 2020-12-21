@@ -35,8 +35,14 @@
 #elif defined(STM32F4) ||  defined(STM32F7)
 #   define FLASH_BASE         0x08000000U
 #   define DFU_IFACE_PAGESIZE 128
+# if   APP_START == 0x08020000
+#   define DFU_IFACE_STRING_OFFSET 62
+#	define DFU_IFACE_STRING  "@Internal Flash   /0x08000000/1*016Ka,3*016Ka,1*064Ka,1*128Kg,002*128Kg"
+# elif APP_START == 0x08004000
 #   define DFU_IFACE_STRING_OFFSET 54
 #	define DFU_IFACE_STRING  "@Internal Flash   /0x08000000/1*016Ka,3*016Kg,1*064Kg,000*128Kg"
+# else
+# endif
 #endif
 #include <libopencm3/stm32/flash.h>
 

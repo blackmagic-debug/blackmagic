@@ -38,7 +38,7 @@
 static inline void _gpio_set(uint32_t gpioport, uint16_t gpios)
 {
 	GPIO_BSRR(gpioport) = gpios;
-#ifdef STM32F4
+#if defined(STM32F4) || defined(STM32F7)
 	/* FIXME: Check if doubling is still needed */
 	GPIO_BSRR(gpioport) = gpios;
 #endif
@@ -47,7 +47,7 @@ static inline void _gpio_set(uint32_t gpioport, uint16_t gpios)
 
 static inline void _gpio_clear(uint32_t gpioport, uint16_t gpios)
 {
-#if defined(STM32F4)
+#if !defined(STM32F4) && !defined(STM32F7)
 	GPIO_BSRR(gpioport) = gpios<<16;
 	/* FIXME: Check if doubling is still needed */
 	GPIO_BSRR(gpioport) = gpios<<16;
