@@ -40,11 +40,10 @@ static const usb_device_descriptor_s dev_desc = {
 	.bDeviceClass = 0xef, /* Miscellaneous Device */
 	.bDeviceSubClass = 2, /* Common Class */
 	.bDeviceProtocol = 1, /* Interface Association */
-#ifdef LM4F
-	.bMaxPacketSize0 = 64, /*Fixed for icdi*/
-#else
-	.bMaxPacketSize0 = 32,
-#endif
+	/* The USB specification requires that the control endpoint size for high
+	 * speed devices (e.g., stlinkv3) is 64 bytes.
+	 * Best to have its size set to 64 bytes in all cases. */
+	.bMaxPacketSize0 = 64,
 	.idVendor = 0x1d50,
 	.idProduct = 0x6018,
 	.bcdDevice = 0x0100,
@@ -322,7 +321,7 @@ static const usb_endpoint_descriptor_s trace_endp = {
 	.bDescriptorType = USB_DT_ENDPOINT,
 	.bEndpointAddress = TRACE_ENDPOINT | USB_REQ_TYPE_IN,
 	.bmAttributes = USB_ENDPOINT_ATTR_BULK,
-	.wMaxPacketSize = 64,
+	.wMaxPacketSize = TRACE_ENDPOINT_SIZE,
 	.bInterval = 0,
 };
 

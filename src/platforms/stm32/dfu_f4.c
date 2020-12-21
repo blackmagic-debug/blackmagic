@@ -104,11 +104,19 @@ void dfu_protect(bool enable)
 #endif
 }
 
+#if defined(STM32F7)		/* Set vector table base address */
+#define SCB_VTOR_MASK 0xffffff00U
+#define RAM_MASK  0x2ff00000U
+#else
+#define SCB_VTOR_MASK 0x001fffffU
+#define RAM_MASK  0x2ffc0000U
+#endif
+
 void dfu_jump_app_if_valid(void)
 {
 	const uint32_t stack_pointer = *((uint32_t *)app_address);
 	/* Boot the application if it's valid */
-	if ((stack_pointer & 0x2ffc0000U) == 0x20000000U) {
+	if ((stack_pointer & RAM_MASK) == 0x20000000U) {
 		/*
 		 * Vector table may be anywhere in the main 128kiB RAM,
 		 * however use of CCM is not handled
@@ -116,12 +124,7 @@ void dfu_jump_app_if_valid(void)
 		 * Set vector table base address
 		 * XXX: Does this not want to be a direct assignment of `app_address`? This seems wrong.
 		 */
-#if defined(STM32F7)
-		SCB_VTOR = app_address & 0xffffff00U;
-#else
-		/* Max 2MiB Flash */
-		SCB_VTOR = app_address & 0x001fffffU;
-#endif
+		SCB_VTOR = app_address & SCB_VTOR_MASK;
 		/* clang-format off */
 		__asm__(
 			"msr msp, %1\n"     /* Load the system stack register with the new stack pointer */
