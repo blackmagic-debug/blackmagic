@@ -560,5 +560,6 @@ handle_z_packet(char *packet, int plen)
 
 void gdb_main(void)
 {
+	crc32_init();
 	gdb_main_loop(&gdb_controller, false);
 }

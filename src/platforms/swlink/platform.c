@@ -58,7 +58,6 @@ void platform_init(void)
 	rev =  detect_rev();
 	/* Enable peripherals */
 	rcc_periph_clock_enable(RCC_AFIO);
-	rcc_periph_clock_enable(RCC_CRC);
 
 	/* Unmap JTAG Pins so we can reuse as GPIO */
 	data = AFIO_MAPR;

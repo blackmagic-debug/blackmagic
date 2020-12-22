@@ -35,7 +35,6 @@ uint32_t detect_rev(void)
 	rcc_periph_clock_enable(RCC_USB);
 	rcc_periph_reset_pulse(RST_USB);
 	rcc_periph_clock_enable(RCC_AFIO);
-	rcc_periph_clock_enable(RCC_CRC);
 	/* First, get Board revision by pulling PC13/14 up. Read
 	 *  11 for ST-Link V1, e.g. on VL Discovery, tag as rev 0
 	 *  11 for Baite, PB11 pulled high,          tag as rev 1
