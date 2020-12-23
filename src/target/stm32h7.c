@@ -25,6 +25,13 @@
  *   Reference manual - STM32H7x3 advanced ARM®-based 32-bit MCUs Rev.3
  */
 
+/*
+ * While the ST document (RM 0433) claims that the stm32h750 only has 1 bank
+ * with 1 sector (128k) of user main memory flash (pages 151-152), we were able
+ * to write and successfully verify into other regions in bank 1 and also into
+ * bank 2 (0x0810 0000 as indicated for the other chips).
+ */
+
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
@@ -199,13 +206,14 @@ static bool stm32h7_attach(target *t)
 	target_mem_map_free(t);
 
 	/* Add RAM to memory map */
+	/* Table 7. Memory map and default device memory area attributes RM 0433, pg 130 */
 	target_add_ram(t, 0x00000000, 0x10000); /* ITCM Ram,  64 k */
 	target_add_ram(t, 0x20000000, 0x20000); /* DTCM Ram, 128 k */
 	target_add_ram(t, 0x24000000, 0x80000); /* AXI Ram,  512 k */
 	target_add_ram(t, 0x30000000, 0x20000); /* AHB SRAM1, 128 k */
-	target_add_ram(t, 0x32000000, 0x20000); /* AHB SRAM2, 128 k */
-	target_add_ram(t, 0x34000000, 0x08000); /* AHB SRAM3,  32 k */
-	target_add_ram(t, 0x38000000, 0x01000); /* AHB SRAM4,  32 k */
+	target_add_ram(t, 0x30020000, 0x20000); /* AHB SRAM2, 128 k */
+	target_add_ram(t, 0x30040000, 0x08000); /* AHB SRAM3,  32 k */
+	target_add_ram(t, 0x38000000, 0x10000); /* AHB SRAM4,  64 k */
 
 	/* Add the flash to memory map. */
 	stm32h7_add_flash(t, 0x8000000, 0x100000, FLASH_SECTOR_SIZE);
