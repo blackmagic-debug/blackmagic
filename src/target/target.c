@@ -66,6 +66,8 @@ target *target_new(void)
 	t->halt_poll = (void*)nop_function;
 	t->halt_resume = (void*)nop_function;
 
+	t->target_storage = NULL;
+
 	return t;
 }
 
@@ -109,6 +111,7 @@ void target_list_free(void)
 			free(target_list->commands);
 			target_list->commands = tc;
 		}
+		free(target_list->target_storage);
 		target_mem_map_free(target_list);
 		while (target_list->bw_list) {
 			void * next = target_list->bw_list->next;

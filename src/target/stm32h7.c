@@ -165,6 +165,10 @@ struct stm32h7_flash {
 	uint32_t regbase;
 };
 
+struct stm32h7_priv_s {
+	uint32_t dbg_cr;
+};
+
 static void stm32h7_add_flash(target *t,
                               uint32_t addr, size_t length, size_t blocksize)
 {
@@ -223,7 +227,9 @@ static bool stm32h7_attach(target *t)
 
 static void stm32h7_detach(target *t)
 {
-	target_mem_write32(t, DBGMCU_CR, t->target_storage);
+	struct stm32h7_priv_s *ps = (struct stm32h7_priv_s*)t->target_storage;
+
+	target_mem_write32(t, DBGMCU_CR, ps->dbg_cr);
 	cortexm_detach(t);
 }
 
@@ -235,7 +241,10 @@ bool stm32h7_probe(target *t)
 		t->attach = stm32h7_attach;
 		t->detach = stm32h7_detach;
 		target_add_commands(t, stm32h7_cmd_list, stm32h7_driver_str);
-		t->target_storage = target_mem_read32(t, DBGMCU_CR);
+		/* Save private storage */
+		struct stm32h7_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
+		priv_storage->dbg_cr = target_mem_read32(t, DBGMCU_CR);
+		t->target_storage = (void*)priv_storage;
 		/* RM0433 Rev 4 is not really clear, what bits are needed in DBGMCU_CR.
 		 * Maybe more flags needed?
 		 */

@@ -113,7 +113,7 @@ struct target_s {
 	unsigned target_options;
 	uint16_t t_designer;
 	uint16_t idcode;
-	uint32_t target_storage;
+	void *target_storage;
 
 	struct target_ram *ram;
 	struct target_flash *flash;
@@ -176,6 +176,7 @@ bool stm32h7_probe(target *t);
 bool stm32l0_probe(target *t);
 bool stm32l1_probe(target *t);
 bool stm32l4_probe(target *t);
+bool stm32g0_probe(target *t);
 bool lmi_probe(target *t);
 bool lpc11xx_probe(target *t);
 bool lpc15xx_probe(target *t);
