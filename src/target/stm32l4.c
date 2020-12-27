@@ -116,7 +116,6 @@ static int stm32l4_flash_write(struct target_flash *f,
 #define DBGMCU_CR_DBG_STANDBY	(0x1U << 2U)
 
 enum {
-        STM32G0_DBGMCU_IDCODE_PHYS = 0x40015800,
         STM32L4_DBGMCU_IDCODE_PHYS = 0xe0042000,
 };
 #define FLASH_SIZE_REG  0x1FFF75E0
@@ -126,6 +125,10 @@ struct stm32l4_flash {
 	uint32_t bank1_start;
 };
 
+struct stm32l4_priv_s {
+	uint32_t dbgmcu_cr;
+};
+
 enum ID_STM32L4 {
 	ID_STM32L41  = 0x464u, /* RM0394, Rev.4 */
 	ID_STM32L43  = 0x435u, /* RM0394, Rev.4 */
@@ -133,8 +136,6 @@ enum ID_STM32L4 {
 	ID_STM32L47  = 0x415u, /* RM0351, Rev.5 */
 	ID_STM32L49  = 0x461u, /* RM0351, Rev.5 */
 	ID_STM32L4R  = 0x470u, /* RM0432, Rev.5 */
-	ID_STM32G03  = 0x466u, /* RM0444/454, Rev.2 */
-	ID_STM32G07  = 0x460u, /* RM0444/454, Rev.2 */
 	ID_STM32G43  = 0x468u, /* RM0440, Rev.1 */
 	ID_STM32G47  = 0x469u, /* RM0440, Rev.1 */
 };
@@ -142,7 +143,6 @@ enum ID_STM32L4 {
 enum FAM_STM32L4 {
 	FAM_STM32L4xx = 1,
 	FAM_STM32L4Rx = 2,
-	FAM_STM32G0x = 3,
 	FAM_STM32WBxx = 4,
 	FAM_STM32G4xx = 5,
 };
@@ -211,20 +211,6 @@ struct stm32l4_info const L4info[] = {
 		.flags = 3 | DUAL_BANK,
 	},
 	{
-		.idcode = ID_STM32G07,
-		.family = FAM_STM32G0x,
-		.designator = "STM32G07",
-		.sram1 = 36,
-		.flags = 1,
-	},
-	{
-		.idcode = ID_STM32G03,
-		.family = FAM_STM32G0x,
-		.designator = "STM32G03",
-		.sram1 = 8,
-		.flags = 1,
-	},
-	{
 		.idcode = ID_STM32G43,
 		.family = FAM_STM32G4xx,
 		.designator = "STM32G43",
@@ -287,14 +273,13 @@ static bool stm32l4_attach(target *t)
 	struct stm32l4_info const *chip = stm32l4_get_chip_info(t->idcode);
 
 
-	uint32_t idcodereg = (chip->family == FAM_STM32G0x)
-				     ? STM32G0_DBGMCU_IDCODE_PHYS
-				     : STM32L4_DBGMCU_IDCODE_PHYS;
+	uint32_t idcodereg = STM32L4_DBGMCU_IDCODE_PHYS;
 
 
 	/* Save DBGMCU_CR to restore it when detaching*/
-	uint32_t dbgmcu_cr = target_mem_read32(t, DBGMCU_CR(idcodereg));
-	t->target_storage = dbgmcu_cr;
+	struct stm32l4_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
+	priv_storage->dbgmcu_cr = target_mem_read32(t, DBGMCU_CR(idcodereg));
+	t->target_storage = (void*)priv_storage;
 
 	/* Enable debugging during all low power modes*/
 	target_mem_write32(t, DBGMCU_CR(idcodereg), DBGMCU_CR_DBG_SLEEP | DBGMCU_CR_DBG_STANDBY | DBGMCU_CR_DBG_STOP);
@@ -304,15 +289,11 @@ static bool stm32l4_attach(target *t)
 	target_mem_map_free(t);
 
 	/* Add RAM to memory map */
-	if (chip->family == FAM_STM32G0x) {
-		target_add_ram(t, 0x20000000, chip->sram1 << 10);
-	} else {
-		target_add_ram(t, 0x10000000, chip->sram2 << 10);
-		/* All L4 beside L47 alias SRAM2 after SRAM1.*/
-		uint32_t ramsize = (t->idcode == ID_STM32L47)?
-			chip->sram1 : (chip->sram1 + chip->sram2 + chip->sram3);
-		target_add_ram(t, 0x20000000, ramsize << 10);
-	}
+	target_add_ram(t, 0x10000000, chip->sram2 << 10);
+	/* All L4 beside L47 alias SRAM2 after SRAM1.*/
+	uint32_t ramsize = (t->idcode == ID_STM32L47)?
+		chip->sram1 : (chip->sram1 + chip->sram2 + chip->sram3);
+	target_add_ram(t, 0x20000000, ramsize << 10);
 
 	/* Add the flash to memory map. */
 	uint32_t size = target_mem_read16(t, FLASH_SIZE_REG);
@@ -363,11 +344,11 @@ static bool stm32l4_attach(target *t)
 
 static void stm32l4_detach(target *t)
 {
+	struct stm32l4_priv_s *ps = (struct stm32l4_priv_s*)t->target_storage;
+
 	/*reverse all changes to DBGMCU_CR*/
 	uint32_t idcodereg = STM32L4_DBGMCU_IDCODE_PHYS;
-	if (t->idcode == ID_STM32G07)
-		idcodereg = STM32G0_DBGMCU_IDCODE_PHYS;
-	target_mem_write32(t, DBGMCU_CR(idcodereg), t->target_storage);
+	target_mem_write32(t, DBGMCU_CR(idcodereg), ps->dbgmcu_cr);
 	cortexm_detach(t);
 }
 
@@ -513,10 +494,6 @@ static const uint8_t l4_i2offset[9] = {
 	0x20, 0x24, 0x28, 0x2c, 0x30, 0x44, 0x48, 0x4c, 0x50
 };
 
-static const uint8_t g0_i2offset[7] = {
-	0x20, 0x24, 0x28, 0x2c, 0x30, 0x34, 0x38
-};
-
 static const uint8_t g4_i2offset[11] = {
 	0x20, 0x24, 0x28, 0x2c, 0x30, 0x70, 0x44, 0x48, 0x4c, 0x50, 0x74
 };
@@ -577,9 +554,6 @@ static bool stm32l4_cmd_option(target *t, int argc, char *argv[])
 	const uint8_t *i2offset = l4_i2offset;
 	if (t->idcode == ID_STM32L43) {/* L43x */
 		len = 5;
-	} else if (t->idcode == ID_STM32G07) {/* G07x */
-		i2offset = g0_i2offset;
-		len = 7;
 	} else if (t->idcode == ID_STM32G47) {/* G47 */
 		i2offset = g4_i2offset;
 		len = 11;

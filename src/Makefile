@@ -57,6 +57,7 @@ SRC =			\
 	stm32h7.c	\
 	stm32l0.c	\
 	stm32l4.c	\
+	stm32g0.c	\
 	target.c	\
 
 include $(PLATFORM_DIR)/Makefile.inc
