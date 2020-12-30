@@ -35,6 +35,7 @@ enum bmp_cl_mode {
 	BMP_MODE_FLASH_READ,
 	BMP_MODE_FLASH_VERIFY,
 	BMP_MODE_SWJ_TEST,
+	BMP_MODE_MONITOR,
 };
 
 typedef struct BMP_CL_OPTIONS_s {
@@ -51,6 +52,7 @@ typedef struct BMP_CL_OPTIONS_s {
 	char *opt_ident_string;
 	int  opt_position;
 	char *opt_cable;
+	char *opt_monitor;
 	int opt_debuglevel;
 	int opt_target_dev;
 	uint32_t opt_flash_start;

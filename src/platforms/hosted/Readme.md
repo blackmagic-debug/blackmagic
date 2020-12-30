@@ -36,7 +36,19 @@ blackmagic -V <file>.bin
 ```
 ### Show more options
 ```
-blackmagic -h"
+blackmagic -h
+```
+### Show available monitor commands
+```
+blackmagic -M help
+```
+### Show available monitor commands on second target
+```
+blackmagic -n 2 -M help
+```
+### Monitor commands with multiple arguments, e.g.Stm32F1:
+```
+blackmagic -M "option help"
 ```
 ## Used shared libraries:
 ### libusb

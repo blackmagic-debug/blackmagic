@@ -32,6 +32,7 @@
 #include "target.h"
 #include "target_internal.h"
 #include "cortexm.h"
+#include "command.h"
 
 #include "cl_utils.h"
 #include "bmp_hosted.h"
@@ -44,6 +45,18 @@
 #else
 # include <sys/mman.h>
 #endif
+
+static void cl_target_printf(struct target_controller *tc,
+                              const char *fmt, va_list ap)
+{
+	(void)tc;
+
+	vprintf(fmt, ap);
+}
+
+static struct target_controller cl_controller = {
+	.printf = cl_target_printf,
+};
 
 struct mmap_data {
 	void *data;
@@ -152,6 +165,8 @@ static void cl_help(char **argv)
 	DEBUG_WARN("\t-p\t\t: Supplies power to the target (where applicable)\n");
 	DEBUG_WARN("\t-R\t\t: Reset device\n");
 	DEBUG_WARN("\t-H\t\t: Do not use high level commands (BMP-Remote)\n");
+	DEBUG_WARN("\t-M <string>\t: Run target specific monitor commands. Quote multi\n");
+	DEBUG_WARN("\t\t\t  word strings. Run \"-M help\" for help.\n");
 	DEBUG_WARN("Flash operation modifiers options:\n");
 	DEBUG_WARN("\tDefault action with given file is to write to flash\n");
 	DEBUG_WARN("\t-a <addr>\t: Start flash operation at flash address <addr>\n"
@@ -168,7 +183,7 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 	opt->opt_flash_size = 16 * 1024 *1024;
 	opt->opt_flash_start = 0xffffffff;
 	opt->opt_max_swj_frequency = 4000000;
-	while((c = getopt(argc, argv, "eEhHv:d:f:s:I:c:Cln:tVtTa:S:jpP:rR")) != -1) {
+	while((c = getopt(argc, argv, "eEhHv:d:f:s:I:c:Cln:M:tVtTa:S:jpP:rR")) != -1) {
 		switch(c) {
 		case 'c':
 			if (optarg)
@@ -255,6 +270,11 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 			if (optarg)
 				opt->opt_target_dev = strtol(optarg, NULL, 0);
 			break;
+		case 'M':
+			opt->opt_mode = BMP_MODE_MONITOR;
+			if (optarg)
+				opt->opt_monitor = optarg;
+			break;
 		case 'P':
 			if (optarg)
 				opt->opt_position = atoi(optarg);
@@ -340,7 +360,8 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 				   opt->opt_target_dev, num_targets);
 		return res;
 	}
-	target *t = target_attach_n(opt->opt_target_dev, NULL);
+	target *t = target_attach_n(opt->opt_target_dev, &cl_controller);
+
 	if (!t) {
 		DEBUG_WARN("Can not attach to target %d\n", opt->opt_target_dev);
 		goto target_detach;
@@ -403,6 +424,8 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 		default:
 			DEBUG_WARN("No test for this core type yet\n");
 		}
+	} else if (opt->opt_mode == BMP_MODE_MONITOR) {
+		command_process(t, opt->opt_monitor);
 	}
 	if ((opt->opt_mode == BMP_MODE_TEST) ||
 		(opt->opt_mode == BMP_MODE_SWJ_TEST))
@@ -525,8 +548,11 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 		uint32_t end_time = platform_time_ms();
 		if (read_file != -1)
 			close(read_file);
-		DEBUG_WARN("Read/Verify succeeded for %d bytes, %8.3f kiB/s\n",
-			   bytes_read, (((bytes_read * 1.0)/(end_time - start_time))));
+		if ((opt->opt_mode == BMP_MODE_FLASH_VERIFY) ||
+			(opt->opt_mode == BMP_MODE_FLASH_READ))
+			DEBUG_WARN("Read/Verify succeeded for %d bytes, %8.3f kiB/s\n",
+					   bytes_read,
+					   (((bytes_read * 1.0)/(end_time - start_time))));
 	}
   free_map:
 	if (map.size)

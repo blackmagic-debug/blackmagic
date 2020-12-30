@@ -100,7 +100,7 @@ void target_list_free(void)
 
 	while(target_list) {
 		target *t = target_list->next;
-		if (target_list->tc)
+		if (target_list->tc && target_list->tc->destroy_callback)
 			target_list->tc->destroy_callback(target_list->tc, target_list);
 		if (target_list->priv)
 			target_list->priv_free(target_list->priv);
