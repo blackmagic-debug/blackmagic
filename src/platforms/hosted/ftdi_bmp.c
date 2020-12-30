@@ -123,8 +123,8 @@ cable_desc_t cable_desc[] = {
 		.init.ddr_low = PIN4,
 		.init.data_high = PIN4 | PIN3 | PIN2,
 		.init.ddr_high = PIN4 | PIN3 | PIN2 | PIN1 | PIN0,
-		.assert_srst.data_high   = ~PIN2,
-		.deassert_srst.data_high =  PIN2,
+		.assert_srst.data_high   = ~PIN3,
+		.deassert_srst.data_high =  PIN3,
 		.srst_get_port_cmd = GET_BITS_LOW,
 		.srst_get_pin = PIN6,
 		.description = "FTDIJTAG",
@@ -421,11 +421,11 @@ static void libftdi_set_data(data_desc_t* data)
 	if ((data->data_low) || (data->ddr_low)) {
 		if (data->data_low > 0)
 			active_state.data_low |= (data->data_low & 0xff);
-		else
+		else if (data->data_low < 0)
 			active_state.data_low &= (data->data_low & 0xff);
 		if (data->ddr_low > 0)
 			active_state.ddr_low  |= (data->ddr_low  & 0xff);
-		else
+		else if (data->ddr_low < 0)
 			active_state.ddr_low  &= (data->ddr_low  & 0xff);
 		cmd[index++] = SET_BITS_LOW;
 		cmd[index++] = active_state.data_low;
@@ -434,11 +434,11 @@ static void libftdi_set_data(data_desc_t* data)
 	if ((data->data_high) || (data->ddr_high)) {
 		if (data->data_high > 0)
 			active_state.data_high |= (data->data_high & 0xff);
-		else
+		else if (data->data_high < 0)
 			active_state.data_high &= (data->data_high & 0xff);
 		if (data->ddr_high > 0)
 			active_state.ddr_high  |= (data->ddr_high  & 0xff);
-		else
+		else if (data->ddr_high < 0)
 			active_state.ddr_high  &= (data->ddr_high  & 0xff);
 		cmd[index++] = SET_BITS_HIGH;
 		cmd[index++] = active_state.data_high;
