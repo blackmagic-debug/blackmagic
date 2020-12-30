@@ -299,6 +299,8 @@ void platform_srst_set_val(bool assert)
 		return remote_srst_set_val(assert);
 	case BMP_TYPE_JLINK:
 		return jlink_srst_set_val(&info, assert);
+	case BMP_TYPE_LIBFTDI:
+		return libftdi_srst_set_val(assert);
 	default:
 		break;
 	}
@@ -313,6 +315,8 @@ bool platform_srst_get_val(void)
 		return stlink_srst_get_val();
 	case BMP_TYPE_JLINK:
 		return jlink_srst_get_val(&info);
+	case BMP_TYPE_LIBFTDI:
+		return libftdi_srst_get_val();
 	default:
 		break;
 	}
