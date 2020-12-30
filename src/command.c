@@ -3,6 +3,8 @@
  *
  * Copyright (C) 2011  Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
+ * Copyright (C) 2021 Uwe Bonnes
+ *                            (bon@elektron.ikp.physik.tu-darmstadt.de)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,6 +29,7 @@
 #include "command.h"
 #include "gdb_packet.h"
 #include "target.h"
+#include "target_internal.h"
 #include "morse.h"
 #include "version.h"
 #include "serialno.h"
@@ -36,13 +39,6 @@
 #endif
 
 typedef bool (*cmd_handler)(target *t, int argc, const char **argv);
-
-struct command_s {
-	const char *cmd;
-	cmd_handler handler;
-
-	const char *help;
-};
 
 static bool cmd_version(target *t, int argc, char **argv);
 static bool cmd_help(target *t, int argc, char **argv);
@@ -161,10 +157,11 @@ bool cmd_help(target *t, int argc, char **argv)
 	(void)argv;
 	const struct command_s *c;
 
-	gdb_out("General commands:\n");
-	for(c = cmd_list; c->cmd; c++)
-		gdb_outf("\t%s -- %s\n", c->cmd, c->help);
-
+	if (!t || t->tc->destroy_callback) {
+		gdb_out("General commands:\n");
+		for(c = cmd_list; c->cmd; c++)
+			gdb_outf("\t%s -- %s\n", c->cmd, c->help);
+	}
 	if (!t)
 		return -1;
 
