@@ -24,6 +24,7 @@
 
 #include "general.h"
 #include <unistd.h>
+#include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -151,10 +152,10 @@ static void cl_help(char **argv)
 	DEBUG_WARN("\tDefault mode is to start the debug server at :2000\n");
 	DEBUG_WARN("\t-j\t\t: Use JTAG. SWD is default.\n");
 	DEBUG_WARN("\t-f\t\t: Set minimum high and low times of SWJ waveform.\n");
-	DEBUG_WARN("\t-C\t\t: Connect under reset\n");
+	DEBUG_WARN("\t-C\t\t: Connect under hardware reset\n");
 	DEBUG_WARN("\t-t\t\t: Scan SWD or JTAG and display information about \n"
 			   "\t\t\t  connected devices\n");
-	DEBUG_WARN("\t-T\t\t: Continious read/write-back some value to allow\n"
+	DEBUG_WARN("\t-T\t\t: Continuous read/write-back some value to allow\n"
 			   "\t\t\t  timing insection of SWJ. Abort with ^C\n");
 	DEBUG_WARN("\t-e\t\t: Assume \"resistor SWD connection\" on FTDI: TDI\n"
                "\t\t\t  connected to TMS, TDO to TDI with eventual resistor\n");
@@ -164,7 +165,7 @@ static void cl_help(char **argv)
 	           "\t\t\t  with -w to verify right after programming.\n");
 	DEBUG_WARN("\t-r\t\t: Read flash and write to binary file\n");
 	DEBUG_WARN("\t-p\t\t: Supplies power to the target (where applicable)\n");
-	DEBUG_WARN("\t-R\t\t: Reset device\n");
+	DEBUG_WARN("\t-R[h]\t\t: Reset device. Default via SWJ or by hardware(h)\n");
 	DEBUG_WARN("\t-H\t\t: Do not use high level commands (BMP-Remote)\n");
 	DEBUG_WARN("\t-m <target>\t: Use (target)id for SWD multi-drop.\n");
 	DEBUG_WARN("\t-M <string>\t: Run target specific monitor commands. Quote multi\n");
@@ -185,7 +186,7 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 	opt->opt_flash_size = 0xffffffff;
 	opt->opt_flash_start = 0xffffffff;
 	opt->opt_max_swj_frequency = 4000000;
-	while((c = getopt(argc, argv, "eEhHv:d:f:s:I:c:Cln:m:M:wVtTa:S:jpP:rR")) != -1) {
+	while((c = getopt(argc, argv, "eEhHv:d:f:s:I:c:Cln:m:M:wVtTa:S:jpP:rR::")) != -1) {
 		switch(c) {
 		case 'c':
 			if (optarg)
@@ -268,7 +269,10 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 			opt->opt_mode = BMP_MODE_FLASH_READ;
 			break;
 		case 'R':
-			opt->opt_mode = BMP_MODE_RESET;
+			if ((optarg) && (tolower(optarg[0]) == 'h'))
+				opt->opt_mode = BMP_MODE_RESET_HW;
+			else
+				opt->opt_mode = BMP_MODE_RESET;
 			break;
 		case 'p':
 			opt->opt_tpwr = true;
@@ -321,7 +325,8 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 	/* Checks */
 	if ((opt->opt_flash_file) && ((opt->opt_mode == BMP_MODE_TEST ) ||
 								  (opt->opt_mode == BMP_MODE_SWJ_TEST) ||
-								  (opt->opt_mode == BMP_MODE_RESET))) {
+								  (opt->opt_mode == BMP_MODE_RESET) ||
+								  (opt->opt_mode == BMP_MODE_RESET_HW))) {
 		DEBUG_WARN("Ignoring filename in reset/test mode\n");
 		opt->opt_flash_file = NULL;
 	}
@@ -351,6 +356,12 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 	if (opt->opt_tpwr) {
 		platform_target_set_power(true);
 		platform_delay(500);
+	}
+	if (opt->opt_mode == BMP_MODE_RESET_HW) {
+			platform_srst_set_val(true);
+			platform_delay(1);
+			platform_srst_set_val(false);
+			return 0;
 	}
 	if (opt->opt_connect_under_reset)
 		DEBUG_INFO("Connecting under reset\n");
@@ -466,7 +477,7 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 		map.size = opt->opt_flash_size;
 	if (opt->opt_mode == BMP_MODE_RESET) {
 		target_reset(t);
-	} else if (opt->opt_mode == BMP_MODE_FLASH_ERASE) {
+	} else 	if (opt->opt_mode == BMP_MODE_FLASH_ERASE) {
 		DEBUG_INFO("Erase %zu bytes at 0x%08" PRIx32 "\n", opt->opt_flash_size,
 			  opt->opt_flash_start);
 		unsigned int erased = target_flash_erase(t, opt->opt_flash_start,
