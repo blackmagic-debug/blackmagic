@@ -349,7 +349,7 @@ static void cmsis_dap_jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms,
 										  const uint8_t *DI, int ticks)
 {
 	dap_jtagtap_tdi_tdo_seq(DO, (final_tms), NULL, DI, ticks);
-	DEBUG_PROBE("jtagtap_tdi_tdo_seq %d, %02x-> %02x\n", ticks, DI[0], DO[0]);
+	DEBUG_PROBE("jtagtap_tdi_tdo_seq %d, %02x-> %02x\n", ticks, DI[0], (DO)? DO[0] : 0);
 }
 
 static void  cmsis_dap_jtagtap_tdi_seq(const uint8_t final_tms,
