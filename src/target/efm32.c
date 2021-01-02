@@ -979,11 +979,6 @@ const struct command_s efm32_aap_cmd_list[] = {
 	{NULL, NULL, NULL}
 };
 
-static bool nop_function(void)
-{
-	return true;
-}
-
 /**
  * AAP Probe
  */
@@ -1019,17 +1014,7 @@ void efm32_aap_probe(ADIv5_AP_t *ap)
 			"EFM32 Authentication Access Port rev.%d",
 			aap_revision);
 	t->driver = priv_storage->aap_driver_string;
-	t->attach = (void*)nop_function;
-	t->detach = (void*)nop_function;
-	t->check_error = (void*)nop_function;
-	t->mem_read = (void*)nop_function;
-	t->mem_write = (void*)nop_function;
 	t->regs_size = 4;
-	t->regs_read = (void*)nop_function;
-	t->regs_write = (void*)nop_function;
-	t->reset = (void*)nop_function;
-	t->halt_request = (void*)nop_function;
-	t->halt_resume = (void*)nop_function;
 
 	target_add_commands(t, efm32_aap_cmd_list, t->driver);
 }
