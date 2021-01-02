@@ -34,6 +34,11 @@ static bool nop_function(void)
 	return true;
 }
 
+static int null_function(void)
+{
+	return 0;
+}
+
 target *target_new(void)
 {
 	target *t = (void*)calloc(1, sizeof(*t));
@@ -63,6 +68,7 @@ target *target_new(void)
 	t->halt_request = (void*)nop_function;
 	t->halt_poll = (void*)nop_function;
 	t->halt_resume = (void*)nop_function;
+	t->check_error = (void*)null_function;
 
 	t->target_storage = NULL;
 
