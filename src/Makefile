@@ -31,7 +31,6 @@ SRC =			\
 	gdb_hostio.c	\
 	gdb_packet.c	\
 	hex_utils.c	\
-	jtag_devs.c	\
 	jtag_scan.c	\
 	lmi.c		\
 	lpc_common.c	\
