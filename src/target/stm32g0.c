@@ -52,6 +52,9 @@
 #define FLASH_MEMORY_SIZE               0x1FFF75E0
 #define FLASH_PAGE_SIZE                 0x800
 #define FLASH_BANK2_START_PAGE_NB       256U
+#define FLASH_OTP_START                 0x1FFF7000
+#define FLASH_OTP_SIZE                  0x400
+#define FLASH_OTP_BLOCKSIZE             0x8
 #define FLASH_SIZE_MAX_G03_4            (64U * 1024U)    // 64 kiB
 #define FLASH_SIZE_MAX_G05_6            (64U * 1024U)    // 64 kiB
 #define FLASH_SIZE_MAX_G07_8            (128U * 1024U)   // 128 kiB
@@ -189,7 +192,7 @@ static void stm32g0_add_flash(target *t, uint32_t addr, size_t length,
 	f->blocksize = blocksize;
 	f->erase = stm32g0_flash_erase;
 	f->write = stm32g0_flash_write;
-	f->buf_size = FLASH_PAGE_SIZE;
+	f->buf_size = blocksize;
 	f->erased = 0xFF;
 	target_add_flash(t, f);
 }
@@ -248,6 +251,9 @@ bool stm32g0_probe(target *t)
 	struct stm32g0_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
 	priv_storage->irreversible_enabled = false;
 	t->target_storage = (void*)priv_storage;
+
+	/* OTP Flash area */
+	stm32g0_add_flash(t, FLASH_OTP_START, FLASH_OTP_SIZE, FLASH_OTP_BLOCKSIZE);
 
 	return true;
 }
@@ -311,6 +317,7 @@ static void stm32g0_flash_lock(target *t)
 
 /*
  * Flash erasure function.
+ * OTP case: this function clears any previous error and returns.
  */
 static int stm32g0_flash_erase(struct target_flash *f, target_addr addr,
                                size_t len)
@@ -328,11 +335,6 @@ static int stm32g0_flash_erase(struct target_flash *f, target_addr addr,
 	if (len == (size_t)0U)
 		goto exit_cleanup;
 
-	nb_pages_to_erase = (uint16_t)((len - 1U) / f->blocksize) + 1U;
-	if (t->idcode == STM32G0B_C) // Dual-bank devices
-		bank1_end_page_nb = ((f->length / 2U) - 1U) / f->blocksize;
-	page_nb = (uint16_t)((addr - f->start) / f->blocksize);
-
 	/* Wait for Flash ready */
 	while (target_mem_read32(t, FLASH_SR) & FLASH_SR_BSY_MASK) {
 		if (target_check_error(t))
@@ -341,6 +343,14 @@ static int stm32g0_flash_erase(struct target_flash *f, target_addr addr,
 
 	/* Clear any previous programming error */
 	target_mem_write32(t, FLASH_SR, target_mem_read32(t, FLASH_SR));
+
+	if (addr >= (target_addr)FLASH_OTP_START)
+		goto exit_cleanup;
+
+	nb_pages_to_erase = (uint16_t)((len - 1U) / f->blocksize) + 1U;
+	if (t->idcode == STM32G0B_C) // Dual-bank devices
+		bank1_end_page_nb = ((f->length / 2U) - 1U) / f->blocksize;
+	page_nb = (uint16_t)((addr - f->start) / f->blocksize);
 
 	stm32g0_flash_unlock(t);
 
@@ -392,12 +402,20 @@ exit_cleanup:
  * The SR is supposed to be ready and free of any error.
  * After a successful programming, the EMPTY bit is cleared to allow rebooting
  * in Main Flash memory without power cycle.
+ * OTP area is programmed as the "program" area. It can be programmed 8-bytes
+ * by 8-bytes.
  */
 static int stm32g0_flash_write(struct target_flash *f, target_addr dest,
                                const void *src, size_t len)
 {
 	target *t = f->t;
 	int ret = 0;
+	struct stm32g0_priv_s *ps = (struct stm32g0_priv_s*)t->target_storage;
+
+	if ((dest >= (target_addr)FLASH_OTP_START) && !ps->irreversible_enabled) {
+		tc_printf(t, "Irreversible operations disabled\n");
+		goto exit_error;
+	}
 
 	stm32g0_flash_unlock(t);
 
