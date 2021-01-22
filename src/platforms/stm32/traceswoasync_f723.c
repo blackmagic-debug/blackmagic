@@ -3,6 +3,7 @@
  *
  * Based on work that is Copyright (C) 2017 Black Sphere Technologies Ltd.
  * Copyright (C) 2017 Dave Marples <dave@marples.net>
+ * Portions (C) 2020-2021 Stoyan Shopov <stoyan.shopov@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

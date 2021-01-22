@@ -18,6 +18,7 @@ LGPL License Terms @ref lgpl_license
  * This file is part of the libopencm3 project.
  *
  * Copyright (C) 2010 Gareth McMullin <gareth@blacksphere.co.nz>
+ * Portions (C) 2020-2021 Stoyan Shopov <stoyan.shopov@gmail.com>
  *
  * This library is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License as published by
