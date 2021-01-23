@@ -5,7 +5,7 @@ OBJCOPY = $(CROSS_COMPILE)objcopy
 
 CFLAGS += -Istm32/include -mcpu=cortex-m4 -mthumb \
 	-mfloat-abi=hard -mfpu=fpv4-sp-d16 \
-	-DSTM32F4 -DF4DISCOVERY -I../libopencm3/include \
+	-DSTM32F4 -I../libopencm3/include \
 	-Iplatforms/stm32
 
 LDFLAGS_BOOT = -lopencm3_stm32f4 \
@@ -17,9 +17,10 @@ LDFLAGS_BOOT = -lopencm3_stm32f4 \
 ifeq ($(BMP_BOOTLOADER), 1)
 $(info  Load address 0x08004000 for BMPBootloader)
 LDFLAGS = $(LDFLAGS_BOOT) -Wl,-Ttext=0x8004000
+CFLAGS += -DDFU_SERIAL_LENGTH=9
 else
 LDFLAGS += $(LDFLAGS_BOOT)
-CFLAGS += -DUSE_ST_SERIAL
+CFLAGS += -DDFU_SERIAL_LENGTH=13
 endif
 
 VPATH += platforms/stm32
@@ -36,7 +37,7 @@ ifneq ($(BMP_BOOTLOADER), 1)
 all:	blackmagic.bin
 else
 all:	blackmagic.bin  blackmagic_dfu.bin blackmagic_dfu.hex
-blackmagic_dfu: usbdfu.o dfucore.o dfu_f4.o
+blackmagic_dfu: usbdfu.o dfucore.o dfu_f4.o serialno.o
 	$(CC) $^ -o $@ $(LDFLAGS_BOOT)
 
 blackmagic_dfu.bin:    blackmagic_dfu

@@ -4,8 +4,8 @@ OBJCOPY = $(CROSS_COMPILE)objcopy
 
 CFLAGS += -Istm32/include -mcpu=cortex-m4 -mthumb \
 	-mfloat-abi=hard -mfpu=fpv4-sp-d16 \
-	-DSTM32F4 -DHYDRABUS -I../libopencm3/include \
-	-Iplatforms/stm32 -DUSE_ST_BOOTLOADER
+	-DSTM32F4 -I../libopencm3/include \
+	-Iplatforms/stm32 -DDFU_SERIAL_LENGTH=9
 
 LDFLAGS = -lopencm3_stm32f4 \
 	-Wl,-T,platforms/stm32/f4discovery.ld -nostartfiles -lc -lnosys \

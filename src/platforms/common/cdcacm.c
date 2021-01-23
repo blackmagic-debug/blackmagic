@@ -394,12 +394,7 @@ static const struct usb_config_descriptor config = {
 
 	.interface = ifaces,
 };
-
-#if defined(DUSE_ST_SERIAL)
-char serial_no[13];
-#else
-static char serial_no[9];
-#endif
+static char serial_no[DFU_SERIAL_LENGTH];
 
 #define BOARD_IDENT "Black Magic Probe " PLATFORM_IDENT FIRMWARE_VERSION
 #define DFU_IDENT   "Black Magic Firmware Upgrade " PLATFORM_IDENT FIRMWARE_VERSION
@@ -555,7 +550,7 @@ void cdcacm_init(void)
 {
 	void exti15_10_isr(void);
 
-	serial_no_read(serial_no, sizeof(serial_no));
+	serial_no_read(serial_no);
 
 	usbdev = usbd_init(&USB_DRIVER, &dev, &config, usb_strings,
 			    sizeof(usb_strings)/sizeof(char *),

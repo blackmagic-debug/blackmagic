@@ -19,10 +19,11 @@
 
 #include "general.h"
 #include "version.h"
+#include "serialno.h"
+#include <string.h>
 
 #include <libopencm3/stm32/desig.h>
 
-#include <string.h>
 #if defined(STM32F1HD)
 #	define DFU_IFACE_STRING  "@Internal Flash   /0x08000000/4*002Ka,000*002Kg"
 #   define DFU_IFACE_STRING_OFFSET 38
@@ -124,7 +125,7 @@ const struct usb_config_descriptor config = {
 	.interface = ifaces,
 };
 
-static char serial_no[9];
+static char serial_no[DFU_SERIAL_LENGTH];
 static char if_string[] = DFU_IFACE_STRING;
 #define BOARD_IDENT_DFU(BOARD_TYPE) "Black Magic Probe DFU " PLATFORM_IDENT  "" FIRMWARE_VERSION
 
@@ -338,11 +339,6 @@ static void set_dfu_iface_string(uint32_t size)
 
 static char *get_dev_unique_id(char *s)
 {
-	volatile uint32_t *unique_id_p = (volatile uint32_t *)DESIG_UNIQUE_ID_BASE;
-	uint32_t unique_id = *unique_id_p +
-			*(unique_id_p + 1) +
-			*(unique_id_p + 2);
-	int i;
 	uint32_t fuse_flash_size;
 
 	/* Calculated the upper flash limit from the exported data
@@ -352,14 +348,5 @@ static char *get_dev_unique_id(char *s)
 		fuse_flash_size = 0x80;
 	set_dfu_iface_string(fuse_flash_size - 8);
 	max_address = FLASH_BASE + (fuse_flash_size << 10);
-	/* Fetch serial number from chip's unique ID */
-	for(i = 0; i < 8; i++) {
-		s[7-i] = ((unique_id >> (4*i)) & 0xF) + '0';
-	}
-	for(i = 0; i < 8; i++)
-		if(s[i] > '9')
-			s[i] += 'A' - '9' - 1;
-	s[8] = 0;
-
-	return s;
+	return serial_no_read(s);
 }

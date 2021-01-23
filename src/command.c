@@ -408,7 +408,7 @@ static bool cmd_target_power(target *t, int argc, const char **argv)
 #ifdef PLATFORM_HAS_TRACESWO
 static bool cmd_traceswo(target *t, int argc, const char **argv)
 {
-	char serial_no[13];
+	char serial_no[DFU_SERIAL_LENGTH];
 	(void)t;
 #if TRACESWO_PROTOCOL == 2
 	uint32_t baudrate = SWO_DEFAULT_BAUD;
@@ -454,7 +454,7 @@ static bool cmd_traceswo(target *t, int argc, const char **argv)
 #else
 	traceswo_init(swo_channelmask);
 #endif
-	serial_no_read(serial_no, sizeof(serial_no));
+	serial_no_read(serial_no);
 	gdb_outf("%s:%02X:%02X\n", serial_no, 5, 0x85);
 	return true;
 }
