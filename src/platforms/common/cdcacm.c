@@ -401,8 +401,8 @@ char serial_no[13];
 static char serial_no[9];
 #endif
 
-#define BOARD_IDENT "Black Magic Probe" PLATFORM_IDENT FIRMWARE_VERSION
-#define DFU_IDENT   "Black Magic Firmware Upgrade" PLATFORM_IDENT FIRMWARE_VERSION
+#define BOARD_IDENT "Black Magic Probe " PLATFORM_IDENT FIRMWARE_VERSION
+#define DFU_IDENT   "Black Magic Firmware Upgrade " PLATFORM_IDENT FIRMWARE_VERSION
 
 static const char *usb_strings[] = {
 	"Black Sphere Technologies",
