@@ -34,6 +34,21 @@
 #define SWDP_ACK_WAIT  0x02
 #define SWDP_ACK_FAULT 0x04
 
+static unsigned int make_packet_request(uint8_t  RnW, uint16_t addr)
+{
+	bool APnDP = addr & ADIV5_APnDP;
+	addr &= 0xff;
+	unsigned int request = 0x81; /* Park and Startbit */
+	if(APnDP) request ^= 0x22;
+	if(RnW)   request ^= 0x24;
+
+	addr &= 0xC;
+	request |= (addr << 1) & 0x18;
+	if((addr == 4) || (addr == 8))
+		request ^= 0x20;
+	return request;
+}
+
 int adiv5_swdp_scan(uint32_t targetid)
 {
 	uint32_t ack;
@@ -61,7 +76,8 @@ int adiv5_swdp_scan(uint32_t targetid)
 	/* Read the SW-DP IDCODE register to syncronise */
 	/* This could be done with adiv_swdp_low_access(), but this doesn't
 	 * allow the ack to be checked here. */
-	swd_proc.swdptap_seq_out(0xA5, 8);
+	uint32_t request = make_packet_request(ADIV5_LOW_READ, ADIV5_DP_IDCODE);
+	swd_proc.swdptap_seq_out(request, 8);
 	ack = swd_proc.swdptap_seq_in(3);
 	uint32_t idcode;
 	if((ack != SWDP_ACK_OK) || swd_proc.swdptap_seq_in_parity(&idcode, 32)) {
@@ -123,22 +139,12 @@ uint32_t firmware_swdp_read(ADIv5_DP_t *dp, uint16_t addr)
 uint32_t firmware_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 				      uint16_t addr, uint32_t value)
 {
-	bool APnDP = addr & ADIV5_APnDP;
-	addr &= 0xff;
-	uint32_t request = 0x81;
+	uint32_t request = make_packet_request(RnW, addr);
 	uint32_t response = 0;
 	uint32_t ack;
 	platform_timeout timeout;
 
-	if(APnDP && dp->fault) return 0;
-
-	if(APnDP) request ^= 0x22;
-	if(RnW)   request ^= 0x24;
-
-	addr &= 0xC;
-	request |= (addr << 1) & 0x18;
-	if((addr == 4) || (addr == 8))
-		request ^= 0x20;
+	if((addr & ADIV5_APnDP) && dp->fault) return 0;
 
 	platform_timeout_set(&timeout, 2000);
 	do {
