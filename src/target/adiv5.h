@@ -27,18 +27,20 @@
 #define ADIV5_DP_REG(x)   (x)
 #define ADIV5_AP_REG(x)   (ADIV5_APnDP | (x))
 
+#define ADIV5_DP_BANK0    0x00
+#define ADIV5_DP_BANK1    0x10
+#define ADIV5_DP_BANK2    0x20
+#define ADIV5_DP_BANK3    0x30
+#define ADIV5_DP_BANK4    0x40
+
 /* ADIv5 DP Register addresses */
 #define ADIV5_DP_IDCODE   ADIV5_DP_REG(0x0)
 #define ADIV5_DP_ABORT    ADIV5_DP_REG(0x0)
 #define ADIV5_DP_CTRLSTAT ADIV5_DP_REG(0x4)
+#define ADIV5_DP_TARGETID  (ADIV5_DP_BANK2 | ADIV5_DP_REG(0x4))
 #define ADIV5_DP_SELECT   ADIV5_DP_REG(0x8)
 #define ADIV5_DP_RDBUFF   ADIV5_DP_REG(0xC)
-
-#define ADIV5_DP_BANK0    0
-#define ADIV5_DP_BANK1    1
-#define ADIV5_DP_BANK2    2
-#define ADIV5_DP_BANK3    3
-#define ADIV5_DP_BANK4    4
+#define ADIV5_DP_TARGETSEL ADIV5_DP_REG(0xC)
 
 #define ADIV5_DP_VERSION_MASK 0xf000
 #define ADIV5_DPv1            0x1000

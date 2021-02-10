@@ -707,13 +707,6 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 		}
 	}
 
-	if ((dp->idcode & ADIV5_DP_VERSION_MASK) == ADIV5_DPv2) {
-		/* Read TargetID. Can be done with device in WFI, sleep or reset!*/
-		adiv5_dp_write(dp, ADIV5_DP_SELECT, ADIV5_DP_BANK2);
-		dp->targetid = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT);
-		adiv5_dp_write(dp, ADIV5_DP_SELECT, ADIV5_DP_BANK0);
-		DEBUG_INFO("TARGETID %08" PRIx32 "\n", dp->targetid);
-	}
 	/* Probe for APs on this DP */
 	uint32_t last_base = 0;
 	int void_aps = 0;
