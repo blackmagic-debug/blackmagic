@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2015  Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
- * Copyright (C) 2018 - 2020 Uwe Bonnes
+ * Copyright (C) 2018 - 2021 Uwe Bonnes
  *                           (bon@elektron.ikp.physik.tu-darmstadt.de)
  *
  * This program is free software: you can redistribute it and/or modify
@@ -610,6 +610,20 @@ ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel)
 	return ap;
 }
 
+/* No real AP on RP2040. Special setup.*/
+static void rp_rescue_setup(ADIv5_DP_t *dp)
+{
+	ADIv5_AP_t *ap = malloc(sizeof(*ap));
+	if (!ap) {			/* malloc failed: heap exhaustion */
+		DEBUG_WARN("malloc: failed in %s\n", __func__);
+		return;
+	}
+	ap->dp = dp;
+	extern void rp_rescue_probe(ADIv5_AP_t *);
+	rp_rescue_probe(ap);
+	return;
+}
+
 void adiv5_dp_init(ADIv5_DP_t *dp)
 {
 #define DPIDR_PARTNO_MASK 0x0ff00000
@@ -617,6 +631,11 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 	if (((dp->idcode & 0xfff) == 0)  ||
 		((dp->idcode & DPIDR_PARTNO_MASK)) == DPIDR_PARTNO_MASK) {
 		DEBUG_WARN("Invalid DP idcode %08" PRIx32 "\n", dp->idcode);
+		free(dp);
+		return;
+	}
+	if (dp->idcode == 0x10212927) {
+		rp_rescue_setup(dp);
 		free(dp);
 		return;
 	}

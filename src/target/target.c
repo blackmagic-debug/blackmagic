@@ -54,7 +54,6 @@ target *target_new(void)
 
 	t->attach = (void*)nop_function;
 	t->detach = (void*)nop_function;
-	t->check_error = (void*)nop_function;
 	t->mem_read = (void*)nop_function;
 	t->mem_write = (void*)nop_function;
 	t->reg_read = (void*)nop_function;
@@ -348,7 +347,13 @@ void target_detach(target *t)
 #endif
 }
 
-bool target_check_error(target *t) { return t->check_error(t); }
+bool target_check_error(target *t) {
+	if (t)
+		return t->check_error(t);
+	else
+		return false;
+}
+
 bool target_attached(target *t) { return t->attached; }
 
 /* Memory access functions */

@@ -88,7 +88,8 @@
 #define ADIV5_AP_BASE		ADIV5_AP_REG(0xF8)
 #define ADIV5_AP_IDR		ADIV5_AP_REG(0xFC)
 
-/* Known designers seen in SYSROM-PIDR. Ignore Bit 7 from the designer bits*/
+/* Known designers seen in SYSROM-PIDR. Ignore Bit 0 from
+ * the designer bits to get JEDEC Ids with bit 7 ignored.*/
 #define AP_DESIGNER_FREESCALE    0x00e
 #define AP_DESIGNER_TEXAS        0x017
 #define AP_DESIGNER_ATMEL        0x01f
@@ -102,6 +103,7 @@
 #define AP_DESIGNER_CS           0x555
 #define AP_DESIGNER_ENERGY_MICRO 0x673
 #define AP_DESIGNER_GIGADEVICE   0x751
+#define AP_DESIGNER_RASPBERRY    0x927
 
 /* AP Control and Status Word (CSW) */
 #define ADIV5_AP_CSW_DBGSWENABLE	(1u << 31)
