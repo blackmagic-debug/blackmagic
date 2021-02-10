@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2019 - 2020 Uwe Bonnes
+ * Copyright (C) 2019 - 2021 Uwe Bonnes
  *                            (bon@elektron.ikp.physik.tu-darmstadt.de)
  *
  * This program is free software: you can redistribute it and/or modify
@@ -168,7 +168,7 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 	opt->opt_flash_size = 16 * 1024 *1024;
 	opt->opt_flash_start = 0xffffffff;
 	opt->opt_max_swj_frequency = 4000000;
-	while((c = getopt(argc, argv, "eEhHv:d:f:s:I:c:CnltVtTa:S:jpP:rR")) != -1) {
+	while((c = getopt(argc, argv, "eEhHv:d:f:s:I:c:Cln:tVtTa:S:jpP:rR")) != -1) {
 		switch(c) {
 		case 'c':
 			if (optarg)
@@ -333,11 +333,11 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 		DEBUG_WARN("No target found\n");
 		return res;
 	} else {
-		target_foreach(display_target, NULL);
+		num_targets = target_foreach(display_target, &num_targets);
 	}
 	if (opt->opt_target_dev > num_targets) {
-		DEBUG_WARN("Given target nummer %d not available\n",
-				   opt->opt_target_dev);
+		DEBUG_WARN("Given target nummer %d not available max %d\n",
+				   opt->opt_target_dev, num_targets);
 		return res;
 	}
 	target *t = target_attach_n(opt->opt_target_dev, NULL);
