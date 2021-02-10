@@ -163,9 +163,6 @@ int adiv5_swdp_scan(uint32_t targetid)
 			if (initial_dp->dp_low_read(initial_dp, ADIV5_DP_IDCODE,
 										&idcode))
 				continue;
-			if (dp_targetid == 0xf1002927) /* Fixme: Handle RP2040 rescue port */
-				continue;
-			DEBUG_WARN("DP %2d IDCODE %08" PRIx32 " TID 0x%08" PRIx32 "\n", i, idcode, dp_targetid);
 		} else {
 			dp_targetid = 0;
 		}
