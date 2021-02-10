@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2020 Uwe Bonnes (bon@elektron.ikp.physik.tu-darmstadt.de)
+ * Copyright (C) 2020- 2021 Uwe Bonnes (bon@elektron.ikp.physik.tu-darmstadt.de)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -119,14 +119,16 @@ void platform_init(int argc, char **argv)
 	exit(ret);
 }
 
-int platform_adiv5_swdp_scan(void)
+int platform_adiv5_swdp_scan(uint32_t targetid)
 {
 	info.is_jtag = false;
 	platform_max_frequency_set(cl_opts.opt_max_swj_frequency);
+	if (targetid && (info.bmp_type != BMP_TYPE_BMP))
+		DEBUG_WARN("Ignoring TARGETID for now!\n");
 	switch (info.bmp_type) {
 	case BMP_TYPE_BMP:
 	case BMP_TYPE_LIBFTDI:
-		return adiv5_swdp_scan();
+		return adiv5_swdp_scan(targetid);
 		break;
 	case BMP_TYPE_STLINKV2:
 	{

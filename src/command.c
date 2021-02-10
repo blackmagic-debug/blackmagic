@@ -219,8 +219,9 @@ static bool cmd_jtag_scan(target *t, int argc, char **argv)
 bool cmd_swdp_scan(target *t, int argc, char **argv)
 {
 	(void)t;
-	(void)argc;
-	(void)argv;
+	volatile uint32_t targetid = 0;
+	if (argc > 1)
+		targetid  = strtol(argv[1], NULL, 0);
 	if (platform_target_voltage())
 		gdb_outf("Target voltage: %s\n", platform_target_voltage());
 
@@ -231,9 +232,9 @@ bool cmd_swdp_scan(target *t, int argc, char **argv)
 	volatile struct exception e;
 	TRY_CATCH (e, EXCEPTION_ALL) {
 #if PC_HOSTED == 1
-		devs = platform_adiv5_swdp_scan();
+		devs = platform_adiv5_swdp_scan(targetid);
 #else
-		devs = adiv5_swdp_scan();
+		devs = adiv5_swdp_scan(targetid);
 #endif
 		}
 	switch (e.type) {
