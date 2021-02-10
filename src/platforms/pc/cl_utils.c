@@ -165,6 +165,7 @@ static void cl_help(char **argv)
 	DEBUG_WARN("\t-p\t\t: Supplies power to the target (where applicable)\n");
 	DEBUG_WARN("\t-R\t\t: Reset device\n");
 	DEBUG_WARN("\t-H\t\t: Do not use high level commands (BMP-Remote)\n");
+	DEBUG_WARN("\t-m <target>\t: Use (target)id for SWD multi-drop.\n");
 	DEBUG_WARN("\t-M <string>\t: Run target specific monitor commands. Quote multi\n");
 	DEBUG_WARN("\t\t\t  word strings. Run \"-M help\" for help.\n");
 	DEBUG_WARN("Flash operation modifiers options:\n");
@@ -183,7 +184,7 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 	opt->opt_flash_size = 16 * 1024 *1024;
 	opt->opt_flash_start = 0xffffffff;
 	opt->opt_max_swj_frequency = 4000000;
-	while((c = getopt(argc, argv, "eEhHv:d:f:s:I:c:Cln:M:tVtTa:S:jpP:rR")) != -1) {
+	while((c = getopt(argc, argv, "eEhHv:d:f:s:I:c:Cln:m:M:tVtTa:S:jpP:rR")) != -1) {
 		switch(c) {
 		case 'c':
 			if (optarg)
@@ -270,6 +271,10 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 			if (optarg)
 				opt->opt_target_dev = strtol(optarg, NULL, 0);
 			break;
+		case 'm':
+			if (optarg)
+				opt->opt_targetid = strtol(optarg, NULL, 0);
+			break;
 		case 'M':
 			opt->opt_mode = BMP_MODE_MONITOR;
 			if (optarg)
@@ -347,7 +352,7 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 	if (opt->opt_usejtag) {
 		num_targets = platform_jtag_scan(NULL);
 	} else {
-		num_targets = platform_adiv5_swdp_scan();
+		num_targets = platform_adiv5_swdp_scan(opt->opt_targetid);
 	}
 	if (!num_targets) {
 		DEBUG_WARN("No target found\n");

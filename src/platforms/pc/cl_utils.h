@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2019 - 2020  Uwe Bonnes
+ * Copyright (C) 2019 - 2021  Uwe Bonnes
  * Written by Uwe Bonnes (bon@elektron.ikp.physik.tu-darmstadt.de)
  *
  * This program is free software: you can redistribute it and/or modify
@@ -49,6 +49,7 @@ typedef struct BMP_CL_OPTIONS_s {
 	char *opt_flash_file;
 	char *opt_device;
 	char *opt_serial;
+	uint32_t opt_targetid;
 	char *opt_ident_string;
 	int  opt_position;
 	char *opt_cable;

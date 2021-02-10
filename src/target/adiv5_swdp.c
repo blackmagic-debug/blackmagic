@@ -3,6 +3,7 @@
  *
  * Copyright (C) 2011  Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
+ * Copyright (C) 2020- 2021 Uwe Bonnes (bon@elektron.ikp.physik.tu-darmstadt.de)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,10 +34,10 @@
 #define SWDP_ACK_WAIT  0x02
 #define SWDP_ACK_FAULT 0x04
 
-int adiv5_swdp_scan(void)
+int adiv5_swdp_scan(uint32_t targetid)
 {
 	uint32_t ack;
-
+	(void) targetid;
 	target_list_free();
 #if PC_HOSTED == 1
 	if (platform_swdptap_init()) {
