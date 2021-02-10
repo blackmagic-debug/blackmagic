@@ -41,7 +41,7 @@ int platform_jtag_scan(const uint8_t *lrlens);
 int adiv5_swdp_scan(void);
 int jtag_scan(const uint8_t *lrlens);
 
-bool target_foreach(void (*cb)(int i, target *t, void *context), void *context);
+int target_foreach(void (*cb)(int i, target *t, void *context), void *context);
 void target_list_free(void);
 
 /* Attach/detach functions */

@@ -69,13 +69,13 @@ target *target_new(void)
 	return t;
 }
 
-bool target_foreach(void (*cb)(int, target *t, void *context), void *context)
+int target_foreach(void (*cb)(int, target *t, void *context), void *context)
 {
 	int i = 1;
 	target *t = target_list;
 	for (; t; t = t->next, i++)
 		cb(i, t, context);
-	return target_list != NULL;
+	return i;
 }
 
 void target_mem_map_free(target *t)
