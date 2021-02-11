@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2020 Uwe Bonnes (bon@elektron.ikp.physik.tu-darmstadt.de)
+ * Copyright(C) 2020 - 2021 Uwe Bonnes (bon@elektron.ikp.physik.tu-darmstadt.de)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -149,22 +149,9 @@ int find_debuggers(BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 		res = libusb_get_string_descriptor_ascii(
 			handle, desc.iManufacturer, (uint8_t*)manufacturer,
 			sizeof(manufacturer));
-		if (res > 0) {
-			res = libusb_get_string_descriptor_ascii(
-				handle, desc.iProduct, (uint8_t*)product,
-				sizeof(product));
-			if (res <= 0) {
-				DEBUG_WARN( "WARN:"
-						"libusb_get_string_descriptor_ascii "
-						"for ident_string failed: %s\n",
-						libusb_strerror(res));
-				libusb_close(handle);
-				continue;
-			}
-		} else {
-			libusb_close(handle);
-			continue;
-		}
+		res = libusb_get_string_descriptor_ascii(
+			handle, desc.iProduct, (uint8_t*)product,
+			sizeof(product));
 		libusb_close(handle);
 		if (cl_opts->opt_ident_string) {
 			char *match_manu = NULL;
