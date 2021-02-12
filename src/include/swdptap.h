@@ -20,11 +20,20 @@
 
 #ifndef __SWDPTAP_H
 #define __SWDPTAP_H
+#include "adiv5.h"
+
 typedef struct swd_proc_s {
 	uint32_t (*swdptap_seq_in)(int ticks);
 	bool (*swdptap_seq_in_parity)(uint32_t *data, int ticks);
 	void (*swdptap_seq_out)(uint32_t MS, int ticks);
 	void (*swdptap_seq_out_parity)(uint32_t MS, int ticks);
+# if PC_HOSTED == 1
+	uint32_t (*swdp_read)(ADIv5_DP_t *dp, uint16_t addr);
+	uint32_t (*swdp_error)(ADIv5_DP_t *dp);
+	uint32_t (*swdp_low_access)(ADIv5_DP_t *dp, uint8_t RnW,
+								uint16_t addr, uint32_t value);
+	void     (*swdp_abort)(ADIv5_DP_t *dp, uint32_t abort);
+#endif
 } swd_proc_t;
 extern swd_proc_t swd_proc;
 

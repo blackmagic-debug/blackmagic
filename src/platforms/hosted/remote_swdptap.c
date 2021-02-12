@@ -3,7 +3,7 @@
  *
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
  * Modified by Dave Marples <dave@marples.net>
- * Modification (C) 2020 Uwe Bonnes (bon@elektron.ikp.physik.tu-darmstadt.de)
+ * Modified 2020 - 2021 by Uwe Bonnes (bon@elektron.ikp.physik.tu-darmstadt.de)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -54,7 +54,10 @@ int remote_swdptap_init(swd_proc_t *swd_proc)
 	swd_proc->swdptap_seq_in_parity  = swdptap_seq_in_parity;
 	swd_proc->swdptap_seq_out = swdptap_seq_out;
 	swd_proc->swdptap_seq_out_parity  = swdptap_seq_out_parity;
-
+	swd_proc->swdp_read = firmware_swdp_read;
+	swd_proc->swdp_error = firmware_swdp_error;
+	swd_proc->swdp_low_access = firmware_swdp_low_access;
+	swd_proc->swdp_abort = firmware_swdp_abort;
   return 0;
 }
 

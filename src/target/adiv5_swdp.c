@@ -173,12 +173,19 @@ int adiv5_swdp_scan(uint32_t targetid)
 		}
 		dp->idcode = idcode;
 		dp->targetid = dp_targetid;
+#if HOSTED == 0
 		dp->dp_read = firmware_swdp_read;
 		dp->error = firmware_swdp_error;
 		dp->low_access = firmware_swdp_low_access;
 		dp->abort = firmware_swdp_abort;
-
 		firmware_swdp_error(dp);
+#else
+		dp->dp_read = swd_proc->swdp_read;
+		dp->error =  swd_proc->swdp_error;
+		dp->low_access =  swd_proc->swdp_low_access;
+		dp->abort =  swd_proc->swdp_abort;
+		swd_proc->swdp_error();
+#endif
 		adiv5_dp_init(dp);
 
 	}
