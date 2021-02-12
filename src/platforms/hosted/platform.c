@@ -144,18 +144,26 @@ int platform_adiv5_swdp_scan(uint32_t targetid)
 		break;
 	}
 	case BMP_TYPE_CMSIS_DAP:
-	{
-		target_list_free();
-		ADIv5_DP_t *dp = (void*)calloc(1, sizeof(*dp));
-		if (dap_enter_debug_swd(dp)) {
-			free(dp);
+		if (dap_swdptap_init(&swd_proc))
+			return 0;
+		if (swd_proc.swdptap_seq_in) {
+			dap_swd_configure(4); /* No abort for now*/
+			return adiv5_swdp_scan(targetid);
 		} else {
-			adiv5_dp_init(dp);
-			if (target_list)
-				return 1;
+			/* We need to ignore errors with TARGET_SEL.
+			 * Therefore we need DAP_SWD_Sequence obly available on >= V1.2
+			 */
+			target_list_free();
+			ADIv5_DP_t *dp = (void*)calloc(1, sizeof(*dp));
+			if (dap_enter_debug_swd(dp)) {
+				free(dp);
+			} else {
+				adiv5_dp_init(dp);
+				if (target_list)
+					return 1;
+			}
 		}
 		break;
-	}
 	case BMP_TYPE_JLINK:
 		return jlink_swdp_scan(&info);
 	default:
@@ -169,8 +177,9 @@ int platform_swdptap_init(void)
 	switch (info.bmp_type) {
 	case BMP_TYPE_BMP:
 		return remote_swdptap_init(&swd_proc);
-	case BMP_TYPE_STLINKV2:
 	case BMP_TYPE_CMSIS_DAP:
+//		return dap_swdptap_init(&swd_proc);
+	case BMP_TYPE_STLINKV2:
 	case BMP_TYPE_JLINK:
 		return 0;
 	case BMP_TYPE_LIBFTDI:

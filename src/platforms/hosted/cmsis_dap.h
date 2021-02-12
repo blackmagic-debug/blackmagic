@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2019 Uwe Bonnes
+ * Copyright (C) 2019 - 2021 Uwe Bonnes(bon@elektron.ikp.physik.tu-darmstadt.de)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,8 +28,10 @@ int dap_enter_debug_swd(ADIv5_DP_t *dp);
 void dap_exit_function(void);
 void dap_adiv5_dp_defaults(ADIv5_DP_t *dp);
 int cmsis_dap_jtagtap_init(jtag_proc_t *jtag_proc);
+int dap_swdptap_init(swd_proc_t *swd_proc);
 int dap_jtag_dp_init(ADIv5_DP_t *dp);
 uint32_t dap_swj_clock(uint32_t clock);
+void dap_swd_configure(uint8_t cfg);
 #else
 int dap_init(bmp_info_t *info)
 {
@@ -44,8 +46,10 @@ uint32_t dap_swj_clock(uint32_t clock) {return 0;}
 void dap_exit_function(void) {};
 void dap_adiv5_dp_defaults(ADIv5_DP_t *dp) {};
 int cmsis_dap_jtagtap_init(jtag_proc_t *jtag_proc) {return -1;}
+int dap_swdptap_init(swd_proc_t *swd_proc) {return -1;}
 int dap_jtag_dp_init(ADIv5_DP_t *dp) {return -1;}
-# pragma GCC diagnostic pop
+void dap_swd_configure(uint8_t cfg) {};
+## pragma GCC diagnostic pop
 
 #endif
 
