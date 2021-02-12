@@ -27,7 +27,7 @@
  */
 
 /* Modified for Blackmagic Probe
- * Copyright (c) 2020 Uwe Bonnes bon@elektron.ikp.physik.tu-darmstadt.de
+ * Copyright (c) 2020-21 Uwe Bonnes bon@elektron.ikp.physik.tu-darmstadt.de
  */
 
 /*- Includes ----------------------------------------------------------------*/
@@ -57,6 +57,7 @@ enum
 	ID_DAP_JTAG_SEQUENCE      = 0x14,
 	ID_DAP_JTAG_CONFIGURE     = 0x15,
 	ID_DAP_JTAG_IDCODE        = 0x16,
+	ID_DAP_SWD_SEQUENCE       = 0x1D,
 };
 
 enum
@@ -749,4 +750,75 @@ int dap_jtag_configure(void)
 	if (buf[0] != DAP_OK)
 		DEBUG_WARN("dap_jtag_configure Failed %02x\n", buf[0]);
 	return 0;
+}
+
+void dap_swdptap_seq_out(uint32_t MS, int ticks)
+{
+	uint8_t buf[] = {
+		ID_DAP_SWJ_SEQUENCE,
+		ticks,
+		(MS >>  0) & 0xff,
+		(MS >>  8) & 0xff,
+		(MS >> 16) & 0xff,
+		(MS >> 24) & 0xff
+	};
+	dbg_dap_cmd(buf, 1, sizeof(buf));
+	if (buf[0])
+		DEBUG_WARN("dap_swdptap_seq_out error\n");
+}
+
+void dap_swdptap_seq_out_parity(uint32_t MS, int ticks)
+{
+	uint8_t buf[] = {
+		ID_DAP_SWJ_SEQUENCE,
+		ticks + 1,
+		(MS >>  0) & 0xff,
+		(MS >>  8) & 0xff,
+		(MS >> 16) & 0xff,
+		(MS >> 24) & 0xff,
+		__builtin_parity(MS) & 1
+	};
+	dbg_dap_cmd(buf, 1, sizeof(buf));
+	if (buf[0])
+		DEBUG_WARN("dap_swdptap_seq_out error\n");
+}
+
+#define SWD_SEQUENCE_IN 0x80
+uint32_t dap_swdptap_seq_in(int ticks)
+{
+	uint8_t buf[5] = {
+		ID_DAP_SWD_SEQUENCE,
+		1,
+		ticks + SWD_SEQUENCE_IN
+	};
+	dbg_dap_cmd(buf, 2 + ((ticks + 7) >> 3), 3);
+	uint32_t res = 0;
+	int len = (ticks + 7) >> 3;
+	while (len--) {
+		res <<= 8;
+		res += buf[len + 1];
+	}
+	return res;
+}
+
+bool dap_swdptap_seq_in_parity(uint32_t *ret, int ticks)
+{
+	(void)ticks;
+	uint8_t buf[8] = {
+		ID_DAP_SWD_SEQUENCE,
+		1,
+		33 + SWD_SEQUENCE_IN,
+	};
+	dbg_dap_cmd(buf, 7, 4);
+	uint32_t res = 0;
+	int len = 4;
+	while (len--) {
+		res <<= 8;
+		res += buf[len + 1];
+	}
+	*ret = res;
+	unsigned int parity = __builtin_parity(res) & 1;
+	parity ^= (buf[5] % 1);
+	DEBUG_WARN("Res %08" PRIx32" %d\n", *ret, parity & 1);
+	return (!parity & 1);
 }

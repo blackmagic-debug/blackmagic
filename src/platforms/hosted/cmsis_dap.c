@@ -35,6 +35,7 @@
 #include <wchar.h>
 
 #include "bmp_hosted.h"
+#include "swdptap.h"
 #include "dap.h"
 #include "cmsis_dap.h"
 
@@ -79,12 +80,12 @@ int dap_init(bmp_info_t *info)
 		if (sscanf((const char *)hid_buffer, "%d.%d.%d",
 				   &major, &minor, &sub)) {
 			if (sub == -1) {
-				if (minor > 10) {
+				if (minor >= 10) {
 					minor /= 10;
 					sub = 0;
 				}
 			}
-			has_swd_sequence = ((major > 0 ) && (minor > 1));
+			has_swd_sequence = ((major > 1 ) || ((major > 0 ) && (minor > 1)));
 		}
 	}
 	size = dap_info(DAP_INFO_CAPABILITIES, hid_buffer, sizeof(hid_buffer));
@@ -176,7 +177,7 @@ int dbg_dap_cmd(uint8_t *data, int size, int rsize)
 	memcpy(&hid_buffer[1], data, rsize);
 
 	DEBUG_WIRE("cmd :   ");
-	for(int i = 0; (i < 16) && (i < rsize + 1); i++)
+	for(int i = 1; (i < 16) && (i < rsize + 1); i++)
 		DEBUG_WIRE("%02x.",	hid_buffer[i]);
 	DEBUG_WIRE("\n");
 	res = hid_write(handle, hid_buffer, rsize + 1);
@@ -184,24 +185,21 @@ int dbg_dap_cmd(uint8_t *data, int size, int rsize)
 		DEBUG_WARN( "Error: %ls\n", hid_error(handle));
 		exit(-1);
 	}
-	if (size) {
-		res = hid_read(handle, hid_buffer, report_size + 1);
-		if (res < 0) {
-			DEBUG_WARN( "debugger read(): %ls\n", hid_error(handle));
-			exit(-1);
-		}
-		if (size && hid_buffer[0] != cmd) {
-			DEBUG_WARN("cmd %02x invalid response received %02x\n",
-				   cmd, hid_buffer[0]);
-		}
-		res--;
-		memcpy(data, &hid_buffer[1], (size < res) ? size : res);
-		DEBUG_WIRE("cmd res:");
-		for(int i = 0; (i < 16) && (i < size + 4); i++)
-			DEBUG_WIRE("%02x.",	hid_buffer[i]);
-		DEBUG_WIRE("\n");
+	res = hid_read(handle, hid_buffer, report_size + 1);
+	if (res < 0) {
+		DEBUG_WARN( "debugger read(): %ls\n", hid_error(handle));
+		exit(-1);
 	}
-
+	if (hid_buffer[0] != cmd) {
+		DEBUG_WARN("cmd %02x invalid response received %02x\n",
+				   cmd, hid_buffer[0]);
+	}
+	DEBUG_WIRE("cmd res:");
+	for(int i = 0; (i < 16) && (i < size + 1); i++)
+		DEBUG_WIRE("%02x.",	hid_buffer[i]);
+	DEBUG_WIRE("\n");
+	if (size)
+		memcpy(data, &hid_buffer[1], (size < res) ? size : res);
 	return res;
 }
 #define ALIGNOF(x) (((x) & 3) == 0 ? ALIGN_WORD :					\
@@ -283,16 +281,6 @@ static void dap_mem_write_sized(
 
 int dap_enter_debug_swd(ADIv5_DP_t *dp)
 {
-	target_list_free();
-	if (!(dap_caps & DAP_CAP_SWD))
-		return -1;
-	mode =  DAP_CAP_SWD;
-	dap_transfer_configure(2, 128, 128);
-	dap_swd_configure(0);
-	dap_connect(false);
-	dap_led(0, 1);
-	dap_reset_link(false);
-
 	dp->idcode = dap_read_idcode(dp);
 	dp->dp_read = dap_dp_read_reg;
 	dp->error = dap_dp_error;
@@ -355,12 +343,12 @@ int cmsis_dap_jtagtap_init(jtag_proc_t *jtag_proc)
 	mode =  DAP_CAP_JTAG;
 	dap_disconnect();
 	dap_connect(true);
+	dap_reset_link(true);
 	jtag_proc->jtagtap_reset       = cmsis_dap_jtagtap_reset;
 	jtag_proc->jtagtap_next        = cmsis_dap_jtagtap_next;
 	jtag_proc->jtagtap_tms_seq     = cmsis_dap_jtagtap_tms_seq;
 	jtag_proc->jtagtap_tdi_tdo_seq = cmsis_dap_jtagtap_tdi_tdo_seq;
 	jtag_proc->jtagtap_tdi_seq     = cmsis_dap_jtagtap_tdi_seq;
-	dap_reset_link(true);
 	return 0;
 }
 
@@ -372,4 +360,27 @@ int dap_jtag_dp_init(ADIv5_DP_t *dp)
 	dp->abort = dap_dp_abort;
 
 	return true;
+}
+
+int dap_swdptap_init(swd_proc_t *swd_proc)
+{
+	if (!(dap_caps & DAP_CAP_SWD))
+		return 1;
+	mode =  DAP_CAP_SWD;
+	dap_transfer_configure(2, 128, 128);
+	dap_swd_configure(0);
+	dap_connect(false);
+	dap_led(0, 1);
+	dap_reset_link(false);
+	if (has_swd_sequence) {
+		swd_proc->swdptap_seq_in = dap_swdptap_seq_in;
+		swd_proc->swdptap_seq_in_parity = dap_swdptap_seq_in_parity;
+		swd_proc->swdptap_seq_out = dap_swdptap_seq_out;
+		swd_proc->swdptap_seq_out_parity = dap_swdptap_seq_out_parity;
+		swd_proc->swdp_read = dap_dp_read_reg;
+		swd_proc->swdp_error = dap_dp_error;
+		swd_proc->swdp_low_access = dap_dp_low_access;
+		swd_proc->swdp_abort = dap_dp_abort;
+	}
+	return 0;
 }
