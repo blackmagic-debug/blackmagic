@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2019-20 Uwe Bonnes <bon@elektron,ikp.physik.tu-darmstadt.de>
+ * Copyright (C) 2019-2021 Uwe Bonnes <bon@elektron.ikp.physik.tu-darmstadt.de>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -49,10 +49,11 @@ uint8_t mode;
 static hid_device *handle = NULL;
 static uint8_t hid_buffer[1024 + 1];
 static int report_size = 64 + 1; // TODO: read actual report size
+static bool has_swd_sequence = false;
+
 /* LPC845 Breakout Board Rev. 0 report invalid response with > 65 bytes */
 int dap_init(bmp_info_t *info)
 {
-	DEBUG_INFO("dap_init\n");
 	if (hid_init())
 		return -1;
 	int size = strlen(info->serial);
@@ -71,17 +72,32 @@ int dap_init(bmp_info_t *info)
 	if (!handle)
 		return -1;
 	dap_disconnect();
+	size = dap_info(DAP_INFO_FW_VER, hid_buffer, sizeof(hid_buffer));
+	if (size) {
+		DEBUG_INFO("Ver %s, ", hid_buffer);
+		int major = -1, minor = -1, sub = -1;
+		if (sscanf((const char *)hid_buffer, "%d.%d.%d",
+				   &major, &minor, &sub)) {
+			if (sub == -1) {
+				if (minor > 10) {
+					minor /= 10;
+					sub = 0;
+				}
+			}
+			has_swd_sequence = ((major > 0 ) && (minor > 1));
+		}
+	}
 	size = dap_info(DAP_INFO_CAPABILITIES, hid_buffer, sizeof(hid_buffer));
 	dap_caps = hid_buffer[0];
-	DEBUG_INFO(" Cap (0x%2x): %s%s%s", hid_buffer[0],
-		   (hid_buffer[0] & 1)? "SWD" : "",
-		   ((hid_buffer[0] & 3) == 3) ? "/" : "",
-		   (hid_buffer[0] & 2)? "JTAG" : "");
-	if (hid_buffer[0] & 4)
+	DEBUG_INFO("Cap (0x%2x): %s%s%s", dap_caps,
+		   (dap_caps & 1)? "SWD" : "",
+		   ((dap_caps & 3) == 3) ? "/" : "",
+		   (dap_caps & 2)? "JTAG" : "");
+	if (dap_caps & 4)
 		DEBUG_INFO(", SWO_UART");
-	if (hid_buffer[0] & 8)
+	if (dap_caps & 8)
 		DEBUG_INFO(", SWO_MANCHESTER");
-	if (hid_buffer[0] & 0x10)
+	if (dap_caps & 0x10)
 		DEBUG_INFO(", Atomic Cmds");
 	DEBUG_INFO("\n");
 	return 0;
