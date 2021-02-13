@@ -198,7 +198,7 @@ void dap_connect(bool jtag)
 //-----------------------------------------------------------------------------
 void dap_disconnect(void)
 {
-	uint8_t buf[1];
+	uint8_t buf[65];
 
 	buf[0] = ID_DAP_DISCONNECT;
 	dbg_dap_cmd(buf, sizeof(buf), 1);
@@ -213,7 +213,7 @@ uint32_t dap_swj_clock(uint32_t clock)
 {
 	if (clock == 0)
 		return swj_clock;
-	uint8_t buf[5];
+	uint8_t buf[65];
 	buf[0] = ID_DAP_SWJ_CLOCK;
 	buf[1] = clock & 0xff;
 	buf[2] = (clock >> 8) & 0xff;
@@ -254,7 +254,7 @@ void dap_swd_configure(uint8_t cfg)
 //-----------------------------------------------------------------------------
 int dap_info(int info, uint8_t *data, int size)
 {
-	uint8_t buf[256];
+	uint8_t buf[32];
 	int rsize;
 
 	buf[0] = ID_DAP_INFO;
@@ -786,7 +786,7 @@ void dap_swdptap_seq_out_parity(uint32_t MS, int ticks)
 #define SWD_SEQUENCE_IN 0x80
 uint32_t dap_swdptap_seq_in(int ticks)
 {
-	uint8_t buf[5] = {
+	uint8_t buf[16] = {
 		ID_DAP_SWD_SEQUENCE,
 		1,
 		ticks + SWD_SEQUENCE_IN
@@ -804,10 +804,11 @@ uint32_t dap_swdptap_seq_in(int ticks)
 bool dap_swdptap_seq_in_parity(uint32_t *ret, int ticks)
 {
 	(void)ticks;
-	uint8_t buf[8] = {
+	uint8_t buf[16] = {
 		ID_DAP_SWD_SEQUENCE,
-		1,
-		33 + SWD_SEQUENCE_IN,
+		2,
+		32 + SWD_SEQUENCE_IN,
+		1 + SWD_SEQUENCE_IN,
 	};
 	dbg_dap_cmd(buf, 7, 4);
 	uint32_t res = 0;
