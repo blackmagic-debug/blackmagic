@@ -67,7 +67,7 @@ int dap_init(bmp_info_t *info)
 	 */
 	if ((info->vid == 0x1fc9) && (info->pid == 0x0132)) {
 		DEBUG_WARN("Blacklist\n");
-		report_size = 64 + 1;
+		report_size = 64;
 	}
 	handle = hid_open(info->vid, info->pid,  (serial[0]) ? serial : NULL);
 	if (!handle)
@@ -100,6 +100,11 @@ int dap_init(bmp_info_t *info)
 		DEBUG_INFO(", SWO_MANCHESTER");
 	if (dap_caps & 0x10)
 		DEBUG_INFO(", Atomic Cmds");
+	size = dap_info(DAP_INFO_PACKET_SIZE, hid_buffer, sizeof(hid_buffer));
+	if (size) {
+		report_size = hid_buffer[0];
+		DEBUG_INFO(", Reportsize %d", hid_buffer[0]);
+	}
 	DEBUG_INFO("\n");
 	return 0;
 }
@@ -171,16 +176,17 @@ int dbg_dap_cmd(uint8_t *data, int size, int rsize)
 	char cmd = data[0];
 	int res;
 
-	memset(hid_buffer, 0xff, report_size + 1);
+	memset(hid_buffer, 0, report_size + 1);
 
-	hid_buffer[0] = 0x00; // Report ID??
 	memcpy(&hid_buffer[1], data, rsize);
 
 	DEBUG_WIRE("cmd :   ");
-	for(int i = 1; (i < 16) && (i < rsize + 1); i++)
+	for(int i = 0; (i < 16) && (i < rsize + 1); i++)
 		DEBUG_WIRE("%02x.",	hid_buffer[i]);
 	DEBUG_WIRE("\n");
-	res = hid_write(handle, hid_buffer, rsize + 1);
+	/* Write must be as long as we expect the result, at least
+	 * for Dappermime 20210213 */
+	res = hid_write(handle, hid_buffer, report_size + 1);
 	if (res < 0) {
 		DEBUG_WARN( "Error: %ls\n", hid_error(handle));
 		exit(-1);
@@ -190,14 +196,14 @@ int dbg_dap_cmd(uint8_t *data, int size, int rsize)
 		DEBUG_WARN( "debugger read(): %ls\n", hid_error(handle));
 		exit(-1);
 	}
+	DEBUG_WIRE("res %2d: ", res);
+	for(int i = 0; (i < 16) && (i < res + 1); i++)
+		DEBUG_WIRE("%02x.",	hid_buffer[i]);
+	DEBUG_WIRE("\n");
 	if (hid_buffer[0] != cmd) {
 		DEBUG_WARN("cmd %02x invalid response received %02x\n",
 				   cmd, hid_buffer[0]);
 	}
-	DEBUG_WIRE("cmd res:");
-	for(int i = 0; (i < 16) && (i < size + 1); i++)
-		DEBUG_WIRE("%02x.",	hid_buffer[i]);
-	DEBUG_WIRE("\n");
 	if (size)
 		memcpy(data, &hid_buffer[1], (size < res) ? size : res);
 	return res;
