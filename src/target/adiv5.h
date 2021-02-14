@@ -155,6 +155,15 @@ typedef struct ADIv5_DP_s {
 	uint32_t idcode;
 	uint32_t targetid;  /* Contains IDCODE for DPv2 devices.*/
 
+	void (*seq_out)(uint32_t MS, int ticks);
+	void (*seq_out_parity)(uint32_t MS, int ticks);
+	uint32_t (*seq_in)(int ticks);
+	bool (*seq_in_parity)(uint32_t *ret, int ticks);
+	/* dp_low_write returns true if no OK resonse. */
+	bool (*dp_low_write)(struct ADIv5_DP_s *dp, uint16_t addr,
+						 const uint32_t data);
+	/* dp_low_read returns true with parity error */
+	bool (*dp_low_read)(struct ADIv5_DP_s *dp, uint16_t addr, uint32_t *data);
 	uint32_t (*dp_read)(struct ADIv5_DP_s *dp, uint16_t addr);
 	uint32_t (*error)(struct ADIv5_DP_s *dp);
 	uint32_t (*low_access)(struct ADIv5_DP_s *dp, uint8_t RnW,
