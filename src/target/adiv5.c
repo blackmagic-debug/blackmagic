@@ -628,6 +628,7 @@ static void rp_rescue_setup(ADIv5_DP_t *dp)
 		DEBUG_WARN("malloc: failed in %s\n", __func__);
 		return;
 	}
+	memset(ap, 0, sizeof(ADIv5_AP_t));
 	ap->dp = dp;
 	extern void rp_rescue_probe(ADIv5_AP_t *);
 	rp_rescue_probe(ap);
@@ -646,7 +647,6 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 	}
 	if (dp->idcode == 0x10212927) {
 		rp_rescue_setup(dp);
-		free(dp);
 		return;
 	}
 	DEBUG_INFO("DPIDR 0x%08" PRIx32 " (v%d %srev%d)\n", dp->idcode,

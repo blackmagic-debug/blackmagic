@@ -92,6 +92,4 @@ void dap_jtagtap_tdi_tdo_seq(uint8_t *DO, bool final_tms, const uint8_t *TMS,
 int dap_jtag_configure(void);
 void dap_swdptap_seq_out(uint32_t MS, int ticks);
 void dap_swdptap_seq_out_parity(uint32_t MS, int ticks);
-uint32_t dap_swdptap_seq_in(int ticks);
-bool dap_swdptap_seq_in_parity(uint32_t *ret, int ticks);
 #endif // _DAP_H_

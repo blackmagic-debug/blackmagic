@@ -116,6 +116,7 @@ static void dap_dp_abort(ADIv5_DP_t *dp, uint32_t abort)
 
 static uint32_t dap_dp_error(ADIv5_DP_t *dp)
 {
+	/* Not used for SWD debugging, so no TARGETID switch needed!*/
 	uint32_t ctrlstat = dap_read_reg(dp, ADIV5_DP_CTRLSTAT);
 	uint32_t err = ctrlstat &
 		(ADIV5_DP_CTRLSTAT_STICKYORUN | ADIV5_DP_CTRLSTAT_STICKYCMP |
@@ -180,7 +181,7 @@ int dbg_dap_cmd(uint8_t *data, int size, int rsize)
 	memcpy(&hid_buffer[1], data, rsize);
 
 	DEBUG_WIRE("cmd :   ");
-	for(int i = 0; (i < 16) && (i < rsize + 1); i++)
+	for(int i = 0; (i < 32) && (i < rsize + 1); i++)
 		DEBUG_WIRE("%02x.",	hid_buffer[i]);
 	DEBUG_WIRE("\n");
 	/* Write must be as long as we expect the result, at least
@@ -284,16 +285,6 @@ static void dap_mem_write_sized(
 	DEBUG_WIRE("memwrite done\n");
 }
 
-int dap_enter_debug_swd(ADIv5_DP_t *dp)
-{
-	dp->idcode = dap_read_idcode(dp);
-	dp->dp_read = dap_dp_read_reg;
-	dp->error = dap_dp_error;
-	dp->low_access =  dap_dp_low_access;
-	dp->abort = dap_dp_abort; /* DP Write to Reg 0.*/
-	return 0;
-}
-
 void dap_adiv5_dp_defaults(ADIv5_DP_t *dp)
 {
 	if ((mode == DAP_CAP_JTAG) && dap_jtag_configure())
@@ -367,6 +358,66 @@ int dap_jtag_dp_init(ADIv5_DP_t *dp)
 	return true;
 }
 
+#define SWD_SEQUENCE_IN 0x80
+#define DAP_SWD_SEQUENCE 0x1d
+/* DAP_SWD_SEQUENCE does not do auto turnaround*/
+static bool dap_dp_low_read(ADIv5_DP_t *dp, uint16_t addr, uint32_t *res)
+{
+	(void)dp;
+	unsigned int paket_request = make_packet_request(ADIV5_LOW_READ, addr);
+	uint8_t buf[32] = {
+		DAP_SWD_SEQUENCE,
+		5,
+		8,
+		paket_request,
+		4 + SWD_SEQUENCE_IN,  /* one turn-around + read 3 bit ACK */
+		32 + SWD_SEQUENCE_IN, /* read 32 bit data */
+		1 + SWD_SEQUENCE_IN,  /* read parity bit */
+		1,                    /* one bit turn around to drive SWDIO */
+		0
+	};
+	dbg_dap_cmd(buf, sizeof(buf), 9);
+	if (buf[0])
+		DEBUG_WARN("dap_dp_low_read failed\n");
+	uint32_t ack = (buf[1] >> 1) & 7;
+	uint32_t data = (buf[2] << 0) + (buf[3] << 8) + (buf[4] << 16)
+		+ (buf[5] << 24);
+	int parity = __builtin_parity(data);
+	bool ret = ((parity != buf[6]) || (ack != 1));
+	*res = data;
+	DEBUG_PROBE("dap_dp_low_read ack %d, res %08" PRIx32 ", parity %s\n", ack,
+			   data, (ret)? "ERR": "OK");
+	return ret;
+}
+
+static bool dap_dp_low_write(ADIv5_DP_t *dp, uint16_t addr, const uint32_t data)
+{
+	DEBUG_PROBE("dap_dp_low_write %08" PRIx32 "\n", data);
+	(void)dp;
+	unsigned int paket_request = make_packet_request(ADIV5_LOW_WRITE, addr);
+	uint8_t buf[32] = {
+		DAP_SWD_SEQUENCE,
+		5,
+		8,
+		paket_request,
+		4 + SWD_SEQUENCE_IN,  /* one turn-around + read 3 bit ACK */
+		1,                    /* one bit turn around to drive SWDIO */
+		0,
+		32,                   /* write 32 bit data */
+		(data >>  0) & 0xff,
+		(data >>  8) & 0xff,
+		(data >> 16) & 0xff,
+		(data >> 24) & 0xff,
+		1,                    /* write parity biT */
+		__builtin_parity(data)
+	};
+	dbg_dap_cmd(buf, sizeof(buf), 14);
+	if (buf[0])
+		DEBUG_WARN("dap_dp_low_write failed\n");
+	uint32_t ack = (buf[1] >> 1) & 7;
+	return (ack != SWDP_ACK_OK);
+}
+
 int dap_swdptap_init(ADIv5_DP_t *dp)
 {
 	if (!(dap_caps & DAP_CAP_SWD))
@@ -378,14 +429,15 @@ int dap_swdptap_init(ADIv5_DP_t *dp)
 	dap_led(0, 1);
 	dap_reset_link(false);
 	if (has_swd_sequence) {
-		dp->seq_in = dap_swdptap_seq_in;
-		dp->seq_in_parity = dap_swdptap_seq_in_parity;
-		dp->seq_out = dap_swdptap_seq_out;
-		dp->seq_out_parity = dap_swdptap_seq_out_parity;
-		dp->dp_read = dap_dp_read_reg;
-		dp->error = dap_dp_error;
-		dp->low_access = dap_dp_low_access;
-		dp->abort = dap_dp_abort;
+		/* DAP_SWD_SEQUENCE does not do auto turnaround, use own!*/
+		dp->dp_low_read = dap_dp_low_read;
+		dp->dp_low_write = dap_dp_low_write;
 	}
+	dp->seq_out = dap_swdptap_seq_out;
+	dp->seq_out_parity = dap_swdptap_seq_out_parity;
+	dp->dp_read = dap_dp_read_reg;
+	/* For error() use the TARGETID switching firmware_swdp_error */
+	dp->low_access = dap_dp_low_access;
+	dp->abort = dap_dp_abort;
 	return 0;
 }

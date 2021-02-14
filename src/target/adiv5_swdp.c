@@ -146,6 +146,9 @@ int adiv5_swdp_scan(uint32_t targetid)
 				adiv5_dp_write(initial_dp, ADIV5_DP_CTRLSTAT, 0);
 				break;
 			}
+			if (!initial_dp->dp_low_read)
+				/* E.g. CMSIS_DAP < V1.2 can not handle multu-drop!*/
+				is_v2 = false;
 		} else {
 			is_v2 = false;
 		}
@@ -161,8 +164,9 @@ int adiv5_swdp_scan(uint32_t targetid)
 			initial_dp->dp_low_write(initial_dp, ADIV5_DP_TARGETSEL,
 									dp_targetid);
 			if (initial_dp->dp_low_read(initial_dp, ADIV5_DP_IDCODE,
-										&idcode))
+										&idcode)) {
 				continue;
+			}
 		} else {
 			dp_targetid = 0;
 		}
