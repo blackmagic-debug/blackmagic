@@ -21,8 +21,8 @@
 /* This file implements the SW-DP interface. */
 
 #include "general.h"
-#include "swdptap.h"
 #include "timing.h"
+#include "adiv5.h"
 
 enum {
 	SWDIO_STATUS_FLOAT = 0,
@@ -204,14 +204,12 @@ static void swdptap_seq_out_parity(uint32_t MS, int ticks)
 	for(cnt = swd_delay_cnt; --cnt > 0;);
 }
 
-swd_proc_t swd_proc;
-
-int swdptap_init(void)
+int swdptap_init(ADIv5_DP_t *dp)
 {
-	swd_proc.swdptap_seq_in  = swdptap_seq_in;
-	swd_proc.swdptap_seq_in_parity  = swdptap_seq_in_parity;
-	swd_proc.swdptap_seq_out = swdptap_seq_out;
-	swd_proc.swdptap_seq_out_parity  = swdptap_seq_out_parity;
+	dp->seq_in  = swdptap_seq_in;
+	dp->seq_in_parity  = swdptap_seq_in_parity;
+	dp->seq_out = swdptap_seq_out;
+	dp->seq_out_parity  = swdptap_seq_out_parity;
 
 	return 0;
 }

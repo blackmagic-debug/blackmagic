@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2011  Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
- * Copyright (C) 2019 - 2020 Uwe Bonnes
+ * Copyright (C) 2019 - 2021 Uwe Bonnes
  *                           (bon@elektron.ikp.physik.tu-darmstadt.de)
  *
  * This program is free software: you can redistribute it and/or modify
@@ -103,7 +103,7 @@ static int line_reset(bmp_info_t *info)
         return 0;
 }
 
-static int swdptap_init(bmp_info_t *info)
+static int jlink_swdptap_init(bmp_info_t *info)
 {
 	uint8_t cmd[2] = {CMD_GET_SELECT_IF, JLINK_IF_GET_AVAILABLE};
 	uint8_t res[4];
@@ -119,7 +119,7 @@ static int swdptap_init(bmp_info_t *info)
 
 int jlink_swdp_scan(bmp_info_t *info)
 {
-	swdptap_init(info);
+	jlink_swdptap_init(info);
 	target_list_free();
 	uint8_t cmd[44];
 	cmd[0]  = CMD_HW_JTAG3;
