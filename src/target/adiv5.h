@@ -139,6 +139,10 @@
 #define ADIV5_LOW_WRITE		0
 #define ADIV5_LOW_READ		1
 
+#define SWDP_ACK_OK    0x01
+#define SWDP_ACK_WAIT  0x02
+#define SWDP_ACK_FAULT 0x04
+
 enum align {
 	ALIGN_BYTE     = 0,
 	ALIGN_HALFWORD = 1,
@@ -205,6 +209,8 @@ struct ADIv5_AP_s {
 	uint16_t ap_designer;
 	uint16_t ap_partno;
 };
+
+unsigned int make_packet_request(uint8_t RnW, uint16_t addr);
 
 #if PC_HOSTED == 0
 static inline uint32_t adiv5_dp_read(ADIv5_DP_t *dp, uint16_t addr)
@@ -280,6 +286,7 @@ void platform_add_jtag_dev(const int dev_index, const jtag_dev_t *jtag_dev);
 
 void adiv5_jtag_dp_handler(uint8_t jd_index, uint32_t j_idcode);
 int platform_jtag_dp_init(ADIv5_DP_t *dp);
+int swdptap_init(ADIv5_DP_t *dp);
 
 void adiv5_mem_write(ADIv5_AP_t *ap, uint32_t dest, const void *src, size_t len);
 uint64_t adiv5_ap_read_pidr(ADIv5_AP_t *ap, uint32_t addr);

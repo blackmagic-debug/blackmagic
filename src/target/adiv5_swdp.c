@@ -26,15 +26,10 @@
 #include "general.h"
 #include "exception.h"
 #include "adiv5.h"
-#include "swdptap.h"
 #include "target.h"
 #include "target_internal.h"
 
-#define SWDP_ACK_OK    0x01
-#define SWDP_ACK_WAIT  0x02
-#define SWDP_ACK_FAULT 0x04
-
-static unsigned int make_packet_request(uint8_t  RnW, uint16_t addr)
+unsigned int make_packet_request(uint8_t RnW, uint16_t addr)
 {
 	bool APnDP = addr & ADIV5_APnDP;
 	addr &= 0xff;
@@ -62,8 +57,7 @@ bool firmware_dp_low_write(ADIv5_DP_t *dp, uint16_t addr, const uint32_t data)
 	unsigned int request =  make_packet_request(ADIV5_LOW_WRITE, addr & 0xf);
 	dp->seq_out(request, 8);
 	int res = dp->seq_in(3);
-	dp->seq_out(data, 32);
-	dp->seq_out(__builtin_parity(data), 1);
+	dp->seq_out_parity(data, 32);
 	return (res != 1);
 }
 
@@ -72,9 +66,7 @@ static bool firmware_dp_low_read(ADIv5_DP_t *dp, uint16_t addr, uint32_t *res)
 	unsigned int request =  make_packet_request(ADIV5_LOW_READ, addr & 0xf);
 	dp->seq_out(request, 8);
 	dp->seq_in(3);
-    *res = dp->seq_in(32);
-	int paritybit = dp->seq_in(1);
-	return (__builtin_parity(*res) != paritybit);
+    return dp->seq_in_parity(res, 32);
 }
 
 /* Try first the dormant to SWD procedure.
@@ -86,36 +78,21 @@ int adiv5_swdp_scan(uint32_t targetid)
 	target_list_free();
 	ADIv5_DP_t idp, *initial_dp = &idp;
 	memset(initial_dp, 0, sizeof(ADIv5_DP_t));
-#if PC_HOSTED == 1
-	if (platform_swdptap_init()) {
-		exit(-1);
-	}
-#else
-	if (swdptap_init()) {
+	if (swdptap_init(initial_dp))
 		return -1;
-	}
-#endif
-
-#if HOSTED == 0
-	initial_dp->seq_out= swd_proc.swdptap_seq_out;
-	initial_dp->seq_in= swd_proc.swdptap_seq_in;
-	initial_dp->dp_low_write = firmware_dp_low_write;
-	initial_dp->dp_low_read = firmware_dp_low_read;
-	initial_dp->dp_read = firmware_swdp_read;
-	initial_dp->error = firmware_swdp_error;
-	initial_dp->low_access = firmware_swdp_low_access;
-	initial_dp->abort = firmware_swdp_abort;
-#else
-	initial_dp->seq_out= swd_proc.swdptap_seq_out;
-	initial_dp->seq_in= swd_proc.swdptap_seq_in;
-	initial_dp->dp_low_write = firmware_dp_low_write;
-	initial_dp->dp_low_write = firmware_dp_low_read;
-	initial_dp->dp_read = firmware_swdp_read;
-	initial_dp->dp_read = swd_proc->swdp_read;
-	initial_dp->error =  swd_proc->swdp_error;
-	initial_dp->low_access =  swd_proc->swdp_low_access;
-	initial_dp->abort =  swd_proc->swdp_abort;
-#endif
+	/* Set defaults when no procedure given*/
+	if (!initial_dp->dp_low_write)
+		initial_dp->dp_low_write = firmware_dp_low_write;
+	if (!initial_dp->dp_low_read)
+		initial_dp->dp_low_read = firmware_dp_low_read;
+	if (!initial_dp->error)
+		initial_dp->error = firmware_swdp_error;
+	if (!initial_dp->dp_read)
+		initial_dp->dp_read = firmware_swdp_read;
+	if (!initial_dp->error)
+		initial_dp->error = firmware_swdp_error;
+	if (!initial_dp->low_access)
+       initial_dp->low_access = firmware_swdp_low_access;
 	/* DORMANT-> SWD sequence*/
 	initial_dp->seq_out(0xFFFFFFFF, 32);
 	initial_dp->seq_out(0xFFFFFFFF, 32);
@@ -163,6 +140,12 @@ int adiv5_swdp_scan(uint32_t targetid)
 			target_id = adiv5_dp_read(initial_dp, ADIV5_DP_CTRLSTAT);
 			adiv5_dp_write(initial_dp, ADIV5_DP_SELECT, 0);
 			DEBUG_INFO("TARGETID %08" PRIx32 "\n", target_id);
+			switch (target_id) {
+			case 0x01002927: /* RP2040 */
+				/* Release evt. handing RESCUE DP reset*/
+				adiv5_dp_write(initial_dp, ADIV5_DP_CTRLSTAT, 0);
+				break;
+			}
 		} else {
 			is_v2 = false;
 		}
@@ -177,9 +160,8 @@ int adiv5_swdp_scan(uint32_t targetid)
 			dp_targetid = (i << 28) | (target_id & 0x0fffffff);
 			initial_dp->dp_low_write(initial_dp, ADIV5_DP_TARGETSEL,
 									dp_targetid);
-			bool res = initial_dp->dp_low_read(initial_dp, ADIV5_DP_IDCODE,
-											  &idcode);
-			if (res)
+			if (initial_dp->dp_low_read(initial_dp, ADIV5_DP_IDCODE,
+										&idcode))
 				continue;
 			if (dp_targetid == 0xf1002927) /* Fixme: Handle RP2040 rescue port */
 				continue;
@@ -225,7 +207,7 @@ uint32_t firmware_swdp_read(ADIv5_DP_t *dp, uint16_t addr)
 		uint32_t dummy;
 		dp->dp_low_read(dp, ADIV5_DP_IDCODE, &dummy);
 	}
-	err = firmware_swdp_read(dp, ADIV5_DP_CTRLSTAT) &
+	err = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT) &
 		(ADIV5_DP_CTRLSTAT_STICKYORUN | ADIV5_DP_CTRLSTAT_STICKYCMP |
 		ADIV5_DP_CTRLSTAT_STICKYERR | ADIV5_DP_CTRLSTAT_WDATAERR);
 
@@ -256,13 +238,13 @@ uint32_t firmware_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 
 	platform_timeout_set(&timeout, 2000);
 	do {
-		swd_proc.swdptap_seq_out(request, 8);
-		ack = swd_proc.swdptap_seq_in(3);
+		dp->seq_out(request, 8);
+		ack = dp->seq_in(3);
 		if (ack == SWDP_ACK_FAULT) {
 			/* On fault, abort() and repeat the command once.*/
-			firmware_swdp_error(dp);
-			swd_proc.swdptap_seq_out(request, 8);
-			ack = swd_proc.swdptap_seq_in(3);
+			dp->error(dp);
+			dp->seq_out(request, 8);
+			ack = dp->seq_in(3);
 		}
 	} while (ack == SWDP_ACK_WAIT && !platform_timeout_is_expired(&timeout));
 
@@ -278,10 +260,10 @@ uint32_t firmware_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 		raise_exception(EXCEPTION_ERROR, "SWDP invalid ACK");
 
 	if(RnW) {
-		if(swd_proc.swdptap_seq_in_parity(&response, 32))  /* Give up on parity error */
+		if(dp->seq_in_parity(&response, 32))  /* Give up on parity error */
 			raise_exception(EXCEPTION_ERROR, "SWDP Parity error");
 	} else {
-		swd_proc.swdptap_seq_out_parity(value, 32);
+		dp->seq_out_parity(value, 32);
 		/* ARM Debug Interface Architecture Specification ADIv5.0 to ADIv5.2
 		 * tells to clock the data through SW-DP to either :
 		 * - immediate start a new transaction
@@ -291,7 +273,7 @@ uint32_t firmware_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 		 * Implement last option to favour correctness over
 		 *   slight speed decrease
 		 */
-		swd_proc.swdptap_seq_out(0, 8);
+	dp->seq_out(0, 8);
 	}
 	return response;
 }

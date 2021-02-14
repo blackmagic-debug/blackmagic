@@ -18,7 +18,6 @@
  */
 #if !defined(__BMP_REMOTE_H_)
 #define      __BMP_REMOTE_H_
-#include "swdptap.h"
 #include "jtagtap.h"
 #include "adiv5.h"
 #include "target.h"
@@ -30,7 +29,7 @@ int platform_buffer_write(const uint8_t *data, int size);
 int platform_buffer_read(uint8_t *data, int size);
 
 int remote_init(void);
-int remote_swdptap_init(swd_proc_t *swd_proc);
+int remote_swdptap_init(ADIv5_DP_t *dp);
 int remote_jtagtap_init(jtag_proc_t *jtag_proc);
 bool remote_target_get_power(void);
 const char *remote_target_voltage(void);

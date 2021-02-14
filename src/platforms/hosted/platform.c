@@ -21,7 +21,6 @@
  */
 
 #include "general.h"
-#include "swdptap.h"
 #include "jtagtap.h"
 #include "target.h"
 #include "target_internal.h"
@@ -41,7 +40,6 @@
 
 bmp_info_t info;
 
-swd_proc_t swd_proc;
 jtag_proc_t jtag_proc;
 
 void gdb_ident(char *p, int count)
@@ -128,6 +126,7 @@ int platform_adiv5_swdp_scan(uint32_t targetid)
 	switch (info.bmp_type) {
 	case BMP_TYPE_BMP:
 	case BMP_TYPE_LIBFTDI:
+	case BMP_TYPE_CMSIS_DAP:
 		return adiv5_swdp_scan(targetid);
 		break;
 	case BMP_TYPE_STLINKV2:
@@ -143,27 +142,6 @@ int platform_adiv5_swdp_scan(uint32_t targetid)
 		}
 		break;
 	}
-	case BMP_TYPE_CMSIS_DAP:
-		if (dap_swdptap_init(&swd_proc))
-			return 0;
-		if (swd_proc.swdptap_seq_in) {
-			dap_swd_configure(4); /* No abort for now*/
-			return adiv5_swdp_scan(targetid);
-		} else {
-			/* We need to ignore errors with TARGET_SEL.
-			 * Therefore we need DAP_SWD_Sequence obly available on >= V1.2
-			 */
-			target_list_free();
-			ADIv5_DP_t *dp = (void*)calloc(1, sizeof(*dp));
-			if (dap_enter_debug_swd(dp)) {
-				free(dp);
-			} else {
-				adiv5_dp_init(dp);
-				if (target_list)
-					return 1;
-			}
-		}
-		break;
 	case BMP_TYPE_JLINK:
 		return jlink_swdp_scan(&info);
 	default:
@@ -172,18 +150,18 @@ int platform_adiv5_swdp_scan(uint32_t targetid)
 	return 0;
 }
 
-int platform_swdptap_init(void)
+int swdptap_init(ADIv5_DP_t *dp)
 {
 	switch (info.bmp_type) {
 	case BMP_TYPE_BMP:
-		return remote_swdptap_init(&swd_proc);
+		return remote_swdptap_init(dp);
 	case BMP_TYPE_CMSIS_DAP:
-//		return dap_swdptap_init(&swd_proc);
+		return dap_swdptap_init(dp);
 	case BMP_TYPE_STLINKV2:
 	case BMP_TYPE_JLINK:
 		return 0;
 	case BMP_TYPE_LIBFTDI:
-		return libftdi_swdptap_init(&swd_proc);
+		return libftdi_swdptap_init(dp);
 	default:
 		return -1;
 	}

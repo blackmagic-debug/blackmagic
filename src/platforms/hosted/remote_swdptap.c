@@ -35,7 +35,7 @@ static uint32_t swdptap_seq_in(int ticks);
 static void swdptap_seq_out(uint32_t MS, int ticks);
 static void swdptap_seq_out_parity(uint32_t MS, int ticks);
 
-int remote_swdptap_init(swd_proc_t *swd_proc)
+int remote_swdptap_init(ADIv5_DP_t *dp)
 {
 	DEBUG_WIRE("remote_swdptap_init\n");
 	uint8_t construct[REMOTE_MAX_MSG_SIZE];
@@ -50,14 +50,14 @@ int remote_swdptap_init(swd_proc_t *swd_proc)
 		exit(-1);
     }
 
-	swd_proc->swdptap_seq_in  = swdptap_seq_in;
-	swd_proc->swdptap_seq_in_parity  = swdptap_seq_in_parity;
-	swd_proc->swdptap_seq_out = swdptap_seq_out;
-	swd_proc->swdptap_seq_out_parity  = swdptap_seq_out_parity;
-	swd_proc->swdp_read = firmware_swdp_read;
-	swd_proc->swdp_error = firmware_swdp_error;
-	swd_proc->swdp_low_access = firmware_swdp_low_access;
-	swd_proc->swdp_abort = firmware_swdp_abort;
+	dp->seq_in  = swdptap_seq_in;
+	dp->seq_in_parity  = swdptap_seq_in_parity;
+	dp->seq_out = swdptap_seq_out;
+	dp->seq_out_parity  = swdptap_seq_out_parity;
+	dp->dp_read = firmware_swdp_read;
+	dp->error = firmware_swdp_error;
+	dp->low_access = firmware_swdp_low_access;
+	dp->abort = firmware_swdp_abort;
   return 0;
 }
 

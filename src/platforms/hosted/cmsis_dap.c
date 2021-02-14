@@ -35,7 +35,6 @@
 #include <wchar.h>
 
 #include "bmp_hosted.h"
-#include "swdptap.h"
 #include "dap.h"
 #include "cmsis_dap.h"
 
@@ -368,7 +367,7 @@ int dap_jtag_dp_init(ADIv5_DP_t *dp)
 	return true;
 }
 
-int dap_swdptap_init(swd_proc_t *swd_proc)
+int dap_swdptap_init(ADIv5_DP_t *dp)
 {
 	if (!(dap_caps & DAP_CAP_SWD))
 		return 1;
@@ -379,14 +378,14 @@ int dap_swdptap_init(swd_proc_t *swd_proc)
 	dap_led(0, 1);
 	dap_reset_link(false);
 	if (has_swd_sequence) {
-		swd_proc->swdptap_seq_in = dap_swdptap_seq_in;
-		swd_proc->swdptap_seq_in_parity = dap_swdptap_seq_in_parity;
-		swd_proc->swdptap_seq_out = dap_swdptap_seq_out;
-		swd_proc->swdptap_seq_out_parity = dap_swdptap_seq_out_parity;
-		swd_proc->swdp_read = dap_dp_read_reg;
-		swd_proc->swdp_error = dap_dp_error;
-		swd_proc->swdp_low_access = dap_dp_low_access;
-		swd_proc->swdp_abort = dap_dp_abort;
+		dp->seq_in = dap_swdptap_seq_in;
+		dp->seq_in_parity = dap_swdptap_seq_in_parity;
+		dp->seq_out = dap_swdptap_seq_out;
+		dp->seq_out_parity = dap_swdptap_seq_out_parity;
+		dp->dp_read = dap_dp_read_reg;
+		dp->error = dap_dp_error;
+		dp->low_access = dap_dp_low_access;
+		dp->abort = dap_dp_abort;
 	}
 	return 0;
 }
