@@ -24,7 +24,6 @@
 
 #if defined(CMSIS_DAP)
 int dap_init(bmp_info_t *info);
-int dap_enter_debug_swd(ADIv5_DP_t *dp);
 void dap_exit_function(void);
 void dap_adiv5_dp_defaults(ADIv5_DP_t *dp);
 int cmsis_dap_jtagtap_init(jtag_proc_t *jtag_proc);
@@ -41,7 +40,6 @@ int dap_init(bmp_info_t *info)
 }
 # pragma GCC diagnostic push
 # pragma GCC diagnostic ignored "-Wunused-parameter"
-int dap_enter_debug_swd(ADIv5_DP_t *dp) {return -1;}
 uint32_t dap_swj_clock(uint32_t clock) {return 0;}
 void dap_exit_function(void) {};
 void dap_adiv5_dp_defaults(ADIv5_DP_t *dp) {};
