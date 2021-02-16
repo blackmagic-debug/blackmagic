@@ -14,24 +14,28 @@ monitor traceswo 115200
 
 We are constrained on maximum input speed by both the capabilities of the
 BMP STM32F103 USART and the ability to get the packets back out over the USB
-link. The UART baudrate is set by b=(72x10^6)/(16*d)...so for d=1 that means
-a maximum speed of 4.5Mbps. For continious streaming that turns out to be
-_too_ fast for the USB link, so the next available option is the 2.25Mbps
-that we use. ....you can safely use the 4.5Mbps setting if your debug data
+link. The UART baudrate is set by b=(72x10^6)/d...with d >= 16 or
+a maximum speed of 4.5Mbps UART1 and 2.25 Mbps on UART2.
+For continious streaming that turns out to be_too_ fast for the USB
+link, so the next available option is the 2.25Mbps that we use. ....
+You can safely use the 4.5Mbps setting if your debug data
 is bursty, or if you're using a different CPU to the STM32F103 as your BMP
 host, but you potentially run the risk of losing packets if you have long
 runs of sending which the usb cannot flush in time (there's a 12K buffer, so
 the it is a pretty long run before it becomes a problem).
 
 Note that the baudrate equation means there are only certain speeds
-available. The highest half dozen are;
-SWO uses   USART1(stlink)  USART2(swlink)
-1    	   4.50  Mbps      2.25   Mbps
-2	   2.25  Mbps 	   1.125  Mbps
-3	   1.50  Mbps 	   0.75   Mbps
-4	   1.125 Mbps 	   0.5635 Mbps
-5	   0.900 Mbps 	   0.45   Mbps
-6	   0.750 Mbps      0.375  Mbps
+available. The highest:
+BRR        USART1(stlink)  USART2(swlink)
+16    	   4.50  Mbps      2.25  Mbps
+17	   4.235 Mbps 	   2.118 Mbps
+18	   4.000 Mbps 	   2.0   Mbps
+19	   3.789 Mbps 	   1.895 Mbps
+20	   3.600 Mbps 	   1.8   Mbps
+...
+24	   3.0   Mbps      1.5   Mbps
+...
+36         2.0   Mbps      1.0   Mbps
 
 ...the USART will cope with some timing slip, but it's advisible to stay as
 close to these values as you can. As the speed comes down the spread between
