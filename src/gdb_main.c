@@ -36,6 +36,10 @@
 #include "crc32.h"
 #include "morse.h"
 
+#ifdef ENABLE_SRTT
+#  include "srtt.h"
+#endif
+
 enum gdb_signal {
 	GDB_SIGINT = 2,
 	GDB_SIGTRAP = 5,
@@ -261,6 +265,9 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 		case 'D':	/* GDB 'detach' command. */
 			if(cur_target) {
 				SET_RUN_STATE(1);
+#ifdef ENABLE_SRTT
+				srtt_detach();
+#endif
 				target_detach(cur_target);
 			}
 			last_target = cur_target;

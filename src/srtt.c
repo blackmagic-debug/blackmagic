@@ -270,6 +270,10 @@ static bool srtt_detach_buffer(target *t, int argc, const char **argv) {
 	return true;
 }
 
+void srtt_detach(void) {
+	memset(srtt_attached, 0, SRTT_MAX_BUFFERS);
+}
+
 static bool srtt_read_up_chunk(target *t, const char* addr, size_t from, size_t to) {
 	char data[SRTT_IO_CHUNK_LEN];
 	target_addr ptr = (target_addr)addr + from, end = (target_addr)addr + to;
