@@ -1,10 +1,10 @@
+#ifdef ENABLE_SRTT
+
 #include "srtt.h"
 
 #include "general.h"
 #include "gdb_packet.h"
 #include "target/target_internal.h"
-
-#ifdef ENABLE_SRTT
 
 #ifndef SRTT_MAX_BUFFERS
 #	 define SRTT_MAX_BUFFERS 4
@@ -16,6 +16,10 @@
 
 #ifndef SRTT_IO_CHUNK_LEN
 #	 define SRTT_IO_CHUNK_LEN 64
+#endif
+
+#ifndef SRTT_MIN_POLL_PERIOD
+#  define SRTT_MIN_POLL_PERIOD 300
 #endif
 
 #define field_offset(struc, field) ((size_t)((char*)&((struc*)(0))->field))
@@ -68,6 +72,9 @@ static target *srtt_target;
 
 // The attached buffers
 static bool srtt_attached[SRTT_MAX_BUFFERS];
+
+// The latest polling time which is used to throttle polls frequency
+static uint32_t srtt_last_poll_time = 0;
 
 bool srtt_available()
 {
@@ -164,9 +171,7 @@ bool srtt_scan(target *t)
 		for (addr = ram->start; addr < end; addr += len) {
 			len = MIN(sizeof(region), end - addr);
 			if (target_mem_read(t, region, addr, len)) {
-				gdb_outf("No RTT control block found.\n");
-
-				return false;
+				goto rtt_cb_not_found;
 			}
 			// seek over the memory region
 			for (off = 0; off < len; off++) {
@@ -196,6 +201,9 @@ bool srtt_scan(target *t)
 			}
 		}
 	}
+
+ rtt_cb_not_found:
+	gdb_outf("No RTT control block found.\n");
 
 	return false;
 }
@@ -384,12 +392,26 @@ static bool srtt_send_down_buffer(target *t, int argc, const char **argv) {
 	return false;
 }
 
+static bool srtt_poll(target *t, int argc, const char **argv) {
+	(void) argc;
+	(void) argv;
+
+	// read data from buffers
+	for (size_t i = 0; i < (size_t)srtt_cb.up_buffers; i++) {
+		if (srtt_attached[i]) {
+			srtt_read_up_buffer(t, i);
+		}
+	}
+	return false;
+}
+
 static const cmd_t srtt_cmds[] = {
 	{"srtt_buffers", srtt_display_buffers, "Display list of available RTT buffers"},
 	{"srtt_attach", srtt_attach_buffer, "Attach to UP buffer to receive outgoing device messages"},
 	{"srtt_detach", srtt_detach_buffer, "Detach from UP buffer"},
 	{"srtt_recv", srtt_receive_up_buffer, "Receive text from UP buffer"},
 	{"srtt_send", srtt_send_down_buffer, "Send text to DOWN buffer"},
+	{"srtt_poll", srtt_poll, "Poll attached buffers"},
 };
 
 int srtt_command(target *t, int argc, const char **argv) {
@@ -412,7 +434,17 @@ void srtt_command_help(void) {
 	}
 }
 
-void srtt_poll(void) {
+void srtt_do_poll(void) {
+	if (!running_status)
+		return;
+
+	// poll rtt every second
+	uint32_t now = platform_time_ms();
+	if (now - srtt_last_poll_time < SRTT_MIN_POLL_PERIOD)
+		return;
+
+	srtt_last_poll_time = now;
+
 	target *t = srtt_target;
 
 	// read data from buffers
