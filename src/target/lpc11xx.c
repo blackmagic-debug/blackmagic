@@ -29,8 +29,8 @@
 #define MIN_RAM_SIZE            1024
 #define RAM_USAGE_FOR_IAP_ROUTINES	32	/* IAP routines use 32 bytes at top of ram */
 
-#define IAP_ENTRY_MOST	0x1fff1ff1	/* all except LPC84x */
-#define IAP_ENTRY_84x	0x0f001ff1
+#define IAP_ENTRY_MOST	0x1fff1ff1	/* all except LPC802, LPC804 & LPC84x */
+#define IAP_ENTRY_84x	0x0f001ff1  /* LPC802, LPC804 & LPC84x */
 #define IAP_RAM_BASE	0x10000000
 
 #define LPC11XX_DEVICE_ID  0x400483F4
@@ -142,6 +142,25 @@ lpc11xx_probe(target *t)
 	}
 	idcode = target_mem_read32(t, LPC8XX_DEVICE_ID);
 	switch (idcode) {
+	case 0x00008021:  /* 802M001JDH20 */
+	case 0x00008022:  /* 802M011JDH20 */
+	case 0x00008023:  /* 802M001JDH16 */
+	case 0x00008024:  /* 802M001JHI33 */
+	  t->driver = "LPC802";
+	  target_add_ram(t, 0x10000000, 0x800);
+	  lpc11xx_add_flash(t, 0x00000000, 0x4000, 0x400, IAP_ENTRY_84x);
+	  target_add_commands(t, lpc11xx_cmd_list, "LPC802");
+	  return true;
+	case 0x00008040:  /* 804M101JBD64 */
+	case 0x00008041:  /* 804M101JDH20 */
+	case 0x00008042:  /* 804M101JDH24 */
+	case 0x00008043:  /* 804M111JDH24 */
+	case 0x00008044:  /* 804M101JHI33 */
+	  t->driver = "LPC804";
+	  target_add_ram(t, 0x10000000, 0x1000);
+	  lpc11xx_add_flash(t, 0x00000000, 0x8000, 0x400, IAP_ENTRY_84x);
+	  target_add_commands(t, lpc11xx_cmd_list, "LPC804");
+	  return true;
 	case 0x00008100:  /* LPC810M021FN8 */
 	case 0x00008110:  /* LPC811M001JDH16 */
 	case 0x00008120:  /* LPC812M101JDH16 */
@@ -160,6 +179,18 @@ lpc11xx_probe(target *t)
 		target_add_ram(t, 0x10000000, 0x2000);
 		lpc11xx_add_flash(t, 0x00000000, 0x8000, 0x400, IAP_ENTRY_MOST);
 		target_add_commands(t, lpc11xx_cmd_list, "LPC82x");
+		return true;
+	case 0x00008322:  /* LPC832M101FDH20 */
+		t->driver = "LPC832";
+		target_add_ram(t, 0x10000000, 0x1000);
+		lpc11xx_add_flash(t, 0x00000000, 0x4000, 0x400, IAP_ENTRY_MOST);
+		target_add_commands(t, lpc11xx_cmd_list, "LPC832");
+		return true;
+	case 0x00008341:  /* LPC8341201FHI33 */
+		t->driver = "LPC834";
+		target_add_ram(t, 0x10000000, 0x1000);
+		lpc11xx_add_flash(t, 0x00000000, 0x8000, 0x400, IAP_ENTRY_MOST);
+		target_add_commands(t, lpc11xx_cmd_list, "LPC834");
 		return true;
 	case 0x00008441:
 	case 0x00008442:
