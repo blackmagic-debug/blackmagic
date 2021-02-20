@@ -458,6 +458,8 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 			PROBE(kinetis_probe); /* Older K-series */
 		} else if (ap->ap_partno == 0x4cb) { /* Cortex-M23 ROM */
 			PROBE(gd32f1_probe); /* GD32E23x uses GD32F1 peripherals */
+		} else if (ap->ap_partno == 0x4c0) { /* Cortex-M0+ ROM */
+			PROBE(lpc11xx_probe); /* some of the LPC8xx series, like LPC802 */
 		}
 		/* Info on PIDR of these parts wanted! */
 		PROBE(sam3x_probe);
