@@ -116,6 +116,15 @@ static void stm32f1_add_flash(target *t,
 	target_add_flash(t, f);
 }
 
+static void stm32f1_detach(target *t)
+{
+	ADIv5_AP_t *ap = cortexm_ap(t);
+	uint32_t dbgmcu_cr = (((t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M0) ?
+						  DBGMCU_IDCODE_F0 : DBGMCU_IDCODE) + 4;
+	target_mem_write32(t, dbgmcu_cr, ap->ap_storage);
+	cortexm_detach(t);
+}
+	
 /**
     \brief identify the correct gd32 f1/f3 chip
     GD32 : STM32 compatible chip
@@ -150,14 +159,6 @@ bool gd32f1_probe(target *t)
 	return true;
 }
 
-static void stm32f1_read_idcode(target *t)
-{
-	if ((t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M0)
-		t->idcode = target_mem_read32(t, DBGMCU_IDCODE_F0) & 0xfff;
-	else
-		t->idcode = target_mem_read32(t, DBGMCU_IDCODE) & 0xfff;
-}
-
 /**
     \brief identify the stm32f1 chip
 */
@@ -165,17 +166,13 @@ static void stm32f1_read_idcode(target *t)
 bool stm32f1_probe(target *t)
 {
 	uint16_t stored_idcode = t->idcode;
-
-	stm32f1_read_idcode(t);
-
-	/* This likely means the MCU was in deep sleep. */
-	if (t->idcode == 0) {
-		/* Try to halt it outside of WFI. */
-		target_halt_poll(t, NULL);
-		/* Re-read the idcode. */
-		stm32f1_read_idcode(t);
-	}
-
+	uint32_t dbgmcu = ((t->cpuid & CPUID_PARTNO_MASK)) ?
+		DBGMCU_IDCODE_F0 : DBGMCU_IDCODE;
+	t->idcode = target_mem_read32(t, dbgmcu) & 0xfff;
+	ADIv5_AP_t *ap = cortexm_ap(t);
+	ap->ap_storage = target_mem_read32(t, dbgmcu + 4);
+	target_mem_write32(t, dbgmcu + 4, ap->ap_storage & 7);
+	t->detach = stm32f1_detach;
 	size_t flash_size;
 	size_t block_size = 0x400;
 	switch(t->idcode) {
