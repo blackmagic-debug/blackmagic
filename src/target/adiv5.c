@@ -410,18 +410,12 @@ static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, int recursion, 
 	addr &= 0xfffff000; /* Mask out base address */
 	if (addr == 0) /* No rom table on this AP */
 		return;
+	/* Halt each DP on first AP once by DHCSR before further AP accesses */
+	if (!ap->apsel && !recursion && !num_entry && !cortexm_prepare(ap))
+		return; /* Halting failed! */
 	uint32_t cidr = adiv5_ap_read_id(ap, addr + CIDR0_OFFSET);
-	if ((cidr & ~CID_CLASS_MASK) != CID_PREAMBLE) {
-		/* Maybe caused by a not halted CortexM */
-		if ((ap->idr & 0xf) == ARM_AP_TYPE_AHB) {
-			if (!cortexm_prepare(ap))
-				return; /* Halting failed! */
-			/* CPU now halted, read cidr again. */
-			cidr = adiv5_ap_read_id(ap, addr + CIDR0_OFFSET);
-			if ((cidr & ~CID_CLASS_MASK) != CID_PREAMBLE)
-				return;
-		}
-	}
+	if ((cidr & ~CID_CLASS_MASK) != CID_PREAMBLE)
+		return;
 #if defined(ENABLE_DEBUG)
 	char indent[recursion + 1];
 
