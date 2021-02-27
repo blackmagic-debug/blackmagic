@@ -322,7 +322,7 @@ uint64_t adiv5_ap_read_pidr(ADIv5_AP_t *ap, uint32_t addr)
  *   DBGMCU_CR not set.
  *
  * Keep a copy of DEMCR at startup to restore with exit, to
- * not interrupt tracing initialed by the CPU.
+ * not interrupt tracing initiated by the CPU.
  */
 static bool cortexm_prepare(ADIv5_AP_t *ap)
 {
@@ -339,6 +339,8 @@ static bool cortexm_prepare(ADIv5_AP_t *ap)
 	while (true) {
 		adiv5_mem_write(ap, CORTEXM_DHCSR, &dhcsr_ctl, sizeof(dhcsr_ctl));
 		dhcsr = adiv5_mem_read32(ap, CORTEXM_DHCSR);
+		/* ADIV5_DP_CTRLSTAT_READOK is always set e.g. on STM32F7 even so
+		   CORTEXM_DHCS reads nonsense*/
 		/* On a sleeping STM32F7, invalid DHCSR reads with e.g. 0xffffffff and
 		 * 0x0xA05F0000  may happen.
 		 * M23/33 will have S_SDE set when debug is allowed
@@ -606,9 +608,9 @@ ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel)
 #if defined(ENABLE_DEBUG)
 	uint32_t cfg = adiv5_ap_read(ap, ADIV5_AP_CFG);
 	DEBUG_INFO("AP %3d: IDR=%08"PRIx32" CFG=%08"PRIx32" BASE=%08" PRIx32
-			   " CSW=%08"PRIx32"\n", apsel, ap->idr, cfg, ap->base, ap->csw);
-	DEBUG_INFO("AP#0 IDR = 0x%08" PRIx32 " (AHB-AP var%x rev%x)\n",
-			   ap->idr, (ap->idr >> 4) & 0xf, ap->idr >> 28);
+			   " CSW=%08"PRIx32, apsel, ap->idr, cfg, ap->base, ap->csw);
+	DEBUG_INFO(" (AHB-AP var%x rev%x)\n",
+			   (ap->idr >> 4) & 0xf, ap->idr >> 28);
 #endif
 	adiv5_ap_ref(ap);
 	return ap;
