@@ -371,48 +371,33 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 		DEBUG_WARN("Can not attach to target %d\n", opt->opt_target_dev);
 		goto target_detach;
 	}
+	/* List each defined RAM */
+	int n_ram = 0;
+	for (struct target_ram *r = t->ram; r; r = r->next)
+		n_ram++;
+	for (int n = n_ram; n >= 0; n --) {
+		struct target_ram *r = t->ram;
+		for (int i = 1; r; r = r->next, i++)
+			if (i == n)
+				DEBUG_INFO("RAM   Start: 0x%08" PRIx32 " length = 0x%" PRIx32 "\n",
+					   r->start, (uint32_t)r->length);
+	}
 	/* Always scan memory map to find lowest flash */
-	char memory_map [1024], *p = memory_map;
+	/* List each defined Flash */
 	uint32_t flash_start = 0xffffffff;
-	if (target_mem_map(t, memory_map, sizeof(memory_map))) {
-		while (*p && (*p == '<')) {
-			unsigned int start, size;
-			char *res;
-			int match;
-			match = strncmp(p, "<memory-map>", strlen("<memory-map>"));
-			if (!match) {
-				p  += strlen("<memory-map>");
-				continue;
+	int n_flash = 0;
+	for (struct target_flash *f = t->flash; f; f = f->next)
+		n_flash++;
+	for (int n = n_flash; n >= 0; n --) {
+		struct target_flash *f = t->flash;
+		for (int i = 1; f; f = f->next, i++)
+			if (i == n) {
+				DEBUG_INFO("Flash Start: 0x%08" PRIx32 " length = 0x%" PRIx32
+						   " blocksize 0x%" PRIx32 "\n",
+						   f->start, (uint32_t)f->length, (uint32_t)f->blocksize);
+				if (f->start < flash_start)
+					flash_start = f->start;
 			}
-			match = strncmp(p, "<memory type=\"flash\" ", strlen("<memory type=\"flash\" "));
-			if (!match) {
-				unsigned int blocksize;
-				if (sscanf(p, "<memory type=\"flash\" start=\"%x\" length=\"%x\">"
-						   "<property name=\"blocksize\">%x</property></memory>",
-						   &start, &size, &blocksize)) {
-					if (opt->opt_mode == BMP_MODE_TEST)
-						DEBUG_INFO("Flash Start: 0x%08x, length %#9x, "
-								   "blocksize %#8x\n", start, size, blocksize);
-					if (start < flash_start)
-						flash_start = start;
-				}
-				res = strstr(p, "</memory>");
-				p = res + strlen("</memory>");
-				continue;
-			}
-			match = strncmp(p, "<memory type=\"ram\" ", strlen("<memory type=\"ram\" "));
-			if (!match) {
-				if (sscanf(p, "<memory type=\"ram\" start=\"%x\" length=\"%x\"/",
-						   &start, &size))
-					if (opt->opt_mode == BMP_MODE_TEST)
-						DEBUG_INFO("Ram   Start: 0x%08x, length %#9x\n",
-								   start, size);
-				res = strstr(p, "/>");
-				p = res + strlen("/>");
-				continue;
-			}
-			break;
-		}
 	}
 	if (opt->opt_flash_start == 0xffffffff)
 		opt->opt_flash_start = flash_start;
