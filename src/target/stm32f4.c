@@ -36,10 +36,12 @@
 #include "target.h"
 #include "target_internal.h"
 #include "cortexm.h"
+#include "command.h"
 
 static bool stm32f4_cmd_erase_mass(target *t, int argc, const char **argv);
 static bool stm32f4_cmd_option(target *t, int argc, char *argv[]);
 static bool stm32f4_cmd_psize(target *t, int argc, char *argv[]);
+static bool stm32f4_cmd_dbgbits_restore(target *t, int argc, char *argv[]);
 
 const struct command_s stm32f4_cmd_list[] = {
 	{"erase_mass", (cmd_handler)stm32f4_cmd_erase_mass,
@@ -47,6 +49,8 @@ const struct command_s stm32f4_cmd_list[] = {
 	{"option", (cmd_handler)stm32f4_cmd_option, "Manipulate option bytes"},
 	{"psize", (cmd_handler)stm32f4_cmd_psize,
 	 "Configure flash write parallelism: (x8|x16|x32(default)|x64)"},
+	{"dbgbits", (cmd_handler)stm32f4_cmd_dbgbits_restore,
+	 "Restore dbgbits to initial value enabled(default)|disable"},
 	{NULL, NULL, NULL}
 };
 
@@ -109,6 +113,8 @@ static int stm32f4_flash_write(struct target_flash *f,
 
 #define AXIM_BASE 0x8000000
 #define ITCM_BASE 0x0200000
+
+#define F7_DISABLE_RESTORE (1 << 31)
 
 struct stm32f4_flash {
 	struct target_flash f;
@@ -196,17 +202,23 @@ char *stm32f4_get_chip_name(uint32_t idcode)
 
 static void stm32f4_detach(target *t)
 {
-	uint32_t dbgmcu_cr = target_mem_read32(t, DBGMCU_CR);
-	dbgmcu_cr &= ~7;
-	dbgmcu_cr |= (t->target_storage & 7);
-	target_mem_write32(t, DBGMCU_CR, dbgmcu_cr);
+	if (!(t->target_storage & F7_DISABLE_RESTORE)) {
+		DEBUG_INFO("Restore DBGMCU_CR %08" PRIx32 "\n", t->target_storage);
+		uint32_t dbgmcu_cr = target_mem_read32(t, DBGMCU_CR);
+		dbgmcu_cr &= ~7;
+		dbgmcu_cr |= (t->target_storage & 7);
+		target_mem_write32(t, DBGMCU_CR, dbgmcu_cr);
+	}
 	cortexm_detach(t);
 }
 
 bool stm32f4_probe(target *t)
 {
-	/* DBGMCU_CR bits need to be set already for Romtable scan*/
+	/* On F7 DBGMCU_CR bits need to be set already for Romtable scan.
+	 * F4 seem sto be accessible in sleep, but set the bits to keep code
+	 * simple*/
 	t->target_storage = target_mem_read32(t, DBGMCU_CR);
+	DEBUG_INFO("DBGMCU_CR %08" PRIx32 "\n", t->target_storage);
 	target_mem_write32(t,  DBGMCU_CR, t->target_storage | 7);
 	if (t->idcode == ID_STM32F20X) {
 		/* F405 revision A have a wrong IDCODE, use ARM_CPUID to make the
@@ -719,6 +731,26 @@ static bool stm32f4_cmd_psize(target *t, int argc, char *argv[])
 				((struct stm32f4_flash *)f)->psize = psize;
 			}
 		}
+	}
+	return true;
+}
+
+static bool stm32f4_cmd_dbgbits_restore(target *t, int argc, char *argv[])
+{
+	if (argc == 1) {
+		if (t->target_storage & F7_DISABLE_RESTORE)
+			tc_printf(t, "Not ");
+		tc_printf(t, "Restoring DBGMCU_CR dbgbits\n");
+	} else {
+		bool enabled;
+		if (parse_enable_or_disable(argv[1], &enabled)) {
+			tc_printf(t, "Bad argument ");
+			return false;
+		}
+		if (enabled)
+			t->target_storage &= ~F7_DISABLE_RESTORE;
+		else
+			t->target_storage |=  F7_DISABLE_RESTORE;
 	}
 	return true;
 }
