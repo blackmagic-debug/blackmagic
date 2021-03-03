@@ -196,7 +196,10 @@ char *stm32f4_get_chip_name(uint32_t idcode)
 
 static void stm32f4_detach(target *t)
 {
-	target_mem_write32(t, DBGMCU_CR, t->target_storage);
+	uint32_t dbgmcu_cr = target_mem_read32(t, DBGMCU_CR);
+	dbgmcu_cr &= ~7;
+	dbgmcu_cr |= (t->target_storage & 7);
+	target_mem_write32(t, DBGMCU_CR, dbgmcu_cr);
 	cortexm_detach(t);
 }
 
@@ -232,6 +235,8 @@ static bool stm32f4_attach(target *t)
 	if (!cortexm_attach(t))
 		return false;
 
+	uint32_t dbgmcu_cr = target_mem_read32(t, DBGMCU_CR);
+	target_mem_write32(t,  DBGMCU_CR, dbgmcu_cr | 7);
 	switch(t->idcode) {
 	case ID_STM32F40X:
 		has_ccmram = true;
