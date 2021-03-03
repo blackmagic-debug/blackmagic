@@ -190,7 +190,8 @@ int platform_buffer_read(uint8_t *data, int maxsize)
 	c = data;
 	tv.tv_sec = 0;
 
-	tv.tv_usec = 1000 * cortexm_wait_timeout;
+	tv.tv_sec = cortexm_wait_timeout / 1000 ;
+	tv.tv_usec = 1000 * (cortexm_wait_timeout % 1000);
 
 	/* Look for start of response */
 	do {
