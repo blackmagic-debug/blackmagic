@@ -166,12 +166,12 @@ bool gd32f1_probe(target *t)
 bool stm32f1_probe(target *t)
 {
 	uint16_t stored_idcode = t->idcode;
-	uint32_t dbgmcu = ((t->cpuid & CPUID_PARTNO_MASK)) ?
+	uint32_t dbgmcu = ((t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M0) ?
 		DBGMCU_IDCODE_F0 : DBGMCU_IDCODE;
-	t->idcode = target_mem_read32(t, dbgmcu) & 0xfff;
 	ADIv5_AP_t *ap = cortexm_ap(t);
 	ap->ap_storage = target_mem_read32(t, dbgmcu + 4);
-	target_mem_write32(t, dbgmcu + 4, ap->ap_storage & 7);
+	target_mem_write32(t, dbgmcu + 4, ap->ap_storage | 0x7); /* enable debug in all sleep modes */
+	t->idcode = target_mem_read32(t, dbgmcu) & 0xfff;
 	t->detach = stm32f1_detach;
 	size_t flash_size;
 	size_t block_size = 0x400;
@@ -184,7 +184,6 @@ bool stm32f1_probe(target *t)
 		stm32f1_add_flash(t, 0x8000000, 0x20000, 0x400);
 		target_add_commands(t, stm32f1_cmd_list, "STM32 LD/MD/VL-LD/VL-MD");
 		/* Test for non-genuine parts with Core rev 2*/
-		ADIv5_AP_t *ap = cortexm_ap(t);
 		if ((ap->idr >> 28) > 1) {
 			t->driver = "STM32F1 (clone) medium density";
 #if defined(PLATFORM_HAS_DEBUG)
@@ -246,6 +245,9 @@ bool stm32f1_probe(target *t)
 		break;
 	default:     /* NONE */
 		t->idcode = stored_idcode;
+		/* restore debug sleep flags */
+		t->detach = cortexm_detach;
+		target_mem_write32(t, dbgmcu + 4, ap->ap_storage);
 		return false;
 	}
 
