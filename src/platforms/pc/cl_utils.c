@@ -364,6 +364,10 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 		num_targets = platform_jtag_scan(NULL);
 	} else {
 		num_targets = platform_adiv5_swdp_scan(opt->opt_targetid);
+		if (!num_targets) {
+			DEBUG_INFO("Scan SWD failed, trying JTAG!\n");
+			num_targets = platform_jtag_scan(NULL);
+		}
 	}
 	if (!num_targets) {
 		DEBUG_WARN("No target found\n");
