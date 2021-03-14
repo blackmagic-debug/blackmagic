@@ -31,8 +31,9 @@ If you have a toolchain from other sources and find problems, check if it is a f
 
 OS specific remarks for BMP-Hosted
 ==================================
-Most hosted building is done on and for Linux. BMP-hosted for windows can also be build with Mingw on Linux.
-On BSD/Macos, using dev/tty.usbmodemXXX should work but unresolved discussions indicate a hanging open() call on the second invocation. If that happens, try with cu.usbmodemXXX.
+Most hosted building is done on and for Linux. BMP-hosted for windows can also be build with Mingw on Linux.<br>
+Building hosted for BMP firmware probes only with "make PROBE_HOST HOSTED_BMP_ONLY=1" does not require libusb, libftdi and evt. libhidapi development headers and libraries for running.<br>
+On BSD/Macos, using dev/tty.usbmodemXXX should work but unresolved discussions indicate a hanging open() call on the second invocation. If that happens, try with cu.usbmodemXXX.<br>
 
 Reporting problems
 ==================
