@@ -83,11 +83,19 @@ static BOOL _runFifo(int portNo, int listenHandle, char *fifoName)
   int pid,fifo;
   int readDataLen, writeDataLen;
 
-  if (mkfifo(fifoName,0666)<0)
+  //char cwd[PATH_MAX];
+  //getcwd(cwd, sizeof(cwd));
+  //fprintf(stderr, "mkfifo %s %s\n", cwd, fifoName);
+
+  int rv;
+  if ((rv = mkfifo(fifoName,0666))<0)
     {
+      fprintf(stderr, "mkfifo %s %d\n", fifoName, rv);
       return FALSE;
     }
 
+  //fprintf(stderr, "mkfifo %s ok\n", fifoName);
+  //exit(0);
   pid=fork();
 
   if (pid==0)
@@ -102,6 +110,7 @@ static BOOL _runFifo(int portNo, int listenHandle, char *fifoName)
 	{
 	  /* This is the child */
 	  fifo=open(fifoName,O_WRONLY);
+          fprintf(stderr, "open %s fd=%d\n", fifoName, fifo);
 
 	  while (1)
 	    {
@@ -160,6 +169,8 @@ static void _removeFifoTasks(void)
   int statloc;
   int remainingProcesses=0;
   char fifoName[PATH_MAX];
+
+  fprintf(stderr, "_removeFifoTasks\n");
 
   for (int t=0; t<options.nChannels; t++)
     {

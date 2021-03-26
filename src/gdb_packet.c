@@ -188,15 +188,20 @@ void gdb_putpacket_f(const char *fmt, ...)
 	va_end(ap);
 }
 
-void gdb_out(const char *buf)
+void gdb_out_buf(const char *buf, uint32_t len)
 {
 	char *hexdata;
 	int i;
 
-	hexdata = alloca((i = strlen(buf)*2 + 1) + 1);
+	hexdata = alloca((i = len*2 + 1) + 1);
 	hexdata[0] = 'O';
-	hexify(hexdata+1, buf, strlen(buf));
+	hexify(hexdata+1, buf, len);
 	gdb_putpacket(hexdata, i);
+}
+
+void gdb_out(const char *buf)
+{
+	gdb_out_buf(buf, strlen(buf));
 }
 
 void gdb_voutf(const char *fmt, va_list ap)

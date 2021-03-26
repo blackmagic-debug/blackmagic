@@ -28,6 +28,7 @@ void gdb_putpacket(const char *packet, int size);
 #define gdb_putpacketz(packet) gdb_putpacket((packet), strlen(packet))
 void gdb_putpacket_f(const char *packet, ...);
 
+void gdb_out_buf(const char *buf, uint32_t len);
 void gdb_out(const char *buf);
 void gdb_voutf(const char *fmt, va_list);
 void gdb_outf(const char *fmt, ...);

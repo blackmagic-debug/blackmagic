@@ -21,6 +21,7 @@
 #include "general.h"
 #include "cdcacm.h"
 #include "traceswo.h"
+#include "gdb_packet.h"
 
 /* SWO decoding */
 /* data is static in case swo packet is astride two buffers */
@@ -29,6 +30,8 @@ static int swo_buf_len = 0;
 static uint32_t swo_decode = 0; /* bitmask of channels to print */
 static int swo_pkt_len = 0; /* decoder state */
 static bool swo_print = false;
+
+extern bool zwizwa_decode_gdb;
 
 /* print decoded swo packet on usb serial */
 uint16_t traceswo_decode(usbd_device *usbd_dev, uint8_t addr,
@@ -46,9 +49,14 @@ uint16_t traceswo_decode(usbd_device *usbd_dev, uint8_t addr,
 		} else if (swo_pkt_len <= 4) { /* data */
 			if (swo_print) {
 				swo_buf[swo_buf_len++]=ch;
-				if (swo_buf_len == sizeof(swo_buf)) {
-					if (cdcacm_get_config() && cdcacm_get_dtr()) /* silently drop if usb not ready */
-						usbd_ep_write_packet(usbd_dev, addr, swo_buf, swo_buf_len);
+				if ((ch == '\n') || (ch == '\r') || (swo_buf_len == sizeof(swo_buf))) {
+					if (zwizwa_decode_gdb) {
+						gdb_out_buf((const char*)swo_buf, swo_buf_len); // Is it ok to do this from ISR?
+					}
+					else {
+						if (cdcacm_get_config() && cdcacm_get_dtr()) /* silently drop if usb not ready */
+							usbd_ep_write_packet(usbd_dev, addr, swo_buf, swo_buf_len);
+					}
 					swo_buf_len=0;
 				}
 			}

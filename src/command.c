@@ -62,6 +62,20 @@ static bool cmd_heapinfo(target *t, int argc, const char **argv);
 static bool cmd_debug_bmp(target *t, int argc, const char **argv);
 #endif
 
+bool zwizwa_decode_gdb = false;
+static bool cmd_zwizwa(target *t, int argc, const char **argv) {
+	(void)t;
+	if (argc == 3) {
+		if (!strcmp("decode_gdb", argv[1])) {
+			zwizwa_decode_gdb = !!atoi(argv[2]);
+			gdb_outf("decode_gdb %d\n", zwizwa_decode_gdb);
+			return true;
+		}
+	}
+	gdb_out("zwizwa: bad command\n");
+	return -1;
+}
+
 const struct command_s cmd_list[] = {
 	{"version", (cmd_handler)cmd_version, "Display firmware version info"},
 	{"help", (cmd_handler)cmd_help, "Display help for monitor commands"},
@@ -87,6 +101,7 @@ const struct command_s cmd_list[] = {
 #if defined(PLATFORM_HAS_DEBUG) && (PC_HOSTED == 0)
 	{"debug_bmp", (cmd_handler)cmd_debug_bmp, "Output BMP \"debug\" strings to the second vcom: (enable|disable)"},
 #endif
+	{"zwizwa", (cmd_handler)cmd_zwizwa, "Zwizwa hacks (see blackmagic/src/command.c)"},
 	{NULL, NULL, NULL}
 };
 
