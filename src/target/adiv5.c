@@ -321,6 +321,9 @@ uint64_t adiv5_ap_read_pidr(ADIv5_AP_t *ap, uint32_t addr)
  * - fails reading outside SYSROM when halted from WFI and
  *   DBGMCU_CR not set.
  *
+ * E.g. Stm32F0
+ * - fails reading DBGMCU when under reset
+ *
  * Keep a copy of DEMCR at startup to restore with exit, to
  * not interrupt tracing initiated by the CPU.
  */
@@ -411,17 +414,8 @@ static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, int recursion, 
 	if (addr == 0) /* No rom table on this AP */
 		return;
 	uint32_t cidr = adiv5_ap_read_id(ap, addr + CIDR0_OFFSET);
-	if ((cidr & ~CID_CLASS_MASK) != CID_PREAMBLE) {
-		/* Maybe caused by a not halted CortexM */
-		if ((ap->idr & 0xf) == ARM_AP_TYPE_AHB) {
-			if (!cortexm_prepare(ap))
-				return; /* Halting failed! */
-			/* CPU now halted, read cidr again. */
-			cidr = adiv5_ap_read_id(ap, addr + CIDR0_OFFSET);
-			if ((cidr & ~CID_CLASS_MASK) != CID_PREAMBLE)
+	if ((cidr & ~CID_CLASS_MASK) != CID_PREAMBLE)
 				return;
-		}
-	}
 #if defined(ENABLE_DEBUG)
 	char indent[recursion + 1];
 
@@ -755,6 +749,9 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 		extern void efm32_aap_probe(ADIv5_AP_t *);
 		efm32_aap_probe(ap);
 
+		/* Halt the device and release from reset if reset is active!*/
+		if (!ap->apsel && ((ap->idr & 0xf) == ARM_AP_TYPE_AHB))
+			cortexm_prepare(ap);
 		/* Should probe further here to make sure it's a valid target.
 		 * AP should be unref'd if not valid.
 		 */
