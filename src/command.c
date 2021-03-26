@@ -62,13 +62,13 @@ static bool cmd_heapinfo(target *t, int argc, const char **argv);
 static bool cmd_debug_bmp(target *t, int argc, const char **argv);
 #endif
 
-bool zwizwa_decode_gdb = false;
+bool zwizwa_console = false;
 static bool cmd_zwizwa(target *t, int argc, const char **argv) {
 	(void)t;
 	if (argc == 3) {
-		if (!strcmp("decode_gdb", argv[1])) {
-			zwizwa_decode_gdb = !!atoi(argv[2]);
-			gdb_outf("decode_gdb %d\n", zwizwa_decode_gdb);
+		if (!strcmp("console", argv[1])) {
+			zwizwa_console = !!atoi(argv[2]);
+			gdb_outf("console %d\n", zwizwa_console);
 			return true;
 		}
 	}
