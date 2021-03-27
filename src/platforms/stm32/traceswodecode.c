@@ -31,7 +31,7 @@ static uint32_t swo_decode = 0; /* bitmask of channels to print */
 static int swo_pkt_len = 0; /* decoder state */
 static bool swo_print = false;
 
-extern bool zwizwa_console;
+extern bool hack_console;
 
 /* print decoded swo packet on usb serial */
 uint16_t traceswo_decode(usbd_device *usbd_dev, uint8_t addr,
@@ -51,9 +51,9 @@ uint16_t traceswo_decode(usbd_device *usbd_dev, uint8_t addr,
 				swo_buf[swo_buf_len++]=ch;
 				if (/*(ch == '\n') || (ch == '\r') ||*/  // No point in this if the DMA buffer is chunking...
 					(swo_buf_len == sizeof(swo_buf))) {
-					if (zwizwa_console) {
-						/* This is dirty, but since main loop is just waiting for Ctrl-C it's probably ok
-						   to call this from ISR, apart from maybe alloca() size issues. */
+					if (hack_console) {
+						/* This is dirty, but since main loop is just waiting for Ctrl-C
+						   it's probably ok to call this from ISR. */
 						gdb_out_buf((const char*)swo_buf, swo_buf_len);
 					}
 					else {

@@ -62,17 +62,17 @@ static bool cmd_heapinfo(target *t, int argc, const char **argv);
 static bool cmd_debug_bmp(target *t, int argc, const char **argv);
 #endif
 
-bool zwizwa_console = false;
-static bool cmd_zwizwa(target *t, int argc, const char **argv) {
+bool hack_console = false;
+static bool cmd_hack(target *t, int argc, const char **argv) {
 	(void)t;
 	if (argc == 3) {
 		if (!strcmp("console", argv[1])) {
-			zwizwa_console = !!atoi(argv[2]);
-			gdb_outf("console %d\n", zwizwa_console);
+			hack_console = !!atoi(argv[2]);
+			gdb_outf("console %d\n", hack_console);
 			return true;
 		}
 	}
-	gdb_out("zwizwa: bad command\n");
+	gdb_out("hack: bad command\n");
 	return -1;
 }
 
@@ -101,7 +101,7 @@ const struct command_s cmd_list[] = {
 #if defined(PLATFORM_HAS_DEBUG) && (PC_HOSTED == 0)
 	{"debug_bmp", (cmd_handler)cmd_debug_bmp, "Output BMP \"debug\" strings to the second vcom: (enable|disable)"},
 #endif
-	{"zwizwa", (cmd_handler)cmd_zwizwa, "Zwizwa hacks (see blackmagic/src/command.c)"},
+	{"hack", (cmd_handler)cmd_hack, "hacks (see blackmagic/src/command.c)"},
 	{NULL, NULL, NULL}
 };
 
