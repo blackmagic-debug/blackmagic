@@ -350,6 +350,10 @@ handle_q_string_reply(const char *str, const char *param)
 		gdb_putpacketz("E01");
 }
 
+/* To keep the hack simple, all run time information is contained in a
+   single struct on the target. */
+extern uint32_t hack_target_config;
+
 static void
 handle_q_packet(char *packet, int len)
 {
@@ -405,12 +409,22 @@ handle_q_packet(char *packet, int len)
 			return;
 		}
 		handle_q_string_reply(target_tdesc(cur_target), packet + 31);
+
 	} else if (sscanf(packet, "qCRC:%" PRIx32 ",%" PRIx32, &addr, &alen) == 2) {
 		if(!cur_target) {
 			gdb_putpacketz("E01");
 			return;
 		}
 		gdb_putpacket_f("C%lx", generic_crc32(cur_target, addr, alen));
+
+	} else if (!strcmp (packet, "qSymbol::")) {
+		/* Retrieve 'config' symbol. */
+		hack_target_config = 0;
+		gdb_putpacketz("qSymbol:636f6e666967");
+
+	} else if (1 == sscanf(packet, "qSymbol:%" SCNx32 ":636f6e666967", &hack_target_config)) {
+		/* We only expect 'config', so don't check it. */
+		gdb_putpacketz("OK");
 
 	} else {
 		DEBUG_GDB("*** Unsupported packet: %s\n", packet);
