@@ -766,12 +766,20 @@ static void cortexm_halt_request(target *t)
 }
 
 extern uint32_t hack_target_config;
-uint32_t swd_tether;
+struct info_buf {
+    uint16_t write_next;
+    uint16_t read_next;
+    uint8_t  logsize;
+    uint8_t  reserved[3];
+};
 void hack_cortexm_tether_poll(target *t)
 {
-	/* Check that we have config, swd_tether and data ready. */
 	if (!hack_target_config) return;
-	swd_tether = target_mem_read32(t, hack_target_config + 18 * sizeof(uint32_t));
+#if 0
+	/* Custom protocol.  This can be extended to any event generated
+	   by the target, but will need target support to poll the
+	   synchronization word. */
+	uint32_t swd_tether = target_mem_read32(t, hack_target_config + 18 * sizeof(uint32_t));
 	if (!swd_tether) return;
 	uint32_t swd_ctrl = target_mem_read32(t, swd_tether);
 	uint32_t size = swd_ctrl & 0xFF;
@@ -787,6 +795,36 @@ void hack_cortexm_tether_poll(target *t)
 
 	/* Acknowledge. */
 	target_mem_write32(t, swd_tether, 0);
+
+#else
+	/* Read from the log buffer directly.  This requires no additional
+	   target support other than providing the buffer address in the
+	   config struct. */
+	uint32_t info_buf_addr = target_mem_read32(t, hack_target_config + 17 * sizeof(uint32_t));
+	if (!info_buf_addr) return;
+	/* Simplest to just read the whole thing at once. */
+	struct info_buf info_buf;
+	target_mem_read(t, &info_buf, info_buf_addr, sizeof(info_buf));
+	int32_t nb = info_buf.write_next - info_buf.read_next;
+	if (!nb) return;
+	uint32_t buf_size = 1 << info_buf.logsize;
+	uint32_t buf_mask = buf_size - 1;
+	uint32_t offset_start = info_buf.read_next & buf_mask;
+	/* Keep it simple and just transfer the chunk up to the end of the
+	   buffer. If there is wrap around, the remainder will be read on
+	   the next poll. */
+	uint32_t offset_endx = offset_start + nb;
+	if (offset_endx > buf_size) offset_endx = buf_size;
+	nb = offset_endx - offset_start;
+	/* FIXME: Limit chunk to available stack size. */
+	if (nb > 64) nb = 64;
+	char buf[nb];
+	uint32_t data_addr = info_buf_addr + sizeof(struct info_buf) + offset_start;
+	target_mem_read(t, buf, data_addr, nb);
+	gdb_out_buf(buf, nb);
+	/* Acknowledge by updating the read pointer. */
+	target_mem_write16(t, info_buf_addr + 2, info_buf.read_next + nb);
+#endif
 }
 
 static enum target_halt_reason cortexm_halt_poll(target *t, target_addr *watch)
