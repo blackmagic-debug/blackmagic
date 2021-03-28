@@ -765,8 +765,34 @@ static void cortexm_halt_request(target *t)
 	}
 }
 
+extern uint32_t hack_target_config;
+uint32_t swd_tether;
+void hack_cortexm_tether_poll(target *t)
+{
+	/* Check that we have config, swd_tether and data ready. */
+	if (!hack_target_config) return;
+	swd_tether = target_mem_read32(t, hack_target_config + 18 * sizeof(uint32_t));
+	if (!swd_tether) return;
+	uint32_t swd_ctrl = target_mem_read32(t, swd_tether);
+	uint32_t size = swd_ctrl & 0xFF;
+	if (!size) return;
+
+	/* Transfer buffer. */
+	if (size >= 2) {
+		uint8_t buf[size];
+		target_mem_read(t, buf, swd_tether + sizeof(uint32_t), size);
+		/* FIXME: Ignore tag for now. */
+		gdb_out_buf((const char *)(buf+2), size-2);
+	}
+
+	/* Acknowledge. */
+	target_mem_write32(t, swd_tether, 0);
+}
+
 static enum target_halt_reason cortexm_halt_poll(target *t, target_addr *watch)
 {
+	hack_cortexm_tether_poll(t);
+
 	struct cortexm_priv *priv = t->priv;
 
 	volatile uint32_t dhcsr = 0;
