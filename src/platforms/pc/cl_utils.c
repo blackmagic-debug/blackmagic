@@ -253,8 +253,17 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 		case 'T':
 			opt->opt_mode = BMP_MODE_SWJ_TEST;
 			break;
+		case 'w':
+			if (opt->opt_mode == BMP_MODE_FLASH_VERIFY)
+				opt->opt_mode = BMP_MODE_FLASH_WRITE_VERIFY;
+			else
+				opt->opt_mode = BMP_MODE_FLASH_WRITE;
+			break;
 		case 'V':
-			opt->opt_mode = BMP_MODE_FLASH_VERIFY;
+			if (opt->opt_mode == BMP_MODE_FLASH_WRITE)
+				opt->opt_mode = BMP_MODE_FLASH_WRITE_VERIFY;
+			else
+				opt->opt_mode = BMP_MODE_FLASH_VERIFY;
 			break;
 		case 'r':
 			opt->opt_mode = BMP_MODE_FLASH_READ;
