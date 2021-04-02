@@ -53,6 +53,7 @@ void platform_init(void)
 	initialise_monitor_handles();
 #endif
 	//rcc_clock_setup_pll(&rcc_hse_configs[RCC_CLOCK_HSE8_72MHZ]);
+	// FIXME: old libopencm3 API
 	rcc_clock_setup_in_hse_8mhz_out_72mhz();
 
 	if (rev == 0) {

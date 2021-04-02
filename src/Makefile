@@ -12,6 +12,8 @@ CFLAGS += -Wall -Wextra -Werror -Wno-char-subscripts \
 	-std=gnu99 -g3 -MD -I./target \
 	-I. -Iinclude -I$(PLATFORM_DIR) \
 	-I/i/exo/deps/libopencm3/include
+# FIXME: hardcoded path
+
 
 ifeq ($(ENABLE_DEBUG), 1)
 CFLAGS += -DENABLE_DEBUG

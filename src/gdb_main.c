@@ -409,7 +409,6 @@ handle_q_packet(char *packet, int len)
 			return;
 		}
 		handle_q_string_reply(target_tdesc(cur_target), packet + 31);
-
 	} else if (sscanf(packet, "qCRC:%" PRIx32 ",%" PRIx32, &addr, &alen) == 2) {
 		if(!cur_target) {
 			gdb_putpacketz("E01");

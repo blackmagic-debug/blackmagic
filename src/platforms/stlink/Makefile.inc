@@ -12,6 +12,8 @@ LDFLAGS_BOOT := $(LDFLAGS) --specs=nano.specs -lopencm3_stm32f1 \
 	-Wl,-Map=mapfile -mthumb -mcpu=cortex-m3 -Wl,-gc-sections \
 	-L../libopencm3/lib \
         -L/i/exo/deps/libopencm3/lib
+# FIXME: hardcoded path
+
 ifeq ($(ST_BOOTLOADER), 1)
 $(info  Load address 0x08004000 for original ST-LinkV2 Bootloader)
 CFLAGS += -DST_BOOTLOADER

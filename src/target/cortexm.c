@@ -774,13 +774,27 @@ struct info_buf {
 };
 void hack_cortexm_tether_poll(target *t)
 {
-	/* Use the uc_tools config struct as root data structure. */
+	/* Use the uc_tools config struct as root data structure.
+	   See  struct gdbstub_config in uc_tools/gdb/gdbstub_api.h */
 	if (!hack_target_config) return;
 #if 0
-	/* Custom protocol.  This can be extended to any event generated
-	   by the target, but will need target support to poll the
-	   synchronization word. */
-	uint32_t swd_tether = target_mem_read32(t, hack_target_config + 18 * sizeof(uint32_t));
+	/* FIXME: Incomplete.
+
+	   An attempt at a more general protocol.  The idea is to expose
+	   the uc_tools USB protocol here, allowing the SWD bus to be a
+	   drop-in replacement of the USB debugging bus in the case the
+	   target does not have the USB port available.
+
+	   General idea:
+
+	   BMP emulates a DMA peripheral on the target: BMP polls for
+       some flag on the target indicating data is read, performs a
+       transfer to/from target memory, and sets a software interrupt
+       for synchronization. */
+
+	const uint32_t swd_tether_config_offset = 18;
+	uint32_t swd_tether =
+		target_mem_read32(t, hack_target_config + swd_tether_config_offset * sizeof(uint32_t));
 	if (!swd_tether) return;
 	uint32_t swd_ctrl = target_mem_read32(t, swd_tether);
 	uint32_t size = swd_ctrl & 0xFF;
@@ -790,7 +804,7 @@ void hack_cortexm_tether_poll(target *t)
 	if (size >= 2) {
 		uint8_t buf[size];
 		target_mem_read(t, buf, swd_tether + sizeof(uint32_t), size);
-		/* FIXME: Ignore tag for now. */
+		/* FIXME: Ignore tag for now, assume this is logging data. */
 		gdb_out_buf((const char *)(buf+2), size-2);
 	}
 
@@ -798,11 +812,14 @@ void hack_cortexm_tether_poll(target *t)
 	target_mem_write32(t, swd_tether, 0);
 
 #else
-	/* Read from the log buffer directly.  This requires no additional
-	   target support other than providing the buffer address in the
-	   config struct. */
+	/* A proof-of-concept and a scratch for an immediate itch: read
+	   from the target log buffer directly.  For uc_tools this
+	   requires no additional target support other than providing the
+	   buffer address in the config struct. */
+
+	const uint32_t info_buf_config_offset = 17;
 	uint32_t info_buf_addr =
-            target_mem_read32(t, hack_target_config + 17 * sizeof(uint32_t));
+            target_mem_read32(t, hack_target_config + info_buf_config_offset * sizeof(uint32_t));
 	if (!info_buf_addr) return;
 	/* Simplest to just read the whole thing at once. */
 	struct info_buf info_buf;

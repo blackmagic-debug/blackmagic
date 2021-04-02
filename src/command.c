@@ -63,16 +63,7 @@ static bool cmd_debug_bmp(target *t, int argc, const char **argv);
 #endif
 
 /* Keep hacks together, and clearly mark them as such. */
-bool     hack_swo_console = false;
 uint32_t hack_target_config = 0;
-static bool cmd_swo_console(target *t, int argc, const char **argv) {
-	(void)t;
-	if (argc >= 2) {
-		hack_swo_console = !!atoi(argv[1]);
-	}
-	gdb_outf("swo_console = %d\n", hack_swo_console);
-	return true;
-}
 static bool cmd_target_config(target *t, int argc, const char **argv) {
 	(void)argc;
 	(void)argv;
@@ -109,7 +100,6 @@ const struct command_s cmd_list[] = {
 #if defined(PLATFORM_HAS_DEBUG) && (PC_HOSTED == 0)
 	{"debug_bmp", (cmd_handler)cmd_debug_bmp, "Output BMP \"debug\" strings to the second vcom: (enable|disable)"},
 #endif
-	{"swo_console", (cmd_handler)cmd_swo_console, "Send SWO data to GDB console (enable|disable)"},
 	{"target_config", (cmd_handler)cmd_target_config, "Target config struct (address)"},
 	{NULL, NULL, NULL}
 };

@@ -31,8 +31,6 @@ static uint32_t swo_decode = 0; /* bitmask of channels to print */
 static int swo_pkt_len = 0; /* decoder state */
 static bool swo_print = false;
 
-extern bool hack_swo_console;
-
 /* print decoded swo packet on usb serial */
 uint16_t traceswo_decode(usbd_device *usbd_dev, uint8_t addr,
 				const void *buf, uint16_t len) {
@@ -49,17 +47,9 @@ uint16_t traceswo_decode(usbd_device *usbd_dev, uint8_t addr,
 		} else if (swo_pkt_len <= 4) { /* data */
 			if (swo_print) {
 				swo_buf[swo_buf_len++]=ch;
-				if (/*(ch == '\n') || (ch == '\r') ||*/  // No point in this if the DMA buffer is chunking...
-					(swo_buf_len == sizeof(swo_buf))) {
-					if (hack_swo_console) {
-						/* This is dirty, but since main loop is just waiting for Ctrl-C
-						   it's probably ok to call this from ISR. */
-						gdb_out_buf((const char*)swo_buf, swo_buf_len);
-					}
-					else {
-						if (cdcacm_get_config() && cdcacm_get_dtr()) /* silently drop if usb not ready */
-							usbd_ep_write_packet(usbd_dev, addr, swo_buf, swo_buf_len);
-					}
+				if (swo_buf_len == sizeof(swo_buf)) {
+					if (cdcacm_get_config() && cdcacm_get_dtr()) /* silently drop if usb not ready */
+						usbd_ep_write_packet(usbd_dev, addr, swo_buf, swo_buf_len);
 					swo_buf_len=0;
 				}
 			}
