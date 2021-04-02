@@ -774,8 +774,9 @@ struct info_buf {
 };
 void hack_cortexm_tether_poll(target *t)
 {
-	/* Use the uc_tools config struct as root data structure.
-	   See  struct gdbstub_config in uc_tools/gdb/gdbstub_api.h */
+	/* This uses the uc_tools config struct as root data structure.
+	   See struct gdbstub_config in uc_tools/gdb/gdbstub_api.h
+	   https://github.com/zwizwa/uc_tools */
 	if (!hack_target_config) return;
 #if 0
 	/* FIXME: Incomplete.
@@ -812,8 +813,8 @@ void hack_cortexm_tether_poll(target *t)
 	target_mem_write32(t, swd_tether, 0);
 
 #else
-	/* A proof-of-concept and a scratch for an immediate itch: read
-	   from the target log buffer directly.  For uc_tools this
+	/* A simpler proof-of-concept and a scratch for an immediate itch:
+	   read from the target log buffer directly.  For uc_tools this
 	   requires no additional target support other than providing the
 	   buffer address in the config struct. */
 

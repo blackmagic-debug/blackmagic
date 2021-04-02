@@ -65,8 +65,6 @@ static bool cmd_debug_bmp(target *t, int argc, const char **argv);
 /* Keep hacks together, and clearly mark them as such. */
 uint32_t hack_target_config = 0;
 static bool cmd_target_config(target *t, int argc, const char **argv) {
-	(void)argc;
-	(void)argv;
 	(void)t;
 	if (argc >= 2) {
 		hack_target_config = strtol(argv[1], NULL, 0);
