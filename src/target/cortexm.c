@@ -86,7 +86,7 @@ static int cortexm_breakwatch_clear(target *t, struct breakwatch *);
 static target_addr cortexm_check_watch(target *t);
 
 #define CORTEXM_MAX_WATCHPOINTS	4	/* architecture says up to 15, no implementation has > 4 */
-#define CORTEXM_MAX_BREAKPOINTS	6	/* architecture says up to 127, no implementation has > 6 */
+#define CORTEXM_MAX_BREAKPOINTS	8	/* architecture says up to 127, no implementation has > 8 */
 
 static int cortexm_hostio_request(target *t);
 
