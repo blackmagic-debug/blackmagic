@@ -767,13 +767,14 @@ static void cortexm_halt_request(target *t)
 
 extern uint32_t hack_target_config;
 struct info_buf {
-    uint16_t write_next;
-    uint16_t read_next;
+    uint32_t write_next;
+    uint32_t read_next;
     uint8_t  logsize;
     uint8_t  reserved[3];
 };
 void hack_cortexm_tether_poll(target *t)
 {
+	/* Use the uc_tools config struct as root data structure. */
 	if (!hack_target_config) return;
 #if 0
 	/* Custom protocol.  This can be extended to any event generated
@@ -800,13 +801,17 @@ void hack_cortexm_tether_poll(target *t)
 	/* Read from the log buffer directly.  This requires no additional
 	   target support other than providing the buffer address in the
 	   config struct. */
-	uint32_t info_buf_addr = target_mem_read32(t, hack_target_config + 17 * sizeof(uint32_t));
+	uint32_t info_buf_addr =
+            target_mem_read32(t, hack_target_config + 17 * sizeof(uint32_t));
 	if (!info_buf_addr) return;
 	/* Simplest to just read the whole thing at once. */
 	struct info_buf info_buf;
 	target_mem_read(t, &info_buf, info_buf_addr, sizeof(info_buf));
 	int32_t nb = info_buf.write_next - info_buf.read_next;
 	if (!nb) return;
+	/* FIXME: This probably needs a consistency check.  It is possible
+	   that the pointers became corrupt due to a target crash.  What
+	   we expect here is that nb is between 0 and buf_size-1. */
 	uint32_t buf_size = 1 << info_buf.logsize;
 	uint32_t buf_mask = buf_size - 1;
 	uint32_t offset_start = info_buf.read_next & buf_mask;
@@ -816,6 +821,7 @@ void hack_cortexm_tether_poll(target *t)
 	uint32_t offset_endx = offset_start + nb;
 	if (offset_endx > buf_size) offset_endx = buf_size;
 	nb = offset_endx - offset_start;
+
 	/* FIXME: Limit chunk to available stack size. */
 	if (nb > 64) nb = 64;
 	char buf[nb];
@@ -823,7 +829,7 @@ void hack_cortexm_tether_poll(target *t)
 	target_mem_read(t, buf, data_addr, nb);
 	gdb_out_buf(buf, nb);
 	/* Acknowledge by updating the read pointer. */
-	target_mem_write16(t, info_buf_addr + 2, info_buf.read_next + nb);
+	target_mem_write32(t, info_buf_addr + 4, info_buf.read_next + nb);
 #endif
 }
 
