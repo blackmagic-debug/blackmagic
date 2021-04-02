@@ -33,6 +33,7 @@
 #include "morse.h"
 #include "version.h"
 #include "serialno.h"
+#include "app.h"
 
 #ifdef PLATFORM_HAS_TRACESWO
 #	include "traceswo.h"
@@ -62,16 +63,6 @@ static bool cmd_heapinfo(target *t, int argc, const char **argv);
 static bool cmd_debug_bmp(target *t, int argc, const char **argv);
 #endif
 
-/* Keep hacks together, and clearly mark them as such. */
-uint32_t hack_target_config = 0;
-static bool cmd_target_config(target *t, int argc, const char **argv) {
-	(void)t;
-	if (argc >= 2) {
-		hack_target_config = strtol(argv[1], NULL, 0);
-	}
-	gdb_outf("target_config = 0x%08x\n", hack_target_config);
-	return true;
-}
 
 const struct command_s cmd_list[] = {
 	{"version", (cmd_handler)cmd_version, "Display firmware version info"},
@@ -98,7 +89,6 @@ const struct command_s cmd_list[] = {
 #if defined(PLATFORM_HAS_DEBUG) && (PC_HOSTED == 0)
 	{"debug_bmp", (cmd_handler)cmd_debug_bmp, "Output BMP \"debug\" strings to the second vcom: (enable|disable)"},
 #endif
-	{"target_config", (cmd_handler)cmd_target_config, "Target config struct (address)"},
 	{NULL, NULL, NULL}
 };
 
@@ -134,6 +124,14 @@ int command_process(target *t, char *cmd)
 		if ((argc == 0) || !strncmp(argv[0], c->cmd, strlen(argv[0])))
 			return !c->handler(t, argc, argv);
 	}
+
+#if ENABLE_APP
+	/* Same behavior as above. */
+	for(c = app_cmd_list; c->cmd; c++) {
+		if ((argc == 0) || !strncmp(argv[0], c->cmd, strlen(argv[0])))
+			return !c->handler(t, argc, argv);
+	}
+#endif
 
 	if (!t)
 		return -1;
@@ -173,6 +171,11 @@ bool cmd_help(target *t, int argc, char **argv)
 		gdb_out("General commands:\n");
 		for(c = cmd_list; c->cmd; c++)
 			gdb_outf("\t%s -- %s\n", c->cmd, c->help);
+#ifdef ENABLE_APP
+		gdb_outf("%s commands:\n", app_name);
+		for(c = app_cmd_list; c->cmd; c++)
+			gdb_outf("\t%s -- %s\n", c->cmd, c->help);
+#endif
 	}
 	if (!t)
 		return -1;

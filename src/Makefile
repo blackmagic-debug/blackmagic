@@ -2,6 +2,8 @@ PROBE_HOST ?= native
 PLATFORM_DIR = platforms/$(PROBE_HOST)
 VPATH += $(PLATFORM_DIR) target
 ENABLE_DEBUG ?=
+APP_SRC ?=
+APP_CFLAGS ?=
 
 ifneq ($(V), 1)
 MAKEFLAGS += --no-print-dir
@@ -10,13 +12,14 @@ endif
 
 CFLAGS += -Wall -Wextra -Werror -Wno-char-subscripts \
 	-std=gnu99 -g3 -MD -I./target \
-	-I. -Iinclude -I$(PLATFORM_DIR) \
-	-I/i/exo/deps/libopencm3/include
-# FIXME: hardcoded path
-
+	-I. -Iinclude -I$(PLATFORM_DIR)
 
 ifeq ($(ENABLE_DEBUG), 1)
 CFLAGS += -DENABLE_DEBUG
+endif
+
+ifneq ($(APP_SRC),)
+CFLAGS += $(APP_CFLAGS) -DENABLE_APP
 endif
 
 SRC =			\
@@ -62,6 +65,7 @@ SRC =			\
 	stm32l4.c	\
 	stm32g0.c	\
 	target.c	\
+	$(APP_SRC)
 
 include $(PLATFORM_DIR)/Makefile.inc
 

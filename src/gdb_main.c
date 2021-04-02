@@ -35,6 +35,7 @@
 #include "command.h"
 #include "crc32.h"
 #include "morse.h"
+#include "app.h"
 
 enum gdb_signal {
 	GDB_SIGINT = 2,
@@ -102,6 +103,12 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 		SET_IDLE_STATE(1);
 		size = gdb_getpacket(pbuf, BUF_SIZE);
 		SET_IDLE_STATE(0);
+#if ENABLE_APP
+		if (app_handle_packet(pbuf, size)) {
+			/* App handled the reply. */
+			continue;
+		}
+#endif
 		switch(pbuf[0]) {
 		/* Implementation of these is mandatory! */
 		case 'g': { /* 'g': Read general registers */
@@ -321,7 +328,8 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 			handle_z_packet(pbuf, size);
 			break;
 
-		default: 	/* Packet not implemented */
+		default:
+			/* Packet not implemented */
 			DEBUG_GDB("*** Unsupported packet: %s\n", pbuf);
 			gdb_putpacketz("");
 		}
@@ -415,15 +423,6 @@ handle_q_packet(char *packet, int len)
 			return;
 		}
 		gdb_putpacket_f("C%lx", generic_crc32(cur_target, addr, alen));
-
-	} else if (!strcmp (packet, "qSymbol::")) {
-		/* Retrieve 'config' symbol. */
-		hack_target_config = 0;
-		gdb_putpacketz("qSymbol:636f6e666967");
-
-	} else if (1 == sscanf(packet, "qSymbol:%" SCNx32 ":636f6e666967", &hack_target_config)) {
-		/* We only expect 'config', so don't check it. */
-		gdb_putpacketz("OK");
 
 	} else {
 		DEBUG_GDB("*** Unsupported packet: %s\n", packet);

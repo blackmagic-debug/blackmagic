@@ -36,6 +36,7 @@
 #include "platform.h"
 #include "command.h"
 #include "gdb_packet.h"
+#include "app.h"
 
 #include <unistd.h>
 
@@ -766,96 +767,16 @@ static void cortexm_halt_request(target *t)
 	}
 }
 
-extern uint32_t hack_target_config;
-struct info_buf {
-    uint32_t write_next;
-    uint32_t read_next;
-    uint8_t  logsize;
-    uint8_t  reserved[3];
-};
-void hack_cortexm_tether_poll(target *t)
-{
-	/* This uses the uc_tools config struct as root data structure.
-	   See struct gdbstub_config in uc_tools/gdb/gdbstub_api.h
-	   https://github.com/zwizwa/uc_tools */
-	if (!hack_target_config) return;
-#if 0
-	/* FIXME: Incomplete.
-
-	   An attempt at a more general protocol.  The idea is to expose
-	   the uc_tools USB protocol here, allowing the SWD bus to be a
-	   drop-in replacement of the USB debugging bus in the case the
-	   target does not have the USB port available.
-
-	   General idea:
-
-	   BMP emulates a DMA peripheral on the target: BMP polls for
-       some flag on the target indicating data is read, performs a
-       transfer to/from target memory, and sets a software interrupt
-       for synchronization. */
-
-	const uint32_t swd_tether_config_offset = 18;
-	uint32_t swd_tether =
-		target_mem_read32(t, hack_target_config + swd_tether_config_offset * sizeof(uint32_t));
-	if (!swd_tether) return;
-	uint32_t swd_ctrl = target_mem_read32(t, swd_tether);
-	uint32_t size = swd_ctrl & 0xFF;
-	if (!size) return;
-
-	/* Transfer buffer. */
-	if (size >= 2) {
-		uint8_t buf[size];
-		target_mem_read(t, buf, swd_tether + sizeof(uint32_t), size);
-		/* FIXME: Ignore tag for now, assume this is logging data. */
-		gdb_out_buf((const char *)(buf+2), size-2);
-	}
-
-	/* Acknowledge. */
-	target_mem_write32(t, swd_tether, 0);
-
-#else
-	/* A simpler proof-of-concept and a scratch for an immediate itch:
-	   read from the target log buffer directly.  For uc_tools this
-	   requires no additional target support other than providing the
-	   buffer address in the config struct. */
-
-	const uint32_t info_buf_config_offset = 17;
-	uint32_t info_buf_addr =
-            target_mem_read32(t, hack_target_config + info_buf_config_offset * sizeof(uint32_t));
-	if (!info_buf_addr) return;
-	/* Simplest to just read the whole thing at once. */
-	struct info_buf info_buf;
-	target_mem_read(t, &info_buf, info_buf_addr, sizeof(info_buf));
-	int32_t nb = info_buf.write_next - info_buf.read_next;
-	if (!nb) return;
-	/* FIXME: This probably needs a consistency check.  It is possible
-	   that the pointers became corrupt due to a target crash.  What
-	   we expect here is that nb is between 0 and buf_size-1. */
-	uint32_t buf_size = 1 << info_buf.logsize;
-	uint32_t buf_mask = buf_size - 1;
-	uint32_t offset_start = info_buf.read_next & buf_mask;
-	/* Keep it simple and just transfer the chunk up to the end of the
-	   buffer. If there is wrap around, the remainder will be read on
-	   the next poll. */
-	uint32_t offset_endx = offset_start + nb;
-	if (offset_endx > buf_size) offset_endx = buf_size;
-	nb = offset_endx - offset_start;
-
-	/* FIXME: Limit chunk to available stack size. */
-	if (nb > 64) nb = 64;
-	char buf[nb];
-	uint32_t data_addr = info_buf_addr + sizeof(struct info_buf) + offset_start;
-	target_mem_read(t, buf, data_addr, nb);
-	gdb_out_buf(buf, nb);
-	/* Acknowledge by updating the read pointer. */
-	target_mem_write32(t, info_buf_addr + 4, info_buf.read_next + nb);
-#endif
-}
 
 static enum target_halt_reason cortexm_halt_poll(target *t, target_addr *watch)
 {
-	hack_cortexm_tether_poll(t);
-
+#ifdef ENABLE_APP
+	/* FIXME: This should go in a more general spot,
+	   e.g. target_halt_poll().  Trouble is that the routine does need
+	   to be polled repeatedly inside the while(!halted) loop, so
+	   parking it here for now. */
+	app_poll(t);
+#endif
 	struct cortexm_priv *priv = t->priv;
 
 	volatile uint32_t dhcsr = 0;
