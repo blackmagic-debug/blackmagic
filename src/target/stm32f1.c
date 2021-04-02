@@ -155,6 +155,11 @@ bool gd32f1_probe(target *t)
 
 bool stm32f1_probe(target *t)
 {
+	uint16_t stored_idcode = t->idcode;
+	if ((t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M0)
+		t->idcode = target_mem_read32(t, DBGMCU_IDCODE_F0) & 0xfff;
+	else
+		t->idcode = target_mem_read32(t, DBGMCU_IDCODE) & 0xfff;
 	size_t flash_size;
 	size_t block_size = 0x400;
 	switch(t->idcode) {
@@ -227,6 +232,7 @@ bool stm32f1_probe(target *t)
 		block_size = 0x800;
 		break;
 	default:     /* NONE */
+		t->idcode = stored_idcode;
 		return false;
 	}
 

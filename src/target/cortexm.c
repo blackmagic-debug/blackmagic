@@ -377,7 +377,7 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 		target_check_error(t);
 	}
 #define PROBE(x) \
-	do { if ((x)(t)) {target_halt_resume(t, 0); return true;} else target_check_error(t); } while (0)
+	do { if ((x)(t)) {return true;} else target_check_error(t); } while (0)
 
 	switch (ap->ap_designer) {
 	case AP_DESIGNER_FREESCALE:
@@ -399,6 +399,7 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 		PROBE(stm32h7_probe);
 		PROBE(stm32l0_probe);
 		PROBE(stm32l4_probe);
+		PROBE(stm32g0_probe);
 		if (ap->ap_partno == 0x472) {
 			t->driver = "STM32L552(no flash)";
 			target_halt_resume(t, 0);
