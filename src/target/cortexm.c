@@ -36,7 +36,6 @@
 #include "platform.h"
 #include "command.h"
 #include "gdb_packet.h"
-#include "app.h"
 
 #include <unistd.h>
 
@@ -770,13 +769,6 @@ static void cortexm_halt_request(target *t)
 
 static enum target_halt_reason cortexm_halt_poll(target *t, target_addr *watch)
 {
-#ifdef ENABLE_APP
-	/* FIXME: This should go in a more general spot,
-	   e.g. target_halt_poll().  Trouble is that the routine does need
-	   to be polled repeatedly inside the while(!halted) loop, so
-	   parking it here for now. */
-	app_poll(t);
-#endif
 	struct cortexm_priv *priv = t->priv;
 
 	volatile uint32_t dhcsr = 0;

@@ -22,8 +22,8 @@ extern const char app_name[];
    character is passed to the app.  App can call gdb_if_getchar()
    until it decides something's wrong and return.  At that point
    gdb_getpacket() continues to look for the next '$' or '!' packet.
-   If this is not used, just return. */
-void app_switch_protocol(char c);
+   If this is not used, ignore c and return gdb_if_getchar(). */
+char app_switch_protocol(char c);
 
 
 #endif

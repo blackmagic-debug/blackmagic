@@ -44,21 +44,24 @@ int gdb_getpacket(char *packet, int size)
 			/* Spin waiting for a start of packet character - either a gdb
              * start ('$') or a BMP remote packet start ('!').
 			 */
+			packet[0] = gdb_if_getchar();
 			for(;;) {
-				packet[0] = gdb_if_getchar();
 				if (packet[0]==0x04) return 1;
 				if (packet[0] == '$') break;
 				if (packet[0] == '!') break;
 #if ENABLE_APP
-				/* Unknown prototocl.  App might know.  Transfer
-				 * complete control to app. App can call
-				 * gdb_if_getchar() to get more data, and return when
-				 * it reads something it can't handle.  App can decide
-				 * to give back control.  To us it is as if nothing
-				 * happened meanwhile. */
-				app_switch_protocol(packet[0]);
-			}
+				/* Transfer control to app when we see an unexpected
+				 * character. One posssible route here is "hit enter
+				 * to activate console".  App can call
+				 * gdb_if_getchar() to get more data. It can return
+				 * when it reads something it can't handle so BMP can
+				 * contine ignoring.  This function needs to call
+				 * gdb_if_char() at least once. */
+				packet[0] = app_switch_protocol(packet[0]);
+#else
+				packet[0] = gdb_if_getchar();
 #endif
+			}
 #if PC_HOSTED == 0
 			if (packet[0]==REMOTE_SOM) {
 				/* This is probably a remote control packet
