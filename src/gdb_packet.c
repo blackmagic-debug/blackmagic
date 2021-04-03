@@ -51,12 +51,11 @@ int gdb_getpacket(char *packet, int size)
 				if (packet[0] == '!') break;
 #if ENABLE_APP
 				/* Transfer control to app when we see an unexpected
-				 * character. One posssible route here is "hit enter
-				 * to activate console".  App can call
-				 * gdb_if_getchar() to get more data. It can return
-				 * when it reads something it can't handle so BMP can
-				 * contine ignoring.  This function needs to call
-				 * gdb_if_char() at least once. */
+				 * character. App can call gdb_if_getchar() to get
+				 * more data, e.g. to implement a command console. It
+				 * can return when it decides it is time to switch
+				 * back to normal operation. This function needs to
+				 * call gdb_if_char() at least once. */
 				packet[0] = app_switch_protocol(packet[0]);
 #else
 				packet[0] = gdb_if_getchar();

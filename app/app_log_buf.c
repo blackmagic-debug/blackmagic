@@ -9,11 +9,6 @@
 #include <ctype.h>
 #include <inttypes.h>
 
-/* FIXME: It would be nice to not have to keep track of this...  But
-   hey, this is one-off applet code so it can be messy. */
-static target *tgt;
-static void track_target(target *t) { tgt = t; }
-
 uint32_t config_addr;
 
 #define CONFIG_HEX "636f6e666967"
@@ -53,8 +48,6 @@ struct log_buf_hdr {
    Data is displayed on the GDB console.  */
 void app_poll(target *t)
 {
-	track_target(t);
-
 	/* This uses the uc_tools config struct as root data structure.
 	   See struct gdbstub_config in uc_tools/gdb/gdbstub_api.h
 	   https://github.com/zwizwa/uc_tools
@@ -116,9 +109,9 @@ const struct command_s app_cmd_list[] = {
 
 const char app_name[] = "log_buf";
 
-/* If this is not used, it needs to behave as gdb_if_getchar().
-   I.e. it needs to pull in at least one new character to ensure the
-   call sequence doesn't end up in an infinite loop. */
+/* This is called whenever gdb_getpacket() sees a character it doesn't
+   understand.  We take control of gdb_if_getchar(), e.g. to implement
+   a command console on the main ttyACM port. */
 char app_switch_protocol(char c) {
 	for(;;) {
 		/* Echo. */
@@ -127,8 +120,13 @@ char app_switch_protocol(char c) {
 
 		c = gdb_if_getchar();
 
-		/* It is possible to escape back to the main firmware.
-		   In this app we can just detect a protocol packet start. */
+		/* We can give control back to gdb_getpacket() to switch back
+		   to GDB RSP or remote control packet mode. Here we do this
+		   when we see a start-of-packet, but it could be done on any
+		   condition we chose, e.g. an explict quite command.
+
+		   The only condition is that we must at least read one
+		   character to prevent an infinite loop. */
 		if ('$' == c) break;
 		if ('!' == c) break;
 		if (0x04 == c) break;
