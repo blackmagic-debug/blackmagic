@@ -21,7 +21,6 @@
 #include "general.h"
 #include "cdcacm.h"
 #include "traceswo.h"
-#include "gdb_packet.h"
 
 /* SWO decoding */
 /* data is static in case swo packet is astride two buffers */

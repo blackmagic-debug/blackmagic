@@ -63,7 +63,6 @@ static bool cmd_heapinfo(target *t, int argc, const char **argv);
 static bool cmd_debug_bmp(target *t, int argc, const char **argv);
 #endif
 
-
 const struct command_s cmd_list[] = {
 	{"version", (cmd_handler)cmd_version, "Display firmware version info"},
 	{"help", (cmd_handler)cmd_help, "Display help for monitor commands"},

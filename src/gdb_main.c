@@ -328,8 +328,7 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 			handle_z_packet(pbuf, size);
 			break;
 
-		default:
-			/* Packet not implemented */
+		default: 	/* Packet not implemented */
 			DEBUG_GDB("*** Unsupported packet: %s\n", pbuf);
 			gdb_putpacketz("");
 		}
@@ -357,10 +356,6 @@ handle_q_string_reply(const char *str, const char *param)
 	} else
 		gdb_putpacketz("E01");
 }
-
-/* To keep the hack simple, all run time information is contained in a
-   single struct on the target. */
-extern uint32_t hack_target_config;
 
 static void
 handle_q_packet(char *packet, int len)
