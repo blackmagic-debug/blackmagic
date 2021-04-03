@@ -21,7 +21,6 @@
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
-#include "app.h"
 
 #include <stdarg.h>
 

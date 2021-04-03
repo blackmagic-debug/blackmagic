@@ -27,6 +27,7 @@
 #include "gdb_packet.h"
 #include "hex_utils.h"
 #include "remote.h"
+#include "app.h"
 
 #include <stdarg.h>
 
@@ -43,10 +44,21 @@ int gdb_getpacket(char *packet, int size)
 			/* Spin waiting for a start of packet character - either a gdb
              * start ('$') or a BMP remote packet start ('!').
 			 */
-			do {
+			for(;;) {
 				packet[0] = gdb_if_getchar();
 				if (packet[0]==0x04) return 1;
-			} while ((packet[0] != '$') && (packet[0] != REMOTE_SOM));
+				if (packet[0] == '$') break;
+				if (packet[0] == '!') break;
+#if ENABLE_APP
+				/* Unknown prototocl.  App might know.  Transfer
+				 * complete control to app. App can call
+				 * gdb_if_getchar() to get more data, and return when
+				 * it reads something it can't handle.  App can decide
+				 * to give back control.  To us it is as if nothing
+				 * happened meanwhile. */
+				app_switch_protocol(packet[0]);
+			}
+#endif
 #if PC_HOSTED == 0
 			if (packet[0]==REMOTE_SOM) {
 				/* This is probably a remote control packet
@@ -88,6 +100,7 @@ int gdb_getpacket(char *packet, int size)
 				 */
 				packet[0] = 0;
 			}
+
 #endif
 	    } while (packet[0] != '$');
 

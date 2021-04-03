@@ -1,9 +1,11 @@
 #include "target.h"
 #include "target_internal.h"
 #include "gdb_packet.h"
+#include "gdb_if.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 #include <inttypes.h>
 
 uint32_t config_addr;
@@ -105,3 +107,35 @@ const struct command_s app_cmd_list[] = {
 };
 
 const char app_name[] = "log_buf";
+
+/* This is just a stub. */
+#define APP_INPUT_BUF_LOGSIZE 8
+#define APP_INPUT_BUF_SIZE (1 << APP_INPUT_BUF_LOGSIZE)
+#define APP_INPUT_BUF_MASK (APP_INPUT_BUF_SIZE-1)
+struct {
+	char buf[APP_INPUT_BUF_SIZE];
+	uint32_t write;
+} app_input = {};
+
+/* Just an illustration.  The point is to allow an alternative
+   protocol on the main ttyACM in case non-RSP protocol is
+   received. */
+void app_switch_protocol(char c) {
+	app_input.buf[app_input.write] = c;
+	while ('$' != (c = gdb_if_getchar())) {
+		app_input.buf[app_input.write++] = c;
+		if (isspace(c)) {
+			app_input.buf[app_input.write] = 0;
+			/* FIXME: Hook this into:
+			   https://github.com/zwizwa/uc_tools/blob/master/mod_forth.c
+			   The input of that interpreter is just isolated commands or numbers.
+			   For now, just print those to the console. */
+			for (uint32_t i=0; i<app_input.write; i++) {
+				gdb_if_putchar(app_input.buf[i], 0);
+			}
+			gdb_if_putchar('\r', 0);
+			gdb_if_putchar('\n', 1);
+			app_input.write = 0;
+		}
+	}
+}
