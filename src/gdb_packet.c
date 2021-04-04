@@ -27,7 +27,9 @@
 #include "gdb_packet.h"
 #include "hex_utils.h"
 #include "remote.h"
-#include "app.h"
+#ifdef ENABLE_APPLET
+#include "applet.h"
+#endif
 
 #include <stdarg.h>
 
@@ -49,14 +51,14 @@ int gdb_getpacket(char *packet, int size)
 				if (packet[0]==0x04) return 1;
 				if (packet[0] == '$') break;
 				if (packet[0] == '!') break;
-#if ENABLE_APP
+#if ENABLE_APPLET
 				/* Transfer control to app when we see an unexpected
 				 * character. App can call gdb_if_getchar() to get
 				 * more data, e.g. to implement a command console. It
 				 * can return when it decides it is time to switch
 				 * back to normal operation. This function needs to
 				 * call gdb_if_char() at least once. */
-				packet[0] = app_switch_protocol(packet[0]);
+				packet[0] = applet_switch_protocol(packet[0]);
 #else
 				packet[0] = gdb_if_getchar();
 #endif

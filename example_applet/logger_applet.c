@@ -2,7 +2,7 @@
 #include "target_internal.h"
 #include "gdb_packet.h"
 #include "gdb_if.h"
-#include "app.h"
+#include "applet.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -13,7 +13,7 @@ uint32_t config_addr;
 
 #define CONFIG_HEX "636f6e666967"
 
-int app_handle_packet(char *packet, int len) {
+int applet_handle_packet(char *packet, int len) {
 	(void)len;
     if (!strcmp (packet, "qSymbol::")) {
         /* Retrieve 'config' symbol. */
@@ -46,7 +46,7 @@ struct log_buf_hdr {
 
 /* Poll data from the on-target log buffer when the target is running.
    Data is displayed on the GDB console.  */
-void app_poll(target *t)
+void applet_poll(target *t)
 {
 	/* This uses the uc_tools config struct as root data structure.
 	   See struct gdbstub_config in uc_tools/gdb/gdbstub_api.h
@@ -93,7 +93,7 @@ void app_poll(target *t)
 
 
 /* Keep hacks together, and clearly mark them as such. */
-static bool app_cmd_config_addr(target *t, int argc, const char **argv) {
+static bool applet_cmd_config_addr(target *t, int argc, const char **argv) {
 	(void)t;
 	if (argc >= 2) {
 		config_addr = strtol(argv[1], NULL, 0);
@@ -102,17 +102,21 @@ static bool app_cmd_config_addr(target *t, int argc, const char **argv) {
 	return true;
 }
 
-const struct command_s app_cmd_list[] = {
-	{"config_address", (cmd_handler)app_cmd_config_addr, "Target config struct (address)"},
+const struct command_s applet_cmd_list[] = {
+	{"config_address", (cmd_handler)applet_cmd_config_addr, "Target config struct (address)"},
 	{NULL, NULL, NULL}
 };
 
-const char app_name[] = "log_buf";
+const char applet_name[] = "log_buf";
+
+
+/* TODO: Implement a main loop that allows display of logs without GDB
+ * attached. */
 
 /* This is called whenever gdb_getpacket() sees a character it doesn't
    understand.  We take control of gdb_if_getchar(), e.g. to implement
    a command console on the main ttyACM port. */
-char app_switch_protocol(char c) {
+char applet_switch_protocol(char c) {
 	for(;;) {
 		/* Echo. */
 		if (c == '\r') gdb_if_putchar('\n', 0);

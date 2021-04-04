@@ -33,7 +33,9 @@
 #include "morse.h"
 #include "version.h"
 #include "serialno.h"
-#include "app.h"
+#ifdef ENABLE_APPLET
+#include "applet.h"
+#endif
 
 #ifdef PLATFORM_HAS_TRACESWO
 #	include "traceswo.h"
@@ -124,9 +126,9 @@ int command_process(target *t, char *cmd)
 			return !c->handler(t, argc, argv);
 	}
 
-#if ENABLE_APP
+#if ENABLE_APPLET
 	/* Same behavior as above. */
-	for(c = app_cmd_list; c->cmd; c++) {
+	for(c = applet_cmd_list; c->cmd; c++) {
 		if ((argc == 0) || !strncmp(argv[0], c->cmd, strlen(argv[0])))
 			return !c->handler(t, argc, argv);
 	}
@@ -170,9 +172,9 @@ bool cmd_help(target *t, int argc, char **argv)
 		gdb_out("General commands:\n");
 		for(c = cmd_list; c->cmd; c++)
 			gdb_outf("\t%s -- %s\n", c->cmd, c->help);
-#ifdef ENABLE_APP
-		gdb_outf("%s commands:\n", app_name);
-		for(c = app_cmd_list; c->cmd; c++)
+#ifdef ENABLE_APPLET
+		gdb_outf("%s commands:\n", applet_name);
+		for(c = applet_cmd_list; c->cmd; c++)
 			gdb_outf("\t%s -- %s\n", c->cmd, c->help);
 #endif
 	}

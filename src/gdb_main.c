@@ -35,7 +35,9 @@
 #include "command.h"
 #include "crc32.h"
 #include "morse.h"
-#include "app.h"
+#ifdef ENABLE_APPLET
+#include "applet.h"
+#endif
 
 enum gdb_signal {
 	GDB_SIGINT = 2,
@@ -103,8 +105,8 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 		SET_IDLE_STATE(1);
 		size = gdb_getpacket(pbuf, BUF_SIZE);
 		SET_IDLE_STATE(0);
-#if ENABLE_APP
-		if (app_handle_packet(pbuf, size)) {
+#if ENABLE_APPLET
+		if (applet_handle_packet(pbuf, size)) {
 			/* App handled the reply. */
 			continue;
 		}

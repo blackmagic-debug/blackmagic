@@ -2,8 +2,8 @@ PROBE_HOST ?= native
 PLATFORM_DIR = platforms/$(PROBE_HOST)
 VPATH += $(PLATFORM_DIR) target
 ENABLE_DEBUG ?=
-APP_SRC ?=
-APP_CFLAGS ?=
+APPLET_SRC ?=
+APPLET_CFLAGS ?=
 
 ifneq ($(V), 1)
 MAKEFLAGS += --no-print-dir
@@ -18,8 +18,8 @@ ifeq ($(ENABLE_DEBUG), 1)
 CFLAGS += -DENABLE_DEBUG
 endif
 
-ifneq ($(APP_SRC),)
-CFLAGS += $(APP_CFLAGS) -DENABLE_APP
+ifneq ($(APPLET_SRC),)
+CFLAGS += $(APPLET_CFLAGS) -DENABLE_APPLET
 endif
 
 SRC =			\
@@ -65,7 +65,7 @@ SRC =			\
 	stm32l4.c	\
 	stm32g0.c	\
 	target.c	\
-	$(APP_SRC)
+	$(APPLET_SRC)
 
 include $(PLATFORM_DIR)/Makefile.inc
 
