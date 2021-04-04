@@ -22,26 +22,34 @@
 #include <stdbool.h>
 
 /* Applet is allowed to handle or override GDB RSP commands.  This can
-   e.g. be used to implement symbol lookup.  The return true to
-   idicate the packet was handled. */
+ * e.g. be used to implement symbol lookup.  Return true to indicate
+ * the packet was handled. */
 bool applet_handle_packet(char *packet, int len);
 
-/* Called just before polling target halt status. */
+/* Called just before polling target halt status.  The Applet can
+ * perform target interaction at this point, read/write memory,
+ * registers, ... */
 void applet_poll(target *);
 
-/* Same behavior as cmd_list */
+/* The applet can define commands.  The structure is the same as
+ * cmd_list in command.c */
 extern const struct command_s applet_cmd_list[];
 
-/* Name that shows up in 'help' command. */
+/* The applet name shows up in the 'help' command. */
 extern const char applet_name[];
 
-/* This is called whenver gdb_getpacket() receives data that doesn't
-   make sense, and would normally drop the character.  Instead, the
-   character is passed to the app.  App can call gdb_if_getchar()
-   until it decides something's wrong and return.  At that point
-   gdb_getpacket() continues to look for the next '$' or '!' packet.
-   If this is not used, ignore c and return gdb_if_getchar(). */
+/* The applet is allowed to take over the main ttyACM, e.g. to
+ * implement a different protocol, or a user command console.
+ *
+ * When gdb_getpacket() receives data that it doesn't recognize, it
+ * would normally drop the character.  Instead, the character is
+ * passed to the applet through this function.  The applet can then
+ * keep calling gdb_if_getchar() to get more input.  For smooth
+ * auto-switch operation back to normal BMP operation, the function
+ * should return the character if it is one of 0x04, '$' or '!'.
+ *
+ * If this functionality is not used, the function should return a new
+ * character obtained by gdb_if_getchar(). */
 char applet_switch_protocol(char c);
-
 
 #endif
