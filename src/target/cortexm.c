@@ -766,7 +766,6 @@ static void cortexm_halt_request(target *t)
 	}
 }
 
-
 static enum target_halt_reason cortexm_halt_poll(target *t, target_addr *watch)
 {
 	struct cortexm_priv *priv = t->priv;

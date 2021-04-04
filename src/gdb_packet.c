@@ -104,7 +104,6 @@ int gdb_getpacket(char *packet, int size)
 				 */
 				packet[0] = 0;
 			}
-
 #endif
 	    } while (packet[0] != '$');
 

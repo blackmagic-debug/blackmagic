@@ -9,32 +9,18 @@
 #include <ctype.h>
 #include <inttypes.h>
 
+/* Target address of the configuration structure.  This is _very_
+   application-specific, and one reason why we want to hide this
+   knowledge in an applet, away from the main BMP firmware.  The only
+   thing to know here is that this address contains an array of
+   pointers, and at position 17 there is a pointer to log_buf_hdr
+   struct described below. */
 uint32_t config_addr;
+const uint32_t log_buf_config_offset = 17;
 
-#define CONFIG_HEX "636f6e666967"
-
-int applet_handle_packet(char *packet, int len) {
-	(void)len;
-    if (!strcmp (packet, "qSymbol::")) {
-        /* Retrieve 'config' symbol. */
-        config_addr = 0;
-        gdb_putpacketz("qSymbol:" CONFIG_HEX);
-        return 1;
-    }
-    else if (1 == sscanf(packet, "qSymbol:%" SCNx32 ":" CONFIG_HEX, &config_addr)) {
-		/* Only expecting one symbol, so we're done. */
-        gdb_putpacketz("OK");
-        return 1;
-    }
-    else {
-        /* Not handled. */
-        return 0;
-    }
-}
-
-/* Target contains this structure to describe the log buffer.  The
-   buffer data follows the header.  Buffer size is always a power of
-   two.  The _next pointers are rolling counters, and need to be
+/* Target contains this structure to describe the log buffer.  The log
+   buffer char data follows the header.  Buffer size is always a power
+   of two.  The _next pointers are rolling counters, and need to be
    interpreted modulo buffer size. */
 struct log_buf_hdr {
 	uint32_t write_next;
@@ -43,20 +29,46 @@ struct log_buf_hdr {
 	uint8_t  reserved[3];
 };
 
+/* To find the target configuration structure, we use GDB RSP qSymbol
+   functionality, not supported by BMP. */
+/* We're only looking up one symbol and only need its hex form. */
+#define CONFIG_HEX "636f6e666967"
+bool applet_handle_packet(char *packet, int len) {
+	(void)len;
+    if (!strcmp (packet, "qSymbol::")) {
+		/* When loading an ELF, GDB will send this command to indicate
+		   it is ready to start symbol lookup.  We request the
+		   'config' symbol. */
+        config_addr = 0;
+        gdb_putpacketz("qSymbol:" CONFIG_HEX);
+        return true;
+    }
+    else if (1 == sscanf(packet, "qSymbol:%" SCNx32 ":" CONFIG_HEX, &config_addr)) {
+		/* That's all we need.  Indicate to GDB that we're done
+		   looking up symbols. */
+        gdb_putpacketz("OK");
+        return true;
+    }
+    else {
+        /* Not handled. */
+        return false;
+    }
+}
 
-/* Poll data from the on-target log buffer when the target is running.
-   Data is displayed on the GDB console.  */
+/* This function is called when BMP is in its main halt polling loop,
+ * waiting for the target to halt.  At that point we can use
+ * target_mem_* functions to interact with the target while it is
+ * running.  We poll the log buffer and if we find data, we dump it to
+ * the GDB console. */
 void applet_poll(target *t)
 {
-	/* This uses the uc_tools config struct as root data structure.
-	   See struct gdbstub_config in uc_tools/gdb/gdbstub_api.h
-	   https://github.com/zwizwa/uc_tools
+	/* For more information, see struct gdbstub_config in
+	   uc_tools/gdb/gdbstub_api.h https://github.com/zwizwa/uc_tools
 
 	   Details might change later.  The important bit is that we know
 	   how to find log_buf_addr, the target memory address of the
 	   log_buf_hdr struct. */
 	if (!config_addr) return;
-	const uint32_t log_buf_config_offset = 17;
 	const uint32_t p_log_buf_addr = config_addr + log_buf_config_offset * 4;
 	uint32_t log_buf_addr = target_mem_read32(t, p_log_buf_addr);
 	if (!log_buf_addr) return;
@@ -91,8 +103,8 @@ void applet_poll(target *t)
 	target_mem_write32(t, log_buf_addr + 4, log_buf.read_next + nb);
 }
 
-
-/* Keep hacks together, and clearly mark them as such. */
+/* Display the config struct address, and allow it to be specified in
+   case the symbol lookup did not find it. */
 static bool applet_cmd_config_addr(target *t, int argc, const char **argv) {
 	(void)t;
 	if (argc >= 2) {
@@ -101,22 +113,48 @@ static bool applet_cmd_config_addr(target *t, int argc, const char **argv) {
 	gdb_outf("config_addr = 0x%08x\n", config_addr);
 	return true;
 }
-
 const struct command_s applet_cmd_list[] = {
 	{"config_address", (cmd_handler)applet_cmd_config_addr, "Target config struct (address)"},
 	{NULL, NULL, NULL}
 };
-
 const char applet_name[] = "log_buf";
 
 
-/* TODO: Implement a main loop that allows display of logs without GDB
- * attached. */
 
-/* This is called whenever gdb_getpacket() sees a character it doesn't
-   understand.  We take control of gdb_if_getchar(), e.g. to implement
-   a command console on the main ttyACM port. */
+
+/* BMP firmware already supports two protocols: GDB RSP and the remote
+   protocol.  It is possible to implement an additional custom
+   protocol, as long as it uses a preamble that is different from
+   GDB's '$' and the remote protocol '!'.
+
+   Here we use the enter key '\r' to activate a command console.  We
+   can use gdb_if_putchar() to print characters.
+
+   TODO: Add functionality that polls the target log data in a similar
+   way as is done in the halt loop.
+*/
+
+static void console_newline(void) {
+	gdb_if_putchar('\r', 0);
+	gdb_if_putchar('\n', 1);
+}
+void console_println(const char *line) {
+	while(*line) gdb_if_putchar(*line++, 0);
+	console_newline();
+}
+
 char applet_switch_protocol(char c) {
+	if (c != '\r') {
+		/* ENTER key activates the console.  Anything else is ignored
+		   in the same way as if there was no applet linked into the
+		   BMP firmware.  We are required to return a new character to
+		   avoid an infinite loop. */
+		return gdb_if_getchar();
+	}
+	/* ENTER was pressed.  The protocol is now interactive user
+	   commands. */
+	console_println("Activating console.");
+	c = gdb_if_getchar();
 	for(;;) {
 		/* Echo. */
 		if (c == '\r') gdb_if_putchar('\n', 0);
@@ -124,16 +162,17 @@ char applet_switch_protocol(char c) {
 
 		c = gdb_if_getchar();
 
-		/* We can give control back to gdb_getpacket() to switch back
-		   to GDB RSP or remote control packet mode. Here we do this
-		   when we see a start-of-packet, but it could be done on any
-		   condition we chose, e.g. an explict quite command.
-
-		   The only condition is that we must at least read one
-		   character to prevent an infinite loop. */
+		/* If we want smooth interoperability with GDB RSP and remote
+		   protocols, we need to reserve these characters and excape
+		   back to gdb_getpacket(). */
 		if ('$' == c) break;
 		if ('!' == c) break;
 		if (0x04 == c) break;
+
+		/* Note that another way to handle this is to just stay in
+		   this mode forever, and let the user restart the board to
+		   make it go back into GDB RSP or remote protocol mode.
+		   Whatever works... */
 	}
 	return c;
 }

@@ -15,3 +15,4 @@ The applet consists of a single C file logger_applet.c that:
   stand-alone logging monitor, to allow gathering logs without the
   need for GDB to be attached.  (TODO: needs further work)
   
+Build instructions are in build.sh

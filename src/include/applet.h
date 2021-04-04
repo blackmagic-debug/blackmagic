@@ -18,11 +18,13 @@
 
 
 
-
 #include "target_internal.h"
+#include <stdbool.h>
 
-/* Return value indicates whether packet was handled. */
-int applet_handle_packet(char *packet, int len);
+/* Applet is allowed to handle or override GDB RSP commands.  This can
+   e.g. be used to implement symbol lookup.  The return true to
+   idicate the packet was handled. */
+bool applet_handle_packet(char *packet, int len);
 
 /* Called just before polling target halt status. */
 void applet_poll(target *);
