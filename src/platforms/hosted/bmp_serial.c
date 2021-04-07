@@ -178,6 +178,7 @@ static int scan_linux_id(char *name, char *type, char *version, char  *serial)
 		return -1;
 	}
 	strncpy(type, name, p - name);
+	type[p - name] = 0;
 	name = p;
 	while (*name != 'v')
 		name++;
@@ -191,6 +192,7 @@ static int scan_linux_id(char *name, char *type, char *version, char  *serial)
 		return -1;
 	}
 	strncpy(version, name, p - name);
+	version[p - name] = 0;
 	name = p;
 	while (*name == '_')
 		name++;
@@ -204,6 +206,7 @@ static int scan_linux_id(char *name, char *type, char *version, char  *serial)
 		return -1;
 	}
 	strncpy(serial, name, p - name);
+	serial[p - name] = 0;
 	return 0;
 }
 
