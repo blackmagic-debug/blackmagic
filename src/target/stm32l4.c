@@ -648,7 +648,8 @@ static bool stm32l4_cmd_option(target *t, int argc, char *argv[])
 		len = 11;
 		for (int i = 0; i < len; i++)
 			values[i] = g4_values[i];
-	} else if (t->idcode == ID_STM32G49) { /* G4 cat 4*/
+	} else if ((t->idcode == ID_STM32G43) || (t->idcode == ID_STM32G49)) {
+		/* G4 cat 2 and 4 (single bank) */
 		i2offset = g4_i2offset;
 		len = 6;
 		for (int i = 0; i < len; i++)
