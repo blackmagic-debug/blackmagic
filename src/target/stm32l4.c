@@ -28,7 +28,7 @@
  * RM0394 STM32L43xxx STM32L44xxx STM32L45xxx STM32L46xxxx advanced
  *  ARM®-based 32-bit MCUs Rev.3
  * RM0432 STM32L4Rxxx and STM32L4Sxxx advanced Arm®-based 32-bit MCU. Rev 1
- * RM0440 STM32G4 Series advanced Arm®-based 32-bit MCU. Rev 1
+ * RM0440 STM32G4 Series advanced Arm®-based 32-bit MCU. Rev 6
  *
  *
  */
@@ -110,6 +110,8 @@ static int stm32l4_flash_write(struct target_flash *f,
 #define FLASH_SR_ERROR_MASK	0xC3FA
 #define FLASH_SR_BSY		(1 << 16)
 
+#define FLASH_SIZE_MAX_G4_CAT4  (512U * 1024U)   // 512 kiB
+
 #define KEY1 0x45670123
 #define KEY2 0xCDEF89AB
 
@@ -156,6 +158,7 @@ enum ID_STM32L4 {
 	ID_STM32L4R  = 0x470u, /* RM0432, Rev.5 */
 	ID_STM32G43  = 0x468u, /* RM0440, Rev.1 */
 	ID_STM32G47  = 0x469u, /* RM0440, Rev.1 */
+	ID_STM32G49  = 0x479u, /* RM0440, Rev.6 */
 	ID_STM32L55  = 0x472u, /* RM0438, Rev.4 */
 };
 
@@ -243,6 +246,14 @@ static struct stm32l4_info const L4info[] = {
 		.designator = "STM32G47",
 		.sram1 = 96, /* SRAM1 and SRAM2 are mapped continuous */
 		.sram2 = 32, /* CCM SRAM is mapped as per SRAM2 on G4 */
+		.flags = 2,
+	},
+	{
+		.idcode = ID_STM32G49,
+		.family = FAM_STM32G4xx,
+		.designator = "STM32G49",
+		.sram1 = 96, /* SRAM1 and SRAM2 are mapped continuously */
+		.sram2 = 16, /* CCM SRAM is mapped as per SRAM2 on G4 */
 		.flags = 2,
 	},
 	{
@@ -362,12 +373,17 @@ static bool stm32l4_attach(target *t)
 		} else
 			stm32l4_add_flash(t, 0x08000000, 0x00080000, 0x0800, -1);
 	} else if (chip->family == FAM_STM32G4xx) {
-		// RM0440 describes G43x as Category 2, G47x/G48x as Category 3 devices
+		// RM0440 describes G43x/G44x as Category 2, G47x/G48x as Category 3 and G49x/G4Ax as Category 4 devices
 		// Cat 2 is always 128k with 2k pages, single bank
 		// Cat 3 is dual bank with an option bit to choose single 512k bank with 4k pages or dual bank as 2x256k with 2k pages
+		// Cat 4 is single bank with up to 512k, 2k pages
 		if (chip->idcode == ID_STM32G43) {
 			uint32_t banksize = size << 10;
 			stm32l4_add_flash(t, 0x08000000, banksize, 0x0800, -1);
+		}
+		else if (chip->idcode == ID_STM32G49) {
+			// Announce maximum possible flash size on this chip
+			stm32l4_add_flash(t, 0x08000000, FLASH_SIZE_MAX_G4_CAT4, 0x0800, -1);
 		}
 		else {
 			if (options & OR_DBANK) {
@@ -611,7 +627,10 @@ static bool stm32l4_cmd_option(target *t, int argc, char *argv[])
 		return false;
 	}
 	static const uint32_t g4_values[11] = {
-		0xFFEFF8AA, 0xFFFFFFFF, 0x00FF0000, 0xFF00FFFF, 0xFF00FFFF, 0xFF00FF00,
+		/* SEC_SIZE1 occupies 9 bits on G49/G4A (cat 4),
+		 * 8 bits on cat 3 and 7 bits on cat 2.
+		 * It is safe to write 0xFF00FE00 (cat 4 value) in FLASH_SEC1R */
+		0xFFEFF8AA, 0xFFFFFFFF, 0x00FF0000, 0xFF00FFFF, 0xFF00FFFF, 0xFF00FE00,
 		0xFFFFFFFF, 0xFFFFFFFF, 0xFF00FFFF, 0xFF00FFFF, 0xFF00FF00
 	};
 
@@ -627,6 +646,11 @@ static bool stm32l4_cmd_option(target *t, int argc, char *argv[])
 	} else if (t->idcode == ID_STM32G47) {/* G47 */
 		i2offset = g4_i2offset;
 		len = 11;
+		for (int i = 0; i < len; i++)
+			values[i] = g4_values[i];
+	} else if (t->idcode == ID_STM32G49) { /* G4 cat 4*/
+		i2offset = g4_i2offset;
+		len = 6;
 		for (int i = 0; i < len; i++)
 			values[i] = g4_values[i];
 	} else {
