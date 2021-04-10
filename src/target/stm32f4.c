@@ -415,7 +415,7 @@ static int stm32f4_flash_erase(struct target_flash *f, target_addr addr,
 	/* Check for error */
 	sr = target_mem_read32(t, FLASH_SR);
 	if(sr & SR_ERROR_MASK) {
-		DEBUG_WARN("stm32f4 flash erase: sr error: 0x%" PRIu32 "\n", sr);
+		DEBUG_WARN("stm32f4 flash erase: sr error: 0x%" PRIx32 "\n", sr);
 		return -1;
 	}
 	return 0;

@@ -507,7 +507,7 @@ static int stm32l4_flash_write(struct target_flash *f,
 	} while (sr & FLASH_SR_BSY);
 
 	if(sr & FLASH_SR_ERROR_MASK) {
-		DEBUG_WARN("stm32l4 flash write error: sr 0x%" PRIu32 "\n", sr);
+		DEBUG_WARN("stm32l4 flash write error: sr 0x%" PRIx32 "\n", sr);
 		return -1;
 	}
 	return 0;
