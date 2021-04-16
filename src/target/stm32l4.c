@@ -56,30 +56,11 @@ static int stm32l4_flash_write(struct target_flash *f,
                                target_addr dest, const void *src, size_t len);
 
 /* Flash Program ad Erase Controller Register Map */
-#define FPEC_BASE			0x40022000
-#define L4_FLASH_ACR			(FPEC_BASE+0x00)
-#define L4_FLASH_KEYR			(FPEC_BASE+0x08)
-#define L4_FLASH_OPTKEYR		(FPEC_BASE+0x0c)
-#define L4_FLASH_SR			(FPEC_BASE+0x10)
-#define L4_FLASH_CR			(FPEC_BASE+0x14)
-#define L4_FLASH_OPTR			(FPEC_BASE+0x20)
-//#define FLASH_OPTCR		(FPEC_BASE+0x14)
-
-#define L5_FPEC_BASE		0x40022000
-#define L5_FLASH_ACR		(L5_FPEC_BASE+0x00)
-#define L5_FLASH_KEYR		(L5_FPEC_BASE+0x08)
-#define L5_FLASH_OPTKEYR	(L5_FPEC_BASE+0x10)
-#define L5_FLASH_SR			(L5_FPEC_BASE+0x20)
-#define L5_FLASH_CR			(L5_FPEC_BASE+0x28)
-#define L5_FLASH_OPTR		(L5_FPEC_BASE+0x40)
+#define L4_FPEC_BASE			0x40022000
+#define L5_FPEC_BASE			0x40022000
+#define WL_FPEC_BASE			0x58004000
 
 #define L5_FLASH_OPTR_TZEN	(1 << 31)
-
-#define FLASH_KEYR(x)		((x == ID_STM32L55) ? L5_FLASH_KEYR : L4_FLASH_KEYR)
-#define FLASH_SR(x)			((x == ID_STM32L55) ? L5_FLASH_SR : L4_FLASH_SR)
-#define FLASH_CR(x)			((x == ID_STM32L55) ? L5_FLASH_CR : L4_FLASH_CR)
-#define FLASH_OPTR(x)		((x == ID_STM32L55) ? L5_FLASH_OPTR : L4_FLASH_OPTR)
-#define FLASH_OPTKEYR(x)	((x == ID_STM32L55) ? L5_FLASH_OPTKEYR : L4_FLASH_OPTKEYR)
 
 #define FLASH_CR_PG			(1 << 0)
 #define FLASH_CR_PER		(1 << 1)
@@ -138,7 +119,6 @@ enum {
 };
 #define L4_FLASH_SIZE_REG  0x1FFF75E0
 #define L5_FLASH_SIZE_REG  0x0bfa05e0
-#define FLASH_SIZE_REG(x)	((x == ID_STM32L55) ? L5_FLASH_SIZE_REG : L4_FLASH_SIZE_REG)
 
 struct stm32l4_flash {
 	struct target_flash f;
@@ -160,6 +140,7 @@ enum ID_STM32L4 {
 	ID_STM32G47  = 0x469u, /* RM0440, Rev.1 */
 	ID_STM32G49  = 0x479u, /* RM0440, Rev.6 */
 	ID_STM32L55  = 0x472u, /* RM0438, Rev.4 */
+	ID_STM32WLXX = 0x497u, /* RM0461, Rev.3, RM453, Rev.1 */
 };
 
 enum FAM_STM32L4 {
@@ -167,11 +148,49 @@ enum FAM_STM32L4 {
 	FAM_STM32L4Rx = 2,
 	FAM_STM32WBxx = 4,
 	FAM_STM32G4xx = 5,
-	FAM_STM32L55x,
+	FAM_STM32L55x = 6,
+	FAM_STM32WLxx = 7,
 };
 
 #define DUAL_BANK	0x80u
 #define RAM_COUNT_MSK	0x07u
+
+enum stm32l4_flash_regs {
+	FLASH_KEYR,
+	FLASH_OPTKEYR,
+	FLASH_SR,
+	FLASH_CR,
+	FLASH_OPTR,
+	FLASHSIZE,
+	FLASH_REGS_COUNT
+};
+
+static const uint32_t stm32l4_flash_regs_map[FLASH_REGS_COUNT] = {
+	L4_FPEC_BASE + 0x08, /* KEYR */
+	L4_FPEC_BASE + 0x0c, /* OPTKEYR */
+	L4_FPEC_BASE + 0x10, /* SR */
+	L4_FPEC_BASE + 0x14, /* CR */
+	L4_FPEC_BASE + 0x20, /* OPTR */
+	L4_FLASH_SIZE_REG,   /* FLASHSIZE */
+};
+
+static const uint32_t stm32l5_flash_regs_map[FLASH_REGS_COUNT] = {
+	L5_FPEC_BASE + 0x08, /* KEYR */
+	L5_FPEC_BASE + 0x10, /* OPTKEYR */
+	L5_FPEC_BASE + 0x20, /* SR */
+	L5_FPEC_BASE + 0x28, /* CR */
+	L5_FPEC_BASE + 0x40, /* OPTR */
+	L5_FLASH_SIZE_REG,   /* FLASHSIZE */
+};
+
+static const uint32_t stm32wl_flash_regs_map[FLASH_REGS_COUNT] = {
+	WL_FPEC_BASE + 0x08, /* KEYR */
+	WL_FPEC_BASE + 0x0c, /* OPTKEYR */
+	WL_FPEC_BASE + 0x10, /* SR */
+	WL_FPEC_BASE + 0x14, /* CR */
+	WL_FPEC_BASE + 0x20, /* OPTR */
+	L4_FLASH_SIZE_REG,   /* FLASHSIZE */
+};
 
 struct stm32l4_info {
 	char designator[10];
@@ -181,6 +200,7 @@ struct stm32l4_info {
 	enum ID_STM32L4 idcode;
 	enum FAM_STM32L4 family;
 	uint8_t flags;          /* Only DUAL_BANK is evaluated for now.*/
+	const uint32_t *flash_regs_map;
 };
 
 static struct stm32l4_info const L4info[] = {
@@ -191,6 +211,7 @@ static struct stm32l4_info const L4info[] = {
 		.sram1 = 32,
 		.sram2 = 8,
 		.flags = 2,
+		.flash_regs_map = stm32l4_flash_regs_map,
 	},
 	{
 		.idcode = ID_STM32L43,
@@ -199,6 +220,7 @@ static struct stm32l4_info const L4info[] = {
 		.sram1 = 48,
 		.sram2 = 16,
 		.flags = 2,
+		.flash_regs_map = stm32l4_flash_regs_map,
 	},
 	{
 		.idcode = ID_STM32L45,
@@ -207,6 +229,7 @@ static struct stm32l4_info const L4info[] = {
 		.sram1 = 128,
 		.sram2 = 32,
 		.flags = 2,
+		.flash_regs_map = stm32l4_flash_regs_map,
 	},
 	{
 		.idcode = ID_STM32L47,
@@ -215,6 +238,7 @@ static struct stm32l4_info const L4info[] = {
 		.sram1 = 96,
 		.sram2 = 32,
 		.flags = 2 | DUAL_BANK,
+		.flash_regs_map = stm32l4_flash_regs_map,
 	},
 	{
 		.idcode = ID_STM32L49,
@@ -223,6 +247,7 @@ static struct stm32l4_info const L4info[] = {
 		.sram1 = 256,
 		.sram2 = 64,
 		.flags = 2 | DUAL_BANK,
+		.flash_regs_map = stm32l4_flash_regs_map,
 	},
 	{
 		.idcode = ID_STM32L4R,
@@ -232,6 +257,7 @@ static struct stm32l4_info const L4info[] = {
 		.sram2 = 64,
 		.sram3 = 384,
 		.flags = 3 | DUAL_BANK,
+		.flash_regs_map = stm32l4_flash_regs_map,
 	},
 	{
 		.idcode = ID_STM32G43,
@@ -239,6 +265,7 @@ static struct stm32l4_info const L4info[] = {
 		.designator = "STM32G43",
 		.sram1 = 22,
 		.sram2 = 10,
+		.flash_regs_map = stm32l4_flash_regs_map,
 	},
 	{
 		.idcode = ID_STM32G47,
@@ -247,6 +274,7 @@ static struct stm32l4_info const L4info[] = {
 		.sram1 = 96, /* SRAM1 and SRAM2 are mapped continuous */
 		.sram2 = 32, /* CCM SRAM is mapped as per SRAM2 on G4 */
 		.flags = 2,
+		.flash_regs_map = stm32l4_flash_regs_map,
 	},
 	{
 		.idcode = ID_STM32G49,
@@ -255,6 +283,7 @@ static struct stm32l4_info const L4info[] = {
 		.sram1 = 96, /* SRAM1 and SRAM2 are mapped continuously */
 		.sram2 = 16, /* CCM SRAM is mapped as per SRAM2 on G4 */
 		.flags = 2,
+		.flash_regs_map = stm32l4_flash_regs_map,
 	},
 	{
 		.idcode = ID_STM32L55,
@@ -263,6 +292,16 @@ static struct stm32l4_info const L4info[] = {
 		.sram1 = 192, /* SRAM1 and SRAM2 are mapped continuous */
 		.sram2 =  64,
 		.flags = 2,
+		.flash_regs_map = stm32l5_flash_regs_map,
+	},
+	{
+		.idcode = ID_STM32WLXX,
+		.family = FAM_STM32WLxx,
+		.designator = "STM32WLxx",
+		.sram1 = 64,
+		.sram2 = 32,
+		.flags = 2,
+		.flash_regs_map = stm32wl_flash_regs_map,
 	},
 	{
 		/* Terminator */
@@ -277,6 +316,27 @@ static struct stm32l4_info const * stm32l4_get_chip_info(uint32_t idcode) {
 	while (p->idcode && (p->idcode != idcode))
 		p++;
 	return p;
+}
+
+static uint32_t stm32l4_flash_read16(target *t, enum stm32l4_flash_regs reg)
+{
+	struct stm32l4_info const *chip = stm32l4_get_chip_info(t->idcode);
+	uint32_t addr = chip->flash_regs_map[reg];
+	return target_mem_read16(t, addr);
+}
+
+static uint32_t stm32l4_flash_read32(target *t, enum stm32l4_flash_regs reg)
+{
+	struct stm32l4_info const *chip = stm32l4_get_chip_info(t->idcode);
+	uint32_t addr = chip->flash_regs_map[reg];
+	return target_mem_read32(t, addr);
+}
+
+static void stm32l4_flash_write32(target *t, enum stm32l4_flash_regs reg, uint32_t value)
+{
+	struct stm32l4_info const *chip = stm32l4_get_chip_info(t->idcode);
+	uint32_t addr = chip->flash_regs_map[reg];
+	target_mem_write32(t, addr, value);
 }
 
 static void stm32l4_add_flash(target *t,
@@ -354,9 +414,9 @@ static bool stm32l4_attach(target *t)
 		chip->sram1 : (chip->sram1 + chip->sram2 + chip->sram3);
 	target_add_ram(t, 0x20000000, ramsize << 10);
 
-	uint32_t size = target_mem_read16(t, FLASH_SIZE_REG(t->idcode));
+	uint32_t size = stm32l4_flash_read16(t, FLASHSIZE);
 	/* Add the flash to memory map. */
-	uint32_t options =  target_mem_read32(t, FLASH_OPTR(t->idcode));
+	uint32_t options = stm32l4_flash_read32(t, FLASH_OPTR);
 
 	if (chip->family == FAM_STM32L4Rx) {
 		/* rm0432 Rev. 2 does not mention 1 MB devices or explain DB1M.*/
@@ -408,7 +468,7 @@ static bool stm32l4_attach(target *t)
 		stm32l4_add_flash(t, 0x08000000, size << 10, 0x800, -1);
 
 	/* Clear all errors in the status register. */
-	target_mem_write32(t, FLASH_SR(t->idcode), target_mem_read32(t, FLASH_SR(t->idcode)));
+	stm32l4_flash_write32(t, FLASH_SR, stm32l4_flash_read32(t, FLASH_SR));
 
 	return true;
 }
@@ -429,7 +489,7 @@ bool stm32l4_probe(target *t)
 	ADIv5_AP_t *ap = cortexm_ap(t);
 	if (ap->dp->idcode == 0x0Be12477) {
 		idcode_reg = STM32L5_DBGMCU_IDCODE_PHYS;
-		if ((target_mem_read32(t, L5_FLASH_OPTR)) & L5_FLASH_OPTR_TZEN) {
+		if ((stm32l4_flash_read32(t, FLASH_OPTR)) & L5_FLASH_OPTR_TZEN) {
 			DEBUG_WARN("STM32L5 Trust Zone enabled\n");
 		}
 	}
@@ -450,10 +510,10 @@ bool stm32l4_probe(target *t)
 
 static void stm32l4_flash_unlock(target *t)
 {
-	if ((target_mem_read32(t, FLASH_CR(t->idcode))) & FLASH_CR_LOCK) {
+	if ((stm32l4_flash_read32(t, FLASH_CR)) & FLASH_CR_LOCK) {
 		/* Enable FPEC controller access */
-		target_mem_write32(t, FLASH_KEYR(t->idcode), KEY1);
-		target_mem_write32(t, FLASH_KEYR(t->idcode), KEY2);
+		stm32l4_flash_write32(t, FLASH_KEYR, KEY1);
+		stm32l4_flash_write32(t, FLASH_KEYR, KEY2);
 	}
 }
 
@@ -468,11 +528,11 @@ static int stm32l4_flash_erase(struct target_flash *f, target_addr addr, size_t 
 	stm32l4_flash_unlock(t);
 
 	/* Read FLASH_SR to poll for BSY bit */
-	while(target_mem_read32(t, FLASH_SR(t->idcode)) & FLASH_SR_BSY)
+	while(stm32l4_flash_read32(t, FLASH_SR) & FLASH_SR_BSY)
 		if(target_check_error(t))
 			return -1;
 	/* Fixme: OPTVER always set after reset! Wrong option defaults?*/
-	target_mem_write32(t, FLASH_SR(t->idcode), target_mem_read32(t, FLASH_SR(t->idcode)));
+	stm32l4_flash_write32(t, FLASH_SR, stm32l4_flash_read32(t, FLASH_SR));
 	page = (addr - 0x08000000) / blocksize;
 	while(len) {
 		uint32_t cr;
@@ -481,13 +541,13 @@ static int stm32l4_flash_erase(struct target_flash *f, target_addr addr, size_t 
 		if (addr >= bank1_start)
 			cr |= FLASH_CR_BKER;
 		/* Flash page erase instruction */
-		target_mem_write32(t, FLASH_CR(t->idcode), cr);
+		stm32l4_flash_write32(t, FLASH_CR, cr);
 		/* write address to FMA */
 		cr |= FLASH_CR_STRT;
-		target_mem_write32(t, FLASH_CR(t->idcode), cr);
+		stm32l4_flash_write32(t, FLASH_CR, cr);
 
 		/* Read FLASH_SR to poll for BSY bit */
-		while(target_mem_read32(t, FLASH_SR(t->idcode)) & FLASH_SR_BSY)
+		while(stm32l4_flash_read32(t, FLASH_SR) & FLASH_SR_BSY)
 			if(target_check_error(t))
 				return -1;
 		if (len > blocksize)
@@ -499,7 +559,7 @@ static int stm32l4_flash_erase(struct target_flash *f, target_addr addr, size_t 
 	}
 
 	/* Check for error */
-	sr = target_mem_read32(t, FLASH_SR(t->idcode));
+	sr = stm32l4_flash_read32(t, FLASH_SR);
 	if(sr & FLASH_SR_ERROR_MASK)
 		return -1;
 
@@ -510,12 +570,12 @@ static int stm32l4_flash_write(struct target_flash *f,
                                target_addr dest, const void *src, size_t len)
 {
 	target *t = f->t;
-	target_mem_write32(t, FLASH_CR(t->idcode), FLASH_CR_PG);
+	stm32l4_flash_write32(t, FLASH_CR, FLASH_CR_PG);
 	target_mem_write(t, dest, src, len);
 	/* Wait for completion or an error */
 	uint32_t sr;
 	do {
-		sr = target_mem_read32(t, FLASH_SR(t->idcode));
+		sr = stm32l4_flash_read32(t, FLASH_SR);
 		if (target_check_error(t)) {
 			DEBUG_WARN("stm32l4 flash write: comm error\n");
 			return -1;
@@ -534,18 +594,18 @@ static bool stm32l4_cmd_erase(target *t, uint32_t action)
 	stm32l4_flash_unlock(t);
 	/* Erase time is 25 ms. No need for a spinner.*/
 	/* Flash erase action start instruction */
-	target_mem_write32(t, FLASH_CR(t->idcode), action);
-	target_mem_write32(t, FLASH_CR(t->idcode), action | FLASH_CR_STRT);
+	stm32l4_flash_write32(t, FLASH_CR, action);
+	stm32l4_flash_write32(t, FLASH_CR, action | FLASH_CR_STRT);
 
 	/* Read FLASH_SR to poll for BSY bit */
-	while (target_mem_read32(t, FLASH_SR(t->idcode)) & FLASH_SR_BSY) {
+	while (stm32l4_flash_read32(t, FLASH_SR) & FLASH_SR_BSY) {
 		if(target_check_error(t)) {
 			return false;
 		}
 	}
 
 	/* Check for error */
-	uint16_t sr = target_mem_read32(t, FLASH_SR(t->idcode));
+	uint16_t sr = stm32l4_flash_read32(t, FLASH_SR);
 	if (sr & FLASH_SR_ERROR_MASK)
 		return false;
 	return true;
@@ -585,22 +645,22 @@ static bool stm32l4_option_write(
 {
 	tc_printf(t, "Device will lose connection. Rescan!\n");
 	stm32l4_flash_unlock(t);
-	target_mem_write32(t, FLASH_OPTKEYR(t->idcode), OPTKEY1);
-	target_mem_write32(t, FLASH_OPTKEYR(t->idcode), OPTKEY2);
-	while (target_mem_read32(t, FLASH_SR(t->idcode)) & FLASH_SR_BSY)
+	stm32l4_flash_write32(t, FLASH_OPTKEYR, OPTKEY1);
+	stm32l4_flash_write32(t, FLASH_OPTKEYR, OPTKEY2);
+	while (stm32l4_flash_read32(t, FLASH_SR) & FLASH_SR_BSY)
 		if(target_check_error(t))
 			return true;
 	for (int i = 0; i < len; i++)
-		target_mem_write32(t, FPEC_BASE + i2offset[i], values[i]);
-	target_mem_write32(t, FLASH_CR(t->idcode), FLASH_CR_OPTSTRT);
-	while (target_mem_read32(t, FLASH_SR(t->idcode)) & FLASH_SR_BSY)
+		target_mem_write32(t, L4_FPEC_BASE + i2offset[i], values[i]);
+	stm32l4_flash_write32(t, FLASH_CR, FLASH_CR_OPTSTRT);
+	while (stm32l4_flash_read32(t, FLASH_SR) & FLASH_SR_BSY)
 		if(target_check_error(t))
 			return true;
-	target_mem_write32(t, FLASH_CR(t->idcode), FLASH_CR_OBL_LAUNCH);
-	while (target_mem_read32(t, FLASH_CR(t->idcode)) & FLASH_CR_OBL_LAUNCH)
+	stm32l4_flash_write32(t, FLASH_CR, FLASH_CR_OBL_LAUNCH);
+	while (stm32l4_flash_read32(t, FLASH_CR) & FLASH_CR_OBL_LAUNCH)
 		if(target_check_error(t))
 			return true;
-	target_mem_write32(t, FLASH_CR(t->idcode), FLASH_CR_LOCK);
+	stm32l4_flash_write32(t, FLASH_CR, FLASH_CR_LOCK);
 	return false;
 }
 
@@ -624,6 +684,10 @@ static bool stm32l4_cmd_option(target *t, int argc, char *argv[])
 {
 	if (t->idcode == ID_STM32L55) {
 		tc_printf(t, "STM32L5 options not implemented!\n");
+		return false;
+	}
+	if (t->idcode == ID_STM32WLXX) {
+		tc_printf(t, "STM32WLxx options not implemented!\n");
 		return false;
 	}
 	static const uint32_t g4_values[11] = {
@@ -664,7 +728,7 @@ static bool stm32l4_cmd_option(target *t, int argc, char *argv[])
 		for (i = 2; i < argc; i++)
 			values[i - 2] = strtoul(argv[i], NULL, 0);
 		for (i = i - 2; i < len; i++) {
-			uint32_t addr = FPEC_BASE + i2offset[i];
+			uint32_t addr = L4_FPEC_BASE + i2offset[i];
 			values[i] = target_mem_read32(t, addr);
 		}
 		if ((values[0] & 0xff) == 0xCC) {
@@ -681,8 +745,8 @@ static bool stm32l4_cmd_option(target *t, int argc, char *argv[])
 		return false;
 	}
 	for (int i = 0; i < len; i ++) {
-		uint32_t addr = FPEC_BASE + i2offset[i];
-		val = target_mem_read32(t, FPEC_BASE + i2offset[i]);
+		uint32_t addr = L4_FPEC_BASE + i2offset[i];
+		val = target_mem_read32(t, L4_FPEC_BASE + i2offset[i]);
 		tc_printf(t, "0x%08X: 0x%08X\n", addr, val);
 	}
 	return true;
