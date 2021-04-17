@@ -90,47 +90,54 @@
 #define SWDIO_MODE_DRIVE() \
 	gpio_mode_setup(SWDIO_PORT, GPIO_MODE_OUTPUT, \
 	                GPIO_PUPD_NONE, SWDIO_PIN);
-
+#define UART_PIN_SETUP() do { \
+	gpio_mode_setup(USBUSART_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, \
+	                USBUSART_TX_PIN); \
+	gpio_set_output_options(USBUSART_PORT, GPIO_OTYPE_PP, \
+					GPIO_OSPEED_100MHZ, USBUSART_TX_PIN); \
+	gpio_set_af(USBUSART_PORT, GPIO_AF7, USBUSART_TX_PIN); \
+	gpio_mode_setup(USBUSART_PORT, GPIO_MODE_AF, GPIO_PUPD_PULLUP, \
+	                USBUSART_RX_PIN); \
+	gpio_set_output_options(USBUSART_PORT, GPIO_OTYPE_OD, \
+					GPIO_OSPEED_100MHZ, USBUSART_RX_PIN); \
+	gpio_set_af(USBUSART_PORT, GPIO_AF7, USBUSART_RX_PIN); \
+} while(0)
 
 #define USB_DRIVER      stm32f107_usb_driver
 #define USB_IRQ         NVIC_OTG_FS_IRQ
-#define USB_ISR         otg_fs_isr
+#define USB_ISR(x)      otg_fs_isr(x)
 /* Interrupt priorities.  Low numbers are high priority.
- * For now USART1 preempts USB which may spin while buffer is drained.
  * TIM3 is used for traceswo capture and must be highest priority.
  */
-#define IRQ_PRI_USB		(2 << 4)
-#define IRQ_PRI_USBUSART	(1 << 4)
-#define IRQ_PRI_USBUSART_TIM	(3 << 4)
+#define IRQ_PRI_USB		(1 << 4)
+#define IRQ_PRI_USBUSART	(2 << 4)
+#define IRQ_PRI_USBUSART_DMA 	(2 << 4)
 #define IRQ_PRI_TRACE		(0 << 4)
 
 #define USBUSART USART1
 #define USBUSART_CR1 USART1_CR1
+#define USBUSART_DR USART1_DR
 #define USBUSART_IRQ NVIC_USART1_IRQ
 #define USBUSART_CLK RCC_USART1
-#define USBUSART_TX_PORT GPIOA
-#define USBUSART_TX_PIN  GPIO9
-#define USBUSART_RX_PORT GPIOA
-#define USBUSART_RX_PIN  GPIO10
-#define USBUSART_ISR usart1_isr
-#define USBUSART_TIM TIM4
-#define USBUSART_TIM_CLK_EN() rcc_periph_clock_enable(RCC_TIM4)
-#define USBUSART_TIM_IRQ NVIC_TIM4_IRQ
-#define USBUSART_TIM_ISR tim4_isr
-
-#define UART_PIN_SETUP() do { \
-	gpio_mode_setup(USBUSART_TX_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, \
-	                USBUSART_TX_PIN); \
-	gpio_mode_setup(USBUSART_RX_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, \
-	                USBUSART_RX_PIN); \
-	gpio_set_af(USBUSART_TX_PORT, GPIO_AF7, USBUSART_TX_PIN); \
-	gpio_set_af(USBUSART_RX_PORT, GPIO_AF7, USBUSART_RX_PIN); \
-    } while(0)
+#define USBUSART_PORT GPIOA
+#define USBUSART_TX_PIN GPIO9
+#define USBUSART_RX_PIN GPIO10
+#define USBUSART_ISR(x) usart1_isr(x)
+#define USBUSART_DMA_BUS DMA2
+#define USBUSART_DMA_CLK RCC_DMA2
+#define USBUSART_DMA_TX_CHAN DMA_STREAM7
+#define USBUSART_DMA_TX_IRQ NVIC_DMA2_STREAM7_IRQ
+#define USBUSART_DMA_TX_ISR(x) dma2_stream7_isr(x)
+#define USBUSART_DMA_RX_CHAN DMA_STREAM5
+#define USBUSART_DMA_RX_IRQ NVIC_DMA2_STREAM5_IRQ
+#define USBUSART_DMA_RX_ISR(x) dma2_stream5_isr(x)
+/* For STM32F4 DMA trigger source must be specified */
+#define USBUSART_DMA_TRG DMA_SxCR_CHSEL_4
 
 #define TRACE_TIM TIM3
 #define TRACE_TIM_CLK_EN() rcc_periph_clock_enable(RCC_TIM3)
 #define TRACE_IRQ   NVIC_TIM3_IRQ
-#define TRACE_ISR   tim3_isr
+#define TRACE_ISR(x) tim3_isr(x)
 
 #define gpio_set_val(port, pin, val) do {	\
 	if(val)					\
@@ -182,4 +189,3 @@ static inline int platform_hwversion(void)
 #endif
 
 #endif
-

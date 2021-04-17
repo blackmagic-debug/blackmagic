@@ -87,33 +87,41 @@ int usbuart_debug_write(const char *buf, size_t len);
 	cr  |=  (0x1 * SWD_CR_MULT); \
 	SWD_CR = cr; \
 } while(0)
-#define UART_PIN_SETUP() \
-	gpio_set_mode(USBUSART_PORT, GPIO_MODE_OUTPUT_2_MHZ, \
-	              GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, USBUSART_TX_PIN);
+#define UART_PIN_SETUP() do { \
+	gpio_set_mode(USBUSART_PORT, GPIO_MODE_OUTPUT_50_MHZ, \
+	              GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, USBUSART_TX_PIN); \
+	gpio_set_mode(USBUSART_PORT, GPIO_MODE_INPUT, \
+				  GPIO_CNF_INPUT_PULL_UPDOWN, USBUSART_RX_PIN); \
+	gpio_set(USBUSART_PORT, USBUSART_RX_PIN); \
+} while(0)
 
 #define USB_DRIVER      st_usbfs_v1_usb_driver
 #define USB_IRQ	        NVIC_USB_LP_CAN_RX0_IRQ
-#define USB_ISR	        usb_lp_can_rx0_isr
-/* Interrupt priorities.  Low numbers are high priority.
- * For now USART2 preempts USB which may spin while buffer is drained.
- */
-#define IRQ_PRI_USB		(2 << 4)
-#define IRQ_PRI_USBUSART	(1 << 4)
-#define IRQ_PRI_USBUSART_TIM	(3 << 4)
+#define USB_ISR(x)      usb_lp_can_rx0_isr(x)
+/* Interrupt priorities.  Low numbers are high priority. */
+#define IRQ_PRI_USB		(1 << 4)
+#define IRQ_PRI_USBUSART	(2 << 4)
+#define IRQ_PRI_USBUSART_DMA 	(2 << 4)
 #define IRQ_PRI_USB_VBUS	(14 << 4)
-#define IRQ_PRI_SWO_DMA			(1 << 4)
+#define IRQ_PRI_SWO_DMA			(0 << 4)
 
 #define USBUSART USART2
 #define USBUSART_CR1 USART2_CR1
+#define USBUSART_DR USART2_DR
 #define USBUSART_IRQ NVIC_USART2_IRQ
 #define USBUSART_CLK RCC_USART2
 #define USBUSART_PORT GPIOA
 #define USBUSART_TX_PIN GPIO2
-#define USBUSART_ISR usart2_isr
-#define USBUSART_TIM TIM4
-#define USBUSART_TIM_CLK_EN() rcc_periph_clock_enable(RCC_TIM4)
-#define USBUSART_TIM_IRQ NVIC_TIM4_IRQ
-#define USBUSART_TIM_ISR tim4_isr
+#define USBUSART_RX_PIN GPIO3
+#define USBUSART_ISR(x) usart2_isr(x)
+#define USBUSART_DMA_BUS DMA1
+#define USBUSART_DMA_CLK RCC_DMA1
+#define USBUSART_DMA_TX_CHAN DMA_CHANNEL7
+#define USBUSART_DMA_TX_IRQ NVIC_DMA1_CHANNEL7_IRQ
+#define USBUSART_DMA_TX_ISR(x) dma1_channel7_isr(x)
+#define USBUSART_DMA_RX_CHAN DMA_CHANNEL6
+#define USBUSART_DMA_RX_IRQ NVIC_DMA1_CHANNEL6_IRQ
+#define USBUSART_DMA_RX_ISR(x) dma1_channel6_isr(x)
 
 /* On F103, only USART1 is on AHB2 and can reach 4.5 MBaud at 72 MHz.*/
 #define SWO_UART				USART1
@@ -172,4 +180,3 @@ extern uint32_t detect_rev(void);
 
 
 #endif
-

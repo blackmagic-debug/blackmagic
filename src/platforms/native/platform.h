@@ -132,39 +132,47 @@ int usbuart_debug_write(const char *buf, size_t len);
 	SWD_CR = cr; \
 } while(0)
 #define UART_PIN_SETUP() do { \
-	gpio_set_mode(USBUSART_PORT, GPIO_MODE_OUTPUT_2_MHZ, \
+	gpio_set_mode(USBUSART_PORT, GPIO_MODE_OUTPUT_50_MHZ, \
 	              GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, USBUSART_TX_PIN); \
+	gpio_set_mode(USBUSART_PORT, GPIO_MODE_INPUT, \
+				  GPIO_CNF_INPUT_PULL_UPDOWN, USBUSART_RX_PIN); \
+	gpio_set(USBUSART_PORT, USBUSART_RX_PIN); \
 } while(0)
 
 #define USB_DRIVER st_usbfs_v1_usb_driver
 #define USB_IRQ    NVIC_USB_LP_CAN_RX0_IRQ
-#define USB_ISR    usb_lp_can_rx0_isr
+#define USB_ISR(x) usb_lp_can_rx0_isr(x)
 /* Interrupt priorities.  Low numbers are high priority.
- * For now USART1 preempts USB which may spin while buffer is drained.
  * TIM3 is used for traceswo capture and must be highest priority.
  */
-#define IRQ_PRI_USB             (2 << 4)
-#define IRQ_PRI_USBUSART        (1 << 4)
-#define IRQ_PRI_USBUSART_TIM    (3 << 4)
+#define IRQ_PRI_USB             (1 << 4)
+#define IRQ_PRI_USBUSART        (2 << 4)
+#define IRQ_PRI_USBUSART_DMA 	(2 << 4)
 #define IRQ_PRI_USB_VBUS        (14 << 4)
 #define IRQ_PRI_TRACE           (0 << 4)
 
 #define USBUSART USART1
 #define USBUSART_CR1 USART1_CR1
+#define USBUSART_DR USART1_DR
 #define USBUSART_IRQ NVIC_USART1_IRQ
 #define USBUSART_CLK RCC_USART1
 #define USBUSART_PORT GPIOA
 #define USBUSART_TX_PIN GPIO9
-#define USBUSART_ISR usart1_isr
-#define USBUSART_TIM TIM4
-#define USBUSART_TIM_CLK_EN() rcc_periph_clock_enable(RCC_TIM4)
-#define USBUSART_TIM_IRQ NVIC_TIM4_IRQ
-#define USBUSART_TIM_ISR tim4_isr
+#define USBUSART_RX_PIN GPIO10
+#define USBUSART_ISR(x) usart1_isr(x)
+#define USBUSART_DMA_BUS DMA1
+#define USBUSART_DMA_CLK RCC_DMA1
+#define USBUSART_DMA_TX_CHAN DMA_CHANNEL4
+#define USBUSART_DMA_TX_IRQ NVIC_DMA1_CHANNEL4_IRQ
+#define USBUSART_DMA_TX_ISR(x) dma1_channel4_isr(x)
+#define USBUSART_DMA_RX_CHAN DMA_CHANNEL5
+#define USBUSART_DMA_RX_IRQ NVIC_DMA1_CHANNEL5_IRQ
+#define USBUSART_DMA_RX_ISR(x) dma1_channel5_isr(x)
 
 #define TRACE_TIM TIM3
 #define TRACE_TIM_CLK_EN() rcc_periph_clock_enable(RCC_TIM3)
 #define TRACE_IRQ   NVIC_TIM3_IRQ
-#define TRACE_ISR   tim3_isr
+#define TRACE_ISR(x)  tim3_isr(x)
 
 #define SET_RUN_STATE(state)	{running_status = (state);}
 #define SET_IDLE_STATE(state)	{gpio_set_val(LED_PORT, LED_IDLE_RUN, state);}
