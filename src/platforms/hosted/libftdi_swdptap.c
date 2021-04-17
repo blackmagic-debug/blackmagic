@@ -26,7 +26,7 @@
 #include <assert.h>
 
 #include "general.h"
-#include <libftdi1/ftdi.h>
+#include <ftdi.h>
 #include "platform.h"
 #include "ftdi_bmp.h"
 

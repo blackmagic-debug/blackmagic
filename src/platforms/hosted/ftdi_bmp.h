@@ -117,7 +117,7 @@ void libftdi_max_frequency_set(uint32_t freq) {};
 uint32_t libftdi_max_frequency_get(void) {return 0;};
 # pragma GCC diagnostic pop
 #else
-#include <libftdi1/ftdi.h>
+#include <ftdi.h>
 extern cable_desc_t cable_desc[];
 extern cable_desc_t *active_cable;
 extern struct ftdi_context *ftdic;
