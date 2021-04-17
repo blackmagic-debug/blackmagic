@@ -248,8 +248,8 @@ int find_debuggers(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info)
 	if (found_bmps < 1) {
 		DEBUG_WARN("No BMP probe found\n");
 		return -1;
-	} else if (found_bmps > 1) {
-		DEBUG_INFO("Available Probes:\n");
+	} else if ((found_bmps > 1) || cl_opts->opt_list_only) {
+		DEBUG_WARN("Available Probes:\n");
 	}
 	dir = opendir(DEVICE_BY_ID);
 	i = 0;
@@ -261,7 +261,7 @@ int find_debuggers(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info)
 			if (scan_linux_id(dp->d_name, type, version, serial)) {
 				DEBUG_WARN("Unexpected device name found \"%s\"\n",
 						   dp->d_name);
-			} else if (found_bmps == 1) {
+			} else if ((found_bmps == 1) && (!cl_opts->opt_list_only)) {
 				strncpy(info->serial, serial, sizeof(info->serial));
 				found_bmps = 1;
 				strncpy(info->serial, serial, sizeof(info->serial));
@@ -269,13 +269,13 @@ int find_debuggers(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info)
 				strncpy(info->product, type, sizeof(info->product));
 				strncpy(info->version, version, sizeof(info->version));
 				break;
-			} else if (found_bmps > 1) {
+			} else if (found_bmps > 0) {
 				DEBUG_WARN("%2d: %s, Black Sphere Technologies, Black Magic "
 						   "Probe (%s), %s\n", i, serial, type, version);
 			}
 		}
 	}
 	closedir(dir);
-	return (found_bmps == 1) ? 0 : 1;
+	return (found_bmps == 1 && !cl_opts->opt_list_only) ? 0 : 1;
 }
 #endif
