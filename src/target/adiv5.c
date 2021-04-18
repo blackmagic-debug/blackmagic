@@ -413,7 +413,17 @@ static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, int recursion, 
 	addr &= 0xfffff000; /* Mask out base address */
 	if (addr == 0) /* No rom table on this AP */
 		return;
-	uint32_t cidr = adiv5_ap_read_id(ap, addr + CIDR0_OFFSET);
+	volatile uint32_t cidr;
+	volatile struct exception e;
+	TRY_CATCH (e, EXCEPTION_TIMEOUT) {
+		cidr = adiv5_ap_read_id(ap, addr + CIDR0_OFFSET);
+	}
+	if (e.type) {
+		DEBUG_WARN("CIDR read timeout on AP%d, aborting.\n", num_entry);
+		adiv5_dp_abort(ap->dp, ADIV5_DP_ABORT_DAPABORT);
+		return;
+	}
+
 	if ((cidr & ~CID_CLASS_MASK) != CID_PREAMBLE)
 				return;
 #if defined(ENABLE_DEBUG)
