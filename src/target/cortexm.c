@@ -926,7 +926,7 @@ int cortexm_run_stub(target *t, uint32_t loadaddr,
 	regs[2] = r2;
 	regs[3] = r3;
 	regs[15] = loadaddr;
-	regs[16] = 0x1000000;
+	regs[REG_XPSR] = CORTEXM_XPSR_THUMB;
 	regs[19] = 0;
 
 	cortexm_regs_write(t, regs);
@@ -936,16 +936,36 @@ int cortexm_run_stub(target *t, uint32_t loadaddr,
 
 	/* Execute the stub */
 	enum target_halt_reason reason;
+#if defined(PLATFORM_HAS_DEBUG)
+	uint32_t arm_regs_start[t->regs_size];
+	target_regs_read(t, arm_regs_start);
+#endif
 	cortexm_halt_resume(t, 0);
-	while ((reason = cortexm_halt_poll(t, NULL)) == TARGET_HALT_RUNNING)
-		;
+	platform_timeout timeout;
+	platform_timeout_set(&timeout, 5000);
+	do {
+		if (platform_timeout_is_expired(&timeout)) {
+			cortexm_halt_request(t);
+#if defined(PLATFORM_HAS_DEBUG)
+			DEBUG_WARN("Stub hangs\n");
+			uint32_t arm_regs[t->regs_size];
+			target_regs_read(t, arm_regs);
+			for (unsigned int i = 0; i < 20; i++) {
+				DEBUG_WARN("%2d: %08" PRIx32 ", %08" PRIx32 "\n",
+						   i, arm_regs_start[i], arm_regs[i]);
+			}
+#endif
+			return -3;
+		}
+	} while ((reason = cortexm_halt_poll(t, NULL)) == TARGET_HALT_RUNNING);
 
 	if (reason == TARGET_HALT_ERROR)
 		raise_exception(EXCEPTION_ERROR, "Target lost in stub");
 
-	if (reason != TARGET_HALT_BREAKPOINT)
+	if (reason != TARGET_HALT_BREAKPOINT) {
+		DEBUG_WARN(" Reasone %d\n", reason);
 		return -2;
-
+	}
 	uint32_t pc = cortexm_pc_read(t);
 	uint16_t bkpt_instr = target_mem_read16(t, pc);
 	if (bkpt_instr >> 8 != 0xbe)
