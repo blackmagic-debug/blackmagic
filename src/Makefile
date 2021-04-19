@@ -62,7 +62,7 @@ SRC =			\
 
 include $(PLATFORM_DIR)/Makefile.inc
 
-OPT_FLAGS ?= -Og
+OPT_FLAGS ?= -Os
 CFLAGS += $(OPT_FLAGS)
 LDFLAGS += $(OPT_FLAGS)
 
