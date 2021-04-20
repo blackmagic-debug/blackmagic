@@ -777,7 +777,6 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 	}
 
 	/* Probe for APs on this DP */
-	uint32_t last_base = 0;
 	int void_aps = 0;
 	dp->refcnt++;
 	for(int i = 0; (i < 256) && (void_aps < 8); i++) {
@@ -801,18 +800,6 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 				continue;
 			}
 		}
-		if (ap->base == last_base) {
-			DEBUG_WARN("AP %d: Duplicate base\n", i);
-#if PC_HOSTED == 1
-			if (dp->ap_cleanup)
-				dp->ap_cleanup(i);
-#endif
-			adiv5_ap_unref(ap);
-			adiv5_dp_unref(dp);
-			/* FIXME: Should we expect valid APs behind duplicate ones? */
-			return;
-		}
-		last_base = ap->base;
 		extern void kinetis_mdm_probe(ADIv5_AP_t *);
 		kinetis_mdm_probe(ap);
 
