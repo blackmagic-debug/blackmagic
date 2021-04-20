@@ -183,7 +183,7 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 {
 	int c;
 	opt->opt_target_dev = 1;
-	opt->opt_flash_size = 16 * 1024 *1024;
+	opt->opt_flash_size = 0xffffffff;
 	opt->opt_flash_start = 0xffffffff;
 	opt->opt_max_swj_frequency = 4000000;
 	while((c = getopt(argc, argv, "eEhHv:d:f:s:I:c:Cln:m:M:wVtTa:S:jpP:rR")) != -1) {
@@ -395,7 +395,8 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 	}
 	/* Always scan memory map to find lowest flash */
 	/* List each defined Flash */
-	uint32_t flash_start = 0xffffffff;
+	uint32_t lowest_flash_start = 0xffffffff;
+	uint32_t lowest_flash_size = 0;
 	int n_flash = 0;
 	for (struct target_flash *f = t->flash; f; f = f->next)
 		n_flash++;
@@ -406,12 +407,16 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 				DEBUG_INFO("Flash Start: 0x%08" PRIx32 " length = 0x%" PRIx32
 						   " blocksize 0x%" PRIx32 "\n",
 						   f->start, (uint32_t)f->length, (uint32_t)f->blocksize);
-				if (f->start < flash_start)
-					flash_start = f->start;
+				if (f->start < lowest_flash_start) {
+					lowest_flash_start = f->start;
+					lowest_flash_size = f->length;
+				}
 			}
 	}
 	if (opt->opt_flash_start == 0xffffffff)
-		opt->opt_flash_start = flash_start;
+		opt->opt_flash_start = lowest_flash_start;
+	if (opt->opt_flash_size == 0xffffffff)
+		opt->opt_flash_size = lowest_flash_size;
 	if (opt->opt_mode == BMP_MODE_SWJ_TEST) {
 		switch (t->core[0]) {
 		case 'M':
