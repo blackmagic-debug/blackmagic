@@ -114,6 +114,10 @@ struct target_s {
 	uint16_t t_designer;
 	uint16_t idcode;
 	void *target_storage;
+	union {
+		bool unsafe_enabled;
+		bool ke04_mode;
+	};
 
 	struct target_ram *ram;
 	struct target_flash *flash;
