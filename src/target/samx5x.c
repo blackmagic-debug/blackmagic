@@ -519,7 +519,7 @@ static int samx5x_flash_erase(struct target_flash *f, target_addr addr,
 	target *t = f->t;
 	uint16_t errs = samx5x_read_nvm_error(t);
 	if (errs) {
-		DEBUG_INFO(NVM_ERROR_BITS_MSG, "erase", addr, len);
+		DEBUG_WARN(NVM_ERROR_BITS_MSG, "erase", addr, len);
 		samx5x_print_nvm_error(errs);
 		samx5x_clear_nvm_error(t);
 	}
@@ -533,11 +533,15 @@ static int samx5x_flash_erase(struct target_flash *f, target_addr addr,
 		SAMX5X_PAGE_SIZE;
 	lock_region_size = flash_size >> 5;
 
-	if (addr < (15 - bootprot) * 8192)
-		return -1;
+	if (addr < (15 - bootprot) * 8192) {
+            DEBUG_WARN("Bootprot\n");
+            return -1;
+        }
 
-	if (~runlock & (1 << addr / lock_region_size))
-		return -1;
+	if (~runlock & (1 << addr / lock_region_size)) {
+            DEBUG_WARN("runlock\n");
+            return -1;
+        }
 
 	while (len) {
 		target_mem_write32(t, SAMX5X_NVMC_ADDRESS, addr);
@@ -553,11 +557,15 @@ static int samx5x_flash_erase(struct target_flash *f, target_addr addr,
 		/* Poll for NVM Ready */
 		while ((target_mem_read32(t, SAMX5X_NVMC_STATUS) &
 			SAMX5X_STATUS_READY) == 0)
-			if (target_check_error(t) || samx5x_check_nvm_error(t))
-				return -1;
+                    if (target_check_error(t) || samx5x_check_nvm_error(t)) {
+                        DEBUG_WARN("NVM Ready\n");
+                        return -1;
+                    }
 
-		if (target_check_error(t) || samx5x_check_nvm_error(t))
-			return -1;
+		if (target_check_error(t) || samx5x_check_nvm_error(t)) {
+                    DEBUG_WARN("Error\n");
+                    return -1;
+                }
 
 		/* Lock */
 		samx5x_lock_current_address(t);
