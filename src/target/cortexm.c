@@ -327,8 +327,9 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 		t->core = "M0";
 		break;
 	default:
-		DEBUG_WARN("Unexpected CortexM CPUID partno %04" PRIx32 "\n",
-				   cpuid_partno);
+		if (ap->ap_designer != AP_DESIGNER_ATMEL) /* Protected Atmel device?*/{
+			DEBUG_WARN("Unexpected CortexM CPUID partno %04x\n", cpuid_partno);
+		}
 	}
 	DEBUG_INFO("CPUID 0x%08" PRIx32 " (%s var %" PRIx32 " rev %" PRIx32 ")\n",
 			   t->cpuid,

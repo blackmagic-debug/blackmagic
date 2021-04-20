@@ -470,8 +470,19 @@ static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, int recursion, 
 		if (recursion == 0) {
 			ap->ap_designer = designer;
 			ap->ap_partno   = partno;
-			if ((ap->ap_designer == AP_DESIGNER_ATMEL) && (ap->ap_partno == 0xcd0))
-				cortexm_probe(ap);
+			if ((ap->ap_designer == AP_DESIGNER_ATMEL) && (ap->ap_partno == 0xcd0)) {
+#define SAMX5X_DSU_CTRLSTAT			0x41002100
+#define SAMX5X_STATUSB_PROT			(1 << 16)
+				uint32_t ctrlstat = adiv5_mem_read32(ap, SAMX5X_DSU_CTRLSTAT);
+				if (ctrlstat & SAMX5X_STATUSB_PROT) {
+					/* A protected SAMx5x device is found.
+					 * Handle it here, as access only to limited memory region
+					 * is allowed
+					 */
+					cortexm_probe(ap);
+					return;
+				}
+			}
 		}
 		for (int i = 0; i < 960; i++) {
 			adiv5_dp_error(ap->dp);
