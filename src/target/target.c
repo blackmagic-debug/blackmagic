@@ -584,6 +584,7 @@ void tc_printf(target *t, const char *fmt, ...)
 
 	va_start(ap, fmt);
 	t->tc->printf(t->tc, fmt, ap);
+	fflush(stdout);
 	va_end(ap);
 }
 
