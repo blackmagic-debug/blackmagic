@@ -344,7 +344,10 @@ static void samx5x_add_flash(target *t, uint32_t addr, size_t length,
 	target_add_flash(t, f);
 }
 
-static char samx5x_variant_string[60];
+struct samx5x_priv_s {
+	char samx5x_variant_string[60];
+};
+
 bool samx5x_probe(target *t)
 {
 	ADIv5_AP_t *ap = cortexm_ap(t);
@@ -370,20 +373,25 @@ bool samx5x_probe(target *t)
 	bool protected = (ctrlstat & SAMX5X_STATUSB_PROT);
 
 	/* Part String */
+	struct samx5x_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
+	t->target_storage = (void*)priv_storage;
+
 	if (protected) {
-		snprintf(samx5x_variant_string, sizeof(samx5x_variant_string),
+		snprintf(priv_storage->samx5x_variant_string,
+				 sizeof(priv_storage->samx5x_variant_string),
 			 "Microchip SAM%c%d%c%dA (rev %c) (PROT=1)",
 			 samx5x.series_letter, samx5x.series_number,
 			 samx5x.pin, samx5x.mem, samx5x.revision);
 	} else {
-		snprintf(samx5x_variant_string, sizeof(samx5x_variant_string),
+		snprintf(priv_storage->samx5x_variant_string,
+				 sizeof(priv_storage->samx5x_variant_string),
 			 "Microchip SAM%c%d%c%dA (rev %c)",
 			 samx5x.series_letter, samx5x.series_number,
 			 samx5x.pin, samx5x.mem, samx5x.revision);
 	}
 
 	/* Setup Target */
-	t->driver = samx5x_variant_string;
+	t->driver = priv_storage->samx5x_variant_string;
 	t->reset = samx5x_reset;
 
 	if (protected) {
