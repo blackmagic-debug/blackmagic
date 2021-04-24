@@ -57,6 +57,7 @@ struct rp_priv_s {
 	uint16_t flash_range_program;
 	uint16_t _flash_flush_cache;
 	uint16_t _flash_enter_cmd_xip;
+	uint16_t reset_usb_boot;
 	bool     is_prepared;
 	uint32_t regs[0x20];/* Register playground*/
 };
@@ -94,6 +95,9 @@ static bool rp2040_fill_table(struct rp_priv_s *priv, uint16_t *table, int max)
 		case ('C' | ('X' << 8)):
 			priv->_flash_enter_cmd_xip = data;
 			break;
+		case ('U' | ('B' << 8)):
+			priv->reset_usb_boot = data;
+			break;
 		default:
 			check--;
 		}
@@ -102,10 +106,14 @@ static bool rp2040_fill_table(struct rp_priv_s *priv, uint16_t *table, int max)
 	DEBUG_TARGET("connect %04x debug_trampoline %04x end %04x\n",
 			   priv->_connect_internal_flash, priv->_debug_trampoline,
 			   priv->_debug_trampoline_end);
-	return (check != 8);
+	return (check != 9);
 }
 
-/* RP ROM functions for flash handling return void */
+/* RP ROM functions calls
+ *
+ * timout == 0: Do not wait for poll, use for reset_usb_boot()
+ * timeout > 400 (ms) : display spinner
+ */
 static bool rp_rom_call(target *t, uint32_t *regs, uint32_t cmd,
 						uint32_t timeout)
 {
@@ -121,6 +129,8 @@ static bool rp_rom_call(target *t, uint32_t *regs, uint32_t cmd,
 	target_regs_write(t, regs);
 	/* start the target and wait for it to halt again */
 	target_halt_resume(t, false);
+	if (!timeout)
+		return false;
 	DEBUG_INFO("Call cmd %04x\n", cmd);
 	platform_timeout to;
 	platform_timeout_set(&to, timeout);
@@ -253,6 +263,21 @@ int rp_flash_write(struct target_flash *f,
 	return 0;
 }
 
+static bool rp_cmd_reset_usb_boot(target *t, int argc, const char *argv[])
+{
+	struct rp_priv_s *ps = (struct rp_priv_s*)t->target_storage;
+	if (argc > 2) {
+		ps->regs[1] = atoi(argv[2]);
+	} else if (argc < 3) {
+		ps->regs[0] = atoi(argv[1]);
+	} else {
+		ps->regs[0] = 0;
+		ps->regs[1] = 0;
+	}
+	rp_rom_call(t, ps->regs, ps->reset_usb_boot, 0);
+	return true;
+}
+
 static bool rp_cmd_erase_mass(target *t, int argc, const char *argv[])
 {
 	(void) argc;
@@ -264,6 +289,7 @@ static bool rp_cmd_erase_mass(target *t, int argc, const char *argv[])
 
 const struct command_s rp_cmd_list[] = {
 	{"erase_mass", rp_cmd_erase_mass, "Erase entire flash memory"},
+	{"reset_usb_boot", rp_cmd_reset_usb_boot, "Reboot the device into BOOTSEL mode"},
 	{NULL, NULL, NULL}
 };
 
