@@ -584,7 +584,10 @@ static efm32_device_t const * efm32_get_device(size_t index)
 /**
  * Probe
  */
-static char efm32_variant_string[60];
+struct efm32_priv_s {
+	char efm32_variant_string[60];
+};
+
 bool efm32_probe(target *t)
 {
 	uint8_t di_version = 1;
@@ -636,13 +639,17 @@ bool efm32_probe(target *t)
 	uint32_t ram_size   = ram_kib   * 0x400;
 	uint32_t flash_page_size = device->flash_page_size;
 
-	snprintf(efm32_variant_string, sizeof(efm32_variant_string), "%c\b%c\b%s %d F%d %s",
+	struct efm32_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
+	t->target_storage = (void*)priv_storage;
+
+	snprintf(priv_storage->efm32_variant_string,
+			 sizeof(priv_storage->efm32_variant_string), "%c\b%c\b%s %d F%d %s",
 			di_version + 48, (uint8_t)device_index + 32,
 			device->name, part_number, flash_kib, device->description);
 
 	/* Setup Target */
 	t->target_options |= CORTEXM_TOPT_INHIBIT_SRST;
-	t->driver = efm32_variant_string;
+	t->driver = priv_storage->efm32_variant_string;
 	tc_printf(t, "flash size %d page size %d\n", flash_size, flash_page_size);
 	target_add_ram (t, SRAM_BASE, ram_size);
 	efm32_add_flash(t, 0x00000000, flash_size, flash_page_size);
@@ -980,7 +987,10 @@ static bool nop_function(void)
 /**
  * AAP Probe
  */
-char aap_driver_string[42];
+struct efm32_aap_priv_s {
+       char aap_driver_string[42];
+};
+
 void efm32_aap_probe(ADIv5_AP_t *ap)
 {
 	if ((ap->idr & EFM32_APP_IDR_MASK) == EFM32_AAP_IDR) {
@@ -1004,10 +1014,11 @@ void efm32_aap_probe(ADIv5_AP_t *ap)
 	/* Read status */
 	DEBUG_INFO("EFM32: AAP STATUS=%08"PRIx32"\n", adiv5_ap_read(ap, AAP_STATUS));
 
-	sprintf(aap_driver_string,
+	struct efm32_aap_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
+	sprintf(priv_storage->aap_driver_string,
 			"EFM32 Authentication Access Port rev.%d",
 			aap_revision);
-	t->driver = aap_driver_string;
+	t->driver = priv_storage->aap_driver_string;
 	t->attach = (void*)nop_function;
 	t->detach = (void*)nop_function;
 	t->check_error = (void*)nop_function;

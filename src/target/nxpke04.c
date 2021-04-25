@@ -126,7 +126,6 @@ static int ke04_flash_done(struct target_flash *f);
 static bool kinetis_cmd_unsafe(target *t, int argc, char *argv[]);
 static bool ke04_cmd_sector_erase(target *t, int argc, char *argv[]);
 static bool ke04_cmd_mass_erase(target *t, int argc, char *argv[]);
-static bool unsafe_enabled;
 
 const struct command_s ke_cmd_list[] = {
 	{"unsafe", (cmd_handler)kinetis_cmd_unsafe, "Allow programming security byte (enable|disable)"},
@@ -173,9 +172,9 @@ static bool kinetis_cmd_unsafe(target *t, int argc, char *argv[])
 {
 	if (argc == 1) {
 		tc_printf(t, "Allow programming security byte: %s\n",
-			  unsafe_enabled ? "enabled" : "disabled");
+			  t->unsafe_enabled ? "enabled" : "disabled");
 	} else {
-		parse_enable_or_disable(argv[1], &unsafe_enabled);
+		parse_enable_or_disable(argv[1], &t->unsafe_enabled);
 	}
 	return true;
 }
@@ -253,7 +252,6 @@ bool ke04_probe(target *t)
 	target_add_flash(t, f);
 
 	/* Add target specific commands */
-	unsafe_enabled = false;
 	target_add_commands(t, ke_cmd_list, t->driver);
 
 	return true;
@@ -343,7 +341,8 @@ static int ke04_flash_write(struct target_flash *f,
                               target_addr dest, const void *src, size_t len)
 {
 	/* Ensure we don't write something horrible over the security byte */
-	if (!unsafe_enabled &&
+	target *t = f->t;
+	if (!t->unsafe_enabled &&
 	    (dest <= FLASH_SECURITY_BYTE_ADDRESS) &&
 	    ((dest + len) > FLASH_SECURITY_BYTE_ADDRESS)) {
 		((uint8_t*)src)[FLASH_SECURITY_BYTE_ADDRESS - dest] =
@@ -364,7 +363,8 @@ static int ke04_flash_write(struct target_flash *f,
 
 static int ke04_flash_done(struct target_flash *f)
 {
-	if (unsafe_enabled)
+	target *t = f->t;
+	if (t->unsafe_enabled)
 		return 0;
 
 	if (target_mem_read8(f->t, FLASH_SECURITY_BYTE_ADDRESS) ==

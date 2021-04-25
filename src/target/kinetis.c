@@ -74,7 +74,6 @@
 #define K64_WRITE_LEN 8
 
 static bool kinetis_cmd_unsafe(target *t, int argc, char *argv[]);
-static bool unsafe_enabled;
 
 const struct command_s kinetis_cmd_list[] = {
 	{"unsafe", (cmd_handler)kinetis_cmd_unsafe, "Allow programming security byte (enable|disable)"},
@@ -85,9 +84,9 @@ static bool kinetis_cmd_unsafe(target *t, int argc, char *argv[])
 {
 	if (argc == 1) {
 		tc_printf(t, "Allow programming security byte: %s\n",
-			  unsafe_enabled ? "enabled" : "disabled");
+			  t->unsafe_enabled ? "enabled" : "disabled");
 	} else {
-		parse_enable_or_disable(argv[1], &unsafe_enabled);
+		parse_enable_or_disable(argv[1], &t->unsafe_enabled);
 	}
 	return true;
 }
@@ -336,7 +335,7 @@ bool kinetis_probe(target *t)
 	default:
 		return false;
 	}
-	unsafe_enabled = false;
+	t->unsafe_enabled = false;
 	target_add_commands(t, kinetis_cmd_list, t->driver);
 	return true;
 }
@@ -403,7 +402,7 @@ static int kl_gen_flash_write(struct target_flash *f,
 	struct kinetis_flash *kf = (struct kinetis_flash *)f;
 
 	/* Ensure we don't write something horrible over the security byte */
-	if (!unsafe_enabled &&
+	if (!f->t->unsafe_enabled &&
 	    (dest <= FLASH_SECURITY_BYTE_ADDRESS) &&
 	    ((dest + len) > FLASH_SECURITY_BYTE_ADDRESS)) {
 		((uint8_t*)src)[FLASH_SECURITY_BYTE_ADDRESS - dest] =
@@ -437,7 +436,7 @@ static int kl_gen_flash_done(struct target_flash *f)
 {
 	struct kinetis_flash *kf = (struct kinetis_flash *)f;
 
-	if (unsafe_enabled)
+	if (f->t->unsafe_enabled)
 		return 0;
 
 	if (target_mem_read8(f->t, FLASH_SECURITY_BYTE_ADDRESS) ==
@@ -527,13 +526,12 @@ void kinetis_mdm_probe(ADIv5_AP_t *ap)
 
 /* This is needed as a separate command, as there's no way to  *
  * tell a KE04 from other kinetis in kinetis_mdm_probe()       */
-static bool ke04_mode = false;
 static bool kinetis_mdm_cmd_ke04_mode(target *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
 	/* Set a flag to ignore part of the status and assert reset */
-	ke04_mode = true;
+	t->ke04_mode = true;
 	tc_printf(t, "Mass erase for KE04 now allowed\n");
 	return true;
 }
@@ -544,7 +542,7 @@ static bool kinetis_mdm_cmd_erase_mass(target *t, int argc, const char **argv)
 	ADIv5_AP_t *ap = t->priv;
 
 	/* Keep the MCU in reset as stated in KL25PxxM48SF0RM */
-	if(ke04_mode)
+	if(t->ke04_mode)
 		adiv5_ap_write(ap, MDM_CONTROL, MDM_CONTROL_SYS_RESET);
 
 	uint32_t status, control;
@@ -553,13 +551,13 @@ static bool kinetis_mdm_cmd_erase_mass(target *t, int argc, const char **argv)
 	tc_printf(t, "Requesting mass erase (status = 0x%"PRIx32")\n", status);
 
 	/* This flag does not exist on KE04 */
-	if (!(status & MDM_STATUS_MASS_ERASE_ENABLED) && !ke04_mode) {
+	if (!(status & MDM_STATUS_MASS_ERASE_ENABLED) && !t->ke04_mode) {
 		tc_printf(t, "ERROR: Mass erase disabled!\n");
 		return false;
 	}
 
 	/* Flag is not persistent */
-	ke04_mode = false;
+	t->ke04_mode = false;
 
 	if (!(status & MDM_STATUS_FLASH_READY)) {
 		tc_printf(t, "ERROR: Flash not ready!\n");

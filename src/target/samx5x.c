@@ -344,7 +344,10 @@ static void samx5x_add_flash(target *t, uint32_t addr, size_t length,
 	target_add_flash(t, f);
 }
 
-static char samx5x_variant_string[60];
+struct samx5x_priv_s {
+	char samx5x_variant_string[60];
+};
+
 bool samx5x_probe(target *t)
 {
 	ADIv5_AP_t *ap = cortexm_ap(t);
@@ -370,20 +373,25 @@ bool samx5x_probe(target *t)
 	bool protected = (ctrlstat & SAMX5X_STATUSB_PROT);
 
 	/* Part String */
+	struct samx5x_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
+	t->target_storage = (void*)priv_storage;
+
 	if (protected) {
-		snprintf(samx5x_variant_string, sizeof(samx5x_variant_string),
+		snprintf(priv_storage->samx5x_variant_string,
+				 sizeof(priv_storage->samx5x_variant_string),
 			 "Microchip SAM%c%d%c%dA (rev %c) (PROT=1)",
 			 samx5x.series_letter, samx5x.series_number,
 			 samx5x.pin, samx5x.mem, samx5x.revision);
 	} else {
-		snprintf(samx5x_variant_string, sizeof(samx5x_variant_string),
+		snprintf(priv_storage->samx5x_variant_string,
+				 sizeof(priv_storage->samx5x_variant_string),
 			 "Microchip SAM%c%d%c%dA (rev %c)",
 			 samx5x.series_letter, samx5x.series_number,
 			 samx5x.pin, samx5x.mem, samx5x.revision);
 	}
 
 	/* Setup Target */
-	t->driver = samx5x_variant_string;
+	t->driver = priv_storage->samx5x_variant_string;
 	t->reset = samx5x_reset;
 
 	if (protected) {
@@ -519,7 +527,7 @@ static int samx5x_flash_erase(struct target_flash *f, target_addr addr,
 	target *t = f->t;
 	uint16_t errs = samx5x_read_nvm_error(t);
 	if (errs) {
-		DEBUG_INFO(NVM_ERROR_BITS_MSG, "erase", addr, len);
+		DEBUG_WARN(NVM_ERROR_BITS_MSG, "erase", addr, len);
 		samx5x_print_nvm_error(errs);
 		samx5x_clear_nvm_error(t);
 	}
@@ -533,11 +541,15 @@ static int samx5x_flash_erase(struct target_flash *f, target_addr addr,
 		SAMX5X_PAGE_SIZE;
 	lock_region_size = flash_size >> 5;
 
-	if (addr < (15 - bootprot) * 8192)
-		return -1;
+	if (addr < (15 - bootprot) * 8192) {
+            DEBUG_WARN("Bootprot\n");
+            return -1;
+        }
 
-	if (~runlock & (1 << addr / lock_region_size))
-		return -1;
+	if (~runlock & (1 << addr / lock_region_size)) {
+            DEBUG_WARN("runlock\n");
+            return -1;
+        }
 
 	while (len) {
 		target_mem_write32(t, SAMX5X_NVMC_ADDRESS, addr);
@@ -553,11 +565,15 @@ static int samx5x_flash_erase(struct target_flash *f, target_addr addr,
 		/* Poll for NVM Ready */
 		while ((target_mem_read32(t, SAMX5X_NVMC_STATUS) &
 			SAMX5X_STATUS_READY) == 0)
-			if (target_check_error(t) || samx5x_check_nvm_error(t))
-				return -1;
+                    if (target_check_error(t) || samx5x_check_nvm_error(t)) {
+                        DEBUG_WARN("NVM Ready\n");
+                        return -1;
+                    }
 
-		if (target_check_error(t) || samx5x_check_nvm_error(t))
-			return -1;
+		if (target_check_error(t) || samx5x_check_nvm_error(t)) {
+                    DEBUG_WARN("Error\n");
+                    return -1;
+                }
 
 		/* Lock */
 		samx5x_lock_current_address(t);
