@@ -66,7 +66,7 @@ int dap_init(bmp_info_t *info)
 	 */
 	if ((info->vid == 0x1fc9) && (info->pid == 0x0132)) {
 		DEBUG_WARN("Blacklist\n");
-		report_size = 64 + 1;
+		report_size = 64;
 	}
 	handle = hid_open(info->vid, info->pid,  (serial[0]) ? serial : NULL);
 	if (!handle)
@@ -79,12 +79,12 @@ int dap_init(bmp_info_t *info)
 		if (sscanf((const char *)hid_buffer, "%d.%d.%d",
 				   &major, &minor, &sub)) {
 			if (sub == -1) {
-				if (minor > 10) {
+				if (minor >= 10) {
 					minor /= 10;
 					sub = 0;
 				}
 			}
-			has_swd_sequence = ((major > 0 ) && (minor > 1));
+			has_swd_sequence = ((major > 1 ) || ((major > 0 ) && (minor > 1)));
 		}
 	}
 	size = dap_info(DAP_INFO_CAPABILITIES, hid_buffer, sizeof(hid_buffer));
@@ -99,6 +99,11 @@ int dap_init(bmp_info_t *info)
 		DEBUG_INFO(", SWO_MANCHESTER");
 	if (dap_caps & 0x10)
 		DEBUG_INFO(", Atomic Cmds");
+	size = dap_info(DAP_INFO_PACKET_SIZE, hid_buffer, sizeof(hid_buffer));
+	if (size) {
+		report_size = hid_buffer[0];
+		DEBUG_INFO(", Reportsize %d", hid_buffer[0]);
+	}
 	DEBUG_INFO("\n");
 	return 0;
 }
@@ -111,6 +116,7 @@ static void dap_dp_abort(ADIv5_DP_t *dp, uint32_t abort)
 
 static uint32_t dap_dp_error(ADIv5_DP_t *dp)
 {
+	/* Not used for SWD debugging, so no TARGETID switch needed!*/
 	uint32_t ctrlstat = dap_read_reg(dp, ADIV5_DP_CTRLSTAT);
 	uint32_t err = ctrlstat &
 		(ADIV5_DP_CTRLSTAT_STICKYORUN | ADIV5_DP_CTRLSTAT_STICKYCMP |
@@ -170,38 +176,36 @@ int dbg_dap_cmd(uint8_t *data, int size, int rsize)
 	char cmd = data[0];
 	int res;
 
-	memset(hid_buffer, 0xff, report_size + 1);
+	memset(hid_buffer, 0, report_size + 1);
 
-	hid_buffer[0] = 0x00; // Report ID??
 	memcpy(&hid_buffer[1], data, rsize);
 
 	DEBUG_WIRE("cmd :   ");
-	for(int i = 0; (i < 16) && (i < rsize + 1); i++)
+	for(int i = 0; (i < 32) && (i < rsize + 1); i++)
 		DEBUG_WIRE("%02x.",	hid_buffer[i]);
 	DEBUG_WIRE("\n");
-	res = hid_write(handle, hid_buffer, rsize + 1);
+	/* Write must be as long as we expect the result, at least
+	 * for Dappermime 20210213 */
+	res = hid_write(handle, hid_buffer, report_size + 1);
 	if (res < 0) {
 		DEBUG_WARN( "Error: %ls\n", hid_error(handle));
 		exit(-1);
 	}
-	if (size) {
-		res = hid_read(handle, hid_buffer, report_size + 1);
-		if (res < 0) {
-			DEBUG_WARN( "debugger read(): %ls\n", hid_error(handle));
-			exit(-1);
-		}
-		if (size && hid_buffer[0] != cmd) {
-			DEBUG_WARN("cmd %02x invalid response received %02x\n",
-				   cmd, hid_buffer[0]);
-		}
-		res--;
-		memcpy(data, &hid_buffer[1], (size < res) ? size : res);
-		DEBUG_WIRE("cmd res:");
-		for(int i = 0; (i < 16) && (i < size + 4); i++)
-			DEBUG_WIRE("%02x.",	hid_buffer[i]);
-		DEBUG_WIRE("\n");
+	res = hid_read(handle, hid_buffer, report_size + 1);
+	if (res < 0) {
+		DEBUG_WARN( "debugger read(): %ls\n", hid_error(handle));
+		exit(-1);
 	}
-
+	DEBUG_WIRE("res %2d: ", res);
+	for(int i = 0; (i < 16) && (i < res + 1); i++)
+		DEBUG_WIRE("%02x.",	hid_buffer[i]);
+	DEBUG_WIRE("\n");
+	if (hid_buffer[0] != cmd) {
+		DEBUG_WARN("cmd %02x invalid response received %02x\n",
+				   cmd, hid_buffer[0]);
+	}
+	if (size)
+		memcpy(data, &hid_buffer[1], (size < res) ? size : res);
 	return res;
 }
 #define ALIGNOF(x) (((x) & 3) == 0 ? ALIGN_WORD :					\
@@ -281,26 +285,6 @@ static void dap_mem_write_sized(
 	DEBUG_WIRE("memwrite done\n");
 }
 
-int dap_enter_debug_swd(ADIv5_DP_t *dp)
-{
-	target_list_free();
-	if (!(dap_caps & DAP_CAP_SWD))
-		return -1;
-	mode =  DAP_CAP_SWD;
-	dap_transfer_configure(2, 128, 128);
-	dap_swd_configure(0);
-	dap_connect(false);
-	dap_led(0, 1);
-	dap_reset_link(false);
-
-	dp->idcode = dap_read_idcode(dp);
-	dp->dp_read = dap_dp_read_reg;
-	dp->error = dap_dp_error;
-	dp->low_access =  dap_dp_low_access;
-	dp->abort = dap_dp_abort; /* DP Write to Reg 0.*/
-	return 0;
-}
-
 void dap_adiv5_dp_defaults(ADIv5_DP_t *dp)
 {
 	if ((mode == DAP_CAP_JTAG) && dap_jtag_configure())
@@ -355,12 +339,12 @@ int cmsis_dap_jtagtap_init(jtag_proc_t *jtag_proc)
 	mode =  DAP_CAP_JTAG;
 	dap_disconnect();
 	dap_connect(true);
+	dap_reset_link(true);
 	jtag_proc->jtagtap_reset       = cmsis_dap_jtagtap_reset;
 	jtag_proc->jtagtap_next        = cmsis_dap_jtagtap_next;
 	jtag_proc->jtagtap_tms_seq     = cmsis_dap_jtagtap_tms_seq;
 	jtag_proc->jtagtap_tdi_tdo_seq = cmsis_dap_jtagtap_tdi_tdo_seq;
 	jtag_proc->jtagtap_tdi_seq     = cmsis_dap_jtagtap_tdi_seq;
-	dap_reset_link(true);
 	return 0;
 }
 
@@ -372,4 +356,88 @@ int dap_jtag_dp_init(ADIv5_DP_t *dp)
 	dp->abort = dap_dp_abort;
 
 	return true;
+}
+
+#define SWD_SEQUENCE_IN 0x80
+#define DAP_SWD_SEQUENCE 0x1d
+/* DAP_SWD_SEQUENCE does not do auto turnaround*/
+static bool dap_dp_low_read(ADIv5_DP_t *dp, uint16_t addr, uint32_t *res)
+{
+	(void)dp;
+	unsigned int paket_request = make_packet_request(ADIV5_LOW_READ, addr);
+	uint8_t buf[32] = {
+		DAP_SWD_SEQUENCE,
+		5,
+		8,
+		paket_request,
+		4 + SWD_SEQUENCE_IN,  /* one turn-around + read 3 bit ACK */
+		32 + SWD_SEQUENCE_IN, /* read 32 bit data */
+		1 + SWD_SEQUENCE_IN,  /* read parity bit */
+		1,                    /* one bit turn around to drive SWDIO */
+		0
+	};
+	dbg_dap_cmd(buf, sizeof(buf), 9);
+	if (buf[0])
+		DEBUG_WARN("dap_dp_low_read failed\n");
+	uint32_t ack = (buf[1] >> 1) & 7;
+	uint32_t data = (buf[2] << 0) + (buf[3] << 8) + (buf[4] << 16)
+		+ (buf[5] << 24);
+	int parity = __builtin_parity(data);
+	bool ret = ((parity != buf[6]) || (ack != 1));
+	*res = data;
+	DEBUG_PROBE("dap_dp_low_read ack %d, res %08" PRIx32 ", parity %s\n", ack,
+			   data, (ret)? "ERR": "OK");
+	return ret;
+}
+
+static bool dap_dp_low_write(ADIv5_DP_t *dp, uint16_t addr, const uint32_t data)
+{
+	DEBUG_PROBE("dap_dp_low_write %08" PRIx32 "\n", data);
+	(void)dp;
+	unsigned int paket_request = make_packet_request(ADIV5_LOW_WRITE, addr);
+	uint8_t buf[32] = {
+		DAP_SWD_SEQUENCE,
+		5,
+		8,
+		paket_request,
+		4 + SWD_SEQUENCE_IN,  /* one turn-around + read 3 bit ACK */
+		1,                    /* one bit turn around to drive SWDIO */
+		0,
+		32,                   /* write 32 bit data */
+		(data >>  0) & 0xff,
+		(data >>  8) & 0xff,
+		(data >> 16) & 0xff,
+		(data >> 24) & 0xff,
+		1,                    /* write parity biT */
+		__builtin_parity(data)
+	};
+	dbg_dap_cmd(buf, sizeof(buf), 14);
+	if (buf[0])
+		DEBUG_WARN("dap_dp_low_write failed\n");
+	uint32_t ack = (buf[1] >> 1) & 7;
+	return (ack != SWDP_ACK_OK);
+}
+
+int dap_swdptap_init(ADIv5_DP_t *dp)
+{
+	if (!(dap_caps & DAP_CAP_SWD))
+		return 1;
+	mode =  DAP_CAP_SWD;
+	dap_transfer_configure(2, 128, 128);
+	dap_swd_configure(0);
+	dap_connect(false);
+	dap_led(0, 1);
+	dap_reset_link(false);
+	if (has_swd_sequence) {
+		/* DAP_SWD_SEQUENCE does not do auto turnaround, use own!*/
+		dp->dp_low_read = dap_dp_low_read;
+		dp->dp_low_write = dap_dp_low_write;
+	}
+	dp->seq_out = dap_swdptap_seq_out;
+	dp->seq_out_parity = dap_swdptap_seq_out_parity;
+	dp->dp_read = dap_dp_read_reg;
+	/* For error() use the TARGETID switching firmware_swdp_error */
+	dp->low_access = dap_dp_low_access;
+	dp->abort = dap_dp_abort;
+	return 0;
 }

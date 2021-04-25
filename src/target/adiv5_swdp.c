@@ -26,15 +26,10 @@
 #include "general.h"
 #include "exception.h"
 #include "adiv5.h"
-#include "swdptap.h"
 #include "target.h"
 #include "target_internal.h"
 
-#define SWDP_ACK_OK    0x01
-#define SWDP_ACK_WAIT  0x02
-#define SWDP_ACK_FAULT 0x04
-
-static unsigned int make_packet_request(uint8_t  RnW, uint16_t addr)
+unsigned int make_packet_request(uint8_t RnW, uint16_t addr)
 {
 	bool APnDP = addr & ADIV5_APnDP;
 	addr &= 0xff;
@@ -49,56 +44,144 @@ static unsigned int make_packet_request(uint8_t  RnW, uint16_t addr)
 	return request;
 }
 
+/* Provide bare DP access functions without timeout and exception */
+
+static void dp_line_reset(ADIv5_DP_t *dp)
+{
+	dp->seq_out(0xFFFFFFFF, 32);
+	dp->seq_out(0x0FFFFFFF, 32);
+}
+
+bool firmware_dp_low_write(ADIv5_DP_t *dp, uint16_t addr, const uint32_t data)
+{
+	unsigned int request =  make_packet_request(ADIV5_LOW_WRITE, addr & 0xf);
+	dp->seq_out(request, 8);
+	int res = dp->seq_in(3);
+	dp->seq_out_parity(data, 32);
+	return (res != 1);
+}
+
+static bool firmware_dp_low_read(ADIv5_DP_t *dp, uint16_t addr, uint32_t *res)
+{
+	unsigned int request =  make_packet_request(ADIV5_LOW_READ, addr & 0xf);
+	dp->seq_out(request, 8);
+	dp->seq_in(3);
+    return dp->seq_in_parity(res, 32);
+}
+
+/* Try first the dormant to SWD procedure.
+ * If target id given, scan DPs 0 .. 15 on that device and return.
+ * Otherwise
+ */
 int adiv5_swdp_scan(uint32_t targetid)
 {
-	uint32_t ack;
-	(void) targetid;
 	target_list_free();
-#if PC_HOSTED == 1
-	if (platform_swdptap_init()) {
-		exit(-1);
-	}
-#else
-	if (swdptap_init()) {
+	ADIv5_DP_t idp, *initial_dp = &idp;
+	memset(initial_dp, 0, sizeof(ADIv5_DP_t));
+	if (swdptap_init(initial_dp))
 		return -1;
+	/* Set defaults when no procedure given*/
+	if (!initial_dp->dp_low_write)
+		initial_dp->dp_low_write = firmware_dp_low_write;
+	if (!initial_dp->dp_low_read)
+		initial_dp->dp_low_read = firmware_dp_low_read;
+	if (!initial_dp->error)
+		initial_dp->error = firmware_swdp_error;
+	if (!initial_dp->dp_read)
+		initial_dp->dp_read = firmware_swdp_read;
+	if (!initial_dp->error)
+		initial_dp->error = firmware_swdp_error;
+	if (!initial_dp->low_access)
+       initial_dp->low_access = firmware_swdp_low_access;
+	/* DORMANT-> SWD sequence*/
+	initial_dp->seq_out(0xFFFFFFFF, 32);
+	initial_dp->seq_out(0xFFFFFFFF, 32);
+	/* 128 bit selection alert sequence for SW-DP-V2 */
+	initial_dp->seq_out(0x6209f392, 32);
+	initial_dp->seq_out(0x86852d95, 32);
+	initial_dp->seq_out(0xe3ddafe9, 32);
+	initial_dp->seq_out(0x19bc0ea2, 32);
+	/* 4 cycle low,
+	 * 0x1a Arm CoreSight SW-DP activation sequence
+	 * 20 bits start of reset another reset sequence*/
+	initial_dp->seq_out(0x1a0, 12);
+	uint32_t idcode = 0;
+	volatile uint32_t target_id;
+	bool is_v2 = true;
+	if (!targetid) {
+		/* Try to read ID */
+		dp_line_reset(initial_dp);
+		volatile struct exception e;
+		TRY_CATCH (e, EXCEPTION_ALL) {
+			idcode = initial_dp->low_access(initial_dp, ADIV5_LOW_READ,
+										   ADIV5_DP_IDCODE, 0);
+		}
+		if (e.type || initial_dp->fault) {
+			is_v2 = false;
+			DEBUG_WARN("Trying old JTAG to SWD sequence\n");
+			initial_dp->seq_out(0xFFFFFFFF, 32);
+			initial_dp->seq_out(0xFFFFFFFF, 32);
+			initial_dp->seq_out(0xE79E, 16); /* 0b0111100111100111 */
+			dp_line_reset(initial_dp);
+			initial_dp->fault = 0;
+			volatile struct exception e;
+			TRY_CATCH (e, EXCEPTION_ALL) {
+				idcode = initial_dp->low_access(initial_dp, ADIV5_LOW_READ,
+									  ADIV5_DP_IDCODE, 0);
+			}
+			if (e.type) {
+				DEBUG_WARN("No usable DP found\n");
+				return -1;
+			}
+		}
+		if ((idcode & ADIV5_DP_VERSION_MASK) == ADIV5_DPv2) {
+			is_v2 = true;
+			/* Read TargetID. Can be done with device in WFI, sleep or reset!*/
+			adiv5_dp_write(initial_dp, ADIV5_DP_SELECT, 2);
+			target_id = adiv5_dp_read(initial_dp, ADIV5_DP_CTRLSTAT);
+			adiv5_dp_write(initial_dp, ADIV5_DP_SELECT, 0);
+			DEBUG_INFO("TARGETID %08" PRIx32 "\n", target_id);
+			switch (target_id) {
+			case 0x01002927: /* RP2040 */
+				/* Release evt. handing RESCUE DP reset*/
+				adiv5_dp_write(initial_dp, ADIV5_DP_CTRLSTAT, 0);
+				break;
+			}
+			if (!initial_dp->dp_low_read)
+				/* E.g. CMSIS_DAP < V1.2 can not handle multu-drop!*/
+				is_v2 = false;
+		} else {
+			is_v2 = false;
+		}
+	} else {
+		target_id = targetid;
 	}
-#endif
+	int nr_dps = (is_v2) ? 16: 1;
+	uint32_t dp_targetid;
+	for (int i = 0; i < nr_dps; i++) {
+		if (is_v2) {
+			dp_line_reset(initial_dp);
+			dp_targetid = (i << 28) | (target_id & 0x0fffffff);
+			initial_dp->dp_low_write(initial_dp, ADIV5_DP_TARGETSEL,
+									dp_targetid);
+			if (initial_dp->dp_low_read(initial_dp, ADIV5_DP_IDCODE,
+										&idcode)) {
+				continue;
+			}
+		} else {
+			dp_targetid = 0;
+		}
+		ADIv5_DP_t *dp = (void*)calloc(1, sizeof(*dp));
+		if (!dp) {			/* calloc failed: heap exhaustion */
+			DEBUG_WARN("calloc: failed in %s\n", __func__);
+			continue;
+		}
+		memcpy(dp, initial_dp, sizeof(ADIv5_DP_t));
+		dp->idcode = idcode;
+		dp->targetid = dp_targetid;
+		adiv5_dp_init(dp);
 
-	/* Switch from JTAG to SWD mode */
-	swd_proc.swdptap_seq_out(0xFFFFFFFF, 16);
-	swd_proc.swdptap_seq_out(0xFFFFFFFF, 32);
-	swd_proc.swdptap_seq_out(0xFFFFFFFF, 18);
-	swd_proc.swdptap_seq_out(0xE79E, 16); /* 0b0111100111100111 */
-	swd_proc.swdptap_seq_out(0xFFFFFFFF, 32);
-	swd_proc.swdptap_seq_out(0xFFFFFFFF, 18);
-	swd_proc.swdptap_seq_out(0, 16);
-
-	/* Read the SW-DP IDCODE register to syncronise */
-	/* This could be done with adiv_swdp_low_access(), but this doesn't
-	 * allow the ack to be checked here. */
-	uint32_t request = make_packet_request(ADIV5_LOW_READ, ADIV5_DP_IDCODE);
-	swd_proc.swdptap_seq_out(request, 8);
-	ack = swd_proc.swdptap_seq_in(3);
-	uint32_t idcode;
-	if((ack != SWDP_ACK_OK) || swd_proc.swdptap_seq_in_parity(&idcode, 32)) {
-		DEBUG_WARN("Read SW-DP IDCODE failed %1" PRIx32 "\n", ack);
-		return -1;
 	}
-
-	ADIv5_DP_t *dp = (void*)calloc(1, sizeof(*dp));
-	if (!dp) {			/* calloc failed: heap exhaustion */
-		DEBUG_WARN("calloc: failed in %s\n", __func__);
-		return -1;
-	}
-
-	dp->idcode = idcode;
-	dp->dp_read = firmware_swdp_read;
-	dp->error = firmware_swdp_error;
-	dp->low_access = firmware_swdp_low_access;
-	dp->abort = firmware_swdp_abort;
-
-	firmware_swdp_error(dp);
-	adiv5_dp_init(dp);
 	return target_list?1:0;
 }
 
@@ -117,7 +200,16 @@ uint32_t firmware_swdp_read(ADIv5_DP_t *dp, uint16_t addr)
 {
 	uint32_t err, clr = 0;
 
-	err = firmware_swdp_read(dp, ADIV5_DP_CTRLSTAT) &
+	if ((dp->idcode & ADIV5_DP_VERSION_MASK) == ADIV5_DPv2) {
+		/* On protocoll error target gets deselected.
+		 * With DP Change, another target needs selection.
+		 * => Reselect with right target! */
+		dp_line_reset(dp);
+		dp->dp_low_write(dp, ADIV5_DP_TARGETSEL, dp->targetid);
+		uint32_t dummy;
+		dp->dp_low_read(dp, ADIV5_DP_IDCODE, &dummy);
+	}
+	err = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT) &
 		(ADIV5_DP_CTRLSTAT_STICKYORUN | ADIV5_DP_CTRLSTAT_STICKYCMP |
 		ADIV5_DP_CTRLSTAT_STICKYERR | ADIV5_DP_CTRLSTAT_WDATAERR);
 
@@ -148,13 +240,11 @@ uint32_t firmware_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 
 	platform_timeout_set(&timeout, 2000);
 	do {
-		swd_proc.swdptap_seq_out(request, 8);
-		ack = swd_proc.swdptap_seq_in(3);
+		dp->seq_out(request, 8);
+		ack = dp->seq_in(3);
 		if (ack == SWDP_ACK_FAULT) {
-			/* On fault, abort() and repeat the command once.*/
-			firmware_swdp_error(dp);
-			swd_proc.swdptap_seq_out(request, 8);
-			ack = swd_proc.swdptap_seq_in(3);
+			dp->fault = 1;
+			return 0;
 		}
 	} while (ack == SWDP_ACK_WAIT && !platform_timeout_is_expired(&timeout));
 
@@ -170,10 +260,10 @@ uint32_t firmware_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 		raise_exception(EXCEPTION_ERROR, "SWDP invalid ACK");
 
 	if(RnW) {
-		if(swd_proc.swdptap_seq_in_parity(&response, 32))  /* Give up on parity error */
+		if(dp->seq_in_parity(&response, 32))  /* Give up on parity error */
 			raise_exception(EXCEPTION_ERROR, "SWDP Parity error");
 	} else {
-		swd_proc.swdptap_seq_out_parity(value, 32);
+		dp->seq_out_parity(value, 32);
 		/* ARM Debug Interface Architecture Specification ADIv5.0 to ADIv5.2
 		 * tells to clock the data through SW-DP to either :
 		 * - immediate start a new transaction
@@ -183,7 +273,7 @@ uint32_t firmware_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 		 * Implement last option to favour correctness over
 		 *   slight speed decrease
 		 */
-		swd_proc.swdptap_seq_out(0, 8);
+	dp->seq_out(0, 8);
 	}
 	return response;
 }

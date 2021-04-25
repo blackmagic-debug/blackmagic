@@ -27,18 +27,20 @@
 #define ADIV5_DP_REG(x)   (x)
 #define ADIV5_AP_REG(x)   (ADIV5_APnDP | (x))
 
+#define ADIV5_DP_BANK0    0x00
+#define ADIV5_DP_BANK1    0x10
+#define ADIV5_DP_BANK2    0x20
+#define ADIV5_DP_BANK3    0x30
+#define ADIV5_DP_BANK4    0x40
+
 /* ADIv5 DP Register addresses */
 #define ADIV5_DP_IDCODE   ADIV5_DP_REG(0x0)
 #define ADIV5_DP_ABORT    ADIV5_DP_REG(0x0)
 #define ADIV5_DP_CTRLSTAT ADIV5_DP_REG(0x4)
+#define ADIV5_DP_TARGETID  (ADIV5_DP_BANK2 | ADIV5_DP_REG(0x4))
 #define ADIV5_DP_SELECT   ADIV5_DP_REG(0x8)
 #define ADIV5_DP_RDBUFF   ADIV5_DP_REG(0xC)
-
-#define ADIV5_DP_BANK0    0
-#define ADIV5_DP_BANK1    1
-#define ADIV5_DP_BANK2    2
-#define ADIV5_DP_BANK3    3
-#define ADIV5_DP_BANK4    4
+#define ADIV5_DP_TARGETSEL ADIV5_DP_REG(0xC)
 
 #define ADIV5_DP_VERSION_MASK 0xf000
 #define ADIV5_DPv1            0x1000
@@ -86,7 +88,8 @@
 #define ADIV5_AP_BASE		ADIV5_AP_REG(0xF8)
 #define ADIV5_AP_IDR		ADIV5_AP_REG(0xFC)
 
-/* Known designers seen in SYSROM-PIDR. Ignore Bit 7 from the designer bits*/
+/* Known designers seen in SYSROM-PIDR. Ignore Bit 0 from
+ * the designer bits to get JEDEC Ids with bit 7 ignored.*/
 #define AP_DESIGNER_FREESCALE    0x00e
 #define AP_DESIGNER_TEXAS        0x017
 #define AP_DESIGNER_ATMEL        0x01f
@@ -100,6 +103,7 @@
 #define AP_DESIGNER_CS           0x555
 #define AP_DESIGNER_ENERGY_MICRO 0x673
 #define AP_DESIGNER_GIGADEVICE   0x751
+#define AP_DESIGNER_RASPBERRY    0x927
 
 /* AP Control and Status Word (CSW) */
 #define ADIV5_AP_CSW_DBGSWENABLE	(1u << 31)
@@ -137,6 +141,10 @@
 #define ADIV5_LOW_WRITE		0
 #define ADIV5_LOW_READ		1
 
+#define SWDP_ACK_OK    0x01
+#define SWDP_ACK_WAIT  0x02
+#define SWDP_ACK_FAULT 0x04
+
 enum align {
 	ALIGN_BYTE     = 0,
 	ALIGN_HALFWORD = 1,
@@ -153,6 +161,15 @@ typedef struct ADIv5_DP_s {
 	uint32_t idcode;
 	uint32_t targetid;  /* Contains IDCODE for DPv2 devices.*/
 
+	void (*seq_out)(uint32_t MS, int ticks);
+	void (*seq_out_parity)(uint32_t MS, int ticks);
+	uint32_t (*seq_in)(int ticks);
+	bool (*seq_in_parity)(uint32_t *ret, int ticks);
+	/* dp_low_write returns true if no OK resonse. */
+	bool (*dp_low_write)(struct ADIv5_DP_s *dp, uint16_t addr,
+						 const uint32_t data);
+	/* dp_low_read returns true with parity error */
+	bool (*dp_low_read)(struct ADIv5_DP_s *dp, uint16_t addr, uint32_t *data);
 	uint32_t (*dp_read)(struct ADIv5_DP_s *dp, uint16_t addr);
 	uint32_t (*error)(struct ADIv5_DP_s *dp);
 	uint32_t (*low_access)(struct ADIv5_DP_s *dp, uint8_t RnW,
@@ -194,6 +211,8 @@ struct ADIv5_AP_s {
 	uint16_t ap_designer;
 	uint16_t ap_partno;
 };
+
+unsigned int make_packet_request(uint8_t RnW, uint16_t addr);
 
 #if PC_HOSTED == 0
 static inline uint32_t adiv5_dp_read(ADIv5_DP_t *dp, uint16_t addr)
@@ -269,6 +288,7 @@ void platform_add_jtag_dev(const int dev_index, const jtag_dev_t *jtag_dev);
 
 void adiv5_jtag_dp_handler(uint8_t jd_index, uint32_t j_idcode);
 int platform_jtag_dp_init(ADIv5_DP_t *dp);
+int swdptap_init(ADIv5_DP_t *dp);
 
 void adiv5_mem_write(ADIv5_AP_t *ap, uint32_t dest, const void *src, size_t len);
 uint64_t adiv5_ap_read_pidr(ADIv5_AP_t *ap, uint32_t addr);

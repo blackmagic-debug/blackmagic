@@ -27,7 +27,7 @@
  */
 
 /* Modified for Blackmagic Probe
- * Copyright (c) 2020 Uwe Bonnes bon@elektron.ikp.physik.tu-darmstadt.de
+ * Copyright (c) 2020-21 Uwe Bonnes bon@elektron.ikp.physik.tu-darmstadt.de
  */
 
 /*- Includes ----------------------------------------------------------------*/
@@ -57,6 +57,7 @@ enum
 	ID_DAP_JTAG_SEQUENCE      = 0x14,
 	ID_DAP_JTAG_CONFIGURE     = 0x15,
 	ID_DAP_JTAG_IDCODE        = 0x16,
+	ID_DAP_SWD_SEQUENCE       = 0x1D,
 };
 
 enum
@@ -197,7 +198,7 @@ void dap_connect(bool jtag)
 //-----------------------------------------------------------------------------
 void dap_disconnect(void)
 {
-	uint8_t buf[1];
+	uint8_t buf[65];
 
 	buf[0] = ID_DAP_DISCONNECT;
 	dbg_dap_cmd(buf, sizeof(buf), 1);
@@ -212,7 +213,7 @@ uint32_t dap_swj_clock(uint32_t clock)
 {
 	if (clock == 0)
 		return swj_clock;
-	uint8_t buf[5];
+	uint8_t buf[65];
 	buf[0] = ID_DAP_SWJ_CLOCK;
 	buf[1] = clock & 0xff;
 	buf[2] = (clock >> 8) & 0xff;
@@ -253,7 +254,7 @@ void dap_swd_configure(uint8_t cfg)
 //-----------------------------------------------------------------------------
 int dap_info(int info, uint8_t *data, int size)
 {
-	uint8_t buf[256];
+	uint8_t buf[32];
 	int rsize;
 
 	buf[0] = ID_DAP_INFO;
@@ -749,4 +750,35 @@ int dap_jtag_configure(void)
 	if (buf[0] != DAP_OK)
 		DEBUG_WARN("dap_jtag_configure Failed %02x\n", buf[0]);
 	return 0;
+}
+
+void dap_swdptap_seq_out(uint32_t MS, int ticks)
+{
+	uint8_t buf[] = {
+		ID_DAP_SWJ_SEQUENCE,
+		ticks,
+		(MS >>  0) & 0xff,
+		(MS >>  8) & 0xff,
+		(MS >> 16) & 0xff,
+		(MS >> 24) & 0xff
+	};
+	dbg_dap_cmd(buf, 1, sizeof(buf));
+	if (buf[0])
+		DEBUG_WARN("dap_swdptap_seq_out error\n");
+}
+
+void dap_swdptap_seq_out_parity(uint32_t MS, int ticks)
+{
+	uint8_t buf[] = {
+		ID_DAP_SWJ_SEQUENCE,
+		ticks + 1,
+		(MS >>  0) & 0xff,
+		(MS >>  8) & 0xff,
+		(MS >> 16) & 0xff,
+		(MS >> 24) & 0xff,
+		__builtin_parity(MS) & 1
+	};
+	dbg_dap_cmd(buf, 1, sizeof(buf));
+	if (buf[0])
+		DEBUG_WARN("dap_swdptap_seq_out error\n");
 }

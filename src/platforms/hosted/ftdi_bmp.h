@@ -23,7 +23,6 @@
 #define __FTDI_BMP_H
 
 #include "cl_utils.h"
-#include "swdptap.h"
 #include "jtagtap.h"
 
 #include "bmp_hosted.h"
@@ -104,7 +103,7 @@ typedef struct cable_desc_s {
 # pragma GCC diagnostic push
 # pragma GCC diagnostic ignored "-Wunused-parameter"
 int ftdi_bmp_init(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info) {return -1;};
-int libftdi_swdptap_init(swd_proc_t *swd_proc) {return -1;};
+int libftdi_swdptap_init(ADIv5_DP_t *dp) {return -1;};
 int libftdi_jtagtap_init(jtag_proc_t *jtag_proc) {return 0;};
 void libftdi_buffer_flush(void) {};
 int libftdi_buffer_write(const uint8_t *data, int size) {return size;};
@@ -124,7 +123,7 @@ extern struct ftdi_context *ftdic;
 extern data_desc_t active_state;
 
 int ftdi_bmp_init(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info);
-int libftdi_swdptap_init(swd_proc_t *swd_proc);
+int libftdi_swdptap_init(ADIv5_DP_t *dp);
 int libftdi_jtagtap_init(jtag_proc_t *jtag_proc);
 void libftdi_buffer_flush(void);
 int libftdi_buffer_write(const uint8_t *data, int size);
