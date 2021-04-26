@@ -108,8 +108,9 @@ int adiv5_swdp_scan(uint32_t targetid)
 	uint32_t idcode = 0;
 	volatile uint32_t target_id;
 	bool is_v2 = true;
-	if (!targetid) {
-		/* Try to read ID */
+	if (!targetid || (initial_dp->error != firmware_swdp_error)) {
+		/* No targetID given on the command line or probe can not
+		 * handle multi-drop. Try to read ID */
 		dp_line_reset(initial_dp);
 		volatile struct exception e;
 		TRY_CATCH (e, EXCEPTION_ALL) {
@@ -147,9 +148,11 @@ int adiv5_swdp_scan(uint32_t targetid)
 				adiv5_dp_write(initial_dp, ADIV5_DP_CTRLSTAT, 0);
 				break;
 			}
-			if (!initial_dp->dp_low_read)
-				/* E.g. CMSIS_DAP < V1.2 can not handle multu-drop!*/
+			if (initial_dp->error != firmware_swdp_error) {
+				DEBUG_WARN("CMSIS_DAP < V1.2 can not handle multi-drop!\n");
+				/* E.g. CMSIS_DAP < V1.2 can not handle multi-drop!*/
 				is_v2 = false;
+			}
 		} else {
 			is_v2 = false;
 		}

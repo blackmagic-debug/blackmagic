@@ -121,8 +121,6 @@ int platform_adiv5_swdp_scan(uint32_t targetid)
 {
 	info.is_jtag = false;
 	platform_max_frequency_set(cl_opts.opt_max_swj_frequency);
-	if (targetid && (info.bmp_type != BMP_TYPE_BMP))
-		DEBUG_WARN("Ignoring TARGETID for now!\n");
 	switch (info.bmp_type) {
 	case BMP_TYPE_BMP:
 	case BMP_TYPE_LIBFTDI:

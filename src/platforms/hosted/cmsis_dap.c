@@ -426,6 +426,8 @@ int dap_swdptap_init(ADIv5_DP_t *dp)
 		/* DAP_SWD_SEQUENCE does not do auto turnaround, use own!*/
 		dp->dp_low_read = dap_dp_low_read;
 		dp->dp_low_write = dap_dp_low_write;
+	} else {
+		dp->error = dap_dp_error;
 	}
 	dp->seq_out = dap_swdptap_seq_out;
 	dp->seq_out_parity = dap_swdptap_seq_out_parity;
