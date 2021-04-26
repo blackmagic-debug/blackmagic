@@ -133,6 +133,7 @@ static void cl_help(char **argv)
 	DEBUG_WARN("\t-h\t\t: This help.\n");
 	DEBUG_WARN("\t-v[bitmask]\t: Increasing verbosity. Bitmask:\n");
 	DEBUG_WARN("\t\t\t  1 = INFO, 2 = GDB, 4 = TARGET, 8 = PROBE, 16 = WIRE\n");
+	DEBUG_WARN("\t-l\t\t: List available probes\n");
 	DEBUG_WARN("Probe selection arguments:\n");
 	DEBUG_WARN("\t-d \"path\"\t: Use serial BMP device at <path>");
 #if HOSTED_BMP_ONLY == 1 && defined(__APPLE__)
