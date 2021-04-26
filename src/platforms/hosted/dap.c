@@ -420,7 +420,6 @@ unsigned int dap_read_block(ADIv5_AP_t *ap, void *dest, uint32_t src,
 			dest = extract(dest, src, *p, align);
 			p++;
 			src  += (1 << align);
-			dest += (1 << align);
 			sz--;
 		}
 	}
