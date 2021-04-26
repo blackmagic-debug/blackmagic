@@ -50,6 +50,73 @@ void libusb_exit_function(bmp_info_t *info)
 	}
 }
 
+static bmp_type_t find_cmsis_dap_interface(libusb_device *dev,bmp_info_t *info) {
+	bmp_type_t type = BMP_TYPE_NONE;
+
+	struct libusb_config_descriptor *conf;
+	char interface_string[128];
+
+	int res = libusb_get_active_config_descriptor(dev, &conf);
+	if (res < 0) {
+		DEBUG_WARN( "WARN: libusb_get_active_config_descriptor() failed: %s",
+				libusb_strerror(res));
+		return type;
+	}
+
+	libusb_device_handle *handle;
+	res = libusb_open(dev, &handle);
+	if (res != LIBUSB_SUCCESS) {
+		DEBUG_INFO("INFO: libusb_open() failed: %s\n",
+					libusb_strerror(res));
+		return type;
+	}
+
+	for (int i = 0; i < conf->bNumInterfaces; i++) {
+		const struct libusb_interface_descriptor *interface = &conf->interface[i].altsetting[0];
+
+		if (!interface->iInterface) {
+			continue;
+		}
+
+		res = libusb_get_string_descriptor_ascii(
+			handle, interface->iInterface, (uint8_t*)interface_string,
+			sizeof(interface_string));
+		if (res < 0) {
+			DEBUG_WARN( "WARN: libusb_get_string_descriptor_ascii() failed: %s\n",
+					libusb_strerror(res));
+			continue;
+		}
+
+		if (!strstr(interface_string, "CMSIS")) {
+			continue;
+		}
+
+		if (interface->bInterfaceClass == 0x03) {
+			type = BMP_TYPE_CMSIS_DAP_V1;
+
+		} else if (interface->bInterfaceClass == 0xff) {
+			type = BMP_TYPE_CMSIS_DAP_V2;
+
+			info->interface_num = interface->bInterfaceNumber;
+
+			for (int j = 0; j < interface->bNumEndpoints; j++) {
+				uint8_t n = interface->endpoint[j].bEndpointAddress;
+
+				if (n & 0x80) {
+					info->in_ep = n;
+				} else {
+					info->out_ep = n;
+				}
+			}
+
+			/* V2 is preferred, return early. */
+			return type;
+		}
+	}
+
+	return type;
+}
+
 int find_debuggers(BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 {
 	libusb_device **devs;
@@ -159,8 +226,10 @@ int find_debuggers(BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 				DEBUG_WARN("BMP in botloader mode found. Restart or reflash!\n");
 				continue;
 			}
+		} else if ((type = find_cmsis_dap_interface(dev, info)) != BMP_TYPE_NONE) {
+			/* type was set by the expression */
 		} else if ((strstr(manufacturer, "CMSIS")) || (strstr(product, "CMSIS"))) {
-			type = BMP_TYPE_CMSIS_DAP;
+			type = BMP_TYPE_CMSIS_DAP_V1;
 		} else if (desc.idVendor ==  VENDOR_ID_STLINK) {
 			if ((desc.idProduct == PRODUCT_ID_STLINKV2) ||
 				(desc.idProduct == PRODUCT_ID_STLINKV21) ||
