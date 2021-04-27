@@ -63,18 +63,6 @@ extern bool debug_bmp;
 #define SRST_PORT	GPIOA
 #define SRST_PIN	GPIO6
 
-/* SPI5 pins on the stlinkv3-mini. */
-#define STLINKV3_MINI_SPI		SPI5
-/* Alternate function number for the spi pins. */
-#define STLINKV3_MINI_SPI_AF_NUMBER	GPIO_AF5
-
-#define	STLINKV3_MINI_SPI_MOSI_PORT	GPIOF
-#define	STLINKV3_MINI_SPI_MOSI_PIN	GPIO9
-#define	STLINKV3_MINI_SPI_MISO_PORT	GPIOH
-#define	STLINKV3_MINI_SPI_MISO_PIN	GPIO7
-#define	STLINKV3_MINI_SPI_SCK_PORT	GPIOH
-#define	STLINKV3_MINI_SPI_SCK_PIN	GPIO6
-
 #define PLATFORM_HAS_TRACESWO		1
 #define NUM_TRACE_PACKETS		(16)
 #define TRACESWO_PROTOCOL		2			/* 1 = Manchester, 2 = NRZ / async */
