@@ -94,7 +94,7 @@ static bmp_type_t find_cmsis_dap_interface(libusb_device *dev,bmp_info_t *info) 
 		if (interface->bInterfaceClass == 0x03) {
 			type = BMP_TYPE_CMSIS_DAP_V1;
 
-		} else if (interface->bInterfaceClass == 0xff) {
+		} else if (interface->bInterfaceClass == 0xff && interface->bNumEndpoints == 2) {
 			type = BMP_TYPE_CMSIS_DAP_V2;
 
 			info->interface_num = interface->bInterfaceNumber;
