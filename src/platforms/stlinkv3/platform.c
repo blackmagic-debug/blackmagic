@@ -36,6 +36,8 @@
 #include <libopencm3/stm32/adc.h>
 #include <libopencm3/stm32/spi.h>
 #include <libopencm3/stm32/adc.h>
+#include <libopencm3/stm32/exti.h>
+#include <libopencm3/stm32/syscfg.h>
 
 uint16_t led_idle_run;
 uint16_t srst_pin;
@@ -137,6 +139,26 @@ bool platform_srst_get_val()
 	return gpio_get(SRST_PORT, SRST_PIN) == 0;
 }
 
+/* GND_DETECT is pull low with 100R. Probably some task should
+ * pull is high, test and than immediate release */
+#define GND_DETECT_PORT GPIOG
+#define GND_DETECT_PIN  GPIO5
+void exti9_5_isr(void)
+{
+	exti_reset_request(EXTI5);
+	if (gpio_get(GND_DETECT_PORT, GND_DETECT_PIN)) {
+		gpio_mode_setup(TMS_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TMS_PIN);
+		gpio_mode_setup(TCK_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TCK_PIN);
+		gpio_mode_setup(TDI_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TDI_PIN);
+		gpio_mode_setup(SRST_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, SRST_PIN);
+	} else {
+		gpio_mode_setup(TMS_PORT, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, TMS_PIN);
+		gpio_mode_setup(TCK_PORT, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, TCK_PIN);
+		gpio_mode_setup(TDI_PORT, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, TDI_PIN);
+		gpio_mode_setup(SRST_PORT, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, SRST_PIN);
+	}
+}
+
 const char *platform_target_voltage(void)
 {
 	/* On the stlinkv3, the target input voltage is divided by two.
@@ -181,6 +203,7 @@ void platform_init(void)
 	rcc_periph_clock_enable(RCC_GPIOD);
 	rcc_periph_clock_enable(RCC_GPIOH);
 	rcc_periph_clock_enable(RCC_GPIOF);
+	rcc_periph_clock_enable(RCC_GPIOG);
 
 	/* Initialize ADC. */
 	gpio_mode_setup(GPIOA, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, GPIO0);
@@ -189,6 +212,14 @@ void platform_init(void)
 	adc_disable_scan_mode(ADC1);
 	adc_set_sample_time(ADC1, ADC_CHANNEL0, ADC_SMPR_SMP_3CYC);
 	adc_power_on(ADC1);
+
+	rcc_periph_clock_enable(RCC_SYSCFG);
+	gpio_mode_setup(GND_DETECT_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, GND_DETECT_PIN);
+	nvic_set_priority(NVIC_EXTI9_5_IRQ, 15);
+	nvic_enable_irq(NVIC_EXTI9_5_IRQ);
+	exti_select_source(EXTI5,  GPIOG);
+	exti_set_trigger(EXTI5, EXTI_TRIGGER_BOTH);
+	exti_enable_request(EXTI5);
 
 	/* Configure srst pin. */
 	gpio_set_output_options(SRST_PORT, GPIO_OTYPE_OD, GPIO_OSPEED_2MHZ, SRST_PIN);
