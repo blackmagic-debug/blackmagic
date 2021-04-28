@@ -64,6 +64,9 @@ int usbuart_debug_write(const char *buf, size_t len);
 #define SRST_PORT	GPIOA
 #define SRST_PIN	GPIO6
 
+#define TMS_DRIVE_PORT GPIOA
+#define TMS_DRIVE_PIN  GPIO7
+
 #define PLATFORM_HAS_TRACESWO		1
 #define NUM_TRACE_PACKETS		(16)
 #define TRACESWO_PROTOCOL		2			/* 1 = Manchester, 2 = NRZ / async */
@@ -77,16 +80,18 @@ int usbuart_debug_write(const char *buf, size_t len);
 	gpio_mode_setup(TMS_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TMS_PIN);	\
 	gpio_set_output_options(TMS_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ, TMS_PIN);
 
-#define SWDIO_MODE_FLOAT()	do {				\
-		uint32_t moder = SWDIO_MODER;			\
-		moder &= ~(0x3 * SWDIO_MODER_MULT);		\
-		SWDIO_MODER = moder;					\
+#define SWDIO_MODE_FLOAT()	do {					\
+		uint32_t moder = SWDIO_MODER;				\
+		moder &= ~(0x3 * SWDIO_MODER_MULT);			\
+		SWDIO_MODER = moder;						\
+		gpio_clear(TMS_DRIVE_PORT, TMS_DRIVE_PIN);	\
 	} while(0)
 
-#define SWDIO_MODE_DRIVE()   do {				\
-		uint32_t moder = SWDIO_MODER;			\
-		moder |= (1 * SWDIO_MODER_MULT);		\
-		SWDIO_MODER = moder;					\
+#define SWDIO_MODE_DRIVE()   do {					\
+		uint32_t moder = SWDIO_MODER;				\
+		moder |= (1 * SWDIO_MODER_MULT);			\
+		SWDIO_MODER = moder;						\
+		gpio_set(TMS_DRIVE_PORT, TMS_DRIVE_PIN);	\
 	} while(0)
 
 #define PIN_MODE_FAST()  do {											\

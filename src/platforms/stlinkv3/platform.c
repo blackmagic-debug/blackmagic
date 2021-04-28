@@ -204,6 +204,11 @@ void platform_init(void)
 	gpio_mode_setup(TCK_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TCK_PIN);
 	gpio_set_output_options(TCK_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ, TCK_PIN);
 
+	/* Drive direction switch pin. */
+	gpio_mode_setup(TMS_DRIVE_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TMS_DRIVE_PIN);
+	gpio_set_output_options(TMS_DRIVE_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ, TMS_DRIVE_PIN);
+	gpio_set(TMS_DRIVE_PORT, TMS_DRIVE_PIN);
+
 #define PWR_EN_PORT GPIOB
 #define PWR_EN_PIN  GPIO0
 	gpio_mode_setup(PWR_EN_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, PWR_EN_PIN);
