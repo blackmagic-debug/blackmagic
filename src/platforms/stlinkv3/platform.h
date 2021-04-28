@@ -68,6 +68,8 @@ int usbuart_debug_write(const char *buf, size_t len);
 #define NUM_TRACE_PACKETS		(16)
 #define TRACESWO_PROTOCOL		2			/* 1 = Manchester, 2 = NRZ / async */
 
+#define PLATFORM_HAS_SLCAN		1
+
 #define SWDIO_MODER   GPIO_MODER(TMS_PORT)
 #define SWDIO_MODER_MULT (1 << (9 << 1))
 
