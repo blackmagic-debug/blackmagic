@@ -35,13 +35,9 @@ extern uint16_t usb_config;
 #define MAX_BINTERVAL 255U
 #endif
 
-/* TODO: it looks cleaner to move the trace endpoint size definition
- * to the platform.h files for different targets, because this definition
- * must be kept in sync with the values used in the 'traceswo(async)' files. */
-#if defined(STM32F7)
-#define TRACE_ENDPOINT_SIZE	512U
-#else
-#define TRACE_ENDPOINT_SIZE	64U
+/* Use platform provided value if given. */
+#if !defined(TRACE_ENDPOINT_SIZE)
+#define TRACE_ENDPOINT_SIZE 64U
 #endif
 
 #define CDCACM_GDB_ENDPOINT  1U
