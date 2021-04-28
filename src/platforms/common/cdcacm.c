@@ -66,15 +66,6 @@
 
 usbd_device * usbdev;
 
-/* TODO: it looks cleaner to move the trace endpoint size definition
- * to the platform.h files for different targets, because this definition
- * must be kept in sync with the values used in the 'traceswo(async)' files. */
-#if defined(STM32F7)
-#define TRACE_ENDPOINT_SIZE	512
-#else
-#define TRACE_ENDPOINT_SIZE	64
-#endif
-
 static int configured;
 static int cdcacm_gdb_dtr = 1;
 

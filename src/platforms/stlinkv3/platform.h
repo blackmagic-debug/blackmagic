@@ -105,6 +105,7 @@ extern const struct _usbd_driver stm32f723_usb_driver;
 #define USB_ISR	        otg_hs_isr
 #define MAX_BINTERVAL   11
 //#define CDCACM_PACKET_SIZE 512 /* Fixme: Needs more consideratiobs*/
+#define TRACE_ENDPOINT_SIZE 512
 
 /* Interrupt priorities.  Low numbers are high priority.
  * For now USART2 preempts USB which may spin while buffer is drained.
