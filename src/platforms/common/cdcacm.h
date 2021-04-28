@@ -30,7 +30,13 @@
 
 #include <libopencm3/usb/usbd.h>
 
-#define CDCACM_PACKET_SIZE 	64
+#if !defined(CDCACM_PACKET_SIZE)
+# define CDCACM_PACKET_SIZE 	64
+#endif
+
+#if !defined(MAX_BINTERVAL)
+# define MAX_BINTERVAL 255
+#endif
 
 #define CDCACM_GDB_ENDPOINT	1
 #define CDCACM_UART_ENDPOINT	3
