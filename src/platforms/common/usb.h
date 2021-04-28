@@ -27,7 +27,13 @@
 extern usbd_device *usbdev;
 extern uint16_t usb_config;
 
+#if !defined(CDCACM_PACKET_SIZE)
 #define CDCACM_PACKET_SIZE 64U
+#endif
+
+#if !defined(MAX_BINTERVAL)
+#define MAX_BINTERVAL 255U
+#endif
 
 /* TODO: it looks cleaner to move the trace endpoint size definition
  * to the platform.h files for different targets, because this definition
