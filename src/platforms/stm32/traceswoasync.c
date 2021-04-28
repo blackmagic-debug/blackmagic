@@ -39,15 +39,12 @@
 #include <libopencm3/stm32/usart.h>
 #include <libopencm3/stm32/dma.h>
 
-/* For speed this is set to the USB transfer size */
-#define FULL_SWO_PACKET	(64)
-
 static volatile uint32_t w;	/* Packet currently received via UART */
 static volatile uint32_t r;	/* Packet currently waiting to transmit to USB */
 /* Packets arrived from the SWO interface */
-static uint8_t trace_rx_buf[NUM_TRACE_PACKETS * FULL_SWO_PACKET];
+static uint8_t trace_rx_buf[NUM_TRACE_PACKETS * TRACE_ENDPOINT_SIZE];
 /* Packet pingpong buffer used for receiving packets */
-static uint8_t pingpong_buf[2 * FULL_SWO_PACKET];
+static uint8_t pingpong_buf[2 * TRACE_ENDPOINT_SIZE];
 /* SWO decoding */
 static bool decoding = false;
 
@@ -64,13 +61,13 @@ void trace_buf_drain(usbd_device *dev, uint8_t ep)
 		if (decoding)
 			/* write decoded swo packets to the uart port */
 			rc = traceswo_decode(dev, CDCACM_UART_ENDPOINT,
-										  &trace_rx_buf[r * FULL_SWO_PACKET],
-										  FULL_SWO_PACKET);
+										  &trace_rx_buf[r * TRACE_ENDPOINT_SIZE],
+										  TRACE_ENDPOINT_SIZE);
 		else
 			/* write raw swo packets to the trace port */
 			rc = usbd_ep_write_packet(dev, ep,
-										  &trace_rx_buf[r * FULL_SWO_PACKET],
-										  FULL_SWO_PACKET);
+										  &trace_rx_buf[r * TRACE_ENDPOINT_SIZE],
+										  TRACE_ENDPOINT_SIZE);
 		if (rc) r = (r + 1) % NUM_TRACE_PACKETS;
 	}
 	__atomic_clear (&inBufDrain, __ATOMIC_RELAXED);
@@ -104,7 +101,7 @@ void traceswo_setspeed(uint32_t baudrate)
 	nvic_enable_irq(SWO_DMA_IRQ);
 	w = r = 0;
 	dma_set_memory_address(SWO_DMA_BUS, SWO_DMA_CHAN, (uint32_t)pingpong_buf);
-	dma_set_number_of_data(SWO_DMA_BUS, SWO_DMA_CHAN, 2 * FULL_SWO_PACKET);
+	dma_set_number_of_data(SWO_DMA_BUS, SWO_DMA_CHAN, 2 * TRACE_ENDPOINT_SIZE);
 	dma_enable_channel(SWO_DMA_BUS, SWO_DMA_CHAN);
 	usart_enable_rx_dma(SWO_UART);
 }
@@ -113,16 +110,16 @@ void SWO_DMA_ISR(void)
 {
 	if (DMA_ISR(SWO_DMA_BUS) & DMA_ISR_HTIF(SWO_DMA_CHAN)) {
 		DMA_IFCR(SWO_DMA_BUS) |= DMA_ISR_HTIF(SWO_DMA_CHAN);
-		memcpy(&trace_rx_buf[w * FULL_SWO_PACKET], pingpong_buf,
-			   FULL_SWO_PACKET);
+		memcpy(&trace_rx_buf[w * TRACE_ENDPOINT_SIZE], pingpong_buf,
+			   TRACE_ENDPOINT_SIZE);
 	}
 	if (DMA_ISR(SWO_DMA_BUS) & DMA_ISR_TCIF(SWO_DMA_CHAN)) {
 		DMA_IFCR(SWO_DMA_BUS) |= DMA_ISR_TCIF(SWO_DMA_CHAN);
-		memcpy(&trace_rx_buf[w * FULL_SWO_PACKET],
-			   &pingpong_buf[FULL_SWO_PACKET], FULL_SWO_PACKET);
+		memcpy(&trace_rx_buf[w * TRACE_ENDPOINT_SIZE],
+			   &pingpong_buf[TRACE_ENDPOINT_SIZE], TRACE_ENDPOINT_SIZE);
 	}
 	w = (w + 1) % NUM_TRACE_PACKETS;
-	trace_buf_drain(usbdev, 0x85);
+	trace_buf_drain(usbdev, TRACE_ENDPOINT);
 }
 
 void traceswo_init(uint32_t baudrate, uint32_t swo_chan_bitmask)

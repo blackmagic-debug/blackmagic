@@ -122,7 +122,7 @@ void SWO_DMA_ISR(void)
 			   &pingpong_buf[TRACE_ENDPOINT_SIZE], TRACE_ENDPOINT_SIZE);
 	}
 	w = (w + 1) % NUM_TRACE_PACKETS;
-	trace_buf_drain(usbdev, 0x85);
+	trace_buf_drain(usbdev, TRACE_ENDPOINT);
 }
 
 void traceswo_init(uint32_t baudrate, uint32_t swo_chan_bitmask)
