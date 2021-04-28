@@ -35,9 +35,11 @@ extern uint16_t usb_config;
 #define MAX_BINTERVAL 255U
 #endif
 
+#define TRACE_ENDPOINT_SIZE CDCACM_PACKET_SIZE
+
 /* Use platform provided value if given. */
 #if !defined(TRACE_ENDPOINT_SIZE)
-#define TRACE_ENDPOINT_SIZE 64U
+#define TRACE_ENDPOINT_SIZE CDCACM_PACKET_SIZE
 #endif
 
 #define CDCACM_GDB_ENDPOINT  1U
