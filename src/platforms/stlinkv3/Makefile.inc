@@ -33,6 +33,7 @@ VPATH += platforms/stm32
 SRC += 	usbuart.c	\
 	cdcacm.c	\
 	serialno.c	\
+	stm32-slcan.c	\
 	timing.c	\
 	timing_stm32.c	\
 	traceswoasync_f723.c	\

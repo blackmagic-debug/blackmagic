@@ -72,6 +72,11 @@ int usbuart_debug_write(const char *buf, size_t len);
 #define TRACESWO_PROTOCOL		2			/* 1 = Manchester, 2 = NRZ / async */
 
 #define PLATFORM_HAS_SLCAN		1
+#define CAN_APB_FREQUENCY  (54*1000*1000L)
+#define CAN_RX0_IRQ   NVIC_CAN1_RX0_IRQ
+#define CAN_RX0_ISR   can1_rx0_isr
+#define CAN_TX_IRQ    NVIC_CAN1_TX_IRQ
+#define CAN_TX_ISR    can1_tx_isr
 
 #define SWDIO_MODER   GPIO_MODER(TMS_PORT)
 #define SWDIO_MODER_MULT (1 << (9 << 1))
@@ -121,6 +126,8 @@ extern const struct _usbd_driver stm32f723_usb_driver;
 #define IRQ_PRI_USBUSART_DMA (2 << 4)
 #define IRQ_PRI_USB_VBUS	(14 << 4)
 #define IRQ_PRI_SWO_DMA			(0 << 4)
+#define IRQ_PRI_CAN_RX0			(6 << 4)
+#define IRQ_PRI_CAN_TX			(7 << 4)
 
 /* USART6 is on DMA2 Channel 5 , Rx Stream 1/2, TX Stream 6/7*/
 #define USBUSART USART6
