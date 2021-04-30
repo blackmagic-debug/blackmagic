@@ -38,6 +38,9 @@ typedef struct bmp_info_s {
 	usb_link_t *usb_link;
 	unsigned int vid;
 	unsigned int pid;
+	uint8_t interface_num;
+	uint8_t in_ep;
+	uint8_t out_ep;
 #endif
 } bmp_info_t;
 

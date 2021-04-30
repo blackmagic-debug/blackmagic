@@ -46,37 +46,58 @@ uint8_t dap_caps;
 uint8_t mode;
 
 /*- Variables ---------------------------------------------------------------*/
+static bmp_type_t type;
+static libusb_device_handle *usb_handle = NULL;
+static uint8_t in_ep;
+static uint8_t out_ep;
 static hid_device *handle = NULL;
-static uint8_t hid_buffer[1024 + 1];
+static uint8_t buffer[1024 + 1];
 static int report_size = 64 + 1; // TODO: read actual report size
 static bool has_swd_sequence = false;
 
 /* LPC845 Breakout Board Rev. 0 report invalid response with > 65 bytes */
 int dap_init(bmp_info_t *info)
 {
-	if (hid_init())
-		return -1;
-	int size = strlen(info->serial);
-	wchar_t serial[64] = {0}, *wc = serial;
-	for (int i = 0; i < size; i++)
-		*wc++ = info->serial[i];
-	*wc = 0;
-	/* Blacklist devices that do not work with 513 byte report length
-	 * FIXME: Find a solution to decipher from the device.
-	 */
-	if ((info->vid == 0x1fc9) && (info->pid == 0x0132)) {
-		DEBUG_WARN("Blacklist\n");
-		report_size = 64 + 1;
+	type = info->bmp_type;
+	int size;
+
+	if (type == BMP_TYPE_CMSIS_DAP_V1) {
+		if (hid_init())
+			return -1;
+		size = strlen(info->serial);
+		wchar_t serial[64] = {0}, *wc = serial;
+		for (int i = 0; i < size; i++)
+			*wc++ = info->serial[i];
+		*wc = 0;
+		/* Blacklist devices that do not work with 513 byte report length
+		* FIXME: Find a solution to decipher from the device.
+		*/
+		if ((info->vid == 0x1fc9) && (info->pid == 0x0132)) {
+			DEBUG_WARN("Blacklist\n");
+			report_size = 64 + 1;
+		}
+		handle = hid_open(info->vid, info->pid,  (serial[0]) ? serial : NULL);
+		if (!handle)
+			return -1;
+	} else if (type == BMP_TYPE_CMSIS_DAP_V2) {
+		usb_handle = libusb_open_device_with_vid_pid(info->libusb_ctx, info->vid, info->pid);
+		if (!usb_handle) {
+			DEBUG_WARN("WARN: libusb_open_device_with_vid_pid() failed\n");
+			return -1;
+		}
+		if (libusb_claim_interface(usb_handle, info->interface_num) < 0) {
+			DEBUG_WARN("WARN: libusb_claim_interface() failed\n");
+			return -1;
+		}
+		in_ep = info->in_ep;
+		out_ep = info->out_ep;
 	}
-	handle = hid_open(info->vid, info->pid,  (serial[0]) ? serial : NULL);
-	if (!handle)
-		return -1;
 	dap_disconnect();
-	size = dap_info(DAP_INFO_FW_VER, hid_buffer, sizeof(hid_buffer));
+	size = dap_info(DAP_INFO_FW_VER, buffer, sizeof(buffer));
 	if (size) {
-		DEBUG_INFO("Ver %s, ", hid_buffer);
+		DEBUG_INFO("Ver %s, ", buffer);
 		int major = -1, minor = -1, sub = -1;
-		if (sscanf((const char *)hid_buffer, "%d.%d.%d",
+		if (sscanf((const char *)buffer, "%d.%d.%d",
 				   &major, &minor, &sub)) {
 			if (sub == -1) {
 				if (minor >= 10) {
@@ -87,8 +108,8 @@ int dap_init(bmp_info_t *info)
 			has_swd_sequence = ((major > 1 ) || ((major > 0 ) && (minor > 1)));
 		}
 	}
-	size = dap_info(DAP_INFO_CAPABILITIES, hid_buffer, sizeof(hid_buffer));
-	dap_caps = hid_buffer[0];
+	size = dap_info(DAP_INFO_CAPABILITIES, buffer, sizeof(buffer));
+	dap_caps = buffer[0];
 	DEBUG_INFO("Cap (0x%2x): %s%s%s", dap_caps,
 		   (dap_caps & 1)? "SWD" : "",
 		   ((dap_caps & 3) == 3) ? "/" : "",
@@ -154,9 +175,16 @@ static uint32_t dap_dp_read_reg(ADIv5_DP_t *dp, uint16_t addr)
 
 void dap_exit_function(void)
 {
-	if (handle) {
-		dap_disconnect();
-		hid_close(handle);
+	if (type == BMP_TYPE_CMSIS_DAP_V1) {
+		if (handle) {
+			dap_disconnect();
+			hid_close(handle);
+		}
+	} else if (type == BMP_TYPE_CMSIS_DAP_V2) {
+		if (usb_handle) {
+			dap_disconnect();
+			libusb_close(usb_handle);
+		}
 	}
 }
 
@@ -169,37 +197,51 @@ int dbg_dap_cmd(uint8_t *data, int size, int rsize)
 
 {
 	char cmd = data[0];
-	int res;
+	int res = -1;
 
-	memset(hid_buffer, 0xff, report_size + 1);
+	memset(buffer, 0xff, report_size + 1);
 
-	hid_buffer[0] = 0x00; // Report ID??
-	memcpy(&hid_buffer[1], data, rsize);
+	buffer[0] = 0x00; // Report ID??
+	memcpy(&buffer[1], data, rsize);
 
 	DEBUG_WIRE("cmd :   ");
 	for(int i = 0; (i < 32) && (i < rsize + 1); i++)
-		DEBUG_WIRE("%02x.",	hid_buffer[i]);
+		DEBUG_WIRE("%02x.",	buffer[i]);
 	DEBUG_WIRE("\n");
-	res = hid_write(handle, hid_buffer, rsize + 1);
-	if (res < 0) {
-		DEBUG_WARN( "Error: %ls\n", hid_error(handle));
-		exit(-1);
+	if (type == BMP_TYPE_CMSIS_DAP_V1) {
+		res = hid_write(handle, buffer, rsize + 1);
+		if (res < 0) {
+			DEBUG_WARN( "Error: %ls\n", hid_error(handle));
+			exit(-1);
+		}
+		res = hid_read(handle, buffer, report_size + 1);
+		if (res < 0) {
+			DEBUG_WARN( "debugger read(): %ls\n", hid_error(handle));
+			exit(-1);
+		}
+	} else if (type == BMP_TYPE_CMSIS_DAP_V2) {
+		int transferred = 0;
+
+		res = libusb_bulk_transfer(usb_handle, out_ep, buffer + 1, rsize, &transferred, 0);
+		if (res < 0) {
+			DEBUG_WARN( "OUT error\n" );
+		}
+		res = libusb_bulk_transfer(usb_handle, in_ep, buffer, report_size, &transferred, 0);
+		if (res < 0) {
+			DEBUG_WARN( "IN error\n" );
+		}
+		res = transferred;
 	}
-	res = hid_read(handle, hid_buffer, report_size + 1);
-	if (res < 0) {
-		DEBUG_WARN( "debugger read(): %ls\n", hid_error(handle));
-		exit(-1);
-	}
-	if (hid_buffer[0] != cmd) {
+	if (buffer[0] != cmd) {
 		DEBUG_WARN("cmd %02x invalid response received %02x\n",
-				   cmd, hid_buffer[0]);
+				   cmd, buffer[0]);
 	}
 	DEBUG_WIRE("cmd res:");
 	for(int i = 0; (i < 16) && (i < size + 1); i++)
-		DEBUG_WIRE("%02x.",	hid_buffer[i]);
+		DEBUG_WIRE("%02x.",	buffer[i]);
 	DEBUG_WIRE("\n");
 	if (size)
-		memcpy(data, &hid_buffer[1], (size < res) ? size : res);
+		memcpy(data, &buffer[1], (size < res) ? size : res);
 	return res;
 }
 #define ALIGNOF(x) (((x) & 3) == 0 ? ALIGN_WORD :					\

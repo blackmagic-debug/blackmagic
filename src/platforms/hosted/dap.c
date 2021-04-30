@@ -819,5 +819,5 @@ bool dap_swdptap_seq_in_parity(uint32_t *ret, int ticks)
 	unsigned int parity = __builtin_parity(res) & 1;
 	parity ^= (buf[5] % 1);
 	DEBUG_WARN("Res %08" PRIx32" %d\n", *ret, parity & 1);
-	return (!parity & 1);
+	return (!(parity & 1));
 }
