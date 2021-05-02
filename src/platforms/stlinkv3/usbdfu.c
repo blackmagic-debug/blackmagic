@@ -23,6 +23,7 @@
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/cm3/scb.h>
+#include <libopencm3/cm3/scs.h>
 
 #include "usbdfu.h"
 #include "general.h"
@@ -41,9 +42,12 @@ int main(void)
 	volatile uint32_t *magic = (volatile uint32_t *) 0x3ff8;
 	rcc_periph_clock_enable(RCC_GPIOA);
 	/* On the Mini, NRST is on the footprint for the 1.27 mm Jumper
-	 * to the side of th USB connector */
+	 * to the side of the USB connector.
+	 * With debugger connected, ignore reset. Use debugger to enter!
+	 */
 	bool force_bootloader;
-	force_bootloader = ((RCC_CSR &  RCC_CSR_RESET_FLAGS) == RCC_CSR_PINRSTF);
+	force_bootloader = (!(SCS_DHCSR  & SCS_DHCSR_C_DEBUGEN) &&
+						((RCC_CSR &  RCC_CSR_RESET_FLAGS) == RCC_CSR_PINRSTF));
 	RCC_CSR |= RCC_CSR_RMVF;
 	RCC_CSR &= ~RCC_CSR_RMVF;
 	if (force_bootloader ||
