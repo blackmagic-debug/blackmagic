@@ -2,7 +2,7 @@ CROSS_COMPILE ?= arm-none-eabi-
 CC = $(CROSS_COMPILE)gcc
 OBJCOPY = $(CROSS_COMPILE)objcopy
 
-OPT_FLAGS = -Os
+OPT_FLAGS = -Og -g
 CFLAGS += -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard \
 	-DSTM32F7 -DDFU_SERIAL_LENGTH=25 -I../libopencm3/include \
 	-I platforms/stm32
