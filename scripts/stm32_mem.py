@@ -184,7 +184,7 @@ if __name__ == "__main__":
 		print("Invoking DFU Device")
 		timeout = 0
 		while True :
-			sleep(0.5)
+			sleep(1)
 			timeout = timeout + 0.5
 			dfudev = stm32_scan(args, True)
 			if dfudev: break
