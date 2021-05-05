@@ -41,7 +41,7 @@ enum CAN_SPEED_INDEX {
 };
 
 /* Define true for loopback test */
-#define LPBK_MODE true
+#define LPBK_MODE false
 
 /* CAN_ABP_FREQUENCY must be defined and a multiple of 18 MHz*/
 static int can_speed(enum CAN_SPEED_INDEX index) {
@@ -151,13 +151,8 @@ void slcan_init(void) {
 
 	/* Reset CAN */
 	can_reset(CAN1);
-
-	/* defaultt CAN setting 250 kBaud */
-	if (can_speed(CAN_250k)) {
-		/* FIXME: What is an adequate action here?*/
-		return;
-	}
-
+	/* Ignore for now if normal mode has not yet been reached*/
+	can_speed(CAN_1000k);
 	/* CAN filter 0 init. */
 	can_filter_id_mask_32bit_init(0, 0, /* CAN ID */
 	0, /* CAN ID mask */
@@ -222,6 +217,16 @@ static uint16_t get_2byte_unique(void)
 	return res;
 }
 
+static void can_verbose_errors(char *txbuf)
+{
+	uint32_t msr = CAN_MSR(CAN1);
+	uint32_t tsr = CAN_TSR(CAN1);
+	uint32_t esr = CAN_ESR(CAN1);
+	uint32_t btr = CAN_BTR(CAN1);
+	sprintf(txbuf, "MSR %08lx TSR  %08lx ESR %08lx BTR %08lx\r",
+			msr, tsr, esr, btr);
+}
+
 static uint8_t can_get_errors(void)
 {
 	uint8_t res = 0;
@@ -265,7 +270,7 @@ void CAN_TX_ISR(void) {
 	char c, *p = (char*)double_buffer_out;
 	bool send;
 	char txbuf[32];
-	int res = 0;
+	int res = -1;
 	txbuf[1] = 0;
 
 	id = 0;
@@ -297,57 +302,53 @@ void CAN_TX_ISR(void) {
 		break;
 	case 'S':
 		can_speed(*p++ - '0');
+		res = 0;
 		break;
 	case 'v': /* FIXME: not found in docs*/
+		res = 0;
 		break;
 	case 'V':
 		sprintf(txbuf, "V123\r");
+		res = 0;
 		break;
 	case 'F':
 		sprintf(txbuf, "F%02x\r", can_get_errors());
+		res = 0;
+		break;
+	case 'f':
+		can_verbose_errors(txbuf);
+		res = 0;
 		break;
 	case 'N':
 		sprintf(txbuf, "N%04x\r", get_2byte_unique());
+		res = 0;
 		break;
 	case 'C':
+		res = 0;
 		break;
 	default:
-		res = -1;
+		res = 0;
 		break;
 	}
-	if(dlc > 8)
-		res = -1;
-
-	for (i = 0; i < dlc; i++) {
-		/* Suspect: sscanf(p, "%2hhx", data + i); reads decimal*/
-		uint32_t x;
-		sscanf(p,  "%2lx", &x);
-		data[i] = x & 0xff;
-		p += 2;
+	if(dlc <= 8) {
+		for (i = 0; i < dlc; i++) {
+			/* Suspect: sscanf(p, "%2hhx", data + i); reads decimal*/
+			uint32_t x;
+			sscanf(p,  "%2lx", &x);
+			data[i] = x & 0xff;
+			p += 2;
+		}
 	}
-
 	/* consume chars until eol reached */
 	for (; (*p != '\r') &&
-			 ((uint8_t*)p < (double_buffer_out + sizeof(double_buffer_out))); p++);
-	if ((uint8_t*) p >= double_buffer_out + sizeof(double_buffer_out))
-		res = -1;
-#if 1
-	if (send) {
-		res = can_transmit(CAN1, id, ext, rtr, dlc, data);
-	}
-#else
-	/* Already tested when USB data was received*/
-	if (send) {
-		int loop = CAN_MAX_RETRY;
-		/* try to send data - omit if not possible */
-		while(loop-- > 0) {
-			if (can_available_mailbox(CAN1))
-			break;
-			/* TODO: LED overflow */
+			 ((uint8_t*)p < (double_buffer_out + sizeof(double_buffer_out)));
+		 p++);
+	if ((uint8_t*) p < double_buffer_out + sizeof(double_buffer_out)) {
+		/* Do not transmit when not in normal mode */
+		if (send && !(CAN_MSR(CAN1) & (CAN_MSR_SLAK | CAN_MSR_INAK))) {
+			res = can_transmit(CAN1, id, ext, rtr, dlc, data);
 		}
-		res = can_transmit(CAN1, id, ext, rtr, dlc, data);
 	}
-#endif
 	count_new = 0; /* Command processed*/
 	if (res == -1)
 		txbuf[0] = '\b';
