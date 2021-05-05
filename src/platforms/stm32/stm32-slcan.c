@@ -217,13 +217,13 @@ static uint16_t get_2byte_unique(void)
 	return res;
 }
 
-static void can_verbose_errors(char *txbuf)
+static int can_verbose_errors(char *txbuf)
 {
 	uint32_t msr = CAN_MSR(CAN1);
 	uint32_t tsr = CAN_TSR(CAN1);
 	uint32_t esr = CAN_ESR(CAN1);
 	uint32_t btr = CAN_BTR(CAN1);
-	sprintf(txbuf, "MSR %08lx TSR  %08lx ESR %08lx BTR %08lx\r",
+	return sprintf(txbuf, "MSR %08lx TSR  %08lx ESR %08lx BTR %08lx\r",
 			msr, tsr, esr, btr);
 }
 
@@ -264,97 +264,102 @@ void CAN_TX_ISR(void) {
 	}
 	if (!double_buffer_out[0])
 		return;
-	bool ext, rtr;
-	uint8_t i, dlc, data[8];
-	uint32_t id;
-	char c, *p = (char*)double_buffer_out;
-	bool send;
-	char txbuf[32];
-	int res = -1;
-	txbuf[1] = 0;
+	char *p = (char*)double_buffer_out;
+	char txbuf[128], *q = txbuf;
+	do {
+		bool ext, rtr;
+		uint8_t i, dlc, data[8];
+		uint32_t id;
+		char c;
+		bool send;
+		int res = -1;
 
-	id = 0;
-	dlc = 0;
-	ext = true;
-	send = false;
-	rtr = false;
+		id = 0;
+		dlc = 0;
+		ext = true;
+		send = false;
+		rtr = false;
 
-	c = *p++;
-	switch (c) {
-	case 'R':
-		rtr = true;
-		/* fall through */
-	case 'T':
-		sscanf(p, "%8lx", &id);
-		p += 8;
-		dlc = *p++ - '0';
-		send = true;
-		break;
-	case 'r':
-		rtr = true;
+		c = *p++;
+		switch (c) {
+		case 'R':
+			rtr = true;
 			/* fall through */
-	case 't':
-		ext = false;
-		sscanf(p, "%3lx", &id);
-		p += 3;
-		dlc = *p++ - '0';
-		send = true;
-		break;
-	case 'S':
-		can_speed(*p++ - '0');
-		res = 0;
-		break;
-	case 'v': /* FIXME: not found in docs*/
-		res = 0;
-		break;
-	case 'V':
-		sprintf(txbuf, "V123\r");
-		res = 0;
-		break;
-	case 'F':
-		sprintf(txbuf, "F%02x\r", can_get_errors());
-		res = 0;
-		break;
-	case 'f':
-		can_verbose_errors(txbuf);
-		res = 0;
-		break;
-	case 'N':
-		sprintf(txbuf, "N%04x\r", get_2byte_unique());
-		res = 0;
-		break;
-	case 'C':
-		res = 0;
-		break;
-	default:
-		res = 0;
-		break;
-	}
-	if(dlc <= 8) {
-		for (i = 0; i < dlc; i++) {
-			/* Suspect: sscanf(p, "%2hhx", data + i); reads decimal*/
-			uint32_t x;
-			sscanf(p,  "%2lx", &x);
-			data[i] = x & 0xff;
-			p += 2;
+		case 'T':
+			sscanf(p, "%8lx", &id);
+			p += 8;
+			dlc = *p++ - '0';
+			send = true;
+			break;
+		case 'r':
+			rtr = true;
+			/* fall through */
+		case 't':
+			ext = false;
+			sscanf(p, "%3lx", &id);
+			p += 3;
+			dlc = *p++ - '0';
+			send = true;
+			break;
+		case 'S':
+			can_speed(*p++ - '0');
+			res = 0;
+			break;
+		case 'v': /* FIXME: not found in docs*/
+			res = 0;
+			break;
+		case 'V':
+			q += sprintf(q, "V123");
+			res = 0;
+			break;
+		case 'F':
+			q += sprintf(q, "F%02x", can_get_errors());
+			res = 0;
+			break;
+		case 'f':
+			q += can_verbose_errors(q);
+			res = 0;
+			break;
+		case 'N':
+			q += sprintf(q, "N%04x", get_2byte_unique());
+			res = 0;
+			break;
+		case 'C':
+			res = 0;
+			break;
+		default:
+			res = 0;
+			break;
 		}
-	}
-	/* consume chars until eol reached */
-	for (; (*p != '\r') &&
-			 ((uint8_t*)p < (double_buffer_out + sizeof(double_buffer_out)));
-		 p++);
-	if ((uint8_t*) p < double_buffer_out + sizeof(double_buffer_out)) {
-		/* Do not transmit when not in normal mode */
-		if (send && !(CAN_MSR(CAN1) & (CAN_MSR_SLAK | CAN_MSR_INAK))) {
-			res = can_transmit(CAN1, id, ext, rtr, dlc, data);
+		if(dlc <= 8) {
+			for (i = 0; i < dlc; i++) {
+				/* Suspect: sscanf(p, "%2hhx", data + i); reads decimal*/
+				uint32_t x;
+				sscanf(p,  "%2lx", &x);
+				data[i] = x & 0xff;
+				p += 2;
+			}
 		}
-	}
-	count_new = 0; /* Command processed*/
-	if (res == -1)
-		txbuf[0] = '\b';
-	else if (txbuf[1] == 0)
-		txbuf[0] = '\r';
+		/* consume chars until cr or null termination is reached */
+		for (; (*p && (*p != '\r') &&
+				((uint8_t*)p < (double_buffer_out + sizeof(double_buffer_out))));
+			 p++);
+		if (*p == '\r') /* skip over CR */
+			p++;
+		if ((uint8_t*)p < (double_buffer_out + sizeof(double_buffer_out))) {
+			/* Do not transmit when not in normal mode */
+			if (send && !(CAN_MSR(CAN1) & (CAN_MSR_SLAK | CAN_MSR_INAK))) {
+				res = can_transmit(CAN1, id, ext, rtr, dlc, data);
+			}
+		}
+		if (res == -1)
+			*q++ = '\b';
+		else
+			*q++ = '\r';
 
+	} while (*p && ((uint8_t *)p < (double_buffer_out + count_new)));
+	*q++ = 0;
+	count_new = 0; /* Command processed*/
 	size_t len = strlen(txbuf);
 	usbd_ep_write_packet(usbdev, CDCACM_SLCAN_ENDPOINT, txbuf, len);
 
