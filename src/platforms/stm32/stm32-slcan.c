@@ -186,21 +186,16 @@ void CAN_RX0_ISR(void) {
 	usbd_ep_write_packet(usbdev, CDCACM_SLCAN_ENDPOINT, buf, p - buf);
 }
 
+static uint32_t count_out;
+static uint8_t buffer_out[CDCACM_PACKET_SIZE];
 static volatile uint32_t count_new;
 static uint8_t double_buffer_out[CDCACM_PACKET_SIZE];
 void slcan_usb_out_cb(usbd_device *dev, uint8_t ep)
 {
 	(void)ep;
 	usbd_ep_nak_set(dev, CDCACM_SLCAN_ENDPOINT, 1);
-	if (count_new) /* Last command not yet handled*/
-		return;
-	if (!can_available_mailbox(CAN1)) {
-		can_enable_irq(CAN1, CAN_IER_TMEIE);
-		return;
-	}
 	count_new = usbd_ep_read_packet(dev, CDCACM_SLCAN_ENDPOINT,
 									double_buffer_out, CDCACM_PACKET_SIZE);
-	usbd_ep_nak_set(dev, CDCACM_SLCAN_ENDPOINT, 0);
 	nvic_set_pending_irq(CAN_TX_IRQ);
 }
 
@@ -255,6 +250,26 @@ static uint8_t can_get_errors(void)
  * interrupt as kind of software IRQ
  */
 void CAN_TX_ISR(void) {
+	if (!can_available_mailbox(CAN1)) {
+		/* No room for commands: Reschedule interrupt until mailbox available*/
+		can_enable_irq(CAN1, CAN_IER_TMEIE);
+		return;
+	}
+#if defined(STM32F4) || defined(STM32F7)
+	asm volatile ("cpsid i; isb");
+	if (count_new && !count_out) {
+		/* New command arrived, but old command still processing:
+		 * keep new command until old command processed */
+		memcpy(buffer_out, double_buffer_out, count_new);
+		count_out = count_new;
+		count_new = 0;
+		usbd_ep_nak_set(usbdev, CDCACM_SLCAN_ENDPOINT, 0);
+	}
+	asm volatile ("cpsie i; isb");
+#else
+	count_out = usbd_ep_read_packet(usbdev, CDCACM_GDB_ENDPOINT,
+									buffer_out, CDCACM_PACKET_SIZE);
+#endif
 	uint32_t tx_status = CAN_TSR(CAN1);
 	uint32_t tx_mask = CAN_TSR_RQCP2 | CAN_TSR_RQCP1 | CAN_TSR_RQCP0;
 	if (tx_status & tx_mask) {
@@ -262,9 +277,9 @@ void CAN_TX_ISR(void) {
 		can_disable_irq(CAN1, CAN_IER_TMEIE);
 		usbd_ep_nak_set(usbdev, CDCACM_SLCAN_ENDPOINT, 0);
 	}
-	if (!double_buffer_out[0])
+	if (!buffer_out[0])
 		return;
-	char *p = (char*)double_buffer_out;
+	char *p = (char*)buffer_out;
 	char txbuf[128], *q = txbuf;
 	do {
 		bool ext, rtr;
@@ -342,11 +357,11 @@ void CAN_TX_ISR(void) {
 		}
 		/* consume chars until cr or null termination is reached */
 		for (; (*p && (*p != '\r') &&
-				((uint8_t*)p < (double_buffer_out + sizeof(double_buffer_out))));
+				((uint8_t*)p < (buffer_out + sizeof(buffer_out))));
 			 p++);
 		if (*p == '\r') /* skip over CR */
 			p++;
-		if ((uint8_t*)p < (double_buffer_out + sizeof(double_buffer_out))) {
+		if ((uint8_t*)p < (buffer_out + sizeof(buffer_out))) {
 			/* Do not transmit when not in normal mode */
 			if (send && !(CAN_MSR(CAN1) & (CAN_MSR_SLAK | CAN_MSR_INAK))) {
 				res = can_transmit(CAN1, id, ext, rtr, dlc, data);
@@ -357,10 +372,12 @@ void CAN_TX_ISR(void) {
 		else
 			*q++ = '\r';
 
-	} while (*p && ((uint8_t *)p < (double_buffer_out + count_new)));
+	} while (*p && ((uint8_t *)p < (buffer_out + count_out)));
 	*q++ = 0;
-	count_new = 0; /* Command processed*/
+	count_out = 0; /* Command processed*/
 	size_t len = strlen(txbuf);
 	usbd_ep_write_packet(usbdev, CDCACM_SLCAN_ENDPOINT, txbuf, len);
-
+	if (count_new)
+		/* Process pending new command */
+		nvic_set_pending_irq(CAN_TX_IRQ);
 }
