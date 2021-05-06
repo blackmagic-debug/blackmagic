@@ -373,7 +373,7 @@ do_common_s32k14x:
 }
 
 static bool
-kl_gen_command(target *t, uint8_t cmd, uint32_t addr, const uint8_t data[8])
+kl_gen_command(target *t, uint8_t cmd, uint32_t addr, const uint32_t *data, int n_items)
 {
 	uint8_t fstat;
 
@@ -390,8 +390,9 @@ kl_gen_command(target *t, uint8_t cmd, uint32_t addr, const uint8_t data[8])
 	addr |= (uint32_t)cmd << 24;
 	target_mem_write32(t, FTFA_FCCOB_0, addr);
 	if (data) {
-		target_mem_write32(t, FTFA_FCCOB_1, *(uint32_t*)&data[0]);
-		target_mem_write32(t, FTFA_FCCOB_2, *(uint32_t*)&data[4]);
+		target_mem_write32(t, FTFA_FCCOB_1, data[0]);
+		if (n_items > 1)
+			target_mem_write32(t, FTFA_FCCOB_2, data[1]);
 	}
 
 	/* Enable execution by clearing CCIF */
@@ -411,7 +412,7 @@ kl_gen_command(target *t, uint8_t cmd, uint32_t addr, const uint8_t data[8])
 static int kl_gen_flash_erase(struct target_flash *f, target_addr addr, size_t len)
 {
 	while (len) {
-		if (kl_gen_command(f->t, FTFA_CMD_ERASE_SECTOR, addr, NULL)) {
+		if (kl_gen_command(f->t, FTFA_CMD_ERASE_SECTOR, addr, NULL, 0)) {
 			/* Different targets have different flash erase sizes */
 			if (len > f->blocksize)
 				len -= f->blocksize;
@@ -450,7 +451,7 @@ static int kl_gen_flash_write(struct target_flash *f,
 	}
 
 	while (len) {
-		if (kl_gen_command(f->t, write_cmd, dest, src)) {
+		if (kl_gen_command(f->t, write_cmd, dest, src, 1)) {
 			if (len > kf->write_len)
 				len -= kf->write_len;
 			else
@@ -484,12 +485,13 @@ static int kl_gen_flash_done(struct target_flash *f)
 		vals[1] = target_mem_read32(f->t, FLASH_SECURITY_BYTE_ADDRESS);
 		vals[1] = (vals[1] & 0xffffff00) | FLASH_SECURITY_BYTE_UNSECURED;
 		kl_gen_command(f->t, FTFE_CMD_PROGRAM_PHRASE,
-					   FLASH_SECURITY_BYTE_ADDRESS - 4, (uint8_t*)vals);
+					   FLASH_SECURITY_BYTE_ADDRESS - 4, vals, 2);
 	} else {
-		uint32_t vals[2] = {target_mem_read32(f->t, FLASH_SECURITY_BYTE_ADDRESS), 0};
+		uint32_t vals[1];
+		vals[0] = target_mem_read32(f->t, FLASH_SECURITY_BYTE_ADDRESS);
 		vals[0] = (vals[0] & 0xffffff00) | FLASH_SECURITY_BYTE_UNSECURED;
 		kl_gen_command(f->t, FTFA_CMD_PROGRAM_LONGWORD,
-					   FLASH_SECURITY_BYTE_ADDRESS, (uint8_t*)&vals);
+					   FLASH_SECURITY_BYTE_ADDRESS, vals, 1);
 	}
 
 	return 0;
