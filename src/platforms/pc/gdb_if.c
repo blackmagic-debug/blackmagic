@@ -51,8 +51,13 @@ static int gdb_if_serv, gdb_if_conn;
 int gdb_if_init(void)
 {
 #if defined(_WIN32) || defined(__CYGWIN__)
+	int iResult;
 	WSADATA wsaData;
-	WSAStartup(MAKEWORD(2, 2), &wsaData);
+	iResult =  WSAStartup(MAKEWORD(2, 2), &wsaData);
+	if (iResult != NO_ERROR) {
+		DEBUG_WARN("WSAStartup failed with error: %ld\n", iResult);
+		exit(1);
+	}
 #endif
 	struct sockaddr_in addr;
 	int opt;
@@ -67,23 +72,47 @@ int gdb_if_init(void)
 		addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
 		gdb_if_serv = socket(PF_INET, SOCK_STREAM, 0);
-		if (gdb_if_serv == -1)
+		if (gdb_if_serv == -1) {
+			DEBUG_WARN("PF_INET %d\n",gdb_if_serv);
 			continue;
+		}
 
 		opt = 1;
 		if (setsockopt(gdb_if_serv, SOL_SOCKET, SO_REUSEADDR, (void*)&opt, sizeof(opt)) == -1) {
+#if defined(_WIN32) || defined(__CYGWIN__)
+		    DEBUG_WARN("error setsockopt SOL_SOCKET : %d error: %d\n", gdb_if_serv,
+			WSAGetLastError());
+#else
+			DEBUG_WARN("error setsockopt SOL_SOCKET : %d error: %d\n", gdb_if_serv,
+			strerror(errno));
+#endif
 			close(gdb_if_serv);
 			continue;
 		}
 		if (setsockopt(gdb_if_serv, IPPROTO_TCP, TCP_NODELAY, (void*)&opt, sizeof(opt)) == -1) {
+#if defined(_WIN32) || defined(__CYGWIN__)
+			DEBUG_WARN("error setsockopt IPPROTO_TCP : %d error: %d\n", gdb_if_serv,
+			WSAGetLastError());
+#else
+			DEBUG_WARN("error setsockopt IPPROTO_TCP : %d error: %d\n", gdb_if_serv,
+			strerror(errno));
+#endif
 			close(gdb_if_serv);
 			continue;
 		}
 		if (bind(gdb_if_serv, (void*)&addr, sizeof(addr)) == -1) {
+#if defined(_WIN32) || defined(__CYGWIN__)
+			DEBUG_WARN("error when binding socket: %d error: %d\n", gdb_if_serv,
+			WSAGetLastError());
+#else
+			DEBUG_WARN("error when binding socket: %d error: %d\n", gdb_if_serv,
+			strerror(errno));
+#endif
 			close(gdb_if_serv);
 			continue;
 		}
 		if (listen(gdb_if_serv, 1) == -1) {
+			DEBUG_WARN("listen closed %d\n",gdb_if_serv);
 			close(gdb_if_serv);
 			continue;
 		}
@@ -100,6 +129,7 @@ unsigned char gdb_if_getchar(void)
 	unsigned char ret;
 	int i = 0;
 #if defined(_WIN32) || defined(__CYGWIN__)
+	int iResult;
 	unsigned long opt;
 #else
 	int flags;
@@ -108,7 +138,10 @@ unsigned char gdb_if_getchar(void)
 		if(gdb_if_conn <= 0) {
 #if defined(_WIN32) || defined(__CYGWIN__)
 			opt = 1;
-			ioctlsocket(gdb_if_serv, FIONBIO, &opt);
+			iResult = ioctlsocket(gdb_if_serv, FIONBIO, &opt);
+			if (iResult != NO_ERROR) {
+				DEBUG_WARN("ioctlsocket failed with error: %ld\n", iResult);
+			}
 #else
 			flags = fcntl(gdb_if_serv, F_GETFL);
 			fcntl(gdb_if_serv, F_SETFL, flags | O_NONBLOCK);
