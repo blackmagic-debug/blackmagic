@@ -112,7 +112,7 @@ static bool rp2040_fill_table(struct rp_priv_s *priv, uint16_t *table, int max)
 /* RP ROM functions calls
  *
  * timout == 0: Do not wait for poll, use for reset_usb_boot()
- * timeout > 400 (ms) : display spinner
+ * timeout > 500 (ms) : display spinner
  */
 static bool rp_rom_call(target *t, uint32_t *regs, uint32_t cmd,
 						uint32_t timeout)
@@ -134,9 +134,17 @@ static bool rp_rom_call(target *t, uint32_t *regs, uint32_t cmd,
 	DEBUG_INFO("Call cmd %04" PRIx32 "\n", cmd);
 	platform_timeout to;
 	platform_timeout_set(&to, timeout);
+	platform_timeout to_spinner;
+	if (timeout > 500)
+		platform_timeout_set(&to_spinner, 500);
+	else
+		/* never trigger if timeout is short */
+		platform_timeout_set(&to_spinner, timeout + 1);
 	do {
-		if (timeout > 400)
+		if (platform_timeout_is_expired(&to_spinner)) {
 			tc_printf(t, "\b%c", spinner[spinindex++ % 4]);
+			platform_timeout_set(&to_spinner, 500);
+		}
 		if (platform_timeout_is_expired(&to)) {
 			DEBUG_WARN("RP Run timout %d ms reached: ", (int)timeout);
 			break;
