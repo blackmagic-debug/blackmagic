@@ -399,8 +399,15 @@ void USBUSART_ISR(void)
 	usart_recv(USBUSART);
 
 	/* If line is now idle, then transmit a packet */
-	if (isIdle)
+	if (isIdle) {
+#if defined(USART_ICR)
+		USART_ICR(USBUSART) = USART_ICR_IDLECF;
+#else
+		/* On the older uarts, the sequence "read flags", "read DR"
+		 * as above cleared the flags */
+#endif
 		usbuart_run();
+	}
 
 	nvic_enable_irq(USBUSART_DMA_RX_IRQ);
 }
