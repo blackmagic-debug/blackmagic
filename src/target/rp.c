@@ -131,14 +131,14 @@ static bool rp_rom_call(target *t, uint32_t *regs, uint32_t cmd,
 	target_halt_resume(t, false);
 	if (!timeout)
 		return false;
-	DEBUG_INFO("Call cmd %04x\n", cmd);
+	DEBUG_INFO("Call cmd %04" PRIx32 "\n", cmd);
 	platform_timeout to;
 	platform_timeout_set(&to, timeout);
 	do {
 		if (timeout > 400)
 			tc_printf(t, "\b%c", spinner[spinindex++ % 4]);
 		if (platform_timeout_is_expired(&to)) {
-			DEBUG_WARN("RP Run timout %d ms reached: ", timeout);
+			DEBUG_WARN("RP Run timout %d ms reached: ", (int)timeout);
 			break;
 		}
 	} while (!target_halt_poll(t, NULL));
@@ -146,7 +146,7 @@ static bool rp_rom_call(target *t, uint32_t *regs, uint32_t cmd,
 	target_regs_read(t, dbg_regs);
 	bool ret = ((dbg_regs[REG_PC] &~1) != (ps->_debug_trampoline_end & ~1));
 	if (ret) {
-		DEBUG_WARN("rp_rom_call cmd %04x failed, PC %08" PRIx32 "\n",
+		DEBUG_WARN("rp_rom_call cmd %04" PRIx32 " failed, PC %08" PRIx32 "\n",
 				   cmd, dbg_regs[REG_PC]);
 	}
 	return ret;
@@ -181,7 +181,7 @@ static int rp_flash_erase(struct target_flash *f, target_addr addr,
 		DEBUG_WARN("Unaligned len\n");
 		len = (len + 0xfff) & ~0xfff;
 	}
-	DEBUG_INFO("Erase addr %08" PRIx32 " len 0x%" PRIx32 "\n", addr, len);
+	DEBUG_INFO("Erase addr %08" PRIx32 " len 0x%" PRIx32 "\n", addr, (uint32_t)len);
 	target *t = f->t;
 	rp_flash_prepare(t);
 	struct rp_priv_s *ps = (struct rp_priv_s*)t->target_storage;
@@ -236,7 +236,7 @@ static int rp_flash_erase(struct target_flash *f, target_addr addr,
 int rp_flash_write(struct target_flash *f,
                     target_addr dest, const void *src, size_t len)
 {
-	DEBUG_INFO("RP Write %08" PRIx32 " len 0x%" PRIx32 "\n", dest, len);
+	DEBUG_INFO("RP Write %08" PRIx32 " len 0x%" PRIx32 "\n", dest, (uint32_t)len);
 	if ((dest & 0xff) || (len & 0xff)) {
 		DEBUG_WARN("Unaligned erase\n");
 		return -1;
