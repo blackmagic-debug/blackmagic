@@ -59,6 +59,7 @@ struct rp_priv_s {
 	uint16_t _flash_enter_cmd_xip;
 	uint16_t reset_usb_boot;
 	bool     is_prepared;
+	bool     is_monitor;
 	uint32_t regs[0x20];/* Register playground*/
 };
 
@@ -142,7 +143,8 @@ static bool rp_rom_call(target *t, uint32_t *regs, uint32_t cmd,
 		platform_timeout_set(&to_spinner, timeout + 1);
 	do {
 		if (platform_timeout_is_expired(&to_spinner)) {
-			tc_printf(t, "\b%c", spinner[spinindex++ % 4]);
+			if (ps->is_monitor)
+				tc_printf(t, "\b%c", spinner[spinindex++ % 4]);
 			platform_timeout_set(&to_spinner, 500);
 		}
 		if (platform_timeout_is_expired(&to)) {
@@ -323,7 +325,11 @@ static bool rp_cmd_erase_mass(target *t, int argc, const char *argv[])
 	(void) argv;
 	struct target_flash f;
 	f.t = t;
-	return (rp_flash_erase(&f, XIP_FLASH_START, MAX_FLASH)) ? false: true;
+	struct rp_priv_s *ps = (struct rp_priv_s*)t->target_storage;
+	ps->is_monitor = true;
+	bool res =  (rp_flash_erase(&f, XIP_FLASH_START, MAX_FLASH)) ? false: true;
+	ps->is_monitor = false;
+	return res;
 }
 
 const struct command_s rp_cmd_list[] = {
