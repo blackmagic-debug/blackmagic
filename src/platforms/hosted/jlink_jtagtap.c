@@ -21,13 +21,10 @@
  *
  */
 
-#include <stdio.h>
+#include "general.h"
 #include <unistd.h>
-#include <string.h>
-#include <alloca.h>
 #include <assert.h>
 
-#include "general.h"
 #include "exception.h"
 
 #include "jlink.h"

@@ -32,7 +32,6 @@
 
 /*- Includes ----------------------------------------------------------------*/
 #include <general.h>
-#include <stdlib.h>
 #include "dap.h"
 #include "jtag_scan.h"
 

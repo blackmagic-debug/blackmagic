@@ -44,7 +44,14 @@ int vasprintf(char **strp, const char *fmt, va_list ap)
 
 void platform_delay(uint32_t ms)
 {
-	usleep(ms * 1000);
+#if defined(_WIN32) && !defined(__MINGW32__)
+	Sleep(ms);
+#else
+# if !defined(usleep)
+	int usleep(unsigned int);
+# endif
+	usleep(ms);
+#endif
 }
 
 uint32_t platform_time_ms(void)

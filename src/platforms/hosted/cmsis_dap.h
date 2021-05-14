@@ -47,7 +47,7 @@ int cmsis_dap_jtagtap_init(jtag_proc_t *jtag_proc) {return -1;}
 int dap_swdptap_init(swd_proc_t *swd_proc) {return -1;}
 int dap_jtag_dp_init(ADIv5_DP_t *dp) {return -1;}
 void dap_swd_configure(uint8_t cfg) {};
-## pragma GCC diagnostic pop
+# pragma GCC diagnostic pop
 
 #endif
 

@@ -24,12 +24,10 @@
 
 #include "general.h"
 #include <unistd.h>
-#include <stdlib.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include "version.h"
-#include "target.h"
 #include "target_internal.h"
 #include "cortexm.h"
 #include "command.h"

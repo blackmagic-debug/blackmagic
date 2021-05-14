@@ -36,13 +36,11 @@
 #   include <fcntl.h>
 #endif
 
-#include <stdio.h>
+#include "general.h"
 #include <assert.h>
 #include <errno.h>
-#include <string.h>
 #include <unistd.h>
 
-#include "general.h"
 #include "gdb_if.h"
 
 static int gdb_if_serv, gdb_if_conn;
