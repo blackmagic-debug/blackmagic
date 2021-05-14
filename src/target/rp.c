@@ -283,8 +283,12 @@ int rp_flash_write(struct target_flash *f,
 		ps->regs[0] = dest;
 		ps->regs[1] = SRAM_START;
 		ps->regs[2] = chunksize;
+		/* Loading takes 3 ms per 256 byte page
+		 * however it takes much longer if the XOSC is not enabled
+		 * so lets give ourselves a little bit more time (x10)
+		 */
 		ret |= rp_rom_call(t, ps->regs, ps->flash_range_program,
-					(3 *  chunksize) >> 8); /* 3 ms per 256 byte page */
+					(3 *  chunksize * 10) >> 8);
 		if (ret) {
 			DEBUG_WARN("Write failed!\n");
 			break;
