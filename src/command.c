@@ -38,8 +38,6 @@
 #	include "traceswo.h"
 #endif
 
-typedef bool (*cmd_handler)(target *t, int argc, const char **argv);
-
 static bool cmd_version(target *t, int argc, char **argv);
 static bool cmd_help(target *t, int argc, char **argv);
 
