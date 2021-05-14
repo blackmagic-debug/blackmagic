@@ -164,6 +164,7 @@ static void rp_flash_prepare(target *t)
 {
 	struct rp_priv_s *ps = (struct rp_priv_s*)t->target_storage;
 	if (!ps->is_prepared) {
+		DEBUG_INFO("rp_flash_prepare\n");
 		/* connect*/
 		rp_rom_call(t, ps->regs, ps->_connect_internal_flash,100);
 		/* exit_xip */
@@ -176,6 +177,7 @@ static void rp_flash_resume(target *t)
 {
 	struct rp_priv_s *ps = (struct rp_priv_s*)t->target_storage;
 	if (ps->is_prepared) {
+		DEBUG_INFO("rp_flash_resume\n");
 		/* flush */
 		rp_rom_call(t, ps->regs, ps->_flash_flush_cache,100);
 		/* enter_cmd_xip */
@@ -249,11 +251,13 @@ static int rp_flash_erase(struct target_flash *f, target_addr addr,
 			ret = rp_rom_call(t, ps->regs, ps->_flash_range_erase, 410);
 			len = 0;
 		}
-		if (ret)
+		if (ret) {
+			DEBUG_WARN("Erase failed!\n");
 			break;
+		}
 	}
 	rp_flash_resume(t);
-	DEBUG_INFO("\nErase done!\n");
+	DEBUG_INFO("Erase done!\n");
 	return ret;
 }
 
@@ -279,15 +283,18 @@ int rp_flash_write(struct target_flash *f,
 		ps->regs[0] = dest;
 		ps->regs[1] = SRAM_START;
 		ps->regs[2] = chunksize;
-		ret = rp_rom_call(t, ps->regs, ps->flash_range_program,
+		ret |= rp_rom_call(t, ps->regs, ps->flash_range_program,
 					(3 *  chunksize) >> 8); /* 3 ms per 256 byte page */
-		if (ret)
+		if (ret) {
+			DEBUG_WARN("Write failed!\n");
 			break;
+		}
 		len -= chunksize;
 		src += chunksize;
 		dest += chunksize;
 	}
 	rp_flash_resume(t);
+	DEBUG_INFO("Write done!\n");
 	return ret;
 }
 
