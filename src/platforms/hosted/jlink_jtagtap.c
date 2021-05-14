@@ -24,7 +24,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
-
+#include <alloca.h>
 #include <assert.h>
 
 #include "general.h"
