@@ -41,7 +41,6 @@
 #include <libopencm3/usb/cdc.h>
 #include <libopencm3/cm3/scb.h>
 #include <libopencm3/usb/dfu.h>
-#include <stdlib.h>
 
 #define DFU_IF_NO 4
 

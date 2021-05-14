@@ -17,7 +17,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <sys/types.h>
 #include "general.h"
 #include <windows.h>
 #include "remote.h"

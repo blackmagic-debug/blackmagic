@@ -21,12 +21,10 @@
  * Speed is sensible.
  */
 
-#include <stdio.h>
+#include "general.h"
 #include <assert.h>
 
-#include "general.h"
 #include <ftdi.h>
-#include "platform.h"
 #include "ftdi_bmp.h"
 
 enum  swdio_status{

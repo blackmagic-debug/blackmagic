@@ -19,7 +19,6 @@
  */
 
 #include "general.h"
-#include "target.h"
 #include "target_internal.h"
 
 #include <stdarg.h>
@@ -342,7 +341,6 @@ void target_detach(target *t)
 	t->detach(t);
 	t->attached = false;
 #if PC_HOSTED == 1
-# include "platform.h"
 	platform_buffer_flush();
 #endif
 }

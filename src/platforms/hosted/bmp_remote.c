@@ -22,7 +22,6 @@
 #include "general.h"
 #include "gdb_if.h"
 #include "version.h"
-#include "platform.h"
 #include "remote.h"
 #include "target.h"
 #include "bmp_remote.h"
@@ -33,7 +32,6 @@
 #include <sys/time.h>
 #include <sys/time.h>
 #include <errno.h>
-#include <string.h>
 
 #include "adiv5.h"
 

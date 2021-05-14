@@ -19,11 +19,9 @@
 
 /* Find all known serial connected debuggers */
 
+#include "general.h"
 #include <dirent.h>
 #include <errno.h>
-#include <stdio.h>
-#include "general.h"
-#include "platform.h"
 #include "bmp_hosted.h"
 #include "version.h"
 

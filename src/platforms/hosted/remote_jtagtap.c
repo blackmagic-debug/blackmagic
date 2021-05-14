@@ -26,13 +26,11 @@
  * Should share interface with swdptap.c or at least clean up...
  */
 
-#include <stdio.h>
+#include "general.h"
 #include <unistd.h>
-#include <string.h>
 
 #include <assert.h>
 
-#include "general.h"
 #include "remote.h"
 #include "jtagtap.h"
 #include "bmp_remote.h"

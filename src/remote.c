@@ -24,7 +24,6 @@
 #include "gdb_packet.h"
 #include "jtagtap.h"
 #include "gdb_if.h"
-#include "platform.h"
 #include "version.h"
 #include "exception.h"
 #include <stdarg.h>
