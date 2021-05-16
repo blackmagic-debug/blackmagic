@@ -253,13 +253,13 @@ int find_debuggers(BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 				if ((cable->vendor != desc.idVendor) || (cable->product != desc.idProduct))
 					continue; /* VID/PID do not match*/
 				if (cl_opts->opt_cable) {
-					if (strcmp(cable->name, cl_opts->opt_cable))
+					if (strncmp(cable->name, cl_opts->opt_cable, strlen(cable->name)))
 						continue; /* cable names do not match*/
 					else
 						found = true;
 				}
 				if (cable->description) {
-					if (strcmp(cable->description, product))
+					if (strncmp(cable->description, product, strlen(cable->description)))
 						continue; /* discriptions do not match*/
 					else
 						found = true;
