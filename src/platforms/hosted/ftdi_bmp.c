@@ -27,7 +27,7 @@
 #include <sys/time.h>
 
 #include "ftdi_bmp.h"
-#include <ftdi.h>
+#include <libftdi1/ftdi.h>
 
 struct ftdi_context *ftdic;
 
