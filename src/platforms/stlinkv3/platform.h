@@ -55,10 +55,12 @@ extern bool debug_bmp;
 #define TCK_PIN		GPIO6
 #define TDO_PIN		GPIO2
 
-#define SWDIO_PORT 	TMS_PORT
-#define SWCLK_PORT 	TCK_PORT
-#define SWDIO_PIN	TMS_PIN
-#define SWCLK_PIN	TCK_PIN
+#define SWDIO_IN_PORT GPIOH
+#define SWDIO_PORT    TMS_PORT
+#define SWCLK_PORT 	  TCK_PORT
+#define SWDIO_IN_PIN  GPIO7
+#define SWDIO_PIN     TMS_PIN
+#define SWCLK_PIN	  TCK_PIN
 
 #define SRST_PORT	GPIOA
 #define SRST_PIN	GPIO6
