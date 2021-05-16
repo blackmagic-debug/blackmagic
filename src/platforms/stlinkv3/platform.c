@@ -223,10 +223,13 @@ void platform_init(void)
 
 	/* Configure srst pin. */
 	gpio_set_output_options(SRST_PORT, GPIO_OTYPE_OD, GPIO_OSPEED_2MHZ, SRST_PIN);
-	gpio_mode_setup(SRST_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, SRST_PIN);
+	gpio_mode_setup(SRST_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_PULLUP, SRST_PIN);
 	gpio_set(SRST_PORT, SRST_PIN);
 
-	TMS_SET_MODE();
+	gpio_mode_setup(TMS_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TMS_PIN);
+	gpio_set_output_options(TMS_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ, TMS_PIN);
+	gpio_mode_setup(SWDIO_IN_PORT, GPIO_MODE_INPUT, GPIO_PUPD_PULLUP, SWDIO_IN_PIN);
+
 	/* Configure TDI pin. */
 	gpio_mode_setup(TDI_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TDI_PIN);
 	gpio_set_output_options(TDI_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ, TDI_PIN);
@@ -245,6 +248,19 @@ void platform_init(void)
 	gpio_mode_setup(PWR_EN_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, PWR_EN_PIN);
 	gpio_set_output_options(PWR_EN_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ, PWR_EN_PIN);
 	gpio_set(PWR_EN_PORT, PWR_EN_PIN);
+
+	/* Set up MCO at 8 MHz on PA8 */
+#define MCO1_PORT GPIOA
+#define MCO1_PIN  GPIO8
+#define MCO1_AF   0
+	gpio_set_af    (MCO1_PORT, MCO1_AF, MCO1_PIN);
+	gpio_mode_setup(MCO1_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, MCO1_PIN);
+	gpio_set_output_options(MCO1_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_25MHZ, PWR_EN_PIN);
+	RCC_CR |= RCC_CR_HSION;
+	RCC_CFGR &= ~(0x3 << RCC_CFGR_MCO1_SHIFT);
+	RCC_CFGR |= RCC_CFGR_MCO1_HSI << RCC_CFGR_MCO1_SHIFT;
+	RCC_CFGR &= ~(0x7 << RCC_CFGR_MCO1PRE_SHIFT);
+	RCC_CFGR |= RCC_CFGR_MCOPRE_DIV_2 << RCC_CFGR_MCO1PRE_SHIFT;
 
 	/* Set up green/red led to steady green to indicate application active
 	 * FIXME: Allow RED and yellow constant and blinking,

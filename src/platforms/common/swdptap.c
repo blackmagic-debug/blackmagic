@@ -24,6 +24,13 @@
 #include "timing.h"
 #include "adiv5.h"
 
+#if !defined(SWDIO_IN_PORT)
+# define SWDIO_IN_PORT SWDIO_PORT
+#endif
+#if !defined(SWDIO_IN_PIN)
+# define SWDIO_IN_PIN SWDIO_PIN
+#endif
+
 enum {
 	SWDIO_STATUS_FLOAT = 0,
 	SWDIO_STATUS_DRIVE
@@ -71,7 +78,7 @@ static uint32_t swdptap_seq_in(int ticks)
 	if (swd_delay_cnt) {
 		while (len--) {
 			int res;
-			res = gpio_get(SWDIO_PORT, SWDIO_PIN);
+			res = gpio_get(SWDIO_IN_PORT, SWDIO_IN_PIN);
 			gpio_set(SWCLK_PORT, SWCLK_PIN);
 			for(cnt = swd_delay_cnt; --cnt > 0;);
 			ret |= (res) ? index : 0;
@@ -82,7 +89,7 @@ static uint32_t swdptap_seq_in(int ticks)
 	} else {
 		volatile int res;
 		while (len--) {
-			res = gpio_get(SWDIO_PORT, SWDIO_PIN);
+			res = gpio_get(SWDIO_IN_PORT, SWDIO_IN_PIN);
 			gpio_set(SWCLK_PORT, SWCLK_PIN);
 			ret |= (res) ? index : 0;
 			index <<= 1;
@@ -107,7 +114,7 @@ static bool swdptap_seq_in_parity(uint32_t *ret, int ticks)
 	swdptap_turnaround(SWDIO_STATUS_FLOAT);
 	if (swd_delay_cnt) {
 		while (len--) {
-			bit = gpio_get(SWDIO_PORT, SWDIO_PIN);
+			bit = gpio_get(SWDIO_IN_PORT, SWDIO_IN_PIN);
 			gpio_set(SWCLK_PORT, SWCLK_PIN);
 			for(cnt = swd_delay_cnt; --cnt > 0;);
 			res |= (bit) ? index : 0;
@@ -117,7 +124,7 @@ static bool swdptap_seq_in_parity(uint32_t *ret, int ticks)
 		}
 	} else {
 		while (len--) {
-			bit = gpio_get(SWDIO_PORT, SWDIO_PIN);
+			bit = gpio_get(SWDIO_IN_PORT, SWDIO_IN_PIN);
 			gpio_set(SWCLK_PORT, SWCLK_PIN);
 			res |= (bit) ? index : 0;
 			index <<= 1;
@@ -125,7 +132,7 @@ static bool swdptap_seq_in_parity(uint32_t *ret, int ticks)
 		}
 	}
 	int parity = __builtin_popcount(res);
-	bit = gpio_get(SWDIO_PORT, SWDIO_PIN);
+	bit = gpio_get(SWDIO_IN_PORT, SWDIO_IN_PIN);
 	gpio_set(SWCLK_PORT, SWCLK_PIN);
 	for(cnt = swd_delay_cnt; --cnt > 0;);
 	parity += (bit) ? 1 : 0;
