@@ -269,7 +269,7 @@ int ftdi_bmp_init(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info)
 	int err;
 	cable_desc_t *cable = &cable_desc[0];
 	for(;  cable->name; cable++) {
-		if (strcmp(cable->name, cl_opts->opt_cable) == 0)
+		if (strncmp(cable->name, cl_opts->opt_cable, strlen(cable->name)) == 0)
 		 break;
 	}
 
@@ -281,7 +281,7 @@ int ftdi_bmp_init(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info)
 	active_cable = cable;
 	memcpy(&active_state, &active_cable->init, sizeof(data_desc_t));
 	/* If swd_(read|write) is not given for the selected cable and
-	   the 'r' command line argument is give, assume resistor SWD
+	   the 'e' command line argument is give, assume resistor SWD
 	   connection.*/
 	if (cl_opts->external_resistor_swd &&
 		(active_cable->mpsse_swd_read.set_data_low  == 0) &&
