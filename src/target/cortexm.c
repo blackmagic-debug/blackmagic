@@ -440,6 +440,7 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 		if (ap->ap_partno == 0x4c0)  { /* Cortex-M0+ ROM */
 			if ((ap->dp->targetid & 0xfff) == AP_DESIGNER_RASPBERRY)
 				PROBE(rp_probe);
+			PROBE(lpc11xx_probe); /* LPC8 */
 		} else if (ap->ap_partno == 0x4c3)  { /* Cortex-M3 ROM */
 			PROBE(stm32f1_probe); /* Care for STM32F1 clones */
 			PROBE(lpc15xx_probe); /* Thanks to JojoS for testing */
