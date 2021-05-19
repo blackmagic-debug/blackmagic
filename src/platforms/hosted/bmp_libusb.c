@@ -201,9 +201,11 @@ int find_debuggers(BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 		}
 		if (res < 0)
 			serial[0] = 0;
+		manufacturer[0] = 0;
 		res = libusb_get_string_descriptor_ascii(
 			handle, desc.iManufacturer, (uint8_t*)manufacturer,
 			sizeof(manufacturer));
+		product[0] = 0;
 		res = libusb_get_string_descriptor_ascii(
 			handle, desc.iProduct, (uint8_t*)product,
 			sizeof(product));
