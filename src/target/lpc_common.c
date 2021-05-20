@@ -33,6 +33,42 @@ struct flash_param {
 	uint32_t result[4];
 } __attribute__((aligned(4)));
 
+char *iap_error[] = {
+	"CMD_SUCCESS",
+	"Invalid command",
+	"Unaligned src address",
+	"Dst address not on boundary",
+	"Src not mapped",
+	"Dst not mapped",
+	"Invalid byte count",
+	"Invalid sector",
+	"Sector not blank",
+	"Sector not prepared",
+	"Compare error",
+	"Flash interface busy",
+	"Invalid or missing parameter",
+	"Address not on boundary",
+	"Address not mapped",
+	"Checksum error",
+	"16",
+	"17",
+	"18",
+	"19",
+	"20",
+	"21",
+	"22",
+	"FRO not powered",
+	"Flash not powered",
+	"25",
+	"26",
+	"Flash clock disabled",
+	"Reinvoke error",
+	"Invalid image",
+	"30",
+	"31",
+	"Flash erase failed",
+	"Page is invalid",
+};
 
 struct lpc_flash *lpc_add_flash(target *t, target_addr addr, size_t length)
 {
@@ -109,11 +145,17 @@ enum iap_status lpc_iap_call(struct lpc_flash *f, void *result, enum iap_cmd cmd
 	if (result != NULL)
 		memcpy(result, param.result, sizeof(param.result));
 
+#if defined(ENABLE_DEBUG)
 	if (param.status != IAP_STATUS_CMD_SUCCESS) {
-		DEBUG_WARN("IAP failure code %d for cmd %d\n",
-			   (enum iap_status)param.status, cmd);
+		if (param.status > (sizeof(iap_error) / sizeof(char*)))
+			DEBUG_WARN("IAP  cmd %d : %d\n", cmd, param.status);
+		else
+			DEBUG_WARN("IAP  cmd %d : %s\n", cmd, iap_error[param.status]);
+		DEBUG_WARN("return parameters: %08" PRIx32 " %08" PRIx32 " %08" PRIx32
+				   " %08" PRIx32 "\n", param.result[0],
+				   param.result[1], param.result[2], param.result[3]);
 	}
-
+#endif
 	return param.status;
 }
 
