@@ -267,75 +267,75 @@ const struct command_s efm32_cmd_list[] = {
 /* -------------------------------------------------------------------------- */
 
 typedef struct efm32_device_t {
-	uint16_t family_id;	/* Family for device matching */
-	char* name;			/* Friendly device family name */
-	uint32_t flash_page_size;	/* Flash page size */
-	uint32_t msc_addr;			/* MSC Address */
+	uint8_t family_id;	/* Family for device matching */
 	bool has_radio;		   /* Indicates a device has attached radio */
-	uint32_t user_data_size;	/* User Data (UD) region size */
-	uint32_t bootloader_size;	/* Bootloader (BL) region size (may be 0 for no BL region) */
+	uint16_t flash_page_size;	/* Flash page size */
+	char* name;			/* Friendly device family name */
+	uint32_t msc_addr;			/* MSC Address */
+	uint16_t user_data_size;	/* User Data (UD) region size */
+	uint16_t bootloader_size;	/* Bootloader (BL) region size (may be 0 for no BL region) */
 	char* description;	   /* Human-readable description */
 } efm32_device_t;
 
 efm32_device_t const efm32_devices[] = {
 	/*  First gen micros */
-	{71, "EFM32G", 512, 0x400c0000, false, 512, 0, "Gecko"},
-	{72, "EFM32GG", 2048, 0x400c0000, false, 4096, 0, "Giant Gecko"},
-	{73, "EFM32TG", 512, 0x400c0000, false, 512, 0, "Tiny Gecko"},
-	{74, "EFM32LG", 2048, 0x400c0000, false, 2048, 0, "Leopard Gecko"},
-	{75, "EFM32WG", 2048, 0x400c0000, false, 2048, 0, "Wonder Gecko"},
-	{76, "EFM32ZG", 1024, 0x400c0000, false, 1024, 0, "Zero Gecko"},
-	{77, "EFM32HG", 1024, 0x400c0000, false, 1024, 0, "Happy Gecko"},
+	{ 71, false,  512, "EFM32G"    , 0x400c0000,  512, 0, "Gecko"},
+	{ 72, false, 2048, "EFM32GG"   , 0x400c0000, 4096, 0, "Giant Gecko"},
+	{ 73, false,  512, "EFM32TG"   , 0x400c0000,  512, 0, "Tiny Gecko"},
+	{ 74, false, 2048, "EFM32LG"   , 0x400c0000, 2048, 0, "Leopard Gecko"},
+	{ 75, false, 2048, "EFM32WG"   , 0x400c0000, 2048, 0, "Wonder Gecko"},
+	{ 76, false, 1024, "EFM32ZG"   , 0x400c0000, 1024, 0, "Zero Gecko"},
+	{ 77, false, 1024, "EFM32HG"   , 0x400c0000, 1024, 0, "Happy Gecko"},
 	/*  First (1.5) gen micro + radio */
-	{120, "EZR32WG", 2048, 0x400c0000, true, 2048, 0, "EZR Wonder Gecko"},
-	{121, "EZR32LG", 2048, 0x400c0000, true, 2048, 0, "EZR Leopard Gecko"},
-	{122, "EZR32HG", 1024, 0x400c0000, true, 1024, 0, "EZR Happy Gecko"},
+	{120, true , 2048, "EZR32WG"   , 0x400c0000, 2048, 0, "EZR Wonder Gecko"},
+	{121, true , 2048, "EZR32LG"   , 0x400c0000, 2048, 0, "EZR Leopard Gecko"},
+	{122, true , 1024, "EZR32HG"   , 0x400c0000, 1024, 0, "EZR Happy Gecko"},
 	/*  Second gen micros */
-	{81, "EFM32PG1B", 2048, 0x400e0000, false, 2048, 10240, "Pearl Gecko"},
-	{83, "EFM32JG1B", 2048, 0x400e0000, false, 2048, 10240, "Jade Gecko"},
-	{85, "EFM32PG12B", 2048, 0x400e0000, false, 2048, 32768,"Pearl Gecko 12"},
-	{87, "EFM32JG12B", 2048, 0x400e0000, false, 2048, 32768, "Jade Gecko 12"},
+	{ 81, false, 2048, "EFM32PG1B" , 0x400e0000, 2048, 10240, "Pearl Gecko"},
+	{ 83, false, 2048, "EFM32JG1B" , 0x400e0000, 2048, 10240, "Jade Gecko"},
+	{ 85, false, 2048, "EFM32PG12B", 0x400e0000, 2048, 32768,"Pearl Gecko 12"},
+	{ 87, false, 2048, "EFM32JG12B", 0x400e0000, 2048, 32768, "Jade Gecko 12"},
 	/*  Second (2.5) gen micros, with re-located MSC */
-	{100, "EFM32GG11B", 4096, 0x40000000, false, 4096, 32768, "Giant Gecko 11"},
-	{103, "EFM32TG11B", 2048, 0x40000000, false, 2048, 18432, "Tiny Gecko 11"},
-	{106, "EFM32GG12B", 2048, 0x40000000, false, 2048, 32768, "Giant Gecko 12"},
+	{100, false, 4096, "EFM32GG11B", 0x40000000, 4096, 32768, "Giant Gecko 11"},
+	{103, false, 2048, "EFM32TG11B", 0x40000000, 2048, 18432, "Tiny Gecko 11"},
+	{106, false, 2048, "EFM32GG12B", 0x40000000, 2048, 32768, "Giant Gecko 12"},
 	/*  Second gen devices micro + radio */
-	{16, "EFR32MG1P", 2048, 0x400e0000, true, 2048, 10240, "Mighty Gecko"},
-	{17, "EFR32MG1B", 2048, 0x400e0000, true, 2048, 10240, "Mighty Gecko"},
-	{18, "EFR32MG1V", 2048, 0x400e0000, true, 2048, 10240, "Mighty Gecko"},
-	{19, "EFR32BG1P", 2048, 0x400e0000, true, 2048, 10240, "Blue Gecko"},
-	{20, "EFR32BG1B", 2048, 0x400e0000, true, 2048, 10240, "Blue Gecko"},
-	{21, "EFR32BG1V", 2048, 0x400e0000, true, 2048, 10240, "Blue Gecko"},
-	{25, "EFR32FG1P", 2048, 0x400e0000, true, 2048, 10240, "Flex Gecko"},
-	{26, "EFR32FG1B", 2048, 0x400e0000, true, 2048, 10240, "Flex Gecko"},
-	{27, "EFR32FG1V", 2048, 0x400e0000, true, 2048, 10240, "Flex Gecko"},
-	{28, "EFR32MG12P", 2048, 0x400e0000, true, 2048, 32768, "Mighty Gecko"},
-	{29, "EFR32MG12B", 2048, 0x400e0000, true, 2048, 32768, "Mighty Gecko"},
-	{30, "EFR32MG12V", 2048, 0x400e0000, true, 2048, 32768, "Mighty Gecko"},
-	{31, "EFR32BG12P", 2048, 0x400e0000, true, 2048, 32768, "Blue Gecko"},
-	{32, "EFR32BG12B", 2048, 0x400e0000, true, 2048, 32768, "Blue Gecko"},
-	{33, "EFR32BG12V", 2048, 0x400e0000, true, 2048, 32768, "Blue Gecko"},
-	{37, "EFR32FG12P", 2048, 0x400e0000, true, 2048, 32768, "Flex Gecko"},
-	{38, "EFR32FG12B", 2048, 0x400e0000, true, 2048, 32768, "Flex Gecko"},
-	{39, "EFR32FG12V", 2048, 0x400e0000, true, 2048, 32768, "Flex Gecko"},
-	{40, "EFR32MG13P", 2048, 0x400e0000, true, 2048, 16384, "Mighty Gecko"},
-	{41, "EFR32MG13B", 2048, 0x400e0000, true, 2048, 16384, "Mighty Gecko"},
-	{42, "EFR32MG13V", 2048, 0x400e0000, true, 2048, 16384, "Mighty Gecko"},
-	{43, "EFR32BG13P", 2048, 0x400e0000, true, 2048, 16384, "Blue Gecko"},
-	{44, "EFR32BG13B", 2048, 0x400e0000, true, 2048, 16384, "Blue Gecko"},
-	{45, "EFR32BG13V", 2048, 0x400e0000, true, 2048, 16384, "Blue Gecko"},
-	{49, "EFR32FG13P", 2048, 0x400e0000, true, 2048, 16384, "Flex Gecko"},
-	{50, "EFR32FG13B", 2048, 0x400e0000, true, 2048, 16384, "Flex Gecko"},
-	{51, "EFR32FG13V", 2048, 0x400e0000, true, 2048, 16384, "Flex Gecko"},
-	{52, "EFR32MG14P", 2048, 0x400e0000, true, 2048, 16384, "Mighty Gecko"},
-	{53, "EFR32MG14B", 2048, 0x400e0000, true, 2048, 16384, "Mighty Gecko"},
-	{54, "EFR32MG14V", 2048, 0x400e0000, true, 2048, 16384, "Mighty Gecko"},
-	{55, "EFR32BG14P", 2048, 0x400e0000, true, 2048, 16384, "Blue Gecko"},
-	{56, "EFR32BG14B", 2048, 0x400e0000, true, 2048, 16384, "Blue Gecko"},
-	{57, "EFR32BG14V", 2048, 0x400e0000, true, 2048, 16384, "Blue Gecko"},
-	{61, "EFR32FG14P", 2048, 0x400e0000, true, 2048, 16384, "Flex Gecko"},
-	{62, "EFR32FG14B", 2048, 0x400e0000, true, 2048, 16384, "Flex Gecko"},
-	{63, "EFR32FG14V", 2048, 0x400e0000, true, 2048, 16384, "Flex Gecko"},
+	{ 16, true , 2048, "EFR32MG1P" , 0x400e0000, 2048, 10240, "Mighty Gecko"},
+	{ 17, true , 2048, "EFR32MG1B" , 0x400e0000, 2048, 10240, "Mighty Gecko"},
+	{ 18, true , 2048, "EFR32MG1V" , 0x400e0000, 2048, 10240, "Mighty Gecko"},
+	{ 19, true , 2048, "EFR32BG1P" , 0x400e0000, 2048, 10240, "Blue Gecko"},
+	{ 20, true , 2048, "EFR32BG1B" , 0x400e0000, 2048, 10240, "Blue Gecko"},
+	{ 21, true , 2048, "EFR32BG1V" , 0x400e0000, 2048, 10240, "Blue Gecko"},
+	{ 25, true , 2048, "EFR32FG1P" , 0x400e0000, 2048, 10240, "Flex Gecko"},
+	{ 26, true , 2048, "EFR32FG1B" , 0x400e0000, 2048, 10240, "Flex Gecko"},
+	{ 27, true , 2048, "EFR32FG1V" , 0x400e0000, 2048, 10240, "Flex Gecko"},
+	{ 28, true , 2048, "EFR32MG12P", 0x400e0000, 2048, 32768, "Mighty Gecko"},
+	{ 29, true , 2048, "EFR32MG12B", 0x400e0000, 2048, 32768, "Mighty Gecko"},
+	{ 30, true , 2048, "EFR32MG12V", 0x400e0000, 2048, 32768, "Mighty Gecko"},
+	{ 31, true , 2048, "EFR32BG12P", 0x400e0000, 2048, 32768, "Blue Gecko"},
+	{ 32, true , 2048, "EFR32BG12B", 0x400e0000, 2048, 32768, "Blue Gecko"},
+	{ 33, true , 2048, "EFR32BG12V", 0x400e0000, 2048, 32768, "Blue Gecko"},
+	{ 37, true , 2048, "EFR32FG12P", 0x400e0000, 2048, 32768, "Flex Gecko"},
+	{ 38, true , 2048, "EFR32FG12B", 0x400e0000, 2048, 32768, "Flex Gecko"},
+	{ 39, true , 2048, "EFR32FG12V", 0x400e0000, 2048, 32768, "Flex Gecko"},
+	{ 40, true , 2048, "EFR32MG13P", 0x400e0000, 2048, 16384, "Mighty Gecko"},
+	{ 41, true , 2048, "EFR32MG13B", 0x400e0000, 2048, 16384, "Mighty Gecko"},
+	{ 42, true , 2048, "EFR32MG13V", 0x400e0000, 2048, 16384, "Mighty Gecko"},
+	{ 43, true , 2048, "EFR32BG13P", 0x400e0000, 2048, 16384, "Blue Gecko"},
+	{ 44, true , 2048, "EFR32BG13B", 0x400e0000, 2048, 16384, "Blue Gecko"},
+	{ 45, true , 2048, "EFR32BG13V", 0x400e0000, 2048, 16384, "Blue Gecko"},
+	{ 49, true , 2048, "EFR32FG13P", 0x400e0000, 2048, 16384, "Flex Gecko"},
+	{ 50, true , 2048, "EFR32FG13B", 0x400e0000, 2048, 16384, "Flex Gecko"},
+	{ 51, true , 2048, "EFR32FG13V", 0x400e0000, 2048, 16384, "Flex Gecko"},
+	{ 52, true , 2048, "EFR32MG14P", 0x400e0000, 2048, 16384, "Mighty Gecko"},
+	{ 53, true , 2048, "EFR32MG14B", 0x400e0000, 2048, 16384, "Mighty Gecko"},
+	{ 54, true , 2048, "EFR32MG14V", 0x400e0000, 2048, 16384, "Mighty Gecko"},
+	{ 55, true , 2048, "EFR32BG14P", 0x400e0000, 2048, 16384, "Blue Gecko"},
+	{ 56, true , 2048, "EFR32BG14B", 0x400e0000, 2048, 16384, "Blue Gecko"},
+	{ 57, true , 2048, "EFR32BG14V", 0x400e0000, 2048, 16384, "Blue Gecko"},
+	{ 61, true , 2048, "EFR32FG14P", 0x400e0000, 2048, 16384, "Flex Gecko"},
+	{ 62, true , 2048, "EFR32FG14B", 0x400e0000, 2048, 16384, "Flex Gecko"},
+	{ 63, true , 2048, "EFR32FG14V", 0x400e0000, 2048, 16384, "Flex Gecko"},
 };
 
 
