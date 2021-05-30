@@ -72,7 +72,7 @@ const struct command_s lpc11xx_cmd_list[] = {
 	{NULL, NULL, NULL}
 };
 
-void lpc11xx_add_flash(target *t, uint32_t addr, size_t len, size_t erasesize, uint32_t iap_entry)
+void lpc11xx_add_flash(target *t, uint32_t addr, size_t len, size_t erasesize, uint32_t iap_entry, uint8_t reserved_pages)
 {
 	struct lpc_flash *lf = lpc_add_flash(t, addr, len);
 	lf->f.blocksize = erasesize;
@@ -81,6 +81,7 @@ void lpc11xx_add_flash(target *t, uint32_t addr, size_t len, size_t erasesize, u
 	lf->iap_entry = iap_entry;
 	lf->iap_ram = IAP_RAM_BASE;
 	lf->iap_msp = IAP_RAM_BASE + MIN_RAM_SIZE - RAM_USAGE_FOR_IAP_ROUTINES;
+	lf->reserved_pages = reserved_pages;
 }
 
 bool
@@ -125,7 +126,7 @@ lpc11xx_probe(target *t)
 	case 0x2980002B:	/* lpc11u24x/401 */
 		t->driver = "LPC11xx";
 		target_add_ram(t, 0x10000000, 0x2000);
-		lpc11xx_add_flash(t, 0x00000000, 0x20000, 0x1000, IAP_ENTRY_MOST);
+		lpc11xx_add_flash(t, 0x00000000, 0x20000, 0x1000, IAP_ENTRY_MOST, 0);
 		target_add_commands(t, lpc11xx_cmd_list, "LPC11xx");
 		return true;
 
@@ -133,18 +134,18 @@ lpc11xx_probe(target *t)
 	case 0x1A24902B:
 		t->driver = "LPC1112";
 		target_add_ram(t, 0x10000000, 0x1000);
-		lpc11xx_add_flash(t, 0x00000000, 0x10000, 0x1000, IAP_ENTRY_MOST);
+		lpc11xx_add_flash(t, 0x00000000, 0x10000, 0x1000, IAP_ENTRY_MOST, 0);
 		return true;
     case 0x1000002b: // FX LPC11U6 32 kB SRAM/256 kB flash (max)
 		t->driver = "LPC11U6";
 		target_add_ram(t, 0x10000000, 0x8000);
-		lpc11xx_add_flash(t, 0x00000000, 0x40000, 0x1000, IAP_ENTRY_MOST);
+		lpc11xx_add_flash(t, 0x00000000, 0x40000, 0x1000, IAP_ENTRY_MOST, 0);
 		return true;
 	case 0x3000002B:
 	case 0x3D00002B:
 		t->driver = "LPC1343";
 		target_add_ram(t, 0x10000000, 0x2000);
-		lpc11xx_add_flash(t, 0x00000000, 0x8000, 0x1000, IAP_ENTRY_MOST);
+		lpc11xx_add_flash(t, 0x00000000, 0x8000, 0x1000, IAP_ENTRY_MOST, 0);
 		return true;
 	case 0x00008A04:  /* LPC8N04 (see UM11074 Rev.1.3 section 4.5.19) */
 		t->driver = "LPC8N04";
@@ -152,7 +153,7 @@ lpc11xx_probe(target *t)
 		/* UM11074/ Flash controller/15.2: The two topmost sectors
 		 * contain the initialization code and IAP firmware.
 		 * Do not touch the! */
-		lpc11xx_add_flash(t, 0x00000000, 0x7800, 0x400, IAP_ENTRY_MOST);
+		lpc11xx_add_flash(t, 0x00000000, 0x7800, 0x400, IAP_ENTRY_MOST, 0);
 		target_add_commands(t, lpc11xx_cmd_list, "LPC8N04");
 		return true;
 	}
@@ -167,7 +168,7 @@ lpc11xx_probe(target *t)
 	case 0x00008024:  /* 802M001JHI33 */
 	  t->driver = "LPC802";
 	  target_add_ram(t, 0x10000000, 0x800);
-	  lpc11xx_add_flash(t, 0x00000000, 0x4000, 0x400, IAP_ENTRY_84x);
+	  lpc11xx_add_flash(t, 0x00000000, 0x4000, 0x400, IAP_ENTRY_84x, 2);
 	  target_add_commands(t, lpc11xx_cmd_list, "LPC802");
 	  return true;
 	case 0x00008040:  /* 804M101JBD64 */
@@ -177,7 +178,7 @@ lpc11xx_probe(target *t)
 	case 0x00008044:  /* 804M101JHI33 */
 	  t->driver = "LPC804";
 	  target_add_ram(t, 0x10000000, 0x1000);
-	  lpc11xx_add_flash(t, 0x00000000, 0x8000, 0x400, IAP_ENTRY_84x);
+	  lpc11xx_add_flash(t, 0x00000000, 0x8000, 0x400, IAP_ENTRY_84x, 2);
 	  target_add_commands(t, lpc11xx_cmd_list, "LPC804");
 	  return true;
 	case 0x00008100:  /* LPC810M021FN8 */
@@ -187,7 +188,7 @@ lpc11xx_probe(target *t)
 	case 0x00008122:  /* LPC812M101JDH20 / LPC812M101JTB16 */
 		t->driver = "LPC81x";
 		target_add_ram(t, 0x10000000, 0x1000);
-		lpc11xx_add_flash(t, 0x00000000, 0x4000, 0x400, IAP_ENTRY_MOST);
+		lpc11xx_add_flash(t, 0x00000000, 0x4000, 0x400, IAP_ENTRY_MOST, 0);
 		target_add_commands(t, lpc11xx_cmd_list, "LPC81x");
 		return true;
 	case 0x00008221:  /* LPC822M101JHI33 */
@@ -196,19 +197,19 @@ lpc11xx_probe(target *t)
 	case 0x00008242:  /* LPC824M201JDH20 */
 		t->driver = "LPC82x";
 		target_add_ram(t, 0x10000000, 0x2000);
-		lpc11xx_add_flash(t, 0x00000000, 0x8000, 0x400, IAP_ENTRY_MOST);
+		lpc11xx_add_flash(t, 0x00000000, 0x8000, 0x400, IAP_ENTRY_MOST, 0);
 		target_add_commands(t, lpc11xx_cmd_list, "LPC82x");
 		return true;
 	case 0x00008322:  /* LPC832M101FDH20 */
 		t->driver = "LPC832";
 		target_add_ram(t, 0x10000000, 0x1000);
-		lpc11xx_add_flash(t, 0x00000000, 0x4000, 0x400, IAP_ENTRY_MOST);
+		lpc11xx_add_flash(t, 0x00000000, 0x4000, 0x400, IAP_ENTRY_MOST, 0);
 		target_add_commands(t, lpc11xx_cmd_list, "LPC832");
 		return true;
 	case 0x00008341:  /* LPC8341201FHI33 */
 		t->driver = "LPC834";
 		target_add_ram(t, 0x10000000, 0x1000);
-		lpc11xx_add_flash(t, 0x00000000, 0x8000, 0x400, IAP_ENTRY_MOST);
+		lpc11xx_add_flash(t, 0x00000000, 0x8000, 0x400, IAP_ENTRY_MOST, 0);
 		target_add_commands(t, lpc11xx_cmd_list, "LPC834");
 		return true;
 	case 0x00008441:
@@ -217,7 +218,7 @@ lpc11xx_probe(target *t)
 	case 0x00008444:
 		t->driver = "LPC844";
 		target_add_ram(t, 0x10000000, 0x2000);
-		lpc11xx_add_flash(t, 0x00000000, 0x10000, 0x400, IAP_ENTRY_84x);
+		lpc11xx_add_flash(t, 0x00000000, 0x10000, 0x400, IAP_ENTRY_84x, 0);
 		return true;
 	case 0x00008451:
 	case 0x00008452:
@@ -225,7 +226,7 @@ lpc11xx_probe(target *t)
 	case 0x00008454:
 		t->driver = "LPC845";
 		target_add_ram(t, 0x10000000, 0x4000);
-		lpc11xx_add_flash(t, 0x00000000, 0x10000, 0x400, IAP_ENTRY_84x);
+		lpc11xx_add_flash(t, 0x00000000, 0x10000, 0x400, IAP_ENTRY_84x, 0);
 		return true;
 	case 0x0003D440:	/* LPC11U34/311  */
 	case 0x0001cc40:	/* LPC11U34/421  */
@@ -237,13 +238,13 @@ lpc11xx_probe(target *t)
 	case 0x00007C40:	/* LPC11U37FBD64/501  */
 		t->driver = "LPC11U3x";
 		target_add_ram(t, 0x10000000, 0x2000);
-		lpc11xx_add_flash(t, 0x00000000, 0x20000, 0x1000, IAP_ENTRY_MOST);
+		lpc11xx_add_flash(t, 0x00000000, 0x20000, 0x1000, IAP_ENTRY_MOST, 0);
 		return true;
 	case 0x00040070:	/* LPC1114/333 */
 	case 0x00050080:	/* lpc1115XL */
 		t->driver = "LPC1100XL";
 		target_add_ram(t, 0x10000000, 0x2000);
-		lpc11xx_add_flash(t, 0x00000000, 0x20000, 0x1000, IAP_ENTRY_MOST);
+		lpc11xx_add_flash(t, 0x00000000, 0x20000, 0x1000, IAP_ENTRY_MOST, 0);
 		return true;
 	}
 	if (idcode) {
