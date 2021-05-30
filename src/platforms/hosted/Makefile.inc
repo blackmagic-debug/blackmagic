@@ -8,7 +8,7 @@ CFLAGS +=-I ./target -I./platforms/pc
 # be useful to minimize external dependencies, and make building on
 # windows systems easier.
 HOSTED_BMP_ONLY ?= 0
-CFLAGS  +=  -DHOSTED_BMP_ONLY=$(HOSTED_BMP_ONLY)
+CFLAGS  +=  -DHOSTED_BMP_ONLY=$(HOSTED_BMP_ONLY) -Wno-format-truncation
 
 ifneq (, $(findstring linux, $(SYS)))
 SRC += serial_unix.c
