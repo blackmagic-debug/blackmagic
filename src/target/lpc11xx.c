@@ -36,6 +36,22 @@
 #define LPC11XX_DEVICE_ID  0x400483F4
 #define LPC8XX_DEVICE_ID   0x400483F8
 
+/*
+ * CHIP    Ram Flash page sector   Rsvd pages  EEPROM
+ * LPX80x   2k   16k   64   1024            2
+ * LPC804   4k   32k   64   1024            2
+ * LPC8N04  8k   32k   64   1024           32
+ * LPC810   1k    4k   64   1024            0
+ * LPC811   2k    8k   64   1024            0
+ * LPC812   4k   16k   64   1024
+ * LPC822   4k   16k   64   1024
+ * LPC822   8k   32k   64   1024
+ * LPC832   4k   16k   64   1024
+ * LPC834   4k   32k   64   1024
+ * LPC844   8k   64k   64   1024
+ * LPC845  16k   64k   64   1024
+ */
+
 static bool lpc11xx_read_uid(target *t, int argc, const char *argv[])
 {
 	(void)argc;
@@ -133,7 +149,10 @@ lpc11xx_probe(target *t)
 	case 0x00008A04:  /* LPC8N04 (see UM11074 Rev.1.3 section 4.5.19) */
 		t->driver = "LPC8N04";
 		target_add_ram(t, 0x10000000, 0x2000);
-		lpc11xx_add_flash(t, 0x00000000, 0x8000, 0x400, IAP_ENTRY_MOST);
+		/* UM11074/ Flash controller/15.2: The two topmost sectors
+		 * contain the initialization code and IAP firmware.
+		 * Do not touch the! */
+		lpc11xx_add_flash(t, 0x00000000, 0x7800, 0x400, IAP_ENTRY_MOST);
 		target_add_commands(t, lpc11xx_cmd_list, "LPC8N04");
 		return true;
 	}
