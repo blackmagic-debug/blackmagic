@@ -418,7 +418,10 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 	}
 	if (opt->opt_flash_start == 0xffffffff)
 		opt->opt_flash_start = lowest_flash_start;
-	if (opt->opt_flash_size == 0xffffffff)
+	if ((opt->opt_flash_size == 0xffffffff) &&
+		(opt->opt_mode != BMP_MODE_FLASH_WRITE) &&
+	    (opt->opt_mode != BMP_MODE_FLASH_VERIFY) &&
+		(opt->opt_mode != BMP_MODE_FLASH_VERIFY))
 		opt->opt_flash_size = lowest_flash_size;
 	if (opt->opt_mode == BMP_MODE_SWJ_TEST) {
 		switch (t->core[0]) {
