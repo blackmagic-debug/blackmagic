@@ -12,6 +12,7 @@ CFLAGS  +=  -DHOSTED_BMP_ONLY=$(HOSTED_BMP_ONLY) -Wno-format-truncation
 
 ifneq (, $(findstring linux, $(SYS)))
 SRC += serial_unix.c
+HIDAPILIB = hidapi-libusb
 ifeq ($(ASAN), 1)
 CFLAGS += -fsanitize=address
 LDFLAGS += -lasan
@@ -36,6 +37,7 @@ SRC += serial_unix.c
 LDFLAGS += -lhidapi
 LDFLAGS += -framework CoreFoundation
 CFLAGS += -Ihidapi/hidapi
+HIDAPILIB = hidapi
 endif
 
 ifneq ($(HOSTED_BMP_ONLY), 1)
@@ -51,8 +53,8 @@ ifneq ($(HOSTED_BMP_ONLY), 1)
  ifneq (, $(findstring mingw, $(SYS)))
   SRC += hid.c
  else
-  CFLAGS += $(shell pkg-config --cflags hidapi-libusb)
-  LDFLAGS += $(shell pkg-config --libs hidapi-libusb)
+  CFLAGS += $(shell pkg-config --cflags $(HIDAPILIB))
+  LDFLAGS += $(shell pkg-config --libs $(HIDAPILIB))
  endif
 endif
 
