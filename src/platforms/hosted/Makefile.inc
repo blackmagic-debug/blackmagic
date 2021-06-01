@@ -8,13 +8,13 @@ CFLAGS +=-I ./target -I./platforms/pc
 # be useful to minimize external dependencies, and make building on
 # windows systems easier.
 HOSTED_BMP_ONLY ?= 0
-CFLAGS  +=  -DHOSTED_BMP_ONLY=$(HOSTED_BMP_ONLY) -Wno-format-truncation
+CFLAGS  +=  -DHOSTED_BMP_ONLY=$(HOSTED_BMP_ONLY)
 
 ifneq (, $(findstring linux, $(SYS)))
 SRC += serial_unix.c
 HIDAPILIB = hidapi-libusb
 ifeq ($(ASAN), 1)
-CFLAGS += -fsanitize=address
+CFLAGS += -fsanitize=address  -Wno-format-truncation
 LDFLAGS += -lasan
 endif
 else ifneq (, $(findstring mingw, $(SYS)))
