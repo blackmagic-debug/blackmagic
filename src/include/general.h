@@ -59,9 +59,12 @@ enum BMP_DEBUG {
  * BMP PC-Hosted is the preferred way. Printing DEBUG_WARN
  * and DEBUG_INFO is kept for comptibiluty.
  */
+# if !defined(PLATFORM_PRINTF)
+#  define PLATFORM_PRINTF printf
+# endif
 # if defined(ENABLE_DEBUG)
-#  define DEBUG_WARN printf
-#  define DEBUG_INFO printf
+#  define DEBUG_WARN PLATFORM_PRINTF
+#  define DEBUG_INFO PLATFORM_PRINTF
 # else
 #  define DEBUG_WARN(...) do {} while(0)
 #  define DEBUG_INFO(...) do {} while(0)
