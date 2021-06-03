@@ -248,7 +248,7 @@ bool sam3x_probe(target *t)
 	case CHIPID_CIDR_ARCH_SAM4SDC | CHIPID_CIDR_EPROC_CM4:
 		t->driver = "Atmel SAM4S";
 		target_add_ram(t, 0x20000000, 0x400000);
-		size_t size = sam_flash_size(cidr);
+		size = sam_flash_size(cidr);
 		if (size <= 0x80000) {
 			/* Smaller devices have a single bank */
 			sam4_add_flash(t, SAM4S_EEFC_BASE(0), 0x400000, size);

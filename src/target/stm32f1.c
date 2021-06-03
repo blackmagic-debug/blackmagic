@@ -386,7 +386,7 @@ static bool stm32f1_cmd_erase_mass(target *t, int argc, const char **argv)
 			if(target_check_error(t))
 				return false;
 		/* Check for error */
-		uint16_t sr = target_mem_read32(t, FLASH_SR + FLASH_BANK2_OFFSET);
+		sr = target_mem_read32(t, FLASH_SR + FLASH_BANK2_OFFSET);
 		if ((sr & SR_ERROR_MASK) || !(sr & SR_EOP))
 			return false;
 	}

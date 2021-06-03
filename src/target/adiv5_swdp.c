@@ -125,12 +125,12 @@ int adiv5_swdp_scan(uint32_t targetid)
 			initial_dp->seq_out(0xE79E, 16); /* 0b0111100111100111 */
 			dp_line_reset(initial_dp);
 			initial_dp->fault = 0;
-			volatile struct exception e;
-			TRY_CATCH (e, EXCEPTION_ALL) {
+			volatile struct exception e2;
+			TRY_CATCH (e2, EXCEPTION_ALL) {
 				idcode = initial_dp->low_access(initial_dp, ADIV5_LOW_READ,
 									  ADIV5_DP_IDCODE, 0);
 			}
-			if (e.type) {
+			if (e2.type) {
 				DEBUG_WARN("No usable DP found\n");
 				return -1;
 			}

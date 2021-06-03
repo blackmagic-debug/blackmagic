@@ -384,9 +384,9 @@ static int stm32f4_flash_erase(struct target_flash *f, target_addr addr,
 	stm32f4_flash_unlock(t);
 
 	enum align psize = ALIGN_WORD;
-	for (struct target_flash *f = t->flash; f; f = f->next) {
-		if (f->write == stm32f4_flash_write) {
-			psize = ((struct stm32f4_flash *)f)->psize;
+	for (struct target_flash *currf = t->flash; currf; currf = currf->next) {
+		if (currf->write == stm32f4_flash_write) {
+			psize = ((struct stm32f4_flash *)currf)->psize;
 		}
 	}
 	while(len) {

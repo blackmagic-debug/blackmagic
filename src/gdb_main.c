@@ -436,27 +436,27 @@ handle_v_packet(char *packet, int plen)
 	} else if (!strncmp(packet, "vRun", 4)) {
 		/* Parse command line for get_cmdline semihosting call */
 		char cmdline[83];
-		char *pbuf = cmdline;
+		char *pcmdline = cmdline;
 		char *tok = packet + 4;
 		if (*tok == ';') tok++;
 		*cmdline='\0';
 		while(*tok != '\0') {
 			if(strlen(cmdline)+3 >= sizeof(cmdline)) break;
 			if (*tok == ';') {
-				*pbuf++=' ';
-				*pbuf='\0';
+				*pcmdline++=' ';
+				*pcmdline='\0';
 				tok++;
 				continue;
 			}
 			if (isxdigit(*tok) && isxdigit(*(tok+1))) {
-				unhexify(pbuf, tok, 2);
-				if ((*pbuf == ' ') || (*pbuf == '\\')) {
-					*(pbuf+1)=*pbuf;
-					*pbuf++='\\';
+				unhexify(pcmdline, tok, 2);
+				if ((*pcmdline == ' ') || (*pcmdline == '\\')) {
+					*(pcmdline+1)=*pcmdline;
+					*pcmdline++='\\';
 				}
-				pbuf++;
+				pcmdline++;
 				tok+=2;
-				*pbuf='\0';
+				*pcmdline='\0';
 				continue;
 			}
 			break;
