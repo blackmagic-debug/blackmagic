@@ -334,7 +334,7 @@ static bool cortexm_prepare(ADIv5_AP_t *ap)
 	uint32_t dhcsr_ctl = CORTEXM_DHCSR_DBGKEY |	CORTEXM_DHCSR_C_DEBUGEN |
 		CORTEXM_DHCSR_C_HALT;
 	uint32_t dhcsr_valid = CORTEXM_DHCSR_S_HALT | CORTEXM_DHCSR_C_DEBUGEN;
-#ifdef PLATFORM_HAS_DEBUG
+#if defined(ENABLE_DEBUG) && defined(PLATFORM_HAS_DEBUG)
 	uint32_t start_time = platform_time_ms();
 #endif
 	uint32_t dhcsr;
