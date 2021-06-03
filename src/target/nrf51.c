@@ -31,6 +31,7 @@ static int nrf51_flash_write(struct target_flash *f,
                              target_addr dest, const void *src, size_t len);
 
 static bool nrf51_cmd_erase_all(target *t, int argc, const char **argv);
+static bool nrf51_cmd_erase_uicr(target *t, int argc, const char **argv);
 static bool nrf51_cmd_read_hwid(target *t, int argc, const char **argv);
 static bool nrf51_cmd_read_fwid(target *t, int argc, const char **argv);
 static bool nrf51_cmd_read_deviceid(target *t, int argc, const char **argv);
@@ -41,6 +42,7 @@ static bool nrf51_cmd_read(target *t, int argc, const char **argv);
 
 const struct command_s nrf51_cmd_list[] = {
 	{"erase_mass", (cmd_handler)nrf51_cmd_erase_all, "Erase entire flash memory"},
+	{"erase_uicr", (cmd_handler)nrf51_cmd_erase_uicr, "Erase UICR registers"},
 	{"read", (cmd_handler)nrf51_cmd_read, "Read device parameters"},
 	{NULL, NULL, NULL}
 };
@@ -235,6 +237,31 @@ static bool nrf51_cmd_erase_all(target *t, int argc, const char **argv)
 
 	/* Erase all */
 	target_mem_write32(t, NRF51_NVMC_ERASEALL, 1);
+
+	/* Poll for NVMC_READY */
+	while (target_mem_read32(t, NRF51_NVMC_READY) == 0)
+		if(target_check_error(t))
+			return false;
+
+	return true;
+}
+
+static bool nrf51_cmd_erase_uicr(target *t, int argc, const char **argv)
+{
+	(void)argc;
+	(void)argv;
+	tc_printf(t, "erase..\n");
+
+	/* Enable erase */
+	target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_EEN);
+
+	/* Poll for NVMC_READY */
+	while (target_mem_read32(t, NRF51_NVMC_READY) == 0)
+		if(target_check_error(t))
+			return false;
+
+	/* Erase UICR */
+	target_mem_write32(t, NRF51_NVMC_ERASEUICR, 1);
 
 	/* Poll for NVMC_READY */
 	while (target_mem_read32(t, NRF51_NVMC_READY) == 0)
