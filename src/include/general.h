@@ -63,14 +63,14 @@ enum BMP_DEBUG {
 #  define DEBUG_WARN printf
 #  define DEBUG_INFO printf
 # else
-#  define DEBUG_WARN(...)
-#  define DEBUG_INFO(...)
+#  define DEBUG_WARN(...) do {} while(0)
+#  define DEBUG_INFO(...) do {} while(0)
 # endif
-# define DEBUG_GDB(...)
-# define DEBUG_TARGET(...)
-# define DEBUG_PROBE(...)
-# define DEBUG_WIRE(...)
-# define DEBUG_GDB_WIRE(...)
+# define DEBUG_GDB(...) do {} while(0)
+# define DEBUG_TARGET(...) do {} while(0)
+# define DEBUG_PROBE(...) do {} while(0)
+# define DEBUG_WIRE(...) do {} while(0)
+# define DEBUG_GDB_WIRE(...) do {} while(0)
 #else
 # include <stdarg.h>
 extern int cl_debuglevel;
