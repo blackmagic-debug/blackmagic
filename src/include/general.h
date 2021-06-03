@@ -21,7 +21,9 @@
 #ifndef __GENERAL_H
 #define __GENERAL_H
 
-#define _GNU_SOURCE
+#if !defined(_GNU_SOURCE)
+# define _GNU_SOURCE
+#endif
 #if !defined(__USE_MINGW_ANSI_STDIO)
 # define __USE_MINGW_ANSI_STDIO 1
 #endif
