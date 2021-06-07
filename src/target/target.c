@@ -276,7 +276,7 @@ int target_flash_done(target *t)
 		if (tmp)
 			return tmp;
 		if (f->done) {
-			int tmp = f->done(f);
+			tmp = f->done(f);
 			if (tmp)
 				return tmp;
 		}

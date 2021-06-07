@@ -63,7 +63,7 @@ static struct {
 } prog;
 static uint8_t current_error;
 
-const struct usb_device_descriptor dev = {
+const struct usb_device_descriptor dev_desc = {
 	.bLength = USB_DT_DEVICE_SIZE,
 	.bDescriptorType = USB_DT_DEVICE,
 	.bcdUSB = 0x0200,
@@ -293,7 +293,7 @@ void dfu_init(const usbd_driver *driver)
 {
 	get_dev_unique_id(serial_no);
 
-	usbdev = usbd_init(driver, &dev, &config,
+	usbdev = usbd_init(driver, &dev_desc, &config,
 			   usb_strings, 4,
 			   usbd_control_buffer, sizeof(usbd_control_buffer));
 

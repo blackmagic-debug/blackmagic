@@ -526,7 +526,7 @@ bool cortexm_attach(target *t)
 		platform_timeout timeout;
 		platform_timeout_set(&timeout, 1000);
 		while (1) {
-			uint32_t dhcsr = target_mem_read32(t, CORTEXM_DHCSR);
+			dhcsr = target_mem_read32(t, CORTEXM_DHCSR);
 			if (!(dhcsr & CORTEXM_DHCSR_S_RESET_ST))
 				break;
 			if (platform_timeout_is_expired(&timeout)) {
@@ -572,8 +572,8 @@ static void cortexm_regs_read(target *t, void *data)
 		for(i = 0; i < sizeof(regnum_cortex_m) / 4; i++)
 			*regs++ = base_regs[regnum_cortex_m[i]];
 		if (t->target_options & TOPT_FLAVOUR_V7MF)
-			for(size_t t = 0; t < sizeof(regnum_cortex_mf) / 4; t++)
-			*regs++ = ap->dp->ap_reg_read(ap, regnum_cortex_mf[t]);
+			for(i = 0; i < sizeof(regnum_cortex_mf) / 4; i++)
+				*regs++ = ap->dp->ap_reg_read(ap, regnum_cortex_mf[i]);
 	}
 #else
 	if (0) {}
