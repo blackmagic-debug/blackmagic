@@ -48,6 +48,7 @@ bool bmda_jtag_scan(void);
 #endif
 bool adiv5_swd_scan(uint32_t targetid);
 bool jtag_scan(void);
+bool onboard_flash_scan();
 
 size_t target_foreach(void (*callback)(size_t index, target_s *target, void *context), void *context);
 void target_list_free(void);
