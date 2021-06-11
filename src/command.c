@@ -64,6 +64,7 @@ static bool cmd_swd_scan(target_s *target, int argc, const char **argv);
 #if defined(CONFIG_RVSWD) && defined(PLATFORM_HAS_RVSWD)
 static bool cmd_rvswd_scan(target_s *target, int argc, const char **argv);
 #endif
+static bool cmd_onboard_flash_scan(target_s *target, int argc, const char **argv);
 static bool cmd_auto_scan(target_s *target, int argc, const char **argv);
 static bool cmd_frequency(target_s *target, int argc, const char **argv);
 static bool cmd_targets(target_s *target, int argc, const char **argv);
@@ -108,6 +109,7 @@ const command_s cmd_list[] = {
 #if defined(CONFIG_RVSWD) && defined(PLATFORM_HAS_RVSWD)
 	{"rvswd_scan", cmd_rvswd_scan, "Scan RVSWD for devices"},
 #endif
+	{"spi_scan", cmd_onboard_flash_scan, "Scan for on-board SPI Flash devices"},
 	{"auto_scan", cmd_auto_scan, "Automatically scan all chain types for devices"},
 	{"frequency", cmd_frequency, "set minimum high and low times: [FREQ]"},
 	{"targets", cmd_targets, "Display list of available targets"},
@@ -329,6 +331,23 @@ bool cmd_swd_scan(target_s *target, int argc, const char **argv)
 
 	cmd_targets(NULL, 0, NULL);
 	platform_target_clk_output_enable(false);
+	morse(NULL, false);
+	return true;
+}
+
+bool cmd_onboard_flash_scan(target_s *target, int argc, const char **argv)
+{
+	(void)target;
+	(void)argc;
+	(void)argv;
+
+	/* Attempt a SPI bus scan for Flash */
+	if (!onboard_flash_scan()) {
+		gdb_out("On-board Flash scan failed!\n");
+		return false;
+	}
+	/* If that succeeded, register global target commands and clear morse code state */
+	cmd_targets(NULL, 0, NULL);
 	morse(NULL, false);
 	return true;
 }

@@ -55,6 +55,7 @@ bool bmda_rvswd_scan(void);
 bool adiv5_swd_scan(void);
 bool adiv5_swd_scan_targetid(uint32_t targetid);
 bool jtag_scan(void);
+bool onboard_flash_scan(void);
 
 size_t target_foreach(void (*callback)(size_t index, target_s *target, void *context), void *context);
 target_s *target_list_get_last(void);
