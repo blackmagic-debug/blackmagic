@@ -229,8 +229,9 @@ int find_debuggers(BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 					DEBUG_WARN("BMP in botloader mode found. Restart or reflash!\n");
 				continue;
 			}
-		} else if ((type = find_cmsis_dap_interface(dev, info)) != BMP_TYPE_NONE) {
-			/* type was set by the expression */
+		} else if ((type == BMP_TYPE_NONE) &&
+				   ((type = find_cmsis_dap_interface(dev, info)) != BMP_TYPE_NONE)) {
+			/* find_cmsis_dap_interface has set valid type*/
 		} else if ((strstr(manufacturer, "CMSIS")) || (strstr(product, "CMSIS"))) {
 			type = BMP_TYPE_CMSIS_DAP_V1;
 		} else if (desc.idVendor ==  VENDOR_ID_STLINK) {
