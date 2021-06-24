@@ -61,6 +61,8 @@ int usbuart_debug_write(const char *buf, size_t len);
  * USB cable pull-up: PA8
  * USB VBUS detect:  PB13 -- New on mini design.
  *                           Enable pull up for compatibility.
+ *                           Hardware 4 and older. (we needed the pin for SPI on 5)
+ * 		     PA15 -- Hardware 5 and newer.
  * Force DFU mode button: PB12
  */
 
@@ -96,9 +98,15 @@ int usbuart_debug_write(const char *buf, size_t len);
 #define USB_PU_PORT	GPIOA
 #define USB_PU_PIN	GPIO8
 
+// For HW Rev 4 and older
 #define USB_VBUS_PORT	GPIOB
 #define USB_VBUS_PIN	GPIO13
+// IRQ stays the same for all hw revisions.
 #define USB_VBUS_IRQ	NVIC_EXTI15_10_IRQ
+
+// For HW Rev 5 and newer
+#define USB_VBUS5_PORT	GPIOA
+#define USB_VBUS5_PIN	GPIO15
 
 #define LED_PORT	GPIOB
 #define LED_PORT_UART	GPIOB
