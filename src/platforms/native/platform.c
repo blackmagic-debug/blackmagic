@@ -35,15 +35,41 @@
 #include <libopencm3/stm32/usart.h>
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/stm32/adc.h>
+#include <libopencm3/stm32/flash.h>
 
 static void adc_init(void);
 static void setup_vbus_irq(void);
 
+/* Starting with hardware version 4 we are storing the hardware version in the
+ * flash option user Data1 byte.
+ * The hardware version 4 was the transition version that had it's hardware
+ * pins strapped to 3 but contains version 4 in the Data1 byte.
+ * The hardware 4 is backward compatible with V3 but provides the new jumper
+ * connecting STRACE target pin to the UART1 pin.
+ * Hardware version 5 does not have the physically strapped version encoding
+ * any more and the hardware version has to be read out of the option bytes.
+ * This means that older firmware versions that don't do the detection won't
+ * work on the newer hardware.
+ */
+#define BMP_HWVERSION_BYTE FLASH_OPTION_BYTE_2
+
 /* Pins PB[7:5] are used to detect hardware revision.
- * 000 - Original production build.
- * 001 - Mini production build.
- * 010 - Mini V2.0e and later.
- * 011 - Mini V2.1e and later.
+ * User option byte Data1 is used starting with hardware revision 4.
+ * Pin -  OByte - Rev - Description
+ * 000 - 0xFFFF -   0 - Original production build.
+ * 001 - 0xFFFF -   1 - Mini production build.
+ * 010 - 0xFFFF -   2 - Mini V2.0e and later.
+ * 011 - 0xFFFF -   3 - Mini V2.1a and later.
+ * 011 - 0xFB04 -   4 - Mini V2.1d and later.
+ * xxx - 0xFB05 -   5 - Mini V2.2a and later.
+ *
+ * This function will return -2 if the version number does not make sense.
+ * This can happen when the Data1 byte contains "garbage". For example a
+ * hardware revision that is <4 or the high byte is not the binary inverse of
+ * the lower byte.
+ * Note: The high byte of the Data1 option byte should always be the binary
+ * inverse of the lower byte unless the byte is not set, then all bits in both
+ * high and low byte are 0xFF.
  */
 int platform_hwversion(void)
 {
@@ -51,7 +77,25 @@ int platform_hwversion(void)
 	uint16_t hwversion_pins = GPIO7 | GPIO6 | GPIO5;
 	uint16_t unused_pins = hwversion_pins ^ 0xFFFF;
 
-	/* Only check for version if this is the first time. */
+	/* Check if the hwversion is set in the user option byte. */
+	if (hwversion == -1) {
+		if (BMP_HWVERSION_BYTE != 0xFFFF) {
+			/* Check if the data is valid.
+			 * When valid it should only have values 4 and higher.
+			 */
+			if ((BMP_HWVERSION_BYTE >> 8) !=
+			    (~BMP_HWVERSION_BYTE & 0xFF) ||
+			    ((BMP_HWVERSION_BYTE & 0xFF) < 4)) {
+				return -2;
+			} else {
+				hwversion = BMP_HWVERSION_BYTE & 0xFF;
+			}
+		}
+	}
+
+	/* If the hwversion is not set in option bytes check
+	 * the hw pin strapping.
+	 */
 	if (hwversion == -1) {
 		/* Configure the hardware version pins as input pull-up/down */
 		gpio_set_mode(GPIOB, GPIO_MODE_INPUT,
