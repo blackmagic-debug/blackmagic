@@ -1,0 +1,24 @@
+System vs BMP Bootloader
+========================
+For the BMP bootloader, flashing was not reliable. So we use the system
+bootloder unconditional.
+
+Connections:
+====================
+
+PA0: User button to force system bootloader entry with reset
+PA2/PA3 eventual connected to the STLINK/ STM32F103C8
+
+PA0: TDI
+PA1: TMS/SWDIO
+PA7: TCK/SWCLK
+PA6: TDO/TRACESWO
+
+PA5: TRST
+
+PB5: LED green
+PB6: LED yellow
+PB7: LED red
+
+PB0: VTARGET
+PB1: VUSB
