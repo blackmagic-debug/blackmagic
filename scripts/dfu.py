@@ -170,6 +170,7 @@ def finddevs():
 				for ifaces in conf.interfaces:
 					for iface in ifaces:
 						if ((iface.interfaceClass == 0xFE) and
+						    (iface.alternateSetting == 0x0) and
 						    (iface.interfaceSubClass == 0x01)):
 							devs.append((dev, conf, iface))
 	return devs

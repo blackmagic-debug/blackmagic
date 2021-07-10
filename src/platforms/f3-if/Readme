@@ -1,0 +1,20 @@
+Connections:
+====================
+
+BOOT0: Pull low to force system bootloader entry with reset
+PA2/PA3 eventual connected to the STLINK/ STM32F103C8
+
+PA0: TDI
+PA1: TMS/SWDIO
+PA5: NRST
+PA6: TDO/TRACESWO
+PA7: TCK/SWCLK
+
+PA9: USB_DETACH_N
+
+PA2: UART_RX
+PA3: UART_TX
+
+Reflash:
+====================
+dfu-util -a0 -s 0x08000000 -D blackmagic.bin

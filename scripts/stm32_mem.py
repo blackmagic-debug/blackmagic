@@ -103,9 +103,13 @@ def stm32_scan(args, test):
 			continue
 
 		man = dfudev.handle.getString(dfudev.dev.iManufacturer, 30)
+#		prod = dfudev.handle.getString(dfudev.dev.iProduct, 64)
 		if man == b"Black Sphere Technologies":
 			bmp = bmp + 1
 			bmp_devs.append(dev)
+#		if man == b"STMicroelectronics" and prod == b"STM32  BOOTLOADER":
+#			bmp = bmp + 1
+#			bmp_devs.append(dev)
 
 	if bmp == 0:
 		if test == True:
@@ -209,6 +213,8 @@ if __name__ == "__main__":
 	else :
 		if "F4" in product or "STLINK-V3" in product:
 			start = 0x8004000
+#		elif "STM32  BOOTLOADER" in product:
+#			start = 0x8000000
 		else:
 			start = 0x8002000
 	addr = start
