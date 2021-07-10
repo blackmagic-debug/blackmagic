@@ -418,7 +418,9 @@ static void dfu_detach_complete(usbd_device *dev, struct usb_setup_data *req)
 	platform_request_boot();
 
 	/* Reset core to enter bootloader */
+#if defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7EM__)
 	scb_reset_core();
+#endif
 }
 
 static enum usbd_request_return_codes  cdcacm_control_request(usbd_device *dev,

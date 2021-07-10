@@ -40,7 +40,7 @@ char *serial_no_read(char *s)
 	uint16_t *uid = (uint16_t *)DESIG_UNIQUE_ID_BASE;
 # if defined(STM32F4) || defined(STM32F7)
 	int offset = 3;
-# elif defined(STM32L0) || defined(STM32F3)
+# elif defined(STM32L0) ||  defined(STM32F0) || defined(STM32F3)
 	int offset = 5;
 # endif
 	sprintf(s, "%04X%04X%04X",
