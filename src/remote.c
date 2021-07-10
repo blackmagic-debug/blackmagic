@@ -144,6 +144,7 @@ void remotePacketProcessSWD(uint8_t i, char *packet)
 		if (i==2) {
 			remote_dp.dp_read = firmware_swdp_read;
 			remote_dp.low_access = firmware_swdp_low_access;
+			remote_dp.abort = firmware_swdp_abort;
 			swdptap_init(&remote_dp);
 			_respond(REMOTE_RESP_OK, 0);
 		} else {
@@ -194,6 +195,7 @@ void remotePacketProcessJTAG(uint8_t i, char *packet)
     case REMOTE_INIT: /* JS = initialise ============================= */
 		remote_dp.dp_read = fw_adiv5_jtagdp_read;
 		remote_dp.low_access = fw_adiv5_jtagdp_low_access;
+		remote_dp.abort = adiv5_jtagdp_abort;
 		jtagtap_init();
 		_respond(REMOTE_RESP_OK, 0);
 		break;
