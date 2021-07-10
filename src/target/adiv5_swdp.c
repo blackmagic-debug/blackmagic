@@ -93,6 +93,8 @@ int adiv5_swdp_scan(uint32_t targetid)
 		initial_dp->error = firmware_swdp_error;
 	if (!initial_dp->low_access)
        initial_dp->low_access = firmware_swdp_low_access;
+	if (!initial_dp->abort)
+       initial_dp->abort = firmware_swdp_abort;
 	/* DORMANT-> SWD sequence*/
 	initial_dp->seq_out(0xFFFFFFFF, 32);
 	initial_dp->seq_out(0xFFFFFFFF, 32);
@@ -241,7 +243,7 @@ uint32_t firmware_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 
 	if((addr & ADIV5_APnDP) && dp->fault) return 0;
 
-	platform_timeout_set(&timeout, 2000);
+	platform_timeout_set(&timeout, 20);
 	do {
 		dp->seq_out(request, 8);
 		ack = dp->seq_in(3);
@@ -251,8 +253,11 @@ uint32_t firmware_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 		}
 	} while (ack == SWDP_ACK_WAIT && !platform_timeout_is_expired(&timeout));
 
-	if (ack == SWDP_ACK_WAIT)
-		raise_exception(EXCEPTION_TIMEOUT, "SWDP ACK timeout");
+	if (ack == SWDP_ACK_WAIT) {
+		dp->abort(dp, ADIV5_DP_ABORT_DAPABORT);
+		dp->fault = 1;
+		return 0;
+	}
 
 	if(ack == SWDP_ACK_FAULT) {
 		dp->fault = 1;

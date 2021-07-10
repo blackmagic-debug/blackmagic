@@ -414,16 +414,11 @@ static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, int recursion, 
 	if (addr == 0) /* No rom table on this AP */
 		return;
 	volatile uint32_t cidr;
-	volatile struct exception e;
-	TRY_CATCH (e, EXCEPTION_TIMEOUT) {
-		cidr = adiv5_ap_read_id(ap, addr + CIDR0_OFFSET);
-	}
-	if (e.type) {
-		DEBUG_WARN("CIDR read timeout on AP%d, aborting.\n", num_entry);
-		adiv5_dp_abort(ap->dp, ADIV5_DP_ABORT_DAPABORT);
+	cidr = adiv5_ap_read_id(ap, addr + CIDR0_OFFSET);
+	if (ap->dp->fault) {
+		DEBUG_WARN("CIDR read timeout on AP%d, aborting.\n", ap->apsel);
 		return;
 	}
-
 	if ((cidr & ~CID_CLASS_MASK) != CID_PREAMBLE)
 				return;
 #if defined(ENABLE_DEBUG)
@@ -603,6 +598,15 @@ ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel)
 
 	if(!tmpap.idr) /* IDR Invalid */
 		return NULL;
+	tmpap.csw = adiv5_ap_read(&tmpap, ADIV5_AP_CSW) &
+		~(ADIV5_AP_CSW_SIZE_MASK | ADIV5_AP_CSW_ADDRINC_MASK);
+
+	if (tmpap.csw & ADIV5_AP_CSW_TRINPROG) {
+		DEBUG_WARN("AP %d: Transaction in progress. AP is not be usable!\n",
+			apsel);
+		return NULL;
+	}
+
 	/* It's valid to so create a heap copy */
 	ap = malloc(sizeof(*ap));
 	if (!ap) {			/* malloc failed: heap exhaustion */
@@ -611,14 +615,6 @@ ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel)
 	}
 
 	memcpy(ap, &tmpap, sizeof(*ap));
-
-	ap->csw = adiv5_ap_read(ap, ADIV5_AP_CSW) &
-		~(ADIV5_AP_CSW_SIZE_MASK | ADIV5_AP_CSW_ADDRINC_MASK);
-
-	if (ap->csw & ADIV5_AP_CSW_TRINPROG) {
-		DEBUG_WARN("AP transaction in progress.  Target may not be usable.\n");
-		ap->csw &= ~ADIV5_AP_CSW_TRINPROG;
-	}
 
 #if defined(ENABLE_DEBUG)
 	uint32_t cfg = adiv5_ap_read(ap, ADIV5_AP_CFG);
