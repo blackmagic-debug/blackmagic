@@ -50,8 +50,12 @@
 #define TX_LED_ACT (1 << 0)
 #define RX_LED_ACT (1 << 1)
 
-#define RX_FIFO_SIZE (128)
-#define TX_BUF_SIZE (128)
+/* F072 with st_usbfs_v2_usb_drive drops characters at the 64 byte boundary!*/
+#if !defined(USART_DMA_BUF_SIZE)
+# define USART_DMA_BUF_SIZE 128
+#endif
+#define RX_FIFO_SIZE (USART_DMA_BUF_SIZE)
+#define TX_BUF_SIZE (USART_DMA_BUF_SIZE)
 
 /* TX double buffer */
 static uint8_t buf_tx[TX_BUF_SIZE * 2];
@@ -164,11 +168,19 @@ void usbuart_init(void)
 
 	/* Enable interrupts */
 	nvic_set_priority(USBUSART_IRQ, IRQ_PRI_USBUSART);
+#if defined(USBUSART_DMA_RXTX_IRQ)
+	nvic_set_priority(USBUSART_DMA_RXTX_IRQ, IRQ_PRI_USBUSART_DMA);
+#else
 	nvic_set_priority(USBUSART_DMA_TX_IRQ, IRQ_PRI_USBUSART_DMA);
 	nvic_set_priority(USBUSART_DMA_RX_IRQ, IRQ_PRI_USBUSART_DMA);
+#endif
 	nvic_enable_irq(USBUSART_IRQ);
+#if defined(USBUSART_DMA_RXTX_IRQ)
+	nvic_enable_irq(USBUSART_DMA_RXTX_IRQ);
+#else
 	nvic_enable_irq(USBUSART_DMA_TX_IRQ);
 	nvic_enable_irq(USBUSART_DMA_RX_IRQ);
+#endif
 
 	/* Finally enable the USART */
 	usart_enable(USBUSART);
@@ -392,7 +404,11 @@ static void usbuart_run(void)
 
 void USBUSART_ISR(void)
 {
+#if defined(USBUSART_DMA_RXTX_IRQ)
+	nvic_disable_irq(USBUSART_DMA_RXTX_IRQ);
+#else
 	nvic_disable_irq(USBUSART_DMA_RX_IRQ);
+#endif
 
 	/* Get IDLE flag and reset interrupt flags */
 	const bool isIdle = usart_get_flag(USBUSART, USART_FLAG_IDLE);
@@ -409,7 +425,11 @@ void USBUSART_ISR(void)
 		usbuart_run();
 	}
 
+#if defined(USBUSART_DMA_RXTX_IRQ)
+	nvic_enable_irq(USBUSART_DMA_RXTX_IRQ);
+#else
 	nvic_enable_irq(USBUSART_DMA_RX_IRQ);
+#endif
 }
 
 void USBUSART_DMA_TX_ISR(void)
@@ -448,6 +468,16 @@ void USBUSART_DMA_RX_ISR(void)
 
 	nvic_enable_irq(USBUSART_IRQ);
 }
+
+#if defined(USBUSART_DMA_RXTX_ISR)
+void USBUSART_DMA_RXTX_ISR(void)
+{
+	if (dma_get_interrupt_flag(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN, DMA_CGIF))
+		USBUSART_DMA_RX_ISR();
+	if (dma_get_interrupt_flag(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN, DMA_CGIF))
+		USBUSART_DMA_TX_ISR();
+}
+#endif
 
 #ifdef ENABLE_DEBUG
 enum {
