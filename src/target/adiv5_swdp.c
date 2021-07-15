@@ -134,7 +134,7 @@ int adiv5_swdp_scan(uint32_t targetid)
 			}
 			if (e2.type) {
 				DEBUG_WARN("No usable DP found\n");
-				return -1;
+				return 0;
 			}
 		}
 		if ((idcode & ADIV5_DP_VERSION_MASK) == ADIV5_DPv2) {
