@@ -552,7 +552,8 @@ void libftdi_jtagtap_tdi_tdo_seq(
 	if(!ticks) return;
 	if (!DI && !DO) return;
 
-//	printf("ticks: %d\n", ticks);
+    DEBUG_WIRE("libftdi_jtagtap_tdi_tdo_seq %s ticks: %d\n",
+			   (DI && DO) ? "read/write" : ((DI) ? "read" : "write"),ticks);
 	if(final_tms) ticks--;
 	rticks = ticks & 7;
 	ticks >>= 3;
@@ -593,7 +594,6 @@ void libftdi_jtagtap_tdi_tdo_seq(
 		if(final_tms) rsize--;
 
 		while(rsize--) {
-			/*if(rsize) printf("%02X ", tmp[index]);*/
 			*DO++ = tmp[index++];
 		}
 		if (rticks == 0)
@@ -606,7 +606,6 @@ void libftdi_jtagtap_tdi_tdo_seq(
 		if(rticks) {
 			*DO >>= (8-rticks);
 		}
-		/*printf("%02X\n", *DO);*/
 	}
 }
 
