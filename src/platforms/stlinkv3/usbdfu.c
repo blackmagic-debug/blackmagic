@@ -59,9 +59,29 @@ int main(void)
 	rcc_periph_clock_enable(RCC_APB2ENR_SYSCFGEN);
 	rcc_clock_setup_hse(rcc_3v3 + RCC_CLOCK_3V3_216MHZ, 25);
 
+	/* Keep the target powered and supplied with clock when in bootloader */
+#define PWR_EN_PORT GPIOB
+#define PWR_EN_PIN  GPIO0
+	rcc_periph_clock_enable(RCC_GPIOB);
+	gpio_mode_setup(PWR_EN_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, PWR_EN_PIN);
+	gpio_set_output_options(PWR_EN_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ, PWR_EN_PIN);
+	gpio_set(PWR_EN_PORT, PWR_EN_PIN);
+
+	/* Set up MCO at 8 MHz on PA8 */
+#define MCO1_PORT GPIOA
+#define MCO1_PIN  GPIO8
+#define MCO1_AF   0
+	gpio_set_af    (MCO1_PORT, MCO1_AF, MCO1_PIN);
+	gpio_mode_setup(MCO1_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, MCO1_PIN);
+	gpio_set_output_options(MCO1_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_25MHZ, PWR_EN_PIN);
+	RCC_CR |= RCC_CR_HSION;
+	RCC_CFGR &= ~(0x3 << 21); /* HSI */
+	RCC_CFGR &= ~(0x7 << 24); /* no division */
+
 	/* Set up green/red led to blink green to indicate bootloader active*/
-	gpio_mode_setup(LED_RG_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED_RG_PIN);
-	gpio_set_output_options(LED_RG_PORT, GPIO_OTYPE_OD, GPIO_OSPEED_2MHZ, LED_RG_PIN);
+	gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED_PIN);
+	gpio_set_output_options(LED_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ, LED_PIN);
+	gpio_clear(LED_PORT, LED_PIN);
 
 	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
 	systick_set_reload(216*1000*1000/(8 * 10));
@@ -81,5 +101,5 @@ void dfu_event(void)
 
 void sys_tick_handler(void)
 {
-	gpio_toggle(LED_RG_PORT, LED_RG_PIN);
+	gpio_toggle(LED_PORT, LED_PIN);
 }
