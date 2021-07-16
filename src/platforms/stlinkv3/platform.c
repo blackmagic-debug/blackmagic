@@ -266,9 +266,9 @@ void platform_init(void)
 	 * FIXME: Allow RED and yellow constant and blinking,
 	 * e.g. by PWM onTIM1_CH3 (PA10)
 	 */
-	gpio_mode_setup(LED_RG_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED_RG_PIN);
-	gpio_set_output_options(LED_RG_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ,
-							LED_RG_PIN);
+	gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED_PIN);
+	gpio_set_output_options(LED_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ,
+							LED_PIN);
 
 	/* CAN Pins
 	 * Configure CAN pin: Slow.  OD and  PullUp for now.

@@ -183,9 +183,8 @@ extern const struct _usbd_driver stm32f723_usb_driver;
 #define SWO_DMA_ISR(x)			dma1_stream0_isr(x)
 
 extern uint16_t led_idle_run;
-#define LED_RG_PORT	GPIOA
-#define LED_RG_PIN  GPIO10
 #define LED_PORT	GPIOA
+#define LED_PIN 	GPIO10
 #define LED_PORT_UART	GPIOA
 #define LED_UART	GPIO10
 
