@@ -40,7 +40,7 @@ typedef struct jtag_dev_s {
 	uint32_t current_ir;
 } jtag_dev_t;
 
-extern struct jtag_dev_s jtag_devs[JTAG_MAX_DEVS+1];
+extern jtag_dev_t jtag_devs[JTAG_MAX_DEVS+1];
 extern int jtag_dev_count;
 
 void jtag_dev_write_ir(jtag_proc_t *jp, uint8_t jd_index, uint32_t ir);

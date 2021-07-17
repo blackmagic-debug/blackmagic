@@ -290,7 +290,7 @@ void adiv5_ap_ref(ADIv5_AP_t *ap);
 void adiv5_ap_unref(ADIv5_AP_t *ap);
 void platform_add_jtag_dev(const int dev_index, const jtag_dev_t *jtag_dev);
 
-void adiv5_jtag_dp_handler(uint8_t jd_index, uint32_t j_idcode);
+void adiv5_jtag_dp_handler(jtag_dev_t *jd);
 int platform_jtag_dp_init(ADIv5_DP_t *dp);
 int swdptap_init(ADIv5_DP_t *dp);
 

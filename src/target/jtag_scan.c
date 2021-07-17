@@ -29,7 +29,7 @@
 #include "target.h"
 #include "adiv5.h"
 
-struct jtag_dev_s jtag_devs[JTAG_MAX_DEVS+1];
+jtag_dev_t jtag_devs[JTAG_MAX_DEVS+1];
 int jtag_dev_count;
 
 /* bucket of ones for don't care TDI */
@@ -64,7 +64,7 @@ void jtag_add_device(const int dev_index, const jtag_dev_t *jtag_dev)
 int jtag_scan(const uint8_t *irlens)
 {
 	int i;
-	void (*jd_handlers[JTAG_MAX_DEVS])(uint8_t jd_index, uint32_t j_idcode);
+	void (*jd_handlers[JTAG_MAX_DEVS])(jtag_dev_t *jd);
 	target_list_free();
 
 	memset(jd_handlers, 0, sizeof(jd_handlers));
@@ -220,7 +220,7 @@ int jtag_scan(const uint8_t *irlens)
 	for(i = 0; i < jtag_dev_count; i++)
 		/* Call handler to initialise/probe device further */
 		if (jd_handlers[i])
-			jd_handlers[i](i, jtag_devs[i].jd_idcode);
+			jd_handlers[i](&jtag_devs[i]);
 	return jtag_dev_count;
 }
 
