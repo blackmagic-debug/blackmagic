@@ -104,35 +104,53 @@ static void jtagtap_tms_seq(uint32_t MS, int ticks)
     }
 }
 
+/* At least up to v1.7.1-233, remote handles only up to 32 ticks in one
+ * call. Break up large calls.
+ *
+ * FIXME: Provide and test faster call and keep fallback
+ * for old firmware
+ */
 static void jtagtap_tdi_tdo_seq(
 	uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int ticks)
 {
 	uint8_t construct[REMOTE_MAX_MSG_SIZE];
 	int s;
 
-	uint64_t DIl=*(uint64_t *)DI;
+	if(!ticks || (!DI && !DO))
+		return;
+	uint64_t *DIl = (uint64_t *)DI;
+	uint64_t *DOl = (uint64_t *)DO;
+	while (ticks) {
+		int chunk;
+		if (ticks < 65)
+			chunk = ticks;
+		else {
+			chunk = 64;
+		}
+		ticks -= chunk;
+		uint64_t dil;
+		if (DI)
+			dil = *DIl++;
+		else
+			dil = 0;
+		/* Reduce the length of DI according to the bits we're transmitting */
+		if (chunk < 64)
+			dil &= ((1LL << chunk) - 1);
+		s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE,
+					 "!J%c%02x%" PRIx64 "%c",
+					 (!ticks && final_tms) ?
+					 REMOTE_TDITDO_TMS : REMOTE_TDITDO_NOTMS,
+					 chunk, dil, REMOTE_EOM);
+		platform_buffer_write(construct,s);
 
-	if(!ticks || !DI) return;
-
-	/* Reduce the length of DI according to the bits we're transmitting */
-	DIl &= (1LL << (ticks + 1))-1;
-
-	s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE,
-				 REMOTE_JTAG_TDIDO_STR,
-				 final_tms ? REMOTE_TDITDO_TMS : REMOTE_TDITDO_NOTMS,
-				 ticks, DIl);
-	platform_buffer_write(construct,s);
-
-	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
-	if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
-		DEBUG_WARN("jtagtap_tms_seq failed, error %s\n",
-				s ? (char *)&(construct[1]) : "unknown");
-		exit(-1);
-    }
-
-	if (DO) {
-		uint64_t DOl = remotehston(-1, (char *)&construct[1]);
-		*(uint64_t *)DO = DOl;
+		s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
+		if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
+			DEBUG_WARN("jtagtap_tms_seq failed, error %s\n",
+					   s ? (char *)&(construct[1]) : "unknown");
+			exit(-1);
+		}
+		if (DO)
+			*DOl++ = remotehston(-1, (char *)&construct[1]);
 	}
 }
 
