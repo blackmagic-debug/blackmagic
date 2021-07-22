@@ -110,6 +110,7 @@ enum iap_status lpc_iap_call(struct lpc_flash *f, void *result, enum iap_cmd cmd
 	struct flash_param param = {
 		.opcode = ARM_THUMB_BREAKPOINT,
 		.command = cmd,
+		.status = 0xdeadbeef, // to help us see if the IAP didn't execute
 	};
 
 	/* Pet WDT before each IAP call, if it is on */

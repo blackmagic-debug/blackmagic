@@ -40,6 +40,11 @@
 #define LPC546XX_WDT_PERIOD_MAX 0xFFFFFF
 #define LPC546XX_WDT_PROTECT (1 << 4)
 
+#define LPC546XX_MAINCLKSELA 0x40000280
+#define LPC546XX_MAINCLKSELB 0x40000284
+#define LPC546XX_AHBCLKDIV 0x40000380
+#define LPC546XX_FLASHCFG 0x40000400
+
 #define IAP_RAM_SIZE LPC546XX_ETBAHB_SRAM_SIZE
 #define IAP_RAM_BASE LPC546XX_ETBAHB_SRAM_BASE
 
@@ -280,13 +285,19 @@ static int lpc546xx_flash_init(target *t)
 {
 	/* Reset the chip. It's unfortunate but we need to make sure the ROM
 	bootloader is no longer mapped to 0x0 or flash blank check won't work after
-	erasing that sector. Resetting will also set the main clock back to default
-	12MHZ FRO; that value is required for some IAP routines. */
+	erasing that sector. Additionally, the ROM itself may increase the
+	main clock frequency during its own operation, so we need to force
+	it back to the 12MHz FRO to guarantee correct flash timing for
+	the IAP API */
 	lpc546xx_reset_attach(t);
 
 	/* Deal with WDT */
 	lpc546xx_wdt_set_period(t);
 
+	target_mem_write32(t, LPC546XX_MAINCLKSELA, 0); // 12MHz FRO
+	target_mem_write32(t, LPC546XX_MAINCLKSELB, 0); // use MAINCLKSELA
+	target_mem_write32(t, LPC546XX_AHBCLKDIV, 0); // Divide by 1
+	target_mem_write32(t, LPC546XX_FLASHCFG, 0x1a); // recommended default
 	return 0;
 }
 
