@@ -25,9 +25,6 @@
 #include <libopencm3/cm3/systick.h>
 #include <libopencm3/lm4f/usb.h>
 
-#define SYSTICKHZ	100
-#define SYSTICKMS	(1000 / SYSTICKHZ)
-
 #define PLL_DIV_80MHZ	5
 #define PLL_DIV_25MHZ	16
 

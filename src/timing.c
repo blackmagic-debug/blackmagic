@@ -21,10 +21,12 @@
 
 void platform_timeout_set(platform_timeout *t, uint32_t ms)
 {
+	if (ms <= SYSTICKMS)
+		ms = SYSTICKMS;
 	t->time = platform_time_ms() + ms;
 }
 
 bool platform_timeout_is_expired(platform_timeout *t)
 {
-	return platform_time_ms() >= t->time;
+	return platform_time_ms() > t->time;
 }
