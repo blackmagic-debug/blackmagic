@@ -27,12 +27,14 @@ uint8_t running_status;
 static volatile uint32_t time_ms;
 uint32_t swd_delay_cnt = 0;
 
+static int morse_tick;
+
 void platform_timing_init(void)
 {
 	/* Setup heartbeat timer */
 	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
 	/* Interrupt us at 10 Hz */
-	systick_set_reload(rcc_ahb_frequency / (8 * 10) );
+	systick_set_reload(rcc_ahb_frequency / (8 * SYSTICKHZ) );
 	/* SYSTICK_IRQ with low priority */
 	nvic_set_priority(NVIC_SYSTICK_IRQ, 14 << 4);
 	systick_interrupt_enable();
@@ -48,12 +50,16 @@ void platform_delay(uint32_t ms)
 
 void sys_tick_handler(void)
 {
-	if(running_status)
-		gpio_toggle(LED_PORT, LED_IDLE_RUN);
+	time_ms += SYSTICKMS;
 
-	time_ms += 100;
-
-	SET_ERROR_STATE(morse_update());
+	if (morse_tick >= MORSECNT) {
+		if(running_status)
+			gpio_toggle(LED_PORT, LED_IDLE_RUN);
+		SET_ERROR_STATE(morse_update());
+		morse_tick = 0;
+	} else {
+		morse_tick++;
+	}
 }
 
 uint32_t platform_time_ms(void)
