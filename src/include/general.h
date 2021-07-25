@@ -164,5 +164,11 @@ static inline void DEBUG_WIRE(const char *format, ...)
 #undef MAX
 #define MAX(x, y)  (((x) > (y)) ? (x) : (y))
 
+#if !defined(SYSTICKHZ)
+# define SYSTICKHZ 100
+#endif
+#define SYSTICKMS (1000 / SYSTICKHZ)
+#define MORSECNT ((SYSTICKHZ / 10) - 1)
+
 #endif
 
