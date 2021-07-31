@@ -90,40 +90,55 @@ lpc11xx_probe(target *t)
 	uint32_t idcode;
 
 	/* read the device ID register */
-	/* See UM10462 Rev. 5.5 Chapter 20.13.11 Table 377 */
+	/* For LPC11xx & LPC11Cxx see UM10398 Rev. 12.4 Chapter 26.5.11 Table 387
+	 * For LPC11Uxx see UM10462 Rev. 5.5 Chapter 20.13.11 Table 377
+	 * Nota Bene: the DEVICE_ID register at address 0x400483F4 is not valid 
+	 * for:
+	 *   1) the LPC11xx & LPC11Cxx "XL" series, see UM10398 Rev.12.4 Chapter 3.1
+	 *   2) the LPC11U3x series, see UM10462 Rev.5.5 Chapter 3.1
+	 * But see the comment for the LPC8xx series below.
+	 */
 	idcode = target_mem_read32(t, LPC11XX_DEVICE_ID);
 	switch (idcode) {
-	case 0x041E502B:
-	case 0x2516D02B:
-	case 0x0416502B:
-	case 0x2516902B:	/* lpc1111 */
-	case 0x2524D02B:
-	case 0x0425502B:
-	case 0x2524902B:
-	case 0x1421102B:	/* lpc1112 */
-	case 0x0434502B:
-	case 0x2532902B:
-	case 0x0434102B:
-	case 0x2532102B:	/* lpc1113 */
-	case 0x0444502B:
-	case 0x2540902B:
-	case 0x0444102B:
-	case 0x2540102B:
-	case 0x1440102B:	/* lpc1114 */
-	case 0x0A40902B:
-	case 0x1A40902B:
-	case 0x00050080:	/* lpc1115 and lpc1115L (not the XL version. See UM10398 Rev12.4 Chapter 3.1  ) */
-	case 0x1431102B:	/* lpc11c22 */
-	case 0x1430102B:	/* lpc11c24 */
-	case 0x095C802B:	/* lpc11u12x/201 */
-	case 0x295C802B:
-	case 0x097A802B:	/* lpc11u13/201 */
-	case 0x297A802B:
-	case 0x0998802B:	/* lpc11u14x/201 */
-	case 0x2998802B:
-	case 0x2972402B:	/* lpc11u23/301 */
-	case 0x2988402B:	/* lpc11u24x/301 */
-	case 0x2980002B:	/* lpc11u24x/401 */
+	case 0x0A07102B:	/* LPC1110 - 4K Flash 1K SRAM */
+	case 0x1A07102B:	/* LPC1110 - 4K Flash 1K SRAM */
+	case 0x0A16D02B:	/* LPC1111/002 - 8K Flash 2K SRAM */
+	case 0x1A16D02B:	/* LPC1111/002 - 8K Flash 2K SRAM */
+	case 0x041E502B:	/* LPC1111/101 - 8K Flash 2K SRAM */
+	case 0x2516D02B:	/* LPC1111/101/102 - 8K Flash 2K SRAM */
+	case 0x0416502B:	/* LPC1111/201 - 8K Flash 4K SRAM */
+	case 0x2516902B:	/* LPC1111/201/202 - 8K Flash 4K SRAM */
+	case 0x0A23902B:	/* LPC1112/102 - 16K Flash 4K SRAM */
+	case 0x1A23902B:	/* LPC1112/102 - 16K Flash 4K SRAM */
+	case 0x042D502B:	/* LPC1112/101 - 16K Flash 2K SRAM */
+	case 0x2524D02B:	/* LPC1112/101/102 - 16K Flash 2K SRAM */
+	case 0x0425502B:	/* LPC1112/201 - 16K Flash 4K SRAM */
+	case 0x2524902B:	/* LPC1112/201/202 - 16K Flash 4K SRAM */
+	case 0x0434502B:	/* LPC1113/201 - 24K Flash 4K SRAM */
+	case 0x2532902B:	/* LPC1113/201/202 - 24K Flash 4K SRAM */
+	case 0x0434102B:	/* LPC1113/301 - 24K Flash 8K SRAM */
+	case 0x2532102B:	/* LPC1113/301/302 - 24K Flash 8K SRAM */
+	case 0x0A40902B:	/* LPC1114/102 - 32K Flash 4K SRAM */
+	case 0x1A40902B:	/* LPC1114/102 - 32K Flash 4K SRAM */
+	case 0x0444502B:	/* LPC1114/201 - 32K Flash 4K SRAM */
+	case 0x2540902B:	/* LPC1114/201/202 - 32K Flash 4K SRAM */
+	case 0x0444102B:	/* LPC1114/301 - 32K Flash 8K SRAM */
+	case 0x2540102B:	/* LPC1114/301/302 & LPC11D14/302 - 32K Flash 8K SRAM */
+	case 0x00050080:	/* LPC1115/303 - 64K Flash 8K SRAM (redundant? see UM10398, XL has Device ID at different address) */
+	case 0x1421102B:	/* LPC11c12/301 - 16K Flash 8K SRAM */
+	case 0x1440102B:	/* LPC11c14/301 - 32K Flash 8K SRAM */
+	case 0x1431102B:	/* LPC11c22/301 - 16K Flash 8K SRAM */
+	case 0x1430102B:	/* LPC11c24/301 - 32K Flash 8K SRAM */
+	case 0x095C802B:	/* LPC11u12x/201 - 16K Flash 4K SRAM */
+	case 0x295C802B:	/* LPC11u12x/201 - 16K Flash 4K SRAM */
+	case 0x097A802B:	/* LPC11u13/201 - 24K Flash 4K SRAM */
+	case 0x297A802B:	/* LPC11u13/201 - 24K Flash 4K SRAM */
+	case 0x0998802B:	/* LPC11u14/201 - 32K Flash 4K SRAM */
+	case 0x2998802B:	/* LPC11u14/201 - 32K Flash 4K SRAM */
+	case 0x2954402B:	/* LPC11u22/301 - 16K Flash 6K SRAM */
+	case 0x2972402B:	/* LPC11u23/301 - 24K Flash 6K SRAM */
+	case 0x2988402B:	/* LPC11u24x/301 - 32K Flash 6K SRAM */
+	case 0x2980002B:	/* LPC11u24x/401 - 32K Flash 8K SRAM */
 		t->driver = "LPC11xx";
 		target_add_ram(t, 0x10000000, 0x2000);
 		lpc11xx_add_flash(t, 0x00000000, 0x20000, 0x1000, IAP_ENTRY_MOST, 0);
@@ -152,7 +167,7 @@ lpc11xx_probe(target *t)
 		target_add_ram(t, 0x10000000, 0x2000);
 		/* UM11074/ Flash controller/15.2: The two topmost sectors
 		 * contain the initialization code and IAP firmware.
-		 * Do not touch the! */
+		 * Do not touch them! */
 		lpc11xx_add_flash(t, 0x00000000, 0x7800, 0x400, IAP_ENTRY_MOST, 0);
 		target_add_commands(t, lpc11xx_cmd_list, "LPC8N04");
 		return true;
@@ -160,91 +175,115 @@ lpc11xx_probe(target *t)
 	if ((t->t_designer != AP_DESIGNER_SPECULAR) && idcode) {
 		DEBUG_INFO("LPC11xx: Unknown IDCODE 0x%08" PRIx32 "\n", idcode);
 	}
+	/* For LPC802, see UM11045 Rev. 1.4 Chapter 6.6.29 Table 84
+	 * For LPC804, see UM11065 Rev. 1.0 Chapter 6.6.31 Table 87
+	 * For LPC81x, see UM10601 Rev. 1.6 Chapter 4.6.33 Table 50
+	 * For LPC82x, see UM10800 Rev. 1.2 Chapter 5.6.34 Table 55
+	 * For LPC83x, see UM11021 Rev. 1.1 Chapter 5.6.34 Table 53
+	 * For LPC84x, see UM11029 Rev. 1.4 Chapter 8.6.49 Table 174
+	 * 
+	 * Not documented, but the DEVICE_ID register at address 0x400483F8
+	 * for the LPC8xx series is also valid for the LPC11xx "XL" and the
+	 * LPC11U3x variants.
+	 */
 	idcode = target_mem_read32(t, LPC8XX_DEVICE_ID);
 	switch (idcode) {
-	case 0x00008021:  /* 802M001JDH20 */
-	case 0x00008022:  /* 802M011JDH20 */
-	case 0x00008023:  /* 802M001JDH16 */
-	case 0x00008024:  /* 802M001JHI33 */
+	case 0x00008021:	/* LPC802M001JDH20 - 16K Flash 2K SRAM */
+	case 0x00008022:	/* LPC802M011JDH20 */
+	case 0x00008023:	/* LPC802M001JDH16 */
+	case 0x00008024:	/* LPC802M001JHI33 */
 	  t->driver = "LPC802";
 	  target_add_ram(t, 0x10000000, 0x800);
 	  lpc11xx_add_flash(t, 0x00000000, 0x4000, 0x400, IAP_ENTRY_84x, 2);
 	  target_add_commands(t, lpc11xx_cmd_list, "LPC802");
 	  return true;
-	case 0x00008040:  /* 804M101JBD64 */
-	case 0x00008041:  /* 804M101JDH20 */
-	case 0x00008042:  /* 804M101JDH24 */
-	case 0x00008043:  /* 804M111JDH24 */
-	case 0x00008044:  /* 804M101JHI33 */
+	case 0x00008040:	/* LPC804M101JBD64 - 32K Flash 4K SRAM */
+	case 0x00008041:	/* LPC804M101JDH20 */
+	case 0x00008042:	/* LPC804M101JDH24 */
+	case 0x00008043:	/* LPC804M111JDH24 */
+	case 0x00008044:	/* LPC804M101JHI33 */
 	  t->driver = "LPC804";
 	  target_add_ram(t, 0x10000000, 0x1000);
 	  lpc11xx_add_flash(t, 0x00000000, 0x8000, 0x400, IAP_ENTRY_84x, 2);
 	  target_add_commands(t, lpc11xx_cmd_list, "LPC804");
 	  return true;
-	case 0x00008100:  /* LPC810M021FN8 */
-	case 0x00008110:  /* LPC811M001JDH16 */
-	case 0x00008120:  /* LPC812M101JDH16 */
-	case 0x00008121:  /* LPC812M101JD20 */
-	case 0x00008122:  /* LPC812M101JDH20 / LPC812M101JTB16 */
+	case 0x00008100:	/* LPC810M021FN8 - 4K Flash 1K SRAM */
+	case 0x00008110:	/* LPC811M001JDH16 - 8K Flash 2K SRAM */
+	case 0x00008120:	/* LPC812M101JDH16 - 16K Flash 4K SRAM */
+	case 0x00008121:	/* LPC812M101JD20 - 16K Flash 4K SRAM */
+	case 0x00008122:	/* LPC812M101JDH20 / LPC812M101JTB16 - 16K Flash 4K SRAM */
 		t->driver = "LPC81x";
 		target_add_ram(t, 0x10000000, 0x1000);
 		lpc11xx_add_flash(t, 0x00000000, 0x4000, 0x400, IAP_ENTRY_MOST, 0);
 		target_add_commands(t, lpc11xx_cmd_list, "LPC81x");
 		return true;
-	case 0x00008221:  /* LPC822M101JHI33 */
-	case 0x00008222:  /* LPC822M101JDH20 */
-	case 0x00008241:  /* LPC824M201JHI33 */
-	case 0x00008242:  /* LPC824M201JDH20 */
+	case 0x00008221:	/* LPC822M101JHI33 - 16K Flash 4K SRAM */
+	case 0x00008222:	/* LPC822M101JDH20 */
+	case 0x00008241:	/* LPC824M201JHI33 - 32K Flash 8K SRAM */
+	case 0x00008242:	/* LPC824M201JDH20 */
 		t->driver = "LPC82x";
 		target_add_ram(t, 0x10000000, 0x2000);
 		lpc11xx_add_flash(t, 0x00000000, 0x8000, 0x400, IAP_ENTRY_MOST, 0);
 		target_add_commands(t, lpc11xx_cmd_list, "LPC82x");
 		return true;
-	case 0x00008322:  /* LPC832M101FDH20 */
+	case 0x00008322:	/* LPC832M101FDH20 - 16K Flash 4K SRAM */
 		t->driver = "LPC832";
 		target_add_ram(t, 0x10000000, 0x1000);
 		lpc11xx_add_flash(t, 0x00000000, 0x4000, 0x400, IAP_ENTRY_MOST, 0);
 		target_add_commands(t, lpc11xx_cmd_list, "LPC832");
 		return true;
-	case 0x00008341:  /* LPC8341201FHI33 */
+	case 0x00008341:	/* LPC834M101FHI33 - 32K Flash 4K SRAM */
 		t->driver = "LPC834";
 		target_add_ram(t, 0x10000000, 0x1000);
 		lpc11xx_add_flash(t, 0x00000000, 0x8000, 0x400, IAP_ENTRY_MOST, 0);
 		target_add_commands(t, lpc11xx_cmd_list, "LPC834");
 		return true;
-	case 0x00008441:
-	case 0x00008442:
-	case 0x00008443: /* UM11029 Rev.1.4 list 8442 */
-	case 0x00008444:
+	case 0x00008441:	/* LPC844M201JBD64 - 64K Flash 8K SRAM */
+	case 0x00008442:	/* LPC844M201JBD48 */
+	case 0x00008443:	/* LPC844M201JHI48, note UM11029 Rev.1.4 table 29 is wrong, see table 174 (in same manual) */
+	case 0x00008444:	/* LPC844M201JHI33 */
 		t->driver = "LPC844";
 		target_add_ram(t, 0x10000000, 0x2000);
 		lpc11xx_add_flash(t, 0x00000000, 0x10000, 0x400, IAP_ENTRY_84x, 0);
+		target_add_commands(t, lpc11xx_cmd_list, "LPC844");
 		return true;
-	case 0x00008451:
-	case 0x00008452:
-	case 0x00008453:
-	case 0x00008454:
+	case 0x00008451:	/* LPC845M301JBD64 - 64K Flash 16K SRAM */
+	case 0x00008452:	/* LPC845M301JBD48 */
+	case 0x00008453:	/* LPC845M301JHI48 */
+	case 0x00008454:	/* LPC845M301JHI33 */
 		t->driver = "LPC845";
 		target_add_ram(t, 0x10000000, 0x4000);
 		lpc11xx_add_flash(t, 0x00000000, 0x10000, 0x400, IAP_ENTRY_84x, 0);
+		target_add_commands(t, lpc11xx_cmd_list, "LPC845");
 		return true;
-	case 0x0003D440:	/* LPC11U34/311  */
-	case 0x0001cc40:	/* LPC11U34/421  */
-	case 0x0001BC40:	/* LPC11U35/401  */
-	case 0x0000BC40:	/* LPC11U35/501  */
-	case 0x00019C40:	/* LPC11U36/401  */
-	case 0x00017C40:	/* LPC11U37FBD48/401  */
-	case 0x00007C44:	/* LPC11U37HFBD64/401  */
-	case 0x00007C40:	/* LPC11U37FBD64/501  */
+	case 0x0003D440:	/* LPC11U34/311 - 40K Flash 8K SRAM */
+	case 0x0001cc40:	/* LPC11U34/421 - 48K Flash 8K SRAM */
+	case 0x0001BC40:	/* LPC11U35/401 - 64K Flash 8K SRAM */
+	case 0x0000BC40:	/* LPC11U35/501 - 64K Flash 8K SRAM */
+	case 0x00019C40:	/* LPC11U36/401 - 96K Flash 8K SRAM */
+	case 0x00017C40:	/* LPC11U37FBD48/401 - 128K Flash 8K SRAM */
+	case 0x00007C44:	/* LPC11U37HFBD64/401 */
+	case 0x00007C40:	/* LPC11U37FBD64/501 */
 		t->driver = "LPC11U3x";
 		target_add_ram(t, 0x10000000, 0x2000);
 		lpc11xx_add_flash(t, 0x00000000, 0x20000, 0x1000, IAP_ENTRY_MOST, 0);
+		target_add_commands(t, lpc11xx_cmd_list, "LPC11U3x");
 		return true;
-	case 0x00040070:	/* LPC1114/333 */
-	case 0x00050080:	/* lpc1115XL */
-		t->driver = "LPC1100XL";
+	case 0x00010013:	/* LPC1111/103 - 8K Flash 2K SRAM */
+	case 0x00010012:	/* LPC1111/203 - 8K Flash 4K SRAM */
+	case 0x00020023:	/* LPC1112/103 - 16K Flash 2K SRAM */
+	case 0x00020022:	/* LPC1112/203 - 16K Flash 4K SRAM */
+	case 0x00030030:	/* LPC1113/303 - 24K Flash 8K SRAM */
+	case 0x00030032:	/* LPC1113/203 - 24K Flash 4K SRAM */
+	case 0x00040040:	/* LPC1114/303 - 32K Flash 8K SRAM */
+	case 0x00040042:	/* LPC1114/203 - 32K Flash 4K SRAM */
+	case 0x00040060:	/* LPC1114/323 - 48K Flash 8K SRAM */
+	case 0x00040070:	/* LPC1114/333 - 56K Flash 8K SRAM */
+	case 0x00050080:	/* LPC1115/303 - 64K Flash 8K SRAM */
+		t->driver = "LPC11xx-XL";
 		target_add_ram(t, 0x10000000, 0x2000);
 		lpc11xx_add_flash(t, 0x00000000, 0x20000, 0x1000, IAP_ENTRY_MOST, 0);
+		target_add_commands(t, lpc11xx_cmd_list, "LPC11xx-XL");
 		return true;
 	}
 	if (idcode) {
