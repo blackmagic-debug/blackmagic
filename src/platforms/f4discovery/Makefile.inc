@@ -8,8 +8,15 @@ CFLAGS += -Istm32/include -mcpu=cortex-m4 -mthumb \
 	-DSTM32F4 -I../libopencm3/include \
 	-Iplatforms/stm32
 
+ifeq ($(BLACKPILL), 1)
+LINKER_SCRIPT=platforms/stm32/blackpillv2.ld
+CFLAGS += -DBLACKPILL=1
+else
+LINKER_SCRIPT=platforms/stm32/f4discovery.ld
+endif
+
 LDFLAGS_BOOT = -lopencm3_stm32f4 \
-	-Wl,-T,platforms/stm32/f4discovery.ld -nostartfiles -lc -lnosys \
+	-Wl,-T,$(LINKER_SCRIPT) -nostartfiles -lc -lnosys \
 	-Wl,-Map=mapfile -mthumb -mcpu=cortex-m4 -Wl,-gc-sections \
 	-mfloat-abi=hard -mfpu=fpv4-sp-d16 \
 	-L../libopencm3/lib
