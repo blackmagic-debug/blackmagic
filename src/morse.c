@@ -64,7 +64,7 @@ void morse(const char *msg, char repeat)
 		DEBUG_WARN("%s\n", msg);
 	(void) repeat;
 #else
-morse_msg = morse_ptr = msg;
+	morse_msg = morse_ptr = msg;
 	morse_repeat = repeat;
 #endif
 }
