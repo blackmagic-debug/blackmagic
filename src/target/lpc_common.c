@@ -184,7 +184,7 @@ int lpc_flash_erase(struct target_flash *tf, target_addr addr, size_t len)
 	if (f->reserved_pages && ((addr + len) >=  tf->length - 0x400) ) {
 		last_full_sector -= 1;
 	}
-	if (start >= last_full_sector) {
+	if (start <= last_full_sector) {
 		/* Sector erase */
 		if (lpc_iap_call(f, NULL, IAP_CMD_ERASE, start, last_full_sector, CPU_CLK_KHZ, f->bank))
 			return -2;
