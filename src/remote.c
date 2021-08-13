@@ -228,7 +228,8 @@ void remotePacketProcessJTAG(uint8_t i, char *packet)
 			jtag_proc.jtagtap_tdi_tdo_seq((void *)&DO, (packet[1]==REMOTE_TDITDO_TMS), (void *)&DI, ticks);
 
 			/* Mask extra bits on return value... */
-			DO &= (1LL << (ticks + 1)) - 1;
+			if (ticks < 64)
+				DO &= (1LL << ticks) - 1;
 
 			_respond(REMOTE_RESP_OK, DO);
 		}
