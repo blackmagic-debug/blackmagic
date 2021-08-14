@@ -115,7 +115,7 @@ bool  libftdi_swd_possible(bool *do_mpsse, bool *direct_bb_swd) {return false;};
 void libftdi_max_frequency_set(uint32_t freq) {};
 uint32_t libftdi_max_frequency_get(void) {return 0;};
 void libftdi_srst_set_val(bool assert){};
-bool libftdi_srst_get_val(void) { return false};
+bool libftdi_srst_get_val(void) { return false;};
 # pragma GCC diagnostic pop
 #else
 #include <ftdi.h>
