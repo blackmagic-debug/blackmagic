@@ -21,6 +21,7 @@
 #ifndef __JTAGTAP_H
 #define __JTAGTAP_H
 
+typedef struct jtag_proc_s jtag_proc_t;
 typedef struct jtag_proc_s {
 /* Note: Signal names are as for the device under test. */
 
@@ -43,8 +44,15 @@ typedef struct jtag_proc_s {
  * - DO may be NULL to ignore captured data.
  * - DO may be point to the same address as DI.
  */
+
 	void (*jtagtap_tdi_seq)
 	(const uint8_t final_tms, const uint8_t *DI, int ticks);
+
+	uint32_t (*dev_shift_ir)(jtag_proc_t *jp, uint8_t jd_index, uint32_t ir);
+
+	void (*dev_shift_dr)(jtag_proc_t *jp, uint8_t jd_index, uint8_t *dout,
+						 const uint8_t *din, int ticks);
+
 } jtag_proc_t;
 extern jtag_proc_t jtag_proc;
 
@@ -63,6 +71,9 @@ extern jtag_proc_t jtag_proc;
 /* Goto Run-test/Idle: 1, 1, 0 */
 #define jtagtap_return_idle()	\
 	jtag_proc.jtagtap_tms_seq(0x01, 2)
+
+
+void jtag_toggle_jtck(uint32_t ticks);
 
 # if PC_HOSTED == 1
 int platform_jtagtap_init(void);

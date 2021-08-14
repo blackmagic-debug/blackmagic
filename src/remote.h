@@ -65,7 +65,12 @@
 #define REMOTE_START        'A'
 #define REMOTE_TDITDO_TMS   'D'
 #define REMOTE_TDITDO_NOTMS 'd'
+#define REMOTE_IOSEQ_TMS    'Q'
+#define REMOTE_IOSEQ_NOTMS  'q'
 #define REMOTE_IN_PAR       'I'
+#define REMOTE_JTAG_SHIFT_IR 'I'
+#define REMOTE_JTAG_SHIFT_DR 'i'
+#define REMOTE_JTAG_JTCK    'C'
 #define REMOTE_FREQ_SET     'F'
 #define REMOTE_FREQ_GET     'f'
 #define REMOTE_IN           'i'
@@ -82,7 +87,11 @@
 #define REMOTE_SRST_GET     'z'
 #define REMOTE_ADD_JTAG_DEV 'J'
 
-/* Protocol response options */
+#define REMOTE_IOSEQ_FLAG_NONE 0
+#define REMOTE_IOSEQ_FLAG_IN   1
+#define REMOTE_IOSEQ_FLAG_OUT  2
+
+#/* Protocol response options */
 #define REMOTE_RESP_OK     'K'
 #define REMOTE_RESP_PARERR 'P'
 #define REMOTE_RESP_ERR    'E'
@@ -139,8 +148,7 @@
 #define REMOTE_JTAG_TMS_STR (char []){ REMOTE_SOM, REMOTE_JTAG_PACKET, REMOTE_TMS, \
                                            '%','0','2','x','%','x',REMOTE_EOM, 0 }
 
-#define REMOTE_JTAG_TDIDO_STR (char []){ REMOTE_SOM, REMOTE_JTAG_PACKET, '%', 'c', \
-      '%','0','2','x','%','l', 'x', REMOTE_EOM, 0 }
+#define REMOTE_JTAG_IOSEQ_STR (char []) {REMOTE_SOM, REMOTE_JTAG_PACKET,'%', 'c', '%', 'd', '%','0','4','x', 0}
 
 #define REMOTE_JTAG_NEXT (char []){ REMOTE_SOM, REMOTE_JTAG_PACKET, REMOTE_NEXT, \
                                        '%','c','%','c',REMOTE_EOM, 0 }
@@ -148,6 +156,13 @@
 #define HEX '%', '0', '2', 'x'
 #define HEX_U32(x) '%', '0', '8', 'x'
 #define CHR(x) '%', 'c'
+
+#define REMOTE_JTAG_SHIFT_IR_STR (char []){ REMOTE_SOM, REMOTE_JTAG_PACKET, \
+		REMOTE_JTAG_SHIFT_IR, '%','0','2', 'x', HEX_U32(ir),REMOTE_EOM, 0 }
+
+/* Flags (nibble), index(byte), ticks(16 bits) */
+#define REMOTE_JTAG_SHIFT_DR_STR (char []){ REMOTE_SOM, REMOTE_JTAG_PACKET, \
+		REMOTE_JTAG_SHIFT_DR, '%', 'd', '%','0','2', 'x', '%', '0', '4', 'x', 0 }
 
 #define REMOTE_JTAG_ADD_DEV_STR (char []){ REMOTE_SOM, REMOTE_JTAG_PACKET,\
 			REMOTE_ADD_JTAG_DEV,											\

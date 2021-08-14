@@ -34,14 +34,23 @@
 #include "remote.h"
 #include "jtagtap.h"
 #include "bmp_remote.h"
+#include "hex_utils.h"
 
 static void jtagtap_reset(void);
 static void jtagtap_tms_seq(uint32_t MS, int ticks);
 static void jtagtap_tdi_tdo_seq(
 	uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int ticks);
+static void jtagtap_io_seq(
+	uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int ticks);
 static void jtagtap_tdi_seq(
 	const uint8_t final_tms, const uint8_t *DI, int ticks);
 static uint8_t jtagtap_next(uint8_t dTMS, uint8_t dTDI);
+static uint32_t remote_jtag_dev_shift_ir(jtag_proc_t *jp, uint8_t jd_index,
+									uint32_t ir);
+void fw_jtag_dev_shift_dr(jtag_proc_t *jp, uint8_t jd_index,
+					  uint8_t *dout, const uint8_t *din, int ticks);
+static void remote_jtag_dev_shift_dr(jtag_proc_t *jp, uint8_t jd_index,
+									 uint8_t *dout, const uint8_t *din, int ticks);
 
 int remote_jtagtap_init(jtag_proc_t *jtag_proc)
 {
@@ -62,7 +71,19 @@ int remote_jtagtap_init(jtag_proc_t *jtag_proc)
 	jtag_proc->jtagtap_reset = jtagtap_reset;
 	jtag_proc->jtagtap_next =jtagtap_next;
 	jtag_proc->jtagtap_tms_seq = jtagtap_tms_seq;
-	jtag_proc->jtagtap_tdi_tdo_seq = jtagtap_tdi_tdo_seq;
+	s = snprintf((char *)construct,  REMOTE_MAX_MSG_SIZE, "!Jq00000#");
+	platform_buffer_write(construct, s);
+
+	/* Check if large tdi_tdo transfers are possible*/
+	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
+	if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
+		DEBUG_WARN("Update firmware for faster JTAG\n");
+		jtag_proc->jtagtap_tdi_tdo_seq = jtagtap_tdi_tdo_seq;
+    } else {
+		jtag_proc->jtagtap_tdi_tdo_seq = jtagtap_io_seq;
+		jtag_proc->dev_shift_ir = remote_jtag_dev_shift_ir;
+		jtag_proc->dev_shift_dr = remote_jtag_dev_shift_dr;
+	}
 	jtag_proc->jtagtap_tdi_seq = jtagtap_tdi_seq;
 
 	return 0;
@@ -150,7 +171,7 @@ static void jtagtap_tdi_tdo_seq(
 
 		s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
 		if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
-			DEBUG_WARN("jtagtap_tms_seq failed, error %s\n",
+			DEBUG_WARN("jtagtap_tdi_tdo_seq failed, error %s\n",
 					   s ? (char *)&(construct[1]) : "unknown");
 			exit(-1);
 		}
@@ -162,10 +183,55 @@ static void jtagtap_tdi_tdo_seq(
 	}
 }
 
+/* Provide a tdi_tdo sequence for large transfers
+ *
+ * packet BUF_SIZE is 1024, so enough space for 500 byte = 2000 ticks
+ */
+static void jtagtap_io_seq(
+	uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int ticks)
+{
+	if (!ticks || (!DO && ! DI))
+		return;
+	while (ticks) {
+		int chunk = (ticks > 2000) ? 2000 : ticks;
+		ticks -= chunk;
+		int byte_count = (chunk + 7) >> 3;
+		char construct[REMOTE_MAX_MSG_SIZE];
+		int s = snprintf(
+			construct, REMOTE_MAX_MSG_SIZE,
+			REMOTE_JTAG_IOSEQ_STR,
+			(!ticks && final_tms) ? REMOTE_IOSEQ_TMS : REMOTE_IOSEQ_NOTMS,
+			(((DI) ? REMOTE_IOSEQ_FLAG_IN  : REMOTE_IOSEQ_FLAG_NONE) |
+			 ((DO) ? REMOTE_IOSEQ_FLAG_OUT : REMOTE_IOSEQ_FLAG_NONE)),
+			chunk);
+		char *p = construct + s;
+		if (DI) {
+			hexify(p, DI, byte_count);
+			p += 2 * byte_count;
+		}
+		*p++ = REMOTE_EOM;
+		*p   = 0;
+		platform_buffer_write((uint8_t*)construct, p - construct);
+		s = platform_buffer_read((uint8_t*)construct, REMOTE_MAX_MSG_SIZE);
+		if ((s > 0) && (construct[0] == REMOTE_RESP_OK)) {
+			if (DO) {
+				unhexify(DO, (const char*)&construct[1], byte_count);
+				DO += byte_count;
+			}
+			continue;
+		}
+		DEBUG_WARN("%s error %d\n",
+				   __func__, s);
+		break;
+	}
+}
+
 static void jtagtap_tdi_seq(
 	const uint8_t final_tms, const uint8_t *DI, int ticks)
 {
-	return jtagtap_tdi_tdo_seq(NULL,  final_tms, DI, ticks);
+	if (!ticks)
+		return;
+	return jtagtap_tdi_tdo_seq(NULL, final_tms, DI, ticks);
 }
 
 
@@ -187,4 +253,54 @@ static uint8_t jtagtap_next(uint8_t dTMS, uint8_t dTDI)
     }
 
 	return remotehston(-1, (char *)&construct[1]);
+}
+
+static uint32_t remote_jtag_dev_shift_ir(jtag_proc_t *jp, uint8_t jd_index,
+									uint32_t ir)
+{
+	uint8_t construct[REMOTE_MAX_MSG_SIZE];
+	int s;
+	(void) jp;
+	s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE, REMOTE_JTAG_SHIFT_IR_STR,
+				 jd_index, ir);
+
+	platform_buffer_write(construct, s);
+
+	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
+	if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
+		DEBUG_WARN("remote_dev_shift_ir failed, error %s\n",
+				s ? (char *)&(construct[1]) : "unknown");
+		exit(-1);
+    }
+
+	return remotehston(-1, (char *)&construct[1]);
+}
+
+static void remote_jtag_dev_shift_dr(jtag_proc_t *jp, uint8_t jd_index,
+									 uint8_t *dout, const uint8_t *din, int ticks)
+{
+	if (ticks > (500 * 8))
+		return fw_jtag_dev_shift_dr(jp, jd_index, dout, din, ticks);
+	char construct[REMOTE_MAX_MSG_SIZE];
+	int byte_count = (ticks + 7) >> 3;
+	int s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE, REMOTE_JTAG_SHIFT_DR_STR,
+				 (((din) ? REMOTE_IOSEQ_FLAG_IN  : REMOTE_IOSEQ_FLAG_NONE) |
+				  ((dout) ? REMOTE_IOSEQ_FLAG_OUT : REMOTE_IOSEQ_FLAG_NONE)),
+				 jd_index, ticks);
+	char *p = construct + s;
+	if (din) {
+		hexify(p, din, byte_count);
+		p += 2 * byte_count;
+	}
+	*p++ = REMOTE_EOM;
+	*p   = 0;
+	platform_buffer_write((uint8_t*)construct, p - construct);
+	s = platform_buffer_read((uint8_t*)construct, REMOTE_MAX_MSG_SIZE);
+	if ((s > 0) && (construct[0] == REMOTE_RESP_OK)) {
+		if (dout)
+			unhexify(dout, (const char*)&construct[1], byte_count);
+	} else {
+		DEBUG_WARN("%s error %d\n",
+				   __func__, s);
+	}
 }

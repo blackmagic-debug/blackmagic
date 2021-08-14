@@ -25,6 +25,7 @@
 #include "general.h"
 #include "jtagtap.h"
 #include "gdb_packet.h"
+#include "jtag_scan.h"
 
 jtag_proc_t jtag_proc;
 
@@ -35,6 +36,8 @@ static void jtagtap_tdi_tdo_seq(
 static void jtagtap_tdi_seq(
 	const uint8_t final_tms, const uint8_t *DI, int ticks);
 static uint8_t jtagtap_next(uint8_t dTMS, uint8_t dTDI);
+uint32_t fw_jtag_dev_shift_ir(jtag_proc_t *jp, uint8_t jd_index, uint32_t ir);
+void fw_jtag_dev_shift_dr(jtag_proc_t *jp, uint8_t jd_index, uint8_t *dout, const uint8_t *din, int ticks);
 
 int jtagtap_init()
 {
@@ -45,6 +48,8 @@ int jtagtap_init()
 	jtag_proc.jtagtap_tms_seq = jtagtap_tms_seq;
 	jtag_proc.jtagtap_tdi_tdo_seq = jtagtap_tdi_tdo_seq;
 	jtag_proc.jtagtap_tdi_seq = jtagtap_tdi_seq;
+	jtag_proc.dev_shift_ir = fw_jtag_dev_shift_ir;
+	jtag_proc.dev_shift_dr = fw_jtag_dev_shift_dr;
 
 	/* Go to JTAG mode for SWJ-DP */
 	for(int i = 0; i <= 50; i++) jtagtap_next(1, 0); /* Reset SW-DP */
@@ -193,6 +198,25 @@ static void jtagtap_tdi_seq(const uint8_t final_tms, const uint8_t *DI, int tick
 				index = 1;
 				DI++;
 			}
+			gpio_clear(TCK_PORT, TCK_PIN);
+		}
+	}
+}
+
+void jtag_toggle_jtck(uint32_t ticks)
+{
+	register volatile int32_t cnt;
+	if (swd_delay_cnt) {
+		while(ticks--) {
+			gpio_set(TCK_PORT, TCK_PIN);
+			for(cnt = swd_delay_cnt -2 ; cnt > 0; cnt--);
+			gpio_clear(TCK_PORT, TCK_PIN);
+			for(cnt = swd_delay_cnt -2 ; cnt > 0; cnt--);
+		}
+	} else {
+		while(ticks--) {
+			gpio_set(TCK_PORT, TCK_PIN);
+			gpio_set(TCK_PORT, TCK_PIN);
 			gpio_clear(TCK_PORT, TCK_PIN);
 		}
 	}

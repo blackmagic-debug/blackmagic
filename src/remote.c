@@ -188,6 +188,8 @@ static void remotePacketProcessJTAG(unsigned i, char *packet)
 {
 	uint32_t MS;
 	uint64_t DO;
+	uint8_t dir_flags;
+	uint8_t index;
 	uint8_t ticks;
 	uint64_t DI;
 	jtag_dev_t jtag_dev;
@@ -217,6 +219,32 @@ static void remotePacketProcessJTAG(unsigned i, char *packet)
 		}
 		break;
 
+    case REMOTE_JTAG_JTCK: /* JC = Toggle JTCK ============================ */
+		MS = remotehston(8, &packet[2]);
+		jtag_toggle_jtck(MS);
+		_respond(REMOTE_RESP_OK, DO);
+		break;
+    case REMOTE_JTAG_SHIFT_IR: /* JI = R/W IR ============================ */
+		index = remotehston(2, &packet[2]);
+		DI = remotehston(-1, &packet[4]);
+		DO = jtag_dev_shift_ir(&jtag_proc, index, DI);
+		DO &= 0xffffffff;
+		_respond(REMOTE_RESP_OK, DO);
+		break;
+    case REMOTE_JTAG_SHIFT_DR: /* Ji = R/W DIR ============================ */
+		dir_flags = packet[2] - '0';
+		index = remotehston(2, &packet[3]);
+		int wticks = remotehston(4, &packet[5]);
+		void *src = (void *)(uint32_t)packet;
+		int byte_count = (wticks + 7) >> 3;
+		if (dir_flags & REMOTE_IOSEQ_FLAG_IN) /* write to target */
+			unhexify(src + 1, &packet[9], byte_count);
+		jtag_dev_shift_dr(&jtag_proc, index, src, src + 1, wticks);
+		if (dir_flags & REMOTE_IOSEQ_FLAG_OUT) /* read from target */
+			_respond_buf(REMOTE_RESP_OK, src, byte_count);
+		else
+			_respond(REMOTE_RESP_OK, DO);
+		break;
     case REMOTE_TDITDO_TMS: /* JD = TDI/TDO  ========================================= */
     case REMOTE_TDITDO_NOTMS:
 
@@ -235,7 +263,27 @@ static void remotePacketProcessJTAG(unsigned i, char *packet)
 		}
 		break;
 
-    case REMOTE_NEXT: /* JN = NEXT ======================================== */
+	case REMOTE_IOSEQ_TMS: /*   JQ = TDI/TDO large chunks, TMS set on last */
+	case REMOTE_IOSEQ_NOTMS: /* Jq = TDI/TDO large chunks, TMS clear on last */
+		if (i < 7) {
+			_respond(REMOTE_RESP_ERR,REMOTE_ERROR_WRONGLEN);
+		} else {
+			bool last_tms =  (packet[1] == REMOTE_IOSEQ_TMS);
+			dir_flags = packet[2] - '0';
+			int wticks = remotehston(4, &packet[3]);
+			void *src = (void *)(uint32_t)packet;
+			int count = (wticks + 7) >> 3;
+			if (dir_flags & REMOTE_IOSEQ_FLAG_IN) /* write to target */
+				unhexify(src + 1, &packet[7], count);
+			jtag_proc.jtagtap_tdi_tdo_seq(src, last_tms, src + 1, wticks);
+			if (dir_flags & REMOTE_IOSEQ_FLAG_OUT) /* read from target */
+				_respond_buf(REMOTE_RESP_OK, src, count);
+			else
+				_respond(REMOTE_RESP_OK, 0);
+		}
+		break;
+
+	case REMOTE_NEXT: /* JN = NEXT ======================================== */
 		if (i!=4) {
 			_respond(REMOTE_RESP_ERR,REMOTE_ERROR_WRONGLEN);
 		} else {

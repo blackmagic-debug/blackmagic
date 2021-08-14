@@ -43,7 +43,7 @@ typedef struct jtag_dev_s {
 extern jtag_dev_t jtag_devs[JTAG_MAX_DEVS+1];
 extern int jtag_dev_count;
 
-void jtag_dev_write_ir(jtag_proc_t *jp, uint8_t jd_index, uint32_t ir);
+uint32_t jtag_dev_shift_ir(jtag_proc_t *jp, uint8_t jd_index, uint32_t ir);
 void jtag_dev_shift_dr(jtag_proc_t *jp, uint8_t jd_index, uint8_t *dout, const uint8_t *din, int ticks);
 void jtag_add_device(const int dev_index, const jtag_dev_t *jtag_dev);
 #endif
