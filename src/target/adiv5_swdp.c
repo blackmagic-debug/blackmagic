@@ -76,25 +76,17 @@ static bool firmware_dp_low_read(ADIv5_DP_t *dp, uint16_t addr, uint32_t *res)
 int adiv5_swdp_scan(uint32_t targetid)
 {
 	target_list_free();
-	ADIv5_DP_t idp, *initial_dp = &idp;
-	memset(initial_dp, 0, sizeof(ADIv5_DP_t));
+	ADIv5_DP_t idp = {
+		.dp_low_write = firmware_dp_low_write,
+		.dp_low_read = firmware_dp_low_read,
+		.error = firmware_swdp_error,
+		.dp_read = firmware_swdp_read,
+		.low_access = firmware_swdp_low_access,
+		.abort = firmware_swdp_abort,
+	};
+	ADIv5_DP_t *initial_dp = &idp;
 	if (swdptap_init(initial_dp))
 		return -1;
-	/* Set defaults when no procedure given*/
-	if (!initial_dp->dp_low_write)
-		initial_dp->dp_low_write = firmware_dp_low_write;
-	if (!initial_dp->dp_low_read)
-		initial_dp->dp_low_read = firmware_dp_low_read;
-	if (!initial_dp->error)
-		initial_dp->error = firmware_swdp_error;
-	if (!initial_dp->dp_read)
-		initial_dp->dp_read = firmware_swdp_read;
-	if (!initial_dp->error)
-		initial_dp->error = firmware_swdp_error;
-	if (!initial_dp->low_access)
-       initial_dp->low_access = firmware_swdp_low_access;
-	if (!initial_dp->abort)
-       initial_dp->abort = firmware_swdp_abort;
 	/* DORMANT-> SWD sequence*/
 	initial_dp->seq_out(0xFFFFFFFF, 32);
 	initial_dp->seq_out(0xFFFFFFFF, 32);
