@@ -1,5 +1,7 @@
 # PC-Hosted BMP
-Compile in src with "make PROBE_HOST=hosted"
+Compile in src with "make PROBE_HOST=hosted". This needs minimal external
+support.  "make PROBE_HOST=hosted HOSTED_BMP=0" will compile support for FTDI,
+STLink, CMSIS-DAP and JLINK probes, but requires external libraries.
 
 ## Description
 PC-hosted BMP run on the PC and compiles as "blackmagic". When started,
@@ -8,7 +10,7 @@ if either only one probe is attached to the PC or enough information is
 given on the command line to select one of several probes.
 
 When started without any other argument beside the probe selection, a
-GDB server is started as port 2000 and up. Connect to the server as you would
+GDB server is started on port 2000 and up. Connect to the server as you would
 connect to the BMP with the CDCACM GDB serial server. GDB functionality
 is the same, monitor option may vary.
 
@@ -60,9 +62,9 @@ blackmagic -M "option help"
 ## Compiling on windows
 
 You can crosscompile blackmagic for windows with mingw or on windows
-with cygwin. For compilation, headers for libftdi1 and libusb-1.0 are
-needed. For running, libftdi1.dll and libusb-1.0.dll are needed and
-the executable must be able to find them. Mingw on cygwin does not provide
+with cygwin. For suppport of other probes beside BMP, headers for libftdi1 and
+libusb-1.0 are needed. For running, libftdi1.dll and libusb-1.0.dll are needed
+and the executable must be able to find them. Mingw on cygwin does not provide
 a libftdi package yet.
 
 PC-hosted BMP for windows can also be built with [MSYS2](https://www.msys2.org/),
@@ -78,7 +80,8 @@ pacman -S mingw-w64-x86_64-gcc --needed
 PROBE_HOST=hosted make
 ```
 
-To prepare libusb access to the ftdi/stlink/jlink/cmsis-dap devices, run zadig
+For suppport of other probes beside BMP, libusb access is needed. To prepare
+libusb access to the ftdi/stlink/jlink/cmsis-dap devices, run zadig
 https://zadig.akeo.ie/. Choose WinUSB(libusb-1.0).
 
 Running cygwin/blackmagic in a cygwin console, the program does not react
@@ -91,6 +94,7 @@ REMOTE_BMP is a "normal" BMP usb connected
 |   Debugger   | Speed | Remarks
 | ------------ | ----- | ------
 | REMOTE_BMP   |  +++  | Requires recent firmware for decent speed
+Probes below only when compiled with HOSTED_BMP=0
 | ST-Link V3   | ++++  | Requires recent firmware, Only STM32 devices supported!
 | ST-Link V2   |  +++  | Requires recent firmware, No CDCACM uart! Cortex only!
 | ST-Link V2/1 |  +++  | Requires recent firmware, Cortex only!
