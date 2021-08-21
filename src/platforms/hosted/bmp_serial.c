@@ -39,6 +39,7 @@ void libusb_exit_function(bmp_info_t *info) {(void)info;};
 #ifdef __APPLE__
 int find_debuggers(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info)
 {
+	DEBUG_WARN("Please implement find_debuggers for MACOS!\n");
 	(void)cl_opts;
 	(void)info;
 	return -1;
