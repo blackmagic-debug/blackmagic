@@ -660,7 +660,7 @@ void dap_jtagtap_tdi_tdo_seq(uint8_t *DO, bool final_tms, const uint8_t *TMS,
 	const uint8_t *din = DI;
 	uint8_t *dout = DO;
 	if (!TMS) {
-		int last_byte = last_byte = (ticks - 1) >> 3;
+		int last_byte = (ticks - 1) >> 3;
 		int last_bit = (ticks - 1) & 7;
 		if (final_tms)
 			ticks --;
@@ -714,8 +714,8 @@ void dap_jtagtap_tdi_tdo_seq(uint8_t *DO, bool final_tms, const uint8_t *TMS,
 		while(ticks) {
 			uint8_t *p = buf;
 			int transfers = ticks;
-			if (transfers > 64)
-				transfers = 64;
+			if (transfers > 30)
+				transfers = 30;
 			p = buf;
 			*p++ = ID_DAP_JTAG_SEQUENCE;
 			*p++ = transfers;
@@ -842,4 +842,195 @@ bool dap_swdptap_seq_in_parity(uint32_t *ret, int ticks)
 	parity ^= (buf[5] % 1);
 	DEBUG_WARN("Res %08" PRIx32" %d\n", *ret, parity & 1);
 	return (!(parity & 1));
+}
+
+/* */
+void dap_shift_ir(jtag_proc_t *jp, uint8_t jd_index, uint32_t ir, uint32_t *out)
+{
+	(void) jp;
+	jtag_dev_t *d = &jtag_devs[jd_index];
+	/* Skip shift_ir if already set */
+	if (!(out) && (ir == d->current_ir))
+		return;
+	for (int i = 0; i < jtag_dev_count; i++)
+		jtag_devs[i].current_ir = -1;
+	uint8_t buf[48];
+	/* 1 Byte command
+	 * 1 Byte length
+	 * 2 * 2 Byte jtagtap_shift_ir (0x03, 4) with DI 1
+	 * (d->ir_prescan)? 1 + 1..8 Byte
+	 * 1 + 1..4 ir
+	 * d->dr_postscan) ? 1 + 1..8 Byte
+	 * 1 + 1
+	 * 1 + 1
+	 */
+	unsigned int n_transactions = 0;
+	int index = 0;
+	buf[index++] = ID_DAP_JTAG_SEQUENCE;
+	index++; /* Put index here later*/
+	/* Run-Test/Idle ->Select-DR Scan -> Select-IR Scan*/
+	n_transactions++;
+	buf[index++] = DAP_JTAG_TMS | 2;
+	buf[index++] = 0xff;
+	/* Select-IR Scan -> Capture-IR-> Shift-IR + ir_prescan */
+	n_transactions++;
+	int prescan = 2 + d->ir_prescan;
+	buf[index++] = prescan;
+	int pre_bytes = (prescan + 7) >> 3;
+	memset(buf + index, 0xff, pre_bytes);
+	index += pre_bytes;
+
+	/* ir transfer */
+	int ir_len = d->ir_len;
+	bool last_bit = true;
+	if (!d->ir_postscan) {
+		last_bit = ir  & (1 << (d->ir_len - 1));
+		ir_len--; /* last bit must have TMS set */
+	}
+	n_transactions++;
+	buf[index++] = DAP_JTAG_TDO_CAPTURE | ir_len ;
+	int chunk = ir_len;
+	while (ir_len) {
+		if (chunk > 8)
+			chunk = 8;
+		buf[index++] = ir & 0xff;
+		ir >>= 8;
+		ir_len -= chunk;
+	}
+	if (d->ir_postscan > 1) {
+		/* postscan w/o TMS*/
+		int tdi_only = d->ir_postscan - 1;
+		n_transactions ++;
+		buf[index++] = tdi_only;
+		int n_bytes = (tdi_only + 7) >> 3;
+		memset(buf + index, 0xff, n_bytes);
+		index += n_bytes;
+	}
+	/* postscan with TMS*/
+	/* SHIFT-IR -> EXIT-IR */
+	n_transactions ++;
+	buf[index++] = 1 | DAP_JTAG_TMS | DAP_JTAG_TDO_CAPTURE;
+	buf[index++] = (last_bit) ? 0xff : 0xfe;
+	/* EXIT-IR -> Update-IR*/
+	n_transactions ++;
+	buf[index++] = 1 | DAP_JTAG_TMS ;
+	buf[index++] = 0xff;
+	/* Update-IR -> Run-Test/Idle*/
+	n_transactions++;
+	buf[index++] = 1;
+	buf[index++] = 0xff;
+	buf[1] = n_transactions;
+	dbg_dap_cmd(buf, sizeof(buf), index);
+	if (buf[0] == DAP_ERROR)
+		DEBUG_WARN("dap_shift_ir failed %02x\n", buf[0]);
+	if (out) {
+		int ir_bytes = (d->ir_len + 7) >> 3;
+		if (!d->ir_postscan) {
+			unsigned int shift = (d->ir_len - 1) & 7;
+			unsigned int mask = 1 << shift;
+			if (buf[ir_bytes + 2])
+				buf[ir_bytes + 1] |= mask;
+			else
+				buf[ir_bytes + 1] &= ~mask;
+		}
+		uint32_t res = 0;
+		for (int i = 0; i <= ir_bytes; i++){
+			res <<= 8;
+			res += buf[i + 1];
+		}
+		*out = res;
+	}
+	d->current_ir = ir;
+}
+
+void fw_jtag_dev_shift_dr(jtag_proc_t *jp, uint8_t jd_index,
+						  uint8_t *dout, const uint8_t *din, int ticks);
+void dap_shift_dr(jtag_proc_t *jp, uint8_t jd_index, uint8_t *dout,
+				  const uint8_t *din, int ticks)
+{
+	if (ticks > 950 * 8)
+		return fw_jtag_dev_shift_dr(jp, jd_index, dout, din, ticks);
+	uint8_t buf[1024];
+	jtag_dev_t *d = &jtag_devs[jd_index];
+	unsigned int n_transactions = 0;
+	int index = 0;
+	buf[index++] = ID_DAP_JTAG_SEQUENCE;
+	index++; /* Put index here later*/
+	/* Run-Test/Idle ->Select-DR Scan */
+	n_transactions++;
+	buf[index++] = DAP_JTAG_TMS | 1;
+	buf[index++] = 0xff;
+	/* Select-DR Scan -> Capture-DR-> Shift-DR + dr_prescan */
+	n_transactions++;
+	int prescan = 2 + d->dr_prescan;
+	int prebytes = (prescan + 7 ) >> 3;
+	buf[index++] = prescan;
+	memset(buf + index, 0xff, prebytes);
+	index += prebytes;
+
+	/* dr transfer */
+	int dr_len = ticks;
+	bool last_bit = true;
+	if (!d->dr_postscan) {
+		last_bit = din[(ticks - 1) >> 3] & (1 << ((ticks - 1) & 7));
+		dr_len--;
+	}
+	while (dr_len) {
+		int chunk = ticks;
+		if (chunk > 64)
+			chunk = 64;
+		n_transactions++;
+		buf[index++] = ((dout) ? DAP_JTAG_TDO_CAPTURE: 0) | (chunk & 0x3f) ;
+		memcpy(buf + index, din, (chunk + 7) >> 3);
+		index += (chunk + 7) >> 3;
+		dr_len -= chunk;
+	}
+	if (d->dr_postscan) {
+		/* postscan w/o TMS*/
+		int tdi_only = d->dr_postscan - 1;
+		if (tdi_only) {
+			n_transactions ++;
+			buf[index++] = tdi_only;
+			while (tdi_only) {
+				int chunk = tdi_only;
+				if (chunk > 8)
+					chunk = 8;
+				buf[index++] = 0xff;
+				tdi_only -= chunk;
+			}
+		}
+	}
+	/* SHIFT-DR -> EXIT-DR*/
+	n_transactions ++;
+	buf[index++] = 1 | DAP_JTAG_TMS | ((dout) ? DAP_JTAG_TDO_CAPTURE : 0);
+	buf[index++] = (last_bit) ? 0xff : 0xfe;
+	/* EXIT-DR -> Update-DR*/
+	n_transactions++;
+	buf[index++] = 1 | DAP_JTAG_TMS ;
+	buf[index++] = 0xff;
+	/* Update-DR -> Run-Test/Idle + additional cycles
+	 * jp->idle > 1: Additional cycles in RunTest/Idle for Riscv*/
+	n_transactions++;
+	int postticks = (jp->idle_cycles > 1) ? jp->idle_cycles : 1;
+	buf[index++] = postticks;
+	buf[index++] = 0xff;
+	if (postticks > 7)
+		buf[index++] = 0xff;
+	/* Update-DR -> Run-Test/Idle + additional cycles*/
+	buf[1] = n_transactions;
+	dbg_dap_cmd(buf, sizeof(buf), index);
+	if (buf[0] == DAP_ERROR)
+		DEBUG_WARN("dap_shift_dr failed %02x\n", buf[0]);
+	int dr_bytes = (ticks + 7) >> 3;
+	if (dout) {
+		memcpy(dout, buf + 1, dr_bytes);
+		if (!d->dr_postscan) {
+			unsigned int shift = (ticks - 1) & 7;
+			unsigned int mask = 1 << shift;
+			if (dout[dr_bytes + 1])
+				dout[dr_bytes] |= mask;
+			else
+				dout[dr_bytes] &= ~mask;
+		}
+	}
 }

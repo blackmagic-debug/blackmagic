@@ -402,6 +402,8 @@ int cmsis_dap_jtagtap_init(jtag_proc_t *jtag_proc)
 	jtag_proc->jtagtap_tms_seq     = cmsis_dap_jtagtap_tms_seq;
 	jtag_proc->jtagtap_tdi_tdo_seq = cmsis_dap_jtagtap_tdi_tdo_seq;
 	jtag_proc->jtagtap_tdi_seq     = cmsis_dap_jtagtap_tdi_seq;
+	jtag_proc->dev_shift_ir        = dap_shift_ir;
+	jtag_proc->dev_shift_dr        = dap_shift_dr;
 	return 0;
 }
 
