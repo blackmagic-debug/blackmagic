@@ -289,10 +289,11 @@ static void remote_jtag_dev_shift_dr(jtag_proc_t *jp, uint8_t jd_index,
 		return fw_jtag_dev_shift_dr(jp, jd_index, dout, din, ticks);
 	char construct[REMOTE_MAX_MSG_SIZE];
 	int byte_count = (ticks + 7) >> 3;
-	int s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE, REMOTE_JTAG_SHIFT_DR_STR,
-				 (((din) ? REMOTE_IOSEQ_FLAG_IN  : REMOTE_IOSEQ_FLAG_NONE) |
-				  ((dout) ? REMOTE_IOSEQ_FLAG_OUT : REMOTE_IOSEQ_FLAG_NONE)),
-				 jd_index, ticks);
+	int s = snprintf(
+		(char *)construct, REMOTE_MAX_MSG_SIZE, REMOTE_JTAG_SHIFT_DR_STR,
+		(((din) ? REMOTE_IOSEQ_FLAG_IN  : REMOTE_IOSEQ_FLAG_NONE) |
+		 ((dout) ? REMOTE_IOSEQ_FLAG_OUT : REMOTE_IOSEQ_FLAG_NONE)),
+		jp->idle_cycles, jd_index, ticks);
 	char *p = construct + s;
 	if (din) {
 		hexify(p, din, byte_count);

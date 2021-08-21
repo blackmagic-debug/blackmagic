@@ -163,7 +163,11 @@
 
 /* Flags (nibble), index(byte), ticks(16 bits) */
 #define REMOTE_JTAG_SHIFT_DR_STR (char []){ REMOTE_SOM, REMOTE_JTAG_PACKET, \
-		REMOTE_JTAG_SHIFT_DR, '%', 'd', '%','0','2', 'x', '%', '0', '4', 'x', 0 }
+		REMOTE_JTAG_SHIFT_DR,											\
+		'%', 'd', /* Flags*/											\
+		'%', 'd', /* Idle Ticks in Idle*/								\
+		'%','0','2','x', /* Index in Chain*/							\
+		'%', '0', '4', 'x', 0 } /* ticks */
 
 #define REMOTE_JTAG_ADD_DEV_STR (char []){ REMOTE_SOM, REMOTE_JTAG_PACKET,\
 			REMOTE_ADD_JTAG_DEV,											\

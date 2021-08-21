@@ -235,8 +235,9 @@ static void remotePacketProcessJTAG(unsigned i, char *packet)
 		break;
     case REMOTE_JTAG_SHIFT_DR: /* Ji = R/W DIR ============================ */
 		dir_flags = packet[2] - '0';
-		index = remotehston(2, &packet[3]);
-		int wticks = remotehston(4, &packet[5]);
+		jtag_proc.idle_cycles = packet[3] - '0';
+		index = remotehston(2, &packet[4]);
+		int wticks = remotehston(4, &packet[6]);
 		void *src = (void *)(uint32_t)packet;
 		int byte_count = (wticks + 7) >> 3;
 		if (dir_flags & REMOTE_IOSEQ_FLAG_IN) /* write to target */

@@ -75,10 +75,9 @@ extern jtag_proc_t jtag_proc;
 #define jtagtap_shift_dr()		\
 	jtag_proc.jtagtap_tms_seq(0x01, 3)
 
-/* Goto Run-test/Idle: 1, 1, 0 */
+/* Goto Run-Test/Idle from Exit-I|DR: 1, 0 plus Idle TCK */
 #define jtagtap_return_idle(x)	\
 	jtag_proc.jtagtap_tms_seq(0x01, (x > 1) ? x + 1 : 2 )
-
 
 void jtag_toggle_jtck(bool tms, bool tdi, uint32_t ticks);
 
@@ -88,4 +87,3 @@ int platform_jtagtap_init(void);
 int jtagtap_init(void);
 # endif
 #endif
-
