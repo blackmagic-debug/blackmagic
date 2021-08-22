@@ -1,3 +1,4 @@
+CC ?= gcc
 SYS = $(shell $(CC) -dumpmachine)
 CFLAGS += -DENABLE_DEBUG -DPLATFORM_HAS_DEBUG
 CFLAGS +=-I ./target -I./platforms/pc
