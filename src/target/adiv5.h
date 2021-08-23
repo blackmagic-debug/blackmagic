@@ -45,6 +45,7 @@
 #define ADIV5_DP_VERSION_MASK 0xf000
 #define ADIV5_DPv1            0x1000
 #define ADIV5_DPv2            0x2000
+#define ADIV5_MINDP          0x10000
 
 /* AP Abort Register (ABORT) */
 /* Bits 31:5 - Reserved */
@@ -64,7 +65,7 @@
 #define ADIV5_DP_CTRLSTAT_CDBGRSTREQ	(1u << 26)
 /* Bits 25:24 - Reserved */
 /* Bits 23:12 - TRNCNT */
-#define ADIV5_DP_CTRLSTAT_TRNCNT
+#define ADIV5_DP_CTRLSTAT_TRNCNT        (1u << 12)
 /* Bits 11:8 - MASKLANE */
 #define ADIV5_DP_CTRLSTAT_MASKLANE
 /* Bits 7:6 - Reserved in JTAG-DP */
@@ -189,7 +190,6 @@ typedef struct ADIv5_DP_s {
 	void (*read_block)(uint32_t addr, uint8_t *data, int size);
 	void (*dap_write_block_sized)(uint32_t addr, uint8_t *data,
 								  int size, enum align align);
-
 #endif
 	uint32_t (*ap_read)(ADIv5_AP_t *ap, uint16_t addr);
 	void (*ap_write)(ADIv5_AP_t *ap, uint16_t addr, uint32_t value);

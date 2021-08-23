@@ -308,6 +308,52 @@ uint64_t adiv5_ap_read_pidr(ADIv5_AP_t *ap, uint32_t addr)
 	return pidr;
 }
 
+/* Halt CortexM
+ *
+ * Run in tight loop to catch small windows of awakeness.
+ * Repeat the write command with the highest possible value
+ * of the trannsaction counter, if not on MINDP
+ */
+static uint32_t cortexm_initial_halt(ADIv5_AP_t *ap)
+{
+	platform_timeout to ;
+	uint32_t ctrlstat = adiv5_dp_read(ap->dp, ADIV5_DP_CTRLSTAT);
+	platform_timeout_set(&to, cortexm_wait_timeout);
+	uint32_t dhcsr_ctl = CORTEXM_DHCSR_DBGKEY |	CORTEXM_DHCSR_C_DEBUGEN |
+		CORTEXM_DHCSR_C_HALT;
+	uint32_t dhcsr_valid = CORTEXM_DHCSR_S_HALT | CORTEXM_DHCSR_C_DEBUGEN;
+	uint32_t dhcsr;
+	bool reset_seen = false;
+	adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw | ADIV5_AP_CSW_SIZE_WORD);
+	adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR, CORTEXM_DHCSR);
+	while (!platform_timeout_is_expired(&to)) {
+		if (!(ap->dp->idcode & ADIV5_MINDP))
+			adiv5_dp_write(ap->dp, ADIV5_DP_CTRLSTAT,
+						   ctrlstat | (0xfff * ADIV5_DP_CTRLSTAT_TRNCNT));
+		adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DRW, dhcsr_ctl);
+		dhcsr = adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_AP_DRW, 0);
+		/* ADIV5_DP_CTRLSTAT_READOK is always set e.g. on STM32F7 even so
+		   CORTEXM_DHCS reads nonsense*/
+		/* On a sleeping STM32F7, invalid DHCSR reads with e.g. 0xffffffff and
+		 * 0x0xA05F0000  may happen.
+		 * M23/33 will have S_SDE set when debug is allowed
+		 */
+		if ((dhcsr != 0xffffffff) && /* Invalid read */
+			((dhcsr & 0xf000fff0) == 0)) {/* Check RAZ bits */
+			if ((dhcsr & CORTEXM_DHCSR_S_RESET_ST)  && !reset_seen) {
+				if (connect_assert_srst)
+					return dhcsr;
+				reset_seen = true;
+				continue;
+			}
+			if ((dhcsr & dhcsr_valid) == dhcsr_valid) { /* Halted */
+				return dhcsr;
+			}
+		}
+	}
+	return 0;
+}
+
 /* Prepare to read SYSROM and SYSROM PIDR
  *
  * Try hard to halt, if not connecting under reset
@@ -329,52 +375,26 @@ uint64_t adiv5_ap_read_pidr(ADIv5_AP_t *ap, uint32_t addr)
  */
 static bool cortexm_prepare(ADIv5_AP_t *ap)
 {
-	platform_timeout to ;
-	platform_timeout_set(&to, cortexm_wait_timeout);
-	uint32_t dhcsr_ctl = CORTEXM_DHCSR_DBGKEY |	CORTEXM_DHCSR_C_DEBUGEN |
-		CORTEXM_DHCSR_C_HALT;
-	uint32_t dhcsr_valid = CORTEXM_DHCSR_S_HALT | CORTEXM_DHCSR_C_DEBUGEN;
-#if defined(ENABLE_DEBUG) && defined(PLATFORM_HAS_DEBUG)
+#if PC_HOSTED  == 1
 	uint32_t start_time = platform_time_ms();
 #endif
-	uint32_t dhcsr;
-	bool reset_seen = false;
-	while (true) {
-		adiv5_mem_write(ap, CORTEXM_DHCSR, &dhcsr_ctl, sizeof(dhcsr_ctl));
-		dhcsr = adiv5_mem_read32(ap, CORTEXM_DHCSR);
-		/* ADIV5_DP_CTRLSTAT_READOK is always set e.g. on STM32F7 even so
-		   CORTEXM_DHCS reads nonsense*/
-		/* On a sleeping STM32F7, invalid DHCSR reads with e.g. 0xffffffff and
-		 * 0x0xA05F0000  may happen.
-		 * M23/33 will have S_SDE set when debug is allowed
-		 */
-		if ((dhcsr != 0xffffffff) && /* Invalid read */
-			((dhcsr & 0xf000fff0) == 0)) {/* Check RAZ bits */
-			if ((dhcsr & CORTEXM_DHCSR_S_RESET_ST)  && !reset_seen) {
-				if (connect_assert_srst)
-					break;
-				reset_seen = true;
-				continue;
-			}
-			if ((dhcsr & dhcsr_valid) == dhcsr_valid) { /* Halted */
-				DEBUG_INFO("Halt via DHCSR: success %08" PRIx32 " after %"
-						   PRId32 "ms\n",
-						   dhcsr, platform_time_ms() - start_time);
-			break;
-			}
-		}
-		if (platform_timeout_is_expired(&to)) {
-			DEBUG_WARN("Halt via DHCSR: Failure DHCSR %08" PRIx32 " after % "
-					   PRId32 "ms\nTry again, evt. with longer timeout or "
-					   "connect under reset\n",
-					   dhcsr, platform_time_ms() - start_time);
-			return false;
-		}
+	uint32_t dhcsr = cortexm_initial_halt(ap);
+	if (!dhcsr) {
+		DEBUG_WARN("Halt via DHCSR: Failure DHCSR %08" PRIx32 " after % "
+				   PRId32 "ms\nTry again, evt. with longer timeout or "
+				   "connect under reset\n",
+				   adiv5_mem_read32(ap, CORTEXM_DHCSR),
+				   platform_time_ms() - start_time);
+		return false;
 	}
+	DEBUG_INFO("Halt via DHCSR: success %08" PRIx32 " after %" PRId32 "ms\n",
+			   dhcsr,
+			   platform_time_ms() - start_time);
 	ap->ap_cortexm_demcr = adiv5_mem_read32(ap, CORTEXM_DEMCR);
 	uint32_t demcr = CORTEXM_DEMCR_TRCENA | CORTEXM_DEMCR_VC_HARDERR |
 		CORTEXM_DEMCR_VC_CORERESET;
 	adiv5_mem_write(ap, CORTEXM_DEMCR, &demcr, sizeof(demcr));
+	platform_timeout to ;
 	platform_timeout_set(&to, cortexm_wait_timeout);
 	platform_srst_set_val(false);
 	while (1) {
@@ -658,7 +678,8 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 	}
 	DEBUG_INFO("DPIDR 0x%08" PRIx32 " (v%d %srev%d)\n", dp->idcode,
 			   (uint8_t)((dp->idcode >> 12) & 0xf),
-			   (dp->idcode & 0x10000) ? "MINDP " : "", (uint16_t)(dp->idcode >> 28));
+			   (dp->idcode & ADIV5_MINDP) ? "MINDP " : "",
+			   (uint16_t)(dp->idcode >> 28));
 	volatile uint32_t ctrlstat = 0;
 #if PC_HOSTED  == 1
 	platform_adiv5_dp_defaults(dp);
