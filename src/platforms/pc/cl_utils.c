@@ -522,7 +522,7 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 	if ((opt->opt_mode == BMP_MODE_FLASH_READ) ||
 	    (opt->opt_mode == BMP_MODE_FLASH_VERIFY) ||
 	    (opt->opt_mode == BMP_MODE_FLASH_WRITE_VERIFY)) {
-#define WORKSIZE 1024
+#define WORKSIZE 0x1000
 		uint8_t *data = alloca(WORKSIZE);
 		if (!data) {
 			DEBUG_WARN("Can not malloc memory for flash read/verify "
