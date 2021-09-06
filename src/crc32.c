@@ -20,6 +20,7 @@
 
 #include "general.h"
 #include "target.h"
+#include "gdb_if.h"
 
 #if !defined(STM32F0) && !defined(STM32F1) && !defined(STM32F2) && \
 	!defined(STM32F3) && !defined(STM32F4) && !defined(STM32F7) && \
@@ -97,14 +98,31 @@ static uint32_t crc32_calc(uint32_t crc, uint8_t data)
 	return (crc << 8) ^ crc32_table[((crc >> 24) ^ data) & 255];
 }
 
-uint32_t generic_crc32(target *t, uint32_t base, size_t len)
+int generic_crc32(target *t, uint32_t *crc_res, uint32_t base, size_t len)
 {
 	uint32_t crc = -1;
+#if PC_HOSTED == 1
+	/* Reading a 2 MByte on a H743 takes about 80 s@128, 28s @ 1k,
+	 * 22 s @ 4k and 21 s @ 64k
+	 */
+	uint8_t bytes[0x1000];
+	uint32_t start_time = platform_time_ms();
+#else
 	uint8_t bytes[128];
-
+#endif
+	uint32_t last_time = platform_time_ms();
 	while (len) {
+		uint32_t actual_time = platform_time_ms();
+		if ( actual_time > last_time + 1000) {
+			last_time = actual_time;
+			gdb_if_putchar(0, true);
+		}
 		size_t read_len = MIN(sizeof(bytes), len);
-		target_mem_read(t, bytes, base, read_len);
+		if (target_mem_read(t, bytes, base, read_len)) {
+			DEBUG_WARN("generic_crc32 error around address 0x%08" PRIx32 "\n",
+					   base);
+			return -1;
+		}
 
 		for (unsigned i = 0; i < read_len; i++)
 			crc = crc32_calc(crc, bytes[i]);
@@ -112,20 +130,32 @@ uint32_t generic_crc32(target *t, uint32_t base, size_t len)
 		base += read_len;
 		len -= read_len;
 	}
-	return crc;
+	DEBUG_WARN("%d ms\n", platform_time_ms() - start_time);
+	*crc_res = crc;
+	return 0;
 }
 #else
 #include <libopencm3/stm32/crc.h>
-uint32_t generic_crc32(target *t, uint32_t base, size_t len)
+int generic_crc32(target *t, uint32_t *crc_res, uint32_t base, size_t len)
 {
 	uint8_t bytes[128];
 	uint32_t crc;
 
 	CRC_CR |= CRC_CR_RESET;
 
+	uint32_t last_time = platform_time_ms();
 	while (len > 3) {
+		uint32_t actual_time = platform_time_ms();
+		if ( actual_time > last_time + 1000) {
+			last_time = actual_time;
+			gdb_if_putchar(0, true);
+		}
 		size_t read_len = MIN(sizeof(bytes), len) & ~3;
-		target_mem_read(t, bytes, base, read_len);
+		if (target_mem_read(t, bytes, base, read_len)) {
+			DEBUG_WARN("generic_crc32 error around address 0x%08" PRIx32 "\n",
+					   base);
+			return -1;
+		}
 
 		for (unsigned i = 0; i < read_len; i += 4)
 			CRC_DR = __builtin_bswap32(*(uint32_t*)(bytes+i));
@@ -136,7 +166,11 @@ uint32_t generic_crc32(target *t, uint32_t base, size_t len)
 
 	crc = CRC_DR;
 
-	target_mem_read(t, bytes, base, len);
+	if (target_mem_read(t, bytes, base, len)) {
+		DEBUG_WARN("generic_crc32 error around address 0x%08" PRIx32 "\n",
+				   base);
+		return -1;
+	}
 	uint8_t *data = bytes;
 	while (len--) {
 		crc ^= *data++ << 24;
@@ -147,7 +181,8 @@ uint32_t generic_crc32(target *t, uint32_t base, size_t len)
 				crc <<= 1;
 		}
 	}
-	return crc;
+	*crc_res = crc;
+	return 0;
 }
 #endif
 
