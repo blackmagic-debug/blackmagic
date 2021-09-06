@@ -50,7 +50,7 @@ void platform_delay(uint32_t ms)
 # if !defined(usleep)
 	int usleep(unsigned int);
 # endif
-	usleep(ms);
+	usleep(ms * 1000);
 #endif
 }
 
