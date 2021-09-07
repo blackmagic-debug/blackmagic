@@ -28,9 +28,9 @@ typedef struct bmp_info_s {
 	bmp_type_t bmp_type;
 	char dev;
 	char serial[64];
-	char manufacturer[128];
-	char product[128];
-	char version[128];
+	char manufacturer[512];
+	char product[256];
+	char version[256];
 	bool is_jtag;
 #if HOSTED_BMP_ONLY != 1
 	libusb_context *libusb_ctx;
