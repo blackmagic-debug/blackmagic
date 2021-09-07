@@ -486,10 +486,10 @@ static int kl_gen_flash_done(struct target_flash *f)
 		kl_gen_command(f->t, FTFE_CMD_PROGRAM_PHRASE,
 					   FLASH_SECURITY_BYTE_ADDRESS - 4, (uint8_t*)vals);
 	} else {
-		uint32_t val = target_mem_read32(f->t, FLASH_SECURITY_BYTE_ADDRESS);
-		val = (val & 0xffffff00) | FLASH_SECURITY_BYTE_UNSECURED;
+		uint32_t vals[2] = {target_mem_read32(f->t, FLASH_SECURITY_BYTE_ADDRESS), 0};
+		vals[0] = (vals[0] & 0xffffff00) | FLASH_SECURITY_BYTE_UNSECURED;
 		kl_gen_command(f->t, FTFA_CMD_PROGRAM_LONGWORD,
-					   FLASH_SECURITY_BYTE_ADDRESS, (uint8_t*)&val);
+					   FLASH_SECURITY_BYTE_ADDRESS, (uint8_t*)&vals);
 	}
 
 	return 0;

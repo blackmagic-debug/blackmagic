@@ -373,10 +373,10 @@ static int ke04_flash_done(struct target_flash *f)
 
 	/* Load the security byte from its field */
 	/* Note: Cumulative programming is not allowed according to the RM */
-	uint32_t val = target_mem_read32(f->t, FLASH_SECURITY_WORD_ADDRESS);
-	val = (val & 0xff00ffff) | (FLASH_SECURITY_BYTE_UNSECURED << 16);
+	uint32_t vals[2] = {target_mem_read32(f->t, FLASH_SECURITY_WORD_ADDRESS), 0};
+	vals[0] = (vals[0] & 0xff00ffff) | (FLASH_SECURITY_BYTE_UNSECURED << 16);
 	ke04_command(f->t, CMD_PROGRAM_FLASH_32,
-			 FLASH_SECURITY_WORD_ADDRESS, (uint8_t *)&val);
+				 FLASH_SECURITY_WORD_ADDRESS, (uint8_t *)&vals);
 
 	return 0;
 }
