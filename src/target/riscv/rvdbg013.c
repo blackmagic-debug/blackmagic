@@ -172,21 +172,22 @@ void rvdbd_dmi_unref(RVDBGv013_DMI_t *dtm)
     }
 }
 
+/* Busy is only seen with the second dmi access */
 static int rvdbg_dmi_write(RVDBGv013_DMI_t *dmi, uint32_t addr, uint32_t data)
 {
-	if (dmi->rvdbg_dmi_low_access(dmi, NULL,
-			((uint64_t)addr << DMI_BASE_BIT_COUNT) | (data << 2) | DMI_OP_WRITE) < 0) {
-		return -1;
-	}
-
-	return dmi->rvdbg_dmi_low_access(dmi, NULL, DMI_OP_NOP);
+	int res = -1;
+	dmi->rvdbg_dmi_low_access(
+		dmi, NULL, ((uint64_t)addr << DMI_BASE_BIT_COUNT) | (data << 2) | DMI_OP_WRITE);
+	res  = dmi->rvdbg_dmi_low_access(dmi, NULL, DMI_OP_NOP);
+	DEBUG_TARGET("DMI write add %08" PRIx32 ", data %08" PRIx32 "\n", addr, data);
+	return res;
 }
 
 static int rvdbg_dmi_read(RVDBGv013_DMI_t *dmi, uint32_t addr, uint32_t *data)
 {
-	int res = -1;
-	if (dmi->rvdbg_dmi_low_access(dmi, NULL, ((uint64_t)addr << DMI_BASE_BIT_COUNT) | DMI_OP_READ) >= 0)
-		res = dmi->rvdbg_dmi_low_access(dmi, data, DMI_OP_NOP);
+	int res = 0;
+	dmi->rvdbg_dmi_low_access(dmi, NULL, ((uint64_t)addr << DMI_BASE_BIT_COUNT) | DMI_OP_READ);
+	res = dmi->rvdbg_dmi_low_access(dmi, data, DMI_OP_NOP);
 	DEBUG_TARGET("DMI Read addr %x%s:data %x\n", *data, (res == -1) ? "failed" : "", *data);
 	return res;
 }
@@ -823,6 +824,7 @@ static int rvdbg_select_mem_and_csr_access_impl(RVDBGv013_DMI_t *dmi)
 static bool rvdbg_attach(target *t) {
 	RVDBGv013_DMI_t *dmi = t->priv;
 
+	DEBUG_TARGET("Attach\n");
 	// Activate the debug module
 	if (rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, DMCONTROL_DMACTIVE | DMCONTROL_MK_HARTSEL(dmi->current_hart)) < 0) {
 		dmi->error = true;
