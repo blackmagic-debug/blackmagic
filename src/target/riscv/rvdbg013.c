@@ -184,10 +184,11 @@ static int rvdbg_dmi_write(RVDBGv013_DMI_t *dmi, uint32_t addr, uint32_t data)
 
 static int rvdbg_dmi_read(RVDBGv013_DMI_t *dmi, uint32_t addr, uint32_t *data)
 {
-	if (dmi->rvdbg_dmi_low_access(dmi, NULL, ((uint64_t)addr << DMI_BASE_BIT_COUNT) | DMI_OP_READ) < 0)
-		return -1;
-
-	return dmi->rvdbg_dmi_low_access(dmi, data, DMI_OP_NOP);
+	int res = -1;
+	if (dmi->rvdbg_dmi_low_access(dmi, NULL, ((uint64_t)addr << DMI_BASE_BIT_COUNT) | DMI_OP_READ) >= 0)
+		res = dmi->rvdbg_dmi_low_access(dmi, data, DMI_OP_NOP);
+	DEBUG_TARGET("DMI Read addr %x%s:data %x\n", *data, (res == -1) ? "failed" : "", *data);
+	return res;
 }
 
 int rvdbg_set_debug_version(RVDBGv013_DMI_t *dmi, uint8_t version)
