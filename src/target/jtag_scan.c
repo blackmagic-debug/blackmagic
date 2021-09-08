@@ -157,6 +157,7 @@ int jtag_scan(const uint8_t *irlens)
 			}
 			jtag_devs[i].jd_descr = "XILINX";
 			break;
+		case 0xc12: /*ESP32-C3*/
 		case DESIGNER_XAMBALA:
 			expected_irlen = 5;
 			jtag_devs[i].jd_descr = "RVDBG013";
