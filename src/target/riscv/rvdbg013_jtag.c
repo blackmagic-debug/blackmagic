@@ -65,20 +65,21 @@ static int rvdbg_dmi_low_access_jtag(RVDBGv013_DMI_t *dmi, uint32_t *dmi_data_ou
 retry:
 	jtag_dev_shift_dr(&jtag_proc, rvdbg_jtag->dp_jd_index, (void*)&dmi_ret, (const void*)&dmi_cmd,
 		DMI_BASE_BIT_COUNT + dmi->abits);
-	if (dmi->idle > 1)
-		jtag_proc.jtagtap_tms_seq(0, dmi->idle - 1);
-
 	switch (DMI_GET_OP(dmi_ret)) {
 		case DMISTAT_OP_BUSY:
 			// Retry after idling, restore last dmi
 			rvdbg_dmi_reset_jtag(dmi, false);
-			dmi->idle ++;
+			if (dmi->idle < 9) {
+				dmi->idle ++;
+				jtag_proc.idle_cycles = dmi->idle;
+			} else {
+				DEBUG_WARN("dmi_low_access idle cycle overflow\n");
+				return -1;
+			}
 			jtag_dev_shift_dr(&jtag_proc, rvdbg_jtag->dp_jd_index, (void*)&dmi_ret, (const void*)&rvdbg_jtag->last_dmi,
 				DMI_BASE_BIT_COUNT + dmi->abits);
 
-			DEBUG_WARN("RISC-V DMI op interrupted ret = 0x%"PRIx64", idle now %d \n", dmi_ret, dmi->idle);
-			if (dmi->idle > 1)
-				jtag_proc.jtagtap_tms_seq(0, dmi->idle - 1);
+			DEBUG_INFO("RISC-V DMI op interrupted ret = 0x%"PRIx64", idle now %d \n", dmi_ret, dmi->idle);
 			goto retry;
 
 		case DMISTAT_NO_ERROR:
@@ -142,6 +143,7 @@ void rvdbg013_jtag_dp_handler(jtag_dev_t *jd)
 	}
 
 	rvdbg_jtag->dmi.idle = DTMCS_GET_IDLE(dtmcontrol);
+	jtag_proc.idle_cycles = rvdbg_jtag->dmi.idle ;
 	rvdbg_jtag->dmi.abits = DTMCS_GET_ABITS(dtmcontrol);
 
 	if (rvdbg_dmi_init(&rvdbg_jtag->dmi) < 0) {
