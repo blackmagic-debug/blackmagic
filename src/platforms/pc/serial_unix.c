@@ -173,7 +173,7 @@ int platform_buffer_write(const uint8_t *data, int size)
 	s = write(fd, data, size);
 	if (s < 0) {
 		DEBUG_WARN("Failed to write\n");
-		return(-2);
+		exit(-2);
     }
 
 	return size;
