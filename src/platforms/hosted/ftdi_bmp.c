@@ -583,7 +583,7 @@ void libftdi_jtagtap_tdi_tdo_seq(
 			MPSSE_LSB | MPSSE_BITMODE | MPSSE_WRITE_NEG;
 		data[index++] = 0;
 		if (DI)
-			data[index++] = (DI[ticks]) >> rticks?0x81 : 0x01;
+			data[index++] = (DI[ticks] & (1 << rticks)) ? 0x81 : 0x01;
 	}
 	if (index)
 		libftdi_buffer_write(data, index);
