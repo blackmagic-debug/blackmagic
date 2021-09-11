@@ -97,6 +97,7 @@ enum AUTOEXEC_STATE {
 enum HART_REG {
 	HART_REG_CSR_BEGIN   = 0x0000,
 	HART_REG_CSR_MISA    = 0x0301,
+	HART_REG_CSR_MACHINE = 0x0f11,
 	HART_REG_CSR_MHARTID = 0x0f14,
 	HART_REG_CSR_END     = 0x0fff,
 	HART_REG_GPR_BEGIN   = 0x1000,
@@ -109,6 +110,7 @@ enum HART_REG {
 #define DMSTATUS_GET_AUTHBUSY(x)		((x >> 6) & 0x1)
 #define DMSTATUS_GET_AUTHENTICATED(x)   ((x >> 7) & 0x1)
 #define DMSTATUS_GET_ANYNONEXISTENT(x)  ((x >> 14) & 0x1)
+#define DMSTATUS_GET_ALLRESEUMSET(x)    ((x >> 17) & 0x1)
 #define DMSTATUS_GET_ANYHAVERESET(x)    ((x >> 18) & 0x1)
 #define DMSTATUS_GET_IMPEBREAK(x)	    ((x >> 22) & 0x1)
 #define DMSTATUS_GET_ALLHALTED(x)       ((x >> 9) & 0x1)
@@ -117,6 +119,7 @@ enum HART_REG {
 #define DMCONTROL_MK_HARTSEL(s)       (((s) & 0x3ff) << 16) | ((s) & (0x3ff << 10) >> 4)
 #define DMCONTROL_HASEL               (0x1 << 26)
 #define DMCONTROL_HALTREQ             (0x1U << 31)
+#define DMCONTROL_RESUMEREQ           (0x1U << 30)
 #define DMCONTROL_HARTRESET           (0x1U << 29)
 #define DMCONTROL_DMACTIVE            (0x1)
 #define DMCONTROL_NDMRESET		      (0x1U << 1)
@@ -129,6 +132,13 @@ enum HART_REG {
 #define ABSTRACTCS_CLEAR_CMDERR(t) do { t |= (0x7 << 8);} while (0)
 #define ABSTRACTCS_GET_BUSY(x)		  ((x >> 12) & 0x1)
 #define ABSTRACTCS_GET_PROGBUFSIZE(x) ((x >> 24) & 0x1f)
+
+#define SBCS_SBREADONDATA             (1U << 15)
+#define SBCS_SBAUTOINCREMENT          (1U << 16)
+#define SBCS_SBACCESS_8BIT            (0U << 17)
+#define SBCS_SBACCESS_16BIT           (1U << 17)
+#define SBCS_SBACCESS_32BIT           (2U << 17)
+#define SBCD_SBREADONADDR             (1U << 20)
 
 #define ABSTRACTCMD_SET_TYPE(t, s) do { \
 	t &= ~(0xff << 24); \
@@ -177,7 +187,7 @@ static int rvdbg_dmi_write(RVDBGv013_DMI_t *dmi, uint32_t addr, uint32_t data)
 {
 	int res = -1;
 	dmi->rvdbg_dmi_low_access(
-		dmi, NULL, ((uint64_t)addr << DMI_BASE_BIT_COUNT) | (data << 2) | DMI_OP_WRITE);
+		dmi, NULL, ((uint64_t)addr << DMI_BASE_BIT_COUNT) | ((uint64_t)data << 2) | DMI_OP_WRITE);
 	res  = dmi->rvdbg_dmi_low_access(dmi, NULL, DMI_OP_NOP);
 	DEBUG_TARGET("DMI write add %08" PRIx32 ", data %08" PRIx32 "\n", addr, data);
 	return res;
@@ -257,9 +267,6 @@ static int rvdbg_halt_current_hart(RVDBGv013_DMI_t *dmi)
 	if (!DMSTATUS_GET_ALLHALTED(dmstatus)) {
 		if (rvdbg_dmi_read(dmi, DMI_REG_DMSTATUS, &dmstatus) < 0)
 			return -1;
-
-		// DEBUG("RISC-V: error, can not halt hart %d, dmstatus = 0x%08x\n",
-		// 	dmi->current_hart, dmstatus);
 
 		DEBUG_WARN("RISC-V: error, can not halt hart %d, dmstatus = 0x%08x -> trying resethaltreq\n",
 			dmi->current_hart, dmstatus);
@@ -362,12 +369,12 @@ static int rvdbg_discover_harts(RVDBGv013_DMI_t *dmi)
 			return -1;
 
 		if (DMSTATUS_GET_ANYNONEXISTENT(dmstatus)) {
-			DEBUG_WARN("Hart idx 0x%05x does not exist\n", hart_idx);
+			DEBUG_INFO("Hart idx 0x%05x does not exist\n", hart_idx);
 			break;
 		}
 
 		if (DMSTATUS_GET_ANYHAVERESET(dmstatus)) {
-			DEBUG_INFO("Hart idx 0x%05x has reset, acknowledge\n", hart_idx);
+			DEBUG_WARN("Hart idx 0x%05x has reset, acknowledge\n", hart_idx);
 			dmcontrol = DMCONTROL_DMACTIVE | DMCONTROL_MK_HARTSEL(hart_idx) | DMCONTROL_ACKHAVERESET;
 			if (rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, dmcontrol) < 0)
 				return -1;
@@ -445,7 +452,7 @@ static int rvdbg_read_single_reg(RVDBGv013_DMI_t *dmi, uint16_t reg_idx, uint32_
 	ABSTRACTCMD_ACCESS_REGISTER_SET_AARPOSTINCREMENT(command,
 		astate == AUTOEXEC_STATE_INIT ? 1 : 0);
 
-	// Avoid wrinting command, when in autoexec cont mode
+	// Avoid writing command, when in autoexec cont mode
 	if (astate != AUTOEXEC_STATE_CONT) {
 		// Initiate register read command
 		if ((ret = rvdbg_abstract_command_run(dmi, command)) < 0)
@@ -640,7 +647,10 @@ static int rvdbg_progbuf_exec(RVDBGv013_DMI_t *dmi, uint32_t *args, uint8_t argi
 	uint32_t gp_register_backup[31];
 	ABSTRACTCMD_SET_TYPE(command, ABSTRACTCMD_TYPE_ACCESS_REGISTER);
 	ABSTRACTCMD_ACCESS_REGISTER_SET_POSTEXEC(command, 1);
-
+	DEBUG_INFO("rvdbg_progbuf_exec:");
+	for (int i = 0; i < argin_len; i++)
+		DEBUG_INFO(" %" PRIx32, args[i]);
+	DEBUG_INFO("\n");
 	// How many registers have to be backed up?
 	backup_len = MAX(argin_len, argout_len);
 
@@ -703,6 +713,57 @@ static int rvdbg_read_csr_progbuf(RVDBGv013_DMI_t *dmi, uint16_t reg_id, uint32_
 }
 
 // static int rvdbg_write_csr_progbuf(RVDBGv013_DMI_t *dmi, uint16_t reg_id, uint32_t value) { }
+
+static int rvdbg_read_mem_abstract(RVDBGv013_DMI_t *dmi, uint32_t address, uint32_t len, uint8_t* value)
+{
+/* Do not care for unaligned access and len for now */
+	if ((address % 3) || (len & 3))
+		DEBUG_WARN("rvdbg_read_mem_abstract unaligne access, expect problems\n");
+	uint32_t sbcs = SBCS_SBACCESS_32BIT | SBCD_SBREADONADDR;
+	if (len > 4)
+		sbcs |= SBCS_SBREADONDATA | SBCS_SBAUTOINCREMENT;
+	int res  = rvdbg_dmi_write(dmi, DMI_REG_SYSBUSCS, sbcs);
+	if (res) {
+		DEBUG_INFO("rvdbg_read_mem_abstract: SBCS write failed\n");
+		return -1;
+	}
+	res = rvdbg_dmi_write(dmi, DMI_REG_SBADDRESS0, address);
+	if (res) {
+		DEBUG_INFO("rvdbg_read_mem_abstract: Address write failed\n");
+		return -1;
+	}
+	uint32_t data;
+	if (len > 4) {
+		res = rvdbg_dmi_read(dmi, DMI_REG_SBDATA0, &data);
+		if (res) {
+			DEBUG_WARN("Write read at len %d failed\n", len);
+			return -1;
+		}
+		*value++ = (data >>  0) & 0xff;
+		*value++ = (data >>  8) & 0xff;
+		*value++ = (data >> 16) & 0xff;
+		*value++ = (data >> 24) & 0xff;
+		len -= 4;
+		if (len <= 4) {
+			int res  = rvdbg_dmi_write(dmi, DMI_REG_SYSBUSCS, 0);
+			if (res) {
+				DEBUG_INFO("rvdbg_read_mem_disable autoread: SBCS write failed\n");
+				return -1;
+			}
+		}
+	}
+	res = rvdbg_dmi_read(dmi, DMI_REG_SBDATA0, &data);
+	if (res) {
+		DEBUG_WARN("Last read failed\n");
+		return -1;
+	}
+	while (len) {
+		*value++ = data & 0xff;
+		data >>= 8;
+		len --;
+	}
+	return 0;
+}
 
 static int rvdbg_read_mem_progbuf(RVDBGv013_DMI_t *dmi, uint32_t address, uint32_t len, uint8_t* value)
 {
@@ -782,7 +843,7 @@ static int rvdbg_select_mem_and_csr_access_impl(RVDBGv013_DMI_t *dmi)
 		return -1;
 	}
 
-	// DEBUG("datacount = %d\n", dmi->abstract_data_count);
+	DEBUG_INFO("datacount = %d\n", dmi->abstract_data_count);
 
 	// Check if a program buffer is supported, and it is sufficient for accessing
 	// CSR and / or MEMORY.
@@ -849,6 +910,11 @@ static bool rvdbg_check_error(target *t) {
 	return dmi->error;
 }
 
+//int rvdbg_mem_read(target *t, void *dest, target_addr src, size_t len)
+//{
+//	return -1;
+//}
+
 int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 {
 	uint8_t version;
@@ -874,6 +940,14 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 
 	dmi->rvdbg_dmi_reset(dmi, false);
 
+	if (rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, 0) < 0)
+			return -1;
+	do {
+		rvdbg_dmi_read(dmi, DMI_REG_DMCONTROL, &dmcontrol);
+	} while (dmcontrol & DMCONTROL_DMACTIVE);
+
+	if (rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, DMCONTROL_DMACTIVE) < 0)
+			return -1;
 	// Read dmcontrol and store for reference
 	if (rvdbg_dmi_read(dmi, DMI_REG_DMCONTROL, &dmcontrol) < 0)
 		return -1;
@@ -938,7 +1012,75 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
     // Discover harts, add targets
 	if (rvdbg_discover_harts(dmi) < 0)
 		return -1;
+	if (rvdbg_dmi_read(dmi, DMI_REG_DMCONTROL, &dmcontrol) < 0)
+		return -1;
+	int res = rvdbg_halt_current_hart(dmi);
+	if (res)
+		DEBUG_WARN("Halt failed\n");
 
+	uint32_t misa[1];
+	res = rvdbg_read_single_reg(dmi, HART_REG_CSR_MISA, misa, AUTOEXEC_STATE_NONE);
+	if (res) {
+		DEBUG_WARN("Read MISA failed\n");
+	} else {
+		DEBUG_INFO("MISA %"PRIx32 ", XLEN %d bits\n",  misa[0], ((misa[0] >> 30) << 5));
+	}
+
+	uint32_t machine[4];
+	res = rvdbg_read_regs(dmi, HART_REG_CSR_MACHINE, machine, 4);
+	if (res) {
+		DEBUG_WARN("Read machine failed\n");
+	} else {
+		DEBUG_INFO("Machine %"PRIx32 ", %"PRIx32 ", %"PRIx32 ", %"PRIx32 "\n",
+				   machine[0], machine[1], machine[2], machine[3]);
+	}
+	/* Try to read memory*/
+	uint32_t sbcs;
+	res = rvdbg_dmi_read(dmi, DMI_REG_SYSBUSCS, &sbcs);
+	if (res) {
+		DEBUG_WARN("READ SCSC failed\n");
+		return -1;
+	} else {
+		if (sbcs)
+			DEBUG_WARN("SCS: %" PRIx32 ", sbasize %d, sbaccess %d\n", sbcs, (sbcs >>5) & 0x3f,  8 << ((sbcs >>17) & 7));
+		else
+			DEBUG_WARN("No system bus access\n");
+	}
+	uint32_t addr = (sbcs) ? 0x3c100020 : 0x08000000;
+	uint8_t mem8[4] ;
+	if (sbcs)
+		res = rvdbg_read_mem_abstract(dmi, addr, sizeof(mem8), mem8);
+	else
+		res = rvdbg_read_mem_progbuf(dmi, addr, sizeof(mem8), mem8);
+	if (res) {
+		DEBUG_WARN("Read MEM failed\n");
+	} else {
+			DEBUG_INFO("MEM @ 0x%08" PRIx32 ": %" PRIx32 "\n", addr,*(uint32_t*)mem8);
+//			DEBUG_INFO("MEM: %" PRIx32 ", %" PRIx32 ", %" PRIx32 ", %" PRIx32 ", %" PRIx32 ", %"
+//					   PRIx32 ", %" PRIx32 ", %" PRIx32 "\n",
+//					   mem32[0], mem32[1], mem32[2], mem32[3], mem32[4], mem32[5], mem32[6], mem32[7]);
+	}
+	/* Resume from Halt
+	 * Remove HaltReq
+     */
+	if (rvdbg_dmi_read(dmi, DMI_REG_DMSTATUS, &dmstatus) < 0)
+		return -1;
+	DEBUG_WARN("Before resume: dmstatus %" PRIx32 "\n", dmstatus);
+	if (rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, DMCONTROL_DMACTIVE| DMCONTROL_RESUMEREQ) < 0)
+		return -1;
+	if (rvdbg_dmi_read(dmi, DMI_REG_DMSTATUS, &dmstatus) < 0)
+		return -1;
+	DEBUG_WARN("After first resume: dmstatus %" PRIx32 "\n", dmstatus);
+	int i = 0;
+	for (; i < 16; i++) {
+		if (rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, DMCONTROL_DMACTIVE | DMCONTROL_RESUMEREQ) < 0)
+			return -1;
+		if (rvdbg_dmi_read(dmi, DMI_REG_DMSTATUS, &dmstatus) < 0)
+			return -1;
+		if (DMSTATUS_GET_ALLRESEUMSET(dmstatus))
+			break;
+	};
+	DEBUG_WARN("run %d: dmstatus %" PRIx32 "\n", i, dmstatus);
 	// Disable the debug module
 	if (rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, 0) < 0)
 		return -1;
