@@ -200,9 +200,8 @@ void rvdbd_dmi_unref(RVDBGv013_DMI_t *dtm)
 static int rvdbg_dmi_write(RVDBGv013_DMI_t *dmi, uint32_t addr, uint32_t data)
 {
 	int res = -1;
-	dmi->rvdbg_dmi_low_access(
+	res = dmi->rvdbg_dmi_low_access(
 		dmi, NULL, ((uint64_t)addr << DMI_BASE_BIT_COUNT) | ((uint64_t)data << 2) | DMI_OP_WRITE);
-	res  = dmi->rvdbg_dmi_low_access(dmi, NULL, DMI_OP_NOP);
 	DEBUG_TARGET("DMI write add %08" PRIx32 ", data %08" PRIx32 "\n", addr, data);
 	return res;
 }
