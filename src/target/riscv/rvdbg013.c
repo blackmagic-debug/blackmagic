@@ -39,7 +39,8 @@ enum DMI_OP {
 };
 
 enum DMI_REG {
-	DMI_REG_ABSTRACTDATA_BEGIN = 0x04,
+	DMI_REG_ABSTRACTDATA0      = 0x04,
+	DMI_REG_ABSTRACTDATA1      = 0x05,
 	DMI_REG_ABSTRACTDATA_END   = 0x0f,
 	DMI_REG_DMCONTROL          = 0x10,
 	DMI_REG_DMSTATUS           = 0x11,
@@ -75,8 +76,18 @@ enum DMI_REG {
 enum ABSTRACTCMD_TYPE {
 	ABSTRACTCMD_TYPE_ACCESS_REGISTER = 0x0,
 	ABSTRACTCMD_TYPE_QUICK_ACCESS    = 0x1,
-	ABSTRACTCMD_TYPE_ACCESS_MEMORY   = 0x2,
+	ABSTRACTCMD_TYPE_ACCESS_MEMORY   = (0x2U << 24),
 };
+
+enum ABSTRACTCMD_AAMSIZE {
+	ABSTRACTCMD_AAMSIZE_8bit   = (0U << 20),
+	ABSTRACTCMD_AAMSIZE_16bit  = (1U << 20),
+	ABSTRACTCMD_AAMSIZE_32bit  = (2U << 20),
+	ABSTRACTCMD_AAMSIZE_64bit  = (3U << 20),
+	ABSTRACTCMD_AAMSIZE_128bit = (4U << 20),
+};
+
+#define ABSTRACTCMD_AAMPOSTINCREMENT (1U << 19)
 
 enum ABSTRACTCMD_ERR {
 	ABSTRACTCMD_ERR_NONE = 0x0,
@@ -132,6 +143,9 @@ enum HART_REG {
 #define ABSTRACTCS_CLEAR_CMDERR(t) do { t |= (0x7 << 8);} while (0)
 #define ABSTRACTCS_GET_BUSY(x)		  ((x >> 12) & 0x1)
 #define ABSTRACTCS_GET_PROGBUFSIZE(x) ((x >> 24) & 0x1f)
+
+#define ABSTRACTAUTO_AUTOEXECPROGBUF  (1U << 16)
+#define ABSTRACTAUTO_AUTOEXECDATA     (1U <<  0)
 
 #define SBCS_SBREADONDATA             (1U << 15)
 #define SBCS_SBAUTOINCREMENT          (1U << 16)
@@ -198,7 +212,7 @@ static int rvdbg_dmi_read(RVDBGv013_DMI_t *dmi, uint32_t addr, uint32_t *data)
 	int res = 0;
 	dmi->rvdbg_dmi_low_access(dmi, NULL, ((uint64_t)addr << DMI_BASE_BIT_COUNT) | DMI_OP_READ);
 	res = dmi->rvdbg_dmi_low_access(dmi, data, DMI_OP_NOP);
-	DEBUG_TARGET("DMI Read addr %x%s:data %x\n", *data, (res == -1) ? "failed" : "", *data);
+	DEBUG_TARGET("DMI Read addr %x%s:data %x\n", addr, (res == -1) ? "failed" : "", *data);
 	return res;
 }
 
@@ -419,17 +433,25 @@ retry:
 
 	if (cmderror != ABSTRACTCMD_ERR_NONE) {
 		// Clear the error
-		abstractcs = 0;
-		ABSTRACTCS_CLEAR_CMDERR(abstractcs);
+		abstractcs = 7 << 8;
 		if (rvdbg_dmi_write(dmi, DMI_REG_ABSTRACT_CS, abstractcs) < 0)
 			return -1;
 
 		// Handle ERR_BUSY retries automatically
-		if (cmderror == ABSTRACTCMD_ERR_BUSY) {
+		switch (cmderror) {
+		case 0:
+			break;
+		case ABSTRACTCMD_ERR_BUSY:
 			DEBUG_WARN("RISC-V abstract command busy, retry...\n");
 			goto retry;
-		} else if (cmderror == ABSTRACTCMD_ERR_HALT_RESUME) {
+		case ABSTRACTCMD_ERR_HALT_RESUME:
 			DEBUG_WARN("RISC-V abstract command 0x%08x not supported in run/halt state\n", command);
+			break;
+		case ABSTRACTCMD_ERR_NOT_SUPPORTED:
+			DEBUG_WARN("RISC-V abstract command 0x%08x not supported\n", command);
+			break;
+		default:
+			DEBUG_WARN("RISC-V abstract command 0x%08x,err %d\n", command, cmderror);
 		}
 	}
 
@@ -472,7 +494,7 @@ static int rvdbg_read_single_reg(RVDBGv013_DMI_t *dmi, uint16_t reg_idx, uint32_
 		}
 	}
 
-	if (rvdbg_dmi_read(dmi, DMI_REG_ABSTRACTDATA_BEGIN, out) < 0)
+	if (rvdbg_dmi_read(dmi, DMI_REG_ABSTRACTDATA0, out) < 0)
 		return -1;
 
 	if (astate == AUTOEXEC_STATE_CONT) {
@@ -494,7 +516,7 @@ static int rvdbg_write_single_reg(RVDBGv013_DMI_t *dmi, uint16_t reg_id, uint32_
 	int ret;
 
 	// Write value to data0
-	if (rvdbg_dmi_write(dmi, DMI_REG_ABSTRACTDATA_BEGIN, value) < 0)
+	if (rvdbg_dmi_write(dmi, DMI_REG_ABSTRACTDATA0, value) < 0)
 		return -1;
 
 	// Construct abstract command
@@ -714,38 +736,134 @@ static int rvdbg_read_csr_progbuf(RVDBGv013_DMI_t *dmi, uint16_t reg_id, uint32_
 
 // static int rvdbg_write_csr_progbuf(RVDBGv013_DMI_t *dmi, uint16_t reg_id, uint32_t value) { }
 
-static int rvdbg_read_mem_abstract(RVDBGv013_DMI_t *dmi, uint32_t address, uint32_t len, uint8_t* value)
+static int rvdbg_read_mem_abstract(RVDBGv013_DMI_t *dmi, void* dest, target_addr address, size_t len)
 {
-/* Do not care for unaligned access and len for now */
-	if ((address % 3) || (len & 3))
-		DEBUG_WARN("rvdbg_read_mem_abstract unaligne access, expect problems\n");
+	if (!dest) {
+		DEBUG_WARN("rvdbg_read_mem_abstract invalid buffer\n");
+		return -1;
+	}
+	if (!len)
+		return 0;
+	int res;
+	if (address & 3) {
+		DEBUG_WARN("abstract unaligned!\n");
+		/* Align start address */
+		uint8_t preread[4], *p = preread;
+		res = rvdbg_read_mem_abstract(dmi, preread, address & ~3, 4);
+		if (res) {
+			DEBUG_WARN("rvdbg_read_mem_abstract preread failed\n");
+			return -1;
+		}
+		int pre_run = (address & 3);
+		p += pre_run;
+		unsigned int remainder = 4 - pre_run;
+		int count = MIN(remainder, len);
+		memcpy(dest, p, count);
+		address += count;
+		len -= count;
+	}
+	if (!len)
+		return 0;
+	if (len > 4) {
+		uint32_t abstractauto = ABSTRACTAUTO_AUTOEXECDATA;
+		res  = rvdbg_dmi_write(dmi, DMI_REG_ABSTRACT_AUTOEXEC, abstractauto);
+		if (res) {
+			DEBUG_INFO("rvdbg_read_mem_abstract: write abstractauto failed\n");
+			return -1;
+		}
+	}
+	res  = rvdbg_dmi_write(dmi, DMI_REG_ABSTRACTDATA1, address);
+	if (res) {
+		DEBUG_INFO("rvdbg_read_mem_abstract: write address failed\n");
+		return -1;
+	}
+	uint32_t command = ABSTRACTCMD_TYPE_ACCESS_MEMORY | ABSTRACTCMD_AAMSIZE_32bit;
+	if (len > 4)
+		command |=  ABSTRACTCMD_AAMPOSTINCREMENT;
+	res  = rvdbg_dmi_write(dmi, DMI_REG_ABSTRACT_CMD, command);
+	if (res) {
+		DEBUG_INFO("rvdbg_read_mem_abstract: write command failed\n");
+		return -1;
+	}
+	uint32_t data;
+	while (len > 4) {
+		res = rvdbg_dmi_read(dmi, DMI_REG_ABSTRACTDATA0, &data);
+		if (res) {
+			DEBUG_WARN("Read at len %d failed\n", len);
+			return -1;
+		}
+		memcpy(dest, &data, 4);
+		dest += 4;
+		len -= 4;
+		if (len <= 4) {
+			res  = rvdbg_dmi_write(dmi, DMI_REG_ABSTRACT_CMD, 0);
+			if (res) {
+				DEBUG_INFO("rvdbg_read_mem_disable autoexec failed\n");
+				return -1;
+			}
+		}
+	}
+	res = rvdbg_dmi_read(dmi, DMI_REG_ABSTRACTDATA0, &data);
+	if (res) {
+		DEBUG_WARN("Last read failed\n");
+		return -1;
+	}else DEBUG_WARN("ab data %08x\n", data);
+	memcpy(dest, &data, len);
+	return 0;
+}
+
+static int rvdbg_read_mem_systembus(RVDBGv013_DMI_t *dmi,  void* dest, target_addr address, size_t len)
+{
+	if (!dest) {
+		DEBUG_WARN("rvdbg_read_mem_systembus invalid buffer\n");
+		return -1;
+	}
+	if (!len)
+		return 0;
+	int res;
+	if (address & 3) {
+		/* Align start address */
+		uint8_t preread[4], *p = preread;
+		res = rvdbg_read_mem_systembus(dmi, preread, address & ~3, 4);
+		if (res) {
+			DEBUG_WARN("rvdbg_read_mem_systembus preread failed\n");
+			return -1;
+		}
+		int pre_run = (address & 3);
+		p += pre_run;
+		unsigned int remainder = 4 - pre_run;
+		int count = MIN(remainder, len);
+		memcpy(dest, p, count);
+		address += count;
+		len -= count;
+	}
+	if (!len)
+		return 0;
 	uint32_t sbcs = SBCS_SBACCESS_32BIT | SBCD_SBREADONADDR;
 	if (len > 4)
 		sbcs |= SBCS_SBREADONDATA | SBCS_SBAUTOINCREMENT;
-	int res  = rvdbg_dmi_write(dmi, DMI_REG_SYSBUSCS, sbcs);
+	res  = rvdbg_dmi_write(dmi, DMI_REG_SYSBUSCS, sbcs);
 	if (res) {
-		DEBUG_INFO("rvdbg_read_mem_abstract: SBCS write failed\n");
+		DEBUG_INFO("rvdbg_read_mem_systembus: SBCS write failed\n");
 		return -1;
 	}
 	res = rvdbg_dmi_write(dmi, DMI_REG_SBADDRESS0, address);
 	if (res) {
-		DEBUG_INFO("rvdbg_read_mem_abstract: Address write failed\n");
+		DEBUG_INFO("rvdbg_read_mem_systembus: Address write failed\n");
 		return -1;
 	}
 	uint32_t data;
-	if (len > 4) {
+	while (len > 4) {
 		res = rvdbg_dmi_read(dmi, DMI_REG_SBDATA0, &data);
 		if (res) {
 			DEBUG_WARN("Write read at len %d failed\n", len);
 			return -1;
 		}
-		*value++ = (data >>  0) & 0xff;
-		*value++ = (data >>  8) & 0xff;
-		*value++ = (data >> 16) & 0xff;
-		*value++ = (data >> 24) & 0xff;
+		memcpy(dest, &data, 4);
+		dest += 4;
 		len -= 4;
 		if (len <= 4) {
-			int res  = rvdbg_dmi_write(dmi, DMI_REG_SYSBUSCS, 0);
+			res  = rvdbg_dmi_write(dmi, DMI_REG_SYSBUSCS, 0);
 			if (res) {
 				DEBUG_INFO("rvdbg_read_mem_disable autoread: SBCS write failed\n");
 				return -1;
@@ -757,11 +875,7 @@ static int rvdbg_read_mem_abstract(RVDBGv013_DMI_t *dmi, uint32_t address, uint3
 		DEBUG_WARN("Last read failed\n");
 		return -1;
 	}
-	while (len) {
-		*value++ = data & 0xff;
-		data >>= 8;
-		len --;
-	}
+	memcpy(dest, &data, len);
 	return 0;
 }
 
@@ -789,7 +903,7 @@ static int rvdbg_read_mem_progbuf(RVDBGv013_DMI_t *dmi, uint32_t address, uint32
 	uint32_t program[] = {
 		RV32I_ISA_LOAD(1, width, RV32I_ISA_LOAD_ZERO_EXTEND, 2, 0),
 	};
-
+	DEBUG_WARN("RV32I_ISA_LOAD 0x%08" PRIx32 "\n", program[0]);
 	if (rvdbg_progbuf_upload(dmi, program, ARRAY_NUMELEM(program)) < 0)
 		return -1;
 
@@ -1014,7 +1128,22 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 		return -1;
 	if (rvdbg_dmi_read(dmi, DMI_REG_DMCONTROL, &dmcontrol) < 0)
 		return -1;
-	int res = rvdbg_halt_current_hart(dmi);
+	/* Start to fill out target */
+	t = target_new();
+
+	rvdbd_dmi_ref(dmi);
+
+	t->priv = dmi;
+	t->priv_free = (void (*)(void *))rvdbd_dmi_unref;
+	t->driver = dmi->descr;
+	t->core = "Generic RVDBG 0.13";
+
+	t->attach = rvdbg_attach;
+	t->detach = rvdbg_detach;
+	t->check_error = rvdbg_check_error;
+
+	int res;
+	res = rvdbg_halt_current_hart(dmi);
 	if (res)
 		DEBUG_WARN("Halt failed\n");
 
@@ -1046,19 +1175,49 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 		else
 			DEBUG_WARN("No system bus access\n");
 	}
-	uint32_t addr = (sbcs) ? 0x3c100020 : 0x08000000;
-	uint8_t mem8[4] ;
+	uint32_t addr = (sbcs) ? 0x3c100020 : 0x08000fc0;
+	addr++;
+	uint8_t mem8[1];
 	if (sbcs)
-		res = rvdbg_read_mem_abstract(dmi, addr, sizeof(mem8), mem8);
-	else
-		res = rvdbg_read_mem_progbuf(dmi, addr, sizeof(mem8), mem8);
+		res = rvdbg_read_mem_systembus(dmi, mem8, addr, sizeof(mem8));
+	else {
+		res = rvdbg_read_mem_abstract(dmi, mem8, addr, sizeof(mem8));
+		if (res)
+			res = rvdbg_read_mem_progbuf(dmi, addr, sizeof(mem8), mem8);
+	}
 	if (res) {
-		DEBUG_WARN("Read MEM failed\n");
+		DEBUG_WARN("Read MEM unaligned 1 byte failed\n");
 	} else {
-			DEBUG_INFO("MEM @ 0x%08" PRIx32 ": %" PRIx32 "\n", addr,*(uint32_t*)mem8);
-//			DEBUG_INFO("MEM: %" PRIx32 ", %" PRIx32 ", %" PRIx32 ", %" PRIx32 ", %" PRIx32 ", %"
-//					   PRIx32 ", %" PRIx32 ", %" PRIx32 "\n",
-//					   mem32[0], mem32[1], mem32[2], mem32[3], mem32[4], mem32[5], mem32[6], mem32[7]);
+			DEBUG_INFO("MEM @ 0x%08" PRIx32 ": %02x\n", addr, mem8[0]);
+	}
+	addr--;
+
+	uint32_t mem32[4] ={0};
+	if (sbcs)
+		res = rvdbg_read_mem_systembus(dmi, mem32, addr, 4);
+	else {
+		res = rvdbg_read_mem_abstract(dmi, mem32, addr, 4);
+		if (res)
+			res = rvdbg_read_mem_progbuf(dmi, addr, 4, (uint8_t*)mem32);
+	}
+	if (res) {
+		DEBUG_WARN("Read MEM aligned 1 word failed\n");
+	} else {
+			DEBUG_INFO("MEM @ 0x%08" PRIx32 ": %08x\n", addr, mem32[0]);
+	}
+	DEBUG_WARN("read 16 Bytes\n");
+	if (sbcs)
+		res = rvdbg_read_mem_systembus(dmi, mem32, addr, 16);
+	else {
+		res = rvdbg_read_mem_abstract(dmi, mem32, addr, 16);
+		if (res)
+			res = rvdbg_read_mem_progbuf(dmi, addr, 16, (uint8_t*)mem32);
+	}
+	if (res) {
+		DEBUG_WARN("Read MEM aligned 4 word failed\n");
+	} else {
+		DEBUG_INFO("MEM @ 0x%08" PRIx32 ": %08x %08x %08x %08x\n", addr,
+				   mem32[0], mem32[1], mem32[2], mem32[3]);
 	}
 	/* Resume from Halt
 	 * Remove HaltReq
@@ -1085,18 +1244,6 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 	if (rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, 0) < 0)
 		return -1;
 
-	t = target_new();
-
-	rvdbd_dmi_ref(dmi);
-
-	t->priv = dmi;
-	t->priv_free = (void (*)(void *))rvdbd_dmi_unref;
-	t->driver = dmi->descr;
-	t->core = "Generic RVDBG 0.13";
-
-	t->attach = rvdbg_attach;
-	t->detach = rvdbg_detach;
-	t->check_error = rvdbg_check_error;
 
 	return 0;
 }
