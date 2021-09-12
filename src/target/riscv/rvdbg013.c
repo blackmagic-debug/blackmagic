@@ -784,9 +784,14 @@ static int rvdbg_read_mem_abstract(RVDBGv013_DMI_t *dmi, void* dest, target_addr
 		DEBUG_INFO("rvdbg_read_mem_abstract: write command failed\n");
 		return -1;
 	}
+	res = dmi->rvdbg_dmi_low_access(dmi, NULL, ((uint64_t)DMI_REG_ABSTRACTDATA0 << DMI_BASE_BIT_COUNT) | DMI_OP_READ);
+	if (res) {
+		DEBUG_WARN("Read start %d failed\n", len);
+		return -1;
+	}
 	uint32_t data;
-	while (len > 4) {
-		res = rvdbg_dmi_read(dmi, DMI_REG_ABSTRACTDATA0, &data);
+	while (len) {
+		res = dmi->rvdbg_dmi_low_access(dmi, &data, ((uint64_t)DMI_REG_ABSTRACTDATA0 << DMI_BASE_BIT_COUNT) | DMI_OP_READ);
 		if (res) {
 			DEBUG_WARN("Read at len %d failed\n", len);
 			return -1;
@@ -794,7 +799,7 @@ static int rvdbg_read_mem_abstract(RVDBGv013_DMI_t *dmi, void* dest, target_addr
 		memcpy(dest, &data, 4);
 		dest += 4;
 		len -= 4;
-		if (len <= 4) {
+		if (!len) {
 			res  = rvdbg_dmi_write(dmi, DMI_REG_ABSTRACT_CMD, 0);
 			if (res) {
 				DEBUG_INFO("rvdbg_read_mem_disable autoexec failed\n");
@@ -802,11 +807,11 @@ static int rvdbg_read_mem_abstract(RVDBGv013_DMI_t *dmi, void* dest, target_addr
 			}
 		}
 	}
-	res = rvdbg_dmi_read(dmi, DMI_REG_ABSTRACTDATA0, &data);
+	res = dmi->rvdbg_dmi_low_access(dmi, &data, ((uint64_t)DMI_REG_ABSTRACTDATA0 << DMI_BASE_BIT_COUNT) | DMI_OP_READ);
 	if (res) {
 		DEBUG_WARN("Last read failed\n");
 		return -1;
-	}else DEBUG_WARN("ab data %08x\n", data);
+	}
 	memcpy(dest, &data, len);
 	return 0;
 }
@@ -851,9 +856,14 @@ static int rvdbg_read_mem_systembus(RVDBGv013_DMI_t *dmi,  void* dest, target_ad
 		DEBUG_INFO("rvdbg_read_mem_systembus: Address write failed\n");
 		return -1;
 	}
+	res = dmi->rvdbg_dmi_low_access(dmi, NULL, ((uint64_t)DMI_REG_SBDATA0 << DMI_BASE_BIT_COUNT) | DMI_OP_READ);
+	if (res) {
+		DEBUG_WARN("Read start %d failed\n", len);
+		return -1;
+	}
 	uint32_t data;
 	while (len > 4) {
-		res = rvdbg_dmi_read(dmi, DMI_REG_SBDATA0, &data);
+		res = dmi->rvdbg_dmi_low_access(dmi, &data, ((uint64_t)DMI_REG_SBDATA0 << DMI_BASE_BIT_COUNT) | DMI_OP_READ);
 		if (res) {
 			DEBUG_WARN("Write read at len %d failed\n", len);
 			return -1;
@@ -861,7 +871,7 @@ static int rvdbg_read_mem_systembus(RVDBGv013_DMI_t *dmi,  void* dest, target_ad
 		memcpy(dest, &data, 4);
 		dest += 4;
 		len -= 4;
-		if (len <= 4) {
+		if (!len) {
 			res  = rvdbg_dmi_write(dmi, DMI_REG_SYSBUSCS, 0);
 			if (res) {
 				DEBUG_INFO("rvdbg_read_mem_disable autoread: SBCS write failed\n");
@@ -869,7 +879,7 @@ static int rvdbg_read_mem_systembus(RVDBGv013_DMI_t *dmi,  void* dest, target_ad
 			}
 		}
 	}
-	res = rvdbg_dmi_read(dmi, DMI_REG_SBDATA0, &data);
+	res = dmi->rvdbg_dmi_low_access(dmi, &data, ((uint64_t)DMI_REG_SBDATA0 << DMI_BASE_BIT_COUNT) | DMI_OP_READ);
 	if (res) {
 		DEBUG_WARN("Last read failed\n");
 		return -1;
@@ -1174,7 +1184,7 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 		else
 			DEBUG_WARN("No system bus access\n");
 	}
-	uint32_t addr = (sbcs) ? 0x3c100020 : 0x08000fc0;
+	uint32_t addr = (sbcs) ? 0x420caec0 : 0x08000fc0;
 	addr++;
 	uint8_t mem8[1];
 	if (sbcs)
