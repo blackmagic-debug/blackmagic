@@ -1123,6 +1123,29 @@ static bool rvdbg_check_error(target *t) {
 	return dmi->error;
 }
 
+static void rvdbg_reset(target *t)
+{
+	RVDBGv013_DMI_t *dmi = t->priv;
+	int res;
+	/* Try Hartreset first*/
+	res = rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, DMCONTROL_DMACTIVE | DMCONTROL_HARTRESET);
+	if (res)
+		DEBUG_WARN("Reset write HARTRESET failed\n");
+	uint32_t dmcontrol = 0;
+	res = rvdbg_dmi_read(dmi,  DMI_REG_DMCONTROL, &dmcontrol);
+	if (res)
+		DEBUG_WARN("Reset read dmcontrol failed\n");
+	if (!(dmcontrol & DMCONTROL_HARTRESET)) {
+		DEBUG_WARN("Optional HARTRESET not implemented, using NDMRESET\n");
+		res = rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, DMCONTROL_DMACTIVE | DMCONTROL_NDMRESET);
+		if (res)
+			DEBUG_WARN("Reset write NDMRESET failed\n");
+	}
+	res = rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, DMCONTROL_DMACTIVE);
+	if (res)
+		DEBUG_WARN("Reset release RESET failed\n");
+}
+
 int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 {
 	uint8_t version;
@@ -1231,12 +1254,16 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 	t->priv_free = (void (*)(void *))rvdbd_dmi_unref;
 	t->driver = dmi->descr;
 	t->core = "Generic RVDBG 0.13";
+	/* Register access functions */
 	t->regs_size = 33 * 4;
 	t->regs_read = rvdbg_regs_read;
 	t->regs_write = rvdbg_regs_write;
 	t->reg_read = rvdbg_reg_read;
 	t->reg_write = rvdbg_reg_write;
+
 	t->tdesc = tdesc_rv32;
+	/*Halt/resume functions */
+	t->reset = rvdbg_reset;
 
 	t->attach = rvdbg_attach;
 	t->detach = rvdbg_detach;
