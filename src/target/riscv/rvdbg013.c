@@ -256,24 +256,27 @@ static const char* rvdbg_version_tostr(enum RISCV_DEBUG_VERSION version)
 }
 #endif /* ENABLE_DEBUG */
 
-// TODO: Remove
-__attribute__((used))
 static int rvdbg_halt_current_hart(RVDBGv013_DMI_t *dmi)
 {
-	uint32_t dmstatus, dmcontrol;
+	uint32_t dmcontrol;
 
 	DEBUG_INFO("current hart = %d\n", dmi->current_hart);
 
-	// Trigger the halt request
 	if (rvdbg_dmi_read(dmi, DMI_REG_DMCONTROL, &dmcontrol) < 0)
 			return -1;
 
 	dmcontrol |= DMCONTROL_HALTREQ;
+	// Trigger the halt request
 	if (rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, dmcontrol) < 0)
 		return -1;
-
+	platform_timeout timeout;
+	/* The risc debug doc reads as if HALTREQ wakes up sleeping hart
+	 * So assume a short time for reaction
+	 */
+	platform_timeout_set(&timeout, 50);
+	uint32_t dmstatus = 0;
 	// Now wait for the hart to halt
-	for (unsigned int i = 0; i < 512; i++) {
+	while (!(DMSTATUS_GET_ALLHALTED(dmstatus))) {
 		if (rvdbg_dmi_read(dmi, DMI_REG_DMSTATUS, &dmstatus) < 0)
 			return -1;
 		if (DMSTATUS_GET_ANYHAVERESET(dmstatus)) {
@@ -283,56 +286,33 @@ static int rvdbg_halt_current_hart(RVDBGv013_DMI_t *dmi)
 		}
 		if (DMSTATUS_GET_ALLHALTED(dmstatus))
 			break;
-	}
-
-	if (!DMSTATUS_GET_ALLHALTED(dmstatus)) {
-		if (rvdbg_dmi_read(dmi, DMI_REG_DMSTATUS, &dmstatus) < 0)
+		if (platform_timeout_is_expired(&timeout)) {
+			DEBUG_WARN("Timeout waiting for halt\n");
 			return -1;
-
-		DEBUG_WARN("RISC-V: error, can not halt hart %d, dmstatus = 0x%08x -> trying resethaltreq\n",
-			dmi->current_hart, dmstatus);
-
-		if (dmi->support_resethaltreq) {
-			if (rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, dmcontrol | DMCONTROL_SRESETHALTREQ) < 0)
-				return -1;
-		}
-
-		if (rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, dmcontrol | DMCONTROL_NDMRESET | DMCONTROL_HARTRESET) < 0)
-			return -1;
-
-		platform_delay(1000);
-
-		if (rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, dmcontrol) < 0)
-			return -1;
-
-		if (dmi->support_resethaltreq) {
-			if (rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, dmcontrol | DMCONTROL_CRESETHALTREQ) < 0)
-				return -1;
 		}
 	}
-
-	// Now wait for the hart to halt
-	for (unsigned int i = 0; i < 512; i++) {
-		if (rvdbg_dmi_read(dmi, DMI_REG_DMSTATUS, &dmstatus) < 0)
+	if (DMSTATUS_GET_HASRESETHALTREQ(dmcontrol)) {
+		/* Request halt on reset */
+		dmcontrol |= DMCONTROL_SRESETHALTREQ;
+		int res = rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, dmcontrol);
+		if (res) {
+			DEBUG_WARN("Write DMCONTROL failed\n");
 			return -1;
-		if (DMSTATUS_GET_ANYHAVERESET(dmstatus)) {
-			DEBUG_WARN("RISC-V: got reset, while trying to halt\n");
-			if (rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, dmcontrol | DMCONTROL_ACKHAVERESET) < 0)
-				return -1;
 		}
-		if (DMSTATUS_GET_ALLHALTED(dmstatus))
-			break;
+	} else {
+		DEBUG_INFO("Debug Module does not supports halt-on-reset!\n");
 	}
-
-	if (!DMSTATUS_GET_ALLHALTED(dmstatus)) {
-		if (rvdbg_dmi_read(dmi, DMI_REG_DMSTATUS, &dmstatus) < 0)
-			return -1;
-
-		DEBUG_WARN("RISC-V: error, can not halt hart %d, dmstatus = 0x%08x -> giving up\n",
-			dmi->current_hart, dmstatus);
-	}
-
 	return 0;
+}
+static void rvdbg_halt_request(target *t)
+{
+	RVDBGv013_DMI_t *dmi = t->priv;
+	int res;
+	res = rvdbg_halt_current_hart(dmi);
+	if (res) {
+		DEBUG_WARN("Can not halt target\n");
+		dmi->error = true;
+	}
 }
 
 static int rvdbg_discover_hart(RVDBGv013_DMI_t *dmi)
@@ -1095,16 +1075,19 @@ static int rvdbg_select_mem_and_csr_access_impl(RVDBGv013_DMI_t *dmi)
 	return 0;
 }
 
-static bool rvdbg_attach(target *t) {
+static bool rvdbg_check_error(target *t) {
 	RVDBGv013_DMI_t *dmi = t->priv;
 
-	DEBUG_TARGET("Attach\n");
-	// Activate the debug module
-	if (rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, DMCONTROL_DMACTIVE | DMCONTROL_MK_HARTSEL(dmi->current_hart)) < 0) {
-		dmi->error = true;
-		return false;
-	}
+	bool res = dmi->error;
+	dmi->error = false;
+	return res;
+}
 
+static bool rvdbg_attach(target *t) {
+	DEBUG_TARGET("Attach\n");
+	/* Clear any pending fault condition */
+	rvdbg_check_error(t);
+	rvdbg_halt_request(t);
 	// TODO: Implement
 	return true;
 }
@@ -1115,12 +1098,6 @@ static void rvdbg_detach(target *t) {
 	// Deactivate the debug module
 	if (rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, 0) < 0)
 		dmi->error = true;
-}
-
-static bool rvdbg_check_error(target *t) {
-	RVDBGv013_DMI_t *dmi = t->priv;
-
-	return dmi->error;
 }
 
 static void rvdbg_reset(target *t)
@@ -1264,6 +1241,7 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 	t->tdesc = tdesc_rv32;
 	/*Halt/resume functions */
 	t->reset = rvdbg_reset;
+	t->halt_request = rvdbg_halt_request;
 
 	t->attach = rvdbg_attach;
 	t->detach = rvdbg_detach;
