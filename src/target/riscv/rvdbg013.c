@@ -217,15 +217,32 @@ static int rvdbg_dmi_write(RVDBGv013_DMI_t *dmi, uint32_t addr, uint32_t data)
 	int res = -1;
 	res = dmi->rvdbg_dmi_low_access(
 		dmi, NULL, ((uint64_t)addr << DMI_BASE_BIT_COUNT) | ((uint64_t)data << 2) | DMI_OP_WRITE);
-	DEBUG_TARGET("DMI Write addr %08" PRIx32 ", data %08" PRIx32 "\n", addr, data);
+	if (res) {
+		dmi->error = true;
+		DEBUG_WARN("DMI Write addr %08" PRIx32 ", data %08" PRIx32 "failed\n", addr, data);
+	} else {
+		DEBUG_TARGET("DMI Write addr %08" PRIx32 ", data %08" PRIx32 "\n", addr, data);
+	}
 	return res;
 }
 
-static int rvdbg_dmi_reads(RVDBGv013_DMI_t *dmi, uint32_t addr, uint32_t *data)
+static int rvdbg_dmi_read_nop(RVDBGv013_DMI_t *dmi, uint32_t *data)
+{
+	int res = 0;
+	res = dmi->rvdbg_dmi_low_access(dmi, data, DMI_OP_NOP);
+	DEBUG_TARGET("DMI Read NOP%s, data %08x\n", (res == -1) ? "failed" : "", (data) ? *data: 0);
+	return res;
+}
+static int rvdbg_dmi_read_pure(RVDBGv013_DMI_t *dmi, uint32_t addr, uint32_t *data)
 {
 	int res = 0;
 	res = dmi->rvdbg_dmi_low_access(dmi, data, ((uint64_t)addr << DMI_BASE_BIT_COUNT) | DMI_OP_READ);
-	DEBUG_TARGET("DMI Reads addr %08" PRIx32 "%s, data %08x\n", addr, (res == -1) ? "failed" : "", (data) ? *data: 0);
+	if (res) {
+		dmi->error = true;
+		DEBUG_TARGET("DMI Readp addr %08" PRIx32 "failed\n", addr);
+	} else {
+		DEBUG_TARGET("DMI Readp addr %08" PRIx32 ": data %08x\n", addr, (data) ? *data: 0);
+	}
 	return res;
 }
 static int rvdbg_dmi_read(RVDBGv013_DMI_t *dmi, uint32_t addr, uint32_t *data)
@@ -319,7 +336,6 @@ static int rvdbg_halt_current_hart(RVDBGv013_DMI_t *dmi)
 		dmcontrol |= DMCONTROL_SRESETHALTREQ;
 		int res = rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, dmcontrol);
 		if (res) {
-			DEBUG_WARN("Write DMCONTROL failed\n");
 			return -1;
 		}
 	} else {
@@ -824,7 +840,6 @@ static void rvdbg_mem_read_abstract(target *t, void* dest, target_addr address, 
 	}
 	if (!len)
 		return;
-	int res;
 	if (address & 3) {
 		DEBUG_WARN("abstract unaligned!\n");
 		/* Align start address */
@@ -844,56 +859,36 @@ static void rvdbg_mem_read_abstract(target *t, void* dest, target_addr address, 
 	}
 	if (!len)
 		return;
-	if (len > 4) {
-		uint32_t abstractauto = ABSTRACTAUTO_AUTOEXECDATA;
-		res  = rvdbg_dmi_write(dmi, DMI_REG_ABSTRACT_AUTOEXEC, abstractauto);
-		if (res) {
-			DEBUG_INFO("rvdbg_mem_read_abstract: write abstractauto failed\n");
-			dmi->error = true;
-			return;
-		}
-	}
-	res  = rvdbg_dmi_write(dmi, DMI_REG_ABSTRACTDATA1, address);
-	if (res) {
-		DEBUG_INFO("rvdbg_mem_read_abstract: write address failed\n");
-		dmi->error = true;
-		return;
-	}
 	uint32_t command = ABSTRACTCMD_TYPE_ACCESS_MEMORY | ABSTRACTCMD_AAMSIZE_32bit;
-	if (len > 4)
+	if (len > 4) {
 		command |=  ABSTRACTCMD_AAMPOSTINCREMENT;
-	res  = rvdbg_dmi_write(dmi, DMI_REG_ABSTRACT_CMD, command);
-	if (res) {
-		DEBUG_INFO("rvdbg_mem_read_abstract: write command failed\n");
-		dmi->error = true;
-		return;
+		uint32_t abstractauto = ABSTRACTAUTO_AUTOEXECDATA;
+		rvdbg_dmi_write(dmi, DMI_REG_ABSTRACT_AUTOEXEC, abstractauto);
 	}
-	res = rvdbg_dmi_reads(dmi, DMI_REG_ABSTRACTDATA0, NULL);
-	if (res) {
-		DEBUG_WARN("Read start %d failed\n", len);
-		dmi->error = true;
-		return;
-	}
+	rvdbg_dmi_write(dmi, DMI_REG_ABSTRACTDATA1, address);
+	rvdbg_dmi_write(dmi, DMI_REG_ABSTRACT_CMD, command);
+	rvdbg_dmi_read_pure(dmi, DMI_REG_ABSTRACTDATA0, NULL);
 	uint32_t data;
-	while (len) {
-		res = rvdbg_dmi_reads(dmi, DMI_REG_ABSTRACTDATA0, &data);
-		if (res) {
+	while (len && !dmi->error) {
+		if (len >4 && len <= 8) {
+			rvdbg_dmi_read_nop(dmi, &data);
+			rvdbg_dmi_write(dmi, DMI_REG_ABSTRACT_AUTOEXEC, 0);
+			rvdbg_dmi_read_pure(dmi, DMI_REG_ABSTRACTDATA0, NULL);
+		} else {
+			rvdbg_dmi_read_pure(dmi, DMI_REG_ABSTRACTDATA0, &data);
+		}
+		if (dmi->error) {
 			DEBUG_WARN("Read at len %d failed\n", len);
-			dmi->error = true;
 			return;
 		}
 		size_t chunk = MIN(len, 4);
 		memcpy(dest, &data, chunk);
 		dest += chunk;
 		len -= chunk;
-		if (!len) {
-			res  = rvdbg_dmi_write(dmi, DMI_REG_ABSTRACT_AUTOEXEC, 0);
-			if (res) {
-				DEBUG_INFO("rvdbg_mem_read_disable autoexec failed\n");
-				dmi->error = true;
-				return;
-			}
-		}
+	}
+	if (dmi->error) {
+		DEBUG_WARN("Abstract read failed at addr %p\n", dest);
+		return;
 	}
 	rvdbg_dmi_read(dmi, DMI_REG_ABSTRACTDATA1, &data);
 }
