@@ -852,7 +852,7 @@ static void rvdbg_mem_read_abstract(target *t, void* dest, target_addr address, 
 	if (!len)
 		return;
 	if (address & 3) {
-		DEBUG_WARN("abstract unaligned!\n");
+		DEBUG_WARN("#mem_read unaligned!\n");
 		/* Align start address */
 		uint8_t preread[4], *p = preread;
 		rvdbg_mem_read_abstract(t, preread, address & ~3, 4);
@@ -1123,16 +1123,6 @@ static void rvdbg_halt_resume(target *t, bool step)
 {
 	RVDBGv013_DMI_t *dmi = t->priv;
 	int res;
-	uint32_t dmcontrol = 0;
-	res = rvdbg_dmi_read(dmi, DMI_REG_DMCONTROL, &dmcontrol);
-	if (res)
-		DEBUG_WARN("Reset read dmcontrol failed\n");
-	else DEBUG_WARN("Halt_resume dmcontrol %08x\n", dmcontrol);
-	uint32_t dmstatu = 0;
-	res = rvdbg_dmi_read(dmi, DMI_REG_DMSTATUS, &dmstatu);
-	if (res)
-		DEBUG_WARN("Reset read dmstatus failed\n");
-	else DEBUG_WARN("Halt_resume dmstatus %08x\n", dmstatu);
 	/* Handle single step in DCSR*/
 	uint32_t dcsr;
 	res = rvdbg_read_single_reg(dmi, HART_REG_CSR_DCSR, &dcsr, AUTOEXEC_STATE_NONE);
@@ -1181,13 +1171,6 @@ static enum target_halt_reason rvdbg_halt_poll(target *t, target_addr *watch)
 	int res = rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, DMCONTROL_DMACTIVE);
 	if (res)
 		DEBUG_WARN("Poll write dmcontrol failed\n");
-	uint32_t dmstatus;
-	res = rvdbg_dmi_read(dmi, DMI_REG_DMSTATUS, &dmstatus);
-	if (res)
-		DEBUG_WARN("POLL read dmstatus failed\n");
-	if (! DMSTATUS_GET_ALLHALTED(dmstatus))
-		return TARGET_HALT_RUNNING;
-	DEBUG_WARN("halt_poll dmstatus 0x%08" PRIx32 "\n", dmstatus);
 	uint32_t dcsr;
 	res = rvdbg_read_single_reg(dmi, HART_REG_CSR_DCSR, &dcsr, AUTOEXEC_STATE_NONE);
 	uint8_t cause = (dcsr >> 6) & 7;
@@ -1196,7 +1179,7 @@ static enum target_halt_reason rvdbg_halt_poll(target *t, target_addr *watch)
 		DEBUG_INFO("Workaround for single stepping ESP32-C3\n");
 		cause = 4;
 	}
-	DEBUG_WARN("DCSR 0x%08" PRIx32 ", cause = %d\n", dcsr,cause);
+	DEBUG_TARGET("DCSR 0x%08" PRIx32 ", cause = %d\n", dcsr,cause);
 	if (cause == 0)
 		return TARGET_HALT_RUNNING;
 	switch (cause) {
@@ -1398,6 +1381,7 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 		dmi->dmi_triggers = i;
 	}
 	DEBUG_INFO("Found %d triggers\n", dmi->dmi_triggers);
+#if 0
 	/* Try to read memory*/
 	uint32_t sbcs;
 	res = rvdbg_dmi_read(dmi, DMI_REG_SYSBUSCS, &sbcs);
@@ -1406,37 +1390,36 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 		return -1;
 	} else {
 		if (sbcs)
-			DEBUG_WARN("SCS: %" PRIx32 ", sbasize %d, sbaccess %d\n", sbcs, (sbcs >>5) & 0x3f,  8 << ((sbcs >>17) & 7));
+			DEBUG_INFO("SCS: %" PRIx32 ", sbasize %d, sbaccess %d\n", sbcs, (sbcs >>5) & 0x3f,  8 << ((sbcs >>17) & 7));
 		else
-			DEBUG_WARN("No system bus access\n");
+			DEBUG_INFO("No system bus access\n");
 	}
 	uint32_t addr = (sbcs) ? 0x420caec0 : 0x08000fc0;
 	addr++;
 	uint8_t mem8[1];
 	t->mem_read(t, mem8, addr, sizeof(mem8));
 	if (dmi->error) {
-		DEBUG_WARN("Read MEM unaligned 1 byte failed\n");
+		DEBUG_WARN("#Read MEM unaligned 1 byte failed\n");
 	} else {
-		DEBUG_INFO("MEM @ 0x%08" PRIx32 ": %02x\n", addr, mem8[0]);
+		DEBUG_INFO("#MEM @ 0x%08" PRIx32 ": %02x\n", addr, mem8[0]);
 	}
 	addr--;
 
 	uint32_t mem32[4] ={0};
 	t->mem_read(t, mem32, addr, 4);
 	if (dmi->error) {
-		DEBUG_WARN("Read MEM aligned 1 word failed\n");
+		DEBUG_WARN("#Read MEM aligned 1 word failed\n");
 	} else {
-		DEBUG_INFO("MEM @ 0x%08" PRIx32 ": %08x\n", addr, mem32[0]);
+		DEBUG_INFO("#MEM @ 0x%08" PRIx32 ": %08x\n", addr, mem32[0]);
 	}
-	DEBUG_WARN("read 16 Bytes\n");
+	DEBUG_WARN("#read 16 Bytes\n");
 	t->mem_read(t, mem32, addr, 16);
 	if (dmi->error) {
-		DEBUG_WARN("Read MEM aligned 4 word failed\n");
+		DEBUG_WARN("#Read MEM aligned 4 word failed\n");
 	} else {
-		DEBUG_INFO("MEM @ 0x%08" PRIx32 ": %08x %08x %08x %08x\n", addr,
+		DEBUG_INFO("#MEM @ 0x%08" PRIx32 ": %08x %08x %08x %08x\n", addr,
 				   mem32[0], mem32[1], mem32[2], mem32[3]);
 	}
-#if 0
 /* dump registers */
 	uint32_t regs[t->regs_size / 4];
 	t->regs_read(t, regs);
@@ -1454,7 +1437,7 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 	rvdbg_halt_request(t);
 	DEBUG_TARGET("#Poll after resume\n");
 	res = rvdbg_halt_poll(t, NULL);
-	DEBUG_WARN("Poll res resume %d\n", res);
+	DEBUG_WARN("#Poll res resume %d\n", res);
 	rvdbg_halt_resume(t, false);
 	if (dmi->error)
 		return -1;
