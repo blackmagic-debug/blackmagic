@@ -221,12 +221,19 @@ static int rvdbg_dmi_write(RVDBGv013_DMI_t *dmi, uint32_t addr, uint32_t data)
 	return res;
 }
 
+static int rvdbg_dmi_reads(RVDBGv013_DMI_t *dmi, uint32_t addr, uint32_t *data)
+{
+	int res = 0;
+	res = dmi->rvdbg_dmi_low_access(dmi, data, ((uint64_t)addr << DMI_BASE_BIT_COUNT) | DMI_OP_READ);
+	DEBUG_TARGET("DMI Reads addr %08" PRIx32 "%s, data %08x\n", addr, (res == -1) ? "failed" : "", (data) ? *data: 0);
+	return res;
+}
 static int rvdbg_dmi_read(RVDBGv013_DMI_t *dmi, uint32_t addr, uint32_t *data)
 {
 	int res = 0;
 	dmi->rvdbg_dmi_low_access(dmi, NULL, ((uint64_t)addr << DMI_BASE_BIT_COUNT) | DMI_OP_READ);
 	res = dmi->rvdbg_dmi_low_access(dmi, data, DMI_OP_NOP);
-	DEBUG_TARGET("DMI Read addr  %08" PRIx32 "%s, data %x\n", addr, (res == -1) ? "failed" : "", *data);
+	DEBUG_TARGET("DMI Read addr  %08" PRIx32 "%s, data %08x\n", addr, (res == -1) ? "failed" : "", *data);
 	return res;
 }
 
@@ -861,7 +868,7 @@ static void rvdbg_mem_read_abstract(target *t, void* dest, target_addr address, 
 		dmi->error = true;
 		return;
 	}
-	res = dmi->rvdbg_dmi_low_access(dmi, NULL, ((uint64_t)DMI_REG_ABSTRACTDATA0 << DMI_BASE_BIT_COUNT) | DMI_OP_READ);
+	res = rvdbg_dmi_reads(dmi, DMI_REG_ABSTRACTDATA0, NULL);
 	if (res) {
 		DEBUG_WARN("Read start %d failed\n", len);
 		dmi->error = true;
@@ -869,7 +876,7 @@ static void rvdbg_mem_read_abstract(target *t, void* dest, target_addr address, 
 	}
 	uint32_t data;
 	while (len) {
-		res = dmi->rvdbg_dmi_low_access(dmi, &data, ((uint64_t)DMI_REG_ABSTRACTDATA0 << DMI_BASE_BIT_COUNT) | DMI_OP_READ);
+		res = rvdbg_dmi_reads(dmi, DMI_REG_ABSTRACTDATA0, &data);
 		if (res) {
 			DEBUG_WARN("Read at len %d failed\n", len);
 			dmi->error = true;
@@ -880,7 +887,7 @@ static void rvdbg_mem_read_abstract(target *t, void* dest, target_addr address, 
 		dest += chunk;
 		len -= chunk;
 		if (!len) {
-			res  = rvdbg_dmi_write(dmi, DMI_REG_ABSTRACT_CMD, 0);
+			res  = rvdbg_dmi_write(dmi, DMI_REG_ABSTRACT_AUTOEXEC, 0);
 			if (res) {
 				DEBUG_INFO("rvdbg_mem_read_disable autoexec failed\n");
 				dmi->error = true;
@@ -888,13 +895,7 @@ static void rvdbg_mem_read_abstract(target *t, void* dest, target_addr address, 
 			}
 		}
 	}
-	res = dmi->rvdbg_dmi_low_access(dmi, &data, ((uint64_t)DMI_REG_ABSTRACTDATA0 << DMI_BASE_BIT_COUNT) | DMI_OP_READ);
-	if (res) {
-		DEBUG_WARN("Last read failed\n");
-		dmi->error = true;
-		return;
-	}
-	memcpy(dest, &data, len);
+	rvdbg_dmi_read(dmi, DMI_REG_ABSTRACTDATA1, &data);
 }
 
 static void rvdbg_mem_read_systembus(target *t,  void* dest, target_addr address, size_t len)
