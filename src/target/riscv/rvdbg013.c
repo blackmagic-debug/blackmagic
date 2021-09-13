@@ -214,7 +214,7 @@ static int rvdbg_dmi_write(RVDBGv013_DMI_t *dmi, uint32_t addr, uint32_t data)
 	int res = -1;
 	res = dmi->rvdbg_dmi_low_access(
 		dmi, NULL, ((uint64_t)addr << DMI_BASE_BIT_COUNT) | ((uint64_t)data << 2) | DMI_OP_WRITE);
-	DEBUG_TARGET("DMI write add %08" PRIx32 ", data %08" PRIx32 "\n", addr, data);
+	DEBUG_TARGET("DMI Write addr %08" PRIx32 ", data %08" PRIx32 "\n", addr, data);
 	return res;
 }
 
@@ -223,7 +223,7 @@ static int rvdbg_dmi_read(RVDBGv013_DMI_t *dmi, uint32_t addr, uint32_t *data)
 	int res = 0;
 	dmi->rvdbg_dmi_low_access(dmi, NULL, ((uint64_t)addr << DMI_BASE_BIT_COUNT) | DMI_OP_READ);
 	res = dmi->rvdbg_dmi_low_access(dmi, data, DMI_OP_NOP);
-	DEBUG_TARGET("DMI Read addr %08" PRIx32 "%s:data %x\n", addr, (res == -1) ? "failed" : "", *data);
+	DEBUG_TARGET("DMI Read addr  %08" PRIx32 "%s, data %x\n", addr, (res == -1) ? "failed" : "", *data);
 	return res;
 }
 
@@ -1108,13 +1108,13 @@ static bool rvdbg_attach(target *t) {
 	return true;
 }
 
-static void rvdbg_detach(target *t) {
+static void rvdbg_detach(target *t)
+{
 	RVDBGv013_DMI_t *dmi = t->priv;
-
-	// Deactivate the debug module
-	if (rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, 0) < 0)
-		dmi->error = true;
+	target_halt_resume(t, false);
+	dmi->error = false;
 }
+
 
 static void rvdbg_reset(target *t)
 {
@@ -1159,6 +1159,7 @@ static void rvdbg_halt_resume(target *t, bool step)
 			DEBUG_WARN("Write DCSR failed\n");
 	}
 	uint32_t dmstatus;
+	/* As DMCONTROL_HALTREQ is not set, this clears halt request*/
 	if (rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, DMCONTROL_DMACTIVE| DMCONTROL_RESUMEREQ) < 0) {
 		DEBUG_WARN("Can not write resumereq\n");
 		dmi->error = true;
@@ -1175,6 +1176,14 @@ static void rvdbg_halt_resume(target *t, bool step)
 			DEBUG_WARN("Timeout waiting for resume, dmstatus 0x%08" PRIx32 "\n", dmstatus);
 			dmi->error = true;
 		}
+	}
+	if (rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, DMCONTROL_DMACTIVE) < 0) {
+		DEBUG_WARN("Can not write resumereq\n");
+		dmi->error = true;
+	}
+	if (rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, 0) < 0) {
+		DEBUG_WARN("Can not write resumereq\n");
+		dmi->error = true;
 	}
 }
 
@@ -1195,7 +1204,12 @@ static enum target_halt_reason rvdbg_halt_poll(target *t, target_addr *watch)
 	uint32_t dcsr;
 	res = rvdbg_read_single_reg(dmi, HART_REG_CSR_DCSR, &dcsr, AUTOEXEC_STATE_NONE);
 	uint8_t cause = (dcsr >> 6) & 7;
-	DEBUG_INFO("cause = %d\n", cause);
+	if ((t->t_designer == 0x612) && (cause == 3 ) && (dcsr & CSR_DCSR_STEP)) {
+		/* FIXME: ESP32-C3 never reports TARGET_HALT_STEPPING */
+		DEBUG_INFO("Workaround for single stepping ESP32-C3\n");
+		cause = 4;
+	}
+	DEBUG_INFO("DCSR 0x%08" PRIx32 ", cause = %d\n", dcsr,cause);
 	if (cause == 0)
 		return TARGET_HALT_RUNNING;
 	switch (cause) {
@@ -1356,6 +1370,7 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 	} else {
 		DEBUG_INFO("Machine %"PRIx32 ", %"PRIx32 ", %"PRIx32 ", %"PRIx32 "\n",
 				   machine[0], machine[1], machine[2], machine[3]);
+		t->t_designer = machine[0] & 0xffff;
 		switch (machine[0]) {
 		case 0x612:
 			t->mem_read = rvdbg_mem_read_systembus;
@@ -1424,17 +1439,19 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 	for (size_t i = 0; i < t->regs_size; i = i+4) {
 		DEBUG_WARN("reg %2d: 0x%08x\n", i/4, regs[i/4]);
 	}
+#endif
 	DEBUG_TARGET("Resume single step\n");
 	rvdbg_halt_resume(t, true);
 	DEBUG_TARGET("Poll\n");
 	res = rvdbg_halt_poll(t, NULL);
-	DEBUG_WARN("Poll res %d\n", res);
-#endif
+	DEBUG_WARN("Poll res single step %d\n", res);
 	rvdbg_halt_resume(t, false);
-	// Disable the debug module
-	if (rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, 0) < 0)
+	rvdbg_halt_request(t);
+	DEBUG_TARGET("Poll after resume\n");
+	res = rvdbg_halt_poll(t, NULL);
+	DEBUG_WARN("Poll res resume %d\n", res);
+	rvdbg_halt_resume(t, false);
+	if (dmi->error)
 		return -1;
-
-
 	return 0;
 }
