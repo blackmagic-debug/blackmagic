@@ -115,6 +115,7 @@ enum AUTOEXEC_STATE {
 enum HART_REG {
 	HART_REG_CSR_BEGIN   = 0x0000,
 	HART_REG_CSR_MISA    = 0x0301,
+	HART_REG_CSR_DCSR    = 0x07b0,
 	HART_REG_CSR_DPC     = 0x07b1,
 	HART_REG_CSR_MACHINE = 0x0f11,
 	HART_REG_CSR_MHARTID = 0x0f14,
@@ -189,6 +190,9 @@ enum HART_REG {
 #define ABSTRACTAUTO_SET_DATA(t, s)     do { \
 	t &= ~(0xfff); \
 	t |= s & 0xfff; } while (0)
+
+/* CSR Register bits */
+#define CSR_DCSR_STEP (1U << 2)
 
 #define RISCV_MAX_HARTS 32U
 
@@ -265,6 +269,12 @@ static int rvdbg_halt_current_hart(RVDBGv013_DMI_t *dmi)
 	if (rvdbg_dmi_read(dmi, DMI_REG_DMCONTROL, &dmcontrol) < 0)
 			return -1;
 
+	if (!(dmcontrol & DMCONTROL_DMACTIVE)) {
+		/* Enable hart first */
+			dmcontrol |= DMCONTROL_DMACTIVE;
+			if (rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, dmcontrol) < 0)
+				return -1;
+	}
 	dmcontrol |= DMCONTROL_HALTREQ;
 	// Trigger the halt request
 	if (rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, dmcontrol) < 0)
@@ -291,7 +301,7 @@ static int rvdbg_halt_current_hart(RVDBGv013_DMI_t *dmi)
 			return -1;
 		}
 	}
-	if (DMSTATUS_GET_HASRESETHALTREQ(dmcontrol)) {
+	if (DMSTATUS_GET_HASRESETHALTREQ(dmstatus)) {
 		/* Request halt on reset */
 		dmcontrol |= DMCONTROL_SRESETHALTREQ;
 		int res = rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, dmcontrol);
@@ -304,6 +314,7 @@ static int rvdbg_halt_current_hart(RVDBGv013_DMI_t *dmi)
 	}
 	return 0;
 }
+
 static void rvdbg_halt_request(target *t)
 {
 	RVDBGv013_DMI_t *dmi = t->priv;
@@ -370,7 +381,7 @@ static int rvdbg_discover_harts(RVDBGv013_DMI_t *dmi)
 			return -1;
 
 		if (DMSTATUS_GET_ANYNONEXISTENT(dmstatus)) {
-			DEBUG_INFO("Hart idx 0x%05x does not exist\n", hart_idx);
+			DEBUG_TARGET("Hart idx 0x%05x does not exist\n", hart_idx);
 			break;
 		}
 
@@ -665,7 +676,7 @@ static ssize_t rvdbg_reg_read(target *t, int reg, void *data, size_t max)
 	int res;
 	if (max < 4) /* assume all registers 4 byte*/
 		return -1;
-	res = rvdbg_read_single_reg(dmi,reg, data, AUTOEXEC_STATE_NONE);
+	res = rvdbg_read_single_reg(dmi, reg, data, AUTOEXEC_STATE_NONE);
 	if (res) {
 		DEBUG_INFO("rvdbg_reg_read  failed\n");
 		return -1;
@@ -1109,7 +1120,7 @@ static void rvdbg_reset(target *t)
 	if (res)
 		DEBUG_WARN("Reset write HARTRESET failed\n");
 	uint32_t dmcontrol = 0;
-	res = rvdbg_dmi_read(dmi,  DMI_REG_DMCONTROL, &dmcontrol);
+	res = rvdbg_dmi_read(dmi, DMI_REG_DMCONTROL, &dmcontrol);
 	if (res)
 		DEBUG_WARN("Reset read dmcontrol failed\n");
 	if (!(dmcontrol & DMCONTROL_HARTRESET)) {
@@ -1121,6 +1132,72 @@ static void rvdbg_reset(target *t)
 	res = rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, DMCONTROL_DMACTIVE);
 	if (res)
 		DEBUG_WARN("Reset release RESET failed\n");
+}
+
+static void rvdbg_halt_resume(target *t, bool step)
+{
+	RVDBGv013_DMI_t *dmi = t->priv;
+	int res;
+	uint32_t dcsr;
+	res = rvdbg_read_single_reg(dmi, HART_REG_CSR_DCSR, &dcsr, AUTOEXEC_STATE_NONE);
+	if (res) {
+		DEBUG_WARN("Read DCSR failed\n");
+	} else {
+		if (step)
+			dcsr |= CSR_DCSR_STEP;
+		else
+			dcsr &= ~CSR_DCSR_STEP;
+		res = rvdbg_write_single_reg(dmi, HART_REG_CSR_DCSR, dcsr, AUTOEXEC_STATE_NONE);
+		if (res)
+			DEBUG_WARN("Wtrite DCSR failed\n");
+	}
+	uint32_t dmstatus;
+	DEBUG_WARN("Before resume: dmstatus %" PRIx32 "\n", dmstatus);
+	if (rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, DMCONTROL_DMACTIVE| DMCONTROL_RESUMEREQ) < 0) {
+		DEBUG_WARN("Can not write resumereq\n");
+		dmi->error = true;
+	}
+	platform_timeout timeout;
+	platform_timeout_set(&timeout, 1050); /* Hart should resume in less than 1 sec*/
+	while (!DMSTATUS_GET_ALLRESEUMSET(dmstatus)) {
+		if (rvdbg_dmi_read(dmi, DMI_REG_DMSTATUS, &dmstatus) < 0) {
+			DEBUG_WARN("Can not read dmstatua\n");
+			dmi->error = true;
+		}
+		if (platform_timeout_is_expired(&timeout)) {
+			DEBUG_WARN("Timeout waiting for resume, dmstatus 0x%08" PRIx32 "\n", dmstatus);
+			dmi->error = true;
+		}
+	}
+}
+
+static enum target_halt_reason rvdbg_halt_poll(target *t, target_addr *watch)
+{
+	(void)watch;
+	RVDBGv013_DMI_t *dmi = t->priv;
+	uint32_t dmcontrol;
+	int res = rvdbg_dmi_read(dmi, DMI_REG_DMCONTROL, &dmcontrol);
+	if (res)
+		DEBUG_WARN("POLL read dmcontrol failed\n");
+	if (! DMSTATUS_GET_ALLHALTED(dmcontrol))
+		return TARGET_HALT_RUNNING;
+
+	uint32_t dcsr;
+	res = rvdbg_read_single_reg(dmi, HART_REG_CSR_DCSR, &dcsr, AUTOEXEC_STATE_NONE);
+	uint8_t cause = (dcsr >> 6) & 7;
+	DEBUG_INFO("cause = %d\n", cause);
+	if (cause == 0)
+		return TARGET_HALT_RUNNING;
+	switch (cause) {
+	case 1: /* Software breakpoint */
+	case 2: /* Hardware trigger breakpoint */
+		return TARGET_HALT_BREAKPOINT;
+	case 3: return TARGET_HALT_REQUEST;
+	case 4: return TARGET_HALT_STEPPING;
+	case 5: return TARGET_HALT_REQUEST;
+	default:
+		return TARGET_HALT_ERROR;
+	}
 }
 
 int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
@@ -1242,6 +1319,8 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 	/*Halt/resume functions */
 	t->reset = rvdbg_reset;
 	t->halt_request = rvdbg_halt_request;
+	t->halt_resume = rvdbg_halt_resume;
+	t->halt_poll = rvdbg_halt_poll;
 
 	t->attach = rvdbg_attach;
 	t->detach = rvdbg_detach;
@@ -1283,11 +1362,18 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 			return -1;
 		}
 	}
+	uint32_t dcsr[1];
+	res = rvdbg_read_single_reg(dmi, HART_REG_CSR_DCSR, dcsr, AUTOEXEC_STATE_NONE);
+	if (res) {
+		DEBUG_WARN("Read DCSR failed\n");
+	} else {
+		DEBUG_WARN("DCSR 0x%08" PRIx32 "\n", dcsr[0]);
+	}
 	/* Try to read memory*/
 	uint32_t sbcs;
 	res = rvdbg_dmi_read(dmi, DMI_REG_SYSBUSCS, &sbcs);
 	if (res) {
-		DEBUG_WARN("READ SCSC failed\n");
+		DEBUG_WARN("READ SBSC failed\n");
 		return -1;
 	} else {
 		if (sbcs)
@@ -1321,34 +1407,15 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 		DEBUG_INFO("MEM @ 0x%08" PRIx32 ": %08x %08x %08x %08x\n", addr,
 				   mem32[0], mem32[1], mem32[2], mem32[3]);
 	}
+#if 0
 	/* dump registers */
 	uint32_t regs[t->regs_size / 4];
 	t->regs_read(t, regs);
 	for (size_t i = 0; i < t->regs_size; i = i+4) {
 		DEBUG_WARN("reg %2d: 0x%08x\n", i/4, regs[i/4]);
 	}
-
-	/* Resume from Halt
-	 * Remove HaltReq
-     */
-	if (rvdbg_dmi_read(dmi, DMI_REG_DMSTATUS, &dmstatus) < 0)
-		return -1;
-	DEBUG_WARN("Before resume: dmstatus %" PRIx32 "\n", dmstatus);
-	if (rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, DMCONTROL_DMACTIVE| DMCONTROL_RESUMEREQ) < 0)
-		return -1;
-	if (rvdbg_dmi_read(dmi, DMI_REG_DMSTATUS, &dmstatus) < 0)
-		return -1;
-	DEBUG_WARN("After first resume: dmstatus %" PRIx32 "\n", dmstatus);
-	int i = 0;
-	for (; i < 16; i++) {
-		if (rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, DMCONTROL_DMACTIVE | DMCONTROL_RESUMEREQ) < 0)
-			return -1;
-		if (rvdbg_dmi_read(dmi, DMI_REG_DMSTATUS, &dmstatus) < 0)
-			return -1;
-		if (DMSTATUS_GET_ALLRESEUMSET(dmstatus))
-			break;
-	};
-	DEBUG_WARN("run %d: dmstatus %" PRIx32 "\n", i, dmstatus);
+#endif
+	rvdbg_halt_resume(t, false);
 	// Disable the debug module
 	if (rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, 0) < 0)
 		return -1;
