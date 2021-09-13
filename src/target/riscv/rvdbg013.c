@@ -223,7 +223,7 @@ static int rvdbg_dmi_read(RVDBGv013_DMI_t *dmi, uint32_t addr, uint32_t *data)
 	int res = 0;
 	dmi->rvdbg_dmi_low_access(dmi, NULL, ((uint64_t)addr << DMI_BASE_BIT_COUNT) | DMI_OP_READ);
 	res = dmi->rvdbg_dmi_low_access(dmi, data, DMI_OP_NOP);
-	DEBUG_TARGET("DMI Read addr %x%s:data %x\n", addr, (res == -1) ? "failed" : "", *data);
+	DEBUG_TARGET("DMI Read addr %08" PRIx32 "%s:data %x\n", addr, (res == -1) ? "failed" : "", *data);
 	return res;
 }
 
@@ -872,9 +872,10 @@ static void rvdbg_mem_read_abstract(target *t, void* dest, target_addr address, 
 			dmi->error = true;
 			return;
 		}
-		memcpy(dest, &data, 4);
-		dest += 4;
-		len -= 4;
+		size_t chunk = MIN(len, 4);
+		memcpy(dest, &data, chunk);
+		dest += chunk;
+		len -= chunk;
 		if (!len) {
 			res  = rvdbg_dmi_write(dmi, DMI_REG_ABSTRACT_CMD, 0);
 			if (res) {
@@ -951,9 +952,10 @@ static void rvdbg_mem_read_systembus(target *t,  void* dest, target_addr address
 			dmi->error = true;
 			return;
 		}
-		memcpy(dest, &data, 4);
-		dest += 4;
-		len -= 4;
+		size_t chunk = MIN(len, 4);
+		memcpy(dest, &data, chunk);
+		dest += chunk;
+		len -= chunk;
 		if (!len) {
 			res  = rvdbg_dmi_write(dmi, DMI_REG_SYSBUSCS, 0);
 			if (res) {
@@ -1141,25 +1143,27 @@ static void rvdbg_halt_resume(target *t, bool step)
 {
 	RVDBGv013_DMI_t *dmi = t->priv;
 	int res;
+	/* Handle single step in DCSR*/
 	uint32_t dcsr;
 	res = rvdbg_read_single_reg(dmi, HART_REG_CSR_DCSR, &dcsr, AUTOEXEC_STATE_NONE);
 	if (res) {
 		DEBUG_WARN("Read DCSR failed\n");
 	} else {
+		DEBUG_TARGET("DCSR start 0x%08" PRIx32 "\n", dcsr);
 		if (step)
 			dcsr |= CSR_DCSR_STEP;
 		else
 			dcsr &= ~CSR_DCSR_STEP;
 		res = rvdbg_write_single_reg(dmi, HART_REG_CSR_DCSR, dcsr, AUTOEXEC_STATE_NONE);
 		if (res)
-			DEBUG_WARN("Wtrite DCSR failed\n");
+			DEBUG_WARN("Write DCSR failed\n");
 	}
 	uint32_t dmstatus;
-	DEBUG_WARN("Before resume: dmstatus %" PRIx32 "\n", dmstatus);
 	if (rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, DMCONTROL_DMACTIVE| DMCONTROL_RESUMEREQ) < 0) {
 		DEBUG_WARN("Can not write resumereq\n");
 		dmi->error = true;
 	}
+	dmstatus = 0;
 	platform_timeout timeout;
 	platform_timeout_set(&timeout, 1050); /* Hart should resume in less than 1 sec*/
 	while (!DMSTATUS_GET_ALLRESEUMSET(dmstatus)) {
@@ -1178,11 +1182,14 @@ static enum target_halt_reason rvdbg_halt_poll(target *t, target_addr *watch)
 {
 	(void)watch;
 	RVDBGv013_DMI_t *dmi = t->priv;
-	uint32_t dmcontrol;
-	int res = rvdbg_dmi_read(dmi, DMI_REG_DMCONTROL, &dmcontrol);
+	int res = rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, DMCONTROL_DMACTIVE);
 	if (res)
-		DEBUG_WARN("POLL read dmcontrol failed\n");
-	if (! DMSTATUS_GET_ALLHALTED(dmcontrol))
+		DEBUG_WARN("Poll write dmcontrol failed\n");
+	uint32_t dmstatus;
+	res = rvdbg_dmi_read(dmi, DMI_REG_DMSTATUS, &dmstatus);
+	if (res)
+		DEBUG_WARN("POLL read dmstatus failed\n");
+	if (! DMSTATUS_GET_ALLHALTED(dmstatus))
 		return TARGET_HALT_RUNNING;
 
 	uint32_t dcsr;
@@ -1417,6 +1424,11 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 	for (size_t i = 0; i < t->regs_size; i = i+4) {
 		DEBUG_WARN("reg %2d: 0x%08x\n", i/4, regs[i/4]);
 	}
+	DEBUG_TARGET("Resume single step\n");
+	rvdbg_halt_resume(t, true);
+	DEBUG_TARGET("Poll\n");
+	res = rvdbg_halt_poll(t, NULL);
+	DEBUG_WARN("Poll res %d\n", res);
 #endif
 	rvdbg_halt_resume(t, false);
 	// Disable the debug module
