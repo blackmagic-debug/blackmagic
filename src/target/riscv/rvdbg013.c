@@ -115,6 +115,9 @@ enum AUTOEXEC_STATE {
 enum HART_REG {
 	HART_REG_CSR_BEGIN   = 0x0000,
 	HART_REG_CSR_MISA    = 0x0301,
+	HART_REG_CSR_TSELECT = 0x7a0,
+	HART_REG_CSR_MCONTROL =0x7a1,
+	HART_REG_CSR_TDATA2  = 0x7a2,
 	HART_REG_CSR_DCSR    = 0x07b0,
 	HART_REG_CSR_DPC     = 0x07b1,
 	HART_REG_CSR_MACHINE = 0x0f11,
@@ -1143,11 +1146,21 @@ static void rvdbg_halt_resume(target *t, bool step)
 {
 	RVDBGv013_DMI_t *dmi = t->priv;
 	int res;
+	uint32_t dmcontrol = 0;
+	res = rvdbg_dmi_read(dmi, DMI_REG_DMCONTROL, &dmcontrol);
+	if (res)
+		DEBUG_WARN("Reset read dmcontrol failed\n");
+	else DEBUG_WARN("Halt_resume dmcontrol %08x\n", dmcontrol);
+	uint32_t dmstatu = 0;
+	res = rvdbg_dmi_read(dmi, DMI_REG_DMSTATUS, &dmstatu);
+	if (res)
+		DEBUG_WARN("Reset read dmstatus failed\n");
+	else DEBUG_WARN("Halt_resume dmstatus %08x\n", dmstatu);
 	/* Handle single step in DCSR*/
 	uint32_t dcsr;
 	res = rvdbg_read_single_reg(dmi, HART_REG_CSR_DCSR, &dcsr, AUTOEXEC_STATE_NONE);
 	if (res) {
-		DEBUG_WARN("Read DCSR failed\n");
+		DEBUG_WARN("Halt_resume read DCSR failed\n");
 	} else {
 		DEBUG_TARGET("DCSR start 0x%08" PRIx32 "\n", dcsr);
 		if (step)
@@ -1175,13 +1188,10 @@ static void rvdbg_halt_resume(target *t, bool step)
 		if (platform_timeout_is_expired(&timeout)) {
 			DEBUG_WARN("Timeout waiting for resume, dmstatus 0x%08" PRIx32 "\n", dmstatus);
 			dmi->error = true;
+			return;
 		}
 	}
 	if (rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, DMCONTROL_DMACTIVE) < 0) {
-		DEBUG_WARN("Can not write resumereq\n");
-		dmi->error = true;
-	}
-	if (rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, 0) < 0) {
 		DEBUG_WARN("Can not write resumereq\n");
 		dmi->error = true;
 	}
@@ -1200,7 +1210,7 @@ static enum target_halt_reason rvdbg_halt_poll(target *t, target_addr *watch)
 		DEBUG_WARN("POLL read dmstatus failed\n");
 	if (! DMSTATUS_GET_ALLHALTED(dmstatus))
 		return TARGET_HALT_RUNNING;
-
+	DEBUG_WARN("halt_poll dmstatus 0x%08" PRIx32 "\n", dmstatus);
 	uint32_t dcsr;
 	res = rvdbg_read_single_reg(dmi, HART_REG_CSR_DCSR, &dcsr, AUTOEXEC_STATE_NONE);
 	uint8_t cause = (dcsr >> 6) & 7;
@@ -1209,7 +1219,7 @@ static enum target_halt_reason rvdbg_halt_poll(target *t, target_addr *watch)
 		DEBUG_INFO("Workaround for single stepping ESP32-C3\n");
 		cause = 4;
 	}
-	DEBUG_INFO("DCSR 0x%08" PRIx32 ", cause = %d\n", dcsr,cause);
+	DEBUG_WARN("DCSR 0x%08" PRIx32 ", cause = %d\n", dcsr,cause);
 	if (cause == 0)
 		return TARGET_HALT_RUNNING;
 	switch (cause) {
@@ -1248,7 +1258,9 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 	}
 
 	dmi->rvdbg_dmi_reset(dmi, false);
-
+	/* Reset DM to initial values.
+	 * 0,13 to 1.0 incompatible change: Poll dmactive after lowering it. #566
+	 */
 	if (rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, 0) < 0)
 			return -1;
 	do {
@@ -1257,9 +1269,10 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 
 	if (rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, DMCONTROL_DMACTIVE) < 0)
 			return -1;
-	// Read dmcontrol and store for reference
-	if (rvdbg_dmi_read(dmi, DMI_REG_DMCONTROL, &dmcontrol) < 0)
-		return -1;
+	do {
+		rvdbg_dmi_read(dmi, DMI_REG_DMCONTROL, &dmcontrol);
+	} while (!(dmcontrol & DMCONTROL_DMACTIVE));
+
 	DEBUG_INFO("dmactive = %d\n", !!(dmcontrol & DMCONTROL_DMACTIVE));
 
 	// Activate when not already activated
@@ -1394,7 +1407,20 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 	} else {
 		DEBUG_WARN("DCSR 0x%08" PRIx32 "\n", dcsr[0]);
 	}
-#if 0
+
+	/* Enumerate triggers */
+	dmi->dmi_triggers = 0;
+	for (uint32_t i = 0; ; i++) {
+		res = rvdbg_write_single_reg(dmi, HART_REG_CSR_TSELECT, i, AUTOEXEC_STATE_NONE);
+		if (res)
+			break;
+		uint32_t tselect;
+		rvdbg_read_single_reg(dmi, HART_REG_CSR_TSELECT, &tselect, AUTOEXEC_STATE_NONE);
+		if (i  != tselect)
+			break;
+		dmi->dmi_triggers = i;
+	}
+	DEBUG_INFO("Found %d triggers\n", dmi->dmi_triggers);
 	/* Try to read memory*/
 	uint32_t sbcs;
 	res = rvdbg_dmi_read(dmi, DMI_REG_SYSBUSCS, &sbcs);
@@ -1433,21 +1459,23 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 		DEBUG_INFO("MEM @ 0x%08" PRIx32 ": %08x %08x %08x %08x\n", addr,
 				   mem32[0], mem32[1], mem32[2], mem32[3]);
 	}
-	/* dump registers */
+#if 0
+/* dump registers */
 	uint32_t regs[t->regs_size / 4];
 	t->regs_read(t, regs);
 	for (size_t i = 0; i < t->regs_size; i = i+4) {
 		DEBUG_WARN("reg %2d: 0x%08x\n", i/4, regs[i/4]);
 	}
 #endif
-	DEBUG_TARGET("Resume single step\n");
+	DEBUG_WARN("#Resume single step\n");
 	rvdbg_halt_resume(t, true);
-	DEBUG_TARGET("Poll\n");
+	DEBUG_TARGET("#Poll\n");
 	res = rvdbg_halt_poll(t, NULL);
-	DEBUG_WARN("Poll res single step %d\n", res);
+	DEBUG_WARN("#Poll res single step %d\n", res);
 	rvdbg_halt_resume(t, false);
+	DEBUG_WARN("#Resume normal\n");
 	rvdbg_halt_request(t);
-	DEBUG_TARGET("Poll after resume\n");
+	DEBUG_TARGET("#Poll after resume\n");
 	res = rvdbg_halt_poll(t, NULL);
 	DEBUG_WARN("Poll res resume %d\n", res);
 	rvdbg_halt_resume(t, false);

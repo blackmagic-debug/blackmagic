@@ -83,6 +83,8 @@ typedef struct RVDBGv013_DMI_s {
     uint8_t num_harts;
     uint8_t current_hart;
 
+	uint32_t dmi_triggers;
+
     HART_t harts[RVDBG_MAX_HARTS];
     int (*rvdbg_dmi_low_access)(struct RVDBGv013_DMI_s *dmi, uint32_t *dmi_data_out, uint64_t dmi_cmd);
     void (*rvdbg_dmi_reset)(struct RVDBGv013_DMI_s *dmi, bool hard_reset);
