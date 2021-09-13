@@ -1093,6 +1093,7 @@ static void rvdbg_detach(target *t)
 	RVDBGv013_DMI_t *dmi = t->priv;
 	target_halt_resume(t, false);
 	dmi->error = false;
+	rvdbg_dmi_read(dmi, DMI_REG_DMCONTROL, 0);
 }
 
 
@@ -1168,9 +1169,14 @@ static enum target_halt_reason rvdbg_halt_poll(target *t, target_addr *watch)
 {
 	(void)watch;
 	RVDBGv013_DMI_t *dmi = t->priv;
-	int res = rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, DMCONTROL_DMACTIVE);
+	int res;
+	uint32_t dmstatus;
+	res = rvdbg_dmi_read(dmi, DMI_REG_DMSTATUS, &dmstatus);
 	if (res)
 		DEBUG_WARN("Poll write dmcontrol failed\n");
+	if (!DMSTATUS_GET_ALLHALTED(dmstatus))
+		return TARGET_HALT_RUNNING;
+	/* dcsr may not be readable when running*/
 	uint32_t dcsr;
 	res = rvdbg_read_single_reg(dmi, HART_REG_CSR_DCSR, &dcsr, AUTOEXEC_STATE_NONE);
 	uint8_t cause = (dcsr >> 6) & 7;
@@ -1367,7 +1373,7 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 	if (res) {
 		DEBUG_WARN("Read DCSR failed\n");
 	} else {
-		DEBUG_WARN("DCSR 0x%08" PRIx32 "\n", dcsr[0]);
+		DEBUG_TARGET("DCSR 0x%08" PRIx32 "\n", dcsr[0]);
 	}
 
 	/* Enumerate triggers */
@@ -1383,6 +1389,7 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 		dmi->dmi_triggers = i;
 	}
 	DEBUG_INFO("Found %d triggers\n", dmi->dmi_triggers);
+
 #if 0
 	/* Try to read memory*/
 	uint32_t sbcs;
@@ -1428,7 +1435,6 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 	for (size_t i = 0; i < t->regs_size; i = i+4) {
 		DEBUG_WARN("reg %2d: 0x%08x\n", i/4, regs[i/4]);
 	}
-#endif
 	DEBUG_WARN("#Resume single step\n");
 	rvdbg_halt_resume(t, true);
 	DEBUG_TARGET("#Poll\n");
@@ -1440,6 +1446,7 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 	DEBUG_TARGET("#Poll after resume\n");
 	res = rvdbg_halt_poll(t, NULL);
 	DEBUG_WARN("#Poll res resume %d\n", res);
+#endif
 	rvdbg_halt_resume(t, false);
 	if (dmi->error)
 		return -1;
