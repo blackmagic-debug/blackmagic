@@ -1352,6 +1352,8 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 		case 0x31e:
 			t->mem_read = rvdbg_mem_read_abstract;
 			t->driver = "GD32VF103";
+			if (!gd32f1_probe(t))
+				DEBUG_WARN("probe failed\n");
 			break;
 		default:
 			DEBUG_WARN("Unhandled device\n");
