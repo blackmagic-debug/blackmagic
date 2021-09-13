@@ -325,13 +325,45 @@ bool kinetis_probe(target *t)
 		kl_gen_add_flash(t, 0x00000000, 0x00040000, 0x800, K64_WRITE_LEN); /* P-Flash, 256 KB, 2 KB Sectors */
 		kl_gen_add_flash(t, 0x10000000, 0x00008000, 0x800, K64_WRITE_LEN); /* FlexNVM, 32 KB, 2 KB Sectors */
 		break;
+		/* gen1 s32k14x */
+		{
+			uint32_t sram_l, sram_h;
+			uint32_t flash, flexmem;
+	case 0x142: /* s32k142 */
+	case 0x143: /* s32k142w */
+		sram_l = 0x1FFFC000; /* SRAM_L, 16k */
+		sram_h = 0x03000;		 /* SRAM_H, 12k */
+		flash = 0x00040000;	 /* flash 256 KB */
+		flexmem = 0x10000;	 /* FlexNVM 64 KB */
+		goto do_common_s32k14x;
+	case 0x144: /* s32k144 */
+	case 0x145: /* s32k144w */
+		sram_l = 0x1FFF8000; /* SRAM_L, 32k */
+		sram_h = 0x07000;		 /* SRAM_H, 28k */
+		flash = 0x00080000;	 /* flash 512 KB */
+		flexmem = 0x10000;	 /* FlexNVM 64 KB */
+		goto do_common_s32k14x;
+	case 0x146: /* s32k146 */
+		sram_l = 0x1fff0000; /* SRAM_L, 64k */
+		sram_h = 0x0f000;		 /* SRAM_H, 60k */
+		flash = 0x00100000;	 /* flash 1024 KB */
+		flexmem = 0x10000;	 /* FlexNVM 64 KB */
+		goto do_common_s32k14x;
 	case 0x148: /* S32K148 */
-		t->driver = "S32K148";
-		target_add_ram(t, 0x1FFE0000, 0x20000); /* SRAM_L, 128 KB */
-		target_add_ram(t, 0x20000000, 0x1f000); /* SRAM_H, 124 KB */
-		kl_gen_add_flash(t, 0x00000000, 0x00180000, 0x1000, K64_WRITE_LEN); /* P-Flash, 1536 KB, 4 KB Sectors */
-		kl_gen_add_flash(t, 0x10000000, 0x80000, 0x1000, K64_WRITE_LEN); /* FlexNVM, 512 KB, 4 KB Sectors */
+		sram_l = 0x1ffe0000; /* SRAM_L, 128 KB */
+		sram_h = 0x1f000;		 /* SRAM_H, 124 KB */
+		flash = 0x00180000;	 /* flash 1536 KB */
+		flexmem = 0x80000;	 /* FlexNVM 512 KB */
+		goto do_common_s32k14x;
+do_common_s32k14x:
+		t->driver = "S32K14x";
+		target_add_ram(t, sram_l, 0x20000000 - sram_l);
+		target_add_ram(t, 0x20000000, sram_h);
+
+		kl_gen_add_flash(t, 0x00000000, flash, 0x1000, K64_WRITE_LEN);	 /* P-Flash, 4 KB Sectors */
+		kl_gen_add_flash(t, 0x10000000, flexmem, 0x1000, K64_WRITE_LEN); /* FlexNVM, 4 KB Sectors */
 		break;
+		}
 	default:
 		return false;
 	}
