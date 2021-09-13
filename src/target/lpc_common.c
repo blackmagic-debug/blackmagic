@@ -151,7 +151,7 @@ enum iap_status lpc_iap_call(struct lpc_flash *f, void *result, enum iap_cmd cmd
 #if defined(ENABLE_DEBUG)
 	if (param.status != IAP_STATUS_CMD_SUCCESS) {
 		if (param.status > (sizeof(iap_error) / sizeof(char*)))
-			DEBUG_WARN("IAP  cmd %d : %d\n", cmd, param.status);
+			DEBUG_WARN("IAP  cmd %d : %" PRId32 "\n", cmd, param.status);
 		else
 			DEBUG_WARN("IAP  cmd %d : %s\n", cmd, iap_error[param.status]);
 		DEBUG_WARN("return parameters: %08" PRIx32 " %08" PRIx32 " %08" PRIx32
