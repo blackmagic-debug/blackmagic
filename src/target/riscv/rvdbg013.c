@@ -275,6 +275,9 @@ static int rvdbg_halt_current_hart(RVDBGv013_DMI_t *dmi)
 			if (rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, dmcontrol) < 0)
 				return -1;
 	}
+	/* Clear reset */
+	if (rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, dmcontrol | DMCONTROL_ACKHAVERESET) < 0)
+		return -1;
 	dmcontrol |= DMCONTROL_HALTREQ;
 	// Trigger the halt request
 	if (rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, dmcontrol) < 0)
@@ -1369,6 +1372,7 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 	} else {
 		DEBUG_WARN("DCSR 0x%08" PRIx32 "\n", dcsr[0]);
 	}
+#if 0
 	/* Try to read memory*/
 	uint32_t sbcs;
 	res = rvdbg_dmi_read(dmi, DMI_REG_SYSBUSCS, &sbcs);
@@ -1407,7 +1411,6 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 		DEBUG_INFO("MEM @ 0x%08" PRIx32 ": %08x %08x %08x %08x\n", addr,
 				   mem32[0], mem32[1], mem32[2], mem32[3]);
 	}
-#if 0
 	/* dump registers */
 	uint32_t regs[t->regs_size / 4];
 	t->regs_read(t, regs);
