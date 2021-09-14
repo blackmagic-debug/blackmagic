@@ -95,6 +95,7 @@ enum ABSTRACTCMD_AAMSIZE {
 
 #define ABSTRACTCMD_AAMPOSTINCREMENT (1U << 19)
 #define ABSTRACTCMD_TRANSFER         (1U << 17)
+#define ABSTRACTCMD_WRITE            (1U << 16)
 
 enum ABSTRACTCMD_ERR {
 	ABSTRACTCMD_ERR_NONE = 0x0,
@@ -852,7 +853,6 @@ static void rvdbg_mem_read_abstract(target *t, void* dest, target_addr address, 
 	if (!len)
 		return;
 	if (address & 3) {
-		DEBUG_WARN("#mem_read unaligned!\n");
 		/* Align start address */
 		uint8_t preread[4], *p = preread;
 		rvdbg_mem_read_abstract(t, preread, address & ~3, 4);
@@ -902,6 +902,76 @@ static void rvdbg_mem_read_abstract(target *t, void* dest, target_addr address, 
 		return;
 	}
 	rvdbg_dmi_read(dmi, DMI_REG_ABSTRACTDATA1, &data);
+}
+static void rvdbg_mem_write_abstract(target *t, target_addr dest, const void* src, size_t len)
+{
+	RVDBGv013_DMI_t *dmi = t->priv;
+	if (!dest) {
+		DEBUG_WARN("rvdbg_mem_read_abstract invalid buffer\n");
+		dmi->error = true;
+		return;
+	}
+	if (!len)
+		return;
+	const uint32_t *w;
+	/* Align to word */
+	if (dest & 3) {
+		const uint8_t *p = src;
+		size_t count = MIN(4 - (dest & 3), len);
+		len -= count;
+		uint32_t cmd = ABSTRACTCMD_TYPE_ACCESS_MEMORY | ABSTRACTCMD_AAMSIZE_8bit | ABSTRACTCMD_WRITE;
+		while (count && !dmi->error) {
+			rvdbg_dmi_write(dmi, DMI_REG_ABSTRACTDATA1, dest);
+			rvdbg_dmi_write(dmi, DMI_REG_ABSTRACTDATA0, *p);
+			dest ++;
+			p++;
+			count--;
+			rvdbg_dmi_write(dmi, DMI_REG_ABSTRACT_CMD, cmd);
+		}
+		w = (const uint32_t *) p;
+		if (!len)
+			return;
+	} else {
+		w = src;
+	}
+	if (dmi->error)
+		return;
+	if (len > 3) {
+		uint32_t cmd =  ABSTRACTCMD_TYPE_ACCESS_MEMORY | ABSTRACTCMD_AAMSIZE_32bit | ABSTRACTCMD_WRITE;
+		rvdbg_dmi_write(dmi, DMI_REG_ABSTRACTDATA1, dest);
+		rvdbg_dmi_write(dmi, DMI_REG_ABSTRACTDATA0, *w);
+		len -= 4;
+		dest += 4;
+		w++;
+		if (len > 3 ) {
+			cmd |= ABSTRACTCMD_AAMPOSTINCREMENT;
+			rvdbg_dmi_write(dmi, DMI_REG_ABSTRACT_CMD, cmd);
+			rvdbg_dmi_write(dmi, DMI_REG_ABSTRACT_AUTOEXEC, ABSTRACTAUTO_AUTOEXECDATA);
+		}
+		rvdbg_dmi_write(dmi, DMI_REG_ABSTRACT_CMD, cmd);
+		while ((len > 3) && !dmi->error) {
+			rvdbg_dmi_write(dmi, DMI_REG_ABSTRACTDATA0, *w);
+			w++;
+			len -= 4;
+			dest += 4;
+			if (len < 4) /* Terminate writing words*/ {
+				rvdbg_dmi_write(dmi, DMI_REG_ABSTRACT_AUTOEXEC, 0);
+				break;
+			}
+		}
+	}
+	if (len && !dmi->error) {
+		uint8_t *p = (uint8_t *)w;
+		uint32_t cmd =  ABSTRACTCMD_TYPE_ACCESS_MEMORY | ABSTRACTCMD_AAMSIZE_8bit | ABSTRACTCMD_WRITE;
+		while (len && !dmi->error) {
+			rvdbg_dmi_write(dmi, DMI_REG_ABSTRACTDATA1, dest);
+			rvdbg_dmi_write(dmi, DMI_REG_ABSTRACTDATA0, *p);
+			dest++;
+			p++;
+			len--;
+			rvdbg_dmi_write(dmi, DMI_REG_ABSTRACT_CMD, cmd);
+		}
+	}
 }
 
 static void rvdbg_mem_read_systembus(target *t,  void* dest, target_addr address, size_t len)
@@ -1357,6 +1427,7 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 			break;
 		case 0x31e:
 			t->mem_read = rvdbg_mem_read_abstract;
+			t->mem_write = rvdbg_mem_write_abstract;
 			t->driver = "GD32VF103";
 			if (!gd32f1_probe(t))
 				DEBUG_WARN("probe failed\n");
@@ -1389,6 +1460,39 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 		dmi->dmi_triggers = i;
 	}
 	DEBUG_INFO("Found %d triggers\n", dmi->dmi_triggers);
+
+	/* Test memory access */
+	target_addr tgt = 0x20007000;
+	uint8_t playground[64];
+	uint8_t pattern[64];
+	uint8_t npattern[64];
+	for (int i = 0; i < 64; i++){
+		pattern[i] = i + 1;
+		npattern[i] = 0x3f;
+	}
+
+	res = target_mem_write(t, tgt, npattern, 64);
+	res = target_mem_write(t, tgt, pattern, 1);
+	res = target_mem_read(t, playground, tgt, 33);
+	DEBUG_WARN("Res: ");
+	for (unsigned int i = 0; i < 33; i++)
+		DEBUG_WARN("%3d", playground[i]);
+	DEBUG_WARN("\n");
+
+	res = target_mem_write(t, tgt, npattern, 64);
+	res = target_mem_write(t, tgt + 2, pattern + 1, 7);
+	res = target_mem_read(t, playground, tgt, 33);
+	DEBUG_WARN("Res: ");
+	for (unsigned int i = 0; i < 33; i++)
+		DEBUG_WARN("%3d", playground[i]);
+	DEBUG_WARN("\n");
+
+	res = target_mem_write(t, tgt + 3, pattern + 1, 7);
+	res = target_mem_read(t, playground, tgt, 33);
+	DEBUG_WARN("Res: ");
+	for (unsigned int i = 0; i < 33; i++)
+		DEBUG_WARN("%3d", playground[i]);
+	DEBUG_WARN("\n");
 
 #if 0
 	/* Try to read memory*/
