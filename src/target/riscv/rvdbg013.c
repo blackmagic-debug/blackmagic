@@ -160,6 +160,11 @@ enum HART_REG {
 #define ABSTRACTAUTO_AUTOEXECPROGBUF  (1U << 16)
 #define ABSTRACTAUTO_AUTOEXECDATA     (1U <<  0)
 
+#define SBCS_SBACCESS8                (1U <<  0)
+#define SBCS_SBACCESS16               (1U <<  1)
+#define SBCS_SBACCESS32               (1U <<  2)
+#define SBCS_SBACCESS64               (1U <<  3)
+#define SBCS_SBACCESS128              (1U <<  4)
 #define SBCS_SBREADONDATA             (1U << 15)
 #define SBCS_SBAUTOINCREMENT          (1U << 16)
 #define SBCS_SBACCESS_8BIT            (0U << 17)
@@ -303,7 +308,7 @@ static int rvdbg_halt_current_hart(RVDBGv013_DMI_t *dmi)
 {
 	uint32_t dmcontrol;
 
-	DEBUG_INFO("current hart = %d\n", dmi->current_hart);
+	DEBUG_TARGET("current hart = %d\n", dmi->current_hart);
 
 	if (rvdbg_dmi_read(dmi, DMI_REG_DMCONTROL, &dmcontrol) < 0)
 			return -1;
@@ -1024,6 +1029,79 @@ static void rvdbg_mem_read_systembus(target *t,  void* dest, target_addr address
 	}
 }
 
+/*static*/ void rvdbg_mem_write_systembus(target *t, target_addr dest, const void* src, size_t len)
+{
+	RVDBGv013_DMI_t *dmi = t->priv;
+	if (!dest) {
+		DEBUG_WARN("rvdbg_mem_read_system invalid buffer\n");
+		dmi->error = true;
+		return;
+	}
+	if (!len)
+		return;
+	uint32_t sysbcs;
+	rvdbg_dmi_read(dmi, DMI_REG_SYSBUSCS, &sysbcs);
+	const uint32_t *w;
+	/* Align to word with byte writes*/
+	if (((dest & 3) || (len & 3)) && !(sysbcs & SBCS_SBACCESS8)) {
+			DEBUG_WARN("Unaligned access, SBACCESS8 not possible!\n");
+			dmi->error = true;
+			return;
+		}
+	if (dest & 3) {
+		const uint8_t *p = src;
+		size_t count = MIN(4 - (dest & 3), len);
+		len -= count;
+		uint32_t sbcs = SBCS_SBACCESS_8BIT;
+		rvdbg_dmi_write(dmi, DMI_REG_SYSBUSCS, sbcs);
+		while (count && !dmi->error) {
+			rvdbg_dmi_write(dmi, DMI_REG_SBADDRESS0, dest);
+			rvdbg_dmi_write(dmi, DMI_REG_SBDATA0, *p);
+			dest ++;
+			p++;
+			count--;
+		}
+		w = (const uint32_t *) p;
+		if (!len)
+			return;
+	} else {
+		w = src;
+	}
+	rvdbg_dmi_read(dmi, DMI_REG_SYSBUSCS, &sysbcs);
+	if (dmi->error)
+		return;
+	if (len > 3) {
+		uint32_t sbcs = SBCS_SBACCESS_32BIT | ((len > 7) ? SBCS_SBAUTOINCREMENT : 0) ;
+		rvdbg_dmi_write(dmi, DMI_REG_SYSBUSCS, sbcs);
+		rvdbg_dmi_write(dmi, DMI_REG_SBADDRESS0, dest);
+		rvdbg_dmi_write(dmi, DMI_REG_SBDATA0, *w);
+		len -= 4;
+		dest += 4;
+		w++;
+		while ((len > 3) && !dmi->error) {
+			rvdbg_dmi_write(dmi, DMI_REG_SBDATA0, *w);
+			w++;
+			len -= 4;
+			dest += 4;
+			if (len < 4) /* Terminate writing words*/ {
+				break;
+			}
+		}
+	}
+	if (len && !dmi->error) {
+		uint8_t *p = (uint8_t *)w;
+		uint32_t sbcs = SBCS_SBACCESS_8BIT;
+		rvdbg_dmi_write(dmi, DMI_REG_SYSBUSCS, sbcs);
+		while (len && !dmi->error) {
+			rvdbg_dmi_write(dmi, DMI_REG_ABSTRACTDATA1, dest);
+			rvdbg_dmi_write(dmi, DMI_REG_ABSTRACTDATA0, *p);
+			dest++;
+			p++;
+			len--;
+		}
+	}
+}
+
 static int rvdbg_read_mem_progbuf(RVDBGv013_DMI_t *dmi, uint32_t address, uint32_t len, uint8_t* value)
 {
 	// Select optimal transfer size
@@ -1423,6 +1501,7 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 		switch (machine[0]) {
 		case 0x612:
 			t->mem_read = rvdbg_mem_read_systembus;
+			t->mem_write = rvdbg_mem_write_systembus;
 			t->driver = "ESP32-C3";
 			break;
 		case 0x31e:
@@ -1461,8 +1540,10 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 	}
 	DEBUG_INFO("Found %d triggers\n", dmi->dmi_triggers);
 
+#if 0
 	/* Test memory access */
-	target_addr tgt = 0x20007000;
+	target_addr tgt = 	(t->t_designer == 0x612)? 0x3fc80000 : 0x20007000;
+	DEBUG_WARN("Tgt %x\n", tgt);
 	uint8_t playground[64];
 	uint8_t pattern[64];
 	uint8_t npattern[64];
@@ -1470,6 +1551,21 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 		pattern[i] = i + 1;
 		npattern[i] = 0x3f;
 	}
+
+	res = target_mem_write(t, tgt, npattern, 64);
+	res = target_mem_read(t, playground, tgt, 33);
+	DEBUG_WARN("Res: ");
+	for (unsigned int i = 0; i < 33; i++)
+		DEBUG_WARN("%3d", playground[i]);
+	DEBUG_WARN("\n");
+
+	res = target_mem_write(t, tgt, npattern, 64);
+	res = target_mem_write(t, tgt, pattern, 32);
+	res = target_mem_read(t, playground, tgt, 33);
+	DEBUG_WARN("Res: ");
+	for (unsigned int i = 0; i < 33; i++)
+		DEBUG_WARN("%3d", playground[i]);
+	DEBUG_WARN("\n");
 
 	res = target_mem_write(t, tgt, npattern, 64);
 	res = target_mem_write(t, tgt, pattern, 1);
@@ -1494,7 +1590,6 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 		DEBUG_WARN("%3d", playground[i]);
 	DEBUG_WARN("\n");
 
-#if 0
 	/* Try to read memory*/
 	uint32_t sbcs;
 	res = rvdbg_dmi_read(dmi, DMI_REG_SYSBUSCS, &sbcs);
