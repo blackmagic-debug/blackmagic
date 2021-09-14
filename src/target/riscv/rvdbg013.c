@@ -912,7 +912,7 @@ static void rvdbg_mem_write_abstract(target *t, target_addr dest, const void* sr
 {
 	RVDBGv013_DMI_t *dmi = t->priv;
 	if (!dest) {
-		DEBUG_WARN("rvdbg_mem_read_abstract invalid buffer\n");
+		DEBUG_WARN("rvdbg_mem_write_abstract invalid buffer\n");
 		dmi->error = true;
 		return;
 	}
@@ -1536,7 +1536,7 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 		rvdbg_read_single_reg(dmi, HART_REG_CSR_TSELECT, &tselect, AUTOEXEC_STATE_NONE);
 		if (i  != tselect)
 			break;
-		dmi->dmi_triggers = i;
+		dmi->dmi_triggers = i + 1;
 	}
 	DEBUG_INFO("Found %d triggers\n", dmi->dmi_triggers);
 
