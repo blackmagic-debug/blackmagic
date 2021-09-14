@@ -315,16 +315,18 @@ static int rvdbg_halt_current_hart(RVDBGv013_DMI_t *dmi)
 
 	if (!(dmcontrol & DMCONTROL_DMACTIVE)) {
 		/* Enable hart first */
-			dmcontrol |= DMCONTROL_DMACTIVE;
-			if (rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, dmcontrol) < 0)
+		if (rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, DMCONTROL_DMACTIVE) < 0)
+			return -1;
+		do { /* Poll for change as recommended in V 1.0 */
+			if (rvdbg_dmi_read(dmi, DMI_REG_DMCONTROL, &dmcontrol) < 0)
 				return -1;
+		} while (!(dmcontrol & DMCONTROL_DMACTIVE));
 	}
 	/* Clear reset */
-	if (rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, dmcontrol | DMCONTROL_ACKHAVERESET) < 0)
+	if (rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, DMCONTROL_DMACTIVE | DMCONTROL_ACKHAVERESET) < 0)
 		return -1;
-	dmcontrol |= DMCONTROL_HALTREQ;
 	// Trigger the halt request
-	if (rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, dmcontrol) < 0)
+	if (rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, DMCONTROL_DMACTIVE | DMCONTROL_HALTREQ) < 0)
 		return -1;
 	platform_timeout timeout;
 	/* The risc debug doc reads as if HALTREQ wakes up sleeping hart
@@ -338,7 +340,7 @@ static int rvdbg_halt_current_hart(RVDBGv013_DMI_t *dmi)
 			return -1;
 		if (DMSTATUS_GET_ANYHAVERESET(dmstatus)) {
 			DEBUG_WARN("RISC-V: got reset, while trying to halt\n");
-			if (rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, dmcontrol | DMCONTROL_ACKHAVERESET) < 0)
+			if (rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, DMCONTROL_DMACTIVE | DMCONTROL_ACKHAVERESET) < 0)
 				return -1;
 		}
 		if (DMSTATUS_GET_ALLHALTED(dmstatus))
@@ -350,8 +352,7 @@ static int rvdbg_halt_current_hart(RVDBGv013_DMI_t *dmi)
 	}
 	if (DMSTATUS_GET_HASRESETHALTREQ(dmstatus)) {
 		/* Request halt on reset */
-		dmcontrol |= DMCONTROL_SRESETHALTREQ;
-		int res = rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, dmcontrol);
+		int res = rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, DMCONTROL_DMACTIVE | DMCONTROL_SRESETHALTREQ);
 		if (res) {
 			return -1;
 		}
@@ -906,7 +907,11 @@ static void rvdbg_mem_read_abstract(target *t, void* dest, target_addr address, 
 		DEBUG_WARN("Abstract read failed at addr %p\n", dest);
 		return;
 	}
-	rvdbg_dmi_read(dmi, DMI_REG_ABSTRACTDATA1, &data);
+	rvdbg_dmi_read(dmi, DMI_REG_ABSTRACT_CS, &data);
+	if (ABSTRACTCS_GET_CMDERR(data)) {
+		DEBUG_WARN("mem_read_abstract failure\n");
+		dmi->error = true;
+	}
 }
 static void rvdbg_mem_write_abstract(target *t, target_addr dest, const void* src, size_t len)
 {
