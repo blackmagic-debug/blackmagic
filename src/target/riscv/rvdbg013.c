@@ -1564,6 +1564,16 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 	}
 
 	res = target_mem_write(t, tgt, npattern, 64);
+	res = rvdbg_read_mem_progbuf(dmi, tgt, 32, playground);
+	if (res) {
+			DEBUG_WARN("fvdbg_read_mem_progbuf failed\n");
+	} else {
+		DEBUG_WARN("Res: ");
+		for (unsigned int i = 0; i < 33; i++)
+			DEBUG_WARN("%3d", playground[i]);
+		DEBUG_WARN("\n");
+	}
+	res = target_mem_write(t, tgt, npattern, 64);
 	res = target_mem_read(t, playground, tgt, 33);
 	DEBUG_WARN("Res: ");
 	for (unsigned int i = 0; i < 33; i++)
