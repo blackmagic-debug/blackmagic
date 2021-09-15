@@ -1551,6 +1551,7 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 	}
 	DEBUG_INFO("Found %d triggers\n", dmi->dmi_triggers);
 
+	/* some test routines */
 #if 0
 	/* Test memory access */
 	target_addr tgt = 	(t->t_designer == 0x612)? 0x3fc80000 : 0x20007000;
@@ -1562,24 +1563,31 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 		pattern[i] = i + 1;
 		npattern[i] = 0x3f;
 	}
-
+#if 0
+	/* Causes exceptions on GD32FV103
+     * Fixme: Find a way to recover!
+	 */
 	res = target_mem_write(t, tgt, npattern, 64);
 	res = rvdbg_read_mem_progbuf(dmi, tgt, 32, playground);
 	if (res) {
-			DEBUG_WARN("fvdbg_read_mem_progbuf failed\n");
+			DEBUG_WARN("rvdbg_read_mem_progbuf failed\n");
+			rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, DMCONTROL_DMACTIVE | DMCONTROL_NDMRESET);
+			rvdbg_reset(t);
+			rvdbg_attach(t);
 	} else {
 		DEBUG_WARN("Res: ");
 		for (unsigned int i = 0; i < 33; i++)
 			DEBUG_WARN("%3d", playground[i]);
 		DEBUG_WARN("\n");
 	}
+
 	res = target_mem_write(t, tgt, npattern, 64);
 	res = target_mem_read(t, playground, tgt, 33);
 	DEBUG_WARN("Res: ");
 	for (unsigned int i = 0; i < 33; i++)
 		DEBUG_WARN("%3d", playground[i]);
 	DEBUG_WARN("\n");
-
+#endif
 	res = target_mem_write(t, tgt, npattern, 64);
 	res = target_mem_write(t, tgt, pattern, 32);
 	res = target_mem_read(t, playground, tgt, 33);
