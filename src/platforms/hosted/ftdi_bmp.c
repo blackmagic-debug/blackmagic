@@ -552,8 +552,8 @@ void libftdi_jtagtap_tdi_tdo_seq(
 	if(!ticks) return;
 	if (!DI && !DO) return;
 
-    DEBUG_WIRE("libftdi_jtagtap_tdi_tdo_seq %s ticks: %d\n",
-			   (DI && DO) ? "read/write" : ((DI) ? "read" : "write"),ticks);
+	DEBUG_WIRE("libftdi_jtagtap_tdi_tdo_seq %s ticks: %d\n",
+			   (DI && DO) ? "read/write" : ((DI) ? "write" : "read"), ticks);
 	if(final_tms) ticks--;
 	rticks = ticks & 7;
 	ticks >>= 3;
