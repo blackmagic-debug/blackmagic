@@ -327,7 +327,10 @@ static int stm32f1_flash_write(struct target_flash *f,
 		else
 			length = len;
 		target_mem_write32(t, FLASH_CR, FLASH_CR_PG);
-		cortexm_mem_write_sized(t, dest, src, length, ALIGN_HALFWORD);
+		if (t->cpuid == 0x80000022) /* GD32VF103 */
+			target_mem_write(t, dest, src, length);
+		else
+			cortexm_mem_write_sized(t, dest, src, length, ALIGN_HALFWORD);
 		/* Read FLASH_SR to poll for BSY bit */
 		/* Wait for completion or an error */
 		do {
@@ -348,7 +351,10 @@ static int stm32f1_flash_write(struct target_flash *f,
 	length = len - length;
 	if ((t->idcode == 0x430) && length) { /* Write on bank 2 */
 		target_mem_write32(t, FLASH_CR + FLASH_BANK2_OFFSET, FLASH_CR_PG);
-		cortexm_mem_write_sized(t, dest, src, length, ALIGN_HALFWORD);
+		if (t->cpuid == 0x80000022) /* GD32VF103 */
+			target_mem_write(t, dest, src, length);
+		else
+			cortexm_mem_write_sized(t, dest, src, length, ALIGN_HALFWORD);
 		/* Read FLASH_SR to poll for BSY bit */
 		/* Wait for completion or an error */
 		do {
