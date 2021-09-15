@@ -120,14 +120,13 @@ void rvdbg013_jtag_dp_handler(jtag_dev_t *jd)
 	}
 
 	rvdbg_jtag->dp_jd_index = jd->jd_dev;
-	rvdbg_jtag->dmi.idcode = jd->jd_idcode;
 	rvdbg_jtag->dmi.descr = jtag_devs->jd_descr;
 	rvdbg_jtag->dmi.rvdbg_dmi_low_access = rvdbg_dmi_low_access_jtag;
 	rvdbg_jtag->dmi.rvdbg_dmi_reset = rvdbg_dmi_reset_jtag;
 	rvdbg_jtag->dmi.rvdbg_dmi_free = rvdbg_dmi_free_jtag;
 
 	DEBUG_INFO("RISC-V DTM id 0x%x detected: `%s`\n"
-		"Scanning RISC-V target ...\n", rvdbg_jtag->dmi.idcode, rvdbg_jtag->dmi.descr);
+		"Scanning RISC-V target ...\n", jd->jd_idcode, rvdbg_jtag->dmi.descr);
 
 	// Read from the DTM control and status register
 	jtag_dev_shift_ir(&jtag_proc, rvdbg_jtag->dp_jd_index, IR_DTMCS, NULL);

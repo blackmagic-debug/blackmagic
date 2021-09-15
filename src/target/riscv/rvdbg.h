@@ -66,7 +66,6 @@ typedef struct HART_s {
 typedef struct RVDBGv013_DMI_s {
     int refcnt;
 
-    uint32_t idcode;
     const char* descr;
     enum RISCV_DEBUG_VERSION debug_version;
     uint8_t idle;
