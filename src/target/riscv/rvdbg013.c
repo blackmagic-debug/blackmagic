@@ -895,8 +895,10 @@ static void rvdbg_mem_read_abstract(target *t, void* dest, target_addr address, 
 			rvdbg_dmi_read_nop(dmi, &data);
 			rvdbg_dmi_write(dmi, DMI_REG_ABSTRACT_AUTOEXEC, 0);
 			rvdbg_dmi_read_pure(dmi, DMI_REG_ABSTRACTDATA0, NULL);
-		} else {
+		} else if (len > 8) {
 			rvdbg_dmi_read_pure(dmi, DMI_REG_ABSTRACTDATA0, &data);
+		} else {
+			rvdbg_dmi_read_nop(dmi, &data);
 		}
 		if (dmi->error) {
 			DEBUG_WARN("Read at len %d failed\n", len);
