@@ -131,19 +131,23 @@ bool gd32f1_probe(target *t)
 	uint32_t signature= target_mem_read32(t, FLASHSIZE);
 	uint32_t flashSize=signature & 0xFFFF;
 	uint32_t ramSize=signature >>16 ;
-	switch(t->idcode) {
-	case 0x414:  /* Gigadevice gd32f303 */
-		t->driver = "GD32F3";
-		break;
-	case 0x410:  /* Gigadevice gd32f103, gd32e230 */
-		if ((t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M23)
-			t->driver = "GD32E230";
-		else
-			t->driver = "GD32F1";
-		break;
-	default:
-		t->idcode = stored_idcode;
-		return false;
+	if (t->cpuid == 0x80000022) /* GD32VF103 */ {
+		t->driver = "GD32VF1";
+	} else {
+		switch(t->idcode) {
+		case 0x414:  /* Gigadevice gd32f303 */
+			t->driver = "GD32F3";
+			break;
+		case 0x410:  /* Gigadevice gd32f103, gd32e230 */
+			if ((t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M23)
+				t->driver = "GD32E230";
+			else
+				t->driver = "GD32F1";
+			break;
+		default:
+			t->idcode = stored_idcode;
+			return false;
+		}
 	}
 	target_add_ram(t, 0x20000000, ramSize*1024);
 	stm32f1_add_flash(t, 0x8000000, flashSize*1024, 0x400);

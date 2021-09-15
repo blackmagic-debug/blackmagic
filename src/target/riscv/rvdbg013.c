@@ -1514,6 +1514,7 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 		DEBUG_INFO("Machine %"PRIx32 ", %"PRIx32 ", %"PRIx32 ", %"PRIx32 "\n",
 				   machine[0], machine[1], machine[2], machine[3]);
 		t->t_designer = machine[0] & 0xffff;
+		t->cpuid =  machine[1];
 		switch (machine[0]) {
 		case 0x612:
 			t->mem_read = rvdbg_mem_read_systembus;
