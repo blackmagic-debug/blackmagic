@@ -1405,20 +1405,12 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 		rvdbg_dmi_read(dmi, DMI_REG_DMCONTROL, &dmcontrol);
 	} while (!(dmcontrol & DMCONTROL_DMACTIVE));
 
-	DEBUG_INFO("dmactive = %d\n", !!(dmcontrol & DMCONTROL_DMACTIVE));
-
-	// Activate when not already activated
-	if (!(dmcontrol & DMCONTROL_DMACTIVE)) {
-		DEBUG_INFO("RISC-V: dmactive disabled, enabling...\n");
-		dmcontrol |= DMCONTROL_DMACTIVE;
-		if (rvdbg_dmi_write(dmi, DMI_REG_DMCONTROL, dmcontrol) < 0)
-			return -1;
+	if (!(dmcontrol & DMCONTROL_DMACTIVE) || dmi->error) {
+		DEBUG_WARN("DM Reset and activation failed\n");
 	}
 
 	if (rvdbg_dmi_read(dmi, DMI_REG_DMSTATUS, &dmstatus) < 0)
 		return -1;
-
-	DEBUG_INFO("dmstatus = 0x%08x\n", dmstatus);
 
 	version = DMSTATUS_GET_VERSION(dmstatus);
 	if (version == 0) {
