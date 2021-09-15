@@ -172,6 +172,15 @@ enum HART_REG {
 #define SBCS_SBACCESS_32BIT           (2U << 17)
 #define SBCD_SBREADONADDR             (1U << 20)
 
+#define CSR_MCONTROL_DMODE        (1<<(32-5))
+#define CSR_MCONTROL_ENABLE_MASK  (0xf << 3)
+#define CSR_MCONTROL_R            (1 << 0)
+#define CSR_MCONTROL_W            (1 << 1)
+#define CSR_MCONTROL_X            (1 << 2)
+#define CSR_MCONTROL_RW           (CSR_MCONTROL_R | CSR_MCONTROL_W)
+#define CSR_MCONTROL_RWX          (CSR_MCONTROL_RW | CSR_MCONTROL_X)
+#define CSR_MCONTROL_ACTION_DEBUG (1 << 12)
+
 #define ABSTRACTCMD_SET_TYPE(t, s) do { \
 	t &= ~(0xff << 24); \
 	t |= (s & 0xff) << 24; } while (0)
@@ -741,7 +750,7 @@ static ssize_t rvdbg_reg_write(target *t, int reg, const void *data, size_t max)
 	int res;
 	if (max < 4) /* assume all registers 4 byte*/
 		return -1;
-	res = rvdbg_write_single_reg(dmi,reg, *(uint32_t*)data, AUTOEXEC_STATE_NONE);
+	res = rvdbg_write_single_reg(dmi,reg, (data) ? *(uint32_t*)data : 0, AUTOEXEC_STATE_NONE);
 	if (res) {
 		DEBUG_INFO("rvdbg_reg_write failed\n");
 		return -1;
@@ -1366,6 +1375,74 @@ static enum target_halt_reason rvdbg_halt_poll(target *t, target_addr *watch)
 	}
 }
 
+static int riscv_breakwatch_set(target *t, struct breakwatch *bw)
+{
+	uint32_t mcontrol = CSR_MCONTROL_DMODE | CSR_MCONTROL_ACTION_DEBUG |
+		CSR_MCONTROL_ENABLE_MASK;
+
+	switch (bw->type) {
+	case TARGET_BREAK_HARD:
+		mcontrol |= CSR_MCONTROL_X;
+		break;
+	case TARGET_WATCH_WRITE:
+		mcontrol |= CSR_MCONTROL_W;
+		break;
+	case TARGET_WATCH_READ:
+		mcontrol |= CSR_MCONTROL_R;
+		break;
+	case TARGET_WATCH_ACCESS:
+		mcontrol |= CSR_MCONTROL_RW;
+		break;
+	default:
+		return 1;
+	}
+
+	uint32_t tselect_saved;
+	rvdbg_reg_read(t, HART_REG_CSR_TSELECT, &tselect_saved, 4);
+
+	uint32_t i;
+	for (i = 0; ; i++) {
+		rvdbg_reg_write(t, HART_REG_CSR_TSELECT, &i, 4);
+		uint32_t tselect;
+		rvdbg_reg_read(t, HART_REG_CSR_TSELECT, &tselect, 4);
+		if (tselect != i)
+			return -1;
+		uint32_t tdata1;
+		rvdbg_reg_read(t, HART_REG_CSR_MCONTROL, &tdata1, 4);
+		uint8_t type = (tdata1 >> (32-4)) & 0xf;
+		if ((type == 0))
+			return -1;
+		if ((type == 2)  &&
+			(((tdata1 & CSR_MCONTROL_RWX) == 0) ||
+			 ((tdata1 & CSR_MCONTROL_ENABLE_MASK) == 0)))
+			break;
+	}
+	/* if we get here tselect = i is the index of our trigger */
+	bw->reserved[0] = i;
+
+	rvdbg_reg_write(t, HART_REG_CSR_MCONTROL, &mcontrol, 4);
+	rvdbg_reg_write(t, HART_REG_CSR_TDATA2, &bw->addr, 4);
+
+	/* Restore saved tselect */
+	rvdbg_reg_write(t, HART_REG_CSR_TSELECT, &tselect_saved, 4);
+	return 0;
+}
+
+static int riscv_breakwatch_clear(target *t, struct breakwatch *bw)
+{
+	uint32_t i = bw->reserved[0];
+	uint32_t tselect_saved;
+	rvdbg_reg_read(t, HART_REG_CSR_TSELECT, &tselect_saved, 4);
+
+	rvdbg_reg_write(t, HART_REG_CSR_TSELECT, &i, 4);
+	i = 0;
+	rvdbg_reg_write(t, HART_REG_CSR_MCONTROL, &i, 4);
+
+	/* Restore saved tselect */
+	rvdbg_reg_write(t, HART_REG_CSR_TSELECT, &tselect_saved, 4);
+	return 0;
+}
+
 int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 {
 	uint8_t version;
@@ -1486,6 +1563,10 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 	t->attach = rvdbg_attach;
 	t->detach = rvdbg_detach;
 	t->check_error = rvdbg_check_error;
+
+	t->breakwatch_set = riscv_breakwatch_set;
+	t->breakwatch_clear = riscv_breakwatch_clear;
+
 	/* We need to halt the core to poke around */
 	int res;
 	res = rvdbg_halt_current_hart(dmi);
