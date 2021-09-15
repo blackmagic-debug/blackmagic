@@ -229,9 +229,9 @@ static void remotePacketProcessJTAG(unsigned i, char *packet)
     case REMOTE_JTAG_SHIFT_IR: /* JI = R/W IR ============================ */
 		index = remotehston(2, &packet[2]);
 		DI = remotehston(-1, &packet[4]);
-		DO = jtag_dev_shift_ir(&jtag_proc, index, DI);
-		DO &= 0xffffffff;
-		_respond(REMOTE_RESP_OK, DO);
+		uint32_t ir_out;
+		jtag_dev_shift_ir(&jtag_proc, index, DI, &ir_out);
+		_respond(REMOTE_RESP_OK, ir_out);
 		break;
     case REMOTE_JTAG_SHIFT_DR: /* Ji = R/W DIR ============================ */
 		dir_flags = packet[2] - '0';

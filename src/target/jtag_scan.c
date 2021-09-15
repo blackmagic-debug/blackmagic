@@ -224,12 +224,13 @@ int jtag_scan(const uint8_t *irlens)
 	return jtag_dev_count;
 }
 
-uint32_t fw_jtag_dev_shift_ir(jtag_proc_t *jp, uint8_t jd_index, uint32_t ir)
+void fw_jtag_dev_shift_ir(jtag_proc_t *jp, uint8_t jd_index, uint32_t ir,
+	uint32_t *ir_out)
 {
 	uint8_t dout[4];
 	jtag_dev_t *d = &jtag_devs[jd_index];
-	if(ir == d->current_ir)
-		return 0;
+	if ((!ir_out) && (ir == d->current_ir))
+		return;
 	for(int i = 0; i < jtag_dev_count; i++)
 		jtag_devs[i].current_ir = -1;
 	d->current_ir = ir;
@@ -239,12 +240,14 @@ uint32_t fw_jtag_dev_shift_ir(jtag_proc_t *jp, uint8_t jd_index, uint32_t ir)
 	jp->jtagtap_tdi_tdo_seq(dout, d->ir_postscan?0:1, (void*)&ir, d->ir_len);
 	jp->jtagtap_tdi_seq(1, ones, d->ir_postscan);
 	jtagtap_return_idle();
-	return (dout[0] | (dout[1] << 8) | (dout[2] << 16) | (dout[3] << 24));
+	if (ir_out)
+		*ir_out = dout[0] | (dout[1] << 8) | (dout[2] << 16) | (dout[3] << 24);
 }
 
-uint32_t jtag_dev_shift_ir(jtag_proc_t *jp, uint8_t jd_index, uint32_t ir)
+void jtag_dev_shift_ir(jtag_proc_t *jp, uint8_t jd_index, uint32_t ir,
+	uint32_t *ir_out)
 {
-	return jp->dev_shift_ir(jp, jd_index, ir);
+	return jp->dev_shift_ir(jp, jd_index, ir, ir_out);
 }
 
 void fw_jtag_dev_shift_dr(jtag_proc_t *jp, uint8_t jd_index, uint8_t *dout, const uint8_t *din, int ticks)

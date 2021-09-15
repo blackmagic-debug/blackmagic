@@ -45,8 +45,8 @@ static void jtagtap_io_seq(
 static void jtagtap_tdi_seq(
 	const uint8_t final_tms, const uint8_t *DI, int ticks);
 static uint8_t jtagtap_next(uint8_t dTMS, uint8_t dTDI);
-static uint32_t remote_jtag_dev_shift_ir(jtag_proc_t *jp, uint8_t jd_index,
-									uint32_t ir);
+static void remote_jtag_dev_shift_ir(jtag_proc_t *jp, uint8_t jd_index,
+									 uint32_t ir, uint32_t *ir_out);
 void fw_jtag_dev_shift_dr(jtag_proc_t *jp, uint8_t jd_index,
 					  uint8_t *dout, const uint8_t *din, int ticks);
 static void remote_jtag_dev_shift_dr(jtag_proc_t *jp, uint8_t jd_index,
@@ -255,12 +255,17 @@ static uint8_t jtagtap_next(uint8_t dTMS, uint8_t dTDI)
 	return remotehston(-1, (char *)&construct[1]);
 }
 
-static uint32_t remote_jtag_dev_shift_ir(jtag_proc_t *jp, uint8_t jd_index,
-									uint32_t ir)
+static void remote_jtag_dev_shift_ir(jtag_proc_t *jp, uint8_t jd_index,
+									 uint32_t ir, uint32_t *ir_out)
 {
 	uint8_t construct[REMOTE_MAX_MSG_SIZE];
 	int s;
 	(void) jp;
+	jtag_dev_t *d = &jtag_devs[jd_index];
+	if ((!ir_out) && (ir == d->current_ir))
+		return;
+	for(int i = 0; i < jtag_dev_count; i++)
+		jtag_devs[i].current_ir = -1;
 	s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE, REMOTE_JTAG_SHIFT_IR_STR,
 				 jd_index, ir);
 
@@ -272,8 +277,9 @@ static uint32_t remote_jtag_dev_shift_ir(jtag_proc_t *jp, uint8_t jd_index,
 				s ? (char *)&(construct[1]) : "unknown");
 		exit(-1);
     }
-
-	return remotehston(-1, (char *)&construct[1]);
+	if (ir_out)
+		*ir_out = remotehston(-1, (char *)&construct[1]);
+	d->current_ir = ir;
 }
 
 static void remote_jtag_dev_shift_dr(jtag_proc_t *jp, uint8_t jd_index,

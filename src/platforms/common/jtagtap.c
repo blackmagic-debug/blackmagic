@@ -36,7 +36,7 @@ static void jtagtap_tdi_tdo_seq(
 static void jtagtap_tdi_seq(
 	const uint8_t final_tms, const uint8_t *DI, int ticks);
 static uint8_t jtagtap_next(uint8_t dTMS, uint8_t dTDI);
-uint32_t fw_jtag_dev_shift_ir(jtag_proc_t *jp, uint8_t jd_index, uint32_t ir);
+void fw_jtag_dev_shift_ir(jtag_proc_t *jp, uint8_t jd_index, uint32_t ir_in, uint32_t *ir_out);
 void fw_jtag_dev_shift_dr(jtag_proc_t *jp, uint8_t jd_index, uint8_t *dout, const uint8_t *din, int ticks);
 
 int jtagtap_init()

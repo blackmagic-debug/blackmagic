@@ -40,7 +40,7 @@
 
 bmp_info_t info;
 
-uint32_t fw_jtag_dev_shift_ir(jtag_proc_t *jp, uint8_t jd_index, uint32_t ir);
+void fw_jtag_dev_shift_ir(jtag_proc_t *jp, uint8_t jd_index, uint32_t ir, uint32_t *ir_out);
 void fw_jtag_dev_shift_dr(jtag_proc_t *jp, uint8_t jd_index,
 					  uint8_t *dout, const uint8_t *din, int ticks);
 jtag_proc_t jtag_proc = {

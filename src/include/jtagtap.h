@@ -48,7 +48,7 @@ typedef struct jtag_proc_s {
 	void (*jtagtap_tdi_seq)
 	(const uint8_t final_tms, const uint8_t *DI, int ticks);
 
-	uint32_t (*dev_shift_ir)(jtag_proc_t *jp, uint8_t jd_index, uint32_t ir);
+	void (*dev_shift_ir)(jtag_proc_t *jp, uint8_t jd_index, uint32_t ir_in, uint32_t *ir_out);
 
 	void (*dev_shift_dr)(jtag_proc_t *jp, uint8_t jd_index, uint8_t *dout,
 						 const uint8_t *din, int ticks);
