@@ -324,14 +324,23 @@ static uint32_t cortexm_initial_halt(ADIv5_AP_t *ap)
 	uint32_t dhcsr_valid = CORTEXM_DHCSR_S_HALT | CORTEXM_DHCSR_C_DEBUGEN;
 	uint32_t dhcsr;
 	bool reset_seen = false;
-	adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw | ADIV5_AP_CSW_SIZE_WORD);
-	adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR, CORTEXM_DHCSR);
+	if (!(ap->dp->idcode & ADIV5_MINDP)) {
+		adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw | ADIV5_AP_CSW_SIZE_WORD);
+		adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR,
+							CORTEXM_DHCSR);
+	}
 	while (!platform_timeout_is_expired(&to)) {
-		if (!(ap->dp->idcode & ADIV5_MINDP))
+		if (!(ap->dp->idcode & ADIV5_MINDP)) {
 			adiv5_dp_write(ap->dp, ADIV5_DP_CTRLSTAT,
 						   ctrlstat | (0xfff * ADIV5_DP_CTRLSTAT_TRNCNT));
-		adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DRW, dhcsr_ctl);
-		dhcsr = adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_AP_DRW, 0);
+			adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DRW,
+								dhcsr_ctl);
+			dhcsr = adiv5_dp_low_access(
+				ap->dp, ADIV5_LOW_READ, ADIV5_AP_DRW, 0);
+		} else {
+			adiv5_mem_write(ap, CORTEXM_DHCSR, &dhcsr_ctl, sizeof(dhcsr_ctl));
+			dhcsr = adiv5_mem_read32(ap, CORTEXM_DHCSR);
+		}
 		/* ADIV5_DP_CTRLSTAT_READOK is always set e.g. on STM32F7 even so
 		   CORTEXM_DHCS reads nonsense*/
 		/* On a sleeping STM32F7, invalid DHCSR reads with e.g. 0xffffffff and
