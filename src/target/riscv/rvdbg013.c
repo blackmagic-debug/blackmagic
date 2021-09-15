@@ -371,6 +371,8 @@ static void rvdbg_halt_request(target *t)
 		DEBUG_WARN("Can not halt target\n");
 		dmi->error = true;
 	}
+	uint32_t data;
+	rvdbg_dmi_read(dmi, DMI_REG_DMCONTROL, &data);
 }
 
 static int rvdbg_discover_hart(RVDBGv013_DMI_t *dmi)
@@ -721,8 +723,10 @@ static ssize_t rvdbg_reg_read(target *t, int reg, void *data, size_t max)
 {
 	RVDBGv013_DMI_t *dmi = t->priv;
 	int res;
-	if (max < 4) /* assume all registers 4 byte*/
+	if (max < 4) /* assume all registers 4 byte*/ {
+		DEBUG_WARN("reg_read unexpected size %d\n", max);
 		return -1;
+	}
 	res = rvdbg_read_single_reg(dmi, reg, data, AUTOEXEC_STATE_NONE);
 	if (res) {
 		DEBUG_INFO("rvdbg_reg_read  failed\n");
@@ -957,8 +961,9 @@ static void rvdbg_mem_write_abstract(target *t, target_addr dest, const void* sr
 			cmd |= ABSTRACTCMD_AAMPOSTINCREMENT;
 			rvdbg_dmi_write(dmi, DMI_REG_ABSTRACT_CMD, cmd);
 			rvdbg_dmi_write(dmi, DMI_REG_ABSTRACT_AUTOEXEC, ABSTRACTAUTO_AUTOEXECDATA);
+		} else {
+			rvdbg_dmi_write(dmi, DMI_REG_ABSTRACT_CMD, cmd);
 		}
-		rvdbg_dmi_write(dmi, DMI_REG_ABSTRACT_CMD, cmd);
 		while ((len > 3) && !dmi->error) {
 			rvdbg_dmi_write(dmi, DMI_REG_ABSTRACTDATA0, *w);
 			w++;
@@ -981,6 +986,12 @@ static void rvdbg_mem_write_abstract(target *t, target_addr dest, const void* sr
 			len--;
 			rvdbg_dmi_write(dmi, DMI_REG_ABSTRACT_CMD, cmd);
 		}
+	}
+	uint32_t data;
+	rvdbg_dmi_read(dmi, DMI_REG_ABSTRACT_CS, &data);
+	if (ABSTRACTCS_GET_CMDERR(data)) {
+		DEBUG_WARN("mem_read_abstract failure\n");
+		dmi->error = true;
 	}
 }
 
@@ -1588,7 +1599,16 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 		DEBUG_WARN("%3d", playground[i]);
 	DEBUG_WARN("\n");
 
+	res = target_mem_write(t, tgt, npattern, 64);
 	res = target_mem_write(t, tgt + 3, pattern + 1, 7);
+	res = target_mem_read(t, playground, tgt, 33);
+	DEBUG_WARN("Res: ");
+	for (unsigned int i = 0; i < 33; i++)
+		DEBUG_WARN("%3d", playground[i]);
+	DEBUG_WARN("\n");
+
+	res = target_mem_write(t, tgt, npattern, 64);
+	res = target_mem_write(t, tgt + 8, pattern, 4);
 	res = target_mem_read(t, playground, tgt, 33);
 	DEBUG_WARN("Res: ");
 	for (unsigned int i = 0; i < 33; i++)
