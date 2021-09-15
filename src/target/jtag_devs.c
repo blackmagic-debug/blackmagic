@@ -21,7 +21,7 @@
 #include "general.h"
 #include "jtag_scan.h"
 #include "adiv5.h"
-#include "riscv/rvdbg.h"
+#include "../arch/riscv/rvdbg.h"
 #include "jtag_devs.h"
 
 jtag_dev_descr_t dev_descr[] = {

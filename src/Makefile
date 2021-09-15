@@ -1,6 +1,6 @@
 PROBE_HOST ?= native
 PLATFORM_DIR = platforms/$(PROBE_HOST)
-VPATH += $(PLATFORM_DIR) target target/riscv
+VPATH += $(PLATFORM_DIR) target arch/riscv
 ENABLE_DEBUG ?=
 
 ifneq ($(V), 1)

@@ -28,7 +28,7 @@
 #include "jtagtap.h"
 #include "target.h"
 #include "adiv5.h"
-#include "target/riscv/rvdbg.h"
+#include "arch/riscv/rvdbg.h"
 
 jtag_dev_t jtag_devs[JTAG_MAX_DEVS+1];
 int jtag_dev_count;
