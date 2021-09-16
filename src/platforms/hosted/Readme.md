@@ -1,6 +1,6 @@
 # PC-Hosted BMP
 Compile in src with "make PROBE_HOST=hosted". This needs minimal external
-support.  "make PROBE_HOST=hosted HOSTED_BMP=0" will compile support for FTDI,
+support.  "make PROBE_HOST=hosted HOSTED_BMP_ONLY=0" will compile support for FTDI,
 STLink, CMSIS-DAP and JLINK probes, but requires external libraries.
 
 ## Description
@@ -94,7 +94,7 @@ REMOTE_BMP is a "normal" BMP usb connected
 |   Debugger   | Speed | Remarks
 | ------------ | ----- | ------
 | REMOTE_BMP   |  +++  | Requires recent firmware for decent speed
-Probes below only when compiled with HOSTED_BMP=0
+Probes below only when compiled with HOSTED_BMP_ONLY=0
 | ST-Link V3   | ++++  | Requires recent firmware, Only STM32 devices supported!
 | ST-Link V2   |  +++  | Requires recent firmware, No CDCACM uart! Cortex only!
 | ST-Link V2/1 |  +++  | Requires recent firmware, Cortex only!
