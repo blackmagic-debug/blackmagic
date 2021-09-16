@@ -94,7 +94,7 @@ int jtag_scan(const uint8_t *irlens)
 		DEBUG_WARN("Unexpected IR chain!\n");
 		return 0;
 	}
-	jtagtap_return_idle();
+	jtagtap_return_idle(0);
 	jtagtap_shift_dr();
 	i = LOOPS;
 	uint8_t zeros[] = {0, 0, 0, 0};
@@ -239,7 +239,7 @@ void fw_jtag_dev_shift_ir(jtag_proc_t *jp, uint8_t jd_index, uint32_t ir,
 	jp->jtagtap_tdi_seq(0, ones, d->ir_prescan);
 	jp->jtagtap_tdi_tdo_seq(dout, d->ir_postscan?0:1, (void*)&ir, d->ir_len);
 	jp->jtagtap_tdi_seq(1, ones, d->ir_postscan);
-	jtagtap_return_idle();
+	jtagtap_return_idle(0);
 	if (ir_out)
 		*ir_out = dout[0] | (dout[1] << 8) | (dout[2] << 16) | (dout[3] << 24);
 }
@@ -260,7 +260,7 @@ void fw_jtag_dev_shift_dr(jtag_proc_t *jp, uint8_t jd_index, uint8_t *dout, cons
 	else
 		jp->jtagtap_tdi_seq(d->dr_postscan?0:1, (void*)din, ticks);
 	jp->jtagtap_tdi_seq(1, ones, d->dr_postscan);
-	jtagtap_return_idle();
+	jtagtap_return_idle(jp->idle_cycles);
 }
 
 void jtag_dev_shift_dr(jtag_proc_t *jp, uint8_t jd_index, uint8_t *dout, const uint8_t *din, int ticks)

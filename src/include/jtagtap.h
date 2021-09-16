@@ -52,6 +52,13 @@ typedef struct jtag_proc_s {
 
 	void (*dev_shift_dr)(jtag_proc_t *jp, uint8_t jd_index, uint8_t *dout,
 						 const uint8_t *din, int ticks);
+	uint8_t idle_cycles; /* Additional cycle in Run-Test/Idle as used in
+						  * riscv 0.13 debug spec:
+						  * 0 : No need to pass through Run-Test/Idle
+						  *     (ignored, still using that state)
+						  * 1 : Go through Run-Test/Idle
+						  * 2... : Using 1 ... additional cycles
+						  */
 
 } jtag_proc_t;
 extern jtag_proc_t jtag_proc;
@@ -69,8 +76,8 @@ extern jtag_proc_t jtag_proc;
 	jtag_proc.jtagtap_tms_seq(0x01, 3)
 
 /* Goto Run-test/Idle: 1, 1, 0 */
-#define jtagtap_return_idle()	\
-	jtag_proc.jtagtap_tms_seq(0x01, 2)
+#define jtagtap_return_idle(x)	\
+	jtag_proc.jtagtap_tms_seq(0x01, (x > 1) ? x + 1 : 2 )
 
 
 void jtag_toggle_jtck(bool tms, bool tdi, uint32_t ticks);
