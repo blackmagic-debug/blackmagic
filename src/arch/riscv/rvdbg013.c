@@ -1603,6 +1603,9 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 			t->mem_read = rvdbg_mem_read_systembus;
 			t->mem_write = rvdbg_mem_write_systembus;
 			t->driver = "ESP32-C3";
+			target_add_ram(t, 0x3c800000, 0x00050000); /* Different views? */
+			target_add_ram(t, 0x4037c000, 0x00064000); /* Different views? */
+			target_add_ram(t, 0x50000000, 0x00002000); /* Fast RTC*/
 			break;
 		case 0x31e:
 			t->mem_read = rvdbg_mem_read_abstract;
