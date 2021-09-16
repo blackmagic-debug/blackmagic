@@ -129,8 +129,11 @@ int find_debuggers(BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 			cable_desc_t *cable = &cable_desc[0];
 			DEBUG_WARN("Available cables:\n");
 			for (; cable->name; cable++) {
-				DEBUG_WARN("\t%s\n", cable->name);
+				DEBUG_WARN("\t%s%s\n", cable->name,
+						   (cable->description) ? "" : "*");
 			}
+			DEBUG_WARN("*: No auto-detection possible!"
+					   " Give cable name as argument!\n");
 			exit(0);
 		}
 		info->bmp_type = BMP_TYPE_LIBFTDI;
