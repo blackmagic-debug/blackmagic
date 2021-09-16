@@ -260,6 +260,85 @@ cable_desc_t cable_desc[] = {
 		.init.ddr_high =  PIN4 | PIN3 | PIN1 | PIN0,
 		.name = "arm-usb-ocd-h"
 	},
+	/* ESP Prog:
+	 *
+	 * JTAG buffered on Interface A -> No SWD
+	 * Standard VID/PID/Product
+	 * No nRST on the 10 pin connectors
+	 *
+	 * JTAG enabled by default, ESP_EN pulled up,
+	 * inverted by U4 and enabling JTAG by U5
+	 */
+	{
+		.vendor = 0x0403,
+		.product = 0x6010,
+		.interface = INTERFACE_A,
+		.name = "esp-prog"
+		// No explicit reset
+		// SWD not possible
+	},
+	{
+		/* MPSSE_SK (DB0) ----------- SWDCK/JTCK
+		 * Mode-Switch 1-2/4-5: JTAG
+		 * MPSSE-DO (DB1) ----------- JTAG/TDI
+		 * MPSSE-DI (DB2) ----------- JTAG/TDO
+		 * MPSSE-CS (DB3) ----------- JTAG/TMS
+		 * Mode-Switch 3-2/6-5: SWD
+		 * MPSSE-DO (DB1) -- 330 R -- SWD/SWDIO
+		 * MPSSE-DI (DB2) ----------- SWD/SWDIO
+		 * Indicate Mode-SW set to SWD with "-e" on the command line
+		 * TRST is Push/Pull, not OD!
+		 * PIN4     (DB5) ----------- TRST
+		 * SRST is Push/Pull, not OD! Keep DDR set.
+		 * PIN5     (DB5) ----------- NRST */
+		.vendor  = 0x0403,
+		.product = 0x6010,/*FT2232H*/
+		.interface = INTERFACE_B,
+		.init.data_high = PIN4 | PIN5, /* High   on PIN4/5 */
+		.init.ddr_high = PIN4 | PIN5,  /* Output on PIN4/5 */
+		.assert_srst.data_low   = ~PIN5,
+		.assert_srst.ddr_low    =  PIN5,
+		.deassert_srst.data_low =  PIN5,
+		.deassert_srst.ddr_low  =  PIN5,
+		.target_voltage_cmd  = GET_BITS_LOW,
+		.description = "Tigard",
+		.name = "tigard"
+	},
+	{
+		/* https://sifive.cdn.prismic.io/sifive/b5c95ddd-22af-4be0-8021-50327e186b07_hifive1-a-schematics.pdf
+		 * Direct Connection on Interface-A
+		 * Reset on PIN5, Open-Drain, pulled up tp 3.3 Volt
+		 * and decoupled from FE310 reset voa Schottky
+		 */
+		.vendor = 0x0403,
+		.product = 0x6010,
+		.interface = INTERFACE_A,
+		.assert_srst.data_low    = ~PIN5,
+		.assert_srst.ddr_low     =  PIN5,
+		.deassert_srst.data_low  =  PIN5,
+		.deassert_srst.ddr_low   = ~PIN5,
+		.bb_swdio_in_port_cmd = GET_BITS_LOW,
+		.bb_swdio_in_pin = MPSSE_CS,
+		.name = "hifive1"
+	},
+	{  /* https://www.olimex.com/Products/ARM/JTAG/ARM-USB-TINY-H/
+		*
+		* schmeatics not available
+		*/
+		.vendor = 0x15b1,
+		.product = 0x002a,
+		.interface = INTERFACE_A,
+		.init.data_low  = PIN4,
+		.init.ddr_low  = PIN4 | PIN5,
+		.init.data_high = PIN2 | PIN4,
+		.init.ddr_high  = PIN4,
+		.assert_srst.data_high   = ~PIN2,
+		.assert_srst.ddr_high    =  PIN2,
+		.deassert_srst.data_high =  PIN2,
+		.deassert_srst.ddr_high  = ~PIN2,
+		.name = "arm-usb-tiny-h",
+		.description = "Olimex OpenOCD JTAG ARM-USB-TINY-H",
+	},
 	{
 	}
 };
