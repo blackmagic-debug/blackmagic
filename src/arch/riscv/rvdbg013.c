@@ -222,6 +222,14 @@ enum HART_REG {
 
 #define RISCV_MAX_HARTS 32U
 
+static bool rvdbdg_register_access(target *t, int argc, char *argv[]);
+
+const struct command_s rvdbg_cmd_list[] = {
+	{"register_access",
+	 (cmd_handler)rvdbdg_register_access, "Display/change registers"},
+	{NULL, NULL, NULL}
+};
+
 void rvdbd_dmi_ref(RVDBGv013_DMI_t *dtm)
 {
     dtm->refcnt++;
@@ -1575,6 +1583,8 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 	t->breakwatch_set = riscv_breakwatch_set;
 	t->breakwatch_clear = riscv_breakwatch_clear;
 
+	target_add_commands(t, rvdbg_cmd_list, "Riscv");
+
 	/* We need to halt the core to poke around */
 	int res;
 	res = rvdbg_halt_current_hart(dmi);
@@ -1780,4 +1790,28 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 	if (dmi->error)
 		return -1;
 	return 0;
+}
+
+static bool rvdbdg_register_access(target *t, int argc, char *argv[])
+{
+	uint32_t value;
+	if (argc == 3) {
+		value =  strtol(argv[2], NULL, 0);
+	} else if (argc < 2) {
+		tc_printf(t, "usage: monitor register_access register <value> \n");
+		return false;
+	}
+	uint32_t reg = strtol(argv[1], NULL, 0);
+	if (argc != 4) {
+		uint32_t value;
+		rvdbg_read_regs(t->priv, reg, &value, 4);
+		tc_printf(t, "Reg 0x%04x: %08" PRIx32 "\n", reg, value);
+	} else {
+		uint32_t new;
+		rvdbg_write_regs(t->priv, reg, &value, 4);
+		rvdbg_read_regs(t->priv, reg, &new, 4);
+		tc_printf(t, "Reg 0x%04x: Write %08" PRIx32 " -> %08" PRIx32 "\n",
+				 reg, value, new);
+	}
+	return true;
 }
