@@ -126,12 +126,6 @@ int find_debuggers(BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 				libusb_strerror(res));
 		exit(-1);
 	}
-	res = libusb_init(&info->libusb_ctx);
-	if (res) {
-		DEBUG_WARN( "Fatal: Failed to get USB context: %s\n",
-				libusb_strerror(res));
-		exit(-1);
-	}
 	if (cl_opts->opt_cable) {
 		if ((!strcmp(cl_opts->opt_cable, "list")) ||
 			(!strcmp(cl_opts->opt_cable, "l"))) {
