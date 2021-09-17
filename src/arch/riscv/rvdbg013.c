@@ -915,25 +915,25 @@ static void rvdbg_mem_read_abstract(target *t, void* dest, target_addr address, 
 	rvdbg_dmi_write(dmi, DMI_REG_ABSTRACT_CMD, command);
 	rvdbg_dmi_read_pure(dmi, DMI_REG_ABSTRACTDATA0, NULL);
 	uint32_t data;
-	while (len && !dmi->error) {
+	while (len > 4 && !dmi->error) {
 		if ((len > 4) && (len <= 8)) {
 			rvdbg_dmi_read_nop(dmi, &data);
 			rvdbg_dmi_write(dmi, DMI_REG_ABSTRACT_AUTOEXEC, 0);
 			rvdbg_dmi_read_pure(dmi, DMI_REG_ABSTRACTDATA0, NULL);
 		} else if (len > 8) {
 			rvdbg_dmi_read_pure(dmi, DMI_REG_ABSTRACTDATA0, &data);
-		} else {
-			rvdbg_dmi_read_nop(dmi, &data);
 		}
 		if (dmi->error) {
 			DEBUG_WARN("Read at len %d failed\n", len);
 			return;
 		}
-		size_t chunk = MIN(len, 4);
-		memcpy(dest, &data, chunk);
-		dest += chunk;
-		len -= chunk;
+		memcpy(dest, &data, 4);
+		dest += 4;
+		len -= 4;
 	}
+	rvdbg_dmi_read_nop(dmi, &data);
+	size_t chunk = MIN(len, 4);
+	memcpy(dest, &data, chunk);
 	if (dmi->error) {
 		DEBUG_WARN("Abstract read failed at addr %p\n", dest);
 		return;
