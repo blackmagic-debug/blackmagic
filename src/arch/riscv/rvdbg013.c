@@ -752,6 +752,10 @@ static ssize_t rvdbg_reg_read(target *t, int reg, void *data, size_t max)
 		DEBUG_WARN("reg_read unexpected size %d\n", max);
 		return -1;
 	}
+	if (reg < 0x20)
+		reg += 0x1000;
+	else if (reg == 0x20)
+		reg = HART_REG_CSR_DPC;
 	res = rvdbg_read_single_reg(dmi, reg, data, AUTOEXEC_STATE_NONE);
 	if (res) {
 		DEBUG_INFO("rvdbg_reg_read  failed\n");
@@ -766,6 +770,10 @@ static ssize_t rvdbg_reg_write(target *t, int reg, const void *data, size_t max)
 	int res;
 	if (max < 4) /* assume all registers 4 byte*/
 		return -1;
+	if (reg < 0x20)
+		reg += 0x1000;
+	else if (reg == 0x20)
+		reg = HART_REG_CSR_DPC;
 	res = rvdbg_write_single_reg(dmi,reg, (data) ? *(uint32_t*)data : 0, AUTOEXEC_STATE_NONE);
 	if (res) {
 		DEBUG_INFO("rvdbg_reg_write failed\n");
