@@ -1253,12 +1253,10 @@ static int rvdbg_select_mem_and_csr_access_impl(RVDBGv013_DMI_t *dmi)
 	if (ABSTRACTAUTO_GET_DATA(abstractauto) == ABSTRACTAUTO_SOME_PATTEN) {
 		DEBUG_INFO("RISC-V: autoexecdata feature supported\n");
 		dmi->support_autoexecdata = true;
-
-		ABSTRACTAUTO_SET_DATA(abstractauto, 0);
-		if (rvdbg_dmi_write(dmi, DMI_REG_ABSTRACT_AUTOEXEC, abstractauto) < 0)
-			return -1;
 	}
-
+	ABSTRACTAUTO_SET_DATA(abstractauto, 0);
+	if (rvdbg_dmi_write(dmi, DMI_REG_ABSTRACT_AUTOEXEC, abstractauto) < 0)
+		return -1;
 	return 0;
 }
 
