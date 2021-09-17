@@ -261,7 +261,7 @@ int find_debuggers(BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 						continue; /* discriptions do not match*/
 					else
 						found = true;
-				} else { /* VID/PID fits, but no cl_opts->opt_cable and no description*/
+				} else if (!found) { /* VID/PID fits, but no cl_opts->opt_cable and no description*/
 					if ((cable->vendor == 0x0403) && /* FTDI*/
 						((cable->product == 0x6010) || /* FT2232C/D/H*/
 						 (cable->product == 0x6011) || /* FT4232H Quad HS USB-UART/FIFO IC */
@@ -298,7 +298,7 @@ int find_debuggers(BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 			found_debuggers++;
 		}
 	}
-	if ((found_debuggers == 0) && ftdi_unknown)
+	if ((found_debuggers == 0) && ftdi_unknown && !cl_opts->opt_cable)
 		DEBUG_WARN("Generic FTDI MPSSE VID/PID found. Please specify exact type with \"-c <cable>\" !\n");
 	if ((found_debuggers == 1) && !cl_opts->opt_cable && (type == BMP_TYPE_LIBFTDI))
 		cl_opts->opt_cable = active_cable;
