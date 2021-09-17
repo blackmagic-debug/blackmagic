@@ -171,8 +171,12 @@ int find_debuggers(BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 			libusb_free_device_list(devs, 1);
 			continue;
 		}
-		/* Exclude hubs from testing. Probably more classes could be excluded here!*/
+		/* Exclude hubs from testing. Probably more classes need exclusion!*/
 		if (desc.bDeviceClass == LIBUSB_CLASS_HUB) {
+			continue;
+		}
+		/* Exclude wireless for now.*/
+		if (desc.bDeviceClass == LIBUSB_CLASS_WIRELESS) {
 			continue;
 		}
 		libusb_device_handle *handle;
