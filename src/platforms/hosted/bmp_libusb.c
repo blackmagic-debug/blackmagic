@@ -329,7 +329,7 @@ rescan:
 		} else
 			++found_debuggers;
 	}
-	if (found_debuggers == 0 && ftdi_unknown)
+	if (found_debuggers == 0 && ftdi_unknown && !cl_opts->opt_cable)
 		DEBUG_WARN("Generic FTDI MPSSE VID/PID found. Please specify exact type with \"-c <cable>\" !\n");
 	if (found_debuggers == 1 && !cl_opts->opt_cable && info->bmp_type == BMP_TYPE_LIBFTDI)
 		cl_opts->opt_cable = active_cable;
