@@ -955,6 +955,14 @@ static void rvdbg_mem_write_abstract(target *t, target_addr dest, const void* sr
 	if (!len)
 		return;
 	const uint32_t *w;
+	int retry = 0;
+	uint32_t cs;
+	do {
+		rvdbg_dmi_read(dmi, DMI_REG_ABSTRACT_CS, &cs);
+		if (ABSTRACTCS_GET_CMDERR(cs) > 2) {
+			dmi->error = true;
+		}
+	} while (ABSTRACTCS_GET_BUSY(cs));
 	/* Align to word */
 	if (dest & 3) {
 		const uint8_t *p = src;
@@ -977,30 +985,33 @@ static void rvdbg_mem_write_abstract(target *t, target_addr dest, const void* sr
 	}
 	if (dmi->error)
 		return;
-	if (len > 3) {
-		uint32_t cmd =  ABSTRACTCMD_TYPE_ACCESS_MEMORY | ABSTRACTCMD_AAMSIZE_32bit | ABSTRACTCMD_WRITE;
-		rvdbg_dmi_write(dmi, DMI_REG_ABSTRACTDATA1, dest);
-		rvdbg_dmi_write(dmi, DMI_REG_ABSTRACTDATA0, *w);
-		len -= 4;
-		dest += 4;
-		w++;
-		if (len > 3 ) {
-			cmd |= ABSTRACTCMD_AAMPOSTINCREMENT;
-			rvdbg_dmi_write(dmi, DMI_REG_ABSTRACT_CMD, cmd);
-			rvdbg_dmi_write(dmi, DMI_REG_ABSTRACT_AUTOEXEC, ABSTRACTAUTO_AUTOEXECDATA);
-		} else {
-			rvdbg_dmi_write(dmi, DMI_REG_ABSTRACT_CMD, cmd);
-		}
+	uint32_t cmd =  ABSTRACTCMD_TYPE_ACCESS_MEMORY | ABSTRACTCMD_AAMSIZE_32bit | ABSTRACTCMD_WRITE;
+	rvdbg_dmi_write(dmi, DMI_REG_ABSTRACTDATA1, dest);
+	rvdbg_dmi_write(dmi, DMI_REG_ABSTRACTDATA0, *w);
+	len -= 4;
+	dest += 4;
+	w++;
+	if (len < 4) {
+		rvdbg_dmi_write(dmi, DMI_REG_ABSTRACT_CMD, cmd);
+	}else {
+		cmd |= ABSTRACTCMD_AAMPOSTINCREMENT;
+		rvdbg_dmi_write(dmi, DMI_REG_ABSTRACT_CMD, cmd);
+		rvdbg_dmi_write(dmi, DMI_REG_ABSTRACT_AUTOEXEC, ABSTRACTAUTO_AUTOEXECDATA);
 		while ((len > 3) && !dmi->error) {
+			do {
+				rvdbg_dmi_read(dmi, DMI_REG_ABSTRACT_CS, &cs);
+				if (ABSTRACTCS_GET_CMDERR(cs))
+					retry ++;
+				if (ABSTRACTCS_GET_CMDERR(cs) > 2) {
+					dmi->error = true;
+				}
+			} while (ABSTRACTCS_GET_BUSY(cs));
 			rvdbg_dmi_write(dmi, DMI_REG_ABSTRACTDATA0, *w);
 			w++;
 			len -= 4;
 			dest += 4;
-			if (len < 4) /* Terminate writing words*/ {
-				rvdbg_dmi_write(dmi, DMI_REG_ABSTRACT_AUTOEXEC, 0);
-				break;
-			}
 		}
+		rvdbg_dmi_write(dmi, DMI_REG_ABSTRACT_AUTOEXEC, 0);
 	}
 	if (len && !dmi->error) {
 		uint8_t *p = (uint8_t *)w;
@@ -1013,6 +1024,9 @@ static void rvdbg_mem_write_abstract(target *t, target_addr dest, const void* sr
 			len--;
 			rvdbg_dmi_write(dmi, DMI_REG_ABSTRACT_CMD, cmd);
 		}
+	}
+	if (retry) {
+		DEBUG_WARN(" %d retries @%08" PRIx32 "\n", retry, dest);
 	}
 	uint32_t data;
 	rvdbg_dmi_read(dmi, DMI_REG_ABSTRACT_CS, &data);
