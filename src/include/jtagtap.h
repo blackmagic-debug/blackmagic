@@ -73,7 +73,7 @@ extern jtag_proc_t jtag_proc;
 	jtag_proc.jtagtap_tms_seq(0x01, 2)
 
 
-void jtag_toggle_jtck(uint32_t ticks);
+void jtag_toggle_jtck(bool tms, bool tdi, uint32_t ticks);
 
 # if PC_HOSTED == 1
 int platform_jtagtap_init(void);

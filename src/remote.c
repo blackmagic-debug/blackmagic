@@ -220,9 +220,11 @@ static void remotePacketProcessJTAG(unsigned i, char *packet)
 		break;
 
     case REMOTE_JTAG_JTCK: /* JC = Toggle JTCK ============================ */
-		MS = remotehston(8, &packet[2]);
-		jtag_toggle_jtck(MS);
-		_respond(REMOTE_RESP_OK, DO);
+		MS = remotehston(8, &packet[4]);
+		bool tms = (packet[2] != '0');
+		bool tdi = (packet[3] != '0');
+		jtag_toggle_jtck(tms, tdi, MS);
+		_respond(REMOTE_RESP_OK, 0);
 		break;
     case REMOTE_JTAG_SHIFT_IR: /* JI = R/W IR ============================ */
 		index = remotehston(2, &packet[2]);
@@ -238,8 +240,8 @@ static void remotePacketProcessJTAG(unsigned i, char *packet)
 		void *src = (void *)(uint32_t)packet;
 		int byte_count = (wticks + 7) >> 3;
 		if (dir_flags & REMOTE_IOSEQ_FLAG_IN) /* write to target */
-			unhexify(src + 1, &packet[9], byte_count);
-		jtag_dev_shift_dr(&jtag_proc, index, src, src + 1, wticks);
+			unhexify(src + 4, &packet[10], byte_count);
+		jtag_dev_shift_dr(&jtag_proc, index, src, src + 4, wticks);
 		if (dir_flags & REMOTE_IOSEQ_FLAG_OUT) /* read from target */
 			_respond_buf(REMOTE_RESP_OK, src, byte_count);
 		else

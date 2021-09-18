@@ -203,8 +203,10 @@ static void jtagtap_tdi_seq(const uint8_t final_tms, const uint8_t *DI, int tick
 	}
 }
 
-void jtag_toggle_jtck(uint32_t ticks)
+void jtag_toggle_jtck(bool tms, bool tdi, uint32_t ticks)
 {
+	gpio_set_val(TMS_PORT, TMS_PIN, tms);
+	gpio_set_val(TDI_PORT, TDI_PIN, tdi);
 	register volatile int32_t cnt;
 	if (swd_delay_cnt) {
 		while(ticks--) {
