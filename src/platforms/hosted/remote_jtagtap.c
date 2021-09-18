@@ -118,8 +118,6 @@ static void jtagtap_tdi_tdo_seq(
 
 	if(!ticks || (!DI && !DO))
 		return;
-	uint64_t *DIl = (uint64_t *)DI;
-	uint64_t *DOl = (uint64_t *)DO;
 	while (ticks) {
 		int chunk;
 		if (ticks < 65)
@@ -128,19 +126,26 @@ static void jtagtap_tdi_tdo_seq(
 			chunk = 64;
 		}
 		ticks -= chunk;
-		uint64_t dil;
-		if (DI)
-			dil = *DIl++;
-		else
-			dil = 0;
-		/* Reduce the length of DI according to the bits we're transmitting */
-		if (chunk < 64)
-			dil &= ((1LL << chunk) - 1);
+		uint8_t di[8];
+		memset(di, 0, 8);
+		int bytes = (chunk + 7) >> 3;
+		if (DI) {
+			memcpy(&di, DI, bytes);
+			int remainder = chunk & 7;
+			DI += bytes;
+			DI += bytes;
+			if (remainder) {
+				uint8_t rem = *DI;
+				rem &= (1 << remainder) - 1;
+				*di = rem;
+			}
+		};
+		/* PRIx64 differs with system. Use it explicit in the format string*/
 		s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE,
 					 "!J%c%02x%" PRIx64 "%c",
 					 (!ticks && final_tms) ?
 					 REMOTE_TDITDO_TMS : REMOTE_TDITDO_NOTMS,
-					 chunk, dil, REMOTE_EOM);
+					 chunk, *(uint64_t*)di, REMOTE_EOM);
 		platform_buffer_write(construct,s);
 
 		s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
@@ -149,8 +154,11 @@ static void jtagtap_tdi_tdo_seq(
 					   s ? (char *)&(construct[1]) : "unknown");
 			exit(-1);
 		}
-		if (DO)
-			*DOl++ = remotehston(-1, (char *)&construct[1]);
+		if (DO) {
+			uint64_t res = remotehston(-1, (char *)&construct[1]);
+			memcpy(DO, &res, bytes);
+			DO += bytes;
+		}
 	}
 }
 
