@@ -782,6 +782,8 @@ static ssize_t rvdbg_reg_write(target *t, int reg, const void *data, size_t max)
 	return 4;
 }
 
+#if 0
+/* proposed by ruabmbua, but not yet used and not yet working*/
 static int rvdbg_progbuf_upload(RVDBGv013_DMI_t *dmi, const uint32_t* buffer, uint8_t buffer_len)
 {
 	uint8_t i;
@@ -884,6 +886,57 @@ static int rvdbg_read_csr_progbuf(RVDBGv013_DMI_t *dmi, uint16_t reg_id, uint32_
 }
 
 // static int rvdbg_write_csr_progbuf(RVDBGv013_DMI_t *dmi, uint16_t reg_id, uint32_t value) { }
+
+static int rvdbg_read_mem_progbuf(RVDBGv013_DMI_t *dmi, uint32_t address, uint32_t len, uint8_t* value)
+{
+	// Select optimal transfer size
+	enum BUS_ACCESS width;
+	uint32_t width_bytes;
+	uint32_t i;
+	uint32_t args[2];
+
+	if (address % 4 == 0 && len > 4) {
+		width = BUS_ACCESS_32;
+		width_bytes = 4;
+	} else if (address % 2 == 0 && len > 2) {
+		width = BUS_ACCESS_16;
+		width_bytes = 2;
+	} else {
+		width = BUS_ACCESS_8;
+		width_bytes = 1;
+	}
+
+	// Load instruction with zero extend, x1 is target for data,
+	// x2 is load address.
+	uint32_t program[] = {
+		RV32I_ISA_LOAD(1, width, RV32I_ISA_LOAD_ZERO_EXTEND, 2, 0),
+	};
+	DEBUG_WARN("RV32I_ISA_LOAD 0x%08" PRIx32 "\n", program[0]);
+	if (rvdbg_progbuf_upload(dmi, program, ARRAY_NUMELEM(program)) < 0)
+		dmi->error = true;
+
+	// Go over memory addresses in width steps, copy from x1
+	// result to value.
+	for (i = 0; i < len; i += width_bytes) {
+		// Set x2
+		args[1] = address + i;
+		if (rvdbg_progbuf_exec(dmi, args, 1, 2) < 0)
+			dmi->error = true;
+		memcpy(value + i, &args[0], width_bytes);
+	}
+
+	// If i is not exactly len some spare bytes are left,
+	// call function recursively with remainder.
+	if (i != len) {
+		i -= width_bytes;
+		return rvdbg_read_mem_progbuf(dmi, address + i, len - i, value + i);
+	}
+
+	return 0;
+}
+
+// static void rvdbg_write_mem_progbuf(RVDBGv013_DMI_t *dmi, uint32_t address, uint32_t len, const uint8_t *value); { }
+#endif
 
 static void rvdbg_mem_read_abstract(target *t, void* dest, target_addr address, size_t len)
 {
@@ -1167,57 +1220,6 @@ static void rvdbg_mem_read_systembus(target *t,  void* dest, target_addr address
 	}
 }
 
-static int rvdbg_read_mem_progbuf(RVDBGv013_DMI_t *dmi, uint32_t address, uint32_t len, uint8_t* value)
-{
-	// Select optimal transfer size
-	enum BUS_ACCESS width;
-	uint32_t width_bytes;
-	uint32_t i;
-	uint32_t args[2];
-
-	if (address % 4 == 0 && len > 4) {
-		width = BUS_ACCESS_32;
-		width_bytes = 4;
-	} else if (address % 2 == 0 && len > 2) {
-		width = BUS_ACCESS_16;
-		width_bytes = 2;
-	} else {
-		width = BUS_ACCESS_8;
-		width_bytes = 1;
-	}
-
-	// Load instruction with zero extend, x1 is target for data,
-	// x2 is load address.
-	uint32_t program[] = {
-		RV32I_ISA_LOAD(1, width, RV32I_ISA_LOAD_ZERO_EXTEND, 2, 0),
-	};
-	DEBUG_WARN("RV32I_ISA_LOAD 0x%08" PRIx32 "\n", program[0]);
-	if (rvdbg_progbuf_upload(dmi, program, ARRAY_NUMELEM(program)) < 0)
-		dmi->error = true;
-
-	// Go over memory addresses in width steps, copy from x1
-	// result to value.
-	for (i = 0; i < len; i += width_bytes) {
-		// Set x2
-		args[1] = address + i;
-		if (rvdbg_progbuf_exec(dmi, args, 1, 2) < 0)
-			dmi->error = true;
-		memcpy(value + i, &args[0], width_bytes);
-	}
-
-	// If i is not exactly len some spare bytes are left,
-	// call function recursively with remainder.
-	if (i != len) {
-		i -= width_bytes;
-		return rvdbg_read_mem_progbuf(dmi, address + i, len - i, value + i);
-	}
-
-	return 0;
-}
-
-// static void rvdbg_write_mem_progbuf(RVDBGv013_DMI_t *dmi, uint32_t address, uint32_t len, const uint8_t *value); { }
-
-
 static int rvdbg_select_mem_and_csr_access_impl(RVDBGv013_DMI_t *dmi)
 {
 	uint32_t abstractcs, abstractauto;
@@ -1257,9 +1259,9 @@ static int rvdbg_select_mem_and_csr_access_impl(RVDBGv013_DMI_t *dmi)
 		// PROGBUF supported
 		DEBUG_INFO("RISC-V: Program buffer with available size %d supported.\n", total_avail_progbuf);
 
-		dmi->read_csr = rvdbg_read_csr_progbuf;
+	// dmi->read_csr = rvdbg_read_csr_progbuf;
 		// dmi->write_csr = rvdbg_write_csr_progbuf;
-		dmi->read_mem = rvdbg_read_mem_progbuf;
+		// dmi->read_mem = rvdbg_read_mem_progbuf;
 		// dmi->write_mem = rvdbg_write_mem_progbuf;
 	}
 

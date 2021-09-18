@@ -96,11 +96,13 @@ typedef struct RVDBGv013_DMI_s {
     int (*rvdbg_dmi_low_access)(struct RVDBGv013_DMI_s *dmi, uint32_t *dmi_data_out, uint64_t dmi_cmd);
     void (*rvdbg_dmi_reset)(struct RVDBGv013_DMI_s *dmi, bool hard_reset);
     void (*rvdbg_dmi_free)(struct RVDBGv013_DMI_s *dmi);
-
+#if 0
+	/* Proposed by ruabmbua, but not yet used */
     int (*read_csr)(struct RVDBGv013_DMI_s *dmi, uint16_t reg_id, uint32_t *value);
     int (*write_csr)(struct RVDBGv013_DMI_s *dmi, uint16_t reg_id, uint32_t value);
     int (*read_mem)(struct RVDBGv013_DMI_s *dmi, uint32_t address, uint32_t len, uint8_t *value);
     int (*write_mem)(struct RVDBGv013_DMI_s *dmi, uint32_t address, uint32_t len, const uint8_t *value);
+#endif
 } RVDBGv013_DMI_t;
 
 enum DTM_REGISTERS {
