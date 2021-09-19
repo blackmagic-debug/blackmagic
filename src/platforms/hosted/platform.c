@@ -196,23 +196,45 @@ int platform_jtag_scan(const uint8_t *lrlens)
 	return -1;
 }
 
+void basic_jtag_toggle_jtck(bool tms, bool tdi, uint32_t ticks)
+{
+	uint8_t din[500];
+	(void) tms;
+	int value = (tdi) ? -1 : 0;
+	memset (din, value, 500);
+	while (ticks) {
+		int chunk = ticks;
+		if (chunk > 4000)
+			chunk = 4000;
+		jtag_proc.jtagtap_tdi_tdo_seq(NULL, 0, din, chunk);
+		ticks -= chunk;
+	}
+}
+
 int platform_jtagtap_init(void)
 {
+	int res = -1;
 	switch (info.bmp_type) {
 	case BMP_TYPE_BMP:
-		return remote_jtagtap_init(&jtag_proc);
+		res =remote_jtagtap_init(&jtag_proc);
+		break;
 	case BMP_TYPE_STLINKV2:
-		return 0;
+		res = 0;
+		break;
 	case BMP_TYPE_LIBFTDI:
-		return libftdi_jtagtap_init(&jtag_proc);
+		res =libftdi_jtagtap_init(&jtag_proc);
+		break;
 	case BMP_TYPE_JLINK:
 		return jlink_jtagtap_init(&info, &jtag_proc);
 	case BMP_TYPE_CMSIS_DAP:
 		return cmsis_dap_jtagtap_init(&jtag_proc);
 	default:
-		return -1;
+		res = -1;
 	}
-	return -1;
+	if ((!res) && (!(jtag_proc.jtag_toggle_jtck))) {
+		jtag_proc.jtag_toggle_jtck = basic_jtag_toggle_jtck;
+	}
+	return res;
 }
 
 void platform_adiv5_dp_defaults(ADIv5_DP_t *dp)

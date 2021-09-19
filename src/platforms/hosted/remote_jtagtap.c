@@ -4,7 +4,7 @@
  * Copyright (C) 2008  Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
  * Modified by Dave Marples <dave@marples.net>
- * Modified (c) 2020 Uwe Bonnes <bon@elektron.ikp.physik.tu-darmstadt.de>
+ * Modified (c) 2020, 2021 Uwe Bonnes <bon@elektron.ikp.physik.tu-darmstadt.de>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -51,6 +51,7 @@ void fw_jtag_dev_shift_dr(jtag_proc_t *jp, uint8_t jd_index,
 					  uint8_t *dout, const uint8_t *din, int ticks);
 static void remote_jtag_dev_shift_dr(jtag_proc_t *jp, uint8_t jd_index,
 									 uint8_t *dout, const uint8_t *din, int ticks);
+static void remote_jtag_toggle_jtck(bool tms, bool tdi, uint32_t ticks);
 
 int remote_jtagtap_init(jtag_proc_t *jtag_proc)
 {
@@ -75,17 +76,20 @@ int remote_jtagtap_init(jtag_proc_t *jtag_proc)
 	platform_buffer_write(construct, s);
 
 	/* Check if large tdi_tdo transfers are possible*/
+	jtag_proc->jtagtap_tdi_tdo_seq = jtagtap_tdi_tdo_seq;
+	jtag_proc->jtagtap_tdi_seq = jtagtap_tdi_seq;
 	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
 	if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
+		DEBUG_WARN("Update old firmware for faster JTAG\n");
+    } else if ((construct[0] < REMOTE_HL_VERSION)) {
 		DEBUG_WARN("Update firmware for faster JTAG\n");
-		jtag_proc->jtagtap_tdi_tdo_seq = jtagtap_tdi_tdo_seq;
-    } else {
+	} else {
 		jtag_proc->jtagtap_tdi_tdo_seq = jtagtap_io_seq;
 		jtag_proc->dev_shift_ir = remote_jtag_dev_shift_ir;
 		jtag_proc->dev_shift_dr = remote_jtag_dev_shift_dr;
+		(void) remote_jtag_toggle_jtck;
+		jtag_proc->jtag_toggle_jtck = remote_jtag_toggle_jtck;
 	}
-	jtag_proc->jtagtap_tdi_seq = jtagtap_tdi_seq;
-
 	return 0;
 }
 
@@ -185,7 +189,7 @@ static void jtagtap_tdi_tdo_seq(
 
 /* Provide a tdi_tdo sequence for large transfers
  *
- * packet BUF_SIZE is 1024, so enough space for 500 byte = 2000 ticks
+ * packet BUF_SIZE is 1024, so enough space for 500 byte = 4000 ticks
  */
 static void jtagtap_io_seq(
 	uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int ticks)
@@ -193,7 +197,7 @@ static void jtagtap_io_seq(
 	if (!ticks || (!DO && ! DI))
 		return;
 	while (ticks) {
-		int chunk = (ticks > 2000) ? 2000 : ticks;
+		int chunk = (ticks > 4000) ? 4000 : ticks;
 		ticks -= chunk;
 		int byte_count = (chunk + 7) >> 3;
 		char construct[REMOTE_MAX_MSG_SIZE];
@@ -208,6 +212,7 @@ static void jtagtap_io_seq(
 		if (DI) {
 			hexify(p, DI, byte_count);
 			p += 2 * byte_count;
+			DI+= byte_count;
 		}
 		*p++ = REMOTE_EOM;
 		*p   = 0;
@@ -310,4 +315,17 @@ static void remote_jtag_dev_shift_dr(jtag_proc_t *jp, uint8_t jd_index,
 		DEBUG_WARN("%s error %d\n",
 				   __func__, s);
 	}
+}
+
+static void remote_jtag_toggle_jtck(bool tms, bool tdi, uint32_t ticks)
+{
+    char construct[REMOTE_MAX_MSG_SIZE];
+    int s = snprintf(
+	construct, REMOTE_MAX_MSG_SIZE, REMOTE_JTAG_JTCK_STR,
+	(tms) ? 1 : 0, (tdi) ? 1 : 0, ticks);
+    platform_buffer_write((uint8_t*)construct, s);
+
+    s = platform_buffer_read((uint8_t*)construct, REMOTE_MAX_MSG_SIZE);
+    if ((!s) || (construct[0] == REMOTE_RESP_ERR))
+	DEBUG_WARN("toggleClk, error %d\n", __func__, s);
 }

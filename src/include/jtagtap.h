@@ -59,7 +59,7 @@ typedef struct jtag_proc_s {
 						  * 1 : Go through Run-Test/Idle
 						  * 2... : Using 1 ... additional cycles
 						  */
-
+	void (*jtag_toggle_jtck)(bool tms, bool tdi, uint32_t ticks);
 } jtag_proc_t;
 extern jtag_proc_t jtag_proc;
 
@@ -78,8 +78,6 @@ extern jtag_proc_t jtag_proc;
 /* Goto Run-Test/Idle from Exit-I|DR: 1, 0 plus Idle TCK */
 #define jtagtap_return_idle(x)	\
 	jtag_proc.jtagtap_tms_seq(0x01, (x > 1) ? x + 1 : 2 )
-
-void jtag_toggle_jtck(bool tms, bool tdi, uint32_t ticks);
 
 # if PC_HOSTED == 1
 int platform_jtagtap_init(void);
