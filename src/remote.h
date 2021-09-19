@@ -178,6 +178,6 @@
 			'%','0', '2', 'x', '%','0','2','x', HEX_U32(address), HEX_U32(count), 0}
 
 uint64_t remotehston(uint32_t limit, char *s);
-void remotePacketProcess(uint8_t i, char *packet);
+void remotePacketProcess(unsigned int i, char *packet);
 
 #endif
