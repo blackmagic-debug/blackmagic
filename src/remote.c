@@ -296,8 +296,18 @@ static void remotePacketProcessGEN(unsigned i, char *packet)
 
     case REMOTE_PWR_SET:
 #ifdef PLATFORM_HAS_POWER_SWITCH
-		platform_target_set_power(packet[2]=='1');
-		_respond(REMOTE_RESP_OK,0);
+		if (packet[2]=='1'
+			&& !platform_target_get_power()
+			&& platform_target_voltage_sense() > POWER_CONFLICT_THRESHOLD)
+		{
+			/* want to enable target power, but voltage > 0.5V sensed
+			 * on the pin -> cancel
+			 */
+			_respond(REMOTE_RESP_ERR,0);
+		} else {
+			platform_target_set_power(packet[2]=='1');
+			_respond(REMOTE_RESP_OK,0);
+		}
 #else
 		_respond(REMOTE_RESP_NOTSUP,0);
 #endif

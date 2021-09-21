@@ -393,8 +393,15 @@ static bool cmd_target_power(target *t, int argc, const char **argv)
 	} else if (argc == 2) {
 		bool want_enable = false;
 		if (parse_enable_or_disable(argv[1], &want_enable)) {
-			platform_target_set_power(want_enable);
-			gdb_outf("%s target power\n", want_enable ? "Enabling" : "Disabling");
+			if (want_enable
+				&& !platform_target_get_power()
+				&& platform_target_voltage_sense() > POWER_CONFLICT_THRESHOLD) {
+				/* want to enable target power, but VREF > 0.5V sensed -> cancel */
+				gdb_outf("Target already powered (%s)\n", platform_target_voltage());
+			} else {
+				platform_target_set_power(want_enable);
+				gdb_outf("%s target power\n", want_enable ? "Enabling" : "Disabling");
+			}
 		}
 	} else {
 		gdb_outf("Unrecognized command format\n");
