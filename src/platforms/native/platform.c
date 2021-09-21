@@ -251,12 +251,16 @@ static void adc_init(void)
 	adc_calibrate(ADC1);
 }
 
-const char *platform_target_voltage(void)
+uint32_t platform_target_voltage_sense(void)
 {
+	/* returns the voltage in volt scaled by 10 (so 33 means 3.3V), except
+	 * for hardware version 1
+	 * this function is only needed for implementations that allow the
+	 * target to be powered from the debug probe
+	 */
 	if (platform_hwversion() == 0)
-		return gpio_get(GPIOB, GPIO0) ? "OK" : "ABSENT!";
+		return 0;
 
-	static char ret[] = "0.0V";
 	const uint8_t channel = 8;
 	adc_set_regular_sequence(ADC1, 1, (uint8_t*)&channel);
 
@@ -265,9 +269,19 @@ const char *platform_target_voltage(void)
 	/* Wait for end of conversion. */
 	while (!adc_eoc(ADC1));
 
-	uint32_t val = adc_read_regular(ADC1) * 99; /* 0-4095 */
-	ret[0] = '0' + val / 81910;
-	ret[2] = '0' + (val / 8191) % 10;
+	uint32_t val = adc_read_regular(ADC1); /* 0-4095 */
+	return (val * 99) / 8191;
+}
+
+const char *platform_target_voltage(void)
+{
+	if (platform_hwversion() == 0)
+		return gpio_get(GPIOB, GPIO0) ? "OK" : "ABSENT!";
+
+	static char ret[] = "0.0V";
+	uint32_t val = platform_target_voltage_sense();
+	ret[0] = '0' + val / 10;
+	ret[2] = '0' + val % 10;
 
 	return ret;
 }
