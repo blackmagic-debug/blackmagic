@@ -322,15 +322,22 @@ static uint32_t cortexm_initial_halt(ADIv5_AP_t *ap)
 	uint32_t dhcsr_ctl = CORTEXM_DHCSR_DBGKEY |	CORTEXM_DHCSR_C_DEBUGEN |
 		CORTEXM_DHCSR_C_HALT;
 	uint32_t dhcsr_valid = CORTEXM_DHCSR_S_HALT | CORTEXM_DHCSR_C_DEBUGEN;
-	uint32_t dhcsr;
 	bool reset_seen = false;
-	if (!(ap->dp->idcode & ADIV5_MINDP)) {
+	bool is_mindp = (ap->dp->idcode & ADIV5_MINDP);
+#if  PC_HOSTED == 1
+	bool use_low_access = (!(ap->dp->ap_setup) && !is_mindp);
+#else
+	bool use_low_access = (!is_mindp);
+#endif
+	if (use_low_access) {
+		DEBUG_WARN("Using low access\n");
+		/* ap_mem_access_setup() sets ADIV5_AP_CSW_ADDRINC_SINGLE -> unusable!*/
 		adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw | ADIV5_AP_CSW_SIZE_WORD);
-		adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR,
-							CORTEXM_DHCSR);
+		adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR, CORTEXM_DHCSR);
 	}
 	while (!platform_timeout_is_expired(&to)) {
-		if (!(ap->dp->idcode & ADIV5_MINDP)) {
+		uint32_t dhcsr ;
+		if (use_low_access) {
 			adiv5_dp_write(ap->dp, ADIV5_DP_CTRLSTAT,
 						   ctrlstat | (0xfff * ADIV5_DP_CTRLSTAT_TRNCNT));
 			adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DRW,
