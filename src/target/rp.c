@@ -263,7 +263,7 @@ static int rp_flash_erase(struct target_flash *f, target_addr addr,
 	return ret;
 }
 
-int rp_flash_write(struct target_flash *f,
+static int rp_flash_write(struct target_flash *f,
                     target_addr dest, const void *src, size_t len)
 {
 	DEBUG_INFO("RP Write %08" PRIx32 " len 0x%" PRIx32 "\n", dest, (uint32_t)len);

@@ -160,7 +160,7 @@ static void stm32f4_add_flash(target *t,
 	target_add_flash(t, f);
 }
 
-char *stm32f4_get_chip_name(uint32_t idcode)
+static char *stm32f4_get_chip_name(uint32_t idcode)
 {
 	switch(idcode){
 	case ID_STM32F40X: /* F40XxE/G */
