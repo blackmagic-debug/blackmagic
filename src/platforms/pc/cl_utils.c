@@ -448,7 +448,9 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 			DEBUG_WARN("No test for this core type yet\n");
 		}
 	} else if (opt->opt_mode == BMP_MODE_MONITOR) {
-		command_process(t, opt->opt_monitor);
+		res = command_process(t, opt->opt_monitor);
+		if (res)
+			DEBUG_WARN("Command \"%s\" failed\n", opt->opt_monitor);
 	}
 	if ((opt->opt_mode == BMP_MODE_TEST) ||
 		(opt->opt_mode == BMP_MODE_SWJ_TEST))

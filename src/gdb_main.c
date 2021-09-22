@@ -374,7 +374,8 @@ handle_q_packet(char *packet, int len)
 		else if(c == 0)
 			gdb_putpacketz("OK");
 		else
-			gdb_putpacketz("E");
+			gdb_putpacket(hexify(pbuf, "Failed\n", strlen("Failed\n")),
+						  2 * strlen("Failed\n"));
 
 	} else if (!strncmp (packet, "qSupported", 10)) {
 		/* Query supported protocol features */

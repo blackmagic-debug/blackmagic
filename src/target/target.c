@@ -574,7 +574,7 @@ int target_command(target *t, int argc, const char *argv[])
 	for (struct target_command_s *tc = t->commands; tc; tc = tc->next)
 		for(const struct command_s *c = tc->cmds; c->cmd; c++)
 			if(!strncmp(argv[0], c->cmd, strlen(argv[0])))
-				return !c->handler(t, argc, argv);
+				return (c->handler(t, argc, argv)) ? 0 : 1;
 	return -1;
 }
 
