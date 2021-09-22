@@ -131,8 +131,6 @@ enum BUS_ACCESS {
 
 int rvdbg_dmi_init(RVDBGv013_DMI_t *dtm);
 void rvdbg013_jtag_dp_handler(jtag_dev_t *jd);
-void rvdbg_dmi_ref(RVDBGv013_DMI_t *dtm);
-void rvdbg_dmi_unref(RVDBGv013_DMI_t *dtm);
 int rvdbg_set_debug_version(RVDBGv013_DMI_t *dp, uint8_t version);
 
 #endif /* __RVDBG_H */

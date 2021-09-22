@@ -230,12 +230,12 @@ const struct command_s rvdbg_cmd_list[] = {
 	{NULL, NULL, NULL}
 };
 
-void rvdbd_dmi_ref(RVDBGv013_DMI_t *dtm)
+static void rvdbd_dmi_ref(RVDBGv013_DMI_t *dtm)
 {
     dtm->refcnt++;
 }
 
-void rvdbd_dmi_unref(RVDBGv013_DMI_t *dtm)
+static void rvdbd_dmi_unref(RVDBGv013_DMI_t *dtm)
 {
     if (--dtm->refcnt == 0) {
 	dtm->rvdbg_dmi_free(dtm);
@@ -1147,7 +1147,7 @@ static void rvdbg_mem_read_systembus(target *t,  void* dest, target_addr address
 	}
 }
 
-/*static*/ void rvdbg_mem_write_systembus(target *t, target_addr dest, const void* src, size_t len)
+static void rvdbg_mem_write_systembus(target *t, target_addr dest, const void* src, size_t len)
 {
 	RVDBGv013_DMI_t *dmi = t->priv;
 	if (!dest) {
