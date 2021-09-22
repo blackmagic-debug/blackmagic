@@ -330,7 +330,6 @@ static uint32_t cortexm_initial_halt(ADIv5_AP_t *ap)
 	bool use_low_access = (!is_mindp);
 #endif
 	if (use_low_access) {
-		DEBUG_WARN("Using low access\n");
 		/* ap_mem_access_setup() sets ADIV5_AP_CSW_ADDRINC_SINGLE -> unusable!*/
 		adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw | ADIV5_AP_CSW_SIZE_WORD);
 		adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR, CORTEXM_DHCSR);
