@@ -54,7 +54,7 @@ const struct command_s lpc17xx_cmd_list[] = {
 	{NULL, NULL, NULL}
 };
 
-void lpc17xx_add_flash(target *t, uint32_t addr, size_t len, size_t erasesize, unsigned int base_sector)
+static void lpc17xx_add_flash(target *t, uint32_t addr, size_t len, size_t erasesize, unsigned int base_sector)
 {
 	struct lpc_flash *lf = lpc_add_flash(t, addr, len);
 	lf->f.blocksize = erasesize;

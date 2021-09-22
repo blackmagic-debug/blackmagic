@@ -76,7 +76,7 @@ const struct command_s lpc546xx_cmd_list[] = {
 	{ NULL, NULL, NULL }
 };
 
-void lpc546xx_add_flash(target *t, uint32_t iap_entry,
+static void lpc546xx_add_flash(target *t, uint32_t iap_entry,
 			uint8_t base_sector, uint32_t addr,
 			size_t len, size_t erasesize)
 {
