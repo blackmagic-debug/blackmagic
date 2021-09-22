@@ -70,6 +70,7 @@ static int stm32f1_flash_write(struct target_flash *f,
 
 #define FLASH_CR_OBL_LAUNCH (1<<13)
 #define FLASH_CR_OPTWRE	(1 << 9)
+#define FLASH_CR_LOCK	(1 << 7)
 #define FLASH_CR_STRT	(1 << 6)
 #define FLASH_CR_OPTER	(1 << 5)
 #define FLASH_CR_OPTPG	(1 << 4)
@@ -242,10 +243,16 @@ bool stm32f1_probe(target *t)
 	return true;
 }
 
-static void stm32f1_flash_unlock(target *t, uint32_t bank_offset)
+static int stm32f1_flash_unlock(target *t, uint32_t bank_offset)
 {
 	target_mem_write32(t, FLASH_KEYR + bank_offset, KEY1);
 	target_mem_write32(t, FLASH_KEYR + bank_offset, KEY2);
+	uint32_t cr = target_mem_read32(t, FLASH_CR);
+	if (cr & FLASH_CR_LOCK) {
+		DEBUG_WARN("unlock failed, cr: 0x%08" PRIx32 "\n", cr);
+		return -1;
+	}
+	return 0;
 }
 
 static int stm32f1_flash_erase(struct target_flash *f,
@@ -256,9 +263,11 @@ static int stm32f1_flash_erase(struct target_flash *f,
 	target_addr start = addr;
 
 	if ((t->idcode == 0x430) && (end >= FLASH_BANK_SPLIT))
-		stm32f1_flash_unlock(t, FLASH_BANK2_OFFSET);
+		if (stm32f1_flash_unlock(t, FLASH_BANK2_OFFSET))
+			return -1;
 	if (addr < FLASH_BANK_SPLIT)
-		stm32f1_flash_unlock(t, 0);
+		if (stm32f1_flash_unlock(t, 0))
+			return -1;
 	while(len) {
 		uint32_t bank_offset = 0;
 		if (addr >= FLASH_BANK_SPLIT)
@@ -358,7 +367,8 @@ static bool stm32f1_cmd_erase_mass(target *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
-	stm32f1_flash_unlock(t, 0);
+	if (stm32f1_flash_unlock(t, 0))
+		return false;
 
 	/* Flash mass erase start instruction */
 	target_mem_write32(t, FLASH_CR, FLASH_CR_MER);
@@ -374,7 +384,8 @@ static bool stm32f1_cmd_erase_mass(target *t, int argc, const char **argv)
 	if ((sr & SR_ERROR_MASK) || !(sr & SR_EOP))
 		return false;
 	if (t->idcode == 0x430) {
-		stm32f1_flash_unlock(t, FLASH_BANK2_OFFSET);
+		if (stm32f1_flash_unlock(t, FLASH_BANK2_OFFSET))
+			return false;
 
 		/* Flash mass erase start instruction on bank 2*/
 		target_mem_write32(t, FLASH_CR + FLASH_BANK2_OFFSET, FLASH_CR_MER);
@@ -469,7 +480,8 @@ static bool stm32f1_cmd_option(target *t, int argc, const char **argv)
 	default: flash_obp_rdp_key = FLASH_OBP_RDP_KEY;
 	}
 	rdprt = target_mem_read32(t, FLASH_OBR) & FLASH_OBR_RDPRT;
-	stm32f1_flash_unlock(t, 0);
+	if (stm32f1_flash_unlock(t, 0))
+		return false;
 	target_mem_write32(t, FLASH_OPTKEYR, KEY1);
 	target_mem_write32(t, FLASH_OPTKEYR, KEY2);
 
