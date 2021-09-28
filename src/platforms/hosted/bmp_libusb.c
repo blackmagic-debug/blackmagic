@@ -232,6 +232,7 @@ int find_debuggers(BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 			if ((desc.idProduct == PRODUCT_ID_STLINKV2) ||
 				(desc.idProduct == PRODUCT_ID_STLINKV21) ||
 				(desc.idProduct == PRODUCT_ID_STLINKV21_MSD) ||
+				(desc.idProduct == PRODUCT_ID_STLINKV3_NO_MSD) ||
 				(desc.idProduct == PRODUCT_ID_STLINKV3_BL) ||
 				(desc.idProduct == PRODUCT_ID_STLINKV3) ||
 				(desc.idProduct == PRODUCT_ID_STLINKV3E)) {

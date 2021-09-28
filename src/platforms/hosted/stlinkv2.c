@@ -553,6 +553,7 @@ int stlink_init(bmp_info_t *info)
 	case PRODUCT_ID_STLINKV3_BL:
 	case PRODUCT_ID_STLINKV3:
 	case PRODUCT_ID_STLINKV3E:
+	case PRODUCT_ID_STLINKV3_NO_MSD:
 		Stlink.ver_hw = 30;
 		info->usb_link->ep_tx = 1;
 		Stlink.ep_tx = 1;
