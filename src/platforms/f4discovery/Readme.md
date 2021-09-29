@@ -54,7 +54,7 @@ To exit from dfu mode press a "key" and "reset", release reset. BMP firmware sho
 10 pin male from pins
 ========================================
 
-| PB3/TDO  | PB7/RX      | PB8/TX     | X          | PA1/TDI |
+| PB3/TDO  | PB7/RX      | PB6/TX     | X          | PA1/TDI |
 | -------- | ----------- | ---------- | ---------- | ------- |
 | PB4/SRST | +3V3/PB8 SW | PA13/SWDIO | PA14/SWCLK | GND     |
 
