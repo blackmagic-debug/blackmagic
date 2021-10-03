@@ -42,7 +42,7 @@ int remote_init(void)
 	platform_buffer_write((uint8_t *)construct, c);
 	c = platform_buffer_read((uint8_t *)construct, REMOTE_MAX_MSG_SIZE);
 
-	if ((!c) || (construct[0] == REMOTE_RESP_ERR)) {
+	if ((c < 1) || (construct[0] == REMOTE_RESP_ERR)) {
 		DEBUG_WARN("Remote Start failed, error %s\n",
 				c ? (char *)&(construct[1]) : "unknown");
       return -1;
@@ -62,7 +62,7 @@ bool remote_target_get_power(void)
 
 	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
 
-	if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
+	if ((s < 1) || (construct[0] == REMOTE_RESP_ERR)) {
       DEBUG_WARN(" platform_target_get_power failed, error %s\n",
 				 s ? (char *)&(construct[1]) : "unknown");
       exit (-1);
@@ -82,7 +82,7 @@ bool remote_target_set_power(bool power)
 
 	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
 
-	if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
+	if ((s < 1) || (construct[0] == REMOTE_RESP_ERR)) {
 		DEBUG_WARN("platform_target_set_power failed, error %s\n",
 				s ? (char *)&(construct[1]) : "unknown");
 		return false;
@@ -101,7 +101,7 @@ void remote_srst_set_val(bool assert)
 
 	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
 
-	if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
+	if ((s < 1) || (construct[0] == REMOTE_RESP_ERR)) {
 		DEBUG_WARN("platform_srst_set_val failed, error %s\n",
 				   s ? (char *)&(construct[1]) : "unknown");
       exit(-1);
@@ -119,7 +119,7 @@ bool remote_srst_get_val(void)
 
 	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
 
-	if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
+	if ((s < 1) || (construct[0] == REMOTE_RESP_ERR)) {
 		DEBUG_WARN("platform_srst_set_val failed, error %s\n",
 				   s ? (char *)&(construct[1]) : "unknown");
       exit(-1);
@@ -137,7 +137,7 @@ void remote_max_frequency_set(uint32_t freq)
 
 	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
 
-	if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
+	if ((s < 1) || (construct[0] == REMOTE_RESP_ERR)) {
 		DEBUG_WARN("Update Firmware to allow to set max SWJ frequency\n");
     }
 }
@@ -153,7 +153,7 @@ uint32_t remote_max_frequency_get(void)
 
 	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
 
-	if ((!s) || (construct[0] == REMOTE_RESP_ERR))
+	if ((s < 1) || (construct[0] == REMOTE_RESP_ERR))
 		return FREQ_FIXED;
 
 	uint32_t freq[1];
@@ -172,7 +172,7 @@ const char *remote_target_voltage(void)
 
 	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
 
-	if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
+	if ((s < 1) || (construct[0] == REMOTE_RESP_ERR)) {
       DEBUG_WARN("platform_target_voltage failed, error %s\n",
 			  s ? (char *)&(construct[1]) : "unknown");
       exit(- 1);
@@ -188,7 +188,7 @@ static uint32_t remote_adiv5_dp_read(ADIv5_DP_t *dp, uint16_t addr)
 					 dp->dp_jd_index, addr);
 	platform_buffer_write(construct, s);
 	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
-	if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
+	if ((s < 1) || (construct[0] == REMOTE_RESP_ERR)) {
 		DEBUG_WARN("%s error %d\n", __func__, s);
 	}
     uint32_t dest[1];
@@ -206,7 +206,7 @@ static uint32_t remote_adiv5_low_access(
 					 REMOTE_LOW_ACCESS_STR, dp->dp_jd_index, RnW, addr, value);
 	platform_buffer_write(construct, s);
 	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
-	if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
+	if ((s < 1) || (construct[0] == REMOTE_RESP_ERR)) {
 		DEBUG_WARN("%s error %d\n", __func__, s);
 	}
     uint32_t dest[1];
@@ -221,7 +221,7 @@ static uint32_t remote_adiv5_ap_read(ADIv5_AP_t *ap, uint16_t addr)
 					 ap->dp->dp_jd_index, ap->apsel, addr);
 	platform_buffer_write(construct, s);
 	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
-	if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
+	if ((s < 1) || (construct[0] == REMOTE_RESP_ERR)) {
 		DEBUG_WARN("%s error %d\n", __func__, s);
 	}
     uint32_t dest[1];
@@ -236,7 +236,7 @@ static void remote_adiv5_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value)
 					ap->dp->dp_jd_index,  ap->apsel, addr, value);
 	platform_buffer_write(construct, s);
 	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
-	if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
+	if ((s < 1) || (construct[0] == REMOTE_RESP_ERR)) {
 		DEBUG_WARN("%s error %d\n", __func__, s);
 	}
 	return;
@@ -372,7 +372,7 @@ void remote_adiv5_dp_defaults(ADIv5_DP_t *dp)
 					 REMOTE_HL_CHECK_STR);
 	platform_buffer_write(construct, s);
 	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
-	if ((!s) || (construct[0] == REMOTE_RESP_ERR) ||
+	if ((s < 1) || (construct[0] == REMOTE_RESP_ERR) ||
 		((construct[1] - '0') <  REMOTE_HL_VERSION)) {
 		DEBUG_WARN(
 			"Please update BMP firmware for substantial speed increase!\n");
