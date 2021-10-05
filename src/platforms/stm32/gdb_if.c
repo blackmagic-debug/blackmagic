@@ -24,6 +24,7 @@
  */
 #include "general.h"
 #include "cdcacm.h"
+#include <libopencmsis/core_cm3.h>
 #include "gdb_if.h"
 
 static uint32_t count_out;
@@ -95,6 +96,8 @@ static void gdb_if_update_buf(void)
 	                                buffer_out, CDCACM_PACKET_SIZE);
 	out_ptr = 0;
 #endif
+	if (!count_out)
+		__WFI();
 }
 
 unsigned char gdb_if_getchar(void)
@@ -102,8 +105,10 @@ unsigned char gdb_if_getchar(void)
 
 	while (!(out_ptr < count_out)) {
 		/* Detach if port closed */
-		if (!cdcacm_get_dtr())
+		if (!cdcacm_get_dtr()) {
+			__WFI();
 			return 0x04;
+		}
 
 		gdb_if_update_buf();
 	}
@@ -118,8 +123,10 @@ unsigned char gdb_if_getchar_to(int timeout)
 
 	if (!(out_ptr < count_out)) do {
 		/* Detach if port closed */
-		if (!cdcacm_get_dtr())
-			return 0x04;
+			if (!cdcacm_get_dtr()) {
+				__WFI(); /* systick will wake up too!*/
+				return 0x04;
+			}
 
 		gdb_if_update_buf();
 	} while (!platform_timeout_is_expired(&t) && !(out_ptr < count_out));
