@@ -323,10 +323,14 @@ static void dap_line_reset(void)
 
 static uint32_t wait_word(uint8_t *buf, int size, int len, uint8_t *dp_fault)
 {
+	uint8_t cmd_copy[len];
+	memcpy(cmd_copy, buf, len);
 	do {
 		dbg_dap_cmd(buf, size, len);
 		if (buf[1] < DAP_TRANSFER_WAIT)
 			break;
+		if (buf[1] == DAP_TRANSFER_WAIT)
+			memcpy(buf, cmd_copy, len);
 	} while (buf[1] == DAP_TRANSFER_WAIT);
 
 	if (buf[1] > DAP_TRANSFER_WAIT) {
