@@ -337,7 +337,7 @@ static uint32_t cortexm_initial_halt(ADIv5_AP_t *ap)
 	while (!platform_timeout_is_expired(&to)) {
 		uint32_t dhcsr ;
 		if (use_low_access) {
-			adiv5_dp_write(ap->dp, ADIV5_DP_CTRLSTAT,
+			adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_DP_CTRLSTAT,
 						   ctrlstat | (0xfff * ADIV5_DP_CTRLSTAT_TRNCNT));
 			adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DRW,
 								dhcsr_ctl);
