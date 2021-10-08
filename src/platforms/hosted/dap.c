@@ -326,11 +326,10 @@ static uint32_t wait_word(uint8_t *buf, int size, int len, uint8_t *dp_fault)
 	uint8_t cmd_copy[len];
 	memcpy(cmd_copy, buf, len);
 	do {
+		memcpy(buf, cmd_copy, len);
 		dbg_dap_cmd(buf, size, len);
 		if (buf[1] < DAP_TRANSFER_WAIT)
 			break;
-		if (buf[1] == DAP_TRANSFER_WAIT)
-			memcpy(buf, cmd_copy, len);
 	} while (buf[1] == DAP_TRANSFER_WAIT);
 
 	if (buf[1] > DAP_TRANSFER_WAIT) {
@@ -378,7 +377,10 @@ void dap_write_reg(ADIv5_DP_t *dp, uint8_t reg, uint32_t data)
 	buf[5] = (data >> 8) & 0xff;
 	buf[6] = (data >> 16) & 0xff;
 	buf[7] = (data >> 24) & 0xff;
+	uint8_t cmd_copy[8];
+	memcpy(cmd_copy, buf, 8);
 	do {
+		memcpy(buf, cmd_copy, 8);
 		dbg_dap_cmd(buf, sizeof(buf), 8);
 		if (buf[1] < DAP_TRANSFER_WAIT)
 			break;
