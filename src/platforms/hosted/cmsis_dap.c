@@ -127,6 +127,8 @@ int dap_init(bmp_info_t *info)
 		DEBUG_INFO(", SWO_MANCHESTER");
 	if (dap_caps & 0x10)
 		DEBUG_INFO(", Atomic Cmds");
+	if (has_swd_sequence)
+		DEBUG_INFO(", DAP_SWD_Sequence");
 	DEBUG_INFO("\n");
 	return 0;
 }
