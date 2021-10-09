@@ -764,9 +764,10 @@ uint32_t stlink_dp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 	int res;
 	if (RnW) {
 		res = stlink_read_dp_register(
-			STLINK_DEBUG_PORT_ACCESS, addr, &response);
+			(addr < 0x100) ? STLINK_DEBUG_PORT_ACCESS : 0, addr, &response);
 	} else {
-		res = stlink_write_dp_register(STLINK_DEBUG_PORT_ACCESS, addr, value);
+		res = stlink_write_dp_register(
+			(addr < 0x100) ? STLINK_DEBUG_PORT_ACCESS : 0, addr, value);
 	}
 	if (res == STLINK_ERROR_WAIT)
 		raise_exception(EXCEPTION_TIMEOUT, "DP ACK timeout");
