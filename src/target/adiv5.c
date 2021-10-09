@@ -323,12 +323,7 @@ static uint32_t cortexm_initial_halt(ADIv5_AP_t *ap)
 		CORTEXM_DHCSR_C_HALT;
 	uint32_t dhcsr_valid = CORTEXM_DHCSR_S_HALT | CORTEXM_DHCSR_C_DEBUGEN;
 	bool reset_seen = false;
-	bool is_mindp = (ap->dp->idcode & ADIV5_MINDP);
-#if  PC_HOSTED == 1
-	bool use_low_access = (!(ap->dp->ap_setup) && !is_mindp);
-#else
-	bool use_low_access = (!is_mindp);
-#endif
+	bool use_low_access = (!(ap->dp->idcode & ADIV5_MINDP));
 	if (use_low_access) {
 		/* ap_mem_access_setup() sets ADIV5_AP_CSW_ADDRINC_SINGLE -> unusable!*/
 		adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw | ADIV5_AP_CSW_SIZE_WORD);
