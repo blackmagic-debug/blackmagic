@@ -83,8 +83,10 @@ int dap_init(bmp_info_t *info)
 			report_size = 64 + 1;
 		}
 		handle = hid_open(info->vid, info->pid,  (serial[0]) ? serial : NULL);
-		if (!handle)
+		if (!handle) {
+			DEBUG_WARN("hid_open failed\n");
 			return -1;
+		}
 	} else if (type == CMSIS_TYPE_BULK) {
 		DEBUG_INFO("Using bulk transfer\n");
 		usb_handle = libusb_open_device_with_vid_pid(info->libusb_ctx, info->vid, info->pid);

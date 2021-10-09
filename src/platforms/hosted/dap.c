@@ -333,12 +333,14 @@ static uint32_t wait_word(uint8_t *buf, int size, int len, uint8_t *dp_fault)
 	} while (buf[1] == DAP_TRANSFER_WAIT);
 
 	if (buf[1] > DAP_TRANSFER_WAIT) {
-//	  DEBUG_WARN("dap_read_reg fault\n");
+		DEBUG_WARN("dap wait_word reg %x fault %x\n",
+				   cmd_copy[3] & 0x7c, buf[1]);
 		*dp_fault = 1;
-	}
-	if (buf[1] == DAP_TRANSFER_ERROR) {
-		DEBUG_WARN("dap_read_reg, protocoll error\n");
-		dap_line_reset();
+		if (buf[1] == DAP_TRANSFER_ERROR) {
+			DEBUG_WARN("dap_read_reg, protocoll error\n");
+			dap_line_reset();
+		}
+		return 0;
 	}
 	uint32_t res =
 		((uint32_t)buf[5] << 24) | ((uint32_t)buf[4] << 16) |
@@ -568,7 +570,7 @@ void dap_ap_mem_access_setup(ADIv5_AP_t *ap, uint32_t addr, enum align align)
 
 uint32_t dap_ap_read(ADIv5_AP_t *ap, uint16_t addr)
 {
-	DEBUG_PROBE("dap_ap_read_start\n");
+	DEBUG_PROBE("dap_ap_read_start addr %x\n", addr);
 	uint8_t buf[63], *p = buf;
 	buf[0] = ID_DAP_TRANSFER;
 	uint8_t dap_index = 0;
@@ -584,6 +586,9 @@ uint32_t dap_ap_read(ADIv5_AP_t *ap, uint16_t addr)
 	*p++ = (addr & 0x0c) | DAP_TRANSFER_RnW  |
 		((addr & 0x100) ?  DAP_TRANSFER_APnDP : 0);
 	uint32_t res = wait_word(buf, 63, p - buf, &ap->dp->fault);
+	if ((buf[0] != 2) || (buf[1] != 1)) {
+		DEBUG_WARN("dap_ap_read error %x\n", buf[1]);
+	}
 	return res;
 }
 
@@ -607,6 +612,9 @@ void dap_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value)
 	*p++ = (value >> 16) & 0xff;
 	*p++ = (value >> 24) & 0xff;
 	dbg_dap_cmd(buf, sizeof(buf), p - buf);
+	if ((buf[0] != 2) || (buf[1] != 1)) {
+		DEBUG_WARN("dap_ap_write error %x\n", buf[1]);
+	}
 }
 
 void dap_read_single(ADIv5_AP_t *ap, void *dest, uint32_t src, enum align align)

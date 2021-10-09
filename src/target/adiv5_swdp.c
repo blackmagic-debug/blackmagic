@@ -124,7 +124,7 @@ int adiv5_swdp_scan(uint32_t targetid)
 				idcode = initial_dp->low_access(initial_dp, ADIV5_LOW_READ,
 									  ADIV5_DP_IDCODE, 0);
 			}
-			if (e2.type) {
+			if (e2.type || initial_dp->fault) {
 				DEBUG_WARN("No usable DP found\n");
 				return 0;
 			}
