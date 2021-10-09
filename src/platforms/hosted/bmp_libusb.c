@@ -307,9 +307,8 @@ int find_debuggers(BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 		((found_debuggers == 1) && (cl_opts->opt_list_only))) {
 		if (!report) {
 			if (found_debuggers > 1)
-				DEBUG_WARN("%d debuggers found!\nSelect with -P <pos>, "
-						   "-s <(partial)serial no.> "
-						   "and/or -S <(partial)description>\n",
+				DEBUG_WARN("%d debuggers found!\nSelect with -P <pos> "
+						   "or -s <(partial)serial no.>\n",
 						   found_debuggers);
 			report = true;
 			goto rescan;
