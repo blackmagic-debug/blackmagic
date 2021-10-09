@@ -220,7 +220,7 @@ int find_debuggers(BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 				type = BMP_TYPE_BMP;
 			} else {
 				if (desc.idProduct == PRODUCT_ID_BMP_BL)
-					DEBUG_WARN("BMP in botloader mode found. Restart or reflash!\n");
+					DEBUG_WARN("BMP in bootloader mode found. Restart or reflash!\n");
 				continue;
 			}
 		} else if ((type == BMP_TYPE_NONE) &&

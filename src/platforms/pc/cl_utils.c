@@ -386,7 +386,7 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 		num_targets = target_foreach(display_target, &num_targets);
 	}
 	if (opt->opt_target_dev > num_targets) {
-		DEBUG_WARN("Given target nummer %d not available max %d\n",
+		DEBUG_WARN("Given target number %d not available max %d\n",
 				   opt->opt_target_dev, num_targets);
 		return -1;
 	}
@@ -438,7 +438,7 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 	if (opt->opt_mode == BMP_MODE_SWJ_TEST) {
 		switch (t->core[0]) {
 		case 'M':
-			DEBUG_WARN("Continious read/write-back DEMCR. Abort with ^C\n");
+			DEBUG_WARN("Continuous read/write-back DEMCR. Abort with ^C\n");
 			while(1) {
 				uint32_t demcr;
 				target_mem_read(t, &demcr, CORTEXM_DEMCR, 4);
