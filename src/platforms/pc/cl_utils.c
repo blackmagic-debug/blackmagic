@@ -351,7 +351,7 @@ static void display_target(int i, target *t, void *context)
 
 int cl_execute(BMP_CL_OPTIONS_t *opt)
 {
-	int res = -1;
+	int res = 0;
 	int num_targets;
 	if (opt->opt_tpwr) {
 		platform_target_set_power(true);
@@ -361,7 +361,7 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 			platform_srst_set_val(true);
 			platform_delay(1);
 			platform_srst_set_val(false);
-			return 0;
+			return res;
 	}
 	if (opt->opt_connect_under_reset)
 		DEBUG_INFO("Connecting under reset\n");
@@ -381,19 +381,20 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 	}
 	if (!num_targets) {
 		DEBUG_WARN("No target found\n");
-		return res;
+		return -1;
 	} else {
 		num_targets = target_foreach(display_target, &num_targets);
 	}
 	if (opt->opt_target_dev > num_targets) {
-		DEBUG_WARN("Given target nummer %d not available max %d\n",
+		DEBUG_WARN("Given target number %d not available max %d\n",
 				   opt->opt_target_dev, num_targets);
-		return res;
+		return -1;
 	}
 	target *t = target_attach_n(opt->opt_target_dev, &cl_controller);
 
 	if (!t) {
 		DEBUG_WARN("Can not attach to target %d\n", opt->opt_target_dev);
+		res = -1;
 		goto target_detach;
 	}
 	/* List each defined RAM */
@@ -437,7 +438,7 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 	if (opt->opt_mode == BMP_MODE_SWJ_TEST) {
 		switch (t->core[0]) {
 		case 'M':
-			DEBUG_WARN("Continious read/write-back DEMCR. Abort with ^C\n");
+			DEBUG_WARN("Continuous read/write-back DEMCR. Abort with ^C\n");
 			while(1) {
 				uint32_t demcr;
 				target_mem_read(t, &demcr, CORTEXM_DEMCR, 4);
@@ -462,6 +463,7 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 		int mmap_res = bmp_mmap(opt->opt_flash_file, &map);
 		if (mmap_res) {
 			DEBUG_WARN("Can not map file: %s. Aborting!\n", strerror(errno));
+			res = -1;
 			goto target_detach;
 		}
 	} else if (opt->opt_mode == BMP_MODE_FLASH_READ) {
@@ -471,7 +473,8 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 		if (read_file == -1) {
 			DEBUG_WARN("Error opening flashfile %s for read: %s\n",
 					   opt->opt_flash_file, strerror(errno));
-			return res;
+			res = -1;
+			goto target_detach;
 		}
 	}
 	if (opt->opt_flash_size < map.size)
@@ -485,7 +488,8 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 		unsigned int erased = target_flash_erase(t, opt->opt_flash_start,
 												 opt->opt_flash_size);
 		if (erased) {
-			DEBUG_WARN("Erased failed!\n");
+			DEBUG_WARN("Erasure failed!\n");
+			res = -1;
 			goto free_map;
 		}
 		target_reset(t);
@@ -497,7 +501,8 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 		unsigned int erased = target_flash_erase(t, opt->opt_flash_start,
 												 map.size);
 		if (erased) {
-			DEBUG_WARN("Erased failed!\n");
+			DEBUG_WARN("Erasure failed!\n");
+			res = -1;
 			goto free_map;
 		} else {
 			DEBUG_INFO("Flashing %zu bytes at 0x%08" PRIx32 "\n",
@@ -507,9 +512,10 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 			/* Buffered write cares for padding*/
 			if (flashed) {
 				DEBUG_WARN("Flashing failed!\n");
+				res = -1;
+				goto free_map;
 			} else {
 				DEBUG_INFO("Success!\n");
-				res = 0;
 			}
 		}
 		target_flash_done(t);
@@ -529,7 +535,8 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 		if (!data) {
 			DEBUG_WARN("Can not malloc memory for flash read/verify "
 					   "operation\n");
-			return res;
+			res = -1;
+			goto free_map;
 		}
 		if (opt->opt_mode == BMP_MODE_FLASH_READ)
 			DEBUG_INFO("Reading flash from 0x%08" PRIx32 " for %zu"
@@ -563,7 +570,8 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 				if (difference){
 					DEBUG_WARN("Verify failed at flash region 0x%08"
 							   PRIx32 "\n", flash_src);
-					return -1;
+					res = -1;
+					goto free_map;
 				}
 				flash += worksize;
 			} else if (read_file != -1) {
@@ -571,13 +579,12 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 				if (written < worksize) {
 					DEBUG_WARN("Read failed at flash region 0x%08" PRIx32 "\n",
 						   flash_src);
-					return -1;
+					res = -1;
+					goto free_map;
 				}
 			}
 			flash_src += worksize;
 			size -= worksize;
-			if (size <= 0)
-				res = 0;
 		}
 		uint32_t end_time = platform_time_ms();
 		if (read_file != -1)
