@@ -197,10 +197,10 @@ void dap_connect(bool jtag)
 //-----------------------------------------------------------------------------
 void dap_disconnect(void)
 {
-	uint8_t buf[1];
+	uint8_t buf[65];
 
 	buf[0] = ID_DAP_DISCONNECT;
-	dbg_dap_cmd(buf, sizeof(buf), 1);
+	dbg_dap_cmd(buf, sizeof(buf), 65);
 }
 
 static uint32_t swj_clock;
