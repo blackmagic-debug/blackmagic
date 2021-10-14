@@ -18,7 +18,7 @@ CFLAGS  +=  -DHOSTED_BMP_ONLY=$(HOSTED_BMP_ONLY)
 
 ifneq (, $(findstring linux, $(SYS)))
 SRC += serial_unix.c
-HIDAPILIB = hidapi-libusb
+HIDAPILIB = hidapi-hidraw
 ifeq ($(ASAN), 1)
 CFLAGS += -fsanitize=address  -Wno-format-truncation
 LDFLAGS += -lasan
