@@ -91,13 +91,9 @@ static bmp_type_t find_cmsis_dap_interface(libusb_device *dev,bmp_info_t *info) 
 		if (!strstr(interface_string, "CMSIS")) {
 			continue;
 		}
+		type = BMP_TYPE_CMSIS_DAP;
 
-		if (interface->bInterfaceClass == 0x03) {
-			type = BMP_TYPE_CMSIS_DAP_V1;
-
-		} else if (interface->bInterfaceClass == 0xff && interface->bNumEndpoints == 2) {
-			type = BMP_TYPE_CMSIS_DAP_V2;
-
+		if (interface->bInterfaceClass == 0xff && interface->bNumEndpoints == 2) {
 			info->interface_num = interface->bInterfaceNumber;
 
 			for (int j = 0; j < interface->bNumEndpoints; j++) {
@@ -228,7 +224,7 @@ int find_debuggers(BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 				   ((type = find_cmsis_dap_interface(dev, info)) != BMP_TYPE_NONE)) {
 			/* find_cmsis_dap_interface has set valid type*/
 		} else if ((strstr(manufacturer, "CMSIS")) || (strstr(product, "CMSIS"))) {
-			type = BMP_TYPE_CMSIS_DAP_V1;
+			type = BMP_TYPE_CMSIS_DAP;
 		} else if (desc.idVendor ==  VENDOR_ID_STLINK) {
 			if ((desc.idProduct == PRODUCT_ID_STLINKV2) ||
 				(desc.idProduct == PRODUCT_ID_STLINKV21) ||

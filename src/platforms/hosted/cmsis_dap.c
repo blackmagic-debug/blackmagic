@@ -45,8 +45,13 @@
 uint8_t dap_caps;
 uint8_t mode;
 
+typedef enum cmsis_type_s {
+	CMSIS_TYPE_NONE = 0,
+	CMSIS_TYPE_HID,
+	CMSIS_TYPE_BULK
+} cmsis_type_t;
 /*- Variables ---------------------------------------------------------------*/
-static bmp_type_t type;
+static cmsis_type_t type;
 static libusb_device_handle *usb_handle = NULL;
 static uint8_t in_ep;
 static uint8_t out_ep;
@@ -58,10 +63,11 @@ static bool has_swd_sequence = false;
 /* LPC845 Breakout Board Rev. 0 report invalid response with > 65 bytes */
 int dap_init(bmp_info_t *info)
 {
-	type = info->bmp_type;
+	type = (info->in_ep && info->out_ep) ? CMSIS_TYPE_BULK : CMSIS_TYPE_HID;
 	int size;
 
-	if (type == BMP_TYPE_CMSIS_DAP_V1) {
+	if (type == CMSIS_TYPE_HID) {
+		DEBUG_INFO("Using hid transfer\n");
 		if (hid_init())
 			return -1;
 		size = strlen(info->serial);
@@ -79,7 +85,8 @@ int dap_init(bmp_info_t *info)
 		handle = hid_open(info->vid, info->pid,  (serial[0]) ? serial : NULL);
 		if (!handle)
 			return -1;
-	} else if (type == BMP_TYPE_CMSIS_DAP_V2) {
+	} else if (type == CMSIS_TYPE_BULK) {
+		DEBUG_INFO("Using bulk transfer\n");
 		usb_handle = libusb_open_device_with_vid_pid(info->libusb_ctx, info->vid, info->pid);
 		if (!usb_handle) {
 			DEBUG_WARN("WARN: libusb_open_device_with_vid_pid() failed\n");
@@ -175,12 +182,12 @@ static uint32_t dap_dp_read_reg(ADIv5_DP_t *dp, uint16_t addr)
 
 void dap_exit_function(void)
 {
-	if (type == BMP_TYPE_CMSIS_DAP_V1) {
+	if (type == CMSIS_TYPE_HID) {
 		if (handle) {
 			dap_disconnect();
 			hid_close(handle);
 		}
-	} else if (type == BMP_TYPE_CMSIS_DAP_V2) {
+	} else if (type == CMSIS_TYPE_BULK) {
 		if (usb_handle) {
 			dap_disconnect();
 			libusb_close(usb_handle);
@@ -208,7 +215,7 @@ int dbg_dap_cmd(uint8_t *data, int size, int rsize)
 	for(int i = 0; (i < 32) && (i < rsize + 1); i++)
 		DEBUG_WIRE("%02x.",	buffer[i]);
 	DEBUG_WIRE("\n");
-	if (type == BMP_TYPE_CMSIS_DAP_V1) {
+	if (type == CMSIS_TYPE_HID) {
 		res = hid_write(handle, buffer, rsize + 1);
 		if (res < 0) {
 			DEBUG_WARN( "Error: %ls\n", hid_error(handle));
@@ -219,7 +226,7 @@ int dbg_dap_cmd(uint8_t *data, int size, int rsize)
 			DEBUG_WARN( "debugger read(): %ls\n", hid_error(handle));
 			exit(-1);
 		}
-	} else if (type == BMP_TYPE_CMSIS_DAP_V2) {
+	} else if (type == CMSIS_TYPE_BULK) {
 		int transferred = 0;
 
 		res = libusb_bulk_transfer(usb_handle, out_ep, buffer + 1, rsize, &transferred, 0);
