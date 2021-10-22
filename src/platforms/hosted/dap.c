@@ -619,7 +619,8 @@ void dap_read_single(ADIv5_AP_t *ap, void *dest, uint32_t src, enum align align)
 	uint8_t buf[63];
 	uint8_t *p = mem_access_setup(ap, buf, src, align);
 	*p++ = SWD_AP_DRW | DAP_TRANSFER_RnW;
-	buf[2] = 4;
+	*p++ = SWD_DP_R_RDBUFF | DAP_TRANSFER_RnW;
+	buf[2] = 5;
 	uint32_t tmp = wait_word(buf, 63, p - buf, &ap->dp->fault);
 	dest = extract(dest, src, tmp, align);
 }
