@@ -292,6 +292,8 @@ void platform_srst_set_val(bool assert)
 		return jlink_srst_set_val(&info, assert);
 	case BMP_TYPE_LIBFTDI:
 		return libftdi_srst_set_val(assert);
+	case BMP_TYPE_CMSIS_DAP:
+		return dap_srst_set_val(assert);
 	default:
 		break;
 	}

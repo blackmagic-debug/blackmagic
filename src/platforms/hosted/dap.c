@@ -200,7 +200,7 @@ void dap_disconnect(void)
 	uint8_t buf[65];
 
 	buf[0] = ID_DAP_DISCONNECT;
-	dbg_dap_cmd(buf, sizeof(buf), 65);
+	dbg_dap_cmd(buf, sizeof(buf), 1);
 }
 
 static uint32_t swj_clock;
@@ -277,10 +277,7 @@ void dap_reset_pin(int state)
 	buf[1] = state ? DAP_SWJ_nRESET : 0; // Value
 	buf[2] = DAP_SWJ_nRESET; // Select
 	buf[3] = 0; // Wait
-	buf[4] = 0;
-	buf[5] = 0;
-	buf[6] = 0;
-	dbg_dap_cmd(buf, sizeof(buf), 7);
+	dbg_dap_cmd(buf, sizeof(buf), 4);
 }
 
 void dap_trst_reset(void)
