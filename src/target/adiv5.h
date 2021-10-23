@@ -173,8 +173,6 @@ typedef struct ADIv5_DP_s {
 	/* dp_low_write returns true if no OK resonse. */
 	bool (*dp_low_write)(struct ADIv5_DP_s *dp, uint16_t addr,
 						 const uint32_t data);
-	/* dp_low_read returns true with parity error */
-	bool (*dp_low_read)(struct ADIv5_DP_s *dp, uint16_t addr, uint32_t *data);
 	uint32_t (*dp_read)(struct ADIv5_DP_s *dp, uint16_t addr);
 	uint32_t (*error)(struct ADIv5_DP_s *dp);
 	uint32_t (*low_access)(struct ADIv5_DP_s *dp, uint8_t RnW,

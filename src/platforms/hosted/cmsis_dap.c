@@ -415,36 +415,6 @@ int dap_jtag_dp_init(ADIv5_DP_t *dp)
 
 #define SWD_SEQUENCE_IN 0x80
 #define DAP_SWD_SEQUENCE 0x1d
-/* DAP_SWD_SEQUENCE does not do auto turnaround*/
-static bool dap_dp_low_read(ADIv5_DP_t *dp, uint16_t addr, uint32_t *res)
-{
-	(void)dp;
-	unsigned int paket_request = make_packet_request(ADIV5_LOW_READ, addr);
-	uint8_t buf[32] = {
-		DAP_SWD_SEQUENCE,
-		5,
-		8,
-		paket_request,
-		4 + SWD_SEQUENCE_IN,  /* one turn-around + read 3 bit ACK */
-		32 + SWD_SEQUENCE_IN, /* read 32 bit data */
-		1 + SWD_SEQUENCE_IN,  /* read parity bit */
-		1,                    /* one bit turn around to drive SWDIO */
-		0
-	};
-	dbg_dap_cmd(buf, sizeof(buf), 9);
-	if (buf[0])
-		DEBUG_WARN("dap_dp_low_read failed\n");
-	uint32_t ack = (buf[1] >> 1) & 7;
-	uint32_t data = (buf[2] << 0) + (buf[3] << 8) + (buf[4] << 16)
-		+ (buf[5] << 24);
-	int parity = __builtin_parity(data);
-	bool ret = ((parity != buf[6]) || (ack != 1));
-	*res = data;
-	DEBUG_PROBE("dap_dp_low_read ack %d, res %08" PRIx32 ", parity %s\n", ack,
-			   data, (ret)? "ERR": "OK");
-	return ret;
-}
-
 static bool dap_dp_low_write(ADIv5_DP_t *dp, uint16_t addr, const uint32_t data)
 {
 	DEBUG_PROBE("dap_dp_low_write %08" PRIx32 "\n", data);
@@ -485,7 +455,6 @@ int dap_swdptap_init(ADIv5_DP_t *dp)
 	dap_reset_link(false);
 	if (has_swd_sequence) {
 		/* DAP_SWD_SEQUENCE does not do auto turnaround, use own!*/
-		dp->dp_low_read = dap_dp_low_read;
 		dp->dp_low_write = dap_dp_low_write;
 	} else {
 		dp->error = dap_dp_error;

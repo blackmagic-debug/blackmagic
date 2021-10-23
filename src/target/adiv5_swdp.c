@@ -61,14 +61,6 @@ bool firmware_dp_low_write(ADIv5_DP_t *dp, uint16_t addr, const uint32_t data)
 	return (res != 1);
 }
 
-static bool firmware_dp_low_read(ADIv5_DP_t *dp, uint16_t addr, uint32_t *res)
-{
-	unsigned int request =  make_packet_request(ADIV5_LOW_READ, addr & 0xf);
-	dp->seq_out(request, 8);
-	dp->seq_in(3);
-    return dp->seq_in_parity(res, 32);
-}
-
 /* Try first the dormant to SWD procedure.
  * If target id given, scan DPs 0 .. 15 on that device and return.
  * Otherwise
@@ -78,7 +70,6 @@ int adiv5_swdp_scan(uint32_t targetid)
 	target_list_free();
 	ADIv5_DP_t idp = {
 		.dp_low_write = firmware_dp_low_write,
-		.dp_low_read = firmware_dp_low_read,
 		.error = firmware_swdp_error,
 		.dp_read = firmware_swdp_read,
 		.low_access = firmware_swdp_low_access,
@@ -108,8 +99,7 @@ int adiv5_swdp_scan(uint32_t targetid)
 		dp_line_reset(initial_dp);
 		volatile struct exception e;
 		TRY_CATCH (e, EXCEPTION_ALL) {
-			idcode = initial_dp->low_access(initial_dp, ADIV5_LOW_READ,
-										   ADIV5_DP_IDCODE, 0);
+			idcode = initial_dp->dp_read(initial_dp, ADIV5_DP_IDCODE);
 		}
 		if (e.type || initial_dp->fault) {
 			is_v2 = false;
@@ -121,8 +111,7 @@ int adiv5_swdp_scan(uint32_t targetid)
 			initial_dp->fault = 0;
 			volatile struct exception e2;
 			TRY_CATCH (e2, EXCEPTION_ALL) {
-				idcode = initial_dp->low_access(initial_dp, ADIV5_LOW_READ,
-									  ADIV5_DP_IDCODE, 0);
+				idcode = initial_dp->dp_read(initial_dp, ADIV5_DP_IDCODE);
 			}
 			if (e2.type || initial_dp->fault) {
 				DEBUG_WARN("No usable DP found\n");
@@ -153,16 +142,19 @@ int adiv5_swdp_scan(uint32_t targetid)
 	} else {
 		target_id = targetid;
 	}
-	int nr_dps = (is_v2) ? 16: 1;
-	uint32_t dp_targetid;
-	for (int i = 0; i < nr_dps; i++) {
+	volatile int nr_dps = (is_v2) ? 16: 1;
+	volatile uint32_t dp_targetid;
+	for (volatile int i = 0; i < nr_dps; i++) {
 		if (is_v2) {
 			dp_line_reset(initial_dp);
 			dp_targetid = (i << 28) | (target_id & 0x0fffffff);
 			initial_dp->dp_low_write(initial_dp, ADIV5_DP_TARGETSEL,
 									dp_targetid);
-			if (initial_dp->dp_low_read(initial_dp, ADIV5_DP_IDCODE,
-										&idcode)) {
+			volatile struct exception e;
+			TRY_CATCH (e, EXCEPTION_ALL) {
+				idcode = initial_dp->dp_read(initial_dp, ADIV5_DP_IDCODE);
+			}
+			if (e.type || initial_dp->fault) {
 				continue;
 			}
 		} else {
@@ -202,8 +194,8 @@ uint32_t firmware_swdp_read(ADIv5_DP_t *dp, uint16_t addr)
 		 * => Reselect with right target! */
 		dp_line_reset(dp);
 		dp->dp_low_write(dp, ADIV5_DP_TARGETSEL, dp->targetid);
-		uint32_t dummy;
-		dp->dp_low_read(dp, ADIV5_DP_IDCODE, &dummy);
+		dp->dp_read(dp, ADIV5_DP_IDCODE);
+		/* Exception here is unexpected, so do not catch */
 	}
 	uint32_t err, clr = 0;
 	err = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT) &

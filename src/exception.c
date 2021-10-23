@@ -26,7 +26,6 @@ struct exception *innermost_exception;
 void raise_exception(uint32_t type, const char *msg)
 {
 	struct exception *e;
-	DEBUG_WARN("Exception: %s\n", msg);
 	for (e = innermost_exception; e; e = e->outer) {
 		if (e->mask & type) {
 			e->type = type;
@@ -35,6 +34,7 @@ void raise_exception(uint32_t type, const char *msg)
 			longjmp(e->jmpbuf, type);
 		}
 	}
+	DEBUG_WARN("Unhandled exception: %s\n", msg);
 	abort();
 }
 
