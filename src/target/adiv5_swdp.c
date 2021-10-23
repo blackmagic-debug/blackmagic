@@ -195,9 +195,8 @@ uint32_t firmware_swdp_read(ADIv5_DP_t *dp, uint16_t addr)
 
  uint32_t firmware_swdp_error(ADIv5_DP_t *dp)
 {
-	uint32_t err, clr = 0;
-
-	if ((dp->idcode & ADIV5_DP_VERSION_MASK) == ADIV5_DPv2) {
+	if ((dp->fault && (dp->idcode & ADIV5_DP_VERSION_MASK) == ADIV5_DPv2) &&
+		dp->dp_low_write) {
 		/* On protocoll error target gets deselected.
 		 * With DP Change, another target needs selection.
 		 * => Reselect with right target! */
@@ -206,6 +205,7 @@ uint32_t firmware_swdp_read(ADIv5_DP_t *dp, uint16_t addr)
 		uint32_t dummy;
 		dp->dp_low_read(dp, ADIV5_DP_IDCODE, &dummy);
 	}
+	uint32_t err, clr = 0;
 	err = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT) &
 		(ADIV5_DP_CTRLSTAT_STICKYORUN | ADIV5_DP_CTRLSTAT_STICKYCMP |
 		ADIV5_DP_CTRLSTAT_STICKYERR | ADIV5_DP_CTRLSTAT_WDATAERR);
