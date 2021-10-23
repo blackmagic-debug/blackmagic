@@ -92,8 +92,8 @@ int adiv5_swdp_scan(uint32_t targetid)
 	initial_dp->seq_out(0x1a0, 12);
 	uint32_t idcode = 0;
 	volatile uint32_t target_id;
-	bool is_v2 = true;
-	if (!targetid || (initial_dp->error != firmware_swdp_error)) {
+	bool scan_multidrop = true;
+	if (!targetid || !initial_dp->dp_low_write) {
 		/* No targetID given on the command line or probe can not
 		 * handle multi-drop. Try to read ID */
 		dp_line_reset(initial_dp);
@@ -102,7 +102,7 @@ int adiv5_swdp_scan(uint32_t targetid)
 			idcode = initial_dp->dp_read(initial_dp, ADIV5_DP_IDCODE);
 		}
 		if (e.type || initial_dp->fault) {
-			is_v2 = false;
+			scan_multidrop = false;
 			DEBUG_WARN("Trying old JTAG to SWD sequence\n");
 			initial_dp->seq_out(0xFFFFFFFF, 32);
 			initial_dp->seq_out(0xFFFFFFFF, 32);
@@ -119,7 +119,7 @@ int adiv5_swdp_scan(uint32_t targetid)
 			}
 		}
 		if ((idcode & ADIV5_DP_VERSION_MASK) == ADIV5_DPv2) {
-			is_v2 = true;
+			scan_multidrop = true;
 			/* Read TargetID. Can be done with device in WFI, sleep or reset!*/
 			adiv5_dp_write(initial_dp, ADIV5_DP_SELECT, 2);
 			target_id = adiv5_dp_read(initial_dp, ADIV5_DP_CTRLSTAT);
@@ -131,21 +131,21 @@ int adiv5_swdp_scan(uint32_t targetid)
 				adiv5_dp_write(initial_dp, ADIV5_DP_CTRLSTAT, 0);
 				break;
 			}
-			if (initial_dp->error != firmware_swdp_error) {
+			if (!initial_dp->dp_low_write) {
 				DEBUG_WARN("CMSIS_DAP < V1.2 can not handle multi-drop!\n");
 				/* E.g. CMSIS_DAP < V1.2 can not handle multi-drop!*/
-				is_v2 = false;
+				scan_multidrop = false;
 			}
 		} else {
-			is_v2 = false;
+			scan_multidrop = false;
 		}
 	} else {
 		target_id = targetid;
 	}
-	volatile int nr_dps = (is_v2) ? 16: 1;
+	volatile int nr_dps = (scan_multidrop) ? 16: 1;
 	volatile uint32_t dp_targetid;
 	for (volatile int i = 0; i < nr_dps; i++) {
-		if (is_v2) {
+		if (scan_multidrop) {
 			dp_line_reset(initial_dp);
 			dp_targetid = (i << 28) | (target_id & 0x0fffffff);
 			initial_dp->dp_low_write(initial_dp, ADIV5_DP_TARGETSEL,
@@ -158,7 +158,7 @@ int adiv5_swdp_scan(uint32_t targetid)
 				continue;
 			}
 		} else {
-			dp_targetid = 0;
+			dp_targetid = target_id;
 		}
 		ADIv5_DP_t *dp = (void*)calloc(1, sizeof(*dp));
 		if (!dp) {			/* calloc failed: heap exhaustion */

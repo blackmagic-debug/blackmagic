@@ -457,10 +457,9 @@ int dap_swdptap_init(ADIv5_DP_t *dp)
 		/* DAP_SWD_SEQUENCE does not do auto turnaround, use own!*/
 		dp->dp_low_write = dap_dp_low_write;
 	} else {
-		dp->error = dap_dp_error;
+		dp->dp_low_write = NULL;
 	}
 	dp->seq_out = dap_swdptap_seq_out;
-	dp->seq_out_parity = dap_swdptap_seq_out_parity;
 	dp->dp_read = dap_dp_read_reg;
 	/* For error() use the TARGETID switching firmware_swdp_error */
 	dp->low_access = dap_dp_low_access;

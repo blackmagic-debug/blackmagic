@@ -331,12 +331,8 @@ static uint32_t wait_word(uint8_t *buf, int size, int len, uint8_t *dp_fault)
 
 	if (buf[1] > DAP_TRANSFER_WAIT) {
 		DEBUG_WARN("dap wait_word reg %x fault %x\n",
-				   cmd_copy[3] & 0x7c, buf[1]);
+				   cmd_copy[3], buf[1]);
 		*dp_fault = 1;
-		if (buf[1] == DAP_TRANSFER_ERROR) {
-			DEBUG_WARN("dap_read_reg, protocoll error\n");
-			dap_line_reset();
-		}
 		return 0;
 	}
 	uint32_t res =
