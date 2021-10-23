@@ -32,6 +32,7 @@
 
 /*- Includes ----------------------------------------------------------------*/
 #include <general.h>
+#include "exception.h"
 #include "dap.h"
 #include "jtag_scan.h"
 
@@ -329,12 +330,13 @@ static uint32_t wait_word(uint8_t *buf, int size, int len, uint8_t *dp_fault)
 			break;
 	} while (buf[1] == DAP_TRANSFER_WAIT);
 
-	if (buf[1] > DAP_TRANSFER_WAIT) {
-		DEBUG_WARN("dap wait_word reg %x fault %x\n",
-				   cmd_copy[3], buf[1]);
+	if(buf[1] == SWDP_ACK_FAULT) {
 		*dp_fault = 1;
 		return 0;
 	}
+
+	if(buf[1] != SWDP_ACK_OK)
+		raise_exception(EXCEPTION_ERROR, "SWDP invalid ACK");
 	uint32_t res =
 		((uint32_t)buf[5] << 24) | ((uint32_t)buf[4] << 16) |
 		((uint32_t)buf[3] << 8) | (uint32_t)buf[2];

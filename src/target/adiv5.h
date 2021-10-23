@@ -170,7 +170,7 @@ typedef struct ADIv5_DP_s {
 	void (*seq_out_parity)(uint32_t MS, int ticks);
 	uint32_t (*seq_in)(int ticks);
 	bool (*seq_in_parity)(uint32_t *ret, int ticks);
-	/* dp_low_write returns true if no OK resonse. */
+	/* dp_low_write returns true if no OK resonse, but ignores errors */
 	bool (*dp_low_write)(struct ADIv5_DP_s *dp, uint16_t addr,
 						 const uint32_t data);
 	uint32_t (*dp_read)(struct ADIv5_DP_s *dp, uint16_t addr);
