@@ -251,14 +251,14 @@ int dbg_dap_cmd(uint8_t *data, int size, int rsize)
 		}
 		res = transferred;
 	}
-	if (buffer[0] != cmd) {
-		DEBUG_WARN("cmd %02x invalid response received %02x\n",
-				   cmd, buffer[0]);
-	}
 	DEBUG_WIRE("cmd res:");
 	for(int i = 0; (i < 16) && (i < size + 1); i++)
 		DEBUG_WIRE("%02x.",	buffer[i]);
 	DEBUG_WIRE("\n");
+	if (buffer[0] != cmd) {
+		DEBUG_WARN("cmd %02x not implemented\n", cmd);
+		buffer[1] = 0xff /*DAP_ERROR*/;
+	}
 	if (size)
 		memcpy(data, &buffer[1], (size < res) ? size : res);
 	return res;
@@ -453,7 +453,7 @@ int dap_swdptap_init(ADIv5_DP_t *dp)
 	dap_connect(false);
 	dap_led(0, 1);
 	dap_reset_link(false);
-	if (has_swd_sequence) {
+	if ((has_swd_sequence)  && dap_sequence_test()) {
 		/* DAP_SWD_SEQUENCE does not do auto turnaround, use own!*/
 		dp->dp_low_write = dap_dp_low_write;
 	} else {

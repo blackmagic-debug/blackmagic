@@ -793,6 +793,17 @@ void dap_swdptap_seq_out_parity(uint32_t MS, int ticks)
 		DEBUG_WARN("dap_swdptap_seq_out error\n");
 }
 
+bool dap_sequence_test(void)
+{
+	uint8_t buf[4] = {
+		ID_DAP_SWD_SEQUENCE,
+		1,
+		0 /* one idle cycle */
+	};
+	dbg_dap_cmd(buf, sizeof(buf), 3);
+	return (buf[0] == DAP_OK);
+}
+
 #define SWD_SEQUENCE_IN 0x80
 uint32_t dap_swdptap_seq_in(int ticks)
 {
