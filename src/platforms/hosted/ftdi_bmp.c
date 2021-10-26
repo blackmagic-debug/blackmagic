@@ -379,7 +379,7 @@ int ftdi_bmp_init(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info)
 	case TYPE_2232H:
 	case TYPE_4232H:
 	case TYPE_232H:
-		ftdi_init[index++] = EN_DIV_5;
+		ftdi_init[index++] = DIS_DIV_5;
 		break;
 	case TYPE_2232C:
 		break;
