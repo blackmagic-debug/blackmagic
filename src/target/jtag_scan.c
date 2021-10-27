@@ -164,6 +164,10 @@ int jtag_scan(const uint8_t *irlens)
 			jtag_devs[i].jd_descr = "RVDBG013";
 			jd_handlers[i] = rvdbg013_jtag_dp_handler;
 			break;
+		case 0x935: /*K210*/
+			expected_irlen = 5;
+			jtag_devs[i].jd_descr = "K210 RVDBG011";
+			break;
 		case AP_DESIGNER_GIGADEVICE:
 			expected_irlen = 5;
 			jtag_devs[i].jd_descr = "GIGADEVICE BSD";
