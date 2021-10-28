@@ -41,12 +41,14 @@
 static bool stm32l4_cmd_erase_mass(target *t, int argc, const char **argv);
 static bool stm32l4_cmd_erase_bank1(target *t, int argc, const char **argv);
 static bool stm32l4_cmd_erase_bank2(target *t, int argc, const char **argv);
+static bool stm32l4_cmd_erase_pages(target *t, int argc, const char **argv);
 static bool stm32l4_cmd_option(target *t, int argc, char *argv[]);
 
 const struct command_s stm32l4_cmd_list[] = {
 	{"erase_mass", (cmd_handler)stm32l4_cmd_erase_mass, "Erase entire flash memory"},
 	{"erase_bank1", (cmd_handler)stm32l4_cmd_erase_bank1, "Erase entire bank1 flash memory"},
 	{"erase_bank2", (cmd_handler)stm32l4_cmd_erase_bank2, "Erase entire bank2 flash memory"},
+	{"erase_pages", (cmd_handler)stm32l4_cmd_erase_pages, "Erase flash memory by pages"},
 	{"option", (cmd_handler)stm32l4_cmd_option, "Manipulate option bytes"},
 	{NULL, NULL, NULL}
 };
@@ -59,6 +61,7 @@ static int stm32l4_flash_write(struct target_flash *f,
 #define L4_FPEC_BASE			0x40022000
 #define L5_FPEC_BASE			0x40022000
 #define WL_FPEC_BASE			0x58004000
+#define WB_FPEC_BASE			0x58004000
 
 #define L5_FLASH_OPTR_TZEN	(1 << 31)
 
@@ -141,6 +144,7 @@ enum ID_STM32L4 {
 	ID_STM32G49  = 0x479u, /* RM0440, Rev.6 */
 	ID_STM32L55  = 0x472u, /* RM0438, Rev.4 */
 	ID_STM32WLXX = 0x497u, /* RM0461, Rev.3, RM453, Rev.1 */
+	ID_STM32WBXX = 0x495u, /* RM0434, Rev.9 */
 };
 
 enum FAM_STM32L4 {
@@ -189,6 +193,15 @@ static const uint32_t stm32wl_flash_regs_map[FLASH_REGS_COUNT] = {
 	WL_FPEC_BASE + 0x10, /* SR */
 	WL_FPEC_BASE + 0x14, /* CR */
 	WL_FPEC_BASE + 0x20, /* OPTR */
+	L4_FLASH_SIZE_REG,   /* FLASHSIZE */
+};
+
+static const uint32_t stm32wb_flash_regs_map[FLASH_REGS_COUNT] = {
+	WB_FPEC_BASE + 0x08, /* KEYR */
+	WB_FPEC_BASE + 0x0c, /* OPTKEYR */
+	WB_FPEC_BASE + 0x10, /* SR */
+	WB_FPEC_BASE + 0x14, /* CR */
+	WB_FPEC_BASE + 0x20, /* OPTR */
 	L4_FLASH_SIZE_REG,   /* FLASHSIZE */
 };
 
@@ -302,6 +315,15 @@ static struct stm32l4_info const L4info[] = {
 		.sram2 = 32,
 		.flags = 2,
 		.flash_regs_map = stm32wl_flash_regs_map,
+	},
+	{
+		.idcode = ID_STM32WBXX,
+		.family = FAM_STM32WBxx,
+		.designator = "STM32WBxx",
+		.sram1 = 192,
+		.sram2 = 64,
+		.flags = 2,
+		.flash_regs_map = stm32wb_flash_regs_map,
 	},
 	{
 		/* Terminator */
@@ -418,7 +440,9 @@ static bool stm32l4_attach(target *t)
 	/* Add the flash to memory map. */
 	uint32_t options = stm32l4_flash_read32(t, FLASH_OPTR);
 
-	if (chip->family == FAM_STM32L4Rx) {
+	if (chip->family == FAM_STM32WBxx) {
+		stm32l4_add_flash(t, 0x08000000, size << 10, 0x1000, -1);
+	} else if (chip->family == FAM_STM32L4Rx) {
 		/* rm0432 Rev. 2 does not mention 1 MB devices or explain DB1M.*/
 		if (options & OR_DBANK) {
 			stm32l4_add_flash(t, 0x08000000, 0x00100000, 0x1000, 0x08100000);
@@ -632,6 +656,28 @@ static bool stm32l4_cmd_erase_bank2(target *t, int argc, const char **argv)
 	return stm32l4_cmd_erase(t, FLASH_CR_MER2);
 }
 
+static bool stm32l4_cmd_erase_pages(target *t, int argc, const char **argv)
+{
+	(void)argc;
+	(void)argv;
+	bool result = false;
+	uint32_t addr;
+	size_t len;
+
+	if (argc == 3){
+		addr = strtol(argv[1], NULL, 0);
+		len  = strtol(argv[2], NULL, 0);
+
+		if(stm32l4_flash_erase(t->flash, addr, len) == 0){
+			result = true;
+		}
+	} else {
+		tc_printf(t, "usage: monitor erase_pages addr len\n");
+	}
+
+	return result;
+}
+
 static const uint8_t l4_i2offset[9] = {
 	0x20, 0x24, 0x28, 0x2c, 0x30, 0x44, 0x48, 0x4c, 0x50
 };
@@ -688,6 +734,10 @@ static bool stm32l4_cmd_option(target *t, int argc, char *argv[])
 	}
 	if (t->idcode == ID_STM32WLXX) {
 		tc_printf(t, "STM32WLxx options not implemented!\n");
+		return false;
+	}
+	if (t->idcode == ID_STM32WBXX) {
+		tc_printf(t, "STM32WBxx options not implemented!\n");
 		return false;
 	}
 	static const uint32_t g4_values[11] = {
