@@ -41,14 +41,12 @@
 static bool stm32l4_cmd_erase_mass(target *t, int argc, const char **argv);
 static bool stm32l4_cmd_erase_bank1(target *t, int argc, const char **argv);
 static bool stm32l4_cmd_erase_bank2(target *t, int argc, const char **argv);
-static bool stm32l4_cmd_erase_pages(target *t, int argc, const char **argv);
 static bool stm32l4_cmd_option(target *t, int argc, char *argv[]);
 
 const struct command_s stm32l4_cmd_list[] = {
 	{"erase_mass", (cmd_handler)stm32l4_cmd_erase_mass, "Erase entire flash memory"},
 	{"erase_bank1", (cmd_handler)stm32l4_cmd_erase_bank1, "Erase entire bank1 flash memory"},
 	{"erase_bank2", (cmd_handler)stm32l4_cmd_erase_bank2, "Erase entire bank2 flash memory"},
-	{"erase_pages", (cmd_handler)stm32l4_cmd_erase_pages, "Erase flash memory by pages"},
 	{"option", (cmd_handler)stm32l4_cmd_option, "Manipulate option bytes"},
 	{NULL, NULL, NULL}
 };
@@ -654,28 +652,6 @@ static bool stm32l4_cmd_erase_bank2(target *t, int argc, const char **argv)
 	(void)argc;
 	(void)argv;
 	return stm32l4_cmd_erase(t, FLASH_CR_MER2);
-}
-
-static bool stm32l4_cmd_erase_pages(target *t, int argc, const char **argv)
-{
-	(void)argc;
-	(void)argv;
-	bool result = false;
-	uint32_t addr;
-	size_t len;
-
-	if (argc == 3){
-		addr = strtol(argv[1], NULL, 0);
-		len  = strtol(argv[2], NULL, 0);
-
-		if(stm32l4_flash_erase(t->flash, addr, len) == 0){
-			result = true;
-		}
-	} else {
-		tc_printf(t, "usage: monitor erase_pages addr len\n");
-	}
-
-	return result;
 }
 
 static const uint8_t l4_i2offset[9] = {
