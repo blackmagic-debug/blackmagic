@@ -155,7 +155,6 @@ int find_debuggers(BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 	char *active_cable = NULL;
 	bool ftdi_unknown = false;
   rescan:
-	type = BMP_TYPE_NONE;
 	found_debuggers = 0;
 	serial[0] = 0;
 	manufacturer[0] = 0;
@@ -164,6 +163,7 @@ int find_debuggers(BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 	active_cable = NULL;
 	ftdi_unknown = false;
 	for (int i = 0;  devs[i]; i++) {
+		type = BMP_TYPE_NONE;
 		libusb_device *dev =  devs[i];
 		int res = libusb_get_device_descriptor(dev, &desc);
 		if (res < 0) {
