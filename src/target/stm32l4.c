@@ -59,6 +59,7 @@ static int stm32l4_flash_write(struct target_flash *f,
 #define L4_FPEC_BASE			0x40022000
 #define L5_FPEC_BASE			0x40022000
 #define WL_FPEC_BASE			0x58004000
+#define WB_FPEC_BASE			0x58004000
 
 #define L5_FLASH_OPTR_TZEN	(1 << 31)
 
@@ -141,6 +142,7 @@ enum ID_STM32L4 {
 	ID_STM32G49  = 0x479u, /* RM0440, Rev.6 */
 	ID_STM32L55  = 0x472u, /* RM0438, Rev.4 */
 	ID_STM32WLXX = 0x497u, /* RM0461, Rev.3, RM453, Rev.1 */
+	ID_STM32WBXX = 0x495u, /* RM0434, Rev.9 */
 };
 
 enum FAM_STM32L4 {
@@ -189,6 +191,15 @@ static const uint32_t stm32wl_flash_regs_map[FLASH_REGS_COUNT] = {
 	WL_FPEC_BASE + 0x10, /* SR */
 	WL_FPEC_BASE + 0x14, /* CR */
 	WL_FPEC_BASE + 0x20, /* OPTR */
+	L4_FLASH_SIZE_REG,   /* FLASHSIZE */
+};
+
+static const uint32_t stm32wb_flash_regs_map[FLASH_REGS_COUNT] = {
+	WB_FPEC_BASE + 0x08, /* KEYR */
+	WB_FPEC_BASE + 0x0c, /* OPTKEYR */
+	WB_FPEC_BASE + 0x10, /* SR */
+	WB_FPEC_BASE + 0x14, /* CR */
+	WB_FPEC_BASE + 0x20, /* OPTR */
 	L4_FLASH_SIZE_REG,   /* FLASHSIZE */
 };
 
@@ -302,6 +313,15 @@ static struct stm32l4_info const L4info[] = {
 		.sram2 = 32,
 		.flags = 2,
 		.flash_regs_map = stm32wl_flash_regs_map,
+	},
+	{
+		.idcode = ID_STM32WBXX,
+		.family = FAM_STM32WBxx,
+		.designator = "STM32WBxx",
+		.sram1 = 192,
+		.sram2 = 64,
+		.flags = 2,
+		.flash_regs_map = stm32wb_flash_regs_map,
 	},
 	{
 		/* Terminator */
@@ -418,7 +438,9 @@ static bool stm32l4_attach(target *t)
 	/* Add the flash to memory map. */
 	uint32_t options = stm32l4_flash_read32(t, FLASH_OPTR);
 
-	if (chip->family == FAM_STM32L4Rx) {
+	if (chip->family == FAM_STM32WBxx) {
+		stm32l4_add_flash(t, 0x08000000, size << 10, 0x1000, -1);
+	} else if (chip->family == FAM_STM32L4Rx) {
 		/* rm0432 Rev. 2 does not mention 1 MB devices or explain DB1M.*/
 		if (options & OR_DBANK) {
 			stm32l4_add_flash(t, 0x08000000, 0x00100000, 0x1000, 0x08100000);
@@ -688,6 +710,10 @@ static bool stm32l4_cmd_option(target *t, int argc, char *argv[])
 	}
 	if (t->idcode == ID_STM32WLXX) {
 		tc_printf(t, "STM32WLxx options not implemented!\n");
+		return false;
+	}
+	if (t->idcode == ID_STM32WBXX) {
+		tc_printf(t, "STM32WBxx options not implemented!\n");
 		return false;
 	}
 	static const uint32_t g4_values[11] = {
