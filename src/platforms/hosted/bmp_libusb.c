@@ -68,6 +68,7 @@ static bmp_type_t find_cmsis_dap_interface(libusb_device *dev,bmp_info_t *info) 
 	if (res != LIBUSB_SUCCESS) {
 		DEBUG_INFO("INFO: libusb_open() failed: %s\n",
 					libusb_strerror(res));
+		libusb_free_config_descriptor(conf);
 		return type;
 	}
 
@@ -110,10 +111,10 @@ static bmp_type_t find_cmsis_dap_interface(libusb_device *dev,bmp_info_t *info) 
 			}
 
 			/* V2 is preferred, return early. */
-			return type;
+			break;
 		}
 	}
-
+	libusb_free_config_descriptor(conf);
 	return type;
 }
 
