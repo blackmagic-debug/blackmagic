@@ -764,7 +764,7 @@ int dap_jtag_configure(void)
 
 void dap_swdptap_seq_out(uint32_t MS, int ticks)
 {
-	uint8_t buf[] = {
+	uint8_t buf[64] = {
 		ID_DAP_SWJ_SEQUENCE,
 		ticks,
 		(MS >>  0) & 0xff,
@@ -772,7 +772,7 @@ void dap_swdptap_seq_out(uint32_t MS, int ticks)
 		(MS >> 16) & 0xff,
 		(MS >> 24) & 0xff
 	};
-	dbg_dap_cmd(buf, 1, sizeof(buf));
+	dbg_dap_cmd(buf, 64, 2 + ((ticks +7) >> 3));
 	if (buf[0])
 		DEBUG_WARN("dap_swdptap_seq_out error\n");
 }
