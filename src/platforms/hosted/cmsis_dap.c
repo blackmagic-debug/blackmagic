@@ -279,7 +279,7 @@ static void dap_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
 		return dap_read_single(ap, dest, src, align);
 	/* One word transfer for every byte/halfword/word
 	 * Total number of bytes in transfer*/
-	unsigned int max_size = (dbg_get_report_size() - 5) >> (2 - align);
+	unsigned int max_size = ((dbg_get_report_size() - 6) >> (2 - align)) & ~3;
 	while (len) {
 		dap_ap_mem_access_setup(ap, src, align);
 		/* Calculate length until next access setup is needed */
@@ -316,7 +316,7 @@ static void dap_mem_write_sized(
 		dest, len, align, *(uint32_t *)src);
 	if (((unsigned)(1 << align)) == len)
 		return dap_write_single(ap, dest, src, align);
-	unsigned int max_size = (dbg_get_report_size() - 5) >> (2 - align);
+	unsigned int max_size = ((dbg_get_report_size() - 6) >> (2 - align) & ~3);
 	while (len) {
 		dap_ap_mem_access_setup(ap, dest, align);
 		unsigned int blocksize = (dest | 0x3ff) - dest + 1;
