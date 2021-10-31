@@ -243,11 +243,13 @@ int dbg_dap_cmd(uint8_t *data, int size, int rsize)
 
 		res = libusb_bulk_transfer(usb_handle, out_ep, data, rsize, &transferred, 500);
 		if (res < 0) {
-			DEBUG_WARN( "OUT error\n" );
+			DEBUG_WARN("OUT error: %d\n", res);
+			return res;
 		}
 		res = libusb_bulk_transfer(usb_handle, in_ep, buffer, report_size, &transferred, 500);
 		if (res < 0) {
-			DEBUG_WARN( "IN error\n" );
+			DEBUG_WARN("IN error: %d\n", res);
+			return res;
 		}
 		res = transferred;
 	}
