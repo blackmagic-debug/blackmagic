@@ -241,11 +241,11 @@ int dbg_dap_cmd(uint8_t *data, int size, int rsize)
 	} else if (type == CMSIS_TYPE_BULK) {
 		int transferred = 0;
 
-		res = libusb_bulk_transfer(usb_handle, out_ep, buffer + 1, rsize, &transferred, 0);
+		res = libusb_bulk_transfer(usb_handle, out_ep, data, rsize, &transferred, 500);
 		if (res < 0) {
 			DEBUG_WARN( "OUT error\n" );
 		}
-		res = libusb_bulk_transfer(usb_handle, in_ep, buffer, report_size, &transferred, 0);
+		res = libusb_bulk_transfer(usb_handle, in_ep, buffer, report_size, &transferred, 500);
 		if (res < 0) {
 			DEBUG_WARN( "IN error\n" );
 		}
