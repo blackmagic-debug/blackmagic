@@ -1214,8 +1214,8 @@ static int cortexm_hostio_request(target *t)
 
 	t->tc->interrupted = false;
 	target_regs_read(t, arm_regs);
-	target_mem_read(t, params, arm_regs[1], sizeof(params));
 	uint32_t syscall = arm_regs[0];
+	if (syscall != SYS_EXIT) target_mem_read(t, params, arm_regs[1], sizeof(params));
 	int32_t ret = 0;
 
 	DEBUG_INFO("syscall 0"PRIx32"%"PRIx32" (%"PRIx32" %"PRIx32" %"PRIx32" %"PRIx32")\n",
@@ -1605,7 +1605,7 @@ static int cortexm_hostio_request(target *t)
 #endif
 
 	case SYS_EXIT: /* _exit() */
-		tc_printf(t, "_exit(0x%x)\n", params[0]);
+		tc_printf(t, "_exit(0x%x)\n", arm_regs[1]);
 		target_halt_resume(t, 1);
 		break;
 
