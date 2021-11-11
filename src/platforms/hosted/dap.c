@@ -32,6 +32,7 @@
 
 /*- Includes ----------------------------------------------------------------*/
 #include <general.h>
+#include "exception.h"
 #include "dap.h"
 #include "jtag_scan.h"
 
@@ -197,7 +198,7 @@ void dap_connect(bool jtag)
 //-----------------------------------------------------------------------------
 void dap_disconnect(void)
 {
-	uint8_t buf[1];
+	uint8_t buf[65];
 
 	buf[0] = ID_DAP_DISCONNECT;
 	dbg_dap_cmd(buf, sizeof(buf), 1);
@@ -277,10 +278,7 @@ void dap_reset_pin(int state)
 	buf[1] = state ? DAP_SWJ_nRESET : 0; // Value
 	buf[2] = DAP_SWJ_nRESET; // Select
 	buf[3] = 0; // Wait
-	buf[4] = 0;
-	buf[5] = 0;
-	buf[6] = 0;
-	dbg_dap_cmd(buf, sizeof(buf), 7);
+	dbg_dap_cmd(buf, sizeof(buf), 4);
 }
 
 void dap_trst_reset(void)
@@ -326,21 +324,19 @@ static uint32_t wait_word(uint8_t *buf, int size, int len, uint8_t *dp_fault)
 	uint8_t cmd_copy[len];
 	memcpy(cmd_copy, buf, len);
 	do {
+		memcpy(buf, cmd_copy, len);
 		dbg_dap_cmd(buf, size, len);
 		if (buf[1] < DAP_TRANSFER_WAIT)
 			break;
-		if (buf[1] == DAP_TRANSFER_WAIT)
-			memcpy(buf, cmd_copy, len);
 	} while (buf[1] == DAP_TRANSFER_WAIT);
 
-	if (buf[1] > DAP_TRANSFER_WAIT) {
-//	  DEBUG_WARN("dap_read_reg fault\n");
+	if(buf[1] == SWDP_ACK_FAULT) {
 		*dp_fault = 1;
+		return 0;
 	}
-	if (buf[1] == DAP_TRANSFER_ERROR) {
-		DEBUG_WARN("dap_read_reg, protocoll error\n");
-		dap_line_reset();
-	}
+
+	if(buf[1] != SWDP_ACK_OK)
+		raise_exception(EXCEPTION_ERROR, "SWDP invalid ACK");
 	uint32_t res =
 		((uint32_t)buf[5] << 24) | ((uint32_t)buf[4] << 16) |
 		((uint32_t)buf[3] << 8) | (uint32_t)buf[2];
@@ -378,7 +374,10 @@ void dap_write_reg(ADIv5_DP_t *dp, uint8_t reg, uint32_t data)
 	buf[5] = (data >> 8) & 0xff;
 	buf[6] = (data >> 16) & 0xff;
 	buf[7] = (data >> 24) & 0xff;
+	uint8_t cmd_copy[8];
+	memcpy(cmd_copy, buf, 8);
 	do {
+		memcpy(buf, cmd_copy, 8);
 		dbg_dap_cmd(buf, sizeof(buf), 8);
 		if (buf[1] < DAP_TRANSFER_WAIT)
 			break;
@@ -566,7 +565,7 @@ void dap_ap_mem_access_setup(ADIv5_AP_t *ap, uint32_t addr, enum align align)
 
 uint32_t dap_ap_read(ADIv5_AP_t *ap, uint16_t addr)
 {
-	DEBUG_PROBE("dap_ap_read_start\n");
+	DEBUG_PROBE("dap_ap_read_start addr %x\n", addr);
 	uint8_t buf[63], *p = buf;
 	buf[0] = ID_DAP_TRANSFER;
 	uint8_t dap_index = 0;
@@ -582,6 +581,9 @@ uint32_t dap_ap_read(ADIv5_AP_t *ap, uint16_t addr)
 	*p++ = (addr & 0x0c) | DAP_TRANSFER_RnW  |
 		((addr & 0x100) ?  DAP_TRANSFER_APnDP : 0);
 	uint32_t res = wait_word(buf, 63, p - buf, &ap->dp->fault);
+	if ((buf[0] != 2) || (buf[1] != 1)) {
+		DEBUG_WARN("dap_ap_read error %x\n", buf[1]);
+	}
 	return res;
 }
 
@@ -605,6 +607,9 @@ void dap_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value)
 	*p++ = (value >> 16) & 0xff;
 	*p++ = (value >> 24) & 0xff;
 	dbg_dap_cmd(buf, sizeof(buf), p - buf);
+	if ((buf[0] != 2) || (buf[1] != 1)) {
+		DEBUG_WARN("dap_ap_write error %x\n", buf[1]);
+	}
 }
 
 void dap_read_single(ADIv5_AP_t *ap, void *dest, uint32_t src, enum align align)
@@ -612,7 +617,8 @@ void dap_read_single(ADIv5_AP_t *ap, void *dest, uint32_t src, enum align align)
 	uint8_t buf[63];
 	uint8_t *p = mem_access_setup(ap, buf, src, align);
 	*p++ = SWD_AP_DRW | DAP_TRANSFER_RnW;
-	buf[2] = 4;
+	*p++ = SWD_DP_R_RDBUFF | DAP_TRANSFER_RnW;
+	buf[2] = 5;
 	uint32_t tmp = wait_word(buf, 63, p - buf, &ap->dp->fault);
 	dest = extract(dest, src, tmp, align);
 }
@@ -758,7 +764,7 @@ int dap_jtag_configure(void)
 
 void dap_swdptap_seq_out(uint32_t MS, int ticks)
 {
-	uint8_t buf[] = {
+	uint8_t buf[64] = {
 		ID_DAP_SWJ_SEQUENCE,
 		ticks,
 		(MS >>  0) & 0xff,
@@ -766,7 +772,7 @@ void dap_swdptap_seq_out(uint32_t MS, int ticks)
 		(MS >> 16) & 0xff,
 		(MS >> 24) & 0xff
 	};
-	dbg_dap_cmd(buf, 1, sizeof(buf));
+	dbg_dap_cmd(buf, 64, 2 + ((ticks +7) >> 3));
 	if (buf[0])
 		DEBUG_WARN("dap_swdptap_seq_out error\n");
 }
@@ -785,6 +791,17 @@ void dap_swdptap_seq_out_parity(uint32_t MS, int ticks)
 	dbg_dap_cmd(buf, 1, sizeof(buf));
 	if (buf[0])
 		DEBUG_WARN("dap_swdptap_seq_out error\n");
+}
+
+bool dap_sequence_test(void)
+{
+	uint8_t buf[4] = {
+		ID_DAP_SWD_SEQUENCE,
+		1,
+		0 /* one idle cycle */
+	};
+	dbg_dap_cmd(buf, sizeof(buf), 3);
+	return (buf[0] == DAP_OK);
 }
 
 #define SWD_SEQUENCE_IN 0x80

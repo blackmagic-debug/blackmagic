@@ -174,7 +174,7 @@ static const struct usb_iface_assoc_descriptor gdb_assoc = {
 	.bFunctionClass = USB_CLASS_CDC,
 	.bFunctionSubClass = USB_CDC_SUBCLASS_ACM,
 	.bFunctionProtocol = USB_CDC_PROTOCOL_NONE,
-	.iFunction = 0,
+	.iFunction = 4,
 };
 
 /* Serial ACM interface */
@@ -277,7 +277,7 @@ static const struct usb_iface_assoc_descriptor uart_assoc = {
 	.bFunctionClass = USB_CLASS_CDC,
 	.bFunctionSubClass = USB_CDC_SUBCLASS_ACM,
 	.bFunctionProtocol = USB_CDC_PROTOCOL_NONE,
-	.iFunction = 0,
+	.iFunction = 5,
 };
 
 const struct usb_dfu_descriptor dfu_function = {
@@ -396,7 +396,6 @@ static const struct usb_config_descriptor config = {
 static char serial_no[DFU_SERIAL_LENGTH];
 
 #define BOARD_IDENT "Black Magic Probe " PLATFORM_IDENT FIRMWARE_VERSION
-#define DFU_IDENT   "Black Magic Firmware Upgrade " PLATFORM_IDENT FIRMWARE_VERSION
 
 static const char *usb_strings[] = {
 	"Black Sphere Technologies",
@@ -404,7 +403,7 @@ static const char *usb_strings[] = {
 	serial_no,
 	"Black Magic GDB Server",
 	"Black Magic UART Port",
-	DFU_IDENT,
+	"Black Magic DFU",
 #if defined(PLATFORM_HAS_TRACESWO)
 	"Black Magic Trace Capture",
 #endif

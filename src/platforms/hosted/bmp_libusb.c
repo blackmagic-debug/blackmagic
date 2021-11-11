@@ -68,6 +68,7 @@ static bmp_type_t find_cmsis_dap_interface(libusb_device *dev,bmp_info_t *info) 
 	if (res != LIBUSB_SUCCESS) {
 		DEBUG_INFO("INFO: libusb_open() failed: %s\n",
 					libusb_strerror(res));
+		libusb_free_config_descriptor(conf);
 		return type;
 	}
 
@@ -90,13 +91,9 @@ static bmp_type_t find_cmsis_dap_interface(libusb_device *dev,bmp_info_t *info) 
 		if (!strstr(interface_string, "CMSIS")) {
 			continue;
 		}
+		type = BMP_TYPE_CMSIS_DAP;
 
-		if (interface->bInterfaceClass == 0x03) {
-			type = BMP_TYPE_CMSIS_DAP_V1;
-
-		} else if (interface->bInterfaceClass == 0xff && interface->bNumEndpoints == 2) {
-			type = BMP_TYPE_CMSIS_DAP_V2;
-
+		if (interface->bInterfaceClass == 0xff && interface->bNumEndpoints == 2) {
 			info->interface_num = interface->bInterfaceNumber;
 
 			for (int j = 0; j < interface->bNumEndpoints; j++) {
@@ -110,10 +107,10 @@ static bmp_type_t find_cmsis_dap_interface(libusb_device *dev,bmp_info_t *info) 
 			}
 
 			/* V2 is preferred, return early. */
-			return type;
+			break;
 		}
 	}
-
+	libusb_free_config_descriptor(conf);
 	return type;
 }
 
@@ -154,7 +151,6 @@ int find_debuggers(BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 	char *active_cable = NULL;
 	bool ftdi_unknown = false;
   rescan:
-	type = BMP_TYPE_NONE;
 	found_debuggers = 0;
 	serial[0] = 0;
 	manufacturer[0] = 0;
@@ -163,6 +159,7 @@ int find_debuggers(BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 	active_cable = NULL;
 	ftdi_unknown = false;
 	for (int i = 0;  devs[i]; i++) {
+		type = BMP_TYPE_NONE;
 		libusb_device *dev =  devs[i];
 		int res = libusb_get_device_descriptor(dev, &desc);
 		if (res < 0) {
@@ -227,11 +224,12 @@ int find_debuggers(BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 				   ((type = find_cmsis_dap_interface(dev, info)) != BMP_TYPE_NONE)) {
 			/* find_cmsis_dap_interface has set valid type*/
 		} else if ((strstr(manufacturer, "CMSIS")) || (strstr(product, "CMSIS"))) {
-			type = BMP_TYPE_CMSIS_DAP_V1;
+			type = BMP_TYPE_CMSIS_DAP;
 		} else if (desc.idVendor ==  VENDOR_ID_STLINK) {
 			if ((desc.idProduct == PRODUCT_ID_STLINKV2) ||
 				(desc.idProduct == PRODUCT_ID_STLINKV21) ||
 				(desc.idProduct == PRODUCT_ID_STLINKV21_MSD) ||
+				(desc.idProduct == PRODUCT_ID_STLINKV3_NO_MSD) ||
 				(desc.idProduct == PRODUCT_ID_STLINKV3_BL) ||
 				(desc.idProduct == PRODUCT_ID_STLINKV3) ||
 				(desc.idProduct == PRODUCT_ID_STLINKV3E)) {

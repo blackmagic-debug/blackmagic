@@ -170,11 +170,9 @@ typedef struct ADIv5_DP_s {
 	void (*seq_out_parity)(uint32_t MS, int ticks);
 	uint32_t (*seq_in)(int ticks);
 	bool (*seq_in_parity)(uint32_t *ret, int ticks);
-	/* dp_low_write returns true if no OK resonse. */
+	/* dp_low_write returns true if no OK resonse, but ignores errors */
 	bool (*dp_low_write)(struct ADIv5_DP_s *dp, uint16_t addr,
 						 const uint32_t data);
-	/* dp_low_read returns true with parity error */
-	bool (*dp_low_read)(struct ADIv5_DP_s *dp, uint16_t addr, uint32_t *data);
 	uint32_t (*dp_read)(struct ADIv5_DP_s *dp, uint16_t addr);
 	uint32_t (*error)(struct ADIv5_DP_s *dp);
 	uint32_t (*low_access)(struct ADIv5_DP_s *dp, uint8_t RnW,
@@ -182,6 +180,7 @@ typedef struct ADIv5_DP_s {
 	void (*abort)(struct ADIv5_DP_s *dp, uint32_t abort);
 
 #if PC_HOSTED == 1
+	bmp_type_t dp_bmp_type;
 	bool (*ap_setup)(int i);
 	void (*ap_cleanup)(int i);
     void (*ap_regs_read)(ADIv5_AP_t *ap, void *data);

@@ -45,8 +45,13 @@
 uint8_t dap_caps;
 uint8_t mode;
 
+typedef enum cmsis_type_s {
+	CMSIS_TYPE_NONE = 0,
+	CMSIS_TYPE_HID,
+	CMSIS_TYPE_BULK
+} cmsis_type_t;
 /*- Variables ---------------------------------------------------------------*/
-static bmp_type_t type;
+static cmsis_type_t type;
 static libusb_device_handle *usb_handle = NULL;
 static uint8_t in_ep;
 static uint8_t out_ep;
@@ -58,10 +63,11 @@ static bool has_swd_sequence = false;
 /* LPC845 Breakout Board Rev. 0 report invalid response with > 65 bytes */
 int dap_init(bmp_info_t *info)
 {
-	type = info->bmp_type;
+	type = (info->in_ep && info->out_ep) ? CMSIS_TYPE_BULK : CMSIS_TYPE_HID;
 	int size;
 
-	if (type == BMP_TYPE_CMSIS_DAP_V1) {
+	if (type == CMSIS_TYPE_HID) {
+		DEBUG_INFO("Using hid transfer\n");
 		if (hid_init())
 			return -1;
 		size = strlen(info->serial);
@@ -77,9 +83,12 @@ int dap_init(bmp_info_t *info)
 			report_size = 64 + 1;
 		}
 		handle = hid_open(info->vid, info->pid,  (serial[0]) ? serial : NULL);
-		if (!handle)
+		if (!handle) {
+			DEBUG_WARN("hid_open failed\n");
 			return -1;
-	} else if (type == BMP_TYPE_CMSIS_DAP_V2) {
+		}
+	} else if (type == CMSIS_TYPE_BULK) {
+		DEBUG_INFO("Using bulk transfer\n");
 		usb_handle = libusb_open_device_with_vid_pid(info->libusb_ctx, info->vid, info->pid);
 		if (!usb_handle) {
 			DEBUG_WARN("WARN: libusb_open_device_with_vid_pid() failed\n");
@@ -120,8 +129,15 @@ int dap_init(bmp_info_t *info)
 		DEBUG_INFO(", SWO_MANCHESTER");
 	if (dap_caps & 0x10)
 		DEBUG_INFO(", Atomic Cmds");
+	if (has_swd_sequence)
+		DEBUG_INFO(", DAP_SWD_Sequence");
 	DEBUG_INFO("\n");
 	return 0;
+}
+
+void dap_srst_set_val(bool assert)
+{
+	dap_reset_pin(!assert);
 }
 
 static void dap_dp_abort(ADIv5_DP_t *dp, uint32_t abort)
@@ -175,12 +191,12 @@ static uint32_t dap_dp_read_reg(ADIv5_DP_t *dp, uint16_t addr)
 
 void dap_exit_function(void)
 {
-	if (type == BMP_TYPE_CMSIS_DAP_V1) {
+	if (type == CMSIS_TYPE_HID) {
 		if (handle) {
 			dap_disconnect();
 			hid_close(handle);
 		}
-	} else if (type == BMP_TYPE_CMSIS_DAP_V2) {
+	} else if (type == CMSIS_TYPE_BULK) {
 		if (usb_handle) {
 			dap_disconnect();
 			libusb_close(usb_handle);
@@ -208,38 +224,43 @@ int dbg_dap_cmd(uint8_t *data, int size, int rsize)
 	for(int i = 0; (i < 32) && (i < rsize + 1); i++)
 		DEBUG_WIRE("%02x.",	buffer[i]);
 	DEBUG_WIRE("\n");
-	if (type == BMP_TYPE_CMSIS_DAP_V1) {
-		res = hid_write(handle, buffer, rsize + 1);
+	if (type == CMSIS_TYPE_HID) {
+		res = hid_write(handle, buffer, 65);
 		if (res < 0) {
 			DEBUG_WARN( "Error: %ls\n", hid_error(handle));
 			exit(-1);
 		}
-		res = hid_read(handle, buffer, report_size + 1);
+		res = hid_read_timeout(handle, buffer, 65, 1000);
 		if (res < 0) {
 			DEBUG_WARN( "debugger read(): %ls\n", hid_error(handle));
 			exit(-1);
+		} else if (res == 0) {
+			DEBUG_WARN( "timeout\n");
+			exit(-1);
 		}
-	} else if (type == BMP_TYPE_CMSIS_DAP_V2) {
+	} else if (type == CMSIS_TYPE_BULK) {
 		int transferred = 0;
 
-		res = libusb_bulk_transfer(usb_handle, out_ep, buffer + 1, rsize, &transferred, 0);
+		res = libusb_bulk_transfer(usb_handle, out_ep, data, rsize, &transferred, 500);
 		if (res < 0) {
-			DEBUG_WARN( "OUT error\n" );
+			DEBUG_WARN("OUT error: %d\n", res);
+			return res;
 		}
-		res = libusb_bulk_transfer(usb_handle, in_ep, buffer, report_size, &transferred, 0);
+		res = libusb_bulk_transfer(usb_handle, in_ep, buffer, report_size, &transferred, 500);
 		if (res < 0) {
-			DEBUG_WARN( "IN error\n" );
+			DEBUG_WARN("IN error: %d\n", res);
+			return res;
 		}
 		res = transferred;
-	}
-	if (buffer[0] != cmd) {
-		DEBUG_WARN("cmd %02x invalid response received %02x\n",
-				   cmd, buffer[0]);
 	}
 	DEBUG_WIRE("cmd res:");
 	for(int i = 0; (i < 16) && (i < size + 1); i++)
 		DEBUG_WIRE("%02x.",	buffer[i]);
 	DEBUG_WIRE("\n");
+	if (buffer[0] != cmd) {
+		DEBUG_WARN("cmd %02x not implemented\n", cmd);
+		buffer[1] = 0xff /*DAP_ERROR*/;
+	}
 	if (size)
 		memcpy(data, &buffer[1], (size < res) ? size : res);
 	return res;
@@ -258,7 +279,7 @@ static void dap_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
 		return dap_read_single(ap, dest, src, align);
 	/* One word transfer for every byte/halfword/word
 	 * Total number of bytes in transfer*/
-	unsigned int max_size = (dbg_get_report_size() - 5) >> (2 - align);
+	unsigned int max_size = ((dbg_get_report_size() - 6) >> (2 - align)) & ~3;
 	while (len) {
 		dap_ap_mem_access_setup(ap, src, align);
 		/* Calculate length until next access setup is needed */
@@ -295,7 +316,7 @@ static void dap_mem_write_sized(
 		dest, len, align, *(uint32_t *)src);
 	if (((unsigned)(1 << align)) == len)
 		return dap_write_single(ap, dest, src, align);
-	unsigned int max_size = (dbg_get_report_size() - 5) >> (2 - align);
+	unsigned int max_size = ((dbg_get_report_size() - 6) >> (2 - align) & ~3);
 	while (len) {
 		dap_ap_mem_access_setup(ap, dest, align);
 		unsigned int blocksize = (dest | 0x3ff) - dest + 1;
@@ -396,36 +417,6 @@ int dap_jtag_dp_init(ADIv5_DP_t *dp)
 
 #define SWD_SEQUENCE_IN 0x80
 #define DAP_SWD_SEQUENCE 0x1d
-/* DAP_SWD_SEQUENCE does not do auto turnaround*/
-static bool dap_dp_low_read(ADIv5_DP_t *dp, uint16_t addr, uint32_t *res)
-{
-	(void)dp;
-	unsigned int paket_request = make_packet_request(ADIV5_LOW_READ, addr);
-	uint8_t buf[32] = {
-		DAP_SWD_SEQUENCE,
-		5,
-		8,
-		paket_request,
-		4 + SWD_SEQUENCE_IN,  /* one turn-around + read 3 bit ACK */
-		32 + SWD_SEQUENCE_IN, /* read 32 bit data */
-		1 + SWD_SEQUENCE_IN,  /* read parity bit */
-		1,                    /* one bit turn around to drive SWDIO */
-		0
-	};
-	dbg_dap_cmd(buf, sizeof(buf), 9);
-	if (buf[0])
-		DEBUG_WARN("dap_dp_low_read failed\n");
-	uint32_t ack = (buf[1] >> 1) & 7;
-	uint32_t data = (buf[2] << 0) + (buf[3] << 8) + (buf[4] << 16)
-		+ (buf[5] << 24);
-	int parity = __builtin_parity(data);
-	bool ret = ((parity != buf[6]) || (ack != 1));
-	*res = data;
-	DEBUG_PROBE("dap_dp_low_read ack %d, res %08" PRIx32 ", parity %s\n", ack,
-			   data, (ret)? "ERR": "OK");
-	return ret;
-}
-
 static bool dap_dp_low_write(ADIv5_DP_t *dp, uint16_t addr, const uint32_t data)
 {
 	DEBUG_PROBE("dap_dp_low_write %08" PRIx32 "\n", data);
@@ -464,15 +455,13 @@ int dap_swdptap_init(ADIv5_DP_t *dp)
 	dap_connect(false);
 	dap_led(0, 1);
 	dap_reset_link(false);
-	if (has_swd_sequence) {
+	if ((has_swd_sequence)  && dap_sequence_test()) {
 		/* DAP_SWD_SEQUENCE does not do auto turnaround, use own!*/
-		dp->dp_low_read = dap_dp_low_read;
 		dp->dp_low_write = dap_dp_low_write;
 	} else {
-		dp->error = dap_dp_error;
+		dp->dp_low_write = NULL;
 	}
 	dp->seq_out = dap_swdptap_seq_out;
-	dp->seq_out_parity = dap_swdptap_seq_out_parity;
 	dp->dp_read = dap_dp_read_reg;
 	/* For error() use the TARGETID switching firmware_swdp_error */
 	dp->low_access = dap_dp_low_access;

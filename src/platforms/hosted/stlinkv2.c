@@ -553,6 +553,7 @@ int stlink_init(bmp_info_t *info)
 	case PRODUCT_ID_STLINKV3_BL:
 	case PRODUCT_ID_STLINKV3:
 	case PRODUCT_ID_STLINKV3E:
+	case PRODUCT_ID_STLINKV3_NO_MSD:
 		Stlink.ver_hw = 30;
 		info->usb_link->ep_tx = 1;
 		Stlink.ep_tx = 1;
@@ -763,9 +764,10 @@ uint32_t stlink_dp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 	int res;
 	if (RnW) {
 		res = stlink_read_dp_register(
-			STLINK_DEBUG_PORT_ACCESS, addr, &response);
+			(addr < 0x100) ? STLINK_DEBUG_PORT_ACCESS : 0, addr, &response);
 	} else {
-		res = stlink_write_dp_register(STLINK_DEBUG_PORT_ACCESS, addr, value);
+		res = stlink_write_dp_register(
+			(addr < 0x100) ? STLINK_DEBUG_PORT_ACCESS : 0, addr, value);
 	}
 	if (res == STLINK_ERROR_WAIT)
 		raise_exception(EXCEPTION_TIMEOUT, "DP ACK timeout");
@@ -1048,7 +1050,7 @@ int stlink_enter_debug_swd(bmp_info_t *info, ADIv5_DP_t *dp)
 	uint8_t data[2];
 	stlink_send_recv_retry(cmd, 16, data, 2);
 	if (stlink_usb_error_check(data, true))
-		return -1;
+		exit( -1);
 	dp->idcode = stlink_read_coreid();
 	dp->dp_read = stlink_dp_read;
 	dp->error = stlink_dp_error;
@@ -1056,6 +1058,12 @@ int stlink_enter_debug_swd(bmp_info_t *info, ADIv5_DP_t *dp)
 	dp->abort = stlink_dp_abort;
 
 	stlink_dp_error(dp);
+	if ((dp->idcode & ADIV5_DP_VERSION_MASK) == ADIV5_DPv2) {
+		adiv5_dp_write(dp, ADIV5_DP_SELECT, 2);
+		dp->targetid = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT);
+		adiv5_dp_write(dp, ADIV5_DP_SELECT, 0);
+		DEBUG_INFO("TARGETID 0x%08" PRIx32 "\n", dp->targetid);
+	}
 	return 0;
 }
 

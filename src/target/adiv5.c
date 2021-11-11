@@ -323,24 +323,32 @@ static uint32_t cortexm_initial_halt(ADIv5_AP_t *ap)
 		CORTEXM_DHCSR_C_HALT;
 	uint32_t dhcsr_valid = CORTEXM_DHCSR_S_HALT | CORTEXM_DHCSR_C_DEBUGEN;
 	bool reset_seen = false;
-	bool is_mindp = (ap->dp->idcode & ADIV5_MINDP);
-#if  PC_HOSTED == 1
-	bool use_low_access = (!(ap->dp->ap_setup) && !is_mindp);
-#else
-	bool use_low_access = (!is_mindp);
-#endif
+	bool use_low_access = (!(ap->dp->idcode & ADIV5_MINDP));
 	if (use_low_access) {
 		/* ap_mem_access_setup() sets ADIV5_AP_CSW_ADDRINC_SINGLE -> unusable!*/
 		adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw | ADIV5_AP_CSW_SIZE_WORD);
 		adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR, CORTEXM_DHCSR);
 	}
+	 /* Workaround for CMSIS-DAP Bulk orbtrace
+	  * High values of TRNCNT lead to NO_ACK answer from debugger.
+	  *
+	  * However CMSIS/HID even with highest value has few chances to catch
+	  * a STM32F767 mostly sleeping in WFI!
+	  */
+	uint32_t start_time = platform_time_ms();
+	int trncnt = 0x80;
 	while (!platform_timeout_is_expired(&to)) {
 		uint32_t dhcsr ;
 		if (use_low_access) {
-			adiv5_dp_write(ap->dp, ADIV5_DP_CTRLSTAT,
-						   ctrlstat | (0xfff * ADIV5_DP_CTRLSTAT_TRNCNT));
+			adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_DP_CTRLSTAT,
+								ctrlstat | (trncnt * ADIV5_DP_CTRLSTAT_TRNCNT));
 			adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DRW,
 								dhcsr_ctl);
+			if (trncnt < 0xfff) {
+				trncnt += (platform_time_ms() -  start_time) * 8;
+			} else {
+				trncnt = 0xfff;
+			}
 			dhcsr = adiv5_dp_low_access(
 				ap->dp, ADIV5_LOW_READ, ADIV5_AP_DRW, 0);
 		} else {
