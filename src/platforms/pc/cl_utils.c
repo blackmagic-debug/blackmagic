@@ -510,6 +510,8 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 			unsigned int flashed = target_flash_write(t, opt->opt_flash_start,
 													  map.data, map.size);
 			/* Buffered write cares for padding*/
+			if (!flashed)
+				flashed = target_flash_done(t);
 			if (flashed) {
 				DEBUG_WARN("Flashing failed!\n");
 				res = -1;
@@ -518,7 +520,6 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 				DEBUG_INFO("Success!\n");
 			}
 		}
-		target_flash_done(t);
 		uint32_t end_time = platform_time_ms();
 		DEBUG_WARN("Flash Write succeeded for %d bytes, %8.3f kiB/s\n",
 			   (int)map.size, (((map.size * 1.0)/(end_time - start_time))));
