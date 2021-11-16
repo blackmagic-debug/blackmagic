@@ -290,7 +290,6 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 				opt->opt_targetid = strtol(optarg, NULL, 0);
 			break;
 		case 'M':
-			opt->opt_mode = BMP_MODE_MONITOR;
 			if (optarg)
 				opt->opt_monitor = optarg;
 			break;
@@ -321,7 +320,11 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 		if (opt->opt_mode == BMP_MODE_DEBUG)
 			opt->opt_mode = BMP_MODE_FLASH_WRITE;
 		opt->opt_flash_file = argv[optind];
+	} else if ((opt->opt_mode == BMP_MODE_DEBUG) &&
+	           (opt->opt_monitor)) {
+		opt->opt_mode = BMP_MODE_MONITOR; // To avoid DEBUG mode
 	}
+
 	/* Checks */
 	if ((opt->opt_flash_file) && ((opt->opt_mode == BMP_MODE_TEST ) ||
 								  (opt->opt_mode == BMP_MODE_SWJ_TEST) ||
@@ -448,10 +451,6 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 		default:
 			DEBUG_WARN("No test for this core type yet\n");
 		}
-	} else if (opt->opt_mode == BMP_MODE_MONITOR) {
-		res = command_process(t, opt->opt_monitor);
-		if (res)
-			DEBUG_WARN("Command \"%s\" failed\n", opt->opt_monitor);
 	}
 	if ((opt->opt_mode == BMP_MODE_TEST) ||
 		(opt->opt_mode == BMP_MODE_SWJ_TEST))
@@ -480,9 +479,14 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 	if (opt->opt_flash_size < map.size)
 		/* restrict to size given on command line */
 		map.size = opt->opt_flash_size;
+	if (opt->opt_monitor) {
+		res = command_process(t, opt->opt_monitor);
+		if (res)
+			DEBUG_WARN("Command \"%s\" failed\n", opt->opt_monitor);
+	}
 	if (opt->opt_mode == BMP_MODE_RESET) {
 		target_reset(t);
-	} else 	if (opt->opt_mode == BMP_MODE_FLASH_ERASE) {
+	} else if (opt->opt_mode == BMP_MODE_FLASH_ERASE) {
 		DEBUG_INFO("Erase %zu bytes at 0x%08" PRIx32 "\n", opt->opt_flash_size,
 			  opt->opt_flash_start);
 		unsigned int erased = target_flash_erase(t, opt->opt_flash_start,
@@ -510,6 +514,8 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 			unsigned int flashed = target_flash_write(t, opt->opt_flash_start,
 													  map.data, map.size);
 			/* Buffered write cares for padding*/
+			if (!flashed)
+				flashed = target_flash_done(t);
 			if (flashed) {
 				DEBUG_WARN("Flashing failed!\n");
 				res = -1;
@@ -518,7 +524,6 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 				DEBUG_INFO("Success!\n");
 			}
 		}
-		target_flash_done(t);
 		uint32_t end_time = platform_time_ms();
 		DEBUG_WARN("Flash Write succeeded for %d bytes, %8.3f kiB/s\n",
 			   (int)map.size, (((map.size * 1.0)/(end_time - start_time))));
