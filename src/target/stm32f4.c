@@ -110,11 +110,19 @@ static int stm32f4_flash_write(struct target_flash *f,
 #define AXIM_BASE 0x8000000
 #define ITCM_BASE 0x0200000
 
+#define DBGMCU_CR_DBG_SLEEP		(0x1U << 0U)
+#define DBGMCU_CR_DBG_STOP		(0x1U << 1U)
+#define DBGMCU_CR_DBG_STANDBY	(0x1U << 2U)
+
 struct stm32f4_flash {
 	struct target_flash f;
 	enum align psize;
 	uint8_t base_sector;
 	uint8_t bank_split;
+};
+
+struct stm32f4_priv_s {
+	uint32_t dbgmcu_cr;
 };
 
 enum IDS_STM32F247 {
@@ -194,10 +202,12 @@ static char *stm32f4_get_chip_name(uint32_t idcode)
 	}
 }
 
-static void stm32f7_detach(target *t)
+static void stm32f4_detach(target *t)
 {
-	ADIv5_AP_t *ap = cortexm_ap(t);
-	target_mem_write32(t, DBGMCU_CR, ap->ap_storage);
+	struct stm32f4_priv_s *ps = (struct stm32f4_priv_s*)t->target_storage;
+
+	/*reverse all changes to DBGMCU_CR*/
+	target_mem_write32(t, DBGMCU_CR, ps->dbgmcu_cr);
 	cortexm_detach(t);
 }
 
@@ -214,8 +224,6 @@ bool stm32f4_probe(target *t)
 	case ID_STM32F74X: /* F74x RM0385 Rev.4 */
 	case ID_STM32F76X: /* F76x F77x RM0410 */
 	case ID_STM32F72X: /* F72x F73x RM0431 */
-		t->detach = stm32f7_detach;
-		/* fall through */
 	case ID_STM32F40X:
 	case ID_STM32F42X: /* 427/437 */
 	case ID_STM32F46X: /* 469/479 */
@@ -226,6 +234,7 @@ bool stm32f4_probe(target *t)
 	case ID_STM32F412: /* F412     RM0402 Rev.4, 256 kB Ram */
 	case ID_STM32F401E: /* F401 D/E RM0368 Rev.3 */
 	case ID_STM32F413: /* F413     RM0430 Rev.2, 320 kB Ram, 1.5 MB flash. */
+		t->detach = stm32f4_detach;
 		t->driver = stm32f4_get_chip_name(t->idcode);
 		t->attach = stm32f4_attach;
 		target_add_commands(t, stm32f4_cmd_list, t->driver);
@@ -295,6 +304,15 @@ static bool stm32f4_attach(target *t)
 		return false;
 	}
 	bool use_dual_bank = false;
+	/* Save DBGMCU_CR to restore it when detaching*/
+	struct stm32f4_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
+	priv_storage->dbgmcu_cr = target_mem_read32(t, DBGMCU_CR);
+	t->target_storage = (void*)priv_storage;
+	/* Enable debugging during all low power modes*/
+	target_mem_write32(t, DBGMCU_CR, DBGMCU_CR_DBG_SLEEP |
+					   DBGMCU_CR_DBG_STANDBY | DBGMCU_CR_DBG_STOP);
+
+	/* Free previously loaded memory map */
 	target_mem_map_free(t);
 	if (is_f7) {
 		target_add_ram(t, 0x00000000, 0x4000);  /* 16 k ITCM Ram */
