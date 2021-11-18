@@ -252,8 +252,10 @@ uint32_t firmware_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 		raise_exception(EXCEPTION_ERROR, "SWDP invalid ACK");
 
 	if(RnW) {
-		if(dp->seq_in_parity(&response, 32))  /* Give up on parity error */
+		if (dp->seq_in_parity(&response, 32)) { /* Give up on parity error */
+			dp->fault = 1;
 			raise_exception(EXCEPTION_ERROR, "SWDP Parity error");
+		}
 	} else {
 		dp->seq_out_parity(value, 32);
 		/* ARM Debug Interface Architecture Specification ADIv5.0 to ADIv5.2
