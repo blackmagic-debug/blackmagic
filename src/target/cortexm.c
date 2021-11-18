@@ -557,6 +557,9 @@ void cortexm_detach(target *t)
 	/* Restort DEMCR*/
 	ADIv5_AP_t *ap = cortexm_ap(t);
 	target_mem_write32(t, CORTEXM_DEMCR, ap->ap_cortexm_demcr);
+	/* Resume from halt */
+	target_mem_write32(t, CORTEXM_DHCSR, CORTEXM_DHCSR_DBGKEY |
+					   CORTEXM_DHCSR_C_DEBUGEN);
 	/* Disable debug */
 	target_mem_write32(t, CORTEXM_DHCSR, CORTEXM_DHCSR_DBGKEY);
 }
