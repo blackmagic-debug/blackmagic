@@ -314,7 +314,7 @@ uint64_t adiv5_ap_read_pidr(ADIv5_AP_t *ap, uint32_t addr)
  * Repeat the write command with the highest possible value
  * of the trannsaction counter, if not on MINDP
  */
-static uint32_t cortexm_initial_halt(ADIv5_AP_t *ap)
+uint32_t cortexm_forced_halt(ADIv5_AP_t *ap)
 {
 	platform_timeout to ;
 	uint32_t ctrlstat = adiv5_dp_read(ap->dp, ADIV5_DP_CTRLSTAT);
@@ -401,7 +401,7 @@ static bool cortexm_prepare(ADIv5_AP_t *ap)
 #if ((PC_HOSTED  == 1) || (ENABLE_DEBUG == 1))
 	uint32_t start_time = platform_time_ms();
 #endif
-	uint32_t dhcsr = cortexm_initial_halt(ap);
+	uint32_t dhcsr = cortexm_forced_halt(ap);
 	if (!dhcsr) {
 		DEBUG_WARN("Halt via DHCSR: Failure DHCSR %08" PRIx32 " after % "
 				   PRId32 "ms\nTry again, evt. with longer timeout or "

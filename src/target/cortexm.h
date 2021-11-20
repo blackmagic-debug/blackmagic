@@ -194,6 +194,6 @@ int cortexm_run_stub(target *t, uint32_t loadaddr,
                      uint32_t r0, uint32_t r1, uint32_t r2, uint32_t r3);
 int cortexm_mem_write_sized(
 	target *t, target_addr dest, const void *src, size_t len, enum align align);
-
+uint32_t cortexm_forced_halt(ADIv5_AP_t *ap);
 #endif
 

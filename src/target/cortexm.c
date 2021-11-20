@@ -487,8 +487,12 @@ bool cortexm_attach(target *t)
 
 	/* Clear any pending fault condition */
 	target_check_error(t);
-
-	target_halt_request(t);
+	/* With recent changes, we do no special handling for special target.
+	 * E.g. for STM32F7, DBGMCU is not changes yet.
+	 * So after probe, target may again be in WFI.
+	 * Use forced halt to regain control.
+	 */
+	cortexm_forced_halt(ap);
 	/* Request halt on reset */
 	target_mem_write32(t, CORTEXM_DEMCR, priv->demcr);
 
