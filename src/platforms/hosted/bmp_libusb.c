@@ -169,7 +169,9 @@ int find_debuggers(BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info)
 			continue;
 		}
 		/* Exclude hubs from testing. Probably more classes could be excluded here!*/
-		if (desc.bDeviceClass == LIBUSB_CLASS_HUB) {
+		switch (desc.bDeviceClass) {
+		case LIBUSB_CLASS_HUB:
+		case LIBUSB_CLASS_WIRELESS:
 			continue;
 		}
 		libusb_device_handle *handle;
