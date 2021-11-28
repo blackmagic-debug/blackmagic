@@ -99,6 +99,7 @@ void usbuart_set_line_coding(struct usb_cdc_line_coding *coding)
 	}
 }
 
+#ifndef ENABLE_RTT
 void usbuart_usb_out_cb(usbd_device *dev, uint8_t ep)
 {
 	(void)ep;
@@ -110,7 +111,7 @@ void usbuart_usb_out_cb(usbd_device *dev, uint8_t ep)
 	for(int i = 0; i < len; i++)
 		uart_send_blocking(USBUART, buf[i]);
 }
-
+#endif
 
 void usbuart_usb_in_cb(usbd_device *dev, uint8_t ep)
 {

@@ -34,6 +34,10 @@
 #include "version.h"
 #include "serialno.h"
 
+#ifdef ENABLE_RTT
+#include "rtt.h"
+#endif
+
 #ifdef PLATFORM_HAS_TRACESWO
 #	include "traceswo.h"
 #endif
@@ -56,6 +60,9 @@ static bool cmd_target_power(target *t, int argc, const char **argv);
 static bool cmd_traceswo(target *t, int argc, const char **argv);
 #endif
 static bool cmd_heapinfo(target *t, int argc, const char **argv);
+#ifdef ENABLE_RTT
+static bool cmd_rtt(target *t, int argc, const char **argv);
+#endif
 #if defined(PLATFORM_HAS_DEBUG) && (PC_HOSTED == 0)
 static bool cmd_debug_bmp(target *t, int argc, const char **argv);
 #endif
@@ -73,6 +80,9 @@ const struct command_s cmd_list[] = {
 	{"hard_srst", (cmd_handler)cmd_hard_srst, "Force a pulse on the hard SRST line - disconnects target" },
 #ifdef PLATFORM_HAS_POWER_SWITCH
 	{"tpwr", (cmd_handler)cmd_target_power, "Supplies power to the target: (enable|disable)"},
+#endif
+#ifdef ENABLE_RTT
+	{"rtt", (cmd_handler)cmd_rtt, "enable|disable|status|channel 0..15|ident (str)|cblock|poll maxms minms maxerr" },
 #endif
 #ifdef PLATFORM_HAS_TRACESWO
 #if defined TRACESWO_PROTOCOL && TRACESWO_PROTOCOL == 2
@@ -406,6 +416,93 @@ static bool cmd_target_power(target *t, int argc, const char **argv)
 	} else {
 		gdb_outf("Unrecognized command format\n");
 	}
+	return true;
+}
+#endif
+
+#ifdef ENABLE_RTT
+const char* onoroffstr[2] = {"off", "on"};
+static const char* onoroff(bool bval) {
+	return bval ? onoroffstr[1] : onoroffstr[0];
+}
+
+static bool cmd_rtt(target *t, int argc, const char **argv)
+{
+	(void)t;
+	if ((argc == 1) || ((argc == 2) && !strncmp(argv[1], "enabled", strlen(argv[1])))) {
+		rtt_enabled = true;
+		rtt_found = false;
+	}
+	else if ((argc == 2) && !strncmp(argv[1], "disabled", strlen(argv[1]))) {
+		rtt_enabled = false;
+		rtt_found = false;
+	}
+	else if ((argc == 2) && !strncmp(argv[1], "status", strlen(argv[1]))) {
+		gdb_outf("rtt: %s found: %s ident: ",
+			onoroff(rtt_enabled), rtt_found ? "yes" : "no");
+		if (rtt_ident[0] == '\0')
+			gdb_out("off");
+		else
+			gdb_outf("\"%s\"", rtt_ident);
+		gdb_outf(" halt: %s", onoroff(target_no_background_memory_access(t)));
+		gdb_out(" channels: ");
+		if (rtt_auto_channel) gdb_out("auto ");
+		for (uint32_t i = 0; i < MAX_RTT_CHAN; i++)
+			if (rtt_channel[i].is_enabled) gdb_outf("%d ", i);
+		gdb_outf("\nmax poll ms: %u min poll ms: %u max errs: %u\n",
+			rtt_max_poll_ms, rtt_min_poll_ms, rtt_max_poll_errs);
+	}
+	else if ((argc >= 2) && !strncmp(argv[1], "channel", strlen(argv[1]))) {
+		/* mon rtt channel switches to auto rtt channel selection
+		   mon rtt channel number... selects channels given */
+		for (uint32_t i = 0; i < MAX_RTT_CHAN; i++)
+			rtt_channel[i].is_enabled = false;
+		if (argc == 2) {
+			rtt_auto_channel = true;
+		} else {
+			rtt_auto_channel = false;
+			for (int i = 2; i < argc; i++) {
+				int chan = atoi(argv[i]);
+				if ((chan >= 0) && (chan < MAX_RTT_CHAN))
+					rtt_channel[chan].is_enabled = true;
+			}
+		}
+	}
+	else if ((argc == 2) && !strncmp(argv[1], "ident", strlen(argv[1]))) {
+		rtt_ident[0] = '\0';
+	}
+	else if ((argc == 2) && !strncmp(argv[1], "poll", strlen(argv[1])))
+		gdb_outf("%u %u %u\n", rtt_max_poll_ms, rtt_min_poll_ms, rtt_max_poll_errs);
+	else if ((argc == 2) && !strncmp(argv[1], "cblock", strlen(argv[1]))) {
+		gdb_outf("cbaddr: 0x%x\n", rtt_cbaddr);
+		gdb_out("ch ena cfg i/o buf@        size head@      tail@      flg\n");
+		for (uint32_t i = 0; i < MAX_RTT_CHAN; i++) {
+			gdb_outf("%2d   %c   %c %s 0x%08x %5d 0x%08x 0x%08x   %d\n",
+			i, rtt_channel[i].is_enabled ? 'y' : 'n', rtt_channel[i].is_configured ? 'y' : 'n',
+			rtt_channel[i].is_output ? "out" : "in ", rtt_channel[i].buf_addr, rtt_channel[i].buf_size,
+			rtt_channel[i].head_addr, rtt_channel[i].tail_addr, rtt_channel[i].flag);
+		}
+	}
+	else if ((argc == 3) && !strncmp(argv[1], "ident", strlen(argv[1]))) {
+		strncpy(rtt_ident, argv[2], sizeof(rtt_ident));
+		rtt_ident[sizeof(rtt_ident)-1] = '\0';
+		for (uint32_t i = 0; i < sizeof(rtt_ident); i++)
+			if (rtt_ident[i] == '_') rtt_ident[i] = ' ';
+	}
+	else if ((argc == 5) && !strncmp(argv[1], "poll", strlen(argv[1]))) {
+		/* set polling params */
+		int32_t new_max_poll_ms = atoi(argv[2]);
+		int32_t new_min_poll_ms = atoi(argv[3]);
+		int32_t new_max_poll_errs = atoi(argv[4]);
+		if ((new_max_poll_ms >= 0) && (new_min_poll_ms >= 0) && (new_max_poll_errs >= 0)
+			 && (new_max_poll_ms >= new_min_poll_ms)) {
+			rtt_max_poll_ms = new_max_poll_ms;
+			rtt_min_poll_ms = new_min_poll_ms;
+			rtt_max_poll_errs = new_max_poll_errs;
+		}
+		else gdb_out("how?\n");
+	}
+	else gdb_out("what?\n");
 	return true;
 }
 #endif

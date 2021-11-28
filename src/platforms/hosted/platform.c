@@ -30,6 +30,10 @@
 #include "gdb_if.h"
 #include <signal.h>
 
+#ifdef ENABLE_RTT
+#include "rtt_if.h"
+#endif
+
 #include "bmp_remote.h"
 #include "bmp_hosted.h"
 #include "stlinkv2.h"
@@ -58,6 +62,9 @@ static void exit_function(void)
 	default:
 		break;
 	}
+	#ifdef ENABLE_RTT
+	rtt_if_exit();
+	#endif
 	fflush(stdout);
 }
 
@@ -110,6 +117,9 @@ void platform_init(int argc, char **argv)
 		exit(cl_execute(&cl_opts));
 	else {
 		gdb_if_init();
+		#ifdef ENABLE_RTT
+		rtt_if_init();
+		#endif
 		return;
 	}
 }
