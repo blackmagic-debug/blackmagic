@@ -87,6 +87,15 @@ VPATH += platforms/common
 CFLAGS += -Iplatforms/common
 endif
 
+ifeq ($(ENABLE_RTT), 1)
+CFLAGS += -DENABLE_RTT
+SRC += rtt.c rtt_if.c
+endif
+
+ifdef RTT_IDENT
+CFLAGS += -DRTT_IDENT=$(RTT_IDENT)
+endif
+
 OBJ = $(patsubst %.S,%.o,$(patsubst %.c,%.o,$(SRC)))
 
 $(TARGET): include/version.h $(OBJ)

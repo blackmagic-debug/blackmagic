@@ -255,6 +255,7 @@ static void usbuart_change_dma_tx_buf(void)
 	buf_tx_act_idx ^= 1;
 }
 
+#ifndef ENABLE_RTT
 void usbuart_usb_out_cb(usbd_device *dev, uint8_t ep)
 {
 	(void)ep;
@@ -296,6 +297,7 @@ void usbuart_usb_out_cb(usbd_device *dev, uint8_t ep)
 	if (TX_BUF_SIZE - buf_tx_act_sz >= CDCACM_PACKET_SIZE)
 		usbd_ep_nak_set(dev, CDCACM_UART_ENDPOINT, 0);
 }
+#endif
 
 #ifdef USBUART_DEBUG
 int usbuart_debug_write(const char *buf, size_t len)
