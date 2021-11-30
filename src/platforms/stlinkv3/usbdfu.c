@@ -73,7 +73,7 @@ int main(void)
 #define MCO1_AF   0
 	gpio_set_af    (MCO1_PORT, MCO1_AF, MCO1_PIN);
 	gpio_mode_setup(MCO1_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, MCO1_PIN);
-	gpio_set_output_options(MCO1_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_25MHZ, PWR_EN_PIN);
+	gpio_set_output_options(MCO1_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_25MHZ, MCO1_PIN);
 	RCC_CR |= RCC_CR_HSION;
 	RCC_CFGR &= ~(0x3 << 21); /* HSI */
 	RCC_CFGR &= ~(0x7 << 24); /* no division */
