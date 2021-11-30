@@ -126,8 +126,12 @@ static usbd_device *stm32f723_usbd_init(void)
 	OTG_HS_PHYC_PLL1 = 5 << 1;
 	OTG_HS_PHYC_TUNE |= 0x00000F13U;
 	OTG_HS_PHYC_PLL1 |= OTG_PHYC_PLL1_ENABLE;
-	/* 2ms Delay required to get internal phy clock stable */
-	//HAL_Delay(2U);
+	/* 2ms Delay required to get internal phy clock stable
+	 * Used by DFU too, so platform_xxx not available.
+	 * Some Stlinkv3-Set did not cold start w/o the delay
+	 */
+	volatile int i = 200*1000;
+	while(i--);
 
 	////OTG_HS_GUSBCFG |= OTG_GUSBCFG_PHYSEL;
 	/* Enable VBUS sensing in device mode and power down the PHY. */
