@@ -27,7 +27,9 @@
 extern usbd_device *usbdev;
 extern uint16_t usb_config;
 
-#if !defined(CDCACM_PACKET_SIZE)
+#if defined(USB_HS)
+#define CDCACM_PACKET_SIZE 512U
+#else
 #define CDCACM_PACKET_SIZE 64U
 #endif
 

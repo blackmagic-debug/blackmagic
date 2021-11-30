@@ -183,7 +183,11 @@ static const usb_endpoint_descriptor_s uart_data_endp[] = {
 		.bDescriptorType = USB_DT_ENDPOINT,
 		.bEndpointAddress = CDCACM_UART_ENDPOINT,
 		.bmAttributes = USB_ENDPOINT_ATTR_BULK,
+#if defined(USB_HS)
+		.wMaxPacketSize = CDCACM_PACKET_SIZE,
+#else
 		.wMaxPacketSize = CDCACM_PACKET_SIZE / 2U,
+#endif
 		.bInterval = 1,
 	},
 	{
