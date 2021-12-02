@@ -296,10 +296,11 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 			if(cur_target) {
 				SET_RUN_STATE(1);
 				target_detach(cur_target);
+				last_target = cur_target;
+				cur_target = NULL;
 			}
-			last_target = cur_target;
-			cur_target = NULL;
-			gdb_putpacketz("OK");
+			if (pbuf[0] == 'D')
+				gdb_putpacketz("OK");
 			break;
 
 		case 'k':	/* Kill the target */
