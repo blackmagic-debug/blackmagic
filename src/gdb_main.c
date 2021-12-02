@@ -117,8 +117,11 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 	while (1) {
 		SET_IDLE_STATE(1);
 		size_t size = gdb_getpacket(pbuf, BUF_SIZE);
-		SET_IDLE_STATE(0);
-		switch (pbuf[0]) {
+		// If port closed and target detached, stay idle
+		if ((pbuf[0] != 0x04) || cur_target) {
+			SET_IDLE_STATE(0);
+		}
+		switch(pbuf[0]) {
 		/* Implementation of these is mandatory! */
 		case 'g': { /* 'g': Read general registers */
 			ERROR_IF_NO_TARGET();
