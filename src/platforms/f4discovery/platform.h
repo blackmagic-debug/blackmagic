@@ -32,7 +32,7 @@
 
 #define PLATFORM_HAS_TRACESWO
 #ifdef BLACKPILL
-#define PLATFORM_IDENT "(F4Discovery/BlackPillV2) "
+#define PLATFORM_IDENT "(F4Discovery-BlackPillV2) "
 /* Important pin mappings for STM32 implementation:
         * JTAG/SWD
                 * PA1: TDI<br>

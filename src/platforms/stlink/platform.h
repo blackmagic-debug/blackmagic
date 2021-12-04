@@ -39,7 +39,7 @@ extern bool debug_bmp;
 int usbuart_debug_write(const char *buf, size_t len);
 #endif
 
-#define PLATFORM_IDENT   "(STLINK/V2) "
+#define PLATFORM_IDENT   "(STLINK-V2) "
 
 /* Hardware definitions... */
 #define TDI_PORT	GPIOA

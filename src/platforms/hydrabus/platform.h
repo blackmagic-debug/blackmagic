@@ -32,7 +32,7 @@
 #include <setjmp.h>
 
 #define PLATFORM_HAS_TRACESWO
-#define PLATFORM_IDENT        " (HydraBus))"
+#define PLATFORM_IDENT        " (HydraBus)"
 
 /* Important pin mappings for STM32 implementation:
  *
