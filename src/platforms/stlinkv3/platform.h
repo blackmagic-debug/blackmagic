@@ -73,7 +73,6 @@ int usbuart_debug_write(const char *buf, size_t len);
 #define NUM_TRACE_PACKETS		(16)
 #define TRACESWO_PROTOCOL		2			/* 1 = Manchester, 2 = NRZ / async */
 
-#define PLATFORM_HAS_SLCAN		1
 #define CAN_APB_FREQUENCY  (54*1000*1000L)
 #define CAN_RX0_IRQ   NVIC_CAN1_RX0_IRQ
 #define CAN_RX0_ISR   can1_rx0_isr

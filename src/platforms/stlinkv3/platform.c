@@ -268,8 +268,10 @@ void platform_init(void)
 	platform_timing_init();
 	cdcacm_init();
 	usbuart_init();
+#if defined(PLATFORM_HAS_SLCAN)
 	extern void slcan_init();
 	slcan_init();
+#endif
 	/* By default, do not drive the swd bus too fast. */
 	platform_max_frequency_set(6000000);
 }

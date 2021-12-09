@@ -29,16 +29,20 @@ LDFLAGS += --specs=nosys.specs
 endif
 
 VPATH += platforms/stm32
+PLATFORM_HAS_SLCAN ?= 1
 
 SRC += 	usbuart.c	\
 	cdcacm.c	\
 	serialno.c	\
-	stm32-slcan.c	\
 	timing.c	\
 	timing_stm32.c	\
 	traceswoasync_f723.c	\
 	traceswodecode.c	\
 
+ifeq ($(PLATFORM_HAS_SLCAN), 1)
+SRC += stm32-slcan.c
+CFLAGS += -DPLATFORM_HAS_SLCAN
+endif
 ifeq ($(NO_BOOTLOADER), 1)
 all:	blackmagic.bin
 else
