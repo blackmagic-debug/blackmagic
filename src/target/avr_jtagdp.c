@@ -3,7 +3,6 @@
 #include "avr.h"
 #include "jtag_scan.h"
 #include "jtagtap.h"
-#include "gdb_packet.h"
 
 void avr_jtag_dp_handler(uint8_t jd_index, uint32_t j_idcode)
 {
