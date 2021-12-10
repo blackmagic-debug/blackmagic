@@ -252,6 +252,11 @@ int platform_jtag_dp_init(ADIv5_DP_t *dp)
 	return 0;
 }
 
+int platform_avr_jtag_dp_init(AVR_DP_t *dp)
+{
+	return 0;
+}
+
 char *platform_ident(void)
 {
 	switch (info.bmp_type) {

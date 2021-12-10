@@ -22,6 +22,7 @@
 #include "general.h"
 #include "jtag_scan.h"
 #include "adiv5.h"
+#include "avr.h"
 #include "jtag_devs.h"
 
 jtag_dev_descr_t dev_descr[] = {
@@ -62,6 +63,9 @@ jtag_dev_descr_t dev_descr[] = {
 		.descr = "Xambala: RVDBG013."},
 	{.idcode = 0x000007A3, .idmask = 0x00000FFF,
 		.descr = "Gigadevice BSD."},
+	{.idcode = 0x0000003F, .idmask = 0x00000FFF,
+		.descr = "Atmel Limited: AVR JTAG-PDI port.",
+		.handler = avr_jtag_dp_handler},
 /* Just for fun, unsupported */
 	{.idcode = 0x8940303F, .idmask = 0xFFFFFFFF, .descr = "ATMega16."},
 	{.idcode = 0x0792603F, .idmask = 0xFFFFFFFF, .descr = "AT91SAM9261."},
