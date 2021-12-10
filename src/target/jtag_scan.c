@@ -207,8 +207,8 @@ int jtag_scan(const uint8_t *irlens)
 #endif
 
 	/* Check for known devices and handle accordingly */
-	for(i = 0; i < jtag_dev_count; i++)
-		for(j = 0; dev_descr[j].idcode; j++)
+	for(i = 0; i < jtag_dev_count; i++) {
+		for(j = 0; dev_descr[j].idcode; j++) {
 			if((jtag_devs[i].jd_idcode & dev_descr[j].idmask) ==
 			   dev_descr[j].idcode) {
 				jtag_devs[i].current_ir = -1;
@@ -219,6 +219,8 @@ int jtag_scan(const uint8_t *irlens)
 					dev_descr[j].handler(i);
 				break;
 			}
+		}
+	}
 
 	return jtag_dev_count;
 }
