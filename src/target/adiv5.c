@@ -683,9 +683,8 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 		return;
 	}
 	DEBUG_INFO("DPIDR 0x%08" PRIx32 " (v%d %srev%d)\n", dp->idcode,
-			   (uint8_t)((dp->idcode >> 12) & 0xf),
-			   (dp->idcode & ADIV5_MINDP) ? "MINDP " : "",
-			   (uint16_t)(dp->idcode >> 28));
+			   (uint8_t)((dp->idcode >> 12U) & 0xfU),
+			   (dp->idcode & ADIV5_MINDP) ? "MINDP " : "", (uint16_t)(dp->idcode >> 28U));
 	volatile uint32_t ctrlstat = 0;
 #if PC_HOSTED  == 1
 	platform_adiv5_dp_defaults(dp);
