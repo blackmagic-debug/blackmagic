@@ -68,38 +68,13 @@ void avr_add_flash(target *t, uint32_t start, size_t length)
 	target_add_flash(t, f);
 }
 
-static bool avr_dev_shift_dr(jtag_proc_t *jp, uint8_t jd_index, uint8_t *dout, const uint8_t din)
-{
-	jtag_dev_t *d = &jtag_devs[jd_index];
-	uint8_t result = 0;
-	uint16_t request = 0, response = 0;
-	uint8_t *data = (uint8_t *)&request;
-	if (!dout)
-		return false;
-	jtagtap_shift_dr();
-	jp->jtagtap_tdi_seq(0, ones, d->dr_prescan);
-	data[0] = din;
-	// Calculate the parity bit
-	for (uint8_t i = 0; i < 8; ++i)
-		data[1] ^= (din >> i) & 1U;
-	jp->jtagtap_tdi_tdo_seq((uint8_t *)&response, 1, (uint8_t *)&request, 9);
-	jp->jtagtap_tdi_seq(1, ones, d->dr_postscan);
-	jtagtap_return_idle();
-	data = (uint8_t *)&response;
-	// Calculate the parity bit
-	for (uint8_t i = 0; i < 8; ++i)
-		result ^= (data[0] >> i) & 1U;
-	*dout = data[0];
-	return result == data[1];
-}
-
 bool avr_pdi_reg_write(AVR_DP_t *dp, uint8_t reg, uint8_t value)
 {
 	uint8_t result = 0, command = PDI_STCS | reg;
 	if (reg >= 16 ||
-		avr_dev_shift_dr(&jtag_proc, dp->dp_jd_index, &result, command) ||
+		avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, command) ||
 		result != PDI_EMPTY ||
-		avr_dev_shift_dr(&jtag_proc, dp->dp_jd_index, &result, value))
+		avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, value))
 		return false;
 	return result == PDI_EMPTY;
 }
@@ -108,9 +83,9 @@ uint8_t avr_pdi_reg_read(AVR_DP_t *dp, uint8_t reg)
 {
 	uint8_t result = 0, command = PDI_LDCS | reg;
 	if (reg >= 16 ||
-		avr_dev_shift_dr(&jtag_proc, dp->dp_jd_index, &result, command) ||
+		avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, command) ||
 		result != PDI_EMPTY ||
-		!avr_dev_shift_dr(&jtag_proc, dp->dp_jd_index, &result, command))
+		!avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, command))
 		return 0xFFU; // TODO - figure out a better way to indicate failure.
 	return result;
 }
