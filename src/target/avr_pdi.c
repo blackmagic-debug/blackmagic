@@ -3,6 +3,7 @@
 #include "target_internal.h"
 #include "avr.h"
 #include "exception.h"
+#include "gdb_packet.h"
 
 #define IR_PDI		0x7U
 #define PDI_BREAK	0xBBU
@@ -12,6 +13,11 @@
 #define PDI_LDCS	0x80U
 #define PDI_STCS	0xC0U
 
+static void avr_dp_ref(AVR_DP_t *dp)
+{
+	dp->refcnt++;
+}
+
 static void avr_dp_unref(AVR_DP_t *dp)
 {
 	if (--(dp->refcnt) == 0)
@@ -20,6 +26,8 @@ static void avr_dp_unref(AVR_DP_t *dp)
 
 bool avr_dp_init(AVR_DP_t *dp)
 {
+	target *t;
+
 	/* Check for a valid part number in the IDCode */
 	if ((dp->idcode & 0x0FFFF000) == 0) {
 		DEBUG_WARN("Invalid DP idcode %08" PRIx32 "\n", dp->idcode);
@@ -29,6 +37,19 @@ bool avr_dp_init(AVR_DP_t *dp)
 	DEBUG_INFO("AVR ID 0x%08" PRIx32 " (v%d)\n", dp->idcode,
 		(uint8_t)((dp->idcode >> 28U) & 0xfU));
 	jtag_dev_write_ir(&jtag_proc, dp->dp_jd_index, IR_PDI);
+
+	t = target_new();
+	if (!t)
+		return false;
+	avr_dp_ref(dp);
+
+	t->cpuid = dp->idcode;
+	t->idcode = (dp->idcode >> 12) & 0xFFFFU;
+	t->priv = dp;
+	t->driver = "Atmel AVR";
+	t->core = "AVR";
+	if (atxmega_probe(t))
+		return true;
 	return true;
 }
 
