@@ -6,6 +6,8 @@
 #include "gdb_packet.h"
 
 #define IR_PDI		0x7U
+#define IR_BYPASS	0xFU
+
 #define PDI_BREAK	0xBBU
 #define PDI_DELAY	0xDBU
 #define PDI_EMPTY	0xEBU
@@ -36,7 +38,7 @@ bool avr_dp_init(AVR_DP_t *dp)
 	}
 	DEBUG_INFO("AVR ID 0x%08" PRIx32 " (v%d)\n", dp->idcode,
 		(uint8_t)((dp->idcode >> 28U) & 0xfU));
-	jtag_dev_write_ir(&jtag_proc, dp->dp_jd_index, IR_PDI);
+	jtag_dev_write_ir(&jtag_proc, dp->dp_jd_index, IR_BYPASS);
 
 	t = target_new();
 	if (!t)
@@ -48,24 +50,13 @@ bool avr_dp_init(AVR_DP_t *dp)
 	t->priv = dp;
 	t->driver = "Atmel AVR";
 	t->core = "AVR";
+
+	t->attach = avr_attach;
+	t->detach = avr_detach;
+
 	if (atxmega_probe(t))
 		return true;
 	return true;
-}
-
-void avr_add_flash(target *t, uint32_t start, size_t length)
-{
-	struct target_flash *f = calloc(1, sizeof(*f));
-	if (!f) {			/* calloc failed: heap exhaustion */
-		DEBUG_WARN("calloc: failed in %s\n", __func__);
-		return;
-	}
-
-	f->start = start;
-	f->length = length;
-	f->blocksize = 0x100;
-	f->erased = 0xff;
-	target_add_flash(t, f);
 }
 
 bool avr_pdi_reg_write(AVR_DP_t *dp, uint8_t reg, uint8_t value)
@@ -88,4 +79,33 @@ uint8_t avr_pdi_reg_read(AVR_DP_t *dp, uint8_t reg)
 		!avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, command))
 		return 0xFFU; // TODO - figure out a better way to indicate failure.
 	return result;
+}
+
+void avr_add_flash(target *t, uint32_t start, size_t length)
+{
+	struct target_flash *f = calloc(1, sizeof(*f));
+	if (!f) {			/* calloc failed: heap exhaustion */
+		DEBUG_WARN("calloc: failed in %s\n", __func__);
+		return;
+	}
+
+	f->start = start;
+	f->length = length;
+	f->blocksize = 0x100;
+	f->erased = 0xff;
+	target_add_flash(t, f);
+}
+
+bool avr_attach(target *t)
+{
+	AVR_DP_t *dp = t->priv;
+	jtag_dev_write_ir(&jtag_proc, dp->dp_jd_index, IR_PDI);
+
+	return true;
+}
+
+void avr_detach(target *t)
+{
+	AVR_DP_t *dp = t->priv;
+	jtag_dev_write_ir(&jtag_proc, dp->dp_jd_index, IR_BYPASS);
 }
