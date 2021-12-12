@@ -34,6 +34,7 @@
 
 #define CDCACM_GDB_ENDPOINT	1
 #define CDCACM_UART_ENDPOINT	3
+#define TRACE_ENDPOINT			5
 
 extern usbd_device *usbdev;
 
