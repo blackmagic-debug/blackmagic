@@ -38,7 +38,6 @@
 #include <libopencm3/stm32/adc.h>
 #include <libopencm3/stm32/syscfg.h>
 
-uint16_t led_idle_run;
 uint16_t srst_pin;
 static uint32_t hw_version;
 

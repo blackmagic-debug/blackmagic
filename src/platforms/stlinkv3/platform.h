@@ -181,16 +181,15 @@ extern const struct _usbd_driver stm32f723_usb_driver;
 #define SWO_DMA_IRQ			NVIC_DMA1_STREAM0_IRQ
 #define SWO_DMA_ISR(x)			dma1_stream0_isr(x)
 
-extern uint16_t led_idle_run;
 #define LED_PORT	GPIOA
 #define LED_PIN 	GPIO10
 #define LED_PORT_UART	GPIOA
 #define LED_UART	GPIO10
 
-#define LED_IDLE_RUN            led_idle_run
-#define SET_RUN_STATE(state)
-#define SET_IDLE_STATE(state)
-#define SET_ERROR_STATE(x)
+#define LED_IDLE_RUN            GPIO10
+#define SET_RUN_STATE(state)	{gpio_set_val(LED_PORT, LED_IDLE_RUN, state); running_status = (state);}
+#define SET_IDLE_STATE(state)	{gpio_set_val(LED_PORT, LED_IDLE_RUN, !state);}
+#define SET_ERROR_STATE(state)
 
 extern uint32_t detect_rev(void);
 
