@@ -15,6 +15,15 @@
 #define PDI_LDCS	0x80U
 #define PDI_STCS	0xC0U
 
+#define PDI_REG_STATUS	0U
+#define PDI_REG_RESET	1U
+#define PDI_REG_CTRL	2U
+#define PDI_REG_R3		3U
+#define PDI_REG_R4		4U
+
+#define PDI_RESET	0x59U
+
+static void avr_reset(target *t);
 static enum target_halt_reason avr_halt_poll(target *t, target_addr *watch);
 
 static void avr_dp_ref(AVR_DP_t *dp)
@@ -112,6 +121,14 @@ void avr_detach(target *t)
 {
 	AVR_DP_t *dp = t->priv;
 	jtag_dev_write_ir(&jtag_proc, dp->dp_jd_index, IR_BYPASS);
+}
+
+static void avr_reset(target *t)
+{
+	AVR_DP_t *dp = t->priv;
+	if (!avr_pdi_reg_write(dp, PDI_REG_RESET, PDI_RESET) ||
+		avr_pdi_reg_read(dp, PDI_REG_STATUS) != 0x00)
+		raise_exception(EXCEPTION_ERROR, "Error resetting device, device in incorrect state\n");
 }
 
 static enum target_halt_reason avr_halt_poll(target *t, target_addr *watch)
