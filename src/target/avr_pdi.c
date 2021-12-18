@@ -24,6 +24,7 @@
 #define PDI_RESET	0x59U
 
 static void avr_reset(target *t);
+static void avr_halt_request(target *t);
 static enum target_halt_reason avr_halt_poll(target *t, target_addr *watch);
 
 static void avr_dp_ref(AVR_DP_t *dp)
@@ -64,6 +65,8 @@ bool avr_dp_init(AVR_DP_t *dp)
 
 	t->attach = avr_attach;
 	t->detach = avr_detach;
+	t->reset = avr_reset;
+	t->halt_request = avr_halt_request;
 	t->halt_poll = avr_halt_poll;
 
 	if (atxmega_probe(t))
@@ -129,6 +132,26 @@ static void avr_reset(target *t)
 	if (!avr_pdi_reg_write(dp, PDI_REG_RESET, PDI_RESET) ||
 		avr_pdi_reg_read(dp, PDI_REG_STATUS) != 0x00)
 		raise_exception(EXCEPTION_ERROR, "Error resetting device, device in incorrect state\n");
+}
+
+static void avr_halt_request(target *t)
+{
+	AVR_DP_t *dp = t->priv;
+	/* To halt the processor we go through a few really specific steps:
+	 * Write r4 to 1 to indicate we want to put the processor into debug-based pause
+	 * Read r3 and check it's 0x10 which indicates the processor is held in reset and no debugging is active
+	 * Releae reset
+	 * Read r3 twice more, the first time should respond 0x14 to indicate the processor is still reset
+	 * but that debug pause is requested, and the second should respond 0x04 to indicate the processor is now
+	 * in debug pause state (halted)
+	 */
+	if (!avr_pdi_reg_write(dp, PDI_REG_R4, 1) ||
+		avr_pdi_reg_read(dp, PDI_REG_R3) != 0x10U ||
+		!avr_pdi_reg_write(dp, PDI_REG_RESET, 0) ||
+		avr_pdi_reg_read(dp, PDI_REG_R3) != 0x14U ||
+		avr_pdi_reg_read(dp, PDI_REG_R3) != 0x04U)
+		raise_exception(EXCEPTION_ERROR, "Error halting device, device in incorrect state\n");
+	dp->halt_reason = TARGET_HALT_REQUEST;
 }
 
 static enum target_halt_reason avr_halt_poll(target *t, target_addr *watch)
