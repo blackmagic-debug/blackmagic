@@ -15,6 +15,8 @@
 #define PDI_LDCS	0x80U
 #define PDI_STCS	0xC0U
 
+static enum target_halt_reason avr_halt_poll(target *t, target_addr *watch);
+
 static void avr_dp_ref(AVR_DP_t *dp)
 {
 	dp->refcnt++;
@@ -53,9 +55,11 @@ bool avr_dp_init(AVR_DP_t *dp)
 
 	t->attach = avr_attach;
 	t->detach = avr_detach;
+	t->halt_poll = avr_halt_poll;
 
 	if (atxmega_probe(t))
 		return true;
+	dp->halt_reason = TARGET_HALT_RUNNING;
 	return true;
 }
 
@@ -108,4 +112,11 @@ void avr_detach(target *t)
 {
 	AVR_DP_t *dp = t->priv;
 	jtag_dev_write_ir(&jtag_proc, dp->dp_jd_index, IR_BYPASS);
+}
+
+static enum target_halt_reason avr_halt_poll(target *t, target_addr *watch)
+{
+	AVR_DP_t *dp = t->priv;
+	(void)watch;
+	return dp->halt_reason;
 }

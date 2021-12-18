@@ -10,6 +10,7 @@ typedef struct Atmel_DP_s {
 	uint32_t idcode;
 
 	uint8_t dp_jd_index;
+	enum target_halt_reason halt_reason;
 } AVR_DP_t;
 
 bool avr_dp_init(AVR_DP_t *dp);
