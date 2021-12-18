@@ -14,6 +14,7 @@
 
 #define PDI_LDCS	0x80U
 #define PDI_STCS	0xC0U
+#define PDI_KEY		0xE0U
 
 #define PDI_REG_STATUS	0U
 #define PDI_REG_RESET	1U
@@ -22,6 +23,15 @@
 #define PDI_REG_R4		4U
 
 #define PDI_RESET	0x59U
+
+typedef enum
+{
+	PDI_PROG = 0x02U,
+	PDI_DEBUG = 0x04U,
+} pdi_key_e;
+
+static const char pdi_key_prog[] = {0xff, 0x88, 0xd8, 0xcd, 0x45, 0xab, 0x89, 0x12};
+static const char pdi_key_debug[] = {0x21, 0x81, 0x7c, 0x9f, 0xd4, 0x2d, 0x21, 0x3a};
 
 static void avr_reset(target *t);
 static void avr_halt_request(target *t);
@@ -95,6 +105,27 @@ uint8_t avr_pdi_reg_read(AVR_DP_t *dp, uint8_t reg)
 		!avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, command))
 		return 0xFFU; // TODO - figure out a better way to indicate failure.
 	return result;
+}
+
+bool avr_enable(AVR_DP_t *dp, pdi_key_e what)
+{
+	const char *const key = what == PDI_DEBUG ? pdi_key_debug : pdi_key_prog;
+	uint8_t result = 0;
+	if (avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, PDI_KEY) ||
+		result != PDI_EMPTY)
+		return false;
+	for (uint8_t i = 0; i < 8; ++i)
+	{
+		if (avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, key[i]) ||
+			result != PDI_EMPTY)
+			return false;
+	}
+	return (avr_pdi_reg_read(dp, PDI_REG_STATUS) & what) == what;
+}
+
+bool avr_disable(AVR_DP_t *dp, pdi_key_e what)
+{
+	return avr_pdi_reg_write(dp, PDI_REG_STATUS, ~what);
 }
 
 void avr_add_flash(target *t, uint32_t start, size_t length)
