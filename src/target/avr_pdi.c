@@ -147,6 +147,9 @@ bool avr_attach(target *t)
 {
 	AVR_DP_t *dp = t->priv;
 	jtag_dev_write_ir(&jtag_proc, dp->dp_jd_index, IR_PDI);
+	target_reset(t);
+	avr_enable(dp, PDI_DEBUG);
+	target_halt_request(t);
 
 	return true;
 }
@@ -154,6 +157,8 @@ bool avr_attach(target *t)
 void avr_detach(target *t)
 {
 	AVR_DP_t *dp = t->priv;
+
+	avr_disable(dp, PDI_DEBUG);
 	jtag_dev_write_ir(&jtag_proc, dp->dp_jd_index, IR_BYPASS);
 }
 
