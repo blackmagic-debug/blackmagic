@@ -11,7 +11,7 @@
 #define FLASHREG2	0x1F000038
 #define FLASHKEY	0xAAAAAAAA
 #define SYS_CFG_0	0x400F0000
-#define SYS_DBLF	0x400F0008	
+#define SYS_DBLF	0x400F0008
 
 // decalrations
 static void synwit_add_flash(target *t, uint32_t addr, size_t length, size_t erasesize);
@@ -20,7 +20,7 @@ static int synwit_flash_write(struct target_flash *f, target_addr dest, const vo
 bool synwit_probe(target *t);
 
 
-static bool synwit_cmd_erase_mass(target *t);
+static bool synwit_cmd_erase_mass(target *t, int argc, const char **argv);
 
 const struct command_s synwit_cmd_list[] = {
 	{"erase_mass", (cmd_handler)synwit_cmd_erase_mass, "Erase entire flash memory"},
@@ -100,23 +100,27 @@ static int synwit_flash_write(struct target_flash *f, target_addr dest, const vo
 
 bool synwit_probe(target *t)
 {
-	t->idcode = target_mem_read32(t, CPUID);
+	uint32_t idcode = target_mem_read32(t, CPUID);
 
-	switch(t->idcode)
+	switch(idcode)
 	{
-		case 0x410CC200:	t->driver = "Synwit SWM050";
-					target_add_ram(t, 0x20000000, 0x400);
-					synwit_add_flash(t, 0x00000000, 0x2000, 0x200);
-					
-					return true;
-		default:		return false;
+		case 0x410CC200:
+			t->driver = "Synwit SWM050";
+			target_add_ram(t, 0x20000000, 0x400);
+			synwit_add_flash(t, 0x00000000, 0x2000, 0x200);
+			return true;
+		default:
+			return false;
 	}
 
 	return false;
 }
 
-static bool synwit_cmd_erase_mass(target *t)
+static bool synwit_cmd_erase_mass(target *t, int argc, const char **argv)
 {
+	(void)argc;
+	(void)argv;
+
 	// 18Mhz
 	target_mem_write32(t, SYS_CFG_0, 1);
 	target_mem_write32(t, SYS_DBLF, 0);
