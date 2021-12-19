@@ -45,6 +45,18 @@
 
 #define PDI_RESET	0x59U
 
+#define AVR_ADDR_DBG_CTR		0x00000000U
+#define AVR_ADDR_DBG_PC			0x00000004U
+#define AVR_ADDR_DBG_CTRL		0x0000000aU
+#define AVR_ADDR_DBG_SPECIAL	0x0000000cU
+
+#define AVR_DBG_READ_REGS	0x11U
+#define AVR_NUM_REGS		32
+
+#define AVR_ADDR_CPU		0x01000030U
+#define AVR_ADDR_CPU_SPL	0xDU
+#define AVR_ADDR_CPU_SREG	0xFU
+
 typedef enum
 {
 	PDI_PROG = 0x02U,
@@ -57,6 +69,8 @@ static const char pdi_key_debug[] = {0x21, 0x81, 0x7c, 0x9f, 0xd4, 0x2d, 0x21, 0
 static void avr_reset(target *t);
 static void avr_halt_request(target *t);
 static enum target_halt_reason avr_halt_poll(target *t, target_addr *watch);
+
+static void avr_regs_read(target *t, void *data);
 
 typedef struct __attribute__((packed))
 {
@@ -352,4 +366,19 @@ static enum target_halt_reason avr_halt_poll(target *t, target_addr *watch)
 	AVR_DP_t *dp = t->priv;
 	(void)watch;
 	return dp->halt_reason;
+}
+
+static void avr_regs_read(target *t, void *data)
+{
+	AVR_DP_t *dp = t->priv;
+	avr_regs *regs = (avr_regs *)data;
+	regs->pc = avr_pdi_ld32(dp, AVR_ADDR_DBG_PC);
+	regs->sp = avr_pdi_ld16(dp, AVR_ADDR_CPU | AVR_ADDR_CPU_SPL);
+	regs->sreg = avr_pdi_ld16(dp, AVR_ADDR_CPU | AVR_ADDR_CPU_SREG);
+
+	if (!avr_pdi_st8(dp, AVR_ADDR_DBG_CTRL, AVR_DBG_READ_REGS) ||
+		!avr_pdi_st32(dp, AVR_ADDR_DBG_CTR, AVR_NUM_REGS) ||
+		!avr_pdi_reg_write(dp, PDI_REG_R4, 1) ||
+		!avr_pdi_read(dp, AVR_ADDR_DBG_SPECIAL, PDI_MODE_IND_PTR, regs->general, 32))
+		raise_exception(EXCEPTION_ERROR, "Error reading registers");
 }
