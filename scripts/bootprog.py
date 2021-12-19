@@ -23,12 +23,12 @@ from time import sleep
 
 class stm32_boot:
 	def __init__(self, port, baud=115200):
-		self.serial = serial.Serial(port, baud, 8, 'E', 1, 
+		self.serial = serial.Serial(port, baud, 8, 'E', 1,
 				timeout=1)
 
 		# Turn on target device in SystemMemory boot mode
 		self.serial.setDTR(1)
-		sleep(0.1);
+		sleep(0.1)
 
 		self._sync()
 
@@ -98,7 +98,6 @@ class stm32_boot:
 		# Send data
 		self._send(chr(len(data)-1) + data)
 		self._checkack()
-	
 
 	def write_protect(self, sectors):
 		# Send WP cmd
@@ -134,11 +133,11 @@ if __name__ == "__main__":
 	from getopt import getopt
 
 	if platform == "linux2":
-		print  "\x1b\x5b\x48\x1b\x5b\x32\x4a" # clear terminal screen
-	print "STM32 SystemMemory Production Programmer -- version 1.1"
-	print "Copyright (C) 2011  Black Sphere Technologies"
-	print "License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>"
-	print
+		print("\x1b\x5b\x48\x1b\x5b\x32\x4a") # clear terminal screen
+	print("STM32 SystemMemory Production Programmer -- version 1.1")
+	print("Copyright (C) 2011  Black Sphere Technologies")
+	print("License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>")
+	print()
 
 	dev = "COM1" if platform == "win32" else "/dev/ttyUSB0"
 	baud = 115200
@@ -152,38 +151,38 @@ if __name__ == "__main__":
 
 		progfile = args[0]
 	except:
-		print "Usage %s [-d <dev>] [-b <baudrate>] [-a <address>] <filename>" % argv[0]
-		print "\t-d : Use target on interface <dev> (default: %s)" % dev
-		print "\t-b : Set device baudrate (default: %d)" % baud
-		print "\t-a : Set programming address (default: 0x%X)" % addr
-		print
+		print("Usage %s [-d <dev>] [-b <baudrate>] [-a <address>] <filename>" % argv[0])
+		print("\t-d : Use target on interface <dev> (default: %s)" % dev)
+		print("\t-b : Set device baudrate (default: %d)" % baud)
+		print("\t-a : Set programming address (default: 0x%X)" % addr)
+		print()
 		exit(-1)
 
 	prog = open(progfile, "rb").read()
 	boot = stm32_boot(dev, baud)
 
 	cmds = boot.get()
-	print "Target bootloader version: %d.%d\n" % (ord(cmds[0]) >> 4, ord(cmds[0]) % 0xf)
+	print("Target bootloader version: %d.%d\n" % (ord(cmds[0]) >> 4, ord(cmds[0]) % 0xf))
 
-	print "Removing device protection..."
+	print("Removing device protection...")
 	boot.read_unprotect()
 	boot.write_unprotect()
-	print "Erasing target device..."
+	print("Erasing target device...")
 	boot.eraseall()
 	addr = 0x8000000
 	while prog:
-		print ("Programming address 0x%08X..0x%08X...\r" % (addr, addr + min(len(prog), 255))),
-		stdout.flush();
+		print("Programming address 0x%08X..0x%08X...\r" % (addr, addr + min(len(prog), 255)), end=' ')
+		stdout.flush()
 		boot.write(addr, prog[:256])
 		addr += 256
 		prog = prog[256:]
 
 	print
-	print "Enabling device protection..."
+	print("Enabling device protection...")
 	boot.write_protect(range(0,2))
 	#boot.read_protect()
 
-	print "All operations completed."
+	print("All operations completed.")
 	print
 
 
