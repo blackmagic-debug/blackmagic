@@ -37,6 +37,14 @@ static void avr_reset(target *t);
 static void avr_halt_request(target *t);
 static enum target_halt_reason avr_halt_poll(target *t, target_addr *watch);
 
+static const uint32_t regnum_avr[] = {
+	0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, // r0-r15
+	16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, // r16-31
+	32, // SREG
+	33, // SP
+	34, // PC
+};
+
 static void avr_dp_ref(AVR_DP_t *dp)
 {
 	dp->refcnt++;
@@ -79,6 +87,7 @@ bool avr_dp_init(AVR_DP_t *dp)
 	t->reset = avr_reset;
 	t->halt_request = avr_halt_request;
 	t->halt_poll = avr_halt_poll;
+	t->regs_size = sizeof(regnum_avr);
 
 	if (atxmega_probe(t))
 		return true;
