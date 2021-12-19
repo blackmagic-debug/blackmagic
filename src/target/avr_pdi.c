@@ -152,96 +152,85 @@ uint8_t avr_pdi_reg_read(AVR_DP_t *dp, uint8_t reg)
 	return result;
 }
 
-bool avr_pdi_st8(AVR_DP_t *dp, uint32_t reg, uint8_t data)
+static bool avr_pdi_write(AVR_DP_t *dp, uint8_t bytes, uint32_t reg, uint32_t value)
 {
-	uint8_t result = 0, command = PDI_STS | PDI_ADDR_32 | PDI_DATA_8;
+	uint8_t result = 0;
+	uint8_t command = PDI_STS | PDI_ADDR_32 | bytes;
+	uint8_t data_bytes[4] = {
+		value & 0xffU,
+		(value >> 8U) & 0xffU,
+		(value >> 16U) & 0xffU,
+		(value >> 24U) & 0xffU
+	};
+
 	if (avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, command) || result != PDI_EMPTY ||
 		avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, reg & 0xffU) || result != PDI_EMPTY ||
 		avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, (reg >> 8U) & 0xffU) || result != PDI_EMPTY ||
 		avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, (reg >> 16U) & 0xffU) || result != PDI_EMPTY ||
-		avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, (reg >> 24U) & 0xffU) || result != PDI_EMPTY ||
-		avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, data))
+		avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, (reg >> 24U) & 0xffU) || result != PDI_EMPTY)
 		return false;
-	return result == PDI_EMPTY;
+	// This is intentionally <= to avoid `bytes + 1` silliness
+	for (uint8_t i = 0; i <= bytes; ++i)
+	{
+		if (avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, data_bytes[i]) || result != PDI_EMPTY)
+			return false;
+	}
+	return true;
 }
 
-uint8_t avr_pdi_ld8(AVR_DP_t *dp, uint32_t reg)
+static bool avr_pdi_read(AVR_DP_t *dp, uint8_t bytes, uint32_t reg, uint32_t *value)
 {
-	uint8_t result = 0, command = PDI_LDS | PDI_ADDR_32 | PDI_DATA_8;
-	uint8_t data[1];
+	uint8_t result = 0;
+	uint8_t command = PDI_LDS | PDI_ADDR_32 | bytes;
+	uint8_t data_bytes[4];
+	uint32_t data = 0xffffffffU;
 	if (avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, command) || result != PDI_EMPTY ||
 		avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, reg & 0xffU) || result != PDI_EMPTY ||
 		avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, (reg >> 8U) & 0xffU) || result != PDI_EMPTY ||
 		avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, (reg >> 16U) & 0xffU) || result != PDI_EMPTY ||
-		avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, (reg >> 24U) & 0xffU) || result != PDI_EMPTY ||
-		!avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, data, 0))
-		return 0xFFU; // TODO - figure out a better way to indicate failure.
-	return data[0];
-}
-
-bool avr_pdi_st16(AVR_DP_t *dp, uint32_t reg, uint16_t data)
-{
-	uint8_t result = 0, command = PDI_STS | PDI_ADDR_32 | PDI_DATA_16;
-	if (avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, command) || result != PDI_EMPTY ||
-		avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, reg & 0xffU) || result != PDI_EMPTY ||
-		avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, (reg >> 8U) & 0xffU) || result != PDI_EMPTY ||
-		avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, (reg >> 16U) & 0xffU) || result != PDI_EMPTY ||
-		avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, (reg >> 24U) & 0xffU) || result != PDI_EMPTY ||
-		avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, data & 0xffU) || result != PDI_EMPTY ||
-		avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, (data >> 8U) & 0xffU))
+		avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, (reg >> 24U) & 0xffU) || result != PDI_EMPTY)
 		return false;
-	return result == PDI_EMPTY;
+	for (uint8_t i = 0; i <= bytes; ++i)
+	{
+		if (!avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &data_bytes[i], 0))
+			return false;
+	}
+	data = data_bytes[0];
+	if (bytes > PDI_DATA_8)
+		data |= data_bytes[1] << 8U;
+	if (bytes > PDI_DATA_16)
+		data |= data_bytes[2] << 16U;
+	if (bytes > PDI_DATA_24)
+		data |= data_bytes[3] << 24U;
+	*value = data;
+	return true;
 }
 
-uint16_t avr_pdi_ld16(AVR_DP_t *dp, uint32_t reg)
+static inline bool avr_pdi_read8(AVR_DP_t *dp, uint32_t reg, uint8_t *value)
 {
-	uint8_t result = 0, command = PDI_LDS | PDI_ADDR_32 | PDI_DATA_16;
-	uint8_t data[2];
-	if (avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, command) || result != PDI_EMPTY ||
-		avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, reg & 0xffU) || result != PDI_EMPTY ||
-		avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, (reg >> 8U) & 0xffU) || result != PDI_EMPTY ||
-		avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, (reg >> 16U) & 0xffU) || result != PDI_EMPTY ||
-		avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, (reg >> 24U) & 0xffU) || result != PDI_EMPTY ||
-		!avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, data + 0, 0) ||
-		!avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, data + 1, 0))
-		return 0xFFFFU; // TODO - figure out a better way to indicate failure.
-	return data[0] | (data[1] << 8U);
+	uint32_t data;
+	const bool result = avr_pdi_read(dp, PDI_DATA_8, reg, &data);
+	if (result)
+		*value = data;
+	return result;
 }
 
-bool avr_pdi_st32(AVR_DP_t *dp, uint32_t reg, uint32_t data)
+static inline bool avr_pdi_read16(AVR_DP_t *dp, uint32_t reg, uint16_t *value)
 {
-	uint8_t result = 0, command = PDI_STS | PDI_ADDR_32 | PDI_DATA_32;
-	if (avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, command) || result != PDI_EMPTY ||
-		avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, reg & 0xffU) || result != PDI_EMPTY ||
-		avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, (reg >> 8U) & 0xffU) || result != PDI_EMPTY ||
-		avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, (reg >> 16U) & 0xffU) || result != PDI_EMPTY ||
-		avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, (reg >> 24U) & 0xffU) || result != PDI_EMPTY ||
-		avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, data & 0xffU) || result != PDI_EMPTY ||
-		avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, (data >> 8U) & 0xffU) || result != PDI_EMPTY ||
-		avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, (data >> 16U) & 0xffU) || result != PDI_EMPTY ||
-		avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, (data >> 24U) & 0xffU))
-		return false;
-	return result == PDI_EMPTY;
+	uint32_t data;
+	const bool result = avr_pdi_read(dp, PDI_DATA_16, reg, &data);
+	if (result)
+		*value = data;
+	return result;
 }
 
-uint32_t avr_pdi_ld32(AVR_DP_t *dp, uint32_t reg)
-{
-	uint8_t result = 0, command = PDI_LDS | PDI_ADDR_32 | PDI_DATA_32;
-	uint8_t data[4];
-	if (avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, command) || result != PDI_EMPTY ||
-		avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, reg & 0xffU) || result != PDI_EMPTY ||
-		avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, (reg >> 8U) & 0xffU) || result != PDI_EMPTY ||
-		avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, (reg >> 16U) & 0xffU) || result != PDI_EMPTY ||
-		avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, (reg >> 24U) & 0xffU) || result != PDI_EMPTY ||
-		!avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, data + 0, 0) ||
-		!avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, data + 1, 0) ||
-		!avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, data + 2, 0) ||
-		!avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, data + 3, 0))
-		return 0xFFFFU; // TODO - figure out a better way to indicate failure.
-	return data[0] | (data[1] << 8U) | (data[2] << 16U) | (data[3] << 24U);
-}
+static inline bool avr_pdi_read24(AVR_DP_t *dp, uint32_t reg, uint32_t *value)
+	{ return avr_pdi_read(dp, PDI_DATA_24, reg, value); }
 
-bool avr_pdi_read(AVR_DP_t *dp, uint32_t addr, uint8_t ptr_mode, void *dst, uint32_t count)
+static inline bool avr_pdi_read32(AVR_DP_t *dp, uint32_t reg, uint32_t *value)
+	{ return avr_pdi_read(dp, PDI_DATA_32, reg, value); }
+
+static bool avr_pdi_read_ind(AVR_DP_t *dp, uint32_t addr, uint8_t ptr_mode, void *dst, uint32_t count)
 {
 	const uint32_t repeat = count - 1U;
 	uint8_t result = 0, command;
@@ -372,13 +361,19 @@ static void avr_regs_read(target *t, void *data)
 {
 	AVR_DP_t *dp = t->priv;
 	avr_regs *regs = (avr_regs *)data;
-	regs->pc = avr_pdi_ld32(dp, AVR_ADDR_DBG_PC);
-	regs->sp = avr_pdi_ld16(dp, AVR_ADDR_CPU | AVR_ADDR_CPU_SPL);
-	regs->sreg = avr_pdi_ld16(dp, AVR_ADDR_CPU | AVR_ADDR_CPU_SREG);
-
-	if (!avr_pdi_st8(dp, AVR_ADDR_DBG_CTRL, AVR_DBG_READ_REGS) ||
-		!avr_pdi_st32(dp, AVR_ADDR_DBG_CTR, AVR_NUM_REGS) ||
+	uint32_t pc = 0;
+	uint16_t sp = 0;
+	if (!avr_pdi_read32(dp, AVR_ADDR_DBG_PC, &pc) ||
+		!avr_pdi_read16(dp, AVR_ADDR_CPU | AVR_ADDR_CPU_SPL, &sp) ||
+		!avr_pdi_read8(dp, AVR_ADDR_CPU | AVR_ADDR_CPU_SREG, &regs->sreg) ||
+		!avr_pdi_write(dp, PDI_DATA_8, AVR_ADDR_DBG_CTRL, AVR_DBG_READ_REGS) ||
+		!avr_pdi_write(dp, PDI_DATA_32, AVR_ADDR_DBG_CTR, AVR_NUM_REGS) ||
 		!avr_pdi_reg_write(dp, PDI_REG_R4, 1) ||
-		!avr_pdi_read(dp, AVR_ADDR_DBG_SPECIAL, PDI_MODE_IND_PTR, regs->general, 32))
+		!avr_pdi_read_ind(dp, AVR_ADDR_DBG_SPECIAL, PDI_MODE_IND_PTR, regs->general, 32))
 		raise_exception(EXCEPTION_ERROR, "Error reading registers");
+	// These aren't in the reads above because regs is a packed struct, which results in compiler errors
+	// Additionally, the program counter is stored in words and points to the next instruction to be executed
+	// So we substract 1 and double.
+	regs->pc = (pc - 1) << 1;
+	regs->sp = sp;
 }
