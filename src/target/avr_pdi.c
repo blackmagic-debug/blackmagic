@@ -17,6 +17,7 @@
 #define PDI_STS		0x40U
 #define PDI_ST		0x60U
 #define PDI_LDCS	0x80U
+#define PDI_REPEAT	0xa0U
 #define PDI_STCS	0xc0U
 #define PDI_KEY		0xe0U
 
@@ -29,6 +30,12 @@
 #define PDI_ADDR_16	0x04U
 #define PDI_ADDR_24	0x08U
 #define PDI_ADDR_32	0x0cU
+
+#define PDI_MODE_IND_PTR	0x00U
+#define PDI_MODE_IND_INCPTR	0x04U
+#define PDI_MODE_DIR_PTR	0x08U
+#define PDI_MODE_DIR_INCPTR	0x0cU // "Reserved"
+#define PDI_MODE_MASK		0xf3U
 
 #define PDI_REG_STATUS	0U
 #define PDI_REG_RESET	1U
@@ -218,6 +225,41 @@ uint32_t avr_pdi_ld32(AVR_DP_t *dp, uint32_t reg)
 		!avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, data + 3, 0))
 		return 0xFFFFU; // TODO - figure out a better way to indicate failure.
 	return data[0] | (data[1] << 8U) | (data[2] << 16U) | (data[3] << 24U);
+}
+
+bool avr_pdi_read(AVR_DP_t *dp, uint32_t addr, uint8_t ptr_mode, void *dst, uint32_t count)
+{
+	const uint32_t repeat = count - 1U;
+	uint8_t result = 0, command;
+	uint8_t *data = (uint8_t *)dst;
+	if ((ptr_mode & PDI_MODE_MASK) || !count)
+		return false;
+	// Run `st ptr <addr>`
+	command = PDI_ST | PDI_MODE_DIR_PTR | PDI_DATA_32;
+	if (avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, command) || result != PDI_EMPTY ||
+		avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, addr & 0xffU) || result != PDI_EMPTY ||
+		avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, (addr >> 8U) & 0xffU) || result != PDI_EMPTY ||
+		avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, (addr >> 16U) & 0xffU) || result != PDI_EMPTY ||
+		avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, (addr >> 24U) & 0xffU) || result != PDI_EMPTY)
+		return false;
+	// Run `repeat <count - 1>`
+	command = PDI_REPEAT | PDI_DATA_32;
+	if (avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, command) || result != PDI_EMPTY ||
+		avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, repeat & 0xffU) || result != PDI_EMPTY ||
+		avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, (repeat >> 8U) & 0xffU) || result != PDI_EMPTY ||
+		avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, (repeat >> 16U) & 0xffU) || result != PDI_EMPTY ||
+		avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, (repeat >> 24U) & 0xffU) || result != PDI_EMPTY)
+		return false;
+	// Run `ld <ptr_mode>`
+	command = PDI_LD | ptr_mode;
+	if (avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, command) || result != PDI_EMPTY)
+		return false;
+	for (uint32_t i = 0; i < count; ++i)
+	{
+		if (!avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &data[i], 0))
+			return false;
+	}
+	return true;
 }
 
 bool avr_enable(AVR_DP_t *dp, pdi_key_e what)
