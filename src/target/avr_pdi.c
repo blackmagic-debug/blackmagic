@@ -119,6 +119,8 @@ bool avr_dp_init(AVR_DP_t *dp)
 	t->attach = avr_attach;
 	t->detach = avr_detach;
 
+	t->regs_read = avr_regs_read;
+
 	t->reset = avr_reset;
 	t->halt_request = avr_halt_request;
 	t->halt_poll = avr_halt_poll;
@@ -265,7 +267,7 @@ static bool avr_pdi_read_ind(AVR_DP_t *dp, uint32_t addr, uint8_t ptr_mode, void
 	return true;
 }
 
-bool avr_enable(AVR_DP_t *dp, pdi_key_e what)
+static bool avr_enable(AVR_DP_t *dp, pdi_key_e what)
 {
 	const char *const key = what == PDI_DEBUG ? pdi_key_debug : pdi_key_prog;
 	uint8_t result = 0;
@@ -279,7 +281,7 @@ bool avr_enable(AVR_DP_t *dp, pdi_key_e what)
 	return (avr_pdi_reg_read(dp, PDI_REG_STATUS) & what) == what;
 }
 
-bool avr_disable(AVR_DP_t *dp, pdi_key_e what)
+static bool avr_disable(AVR_DP_t *dp, pdi_key_e what)
 {
 	return avr_pdi_reg_write(dp, PDI_REG_STATUS, ~what);
 }
