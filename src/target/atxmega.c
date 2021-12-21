@@ -10,6 +10,8 @@ static const char tdesc_xmega6[] =
 	"<!DOCTYPE target SYSTEM \"gdb-target.dtd\">"
 	"<target>"
 	"	<architecture>avr:106</architecture>"
+	/* As it turns out, GDB doesn't acctually support this (despite asking for it!) yet */
+#if 0
 	"	<feature name=\"org.gnu.gdb.avr.cpu\">"
 	"		<reg name=\"r0\" bitsize=\"8\" regnum=\"0\"/>"
 	"		<reg name=\"r1\" bitsize=\"8\"/>"
@@ -47,6 +49,7 @@ static const char tdesc_xmega6[] =
 	"		<reg name=\"sp\" bitsize=\"16\" type=\"data_ptr\"/>"
 	"		<reg name=\"pc\" bitsize=\"32\" type=\"code_ptr\"/>"
 	"	</feature>"
+#endif
 	"</target>";
 
 bool atxmega_probe(target *t)
@@ -54,7 +57,7 @@ bool atxmega_probe(target *t)
 	switch (t->idcode) {
 		case IDCODE_XMEGA256A3U:
 			t->core = "ATXMega256A3U";
-			target_add_ram(t, 0x01002000, 0x01002800);
+			target_add_ram(t, 0x01002000, 0x800);
 			avr_add_flash(t, 0x00800000, 0x40000);
 			avr_add_flash(t, 0x00840000, 0x2000);
 			t->tdesc = tdesc_xmega6;
