@@ -126,26 +126,19 @@ static void jtagtap_tdi_tdo_seq(
 			chunk = 64;
 		}
 		ticks -= chunk;
-		uint8_t di[8];
-		memset(di, 0, 8);
+		uint64_t di = 0;
 		int bytes = (chunk + 7) >> 3;
-		if (DI) {
-			memcpy(&di, DI, bytes);
-			int remainder = chunk & 7;
-			DI += bytes;
-			DI += bytes;
-			if (remainder) {
-				uint8_t rem = *DI;
-				rem &= (1 << remainder) - 1;
-				*di = rem;
-			}
+		int i = 0;
+		for (; i < bytes; i++) {
+			di = di | (*DI << (i * 8));
+			DI ++;
 		};
 		/* PRIx64 differs with system. Use it explicit in the format string*/
 		s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE,
 					 "!J%c%02x%" PRIx64 "%c",
 					 (!ticks && final_tms) ?
 					 REMOTE_TDITDO_TMS : REMOTE_TDITDO_NOTMS,
-					 chunk, *(uint64_t*)di, REMOTE_EOM);
+					 chunk, di, REMOTE_EOM);
 		platform_buffer_write(construct,s);
 
 		s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
@@ -156,7 +149,7 @@ static void jtagtap_tdi_tdo_seq(
 		}
 		if (DO) {
 			uint64_t res = remotehston(-1, (char *)&construct[1]);
-			memcpy(DO, &res, bytes);
+			memcpy(DO, &res, bytes); /* Fixme: Endian dependant!*/
 			DO += bytes;
 		}
 	}
