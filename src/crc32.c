@@ -106,9 +106,11 @@ int generic_crc32(target *t, uint32_t *crc_res, uint32_t base, size_t len)
 	 * 22 s @ 4k and 21 s @ 64k
 	 */
 	uint8_t bytes[0x1000];
-	uint32_t start_time = platform_time_ms();
 #else
 	uint8_t bytes[128];
+#endif
+#if defined(ENABLE_DEBUG)
+	uint32_t start_time = platform_time_ms();
 #endif
 	uint32_t last_time = platform_time_ms();
 	while (len) {
