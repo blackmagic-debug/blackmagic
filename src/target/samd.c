@@ -341,6 +341,8 @@ struct samd_descr {
 	uint8_t series;
 	char revision;
 	char pin;
+	uint32_t ram_size;
+	uint32_t flash_size;
 	uint8_t mem;
 	char variant;
 	char package[3];
@@ -351,6 +353,8 @@ struct samd_descr samd_parse_device_id(uint32_t did)
 	uint8_t i = 0;
 	const struct samd_part *parts = samd_d21_parts;
 	memset(samd.package, 0, 3);
+	samd.ram_size = 0x8000;
+	samd.flash_size = 0x40000;
 
 	uint8_t family = (did >> SAMD_DID_FAMILY_POS)
 	  & SAMD_DID_FAMILY_MASK;
@@ -513,8 +517,8 @@ bool samd_probe(target *t)
 		t->attach = samd_protected_attach;
 	}
 
-	target_add_ram(t, 0x20000000, 0x8000);
-	samd_add_flash(t, 0x00000000, 0x40000);
+	target_add_ram(t, 0x20000000, samd.ram_size);
+	samd_add_flash(t, 0x00000000, samd.flash_size);
 	target_add_commands(t, samd_cmd_list, "SAMD");
 
 	/* If we're not in reset here */
