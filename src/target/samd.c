@@ -22,6 +22,7 @@
  * programming.
  *
  * Tested with
+ * * SAMD09D14A (rev B)
  * * SAMD20E17A (rev C)
  * * SAMD20J18A (rev B)
  * * SAMD21J18A (rev B)
@@ -128,7 +129,7 @@ const struct command_s samd_cmd_list[] = {
 #define SAMD_STATUSB_PROT		(1 << 16)
 
 /* Device Identification Register (DID) */
-#define SAMD_DID_MASK			0xFF3C0000
+#define SAMD_DID_MASK			0xFF380000
 #define SAMD_DID_CONST_VALUE		0x10000000
 #define SAMD_DID_DEVSEL_MASK		0xFF
 #define SAMD_DID_DEVSEL_POS		0
@@ -384,6 +385,7 @@ struct samd_descr samd_parse_device_id(uint32_t did)
 			}
 			break;
 		case 3: samd.series = 11; break;
+		case 4: samd.series = 9; break;
 		default: samd.series = 0; break;
 	}
 	/* Revision */
@@ -421,6 +423,23 @@ struct samd_descr samd_parse_device_id(uint32_t did)
 		}
 		samd.pin = 'D';
 		samd.mem = 14 - (devsel % 3);
+		samd.variant = 'A';
+		break;
+	case 9: /* SAM D09 */
+		samd.ram_size = 4096;
+		switch (devsel) {
+			case 0:
+				samd.pin = 'D';
+				samd.mem = 14;
+				samd.flash_size = 16384;
+				samd.package[0] = 'M';
+				break;
+			case 7:
+				samd.pin = 'C';
+				samd.mem = 13;
+				samd.flash_size = 8192;
+				break;
+		}
 		samd.variant = 'A';
 		break;
 	}
@@ -479,14 +498,14 @@ bool samd_probe(target *t)
 	/* Part String */
 	if (protected) {
 		sprintf(priv_storage->samd_variant_string,
-		        "Atmel SAM%c%d%c%d%c%s (rev %c) (PROT=1)",
+		        "Atmel SAM%c%02d%c%d%c%s (rev %c) (PROT=1)",
 		        samd.family,
 		        samd.series, samd.pin, samd.mem,
 		        samd.variant,
 		        samd.package, samd.revision);
 	} else {
 		sprintf(priv_storage->samd_variant_string,
-		        "Atmel SAM%c%d%c%d%c%s (rev %c)",
+		        "Atmel SAM%c%02d%c%d%c%s (rev %c)",
 		        samd.family,
 		        samd.series, samd.pin, samd.mem,
 		        samd.variant,
