@@ -95,6 +95,7 @@
  * Should get it's one file as not only related to Adiv5!
  */
 #define AP_DESIGNER_FREESCALE    0x00e
+#define AP_DESIGNER_NXP          0x015
 #define AP_DESIGNER_TEXAS        0x017
 #define AP_DESIGNER_ATMEL        0x01f
 #define AP_DESIGNER_STM          0x020

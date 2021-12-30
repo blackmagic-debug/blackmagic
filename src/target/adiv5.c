@@ -43,6 +43,7 @@
 #define ARM_AP_TYPE_AXI  4
 #define ARM_AP_TYPE_AHB5 5
 
+#define AUTHSTATUS      0xFB8
 /* ROM table CIDR values */
 #define CIDR0_OFFSET    0xFF0 /* DBGCID0 */
 #define CIDR1_OFFSET    0xFF4 /* DBGCID1 */
@@ -776,6 +777,53 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 		}
 	}
 
+	if (((dp->targetid >> 1) & 0x7ff) == AP_DESIGNER_NXP) {
+		/* Reading targetid again here upsets the LPC55 ans STM32U5!*/
+		/* UM11126, 51.6.1
+		 * Debug session with uninitialized/invalid flash image or ISP mode
+		 */
+		adiv5_dp_abort(dp, ADIV5_DP_ABORT_DAPABORT);
+		ADIv5_AP_t tmpap;
+		memset(&tmpap, 0, sizeof(tmpap));
+		tmpap.dp = dp;
+		tmpap.apsel = 2;
+		tmpap.idr = adiv5_ap_read(&tmpap, ADIV5_AP_IDR);
+		if (tmpap.idr == 0x002A0000) {
+			/* All fine when AP0 is visible*/
+			tmpap.apsel = 0;
+			tmpap.idr = adiv5_ap_read(&tmpap, ADIV5_AP_IDR);
+			if (!tmpap.idr) {
+				DEBUG_WARN("LPC55 activation sequence\n");
+				/* AP0 not visible, activation sequence needed*/
+				tmpap.apsel = 2;
+				adiv5_ap_write(&tmpap, ADIV5_AP_CSW, 0x21);
+				uint32_t value;
+				platform_delay(20);
+				do {
+					value = adiv5_ap_read(&tmpap, ADIV5_AP_CSW);
+					if (platform_timeout_is_expired(&timeout))
+						break;
+				} while (value);
+				if (!value) {
+					adiv5_ap_write(&tmpap, ADIV5_AP_TAR, 7);
+					platform_delay(20);
+					do {
+						value = adiv5_ap_read(&tmpap, ADIV5_AP_DRW)
+							& 0xffff;
+						if (platform_timeout_is_expired(&timeout))
+							break;
+					} while(value);
+				}
+				if (value) {
+					DEBUG_WARN("LPC55 activation failed\n");
+					free(dp); /* No AP that referenced this DP so long*/
+					return;
+				}
+			}
+		} else {
+			DEBUG_WARN("LPC55 AP2 not visible %08" PRIx32 "\n", tmpap.idr);
+		}
+	}
 	/* Probe for APs on this DP */
 	int void_aps = 0;
 	dp->refcnt++;

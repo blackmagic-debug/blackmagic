@@ -406,6 +406,14 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 	case AP_DESIGNER_CYPRESS:
 		DEBUG_WARN("Unhandled Cypress device\n");
 		break;
+	case AP_DESIGNER_NXP:
+		if ((t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M33) {
+			t->driver = "LPC55(no flash)";
+			target_halt_resume(t, 0);
+		} else {
+			 DEBUG_WARN("Unhandled NXP device\n");
+		}
+		break;
 	case AP_DESIGNER_INFINEON:
 		DEBUG_WARN("Unhandled Infineon device\n");
 		break;
