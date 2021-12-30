@@ -164,7 +164,8 @@ static void cl_help(char **argv)
 	DEBUG_WARN("\t-V\t\t: Verify flash against binary file. Can be combined\n"
 	           "\t\t\t  with -w to verify right after programming.\n");
 	DEBUG_WARN("\t-r\t\t: Read flash and write to binary file\n");
-	DEBUG_WARN("\t-p\t\t: Supplies power to the target (where applicable)\n");
+	DEBUG_WARN("\t-p[0]\t\t: Supplies power to the target (where applicable)\n"
+	           "\t\t\t  or switch off with optarg == '0'\n");
 	DEBUG_WARN("\t-R[h]\t\t: Reset device. Default via SWJ or by hardware(h)\n");
 	DEBUG_WARN("\t-H\t\t: Do not use high level commands (BMP-Remote)\n");
 	DEBUG_WARN("\t-m <target>\t: Use (target)id for SWD multi-drop.\n");
@@ -186,7 +187,7 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 	opt->opt_flash_size = 0xffffffff;
 	opt->opt_flash_start = 0xffffffff;
 	opt->opt_max_swj_frequency = 4000000;
-	while((c = getopt(argc, argv, "eEhHv:d:f:s:I:c:Cln:m:M:wVtTa:S:jpP:rR::")) != -1) {
+	while((c = getopt(argc, argv, "eEhHv:d:f:s:I:c:Cln:m:M:wVtTa:S:jp::P:rR::")) != -1) {
 		switch(c) {
 		case 'c':
 			if (optarg)
@@ -275,7 +276,8 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 				opt->opt_mode = BMP_MODE_RESET;
 			break;
 		case 'p':
-			opt->opt_tpwr = true;
+			if ((!optarg) || (optarg[0] != '0'))
+				opt->opt_tpwr = true;
 			break;
 		case 'a':
 			if (optarg)
@@ -356,10 +358,9 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 {
 	int res = 0;
 	int num_targets;
-	if (opt->opt_tpwr) {
-		platform_target_set_power(true);
+	platform_target_set_power(opt->opt_tpwr);
+	if (opt->opt_tpwr)
 		platform_delay(500);
-	}
 	if (opt->opt_mode == BMP_MODE_RESET_HW) {
 			platform_srst_set_val(true);
 			platform_delay(1);
