@@ -27,11 +27,12 @@
 #define ADIV5_DP_REG(x)   (x)
 #define ADIV5_AP_REG(x)   (ADIV5_APnDP | (x))
 
-#define ADIV5_DP_BANK0    0x00
-#define ADIV5_DP_BANK1    0x10
-#define ADIV5_DP_BANK2    0x20
-#define ADIV5_DP_BANK3    0x30
-#define ADIV5_DP_BANK4    0x40
+/* Arguments to  ADIV5_DP_SELECT to switch banks*/
+#define ADIV5_DP_BANK0    0x0
+#define ADIV5_DP_BANK1    0x1
+#define ADIV5_DP_BANK2    0x2
+#define ADIV5_DP_BANK3    0x3
+#define ADIV5_DP_BANK4    0x4
 
 /* ADIv5 DP Register addresses */
 #define ADIV5_DP_IDCODE   ADIV5_DP_REG(0x0)
