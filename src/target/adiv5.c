@@ -642,8 +642,9 @@ ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel)
 
 	if(!tmpap.idr) /* IDR Invalid */
 		return NULL;
-	tmpap.csw = adiv5_ap_read(&tmpap, ADIV5_AP_CSW) &
-		~(ADIV5_AP_CSW_SIZE_MASK | ADIV5_AP_CSW_ADDRINC_MASK);
+	tmpap.csw = adiv5_ap_read(&tmpap, ADIV5_AP_CSW);
+	tmpap.csw &= ~(ADIV5_AP_CSW_SIZE_MASK | ADIV5_AP_CSW_ADDRINC_MASK);
+	tmpap.csw |= 0x80000000;
 
 	if (tmpap.csw & ADIV5_AP_CSW_TRINPROG) {
 		DEBUG_WARN("AP %d: Transaction in progress. AP is not be usable!\n",
@@ -777,52 +778,9 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 		}
 	}
 
+	extern void lpc55_ap_prepare(ADIv5_DP_t *dp);
 	if (((dp->targetid >> 1) & 0x7ff) == AP_DESIGNER_NXP) {
-		/* Reading targetid again here upsets the LPC55 ans STM32U5!*/
-		/* UM11126, 51.6.1
-		 * Debug session with uninitialized/invalid flash image or ISP mode
-		 */
-		adiv5_dp_abort(dp, ADIV5_DP_ABORT_DAPABORT);
-		ADIv5_AP_t tmpap;
-		memset(&tmpap, 0, sizeof(tmpap));
-		tmpap.dp = dp;
-		tmpap.apsel = 2;
-		tmpap.idr = adiv5_ap_read(&tmpap, ADIV5_AP_IDR);
-		if (tmpap.idr == 0x002A0000) {
-			/* All fine when AP0 is visible*/
-			tmpap.apsel = 0;
-			tmpap.idr = adiv5_ap_read(&tmpap, ADIV5_AP_IDR);
-			if (!tmpap.idr) {
-				DEBUG_WARN("LPC55 activation sequence\n");
-				/* AP0 not visible, activation sequence needed*/
-				tmpap.apsel = 2;
-				adiv5_ap_write(&tmpap, ADIV5_AP_CSW, 0x21);
-				uint32_t value;
-				platform_delay(20);
-				do {
-					value = adiv5_ap_read(&tmpap, ADIV5_AP_CSW);
-					if (platform_timeout_is_expired(&timeout))
-						break;
-				} while (value);
-				if (!value) {
-					adiv5_ap_write(&tmpap, ADIV5_AP_TAR, 7);
-					platform_delay(20);
-					do {
-						value = adiv5_ap_read(&tmpap, ADIV5_AP_DRW)
-							& 0xffff;
-						if (platform_timeout_is_expired(&timeout))
-							break;
-					} while(value);
-				}
-				if (value) {
-					DEBUG_WARN("LPC55 activation failed\n");
-					free(dp); /* No AP that referenced this DP so long*/
-					return;
-				}
-			}
-		} else {
-			DEBUG_WARN("LPC55 AP2 not visible %08" PRIx32 "\n", tmpap.idr);
-		}
+		lpc55_ap_prepare(dp);
 	}
 	/* Probe for APs on this DP */
 	int void_aps = 0;
@@ -856,6 +814,9 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 
 		extern void efm32_aap_probe(ADIv5_AP_t *);
 		efm32_aap_probe(ap);
+
+		extern void lpc55_dmap_probe(ADIv5_AP_t *);
+		lpc55_dmap_probe(ap);
 
 		/* Halt the device and release from reset if reset is active!*/
 		if (!ap->apsel && ((ap->idr & 0xf) == ARM_AP_TYPE_AHB))

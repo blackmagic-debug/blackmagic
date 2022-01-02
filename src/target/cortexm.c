@@ -408,8 +408,7 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 		break;
 	case AP_DESIGNER_NXP:
 		if ((t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M33) {
-			t->driver = "LPC55(no flash)";
-			target_halt_resume(t, 0);
+			PROBE(lpc55xx_probe);
 		} else {
 			 DEBUG_WARN("Unhandled NXP device\n");
 		}
