@@ -671,8 +671,12 @@ static const uint8_t g4_i2offset[11] = {
 	0x20, 0x24, 0x28, 0x2c, 0x30, 0x70, 0x44, 0x48, 0x4c, 0x50, 0x74
 };
 
+static const uint8_t wl_i2offset[7] = {
+	0x20, 0x24, 0x28, 0x2c, 0x30, 0x34, 0x38
+};
+
 static bool stm32l4_option_write(
-	target *t,const uint32_t *values, int len, const uint8_t *i2offset)
+	target *t,const uint32_t *values, int len, const uint8_t *i2offset, uint32_t fpec_base)
 {
 	tc_printf(t, "Device will lose connection. Rescan!\n");
 	stm32l4_flash_unlock(t);
@@ -682,7 +686,7 @@ static bool stm32l4_option_write(
 		if(target_check_error(t))
 			return true;
 	for (int i = 0; i < len; i++)
-		target_mem_write32(t, L4_FPEC_BASE + i2offset[i], values[i]);
+		target_mem_write32(t, fpec_base + i2offset[i], values[i]);
 	stm32l4_flash_write32(t, FLASH_CR, FLASH_CR_OPTSTRT);
 	while (stm32l4_flash_read32(t, FLASH_SR) & FLASH_SR_BSY)
 		if(target_check_error(t))
@@ -717,10 +721,6 @@ static bool stm32l4_cmd_option(target *t, int argc, char *argv[])
 		tc_printf(t, "STM32L5 options not implemented!\n");
 		return false;
 	}
-	if (t->idcode == ID_STM32WLXX) {
-		tc_printf(t, "STM32WLxx options not implemented!\n");
-		return false;
-	}
 	if (t->idcode == ID_STM32WBXX) {
 		tc_printf(t, "STM32WBxx options not implemented!\n");
 		return false;
@@ -733,12 +733,17 @@ static bool stm32l4_cmd_option(target *t, int argc, char *argv[])
 		0xFFFFFFFF, 0xFFFFFFFF, 0xFF00FFFF, 0xFF00FFFF, 0xFF00FF00
 	};
 
+	static const uint32_t wl_values[11] = {
+		0x3FEFF0AA, 0xFFFFFFFF, 0xFFFFFF00, 0xFF80FFFF, 0xFF80FFFF, 0xFFFFFFFF,
+		0xFFFFFF00
+	};
+
 	uint32_t val;
 	uint32_t values[11] = { 0xFFEFF8AA, 0xFFFFFFFF, 0, 0x000000ff,
 							0x000000ff, 0xffffffff, 0, 0x000000ff, 0x000000ff };
 	int len;
 	bool res = false;
-
+	uint32_t fpec_base = L4_FPEC_BASE;
 	const uint8_t *i2offset = l4_i2offset;
 	if (t->idcode == ID_STM32L43) {/* L43x */
 		len = 5;
@@ -753,24 +758,30 @@ static bool stm32l4_cmd_option(target *t, int argc, char *argv[])
 		len = 6;
 		for (int i = 0; i < len; i++)
 			values[i] = g4_values[i];
+	} else if (t->idcode == ID_STM32WLXX) {/* WLxx */
+		len = 7;
+		i2offset = wl_i2offset;
+		fpec_base = WL_FPEC_BASE;
+		for (int i = 0; i < len; i++)
+			values[i] = wl_values[i];
 	} else {
 		len = 9;
 	}
 	if ((argc == 2) && !strcmp(argv[1], "erase")) {
-		res = stm32l4_option_write(t, values, len, i2offset);
+		res = stm32l4_option_write(t, values, len, i2offset, fpec_base);
 	} else if ((argc >  2) && !strcmp(argv[1], "write")) {
 		int i;
 		for (i = 2; i < argc; i++)
 			values[i - 2] = strtoul(argv[i], NULL, 0);
 		for (i = i - 2; i < len; i++) {
-			uint32_t addr = L4_FPEC_BASE + i2offset[i];
+			uint32_t addr = fpec_base + i2offset[i];
 			values[i] = target_mem_read32(t, addr);
 		}
 		if ((values[0] & 0xff) == 0xCC) {
 			values[0]++;
 			tc_printf(t, "Changing Level 2 request to Level 1!");
 		}
-		res = stm32l4_option_write(t, values, len, i2offset);
+		res = stm32l4_option_write(t, values, len, i2offset, fpec_base);
 	} else {
 		tc_printf(t, "usage: monitor option erase\n");
 		tc_printf(t, "usage: monitor option write <value> ...\n");
@@ -780,8 +791,8 @@ static bool stm32l4_cmd_option(target *t, int argc, char *argv[])
 		return false;
 	}
 	for (int i = 0; i < len; i ++) {
-		uint32_t addr = L4_FPEC_BASE + i2offset[i];
-		val = target_mem_read32(t, L4_FPEC_BASE + i2offset[i]);
+		uint32_t addr = fpec_base + i2offset[i];
+		val = target_mem_read32(t, fpec_base + i2offset[i]);
 		tc_printf(t, "0x%08X: 0x%08X\n", addr, val);
 	}
 	return true;
