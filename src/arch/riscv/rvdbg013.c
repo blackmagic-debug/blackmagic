@@ -224,6 +224,7 @@ enum HART_REG {
 #define RISCV_MAX_HARTS 32U
 
 static bool rvdbdg_register_access(target *t, int argc, char *argv[]);
+static bool riscv_check_watch(target *t, target_addr *watch);
 
 const struct command_s rvdbg_cmd_list[] = {
 	{"register_access",
@@ -1381,7 +1382,7 @@ static void rvdbg_halt_resume(target *t, bool step)
 
 static enum target_halt_reason rvdbg_halt_poll(target *t, target_addr *watch)
 {
-	(void)watch;
+	//(void)watch;
 	RVDBGv013_DMI_t *dmi = t->priv;
 	int res;
 	uint32_t dmstatus;
@@ -1404,7 +1405,11 @@ static enum target_halt_reason rvdbg_halt_poll(target *t, target_addr *watch)
 		return TARGET_HALT_RUNNING;
 	switch (cause) {
 	case 1: /* Software breakpoint */
+		return TARGET_HALT_BREAKPOINT;
 	case 2: /* Hardware trigger breakpoint */
+		if (riscv_check_watch(t, watch))
+			return TARGET_HALT_WATCHPOINT;
+		else
 		return TARGET_HALT_BREAKPOINT;
 	case 3: return TARGET_HALT_REQUEST;
 	case 4: return TARGET_HALT_STEPPING;
@@ -1412,6 +1417,41 @@ static enum target_halt_reason rvdbg_halt_poll(target *t, target_addr *watch)
 	default:
 		return TARGET_HALT_ERROR;
 	}
+}
+
+/**
+ * TODO
+ */
+static bool riscv_check_watch(target *t, target_addr *watch)
+{
+	uint32_t dpc = 0UL;
+	struct breakwatch *bw = NULL;
+	//*watch = NULL;
+	//(void)watch;
+
+	/* Search for hardware breakpoint */
+	rvdbg_reg_read(t, HART_REG_CSR_DPC, &dpc, 4);
+	DEBUG_TARGET("DPC 0x%08" PRIx32 "\n", dpc);
+	for (bw = t->bw_list; bw; bw = bw->next) {
+		if ((bw->type == TARGET_BREAK_HARD) && (bw->addr == dpc)) {
+			DEBUG_TARGET("Breakpoint found\n");
+			return false; // breakpoint found
+		}
+	}
+
+	/* If none, then it's a watchpoint */
+	for (bw = t->bw_list; bw; bw = bw->next) {
+		if ((bw->type == TARGET_WATCH_WRITE) ||
+		    (bw->type == TARGET_WATCH_READ) ||
+		    (bw->type == TARGET_WATCH_ACCESS)) {
+			// TODO find watch address
+			DEBUG_TARGET("Watchpoint found\n");
+			*watch = 0x20007fec;
+			break;
+		}
+	}
+
+	return true;
 }
 
 static int riscv_breakwatch_set(target *t, struct breakwatch *bw)
