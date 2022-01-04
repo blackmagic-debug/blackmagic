@@ -72,7 +72,7 @@ def stm32_read(dev):
 	return data
 
 def stm32_manifest(dev):
-	dev.download(0, "")
+	dev.download(0, b"")
 	while True:
 		try:
 			status = dev.get_status()
