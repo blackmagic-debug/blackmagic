@@ -188,6 +188,7 @@ enum HART_REG {
 #define CSR_MCONTROL_RW           (CSR_MCONTROL_R | CSR_MCONTROL_W)
 #define CSR_MCONTROL_RWX          (CSR_MCONTROL_RW | CSR_MCONTROL_X)
 #define CSR_MCONTROL_ACTION_DEBUG (1 << 12)
+#define CSR_MCONTROL_TIMING       (1 << 18)
 
 #define ABSTRACTCMD_SET_TYPE(t, s) do { \
 	t &= ~(0xff << 24); \
@@ -1427,9 +1428,11 @@ static int riscv_breakwatch_set(target *t, struct breakwatch *bw)
 		break;
 	case TARGET_WATCH_READ:
 		mcontrol |= CSR_MCONTROL_R;
+		mcontrol |= CSR_MCONTROL_TIMING;
 		break;
 	case TARGET_WATCH_ACCESS:
 		mcontrol |= CSR_MCONTROL_RW;
+		mcontrol |= CSR_MCONTROL_TIMING;
 		break;
 	default:
 		return 1;
