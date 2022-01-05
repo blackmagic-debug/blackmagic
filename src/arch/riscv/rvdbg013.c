@@ -225,6 +225,7 @@ enum HART_REG {
 
 static bool rvdbdg_register_access(target *t, int argc, char *argv[]);
 static bool riscv_check_watch(target *t, target_addr *watch);
+static bool decode_load_store_inst(target *t, uint32_t dpc, target_addr *watch);
 
 const struct command_s rvdbg_cmd_list[] = {
 	{"register_access",
@@ -1410,7 +1411,7 @@ static enum target_halt_reason rvdbg_halt_poll(target *t, target_addr *watch)
 		if (riscv_check_watch(t, watch))
 			return TARGET_HALT_WATCHPOINT;
 		else
-		return TARGET_HALT_BREAKPOINT;
+			return TARGET_HALT_BREAKPOINT;
 	case 3: return TARGET_HALT_REQUEST;
 	case 4: return TARGET_HALT_STEPPING;
 	case 5: return TARGET_HALT_REQUEST;
@@ -1435,23 +1436,104 @@ static bool riscv_check_watch(target *t, target_addr *watch)
 	for (bw = t->bw_list; bw; bw = bw->next) {
 		if ((bw->type == TARGET_BREAK_HARD) && (bw->addr == dpc)) {
 			DEBUG_TARGET("Breakpoint found\n");
-			return false; // breakpoint found
+			goto exit_fail; // breakpoint found
 		}
 	}
 
+	// TODO depending on the chip id (or its 'hit' bit implemented),
+	// search for the hit watchpoint. Else, decode the instruction.
+
 	/* If none, then it's a watchpoint */
+	if (!decode_load_store_inst(t, dpc, watch))
+		goto exit_fail;
+
 	for (bw = t->bw_list; bw; bw = bw->next) {
 		if ((bw->type == TARGET_WATCH_WRITE) ||
 		    (bw->type == TARGET_WATCH_READ) ||
 		    (bw->type == TARGET_WATCH_ACCESS)) {
-			// TODO find watch address
-			DEBUG_TARGET("Watchpoint found\n");
-			*watch = 0x20007fec;
-			break;
+			if (bw->addr == *watch) {
+				DEBUG_TARGET("Watchpoint found\n");
+				goto exit_success;
+			}
 		}
 	}
 
+exit_fail:
+	return false;
+exit_success:
 	return true;
+}
+
+static bool decode_load_store_inst(target *t, uint32_t dpc, target_addr *watch)
+{
+	(void)watch;
+	uint8_t rv_opcode = 0U;
+	uint8_t rvc_funct3 = 0U;
+	uint16_t offset = 0U;
+	uint8_t base_reg = 2U; // sp == x2
+	target_addr base_addr = 0UL;
+	uint32_t inst = (uint32_t)target_mem_read16(t, dpc); // TODO target_mem_read32()
+
+	DEBUG_TARGET("inst: 0x%08" PRIx32 "\n", inst);
+
+	rv_opcode = RVC_ISA_GET_OP(inst);
+	rvc_funct3 = RVC_ISA_GET_FUNCT3(inst);
+
+	switch (rv_opcode) {
+	case RVC_ISA_OP_QUAD0:
+		DEBUG_TARGET("quad0\n");
+		switch (rvc_funct3) {
+		case RVC_ISA_FUNCT3_LW: // C.LW (CL format)
+		case RVC_ISA_FUNCT3_SW: // C.SW (CS format)
+			offset = RVC_ISA_SW_GET_OFFSET(inst);
+			base_reg = RVC_ISA_SW_GET_BASE(inst);
+			break;
+		default:
+			goto exit_fail;
+		}
+		break;
+	case RVC_ISA_OP_QUAD2: // Stack pointer based
+		DEBUG_TARGET("quad2\n");
+		switch (rvc_funct3) {
+		case RVC_ISA_FUNCT3_LW: // C.LWSP (CI format)
+			offset = RVC_ISA_LWSP_GET_OFFSET(inst);
+			break;
+		case RVC_ISA_FUNCT3_SW: // C.SWSP (CSS format)
+			offset = RVC_ISA_SWSP_GET_OFFSET(inst);
+			break;
+		default:
+			goto exit_fail;
+		}
+		break;
+	case RVC_ISA_OP_RV32I:
+		DEBUG_TARGET("rv32i\n");
+		base_reg = RV32I_ISA_S_GET_RS1(inst); // S and I-type have the same base
+		rv_opcode = RV32I_ISA_GET_OPCODE(inst);
+		switch (rv_opcode) {
+		case RV32I_ISA_OP_LOAD:
+			offset = RV32I_ISA_I_GET_IMM(inst);
+			break;
+		case RV32I_ISA_OP_STORE:
+			offset = RV32I_ISA_S_GET_IMM(inst);
+			break;
+		default:
+			goto exit_fail;
+		}
+		break;
+	default:
+		goto exit_fail;
+	}
+
+	DEBUG_TARGET("offset: %" PRIu16 "\n", offset);
+	DEBUG_TARGET("base_reg: %" PRIu8 "\n", base_reg);
+
+	rvdbg_reg_read(t, (int)base_reg, (void *)&base_addr, 4);
+	DEBUG_TARGET("base_addr: 0x%" PRIx32 "\n", base_addr);
+	*watch = base_addr + (target_addr)offset;
+
+	return true;
+exit_fail:
+	return false;
 }
 
 static int riscv_breakwatch_set(target *t, struct breakwatch *bw)
