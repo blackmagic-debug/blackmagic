@@ -38,7 +38,7 @@
 #include "cortexm.h"
 
 #define  LPC55_DMAP_IDR  0x002A0000
-#define  LPC5XXXX_CHIPID 0x50000ff8
+#define  LPC5XXXX_CHIPID 0x40000ff8
 
 #define LPC55_DMAP_BULK_ERASE 0x02
 #define LPC55_DMAP_START_DEBUG_SESSION 0x07
@@ -100,10 +100,12 @@ void lpc55_ap_prepare(ADIv5_DP_t *dp)
 
 bool lpc55xx_probe(target *t)
 {
-	/* Syscon access does not work
-	uint32_t chipid = target_mem_read32(t, LPC5XXXX_CHIPID);
+	ADIv5_AP_t *ap = cortexm_ap(t);
+	if (ap->apsel == 1)
+		return false;
+	uint32_t chipid = target_mem_read32(t, 0x50000ff8);
 	DEBUG_WARN("Chipid %08" PRIx32 "\n", chipid);
-	*/
+	/**/
 	target_add_ram(t, 0x20000000, 0x44000);
 	t->target_options |= CORTEXM_TOPT_INHIBIT_SRST;
 	switch (t->cpuid & CPUID_PATCH_MASK) {
