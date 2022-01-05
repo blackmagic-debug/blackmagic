@@ -34,7 +34,7 @@
  */
 
 #define RV_ISA_R_TYPE(funct7, rs2, rs1, funct3, rd, opcode) (\
-	(opcode & 0x3f) \
+	(opcode & 0x7f) \
 	| ((rd & 0x1f) << 7) \
 	| ((funct3 & 0x7) << 12) \
 	| ((rs1 & 0x1f) << 15) \
@@ -42,14 +42,14 @@
 	| ((funct7 & 0x7f) << 25) \
     )
 #define RV_ISA_I_TYPE(imm11_0, rs1, funct3, rd, opcode) (\
-	(opcode & 0x3f) \
+	(opcode & 0x7f) \
 	| ((rd & 0x1f) << 7) \
 	| (((funct3) & 0x7) << 12) \
 	| ((rs1 & 0x1f) << 15) \
-	| ((imm11_0 & 0x7ff) << 20) \
+	| ((imm11_0 & 0xfff) << 20) \
     )
 #define RV_ISA_S_TYPE(imm11_0, rs2, rs1, funct3, opcode) (\
-	(opcode & 0x3f) \
+	(opcode & 0x7f) \
 	| ((imm11_0 & 0x1f) << 7) \
 	| ((funct3 & 0x7) << 12) \
 	| ((rs1 & 0x1f) << 15) \
@@ -57,7 +57,7 @@
 	| (((imm11_0 >> 5) & 0x7f) << 25) \
     )
 #define RV_ISA_B_TYPE(imm12_1, rs2, rs1, funct3, opcode) (\
-	(opcode & 0x3f) \
+	(opcode & 0x7f) \
 	| (((imm12_1 >> 10) & 0x1) << 7) \
 	| ((imm12_1 & 0xf) << 8) \
 	| ((funct3 & 0x7) << 12) \
@@ -67,12 +67,12 @@
 	| (((imm12_1 >> 11) & 0x1) << 31) \
     )
 #define RV_ISA_U_TYPE(imm31_12, rd, opcode) (\
-	(opcode & 0x3f) \
+	(opcode & 0x7f) \
 	| ((rd & 0x1f) << 7) \
 	| ((imm31_12 & 0xfffff) << 12) \
     )
 #define RV_ISA_J_TYPE(imm20_1, rd, opcode) (\
-	(opcode & 0x3f) \
+	(opcode & 0x7f) \
 	| ((rd & 0x1f) << 7) \
 	| (((imm20_1 >> 11) & 0xff) << 12) \
 	| (((imm20_1 >> 10) & 0x1) << 20) \
