@@ -109,12 +109,13 @@
 #define RV32I_ISA_OPCODE_LBU      RV32I_ISA_OPCODE_LW
 #define RV32I_ISA_OPCODE_LHU      RV32I_ISA_OPCODE_LW
 
+// Sign-aware immediate decode
 #define RV32I_ISA_I_GET_IMM(inst) \
-	((inst >> 20) & 0xfff)
-#define RV32I_ISA_S_GET_IMM(inst) (\
-	((inst >> 7) & 0x1f) \
-	| ((inst >> 25) & 0x7f) \
-	)
+	((int32_t)(inst & (0xfff << 20)) >> 20)
+#define RV32I_ISA_S_GET_IMM(inst) ((int32_t) \
+	(((inst & (0x1f << 7)) << 13) \
+	| (inst & (0x7f << 25)) \
+	) >> 20)
 #define RV32I_ISA_S_GET_RS1(inst) \
 	((inst >> 15) & 0x1f)
 

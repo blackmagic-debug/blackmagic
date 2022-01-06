@@ -1466,10 +1466,9 @@ exit_success:
 
 static bool decode_load_store_inst(target *t, uint32_t dpc, target_addr *watch)
 {
-	(void)watch;
 	uint8_t rv_opcode = 0U;
 	uint8_t rvc_funct3 = 0U;
-	uint16_t offset = 0U;
+	int32_t offset = 0;
 	uint8_t base_reg = 2U; // sp == x2
 	target_addr base_addr = 0UL;
 	uint32_t inst = (uint32_t)target_mem_read16(t, dpc); // TODO target_mem_read32()
@@ -1524,12 +1523,12 @@ static bool decode_load_store_inst(target *t, uint32_t dpc, target_addr *watch)
 		goto exit_fail;
 	}
 
-	DEBUG_TARGET("offset: %" PRIu16 "\n", offset);
+	DEBUG_TARGET("offset: %" PRIi32 "\n", offset);
 	DEBUG_TARGET("base_reg: %" PRIu8 "\n", base_reg);
 
 	rvdbg_reg_read(t, (int)base_reg, (void *)&base_addr, 4);
 	DEBUG_TARGET("base_addr: 0x%" PRIx32 "\n", base_addr);
-	*watch = base_addr + (target_addr)offset;
+	*watch = (target_addr)((int32_t)base_addr + offset);
 
 	return true;
 exit_fail:
