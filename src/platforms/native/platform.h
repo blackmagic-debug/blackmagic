@@ -43,38 +43,38 @@ int usbuart_debug_write(const char *buf, size_t len);
 
 /* Important pin mappings for STM32 implementation:
  *
- * LED0 = 	PB2	(Yellow LED : Running)
- * LED1 = 	PB10	(Yellow LED : Idle)
- * LED2 = 	PB11	(Red LED    : Error)
+ * LED0     = PB2   (Yellow LED : Running)
+ * LED1     = PB10  (Orange LED : Idle)
+ * LED2     = PB11  (Red LED    : Error)
  *
- * TPWR = 	PB0 (input) -- analogue on mini design ADC1, ch8
- * nTRST = 	PB1 (output) [blackmagic]
- * PWR_BR = 	PB1 (output) [blackmagic_mini] -- supply power to the target, active low
- * TMS_DIR =    PA1 (output) [blackmagic_mini v2.1] -- choose direction of the TCK pin, input low, output high
- * SRST_OUT = 	PA2 (output)
- * TDI = 	PA3 (output)
- * TMS = 	PA4 (input/output for SWDIO)
- * TCK = 	PA5 (output SWCLK)
- * TDO = 	PA6 (input)
- * nSRST = 	PA7 (input)
+ * TPWR     = PB0  (input)  -- analogue on mini design ADC1, CH8
+ * nTRST    = PB1  (output) [blackmagic]
+ * PWR_BR   = PB1  (output) [blackmagic_mini] -- supply power to the target, active low
+ * TMS_DIR  = PA1  (output) [blackmagic_mini v2.1] -- choose direction of the TCK pin, input low, output high
+ * SRST_OUT = PA2  (output)
+ * TDI      = PA3  (output)
+ * TMS      = PA4  (input/output for SWDIO)
+ * TCK      = PA5  (output SWCLK)
+ * TDO      = PA6  (input)
+ * nSRST    = PA7  (input)
  *
- * USB cable pull-up: PA8
- * USB VBUS detect:  PB13 -- New on mini design.
- *                           Enable pull up for compatibility.
- *                           Hardware 4 and older. (we needed the pin for SPI on 5)
- * 		     PA15 -- Hardware 5 and newer.
- * Force DFU mode button: PB12
+ * USB_PU   = PA8  (output)
+ * USB_VBUS = PB13 (input)  -- New on mini design.
+ *                             Enable pull up for compatibility.
+ *                             Hardware 4 and older. (we needed the pin for SPI on 5)
+ * 	          PA15 (input)  -- Hardware 5 and newer.
+ * BTN1     = PB12 (input)  -- Force DFU bootloader when pressed during powerup.
  *
  * AUX Interface:
- * SCLK =       PB13
- * COPI =       PB15
- * CIPO =       PB14
- * FLASH_CS =   PB5
- * DISPLAY_CS = PB6
- * DISPLAY_DC = PB8
- * BTN1 =       PB12
- * BTN2 =       PB9
- * VBAT =       PA0 (ADC CH0)
+ * SCLK       = PB13 (output)
+ * COPI       = PB15 (output)
+ * CIPO       = PB14 (input)
+ * FLASH_CS   = PB5  (output)
+ * DISPLAY_CS = PB6  (output)
+ * DISPLAY_DC = PB8  (output)
+ * BTN1       = PB12 (input)  -- Shared with the DFU bootloader button
+ * BTN2       = PB9  (input)
+ * VBAT       = PA0  (input)  -- Battery voltage sense ADC2, CH0
  */
 
 /* Hardware definitions... */
