@@ -62,6 +62,7 @@ static void setup_vbus_irq(void);
  * 011 - 0xFFFF -   3 - Mini V2.1a and later.
  * 011 - 0xFB04 -   4 - Mini V2.1d and later.
  * xxx - 0xFB05 -   5 - Mini V2.2a and later.
+ * xxx - 0xFB06 -   6 - Mini V2.3a and later.
  *
  * This function will return -2 if the version number does not make sense.
  * This can happen when the Data1 byte contains "garbage". For example a
