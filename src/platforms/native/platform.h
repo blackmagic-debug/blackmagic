@@ -41,6 +41,12 @@ int usbuart_debug_write(const char *buf, size_t len);
 #define PLATFORM_IDENT          " "
 #define UPD_IFACE_STRING        "@Internal Flash   /0x08000000/8*001Kg"
 
+/* Hardware version switcher helper
+ * when the hardware version is smaller than ver
+ * it outputs opt1, otherwise opt2 */
+#define HW_SWITCH(ver, opt1, opt2) \
+	((platform_hwversion() < (ver))?(opt1):(opt2))
+
 /* Important pin mappings for STM32 implementation:
  *
  * LED0     = PB2   (Yellow LED : Running)
@@ -51,26 +57,46 @@ int usbuart_debug_write(const char *buf, size_t len);
  * nTRST    = PB1  (output) [blackmagic]
  * PWR_BR   = PB1  (output) [blackmagic_mini] -- supply power to the target, active low
  * TMS_DIR  = PA1  (output) [blackmagic_mini v2.1] -- choose direction of the TCK pin, input low, output high
- * SRST_OUT = PA2  (output)
- * TDI      = PA3  (output)
+ * SRST_OUT = PA2  (output) -- Hardware 5 and older
+ *          = PA9  (output) -- Hardware 6 and newer
+ * TDI      = PA3  (output) -- Hardware 5 and older
+ *          = PA7  (output) -- Hardware 6 and newer
  * TMS      = PA4  (input/output for SWDIO)
  * TCK      = PA5  (output SWCLK)
  * TDO      = PA6  (input)
- * nSRST    = PA7  (input)
+ * TRACESWO = PB7  (input)  -- To allow trace decoding using USART1
+ *                             Hardware 4 has a normally open jumper between TDO and TRACESWO
+ *                             Hardware 5 has hardwired connection between TDO and TRACESWO
+ *          = PA10 (input)  -- Hardware 6 and newer
+ * nSRST    = PA7  (input)  -- Hardware 5 and older
+ *          = PC13 (input)  -- Hardware 6 and newer
  *
  * USB_PU   = PA8  (output)
  * USB_VBUS = PB13 (input)  -- New on mini design.
  *                             Enable pull up for compatibility.
  *                             Hardware 4 and older. (we needed the pin for SPI on 5)
- * 	          PA15 (input)  -- Hardware 5 and newer.
+ * 	        = PA15 (input)  -- Hardware 5 and newer.
  * BTN1     = PB12 (input)  -- Force DFU bootloader when pressed during powerup.
  *
- * AUX Interface:
+ * UART_TX  = PA9  (output) -- USART1 Hardware 5 and older
+ *          = PA2  (output) -- USART2 Hardware 6 and newer
+ * UART_RX  = PA10 (input)  -- USART1 Hardware 5 and older
+ *          = PA3  (input)  -- USART2 Hardware 6 and newer
+ *
+ * On Board OTG Flash: -- Optional on Hardware 5 and newer, since Hardware 6 can be on the main board
+ * FLASH_CS   = PB5  (output)
  * SCLK       = PB13 (output)
  * COPI       = PB15 (output)
  * CIPO       = PB14 (input)
- * FLASH_CS   = PB5  (output)
- * DISPLAY_CS = PB6  (output)
+ *
+ * AUX Interface: -- Hardware 5 and newer
+ * SCLK       = PB13 (output)
+ * COPI       = PB15 (output)
+ * CIPO       = PB14 (input)
+ * FLASH_CS   = PB5  (output) -- Only Hardware 5
+ * SD_CS      = PB6  (output) -- Hardware 6 and newer
+ * DISPLAY_CS = PB6  (output) -- OnlyHardware 5
+ *            = PB7  (output) -- Hardware 6 and newer
  * DISPLAY_DC = PB8  (output)
  * BTN1       = PB12 (input)  -- Shared with the DFU bootloader button
  * BTN2       = PB9  (input)
@@ -84,7 +110,7 @@ int usbuart_debug_write(const char *buf, size_t len);
 #define TMS_PORT	JTAG_PORT
 #define TCK_PORT	JTAG_PORT
 #define TDO_PORT	JTAG_PORT
-#define TDI_PIN		GPIO3
+#define TDI_PIN		HW_SWITCH(6, GPIO3, GPIO7)
 #define TMS_DIR_PIN	GPIO1
 #define TMS_PIN		GPIO4
 #define TCK_PIN		GPIO5
@@ -102,9 +128,9 @@ int usbuart_debug_write(const char *buf, size_t len);
 #define PWR_BR_PORT	GPIOB
 #define PWR_BR_PIN	GPIO1
 #define SRST_PORT	GPIOA
-#define SRST_PIN	GPIO2
+#define SRST_PIN	HW_SWITCH(6, GPIO2, GPIO9)
 #define SRST_SENSE_PORT	GPIOA
-#define SRST_SENSE_PIN	GPIO7
+#define SRST_SENSE_PIN  HW_SWITCH(6, GPIO7, GPIO13)
 
 #define USB_PU_PORT	GPIOA
 #define USB_PU_PIN	GPIO8
@@ -128,12 +154,20 @@ int usbuart_debug_write(const char *buf, size_t len);
 #define LED_IDLE_RUN	LED_1
 #define LED_ERROR	LED_2
 
-/* AUX Port */
+/* OTG Flash HW Rev 5 and newer */
+#define OTG_PORT       GPIOB
+#define OTG_CS         GPIO5
+#define OTG_SCLK       GPIO13
+#define OTG_COPI       GPIO15
+#define OTG_CIPO       GPIO14
+
+/* AUX Port HW Rev 5 and newer */
 #define AUX_PORT       GPIOB
 #define AUX_SCLK_PORT  AUX_PORT
 #define AUX_COPI_PORT  AUX_PORT
 #define AUX_CIPO_PORT  AUX_PORT
 #define AUX_FCS_PORT   AUX_PORT
+#define AUX_SDCS_PORT  AUX_PORT
 #define AUX_DCS_PORT   AUX_PORT
 #define AUX_DDC_PORT   AUX_PORT
 #define AUX_BTN1_PORT  AUX_PORT
@@ -143,7 +177,9 @@ int usbuart_debug_write(const char *buf, size_t len);
 #define AUX_COPI       GPIO15
 #define AUX_CIPO       GPIO14
 #define AUX_FCS        GPIO5
+#define AUX_SDCS       GPIO6
 #define AUX_DCS        GPIO6
+#define AUX_DCS6       GPIO7
 #define AUX_DDC        GPIO8
 #define AUX_BTN1       GPIO12
 #define AUX_BTN2       GPIO9
@@ -191,23 +227,39 @@ int usbuart_debug_write(const char *buf, size_t len);
 #define IRQ_PRI_USB_VBUS        (14 << 4)
 #define IRQ_PRI_TRACE           (0 << 4)
 
-#define USBUSART USART1
-#define USBUSART_CR1 USART1_CR1
-#define USBUSART_DR USART1_DR
-#define USBUSART_IRQ NVIC_USART1_IRQ
-#define USBUSART_CLK RCC_USART1
+#define USBUSART HW_SWITCH(6, USBUSART1, USBUSART2)
+#define USBUSART_IRQ HW_SWITCH(6, NVIC_USART1_IRQ, NVIC_USART2_IRQ)
+#define USBUSART_CLK HW_SWITCH(6, RCC_USART1, RCC_USART2)
 #define USBUSART_PORT GPIOA
-#define USBUSART_TX_PIN GPIO9
-#define USBUSART_RX_PIN GPIO10
-#define USBUSART_ISR(x) usart1_isr(x)
+#define USBUSART_TX_PIN HW_SWITCH(6, GPIO9, GPIO2)
+#define USBUSART_RX_PIN HW_SWITCH(6, GPIO10, GPIO3)
+
 #define USBUSART_DMA_BUS DMA1
 #define USBUSART_DMA_CLK RCC_DMA1
-#define USBUSART_DMA_TX_CHAN DMA_CHANNEL4
-#define USBUSART_DMA_TX_IRQ NVIC_DMA1_CHANNEL4_IRQ
-#define USBUSART_DMA_TX_ISR(x) dma1_channel4_isr(x)
-#define USBUSART_DMA_RX_CHAN DMA_CHANNEL5
-#define USBUSART_DMA_RX_IRQ NVIC_DMA1_CHANNEL5_IRQ
-#define USBUSART_DMA_RX_ISR(x) dma1_channel5_isr(x)
+#define USBUSART_DMA_TX_CHAN HW_SWITCH(6, USBUSART1_DMA_TX_CHAN, USBUSART2_DMA_TX_CHAN)
+#define USBUSART_DMA_RX_CHAN HW_SWITCH(6, USBUSART1_DMA_RX_CHAN, USBUSART2_DMA_RX_CHAN)
+#define USBUSART_DMA_TX_IRQ HW_SWITCH(6, USBUSART1_DMA_TX_IRQ, USBUSART2_DMA_TX_IRQ)
+#define USBUSART_DMA_RX_IRQ HW_SWITCH(6, USBUSART1_DMA_RX_IRQ, USBUSART2_DMA_RX_IRQ)
+
+#define USBUSART1 USART1
+#define USBUSART1_IRQ NVIC_USART1_IRQ
+#define USBUSART1_ISR(x) usart1_isr(x)
+#define USBUSART1_DMA_TX_CHAN DMA_CHANNEL4
+#define USBUSART1_DMA_TX_IRQ NVIC_DMA1_CHANNEL4_IRQ
+#define USBUSART1_DMA_TX_ISR(x) dma1_channel4_isr(x)
+#define USBUSART1_DMA_RX_CHAN DMA_CHANNEL5
+#define USBUSART1_DMA_RX_IRQ NVIC_DMA1_CHANNEL5_IRQ
+#define USBUSART1_DMA_RX_ISR(x) dma1_channel5_isr(x)
+
+#define USBUSART2 USART2
+#define USBUSART2_IRQ NVIC_USART2_IRQ
+#define USBUSART2_ISR(x) usart2_isr(x)
+#define USBUSART2_DMA_TX_CHAN DMA_CHANNEL6
+#define USBUSART2_DMA_TX_IRQ NVIC_DMA1_CHANNEL6_IRQ
+#define USBUSART2_DMA_TX_ISR(x) dma1_channel6_isr(x)
+#define USBUSART2_DMA_RX_CHAN DMA_CHANNEL7
+#define USBUSART2_DMA_RX_IRQ NVIC_DMA1_CHANNEL7_IRQ
+#define USBUSART2_DMA_RX_ISR(x) dma1_channel7_isr(x)
 
 #define TRACE_TIM TIM3
 #define TRACE_TIM_CLK_EN() rcc_periph_clock_enable(RCC_TIM3)
