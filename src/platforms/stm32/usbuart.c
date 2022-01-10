@@ -407,7 +407,7 @@ static void usbuart_run(void)
 }
 
 #if defined(USART_ICR)
-#define USBUSART_ISR_TEMPLATE(USART, DMA_IRQ)				\
+#define USBUSART_ISR_TEMPLATE(USART, DMA_IRQ) do {			\
 	nvic_disable_irq(DMA_IRQ);					\
 									\
 	/* Get IDLE flag and reset interrupt flags */ 			\
@@ -420,9 +420,10 @@ static void usbuart_run(void)
 		usbuart_run();						\
 	}								\
 									\
-	nvic_enable_irq(DMA_IRQ);
+	nvic_enable_irq(DMA_IRQ);					\
+} while(0)
 #else
-#define USBUSART_ISR_TEMPLATE(USART, DMA_IRQ)				\
+#define USBUSART_ISR_TEMPLATE(USART, DMA_IRQ) do {			\
 	nvic_disable_irq(DMA_IRQ);					\
 									\
 	/* Get IDLE flag and reset interrupt flags */ 			\
@@ -437,7 +438,8 @@ static void usbuart_run(void)
 		usbuart_run();						\
 	}								\
 									\
-	nvic_enable_irq(DMA_IRQ)
+	nvic_enable_irq(DMA_IRQ);					\
+} while(0)
 #endif
 
 #if defined(USBUSART_ISR)
@@ -473,7 +475,7 @@ void USBUSART2_ISR(void)
 }
 #endif
 
-#define USBUSART_DMA_TX_ISR_TEMPLATE(DMA_TX_CHAN) \
+#define USBUSART_DMA_TX_ISR_TEMPLATE(DMA_TX_CHAN) do {				\
 	nvic_disable_irq(USB_IRQ);						\
 										\
 	/* Stop DMA */								\
@@ -494,7 +496,8 @@ void USBUSART2_ISR(void)
 		tx_trfr_cplt = true;						\
 	}									\
 										\
-	nvic_enable_irq(USB_IRQ)
+	nvic_enable_irq(USB_IRQ);						\
+} while(0)
 
 #if defined(USBUSART_DMA_TX_ISR)
 void USBUSART_DMA_TX_ISR(void)
@@ -524,7 +527,7 @@ void USBUSART_DMA_TX_ISR(void)
 }
 #endif
 
-#define USBUSART_DMA_RX_ISR_TEMPLATE(USART_IRQ, DMA_RX_CHAN)			\
+#define USBUSART_DMA_RX_ISR_TEMPLATE(USART_IRQ, DMA_RX_CHAN) do {		\
 	nvic_disable_irq(USART_IRQ);						\
 										\
 	/* Clear flags */							\
@@ -532,7 +535,8 @@ void USBUSART_DMA_TX_ISR(void)
 	/* Transmit a packet */							\
 	usbuart_run();								\
 										\
-	nvic_enable_irq(USART_IRQ)
+	nvic_enable_irq(USART_IRQ);						\
+} while(0)
 
 #if defined(USBUSART_DMA_RX_ISR)
 void USBUSART_DMA_RX_ISR(void)
