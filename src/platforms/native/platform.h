@@ -254,12 +254,12 @@ int usbuart_debug_write(const char *buf, size_t len);
 #define USBUSART2 USART2
 #define USBUSART2_IRQ NVIC_USART2_IRQ
 #define USBUSART2_ISR(x) usart2_isr(x)
-#define USBUSART2_DMA_TX_CHAN DMA_CHANNEL6
-#define USBUSART2_DMA_TX_IRQ NVIC_DMA1_CHANNEL6_IRQ
-#define USBUSART2_DMA_TX_ISR(x) dma1_channel6_isr(x)
-#define USBUSART2_DMA_RX_CHAN DMA_CHANNEL7
-#define USBUSART2_DMA_RX_IRQ NVIC_DMA1_CHANNEL7_IRQ
-#define USBUSART2_DMA_RX_ISR(x) dma1_channel7_isr(x)
+#define USBUSART2_DMA_TX_CHAN DMA_CHANNEL7
+#define USBUSART2_DMA_TX_IRQ NVIC_DMA1_CHANNEL7_IRQ
+#define USBUSART2_DMA_TX_ISR(x) dma1_channel7_isr(x)
+#define USBUSART2_DMA_RX_CHAN DMA_CHANNEL6
+#define USBUSART2_DMA_RX_IRQ NVIC_DMA1_CHANNEL6_IRQ
+#define USBUSART2_DMA_RX_ISR(x) dma1_channel6_isr(x)
 
 #define TRACE_TIM TIM3
 #define TRACE_TIM_CLK_EN() rcc_periph_clock_enable(RCC_TIM3)
