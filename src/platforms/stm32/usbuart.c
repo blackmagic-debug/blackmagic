@@ -274,7 +274,8 @@ void usbuart_usb_out_cb(usbd_device *dev, uint8_t ep)
 	/* Don't bother if uart is disabled.
 	 * This will be the case on mini while we're being debugged.
 	 */
-	if(!(RCC_APB2ENR & RCC_APB2ENR_USART1EN))
+	if(!(RCC_APB2ENR & RCC_APB2ENR_USART1EN) &&
+	   !(RCC_APB1ENR & RCC_APB1ENR_USART2EN))
 	{
 		usbd_ep_nak_set(dev, CDCACM_UART_ENDPOINT, 0);
 		return;
