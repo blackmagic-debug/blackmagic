@@ -834,9 +834,15 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 		adiv5_ap_unref(ap);
 	}
 	/* We halted at least CortexM for Romtable scan.
-	 * Release the devices now. Attach() will halt them again.*/
-	for (target *t = target_list; t; t = t->next)
-		target_halt_resume(t, false);
+	 * With connect under reset, keep the devices halted.
+	 * Otherwise, release the devices now.
+	 * Attach() will halt them again.
+	 */
+	for (target *t = target_list; t; t = t->next) {
+		if (!connect_assert_srst) {
+			target_halt_resume(t, false);
+		}
+	}
 	adiv5_dp_unref(dp);
 }
 
