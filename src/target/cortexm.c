@@ -471,8 +471,6 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 		PROBE(lpc17xx_probe);
 	}
 #undef PROBE
-	/* Restart the CortexM we stopped for Romtable scan. Allow pure debug.*/
-	target_halt_resume(t, 0);
 	return true;
 }
 
