@@ -198,6 +198,10 @@ enum AUTOEXEC_STATE {
 #define CSR_MCONTROL_ACTION_DEBUG (1 << 12)
 #define CSR_MCONTROL_TIMING       (1 << 18)
 
+#define CSR_TDATA1_GET_TYPE(x)        ((x >> (32 - 4)) & 0xf)
+
+#define CSR_TINFO_GET_INFO(x)         (x & 0xffff)
+
 #define ABSTRACTCMD_SET_TYPE(t, s) do { \
 	t &= ~(0xff << 24); \
 	t |= (s & 0xff) << 24; } while (0)
@@ -232,6 +236,7 @@ enum AUTOEXEC_STATE {
 #define RISCV_MAX_HARTS 32U
 
 static bool rvdbdg_register_access(target *t, int argc, char *argv[]);
+static bool rvdbg_discover_trigger(target *t, uint8_t trigger_idx, uint16_t *info);
 static bool riscv_check_watch(target *t, target_addr *watch);
 static bool decode_load_store_inst(target *t, uint32_t dpc, target_addr *watch);
 
@@ -1598,6 +1603,46 @@ static int riscv_breakwatch_set(target *t, struct breakwatch *bw)
 	return 0;
 }
 
+/**
+ * Tests for a trigger existence.
+ * Returns supported trigger types in *info as specified in the tinfo register.
+ */
+static bool rvdbg_discover_trigger(target *t, uint8_t trigger_idx, uint16_t *info)
+{
+	uint8_t type = 0U;
+	uint16_t info_tmp = 0U;
+	uint32_t tselect, tdata1, tinfo;
+	RVDBGv013_DMI_t *dmi = t->priv;
+
+	rvdbg_write_single_reg(dmi, HART_REG_CSR_TSELECT, trigger_idx, AUTOEXEC_STATE_NONE);
+	rvdbg_read_single_reg(dmi, HART_REG_CSR_TSELECT, &tselect, AUTOEXEC_STATE_NONE);
+	if (tselect != trigger_idx)
+		goto exit_fail;
+	if (rvdbg_read_single_reg(dmi, HART_REG_CSR_TINFO, &tinfo, AUTOEXEC_STATE_NONE)) {
+		DEBUG_TARGET("Trigger #%" PRIu8 ", tinfo unimplemented\n", trigger_idx);
+		rvdbg_read_single_reg(dmi, HART_REG_CSR_TDATA1, &tdata1, AUTOEXEC_STATE_NONE);
+		type = CSR_TDATA1_GET_TYPE(tdata1);
+		if (type == 0U) {
+			DEBUG_TARGET("Trigger type = 0\n");
+			goto exit_fail;
+		} else {
+			info_tmp = 0x1 << type;
+		}
+	} else {
+		info_tmp = CSR_TINFO_GET_INFO(tinfo);
+		if (info_tmp == 1U) {
+			DEBUG_TARGET("Trigger info = 1\n");
+			goto exit_fail;
+		}
+	}
+
+	if (info != NULL)
+		*info = info_tmp;
+	return true;
+exit_fail:
+	return false;
+}
+
 static int riscv_breakwatch_clear(target *t, struct breakwatch *bw)
 {
 	uint32_t i = bw->reserved[0];
@@ -1795,16 +1840,19 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 
 	/* Enumerate triggers */
 	dmi->dmi_triggers = 0;
-	for (uint32_t i = 0; ; i++) {
-		res = rvdbg_write_single_reg(dmi, HART_REG_CSR_TSELECT, i, AUTOEXEC_STATE_NONE);
-		if (res)
-			break;
-		uint32_t tselect;
-		rvdbg_read_single_reg(dmi, HART_REG_CSR_TSELECT, &tselect, AUTOEXEC_STATE_NONE);
-		if (i  != tselect)
-			break;
-		dmi->dmi_triggers = i + 1;
+	uint32_t tselect_saved = 0U;
+	uint32_t trigger_idx = 0U;
+	uint16_t trigger_info = 0U;
+	rvdbg_read_single_reg(dmi, HART_REG_CSR_TSELECT, &tselect_saved, AUTOEXEC_STATE_NONE);
+
+	while (rvdbg_discover_trigger(t, trigger_idx, &trigger_info)) {
+		DEBUG_INFO("Trigger #%" PRIu8 ", info = %04" PRIx16 "\n", trigger_idx, trigger_info);
+		trigger_idx++;
 	}
+	dmi->dmi_triggers = trigger_idx;
+
+	/* Restore tselect */
+	rvdbg_write_single_reg(dmi, HART_REG_CSR_TSELECT, tselect_saved, AUTOEXEC_STATE_NONE);
 	DEBUG_INFO("Found %d triggers\n", dmi->dmi_triggers);
 
 	/* some test routines */
