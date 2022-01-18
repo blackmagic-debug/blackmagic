@@ -5,8 +5,6 @@
 #include "target.h"
 
 typedef struct Atmel_DP_s {
-	int refcnt;
-
 	uint32_t idcode;
 
 	uint8_t dp_jd_index;

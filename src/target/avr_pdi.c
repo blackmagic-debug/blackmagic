@@ -80,17 +80,6 @@ typedef struct __attribute__((packed))
 	uint32_t pc; // r34
 } avr_regs;
 
-static void avr_dp_ref(AVR_DP_t *dp)
-{
-	dp->refcnt++;
-}
-
-static void avr_dp_unref(AVR_DP_t *dp)
-{
-	if (--(dp->refcnt) == 0)
-		free(dp);
-}
-
 bool avr_dp_init(AVR_DP_t *dp)
 {
 	target *t;
@@ -108,13 +97,13 @@ bool avr_dp_init(AVR_DP_t *dp)
 	t = target_new();
 	if (!t)
 		return false;
-	avr_dp_ref(dp);
 
 	t->cpuid = dp->idcode;
 	t->idcode = (dp->idcode >> 12) & 0xFFFFU;
-	t->priv = dp;
 	t->driver = "Atmel AVR";
 	t->core = "AVR";
+	t->priv = dp;
+	t->priv_free = free;
 
 	t->attach = avr_attach;
 	t->detach = avr_detach;
