@@ -6,6 +6,7 @@
  * Copyright (c) 2019 Roland Ruckerbauer <roland.rucky@gmail.com>
  * based on similar work by Gareth McMullin <gareth@blacksphere.co.nz>
  * Copyright (c) 2020-21 Uwe Bonnes <bon@elektron.ikp.physik.tu-darmstadt.de>
+ * Copyright (c) 2021 Fabrice Prost-Boucle <fabalthazar@falbalab.fr>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -188,6 +189,10 @@ enum AUTOEXEC_STATE {
 #define SBCS_SBACCESS_32BIT           (2U << 17)
 #define SBCD_SBREADONADDR             (1U << 20)
 
+/* CSR Register bits */
+#define CSR_DCSR_STEP                 (0x1 << 2)
+#define CSR_DCSR_GET_CAUSE(x)         ((x >> 6) & 0x7)
+
 #define CSR_MCONTROL_DMODE        (1<<(32-5))
 #define CSR_MCONTROL_ENABLE_MASK  (0xf << 3)
 #define CSR_MCONTROL_R            (1 << 0)
@@ -199,9 +204,12 @@ enum AUTOEXEC_STATE {
 #define CSR_MCONTROL_TIMING       (1 << 18)
 #define CSR_MCONTROL_HIT          (0x1 << 20)
 
+#define CSR_TDATA1_TYPE(t)            (t << (32 - 4))
 #define CSR_TDATA1_GET_TYPE(x)        ((x >> (32 - 4)) & 0xf)
+#define CSR_TDATA1_DATA_MASK          0x7ffffff
 
 #define CSR_TINFO_GET_INFO(x)         (x & 0xffff)
+#define CSR_TINFO_HAS_TYPE(x,t)       (x & (0x1 << t))
 
 #define ABSTRACTCMD_SET_TYPE(t, s) do { \
 	t &= ~(0xff << 24); \
@@ -230,9 +238,6 @@ enum AUTOEXEC_STATE {
 #define ABSTRACTAUTO_SET_DATA(t, s)     do { \
 	t &= ~(0xfff); \
 	t |= s & 0xfff; } while (0)
-
-/* CSR Register bits */
-#define CSR_DCSR_STEP (1U << 2)
 
 #define RISCV_MAX_HARTS 32U
 
@@ -1409,7 +1414,7 @@ static enum target_halt_reason rvdbg_halt_poll(target *t, target_addr *watch)
 	/* dcsr may not be readable when running*/
 	uint32_t dcsr;
 	res = rvdbg_read_single_reg(dmi, HART_REG_CSR_DCSR, &dcsr, AUTOEXEC_STATE_NONE);
-	uint8_t cause = (dcsr >> 6) & 7;
+	uint8_t cause = CSR_DCSR_GET_CAUSE(dcsr);
 	if ((t->t_designer == 0x612) && (cause == 3 ) && (dcsr & CSR_DCSR_STEP)) {
 		/* FIXME: ESP32-C3 never reports TARGET_HALT_STEPPING */
 		DEBUG_INFO("Workaround for single stepping ESP32-C3\n");
@@ -1490,11 +1495,11 @@ static bool riscv_check_watch(target *t, target_addr *watch)
 		/* 'hit' bit unimplemented, instruction decoding fallback */
 		DEBUG_TARGET("hit bit unimplemented\n");
 		if (decode_load_store_inst(t, dpc, watch)) {
-	for (bw = t->bw_list; bw; bw = bw->next) {
-		if ((bw->type == TARGET_WATCH_WRITE) ||
-		    (bw->type == TARGET_WATCH_READ) ||
-		    (bw->type == TARGET_WATCH_ACCESS)) {
-			if (bw->addr == *watch) {
+			for (bw = t->bw_list; bw; bw = bw->next) {
+				if ((bw->type == TARGET_WATCH_WRITE) ||
+				    (bw->type == TARGET_WATCH_READ) ||
+				    (bw->type == TARGET_WATCH_ACCESS)) {
+					if (bw->addr == *watch) {
 						wp_found = true;
 						break;
 					}
@@ -1582,8 +1587,13 @@ exit_fail:
 
 static int riscv_breakwatch_set(target *t, struct breakwatch *bw)
 {
-	uint32_t mcontrol = CSR_MCONTROL_DMODE | CSR_MCONTROL_ACTION_DEBUG |
-		CSR_MCONTROL_ENABLE_MASK;
+	int ret = 0;
+	bool free_trigger = false;
+	uint32_t tselect_saved, tdata1;
+	uint32_t trigger_idx = 0U;
+	uint16_t trigger_info = 0U;
+	uint32_t mcontrol = CSR_TDATA1_TYPE(2) | CSR_MCONTROL_DMODE |
+	                    CSR_MCONTROL_ACTION_DEBUG | CSR_MCONTROL_ENABLE_MASK;
 
 	switch (bw->type) {
 	case TARGET_BREAK_HARD:
@@ -1601,38 +1611,42 @@ static int riscv_breakwatch_set(target *t, struct breakwatch *bw)
 		mcontrol |= CSR_MCONTROL_TIMING;
 		break;
 	default:
-		return 1;
+		ret = 1; // Type not supported
+		goto exit;
 	}
 
-	uint32_t tselect_saved;
+	/* Save tselect */
 	rvdbg_reg_read(t, HART_REG_CSR_TSELECT, &tselect_saved, 4);
 
-	uint32_t i;
-	for (i = 0; ; i++) {
-		rvdbg_reg_write(t, HART_REG_CSR_TSELECT, &i, 4);
-		uint32_t tselect;
-		rvdbg_reg_read(t, HART_REG_CSR_TSELECT, &tselect, 4);
-		if (tselect != i)
-			return -1;
-		uint32_t tdata1;
-		rvdbg_reg_read(t, HART_REG_CSR_MCONTROL, &tdata1, 4);
-		uint8_t type = (tdata1 >> (32-4)) & 0xf;
-		if ((type == 0))
-			return -1;
-		if ((type == 2)  &&
-			(((tdata1 & CSR_MCONTROL_RWX) == 0) ||
-			 ((tdata1 & CSR_MCONTROL_ENABLE_MASK) == 0)))
-			break;
-	}
-	/* if we get here tselect = i is the index of our trigger */
-	bw->reserved[0] = i;
+	while (rvdbg_discover_trigger(t, trigger_idx, &trigger_info)) {
+		rvdbg_reg_read(t, HART_REG_CSR_TDATA1, &tdata1, 4);
+		DEBUG_TARGET("Trigger #%" PRIu32 ", type = %" PRIu8 "\n", trigger_idx, CSR_TDATA1_GET_TYPE(tdata1));
 
-	rvdbg_reg_write(t, HART_REG_CSR_MCONTROL, &mcontrol, 4);
-	rvdbg_reg_write(t, HART_REG_CSR_TDATA2, &bw->addr, 4);
+		if (CSR_TINFO_HAS_TYPE(trigger_info,2) &&
+		    (((tdata1 & CSR_MCONTROL_RWX) == 0U) ||
+		    ((tdata1 & CSR_MCONTROL_ENABLE_MASK) == 0U))) {
+			free_trigger = true;
+			break;
+		}
+		trigger_idx++;
+	}
+
+	if (free_trigger) {
+		/* if we get here tselect is the index of our trigger */
+		bw->reserved[0] = trigger_idx;
+		DEBUG_TARGET("Setting trigger #%" PRIu32 ", addr = %08" PRIx32 "\n", trigger_idx, bw->addr);
+
+		rvdbg_reg_write(t, HART_REG_CSR_MCONTROL, &mcontrol, 4);
+		rvdbg_reg_write(t, HART_REG_CSR_TDATA2, &bw->addr, 4);
+	} else {
+		DEBUG_TARGET("No free trigger\n");
+		ret = -1; // Error
+	}
 
 	/* Restore saved tselect */
 	rvdbg_reg_write(t, HART_REG_CSR_TSELECT, &tselect_saved, 4);
-	return 0;
+exit:
+	return ret;
 }
 
 /**
@@ -1680,6 +1694,7 @@ static int riscv_breakwatch_clear(target *t, struct breakwatch *bw)
 	uint32_t i = bw->reserved[0];
 	uint32_t tselect_saved;
 	rvdbg_reg_read(t, HART_REG_CSR_TSELECT, &tselect_saved, 4);
+	DEBUG_TARGET("Clearing trigger #%" PRIu32 ", addr = %08" PRIx32 "\n", i, bw->addr);
 
 	rvdbg_reg_write(t, HART_REG_CSR_TSELECT, &i, 4);
 	i = 0;
