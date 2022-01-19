@@ -539,11 +539,7 @@ handle_z_packet(char *packet, int plen)
 	uint32_t addr;
 	int ret;
 
-	/* I have no idea why this doesn't work. Seems to work
-	 * with real sscanf() though... */
-	//sscanf(packet, "%*[zZ]%hhd,%08lX,%hhd", &type, &addr, &len);
-	type = packet[1] - '0';
-	sscanf(packet + 2, ",%" PRIx32 ",%d", &addr, &len);
+	sscanf(packet, "%*[zZ]%d,%08" PRIX32 ",%d", &type, &addr, &len);
 	if(set)
 		ret = target_breakwatch_set(cur_target, type, addr, len);
 	else
