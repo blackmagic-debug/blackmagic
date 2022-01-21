@@ -53,9 +53,7 @@
 #define AVR_DBG_READ_REGS	0x11U
 #define AVR_NUM_REGS		32
 
-#define AVR_ADDR_CPU		0x01000030U
-#define AVR_ADDR_CPU_SPL	0xDU
-#define AVR_ADDR_CPU_SREG	0xFU
+#define AVR_ADDR_CPU_SPL		0x0100003DU
 
 typedef enum
 {
@@ -352,11 +350,10 @@ static void avr_regs_read(target *t, void *data)
 {
 	AVR_DP_t *dp = t->priv;
 	avr_regs *regs = (avr_regs *)data;
+	uint8_t status[3];
 	uint32_t pc = 0;
-	uint16_t sp = 0;
 	if (!avr_pdi_read32(dp, AVR_ADDR_DBG_PC, &pc) ||
-		!avr_pdi_read16(dp, AVR_ADDR_CPU | AVR_ADDR_CPU_SPL, &sp) ||
-		!avr_pdi_read8(dp, AVR_ADDR_CPU | AVR_ADDR_CPU_SREG, &regs->sreg) ||
+		!avr_pdi_read_ind(dp, AVR_ADDR_CPU_SPL, PDI_MODE_IND_INCPTR, status, 3) ||
 		!avr_pdi_write(dp, PDI_DATA_8, AVR_ADDR_DBG_CTRL, AVR_DBG_READ_REGS) ||
 		!avr_pdi_write(dp, PDI_DATA_32, AVR_ADDR_DBG_CTR, AVR_NUM_REGS) ||
 		!avr_pdi_reg_write(dp, PDI_REG_R4, 1) ||
@@ -366,5 +363,6 @@ static void avr_regs_read(target *t, void *data)
 	// Additionally, the program counter is stored in words and points to the next instruction to be executed
 	// So we substract 1 and double.
 	regs->pc = (pc - 1) << 1;
-	regs->sp = sp;
+	regs->sp = status[0] | (status[1] << 8);
+	regs->sreg = status[2];
 }
