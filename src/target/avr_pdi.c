@@ -219,7 +219,8 @@ static inline bool avr_pdi_read24(AVR_DP_t *dp, uint32_t reg, uint32_t *value)
 static inline bool avr_pdi_read32(AVR_DP_t *dp, uint32_t reg, uint32_t *value)
 	{ return avr_pdi_read(dp, PDI_DATA_32, reg, value); }
 
-static bool avr_pdi_read_ind(AVR_DP_t *dp, uint32_t addr, uint8_t ptr_mode, void *dst, uint32_t count)
+static bool avr_pdi_read_ind(const AVR_DP_t *const dp, const uint32_t addr, const uint8_t ptr_mode,
+	void *const dst, const uint32_t count)
 {
 	const uint32_t repeat = count - 1U;
 	uint8_t result = 0, command;
@@ -248,7 +249,7 @@ static bool avr_pdi_read_ind(AVR_DP_t *dp, uint32_t addr, uint8_t ptr_mode, void
 		return false;
 	for (uint32_t i = 0; i < count; ++i)
 	{
-		if (!avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &data[i], 0))
+		if (!avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, data + i, 0))
 			return false;
 	}
 	return true;
