@@ -58,8 +58,10 @@ bool atxmega_probe(target *t)
 		case IDCODE_XMEGA256A3U:
 			t->core = "ATXMega256A3U";
 			target_add_ram(t, 0x01002000, 0x800);
-			avr_add_flash(t, 0x00800000, 0x40000);
-			avr_add_flash(t, 0x00840000, 0x2000);
+			// These are mapped here to make things make sense to GDB
+			// - internally we add 0x00800000 to get to the PDI mapped address.
+			avr_add_flash(t, 0x00000000, 0x40000);
+			avr_add_flash(t, 0x00040000, 0x2000);
 			t->tdesc = tdesc_xmega6;
 			return true;
 	}

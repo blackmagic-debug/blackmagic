@@ -45,6 +45,8 @@
 
 #define PDI_RESET	0x59U
 
+#define PDI_FLASH_OFFSET	0x00800000U
+
 #define AVR_ADDR_DBG_CTR		0x00000000U
 #define AVR_ADDR_DBG_PC			0x00000004U
 #define AVR_ADDR_DBG_CTRL		0x0000000aU
@@ -74,6 +76,9 @@ static const char pdi_key_debug[] = {0x21, 0x81, 0x7c, 0x9f, 0xd4, 0x2d, 0x21, 0
 static void avr_reset(target *t);
 static void avr_halt_request(target *t);
 static enum target_halt_reason avr_halt_poll(target *t, target_addr *watch);
+
+static bool avr_check_error(target *t);
+static void avr_mem_read(target *t, void *dest, target_addr src, size_t len);
 
 static void avr_regs_read(target *t, void *data);
 
@@ -112,6 +117,9 @@ bool avr_dp_init(AVR_DP_t *dp)
 
 	t->attach = avr_attach;
 	t->detach = avr_detach;
+
+	t->check_error = avr_check_error;
+	t->mem_read = avr_mem_read;
 
 	t->regs_read = avr_regs_read;
 
@@ -373,6 +381,23 @@ static enum target_halt_reason avr_halt_poll(target *t, target_addr *watch)
 	AVR_DP_t *dp = t->priv;
 	(void)watch;
 	return dp->halt_reason;
+}
+
+static bool avr_check_error(target *t)
+{
+	AVR_DP_t *dp = t->priv;
+	(void)dp;
+	return false;
+}
+
+static void avr_mem_read(target *t, void *dest, target_addr src, size_t len)
+{
+	AVR_DP_t *dp = t->priv;
+	// This presently assumes src is a Flash address.
+	if (!avr_pdi_write(dp, PDI_DATA_8, AVR_ADDR_NVM_CMD, AVR_NVM_CMD_READ_NVM) ||
+		!avr_pdi_read_ind(dp, src | PDI_FLASH_OFFSET, PDI_MODE_IND_INCPTR, dest, len) ||
+		!avr_ensure_nvm_idle(dp))
+		return; // TODO: set an error indicator for avr_check_error.
 }
 
 static void avr_regs_read(target *t, void *data)
