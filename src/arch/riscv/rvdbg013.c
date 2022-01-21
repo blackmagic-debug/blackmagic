@@ -1422,7 +1422,7 @@ static enum target_halt_reason rvdbg_halt_poll(target *t, target_addr *watch)
 		DEBUG_INFO("Workaround for single stepping ESP32-C3\n");
 		cause = 4;
 	}
-	DEBUG_TARGET("DCSR 0x%08" PRIx32 ", cause = %d\n", dcsr,cause);
+	DEBUG_TARGET("DCSR 0x%08" PRIx32 ", cause = %" PRIu8 "\n", dcsr, cause);
 	if (cause == 0)
 		return TARGET_HALT_RUNNING;
 	switch (cause) {
@@ -1622,7 +1622,7 @@ static int riscv_breakwatch_set(target *t, struct breakwatch *bw)
 
 	while (rvdbg_discover_trigger(t, trigger_idx, &trigger_info)) {
 		rvdbg_reg_read(t, HART_REG_CSR_TDATA1, &tdata1, 4);
-		DEBUG_TARGET("Trigger #%" PRIu32 ", type = %" PRIu8 "\n", trigger_idx, CSR_TDATA1_GET_TYPE(tdata1));
+		DEBUG_TARGET("Trigger #%" PRIu32 ", type = %" PRIu8 "\n", trigger_idx, (uint8_t)CSR_TDATA1_GET_TYPE(tdata1));
 
 		if (CSR_TINFO_HAS_TYPE(trigger_info,2) &&
 		    (((tdata1 & CSR_MCONTROL_RWX) == 0U) ||
@@ -1636,7 +1636,7 @@ static int riscv_breakwatch_set(target *t, struct breakwatch *bw)
 	if (free_trigger) {
 		/* if we get here tselect is the index of our trigger */
 		bw->reserved[0] = trigger_idx;
-		DEBUG_TARGET("Setting trigger #%" PRIu32 ", addr = %08" PRIx32 "\n", trigger_idx, bw->addr);
+		DEBUG_TARGET("Setting trigger #%" PRIu32 ", addr = 0x%08" PRIx32 "\n", trigger_idx, bw->addr);
 
 		rvdbg_reg_write(t, HART_REG_CSR_MCONTROL, &mcontrol, 4);
 		rvdbg_reg_write(t, HART_REG_CSR_TDATA2, &bw->addr, 4);
@@ -1696,7 +1696,7 @@ static int riscv_breakwatch_clear(target *t, struct breakwatch *bw)
 	uint32_t i = bw->reserved[0];
 	uint32_t tselect_saved;
 	rvdbg_reg_read(t, HART_REG_CSR_TSELECT, &tselect_saved, 4);
-	DEBUG_TARGET("Clearing trigger #%" PRIu32 ", addr = %08" PRIx32 "\n", i, bw->addr);
+	DEBUG_TARGET("Clearing trigger #%" PRIu32 ", addr = 0x%08" PRIx32 "\n", i, bw->addr);
 
 	rvdbg_reg_write(t, HART_REG_CSR_TSELECT, &i, 4);
 	i = 0;
@@ -1895,14 +1895,14 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 	rvdbg_read_single_reg(dmi, HART_REG_CSR_TSELECT, &tselect_saved, AUTOEXEC_STATE_NONE);
 
 	while (rvdbg_discover_trigger(t, trigger_idx, &trigger_info)) {
-		DEBUG_INFO("Trigger #%" PRIu8 ", info = %04" PRIx16 "\n", trigger_idx, trigger_info);
+		DEBUG_INFO("Trigger #%" PRIu8 ", info = 0x%04" PRIx16 "\n", trigger_idx, trigger_info);
 		trigger_idx++;
 	}
 	dmi->dmi_triggers = trigger_idx;
 
 	/* Restore tselect */
 	rvdbg_write_single_reg(dmi, HART_REG_CSR_TSELECT, tselect_saved, AUTOEXEC_STATE_NONE);
-	DEBUG_INFO("Found %d triggers\n", dmi->dmi_triggers);
+	DEBUG_INFO("Found %" PRIu32 " triggers\n", dmi->dmi_triggers);
 
 	/* some test routines */
 #if 0
