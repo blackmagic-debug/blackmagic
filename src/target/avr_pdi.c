@@ -57,11 +57,11 @@
 
 typedef enum
 {
-	PDI_PROG = 0x02U,
+	PDI_NVM = 0x02U,
 	PDI_DEBUG = 0x04U,
 } pdi_key_e;
 
-static const char pdi_key_prog[] = {0xff, 0x88, 0xd8, 0xcd, 0x45, 0xab, 0x89, 0x12};
+static const char pdi_key_nvm[] = {0xff, 0x88, 0xd8, 0xcd, 0x45, 0xab, 0x89, 0x12};
 static const char pdi_key_debug[] = {0x21, 0x81, 0x7c, 0x9f, 0xd4, 0x2d, 0x21, 0x3a};
 
 static void avr_reset(target *t);
@@ -257,7 +257,7 @@ static bool avr_pdi_read_ind(const AVR_DP_t *const dp, const uint32_t addr, cons
 
 static bool avr_enable(AVR_DP_t *dp, pdi_key_e what)
 {
-	const char *const key = what == PDI_DEBUG ? pdi_key_debug : pdi_key_prog;
+	const char *const key = what == PDI_DEBUG ? pdi_key_debug : pdi_key_nvm;
 	uint8_t result = 0;
 	if (avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, PDI_KEY) || result != PDI_EMPTY)
 		return false;
@@ -266,7 +266,14 @@ static bool avr_enable(AVR_DP_t *dp, pdi_key_e what)
 		if (avr_jtag_shift_dr(&jtag_proc, dp->dp_jd_index, &result, key[i]) || result != PDI_EMPTY)
 			return false;
 	}
-	return (avr_pdi_reg_read(dp, PDI_REG_STATUS) & what) == what;
+	if (what == PDI_NVM)
+	{
+		while ((avr_pdi_reg_read(dp, PDI_REG_STATUS) & what) != what)
+			continue;
+		return true;
+	}
+	else
+		return (avr_pdi_reg_read(dp, PDI_REG_STATUS) & what) == what;
 }
 
 static bool avr_disable(AVR_DP_t *dp, pdi_key_e what)
