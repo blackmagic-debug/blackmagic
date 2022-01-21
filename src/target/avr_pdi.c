@@ -17,9 +17,9 @@
 #define PDI_STS		0x40U
 #define PDI_ST		0x60U
 #define PDI_LDCS	0x80U
-#define PDI_REPEAT	0xa0U
-#define PDI_STCS	0xc0U
-#define PDI_KEY		0xe0U
+#define PDI_REPEAT	0xA0U
+#define PDI_STCS	0xC0U
+#define PDI_KEY		0xE0U
 
 #define PDI_DATA_8	0x00U
 #define PDI_DATA_16	0x01U
@@ -29,13 +29,13 @@
 #define PDI_ADDR_8	0x00U
 #define PDI_ADDR_16	0x04U
 #define PDI_ADDR_24	0x08U
-#define PDI_ADDR_32	0x0cU
+#define PDI_ADDR_32	0x0CU
 
 #define PDI_MODE_IND_PTR	0x00U
 #define PDI_MODE_IND_INCPTR	0x04U
 #define PDI_MODE_DIR_PTR	0x08U
-#define PDI_MODE_DIR_INCPTR	0x0cU // "Reserved"
-#define PDI_MODE_MASK		0xf3U
+#define PDI_MODE_DIR_INCPTR	0x0CU // "Reserved"
+#define PDI_MODE_MASK		0xF3U
 
 #define PDI_REG_STATUS	0U
 #define PDI_REG_RESET	1U
@@ -49,11 +49,11 @@
 
 #define AVR_ADDR_DBG_CTR		0x00000000U
 #define AVR_ADDR_DBG_PC			0x00000004U
-#define AVR_ADDR_DBG_CTRL		0x0000000aU
-#define AVR_ADDR_DBG_SPECIAL	0x0000000cU
+#define AVR_ADDR_DBG_CTRL		0x0000000AU
+#define AVR_ADDR_DBG_SPECIAL	0x0000000CU
 
-#define AVR_DBG_READ_REGS	0x11U
-#define AVR_NUM_REGS		32
+#define AVR_DBG_READ_REGS		0x11U
+#define AVR_NUM_REGS			32
 
 #define AVR_ADDR_CPU_SPL		0x0100003DU
 
