@@ -339,9 +339,13 @@ void avr_detach(target *t)
 static void avr_reset(target *t)
 {
 	AVR_DP_t *dp = t->priv;
-	if (!avr_pdi_reg_write(dp, PDI_REG_RESET, PDI_RESET) ||
-		avr_pdi_reg_read(dp, PDI_REG_STATUS) != 0x00)
+	if (!avr_pdi_reg_write(dp, PDI_REG_RESET, PDI_RESET))
 		raise_exception(EXCEPTION_ERROR, "Error resetting device, device in incorrect state");
+	if (avr_pdi_reg_read(dp, PDI_REG_STATUS) != 0x00)
+	{
+		avr_disable(dp, PDI_NVM);
+		avr_disable(dp, PDI_DEBUG);
+	}
 }
 
 static void avr_halt_request(target *t)
