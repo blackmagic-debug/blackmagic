@@ -983,6 +983,7 @@ static void rvdbg_mem_read_abstract(target *t, void* dest, target_addr address, 
 		unsigned int remainder = 4 - pre_run;
 		int count = MIN(remainder, len);
 		memcpy(dest, p, count);
+		dest += count;
 		address += count;
 		len -= count;
 	}
