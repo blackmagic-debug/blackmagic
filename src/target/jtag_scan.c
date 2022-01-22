@@ -30,7 +30,7 @@
 #include "adiv5.h"
 #include "jtag_devs.h"
 
-jtag_dev_t jtag_devs[JTAG_MAX_DEVS+1];
+struct jtag_dev_s jtag_devs[JTAG_MAX_DEVS+1];
 int jtag_dev_count;
 
 /* bucket of ones for don't care TDI */
