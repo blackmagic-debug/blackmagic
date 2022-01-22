@@ -34,9 +34,9 @@ static bool nop_function(void)
 	return true;
 }
 
-static int null_function(void)
+static bool false_function(void)
 {
-	return 0;
+	return false;
 }
 
 target *target_new(void)
@@ -68,7 +68,7 @@ target *target_new(void)
 	t->halt_request = (void*)nop_function;
 	t->halt_poll = (void*)nop_function;
 	t->halt_resume = (void*)nop_function;
-	t->check_error = (void*)null_function;
+	t->check_error = (void*)false_function;
 
 	t->target_storage = NULL;
 
