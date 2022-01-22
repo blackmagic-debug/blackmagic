@@ -429,23 +429,6 @@ static bool cortexm_prepare(ADIv5_AP_t *ap)
 			return false;
 		}
 	}
-	/* Apply device specific settings for successfull Romtable scan
-	 *
-	 * STM32F7 in WFI will not read ROMTABLE when using WFI
-	 */
-	if ((ap->dp->targetid >> 1 & 0x7ff) == 0x20) {
-		uint32_t dbgmcu_cr = 7;
-		uint32_t dbgmcu_cr_addr = 0xE0042004;
-		switch ((ap->dp->targetid >> 16) & 0xfff) {
-		case 0x449:
-		case 0x451:
-		case 0x452:
-			ap->ap_storage = adiv5_mem_read32(ap, dbgmcu_cr_addr);
-			dbgmcu_cr = ap->ap_storage | 7;
-			adiv5_mem_write(ap, dbgmcu_cr_addr, &dbgmcu_cr, sizeof(dbgmcu_cr));
-			break;
-		}
-	}
 	return true;
 }
 
