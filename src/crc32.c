@@ -132,7 +132,7 @@ int generic_crc32(target *t, uint32_t *crc_res, uint32_t base, size_t len)
 		base += read_len;
 		len -= read_len;
 	}
-	DEBUG_WARN("%d ms\n", platform_time_ms() - start_time);
+	DEBUG_WARN("%" PRIu32 " ms\n", platform_time_ms() - start_time);
 	*crc_res = crc;
 	return 0;
 }
