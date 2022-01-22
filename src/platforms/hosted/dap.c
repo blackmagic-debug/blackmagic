@@ -721,9 +721,9 @@ void dap_jtagtap_tdi_tdo_seq(uint8_t *DO, bool final_tms, const uint8_t *TMS,
 			*p++ = transfers;
 			for (int i = 0; i < transfers; i++) {
 				*p++ = 1 | ((DO) ? DAP_JTAG_TDO_CAPTURE : 0) |
-					((TMS[i / 8] & (1 << (i & 7))) ? DAP_JTAG_TMS : 0);
+					((TMS[i >> 3] & (1 << (i & 7))) ? DAP_JTAG_TMS : 0);
 				if (DI)
-					*p++ = (DI[i / 8] & (1 << (i & 7))) ? 1 : 0;
+					*p++ = (DI[i >> 3] & (1 << (i & 7))) ? 1 : 0;
 				else
 					*p++ = 1;
 			}
@@ -733,9 +733,9 @@ void dap_jtagtap_tdi_tdo_seq(uint8_t *DO, bool final_tms, const uint8_t *TMS,
 			if (DO) {
 				for (int i = 0; i < transfers; i++) {
 					if (buf[i + 1])
-						DO[i / 8] |= (1 << (i & 7));
+						DO[i >> 3] |= (1 << (i & 7));
 					else
-						DO[i / 8] &= ~(1 << (i & 7));
+						DO[i >> 3] &= ~(1 << (i & 7));
 				}
 			}
 			ticks -= transfers;
