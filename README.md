@@ -1,10 +1,7 @@
 Black Magic Probe
 =================
 
-[![Build Status](https://travis-ci.org/blacksphere/blackmagic.svg?branch=master)](https://travis-ci.org/blacksphere/blackmagic)
 [![Discord](https://img.shields.io/discord/613131135903596547?logo=discord)](https://discord.gg/P7FYThy)
-[![Donate](https://img.shields.io/badge/paypal-donate-blue.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=N84QYNAM2JJQG)
-[![Kickstarter](https://img.shields.io/badge/kickstarter-back%20us-14e16e.svg)](https://www.kickstarter.com/projects/esden/1bitsy-and-black-magic-probe-demystifying-arm-prog)
 
 Firmware for the Black Magic Debug Probe.
 
@@ -18,11 +15,15 @@ standard USB interface. The user is able to control exactly what happens
 using the GNU source level debugging software, GDB.
 Serial Wire Output (SWO) allows the target to write tracing and logging to the host
 without using usb or serial port. Decoding SWO in the probe itself
-makes [SWO viewing as simple as connecting to a serial port](https://github.com/blacksphere/blackmagic/wiki/Serial-Wire-Output).
+makes [SWO viewing as simple as connecting to a serial port](https://github.com/blackmagic-debug/blackmagic/wiki/Serial-Wire-Output).
 
-See online documentation at https://github.com/blacksphere/blackmagic/wiki
 
-Binaries from the latest automated build are at http://builds.blacksphere.co.nz/blackmagic
+Resources
+=========
+
+ * [Documentation](https://github.com/blackmagic-debug/blackmagic/wiki)
+ * [Binary builds](http://builds.blacksphere.co.nz/blackmagic)
+
 
 Toolchain specific remarks
 ==========================
@@ -95,7 +96,7 @@ Add "-P (position)" to the next invocation to select one.
 For the setup from the sample session above:
 In another terminal:
 ```console
-> blackmagic 
+> blackmagic
 Using 1d50:6018 E2E489E7 Black Sphere Technologies Black Magic Probe (STLINK), (Firmware v1.6.1-477-g70bb131-dirty)
 Remote is Black Magic Probe (STLINK), (Firmware v1.6.1-477-g70bb131-dirty) v1.6.1-477-g70bb131-dirty
 Listening on TCP: 2000
