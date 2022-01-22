@@ -1010,7 +1010,7 @@ int jtag_scan_stlinkv2(bmp_info_t *info, const uint8_t *irlens)
 			if((jtag_devs[i].jd_idcode & dev_descr[j].idmask) ==
 			   dev_descr[j].idcode) {
 				if(dev_descr[j].handler)
-					dev_descr[j].handler(i, dev_descr[j].idcode);
+					dev_descr[j].handler(i);
 				break;
 			}
 
