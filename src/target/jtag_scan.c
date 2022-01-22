@@ -3,6 +3,7 @@
  *
  * Copyright (C) 2011  Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
+ * Copyright (C) 2022  1bitsquared - Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,7 +35,7 @@ struct jtag_dev_s jtag_devs[JTAG_MAX_DEVS+1];
 int jtag_dev_count;
 
 /* bucket of ones for don't care TDI */
-static const uint8_t ones[] = "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF";
+static const uint8_t ones[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
 #if PC_HOSTED == 0
 void jtag_add_device(const int dev_index, const jtag_dev_t *jtag_dev)
