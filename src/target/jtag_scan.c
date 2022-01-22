@@ -215,7 +215,7 @@ int jtag_scan(const uint8_t *irlens)
 				jtag_devs[i].jd_descr = dev_descr[j].descr;
 				/* Call handler to initialise/probe device further */
 				if(dev_descr[j].handler)
-					dev_descr[j].handler(i, dev_descr[i].idcode);
+					dev_descr[j].handler(i);
 				break;
 			}
 
