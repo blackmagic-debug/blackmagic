@@ -378,7 +378,7 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 	} else {
 		num_targets = platform_adiv5_swdp_scan(opt->opt_targetid);
 		if (!num_targets) {
-			DEBUG_WARN("Scan SWD failed, trying JTAG!\n");
+			DEBUG_INFO("Scan SWD failed, trying JTAG!\n");
 			num_targets = platform_jtag_scan(NULL);
 		}
 	}
