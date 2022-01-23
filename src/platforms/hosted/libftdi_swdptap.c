@@ -305,7 +305,10 @@ static uint32_t swdptap_seq_in(int ticks)
 	if (do_mpsse) {
 		uint8_t DO[4];
 		libftdi_jtagtap_tdi_tdo_seq(DO, 0, NULL, ticks);
-		for (int i = 0; i < (ticks >> 3) + (ticks  & 7)? 1: 0; i++) {
+		int bytes = ticks >> 3;
+		if (ticks & 7)
+			bytes++;
+		for (int i = 0; i < bytes; i++) {
 			result |= DO[i] << (8 * i);
 		}
 	} else {
