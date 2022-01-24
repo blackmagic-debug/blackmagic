@@ -27,7 +27,7 @@ all: blackmagic.bin blackmagic.hex
 
 blackmagic.dfu: blackmagic.hex
 	@echo Creating $@
-	@python ../scripts/dfu-convert.py -i $< $@
+	@python3 ../scripts/dfu-convert.py -i $< $@
 
 host_clean:
 	-$(Q)$(RM) blackmagic.bin blackmagic.hex blackmagic.dfu
