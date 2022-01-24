@@ -1,18 +1,12 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Written by Antonio Galea - 2010/11/18
 # Distributed under Gnu LGPL 3.0
 # see http://www.gnu.org/licenses/lgpl-3.0.txt
-#
-# Add support for Python 3 inspired by script found in Bitcraze repository
 
 import sys,struct,zlib,os
 from optparse import OptionParser
 from intelhex import IntelHex
-
-python3 = False
-if (sys.version_info > (3, 0)):
-      python3 = True
 
 DEFAULT_DEVICE="0x0483:0xdf11"
 
@@ -22,7 +16,7 @@ def consume(fmt,data,names):
   n = struct.calcsize(fmt)
   return named(struct.unpack(fmt,data[:n]),names),data[n:]
 def cstring(string):
-  return string.split('\0',1)[0]
+  return string.split(b'\0',1)[0]
 def compute_crc(data):
   return 0xFFFFFFFF & -zlib.crc32(data) -1
 
@@ -31,15 +25,15 @@ def parse(file,dump_images=False):
   data = open(file,'rb').read()
   crc = compute_crc(data[:-4])
   prefix, data = consume('<5sBIB',data,'signature version size targets')
-  print('%(signature)s v%(version)d, image size: %(size)d, targets: %(targets)d' % prefix)
+  print('%(signature)r v%(version)d, image size: %(size)d, targets: %(targets)d' % prefix)
   for t in range(prefix['targets']):
     tprefix, data  = consume('<6sBI255s2I',data,'signature altsetting named name size elements')
     tprefix['num'] = t
     if tprefix['named']:
       tprefix['name'] = cstring(tprefix['name'])
     else:
-      tprefix['name'] = ''
-    print('%(signature)s %(num)d, alt setting: %(altsetting)s, name: "%(name)s", size: %(size)d, elements: %(elements)d' % tprefix)
+      tprefix['name'] = b''
+    print('%(signature)r %(num)d, alt setting: %(altsetting)r, name: %(name)r, size: %(size)d, elements: %(elements)d' % tprefix)
     tsize = tprefix['size']
     target, data = data[:tsize], data[tsize:]
     for e in range(tprefix['elements']):
@@ -55,7 +49,7 @@ def parse(file,dump_images=False):
     if len(target):
       print("target %d: PARSE ERROR" % t)
   suffix = named(struct.unpack('<4H3sBI',data[:16]),'device product vendor dfu ufd len crc')
-  print('usb: %(vendor)04x:%(product)04x, device: 0x%(device)04x, dfu: 0x%(dfu)04x, %(ufd)s, %(len)d, 0x%(crc)08x' % suffix)
+  print('usb: %(vendor)04x:%(product)04x, device: 0x%(device)04x, dfu: 0x%(dfu)04x, %(ufd)r, %(len)d, 0x%(crc)08x' % suffix)
   if crc != suffix['crc']:
     print("CRC ERROR: computed crc32 is 0x%08x" % crc)
   data = data[16:]
@@ -63,30 +57,20 @@ def parse(file,dump_images=False):
     print("PARSE ERROR")
 
 def build(file,targets,device=DEFAULT_DEVICE):
-  data = ''
-  if (python3):
-        data = b''
+  data = b''
   for t,target in enumerate(targets):
-    tdata = ''
-    if (python3):
-          tdata = b''
+    tdata = b''
     for image in target:
       tdata += struct.pack('<2I',image['address'],len(image['data']))+image['data']
 
-    trgt = 'Target'
-    st = 'ST...'
-    if (python3):
-      trgt = b'Target'
-      st = b'ST...'
+    trgt = b'Target'
+    st = b'ST...'
     tdata = struct.pack('<6sBI255s2I',trgt,0,1,st,len(tdata),len(target)) + tdata
     data += tdata
 
-  dfu_se = 'DfuSe'
-  ufd = 'UFD'
-  if (python3):
-    dfu_se = b'DfuSe'
-    ufd = b'UFD'
-  data  = struct.pack('<5sBIB',dfu_se,1,len(data)+11,len(targets)) + data
+  dfu_se = b'DfuSe'
+  ufd = b'UFD'
+  data = struct.pack('<5sBIB',dfu_se,1,len(data)+11,len(targets)) + data
 
   v,d=map(lambda x: int(x,0) & 0xFFFF, device.split(':',1))
   data += struct.pack('<4H3sB',0,d,v,0x011a,ufd,16)
