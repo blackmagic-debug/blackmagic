@@ -580,10 +580,10 @@ static int rvdbg_read_single_reg(RVDBGv013_DMI_t *dmi, uint16_t reg_idx, uint32_
 				break;
 			case ABSTRACTCMD_ERR_EXCEPTION:
 				// TODO: This check becomes invalid as soon as postexec is set.
-				DEBUG_WARN("RISC-V register 0x%"PRIx16"\n does not exist", reg_idx);
+				DEBUG_WARN("RISC-V register 0x%" PRIx16 " does not exist\n", reg_idx);
 				return -1;
 			default:
-				DEBUG_WARN("RISC-V abstract command error: %d\n", ret);
+				DEBUG_WARN("RISC-V abstract command error: %" PRId32 "\n", ret);
 				return -1;
 		}
 	}
@@ -635,10 +635,10 @@ static int rvdbg_write_single_reg(RVDBGv013_DMI_t *dmi, uint16_t reg_id, uint32_
 				break;
 			case ABSTRACTCMD_ERR_EXCEPTION:
 				// TODO: This check becomes invalid as soon as postexec is set.
-				DEBUG_WARN("RISC-V register 0x%"PRIx16"\n does not exist", reg_id);
+				DEBUG_WARN("RISC-V register 0x%" PRIx16 " does not exist\n", reg_id);
 				return -1;
 			default:
-				DEBUG_WARN("RISC-V abstract command error: %d\n", ret);
+				DEBUG_WARN("RISC-V abstract command error: %" PRId32 "\n", ret);
 				return -1;
 		}
 	} else {
@@ -1404,7 +1404,6 @@ static void rvdbg_halt_resume(target *t, bool step)
 
 static enum target_halt_reason rvdbg_halt_poll(target *t, target_addr *watch)
 {
-	//(void)watch;
 	RVDBGv013_DMI_t *dmi = t->priv;
 	int res;
 	uint32_t dmstatus;
@@ -1667,7 +1666,6 @@ static bool rvdbg_discover_trigger(target *t, uint8_t trigger_idx, uint16_t *inf
 	if (tselect != trigger_idx)
 		goto exit_fail;
 	if (rvdbg_read_single_reg(dmi, HART_REG_CSR_TINFO, &tinfo, AUTOEXEC_STATE_NONE)) {
-		DEBUG_TARGET("Trigger #%" PRIu8 ", tinfo unimplemented\n", trigger_idx);
 		rvdbg_read_single_reg(dmi, HART_REG_CSR_TDATA1, &tdata1, AUTOEXEC_STATE_NONE);
 		type = CSR_TDATA1_GET_TYPE(tdata1);
 		if (type == 0U) {
