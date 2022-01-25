@@ -6,6 +6,7 @@
  * Copyright (c) 2019 Roland Ruckerbauer <roland.rucky@gmail.com>
  * based on similar work by Gareth McMullin <gareth@blacksphere.co.nz>
  * Copyright (c) 2020-21 Uwe Bonnes <bon@elektron.ikp.physik.tu-darmstadt.de>
+ * Copyright (c) 2021 Fabrice Prost-Boucle <fabalthazar@falbalab.fr>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -121,20 +122,28 @@ enum AUTOEXEC_STATE {
 	AUTOEXEC_STATE_CONT, /* Only access data0 register */
 };
 
-enum HART_REG {
-	HART_REG_CSR_BEGIN   = 0x0000,
-	HART_REG_CSR_MISA    = 0x0301,
-	HART_REG_CSR_TSELECT = 0x7a0,
-	HART_REG_CSR_MCONTROL =0x7a1,
-	HART_REG_CSR_TDATA2  = 0x7a2,
-	HART_REG_CSR_DCSR    = 0x07b0,
-	HART_REG_CSR_DPC     = 0x07b1,
-	HART_REG_CSR_MACHINE = 0x0f11,
-	HART_REG_CSR_MHARTID = 0x0f14,
-	HART_REG_CSR_END     = 0x0fff,
-	HART_REG_GPR_BEGIN   = 0x1000,
-	HART_REG_GPR_END     = 0x101f,
-};
+#define HART_REG_CSR_MISA          0x0301
+#define HART_REG_CSR_TSELECT       0x07a0
+#define HART_REG_CSR_TDATA1        0x07a1
+#define HART_REG_CSR_MCONTROL      HART_REG_CSR_TDATA1
+#define HART_REG_CSR_ICOUNT        HART_REG_CSR_TDATA1
+#define HART_REG_CSR_ITRIGGER      HART_REG_CSR_TDATA1
+#define HART_REG_CSR_ETRIGGER      HART_REG_CSR_TDATA1
+#define HART_REG_CSR_TDATA2        0x07a2
+#define HART_REG_CSR_TDATA3        0x07a3
+#define HART_REG_CSR_TEXTRA32      HART_REG_CSR_TDATA3
+#define HART_REG_CSR_TEXTRA64      HART_REG_CSR_TDATA3
+#define HART_REG_CSR_TINFO         0x07a4
+#define HART_REG_CSR_TCONTROL      0x07a5
+#define HART_REG_CSR_MCONTEXT      0x07a8
+#define HART_REG_CSR_SCONTEXT      0x07aa
+#define HART_REG_CSR_DCSR          0x07b0
+#define HART_REG_CSR_DPC           0x07b1
+#define HART_REG_CSR_MACHINE       0x0f11
+#define HART_REG_CSR_MHARTID       0x0f14
+
+#define HART_REG_GPR_BEGIN         0x1000
+#define HART_REG_GPR_END           0x101f
 
 #define DMSTATUS_GET_VERSION(x)         DTMCS_GET_VERSION(x)
 #define DMSTATUS_GET_CONFSTRPTRVALID(x) ((x >> 4) & 0x1)
@@ -180,6 +189,10 @@ enum HART_REG {
 #define SBCS_SBACCESS_32BIT           (2U << 17)
 #define SBCD_SBREADONADDR             (1U << 20)
 
+/* CSR Register bits */
+#define CSR_DCSR_STEP                 (0x1 << 2)
+#define CSR_DCSR_GET_CAUSE(x)         ((x >> 6) & 0x7)
+
 #define CSR_MCONTROL_DMODE        (1<<(32-5))
 #define CSR_MCONTROL_ENABLE_MASK  (0xf << 3)
 #define CSR_MCONTROL_R            (1 << 0)
@@ -188,6 +201,15 @@ enum HART_REG {
 #define CSR_MCONTROL_RW           (CSR_MCONTROL_R | CSR_MCONTROL_W)
 #define CSR_MCONTROL_RWX          (CSR_MCONTROL_RW | CSR_MCONTROL_X)
 #define CSR_MCONTROL_ACTION_DEBUG (1 << 12)
+#define CSR_MCONTROL_TIMING       (1 << 18)
+#define CSR_MCONTROL_HIT          (0x1 << 20)
+
+#define CSR_TDATA1_TYPE(t)            (t << (32 - 4))
+#define CSR_TDATA1_GET_TYPE(x)        ((x >> (32 - 4)) & 0xf)
+#define CSR_TDATA1_DATA_MASK          0x7ffffff
+
+#define CSR_TINFO_GET_INFO(x)         (x & 0xffff)
+#define CSR_TINFO_HAS_TYPE(x,t)       (x & (0x1 << t))
 
 #define ABSTRACTCMD_SET_TYPE(t, s) do { \
 	t &= ~(0xff << 24); \
@@ -217,12 +239,12 @@ enum HART_REG {
 	t &= ~(0xfff); \
 	t |= s & 0xfff; } while (0)
 
-/* CSR Register bits */
-#define CSR_DCSR_STEP (1U << 2)
-
 #define RISCV_MAX_HARTS 32U
 
 static bool rvdbdg_register_access(target *t, int argc, char *argv[]);
+static bool rvdbg_discover_trigger(target *t, uint8_t trigger_idx, uint16_t *info);
+static bool riscv_check_watch(target *t, target_addr *watch);
+static bool decode_load_store_inst(target *t, uint32_t dpc, target_addr *watch);
 
 const struct command_s rvdbg_cmd_list[] = {
 	{"register_access",
@@ -558,10 +580,10 @@ static int rvdbg_read_single_reg(RVDBGv013_DMI_t *dmi, uint16_t reg_idx, uint32_
 				break;
 			case ABSTRACTCMD_ERR_EXCEPTION:
 				// TODO: This check becomes invalid as soon as postexec is set.
-				DEBUG_WARN("RISC-V register 0x%"PRIx16"\n does not exist", reg_idx);
+				DEBUG_WARN("RISC-V register 0x%" PRIx16 " does not exist\n", reg_idx);
 				return -1;
 			default:
-				DEBUG_WARN("RISC-V abstract command error: %d\n", ret);
+				DEBUG_WARN("RISC-V abstract command error: %" PRId32 "\n", ret);
 				return -1;
 		}
 	}
@@ -613,10 +635,10 @@ static int rvdbg_write_single_reg(RVDBGv013_DMI_t *dmi, uint16_t reg_id, uint32_
 				break;
 			case ABSTRACTCMD_ERR_EXCEPTION:
 				// TODO: This check becomes invalid as soon as postexec is set.
-				DEBUG_WARN("RISC-V register 0x%"PRIx16"\n does not exist", reg_id);
+				DEBUG_WARN("RISC-V register 0x%" PRIx16 " does not exist\n", reg_id);
 				return -1;
 			default:
-				DEBUG_WARN("RISC-V abstract command error: %d\n", ret);
+				DEBUG_WARN("RISC-V abstract command error: %" PRId32 "\n", ret);
 				return -1;
 		}
 	} else {
@@ -961,6 +983,7 @@ static void rvdbg_mem_read_abstract(target *t, void* dest, target_addr address, 
 		unsigned int remainder = 4 - pre_run;
 		int count = MIN(remainder, len);
 		memcpy(dest, p, count);
+		dest += count;
 		address += count;
 		len -= count;
 	}
@@ -1120,6 +1143,7 @@ static void rvdbg_mem_read_systembus(target *t,  void* dest, target_addr address
 		unsigned int remainder = 4 - pre_run;
 		int count = MIN(remainder, len);
 		memcpy(dest, p, count);
+		dest += count;
 		address += count;
 		len -= count;
 	}
@@ -1380,7 +1404,6 @@ static void rvdbg_halt_resume(target *t, bool step)
 
 static enum target_halt_reason rvdbg_halt_poll(target *t, target_addr *watch)
 {
-	(void)watch;
 	RVDBGv013_DMI_t *dmi = t->priv;
 	int res;
 	uint32_t dmstatus;
@@ -1392,19 +1415,23 @@ static enum target_halt_reason rvdbg_halt_poll(target *t, target_addr *watch)
 	/* dcsr may not be readable when running*/
 	uint32_t dcsr;
 	res = rvdbg_read_single_reg(dmi, HART_REG_CSR_DCSR, &dcsr, AUTOEXEC_STATE_NONE);
-	uint8_t cause = (dcsr >> 6) & 7;
+	uint8_t cause = CSR_DCSR_GET_CAUSE(dcsr);
 	if ((t->t_designer == 0x612) && (cause == 3 ) && (dcsr & CSR_DCSR_STEP)) {
 		/* FIXME: ESP32-C3 never reports TARGET_HALT_STEPPING */
 		DEBUG_INFO("Workaround for single stepping ESP32-C3\n");
 		cause = 4;
 	}
-	DEBUG_TARGET("DCSR 0x%08" PRIx32 ", cause = %d\n", dcsr,cause);
+	DEBUG_TARGET("DCSR 0x%08" PRIx32 ", cause = %" PRIu8 "\n", dcsr, cause);
 	if (cause == 0)
 		return TARGET_HALT_RUNNING;
 	switch (cause) {
 	case 1: /* Software breakpoint */
-	case 2: /* Hardware trigger breakpoint */
 		return TARGET_HALT_BREAKPOINT;
+	case 2: /* Hardware trigger breakpoint */
+		if (riscv_check_watch(t, watch))
+			return TARGET_HALT_WATCHPOINT;
+		else
+			return TARGET_HALT_BREAKPOINT;
 	case 3: return TARGET_HALT_REQUEST;
 	case 4: return TARGET_HALT_STEPPING;
 	case 5: return TARGET_HALT_REQUEST;
@@ -1413,10 +1440,161 @@ static enum target_halt_reason rvdbg_halt_poll(target *t, target_addr *watch)
 	}
 }
 
+/**
+ * Checks whether a watchpoint has been hit. If not, it must be a breakpoint.
+ * Two methods allow figuring out the hit watchpoint, hence its watched address:
+ * - 'hit' bit (optional), part of the mcontrol register;
+ * - If 'hit' is not implemented, fallback to decoding the instruction responsible
+ * for the break.
+ */
+static bool riscv_check_watch(target *t, target_addr *watch)
+{
+	uint32_t dpc = 0UL;
+	struct breakwatch *bw = NULL;
+	uint32_t tselect_saved, mcontrol;
+	uint32_t trigger_idx = 0U;
+	bool wp_found = false;
+
+	/* Cannot pretend a watchpoint without watched address */
+	if (!watch)
+		goto exit_fail;
+
+	/* Search for hardware breakpoint */
+	rvdbg_reg_read(t, HART_REG_CSR_DPC, &dpc, 4);
+	DEBUG_TARGET("DPC 0x%08" PRIx32 "\n", dpc);
+	for (bw = t->bw_list; bw; bw = bw->next) {
+		if ((bw->type == TARGET_BREAK_HARD) && (bw->addr == dpc)) {
+			DEBUG_TARGET("Breakpoint found\n");
+			goto exit_fail; // not a watchpoint
+		}
+	}
+
+	/* Save tselect */
+	rvdbg_reg_read(t, HART_REG_CSR_TSELECT, &tselect_saved, 4);
+
+	/* Search for a 'hit' bit set if implemented */
+	while (rvdbg_discover_trigger(t, trigger_idx, NULL)) {
+		rvdbg_reg_read(t, HART_REG_CSR_MCONTROL, &mcontrol, 4);
+		if (mcontrol & CSR_MCONTROL_HIT) {
+			wp_found = true;
+			break;
+		}
+		trigger_idx++;
+	}
+	if (wp_found) {
+		/* Clear the 'hit' bit */
+		mcontrol &= ~(uint32_t)CSR_MCONTROL_HIT;
+		rvdbg_reg_write(t, HART_REG_CSR_MCONTROL, &mcontrol, 4);
+		/* Get the matching watchpoint */
+		for (bw = t->bw_list; bw; bw = bw->next) {
+			if (bw->reserved[0] == trigger_idx) {
+				*watch = bw->addr;
+				break;
+			}
+		}
+	} else {
+		/* 'hit' bit unimplemented, instruction decoding fallback */
+		DEBUG_TARGET("hit bit unimplemented\n");
+		if (decode_load_store_inst(t, dpc, watch)) {
+			for (bw = t->bw_list; bw; bw = bw->next) {
+				if ((bw->type == TARGET_WATCH_WRITE) ||
+				    (bw->type == TARGET_WATCH_READ) ||
+				    (bw->type == TARGET_WATCH_ACCESS)) {
+					if (bw->addr == *watch) {
+						wp_found = true;
+						break;
+					}
+				}
+			}
+		}
+	}
+
+	/* Restore saved tselect */
+	rvdbg_reg_write(t, HART_REG_CSR_TSELECT, &tselect_saved, 4);
+
+	if (wp_found)
+		return true;
+exit_fail:
+	return false;
+}
+
+static bool decode_load_store_inst(target *t, uint32_t dpc, target_addr *watch)
+{
+	uint8_t rv_opcode = 0U;
+	uint8_t rvc_funct3 = 0U;
+	int32_t offset = 0;
+	uint8_t base_reg = 2U; // sp == x2
+	target_addr base_addr = 0UL;
+	uint32_t inst = target_mem_read32(t, dpc);
+
+	DEBUG_TARGET("inst = 0x%08" PRIx32 "\n", inst);
+
+	rv_opcode = RVC_ISA_GET_OP(inst);
+	rvc_funct3 = RVC_ISA_GET_FUNCT3(inst);
+
+	switch (rv_opcode) {
+	case RVC_ISA_OP_QUAD0:
+		switch (rvc_funct3) {
+		case RVC_ISA_FUNCT3_LW: // C.LW (CL format)
+		case RVC_ISA_FUNCT3_SW: // C.SW (CS format)
+			offset = RVC_ISA_SW_GET_OFFSET(inst);
+			base_reg = RVC_ISA_SW_GET_BASE(inst);
+			break;
+		default:
+			goto exit_fail;
+		}
+		break;
+	case RVC_ISA_OP_QUAD2: // Stack pointer based
+		switch (rvc_funct3) {
+		case RVC_ISA_FUNCT3_LW: // C.LWSP (CI format)
+			offset = RVC_ISA_LWSP_GET_OFFSET(inst);
+			break;
+		case RVC_ISA_FUNCT3_SW: // C.SWSP (CSS format)
+			offset = RVC_ISA_SWSP_GET_OFFSET(inst);
+			break;
+		default:
+			goto exit_fail;
+		}
+		break;
+	case RVC_ISA_OP_RV32I:
+		base_reg = RV32I_ISA_S_GET_RS1(inst); // S and I-type have the same base
+		rv_opcode = RV32I_ISA_GET_OPCODE(inst);
+		switch (rv_opcode) {
+		case RV32I_ISA_OP_LOAD:
+			offset = RV32I_ISA_I_GET_IMM(inst);
+			break;
+		case RV32I_ISA_OP_STORE:
+			offset = RV32I_ISA_S_GET_IMM(inst);
+			break;
+		default:
+			goto exit_fail;
+		}
+		break;
+	default:
+		goto exit_fail;
+	}
+
+	DEBUG_TARGET("offset = %" PRIi32 "\n", offset);
+	DEBUG_TARGET("base_reg = %" PRIu8 "\n", base_reg);
+
+	rvdbg_reg_read(t, (int)base_reg, (void *)&base_addr, 4);
+	*watch = (target_addr)((int32_t)base_addr + offset);
+
+	return true;
+exit_fail:
+	DEBUG_TARGET("Unable to decode load/store instruction!\n");
+	return false;
+}
+
 static int riscv_breakwatch_set(target *t, struct breakwatch *bw)
 {
-	uint32_t mcontrol = CSR_MCONTROL_DMODE | CSR_MCONTROL_ACTION_DEBUG |
-		CSR_MCONTROL_ENABLE_MASK;
+	int ret = 0;
+	bool free_trigger = false;
+	uint32_t tselect_saved, tdata1;
+	uint32_t trigger_idx = 0U;
+	uint16_t trigger_info = 0U;
+	uint32_t mcontrol = CSR_TDATA1_TYPE(2) | CSR_MCONTROL_DMODE |
+	                    CSR_MCONTROL_ACTION_DEBUG | CSR_MCONTROL_ENABLE_MASK;
 
 	switch (bw->type) {
 	case TARGET_BREAK_HARD:
@@ -1427,43 +1605,88 @@ static int riscv_breakwatch_set(target *t, struct breakwatch *bw)
 		break;
 	case TARGET_WATCH_READ:
 		mcontrol |= CSR_MCONTROL_R;
+		mcontrol |= CSR_MCONTROL_TIMING;
 		break;
 	case TARGET_WATCH_ACCESS:
 		mcontrol |= CSR_MCONTROL_RW;
+		mcontrol |= CSR_MCONTROL_TIMING;
 		break;
 	default:
-		return 1;
+		ret = 1; // Type not supported
+		goto exit;
 	}
 
-	uint32_t tselect_saved;
+	/* Save tselect */
 	rvdbg_reg_read(t, HART_REG_CSR_TSELECT, &tselect_saved, 4);
 
-	uint32_t i;
-	for (i = 0; ; i++) {
-		rvdbg_reg_write(t, HART_REG_CSR_TSELECT, &i, 4);
-		uint32_t tselect;
-		rvdbg_reg_read(t, HART_REG_CSR_TSELECT, &tselect, 4);
-		if (tselect != i)
-			return -1;
-		uint32_t tdata1;
-		rvdbg_reg_read(t, HART_REG_CSR_MCONTROL, &tdata1, 4);
-		uint8_t type = (tdata1 >> (32-4)) & 0xf;
-		if ((type == 0))
-			return -1;
-		if ((type == 2)  &&
-			(((tdata1 & CSR_MCONTROL_RWX) == 0) ||
-			 ((tdata1 & CSR_MCONTROL_ENABLE_MASK) == 0)))
-			break;
-	}
-	/* if we get here tselect = i is the index of our trigger */
-	bw->reserved[0] = i;
+	while (rvdbg_discover_trigger(t, trigger_idx, &trigger_info)) {
+		rvdbg_reg_read(t, HART_REG_CSR_TDATA1, &tdata1, 4);
+		DEBUG_TARGET("Trigger #%" PRIu32 ", type = %" PRIu8 "\n", trigger_idx, (uint8_t)CSR_TDATA1_GET_TYPE(tdata1));
 
-	rvdbg_reg_write(t, HART_REG_CSR_MCONTROL, &mcontrol, 4);
-	rvdbg_reg_write(t, HART_REG_CSR_TDATA2, &bw->addr, 4);
+		if (CSR_TINFO_HAS_TYPE(trigger_info,2) &&
+		    (((tdata1 & CSR_MCONTROL_RWX) == 0U) ||
+		    ((tdata1 & CSR_MCONTROL_ENABLE_MASK) == 0U))) {
+			free_trigger = true;
+			break;
+		}
+		trigger_idx++;
+	}
+
+	if (free_trigger) {
+		/* if we get here tselect is the index of our trigger */
+		bw->reserved[0] = trigger_idx;
+		DEBUG_TARGET("Setting trigger #%" PRIu32 ", addr = 0x%08" PRIx32 "\n", trigger_idx, bw->addr);
+
+		rvdbg_reg_write(t, HART_REG_CSR_MCONTROL, &mcontrol, 4);
+		rvdbg_reg_write(t, HART_REG_CSR_TDATA2, &bw->addr, 4);
+	} else {
+		DEBUG_TARGET("No free trigger\n");
+		ret = -1; // Error
+	}
 
 	/* Restore saved tselect */
 	rvdbg_reg_write(t, HART_REG_CSR_TSELECT, &tselect_saved, 4);
-	return 0;
+exit:
+	return ret;
+}
+
+/**
+ * Tests for a trigger existence.
+ * Returns supported trigger types in *info as specified in the tinfo register.
+ */
+static bool rvdbg_discover_trigger(target *t, uint8_t trigger_idx, uint16_t *info)
+{
+	uint8_t type = 0U;
+	uint16_t info_tmp = 0U;
+	uint32_t tselect, tdata1, tinfo;
+	RVDBGv013_DMI_t *dmi = t->priv;
+
+	rvdbg_write_single_reg(dmi, HART_REG_CSR_TSELECT, trigger_idx, AUTOEXEC_STATE_NONE);
+	rvdbg_read_single_reg(dmi, HART_REG_CSR_TSELECT, &tselect, AUTOEXEC_STATE_NONE);
+	if (tselect != trigger_idx)
+		goto exit_fail;
+	if (rvdbg_read_single_reg(dmi, HART_REG_CSR_TINFO, &tinfo, AUTOEXEC_STATE_NONE)) {
+		rvdbg_read_single_reg(dmi, HART_REG_CSR_TDATA1, &tdata1, AUTOEXEC_STATE_NONE);
+		type = CSR_TDATA1_GET_TYPE(tdata1);
+		if (type == 0U) {
+			DEBUG_TARGET("Trigger type = 0\n");
+			goto exit_fail;
+		} else {
+			info_tmp = 0x1 << type;
+		}
+	} else {
+		info_tmp = CSR_TINFO_GET_INFO(tinfo);
+		if (info_tmp == 1U) {
+			DEBUG_TARGET("Trigger info = 1\n");
+			goto exit_fail;
+		}
+	}
+
+	if (info != NULL)
+		*info = info_tmp;
+	return true;
+exit_fail:
+	return false;
 }
 
 static int riscv_breakwatch_clear(target *t, struct breakwatch *bw)
@@ -1471,6 +1694,7 @@ static int riscv_breakwatch_clear(target *t, struct breakwatch *bw)
 	uint32_t i = bw->reserved[0];
 	uint32_t tselect_saved;
 	rvdbg_reg_read(t, HART_REG_CSR_TSELECT, &tselect_saved, 4);
+	DEBUG_TARGET("Clearing trigger #%" PRIu32 ", addr = 0x%08" PRIx32 "\n", i, bw->addr);
 
 	rvdbg_reg_write(t, HART_REG_CSR_TSELECT, &i, 4);
 	i = 0;
@@ -1663,17 +1887,20 @@ int rvdbg_dmi_init(RVDBGv013_DMI_t *dmi)
 
 	/* Enumerate triggers */
 	dmi->dmi_triggers = 0;
-	for (uint32_t i = 0; ; i++) {
-		res = rvdbg_write_single_reg(dmi, HART_REG_CSR_TSELECT, i, AUTOEXEC_STATE_NONE);
-		if (res)
-			break;
-		uint32_t tselect;
-		rvdbg_read_single_reg(dmi, HART_REG_CSR_TSELECT, &tselect, AUTOEXEC_STATE_NONE);
-		if (i  != tselect)
-			break;
-		dmi->dmi_triggers = i + 1;
+	uint32_t tselect_saved = 0U;
+	uint32_t trigger_idx = 0U;
+	uint16_t trigger_info = 0U;
+	rvdbg_read_single_reg(dmi, HART_REG_CSR_TSELECT, &tselect_saved, AUTOEXEC_STATE_NONE);
+
+	while (rvdbg_discover_trigger(t, trigger_idx, &trigger_info)) {
+		DEBUG_INFO("Trigger #%" PRIu8 ", info = 0x%04" PRIx16 "\n", trigger_idx, trigger_info);
+		trigger_idx++;
 	}
-	DEBUG_INFO("Found %d triggers\n", dmi->dmi_triggers);
+	dmi->dmi_triggers = trigger_idx;
+
+	/* Restore tselect */
+	rvdbg_write_single_reg(dmi, HART_REG_CSR_TSELECT, tselect_saved, AUTOEXEC_STATE_NONE);
+	DEBUG_INFO("Found %" PRIu32 " triggers\n", dmi->dmi_triggers);
 
 	/* some test routines */
 #if 0
