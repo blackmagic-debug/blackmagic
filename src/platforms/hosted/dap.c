@@ -198,7 +198,7 @@ void dap_connect(bool jtag)
 //-----------------------------------------------------------------------------
 void dap_disconnect(void)
 {
-	uint8_t buf[65];
+	uint8_t buf[1];
 
 	buf[0] = ID_DAP_DISCONNECT;
 	dbg_dap_cmd(buf, sizeof(buf), 1);

@@ -225,17 +225,14 @@ int dbg_dap_cmd(uint8_t *data, int size, int rsize)
 		DEBUG_WIRE("%02x.",	buffer[i]);
 	DEBUG_WIRE("\n");
 	if (type == CMSIS_TYPE_HID) {
-		res = hid_write(handle, buffer, 65);
+		res = hid_write(handle, buffer, rsize + 1);
 		if (res < 0) {
 			DEBUG_WARN( "Error: %ls\n", hid_error(handle));
 			exit(-1);
 		}
-		res = hid_read_timeout(handle, buffer, 65, 1000);
+		res = hid_read(handle, buffer, report_size + 1);
 		if (res < 0) {
 			DEBUG_WARN( "debugger read(): %ls\n", hid_error(handle));
-			exit(-1);
-		} else if (res == 0) {
-			DEBUG_WARN( "timeout\n");
 			exit(-1);
 		}
 	} else if (type == CMSIS_TYPE_BULK) {
