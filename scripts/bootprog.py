@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # bootprog.py: STM32 SystemMemory Production Programmer -- version 1.1
 # Copyright (C) 2011  Black Sphere Technologies 
@@ -34,95 +34,93 @@ class stm32_boot:
 
 	def _sync(self):
 		# Send sync byte
-		#print "sending sync byte"
-		self.serial.write("\x7F")
+		#print("sending sync byte")
+		self.serial.write(bytes((0x7F,)))
 		self._checkack()
 
 	def _sendcmd(self, cmd):
-		if type(cmd) == int:
-			cmd = chr(cmd)
-		cmd += chr(ord(cmd) ^ 0xff)
-		#print "sendcmd:", repr(cmd)
+		cmd = bytes((cmd, cmd ^ 0xff))
+		#print("sendcmd:", repr(cmd))
 		self.serial.write(cmd)
 
 	def _send(self, data):
 		csum = 0
-		for c in data: csum ^= ord(c)
-		data = data + chr(csum)
-		#print "sending:", repr(data)
+		for c in data: csum ^= c
+		data = data + bytes((csum,))
+		#print("sending:", repr(data))
 		self.serial.write(data)
 
 	def _checkack(self):
-		ACK = "\x79"
+		ACK = bytes((0x79,))
 		b = self.serial.read(1)
 		if b != ACK: raise Exception("Invalid ack: %r" % b)
-		#print "got ack!"
+		#print("got ack!")
 
 
 
 	def get(self):
-		self._sendcmd("\x00")
+		self._sendcmd(0x00)
 		self._checkack()
-		num = ord(self.serial.read(1))
+		num = self.serial.read(1)[0]
 		data = self.serial.read(num+1)
 		self._checkack()
 		return data
 
 	def eraseall(self):
 		# Send erase cmd
-		self._sendcmd("\x43")
+		self._sendcmd(0x43)
 		self._checkack()
 		# Global erase
-		self._sendcmd("\xff")
+		self._sendcmd(0xff)
 		self._checkack()
 
 	def read(self, addr, len):
 		# Send read cmd
-		self._sendcmd("\x11")
+		self._sendcmd(0x11)
 		self._checkack()
 		# Send address
 		self._send(struct.pack(">L", addr))
 		self._checkack()
 		# Send length
-		self._sendcmd(chr(len-1))
+		self._sendcmd(len-1)
 		self._checkack()
 		return self.serial.read(len)
 
 	def write(self, addr, data):
 		# Send write cmd
-		self._sendcmd("\x31")
+		self._sendcmd(0x31)
 		self._checkack()
 		# Send address
 		self._send(struct.pack(">L", addr))
 		self._checkack()
 		# Send data
-		self._send(chr(len(data)-1) + data)
+		self._send(bytes((len(data)-1,)) + data)
 		self._checkack()
 
 	def write_protect(self, sectors):
 		# Send WP cmd
-		self._sendcmd("\x63")
+		self._sendcmd(0x63)
 		self._checkack()
 		# Send sector list
-		self._send(chr(len(sectors)-1) + "".join(chr(i) for i in sectors))
+		self._send(bytes((len(sectors)-1,)) + bytes(sectors))
 		self._checkack()
 		# Resync after system reset
 		self._sync()
 
 	def write_unprotect(self):
-		self._sendcmd("\x73")
+		self._sendcmd(0x73)
 		self._checkack()
 		self._checkack()
 		self._sync()
 
 	def read_protect(self):
-		self._sendcmd("\x82")
+		self._sendcmd(0x82)
 		self._checkack()
 		self._checkack()
 		self._sync()
 
 	def read_unprotect(self):
-		self._sendcmd("\x92")
+		self._sendcmd(0x92)
 		self._checkack()
 		self._checkack()
 		self._sync()
@@ -132,7 +130,7 @@ if __name__ == "__main__":
 	from sys import stdout, argv, platform
 	from getopt import getopt
 
-	if platform == "linux2":
+	if platform == "linux":
 		print("\x1b\x5b\x48\x1b\x5b\x32\x4a") # clear terminal screen
 	print("STM32 SystemMemory Production Programmer -- version 1.1")
 	print("Copyright (C) 2011  Black Sphere Technologies")
@@ -162,7 +160,7 @@ if __name__ == "__main__":
 	boot = stm32_boot(dev, baud)
 
 	cmds = boot.get()
-	print("Target bootloader version: %d.%d\n" % (ord(cmds[0]) >> 4, ord(cmds[0]) % 0xf))
+	print("Target bootloader version: %d.%d\n" % (cmds[0] >> 4, cmds[0] % 0xf))
 
 	print("Removing device protection...")
 	boot.read_unprotect()
