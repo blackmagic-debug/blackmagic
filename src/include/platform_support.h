@@ -50,5 +50,14 @@ void platform_request_boot(void);
 void platform_max_frequency_set(uint32_t frequency);
 uint32_t platform_max_frequency_get(void);
 
+#if !defined(IDLE_TASK)
+# if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) ||\
+	defined(STM32F4) || defined(STM32F7)
+#  define IDLE_TASK() __asm__("wfi")
+# else
+#  define IDLE_TASK()
+# endif
+#endif
+
 #endif
 
