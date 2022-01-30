@@ -11,7 +11,7 @@
 |  SRST       |  PB4  |   CN5/8     |  P4/9  (40) |
 |  UART1_TX   |  PB6  |   CN7/4     |  P4/7  (42) |
 |  UART1_RX   |  PB7  |   CN7/2     |  P4/6  (43) |
-|  SWO/RX2    |  PA3  |   NA(*1)    |  P3/7  (13) |
+|  SWO/RX2    |  PA3  |   NA(*1)    |  P3/8  (13) |
 
 *1: Wire JTDO/PB3  (U2/39) to USART2_RX/PA3 (U2/13) to expose SWO for Stlink
 on STM8S-Disco on CN5/3
