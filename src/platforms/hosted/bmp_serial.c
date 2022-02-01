@@ -27,10 +27,10 @@
 
 void bmp_ident(bmp_info_t *info)
 {
-	if (!info)
-		return;
 	DEBUG_INFO("BMP hosted (BMP Only) %s\n", FIRMWARE_VERSION);
-	DEBUG_INFO("Using:\n %s %s %s\n", info->manufacturer, info->version, info->serial);
+	if (info)
+		DEBUG_INFO("Using:\n %s %s %s\n",
+				   info->manufacturer, info->version, info->serial);
 }
 
 void libusb_exit_function(bmp_info_t *info) {(void)info;};
@@ -139,7 +139,6 @@ print_probes_info:
 		 * in the detection loop, so use this probe. */
 		return 0;
 	if (probes_found < 1) {
-		DEBUG_WARN("No BMP probe found\n");
 		return -1;
 	}
 	/* Otherwise, if this line is reached, then more than one probe has been found,
@@ -256,7 +255,6 @@ int find_debuggers(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info)
 	}
 	closedir(dir);
 	if (found_bmps < 1) {
-		DEBUG_WARN("No BMP probe found\n");
 		return -1;
 	} else if ((found_bmps > 1) || cl_opts->opt_list_only) {
 		DEBUG_WARN("Available Probes:\n");
