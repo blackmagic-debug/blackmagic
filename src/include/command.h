@@ -25,6 +25,8 @@
 
 #include "target.h"
 
+extern bool do_probe;
+
 int command_process(target *t, char *cmd);
 
 /*
