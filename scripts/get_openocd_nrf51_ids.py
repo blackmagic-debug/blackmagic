@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 
 """Pulls nRF51 IDs from openocd's nrf51.c in a form suitable for
 pasting into blackmagic's nrf51.c
@@ -21,11 +21,11 @@ specdict = {}
 specs    = []
 spec     = Spec()
 for line in io.TextIOWrapper(proc.stdout, encoding="utf-8"):
-    m = re.search('/\*(.*)\*/',line)
+    m = re.search(r'/\*(.*)\*/',line)
     if m:
         lastcomment=m.group(1)
 
-    m = re.search('NRF51_DEVICE_DEF\((0x[0-9A-F]*),\s*"(.*)",\s*"(.*)",\s*"(.*)",\s*([0-9]*)\s*\),', line)
+    m = re.search(r'NRF51_DEVICE_DEF\((0x[0-9A-F]*),\s*"(.*)",\s*"(.*)",\s*"(.*)",\s*([0-9]*)\s*\),', line)
     if m:
         spec.hwid          = int(m.group(1), base=0)
         spec.variant       = m.group(3)

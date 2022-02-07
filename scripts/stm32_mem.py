@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # stm32_mem.py: STM32 memory access using USB DFU class
 # Copyright (C) 2011  Black Sphere Technologies

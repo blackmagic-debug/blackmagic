@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # dfu.py: Access USB DFU class devices
 # Copyright (C) 2009  Black Sphere Technologies
@@ -62,7 +62,7 @@ DFU_STATUS_ERROR_POR =           0x0d
 DFU_STATUS_ERROR_UNKNOWN =       0x0e
 DFU_STATUS_ERROR_STALLEDPKT =    0x0f
 
-class dfu_status(object):
+class dfu_status:
 	def __init__(self, buf):
 		self.bStatus = buf[0]
 		self.bwPollTimeout = buf[1] + (buf[2]<<8) + (buf[3]<<16)
@@ -70,7 +70,7 @@ class dfu_status(object):
 		self.iString = buf[5]
 
 
-class dfu_device(object):
+class dfu_device:
 	def __init__(self, dev, conf, iface):
 		self.dev = dev
 		self.conf = conf
