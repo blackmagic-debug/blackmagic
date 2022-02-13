@@ -18,7 +18,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import gdb
-import struct
 import time
 
 # Microcode sequence to erase option bytes
@@ -35,7 +34,7 @@ def flash_write_hex(target, hexfile, progress_cb=None):
 			raise Exception("Error in hex file")
 		reclen = int(line[1:3], 16)
 		addrlo = int(line[3:7], 16)
-		rectype = int(line[7:9], 16);
+		rectype = int(line[7:9], 16)
 		if sum(x for x in bytes.fromhex(line[1:11+reclen*2])) & 0xff != 0:
 			raise Exception("Checksum error in hex file")
 		if rectype == 0: # Data record
