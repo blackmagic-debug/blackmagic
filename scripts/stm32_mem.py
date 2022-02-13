@@ -21,10 +21,9 @@
 from time import sleep
 import struct
 import os
-from sys import stdout, argv
+from sys import stdout
 
 import argparse
-import usb
 import dfu
 
 CMD_GETCOMMANDS =       0x00
@@ -86,7 +85,7 @@ def stm32_scan(args, test):
 	bmp_devs = []
 	bmp = 0
 	if not devs:
-		if test == True:
+		if test:
 			return
 
 		print("No DFU devices found!")
@@ -107,14 +106,14 @@ def stm32_scan(args, test):
 			bmp_devs.append(dev)
 
 	if bmp == 0:
-		if test == True:
+		if test:
 			return
 
 		print("No compatible device found\n")
 		exit(-1)
 
 	if bmp > 1 and not args.serial_target:
-		if test == True:
+		if test:
 			return
 
 		print("Found multiple devices:\n")
@@ -129,7 +128,7 @@ def stm32_scan(args, test):
 			print("Serial:\t\t %s\n" % serial_no)
 
 		print("Select device with serial number!")
-		exit (-1)
+		exit(-1)
 
 	for dev in bmp_devs:
 		dfudev = dfu.dfu_device(*dev)
@@ -171,7 +170,7 @@ if __name__ == "__main__":
 	try:
 		state = dfudev.get_state()
 	except:
-		if args.manifest : exit(0)
+		if args.manifest: exit(0)
 		print("Failed to read device state! Assuming APP_IDLE")
 		state = dfu.STATE_APP_IDLE
 	if state == dfu.STATE_APP_IDLE:
@@ -182,15 +181,15 @@ if __name__ == "__main__":
 		dfudev.release()
 		print("Invoking DFU Device")
 		timeout = 0
-		while True :
+		while True:
 			sleep(1)
 			timeout = timeout + 0.5
 			dfudev = stm32_scan(args, True)
 			if dfudev: break
-			if timeout > 5 :
+			if timeout > 5:
 				print("Error: DFU device did not appear")
 				exit(-1)
-	if args.manifest :
+	if args.manifest:
 		stm32_manifest(dfudev)
 		print("Invoking Application Device")
 		exit(0)
@@ -203,16 +202,16 @@ if __name__ == "__main__":
 	bin = file.read()
 
 	product = dfudev.handle.getString(dfudev.dev.iProduct, 64).decode('utf8')
-	if args.address :
+	if args.address:
 		start = int(args.address, 0)
-	else :
+	else:
 		if "F4" in product or "STLINK-V3" in product:
 			start = 0x8004000
 		else:
 			start = 0x8002000
 	addr = start
 	while bin:
-		print ("Programming memory at 0x%08X" % addr, end="\r")
+		print("Programming memory at 0x%08X" % addr, end="\r")
 		stdout.flush()
 		try:
 # STM DFU bootloader erases always.
@@ -243,19 +242,19 @@ if __name__ == "__main__":
 		except:
 # Abort silent if bootloader does not support upload
 			break
-		print ("Verifying memory at 0x%08X" % addr, end="\r")
+		print("Verifying memory at 0x%08X" % addr, end="\r")
 		stdout.flush()
-		if len > 1024 :
+		if len > 1024:
 			size = 1024
-		else :
+		else:
 			size = len
-		if bin[:size] != bytearray(data[:size]) :
-			print ("\nMismatch in block at 0x%08X" % addr)
-			break;
+		if bin[:size] != bytearray(data[:size]):
+			print("\nMismatch in block at 0x%08X" % addr)
+			break
 		bin = bin[1024:]
 		addr += 1024
 		len -= 1024
-		if len <= 0 :
+		if len <= 0:
 			print("\nVerified!")
 	stm32_manifest(dfudev)
 
