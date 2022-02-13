@@ -188,11 +188,11 @@ class Target:
 		self.putpacket(b"g")
 		reply = self.getpacket()
 		if (reply == b'') or (reply[:1] == b'E'):
-			raise Exception('Error reading memory at 0x%08X' % addr)
+			raise Exception('Error reading target core registers')
 		try:
 			data = unhexify(reply)
 		except Exception:
-			raise Exception('Invalid response to memory read packet: %r' % reply)
+			raise Exception('Invalid response to registers read packet: %r' % reply)
 		ret = array.array('I',data)
 		return ret
 
