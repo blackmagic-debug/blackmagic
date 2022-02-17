@@ -60,9 +60,17 @@
 #define AVR_ADDR_NVM			0x010001C0U
 #define AVR_ADDR_NVM_DATA		0x010001C4U
 #define AVR_ADDR_NVM_CMD		0x010001CAU
+#define AVR_ADDR_NVM_STATUS		0x010001CFU
 
-#define AVR_NVM_CMD_NOP			0x00U
-#define AVR_NVM_CMD_READ_NVM	0x43U
+#define AVR_NVM_CMD_NOP					0x00U
+#define AVR_NVM_CMD_ERASE_FLASH_BUFFER	0x26U
+#define AVR_NVM_CMD_WRITE_FLASH_BUFFER	0x23U
+#define AVR_NVM_CMD_ERASE_FLASH_PAGE	0x2BU
+#define AVR_NVM_CMD_WRITE_FLASH_PAGE	0x2EU
+#define AVR_NVM_CMD_READ_NVM			0x43U
+
+#define AVR_NVM_BUSY			0x80U
+#define AVR_NVM_FBUSY			0x40U
 
 typedef enum
 {
@@ -81,6 +89,9 @@ static bool avr_check_error(target *t);
 static void avr_mem_read(target *t, void *dest, target_addr src, size_t len);
 
 static void avr_regs_read(target *t, void *data);
+
+static int avr_flash_erase(struct target_flash *f, target_addr addr, size_t len);
+static int avr_flash_write(struct target_flash *f, target_addr dest, const void *src, size_t len);
 
 typedef struct __attribute__((packed))
 {
@@ -338,6 +349,8 @@ void avr_add_flash(target *t, uint32_t start, size_t length)
 	f->start = start;
 	f->length = length;
 	f->blocksize = 0x100;
+	f->erase = avr_flash_erase;
+	f->write = avr_flash_write;
 	f->erased = 0xff;
 	target_add_flash(t, f);
 }
@@ -457,4 +470,53 @@ static void avr_regs_read(target *t, void *data)
 	regs->pc = (pc - 1) << 1;
 	regs->sp = status[0] | (status[1] << 8);
 	regs->sreg = status[2];
+}
+
+static int avr_flash_erase(struct target_flash *f, target_addr addr, size_t len)
+{
+	avr_pdi_t *pdi = f->t->priv;
+	for (size_t i = 0; i < len; i += f->blocksize)
+	{
+		uint8_t status = 0;
+		if (!avr_pdi_write(pdi, PDI_DATA_8, AVR_ADDR_NVM_CMD, AVR_NVM_CMD_ERASE_FLASH_PAGE) ||
+			!avr_pdi_write(pdi, PDI_DATA_8, (addr + i) | PDI_FLASH_OFFSET, 0x55U))
+			return 1;
+
+		while (avr_pdi_read8(pdi, AVR_ADDR_NVM_STATUS, &status) &&
+			(status & (AVR_NVM_BUSY | AVR_NVM_FBUSY)) == (AVR_NVM_BUSY | AVR_NVM_FBUSY))
+			continue;
+
+		if (!avr_ensure_nvm_idle(pdi) ||
+			// This can only happen if the read failed.
+			(status & (AVR_NVM_BUSY | AVR_NVM_FBUSY)) != 0)
+			return 1;
+	}
+	return 0;
+}
+
+static int avr_flash_write(struct target_flash *f, target_addr dest, const void *src, size_t len)
+{
+	avr_pdi_t *pdi = f->t->priv;
+	const uint8_t *const buffer = (const uint8_t *)src;
+	for (size_t i = 0; i < len; i += f->blocksize)
+	{
+		uint8_t status = 0;
+		const size_t amount = MIN(f->blocksize, len - i);
+		const uint32_t addr = (dest + i) | PDI_FLASH_OFFSET;
+		if (!avr_pdi_write(pdi, PDI_DATA_8, AVR_ADDR_NVM_CMD, AVR_NVM_CMD_WRITE_FLASH_BUFFER) ||
+			!avr_pdi_write_ind(pdi, addr, PDI_MODE_IND_INCPTR, buffer + i, amount) ||
+			!avr_pdi_write(pdi, PDI_DATA_8, AVR_ADDR_NVM_CMD, AVR_NVM_CMD_WRITE_FLASH_PAGE) ||
+			!avr_pdi_write(pdi, PDI_DATA_8, addr, 0xFFU))
+			return 1;
+
+		while (avr_pdi_read8(pdi, AVR_ADDR_NVM_STATUS, &status) &&
+			(status & (AVR_NVM_BUSY | AVR_NVM_FBUSY)) == (AVR_NVM_BUSY | AVR_NVM_FBUSY))
+			continue;
+
+		if (!avr_ensure_nvm_idle(pdi) ||
+			// This can only happen if the read failed.
+			(status & (AVR_NVM_BUSY | AVR_NVM_FBUSY)) != 0)
+			return 1;
+	}
+	return 0;
 }
