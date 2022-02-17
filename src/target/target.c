@@ -252,7 +252,7 @@ bool target_mem_map(target *t, char *tmp, size_t len)
 	return true;
 }
 
-static struct target_flash *flash_for_addr(target *t, uint32_t addr)
+struct target_flash *target_flash_for_addr(target *t, uint32_t addr)
 {
 	for (struct target_flash *f = t->flash; f; f = f->next)
 		if ((f->start <= addr) &&
@@ -265,7 +265,7 @@ int target_flash_erase(target *t, target_addr addr, size_t len)
 {
 	int ret = 0;
 	while (len) {
-		struct target_flash *f = flash_for_addr(t, addr);
+		struct target_flash *f = target_flash_for_addr(t, addr);
 		if (!f) {
 			DEBUG_WARN("Erase stopped at 0x%06" PRIx32 "\n", addr);
 			return ret;
@@ -283,7 +283,7 @@ int target_flash_write(target *t, target_addr dest, const void *src, size_t len)
 {
 	int ret = 0;
 	while (len) {
-		struct target_flash *f = flash_for_addr(t, dest);
+		struct target_flash *f = target_flash_for_addr(t, dest);
 		if (!f)
 			return 1;
 		size_t tmptarget = MIN(dest + len, f->start + f->length);
@@ -551,7 +551,7 @@ static bool target_cmd_range_erase(target *const t, const int argc, const char *
 	}
 	const uint32_t addr = strtoul(argv[1], NULL, 0);
 	const uint32_t length = strtoul(argv[2], NULL, 0);
-	struct target_flash *flash = flash_for_addr(t, addr);
+	struct target_flash *flash = target_flash_for_addr(t, addr);
 
 	if (flash == NULL) {
 		gdb_out("Requested address is outside the valid range for this target");
