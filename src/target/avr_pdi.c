@@ -392,11 +392,19 @@ static bool avr_check_error(target *t)
 static void avr_mem_read(target *t, void *dest, target_addr src, size_t len)
 {
 	AVR_DP_t *dp = t->priv;
-	// This presently assumes src is a Flash address.
-	if (!avr_pdi_write(dp, PDI_DATA_8, AVR_ADDR_NVM_CMD, AVR_NVM_CMD_READ_NVM) ||
-		!avr_pdi_read_ind(dp, src | PDI_FLASH_OFFSET, PDI_MODE_IND_INCPTR, dest, len) ||
-		!avr_ensure_nvm_idle(dp))
-		return; // TODO: set an error indicator for avr_check_error.
+	if (target_flash_for_addr(t, src) != NULL)
+	{
+		// This presently assumes src is a Flash address.
+		if (!avr_pdi_write(dp, PDI_DATA_8, AVR_ADDR_NVM_CMD, AVR_NVM_CMD_READ_NVM) ||
+			!avr_pdi_read_ind(dp, src | PDI_FLASH_OFFSET, PDI_MODE_IND_INCPTR, dest, len) ||
+			!avr_ensure_nvm_idle(dp))
+			dp->error_state = pdi_failure;
+	}
+	else if (src >= 0x00800000U)
+	{
+		if (!avr_pdi_read_ind(dp, src + 0x00800000U, PDI_MODE_IND_INCPTR, dest, len))
+			dp->error_state = pdi_failure;
+	}
 }
 
 static void avr_regs_read(target *t, void *data)
