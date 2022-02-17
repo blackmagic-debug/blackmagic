@@ -65,7 +65,7 @@ jtag_dev_descr_t dev_descr[] = {
 		.descr = "Gigadevice BSD."},
 	{.idcode = 0x0000003F, .idmask = 0x00000FFF,
 		.descr = "Atmel Limited: AVR JTAG-PDI port.",
-		.handler = avr_jtag_dp_handler},
+		.handler = avr_jtag_pdi_handler},
 /* Just for fun, unsupported */
 	{.idcode = 0x8940303F, .idmask = 0xFFFFFFFF, .descr = "ATMega16."},
 	{.idcode = 0x0792603F, .idmask = 0xFFFFFFFF, .descr = "AT91SAM9261."},

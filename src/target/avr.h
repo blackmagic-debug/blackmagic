@@ -16,16 +16,16 @@ typedef struct Atmel_DP_s {
 	uint8_t dp_jd_index;
 	enum target_halt_reason halt_reason;
 	enum avr_error_e error_state;
-} AVR_DP_t;
+} avr_pdi_t;
 
-bool avr_dp_init(AVR_DP_t *dp);
+bool avr_pdi_init(avr_pdi_t *pdi);
 
-void avr_jtag_dp_handler(uint8_t jd_index, uint32_t j_idcode);
-int platform_avr_jtag_dp_init(AVR_DP_t *dp);
+void avr_jtag_pdi_handler(uint8_t jd_index, uint32_t j_idcode);
+int platform_avr_jtag_pdi_init(avr_pdi_t *pdi);
 
 bool avr_jtag_shift_dr(jtag_proc_t *jp, uint8_t jd_index, uint8_t *dout, const uint8_t din);
-bool avr_pdi_reg_write(AVR_DP_t *dp, uint8_t reg, uint8_t value);
-uint8_t avr_pdi_reg_read(AVR_DP_t *dp, uint8_t reg);
+bool avr_pdi_reg_write(avr_pdi_t *pdi, uint8_t reg, uint8_t value);
+uint8_t avr_pdi_reg_read(avr_pdi_t *pdi, uint8_t reg);
 
 bool avr_attach(target *t);
 void avr_detach(target *t);

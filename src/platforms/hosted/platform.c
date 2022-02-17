@@ -253,7 +253,7 @@ int platform_jtag_dp_init(ADIv5_DP_t *dp)
 	return 0;
 }
 
-int platform_avr_jtag_dp_init(AVR_DP_t *dp)
+int platform_avr_jtag_pdi_init(avr_pdi_t *pdi)
 {
 	(void)dp;
 	return 0;

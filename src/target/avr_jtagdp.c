@@ -6,22 +6,22 @@
 
 #define PDI_DELAY	0xDBU
 
-void avr_jtag_dp_handler(uint8_t jd_index, uint32_t j_idcode)
+void avr_jtag_pdi_handler(uint8_t jd_index, uint32_t j_idcode)
 {
-	AVR_DP_t *dp = calloc(1, sizeof(*dp));
-	if (!dp) {			/* calloc failed: heap exhaustion */
+	avr_pdi_t *pdi = calloc(1, sizeof(*pdi));
+	if (!pdi) {			/* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return;
 	}
 	(void)j_idcode;
 
-	dp->dp_jd_index = jd_index;
-	dp->idcode = jtag_devs[jd_index].jd_idcode;
-	dp->error_state = pdi_ok;
-	if ((PC_HOSTED == 0) || (!platform_avr_jtag_dp_init(dp))) {
+	pdi->dp_jd_index = jd_index;
+	pdi->idcode = jtag_devs[jd_index].jd_idcode;
+	pdi->error_state = pdi_ok;
+	if ((PC_HOSTED == 0) || (!platform_avr_jtag_pdi_init(pdi))) {
 		//
 	}
-	avr_dp_init(dp);
+	avr_pdi_init(pdi);
 }
 
 bool avr_jtag_shift_dr(jtag_proc_t *jp, uint8_t jd_index, uint8_t *dout, const uint8_t din)
