@@ -143,6 +143,8 @@ void target_add_commands(target *t, const struct command_s *cmds, const char *na
 void target_add_ram(target *t, target_addr start, uint32_t len);
 void target_add_flash(target *t, struct target_flash *f);
 
+struct target_flash *target_flash_for_addr(target *t, uint32_t addr);
+
 /* Convenience function for MMIO access */
 uint32_t target_mem_read32(target *t, uint32_t addr);
 uint16_t target_mem_read16(target *t, uint32_t addr);
