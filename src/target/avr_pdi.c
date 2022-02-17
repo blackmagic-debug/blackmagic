@@ -391,6 +391,9 @@ void avr_detach(target *t)
 static void avr_reset(target *t)
 {
 	avr_pdi_t *pdi = t->priv;
+	// We only actually want to do this if the target is not presently attached as this resets the NVM and debug enables
+	if (target_attached(t))
+		return;
 	if (!avr_pdi_reg_write(pdi, PDI_REG_RESET, PDI_RESET))
 		raise_exception(EXCEPTION_ERROR, "Error resetting device, device in incorrect state");
 	if (avr_pdi_reg_read(pdi, PDI_REG_STATUS) != 0x00)
