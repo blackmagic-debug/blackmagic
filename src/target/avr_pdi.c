@@ -386,8 +386,7 @@ static enum target_halt_reason avr_halt_poll(target *t, target_addr *watch)
 static bool avr_check_error(target *t)
 {
 	AVR_DP_t *dp = t->priv;
-	(void)dp;
-	return false;
+	return dp->error_state != pdi_ok;
 }
 
 static void avr_mem_read(target *t, void *dest, target_addr src, size_t len)

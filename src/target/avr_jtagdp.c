@@ -17,6 +17,7 @@ void avr_jtag_dp_handler(uint8_t jd_index, uint32_t j_idcode)
 
 	dp->dp_jd_index = jd_index;
 	dp->idcode = jtag_devs[jd_index].jd_idcode;
+	dp->error_state = pdi_ok;
 	if ((PC_HOSTED == 0) || (!platform_avr_jtag_dp_init(dp))) {
 		//
 	}
