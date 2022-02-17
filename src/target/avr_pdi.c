@@ -234,32 +234,42 @@ static inline bool avr_pdi_read24(avr_pdi_t *pdi, uint32_t reg, uint32_t *value)
 static inline bool avr_pdi_read32(avr_pdi_t *pdi, uint32_t reg, uint32_t *value)
 	{ return avr_pdi_read(pdi, PDI_DATA_32, reg, value); }
 
+// Runs `st ptr <addr>`
+static bool avr_pdi_write_ptr(const avr_pdi_t *const pdi, const uint32_t addr)
+{
+	const uint8_t command = PDI_ST | PDI_MODE_DIR_PTR | PDI_DATA_32;
+	uint8_t result = 0;
+	return !avr_jtag_shift_dr(&jtag_proc, pdi->dp_jd_index, &result, command) && result == PDI_EMPTY &&
+		!avr_jtag_shift_dr(&jtag_proc, pdi->dp_jd_index, &result, addr & 0xffU) && result == PDI_EMPTY &&
+		!avr_jtag_shift_dr(&jtag_proc, pdi->dp_jd_index, &result, (addr >> 8U) & 0xffU) && result == PDI_EMPTY &&
+		!avr_jtag_shift_dr(&jtag_proc, pdi->dp_jd_index, &result, (addr >> 16U) & 0xffU) && result == PDI_EMPTY &&
+		!avr_jtag_shift_dr(&jtag_proc, pdi->dp_jd_index, &result, (addr >> 24U) & 0xffU) && result == PDI_EMPTY;
+}
+
+// Runs `repeat <count - 1>`
+static bool avr_pdi_repeat(const avr_pdi_t *const pdi, const uint32_t count)
+{
+	const uint32_t repeat = count - 1U;
+	const uint8_t command = PDI_REPEAT | PDI_DATA_32;
+	uint8_t result = 0;
+	return !avr_jtag_shift_dr(&jtag_proc, pdi->dp_jd_index, &result, command) && result == PDI_EMPTY &&
+		!avr_jtag_shift_dr(&jtag_proc, pdi->dp_jd_index, &result, repeat & 0xffU) && result == PDI_EMPTY &&
+		!avr_jtag_shift_dr(&jtag_proc, pdi->dp_jd_index, &result, (repeat >> 8U) & 0xffU) && result == PDI_EMPTY &&
+		!avr_jtag_shift_dr(&jtag_proc, pdi->dp_jd_index, &result, (repeat >> 16U) & 0xffU) && result == PDI_EMPTY &&
+		!avr_jtag_shift_dr(&jtag_proc, pdi->dp_jd_index, &result, (repeat >> 24U) & 0xffU) && result == PDI_EMPTY;
+}
+
 static bool avr_pdi_read_ind(const avr_pdi_t *const pdi, const uint32_t addr, const uint8_t ptr_mode,
 	void *const dst, const uint32_t count)
 {
-	const uint32_t repeat = count - 1U;
-	uint8_t result = 0, command;
-	uint8_t *data = (uint8_t *)dst;
-	if ((ptr_mode & PDI_MODE_MASK) || !count)
-		return false;
-	// Run `st ptr <addr>`
-	command = PDI_ST | PDI_MODE_DIR_PTR | PDI_DATA_32;
-	if (avr_jtag_shift_dr(&jtag_proc, pdi->dp_jd_index, &result, command) || result != PDI_EMPTY ||
-		avr_jtag_shift_dr(&jtag_proc, pdi->dp_jd_index, &result, addr & 0xffU) || result != PDI_EMPTY ||
-		avr_jtag_shift_dr(&jtag_proc, pdi->dp_jd_index, &result, (addr >> 8U) & 0xffU) || result != PDI_EMPTY ||
-		avr_jtag_shift_dr(&jtag_proc, pdi->dp_jd_index, &result, (addr >> 16U) & 0xffU) || result != PDI_EMPTY ||
-		avr_jtag_shift_dr(&jtag_proc, pdi->dp_jd_index, &result, (addr >> 24U) & 0xffU) || result != PDI_EMPTY)
-		return false;
-	// Run `repeat <count - 1>`
-	command = PDI_REPEAT | PDI_DATA_32;
-	if (avr_jtag_shift_dr(&jtag_proc, pdi->dp_jd_index, &result, command) || result != PDI_EMPTY ||
-		avr_jtag_shift_dr(&jtag_proc, pdi->dp_jd_index, &result, repeat & 0xffU) || result != PDI_EMPTY ||
-		avr_jtag_shift_dr(&jtag_proc, pdi->dp_jd_index, &result, (repeat >> 8U) & 0xffU) || result != PDI_EMPTY ||
-		avr_jtag_shift_dr(&jtag_proc, pdi->dp_jd_index, &result, (repeat >> 16U) & 0xffU) || result != PDI_EMPTY ||
-		avr_jtag_shift_dr(&jtag_proc, pdi->dp_jd_index, &result, (repeat >> 24U) & 0xffU) || result != PDI_EMPTY)
+	const uint8_t command = PDI_LD | ptr_mode;
+	uint8_t result = 0;
+	uint8_t *const data = (uint8_t *)dst;
+	if ((ptr_mode & PDI_MODE_MASK) || !count ||
+		!avr_pdi_write_ptr(pdi, addr) ||
+		!avr_pdi_repeat(pdi, count))
 		return false;
 	// Run `ld <ptr_mode>`
-	command = PDI_LD | ptr_mode;
 	if (avr_jtag_shift_dr(&jtag_proc, pdi->dp_jd_index, &result, command) || result != PDI_EMPTY)
 		return false;
 	for (uint32_t i = 0; i < count; ++i)
