@@ -380,7 +380,7 @@ void avr_add_flash(target *t, uint32_t start, size_t length)
 	target_add_flash(t, f);
 }
 
-bool avr_ensure_nvm_idle(avr_pdi_t *pdi)
+static bool avr_ensure_nvm_idle(avr_pdi_t *pdi)
 {
 	return avr_pdi_write(pdi, PDI_DATA_8, AVR_ADDR_NVM_CMD, 0) &&
 		avr_pdi_write(pdi, PDI_DATA_8, AVR_ADDR_NVM_DATA, 0xFFU);
@@ -468,7 +468,7 @@ static void avr_halt_request(target *t)
 	pdi->halt_reason = TARGET_HALT_REQUEST;
 }
 
-static void avr_halt_resume(target *t, bool step)
+static void avr_halt_resume(target *t, const bool step)
 {
 	avr_pdi_t *pdi = t->priv;
 	if (step)
