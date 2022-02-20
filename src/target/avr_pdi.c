@@ -81,6 +81,13 @@ typedef enum
 static const char pdi_key_nvm[] = {0xff, 0x88, 0xd8, 0xcd, 0x45, 0xab, 0x89, 0x12};
 static const char pdi_key_debug[] = {0x21, 0x81, 0x7c, 0x9f, 0xd4, 0x2d, 0x21, 0x3a};
 
+static bool avr_erase(target *t, int argc, char **argv);
+
+const struct command_s avr_cmd_list[] = {
+	{"erase", (cmd_handler)avr_erase, "Erase (part of) a device"},
+	{NULL, NULL, NULL}
+};
+
 static void avr_reset(target *t);
 static void avr_halt_request(target *t);
 static enum target_halt_reason avr_halt_poll(target *t, target_addr *watch);
@@ -140,6 +147,8 @@ bool avr_pdi_init(avr_pdi_t *pdi)
 	// Unlike on an ARM processor, where this is the length of a table, here we return the size of
 	// a suitable registers structure.
 	t->regs_size = sizeof(avr_regs);
+
+	target_add_commands(t, avr_cmd_list, "Atmel AVR");
 
 	if (atxmega_probe(t))
 		return true;
@@ -522,4 +531,24 @@ static int avr_flash_write(struct target_flash *f, target_addr dest, const void 
 			return 1;
 	}
 	return 0;
+}
+
+static bool avr_erase(target *t, int argc, char **argv)
+{
+	if (argc < 2)
+		tc_printf(t, "usage: monitor erase (<start_address>) <length>\n");
+	else
+	{
+		target_addr begin = 0;
+		size_t length = 0;
+		if (argc >= 3)
+		{
+			begin = atol(argv[1]);
+			length = atol(argv[2]);
+		}
+		else
+			length = atol(argv[1]);
+		target_flash_erase(t, begin, length);
+	}
+	return true;
 }
