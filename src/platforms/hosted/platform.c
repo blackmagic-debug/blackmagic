@@ -255,7 +255,7 @@ int platform_jtag_dp_init(ADIv5_DP_t *dp)
 
 int platform_avr_jtag_pdi_init(avr_pdi_t *pdi)
 {
-	(void)dp;
+	(void)pdi;
 	return 0;
 }
 
