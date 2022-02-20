@@ -10,12 +10,18 @@ enum avr_error_e
 	pdi_failure,
 };
 
-typedef struct Atmel_DP_s {
+#define AVR_MAX_BREAKPOINTS 2
+
+typedef struct avr_pdi_s {
 	uint32_t idcode;
 
 	uint8_t dp_jd_index;
 	enum target_halt_reason halt_reason;
 	enum avr_error_e error_state;
+	target_addr programCounter;
+
+	bool hw_breakpoint[AVR_MAX_BREAKPOINTS];
+	uint8_t hw_breakpoint_max;
 } avr_pdi_t;
 
 bool avr_pdi_init(avr_pdi_t *pdi);
