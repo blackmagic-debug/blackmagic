@@ -382,7 +382,8 @@ bool avr_attach(target *t)
 			return false;
 		target_halt_request(t);
 		if (!avr_enable(pdi, PDI_NVM) ||
-			!avr_ensure_nvm_idle(pdi))
+			!avr_ensure_nvm_idle(pdi) ||
+			avr_pdi_reg_read(pdi, PDI_REG_R3) != 0x04U)
 			return false;
 	}
 	return !e.type;
@@ -410,6 +411,7 @@ static void avr_reset(target *t)
 		avr_disable(pdi, PDI_NVM);
 		avr_disable(pdi, PDI_DEBUG);
 	}
+	pdi->programCounter = 0;
 }
 
 static void avr_halt_request(target *t)
@@ -471,10 +473,12 @@ static void avr_regs_read(target *t, void *data)
 	uint32_t pc = 0;
 	if (!avr_pdi_read32(pdi, AVR_ADDR_DBG_PC, &pc) ||
 		!avr_pdi_read_ind(pdi, AVR_ADDR_CPU_SPL, PDI_MODE_IND_INCPTR, status, 3) ||
-		!avr_pdi_write(pdi, PDI_DATA_8, AVR_ADDR_DBG_CTRL, AVR_DBG_READ_REGS) ||
+		!avr_pdi_write(pdi, PDI_DATA_32, AVR_ADDR_DBG_PC, 0) ||
 		!avr_pdi_write(pdi, PDI_DATA_32, AVR_ADDR_DBG_CTR, AVR_NUM_REGS) ||
+		!avr_pdi_write(pdi, PDI_DATA_8, AVR_ADDR_DBG_CTRL, AVR_DBG_READ_REGS) ||
 		!avr_pdi_reg_write(pdi, PDI_REG_R4, 1) ||
-		!avr_pdi_read_ind(pdi, AVR_ADDR_DBG_SPECIAL, PDI_MODE_IND_PTR, regs->general, 32))
+		!avr_pdi_read_ind(pdi, AVR_ADDR_DBG_SPECIAL, PDI_MODE_IND_PTR, regs->general, 32) ||
+		avr_pdi_reg_read(pdi, PDI_REG_R3) != 0x04U)
 		raise_exception(EXCEPTION_ERROR, "Error reading registers");
 	// These aren't in the reads above because regs is a packed struct, which results in compiler errors
 	// Additionally, the program counter is stored in words and points to the next instruction to be executed
@@ -482,6 +486,7 @@ static void avr_regs_read(target *t, void *data)
 	regs->pc = (pc - 1) << 1;
 	regs->sp = status[0] | (status[1] << 8);
 	regs->sreg = status[2];
+	pdi->programCounter = pc - 1;
 }
 
 static int avr_flash_erase(struct target_flash *f, target_addr addr, size_t len)
