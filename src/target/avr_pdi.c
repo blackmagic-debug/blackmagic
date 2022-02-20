@@ -98,6 +98,7 @@ const struct command_s avr_cmd_list[] = {
 
 static void avr_reset(target *t);
 static void avr_halt_request(target *t);
+static void avr_halt_resume(target *t, bool step);
 static enum target_halt_reason avr_halt_poll(target *t, target_addr *watch);
 
 static bool avr_check_error(target *t);
@@ -467,9 +468,54 @@ static void avr_halt_request(target *t)
 	pdi->halt_reason = TARGET_HALT_REQUEST;
 }
 
+static void avr_halt_resume(target *t, bool step)
+{
+	avr_pdi_t *pdi = t->priv;
+	if (step)
+	{
+		const target_addr currentPC = pdi->programCounter;
+		const target_addr nextPC = currentPC + 1U;
+		/* To do a single step, we run the following steps:
+		 * Write the debug control register to 4, which puts the processor in a temporary breakpoint mode
+		 * Write the debug counter register with the address to stop execution on
+		 * Write the program counter with the address to resume execution on
+		 */
+		if (avr_pdi_reg_read(pdi, PDI_REG_R3) != 0x04U ||
+			!avr_pdi_write(pdi, PDI_DATA_8, AVR_ADDR_DBG_CTRL, 4) ||
+			!avr_pdi_write(pdi, PDI_DATA_32, AVR_ADDR_DBG_CTR, nextPC) ||
+			!avr_pdi_write(pdi, PDI_DATA_32, AVR_ADDR_DBG_PC, currentPC) ||
+			!avr_pdi_reg_write(pdi, PDI_REG_R4, 1) ||
+			avr_pdi_reg_read(pdi, PDI_REG_R3) != 0x04U ||
+			avr_pdi_reg_read(pdi, PDI_REG_STATUS) != 0x06U)
+			raise_exception(EXCEPTION_ERROR, "Error resuming device, device in incorrect state");
+		pdi->halt_reason = TARGET_HALT_STEPPING;
+	}
+	else
+	{
+		/* To resume the processor we go through the following specific steps:
+		 * Write the program counter to ensure we start where we expect
+		 * Then we release the externally (PDI) applied reset
+		 * We then poke the debug control register to indicate debug-supervised run
+		 * Ensure that PDI is still in debug mode (r4 = 1)
+		 * Read r3 to see that the processor is resuming
+		 */
+		if (avr_pdi_reg_read(pdi, PDI_REG_R3) != 0x04U ||
+			!avr_config_breakpoints(pdi) ||
+			!avr_pdi_write(pdi, PDI_DATA_32, AVR_ADDR_DBG_PC, pdi->programCounter) ||
+			!avr_pdi_reg_write(pdi, PDI_REG_RESET, 0) ||
+			!avr_pdi_write(pdi, PDI_DATA_8, AVR_ADDR_DBG_CTRL, 0) ||
+			!avr_pdi_reg_write(pdi, PDI_REG_R4, 1))
+			raise_exception(EXCEPTION_ERROR, "Error resuming device, device in incorrect state");
+		pdi->halt_reason = TARGET_HALT_RUNNING;
+	}
+}
+
 static enum target_halt_reason avr_halt_poll(target *t, target_addr *watch)
 {
 	avr_pdi_t *pdi = t->priv;
+	if (pdi->halt_reason == TARGET_HALT_RUNNING &&
+		avr_pdi_reg_read(pdi, PDI_REG_R3) == 0x04U)
+		pdi->halt_reason = TARGET_HALT_BREAKPOINT;
 	(void)watch;
 	return pdi->halt_reason;
 }
