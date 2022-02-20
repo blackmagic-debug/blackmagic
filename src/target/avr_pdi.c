@@ -52,6 +52,11 @@
 #define AVR_ADDR_DBG_CTRL		0x0000000AU
 #define AVR_ADDR_DBG_SPECIAL	0x0000000CU
 
+#define AVR_ADDR_DBG_BREAK_BASE	0x00000020U
+#define AVR_ADDR_DBG_BREAK_UNK1	0x00000040U
+#define AVR_ADDR_DBG_BREAK_UNK2	0x00000044U
+#define AVR_ADDR_DBG_BREAK_UNK3	0x00000048U
+
 #define AVR_DBG_BREAK_ENABLED	0x80000000U
 #define AVR_DBG_BREAK_MASK		0x00FFFFFFU
 
@@ -378,6 +383,24 @@ bool avr_ensure_nvm_idle(avr_pdi_t *pdi)
 {
 	return avr_pdi_write(pdi, PDI_DATA_8, AVR_ADDR_NVM_CMD, 0) &&
 		avr_pdi_write(pdi, PDI_DATA_8, AVR_ADDR_NVM_DATA, 0xFFU);
+}
+
+static bool avr_config_breakpoints(avr_pdi_t *pdi)
+{
+	const uint32_t addr_breakpoint_counter = AVR_ADDR_DBG_BREAK_BASE + (pdi->hw_breakpoint_max * 4);
+	const uint16_t breakpoint_count = pdi->hw_breakpoint_enabled << 8U;
+	for (uint8_t i = 0; i < pdi->hw_breakpoint_max; ++i)
+	{
+		if (!avr_pdi_write(pdi, PDI_DATA_32, AVR_ADDR_DBG_BREAK_BASE + (i * 4),
+				pdi->hw_breakpoint[i] & AVR_DBG_BREAK_MASK))
+			return false;
+	}
+	if (!avr_pdi_write(pdi, PDI_DATA_8, AVR_ADDR_DBG_BREAK_UNK1, 0) ||
+		!avr_pdi_write(pdi, PDI_DATA_8, AVR_ADDR_DBG_BREAK_UNK2, 0) ||
+		!avr_pdi_write(pdi, PDI_DATA_16, addr_breakpoint_counter, breakpoint_count) ||
+		!avr_pdi_write(pdi, PDI_DATA_8, AVR_ADDR_DBG_BREAK_UNK3, 0))
+		return false;
+	return true;
 }
 
 bool avr_attach(target *t)
