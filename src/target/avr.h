@@ -20,7 +20,8 @@ typedef struct avr_pdi_s {
 	enum avr_error_e error_state;
 	target_addr programCounter;
 
-	bool hw_breakpoint[AVR_MAX_BREAKPOINTS];
+	target_addr hw_breakpoint[AVR_MAX_BREAKPOINTS];
+	uint8_t hw_breakpoint_enabled;
 	uint8_t hw_breakpoint_max;
 } avr_pdi_t;
 

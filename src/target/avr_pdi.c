@@ -52,6 +52,9 @@
 #define AVR_ADDR_DBG_CTRL		0x0000000AU
 #define AVR_ADDR_DBG_SPECIAL	0x0000000CU
 
+#define AVR_DBG_BREAK_ENABLED	0x80000000U
+#define AVR_DBG_BREAK_MASK		0x00FFFFFFU
+
 #define AVR_DBG_READ_REGS		0x11U
 #define AVR_NUM_REGS			32
 
@@ -100,6 +103,9 @@ static void avr_regs_read(target *t, void *data);
 static int avr_flash_erase(struct target_flash *f, target_addr addr, size_t len);
 static int avr_flash_write(struct target_flash *f, target_addr dest, const void *src, size_t len);
 
+static int avr_breakwatch_set(target *t, struct breakwatch *bw);
+static int avr_breakwatch_clear(target *t, struct breakwatch *bw);
+
 typedef struct __attribute__((packed))
 {
 	uint8_t general[32]; // r0-r31
@@ -143,10 +149,14 @@ bool avr_pdi_init(avr_pdi_t *pdi)
 
 	t->reset = avr_reset;
 	t->halt_request = avr_halt_request;
+	t->halt_resume = avr_halt_resume;
 	t->halt_poll = avr_halt_poll;
 	// Unlike on an ARM processor, where this is the length of a table, here we return the size of
 	// a suitable registers structure.
 	t->regs_size = sizeof(avr_regs);
+
+	t->breakwatch_set = avr_breakwatch_set;
+	t->breakwatch_clear = avr_breakwatch_clear;
 
 	target_add_commands(t, avr_cmd_list, "Atmel AVR");
 
@@ -536,6 +546,57 @@ static int avr_flash_write(struct target_flash *f, target_addr dest, const void 
 			return 1;
 	}
 	return 0;
+}
+
+static int avr_breakwatch_set(target *t, struct breakwatch *bw)
+{
+	avr_pdi_t *pdi = t->priv;
+	switch (bw->type)
+	{
+		case TARGET_BREAK_HARD:
+		{
+			const uint8_t bp = pdi->hw_breakpoint_enabled;
+			if (bp == pdi->hw_breakpoint_max)
+				return -1;
+			pdi->hw_breakpoint[bp] = AVR_DBG_BREAK_ENABLED | bw->addr;
+			bw->reserved[0] = pdi->hw_breakpoint[bp];
+			++pdi->hw_breakpoint_enabled;
+			return 0;
+		}
+		default:
+			return 1;
+	}
+}
+
+static int avr_breakwatch_clear(target *t, struct breakwatch *bw)
+{
+	avr_pdi_t *pdi = t->priv;
+	switch (bw->type)
+	{
+		case TARGET_BREAK_HARD:
+		{
+			uint8_t bp = 0;
+			// Locate the breakpoint
+			for (; bp < pdi->hw_breakpoint_max; ++bp)
+			{
+				if (pdi->hw_breakpoint[bp] == bw->reserved[0])
+					break;
+			}
+			// Fail if we cannot find it
+			if (bp == pdi->hw_breakpoint_max)
+				return -1;
+			// Shuffle the remaining breakpoints.
+			for (; bp < (pdi->hw_breakpoint_enabled - 1U); ++bp)
+				pdi->hw_breakpoint[bp] = pdi->hw_breakpoint[bp + 1];
+			// Cleanup by disabling the breakpoint and fixing the count
+			pdi->hw_breakpoint[bp] = 0;
+			bw->reserved[0] = 0;
+			--pdi->hw_breakpoint_enabled;
+			return 0;
+		}
+		default:
+			return 1;
+	}
 }
 
 static bool avr_erase(target *t, int argc, char **argv)
