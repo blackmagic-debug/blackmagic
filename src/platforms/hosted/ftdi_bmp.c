@@ -165,6 +165,14 @@ cable_desc_t cable_desc[] = {
 		.description = "FTDISWD"
 	},
 	{
+		.vendor = 0x0403,
+		.product = 0x6010,
+		.interface = INTERFACE_A,
+		.init.data_low = PIN3,
+		.init.ddr_low  = PIN4 | PIN3 | PIN1 | PIN0,
+		.name = "hifive1"
+	},
+	{
 		.vendor = 0x15b1,
 		.product = 0x0003,
 		.interface = INTERFACE_A,
