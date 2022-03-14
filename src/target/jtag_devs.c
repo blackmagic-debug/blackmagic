@@ -63,10 +63,10 @@ jtag_dev_descr_t dev_descr[] = {
 	{.idcode = 0x000007A3, .idmask = 0x00000FFF,
 		.descr = "Gigadevice BSD."},
 /* Just for fun, unsupported */
-	{.idcode = 0x8940303F, .idmask = 0xFFFFFFFF, .descr = "Atmel: ATMega16."},
-	{.idcode = 0x0792603F, .idmask = 0xFFFFFFFF, .descr = "Atmel: AT91SAM9261."},
-	{.idcode = 0x20270013, .idmask = 0xFFFFFFFF, .descr = "Intel: i80386ex."},
-	{.idcode = 0x07B7617F, .idmask = 0xFFFFFFFF, .descr = "Broadcom: BCM2835."},
-	{.idcode = 0x4BA00477, .idmask = 0xFFFFFFFF, .descr = "Broadcom: BCM2836."},
+	{.idcode = 0x8940303F, .idmask = 0xFFFFFFFF, .descr = "ATMega16."},
+	{.idcode = 0x0792603F, .idmask = 0xFFFFFFFF, .descr = "AT91SAM9261."},
+	{.idcode = 0x20270013, .idmask = 0xFFFFFFFF, .descr = "i80386ex."},
+	{.idcode = 0x07B7617F, .idmask = 0xFFFFFFFF, .descr = "BCM2835."},
+	{.idcode = 0x4BA00477, .idmask = 0xFFFFFFFF, .descr = "BCM2836."},
 	{.idcode = 0, .idmask = 0, .descr = "Unknown"},
 };
