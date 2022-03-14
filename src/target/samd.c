@@ -715,51 +715,45 @@ static bool samd_set_flashlock(target *t, uint16_t value, const char **argv)
 	return true;
 }
 
-static bool parse_unsigned(const char *s, uint32_t *val) {
+static bool parse_unsigned(const char *s, uint32_t *val)
+{
 	int l, st;
 	unsigned long num;
-	
-	l=strlen(s);
-	
-	if (l>2 && s[0]=='0' && (s[1]=='x' || s[1]=='X')) {
-		st=sscanf(s+2, "%lx", &num);
-	} else {
-		st=sscanf(s, "%lu", &num);
-	}
-	
-	if (st<1) {
+
+	l = strlen(s);
+	// TODO: port to use substrate::toInt_t<> style parser for robustness and smaller code size
+	if (l > 2 && s[0] == '0' && (s[1] == 'x' || s[1] == 'X'))
+		st = sscanf(s + 2, "%lx", &num);
+	else
+		st = sscanf(s, "%lu", &num);
+
+	if (st < 1)
 		return false;
-	}
-	
-	*val=(uint32_t)num;
+
+	*val = (uint32_t)num;
 	return true;
 }
 
 static bool samd_cmd_lock_flash(target *t, int argc, const char **argv)
 {
-	unsigned long val;
-	
-	(void)argc;
-	(void)argv;
-	
-	if (argc>2) {
+	if (argc > 2) {
 		tc_printf(t, "usage: monitor lock_flash [number]\n");
 		return false;
-	} else if (argc==1) {
-		return samd_set_flashlock(t, 0x0000, NULL);
-	} else {
+	} else if (argc == 2) {
+		uint32_t val = 0;
 		if (!parse_unsigned(argv[1], &val)) {
 			tc_printf(t, "number must be either decimal or 0x prefixed hexadecimal\n");
 			return false;
 		}
-		
-		if (val>0xffff) {
-			tc_printf(t, "number must be between 0 and 0xFFFF\n");
+
+		if (val > 0xffffu) {
+			tc_printf(t, "number must be between 0 and 65535\n");
 			return false;
 		}
-		
+
 		return samd_set_flashlock(t, (uint16_t)val, NULL);
-	}
+	} else
+		return samd_set_flashlock(t, 0x0000, NULL);
 }
 
 static bool samd_cmd_unlock_flash(target *t, int argc, const char **argv)
@@ -804,30 +798,25 @@ static bool samd_set_bootprot(target *t, uint16_t value, const char **argv)
 
 static bool samd_cmd_lock_bootprot(target *t, int argc, const char **argv)
 {
-	unsigned long val;
-	
-	(void)argc;
-	(void)argv;
 	/* locks first 0x7 .. 0, 0x6 .. 512, 0x5 .. 1024, ..., 0x0 .. 32768 bytes of flash*/
-	
-	if (argc>2) {
+	if (argc > 2) {
 		tc_printf(t, "usage: monitor lock_bootprot [number]\n");
 		return false;
-	} else if (argc==1) {
-		return samd_set_bootprot(t, 0, NULL);
-	} else {
+	} else if (argc == 2) {
+		uint32_t val = 0;
 		if (!parse_unsigned(argv[1], &val)) {
 			tc_printf(t, "number must be either decimal or 0x prefixed hexadecimal\n");
 			return false;
 		}
-		
-		if (val>7) {
+
+		if (val > 7) {
 			tc_printf(t, "number must be between 0 and 7\n");
 			return false;
 		}
-		
+
 		return samd_set_bootprot(t, (uint16_t)val, NULL);
-	}
+	} else
+		return samd_set_bootprot(t, 0, NULL);
 }
 
 static bool samd_cmd_unlock_bootprot(target *t, int argc, const char **argv)
