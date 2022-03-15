@@ -17,7 +17,7 @@ ifndef NO_LIBOPENCM3
 		git submodule init ;\
 		git submodule update ;\
 	fi
-	$(Q)$(MAKE) $(MFLAGS) -C libopencm3 lib
+	$(Q)$(MAKE) $(MFLAGS) -C libopencm3 lib/stm32/f1 lib/stm32/f4 lib/lm4f
 endif
 	$(Q)$(MAKE) $(MFLAGS) -C src
 
