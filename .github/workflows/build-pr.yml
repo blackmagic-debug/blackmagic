@@ -24,12 +24,15 @@ jobs:
       # Use embedded toolchain
       - uses: numworks/setup-arm-toolchain@2020-q4
 
-      # Runs a single command using the runners shell
+      # Run some of the most common build types
       - name: Build native fw
         run: make
 
       - name: Clean
         run: make clean
+
+      - name: Install BMP PC hosted dependencies
+        run: sudo apt-get -y install libftdi1-dev
 
       - name: Build PC hosted binary
         run: make PROBE_HOST=hosted 
