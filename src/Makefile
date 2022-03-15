@@ -61,6 +61,9 @@ SRC =			\
 	stm32g0.c	\
 	target.c	\
 
+# Output memory usage information
+LDFLAGS += -Wl,--print-memory-usage
+
 include $(PLATFORM_DIR)/Makefile.inc
 
 OPT_FLAGS ?= -Os
