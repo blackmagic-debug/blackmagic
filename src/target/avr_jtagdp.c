@@ -6,15 +6,13 @@
 
 #define PDI_DELAY	0xDBU
 
-void avr_jtag_pdi_handler(uint8_t jd_index, uint32_t j_idcode)
+void avr_jtag_pdi_handler(uint8_t jd_index)
 {
 	avr_pdi_t *pdi = calloc(1, sizeof(*pdi));
 	if (!pdi) {			/* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return;
 	}
-	(void)j_idcode;
-
 	pdi->dp_jd_index = jd_index;
 	pdi->idcode = jtag_devs[jd_index].jd_idcode;
 	pdi->error_state = pdi_ok;
