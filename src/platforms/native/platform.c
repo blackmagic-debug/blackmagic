@@ -80,12 +80,13 @@ int platform_hwversion(void)
 
 	/* Check if the hwversion is set in the user option byte. */
 	if (hwversion == -1) {
-		if (BMP_HWVERSION_BYTE != 0xFFFF) {
+		if ((BMP_HWVERSION_BYTE != 0xFFFF) &&
+		    (BMP_HWVERSION_BYTE != 0x00FF)) {
 			/* Check if the data is valid.
 			 * When valid it should only have values 4 and higher.
 			 */
-			if ((BMP_HWVERSION_BYTE >> 8) !=
-			    (~BMP_HWVERSION_BYTE & 0xFF) ||
+			if (((BMP_HWVERSION_BYTE >> 8) !=
+			     (~BMP_HWVERSION_BYTE & 0xFF)) ||
 			    ((BMP_HWVERSION_BYTE & 0xFF) < 4)) {
 				return -2;
 			} else {
