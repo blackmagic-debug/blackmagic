@@ -56,7 +56,6 @@ static target *last_target;
 static void handle_q_packet(char *packet, int len);
 static void handle_v_packet(char *packet, int len);
 static void handle_z_packet(char *packet, int len);
-
 static void gdb_target_destroy_callback(struct target_controller *tc, target *t)
 {
 	(void)tc;
@@ -330,101 +329,154 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 	}
 }
 
-static void
-handle_q_string_reply(const char *str, const char *param)
+static void handle_q_string_reply(const char *str, const char *param)
 {
 	unsigned long addr, len;
 
-	if (sscanf(param, "%08lx,%08lx", &addr, &len) != 2) {
+	if (sscanf(param, "%08lx,%08lx", &addr, &len) != 2)
+  {
 		gdb_putpacketz("E01");
 		return;
 	}
-	if (addr < strlen (str)) {
-		char reply[len+2];
-		reply[0] = 'm';
-		strncpy (reply + 1, &str[addr], len);
-		if(len > strlen(&str[addr]))
-			len = strlen(&str[addr]);
-		gdb_putpacket(reply, len + 1);
-	} else if (addr == strlen (str)) {
-		gdb_putpacketz("l");
-	} else
-		gdb_putpacketz("E01");
+  if (addr > strlen (str))
+  {
+    	gdb_putpacketz("E01");
+      return;
+  }
+  if(addr== strlen (str))
+  {
+    	gdb_putpacketz("l");
+      return;
+  }
+  unsigned long int outputLen=strlen(str)-addr;
+  if(outputLen>len) outputLen=len;
+  gdb_putpacket2("m",1,str+addr,outputLen);
 }
 
-static void
-handle_q_packet(char *packet, int len)
+typedef struct
 {
-	uint32_t addr, alen;
+    const char *cmdPrefix;
+    void  (*func)(char *packet,int len);
+}cmdExecuter;
+//---
+static void execqRcmd(char *packet,int len)
+{
+  char *data;
+  int datalen;
 
-	if(!strncmp(packet, "qRcmd,", 6)) {
-		char *data;
-		int datalen;
+  /* calculate size and allocate buffer for command */
+  datalen = len/ 2;
+  data = alloca(datalen+1);
+  /* dehexify command */
+  unhexify(data, packet, datalen);
+  data[datalen] = 0;	/* add terminating null */
 
-		/* calculate size and allocate buffer for command */
-		datalen = (len - 6) / 2;
-		data = alloca(datalen+1);
-		/* dehexify command */
-		unhexify(data, packet+6, datalen);
-		data[datalen] = 0;	/* add terminating null */
-
-		int c = command_process(cur_target, data);
-		if(c < 0)
-			gdb_putpacketz("");
-		else if(c == 0)
-			gdb_putpacketz("OK");
-		else
-			gdb_putpacket(hexify(pbuf, "Failed\n", strlen("Failed\n")),
-						  2 * strlen("Failed\n"));
-
-	} else if (!strncmp (packet, "qSupported", 10)) {
-		/* Query supported protocol features */
-		gdb_putpacket_f("PacketSize=%X;qXfer:memory-map:read+;qXfer:features:read+", BUF_SIZE);
-
-	} else if (strncmp (packet, "qXfer:memory-map:read::", 23) == 0) {
-		/* Read target XML memory map */
-		if((!cur_target) && last_target) {
-			/* Attach to last target if detached. */
-			cur_target = target_attach(last_target,
-						   &gdb_controller);
-		}
-		if (!cur_target) {
-			gdb_putpacketz("E01");
-			return;
-		}
-		char buf[1024];
-		target_mem_map(cur_target, buf, sizeof(buf)); /* Fixme: Check size!*/
-		handle_q_string_reply(buf, packet + 23);
-
-	} else if (strncmp (packet, "qXfer:features:read:target.xml:", 31) == 0) {
-		/* Read target description */
-		if((!cur_target) && last_target) {
-			/* Attach to last target if detached. */
-			cur_target = target_attach(last_target,
-						   &gdb_controller);
-		}
-		if (!cur_target) {
-			gdb_putpacketz("E01");
-			return;
-		}
-		handle_q_string_reply(target_tdesc(cur_target), packet + 31);
-	} else if (sscanf(packet, "qCRC:%" PRIx32 ",%" PRIx32, &addr, &alen) == 2) {
-		if(!cur_target) {
-			gdb_putpacketz("E01");
-			return;
-		}
-		uint32_t crc;
-		int res = generic_crc32(cur_target, &crc, addr, alen);
-		if (res)
-			gdb_putpacketz("E03");
-		else
-			gdb_putpacket_f("C%lx", crc);
-
-	} else {
-		DEBUG_GDB("*** Unsupported packet: %s\n", packet);
-		gdb_putpacket("", 0);
-	}
+  int c = command_process(cur_target, data);
+  if(c < 0)
+    gdb_putpacketz("");
+  else if(c == 0)
+    gdb_putpacketz("OK");
+  else
+    gdb_putpacket(hexify(pbuf, "Failed\n", strlen("Failed\n")),
+            2 * strlen("Failed\n"));
 }
+static void execqSupported(char *packet, int len)
+{
+    (void)(packet);
+    (void)(len);
+  	gdb_putpacket_f("PacketSize=%X;qXfer:memory-map:read+;qXfer:features:read+", BUF_SIZE);
+}
+extern  char *ztarget_mem_map(const target *t);
+static void execqMemoryMap(char *packet,int len)
+{
+    (void)(len);
+    /* Read target XML memory map */
+    if((!cur_target) && last_target) {
+    	/* Attach to last target if detached. */
+    	cur_target = target_attach(last_target,
+    				   &gdb_controller);
+    }
+ 		if (!cur_target) {
+ 			gdb_putpacketz("E01");
+ 			return;
+ 		}
+
+    //ok, grab the full reply
+    char buf[1024];
+    target_mem_map(cur_target, buf, sizeof(buf)); /* Fixme: Check size!*/
+    handle_q_string_reply(buf,packet);
+}
+
+static void execqFeatureRead(char *packet, int len)
+{
+  (void)(len);
+  /* Read target description */
+  if((!cur_target) && last_target) {
+    /* Attach to last target if detached. */
+    cur_target = target_attach(last_target, &gdb_controller);
+  }
+  if (!cur_target) {
+    gdb_putpacketz("E01");
+    return;
+  }
+  handle_q_string_reply(target_tdesc(cur_target), packet );
+}
+
+static void execqCRC(char *packet, int len)
+{
+  uint32_t addr, alen;
+  (void)(len);
+  if (sscanf(packet, "%" PRIx32 ",%" PRIx32, &addr, &alen) == 2) {
+   if(!cur_target) {
+     gdb_putpacketz("E01");
+     return;
+   }
+   uint32_t crc;
+   int res = generic_crc32(cur_target, &crc, addr, alen);
+   if (res)
+     gdb_putpacketz("E03");
+   else
+     gdb_putpacket_f("C%lx", crc);
+  }
+}
+//----
+static const cmdExecuter qCommands[]=
+{
+    {"qRcmd,",                         execqRcmd},
+    {"qSupported",                     execqSupported},
+    {"qXfer:memory-map:read::",        execqMemoryMap},
+    {"qXfer:features:read:target.xml:",execqFeatureRead},
+    {"qCRC:"                          ,execqCRC},
+    {NULL,NULL},
+};
+/**
+
+*/
+bool execCommand(char *packet, int len, const cmdExecuter *exec)
+{
+  while(exec->cmdPrefix)
+  {
+      int l=strlen(exec->cmdPrefix);
+      if(!strncmp(packet,exec->cmdPrefix,l))
+      {
+        exec->func(packet+l,len-l);
+        return true;
+      }
+      exec++;
+  }
+  return false;
+}
+
+static void handle_q_packet(char *packet, int len)
+{
+  if(execCommand(packet,len,qCommands))
+  {
+    return;
+  }
+	DEBUG_GDB("*** Unsupported packet: %s\n", packet);
+	gdb_putpacket("", 0);
+}
+
 
 static void
 handle_v_packet(char *packet, int plen)
