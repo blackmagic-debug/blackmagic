@@ -16,7 +16,7 @@ void avr_jtag_pdi_handler(uint8_t jd_index)
 	pdi->dp_jd_index = jd_index;
 	pdi->idcode = jtag_devs[jd_index].jd_idcode;
 	pdi->error_state = pdi_ok;
-	pdi->hw_breakpoint_enabled = 0;
+	pdi->hw_breakpoints_enabled = 0;
 	if ((PC_HOSTED == 0) || (!platform_avr_jtag_pdi_init(pdi))) {
 		//
 	}

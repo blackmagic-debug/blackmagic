@@ -21,8 +21,8 @@ typedef struct avr_pdi_s {
 	target_addr programCounter;
 
 	target_addr hw_breakpoint[AVR_MAX_BREAKPOINTS];
-	uint8_t hw_breakpoint_enabled;
-	uint8_t hw_breakpoint_max;
+	uint32_t hw_breakpoints_enabled;
+	uint32_t hw_breakpoints_max;
 } avr_pdi_t;
 
 bool avr_pdi_init(avr_pdi_t *pdi);

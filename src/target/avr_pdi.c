@@ -386,15 +386,26 @@ static bool avr_ensure_nvm_idle(avr_pdi_t *pdi)
 		avr_pdi_write(pdi, PDI_DATA_8, AVR_ADDR_NVM_DATA, 0xFFU);
 }
 
-static bool avr_config_breakpoints(avr_pdi_t *pdi)
+static bool avr_config_breakpoints(avr_pdi_t *pdi, const bool step)
 {
-	const uint32_t addr_breakpoint_counter = AVR_ADDR_DBG_BREAK_BASE + (pdi->hw_breakpoint_max * 4);
-	const uint16_t breakpoint_count = pdi->hw_breakpoint_enabled << 8U;
-	for (uint8_t i = 0; i < pdi->hw_breakpoint_max; ++i)
+	const uint32_t addr_breakpoint_counter = AVR_ADDR_DBG_BREAK_BASE + (pdi->hw_breakpoints_max * 4);
+	const uint16_t breakpoint_count = step ? 0U : (pdi->hw_breakpoints_enabled << 8U);
+	if (step)
 	{
-		if (!avr_pdi_write(pdi, PDI_DATA_32, AVR_ADDR_DBG_BREAK_BASE + (i * 4),
-				pdi->hw_breakpoint[i] & AVR_DBG_BREAK_MASK))
-			return false;
+		for (uint8_t i = 0; i < pdi->hw_breakpoints_max; ++i)
+		{
+			if (!avr_pdi_write(pdi, PDI_DATA_32, AVR_ADDR_DBG_BREAK_BASE + (i * 4), 0U))
+				return false;
+		}
+	}
+	else
+	{
+		for (uint8_t i = 0; i < pdi->hw_breakpoints_max; ++i)
+		{
+			if (!avr_pdi_write(pdi, PDI_DATA_32, AVR_ADDR_DBG_BREAK_BASE + (i * 4),
+					pdi->hw_breakpoint[i] & AVR_DBG_BREAK_MASK))
+				return false;
+		}
 	}
 	if (!avr_pdi_write(pdi, PDI_DATA_8, AVR_ADDR_DBG_BREAK_UNK1, 0) ||
 		!avr_pdi_write(pdi, PDI_DATA_8, AVR_ADDR_DBG_BREAK_UNK2, 0) ||
@@ -481,13 +492,14 @@ static void avr_halt_resume(target *t, const bool step)
 		 * Write the program counter with the address to resume execution on
 		 */
 		if (avr_pdi_reg_read(pdi, PDI_REG_R3) != 0x04U ||
+			!avr_config_breakpoints(pdi, step) ||
 			!avr_pdi_write(pdi, PDI_DATA_8, AVR_ADDR_DBG_CTRL, 4) ||
 			!avr_pdi_write(pdi, PDI_DATA_32, AVR_ADDR_DBG_CTR, nextPC) ||
 			!avr_pdi_write(pdi, PDI_DATA_32, AVR_ADDR_DBG_PC, currentPC) ||
 			!avr_pdi_reg_write(pdi, PDI_REG_R4, 1) ||
 			avr_pdi_reg_read(pdi, PDI_REG_R3) != 0x04U ||
 			avr_pdi_reg_read(pdi, PDI_REG_STATUS) != 0x06U)
-			raise_exception(EXCEPTION_ERROR, "Error resuming device, device in incorrect state");
+			raise_exception(EXCEPTION_ERROR, "Error stepping device, device in incorrect state");
 		pdi->halt_reason = TARGET_HALT_STEPPING;
 	}
 	else
@@ -500,7 +512,7 @@ static void avr_halt_resume(target *t, const bool step)
 		 * Read r3 to see that the processor is resuming
 		 */
 		if (avr_pdi_reg_read(pdi, PDI_REG_R3) != 0x04U ||
-			!avr_config_breakpoints(pdi) ||
+			!avr_config_breakpoints(pdi, step) ||
 			!avr_pdi_write(pdi, PDI_DATA_32, AVR_ADDR_DBG_PC, pdi->programCounter) ||
 			!avr_pdi_reg_write(pdi, PDI_REG_RESET, 0) ||
 			!avr_pdi_write(pdi, PDI_DATA_8, AVR_ADDR_DBG_CTRL, 0) ||
@@ -624,12 +636,12 @@ static int avr_breakwatch_set(target *t, struct breakwatch *bw)
 	{
 		case TARGET_BREAK_HARD:
 		{
-			const uint8_t bp = pdi->hw_breakpoint_enabled;
-			if (bp == pdi->hw_breakpoint_max)
+			const uint8_t bp = pdi->hw_breakpoints_enabled;
+			if (bp == pdi->hw_breakpoints_max)
 				return -1;
 			pdi->hw_breakpoint[bp] = AVR_DBG_BREAK_ENABLED | bw->addr;
 			bw->reserved[0] = pdi->hw_breakpoint[bp];
-			++pdi->hw_breakpoint_enabled;
+			++pdi->hw_breakpoints_enabled;
 			return 0;
 		}
 		default:
@@ -646,21 +658,21 @@ static int avr_breakwatch_clear(target *t, struct breakwatch *bw)
 		{
 			uint8_t bp = 0;
 			// Locate the breakpoint
-			for (; bp < pdi->hw_breakpoint_max; ++bp)
+			for (; bp < pdi->hw_breakpoints_max; ++bp)
 			{
 				if (pdi->hw_breakpoint[bp] == bw->reserved[0])
 					break;
 			}
 			// Fail if we cannot find it
-			if (bp == pdi->hw_breakpoint_max)
+			if (bp == pdi->hw_breakpoints_max)
 				return -1;
 			// Shuffle the remaining breakpoints.
-			for (; bp < (pdi->hw_breakpoint_enabled - 1U); ++bp)
+			for (; bp < (pdi->hw_breakpoints_enabled - 1U); ++bp)
 				pdi->hw_breakpoint[bp] = pdi->hw_breakpoint[bp + 1];
 			// Cleanup by disabling the breakpoint and fixing the count
 			pdi->hw_breakpoint[bp] = 0;
 			bw->reserved[0] = 0;
-			--pdi->hw_breakpoint_enabled;
+			--pdi->hw_breakpoints_enabled;
 			return 0;
 		}
 		default:

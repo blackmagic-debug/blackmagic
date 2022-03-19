@@ -67,7 +67,7 @@ bool atxmega_probe(target *t)
 			avr_add_flash(t, 0x00000000, 0x40000);
 			avr_add_flash(t, 0x00040000, 0x2000);
 			t->tdesc = tdesc_xmega6;
-			pdi->hw_breakpoint_max = 2;
+			pdi->hw_breakpoints_max = 2;
 			return true;
 	}
 	return false;
