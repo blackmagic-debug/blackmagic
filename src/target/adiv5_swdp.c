@@ -67,6 +67,7 @@ bool firmware_dp_low_write(ADIv5_DP_t *dp, uint16_t addr, const uint32_t data)
  */
 int adiv5_swdp_scan(uint32_t targetid)
 {
+	volatile struct exception e;
 	target_list_free();
 	ADIv5_DP_t idp = {
 		.dp_low_write = firmware_dp_low_write,
@@ -97,7 +98,7 @@ int adiv5_swdp_scan(uint32_t targetid)
 		/* No targetID given on the command line or probe can not
 		 * handle multi-drop. Try to read ID */
 		dp_line_reset(initial_dp);
-		volatile struct exception e;
+
 		TRY_CATCH (e, EXCEPTION_ALL) {
 			idcode = initial_dp->dp_read(initial_dp, ADIV5_DP_IDCODE);
 		}
@@ -109,11 +110,11 @@ int adiv5_swdp_scan(uint32_t targetid)
 			initial_dp->seq_out(0xE79E, 16); /* 0b0111100111100111 */
 			dp_line_reset(initial_dp);
 			initial_dp->fault = 0;
-			volatile struct exception e2;
-			TRY_CATCH (e2, EXCEPTION_ALL) {
+
+			TRY_CATCH (e, EXCEPTION_ALL) {
 				idcode = initial_dp->dp_read(initial_dp, ADIV5_DP_IDCODE);
 			}
-			if (e2.type || initial_dp->fault) {
+			if (e.type || initial_dp->fault) {
 				DEBUG_WARN("No usable DP found\n");
 				return -1;
 			}
@@ -150,7 +151,6 @@ int adiv5_swdp_scan(uint32_t targetid)
 			dp_targetid = (i << 28) | (target_id & 0x0fffffff);
 			initial_dp->dp_low_write(initial_dp, ADIV5_DP_TARGETSEL,
 									dp_targetid);
-			volatile struct exception e;
 			TRY_CATCH (e, EXCEPTION_ALL) {
 				idcode = initial_dp->dp_read(initial_dp, ADIV5_DP_IDCODE);
 			}
