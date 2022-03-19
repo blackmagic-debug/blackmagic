@@ -160,7 +160,6 @@ void gdb_putpacket2(const char *packet1, int size1,const char *packet2, int size
 {
 	int i;
 	unsigned char csum;
-	unsigned char c;
 	char xmit_csum[3];
 	int tries = 0;
 
@@ -185,7 +184,6 @@ void gdb_putpacket(const char *packet, int size)
 {
 	int i;
 	unsigned char csum;
-	unsigned char c;
 	char xmit_csum[3];
 	int tries = 0;
 
@@ -219,7 +217,6 @@ void gdb_putpacket_f(const char *fmt, ...)
 void gdb_out(const char *buf)
 {
 	char *hexdata;
-	int i;
 
 	int l=strlen(buf);
 	hexdata = alloca(2*l+1);
