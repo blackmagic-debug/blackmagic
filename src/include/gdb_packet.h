@@ -25,6 +25,7 @@
 
 int gdb_getpacket(char *packet, int size);
 void gdb_putpacket(const char *packet, int size);
+void gdb_putpacket2(const char *packet1, int size1,const char *packet2, int size2);
 #define gdb_putpacketz(packet) gdb_putpacket((packet), strlen(packet))
 void gdb_putpacket_f(const char *packet, ...);
 
