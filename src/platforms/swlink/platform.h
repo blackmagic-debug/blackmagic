@@ -115,7 +115,7 @@ int usbuart_debug_write(const char *buf, size_t len);
 #define USBUSART_DMA_CLK RCC_DMA1
 #define USBUSART_DMA_TX_CHAN DMA_CHANNEL4
 #define USBUSART_DMA_TX_IRQ NVIC_DMA1_CHANNEL4_IRQ
-#define USBUSART_DMA_TX_ISR(x) dma1_channel4_isr(x)
+//#define USBUSART_DMA_TX_ISR(x) dma1_channel4_isr(x)
 #define USBUSART_DMA_RX_CHAN DMA_CHANNEL5
 #define USBUSART_DMA_RX_IRQ NVIC_DMA1_CHANNEL5_IRQ
 #define USBUSART_DMA_RX_ISR(x) dma1_channel5_isr(x)
