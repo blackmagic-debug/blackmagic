@@ -350,7 +350,7 @@ bool exec_command(char *packet, int len, const cmd_executer *exec)
 	return false;
 }
 
-static void exec_qRcmd(const char *packet,int len)
+static void exec_q_rcmd(const char *packet,int len)
 {
 char *data;
 int datalen;
@@ -393,14 +393,14 @@ handle_q_string_reply(const char *str, const char *param)
 	if(output_len>len) output_len=len;
 	gdb_putpacket2("m",1,str+addr,output_len);
 }
-static void exec_qSupported(const char *packet, int len)
+static void exec_q_supported(const char *packet, int len)
 {
 	(void)packet;
 	(void)len;
 	gdb_putpacket_f("PacketSize=%X;qXfer:memory-map:read+;qXfer:features:read+", BUF_SIZE);
 }
 
-static void exec_qMemoryMap(const char *packet,int len)
+static void exec_q_memory_map(const char *packet,int len)
 {
 	(void)packet;
 	(void)len;
@@ -419,7 +419,7 @@ static void exec_qMemoryMap(const char *packet,int len)
 	handle_q_string_reply(buf, packet);
 }
 
-static void exec_qFeatureRead(const char *packet, int len)
+static void exec_q_feature_read(const char *packet, int len)
 {
 	(void)len;
 	/* Read target description */
@@ -434,7 +434,7 @@ static void exec_qFeatureRead(const char *packet, int len)
 	handle_q_string_reply(target_tdesc(cur_target), packet );
 }
 
-static void exec_qCRC(const char *packet, int len)
+static void exec_q_crc(const char *packet, int len)
 {
 	(void)len;
 	uint32_t addr, alen;
@@ -453,11 +453,11 @@ static void exec_qCRC(const char *packet, int len)
 }
 static const cmd_executer q_commands[]=
 {
-	{"qRcmd,",                         exec_qRcmd},
-	{"qSupported",                     exec_qSupported},
-	{"qXfer:memory-map:read::",        exec_qMemoryMap},
-	{"qXfer:features:read:target.xml:",exec_qFeatureRead},
-	{"qCRC:",                          exec_qCRC},
+	{"qRcmd,",                         exec_q_rcmd},
+	{"qSupported",                     exec_q_supported},
+	{"qXfer:memory-map:read::",        exec_q_memory_map},
+	{"qXfer:features:read:target.xml:",exec_q_feature_read},
+	{"qCRC:",                          exec_q_crc},
 
 	{NULL,NULL},
 };
