@@ -521,13 +521,6 @@ void USBUSART2_DMA_TX_ISR(void)
 }
 #endif
 
-#if defined(USBUSART_DMA_TX_ISR)
-void USBUSART_DMA_TX_ISR(void)
-{
-	USBUSART_DMA_TX_ISR_TEMPLATE(USBUSART_DMA_TX_CHAN);
-}
-#endif
-
 #define USBUSART_DMA_RX_ISR_TEMPLATE(USART_IRQ, DMA_RX_CHAN) do {		\
 	nvic_disable_irq(USART_IRQ);						\
 										\
