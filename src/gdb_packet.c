@@ -27,6 +27,9 @@
 #include "gdb_packet.h"
 #include "hex_utils.h"
 #include "remote.h"
+#ifdef ENABLE_APPLET
+#include "applet.h"
+#endif
 
 #include <stdarg.h>
 
@@ -43,10 +46,23 @@ int gdb_getpacket(char *packet, int size)
 			/* Spin waiting for a start of packet character - either a gdb
              * start ('$') or a BMP remote packet start ('!').
 			 */
-			do {
-				packet[0] = gdb_if_getchar();
+			packet[0] = gdb_if_getchar();
+			for(;;) {
 				if (packet[0]==0x04) return 1;
-			} while ((packet[0] != '$') && (packet[0] != REMOTE_SOM));
+				if (packet[0] == '$') break;
+				if (packet[0] == '!') break;
+#if ENABLE_APPLET
+				/* Transfer control to app when we see an unexpected
+				 * character. App can call gdb_if_getchar() to get
+				 * more data, e.g. to implement a command console. It
+				 * can return when it decides it is time to switch
+				 * back to normal operation. This function needs to
+				 * call gdb_if_char() at least once. */
+				packet[0] = applet_switch_protocol(packet[0]);
+#else
+				packet[0] = gdb_if_getchar();
+#endif
+			}
 #if PC_HOSTED == 0
 			if (packet[0]==REMOTE_SOM) {
 				/* This is probably a remote control packet
@@ -188,15 +204,20 @@ void gdb_putpacket_f(const char *fmt, ...)
 	va_end(ap);
 }
 
-void gdb_out(const char *buf)
+void gdb_out_buf(const char *buf, uint32_t len)
 {
 	char *hexdata;
 	int i;
 
-	hexdata = alloca((i = strlen(buf)*2 + 1) + 1);
+	hexdata = alloca((i = len*2 + 1) + 1);
 	hexdata[0] = 'O';
-	hexify(hexdata+1, buf, strlen(buf));
+	hexify(hexdata+1, buf, len);
 	gdb_putpacket(hexdata, i);
+}
+
+void gdb_out(const char *buf)
+{
+	gdb_out_buf(buf, strlen(buf));
 }
 
 void gdb_voutf(const char *fmt, va_list ap)

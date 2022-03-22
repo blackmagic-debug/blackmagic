@@ -20,6 +20,9 @@
 
 #include "general.h"
 #include "target_internal.h"
+#ifdef ENABLE_APPLET
+#include "applet.h"
+#endif
 
 #include <stdarg.h>
 
@@ -410,6 +413,9 @@ void target_reset(target *t) { t->reset(t); }
 void target_halt_request(target *t) { t->halt_request(t); }
 enum target_halt_reason target_halt_poll(target *t, target_addr *watch)
 {
+#ifdef ENABLE_APPLET
+	applet_poll(t);
+#endif
 	return t->halt_poll(t, watch);
 }
 

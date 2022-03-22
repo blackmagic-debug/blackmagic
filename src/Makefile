@@ -2,6 +2,8 @@ PROBE_HOST ?= native
 PLATFORM_DIR = platforms/$(PROBE_HOST)
 VPATH += $(PLATFORM_DIR) target
 ENABLE_DEBUG ?=
+APPLET_SRC ?=
+APPLET_CFLAGS ?=
 
 ifneq ($(V), 1)
 MAKEFLAGS += --no-print-dir
@@ -14,6 +16,10 @@ CFLAGS += -Wall -Wextra -Werror -Wno-char-subscripts \
 
 ifeq ($(ENABLE_DEBUG), 1)
 CFLAGS += -DENABLE_DEBUG
+endif
+
+ifneq ($(APPLET_SRC),)
+CFLAGS += $(APPLET_CFLAGS) -DENABLE_APPLET
 endif
 
 SRC =			\
@@ -60,6 +66,7 @@ SRC =			\
 	stm32l4.c	\
 	stm32g0.c	\
 	target.c	\
+	$(APPLET_SRC)
 
 # Output memory usage information
 LDFLAGS += -Wl,--print-memory-usage
