@@ -85,7 +85,7 @@ uint32_t fw_adiv5_jtagdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 
 	jtag_dev_write_ir(&jtag_proc, dp->dp_jd_index, APnDP ? IR_APACC : IR_DPACC);
 
-	platform_timeout_set(&timeout, 20);
+	platform_timeout_set(&timeout, 250);
 	do {
 		jtag_dev_shift_dr(&jtag_proc, dp->dp_jd_index, (uint8_t*)&response,
 						  (uint8_t*)&request, 35);

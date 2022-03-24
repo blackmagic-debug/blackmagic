@@ -227,7 +227,7 @@ uint32_t firmware_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 
 	if((addr & ADIV5_APnDP) && dp->fault) return 0;
 
-	platform_timeout_set(&timeout, 20);
+	platform_timeout_set(&timeout, 250);
 	do {
 		dp->seq_out(request, 8);
 		ack = dp->seq_in(3);
