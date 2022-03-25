@@ -222,7 +222,7 @@ uint32_t firmware_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 {
 	uint32_t request = make_packet_request(RnW, addr);
 	uint32_t response = 0;
-	uint32_t ack;
+	uint32_t ack = SWDP_ACK_WAIT;
 	platform_timeout timeout;
 
 	if ((addr & ADIV5_APnDP) && dp->fault)
@@ -233,10 +233,10 @@ uint32_t firmware_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 		dp->seq_out(request, 8);
 		ack = dp->seq_in(3);
 		if (ack == SWDP_ACK_FAULT) {
-			dp->fault = 1;
-			return 0;
+			/* On fault, abort the request and repeat */
+			dp->error(dp);
 		}
-	} while (ack == SWDP_ACK_WAIT && !platform_timeout_is_expired(&timeout));
+	} while ((ack == SWDP_ACK_WAIT || ack == SWDP_ACK_FAULT) && !platform_timeout_is_expired(&timeout));
 
 	if (ack == SWDP_ACK_WAIT) {
 		dp->abort(dp, ADIV5_DP_ABORT_DAPABORT);
