@@ -225,7 +225,8 @@ uint32_t firmware_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 	uint32_t ack;
 	platform_timeout timeout;
 
-	if((addr & ADIV5_APnDP) && dp->fault) return 0;
+	if ((addr & ADIV5_APnDP) && dp->fault)
+		return 0;
 
 	platform_timeout_set(&timeout, 250);
 	do {
@@ -243,15 +244,15 @@ uint32_t firmware_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 		return 0;
 	}
 
-	if(ack == SWDP_ACK_FAULT) {
+	if (ack == SWDP_ACK_FAULT) {
 		dp->fault = 1;
 		return 0;
 	}
 
-	if(ack != SWDP_ACK_OK)
+	if (ack != SWDP_ACK_OK)
 		raise_exception(EXCEPTION_ERROR, "SWDP invalid ACK");
 
-	if(RnW) {
+	if (RnW) {
 		if (dp->seq_in_parity(&response, 32)) { /* Give up on parity error */
 			dp->fault = 1;
 			raise_exception(EXCEPTION_ERROR, "SWDP Parity error");
@@ -267,7 +268,7 @@ uint32_t firmware_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
 		 * Implement last option to favour correctness over
 		 *   slight speed decrease
 		 */
-	dp->seq_out(0, 8);
+		dp->seq_out(0, 8);
 	}
 	return response;
 }
