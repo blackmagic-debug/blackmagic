@@ -295,6 +295,16 @@ static void stm32g0_detach(target *t)
 {
 	struct stm32g0_priv_s *ps = (struct stm32g0_priv_s*)t->target_storage;
 
+	/*
+	 * First re-enable DBGEN clock, in case it got disabled in the meantime
+	 * (happens during flash), so that writes to DBG_* registers below succeed.
+	 */
+	target_mem_write32(t, RCC_APBENR1, ps->saved_regs.rcc_apbenr1 |
+	                   RCC_APBENR1_DBGEN);
+
+	/*
+	 * Then restore the DBG_* registers and clock settings.
+	 */
 	target_mem_write32(t, DBG_APB_FZ1, ps->saved_regs.dbg_apb_fz1);
 	target_mem_write32(t, DBG_CR, ps->saved_regs.dbg_cr);
 	target_mem_write32(t, RCC_APBENR1, ps->saved_regs.rcc_apbenr1);
