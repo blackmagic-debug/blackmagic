@@ -313,8 +313,8 @@ static bool stm32f4_attach(target *t)
 	priv_storage->dbgmcu_cr = target_mem_read32(t, DBGMCU_CR);
 	t->target_storage = (void*)priv_storage;
 	/* Enable debugging during all low power modes*/
-	target_mem_write32(t, DBGMCU_CR, DBGMCU_CR_DBG_SLEEP |
-					   DBGMCU_CR_DBG_STANDBY | DBGMCU_CR_DBG_STOP);
+	target_mem_write32(t, DBGMCU_CR, priv_storage->dbgmcu_cr |
+		DBGMCU_CR_DBG_SLEEP | DBGMCU_CR_DBG_STANDBY | DBGMCU_CR_DBG_STOP);
 
 	/* Free previously loaded memory map */
 	target_mem_map_free(t);
