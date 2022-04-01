@@ -389,15 +389,14 @@ int send_recv(usb_link_t *link,
 {
 	int res = 0;
 	if (txsize) {
-		int txlen = txsize;
 		libusb_fill_bulk_transfer(link->req_trans,
 								  link->ul_libusb_device_handle,
 								  link->ep_tx | LIBUSB_ENDPOINT_OUT,
-								  txbuf, txlen,
+								  txbuf, txsize,
 								  NULL, NULL, 0);
 		size_t i = 0;
-		DEBUG_WIRE(" Send (%3d): ", txlen);
-		for (; i < txlen; ++i) {
+		DEBUG_WIRE(" Send (%3zu): ", txsize);
+		for (; i < txsize; ++i) {
 			DEBUG_WIRE("%02x", txbuf[i]);
 			if ((i & 7U) == 7U)
 				DEBUG_WIRE(".");
@@ -425,12 +424,12 @@ int send_recv(usb_link_t *link,
 		}
 		res = link->rep_trans->actual_length;
 		if (res > 0) {
-			uint8_t *p = rxbuf;
-			DEBUG_WIRE(" Rec (%zu/%d)", rxsize, res);
-			for (size_t i = 0; i < res && i < 32 ; ++i) {
+			const size_t rxlen = (size_t)res;
+			DEBUG_WIRE(" Rec (%zu/%zu)", rxsize, rxlen);
+			for (size_t i = 0; i < rxlen && i < 32 ; ++i) {
 				if (i && ((i & 7U) == 0U))
 					DEBUG_WIRE(".");
-				DEBUG_WIRE("%02x", p[i]);
+				DEBUG_WIRE("%02x", rxbuf[i]);
 			}
 		}
 	}
