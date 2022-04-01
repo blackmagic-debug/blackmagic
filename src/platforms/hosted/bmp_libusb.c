@@ -183,24 +183,59 @@ rescan:
 			}
 			continue;
 		}
-		res = libusb_get_string_descriptor_ascii(
-			handle, desc.iSerialNumber, (uint8_t*)serial,
-			sizeof(serial));
-		if (cl_opts->opt_serial && (res <= 0 ||
-			!strstr(serial, cl_opts->opt_serial))) {
+		/* If the device even has a serial number string, fetch it */
+		if (desc.iSerialNumber) {
+			res = libusb_get_string_descriptor_ascii(handle, desc.iSerialNumber,
+				(uint8_t *)serial, sizeof(serial));
+			/* If the call fails and it's not because the device gave us STALL, continue to the next one */
+			if (res < 0 && res != LIBUSB_ERROR_PIPE) {
+				libusb_close(handle);
+				continue;
+			}
+			/* Device has no serial and that's ok. */
+			else if (res <= 0)
+				serial[0] = '\0';
+		}
+		else
+			serial[0] = '\0';
+		if (cl_opts->opt_serial && !strstr(serial, cl_opts->opt_serial)) {
 			libusb_close(handle);
 			continue;
 		}
-		if (res < 0)
-			serial[0] = 0;
-		manufacturer[0] = 0;
-		res = libusb_get_string_descriptor_ascii(
-			handle, desc.iManufacturer, (uint8_t *)manufacturer,
-			sizeof(manufacturer));
-		product[0] = 0;
-		res = libusb_get_string_descriptor_ascii(
-			handle, desc.iProduct, (uint8_t *)product,
-			sizeof(product));
+		/* Attempt to get the manufacturer string */
+		if (desc.iManufacturer) {
+			res = libusb_get_string_descriptor_ascii(handle, desc.iManufacturer,
+				(uint8_t *)manufacturer, sizeof(manufacturer));
+			/* If the call fails and it's not because the device gave us STALL, continue to the next one */
+			if (res < 0 && res != LIBUSB_ERROR_PIPE) {
+				DEBUG_WARN("WARN: libusb_get_string_descriptor_ascii() call to fetch manufacturer string failed: %s\n",
+					libusb_strerror(res));
+				libusb_close(handle);
+				continue;
+			}
+			/* Device has no manufacturer string and that's ok. */
+			else if (res <= 0)
+				manufacturer[0] = '\0';
+		}
+		else
+			manufacturer[0] = '\0';
+		/* Attempt to get the product string */
+		if (desc.iProduct) {
+			res = libusb_get_string_descriptor_ascii(handle, desc.iProduct,
+				(uint8_t *)product, sizeof(product));
+			/* If the call fails and it's not because the device gave us STALL, continue to the next one */
+			if (res < 0 && res != LIBUSB_ERROR_PIPE) {
+				DEBUG_WARN("WARN: libusb_get_string_descriptor_ascii() call to fetch product string failed: %s\n",
+					libusb_strerror(res));
+				libusb_close(handle);
+				continue;
+			}
+			/* Device has no product string and that's ok. */
+			else if (res <= 0)
+				product[0] = '\0';
+		}
+		else
+			product[0] = '\0';
 		libusb_close(handle);
 		if (cl_opts->opt_ident_string) {
 			char *match_manu = NULL;
