@@ -217,9 +217,9 @@ static const char tdesc_cortex_mf[] =
  */
 static bool stm32f1_clones_probe(target *t)
 {
-    PROBE(ch32f1_probe);
-    PROBE(stm32f1_probe); /* Care for other STM32F1 clones (?) */
-    return false;
+	PROBE(ch32f1_probe);
+	PROBE(stm32f1_probe); /* Care for other STM32F1 clones (?) */
+	return false;
 }
 
 
