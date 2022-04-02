@@ -254,7 +254,7 @@ int ch32_buffer_clear(target *t)
   CLEAR_CR(FLASH_CR_FTPG_CH32); // Fast page program 4-
   return 0;
 }
-#define CH32_VERIFY
+//#define CH32_VERIFY
 
 /**
 
