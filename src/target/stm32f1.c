@@ -97,7 +97,9 @@ static int stm32f1_flash_write(struct target_flash *f,
 
 #define FLASHSIZE     0x1FFFF7E0
 #define FLASHSIZE_F0  0x1FFFF7CC
-
+//
+#include "stm32f1_ch32.c"
+//
 static void stm32f1_add_flash(target *t,
                               uint32_t addr, size_t length, size_t erasesize)
 {
