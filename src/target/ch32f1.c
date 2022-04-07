@@ -43,9 +43,9 @@
 extern const struct command_s stm32f1_cmd_list[]; // Reuse stm32f1 stuff
 
  static int ch32f1_flash_erase(struct target_flash *f,
-	                            target_addr addr, size_t len);
+								target_addr addr, size_t len);
  static int ch32f1_flash_write(struct target_flash *f,
-	                            target_addr dest, const void *src, size_t len);
+								target_addr dest, const void *src, size_t len);
 
 #define FPEC_BASE	0x40022000
 #define FLASH_ACR	(FPEC_BASE+0x00)
@@ -87,25 +87,25 @@ extern const struct command_s stm32f1_cmd_list[]; // Reuse stm32f1 stuff
 #define DBGMCU_IDCODE	0xE0042000
 #define DBGMCU_IDCODE_F0	0x40015800
 
-#define FLASHSIZE     0x1FFFF7E0
+#define FLASHSIZE	 0x1FFFF7E0
 #define FLASHSIZE_F0  0x1FFFF7CC
 
 #define FLASH_MODEKEYR_CH32 (FPEC_BASE+0x24) // Fast mode for CH32F10x
 
-#define FLASH_CR_FLOCK_CH32       (1<<15) // fast unlock
-#define FLASH_CR_FTPG_CH32        (1<<16) // fast page program
-#define FLASH_CR_FTER_CH32        (1<<17) // fast page erase
-#define FLASH_CR_BUF_LOAD_CH32    (1<<18) // Buffer load
+#define FLASH_CR_FLOCK_CH32	   (1<<15) // fast unlock
+#define FLASH_CR_FTPG_CH32		(1<<16) // fast page program
+#define FLASH_CR_FTER_CH32		(1<<17) // fast page erase
+#define FLASH_CR_BUF_LOAD_CH32	(1<<18) // Buffer load
 #define FLASH_CR_BUF_RESET_CH32   (1<<19) // Buffer reset
-#define FLASH_SR_EOP              (1<<5)  // End of programming
+#define FLASH_SR_EOP			  (1<<5)  // End of programming
 #define FLASH_BEGIN_ADDRESS_CH32  0x8000000
-#define FLASH_MAGIC               (FPEC_BASE+0x34)
+#define FLASH_MAGIC			   (FPEC_BASE+0x34)
 
 static volatile uint32_t magic,sr,ct;
 
 /**
-	    \fn ch32f1_add_flash
-	    \brief "fast" flash driver for CH32F10x chips
+		\fn ch32f1_add_flash
+		\brief "fast" flash driver for CH32F10x chips
 */
 static void ch32f1_add_flash(target *t, uint32_t addr, size_t length, size_t erasesize)
 {
@@ -126,37 +126,37 @@ static void ch32f1_add_flash(target *t, uint32_t addr, size_t length, size_t era
 }
 
 #define WAIT_BUSY()  	do { \
-			    sr = target_mem_read32(t, FLASH_SR); \
-	            if(target_check_error(t)) { \
-	                    ERROR_CH("ch32f1 flash write: comm error\n"); \
-	                    return -1; \
-	            } \
-	    } while (sr & FLASH_SR_BSY);
+				sr = target_mem_read32(t, FLASH_SR); \
+				if(target_check_error(t)) { \
+						ERROR_CH("ch32f1 flash write: comm error\n"); \
+						return -1; \
+				} \
+		} while (sr & FLASH_SR_BSY);
 
 #define WAIT_EOP()  	do { \
-	            sr = target_mem_read32(t, FLASH_SR); \
-	            if(target_check_error(t)) { \
-	                    ERROR_CH("ch32f1 flash write: comm error\n"); \
-	                    return -1; \
-	            } \
-	    } while (!(sr & FLASH_SR_EOP));
+				sr = target_mem_read32(t, FLASH_SR); \
+				if(target_check_error(t)) { \
+						ERROR_CH("ch32f1 flash write: comm error\n"); \
+						return -1; \
+				} \
+		} while (!(sr & FLASH_SR_EOP));
 
-#define CLEAR_EOP()     target_mem_write32(t, FLASH_SR,FLASH_SR_EOP)
+#define CLEAR_EOP()	 target_mem_write32(t, FLASH_SR,FLASH_SR_EOP)
 
 #define SET_CR(bit) {	ct = target_mem_read32(t, FLASH_CR); \
-	                    ct|=(bit); \
-	                    target_mem_write32(t, FLASH_CR, ct);}
+						ct|=(bit); \
+						target_mem_write32(t, FLASH_CR, ct);}
 
 
 #define CLEAR_CR(bit) 	{ct = target_mem_read32(t, FLASH_CR); \
-	                    ct&=~(bit); \
-	                    target_mem_write32(t, FLASH_CR, ct);}
+						ct&=~(bit); \
+						target_mem_write32(t, FLASH_CR, ct);}
 
 // Which one is the right value ?
 #define MAGIC_WORD 0x100
 // #define MAGIC_WORD 0x100
 #define MAGIC(adr) { magic=target_mem_read32(t,(adr) ^ MAGIC_WORD); \
-	                target_mem_write32(t, FLASH_MAGIC , magic); }
+					target_mem_write32(t, FLASH_MAGIC , magic); }
 
 /**
   \fn ch32f1_flash_unlock
@@ -188,7 +188,7 @@ static int ch32f1_flash_lock(target *t)
 
 /**
 	\brief identify the ch32f1 chip
-	            Actually grab all cortex m3 with designer = arm not caught earlier...
+				Actually grab all cortex m3 with designer = arm not caught earlier...
 */
 
 bool ch32f1_probe(target *t)
@@ -316,7 +316,7 @@ int ch32f1_buffer_clear(target *t)
 
 */
 static int ch32f1_flash_write(struct target_flash *f,
-	                           target_addr dest, const void *src, size_t len)
+							   target_addr dest, const void *src, size_t len)
 {
 	target *t = f->t;
 	size_t length = len;
