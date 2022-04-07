@@ -200,20 +200,20 @@ int ch32f1_flash_erase (struct target_flash *f,  target_addr addr, size_t len)
 }
 
 /**
-	\fn waitFlashReady
-	\brief poll the beginning of a block till it is fffff, meaning we can proceeed
-
+	\fn ch32f1_wait_flash_ready
+	\brief   Wait a bit for the previous operation to finish
+			As per test result we need a time similar to 10 read operation over SWD
+			We do 32 to have a bit of headroom, then we check we read ffff (erased flash)
+			NB: Just reading fff is not enough as it could be a transient previous operation value
 */
 
-static bool waitFlashReady(target *t,uint32_t adr)
+static bool ch32f1_wait_flash_ready(target *t,uint32_t adr)
 {
-  // Wait a bit
-  // the # of cycles needed to do N read access over SWD
-  // the actual number is around 10
-  // then check we do read ffff (/!\ even if we read ffff it does not mean its ok
-  // these are the data from the previous operation and they could be ffff)
+ 
   uint32_t ff;
-  for(int i=0;i<32;i++)   ff=target_mem_read32(t,adr);
+  for(int i=0;i<32;i++) {
+	  ff=target_mem_read32(t,adr);
+  }  
   if(ff!=0xffffffffUL) {
 	  ERROR_CH("ch32f1 Not erased properly at %x or flash access issue\n",adr);
 	  return false;
@@ -225,7 +225,7 @@ static bool waitFlashReady(target *t,uint32_t adr)
   \brief fast flash for ch32. Load 128 bytes chunk and then flash them
 */
 
-static int upload(target *t, uint32_t dest, const void  *src, uint32_t offset)
+static int ch32f1_upload(target *t, uint32_t dest, const void  *src, uint32_t offset)
 {
 	const uint32_t *ss=(const uint32_t *)(src+offset);
 	uint32_t dd=dest+offset;
@@ -243,10 +243,10 @@ static int upload(target *t, uint32_t dest, const void  *src, uint32_t offset)
 	return 0;
 }
 /**
-	\fn ch32_buffer_clear
+	\fn ch32f1_buffer_clear
 	\brief clear the write buffer
 */
-int ch32_buffer_clear(target *t)
+int ch32f1_buffer_clear(target *t)
 {
   SET_CR(FLASH_CR_FTPG_CH32); // Fast page program 4-
   SET_CR(FLASH_CR_BUF_RESET_CH32); // BUF_RESET 5-
@@ -279,13 +279,13 @@ static int ch32f1_flash_write(struct target_flash *f,
 		WAIT_BUSY();
 
 		// Buffer reset...
-		ch32_buffer_clear(t);
+		ch32f1_buffer_clear(t);
 		// Load 128 bytes to buffer
-		if(!waitFlashReady(t,dest)) {
+		if(!ch32f1_wait_flash_ready(t,dest)) {
 			return -1;
 		}
 		for(int i=0;i<8;i++) {
-			if(upload(t,dest,src, 16*i)) {
+			if(ch32f1_upload(t,dest,src, 16*i)) {
 	  			ERROR_CH("Cannot upload to buffer\n");
 				return -1;
 			}
@@ -318,8 +318,8 @@ static int ch32f1_flash_write(struct target_flash *f,
 	}
 #ifdef CH32_VERIFY
 	DEBUG_CH("Verifying\n");
-	int i=0;
-	for(i=0;i<(int)len;i+=4)
+	size_t i=0;
+	for(i=0;i<len;i+=4)
 	{
 		uint32_t mem=target_mem_read32(t, orgDest+i);
 		uint32_t mem2=*(uint32_t *)(orgSrc+i);
