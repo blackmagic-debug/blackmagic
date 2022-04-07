@@ -55,9 +55,6 @@
 #include <fcntl.h>
 #endif
 
-#define PROBE(x) \
-	do { if ((x)(t)) {return true;} else target_check_error(t); } while (0)
-
 static const char cortexm_driver_str[] = "ARM Cortex-M";
 
 static bool cortexm_vector_catch(target *t, int argc, char *argv[]);
@@ -211,17 +208,6 @@ static const char tdesc_cortex_mf[] =
 	"    <reg name=\"d15\" bitsize=\"64\" type=\"float\"/>"
 	"  </feature>"
 	"</target>";
-
-/*
- Probe STM32F103 clones
- */
-static bool stm32f1_clones_probe(target *t)
-{
-	PROBE(ch32f1_probe);
-	PROBE(stm32f1_probe); /* Care for other STM32F1 clones (?) */
-	return false;
-}
-
 
 ADIv5_AP_t *cortexm_ap(target *t)
 {
@@ -392,6 +378,8 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 	} else {
 		target_check_error(t);
 	}
+#define PROBE(x) \
+	do { if ((x)(t)) {return true;} else target_check_error(t); } while (0)
 
 	switch (ap->ap_designer) {
 	case AP_DESIGNER_FREESCALE:
@@ -454,7 +442,8 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 				PROBE(rp_probe);
 			PROBE(lpc11xx_probe); /* LPC8 */
 		} else if (ap->ap_partno == 0x4c3)  { /* Cortex-M3 ROM */
-			PROBE(stm32f1_clones_probe); /* Care for STM32F1 clones */
+			PROBE(ch32f1_probe);
+			PROBE(stm32f1_probe); /* Care for other STM32F1 clones (?) */
 			PROBE(lpc15xx_probe); /* Thanks to JojoS for testing */
 		} else if (ap->ap_partno == 0x471)  { /* Cortex-M0 ROM */
 			PROBE(lpc11xx_probe); /* LPC24C11 */
