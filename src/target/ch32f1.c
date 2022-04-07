@@ -77,7 +77,7 @@ extern const struct command_s stm32f1_cmd_list[]; // Reuse stm32f1 stuff
 #define FLASH_BEGIN_ADDRESS_CH32  		0x8000000
 
 
-static volatile uint32_t magic,sr,ct;
+
 
 /**
 		\fn ch32f1_add_flash
@@ -156,6 +156,7 @@ static int ch32f1_flash_unlock(target *t)
 }
 static int ch32f1_flash_lock(target *t)
 {
+	volatile uint32_t ct;
 	DEBUG_CH("CH32: flash lock \n");
 	SET_CR(FLASH_CR_LOCK);
 	return 0;
@@ -182,8 +183,8 @@ bool ch32f1_probe(target *t)
 		return false;
 	}
 
-	uint32_t signature= target_mem_read32(t, FLASHSIZE);
-	uint32_t flashSize=signature & 0xFFFF;
+	uint32_t signature = target_mem_read32(t, FLASHSIZE);
+	uint32_t flashSize = signature & 0xFFFF;
 
 	target_add_ram(t, 0x20000000, 0x5000);
 	ch32f1_add_flash(t, FLASH_BEGIN_ADDRESS_CH32, flashSize*1024, 128);
@@ -197,6 +198,7 @@ bool ch32f1_probe(target *t)
 */
 int ch32f1_flash_erase (struct target_flash *f,  target_addr addr, size_t len)
 {
+	volatile uint32_t ct, sr, magic;
 	target *t = f->t;
 	DEBUG_CH("CH32: flash erase \n");
 
@@ -258,6 +260,7 @@ static bool ch32f1_wait_flash_ready(target *t,uint32_t adr)
 
 static int ch32f1_upload(target *t, uint32_t dest, const void  *src, uint32_t offset)
 {
+	volatile uint32_t ct, sr, magic;
 	const uint32_t *ss = (const uint32_t *)(src+offset);
 	uint32_t dd = dest+offset;
 
@@ -279,6 +282,7 @@ static int ch32f1_upload(target *t, uint32_t dest, const void  *src, uint32_t of
 */
 int ch32f1_buffer_clear(target *t)
 {
+  volatile uint32_t ct,sr;
   SET_CR(FLASH_CR_FTPG_CH32); // Fast page program 4-
   SET_CR(FLASH_CR_BUF_RESET_CH32); // BUF_RESET 5-
   WAIT_BUSY(); // 6-
@@ -293,6 +297,7 @@ int ch32f1_buffer_clear(target *t)
 static int ch32f1_flash_write(struct target_flash *f,
 							   target_addr dest, const void *src, size_t len)
 {
+	volatile uint32_t ct, sr, magic;
 	target *t = f->t;
 	size_t length = len;
 #ifdef CH32_VERIFY
