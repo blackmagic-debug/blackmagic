@@ -207,7 +207,6 @@ bool ch32f1_probe(target *t)
 		return false;
 	}
 
-
 	uint32_t signature= target_mem_read32(t, FLASHSIZE);
 	uint32_t flashSize=signature & 0xFFFF;
 
@@ -215,9 +214,6 @@ bool ch32f1_probe(target *t)
 	ch32f1_add_flash(t, FLASH_BEGIN_ADDRESS_CH32, flashSize*1024, 128);
 	target_add_commands(t, stm32f1_cmd_list, "STM32 LD/MD/VL-LD/VL-MD");
 	t->driver = "CH32F1 medium density (stm32f1 clone)";
-
-	// make sure we have 2 wait states
-	//target_mem_write32(t, FLASH_ACR,2);
 	return true;
 }
 /**
@@ -228,9 +224,6 @@ int ch32f1_flash_erase (struct target_flash *f,  target_addr addr, size_t len)
 {
 	target *t = f->t;
 	DEBUG_CH("CH32: flash erase \n");
-
-// Make sure we have 2 wait states, prefetch disabled
-	//target_mem_write32(t, FLASH_ACR , 2);
 
 	if (ch32f1_flash_unlock(t)) {
 		ERROR_CH("CH32: Unlock failed\n");
@@ -273,7 +266,6 @@ int ch32f1_flash_erase (struct target_flash *f,  target_addr addr, size_t len)
 
 static bool ch32f1_wait_flash_ready(target *t,uint32_t adr)
 {
- 
   uint32_t ff;
   for(int i=0;i<32;i++) {
 	  ff=target_mem_read32(t,adr);
