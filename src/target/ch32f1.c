@@ -1,14 +1,37 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2022  Black Sphere Technologies Ltd.
- * See CH32 Sample code from WCH StdPeriphLib_CH32F1/Examples/FLASH/FLASH_Program
+ * Copyright (C) 2011  Black Sphere Technologies Ltd.
+ * Written by Gareth McMullin <gareth@blacksphere.co.nz>
  *
- * The CH32 seems to like the EOP bit to be cleared at the end of erase/flash operation
- * The following code works fine in BMP hosted mode
- * It does NOT work with a real BMP, only the first 128 bytes block is successfully written
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
+/* This file implements CH32F1xx target specific functions. 
+	The ch32 flash is rather slow so this code is using the so called fast mode (ch32 specific).
+	128 bytes are copied to a write buffer, then the write buffer is committed to flash
+	/!\ There is some sort of bus stall/bus arbitration going on that does NOT work when
+	programmed through SWD/jtag
+	The workaround is to wait a few cycles before filling the write buffer. This is performed by reading the flash a few times 
+
+ */
+
+#include "general.h"
+#include "target.h"
+#include "target_internal.h"
+#include "cortexm.h"
+
 #if PC_HOSTED == 1
 	#define DEBUG_CH DEBUG_INFO
 	#define ERROR_CH DEBUG_WARN
@@ -17,11 +40,56 @@
 	#define ERROR_CH DEBUG_WARN //DEBUG_WARN
 #endif
 
+extern const struct command_s stm32f1_cmd_list[]; // Reuse stm32f1 stuff
 
  static int ch32f1_flash_erase(struct target_flash *f,
 	                            target_addr addr, size_t len);
  static int ch32f1_flash_write(struct target_flash *f,
 	                            target_addr dest, const void *src, size_t len);
+
+#define FPEC_BASE	0x40022000
+#define FLASH_ACR	(FPEC_BASE+0x00)
+#define FLASH_KEYR	(FPEC_BASE+0x04)
+#define FLASH_OPTKEYR	(FPEC_BASE+0x08)
+#define FLASH_SR	(FPEC_BASE+0x0C)
+#define FLASH_CR	(FPEC_BASE+0x10)
+#define FLASH_AR	(FPEC_BASE+0x14)
+#define FLASH_OBR	(FPEC_BASE+0x1C)
+#define FLASH_WRPR	(FPEC_BASE+0x20)
+
+#define FLASH_BANK2_OFFSET 0x40
+#define FLASH_BANK_SPLIT   0x08080000
+
+#define FLASH_CR_OBL_LAUNCH (1<<13)
+#define FLASH_CR_OPTWRE	(1 << 9)
+#define FLASH_CR_LOCK	(1 << 7)
+#define FLASH_CR_STRT	(1 << 6)
+#define FLASH_CR_OPTER	(1 << 5)
+#define FLASH_CR_OPTPG	(1 << 4)
+#define FLASH_CR_MER	(1 << 2)
+#define FLASH_CR_PER	(1 << 1)
+#define FLASH_CR_PG		(1 << 0)
+
+#define FLASH_OBR_RDPRT (1 << 1)
+
+#define FLASH_SR_BSY	(1 << 0)
+
+#define FLASH_OBP_RDP 0x1FFFF800
+#define FLASH_OBP_RDP_KEY 0x5aa5
+#define FLASH_OBP_RDP_KEY_F3 0x55AA
+
+#define KEY1 0x45670123
+#define KEY2 0xCDEF89AB
+
+#define SR_ERROR_MASK	0x14
+#define SR_EOP		0x20
+
+#define DBGMCU_IDCODE	0xE0042000
+#define DBGMCU_IDCODE_F0	0x40015800
+
+#define FLASHSIZE     0x1FFFF7E0
+#define FLASHSIZE_F0  0x1FFFF7CC
+
 #define FLASH_MODEKEYR_CH32 (FPEC_BASE+0x24) // Fast mode for CH32F10x
 
 #define FLASH_CR_FLOCK_CH32       (1<<15) // fast unlock
@@ -56,10 +124,6 @@ static void ch32f1_add_flash(target *t, uint32_t addr, size_t length, size_t era
 	f->erased = 0xff;
 	target_add_flash(t, f);
 }
-
-
-
-
 
 #define WAIT_BUSY()  	do { \
 			    sr = target_mem_read32(t, FLASH_SR); \
