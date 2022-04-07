@@ -54,6 +54,7 @@ SRC =			\
 	samd.c		\
 	samx5x.c	\
 	stm32f1.c	\
+	ch32f1.c	\
 	stm32f4.c	\
 	stm32h7.c	\
 	stm32l0.c	\
