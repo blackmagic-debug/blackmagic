@@ -523,10 +523,21 @@ int stlink_init(bmp_info_t *info)
 			continue;
 		}
 		char serial[64];
-		r = libusb_get_string_descriptor_ascii(
-			sl->ul_libusb_device_handle, desc.iSerialNumber,
-			(uint8_t*)serial,sizeof(serial));
-		if (r <= 0 || !strstr(serial, info->serial)) {
+		if (desc.iSerialNumber) {
+			const int result = libusb_get_string_descriptor_ascii(sl->ul_libusb_device_handle,
+				desc.iSerialNumber, (uint8_t *)serial, sizeof(serial));
+			/* If the call fails and it's not because the device gave us STALL, continue to the next one */
+			if (result < 0 && result != LIBUSB_ERROR_PIPE) {
+				libusb_close(sl->ul_libusb_device_handle);
+				continue;
+			}
+			else if (result <= 0)
+				serial[0] = '\0';
+		}
+		else
+			serial[0] = '\0';
+		/* Likewise, if the serial number returned doesn't match the one in info, go to next */
+		if (!strstr(serial, info->serial)) {
 			libusb_close(sl->ul_libusb_device_handle);
 			continue;
 		}
