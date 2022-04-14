@@ -510,21 +510,26 @@ int stlink_init(bmp_info_t *info)
 	bool found = false;
 	while ((dev = devs[i++]) != NULL) {
 		struct libusb_device_descriptor desc;
-		int r = libusb_get_device_descriptor(dev, &desc);
-		if (r < 0) {
+		int result = libusb_get_device_descriptor(dev, &desc);
+		if (result != LIBUSB_SUCCESS) {
 			DEBUG_WARN("libusb_get_device_descriptor failed %s",
-					libusb_strerror(r));
+					libusb_strerror(result));
 			return -1;
 		}
-		if ((desc.idVendor != info->vid) ||
-			(desc.idProduct != info->pid) ||
-			(libusb_open(dev, &sl->ul_libusb_device_handle)
-			 != LIBUSB_SUCCESS)) {
+		if (desc.idVendor != info->vid ||
+			desc.idProduct != info->pid) {
+			continue;
+		}
+		if ((result = libusb_open(dev, &sl->ul_libusb_device_handle)) != LIBUSB_SUCCESS)
+		{
+			DEBUG_WARN("Failed to open STLink device %#06x:%#06x - %s",
+				desc.idVendor, desc.idProduct, libusb_strerror(result));
+			DEBUG_WARN("Are you sure the permissions on the device are set correctly?");
 			continue;
 		}
 		char serial[64];
 		if (desc.iSerialNumber) {
-			const int result = libusb_get_string_descriptor_ascii(sl->ul_libusb_device_handle,
+			int result = libusb_get_string_descriptor_ascii(sl->ul_libusb_device_handle,
 				desc.iSerialNumber, (uint8_t *)serial, sizeof(serial));
 			/* If the call fails and it's not because the device gave us STALL, continue to the next one */
 			if (result < 0 && result != LIBUSB_ERROR_PIPE) {
@@ -546,7 +551,7 @@ int stlink_init(bmp_info_t *info)
 	}
 	libusb_free_device_list(devs, 1);
 	if (!found)
-		return 0;
+		return 1;
 	if (info->vid != VENDOR_ID_STLINK)
 		return 0;
 	switch (info->pid) {
