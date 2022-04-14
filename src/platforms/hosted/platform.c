@@ -76,11 +76,10 @@ void platform_init(int argc, char **argv)
 	atexit(exit_function);
 	signal(SIGTERM, sigterm_handler);
 	signal(SIGINT, sigterm_handler);
-	if (cl_opts.opt_device) {
+	if (cl_opts.opt_device)
 		info.bmp_type = BMP_TYPE_BMP;
-	} else if (find_debuggers(&cl_opts, &info)) {
+	else if (find_debuggers(&cl_opts, &info))
 		exit(-1);
-	}
 	bmp_ident(&info);
 	switch (info.bmp_type) {
 	case BMP_TYPE_BMP:
@@ -89,11 +88,11 @@ void platform_init(int argc, char **argv)
 		remote_init();
 		break;
 	case BMP_TYPE_STLINKV2:
-		if (stlink_init( &info))
+		if (stlink_init(&info))
 			exit(-1);
 		break;
 	case BMP_TYPE_CMSIS_DAP:
-		if (dap_init( &info))
+		if (dap_init(&info))
 			exit(-1);
 		break;
 	case BMP_TYPE_LIBFTDI:
@@ -107,14 +106,12 @@ void platform_init(int argc, char **argv)
 	default:
 		exit(-1);
 	}
-	int ret = -1;
-	if (cl_opts.opt_mode != BMP_MODE_DEBUG) {
-		ret = cl_execute(&cl_opts);
-	} else {
+	if (cl_opts.opt_mode != BMP_MODE_DEBUG)
+		exit(cl_execute(&cl_opts));
+	else {
 		gdb_if_init();
 		return;
 	}
-	exit(ret);
 }
 
 int platform_adiv5_swdp_scan(uint32_t targetid)
