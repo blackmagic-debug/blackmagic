@@ -522,9 +522,9 @@ int stlink_init(bmp_info_t *info)
 		}
 		if ((result = libusb_open(dev, &sl->ul_libusb_device_handle)) != LIBUSB_SUCCESS)
 		{
-			DEBUG_WARN("Failed to open STLink device %#06x:%#06x - %s",
+			DEBUG_WARN("Failed to open STLink device %04x:%04x - %s\n",
 				desc.idVendor, desc.idProduct, libusb_strerror(result));
-			DEBUG_WARN("Are you sure the permissions on the device are set correctly?");
+			DEBUG_WARN("Are you sure the permissions on the device are set correctly?\n");
 			continue;
 		}
 		char serial[64];
