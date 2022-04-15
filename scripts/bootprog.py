@@ -35,10 +35,11 @@ class stm32_boot:
 	def _sync(self):
 		# Send sync byte
 		#print("sending sync byte")
-		self.serial.write(bytes((0x7F,)))
+		self.serial.write(b"\x7f")
 		self._checkack()
 
 	def _sendcmd(self, cmd):
+		cmd = ord(cmd)
 		cmd = bytes((cmd, cmd ^ 0xff))
 		#print("sendcmd:", repr(cmd))
 		self.serial.write(cmd)
@@ -51,7 +52,7 @@ class stm32_boot:
 		self.serial.write(data)
 
 	def _checkack(self):
-		ACK = bytes((0x79,))
+		ACK = b"\x79"
 		b = self.serial.read(1)
 		if b != ACK: raise Exception("Invalid ack: %r" % b)
 		#print("got ack!")
@@ -59,7 +60,7 @@ class stm32_boot:
 
 
 	def get(self):
-		self._sendcmd(0x00)
+		self._sendcmd(b"\x00")
 		self._checkack()
 		num = self.serial.read(1)[0]
 		data = self.serial.read(num+1)
@@ -68,27 +69,27 @@ class stm32_boot:
 
 	def eraseall(self):
 		# Send erase cmd
-		self._sendcmd(0x43)
+		self._sendcmd(b"\x43")
 		self._checkack()
 		# Global erase
-		self._sendcmd(0xff)
+		self._sendcmd(b"\xff")
 		self._checkack()
 
 	def read(self, addr, len):
 		# Send read cmd
-		self._sendcmd(0x11)
+		self._sendcmd(b"\x11")
 		self._checkack()
 		# Send address
 		self._send(struct.pack(">L", addr))
 		self._checkack()
 		# Send length
-		self._sendcmd(len-1)
+		self._sendcmd(bytes((len-1,)))
 		self._checkack()
 		return self.serial.read(len)
 
 	def write(self, addr, data):
 		# Send write cmd
-		self._sendcmd(0x31)
+		self._sendcmd(b"\x31")
 		self._checkack()
 		# Send address
 		self._send(struct.pack(">L", addr))
@@ -99,7 +100,7 @@ class stm32_boot:
 
 	def write_protect(self, sectors):
 		# Send WP cmd
-		self._sendcmd(0x63)
+		self._sendcmd(b"\x63")
 		self._checkack()
 		# Send sector list
 		self._send(bytes((len(sectors)-1,)) + bytes(sectors))
@@ -108,19 +109,19 @@ class stm32_boot:
 		self._sync()
 
 	def write_unprotect(self):
-		self._sendcmd(0x73)
+		self._sendcmd(b"\x73")
 		self._checkack()
 		self._checkack()
 		self._sync()
 
 	def read_protect(self):
-		self._sendcmd(0x82)
+		self._sendcmd(b"\x82")
 		self._checkack()
 		self._checkack()
 		self._sync()
 
 	def read_unprotect(self):
-		self._sendcmd(0x92)
+		self._sendcmd(b"\x92")
 		self._checkack()
 		self._checkack()
 		self._sync()
