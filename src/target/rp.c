@@ -211,7 +211,7 @@ static int rp_flash_erase(struct target_flash *f, target_addr addr,
 	struct rp_priv_s *ps = (struct rp_priv_s*)t->target_storage;
 	/* Register playground*/
 	/* erase */
-#define MAX_FLASH               (2 * 1024 * 1024)
+#define MAX_FLASH               (16 * 1024 * 1024)
 #define FLASHCMD_SECTOR_ERASE   0x20
 #define FLASHCMD_BLOCK32K_ERASE 0x52
 #define FLASHCMD_BLOCK64K_ERASE 0xd8
@@ -408,7 +408,7 @@ bool rp_probe(target *t)
 	}
 	rp_add_flash(t, XIP_FLASH_START, size << 1);
 	t->driver = RP_ID;
-	target_add_ram(t, SRAM_START, 0x40000);
+	target_add_ram(t, SRAM_START, 0x42000);
 	target_add_ram(t, 0x51000000,  0x1000);
 	target_add_commands(t, rp_cmd_list, RP_ID);
 	return true;
