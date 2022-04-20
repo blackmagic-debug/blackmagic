@@ -1,0 +1,45 @@
+---
+AccessModifierOffset: -4
+AlignAfterOpenBracket: Align
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: false
+# This is currently broken:
+# https://github.com/llvm/llvm-project/issues/53442
+#AlignArrayOfStructures: Left
+BraceWrapping:
+  AfterClass: false
+  AfterControlStatement: false
+  AfterEnum: false
+  AfterFunction: true
+  AfterNamespace: true
+  AfterObjCDeclaration: false
+  AfterStruct: false
+  AfterUnion: false
+  BeforeCatch: false
+  BeforeElse: false
+  IndentBraces: false
+BreakBeforeBraces: Linux
+BasedOnStyle: LLVM
+ColumnLimit: 120
+Cpp11BracedListStyle: false
+IndentCaseLabels: false
+IndentWidth: 8
+KeepEmptyLinesAtTheStartOfBlocks: false
+
+# Taken from git's rules
+#PenaltyBreakAssignment: 10 # Unknown to clang-format-4.0
+PenaltyBreakBeforeFirstCallParameter: 30
+PenaltyBreakComment: 10
+PenaltyBreakFirstLessLess: 0
+PenaltyBreakString: 10
+PenaltyExcessCharacter: 100
+PenaltyReturnTypeOnItsOwnLine: 60
+
+PointerAlignment: Right
+ReflowComments: false
+SpacesBeforeTrailingComments: 1
+SortIncludes: false
+TabWidth: 8
+UseTab: Always
