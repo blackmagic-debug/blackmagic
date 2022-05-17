@@ -15,6 +15,7 @@ mkShell {
     gcc-arm-embedded
     dfu-util
 
+    blackmagic
     pkg-config
     libftdi1
     libusb-compat-0_1
