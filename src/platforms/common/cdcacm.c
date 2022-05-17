@@ -450,13 +450,21 @@ static enum usbd_request_return_codes  cdcacm_control_request(usbd_device *dev,
 	switch(req->bRequest) {
 	case USB_CDC_REQ_SET_CONTROL_LINE_STATE:
 		cdcacm_set_modem_state(dev, req->wIndex, true, true);
-		/* Ignore if not for GDB interface */
-		if(req->wIndex != GDB_IF_NO)
-			return USBD_REQ_HANDLED;
-
-		cdcacm_gdb_dtr = req->wValue & 1;
-
-		return USBD_REQ_HANDLED;
+        switch(req->wIndex) {
+			case UART_IF_NO:
+			    #ifdef USBUSART_DTR_PIN
+				gpio_set_val(USBUSART_PORT, USBUSART_DTR_PIN, !(req->wValue & 1));
+				#endif
+				#ifdef USBUSART_RTS_PIN
+				gpio_set_val(USBUSART_PORT, USBUSART_RTS_PIN, !((req->wValue >> 1) & 1));
+				#endif
+				return USBD_REQ_HANDLED;
+			case GDB_IF_NO:
+				cdcacm_gdb_dtr = req->wValue & 1;
+				return USBD_REQ_HANDLED;
+			default:
+				return USBD_REQ_NOTSUPP;
+		}
 	case USB_CDC_REQ_SET_LINE_CODING:
 		if(*len < sizeof(struct usb_cdc_line_coding))
 			return USBD_REQ_NOTSUPP;
