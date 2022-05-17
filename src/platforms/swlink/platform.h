@@ -88,6 +88,8 @@ int usbuart_debug_write(const char *buf, size_t len);
 	gpio_set_mode(USBUSART_PORT, GPIO_MODE_INPUT, \
 				  GPIO_CNF_INPUT_PULL_UPDOWN, USBUSART_RX_PIN); \
 	gpio_set(USBUSART_PORT, USBUSART_RX_PIN); \
+	gpio_set_mode(USBUSART_PORT, GPIO_MODE_OUTPUT_50_MHZ, \
+                  GPIO_CNF_OUTPUT_PUSHPULL, USBUSART_RTS_PIN | USBUSART_DTR_PIN); \
 } while(0)
 
 #define USB_DRIVER      st_usbfs_v1_usb_driver
@@ -110,6 +112,8 @@ int usbuart_debug_write(const char *buf, size_t len);
 #define USBUSART_PORT GPIOB
 #define USBUSART_TX_PIN GPIO6
 #define USBUSART_RX_PIN GPIO7
+#define USBUSART_RTS_PIN GPIO8
+#define USBUSART_DTR_PIN GPIO9
 #define USBUSART_ISR(x) usart1_isr(x)
 #define USBUSART_DMA_BUS DMA1
 #define USBUSART_DMA_CLK RCC_DMA1
