@@ -278,7 +278,10 @@ void dap_reset_pin(int state)
 	buf[1] = state ? DAP_SWJ_nRESET : 0; // Value
 	buf[2] = DAP_SWJ_nRESET; // Select
 	buf[3] = 0; // Wait
-	dbg_dap_cmd(buf, sizeof(buf), 4);
+	buf[4] = 0; // Wait
+	buf[5] = 0; // Wait
+	buf[6] = 0; // Wait
+	dbg_dap_cmd(buf, sizeof(buf), 7);
 }
 
 void dap_trst_reset(void)
@@ -797,8 +800,9 @@ bool dap_sequence_test(void)
 {
 	uint8_t buf[4] = {
 		ID_DAP_SWD_SEQUENCE,
-		1,
-		0 /* one idle cycle */
+		0x1,
+		0x81, /* Read one bit */
+		0     /* one idle cycle */
 	};
 	dbg_dap_cmd(buf, sizeof(buf), 3);
 	return (buf[0] == DAP_OK);
