@@ -133,6 +133,7 @@ bool gd32f1_probe(target *t)
 	uint32_t ramSize=signature >>16 ;
 	switch(t->idcode) {
 	case 0x414:  /* Gigadevice gd32f303 */
+	case 0x430:
 		t->driver = "GD32F3";
 		break;
 	case 0x410:  /* Gigadevice gd32f103, gd32e230 */
