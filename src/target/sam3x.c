@@ -35,12 +35,10 @@ static int sam_flash_write(struct target_flash *f, target_addr dest,
 
 static uint32_t sam_gpnvm_get(target *t, uint32_t base);
 
-static bool sam_cmd_gpnvm_get(target *t, int argc, const char **argv);
-static bool sam_cmd_gpnvm_set(target *t, int argc, const char **argv);
+static bool sam_cmd_gpnvm(target *t, int argc, const char **argv);
 
 const struct command_s sam_cmd_list[] = {
-	{"gpnvm_get", (cmd_handler)sam_cmd_gpnvm_get, "Get GPVNM value"},
-	{"gpnvm_set", (cmd_handler)sam_cmd_gpnvm_set, "Set GPVNM bit"},
+	{"gpnvm", (cmd_handler)sam_cmd_gpnvm, "Set/Get GPVNM bits"},
 	{NULL, NULL, NULL}
 };
 
@@ -165,6 +163,14 @@ const struct command_s sam_cmd_list[] = {
 #define GPNVM_SAMX7X_TCM_32K				(0x1 << GPNVM_SAMX7X_TCM_BIT_OFFSET)
 #define GPNVM_SAMX7X_TCM_64K				(0x2 << GPNVM_SAMX7X_TCM_BIT_OFFSET)
 #define GPNVM_SAMX7X_TCM_128K				(0x3 << GPNVM_SAMX7X_TCM_BIT_OFFSET)
+
+enum sam_driver {
+	DRIVER_SAM3X,
+	DRIVER_SAM3U,
+	DRIVER_SAM4S,
+	DRIVER_SAM3NS,
+	DRIVER_SAMX7X,
+};
 
 struct sam_flash {
 	struct target_flash f;
@@ -504,21 +510,21 @@ sam_flash_cmd(target *t, uint32_t base, uint8_t cmd, uint16_t arg)
 	return sr & EEFC_FSR_ERROR;
 }
 
-static uint32_t sam_flash_base(target *t)
+static enum sam_driver sam_driver(target *t)
 {
 	if (strcmp(t->driver, "Atmel SAM3X") == 0) {
-		return SAM3X_EEFC_BASE(0);
+		return DRIVER_SAM3X;
 	}
 	if (strcmp(t->driver, "Atmel SAM3U") == 0) {
-		return SAM3U_EEFC_BASE(0);
+		return DRIVER_SAM3U;
 	}
 	if (strcmp(t->driver, "Atmel SAM4S") == 0) {
-		return SAM4S_EEFC_BASE(0);
+		return DRIVER_SAM4S;
 	}
 	if (strcmp(t->driver, "Atmel SAM3N/S") == 0) {
-		return SAM3N_EEFC_BASE;
+		return DRIVER_SAM3NS;
 	}
-	return SAMX7X_EEFC_BASE;
+	return DRIVER_SAMX7X;
 }
 
 static int sam_flash_erase(struct target_flash *f, target_addr addr, size_t len)
@@ -577,31 +583,72 @@ static uint32_t sam_gpnvm_get(target *t, uint32_t base)
 	return target_mem_read32(t, EEFC_FRR(base));
 }
 
-static bool sam_cmd_gpnvm_get(target *t, int argc, const char **argv)
+static bool sam_cmd_gpnvm(target *t, int argc, const char **argv)
 {
-	(void)argc;
-	(void)argv;
+	if (argc != 2 && argc != 4) {
+		goto bad_usage;
+	}
 
-	uint32_t base = sam_flash_base(t);
+	uint8_t arglen = strlen(argv[1]);
+	if (arglen == 0) {
+		goto bad_usage;
+	}
+
+	uint32_t base, gpnvm_mask;
+	switch(sam_driver(t)) {
+	case DRIVER_SAM3X:
+		gpnvm_mask = 0x7;
+		base = SAM3X_EEFC_BASE(0);
+		break;
+	case DRIVER_SAM3U:
+		gpnvm_mask = 0x7;
+		base = SAM3U_EEFC_BASE(0);
+		break;
+	case DRIVER_SAM4S:
+		gpnvm_mask = 0x7;
+		base = SAM4S_EEFC_BASE(0);
+		break;
+	case DRIVER_SAM3NS:
+		gpnvm_mask = 0x3;
+		base = SAM3N_EEFC_BASE;
+		break;
+	case DRIVER_SAMX7X:
+		gpnvm_mask = 0x1BF;
+		base = SAMX7X_EEFC_BASE;
+		break;
+	}
+
+	if (strncmp(argv[1], "get", arglen) == 0) {
+		/* nothing to do */
+	} else if (strncmp(argv[1], "set", arglen) == 0) {
+		char *eos;
+		uint32_t mask = strtoul(argv[2], &eos, 0);
+		uint32_t values = strtoul(argv[3], &eos, 0);
+
+		if (mask == 0 || mask & ~gpnvm_mask) {
+			/* trying to write invalid bits */
+			goto bad_usage;
+		}
+
+		for (uint16_t bit = 0; mask > 0; bit++)
+		{
+			if (mask & 1) {
+				uint8_t cmd = (values & 1) ? EEFC_FCR_FCMD_SGPB : EEFC_FCR_FCMD_CGPB;
+				sam_flash_cmd(t, base, cmd, bit);
+			}
+			mask >>= 1;
+			values >>= 1;
+		}
+	} else {
+		goto bad_usage;
+	}
+
 	tc_printf(t, "GPNVM: 0x%08X\n", sam_gpnvm_get(t, base));
 
 	return true;
-}
 
-static bool sam_cmd_gpnvm_set(target *t, int argc, const char **argv)
-{
-	uint32_t bit, cmd;
-	uint32_t base = sam_flash_base(t);
-
-	if (argc != 3) {
-		tc_printf(t, "usage: monitor gpnvm_set <bit> <val>\n");
-		return false;
-	}
-	bit = atol(argv[1]);
-	cmd = atol(argv[2]) ? EEFC_FCR_FCMD_SGPB : EEFC_FCR_FCMD_CGPB;
-
-	sam_flash_cmd(t, base, cmd, bit);
-	sam_cmd_gpnvm_get(t, 0, NULL);
-
-	return true;
+bad_usage:
+	tc_printf(t, "usage: monitor gpnvm get\n");
+	tc_printf(t, "usage: monitor gpnvm set <bit> <val>\n");
+	return false;
 }
