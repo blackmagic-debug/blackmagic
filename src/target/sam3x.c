@@ -21,7 +21,7 @@
 /* This file implements Atmel SAM3/4 target specific functions for detecting
  * the device, providing the XML memory map and Flash memory programming.
  *
- * Supported devices: SAM3N, SAM3S, SAM3U, SAM3X, and SAM4S
+ * Supported devices: SAM3N, SAM3S, SAM3U, SAM3X, SAM4S, SAME70, SAMS70, SAMV71, SAMV70
  */
 
 #include "general.h"
@@ -43,6 +43,7 @@ const struct command_s sam3x_cmd_list[] = {
 };
 
 /* Enhanced Embedded Flash Controller (EEFC) Register Map */
+#define SAMX7X_EEFC_BASE 	0x400E0C00
 #define SAM3N_EEFC_BASE 	0x400E0A00
 #define SAM3X_EEFC_BASE(x)	(0x400E0A00+((x)*0x200))
 #define SAM3U_EEFC_BASE(x)	(0x400E0800+((x)*0x200))
@@ -77,43 +78,71 @@ const struct command_s sam3x_cmd_list[] = {
 #define SAM3X_CHIPID_CIDR	0x400E0940
 #define SAM34NSU_CHIPID_CIDR	0x400E0740
 
+#define SAMX_CHIPID_EXID	(SAM3X_CHIPID_CIDR + 0x4)
+
 #define CHIPID_CIDR_VERSION_MASK	(0x1F << 0)
-#define CHIPID_CIDR_EPROC_CM3		(0x03 << 5)
-#define CHIPID_CIDR_EPROC_CM4		(0x07 << 5)
-#define CHIPID_CIDR_EPROC_MASK		(0x07 << 5)
-#define CHIPID_CIDR_NVPSIZ_MASK		(0x0F << 8)
-#define CHIPID_CIDR_NVPSIZ_8K		(0x01 << 8)
-#define CHIPID_CIDR_NVPSIZ_16K		(0x02 << 8)
-#define CHIPID_CIDR_NVPSIZ_32K		(0x03 << 8)
-#define CHIPID_CIDR_NVPSIZ_64K		(0x05 << 8)
-#define CHIPID_CIDR_NVPSIZ_128K		(0x07 << 8)
-#define CHIPID_CIDR_NVPSIZ_256K		(0x09 << 8)
-#define CHIPID_CIDR_NVPSIZ_512K		(0x0A << 8)
-#define CHIPID_CIDR_NVPSIZ_1024K	(0x0C << 8)
-#define CHIPID_CIDR_NVPSIZ_2048K	(0x0E << 8)
-#define CHIPID_CIDR_NVPSIZ2_MASK	(0x0F << 12)
-#define CHIPID_CIDR_SRAMSIZ_MASK	(0x0F << 16)
-#define CHIPID_CIDR_ARCH_MASK		(0xFF << 20)
-#define CHIPID_CIDR_ARCH_SAM3UxC	(0x80 << 20)
-#define CHIPID_CIDR_ARCH_SAM3UxE	(0x81 << 20)
-#define CHIPID_CIDR_ARCH_SAM3XxC	(0x84 << 20)
-#define CHIPID_CIDR_ARCH_SAM3XxE	(0x85 << 20)
-#define CHIPID_CIDR_ARCH_SAM3XxG	(0x86 << 20)
-#define CHIPID_CIDR_ARCH_SAM3NxA	(0x93 << 20)
-#define CHIPID_CIDR_ARCH_SAM3NxB	(0x94 << 20)
-#define CHIPID_CIDR_ARCH_SAM3NxC	(0x95 << 20)
-#define CHIPID_CIDR_ARCH_SAM3SxA	(0x88 << 20)
-#define CHIPID_CIDR_ARCH_SAM3SxB	(0x89 << 20)
-#define CHIPID_CIDR_ARCH_SAM3SxC	(0x8A << 20)
-#define CHIPID_CIDR_ARCH_SAM4SxA	(0x88 << 20)
-#define CHIPID_CIDR_ARCH_SAM4SxB	(0x89 << 20)
-#define CHIPID_CIDR_ARCH_SAM4SxC	(0x8A << 20)
-#define CHIPID_CIDR_ARCH_SAM4SDB	(0x99 << 20)
-#define CHIPID_CIDR_ARCH_SAM4SDC	(0x9A << 20)
-#define CHIPID_CIDR_NVPTYP_MASK		(0x07 << 28)
-#define CHIPID_CIDR_NVPTYP_FLASH	(0x02 << 28)
-#define CHIPID_CIDR_NVPTYP_ROM_FLASH	(0x03 << 28)
+
+#define CHIPID_CIDR_EPROC_OFFSET	(5)
+#define CHIPID_CIDR_EPROC_MASK		(0x7 << CHIPID_CIDR_EPROC_OFFSET)
+#define CHIPID_CIDR_EPROC_CM7		(0x0 << CHIPID_CIDR_EPROC_OFFSET)
+#define CHIPID_CIDR_EPROC_CM3		(0x3 << CHIPID_CIDR_EPROC_OFFSET)
+#define CHIPID_CIDR_EPROC_CM4		(0x7 << CHIPID_CIDR_EPROC_OFFSET)
+
+#define CHIPID_CIDR_NVPSIZ_OFFSET	(8)
+#define CHIPID_CIDR_NVPSIZ_MASK		(0xF << CHIPID_CIDR_NVPSIZ_OFFSET)
+#define CHIPID_CIDR_NVPSIZ_8K		(0x1 << CHIPID_CIDR_NVPSIZ_OFFSET)
+#define CHIPID_CIDR_NVPSIZ_16K		(0x2 << CHIPID_CIDR_NVPSIZ_OFFSET)
+#define CHIPID_CIDR_NVPSIZ_32K		(0x3 << CHIPID_CIDR_NVPSIZ_OFFSET)
+#define CHIPID_CIDR_NVPSIZ_64K		(0x5 << CHIPID_CIDR_NVPSIZ_OFFSET)
+#define CHIPID_CIDR_NVPSIZ_128K		(0x7 << CHIPID_CIDR_NVPSIZ_OFFSET)
+#define CHIPID_CIDR_NVPSIZ_256K		(0x9 << CHIPID_CIDR_NVPSIZ_OFFSET)
+#define CHIPID_CIDR_NVPSIZ_512K		(0xA << CHIPID_CIDR_NVPSIZ_OFFSET)
+#define CHIPID_CIDR_NVPSIZ_1024K	(0xC << CHIPID_CIDR_NVPSIZ_OFFSET)
+#define CHIPID_CIDR_NVPSIZ_2048K	(0xE << CHIPID_CIDR_NVPSIZ_OFFSET)
+
+#define CHIPID_CIDR_NVPSIZ2_OFFSET	(12)
+#define CHIPID_CIDR_NVPSIZ2_MASK	(0xF << CHIPID_CIDR_NVPSIZ2_OFFSET)
+
+#define CHIPID_CIDR_SRAMSIZ_OFFSET	(16)
+#define CHIPID_CIDR_SRAMSIZ_MASK	(0xF << CHIPID_CIDR_SRAMSIZ_OFFSET)
+#define CHIPID_CIDR_SRAMSIZ_384K	(0x2 << CHIPID_CIDR_SRAMSIZ_OFFSET)
+#define CHIPID_CIDR_SRAMSIZ_256K	(0xD << CHIPID_CIDR_SRAMSIZ_OFFSET)
+
+#define CHIPID_CIDR_ARCH_OFFSET		(20)
+#define CHIPID_CIDR_ARCH_MASK		(0xFF << CHIPID_CIDR_ARCH_OFFSET)
+#define CHIPID_CIDR_ARCH_SAME70		(0x10 << CHIPID_CIDR_ARCH_OFFSET)
+#define CHIPID_CIDR_ARCH_SAMS70		(0x11 << CHIPID_CIDR_ARCH_OFFSET)
+#define CHIPID_CIDR_ARCH_SAMV71		(0x12 << CHIPID_CIDR_ARCH_OFFSET)
+#define CHIPID_CIDR_ARCH_SAMV70		(0x13 << CHIPID_CIDR_ARCH_OFFSET)
+#define CHIPID_CIDR_ARCH_SAM3UxC	(0x80 << CHIPID_CIDR_ARCH_OFFSET)
+#define CHIPID_CIDR_ARCH_SAM3UxE	(0x81 << CHIPID_CIDR_ARCH_OFFSET)
+#define CHIPID_CIDR_ARCH_SAM3XxC	(0x84 << CHIPID_CIDR_ARCH_OFFSET)
+#define CHIPID_CIDR_ARCH_SAM3XxE	(0x85 << CHIPID_CIDR_ARCH_OFFSET)
+#define CHIPID_CIDR_ARCH_SAM3XxG	(0x86 << CHIPID_CIDR_ARCH_OFFSET)
+#define CHIPID_CIDR_ARCH_SAM3NxA	(0x93 << CHIPID_CIDR_ARCH_OFFSET)
+#define CHIPID_CIDR_ARCH_SAM3NxB	(0x94 << CHIPID_CIDR_ARCH_OFFSET)
+#define CHIPID_CIDR_ARCH_SAM3NxC	(0x95 << CHIPID_CIDR_ARCH_OFFSET)
+#define CHIPID_CIDR_ARCH_SAM3SxA	(0x88 << CHIPID_CIDR_ARCH_OFFSET)
+#define CHIPID_CIDR_ARCH_SAM3SxB	(0x89 << CHIPID_CIDR_ARCH_OFFSET)
+#define CHIPID_CIDR_ARCH_SAM3SxC	(0x8A << CHIPID_CIDR_ARCH_OFFSET)
+#define CHIPID_CIDR_ARCH_SAM4SxA	(0x88 << CHIPID_CIDR_ARCH_OFFSET)
+#define CHIPID_CIDR_ARCH_SAM4SxB	(0x89 << CHIPID_CIDR_ARCH_OFFSET)
+#define CHIPID_CIDR_ARCH_SAM4SxC	(0x8A << CHIPID_CIDR_ARCH_OFFSET)
+#define CHIPID_CIDR_ARCH_SAM4SDB	(0x99 << CHIPID_CIDR_ARCH_OFFSET)
+#define CHIPID_CIDR_ARCH_SAM4SDC	(0x9A << CHIPID_CIDR_ARCH_OFFSET)
+
+#define CHIPID_CIDR_NVPTYP_OFFSET	(28)
+#define CHIPID_CIDR_NVPTYP_MASK		(0x7 << CHIPID_CIDR_NVPTYP_OFFSET)
+#define CHIPID_CIDR_NVPTYP_FLASH	(0x2 << CHIPID_CIDR_NVPTYP_OFFSET)
+#define CHIPID_CIDR_NVPTYP_ROM_FLASH	(0x3 << CHIPID_CIDR_NVPTYP_OFFSET)
+
 #define CHIPID_CIDR_EXT			(0x01 << 31)
+
+#define CHIPID_EXID_SAMX7X_PINS_OFFSET	(0)
+#define CHIPID_EXID_SAMX7X_PINS_MASK	(0x3 << CHIPID_EXID_SAMX7X_PINS_OFFSET)
+#define CHIPID_EXID_SAMX7X_PINS_Q		(0x2 << CHIPID_EXID_SAMX7X_PINS_OFFSET)
+#define CHIPID_EXID_SAMX7X_PINS_N		(0x1 << CHIPID_EXID_SAMX7X_PINS_OFFSET)
+#define CHIPID_EXID_SAMX7X_PINS_J		(0x0 << CHIPID_EXID_SAMX7X_PINS_OFFSET)
 
 #define SAM3_PAGE_SIZE 256
 #define SAM4_PAGE_SIZE 512
@@ -122,6 +151,10 @@ struct sam_flash {
 	struct target_flash f;
 	uint32_t eefc_base;
 	uint8_t write_cmd;
+};
+
+struct sam_priv_s {
+	char sam_variant_string[60];
 };
 
 static void sam3_add_flash(target *t,
@@ -193,6 +226,149 @@ static size_t sam_flash_size(uint32_t cidr)
 		return 0x200000;
 	}
 	return 0;
+}
+
+static size_t sam_sram_size(uint32_t cidr)
+{
+	switch (cidr & CHIPID_CIDR_SRAMSIZ_MASK) {
+	case CHIPID_CIDR_SRAMSIZ_256K:
+		return 0x40000;
+	case CHIPID_CIDR_SRAMSIZ_384K:
+		return 0x60000;
+	default:
+		return 0;
+	}
+}
+
+struct samx7x_descr {
+	char product_code;
+	uint8_t product_id;
+	char pins;
+	uint32_t ram_size;
+	uint32_t flash_size;
+	uint8_t density;
+	char revision;
+};
+
+struct samx7x_descr samx7x_parse_id(uint32_t cidr, uint32_t exid) {
+
+	struct samx7x_descr descr = {0};
+
+	switch (cidr & CHIPID_CIDR_ARCH_MASK) {
+	case CHIPID_CIDR_ARCH_SAME70:
+		descr.product_code = 'E';
+		descr.product_id = 70;
+		break;
+	case CHIPID_CIDR_ARCH_SAMS70:
+		descr.product_code = 'S';
+		descr.product_id = 70;
+		break;
+	case CHIPID_CIDR_ARCH_SAMV71:
+		descr.product_code = 'V';
+		descr.product_id = 71;
+		break;
+	case CHIPID_CIDR_ARCH_SAMV70:
+		descr.product_code = 'V';
+		descr.product_id = 70;
+		break;
+	}
+
+	// A = Revision A, legacy version
+	// B = Revision B, current variant
+	switch (exid & CHIPID_CIDR_VERSION_MASK) {
+	case 0:
+		descr.revision = 'A';
+		break;
+	case 1:
+		descr.revision = 'B';
+		break;
+	default:
+		descr.revision = '_';
+		break;
+	}
+
+	// Q = 144 pins
+	// N = 100 pins
+	// J = 64 pins
+	switch (exid & CHIPID_EXID_SAMX7X_PINS_MASK) {
+	case CHIPID_EXID_SAMX7X_PINS_Q:
+		descr.pins = 'Q';
+		break;
+	case CHIPID_EXID_SAMX7X_PINS_N:
+		descr.pins = 'N';
+		break;
+	case CHIPID_EXID_SAMX7X_PINS_J:
+		descr.pins = 'J';
+		break;
+	}
+
+	descr.ram_size = sam_sram_size(cidr);
+	descr.flash_size = sam_flash_size(cidr);
+
+	// 21 = 2048 KB
+	// 20 = 1024 KB
+	// 19 = 512 KB
+	switch (descr.flash_size)
+	{
+	case 0x200000:
+		descr.density = 21;
+		break;
+	case 0x100000:
+		descr.density = 20;
+		break;
+	case 0x80000:
+		descr.density = 19;
+		break;
+	default:
+		descr.density = 0;
+		break;
+	}
+
+	return descr;
+}
+
+bool samx7x_probe(target *t)
+{
+	uint32_t cidr = target_mem_read32(t, SAM3X_CHIPID_CIDR);
+	uint32_t exid = 0;
+	if (cidr & CHIPID_CIDR_EXT) {
+		exid = target_mem_read32(t, SAMX_CHIPID_EXID);
+	}
+
+	switch (cidr & CHIPID_CIDR_ARCH_MASK) {
+	case CHIPID_CIDR_ARCH_SAME70:
+	case CHIPID_CIDR_ARCH_SAMS70:
+	case CHIPID_CIDR_ARCH_SAMV71:
+	case CHIPID_CIDR_ARCH_SAMV70:
+		break;
+	default:
+		return false;
+	}
+
+	struct samx7x_descr descr = samx7x_parse_id(cidr, exid);
+	target_add_ram(t, 0x20400000, descr.ram_size);
+	sam4_add_flash(t, SAMX7X_EEFC_BASE, 0x00400000, descr.flash_size);
+
+	target_add_commands(t, sam3x_cmd_list, "SAMX7X");
+
+	struct sam_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
+	if (!priv_storage) { /* calloc failed: heap exhaustion */
+		DEBUG_WARN("calloc: failed in %s\n", __func__);
+		return false;
+	}
+	t->target_storage = (void*)priv_storage;
+
+	sprintf(priv_storage->sam_variant_string,
+			"SAM%c%02d%c%d%c",
+			descr.product_code,
+			descr.product_id,
+			descr.pins,
+			descr.density,
+			descr.revision);
+
+	t->driver = priv_storage->sam_variant_string;
+
+	return true;
 }
 
 bool sam3x_probe(target *t)
@@ -292,7 +468,10 @@ static uint32_t sam3x_flash_base(target *t)
 	if (strcmp(t->driver, "Atmel SAM4S") == 0) {
 		return SAM4S_EEFC_BASE(0);
 	}
-	return SAM3N_EEFC_BASE;
+	if (strcmp(t->driver, "Atmel SAM3N/S") == 0) {
+		return SAM3N_EEFC_BASE;
+	}
+	return SAMX7X_EEFC_BASE;
 }
 
 static int sam4_flash_erase(struct target_flash *f, target_addr addr, size_t len)

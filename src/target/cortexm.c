@@ -413,6 +413,7 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 		PROBE(nrf51_probe);
 		break;
 	case AP_DESIGNER_ATMEL:
+		PROBE(samx7x_probe);
 		PROBE(sam4l_probe);
 		PROBE(samd_probe);
 		PROBE(samx5x_probe);
