@@ -33,6 +33,8 @@ static int sam3_flash_erase(struct target_flash *f, target_addr addr, size_t len
 static int sam_flash_write(struct target_flash *f, target_addr dest,
                              const void *src, size_t len);
 
+static uint32_t sam_gpnvm_get(target *t, uint32_t base);
+
 static bool sam_cmd_gpnvm_get(target *t, int argc, const char **argv);
 static bool sam_cmd_gpnvm_set(target *t, int argc, const char **argv);
 
@@ -75,6 +77,10 @@ const struct command_s sam_cmd_list[] = {
 #define EEFC_FSR_FLOCKE		(1 << 2)
 #define EEFC_FSR_ERROR		(EEFC_FSR_FCMDE | EEFC_FSR_FLOCKE)
 
+#define SAM_SMALL_PAGE_SIZE 256
+#define SAM_LARGE_PAGE_SIZE 512
+
+/* CHIPID Register Map */
 #define SAM_CHIPID_CIDR	0x400E0940
 #define SAM34NSU_CHIPID_CIDR	0x400E0740
 
@@ -144,8 +150,21 @@ const struct command_s sam_cmd_list[] = {
 #define CHIPID_EXID_SAMX7X_PINS_N		(0x1 << CHIPID_EXID_SAMX7X_PINS_OFFSET)
 #define CHIPID_EXID_SAMX7X_PINS_J		(0x0 << CHIPID_EXID_SAMX7X_PINS_OFFSET)
 
-#define SAM_SMALL_PAGE_SIZE 256
-#define SAM_LARGE_PAGE_SIZE 512
+/* GPNVM */
+#define GPNVM_SAMX7X_SECURITY_BIT_OFFSET	(0)
+#define GPNVM_SAMX7X_SECURITY_BIT_MASK		(0x1 << GPNVM_SAMX7X_SECURITY_BIT_OFFSET)
+
+#define GPNVM_SAMX7X_BOOT_BIT_OFFSET		(1)
+#define GPNVM_SAMX7X_BOOT_BIT_MASK			(0x1 << GPNVM_SAMX7X_BOOT_BIT_OFFSET)
+#define GPNVM_SAMX7X_BOOT_ROM				(0x0 << GPNVM_SAMX7X_BOOT_BIT_OFFSET)
+#define GPNVM_SAMX7X_BOOT_FLASH				(0x1 << GPNVM_SAMX7X_BOOT_BIT_OFFSET)
+
+#define GPNVM_SAMX7X_TCM_BIT_OFFSET			(7)
+#define GPNVM_SAMX7X_TCM_BIT_MASK			(0x3 << GPNVM_SAMX7X_TCM_BIT_OFFSET)
+#define GPNVM_SAMX7X_TCM_0K					(0x0 << GPNVM_SAMX7X_TCM_BIT_OFFSET)
+#define GPNVM_SAMX7X_TCM_32K				(0x1 << GPNVM_SAMX7X_TCM_BIT_OFFSET)
+#define GPNVM_SAMX7X_TCM_64K				(0x2 << GPNVM_SAMX7X_TCM_BIT_OFFSET)
+#define GPNVM_SAMX7X_TCM_128K				(0x3 << GPNVM_SAMX7X_TCM_BIT_OFFSET)
 
 struct sam_flash {
 	struct target_flash f;
@@ -346,7 +365,35 @@ bool samx7x_probe(target *t)
 	}
 
 	struct samx7x_descr descr = samx7x_parse_id(cidr, exid);
-	target_add_ram(t, 0x20400000, descr.ram_size);
+
+	uint32_t gpnvm = sam_gpnvm_get(t, SAMX7X_EEFC_BASE);
+
+	uint32_t itcm_size = 0, dtcm_size = 0;
+	switch (gpnvm & GPNVM_SAMX7X_TCM_BIT_MASK)
+	{
+	case GPNVM_SAMX7X_TCM_32K:
+		itcm_size = dtcm_size = 0x8000;
+		break;
+	case GPNVM_SAMX7X_TCM_64K:
+		itcm_size = dtcm_size = 0x10000;
+		break;
+	case GPNVM_SAMX7X_TCM_128K:
+		itcm_size = dtcm_size = 0x20000;
+		break;
+	}
+
+	if (dtcm_size > 0) {
+		target_add_ram(t, 0x20000000, dtcm_size);
+	}
+	if (itcm_size > 0) {
+		target_add_ram(t, 0x00000000, itcm_size);
+	}
+
+	uint32_t sram_size = descr.ram_size - (itcm_size + dtcm_size);
+	if (sram_size > 0) {
+		target_add_ram(t, 0x20400000, sram_size);
+	}
+
 	sam_add_flash(t, SAMX7X_EEFC_BASE, 0x00400000, descr.flash_size);
 
 	target_add_commands(t, sam_cmd_list, "SAMX7X");
@@ -524,14 +571,19 @@ static int sam_flash_write(struct target_flash *f, target_addr dest,
 	return 0;
 }
 
+static uint32_t sam_gpnvm_get(target *t, uint32_t base)
+{
+	sam_flash_cmd(t, base, EEFC_FCR_FCMD_GGPB, 0);
+	return target_mem_read32(t, EEFC_FRR(base));
+}
+
 static bool sam_cmd_gpnvm_get(target *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
-	uint32_t base = sam_flash_base(t);
 
-	sam_flash_cmd(t, base, EEFC_FCR_FCMD_GGPB, 0);
-	tc_printf(t, "GPNVM: 0x%08X\n", target_mem_read32(t, EEFC_FRR(base)));
+	uint32_t base = sam_flash_base(t);
+	tc_printf(t, "GPNVM: 0x%08X\n", sam_gpnvm_get(t, base));
 
 	return true;
 }
