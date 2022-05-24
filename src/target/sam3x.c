@@ -28,17 +28,17 @@
 #include "target.h"
 #include "target_internal.h"
 
-static int sam4_flash_erase(struct target_flash *f, target_addr addr, size_t len);
+static int sam_flash_erase(struct target_flash *f, target_addr addr, size_t len);
 static int sam3_flash_erase(struct target_flash *f, target_addr addr, size_t len);
-static int sam3x_flash_write(struct target_flash *f, target_addr dest,
+static int sam_flash_write(struct target_flash *f, target_addr dest,
                              const void *src, size_t len);
 
-static bool sam3x_cmd_gpnvm_get(target *t, int argc, const char **argv);
-static bool sam3x_cmd_gpnvm_set(target *t, int argc, const char **argv);
+static bool sam_cmd_gpnvm_get(target *t, int argc, const char **argv);
+static bool sam_cmd_gpnvm_set(target *t, int argc, const char **argv);
 
-const struct command_s sam3x_cmd_list[] = {
-	{"gpnvm_get", (cmd_handler)sam3x_cmd_gpnvm_get, "Get GPVNM value"},
-	{"gpnvm_set", (cmd_handler)sam3x_cmd_gpnvm_set, "Set GPVNM bit"},
+const struct command_s sam_cmd_list[] = {
+	{"gpnvm_get", (cmd_handler)sam_cmd_gpnvm_get, "Get GPVNM value"},
+	{"gpnvm_set", (cmd_handler)sam_cmd_gpnvm_set, "Set GPVNM bit"},
 	{NULL, NULL, NULL}
 };
 
@@ -75,10 +75,10 @@ const struct command_s sam3x_cmd_list[] = {
 #define EEFC_FSR_FLOCKE		(1 << 2)
 #define EEFC_FSR_ERROR		(EEFC_FSR_FCMDE | EEFC_FSR_FLOCKE)
 
-#define SAM3X_CHIPID_CIDR	0x400E0940
+#define SAM_CHIPID_CIDR	0x400E0940
 #define SAM34NSU_CHIPID_CIDR	0x400E0740
 
-#define SAMX_CHIPID_EXID	(SAM3X_CHIPID_CIDR + 0x4)
+#define SAM_CHIPID_EXID	(SAM_CHIPID_CIDR + 0x4)
 
 #define CHIPID_CIDR_VERSION_MASK	(0x1F << 0)
 
@@ -144,8 +144,8 @@ const struct command_s sam3x_cmd_list[] = {
 #define CHIPID_EXID_SAMX7X_PINS_N		(0x1 << CHIPID_EXID_SAMX7X_PINS_OFFSET)
 #define CHIPID_EXID_SAMX7X_PINS_J		(0x0 << CHIPID_EXID_SAMX7X_PINS_OFFSET)
 
-#define SAM3_PAGE_SIZE 256
-#define SAM4_PAGE_SIZE 512
+#define SAM_SMALL_PAGE_SIZE 256
+#define SAM_LARGE_PAGE_SIZE 512
 
 struct sam_flash {
 	struct target_flash f;
@@ -171,16 +171,16 @@ static void sam3_add_flash(target *t,
 	f = &sf->f;
 	f->start = addr;
 	f->length = length;
-	f->blocksize = SAM3_PAGE_SIZE;
+	f->blocksize = SAM_SMALL_PAGE_SIZE;
 	f->erase = sam3_flash_erase;
-	f->write = sam3x_flash_write;
-	f->buf_size = SAM3_PAGE_SIZE;
+	f->write = sam_flash_write;
+	f->buf_size = SAM_SMALL_PAGE_SIZE;
 	sf->eefc_base = eefc_base;
 	sf->write_cmd = EEFC_FCR_FCMD_EWP;
 	target_add_flash(t, f);
 }
 
-static void sam4_add_flash(target *t,
+static void sam_add_flash(target *t,
                            uint32_t eefc_base, uint32_t addr, size_t length)
 {
 	struct sam_flash *sf = calloc(1, sizeof(*sf));
@@ -194,10 +194,10 @@ static void sam4_add_flash(target *t,
 	f = &sf->f;
 	f->start = addr;
 	f->length = length;
-	f->blocksize = SAM4_PAGE_SIZE * 8;
-	f->erase = sam4_flash_erase;
-	f->write = sam3x_flash_write;
-	f->buf_size = SAM4_PAGE_SIZE;
+	f->blocksize = SAM_LARGE_PAGE_SIZE * 8;
+	f->erase = sam_flash_erase;
+	f->write = sam_flash_write;
+	f->buf_size = SAM_LARGE_PAGE_SIZE;
 	sf->eefc_base = eefc_base;
 	sf->write_cmd = EEFC_FCR_FCMD_WP;
 	target_add_flash(t, f);
@@ -329,10 +329,10 @@ struct samx7x_descr samx7x_parse_id(uint32_t cidr, uint32_t exid) {
 
 bool samx7x_probe(target *t)
 {
-	uint32_t cidr = target_mem_read32(t, SAM3X_CHIPID_CIDR);
+	uint32_t cidr = target_mem_read32(t, SAM_CHIPID_CIDR);
 	uint32_t exid = 0;
 	if (cidr & CHIPID_CIDR_EXT) {
-		exid = target_mem_read32(t, SAMX_CHIPID_EXID);
+		exid = target_mem_read32(t, SAM_CHIPID_EXID);
 	}
 
 	switch (cidr & CHIPID_CIDR_ARCH_MASK) {
@@ -347,9 +347,9 @@ bool samx7x_probe(target *t)
 
 	struct samx7x_descr descr = samx7x_parse_id(cidr, exid);
 	target_add_ram(t, 0x20400000, descr.ram_size);
-	sam4_add_flash(t, SAMX7X_EEFC_BASE, 0x00400000, descr.flash_size);
+	sam_add_flash(t, SAMX7X_EEFC_BASE, 0x00400000, descr.flash_size);
 
-	target_add_commands(t, sam3x_cmd_list, "SAMX7X");
+	target_add_commands(t, sam_cmd_list, "SAMX7X");
 
 	struct sam_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
 	if (!priv_storage) { /* calloc failed: heap exhaustion */
@@ -373,7 +373,7 @@ bool samx7x_probe(target *t)
 
 bool sam3x_probe(target *t)
 {
-	uint32_t cidr = target_mem_read32(t, SAM3X_CHIPID_CIDR);
+	uint32_t cidr = target_mem_read32(t, SAM_CHIPID_CIDR);
 	size_t size = sam_flash_size(cidr);
 	switch (cidr & (CHIPID_CIDR_ARCH_MASK | CHIPID_CIDR_EPROC_MASK)) {
 	case CHIPID_CIDR_ARCH_SAM3XxC | CHIPID_CIDR_EPROC_CM3:
@@ -384,7 +384,7 @@ bool sam3x_probe(target *t)
 		/* 2 Flash memories back-to-back starting at 0x80000 */
 		sam3_add_flash(t, SAM3X_EEFC_BASE(0), 0x80000, size/2);
 		sam3_add_flash(t, SAM3X_EEFC_BASE(1), 0x80000 + size/2, size/2);
-		target_add_commands(t, sam3x_cmd_list, "SAM3X");
+		target_add_commands(t, sam_cmd_list, "SAM3X");
 		return true;
 	}
 
@@ -402,7 +402,7 @@ bool sam3x_probe(target *t)
 		/* These devices only have a single bank */
 		size = sam_flash_size(cidr);
 		sam3_add_flash(t, SAM3N_EEFC_BASE, 0x400000, size);
-		target_add_commands(t, sam3x_cmd_list, "SAM3N/S");
+		target_add_commands(t, sam_cmd_list, "SAM3N/S");
 		return true;
 	case CHIPID_CIDR_ARCH_SAM3UxC | CHIPID_CIDR_EPROC_CM3:
 	case CHIPID_CIDR_ARCH_SAM3UxE | CHIPID_CIDR_EPROC_CM3:
@@ -415,7 +415,7 @@ bool sam3x_probe(target *t)
 			sam3_add_flash(t, SAM3U_EEFC_BASE(1),
 			               0x100000, 0x80000);
 		}
-		target_add_commands(t, sam3x_cmd_list, "SAM3U");
+		target_add_commands(t, sam_cmd_list, "SAM3U");
 		return true;
 	case CHIPID_CIDR_ARCH_SAM4SxA | CHIPID_CIDR_EPROC_CM4:
 	case CHIPID_CIDR_ARCH_SAM4SxB | CHIPID_CIDR_EPROC_CM4:
@@ -427,14 +427,14 @@ bool sam3x_probe(target *t)
 		size = sam_flash_size(cidr);
 		if (size <= 0x80000) {
 			/* Smaller devices have a single bank */
-			sam4_add_flash(t, SAM4S_EEFC_BASE(0), 0x400000, size);
+			sam_add_flash(t, SAM4S_EEFC_BASE(0), 0x400000, size);
 		} else {
 			/* Larger devices are split evenly between 2 */
-			sam4_add_flash(t, SAM4S_EEFC_BASE(0), 0x400000, size/2);
-			sam4_add_flash(t, SAM4S_EEFC_BASE(1),
+			sam_add_flash(t, SAM4S_EEFC_BASE(0), 0x400000, size/2);
+			sam_add_flash(t, SAM4S_EEFC_BASE(1),
 			               0x400000 + size/2, size/2);
 		}
-		target_add_commands(t, sam3x_cmd_list, "SAM4S");
+		target_add_commands(t, sam_cmd_list, "SAM4S");
 		return true;
 	}
 
@@ -442,7 +442,7 @@ bool sam3x_probe(target *t)
 }
 
 static int
-sam3x_flash_cmd(target *t, uint32_t base, uint8_t cmd, uint16_t arg)
+sam_flash_cmd(target *t, uint32_t base, uint8_t cmd, uint16_t arg)
 {
 	DEBUG_INFO("%s: base = 0x%08"PRIx32" cmd = 0x%02X, arg = 0x%06X\n",
 		__func__, base, cmd, arg);
@@ -457,7 +457,7 @@ sam3x_flash_cmd(target *t, uint32_t base, uint8_t cmd, uint16_t arg)
 	return sr & EEFC_FSR_ERROR;
 }
 
-static uint32_t sam3x_flash_base(target *t)
+static uint32_t sam_flash_base(target *t)
 {
 	if (strcmp(t->driver, "Atmel SAM3X") == 0) {
 		return SAM3X_EEFC_BASE(0);
@@ -474,7 +474,7 @@ static uint32_t sam3x_flash_base(target *t)
 	return SAMX7X_EEFC_BASE;
 }
 
-static int sam4_flash_erase(struct target_flash *f, target_addr addr, size_t len)
+static int sam_flash_erase(struct target_flash *f, target_addr addr, size_t len)
 {
 	target *t = f->t;
 	uint32_t base = ((struct sam_flash *)f)->eefc_base;
@@ -484,11 +484,11 @@ static int sam4_flash_erase(struct target_flash *f, target_addr addr, size_t len
 	 * Erasing is done in 8-page chunks. arg[15:2] contains the page
 	 * number and arg[1:0] contains 0x1, indicating 8-page chunks.
 	 */
-	unsigned chunk = offset / SAM4_PAGE_SIZE;
+	unsigned chunk = offset / SAM_LARGE_PAGE_SIZE;
 
 	while (len) {
 		int16_t arg = chunk | 0x1;
-		if(sam3x_flash_cmd(t, base, EEFC_FCR_FCMD_EPA, arg))
+		if(sam_flash_cmd(t, base, EEFC_FCR_FCMD_EPA, arg))
 			return -1;
 
 		if (len > f->blocksize)
@@ -509,7 +509,7 @@ static int sam3_flash_erase(struct target_flash *f, target_addr addr, size_t len
 	return 0;
 }
 
-static int sam3x_flash_write(struct target_flash *f, target_addr dest,
+static int sam_flash_write(struct target_flash *f, target_addr dest,
                              const void *src, size_t len)
 {
 	target *t = f->t;
@@ -518,28 +518,28 @@ static int sam3x_flash_write(struct target_flash *f, target_addr dest,
 	unsigned chunk = (dest - f->start) / f->buf_size;
 
 	target_mem_write(t, dest, src, len);
-	if(sam3x_flash_cmd(t, base, sf->write_cmd, chunk))
+	if(sam_flash_cmd(t, base, sf->write_cmd, chunk))
 		return -1;
 
 	return 0;
 }
 
-static bool sam3x_cmd_gpnvm_get(target *t, int argc, const char **argv)
+static bool sam_cmd_gpnvm_get(target *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
-	uint32_t base = sam3x_flash_base(t);
+	uint32_t base = sam_flash_base(t);
 
-	sam3x_flash_cmd(t, base, EEFC_FCR_FCMD_GGPB, 0);
+	sam_flash_cmd(t, base, EEFC_FCR_FCMD_GGPB, 0);
 	tc_printf(t, "GPNVM: 0x%08X\n", target_mem_read32(t, EEFC_FRR(base)));
 
 	return true;
 }
 
-static bool sam3x_cmd_gpnvm_set(target *t, int argc, const char **argv)
+static bool sam_cmd_gpnvm_set(target *t, int argc, const char **argv)
 {
 	uint32_t bit, cmd;
-	uint32_t base = sam3x_flash_base(t);
+	uint32_t base = sam_flash_base(t);
 
 	if (argc != 3) {
 		tc_printf(t, "usage: monitor gpnvm_set <bit> <val>\n");
@@ -548,8 +548,8 @@ static bool sam3x_cmd_gpnvm_set(target *t, int argc, const char **argv)
 	bit = atol(argv[1]);
 	cmd = atol(argv[2]) ? EEFC_FCR_FCMD_SGPB : EEFC_FCR_FCMD_CGPB;
 
-	sam3x_flash_cmd(t, base, cmd, bit);
-	sam3x_cmd_gpnvm_get(t, 0, NULL);
+	sam_flash_cmd(t, base, cmd, bit);
+	sam_cmd_gpnvm_get(t, 0, NULL);
 
 	return true;
 }
