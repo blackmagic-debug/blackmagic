@@ -136,6 +136,8 @@ struct target_s {
 	void (*priv_free)(void *);
 };
 
+void target_ram_map_free(target *t);
+void target_flash_map_free(target *t);
 void target_mem_map_free(target *t);
 void target_add_commands(target *t, const struct command_s *cmds, const char *name);
 void target_add_ram(target *t, target_addr start, uint32_t len);

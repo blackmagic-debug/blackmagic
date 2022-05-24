@@ -84,13 +84,16 @@ int target_foreach(void (*cb)(int, target *t, void *context), void *context)
 	return i;
 }
 
-void target_mem_map_free(target *t)
-{
+
+void target_ram_map_free(target *t) {
 	while (t->ram) {
 		void * next = t->ram->next;
 		free(t->ram);
 		t->ram = next;
 	}
+}
+
+void target_flash_map_free(target *t) {
 	while (t->flash) {
 		void * next = t->flash->next;
 		if (t->flash->buf)
@@ -98,6 +101,12 @@ void target_mem_map_free(target *t)
 		free(t->flash);
 		t->flash = next;
 	}
+}
+
+void target_mem_map_free(target *t)
+{
+	target_ram_map_free(t);
+	target_flash_map_free(t);
 }
 
 void target_list_free(void)
