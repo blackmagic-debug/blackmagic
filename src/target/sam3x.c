@@ -178,8 +178,18 @@ struct sam_flash {
 	uint8_t write_cmd;
 };
 
+struct samx7x_descr {
+	char product_code;
+	uint8_t product_id;
+	char pins;
+	uint32_t ram_size;
+	uint32_t flash_size;
+	uint8_t density;
+	char revision;
+};
 struct sam_priv_s {
-	char sam_variant_string[60];
+	struct samx7x_descr descr;
+	char sam_variant_string[16];
 };
 
 static void sam3_add_flash(target *t,
@@ -228,6 +238,35 @@ static void sam_add_flash(target *t,
 	target_add_flash(t, f);
 }
 
+static void samx7x_add_ram(target* t, uint32_t tcm_config, uint32_t ram_size) {
+	uint32_t itcm_size = 0, dtcm_size = 0;
+
+	switch (tcm_config)
+	{
+	case GPNVM_SAMX7X_TCM_32K:
+		itcm_size = dtcm_size = 0x8000;
+		break;
+	case GPNVM_SAMX7X_TCM_64K:
+		itcm_size = dtcm_size = 0x10000;
+		break;
+	case GPNVM_SAMX7X_TCM_128K:
+		itcm_size = dtcm_size = 0x20000;
+		break;
+	}
+
+	if (dtcm_size > 0) {
+		target_add_ram(t, 0x20000000, dtcm_size);
+	}
+	if (itcm_size > 0) {
+		target_add_ram(t, 0x00000000, itcm_size);
+	}
+
+	uint32_t sram_size = ram_size - (itcm_size + dtcm_size);
+	if (sram_size > 0) {
+		target_add_ram(t, 0x20400000, sram_size);
+	}
+}
+
 static size_t sam_flash_size(uint32_t cidr)
 {
 	switch (cidr & CHIPID_CIDR_NVPSIZ_MASK) {
@@ -264,16 +303,6 @@ static size_t sam_sram_size(uint32_t cidr)
 		return 0;
 	}
 }
-
-struct samx7x_descr {
-	char product_code;
-	uint8_t product_id;
-	char pins;
-	uint32_t ram_size;
-	uint32_t flash_size;
-	uint8_t density;
-	char revision;
-};
 
 struct samx7x_descr samx7x_parse_id(uint32_t cidr, uint32_t exid) {
 
@@ -370,40 +399,6 @@ bool samx7x_probe(target *t)
 		return false;
 	}
 
-	struct samx7x_descr descr = samx7x_parse_id(cidr, exid);
-
-	uint32_t gpnvm = sam_gpnvm_get(t, SAMX7X_EEFC_BASE);
-
-	uint32_t itcm_size = 0, dtcm_size = 0;
-	switch (gpnvm & GPNVM_SAMX7X_TCM_BIT_MASK)
-	{
-	case GPNVM_SAMX7X_TCM_32K:
-		itcm_size = dtcm_size = 0x8000;
-		break;
-	case GPNVM_SAMX7X_TCM_64K:
-		itcm_size = dtcm_size = 0x10000;
-		break;
-	case GPNVM_SAMX7X_TCM_128K:
-		itcm_size = dtcm_size = 0x20000;
-		break;
-	}
-
-	if (dtcm_size > 0) {
-		target_add_ram(t, 0x20000000, dtcm_size);
-	}
-	if (itcm_size > 0) {
-		target_add_ram(t, 0x00000000, itcm_size);
-	}
-
-	uint32_t sram_size = descr.ram_size - (itcm_size + dtcm_size);
-	if (sram_size > 0) {
-		target_add_ram(t, 0x20400000, sram_size);
-	}
-
-	sam_add_flash(t, SAMX7X_EEFC_BASE, 0x00400000, descr.flash_size);
-
-	target_add_commands(t, sam_cmd_list, "SAMX7X");
-
 	struct sam_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
 	if (!priv_storage) { /* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
@@ -411,13 +406,23 @@ bool samx7x_probe(target *t)
 	}
 	t->target_storage = (void*)priv_storage;
 
+	priv_storage->descr = samx7x_parse_id(cidr, exid);
+
+	uint32_t tcm_config = sam_gpnvm_get(t, SAMX7X_EEFC_BASE) & GPNVM_SAMX7X_TCM_BIT_MASK;
+
+	samx7x_add_ram(t, tcm_config, priv_storage->descr.ram_size);
+
+	sam_add_flash(t, SAMX7X_EEFC_BASE, 0x00400000, priv_storage->descr.flash_size);
+
+	target_add_commands(t, sam_cmd_list, "SAMX7X");
+
 	sprintf(priv_storage->sam_variant_string,
 			"SAM%c%02d%c%d%c",
-			descr.product_code,
-			descr.product_id,
-			descr.pins,
-			descr.density,
-			descr.revision);
+			priv_storage->descr.product_code,
+			priv_storage->descr.product_id,
+			priv_storage->descr.pins,
+			priv_storage->descr.density,
+			priv_storage->descr.revision);
 
 	t->driver = priv_storage->sam_variant_string;
 
@@ -595,7 +600,8 @@ static bool sam_cmd_gpnvm(target *t, int argc, const char **argv)
 	}
 
 	uint32_t base, gpnvm_mask;
-	switch(sam_driver(t)) {
+	enum sam_driver drv = sam_driver(t);
+	switch(drv) {
 	case DRIVER_SAM3X:
 		gpnvm_mask = 0x7;
 		base = SAM3X_EEFC_BASE(0);
@@ -618,32 +624,44 @@ static bool sam_cmd_gpnvm(target *t, int argc, const char **argv)
 		break;
 	}
 
+	uint32_t mask = 0, values = 0;
 	if (strncmp(argv[1], "get", arglen) == 0) {
 		/* nothing to do */
 	} else if (strncmp(argv[1], "set", arglen) == 0) {
 		char *eos;
-		uint32_t mask = strtoul(argv[2], &eos, 0);
-		uint32_t values = strtoul(argv[3], &eos, 0);
+		mask = strtoul(argv[2], &eos, 0);
+		values = strtoul(argv[3], &eos, 0);
 
 		if (mask == 0 || mask & ~gpnvm_mask) {
 			/* trying to write invalid bits */
 			goto bad_usage;
 		}
 
-		for (uint16_t bit = 0; mask > 0; bit++)
+		uint32_t work_mask = mask;
+		uint32_t work_values = values;
+		for (uint16_t bit = 0; work_mask > 0; bit++)
 		{
-			if (mask & 1) {
-				uint8_t cmd = (values & 1) ? EEFC_FCR_FCMD_SGPB : EEFC_FCR_FCMD_CGPB;
+			if (work_mask & 1) {
+				uint8_t cmd = (work_values & 1) ? EEFC_FCR_FCMD_SGPB : EEFC_FCR_FCMD_CGPB;
 				sam_flash_cmd(t, base, cmd, bit);
 			}
-			mask >>= 1;
-			values >>= 1;
+			work_mask >>= 1;
+			work_values >>= 1;
 		}
 	} else {
 		goto bad_usage;
 	}
 
-	tc_printf(t, "GPNVM: 0x%08X\n", sam_gpnvm_get(t, base));
+	uint32_t gpnvm = sam_gpnvm_get(t, base);
+	tc_printf(t, "GPNVM: 0x%08X\n", gpnvm);
+
+	if ((drv == DRIVER_SAMX7X) && (mask & GPNVM_SAMX7X_TCM_BIT_MASK)) {
+		struct sam_priv_s * storage = (struct sam_priv_s *)t->target_storage;
+
+		target_ram_map_free(t);
+		samx7x_add_ram(t, gpnvm & GPNVM_SAMX7X_TCM_BIT_MASK, storage->descr.ram_size);
+		target_reset(t);
+	}
 
 	return true;
 
