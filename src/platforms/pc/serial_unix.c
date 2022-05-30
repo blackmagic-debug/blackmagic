@@ -95,7 +95,9 @@ int serial_open(BMP_CL_OPTIONS_t *cl_opts, char *serial)
     return set_interface_attribs();
 }
 #else
-#define BMP_IDSTRING "usb-Black_Sphere_Technologies_Black_Magic_Probe"
+#define BMP_IDSTRING_BLACKSPHERE "usb-Black_Sphere_Technologies_Black_Magic_Probe"
+#define BMP_IDSTRING_BLACKMAGIC "usb-Black_Magic_Debug_Black_Magic_Probe"
+#define BMP_IDSTRING_1BITSQUARED "usb-1BitSquared_Black_Magic_Probe"
 #define DEVICE_BY_ID "/dev/serial/by-id/"
 int serial_open(BMP_CL_OPTIONS_t *cl_opts, char *serial)
 {
@@ -111,7 +113,9 @@ int serial_open(BMP_CL_OPTIONS_t *cl_opts, char *serial)
 		int num_devices = 0;
 		int num_total = 0;
 		while ((dp = readdir(dir)) != NULL) {
-			if ((strstr(dp->d_name, BMP_IDSTRING)) &&
+			if ((strstr(dp->d_name, BMP_IDSTRING_BLACKSPHERE) ||
+			     strstr(dp->d_name, BMP_IDSTRING_BLACKMAGIC) ||
+			     strstr(dp->d_name, BMP_IDSTRING_1BITSQUARED)) &&
 				(strstr(dp->d_name, "-if00"))) {
 				num_total++;
 				if ((serial) && (!strstr(dp->d_name, serial)))
@@ -130,7 +134,9 @@ int serial_open(BMP_CL_OPTIONS_t *cl_opts, char *serial)
 			dir = opendir(DEVICE_BY_ID);
 			if (dir) {
 				while ((dp = readdir(dir)) != NULL) {
-					if ((strstr(dp->d_name, BMP_IDSTRING)) &&
+					if ((strstr(dp->d_name, BMP_IDSTRING_BLACKSPHERE) ||
+					     strstr(dp->d_name, BMP_IDSTRING_BLACKMAGIC) ||
+					     strstr(dp->d_name, BMP_IDSTRING_1BITSQUARED)) &&
 						(strstr(dp->d_name, "-if00")))
 						DEBUG_WARN("%s\n", dp->d_name);
 				}

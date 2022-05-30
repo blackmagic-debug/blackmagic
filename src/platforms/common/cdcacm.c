@@ -414,7 +414,7 @@ static char serial_no[DFU_SERIAL_LENGTH];
 #define BOARD_IDENT "Black Magic Probe " PLATFORM_IDENT FIRMWARE_VERSION
 
 static const char *usb_strings[] = {
-	"Black Sphere Technologies",
+	"Black Magic Debug",
 	BOARD_IDENT,
 	serial_no,
 	"Black Magic GDB Server",

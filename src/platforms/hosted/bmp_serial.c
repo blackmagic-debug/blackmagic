@@ -159,7 +159,9 @@ print_probes_info:
  * Recent: Black_Sphere_Technologies_Black_Magic_Probe_v1.7.1-212-g212292ab_7BAE7AB8-if00
  * usb-Black_Sphere_Technologies_Black_Magic_Probe__SWLINK__v1.7.1-155-gf55ad67b-dirty_DECB8811-if00
  */
-#define BMP_IDSTRING "usb-Black_Sphere_Technologies_Black_Magic_Probe"
+#define BMP_IDSTRING_BLACKSPHERE "usb-Black_Sphere_Technologies_Black_Magic_Probe"
+#define BMP_IDSTRING_BLACKMAGIC "usb-Black_Magic_Debug_Black_Magic_Probe"
+#define BMP_IDSTRING_1BITSQUARED "usb-1BitSquared_Black_Magic_Probe"
 #define DEVICE_BY_ID "/dev/serial/by-id/"
 
 /*
@@ -170,7 +172,7 @@ print_probes_info:
  */
 static int scan_linux_id(char *name, char *type, char *version, char  *serial)
 {
-	name += strlen(BMP_IDSTRING) + 1;
+	name += strlen(BMP_IDSTRING_BLACKSPHERE) + 1;
 	while (*name == '_')
 		name++;
 	if (!*name) {
@@ -279,7 +281,7 @@ int find_debuggers(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info)
 				strncpy(info->version, version, sizeof(info->version));
 				break;
 			} else if (found_bmps > 0) {
-				DEBUG_WARN("%2d: %s, Black Sphere Technologies, Black Magic "
+				DEBUG_WARN("%2d: %s, Black Magic Debug, Black Magic "
 						   "Probe (%s), %s\n", i, serial, type, version);
 			}
 		}

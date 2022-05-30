@@ -130,7 +130,7 @@ static char if_string[] = DFU_IFACE_STRING;
 #define BOARD_IDENT_DFU(BOARD_TYPE) "Black Magic Probe DFU " PLATFORM_IDENT  "" FIRMWARE_VERSION
 
 static const char *usb_strings[] = {
-	"Black Sphere Technologies",
+	"Black Magic Debug",
 	BOARD_IDENT_DFU(PLATFORM_IDENT),
 	serial_no,
 	/* This string is used by ST Microelectronics' DfuSe utility */
