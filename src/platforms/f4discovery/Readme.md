@@ -60,6 +60,6 @@ To exit from dfu mode press a "key" and "reset", release reset. BMP firmware sho
 
 SWJ frequency setting
 ====================================
-https://github.com/blacksphere/blackmagic/pull/783#issue-529197718
+https://github.com/blackmagic-debug/blackmagic/pull/783#issue-529197718
 
 `mon freq 900k` helps at most

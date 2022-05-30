@@ -171,7 +171,7 @@ cables already listed and propose other cable. A link to the schematics
 is welcome.
 
 ## Feedback
-### Issues and Pull request on https://github.com/blacksphere/blackmagic/
+### Issues and Pull request on https://github.com/blackmagic-debug/blackmagic/
 ### Discussions on Discord.
 You can find the Discord link here: https://1bitsquared.com/pages/chat
 ### Blackmagic mailing list http://sourceforge.net/mail/?group_id=407419
