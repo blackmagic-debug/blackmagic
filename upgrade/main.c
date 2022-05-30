@@ -38,7 +38,7 @@
 void banner(void)
 {
 	puts("\nBlack Magic Probe -- Firmware Upgrade Utility -- Version " VERSION);
-	puts("Copyright (C) 2011  Black Sphere Technologies Ltd.");
+	puts("Copyright (C) 2022 Black Magic Debug Project");
 	puts("License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\n");
 }
 
@@ -74,12 +74,16 @@ struct usb_device * find_dev(void)
 
 			if (((dev->descriptor.idProduct == 0x5740) ||
 			     (dev->descriptor.idProduct == 0x6018)) &&
-			   !strcmp(man, "Black Sphere Technologies"))
+			    (!strcmp(man, "Black Sphere Technologies") ||
+			     !strcmp(man, "Black Magic Debug") ||
+			     !strcmp(man, "1BitSquared")))
 				return dev;
 
 			if (((dev->descriptor.idProduct == 0xDF11) ||
 			     (dev->descriptor.idProduct == 0x6017)) &&
-			   !strcmp(man, "Black Sphere Technologies"))
+			    (!strcmp(man, "Black Sphere Technologies") ||
+			     !strcmp(man, "Black Magic Debug") ||
+			     !strcmp(man, "1BitSquared")))
 				return dev;
 		}
 	}
