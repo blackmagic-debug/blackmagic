@@ -13,17 +13,17 @@
 Signature="$Windows NT$"
 Class=Ports
 ClassGuid={4D36E978-E325-11CE-BFC1-08002BE10318}
-Provider=%BLACKSPHERE%
+Provider=%BLACKMAGIC%
 DriverVer=28/12/2011,0.0.1.1
 
 [Manufacturer]
 %VendorName%=DeviceList, NTamd64
 
 [Strings]
-VendorName = "Black Sphere Technologies"
+VendorName = "Black Magic Debug"
 BLACKMAGICGDB = "Black Magic GDB Server"
 BLACKMAGICUART = "Black Magic UART Port"
-BLACKSPHERE_DISPLAY_NAME = "Black Magic Probe Driver"
+BLACKMAGIC_DISPLAY_NAME = "Black Magic Probe Driver"
 
 [DeviceList]
 %BLACKMAGICGDB%=DriverInstall, USB\VID_1d50&PID_6018&Rev_0100&MI_00
@@ -55,7 +55,7 @@ HKR,,EnumPropPages32,,"MsPorts.dll,SerialPortPropPageProvider"
 AddService = usbser,0x0002,DriverService.nt
 
 [DriverService.nt]
-DisplayName = %BLACKSPHERE_DISPLAY_NAME%
+DisplayName = %BLACKMAGIC_DISPLAY_NAME%
 ServiceType = 1                  ; SERVICE_KERNEL_DRIVER
 StartType = 3                    ; SERVICE_DEMAND_START
 ErrorControl = 1                 ; SERVICE_ERROR_NORMAL
@@ -80,7 +80,7 @@ HKR,,EnumPropPages32,,"MsPorts.dll,SerialPortPropPageProvider"
 AddService = usbser,0x0002,DriverService.NTamd64
 
 [DriverService.NTamd64]
-DisplayName = %BLACKSPHERE_DISPLAY_NAME%
+DisplayName = %BLACKMAGIC_DISPLAY_NAME%
 ServiceType = 1                  ; SERVICE_KERNEL_DRIVER
 StartType = 3                    ; SERVICE_DEMAND_START
 ErrorControl = 1                 ; SERVICE_ERROR_NORMAL

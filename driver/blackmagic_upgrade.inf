@@ -4,7 +4,7 @@
 DeviceName = "Black Magic Firmware Upgrade"
 DeviceNameDFU = "Black Magic Probe (Upgrade)"
 DeviceNameTPA = "Black Magic Trace Capture"
-VendorName = "Black Sphere Technologies"
+VendorName = "Black Magic Debug"
 SourceName = "Black Magic Firmware Upgrade Install Disk"
 DeviceID   = "VID_1d50&PID_6018&Rev_0100&MI_04"
 DeviceIDDFU= "VID_1d50&PID_6017&Rev_0100"
