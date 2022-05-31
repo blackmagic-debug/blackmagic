@@ -241,17 +241,16 @@ int ch32f1_flash_erase (struct target_flash *f,  target_addr addr, size_t len)
 			NB: Just reading fff is not enough as it could be a transient previous operation value
 */
 
-static bool ch32f1_wait_flash_ready(target *t,uint32_t adr)
+static bool ch32f1_wait_flash_ready(target *t, uint32_t adr)
 {
-  uint32_t ff;
-  for(int i = 0; i < 32; i++) {
-	  ff = target_mem_read32(t,adr);
-  }  
-  if(ff != 0xffffffffUL) {
-	  ERROR_CH("ch32f1 Not erased properly at %x or flash access issue\n",adr);
-	  return false;
-  }
-  return true;
+	uint32_t ff;
+	for (int i = 0; i < 32; i++)
+		ff = target_mem_read32(t, adr);
+	if (ff != 0xffffffffUL) {
+		ERROR_CH("ch32f1 Not erased properly at %" PRIx32 " or flash access issue\n", adr);
+		return false;
+	}
+	return true;
 }
 /**
   \fn ch32f1_flash_write
