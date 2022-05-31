@@ -282,12 +282,12 @@ static int ch32f1_upload(target *t, uint32_t dest, const void  *src, uint32_t of
 */
 int ch32f1_buffer_clear(target *t)
 {
-  volatile uint32_t ct,sr;
-  SET_CR(FLASH_CR_FTPG_CH32); // Fast page program 4-
-  SET_CR(FLASH_CR_BUF_RESET_CH32); // BUF_RESET 5-
-  WAIT_BUSY(); // 6-
-  CLEAR_CR(FLASH_CR_FTPG_CH32); // Fast page program 4-
-  return 0;
+	volatile uint32_t ct,sr;
+	SET_CR(FLASH_CR_FTPG_CH32); // Fast page program 4-
+	SET_CR(FLASH_CR_BUF_RESET_CH32); // BUF_RESET 5-
+	WAIT_BUSY(); // 6-
+	CLEAR_CR(FLASH_CR_FTPG_CH32); // Fast page program 4-
+	return 0;
 }
 //#define CH32_VERIFY
 
@@ -338,9 +338,9 @@ static int ch32f1_flash_write(struct target_flash *f,
 
 		// next
 		if(length > 128)
-		  length -=128;
+			length -=128;
 		else
-		  length = 0;
+			length = 0;
 		dest += 128;
 		src += 128;
 
