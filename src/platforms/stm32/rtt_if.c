@@ -46,18 +46,17 @@ static uint32_t recv_tail = 0;
 /* data from host to target: number of free bytes in usb receive buffer */
 inline static uint32_t recv_bytes_free()
 {
-	uint32_t bytes_free;
-	if (recv_tail <= recv_head) bytes_free = sizeof(recv_buf) - recv_head + recv_tail - 1;
-	else bytes_free = recv_tail - recv_head - 1;
-	return bytes_free;
+	if (recv_tail <= recv_head)
+		return sizeof(recv_buf) - recv_head + recv_tail - 1;
+	else
+		return recv_tail - recv_head - 1;
 }
 
 /* data from host to target: true if not enough free buffer space and we need to close flow control */
 inline static bool recv_set_nak()
 {
 	assert(sizeof(recv_buf) > 2 * CDCACM_PACKET_SIZE);
-	bool nak = recv_bytes_free() < 2 * CDCACM_PACKET_SIZE;
-	return nak;
+	return recv_bytes_free() < 2 * CDCACM_PACKET_SIZE;
 }
 
 /* usbuart_usb_out_cb is called when usb uart has received new data for target.
@@ -75,7 +74,7 @@ void usbuart_usb_out_cb(usbd_device *dev, uint8_t ep)
 	const uint16_t len = usbd_ep_read_packet(usbdev, CDCACM_UART_ENDPOINT, usb_buf, CDCACM_PACKET_SIZE);
 
 	/* skip flag: drop packet if not enough free buffer space */
-	if (rtt_flag_skip && (len > recv_bytes_free())) {
+	if (rtt_flag_skip && len > recv_bytes_free()) {
 		usbd_ep_nak_set(usbdev, CDCACM_UART_ENDPOINT, 0);
 		return;
 	}
@@ -122,15 +121,14 @@ bool rtt_nodata()
 /* rtt target to host: write string */
 uint32_t rtt_write(const char *buf, uint32_t len)
 {
-	if ((len != 0) && usbdev && cdcacm_get_config() && cdcacm_get_dtr()) {
+	if (len != 0 && usbdev && cdcacm_get_config() && cdcacm_get_dtr()) {
 		for (uint32_t p = 0; p < len; p += CDCACM_PACKET_SIZE) {
 			uint32_t plen = MIN(CDCACM_PACKET_SIZE, len - p);
 			while(usbd_ep_write_packet(usbdev, CDCACM_UART_ENDPOINT, buf + p, plen) <= 0);
 		}
 		/* flush 64-byte packet on full-speed */
-		if ((CDCACM_PACKET_SIZE == 64) && ((len % CDCACM_PACKET_SIZE) == 0))
+		if (CDCACM_PACKET_SIZE == 64 && (len % CDCACM_PACKET_SIZE) == 0)
 			while(usbd_ep_write_packet(usbdev, CDCACM_UART_ENDPOINT, NULL, 0) <= 0);
 	}
 	return len;
 }
-// not truncated

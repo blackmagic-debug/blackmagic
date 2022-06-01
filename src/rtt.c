@@ -1,4 +1,3 @@
-
 /*
  * This file is part of the Black Magic Debug project.
  *
@@ -85,8 +84,8 @@ uint32_t fastsrch(target *cur_target)
 	uint8_t srch_buf[m+stride];
 
 	for (struct target_ram *r = cur_target->ram; r; r = r->next) {
-		uint32_t ram_start = r->start;
-		uint32_t ram_end = r->start + r->length;
+		const uint32_t ram_start = r->start;
+		const uint32_t ram_end = r->start + r->length;
 
 		t = 0;
 		memset(srch_buf, 0, sizeof(srch_buf));
@@ -95,7 +94,7 @@ uint32_t fastsrch(target *cur_target)
 			uint32_t buf_siz = MIN(stride, ram_end - addr);
 			memcpy(srch_buf, srch_buf + stride, m);
 			if (target_mem_read(cur_target, srch_buf + m, addr, buf_siz)) {
-				gdb_outf("rtt: read fail at 0x%x\r\n", addr);
+				gdb_outf("rtt: read fail at 0x%" PRIx32 "\r\n", addr);
 				return 0;
 			}
 			for (uint32_t i = 0; i < buf_siz; i++) {
@@ -118,21 +117,20 @@ uint32_t memsrch(target *cur_target)
 	uint32_t srch_str_len = strlen(srch_str);
 	uint8_t srch_buf[128];
 
-	if ((srch_str_len == 0) || (srch_str_len > sizeof(srch_buf) / 2))
+	if (srch_str_len == 0 || srch_str_len > sizeof(srch_buf) / 2)
 		return 0;
 
 	if (rtt_cbaddr && !target_mem_read(cur_target, srch_buf, rtt_cbaddr, srch_str_len)
-		&& (strncmp((const char *)(srch_buf), srch_str, srch_str_len) == 0)) {
+		&& strncmp((const char *)(srch_buf), srch_str, srch_str_len) == 0)
 		/* still at same place */
 		return rtt_cbaddr;
-	}
 
 	for (struct target_ram *r = cur_target->ram; r; r = r->next) {
 		uint32_t ram_end = r->start + r->length;
 		for (uint32_t addr = r->start; addr < ram_end; addr += sizeof(srch_buf) - srch_str_len - 1) {
 			uint32_t buf_siz = MIN(ram_end - addr, sizeof(srch_buf));
 			if (target_mem_read(cur_target, srch_buf, addr, buf_siz)) {
-				gdb_outf("rtt: read fail at 0x%x\r\n", addr);
+				gdb_outf("rtt: read fail at 0x%" PRIx32 "\r\n", addr);
 				continue;
 			}
 			for (uint32_t offset = 0; offset + srch_str_len + 1 < buf_siz; offset++) {
@@ -156,8 +154,10 @@ static void find_rtt(target *cur_target)
 	if (!cur_target || !rtt_enabled)
 		return;
 
-	if (rtt_ident[0] == 0) rtt_cbaddr = fastsrch(cur_target);
-	else rtt_cbaddr = memsrch(cur_target);
+	if (rtt_ident[0] == 0)
+		rtt_cbaddr = fastsrch(cur_target);
+	else
+		rtt_cbaddr = memsrch(cur_target);
 	DEBUG_INFO("rtt: match at 0x%" PRIx32 "\r\n", rtt_cbaddr);
 
 	if (rtt_cbaddr) {
@@ -169,11 +169,11 @@ static void find_rtt(target *cur_target)
 		num_up_buf = num_buf[0];
 		num_down_buf = num_buf[1];
 
-		if ((num_up_buf > 255) || (num_down_buf > 255)) {
+		if (num_up_buf > 255 || num_down_buf > 255) {
 			gdb_out("rtt: bad cblock\r\n");
 			rtt_enabled = false;
 			return;
-		} else if ((num_up_buf == 0) && (num_down_buf == 0))
+		} else if (num_up_buf == 0 && num_down_buf == 0)
 			gdb_out("rtt: empty cblock\r\n");
 
 		for (int32_t i = 0; i < MAX_RTT_CHAN; i++) {
@@ -187,7 +187,8 @@ static void find_rtt(target *cur_target)
 			rtt_channel[i].tail_addr = 0;
 			rtt_channel[i].flag = 0;
 
-			if (i >= num_up_buf + num_down_buf) continue;
+			if (i >= num_up_buf + num_down_buf)
+				continue;
 			if (target_mem_read(cur_target, buf_desc, rtt_cbaddr + 24 + i * 24, sizeof(buf_desc)))
 				return;
 			rtt_channel[i].is_output = i < num_up_buf;
@@ -245,36 +246,31 @@ static rtt_retval read_rtt(target *cur_target, uint32_t i)
 	if (rtt_nodata())
 		return RTT_IDLE;
 
-	if ((cur_target == NULL) || rtt_channel[i].is_output || (rtt_channel[i].buf_addr == 0) || (rtt_channel[i].buf_size == 0))
+	if (cur_target == NULL || rtt_channel[i].is_output || rtt_channel[i].buf_addr == 0 || rtt_channel[i].buf_size == 0)
 		return RTT_IDLE;
 
 	/* read down buffer head and tail from target */
-	if (target_mem_read(cur_target, head_tail, rtt_channel[i].head_addr, sizeof(head_tail))) {
+	if (target_mem_read(cur_target, head_tail, rtt_channel[i].head_addr, sizeof(head_tail)))
 		return RTT_ERR;
-	}
 
 	buf_head = head_tail[0];
 	buf_tail = head_tail[1];
 
-	if ((buf_head >= rtt_channel[i].buf_size) || (buf_tail >= rtt_channel[i].buf_size)) {
+	if (buf_head >= rtt_channel[i].buf_size || buf_tail >= rtt_channel[i].buf_size)
 		return RTT_ERR;
-	}
 
 	/* write recv_buf to target rtt 'down' buf */
-	while (((next_head = ((buf_head + 1) % rtt_channel[i].buf_size)) != buf_tail) && ((ch = rtt_getchar()) != -1)) {
-		if (target_mem_write(cur_target, rtt_channel[i].buf_addr + buf_head, &ch, 1)) {
+	while ((next_head = ((buf_head + 1) % rtt_channel[i].buf_size)) != buf_tail && (ch = rtt_getchar()) != -1) {
+		if (target_mem_write(cur_target, rtt_channel[i].buf_addr + buf_head, &ch, 1))
 			return RTT_ERR;
-		}
 
 		/* advance pointers */
 		buf_head = next_head;
 	}
 
 	/* update head of target 'down' buffer */
-	if (target_mem_write(cur_target, rtt_channel[i].head_addr, &buf_head, sizeof(buf_head))) {
+	if (target_mem_write(cur_target, rtt_channel[i].head_addr, &buf_head, sizeof(buf_head)))
 		return RTT_ERR;
-	}
-
 	return RTT_OK;
 }
 
@@ -296,9 +292,10 @@ int target_aligned_mem_read(target *t, void *dest, target_addr src, size_t len)
 	uint32_t offset = src & 0x3;
 	src0 -= offset;
 	len0 += offset;
-	if ((len0 & 0x3) != 0) len0 = (len0 + 4) & ~0x3;
+	if ((len0 & 0x3) != 0)
+		len0 = (len0 + 4) & ~0x3;
 
-	if ((src0 == src) && (len0 == len))
+	if (src0 == src && len0 == len)
 		return target_mem_read(t, dest, src, len);
 	else {
 		uint32_t retval = target_mem_read(t, dest, src0, len0);
@@ -313,21 +310,18 @@ static rtt_retval print_rtt(target *cur_target, uint32_t i)
 	uint32_t head;
 	uint32_t tail;
 
-	if (!cur_target || !rtt_channel[i].is_output || (rtt_channel[i].buf_addr == 0) || (rtt_channel[i].head_addr == 0))
+	if (!cur_target || !rtt_channel[i].is_output || rtt_channel[i].buf_addr == 0 || rtt_channel[i].head_addr == 0)
 		return RTT_IDLE;
 
 	uint32_t head_tail[2];
-	if (target_mem_read(cur_target, head_tail, rtt_channel[i].head_addr, sizeof(head_tail))) {
+	if (target_mem_read(cur_target, head_tail, rtt_channel[i].head_addr, sizeof(head_tail)))
 		return RTT_ERR;
-	}
 	head = head_tail[0];
 	tail = head_tail[1];
 
-	if ((head >= rtt_channel[i].buf_size) || (tail >= rtt_channel[i].buf_size)) {
+	if (head >= rtt_channel[i].buf_size || tail >= rtt_channel[i].buf_size)
 		return RTT_ERR;
-	}
-
-	if (head == tail)
+	else if (head == tail)
 		return RTT_IDLE;
 
 	uint32_t bytes_free = sizeof(xmit_buf) - 8; /* need 8 bytes for alignment and padding */
@@ -344,7 +338,7 @@ static rtt_retval print_rtt(target *cur_target, uint32_t i)
 		tail = (tail + len) % rtt_channel[i].buf_size;
 	}
 
-	if ((head > tail) && (bytes_free > 0)) {
+	if (head > tail && bytes_free > 0) {
 		uint32_t len = head - tail;
 		if (len > bytes_free)
 			len = bytes_free;
@@ -393,32 +387,30 @@ bool target_no_background_memory_access(target *cur_target)
 void poll_rtt(target *cur_target)
 {
 	/* rtt off */
-	if (!cur_target || !rtt_enabled) {
+	if (!cur_target || !rtt_enabled)
 		return;
-	}
 	/* target present and rtt enabled */
 	uint32_t now = platform_time_ms();
 	bool rtt_err = false;
 	bool rtt_busy = false;
 
-	if ((last_poll_ms + poll_ms <= now) || (now < last_poll_ms)) {
+	if (last_poll_ms + poll_ms <= now || now < last_poll_ms) {
 		target_addr watch;
 		enum target_halt_reason reason;
 		bool resume_target = false;
-		if (!rtt_found) {
+		if (!rtt_found)
 			/* check if target needs to be halted during memory access */
 			rtt_halt = target_no_background_memory_access(cur_target);
-		}
-		if (rtt_halt && (target_halt_poll(cur_target, &watch) == TARGET_HALT_RUNNING)) {
+		if (rtt_halt && target_halt_poll(cur_target, &watch) == TARGET_HALT_RUNNING) {
 			/* briefly halt target during target memory access */
 			target_halt_request(cur_target);
-			while((reason = target_halt_poll(cur_target, &watch)) == TARGET_HALT_RUNNING);
+			while((reason = target_halt_poll(cur_target, &watch)) == TARGET_HALT_RUNNING)
+				continue;
 			resume_target = reason == TARGET_HALT_REQUEST;
 		}
-		if (!rtt_found) {
+		if (!rtt_found)
 			/* find rtt control block in target memory */
 			find_rtt(cur_target);
-		}
 		/* do rtt i/o if control block found */
 		if (rtt_found) {
 			for (uint32_t i = 0; i < MAX_RTT_CHAN; i++) {
@@ -434,9 +426,8 @@ void poll_rtt(target *cur_target)
 			}
 		}
 		/* continue target if halted */
-		if (resume_target) {
+		if (resume_target)
 			target_halt_resume(cur_target, false);
-		}
 
 		/* update last poll time */
 		last_poll_ms = now;
@@ -444,14 +435,18 @@ void poll_rtt(target *cur_target)
 		/* rtt polling frequency goes up and down with rtt activity */
 		if (rtt_busy && !rtt_err)
 			poll_ms /= 2;
-		else poll_ms *= 2;
-		if (poll_ms > rtt_max_poll_ms) poll_ms = rtt_max_poll_ms;
-		else if (poll_ms < rtt_min_poll_ms) poll_ms = rtt_min_poll_ms;
+		else
+			poll_ms *= 2;
+
+		if (poll_ms > rtt_max_poll_ms)
+			poll_ms = rtt_max_poll_ms;
+		else if (poll_ms < rtt_min_poll_ms)
+			poll_ms = rtt_min_poll_ms;
 
 		if (rtt_err) {
 			gdb_out("rtt: err\r\n");
 			poll_errs++;
-			if ((rtt_max_poll_errs != 0) && (poll_errs > rtt_max_poll_errs)) {
+			if (rtt_max_poll_errs != 0 && poll_errs > rtt_max_poll_errs) {
 				gdb_out("\r\nrtt lost\r\n");
 				rtt_enabled = false;
 			}
@@ -459,5 +454,3 @@ void poll_rtt(target *cur_target)
 	}
 	return;
 }
-
-// not truncated
