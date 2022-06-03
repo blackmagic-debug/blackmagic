@@ -8,12 +8,7 @@ CFLAGS += -Istm32/include -mcpu=cortex-m4 -mthumb \
 	-DSTM32F4 -I../libopencm3/include \
 	-Iplatforms/stm32
 
-ifeq ($(BLACKPILL), 1)
-LINKER_SCRIPT=platforms/stm32/blackpillv2.ld
-CFLAGS += -DBLACKPILL=1
-else
 LINKER_SCRIPT=platforms/stm32/f4discovery.ld
-endif
 
 LDFLAGS_BOOT = -lopencm3_stm32f4 \
 	-Wl,-T,$(LINKER_SCRIPT) -nostartfiles -lc -lnosys \
