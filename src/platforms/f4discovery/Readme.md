@@ -1,6 +1,6 @@
 # Firmware BMP for STM32F407 DISCO boards
 
-Kept for historical reasons to load BMP bootloader to the STM32F103 of the onboard STLINK or external STLINKs. As stlink-tool now allows to load BMP firmware via the original STLINK bootloader is no longer really needed.
+Allows the use of the STM32F407 Discovery board main cpu as a Black Magic Probe. Historically it was used to program the on board built in debugger before ST-Link bootloader use was possible.
 
 ## Connections:
 
@@ -11,35 +11,6 @@ PC6: TDO/TRACESWO<br>
 
 PC1: TRST<br>
 PC8: SRST<br>
-
-# Alternate build for stm32f401 stm32f411 MiniF4 aka BlackPillV2 boards.
-
-https://github.com/WeActTC/MiniSTM32F4x1
-
-## Connections:
-
-* JTAG/SWD
-   * PA1: TDI
-   * PA13: TMS/SWDIO
-   * PA14: TCK/SWCLK
-   * PB3: TDO/TRACESWO
-   * PB5: TRST
-   * PB4: SRST
-
-* USB USART
-   * PB6: USART1 TX (usbuart_xxx)
-   * PB7: USART1 RX (usbuart_xxx)
-
-* +3V3.
-   * PB8 - turn on IRLML5103 transistor
-
-How to Build
-========================================
-```
-cd blackmagic
-make clean
-make PROBE_HOST=f4discovery BLACKPILL=1
-```
 
 How to Flash with dfu
 ========================================

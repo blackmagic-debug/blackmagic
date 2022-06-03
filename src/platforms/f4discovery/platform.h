@@ -31,75 +31,6 @@
 #include <setjmp.h>
 
 #define PLATFORM_HAS_TRACESWO
-#ifdef BLACKPILL
-#define PLATFORM_IDENT "(F4Discovery/BlackPillV2) "
-/* Important pin mappings for STM32 implementation:
-        * JTAG/SWD
-                * PA1: TDI<br>
-                * PA13: TMS/SWDIO<br>
-                * PA14: TCK/SWCLK<br>
-                * PB3: TDO/TRACESWO<br>
-                * PB5: TRST<br>
-                * PB4: SRST<br>
-        * USB USART
-                * PB6: USART1 TX
-                * PB7: USART1 RX
-        * +3V3
-                * PB8 - turn on IRLML5103 transistor
-        * Force DFU mode button: PA0
- */
-
-/* Hardware definitions... */
-#define JTAG_PORT GPIOA
-#define TDI_PORT JTAG_PORT
-#define TMS_PORT JTAG_PORT
-#define TCK_PORT JTAG_PORT
-#define TDO_PORT GPIOB
-#define TDI_PIN GPIO1
-#define TMS_PIN GPIO13
-#define TCK_PIN GPIO14
-#define TDO_PIN GPIO3
-
-#define SWDIO_PORT JTAG_PORT
-#define SWCLK_PORT JTAG_PORT
-#define SWDIO_PIN TMS_PIN
-#define SWCLK_PIN TCK_PIN
-
-#define TRST_PORT GPIOB
-#define TRST_PIN GPIO5
-#define SRST_PORT GPIOB
-#define SRST_PIN GPIO4
-
-#define PWR_BR_PORT GPIOB
-#define PWR_BR_PIN GPIO8
-
-#define LED_PORT GPIOC
-#define LED_PORT_UART GPIOA
-#define LED_UART GPIO1
-#define LED_IDLE_RUN GPIO15
-#define LED_ERROR GPIO14
-#define LED_BOOTLOADER GPIO13
-
-#define USBUSART USART1
-#define USBUSART_CR1 USART1_CR1
-#define USBUSART_DR USART1_DR
-#define USBUSART_IRQ NVIC_USART1_IRQ
-#define USBUSART_CLK RCC_USART1
-#define USBUSART_PORT GPIOB
-#define USBUSART_TX_PIN GPIO6
-#define USBUSART_RX_PIN GPIO7
-#define USBUSART_ISR(x) usart1_isr(x)
-#define USBUSART_DMA_BUS DMA2
-#define USBUSART_DMA_CLK RCC_DMA2
-#define USBUSART_DMA_TX_CHAN DMA_STREAM7
-#define USBUSART_DMA_TX_IRQ NVIC_DMA2_STREAM7_IRQ
-#define USBUSART_DMA_TX_ISR(x) dma2_stream7_isr(x)
-#define USBUSART_DMA_RX_CHAN DMA_STREAM5
-#define USBUSART_DMA_RX_IRQ NVIC_DMA2_STREAM5_IRQ
-#define USBUSART_DMA_RX_ISR(x) dma2_stream5_isr(x)
-/* For STM32F4 DMA trigger source must be specified */
-#define USBUSART_DMA_TRG DMA_SxCR_CHSEL_4
-#else
 #define PLATFORM_IDENT "(F4Discovery) "
 
 /* Important pin mappings for STM32 implementation:
@@ -167,7 +98,6 @@
 #define USBUSART_DMA_RX_ISR(x) dma1_stream1_isr(x)
 /* For STM32F4 DMA trigger source must be specified */
 #define USBUSART_DMA_TRG DMA_SxCR_CHSEL_4
-#endif
 
 #define BOOTMAGIC0 0xb007da7a
 #define BOOTMAGIC1 0xbaadfeed
