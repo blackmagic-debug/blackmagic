@@ -233,7 +233,9 @@ int find_debuggers(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info)
 	struct dirent *dp;
 	int i = 0;
 	while ((dp = readdir(dir)) != NULL) {
-		if ((strstr(dp->d_name, BMP_IDSTRING)) &&
+		if ((strstr(dp->d_name, BMP_IDSTRING_BLACKMAGIC) ||
+		     strstr(dp->d_name, BMP_IDSTRING_BLACKSPHERE) ||
+		     strstr(dp->d_name, BMP_IDSTRING_1BITSQUARED)) &&
 			(strstr(dp->d_name, "-if00"))) {
 			i++;
 			char type[256], version[256], serial[256];
@@ -266,7 +268,9 @@ int find_debuggers(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info)
 	dir = opendir(DEVICE_BY_ID);
 	i = 0;
 	while ((dp = readdir(dir)) != NULL) {
-		if ((strstr(dp->d_name, BMP_IDSTRING)) &&
+		if ((strstr(dp->d_name, BMP_IDSTRING_BLACKMAGIC) ||
+		     strstr(dp->d_name, BMP_IDSTRING_BLACKSPHERE) ||
+		     strstr(dp->d_name, BMP_IDSTRING_1BITSQUARED)) &&
 			(strstr(dp->d_name, "-if00"))) {
 			i++;
 			char type[256], version[256], serial[256];
