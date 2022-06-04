@@ -83,3 +83,8 @@ else
 SRC += bmp_serial.c
 endif
 PC_HOSTED = 1
+
+all: blackmagic
+
+host_clean:
+	-$(Q)$(RM) blackmagic
