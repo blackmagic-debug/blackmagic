@@ -130,52 +130,65 @@ static void bmp_munmap(struct mmap_data *map)
 static void cl_help(char **argv)
 {
 	bmp_ident(NULL);
-	DEBUG_WARN("Usage: %s [options]\n", argv[0]);
-	DEBUG_WARN("\t-h\t\t: This help.\n");
-	DEBUG_WARN("\t-v[bitmask]\t: Increasing verbosity. Bitmask:\n");
-	DEBUG_WARN("\t\t\t  1 = INFO, 2 = GDB, 4 = TARGET, 8 = PROBE, 16 = WIRE\n");
-	DEBUG_WARN("\t-l\t\t: List available probes\n");
-	DEBUG_WARN("Probe selection arguments:\n");
-	DEBUG_WARN("\t-d \"path\"\t: Use serial BMP device at <path>");
-#if HOSTED_BMP_ONLY == 1 && defined(__APPLE__)
-	DEBUG_WARN("\n");
-#else
-	DEBUG_WARN(". Deprecated!\n");
-#endif
-	DEBUG_WARN("\t-P <pos>\t: Use debugger found at position <pos>\n");
-	DEBUG_WARN("\t-n <num>\t: Use target device found at position <num>\n");
-	DEBUG_WARN("\t-s \"serial\"\t: Use dongle with (partial) "
-		  "serial number \"serial\"\n");
-	DEBUG_WARN("\t-c \"string\"\t: Use ftdi dongle with type \"string\"\n");
-	DEBUG_WARN("\t\t Use \"list\" to list available cables\n");
-	DEBUG_WARN("Run mode related options:\n");
-	DEBUG_WARN("\tDefault mode is to start the debug server at :2000\n");
-	DEBUG_WARN("\t-j\t\t: Use JTAG. SWD is default.\n");
-	DEBUG_WARN("\t-f\t\t: Set minimum high and low times of SWJ waveform.\n");
-	DEBUG_WARN("\t-C\t\t: Connect under hardware reset\n");
-	DEBUG_WARN("\t-t\t\t: Scan SWD or JTAG and display information about \n"
-			   "\t\t\t  connected devices\n");
-	DEBUG_WARN("\t-T\t\t: Continuous read/write-back some value to allow\n"
-			   "\t\t\t  timing insection of SWJ. Abort with ^C\n");
-	DEBUG_WARN("\t-e\t\t: Assume \"resistor SWD connection\" on FTDI: TDI\n"
-               "\t\t\t  connected to TMS, TDO to TDI with eventual resistor\n");
-	DEBUG_WARN("\t-E\t\t: Erase flash until flash end or for given size\n");
-	DEBUG_WARN("\t-w\t\t: Write binary file to target flash (default).\n");
-	DEBUG_WARN("\t-V\t\t: Verify flash against binary file. Can be combined\n"
-	           "\t\t\t  with -w to verify right after programming.\n");
-	DEBUG_WARN("\t-r\t\t: Read flash and write to binary file\n");
-	DEBUG_WARN("\t-p\t\t: Supplies power to the target (where applicable)\n");
-	DEBUG_WARN("\t-R[h]\t\t: Reset device. Default via SWJ or by hardware(h)\n");
-	DEBUG_WARN("\t-H\t\t: Do not use high level commands (BMP-Remote)\n");
-	DEBUG_WARN("\t-m <target>\t: Use (target)id for SWD multi-drop.\n");
-	DEBUG_WARN("\t-M <string>\t: Run target specific monitor commands. Quote multi\n");
-	DEBUG_WARN("\t\t\t  word strings. Run \"-M help\" for help.\n");
-	DEBUG_WARN("Flash operation modifiers options:\n");
-	DEBUG_WARN("\tDefault action with given file is to write to flash\n");
-	DEBUG_WARN("\t-a <addr>\t: Start flash operation at flash address <addr>\n"
-		"\t\t\t  Default start is start of flash in memory map\n");
-	DEBUG_WARN("\t-S <num>\t: Read <num> bytes. Default is until read fails.\n");
-	DEBUG_WARN("\t <file>\t\t: Use (binary) file <file> for flash operation\n");
+	PRINT_INFO("\n");
+	PRINT_INFO("Usage: %s [-h | -l | [-vBITMASK] [-d PATH | -P NUMBER | -s SERIAL | -c TYPE]\n", argv[0]);
+	PRINT_INFO("  [-n NUMBER] [-j] [-C] [-t | -T] [-e] [-p] [-R[h]] [-H] [-M STRING ...]\n");
+	PRINT_INFO("  [-E | -w | -V | -r] [-a ADDR] [-S number] [file]]\n");
+	PRINT_INFO("\n");
+	PRINT_INFO("Single-shot and verbosity options [-h | -l | -vBITMASK]:\n");
+	PRINT_INFO("\t-h              Show the version version and this help, then exit\n");
+	PRINT_INFO("\t-l              List available supported probes\n");
+	PRINT_INFO("\t-v<bitmask>     Set the output verbosity level based on some combination of:\n");
+	PRINT_INFO("\t                  1 = INFO, 2 = GDB, 4 = TARGET, 8 = PROBE, 16 = WIRE\n");
+	PRINT_INFO("\n");
+	PRINT_INFO("Probe selection arguments [-d PATH | -P NUMBER | -s SERIAL | -c TYPE]:\n");
+	PRINT_INFO("\t-d <path>       Use a serial device at the given path (Deprecated!)\n");
+	PRINT_INFO("\t-P <number>     Use the <number>th debug probe found while scanning the\n");
+	PRINT_INFO("\t                  system, see the output from list for the order\n");
+	PRINT_INFO("\t-s <serial>     Select the debug probe with the given serial number\n");
+	PRINT_INFO("\t-c <type>       Select the FTDI-based debug probe with of the given\n");
+	PRINT_INFO("\t                  type (cable)\n");
+	PRINT_INFO("\n");
+	PRINT_INFO("The default is to start a debug server at localhost:2000\n");
+	PRINT_INFO("General configuration options: [-n NUMBER] [-j] [-C] [-t | -T] [-e] [-p] [-R[h]]\n");
+	PRINT_INFO("  [-H] [-M STRING ...]\n");
+	PRINT_INFO("\t-n <number>     Select the target device at the given position in the\n");
+	PRINT_INFO("\t                  scan chain (use the -t option to get a scan chain listing)\n");
+	PRINT_INFO("\t-j              Use JTAG instead of SWD\n");
+	PRINT_INFO("\t-C              Connect to target under hardware reset\n");
+	PRINT_INFO("\t-t              Perform a chain scan and display information about the\n");
+	PRINT_INFO("\t                  conected devices\n");
+	PRINT_INFO("\t-T              Perform continues read- or write-back of a value to allow\n");
+	PRINT_INFO("\t                  measurement of protocol timing. Aborted by ^C\n");
+	PRINT_INFO("\t-e              Assume external resistors for FTDI devices, that is having the\n");
+	PRINT_INFO("\t                  FTDI chip connected through resistors to TMS, TDI and TDO\n");
+	PRINT_INFO("\t-p              Power the target from the probe (if possible)\n");
+	PRINT_INFO("\t-R[h]           Reset the device. If followed by 'h', this will be done using\n");
+	PRINT_INFO("\t                  the hardware reset line instead of over the debug link\n");
+	PRINT_INFO("\t-H              Do not use the high level command API (bmp-remote)\n");
+	PRINT_INFO("\t-M <string>     Run target-specific monitor commands. This option\n");
+	PRINT_INFO("\t                  can be repeated for as many commands you wish to run.\n");
+	PRINT_INFO("\t                  If the command contains spaces, use quotes around the\n");
+	PRINT_INFO("\t                  complete command\n");
+	PRINT_INFO("\n");
+	PRINT_INFO("SWD-specific configuration options [-f FREQUENCY | -m TARGET]:\n");
+	PRINT_INFO("\t-f <frequency>  Set an operating frequency for SWD\n");
+	PRINT_INFO("\t-m <target>     Use the given target ID for selection in SWD multi-drop\n");
+	PRINT_INFO("\n");
+	PRINT_INFO("Flash operation selection options [-E | -w | -V | -r]:\n");
+	PRINT_INFO("\t-E              Erase the target device Flash\n");
+	PRINT_INFO("\t-w              Write the specified binary file to the target device\n");
+	PRINT_INFO("\t                  Flash (the default)\n");
+	PRINT_INFO("\t-V              Verify the target device Flash against the specified\n");
+	PRINT_INFO("\t                  binary file\n");
+	PRINT_INFO("\t-r              Read the target device Flash\n");
+	PRINT_INFO("\n");
+	PRINT_INFO("Flash operation modifiers options: [-a ADDR] [-S number] [FILE]\n");
+	PRINT_INFO("\t-a <addr>       Start address for the given Flash operation (defaults to\n");
+	PRINT_INFO("\t                  the start of Flash)\n");
+	PRINT_INFO("\t-S <number>     Number of bytes to work on in the Flash operation (default\n");
+	PRINT_INFO("\t                  is till the operation fails or is complete)\n");
+	PRINT_INFO("\t<file>          Binary file to use in Flash operations\n");
 	exit(0);
 }
 
