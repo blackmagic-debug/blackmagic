@@ -39,7 +39,7 @@ jmp_buf fatal_error_jmpbuf;
 
 void platform_init(void)
 {
-	rcc_clock_setup_hse_3v3(&rcc_hse_16mhz_3v3[RCC_CLOCK_3V3_48MHZ]);
+	rcc_clock_setup_pll(&rcc_hse_16mhz_3v3[RCC_CLOCK_3V3_84MHZ]);
 
 	/* Enable peripherals */
 	rcc_periph_clock_enable(RCC_OTGFS);

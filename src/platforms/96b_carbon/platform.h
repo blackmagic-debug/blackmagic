@@ -32,11 +32,8 @@
 #include <setjmp.h>
 
 #define PLATFORM_HAS_TRACESWO
-#define BOARD_IDENT       "Black Magic Probe (Carbon), (Firmware " FIRMWARE_VERSION ")"
-#define BOARD_IDENT_DFU   "Black Magic (Upgrade) for Carbon, (Firmware " FIRMWARE_VERSION ")"
-#define DFU_IDENT         "Black Magic Firmware Upgrade (Carbon)"
-#define DFU_IFACE_STRING  "@Internal Flash   /0x08000000/1*016Ka,3*016Kg,1*064Kg,7*128Kg"
-
+#define PLATFORM_IDENT       "(Carbon)"
+#
 /* Important pin mappings for Carbon implementation:
  *
  * LED0 = 	PA15 (Green USR2 : Idle))
@@ -100,9 +97,9 @@
  * For now USART preempts USB which may spin while buffer is drained.
  * TIM3 is used for traceswo capture and must be highest priority.
  */
-#define IRQ_PRI_USB		(2 << 4)
-#define IRQ_PRI_USBUSART	(1 << 4)
-#define IRQ_PRI_USBUSART_TIM	(3 << 4)
+#define IRQ_PRI_USB		(1 << 4)
+#define IRQ_PRI_USBUSART	(2 << 4)
+#define IRQ_PRI_USBUSART_DMA	(2 << 4)
 #define IRQ_PRI_TRACE		(0 << 4)
 
 #define USBUSART USART2
@@ -113,11 +110,17 @@
 #define USBUSART_TX_PIN  GPIO2
 #define USBUSART_RX_PORT GPIOA
 #define USBUSART_RX_PIN  GPIO3
-#define USBUSART_ISR usart2_isr
-#define USBUSART_TIM TIM4
-#define USBUSART_TIM_CLK_EN() rcc_periph_clock_enable(RCC_TIM4)
-#define USBUSART_TIM_IRQ NVIC_TIM4_IRQ
-#define USBUSART_TIM_ISR tim4_isr
+#define USBUSART_ISR(x) usart2_isr(x)
+#define USBUSART_DMA_BUS DMA1
+#define USBUSART_DMA_CLK RCC_DMA1
+#define USBUSART_DMA_TX_CHAN DMA_STREAM6
+#define USBUSART_DMA_TX_IRQ NVIC_DMA1_STREAM6_IRQ
+#define USBUSART_DMA_TX_ISR(x) dma1_stream6_isr(x)
+#define USBUSART_DMA_RX_CHAN DMA_STREAM5
+#define USBUSART_DMA_RX_IRQ NVIC_DMA1_STREAM5_IRQ
+#define USBUSART_DMA_RX_ISR(x) dma1_stream5_isr(x)
+/* For STM32F4 DMA trigger source must be specified */
+#define USBUSART_DMA_TRG DMA_SxCR_CHSEL_4
 
 #define UART_PIN_SETUP() do { \
 	gpio_mode_setup(USBUSART_TX_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, \
@@ -131,7 +134,7 @@
 #define TRACE_TIM TIM3
 #define TRACE_TIM_CLK_EN() rcc_periph_clock_enable(RCC_TIM3)
 #define TRACE_IRQ   NVIC_TIM3_IRQ
-#define TRACE_ISR   tim3_isr
+#define TRACE_ISR(x) tim3_isr(x)
 
 #define DEBUG(...)
 
