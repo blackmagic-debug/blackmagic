@@ -28,10 +28,10 @@
 
 void bmp_ident(bmp_info_t *info)
 {
-	DEBUG_INFO("BMP hosted %s\n for ST-Link V2/3, CMSIS_DAP, JLINK and "
+	PRINT_INFO("Black Magic Debug App %s\n for ST-Link V2/3, CMSIS_DAP, JLINK and "
 			   "LIBFTDI/MPSSE\n", FIRMWARE_VERSION);
 	if (info && info->vid && info->pid)
-		DEBUG_INFO("Using %04x:%04x %s %s\n %s\n", info->vid, info->pid,
+		PRINT_INFO("Using %04x:%04x %s %s\n %s\n", info->vid, info->pid,
 				   (info->serial[0]) ? info->serial : NO_SERIAL_NUMBER,
 				   info->manufacturer,
 				   info->product);
