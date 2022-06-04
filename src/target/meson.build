@@ -1,0 +1,42 @@
+
+target_includes = include_directories(
+	'.',
+)
+
+target_sources = files(
+	'target.c',
+	# !TODO: selective include
+	'nrf51.c',
+	'adiv5_swdp.c',
+	'samx5x.c',
+	'lpc15xx.c',
+	'lpc_common.c',
+	'stm32f1.c',
+	'ch32f1.c',
+	'cortexm.c',
+	'rp.c',
+	'efm32.c',
+	'adiv5.c',
+	'msp432.c',
+	'nxpke04.c',
+	'cortexa.c',
+	'lmi.c',
+	'stm32g0.c',
+	'lpc43xx.c',
+	'jtag_scan.c',
+	'lpc546xx.c',
+	'kinetis.c',
+	'stm32l4.c',
+	'sam3x.c',
+	'samd.c',
+	'sam4l.c',
+	'adiv5_jtagdp.c',
+	'swdptap_generic.c',
+	'jtagtap_generic.c',
+	'stm32l0.c',
+	'stm32f4.c',
+	'lpc17xx.c',
+	'lpc11xx.c',
+	'jtag_devs.c',
+	'stm32h7.c',
+)
