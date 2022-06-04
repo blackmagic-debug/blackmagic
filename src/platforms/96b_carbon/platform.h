@@ -93,9 +93,10 @@
 #define USB_DRIVER      otgfs_usb_driver
 #define USB_IRQ         NVIC_OTG_FS_IRQ
 #define USB_ISR         otg_fs_isr
-/* Interrupt priorities.  Low numbers are high priority.
- * For now USART preempts USB which may spin while buffer is drained.
+/* Interrupt priorities. Low numbers are high priority.
  * TIM3 is used for traceswo capture and must be highest priority.
+ * USBUSART can be lowest priority as it is using DMA to transfer
+ * data to the buffer and thus is less critical than USB.
  */
 #define IRQ_PRI_USB		(1 << 4)
 #define IRQ_PRI_USBUSART	(2 << 4)
