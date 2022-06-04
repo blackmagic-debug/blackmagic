@@ -24,8 +24,11 @@ jobs:
       # Use embedded toolchain
       - uses: numworks/setup-arm-toolchain@2020-q4
 
+      - name: Install BMDA dependencies
+        run: sudo apt-get -y install libftdi1-dev libhidapi-dev
+
       # Runs a single command using the runners shell
-      - name: Build all platform firmwares
+      - name: Build all platform firmwares and Linux BMDA
         run: make all_platforms
 
       - name: Archive firmware build artifacts as a zip
