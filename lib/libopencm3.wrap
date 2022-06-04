@@ -1,0 +1,4 @@
+[wrap-git]
+url = https://github.com/libopencm3/libopencm3.git
+revision = 84352873
+clone-recursive = false
