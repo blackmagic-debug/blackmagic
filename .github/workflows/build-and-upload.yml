@@ -25,12 +25,12 @@ jobs:
       - uses: numworks/setup-arm-toolchain@2020-q4
 
       # Runs a single command using the runners shell
-      - name: Build
-        run: make
+      - name: Build all platform firmwares
+        run: make all_platforms
 
       - name: Archive firmware build artifacts as a zip
         uses: actions/upload-artifact@v2.2.4
         with:
           name: blackmagic-firmware.zip
-          path: src/blackmagic*
+          path: src/artifacts/*
           if-no-files-found: error
