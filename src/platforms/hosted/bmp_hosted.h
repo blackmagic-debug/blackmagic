@@ -49,4 +49,12 @@ void bmp_ident(bmp_info_t *info);
 int find_debuggers(BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info);
 void libusb_exit_function(bmp_info_t *info);
 
+#if defined(_WIN32) || defined(__CYGWIN__)
+#include <wchar.h>
+#define PRINT_INFO(fmt, ...) wprintf(L(fmt), ##__VA_ARGS__)
+#else
+#include <stdio.h>
+#define PRINT_INFO(fmt, ...) printf((fmt), ##__VA_ARGS__)
+#endif
+
 #endif
