@@ -38,7 +38,7 @@ jobs:
       - name: Clean
         run: make clean
 
-      - name: Install BMP PC hosted dependencies
+      - name: Install BMDA dependencies
         run: sudo apt-get -y install libftdi1-dev libhidapi-dev
 
       - name: Build BMDA binary
