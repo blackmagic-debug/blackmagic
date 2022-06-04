@@ -136,6 +136,12 @@ clean:	host_clean
 	-$(Q)$(RM) platforms/*/*.o platforms/*/*.d mapfile include/version.h
 
 all_platforms:
+	$(Q)if [ ! -f ../libopencm3/Makefile ]; then \
+		echo "Initialising git submodules..." ;\
+		git submodule init ;\
+		git submodule update ;\
+	fi
+	$(Q)$(MAKE) $(MFLAGS) -C ../libopencm3 lib/stm32/f1 lib/stm32/f4 lib/lm4f
 	$(Q)set -e ;\
 	mkdir -p artifacts/$(shell git describe --always --dirty --tags) ;\
 	echo "<html><body><ul>" > artifacts/index.html ;\
