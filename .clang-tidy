@@ -1,0 +1,29 @@
+---
+Checks: 'bugprone-*,cert-*,clang-analyzer-*,misc-*,modernize-*,portability-*,performance-*,readability-*,-readability-magic-numbers'
+FormatStyle: 'none'
+HeaderFilterRegex: '(src|upgrade)/.+'
+AnalyzeTemporaryDtors: false
+CheckOptions:
+  - key:   cert-dcl16-c.NewSuffixes
+    value: 'L;LL;UL;ULL'
+  - key:   cert-oop54-cpp.WarnOnlyIfThisHasSuspiciousField
+    value: '0'
+  - key:   cppcoreguidelines-explicit-virtual-functions.IgnoreDestructors
+    value: '0'
+  - key:   cppcoreguidelines-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic
+    value: '1'
+  - key:   modernize-loop-convert.MaxCopySize
+    value: '16'
+  - key:   modernize-loop-convert.MinConfidence
+    value: reasonable
+  - key:   modernize-loop-convert.NamingStyle
+    value: camelBack
+  - key:   modernize-pass-by-value.IncludeStyle
+    value: llvm
+  - key:   modernize-replace-auto-ptr.IncludeStyle
+    value: llvm
+  - key:   modernize-use-nullptr.NullMacros
+    value: 'NULL'
+  - key:   readability-braces-around-statements.ShortStatementLines
+    value: '2'
+...
