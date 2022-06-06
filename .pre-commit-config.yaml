@@ -1,0 +1,8 @@
+repos:
+- repo: https://github.com/pre-commit/mirrors-clang-format
+  rev: v14.0.6
+  hooks:
+  - id: clang-format
+    args: [-Werror]  # change formatting warnings to errors, hook includes -i (Inplace edit) by default
+    types_or: [c++, c]  # override default file types to only C and CPP files
+    exclude: '^upgrade/|^scripts/'  # don't run on scripts/ and upgrade/
