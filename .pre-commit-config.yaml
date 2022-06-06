@@ -1,0 +1,20 @@
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v4.2.0
+  hooks:
+  - id: check-ast
+  - id: check-builtin-literals
+  - id: check-merge-conflict
+  - id: check-yaml
+  - id: double-quote-string-fixer
+  - id: end-of-file-fixer
+  - id: trailing-whitespace
+- repo: https://github.com/pycqa/flake8
+  rev: 4.0.1
+  hooks:
+  - id: flake8
+- repo: https://github.com/pocc/pre-commit-hooks
+  rev: v1.3.5
+  hooks:
+    - id: clang-format
+      args: [-i, -Werror]
