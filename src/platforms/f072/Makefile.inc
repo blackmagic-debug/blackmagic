@@ -7,7 +7,7 @@ CFLAGS += -Istm32/include -mcpu=cortex-m0 -mthumb \
 	-DDFU_SERIAL_LENGTH=13 -Iplatforms/stm32
 
 LDFLAGS = --specs=nano.specs -lopencm3_stm32f0 \
-	-Wl,-T,platforms/f072-if/stm32f07xzb.ld \
+	-Wl,-T,platforms/stm32/stm32f07xzb.ld \
 	-nostartfiles -lc -lnosys -Wl,-Map=mapfile -mthumb \
 	-mcpu=cortex-m0 -Wl,-gc-sections -L../libopencm3/lib
 
@@ -22,6 +22,12 @@ SRC += 	cdcacm.c	\
 	timing_stm32.c	\
 
 all:	blackmagic.bin
+blackmagic.elf: libopencm3_stm32f0
+
+libopencm3_stm32f0:
+	$(Q)$(MAKE) $(MFLAGS) -C ../libopencm3 lib/stm32/f0
 
 host_clean:
 	-$(Q)$(RM) blackmagic.bin
+
+.PHONY: libopencm3_stm32f0
