@@ -28,6 +28,7 @@
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
+#include "target_probe.h"
 #include "adiv5.h"
 #include "cortexm.h"
 #include "exception.h"
@@ -273,8 +274,6 @@ static const struct {
 /* Used to probe for a protected SAMX5X device */
 #define SAMX5X_DSU_CTRLSTAT 0x41002100U
 #define SAMX5X_STATUSB_PROT (1U << 16U)
-
-extern bool cortexa_probe(ADIv5_AP_t *apb, uint32_t debug_base);
 
 void adiv5_ap_ref(ADIv5_AP_t *ap)
 {
@@ -677,7 +676,7 @@ static void rp_rescue_setup(ADIv5_DP_t *dp)
 		return;
 	}
 	ap->dp = dp;
-	extern void rp_rescue_probe(ADIv5_AP_t *);
+
 	rp_rescue_probe(ap);
 	return;
 }
@@ -809,13 +808,9 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 			return;
 		}
 		last_base = ap->base;
-		extern void kinetis_mdm_probe(ADIv5_AP_t *);
+
 		kinetis_mdm_probe(ap);
-
-		extern void nrf51_mdm_probe(ADIv5_AP_t *);
 		nrf51_mdm_probe(ap);
-
-		extern void efm32_aap_probe(ADIv5_AP_t *);
 		efm32_aap_probe(ap);
 
 		/* Halt the device and release from reset if reset is active!*/

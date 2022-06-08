@@ -944,13 +944,13 @@ struct efm32_aap_priv_s {
 	char aap_driver_string[42];
 };
 
-void efm32_aap_probe(ADIv5_AP_t *ap)
+bool efm32_aap_probe(ADIv5_AP_t *ap)
 {
 	if ((ap->idr & EFM32_APP_IDR_MASK) == EFM32_AAP_IDR) {
 		/* It's an EFM32 AAP! */
 		DEBUG_INFO("EFM32: Found EFM32 AAP\n");
 	} else
-		return;
+		return false;
 
 	/* Both revsion 1 and revision 2 devices seen in the wild */
 	uint16_t aap_revision = (uint16_t)((ap->idr & 0xF0000000) >> 28);
@@ -958,7 +958,7 @@ void efm32_aap_probe(ADIv5_AP_t *ap)
 	/* New target */
 	target *t = target_new();
 	if (!t) {
-		return;
+		return false;
 	}
 
 	t->mass_erase = efm32_aap_mass_erase;
@@ -974,6 +974,8 @@ void efm32_aap_probe(ADIv5_AP_t *ap)
 	sprintf(priv_storage->aap_driver_string, "EFM32 Authentication Access Port rev.%hu", aap_revision);
 	t->driver = priv_storage->aap_driver_string;
 	t->regs_size = 4;
+
+	return true;
 }
 
 static bool efm32_aap_mass_erase(target *t)
