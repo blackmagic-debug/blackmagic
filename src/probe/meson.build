@@ -10,8 +10,7 @@ probe_list = run_command(
 	capture: true, check: false).stdout().split(',')
 
 if probe not in probe_list
-    message('Available target probes:', probe_list)
-    error(f'The target probe @probe@ is not a valid probe')
+    error('The target probe "@0@" is not a valid probe: "@1@"'.format(probe, ', '.join(probe_list)))
 endif
 
 probe_includes = []
@@ -20,6 +19,8 @@ probe_args = []
 probe_link_args = []
 probe_dfu_link_args = []
 probe_deps = []
+
+summary({'active': probe}, section: 'Probe')
 
 subdir(probe)
 

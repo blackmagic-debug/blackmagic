@@ -13,4 +13,6 @@ platform_args = []
 platform_link_args = []
 platform_deps = []
 
+summary({'active': platform}, section: 'Platform')
+
 subdir(platform)

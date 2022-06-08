@@ -15,13 +15,12 @@ probe_args += [
 	'-DBLACKMAGIC',
 ]
 
-probe_common_link_args = [
-]
-
 probe_link_args += [
 	'-T@0@'.format('blackmagic.ld'),
 	'-Wl,-Ttext=0x8002000',
 ]
+
+summary({'demo': 'just a demo info for probes'}, section: 'Probe')
 
 # probe_dfu_sources += files(
 # 	probe_common_sources,

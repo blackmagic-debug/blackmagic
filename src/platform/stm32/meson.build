@@ -77,3 +77,5 @@ platform_includes += include_directories('../../../libopencm3/include')
 platform_link_args += ['-L@0@'.format(join_paths(meson.project_source_root(), 'libopencm3/lib'))]
 
 platform_deps += [libopencm3_dep]
+
+summary({'family': mcu_family}, section: 'Platform')
