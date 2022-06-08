@@ -48,6 +48,16 @@
 #define XIP_FLASH_START    0x10000000
 #define SRAM_START         0x20000000
 
+#define FLASHSIZE_4K_SECTOR     (4 * 1024)
+#define FLASHSIZE_32K_BLOCK     (32 * 1024)
+#define FLASHSIZE_64K_BLOCK     (64 * 1024)
+#define MAX_FLASH               (16 * 1024 * 1024)
+#define FLASHCMD_SECTOR_ERASE   0x20
+#define FLASHCMD_BLOCK32K_ERASE 0x52
+#define FLASHCMD_BLOCK64K_ERASE 0xd8
+#define FLASHCMD_CHIP_ERASE     0x60
+#define FLASHCMD_READ_ID        0x9F
+
 struct rp_priv_s {
 	uint16_t _debug_trampoline;
 	uint16_t _debug_trampoline_end;
@@ -197,59 +207,50 @@ static void rp_flash_resume(target *t)
 static int rp_flash_erase(struct target_flash *f, target_addr addr,
 						  size_t len)
 {
-	if (addr & 0xfff) {
+	if (addr & (FLASHSIZE_4K_SECTOR - 1)) {
 		DEBUG_WARN("Unaligned erase\n");
 		return -1;
 	}
-	if (len & 0xfff) {
+	if (len & (FLASHSIZE_4K_SECTOR - 1)) {
 		DEBUG_WARN("Unaligned len\n");
-		len = (len + 0xfff) & ~0xfff;
+		len = ALIGN(len, FLASHSIZE_4K_SECTOR);
 	}
-	DEBUG_INFO("Erase addr %08" PRIx32 " len 0x%" PRIx32 "\n", addr, (uint32_t)len);
+	DEBUG_INFO("Erase addr 0x%08" PRIx32 " len 0x%" PRIx32 "\n", addr, (uint32_t)len);
 	target *t = f->t;
 	rp_flash_prepare(t);
 	struct rp_priv_s *ps = (struct rp_priv_s*)t->target_storage;
 	/* Register playground*/
 	/* erase */
-#define MAX_FLASH               (16 * 1024 * 1024)
-#define FLASHCMD_SECTOR_ERASE   0x20
-#define FLASHCMD_BLOCK32K_ERASE 0x52
-#define FLASHCMD_BLOCK64K_ERASE 0xd8
-#define FLASHCMD_CHIP_ERASE     0x72
-	addr -= XIP_FLASH_START;
-	if (len > MAX_FLASH)
-		len = MAX_FLASH;
+	addr -= t->flash->start;
+	len = MIN(len, t->flash->length);
 	bool ret = 0;
 	while (len) {
-		ps->regs[0] = addr;
-		ps->regs[2] = -1;
-		if (len >= MAX_FLASH) { /* Bulk erase */
-			ps->regs[1] = MAX_FLASH;
-			ps->regs[3] = FLASHCMD_CHIP_ERASE;
-			DEBUG_WARN("BULK_ERASE\n");
-			ret = rp_rom_call(t, ps->regs, ps->_flash_range_erase, 25100);
-			len = 0;
-		} else if (len >= (64 * 1024)) {
-			uint32_t chunk = len & ~((1 << 16) - 1);
+		if (len >= FLASHSIZE_64K_BLOCK) {
+			uint32_t chunk = len & ~(FLASHSIZE_64K_BLOCK - 1);
+			ps->regs[0] = addr;
 			ps->regs[1] = chunk;
+			ps->regs[2] = FLASHSIZE_64K_BLOCK;
 			ps->regs[3] = FLASHCMD_BLOCK64K_ERASE;
-			DEBUG_WARN("64k_ERASE\n");
-			ret = rp_rom_call(t, ps->regs, ps->_flash_range_erase, 2100);
+			DEBUG_WARN("64k_ERASE addr 0x%08" PRIx32 " len 0x%" PRIx32 "\n", addr, chunk);
+			ret = rp_rom_call(t, ps->regs, ps->_flash_range_erase, 25100);
 			len -= chunk ;
 			addr += chunk;
-		} else if (len >= (32 * 1024)) {
-			uint32_t chunk = len & ~((1 << 15) - 1);
+		} else if (len >= FLASHSIZE_32K_BLOCK) {
+			uint32_t chunk = len & ~(FLASHSIZE_32K_BLOCK - 1);
+			ps->regs[0] = addr;
 			ps->regs[1] = chunk;
+			ps->regs[2] = FLASHSIZE_32K_BLOCK;
 			ps->regs[3] = FLASHCMD_BLOCK32K_ERASE;
-			DEBUG_WARN("32k_ERASE\n");
+			DEBUG_WARN("32k_ERASE addr 0x%08" PRIx32 " len 0x%" PRIx32 "\n", addr, chunk);
 			ret = rp_rom_call(t, ps->regs, ps->_flash_range_erase, 1700);
 			len -= chunk;
 			addr += chunk;
 		} else {
+			ps->regs[0] = addr;
 			ps->regs[1] = len;
-			ps->regs[2] = MAX_FLASH;
+			ps->regs[2] = FLASHSIZE_4K_SECTOR;
 			ps->regs[3] = FLASHCMD_SECTOR_ERASE;
-			DEBUG_WARN("Sector_ERASE\n");
+			DEBUG_WARN("Sector_ERASE addr 0x%08" PRIx32 " len 0x%" PRIx32 "\n", addr, (uint32_t)len);
 			ret = rp_rom_call(t, ps->regs, ps->_flash_range_erase, 410);
 			len = 0;
 		}
@@ -266,7 +267,7 @@ static int rp_flash_erase(struct target_flash *f, target_addr addr,
 static int rp_flash_write(struct target_flash *f,
                     target_addr dest, const void *src, size_t len)
 {
-	DEBUG_INFO("RP Write %08" PRIx32 " len 0x%" PRIx32 "\n", dest, (uint32_t)len);
+	DEBUG_INFO("RP Write 0x%08" PRIx32 " len 0x%" PRIx32 "\n", dest, (uint32_t)len);
 	if ((dest & 0xff) || (len & 0xff)) {
 		DEBUG_WARN("Unaligned erase\n");
 		return -1;
@@ -327,7 +328,7 @@ static bool rp_cmd_erase_mass(target *t, int argc, const char *argv[])
 	f.t = t;
 	struct rp_priv_s *ps = (struct rp_priv_s*)t->target_storage;
 	ps->is_monitor = true;
-	bool res =  (rp_flash_erase(&f, XIP_FLASH_START, MAX_FLASH)) ? false: true;
+	bool res =  (rp_flash_erase(&f, t->flash->start, t->flash->length)) ? false: true;
 	ps->is_monitor = false;
 	return res;
 }
