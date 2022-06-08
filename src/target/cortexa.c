@@ -822,7 +822,7 @@ static int cortexa_breakwatch_set(target *t, struct breakwatch *bw)
 
 			apb_write(t, DBGWCR(i), wcr);
 			apb_write(t, DBGWVR(i), bw->addr & ~3);
-			DEBUG_INFO("Watchpoint set WCR = 0x%08x, WVR = %08x\n",
+			DEBUG_INFO("Watchpoint set WCR = 0x%08"PRIx32", WVR = %08"PRIx32"\n",
 				apb_read(t, DBGWCR(i)),
 				apb_read(t, DBGWVR(i)));
 		}
