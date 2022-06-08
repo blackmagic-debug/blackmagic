@@ -531,19 +531,19 @@ enum target_halt_reason mdm_halt_poll(target *t, const target_addr *const watch)
 	return TARGET_HALT_REQUEST;
 }
 
-void kinetis_mdm_probe(ADIv5_AP_t *ap)
+bool kinetis_mdm_probe(ADIv5_AP_t *ap)
 {
 	switch (ap->idr) {
 	case KINETIS_MDM_IDR_KZ03: /* Also valid for KE04, no way to check! */
 	case KINETIS_MDM_IDR_K22F:
 		break;
 	default:
-		return;
+		return false;
 	}
 
 	target *t = target_new();
 	if (!t) {
-		return;
+		return false;
 	}
 
 	t->mass_erase = kinetis_mdm_mass_erase;
@@ -554,6 +554,8 @@ void kinetis_mdm_probe(ADIv5_AP_t *ap)
 	t->driver = "Kinetis Recovery (MDM-AP)";
 	t->regs_size = 4;
 	target_add_commands(t, kinetis_mdm_cmd_list, t->driver);
+
+	return true;
 }
 
 /* This is needed as a separate command, as there's no way to  *

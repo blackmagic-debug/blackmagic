@@ -32,6 +32,7 @@
 #include "adiv5.h"
 #include "target.h"
 #include "target_internal.h"
+#include "target_probe.h"
 #include "cortexm.h"
 #include "command.h"
 #include "gdb_packet.h"

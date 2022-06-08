@@ -438,18 +438,18 @@ static bool nrf51_mdm_mass_erase(target *t);
 #define MDM_CONTROL ADIV5_AP_REG(0x04)
 #define MDM_PROT_EN  ADIV5_AP_REG(0x0C)
 
-void nrf51_mdm_probe(ADIv5_AP_t *ap)
+bool nrf51_mdm_probe(ADIv5_AP_t *ap)
 {
 	switch(ap->idr) {
 	case NRF52_MDM_IDR:
 		break;
 	default:
-		return;
+		return false;
 	}
 
 	target *t = target_new();
 	if (!t) {
-		return;
+		return false;
 	}
 
 	t->mass_erase = nrf51_mdm_mass_erase;
@@ -464,6 +464,8 @@ void nrf51_mdm_probe(ADIv5_AP_t *ap)
 	else
 		t->driver = "Nordic nRF52 Access Port (protected)";
 	t->regs_size = 4;
+
+	return true;
 }
 
 static bool nrf51_mdm_mass_erase(target *t)

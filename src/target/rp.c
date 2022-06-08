@@ -531,11 +531,11 @@ static bool rp_rescue_do_reset(target *t)
  *
  * Attach to this DP will do the reset, but will fail to attach!
  */
-void rp_rescue_probe(ADIv5_AP_t *ap)
+bool rp_rescue_probe(ADIv5_AP_t *ap)
 {
 	target *t = target_new();
 	if (!t) {
-		return;
+		return false;
 	}
 
 	adiv5_ap_ref(ap);
@@ -543,4 +543,6 @@ void rp_rescue_probe(ADIv5_AP_t *ap)
 	t->priv = ap;
 	t->priv_free = (void *)adiv5_ap_unref;
 	t->driver = "Raspberry RP2040 Rescue (Attach to reset!)";
+
+	return true;
 }

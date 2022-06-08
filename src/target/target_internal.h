@@ -181,33 +181,4 @@ int tc_gettimeofday(target *t, target_addr tv, target_addr tz);
 int tc_isatty(target *t, int fd);
 int tc_system(target *t, target_addr cmd, size_t cmdlen);
 
-/* Probe for various targets.
- * Actual functions implemented in their respective drivers.
- */
-bool ch32f1_probe(target *t); // will catch all the clones
-bool gd32f1_probe(target *t);
-bool stm32f1_probe(target *t);
-bool stm32f4_probe(target *t);
-bool stm32h7_probe(target *t);
-bool stm32l0_probe(target *t);
-bool stm32l1_probe(target *t);
-bool stm32l4_probe(target *t);
-bool stm32g0_probe(target *t);
-bool lmi_probe(target *t);
-bool lpc11xx_probe(target *t);
-bool lpc15xx_probe(target *t);
-bool lpc17xx_probe(target *t);
-bool lpc43xx_probe(target *t);
-bool lpc546xx_probe(target *t);
-bool samx7x_probe(target *t);
-bool sam3x_probe(target *t);
-bool sam4l_probe(target *t);
-bool nrf51_probe(target *t);
-bool samd_probe(target *t);
-bool samx5x_probe(target *t);
-bool kinetis_probe(target *t);
-bool efm32_probe(target *t);
-bool msp432_probe(target *t);
-bool ke04_probe(target *t);
-bool rp_probe(target *t);
 #endif
