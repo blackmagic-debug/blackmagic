@@ -408,6 +408,7 @@ bool rp_probe(target *t)
 	}
 	rp_add_flash(t, XIP_FLASH_START, size << 1);
 	t->driver = RP_ID;
+	t->target_options |= CORTEXM_TOPT_INHIBIT_SRST;
 	target_add_ram(t, SRAM_START, 0x42000);
 	target_add_ram(t, 0x51000000,  0x1000);
 	target_add_commands(t, rp_cmd_list, RP_ID);
