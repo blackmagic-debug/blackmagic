@@ -27,6 +27,10 @@
  * the architecture TRMs with ARM document IDs DDI0419E and DDI0403C.
  */
 
+#include "target.h"
+#include "target_internal.h"
+#include "target_probes.h"
+
 #include "general.h"
 #include "exception.h"
 #include "adiv5.h"
