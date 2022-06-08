@@ -333,8 +333,32 @@ static bool rp_cmd_erase_mass(target *t, int argc, const char *argv[])
 	return res;
 }
 
+static bool rp_cmd_erase_sector(target *t, int argc, const char *argv[])
+{
+	uint32_t length = t->flash->length;
+	uint32_t start = t->flash->start;
+
+	if (argc == 3) {
+		start = strtoul(argv[1], NULL, 0);
+		length = strtoul(argv[2], NULL, 0);
+	}
+	else if (argc == 2)
+		length = strtoul(argv[1], NULL, 0);
+	else
+		return -1;
+
+	struct target_flash f;
+	f.t = t;
+	struct rp_priv_s *ps = (struct rp_priv_s*)t->target_storage;
+	ps->is_monitor = true;
+	bool res =  (rp_flash_erase(&f, start, length)) ? false: true;
+	ps->is_monitor = false;
+	return res;
+}
+
 const struct command_s rp_cmd_list[] = {
 	{"erase_mass", rp_cmd_erase_mass, "Erase entire flash memory"},
+	{"erase_sector", rp_cmd_erase_sector, "Erase a sector by number" },
 	{"reset_usb_boot", rp_cmd_reset_usb_boot, "Reboot the device into BOOTSEL mode"},
 	{NULL, NULL, NULL}
 };
