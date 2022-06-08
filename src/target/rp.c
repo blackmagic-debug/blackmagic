@@ -360,7 +360,7 @@ bool rp_probe(target *t)
 	/* Check bootrom magic*/
 	uint32_t boot_magic = target_mem_read32(t, BOOTROM_MAGIC_ADDR);
 	if ((boot_magic & 0x00ffffff) != BOOTROM_MAGIC) {
-		DEBUG_WARN("Wrong Bootmagic %08" PRIx32 " found\n!", boot_magic);
+		DEBUG_WARN("Wrong Bootmagic %08" PRIx32 " found!\n", boot_magic);
 		return false;
 	}
 #if defined(ENABLE_DEBUG)
@@ -382,35 +382,11 @@ bool rp_probe(target *t)
 		return false;
 	}
  	t->target_storage = (void*)priv_storage;
-	uint32_t bootsec[16];
-	target_mem_read( t, bootsec, XIP_FLASH_START, sizeof( bootsec));
-	int i;
-	for (i = 0; i < 16; i++)
-		if (bootsec[i])
-			break;
-	uint32_t size = 8 * 1024 *1024;
-	if (i == 16) {
-		DEBUG_WARN("Use default size\n");
-	} else {
-		/* Find out size of connected SPI Flash
-		 *
-		 * Flash needs valid content to be mapped
-		 * Low flash is mirrored when flash size is exceeded
-		 */
-		while (size) {
-			uint32_t mirrorsec[16];
-			target_mem_read(t, mirrorsec, XIP_FLASH_START + size,
-							sizeof( bootsec));
-			if (memcmp(bootsec, mirrorsec, sizeof( bootsec)))
-				break;
-			size >>= 1;
-		}
-	}
-	rp_add_flash(t, XIP_FLASH_START, size << 1);
+
+	rp_add_flash(t, XIP_FLASH_START, MAX_FLASH);
 	t->driver = RP_ID;
 	t->target_options |= CORTEXM_TOPT_INHIBIT_SRST;
 	target_add_ram(t, SRAM_START, 0x42000);
-	target_add_ram(t, 0x51000000,  0x1000);
 	target_add_commands(t, rp_cmd_list, RP_ID);
 	return true;
 }
