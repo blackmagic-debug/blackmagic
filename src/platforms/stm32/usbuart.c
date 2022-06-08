@@ -124,12 +124,12 @@ void usbuart_init(void)
 	/* Setup USART TX DMA */
 #if !defined(USBUSART_TDR) && defined(USBUSART_DR)
 # define USBUSART_TDR USBUSART_DR
-#else
+#elif !defined(USBUSART_TDR)
 # define USBUSART_TDR USART_DR(USBUSART)
 #endif
 #if !defined(USBUSART_RDR) && defined(USBUSART_DR)
 # define USBUSART_RDR USBUSART_DR
-#else
+#elif !defined(USBUSART_RDR)
 # define USBUSART_RDR USART_DR(USBUSART)
 #endif
 	dma_channel_reset(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN);

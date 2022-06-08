@@ -92,7 +92,7 @@
 
 #define USB_DRIVER      st_usbfs_v1_usb_driver
 #define USB_IRQ         NVIC_USB_LP_CAN1_RX0_IRQ
-#define USB_ISR         usb_lp_can1_rx0_isr
+#define USB_ISR(x)      usb_lp_can1_rx0_isr(x)
 
 /* Interrupt priorities.  Low numbers are high priority.
  * TIM3 is used for traceswo capture and must be highest priority.
@@ -108,9 +108,8 @@
 #define USBUSART_RDR USART2_RDR
 #define USBUSART_IRQ NVIC_USART2_EXTI26_IRQ
 #define USBUSART_CLK RCC_USART2
-#define USBUSART_TX_PORT GPIOA
+#define USBUSART_PORT GPIOA
 #define USBUSART_TX_PIN  GPIO3
-#define USBUSART_RX_PORT GPIOA
 #define USBUSART_RX_PIN  GPIO2
 #define USBUSART_ISR(x) usart2_exti26_isr(x)
 
@@ -125,9 +124,9 @@
 
 /* TX/RX on the REV 0/1 boards are swapped against ftdijtag.*/
 #define UART_PIN_SETUP() do {											\
-		gpio_mode_setup(USBUSART_TX_PORT, GPIO_MODE_AF, GPIO_PUPD_PULLUP, \
+		gpio_mode_setup(USBUSART_PORT, GPIO_MODE_AF, GPIO_PUPD_PULLUP,  \
 						USBUSART_TX_PIN | USBUSART_RX_PIN);				\
-		gpio_set_af(USBUSART_TX_PORT, GPIO_AF7,							\
+		gpio_set_af(USBUSART_PORT, GPIO_AF7,							\
 					USBUSART_TX_PIN | USBUSART_RX_PIN);					\
 		USART2_CR2 |= USART_CR2_SWAP;									\
 	} while(0)
