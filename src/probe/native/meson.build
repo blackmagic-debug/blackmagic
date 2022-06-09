@@ -21,14 +21,3 @@ probe_link_args += [
 ]
 
 summary({'demo': 'just a demo info for probes'}, section: 'Probe')
-
-# probe_dfu_sources += files(
-# 	probe_common_sources,
-# 	'usbdfu.c',
-# )
-
-# probe_dfu_link_args = [
-# 	probe_common_link_args
-# ]
-
-# probe_dfu_available = true

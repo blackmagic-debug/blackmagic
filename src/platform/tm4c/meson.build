@@ -1,27 +1,11 @@
 
-platform_includes += include_directories(
-	'.',
-)
-
 platform_sources += files(
-	'serialno.c',
 	'usbuart.c',
 	'traceswo.c',
-	'traceswodecode.c',
-	'traceswoasync.c',
-	# 'rtt_if.c',
 	'gdb_if.c',
-	'timing_stm32.c',
 )
 
-if mcu_family in ['stm32f1']
-	platform_args += [
-		'-mcpu=cortex-m3',
-	]
-	platform_link_args += [
-		'-mcpu=cortex-m3',
-	]
-elif mcu_family in ['stm32f4']
+if mcu_family in ['lm4f']
 	platform_args += [
 		'-mcpu=cortex-m4',
 		'-mfloat-abi=hard',
@@ -51,8 +35,6 @@ platform_link_args += [
 	'-nostdlib',
     '-nostartfiles',
     '-ffreestanding',
-    '--specs=nano.specs',
-    '--specs=nosys.specs',
 	'-Wl,-gc-sections',
 	'-L@0@'.format(meson.current_source_dir()),
 ]
