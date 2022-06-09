@@ -1,0 +1,74 @@
+name: build
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'src/**'
+      - 'lib/**'
+      - 'crossfile/**'
+  pull_request:
+    branches:
+      - master
+    paths:
+      - 'src/**'
+      - 'lib/**'
+      - 'crossfile/**'
+
+jobs:
+  compile-probes:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        probe:
+          - native
+          - stlink
+          - swlink
+          - launchpad-icdi
+          - hydrabus
+          - f4discovery
+          - blackpillv2
+          - 96b_carbon
+    steps:
+      - name: Setup Toolchain
+        uses: numworks/setup-arm-toolchain@2021-10
+
+      - name: Checkout
+        uses: actions/checkout@v3.0.2
+        with:
+          submodules: true
+
+      - name: Build Depency
+        run: make -C libopencm3 lib/stm32/f1 lib/stm32/f4 lib/lm4f
+
+      - name: Build
+        uses: BSFishy/meson-build@v1.0.3
+        with:
+          action: build
+          directory: build/${{ matrix.probe }}
+          setup-options: --cross-file crossfile/arm-none-eabi.ini -Dprobe=${{ matrix.probe }} -Dtargets=[]
+          meson-version: 0.58.0
+
+  compile-targets:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Toolchain
+        uses: numworks/setup-arm-toolchain@2021-10
+
+      - name: Checkout
+        uses: actions/checkout@v3.0.2
+        with:
+          submodules: true
+
+      - name: Build Depency
+        run: make -C libopencm3 lib/stm32/f1 lib/stm32/f4 lib/lm4f
+
+      - name: Build
+        uses: BSFishy/meson-build@v1.0.3
+        with:
+          action: build
+          directory: build/targets
+          setup-options: --cross-file crossfile/arm-none-eabi.ini -Dtargets=cortexa,cortexm,efm,lpc,nrf,nxp,rp,sam,stm,ti
+          meson-version: 0.58.0

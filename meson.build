@@ -4,7 +4,6 @@ project('Black Magic Firmware', 'c',
 	default_options: [
 		'optimization=s',
 		'debug=false',
-		# 'debug=false',
 		# 'warning_level=3',
 		# 'werror=true',
 		],
