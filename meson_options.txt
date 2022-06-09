@@ -1,2 +1,3 @@
 option('probe', type: 'string', description: 'target probe', value: 'native')
 option('targets', type : 'array', value : ['cortexm', 'nrf', 'sam', 'stm', 'lpc', 'nxp', 'efm', 'ti', 'rp'], description: 'enabled debug targets')
+option('bmp_bootloader', type: 'boolean', value: 'true', description: 'use bmp bootloader, not relevant for all targets')
