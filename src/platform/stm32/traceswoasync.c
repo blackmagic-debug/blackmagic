@@ -40,8 +40,11 @@
 #include <libopencm3/stm32/usart.h>
 #include <libopencm3/stm32/dma.h>
 
-static volatile uint32_t write_index; /* Packet currently received via UART */
-static volatile uint32_t read_index;  /* Packet currently waiting to transmit to USB */
+/* For speed this is set to the USB transfer size */
+#define FULL_SWO_PACKET (64)
+
+static volatile uint32_t w; /* Packet currently received via UART */
+static volatile uint32_t r; /* Packet currently waiting to transmit to USB */
 /* Packets arrived from the SWO interface */
 static uint8_t trace_rx_buf[NUM_TRACE_PACKETS * TRACE_ENDPOINT_SIZE];
 /* Packet pingpong buffer used for receiving packets */

@@ -39,6 +39,8 @@
 #include <libopencm3/stm32/timer.h>
 #include <libopencm3/stm32/rcc.h>
 
+#ifndef SWOASYNC
+
 /* SWO decoding */
 static bool decoding = false;
 
@@ -193,3 +195,5 @@ flush_and_reset:
 	decbuf_pos = 0;
 	memset(decbuf, 0, sizeof(decbuf));
 }
+
+#endif
