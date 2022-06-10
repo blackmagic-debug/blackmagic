@@ -52,6 +52,15 @@
 #define FLASHSIZE_32K_BLOCK     (32 * 1024)
 #define FLASHSIZE_64K_BLOCK     (64 * 1024)
 #define MAX_FLASH               (16 * 1024 * 1024)
+
+/* Instruction codes taken from Winbond W25Q16JV datasheet, as used on the
+ * original Pico board from Raspberry Pi.
+ * https://www.winbond.com/resource-files/w25q16jv%20spi%20revd%2008122016.pdf
+ * All dev boards supported by Pico SDK V1.3.1 use SPI flash chips which support
+ * these commands. Other customs boards using different SPI flash chips might
+ * not support these commands
+ */ 
+
 #define FLASHCMD_SECTOR_ERASE   0x20
 #define FLASHCMD_BLOCK32K_ERASE 0x52
 #define FLASHCMD_BLOCK64K_ERASE 0xd8
