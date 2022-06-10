@@ -114,6 +114,7 @@ int usbuart_debug_write(const char *buf, size_t len);
 #define USBUSART_TX_PIN GPIO2
 #define USBUSART_RX_PIN GPIO3
 #define USBUSART_ISR(x) usart2_isr(x)
+
 #define USBUSART_DMA_BUS DMA1
 #define USBUSART_DMA_CLK RCC_DMA1
 #define USBUSART_DMA_TX_CHAN DMA_CHANNEL7
