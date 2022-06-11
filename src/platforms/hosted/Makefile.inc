@@ -40,9 +40,9 @@ LDFLAGS += -lsetupapi
 #https://github.com/dmlc/xgboost/issues/1945 indicates macosx as indicator
 else ifneq (filter, macosx darwin, $(SYS))
 SRC += serial_unix.c
-LDFLAGS += -lhidapi
+LDFLAGS += $(pkg-config --libs hidapi)
 LDFLAGS += -framework CoreFoundation
-CFLAGS += -Ihidapi/hidapi
+CFLAGS += -Ihidapi/hidapi $(pkg-config --cflags hidapi)
 HIDAPILIB = hidapi
 endif
 
