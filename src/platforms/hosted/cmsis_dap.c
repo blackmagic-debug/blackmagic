@@ -45,6 +45,8 @@
 uint8_t dap_caps;
 uint8_t mode;
 
+#define TRANSFER_TIMEOUT_MS (100)
+
 typedef enum cmsis_type_s {
 	CMSIS_TYPE_NONE = 0,
 	CMSIS_TYPE_HID,
@@ -221,40 +223,46 @@ int dbg_dap_cmd(uint8_t *data, int size, int rsize)
 	memcpy(&buffer[1], data, rsize);
 
 	DEBUG_WIRE("cmd :   ");
-	for(int i = 0; (i < 32) && (i < rsize + 1); i++)
+	for(int i = (type == CMSIS_TYPE_HID) ? 0 : 1; (i < rsize + 1); i++)
 		DEBUG_WIRE("%02x.",	buffer[i]);
 	DEBUG_WIRE("\n");
 	if (type == CMSIS_TYPE_HID) {
 		res = hid_write(handle, buffer, 65);
 		if (res < 0) {
-			DEBUG_WARN( "Error: %ls\n", hid_error(handle));
+			DEBUG_WARN("Error: %ls\n", hid_error(handle));
 			exit(-1);
 		}
-		res = hid_read_timeout(handle, buffer, 65, 1000);
-		if (res < 0) {
-			DEBUG_WARN( "debugger read(): %ls\n", hid_error(handle));
-			exit(-1);
-		} else if (res == 0) {
-			DEBUG_WARN( "timeout\n");
-			exit(-1);
-		}
+		do {
+			res = hid_read_timeout(handle, buffer, 65, 1000);
+			if (res < 0) {
+				DEBUG_WARN("debugger read(): %ls\n", hid_error(handle));
+				exit(-1);
+			} else if (res == 0) {
+				DEBUG_WARN("timeout\n");
+				exit(-1);
+			}
+		} while (buffer[0] != cmd);
 	} else if (type == CMSIS_TYPE_BULK) {
 		int transferred = 0;
 
-		res = libusb_bulk_transfer(usb_handle, out_ep, data, rsize, &transferred, 500);
+		res = libusb_bulk_transfer(usb_handle, out_ep, data, rsize, &transferred, TRANSFER_TIMEOUT_MS);
 		if (res < 0) {
 			DEBUG_WARN("OUT error: %d\n", res);
 			return res;
 		}
-		res = libusb_bulk_transfer(usb_handle, in_ep, buffer, report_size, &transferred, 500);
-		if (res < 0) {
-			DEBUG_WARN("IN error: %d\n", res);
-			return res;
-		}
+
+		/* We repeat the read in case we're out of step with the transmitter */
+		do {
+			res = libusb_bulk_transfer(usb_handle, in_ep, buffer, report_size, &transferred, TRANSFER_TIMEOUT_MS);
+			if (res < 0) {
+				DEBUG_WARN("IN error: %d\n", res);
+				return res;
+			}
+		} while (buffer[0] != cmd);
 		res = transferred;
 	}
 	DEBUG_WIRE("cmd res:");
-	for(int i = 0; (i < 16) && (i < size + 1); i++)
+	for (int i = 0; i < res; i++)
 		DEBUG_WIRE("%02x.",	buffer[i]);
 	DEBUG_WIRE("\n");
 	if (buffer[0] != cmd) {
