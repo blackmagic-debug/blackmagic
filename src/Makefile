@@ -174,8 +174,21 @@ all_platforms:
 
 command.c: include/version.h
 
+GIT_VERSION := $(shell git describe --always --dirty --tags)
+VERSION_HEADER := \#define FIRMWARE_VERSION "$(GIT_VERSION)"
+
 include/version.h: FORCE
-	@echo " GEN $@"
-	$(Q)../scripts/gen-version.sh
+	@# If git isn't found then GIT_VERSION will be an empty string.
+ifeq ($(GIT_VERSION),)
+	@echo Git not found, assuming up to date include/version.h
+else
+	@# Note that when we echo the version to the header file, echo writes a final newline
+	@# to the file. This is fine and probably makes the file more human-readable, but
+	@# also means we have to account for that newline in this comparison.
+	$(Q)if [ ! -f $@ ] || [ "$$(cat $@)" != "$$(echo '$(VERSION_HEADER)\n')" ]; then \
+		echo " GEN $@"; \
+		echo '$(VERSION_HEADER)' > $@; \
+	fi
+endif
 
 -include *.d
