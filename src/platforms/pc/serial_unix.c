@@ -79,7 +79,7 @@ int serial_open(BMP_CL_OPTIONS_t *cl_opts, char *serial)
             DEBUG_WARN("No serial device found\n");
             return -1;
         } else {
-            sprintf(name, "/dev/tty.usbmodem%s1", serial);
+            sprintf(name, "/dev/cu.usbmodem%s1", serial);
         }
     } else {
         strncpy(name, cl_opts->opt_device, sizeof(name) - 1);
