@@ -429,15 +429,43 @@ uint32_t rp_read_flash_chip(target *t, uint32_t cmd)
 uint32_t rp_get_flash_length(target *t)
 {
 	uint32_t size = MAX_FLASH;
+	uint32_t bootsec[16];
+	int i;
+
+	target_mem_read(t, bootsec, XIP_FLASH_START, sizeof(bootsec));
+	for (i = 0; i < 16; i++) {
+		if ((bootsec[i] != 0x00) && (bootsec[i] != 0xff))
+			break;
+	}
+
+	if (i < 16) {
+		// We have some data (hopefully a valid program) stored in the start
+		// of the flash memory. We can check if the start of this data is
+		// mirrored anywhere else in the flash as the flash region will repeat
+		// when we try to read out of bounds.
+		uint32_t mirrorsec[16];
+		while (size > FLASHSIZE_4K_SECTOR) {
+			target_mem_read(t, mirrorsec, XIP_FLASH_START + size, sizeof(bootsec));
+			if (memcmp(bootsec, mirrorsec, sizeof(bootsec)))
+				return size << 1;
+			size >>= 1;
+		}
+	}
+
+	// That approach didn't work. Most likely because there was no data found in
+	// at the start of the flash memory. If we have no valid program it's ok to
+	// interrupt the flash execution to check the JEDEC ID of the flash chip.
+	size = MAX_FLASH;
+
+	rp_flash_prepare(t);
 	uint32_t flash_id = rp_read_flash_chip(t, FLASHCMD_READ_JEDEC_ID);
+	rp_flash_resume(t);
 
 	DEBUG_INFO("Flash device ID: %08" PRIx32 "\n", flash_id);
 
 	uint8_t size_log2 = (flash_id & 0xff0000) >> 16;
 	if (size_log2 >= 8 || size_log2 <= 34)
 		size = 1 << size_log2;
-
-	DEBUG_INFO("Flash size: %d MB\n", (int)(size / 1024 / 1024));
 
 	return size;
 }
@@ -458,9 +486,8 @@ static bool rp_attach(target *t)
 	/* Free previously loaded memory map */
 	target_mem_map_free(t);
 
-	rp_flash_prepare(t);
 	uint32_t size = rp_get_flash_length(t);
-	rp_flash_resume(t);
+	DEBUG_INFO("Flash size: %d MB\n", (int)(size / 1024 / 1024));
 
 	rp_add_flash(t, XIP_FLASH_START, size);
 	target_add_ram(t, SRAM_START, SRAM_SIZE);
