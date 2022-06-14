@@ -216,22 +216,22 @@ static void rp_flash_resume(target *t)
 static int rp_flash_erase(struct target_flash *f, target_addr addr,
 						  size_t len)
 {
+	DEBUG_INFO("Erase addr 0x%08" PRIx32 " len 0x%" PRIx32 "\n", addr, (uint32_t)len);
+	target *t = f->t;
 	if (addr & (FLASHSIZE_4K_SECTOR - 1)) {
 		DEBUG_WARN("Unaligned erase\n");
 		return -1;
 	}
-	if (len & (FLASHSIZE_4K_SECTOR - 1)) {
-		DEBUG_WARN("Unaligned len\n");
-		len = ALIGN(len, FLASHSIZE_4K_SECTOR);
+	if ((addr < t->flash->start) || (addr >= t->flash->start + t->flash->length)) {
+		DEBUG_WARN("Address is invalid\n");
+		return -1;
 	}
-	DEBUG_INFO("Erase addr 0x%08" PRIx32 " len 0x%" PRIx32 "\n", addr, (uint32_t)len);
-	target *t = f->t;
-	rp_flash_prepare(t);
-	struct rp_priv_s *ps = (struct rp_priv_s*)t->target_storage;
-	/* Register playground*/
-	/* erase */
 	addr -= t->flash->start;
-	len = MIN(len, t->flash->length);
+	len = ALIGN(len, FLASHSIZE_4K_SECTOR);
+	len = MIN(len, t->flash->length - addr);
+	struct rp_priv_s *ps = (struct rp_priv_s*)t->target_storage;
+	/* erase */
+	rp_flash_prepare(t);
 	bool ret = 0;
 	while (len) {
 		if (len >= FLASHSIZE_64K_BLOCK) {
