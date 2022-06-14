@@ -43,11 +43,14 @@
 #include "cortexm.h"
 
 #define RP_ID "Raspberry RP2040"
+#define RP_MAX_TABLE_SIZE  0x80
 #define BOOTROM_MAGIC ('M' | ('u' << 8) | (0x01 << 16))
 #define BOOTROM_MAGIC_ADDR 0x00000010
 #define XIP_FLASH_START    0x10000000
 #define SRAM_START         0x20000000
 #define SRAM_SIZE          0x42000
+#define SSI_DR0_ADDR       0x18000060
+#define QSPI_CTRL_ADDR     0x4001800c
 
 #define FLASHSIZE_4K_SECTOR     (4 * 1024)
 #define FLASHSIZE_32K_BLOCK     (32 * 1024)
@@ -66,7 +69,7 @@
 #define FLASHCMD_BLOCK32K_ERASE 0x52
 #define FLASHCMD_BLOCK64K_ERASE 0xd8
 #define FLASHCMD_CHIP_ERASE     0x60
-#define FLASHCMD_READ_ID        0x9F
+#define FLASHCMD_READ_JEDEC_ID  0x9F
 
 struct rp_priv_s {
 	uint16_t _debug_trampoline;
@@ -391,6 +394,85 @@ static void rp_add_flash(target *t, uint32_t addr, size_t length)
         target_add_flash(t, f);
 }
 
+void rp_ssel_active(target *t, bool active)
+{
+	const uint32_t qspi_ctrl_outover_low  = 2UL << 8;
+	const uint32_t qspi_ctrl_outover_high = 3UL << 8;
+	uint32_t state = (active) ? qspi_ctrl_outover_low : qspi_ctrl_outover_high;
+	uint32_t val = target_mem_read32(t, QSPI_CTRL_ADDR);
+	val = (val & ~qspi_ctrl_outover_high) | state;
+	target_mem_write32(t, QSPI_CTRL_ADDR, val);
+}
+
+uint32_t rp_read_flash_chip(target *t, uint32_t cmd)
+{
+	uint32_t value = 0;
+
+	rp_ssel_active(t, true);
+
+	/* write command into SPI peripheral's FIFO */
+	for (int count = 0; (count < 4); count++)
+		target_mem_write32(t, SSI_DR0_ADDR, cmd);
+
+	/* now we have an entry in the receive FIFO for each write */
+	for (int count = 0; (count < 4); count++) {
+		uint32_t status = target_mem_read32(t, SSI_DR0_ADDR);
+		value |= (status & 0xFF) << 24;
+		value >>= 8;
+	}
+
+	rp_ssel_active(t, false);
+
+	return value;
+}
+
+uint32_t rp_get_flash_length(target *t)
+{
+	uint32_t size = MAX_FLASH;
+	uint32_t flash_id = rp_read_flash_chip(t, FLASHCMD_READ_JEDEC_ID);
+
+	DEBUG_INFO("Flash device ID: %08" PRIx32 "\n", flash_id);
+
+	uint8_t size_log2 = (flash_id & 0xff0000) >> 16;
+	if (size_log2 >= 8 || size_log2 <= 34)
+		size = 1 << size_log2;
+
+	DEBUG_INFO("Flash size: %d MB\n", (int)(size / 1024 / 1024));
+
+	return size;
+}
+
+static bool rp_attach(target *t)
+{
+	if (!cortexm_attach(t))
+		return false;
+
+	struct rp_priv_s *ps = (struct rp_priv_s*)t->target_storage;
+	uint16_t *table =  alloca(RP_MAX_TABLE_SIZE);
+	uint16_t table_offset = target_mem_read32( t, BOOTROM_MAGIC_ADDR + 4);
+	if (!table || target_mem_read(t, table, table_offset, RP_MAX_TABLE_SIZE))
+		return false;
+	if (rp2040_fill_table(ps, table, RP_MAX_TABLE_SIZE))
+		return false;
+
+	/* Free previously loaded memory map */
+	target_mem_map_free(t);
+
+	rp_flash_prepare(t);
+	uint32_t size = rp_get_flash_length(t);
+	rp_flash_resume(t);
+
+	rp_add_flash(t, XIP_FLASH_START, size);
+	target_add_ram(t, SRAM_START, SRAM_SIZE);
+
+	return true;
+}
+
+static void rp_detach(target *t)
+{
+	cortexm_detach(t);
+}
+
 bool rp_probe(target *t)
 {
 	/* Check bootrom magic*/
@@ -403,26 +485,17 @@ bool rp_probe(target *t)
 	if ((boot_magic >> 24) == 1)
 		DEBUG_WARN("Old Bootrom Version 1!\n");
 #endif
-#define RP_MAX_TABLE_SIZE  0x80
-	uint16_t *table =  alloca(RP_MAX_TABLE_SIZE);
-	uint16_t table_offset = target_mem_read32( t, BOOTROM_MAGIC_ADDR + 4);
-	if (!table || target_mem_read(t, table, table_offset, RP_MAX_TABLE_SIZE))
-		return false;
 	struct rp_priv_s *priv_storage = calloc(1, sizeof(struct rp_priv_s));
 	if (!priv_storage) {               /* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return false;
 	}
-	if (rp2040_fill_table(priv_storage, table, RP_MAX_TABLE_SIZE)) {
-		free(priv_storage);
-		return false;
-	}
  	t->target_storage = (void*)priv_storage;
 
-	rp_add_flash(t, XIP_FLASH_START, MAX_FLASH);
 	t->driver = RP_ID;
 	t->target_options |= CORTEXM_TOPT_INHIBIT_SRST;
-	target_add_ram(t, SRAM_START, SRAM_SIZE);
+	t->attach = rp_attach;
+	t->detach = rp_detach;
 	target_add_commands(t, rp_cmd_list, RP_ID);
 	return true;
 }
