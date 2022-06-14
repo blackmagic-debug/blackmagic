@@ -277,15 +277,15 @@ static int rp_flash_write(struct target_flash *f,
                     target_addr dest, const void *src, size_t len)
 {
 	DEBUG_INFO("RP Write 0x%08" PRIx32 " len 0x%" PRIx32 "\n", dest, (uint32_t)len);
+	target *t = f->t;
 	if ((dest & 0xff) || (len & 0xff)) {
-		DEBUG_WARN("Unaligned erase\n");
+		DEBUG_WARN("Unaligned write\n");
 		return -1;
 	}
-	target *t = f->t;
-	rp_flash_prepare(t);
+	dest -= t->flash->start;
 	struct rp_priv_s *ps = (struct rp_priv_s*)t->target_storage;
 	/* Write payload to target ram */
-	dest -= XIP_FLASH_START;
+	rp_flash_prepare(t);
 	bool ret = 0;
 #define MAX_WRITE_CHUNK 0x1000
 	while (len) {
