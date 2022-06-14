@@ -47,6 +47,7 @@
 #define BOOTROM_MAGIC_ADDR 0x00000010
 #define XIP_FLASH_START    0x10000000
 #define SRAM_START         0x20000000
+#define SRAM_SIZE          0x42000
 
 #define FLASHSIZE_4K_SECTOR     (4 * 1024)
 #define FLASHSIZE_32K_BLOCK     (32 * 1024)
@@ -367,7 +368,7 @@ static bool rp_cmd_erase_sector(target *t, int argc, const char *argv[])
 
 const struct command_s rp_cmd_list[] = {
 	{"erase_mass", rp_cmd_erase_mass, "Erase entire flash memory"},
-	{"erase_sector", rp_cmd_erase_sector, "Erase a sector by number" },
+	{"erase_sector", rp_cmd_erase_sector, "Erase a sector: [start address] length" },
 	{"reset_usb_boot", rp_cmd_reset_usb_boot, "Reboot the device into BOOTSEL mode"},
 	{NULL, NULL, NULL}
 };
@@ -385,7 +386,8 @@ static void rp_add_flash(target *t, uint32_t addr, size_t length)
         f->blocksize = 0x1000;
         f->erase = rp_flash_erase;
         f->write = rp_flash_write;
-        f->buf_size = 2048; /* Max buffer size used eotherwise */
+        f->buf_size = 2048; /* Max buffer size used otherwise */
+		f->erased = 0xFF;
         target_add_flash(t, f);
 }
 
@@ -420,7 +422,7 @@ bool rp_probe(target *t)
 	rp_add_flash(t, XIP_FLASH_START, MAX_FLASH);
 	t->driver = RP_ID;
 	t->target_options |= CORTEXM_TOPT_INHIBIT_SRST;
-	target_add_ram(t, SRAM_START, 0x42000);
+	target_add_ram(t, SRAM_START, SRAM_SIZE);
 	target_add_commands(t, rp_cmd_list, RP_ID);
 	return true;
 }
