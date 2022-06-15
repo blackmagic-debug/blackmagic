@@ -392,6 +392,38 @@ void platform_target_set_power(bool power)
 	}
 }
 
+bool platform_target_get_power(void)
+{
+	switch (info.bmp_type) {
+	case BMP_TYPE_BMP:
+	return remote_target_get_power() ;
+
+	default:
+		return false ;
+	}
+}
+
+uint32_t platform_target_voltage_sense(void)
+{
+	uint32_t	targetVoltage = 0 ;
+	switch (info.bmp_type) {
+	case BMP_TYPE_BMP: {
+		const char * result ;
+		uint32_t units = 0, tenths = 0 ;
+		result = remote_target_voltage() ;
+		if (result != NULL) {
+			sscanf(result,"%u.%u", (unsigned int *) &units, (unsigned int *) &tenths) ;
+			targetVoltage = (units * 10) + tenths ;
+		}
+		break ;
+	}
+
+	default:
+		break ;
+	}
+	return targetVoltage ;
+}
+
 void platform_buffer_flush(void)
 {
 	switch (info.bmp_type) {
