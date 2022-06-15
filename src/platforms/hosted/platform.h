@@ -9,6 +9,7 @@ void platform_buffer_flush(void);
 #define PLATFORM_IDENT     "(PC-Hosted) "
 #define SET_IDLE_STATE(x)
 #define SET_RUN_STATE(x)
+#define PLATFORM_HAS_POWER_SWITCH
 
 #define SYSTICKHZ 1000
 
