@@ -100,7 +100,7 @@ const struct command_s cmd_list[] = {
 	{NULL, NULL, NULL}
 };
 
-bool connect_assert_srst;
+bool connect_assert_nrst;
 #if defined(PLATFORM_HAS_DEBUG) && (PC_HOSTED == 0)
 bool debug_bmp;
 #endif
@@ -195,7 +195,7 @@ static bool cmd_jtag_scan(target *t, int argc, char **argv)
 		irlens[argc-1] = 0;
 	}
 
-	if(connect_assert_srst)
+	if (connect_assert_nrst)
 		platform_nrst_set_val(true); /* will be deasserted after attach */
 
 	int devs = -1;
@@ -236,7 +236,7 @@ bool cmd_swdp_scan(target *t, int argc, char **argv)
 	if (platform_target_voltage())
 		gdb_outf("Target voltage: %s\n", platform_target_voltage());
 
-	if(connect_assert_srst)
+	if (connect_assert_nrst)
 		platform_nrst_set_val(true); /* will be deasserted after attach */
 
 	int devs = -1;
@@ -276,7 +276,7 @@ bool cmd_auto_scan(target *t, int argc, char **argv)
 
 	if (platform_target_voltage())
 		gdb_outf("Target voltage: %s\n", platform_target_voltage());
-	if (connect_assert_srst)
+	if (connect_assert_nrst)
 		platform_nrst_set_val(true); /* will be deasserted after attach */
 
 	int devs = -1;
@@ -414,7 +414,7 @@ static bool cmd_connect_srst(target *t, int argc, const char **argv)
 	if (argc == 1) {
 		print_status = true;
 	} else if (argc == 2) {
-		if (parse_enable_or_disable(argv[1], &connect_assert_srst)) {
+		if (parse_enable_or_disable(argv[1], &connect_assert_nrst)) {
 			print_status = true;
 		}
 	} else {
@@ -422,8 +422,8 @@ static bool cmd_connect_srst(target *t, int argc, const char **argv)
 	}
 
 	if (print_status) {
-		gdb_outf("Assert SRST during connect: %s\n",
-			 connect_assert_srst ? "enabled" : "disabled");
+		gdb_outf("Assert nRST during connect: %s\n",
+			 connect_assert_nrst ? "enabled" : "disabled");
 	}
 	return true;
 }
