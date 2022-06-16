@@ -47,6 +47,7 @@ static bool cmd_help(target *t, int argc, char **argv);
 
 static bool cmd_jtag_scan(target *t, int argc, char **argv);
 static bool cmd_swdp_scan(target *t, int argc, char **argv);
+static bool cmd_auto_scan(target *t, int argc, char **argv);
 static bool cmd_frequency(target *t, int argc, char **argv);
 static bool cmd_targets(target *t, int argc, char **argv);
 static bool cmd_morse(target *t, int argc, char **argv);
@@ -72,6 +73,7 @@ const struct command_s cmd_list[] = {
 	{"help", (cmd_handler)cmd_help, "Display help for monitor commands"},
 	{"jtag_scan", (cmd_handler)cmd_jtag_scan, "Scan JTAG chain for devices" },
 	{"swdp_scan", (cmd_handler)cmd_swdp_scan, "Scan SW-DP for devices" },
+	{"auto_scan", (cmd_handler)cmd_auto_scan, "Automatically scan all chain types for devices"},
 	{"frequency", (cmd_handler)cmd_frequency, "set minimum high and low times" },
 	{"targets", (cmd_handler)cmd_targets, "Display list of available targets" },
 	{"morse", (cmd_handler)cmd_morse, "Display morse error message" },
@@ -263,7 +265,60 @@ bool cmd_swdp_scan(target *t, int argc, char **argv)
 	cmd_targets(NULL, 0, NULL);
 	morse(NULL, false);
 	return true;
+}
 
+bool cmd_auto_scan(target *t, int argc, char **argv)
+{
+	(void)t;
+	(void)argc;
+	(void)argv;
+
+	if (platform_target_voltage())
+		gdb_outf("Target voltage: %s\n", platform_target_voltage());
+	if (connect_assert_srst)
+		platform_srst_set_val(true); /* will be deasserted after attach */
+
+	int devs = -1;
+	volatile struct exception e;
+	TRY_CATCH(e, EXCEPTION_ALL) {
+#if PC_HOSTED == 1
+		devs = platform_jtag_scan(NULL);
+#else
+		devs = jtag_scan(NULL);
+#endif
+		if (devs > 0)
+			break;
+		gdb_out("JTAG scan found no devices, trying SWD!\n");
+
+#if PC_HOSTED == 1
+		devs = platform_adiv5_swdp_scan(0);
+#else
+		devs = adiv5_swdp_scan(0);
+#endif
+		if (devs > 0)
+			break;
+
+		platform_srst_set_val(false);
+		gdb_out("SW-DP scan failed!\n");
+		return false;
+	}
+	switch (e.type) {
+	case EXCEPTION_TIMEOUT:
+		gdb_outf("Timeout during scan. Is target stuck in WFI?\n");
+		break;
+	case EXCEPTION_ERROR:
+		gdb_outf("Exception: %s\n", e.msg);
+		break;
+	}
+	if (devs <= 0) {
+		platform_srst_set_val(false);
+		gdb_out("auto scan failed!\n");
+		return false;
+	}
+
+	cmd_targets(NULL, 0, NULL);
+	morse(NULL, false);
+	return true;
 }
 
 bool cmd_frequency(target *t, int argc, char **argv)
