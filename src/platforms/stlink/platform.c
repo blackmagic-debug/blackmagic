@@ -68,7 +68,7 @@ void platform_init(void)
 	gpio_set_mode(TDI_PORT, GPIO_MODE_OUTPUT_2_MHZ,
 	              GPIO_CNF_OUTPUT_PUSHPULL, TDI_PIN);
 
-	platform_srst_set_val(false);
+	platform_nrst_set_val(false);
 
 	gpio_set_mode(LED_PORT, GPIO_MODE_OUTPUT_2_MHZ,
 	              GPIO_CNF_OUTPUT_PUSHPULL, led_idle_run);
@@ -87,7 +87,7 @@ void platform_init(void)
         adc_init();
 }
 
-void platform_srst_set_val(bool assert)
+void platform_nrst_set_val(bool assert)
 {
 	if (assert) {
 		gpio_set_mode(SRST_PORT, GPIO_MODE_OUTPUT_2_MHZ,
@@ -100,7 +100,7 @@ void platform_srst_set_val(bool assert)
 	}
 }
 
-bool platform_srst_get_val()
+bool platform_nrst_get_val()
 {
 	return gpio_get(SRST_PORT, srst_pin) == 0;
 }

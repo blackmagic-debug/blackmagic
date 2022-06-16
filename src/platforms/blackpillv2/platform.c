@@ -115,8 +115,8 @@ void platform_init(void)
 	OTG_FS_GCCFG &= ~(OTG_GCCFG_VBUSBSEN | OTG_GCCFG_VBUSASEN);
 }
 
-void platform_srst_set_val(bool assert) { (void)assert; }
-bool platform_srst_get_val(void) { return false; }
+void platform_nrst_set_val(bool assert) { (void)assert; }
+bool platform_nrst_get_val(void) { return false; }
 
 const char *platform_target_voltage(void)
 {

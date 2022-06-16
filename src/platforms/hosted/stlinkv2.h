@@ -30,8 +30,8 @@
 int stlink_init(bmp_info_t *info) {return -1;};
 int stlink_hwversion(void) {return -1;};
 const char *stlink_target_voltage(bmp_info_t *info) {return "ERROR";};
-void stlink_srst_set_val(bmp_info_t *info, bool assert) {};
-bool stlink_srst_get_val(void) {return true;};
+void stlink_nrst_set_val(bmp_info_t *info, bool assert) { }
+bool stlink_nrst_get_val(void) { return true; }
 int stlink_enter_debug_swd(bmp_info_t *info, ADIv5_DP_t *dp) {return -1;};
 void stlink_adiv5_dp_defaults(ADIv5_DP_t *dp) {};
 int stlink_jtag_dp_init(ADIv5_DP_t *dp) {return false;};
@@ -44,8 +44,8 @@ uint32_t stlink_max_frequency_get(bmp_info_t *info) {return 0;};
 int stlink_init(bmp_info_t *info);
 int stlink_hwversion(void);
 const char *stlink_target_voltage(bmp_info_t *info);
-void stlink_srst_set_val(bmp_info_t *info, bool assert);
-bool stlink_srst_get_val(void);
+void stlink_nrst_set_val(bmp_info_t *info, bool assert);
+bool stlink_nrst_get_val(void);
 int stlink_enter_debug_swd(bmp_info_t *info, ADIv5_DP_t *dp);
 void stlink_adiv5_dp_defaults(ADIv5_DP_t *dp);
 int stlink_jtag_dp_init(ADIv5_DP_t *dp);

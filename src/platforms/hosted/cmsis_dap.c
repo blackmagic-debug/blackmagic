@@ -138,7 +138,7 @@ int dap_init(bmp_info_t *info)
 	return 0;
 }
 
-void dap_srst_set_val(bool assert)
+void dap_nrst_set_val(bool assert)
 {
 	dap_reset_pin(!assert);
 }

@@ -230,7 +230,7 @@ const char *jlink_target_voltage(bmp_info_t *info)
 }
 
 static bool srst_status = false;
-void jlink_srst_set_val(bmp_info_t *info, bool assert)
+void jlink_nrst_set_val(bmp_info_t *info, bool assert)
 {
         uint8_t cmd[1];
         cmd[0]= (assert)? CMD_HW_RESET0: CMD_HW_RESET1;
@@ -239,7 +239,7 @@ void jlink_srst_set_val(bmp_info_t *info, bool assert)
         srst_status = assert;
 }
 
-bool jlink_srst_get_val(bmp_info_t *info) {
+bool jlink_nrst_get_val(bmp_info_t *info) {
         uint8_t cmd[1] = {CMD_GET_HW_STATUS};
         uint8_t res[8];
         send_recv(info->usb_link, cmd, 1, res, sizeof(res));

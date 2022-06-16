@@ -72,7 +72,7 @@ void platform_init(void)
 	cdcacm_init();
 }
 
-void platform_srst_set_val(bool assert)
+void platform_nrst_set_val(bool assert)
 {
 	if (assert)
 		gpio_clear(SRST_PORT, SRST_PIN);
@@ -80,7 +80,7 @@ void platform_srst_set_val(bool assert)
 		gpio_set(SRST_PORT, SRST_PIN);
 }
 
-bool platform_srst_get_val(void)
+bool platform_nrst_get_val(void)
 {
 	return gpio_get(SRST_PORT, SRST_PIN);
 }

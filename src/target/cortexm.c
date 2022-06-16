@@ -545,7 +545,7 @@ bool cortexm_attach(target *t)
 	uint32_t dhcsr = target_mem_read32(t, CORTEXM_DHCSR);
 	dhcsr = target_mem_read32(t, CORTEXM_DHCSR);
 	if (dhcsr & CORTEXM_DHCSR_S_RESET_ST) {
-		platform_srst_set_val(false);
+		platform_nrst_set_val(false);
 		platform_timeout timeout;
 		platform_timeout_set(&timeout, 1000);
 		while (1) {
@@ -553,7 +553,7 @@ bool cortexm_attach(target *t)
 			if (!(dhcsr & CORTEXM_DHCSR_S_RESET_ST))
 				break;
 			if (platform_timeout_is_expired(&timeout)) {
-				DEBUG_WARN("Error releasing from srst\n");
+				DEBUG_WARN("Error releasing from reset\n");
 				return false;
 			}
 		}
@@ -743,8 +743,8 @@ static void cortexm_reset(target *t)
 	target_mem_read32(t, CORTEXM_DHCSR);
 	platform_timeout to;
 	if ((t->target_options & CORTEXM_TOPT_INHIBIT_SRST) == 0) {
-		platform_srst_set_val(true);
-		platform_srst_set_val(false);
+		platform_nrst_set_val(true);
+		platform_nrst_set_val(false);
 		/* Some NRF52840 users saw invalid SWD transaction with
 		 * native/firmware without this delay.*/
 		platform_delay(10);

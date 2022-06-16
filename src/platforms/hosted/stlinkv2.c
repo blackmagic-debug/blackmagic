@@ -641,7 +641,7 @@ int stlink_init(bmp_info_t *info)
 	return 0;
 }
 
-void stlink_srst_set_val(bmp_info_t *info, bool assert)
+void stlink_nrst_set_val(bmp_info_t *info, bool assert)
 {
 	uint8_t cmd[16] = {STLINK_DEBUG_COMMAND,
 					  STLINK_DEBUG_APIV2_DRIVE_NRST,
@@ -653,7 +653,7 @@ void stlink_srst_set_val(bmp_info_t *info, bool assert)
 	stlink_usb_error_check(data, true);
 }
 
-bool stlink_srst_get_val(void)
+bool stlink_nrst_get_val(void)
 {
 	return Stlink.srst;
 }

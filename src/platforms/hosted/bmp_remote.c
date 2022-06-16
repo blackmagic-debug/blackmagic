@@ -90,7 +90,7 @@ bool remote_target_set_power(bool power)
 	return true;
 }
 
-void remote_srst_set_val(bool assert)
+void remote_nrst_set_val(bool assert)
 {
 	uint8_t construct[REMOTE_MAX_MSG_SIZE];
 	int s;
@@ -108,7 +108,7 @@ void remote_srst_set_val(bool assert)
     }
 }
 
-bool remote_srst_get_val(void)
+bool remote_nrst_get_val(void)
 {
 	uint8_t construct[REMOTE_MAX_MSG_SIZE];
 	int s;
