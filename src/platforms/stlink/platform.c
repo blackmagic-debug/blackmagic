@@ -35,7 +35,7 @@
 #include <libopencm3/stm32/adc.h>
 
 uint16_t led_idle_run;
-uint16_t srst_pin;
+uint16_t nrst_pin;
 static uint32_t rev;
 static void adc_init(void);
 
@@ -55,10 +55,10 @@ void platform_init(void)
 	rcc_clock_setup_pll(&rcc_hse_configs[RCC_CLOCK_HSE8_72MHZ]);
 	if (rev == 0) {
 		led_idle_run = GPIO8;
-		srst_pin = SRST_PIN_V1;
+		nrst_pin = NRST_PIN_V1;
 	} else {
 		led_idle_run = GPIO9;
-		srst_pin = SRST_PIN_V2;
+		nrst_pin = NRST_PIN_V2;
 	}
 	/* Setup GPIO ports */
 	gpio_set_mode(TMS_PORT, GPIO_MODE_OUTPUT_2_MHZ,
@@ -90,19 +90,19 @@ void platform_init(void)
 void platform_nrst_set_val(bool assert)
 {
 	if (assert) {
-		gpio_set_mode(SRST_PORT, GPIO_MODE_OUTPUT_2_MHZ,
-		              GPIO_CNF_OUTPUT_OPENDRAIN, srst_pin);
-		gpio_clear(SRST_PORT, srst_pin);
+		gpio_set_mode(NRST_PORT, GPIO_MODE_OUTPUT_2_MHZ,
+		              GPIO_CNF_OUTPUT_OPENDRAIN, nrst_pin);
+		gpio_clear(NRST_PORT, nrst_pin);
 	} else {
-		gpio_set_mode(SRST_PORT, GPIO_MODE_INPUT,
-			GPIO_CNF_INPUT_PULL_UPDOWN, srst_pin);
-		gpio_set(SRST_PORT, srst_pin);
+		gpio_set_mode(NRST_PORT, GPIO_MODE_INPUT,
+			GPIO_CNF_INPUT_PULL_UPDOWN, nrst_pin);
+		gpio_set(NRST_PORT, nrst_pin);
 	}
 }
 
 bool platform_nrst_get_val()
 {
-	return gpio_get(SRST_PORT, srst_pin) == 0;
+	return gpio_get(NRST_PORT, nrst_pin) == 0;
 }
 
 static void adc_init(void)

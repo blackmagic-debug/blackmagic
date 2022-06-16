@@ -79,10 +79,10 @@ void platform_init(void)
 	gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT,
 					GPIO_PUPD_NONE,
 					LED_UART | LED_IDLE_RUN | LED_ERROR | LED_BOOTLOADER);
-	gpio_mode_setup(SRST_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, SRST_PIN);
-	gpio_set(SRST_PORT, SRST_PIN);
-	gpio_set_output_options(SRST_PORT, GPIO_OTYPE_OD,
-							GPIO_OSPEED_2MHZ, SRST_PIN);
+	gpio_mode_setup(NRST_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, NRST_PIN);
+	gpio_set(NRST_PORT, NRST_PIN);
+	gpio_set_output_options(NRST_PORT, GPIO_OTYPE_OD,
+							GPIO_OSPEED_2MHZ, NRST_PIN);
 	platform_timing_init();
 	cdcacm_init();
 	usbuart_init();
@@ -90,12 +90,12 @@ void platform_init(void)
 
 void platform_nrst_set_val(bool assert)
 {
-	gpio_set_val(SRST_PORT, SRST_PIN, !assert);
+	gpio_set_val(NRST_PORT, NRST_PIN, !assert);
 }
 
 bool platform_nrst_get_val(void)
 {
-	return (gpio_get(SRST_PORT, SRST_PIN)) ? false : true;
+	return (gpio_get(NRST_PORT, NRST_PIN)) ? false : true;
 }
 
 const char *platform_target_voltage(void)

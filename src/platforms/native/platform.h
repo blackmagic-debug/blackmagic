@@ -127,10 +127,10 @@ int usbuart_debug_write(const char *buf, size_t len);
 #define TRST_PIN	GPIO1
 #define PWR_BR_PORT	GPIOB
 #define PWR_BR_PIN	GPIO1
-#define SRST_PORT	GPIOA
-#define SRST_PIN	HW_SWITCH(6, GPIO2, GPIO9)
-#define SRST_SENSE_PORT	GPIOA
-#define SRST_SENSE_PIN  HW_SWITCH(6, GPIO7, GPIO13)
+#define NRST_PORT	GPIOA
+#define NRST_PIN	HW_SWITCH(6, GPIO2, GPIO9)
+#define NRST_SENSE_PORT	GPIOA
+#define NRST_SENSE_PIN  HW_SWITCH(6, GPIO7, GPIO13)
 
 #define USB_PU_PORT	GPIOA
 #define USB_PU_PIN	GPIO8

@@ -65,9 +65,9 @@ platform_init(void)
 	gpio_mode_setup(TCK_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TCK_PIN);
 	gpio_mode_setup(TDI_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TDI_PIN);
 	gpio_mode_setup(TDO_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, TDO_PIN);
-	gpio_mode_setup(SRST_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, SRST_PIN);
-	gpio_set_output_config(SRST_PORT, GPIO_OTYPE_OD, GPIO_DRIVE_2MA, SRST_PIN);
-	gpio_set(SRST_PORT, SRST_PIN);
+	gpio_mode_setup(NRST_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, NRST_PIN);
+	gpio_set_output_config(NRST_PORT, GPIO_OTYPE_OD, GPIO_DRIVE_2MA, NRST_PIN);
+	gpio_set(NRST_PORT, NRST_PIN);
 
 	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
 	systick_set_reload(rcc_get_system_clock_frequency() / (SYSTICKHZ * 8));
@@ -93,16 +93,16 @@ void platform_nrst_set_val(bool assert)
 {
 	volatile int i;
 	if (assert) {
-		gpio_clear(SRST_PORT, SRST_PIN);
+		gpio_clear(NRST_PORT, NRST_PIN);
 		for(i = 0; i < 10000; i++) asm("nop");
 	} else {
-		gpio_set(SRST_PORT, SRST_PIN);
+		gpio_set(NRST_PORT, NRST_PIN);
 	}
 }
 
 bool platform_nrst_get_val(void)
 {
-	return gpio_get(SRST_PORT, SRST_PIN) == 0;
+	return gpio_get(NRST_PORT, NRST_PIN) == 0;
 }
 
 void platform_delay(uint32_t ms)

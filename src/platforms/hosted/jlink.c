@@ -229,14 +229,14 @@ const char *jlink_target_voltage(bmp_info_t *info)
         return ret;
 }
 
-static bool srst_status = false;
+static bool nrst_status = false;
 void jlink_nrst_set_val(bmp_info_t *info, bool assert)
 {
         uint8_t cmd[1];
         cmd[0]= (assert)? CMD_HW_RESET0: CMD_HW_RESET1;
         send_recv(info->usb_link, cmd, 1, NULL, 0);
         platform_delay(2);
-        srst_status = assert;
+        nrst_status = assert;
 }
 
 bool jlink_nrst_get_val(bmp_info_t *info) {

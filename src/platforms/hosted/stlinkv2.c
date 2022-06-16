@@ -190,7 +190,7 @@ typedef struct {
 	libusb_context* libusb_ctx;
 	uint16_t     vid;
 	uint16_t     pid;
-	bool         srst;
+	bool         nrst;
 	uint8_t      dap_select;
 	uint8_t      ep_tx;
 	uint8_t      ver_hw;     /* 20, 21 or 31 deciphered from USB PID.*/
@@ -648,14 +648,14 @@ void stlink_nrst_set_val(bmp_info_t *info, bool assert)
 					  (assert)? STLINK_DEBUG_APIV2_DRIVE_NRST_LOW
 					  : STLINK_DEBUG_APIV2_DRIVE_NRST_HIGH};
 	uint8_t data[2];
-	Stlink.srst = assert;
+	Stlink.nrst = assert;
 	send_recv(info->usb_link, cmd, 16, data, 2);
 	stlink_usb_error_check(data, true);
 }
 
 bool stlink_nrst_get_val(void)
 {
-	return Stlink.srst;
+	return Stlink.nrst;
 }
 
 int stlink_hwversion(void)

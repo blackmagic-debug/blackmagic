@@ -66,8 +66,8 @@
 
 #define TRST_PORT GPIOB
 #define TRST_PIN GPIO5
-#define SRST_PORT GPIOB
-#define SRST_PIN GPIO4
+#define NRST_PORT GPIOB
+#define NRST_PIN GPIO4
 
 #define PWR_BR_PORT GPIOB
 #define PWR_BR_PIN GPIO8
