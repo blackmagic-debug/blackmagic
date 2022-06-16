@@ -202,9 +202,9 @@ typedef struct {
 	uint8_t      ver_bridge;
 	uint16_t     block_size;
 	bool         ap_error;
-} stlink;
+} stlink_t;
 
-stlink Stlink;
+stlink_t Stlink;
 
 static int stlink_usb_get_rw_status(bool verbose);
 

@@ -31,7 +31,7 @@ void platform_buffer_flush(void);
 
 #define VENDOR_ID_SEGGER         0x1366
 
-typedef enum bmp_type_s {
+typedef enum bmp_type_e {
 	BMP_TYPE_NONE = 0,
 	BMP_TYPE_BMP,
 	BMP_TYPE_STLINKV2,
