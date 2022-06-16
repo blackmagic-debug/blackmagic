@@ -1,10 +1,11 @@
-System vs BMP Bootloader
-========================
+# STM32F072
+
+## System vs BMP Bootloader
+
 For the BMP bootloader, flashing was not reliable. So we use the system
 bootloder unconditional.
 
-Connections:
-====================
+## Connections
 
 * PA0: User button to force system bootloader entry with reset
 * PA2/PA3 eventual connected to the STLINK/ STM32F103C8

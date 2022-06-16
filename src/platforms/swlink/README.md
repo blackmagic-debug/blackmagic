@@ -1,6 +1,6 @@
 # Blackmagic for STM8S Discovery and STM32F103 Minimum System Development Board
 
-## External connections:
+## External connections
 
 |  Function   | PIN   | STM8S-DISCO | BLUEPILL    |
 | ----------- | ----- | ----------- | ----------- |
@@ -13,14 +13,16 @@
 |  UART1_RX   |  PB7  |   CN7/2     |  P4/6  (43) |
 |  SWO/RX2    |  PA3  |   NA(*1)    |  P3/8  (13) |
 
-*1: Wire JTDO/PB3  (U2/39) to USART2_RX/PA3 (U2/13) to expose SWO for Stlink
+*1: Wire JTDO/PB3  (U2/39) to USART2_RX/PA3 (U2/13) to expose SWO for ST-Link
 on STM8S-Disco on CN5/3
 
-### Force Bootloader Entry:
+### Force Bootloader Entry
+
     STM8S Discovery: Jumper CN7/4 to CN7/3 to read PB6 low.
     Bluepill: Jumper Boot1 to '1' to read PB2 high.
 
-### References:
+### References
+
 [STM8S UM0817 User manual
     ](https://www.st.com/resource/en/user_manual/cd00250600.pdf)
 
@@ -67,6 +69,7 @@ accessible, with the LED depending on actual board layout routed to some
 wrong pin and force boot not working.
 
 ## Other STM32F103x[8|B] boards
+
 If the needed JTAG connections are accessible, you can use this swlink variant.
 Depending on board layout, LED and force bootloader entry may be routed to
 wrong pins.
