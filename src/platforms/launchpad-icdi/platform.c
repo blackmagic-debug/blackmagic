@@ -121,17 +121,14 @@ char *serial_no_read(char *s)
 {
 	/* FIXME: Store a unique serial number somewhere and retreive here */
 	uint32_t unique_id = SERIAL_NO;
-        int i;
 
-        /* Fetch serial number from chip's unique ID */
-        for(i = 0; i < 8; i++) {
-                s[7-i] = ((unique_id >> (4*i)) & 0xF) + '0';
-        }
-        for(i = 0; i < DFU_SERIAL_LENGTH - 1; i++)
-                if(s[i] > '9')
-                        s[i] += 'A' - '9' - 1;
+	/* Fetch serial number from chip's unique ID */
+	for (size_t i = 0; i < DFU_SERIAL_LENGTH - 1; i++) {
+		s[7U - i] = ((unique_id >> (4 * i)) & 0x0FU) + '0';
+		if (s[7U - i] > '9')
+			s[7U - i] += 7; /* 'A' - '9' = 8, less 1 gives 7. */
+	}
 	s[DFU_SERIAL_LENGTH - 1] = 0;
-
 	return s;
 }
 
