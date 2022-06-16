@@ -33,21 +33,21 @@
 
 #define PLATFORM_HAS_TRACESWO
 #define PLATFORM_IDENT       "(Carbon)"
-#
+
 /* Important pin mappings for Carbon implementation:
  *
- * LED0 = 	PA15 (Green USR2 : Idle))
- * LED1 = 	PD5  (Green USR1 : UART)
- * LED2 = 	PB5  (Blue BT    : Error)
+ * LED0 = 	   PA15 (Green USR2 : Idle))
+ * LED1 = 	   PD5  (Green USR1 : UART)
+ * LED2 = 	   PB5  (Blue BT    : Error)
  *
- * TDO = 	PB12 (LS-02)
- * TDI = 	PB15 (LS-04)
- * TMS/SWDIO = 	PB14 (LS-06)  The pinout for the programmer allows a Carbon to
- * TCK/SWCLK = 	PB13 (LS-08)  program another Carbon (either the STM32 or the
- * GND		     (LS-10)  nRF51) with adjacent pins from LS-06 to LS-12.
- * VCC		     (LS-12)  The order matches the SWD pins for easy hook up.
- * nTRST = 	PC3  (LS-14)
- * nSRST =      PC5  (LS-16)
+ * TDO = 	   PB12 (LS-02)
+ * TDI = 	   PB15 (LS-04)
+ * TMS/SWDIO = PB14 (LS-06)  The pinout for the programmer allows a Carbon to
+ * TCK/SWCLK = PB13 (LS-08)  program another Carbon (either the STM32 or the
+ * GND              (LS-10)  nRF51) with adjacent pins from LS-06 to LS-12.
+ * VCC              (LS-12)  The order matches the SWD pins for easy hook up.
+ * nTRST =     PC3  (LS-14)
+ * nRST =      PC5  (LS-16)
  */
 
 /* Hardware definitions... */
@@ -162,4 +162,3 @@ static inline int platform_hwversion(void)
 #define snprintf sniprintf
 
 #endif
-

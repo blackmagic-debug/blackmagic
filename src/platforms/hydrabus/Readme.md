@@ -3,12 +3,12 @@ Connections
 * PA0: User button to force system bootloader entry with reset (enter USB DFU)
 
 * JTAG/SWD
- * PC0: TMS/SWDIO
- * PC1: TCK/SWCLK
- * PC2: TDI
- * PC3: TDO/TRACESWO
- * PC4: SRST (NRST/System Reset)
- * PC5: TRST (optional Test Reset)
+  * PC0: TMS/SWDIO
+  * PC1: TCK/SWCLK
+  * PC2: TDI
+  * PC3: TDO/TRACESWO
+  * PC4: NRST (NRST / System Reset)
+  * PC5: TRST (optional Test Reset)
 
 * Green Led(ULED/PA4): Indicator that system bootloader is entered via BMP
 

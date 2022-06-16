@@ -12,14 +12,14 @@ The order matches that of the SWD pins for easy hook up.
 JTAG/SWD
 --------
 
- * LS-02 (PB12): TDO/TRACESWO
- * LS-04 (PB15): TDI
- * LS-06 (PB14): TMS/SWDIO
- * LS-08 (PB13): TCK/SWCLK
- * LS-10       : GND
- * LS-12       : Vcc
- * LS-14 (PC3) : TRST (optional test reset)
- * LS-16 (PC5) : SRST (system reset)
+* LS-02 (PB12): TDO/TRACESWO
+* LS-04 (PB15): TDI
+* LS-06 (PB14): TMS/SWDIO
+* LS-08 (PB13): TCK/SWCLK
+* LS-10       : GND
+* LS-12       : Vcc
+* LS-14 (PC3) : TRST (optional Test Reset)
+* LS-16 (PC5) : nRST (nRST / System Reset)
 
 LEDs
 ----

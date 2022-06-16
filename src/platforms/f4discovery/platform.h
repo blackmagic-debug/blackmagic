@@ -40,13 +40,13 @@
  * LED2 = 	PD12	(Red LED    : Error)
  * LED3 = 	PD15	(Blue LED   : Bootloader active)
  *
- * nTRST = 	PC1
- * SRST_OUT =   PC8
- * TDI = 	PC2
- * TMS = 	PC4 (input for SWDP)
- * TCK = 	PC5/SWCLK
- * TDO = 	PC6 (input for TRACESWO
- * nSRST =
+ * nTRST =    PC1
+ * nRST_OUT = PC8
+ * TDI =      PC2
+ * TMS =      PC4 (input for SWDP)
+ * TCK =      PC5/SWCLK
+ * TDO =      PC6 (input for TRACESWO
+ * nRST =     PC8
  *
  * Force DFU mode button: PA0
  */

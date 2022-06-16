@@ -48,7 +48,7 @@
  * TMS = 	PA1 (input for SWDP)
  * TCK = 	PA7/SWCLK
  * TDO = 	PA6 (input for TRACESWO
- * nSRST =	PA5
+ * nRST =	PA5
  *
  * Force DFU mode button: BOOT0
  */

@@ -34,12 +34,12 @@
 #define PLATFORM_IDENT "(BlackPillV2) "
 /* Important pin mappings for STM32 implementation:
         * JTAG/SWD
-                * PA1: TDI<br>
-                * PA13: TMS/SWDIO<br>
-                * PA14: TCK/SWCLK<br>
-                * PB3: TDO/TRACESWO<br>
-                * PB5: TRST<br>
-                * PB4: SRST<br>
+                * PA1: TDI
+                * PA13: TMS/SWDIO
+                * PA14: TCK/SWCLK
+                * PB3: TDO/TRACESWO
+                * PB5: TRST
+                * PB4: nRST
         * USB USART
                 * PB6: USART1 TX
                 * PB7: USART1 RX

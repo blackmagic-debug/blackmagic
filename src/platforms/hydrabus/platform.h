@@ -45,7 +45,7 @@
  * TCK = 	PC1 (SWCLK)
  * TDO = 	PC2 (input for TRACESWO)
  * TDI = 	PC3
- * nSRST = PC4 (nRST /RESET / System Reset)
+ * nRST =   PC4 (nRST / nRESET / "System Reset")
  * nTRST = 	PC5 (Test Reset optional)
  *
  * USB VBUS detect:  PB13

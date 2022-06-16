@@ -262,7 +262,7 @@ sam4l_extended_reset(target *t)
 	int i;
 
 	DEBUG_INFO("SAM4L: Extended Reset\n");
-	/* enable SMAP in case we're dealing with a non-TCK SRST */
+	/* enable SMAP in case we're dealing with a non-JTAG reset */
 	target_mem_write32(t, SMAP_CR, 0x1); /* enable SMAP */
 	reg = target_mem_read32(t, SMAP_SR);
 	DEBUG_INFO("\nSAM4L: SMAP_SR has 0x%08lx\n", (long unsigned int) reg);
