@@ -564,7 +564,7 @@ bool libftdi_nrst_get_val(void)
 	uint8_t data[1];
 	libftdi_buffer_read(data, 1);
 	bool res = false;
-	if (((pin < 0x7f) || (pin == PIN7)))
+	if (pin < 0x7f || pin == PIN7)
 		res = data[0] & pin;
 	else
 		res = !(data[0] & ~pin);
@@ -594,7 +594,7 @@ int libftdi_buffer_write(const uint8_t *data, int size)
 	DEBUG_WIRE("Write %d bytes:", size);
 	for (int i = 0; i < size; i++) {
 		DEBUG_WIRE(" %02x", data[i]);
-		if (i && ((i & 0xf) == 0xf))
+		if (i && (i & 0xf) == 0xf)
 			DEBUG_WIRE("\n\t");
 	}
 	DEBUG_WIRE("\n");
@@ -621,7 +621,7 @@ int libftdi_buffer_read(uint8_t *data, int size)
 	DEBUG_WIRE("Read  %d bytes:", size);
 	for (int i = 0; i < size; i++) {
 		DEBUG_WIRE(" %02x", data[i]);
-		if (i && ((i & 0xf) == 0xf))
+		if (i && (i & 0xf) == 0xf)
 			DEBUG_WIRE("\n\t");
 	}
 	DEBUG_WIRE("\n");
@@ -701,7 +701,7 @@ const char *libftdi_target_voltage(void)
 		uint8_t data[1];
 		libftdi_buffer_read(data, 1);
 		bool res = false;
-		if (((pin < 0x7f) || (pin == PIN7)))
+		if (pin < 0x7f || pin == PIN7)
 			res = data[0] & pin;
 		else
 			res = !(data[0] & ~pin);
@@ -723,7 +723,7 @@ void libftdi_max_frequency_set(uint32_t freq)
 		/* Undivided clock set during startup*/
 		clock = 60 * 1000 * 1000;
 	uint32_t div = (clock  + 2 * freq - 1)/ freq;
-	if ((div < 4) && (ftdic->type = TYPE_2232C))
+	if (div < 4 && ftdic->type == TYPE_2232C)
 		div = 4; /* Avoid bad unsymetrict FT2232C clock at 6 MHz*/
 	divisor = div / 2 - 1;
 	uint8_t buf[3];
