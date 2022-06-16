@@ -420,7 +420,7 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 	}
 	if (opt->opt_connect_under_reset)
 		DEBUG_INFO("Connecting under reset\n");
-	connect_assert_srst = opt->opt_connect_under_reset;
+	connect_assert_nrst = opt->opt_connect_under_reset;
 	platform_nrst_set_val(opt->opt_connect_under_reset);
 	if (opt->opt_mode == BMP_MODE_TEST)
 		DEBUG_INFO("Running in Test Mode\n");

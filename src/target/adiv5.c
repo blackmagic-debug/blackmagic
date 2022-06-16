@@ -366,7 +366,7 @@ static uint32_t cortexm_initial_halt(ADIv5_AP_t *ap)
 		if ((dhcsr != 0xffffffff) && /* Invalid read */
 			((dhcsr & 0xf000fff0) == 0)) {/* Check RAZ bits */
 			if ((dhcsr & CORTEXM_DHCSR_S_RESET_ST)  && !reset_seen) {
-				if (connect_assert_srst)
+				if (connect_assert_nrst)
 					return dhcsr;
 				reset_seen = true;
 				continue;
@@ -824,7 +824,7 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 	 * Attach() will halt them again.
 	 */
 	for (target *t = target_list; t; t = t->next) {
-		if (!connect_assert_srst) {
+		if (!connect_assert_nrst) {
 			target_halt_resume(t, false);
 		}
 	}
