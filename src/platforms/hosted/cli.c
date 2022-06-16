@@ -419,15 +419,11 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 	if (opt->opt_mode == BMP_MODE_TEST)
 		DEBUG_INFO("Running in Test Mode\n");
 	DEBUG_INFO("Target voltage: %s Volt\n", platform_target_voltage());
-	if (opt->opt_usejtag) {
+	if (opt->opt_usejtag)
 		num_targets = platform_jtag_scan(NULL);
-	} else {
+	else
 		num_targets = platform_adiv5_swdp_scan(opt->opt_targetid);
-		if (!num_targets) {
-			DEBUG_INFO("Scan SWD failed, trying JTAG!\n");
-			num_targets = platform_jtag_scan(NULL);
-		}
-	}
+
 	if (!num_targets) {
 		DEBUG_WARN("No target found\n");
 		return -1;
