@@ -123,7 +123,7 @@ static int initialize_handle(bmp_info_t *info, libusb_device *dev)
 	const struct libusb_interface *interface;
 	bool found_interface = false;
 	const struct libusb_interface_descriptor *desc;
-	for (int i = 0; i < config->bNumInterfaces; i++) {
+	for (size_t i = 0; i < config->bNumInterfaces; i++) {
 		interface = &config->interface[i];
 		desc = &interface->altsetting[0];
 		if (desc->bInterfaceClass != LIBUSB_CLASS_VENDOR_SPEC)
@@ -145,7 +145,7 @@ static int initialize_handle(bmp_info_t *info, libusb_device *dev)
 		libusb_free_config_descriptor(config);
 		return -1;
 	}
-	for (int i = 0; i < desc->bNumEndpoints; i++) {
+	for (size_t i = 0; i < desc->bNumEndpoints; i++) {
 		const struct libusb_endpoint_descriptor *epdesc = &desc->endpoint[i];
 		if (epdesc->bEndpointAddress & LIBUSB_ENDPOINT_IN) {
 			info->usb_link->ep_rx = epdesc->bEndpointAddress;
