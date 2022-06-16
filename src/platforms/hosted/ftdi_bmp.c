@@ -352,7 +352,7 @@ int ftdi_bmp_init(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info)
 {
 	int err;
 	cable_desc_t *cable = &cable_desc[0];
-	for(;  cable->name; cable++) {
+	for (; cable->name; cable++) {
 		if (strncmp(cable->name, cl_opts->opt_cable, strlen(cable->name)) == 0)
 		 break;
 	}
@@ -384,23 +384,23 @@ int ftdi_bmp_init(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info)
 		DEBUG_WARN("SWD with cable not possible, trying JTAG\n");
 		cl_opts->opt_scanmode = BMP_SCAN_JTAG;
 	}
-	if(ftdic) {
+	if (ftdic) {
 		ftdi_usb_close(ftdic);
 		ftdi_free(ftdic);
 		ftdic = NULL;
 	}
-	if((ftdic = ftdi_new()) == NULL) {
+	if ((ftdic = ftdi_new()) == NULL) {
 		DEBUG_WARN( "ftdi_new: %s\n",
 			ftdi_get_error_string(ftdic));
 		abort();
 	}
 	info->ftdic = ftdic;
-	if((err = ftdi_set_interface(ftdic, active_cable->interface)) != 0) {
+	if ((err = ftdi_set_interface(ftdic, active_cable->interface)) != 0) {
 		DEBUG_WARN( "ftdi_set_interface: %d: %s\n",
 			err, ftdi_get_error_string(ftdic));
 		goto error_1;
 	}
-	if((err = ftdi_usb_open_desc(
+	if ((err = ftdi_usb_open_desc(
 		ftdic, active_cable->vendor, active_cable->product,
 		active_cable->description, cl_opts->opt_serial)) != 0) {
 		DEBUG_WARN( "unable to open ftdi device: %d (%s)\n",
@@ -408,17 +408,17 @@ int ftdi_bmp_init(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info)
 		goto error_1;
 	}
 
-	if((err = ftdi_set_latency_timer(ftdic, 1)) != 0) {
+	if ((err = ftdi_set_latency_timer(ftdic, 1)) != 0) {
 		DEBUG_WARN( "ftdi_set_latency_timer: %d: %s\n",
 			err, ftdi_get_error_string(ftdic));
 		goto error_2;
 	}
-	if((err = ftdi_set_baudrate(ftdic, 1000000)) != 0) {
+	if ((err = ftdi_set_baudrate(ftdic, 1000000)) != 0) {
 		DEBUG_WARN( "ftdi_set_baudrate: %d: %s\n",
 			err, ftdi_get_error_string(ftdic));
 		goto error_2;
 	}
-	if((err = ftdi_write_data_set_chunksize(ftdic, BUF_SIZE)) != 0) {
+	if ((err = ftdi_write_data_set_chunksize(ftdic, BUF_SIZE)) != 0) {
 		DEBUG_WARN( "ftdi_write_data_set_chunksize: %d: %s\n",
 			err, ftdi_get_error_string(ftdic));
 		goto error_2;
@@ -459,7 +459,7 @@ int ftdi_bmp_init(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info)
 	}
 	int index = 0;
 	ftdi_init[index++]= LOOPBACK_END; /* FT2232D gets upset otherwise*/
-	switch(ftdic->type) {
+	switch (ftdic->type) {
 	case TYPE_2232H:
 	case TYPE_4232H:
 	case TYPE_232H:
@@ -633,19 +633,22 @@ void libftdi_jtagtap_tdi_tdo_seq(
 {
 	int rsize, rticks;
 
-	if(!ticks) return;
-	if (!DI && !DO) return;
+	if (!ticks)
+		return;
+	if (!DI && !DO)
+		return;
 
 	DEBUG_WIRE("libftdi_jtagtap_tdi_tdo_seq %s ticks: %d\n",
 			   (DI && DO) ? "read/write" : ((DI) ? "write" : "read"), ticks);
-	if(final_tms) ticks--;
+	if (final_tms)
+		--ticks;
 	rticks = ticks & 7;
 	ticks >>= 3;
 	uint8_t data[8];
 	uint8_t cmd =  ((DO)? MPSSE_DO_READ : 0) |
 		((DI)? (MPSSE_DO_WRITE | MPSSE_WRITE_NEG) : 0) | MPSSE_LSB;
 	rsize = ticks;
-	if(ticks) {
+	if (ticks) {
 		data[0] = cmd;
 		data[1] = ticks - 1;
 		data[2] = 0;
@@ -654,14 +657,14 @@ void libftdi_jtagtap_tdi_tdo_seq(
 			libftdi_buffer_write(DI, ticks);
 	}
 	int index = 0;
-	if(rticks) {
+	if (rticks) {
 		rsize++;
 		data[index++] = cmd | MPSSE_BITMODE;
 		data[index++] = rticks - 1;
 		if (DI)
 			data[index++] = DI[ticks];
 	}
-	if(final_tms) {
+	if (final_tms) {
 		rsize++;
 		data[index++] = MPSSE_WRITE_TMS | ((DO)? MPSSE_DO_READ : 0) |
 			MPSSE_LSB | MPSSE_BITMODE | MPSSE_WRITE_NEG;
@@ -677,19 +680,20 @@ void libftdi_jtagtap_tdi_tdo_seq(
 		libftdi_buffer_read(tmp, rsize);
 		if(final_tms) rsize--;
 
-		while(rsize--) {
+		while (rsize--)
 			*DO++ = tmp[index++];
-		}
 		if (rticks == 0)
 			*DO++ = 0;
-		if(final_tms) {
+
+		if (final_tms) {
 			rticks++;
 			*(--DO) >>= 1;
 			*DO |= tmp[index] & 0x80;
-		} else DO--;
-		if(rticks) {
+		} else
+			--DO;
+
+		if (rticks)
 			*DO >>= (8-rticks);
-		}
 	}
 }
 

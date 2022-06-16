@@ -63,7 +63,7 @@
  * All dev boards supported by Pico SDK V1.3.1 use SPI flash chips which support
  * these commands. Other custom boards using different SPI flash chips might
  * not support these commands
- */ 
+ */
 
 #define FLASHCMD_SECTOR_ERASE   0x20
 #define FLASHCMD_BLOCK32K_ERASE 0x52

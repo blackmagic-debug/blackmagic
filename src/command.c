@@ -216,7 +216,7 @@ static bool cmd_jtag_scan(target *t, int argc, char **argv)
 		break;
 	}
 
-	if(devs <= 0) {
+	if (devs <= 0) {
 		platform_nrst_set_val(false);
 		gdb_out("JTAG device scan failed!\n");
 		return false;
@@ -328,7 +328,7 @@ bool cmd_frequency(target *t, int argc, char **argv)
 	if (argc == 2) {
 		char *p;
 		uint32_t frequency = strtol(argv[1], &p, 10);
-		switch(*p) {
+		switch (*p) {
 		case 'k':
 			frequency *= 1000;
 			break;
@@ -384,7 +384,7 @@ bool cmd_morse(target *t, int argc, char **argv)
 	(void)t;
 	(void)argc;
 	(void)argv;
-	if(morse_msg) {
+	if (morse_msg) {
 		gdb_outf("%s\n", morse_msg);
 		DEBUG_WARN("%s\n", morse_msg);
 	}
