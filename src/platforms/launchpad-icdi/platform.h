@@ -48,8 +48,8 @@ extern uint32_t swd_delay_cnt;
 #define SWCLK_PORT	TCK_PORT
 #define SWCLK_PIN	TCK_PIN
 
-#define SRST_PORT	GPIOA_BASE
-#define SRST_PIN	GPIO6
+#define NRST_PORT	GPIOA_BASE
+#define NRST_PIN	GPIO6
 
 #define TMS_SET_MODE()	{								\
 	gpio_mode_setup(TMS_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TMS_PIN);		\

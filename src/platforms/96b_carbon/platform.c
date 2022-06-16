@@ -61,7 +61,7 @@ void platform_init(void)
 			TDO_PIN);
 
 	gpio_mode_setup(TRST_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TRST_PIN);
-	gpio_mode_setup(SRST_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, SRST_PIN);
+	gpio_mode_setup(NRST_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, NRST_PIN);
 
 	gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED_IDLE_RUN);
 	gpio_mode_setup(LED_PORT_UART, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED_UART);
@@ -75,14 +75,14 @@ void platform_init(void)
 void platform_nrst_set_val(bool assert)
 {
 	if (assert)
-		gpio_clear(SRST_PORT, SRST_PIN);
+		gpio_clear(NRST_PORT, NRST_PIN);
 	else
-		gpio_set(SRST_PORT, SRST_PIN);
+		gpio_set(NRST_PORT, NRST_PIN);
 }
 
 bool platform_nrst_get_val(void)
 {
-	return gpio_get(SRST_PORT, SRST_PIN);
+	return gpio_get(NRST_PORT, NRST_PIN);
 }
 
 const char *platform_target_voltage(void)

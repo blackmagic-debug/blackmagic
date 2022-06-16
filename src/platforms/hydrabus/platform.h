@@ -70,8 +70,8 @@
 
 #define TRST_PORT	GPIOC
 #define TRST_PIN	GPIO5
-#define SRST_PORT	GPIOC
-#define SRST_PIN	GPIO4
+#define NRST_PORT	GPIOC
+#define NRST_PIN	GPIO4
 
 #define LED_PORT	GPIOA
 #define LED_PORT_UART	GPIOA

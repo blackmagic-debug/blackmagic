@@ -56,9 +56,9 @@ int usbuart_debug_write(const char *buf, size_t len);
 #define SWDIO_PIN	TMS_PIN
 #define SWCLK_PIN	TCK_PIN
 
-#define SRST_PORT	GPIOB
-#define SRST_PIN_V1	GPIO1
-#define SRST_PIN_V2	GPIO0
+#define NRST_PORT	GPIOB
+#define NRST_PIN_V1	GPIO1
+#define NRST_PIN_V2	GPIO0
 
 #define LED_PORT	GPIOA
 /* Use PC14 for a "dummy" uart led. So we can observere at least with scope*/
