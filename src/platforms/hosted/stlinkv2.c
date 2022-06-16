@@ -249,12 +249,12 @@ static int stlink_usb_error_check(uint8_t *data, bool verbose)
 			return STLINK_ERROR_WAIT;
 		case STLINK_SWD_AP_WAIT:
 			if (verbose)
-				DEBUG_WARN("wait status SWD_AP_WAIT (0x%x)\n",
+				DEBUG_WARN("Wait status SWD_AP_WAIT (0x%x)\n",
 						   STLINK_SWD_AP_WAIT);
 			return STLINK_ERROR_WAIT;
 		case STLINK_SWD_DP_WAIT:
 			if (verbose)
-				DEBUG_WARN("wait status SWD_DP_WAIT (0x%x)\n",
+				DEBUG_WARN("Wait status SWD_DP_WAIT (0x%x)\n",
 						   STLINK_SWD_DP_WAIT);
 			return STLINK_ERROR_WAIT;
 		case STLINK_JTAG_WRITE_ERROR:
@@ -323,7 +323,7 @@ static int stlink_usb_error_check(uint8_t *data, bool verbose)
 			return STLINK_ERROR_FAIL;
 		default:
 			if (verbose)
-				DEBUG_WARN("unknown/unexpected STLINK status code 0x%x\n", data[0]);
+				DEBUG_WARN("unknown/unexpected ST-Link status code 0x%x\n", data[0]);
 			return STLINK_ERROR_FAIL;
 	}
 }
@@ -352,7 +352,7 @@ static int stlink_send_recv_retry(uint8_t *txbuf, size_t txsize,
 		uint32_t now = platform_time_ms();
 		if (((now - start) > cortexm_wait_timeout) ||
 			(res != STLINK_ERROR_WAIT)) {
-			DEBUG_WARN("send_recv_retry failed. ");
+			DEBUG_WARN("send_recv_retry failed.\n");
 			return res;
 		}
 	}
@@ -371,7 +371,7 @@ static int read_retry(uint8_t *txbuf, size_t txsize,
 			return res;
 		uint32_t now = platform_time_ms();
 		if (((now -start) > 1000) || (res != STLINK_ERROR_WAIT)) {
-			DEBUG_WARN("read_retry failed. ");
+			DEBUG_WARN("read_retry failed.\n");
 			stlink_usb_get_rw_status(true);
 			return res;
 		}
@@ -513,7 +513,7 @@ int stlink_init(bmp_info_t *info)
 	ssize_t cnt;
 	cnt = libusb_get_device_list(info->libusb_ctx, &devs);
 	if (cnt < 0) {
-		DEBUG_WARN("FATAL: Stlink libusb_get_device_list failed\n");
+		DEBUG_WARN("FATAL: ST-Link libusb_get_device_list failed\n");
 		return -1;
 	}
 	int i = 0;
@@ -522,7 +522,7 @@ int stlink_init(bmp_info_t *info)
 		struct libusb_device_descriptor desc;
 		int result = libusb_get_device_descriptor(dev, &desc);
 		if (result != LIBUSB_SUCCESS) {
-			DEBUG_WARN("libusb_get_device_descriptor failed %s",
+			DEBUG_WARN("libusb_get_device_descriptor failed %s\n",
 					libusb_strerror(result));
 			return -1;
 		}
@@ -532,7 +532,7 @@ int stlink_init(bmp_info_t *info)
 		}
 		if ((result = libusb_open(dev, &sl->ul_libusb_device_handle)) != LIBUSB_SUCCESS)
 		{
-			DEBUG_WARN("Failed to open STLink device %04x:%04x - %s\n",
+			DEBUG_WARN("Failed to open ST-Link device %04x:%04x - %s\n",
 				desc.idVendor, desc.idProduct, libusb_strerror(result));
 			DEBUG_WARN("Are you sure the permissions on the device are set correctly?\n");
 			continue;
@@ -591,21 +591,21 @@ int stlink_init(bmp_info_t *info)
 	int config;
 	int r = libusb_get_configuration(sl->ul_libusb_device_handle, &config);
 	if (r) {
-		DEBUG_WARN("FATAL: Stlink libusb_get_configuration failed %d: %s",
+		DEBUG_WARN("FATAL: ST-Link libusb_get_configuration failed %d: %s\n",
 				 r, libusb_strerror(r));
 		return -1;
 	}
 	if (config != 1) {
 		r = libusb_set_configuration(sl->ul_libusb_device_handle, 0);
 		if (r) {
-			DEBUG_WARN("FATAL: Stlinklibusb_set_configuration "
-				   "failed %d: %s", r, libusb_strerror(r));
+			DEBUG_WARN("FATAL: ST-Link libusb_set_configuration "
+				   "failed %d: %s\n", r, libusb_strerror(r));
 			return -1;
 		}
 	}
 	r = libusb_claim_interface(sl->ul_libusb_device_handle, 0);
 	if (r) 	{
-		DEBUG_WARN("FATAL: Stlink libusb_claim_interface failed %s\n",
+		DEBUG_WARN("FATAL: ST-Link libusb_claim_interface failed %s\n",
 				libusb_strerror(r));
 		return -1;
 	}
@@ -616,13 +616,13 @@ int stlink_init(bmp_info_t *info)
 		(stlink.ver_stlink == 3 && stlink.ver_jtag < 3)) {
 		/* Maybe the adapter is in some strange state. Try to reset */
         int result = libusb_reset_device(sl->ul_libusb_device_handle);
-		DEBUG_WARN("INFO: Trying Stlink reset\n");
+		DEBUG_WARN("INFO: Trying ST-Link reset\n");
 		if (result == LIBUSB_ERROR_BUSY) { /* Try again */
 			platform_delay(50);
 			result = libusb_reset_device(sl->ul_libusb_device_handle);
 		}
         if (result != LIBUSB_SUCCESS) {
-			DEBUG_WARN("FATAL: Stlink libusb_reset_device failed\n");
+			DEBUG_WARN("FATAL: ST-Link libusb_reset_device failed\n");
 			return -1;
 		}
 		stlink_version(info);
@@ -633,7 +633,7 @@ int stlink_init(bmp_info_t *info)
 		return -1;
 	}
 	if (stlink_leave_state(info)) {
-		DEBUG_WARN("Stlink board was in DFU mode. Restart\n");
+		DEBUG_WARN("ST-Link board was in DFU mode. Restart\n");
 		return -1;
 	}
 	stlink_resetsys(info);
@@ -823,7 +823,7 @@ static bool stlink_ap_setup(int ap)
 	int res = stlink_usb_error_check(data, true);
 	if (res) {
 		if (stlink.ver_hw == 30) {
-			DEBUG_WARN("STLINKV3 only connects to STM8/32!\n");
+			DEBUG_WARN("ST-Link v3 only connects to STM8/32!\n");
 		}
 		return false;
 	}
@@ -862,7 +862,7 @@ static void stlink_readmem(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
 	if (src & 1 || len & 1) {
 		type = STLINK_DEBUG_READMEM_8BIT;
 		if (len > stlink.block_size) {
-			DEBUG_WARN(" Too large!\n");
+			DEBUG_WARN("Too large!\n");
 			return;
 		}
 		if (len == 1)
