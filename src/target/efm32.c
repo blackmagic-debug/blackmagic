@@ -949,7 +949,7 @@ static bool efm32_cmd_bootloader(target *t, int argc, const char **argv)
  * to boot from this. If you have just unlocked the device the
  * bootloader could be anything (even garbage, if the bootloader
  * wasn't used before the DEVICEERASE). Therefore you may want to
- * connect under srst and use the bootloader command to disable it.
+ * connect under nrst and use the bootloader command to disable it.
  *
  * It is possible to lock the AAP itself by clearing the AAP Lock Word
  * (ALW). In this case the part is unrecoverable (unless you glitch

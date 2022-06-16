@@ -751,7 +751,7 @@ static void cortexm_reset(target *t)
 	}
 	uint32_t dhcsr = target_mem_read32(t, CORTEXM_DHCSR);
 	if ((dhcsr & CORTEXM_DHCSR_S_RESET_ST) == 0) {
-		/* No reset seen yet, maybe as SRST is not connected, or device has
+		/* No reset seen yet, maybe as nRST is not connected, or device has
          * CORTEXM_TOPT_INHIBIT_SRST set.
 		 * Trigger reset by AIRCR.*/
 		target_mem_write32(t, CORTEXM_AIRCR,

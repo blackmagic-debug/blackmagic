@@ -7,12 +7,12 @@ https://github.com/WeActTC/MiniSTM32F4x1
 ## Connections:
 
 * JTAG/SWD
-   * PA1: TDI
-   * PA13: TMS/SWDIO
-   * PA14: TCK/SWCLK
-   * PB3: TDO/TRACESWO
-   * PB5: TRST
-   * PB4: SRST
+  * PA1: TDI
+  * PA13: TMS/SWDIO
+  * PA14: TCK/SWCLK
+  * PB3: TDO/TRACESWO
+  * PB5: TRST
+  * PB4: nRST
 
 * USB USART
    * PB6: USART1 TX (usbuart_xxx)

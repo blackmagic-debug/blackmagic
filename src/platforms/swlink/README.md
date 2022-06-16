@@ -8,7 +8,7 @@
 |  JTCK/SWCLK |  PA14 |   CN5/4     |  P2/3       |
 |  JTDI       |  PA15 |    CN5/6    |  P4/11 (38) |
 |  JTDO       |  PB3  |   CN5/3     |  P4/10 (39) |
-|  SRST       |  PB4  |   CN5/8     |  P4/9  (40) |
+|  nRST       |  PB4  |   CN5/8     |  P4/9  (40) |
 |  UART1_TX   |  PB6  |   CN7/4     |  P4/7  (42) |
 |  UART1_RX   |  PB7  |   CN7/2     |  P4/6  (43) |
 |  SWO/RX2    |  PA3  |   NA(*1)    |  P3/8  (13) |
