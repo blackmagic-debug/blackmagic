@@ -95,7 +95,7 @@ void remote_nrst_set_val(bool assert)
 	uint8_t construct[REMOTE_MAX_MSG_SIZE];
 	int s;
 
-	s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE, REMOTE_SRST_SET_STR,
+	s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE, REMOTE_NRST_SET_STR,
 				 assert ? '1' : '0');
 	platform_buffer_write(construct, s);
 
@@ -114,7 +114,7 @@ bool remote_nrst_get_val(void)
 	int s;
 
 	s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE,"%s",
-				 REMOTE_SRST_GET_STR);
+				 REMOTE_NRST_GET_STR);
 	platform_buffer_write(construct, s);
 
 	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);

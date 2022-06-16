@@ -277,12 +277,12 @@ static void remotePacketProcessGEN(unsigned i, char *packet)
 		_respondS(REMOTE_RESP_OK,platform_target_voltage());
 		break;
 
-    case REMOTE_SRST_SET:
+    case REMOTE_NRST_SET:
 		platform_nrst_set_val(packet[2] == '1');
 		_respond(REMOTE_RESP_OK, 0);
 		break;
 
-    case REMOTE_SRST_GET:
+    case REMOTE_NRST_GET:
 		_respond(REMOTE_RESP_OK, platform_nrst_get_val());
 		break;
     case REMOTE_FREQ_SET:
