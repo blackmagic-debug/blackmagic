@@ -134,7 +134,7 @@ static void cl_help(char **argv)
 	PRINT_INFO(
 		"\n"
 		"Usage: %s [-h | -l | [-vBITMASK] [-d PATH | -P NUMBER | -s SERIAL | -c TYPE]\n"
-		"\t[-n NUMBER] [-j] [-C] [-t | -T] [-e] [-p] [-R[h]] [-H] [-M STRING ...]\n"
+		"\t[-n NUMBER] [-j | -A] [-C] [-t | -T] [-e] [-p] [-R[h]] [-H] [-M STRING ...]\n"
 		"\t[-f | -m] [-E | -w | -V | -r] [-a ADDR] [-S number] [file]]\n"
 		"\n"
 		"The default is to start a debug server at localhost:2000\n\n"
@@ -153,10 +153,11 @@ static void cl_help(char **argv)
 		"\t                   type (cable)\n"
 		"\n"
 		"General configuration options: [-n NUMBER] [-j] [-C] [-t | -T] [-e] [-p] [-R[h]]\n"
-		"                               [-H] [-M STRING ...]\n"
+		"\t\t[-H] [-M STRING ...]\n"
 		"\t-n, --number     Select the target device at the given position in the\n"
 		"\t                   scan chain (use the -t option to get a scan chain listing)\n"
 		"\t-j, --jtag       Use JTAG instead of SWD\n"
+		"\t-A, --auto-scan  Automatic scanning - try JTAG first, then SWD\n"
 		"\t-C, --hw-reset   Connect to target under hardware reset\n"
 		"\t-t, --list-chain Perform a chain scan and display information about the\n"
 		"\t                   conected devices\n"
@@ -206,6 +207,7 @@ static const struct option long_options[] = {
 	{"ftdi-type", required_argument, NULL, 'c'},
 	{"number", required_argument, NULL, 'n'},
 	{"jtag", no_argument, NULL, 'j'},
+	{"auto-scan", no_argument, NULL, 'A'},
 	{"hw-reset", no_argument, NULL, 'C'},
 	{"list-chain", no_argument, NULL, 't'},
 	{"timing", no_argument, NULL, 'T'},
