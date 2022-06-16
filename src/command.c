@@ -200,7 +200,7 @@ static bool cmd_jtag_scan(target *t, int argc, char **argv)
 
 	int devs = -1;
 	volatile struct exception e;
-	TRY_CATCH (e, EXCEPTION_ALL) {
+	TRY_CATCH(e, EXCEPTION_ALL) {
 #if PC_HOSTED == 1
 		devs = platform_jtag_scan(argc > 1 ? irlens : NULL);
 #else
@@ -221,6 +221,7 @@ static bool cmd_jtag_scan(target *t, int argc, char **argv)
 		gdb_out("JTAG device scan failed!\n");
 		return false;
 	}
+
 	cmd_targets(NULL, 0, NULL);
 	morse(NULL, false);
 	return true;
@@ -240,7 +241,7 @@ bool cmd_swdp_scan(target *t, int argc, char **argv)
 
 	int devs = -1;
 	volatile struct exception e;
-	TRY_CATCH (e, EXCEPTION_ALL) {
+	TRY_CATCH(e, EXCEPTION_ALL) {
 #if PC_HOSTED == 1
 		devs = platform_adiv5_swdp_scan(targetid);
 #else
