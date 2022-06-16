@@ -232,7 +232,8 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 	opt->opt_flash_size = 0xffffffff;
 	opt->opt_flash_start = 0xffffffff;
 	opt->opt_max_swj_frequency = 4000000;
-	while((c = getopt_long(argc, argv, "eEhHv:d:f:s:I:c:Cln:m:M:wVtTa:S:jpP:rR::", long_options, NULL)) != -1) {
+	opt->opt_scanmode = BMP_SCAN_SWD;
+	while((c = getopt_long(argc, argv, "eEhHv:d:f:s:I:c:Cln:m:M:wVtTa:S:jApP:rR::", long_options, NULL)) != -1) {
 		switch(c) {
 		case 'c':
 			if (optarg)
@@ -250,7 +251,10 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 				cl_debuglevel = strtol(optarg, NULL, 0) & (BMP_DEBUG_MAX - 1);
 			break;
 		case 'j':
-			opt->opt_usejtag = true;
+			opt->opt_scanmode = BMP_SCAN_JTAG;
+			break;
+		case 'A':
+			opt->opt_scanmode = BMP_SCAN_AUTO;
 			break;
 		case 'l':
 			opt->opt_list_only = true;
@@ -419,11 +423,24 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 	if (opt->opt_mode == BMP_MODE_TEST)
 		DEBUG_INFO("Running in Test Mode\n");
 	DEBUG_INFO("Target voltage: %s Volt\n", platform_target_voltage());
-	if (opt->opt_usejtag)
-		num_targets = platform_jtag_scan(NULL);
-	else
-		num_targets = platform_adiv5_swdp_scan(opt->opt_targetid);
 
+	if (opt->opt_scanmode == BMP_SCAN_JTAG)
+		num_targets = platform_jtag_scan(NULL);
+	else if (opt->opt_scanmode == BMP_SCAN_SWD)
+		num_targets = platform_adiv5_swdp_scan(opt->opt_targetid);
+	else
+	{
+		num_targets = platform_jtag_scan(NULL);
+		if (num_targets > 0)
+			goto found_targets;
+		DEBUG_INFO("JTAG scan found no devices, trying SWD.\n");
+		num_targets = platform_adiv5_swdp_scan(opt->opt_targetid);
+		if (num_targets > 0)
+			goto found_targets;
+		DEBUG_INFO("SW-DP scan failed!\n");
+	}
+
+found_targets:
 	if (!num_targets) {
 		DEBUG_WARN("No target found\n");
 		return -1;

@@ -375,9 +375,9 @@ int ftdi_bmp_init(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info)
 			active_cable->mpsse_swd_read.set_data_low = MPSSE_DO;
 			active_cable->mpsse_swd_write.set_data_low = MPSSE_DO;
 	} else if (!libftdi_swd_possible(NULL, NULL) &&
-			   !cl_opts->opt_usejtag) {
+			   cl_opts->opt_scanmode != BMP_SCAN_JTAG) {
 		DEBUG_WARN("SWD with cable not possible, trying JTAG\n");
-		cl_opts->opt_usejtag = true;
+		cl_opts->opt_scanmode = BMP_SCAN_JTAG;
 	}
 	if(ftdic) {
 		ftdi_usb_close(ftdic);
