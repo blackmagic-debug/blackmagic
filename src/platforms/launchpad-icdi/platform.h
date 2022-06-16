@@ -111,9 +111,6 @@ inline static uint8_t gpio_get(uint32_t port, uint8_t pin) {
 
 #define disconnect_usb() do { usbd_disconnect(usbdev,1); nvic_disable_irq(USB_IRQ);} while(0)
 
-static inline int platform_hwversion(void)
-{
-	        return 0;
-}
+static inline int platform_hwversion(void) { return 0; }
 
 #endif
