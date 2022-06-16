@@ -529,7 +529,7 @@ static void libftdi_set_data(data_desc_t* data)
 	}
 }
 
-void libftdi_srst_set_val(bool assert)
+void libftdi_nrst_set_val(bool assert)
 {
 	if (assert)
 		libftdi_set_data(&active_cable->assert_srst);
@@ -537,7 +537,7 @@ void libftdi_srst_set_val(bool assert)
 		libftdi_set_data(&active_cable->deassert_srst);
 }
 
-bool libftdi_srst_get_val(void)
+bool libftdi_nrst_get_val(void)
 {
 	uint8_t cmd[1] = {0};
 	uint8_t pin = 0;

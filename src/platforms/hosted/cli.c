@@ -413,15 +413,15 @@ int cl_execute(BMP_CL_OPTIONS_t *opt)
 		platform_delay(500);
 	}
 	if (opt->opt_mode == BMP_MODE_RESET_HW) {
-			platform_srst_set_val(true);
+			platform_nrst_set_val(true);
 			platform_delay(1);
-			platform_srst_set_val(false);
+			platform_nrst_set_val(false);
 			return res;
 	}
 	if (opt->opt_connect_under_reset)
 		DEBUG_INFO("Connecting under reset\n");
 	connect_assert_srst = opt->opt_connect_under_reset;
-	platform_srst_set_val(opt->opt_connect_under_reset);
+	platform_nrst_set_val(opt->opt_connect_under_reset);
 	if (opt->opt_mode == BMP_MODE_TEST)
 		DEBUG_INFO("Running in Test Mode\n");
 	DEBUG_INFO("Target voltage: %s Volt\n", platform_target_voltage());

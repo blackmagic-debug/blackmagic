@@ -421,13 +421,13 @@ static bool cortexm_prepare(ADIv5_AP_t *ap)
 	adiv5_mem_write(ap, CORTEXM_DEMCR, &demcr, sizeof(demcr));
 	platform_timeout to ;
 	platform_timeout_set(&to, cortexm_wait_timeout);
-	platform_srst_set_val(false);
+	platform_nrst_set_val(false);
 	while (1) {
 		dhcsr = adiv5_mem_read32(ap, CORTEXM_DHCSR);
 		if (!(dhcsr & CORTEXM_DHCSR_S_RESET_ST))
 			break;
 		if (platform_timeout_is_expired(&to)) {
-			DEBUG_WARN("Error releasing from srst\n");
+			DEBUG_WARN("Error releasing from reset\n");
 			return false;
 		}
 	}

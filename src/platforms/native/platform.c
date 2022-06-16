@@ -181,7 +181,7 @@ void platform_init(void)
 	 * output HIGH asserts. Mini is directly connected so use open drain output
 	 * and set LOW to assert.
 	 */
-	platform_srst_set_val(false);
+	platform_nrst_set_val(false);
 	gpio_set_mode(SRST_PORT, GPIO_MODE_OUTPUT_50_MHZ,
 			(((platform_hwversion() == 0) ||
 			  (platform_hwversion() >= 3))
@@ -233,7 +233,7 @@ void platform_init(void)
 	setup_vbus_irq();
 }
 
-void platform_srst_set_val(bool assert)
+void platform_nrst_set_val(bool assert)
 {
 	gpio_set_val(TMS_PORT, TMS_PIN, 1);
 	if ((platform_hwversion() == 0) ||
@@ -247,7 +247,7 @@ void platform_srst_set_val(bool assert)
 	}
 }
 
-bool platform_srst_get_val(void)
+bool platform_nrst_get_val(void)
 {
 	if (platform_hwversion() == 0) {
 		return gpio_get(SRST_SENSE_PORT, SRST_SENSE_PIN) == 0;

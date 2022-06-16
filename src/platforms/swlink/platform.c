@@ -93,7 +93,7 @@ void platform_init(void)
 					  GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO8);
 		break;
 	}
-	platform_srst_set_val(false);
+	platform_nrst_set_val(false);
 
 	/* Remap TIM2 TIM2_REMAP[1]
 	 * TIM2_CH1_ETR -> PA15 (TDI, set as output above)
@@ -113,7 +113,7 @@ void platform_init(void)
 	usbuart_init();
 }
 
-void platform_srst_set_val(bool assert)
+void platform_nrst_set_val(bool assert)
 {
 	/* We reuse JSRST as SRST.*/
 	if (assert) {
@@ -131,7 +131,7 @@ void platform_srst_set_val(bool assert)
 	}
 }
 
-bool platform_srst_get_val(void)
+bool platform_nrst_get_val(void)
 {
 	return gpio_get(JRST_PORT, JRST_PIN) == 0;
 }

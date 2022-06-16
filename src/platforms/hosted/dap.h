@@ -69,7 +69,7 @@ void dap_transfer_configure(uint8_t idle, uint16_t count, uint16_t retry);
 void dap_swd_configure(uint8_t cfg);
 int dap_info(int info, uint8_t *data, int size);
 void dap_reset_target(void);
-void dap_srst_set_val(bool assert);
+void dap_nrst_set_val(bool assert);
 void dap_trst_reset(void);
 void dap_reset_target_hw(int state);
 void dap_reset_pin(int state);

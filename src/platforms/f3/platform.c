@@ -92,12 +92,12 @@ void platform_init(void)
 	usbuart_init();
 }
 
-void platform_srst_set_val(bool assert)
+void platform_nrst_set_val(bool assert)
 {
 	gpio_set_val(SRST_PORT, SRST_PIN, !assert);
 }
 
-bool platform_srst_get_val(void)
+bool platform_nrst_get_val(void)
 {
 	return (gpio_get(SRST_PORT, SRST_PIN)) ? false : true;
 }

@@ -433,7 +433,7 @@ bool samx5x_probe(target *t)
 		target_add_commands(t, samx5x_cmd_list, "SAMD5x/E5x");
 
 	/* If we're not in reset here */
-	if (!platform_srst_get_val()) {
+	if (!platform_nrst_get_val()) {
 		/* We'll have to release the target from
 		 * extended reset to make attach possible */
 		if (target_mem_read32(t, SAMX5X_DSU_CTRLSTAT) &

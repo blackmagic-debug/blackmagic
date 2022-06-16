@@ -89,7 +89,7 @@ platform_init(void)
 	                      0xff, 0xff);
 }
 
-void platform_srst_set_val(bool assert)
+void platform_nrst_set_val(bool assert)
 {
 	volatile int i;
 	if (assert) {
@@ -100,7 +100,7 @@ void platform_srst_set_val(bool assert)
 	}
 }
 
-bool platform_srst_get_val(void)
+bool platform_nrst_get_val(void)
 {
 	return gpio_get(SRST_PORT, SRST_PIN) == 0;
 }
