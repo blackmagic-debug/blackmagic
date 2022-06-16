@@ -41,14 +41,14 @@ int dap_init(bmp_info_t *info)
 }
 # pragma GCC diagnostic push
 # pragma GCC diagnostic ignored "-Wunused-parameter"
-uint32_t dap_swj_clock(uint32_t clock) {return 0;}
-void dap_exit_function(void) {};
-void dap_adiv5_dp_defaults(ADIv5_DP_t *dp) {};
-int cmsis_dap_jtagtap_init(jtag_proc_t *jtag_proc) {return -1;}
-int dap_swdptap_init(ADIv5_DP_t *dp) {return -1;}
-int dap_jtag_dp_init(ADIv5_DP_t *dp) {return -1;}
-void dap_swd_configure(uint8_t cfg) {};
-void dap_nrst_set_val(bool assert) {};
+uint32_t dap_swj_clock(uint32_t clock) { return 0; }
+void dap_exit_function(void) { }
+void dap_adiv5_dp_defaults(ADIv5_DP_t *dp) { }
+int cmsis_dap_jtagtap_init(jtag_proc_t *jtag_proc) { return -1; }
+int dap_swdptap_init(ADIv5_DP_t *dp) { return -1; }
+int dap_jtag_dp_init(ADIv5_DP_t *dp) { return -1; }
+void dap_swd_configure(uint8_t cfg) { }
+void dap_nrst_set_val(bool assert) { }
 # pragma GCC diagnostic pop
 
 #endif
