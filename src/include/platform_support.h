@@ -51,4 +51,3 @@ void platform_max_frequency_set(uint32_t frequency);
 uint32_t platform_max_frequency_get(void);
 
 #endif
-

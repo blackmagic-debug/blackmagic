@@ -274,7 +274,7 @@ static void remotePacketProcessGEN(unsigned i, char *packet)
     uint32_t freq;
 	switch (packet[1]) {
     case REMOTE_VOLTAGE:
-		_respondS(REMOTE_RESP_OK,platform_target_voltage());
+		_respondS(REMOTE_RESP_OK, platform_target_voltage());
 		break;
 
     case REMOTE_NRST_SET:
@@ -298,26 +298,25 @@ static void remotePacketProcessGEN(unsigned i, char *packet)
 #ifdef PLATFORM_HAS_POWER_SWITCH
 		if (packet[2]=='1'
 			&& !platform_target_get_power()
-			&& platform_target_voltage_sense() > POWER_CONFLICT_THRESHOLD)
-		{
+			&& platform_target_voltage_sense() > POWER_CONFLICT_THRESHOLD) {
 			/* want to enable target power, but voltage > 0.5V sensed
 			 * on the pin -> cancel
 			 */
-			_respond(REMOTE_RESP_ERR,0);
+			_respond(REMOTE_RESP_ERR, 0);
 		} else {
-			platform_target_set_power(packet[2]=='1');
-			_respond(REMOTE_RESP_OK,0);
+			platform_target_set_power(packet[2] == '1');
+			_respond(REMOTE_RESP_OK, 0);
 		}
 #else
-		_respond(REMOTE_RESP_NOTSUP,0);
+		_respond(REMOTE_RESP_NOTSUP, 0);
 #endif
 		break;
 
     case REMOTE_PWR_GET:
 #ifdef PLATFORM_HAS_POWER_SWITCH
-		_respond(REMOTE_RESP_OK,platform_target_get_power());
+		_respond(REMOTE_RESP_OK, platform_target_get_power());
 #else
-		_respond(REMOTE_RESP_NOTSUP,0);
+		_respond(REMOTE_RESP_NOTSUP, 0);
 #endif
 		break;
 
@@ -329,7 +328,7 @@ static void remotePacketProcessGEN(unsigned i, char *packet)
 		break;
 
     default:
-		_respond(REMOTE_RESP_ERR,REMOTE_ERROR_UNRECOGNISED);
+		_respond(REMOTE_RESP_ERR, REMOTE_ERROR_UNRECOGNISED);
 		break;
     }
 }
