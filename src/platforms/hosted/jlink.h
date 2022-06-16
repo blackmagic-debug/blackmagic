@@ -49,14 +49,14 @@
 #if HOSTED_BMP_ONLY == 1
 # pragma GCC diagnostic push
 # pragma GCC diagnostic ignored "-Wunused-parameter"
-int jlink_init(bmp_info_t *info) {return -1;};
-int jlink_swdp_scan(bmp_info_t *info) {return 0;};
-int jlink_jtagtap_init(bmp_info_t *info, jtag_proc_t *jtag_proc) {return 0;};
-const char *jlink_target_voltage(bmp_info_t *info) {return "ERROR";};
+int jlink_init(bmp_info_t *info) { return -1; }
+int jlink_swdp_scan(bmp_info_t *info) { return 0; }
+int jlink_jtagtap_init(bmp_info_t *info, jtag_proc_t *jtag_proc) { return 0; }
+const char *jlink_target_voltage(bmp_info_t *info) { return "ERROR"; }
 void jlink_nrst_set_val(bmp_info_t *info, bool assert) { }
 bool jlink_nrst_get_val(bmp_info_t *info) { return true; }
-void jlink_max_frequency_set(bmp_info_t *info, uint32_t freq) {};
-uint32_t jlink_max_frequency_get(bmp_info_t *info) {return 0;};
+void jlink_max_frequency_set(bmp_info_t *info, uint32_t freq) { }
+uint32_t jlink_max_frequency_get(bmp_info_t *info) { return 0; }
 # pragma GCC diagnostic pop
 #else
 /** Device capabilities. (from openocd*/

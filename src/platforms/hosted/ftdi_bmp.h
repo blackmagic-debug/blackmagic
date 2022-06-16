@@ -102,18 +102,18 @@ typedef struct cable_desc_s {
 #if HOSTED_BMP_ONLY == 1
 # pragma GCC diagnostic push
 # pragma GCC diagnostic ignored "-Wunused-parameter"
-int ftdi_bmp_init(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info) {return -1;};
-int libftdi_swdptap_init(ADIv5_DP_t *dp) {return -1;};
-int libftdi_jtagtap_init(jtag_proc_t *jtag_proc) {return 0;};
-void libftdi_buffer_flush(void) {};
-int libftdi_buffer_write(const uint8_t *data, int size) {return size;};
-int libftdi_buffer_read(uint8_t *data, int size) {return size;};
-const char *libftdi_target_voltage(void) {return "ERROR";};
+int ftdi_bmp_init(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info) { return -1; }
+int libftdi_swdptap_init(ADIv5_DP_t *dp) { return -1; }
+int libftdi_jtagtap_init(jtag_proc_t *jtag_proc) { return 0; }
+void libftdi_buffer_flush(void) { }
+int libftdi_buffer_write(const uint8_t *data, int size) { return size; }
+int libftdi_buffer_read(uint8_t *data, int size) { return size; }
+const char *libftdi_target_voltage(void) { return "ERROR"; }
 void libftdi_jtagtap_tdi_tdo_seq(
-	uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int ticks) {};
-bool  libftdi_swd_possible(bool *do_mpsse, bool *direct_bb_swd) {return false;};
-void libftdi_max_frequency_set(uint32_t freq) {};
-uint32_t libftdi_max_frequency_get(void) {return 0;};
+	uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int ticks) { }
+bool  libftdi_swd_possible(bool *do_mpsse, bool *direct_bb_swd) { return false; }
+void libftdi_max_frequency_set(uint32_t freq) { }
+uint32_t libftdi_max_frequency_get(void) { return 0; }
 void libftdi_nrst_set_val(bool assert) { }
 bool libftdi_nrst_get_val(void) { return false; }
 # pragma GCC diagnostic pop
