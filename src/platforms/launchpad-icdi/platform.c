@@ -47,11 +47,10 @@ uint32_t platform_time_ms(void)
 	return time_ms;
 }
 
-void
-platform_init(void)
+void platform_init(void)
 {
-	int i;
-	for(i=0; i<1000000; i++);
+	for (int i = 0; i < 1000000; ++i)
+		continue;
 
 	rcc_sysclk_config(OSCSRC_MOSC, XTAL_16M, PLL_DIV_80MHZ);
 
@@ -85,8 +84,7 @@ platform_init(void)
 	cdcacm_init();
 
 	usb_enable_interrupts(USB_INT_RESET | USB_INT_DISCON |
-	                      USB_INT_RESUME | USB_INT_SUSPEND,
-	                      0xff, 0xff);
+		USB_INT_RESUME | USB_INT_SUSPEND, 0xff, 0xff);
 }
 
 void platform_nrst_set_val(bool assert)
@@ -132,9 +130,7 @@ char *serial_no_read(char *s)
 	return s;
 }
 
-void platform_request_boot(void)
-{
-}
+void platform_request_boot(void) { }
 
 void platform_max_frequency_set(uint32_t freq)
 {
