@@ -40,9 +40,15 @@ enum bmp_cl_mode {
 	BMP_MODE_MONITOR,
 };
 
+typedef enum bmp_scan_mode_e {
+	BMP_SCAN_JTAG,
+	BMP_SCAN_SWD,
+	BMP_SCAN_AUTO
+} bmp_scan_mode_t;
+
 typedef struct BMP_CL_OPTIONS_s {
 	enum bmp_cl_mode opt_mode;
-	bool opt_usejtag;
+	bmp_scan_mode_t opt_scanmode;
 	bool opt_tpwr;
 	bool opt_list_only;
 	bool opt_connect_under_reset;
