@@ -33,7 +33,7 @@
  */
 
 /* This file implements Raspberry Pico (RP2040) target specific functions
- * for detecting the device, providing the XML memory map but not yet
+ * for detecting the device, providing the XML memory map and
  * Flash memory programming.
  */
 
@@ -61,7 +61,7 @@
  * original Pico board from Raspberry Pi.
  * https://www.winbond.com/resource-files/w25q16jv%20spi%20revd%2008122016.pdf
  * All dev boards supported by Pico SDK V1.3.1 use SPI flash chips which support
- * these commands. Other customs boards using different SPI flash chips might
+ * these commands. Other custom boards using different SPI flash chips might
  * not support these commands
  */ 
 
@@ -411,11 +411,11 @@ uint32_t rp_read_flash_chip(target *t, uint32_t cmd)
 	rp_ssel_active(t, true);
 
 	/* write command into SPI peripheral's FIFO */
-	for (int count = 0; (count < 4); count++)
+	for (size_t i = 0; i < 4; i++)
 		target_mem_write32(t, SSI_DR0_ADDR, cmd);
 
 	/* now we have an entry in the receive FIFO for each write */
-	for (int count = 0; (count < 4); count++) {
+	for (size_t i = 0; i < 4; i++) {
 		uint32_t status = target_mem_read32(t, SSI_DR0_ADDR);
 		value |= (status & 0xFF) << 24;
 		value >>= 8;
@@ -430,7 +430,7 @@ uint32_t rp_get_flash_length(target *t)
 {
 	uint32_t size = MAX_FLASH;
 	uint32_t bootsec[16];
-	int i;
+	size_t i;
 
 	target_mem_read(t, bootsec, XIP_FLASH_START, sizeof(bootsec));
 	for (i = 0; i < 16; i++) {
@@ -486,8 +486,8 @@ static bool rp_attach(target *t)
 	/* Free previously loaded memory map */
 	target_mem_map_free(t);
 
-	uint32_t size = rp_get_flash_length(t);
-	DEBUG_INFO("Flash size: %d MB\n", (int)(size / 1024 / 1024));
+	size_t size = rp_get_flash_length(t);
+	DEBUG_INFO("Flash size: %zu MB\n", size / (1024U * 1024U));
 
 	rp_add_flash(t, XIP_FLASH_START, size);
 	target_add_ram(t, SRAM_START, SRAM_SIZE);
