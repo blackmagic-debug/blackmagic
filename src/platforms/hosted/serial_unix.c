@@ -27,7 +27,7 @@
 #include <unistd.h>
 
 #include "remote.h"
-#include "cl_utils.h"
+#include "cli.h"
 #include "cortexm.h"
 
 static int fd;  /* File descriptor for connection to GDB remote */

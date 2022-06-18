@@ -21,8 +21,8 @@
 /* This file implements the interface to command line command for PC-Hosted
  * platforms.
  */
-#if !defined(__CL_UTILS_H)
-#define __CL_UTILS_H
+#if !defined(__CLI_H)
+#define __CLI_H
 
 #include "cortexm.h"
 

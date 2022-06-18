@@ -22,7 +22,7 @@
 #ifndef __FTDI_BMP_H
 #define __FTDI_BMP_H
 
-#include "cl_utils.h"
+#include "cli.h"
 #include "jtagtap.h"
 
 #include "bmp_hosted.h"

@@ -26,7 +26,7 @@
 #include "target_internal.h"
 #include "adiv5.h"
 #include "timing.h"
-#include "cl_utils.h"
+#include "cli.h"
 #include "gdb_if.h"
 #include <signal.h>
 
@@ -40,7 +40,6 @@
 #include "ftdi_bmp.h"
 #include "jlink.h"
 #include "cmsis_dap.h"
-#include "cl_utils.h"
 
 bmp_info_t info;
 

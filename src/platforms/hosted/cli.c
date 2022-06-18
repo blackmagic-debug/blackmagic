@@ -33,7 +33,7 @@
 #include "cortexm.h"
 #include "command.h"
 
-#include "cl_utils.h"
+#include "cli.h"
 #include "bmp_hosted.h"
 
 #ifndef O_BINARY

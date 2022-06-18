@@ -20,7 +20,7 @@
 #include "general.h"
 #include <windows.h>
 #include "remote.h"
-#include "cl_utils.h"
+#include "cli.h"
 
 static HANDLE hComm;
 
