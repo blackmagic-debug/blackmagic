@@ -40,7 +40,7 @@
 #include <ctype.h>
 #include <sys/time.h>
 
-#include "cl_utils.h"
+#include "cli.h"
 
 #define STLINK_SWIM_ERR_OK             0x00
 #define STLINK_SWIM_BUSY               0x01

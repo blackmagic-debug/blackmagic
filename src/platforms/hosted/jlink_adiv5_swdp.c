@@ -30,7 +30,7 @@
 #include "target_internal.h"
 #include "adiv5.h"
 #include "jlink.h"
-#include "cl_utils.h"
+#include "cli.h"
 
 #define SWDP_ACK_OK    0x01
 #define SWDP_ACK_WAIT  0x02
