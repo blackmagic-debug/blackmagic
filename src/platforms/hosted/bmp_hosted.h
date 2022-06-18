@@ -1,7 +1,7 @@
 #if !defined(__BMP_LIBUSB_H)
 #define      __BMP_LIBUSB_H
 
-#include "cl_utils.h"
+#include "cli.h"
 
 #if HOSTED_BMP_ONLY != 1
 # include <libusb-1.0/libusb.h>

@@ -72,7 +72,7 @@ ifneq ($(HOSTED_BMP_ONLY), 1)
  endif
 endif
 
-SRC += timing.c cl_utils.c utils.c
+SRC += timing.c cli.c utils.c
 SRC += bmp_remote.c remote_swdptap.c remote_jtagtap.c
 ifneq ($(HOSTED_BMP_ONLY), 1)
 SRC += bmp_libusb.c stlinkv2.c

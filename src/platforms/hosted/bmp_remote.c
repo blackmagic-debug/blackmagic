@@ -25,7 +25,7 @@
 #include "remote.h"
 #include "target.h"
 #include "bmp_remote.h"
-#include "cl_utils.h"
+#include "cli.h"
 #include "hex_utils.h"
 
 #include <assert.h>

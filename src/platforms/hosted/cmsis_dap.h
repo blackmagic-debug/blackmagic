@@ -20,7 +20,7 @@
 #define __CMSIS_DAP_H_
 
 #include "adiv5.h"
-#include "cl_utils.h"
+#include "cli.h"
 
 #if defined(CMSIS_DAP)
 int dap_init(bmp_info_t *info);
