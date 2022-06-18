@@ -38,7 +38,7 @@
 #include "dap.h"
 #include "cmsis_dap.h"
 
-#include "cl_utils.h"
+#include "cli.h"
 #include "target.h"
 #include "target_internal.h"
 
