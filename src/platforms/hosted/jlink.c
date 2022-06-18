@@ -30,7 +30,7 @@
 #include <ctype.h>
 #include <sys/time.h>
 
-#include "cl_utils.h"
+#include "cli.h"
 #include "jlink.h"
 
 #define USB_PID_SEGGER       0x1366
