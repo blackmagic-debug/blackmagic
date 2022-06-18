@@ -1,7 +1,7 @@
 CC ?= gcc
 SYS = $(shell $(CC) -dumpmachine)
 CFLAGS += -DENABLE_DEBUG -DPLATFORM_HAS_DEBUG
-CFLAGS +=-I ./target -I./platforms/pc
+CFLAGS +=-I ./target
 
 # Define HOSTED_BMP_ONLY to '0' in order to build the hosted blackmagic
 # executable with support for other probes beside BMP. Default HOSTED_BMP_ONLY
@@ -72,7 +72,6 @@ ifneq ($(HOSTED_BMP_ONLY), 1)
  endif
 endif
 
-VPATH += platforms/pc
 SRC += timing.c cl_utils.c utils.c
 SRC += bmp_remote.c remote_swdptap.c remote_jtagtap.c
 ifneq ($(HOSTED_BMP_ONLY), 1)
