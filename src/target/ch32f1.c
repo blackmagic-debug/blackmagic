@@ -293,7 +293,7 @@ static int ch32f1_flash_write(struct target_flash *f,
 	target_addr org_dest = dest;
 	const void *org_src = src;
 #endif
-	DEBUG_INFO("CH32: flash write 0x%x ,size=%d\n", dest, len);
+	DEBUG_INFO("CH32: flash write 0x%" PRIx32 " ,size=%zu\n", dest, len);
 
 	while (length > 0)
 	{
