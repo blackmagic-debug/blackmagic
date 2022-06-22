@@ -407,13 +407,15 @@ static bool kinetis_fccob_cmd(target *t, uint8_t cmd, uint32_t addr, const uint3
 	} while (!(fstat & FTFx_FSTAT_CCIF));
 
 	/* Write command to FCCOB */
-	addr &= 0xffffff;
-	addr |= (uint32_t)cmd << 24;
+	addr &= 0x00ffffffU;
+	addr |= cmd << 24U;
 	target_mem_write32(t, FTFx_FCCOB0, addr);
-	if (data) {
+	if (data && n_items) {
 		target_mem_write32(t, FTFx_FCCOB4, data[0]);
 		if (n_items > 1)
 			target_mem_write32(t, FTFx_FCCOB8, data[1]);
+		else
+			target_mem_write32(t, FTFx_FCCOB8, 0);
 	}
 
 	/* Enable execution by clearing CCIF */
