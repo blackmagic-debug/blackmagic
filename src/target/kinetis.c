@@ -436,19 +436,18 @@ static int kl_gen_flash_write(struct target_flash *f,
 
 	/* Ensure we don't write something horrible over the security byte */
 	if (!f->t->unsafe_enabled &&
-	    (dest <= FLASH_SECURITY_BYTE_ADDRESS) &&
-	    ((dest + len) > FLASH_SECURITY_BYTE_ADDRESS)) {
+	    dest <= FLASH_SECURITY_BYTE_ADDRESS &&
+	    dest + len > FLASH_SECURITY_BYTE_ADDRESS) {
 		((uint8_t*)src)[FLASH_SECURITY_BYTE_ADDRESS - dest] =
 		    FLASH_SECURITY_BYTE_UNSECURED;
 	}
 
 	/* Determine write command based on the alignment. */
 	uint8_t write_cmd;
-	if (kf->write_len == K64_WRITE_LEN) {
+	if (kf->write_len == K64_WRITE_LEN)
 		write_cmd = FTFE_CMD_PROGRAM_PHRASE;
-	} else {
+	else
 		write_cmd = FTFA_CMD_PROGRAM_LONGWORD;
-	}
 
 	while (len) {
 		if (kl_gen_command(f->t, write_cmd, dest, src, 1)) {
@@ -458,9 +457,8 @@ static int kl_gen_flash_write(struct target_flash *f,
 				len = 0;
 			dest += kf->write_len;
 			src += kf->write_len;
-		} else {
+		} else
 			return 1;
-		}
 	}
 	return 0;
 }
@@ -472,14 +470,13 @@ static int kl_gen_flash_done(struct target_flash *f)
 	if (f->t->unsafe_enabled)
 		return 0;
 
-	if (target_mem_read8(f->t, FLASH_SECURITY_BYTE_ADDRESS) ==
-	    FLASH_SECURITY_BYTE_UNSECURED)
+	if (target_mem_read8(f->t, FLASH_SECURITY_BYTE_ADDRESS) == FLASH_SECURITY_BYTE_UNSECURED)
 		return 0;
 
 	/* Load the security byte based on the alignment (determine 8 byte phrases
 	 * vs 4 byte phrases).
 	 */
-	if (kf->write_len == 8) {
+	if (kf->write_len == K64_WRITE_LEN) {
 		uint32_t vals[2];
 		vals[0] = target_mem_read32(f->t, FLASH_SECURITY_BYTE_ADDRESS-4);
 		vals[1] = target_mem_read32(f->t, FLASH_SECURITY_BYTE_ADDRESS);
