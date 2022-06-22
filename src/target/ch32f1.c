@@ -157,9 +157,8 @@ static int ch32f1_flash_lock(target *t)
 */
 bool ch32f1_probe(target *t)
 {
-	t->idcode = target_mem_read32(t, DBGMCU_IDCODE) & 0xfff;
-
-	if ((t->cpuid & CPUID_PARTNO_MASK) != CORTEX_M3 || t->idcode != 0x410) // only ch32f103
+	const uint32_t idcode = target_mem_read32(t, DBGMCU_IDCODE) & 0xfff;
+	if ((t->cpuid & CPUID_PARTNO_MASK) != CORTEX_M3 || idcode != 0x410) // only ch32f103
 		return false;
 
 	// try to flock
@@ -168,6 +167,7 @@ bool ch32f1_probe(target *t)
 	if (ch32f1_flash_unlock(t))
 		return false;
 
+	t->idcode = idcode;
 	uint32_t signature = target_mem_read32(t, FLASHSIZE);
 	uint32_t flashSize = signature & 0xFFFF;
 
