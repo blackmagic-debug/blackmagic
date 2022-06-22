@@ -378,8 +378,25 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 	} else {
 		target_check_error(t);
 	}
+#if PC_HOSTED
+#define STRINGIFY(x) #x
 #define PROBE(x) \
-	do { if ((x)(t)) {return true;} else target_check_error(t); } while (0)
+	do { \
+		DEBUG_INFO("Calling " STRINGIFY(x) "\n"); \
+		if ((x)(t)) \
+			return true; \
+		else \
+			target_check_error(t); \
+	} while (0)
+#else
+#define PROBE(x) \
+	do { \
+		if ((x)(t)) \
+			return true; \
+		else \
+			target_check_error(t); \
+	} while (0)
+#endif
 
 	switch (ap->ap_designer) {
 	case AP_DESIGNER_FREESCALE:
