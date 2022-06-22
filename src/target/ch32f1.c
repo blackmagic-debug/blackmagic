@@ -41,11 +41,11 @@ static int ch32f1_flash_write(struct target_flash *f,
 
 // these are common with stm32f1/gd32f1/...
 #define FPEC_BASE						0x40022000
-#define FLASH_ACR						(FPEC_BASE+0x00)
-#define FLASH_KEYR						(FPEC_BASE+0x04)
-#define FLASH_SR						(FPEC_BASE+0x0C)
-#define FLASH_CR						(FPEC_BASE+0x10)
-#define FLASH_AR						(FPEC_BASE+0x14)
+#define FLASH_ACR						(FPEC_BASE + 0x00)
+#define FLASH_KEYR						(FPEC_BASE + 0x04)
+#define FLASH_SR						(FPEC_BASE + 0x0C)
+#define FLASH_CR						(FPEC_BASE + 0x10)
+#define FLASH_AR						(FPEC_BASE + 0x14)
 #define FLASH_CR_LOCK					(1 << 7)
 #define FLASH_CR_STRT					(1 << 6)
 #define FLASH_SR_BSY					(1 << 0)
@@ -57,14 +57,14 @@ static int ch32f1_flash_write(struct target_flash *f,
 #define FLASHSIZE	 					0x1FFFF7E0
 
 // these are specific to ch32f1
-#define FLASH_MAGIC			   			(FPEC_BASE+0x34)
-#define FLASH_MODEKEYR_CH32 			(FPEC_BASE+0x24) // Fast mode for CH32F10x
-#define FLASH_CR_FLOCK_CH32	   			(1<<15) // fast unlock
-#define FLASH_CR_FTPG_CH32				(1<<16) // fast page program
-#define FLASH_CR_FTER_CH32				(1<<17) // fast page erase
-#define FLASH_CR_BUF_LOAD_CH32			(1<<18) // Buffer load
-#define FLASH_CR_BUF_RESET_CH32   		(1<<19) // Buffer reset
-#define FLASH_SR_EOP			  		(1<<5)  // End of programming
+#define FLASH_MAGIC			   			(FPEC_BASE + 0x34)
+#define FLASH_MODEKEYR_CH32 			(FPEC_BASE + 0x24) // Fast mode for CH32F10x
+#define FLASH_CR_FLOCK_CH32	   			(1 << 15) // fast unlock
+#define FLASH_CR_FTPG_CH32				(1 << 16) // fast page program
+#define FLASH_CR_FTER_CH32				(1 << 17) // fast page erase
+#define FLASH_CR_BUF_LOAD_CH32			(1 << 18) // Buffer load
+#define FLASH_CR_BUF_RESET_CH32   		(1 << 19) // Buffer reset
+#define FLASH_SR_EOP			  		(1 << 5)  // End of programming
 #define FLASH_BEGIN_ADDRESS_CH32  		0x8000000
 
 /**
@@ -89,38 +89,41 @@ static void ch32f1_add_flash(target *t, uint32_t addr, size_t length, size_t era
 	target_add_flash(t, f);
 }
 
-#define WAIT_BUSY() 	do { \
-				sr = target_mem_read32(t, FLASH_SR); \
-				if(target_check_error(t)) { \
-						DEBUG_WARN("ch32f1 flash write: comm error\n"); \
-						return -1; \
-				} \
-		} while (sr & FLASH_SR_BSY);
+#define WAIT_BUSY() do { \
+	sr = target_mem_read32(t, FLASH_SR); \
+	if (target_check_error(t)) { \
+		DEBUG_WARN("ch32f1 flash write: comm error\n"); \
+		return -1; \
+	} \
+} while (sr & FLASH_SR_BSY);
 
-#define WAIT_EOP()  	do { \
-				sr = target_mem_read32(t, FLASH_SR); \
-				if(target_check_error(t)) { \
-						DEBUG_WARN("ch32f1 flash write: comm error\n"); \
-						return -1; \
-				} \
-		} while (!(sr & FLASH_SR_EOP));
+#define WAIT_EOP() do { \
+	sr = target_mem_read32(t, FLASH_SR); \
+	if (target_check_error(t)) { \
+		DEBUG_WARN("ch32f1 flash write: comm error\n"); \
+		return -1; \
+	} \
+} while (!(sr & FLASH_SR_EOP));
 
-#define CLEAR_EOP()	 target_mem_write32(t, FLASH_SR,FLASH_SR_EOP)
+#define CLEAR_EOP()	target_mem_write32(t, FLASH_SR,FLASH_SR_EOP)
 
-#define SET_CR(bit) {	ct = target_mem_read32(t, FLASH_CR); \
-						ct |= (bit); \
-						target_mem_write32(t, FLASH_CR, ct);}
+#define SET_CR(bit) do { \
+	const uint32_t cr = target_mem_read32(t, FLASH_CR) | (bit); \
+	target_mem_write32(t, FLASH_CR, cr); \
+} while(0)
 
-
-#define CLEAR_CR(bit) 	{ct = target_mem_read32(t, FLASH_CR); \
-						ct &= ~(bit); \
-						target_mem_write32(t, FLASH_CR, ct);}
+#define CLEAR_CR(bit) do { \
+	const uint32_t cr = target_mem_read32(t, FLASH_CR) & (~(bit)); \
+	target_mem_write32(t, FLASH_CR, cr); \
+} while(0)
 
 // Which one is the right value ?
 #define MAGIC_WORD 0x100
 // #define MAGIC_WORD 0x1000
-#define MAGIC(adr) { magic = target_mem_read32(t,(adr) ^ MAGIC_WORD); \
-					target_mem_write32(t, FLASH_MAGIC , magic); }
+#define MAGIC(addr) do { \
+	magic = target_mem_read32(t, (addr) ^ MAGIC_WORD); \
+	target_mem_write32(t, FLASH_MAGIC , magic); \
+} while(0)
 
 /**
   \fn ch32f1_flash_unlock
@@ -130,11 +133,11 @@ static int ch32f1_flash_unlock(target *t)
 {
 	DEBUG_INFO("CH32: flash unlock \n");
 
-	target_mem_write32(t, FLASH_KEYR , KEY1);
-	target_mem_write32(t, FLASH_KEYR , KEY2);
+	target_mem_write32(t, FLASH_KEYR, KEY1);
+	target_mem_write32(t, FLASH_KEYR, KEY2);
 	// fast mode
-	target_mem_write32(t, FLASH_MODEKEYR_CH32 , KEY1);
-	target_mem_write32(t, FLASH_MODEKEYR_CH32 , KEY2);
+	target_mem_write32(t, FLASH_MODEKEYR_CH32, KEY1);
+	target_mem_write32(t, FLASH_MODEKEYR_CH32, KEY2);
 	uint32_t cr = target_mem_read32(t, FLASH_CR);
 	if (cr & FLASH_CR_FLOCK_CH32) {
 		DEBUG_WARN("Fast unlock failed, cr: 0x%08" PRIx32 "\n", cr);
@@ -145,7 +148,6 @@ static int ch32f1_flash_unlock(target *t)
 
 static int ch32f1_flash_lock(target *t)
 {
-	volatile uint32_t ct;
 	DEBUG_INFO("CH32: flash lock \n");
 	SET_CR(FLASH_CR_LOCK);
 	return 0;
@@ -177,13 +179,14 @@ bool ch32f1_probe(target *t)
 	t->driver = "CH32F1 medium density (stm32f1 clone)";
 	return true;
 }
+
 /**
   \fn ch32f1_flash_erase
   \brief fast erase of CH32
 */
 int ch32f1_flash_erase(struct target_flash *f, target_addr addr, size_t len)
 {
-	volatile uint32_t ct, sr, magic;
+	volatile uint32_t sr, magic;
 	target *t = f->t;
 	DEBUG_INFO("CH32: flash erase \n");
 
@@ -244,7 +247,7 @@ static bool ch32f1_wait_flash_ready(target *t, uint32_t addr)
 
 static int ch32f1_upload(target *t, uint32_t dest, const void *src, uint32_t offset)
 {
-	volatile uint32_t ct, sr, magic;
+	volatile uint32_t sr, magic;
 	const uint32_t *ss = (const uint32_t *)(src+offset);
 	uint32_t dd = dest + offset;
 
@@ -266,7 +269,7 @@ static int ch32f1_upload(target *t, uint32_t dest, const void *src, uint32_t off
 */
 int ch32f1_buffer_clear(target *t)
 {
-	volatile uint32_t ct, sr;
+	volatile uint32_t sr;
 	SET_CR(FLASH_CR_FTPG_CH32); // Fast page program 4-
 	SET_CR(FLASH_CR_BUF_RESET_CH32); // BUF_RESET 5-
 	WAIT_BUSY(); // 6-
@@ -281,7 +284,7 @@ int ch32f1_buffer_clear(target *t)
 static int ch32f1_flash_write(struct target_flash *f,
 	target_addr dest, const void *src, size_t len)
 {
-	volatile uint32_t ct, sr, magic;
+	volatile uint32_t sr, magic;
 	target *t = f->t;
 	size_t length = len;
 #ifdef CH32_VERIFY
