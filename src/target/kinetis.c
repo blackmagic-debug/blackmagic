@@ -466,7 +466,7 @@ static int kinetis_flash_cmd_write(struct target_flash *f, target_addr dest, con
 		write_cmd = FTFx_CMD_PROGRAM_LONGWORD;
 
 	while (len) {
-		if (kinetis_fccob_cmd(f->t, write_cmd, dest, src, 1)) {
+		if (kinetis_fccob_cmd(f->t, write_cmd, dest, src, kf->write_len >> 2U)) {
 			if (len > kf->write_len)
 				len -= kf->write_len;
 			else
