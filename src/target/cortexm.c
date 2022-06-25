@@ -395,6 +395,9 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 	case AP_DESIGNER_GIGADEVICE:
 		PROBE(gd32f1_probe);
 		break;
+	case AP_DESIGNER_STM32WX:
+		PROBE(stm32l4_probe);
+		break;
 	case AP_DESIGNER_STM:
 		PROBE(stm32f1_probe);
 		PROBE(stm32f4_probe);

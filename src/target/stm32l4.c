@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2015, 2017 - 2021  Uwe Bonnes
+ * Copyright (C) 2015, 2017 - 2022  Uwe Bonnes
  *                             <bon@elektron.ikp.physik.tu-darmstadt.de>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -29,6 +29,9 @@
  *  ARM®-based 32-bit MCUs Rev.3
  * RM0432 STM32L4Rxxx and STM32L4Sxxx advanced Arm®-based 32-bit MCU. Rev 1
  * RM0440 STM32G4 Series advanced Arm®-based 32-bit MCU. Rev 6
+ * RM0434 Multiprotocol wireless 32-bit MCU Arm®-based Cortex®-M4 with
+ *        FPU, Bluetooth® Low-Energy and 802.15.4 radio solution
+ * RM0453 STM32WL5x advanced Arm®-based 32-bit MCUswith sub-GHz radio solution
  *
  *
  */
@@ -62,6 +65,10 @@ static int stm32l4_flash_write(struct target_flash *f,
 #define WB_FPEC_BASE			0x58004000
 
 #define L5_FLASH_OPTR_TZEN	(1 << 31)
+
+#define FLASH_OPTR_ESE		(1 <<  8)
+#define PWR_CR4				0x5800040C
+#define PWR_CR4_C2BOOT		(1 << 15)
 
 #define FLASH_CR_PG			(1 << 0)
 #define FLASH_CR_PER		(1 << 1)
@@ -309,7 +316,7 @@ static struct stm32l4_info const L4info[] = {
 		.idcode = ID_STM32WLXX,
 		.family = FAM_STM32WLxx,
 		.designator = "STM32WLxx",
-		.sram1 = 64,
+		.sram1 = 32,
 		.sram2 = 32,
 		.flags = 2,
 		.flash_regs_map = stm32wl_flash_regs_map,
@@ -524,7 +531,24 @@ bool stm32l4_probe(target *t)
 	if( !chip->idcode )	/* Not found */
 		return false;
 
+	t->driver = chip->designator;
 	switch (idcode) {
+		case ID_STM32WLXX:
+		case ID_STM32WBXX:
+			if ((stm32l4_flash_read32(t, FLASH_OPTR)) &	FLASH_OPTR_ESE) {
+				DEBUG_WARN("STM32W security enabled\n");
+				t->driver = (idcode == ID_STM32WLXX) ?
+					"STM32WLxx(secure)" : "STM32WBxx(secure)";
+			}
+			if (ap->apsel == 0) {
+				/* Enable CPU2 from CPU1.
+				 * CPU2 does not boot after reset w/o C2BOOT set.
+				 * RM0453/RM0434, 6.6.4. PWR control register 4 (PWR_CR4)*/
+				uint32_t pwr_cr4 = target_mem_read32(t, PWR_CR4);
+				pwr_cr4 |= PWR_CR4_C2BOOT;
+				target_mem_write32(t, PWR_CR4, pwr_cr4);
+			}
+			break;
 		case ID_STM32L55:
 			if ((stm32l4_flash_read32(t, FLASH_OPTR)) & L5_FLASH_OPTR_TZEN) {
 				DEBUG_WARN("STM32L5 Trust Zone enabled\n");
@@ -532,7 +556,6 @@ bool stm32l4_probe(target *t)
 				break;
 			}
 	}
-	t->driver = chip->designator;
 	t->attach = stm32l4_attach;
 	t->detach = stm32l4_detach;
 	target_add_commands(t, stm32l4_cmd_list, chip->designator);
@@ -723,6 +746,10 @@ static bool stm32l4_cmd_option(target *t, int argc, char *argv[])
 	}
 	if (t->idcode == ID_STM32WBXX) {
 		tc_printf(t, "STM32WBxx options not implemented!\n");
+		return false;
+	}
+	if (t->idcode == ID_STM32WLXX) {
+		tc_printf(t, "STM32WLxx options not implemented!\n");
 		return false;
 	}
 	static const uint32_t g4_values[11] = {
