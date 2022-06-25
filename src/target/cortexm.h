@@ -170,7 +170,7 @@ extern unsigned cortexm_wait_timeout;
 #define ARM_THUMB_BREAKPOINT 0xBE00
 #define CORTEXM_XPSR_THUMB (1 << 24)
 
-#define	CORTEXM_TOPT_INHIBIT_SRST (1 << 2)
+#define	CORTEXM_TOPT_INHIBIT_NRST (1 << 2)
 
 enum cortexm_types {
 	CORTEX_M0  = 0xc200,
@@ -196,4 +196,3 @@ int cortexm_mem_write_sized(
 	target *t, target_addr dest, const void *src, size_t len, enum align align);
 
 #endif
-

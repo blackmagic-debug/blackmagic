@@ -107,7 +107,7 @@ bool lpc43xx_probe(target *t)
 				                  0x1B010000, 0x70000, 0x10000);
 				target_add_commands(t, lpc43xx_cmd_list, "LPC43xx");
 				target_add_ram(t, 0x1B080000, 0xE4F80000UL);
-				t->target_options |= CORTEXM_TOPT_INHIBIT_SRST;
+				t->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
 			}
 			break;
 		case 0x4100C200:
@@ -262,4 +262,3 @@ static void lpc43xx_wdt_pet(target *t)
 		target_mem_write32(t, LPC43XX_WDT_FEED, 0xFF);
 	}
 }
-
