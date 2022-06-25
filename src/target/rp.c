@@ -520,7 +520,7 @@ bool rp_probe(target *t)
  	t->target_storage = (void*)priv_storage;
 
 	t->driver = RP_ID;
-	t->target_options |= CORTEXM_TOPT_INHIBIT_SRST;
+	t->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
 	t->attach = rp_attach;
 	t->detach = rp_detach;
 	target_add_commands(t, rp_cmd_list, RP_ID);

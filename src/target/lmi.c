@@ -91,21 +91,21 @@ bool lmi_probe(target *t)
 		/* On Tiva targets, asserting nRST results in the debug
 		 * logic also being reset.  We can't assert nRST and must
 		 * only use the AIRCR SYSRESETREQ. */
-		t->target_options |= CORTEXM_TOPT_INHIBIT_SRST;
+		t->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
 		return true;
 
 	case 0x1022:    /* TM4C1230C3PM */
 		t->driver = lmi_driver_str;
 		target_add_ram(t, 0x20000000, 0x6000);
 		lmi_add_flash(t, 0x10000);
-		t->target_options |= CORTEXM_TOPT_INHIBIT_SRST;
+		t->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
 		return true;
 
 	case 0x101F:    /* TM4C1294NCPDT */
 		t->driver = lmi_driver_str;
 		target_add_ram(t, 0x20000000, 0x40000);
 		lmi_add_flash(t, 0x100000);
-		t->target_options |= CORTEXM_TOPT_INHIBIT_SRST;
+		t->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
 		return true;
 	}
 	return false;
