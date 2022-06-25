@@ -30,7 +30,7 @@ char *serial_no_read(char *s)
 		s[7U - i] = ((unique_id >> (i * 4U)) & 0x0FU) + '0';
 		/* If the character is something above 9, then add the offset to make it ASCII A-F */
 		if (s[7U - i] > '9')
-			s[7U - i] += 16; /* 'A' - '9' = 17, less 1 gives 16. */
+			s[7U - i] += 7; /* 'A' - '9' = 8, less 1 gives 7. */
 	}
 #elif DFU_SERIAL_LENGTH == 13
 	/* Use the same serial number as the ST DFU Bootloader.*/
@@ -53,7 +53,7 @@ char *serial_no_read(char *s)
 
 		/* If the character is something above 9, then add the offset to make it ASCII A-F */
 		if (s[chunk + (7U - nibble)] > '9')
-			s[chunk + (7U - nibble)] += 16; /* 'A' - '9' = 17, less 1 gives 16. */
+			s[chunk + (7U - nibble)] += 7; /* 'A' - '9' = 8, less 1 gives 7. */
 	}
 #else
 # WARNING "Unhandled DFU_SERIAL_LENGTH"
