@@ -95,6 +95,15 @@
 #define AP_DESIGNER_TEXAS        0x017
 #define AP_DESIGNER_ATMEL        0x01f
 #define AP_DESIGNER_STM          0x020
+/* CPU2 for STM32W(L|B) uses ARM JEDEC continuation (4) and
+ * not STM ARM JEDEC continuation (0) as for CPU1.
+ * See RM0453
+ * https://www.st.com/resource/en/reference_manual/rm0453-stm32wl5x-advanced-armbased-32bit-mcus-with-subghz-radio-solution-stmicroelectronics.pdf :
+ * 38.8.2 CPU1 ROM CoreSight peripheral identity register 4 (ROM_PIDR4)
+ * vs
+ * 38.13.2 CPU2 ROM1 CoreSight peripheral identity register 4 (C2ROM1_PIDR4)
+ */
+#define AP_DESIGNER_STM32WX      0x420
 #define AP_DESIGNER_CYPRESS      0x034
 #define AP_DESIGNER_INFINEON     0x041
 #define AP_DESIGNER_NORDIC       0x244
