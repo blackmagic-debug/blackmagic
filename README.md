@@ -94,14 +94,20 @@ arguments starts the server. When several BMP supported probes are connected,
 their types, position and serial number is displayed and the program exits.
 Add "-P (position)" to the next invocation to select one.
 For the setup from the sample session above:
+
 In another terminal:
 ```console
 > blackmagic
-Using 1d50:6018 E2E489E7 Black Sphere Technologies Black Magic Probe (STLINK), (Firmware v1.6.1-477-g70bb131-dirty)
-Remote is Black Magic Probe (STLINK), (Firmware v1.6.1-477-g70bb131-dirty) v1.6.1-477-g70bb131-dirty
+Black Magic Debug App v1.8.0
+ for Black Magic Probe, ST-Link v2 and v3, CMSIS-DAP, JLink and libftdi/MPSSE
+Using 1d50:6018 8BB20A03 Black Magic Debug
+ Black Magic Probe  v1.8.0
 Listening on TCP: 2000
+```
+
 And in the GDB terminal:
-(gdb) target ext :2000
+```console
+(gdb) tar ext :2000
 Remote debugging using :2000
 (gdb) mon s
 ...
