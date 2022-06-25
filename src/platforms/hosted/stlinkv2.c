@@ -211,6 +211,7 @@ static int stlink_usb_get_rw_status(bool verbose);
 int debug_level = 0;
 
 #define STLINK_ERROR_DP_FAULT -2
+#define STLINK_ERROR_AP_FAULT -3
 
 /**
     Converts an STLINK status code held in the first byte of a response to
@@ -273,7 +274,7 @@ static int stlink_usb_error_check(uint8_t *data, bool verbose)
 			Stlink.ap_error = true;
 			if (verbose)
 				DEBUG_WARN("STLINK_SWD_AP_FAULT\n");
-			return STLINK_ERROR_DP_FAULT;
+			return STLINK_ERROR_AP_FAULT;
 		case STLINK_SWD_AP_ERROR:
 			if (verbose)
 				DEBUG_WARN("STLINK_SWD_AP_ERROR\n");
@@ -331,17 +332,27 @@ static int stlink_send_recv_retry(uint8_t *txbuf, size_t txsize,
 					 uint8_t *rxbuf, size_t rxsize)
 {
 	uint32_t start = platform_time_ms();
-	int res;
+	int res, first_res = STLINK_ERROR_OK;
 	usb_link_t *link = info.usb_link;
 	while(1) {
 		send_recv(link, txbuf, txsize, rxbuf, rxsize);
 		res = stlink_usb_error_check(rxbuf, false);
 		if (res == STLINK_ERROR_OK)
 			return res;
+		if ((res == STLINK_ERROR_AP_FAULT) && (first_res == STLINK_ERROR_WAIT)) {
+			/* STLINKV3 while AP is busy answers once with ERROR_WAIT, then
+			 * with AP_FAULT and finally with ERROR_OK and the pending result.
+			 * Interpret AP_FAULT as AP_WAIT in this case.
+			 */
+			Stlink.ap_error = false;
+			res = STLINK_ERROR_WAIT;
+		}
+		if (first_res == STLINK_ERROR_OK)
+			first_res = res;
 		uint32_t now = platform_time_ms();
 		if (((now - start) > cortexm_wait_timeout) ||
 			(res != STLINK_ERROR_WAIT)) {
-			DEBUG_WARN("write_retry failed. ");
+			DEBUG_WARN("send_recv_retry failed. ");
 			return res;
 		}
 	}
