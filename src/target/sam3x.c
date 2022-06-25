@@ -667,6 +667,6 @@ static bool sam_cmd_gpnvm(target *t, int argc, const char **argv)
 
 bad_usage:
 	tc_printf(t, "usage: monitor gpnvm get\n");
-	tc_printf(t, "usage: monitor gpnvm set <bit> <val>\n");
+	tc_printf(t, "usage: monitor gpnvm set <mask> <val>\n");
 	return false;
 }
