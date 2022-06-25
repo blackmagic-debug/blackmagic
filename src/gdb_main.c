@@ -602,7 +602,7 @@ handle_z_packet(char *packet, int plen)
 	uint32_t addr;
 	int ret;
 
-	sscanf(packet, "%*[zZ]%d,%08" PRIX32 ",%d", &type, &addr, &len);
+	sscanf(packet, "%*[zZ]%d,%08" PRIx32 ",%d", &type, &addr, &len);
 	if(set)
 		ret = target_breakwatch_set(cur_target, type, addr, len);
 	else
