@@ -196,7 +196,7 @@ static void cl_help(char **argv)
 	exit(0);
 }
 
-static struct option long_options[] = {
+static const struct option long_options[] = {
 	{"help", no_argument, NULL, 'h'},
 	{"list", no_argument, NULL, 'l'},
 	{"verbose", required_argument, NULL, 'v'},
