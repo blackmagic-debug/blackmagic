@@ -27,7 +27,6 @@
 
 void bmp_ident(bmp_info_t *info)
 {
-
 	PRINT_INFO("Black Magic Debug App (for BMP only) %s\n", FIRMWARE_VERSION);
 	if (!info)
 		return;
