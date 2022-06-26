@@ -33,4 +33,7 @@ endif
 clang-tidy:
 	$(Q)scripts/run-clang-tidy.py -s "$(PWD)"
 
-.PHONY: clean all_platforms clang-tidy
+clang-format:
+	$(Q)$(MAKE) $(MFLAGS) -C src $@
+
+.PHONY: clean all_platforms clang-tidy clang-format
