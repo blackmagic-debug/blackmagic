@@ -47,13 +47,14 @@ char *serial_no_read(char *s)
 	for (size_t i = 0; i < 24U; ++i) {
 		const size_t chunk = i >> 3U;
 		const size_t nibble = i & 7U;
+		const size_t idx = (chunk << 3U) + (7U - nibble);
 		if (nibble == 0)
 			unique_id = unique_id_p[chunk];
-		s[chunk + (7U - nibble)] = ((unique_id >> (i * 4)) & 0x0F) + '0';
+		s[idx] = ((unique_id >> (i * 4)) & 0x0F) + '0';
 
 		/* If the character is something above 9, then add the offset to make it ASCII A-F */
-		if (s[chunk + (7U - nibble)] > '9')
-			s[chunk + (7U - nibble)] += 7; /* 'A' - '9' = 8, less 1 gives 7. */
+		if (s[idx] > '9')
+			s[idx] += 7; /* 'A' - '9' = 8, less 1 gives 7. */
 	}
 #else
 # WARNING "Unhandled DFU_SERIAL_LENGTH"
