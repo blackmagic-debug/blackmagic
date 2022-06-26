@@ -1,10 +1,14 @@
 ---
 AccessModifierOffset: -4
-AlignAfterOpenBracket: Align
+AlignAfterOpenBracket: DontAlign
 AlignConsecutiveAssignments: false
 AlignConsecutiveDeclarations: false
+AlignConsecutiveMacros: true
+AlignEscapedNewlines: Left
+AllowAllArgumentsOnNextLine: true
 AllowShortFunctionsOnASingleLine: None
 AllowShortIfStatementsOnASingleLine: false
+AllowShortEnumsOnASingleLine: false
 # This is currently broken:
 # https://github.com/llvm/llvm-project/issues/53442
 #AlignArrayOfStructures: Left
@@ -22,15 +26,23 @@ BraceWrapping:
   IndentBraces: false
 BreakBeforeBraces: Linux
 BasedOnStyle: LLVM
+BinPackArguments: true
+BinPackParameters: true
 ColumnLimit: 120
-Cpp11BracedListStyle: false
+Cpp11BracedListStyle: true
 IndentCaseLabels: false
-IndentWidth: 8
+IndentWidth: 4
+ContinuationIndentWidth: 4
 KeepEmptyLinesAtTheStartOfBlocks: false
+FixNamespaceComments: true
+ForEachMacros: ['TRY_CATCH']
+#QualifierAlignment: Custom
+#QualifierOrder: ['inline', 'static', 'const', 'volatile', 'type']
+SpaceAroundPointerQualifiers: After
 
 # Taken from git's rules
 #PenaltyBreakAssignment: 10 # Unknown to clang-format-4.0
-PenaltyBreakBeforeFirstCallParameter: 30
+PenaltyBreakBeforeFirstCallParameter: 50
 PenaltyBreakComment: 10
 PenaltyBreakFirstLessLess: 0
 PenaltyBreakString: 10
@@ -41,5 +53,5 @@ PointerAlignment: Right
 ReflowComments: false
 SpacesBeforeTrailingComments: 1
 SortIncludes: false
-TabWidth: 8
-UseTab: Always
+TabWidth: 4
+UseTab: AlignWithSpaces
