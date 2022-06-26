@@ -599,7 +599,7 @@ static bool sam_cmd_gpnvm(target *t, int argc, const char **argv)
 		goto bad_usage;
 	}
 
-	uint32_t base, gpnvm_mask;
+	uint32_t base = 0, gpnvm_mask = 0;
 	enum sam_driver drv = sam_driver(t);
 	switch(drv) {
 	case DRIVER_SAM3X:
