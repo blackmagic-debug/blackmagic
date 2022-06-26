@@ -412,7 +412,7 @@ uint32_t platform_target_voltage_sense(void)
 		uint32_t units = 0, tenths = 0 ;
 		result = remote_target_voltage() ;
 		if (result != NULL) {
-			sscanf(result,"%u.%u", (unsigned int *) &units, (unsigned int *) &tenths) ;
+			sscanf(result,"%"PRIu32".%"PRIu32, &units, &tenths) ;
 			targetVoltage = (units * 10) + tenths ;
 		}
 		break ;
