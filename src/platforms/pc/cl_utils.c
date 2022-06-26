@@ -167,6 +167,7 @@ static void cl_help(char **argv)
 		"\t-R[h]           Reset the device. If followed by 'h', this will be done using\n"
 		"\t                  the hardware reset line instead of over the debug link\n"
 		"\t-H              Do not use the high level command API (bmp-remote)\n"
+		"\t-N              Do not probe. Usefull if probe causes hickup\n"
 		"\t-M <string>     Run target-specific monitor commands. This option\n"
 		"\t                  can be repeated for as many commands you wish to run.\n"
 		"\t                  If the command contains spaces, use quotes around the\n"
@@ -202,7 +203,7 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 	opt->opt_flash_size = 0xffffffff;
 	opt->opt_flash_start = 0xffffffff;
 	opt->opt_max_swj_frequency = 4000000;
-	while((c = getopt(argc, argv, "eEhHv:d:f:s:I:c:Cln:m:M:wVtTa:S:jpP:rR::")) != -1) {
+	while((c = getopt(argc, argv, "eEhHv:d:f:s:I:c:Cln:m:NM:wVtTa:S:jpP:rR::")) != -1) {
 		switch(c) {
 		case 'c':
 			if (optarg)
@@ -300,6 +301,9 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 		case 'n':
 			if (optarg)
 				opt->opt_target_dev = strtol(optarg, NULL, 0);
+			break;
+		case 'N':
+			do_probe = false;
 			break;
 		case 'm':
 			if (optarg)

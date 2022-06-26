@@ -378,6 +378,10 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 	} else {
 		target_check_error(t);
 	}
+	if (!do_probe) {
+		target_add_ram(t, 0x00000000, 0);; /* Provide some memory map to gdb*/
+		return true;
+	}
 #define PROBE(x) \
 	do { if ((x)(t)) {return true;} else target_check_error(t); } while (0)
 
@@ -476,6 +480,7 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 		PROBE(lpc17xx_probe);
 	}
 #undef PROBE
+	target_add_ram(t, 0x00000000, 0); /* Provide some memory map to gdb*/
 	return true;
 }
 

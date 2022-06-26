@@ -53,6 +53,7 @@ static bool cmd_morse(target *t, int argc, char **argv);
 static bool cmd_halt_timeout(target *t, int argc, const char **argv);
 static bool cmd_connect_srst(target *t, int argc, const char **argv);
 static bool cmd_hard_srst(target *t, int argc, const char **argv);
+static bool cmd_probe(target *t, int argc, const char **argv);
 #ifdef PLATFORM_HAS_POWER_SWITCH
 static bool cmd_target_power(target *t, int argc, const char **argv);
 #endif
@@ -72,6 +73,7 @@ const struct command_s cmd_list[] = {
 	{"help", (cmd_handler)cmd_help, "Display help for monitor commands"},
 	{"jtag_scan", (cmd_handler)cmd_jtag_scan, "Scan JTAG chain for devices" },
 	{"swdp_scan", (cmd_handler)cmd_swdp_scan, "Scan SW-DP for devices" },
+	{"probe", (cmd_handler)cmd_probe, "Probe for devices (enable|disable)" },
 	{"frequency", (cmd_handler)cmd_frequency, "set minimum high and low times" },
 	{"targets", (cmd_handler)cmd_targets, "Display list of available targets" },
 	{"morse", (cmd_handler)cmd_morse, "Display morse error message" },
@@ -596,5 +598,23 @@ static bool cmd_heapinfo(target *t, int argc, const char **argv)
 			heap_base, heap_limit, stack_base, stack_limit);
 		target_set_heapinfo(t, heap_base, heap_limit, stack_base, stack_limit);
 	} else gdb_outf("heapinfo heap_base heap_limit stack_base stack_limit\n");
+	return true;
+}
+
+/* Allow to skip device probing. Usefull to debug yet unsupported Cortex-M SOC
+ *
+ * Default is to do probing
+ */
+bool do_probe = true;
+static bool cmd_probe(target *t, int argc, const char **argv)
+{
+	(void)t;
+	if (argc == 1) {
+		gdb_outf("Probing for devices %sabled\n", (do_probe) ? "en" : "dis");
+	} else {
+		bool enable;
+		if (parse_enable_or_disable(argv[1], &enable))
+			do_probe = enable;
+	}
 	return true;
 }
