@@ -444,14 +444,19 @@ static bool stm32f1_option_erase(target *t)
 	return true;
 }
 
-static bool stm32f1_option_write_erased(target *t, uint32_t addr, uint16_t value)
+static bool stm32f1_option_write_erased(target *t, uint32_t addr, uint16_t value, bool width_word)
 {
 	if (value == 0xffff)
 		return true;
 
 	/* Erase option bytes instruction */
 	target_mem_write32(t, FLASH_CR, FLASH_CR_OPTPG | FLASH_CR_OPTWRE);
-	target_mem_write16(t, addr, value);
+
+	if (width_word)
+		target_mem_write32(t, addr, 0xFFFF0000 | value);
+	else
+		target_mem_write16(t, addr, value);
+
 	/* Read FLASH_SR to poll for BSY bit */
 	while (target_mem_read32(t, FLASH_SR) & FLASH_SR_BSY)
 		if (target_check_error(t))
@@ -487,8 +492,14 @@ static bool stm32f1_option_write(target *t, uint32_t addr, uint16_t value)
 	opt_val[index] = value;
 
 	/* Write changed values*/
+	bool width_word = false;
+	if (t->idcode == 0x410 && (t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M23) {
+		/* GD32E230 special case, target_mem_write16 does not work */
+		width_word = true;
+	}
+
 	for (size_t i = 0; i < 8; i++)
-		if (!stm32f1_option_write_erased(t, FLASH_OBP_RDP + i * 2, opt_val[i]))
+		if (!stm32f1_option_write_erased(t, FLASH_OBP_RDP + i * 2, opt_val[i], width_word))
 			return false;
 
 	return true;
@@ -523,9 +534,14 @@ static bool stm32f1_cmd_option(target *t, int argc, const char **argv)
 	target_mem_write32(t, FLASH_OPTKEYR, KEY1);
 	target_mem_write32(t, FLASH_OPTKEYR, KEY2);
 
-	if (argc == 2 && !strcmp(argv[1], "erase")) {
+	if (argc == 2 && strcmp(argv[1], "erase") == 0) {
 		stm32f1_option_erase(t);
-		stm32f1_option_write_erased(t, FLASH_OBP_RDP, flash_obp_rdp_key);
+		bool width_word = false;
+		if (t->idcode == 0x410 && (t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M23) {
+			/* GD32E230 special case, target_mem_write16 does not work */
+			width_word = true;
+		}
+		stm32f1_option_write_erased(t, FLASH_OBP_RDP, flash_obp_rdp_key, width_word);
 	} else if (rdprt) {
 		tc_printf(t, "Device is Read Protected\n");
 		tc_printf(t, "Use \"monitor option erase\" to unprotect, erasing device\n");
