@@ -277,7 +277,7 @@ static int stm32f1_flash_erase(struct target_flash *f, target_addr addr, size_t 
 	target_addr end = addr + len - 1;
 	target_addr start = addr;
 
-	if ((t->idcode == 0x430) && (end >= FLASH_BANK_SPLIT))
+	if (t->idcode == 0x430 && end >= FLASH_BANK_SPLIT)
 		if (stm32f1_flash_unlock(t, FLASH_BANK2_OFFSET))
 			return -1;
 
@@ -321,7 +321,7 @@ static int stm32f1_flash_erase(struct target_flash *f, target_addr addr, size_t 
 			return -1;
 		}
 	}
-	if ((t->idcode == 0x430) && (end >= FLASH_BANK_SPLIT)) {
+	if (t->idcode == 0x430 && end >= FLASH_BANK_SPLIT) {
 		uint32_t sr = target_mem_read32(t, FLASH_SR + FLASH_BANK2_OFFSET);
 		if ((sr & SR_ERROR_MASK) || !(sr & SR_EOP)) {
 			DEBUG_INFO("stm32f1 bank 2 flash erase error 0x%" PRIx32 "\n", sr);
@@ -366,7 +366,7 @@ static int stm32f1_flash_write(struct target_flash *f, target_addr dest, const v
 	}
 
 	length = len - length;
-	if ((t->idcode == 0x430) && length) { /* Write on bank 2 */
+	if (t->idcode == 0x430 && length) { /* Write on bank 2 */
 		target_mem_write32(t, FLASH_CR + FLASH_BANK2_OFFSET, FLASH_CR_PG);
 		cortexm_mem_write_sized(t, dest, src, length, ALIGN_HALFWORD);
 		/* Read FLASH_SR to poll for BSY bit */
@@ -465,28 +465,34 @@ static bool stm32f1_option_write_erased(target *t, uint32_t addr, uint16_t value
 static bool stm32f1_option_write(target *t, uint32_t addr, uint16_t value)
 {
 	uint16_t opt_val[8];
-	int i, index;
+	int index;
 
 	index = (addr - FLASH_OBP_RDP) / 2;
-	if ((index < 0) || (index > 7))
+	if (index < 0 || index > 7)
 		return false;
+
 	/* Retrieve old values */
-	for (i = 0; i < 16; i = i + 4) {
+	for (size_t i = 0; i < 16; i += 4) {
 		uint32_t val = target_mem_read32(t, FLASH_OBP_RDP + i);
 		opt_val[i / 2] = val & 0xffff;
 		opt_val[i / 2 + 1] = val >> 16;
 	}
+
 	if (opt_val[index] == value)
 		return true;
+
 	/* Check for erased value */
 	if (opt_val[index] != 0xffff)
-		if (!(stm32f1_option_erase(t)))
+		if (!stm32f1_option_erase(t))
 			return false;
+
 	opt_val[index] = value;
+
 	/* Write changed values*/
-	for (i = 0; i < 8; i++)
-		if (!(stm32f1_option_write_erased(t, FLASH_OBP_RDP + i * 2, opt_val[i])))
+	for (size_t i = 0; i < 8; i++)
+		if (!stm32f1_option_write_erased(t, FLASH_OBP_RDP + i * 2, opt_val[i]))
 			return false;
+
 	return true;
 }
 
@@ -519,7 +525,7 @@ static bool stm32f1_cmd_option(target *t, int argc, const char **argv)
 	target_mem_write32(t, FLASH_OPTKEYR, KEY1);
 	target_mem_write32(t, FLASH_OPTKEYR, KEY2);
 
-	if ((argc == 2) && !strcmp(argv[1], "erase")) {
+	if (argc == 2 && !strcmp(argv[1], "erase")) {
 		stm32f1_option_erase(t);
 		stm32f1_option_write_erased(t, FLASH_OBP_RDP, flash_obp_rdp_key);
 	} else if (rdprt) {
@@ -544,8 +550,8 @@ static bool stm32f1_cmd_option(target *t, int argc, const char **argv)
 		stm32f1_option_write(t, FLASH_CR, val);
 	}
 
-	for (int i = 0; i < 0xf; i += 4) {
-		addr = 0x1ffff800 + i;
+	for (size_t i = 0; i < 16; i += 4) {
+		addr = FLASH_OBP_RDP + i;
 		val = target_mem_read32(t, addr);
 		tc_printf(t, "0x%08X: 0x%04X\n", addr, val & 0xFFFF);
 		tc_printf(t, "0x%08X: 0x%04X\n", addr + 2, val >> 16);
