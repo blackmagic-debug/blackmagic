@@ -622,6 +622,9 @@ static bool sam_cmd_gpnvm(target *t, int argc, const char **argv)
 		gpnvm_mask = 0x1BF;
 		base = SAMX7X_EEFC_BASE;
 		break;
+	default:
+		/* unknown / invalid driver*/
+		goto bad_usage;
 	}
 
 	uint32_t mask = 0, values = 0;
