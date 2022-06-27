@@ -464,7 +464,7 @@ uint32_t rp_get_flash_length(target *t)
 	DEBUG_INFO("Flash device ID: %08" PRIx32 "\n", flash_id);
 
 	uint8_t size_log2 = (flash_id & 0xff0000) >> 16;
-	if (size_log2 >= 8 || size_log2 <= 34)
+	if (size_log2 >= 8 && size_log2 <= 34)
 		size = 1 << size_log2;
 
 	return size;
