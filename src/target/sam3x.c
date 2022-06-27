@@ -33,7 +33,7 @@ static int sam3_flash_erase(struct target_flash *f, target_addr addr, size_t len
 static int sam_flash_write(struct target_flash *f, target_addr dest,
                              const void *src, size_t len);
 
-static uint32_t sam_gpnvm_get(target *t, uint32_t base);
+static int sam_gpnvm_get(target *t, uint32_t base, uint32_t *gpnvm);
 
 static bool sam_cmd_gpnvm(target *t, int argc, const char **argv);
 
@@ -408,7 +408,9 @@ bool samx7x_probe(target *t)
 
 	priv_storage->descr = samx7x_parse_id(cidr, exid);
 
-	uint32_t tcm_config = sam_gpnvm_get(t, SAMX7X_EEFC_BASE) & GPNVM_SAMX7X_TCM_BIT_MASK;
+	uint32_t tcm_config = 0;
+	sam_gpnvm_get(t, SAMX7X_EEFC_BASE, &tcm_config);
+	tcm_config &= GPNVM_SAMX7X_TCM_BIT_MASK;
 
 	samx7x_add_ram(t, tcm_config, priv_storage->descr.ram_size);
 
@@ -504,6 +506,10 @@ sam_flash_cmd(target *t, uint32_t base, uint8_t cmd, uint16_t arg)
 {
 	DEBUG_INFO("%s: base = 0x%08"PRIx32" cmd = 0x%02X, arg = 0x%06X\n",
 		__func__, base, cmd, arg);
+
+	if(base == 0)
+		return -1;
+
 	target_mem_write32(t, EEFC_FCR(base),
 	                   EEFC_FCR_FKEY | cmd | ((uint32_t)arg << 8));
 
@@ -582,10 +588,14 @@ static int sam_flash_write(struct target_flash *f, target_addr dest,
 	return 0;
 }
 
-static uint32_t sam_gpnvm_get(target *t, uint32_t base)
+static int sam_gpnvm_get(target *t, uint32_t base, uint32_t *gpnvm)
 {
-	sam_flash_cmd(t, base, EEFC_FCR_FCMD_GGPB, 0);
-	return target_mem_read32(t, EEFC_FRR(base));
+	if(!gpnvm || sam_flash_cmd(t, base, EEFC_FCR_FCMD_GGPB, 0))
+		return -1;
+
+	*gpnvm = target_mem_read32(t, EEFC_FRR(base));
+
+	return 0;
 }
 
 static bool sam_cmd_gpnvm(target *t, int argc, const char **argv)
@@ -624,7 +634,7 @@ static bool sam_cmd_gpnvm(target *t, int argc, const char **argv)
 		break;
 	default:
 		/* unknown / invalid driver*/
-		goto bad_usage;
+		return false;
 	}
 
 	uint32_t mask = 0, values = 0;
@@ -646,7 +656,8 @@ static bool sam_cmd_gpnvm(target *t, int argc, const char **argv)
 		{
 			if (work_mask & 1) {
 				uint8_t cmd = (work_values & 1) ? EEFC_FCR_FCMD_SGPB : EEFC_FCR_FCMD_CGPB;
-				sam_flash_cmd(t, base, cmd, bit);
+				if(sam_flash_cmd(t, base, cmd, bit))
+					return false;
 			}
 			work_mask >>= 1;
 			work_values >>= 1;
@@ -655,7 +666,9 @@ static bool sam_cmd_gpnvm(target *t, int argc, const char **argv)
 		goto bad_usage;
 	}
 
-	uint32_t gpnvm = sam_gpnvm_get(t, base);
+	uint32_t gpnvm = 0;
+	if (sam_gpnvm_get(t, base, &gpnvm))
+		return false;
 	tc_printf(t, "GPNVM: 0x%08X\n", gpnvm);
 
 	if ((drv == DRIVER_SAMX7X) && (mask & GPNVM_SAMX7X_TCM_BIT_MASK)) {
