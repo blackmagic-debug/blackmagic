@@ -176,13 +176,11 @@ bool stm32f1_probe(target *t)
 		target_add_ram(t, 0x20000000, 0x5000);
 		stm32f1_add_flash(t, 0x8000000, 0x20000, 0x400);
 		target_add_commands(t, stm32f1_cmd_list, "STM32 LD/MD/VL-LD/VL-MD");
-		/* Test for non-genuine parts with Core rev 2*/
+		/* Test for clone parts with Core rev 2*/
 		ADIv5_AP_t *ap = cortexm_ap(t);
 		if ((ap->idr >> 28) > 1) {
 			t->driver = "STM32F1 (clone) medium density";
-#if defined(PLATFORM_HAS_DEBUG)
-			DEBUG_WARN("Non-genuine STM32F1\n");
-#endif
+			DEBUG_WARN("Detected clone STM32F1\n");
 		} else {
 			t->driver = "STM32F1 medium density";
 		}
@@ -539,15 +537,6 @@ static bool stm32f1_cmd_option(target *t, int argc, const char **argv)
 	} else {
 		tc_printf(t, "usage: monitor option erase\n");
 		tc_printf(t, "usage: monitor option <addr> <value>\n");
-	}
-
-	if (0 && flash_obp_rdp_key == FLASH_OBP_RDP_KEY_F3) {
-		/* Reload option bytes on F0 and F3*/
-		val = target_mem_read32(t, FLASH_CR);
-		val |= FLASH_CR_OBL_LAUNCH;
-		stm32f1_option_write(t, FLASH_CR, val);
-		val &= ~FLASH_CR_OBL_LAUNCH;
-		stm32f1_option_write(t, FLASH_CR, val);
 	}
 
 	for (size_t i = 0; i < 16; i += 4) {
