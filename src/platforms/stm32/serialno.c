@@ -50,7 +50,7 @@ char *serial_no_read(char *s)
 		const size_t idx = (chunk << 3U) + (7U - nibble);
 		if (nibble == 0)
 			unique_id = unique_id_p[chunk];
-		s[idx] = ((unique_id >> (i * 4)) & 0x0F) + '0';
+		s[idx] = ((unique_id >> (nibble * 4U)) & 0x0F) + '0';
 
 		/* If the character is something above 9, then add the offset to make it ASCII A-F */
 		if (s[idx] > '9')
