@@ -1,6 +1,7 @@
 # Blackmagic for ST-Link Adapters
 
-ST-Link v3, ST-Link v2-1 and v2 with original, recent ST firmware can can use the hosted branch, running the GDB server on PC.
+With recent ST firmware, the ST-Link v2, ST-Link v2-1 and v3 can be used with
+Black Magic Debug App rather than having to flash this firmware to the adaptor.
 
 Running the BMP firmware on ST-Link v2 and ST-Link v2-1 provides:
 
@@ -10,6 +11,12 @@ Running the BMP firmware on ST-Link v2 and ST-Link v2-1 provides:
 * no mass storage device (MSD). A MSD may collide with company policies.
 
 For all commands below, unplug all other BMP/ST-Link beside the target(*1)
+
+If your adaptor offers SWIM pins on the connector (many of clones of the official adaptors do this)
+then they often don't provide a UART interface. In this case, build the firmware with
+`SWIM_AS_UART=1` to repurpose the pins as the UART interface provided to the host over USB.
+
+Note: on some clones, SWIM is strongly pulled up by a 680 Ohm resistor.
 
 ## Upload BMP Firmware
 
