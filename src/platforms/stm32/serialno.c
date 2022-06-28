@@ -26,7 +26,7 @@ char *serial_no_read(char *s)
 	const volatile uint32_t *const unique_id_p = (uint32_t *)DESIG_UNIQUE_ID_BASE;
 	const uint32_t unique_id = unique_id_p[0] + unique_id_p[1] + unique_id_p[2];
 	/* Fetch serial number from chip's unique ID */
-	for(size_t i = 0; i < 8U; ++i) {
+	for (size_t i = 0; i < 8U; ++i) {
 		s[7U - i] = ((unique_id >> (i * 4U)) & 0x0FU) + '0';
 		/* If the character is something above 9, then add the offset to make it ASCII A-F */
 		if (s[7U - i] > '9')
@@ -35,11 +35,11 @@ char *serial_no_read(char *s)
 #elif DFU_SERIAL_LENGTH == 13
 	/* Use the same serial number as the ST DFU Bootloader.*/
 	const volatile uint16_t *const uid = (uint16_t *)DESIG_UNIQUE_ID_BASE;
-# if defined(STM32F4) || defined(STM32F7)
+#if defined(STM32F4) || defined(STM32F7)
 	int offset = 3;
-# elif defined(STM32L0) ||  defined(STM32F0) || defined(STM32F3)
+#elif defined(STM32L0) || defined(STM32F0) || defined(STM32F3)
 	int offset = 5;
-# endif
+#endif
 	sprintf(s, "%04X%04X%04X", uid[1] + uid[5], uid[0] + uid[4], uid[offset]);
 #elif DFU_SERIAL_LENGTH == 25
 	const volatile uint32_t *const unique_id_p = (uint32_t *)DESIG_UNIQUE_ID_BASE;
@@ -57,7 +57,7 @@ char *serial_no_read(char *s)
 			s[idx] += 7; /* 'A' - '9' = 8, less 1 gives 7. */
 	}
 #else
-# WARNING "Unhandled DFU_SERIAL_LENGTH"
+#WARNING "Unhandled DFU_SERIAL_LENGTH"
 #endif
 	s[DFU_SERIAL_LENGTH - 1] = '\0';
 	return s;
