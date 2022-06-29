@@ -37,15 +37,16 @@
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
+#include "adiv5.h"
 
-#define SIM_SDID   0x40048024
-#define SIM_FCFG1  0x4004804C
+#define SIM_SDID  0x40048024
+#define SIM_FCFG1 0x4004804C
 
-#define FTFA_BASE  0x40020000
-#define FTFA_FSTAT (FTFA_BASE + 0x00)
-#define FTFA_FCNFG (FTFA_BASE + 0x01)
-#define FTFA_FSEC  (FTFA_BASE + 0x02)
-#define FTFA_FOPT  (FTFA_BASE + 0x03)
+#define FTFA_BASE    0x40020000
+#define FTFA_FSTAT   (FTFA_BASE + 0x00)
+#define FTFA_FCNFG   (FTFA_BASE + 0x01)
+#define FTFA_FSEC    (FTFA_BASE + 0x02)
+#define FTFA_FOPT    (FTFA_BASE + 0x03)
 #define FTFA_FCCOB_0 (FTFA_BASE + 0x04)
 #define FTFA_FCCOB_1 (FTFA_BASE + 0x08)
 #define FTFA_FCCOB_2 (FTFA_BASE + 0x0C)
@@ -56,35 +57,33 @@
 #define FTFA_FSTAT_FPVIOL   (1 << 4)
 #define FTFA_FSTAT_MGSTAT0  (1 << 0)
 
-#define FTFA_CMD_CHECK_ERASE       0x01
-#define FTFA_CMD_PROGRAM_CHECK     0x02
-#define FTFA_CMD_READ_RESOURCE     0x03
-#define FTFA_CMD_PROGRAM_LONGWORD  0x06
+#define FTFA_CMD_CHECK_ERASE      0x01
+#define FTFA_CMD_PROGRAM_CHECK    0x02
+#define FTFA_CMD_READ_RESOURCE    0x03
+#define FTFA_CMD_PROGRAM_LONGWORD 0x06
 /* Part of the FTFE module for K64 */
-#define FTFE_CMD_PROGRAM_PHRASE    0x07
-#define FTFA_CMD_ERASE_SECTOR      0x09
-#define FTFA_CMD_CHECK_ERASE_ALL   0x40
-#define FTFA_CMD_READ_ONCE         0x41
-#define FTFA_CMD_PROGRAM_ONCE      0x43
-#define FTFA_CMD_ERASE_ALL         0x44
-#define FTFA_CMD_BACKDOOR_ACCESS   0x45
+#define FTFE_CMD_PROGRAM_PHRASE  0x07
+#define FTFA_CMD_ERASE_SECTOR    0x09
+#define FTFA_CMD_CHECK_ERASE_ALL 0x40
+#define FTFA_CMD_READ_ONCE       0x41
+#define FTFA_CMD_PROGRAM_ONCE    0x43
+#define FTFA_CMD_ERASE_ALL       0x44
+#define FTFA_CMD_BACKDOOR_ACCESS 0x45
 
 #define KL_WRITE_LEN 4
 /* 8 byte phrases need to be written to the k64 flash */
 #define K64_WRITE_LEN 8
 
-static bool kinetis_cmd_unsafe(target *t, int argc, char *argv[]);
+static bool kinetis_cmd_unsafe(target *t, int argc, char **argv);
 
 const struct command_s kinetis_cmd_list[] = {
 	{"unsafe", (cmd_handler)kinetis_cmd_unsafe, "Allow programming security byte (enable|disable)"},
-	{NULL, NULL, NULL}
-};
+	{NULL, NULL, NULL}};
 
-static bool kinetis_cmd_unsafe(target *t, int argc, char *argv[])
+static bool kinetis_cmd_unsafe(target *t, int argc, char **argv)
 {
 	if (argc == 1) {
-		tc_printf(t, "Allow programming security byte: %s\n",
-			  t->unsafe_enabled ? "enabled" : "disabled");
+		tc_printf(t, "Allow programming security byte: %s\n", t->unsafe_enabled ? "enabled" : "disabled");
 	} else {
 		parse_enable_or_disable(argv[1], &t->unsafe_enabled);
 	}
@@ -92,8 +91,7 @@ static bool kinetis_cmd_unsafe(target *t, int argc, char *argv[])
 }
 
 static int kl_gen_flash_erase(struct target_flash *f, target_addr addr, size_t len);
-static int kl_gen_flash_write(struct target_flash *f,
-                              target_addr dest, const void *src, size_t len);
+static int kl_gen_flash_write(struct target_flash *f, target_addr dest, const void *src, size_t len);
 static int kl_gen_flash_done(struct target_flash *f);
 
 struct kinetis_flash {
@@ -101,13 +99,13 @@ struct kinetis_flash {
 	uint8_t write_len;
 };
 
-static void kl_gen_add_flash(target *t, uint32_t addr, size_t length,
-                             size_t erasesize, size_t write_len)
+static void kl_gen_add_flash(
+	target *const t, const uint32_t addr, const size_t length, const size_t erasesize, const size_t write_len)
 {
 	struct kinetis_flash *kf = calloc(1, sizeof(*kf));
 	struct target_flash *f;
 
-	if (!kf) {			/* calloc failed: heap exhaustion */
+	if (!kf) { /* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return;
 	}
@@ -135,7 +133,7 @@ static void kl_s32k14_setup(
 	kl_gen_add_flash(t, 0x10000000, flexmem_size, 0x1000, K64_WRITE_LEN); /* FlexNVM, 4 KB Sectors */
 }
 
-bool kinetis_probe(target *t)
+bool kinetis_probe(target *const t)
 {
 	uint32_t sdid = target_mem_read32(t, SIM_SDID);
 	uint32_t fcfg1 = target_mem_read32(t, SIM_FCFG1);
@@ -143,52 +141,52 @@ bool kinetis_probe(target *t)
 	switch (sdid >> 20) {
 	case 0x161:
 		/* sram memory size */
-		switch((sdid >> 16) & 0x0f) {
-			case 0x03:/* 4 KB */
-				target_add_ram(t, 0x1ffffc00, 0x0400);
-				target_add_ram(t, 0x20000000, 0x0C00);
-				break;
-			case 0x04:/* 8 KB */
-				target_add_ram(t, 0x1ffff800, 0x0800);
-				target_add_ram(t, 0x20000000, 0x1800);
-				break;
-			case 0x05:/* 16 KB */
-				target_add_ram(t, 0x1ffff000, 0x1000);
-				target_add_ram(t, 0x20000000, 0x3000);
-				break;
-			case 0x06:/* 32 KB */
-				target_add_ram(t, 0x1fffe000, 0x2000);
-				target_add_ram(t, 0x20000000, 0x6000);
-				break;
-			default:
-				return false;
-				break;
+		switch ((sdid >> 16) & 0x0f) {
+		case 0x03: /* 4 KB */
+			target_add_ram(t, 0x1ffffc00, 0x0400);
+			target_add_ram(t, 0x20000000, 0x0C00);
+			break;
+		case 0x04: /* 8 KB */
+			target_add_ram(t, 0x1ffff800, 0x0800);
+			target_add_ram(t, 0x20000000, 0x1800);
+			break;
+		case 0x05: /* 16 KB */
+			target_add_ram(t, 0x1ffff000, 0x1000);
+			target_add_ram(t, 0x20000000, 0x3000);
+			break;
+		case 0x06: /* 32 KB */
+			target_add_ram(t, 0x1fffe000, 0x2000);
+			target_add_ram(t, 0x20000000, 0x6000);
+			break;
+		default:
+			return false;
+			break;
 		}
 
 		/* flash memory size */
-		switch((fcfg1 >> 24) & 0x0f) {
-			case 0x03: /* 32 KB */
-				t->driver = "KL16Z32Vxxx";
-				kl_gen_add_flash(t, 0x00000000, 0x08000, 0x400, KL_WRITE_LEN);
-				break;
+		switch ((fcfg1 >> 24) & 0x0f) {
+		case 0x03: /* 32 KB */
+			t->driver = "KL16Z32Vxxx";
+			kl_gen_add_flash(t, 0x00000000, 0x08000, 0x400, KL_WRITE_LEN);
+			break;
 
-			case 0x05: /* 64 KB */
-				t->driver = "KL16Z64Vxxx";
-				kl_gen_add_flash(t, 0x00000000, 0x10000, 0x400, KL_WRITE_LEN);
-				break;
+		case 0x05: /* 64 KB */
+			t->driver = "KL16Z64Vxxx";
+			kl_gen_add_flash(t, 0x00000000, 0x10000, 0x400, KL_WRITE_LEN);
+			break;
 
-			case 0x07: /* 128 KB */
-				t->driver = "KL16Z128Vxxx";
-				kl_gen_add_flash(t, 0x00000000, 0x20000, 0x400, KL_WRITE_LEN);
-				break;
+		case 0x07: /* 128 KB */
+			t->driver = "KL16Z128Vxxx";
+			kl_gen_add_flash(t, 0x00000000, 0x20000, 0x400, KL_WRITE_LEN);
+			break;
 
-			case 0x09: /* 256 KB */
-				t->driver = "KL16Z256Vxxx";
-				kl_gen_add_flash(t, 0x00000000, 0x40000, 0x400, KL_WRITE_LEN);
-				break;
-			default:
-				return false;
-				break;
+		case 0x09: /* 256 KB */
+			t->driver = "KL16Z256Vxxx";
+			kl_gen_add_flash(t, 0x00000000, 0x40000, 0x400, KL_WRITE_LEN);
+			break;
+		default:
+			return false;
+			break;
 		}
 
 		break;
@@ -206,45 +204,45 @@ bool kinetis_probe(target *t)
 		kl_gen_add_flash(t, 0x00000000, 0x40000, 0x400, KL_WRITE_LEN);
 		break;
 	case 0x271:
-		switch((sdid >> 16) & 0x0f) {
-			case 4:
-				t->driver = "KL27x32";
-				target_add_ram(t, 0x1ffff800, 0x0800);
-				target_add_ram(t, 0x20000000, 0x1800);
-				kl_gen_add_flash(t, 0x00000000, 0x8000, 0x400, KL_WRITE_LEN);
-				break;
-			case 5:
-				t->driver = "KL27x64";
-				target_add_ram(t, 0x1ffff000, 0x1000);
-				target_add_ram(t, 0x20000000, 0x3000);
-				kl_gen_add_flash(t, 0x00000000, 0x10000, 0x400, KL_WRITE_LEN);
-				break;
-			default:
-				return false;
+		switch ((sdid >> 16) & 0x0f) {
+		case 4:
+			t->driver = "KL27x32";
+			target_add_ram(t, 0x1ffff800, 0x0800);
+			target_add_ram(t, 0x20000000, 0x1800);
+			kl_gen_add_flash(t, 0x00000000, 0x8000, 0x400, KL_WRITE_LEN);
+			break;
+		case 5:
+			t->driver = "KL27x64";
+			target_add_ram(t, 0x1ffff000, 0x1000);
+			target_add_ram(t, 0x20000000, 0x3000);
+			kl_gen_add_flash(t, 0x00000000, 0x10000, 0x400, KL_WRITE_LEN);
+			break;
+		default:
+			return false;
 		}
 		break;
 	case 0x021: /* KL02 family */
-		switch((sdid >> 16) & 0x0f) {
-			case 3:
-				t->driver = "KL02x32";
-				target_add_ram(t, 0x1FFFFC00, 0x400);
-				target_add_ram(t, 0x20000000, 0xc00);
-				kl_gen_add_flash(t, 0x00000000, 0x7FFF, 0x400, KL_WRITE_LEN);
-				break;
-			case 2:
-				t->driver = "KL02x16";
-				target_add_ram(t, 0x1FFFFE00, 0x200);
-				target_add_ram(t, 0x20000000, 0x600);
-				kl_gen_add_flash(t, 0x00000000, 0x3FFF, 0x400, KL_WRITE_LEN);
-				break;
-			case 1:
-				t->driver = "KL02x8";
-				target_add_ram(t, 0x1FFFFF00, 0x100);
-				target_add_ram(t, 0x20000000, 0x300);
-				kl_gen_add_flash(t, 0x00000000, 0x1FFF, 0x400, KL_WRITE_LEN);
-				break;
-			default:
-				return false;
+		switch ((sdid >> 16) & 0x0f) {
+		case 3:
+			t->driver = "KL02x32";
+			target_add_ram(t, 0x1FFFFC00, 0x400);
+			target_add_ram(t, 0x20000000, 0xc00);
+			kl_gen_add_flash(t, 0x00000000, 0x7FFF, 0x400, KL_WRITE_LEN);
+			break;
+		case 2:
+			t->driver = "KL02x16";
+			target_add_ram(t, 0x1FFFFE00, 0x200);
+			target_add_ram(t, 0x20000000, 0x600);
+			kl_gen_add_flash(t, 0x00000000, 0x3FFF, 0x400, KL_WRITE_LEN);
+			break;
+		case 1:
+			t->driver = "KL02x8";
+			target_add_ram(t, 0x1FFFFF00, 0x100);
+			target_add_ram(t, 0x20000000, 0x300);
+			kl_gen_add_flash(t, 0x00000000, 0x1FFF, 0x400, KL_WRITE_LEN);
+			break;
+		default:
+			return false;
 		}
 		break;
 	case 0x031: /* KL03 family */
@@ -266,73 +264,73 @@ bool kinetis_probe(target *t)
 		 * subfamily nibble as 2
 		 */
 		t->driver = "K64";
-		target_add_ram(t, 0x1FFF0000,  0x10000);
-		target_add_ram(t, 0x20000000,  0x30000);
+		target_add_ram(t, 0x1FFF0000, 0x10000);
+		target_add_ram(t, 0x20000000, 0x30000);
 		kl_gen_add_flash(t, 0, 0x80000, 0x1000, K64_WRITE_LEN);
 		kl_gen_add_flash(t, 0x80000, 0x80000, 0x1000, K64_WRITE_LEN);
 		break;
 	case 0x000: /* Older K-series */
-		switch(sdid & 0xff0) {
-			case 0x000: /* K10 Family, DIEID=0x0 */
-			case 0x080: /* K10 Family, DIEID=0x1 */
-			case 0x100: /* K10 Family, DIEID=0x2 */
-			case 0x180: /* K10 Family, DIEID=0x3 */
-			case 0x220: /* K11 Family, DIEID=0x4 */
-				return false;
-			case 0x200: /* K12 Family, DIEID=0x4 */
-				switch((fcfg1 >> 24) & 0x0f) {
-					/* K12 Sub-Family Reference Manual, K12P80M50SF4RM, Rev. 4, February 2013 */
-					case 0x7:
-						t->driver = "MK12DX128Vxx5";
-						target_add_ram(t, 0x1fffc000, 0x00004000); /* SRAM_L, 16 KB */
-						target_add_ram(t, 0x20000000, 0x00004000); /* SRAM_H, 16 KB */
-						kl_gen_add_flash(t, 0x00000000, 0x00020000, 0x800, KL_WRITE_LEN); /* P-Flash, 128 KB, 2 KB Sectors */
-						kl_gen_add_flash(t, 0x10000000, 0x00010000, 0x800, KL_WRITE_LEN); /* FlexNVM, 64 KB, 2 KB Sectors */
-						break;
-					case 0x9:
-						t->driver = "MK12DX256Vxx5";
-						target_add_ram(t, 0x1fffc000, 0x00004000); /* SRAM_L, 16 KB */
-						target_add_ram(t, 0x20000000, 0x00004000); /* SRAM_H, 16 KB */
-						kl_gen_add_flash(t, 0x00000000, 0x00040000, 0x800, KL_WRITE_LEN); /* P-Flash, 256 KB, 2 KB Sectors */
-						kl_gen_add_flash(t, 0x10000000, 0x00010000, 0x800, KL_WRITE_LEN); /* FlexNVM, 64 KB, 2 KB Sectors */
-						break;
-					case 0xb:
-						t->driver = "MK12DN512Vxx5";
-						target_add_ram(t, 0x1fff8000, 0x00008000); /* SRAM_L, 32 KB */
-						target_add_ram(t, 0x20000000, 0x00008000); /* SRAM_H, 32 KB */
-						kl_gen_add_flash(t, 0x00000000, 0x00040000, 0x800, KL_WRITE_LEN); /* P-Flash, 256 KB, 2 KB Sectors */
-						kl_gen_add_flash(t, 0x00040000, 0x00040000, 0x800, KL_WRITE_LEN); /* FlexNVM, 256 KB, 2 KB Sectors */
-						break;
-					default:
-						return false;
-				}
+		switch (sdid & 0xff0) {
+		case 0x000: /* K10 Family, DIEID=0x0 */
+		case 0x080: /* K10 Family, DIEID=0x1 */
+		case 0x100: /* K10 Family, DIEID=0x2 */
+		case 0x180: /* K10 Family, DIEID=0x3 */
+		case 0x220: /* K11 Family, DIEID=0x4 */
+			return false;
+		case 0x200: /* K12 Family, DIEID=0x4 */
+			switch ((fcfg1 >> 24) & 0x0f) {
+			/* K12 Sub-Family Reference Manual, K12P80M50SF4RM, Rev. 4, February 2013 */
+			case 0x7:
+				t->driver = "MK12DX128Vxx5";
+				target_add_ram(t, 0x1fffc000, 0x00004000);                        /* SRAM_L, 16 KB */
+				target_add_ram(t, 0x20000000, 0x00004000);                        /* SRAM_H, 16 KB */
+				kl_gen_add_flash(t, 0x00000000, 0x00020000, 0x800, KL_WRITE_LEN); /* P-Flash, 128 KB, 2 KB Sectors */
+				kl_gen_add_flash(t, 0x10000000, 0x00010000, 0x800, KL_WRITE_LEN); /* FlexNVM, 64 KB, 2 KB Sectors */
 				break;
-			case 0x010: /* K20 Family, DIEID=0x0 */
-			case 0x090: /* K20 Family, DIEID=0x1 */
-			case 0x110: /* K20 Family, DIEID=0x2 */
-			case 0x190: /* K20 Family, DIEID=0x3 */
-			case 0x230: /* K21 Family, DIEID=0x4 */
-			case 0x330: /* K21 Family, DIEID=0x6 */
-			case 0x210: /* K22 Family, DIEID=0x4 */
-			case 0x310: /* K22 Family, DIEID=0x6 */
-			case 0x0a0: /* K30 Family, DIEID=0x1 */
-			case 0x120: /* K30 Family, DIEID=0x2 */
-			case 0x0b0: /* K40 Family, DIEID=0x1 */
-			case 0x130: /* K40 Family, DIEID=0x2 */
-			case 0x0e0: /* K50 Family, DIEID=0x1 */
-			case 0x0f0: /* K51 Family, DIEID=0x1 */
-			case 0x170: /* K53 Family, DIEID=0x2 */
-			case 0x140: /* K60 Family, DIEID=0x2 */
-			case 0x1c0: /* K60 Family, DIEID=0x3 */
-			case 0x1d0: /* K70 Family, DIEID=0x3 */
+			case 0x9:
+				t->driver = "MK12DX256Vxx5";
+				target_add_ram(t, 0x1fffc000, 0x00004000);                        /* SRAM_L, 16 KB */
+				target_add_ram(t, 0x20000000, 0x00004000);                        /* SRAM_H, 16 KB */
+				kl_gen_add_flash(t, 0x00000000, 0x00040000, 0x800, KL_WRITE_LEN); /* P-Flash, 256 KB, 2 KB Sectors */
+				kl_gen_add_flash(t, 0x10000000, 0x00010000, 0x800, KL_WRITE_LEN); /* FlexNVM, 64 KB, 2 KB Sectors */
+				break;
+			case 0xb:
+				t->driver = "MK12DN512Vxx5";
+				target_add_ram(t, 0x1fff8000, 0x00008000);                        /* SRAM_L, 32 KB */
+				target_add_ram(t, 0x20000000, 0x00008000);                        /* SRAM_H, 32 KB */
+				kl_gen_add_flash(t, 0x00000000, 0x00040000, 0x800, KL_WRITE_LEN); /* P-Flash, 256 KB, 2 KB Sectors */
+				kl_gen_add_flash(t, 0x00040000, 0x00040000, 0x800, KL_WRITE_LEN); /* FlexNVM, 256 KB, 2 KB Sectors */
+				break;
 			default:
 				return false;
+			}
+			break;
+		case 0x010: /* K20 Family, DIEID=0x0 */
+		case 0x090: /* K20 Family, DIEID=0x1 */
+		case 0x110: /* K20 Family, DIEID=0x2 */
+		case 0x190: /* K20 Family, DIEID=0x3 */
+		case 0x230: /* K21 Family, DIEID=0x4 */
+		case 0x330: /* K21 Family, DIEID=0x6 */
+		case 0x210: /* K22 Family, DIEID=0x4 */
+		case 0x310: /* K22 Family, DIEID=0x6 */
+		case 0x0a0: /* K30 Family, DIEID=0x1 */
+		case 0x120: /* K30 Family, DIEID=0x2 */
+		case 0x0b0: /* K40 Family, DIEID=0x1 */
+		case 0x130: /* K40 Family, DIEID=0x2 */
+		case 0x0e0: /* K50 Family, DIEID=0x1 */
+		case 0x0f0: /* K51 Family, DIEID=0x1 */
+		case 0x170: /* K53 Family, DIEID=0x2 */
+		case 0x140: /* K60 Family, DIEID=0x2 */
+		case 0x1c0: /* K60 Family, DIEID=0x3 */
+		case 0x1d0: /* K70 Family, DIEID=0x3 */
+		default:
+			return false;
 		}
 		break;
 	case 0x118: /* S32K118 */
 		t->driver = "S32K118";
-		target_add_ram(t, 0x1ffffc00, 0x00000400); /* SRAM_L, 1 KB */
-		target_add_ram(t, 0x20000000, 0x00005800); /* SRAM_H, 22 KB */
+		target_add_ram(t, 0x1ffffc00, 0x00000400);                         /* SRAM_L, 1 KB */
+		target_add_ram(t, 0x20000000, 0x00005800);                         /* SRAM_H, 22 KB */
 		kl_gen_add_flash(t, 0x00000000, 0x00040000, 0x800, K64_WRITE_LEN); /* P-Flash, 256 KB, 2 KB Sectors */
 		kl_gen_add_flash(t, 0x10000000, 0x00008000, 0x800, K64_WRITE_LEN); /* FlexNVM, 32 KB, 2 KB Sectors */
 		break;
@@ -375,13 +373,12 @@ bool kinetis_probe(target *t)
 	return true;
 }
 
-static bool
-kl_gen_command(target *t, uint8_t cmd, uint32_t addr, const uint32_t *data, int n_items)
+static bool kl_gen_command(target *t, uint8_t cmd, uint32_t addr, const uint32_t *data, int n_items)
 {
 	uint8_t fstat;
 
 	/* clear errors unconditionally, so we can start a new operation */
-	target_mem_write8(t,FTFA_FSTAT,(FTFA_FSTAT_ACCERR | FTFA_FSTAT_FPVIOL));
+	target_mem_write8(t, FTFA_FSTAT, (FTFA_FSTAT_ACCERR | FTFA_FSTAT_FPVIOL));
 
 	/* Wait for CCIF to be high */
 	do {
@@ -412,7 +409,7 @@ kl_gen_command(target *t, uint8_t cmd, uint32_t addr, const uint32_t *data, int 
 	return true;
 }
 
-static int kl_gen_flash_erase(struct target_flash *f, target_addr addr, size_t len)
+static int kl_gen_flash_erase(struct target_flash *const f, target_addr addr, size_t len)
 {
 	while (len) {
 		if (kl_gen_command(f->t, FTFA_CMD_ERASE_SECTOR, addr, NULL, 0)) {
@@ -429,20 +426,16 @@ static int kl_gen_flash_erase(struct target_flash *f, target_addr addr, size_t l
 	return 0;
 }
 
-#define FLASH_SECURITY_BYTE_ADDRESS 0x40C
+#define FLASH_SECURITY_BYTE_ADDRESS   0x40C
 #define FLASH_SECURITY_BYTE_UNSECURED 0xFE
 
-static int kl_gen_flash_write(struct target_flash *f,
-                              target_addr dest, const void *src, size_t len)
+static int kl_gen_flash_write(struct target_flash *f, target_addr dest, const void *src, size_t len)
 {
-	struct kinetis_flash *kf = (struct kinetis_flash *)f;
+	struct kinetis_flash *const kf = (struct kinetis_flash *)f;
 
 	/* Ensure we don't write something horrible over the security byte */
-	if (!f->t->unsafe_enabled &&
-	    dest <= FLASH_SECURITY_BYTE_ADDRESS &&
-	    dest + len > FLASH_SECURITY_BYTE_ADDRESS) {
-		((uint8_t*)src)[FLASH_SECURITY_BYTE_ADDRESS - dest] =
-		    FLASH_SECURITY_BYTE_UNSECURED;
+	if (!f->t->unsafe_enabled && dest <= FLASH_SECURITY_BYTE_ADDRESS && dest + len > FLASH_SECURITY_BYTE_ADDRESS) {
+		((uint8_t *)src)[FLASH_SECURITY_BYTE_ADDRESS - dest] = FLASH_SECURITY_BYTE_UNSECURED;
 	}
 
 	/* Determine write command based on the alignment. */
@@ -466,9 +459,9 @@ static int kl_gen_flash_write(struct target_flash *f,
 	return 0;
 }
 
-static int kl_gen_flash_done(struct target_flash *f)
+static int kl_gen_flash_done(struct target_flash *const f)
 {
-	struct kinetis_flash *kf = (struct kinetis_flash *)f;
+	struct kinetis_flash *const kf = (struct kinetis_flash *)f;
 
 	if (f->t->unsafe_enabled)
 		return 0;
@@ -481,17 +474,15 @@ static int kl_gen_flash_done(struct target_flash *f)
 	 */
 	if (kf->write_len == K64_WRITE_LEN) {
 		uint32_t vals[2];
-		vals[0] = target_mem_read32(f->t, FLASH_SECURITY_BYTE_ADDRESS-4);
+		vals[0] = target_mem_read32(f->t, FLASH_SECURITY_BYTE_ADDRESS - 4);
 		vals[1] = target_mem_read32(f->t, FLASH_SECURITY_BYTE_ADDRESS);
 		vals[1] = (vals[1] & 0xffffff00) | FLASH_SECURITY_BYTE_UNSECURED;
-		kl_gen_command(f->t, FTFE_CMD_PROGRAM_PHRASE,
-					   FLASH_SECURITY_BYTE_ADDRESS - 4, vals, 2);
+		kl_gen_command(f->t, FTFE_CMD_PROGRAM_PHRASE, FLASH_SECURITY_BYTE_ADDRESS - 4, vals, 2);
 	} else {
 		uint32_t vals[1];
 		vals[0] = target_mem_read32(f->t, FLASH_SECURITY_BYTE_ADDRESS);
 		vals[0] = (vals[0] & 0xffffff00) | FLASH_SECURITY_BYTE_UNSECURED;
-		kl_gen_command(f->t, FTFA_CMD_PROGRAM_LONGWORD,
-					   FLASH_SECURITY_BYTE_ADDRESS, vals, 1);
+		kl_gen_command(f->t, FTFA_CMD_PROGRAM_LONGWORD, FLASH_SECURITY_BYTE_ADDRESS, vals, 1);
 	}
 
 	return 0;
@@ -504,7 +495,6 @@ static int kl_gen_flash_done(struct target_flash *f)
  * a backdoor AP is provided which may allow a mass erase to recover the
  * device.  This provides a fake target to allow a monitor command interface
  */
-#include "adiv5.h"
 
 #define KINETIS_MDM_IDR_K22F 0x1c0000
 #define KINETIS_MDM_IDR_KZ03 0x1c0020
@@ -514,19 +504,18 @@ static bool kinetis_mdm_cmd_ke04_mode(target *t, int argc, const char **argv);
 
 const struct command_s kinetis_mdm_cmd_list[] = {
 	{"erase_mass", (cmd_handler)kinetis_mdm_cmd_erase_mass, "Erase entire flash memory"},
-	{"ke04_mode", (cmd_handler)kinetis_mdm_cmd_ke04_mode, "Allow erase for KE04"},
-	{NULL, NULL, NULL}
-};
+	{"ke04_mode", (cmd_handler)kinetis_mdm_cmd_ke04_mode, "Allow erase for KE04"}, {NULL, NULL, NULL}};
 
-enum target_halt_reason mdm_halt_poll(target *t, target_addr *watch)
+enum target_halt_reason mdm_halt_poll(target *t, const target_addr *const watch)
 {
-	(void)t; (void)watch;
+	(void)t;
+	(void)watch;
 	return TARGET_HALT_REQUEST;
 }
 
 void kinetis_mdm_probe(ADIv5_AP_t *ap)
 {
-	switch(ap->idr) {
+	switch (ap->idr) {
 	case KINETIS_MDM_IDR_KZ03: /* Also valid for KE04, no way to check! */
 	case KINETIS_MDM_IDR_K22F:
 		break;
@@ -541,7 +530,7 @@ void kinetis_mdm_probe(ADIv5_AP_t *ap)
 
 	adiv5_ap_ref(ap);
 	t->priv = ap;
-	t->priv_free = (void*)adiv5_ap_unref;
+	t->priv_free = (void *)adiv5_ap_unref;
 
 	t->driver = "Kinetis Recovery (MDM-AP)";
 	t->regs_size = 4;
@@ -551,8 +540,8 @@ void kinetis_mdm_probe(ADIv5_AP_t *ap)
 #define MDM_STATUS  ADIV5_AP_REG(0x00)
 #define MDM_CONTROL ADIV5_AP_REG(0x04)
 
-#define MDM_STATUS_MASS_ERASE_ACK (1 << 0)
-#define MDM_STATUS_FLASH_READY (1 << 1)
+#define MDM_STATUS_MASS_ERASE_ACK     (1 << 0)
+#define MDM_STATUS_FLASH_READY        (1 << 1)
 #define MDM_STATUS_MASS_ERASE_ENABLED (1 << 5)
 
 #define MDM_CONTROL_MASS_ERASE (1 << 0)
@@ -569,6 +558,7 @@ static bool kinetis_mdm_cmd_ke04_mode(target *t, int argc, const char **argv)
 	tc_printf(t, "Mass erase for KE04 now allowed\n");
 	return true;
 }
+
 static bool kinetis_mdm_cmd_erase_mass(target *t, int argc, const char **argv)
 {
 	(void)argc;
@@ -576,13 +566,12 @@ static bool kinetis_mdm_cmd_erase_mass(target *t, int argc, const char **argv)
 	ADIv5_AP_t *ap = t->priv;
 
 	/* Keep the MCU in reset as stated in KL25PxxM48SF0RM */
-	if(t->ke04_mode)
+	if (t->ke04_mode)
 		adiv5_ap_write(ap, MDM_CONTROL, MDM_CONTROL_SYS_RESET);
 
-	uint32_t status, control;
-	status = adiv5_ap_read(ap, MDM_STATUS);
-	control = adiv5_ap_read(ap, MDM_CONTROL);
-	tc_printf(t, "Requesting mass erase (status = 0x%"PRIx32")\n", status);
+	uint32_t status = adiv5_ap_read(ap, MDM_STATUS);
+	uint32_t control = adiv5_ap_read(ap, MDM_CONTROL);
+	tc_printf(t, "Requesting mass erase (status = 0x%" PRIx32 ")\n", status);
 
 	/* This flag does not exist on KE04 */
 	if (!(status & MDM_STATUS_MASS_ERASE_ENABLED) && !t->ke04_mode) {
