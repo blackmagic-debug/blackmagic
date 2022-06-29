@@ -124,6 +124,17 @@ static void kl_gen_add_flash(target *t, uint32_t addr, size_t length,
 	target_add_flash(t, f);
 }
 
+static void kl_s32k14_setup(
+	target *const t, const uint32_t sram_l, const uint32_t sram_h, const size_t flash_size, const size_t flexmem_size)
+{
+	t->driver = "S32K14x";
+	target_add_ram(t, sram_l, 0x20000000 - sram_l);
+	target_add_ram(t, 0x20000000, sram_h);
+
+	kl_gen_add_flash(t, 0x00000000, flash_size, 0x1000, K64_WRITE_LEN);   /* P-Flash, 4 KB Sectors */
+	kl_gen_add_flash(t, 0x10000000, flexmem_size, 0x1000, K64_WRITE_LEN); /* FlexNVM, 4 KB Sectors */
+}
+
 bool kinetis_probe(target *t)
 {
 	uint32_t sdid = target_mem_read32(t, SIM_SDID);
@@ -325,45 +336,37 @@ bool kinetis_probe(target *t)
 		kl_gen_add_flash(t, 0x00000000, 0x00040000, 0x800, K64_WRITE_LEN); /* P-Flash, 256 KB, 2 KB Sectors */
 		kl_gen_add_flash(t, 0x10000000, 0x00008000, 0x800, K64_WRITE_LEN); /* FlexNVM, 32 KB, 2 KB Sectors */
 		break;
-		/* gen1 s32k14x */
-		{
-			uint32_t sram_l, sram_h;
-			uint32_t flash, flexmem;
-	case 0x142: /* s32k142 */
-	case 0x143: /* s32k142w */
-		sram_l = 0x1FFFC000; /* SRAM_L, 16k */
-		sram_h = 0x03000;		 /* SRAM_H, 12k */
-		flash = 0x00040000;	 /* flash 256 KB */
-		flexmem = 0x10000;	 /* FlexNVM 64 KB */
-		goto do_common_s32k14x;
-	case 0x144: /* s32k144 */
-	case 0x145: /* s32k144w */
-		sram_l = 0x1FFF8000; /* SRAM_L, 32k */
-		sram_h = 0x07000;		 /* SRAM_H, 28k */
-		flash = 0x00080000;	 /* flash 512 KB */
-		flexmem = 0x10000;	 /* FlexNVM 64 KB */
-		goto do_common_s32k14x;
-	case 0x146: /* s32k146 */
-		sram_l = 0x1fff0000; /* SRAM_L, 64k */
-		sram_h = 0x0f000;		 /* SRAM_H, 60k */
-		flash = 0x00100000;	 /* flash 1024 KB */
-		flexmem = 0x10000;	 /* FlexNVM 64 KB */
-		goto do_common_s32k14x;
-	case 0x148: /* S32K148 */
-		sram_l = 0x1ffe0000; /* SRAM_L, 128 KB */
-		sram_h = 0x1f000;		 /* SRAM_H, 124 KB */
-		flash = 0x00180000;	 /* flash 1536 KB */
-		flexmem = 0x80000;	 /* FlexNVM 512 KB */
-		goto do_common_s32k14x;
-do_common_s32k14x:
-		t->driver = "S32K14x";
-		target_add_ram(t, sram_l, 0x20000000 - sram_l);
-		target_add_ram(t, 0x20000000, sram_h);
-
-		kl_gen_add_flash(t, 0x00000000, flash, 0x1000, K64_WRITE_LEN);	 /* P-Flash, 4 KB Sectors */
-		kl_gen_add_flash(t, 0x10000000, flexmem, 0x1000, K64_WRITE_LEN); /* FlexNVM, 4 KB Sectors */
+	/* gen1 s32k14x */
+	case 0x142: /* S32K142 */
+	case 0x143: /* S32K142W */
+		/* SRAM_L = 16KiB */
+		/* SRAM_H = 12KiB */
+		/* Flash = 256 KiB */
+		/* FlexNVM = 64 KiB */
+		kl_s32k14_setup(t, 0x1FFFC000, 0x03000, 0x00040000, 0x10000);
 		break;
-		}
+	case 0x144: /* S32K144 */
+	case 0x145: /* S32K144W */
+		/* SRAM_L = 32KiB */
+		/* SRAM_H = 28KiB */
+		/* Flash = 512 KiB */
+		/* FlexNVM = 64 KiB */
+		kl_s32k14_setup(t, 0x1FFF8000, 0x07000, 0x00080000, 0x10000);
+		break;
+	case 0x146: /* S32K146 */
+		/* SRAM_L = 64KiB */
+		/* SRAM_H = 60KiB */
+		/* Flash = 1024 KiB */
+		/* FlexNVM = 64 KiB */
+		kl_s32k14_setup(t, 0x1fff0000, 0x0f000, 0x00100000, 0x10000);
+		break;
+	case 0x148: /* S32K148 */
+		/* SRAM_L = 128 KiB */
+		/* SRAM_H = 124 KiB */
+		/* Flash = 1536 KiB */
+		/* FlexNVM = 512 KiB */
+		kl_s32k14_setup(t, 0x1ffe0000, 0x1f000, 0x00180000, 0x80000);
+		break;
 	default:
 		return false;
 	}
