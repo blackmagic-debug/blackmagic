@@ -1,5 +1,5 @@
 ---
-Checks: 'bugprone-*,cert-*,clang-analyzer-*,misc-*,modernize-*,portability-*,performance-*,readability-*,-readability-magic-numbers'
+Checks: 'bugprone-*,cert-*,clang-analyzer-*,misc-*,modernize-*,portability-*,performance-*,readability-*,-readability-magic-numbers,-readability-braces-around-statements'
 FormatStyle: 'none'
 HeaderFilterRegex: '(src|upgrade)/.+'
 AnalyzeTemporaryDtors: false
