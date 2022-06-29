@@ -493,16 +493,16 @@ static int kinetis_flash_done(struct target_flash *const f)
 	 * vs 4 byte phrases).
 	 */
 	if (kf->write_len == K64_WRITE_LEN) {
-		uint32_t vals[2];
-		vals[0] = target_mem_read32(f->t, FLASH_SECURITY_BYTE_ADDRESS - 4);
-		vals[1] = target_mem_read32(f->t, FLASH_SECURITY_BYTE_ADDRESS);
-		vals[1] = (vals[1] & 0xffffff00) | FLASH_SECURITY_BYTE_UNSECURED;
+		uint32_t vals[2] = {
+			target_mem_read32(f->t, FLASH_SECURITY_BYTE_ADDRESS - 4),
+			target_mem_read32(f->t, FLASH_SECURITY_BYTE_ADDRESS)
+		};
+		vals[1] = (vals[1] & 0xffffff00U) | FLASH_SECURITY_BYTE_UNSECURED;
 		kinetis_fccob_cmd(f->t, FTFx_CMD_PROGRAM_PHRASE, FLASH_SECURITY_BYTE_ADDRESS - 4, vals, 2);
 	} else {
-		uint32_t vals[1];
-		vals[0] = target_mem_read32(f->t, FLASH_SECURITY_BYTE_ADDRESS);
-		vals[0] = (vals[0] & 0xffffff00) | FLASH_SECURITY_BYTE_UNSECURED;
-		kinetis_fccob_cmd(f->t, FTFx_CMD_PROGRAM_LONGWORD, FLASH_SECURITY_BYTE_ADDRESS, vals, 1);
+		uint32_t val = target_mem_read32(f->t, FLASH_SECURITY_BYTE_ADDRESS);
+		val = (val & 0xffffff00U) | FLASH_SECURITY_BYTE_UNSECURED;
+		kinetis_fccob_cmd(f->t, FTFx_CMD_PROGRAM_LONGWORD, FLASH_SECURITY_BYTE_ADDRESS, &val, 1);
 	}
 
 	return 0;
