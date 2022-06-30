@@ -33,7 +33,7 @@ make PROBE_HOST=blackpillv2
 
 * After build:
   * 1) `apt install dfu-util`
-  * 2) Force the F4 into system bootloader mode by jumpering "BOOT0" to "3V3" and "PB2/BOOT1" to "GND" and reset (RESET button). System bootloader should appear.
+  * 2) Force the F4 into system bootloader mode by keeping BOOT0 button pressed while pressing and releasing NRST button. System bootloader should appear.
   * 3) `dfu-util -a 0 --dfuse-address 0x08000000 -D blackmagic.bin`
 
 To exit from dfu mode press a "key" and "reset", release reset. BMP firmware should appear
