@@ -26,7 +26,7 @@ https://github.com/WeActTC/MiniSTM32F4x1
 ```sh
 cd blackmagic
 make clean
-make PROBE_HOST=blackpill
+make PROBE_HOST=blackpillv2
 ```
 
 ## How to Flash with dfu
