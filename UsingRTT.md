@@ -249,7 +249,7 @@ make PROBE_HOST=stlink ENABLE_RTT=1
 or for the STM32F411 *[Black Pill](https://www.aliexpress.com/item/1005001456186625.html)*:
 ```
 make clean
-make PROBE_HOST=f4discovery BLACKPILL=1 ENABLE_RTT=1
+make PROBE_HOST=blackpillv2 ENABLE_RTT=1
 ```
 Setting an ident string is optional. But if you wish, you can set the default RTT ident at compile time.
 For STM32F103 *Blue Pill*:
@@ -260,7 +260,7 @@ make PROBE_HOST=stlink ENABLE_RTT=1 "RTT_IDENT=IDENT\ STR"
 or for STM32F411 *Black Pill*:
 ```
 make clean
-make PROBE_HOST=f4discovery BLACKPILL=1 ENABLE_RTT=1 "RTT_IDENT=IDENT\ STR"
+make PROBE_HOST=blackpillv2 ENABLE_RTT=1 "RTT_IDENT=IDENT\ STR"
 ```
 Note the backslash \\ before the space.
 
