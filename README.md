@@ -71,23 +71,24 @@ Breakpoint 1, main () at /devel/en_apps/gpio/f4_discovery/../gpio.c:70
 70      {
 ```
 
-BLACKMAGIC
-==========
+## Black Magic Debug App
 
-You can also build blackmagic as a PC hosted application
-"make PROBE_HOST=hosted"
+You can also build the Black Magic Debug suite as a PC program called Black Magic Debug App
+by running `make PROBE_HOST=hosted`
 
-This builds the same GDB server, that is running on the Black Magic Probe.
+This builds the same GDB server that is running on the Black Magic Probe.
 While connection to the Black Magic Probe GDB server is via serial line,
-connection to the PC-Hosted GDB server is via TCP port 2000 for the first
+connection to the Black Magic Debug App is via TCP port 2000 for the first
 GDB server and higher for more invokations. Use "tar(get) ext(ented) :2000"
 to connect.
-PC-hosted BMP GDB server can talk to
-- Black Magic Probe firmware probes via the USB-serial port
-- ST-LinkV2 and V3 with recent firmware
-- CMSIS-DAP compatible probes
-- JLINK probes
-- FTDI MPSSE based probe.
+
+Black Magic Debug App can talk to
+
+* Black Magic Probe firmware probes via the USB-serial port
+* ST-LinkV2 and V3 with recent firmware
+* CMSIS-DAP compatible probes
+* JLINK probes
+* FTDI MPSSE based probe.
 
 When connected to a single BMP supported probe, starting "blackmagic" w/o any
 arguments starts the server. When several BMP supported probes are connected,
@@ -96,6 +97,7 @@ Add "-P (position)" to the next invocation to select one.
 For the setup from the sample session above:
 
 In another terminal:
+
 ```console
 > blackmagic
 Black Magic Debug App v1.8.0
@@ -106,6 +108,7 @@ Listening on TCP: 2000
 ```
 
 And in the GDB terminal:
+
 ```console
 (gdb) tar ext :2000
 Remote debugging using :2000
@@ -113,7 +116,6 @@ Remote debugging using :2000
 ...
 ```
 
-PC hosted BMP also allows to flash, read and verify a binary file, by default
-starting at lowest flash address. The "-t" argument displays information about the
-connected target. Use "-h " to get a list of supported options.
-
+Black Magic Debug App also provides for Flashing, reading and verification of a binary file,
+by default starting at lowest flash address. The `-t` argument displays information about the
+connected target. Use `-h`/`--help` to get a list of supported options.
