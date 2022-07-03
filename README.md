@@ -1,5 +1,4 @@
-Black Magic Probe
-=================
+# Black Magic Probe
 
 [![Discord](https://img.shields.io/discord/613131135903596547?logo=discord)](https://discord.gg/P7FYThy)
 
@@ -17,31 +16,31 @@ Serial Wire Output (SWO) allows the target to write tracing and logging to the h
 without using usb or serial port. Decoding SWO in the probe itself
 makes [SWO viewing as simple as connecting to a serial port](https://github.com/blackmagic-debug/blackmagic/wiki/Serial-Wire-Output).
 
+## Resources
 
-Resources
-=========
+* [Documentation](https://github.com/blackmagic-debug/blackmagic/wiki)
+* [Binary builds](http://builds.blacksphere.co.nz/blackmagic)
 
- * [Documentation](https://github.com/blackmagic-debug/blackmagic/wiki)
- * [Binary builds](http://builds.blacksphere.co.nz/blackmagic)
+## Toolchain specific remarks
 
-
-Toolchain specific remarks
-==========================
-Most firmware building is done with the most recent suite from https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-rm.
+Building the firmware is done with the most recent toolchain available from
+[ARM's GNU-RM toolchains](https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-rm).
 If you have a toolchain from other sources and find problems, check if it is a failure of your toolchain and if not open an issue or better provide a pull request with a fix.
 
-OS specific remarks for BMP-Hosted
-==================================
-Most hosted building is done on and for Linux. BMP-hosted for windows can also be build with Mingw on Linux.<br>
-Building hosted for BMP firmware probes only with "make PROBE_HOST HOSTED_BMP_ONLY=1" does not require libusb, libftdi and evt. libhidapi development headers and libraries for running.<br>
-On BSD/Macos, using dev/tty.usbmodemXXX should work but unresolved discussions indicate a hanging open() call on the second invocation. If that happens, try with cu.usbmodemXXX.<br>
+## OS specific remarks for BMP-Hosted
 
-Reporting problems
-==================
+Most hosted building is done on and for Linux. BMP-hosted for windows can also be build with Mingw on Linux.
+
+Building hosted for BMP firmware probes only with "make PROBE_HOST=hosted HOSTED_BMP_ONLY=1" does not require libusb, libftdi and evt. libhidapi development headers and libraries for running.
+
+On BSD/Macos, using dev/tty.usbmodemXXX should work but unresolved discussions indicate a hanging open() call on the second invocation. If that happens, try with cu.usbmodemXXX.
+
+## Reporting problems
+
 Before reporting issues, check against the latest git version. If possible, test against another target /and/or debug probe. Consider broken USB cables and connectors. Try to reproduce with bmp-hosted with at least debug bit 1 set (blackmagic -v 1 ...), as debug messages will be dumped to the starting console. When reporting issues, be as specific as possible!
 
-Sample Session
-=============
+## Sample Session
+
 ```console
 > arm-none-eabi-gdb gpio.elf
 ...<GDB Copyright message>
@@ -64,7 +63,7 @@ Transfer rate: 31 KB/sec, 919 bytes/write.
 (gdb) b main
 Breakpoint 1 at 0x80000e8: file /devel/en_apps/gpio/f4_discovery/../gpio.c, line 70.
 (gdb) r
-Starting program: /devel/en_apps/gpio/f4_discovery/gpio.elf 
+Starting program: /devel/en_apps/gpio/f4_discovery/gpio.elf
 Note: automatically using hardware breakpoints for read-only addresses.
 
 Breakpoint 1, main () at /devel/en_apps/gpio/f4_discovery/../gpio.c:70
