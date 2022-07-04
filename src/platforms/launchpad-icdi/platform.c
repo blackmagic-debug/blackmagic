@@ -92,7 +92,7 @@ void platform_nrst_set_val(bool assert)
 	volatile int i;
 	if (assert) {
 		gpio_clear(NRST_PORT, NRST_PIN);
-		for(i = 0; i < 10000; i++) asm("nop");
+		for(i = 0; i < 10000; i++) __asm__("nop");
 	} else {
 		gpio_set(NRST_PORT, NRST_PIN);
 	}

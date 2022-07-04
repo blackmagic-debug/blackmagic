@@ -9,7 +9,7 @@ Q := @
 endif
 
 CFLAGS += -Wall -Wextra -Werror -Wno-char-subscripts \
-	-std=gnu99 -g3 -MD -I./target \
+	-std=c11 -g3 -MD -I./target \
 	-I. -Iinclude -I$(PLATFORM_DIR)
 
 ifeq ($(ENABLE_DEBUG), 1)

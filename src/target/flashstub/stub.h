@@ -23,8 +23,7 @@
 static inline void __attribute__((always_inline))
 stub_exit(const int code)
 {
-	asm("bkpt %0"::"i"(code));
+	__asm__("bkpt %0"::"i"(code));
 }
 
 #endif
-

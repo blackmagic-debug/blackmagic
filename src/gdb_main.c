@@ -39,6 +39,8 @@
 #include "rtt.h"
 #endif
 
+#include <alloca.h>
+
 enum gdb_signal {
 	GDB_SIGINT = 2,
 	GDB_SIGTRAP = 5,
@@ -361,6 +363,8 @@ static void exec_q_rcmd(const char *packet,int len)
 
 	/* calculate size and allocate buffer for command */
 	datalen = len / 2;
+	// This needs replacing with something more sensible.
+	// It should be pinging -Wvla among other things, and it failing is straight-up UB
 	data = alloca(datalen + 1);
 	/* dehexify command */
 	unhexify(data, packet, datalen);

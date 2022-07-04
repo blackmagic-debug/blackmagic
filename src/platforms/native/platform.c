@@ -108,7 +108,7 @@ int platform_hwversion(void)
 		gpio_set(GPIOB, hwversion_pins);
 
 		/* Wait a little to make sure the pull up is in effect... */
-		for(int i = 0; i < 100; i++) asm("nop");
+		for(int i = 0; i < 100; i++) __asm__("nop");
 
 		/* Get all pins that are pulled low in hardware.
 		 * This also sets all the "unused" pins to 1.
@@ -119,7 +119,7 @@ int platform_hwversion(void)
 		gpio_clear(GPIOB, hwversion_pins);
 
 		/* Wait a little to make sure the pull down is in effect... */
-		for(int i = 0; i < 100; i++) asm("nop");
+		for(int i = 0; i < 100; i++) __asm__("nop");
 
 		/* Get all the pins that are pulled high in hardware. */
 		uint16_t pins_positive = gpio_get(GPIOB, hwversion_pins);
@@ -243,7 +243,7 @@ void platform_nrst_set_val(bool assert)
 		gpio_set_val(NRST_PORT, NRST_PIN, !assert);
 	}
 	if (assert) {
-		for(int i = 0; i < 10000; i++) asm("nop");
+		for(int i = 0; i < 10000; i++) __asm__("nop");
 	}
 }
 

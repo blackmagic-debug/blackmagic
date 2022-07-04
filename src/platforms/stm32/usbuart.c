@@ -629,7 +629,7 @@ void debug_monitor_handler_c(struct ex_frame *sp)
 
 }
 
-asm(".globl debug_monitor_handler\n"
+__asm__(".globl debug_monitor_handler\n"
     ".thumb_func\n"
     "debug_monitor_handler: \n"
     "    mov r0, sp\n"
