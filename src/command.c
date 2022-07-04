@@ -42,6 +42,8 @@
 #	include "traceswo.h"
 #endif
 
+#include <alloca.h>
+
 static bool cmd_version(target *t, int argc, char **argv);
 static bool cmd_help(target *t, int argc, char **argv);
 
@@ -117,6 +119,9 @@ int command_process(target *t, char *cmd)
 	for(char *s = cmd; *s; s++)
 		if((*s == ' ') || (*s == '\t')) argc++;
 
+	/* This needs replacing with something more sensible.
+	 * It should be pinging -Wvla among other things, and it failing is straight-up UB
+	 */
 	argv = alloca(sizeof(const char *) * argc);
 
 	/* Tokenize cmd to find argv */

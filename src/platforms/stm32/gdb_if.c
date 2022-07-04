@@ -81,7 +81,7 @@ static void gdb_if_update_buf(void)
 {
 	while (cdcacm_get_config() != 1);
 #ifdef STM32F4
-	asm volatile ("cpsid i; isb");
+	__asm__ volatile("cpsid i; isb");
 	if (count_new) {
 		memcpy(buffer_out, double_buffer_out, count_new);
 		count_out = count_new;
@@ -89,7 +89,7 @@ static void gdb_if_update_buf(void)
 		out_ptr = 0;
 		usbd_ep_nak_set(usbdev, CDCACM_GDB_ENDPOINT, 0);
 	}
-	asm volatile ("cpsie i; isb");
+	__asm__ volatile("cpsie i; isb");
 #else
 	count_out = usbd_ep_read_packet(usbdev, CDCACM_GDB_ENDPOINT,
 	                                buffer_out, CDCACM_PACKET_SIZE);
@@ -129,4 +129,3 @@ unsigned char gdb_if_getchar_to(int timeout)
 
 	return -1;
 }
-

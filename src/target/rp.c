@@ -466,10 +466,10 @@ static bool rp_attach(target *t)
 	if (!cortexm_attach(t))
 		return false;
 
-	struct rp_priv_s *ps = (struct rp_priv_s *)t->target_storage;
-	uint16_t *table = alloca(RP_MAX_TABLE_SIZE);
-	uint16_t table_offset = target_mem_read32(t, BOOTROM_MAGIC_ADDR + 4);
-	if (!table || target_mem_read(t, table, table_offset, RP_MAX_TABLE_SIZE))
+	struct rp_priv_s *ps = (struct rp_priv_s*)t->target_storage;
+	uint16_t table[RP_MAX_TABLE_SIZE];
+	uint16_t table_offset = target_mem_read32( t, BOOTROM_MAGIC_ADDR + 4);
+	if (target_mem_read(t, table, table_offset, RP_MAX_TABLE_SIZE))
 		return false;
 	if (rp2040_fill_table(ps, table, RP_MAX_TABLE_SIZE))
 		return false;
