@@ -271,6 +271,11 @@ int target_flash_write(target *t,
 		dest += tmplen;
 		src += tmplen;
 		len -= tmplen;
+		/* If the current chunk of Flash is now full from this operation
+		 * then finish operations on the Flash chunk and free the internal buffer.
+		 */
+		if (dest == f->start + f->length)
+			ret |= target_flash_done_buffered(f);
 	}
 	return ret;
 }
