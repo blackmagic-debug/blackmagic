@@ -46,8 +46,7 @@
 #define STUB_BUFFER_BASE ALIGN(SRAM_BASE + sizeof(efm32_flash_write_stub), 4)
 
 static int efm32_flash_erase(struct target_flash *t, target_addr addr, size_t len);
-static int efm32_flash_write(struct target_flash *f,
-			     target_addr dest, const void *src, size_t len);
+static int efm32_flash_write(struct target_flash *f, target_addr dest, const void *src, size_t len);
 static bool efm32_mass_erase(target *t);
 
 static const uint16_t efm32_flash_write_stub[] = {
@@ -108,10 +107,10 @@ const struct command_s efm32_cmd_list[] = {
 /* Lock Bits (LB)                                                             */
 /* -------------------------------------------------------------------------- */
 
-#define EFM32_LOCK_BITS_DLW  (EFM32_LOCK_BITS + (4 * 127))
-#define EFM32_LOCK_BITS_ULW  (EFM32_LOCK_BITS + (4 * 126))
-#define EFM32_LOCK_BITS_MLW  (EFM32_LOCK_BITS + (4 * 125))
-#define EFM32_LOCK_BITS_CLW0 (EFM32_LOCK_BITS + (4 * 122))
+#define EFM32_LOCK_BITS_DLW  (EFM32_LOCK_BITS + (4U * 127U))
+#define EFM32_LOCK_BITS_ULW  (EFM32_LOCK_BITS + (4U * 126U))
+#define EFM32_LOCK_BITS_MLW  (EFM32_LOCK_BITS + (4U * 125U))
+#define EFM32_LOCK_BITS_CLW0 (EFM32_LOCK_BITS + (4U * 122U))
 
 #define EFM32_CLW0_BOOTLOADER_ENABLE (1 << 1)
 #define EFM32_CLW0_PINRESETSOFT      (1 << 2)
@@ -373,26 +372,16 @@ efm32_v2_di_tempgrade_t const efm32_v2_di_tempgrades[] = {
 /* Reads the EFM32 Extended Unique Identifier EUI64 (V1) */
 static uint64_t efm32_v1_read_eui64(target *t)
 {
-	uint64_t eui;
-
-	eui = (uint64_t)target_mem_read32(t, EFM32_V1_DI_EUI64_1) << 32;
-	eui |= (uint64_t)target_mem_read32(t, EFM32_V1_DI_EUI64_0) << 0;
-
-	return eui;
+	return ((uint64_t)target_mem_read32(t, EFM32_V1_DI_EUI64_1) << 32) | target_mem_read32(t, EFM32_V1_DI_EUI64_0);
 }
 
 /* Reads the Unique Number (DI V2 only) */
 static uint64_t efm32_v2_read_unique(target *t, uint8_t di_version)
 {
-	uint64_t unique;
-	switch (di_version) {
-	case 2:
-		unique = (uint64_t)target_mem_read32(t, EFM32_V2_DI_UNIQUEH) << 32;
-		unique |= (uint64_t)target_mem_read32(t, EFM32_V2_DI_UNIQUEL) << 0;
-		return unique;
-	default:
+	if (di_version != 2)
 		return 0;
-	}
+
+	return ((uint64_t)target_mem_read32(t, EFM32_V2_DI_UNIQUEH) << 32) | target_mem_read32(t, EFM32_V2_DI_UNIQUEL);
 }
 
 /* Reads the EFM32 flash size in kiB */
@@ -442,7 +431,7 @@ static uint32_t efm32_flash_page_size(target *t, uint8_t di_version)
 		return 0;
 	}
 
-	return (1 << (mem_info_page_size + 10)); /* uint8_t ovf here */
+	return 1 << (mem_info_page_size + 10); /* uint8_t ovf here */
 }
 
 /* Reads the EFM32 Part Number */
@@ -583,7 +572,7 @@ bool efm32_probe(target *t)
 
 	/* Read the part family, and reject if unknown */
 	size_t device_index = efm32_lookup_device_index(t, di_version);
-	if (device_index > (127 - 32)) {
+	if (device_index >= (sizeof(efm32_devices) / sizeof(efm32_device_t))) {
 		/* unknown device family */
 		return false;
 	}
@@ -597,21 +586,21 @@ bool efm32_probe(target *t)
 
 	/* Read memory sizes, convert to bytes */
 	uint16_t flash_kib = efm32_read_flash_size(t, di_version);
-	uint32_t flash_size = flash_kib * 0x400;
+	uint32_t flash_size = flash_kib * 0x400U;
 	uint16_t ram_kib = efm32_read_ram_size(t, di_version);
-	uint32_t ram_size = ram_kib * 0x400;
+	uint32_t ram_size = ram_kib * 0x400U;
 	uint32_t flash_page_size = device->flash_page_size;
 
 	struct efm32_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
 	t->target_storage = (void *)priv_storage;
 
-	snprintf(priv_storage->efm32_variant_string, sizeof(priv_storage->efm32_variant_string), "%c\b%c\b%s %d F%d %s",
+	snprintf(priv_storage->efm32_variant_string, sizeof(priv_storage->efm32_variant_string), "%c\b%c\b%s %hu F%hu %s",
 		di_version + 48, (uint8_t)device_index + 32, device->name, part_number, flash_kib, device->description);
 
 	/* Setup Target */
 	t->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
 	t->driver = priv_storage->efm32_variant_string;
-	tc_printf(t, "flash size %d page size %d\n", flash_size, flash_page_size);
+	tc_printf(t, "flash size %u page size %u\n", flash_size, flash_page_size);
 
 	target_add_ram(t, SRAM_BASE, ram_size);
 	efm32_add_flash(t, 0x00000000, flash_size, flash_page_size);
@@ -695,7 +684,7 @@ static int efm32_flash_write(struct target_flash *f, target_addr dest, const voi
 /* Uses the MSC ERASEMAIN0/1 command to erase the entire flash */
 static bool efm32_mass_erase(target *t)
 {
-	efm32_device_t const* device = efm32_get_device(t->driver[2] - 32);
+	efm32_device_t const *device = efm32_get_device(t->driver[2] - 32);
 	if (device == NULL) {
 		return true;
 	}
@@ -738,10 +727,15 @@ static bool efm32_cmd_serial(target *t, int argc, const char **argv)
 		/* Read the eui */
 		unique = efm32_v1_read_eui64(t);
 		break;
+
 	case 2:
 		/* Read unique number */
 		unique = efm32_v2_read_unique(t, di_version);
 		break;
+
+	default:
+		tc_printf(t, "Bad DI version %hhu! This driver doesn't know about this DI version\n", di_version);
+		return false;
 	}
 
 	tc_printf(t, "Unique Number: 0x%016llx\n", unique);
@@ -758,14 +752,16 @@ static bool efm32_cmd_efm_info(target *t, int argc, const char **argv)
 
 	switch (di_version) {
 	case 1:
-		tc_printf(t, "DI version 1 (silabs remix?) base 0x%08x\n\n", EFM32_V1_DI);
+		tc_printf(t, "DI version 1 (silabs remix?) base 0x%08" PRIx32 "\n\n", EFM32_V1_DI);
 		break;
+
 	case 2:
-		tc_printf(t, "DI version 2 (energy micro remix?) base 0x%08x\n\n", EFM32_V2_DI);
+		tc_printf(t, "DI version 2 (energy micro remix?) base 0x%08" PRIx32 "\n\n", EFM32_V2_DI);
 		break;
+
 	default:
-		tc_printf(t, "Bad DI version %d! This driver doesn't know about this DI version\n", di_version);
-		return true; /* finish */
+		tc_printf(t, "Bad DI version %hhu! This driver doesn't know about this DI version\n", di_version);
+		return false;
 	}
 
 	/* lookup device and part number */
@@ -781,9 +777,9 @@ static bool efm32_cmd_efm_info(target *t, int argc, const char **argv)
 	uint32_t flash_page_size_reported = efm32_flash_page_size(t, di_version);
 	uint32_t flash_page_size = device->flash_page_size;
 
-	tc_printf(t, "%s %d F%d = %s %dkiB flash, %dkiB ram\n", device->name, part_number, flash_kib, device->description,
-		flash_kib, ram_kib);
-	tc_printf(t, "Device says flash page size is %d bytes, we're using %d bytes\n", flash_page_size_reported,
+	tc_printf(t, "%s %hu F%hu = %s %hukiB flash, %hukiB ram\n", device->name, part_number, flash_kib,
+		device->description, flash_kib, ram_kib);
+	tc_printf(t, "Device says flash page size is %u bytes, we're using %u bytes\n", flash_page_size_reported,
 		flash_page_size);
 	if (flash_page_size_reported < flash_page_size) {
 		tc_printf(t, "This is bad, flash writes may be corrupted\n");
@@ -806,14 +802,14 @@ static bool efm32_cmd_efm_info(target *t, int argc, const char **argv)
 			}
 		}
 
-		tc_printf(t, "Package %s %d pins\n", pkgtype->name, miscchip.pincount);
+		tc_printf(t, "Package %s %hhu pins\n", pkgtype->name, miscchip.pincount);
 		tc_printf(t, "Temperature grade %s\n", tempgrade->name);
 		tc_printf(t, "\n");
 	}
 
 	if (di_version == 1 && device->has_radio) {
 		uint16_t radio_number = efm32_read_radio_part_number(t, di_version); /* on-chip radio */
-		tc_printf(t, "Radio si%d\n", radio_number);
+		tc_printf(t, "Radio si%hu\n", radio_number);
 		tc_printf(t, "\n");
 	}
 
@@ -937,7 +933,12 @@ void efm32_aap_probe(ADIv5_AP_t *ap)
 
 	/* New target */
 	target *t = target_new();
+	if (!t) {
+		return;
+	}
+
 	t->mass_erase = efm32_aap_mass_erase;
+
 	adiv5_ap_ref(ap);
 	t->priv = ap;
 	t->priv_free = (void *)adiv5_ap_unref;
@@ -946,7 +947,7 @@ void efm32_aap_probe(ADIv5_AP_t *ap)
 	DEBUG_INFO("EFM32: AAP STATUS=%08" PRIx32 "\n", adiv5_ap_read(ap, AAP_STATUS));
 
 	struct efm32_aap_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
-	sprintf(priv_storage->aap_driver_string, "EFM32 Authentication Access Port rev.%d", aap_revision);
+	sprintf(priv_storage->aap_driver_string, "EFM32 Authentication Access Port rev.%hu", aap_revision);
 	t->driver = priv_storage->aap_driver_string;
 	t->regs_size = 4;
 }
