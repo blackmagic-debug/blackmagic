@@ -80,60 +80,75 @@ static size_t mbslen(const char *str)
 	return result;
 }
 
+static bool dap_init_hid(const bmp_info_t *const info)
+{
+	DEBUG_INFO("Using hid transfer\n");
+	if (hid_init())
+		return false;
+
+	const size_t size = mbslen(info->serial);
+	if (size > 64) {
+		PRINT_INFO("Serial number invalid, aborting\n");
+		return false;
+	}
+	wchar_t serial[65] = {0};
+	if (mbstowcs(serial, info->serial, size) != size) {
+		PRINT_INFO("Serial number conversion failed, aborting\n");
+		return false;
+	}
+	serial[size] = 0;
+	/* Blacklist devices that do not work with 513 byte report length
+	* FIXME: Find a solution to decipher from the device.
+	*/
+	if ((info->vid == 0x1fc9) && (info->pid == 0x0132)) {
+		DEBUG_WARN("Blacklist\n");
+		report_size = 64 + 1;
+	}
+	handle = hid_open(info->vid, info->pid,  (serial[0]) ? serial : NULL);
+	if (!handle) {
+		PRINT_INFO("hid_open failed: %ls\n", hid_error(NULL));
+		return false;
+	}
+	return true;
+}
+
+static bool dap_init_bulk(const bmp_info_t *const info)
+{
+	DEBUG_INFO("Using bulk transfer\n");
+	usb_handle = libusb_open_device_with_vid_pid(info->libusb_ctx, info->vid, info->pid);
+	if (!usb_handle) {
+		DEBUG_WARN("WARN: libusb_open_device_with_vid_pid() failed\n");
+		return false;
+	}
+	if (libusb_claim_interface(usb_handle, info->interface_num) < 0) {
+		DEBUG_WARN("WARN: libusb_claim_interface() failed\n");
+		return false;
+	}
+	in_ep = info->in_ep;
+	out_ep = info->out_ep;
+	return true;
+}
+
 /* LPC845 Breakout Board Rev. 0 report invalid response with > 65 bytes */
 int dap_init(bmp_info_t *info)
 {
 	type = (info->in_ep && info->out_ep) ? CMSIS_TYPE_BULK : CMSIS_TYPE_HID;
 
 	if (type == CMSIS_TYPE_HID) {
-		DEBUG_INFO("Using hid transfer\n");
-		if (hid_init())
+		if (!dap_init_hid(info))
 			return -1;
-
-		const size_t size = mbslen(info->serial);
-		if (size > 64) {
-			PRINT_INFO("Serial number invalid, aborting\n");
-			return -1;
-		}
-		wchar_t serial[65] = {0};
-		if (mbstowcs(serial, info->serial, size) != size) {
-			PRINT_INFO("Serial number conversion failed, aborting\n");
-			return -1;
-		}
-		serial[size] = 0;
-		/* Blacklist devices that do not work with 513 byte report length
-		* FIXME: Find a solution to decipher from the device.
-		*/
-		if ((info->vid == 0x1fc9) && (info->pid == 0x0132)) {
-			DEBUG_WARN("Blacklist\n");
-			report_size = 64 + 1;
-		}
-		handle = hid_open(info->vid, info->pid,  (serial[0]) ? serial : NULL);
-		if (!handle) {
-			PRINT_INFO("hid_open failed: %ls\n", hid_error(NULL));
-			return -1;
-		}
 	} else if (type == CMSIS_TYPE_BULK) {
-		DEBUG_INFO("Using bulk transfer\n");
-		usb_handle = libusb_open_device_with_vid_pid(info->libusb_ctx, info->vid, info->pid);
-		if (!usb_handle) {
-			DEBUG_WARN("WARN: libusb_open_device_with_vid_pid() failed\n");
+		if (!dap_init_bulk(info))
 			return -1;
-		}
-		if (libusb_claim_interface(usb_handle, info->interface_num) < 0) {
-			DEBUG_WARN("WARN: libusb_claim_interface() failed\n");
-			return -1;
-		}
-		in_ep = info->in_ep;
-		out_ep = info->out_ep;
 	}
 	dap_disconnect();
 	size_t size = dap_info(DAP_INFO_FW_VER, buffer, sizeof(buffer));
 	if (size) {
 		DEBUG_INFO("Ver %s, ", buffer);
-		int major = -1, minor = -1, sub = -1;
-		if (sscanf((const char *)buffer, "%d.%d.%d",
-				   &major, &minor, &sub)) {
+		int major = -1;
+		int minor = -1;
+		int sub = -1;
+		if (sscanf((const char *)buffer, "%d.%d.%d", &major, &minor, &sub)) {
 			if (sub == -1) {
 				if (minor >= 10) {
 					minor /= 10;
