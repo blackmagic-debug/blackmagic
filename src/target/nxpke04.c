@@ -39,7 +39,6 @@
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
-#include "gdb_packet.h"
 
 /* KE04 registers and constants */
 
@@ -317,10 +316,8 @@ static bool ke04_command(target *t, uint8_t cmd, uint32_t addr, const uint8_t da
 		if (fstat & (FTMRE_FSTAT_ACCERR | FTMRE_FSTAT_FPVIOL))
 			return false;
 
-		if (cmd == CMD_ERASE_ALL_BLOCKS && platform_timeout_is_expired(&timeout)) {
-			gdb_out(".");
-			platform_timeout_set(&timeout, 500);
-		}
+		if (cmd == CMD_ERASE_ALL_BLOCKS)
+			target_print_progress(&timeout);
 	} while (!(fstat & FTMRE_FSTAT_CCIF));
 
 	return true;

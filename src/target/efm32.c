@@ -42,7 +42,6 @@
 #include "target_internal.h"
 #include "cortexm.h"
 #include "adiv5.h"
-#include "gdb_packet.h"
 
 #define SRAM_BASE		0x20000000
 #define STUB_BUFFER_BASE	ALIGN(SRAM_BASE + sizeof(efm32_flash_write_stub), 4)
@@ -764,11 +763,7 @@ static bool efm32_mass_erase(target *t)
 	while ((target_mem_read32(t, EFM32_MSC_STATUS(msc)) & EFM32_MSC_STATUS_BUSY)) {
 		if (target_check_error(t))
 			return false;
-
-		if (platform_timeout_is_expired(&timeout)) {
-			gdb_out(".");
-			platform_timeout_set(&timeout, 500);
-		}
+		target_print_progress(&timeout);
 	}
 
 	/* Relock mass erase */
@@ -1037,10 +1032,7 @@ static bool efm32_aap_mass_erase(target *t)
 	/* Read until 0, probably should have a timeout here... */
 	do {
 		status = adiv5_ap_read(ap, AAP_STATUS);
-		if (platform_timeout_is_expired(&timeout)) {
-			gdb_out(".");
-			platform_timeout_set(&timeout, 500);
-		}
+		target_print_progress(&timeout);
 	} while (status & AAP_STATUS_ERASEBUSY);
 
 	/* Read status */
