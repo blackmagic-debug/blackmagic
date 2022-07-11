@@ -22,7 +22,7 @@ SRC += serial_unix.c
 HIDAPILIB = hidapi-hidraw
 ifeq ($(ASAN), 1)
 CFLAGS += -fsanitize=address  -Wno-format-truncation
-LDFLAGS += -lasan
+LDFLAGS += -fsanitize=address
 endif
 else ifneq (, $(findstring mingw, $(SYS)))
 # Build for windows versions Vista, and above, where the
