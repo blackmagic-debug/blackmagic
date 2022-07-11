@@ -16,6 +16,7 @@ HOSTED_BMP_ONLY ?= 1
 endif
 CFLAGS  +=  -DHOSTED_BMP_ONLY=$(HOSTED_BMP_ONLY)
 
+HIDAPILIB = hidapi
 ifneq (, $(findstring linux, $(SYS)))
 SRC += serial_unix.c
 HIDAPILIB = hidapi-hidraw
@@ -43,7 +44,6 @@ SRC += serial_unix.c
 LDFLAGS += $(pkg-config --libs hidapi)
 LDFLAGS += -framework CoreFoundation
 CFLAGS += -Ihidapi/hidapi $(pkg-config --cflags hidapi)
-HIDAPILIB = hidapi
 endif
 
 ifneq ($(HOSTED_BMP_ONLY), 1)
@@ -60,16 +60,12 @@ endif
 ifneq ($(HOSTED_BMP_ONLY), 1)
  CFLAGS  +=  -DCMSIS_DAP
  SRC += cmsis_dap.c dap.c
- ifneq (, $(findstring mingw, $(SYS)))
-  SRC += hid.c
- else
   $(shell pkg-config --exists $(HIDAPILIB))
   ifneq ($(.SHELLSTATUS), 0)
    $(error Please install $(HIDAPILIB) dependency or set HOSTED_BMP_ONLY to 1)
   endif
   CFLAGS += $(shell pkg-config --cflags $(HIDAPILIB))
   LDFLAGS += $(shell pkg-config --libs $(HIDAPILIB))
- endif
 endif
 
 SRC += timing.c cli.c utils.c
