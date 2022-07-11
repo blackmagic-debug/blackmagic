@@ -87,7 +87,7 @@ int dap_init(bmp_info_t *info)
 		}
 		handle = hid_open(info->vid, info->pid,  (serial[0]) ? serial : NULL);
 		if (!handle) {
-			DEBUG_WARN("hid_open failed\n");
+			DEBUG_WARN("hid_open failed: %ls\n", hid_error(NULL));
 			return -1;
 		}
 	} else if (type == CMSIS_TYPE_BULK) {
