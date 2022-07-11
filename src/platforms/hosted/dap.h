@@ -29,13 +29,12 @@
 #ifndef _DAP_H_
 #define _DAP_H_
 
-/*- Includes ----------------------------------------------------------------*/
 #include <stdint.h>
+#include <stddef.h>
 #include <stdbool.h>
 #include "adiv5.h"
 
-/*- Definitions -------------------------------------------------------------*/
-enum {
+typedef enum dap_info_e {
 	DAP_INFO_VENDOR = 0x01,
 	DAP_INFO_PRODUCT = 0x02,
 	DAP_INFO_SER_NUM = 0x03,
@@ -47,9 +46,9 @@ enum {
 	DAP_INFO_SWO_BUF_SIZE = 0xfd,
 	DAP_INFO_PACKET_COUNT = 0xfe,
 	DAP_INFO_PACKET_SIZE = 0xff,
-};
+} dap_info_t;
 
-enum {
+typedef enum dap_cap_e {
 	DAP_CAP_SWD = (1 << 0),
 	DAP_CAP_JTAG = (1 << 1),
 	DAP_CAP_SWO_UART = (1 << 2),
@@ -57,9 +56,8 @@ enum {
 	DAP_CAP_ATOMIC_CMD = (1 << 4),
 	DAP_CAP_TDT = (1 << 5),
 	DAP_CAP_SWO_STREAMING = (1 << 6),
-};
+} dap_cap_t;
 
-/*- Prototypes --------------------------------------------------------------*/
 void dap_led(int index, int state);
 void dap_connect(bool jtag);
 void dap_disconnect(void);
@@ -88,4 +86,5 @@ int dap_jtag_configure(void);
 void dap_swdptap_seq_out(uint32_t MS, int ticks);
 void dap_swdptap_seq_out_parity(uint32_t MS, int ticks);
 bool dap_sequence_test(void);
+
 #endif // _DAP_H_
