@@ -16,16 +16,17 @@ ifneq (, $(findstring linux, $(SYS)))
 else
 	HOSTED_BMP_ONLY ?= 1
 endif
-CFLAGS  +=  -DHOSTED_BMP_ONLY=$(HOSTED_BMP_ONLY)
+CFLAGS += -DHOSTED_BMP_ONLY=$(HOSTED_BMP_ONLY)
+
+ifeq ($(ASAN), 1)
+	CFLAGS += -fsanitize=address  -Wno-format-truncation
+	LDFLAGS += -fsanitize=address
+endif
 
 HIDAPILIB = hidapi
 ifneq (, $(findstring linux, $(SYS)))
 	SRC += serial_unix.c
 	HIDAPILIB = hidapi-hidraw
-	ifeq ($(ASAN), 1)
-		CFLAGS += -fsanitize=address  -Wno-format-truncation
-		LDFLAGS += -fsanitize=address
-	endif
 else ifneq (, $(findstring mingw, $(SYS)))
 	# Build for windows versions Vista, and above, where the
 	# 'SetupDiGetDevicePropertyW()' function is available
