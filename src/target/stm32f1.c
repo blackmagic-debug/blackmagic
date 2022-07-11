@@ -38,7 +38,6 @@
 #include "target.h"
 #include "target_internal.h"
 #include "cortexm.h"
-#include "gdb_packet.h"
 
 static bool stm32f1_cmd_option(target *t, int argc, const char **argv);
 
@@ -404,11 +403,7 @@ static bool stm32f1_mass_erase(target *t)
 	while (target_mem_read32(t, FLASH_SR) & FLASH_SR_BSY) {
 		if (target_check_error(t))
 			return false;
-
-		if (platform_timeout_is_expired(&timeout)) {
-			gdb_out(".");
-			platform_timeout_set(&timeout, 500);
-		}
+		target_print_progress(&timeout);
 	}
 
 	/* Check for error */

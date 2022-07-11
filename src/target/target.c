@@ -358,6 +358,14 @@ int target_flash_done_buffered(struct target_flash *f)
 	return ret;
 }
 
+void target_print_progress(platform_timeout *const timeout)
+{
+	if (platform_timeout_is_expired(timeout)) {
+		gdb_out(".");
+		platform_timeout_set(timeout, 500);
+	}
+}
+
 /* Wrapper functions */
 void target_detach(target *t)
 {
