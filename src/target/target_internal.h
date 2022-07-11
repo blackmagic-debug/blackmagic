@@ -109,6 +109,9 @@ struct target_s {
 	int (*breakwatch_clear)(target *t, struct breakwatch*);
 	struct breakwatch *bw_list;
 
+	/* Recovery functions */
+	bool (*mass_erase)(target *t);
+
 	/* target-defined options */
 	unsigned target_options;
 	uint16_t t_designer;
