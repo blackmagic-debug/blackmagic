@@ -516,11 +516,10 @@ static int kinetis_flash_done(struct target_flash *const f)
  * device.  This provides a fake target to allow a monitor command interface
  */
 
-static bool kinetis_mdm_cmd_erase_mass(target *t, int argc, const char **argv);
+static bool kinetis_mdm_mass_erase(target *t);
 static bool kinetis_mdm_cmd_ke04_mode(target *t, int argc, const char **argv);
 
 const struct command_s kinetis_mdm_cmd_list[] = {
-	{"erase_mass", (cmd_handler)kinetis_mdm_cmd_erase_mass, "Erase entire flash memory"},
 	{"ke04_mode", (cmd_handler)kinetis_mdm_cmd_ke04_mode, "Allow erase for KE04"},
 	{NULL, NULL, NULL},
 };
@@ -547,6 +546,7 @@ void kinetis_mdm_probe(ADIv5_AP_t *ap)
 		return;
 	}
 
+	t->mass_erase = kinetis_mdm_mass_erase;
 	adiv5_ap_ref(ap);
 	t->priv = ap;
 	t->priv_free = (void *)adiv5_ap_unref;
@@ -568,10 +568,8 @@ static bool kinetis_mdm_cmd_ke04_mode(target *t, int argc, const char **argv)
 	return true;
 }
 
-static bool kinetis_mdm_cmd_erase_mass(target *t, int argc, const char **argv)
+static bool kinetis_mdm_mass_erase(target *t)
 {
-	(void)argc;
-	(void)argv;
 	ADIv5_AP_t *ap = t->priv;
 
 	/* Keep the MCU in reset as stated in KL25PxxM48SF0RM */
@@ -602,14 +600,18 @@ static bool kinetis_mdm_cmd_erase_mass(target *t, int argc, const char **argv)
 	}
 
 	adiv5_ap_write(ap, MDM_CONTROL, MDM_CONTROL_MASS_ERASE);
+	platform_timeout timeout;
+	platform_timeout_set(&timeout, 500);
 
 	do {
 		status = adiv5_ap_read(ap, MDM_STATUS);
+		target_print_progress(&timeout);
 	} while (!(status & MDM_STATUS_MASS_ERASE_ACK));
 	tc_printf(t, "Mass erase acknowledged\n");
 
 	do {
 		control = adiv5_ap_read(ap, MDM_CONTROL);
+		target_print_progress(&timeout);
 	} while (!(control & MDM_CONTROL_MASS_ERASE));
 	tc_printf(t, "Mass erase complete\n");
 
