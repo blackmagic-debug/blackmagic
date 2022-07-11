@@ -20,6 +20,7 @@
 
 #include "general.h"
 #include "target_internal.h"
+#include "gdb_packet.h"
 
 #include <stdarg.h>
 #include <unistd.h>
@@ -31,6 +32,12 @@ target *target_list = NULL;
 static int target_flash_write_buffered(struct target_flash *f,
                                        target_addr dest, const void *src, size_t len);
 static int target_flash_done_buffered(struct target_flash *f);
+static bool target_cmd_mass_erase(target *t, int argc, const char **argv);
+
+const struct command_s target_cmd_list[] = {
+	{"erase_mass", (cmd_handler)target_cmd_mass_erase, "Erase whole device Flash"},
+	{NULL, NULL, NULL}
+};
 
 static bool nop_function(void)
 {
@@ -75,6 +82,7 @@ target *target_new(void)
 
 	t->target_storage = NULL;
 
+	target_add_commands(t, target_cmd_list, "Target");
 	return t;
 }
 
@@ -508,6 +516,21 @@ int target_breakwatch_clear(target *t,
 		free(bw);
 	}
 	return ret;
+}
+
+/* Target-specific commands */
+static bool target_cmd_mass_erase(target *const t, const int argc, const char **const argv)
+{
+	(void)argc;
+	(void)argv;
+	if (!t || !t->mass_erase) {
+		gdb_out("Mass erase not implemented for target");
+		return true;
+	}
+	gdb_out("Erasing device Flash: ");
+	const bool result = t->mass_erase(t);
+	gdb_out("done\n");
+	return result;
 }
 
 /* Accessor functions */
