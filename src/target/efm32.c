@@ -41,6 +41,7 @@
 #include "target.h"
 #include "target_internal.h"
 #include "cortexm.h"
+#include "adiv5.h"
 #include "gdb_packet.h"
 
 #define SRAM_BASE		0x20000000
@@ -960,8 +961,6 @@ static bool efm32_cmd_bootloader(target *t, int argc, const char **argv)
  * it, please try glitching it).
  */
 
-#include "adiv5.h"
-
 /* IDR revision [31:28] jes106 [27:17] class [16:13] res [12:8]
  * variant [7:4] type [3:0] */
 #define EFM32_AAP_IDR      0x06E60001
@@ -976,12 +975,7 @@ static bool efm32_cmd_bootloader(target *t, int argc, const char **argv)
 
 #define CMDKEY 0xCFACC118
 
-static bool efm32_aap_cmd_device_erase(target *t, int argc, const char **argv);
-
-const struct command_s efm32_aap_cmd_list[] = {
-	{"erase_mass", (cmd_handler)efm32_aap_cmd_device_erase, "Erase entire flash memory"},
-	{NULL, NULL, NULL}
-};
+static bool efm32_aap_mass_erase(target *t);
 
 /**
  * AAP Probe
@@ -995,20 +989,18 @@ void efm32_aap_probe(ADIv5_AP_t *ap)
 	if ((ap->idr & EFM32_APP_IDR_MASK) == EFM32_AAP_IDR) {
 		/* It's an EFM32 AAP! */
 		DEBUG_INFO("EFM32: Found EFM32 AAP\n");
-	} else {
+	} else
 		return;
-	}
 
 	/* Both revsion 1 and revision 2 devices seen in the wild */
 	uint16_t aap_revision = (uint16_t)((ap->idr & 0xF0000000) >> 28);
 
 	/* New target */
 	target *t = target_new();
+	t->mass_erase = efm32_aap_mass_erase;
 	adiv5_ap_ref(ap);
 	t->priv = ap;
 	t->priv_free = (void*)adiv5_ap_unref;
-
-	//efm32_aap_cmd_device_erase(t);
 
 	/* Read status */
 	DEBUG_INFO("EFM32: AAP STATUS=%08"PRIx32"\n", adiv5_ap_read(ap, AAP_STATUS));
@@ -1019,14 +1011,10 @@ void efm32_aap_probe(ADIv5_AP_t *ap)
 			aap_revision);
 	t->driver = priv_storage->aap_driver_string;
 	t->regs_size = 4;
-
-	target_add_commands(t, efm32_aap_cmd_list, t->driver);
 }
 
-static bool efm32_aap_cmd_device_erase(target *t, int argc, const char **argv)
+static bool efm32_aap_mass_erase(target *t)
 {
-	(void)argc;
-	(void)argv;
 	ADIv5_AP_t *ap = t->priv;
 	uint32_t status;
 
@@ -1044,9 +1032,15 @@ static bool efm32_aap_cmd_device_erase(target *t, int argc, const char **argv)
 	adiv5_ap_write(ap, AAP_CMDKEY, CMDKEY);
 	adiv5_ap_write(ap, AAP_CMD, 1);
 
+	platform_timeout timeout;
+	platform_timeout_set(&timeout, 500);
 	/* Read until 0, probably should have a timeout here... */
 	do {
 		status = adiv5_ap_read(ap, AAP_STATUS);
+		if (platform_timeout_is_expired(&timeout)) {
+			gdb_out(".");
+			platform_timeout_set(&timeout, 500);
+		}
 	} while (status & AAP_STATUS_ERASEBUSY);
 
 	/* Read status */
