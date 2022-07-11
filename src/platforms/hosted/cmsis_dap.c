@@ -63,6 +63,23 @@ static uint8_t buffer[1024 + 1];
 static int report_size = 64 + 1; // TODO: read actual report size
 static bool has_swd_sequence = false;
 
+static size_t mbslen(const char *str)
+{
+	const char *const end = str + strlen(str);
+	size_t result = 0;
+	// Reset conversion state
+	mblen(NULL, 0);
+	while (str < end) {
+		const int next = mblen(str, end - str);
+		// If an error occurs, bail out with whatever we got so far.
+		if (next == -1)
+			break;
+		str += next;
+		++result;
+	}
+	return result;
+}
+
 /* LPC845 Breakout Board Rev. 0 report invalid response with > 65 bytes */
 int dap_init(bmp_info_t *info)
 {
@@ -73,11 +90,17 @@ int dap_init(bmp_info_t *info)
 		if (hid_init())
 			return -1;
 
-		const size_t size = strlen(info->serial);
-		wchar_t serial[64] = {0}, *wc = serial;
-		for (size_t i = 0; i < size; i++)
-			*wc++ = info->serial[i];
-		*wc = 0;
+		const size_t size = mbslen(info->serial);
+		if (size > 64) {
+			PRINT_INFO("Serial number invalid, aborting\n");
+			return -1;
+		}
+		wchar_t serial[65] = {0};
+		if (mbstowcs(serial, info->serial, size) != size) {
+			PRINT_INFO("Serial number conversion failed, aborting\n");
+			return -1;
+		}
+		serial[size] = 0;
 		/* Blacklist devices that do not work with 513 byte report length
 		* FIXME: Find a solution to decipher from the device.
 		*/
@@ -87,7 +110,7 @@ int dap_init(bmp_info_t *info)
 		}
 		handle = hid_open(info->vid, info->pid,  (serial[0]) ? serial : NULL);
 		if (!handle) {
-			DEBUG_WARN("hid_open failed: %ls\n", hid_error(NULL));
+			PRINT_INFO("hid_open failed: %ls\n", hid_error(NULL));
 			return -1;
 		}
 	} else if (type == CMSIS_TYPE_BULK) {
