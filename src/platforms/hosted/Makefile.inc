@@ -3,12 +3,14 @@ SYS = $(shell $(CC) -dumpmachine)
 CFLAGS += -DENABLE_DEBUG -DPLATFORM_HAS_DEBUG
 CFLAGS +=-I ./target
 
-# Define HOSTED_BMP_ONLY to '0' in order to build the hosted blackmagic
-# executable with support for other probes beside BMP. Default HOSTED_BMP_ONLY
-# == 1 on Windows makes linking against the libftdi and libusb libraries
-# unnecessary.
-# This can be useful to minimize external dependencies, and make building on
-# windows systems easier and is default now.
+# HOSTED_BMP_ONLY, which defaults to 1 on Windows + MacOS and 0 on Linux,
+# defines whether to build Black Magic Debug App for the Black Magic Firmware
+# only, or whether to include support for other adaptor types including FTDI,
+# and CMSIS-DAP compatible dongles.
+#
+# The benefit of only building for the Black Magic Firmware is a reduced linking
+# footprint. Specifically no requirement to link against libftdi1, libusb1, or
+# hidapi (hidapi-hidraw on Linux). This makes building on Windows in particular easier.
 ifneq (, $(findstring linux, $(SYS)))
 	HOSTED_BMP_ONLY ?= 0
 else
