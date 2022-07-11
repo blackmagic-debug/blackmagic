@@ -252,16 +252,16 @@ void dap_swd_configure(uint8_t cfg)
 }
 
 //-----------------------------------------------------------------------------
-int dap_info(int info, uint8_t *data, int size)
+size_t dap_info(const dap_info_t info, uint8_t *const data, const size_t size)
 {
 	uint8_t buf[256];
-	int rsize;
+	size_t rsize;
 
 	buf[0] = ID_DAP_INFO;
 	buf[1] = info;
 	dbg_dap_cmd(buf, sizeof(buf), 2);
 
-	rsize = (size < buf[0]) ? size : buf[0];
+	rsize = size < buf[0] ? size : buf[0];
 	memcpy(data, &buf[1], rsize);
 
 	if (rsize < size)

@@ -63,7 +63,7 @@ void dap_connect(bool jtag);
 void dap_disconnect(void);
 void dap_transfer_configure(uint8_t idle, uint16_t count, uint16_t retry);
 void dap_swd_configure(uint8_t cfg);
-int dap_info(int info, uint8_t *data, int size);
+size_t dap_info(dap_info_t info, uint8_t *data, size_t size);
 void dap_reset_target(void);
 void dap_nrst_set_val(bool assert);
 void dap_trst_reset(void);

@@ -67,15 +67,15 @@ static bool has_swd_sequence = false;
 int dap_init(bmp_info_t *info)
 {
 	type = (info->in_ep && info->out_ep) ? CMSIS_TYPE_BULK : CMSIS_TYPE_HID;
-	int size;
 
 	if (type == CMSIS_TYPE_HID) {
 		DEBUG_INFO("Using hid transfer\n");
 		if (hid_init())
 			return -1;
-		size = strlen(info->serial);
+
+		const size_t size = strlen(info->serial);
 		wchar_t serial[64] = {0}, *wc = serial;
-		for (int i = 0; i < size; i++)
+		for (size_t i = 0; i < size; i++)
 			*wc++ = info->serial[i];
 		*wc = 0;
 		/* Blacklist devices that do not work with 513 byte report length
@@ -105,7 +105,7 @@ int dap_init(bmp_info_t *info)
 		out_ep = info->out_ep;
 	}
 	dap_disconnect();
-	size = dap_info(DAP_INFO_FW_VER, buffer, sizeof(buffer));
+	size_t size = dap_info(DAP_INFO_FW_VER, buffer, sizeof(buffer));
 	if (size) {
 		DEBUG_INFO("Ver %s, ", buffer);
 		int major = -1, minor = -1, sub = -1;
