@@ -39,6 +39,7 @@
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
+#include "gdb_packet.h"
 
 /* KE04 registers and constants */
 
@@ -119,22 +120,20 @@ static bool ke04_command(target *t, uint8_t cmd, uint32_t addr, const uint8_t da
 static int ke04_flash_erase(struct target_flash *f, target_addr addr, size_t len);
 static int ke04_flash_write(struct target_flash *f,
 			    target_addr dest, const void *src, size_t len);
-
 static int ke04_flash_done(struct target_flash *f);
+static bool ke04_mass_erase(target *t);
 
 /* Target specific commands */
-static bool kinetis_cmd_unsafe(target *t, int argc, char *argv[]);
-static bool ke04_cmd_sector_erase(target *t, int argc, char *argv[]);
-static bool ke04_cmd_mass_erase(target *t, int argc, char *argv[]);
+static bool kinetis_cmd_unsafe(target *t, int argc, char **argv);
+static bool ke04_cmd_sector_erase(target *t, int argc, char **argv);
 
 const struct command_s ke_cmd_list[] = {
 	{"unsafe", (cmd_handler)kinetis_cmd_unsafe, "Allow programming security byte (enable|disable)"},
 	{"sector_erase", (cmd_handler)ke04_cmd_sector_erase, "Erase sector containing given address"},
-	{"mass_erase", (cmd_handler)ke04_cmd_mass_erase, "Erase the whole flash"},
 	{NULL, NULL, NULL}
 };
 
-static bool ke04_cmd_sector_erase(target *t, int argc, char *argv[])
+static bool ke04_cmd_sector_erase(target *t, int argc, char **argv)
 {
 	if (argc < 2)
 		tc_printf(t, "usage: monitor sector_erase <addr>\n");
@@ -157,18 +156,7 @@ static bool ke04_cmd_sector_erase(target *t, int argc, char *argv[])
 	return true;
 }
 
-static bool ke04_cmd_mass_erase(target *t, int argc, char *argv[])
-{
-	(void)argc;
-	(void)argv;
-	/* Erase and verify the whole flash */
-	ke04_command(t, CMD_ERASE_ALL_BLOCKS, 0, NULL);
-	/* Adjust security byte if needed */
-	ke04_flash_done(t->flash);
-	return true;
-}
-
-static bool kinetis_cmd_unsafe(target *t, int argc, char *argv[])
+static bool kinetis_cmd_unsafe(target *t, int argc, char **argv)
 {
 	if (argc == 1) {
 		tc_printf(t, "Allow programming security byte: %s\n",
@@ -229,6 +217,7 @@ bool ke04_probe(target *t)
 		return false;
 	}
 
+	t->mass_erase = ke04_mass_erase;
 	/* Add low (1/4) and high (3/4) RAM */
 	ramsize /= 4;                       /* Amount before RAM_BASE_ADDR */
 	target_add_ram(t, RAM_BASE_ADDR - ramsize, ramsize); /* Lower RAM  */
@@ -257,8 +246,16 @@ bool ke04_probe(target *t)
 	return true;
 }
 
-static bool
-ke04_command(target *t, uint8_t cmd, uint32_t addr, const uint8_t data[8])
+static bool ke04_mass_erase(target *t)
+{
+	/* Erase and verify the whole flash */
+	ke04_command(t, CMD_ERASE_ALL_BLOCKS, 0, NULL);
+	/* Adjust security byte if needed */
+	ke04_flash_done(t->flash);
+	return true;
+}
+
+static bool ke04_command(target *t, uint8_t cmd, uint32_t addr, const uint8_t data[8])
 {
 	uint8_t fstat;
 
@@ -311,12 +308,18 @@ ke04_command(target *t, uint8_t cmd, uint32_t addr, const uint8_t data[8])
 	/* Enable execution by clearing CCIF */
 	target_mem_write8(t, FTMRE_FSTAT, FTMRE_FSTAT_CCIF);
 
+	platform_timeout timeout;
+	platform_timeout_set(&timeout, 500);
 	/* Wait for execution to complete */
 	do {
 		fstat = target_mem_read8(t, FTMRE_FSTAT);
 		/* Check ACCERR and FPVIOL are zero in FSTAT */
-		if (fstat & (FTMRE_FSTAT_ACCERR | FTMRE_FSTAT_FPVIOL)) {
+		if (fstat & (FTMRE_FSTAT_ACCERR | FTMRE_FSTAT_FPVIOL))
 			return false;
+
+		if (cmd == CMD_ERASE_ALL_BLOCKS && platform_timeout_is_expired(&timeout)) {
+			gdb_out(".");
+			platform_timeout_set(&timeout, 500);
 		}
 	} while (!(fstat & FTMRE_FSTAT_CCIF));
 
