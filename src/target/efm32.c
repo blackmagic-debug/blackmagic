@@ -41,6 +41,7 @@
 #include "target.h"
 #include "target_internal.h"
 #include "cortexm.h"
+#include "gdb_packet.h"
 
 #define SRAM_BASE		0x20000000
 #define STUB_BUFFER_BASE	ALIGN(SRAM_BASE + sizeof(efm32_flash_write_stub), 4)
@@ -48,18 +49,17 @@
 static int efm32_flash_erase(struct target_flash *t, target_addr addr, size_t len);
 static int efm32_flash_write(struct target_flash *f,
 			     target_addr dest, const void *src, size_t len);
+static bool efm32_mass_erase(target *t);
 
 static const uint16_t efm32_flash_write_stub[] = {
 #include "flashstub/efm32.stub"
 };
 
-static bool efm32_cmd_erase_all(target *t, int argc, const char **argv);
 static bool efm32_cmd_serial(target *t, int argc, const char **argv);
 static bool efm32_cmd_efm_info(target *t, int argc, const char **argv);
 static bool efm32_cmd_bootloader(target *t, int argc, const char **argv);
 
 const struct command_s efm32_cmd_list[] = {
-	{"erase_mass", (cmd_handler)efm32_cmd_erase_all, "Erase entire flash memory"},
 	{"serial", (cmd_handler)efm32_cmd_serial, "Prints unique number"},
 	{"efm_info", (cmd_handler)efm32_cmd_efm_info, "Prints information about the device"},
 	{"bootloader", (cmd_handler)efm32_cmd_bootloader, "Bootloader status in CLW0"},
@@ -630,6 +630,7 @@ bool efm32_probe(target *t)
 		return false;
 	}
 
+	t->mass_erase = efm32_mass_erase;
 	uint16_t part_number = efm32_read_part_number(t, di_version);
 
 	/* Read memory sizes, convert to bytes */
@@ -739,10 +740,8 @@ static int efm32_flash_write(struct target_flash *f,
 /**
  * Uses the MSC ERASEMAIN0 command to erase the entire flash
  */
-static bool efm32_cmd_erase_all(target *t, int argc, const char **argv)
+static bool efm32_mass_erase(target *t)
 {
-	(void)argc;
-	(void)argv;
 	efm32_device_t const* device = efm32_get_device(t->driver[2] - 32);
 	if (device == NULL) {
 		return true;
@@ -758,16 +757,21 @@ static bool efm32_cmd_erase_all(target *t, int argc, const char **argv)
 	/* Erase operation */
 	target_mem_write32(t, EFM32_MSC_WRITECMD(msc), EFM32_MSC_WRITECMD_ERASEMAIN0);
 
+	platform_timeout timeout;
+	platform_timeout_set(&timeout, 500);
 	/* Poll MSC Busy */
 	while ((target_mem_read32(t, EFM32_MSC_STATUS(msc)) & EFM32_MSC_STATUS_BUSY)) {
 		if (target_check_error(t))
 			return false;
+
+		if (platform_timeout_is_expired(&timeout)) {
+			gdb_out(".");
+			platform_timeout_set(&timeout, 500);
+		}
 	}
 
 	/* Relock mass erase */
 	target_mem_write32(t, EFM32_MSC_MASSLOCK(msc), 0);
-
-	tc_printf(t, "Erase successful!\n");
 
 	return true;
 }
