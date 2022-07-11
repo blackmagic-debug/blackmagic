@@ -38,18 +38,18 @@
 #include "target.h"
 #include "target_internal.h"
 #include "cortexm.h"
+#include "gdb_packet.h"
 
-static bool stm32f1_cmd_erase_mass(target *t, int argc, const char **argv);
 static bool stm32f1_cmd_option(target *t, int argc, const char **argv);
 
 const struct command_s stm32f1_cmd_list[] = {
-	{"erase_mass", (cmd_handler)stm32f1_cmd_erase_mass, "Erase entire flash memory"},
 	{"option", (cmd_handler)stm32f1_cmd_option, "Manipulate option bytes"},
-	{NULL, NULL, NULL},
+	{NULL, NULL, NULL}
 };
 
 static int stm32f1_flash_erase(struct target_flash *f, target_addr addr, size_t len);
 static int stm32f1_flash_write(struct target_flash *f, target_addr dest, const void *src, size_t len);
+static bool stm32f1_mass_erase(target *t);
 
 /* Flash Program ad Erase Controller Register Map */
 #define FPEC_BASE     0x40022000
@@ -146,6 +146,7 @@ bool gd32f1_probe(target *t)
 		return false;
 	}
 
+	t->mass_erase = stm32f1_mass_erase;
 	target_add_ram(t, 0x20000000, ramSize * 1024);
 	stm32f1_add_flash(t, 0x8000000, flashSize * 1024, 0x400);
 	target_add_commands(t, stm32f1_cmd_list, t->driver);
@@ -165,6 +166,7 @@ bool stm32f1_probe(target *t)
 	else
 		t->idcode = target_mem_read32(t, DBGMCU_IDCODE) & 0xfff;
 
+	t->mass_erase = stm32f1_mass_erase;
 	size_t flash_size;
 	size_t block_size = 0x400;
 
@@ -313,16 +315,16 @@ static int stm32f1_flash_erase(struct target_flash *f, target_addr addr, size_t 
 
 	/* Check for error */
 	if (start < FLASH_BANK_SPLIT) {
-		uint32_t sr = target_mem_read32(t, FLASH_SR);
-		if ((sr & SR_ERROR_MASK) || !(sr & SR_EOP)) {
-			DEBUG_INFO("stm32f1 flash erase error 0x%" PRIx32 "\n", sr);
+		const uint32_t status = target_mem_read32(t, FLASH_SR);
+		if ((status & SR_ERROR_MASK) || !(status & SR_EOP)) {
+			DEBUG_INFO("stm32f1 flash erase error 0x%" PRIx32 "\n", status);
 			return -1;
 		}
 	}
 	if (t->idcode == 0x430 && end >= FLASH_BANK_SPLIT) {
-		uint32_t sr = target_mem_read32(t, FLASH_SR + FLASH_BANK2_OFFSET);
-		if ((sr & SR_ERROR_MASK) || !(sr & SR_EOP)) {
-			DEBUG_INFO("stm32f1 bank 2 flash erase error 0x%" PRIx32 "\n", sr);
+		const uint32_t status = target_mem_read32(t, FLASH_SR + FLASH_BANK2_OFFSET);
+		if ((status & SR_ERROR_MASK) || !(status & SR_EOP)) {
+			DEBUG_INFO("stm32f1 bank 2 flash erase error 0x%" PRIx32 "\n", status);
 			return -1;
 		}
 	}
@@ -386,22 +388,28 @@ static int stm32f1_flash_write(struct target_flash *f, target_addr dest, const v
 	return 0;
 }
 
-static bool stm32f1_cmd_erase_mass(target *t, int argc, const char **argv)
+static bool stm32f1_mass_erase(target *t)
 {
-	(void)argc;
-	(void)argv;
-
 	if (stm32f1_flash_unlock(t, 0))
 		return false;
+
+	platform_timeout timeout;
+	platform_timeout_set(&timeout, 500);
 
 	/* Flash mass erase start instruction */
 	target_mem_write32(t, FLASH_CR, FLASH_CR_MER);
 	target_mem_write32(t, FLASH_CR, FLASH_CR_STRT | FLASH_CR_MER);
 
 	/* Read FLASH_SR to poll for BSY bit */
-	while (target_mem_read32(t, FLASH_SR) & FLASH_SR_BSY)
+	while (target_mem_read32(t, FLASH_SR) & FLASH_SR_BSY) {
 		if (target_check_error(t))
 			return false;
+
+		if (platform_timeout_is_expired(&timeout)) {
+			gdb_out(".");
+			platform_timeout_set(&timeout, 500);
+		}
+	}
 
 	/* Check for error */
 	uint16_t sr = target_mem_read32(t, FLASH_SR);
