@@ -46,13 +46,8 @@ struct flash_param {
 } __attribute__((aligned(4)));
 
 static void lpc17xx_extended_reset(target *t);
-static bool lpc17xx_cmd_erase(target *t, int argc, const char *argv[]);
+static bool lpc17xx_mass_erase(target *t);
 enum iap_status lpc17xx_iap_call(target *t, struct flash_param *param, enum iap_cmd cmd, ...);
-
-const struct command_s lpc17xx_cmd_list[] = {
-	{"erase_mass", lpc17xx_cmd_erase, "Erase entire flash memory"},
-	{NULL, NULL, NULL}
-};
 
 static void lpc17xx_add_flash(target *t, uint32_t addr, size_t len, size_t erasesize, unsigned int base_sector)
 {
@@ -75,9 +70,8 @@ lpc17xx_probe(target *t)
 
 	if (ap_idcode == LPC17xx_JTAG_IDCODE || ap_idcode == LPC17xx_SWDP_IDCODE) {
 		/* LPC176x/5x family. See UM10360.pdf 33.7 JTAG TAP Identification*/
-	} else {
+	} else
 		return false;
-	}
 
 	if ((t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M3)  {
 		/*
@@ -111,6 +105,7 @@ lpc17xx_probe(target *t)
 			case 0x25001118: /* LPC1751 */
 			case 0x25001110: /* LPC1751 (No CRP) */
 
+				t->mass_erase = lpc17xx_mass_erase;
 				t->driver = "LPC17xx";
 				t->extended_reset = lpc17xx_extended_reset;
 				target_add_ram(t, 0x10000000, 0x8000);
@@ -118,7 +113,6 @@ lpc17xx_probe(target *t)
 				target_add_ram(t, 0x20080000, 0x4000);
 				lpc17xx_add_flash(t, 0x00000000, 0x10000, 0x1000, 0);
 				lpc17xx_add_flash(t, 0x00010000, 0x70000, 0x8000, 16);
-				target_add_commands(t, lpc17xx_cmd_list, "LPC17xx");
 
 				return true;
 		}
@@ -126,28 +120,22 @@ lpc17xx_probe(target *t)
 	return false;
 }
 
-static bool
-lpc17xx_cmd_erase(target *t, int argc, const char *argv[])
+static bool lpc17xx_mass_erase(target *t)
 {
-	(void)argc;
-	(void)argv;
 	struct flash_param param;
 
-	if (lpc17xx_iap_call(t, &param, IAP_CMD_PREPARE, 0, FLASH_NUM_SECTOR-1)) {
-		DEBUG_WARN("lpc17xx_cmd_erase: prepare failed %d\n",
-				   (unsigned int)param.result[0]);
+	if (lpc17xx_iap_call(t, &param, IAP_CMD_PREPARE, 0, FLASH_NUM_SECTOR - 1U)) {
+		DEBUG_WARN("lpc17xx_cmd_erase: prepare failed %" PRIu32 "\n", param.result[0]);
 		return false;
 	}
 
-	if (lpc17xx_iap_call(t, &param, IAP_CMD_ERASE, 0, FLASH_NUM_SECTOR-1, CPU_CLK_KHZ)) {
-		DEBUG_WARN("lpc17xx_cmd_erase: erase failed %d\n",
-				   (unsigned int)param.result[0]);
+	if (lpc17xx_iap_call(t, &param, IAP_CMD_ERASE, 0, FLASH_NUM_SECTOR - 1U, CPU_CLK_KHZ)) {
+		DEBUG_WARN("lpc17xx_cmd_erase: erase failed %" PRIu32 "\n", param.result[0]);
 		return false;
 	}
 
-	if (lpc17xx_iap_call(t, &param, IAP_CMD_BLANKCHECK, 0, FLASH_NUM_SECTOR-1)) {
-		DEBUG_WARN("lpc17xx_cmd_erase: blankcheck failed %d\n",
-				   (unsigned int)param.result[0]);
+	if (lpc17xx_iap_call(t, &param, IAP_CMD_BLANKCHECK, 0, FLASH_NUM_SECTOR - 1U)) {
+		DEBUG_WARN("lpc17xx_cmd_erase: blankcheck failed %" PRIu32 "\n", param.result[0]);
 		return false;
 	}
 	tc_printf(t, "Erase OK.\n");
@@ -158,15 +146,14 @@ lpc17xx_cmd_erase(target *t, int argc, const char *argv[])
  * Target has been reset, make sure to remap the boot ROM
  * from 0x00000000 leaving the user flash visible
  */
-static void
-lpc17xx_extended_reset(target *t)
+static void lpc17xx_extended_reset(target *t)
 {
 	/* From §33.6 Debug memory re-mapping (Page 643) UM10360.pdf (Rev 2) */
 	target_mem_write32(t, MEMMAP, 1);
 }
 
-enum iap_status
-lpc17xx_iap_call(target *t, struct flash_param *param, enum iap_cmd cmd, ...) {
+enum iap_status lpc17xx_iap_call(target *t, struct flash_param *param, enum iap_cmd cmd, ...)
+{
 	param->opcode = ARM_THUMB_BREAKPOINT;
 	param->command = cmd;
 
@@ -190,9 +177,14 @@ lpc17xx_iap_call(target *t, struct flash_param *param, enum iap_cmd cmd, ...) {
 	regs[REG_PC] = IAP_ENTRYPOINT;
 	target_regs_write(t, regs);
 
+	platform_timeout timeout;
+	platform_timeout_set(&timeout, 500);
 	/* start the target and wait for it to halt again */
 	target_halt_resume(t, false);
-	while (!target_halt_poll(t, NULL));
+	while (!target_halt_poll(t, NULL)) {
+		if (cmd == IAP_CMD_ERASE)
+			target_print_progress(&timeout);
+	}
 
 	/* copy back just the parameters structure */
 	target_mem_read(t, (void *)param, IAP_RAM_BASE, sizeof(struct flash_param));
