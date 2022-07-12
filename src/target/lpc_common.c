@@ -93,6 +93,18 @@ struct lpc_flash *lpc_add_flash(target *t, target_addr addr, size_t length)
 	return lf;
 }
 
+static uint8_t lpc_sector_for_addr(struct lpc_flash *f, uint32_t addr)
+{
+	return f->base_sector + (addr - f->f.start) / f->f.blocksize;
+}
+
+static inline bool lpc_is_full_erase(struct lpc_flash *f, const uint32_t begin, const uint32_t end)
+{
+	const target_addr addr = f->f.start;
+	const size_t len = f->f.length;
+	return begin == lpc_sector_for_addr(f, addr) && end == lpc_sector_for_addr(f, addr + len - 1U);
+}
+
 enum iap_status lpc_iap_call(struct lpc_flash *f, void *result, enum iap_cmd cmd, ...)
 {
 	target *t = f->f.t;
@@ -133,10 +145,15 @@ enum iap_status lpc_iap_call(struct lpc_flash *f, void *result, enum iap_cmd cmd
 	regs[REG_PC] = f->iap_entry;
 	target_regs_write(t, regs);
 
+	platform_timeout timeout;
+	platform_timeout_set(&timeout, 500);
+	const bool full_erase = cmd == IAP_CMD_ERASE && lpc_is_full_erase(f, param.words[0], param.words[1]);
 	/* start the target and wait for it to halt again */
 	target_halt_resume(t, false);
-	while (!target_halt_poll(t, NULL))
-		continue;
+	while (!target_halt_poll(t, NULL)) {
+		if (full_erase)
+			target_print_progress(&timeout);
+	}
 
 	/* copy back just the parameters structure */
 	target_mem_read(t, &param, f->iap_ram, sizeof(param));
@@ -163,28 +180,23 @@ enum iap_status lpc_iap_call(struct lpc_flash *f, void *result, enum iap_cmd cmd
 	return param.status;
 }
 
-static uint8_t lpc_sector_for_addr(struct lpc_flash *f, uint32_t addr)
-{
-	return f->base_sector + (addr - f->f.start) / f->f.blocksize;
-}
-
 #define LPX80X_SECTOR_SIZE 0x400
 #define LPX80X_PAGE_SIZE    0x40
 
 int lpc_flash_erase(struct target_flash *tf, target_addr addr, size_t len)
 {
 	struct lpc_flash *f = (struct lpc_flash *)tf;
-	uint32_t start = lpc_sector_for_addr(f, addr);
-	uint32_t end = lpc_sector_for_addr(f, addr + len - 1);
+	const uint32_t start = lpc_sector_for_addr(f, addr);
+	const uint32_t end = lpc_sector_for_addr(f, addr + len - 1U);
 	uint32_t last_full_sector = end;
 
 	if (lpc_iap_call(f, NULL, IAP_CMD_PREPARE, start, end, f->bank))
 		return -1;
 
 	/* Only LPC80x has reserved pages!*/
-	if (f->reserved_pages && ((addr + len) >=  tf->length - 0x400) ) {
-		last_full_sector -= 1;
-	}
+	if (f->reserved_pages && addr + len >= tf->length - 0x400U)
+		--last_full_sector;
+
 	if (start <= last_full_sector) {
 		/* Sector erase */
 		if (lpc_iap_call(f, NULL, IAP_CMD_ERASE, start, last_full_sector, CPU_CLK_KHZ, f->bank))
@@ -194,9 +206,11 @@ int lpc_flash_erase(struct target_flash *tf, target_addr addr, size_t len)
 		if (lpc_iap_call(f, NULL, IAP_CMD_BLANKCHECK, start, last_full_sector, f->bank))
 			return -3;
 	}
+
 	if (last_full_sector != end) {
-		uint32_t page_start = (addr + len - LPX80X_SECTOR_SIZE) / LPX80X_PAGE_SIZE;
-		uint32_t page_end = page_start +  LPX80X_SECTOR_SIZE/LPX80X_PAGE_SIZE - 1 - f->reserved_pages;
+		const uint32_t page_start = (addr + len - LPX80X_SECTOR_SIZE) / LPX80X_PAGE_SIZE;
+		const uint32_t page_end = page_start + LPX80X_SECTOR_SIZE / LPX80X_PAGE_SIZE - 1 - f->reserved_pages;
+
 		if (lpc_iap_call(f, NULL, IAP_CMD_PREPARE, end, end, f->bank))
 			return -1;
 
