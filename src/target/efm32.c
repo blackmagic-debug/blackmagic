@@ -860,17 +860,18 @@ static bool efm32_cmd_bootloader(target *t, int argc, const char **argv)
 	}
 
 	uint32_t clw0 = target_mem_read32(t, EFM32_LOCK_BITS_CLW0);
-	bool bootloader_status = (clw0 & EFM32_CLW0_BOOTLOADER_ENABLE) ? 1 : 0;
 
 	if (argc == 1) {
+		const bool bootloader_status = clw0 & EFM32_CLW0_BOOTLOADER_ENABLE;
 		tc_printf(t, "Bootloader %s\n", bootloader_status ? "enabled" : "disabled");
 		return true;
-	} else {
-		bootloader_status = (argv[1][0] == 'e');
 	}
 
 	/* Modify bootloader enable bit */
-	clw0 &= bootloader_status ? ~0 : ~EFM32_CLW0_BOOTLOADER_ENABLE;
+	if (argv[1][0] == 'e')
+		clw0 |= EFM32_CLW0_BOOTLOADER_ENABLE;
+	else
+		clw0 &= ~EFM32_CLW0_BOOTLOADER_ENABLE;
 
 	/* Unlock */
 	target_mem_write32(t, EFM32_MSC_LOCK(msc), EFM32_MSC_LOCK_LOCKKEY);
