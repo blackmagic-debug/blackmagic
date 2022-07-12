@@ -37,24 +37,19 @@
 #include "target_internal.h"
 #include "cortexm.h"
 
-static bool stm32f4_cmd_erase_mass(target *t, int argc, const char **argv);
-static bool stm32f4_cmd_option(target *t, int argc, char *argv[]);
-static bool stm32f4_cmd_psize(target *t, int argc, char *argv[]);
+static bool stm32f4_cmd_option(target *t, int argc, char **argv);
+static bool stm32f4_cmd_psize(target *t, int argc, char **argv);
 
 const struct command_s stm32f4_cmd_list[] = {
-	{"erase_mass", (cmd_handler)stm32f4_cmd_erase_mass,
-	 "Erase entire flash memory"},
 	{"option", (cmd_handler)stm32f4_cmd_option, "Manipulate option bytes"},
-	{"psize", (cmd_handler)stm32f4_cmd_psize,
-	 "Configure flash write parallelism: (x8|x16|x32(default)|x64)"},
+	{"psize", (cmd_handler)stm32f4_cmd_psize, "Configure flash write parallelism: (x8|x16|x32(default)|x64)"},
 	{NULL, NULL, NULL}
 };
 
 static bool stm32f4_attach(target *t);
-static int stm32f4_flash_erase(struct target_flash *f, target_addr addr,
-							   size_t len);
-static int stm32f4_flash_write(struct target_flash *f,
-                               target_addr dest, const void *src, size_t len);
+static int stm32f4_flash_erase(struct target_flash *f, target_addr addr, size_t len);
+static int stm32f4_flash_write(struct target_flash *f, target_addr dest, const void *src, size_t len);
+static bool stm32f4_mass_erase(target *t);
 
 /* Flash Program ad Erase Controller Register Map */
 #define FPEC_BASE	0x40023C00
@@ -146,15 +141,15 @@ static void stm32f4_add_flash(target *t,
                               uint32_t addr, size_t length, size_t blocksize,
                               unsigned int base_sector, int split)
 {
-	if (length == 0) return;
+	if (length == 0)
+		return;
 	struct stm32f4_flash *sf = calloc(1, sizeof(*sf));
-	struct target_flash *f;
 	if (!sf) {			/* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return;
 	}
 
-	f = &sf->f;
+	struct target_flash *f = &sf->f;
 	f->start = addr;
 	f->length = length;
 	f->blocksize = blocksize;
@@ -170,7 +165,7 @@ static void stm32f4_add_flash(target *t,
 
 static char *stm32f4_get_chip_name(uint32_t idcode)
 {
-	switch(idcode){
+	switch (idcode) {
 	case ID_STM32F40X: /* F40XxE/G */
 		return "STM32F40x";
 	case ID_STM32F42X: /* F42XxG/I */
@@ -234,6 +229,7 @@ bool stm32f4_probe(target *t)
 	case ID_STM32F412: /* F412     RM0402 Rev.4, 256 kB Ram */
 	case ID_STM32F401E: /* F401 D/E RM0368 Rev.3 */
 	case ID_STM32F413: /* F413     RM0430 Rev.2, 320 kB Ram, 1.5 MB flash. */
+		t->mass_erase = stm32f4_mass_erase;
 		t->detach = stm32f4_detach;
 		t->driver = stm32f4_get_chip_name(t->idcode);
 		t->attach = stm32f4_attach;
@@ -473,41 +469,30 @@ static int stm32f4_flash_write(struct target_flash *f,
 	return 0;
 }
 
-static bool stm32f4_cmd_erase_mass(target *t, int argc, const char **argv)
+static bool stm32f4_mass_erase(target *t)
 {
-	(void)argc;
-	(void)argv;
-	const char spinner[] = "|/-\\";
-	int spinindex = 0;
-	struct target_flash *f = t->flash;
-	struct stm32f4_flash *sf = (struct stm32f4_flash *)f;
-
-	tc_printf(t, "Erasing flash... This may take a few seconds.  ");
+	struct stm32f4_flash *sf = (struct stm32f4_flash *)t->flash;
 	stm32f4_flash_unlock(t);
 
 	/* Flash mass erase start instruction */
-	uint32_t cr =  FLASH_CR_MER;
+	uint32_t ctrl_reg =  FLASH_CR_MER;
 	if (sf->bank_split)
-		cr |=  FLASH_CR_MER1;
-	target_mem_write32(t, FLASH_CR, cr);
-	target_mem_write32(t, FLASH_CR, cr | FLASH_CR_STRT);
+		ctrl_reg |=  FLASH_CR_MER1;
+	target_mem_write32(t, FLASH_CR, ctrl_reg);
+	target_mem_write32(t, FLASH_CR, ctrl_reg | FLASH_CR_STRT);
 
+	platform_timeout timeout;
+	platform_timeout_set(&timeout, 500);
 	/* Read FLASH_SR to poll for BSY bit */
 	while (target_mem_read32(t, FLASH_SR) & FLASH_SR_BSY) {
-		tc_printf(t, "\b%c", spinner[spinindex++ % 4]);
-		if(target_check_error(t)) {
-			tc_printf(t, "\n");
+		if (target_check_error(t))
 			return false;
-		}
+		target_print_progress(&timeout);
 	}
-	tc_printf(t, "\n");
 
 	/* Check for error */
-	uint32_t sr = target_mem_read32(t, FLASH_SR);
-	if ((sr & SR_ERROR_MASK) || !(sr & SR_EOP))
-		return false;
-
-	return true;
+	const uint32_t result = target_mem_read32(t, FLASH_SR);
+	return !(result & SR_ERROR_MASK) && (result & SR_EOP);
 }
 
 /* Dev   | DOC  |Rev|ID |OPTCR    |OPTCR   |OPTCR1   |OPTCR1 | OPTCR2
