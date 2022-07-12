@@ -33,6 +33,7 @@
 #include <sys/time.h>
 #include <hidapi.h>
 #include <wchar.h>
+#include <sys/stat.h>
 
 #include "bmp_hosted.h"
 #include "dap.h"
@@ -80,6 +81,38 @@ static size_t mbslen(const char *str)
 	return result;
 }
 
+#ifdef __linux__
+static void dap_hid_print_permissions_for(const struct hid_device_info *const dev)
+{
+	const char *const path = dev->path;
+	PRINT_INFO("Tried device '%s'", path);
+	struct stat dev_stat;
+	if (stat(path, &dev_stat) == 0) {
+		PRINT_INFO(", permissions = %04o, owner = %u, group = %u",
+			dev_stat.st_mode & ACCESSPERMS, dev_stat.st_uid, dev_stat.st_gid);
+	}
+	PRINT_INFO("\n");
+}
+
+static void dap_hid_print_permissions(const uint16_t vid, const uint16_t pid, const wchar_t *const serial)
+{
+	struct hid_device_info *const devs = hid_enumerate(vid, pid);
+	if (!devs)
+		return;
+	for (const struct hid_device_info *dev = devs; dev; dev = dev->next) {
+		if (serial) {
+			if (wcscmp(serial, dev->serial_number) == 0) {
+				dap_hid_print_permissions_for(dev);
+				break;
+			}
+		}
+		else
+			dap_hid_print_permissions_for(dev);
+	}
+	hid_free_enumeration(devs);
+}
+#endif
+
 static bool dap_init_hid(const bmp_info_t *const info)
 {
 	DEBUG_INFO("Using hid transfer\n");
@@ -89,24 +122,30 @@ static bool dap_init_hid(const bmp_info_t *const info)
 	const size_t size = mbslen(info->serial);
 	if (size > 64) {
 		PRINT_INFO("Serial number invalid, aborting\n");
+		hid_exit();
 		return false;
 	}
 	wchar_t serial[65] = {0};
 	if (mbstowcs(serial, info->serial, size) != size) {
 		PRINT_INFO("Serial number conversion failed, aborting\n");
+		hid_exit();
 		return false;
 	}
 	serial[size] = 0;
 	/* Blacklist devices that do not work with 513 byte report length
 	* FIXME: Find a solution to decipher from the device.
 	*/
-	if ((info->vid == 0x1fc9) && (info->pid == 0x0132)) {
+	if (info->vid == 0x1fc9 && info->pid == 0x0132) {
 		DEBUG_WARN("Blacklist\n");
 		report_size = 64 + 1;
 	}
-	handle = hid_open(info->vid, info->pid,  (serial[0]) ? serial : NULL);
+	handle = hid_open(info->vid, info->pid, serial[0] ? serial : NULL);
 	if (!handle) {
 		PRINT_INFO("hid_open failed: %ls\n", hid_error(NULL));
+#ifdef __linux__
+		dap_hid_print_permissions(info->vid, info->pid, serial[0] ? serial : NULL);
+#endif
+		hid_exit();
 		return false;
 	}
 	return true;
