@@ -25,6 +25,7 @@
 #include "target.h"
 #include "target_internal.h"
 #include "cortexm.h"
+#include "adiv5.h"
 
 static int nrf51_flash_erase(struct target_flash *f, target_addr addr, size_t len);
 static int nrf51_flash_write(struct target_flash *f,
@@ -394,15 +395,9 @@ static bool nrf51_cmd_read(target *t, int argc, const char **argv)
 	return nrf51_cmd_read_help(t, 0, NULL);
 }
 
-#include "adiv5.h"
 #define NRF52_MDM_IDR 0x02880000
 
-static bool nrf51_mdm_cmd_erase_mass(target *t, int argc, const char **argv);
-
-const struct command_s nrf51_mdm_cmd_list[] = {
-	{"erase_mass", (cmd_handler)nrf51_mdm_cmd_erase_mass, "Erase entire flash memory"},
-	{NULL, NULL, NULL}
-};
+static bool nrf51_mdm_mass_erase(target *t);
 
 #define MDM_POWER_EN ADIV5_DP_REG(0x01)
 #define MDM_SELECT_AP ADIV5_DP_REG(0x02)
@@ -424,6 +419,7 @@ void nrf51_mdm_probe(ADIv5_AP_t *ap)
 		return;
 	}
 
+	t->mass_erase = nrf51_mdm_mass_erase;
 	adiv5_ap_ref(ap);
 	t->priv = ap;
 	t->priv_free = (void*)adiv5_ap_unref;
@@ -435,26 +431,23 @@ void nrf51_mdm_probe(ADIv5_AP_t *ap)
 	else
 		t->driver = "Nordic nRF52 Access Port (protected)";
 	t->regs_size = 4;
-	target_add_commands(t, nrf51_mdm_cmd_list, t->driver);
 }
 
-static bool nrf51_mdm_cmd_erase_mass(target *t, int argc, const char **argv)
+static bool nrf51_mdm_mass_erase(target *t)
 {
-	(void)argc;
-	(void)argv;
 	ADIv5_AP_t *ap = t->priv;
 
 	uint32_t status = adiv5_ap_read(ap, MDM_STATUS);
-
 	adiv5_dp_write(ap->dp, MDM_POWER_EN, 0x50000000);
-
 	adiv5_dp_write(ap->dp, MDM_SELECT_AP, 0x01000000);
-
 	adiv5_ap_write(ap, MDM_CONTROL, 0x00000001);
 
+	platform_timeout timeout;
+	platform_timeout_set(&timeout, 500);
 	// Read until 0, probably should have a timeout here...
 	do {
 		status = adiv5_ap_read(ap, MDM_STATUS);
+		target_print_progress(&timeout);
 	} while (status);
 
 	// The second read will provide true prot status
