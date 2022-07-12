@@ -48,8 +48,8 @@
 #define LMI_FLASH_FMC_WRKEY  0xA4420000
 
 static int lmi_flash_erase(struct target_flash *f, target_addr addr, size_t len);
-static int lmi_flash_write(struct target_flash *f,
-                           target_addr dest, const void *src, size_t len);
+static int lmi_flash_write(struct target_flash *f, target_addr dest, const void *src, size_t len);
+static bool lmi_mass_erase(target *t);
 
 static const char lmi_driver_str[] = "TI Stellaris/Tiva";
 
@@ -77,6 +77,7 @@ static void lmi_add_flash(target *t, size_t length)
 bool lmi_probe(target *t)
 {
 	uint32_t did1 = target_mem_read32(t, LMI_SCB_DID1);
+	t->mass_erase = lmi_mass_erase;
 	switch (did1 >> 16) {
 	case 0x1049:	/* LM3S3748 */
 		t->driver = lmi_driver_str;
@@ -108,21 +109,21 @@ bool lmi_probe(target *t)
 		t->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
 		return true;
 	}
+	t->mass_erase = NULL;
 	return false;
 }
 
 static int lmi_flash_erase(struct target_flash *f, target_addr addr, size_t len)
 {
 	target  *t = f->t;
-
 	target_check_error(t);
 
-	while(len) {
+	while (len) {
 		target_mem_write32(t, LMI_FLASH_FMA, addr);
-		target_mem_write32(t, LMI_FLASH_FMC,
-		                   LMI_FLASH_FMC_WRKEY | LMI_FLASH_FMC_ERASE);
-		while (target_mem_read32(t, LMI_FLASH_FMC) &
-		       LMI_FLASH_FMC_ERASE);
+		target_mem_write32(t, LMI_FLASH_FMC, LMI_FLASH_FMC_WRKEY | LMI_FLASH_FMC_ERASE);
+
+		while (target_mem_read32(t, LMI_FLASH_FMC) & LMI_FLASH_FMC_ERASE)
+			continue;
 
 		if (target_check_error(t))
 			return -1;
@@ -139,15 +140,16 @@ static int lmi_flash_write(struct target_flash *f,
                     target_addr dest, const void *src, size_t len)
 {
 	target  *t = f->t;
-
 	target_check_error(t);
-
-	target_mem_write(t, SRAM_BASE, lmi_flash_write_stub,
-	                 sizeof(lmi_flash_write_stub));
+	target_mem_write(t, SRAM_BASE, lmi_flash_write_stub, sizeof(lmi_flash_write_stub));
 	target_mem_write(t, STUB_BUFFER_BASE, src, len);
-
 	if (target_check_error(t))
 		return -1;
 
 	return cortexm_run_stub(t, SRAM_BASE, dest, STUB_BUFFER_BASE, len, 0);
+}
+
+static bool lmi_mass_erase(target *t)
+{
+	return lmi_flash_erase(t->flash, t->flash->start, t->flash->length) == 0;
 }
