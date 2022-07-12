@@ -400,21 +400,15 @@ bool samx5x_probe(target *t)
 	default:
 	case 18:
 		target_add_ram(t, 0x20000000, 0x20000);
-		samx5x_add_flash(t, 0x00000000, 0x40000,
-				 SAMX5X_BLOCK_SIZE,
-				 SAMX5X_PAGE_SIZE);
+		samx5x_add_flash(t, 0x00000000, 0x40000, SAMX5X_BLOCK_SIZE, SAMX5X_PAGE_SIZE);
 		break;
 	case 19:
 		target_add_ram(t, 0x20000000, 0x30000);
-		samx5x_add_flash(t, 0x00000000, 0x80000,
-				 SAMX5X_BLOCK_SIZE,
-				 SAMX5X_PAGE_SIZE);
+		samx5x_add_flash(t, 0x00000000, 0x80000, SAMX5X_BLOCK_SIZE, SAMX5X_PAGE_SIZE);
 		break;
 	case 20:
 		target_add_ram(t, 0x20000000, 0x40000);
-		samx5x_add_flash(t, 0x00000000, 0x100000,
-				 SAMX5X_BLOCK_SIZE,
-				 SAMX5X_PAGE_SIZE);
+		samx5x_add_flash(t, 0x00000000, 0x100000, SAMX5X_BLOCK_SIZE, SAMX5X_PAGE_SIZE);
 		break;
 	}
 
@@ -458,19 +452,14 @@ static void samx5x_unlock_current_address(target *t)
  */
 static void samx5x_print_nvm_error(uint16_t errs)
 {
-	if (errs & SAMX5X_INTFLAG_ADDRE) {
+	if (errs & SAMX5X_INTFLAG_ADDRE)
 		DEBUG_WARN(" ADDRE");
-	}
-	if (errs & SAMX5X_INTFLAG_PROGE) {
+	if (errs & SAMX5X_INTFLAG_PROGE)
 		DEBUG_WARN(" PROGE");
-	}
-	if (errs & SAMX5X_INTFLAG_LOCKE) {
+	if (errs & SAMX5X_INTFLAG_LOCKE)
 		DEBUG_WARN(" LOCKE");
-	}
-	if (errs & SAMX5X_INTFLAG_NVME) {
+	if (errs & SAMX5X_INTFLAG_NVME)
 		DEBUG_WARN(" NVME");
-	}
-
 	DEBUG_WARN("\n");
 }
 
@@ -680,7 +669,7 @@ static int samx5x_update_user_word(target *t, uint32_t addr, uint32_t value,
 		0xFF, 0xFF, 0xFF, 0xFF };
 
 	uint8_t buffer[SAMX5X_PAGE_SIZE];
-	uint32_t current_word, new_word;
+	uint32_t current_word;
 
 	target_mem_read(t, buffer, SAMX5X_NVM_USER_PAGE, SAMX5X_PAGE_SIZE);
 	memcpy(&current_word, buffer + addr, 4);
@@ -690,20 +679,18 @@ static int samx5x_update_user_word(target *t, uint32_t addr, uint32_t value,
 	for (int i = 0; !force && i < 4 && addr + i < 20; i++)
 		factory_word |= (uint32_t)factory_bits[addr + i] << (i * 8);
 
-	new_word = current_word & factory_word;
+	uint32_t new_word = current_word & factory_word;
 	new_word |= value & ~factory_word;
 	if (value_written != NULL)
 		*value_written = new_word;
 
 	if (new_word != current_word) {
-		DEBUG_INFO("Writing user page word 0x%08"PRIx32
-				   " at offset 0x%03"PRIx32"\n", new_word, addr);
+		DEBUG_INFO("Writing user page word 0x%08" PRIx32 " at offset 0x%03"PRIx32"\n", new_word, addr);
 		memcpy(buffer + addr, &new_word, 4);
 		return samx5x_write_user_page(t, buffer);
 	}
-	else {
+	else
 		DEBUG_INFO("Skipping user page write as no change would be made");
-	}
 
 	return 0;
 }
@@ -815,16 +802,12 @@ static bool samx5x_cmd_read_userpage(target *t, int argc, const char **argv)
 	(void)argc;
 	(void)argv;
 	uint8_t buffer[SAMX5X_PAGE_SIZE];
-	int i = 0;
 
 	target_mem_read(t, buffer, SAMX5X_NVM_USER_PAGE, SAMX5X_PAGE_SIZE);
 
 	tc_printf(t, "User Page:\n");
-	while (i < SAMX5X_PAGE_SIZE) {
-		tc_printf(t, "%02x%c", buffer[i],
-			  (i + 1) % 16 == 0 ? '\n' : ' ');
-		i++;
-	}
+	for (size_t i = 0; i < SAMX5X_PAGE_SIZE; ++i)
+		tc_printf(t, "%02x%c", buffer[i], (i + 1) % 16 == 0 ? '\n' : ' ');
 	return true;
 }
 
@@ -864,9 +847,7 @@ static bool samx5x_cmd_ssb(target *t, int argc, const char **argv)
 		if (target_check_error(t))
 			return -1;
 
-	tc_printf(t, "Set the security bit! "
-		  "You will need to issue 'monitor erase_mass' "
-		  "to clear this.\n");
+	tc_printf(t, "Set the security bit!\nYou will need to issue 'monitor erase_mass' to clear this.\n");
 
 	return true;
 }
