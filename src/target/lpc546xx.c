@@ -45,7 +45,6 @@
 
 #define IAP_PGM_CHUNKSIZE 4096
 
-static bool lpc546xx_cmd_erase_mass(target *t, int argc, const char *argv[]);
 static bool lpc546xx_cmd_erase_sector(target *t, int argc, const char *argv[]);
 static bool lpc546xx_cmd_read_partid(target *t, int argc, const char *argv[]);
 static bool lpc546xx_cmd_read_uid(target *t, int argc, const char *argv[]);
@@ -56,15 +55,13 @@ static bool lpc546xx_cmd_write_sector(target *t, int argc, const char *argv[]);
 static void lpc546xx_reset_attach(target *t);
 static int lpc546xx_flash_init(target *t);
 static int lpc546xx_flash_erase(struct target_flash *f, target_addr addr, size_t len);
+static bool lpc546xx_mass_erase(target *t);
 static void lpc546xx_wdt_set_period(target *t);
 static void lpc546xx_wdt_pet(target *t);
 
 const struct command_s lpc546xx_cmd_list[] = {
-	{ "erase_mass", lpc546xx_cmd_erase_mass, "Erase entire flash memory" },
-	{ "erase_sector", lpc546xx_cmd_erase_sector,
-	  "Erase a sector by number" },
-	{ "read_partid", lpc546xx_cmd_read_partid,
-	  "Read out the 32-bit part ID using IAP." },
+	{ "erase_sector", lpc546xx_cmd_erase_sector, "Erase a sector by number" },
+	{ "read_partid", lpc546xx_cmd_read_partid, "Read out the 32-bit part ID using IAP." },
 	{ "read_uid", lpc546xx_cmd_read_uid, "Read out the 16-byte UID." },
 	{ "reset_attach", lpc546xx_cmd_reset_attach,
 	  "Reset target. Reset debug registers. Re-attach debugger. This restores "
@@ -153,8 +150,8 @@ bool lpc546xx_probe(target *t)
 		return false;
 	}
 
-	lpc546xx_add_flash(t, IAP_ENTRYPOINT_LOCATION, 0, 0x0, flash_size,
-			   0x8000);
+	t->mass_erase = lpc546xx_mass_erase;
+	lpc546xx_add_flash(t, IAP_ENTRYPOINT_LOCATION, 0, 0x0, flash_size, 0x8000);
 
 	/* Note: upper 96kB is only usable after enabling the appropriate control
 	register bits, see LPC546xx User Manual: 7.5.19 AHB Clock Control register 0
@@ -178,22 +175,12 @@ static void lpc546xx_reset_attach(target *t)
 	cortexm_attach(t);
 }
 
-static bool lpc546xx_cmd_erase_mass(target *t, int argc, const char *argv[])
+static bool lpc546xx_mass_erase(target *t)
 {
-	(void)argc;
-	(void)argv;
-
-	int result = lpc546xx_flash_erase(t->flash, t->flash->start,
-					  t->flash->length);
-
-	if (result != 0) {
+	const int result = lpc546xx_flash_erase(t->flash, t->flash->start, t->flash->length);
+	if (result != 0)
 		tc_printf(t, "Error erasing flash: %d\n", result);
-		return false;
-	}
-
-	tc_printf(t, "Erase OK.\n");
-
-	return true;
+	return result == 0;
 }
 
 static bool lpc546xx_cmd_erase_sector(target *t, int argc, const char *argv[])
