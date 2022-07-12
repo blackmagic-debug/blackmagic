@@ -135,7 +135,8 @@ enum iap_status lpc_iap_call(struct lpc_flash *f, void *result, enum iap_cmd cmd
 
 	/* start the target and wait for it to halt again */
 	target_halt_resume(t, false);
-	while (!target_halt_poll(t, NULL));
+	while (!target_halt_poll(t, NULL))
+		continue;
 
 	/* copy back just the parameters structure */
 	target_mem_read(t, &param, f->iap_ram, sizeof(param));
@@ -151,7 +152,7 @@ enum iap_status lpc_iap_call(struct lpc_flash *f, void *result, enum iap_cmd cmd
 #if defined(ENABLE_DEBUG)
 	if (param.status != IAP_STATUS_CMD_SUCCESS) {
 		if (param.status > (sizeof(iap_error) / sizeof(char*)))
-			DEBUG_WARN("IAP  cmd %d : %" PRId32 "\n", cmd, param.status);
+			DEBUG_WARN("IAP  cmd %d : %" PRIu32 "\n", cmd, param.status);
 		else
 			DEBUG_WARN("IAP  cmd %d : %s\n", cmd, iap_error[param.status]);
 		DEBUG_WARN("return parameters: %08" PRIx32 " %08" PRIx32 " %08" PRIx32
