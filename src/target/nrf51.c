@@ -29,8 +29,8 @@
 static int nrf51_flash_erase(struct target_flash *f, target_addr addr, size_t len);
 static int nrf51_flash_write(struct target_flash *f,
                              target_addr dest, const void *src, size_t len);
+static bool nrf51_mass_erase(target *t);
 
-static bool nrf51_cmd_erase_all(target *t, int argc, const char **argv);
 static bool nrf51_cmd_erase_uicr(target *t, int argc, const char **argv);
 static bool nrf51_cmd_read_hwid(target *t, int argc, const char **argv);
 static bool nrf51_cmd_read_fwid(target *t, int argc, const char **argv);
@@ -41,7 +41,6 @@ static bool nrf51_cmd_read_help(target *t, int argc, const char **argv);
 static bool nrf51_cmd_read(target *t, int argc, const char **argv);
 
 const struct command_s nrf51_cmd_list[] = {
-	{"erase_mass", (cmd_handler)nrf51_cmd_erase_all, "Erase entire flash memory"},
 	{"erase_uicr", (cmd_handler)nrf51_cmd_erase_uicr, "Erase UICR registers"},
 	{"read", (cmd_handler)nrf51_cmd_read, "Read device parameters"},
 	{NULL, NULL, NULL}
@@ -129,6 +128,7 @@ bool nrf51_probe(target *t)
 	if ((uid0 == 0xffffffff) || (uid1 == 0xffffffff) ||
 		(uid0 ==  0) || (uid1 ==  0))
 		return false;
+	t->mass_erase = nrf51_mass_erase;
 	/* Test for NRF52 device*/
 	uint32_t info_part = target_mem_read32(t, NRF52_PART_INFO);
 	if ((info_part != 0xffffffff) && (info_part != 0) &&
@@ -140,7 +140,6 @@ bool nrf51_probe(target *t)
 		nrf51_add_flash(t, 0, page_size * code_size, page_size);
 		nrf51_add_flash(t, NRF51_UICR, page_size, page_size);
 		target_add_commands(t, nrf51_cmd_list, "nRF52");
-		return true;
 	} else {
 		t->driver = "Nordic nRF51";
 		/* Use the biggest RAM size seen in NRF51 fammily.
@@ -151,9 +150,8 @@ bool nrf51_probe(target *t)
 		nrf51_add_flash(t, 0, page_size * code_size, page_size);
 		nrf51_add_flash(t, NRF51_UICR, page_size, page_size);
 		target_add_commands(t, nrf51_cmd_list, "nRF51");
-		return true;
 	}
-	return false;
+	return true;
 }
 
 static int nrf51_flash_erase(struct target_flash *f, target_addr addr, size_t len)
@@ -221,27 +219,28 @@ static int nrf51_flash_write(struct target_flash *f,
 	return 0;
 }
 
-static bool nrf51_cmd_erase_all(target *t, int argc, const char **argv)
+static bool nrf51_mass_erase(target *t)
 {
-	(void)argc;
-	(void)argv;
-	tc_printf(t, "erase..\n");
-
 	/* Enable erase */
 	target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_EEN);
 
 	/* Poll for NVMC_READY */
-	while (target_mem_read32(t, NRF51_NVMC_READY) == 0)
-		if(target_check_error(t))
+	while (target_mem_read32(t, NRF51_NVMC_READY) == 0) {
+		if (target_check_error(t))
 			return false;
+	}
 
+	platform_timeout timeout = {};
+	platform_timeout_set(&timeout, 500);
 	/* Erase all */
 	target_mem_write32(t, NRF51_NVMC_ERASEALL, 1);
 
 	/* Poll for NVMC_READY */
-	while (target_mem_read32(t, NRF51_NVMC_READY) == 0)
-		if(target_check_error(t))
+	while (target_mem_read32(t, NRF51_NVMC_READY) == 0) {
+		if (target_check_error(t))
 			return false;
+		target_print_progress(&timeout);
+	}
 
 	return true;
 }
