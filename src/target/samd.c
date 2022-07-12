@@ -40,10 +40,9 @@
 #include "cortexm.h"
 
 static int samd_flash_erase(struct target_flash *t, target_addr addr, size_t len);
-static int samd_flash_write(struct target_flash *f,
-                            target_addr dest, const void *src, size_t len);
+static int samd_flash_write(struct target_flash *f, target_addr dest, const void *src, size_t len);
+bool samd_mass_erase(target *t);
 
-bool samd_cmd_erase_all(target *t, int argc, const char **argv);
 static bool samd_cmd_lock_flash(target *t, int argc, const char **argv);
 static bool samd_cmd_unlock_flash(target *t, int argc, const char **argv);
 static bool samd_cmd_unlock_bootprot(target *t, int argc, const char **argv);
@@ -54,7 +53,6 @@ static bool samd_cmd_mbist(target *t, int argc, const char **argv);
 static bool samd_cmd_ssb(target *t, int argc, const char **argv);
 
 const struct command_s samd_cmd_list[] = {
-	{"erase_mass", (cmd_handler)samd_cmd_erase_all, "Erase entire flash memory"},
 	{"lock_flash", (cmd_handler)samd_cmd_lock_flash, "Locks flash against spurious commands"},
 	{"unlock_flash", (cmd_handler)samd_cmd_unlock_flash, "Unlocks flash"},
 	{"lock_bootprot", (cmd_handler)samd_cmd_lock_bootprot, "Lock the boot protections to maximum"},
@@ -348,6 +346,7 @@ struct samd_descr {
 	char variant;
 	char package[3];
 };
+
 struct samd_descr samd_parse_device_id(uint32_t did)
 {
 	struct samd_descr samd;
@@ -357,14 +356,10 @@ struct samd_descr samd_parse_device_id(uint32_t did)
 	samd.ram_size = 0x8000;
 	samd.flash_size = 0x40000;
 
-	uint8_t family = (did >> SAMD_DID_FAMILY_POS)
-	  & SAMD_DID_FAMILY_MASK;
-	uint8_t series = (did >> SAMD_DID_SERIES_POS)
-	  & SAMD_DID_SERIES_MASK;
-	uint8_t revision = (did >> SAMD_DID_REVISION_POS)
-	  & SAMD_DID_REVISION_MASK;
-	uint8_t devsel = (did >> SAMD_DID_DEVSEL_POS)
-	  & SAMD_DID_DEVSEL_MASK;
+	uint8_t family = (did >> SAMD_DID_FAMILY_POS) & SAMD_DID_FAMILY_MASK;
+	uint8_t series = (did >> SAMD_DID_SERIES_POS) & SAMD_DID_SERIES_MASK;
+	uint8_t revision = (did >> SAMD_DID_REVISION_POS) & SAMD_DID_REVISION_MASK;
+	uint8_t devsel = (did >> SAMD_DID_DEVSEL_POS) & SAMD_DID_DEVSEL_MASK;
 
 	/* Family */
 	switch (family) {
@@ -468,6 +463,7 @@ struct samd_priv_s {
 	char samd_variant_string[60];
 };
 
+
 bool samd_probe(target *t)
 {
 	ADIv5_AP_t *ap = cortexm_ap(t);
@@ -486,6 +482,7 @@ bool samd_probe(target *t)
 	if ((did & SAMD_DID_MASK) != SAMD_DID_CONST_VALUE)
 		return false;
 
+	t->mass_erase = samd_mass_erase;
 	struct samd_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
 	t->target_storage = (void*)priv_storage;
 
@@ -639,10 +636,8 @@ static int samd_flash_write(struct target_flash *f,
 /**
  * Uses the Device Service Unit to erase the entire flash
  */
-bool samd_cmd_erase_all(target *t, int argc, const char **argv)
+bool samd_mass_erase(target *t)
 {
-	(void)argc;
-	(void)argv;
 	/* Clear the DSU status bits */
 	target_mem_write32(t, SAMD_DSU_CTRLSTAT,
 	                   SAMD_STATUSA_DONE | SAMD_STATUSA_PERR |
@@ -651,12 +646,16 @@ bool samd_cmd_erase_all(target *t, int argc, const char **argv)
 	/* Erase all */
 	target_mem_write32(t, SAMD_DSU_CTRLSTAT, SAMD_CTRL_CHIP_ERASE);
 
+	platform_timeout timeout;
+	platform_timeout_set(&timeout, 500);
 	/* Poll for DSU Ready */
 	uint32_t status;
 	while (((status = target_mem_read32(t, SAMD_DSU_CTRLSTAT)) &
-		(SAMD_STATUSA_DONE | SAMD_STATUSA_PERR | SAMD_STATUSA_FAIL)) == 0)
+		(SAMD_STATUSA_DONE | SAMD_STATUSA_PERR | SAMD_STATUSA_FAIL)) == 0) {
 		if (target_check_error(t))
 			return false;
+		target_print_progress(&timeout);
+	}
 
 	/* Test the protection error bit in Status A */
 	if (status & SAMD_STATUSA_PERR) {
@@ -669,9 +668,6 @@ bool samd_cmd_erase_all(target *t, int argc, const char **argv)
 		tc_printf(t, "Erase failed.\n");
 		return true;
 	}
-
-	tc_printf(t, "Erase successful!\n");
-
 	return true;
 }
 
