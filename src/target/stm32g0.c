@@ -158,23 +158,19 @@ struct stm32g0_priv_s {
 
 static bool stm32g0_attach(target *t);
 static void stm32g0_detach(target *t);
-static int stm32g0_flash_erase(struct target_flash *f, target_addr addr,
-                               size_t len);
-static int stm32g0_flash_write(struct target_flash *f, target_addr dest,
-                               const void *src, size_t len);
+static int stm32g0_flash_erase(struct target_flash *f, target_addr addr, size_t len);
+static int stm32g0_flash_write(struct target_flash *f, target_addr dest, const void *src, size_t len);
+static bool stm32g0_mass_erase(target *t);
 
 /* Custom commands */
-static bool stm32g0_cmd_erase_mass(target *t, int argc, const char **argv);
+static bool stm32g0_cmd_erase_bank(target *t, int argc, const char **argv);
 static bool stm32g0_cmd_option(target *t, int argc, const char **argv);
 static bool stm32g0_cmd_irreversible(target *t, int argc, const char **argv);
 
 const struct command_s stm32g0_cmd_list[] = {
-	{ "erase_mass [1|2]", (cmd_handler)stm32g0_cmd_erase_mass,
-	  "Erase entire flash memory or specified bank" },
-	{ "option", (cmd_handler)stm32g0_cmd_option,
-	  "Manipulate option bytes" },
-	{ "irreversible", (cmd_handler)stm32g0_cmd_irreversible,
-	  "Allow irreversible operations: (enable|disable)" },
+	{ "erase_bank 1|2", (cmd_handler)stm32g0_cmd_erase_bank, "Erase specified Flash bank" },
+	{ "option", (cmd_handler)stm32g0_cmd_option, "Manipulate option bytes" },
+	{ "irreversible", (cmd_handler)stm32g0_cmd_irreversible, "Allow irreversible operations: (enable|disable)" },
 	{ NULL, NULL, NULL }
 };
 
@@ -239,6 +235,7 @@ bool stm32g0_probe(target *t)
 	default:
 		return false;
 	}
+	t->mass_erase = stm32g0_mass_erase;
 	target_add_ram(t, RAM_START, ram_size);
 	/* Dual banks: contiguous in memory */
 	stm32g0_add_flash(t, FLASH_START, flash_size, FLASH_PAGE_SIZE);
@@ -329,8 +326,7 @@ static void stm32g0_flash_lock(target *t)
  * Flash erasure function.
  * OTP case: this function clears any previous error and returns.
  */
-static int stm32g0_flash_erase(struct target_flash *f, target_addr addr,
-                               size_t len)
+static int stm32g0_flash_erase(struct target_flash *f, target_addr addr, size_t len)
 {
 	target *t = f->t;
 	target_addr end = addr + len - 1U;
@@ -464,53 +460,74 @@ exit_cleanup:
 	return ret;
 }
 
-/*******************
- * Custom commands
- *******************/
-
-static bool stm32g0_cmd_erase_mass(target *t, int argc, const char **argv)
+static bool stm32g0_mass_erase(target *t)
 {
-	uint32_t flash_cr = 0U;
-	bool ret = true;
-
-	if (argc == 2) {
-		switch (argv[1][0]) {
-		case '1':
-			flash_cr = (uint32_t)FLASH_CR_MER1 | FLASH_CR_STRT;
-			break;
-		case '2':
-			flash_cr = (uint32_t)FLASH_CR_MER2 | FLASH_CR_STRT;
-			break;
-		default:
-			goto exit_error;
-			break;
-		}
-	} else {
-		flash_cr = (uint32_t)(FLASH_CR_MER1 | FLASH_CR_MER2 |
-		                      FLASH_CR_STRT);
-	}
+	const uint32_t flash_cr = FLASH_CR_MER1 | FLASH_CR_MER2 | FLASH_CR_STRT;
 
 	stm32g0_flash_unlock(t);
-
 	target_mem_write32(t, FLASH_CR, flash_cr);
+
+	bool error = true;
+	platform_timeout timeout;
+	platform_timeout_set(&timeout, 500);
 
 	/* Read FLASH_SR to poll for BSY bits */
 	while (target_mem_read32(t, FLASH_SR) & FLASH_SR_BSY_MASK) {
-		if (target_check_error(t))
-			goto exit_error;
+		if ((error = target_check_error(t)))
+			goto exit_cleanup;
+		target_print_progress(&timeout);
 	}
 
 	/* Check for error */
 	uint16_t flash_sr = target_mem_read32(t, FLASH_SR);
-	if (flash_sr & FLASH_SR_ERROR_MASK)
-		goto exit_error;
-	goto exit_cleanup;
+	error = flash_sr & FLASH_SR_ERROR_MASK;
 
-exit_error:
-	ret = false;
 exit_cleanup:
 	stm32g0_flash_lock(t);
-	return ret;
+	return !error;
+}
+
+/*******************
+ * Custom commands
+ *******************/
+
+static bool stm32g0_cmd_erase_bank(target *t, int argc, const char **argv)
+{
+	uint32_t flash_cr = 0U;
+
+	if (argc == 2) {
+		switch (argv[1][0]) {
+		case '1':
+			flash_cr = FLASH_CR_MER1 | FLASH_CR_STRT;
+			break;
+		case '2':
+			flash_cr = FLASH_CR_MER2 | FLASH_CR_STRT;
+			break;
+		}
+	}
+
+	if (!flash_cr) {
+		tc_printf(t, "Must specify which bank to erase\n");
+		return false;
+	}
+
+	stm32g0_flash_unlock(t);
+	target_mem_write32(t, FLASH_CR, flash_cr);
+
+	bool error = true;
+	/* Read FLASH_SR to poll for BSY bits */
+	while (target_mem_read32(t, FLASH_SR) & FLASH_SR_BSY_MASK) {
+		if ((error = target_check_error(t)))
+			goto exit_cleanup;
+	}
+
+	/* Check for error */
+	uint16_t flash_sr = target_mem_read32(t, FLASH_SR);
+	error = flash_sr & FLASH_SR_ERROR_MASK;
+
+exit_cleanup:
+	stm32g0_flash_lock(t);
+	return !error;
 }
 
 static void stm32g0_flash_option_unlock(target *t)
