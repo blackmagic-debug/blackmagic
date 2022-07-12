@@ -166,19 +166,18 @@ static int nrf51_flash_erase(struct target_flash *f, target_addr addr, size_t le
 			return -1;
 
 	while (len) {
-		if (addr == NRF51_UICR) { // Special Case
+		if (addr == NRF51_UICR) // Special Case
 			/* Write to the ERASE_UICR register to erase */
 			target_mem_write32(t, NRF51_NVMC_ERASEUICR, 0x1);
-
-		} else { // Standard Flash Page
+		else // Standard Flash Page
 			/* Write address of first word in page to erase it */
 			target_mem_write32(t, NRF51_NVMC_ERASEPAGE, addr);
-		}
 
 		/* Poll for NVMC_READY */
-		while (target_mem_read32(t, NRF51_NVMC_READY) == 0)
-			if(target_check_error(t))
+		while (target_mem_read32(t, NRF51_NVMC_READY) == 0) {
+			if (target_check_error(t))
 				return -1;
+		}
 
 		addr += f->blocksize;
 		if (len > f->blocksize)
@@ -191,9 +190,10 @@ static int nrf51_flash_erase(struct target_flash *f, target_addr addr, size_t le
 	target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_REN);
 
 	/* Poll for NVMC_READY */
-	while (target_mem_read32(t, NRF51_NVMC_READY) == 0)
-		if(target_check_error(t))
+	while (target_mem_read32(t, NRF51_NVMC_READY) == 0) {
+		if (target_check_error(t))
 			return -1;
+	}
 
 	return 0;
 }
