@@ -40,14 +40,13 @@
 #include "target.h"
 #include "target_internal.h"
 #include "cortexm.h"
+#include "gdb_packet.h"
 
-static bool stm32l4_cmd_erase_mass(target *t, int argc, const char **argv);
 static bool stm32l4_cmd_erase_bank1(target *t, int argc, const char **argv);
 static bool stm32l4_cmd_erase_bank2(target *t, int argc, const char **argv);
 static bool stm32l4_cmd_option(target *t, int argc, char *argv[]);
 
 const struct command_s stm32l4_cmd_list[] = {
-	{"erase_mass", (cmd_handler)stm32l4_cmd_erase_mass, "Erase entire flash memory"},
 	{"erase_bank1", (cmd_handler)stm32l4_cmd_erase_bank1, "Erase entire bank1 flash memory"},
 	{"erase_bank2", (cmd_handler)stm32l4_cmd_erase_bank2, "Erase entire bank2 flash memory"},
 	{"option", (cmd_handler)stm32l4_cmd_option, "Manipulate option bytes"},
@@ -55,8 +54,8 @@ const struct command_s stm32l4_cmd_list[] = {
 };
 
 static int stm32l4_flash_erase(struct target_flash *f, target_addr addr, size_t len);
-static int stm32l4_flash_write(struct target_flash *f,
-                               target_addr dest, const void *src, size_t len);
+static int stm32l4_flash_write(struct target_flash *f, target_addr dest, const void *src, size_t len);
+static bool stm32l4_mass_erase(target *t);
 
 /* Flash Program ad Erase Controller Register Map */
 #define L4_FPEC_BASE			0x40022000
@@ -336,7 +335,6 @@ static struct stm32l4_info const L4info[] = {
 	},
 };
 
-
 /* Retrieve chip basic information, just add to the vector to extend */
 static struct stm32l4_info const * stm32l4_get_chip_info(uint32_t idcode) {
 	struct stm32l4_info const *p = L4info;
@@ -366,19 +364,15 @@ static void stm32l4_flash_write32(target *t, enum stm32l4_flash_regs reg, uint32
 	target_mem_write32(t, addr, value);
 }
 
-static void stm32l4_add_flash(target *t,
-                              uint32_t addr, size_t length, size_t blocksize,
-                              uint32_t bank1_start)
+static void stm32l4_add_flash(target *t, uint32_t addr, size_t length, size_t blocksize, uint32_t bank1_start)
 {
 	struct stm32l4_flash *sf = calloc(1, sizeof(*sf));
-	struct target_flash *f;
-
 	if (!sf) {			/* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return;
 	}
 
-	f = &sf->f;
+	struct target_flash *f = &sf->f;
 	f->start = addr;
 	f->length = length;
 	f->blocksize = blocksize;
@@ -389,10 +383,12 @@ static void stm32l4_add_flash(target *t,
 	sf->bank1_start = bank1_start;
 	target_add_flash(t, f);
 }
+
 #define L5_RCC_APB1ENR1        0x50021058
 #define L5_RCC_APB1ENR1_PWREN (1 << 28)
 #define L5_PWR_CR1             0x50007000
 #define L5_PWR_CR1_VOS        (3 << 9)
+
 /* For flash programming, L5 needs to be in VOS 0 or 1 while reset set 2 (or even 3?) */
 static void stm32l5_flash_enable(target *t)
 {
@@ -408,7 +404,6 @@ static bool stm32l4_attach(target *t)
 
 	/* Retrive chip information, no need to check return */
 	struct stm32l4_info const *chip = stm32l4_get_chip_info(t->idcode);
-
 
 	uint32_t idcodereg;
 	switch(chip->family) {
@@ -556,6 +551,7 @@ bool stm32l4_probe(target *t)
 				break;
 			}
 	}
+	t->mass_erase = stm32l4_mass_erase;
 	t->attach = stm32l4_attach;
 	t->detach = stm32l4_detach;
 	target_add_commands(t, stm32l4_cmd_list, chip->designator);
@@ -574,36 +570,34 @@ static void stm32l4_flash_unlock(target *t)
 static int stm32l4_flash_erase(struct target_flash *f, target_addr addr, size_t len)
 {
 	target *t = f->t;
-	uint16_t sr;
-	uint32_t bank1_start = ((struct stm32l4_flash *)f)->bank1_start;
-	uint32_t page;
-	uint32_t blocksize = f->blocksize;
-
 	stm32l4_flash_unlock(t);
 
 	/* Read FLASH_SR to poll for BSY bit */
-	while(stm32l4_flash_read32(t, FLASH_SR) & FLASH_SR_BSY)
-		if(target_check_error(t))
+	while (stm32l4_flash_read32(t, FLASH_SR) & FLASH_SR_BSY) {
+		if (target_check_error(t))
 			return -1;
+	}
+
 	/* Fixme: OPTVER always set after reset! Wrong option defaults?*/
 	stm32l4_flash_write32(t, FLASH_SR, stm32l4_flash_read32(t, FLASH_SR));
-	page = (addr - 0x08000000) / blocksize;
-	while(len) {
-		uint32_t cr;
-
-		cr = FLASH_CR_PER | (page << FLASH_CR_PAGE_SHIFT );
+	const uint32_t blocksize = f->blocksize;
+	uint32_t page = (addr - 0x08000000) / blocksize;
+	const uint32_t bank1_start = ((struct stm32l4_flash *)f)->bank1_start;
+	while (len) {
+		uint32_t ctrl_reg = FLASH_CR_PER | (page << FLASH_CR_PAGE_SHIFT);
 		if (addr >= bank1_start)
-			cr |= FLASH_CR_BKER;
+			ctrl_reg |= FLASH_CR_BKER;
 		/* Flash page erase instruction */
-		stm32l4_flash_write32(t, FLASH_CR, cr);
+		stm32l4_flash_write32(t, FLASH_CR, ctrl_reg);
 		/* write address to FMA */
-		cr |= FLASH_CR_STRT;
-		stm32l4_flash_write32(t, FLASH_CR, cr);
+		ctrl_reg |= FLASH_CR_STRT;
+		stm32l4_flash_write32(t, FLASH_CR, ctrl_reg);
 
 		/* Read FLASH_SR to poll for BSY bit */
-		while(stm32l4_flash_read32(t, FLASH_SR) & FLASH_SR_BSY)
-			if(target_check_error(t))
+		while (stm32l4_flash_read32(t, FLASH_SR) & FLASH_SR_BSY) {
+			if (target_check_error(t))
 				return -1;
+		}
 		if (len > blocksize)
 			len  -= blocksize;
 		else
@@ -613,77 +607,77 @@ static int stm32l4_flash_erase(struct target_flash *f, target_addr addr, size_t 
 	}
 
 	/* Check for error */
-	sr = stm32l4_flash_read32(t, FLASH_SR);
-	if(sr & FLASH_SR_ERROR_MASK)
+	if (stm32l4_flash_read32(t, FLASH_SR) & FLASH_SR_ERROR_MASK)
 		return -1;
-
 	return 0;
 }
 
-static int stm32l4_flash_write(struct target_flash *f,
-                               target_addr dest, const void *src, size_t len)
+static int stm32l4_flash_write(struct target_flash *f, target_addr dest, const void *src, size_t len)
 {
 	target *t = f->t;
 	stm32l4_flash_write32(t, FLASH_CR, FLASH_CR_PG);
 	target_mem_write(t, dest, src, len);
 	/* Wait for completion or an error */
-	uint32_t sr;
+	uint32_t status;
 	do {
-		sr = stm32l4_flash_read32(t, FLASH_SR);
+		status = stm32l4_flash_read32(t, FLASH_SR);
 		if (target_check_error(t)) {
 			DEBUG_WARN("stm32l4 flash write: comm error\n");
 			return -1;
 		}
-	} while (sr & FLASH_SR_BSY);
+	} while (status & FLASH_SR_BSY);
 
-	if(sr & FLASH_SR_ERROR_MASK) {
-		DEBUG_WARN("stm32l4 flash write error: sr 0x%" PRIx32 "\n", sr);
+	if (status & FLASH_SR_ERROR_MASK) {
+		DEBUG_WARN("stm32l4 flash write error: sr 0x%" PRIx32 "\n", status);
 		return -1;
 	}
 	return 0;
 }
 
-static bool stm32l4_cmd_erase(target *t, uint32_t action)
+static bool stm32l4_cmd_erase(target *const t, const uint32_t action)
 {
 	stm32l4_flash_unlock(t);
-	/* Erase time is 25 ms. No need for a spinner.*/
+	/* Erase time is 25 ms. Timeout logic shouldn't get fired.*/
 	/* Flash erase action start instruction */
 	stm32l4_flash_write32(t, FLASH_CR, action);
 	stm32l4_flash_write32(t, FLASH_CR, action | FLASH_CR_STRT);
 
+	platform_timeout timeout;
+	platform_timeout_set(&timeout, 500);
 	/* Read FLASH_SR to poll for BSY bit */
 	while (stm32l4_flash_read32(t, FLASH_SR) & FLASH_SR_BSY) {
-		if(target_check_error(t)) {
+		if(target_check_error(t))
 			return false;
-		}
+		target_print_progress(&timeout);
 	}
 
 	/* Check for error */
-	uint16_t sr = stm32l4_flash_read32(t, FLASH_SR);
-	if (sr & FLASH_SR_ERROR_MASK)
-		return false;
-	return true;
+	return !(stm32l4_flash_read32(t, FLASH_SR) & FLASH_SR_ERROR_MASK);
 }
 
-static bool stm32l4_cmd_erase_mass(target *t, int argc, const char **argv)
+static bool stm32l4_mass_erase(target *const t)
 {
-	(void)argc;
-	(void)argv;
 	return stm32l4_cmd_erase(t, FLASH_CR_MER1 | FLASH_CR_MER2);
 }
 
-static bool stm32l4_cmd_erase_bank1(target *t, int argc, const char **argv)
+static bool stm32l4_cmd_erase_bank1(target *const t, const int argc, const char **const argv)
 {
 	(void)argc;
 	(void)argv;
-	return stm32l4_cmd_erase(t, FLASH_CR_MER1);
+	gdb_out("Erasing bank 1: ");
+	const bool result = stm32l4_cmd_erase(t, FLASH_CR_MER1);
+	gdb_out("done\n");
+	return result;
 }
 
-static bool stm32l4_cmd_erase_bank2(target *t, int argc, const char **argv)
+static bool stm32l4_cmd_erase_bank2(target *const t, const int argc, const char **const argv)
 {
 	(void)argc;
 	(void)argv;
-	return stm32l4_cmd_erase(t, FLASH_CR_MER2);
+	gdb_out("Erasing bank 2: ");
+	const bool result = stm32l4_cmd_erase(t, FLASH_CR_MER2);
+	gdb_out("done\n");
+	return result;
 }
 
 static const uint8_t l4_i2offset[9] = {
