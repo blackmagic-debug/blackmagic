@@ -318,12 +318,7 @@ samd20_revB_halt_resume(target *t, bool step)
  */
 bool samd_protected_attach(target *t)
 {
-	/**
-	 * TODO: Notify the user that we're not really attached and
-	 * they should issue the 'monitor erase_mass' command to
-	 * regain access to the chip.
-	 */
-
+	tc_printf(t, "Attached in protected mode, please issue 'monitor erase_mass' to regain chip access\n");
 	/* Patch back in the normal cortexm attach for next time */
 	t->attach = cortexm_attach;
 
@@ -711,19 +706,19 @@ static bool samd_set_flashlock(target *t, uint16_t value, const char **argv)
 	return true;
 }
 
-static bool parse_unsigned(const char *s, uint32_t *val)
+static bool parse_unsigned(const char *str, uint32_t *val)
 {
-	int l, st;
+	int result;
 	unsigned long num;
 
-	l = strlen(s);
+	size_t len = strlen(str);
 	// TODO: port to use substrate::toInt_t<> style parser for robustness and smaller code size
-	if (l > 2 && s[0] == '0' && (s[1] == 'x' || s[1] == 'X'))
-		st = sscanf(s + 2, "%lx", &num);
+	if (len > 2 && str[0] == '0' && (str[1] == 'x' || str[1] == 'X'))
+		result = sscanf(str + 2, "%lx", &num);
 	else
-		st = sscanf(s, "%lu", &num);
+		result = sscanf(str, "%lu", &num);
 
-	if (st < 1)
+	if (result < 1)
 		return false;
 
 	*val = (uint32_t)num;
@@ -735,21 +730,22 @@ static bool samd_cmd_lock_flash(target *t, int argc, const char **argv)
 	if (argc > 2) {
 		tc_printf(t, "usage: monitor lock_flash [number]\n");
 		return false;
-	} else if (argc == 2) {
+	}
+	if (argc == 2) {
 		uint32_t val = 0;
 		if (!parse_unsigned(argv[1], &val)) {
 			tc_printf(t, "number must be either decimal or 0x prefixed hexadecimal\n");
 			return false;
 		}
 
-		if (val > 0xffffu) {
+		if (val > 0xffffU) {
 			tc_printf(t, "number must be between 0 and 65535\n");
 			return false;
 		}
 
 		return samd_set_flashlock(t, (uint16_t)val, NULL);
-	} else
-		return samd_set_flashlock(t, 0x0000, NULL);
+	}
+	return samd_set_flashlock(t, 0x0000, NULL);
 }
 
 static bool samd_cmd_unlock_flash(target *t, int argc, const char **argv)
@@ -798,7 +794,8 @@ static bool samd_cmd_lock_bootprot(target *t, int argc, const char **argv)
 	if (argc > 2) {
 		tc_printf(t, "usage: monitor lock_bootprot [number]\n");
 		return false;
-	} else if (argc == 2) {
+	}
+	if (argc == 2) {
 		uint32_t val = 0;
 		if (!parse_unsigned(argv[1], &val)) {
 			tc_printf(t, "number must be either decimal or 0x prefixed hexadecimal\n");
@@ -811,8 +808,8 @@ static bool samd_cmd_lock_bootprot(target *t, int argc, const char **argv)
 		}
 
 		return samd_set_bootprot(t, (uint16_t)val, NULL);
-	} else
-		return samd_set_bootprot(t, 0, NULL);
+	}
+	return samd_set_bootprot(t, 0, NULL);
 }
 
 static bool samd_cmd_unlock_bootprot(target *t, int argc, const char **argv)
@@ -922,8 +919,7 @@ static bool samd_cmd_ssb(target *t, int argc, const char **argv)
 		if (target_check_error(t))
 			return -1;
 
-	tc_printf(t, "Security bit set! "
-		  "Scan again, attach and issue 'monitor erase_mass' to reset.\n");
+	tc_printf(t, "Security bit set!\nScan again, attach and issue 'monitor erase_mass' to reset.\n");
 
 	target_reset(t);
 	return true;
