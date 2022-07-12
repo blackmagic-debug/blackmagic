@@ -52,9 +52,8 @@ static bool samx5x_cmd_ssb(target *t, int argc, const char **argv);
 static bool samx5x_cmd_update_user_word(target *t, int argc, const char **argv);
 
 /* (The SAM D1x/2x implementation of erase_all is reused as it's identical)*/
-extern bool samd_cmd_erase_all(target *t, int argc, const char **argv);
-#define samx5x_cmd_erase_all samd_cmd_erase_all
-
+bool samd_mass_erase(target *t);
+#define samx5x_mass_erase samd_mass_erase
 
 #ifdef SAMX5X_EXTRA_CMDS
 static bool samx5x_cmd_mbist(target *t, int argc, const char **argv);
@@ -64,8 +63,6 @@ static bool samx5x_cmd_write32(target *t, int argc, const char **argv);
 #endif
 
 const struct command_s samx5x_cmd_list[] = {
-	{"erase_mass", (cmd_handler)samx5x_cmd_erase_all,
-	 "Erase entire flash memory"},
 	{"lock_flash", (cmd_handler)samx5x_cmd_lock_flash,
 	 "Locks flash against spurious commands"},
 	{"unlock_flash", (cmd_handler)samx5x_cmd_unlock_flash,
@@ -92,12 +89,6 @@ const struct command_s samx5x_cmd_list[] = {
 	{"write32", (cmd_handler)samx5x_cmd_write32,
 	 "Writes a 32-bit word: write32 <addr> <value>"},
 #endif
-	{NULL, NULL, NULL}
-};
-
-const struct command_s samx5x_protected_cmd_list[] = {
-	{"erase_mass", (cmd_handler)samx5x_cmd_erase_all,
-	 "Erase entire flash memory"},
 	{NULL, NULL, NULL}
 };
 
@@ -391,6 +382,7 @@ bool samx5x_probe(target *t)
 	}
 
 	/* Setup Target */
+	t->mass_erase = samx5x_mass_erase;
 	t->driver = priv_storage->samx5x_variant_string;
 	t->reset = samx5x_reset;
 
@@ -426,10 +418,7 @@ bool samx5x_probe(target *t)
 		break;
 	}
 
-	if (protected)
-		target_add_commands(t, samx5x_protected_cmd_list,
-				    "SAMD5x/E5x (protected)");
-	else
+	if (!protected)
 		target_add_commands(t, samx5x_cmd_list, "SAMD5x/E5x");
 
 	/* If we're not in reset here */
