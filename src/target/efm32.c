@@ -87,6 +87,7 @@ const struct command_s efm32_cmd_list[] = {
 #define EFM32_MSC_WRITECMD_WRITETRIG  (1 << 4)
 #define EFM32_MSC_WRITECMD_ERASEABORT (1 << 5)
 #define EFM32_MSC_WRITECMD_ERASEMAIN0 (1 << 8)
+#define EFM32_MSC_WRITECMD_ERASEMAIN1 (1 << 9)
 
 #define EFM32_MSC_STATUS_BUSY       (1 << 0)
 #define EFM32_MSC_STATUS_LOCKED     (1 << 1)
@@ -688,7 +689,17 @@ static bool efm32_mass_erase(target *t)
 	if (device == NULL) {
 		return true;
 	}
+
+	if (device->family_id == 71 || device->family_id == 73) {
+		/* original Gecko and Tiny Gecko families don't support mass erase */
+		tc_printf(t, "This device does not support mass erase through MSC.\n");
+		return false;
+	}
+
 	uint32_t msc = device->msc_addr;
+
+	uint8_t di_version = t->driver[0] - 48; /* di version hidden in driver str */
+	uint16_t flash_kib = efm32_read_flash_size(t, di_version);
 
 	/* Set WREN bit to enable MSC write and erase functionality */
 	target_mem_write32(t, EFM32_MSC_WRITECTRL(msc), 1);
@@ -706,6 +717,19 @@ static bool efm32_mass_erase(target *t)
 		if (target_check_error(t))
 			return false;
 		target_print_progress(&timeout);
+	}
+
+	/* Parts with >= 512 kiB flash have 2 mass erase regions */
+	if (flash_kib >= 512) {
+		/* Erase operation */
+		target_mem_write32(t, EFM32_MSC_WRITECMD(msc), EFM32_MSC_WRITECMD_ERASEMAIN1);
+
+		/* Poll MSC Busy */
+		while ((target_mem_read32(t, EFM32_MSC_STATUS(msc)) & EFM32_MSC_STATUS_BUSY)) {
+			if (target_check_error(t))
+				return false;
+			target_print_progress(&timeout);
+		}
 	}
 
 	/* Relock mass erase */
