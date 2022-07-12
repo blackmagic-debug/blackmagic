@@ -138,8 +138,7 @@ static bool rp2040_fill_table(struct rp_priv_s *priv, uint16_t *table, int max)
  * timout == 0: Do not wait for poll, use for reset_usb_boot()
  * timeout > 500 (ms) : display spinner
  */
-static bool rp_rom_call(target *t, uint32_t *regs, uint32_t cmd,
-						uint32_t timeout)
+static bool rp_rom_call(target *t, uint32_t *regs, uint32_t cmd, uint32_t timeout)
 {
 	const char spinner[] = "|/-\\";
 	int spinindex = 0;
@@ -156,21 +155,21 @@ static bool rp_rom_call(target *t, uint32_t *regs, uint32_t cmd,
 	if (!timeout)
 		return false;
 	DEBUG_INFO("Call cmd %04" PRIx32 "\n", cmd);
-	platform_timeout to;
-	platform_timeout_set(&to, timeout);
-	platform_timeout to_spinner;
+	platform_timeout operation_timeout;
+	platform_timeout_set(&operation_timeout, timeout);
+	platform_timeout spinner_timeout;
 	if (timeout > 500)
-		platform_timeout_set(&to_spinner, 500);
+		platform_timeout_set(&spinner_timeout, 500);
 	else
 		/* never trigger if timeout is short */
-		platform_timeout_set(&to_spinner, timeout + 1);
+		platform_timeout_set(&spinner_timeout, timeout + 1);
 	do {
-		if (platform_timeout_is_expired(&to_spinner)) {
+		if (platform_timeout_is_expired(&spinner_timeout)) {
 			if (ps->is_monitor)
 				tc_printf(t, "\b%c", spinner[spinindex++ % 4]);
-			platform_timeout_set(&to_spinner, 500);
+			platform_timeout_set(&spinner_timeout, 500);
 		}
-		if (platform_timeout_is_expired(&to)) {
+		if (platform_timeout_is_expired(&operation_timeout)) {
 			DEBUG_WARN("RP Run timout %d ms reached: ", (int)timeout);
 			break;
 		}
@@ -217,8 +216,7 @@ static void rp_flash_resume(target *t)
  * chip erase           5000/25000 ms
  * page programm           0.4/  3 ms
  */
-static int rp_flash_erase(struct target_flash *f, target_addr addr,
-						  size_t len)
+static int rp_flash_erase(struct target_flash *f, target_addr addr, size_t len)
 {
 	DEBUG_INFO("Erase addr 0x%08" PRIx32 " len 0x%" PRIx32 "\n", addr, (uint32_t)len);
 	target *t = f->t;
@@ -234,12 +232,16 @@ static int rp_flash_erase(struct target_flash *f, target_addr addr,
 	len = ALIGN(len, FLASHSIZE_4K_SECTOR);
 	len = MIN(len, t->flash->length - addr);
 	struct rp_priv_s *ps = (struct rp_priv_s*)t->target_storage;
+	const bool full_erase = addr == f->start && len == f->length;
+	platform_timeout timeout;
+	platform_timeout_set(&timeout, 500);
+
 	/* erase */
 	rp_flash_prepare(t);
 	bool ret = 0;
 	while (len) {
 		if (len >= FLASHSIZE_64K_BLOCK) {
-			uint32_t chunk = len & ~(FLASHSIZE_64K_BLOCK - 1);
+			const uint32_t chunk = len & ~(FLASHSIZE_64K_BLOCK - 1U);
 			ps->regs[0] = addr;
 			ps->regs[1] = chunk;
 			ps->regs[2] = FLASHSIZE_64K_BLOCK;
@@ -249,7 +251,7 @@ static int rp_flash_erase(struct target_flash *f, target_addr addr,
 			len -= chunk ;
 			addr += chunk;
 		} else if (len >= FLASHSIZE_32K_BLOCK) {
-			uint32_t chunk = len & ~(FLASHSIZE_32K_BLOCK - 1);
+			const uint32_t chunk = len & ~(FLASHSIZE_32K_BLOCK - 1U);
 			ps->regs[0] = addr;
 			ps->regs[1] = chunk;
 			ps->regs[2] = FLASHSIZE_32K_BLOCK;
@@ -271,14 +273,15 @@ static int rp_flash_erase(struct target_flash *f, target_addr addr,
 			DEBUG_WARN("Erase failed!\n");
 			break;
 		}
+		if (full_erase)
+			target_print_progress(&timeout);
 	}
 	rp_flash_resume(t);
 	DEBUG_INFO("Erase done!\n");
 	return ret;
 }
 
-static int rp_flash_write(struct target_flash *f,
-                    target_addr dest, const void *src, size_t len)
+static int rp_flash_write(struct target_flash *f, target_addr dest, const void *src, size_t len)
 {
 	DEBUG_INFO("RP Write 0x%08" PRIx32 " len 0x%" PRIx32 "\n", dest, (uint32_t)len);
 	target *t = f->t;
@@ -333,23 +336,19 @@ static bool rp_cmd_reset_usb_boot(target *t, int argc, const char *argv[])
 	return true;
 }
 
-static bool rp_cmd_erase_mass(target *t, int argc, const char *argv[])
+static bool rp_mass_erase(target *t)
 {
-	(void) argc;
-	(void) argv;
-	struct target_flash f;
-	f.t = t;
 	struct rp_priv_s *ps = (struct rp_priv_s*)t->target_storage;
 	ps->is_monitor = true;
-	bool res =  (rp_flash_erase(&f, t->flash->start, t->flash->length)) ? false: true;
+	const bool result = rp_flash_erase(t->flash, t->flash->start, t->flash->length) == 0;
 	ps->is_monitor = false;
-	return res;
+	return result;
 }
 
 static bool rp_cmd_erase_sector(target *t, int argc, const char *argv[])
 {
-	uint32_t length = t->flash->length;
 	uint32_t start = t->flash->start;
+	uint32_t length;
 
 	if (argc == 3) {
 		start = strtoul(argv[1], NULL, 0);
@@ -360,17 +359,14 @@ static bool rp_cmd_erase_sector(target *t, int argc, const char *argv[])
 	else
 		return -1;
 
-	struct target_flash f;
-	f.t = t;
 	struct rp_priv_s *ps = (struct rp_priv_s*)t->target_storage;
 	ps->is_monitor = true;
-	bool res =  (rp_flash_erase(&f, start, length)) ? false: true;
+	const bool result = rp_flash_erase(t->flash, start, length) == 0;
 	ps->is_monitor = false;
-	return res;
+	return result;
 }
 
 const struct command_s rp_cmd_list[] = {
-	{"erase_mass", rp_cmd_erase_mass, "Erase entire flash memory"},
 	{"erase_sector", rp_cmd_erase_sector, "Erase a sector: [start address] length" },
 	{"reset_usb_boot", rp_cmd_reset_usb_boot, "Reboot the device into BOOTSEL mode"},
 	{NULL, NULL, NULL}
@@ -519,6 +515,7 @@ bool rp_probe(target *t)
 	}
  	t->target_storage = (void*)priv_storage;
 
+	t->mass_erase = rp_mass_erase;
 	t->driver = RP_ID;
 	t->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
 	t->attach = rp_attach;
@@ -530,8 +527,7 @@ bool rp_probe(target *t)
 static bool rp_rescue_do_reset(target *t)
 {
 	ADIv5_AP_t *ap = (ADIv5_AP_t *)t->priv;
-	ap->dp->low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_DP_CTRLSTAT,
-						  ADIV5_DP_CTRLSTAT_CDBGPWRUPREQ);
+	ap->dp->low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_DP_CTRLSTAT, ADIV5_DP_CTRLSTAT_CDBGPWRUPREQ);
 	ap->dp->low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_DP_CTRLSTAT, 0);
 	return false;
 }
@@ -551,5 +547,5 @@ void rp_rescue_probe(ADIv5_AP_t *ap)
 	t->attach = (void*)rp_rescue_do_reset;
 	t->priv = ap;
 	t->priv_free = (void*)adiv5_ap_unref;
-	t->driver = "Raspberry RP2040 Rescue(Attach to reset!)";
+	t->driver = "Raspberry RP2040 Rescue (Attach to reset!)";
 }
