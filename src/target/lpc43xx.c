@@ -45,17 +45,16 @@
 #define FLASH_NUM_BANK		2
 #define FLASH_NUM_SECTOR	15
 
-static bool lpc43xx_cmd_erase(target *t, int argc, const char *argv[]);
 static bool lpc43xx_cmd_reset(target *t, int argc, const char *argv[]);
 static bool lpc43xx_cmd_mkboot(target *t, int argc, const char *argv[]);
 static int lpc43xx_flash_init(target *t);
 static int lpc43xx_flash_erase(struct target_flash *f, target_addr addr, size_t len);
+static bool lpc43xx_mass_erase(target *t);
 static void lpc43xx_set_internal_clock(target *t);
 static void lpc43xx_wdt_set_period(target *t);
 static void lpc43xx_wdt_pet(target *t);
 
 const struct command_s lpc43xx_cmd_list[] = {
-	{"erase_mass", lpc43xx_cmd_erase, "Erase entire flash memory"},
 	{"reset", lpc43xx_cmd_reset, "Reset target"},
 	{"mkboot", lpc43xx_cmd_mkboot, "Make flash bank bootable"},
 	{NULL, NULL, NULL}
@@ -116,6 +115,7 @@ bool lpc43xx_probe(target *t)
 		default:
 			t->driver = "LPC43xx <Unknown>";
 		}
+		t->mass_erase = lpc43xx_mass_erase;
 		return true;
 	case 0x5906002B:	/* Flashless parts */
 	case 0x6906002B:
@@ -129,6 +129,7 @@ bool lpc43xx_probe(target *t)
 		default:
 			t->driver = "LPC43xx <Unknown>";
 		}
+		t->mass_erase = lpc43xx_mass_erase;
 		return true;
 	}
 
@@ -152,26 +153,20 @@ static bool lpc43xx_cmd_reset(target *t, int argc, const char *argv[])
 	return true;
 }
 
-static bool lpc43xx_cmd_erase(target *t, int argc, const char *argv[])
+static bool lpc43xx_mass_erase(target *t)
 {
-	(void)argc;
-	(void)argv;
-
+	platform_timeout timeout;
+	platform_timeout_set(&timeout, 500);
 	lpc43xx_flash_init(t);
 
 	for (int bank = 0; bank < FLASH_NUM_BANK; bank++)
 	{
 		struct lpc_flash *f = (struct lpc_flash *)t->flash;
-		if (lpc_iap_call(f, NULL, IAP_CMD_PREPARE,
-		                 0, FLASH_NUM_SECTOR-1, bank))
+		if (lpc_iap_call(f, NULL, IAP_CMD_PREPARE, 0, FLASH_NUM_SECTOR - 1U, bank) ||
+			lpc_iap_call(f, NULL, IAP_CMD_ERASE, 0, FLASH_NUM_SECTOR - 1U, CPU_CLK_KHZ, bank))
 			return false;
-
-		if (lpc_iap_call(f, NULL, IAP_CMD_ERASE,
-		                 0, FLASH_NUM_SECTOR-1, CPU_CLK_KHZ, bank))
-			return false;
+		target_print_progress(&timeout);
 	}
-
-	tc_printf(t, "Erase OK.\n");
 
 	return true;
 }
