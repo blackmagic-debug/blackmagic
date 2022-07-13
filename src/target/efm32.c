@@ -512,32 +512,26 @@ static void efm32_add_flash(target *t, target_addr addr, size_t length, size_t p
 }
 
 /* Lookup device */
-static size_t efm32_lookup_device_index(target *t, uint8_t di_version)
+static efm32_device_t const *efm32_get_device(target *t, uint8_t di_version)
 {
 	uint8_t part_family = efm32_read_part_family(t, di_version);
 
 	/* Search for family */
 	for (size_t i = 0; i < (sizeof(efm32_devices) / sizeof(efm32_device_t)); i++) {
 		if (efm32_devices[i].family_id == part_family) {
-			return i;
+			return &efm32_devices[i];
 		}
 	}
 
 	/* Unknown family */
-	return UINT32_MAX;
-}
-
-static efm32_device_t const *efm32_get_device(size_t index)
-{
-	if (index >= (sizeof(efm32_devices) / sizeof(efm32_device_t))) {
-		return NULL;
-	}
-	return &efm32_devices[index];
+	return NULL;
 }
 
 /* Probe */
 struct efm32_priv_s {
 	char efm32_variant_string[60];
+	uint8_t di_version;
+	efm32_device_t const *device;
 };
 
 bool efm32_probe(target *t)
@@ -572,15 +566,9 @@ bool efm32_probe(target *t)
 	}
 
 	/* Read the part family, and reject if unknown */
-	size_t device_index = efm32_lookup_device_index(t, di_version);
-	if (device_index >= (sizeof(efm32_devices) / sizeof(efm32_device_t))) {
-		/* unknown device family */
+	efm32_device_t const *device = efm32_get_device(t, di_version);
+	if (!device)
 		return false;
-	}
-	efm32_device_t const *device = &efm32_devices[device_index];
-	if (device == NULL) {
-		return false;
-	}
 
 	t->mass_erase = efm32_mass_erase;
 	uint16_t part_number = efm32_read_part_number(t, di_version);
@@ -595,8 +583,11 @@ bool efm32_probe(target *t)
 	struct efm32_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
 	t->target_storage = (void *)priv_storage;
 
-	snprintf(priv_storage->efm32_variant_string, sizeof(priv_storage->efm32_variant_string), "%c\b%c\b%s %hu F%hu %s",
-		di_version + 48, (uint8_t)device_index + 32, device->name, part_number, flash_kib, device->description);
+	priv_storage->di_version = di_version;
+	priv_storage->device = device;
+
+	snprintf(priv_storage->efm32_variant_string, sizeof(priv_storage->efm32_variant_string), "%s%huF%hu %s",
+		device->name, part_number, flash_kib, device->description);
 
 	/* Setup Target */
 	t->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
@@ -621,11 +612,12 @@ bool efm32_probe(target *t)
 static int efm32_flash_erase(struct target_flash *f, target_addr addr, size_t len)
 {
 	target *t = f->t;
-	efm32_device_t const *device = efm32_get_device(t->driver[2] - 32);
-	if (device == NULL) {
-		return true;
-	}
-	uint32_t msc = device->msc_addr;
+
+	struct efm32_priv_s *priv_storage = (struct efm32_priv_s *)t->target_storage;
+	if (!priv_storage || !priv_storage->device)
+		return false;
+
+	uint32_t msc = priv_storage->device->msc_addr;
 
 	/* Unlock */
 	target_mem_write32(t, EFM32_MSC_LOCK(msc), EFM32_MSC_LOCK_LOCKKEY);
@@ -661,21 +653,23 @@ static int efm32_flash_erase(struct target_flash *f, target_addr addr, size_t le
 static int efm32_flash_write(struct target_flash *f, target_addr dest, const void *src, size_t len)
 {
 	(void)len;
+
 	target *t = f->t;
-	efm32_device_t const *device = efm32_get_device(t->driver[2] - 32);
-	if (device == NULL) {
-		return true;
-	}
+
+	struct efm32_priv_s *priv_storage = (struct efm32_priv_s *)t->target_storage;
+	if (!priv_storage || !priv_storage->device)
+		return false;
+
 	/* Write flashloader */
 	target_mem_write(t, SRAM_BASE, efm32_flash_write_stub, sizeof(efm32_flash_write_stub));
 	/* Write Buffer */
 	target_mem_write(t, STUB_BUFFER_BASE, src, len);
 	/* Run flashloader */
-	int ret = cortexm_run_stub(t, SRAM_BASE, dest, STUB_BUFFER_BASE, len, device->msc_addr);
+	int ret = cortexm_run_stub(t, SRAM_BASE, dest, STUB_BUFFER_BASE, len, priv_storage->device->msc_addr);
 
 #ifdef ENABLE_DEBUG
 	/* Check the MSC_IF */
-	uint32_t msc = device->msc_addr;
+	uint32_t msc = priv_storage->device->msc_addr;
 	uint32_t msc_if = target_mem_read32(t, EFM32_MSC_IF(msc));
 	DEBUG_INFO("EFM32: Flash write done MSC_IF=%08" PRIx32 "\n", msc_if);
 #endif
@@ -685,21 +679,19 @@ static int efm32_flash_write(struct target_flash *f, target_addr dest, const voi
 /* Uses the MSC ERASEMAIN0/1 command to erase the entire flash */
 static bool efm32_mass_erase(target *t)
 {
-	efm32_device_t const *device = efm32_get_device(t->driver[2] - 32);
-	if (device == NULL) {
-		return true;
-	}
+	struct efm32_priv_s *priv_storage = (struct efm32_priv_s *)t->target_storage;
+	if (!priv_storage || !priv_storage->device)
+		return false;
 
-	if (device->family_id == 71 || device->family_id == 73) {
+	if (priv_storage->device->family_id == 71 || priv_storage->device->family_id == 73) {
 		/* original Gecko and Tiny Gecko families don't support mass erase */
 		tc_printf(t, "This device does not support mass erase through MSC.\n");
 		return false;
 	}
 
-	uint32_t msc = device->msc_addr;
+	uint32_t msc = priv_storage->device->msc_addr;
 
-	uint8_t di_version = t->driver[0] - 48; /* di version hidden in driver str */
-	uint16_t flash_kib = efm32_read_flash_size(t, di_version);
+	uint16_t flash_kib = efm32_read_flash_size(t, priv_storage->di_version);
 
 	/* Set WREN bit to enable MSC write and erase functionality */
 	target_mem_write32(t, EFM32_MSC_WRITECTRL(msc), 1);
@@ -743,8 +735,13 @@ static bool efm32_cmd_serial(target *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
+
+	struct efm32_priv_s *priv_storage = (struct efm32_priv_s *)t->target_storage;
+	if (!priv_storage)
+		return false;
+
 	uint64_t unique = 0;
-	uint8_t di_version = t->driver[0] - 48; /* di version hidden in driver str */
+	uint8_t di_version = priv_storage->di_version;
 
 	switch (di_version) {
 	case 1:
@@ -772,7 +769,13 @@ static bool efm32_cmd_efm_info(target *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
-	uint8_t di_version = t->driver[0] - 48; /* hidden in driver str */
+
+	struct efm32_priv_s *priv_storage = (struct efm32_priv_s *)t->target_storage;
+	if (!priv_storage || !priv_storage->device)
+		return false;
+
+	efm32_device_t const *device = priv_storage->device;
+	uint8_t di_version = priv_storage->di_version; /* hidden in driver str */
 
 	switch (di_version) {
 	case 1:
@@ -789,10 +792,6 @@ static bool efm32_cmd_efm_info(target *t, int argc, const char **argv)
 	}
 
 	/* lookup device and part number */
-	efm32_device_t const *device = efm32_get_device(t->driver[2] - 32);
-	if (device == NULL) {
-		return true;
-	}
 	uint16_t part_number = efm32_read_part_number(t, di_version);
 
 	/* Read memory sizes, convert to bytes */
@@ -848,13 +847,13 @@ static bool efm32_cmd_efm_info(target *t, int argc, const char **argv)
 static bool efm32_cmd_bootloader(target *t, int argc, const char **argv)
 {
 	/* lookup device and part number */
-	efm32_device_t const *device = efm32_get_device(t->driver[2] - 32);
-	if (device == NULL) {
-		return true;
-	}
-	uint32_t msc = device->msc_addr;
+	struct efm32_priv_s *priv_storage = (struct efm32_priv_s *)t->target_storage;
+	if (!priv_storage || !priv_storage->device)
+		return false;
 
-	if (device->bootloader_size == 0) {
+	uint32_t msc = priv_storage->device->msc_addr;
+
+	if (priv_storage->device->bootloader_size == 0) {
 		tc_printf(t, "This device has no bootloader.\n");
 		return false;
 	}
