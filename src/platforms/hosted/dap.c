@@ -415,11 +415,12 @@ unsigned int dap_read_block(ADIv5_AP_t *ap, void *dest, uint32_t src,
 		DEBUG_WARN("dap_read_block @ %08" PRIx32 " fault -> line reset\n", src);
 		dap_line_reset();
 	}
-	if (sz != transferred) {
+	if (sz != transferred)
 		return 1;
-	} else if (align > ALIGN_HALFWORD) {
+
+	if (align > ALIGN_HALFWORD)
 		memcpy(dest, &buf[3], len);
-	} else {
+	else {
 		uint32_t *p = (uint32_t *)&buf[3];
 		while(sz) {
 			dest = extract(dest, src, *p, align);
@@ -794,18 +795,6 @@ void dap_swdptap_seq_out_parity(uint32_t MS, int ticks)
 	dbg_dap_cmd(buf, 1, sizeof(buf));
 	if (buf[0])
 		DEBUG_WARN("dap_swdptap_seq_out error\n");
-}
-
-bool dap_sequence_test(void)
-{
-	uint8_t buf[4] = {
-		ID_DAP_SWD_SEQUENCE,
-		0x1,
-		0x81, /* Read one bit */
-		0     /* one idle cycle */
-	};
-	dbg_dap_cmd(buf, sizeof(buf), 3);
-	return (buf[0] == DAP_OK);
 }
 
 #define SWD_SEQUENCE_IN 0x80

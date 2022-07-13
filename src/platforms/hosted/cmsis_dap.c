@@ -392,9 +392,7 @@ static void dap_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
     DEBUG_WIRE("memread res last data %08" PRIx32 "\n", ((uint32_t*)dest)[-1]);
 }
 
-static void dap_mem_write_sized(
-	ADIv5_AP_t *ap, uint32_t dest, const void *src,
-							size_t len, enum align align)
+static void dap_mem_write_sized( ADIv5_AP_t *ap, uint32_t dest, const void *src, size_t len, enum align align)
 {
 	if (len == 0)
 		return;
@@ -452,15 +450,13 @@ static void cmsis_dap_jtagtap_tms_seq(uint32_t MS, int ticks)
 	DEBUG_PROBE("tms_seq DI %08x %d\n", MS, ticks);
 }
 
-static void cmsis_dap_jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms,
-										  const uint8_t *DI, int ticks)
+static void cmsis_dap_jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int ticks)
 {
 	dap_jtagtap_tdi_tdo_seq(DO, (final_tms), NULL, DI, ticks);
 	DEBUG_PROBE("jtagtap_tdi_tdo_seq %d, %02x-> %02x\n", ticks, DI[0], (DO)? DO[0] : 0);
 }
 
-static void  cmsis_dap_jtagtap_tdi_seq(const uint8_t final_tms,
-									   const uint8_t *DI, int ticks)
+static void  cmsis_dap_jtagtap_tdi_seq(const uint8_t final_tms, const uint8_t *DI, int ticks)
 {
 	dap_jtagtap_tdi_tdo_seq(NULL, (final_tms), NULL, DI, ticks);
 	DEBUG_PROBE("jtagtap_tdi_seq %d, %02x\n", ticks, DI[0]);
@@ -541,12 +537,11 @@ int dap_swdptap_init(ADIv5_DP_t *dp)
 	dap_connect(false);
 	dap_led(0, 1);
 	dap_reset_link(false);
-	if ((has_swd_sequence)  && dap_sequence_test()) {
+	if (has_swd_sequence)
 		/* DAP_SWD_SEQUENCE does not do auto turnaround, use own!*/
 		dp->dp_low_write = dap_dp_low_write;
-	} else {
+	else
 		dp->dp_low_write = NULL;
-	}
 	dp->seq_out = dap_swdptap_seq_out;
 	dp->dp_read = dap_dp_read_reg;
 	/* For error() use the TARGETID switching firmware_swdp_error */
