@@ -489,7 +489,7 @@ void dap_reset_link(bool jtag)
 		*p++ = 0x3c;
 		*p++ = 0xe7;
 		*p++ = 0x1f;
-		buf[1] = ((p - &buf[2]) * 8) - 2;
+		buf[1] = ((p - buf + 2) * 8) - 2;
 	} else {
 		*p++ = 0x9e;
 		*p++ = 0xe7;
@@ -501,7 +501,7 @@ void dap_reset_link(bool jtag)
 		*p++ = 0xff;
 		*p++ = 0xff;
 		*p++ = 0x00;
-		buf[1] = (p - &buf[2]) * 8;
+		buf[1] = (p - buf + 2) * 8;
 	}
 	dbg_dap_cmd(buf, sizeof(buf), p - buf);
 
