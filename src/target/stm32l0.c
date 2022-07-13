@@ -17,60 +17,61 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* Description
-   -----------
+/*
+	Description
+	-----------
 
-   This is an implementation of the target-specific functions for the
-   STM32L0x[1] and STM32L1x[2] families of ST Microelectronics MCUs,
-   Cortex M0+ SOCs.  The NVM interface is substantially similar to the
-   STM32L1x parts.  This module is written to better generalize the
-   NVM interface and to provide more features.
+	This is an implementation of the target-specific functions for the
+	STM32L0x[1] and STM32L1x[2] families of ST Microelectronics MCUs,
+	Cortex M0+ SOCs.  The NVM interface is substantially similar to the
+	STM32L1x parts.  This module is written to better generalize the
+	NVM interface and to provide more features.
 
-   [1] ST Microelectronics Document RM0377 (DocID025942), "Reference
-       manual for Ultra-low-power STM32L0x1 advanced ARM-based 32-bit
-       MCUs," April 2014.
+	[1] ST Microelectronics Document RM0377 (DocID025942), "Reference
+		manual for Ultra-low-power STM32L0x1 advanced ARM-based 32-bit
+		MCUs," April 2014.
+		(https://www.st.com/resource/en/reference_manual/rm0377-ultralowpower-stm32l0x1-advanced-armbased-32bit-mcus-stmicroelectronics.pdf)
 
-   [2] ST Microelectronics Document RM0038 (DocID15965, "..."Reference
-       manual for STM32L100xx, STM32L151xx, STM32L152xx and STM32L162xx
-       advanced ARM®-based 32-bit MCUs, " July 2014
+	[2] ST Microelectronics Document RM0038 (DocID15965, "..."Reference
+		manual for STM32L100xx, STM32L151xx, STM32L152xx and STM32L162xx
+		advanced ARM®-based 32-bit MCUs, " July 2014
+		(https://www.st.com/resource/en/reference_manual/rm0038-stm32l100xx-stm32l151xx-stm32l152xx-and-stm32l162xx-advanced-armbased-32bit-mcus-stmicroelectronics.pdf)
 
+	NOTES
+	=====
 
-   NOTES
-   =====
+	o Mass erase unimplemented.  The method for performing a mass erase
+		is to set the options for read protection, reload the option
+		bytes, set options for no protection, and then reload the option
+		bytes again.  The command fails because we lose contact with the
+		target when we perform the option byte reload.  For the time
+		being, the command is disabled.
 
-   o Mass erase unimplemented.  The method for performing a mass erase
-     is to set the options for read protection, reload the option
-     bytes, set options for no protection, and then reload the option
-     bytes again.  The command fails because we lose contact with the
-     target when we perform the option byte reload.  For the time
-     being, the command is disabled.
+		The body of the function was the following.  It is left here for
+		reference in case someone either discovers what is wrong with
+		these lines, or a change is made to the emulator that allows it
+		to regain control of the target after the option byte reload.
 
-     The body of the function was the following.  It is left here for
-     reference in case someone either discovers what is wrong with
-     these lines, or a change is made to the emulator that allows it
-     to regain control of the target after the option byte reload.
+		stm32l0_option_write(t, 0x1ff80000, 0xffff0000);
+		target_mem_write32(target, STM32L0_NVM_PECR, STM32L0_NVM_PECR_OBL_LAUNCH);
+		stm32l0_option_write(t, 0x1ff80000, 0xff5500aa);
+		target_mem_write32(target, STM32L0_NVM_PECR, STM32L0_NVM_PECR_OBL_LAUNCH);
 
-       stm32l0_option_write(t, 0x1ff80000, 0xffff0000);
-       target_mem_write32(target, STM32L0_NVM_PECR, STM32L0_NVM_PECR_OBL_LAUNCH);
-       stm32l0_option_write(t, 0x1ff80000, 0xff5500aa);
-       target_mem_write32(target, STM32L0_NVM_PECR, STM32L0_NVM_PECR_OBL_LAUNCH);
+		uint32_t sr;
+		do {
+			sr = target_mem_read32(target, STM32L0_NVM_SR);
+		} while (sr & STM32L0_NVM_SR_BSY);
 
-       uint32_t sr;
-       do {
-         sr = target_mem_read32(target, STM32L0_NVM_SR);
-       } while (sr & STM32L0_NVM_SR_BSY);
+	o Errors.  We probably should clear SR errors immediately after
+		detecting them.  If we don't then we always must wait for the NVM
+		module to complete the last operation before we can start another.
 
-   o Errors.  We probably should clear SR errors immediately after
-     detecting them.  If we don't then we always must wait for the NVM
-     module to complete the last operation before we can start another.
+	o There are minor inconsistencies between the stm32l0 and the
+		stm32l1 in when handling NVM operations.
 
-   o There are minor inconsistencies between the stm32l0 and the
-     stm32l1 in when handling NVM operations.
-
-   o On the STM32L1xx, PECR can only be changed when the NVM
-     hardware is idle.  The STM32L0xx allows the PECR to be updated
-     while an operation is in progress.
-
+	o On the STM32L1xx, PECR can only be changed when the NVM
+		hardware is idle.  The STM32L0xx allows the PECR to be updated
+		while an operation is in progress.
 */
 
 #include "general.h"
