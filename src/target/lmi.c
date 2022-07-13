@@ -113,31 +113,32 @@ bool lmi_probe(target *t)
 	return false;
 }
 
-static int lmi_flash_erase(struct target_flash *f, target_addr addr, size_t len)
+static int lmi_flash_erase(struct target_flash *f, target_addr addr, const size_t len)
 {
 	target  *t = f->t;
 	target_check_error(t);
 
-	while (len) {
+	const bool full_erase = addr == f->start && len == f->length;
+	platform_timeout timeout;
+	platform_timeout_set(&timeout, 500);
+
+	for (size_t erased = 0; erased < len; erased += BLOCK_SIZE) {
 		target_mem_write32(t, LMI_FLASH_FMA, addr);
 		target_mem_write32(t, LMI_FLASH_FMC, LMI_FLASH_FMC_WRKEY | LMI_FLASH_FMC_ERASE);
 
-		while (target_mem_read32(t, LMI_FLASH_FMC) & LMI_FLASH_FMC_ERASE)
-			continue;
+		while (target_mem_read32(t, LMI_FLASH_FMC) & LMI_FLASH_FMC_ERASE) {
+			if (full_erase)
+				target_print_progress(&timeout);
+		}
 
 		if (target_check_error(t))
 			return -1;
-		if (len > BLOCK_SIZE)
-			len -= BLOCK_SIZE;
-		else
-			len = 0;
 		addr += BLOCK_SIZE;
 	}
 	return 0;
 }
 
-static int lmi_flash_write(struct target_flash *f,
-                    target_addr dest, const void *src, size_t len)
+static int lmi_flash_write(struct target_flash *f, target_addr dest, const void *src, size_t len)
 {
 	target  *t = f->t;
 	target_check_error(t);
