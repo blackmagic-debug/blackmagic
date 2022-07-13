@@ -42,9 +42,9 @@
 #include "target_internal.h"
 #include "cortexm.h"
 
-#define RP_ID "Raspberry RP2040"
+#define RP_ID              "Raspberry RP2040"
 #define RP_MAX_TABLE_SIZE  0x80
-#define BOOTROM_MAGIC ('M' | ('u' << 8) | (0x01 << 16))
+#define BOOTROM_MAGIC      ('M' | ('u' << 8) | (0x01 << 16))
 #define BOOTROM_MAGIC_ADDR 0x00000010
 #define XIP_FLASH_START    0x10000000
 #define SRAM_START         0x20000000
@@ -52,10 +52,12 @@
 #define SSI_DR0_ADDR       0x18000060
 #define QSPI_CTRL_ADDR     0x4001800c
 
-#define FLASHSIZE_4K_SECTOR     (4 * 1024)
-#define FLASHSIZE_32K_BLOCK     (32 * 1024)
-#define FLASHSIZE_64K_BLOCK     (64 * 1024)
-#define MAX_FLASH               (16 * 1024 * 1024)
+#define FLASHSIZE_4K_SECTOR      (4U * 1024U)
+#define FLASHSIZE_32K_BLOCK      (32U * 1024U)
+#define FLASHSIZE_64K_BLOCK      (64U * 1024U)
+#define FLASHSIZE_32K_BLOCK_MASK ~(FLASHSIZE_32K_BLOCK - 1U)
+#define FLASHSIZE_64K_BLOCK_MASK ~(FLASHSIZE_64K_BLOCK - 1U)
+#define MAX_FLASH                (16U * 1024U * 1024U)
 
 /* Instruction codes taken from Winbond W25Q16JV datasheet, as used on the
  * original Pico board from Raspberry Pi.
@@ -81,9 +83,9 @@ struct rp_priv_s {
 	uint16_t _flash_flush_cache;
 	uint16_t _flash_enter_cmd_xip;
 	uint16_t reset_usb_boot;
-	bool     is_prepared;
-	bool     is_monitor;
-	uint32_t regs[0x20];/* Register playground*/
+	bool is_prepared;
+	bool is_monitor;
+	uint32_t regs[0x20]; /* Register playground*/
 };
 
 static bool rp2040_fill_table(struct rp_priv_s *priv, uint16_t *table, int max)
@@ -127,9 +129,8 @@ static bool rp2040_fill_table(struct rp_priv_s *priv, uint16_t *table, int max)
 		}
 		tag = *table++;
 	}
-	DEBUG_TARGET("connect %04x debug_trampoline %04x end %04x\n",
-			   priv->_connect_internal_flash, priv->_debug_trampoline,
-			   priv->_debug_trampoline_end);
+	DEBUG_TARGET("connect %04x debug_trampoline %04x end %04x\n", priv->_connect_internal_flash,
+		priv->_debug_trampoline, priv->_debug_trampoline_end);
 	return (check != 9);
 }
 
@@ -142,7 +143,7 @@ static bool rp_rom_call(target *t, uint32_t *regs, uint32_t cmd, uint32_t timeou
 {
 	const char spinner[] = "|/-\\";
 	int spinindex = 0;
-	struct rp_priv_s *ps = (struct rp_priv_s*)t->target_storage;
+	struct rp_priv_s *ps = (struct rp_priv_s *)t->target_storage;
 	regs[7] = cmd;
 	regs[REG_LR] = ps->_debug_trampoline_end;
 	regs[REG_PC] = ps->_debug_trampoline;
@@ -176,21 +177,20 @@ static bool rp_rom_call(target *t, uint32_t *regs, uint32_t cmd, uint32_t timeou
 	} while (!target_halt_poll(t, NULL));
 	/* Debug */
 	target_regs_read(t, dbg_regs);
-	bool ret = ((dbg_regs[REG_PC] &~1) != (ps->_debug_trampoline_end & ~1));
+	bool ret = ((dbg_regs[REG_PC] & ~1) != (ps->_debug_trampoline_end & ~1));
 	if (ret) {
-		DEBUG_WARN("rp_rom_call cmd %04" PRIx32 " failed, PC %08" PRIx32 "\n",
-				   cmd, dbg_regs[REG_PC]);
+		DEBUG_WARN("rp_rom_call cmd %04" PRIx32 " failed, PC %08" PRIx32 "\n", cmd, dbg_regs[REG_PC]);
 	}
 	return ret;
 }
 
 static void rp_flash_prepare(target *t)
 {
-	struct rp_priv_s *ps = (struct rp_priv_s*)t->target_storage;
+	struct rp_priv_s *ps = (struct rp_priv_s *)t->target_storage;
 	if (!ps->is_prepared) {
 		DEBUG_INFO("rp_flash_prepare\n");
 		/* connect*/
-		rp_rom_call(t, ps->regs, ps->_connect_internal_flash,100);
+		rp_rom_call(t, ps->regs, ps->_connect_internal_flash, 100);
 		/* exit_xip */
 		rp_rom_call(t, ps->regs, ps->_flash_exit_xip, 100);
 		ps->is_prepared = true;
@@ -199,11 +199,11 @@ static void rp_flash_prepare(target *t)
 
 static void rp_flash_resume(target *t)
 {
-	struct rp_priv_s *ps = (struct rp_priv_s*)t->target_storage;
+	struct rp_priv_s *ps = (struct rp_priv_s *)t->target_storage;
 	if (ps->is_prepared) {
 		DEBUG_INFO("rp_flash_resume\n");
 		/* flush */
-		rp_rom_call(t, ps->regs, ps->_flash_flush_cache,100);
+		rp_rom_call(t, ps->regs, ps->_flash_flush_cache, 100);
 		/* enter_cmd_xip */
 		rp_rom_call(t, ps->regs, ps->_flash_enter_cmd_xip, 100);
 		ps->is_prepared = false;
@@ -231,7 +231,7 @@ static int rp_flash_erase(struct target_flash *f, target_addr addr, size_t len)
 	addr -= t->flash->start;
 	len = ALIGN(len, FLASHSIZE_4K_SECTOR);
 	len = MIN(len, t->flash->length - addr);
-	struct rp_priv_s *ps = (struct rp_priv_s*)t->target_storage;
+	struct rp_priv_s *ps = (struct rp_priv_s *)t->target_storage;
 	const bool full_erase = addr == f->start && len == f->length;
 	platform_timeout timeout;
 	platform_timeout_set(&timeout, 500);
@@ -241,17 +241,17 @@ static int rp_flash_erase(struct target_flash *f, target_addr addr, size_t len)
 	bool ret = 0;
 	while (len) {
 		if (len >= FLASHSIZE_64K_BLOCK) {
-			const uint32_t chunk = len & ~(FLASHSIZE_64K_BLOCK - 1U);
+			const uint32_t chunk = len & FLASHSIZE_64K_BLOCK_MASK;
 			ps->regs[0] = addr;
 			ps->regs[1] = chunk;
 			ps->regs[2] = FLASHSIZE_64K_BLOCK;
 			ps->regs[3] = FLASHCMD_BLOCK64K_ERASE;
 			DEBUG_WARN("64k_ERASE addr 0x%08" PRIx32 " len 0x%" PRIx32 "\n", addr, chunk);
 			ret = rp_rom_call(t, ps->regs, ps->_flash_range_erase, 25100);
-			len -= chunk ;
+			len -= chunk;
 			addr += chunk;
 		} else if (len >= FLASHSIZE_32K_BLOCK) {
-			const uint32_t chunk = len & ~(FLASHSIZE_32K_BLOCK - 1U);
+			const uint32_t chunk = len & FLASHSIZE_32K_BLOCK_MASK;
 			ps->regs[0] = addr;
 			ps->regs[1] = chunk;
 			ps->regs[2] = FLASHSIZE_32K_BLOCK;
@@ -290,7 +290,7 @@ static int rp_flash_write(struct target_flash *f, target_addr dest, const void *
 		return -1;
 	}
 	dest -= t->flash->start;
-	struct rp_priv_s *ps = (struct rp_priv_s*)t->target_storage;
+	struct rp_priv_s *ps = (struct rp_priv_s *)t->target_storage;
 	/* Write payload to target ram */
 	rp_flash_prepare(t);
 	bool ret = 0;
@@ -306,8 +306,7 @@ static int rp_flash_write(struct target_flash *f, target_addr dest, const void *
 		 * however it takes much longer if the XOSC is not enabled
 		 * so lets give ourselves a little bit more time (x10)
 		 */
-		ret |= rp_rom_call(t, ps->regs, ps->flash_range_program,
-					(3 *  chunksize * 10) >> 8);
+		ret |= rp_rom_call(t, ps->regs, ps->flash_range_program, (3 * chunksize * 10) >> 8);
 		if (ret) {
 			DEBUG_WARN("Write failed!\n");
 			break;
@@ -323,7 +322,7 @@ static int rp_flash_write(struct target_flash *f, target_addr dest, const void *
 
 static bool rp_cmd_reset_usb_boot(target *t, int argc, const char *argv[])
 {
-	struct rp_priv_s *ps = (struct rp_priv_s*)t->target_storage;
+	struct rp_priv_s *ps = (struct rp_priv_s *)t->target_storage;
 	if (argc > 2) {
 		ps->regs[1] = atoi(argv[2]);
 	} else if (argc < 3) {
@@ -338,7 +337,7 @@ static bool rp_cmd_reset_usb_boot(target *t, int argc, const char *argv[])
 
 static bool rp_mass_erase(target *t)
 {
-	struct rp_priv_s *ps = (struct rp_priv_s*)t->target_storage;
+	struct rp_priv_s *ps = (struct rp_priv_s *)t->target_storage;
 	ps->is_monitor = true;
 	const bool result = rp_flash_erase(t->flash, t->flash->start, t->flash->length) == 0;
 	ps->is_monitor = false;
@@ -353,46 +352,42 @@ static bool rp_cmd_erase_sector(target *t, int argc, const char *argv[])
 	if (argc == 3) {
 		start = strtoul(argv[1], NULL, 0);
 		length = strtoul(argv[2], NULL, 0);
-	}
-	else if (argc == 2)
+	} else if (argc == 2)
 		length = strtoul(argv[1], NULL, 0);
 	else
 		return -1;
 
-	struct rp_priv_s *ps = (struct rp_priv_s*)t->target_storage;
+	struct rp_priv_s *ps = (struct rp_priv_s *)t->target_storage;
 	ps->is_monitor = true;
 	const bool result = rp_flash_erase(t->flash, start, length) == 0;
 	ps->is_monitor = false;
 	return result;
 }
 
-const struct command_s rp_cmd_list[] = {
-	{"erase_sector", rp_cmd_erase_sector, "Erase a sector: [start address] length" },
-	{"reset_usb_boot", rp_cmd_reset_usb_boot, "Reboot the device into BOOTSEL mode"},
-	{NULL, NULL, NULL}
-};
+const struct command_s rp_cmd_list[] = {{"erase_sector", rp_cmd_erase_sector, "Erase a sector: [start address] length"},
+	{"reset_usb_boot", rp_cmd_reset_usb_boot, "Reboot the device into BOOTSEL mode"}, {NULL, NULL, NULL}};
 
 static void rp_add_flash(target *t, uint32_t addr, size_t length)
 {
-        struct target_flash *f = calloc(1, sizeof(*f));
-        if (!f) {                       /* calloc failed: heap exhaustion */
-                DEBUG_WARN("calloc: failed in %s\n", __func__);
-                return;
-        }
+	struct target_flash *f = calloc(1, sizeof(*f));
+	if (!f) { /* calloc failed: heap exhaustion */
+		DEBUG_WARN("calloc: failed in %s\n", __func__);
+		return;
+	}
 
-        f->start = addr;
-        f->length = length;
-        f->blocksize = 0x1000;
-        f->erase = rp_flash_erase;
-        f->write = rp_flash_write;
-        f->buf_size = 2048; /* Max buffer size used otherwise */
-		f->erased = 0xFF;
-        target_add_flash(t, f);
+	f->start = addr;
+	f->length = length;
+	f->blocksize = 0x1000;
+	f->erase = rp_flash_erase;
+	f->write = rp_flash_write;
+	f->buf_size = 2048; /* Max buffer size used otherwise */
+	f->erased = 0xFF;
+	target_add_flash(t, f);
 }
 
 void rp_ssel_active(target *t, bool active)
 {
-	const uint32_t qspi_ctrl_outover_low  = 2UL << 8;
+	const uint32_t qspi_ctrl_outover_low = 2UL << 8;
 	const uint32_t qspi_ctrl_outover_high = 3UL << 8;
 	uint32_t state = (active) ? qspi_ctrl_outover_low : qspi_ctrl_outover_high;
 	uint32_t val = target_mem_read32(t, QSPI_CTRL_ADDR);
@@ -471,9 +466,9 @@ static bool rp_attach(target *t)
 	if (!cortexm_attach(t))
 		return false;
 
-	struct rp_priv_s *ps = (struct rp_priv_s*)t->target_storage;
-	uint16_t *table =  alloca(RP_MAX_TABLE_SIZE);
-	uint16_t table_offset = target_mem_read32( t, BOOTROM_MAGIC_ADDR + 4);
+	struct rp_priv_s *ps = (struct rp_priv_s *)t->target_storage;
+	uint16_t *table = alloca(RP_MAX_TABLE_SIZE);
+	uint16_t table_offset = target_mem_read32(t, BOOTROM_MAGIC_ADDR + 4);
 	if (!table || target_mem_read(t, table, table_offset, RP_MAX_TABLE_SIZE))
 		return false;
 	if (rp2040_fill_table(ps, table, RP_MAX_TABLE_SIZE))
@@ -509,11 +504,11 @@ bool rp_probe(target *t)
 		DEBUG_WARN("Old Bootrom Version 1!\n");
 #endif
 	struct rp_priv_s *priv_storage = calloc(1, sizeof(struct rp_priv_s));
-	if (!priv_storage) {               /* calloc failed: heap exhaustion */
+	if (!priv_storage) { /* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return false;
 	}
- 	t->target_storage = (void*)priv_storage;
+	t->target_storage = (void *)priv_storage;
 
 	t->mass_erase = rp_mass_erase;
 	t->driver = RP_ID;
@@ -544,8 +539,8 @@ void rp_rescue_probe(ADIv5_AP_t *ap)
 	}
 
 	adiv5_ap_ref(ap);
-	t->attach = (void*)rp_rescue_do_reset;
+	t->attach = (void *)rp_rescue_do_reset;
 	t->priv = ap;
-	t->priv_free = (void*)adiv5_ap_unref;
+	t->priv_free = (void *)adiv5_ap_unref;
 	t->driver = "Raspberry RP2040 Rescue (Attach to reset!)";
 }
