@@ -307,14 +307,16 @@ static bool stm32lx_nvm_opt_unlock(target_s *t, uint32_t nvm)
 	return !(target_mem_read32(t, STM32Lx_NVM_PECR(nvm)) & STM32Lx_NVM_PECR_OPTLOCK);
 }
 
-static bool stm32lx_nvm_busy_wait(target_s *t, uint32_t nvm)
+static bool stm32lx_nvm_busy_wait(target_s *const target, const uint32_t nvm, platform_timeout_s *const timeout)
 {
-	while (target_mem_read32(t, STM32Lx_NVM_SR(nvm)) & STM32Lx_NVM_SR_BSY) {
-		if (target_check_error(t))
+	while (target_mem_read32(target, STM32Lx_NVM_SR(nvm)) & STM32Lx_NVM_SR_BSY) {
+		if (target_check_error(target))
 			return false;
+		if (timeout)
+			target_print_progress(timeout);
 	}
-	const uint32_t status = target_mem_read32(t, STM32Lx_NVM_SR(nvm));
-	return !target_check_error(t) && !(status & STM32Lx_NVM_SR_ERR_M);
+	const uint32_t status = target_mem_read32(target, STM32Lx_NVM_SR(nvm));
+	return !target_check_error(target) && !(status & STM32Lx_NVM_SR_ERR_M);
 }
 
 /*
@@ -357,7 +359,7 @@ static bool stm32lx_nvm_prog_erase(target_flash_s *const flash, const const targ
 	/* Disable further programming by locking PECR */
 	stm32lx_nvm_lock(target, nvm);
 	/* Wait for completion or an error */
-	return stm32lx_nvm_busy_wait(target, nvm);
+	return stm32lx_nvm_busy_wait(target, nvm, full_erase ? &timeout : NULL);
 }
 
 /* Write to program flash using operations through the debug interface. */
@@ -373,7 +375,7 @@ static bool stm32lx_nvm_prog_write(target_flash_s *f, target_addr_t dest, const 
 	 * Wait for BSY to clear because we cannot write the PECR until
 	 * the previous operation completes on STM32Lxxx.
 	 */
-	if (!stm32lx_nvm_busy_wait(t, nvm))
+	if (!stm32lx_nvm_busy_wait(t, nvm, NULL))
 		return false;
 
 	target_mem_write32(t, STM32Lx_NVM_PECR(nvm), STM32Lx_NVM_PECR_PROG | STM32Lx_NVM_PECR_FPRG);
@@ -383,7 +385,7 @@ static bool stm32lx_nvm_prog_write(target_flash_s *f, target_addr_t dest, const 
 	stm32lx_nvm_lock(t, nvm);
 
 	/* Wait for completion or an error */
-	return stm32lx_nvm_busy_wait(t, nvm);
+	return stm32lx_nvm_busy_wait(t, nvm, NULL);
 }
 
 /*
@@ -415,7 +417,7 @@ static bool stm32lx_nvm_data_erase(target_flash_s *const f, const const target_a
 	stm32lx_nvm_lock(t, nvm);
 
 	/* Wait for completion or an error */
-	return stm32lx_nvm_busy_wait(t, nvm);
+	return stm32lx_nvm_busy_wait(t, nvm, NULL);
 }
 
 /*
@@ -447,7 +449,7 @@ static bool stm32lx_nvm_data_write(
 	/* Disable further programming by locking PECR */
 	stm32lx_nvm_lock(t, nvm);
 	/* Wait for completion or an error */
-	return stm32lx_nvm_busy_wait(t, nvm);
+	return stm32lx_nvm_busy_wait(t, nvm, NULL);
 }
 
 static bool stm32lx_protected_attach(target_s *const target)
@@ -505,7 +507,8 @@ static bool stm32lx_option_write(target_s *t, uint32_t address, uint32_t value)
 	target_mem_write32(t, STM32Lx_NVM_PECR(nvm), STM32Lx_NVM_PECR_FIX);
 	target_mem_write32(t, address, value);
 
-	return stm32lx_nvm_busy_wait(t, nvm);
+	/* Wait for completion or an error */
+	return stm32lx_nvm_busy_wait(t, nvm, NULL);
 }
 
 /*
@@ -536,7 +539,7 @@ static bool stm32lx_eeprom_write(target_s *t, uint32_t address, size_t cb, uint3
 		return false;
 
 	/* Wait for completion or an error */
-	return stm32lx_nvm_busy_wait(t, nvm);
+	return stm32lx_nvm_busy_wait(t, nvm, NULL);
 }
 
 static bool stm32lx_cmd_option(target_s *t, int argc, const char **argv)
