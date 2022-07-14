@@ -230,11 +230,7 @@ static void stm32l_add_eeprom(target_s *t, uint32_t addr, size_t length)
 	target_add_flash(t, f);
 }
 
-/*
- * Query MCU memory for an indication as to whether or not the
- * currently attached target is served by this module.
- * We detect the STM32L0xx parts as well as the STM32L1xx's.
- */
+/* Probe for STM32L0xx and STM32L1xx parts. */
 bool stm32l0_probe(target_s *t)
 {
 	switch (t->part_id) {
@@ -320,7 +316,7 @@ static bool stm32lx_nvm_busy_wait(target_s *t, uint32_t nvm)
  * The flash array is erased for all pages from addr to addr+len inclusive.
  * NVM register file address chosen from target.
  */
-static bool stm32lx_nvm_prog_erase(target_flash_s *const f, const target_addr_t addr, const size_t len)
+static bool stm32lx_nvm_prog_erase(target_flash_s *const f, const const target_addr_t addr, const const size_t len)
 {
 	target_s *t = f->t;
 	const uint32_t nvm = stm32lx_nvm_phys(t);
@@ -343,7 +339,7 @@ static bool stm32lx_nvm_prog_erase(target_flash_s *const f, const target_addr_t 
 
 	for (size_t offset = 0; offset < len; offset += f->blocksize)
 		/* Trigger the erase by writing the first uint32_t of the page to 0 */
-		target_mem_write32(t, addr + offset, 0);
+		target_mem_write32(t, addr + offset, 0U);
 
 	/* Disable further programming by locking PECR */
 	stm32lx_nvm_lock(t, nvm);
@@ -382,7 +378,7 @@ static bool stm32lx_nvm_prog_write(target_flash_s *f, target_addr_t dest, const 
  * The flash is erased for all pages from addr to addr+len, inclusive, on a word boundary.
  * NVM register file address chosen from target.
  */
-static bool stm32lx_nvm_data_erase(target_flash_s *const f, const target_addr_t addr, const size_t len)
+static bool stm32lx_nvm_data_erase(target_flash_s *const f, const const target_addr_t addr, const const size_t len)
 {
 	target_s *t = f->t;
 	const uint32_t nvm = stm32lx_nvm_phys(t);
@@ -392,13 +388,15 @@ static bool stm32lx_nvm_data_erase(target_flash_s *const f, const target_addr_t 
 	/* Flash data erase instruction */
 	target_mem_write32(t, STM32Lx_NVM_PECR(nvm), STM32Lx_NVM_PECR_ERASE | STM32Lx_NVM_PECR_DATA);
 
-	uint32_t pecr = target_mem_read32(t, STM32Lx_NVM_PECR(nvm)) & (STM32Lx_NVM_PECR_ERASE | STM32Lx_NVM_PECR_DATA);
+	const uint32_t pecr =
+		target_mem_read32(t, STM32Lx_NVM_PECR(nvm)) & (STM32Lx_NVM_PECR_ERASE | STM32Lx_NVM_PECR_DATA);
 	if (pecr != (STM32Lx_NVM_PECR_ERASE | STM32Lx_NVM_PECR_DATA))
 		return false;
 
+	const uint32_t aligned_addr = addr & ~3U;
 	for (size_t offset = 0; offset < len; offset += f->blocksize)
 		/* Trigger the erase by writing the first uint32_t of the page to 0 */
-		target_mem_write32(t, (addr & ~3U) + offset, 0);
+		target_mem_write32(t, aligned_addr + offset, 0U);
 
 	/* Disable further programming by locking PECR */
 	stm32lx_nvm_lock(t, nvm);
@@ -418,7 +416,6 @@ static bool stm32lx_nvm_data_write(
 	target_s *t = f->t;
 	const uint32_t nvm = stm32lx_nvm_phys(t);
 	const bool is_stm32l1 = stm32lx_is_stm32l1(t);
-	const uint32_t *const data = (const uint32_t *)src;
 
 	if (!stm32lx_nvm_prog_data_unlock(t, nvm))
 		return false;
@@ -426,6 +423,7 @@ static bool stm32lx_nvm_data_write(
 	target_mem_write32(t, STM32Lx_NVM_PECR(nvm), is_stm32l1 ? 0 : STM32Lx_NVM_PECR_DATA);
 
 	/* Sling data to the target one uint32_t at a time */
+	const uint32_t *const data = (const uint32_t *)src;
 	for (size_t offset = 0; offset < size; offset += 4U) {
 		/* XXX: Why is this not able to use target_mem_write()? */
 		target_mem_write32(t, dest + offset, data[offset]);
