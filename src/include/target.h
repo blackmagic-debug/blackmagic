@@ -46,7 +46,7 @@ void target_list_free(void);
 
 /* Attach/detach functions */
 target *target_attach(target *t, struct target_controller *);
-target *target_attach_n(int n, struct target_controller *);
+target *target_attach_n(size_t n, struct target_controller *);
 void target_detach(target *t);
 bool target_attached(target *t);
 const char *target_driver_name(target *t);
@@ -179,4 +179,3 @@ struct target_controller {
 };
 
 #endif
-

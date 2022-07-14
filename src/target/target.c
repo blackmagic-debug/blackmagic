@@ -124,7 +124,7 @@ void target_list_free(void)
 {
 	struct target_command_s *tc;
 
-	while(target_list) {
+	while (target_list) {
 		target *t = target_list->next;
 		if (target_list->tc && target_list->tc->destroy_callback)
 			target_list->tc->destroy_callback(target_list->tc, target_list);
@@ -159,21 +159,21 @@ void target_add_commands(target *t, const struct command_s *cmds, const char *na
 		struct target_command_s *tail;
 		for (tail = t->commands; tail->next; tail = tail->next);
 		tail->next = tc;
-	} else {
+	} else
 		t->commands = tc;
-	}
+
 	tc->specific_name = name;
 	tc->cmds = cmds;
 	tc->next = NULL;
 }
 
-target *target_attach_n(int n, struct target_controller *tc)
+target *target_attach_n(const size_t n, struct target_controller *tc)
 {
-	target *t;
-	int i;
-	for(t = target_list, i = 1; t; t = t->next, i++)
-		if(i == n)
+	target *t  = target_list;
+	for (size_t i = 1; t; t = t->next, ++i) {
+		if (i == n)
 			return target_attach(t, tc);
+	}
 	return NULL;
 }
 
@@ -277,8 +277,7 @@ int target_flash_erase(target *t, target_addr addr, size_t len)
 	return ret;
 }
 
-int target_flash_write(target *t,
-                       target_addr dest, const void *src, size_t len)
+int target_flash_write(target *t, target_addr dest, const void *src, size_t len)
 {
 	int ret = 0;
 	while (len) {
@@ -315,8 +314,7 @@ int target_flash_done(target *t)
 	return 0;
 }
 
-int target_flash_write_buffered(struct target_flash *f,
-                                target_addr dest, const void *src, size_t len)
+int target_flash_write_buffered(struct target_flash *f, target_addr dest, const void *src, size_t len)
 {
 	int ret = 0;
 
@@ -455,7 +453,7 @@ void target_set_cmdline(target *t, char *cmdline) {
 	strncpy(t->cmdline, cmdline, len_dst -1);
 	t->cmdline[strlen(t->cmdline)]='\0';
 	DEBUG_INFO("cmdline: >%s<\n", t->cmdline);
-	}
+}
 
 /* Set heapinfo for semihosting */
 void target_set_heapinfo(target *t, target_addr heap_base, target_addr heap_limit,
