@@ -222,6 +222,8 @@ static int nrf51_flash_write(struct target_flash *f,
 
 static bool nrf51_mass_erase(target *t)
 {
+	target_reset(t);
+
 	/* Enable erase */
 	target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_EEN);
 
