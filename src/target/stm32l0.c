@@ -40,28 +40,6 @@
 	NOTES
 	=====
 
-	o Mass erase unimplemented.  The method for performing a mass erase
-		is to set the options for read protection, reload the option
-		bytes, set options for no protection, and then reload the option
-		bytes again.  The command fails because we lose contact with the
-		target when we perform the option byte reload.  For the time
-		being, the command is disabled.
-
-		The body of the function was the following.  It is left here for
-		reference in case someone either discovers what is wrong with
-		these lines, or a change is made to the emulator that allows it
-		to regain control of the target after the option byte reload.
-
-		stm32l0_option_write(t, 0x1ff80000, 0xffff0000);
-		target_mem_write32(target, STM32L0_NVM_PECR, STM32L0_NVM_PECR_OBL_LAUNCH);
-		stm32l0_option_write(t, 0x1ff80000, 0xff5500aa);
-		target_mem_write32(target, STM32L0_NVM_PECR, STM32L0_NVM_PECR_OBL_LAUNCH);
-
-		uint32_t sr;
-		do {
-			sr = target_mem_read32(target, STM32L0_NVM_SR);
-		} while (sr & STM32L0_NVM_SR_BSY);
-
 	o Errors.  We probably should clear SR errors immediately after
 		detecting them.  If we don't then we always must wait for the NVM
 		module to complete the last operation before we can start another.
@@ -153,6 +131,7 @@ static bool stm32lx_nvm_data_erase(target_flash_s *f, target_addr_t addr, size_t
 static bool stm32lx_nvm_data_write(target_flash_s *f, target_addr_t dest, const void *src, size_t size);
 
 static bool stm32lx_protected_attach(target_s *target);
+static bool stm32lx_protected_mass_erase(target_s *target);
 
 static bool stm32lx_cmd_option(target_s *t, int argc, const char **argv);
 static bool stm32lx_cmd_eeprom(target_s *t, int argc, const char **argv);
@@ -280,8 +259,10 @@ bool stm32l0_probe(target_s *target)
 	sprintf(priv_storage->stm32l_variant, "%s%s", target->driver, protected ? " (protected)" : "");
 	target->driver = priv_storage->stm32l_variant;
 
-	if (protected)
+	if (protected) {
 		target->attach = stm32lx_protected_attach;
+		target->mass_erase = stm32lx_protected_mass_erase;
+	}
 
 	return true;
 }
@@ -465,6 +446,28 @@ static bool stm32lx_protected_attach(target_s *const target)
 {
 	tc_printf(target, "Attached in protected mode, please issue 'monitor erase_mass' to regain chip access\n");
 	target->attach = cortexm_attach;
+	return true;
+}
+
+static bool stm32lx_protected_mass_erase(target_s *const target)
+{
+	const uint32_t nvm = stm32lx_nvm_phys(target);
+	if (!stm32lx_nvm_opt_unlock(target, nvm))
+		return false;
+
+	target_mem_write32(target, STM32Lx_NVM_OPT_PHYS, 0xffff0000U);
+	target_mem_write32(target, STM32Lx_NVM_PECR(nvm), STM32Lx_NVM_PECR_OBL_LAUNCH);
+	target_mem_write32(target, STM32Lx_NVM_OPT_PHYS, 0xff5500aaU);
+	target_mem_write32(target, STM32Lx_NVM_PECR(nvm), STM32Lx_NVM_PECR_OBL_LAUNCH);
+
+	platform_timeout_s timeout;
+	platform_timeout_set(&timeout, 500);
+
+	while (target_mem_read32(target, STM32Lx_NVM_SR(nvm)) & STM32Lx_NVM_SR_BSY)
+		target_print_progress(&timeout);
+
+	/* Disable further programming by locking PECR */
+	stm32lx_nvm_lock(target, nvm);
 	return true;
 }
 
