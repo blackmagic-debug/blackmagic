@@ -285,7 +285,7 @@ static void adc_init(void)
 	adc_set_single_conversion_mode(ADC1);
 	adc_disable_external_trigger_regular(ADC1);
 	adc_set_right_aligned(ADC1);
-	adc_set_sample_time_on_all_channels(ADC1, ADC_SMPR_SMP_28DOT5CYC);
+	adc_set_sample_time_on_all_channels(ADC1, ADC_SMPR_SMP_239DOT5CYC);
 
 	adc_power_on(ADC1);
 
@@ -316,6 +316,8 @@ uint32_t platform_target_voltage_sense(void)
 	while (!adc_eoc(ADC1));
 
 	uint32_t val = adc_read_regular(ADC1); /* 0-4095 */
+	/* Clear EOC bit. The GD32F103 does not automatically reset it on ADC read. */
+	ADC_SR(ADC1) &= ~ADC_SR_EOC;
 	return (val * 99) / 8191;
 }
 
