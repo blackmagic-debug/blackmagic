@@ -45,6 +45,7 @@ else ifneq (, $(findstring cygwin, $(SYS)))
 else ifneq (filter, macosx darwin, $(SYS))
 	SRC += serial_unix.c
 	LDFLAGS += -framework CoreFoundation
+	CFLAGS += -I /opt/homebrew/include -I /opt/homebrew/include/libusb-1.0
 endif
 
 ifneq ($(HOSTED_BMP_ONLY), 1)
