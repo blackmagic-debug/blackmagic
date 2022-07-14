@@ -506,10 +506,7 @@ bool cortexm_attach(target *t)
 {
 	ADIv5_AP_t *ap = cortexm_ap(t);
 	ap->dp->fault = 1; /* Force switch to this multi-drop device*/
-	target_check_error(t);
 	struct cortexm_priv *priv = t->priv;
-	unsigned i;
-	uint32_t r;
 
 	/* Clear any pending fault condition */
 	target_check_error(t);
@@ -523,40 +520,40 @@ bool cortexm_attach(target *t)
 
 	/* size the break/watchpoint units */
 	priv->hw_breakpoint_max = CORTEXM_MAX_BREAKPOINTS;
-	r = target_mem_read32(t, CORTEXM_FPB_CTRL);
-	if (((r >> 4) & 0xf) < priv->hw_breakpoint_max)	/* only look at NUM_COMP1 */
-		priv->hw_breakpoint_max = (r >> 4) & 0xf;
-	priv->flash_patch_revision = (r >> 28);
+	const uint32_t flash_break_cfg = target_mem_read32(t, CORTEXM_FPB_CTRL);
+	const uint32_t breakpoints = ((flash_break_cfg >> 4U) & 0xf);
+	if (breakpoints < priv->hw_breakpoint_max)	/* only look at NUM_COMP1 */
+		priv->hw_breakpoint_max = breakpoints;
+	priv->flash_patch_revision = flash_break_cfg >> 28U;
+
 	priv->hw_watchpoint_max = CORTEXM_MAX_WATCHPOINTS;
-	r = target_mem_read32(t, CORTEXM_DWT_CTRL);
-	if ((r >> 28) < priv->hw_watchpoint_max)
-		priv->hw_watchpoint_max = r >> 28;
+	const uint32_t watchpoints = target_mem_read32(t, CORTEXM_DWT_CTRL);
+	if ((watchpoints >> 28) < priv->hw_watchpoint_max)
+		priv->hw_watchpoint_max = watchpoints >> 28U;
 
 	/* Clear any stale breakpoints */
-	for(i = 0; i < priv->hw_breakpoint_max; i++) {
+	for (size_t i = 0; i < priv->hw_breakpoint_max; i++) {
 		target_mem_write32(t, CORTEXM_FPB_COMP(i), 0);
 		priv->hw_breakpoint[i] = 0;
 	}
 
 	/* Clear any stale watchpoints */
-	for(i = 0; i < priv->hw_watchpoint_max; i++) {
+	for (size_t i = 0; i < priv->hw_watchpoint_max; i++) {
 		target_mem_write32(t, CORTEXM_DWT_FUNC(i), 0);
 		priv->hw_watchpoint[i] = 0;
 	}
 
 	/* Flash Patch Control Register: set ENABLE */
-	target_mem_write32(t, CORTEXM_FPB_CTRL,
-			CORTEXM_FPB_CTRL_KEY | CORTEXM_FPB_CTRL_ENABLE);
+	target_mem_write32(t, CORTEXM_FPB_CTRL, CORTEXM_FPB_CTRL_KEY | CORTEXM_FPB_CTRL_ENABLE);
 
-	uint32_t dhcsr = target_mem_read32(t, CORTEXM_DHCSR);
-	dhcsr = target_mem_read32(t, CORTEXM_DHCSR);
-	if (dhcsr & CORTEXM_DHCSR_S_RESET_ST) {
+	(void)target_mem_read32(t, CORTEXM_DHCSR);
+	if (target_mem_read32(t, CORTEXM_DHCSR) & CORTEXM_DHCSR_S_RESET_ST) {
 		platform_nrst_set_val(false);
 		platform_timeout timeout;
 		platform_timeout_set(&timeout, 1000);
 		while (1) {
-			dhcsr = target_mem_read32(t, CORTEXM_DHCSR);
-			if (!(dhcsr & CORTEXM_DHCSR_S_RESET_ST))
+			const uint32_t reset_status = target_mem_read32(t, CORTEXM_DHCSR);
+			if (!(reset_status & CORTEXM_DHCSR_S_RESET_ST))
 				break;
 			if (platform_timeout_is_expired(&timeout)) {
 				DEBUG_WARN("Error releasing from reset\n");
