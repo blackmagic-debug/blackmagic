@@ -152,6 +152,8 @@ static bool stm32lx_nvm_prog_write(target_flash_s *f, target_addr_t dest, const 
 static bool stm32lx_nvm_data_erase(target_flash_s *f, target_addr_t addr, size_t len);
 static bool stm32lx_nvm_data_write(target_flash_s *f, target_addr_t dest, const void *src, size_t size);
 
+static bool stm32lx_protected_attach(target_s *target);
+
 static bool stm32lx_cmd_option(target_s *t, int argc, const char **argv);
 static bool stm32lx_cmd_eeprom(target_s *t, int argc, const char **argv);
 
@@ -160,6 +162,10 @@ static const command_s stm32lx_cmd_list[] = {
 	{"eeprom", stm32lx_cmd_eeprom, "Manipulate EEPROM (NVM data) memory"},
 	{NULL, NULL, NULL},
 };
+
+typedef struct stm32l_priv_s {
+	char stm32l_variant[21];
+} stm32l_priv_t;
 
 static bool stm32lx_is_stm32l1(target_s *t)
 {
@@ -231,35 +237,53 @@ static void stm32l_add_eeprom(target_s *t, uint32_t addr, size_t length)
 }
 
 /* Probe for STM32L0xx and STM32L1xx parts. */
-bool stm32l0_probe(target_s *t)
+bool stm32l0_probe(target_s *target)
 {
-	switch (t->part_id) {
+	switch (target->part_id) {
 	case 0x416U: /* CAT. 1 device */
 	case 0x429U: /* CAT. 2 device */
 	case 0x427U: /* CAT. 3 device */
 	case 0x436U: /* CAT. 4 device */
 	case 0x437U: /* CAT. 5 device  */
-		t->driver = "STM32L1x";
-		target_add_ram(t, 0x20000000, 0x14000);
-		stm32l_add_flash(t, 0x8000000, 0x80000, 0x100);
+		target->driver = "STM32L1x";
+		target_add_ram(target, 0x20000000, 0x14000);
+		stm32l_add_flash(target, 0x8000000, 0x80000, 0x100);
 		//stm32l_add_eeprom(t, 0x8080000, 0x4000);
-		target_add_commands(t, stm32lx_cmd_list, "STM32L1x");
-		return true;
+		target_add_commands(target, stm32lx_cmd_list, "STM32L1x");
+		break;
 	case 0x457U: /* STM32L0xx Cat1 */
 	case 0x425U: /* STM32L0xx Cat2 */
 	case 0x417U: /* STM32L0xx Cat3 */
 	case 0x447U: /* STM32L0xx Cat5 */
-		t->driver = "STM32L0x";
-		target_add_ram(t, 0x20000000, 0x5000);
-		stm32l_add_flash(t, 0x8000000, 0x10000, 0x80);
-		stm32l_add_flash(t, 0x8010000, 0x10000, 0x80);
-		stm32l_add_flash(t, 0x8020000, 0x10000, 0x80);
-		stm32l_add_eeprom(t, 0x8080000, 0x1800);
-		target_add_commands(t, stm32lx_cmd_list, "STM32L0x");
-		return true;
+		target->driver = "STM32L0x";
+		target_add_ram(target, 0x20000000, 0x5000);
+		stm32l_add_flash(target, 0x8000000, 0x10000, 0x80);
+		stm32l_add_flash(target, 0x8010000, 0x10000, 0x80);
+		stm32l_add_flash(target, 0x8020000, 0x10000, 0x80);
+		stm32l_add_eeprom(target, 0x8080000, 0x1800);
+		target_add_commands(target, stm32lx_cmd_list, "STM32L0x");
+		break;
+	default:
+		return false;
 	}
 
-	return false;
+	stm32l_priv_t *priv_storage = calloc(1, sizeof(*priv_storage));
+	if (!priv_storage) {
+		DEBUG_WARN("calloc: failed in %s\n", __func__);
+		return false;
+	}
+	target->target_storage = (void *)priv_storage;
+
+	const uint32_t nvm = stm32lx_nvm_phys(target);
+	const bool protected =
+		(target_mem_read32(target, STM32Lx_NVM_OPTR(nvm)) & STM32Lx_NVM_OPTR_RDPROT_M) != STM32Lx_NVM_OPTR_RDPROT_0;
+	sprintf(priv_storage->stm32l_variant, "%s%s", target->driver, protected ? " (protected)" : "");
+	target->driver = priv_storage->stm32l_variant;
+
+	if (protected)
+		target->attach = stm32lx_protected_attach;
+
+	return true;
 }
 
 /* Lock the NVM control registers preventing writes or erases. */
@@ -435,6 +459,13 @@ static bool stm32lx_nvm_data_write(
 	stm32lx_nvm_lock(t, nvm);
 	/* Wait for completion or an error */
 	return stm32lx_nvm_busy_wait(t, nvm);
+}
+
+static bool stm32lx_protected_attach(target_s *const target)
+{
+	tc_printf(target, "Attached in protected mode, please issue 'monitor erase_mass' to regain chip access\n");
+	target->attach = cortexm_attach;
+	return true;
 }
 
 /*
