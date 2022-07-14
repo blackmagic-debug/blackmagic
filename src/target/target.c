@@ -29,13 +29,15 @@ target *target_list = NULL;
 
 #define STDOUT_READ_BUF_SIZE	64
 
-static int target_flash_write_buffered(struct target_flash *f,
-                                       target_addr dest, const void *src, size_t len);
+static int target_flash_write_buffered(struct target_flash *f, target_addr dest, const void *src, size_t len);
 static int target_flash_done_buffered(struct target_flash *f);
+
 static bool target_cmd_mass_erase(target *t, int argc, const char **argv);
+static bool target_cmd_range_erase(target *t, int argc, const char **argv);
 
 const struct command_s target_cmd_list[] = {
 	{"erase_mass", (cmd_handler)target_cmd_mass_erase, "Erase whole device Flash"},
+	{"erase_range", (cmd_handler)target_cmd_range_erase, "Erase a range of memory on a device"},
 	{NULL, NULL, NULL}
 };
 
@@ -537,6 +539,28 @@ static bool target_cmd_mass_erase(target *const t, const int argc, const char **
 	const bool result = t->mass_erase(t);
 	gdb_out("done\n");
 	return result;
+}
+
+static bool target_cmd_range_erase(target *const t, const int argc, const char **const argv)
+{
+	if (argc < 3) {
+		gdb_out("usage: monitor erase_range <address> <count>");
+		gdb_out("\t<address> is an address in the first page to erase");
+		gdb_out("\t<count> is the number bytes after that to erase, rounded to the next higher whole page");
+		return true;
+	}
+	const uint32_t addr = strtoul(argv[1], NULL, 0);
+	const uint32_t length = strtoul(argv[2], NULL, 0);
+	struct target_flash *flash = flash_for_addr(t, addr);
+
+	if (flash == NULL) {
+		gdb_out("Requested address is outside the valid range for this target");
+		return false;
+	}
+
+	const target_addr aligned_addr = addr & ~(flash->blocksize - 1U);
+	const uint32_t aligned_length = length + (addr - aligned_addr);
+	return target_flash_erase(t, aligned_addr, aligned_length) == 0;
 }
 
 /* Accessor functions */
