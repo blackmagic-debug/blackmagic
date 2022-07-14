@@ -51,7 +51,7 @@ static int stm32f4_flash_erase(struct target_flash *f, target_addr addr, size_t 
 static int stm32f4_flash_write(struct target_flash *f, target_addr dest, const void *src, size_t len);
 static bool stm32f4_mass_erase(target *t);
 
-/* Flash Program ad Erase Controller Register Map */
+/* Flash Program and Erase Controller Register Map */
 #define FPEC_BASE	0x40023C00
 #define FLASH_ACR	(FPEC_BASE+0x00)
 #define FLASH_KEYR	(FPEC_BASE+0x04)
@@ -492,7 +492,7 @@ static bool stm32f4_mass_erase(target *t)
 
 	/* Check for error */
 	const uint32_t result = target_mem_read32(t, FLASH_SR);
-	return !(result & SR_ERROR_MASK) && (result & SR_EOP);
+	return !(result & SR_ERROR_MASK);
 }
 
 /* Dev   | DOC  |Rev|ID |OPTCR    |OPTCR   |OPTCR1   |OPTCR1 | OPTCR2
