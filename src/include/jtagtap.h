@@ -37,7 +37,7 @@ typedef struct jtag_proc_s {
 	 * - Release TCK.
 	 */
 	uint8_t (*jtagtap_next)(const uint8_t tms, const uint8_t tdi);
-	void (*jtagtap_tms_seq)(uint32_t tms_states, int ticks);
+	void (*jtagtap_tms_seq)(uint32_t tms_states, int clock_cycles);
 
 	/*
 	 * Shift out a sequence on MS and DI, capture data to DO.
@@ -45,8 +45,8 @@ typedef struct jtag_proc_s {
 	 * - DO may be NULL to ignore captured data.
 	 * - DO may be point to the same address as DI.
 	 */
-	void (*jtagtap_tdi_tdo_seq)(uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int ticks);
-	void (*jtagtap_tdi_seq)(const uint8_t final_tms, const uint8_t *DI, int ticks);
+	void (*jtagtap_tdi_tdo_seq)(uint8_t *data_out, const uint8_t final_tms, const uint8_t *data_in, int clock_cycles);
+	void (*jtagtap_tdi_seq)(const uint8_t final_tms, const uint8_t *DI, int clock_cycles);
 } jtag_proc_t;
 
 extern jtag_proc_t jtag_proc;
