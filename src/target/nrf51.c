@@ -33,6 +33,7 @@ static int nrf51_flash_write(struct target_flash *f,
 static bool nrf51_mass_erase(target *t);
 
 static bool nrf51_cmd_erase_uicr(target *t, int argc, const char **argv);
+static bool nrf51_cmd_protect_flash(target *t, int argc, const char **argv);
 static bool nrf51_cmd_read_hwid(target *t, int argc, const char **argv);
 static bool nrf51_cmd_read_fwid(target *t, int argc, const char **argv);
 static bool nrf51_cmd_read_deviceid(target *t, int argc, const char **argv);
@@ -43,6 +44,7 @@ static bool nrf51_cmd_read(target *t, int argc, const char **argv);
 
 const struct command_s nrf51_cmd_list[] = {
 	{"erase_uicr", (cmd_handler)nrf51_cmd_erase_uicr, "Erase UICR registers"},
+	{"protect_flash", (cmd_handler)nrf51_cmd_protect_flash, "Enable flash read/write protection"},
 	{"read", (cmd_handler)nrf51_cmd_read, "Read device parameters"},
 	{NULL, NULL, NULL}
 };
@@ -92,6 +94,9 @@ const struct command_s nrf51_read_cmd_list[] = {
 
 /* User Information Configuration Registers (UICR) */
 #define NRF51_UICR				0x10001000
+
+/* Flash R/W Protection Register */
+#define NRF51_APPROTECT	0x10001208
 
 #define NRF51_PAGE_SIZE 1024
 #define NRF52_PAGE_SIZE 4096
@@ -264,6 +269,30 @@ static bool nrf51_cmd_erase_uicr(target *t, int argc, const char **argv)
 
 	/* Erase UICR */
 	target_mem_write32(t, NRF51_NVMC_ERASEUICR, 1);
+
+	/* Poll for NVMC_READY */
+	while (target_mem_read32(t, NRF51_NVMC_READY) == 0)
+		if(target_check_error(t))
+			return false;
+
+	return true;
+}
+
+static bool nrf51_cmd_protect_flash(target *t, int argc, const char **argv)
+{
+	(void)argc;
+	(void)argv;
+	tc_printf(t, "protect flash..\n");
+
+	/* Enable write */
+	target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_WEN);
+
+	/* Poll for NVMC_READY */
+	while (target_mem_read32(t, NRF51_NVMC_READY) == 0)
+		if(target_check_error(t))
+			return false;
+	
+	target_mem_write32(t, NRF51_APPROTECT, 0xFFFFFF00);
 
 	/* Poll for NVMC_READY */
 	while (target_mem_read32(t, NRF51_NVMC_READY) == 0)
