@@ -49,8 +49,10 @@ else ifneq (filter, macosx darwin, $(SYS))
 endif
 
 ifneq ($(HOSTED_BMP_ONLY), 1)
-    $(shell pkg-config --exists libftdi1)
-    ifneq ($(.SHELLSTATUS), 0)
+    ifneq ($(shell pkg-config --exists libusb; echo $$?), 0)
+        $(error Please install libusb dependency or set HOSTED_BMP_ONLY to 1)
+    endif
+    ifneq ($(shell pkg-config --exists libftdi1; echo $$?), 0)
         $(error Please install libftdi1 dependency or set HOSTED_BMP_ONLY to 1)
     endif
     LDFLAGS += -lusb-1.0
@@ -62,8 +64,7 @@ endif
 ifneq ($(HOSTED_BMP_ONLY), 1)
     CFLAGS  +=  -DCMSIS_DAP
     SRC += cmsis_dap.c dap.c
-    $(shell pkg-config --exists $(HIDAPILIB))
-    ifneq ($(.SHELLSTATUS), 0)
+    ifneq ($(shell pkg-config --exists $(HIDAPILIB); echo $$?), 0)
         $(error Please install $(HIDAPILIB) dependency or set HOSTED_BMP_ONLY to 1)
     endif
     CFLAGS += $(shell pkg-config --cflags $(HIDAPILIB))
