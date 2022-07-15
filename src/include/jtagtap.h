@@ -36,8 +36,8 @@ typedef struct jtag_proc_s {
 	 * - Caputure the value on TDO
 	 * - Release TCK.
 	 */
-	uint8_t (*jtagtap_next)(const uint8_t TMS, const uint8_t TDI);
-	void (*jtagtap_tms_seq)(uint32_t MS, int ticks);
+	uint8_t (*jtagtap_next)(const uint8_t tms, const uint8_t tdi);
+	void (*jtagtap_tms_seq)(uint32_t tms_states, int ticks);
 
 	/*
 	 * Shift out a sequence on MS and DI, capture data to DO.
