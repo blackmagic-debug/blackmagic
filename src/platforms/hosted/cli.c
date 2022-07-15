@@ -145,7 +145,7 @@ static void cl_help(char **argv)
 		"\t                   1 = INFO, 2 = GDB, 4 = TARGET, 8 = PROBE, 16 = WIRE\n"
 		"\n"
 		"Probe selection arguments [-d PATH | -P NUMBER | -s SERIAL | -c TYPE]:\n"
-		"\t-d, --device     Use a serial device at the given path (Deprecated!)\n"
+		"\t-d, --device     Use a serial device at the given path\n"
 		"\t-P, --probe      Use the <number>th debug probe found while scanning the\n"
 		"\t                   system, see the output from list for the order\n"
 		"\t-s, --serial     Select the debug probe with the given serial number\n"
