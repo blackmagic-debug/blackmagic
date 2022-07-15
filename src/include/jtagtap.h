@@ -46,7 +46,7 @@ typedef struct jtag_proc_s {
 	 * - DO may be point to the same address as DI.
 	 */
 	void (*jtagtap_tdi_tdo_seq)(uint8_t *data_out, const uint8_t final_tms, const uint8_t *data_in, int clock_cycles);
-	void (*jtagtap_tdi_seq)(const uint8_t final_tms, const uint8_t *DI, int clock_cycles);
+	void (*jtagtap_tdi_seq)(const uint8_t final_tms, const uint8_t *data_in, int clock_cycles);
 } jtag_proc_t;
 
 extern jtag_proc_t jtag_proc;
