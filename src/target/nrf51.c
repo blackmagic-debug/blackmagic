@@ -288,16 +288,18 @@ static bool nrf51_cmd_protect_flash(target *t, int argc, const char **argv)
 	target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_WEN);
 
 	/* Poll for NVMC_READY */
-	while (target_mem_read32(t, NRF51_NVMC_READY) == 0)
+	while (target_mem_read32(t, NRF51_NVMC_READY) == 0) {
 		if(target_check_error(t))
 			return false;
+	}
 	
 	target_mem_write32(t, NRF51_APPROTECT, 0xFFFFFF00);
 
 	/* Poll for NVMC_READY */
-	while (target_mem_read32(t, NRF51_NVMC_READY) == 0)
+	while (target_mem_read32(t, NRF51_NVMC_READY) == 0) {
 		if(target_check_error(t))
 			return false;
+	}
 
 	return true;
 }
