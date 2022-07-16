@@ -628,8 +628,7 @@ int libftdi_buffer_read(uint8_t *data, int size)
 	return size;
 }
 
-void libftdi_jtagtap_tdi_tdo_seq(
-	uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int ticks)
+void libftdi_jtagtap_tdi_tdo_seq(uint8_t *DO, const bool final_tms, const uint8_t *DI, size_t ticks)
 {
 	int rsize, rticks;
 

@@ -29,10 +29,10 @@
 jtag_proc_t jtag_proc;
 
 static void jtagtap_reset(void);
-static void jtagtap_tms_seq(uint32_t tms_states, int ticks);
-static void jtagtap_tdi_tdo_seq(uint8_t *data_out, uint8_t final_tms, const uint8_t *data_in, int ticks);
-static void jtagtap_tdi_seq(uint8_t final_tms, const uint8_t *data_in, int ticks);
-static uint8_t jtagtap_next(uint8_t tms, uint8_t tdi);
+static void jtagtap_tms_seq(uint32_t tms_states, size_t ticks);
+static void jtagtap_tdi_tdo_seq(uint8_t *data_out, bool final_tms, const uint8_t *data_in, size_t ticks);
+static void jtagtap_tdi_seq(bool final_tms, const uint8_t *data_in, size_t ticks);
+static bool jtagtap_next(bool tms, bool tdi);
 
 int jtagtap_init()
 {
@@ -66,7 +66,7 @@ static void jtagtap_reset(void)
 	jtagtap_soft_reset();
 }
 
-static uint8_t jtagtap_next(const uint8_t tms, const uint8_t tdi)
+static bool jtagtap_next(const bool tms, const bool tdi)
 {
 	register volatile int32_t cnt;
 
@@ -113,7 +113,7 @@ static void jtagtap_tms_seq_no_delay(uint32_t tms_states, size_t ticks)
 	}
 }
 
-static void jtagtap_tms_seq(uint32_t tms_states, int ticks)
+static void jtagtap_tms_seq(uint32_t tms_states, size_t ticks)
 {
 	gpio_set(TDI_PORT, TDI_PIN);
 	if (swd_delay_cnt)
@@ -179,7 +179,7 @@ static void jtagtap_tdi_tdo_seq_no_delay(const uint8_t *data_in, uint8_t *data_o
 		data_out[byte] = value;
 }
 
-static void jtagtap_tdi_tdo_seq(uint8_t *data_out, const uint8_t final_tms, const uint8_t *data_in, int ticks)
+static void jtagtap_tdi_tdo_seq(uint8_t *data_out, const bool final_tms, const uint8_t *data_in, size_t ticks)
 {
 	gpio_clear(TDI_PORT, TDI_PIN);
 	if (swd_delay_cnt)
@@ -232,7 +232,7 @@ static void jtagtap_tdi_seq_no_delay(const uint8_t *data_in, const bool final_tm
 	}
 }
 
-static void jtagtap_tdi_seq(const uint8_t final_tms, const uint8_t *data_in, int ticks)
+static void jtagtap_tdi_seq(const bool final_tms, const uint8_t *data_in, size_t ticks)
 {
 	if (swd_delay_cnt)
 		jtagtap_tdi_seq_swd_delay(data_in, final_tms, ticks);

@@ -22,6 +22,8 @@
 #define __JTAGTAP_H
 
 #include <stdint.h>
+#include <stddef.h>
+#include <stdbool.h>
 
 typedef struct jtag_proc_s {
 	/* Note: Signal names are as for the device under test. */
@@ -36,8 +38,8 @@ typedef struct jtag_proc_s {
 	 * - Caputure the value on TDO
 	 * - Release TCK.
 	 */
-	uint8_t (*jtagtap_next)(const uint8_t tms, const uint8_t tdi);
-	void (*jtagtap_tms_seq)(uint32_t tms_states, int clock_cycles);
+	bool (*jtagtap_next)(const bool tms, const bool tdi);
+	void (*jtagtap_tms_seq)(uint32_t tms_states, size_t clock_cycles);
 
 	/*
 	 * Shift out a sequence on MS and DI, capture data to DO.
@@ -45,8 +47,8 @@ typedef struct jtag_proc_s {
 	 * - DO may be NULL to ignore captured data.
 	 * - DO may be point to the same address as DI.
 	 */
-	void (*jtagtap_tdi_tdo_seq)(uint8_t *data_out, const uint8_t final_tms, const uint8_t *data_in, int clock_cycles);
-	void (*jtagtap_tdi_seq)(const uint8_t final_tms, const uint8_t *data_in, int clock_cycles);
+	void (*jtagtap_tdi_tdo_seq)(uint8_t *data_out, const bool final_tms, const uint8_t *data_in, size_t clock_cycles);
+	void (*jtagtap_tdi_seq)(const bool final_tms, const uint8_t *data_in, size_t clock_cycles);
 } jtag_proc_t;
 
 extern jtag_proc_t jtag_proc;

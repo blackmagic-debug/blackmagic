@@ -442,32 +442,34 @@ static void cmsis_dap_jtagtap_reset(void)
 	/* Is there a way to know if TRST is available?*/
 }
 
-static void cmsis_dap_jtagtap_tms_seq(uint32_t MS, int ticks)
+static void cmsis_dap_jtagtap_tms_seq(const uint32_t tms_states, const size_t ticks)
 {
-	uint8_t TMS[4] = {MS & 0xff, (MS >> 8) & 0xff, (MS >> 16) & 0xff,
-					  (MS >> 24) & 0xff};
-	dap_jtagtap_tdi_tdo_seq(NULL, false, TMS, NULL, ticks);
-	DEBUG_PROBE("tms_seq DI %08x %d\n", MS, ticks);
+	const uint8_t tms[4] = {
+		(uint8_t)tms_states, (uint8_t)(tms_states >> 8U), (uint8_t)(tms_states >> 16U), (uint8_t)(tms_states >> 24U)};
+	dap_jtagtap_tdi_tdo_seq(NULL, false, tms, NULL, ticks);
+	DEBUG_PROBE("tms_seq data_in %08x %zu\n", tms_states, ticks);
 }
 
-static void cmsis_dap_jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int ticks)
+static void cmsis_dap_jtagtap_tdi_tdo_seq(uint8_t *const data_out, const bool final_tms, const uint8_t *const data_in, const size_t ticks)
 {
-	dap_jtagtap_tdi_tdo_seq(DO, (final_tms), NULL, DI, ticks);
-	DEBUG_PROBE("jtagtap_tdi_tdo_seq %d, %02x-> %02x\n", ticks, DI[0], (DO)? DO[0] : 0);
+	dap_jtagtap_tdi_tdo_seq(data_out, final_tms, NULL, data_in, ticks);
+	DEBUG_PROBE("jtagtap_tdi_tdo_seq %zu, %02x-> %02x\n", ticks, data_in[0], data_out ? data_out[0] : 0);
 }
 
-static void  cmsis_dap_jtagtap_tdi_seq(const uint8_t final_tms, const uint8_t *DI, int ticks)
+static void cmsis_dap_jtagtap_tdi_seq(const bool final_tms, const uint8_t *const data_in, const size_t ticks)
 {
-	dap_jtagtap_tdi_tdo_seq(NULL, (final_tms), NULL, DI, ticks);
-	DEBUG_PROBE("jtagtap_tdi_seq %d, %02x\n", ticks, DI[0]);
+	dap_jtagtap_tdi_tdo_seq(NULL, final_tms, NULL, data_in, ticks);
+	DEBUG_PROBE("jtagtap_tdi_seq %zu, %02x\n", ticks, data_in[0]);
 }
 
-static uint8_t cmsis_dap_jtagtap_next(uint8_t dTMS, uint8_t dTDI)
+static bool cmsis_dap_jtagtap_next(const bool tms, const bool tdi)
 {
-	uint8_t tdo[1];
-	dap_jtagtap_tdi_tdo_seq(tdo, false, &dTMS, &dTDI, 1);
-	DEBUG_PROBE("next tms %02x tdi %02x tdo %02x\n", dTMS, dTDI, tdo[0]);
-	return (tdo[0] & 1);
+	const uint8_t tms_byte = tms ? 1 : 0;
+	const uint8_t tdi_byte = tdi ? 1 : 0;
+	uint8_t tdo = 0;
+	dap_jtagtap_tdi_tdo_seq(&tdo, false, &tms_byte, &tdi_byte, 1);
+	DEBUG_PROBE("next tms %02x tdi %02x tdo %02x\n", tms, tdi, tdo);
+	return tdo;
 }
 
 int cmsis_dap_jtagtap_init(jtag_proc_t *jtag_proc)
@@ -479,11 +481,11 @@ int cmsis_dap_jtagtap_init(jtag_proc_t *jtag_proc)
 	dap_disconnect();
 	dap_connect(true);
 	dap_reset_link(true);
-	jtag_proc->jtagtap_reset       = cmsis_dap_jtagtap_reset;
-	jtag_proc->jtagtap_next        = cmsis_dap_jtagtap_next;
-	jtag_proc->jtagtap_tms_seq     = cmsis_dap_jtagtap_tms_seq;
+	jtag_proc->jtagtap_reset = cmsis_dap_jtagtap_reset;
+	jtag_proc->jtagtap_next = cmsis_dap_jtagtap_next;
+	jtag_proc->jtagtap_tms_seq = cmsis_dap_jtagtap_tms_seq;
 	jtag_proc->jtagtap_tdi_tdo_seq = cmsis_dap_jtagtap_tdi_tdo_seq;
-	jtag_proc->jtagtap_tdi_seq     = cmsis_dap_jtagtap_tdi_seq;
+	jtag_proc->jtagtap_tdi_seq = cmsis_dap_jtagtap_tdi_seq;
 	return 0;
 }
 
