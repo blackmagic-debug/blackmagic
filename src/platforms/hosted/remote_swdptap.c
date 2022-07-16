@@ -30,110 +30,97 @@
 #include "remote.h"
 #include "bmp_remote.h"
 
-static bool swdptap_seq_in_parity(uint32_t *res, int ticks);
-static uint32_t swdptap_seq_in(int ticks);
-static void swdptap_seq_out(uint32_t MS, int ticks);
-static void swdptap_seq_out_parity(uint32_t MS, int ticks);
+static bool swdptap_seq_in_parity(uint32_t *res, size_t clock_cycles);
+static uint32_t swdptap_seq_in(size_t clock_cycles);
+static void swdptap_seq_out(uint32_t tms_states, size_t clock_cycles);
+static void swdptap_seq_out_parity(uint32_t tms_states, size_t clock_cycles);
 
 int remote_swdptap_init(ADIv5_DP_t *dp)
 {
 	DEBUG_WIRE("remote_swdptap_init\n");
 	uint8_t construct[REMOTE_MAX_MSG_SIZE];
-	int s;
-	s = sprintf((char *)construct,"%s", REMOTE_SWDP_INIT_STR);
+	int s = sprintf((char *)construct, "%s", REMOTE_SWDP_INIT_STR);
 	platform_buffer_write(construct, s);
 
 	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
 	if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
-		DEBUG_WARN("swdptap_init failed, error %s\n",
-				s ? (char *)&(construct[1]) : "unknown");
+		DEBUG_WARN("swdptap_init failed, error %s\n", s ? (char *)&(construct[1]) : "unknown");
 		exit(-1);
-    }
+	}
 
-	dp->seq_in  = swdptap_seq_in;
-	dp->seq_in_parity  = swdptap_seq_in_parity;
+	dp->seq_in = swdptap_seq_in;
+	dp->seq_in_parity = swdptap_seq_in_parity;
 	dp->seq_out = swdptap_seq_out;
-	dp->seq_out_parity  = swdptap_seq_out_parity;
+	dp->seq_out_parity = swdptap_seq_out_parity;
 	dp->dp_read = firmware_swdp_read;
 	dp->error = firmware_swdp_error;
 	dp->low_access = firmware_swdp_low_access;
 	dp->abort = firmware_swdp_abort;
-  return 0;
+	return 0;
 }
 
-static bool swdptap_seq_in_parity(uint32_t *res, int ticks)
+static bool swdptap_seq_in_parity(uint32_t *res, size_t clock_cycles)
 {
 	uint8_t construct[REMOTE_MAX_MSG_SIZE];
-	int s;
 
-	s = sprintf((char *)construct, REMOTE_SWDP_IN_PAR_STR, ticks);
+	int s = sprintf((char *)construct, REMOTE_SWDP_IN_PAR_STR, clock_cycles);
 	platform_buffer_write(construct, s);
 
 	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
-	if ((s<2) || (construct[0] == REMOTE_RESP_ERR)) {
-		DEBUG_WARN("swdptap_seq_in_parity failed, error %s\n",
-				s ? (char *)&(construct[1]) : "short response");
+	if ((s < 2) || (construct[0] == REMOTE_RESP_ERR)) {
+		DEBUG_WARN("swdptap_seq_in_parity failed, error %s\n", s ? (char *)&(construct[1]) : "short response");
 		exit(-1);
 	}
 
-	*res=remotehston(-1, (char *)&construct[1]);
-	DEBUG_PROBE("swdptap_seq_in_parity  %2d ticks: %08" PRIx32 " %s\n",
-				 ticks, *res, (construct[0] != REMOTE_RESP_OK) ? "ERR" : "OK");
+	*res = remotehston(-1, (char *)&construct[1]);
+	DEBUG_PROBE("swdptap_seq_in_parity  %2d clock_cycles: %08" PRIx32 " %s\n", clock_cycles, *res,
+		(construct[0] != REMOTE_RESP_OK) ? "ERR" : "OK");
 	return (construct[0] != REMOTE_RESP_OK);
 }
 
-static uint32_t swdptap_seq_in(int ticks)
+static uint32_t swdptap_seq_in(size_t clock_cycles)
 {
 	uint8_t construct[REMOTE_MAX_MSG_SIZE];
-	int s;
 
-	s = sprintf((char *)construct, REMOTE_SWDP_IN_STR, ticks);
-	platform_buffer_write(construct,s);
+	int s = sprintf((char *)construct, REMOTE_SWDP_IN_STR, clock_cycles);
+	platform_buffer_write(construct, s);
 
 	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
-	if ((s<2) || (construct[0] == REMOTE_RESP_ERR)) {
-      DEBUG_WARN("swdptap_seq_in failed, error %s\n",
-			  s ? (char *)&(construct[1]) : "short response");
-      exit(-1);
-    }
-	uint32_t res = remotehston(-1,(char *)&construct[1]);
-	DEBUG_PROBE("swdptap_seq_in         %2d ticks: %08" PRIx32 "\n",
-				 ticks, res);
+	if ((s < 2) || (construct[0] == REMOTE_RESP_ERR)) {
+		DEBUG_WARN("swdptap_seq_in failed, error %s\n", s ? (char *)construct + 1 : "short response");
+		exit(-1);
+	}
+	uint32_t res = remotehston(-1, (char *)&construct[1]);
+	DEBUG_PROBE("swdptap_seq_in         %2d clock_cycles: %08" PRIx32 "\n", clock_cycles, res);
 	return res;
 }
 
-static void swdptap_seq_out(uint32_t MS, int ticks)
+static void swdptap_seq_out(uint32_t tms_states, size_t clock_cycles)
 {
 	uint8_t construct[REMOTE_MAX_MSG_SIZE];
-	int s;
 
-	DEBUG_PROBE("swdptap_seq_out        %2d ticks: %08" PRIx32 "\n",
-				 ticks, MS);
-	s = sprintf((char *)construct,REMOTE_SWDP_OUT_STR, ticks, MS);
-	platform_buffer_write(construct, s);
-
-	s=platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
-	if ((s < 1) || (construct[0] == REMOTE_RESP_ERR)) {
-      DEBUG_WARN("swdptap_seq_out failed, error %s\n",
-			  s ? (char *)&(construct[1]) : "short response");
-      exit(-1);
-    }
-}
-
-static void swdptap_seq_out_parity(uint32_t MS, int ticks)
-{
-	uint8_t construct[REMOTE_MAX_MSG_SIZE];
-	int s;
-
-	DEBUG_PROBE("swdptap_seq_out_parity %2d ticks: %08" PRIx32 "\n",
-				 ticks, MS);
-	s = sprintf((char *)construct, REMOTE_SWDP_OUT_PAR_STR, ticks, MS);
+	DEBUG_PROBE("swdptap_seq_out        %2d clock_cycles: %08" PRIx32 "\n", clock_cycles, tms_states);
+	int s = sprintf((char *)construct, REMOTE_SWDP_OUT_STR, clock_cycles, tms_states);
 	platform_buffer_write(construct, s);
 
 	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
-	if ((s < 1) || (construct[1] == REMOTE_RESP_ERR)){
-      DEBUG_WARN("swdptap_seq_out_parity failed, error %s\n",
-			  s ? (char *)&(construct[2]) : "short response");
-      exit(-1);
-    }
+	if ((s < 1) || (construct[0] == REMOTE_RESP_ERR)) {
+		DEBUG_WARN("swdptap_seq_out failed, error %s\n", s ? (char *)construct + 1 : "short response");
+		exit(-1);
+	}
+}
+
+static void swdptap_seq_out_parity(uint32_t tms_states, size_t clock_cycles)
+{
+	uint8_t construct[REMOTE_MAX_MSG_SIZE];
+
+	DEBUG_PROBE("swdptap_seq_out_parity %2d clock_cycles: %08" PRIx32 "\n", clock_cycles, tms_states);
+	int s = sprintf((char *)construct, REMOTE_SWDP_OUT_PAR_STR, clock_cycles, tms_states);
+	platform_buffer_write(construct, s);
+
+	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
+	if ((s < 1) || (construct[1] == REMOTE_RESP_ERR)) {
+		DEBUG_WARN("swdptap_seq_out_parity failed, error %s\n", s ? (char *)construct + 2 : "short response");
+		exit(-1);
+	}
 }

@@ -36,12 +36,11 @@ static enum swdio_status olddir;
 static bool do_mpsse;
 static bool direct_bb_swd;
 
-#define MPSSE_MASK (MPSSE_DO | MPSSE_DI | MPSSE_CS)
-#define MPSSE_TD_MASK (MPSSE_DO | MPSSE_DI)
-#define MPSSE_TMS_SHIFT (MPSSE_WRITE_TMS | MPSSE_LSB |\
-						 MPSSE_BITMODE | MPSSE_WRITE_NEG)
-#define MPSSE_TDO_SHIFT (MPSSE_DO_WRITE | MPSSE_LSB |\
-						 MPSSE_BITMODE | MPSSE_WRITE_NEG)
+#define MPSSE_MASK      (MPSSE_DO | MPSSE_DI | MPSSE_CS)
+#define MPSSE_TD_MASK   (MPSSE_DO | MPSSE_DI)
+#define MPSSE_TMS_SHIFT (MPSSE_WRITE_TMS | MPSSE_LSB | MPSSE_BITMODE | MPSSE_WRITE_NEG)
+#define MPSSE_TDO_SHIFT (MPSSE_DO_WRITE | MPSSE_LSB | MPSSE_BITMODE | MPSSE_WRITE_NEG)
+
 static void swdptap_turnaround(enum swdio_status dir)
 {
 	if (dir == olddir)
@@ -121,38 +120,38 @@ static void swdptap_turnaround(enum swdio_status dir)
 	}
 }
 
-static bool swdptap_seq_in_parity(uint32_t *res, int ticks);
-static uint32_t swdptap_seq_in(int ticks);
-static void swdptap_seq_out(uint32_t MS, int ticks);
-static void swdptap_seq_out_parity(uint32_t MS, int ticks);
+static bool swdptap_seq_in_parity(uint32_t *res, size_t clock_cycles);
+static uint32_t swdptap_seq_in(size_t clock_cycles);
+static void swdptap_seq_out(uint32_t tms_states, size_t clock_cycles);
+static void swdptap_seq_out_parity(uint32_t tms_states, size_t clock_cycles);
 
 bool libftdi_swd_possible(bool *do_mpsse, bool *direct_bb_swd)
 {
-	bool swd_read =
+	const bool swd_read =
 		active_cable->mpsse_swd_read.set_data_low ||
 		active_cable->mpsse_swd_read.clr_data_low ||
 		active_cable->mpsse_swd_read.set_data_high ||
 		active_cable->mpsse_swd_read.clr_data_high;
-	bool swd_write =
+	const bool swd_write =
 		active_cable->mpsse_swd_write.set_data_low ||
 		active_cable->mpsse_swd_write.clr_data_low ||
 		active_cable->mpsse_swd_write.set_data_high ||
 		active_cable->mpsse_swd_write.clr_data_high;
-	bool mpsse = swd_read && swd_write;
+	const bool mpsse = swd_read && swd_write;
 	if (do_mpsse)
 		*do_mpsse = mpsse;
 	if (!mpsse) {
-		bool bb_swd_read =
+		const bool bb_swd_read =
 			active_cable->bb_swd_read.set_data_low ||
 			active_cable->bb_swd_read.clr_data_low ||
 			active_cable->bb_swd_read.set_data_high ||
 			active_cable->bb_swd_read.clr_data_high;
-		bool bb_swd_write =
+		const bool bb_swd_write =
 			active_cable->bb_swd_write.set_data_low ||
 			active_cable->bb_swd_write.clr_data_low ||
 			active_cable->bb_swd_write.set_data_high ||
 			active_cable->bb_swd_write.clr_data_high;
-		bool bb_direct_possible =
+		const bool bb_direct_possible =
 			active_cable->bb_swdio_in_port_cmd == GET_BITS_LOW &&
 			active_cable->bb_swdio_in_pin == MPSSE_CS;
 		if (!bb_swd_read && !bb_swd_write) {
@@ -257,20 +256,20 @@ void swdptap_bit_out(bool val)
 	}
 }
 
-bool swdptap_seq_in_parity(uint32_t *res, int ticks)
+bool swdptap_seq_in_parity(uint32_t *res, size_t clock_cycles)
 {
-	assert(ticks == 32);
+	assert(clock_cycles == 32);
 	swdptap_turnaround(SWDIO_STATUS_FLOAT);
 	unsigned int parity = 0;
 	unsigned int result = 0;
 	if (do_mpsse) {
 		uint8_t DO[5];
-		libftdi_jtagtap_tdi_tdo_seq(DO, 0, NULL, ticks + 1);
+		libftdi_jtagtap_tdi_tdo_seq(DO, 0, NULL, clock_cycles + 1);
 		result = DO[0] + (DO[1] << 8) + (DO[2] << 16) + (DO[3] << 24);
-		parity =  __builtin_parity(result & ((1LL << ticks) - 1)) & 1;
+		parity =  __builtin_parity(result & ((1LL << clock_cycles) - 1)) & 1;
 		parity ^= DO[4] & 1;
 	} else {
-		int index = ticks + 1;
+		size_t index = clock_cycles + 1;
 		uint8_t cmd[4];
 
 		cmd[0] = active_cable->bb_swdio_in_port_cmd;
@@ -281,10 +280,10 @@ bool swdptap_seq_in_parity(uint32_t *res, int ticks)
 			libftdi_buffer_write(cmd, sizeof(cmd));
 		}
 		uint8_t data[33];
-		libftdi_buffer_read(data, ticks + 1);
-		if (data[ticks] & active_cable->bb_swdio_in_pin)
+		libftdi_buffer_read(data, clock_cycles + 1);
+		if (data[clock_cycles] & active_cable->bb_swdio_in_pin)
 			parity ^= 1;
-		index = ticks;
+		index = clock_cycles;
 		while (index--) {
 			if (data[index] & active_cable->bb_swdio_in_pin) {
 				parity ^= 1;
@@ -296,23 +295,23 @@ bool swdptap_seq_in_parity(uint32_t *res, int ticks)
 	return parity;
 }
 
-static uint32_t swdptap_seq_in(int ticks)
+static uint32_t swdptap_seq_in(size_t clock_cycles)
 {
-	if (!ticks)
+	if (!clock_cycles)
 		return 0;
 	uint32_t result = 0;
 	swdptap_turnaround(SWDIO_STATUS_FLOAT);
 	if (do_mpsse) {
 		uint8_t DO[4];
-		libftdi_jtagtap_tdi_tdo_seq(DO, 0, NULL, ticks);
-		int bytes = ticks >> 3;
-		if (ticks & 7)
+		libftdi_jtagtap_tdi_tdo_seq(DO, 0, NULL, clock_cycles);
+		int bytes = clock_cycles >> 3;
+		if (clock_cycles & 7)
 			bytes++;
 		for (int i = 0; i < bytes; i++) {
 			result |= DO[i] << (8 * i);
 		}
 	} else {
-		int index = ticks;
+		size_t index = clock_cycles;
 		uint8_t cmd[4];
 
 		cmd[0] = active_cable->bb_swdio_in_port_cmd;
@@ -324,8 +323,8 @@ static uint32_t swdptap_seq_in(int ticks)
 			libftdi_buffer_write(cmd, sizeof(cmd));
 		}
 		uint8_t data[32];
-		libftdi_buffer_read(data, ticks);
-		index = ticks;
+		libftdi_buffer_read(data, clock_cycles);
+		index = clock_cycles;
 		while (index--) {
 			if (data[index] & active_cable->bb_swdio_in_pin)
 				result |= (1 << index);
@@ -334,32 +333,32 @@ static uint32_t swdptap_seq_in(int ticks)
 	return result;
 }
 
-static void swdptap_seq_out(uint32_t MS, int ticks)
+static void swdptap_seq_out(uint32_t tms_states, size_t clock_cycles)
 {
-	if (!ticks)
+	if (!clock_cycles)
 		return;
 	swdptap_turnaround(SWDIO_STATUS_DRIVE);
 	if (do_mpsse) {
 		uint8_t DI[4];
-		DI[0] = (MS >>  0) & 0xff;
-		DI[1] = (MS >>  8) & 0xff;
-		DI[2] = (MS >> 16) & 0xff;
-		DI[3] = (MS >> 24) & 0xff;
-		libftdi_jtagtap_tdi_tdo_seq(NULL, 0, DI, ticks);
+		DI[0] = (tms_states >>  0) & 0xff;
+		DI[1] = (tms_states >>  8) & 0xff;
+		DI[2] = (tms_states >> 16) & 0xff;
+		DI[3] = (tms_states >> 24) & 0xff;
+		libftdi_jtagtap_tdi_tdo_seq(NULL, 0, DI, clock_cycles);
 	} else {
 		uint8_t cmd[16];
-		unsigned int index = 0;
-		while (ticks) {
+		size_t index = 0;
+		while (clock_cycles) {
 			cmd[index++] = MPSSE_TMS_SHIFT;
-			if (ticks >= 7) {
+			if (clock_cycles >= 7) {
 				cmd[index++] = 6;
-				cmd[index++] = MS & 0x7f;
-				MS >>= 7;
-				ticks -= 7;
+				cmd[index++] = tms_states & 0x7f;
+				tms_states >>= 7;
+				clock_cycles -= 7;
 			} else {
-				cmd[index++] = ticks - 1;
-				cmd[index++] = MS & 0x7f;
-				ticks = 0;
+				cmd[index++] = clock_cycles - 1;
+				cmd[index++] = tms_states & 0x7f;
+				clock_cycles = 0;
 			}
 		}
 		libftdi_buffer_write(cmd, index);
@@ -375,33 +374,33 @@ static void swdptap_seq_out(uint32_t MS, int ticks)
  * Implement last option to favour correctness over
  *   slight speed decrease
  */
-static void swdptap_seq_out_parity(uint32_t MS, int ticks)
+static void swdptap_seq_out_parity(uint32_t tms_states, size_t clock_cycles)
 {
-	(void) ticks;
-	int parity = __builtin_parity(MS) & 1;
-	unsigned int index = 0;
+	(void) clock_cycles;
+	int parity = __builtin_parity(tms_states) & 1;
+	size_t index = 0;
 	swdptap_turnaround(SWDIO_STATUS_DRIVE);
 	if (do_mpsse) {
 		uint8_t DI[8];
-		DI[0] = (MS >>  0) & 0xff;
-		DI[1] = (MS >>  8) & 0xff;
-		DI[2] = (MS >> 16) & 0xff;
-		DI[3] = (MS >> 24) & 0xff;
+		DI[0] = (tms_states >>  0) & 0xff;
+		DI[1] = (tms_states >>  8) & 0xff;
+		DI[2] = (tms_states >> 16) & 0xff;
+		DI[3] = (tms_states >> 24) & 0xff;
 		DI[4] = parity;
 		DI[5] = 0;
 		libftdi_jtagtap_tdi_tdo_seq(NULL, 0, DI, 32 + 1 + 8);
 	} else {
 		uint8_t cmd[32];
-		int steps = ticks;
+		size_t steps = clock_cycles;
 		while (steps) {
 			cmd[index++] = MPSSE_TMS_SHIFT;
 			cmd[index++] = 6;
 			if (steps >= 7) {
-				cmd[index++] = MS & 0x7f;
-				MS >>= 7;
+				cmd[index++] = tms_states & 0x7f;
+				tms_states >>= 7;
 				steps -= 7;
 			} else {
-				cmd[index++] = (MS & 0x7f) | (parity << 4);
+				cmd[index++] = (tms_states & 0x7f) | (parity << 4);
 				steps = 0;
 			}
 		}
