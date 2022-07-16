@@ -35,9 +35,9 @@ static void jtagtap_reset(void)
 	jtagtap_soft_reset();
 }
 
-static void jtagtap_tms_seq(uint32_t MS, int ticks)
+static void jtagtap_tms_seq(uint32_t tms_states, size_t ticks)
 {
-	DEBUG_PROBE("jtagtap_tms_seq 0x%08" PRIx32 ", ticks %d\n", MS, ticks);
+	DEBUG_PROBE("jtagtap_tms_seq 0x%08" PRIx32 ", ticks %d\n", tms_states, ticks);
 	int len = (ticks + 7) / 8;
 	uint8_t cmd[12];
 	cmd[0] = CMD_HW_JTAG3;
@@ -46,10 +46,10 @@ static void jtagtap_tms_seq(uint32_t MS, int ticks)
 	cmd[3] = 0;
 	uint8_t *tms = cmd + 4;
 	for (int i = 0; i < len; i++) {
-		*tms = MS & 0xff;
+		*tms = tms_states & 0xff;
 		*(tms + len) = *tms;
 		tms++;
-		MS >>= 8;
+		tms_states >>= 8;
 	}
 	uint8_t res[4];
 	send_recv(info.usb_link, cmd, 4 + 2 * len, res, len);
@@ -58,17 +58,17 @@ static void jtagtap_tms_seq(uint32_t MS, int ticks)
 		raise_exception(EXCEPTION_ERROR, "tagtap_tms_seq failed");
 }
 
-static void jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms,
-						 const uint8_t *DI, int ticks)
+static void jtagtap_tdi_tdo_seq(uint8_t *data_out, const bool final_tms,
+						 const uint8_t *data_in, size_t ticks)
 {
 	if (!ticks)
 		return;
 	int len = (ticks + 7) / 8;
 	if (cl_debuglevel & BMP_DEBUG_PROBE) {
-		DEBUG_PROBE("jtagtap_tdi_tdo %s, ticks %d, DI: ",
+		DEBUG_PROBE("jtagtap_tdi_tdo %s, ticks %d, data_in: ",
 			   (final_tms) ? "Final TMS" : "", ticks);
 		for (int i = 0; i < len; i++) {
-			DEBUG_PROBE("%02x", DI[i]);
+			DEBUG_PROBE("%02x", data_in[i]);
 		}
 		DEBUG_PROBE("\n");
 	}
@@ -83,11 +83,11 @@ static void jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms,
 	if (final_tms)
 		cmd[4 + (ticks - 1) / 8] |= (1 << ((ticks - 1) % 8));
 	uint8_t *tdi = tms;
-	if (DI)
+	if (data_in)
 		for (int i = 0; i < len; i++)
-			*tdi++ = DI[i];
-	if (DO)
-		send_recv(info.usb_link, cmd, 4 + 2 * len, DO, len);
+			*tdi++ = data_in[i];
+	if (data_out)
+		send_recv(info.usb_link, cmd, 4 + 2 * len, data_out, len);
 	else
 		send_recv(info.usb_link, cmd, 4 + 2 * len, cmd, len);
 	uint8_t res[1];
@@ -96,12 +96,12 @@ static void jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms,
 		raise_exception(EXCEPTION_ERROR, "jtagtap_tdi_tdi failed");
 }
 
-static void jtagtap_tdi_seq(const uint8_t final_tms, const uint8_t *DI,
-							int ticks)
+static void jtagtap_tdi_seq(const bool final_tms, const uint8_t *data_in,
+							size_t ticks)
 {
 	if (cl_debuglevel & BMP_DEBUG_PROBE) {
 		DEBUG_PROBE("jtagtap_tdi_seq %s:", (final_tms)? "final_tms" : "");
-		const uint8_t *p = DI;
+		const uint8_t *p = data_in;
 		unsigned int i = (ticks & 7) & ~7 ;
 		if (i > 16)
 			i = 16;
@@ -111,19 +111,19 @@ static void jtagtap_tdi_seq(const uint8_t final_tms, const uint8_t *DI,
 			DEBUG_PROBE(" ...");
 		DEBUG_PROBE("\n");
 	}
-	return jtagtap_tdi_tdo_seq(NULL,  final_tms, DI, ticks);
+	return jtagtap_tdi_tdo_seq(NULL,  final_tms, data_in, ticks);
 }
 
-static uint8_t jtagtap_next(uint8_t dTMS, uint8_t dTDI)
+static bool jtagtap_next(bool tms, bool tdi)
 {
-	DEBUG_PROBE("jtagtap_next TMS 0x%02x, TDI %02x\n", dTMS, dTDI);
+	DEBUG_PROBE("jtagtap_next TMS 0x%02x, TDI %02x\n", tms, tdi);
 	uint8_t cmd[6];
 	cmd[0] = CMD_HW_JTAG3;
 	cmd[1] = 0;
 	cmd[2] = 1;
 	cmd[3] = 0;
-	cmd[4] = (dTMS) ? 0xff : 0;
-	cmd[5] = (dTDI) ? 0xff : 0;
+	cmd[4] = tms ? 0xff : 0;
+	cmd[5] = tdi ? 0xff : 0;
 	uint8_t ret[1];
 	send_recv(info.usb_link, cmd, 6, ret, 1);
 	uint8_t res[1];

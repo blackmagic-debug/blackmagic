@@ -36,12 +36,10 @@
 #include "bmp_remote.h"
 
 static void jtagtap_reset(void);
-static void jtagtap_tms_seq(uint32_t MS, int ticks);
-static void jtagtap_tdi_tdo_seq(
-	uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int ticks);
-static void jtagtap_tdi_seq(
-	const uint8_t final_tms, const uint8_t *DI, int ticks);
-static uint8_t jtagtap_next(uint8_t dTMS, uint8_t dTDI);
+static void jtagtap_tms_seq(uint32_t MS, size_t ticks);
+static void jtagtap_tdi_tdo_seq(uint8_t *DO, bool final_tms, const uint8_t *DI, size_t ticks);
+static void jtagtap_tdi_seq(bool final_tms, const uint8_t *DI, size_t ticks);
+static bool jtagtap_next(bool dTMS, bool dTDI);
 
 int remote_jtagtap_init(jtag_proc_t *jtag_proc)
 {
@@ -87,7 +85,7 @@ static void jtagtap_reset(void)
     }
 }
 
-static void jtagtap_tms_seq(uint32_t MS, int ticks)
+static void jtagtap_tms_seq(uint32_t MS, size_t ticks)
 {
 	uint8_t construct[REMOTE_MAX_MSG_SIZE];
 	int s;
@@ -110,8 +108,7 @@ static void jtagtap_tms_seq(uint32_t MS, int ticks)
  * FIXME: Provide and test faster call and keep fallback
  * for old firmware
  */
-static void jtagtap_tdi_tdo_seq(
-	uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int ticks)
+static void jtagtap_tdi_tdo_seq(uint8_t *DO, const bool final_tms, const uint8_t *DI, size_t ticks)
 {
 	uint8_t construct[REMOTE_MAX_MSG_SIZE];
 	int s;
@@ -159,14 +156,12 @@ static void jtagtap_tdi_tdo_seq(
 	}
 }
 
-static void jtagtap_tdi_seq(
-	const uint8_t final_tms, const uint8_t *DI, int ticks)
+static void jtagtap_tdi_seq(const bool final_tms, const uint8_t *DI, size_t ticks)
 {
 	return jtagtap_tdi_tdo_seq(NULL,  final_tms, DI, ticks);
 }
 
-
-static uint8_t jtagtap_next(uint8_t dTMS, uint8_t dTDI)
+static bool jtagtap_next(bool dTMS, bool dTDI)
 {
 	uint8_t construct[REMOTE_MAX_MSG_SIZE];
 	int s;
