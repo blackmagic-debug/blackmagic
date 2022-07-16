@@ -236,11 +236,11 @@ static void remotePacketProcessJTAG(unsigned i, char *packet)
 		break;
 
     case REMOTE_NEXT: /* JN = NEXT ======================================== */
-		if (i!=4) {
-			_respond(REMOTE_RESP_ERR,REMOTE_ERROR_WRONGLEN);
-		} else {
-			uint32_t dat=jtag_proc.jtagtap_next( (packet[2]=='1'), (packet[3]=='1'));
-			_respond(REMOTE_RESP_OK,dat);
+		if (i != 4)
+			_respond(REMOTE_RESP_ERR, REMOTE_ERROR_WRONGLEN);
+		else {
+			uint32_t dat = jtag_proc.jtagtap_next(packet[2] == '1', packet[3] == '1');
+			_respond(REMOTE_RESP_OK, dat);
 		}
 		break;
 
