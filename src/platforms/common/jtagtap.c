@@ -31,7 +31,7 @@ jtag_proc_t jtag_proc;
 static void jtagtap_reset(void);
 static void jtagtap_tms_seq(uint32_t tms_states, int ticks);
 static void jtagtap_tdi_tdo_seq(uint8_t *data_out, uint8_t final_tms, const uint8_t *data_in, int ticks);
-static void jtagtap_tdi_seq(uint8_t final_tms, const uint8_t *DI, int ticks);
+static void jtagtap_tdi_seq(uint8_t final_tms, const uint8_t *data_in, int ticks);
 static uint8_t jtagtap_next(uint8_t tms, uint8_t tdi);
 
 int jtagtap_init()
@@ -129,10 +129,9 @@ static void jtagtap_tdi_tdo_seq_swd_delay(const uint8_t *data_in, uint8_t *data_
 	uint8_t value = 0;
 	while (clock_cycles--) {
 		/* On the last cycle, assert final_tms to TMS_PIN */
-		if (!clock_cycles)
-			gpio_set_val(TMS_PORT, TMS_PIN, final_tms);
+		gpio_set_val(TMS_PORT, TMS_PIN, clock_cycles ? false : final_tms);
 		/* Set up the TDI pin and start the clock cycle */
-		gpio_set_val(TDI_PORT, TDI_PIN, data_in[byte] & (1 << index));
+		gpio_set_val(TDI_PORT, TDI_PIN, data_in[byte] & (1U << index));
 		gpio_set(TCK_PORT, TCK_PIN);
 		for (volatile int32_t cnt = swd_delay_cnt - 2; cnt > 0; cnt--)
 			continue;
@@ -160,10 +159,9 @@ static void jtagtap_tdi_tdo_seq_no_delay(const uint8_t *data_in, uint8_t *data_o
 	uint8_t value = 0;
 	while (clock_cycles--) {
 		/* On the last tick, assert final_tms to TMS_PIN */
-		if (!clock_cycles)
-			gpio_set_val(TMS_PORT, TMS_PIN, final_tms);
+		gpio_set_val(TMS_PORT, TMS_PIN, clock_cycles ? false : final_tms);
 		/* Set up the TDI pin and start the clock cycle */
-		gpio_set_val(TDI_PORT, TDI_PIN, data_in[byte] & (1 << index));
+		gpio_set_val(TDI_PORT, TDI_PIN, data_in[byte] & (1U << index));
 		gpio_set(TCK_PORT, TCK_PIN);
 		/* If TDO is high, store a 1 in the appropriate position in the value being accumulated */
 		if (gpio_get(TDO_PORT, TDO_PIN))
@@ -190,35 +188,54 @@ static void jtagtap_tdi_tdo_seq(uint8_t *data_out, const uint8_t final_tms, cons
 		jtagtap_tdi_tdo_seq_no_delay(data_in, data_out, final_tms, ticks);
 }
 
-static void jtagtap_tdi_seq(const uint8_t final_tms, const uint8_t *DI, int ticks)
+static void jtagtap_tdi_seq_swd_delay(const uint8_t *data_in, const bool final_tms, size_t clock_cycles)
 {
-	uint8_t index = 1;
-	register volatile int32_t cnt;
-	if (swd_delay_cnt) {
-		while (ticks--) {
-			gpio_set_val(TMS_PORT, TMS_PIN, ticks ? 0 : final_tms);
-			gpio_set_val(TDI_PORT, TDI_PIN, *DI & index);
-			gpio_set(TCK_PORT, TCK_PIN);
-			for (cnt = swd_delay_cnt - 2; cnt > 0; cnt--)
-				;
-			if (!(index <<= 1)) {
-				index = 1;
-				DI++;
-			}
-			gpio_clear(TCK_PORT, TCK_PIN);
-			for (cnt = swd_delay_cnt - 2; cnt > 0; cnt--)
-				;
+	size_t byte = 0;
+	size_t index = 0;
+	while (clock_cycles--) {
+		/* On the last tick, assert final_tms to TMS_PIN */
+		gpio_set_val(TMS_PORT, TMS_PIN, clock_cycles ? false : final_tms);
+		/* Set up the TDI pin and start the clock cycle */
+		gpio_set_val(TDI_PORT, TDI_PIN, data_in[byte] & (1U << index));
+		gpio_set(TCK_PORT, TCK_PIN);
+		for (volatile int32_t cnt = swd_delay_cnt - 2; cnt > 0; cnt--)
+			continue;
+		/* If we've used a whole byte, reset state for the next */
+		if (index++ == 7U) {
+			++byte;
+			index = 0;
 		}
-	} else {
-		while (ticks--) {
-			gpio_set_val(TMS_PORT, TMS_PIN, ticks ? 0 : final_tms);
-			gpio_set_val(TDI_PORT, TDI_PIN, *DI & index);
-			gpio_set(TCK_PORT, TCK_PIN);
-			if (!(index <<= 1)) {
-				index = 1;
-				DI++;
-			}
-			gpio_clear(TCK_PORT, TCK_PIN);
-		}
+		/* Finish the clock cycle */
+		gpio_clear(TCK_PORT, TCK_PIN);
+		for (volatile int32_t cnt = swd_delay_cnt - 2; cnt > 0; cnt--)
+			continue;
 	}
+}
+
+static void jtagtap_tdi_seq_no_delay(const uint8_t *data_in, const bool final_tms, size_t clock_cycles)
+{
+	size_t byte = 0;
+	size_t index = 0;
+	while (clock_cycles--) {
+		/* On the last tick, assert final_tms to TMS_PIN */
+		gpio_set_val(TMS_PORT, TMS_PIN, clock_cycles ? false : final_tms);
+		/* Set up the TDI pin and start the clock cycle */
+		gpio_set_val(TDI_PORT, TDI_PIN, data_in[byte] & (1U << index));
+		gpio_set(TCK_PORT, TCK_PIN);
+		/* If we've used a whole byte, reset state for the next */
+		if (index++ == 7U) {
+			++byte;
+			index = 0;
+		}
+		/* Finish the clock cycle */
+		gpio_clear(TCK_PORT, TCK_PIN);
+	}
+}
+
+static void jtagtap_tdi_seq(const uint8_t final_tms, const uint8_t *data_in, int ticks)
+{
+	if (swd_delay_cnt)
+		jtagtap_tdi_seq_swd_delay(data_in, final_tms, ticks);
+	else
+		jtagtap_tdi_seq_no_delay(data_in, final_tms, ticks);
 }
