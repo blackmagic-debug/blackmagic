@@ -81,9 +81,9 @@ void dap_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value);
 void dap_read_single(ADIv5_AP_t *ap, void *dest, uint32_t src, enum align align);
 void dap_write_single(ADIv5_AP_t *ap, uint32_t dest, const void *src, enum align align);
 int dbg_dap_cmd(uint8_t *data, int size, int rsize);
-void dap_jtagtap_tdi_tdo_seq(uint8_t *DO, bool final_tms, const uint8_t *TMS, const uint8_t *DI, int ticks);
+void dap_jtagtap_tdi_tdo_seq(uint8_t *data_out, bool final_tms, const uint8_t *tms, const uint8_t *data_in, size_t clock_cycles);
 int dap_jtag_configure(void);
-void dap_swdptap_seq_out(uint32_t MS, int ticks);
-void dap_swdptap_seq_out_parity(uint32_t MS, int ticks);
+void dap_swdptap_seq_out(uint32_t tms_states, int clock_cycles);
+void dap_swdptap_seq_out_parity(uint32_t tms_states, int clock_cycles);
 
 #endif // _DAP_H_
