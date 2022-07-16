@@ -442,24 +442,24 @@ static void cmsis_dap_jtagtap_reset(void)
 	/* Is there a way to know if TRST is available?*/
 }
 
-static void cmsis_dap_jtagtap_tms_seq(const uint32_t tms_states, const size_t ticks)
+static void cmsis_dap_jtagtap_tms_seq(const uint32_t tms_states, const size_t clock_cycles)
 {
 	const uint8_t tms[4] = {
 		(uint8_t)tms_states, (uint8_t)(tms_states >> 8U), (uint8_t)(tms_states >> 16U), (uint8_t)(tms_states >> 24U)};
-	dap_jtagtap_tdi_tdo_seq(NULL, false, tms, NULL, ticks);
-	DEBUG_PROBE("tms_seq data_in %08x %zu\n", tms_states, ticks);
+	dap_jtagtap_tdi_tdo_seq(NULL, false, tms, NULL, clock_cycles);
+	DEBUG_PROBE("tms_seq data_in %08x %zu\n", tms_states, clock_cycles);
 }
 
-static void cmsis_dap_jtagtap_tdi_tdo_seq(uint8_t *const data_out, const bool final_tms, const uint8_t *const data_in, const size_t ticks)
+static void cmsis_dap_jtagtap_tdi_tdo_seq(uint8_t *const data_out, const bool final_tms, const uint8_t *const data_in, const size_t clock_cycles)
 {
-	dap_jtagtap_tdi_tdo_seq(data_out, final_tms, NULL, data_in, ticks);
-	DEBUG_PROBE("jtagtap_tdi_tdo_seq %zu, %02x-> %02x\n", ticks, data_in[0], data_out ? data_out[0] : 0);
+	dap_jtagtap_tdi_tdo_seq(data_out, final_tms, NULL, data_in, clock_cycles);
+	DEBUG_PROBE("jtagtap_tdi_tdo_seq %zu, %02x-> %02x\n", clock_cycles, data_in[0], data_out ? data_out[0] : 0);
 }
 
-static void cmsis_dap_jtagtap_tdi_seq(const bool final_tms, const uint8_t *const data_in, const size_t ticks)
+static void cmsis_dap_jtagtap_tdi_seq(const bool final_tms, const uint8_t *const data_in, const size_t clock_cycles)
 {
-	dap_jtagtap_tdi_tdo_seq(NULL, final_tms, NULL, data_in, ticks);
-	DEBUG_PROBE("jtagtap_tdi_seq %zu, %02x\n", ticks, data_in[0]);
+	dap_jtagtap_tdi_tdo_seq(NULL, final_tms, NULL, data_in, clock_cycles);
+	DEBUG_PROBE("jtagtap_tdi_seq %zu, %02x\n", clock_cycles, data_in[0]);
 }
 
 static bool cmsis_dap_jtagtap_next(const bool tms, const bool tdi)
@@ -467,7 +467,7 @@ static bool cmsis_dap_jtagtap_next(const bool tms, const bool tdi)
 	const uint8_t tms_byte = tms ? 1 : 0;
 	const uint8_t tdi_byte = tdi ? 1 : 0;
 	uint8_t tdo = 0;
-	dap_jtagtap_tdi_tdo_seq(&tdo, false, &tms_byte, &tdi_byte, 1);
+	dap_jtagtap_tdi_tdo_seq(&tdo, false, &tms_byte, &tdi_byte, 1U);
 	DEBUG_PROBE("next tms %02x tdi %02x tdo %02x\n", tms, tdi, tdo);
 	return tdo;
 }
