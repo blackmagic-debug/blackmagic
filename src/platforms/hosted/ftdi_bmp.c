@@ -588,11 +588,12 @@ static struct ftdi_transfer_control *tc_write = NULL;
 	bufptr = 0;
 }
 
-int libftdi_buffer_write(const uint8_t *data, int size)
+size_t libftdi_buffer_write(const uint8_t *data, size_t size)
 {
-	if((bufptr + size) / BUF_SIZE > 0) libftdi_buffer_flush();
+	if ((bufptr + size) / BUF_SIZE > 0)
+		libftdi_buffer_flush();
 	DEBUG_WIRE("Write %d bytes:", size);
-	for (int i = 0; i < size; i++) {
+	for (size_t i = 0; i < size; i++) {
 		DEBUG_WIRE(" %02x", data[i]);
 		if (i && (i & 0xf) == 0xf)
 			DEBUG_WIRE("\n\t");

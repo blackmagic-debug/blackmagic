@@ -106,7 +106,7 @@ int ftdi_bmp_init(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info) { return -1; }
 int libftdi_swdptap_init(ADIv5_DP_t *dp) { return -1; }
 int libftdi_jtagtap_init(jtag_proc_t *jtag_proc) { return 0; }
 void libftdi_buffer_flush(void) { }
-int libftdi_buffer_write(const uint8_t *data, int size) { return size; }
+size_t libftdi_buffer_write(const uint8_t *data, size_t size) { return size; }
 int libftdi_buffer_read(uint8_t *data, int size) { return size; }
 const char *libftdi_target_voltage(void) { return "ERROR"; }
 void libftdi_jtagtap_tdi_tdo_seq(uint8_t *const data_out, const bool final_tms,
@@ -128,7 +128,7 @@ int ftdi_bmp_init(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info);
 int libftdi_swdptap_init(ADIv5_DP_t *dp);
 int libftdi_jtagtap_init(jtag_proc_t *jtag_proc);
 void libftdi_buffer_flush(void);
-int libftdi_buffer_write(const uint8_t *data, int size);
+size_t libftdi_buffer_write(const uint8_t *data, size_t size);
 int libftdi_buffer_read(uint8_t *data, int size);
 const char *libftdi_target_voltage(void);
 void libftdi_jtagtap_tdi_tdo_seq(uint8_t *data_out, bool final_tms, const uint8_t *data_in, size_t ticks);
