@@ -764,7 +764,7 @@ int dap_jtag_configure(void)
 	return 0;
 }
 
-void dap_swdptap_seq_out(uint32_t tms_states, int clock_cycles)
+void dap_swdptap_seq_out(uint32_t tms_states, size_t clock_cycles)
 {
 	/* clang-format off */
 	uint8_t buf[64] = {
@@ -781,7 +781,7 @@ void dap_swdptap_seq_out(uint32_t tms_states, int clock_cycles)
 		DEBUG_WARN("dap_swdptap_seq_out error\n");
 }
 
-void dap_swdptap_seq_out_parity(uint32_t tms_states, int clock_cycles)
+void dap_swdptap_seq_out_parity(uint32_t tms_states, size_t clock_cycles)
 {
 	/* clang-format off */
 	uint8_t buf[] = {
