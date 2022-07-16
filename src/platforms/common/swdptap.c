@@ -59,40 +59,47 @@ static void swdptap_turnaround(const swdio_status_t dir)
 		SWDIO_MODE_DRIVE();
 }
 
+static uint32_t swdptap_seq_in_swd_delay(size_t clock_cycles) __attribute__((optimize(3)));
+static uint32_t swdptap_seq_in_swd_delay(size_t clock_cycles)
+{
+	size_t index = 0;
+	uint32_t value = 0;
+	while (clock_cycles--) {
+		if (gpio_get(SWDIO_PORT, SWDIO_PIN))
+			value |= (1U << index);
+		gpio_set(SWCLK_PORT, SWCLK_PIN);
+		for (volatile int32_t cnt = swd_delay_cnt - 2; cnt > 0; cnt--)
+			continue;
+		++index;
+		gpio_clear(SWCLK_PORT, SWCLK_PIN);
+		for (volatile int32_t cnt = swd_delay_cnt - 2; cnt > 0; cnt--)
+			continue;
+	}
+	return value;
+}
+
+static uint32_t swdptap_seq_in_no_delay(size_t clock_cycles) __attribute__((optimize(3)));
+static uint32_t swdptap_seq_in_no_delay(size_t clock_cycles)
+{
+	size_t index = 0;
+	uint32_t value = 0;
+	while (clock_cycles--) {
+		if (gpio_get(SWDIO_PORT, SWDIO_PIN))
+			value |= (1U << index);
+		gpio_set(SWCLK_PORT, SWCLK_PIN);
+		++index;
+		gpio_clear(SWCLK_PORT, SWCLK_PIN);
+	}
+	return value;
+}
+
 static uint32_t swdptap_seq_in(size_t clock_cycles)
 {
-	uint32_t index = 1;
-	uint32_t ret = 0;
-	int len = clock_cycles;
-	register volatile int32_t cnt;
-
 	swdptap_turnaround(SWDIO_STATUS_FLOAT);
-	if (swd_delay_cnt) {
-		while (len--) {
-			int res;
-			res = gpio_get(SWDIO_PORT, SWDIO_PIN);
-			gpio_set(SWCLK_PORT, SWCLK_PIN);
-			for(cnt = swd_delay_cnt; --cnt > 0;);
-			ret |= (res) ? index : 0;
-			index <<= 1;
-			gpio_clear(SWCLK_PORT, SWCLK_PIN);
-			for(cnt = swd_delay_cnt; --cnt > 0;);
-		}
-	} else {
-		volatile int res;
-		while (len--) {
-			res = gpio_get(SWDIO_PORT, SWDIO_PIN);
-			gpio_set(SWCLK_PORT, SWCLK_PIN);
-			ret |= (res) ? index : 0;
-			index <<= 1;
-			gpio_clear(SWCLK_PORT, SWCLK_PIN);
-		}
-	}
-#ifdef DEBUG_SWD_BITS
-	for (int i = 0; i < len; i++)
-		DEBUG("%d", (ret & (1 << i)) ? 1 : 0);
-#endif
-	return ret;
+	if (swd_delay_cnt)
+		return swdptap_seq_in_swd_delay(clock_cycles);
+	else // NOLINT(readability-else-after-return)
+		return swdptap_seq_in_no_delay(clock_cycles);
 }
 
 static bool swdptap_seq_in_parity(uint32_t *ret, size_t ticks)
