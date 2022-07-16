@@ -113,7 +113,7 @@ static void jtagtap_tms_seq_no_delay(uint32_t tms_states, size_t ticks)
 	}
 }
 
-static void jtagtap_tms_seq(uint32_t tms_states, size_t ticks)
+static void jtagtap_tms_seq(const uint32_t tms_states, const size_t ticks)
 {
 	gpio_set(TDI_PORT, TDI_PIN);
 	if (swd_delay_cnt)
@@ -122,7 +122,7 @@ static void jtagtap_tms_seq(uint32_t tms_states, size_t ticks)
 		jtagtap_tms_seq_no_delay(tms_states, ticks);
 }
 
-static void jtagtap_tdi_tdo_seq_swd_delay(const uint8_t *data_in, uint8_t *data_out, const bool final_tms, size_t clock_cycles)
+static void jtagtap_tdi_tdo_seq_swd_delay(const uint8_t *const data_in, uint8_t *const data_out, const bool final_tms, size_t clock_cycles)
 {
 	size_t byte = 0;
 	size_t index = 0;
@@ -152,7 +152,7 @@ static void jtagtap_tdi_tdo_seq_swd_delay(const uint8_t *data_in, uint8_t *data_
 		data_out[byte] = value;
 }
 
-static void jtagtap_tdi_tdo_seq_no_delay(const uint8_t *data_in, uint8_t *data_out, const bool final_tms, size_t clock_cycles)
+static void jtagtap_tdi_tdo_seq_no_delay(const uint8_t *const data_in, uint8_t *const data_out, const bool final_tms, size_t clock_cycles)
 {
 	size_t byte = 0;
 	size_t index = 0;
@@ -179,7 +179,7 @@ static void jtagtap_tdi_tdo_seq_no_delay(const uint8_t *data_in, uint8_t *data_o
 		data_out[byte] = value;
 }
 
-static void jtagtap_tdi_tdo_seq(uint8_t *data_out, const bool final_tms, const uint8_t *data_in, size_t ticks)
+static void jtagtap_tdi_tdo_seq(uint8_t *const data_out, const bool final_tms, const uint8_t *const data_in, size_t ticks)
 {
 	gpio_clear(TDI_PORT, TDI_PIN);
 	if (swd_delay_cnt)
@@ -188,7 +188,7 @@ static void jtagtap_tdi_tdo_seq(uint8_t *data_out, const bool final_tms, const u
 		jtagtap_tdi_tdo_seq_no_delay(data_in, data_out, final_tms, ticks);
 }
 
-static void jtagtap_tdi_seq_swd_delay(const uint8_t *data_in, const bool final_tms, size_t clock_cycles)
+static void jtagtap_tdi_seq_swd_delay(const uint8_t *const data_in, const bool final_tms, size_t clock_cycles)
 {
 	size_t byte = 0;
 	size_t index = 0;
@@ -212,7 +212,7 @@ static void jtagtap_tdi_seq_swd_delay(const uint8_t *data_in, const bool final_t
 	}
 }
 
-static void jtagtap_tdi_seq_no_delay(const uint8_t *data_in, const bool final_tms, size_t clock_cycles)
+static void jtagtap_tdi_seq_no_delay(const uint8_t *const data_in, const bool final_tms, size_t clock_cycles)
 {
 	size_t byte = 0;
 	size_t index = 0;
@@ -232,7 +232,7 @@ static void jtagtap_tdi_seq_no_delay(const uint8_t *data_in, const bool final_tm
 	}
 }
 
-static void jtagtap_tdi_seq(const bool final_tms, const uint8_t *data_in, size_t ticks)
+static void jtagtap_tdi_seq(const bool final_tms, const uint8_t *const data_in, const size_t ticks)
 {
 	if (swd_delay_cnt)
 		jtagtap_tdi_seq_swd_delay(data_in, final_tms, ticks);
