@@ -59,18 +59,17 @@ static void swdptap_turnaround(const swdio_status_t dir)
 		SWDIO_MODE_DRIVE();
 }
 
-static uint32_t swdptap_seq_in_swd_delay(const size_t clock_cycles) __attribute__((optimize(3)));
+static uint32_t swdptap_seq_in_swd_delay(size_t clock_cycles) __attribute__((optimize(3)));
 static uint32_t swdptap_seq_in_swd_delay(const size_t clock_cycles)
 {
-	size_t index = 0;
 	uint32_t value = 0;
-	for (size_t cycle = 0; cycle < clock_cycles; ++cycle) {
+	for (size_t cycle = 0; cycle < clock_cycles;) {
 		if (gpio_get(SWDIO_PORT, SWDIO_PIN))
-			value |= (1U << index);
+			value |= (1U << cycle);
 		gpio_set(SWCLK_PORT, SWCLK_PIN);
 		for (volatile int32_t cnt = swd_delay_cnt - 2; cnt > 0; cnt--)
 			continue;
-		++index;
+		++cycle;
 		gpio_clear(SWCLK_PORT, SWCLK_PIN);
 		for (volatile int32_t cnt = swd_delay_cnt - 2; cnt > 0; cnt--)
 			continue;
@@ -78,16 +77,15 @@ static uint32_t swdptap_seq_in_swd_delay(const size_t clock_cycles)
 	return value;
 }
 
-static uint32_t swdptap_seq_in_no_delay(const size_t clock_cycles) __attribute__((optimize(3)));
+static uint32_t swdptap_seq_in_no_delay(size_t clock_cycles) __attribute__((optimize(3)));
 static uint32_t swdptap_seq_in_no_delay(const size_t clock_cycles)
 {
-	size_t index = 0;
 	uint32_t value = 0;
-	for (size_t cycle = 0; cycle < clock_cycles; ++cycle) {
+	for (size_t cycle = 0; cycle < clock_cycles;) {
 		if (gpio_get(SWDIO_PORT, SWDIO_PIN))
-			value |= (1U << index);
+			value |= (1U << cycle);
 		gpio_set(SWCLK_PORT, SWCLK_PIN);
-		++index;
+		++cycle;
 		gpio_clear(SWCLK_PORT, SWCLK_PIN);
 	}
 	return value;
