@@ -24,37 +24,38 @@
 #include "timing.h"
 #include "adiv5.h"
 
-enum {
+typedef enum swdio_status_e {
 	SWDIO_STATUS_FLOAT = 0,
 	SWDIO_STATUS_DRIVE
-};
+} swdio_status_t;
 
-static void swdptap_turnaround(int dir) __attribute__((optimize(3)));
+static void swdptap_turnaround(swdio_status_t dir) __attribute__((optimize(3)));
 static uint32_t swdptap_seq_in(size_t clock_cycles) __attribute__((optimize(3)));
 static bool swdptap_seq_in_parity(uint32_t *ret, size_t clock_cycles) __attribute__((optimize(3)));
 static void swdptap_seq_out(uint32_t tms_states, size_t clock_cycles) __attribute__((optimize(3)));
 static void swdptap_seq_out_parity(uint32_t tms_states, size_t clock_cycles) __attribute__((optimize(3)));
 
-static void swdptap_turnaround(int dir)
+static void swdptap_turnaround(const swdio_status_t dir)
 {
-	static int olddir = SWDIO_STATUS_FLOAT;
-	register volatile int32_t cnt;
-
+	static swdio_status_t olddir = SWDIO_STATUS_FLOAT;
 	/* Don't turnaround if direction not changing */
-	if(dir == olddir) return;
+	if (dir == olddir)
+		return;
 	olddir = dir;
 
 #ifdef DEBUG_SWD_BITS
-	DEBUG("%s", dir ? "\n-> ":"\n<- ");
+	DEBUG("%s", dir ? "\n-> " : "\n<- ");
 #endif
 
-	if(dir == SWDIO_STATUS_FLOAT)
+	if (dir == SWDIO_STATUS_FLOAT)
 		SWDIO_MODE_FLOAT();
 	gpio_set(SWCLK_PORT, SWCLK_PIN);
-	for(cnt = swd_delay_cnt; --cnt > 0;);
+	for (volatile int32_t cnt = swd_delay_cnt; --cnt > 0;)
+		continue;
 	gpio_clear(SWCLK_PORT, SWCLK_PIN);
-	for(cnt = swd_delay_cnt; --cnt > 0;);
-	if(dir == SWDIO_STATUS_DRIVE)
+	for (volatile int32_t cnt = swd_delay_cnt; --cnt > 0;)
+		continue;
+	if (dir == SWDIO_STATUS_DRIVE)
 		SWDIO_MODE_DRIVE();
 }
 
