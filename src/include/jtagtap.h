@@ -49,6 +49,7 @@ typedef struct jtag_proc_s {
 	 */
 	void (*jtagtap_tdi_tdo_seq)(uint8_t *data_out, const bool final_tms, const uint8_t *data_in, size_t clock_cycles);
 	void (*jtagtap_tdi_seq)(const bool final_tms, const uint8_t *data_in, size_t clock_cycles);
+	void (*jtagtap_cycle)(const bool tms, const bool tdi, const size_t clock_cycles);
 } jtag_proc_t;
 
 extern jtag_proc_t jtag_proc;
