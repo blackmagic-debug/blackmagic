@@ -43,6 +43,11 @@ static void jtagtap_tdi_seq(bool final_tms, const uint8_t *DI, size_t ticks);
 static bool jtagtap_next(bool tms, bool tdi);
 static void jtagtap_cycle(bool tms, bool tdi, size_t clock_cycles);
 
+static inline unsigned int bool_to_int(const bool value)
+{
+	return value ? 1 : 0;
+}
+
 int remote_jtagtap_init(jtag_proc_t *jtag_proc)
 {
 	uint8_t construct[REMOTE_MAX_MSG_SIZE];
@@ -163,7 +168,7 @@ static void jtagtap_tdi_seq(const bool final_tms, const uint8_t *DI, size_t tick
 static bool jtagtap_next(const bool tms, const bool tdi)
 {
 	char buffer[REMOTE_MAX_MSG_SIZE];
-	int length = snprintf((char *)buffer, REMOTE_MAX_MSG_SIZE, REMOTE_JTAG_NEXT, tms ? 1 : 0, tdi ? 1 : 0);
+	int length = snprintf((char *)buffer, REMOTE_MAX_MSG_SIZE, REMOTE_JTAG_NEXT, bool_to_int(tms), bool_to_int(tdi));
 	platform_buffer_write((uint8_t *)buffer, length);
 
 	length = platform_buffer_read((uint8_t *)buffer, REMOTE_MAX_MSG_SIZE);
@@ -178,10 +183,13 @@ static bool jtagtap_next(const bool tms, const bool tdi)
 static void jtagtap_cycle(const bool tms, const bool tdi, const size_t clock_cycles)
 {
 	char buffer[REMOTE_MAX_MSG_SIZE];
-	int length = snprintf(buffer, REMOTE_MAX_MSG_SIZE, REMOTE_JTAG_CYCLE_STR, tms ? 1 : 0, tdi ? 1 : 0, clock_cycles);
+	int length =
+		snprintf(buffer, REMOTE_MAX_MSG_SIZE, REMOTE_JTAG_CYCLE_STR, bool_to_int(tms), bool_to_int(tdi), clock_cycles);
 	platform_buffer_write((uint8_t *)buffer, length);
 
 	length = platform_buffer_read((uint8_t *)buffer, REMOTE_MAX_MSG_SIZE);
-	if (!length || buffer[0] == REMOTE_RESP_ERR)
+	if (!length || buffer[0] == REMOTE_RESP_ERR) {
 		DEBUG_WARN("jtagtap_cycle failed, error %s\n", length ? buffer + 1 : "unknown");
+		exit(-1);
+	}
 }
