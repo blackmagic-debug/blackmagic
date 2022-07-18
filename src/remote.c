@@ -184,7 +184,7 @@ static void remotePacketProcessJTAG(unsigned i, char *packet)
 {
 	uint32_t MS;
 	uint64_t DO;
-	uint8_t ticks;
+	size_t ticks;
 	uint64_t DI;
 	jtag_dev_t jtag_dev;
 	switch (packet[1]) {
@@ -213,8 +213,17 @@ static void remotePacketProcessJTAG(unsigned i, char *packet)
 		}
 		break;
 
-    case REMOTE_TDITDO_TMS: /* JD = TDI/TDO  ========================================= */
-    case REMOTE_TDITDO_NOTMS:
+	case REMOTE_CYCLE: { /* JC = clock cycle ============================ */
+		ticks = remotehston(8, &packet[4]);
+		const bool tms = packet[2] != '0';
+		const bool tdi = packet[3] != '0';
+		jtag_proc.jtagtap_cycle(tms, tdi, ticks);
+		remote_respond(REMOTE_RESP_OK, 0);
+		break;
+	}
+
+	case REMOTE_TDITDO_TMS: /* JD = TDI/TDO  ========================================= */
+	case REMOTE_TDITDO_NOTMS:
 
 		if (i<5) {
 			remote_respond(REMOTE_RESP_ERR,REMOTE_ERROR_WRONGLEN);
@@ -235,8 +244,8 @@ static void remotePacketProcessJTAG(unsigned i, char *packet)
 		if (i != 4)
 			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_WRONGLEN);
 		else {
-			uint32_t dat = jtag_proc.jtagtap_next(packet[2] == '1', packet[3] == '1');
-			remote_respond(REMOTE_RESP_OK, dat);
+			const bool tdo = jtag_proc.jtagtap_next(packet[2] == '1', packet[3] == '1');
+			remote_respond(REMOTE_RESP_OK, tdo ? 1U : 0U);
 		}
 		break;
 
