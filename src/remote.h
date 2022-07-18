@@ -143,8 +143,11 @@
 #define REMOTE_JTAG_TDIDO_STR (char []){ REMOTE_SOM, REMOTE_JTAG_PACKET, '%', 'c', \
       '%','0','2','x','%','l', 'x', REMOTE_EOM, 0 }
 
-#define REMOTE_JTAG_CYCLE_STR (char []){ REMOTE_SOM, REMOTE_JTAG_PACKET, REMOTE_CYCLE, '%', 'u', '%', 'u', \
-	'%', '0', '8', 'x', REMOTE_EOM, 0 }
+#define REMOTE_JTAG_CYCLE_STR                                                                               \
+	(char[])                                                                                                \
+	{                                                                                                       \
+		REMOTE_SOM, REMOTE_JTAG_PACKET, REMOTE_CYCLE, '%', 'u', '%', 'u', '%', '0', '8', 'x', REMOTE_EOM, 0 \
+	}
 
 #define REMOTE_JTAG_NEXT                                                               \
 	(char[])                                                                           \
