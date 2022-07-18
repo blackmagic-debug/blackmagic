@@ -146,8 +146,11 @@
 #define REMOTE_JTAG_CYCLE_STR (char []){ REMOTE_SOM, REMOTE_JTAG_PACKET, REMOTE_CYCLE, '%', 'u', '%', 'u', \
 	'%', '0', '8', 'x', REMOTE_EOM, 0 }
 
-#define REMOTE_JTAG_NEXT (char []){ REMOTE_SOM, REMOTE_JTAG_PACKET, REMOTE_NEXT, \
-                                       '%','c','%','c',REMOTE_EOM, 0 }
+#define REMOTE_JTAG_NEXT                                                               \
+	(char[])                                                                           \
+	{                                                                                  \
+		REMOTE_SOM, REMOTE_JTAG_PACKET, REMOTE_NEXT, '%', 'u', '%', 'u', REMOTE_EOM, 0 \
+	}
 /* HL protocol elements */
 #define HEX '%', '0', '2', 'x'
 #define HEX_U32(x) '%', '0', '8', 'x'
