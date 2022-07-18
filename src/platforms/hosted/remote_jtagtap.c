@@ -33,6 +33,7 @@
 
 #include "remote.h"
 #include "jtagtap.h"
+#include "bmp_hosted.h"
 #include "bmp_remote.h"
 
 static void jtagtap_reset(void);
@@ -40,6 +41,7 @@ static void jtagtap_tms_seq(uint32_t MS, size_t ticks);
 static void jtagtap_tdi_tdo_seq(uint8_t *DO, bool final_tms, const uint8_t *DI, size_t ticks);
 static void jtagtap_tdi_seq(bool final_tms, const uint8_t *DI, size_t ticks);
 static bool jtagtap_next(bool dTMS, bool dTDI);
+static void jtagtap_cycle(bool tms, bool tdi, size_t clock_cycles);
 
 int remote_jtagtap_init(jtag_proc_t *jtag_proc)
 {
@@ -62,6 +64,13 @@ int remote_jtagtap_init(jtag_proc_t *jtag_proc)
 	jtag_proc->jtagtap_tms_seq = jtagtap_tms_seq;
 	jtag_proc->jtagtap_tdi_tdo_seq = jtagtap_tdi_tdo_seq;
 	jtag_proc->jtagtap_tdi_seq = jtagtap_tdi_seq;
+
+	platform_buffer_write((uint8_t *)REMOTE_HL_CHECK_STR, sizeof(REMOTE_HL_CHECK_STR));
+	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
+	if (!s || construct[0] == REMOTE_RESP_ERR || construct[0] == 1)
+		PRINT_INFO("Firmware does not support newer JTAG commands, please update it.");
+	else
+		jtag_proc->jtagtap_cycle = jtagtap_cycle;
 
 	return 0;
 }
@@ -179,4 +188,15 @@ static bool jtagtap_next(bool dTMS, bool dTDI)
     }
 
 	return remotehston(-1, (char *)&construct[1]);
+}
+
+static void jtagtap_cycle(const bool tms, const bool tdi, const size_t clock_cycles)
+{
+	char buffer[REMOTE_MAX_MSG_SIZE];
+	int length = snprintf(buffer, REMOTE_MAX_MSG_SIZE, REMOTE_JTAG_CYCLE_STR, tms ? 1 : 0, tdi ? 1 : 0, clock_cycles);
+	platform_buffer_write((uint8_t *)buffer, length);
+
+	length = platform_buffer_read((uint8_t *)buffer, REMOTE_MAX_MSG_SIZE);
+	if (!length || buffer[0] == REMOTE_RESP_ERR)
+		DEBUG_WARN("jtagtap_cycle failed, error %s\n", length ? buffer + 1 : "unknown");
 }
