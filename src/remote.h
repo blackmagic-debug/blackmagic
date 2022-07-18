@@ -24,7 +24,7 @@
 #include <inttypes.h>
 #include "general.h"
 
-#define REMOTE_HL_VERSION 1
+#define REMOTE_HL_VERSION 2
 
 /*
  * Commands to remote end, and responses
@@ -65,6 +65,7 @@
 #define REMOTE_START        'A'
 #define REMOTE_TDITDO_TMS   'D'
 #define REMOTE_TDITDO_NOTMS 'd'
+#define REMOTE_CYCLE        'c'
 #define REMOTE_IN_PAR       'I'
 #define REMOTE_FREQ_SET     'F'
 #define REMOTE_FREQ_GET     'f'
@@ -141,6 +142,9 @@
 
 #define REMOTE_JTAG_TDIDO_STR (char []){ REMOTE_SOM, REMOTE_JTAG_PACKET, '%', 'c', \
       '%','0','2','x','%','l', 'x', REMOTE_EOM, 0 }
+
+#define REMOTE_JTAG_CYCLE_STR (char []){ REMOTE_SOM, REMOTE_JTAG_PACKET, REMOTE_CYCLE, '%', 'u', '%', 'u', \
+	'%', '0', '8', 'x', REMOTE_EOM, 0 }
 
 #define REMOTE_JTAG_NEXT (char []){ REMOTE_SOM, REMOTE_JTAG_PACKET, REMOTE_NEXT, \
                                        '%','c','%','c',REMOTE_EOM, 0 }
