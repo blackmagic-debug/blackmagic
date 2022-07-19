@@ -356,7 +356,7 @@ static void display_target(int i, target *t, void *context)
 {
 	(void)context;
 	if (!strcmp(target_driver_name(t), "ARM Cortex-M")) {
-		gdb_outf("***%2d%sUnknown %s Designer %3x Partno %3x %s\n",
+		gdb_outf("***%2d%sUnknown %s Designer 0x%03x Partno 0x%03x %s\n",
 				 i, target_attached(t)?" * ":" ",
 				 target_driver_name(t),
 				 target_designer(t),
