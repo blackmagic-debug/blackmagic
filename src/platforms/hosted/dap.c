@@ -333,7 +333,7 @@ static uint32_t wait_word(uint8_t *buf, int size, int len, uint8_t *dp_fault)
 			break;
 	} while (buf[1] == DAP_TRANSFER_WAIT);
 
-	if(buf[1] == SWDP_ACK_FAULT) {
+	if (buf[1] != DAP_TRANSFER_OK && buf[1] != DAP_TRANSFER_NO_TARGET) {
 		*dp_fault = 1;
 		return 0;
 	}
