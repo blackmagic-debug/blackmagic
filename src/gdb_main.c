@@ -67,8 +67,10 @@ static void handle_kill_target(void);
 static void gdb_target_destroy_callback(struct target_controller *tc, target *t)
 {
 	(void)tc;
-	if (cur_target == t)
+	if (cur_target == t) {
+		gdb_out("You are now detached from the previous target.\n");
 		cur_target = NULL;
+	}
 
 	if (last_target == t)
 		last_target = NULL;
@@ -194,7 +196,7 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 			target_addr watch;
 			enum target_halt_reason reason;
 
-			if(!cur_target) {
+			if (!cur_target) {
 				/* Report "target exited" if no target */
 				gdb_putpacketz("W00");
 				break;
@@ -324,7 +326,7 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 			handle_q_packet(pbuf, size);
 			break;
 
-		case 'v':	/* General query packet */
+		case 'v':	/* Verbose command packet */
 			handle_v_packet(pbuf, size);
 			break;
 
