@@ -58,6 +58,7 @@ static char pbuf[BUF_SIZE + 1U];
 
 static target *cur_target;
 static target *last_target;
+static bool gdb_needs_detach_notify = false;
 
 static void handle_q_packet(char *packet, size_t len);
 static void handle_v_packet(char *packet, size_t len);
@@ -68,8 +69,10 @@ static void gdb_target_destroy_callback(struct target_controller *tc, target *t)
 {
 	(void)tc;
 	if (cur_target == t) {
+		gdb_put_notificationz("%Stop:W00");
 		gdb_out("You are now detached from the previous target.\n");
 		cur_target = NULL;
+		gdb_needs_detach_notify = true;
 	}
 
 	if (last_target == t)
@@ -634,6 +637,13 @@ static void handle_v_packet(char *packet, const size_t plen)
 		/* Commit flash operations. */
 		gdb_putpacketz(target_flash_done(cur_target) ? "EFF" : "OK");
 		flash_mode = 0;
+
+	} else if (!strcmp(packet, "vStopped")) {
+		if (gdb_needs_detach_notify) {
+			gdb_putpacketz("W00");
+			gdb_needs_detach_notify = false;
+		} else
+			gdb_putpacketz("OK");
 
 	} else {
 		DEBUG_GDB("*** Unsupported packet: %s\n", packet);
