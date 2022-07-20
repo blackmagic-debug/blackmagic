@@ -67,6 +67,7 @@ static target *last_target;
 static void handle_q_packet(char *packet, size_t len);
 static void handle_v_packet(char *packet, size_t len);
 static void handle_z_packet(char *packet, size_t len);
+static void handle_kill_target(void);
 
 static void gdb_target_destroy_callback(struct target_controller *tc, target *t)
 {
@@ -294,12 +295,7 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 			break;
 
 		case 'k':	/* Kill the target */
-			if(cur_target) {
-				target_reset(cur_target);
-				target_detach(cur_target);
-				last_target = cur_target;
-				cur_target = NULL;
-			}
+			handle_kill_target();
 			break;
 
 		case 'r':	/* Reset the target system */
@@ -494,6 +490,16 @@ static const cmd_executer q_commands[]=
 	{NULL, NULL},
 };
 
+static void handle_kill_target(void)
+{
+	if (cur_target) {
+		target_reset(cur_target);
+		target_detach(cur_target);
+		last_target = cur_target;
+		cur_target = NULL;
+	}
+}
+
 static void handle_q_packet(char *packet, const size_t length)
 {
 	if (exec_command(packet, length, q_commands))
@@ -526,6 +532,11 @@ static void handle_v_packet(char *packet, const size_t plen)
 			gdb_putpacketz("T05thread:1;");
 		} else
 			gdb_putpacketz("E01");
+
+	} else if (!strncmp(packet, "vKill;", 6)) {
+		/* Kill the target - we don't actually care about the PID that follows "vKill;" */
+		handle_kill_target();
+		gdb_putpacketz("OK");
 
 	} else if (!strncmp(packet, "vRun", 4)) {
 		/* Parse command line for get_cmdline semihosting call */
