@@ -468,6 +468,22 @@ static void exec_q_c(const char *packet, const size_t length)
 	gdb_putpacketz("QC1");
 }
 
+/*
+ * qfThreadInfo queries are required in GDB 11 and 12 as these GDBs require the server to support
+ * threading even when there's only the possiblity for one thread to exist. In this instance,
+ * we have to tell GDB that there is a single active thread so it doesn't think the "thread" died.
+ * qsThreadInfo will always follow qfThreadInfo when we reply as we have to specify 'l' at the
+ * end to terminate the list.. GDB doesn't like this not happening.
+ */
+static void exec_q_thread_info(const char *packet, const size_t length)
+{
+	(void)length;
+	if (packet[-11] == 'f')
+		gdb_putpacketz("m1");
+	else
+		gdb_putpacketz("l");
+}
+
 static const cmd_executer q_commands[]=
 {
 	{"qRcmd,",                         exec_q_rcmd},
@@ -476,6 +492,8 @@ static const cmd_executer q_commands[]=
 	{"qXfer:features:read:target.xml:",exec_q_feature_read},
 	{"qCRC:",                          exec_q_crc},
 	{"qC",                             exec_q_c},
+	{"qfThreadInfo",                   exec_q_thread_info},
+	{"qsThreadInfo",                   exec_q_thread_info},
 	{NULL, NULL},
 };
 
