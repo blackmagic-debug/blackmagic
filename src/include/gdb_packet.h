@@ -23,9 +23,9 @@
 
 #include <stdarg.h>
 
-int gdb_getpacket(char *packet, int size);
-void gdb_putpacket(const char *packet, int size);
-void gdb_putpacket2(const char *packet1, int size1, const char *packet2, int size2);
+size_t gdb_getpacket(char *packet, size_t size);
+void gdb_putpacket(const char *packet, size_t size);
+void gdb_putpacket2(const char *packet1, size_t size1, const char *packet2, size_t size2);
 #define gdb_putpacketz(packet) gdb_putpacket((packet), strlen(packet))
 void gdb_putpacket_f(const char *packet, ...);
 
@@ -34,5 +34,3 @@ void gdb_voutf(const char *fmt, va_list);
 void gdb_outf(const char *fmt, ...);
 
 #endif
-
-
