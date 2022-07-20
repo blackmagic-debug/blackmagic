@@ -161,6 +161,19 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 				gdb_putpacketz("OK");
 			break;
 		}
+		/* '[m|M|g|G|c][thread-id]' : Set the thread ID for the given subsequent operation
+		 * (we don't actually care which as we only care about the TID for whether to send OK or an error)
+		 */
+		case 'H': {
+			char operation = 0;
+			uint32_t thread_id = 0;
+			sscanf(pbuf, "H%c%" SCNx32, &operation, &thread_id);
+			if (thread_id <= 1)
+				gdb_putpacketz("OK");
+			else
+				gdb_putpacketz("E01");
+			break;
+		}
 		case 's':	/* 's [addr]': Single step [start at addr] */
 			single_step = true;
 			/* fall through */
