@@ -130,4 +130,3 @@ int hostio_system(struct target_controller *tc,
 	gdb_putpacket_f("Fsystem,%08X/%X", cmd, cmd_len);
 	return gdb_main_loop(tc, true);
 }
-
