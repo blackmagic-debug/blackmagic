@@ -43,7 +43,7 @@ enum gdb_signal {
 	GDB_SIGLOST = 29,
 };
 
-#define BUF_SIZE	1024
+#define BUF_SIZE	1024U
 
 #define ERROR_IF_NO_TARGET()	\
 	if(!cur_target) { gdb_putpacketz("EFF"); break; }
@@ -51,17 +51,17 @@ enum gdb_signal {
 typedef struct
 {
 	const char *cmd_prefix;
-	void (*func)(const char *packet, int len);
+	void (*func)(const char *packet, size_t len);
 } cmd_executer;
 
-static char pbuf[BUF_SIZE + 1];
+static char pbuf[BUF_SIZE + 1U];
 
 static target *cur_target;
 static target *last_target;
 
-static void handle_q_packet(char *packet, int len);
-static void handle_v_packet(char *packet, int len);
-static void handle_z_packet(char *packet, int len);
+static void handle_q_packet(char *packet, size_t len);
+static void handle_v_packet(char *packet, size_t len);
+static void handle_z_packet(char *packet, size_t len);
 
 static void gdb_target_destroy_callback(struct target_controller *tc, target *t)
 {
@@ -143,7 +143,8 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 			break;
 		}
 		case 'M': { /* 'M addr,len:XX': Write len bytes to addr */
-			uint32_t addr, len;
+			uint32_t addr = 0;
+			uint32_t len = 0;
 			int hex;
 			ERROR_IF_NO_TARGET();
 			sscanf(pbuf, "M%" SCNx32 ",%" SCNx32 ":%n", &addr, &len, &hex);
@@ -346,12 +347,12 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 	}
 }
 
-static bool exec_command(char *packet, int len, const cmd_executer *exec)
+static bool exec_command(char *packet, const size_t length, const cmd_executer *exec)
 {
 	while (exec->cmd_prefix) {
-		const int l = strlen(exec->cmd_prefix);
-		if (!strncmp(packet, exec->cmd_prefix, l)) {
-			exec->func(packet + l, len - l);
+		const size_t prefix_length = strlen(exec->cmd_prefix);
+		if (!strncmp(packet, exec->cmd_prefix, prefix_length)) {
+			exec->func(packet + prefix_length, length - prefix_length);
 			return true;
 		}
 		++exec;
@@ -359,19 +360,16 @@ static bool exec_command(char *packet, int len, const cmd_executer *exec)
 	return false;
 }
 
-static void exec_q_rcmd(const char *packet,int len)
+static void exec_q_rcmd(const char *packet, const size_t length)
 {
-	char *data;
-	int datalen;
-
 	/* calculate size and allocate buffer for command */
-	datalen = len / 2;
-	data = alloca(datalen + 1);
+	const size_t datalen = length / 2U;
+	char *data = alloca(datalen + 1);
 	/* dehexify command */
 	unhexify(data, packet, datalen);
 	data[datalen] = 0;	/* add terminating null */
 
-	int c = command_process(cur_target, data);
+	const int c = command_process(cur_target, data);
 	if (c < 0)
 		gdb_putpacketz("");
 	else if (c == 0)
@@ -381,41 +379,41 @@ static void exec_q_rcmd(const char *packet,int len)
 				2 * strlen("Failed\n"));
 }
 
-static void
-handle_q_string_reply(const char *str, const char *param)
+static void handle_q_string_reply(const char *reply, const char *param)
 {
-	unsigned long addr, len;
-	const size_t str_len = strlen(str);
+	const size_t reply_length = strlen(reply);
+	uint32_t addr = 0;
+	uint32_t len = 0;
 
-	if (sscanf(param, "%08lx,%08lx", &addr, &len) != 2) {
+	if (sscanf(param, "%08" PRIx32 ",%08" PRIx32, &addr, &len) != 2) {
 		gdb_putpacketz("E01");
 		return;
 	}
-	else if (addr > str_len) {
+	if (addr > reply_length) {
 		gdb_putpacketz("E01");
 		return;
 	}
-	else if (addr == str_len) {
+	if (addr == reply_length) {
 		gdb_putpacketz("l");
 		return;
 	}
-	unsigned long output_len = str_len - addr;
+	size_t output_len = reply_length - addr;
 	if (output_len > len)
 		output_len = len;
-	gdb_putpacket2("m", 1, str + addr, output_len);
+	gdb_putpacket2("m", 1U, reply + addr, output_len);
 }
 
-static void exec_q_supported(const char *packet, int len)
+static void exec_q_supported(const char *packet, const size_t length)
 {
 	(void)packet;
-	(void)len;
+	(void)length;
 	gdb_putpacket_f("PacketSize=%X;qXfer:memory-map:read+;qXfer:features:read+", BUF_SIZE);
 }
 
-static void exec_q_memory_map(const char *packet, int len)
+static void exec_q_memory_map(const char *packet, const size_t length)
 {
 	(void)packet;
-	(void)len;
+	(void)length;
 	/* Read target XML memory map */
 	if ((!cur_target) && last_target) {
 		/* Attach to last target if detached. */
@@ -431,9 +429,9 @@ static void exec_q_memory_map(const char *packet, int len)
 	handle_q_string_reply(buf, packet);
 }
 
-static void exec_q_feature_read(const char *packet, int len)
+static void exec_q_feature_read(const char *packet, const size_t length)
 {
-	(void)len;
+	(void)length;
 	/* Read target description */
 	if ((!cur_target) && last_target) {
 	  /* Attach to last target if detached. */
@@ -446,18 +444,18 @@ static void exec_q_feature_read(const char *packet, int len)
 	handle_q_string_reply(target_tdesc(cur_target), packet);
 }
 
-static void exec_q_crc(const char *packet, int len)
+static void exec_q_crc(const char *packet, const size_t length)
 {
-	(void)len;
-	uint32_t addr, alen;
-	if (sscanf(packet, "%" PRIx32 ",%" PRIx32, &addr, &alen) == 2) {
+	(void)length;
+	uint32_t addr;
+	uint32_t addr_length;
+	if (sscanf(packet, "%" PRIx32 ",%" PRIx32, &addr, &addr_length) == 2) {
 		if (!cur_target) {
 			gdb_putpacketz("E01");
 			return;
 		}
 		uint32_t crc;
-		int res = generic_crc32(cur_target, &crc, addr, alen);
-		if (res)
+		if (generic_crc32(cur_target, &crc, addr, addr_length))
 			gdb_putpacketz("E03");
 		else
 			gdb_putpacket_f("C%lx", crc);
@@ -474,23 +472,22 @@ static const cmd_executer q_commands[]=
 	{NULL, NULL},
 };
 
-static void
-handle_q_packet(char *packet, int len)
+static void handle_q_packet(char *packet, const size_t length)
 {
-	if (exec_command(packet, len, q_commands))
+	if (exec_command(packet, length, q_commands))
 		return;
 	DEBUG_GDB("*** Unsupported packet: %s\n", packet);
 	gdb_putpacket("", 0);
 }
 
-static void
-handle_v_packet(char *packet, int plen)
+static void handle_v_packet(char *packet, const size_t plen)
 {
-	unsigned long addr, len;
+	uint32_t addr = 0;
+	uint32_t len = 0;
 	int bin;
 	static uint8_t flash_mode = 0;
 
-	if (sscanf(packet, "vAttach;%08lx", &addr) == 1) {
+	if (sscanf(packet, "vAttach;%08" PRIx32, &addr) == 1) {
 		/* Attach to remote target processor */
 		cur_target = target_attach_n(addr, &gdb_controller);
 		if(cur_target) {
@@ -550,9 +547,9 @@ handle_v_packet(char *packet, int plen)
 		} else
 			gdb_putpacketz("E01");
 
-	} else if (sscanf(packet, "vFlashErase:%08lx,%08lx", &addr, &len) == 2) {
+	} else if (sscanf(packet, "vFlashErase:%08" PRIx32 ",%08" PRIx32, &addr, &len) == 2) {
 		/* Erase Flash Memory */
-		DEBUG_GDB("Flash Erase %08lX %08lX\n", addr, len);
+		DEBUG_GDB("Flash Erase %08zX %08zX\n", addr, len);
 		if (!cur_target) {
 			gdb_putpacketz("EFF");
 			return;
@@ -571,11 +568,11 @@ handle_v_packet(char *packet, int plen)
 			gdb_putpacketz("EFF");
 		}
 
-	} else if (sscanf(packet, "vFlashWrite:%08lx:%n", &addr, &bin) == 1) {
+	} else if (sscanf(packet, "vFlashWrite:%08" PRIx32 ":%n", &addr, &bin) == 1) {
 		/* Write Flash Memory */
-		len = plen - bin;
-		DEBUG_GDB("Flash Write %08lX %08lX\n", addr, len);
-		if (cur_target && target_flash_write(cur_target, addr, (void*)packet + bin, len) == 0)
+		const size_t count = plen - bin;
+		DEBUG_GDB("Flash Write %08zX %08zX\n", addr, count);
+		if (cur_target && target_flash_write(cur_target, addr, (void*)packet + bin, count) == 0)
 			gdb_putpacketz("OK");
 		else {
 			flash_mode = 0;
@@ -593,18 +590,17 @@ handle_v_packet(char *packet, int plen)
 	}
 }
 
-static void
-handle_z_packet(char *packet, int plen)
+static void handle_z_packet(char *packet, const size_t plen)
 {
 	(void)plen;
 
-	uint8_t set = (packet[0] == 'Z') ? 1 : 0;
-	int type, len;
+	uint32_t type;
+	uint32_t len;
 	uint32_t addr;
-	int ret;
+	sscanf(packet, "%*[zZ]%" PRIu32 ",%08" PRIx32 ",%" PRIu32, &type, &addr, &len);
 
-	sscanf(packet, "%*[zZ]%d,%08" PRIx32 ",%d", &type, &addr, &len);
-	if(set)
+	int ret = 0;
+	if (packet[0] == 'Z')
 		ret = target_breakwatch_set(cur_target, type, addr, len);
 	else
 		ret = target_breakwatch_clear(cur_target, type, addr, len);
