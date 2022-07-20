@@ -473,6 +473,17 @@ static void exec_q_crc(const char *packet, const size_t length)
 	}
 }
 
+/*
+ * qC queries are for the current thread. We don't support threads but GDB 11 and 12 require this,
+ * so we always answer that the current thread is thread 1.
+ */
+static void exec_q_c(const char *packet, const size_t length)
+{
+	(void)packet;
+	(void)length;
+	gdb_putpacketz("QC1");
+}
+
 static const cmd_executer q_commands[]=
 {
 	{"qRcmd,",                         exec_q_rcmd},
@@ -480,6 +491,7 @@ static const cmd_executer q_commands[]=
 	{"qXfer:memory-map:read::",        exec_q_memory_map},
 	{"qXfer:features:read:target.xml:",exec_q_feature_read},
 	{"qCRC:",                          exec_q_crc},
+	{"qC",                             exec_q_c},
 	{NULL, NULL},
 };
 
