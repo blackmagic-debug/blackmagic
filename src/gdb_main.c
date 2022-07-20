@@ -105,15 +105,14 @@ static struct target_controller gdb_controller = {
 
 int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 {
-	int size;
 	bool single_step = false;
 
 	/* GDB protocol main loop */
-	while(1) {
+	while (1) {
 		SET_IDLE_STATE(1);
-		size = gdb_getpacket(pbuf, BUF_SIZE);
+		size_t size = gdb_getpacket(pbuf, BUF_SIZE);
 		SET_IDLE_STATE(0);
-		switch(pbuf[0]) {
+		switch (pbuf[0]) {
 		/* Implementation of these is mandatory! */
 		case 'g': { /* 'g': Read general registers */
 			ERROR_IF_NO_TARGET();
@@ -171,7 +170,7 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 			single_step = true;
 			/* fall through */
 		case 'c':	/* 'c [addr]': Continue [at addr] */
-			if(!cur_target) {
+			if (!cur_target) {
 				gdb_putpacketz("X1D");
 				break;
 			}
@@ -194,12 +193,12 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 
 			/* Wait for target halt */
 			while(!(reason = target_halt_poll(cur_target, &watch))) {
-				unsigned char c = gdb_if_getchar_to(0);
-				if((c == '\x03') || (c == '\x04')) {
+				char c = (char)gdb_if_getchar_to(0);
+				if(c == '\x03' || c == '\x04')
 					target_halt_request(cur_target);
-				}
 				#ifdef ENABLE_RTT
-				if (rtt_enabled) poll_rtt(cur_target);
+				if (rtt_enabled)
+					poll_rtt(cur_target);
 				#endif
 			}
 			SET_RUN_STATE(0);
