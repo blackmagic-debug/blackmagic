@@ -111,10 +111,9 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 		/* Implementation of these is mandatory! */
 		case 'g': { /* 'g': Read general registers */
 			ERROR_IF_NO_TARGET();
-			uint8_t arm_regs[target_regs_size(cur_target)];
-			target_regs_read(cur_target, arm_regs);
-			gdb_putpacket(hexify(pbuf, arm_regs, sizeof(arm_regs)),
-			              sizeof(arm_regs) * 2);
+			uint8_t gp_regs[target_regs_size(cur_target)];
+			target_regs_read(cur_target, gp_regs);
+			gdb_putpacket(hexify(pbuf, gp_regs, sizeof(gp_regs)), sizeof(gp_regs) * 2U);
 			break;
 		}
 		case 'm': {	/* 'm addr,len': Read len bytes from addr */
@@ -131,14 +130,14 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 			if (target_mem_read(cur_target, mem, addr, len))
 				gdb_putpacketz("E01");
 			else
-				gdb_putpacket(hexify(pbuf, mem, len), len * 2);
+				gdb_putpacket(hexify(pbuf, mem, len), len * 2U);
 			break;
 		}
 		case 'G': {	/* 'G XX': Write general registers */
 			ERROR_IF_NO_TARGET();
-			uint8_t arm_regs[target_regs_size(cur_target)];
-			unhexify(arm_regs, &pbuf[1], sizeof(arm_regs));
-			target_regs_write(cur_target, arm_regs);
+			uint8_t gp_regs[target_regs_size(cur_target)];
+			unhexify(gp_regs, &pbuf[1], sizeof(gp_regs));
+			target_regs_write(cur_target, gp_regs);
 			gdb_putpacketz("OK");
 			break;
 		}
