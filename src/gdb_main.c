@@ -504,7 +504,16 @@ static void handle_v_packet(char *packet, const size_t plen)
 		cur_target = target_attach_n(addr, &gdb_controller);
 		if(cur_target) {
 			morse(NULL, false);
-			gdb_putpacketz("T05");
+			/*
+			 * We don't actually support threads, but GDB 11 and 12 can't work without
+			 * us saying we attached to thread 1.. see the following for the low-down of this:
+			 * https://sourceware.org/bugzilla/show_bug.cgi?id=28405
+			 * https://sourceware.org/bugzilla/show_bug.cgi?id=28874
+			 * https://sourceware.org/pipermail/gdb-patches/2021-December/184171.html
+			 * https://sourceware.org/pipermail/gdb-patches/2022-April/188058.html
+			 * https://sourceware.org/pipermail/gdb-patches/2022-July/190869.html
+			 */
+			gdb_putpacketz("T05thread:1;");
 		} else
 			gdb_putpacketz("E01");
 
