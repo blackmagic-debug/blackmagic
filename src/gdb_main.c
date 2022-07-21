@@ -618,7 +618,7 @@ static void handle_v_packet(char *packet, const size_t plen)
 
 	} else if (sscanf(packet, "vFlashErase:%08" PRIx32 ",%08" PRIx32, &addr, &len) == 2) {
 		/* Erase Flash Memory */
-		DEBUG_GDB("Flash Erase %08zX %08zX\n", addr, len);
+		DEBUG_GDB("Flash Erase %08" PRIX32 " %08" PRIX32 "\n", addr, len);
 		if (!cur_target) {
 			gdb_putpacketz("EFF");
 			return;
@@ -639,8 +639,8 @@ static void handle_v_packet(char *packet, const size_t plen)
 
 	} else if (sscanf(packet, "vFlashWrite:%08" PRIx32 ":%n", &addr, &bin) == 1) {
 		/* Write Flash Memory */
-		const size_t count = plen - bin;
-		DEBUG_GDB("Flash Write %08zX %08zX\n", addr, count);
+		const uint32_t count = plen - bin;
+		DEBUG_GDB("Flash Write %08" PRIX32 " %08" PRIX32 "\n", addr, count);
 		if (cur_target && target_flash_write(cur_target, addr, (void*)packet + bin, count) == 0)
 			gdb_putpacketz("OK");
 		else {
