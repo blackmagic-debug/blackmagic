@@ -670,6 +670,9 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 	case JEP106_MANUFACTURER_RASPBERRY:
 		PROBE(rp_probe);
 		break;
+	case JEP106_MANUFACTURER_RENESAS:
+		PROBE(renesas_probe);
+		break;
 	case JEP106_MANUFACTURER_ARM:
 		if (t->part_id == 0x4c0) {        /* Cortex-M0+ ROM */
 			PROBE(lpc11xx_probe);         /* LPC8 */

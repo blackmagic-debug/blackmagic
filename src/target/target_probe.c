@@ -83,3 +83,4 @@ bool efm32_probe(target *t) TARGET_PROBE_WEAK_NOP;
 bool msp432_probe(target *t) TARGET_PROBE_WEAK_NOP;
 bool ke04_probe(target *t) TARGET_PROBE_WEAK_NOP;
 bool rp_probe(target *t) TARGET_PROBE_WEAK_NOP;
+bool renesas_probe(target *t) TARGET_PROBE_WEAK_NOP;
