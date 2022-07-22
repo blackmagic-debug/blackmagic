@@ -270,6 +270,10 @@ static const struct {
 	{0xfff, 0x00, 0, aa_end, cidc_unknown, ARM_COMPONENT_STR("end", "end")},
 };
 
+/* Used to probe for a protected SAMX5X device */
+#define SAMX5X_DSU_CTRLSTAT 0x41002100U
+#define SAMX5X_STATUSB_PROT (1U << 16U)
+
 extern bool cortexa_probe(ADIv5_AP_t *apb, uint32_t debug_base);
 
 void adiv5_ap_ref(ADIv5_AP_t *ap)
@@ -305,9 +309,8 @@ static uint32_t adiv5_ap_read_id(ADIv5_AP_t *ap, uint32_t addr)
 	uint32_t res = 0;
 	uint8_t data[16];
 	adiv5_mem_read(ap, data, addr, sizeof(data));
-	for (int i = 0; i < 4; i++) {
+	for (int i = 0; i < 4; i++)
 		res |= (data[4 * i] << (i * 8));
-	}
 	return res;
 }
 
@@ -326,18 +329,21 @@ uint64_t adiv5_ap_read_pidr(ADIv5_AP_t *ap, uint32_t addr)
  */
 static uint32_t cortexm_initial_halt(ADIv5_AP_t *ap)
 {
-	platform_timeout to;
-	uint32_t ctrlstat = adiv5_dp_read(ap->dp, ADIV5_DP_CTRLSTAT);
-	platform_timeout_set(&to, cortexm_wait_timeout);
-	uint32_t dhcsr_ctl = CORTEXM_DHCSR_DBGKEY | CORTEXM_DHCSR_C_DEBUGEN | CORTEXM_DHCSR_C_HALT;
-	uint32_t dhcsr_valid = CORTEXM_DHCSR_S_HALT | CORTEXM_DHCSR_C_DEBUGEN;
-	bool reset_seen = false;
-	bool use_low_access = (!(ap->dp->idcode & ADIV5_MINDP));
+	const uint32_t ctrlstat = adiv5_dp_read(ap->dp, ADIV5_DP_CTRLSTAT);
+
+	const uint32_t dhcsr_ctl = CORTEXM_DHCSR_DBGKEY | CORTEXM_DHCSR_C_DEBUGEN | CORTEXM_DHCSR_C_HALT;
+	const uint32_t dhcsr_valid = CORTEXM_DHCSR_S_HALT | CORTEXM_DHCSR_C_DEBUGEN;
+	const bool use_low_access = !(ap->dp->idcode & ADIV5_DP_DPIDR_MINDP);
+
+	platform_timeout halt_timeout;
+	platform_timeout_set(&halt_timeout, cortexm_wait_timeout);
+
 	if (use_low_access) {
 		/* ap_mem_access_setup() sets ADIV5_AP_CSW_ADDRINC_SINGLE -> unusable!*/
 		adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw | ADIV5_AP_CSW_SIZE_WORD);
 		adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR, CORTEXM_DHCSR);
 	}
+
 	/* Workaround for CMSIS-DAP Bulk orbtrace
 	 * High values of TRNCNT lead to NO_ACK answer from debugger.
 	 *
@@ -345,42 +351,45 @@ static uint32_t cortexm_initial_halt(ADIv5_AP_t *ap)
 	 * a STM32F767 mostly sleeping in WFI!
 	 */
 	uint32_t start_time = platform_time_ms();
-	int trncnt = 0x80;
-	while (!platform_timeout_is_expired(&to)) {
+	uint32_t trncnt = 0x80U;
+	bool reset_seen = false;
+	while (!platform_timeout_is_expired(&halt_timeout)) {
 		uint32_t dhcsr;
+
 		if (use_low_access) {
 			adiv5_dp_low_access(
 				ap->dp, ADIV5_LOW_WRITE, ADIV5_DP_CTRLSTAT, ctrlstat | (trncnt * ADIV5_DP_CTRLSTAT_TRNCNT));
 			adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DRW, dhcsr_ctl);
-			if (trncnt < 0xfff) {
-				trncnt += (platform_time_ms() - start_time) * 8;
+			if (trncnt < 0xfffU) {
+				trncnt += (platform_time_ms() - start_time) * 8U;
 			} else {
-				trncnt = 0xfff;
+				trncnt = 0xfffU;
 			}
 			dhcsr = adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_AP_DRW, 0);
 		} else {
 			adiv5_mem_write(ap, CORTEXM_DHCSR, &dhcsr_ctl, sizeof(dhcsr_ctl));
 			dhcsr = adiv5_mem_read32(ap, CORTEXM_DHCSR);
 		}
+
 		/* ADIV5_DP_CTRLSTAT_READOK is always set e.g. on STM32F7 even so
 		   CORTEXM_DHCS reads nonsense*/
 		/* On a sleeping STM32F7, invalid DHCSR reads with e.g. 0xffffffff and
 		 * 0x0xA05F0000  may happen.
 		 * M23/33 will have S_SDE set when debug is allowed
 		 */
-		if ((dhcsr != 0xffffffff) &&       /* Invalid read */
-			((dhcsr & 0xf000fff0) == 0)) { /* Check RAZ bits */
+		if ((dhcsr != 0xffffffffU) &&       /* Invalid read */
+			((dhcsr & 0xf000fff0U) == 0)) { /* Check RAZ bits */
 			if ((dhcsr & CORTEXM_DHCSR_S_RESET_ST) && !reset_seen) {
 				if (connect_assert_nrst)
 					return dhcsr;
 				reset_seen = true;
 				continue;
 			}
-			if ((dhcsr & dhcsr_valid) == dhcsr_valid) { /* Halted */
+			if ((dhcsr & dhcsr_valid) == dhcsr_valid) /* Halted */
 				return dhcsr;
-			}
 		}
 	}
+
 	return 0;
 }
 
@@ -417,7 +426,7 @@ static bool cortexm_prepare(ADIv5_AP_t *ap)
 	}
 	DEBUG_INFO("Halt via DHCSR: success %08" PRIx32 " after %" PRId32 "ms\n", dhcsr, platform_time_ms() - start_time);
 	ap->ap_cortexm_demcr = adiv5_mem_read32(ap, CORTEXM_DEMCR);
-	uint32_t demcr = CORTEXM_DEMCR_TRCENA | CORTEXM_DEMCR_VC_HARDERR | CORTEXM_DEMCR_VC_CORERESET;
+	const uint32_t demcr = CORTEXM_DEMCR_TRCENA | CORTEXM_DEMCR_VC_HARDERR | CORTEXM_DEMCR_VC_CORERESET;
 	adiv5_mem_write(ap, CORTEXM_DEMCR, &demcr, sizeof(demcr));
 	platform_timeout to;
 	platform_timeout_set(&to, cortexm_wait_timeout);
@@ -439,8 +448,8 @@ static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, const size_t re
 {
 	(void)num_entry;
 
-	addr &= 0xfffff000; /* Mask out base address */
-	if (addr == 0)      /* No rom table on this AP */
+	addr &= 0xfffff000U; /* Mask out base address */
+	if (addr == 0)       /* No rom table on this AP */
 		return;
 
 	const volatile uint32_t cidr = adiv5_ap_read_id(ap, addr + CIDR0_OFFSET);
@@ -505,8 +514,6 @@ static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, const size_t re
 			ap->ap_partno = part_number;
 
 			if ((ap->designer_code == JEP106_MANUFACTURER_ATMEL) && (ap->ap_partno == 0xcd0)) {
-#define SAMX5X_DSU_CTRLSTAT 0x41002100
-#define SAMX5X_STATUSB_PROT (1 << 16)
 				uint32_t ctrlstat = adiv5_mem_read32(ap, SAMX5X_DSU_CTRLSTAT);
 				if (ctrlstat & SAMX5X_STATUSB_PROT) {
 					/* A protected SAMx5x device is found.
@@ -521,7 +528,7 @@ static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, const size_t re
 
 #if defined(ENABLE_DEBUG) && defined(PLATFORM_HAS_DEBUG)
 		/* Check SYSMEM bit */
-		uint32_t memtype = adiv5_mem_read32(ap, addr | ADIV5_ROM_MEMTYPE) & ADIV5_ROM_MEMTYPE_SYSMEM;
+		const uint32_t memtype = adiv5_mem_read32(ap, addr | ADIV5_ROM_MEMTYPE) & ADIV5_ROM_MEMTYPE_SYSMEM;
 
 		if (adiv5_dp_error(ap->dp)) {
 			DEBUG_WARN("Fault reading ROM table entry\n");
@@ -664,12 +671,11 @@ ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel)
 /* No real AP on RP2040. Special setup.*/
 static void rp_rescue_setup(ADIv5_DP_t *dp)
 {
-	ADIv5_AP_t *ap = malloc(sizeof(*ap));
-	if (!ap) { /* malloc failed: heap exhaustion */
-		DEBUG_WARN("malloc: failed in %s\n", __func__);
+	ADIv5_AP_t *ap = calloc(1, sizeof(*ap));
+	if (!ap) { /* calloc failed: heap exhaustion */
+		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return;
 	}
-	memset(ap, 0, sizeof(ADIv5_AP_t));
 	ap->dp = dp;
 	extern void rp_rescue_probe(ADIv5_AP_t *);
 	rp_rescue_probe(ap);
@@ -678,20 +684,26 @@ static void rp_rescue_setup(ADIv5_DP_t *dp)
 
 void adiv5_dp_init(ADIv5_DP_t *dp)
 {
-#define DPIDR_PARTNO_MASK 0x0ff00000
-	/* Check IDCODE for a valid designer and sensible PARTNO */
-	if (((dp->idcode & 0xfff) == 0) || ((dp->idcode & DPIDR_PARTNO_MASK)) == DPIDR_PARTNO_MASK) {
-		DEBUG_WARN("Invalid DP idcode %08" PRIx32 "\n", dp->idcode);
+	/* Check IDCODE for a valid manufacturer and sensible PARTNO */
+	/* TODO: this needs clarification, as DPIDR != IDCODE */
+	if ((dp->idcode & ADIV5_DP_DPIDR_DESIGNER_MASK) == 0 ||
+		(dp->idcode & ADIV5_DP_DPIDR_PARTNO_MASK) == ADIV5_DP_DPIDR_PARTNO_MASK) {
+		DEBUG_WARN("Invalid DP DPIDR %08" PRIx32 "\n", dp->idcode);
 		free(dp);
 		return;
 	}
+
+	/* TODO: this could with a non 'magic number' */
 	if (dp->idcode == 0x10212927) {
 		rp_rescue_setup(dp);
 		return;
 	}
-	DEBUG_INFO("DPIDR 0x%08" PRIx32 " (v%d %srev%d)\n", dp->idcode, (uint8_t)((dp->idcode >> 12) & 0xf),
-		(dp->idcode & ADIV5_MINDP) ? "MINDP " : "", (uint16_t)(dp->idcode >> 28));
-	volatile uint32_t ctrlstat = 0;
+
+	DEBUG_INFO("DPIDR 0x%08" PRIx32 " (v%d %srev%d)\n", dp->idcode,
+		(uint8_t)((dp->idcode & ADIV5_DP_DPIDR_VERSION_MASK) >> ADIV5_DP_DPIDR_VERSION_OFFSET),
+		(dp->idcode & ADIV5_DP_DPIDR_MINDP) ? "MINDP " : "",
+		(uint8_t)((dp->idcode & ADIV5_DP_DPIDR_REVISION_MASK) >> ADIV5_DP_DPIDR_REVISION_OFFSET));
+
 #if PC_HOSTED == 1
 	platform_adiv5_dp_defaults(dp);
 	if (!dp->ap_write)
@@ -708,6 +720,8 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 	dp->mem_read = firmware_mem_read;
 	dp->mem_write_sized = firmware_mem_write_sized;
 #endif
+
+	volatile uint32_t ctrlstat = 0;
 	volatile struct exception e;
 	TRY_CATCH (e, EXCEPTION_TIMEOUT) {
 		ctrlstat = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT);
@@ -873,7 +887,7 @@ void firmware_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
 {
 	uint32_t tmp;
 	uint32_t osrc = src;
-	enum align align = MIN(ALIGNOF(src), ALIGNOF(len));
+	const enum align align = MIN(ALIGNOF(src), ALIGNOF(len));
 
 	if (len == 0)
 		return;
@@ -885,9 +899,9 @@ void firmware_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
 		tmp = adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_AP_DRW, 0);
 		dest = extract(dest, src, tmp, align);
 
-		src += (1 << align);
+		src += (1U << align);
 		/* Check for 10 bit address overflow */
-		if ((src ^ osrc) & 0xfffffc00) {
+		if ((src ^ osrc) & 0xfffffc00U) {
 			osrc = src;
 			adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR, src);
 			adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_AP_DRW, 0);
@@ -923,7 +937,7 @@ void firmware_mem_write_sized(ADIv5_AP_t *ap, uint32_t dest, const void *src, si
 		adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DRW, tmp);
 
 		/* Check for 10 bit address overflow */
-		if ((dest ^ odest) & 0xfffffc00) {
+		if ((dest ^ odest) & 0xfffffc00U) {
 			odest = dest;
 			adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR, dest);
 		}

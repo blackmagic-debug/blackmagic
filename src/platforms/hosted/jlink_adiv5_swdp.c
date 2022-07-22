@@ -32,10 +32,6 @@
 #include "jlink.h"
 #include "cli.h"
 
-#define SWDP_ACK_OK    0x01
-#define SWDP_ACK_WAIT  0x02
-#define SWDP_ACK_FAULT 0x04
-
 static uint32_t jlink_adiv5_swdp_read(ADIv5_DP_t *dp, uint16_t addr);
 
 static uint32_t jlink_adiv5_swdp_error(ADIv5_DP_t *dp);

@@ -119,7 +119,7 @@ int adiv5_swdp_scan(uint32_t targetid)
 				return -1;
 			}
 		}
-		if ((idcode & ADIV5_DP_VERSION_MASK) == ADIV5_DPv2) {
+		if ((idcode & ADIV5_DP_DPIDR_VERSION_MASK) == ADIV5_DP_DPIDR_VERSION_DPv2) {
 			scan_multidrop = true;
 			/* Read TargetID. Can be done with device in WFI, sleep or reset!*/
 			adiv5_dp_write(initial_dp, ADIV5_DP_SELECT, 2);
@@ -187,7 +187,7 @@ uint32_t firmware_swdp_read(ADIv5_DP_t *dp, uint16_t addr)
 
  uint32_t firmware_swdp_error(ADIv5_DP_t *dp)
 {
-	if ((dp->fault && (dp->idcode & ADIV5_DP_VERSION_MASK) == ADIV5_DPv2) &&
+	if ((dp->fault && (dp->idcode & ADIV5_DP_DPIDR_VERSION_MASK) == ADIV5_DP_DPIDR_VERSION_DPv2) &&
 		dp->dp_low_write) {
 		/* On protocoll error target gets deselected.
 		 * With DP Change, another target needs selection.
