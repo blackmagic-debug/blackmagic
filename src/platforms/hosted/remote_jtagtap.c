@@ -139,7 +139,7 @@ static void jtagtap_tdi_tdo_seq(uint8_t *const data_out, const bool final_tms, c
 
 		length = platform_buffer_read((uint8_t *)buffer, REMOTE_MAX_MSG_SIZE);
 		if (!length || buffer[0] == REMOTE_RESP_ERR) {
-			DEBUG_WARN("jtagtap_tms_seq failed, error %s\n", length ? buffer + 1 : "unknown");
+			DEBUG_WARN("jtagtap_tdi_tdo_seq failed, error %s\n", length ? buffer + 1 : "unknown");
 			exit(-1);
 		}
 		if (data_out) {
