@@ -37,7 +37,7 @@
 #include "bmp_remote.h"
 
 static void jtagtap_reset(void);
-static void jtagtap_tms_seq(uint32_t MS, size_t ticks);
+static void jtagtap_tms_seq(uint32_t tms_states, size_t ticks);
 static void jtagtap_tdi_tdo_seq(uint8_t *data_out, bool final_tms, const uint8_t *data_in, size_t clock_cycles);
 static void jtagtap_tdi_seq(bool final_tms, const uint8_t *data_in, size_t clock_cycles);
 static bool jtagtap_next(bool tms, bool tdi);
@@ -95,22 +95,20 @@ static void jtagtap_reset(void)
 	}
 }
 
-static void jtagtap_tms_seq(uint32_t MS, size_t ticks)
+static void jtagtap_tms_seq(uint32_t tms_states, size_t clock_cycles)
 {
-	uint8_t construct[REMOTE_MAX_MSG_SIZE];
-	int s;
+	char buffer[REMOTE_MAX_MSG_SIZE];
+	int length = snprintf(buffer, REMOTE_MAX_MSG_SIZE, REMOTE_JTAG_TMS_STR, clock_cycles, tms_states);
+	platform_buffer_write((uint8_t *)buffer, length);
 
-	s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE, REMOTE_JTAG_TMS_STR, ticks, MS);
-	platform_buffer_write(construct, s);
-
-	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
-	if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
-		DEBUG_WARN("jtagtap_tms_seq failed, error %s\n", s ? (char *)&(construct[1]) : "unknown");
+	length = platform_buffer_read((uint8_t *)buffer, REMOTE_MAX_MSG_SIZE);
+	if (!length || buffer[0] == REMOTE_RESP_ERR) {
+		DEBUG_WARN("jtagtap_tms_seq failed, error %s\n", length ? buffer + 1 : "unknown");
 		exit(-1);
 	}
 }
 
-/* At least up to v1.7.1-233, remote handles only up to 32 ticks in one
+/* At least up to v1.7.1-233, remote handles only up to 32 clock cycles in one
  * call. Break up large calls.
  *
  * FIXME: Provide and test faster call and keep fallback
