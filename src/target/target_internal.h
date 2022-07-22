@@ -116,7 +116,7 @@ struct target_s {
 
 	/* target-defined options */
 	unsigned target_options;
-	uint16_t t_designer;
+	uint16_t designer_code;
 	uint16_t idcode;
 	void *target_storage;
 	union {

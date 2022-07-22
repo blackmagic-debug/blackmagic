@@ -172,7 +172,7 @@ lpc11xx_probe(target *t)
 		target_add_commands(t, lpc11xx_cmd_list, "LPC8N04");
 		return true;
 	}
-	if ((t->t_designer != AP_DESIGNER_SPECULAR) && idcode) {
+	if ((t->designer_code != JEP106_MANUFACTURER_SPECULAR) && idcode) {
 		DEBUG_INFO("LPC11xx: Unknown IDCODE 0x%08" PRIx32 "\n", idcode);
 	}
 	/* For LPC802, see UM11045 Rev. 1.4 Chapter 6.6.29 Table 84
@@ -181,7 +181,7 @@ lpc11xx_probe(target *t)
 	 * For LPC82x, see UM10800 Rev. 1.2 Chapter 5.6.34 Table 55
 	 * For LPC83x, see UM11021 Rev. 1.1 Chapter 5.6.34 Table 53
 	 * For LPC84x, see UM11029 Rev. 1.4 Chapter 8.6.49 Table 174
-	 * 
+	 *
 	 * Not documented, but the DEVICE_ID register at address 0x400483F8
 	 * for the LPC8xx series is also valid for the LPC11xx "XL" and the
 	 * LPC11U3x variants.
