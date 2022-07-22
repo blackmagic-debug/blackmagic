@@ -586,7 +586,7 @@ const char *target_core_name(target *t)
 
 unsigned int target_designer(target *t)
 {
-	return t->t_designer;
+	return t->designer_code;
 }
 
 unsigned int target_idcode(target *t)

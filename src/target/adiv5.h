@@ -88,32 +88,6 @@
 #define ADIV5_AP_BASE ADIV5_AP_REG(0xF8U)
 #define ADIV5_AP_IDR  ADIV5_AP_REG(0xFCU)
 
-/* Known designers seen in SYSROM-PIDR. Ignore Bit 0 from
- * the designer bits to get JEDEC Ids with bit 7 ignored.*/
-#define AP_DESIGNER_FREESCALE 0x00e
-#define AP_DESIGNER_TEXAS     0x017
-#define AP_DESIGNER_ATMEL     0x01f
-#define AP_DESIGNER_STM       0x020
-/* CPU2 for STM32W(L|B) uses ARM JEDEC continuation (4) and
- * not STM ARM JEDEC continuation (0) as for CPU1.
- * See RM0453
- * https://www.st.com/resource/en/reference_manual/rm0453-stm32wl5x-advanced-armbased-32bit-mcus-with-subghz-radio-solution-stmicroelectronics.pdf :
- * 38.8.2 CPU1 ROM CoreSight peripheral identity register 4 (ROM_PIDR4)
- * vs
- * 38.13.2 CPU2 ROM1 CoreSight peripheral identity register 4 (C2ROM1_PIDR4)
- */
-#define AP_DESIGNER_STM32WX  0x420
-#define AP_DESIGNER_CYPRESS  0x034
-#define AP_DESIGNER_INFINEON 0x041
-#define AP_DESIGNER_NORDIC   0x244
-#define AP_DESIGNER_ARM      0x43b
-/*LPC845 with designer 501. Strange!? */
-#define AP_DESIGNER_SPECULAR     0x501
-#define AP_DESIGNER_CS           0x555
-#define AP_DESIGNER_ENERGY_MICRO 0x673
-#define AP_DESIGNER_GIGADEVICE   0x751
-#define AP_DESIGNER_RASPBERRY    0x927
-
 /* AP Control and Status Word (CSW) */
 #define ADIV5_AP_CSW_DBGSWENABLE (1U << 31U)
 /* Bits 30:24 - Prot, Implementation defined, for Cortex-M3: */
@@ -151,6 +125,58 @@
 #define SWDP_ACK_OK    0x01U
 #define SWDP_ACK_WAIT  0x02U
 #define SWDP_ACK_FAULT 0x04U
+
+/* JEP-106 code list
+ * JEP-106 is a JEDEC standard assigning IDs to different manufacturers
+ * the codes in this list are encoded as 16 bit values,
+ * with the first bit marking a legacy code (ASCII, not JEP106), the following 3 bits being NULL/unused
+ * the following 4 bits the number of continuation codes (see JEP106 continuation scheme),
+ * and the last 8 bits being the code itself (without parity, bit 7 is always 0).
+ *
+ * |15     |11     |7|6           0|
+ * | | | | | | | | |0| | | | | | | |
+ *  |\____/ \______/|\_____________/
+ *  |  V        V   |       V
+ *  | Unused   Cont	|      code
+ *  |          Code |
+ *  \_ Legacy flag  \_ Parity bit (always 0)
+ */
+#define ASCII_CODE_FLAG (1U << 15U) /* flag the code as legacy ASCII */
+
+#define JEP106_MANUFACTURER_ARM          0x43BU /* ARM Ltd. */
+#define JEP106_MANUFACTURER_FREESCALE    0x00eU /* Freescale */
+#define JEP106_MANUFACTURER_TEXAS        0x017U /* Texas Instruments */
+#define JEP106_MANUFACTURER_ATMEL        0x01fU /* Atmel */
+#define JEP106_MANUFACTURER_STM          0x020U /* STMicroelectronics */
+#define JEP106_MANUFACTURER_CYPRESS      0x034U /* Cypress Semiconductor */
+#define JEP106_MANUFACTURER_INFINEON     0x041U /* Infineon Technologies */
+#define JEP106_MANUFACTURER_NORDIC       0x244U /* Nordic Semiconductor */
+#define JEP106_MANUFACTURER_SPECULAR     0x501U /* LPC845 with code 501. Strange!? Specular Networks */
+#define JEP106_MANUFACTURER_ENERGY_MICRO 0x673U /* Energy Micro */
+#define JEP106_MANUFACTURER_GIGADEVICE   0x751U /* GigaDevice */
+#define JEP106_MANUFACTURER_RASPBERRY    0x927U /* Raspberry Pi */
+
+/*
+ * This code is not listed in the JEP106 standard, but is used by some stm32f1 clones
+ * since we're not using this code elsewhere let's switch to the stm code.
+ */
+#define JEP106_MANUFACTURER_ERRATA_CS 0x555U
+
+/* CPU2 for STM32W(L|B) uses ARM's JEP-106 continuation code (4) instead of
+ * STM's JEP-106 continuation code (0) like expected, CPU1 behaves as expected.
+ *
+ * See RM0453
+ * https://www.st.com/resource/en/reference_manual/rm0453-stm32wl5x-advanced-armbased-32bit-mcus-with-subghz-radio-solution-stmicroelectronics.pdf :
+ * 38.8.2 CPU1 ROM CoreSight peripheral identity register 4 (ROM_PIDR4)
+ * vs
+ * 38.13.2 CPU2 ROM1 CoreSight peripheral identity register 4 (C2ROM1_PIDR4)
+ *
+ * let's call this an errata and switch to the "correct" continuation scheme.
+ *
+ * note: the JEP code 0x420 would belong to "Legend Silicon Corp." so in
+ * the unlikely event we need to support chips by them, here be dragons.
+ */
+#define JEP106_MANUFACTURER_ERRATA_STM32WX 0x420U
 
 enum align {
 	ALIGN_BYTE = 0,
@@ -209,7 +235,7 @@ struct ADIv5_AP_s {
 	uint32_t csw;
 	uint32_t ap_cortexm_demcr; /* Copy of demcr when starting */
 	uint32_t ap_storage;       /* E.g to hold STM32F7 initial DBGMCU_CR value.*/
-	uint16_t ap_designer;
+	uint16_t designer_code;
 	uint16_t ap_partno;
 };
 
