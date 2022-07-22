@@ -82,15 +82,11 @@ int remote_jtagtap_init(jtag_proc_t *jtag_proc)
 
 static void jtagtap_reset(void)
 {
-	uint8_t construct[REMOTE_MAX_MSG_SIZE];
-	int s;
-
-	s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE, "%s", REMOTE_JTAG_RESET_STR);
-	platform_buffer_write(construct, s);
-
-	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
-	if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
-		DEBUG_WARN("jtagtap_reset failed, error %s\n", s ? (char *)&(construct[1]) : "unknown");
+	platform_buffer_write((uint8_t *)REMOTE_JTAG_RESET_STR, sizeof(REMOTE_JTAG_RESET_STR));
+	char buffer[REMOTE_MAX_MSG_SIZE];
+	const int length = platform_buffer_read((uint8_t *)buffer, REMOTE_MAX_MSG_SIZE);
+	if (!length || buffer[0] == REMOTE_RESP_ERR) {
+		DEBUG_WARN("jtagtap_reset failed, error %s\n", length ? buffer + 1 : "unknown");
 		exit(-1);
 	}
 }
