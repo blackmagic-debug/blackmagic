@@ -38,8 +38,8 @@
 
 static void jtagtap_reset(void);
 static void jtagtap_tms_seq(uint32_t MS, size_t ticks);
-static void jtagtap_tdi_tdo_seq(uint8_t *DO, bool final_tms, const uint8_t *DI, size_t ticks);
-static void jtagtap_tdi_seq(bool final_tms, const uint8_t *DI, size_t ticks);
+static void jtagtap_tdi_tdo_seq(uint8_t *data_out, bool final_tms, const uint8_t *data_in, size_t clock_cycles);
+static void jtagtap_tdi_seq(bool final_tms, const uint8_t *data_in, size_t clock_cycles);
 static bool jtagtap_next(bool tms, bool tdi);
 static void jtagtap_cycle(bool tms, bool tdi, size_t clock_cycles);
 
@@ -116,53 +116,49 @@ static void jtagtap_tms_seq(uint32_t MS, size_t ticks)
  * FIXME: Provide and test faster call and keep fallback
  * for old firmware
  */
-static void jtagtap_tdi_tdo_seq(uint8_t *DO, const bool final_tms, const uint8_t *DI, size_t ticks)
+static void jtagtap_tdi_tdo_seq(uint8_t *const data_out, const bool final_tms, const uint8_t *const data_in, const size_t clock_cycles)
 {
-	uint8_t construct[REMOTE_MAX_MSG_SIZE];
-	int s;
-
-	if (!ticks || (!DI && !DO))
+	if (!clock_cycles || (!data_in && !data_out))
 		return;
-	while (ticks) {
-		int chunk;
-		if (ticks < 65)
-			chunk = ticks;
-		else {
+
+	char buffer[REMOTE_MAX_MSG_SIZE];
+	size_t in_offset = 0;
+	size_t out_offset = 0;
+	for (size_t cycle = 0; cycle < clock_cycles; ) {
+		size_t chunk;
+		if (clock_cycles - cycle <= 64)
+			chunk = clock_cycles - cycle;
+		else
 			chunk = 64;
-		}
-		ticks -= chunk;
-		uint64_t di = 0;
-		int bytes = (chunk + 7) >> 3;
-		int i = 0;
-		if (DI) {
-			for (; i < bytes; i++) {
-				di |= *DI << (i * 8);
-				DI++;
-			}
+		cycle += chunk;
+
+		uint64_t data = 0;
+		const size_t bytes = (chunk + 7U) >> 3U;
+		if (data_in) {
+			for (size_t i = 0; i < bytes; ++i)
+				data |= data_in[in_offset++] << (i * 8U);
 		}
 		/* PRIx64 differs with system. Use it explicit in the format string*/
-		s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE, "!J%c%02x%" PRIx64 "%c",
-			(!ticks && final_tms) ? REMOTE_TDITDO_TMS : REMOTE_TDITDO_NOTMS, chunk, di, REMOTE_EOM);
-		platform_buffer_write(construct, s);
+		int length = snprintf(buffer, REMOTE_MAX_MSG_SIZE, "!J%c%02zx%" PRIx64 "%c",
+			!clock_cycles && final_tms ? REMOTE_TDITDO_TMS : REMOTE_TDITDO_NOTMS, chunk, data, REMOTE_EOM);
+		platform_buffer_write((uint8_t *)buffer, length);
 
-		s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
-		if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
-			DEBUG_WARN("jtagtap_tms_seq failed, error %s\n", s ? (char *)&(construct[1]) : "unknown");
+		length = platform_buffer_read((uint8_t *)buffer, REMOTE_MAX_MSG_SIZE);
+		if (!length || buffer[0] == REMOTE_RESP_ERR) {
+			DEBUG_WARN("jtagtap_tms_seq failed, error %s\n", length ? buffer + 1 : "unknown");
 			exit(-1);
 		}
-		if (DO) {
-			uint64_t res = remotehston(-1, (char *)&construct[1]);
-			for (i = bytes; i > 0; i--) {
-				*DO++ = res & 0xff;
-				res >>= 8;
-			}
+		if (data_out) {
+			const uint64_t data = remotehston(-1, buffer + 1);
+			for (size_t i = 0; i < bytes; ++i)
+				data_out[out_offset++] = (uint8_t)(data >> (i * 8U));
 		}
 	}
 }
 
-static void jtagtap_tdi_seq(const bool final_tms, const uint8_t *DI, size_t ticks)
+static void jtagtap_tdi_seq(const bool final_tms, const uint8_t *data_in, size_t clock_cycles)
 {
-	return jtagtap_tdi_tdo_seq(NULL, final_tms, DI, ticks);
+	return jtagtap_tdi_tdo_seq(NULL, final_tms, data_in, clock_cycles);
 }
 
 static bool jtagtap_next(const bool tms, const bool tdi)
