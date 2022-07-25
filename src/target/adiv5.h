@@ -23,6 +23,10 @@
 
 #include "jtag_scan.h"
 
+#if PC_HOSTED == 1
+#include "platform.h"
+#endif
+
 #define ADIV5_APnDP     0x100U
 #define ADIV5_DP_REG(x) (x)
 #define ADIV5_AP_REG(x) (ADIV5_APnDP | (x))
