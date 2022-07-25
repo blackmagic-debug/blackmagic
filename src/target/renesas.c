@@ -242,9 +242,21 @@ typedef enum {
 
 #define RV40_BASE 0x407FE000UL
 
-#define RV40_FSTATR        (RV40_BASE + 0x80U) /* Flash Status */
-#define RV40_FSTATR_RDY    (1U << 15U)         /* Flash Ready */
-#define RV40_FSTATR_DBFULL (1U << 10U)         /* Data Buffer Full */
+#define RV40_FASTAT       (RV40_BASE + 0x10U) /* Flash Access Status */
+#define RV40_FASTAT_CMDLK (1U << 4U)          /* Command Lock */
+
+#define RV40_FSTATR (RV40_BASE + 0x80U) /* Flash Status */
+
+#define RV40_FSTATR_DBFULL (1U << 10U) /* Data Buffer Full */
+#define RV40_FSTATR_RDY    (1U << 15U) /* Flash Ready */
+
+#define RV40_FSTATR_PRGERR    (1U << 12U) /* Programming Error */
+#define RV40_FSTATR_ERSERR    (1U << 13U) /* Erasure Error */
+#define RV40_FSTATR_ILGLERR   (1U << 14U) /* Illegal Command Error */
+#define RV40_FSTATR_OTERR     (1U << 20U) /* Other Error */
+#define RV40_FSTATR_SECERR    (1U << 21U) /* Security Error */
+#define RV40_FSTATR_FESETERR  (1U << 22U) /* FENTRY Setting Error */
+#define RV40_FSTATR_ILGCOMERR (1U << 23U) /* Illegal Command Error */
 
 #define RV40_FSADDR (RV40_BASE + 0x30U)
 
@@ -409,17 +421,57 @@ static bool renesas_rv40_pe_mode(target *t, pe_mode_e pe_mode)
 	platform_timeout timeout;
 	platform_timeout_set(&timeout, 10);
 
-	/* Wait for the operation to complete or timeout, Read FENTRYR until it has been set */
-	while (target_mem_read16(t, RV40_FENTRYR) != fentryr) {
+	/* Wait for the operation to complete or timeout, Read until FENTRYR and FRDY is set */
+	while (target_mem_read16(t, RV40_FENTRYR) != fentryr || !(target_mem_read32(t, RV40_FSTATR) & RV40_FSTATR_RDY)) {
 		if (target_check_error(t) || platform_timeout_is_expired(&timeout))
 			return false;
-	};
-
-	if (has_fmeprot && pe_mode == PE_MODE_READ) {
-		target_mem_write16(t, RV40_FMEPROT, RV40_FMEPROT_LOCK);
 	}
 
+	if (has_fmeprot && pe_mode == PE_MODE_READ)
+		target_mem_write16(t, RV40_FMEPROT, RV40_FMEPROT_LOCK);
+
 	return true;
+}
+
+static bool renesas_rv40_error_check(target *t, uint32_t error_bits)
+{
+	bool error = false;
+
+	uint8_t fstatr = target_mem_read32(t, RV40_FSTATR);
+
+	/* see "Recovery from the Command-Locked State": Section 47.9.3.6 of the RA6M4 manual R01UH0890EJ0100.*/
+	if (target_mem_read8(t, RV40_FASTAT) & RV40_FASTAT_CMDLK) {
+		/* if an illegal error occurred read and clear CFAE and DFAE in FASTAT. */
+		if (fstatr & RV40_FSTATR_ILGLERR) {
+			target_mem_read8(t, RV40_FASTAT);
+			target_mem_write8(t, RV40_FASTAT, 0);
+		}
+		error = true;
+	}
+
+	/* check if status is indicating a programming error */
+	if (fstatr & error_bits)
+		error = true;
+
+	if (error) {
+		/* Stop the flash */
+		target_mem_write8(t, RV40_CMD, RV40_CMD_FORCED_STOP);
+
+		platform_timeout timeout;
+		platform_timeout_set(&timeout, 10);
+
+		/* Wait until the operation has completed or timeout */
+		/* Read FRDY bit until it has been set to 1 indicating that the current  operation is complete.*/
+		while (!(target_mem_read32(t, RV40_FSTATR) & RV40_FSTATR_RDY)) {
+			if (target_check_error(t) || platform_timeout_is_expired(&timeout))
+				return error;
+		}
+
+		if (target_mem_read8(t, RV40_FASTAT) & RV40_FASTAT_CMDLK)
+			return error;
+	}
+
+	return error;
 }
 
 /* !TODO: implement blank check */
@@ -459,6 +511,11 @@ static int renesas_rv40_flash_erase(target_flash_s *f, target_addr_t addr, size_
 		len += RV40_DF_BLOCK_SIZE - len % RV40_DF_BLOCK_SIZE;
 	}
 
+	if (!(target_mem_read32(t, RV40_FSTATR) & RV40_FSTATR_RDY) || target_mem_read16(t, RV40_FENTRYR) != 0) {
+		DEBUG_WARN("flash is not ready, may be hanging mid unfinished command due to something going wrong, "
+				   "please power on reset the device\n");
+	}
+
 	/* Transition to PE mode */
 	const pe_mode_e pe_mode = code_flash ? PE_MODE_CF : PE_MODE_DF;
 	if (!renesas_rv40_pe_mode(t, pe_mode))
@@ -466,6 +523,8 @@ static int renesas_rv40_flash_erase(target_flash_s *f, target_addr_t addr, size_
 
 	/* Set Erasure Priority Mode */
 	target_mem_write16(t, RV40_FCPSR, RV40_FCPSR_ESUSPMD);
+
+	int result = 0;
 
 	while (len) {
 		/* Set block start address*/
@@ -494,15 +553,24 @@ static int renesas_rv40_flash_erase(target_flash_s *f, target_addr_t addr, size_
 		/* Wait until the operation has completed or timeout */
 		/* Read FRDY bit until it has been set to 1 indicating that the current  operation is complete.*/
 		while (!(target_mem_read32(t, RV40_FSTATR) & RV40_FSTATR_RDY)) {
-			if (target_check_error(t) || platform_timeout_is_expired(&timeout))
-				return -1;
-		};
+			if (target_check_error(t) || platform_timeout_is_expired(&timeout)) {
+				result = -1;
+				goto exit;
+			}
+		}
+
+		if (renesas_rv40_error_check(t, RV40_FSTATR_ERSERR | RV40_FSTATR_ILGLERR)) {
+			result = -1;
+			goto exit;
+		}
 	}
+
+exit:
 
 	/* return to read mode */
 	renesas_rv40_pe_mode(t, PE_MODE_READ);
 
-	return 0;
+	return result;
 }
 
 static int renesas_rv40_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
@@ -521,10 +589,17 @@ static int renesas_rv40_flash_write(target_flash_s *f, target_addr_t dest, const
 	if (dest % write_size || len % write_size) /* dest/len must be aligned to write_size */
 		return -1;
 
+	if (!(target_mem_read32(t, RV40_FSTATR) & RV40_FSTATR_RDY) || target_mem_read16(t, RV40_FENTRYR) != 0) {
+		DEBUG_WARN("flash is not ready, may be hanging mid unfinished command due to something going wrong, "
+				   "please power on reset the device\n");
+	}
+
 	/* transition to PE mode */
 	const pe_mode_t pe_mode = code_flash ? PE_MODE_CF : PE_MODE_DF;
 	if (!renesas_rv40_pe_mode(t, pe_mode))
 		return -1;
+
+	int result = 0;
 
 	while (len) {
 		/* set block start address */
@@ -551,9 +626,11 @@ static int renesas_rv40_flash_write(target_flash_s *f, target_addr_t dest, const
 			target_mem_write16(t, RV40_CMD, *(uint16_t *)src);
 
 			while (target_mem_read32(t, RV40_FSTATR) & RV40_FSTATR_DBFULL) {
-				if (target_check_error(t) || platform_timeout_is_expired(&timeout))
-					return -1;
-			};
+				if (target_check_error(t) || platform_timeout_is_expired(&timeout)) {
+					result = -1;
+					goto exit;
+				}
+			}
 
 			/* 2 bytes of data */
 			src += 2U;
@@ -565,15 +642,24 @@ static int renesas_rv40_flash_write(target_flash_s *f, target_addr_t dest, const
 		/* wait until the operation has completed or timeout */
 		/* read FRDY bit until it has been set to 1 indicating that the current operation is complete.*/
 		while (!(target_mem_read32(t, RV40_FSTATR) & RV40_FSTATR_RDY)) {
-			if (target_check_error(t) || platform_timeout_is_expired(&timeout))
-				return -1;
-		};
+			if (target_check_error(t) || platform_timeout_is_expired(&timeout)) {
+				result = -1;
+				goto exit;
+			}
+		}
+
+		if (renesas_rv40_error_check(t, RV40_FSTATR_PRGERR | RV40_FSTATR_ILGLERR)) {
+			result = -1;
+			goto exit;
+		}
 	}
+
+exit:
 
 	/* return to read mode*/
 	renesas_rv40_pe_mode(t, PE_MODE_READ);
 
-	return 0;
+	return result;
 }
 
 static void renesas_add_rv40_flash(target *t, target_addr_t addr, size_t length)
