@@ -146,7 +146,7 @@ int jtag_scan(const uint8_t *irlens)
 
 	DEBUG_INFO("Return to Run-Test/Idle\n");
 	jtag_proc.jtagtap_next(1, 1);
-	jtagtap_return_idle();
+	jtagtap_return_idle(1);
 
 	/* All devices should be in BYPASS now */
 
@@ -165,7 +165,7 @@ int jtag_scan(const uint8_t *irlens)
 
 	DEBUG_INFO("Return to Run-Test/Idle\n");
 	jtag_proc.jtagtap_next(1, 1);
-	jtagtap_return_idle();
+	jtagtap_return_idle(1);
 	if(!jtag_dev_count) {
 		return 0;
 	}
@@ -187,7 +187,7 @@ int jtag_scan(const uint8_t *irlens)
 	}
 	DEBUG_INFO("Return to Run-Test/Idle\n");
 	jtag_proc.jtagtap_next(1, 1);
-	jtagtap_return_idle();
+	jtagtap_return_idle(jtag_proc.tap_idle_cycles);
 #if PC_HOSTED == 1
 	/*Transfer needed device information to firmware jtag_devs*/
 	for(i = 0; i < jtag_dev_count; i++)
@@ -235,7 +235,7 @@ void jtag_dev_write_ir(jtag_proc_t *jp, uint8_t jd_index, uint32_t ir)
 	jp->jtagtap_tdi_seq(0, ones, d->ir_prescan);
 	jp->jtagtap_tdi_seq(d->ir_postscan?0:1, (void*)&ir, d->ir_len);
 	jp->jtagtap_tdi_seq(1, ones, d->ir_postscan);
-	jtagtap_return_idle();
+	jtagtap_return_idle(1);
 }
 
 void jtag_dev_shift_dr(jtag_proc_t *jp, uint8_t jd_index, uint8_t *dout, const uint8_t *din, int ticks)
@@ -248,6 +248,5 @@ void jtag_dev_shift_dr(jtag_proc_t *jp, uint8_t jd_index, uint8_t *dout, const u
 	else
 		jp->jtagtap_tdi_seq(d->dr_postscan?0:1, (void*)din, ticks);
 	jp->jtagtap_tdi_seq(1, ones, d->dr_postscan);
-	jtagtap_return_idle();
+	jtagtap_return_idle(1);
 }
-

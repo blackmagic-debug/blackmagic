@@ -50,6 +50,13 @@ typedef struct jtag_proc_s {
 	void (*jtagtap_tdi_tdo_seq)(uint8_t *data_out, const bool final_tms, const uint8_t *data_in, size_t clock_cycles);
 	void (*jtagtap_tdi_seq)(const bool final_tms, const uint8_t *data_in, size_t clock_cycles);
 	void (*jtagtap_cycle)(const bool tms, const bool tdi, const size_t clock_cycles);
+
+	/*
+	 * Some debug controllers such as the RISC-V debug controller use idle
+	 * cycles during operations as part of their function, while others
+	 * allow the desirable skipping of the entire state under some circumstances.
+	 */
+	uint8_t tap_idle_cycles;
 } jtag_proc_t;
 
 extern jtag_proc_t jtag_proc;
@@ -64,7 +71,7 @@ extern jtag_proc_t jtag_proc;
 #define jtagtap_shift_dr() jtag_proc.jtagtap_tms_seq(0x01, 3)
 
 /* Goto Run-test/Idle: 1, 1, 0 */
-#define jtagtap_return_idle() jtag_proc.jtagtap_tms_seq(0x01, 2)
+#define jtagtap_return_idle(cycles) jtag_proc.jtagtap_tms_seq(0x01, (cycles) + 1U)
 
 #if PC_HOSTED == 1
 int platform_jtagtap_init(void);
