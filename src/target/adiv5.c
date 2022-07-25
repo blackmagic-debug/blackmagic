@@ -309,8 +309,8 @@ static uint32_t adiv5_ap_read_id(ADIv5_AP_t *ap, uint32_t addr)
 	uint32_t res = 0;
 	uint8_t data[16];
 	adiv5_mem_read(ap, data, addr, sizeof(data));
-	for (int i = 0; i < 4; i++)
-		res |= (data[4 * i] << (i * 8));
+	for (size_t i = 0; i < 4; ++i)
+		res |= (data[4U * i] << (i * 8U));
 	return res;
 }
 
