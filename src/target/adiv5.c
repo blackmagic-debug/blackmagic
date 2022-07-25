@@ -428,14 +428,14 @@ static bool cortexm_prepare(ADIv5_AP_t *ap)
 	ap->ap_cortexm_demcr = adiv5_mem_read32(ap, CORTEXM_DEMCR);
 	const uint32_t demcr = CORTEXM_DEMCR_TRCENA | CORTEXM_DEMCR_VC_HARDERR | CORTEXM_DEMCR_VC_CORERESET;
 	adiv5_mem_write(ap, CORTEXM_DEMCR, &demcr, sizeof(demcr));
-	platform_timeout to;
-	platform_timeout_set(&to, cortexm_wait_timeout);
+	platform_timeout reset_timeout;
+	platform_timeout_set(&reset_timeout, cortexm_wait_timeout);
 	platform_nrst_set_val(false);
 	while (1) {
 		dhcsr = adiv5_mem_read32(ap, CORTEXM_DHCSR);
 		if (!(dhcsr & CORTEXM_DHCSR_S_RESET_ST))
 			break;
-		if (platform_timeout_is_expired(&to)) {
+		if (platform_timeout_is_expired(&reset_timeout)) {
 			DEBUG_WARN("Error releasing from reset\n");
 			return false;
 		}
