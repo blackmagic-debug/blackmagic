@@ -45,6 +45,7 @@ int jtagtap_init()
 	jtag_proc.jtagtap_tdi_tdo_seq = jtagtap_tdi_tdo_seq;
 	jtag_proc.jtagtap_tdi_seq = jtagtap_tdi_seq;
 	jtag_proc.jtagtap_cycle = jtagtap_cycle;
+	jtag_proc.tap_idle_cycles = 1;
 
 	/* Go to JTAG mode for SWJ-DP */
 	for (size_t i = 0; i <= 50U; ++i)
