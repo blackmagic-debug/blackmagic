@@ -433,40 +433,30 @@ static int renesas_rv40_flash_erase(target_flash_s *f, target_addr_t addr, size_
 	/* code flash or data flash operation */
 	const bool code_flash = addr < RENESAS_CF_END;
 
-	size_t num_blocks;
-	uint32_t start_address;
-
-	/* determine the number of blocks to erase */
 	if (code_flash) {
-		if (addr < RV40_CF_REGION0_SIZE) {
-			/* region 0 - 8k blocks */
-			start_address = addr & ~(RV40_CF_REGION0_BLOCK_SIZE - 1); /* align to region 0 block */
-			num_blocks = (RV40_CF_REGION0_SIZE - start_address) / RV40_CF_REGION0_BLOCK_SIZE;
+		/* align start address */
+		uint32_t start_align = 0;
+		if (addr < RV40_CF_REGION0_SIZE)
+			start_align = addr % RV40_CF_REGION0_BLOCK_SIZE;
+		else
+			start_align = addr % RV40_CF_REGION1_BLOCK_SIZE;
+		len += start_align;
+		addr -= start_align;
 
-			if (addr + len > RV40_CF_REGION0_SIZE) {
-				/* region 1 - 32k blocks */
-				size_t region_len = (addr + len - RV40_CF_REGION0_SIZE);
-				/* this may have lead to some of the flash bytes requested not being erased, align to region 1 block size */
-				region_len += RV40_CF_REGION1_BLOCK_SIZE - region_len % RV40_CF_REGION1_BLOCK_SIZE;
-
-				num_blocks += region_len / RV40_CF_REGION1_BLOCK_SIZE;
-			}
-		} else {
-			/* region 1 - 32k blocks */
-			start_address = addr & ~(RV40_CF_REGION1_BLOCK_SIZE - 1); /* align to region 1 block */
-
-			/* this may have lead to some of the flash bytes requested not being erased, align to region 1 block size */
+		/* align len */
+		if (addr + len > RV40_CF_REGION0_SIZE)
 			len += RV40_CF_REGION1_BLOCK_SIZE - len % RV40_CF_REGION1_BLOCK_SIZE;
+		else
+			len += RV40_CF_REGION0_BLOCK_SIZE - len % RV40_CF_REGION0_BLOCK_SIZE;
 
-			num_blocks = len / RV40_CF_REGION1_BLOCK_SIZE;
-		}
 	} else {
-		start_address = addr & ~(RV40_DF_BLOCK_SIZE - 1);
+		/* align start address */
+		const uint32_t start_align = addr % RV40_DF_BLOCK_SIZE;
+		len += start_align;
+		addr -= start_align;
 
-		/* this may have lead to some of the flash bytes requested not being erased, align to df block size */
+		/* align len */
 		len += RV40_DF_BLOCK_SIZE - len % RV40_DF_BLOCK_SIZE;
-
-		num_blocks = len / RV40_DF_BLOCK_SIZE;
 	}
 
 	/* Transition to PE mode */
@@ -477,18 +467,19 @@ static int renesas_rv40_flash_erase(target_flash_s *f, target_addr_t addr, size_
 	/* Set Erasure Priority Mode */
 	target_mem_write16(t, RV40_FCPSR, RV40_FCPSR_ESUSPMD);
 
-	while (num_blocks) {
+	while (len) {
 		/* Set block start address*/
-		target_mem_write32(t, RV40_FSADDR, start_address);
+		target_mem_write32(t, RV40_FSADDR, addr);
 
 		/* increment block address */
+		uint16_t block_size;
 		if (code_flash)
-			start_address +=
-				start_address < RV40_CF_REGION0_SIZE ? RV40_CF_REGION0_BLOCK_SIZE : RV40_CF_REGION1_BLOCK_SIZE;
+			block_size = addr < RV40_CF_REGION0_SIZE ? RV40_CF_REGION0_BLOCK_SIZE : RV40_CF_REGION1_BLOCK_SIZE;
 		else
-			start_address += RV40_DF_BLOCK_SIZE;
+			block_size = RV40_DF_BLOCK_SIZE;
 
-		num_blocks--;
+		addr += block_size;
+		len -= block_size;
 
 		/* Issue two part Block Erase commands */
 		target_mem_write8(t, RV40_CMD, RV40_CMD_BLOCK_ERASE);
