@@ -557,7 +557,6 @@ static bool cmd_rtt(target *t, int argc, const char **argv)
 #ifdef PLATFORM_HAS_TRACESWO
 static bool cmd_traceswo(target *t, int argc, const char **argv)
 {
-	char serial_no[DFU_SERIAL_LENGTH];
 	(void)t;
 #if TRACESWO_PROTOCOL == 2
 	uint32_t baudrate = SWO_DEFAULT_BAUD;
@@ -566,23 +565,23 @@ static bool cmd_traceswo(target *t, int argc, const char **argv)
 	uint8_t decode_arg = 1;
 #if TRACESWO_PROTOCOL == 2
 	/* argument: optional baud rate for async mode */
-	if ((argc > 1) && (*argv[1] >= '0') && (*argv[1] <= '9')) {
-		baudrate = atoi(argv[1]);
+	if (argc > 1 && argv[1][0] >= '0' && argv[1][0] <= '9') {
+		baudrate = strtoul(argv[1], NULL, 0);
 		if (baudrate == 0)
 			baudrate = SWO_DEFAULT_BAUD;
 		decode_arg = 2;
 	}
 #endif
 	/* argument: 'decode' literal */
-	if ((argc > decode_arg) && !strncmp(argv[decode_arg], "decode", strlen(argv[decode_arg]))) {
-		swo_channelmask = 0xFFFFFFFF; /* decoding all channels */
+	if (argc > decode_arg && !strncmp(argv[decode_arg], "decode", strlen(argv[decode_arg]))) {
+		swo_channelmask = 0xFFFFFFFFU; /* decoding all channels */
 		/* arguments: channels to decode */
 		if (argc > decode_arg + 1) {
-			swo_channelmask = 0x0;
-			for (int i = decode_arg + 1; i < argc; i++) { /* create bitmask of channels to decode */
-				int channel = atoi(argv[i]);
-				if ((channel >= 0) && (channel <= 31))
-					swo_channelmask |= (uint32_t)0x1 << channel;
+			swo_channelmask = 0U;
+			for (size_t i = decode_arg + 1; i < (size_t)argc; ++i) { /* create bitmask of channels to decode */
+				const uint32_t channel = strtoul(argv[i], NULL, 0);
+				if (channel < 32)
+					swo_channelmask |= 1U << channel;
 			}
 		}
 	}
@@ -592,9 +591,9 @@ static bool cmd_traceswo(target *t, int argc, const char **argv)
 		gdb_outf("baudrate: %lu ", baudrate);
 #endif
 		gdb_outf("channel mask: ");
-		for (int8_t i = 31; i >= 0; i--) {
-			uint8_t bit = (swo_channelmask >> i) & 0x1;
-			gdb_outf("%u", bit);
+		for (size_t i = 0; i < 32; ++i) {
+			const uint32_t bit = (swo_channelmask >> (31U - i)) & 1U;
+			gdb_outf("%" PRIu32, bit);
 		}
 		gdb_outf("\n");
 	}
@@ -604,8 +603,10 @@ static bool cmd_traceswo(target *t, int argc, const char **argv)
 #else
 	traceswo_init(swo_channelmask);
 #endif
+
+	char serial_no[DFU_SERIAL_LENGTH];
 	serial_no_read(serial_no);
-	gdb_outf("%s:%02X:%02X\n", serial_no, 5, 0x85);
+	gdb_outf("Trace enabled for serial %s, USB EP 5\n", serial_no);
 	return true;
 }
 #endif
