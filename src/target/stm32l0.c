@@ -134,7 +134,7 @@ static bool stm32lx_protected_attach(target_s *target);
 static bool stm32lx_protected_mass_erase(target_s *target);
 static bool stm32lx_mass_erase(target_s *target);
 
-static bool stm32lx_cmd_option(target_s *t, int argc, const char **argv);
+static bool stm32lx_cmd_option(target_s *target, int argc, const char **argv);
 static bool stm32lx_cmd_eeprom(target_s *t, int argc, const char **argv);
 
 static const command_s stm32lx_cmd_list[] = {
@@ -552,13 +552,13 @@ static size_t stm32lx_prot_level(const uint32_t options)
 	return 1;
 }
 
-static bool stm32lx_cmd_option(target_s *t, int argc, const char **argv)
+static bool stm32lx_cmd_option(target_s *const target, const int argc, const char **const argv)
 {
-	const uint32_t nvm = stm32lx_nvm_phys(t);
-	const size_t opt_size = stm32lx_nvm_option_size(t);
+	const uint32_t nvm = stm32lx_nvm_phys(target);
+	const size_t opt_size = stm32lx_nvm_option_size(target);
 
-	if (!stm32lx_nvm_opt_unlock(t, nvm)) {
-		tc_printf(t, "unable to unlock NVM option bytes\n");
+	if (!stm32lx_nvm_opt_unlock(target, nvm)) {
+		tc_printf(target, "unable to unlock NVM option bytes\n");
 		return true;
 	}
 
@@ -567,62 +567,61 @@ static bool stm32lx_cmd_option(target_s *t, int argc, const char **argv)
 	const size_t command_len = strlen(argv[1]);
 
 	if (argc == 2 && strncasecmp(argv[1], "obl_launch", command_len) == 0)
-		target_mem_write32(t, STM32Lx_NVM_PECR(nvm), STM32Lx_NVM_PECR_OBL_LAUNCH);
-	else if (argc == 4 && strncasecmp(argv[1], "raw", command_len) == 0) {
-		const uint32_t addr = strtoul(argv[2], NULL, 0);
-		const uint32_t val = strtoul(argv[3], NULL, 0);
-		tc_printf(t, "raw %08x <- %08x\n", addr, val);
-		if (addr < STM32Lx_NVM_OPT_PHYS || addr >= STM32Lx_NVM_OPT_PHYS + opt_size || (addr & 3U))
+		target_mem_write32(target, STM32Lx_NVM_PECR(nvm), STM32Lx_NVM_PECR_OBL_LAUNCH);
+	else if (argc == 4) {
+		const bool raw_write = strncasecmp(argv[1], "raw", command_len) == 0;
+		if (!raw_write && strncasecmp(argv[1], "write", command_len) != 0)
 			goto usage;
-		if (!stm32lx_option_write(t, addr, val))
-			tc_printf(t, "option write failed\n");
-	} else if (argc == 4 && strncasecmp(argv[1], "write", command_len) == 0) {
+
 		const uint32_t addr = strtoul(argv[2], NULL, 0);
 		uint32_t val = strtoul(argv[3], NULL, 0);
-		val = (val & 0xffffU) | ((~val & 0xffffU) << 16U);
-		tc_printf(t, "write %08x <- %08x\n", addr, val);
-		if (addr < STM32Lx_NVM_OPT_PHYS || addr >= STM32Lx_NVM_OPT_PHYS + opt_size || (addr & 3U))
+		if (!raw_write)
+			val = (val & 0xffffU) | ((~val & 0xffffU) << 16U);
+		tc_printf(target, "%s %08x <- %08x\n", argv[1], addr, val);
+
+		if (addr >= STM32Lx_NVM_OPT_PHYS && addr < STM32Lx_NVM_OPT_PHYS + opt_size && (addr & 3U) == 0) {
+			if (!stm32lx_option_write(target, addr, val))
+				tc_printf(target, "option write failed\n");
+		} else
 			goto usage;
-		if (!stm32lx_option_write(t, addr, val))
-			tc_printf(t, "option write failed\n");
 	}
 
 	/* Report the current option values */
-	for (size_t i = 0; i < opt_size; i += sizeof(uint32_t)) {
+	for (size_t i = 0; i < opt_size; i += 4U) {
 		const uint32_t addr = STM32Lx_NVM_OPT_PHYS + i;
-		const uint32_t val = target_mem_read32(t, addr);
-		tc_printf(t, "0x%08" PRIx32 ": 0x%04" PRIx32 " 0x%04" PRIx32 " %s\n", addr, val & 0xffffU,
-			(val >> 16U) & 0xffffU, (val & 0xffffU) == ((~val >> 16U) & 0xffffU) ? "OK" : "ERR");
+		const uint32_t val = target_mem_read32(target, addr);
+		tc_printf(target, "0x%08" PRIx32 ": 0x%04u 0x%04u %s\n", addr, val & 0xffffU, (val >> 16U) & 0xffffU,
+			(val & 0xffffU) == ((~val >> 16U) & 0xffffU) ? "OK" : "ERR");
 	}
 
-	const uint32_t options = target_mem_read32(t, STM32Lx_NVM_OPTR(nvm));
+	const uint32_t options = target_mem_read32(target, STM32Lx_NVM_OPTR(nvm));
 	const size_t read_protection = stm32lx_prot_level(options);
-	if (stm32lx_is_stm32l1(t)) {
-		tc_printf(t,
+	if (stm32lx_is_stm32l1(target)) {
+		tc_printf(target,
 			"OPTR: 0x%08" PRIx32 ", RDPRT %u, SPRMD %u, BOR %u, WDG_SW %u, nRST_STP %u, nRST_STBY %u, nBFB2 %u\n",
 			options, read_protection, (options & STM32L1_NVM_OPTR_SPRMOD) ? 1 : 0,
 			(options >> STM32L1_NVM_OPTR_BOR_LEV_S) & STM32L1_NVM_OPTR_BOR_LEV_M,
 			(options & STM32Lx_NVM_OPTR_WDG_SW) ? 1 : 0, (options & STM32L1_NVM_OPTR_nRST_STOP) ? 1 : 0,
 			(options & STM32L1_NVM_OPTR_nRST_STDBY) ? 1 : 0, (options & STM32L1_NVM_OPTR_nBFB2) ? 1 : 0);
 	} else {
-		tc_printf(t, "OPTR: 0x%08" PRIx32 ", RDPROT %u, WPRMOD %u, WDG_SW %u, BOOT1 %u\n", options, read_protection,
-			(options & STM32L0_NVM_OPTR_WPRMOD) ? 1 : 0, (options & STM32Lx_NVM_OPTR_WDG_SW) ? 1 : 0,
+		tc_printf(target, "OPTR: 0x%08" PRIx32 ", RDPROT %u, WPRMOD %u, WDG_SW %u, BOOT1 %u\n", options,
+			read_protection, (options & STM32L0_NVM_OPTR_WPRMOD) ? 1 : 0, (options & STM32Lx_NVM_OPTR_WDG_SW) ? 1 : 0,
 			(options & STM32L0_NVM_OPTR_BOOT1) ? 1 : 0);
 	}
 
 	goto done;
 
 usage:
-	tc_printf(t, "usage: monitor option [ARGS]\n");
-	tc_printf(t, "  show                   - Show options in NVM and as loaded\n");
-	tc_printf(t, "  obl_launch             - Reload options from NVM\n");
-	tc_printf(t, "  write <addr> <value16> - Set option half-word; complement computed\n");
-	tc_printf(t, "  raw <addr> <value32>   - Set option word\n");
-	tc_printf(t, "The value of <addr> must be word aligned and from 0x%08" PRIx32 " to +0x%" PRIx32 "\n",
-		STM32Lx_NVM_OPT_PHYS, STM32Lx_NVM_OPT_PHYS + (uint32_t)(opt_size - sizeof(uint32_t)));
+	tc_printf(target, "usage: monitor option [ARGS]\n");
+	tc_printf(target, "  show                   - Show options in NVM and as loaded\n");
+	tc_printf(target, "  obl_launch             - Reload options from NVM\n");
+	tc_printf(target, "  write <addr> <value16> - Set option half-word; complement computed\n");
+	tc_printf(target, "  raw <addr> <value32>   - Set option word\n");
+	tc_printf(target, "The value of <addr> must be 32-bit aligned and from 0x%08" PRIx32 " to +0x%" PRIx32 "\n",
+		STM32Lx_NVM_OPT_PHYS, STM32Lx_NVM_OPT_PHYS + (uint32_t)(opt_size - 4U));
 
 done:
-	stm32lx_nvm_lock(t, nvm);
+	stm32lx_nvm_lock(target, nvm);
 	return true;
 }
 
