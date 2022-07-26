@@ -587,19 +587,17 @@ static bool cmd_traceswo(target *t, int argc, const char **argv)
 			}
 		}
 	}
-#if defined(PLATFORM_HAS_DEBUG) && (PC_HOSTED == 0) && defined(ENABLE_DEBUG)
-	if (debug_bmp) {
+
 #if TRACESWO_PROTOCOL == 2
-		gdb_outf("baudrate: %lu ", baudrate);
+	gdb_outf("Baudrate: %lu ", baudrate);
 #endif
-		gdb_outf("channel mask: ");
-		for (size_t i = 0; i < 32; ++i) {
-			const uint32_t bit = (swo_channelmask >> (31U - i)) & 1U;
-			gdb_outf("%" PRIu32, bit);
-		}
-		gdb_outf("\n");
+	gdb_outf("Channel mask: ");
+	for (size_t i = 0; i < 32; ++i) {
+		const uint32_t bit = (swo_channelmask >> (31U - i)) & 1U;
+		gdb_outf("%" PRIu32, bit);
 	}
-#endif
+	gdb_outf("\n");
+
 #if TRACESWO_PROTOCOL == 2
 	traceswo_init(baudrate, swo_channelmask);
 #else
@@ -608,7 +606,7 @@ static bool cmd_traceswo(target *t, int argc, const char **argv)
 
 	char serial_no[DFU_SERIAL_LENGTH];
 	serial_no_read(serial_no);
-	gdb_outf("Trace enabled for serial %s, USB EP 5\n", serial_no);
+	gdb_outf("Trace enabled for BMP serial %s, USB EP 5\n", serial_no);
 	return true;
 }
 #endif
