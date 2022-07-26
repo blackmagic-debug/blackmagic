@@ -399,20 +399,18 @@ bool cmd_morse(target *t, int argc, char **argv)
 	return true;
 }
 
-bool parse_enable_or_disable(const char *s, bool *out) {
-	if (strlen(s) == 0) {
-		gdb_outf("'enable' or 'disable' argument must be provided\n");
-		return false;
-	} else if (!strncmp(s, "enable", strlen(s))) {
+bool parse_enable_or_disable(const char *value, bool *out)
+{
+	const size_t value_len = strlen(value);
+	if (value_len && !strncmp(value, "enable", value_len))
 		*out = true;
-		return true;
-	} else if (!strncmp(s, "disable", strlen(s))) {
+	else if (value_len && !strncmp(value, "disable", value_len))
 		*out = false;
-		return true;
-	} else {
-		gdb_outf("Argument '%s' not recognized as 'enable' or 'disable'\n", s);
+	else {
+		gdb_out("'enable' or 'disable' argument must be provided\n");
 		return false;
 	}
+	return true;
 }
 
 static bool cmd_connect_reset(target *t, int argc, const char **argv)
