@@ -410,15 +410,13 @@ static bool cmd_connect_reset(target *t, int argc, const char **argv)
 {
 	(void)t;
 	bool print_status = false;
-	if (argc == 1) {
+	if (argc == 1)
 		print_status = true;
-	} else if (argc == 2) {
-		if (parse_enable_or_disable(argv[1], &connect_assert_nrst)) {
+	else if (argc == 2) {
+		if (parse_enable_or_disable(argv[1], &connect_assert_nrst))
 			print_status = true;
-		}
-	} else {
-		gdb_outf("Unrecognized command format\n");
-	}
+	} else
+		gdb_out("Unrecognized command format\n");
 
 	if (print_status) {
 		gdb_outf("Assert nRST during connect: %s\n", connect_assert_nrst ? "enabled" : "disabled");
