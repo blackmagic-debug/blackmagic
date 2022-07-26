@@ -615,23 +615,20 @@ static bool cmd_traceswo(target *t, int argc, const char **argv)
 static bool cmd_debug_bmp(target *t, int argc, const char **argv)
 {
 	(void)t;
-	bool print_status = false;
-	if (argc == 1) {
-		print_status = true;
-	} else if (argc == 2) {
-		if (parse_enable_or_disable(argv[1], &debug_bmp)) {
-			print_status = true;
-		}
-	} else {
-		gdb_outf("Unrecognized command format\n");
+	if (argc == 2) {
+		if (!parse_enable_or_disable(argv[1], &debug_bmp))
+			return false;
+	}
+	else if (argc > 2) {
+		gdb_outf("usage: monitor debug [enable|disable]\n");
+		return false;
 	}
 
-	if (print_status) {
-		gdb_outf("Debug mode is %s\n", debug_bmp ? "enabled" : "disabled");
-	}
+	gdb_outf("Debug mode is %s\n", debug_bmp ? "enabled" : "disabled");
 	return true;
 }
 #endif
+
 static bool cmd_heapinfo(target *t, int argc, const char **argv)
 {
 	if (t == NULL)
