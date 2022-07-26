@@ -773,9 +773,9 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 
 	/* Probe for APs on this DP */
 	uint32_t last_base = 0;
-	size_t void_aps = 0;
+	size_t invalid_aps = 0;
 	dp->refcnt++;
-	for (size_t i = 0; i < 256 && void_aps < 8; ++i) {
+	for (size_t i = 0; i < 256 && invalid_aps < 8; ++i) {
 		ADIv5_AP_t *ap = NULL;
 #if PC_HOSTED == 1
 		if ((!dp->ap_setup) || dp->ap_setup(i))
@@ -788,7 +788,7 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 			if (dp->ap_cleanup)
 				dp->ap_cleanup(i);
 #endif
-			if (++void_aps == 8) {
+			if (++invalid_aps == 8) {
 				adiv5_dp_unref(dp);
 				return;
 			}
