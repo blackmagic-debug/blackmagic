@@ -72,7 +72,7 @@ static bool cmd_rtt(target *t, int argc, const char **argv);
 static bool cmd_debug_bmp(target *t, int argc, const char **argv);
 #endif
 
-const struct command_s cmd_list[] = {
+const command_t cmd_list[] = {
 	{"version", (cmd_handler)cmd_version, "Display firmware version info"},
 	{"help", (cmd_handler)cmd_help, "Display help for monitor commands"},
 	{"jtag_scan", (cmd_handler)cmd_jtag_scan, "Scan JTAG chain for devices"},
@@ -113,38 +113,34 @@ unsigned cortexm_wait_timeout = 2000; /* Timeout to wait for Cortex to react on 
 
 int command_process(target *t, char *cmd)
 {
-	const struct command_s *c;
-	int argc = 1;
-	const char **argv;
-	const char *part;
-
 	/* Initial estimate for argc */
-	for (char *s = cmd; *s; s++)
-		if ((*s == ' ') || (*s == '\t'))
-			argc++;
+	size_t argc = 1;
+	for (size_t i = 0; i < strlen(cmd); ++i) {
+		if (cmd[i] == ' ' || cmd[i] == '\t')
+			++argc;
+	}
 
 	/* This needs replacing with something more sensible.
 	 * It should be pinging -Wvla among other things, and it failing is straight-up UB
 	 */
-	argv = alloca(sizeof(const char *) * argc);
+	const char **const argv = alloca(sizeof(const char *) * argc);
 
 	/* Tokenize cmd to find argv */
 	argc = 0;
-	for (part = strtok(cmd, " \t"); part; part = strtok(NULL, " \t"))
+	for (const char *part = strtok(cmd, " \t"); part; part = strtok(NULL, " \t"))
 		argv[argc++] = part;
 
 	/* Look for match and call handler */
-	for (c = cmd_list; c->cmd; c++) {
+	for (const command_t *cmd = cmd_list; cmd->cmd; ++cmd) {
 		/* Accept a partial match as GDB does.
 		 * So 'mon ver' will match 'monitor version'
 		 */
-		if ((argc == 0) || !strncmp(argv[0], c->cmd, strlen(argv[0])))
-			return !c->handler(t, argc, argv);
+		if ((argc == 0) || !strncmp(argv[0], cmd->cmd, strlen(argv[0])))
+			return !cmd->handler(t, argc, argv);
 	}
 
 	if (!t)
 		return -1;
-
 	return target_command(t, argc, argv);
 }
 
