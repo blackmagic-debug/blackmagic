@@ -389,6 +389,8 @@ bool cmd_morse(target *t, int argc, const char **argv)
 		gdb_outf("%s\n", morse_msg);
 		DEBUG_WARN("%s\n", morse_msg);
 	}
+	else
+		gdb_out("No message\n");
 	return true;
 }
 
