@@ -458,9 +458,9 @@ static bool cmd_tdi_low_reset(target *t, int argc, const char **argv)
 static bool cmd_target_power(target *t, int argc, const char **argv)
 {
 	(void)t;
-	if (argc == 1) {
+	if (argc == 1)
 		gdb_outf("Target Power: %s\n", platform_target_get_power() ? "enabled" : "disabled");
-	} else if (argc == 2) {
+	else if (argc == 2) {
 		bool want_enable = false;
 		if (parse_enable_or_disable(argv[1], &want_enable)) {
 			if (want_enable && !platform_target_get_power() &&
@@ -472,9 +472,8 @@ static bool cmd_target_power(target *t, int argc, const char **argv)
 				gdb_outf("%s target power\n", want_enable ? "Enabling" : "Disabling");
 			}
 		}
-	} else {
+	} else
 		gdb_outf("Unrecognized command format\n");
-	}
 	return true;
 }
 #endif
