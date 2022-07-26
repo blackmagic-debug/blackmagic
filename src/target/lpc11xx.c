@@ -59,11 +59,11 @@ const struct command_s lpc11xx_cmd_list[] = {
 	{NULL, NULL, NULL},
 };
 
-static void lpc11xx_add_flash(
-	target *t, uint32_t addr, size_t len, size_t erasesize, uint32_t iap_entry, uint8_t reserved_pages)
+static void lpc11xx_add_flash(target *t, const uint32_t addr, const size_t len, const size_t erase_block_len,
+	const uint32_t iap_entry, const size_t reserved_pages)
 {
 	struct lpc_flash *lf = lpc_add_flash(t, addr, len);
-	lf->f.blocksize = erasesize;
+	lf->f.blocksize = erase_block_len;
 	lf->f.buf_size = IAP_PGM_CHUNKSIZE;
 	lf->f.write = lpc_flash_write_magic_vect;
 	lf->iap_entry = iap_entry;
