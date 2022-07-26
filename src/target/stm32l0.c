@@ -542,6 +542,16 @@ static bool stm32lx_eeprom_write(target_s *t, uint32_t address, size_t cb, uint3
 	return stm32lx_nvm_busy_wait(t, nvm, NULL);
 }
 
+static size_t stm32lx_prot_level(const uint32_t options)
+{
+	const uint32_t read_protection = (options >> STM32Lx_NVM_OPTR_RDPROT_S) & STM32Lx_NVM_OPTR_RDPROT_M;
+	if (read_protection == STM32Lx_NVM_OPTR_RDPROT_0)
+		return 0;
+	if (read_protection == STM32Lx_NVM_OPTR_RDPROT_2)
+		return 2;
+	return 1;
+}
+
 static bool stm32lx_cmd_option(target_s *t, int argc, const char **argv)
 {
 	const uint32_t nvm = stm32lx_nvm_phys(t);
@@ -585,35 +595,19 @@ static bool stm32lx_cmd_option(target_s *t, int argc, const char **argv)
 			(val >> 16U) & 0xffffU, (val & 0xffffU) == ((~val >> 16U) & 0xffffU) ? "OK" : "ERR");
 	}
 
+	const uint32_t options = target_mem_read32(t, STM32Lx_NVM_OPTR(nvm));
+	const size_t read_protection = stm32lx_prot_level(options);
 	if (stm32lx_is_stm32l1(t)) {
-		const uint32_t optr = target_mem_read32(t, STM32Lx_NVM_OPTR(nvm));
-		uint8_t rdprot = (optr >> STM32Lx_NVM_OPTR_RDPROT_S) & STM32Lx_NVM_OPTR_RDPROT_M;
-		if (rdprot == STM32Lx_NVM_OPTR_RDPROT_0)
-			rdprot = 0;
-		else if (rdprot == STM32Lx_NVM_OPTR_RDPROT_2)
-			rdprot = 2;
-		else
-			rdprot = 1;
-
 		tc_printf(t,
-			"OPTR: 0x%08" PRIx32 ", RDPRT %d, SPRMD %d, BOR %d, WDG_SW %d, nRST_STP %d, nRST_STBY %d, nBFB2 %d\n", optr,
-			rdprot, (optr & STM32L1_NVM_OPTR_SPRMOD) ? 1 : 0,
-			(optr >> STM32L1_NVM_OPTR_BOR_LEV_S) & STM32L1_NVM_OPTR_BOR_LEV_M, (optr & STM32Lx_NVM_OPTR_WDG_SW) ? 1 : 0,
-			(optr & STM32L1_NVM_OPTR_nRST_STOP) ? 1 : 0, (optr & STM32L1_NVM_OPTR_nRST_STDBY) ? 1 : 0,
-			(optr & STM32L1_NVM_OPTR_nBFB2) ? 1 : 0);
+			"OPTR: 0x%08" PRIx32 ", RDPRT %u, SPRMD %u, BOR %u, WDG_SW %u, nRST_STP %u, nRST_STBY %u, nBFB2 %u\n",
+			options, read_protection, (options & STM32L1_NVM_OPTR_SPRMOD) ? 1 : 0,
+			(options >> STM32L1_NVM_OPTR_BOR_LEV_S) & STM32L1_NVM_OPTR_BOR_LEV_M,
+			(options & STM32Lx_NVM_OPTR_WDG_SW) ? 1 : 0, (options & STM32L1_NVM_OPTR_nRST_STOP) ? 1 : 0,
+			(options & STM32L1_NVM_OPTR_nRST_STDBY) ? 1 : 0, (options & STM32L1_NVM_OPTR_nBFB2) ? 1 : 0);
 	} else {
-		const uint32_t optr = target_mem_read32(t, STM32Lx_NVM_OPTR(nvm));
-		uint8_t rdprot = (optr >> STM32Lx_NVM_OPTR_RDPROT_S) & STM32Lx_NVM_OPTR_RDPROT_M;
-		if (rdprot == STM32Lx_NVM_OPTR_RDPROT_0)
-			rdprot = 0;
-		else if (rdprot == STM32Lx_NVM_OPTR_RDPROT_2)
-			rdprot = 2;
-		else
-			rdprot = 1;
-
-		tc_printf(t, "OPTR: 0x%08" PRIx32 ", RDPROT %u, WPRMOD %d, WDG_SW %d, BOOT1 %d\n", optr, rdprot,
-			(optr & STM32L0_NVM_OPTR_WPRMOD) ? 1 : 0, (optr & STM32Lx_NVM_OPTR_WDG_SW) ? 1 : 0,
-			(optr & STM32L0_NVM_OPTR_BOOT1) ? 1 : 0);
+		tc_printf(t, "OPTR: 0x%08" PRIx32 ", RDPROT %u, WPRMOD %u, WDG_SW %u, BOOT1 %u\n", options, read_protection,
+			(options & STM32L0_NVM_OPTR_WPRMOD) ? 1 : 0, (options & STM32Lx_NVM_OPTR_WDG_SW) ? 1 : 0,
+			(options & STM32L0_NVM_OPTR_BOOT1) ? 1 : 0);
 	}
 
 	goto done;
