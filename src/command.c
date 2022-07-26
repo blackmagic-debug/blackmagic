@@ -428,8 +428,8 @@ static bool cmd_halt_timeout(target *t, int argc, const char **argv)
 {
 	(void)t;
 	if (argc > 1)
-		cortexm_wait_timeout = atol(argv[1]);
-	gdb_outf("Cortex-M timeout to wait for device haltes: %d\n", cortexm_wait_timeout);
+		cortexm_wait_timeout = strtoul(argv[1], NULL, 0);
+	gdb_outf("Cortex-M timeout to wait for device halts: %d\n", cortexm_wait_timeout);
 	return true;
 }
 
