@@ -170,18 +170,16 @@ bool cmd_help(target *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
-	const struct command_s *c;
 
 	if (!t || t->tc->destroy_callback) {
 		gdb_out("General commands:\n");
-		for (c = cmd_list; c->cmd; c++)
-			gdb_outf("\t%s -- %s\n", c->cmd, c->help);
+		for (const command_t *cmd = cmd_list; cmd->cmd; cmd++)
+			gdb_outf("\t%s -- %s\n", cmd->cmd, cmd->help);
+		if (!t)
+			return true;
 	}
-	if (!t)
-		return -1;
 
 	target_command_help(t);
-
 	return true;
 }
 
