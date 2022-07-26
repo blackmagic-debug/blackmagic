@@ -33,6 +33,7 @@
 #include "morse.h"
 #include "version.h"
 #include "serialno.h"
+#include "jtagtap.h"
 
 #ifdef ENABLE_RTT
 #include "rtt.h"
@@ -56,6 +57,7 @@ static bool cmd_morse(target *t, int argc, char **argv);
 static bool cmd_halt_timeout(target *t, int argc, const char **argv);
 static bool cmd_connect_reset(target *t, int argc, const char **argv);
 static bool cmd_reset(target *t, int argc, const char **argv);
+static bool cmd_tdi_low_reset(target *t, int argc, const char **argv);
 #ifdef PLATFORM_HAS_POWER_SWITCH
 static bool cmd_target_power(target *t, int argc, const char **argv);
 #endif
@@ -82,6 +84,7 @@ const struct command_s cmd_list[] = {
 	{"halt_timeout", (cmd_handler)cmd_halt_timeout, "Timeout (ms) to wait until Cortex-M is halted: (Default 2000)" },
 	{"connect_rst", (cmd_handler)cmd_connect_reset, "Configure connect under reset: (enable|disable)" },
 	{"reset", (cmd_handler)cmd_reset, "Pulse the nRST line - disconnects target" },
+	{"tdi_low_reset", (cmd_handler)cmd_tdi_low_reset, "Pulse nRST with TDI set low to attempt to wake certain targets up (eg LPC82x)"},
 #ifdef PLATFORM_HAS_POWER_SWITCH
 	{"tpwr", (cmd_handler)cmd_target_power, "Supplies power to the target: (enable|disable)"},
 #endif
@@ -451,6 +454,16 @@ static bool cmd_reset(target *t, int argc, const char **argv)
 	target_list_free();
 	platform_nrst_set_val(true);
 	platform_nrst_set_val(false);
+	return true;
+}
+
+static bool cmd_tdi_low_reset(target *t, int argc, const char **argv)
+{
+	(void)t;
+	(void)argc;
+	(void)argv;
+	jtag_proc.jtagtap_next(true, false);
+	cmd_reset(NULL, 0, NULL);
 	return true;
 }
 
