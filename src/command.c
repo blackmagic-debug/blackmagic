@@ -193,8 +193,8 @@ static bool cmd_jtag_scan(target *t, int argc, const char **argv)
 
 	if (argc > 1) {
 		/* Accept a list of IR lengths on command line */
-		for (int i = 1; i < argc; i++)
-			irlens[i - 1] = atoi(argv[i]);
+		for (size_t i = 1; i < (size_t)argc; i++)
+			irlens[i - 1] = strtoul(argv[i], NULL, 0);
 		irlens[argc - 1] = 0;
 	}
 
