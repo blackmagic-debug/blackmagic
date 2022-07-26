@@ -356,14 +356,13 @@ bool cmd_frequency(target *t, int argc, const char **argv)
 static void display_target(int i, target *t, void *context)
 {
 	(void)context;
-	if (!strcmp(target_driver_name(t), "ARM Cortex-M")) {
-		gdb_outf("***%2d%sUnknown %s Designer 0x%03x Partno 0x%03x %s\n", i, target_attached(t) ? " * " : " ",
-			target_driver_name(t), target_designer(t), target_idcode(t),
-			(target_core_name(t)) ? target_core_name(t) : "");
-	} else {
-		gdb_outf("%2d   %c  %s %s\n", i, target_attached(t) ? '*' : ' ', target_driver_name(t),
-			(target_core_name(t)) ? target_core_name(t) : "");
-	}
+	const char attached = target_attached(t) ? '*' : ' ';
+	const char *const core_name = target_core_name(t);
+	if (!strcmp(target_driver_name(t), "ARM Cortex-M"))
+		gdb_outf("***%2d %c Unknown %s Designer 0x%03x Partno 0x%03x %s\n", i, attached, target_driver_name(t),
+			target_designer(t), target_idcode(t), core_name ? core_name : "");
+	else
+		gdb_outf("%2d   %c  %s %s\n", i, attached, target_driver_name(t), core_name ? core_name : "");
 }
 
 bool cmd_targets(target *t, int argc, const char **argv)
