@@ -329,23 +329,27 @@ bool cmd_frequency(target *t, int argc, const char **argv)
 {
 	(void)t;
 	if (argc == 2) {
-		char *p;
-		uint32_t frequency = strtol(argv[1], &p, 10);
-		switch (*p) {
+		char *multiplier = NULL;
+		uint32_t frequency = strtoul(argv[1], &multiplier, 10);
+		if (!multiplier) {
+			gdb_outf("Frequency must be an integral value possibly followed by 'k' or 'M'");
+			return false;
+		}
+		switch (*multiplier) {
 		case 'k':
-			frequency *= 1000;
+			frequency *= 1000U;
 			break;
 		case 'M':
-			frequency *= 1000 * 1000;
+			frequency *= 1000U * 1000U;
 			break;
 		}
 		platform_max_frequency_set(frequency);
 	}
-	uint32_t freq = platform_max_frequency_get();
+	const uint32_t freq = platform_max_frequency_get();
 	if (freq == FREQ_FIXED)
 		gdb_outf("SWJ freq fixed\n");
 	else
-		gdb_outf("Max SWJ freq %08" PRIx32 "\n", freq);
+		gdb_outf("Current SWJ freq %" PRIu32 "Hz\n", freq);
 	return true;
 }
 
