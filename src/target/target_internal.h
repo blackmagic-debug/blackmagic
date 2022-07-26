@@ -54,11 +54,11 @@ struct target_flash {
 
 typedef bool (*cmd_handler)(target *t, int argc, const char **argv);
 
-struct command_s {
+typedef struct command_s {
 	const char *cmd;
 	cmd_handler handler;
 	const char *help;
-};
+} command_t;
 
 struct target_command_s {
 	const char *specific_name;
