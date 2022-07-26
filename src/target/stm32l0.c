@@ -321,9 +321,9 @@ static bool stm32lx_nvm_busy_wait(target_s *const target, const uint32_t nvm, pl
 
 /*
  * Erase a region of program flash using operations through the debug interface.
- * This is slower than stubbed versions(see NOTES).
- * The flash array is erased for all pages from addr to addr+len inclusive.
- * NVM register file address chosen from target.
+ * This is slower than stubbed versions (see NOTES).
+ * The flash array is erased for all pages from addr to addr + length inclusive.
+ * The NVM register base is automatically determined based on the target.
  */
 static bool stm32lx_nvm_prog_erase(target_flash_s *const flash, const target_addr_t addr, const size_t length)
 {
@@ -372,10 +372,7 @@ static bool stm32lx_nvm_prog_write(
 	if (!stm32lx_nvm_prog_data_unlock(target, nvm))
 		return false;
 
-	/*
-	 * Wait for BSY to clear because we cannot write the PECR until
-	 * the previous operation completes on STM32Lxxx.
-	 */
+	/* Wait for BSY to clear because we cannot write the PECR until the previous operation completes */
 	if (!stm32lx_nvm_busy_wait(target, nvm, NULL))
 		return false;
 
@@ -391,8 +388,8 @@ static bool stm32lx_nvm_prog_write(
 
 /*
  * Erase a region of data flash using operations through the debug interface.
- * The flash is erased for all pages from addr to addr+len, inclusive, on a word boundary.
- * NVM register file address chosen from target.
+ * The flash is erased for all pages from addr to addr + length, inclusive, on a word boundary.
+ * The NVM register base is automatically determined based on the target.
  */
 static bool stm32lx_nvm_data_erase(target_flash_s *const flash, const target_addr_t addr, const size_t length)
 {
@@ -423,7 +420,7 @@ static bool stm32lx_nvm_data_erase(target_flash_s *const flash, const target_add
 
 /*
  * Write to data flash using operations through the debug interface.
- * NVM register file address chosen from target.
+ * The NVM register base is automatically determined based on the target.
  * Unaligned destination writes are supported (though unaligned sources are not).
  */
 static bool stm32lx_nvm_data_write(
