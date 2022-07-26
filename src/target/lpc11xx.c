@@ -52,20 +52,7 @@
  * LPC845  16k   64k   64   1024
  */
 
-static bool lpc11xx_read_uid(target *t, int argc, const char *argv[])
-{
-	(void)argc;
-	(void)argv;
-	struct lpc_flash *f = (struct lpc_flash *)t->flash;
-	uint8_t uid[16];
-	if (lpc_iap_call(f, uid, IAP_CMD_READUID))
-		return false;
-	tc_printf(t, "UID: 0x");
-	for (uint32_t i = 0; i < sizeof(uid); ++i)
-		tc_printf(t, "%02x", uid[i]);
-	tc_printf(t, "\n");
-	return true;
-}
+static bool lpc11xx_read_uid(target *t, int argc, const char **argv);
 
 const struct command_s lpc11xx_cmd_list[] = {
 	{"readuid", lpc11xx_read_uid, "Read out the 16-byte UID."},
@@ -291,4 +278,19 @@ bool lpc11xx_probe(target *t)
 	}
 
 	return false;
+}
+
+static bool lpc11xx_read_uid(target *t, int argc, const char **argv)
+{
+	(void)argc;
+	(void)argv;
+	struct lpc_flash *f = (struct lpc_flash *)t->flash;
+	uint8_t uid[16];
+	if (lpc_iap_call(f, uid, IAP_CMD_READUID))
+		return false;
+	tc_printf(t, "UID: 0x");
+	for (size_t i = 0; i < sizeof(uid); ++i)
+		tc_printf(t, "%02x", uid[i]);
+	tc_printf(t, "\n");
+	return true;
 }
