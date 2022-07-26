@@ -45,15 +45,15 @@
 
 #include <alloca.h>
 
-static bool cmd_version(target *t, int argc, char **argv);
-static bool cmd_help(target *t, int argc, char **argv);
+static bool cmd_version(target *t, int argc, const char **argv);
+static bool cmd_help(target *t, int argc, const char **argv);
 
-static bool cmd_jtag_scan(target *t, int argc, char **argv);
-static bool cmd_swdp_scan(target *t, int argc, char **argv);
-static bool cmd_auto_scan(target *t, int argc, char **argv);
-static bool cmd_frequency(target *t, int argc, char **argv);
-static bool cmd_targets(target *t, int argc, char **argv);
-static bool cmd_morse(target *t, int argc, char **argv);
+static bool cmd_jtag_scan(target *t, int argc, const char **argv);
+static bool cmd_swdp_scan(target *t, int argc, const char **argv);
+static bool cmd_auto_scan(target *t, int argc, const char **argv);
+static bool cmd_frequency(target *t, int argc, const char **argv);
+static bool cmd_targets(target *t, int argc, const char **argv);
+static bool cmd_morse(target *t, int argc, const char **argv);
 static bool cmd_halt_timeout(target *t, int argc, const char **argv);
 static bool cmd_connect_reset(target *t, int argc, const char **argv);
 static bool cmd_reset(target *t, int argc, const char **argv);
@@ -73,34 +73,34 @@ static bool cmd_debug_bmp(target *t, int argc, const char **argv);
 #endif
 
 const command_t cmd_list[] = {
-	{"version", (cmd_handler)cmd_version, "Display firmware version info"},
-	{"help", (cmd_handler)cmd_help, "Display help for monitor commands"},
-	{"jtag_scan", (cmd_handler)cmd_jtag_scan, "Scan JTAG chain for devices"},
-	{"swdp_scan", (cmd_handler)cmd_swdp_scan, "Scan SW-DP for devices"},
-	{"auto_scan", (cmd_handler)cmd_auto_scan, "Automatically scan all chain types for devices"},
-	{"frequency", (cmd_handler)cmd_frequency, "set minimum high and low times"},
-	{"targets", (cmd_handler)cmd_targets, "Display list of available targets"},
-	{"morse", (cmd_handler)cmd_morse, "Display morse error message"},
-	{"halt_timeout", (cmd_handler)cmd_halt_timeout, "Timeout (ms) to wait until Cortex-M is halted: (Default 2000)"},
-	{"connect_rst", (cmd_handler)cmd_connect_reset, "Configure connect under reset: (enable|disable)"},
-	{"reset", (cmd_handler)cmd_reset, "Pulse the nRST line - disconnects target"},
-	{"tdi_low_reset", (cmd_handler)cmd_tdi_low_reset, "Pulse nRST with TDI set low to attempt to wake certain targets up (eg LPC82x)"},
+	{"version", cmd_version, "Display firmware version info"},
+	{"help", cmd_help, "Display help for monitor commands"},
+	{"jtag_scan", cmd_jtag_scan, "Scan JTAG chain for devices"},
+	{"swdp_scan", cmd_swdp_scan, "Scan SW-DP for devices"},
+	{"auto_scan", cmd_auto_scan, "Automatically scan all chain types for devices"},
+	{"frequency", cmd_frequency, "set minimum high and low times"},
+	{"targets", cmd_targets, "Display list of available targets"},
+	{"morse", cmd_morse, "Display morse error message"},
+	{"halt_timeout", cmd_halt_timeout, "Timeout (ms) to wait until Cortex-M is halted: (Default 2000)"},
+	{"connect_rst", cmd_connect_reset, "Configure connect under reset: (enable|disable)"},
+	{"reset", cmd_reset, "Pulse the nRST line - disconnects target"},
+	{"tdi_low_reset", cmd_tdi_low_reset, "Pulse nRST with TDI set low to attempt to wake certain targets up (eg LPC82x)"},
 #ifdef PLATFORM_HAS_POWER_SWITCH
-	{"tpwr", (cmd_handler)cmd_target_power, "Supplies power to the target: (enable|disable)"},
+	{"tpwr", cmd_target_power, "Supplies power to the target: (enable|disable)"},
 #endif
 #ifdef ENABLE_RTT
-	{"rtt", (cmd_handler)cmd_rtt, "enable|disable|status|channel 0..15|ident (str)|cblock|poll maxms minms maxerr"},
+	{"rtt", cmd_rtt, "enable|disable|status|channel 0..15|ident (str)|cblock|poll maxms minms maxerr"},
 #endif
 #ifdef PLATFORM_HAS_TRACESWO
 #if defined TRACESWO_PROTOCOL && TRACESWO_PROTOCOL == 2
-	{"traceswo", (cmd_handler)cmd_traceswo, "Start trace capture, NRZ mode: (baudrate) (decode channel ...)"},
+	{"traceswo", cmd_traceswo, "Start trace capture, NRZ mode: (baudrate) (decode channel ...)"},
 #else
-	{"traceswo", (cmd_handler)cmd_traceswo, "Start trace capture, Manchester mode: (decode channel ...)"},
+	{"traceswo", cmd_traceswo, "Start trace capture, Manchester mode: (decode channel ...)"},
 #endif
 #endif
-	{"heapinfo", (cmd_handler)cmd_heapinfo, "Set semihosting heapinfo"},
+	{"heapinfo", cmd_heapinfo, "Set semihosting heapinfo"},
 #if defined(PLATFORM_HAS_DEBUG) && (PC_HOSTED == 0)
-	{"debug_bmp", (cmd_handler)cmd_debug_bmp, "Output BMP \"debug\" strings to the second vcom: (enable|disable)"},
+	{"debug_bmp", cmd_debug_bmp, "Output BMP \"debug\" strings to the second vcom: (enable|disable)"},
 #endif
 	{NULL, NULL, NULL},
 };
@@ -146,7 +146,7 @@ int command_process(target *t, char *cmd)
 
 #define BOARD_IDENT "Black Magic Probe" PLATFORM_IDENT FIRMWARE_VERSION
 
-bool cmd_version(target *t, int argc, char **argv)
+bool cmd_version(target *t, int argc, const char **argv)
 {
 	(void)t;
 	(void)argc;
@@ -166,7 +166,7 @@ bool cmd_version(target *t, int argc, char **argv)
 	return true;
 }
 
-bool cmd_help(target *t, int argc, char **argv)
+bool cmd_help(target *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
@@ -185,7 +185,7 @@ bool cmd_help(target *t, int argc, char **argv)
 	return true;
 }
 
-static bool cmd_jtag_scan(target *t, int argc, char **argv)
+static bool cmd_jtag_scan(target *t, int argc, const char **argv)
 {
 	(void)t;
 	uint8_t irlens[argc];
@@ -232,7 +232,7 @@ static bool cmd_jtag_scan(target *t, int argc, char **argv)
 	return true;
 }
 
-bool cmd_swdp_scan(target *t, int argc, char **argv)
+bool cmd_swdp_scan(target *t, int argc, const char **argv)
 {
 	(void)t;
 	volatile uint32_t targetid = 0;
@@ -273,7 +273,7 @@ bool cmd_swdp_scan(target *t, int argc, char **argv)
 	return true;
 }
 
-bool cmd_auto_scan(target *t, int argc, char **argv)
+bool cmd_auto_scan(target *t, int argc, const char **argv)
 {
 	(void)t;
 	(void)argc;
@@ -327,7 +327,7 @@ bool cmd_auto_scan(target *t, int argc, char **argv)
 	return true;
 }
 
-bool cmd_frequency(target *t, int argc, char **argv)
+bool cmd_frequency(target *t, int argc, const char **argv)
 {
 	(void)t;
 	if (argc == 2) {
@@ -364,7 +364,7 @@ static void display_target(int i, target *t, void *context)
 	}
 }
 
-bool cmd_targets(target *t, int argc, char **argv)
+bool cmd_targets(target *t, int argc, const char **argv)
 {
 	(void)t;
 	(void)argc;
@@ -379,7 +379,7 @@ bool cmd_targets(target *t, int argc, char **argv)
 	return true;
 }
 
-bool cmd_morse(target *t, int argc, char **argv)
+bool cmd_morse(target *t, int argc, const char **argv)
 {
 	(void)t;
 	(void)argc;
