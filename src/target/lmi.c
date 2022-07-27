@@ -86,11 +86,8 @@ bool lm3s_probe(target *const t, const uint16_t did1)
 	t->driver = lmi_driver_str;
 	switch (did1) {
 	case 0x1049:	/* LM3S3748 */
-		target_add_ram(t, 0x20000000U, 0x10000U);
-		lmi_add_flash(t, 0x20000U);
-		break;
 	case 0x1096: /* LM3S5732 */
-		target_add_ram(t, 0x2000000U, 0x10000U);
+		target_add_ram(t, 0x20000000U, 0x10000U);
 		lmi_add_flash(t, 0x20000U);
 		break;
 	case 0x10A6: /* LM3S8962 */
