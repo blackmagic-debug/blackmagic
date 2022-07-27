@@ -38,8 +38,10 @@
 #define LMI_SCB_DID0         (LMI_SCB_BASE + 0x000U)
 #define LMI_SCB_DID1         (LMI_SCB_BASE + 0x004U)
 
-#define DID0_CLASS_MASK      0x00FF0000U
-#define DID0_CLASS_TIVA      0x00050000U
+#define DID0_CLASS_MASK           0x00FF0000U
+#define DID0_CLASS_STELLARIS_FURY 0x00010000U
+#define DID0_CLASS_STELLARIS_DUST 0x00030000U
+#define DID0_CLASS_TIVA           0x00050000U
 
 #define LMI_FLASH_BASE       0x400FD000
 #define LMI_FLASH_FMA        (LMI_FLASH_BASE + 0x000)
@@ -78,47 +80,70 @@ static void lmi_add_flash(target *t, size_t length)
 	target_add_flash(t, f);
 }
 
-bool lmi_probe(target *t)
+bool lm3s_probe(target *const t, const uint16_t did1)
 {
-	const uint32_t did0 = target_mem_read32(t, LMI_SCB_DID0);
-	if ((did0 & DID0_CLASS_MASK) != DID0_CLASS_TIVA)
-		return false;
-
-	const uint32_t did1 = target_mem_read32(t, LMI_SCB_DID1);
-	t->mass_erase = lmi_mass_erase;
-	switch (did1 >> 16) {
+	const char *driver = t->driver;
+	t->driver = lmi_driver_str;
+	switch (did1) {
 	case 0x1049:	/* LM3S3748 */
-		t->driver = lmi_driver_str;
 		target_add_ram(t, 0x20000000, 0x8000);
 		lmi_add_flash(t, 0x40000);
-		return true;
+		break;
+	default:
+		t->driver = driver;
+		return false;
+	}
+	t->mass_erase = lmi_mass_erase;
+	return true;
+}
 
+bool tm4c_probe(target *const t, const uint16_t did1)
+{
+	const char *driver = t->driver;
+	t->driver = lmi_driver_str;
+	switch (did1) {
 	case 0x10A1:	/* TM4C123GH6PM */
-		t->driver = lmi_driver_str;
 		target_add_ram(t, 0x20000000, 0x10000);
 		lmi_add_flash(t, 0x80000);
 		/* On Tiva targets, asserting nRST results in the debug
 		 * logic also being reset.  We can't assert nRST and must
 		 * only use the AIRCR SYSRESETREQ. */
 		t->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
-		return true;
+		break;
 
 	case 0x1022:    /* TM4C1230C3PM */
-		t->driver = lmi_driver_str;
 		target_add_ram(t, 0x20000000, 0x6000);
 		lmi_add_flash(t, 0x10000);
 		t->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
-		return true;
+		break;
 
 	case 0x101F:    /* TM4C1294NCPDT */
-		t->driver = lmi_driver_str;
 		target_add_ram(t, 0x20000000, 0x40000);
 		lmi_add_flash(t, 0x100000);
 		t->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
-		return true;
+		break;
+	default:
+		t->driver = driver;
+		return false;
 	}
-	t->mass_erase = NULL;
-	return false;
+	t->mass_erase = lmi_mass_erase;
+	return true;
+}
+
+bool lmi_probe(target *const t)
+{
+	const uint32_t did0 = target_mem_read32(t, LMI_SCB_DID0);
+	const uint16_t did1 = target_mem_read32(t, LMI_SCB_DID1) >> 16U;
+
+	switch (did0 & DID0_CLASS_MASK) {
+	case DID0_CLASS_STELLARIS_FURY:
+	case DID0_CLASS_STELLARIS_DUST:
+		return lm3s_probe(t, did1);
+	case DID0_CLASS_TIVA:
+		return tm4c_probe(t, did1);
+	default:
+		return false;
+	}
 }
 
 static int lmi_flash_erase(struct target_flash *f, target_addr addr, const size_t len)
