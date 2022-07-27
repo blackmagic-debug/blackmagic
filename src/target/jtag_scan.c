@@ -219,7 +219,7 @@ uint32_t jtag_scan(const uint8_t *irlens)
 	for (size_t device = 0; device < jtag_dev_count; device++) {
 		for (size_t descr = 0; dev_descr[descr].idcode; descr++) {
 			if ((jtag_devs[device].jd_idcode & dev_descr[descr].idmask) == dev_descr[descr].idcode) {
-				jtag_devs[device].current_ir = -1;
+				jtag_devs[device].current_ir = UINT32_MAX;
 				/* Save description in table */
 				jtag_devs[device].jd_descr = dev_descr[descr].descr;
 				/* Call handler to initialise/probe device further */
@@ -233,18 +233,20 @@ uint32_t jtag_scan(const uint8_t *irlens)
 	return jtag_dev_count;
 }
 
-void jtag_dev_write_ir(jtag_proc_t *jp, uint8_t jd_index, uint32_t ir)
+void jtag_dev_write_ir(jtag_proc_t *jp, const uint8_t jd_index, const uint32_t ir)
 {
 	jtag_dev_t *d = &jtag_devs[jd_index];
-	if(ir == d->current_ir) return;
-	for(size_t i = 0; i < jtag_dev_count; i++)
-		jtag_devs[i].current_ir = -1;
+	if (ir == d->current_ir)
+		return;
+
+	for (size_t device = 0; device < jtag_dev_count; device++)
+		jtag_devs[device].current_ir = -1;
 	d->current_ir = ir;
 
 	jtagtap_shift_ir();
-	jp->jtagtap_tdi_seq(0, ones, d->ir_prescan);
-	jp->jtagtap_tdi_seq(d->ir_postscan?0:1, (void*)&ir, d->ir_len);
-	jp->jtagtap_tdi_seq(1, ones, d->ir_postscan);
+	jp->jtagtap_tdi_seq(false, ones, d->ir_prescan);
+	jp->jtagtap_tdi_seq(!d->ir_postscan, (const uint8_t *)&ir, d->ir_len);
+	jp->jtagtap_tdi_seq(true, ones, d->ir_postscan);
 	jtagtap_return_idle(1);
 }
 
