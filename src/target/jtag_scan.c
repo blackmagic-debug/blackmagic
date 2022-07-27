@@ -32,7 +32,7 @@
 #include "jtag_devs.h"
 
 struct jtag_dev_s jtag_devs[JTAG_MAX_DEVS+1];
-int jtag_dev_count;
+uint32_t jtag_dev_count = 0;
 
 /* bucket of ones for don't care TDI */
 static const uint8_t ones[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
@@ -66,7 +66,7 @@ void jtag_add_device(const int dev_index, const jtag_dev_t *jtag_dev)
  */
 int jtag_scan(const uint8_t *irlens)
 {
-	int i;
+	size_t i;
 	uint32_t j;
 
 	target_list_free();
@@ -163,41 +163,44 @@ int jtag_scan(const uint8_t *irlens)
 	/* Count device on chain */
 	DEBUG_INFO("Change state to Shift-DR\n");
 	jtagtap_shift_dr();
-	for(i = 0; (jtag_proc.jtagtap_next(0, 1) == 0) && (i <= jtag_dev_count); i++)
-		jtag_devs[i].dr_postscan = jtag_dev_count - i - 1;
+	size_t device = 0;
+	for (; !jtag_proc.jtagtap_next(false, true) && device <= jtag_dev_count; ++device)
+		jtag_devs[device].dr_postscan = jtag_dev_count - device - 1;
 
-	if(i != jtag_dev_count) {
-		DEBUG_WARN("jtag_scan: Sanity check failed: "
-			"BYPASS dev count doesn't match IR scan\n");
+	if (device != jtag_dev_count) {
+		DEBUG_WARN("jtag_scan: Sanity check failed: BYPASS dev count doesn't match IR scan\n");
 		jtag_dev_count = -1;
 		return -1;
 	}
 
 	DEBUG_INFO("Return to Run-Test/Idle\n");
-	jtag_proc.jtagtap_next(1, 1);
+	jtag_proc.jtagtap_next(true, true);
 	jtagtap_return_idle(1);
-	if(!jtag_dev_count) {
+	if (!jtag_dev_count)
 		return 0;
-	}
 
 	/* Fill in the ir_postscan fields */
-	for(i = jtag_dev_count - 1; i; i--)
-		jtag_devs[i-1].ir_postscan = jtag_devs[i].ir_postscan +
-					jtag_devs[i].ir_len;
+	for (size_t device = jtag_dev_count - 1; device > 0; --device)
+		jtag_devs[device - 1].ir_postscan = jtag_devs[device].ir_postscan + jtag_devs[device].ir_len;
 
 	/* Reset jtagtap: should take all devs to IDCODE */
 	jtag_proc.jtagtap_reset();
 	jtagtap_shift_dr();
-	for(i = 0; i < jtag_dev_count; i++) {
-		if(!jtag_proc.jtagtap_next(0, 1)) continue;
-		jtag_devs[i].jd_idcode = 1;
-		for(j = 2; j; j <<= 1)
-			if(jtag_proc.jtagtap_next(0, 1)) jtag_devs[i].jd_idcode |= j;
+	/* Now shift out the ID codes for all the attached devices. */
+	for (size_t device = 0; device < jtag_dev_count; ++device) {
+		if (!jtag_proc.jtagtap_next(false, true))
+			continue;
+		jtag_devs[device].jd_idcode = 1U;
+		for (size_t bit = 1; bit < 32; ++bit) {
+			if (jtag_proc.jtagtap_next(false, true))
+				jtag_devs[device].jd_idcode |= 1U << bit;
+		}
 
 	}
 	DEBUG_INFO("Return to Run-Test/Idle\n");
-	jtag_proc.jtagtap_next(1, 1);
+	jtag_proc.jtagtap_next(true, true);
 	jtagtap_return_idle(jtag_proc.tap_idle_cycles);
+
 #if PC_HOSTED == 1
 	/*Transfer needed device information to firmware jtag_devs*/
 	for(i = 0; i < jtag_dev_count; i++)
@@ -237,7 +240,7 @@ void jtag_dev_write_ir(jtag_proc_t *jp, uint8_t jd_index, uint32_t ir)
 {
 	jtag_dev_t *d = &jtag_devs[jd_index];
 	if(ir == d->current_ir) return;
-	for(int i = 0; i < jtag_dev_count; i++)
+	for(size_t i = 0; i < jtag_dev_count; i++)
 		jtag_devs[i].current_ir = -1;
 	d->current_ir = ir;
 
