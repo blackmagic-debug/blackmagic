@@ -27,6 +27,10 @@
 #define JTAG_MAX_IR_LEN	16
 
 typedef struct jtag_dev_s {
+	const char *jd_descr;
+	uint32_t jd_idcode;
+	uint32_t current_ir;
+
 	union {
 		uint8_t jd_dev;
 		uint8_t dr_prescan;
@@ -36,9 +40,6 @@ typedef struct jtag_dev_s {
 	uint8_t ir_len;
 	uint8_t ir_prescan;
 	uint8_t ir_postscan;
-	uint32_t jd_idcode;
-	const char *jd_descr;
-	uint32_t current_ir;
 } jtag_dev_t;
 
 extern struct jtag_dev_s jtag_devs[JTAG_MAX_DEVS + 1];
