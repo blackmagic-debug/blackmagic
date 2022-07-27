@@ -34,8 +34,12 @@
 
 #define BLOCK_SIZE           0x400
 
-#define LMI_SCB_BASE         0x400FE000
-#define LMI_SCB_DID1         (LMI_SCB_BASE + 0x004)
+#define LMI_SCB_BASE         0x400FE000U
+#define LMI_SCB_DID0         (LMI_SCB_BASE + 0x000U)
+#define LMI_SCB_DID1         (LMI_SCB_BASE + 0x004U)
+
+#define DID0_CLASS_MASK      0x00FF0000U
+#define DID0_CLASS_TIVA      0x00050000U
 
 #define LMI_FLASH_BASE       0x400FD000
 #define LMI_FLASH_FMA        (LMI_FLASH_BASE + 0x000)
@@ -76,7 +80,11 @@ static void lmi_add_flash(target *t, size_t length)
 
 bool lmi_probe(target *t)
 {
-	uint32_t did1 = target_mem_read32(t, LMI_SCB_DID1);
+	const uint32_t did0 = target_mem_read32(t, LMI_SCB_DID0);
+	if ((did0 & DID0_CLASS_MASK) != DID0_CLASS_TIVA)
+		return false;
+
+	const uint32_t did1 = target_mem_read32(t, LMI_SCB_DID1);
 	t->mass_erase = lmi_mass_erase;
 	switch (did1 >> 16) {
 	case 0x1049:	/* LM3S3748 */
