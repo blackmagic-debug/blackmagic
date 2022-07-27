@@ -43,6 +43,13 @@
 #define DID0_CLASS_STELLARIS_DUST 0x00030000U
 #define DID0_CLASS_TIVA           0x00050000U
 
+#define DID1_LM3S3748        0x1049U
+#define DID1_LM3S5732        0x1096U
+#define DID1_LM3S8962        0x10A6U
+#define DID1_TM4C123GH6PM    0x10A1U
+#define DID1_TM4C1230C3PM    0x1022U
+#define DID1_TM4C1294NCPDT   0x101FU
+
 #define LMI_FLASH_BASE       0x400FD000
 #define LMI_FLASH_FMA        (LMI_FLASH_BASE + 0x000)
 #define LMI_FLASH_FMC        (LMI_FLASH_BASE + 0x008)
@@ -85,12 +92,12 @@ bool lm3s_probe(target *const t, const uint16_t did1)
 	const char *driver = t->driver;
 	t->driver = lmi_driver_str;
 	switch (did1) {
-	case 0x1049:	/* LM3S3748 */
-	case 0x1096: /* LM3S5732 */
+	case DID1_LM3S3748:
+	case DID1_LM3S5732:
 		target_add_ram(t, 0x20000000U, 0x10000U);
 		lmi_add_flash(t, 0x20000U);
 		break;
-	case 0x10A6: /* LM3S8962 */
+	case DID1_LM3S8962:
 		target_add_ram(t, 0x2000000U, 0x10000U);
 		lmi_add_flash(t, 0x40000U);
 		break;
@@ -107,7 +114,7 @@ bool tm4c_probe(target *const t, const uint16_t did1)
 	const char *driver = t->driver;
 	t->driver = lmi_driver_str;
 	switch (did1) {
-	case 0x10A1:	/* TM4C123GH6PM */
+	case DID1_TM4C123GH6PM:
 		target_add_ram(t, 0x20000000, 0x10000);
 		lmi_add_flash(t, 0x80000);
 		/* On Tiva targets, asserting nRST results in the debug
@@ -115,14 +122,12 @@ bool tm4c_probe(target *const t, const uint16_t did1)
 		 * only use the AIRCR SYSRESETREQ. */
 		t->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
 		break;
-
-	case 0x1022:    /* TM4C1230C3PM */
+	case DID1_TM4C1230C3PM:
 		target_add_ram(t, 0x20000000, 0x6000);
 		lmi_add_flash(t, 0x10000);
 		t->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
 		break;
-
-	case 0x101F:    /* TM4C1294NCPDT */
+	case DID1_TM4C1294NCPDT:
 		target_add_ram(t, 0x20000000, 0x40000);
 		lmi_add_flash(t, 0x100000);
 		t->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
