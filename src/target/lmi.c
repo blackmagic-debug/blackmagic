@@ -93,6 +93,10 @@ bool lm3s_probe(target *const t, const uint16_t did1)
 		target_add_ram(t, 0x2000000U, 0x10000U);
 		lmi_add_flash(t, 0x20000U);
 		break;
+	case 0x10A6: /* LM3S8962 */
+		target_add_ram(t, 0x2000000U, 0x10000U);
+		lmi_add_flash(t, 0x40000U);
+		break;
 	default:
 		t->driver = driver;
 		return false;
