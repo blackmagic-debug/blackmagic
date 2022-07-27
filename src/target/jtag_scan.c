@@ -92,24 +92,26 @@ int jtag_scan(const uint8_t *irlens)
 		DEBUG_WARN("Given list of IR lengths, skipping probe\n");
 		DEBUG_INFO("Change state to Shift-IR\n");
 		jtagtap_shift_ir();
-		j = 0;
-		while((jtag_dev_count <= JTAG_MAX_DEVS) &&
-		      (jtag_devs[jtag_dev_count].ir_len <= JTAG_MAX_IR_LEN)) {
-			uint32_t irout;
-			if(*irlens == 0)
+
+		size_t device = 0;
+		for (size_t prescan = 0; device <= JTAG_MAX_DEVS && jtag_devs[device].ir_len <= JTAG_MAX_IR_LEN;
+			++device) {
+			if (irlens[device] == 0)
 				break;
-			jtag_proc.jtagtap_tdi_tdo_seq((uint8_t*)&irout, 0, ones, *irlens);
+
+			uint32_t irout = 0;
+			jtag_proc.jtagtap_tdi_tdo_seq((uint8_t*)&irout, 0, ones, irlens[device]);
+
 			/* IEEE 1149.1 requires the first bit to be a 1, but not all devices conform (see #1130 on GH) */
 			if (!(irout & 1))
 				DEBUG_WARN("check failed: IR[0] != 1\n");
 
-			jtag_devs[jtag_dev_count].ir_len = *irlens;
-			jtag_devs[jtag_dev_count].ir_prescan = j;
-			jtag_devs[jtag_dev_count].jd_dev = jtag_dev_count;
-			j += *irlens;
-			irlens++;
-			jtag_dev_count++;
+			jtag_devs[device].ir_len = irlens[device];
+			jtag_devs[device].ir_prescan = prescan;
+			jtag_devs[device].jd_dev = device;
+			prescan += irlens[device];
 		}
+		jtag_dev_count = device;
 	} else {
 		DEBUG_INFO("Change state to Shift-IR\n");
 		jtagtap_shift_ir();
