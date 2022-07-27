@@ -66,9 +66,6 @@ void jtag_add_device(const int dev_index, const jtag_dev_t *jtag_dev)
  */
 int jtag_scan(const uint8_t *irlens)
 {
-	size_t i;
-	uint32_t j;
-
 	target_list_free();
 
 	jtag_dev_count = 0;
@@ -202,23 +199,24 @@ int jtag_scan(const uint8_t *irlens)
 	jtagtap_return_idle(jtag_proc.tap_idle_cycles);
 
 #if PC_HOSTED == 1
-	/*Transfer needed device information to firmware jtag_devs*/
-	for(i = 0; i < jtag_dev_count; i++)
-		platform_add_jtag_dev(i, &jtag_devs[i]);
-	for(i = 0; i < jtag_dev_count; i++) {
-		DEBUG_INFO("Idcode 0x%08" PRIx32, jtag_devs[i].jd_idcode);
-		for(j = 0; dev_descr[j].idcode; j++) {
-			if((jtag_devs[i].jd_idcode & dev_descr[j].idmask) ==
-			   dev_descr[j].idcode) {
-				DEBUG_INFO(": %s",
-						  (dev_descr[j].descr) ? dev_descr[j].descr : "unknown");
+	/*Transfer needed device information to firmware jtag_devs */
+	for (size_t device = 0; device < jtag_dev_count; ++device)
+		platform_add_jtag_dev(device, jtag_devs + device);
+#endif
+
+	for (size_t device = 0; device < jtag_dev_count; ++device) {
+		DEBUG_INFO("IDCode 0x%08" PRIx32, jtag_devs[device].jd_idcode);
+		for (size_t descr = 0; dev_descr[descr].idcode; ++descr) {
+			if ((jtag_devs[device].jd_idcode & dev_descr[descr].idmask) == dev_descr[descr].idcode) {
+				DEBUG_INFO(": %s", dev_descr[descr].descr ? dev_descr[descr].descr : "Unknown");
 				break;
 			}
 		}
 		DEBUG_INFO("\n");
 	}
-#endif
 
+	size_t i;
+	uint32_t j;
 	/* Check for known devices and handle accordingly */
 	for(i = 0; i < jtag_dev_count; i++)
 		for(j = 0; dev_descr[j].idcode; j++)
