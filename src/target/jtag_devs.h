@@ -25,4 +25,3 @@ typedef const struct jtag_dev_descr_s {
 	void (*const handler)(uint8_t jd_index);
 } jtag_dev_descr_t;
 extern jtag_dev_descr_t dev_descr[];
-
