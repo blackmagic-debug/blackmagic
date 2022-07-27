@@ -224,7 +224,7 @@ static bool cmd_jtag_scan(target *t, int argc, char **argv)
 		break;
 	}
 
-	if (devs <= 0) {
+	if (devs == 0) {
 		platform_nrst_set_val(false);
 		gdb_out("JTAG device scan failed!\n");
 		return false;

@@ -254,7 +254,7 @@ static void remotePacketProcessJTAG(unsigned i, char *packet)
 			remote_respond(REMOTE_RESP_ERR,REMOTE_ERROR_WRONGLEN);
 		} else {
 			memset(&jtag_dev, 0, sizeof(jtag_dev));
-			uint8_t index        = remotehston(2, &packet[ 2]);
+			const uint32_t index = remotehston(2, &packet[ 2]);
 			jtag_dev.dr_prescan  = remotehston(2, &packet[ 4]);
 			jtag_dev.dr_postscan = remotehston(2, &packet[ 6]);
 			jtag_dev.ir_len      = remotehston(2, &packet[ 8]);
