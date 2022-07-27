@@ -215,21 +215,20 @@ uint32_t jtag_scan(const uint8_t *irlens)
 		DEBUG_INFO("\n");
 	}
 
-	size_t i;
-	uint32_t j;
 	/* Check for known devices and handle accordingly */
-	for(i = 0; i < jtag_dev_count; i++)
-		for(j = 0; dev_descr[j].idcode; j++)
-			if((jtag_devs[i].jd_idcode & dev_descr[j].idmask) ==
-			   dev_descr[j].idcode) {
-				jtag_devs[i].current_ir = -1;
+	for (size_t device = 0; device < jtag_dev_count; device++) {
+		for (size_t descr = 0; dev_descr[descr].idcode; descr++) {
+			if ((jtag_devs[device].jd_idcode & dev_descr[descr].idmask) == dev_descr[descr].idcode) {
+				jtag_devs[device].current_ir = -1;
 				/* Save description in table */
-				jtag_devs[i].jd_descr = dev_descr[j].descr;
+				jtag_devs[device].jd_descr = dev_descr[descr].descr;
 				/* Call handler to initialise/probe device further */
-				if(dev_descr[j].handler)
-					dev_descr[j].handler(i);
+				if (dev_descr[descr].handler)
+					dev_descr[descr].handler(device);
 				break;
 			}
+		}
+	}
 
 	return jtag_dev_count;
 }
