@@ -118,26 +118,36 @@ int jtag_scan(const uint8_t *irlens)
 
 		DEBUG_INFO("Scanning out IRs\n");
 		/* IEEE 1149.1 requires the first bit to be a 1, but not all devices conform (see #1130 on GH) */
-		if (!jtag_proc.jtagtap_next(0, 1))
+		if (!jtag_proc.jtagtap_next(false, true))
 			DEBUG_WARN("jtag_scan: Sanity check failed: IR[0] shifted out as 0\n");
 
-		jtag_devs[0].ir_len = 1; j = 1;
-		while((jtag_dev_count <= JTAG_MAX_DEVS) &&
-		      (jtag_devs[jtag_dev_count].ir_len <= JTAG_MAX_IR_LEN)) {
-			if(jtag_proc.jtagtap_next(0, 1)) {
-				if(jtag_devs[jtag_dev_count].ir_len == 1) break;
-				jtag_devs[++jtag_dev_count].ir_len = 1;
-				jtag_devs[jtag_dev_count].ir_prescan = j;
-				jtag_devs[jtag_dev_count].jd_dev = jtag_dev_count;
-			} else jtag_devs[jtag_dev_count].ir_len++;
-			j++;
+		jtag_devs[0].ir_len = 1;
+		size_t device = 0;
+		for (size_t prescan = 1; device <= JTAG_MAX_DEVS && jtag_devs[device].ir_len <= JTAG_MAX_IR_LEN;) {
+			/* If we read out a '1' from TDO, we're at the end of the current device and the start of the next */
+			if (jtag_proc.jtagtap_next(false, true)) {
+				/* If the device was not actually a new device, exit */
+				if (jtag_devs[device].ir_len == 1)
+					break;
+				++device;
+				/* Set up the next device */
+				jtag_devs[device].ir_len = 1;
+				jtag_devs[device].ir_prescan = prescan;
+				jtag_devs[device].jd_dev = device;
+			} else
+				/* Otherwise we have another bit in this device's IR */
+				++jtag_devs[device].ir_len;
+			++prescan;
 		}
-		if(jtag_dev_count > JTAG_MAX_DEVS) {
+		jtag_dev_count = device;
+
+		if (jtag_dev_count > JTAG_MAX_DEVS) {
 			DEBUG_WARN("jtag_scan: Maximum device count exceeded\n");
 			jtag_dev_count = -1;
 			return -1;
 		}
-		if(jtag_devs[jtag_dev_count].ir_len > JTAG_MAX_IR_LEN) {
+
+		if (jtag_devs[jtag_dev_count].ir_len > JTAG_MAX_IR_LEN) {
 			DEBUG_WARN("jtag_scan: Maximum IR length exceeded\n");
 			jtag_dev_count = -1;
 			return -1;
