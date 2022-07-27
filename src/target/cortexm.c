@@ -392,16 +392,14 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 		DEBUG_INFO("Calling " STRINGIFY(x) "\n"); \
 		if ((x)(t)) \
 			return true; \
-		else \
-			target_check_error(t); \
+		target_check_error(t); \
 	} while (0)
 #else
 #define PROBE(x) \
 	do { \
 		if ((x)(t)) \
 			return true; \
-		else \
-			target_check_error(t); \
+		target_check_error(t); \
 	} while (0)
 #endif
 
