@@ -443,7 +443,7 @@ static bool cortexm_prepare(ADIv5_AP_t *ap)
 }
 
 /* Return true if we find a debuggable device.*/
-static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, const size_t recursion, const size_t num_entry)
+static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, const size_t recursion, const uint32_t num_entry)
 {
 	(void)num_entry;
 
@@ -474,14 +474,13 @@ static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, const size_t re
 
 	/* CIDR preamble sanity check */
 	if ((cidr & ~CID_CLASS_MASK) != CID_PREAMBLE) {
-		DEBUG_WARN("%s%d 0x%08" PRIx32 ": 0x%08" PRIx32 " <- does not match preamble (0x%X)\n", indent + 1, num_entry,
-			addr, cidr, CID_PREAMBLE);
+		DEBUG_WARN("%s%" PRIu32 " 0x%08" PRIx32 ": 0x%08" PRIx32 " <- does not match preamble (0x%lX)\n", indent + 1,
+			num_entry, addr, cidr, CID_PREAMBLE);
 		return;
 	}
 
 	/* Extract Component ID class nibble */
 	const uint32_t cid_class = (cidr & CID_CLASS_MASK) >> CID_CLASS_SHIFT;
-
 	const uint64_t pidr = adiv5_ap_read_pidr(ap, addr);
 
 	uint16_t designer_code;
@@ -561,8 +560,8 @@ static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, const size_t re
 	} else {
 		if (designer_code != JEP106_MANUFACTURER_ARM) {
 			/* non arm components not supported currently */
-			DEBUG_WARN("%s0x%" PRIx32 ": 0x%02" PRIx32 "%08" PRIx32 " Non ARM component ignored\n", indent, addr,
-				(uint32_t)(pidr >> 32), (uint32_t)pidr);
+			DEBUG_WARN("%s0x%" PRIx32 ": 0x%08" PRIx32 "%08" PRIx32 " Non ARM component ignored\n", indent, addr,
+				(uint32_t)(pidr >> 32U), (uint32_t)pidr);
 			return;
 		}
 
@@ -586,10 +585,10 @@ static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, const size_t re
 				arm_component_lut[i].arch_id != arch_id)
 				continue;
 
-			DEBUG_INFO("%s%d 0x%" PRIx32 ": %s - %s %s (PIDR = 0x%02" PRIx32 "%08" PRIx32 "  DEVTYPE = 0x%02" PRIx8
-					   " ARCHID = 0x%04" PRIx16 ")\n",
+			DEBUG_INFO("%s%" PRIu32 " 0x%" PRIx32 ": %s - %s %s (PIDR = 0x%08" PRIx32 "%08" PRIx32
+				"  DEVTYPE = 0x%02x ARCHID = 0x%04x)\n",
 				indent + 1, num_entry, addr, cidc_debug_strings[cid_class], arm_component_lut[i].type,
-				arm_component_lut[i].full, (uint32_t)(pidr >> 32), (uint32_t)pidr, dev_type, arch_id);
+				arm_component_lut[i].full, (uint32_t)(pidr >> 32U), (uint32_t)pidr, dev_type, arch_id);
 
 			/* Perform sanity check, if we know what to expect as * component ID class. */
 			if (arm_component_lut[i].cidc != cidc_unknown && cid_class != arm_component_lut[i].cidc) {
@@ -612,9 +611,9 @@ static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, const size_t re
 			break;
 		}
 		if (arm_component_lut[i].arch == aa_end) {
-			DEBUG_WARN("%s%d 0x%" PRIx32 ": %s - Unknown (PIDR = 0x%02" PRIx32 "%08" PRIx32 " DEVTYPE = 0x%02" PRIx8
-					   " ARCHID = 0x%04" PRIx16 ")\n",
-				indent, num_entry, addr, cidc_debug_strings[cid_class], (uint32_t)(pidr >> 32), (uint32_t)pidr,
+			DEBUG_WARN("%s%" PRIu32 " 0x%" PRIx32 ": %s - Unknown (PIDR = 0x%08" PRIx32 "%08" PRIx32
+				" DEVTYPE = 0x%02x ARCHID = 0x%04x)\n",
+				indent, num_entry, addr, cidc_debug_strings[cid_class], (uint32_t)(pidr >> 32U), (uint32_t)pidr,
 				dev_type, arch_id);
 		}
 	}
