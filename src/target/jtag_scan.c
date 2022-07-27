@@ -99,10 +99,10 @@ int jtag_scan(const uint8_t *irlens)
 			if(*irlens == 0)
 				break;
 			jtag_proc.jtagtap_tdi_tdo_seq((uint8_t*)&irout, 0, ones, *irlens);
-			if (!(irout & 1)) {
+			/* IEEE 1149.1 requires the first bit to be a 1, but not all devices conform (see #1130 on GH) */
+			if (!(irout & 1))
 				DEBUG_WARN("check failed: IR[0] != 1\n");
-				return -1;
-			}
+
 			jtag_devs[jtag_dev_count].ir_len = *irlens;
 			jtag_devs[jtag_dev_count].ir_prescan = j;
 			jtag_devs[jtag_dev_count].jd_dev = jtag_dev_count;
@@ -115,12 +115,10 @@ int jtag_scan(const uint8_t *irlens)
 		jtagtap_shift_ir();
 
 		DEBUG_INFO("Scanning out IRs\n");
-		if(!jtag_proc.jtagtap_next(0, 1)) {
-			DEBUG_WARN("jtag_scan: Sanity check failed: IR[0] shifted out "
-					   "as 0\n");
-			jtag_dev_count = -1;
-			return -1; /* must be 1 */
-		}
+		/* IEEE 1149.1 requires the first bit to be a 1, but not all devices conform (see #1130 on GH) */
+		if (!jtag_proc.jtagtap_next(0, 1))
+			DEBUG_WARN("jtag_scan: Sanity check failed: IR[0] shifted out as 0\n");
+
 		jtag_devs[0].ir_len = 1; j = 1;
 		while((jtag_dev_count <= JTAG_MAX_DEVS) &&
 		      (jtag_devs[jtag_dev_count].ir_len <= JTAG_MAX_IR_LEN)) {
