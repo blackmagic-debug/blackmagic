@@ -38,7 +38,7 @@ uint32_t jtag_dev_count = 0;
 static const uint8_t ones[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
 #if PC_HOSTED == 0
-void jtag_add_device(const int dev_index, const jtag_dev_t *jtag_dev)
+void jtag_add_device(const uint32_t dev_index, const jtag_dev_t *jtag_dev)
 {
 	if (dev_index == 0)
 		memset(&jtag_devs, 0, sizeof(jtag_devs));
@@ -64,7 +64,7 @@ void jtag_add_device(const int dev_index, const jtag_dev_t *jtag_dev)
  *	continue to next device. If this is one shift out the remaining 31 bits
  *	of the IDCODE register.
  */
-int jtag_scan(const uint8_t *irlens)
+uint32_t jtag_scan(const uint8_t *irlens)
 {
 	target_list_free();
 
@@ -140,14 +140,14 @@ int jtag_scan(const uint8_t *irlens)
 
 		if (jtag_dev_count > JTAG_MAX_DEVS) {
 			DEBUG_WARN("jtag_scan: Maximum device count exceeded\n");
-			jtag_dev_count = -1;
-			return -1;
+			jtag_dev_count = 0;
+			return 0;
 		}
 
 		if (jtag_devs[jtag_dev_count].ir_len > JTAG_MAX_IR_LEN) {
 			DEBUG_WARN("jtag_scan: Maximum IR length exceeded\n");
-			jtag_dev_count = -1;
-			return -1;
+			jtag_dev_count = 0;
+			return 0;
 		}
 	}
 
@@ -166,8 +166,8 @@ int jtag_scan(const uint8_t *irlens)
 
 	if (device != jtag_dev_count) {
 		DEBUG_WARN("jtag_scan: Sanity check failed: BYPASS dev count doesn't match IR scan\n");
-		jtag_dev_count = -1;
-		return -1;
+		jtag_dev_count = 0;
+		return 0;
 	}
 
 	DEBUG_INFO("Return to Run-Test/Idle\n");
