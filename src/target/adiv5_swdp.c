@@ -128,12 +128,19 @@ int adiv5_swdp_scan(uint32_t targetid)
 			target_id = adiv5_dp_read(initial_dp, ADIV5_DP_CTRLSTAT);
 			adiv5_dp_write(initial_dp, ADIV5_DP_SELECT, 0);
 			DEBUG_INFO("TARGETID %08" PRIx32 "\n", target_id);
-			switch (target_id) {
-			case 0x01002927: /* RP2040 */
+
+			const uint16_t tdesigner =
+				(target_id & ADIV5_DP_TARGETID_TDESIGNER_MASK) >> ADIV5_DP_TARGETID_TDESIGNER_OFFSET;
+			const uint16_t tpartno = (target_id & ADIV5_DP_TARGETID_TPARTNO_MASK) >> ADIV5_DP_TARGETID_TPARTNO_OFFSET;
+			/* convert it to our internal representation, See JEP-106 code list */
+			const uint16_t designer_code = (tdesigner & ADIV5_DP_DESIGNER_JEP106_CONT_MASK) << 1U |
+			                               (tdesigner & ADIV5_DP_DESIGNER_JEP106_CODE_MASK);
+			if (designer_code == JEP106_MANUFACTURER_RASPBERRY && tpartno == 0x2) {
+				/* RP2040 */
 				/* Release evt. handing RESCUE DP reset*/
 				adiv5_dp_write(initial_dp, ADIV5_DP_CTRLSTAT, 0);
-				break;
 			}
+
 			if (!initial_dp->dp_low_write) {
 				DEBUG_WARN("CMSIS_DAP < V1.2 can not handle multi-drop!\n");
 				/* E.g. CMSIS_DAP < V1.2 can not handle multi-drop!*/
