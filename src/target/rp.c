@@ -385,7 +385,7 @@ static void rp_add_flash(target *t, uint32_t addr, size_t length)
 	target_add_flash(t, f);
 }
 
-void rp_ssel_active(target *t, bool active)
+static void rp_ssel_active(target *t, bool active)
 {
 	const uint32_t qspi_ctrl_outover_low = 2UL << 8;
 	const uint32_t qspi_ctrl_outover_high = 3UL << 8;
@@ -395,7 +395,7 @@ void rp_ssel_active(target *t, bool active)
 	target_mem_write32(t, QSPI_CTRL_ADDR, val);
 }
 
-uint32_t rp_read_flash_chip(target *t, uint32_t cmd)
+static uint32_t rp_read_flash_chip(target *t, uint32_t cmd)
 {
 	uint32_t value = 0;
 
@@ -417,7 +417,7 @@ uint32_t rp_read_flash_chip(target *t, uint32_t cmd)
 	return value;
 }
 
-uint32_t rp_get_flash_length(target *t)
+static uint32_t rp_get_flash_length(target *t)
 {
 	uint32_t size = MAX_FLASH;
 	uint32_t bootsec[16];
