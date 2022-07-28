@@ -682,24 +682,35 @@ static void rp_rescue_setup(ADIv5_DP_t *dp)
 
 void adiv5_dp_init(ADIv5_DP_t *dp)
 {
+	/*
+	 * the code in the DPIDR is in the form
+	 * Bits 10:7 - JEP-106 Continuation code
+	 * Bits 6:0 - JEP-106 Identity code
+	 * here we convert it to our internal representation, See JEP-106 code list
+	 * note, this is the code of the designer not the implementer, we expect it to be ARM
+	 */
+	const uint16_t designer = (dp->debug_port_id & ADIV5_DP_DPIDR_DESIGNER_MASK) >> ADIV5_DP_DPIDR_DESIGNER_OFFSET;
+	dp->designer_code = (designer & ADIV5_DP_DESIGNER_JEP106_CONT_MASK) << 1U |
+	                    (designer & ADIV5_DP_DESIGNER_JEP106_CODE_MASK);
+	dp->partno = (dp->debug_port_id & ADIV5_DP_DPIDR_PARTNO_MASK) >> ADIV5_DP_DPIDR_PARTNO_OFFSET;
+
 	/* Check DPIDR for a valid manufacturer and sensible PARTNO */
-	if ((dp->debug_port_id & ADIV5_DP_DPIDR_DESIGNER_MASK) == 0 ||
-		(dp->debug_port_id & ADIV5_DP_DPIDR_PARTNO_MASK) == ADIV5_DP_DPIDR_PARTNO_MASK) {
+	if (dp->designer_code == 0 || dp->partno == 0xff7fU) {
 		DEBUG_WARN("Invalid DP DPIDR %08" PRIx32 "\n", dp->debug_port_id);
 		free(dp);
 		return;
 	}
 
-	/* TODO: this could with a non 'magic number' */
-	if (dp->debug_port_id == 0x10212927) {
+	DEBUG_INFO("DPIDR 0x%08" PRIx32 " (v%d %srev%d) designer 0x%" PRIx32 " partno 0x%" PRIx32 "\n", dp->debug_port_id,
+		(uint8_t)((dp->debug_port_id & ADIV5_DP_DPIDR_VERSION_MASK) >> ADIV5_DP_DPIDR_VERSION_OFFSET),
+		(dp->debug_port_id & ADIV5_DP_DPIDR_MINDP) ? "MINDP " : "",
+		(uint8_t)((dp->debug_port_id & ADIV5_DP_DPIDR_REVISION_MASK) >> ADIV5_DP_DPIDR_REVISION_OFFSET), dp->designer_code,
+		dp->partno);
+
+	if (dp->designer_code == JEP106_MANUFACTURER_RASPBERRY && dp->partno == 0x2) {
 		rp_rescue_setup(dp);
 		return;
 	}
-
-	DEBUG_INFO("DPIDR 0x%08" PRIx32 " (v%d %srev%d)\n", dp->debug_port_id,
-		(uint8_t)((dp->debug_port_id & ADIV5_DP_DPIDR_VERSION_MASK) >> ADIV5_DP_DPIDR_VERSION_OFFSET),
-		(dp->debug_port_id & ADIV5_DP_DPIDR_MINDP) ? "MINDP " : "",
-		(uint8_t)((dp->debug_port_id & ADIV5_DP_DPIDR_REVISION_MASK) >> ADIV5_DP_DPIDR_REVISION_OFFSET));
 
 #if PC_HOSTED == 1
 	platform_adiv5_dp_defaults(dp);

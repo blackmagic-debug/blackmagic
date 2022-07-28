@@ -456,7 +456,12 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 #endif
 		}
 		if (ap->ap_partno == 0x4c0) { /* Cortex-M0+ ROM */
-			if ((ap->dp->targetid & 0xfff) == JEP106_MANUFACTURER_RASPBERRY)
+			const uint16_t tdesigner =
+				(ap->dp->targetid & ADIV5_DP_TARGETID_TDESIGNER_MASK) >> ADIV5_DP_TARGETID_TDESIGNER_OFFSET;
+			/* convert it to our internal representation, See JEP-106 code list */
+			const uint16_t designer_code = (tdesigner & ADIV5_DP_DESIGNER_JEP106_CONT_MASK) << 1U |
+			                               (tdesigner & ADIV5_DP_DESIGNER_JEP106_CODE_MASK);
+			if (designer_code == JEP106_MANUFACTURER_RASPBERRY)
 				PROBE(rp_probe);
 			PROBE(lpc11xx_probe);            /* LPC8 */
 		} else if (ap->ap_partno == 0x4c3) { /* Cortex-M3 ROM */

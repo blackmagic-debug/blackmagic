@@ -46,7 +46,7 @@
 #define ADIV5_DP_RDBUFF    ADIV5_DP_REG(0xCU)
 #define ADIV5_DP_TARGETSEL ADIV5_DP_REG(0xCU)
 
-/* AP DPIDR */
+/* DP DPIDR */
 #define ADIV5_DP_DPIDR_REVISION_OFFSET 28U
 #define ADIV5_DP_DPIDR_REVISION_MASK   (0xfU << ADIV5_DP_DPIDR_VERSION_OFFSET)
 #define ADIV5_DP_DPIDR_PARTNO_OFFSET   20U
@@ -59,6 +59,21 @@
 #define ADIV5_DP_DPIDR_VERSION_DPv2    (2U << ADIV5_DP_DPIDR_VERSION_OFFSET)
 #define ADIV5_DP_DPIDR_DESIGNER_OFFSET 1U
 #define ADIV5_DP_DPIDR_DESIGNER_MASK   (0x7ffU << ADIV5_DP_DPIDR_DESIGNER_OFFSET)
+
+/* DP TARGETID */
+#define ADIV5_DP_TARGETID_TREVISION_OFFSET 28U
+#define ADIV5_DP_TARGETID_TREVISION_MASK   (0xfU << ADIV5_DP_TARGETID_TREVISION_OFFSET)
+#define ADIV5_DP_TARGETID_TPARTNO_OFFSET   12U
+#define ADIV5_DP_TARGETID_TPARTNO_MASK     (0xffffU << ADIV5_DP_TARGETID_TPARTNO_OFFSET)
+#define ADIV5_DP_TARGETID_TDESIGNER_OFFSET 1U
+#define ADIV5_DP_TARGETID_TDESIGNER_MASK   (0x7ffU << ADIV5_DP_TARGETID_TDESIGNER_OFFSET)
+
+/* DP DPIDR/TARGETID DESIGNER */
+/* Bits 10:7 - JEP-106 Continuation code */
+/* Bits 6:0 - JEP-106 Identity code */
+#define ADIV5_DP_DESIGNER_JEP106_CONT_OFFSET 7U
+#define ADIV5_DP_DESIGNER_JEP106_CONT_MASK   (0xfU << ADIV5_DP_DESIGNER_JEP106_CONT_OFFSET)
+#define ADIV5_DP_DESIGNER_JEP106_CODE_MASK   (0x7fU)
 
 /* AP Abort Register (ABORT) */
 /* Bits 31:5 - Reserved */
@@ -167,7 +182,7 @@
 #define JEP106_MANUFACTURER_SPECULAR     0x501U /* LPC845 with code 501. Strange!? Specular Networks */
 #define JEP106_MANUFACTURER_ENERGY_MICRO 0x673U /* Energy Micro */
 #define JEP106_MANUFACTURER_GIGADEVICE   0x751U /* GigaDevice */
-#define JEP106_MANUFACTURER_RASPBERRY    0x927U /* Raspberry Pi */
+#define JEP106_MANUFACTURER_RASPBERRY    0x913U /* Raspberry Pi */
 
 /*
  * This code is not listed in the JEP106 standard, but is used by some stm32f1 clones
@@ -205,6 +220,10 @@ typedef struct ADIv5_DP_s {
 	int refcnt;
 
 	uint32_t debug_port_id;
+
+	uint16_t designer_code;
+	uint16_t partno;
+
 	uint32_t targetid; /* Contains IDCODE for DPv2 devices.*/
 
 	void (*seq_out)(uint32_t tms_states, size_t clock_cycles);
