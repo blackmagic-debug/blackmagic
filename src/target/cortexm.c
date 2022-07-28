@@ -465,7 +465,6 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 			PROBE(ch32f1_probe);
 			PROBE(stm32f1_probe); /* Care for other STM32F1 clones (?) */
 			PROBE(lpc15xx_probe); /* Thanks to JojoS for testing */
-			PROBE(lpc11xx_probe); /* LPC1343 */
 		} else if (ap->ap_partno == 0x471)  { /* Cortex-M0 ROM */
 			PROBE(lpc11xx_probe); /* LPC24C11 */
 			PROBE(lpc43xx_probe);
@@ -491,6 +490,7 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 		PROBE(lmi_probe);
 		PROBE(ke04_probe);
 		PROBE(lpc17xx_probe);
+		PROBE(lpc11xx_probe); /* LPC1343 */
 	}
 #undef PROBE
 	return true;
