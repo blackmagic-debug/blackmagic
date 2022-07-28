@@ -486,11 +486,6 @@ static bool rp_attach(target *t)
 	return true;
 }
 
-static void rp_detach(target *t)
-{
-	cortexm_detach(t);
-}
-
 bool rp_probe(target *t)
 {
 	/* Check bootrom magic*/
@@ -514,7 +509,6 @@ bool rp_probe(target *t)
 	t->driver = RP_ID;
 	t->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
 	t->attach = rp_attach;
-	t->detach = rp_detach;
 	target_add_commands(t, rp_cmd_list, RP_ID);
 	return true;
 }
