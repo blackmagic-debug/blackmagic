@@ -224,8 +224,7 @@ static void stm32h7_detach(target *t)
 
 bool stm32h7_probe(target *t)
 {
-	uint32_t idcode = t->idcode;
-	if (idcode == ID_STM32H74x || idcode == ID_STM32H7Bx || idcode == ID_STM32H72x) {
+	if (t->part_id == ID_STM32H74x || t->part_id == ID_STM32H7Bx || t->part_id == ID_STM32H72x) {
 		t->mass_erase = stm32h7_mass_erase;
 		t->driver = stm32h7_driver_str;
 		t->attach = stm32h7_attach;
@@ -406,7 +405,7 @@ static bool stm32h7_uid(target *t, int argc, const char **argv)
 	(void)argv;
 
 	uint32_t uid = 0x1ff1e800;
-	if (t->idcode == ID_STM32H7Bx) {
+	if (t->part_id == ID_STM32H7Bx) {
 		uid = 0x08fff800;  /* 7B3/7A3/7B0 */
 	}
 

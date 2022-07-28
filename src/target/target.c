@@ -589,9 +589,9 @@ unsigned int target_designer(target *t)
 	return t->designer_code;
 }
 
-unsigned int target_idcode(target *t)
+unsigned int target_part_id(target *t)
 {
-	return t->idcode;
+	return t->part_id;
 }
 
 uint32_t target_mem_read32(target *t, uint32_t addr)

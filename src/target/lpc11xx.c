@@ -74,8 +74,6 @@ static void lpc11xx_add_flash(target *t, const uint32_t addr, const size_t len, 
 
 bool lpc11xx_probe(target *t)
 {
-	uint32_t idcode;
-
 	/* read the device ID register */
 	/* For LPC11xx & LPC11Cxx see UM10398 Rev. 12.4 Chapter 26.5.11 Table 387
 	 * For LPC11Uxx see UM10462 Rev. 5.5 Chapter 20.13.11 Table 377
@@ -85,8 +83,9 @@ bool lpc11xx_probe(target *t)
 	 *   2) the LPC11U3x series, see UM10462 Rev.5.5 Chapter 3.1
 	 * But see the comment for the LPC8xx series below.
 	 */
-	idcode = target_mem_read32(t, LPC11XX_DEVICE_ID);
-	switch (idcode) {
+	uint32_t device_id = target_mem_read32(t, LPC11XX_DEVICE_ID);
+
+	switch (device_id) {
 	case 0x0A07102B: /* LPC1110 - 4K Flash 1K SRAM */
 	case 0x1A07102B: /* LPC1110 - 4K Flash 1K SRAM */
 	case 0x0A16D02B: /* LPC1111/002 - 8K Flash 2K SRAM */
@@ -159,8 +158,8 @@ bool lpc11xx_probe(target *t)
 		target_add_commands(t, lpc11xx_cmd_list, "LPC8N04");
 		return true;
 	}
-	if ((t->designer_code != JEP106_MANUFACTURER_SPECULAR) && idcode) {
-		DEBUG_INFO("LPC11xx: Unknown IDCODE 0x%08" PRIx32 "\n", idcode);
+	if ((t->designer_code != JEP106_MANUFACTURER_SPECULAR) && device_id) {
+		DEBUG_INFO("LPC11xx: Unknown Device ID 0x%08" PRIx32 "\n", device_id);
 	}
 	/* For LPC802, see UM11045 Rev. 1.4 Chapter 6.6.29 Table 84
 	 * For LPC804, see UM11065 Rev. 1.0 Chapter 6.6.31 Table 87
@@ -173,8 +172,8 @@ bool lpc11xx_probe(target *t)
 	 * for the LPC8xx series is also valid for the LPC11xx "XL" and the
 	 * LPC11U3x variants.
 	 */
-	idcode = target_mem_read32(t, LPC8XX_DEVICE_ID);
-	switch (idcode) {
+	device_id = target_mem_read32(t, LPC8XX_DEVICE_ID);
+	switch (device_id) {
 	case 0x00008021: /* LPC802M001JDH20 - 16K Flash 2K SRAM */
 	case 0x00008022: /* LPC802M011JDH20 */
 	case 0x00008023: /* LPC802M001JDH16 */
@@ -273,8 +272,8 @@ bool lpc11xx_probe(target *t)
 		target_add_commands(t, lpc11xx_cmd_list, "LPC11xx-XL");
 		return true;
 	}
-	if (idcode) {
-		DEBUG_INFO("LPC8xx: Unknown IDCODE 0x%08" PRIx32 "\n", idcode);
+	if (device_id) {
+		DEBUG_INFO("LPC8xx: Unknown Device ID 0x%08" PRIx32 "\n", device_id);
 	}
 
 	return false;

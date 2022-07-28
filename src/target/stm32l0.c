@@ -165,7 +165,7 @@ enum stm32l_idcode_e {
 
 static bool stm32lx_is_stm32l1(target *t)
 {
-	switch (t->idcode) {
+	switch (t->part_id) {
 	case 0x457: /* STM32L0xx Cat1 */
 	case 0x425: /* STM32L0xx Cat2 */
 	case 0x417: /* STM32L0xx Cat3 */
@@ -178,7 +178,7 @@ static bool stm32lx_is_stm32l1(target *t)
 
 static uint32_t stm32lx_nvm_eeprom_size(target *t)
 {
-	switch (t->idcode) {
+	switch (t->part_id) {
 	case 0x457: /* STM32L0xx Cat1 */
 		return STM32L0_NVM_EEPROM_CAT1_SIZE;
 	case 0x425: /* STM32L0xx Cat2 */
@@ -194,7 +194,7 @@ static uint32_t stm32lx_nvm_eeprom_size(target *t)
 
 static uint32_t stm32lx_nvm_phys(target *t)
 {
-	switch (t->idcode) {
+	switch (t->part_id) {
 	case 0x457: /* STM32L0xx Cat1 */
 	case 0x425: /* STM32L0xx Cat2 */
 	case 0x417: /* STM32L0xx Cat3 */
@@ -207,7 +207,7 @@ static uint32_t stm32lx_nvm_phys(target *t)
 
 static uint32_t stm32lx_nvm_option_size(target *t)
 {
-	switch (t->idcode) {
+	switch (t->part_id) {
 	case 0x457: /* STM32L0xx Cat1 */
 	case 0x425: /* STM32L0xx Cat2 */
 	case 0x417: /* STM32L0xx Cat3 */
@@ -256,7 +256,7 @@ static void stm32l_add_eeprom(target *t, uint32_t addr, size_t length)
     STM32L0xx parts as well as the STM32L1xx's. */
 bool stm32l0_probe(target *t)
 {
-	switch (t->idcode) {
+	switch (t->part_id) {
 	case 0x416: /* CAT. 1 device */
 	case 0x429: /* CAT. 2 device */
 	case 0x427: /* CAT. 3 device */

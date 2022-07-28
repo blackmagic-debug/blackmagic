@@ -69,12 +69,12 @@ static void lpc15xx_add_flash(target *t, uint32_t addr, size_t len, size_t erase
 bool
 lpc15xx_probe(target *t)
 {
-	uint32_t idcode;
 	uint32_t ram_size = 0;
 
 	/* read the device ID register */
-	idcode = target_mem_read32(t, LPC15XX_DEVICE_ID);
-	switch (idcode) {
+	const uint32_t device_id = target_mem_read32(t, LPC15XX_DEVICE_ID);
+
+	switch (device_id) {
 	case 0x00001549:
 	case 0x00001519:
 		ram_size = 0x9000;
@@ -88,6 +88,7 @@ lpc15xx_probe(target *t)
 		ram_size = 0x3000;
 		break;
 	}
+
 	if (ram_size) {
 		t->driver = "LPC15xx";
 		target_add_ram(t, 0x02000000, ram_size);
