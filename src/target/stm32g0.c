@@ -206,7 +206,7 @@ bool stm32g0_probe(target *t)
 
 	target_mem_map_free(t);
 
-	switch (t->idcode) {
+	switch (t->part_id) {
 	case STM32G03_4:
 		/* SRAM 8 kiB, Flash up to 64 kiB */
 		ram_size = (uint32_t)RAM_SIZE_G03_4;
@@ -354,7 +354,7 @@ static int stm32g0_flash_erase(struct target_flash *f, target_addr addr, size_t 
 		goto exit_cleanup;
 
 	nb_pages_to_erase = (uint16_t)((len - 1U) / f->blocksize) + 1U;
-	if (t->idcode == STM32G0B_C) // Dual-bank devices
+	if (t->part_id == STM32G0B_C) // Dual-bank devices
 		bank1_end_page_nb = ((f->length / 2U) - 1U) / f->blocksize;
 	page_nb = (uint16_t)((addr - f->start) / f->blocksize);
 

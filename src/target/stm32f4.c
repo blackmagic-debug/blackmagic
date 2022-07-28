@@ -163,9 +163,9 @@ static void stm32f4_add_flash(target *t,
 	target_add_flash(t, f);
 }
 
-static char *stm32f4_get_chip_name(uint32_t idcode)
+static char *stm32f4_get_chip_name(uint32_t device_id)
 {
-	switch (idcode) {
+	switch (device_id) {
 	case ID_STM32F40X: /* F40XxE/G */
 		return "STM32F40x";
 	case ID_STM32F42X: /* F42XxG/I */
@@ -208,14 +208,14 @@ static void stm32f4_detach(target *t)
 
 bool stm32f4_probe(target *t)
 {
-	if (t->idcode == ID_STM32F20X) {
+	if (t->part_id == ID_STM32F20X) {
 		/* F405 revision A have a wrong IDCODE, use ARM_CPUID to make the
 		 * distinction with F205. Revision is also wrong (0x2000 instead
 		 * of 0x1000). See F40x/F41x errata. */
 		if ((t->cpuid & 0xFFF0) == CORTEX_M4)
-			t->idcode = ID_STM32F40X;
+			t->part_id = ID_STM32F40X;
 	}
-	switch(t->idcode) {
+	switch(t->part_id) {
 	case ID_STM32F74X: /* F74x RM0385 Rev.4 */
 	case ID_STM32F76X: /* F76x F77x RM0410 */
 	case ID_STM32F72X: /* F72x F73x RM0431 */
@@ -231,7 +231,7 @@ bool stm32f4_probe(target *t)
 	case ID_STM32F413: /* F413     RM0430 Rev.2, 320 kB Ram, 1.5 MB flash. */
 		t->mass_erase = stm32f4_mass_erase;
 		t->detach = stm32f4_detach;
-		t->driver = stm32f4_get_chip_name(t->idcode);
+		t->driver = stm32f4_get_chip_name(t->part_id);
 		t->attach = stm32f4_attach;
 		target_add_commands(t, stm32f4_cmd_list, t->driver);
 		return true;
@@ -251,7 +251,7 @@ static bool stm32f4_attach(target *t)
 	if (!cortexm_attach(t))
 		return false;
 
-	switch(t->idcode) {
+	switch(t->part_id) {
 	case ID_STM32F40X:
 		has_ccmram = true;
 		max_flashsize = 1024;
@@ -519,7 +519,7 @@ static bool stm32f4_mass_erase(target *t)
 
 static bool optcr_mask(target *t, uint32_t *val)
 {
-	switch (t->idcode) {
+	switch (t->part_id) {
 	case ID_STM32F20X:
 	case ID_STM32F40X:
 		val[0] &= ~0xF0000010;
@@ -582,12 +582,12 @@ static bool stm32f4_option_write(target *t, uint32_t *val, int count)
 			return -1;
 
 	/* WRITE option bytes instruction */
-	if (((t->idcode == ID_STM32F42X) || (t->idcode == ID_STM32F46X) ||
-		 (t->idcode == ID_STM32F72X) || (t->idcode == ID_STM32F74X) ||
-		 (t->idcode == ID_STM32F76X)) && (count > 1))
+	if (((t->part_id == ID_STM32F42X) || (t->part_id == ID_STM32F46X) ||
+		 (t->part_id == ID_STM32F72X) || (t->part_id == ID_STM32F74X) ||
+		 (t->part_id == ID_STM32F76X)) && (count > 1))
 	    /* Checkme: Do we need to read old value and then set it? */
 		target_mem_write32(t, FLASH_OPTCR + 4, val[1]);
-	if ((t->idcode == ID_STM32F72X) && (count > 2))
+	if ((t->part_id == ID_STM32F72X) && (count > 2))
 			target_mem_write32(t, FLASH_OPTCR + 8, val[2]);
 
 	target_mem_write32(t, FLASH_OPTCR, val[0]);
@@ -614,7 +614,7 @@ static bool stm32f4_option_write(target *t, uint32_t *val, int count)
 static bool stm32f4_option_write_default(target *t)
 {
 	uint32_t val[3];
-	switch (t->idcode) {
+	switch (t->part_id) {
 	case ID_STM32F42X:
 	case ID_STM32F46X:
 		val[0] = 0x0FFFAAED;
@@ -647,7 +647,7 @@ static bool stm32f4_cmd_option(target *t, int argc, char *argv[])
 	uint32_t val[3];
 	int count = 0, readcount = 1;
 
-	switch (t->idcode) {
+	switch (t->part_id) {
 	case ID_STM32F72X: /* STM32F72|3 */
 		readcount++;
 		/* fall through.*/

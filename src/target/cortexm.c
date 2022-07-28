@@ -284,7 +284,7 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 
 	adiv5_ap_ref(ap);
 	t->designer_code = ap->designer_code;
-	t->idcode = ap->ap_partno;
+	t->part_id = ap->ap_partno;
 	struct cortexm_priv *priv = calloc(1, sizeof(*priv));
 	if (!priv) { /* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);

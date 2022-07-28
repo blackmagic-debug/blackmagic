@@ -167,8 +167,8 @@ bool ch32f1_probe(target *t)
 {
 	if ((t->cpuid & CPUID_PARTNO_MASK) != CORTEX_M3)
 		return false;
-	const uint32_t idcode = target_mem_read32(t, DBGMCU_IDCODE) & 0x00000fffU;
-	if (idcode != 0x410) // only ch32f103
+	const uint32_t device_id = target_mem_read32(t, DBGMCU_IDCODE) & 0x00000fffU;
+	if (device_id != 0x410) // only ch32f103
 		return false;
 
 	// try to flock (if this fails it is not a CH32 chip)
@@ -178,7 +178,7 @@ bool ch32f1_probe(target *t)
 	if (ch32f1_flash_unlock(t))
 		return false;
 
-	t->idcode = idcode;
+	t->part_id = device_id;
 	uint32_t signature = target_mem_read32(t, FLASHSIZE);
 	uint32_t flashSize = signature & 0xFFFF;
 

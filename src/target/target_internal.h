@@ -116,8 +116,10 @@ struct target_s {
 
 	/* target-defined options */
 	unsigned target_options;
+
 	uint16_t designer_code;
-	uint16_t idcode;
+	uint16_t part_id;
+
 	void *target_storage;
 	union {
 		bool unsafe_enabled;

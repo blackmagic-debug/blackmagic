@@ -118,18 +118,17 @@ static void stm32f1_add_flash(target *t, uint32_t addr, size_t length, size_t er
 */
 bool gd32f1_probe(target *t)
 {
-	uint16_t stored_idcode = t->idcode;
-
+	uint16_t device_id;
 	if ((t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M23)
-		t->idcode = target_mem_read32(t, DBGMCU_IDCODE_F0) & 0xfff;
+		device_id = target_mem_read32(t, DBGMCU_IDCODE_F0) & 0xfff;
 	else
-		t->idcode = target_mem_read32(t, DBGMCU_IDCODE) & 0xfff;
+		device_id = target_mem_read32(t, DBGMCU_IDCODE) & 0xfff;
 
 	uint32_t signature = target_mem_read32(t, FLASHSIZE);
 	uint32_t flashSize = signature & 0xFFFF;
 	uint32_t ramSize = signature >> 16;
 
-	switch (t->idcode) {
+	switch (device_id) {
 	case 0x414: /* Gigadevice gd32f303 */
 	case 0x430:
 		t->driver = "GD32F3";
@@ -141,10 +140,10 @@ bool gd32f1_probe(target *t)
 			t->driver = "GD32F1";
 		break;
 	default:
-		t->idcode = stored_idcode;
 		return false;
 	}
 
+	t->part_id = device_id;
 	t->mass_erase = stm32f1_mass_erase;
 	target_add_ram(t, 0x20000000, ramSize * 1024);
 	stm32f1_add_flash(t, 0x8000000, flashSize * 1024, 0x400);
@@ -158,18 +157,17 @@ bool gd32f1_probe(target *t)
 */
 bool stm32f1_probe(target *t)
 {
-	uint16_t stored_idcode = t->idcode;
-
+	uint16_t device_id;
 	if ((t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M0)
-		t->idcode = target_mem_read32(t, DBGMCU_IDCODE_F0) & 0xfff;
+		device_id = target_mem_read32(t, DBGMCU_IDCODE_F0) & 0xfff;
 	else
-		t->idcode = target_mem_read32(t, DBGMCU_IDCODE) & 0xfff;
+		device_id = target_mem_read32(t, DBGMCU_IDCODE) & 0xfff;
 
 	t->mass_erase = stm32f1_mass_erase;
 	size_t flash_size;
 	size_t block_size = 0x400;
 
-	switch (t->idcode) {
+	switch (device_id) {
 	case 0x29b: /* CS clone */
 	case 0x410: /* Medium density */
 	case 0x412: /* Low density */
@@ -185,12 +183,14 @@ bool stm32f1_probe(target *t)
 		} else {
 			t->driver = "STM32F1 medium density";
 		}
+		t->part_id = device_id;
 		return true;
 
 	case 0x414: /* High density */
 	case 0x418: /* Connectivity Line */
 	case 0x428: /* Value Line, High Density */
 		t->driver = "STM32F1  VL density";
+		t->part_id = device_id;
 		target_add_ram(t, 0x20000000, 0x10000);
 		stm32f1_add_flash(t, 0x8000000, 0x80000, 0x800);
 		target_add_commands(t, stm32f1_cmd_list, "STM32 HF/CL/VL-HD");
@@ -198,6 +198,7 @@ bool stm32f1_probe(target *t)
 
 	case 0x430: /* XL-density */
 		t->driver = "STM32F1  XL density";
+		t->part_id = device_id;
 		target_add_ram(t, 0x20000000, 0x18000);
 		stm32f1_add_flash(t, 0x8000000, 0x80000, 0x800);
 		stm32f1_add_flash(t, 0x8080000, 0x80000, 0x800);
@@ -213,6 +214,7 @@ bool stm32f1_probe(target *t)
 	case 0x432: /* STM32F37x */
 	case 0x439: /* STM32F302C8 */
 		t->driver = "STM32F3";
+		t->part_id = device_id;
 		target_add_ram(t, 0x20000000, 0x10000);
 		stm32f1_add_flash(t, 0x8000000, 0x80000, 0x800);
 		target_add_commands(t, stm32f1_cmd_list, "STM32F3");
@@ -246,13 +248,14 @@ bool stm32f1_probe(target *t)
 		break;
 
 	default: /* NONE */
-		t->idcode = stored_idcode;
 		return false;
 	}
 
 	target_add_ram(t, 0x20000000, 0x5000);
 	stm32f1_add_flash(t, 0x8000000, flash_size, block_size);
 	target_add_commands(t, stm32f1_cmd_list, "STM32F0");
+
+	t->part_id = device_id;
 
 	return true;
 }
@@ -276,7 +279,7 @@ static int stm32f1_flash_erase(struct target_flash *f, target_addr addr, size_t 
 	target_addr end = addr + len - 1;
 	target_addr start = addr;
 
-	if (t->idcode == 0x430 && end >= FLASH_BANK_SPLIT)
+	if (t->part_id == 0x430 && end >= FLASH_BANK_SPLIT)
 		if (stm32f1_flash_unlock(t, FLASH_BANK2_OFFSET))
 			return -1;
 
@@ -320,7 +323,7 @@ static int stm32f1_flash_erase(struct target_flash *f, target_addr addr, size_t 
 			return -1;
 		}
 	}
-	if (t->idcode == 0x430 && end >= FLASH_BANK_SPLIT) {
+	if (t->part_id == 0x430 && end >= FLASH_BANK_SPLIT) {
 		const uint32_t status = target_mem_read32(t, FLASH_SR + FLASH_BANK2_OFFSET);
 		if ((status & SR_ERROR_MASK) || !(status & SR_EOP)) {
 			DEBUG_INFO("stm32f1 bank 2 flash erase error 0x%" PRIx32 "\n", status);
@@ -365,7 +368,7 @@ static int stm32f1_flash_write(struct target_flash *f, target_addr dest, const v
 	}
 
 	length = len - length;
-	if (t->idcode == 0x430 && length) { /* Write on bank 2 */
+	if (t->part_id == 0x430 && length) { /* Write on bank 2 */
 		target_mem_write32(t, FLASH_CR + FLASH_BANK2_OFFSET, FLASH_CR_PG);
 		cortexm_mem_write_sized(t, dest, src, length, ALIGN_HALFWORD);
 		/* Read FLASH_SR to poll for BSY bit */
@@ -411,7 +414,7 @@ static bool stm32f1_mass_erase(target *t)
 	if ((sr & SR_ERROR_MASK) || !(sr & SR_EOP))
 		return false;
 
-	if (t->idcode == 0x430) {
+	if (t->part_id == 0x430) {
 		if (stm32f1_flash_unlock(t, FLASH_BANK2_OFFSET))
 			return false;
 
@@ -496,7 +499,7 @@ static bool stm32f1_option_write(target *t, uint32_t addr, uint16_t value)
 
 	/* Write changed values*/
 	bool width_word = false;
-	if (t->idcode == 0x410 && (t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M23) {
+	if (t->part_id == 0x410 && (t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M23) {
 		/* GD32E230 special case, target_mem_write16 does not work */
 		width_word = true;
 	}
@@ -514,7 +517,7 @@ static bool stm32f1_cmd_option(target *t, int argc, const char **argv)
 	uint32_t flash_obp_rdp_key;
 	uint32_t rdprt;
 
-	switch (t->idcode) {
+	switch (t->part_id) {
 	case 0x422: /* STM32F30x */
 	case 0x432: /* STM32F37x */
 	case 0x438: /* STM32F303x6/8 and STM32F328 */
@@ -540,7 +543,7 @@ static bool stm32f1_cmd_option(target *t, int argc, const char **argv)
 	if (argc == 2 && strcmp(argv[1], "erase") == 0) {
 		stm32f1_option_erase(t);
 		bool width_word = false;
-		if (t->idcode == 0x410 && (t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M23) {
+		if (t->part_id == 0x410 && (t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M23) {
 			/* GD32E230 special case, target_mem_write16 does not work */
 			width_word = true;
 		}

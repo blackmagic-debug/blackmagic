@@ -214,7 +214,7 @@ struct stm32l4_info {
 	uint16_t sram1; /* Normal SRAM mapped at 0x20000000*/
 	uint16_t sram2; /* SRAM at 0x10000000, mapped after sram1 (not L47) */
 	uint16_t sram3; /* SRAM mapped after SRAM1 and SRAM2 */
-	enum ID_STM32L4 idcode;
+	enum ID_STM32L4 device_id;
 	enum FAM_STM32L4 family;
 	uint8_t flags;          /* Only DUAL_BANK is evaluated for now.*/
 	const uint32_t *flash_regs_map;
@@ -222,7 +222,7 @@ struct stm32l4_info {
 
 static struct stm32l4_info const L4info[] = {
 	{
-		.idcode = ID_STM32L41,
+		.device_id = ID_STM32L41,
 		.family = FAM_STM32L4xx,
 		.designator = "STM32L41x",
 		.sram1 = 32,
@@ -231,7 +231,7 @@ static struct stm32l4_info const L4info[] = {
 		.flash_regs_map = stm32l4_flash_regs_map,
 	},
 	{
-		.idcode = ID_STM32L43,
+		.device_id = ID_STM32L43,
 		.family = FAM_STM32L4xx,
 		.designator = "STM32L43x",
 		.sram1 = 48,
@@ -240,7 +240,7 @@ static struct stm32l4_info const L4info[] = {
 		.flash_regs_map = stm32l4_flash_regs_map,
 	},
 	{
-		.idcode = ID_STM32L45,
+		.device_id = ID_STM32L45,
 		.family = FAM_STM32L4xx,
 		.designator = "STM32L45x",
 		.sram1 = 128,
@@ -249,7 +249,7 @@ static struct stm32l4_info const L4info[] = {
 		.flash_regs_map = stm32l4_flash_regs_map,
 	},
 	{
-		.idcode = ID_STM32L47,
+		.device_id = ID_STM32L47,
 		.family = FAM_STM32L4xx,
 		.designator = "STM32L47x",
 		.sram1 = 96,
@@ -258,7 +258,7 @@ static struct stm32l4_info const L4info[] = {
 		.flash_regs_map = stm32l4_flash_regs_map,
 	},
 	{
-		.idcode = ID_STM32L49,
+		.device_id = ID_STM32L49,
 		.family = FAM_STM32L4xx,
 		.designator = "STM32L49x",
 		.sram1 = 256,
@@ -267,7 +267,7 @@ static struct stm32l4_info const L4info[] = {
 		.flash_regs_map = stm32l4_flash_regs_map,
 	},
 	{
-		.idcode = ID_STM32L4R,
+		.device_id = ID_STM32L4R,
 		.family = FAM_STM32L4Rx,
 		.designator = "STM32L4Rx",
 		.sram1 = 192,
@@ -277,7 +277,7 @@ static struct stm32l4_info const L4info[] = {
 		.flash_regs_map = stm32l4_flash_regs_map,
 	},
 	{
-		.idcode = ID_STM32G43,
+		.device_id = ID_STM32G43,
 		.family = FAM_STM32G4xx,
 		.designator = "STM32G43",
 		.sram1 = 22,
@@ -285,7 +285,7 @@ static struct stm32l4_info const L4info[] = {
 		.flash_regs_map = stm32l4_flash_regs_map,
 	},
 	{
-		.idcode = ID_STM32G47,
+		.device_id = ID_STM32G47,
 		.family = FAM_STM32G4xx,
 		.designator = "STM32G47",
 		.sram1 = 96, /* SRAM1 and SRAM2 are mapped continuous */
@@ -294,7 +294,7 @@ static struct stm32l4_info const L4info[] = {
 		.flash_regs_map = stm32l4_flash_regs_map,
 	},
 	{
-		.idcode = ID_STM32G49,
+		.device_id = ID_STM32G49,
 		.family = FAM_STM32G4xx,
 		.designator = "STM32G49",
 		.sram1 = 96, /* SRAM1 and SRAM2 are mapped continuously */
@@ -303,7 +303,7 @@ static struct stm32l4_info const L4info[] = {
 		.flash_regs_map = stm32l4_flash_regs_map,
 	},
 	{
-		.idcode = ID_STM32L55,
+		.device_id = ID_STM32L55,
 		.family = FAM_STM32L55x,
 		.designator = "STM32L55",
 		.sram1 = 192, /* SRAM1 and SRAM2 are mapped continuous */
@@ -312,7 +312,7 @@ static struct stm32l4_info const L4info[] = {
 		.flash_regs_map = stm32l5_flash_regs_map,
 	},
 	{
-		.idcode = ID_STM32WLXX,
+		.device_id = ID_STM32WLXX,
 		.family = FAM_STM32WLxx,
 		.designator = "STM32WLxx",
 		.sram1 = 32,
@@ -321,7 +321,7 @@ static struct stm32l4_info const L4info[] = {
 		.flash_regs_map = stm32wl_flash_regs_map,
 	},
 	{
-		.idcode = ID_STM32WBXX,
+		.device_id = ID_STM32WBXX,
 		.family = FAM_STM32WBxx,
 		.designator = "STM32WBxx",
 		.sram1 = 192,
@@ -331,35 +331,35 @@ static struct stm32l4_info const L4info[] = {
 	},
 	{
 		/* Terminator */
-		.idcode = 0,
+		.device_id = 0,
 	},
 };
 
 /* Retrieve chip basic information, just add to the vector to extend */
-static struct stm32l4_info const * stm32l4_get_chip_info(uint32_t idcode) {
+static struct stm32l4_info const * stm32l4_get_chip_info(uint32_t device_id) {
 	struct stm32l4_info const *p = L4info;
-	while (p->idcode && (p->idcode != idcode))
+	while (p->device_id && (p->device_id != device_id))
 		p++;
 	return p;
 }
 
 static uint32_t stm32l4_flash_read16(target *t, enum stm32l4_flash_regs reg)
 {
-	struct stm32l4_info const *chip = stm32l4_get_chip_info(t->idcode);
+	struct stm32l4_info const *chip = stm32l4_get_chip_info(t->part_id);
 	uint32_t addr = chip->flash_regs_map[reg];
 	return target_mem_read16(t, addr);
 }
 
 static uint32_t stm32l4_flash_read32(target *t, enum stm32l4_flash_regs reg)
 {
-	struct stm32l4_info const *chip = stm32l4_get_chip_info(t->idcode);
+	struct stm32l4_info const *chip = stm32l4_get_chip_info(t->part_id);
 	uint32_t addr = chip->flash_regs_map[reg];
 	return target_mem_read32(t, addr);
 }
 
 static void stm32l4_flash_write32(target *t, enum stm32l4_flash_regs reg, uint32_t value)
 {
-	struct stm32l4_info const *chip = stm32l4_get_chip_info(t->idcode);
+	struct stm32l4_info const *chip = stm32l4_get_chip_info(t->part_id);
 	uint32_t addr = chip->flash_regs_map[reg];
 	target_mem_write32(t, addr, value);
 }
@@ -403,7 +403,7 @@ static bool stm32l4_attach(target *t)
 		return false;
 
 	/* Retrive chip information, no need to check return */
-	struct stm32l4_info const *chip = stm32l4_get_chip_info(t->idcode);
+	struct stm32l4_info const *chip = stm32l4_get_chip_info(t->part_id);
 
 	uint32_t idcodereg;
 	switch(chip->family) {
@@ -432,7 +432,7 @@ static bool stm32l4_attach(target *t)
 	else
 		target_add_ram(t, 0x10000000, chip->sram2 << 10);
 	/* All L4 beside L47 alias SRAM2 after SRAM1.*/
-	uint32_t ramsize = (t->idcode == ID_STM32L47)?
+	uint32_t ramsize = (t->part_id == ID_STM32L47)?
 		chip->sram1 : (chip->sram1 + chip->sram2 + chip->sram3);
 	target_add_ram(t, 0x20000000, ramsize << 10);
 
@@ -461,11 +461,11 @@ static bool stm32l4_attach(target *t)
 		// Cat 2 is always 128k with 2k pages, single bank
 		// Cat 3 is dual bank with an option bit to choose single 512k bank with 4k pages or dual bank as 2x256k with 2k pages
 		// Cat 4 is single bank with up to 512k, 2k pages
-		if (chip->idcode == ID_STM32G43) {
+		if (chip->device_id == ID_STM32G43) {
 			uint32_t banksize = size << 10;
 			stm32l4_add_flash(t, 0x08000000, banksize, 0x0800, -1);
 		}
-		else if (chip->idcode == ID_STM32G49) {
+		else if (chip->device_id == ID_STM32G49) {
 			// Announce maximum possible flash size on this chip
 			stm32l4_add_flash(t, 0x08000000, FLASH_SIZE_MAX_G4_CAT4, 0x0800, -1);
 		}
@@ -510,29 +510,30 @@ static void stm32l4_detach(target *t)
 bool stm32l4_probe(target *t)
 {
 	ADIv5_AP_t *ap = cortexm_ap(t);
-	uint32_t idcode;
-	if (ap->dp->targetid > 1) { /* STM32L552 has in valid TARGETID 1 */
-		idcode = (ap->dp->targetid >> 16) & 0xfff;
+	uint32_t device_id;
+	if (ap->dp->targetid > 1) { /* STM32L552 has invalid TARGETID 1 */
+		/* todo: cleanup, this does not look correct, nothing in TARGETID register has offset 16 */
+		device_id = (ap->dp->targetid >> 16) & 0xfff;
 	} else {
 		uint32_t idcode_reg = STM32L4_DBGMCU_IDCODE_PHYS;
 		if (ap->dp->debug_port_id == 0x0Be12477)
 			idcode_reg = STM32L5_DBGMCU_IDCODE_PHYS;
-		idcode = target_mem_read32(t, idcode_reg) & 0xfff;
-		DEBUG_INFO("Idcode %08" PRIx32 "\n", idcode);
+		device_id = target_mem_read32(t, idcode_reg) & 0xfff;
+		DEBUG_INFO("Idcode %08" PRIx32 "\n", device_id);
 	}
 
-	struct stm32l4_info const *chip = stm32l4_get_chip_info(idcode);
+	struct stm32l4_info const *chip = stm32l4_get_chip_info(device_id);
 
-	if( !chip->idcode )	/* Not found */
+	if( !chip->device_id )	/* Not found */
 		return false;
 
 	t->driver = chip->designator;
-	switch (idcode) {
+	switch (device_id) {
 		case ID_STM32WLXX:
 		case ID_STM32WBXX:
 			if ((stm32l4_flash_read32(t, FLASH_OPTR)) &	FLASH_OPTR_ESE) {
 				DEBUG_WARN("STM32W security enabled\n");
-				t->driver = (idcode == ID_STM32WLXX) ?
+				t->driver = (device_id == ID_STM32WLXX) ?
 					"STM32WLxx(secure)" : "STM32WBxx(secure)";
 			}
 			if (ap->apsel == 0) {
@@ -734,15 +735,15 @@ static bool stm32l4_option_write(
 
 static bool stm32l4_cmd_option(target *t, int argc, char *argv[])
 {
-	if (t->idcode == ID_STM32L55) {
+	if (t->part_id == ID_STM32L55) {
 		tc_printf(t, "STM32L5 options not implemented!\n");
 		return false;
 	}
-	if (t->idcode == ID_STM32WBXX) {
+	if (t->part_id == ID_STM32WBXX) {
 		tc_printf(t, "STM32WBxx options not implemented!\n");
 		return false;
 	}
-	if (t->idcode == ID_STM32WLXX) {
+	if (t->part_id == ID_STM32WLXX) {
 		tc_printf(t, "STM32WLxx options not implemented!\n");
 		return false;
 	}
@@ -766,20 +767,20 @@ static bool stm32l4_cmd_option(target *t, int argc, char *argv[])
 	bool res = false;
 	uint32_t fpec_base = L4_FPEC_BASE;
 	const uint8_t *i2offset = l4_i2offset;
-	if (t->idcode == ID_STM32L43) {/* L43x */
+	if (t->part_id == ID_STM32L43) {/* L43x */
 		len = 5;
-	} else if (t->idcode == ID_STM32G47) {/* G47 */
+	} else if (t->part_id == ID_STM32G47) {/* G47 */
 		i2offset = g4_i2offset;
 		len = 11;
 		for (int i = 0; i < len; i++)
 			values[i] = g4_values[i];
-	} else if ((t->idcode == ID_STM32G43) || (t->idcode == ID_STM32G49)) {
+	} else if ((t->part_id == ID_STM32G43) || (t->part_id == ID_STM32G49)) {
 		/* G4 cat 2 and 4 (single bank) */
 		i2offset = g4_i2offset;
 		len = 6;
 		for (int i = 0; i < len; i++)
 			values[i] = g4_values[i];
-	} else if (t->idcode == ID_STM32WLXX) {/* WLxx */
+	} else if (t->part_id == ID_STM32WLXX) {/* WLxx */
 		len = 7;
 		i2offset = wl_i2offset;
 		fpec_base = WL_FPEC_BASE;

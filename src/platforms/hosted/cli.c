@@ -391,11 +391,11 @@ static void display_target(int i, target *t, void *context)
 {
 	(void)context;
 	if (!strcmp(target_driver_name(t), "ARM Cortex-M")) {
-		DEBUG_INFO("***%2d%sUnknown %s Designer %3x Partno %3x %s\n",
+		DEBUG_INFO("***%2d%sUnknown %s Designer %x Part ID %x %s\n",
 			  i, target_attached(t)?" * ":" ",
 			  target_driver_name(t),
 			  target_designer(t),
-			  target_idcode(t),
+			  target_part_id(t),
 			  (target_core_name(t)) ? target_core_name(t): "");
 	} else {
 		DEBUG_INFO("*** %2d   %c  %s %s\n", i, target_attached(t)?'*':' ',
