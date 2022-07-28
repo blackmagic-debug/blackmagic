@@ -452,9 +452,9 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 		if (ap->designer_code != JEP106_MANUFACTURER_ARM) {
 			/* Report unexpected designers */
 #if PC_HOSTED == 0
-			gdb_outf("Please report probed device with Designer code 0x%3x and Partno 0x%3x\n", ap->designer_code, ap->ap_partno);
+			gdb_outf("Please report probed device with Designer code 0x%x and Partno 0x%x\n", ap->designer_code, ap->ap_partno);
 #else
-			DEBUG_WARN("Please report probed device with Designer code 0x%3x and Partno 0x%3x\n", ap->designer_code, ap->ap_partno);
+			DEBUG_WARN("Please report probed device with Designer code 0x%x and Partno 0x%x\n", ap->designer_code, ap->ap_partno);
 #endif
 		}
 		if (ap->ap_partno == 0x4c0)  { /* Cortex-M0+ ROM */
