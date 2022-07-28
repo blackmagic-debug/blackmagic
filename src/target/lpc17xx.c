@@ -33,8 +33,6 @@
 #define IAP_RAM_BASE				0x10000000
 
 #define MEMMAP						0x400FC040
-#define LPC17xx_JTAG_IDCODE			0x4BA00477
-#define LPC17xx_SWDP_IDCODE			0x2BA01477
 #define FLASH_NUM_SECTOR			30
 
 struct flash_param {
@@ -64,15 +62,6 @@ static void lpc17xx_add_flash(target *t, uint32_t addr, size_t len, size_t erase
 bool
 lpc17xx_probe(target *t)
 {
-	/* Read the IDCODE register from the SW-DP */
-	ADIv5_AP_t *ap = cortexm_ap(t);
-	uint32_t ap_idcode = ap->dp->debug_port_id;
-
-	if (ap_idcode == LPC17xx_JTAG_IDCODE || ap_idcode == LPC17xx_SWDP_IDCODE) {
-		/* LPC176x/5x family. See UM10360.pdf 33.7 JTAG TAP Identification*/
-	} else
-		return false;
-
 	if ((t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M3)  {
 		/*
 		 * Now that we're sure it's a Cortex-M3, we need to halt the
