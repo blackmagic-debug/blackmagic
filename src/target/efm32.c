@@ -536,23 +536,9 @@ struct efm32_priv_s {
 
 bool efm32_probe(target *t)
 {
-	uint8_t di_version = 1;
-
-	/* Read the IDCODE register from the SW-DP */
-	ADIv5_AP_t *ap = cortexm_ap(t);
-	uint32_t ap_idcode = ap->dp->debug_port_id;
-
-	/* Check the idcode. See AN0062 Section 2.2 */
-	if (ap_idcode == 0x2BA01477) {
-		/* Cortex M3, Cortex M4 */
-	} else if (ap_idcode == 0x0BC11477) {
-		/* Cortex M0+ */
-	} else {
-		return false;
-	}
-
 	/* Check if the OUI in the EUI is silabs or energymicro.
 	 * Use this to identify the Device Identification (DI) version */
+	uint8_t di_version = 1;
 	uint64_t oui24 = ((efm32_v1_read_eui64(t) >> 40) & 0xFFFFFF);
 	if (oui24 == EFM32_V1_DI_EUI_SILABS) {
 		/* Device Identification (DI) version 1 */
