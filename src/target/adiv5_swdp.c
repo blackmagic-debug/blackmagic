@@ -32,15 +32,17 @@
 unsigned int make_packet_request(uint8_t RnW, uint16_t addr)
 {
 	bool APnDP = addr & ADIV5_APnDP;
-	addr &= 0xff;
-	unsigned int request = 0x81; /* Park and Startbit */
-	if(APnDP) request ^= 0x22;
-	if(RnW)   request ^= 0x24;
+	addr &= 0xffU;
+	unsigned int request = 0x81U; /* Park and Startbit */
+	if (APnDP)
+		request ^= 0x22U;
+	if (RnW)
+		request ^= 0x24U;
 
-	addr &= 0xC;
-	request |= (addr << 1) & 0x18;
-	if((addr == 4) || (addr == 8))
-		request ^= 0x20;
+	addr &= 0xcU;
+	request |= (addr << 1U) & 0x18U;
+	if (addr == 4U || addr == 8U)
+		request ^= 0x20U;
 	return request;
 }
 
@@ -48,13 +50,13 @@ unsigned int make_packet_request(uint8_t RnW, uint16_t addr)
 
 static void dp_line_reset(ADIv5_DP_t *dp)
 {
-	dp->seq_out(0xFFFFFFFF, 32);
-	dp->seq_out(0x0FFFFFFF, 32);
+	dp->seq_out(0xFFFFFFFFU, 32U);
+	dp->seq_out(0x0FFFFFFFU, 32U);
 }
 
 bool firmware_dp_low_write(ADIv5_DP_t *dp, uint16_t addr, const uint32_t data)
 {
-	unsigned int request =  make_packet_request(ADIV5_LOW_WRITE, addr & 0xf);
+	unsigned int request = make_packet_request(ADIV5_LOW_WRITE, addr & 0xfU);
 	dp->seq_out(request, 8);
 	int res = dp->seq_in(3);
 	dp->seq_out_parity(data, 32);
@@ -143,14 +145,13 @@ int adiv5_swdp_scan(uint32_t targetid)
 	} else {
 		target_id = targetid;
 	}
-	volatile int nr_dps = (scan_multidrop) ? 16: 1;
+	const volatile size_t nr_dps = (scan_multidrop) ? 16U : 1U;
 	volatile uint32_t dp_targetid;
-	for (volatile int i = 0; i < nr_dps; i++) {
+	for (volatile size_t i = 0; i < nr_dps; i++) {
 		if (scan_multidrop) {
 			dp_line_reset(initial_dp);
-			dp_targetid = (i << 28) | (target_id & 0x0fffffff);
-			initial_dp->dp_low_write(initial_dp, ADIV5_DP_TARGETSEL,
-									dp_targetid);
+			dp_targetid = (i << 28U) | (target_id & 0x0fffffffU);
+			initial_dp->dp_low_write(initial_dp, ADIV5_DP_TARGETSEL, dp_targetid);
 			TRY_CATCH (e, EXCEPTION_ALL) {
 				idcode = initial_dp->dp_read(initial_dp, ADIV5_DP_IDCODE);
 			}
@@ -160,8 +161,8 @@ int adiv5_swdp_scan(uint32_t targetid)
 		} else {
 			dp_targetid = target_id;
 		}
-		ADIv5_DP_t *dp = (void*)calloc(1, sizeof(*dp));
-		if (!dp) {			/* calloc failed: heap exhaustion */
+		ADIv5_DP_t *dp = calloc(1, sizeof(*dp));
+		if (!dp) { /* calloc failed: heap exhaustion */
 			DEBUG_WARN("calloc: failed in %s\n", __func__);
 			continue;
 		}
@@ -169,26 +170,23 @@ int adiv5_swdp_scan(uint32_t targetid)
 		dp->idcode = idcode;
 		dp->targetid = dp_targetid;
 		adiv5_dp_init(dp);
-
 	}
-	return target_list?1:0;
+	return target_list ? 1U : 0U;
 }
 
 uint32_t firmware_swdp_read(ADIv5_DP_t *dp, uint16_t addr)
 {
 	if (addr & ADIV5_APnDP) {
 		adiv5_dp_low_access(dp, ADIV5_LOW_READ, addr, 0);
-		return adiv5_dp_low_access(dp, ADIV5_LOW_READ,
-		                           ADIV5_DP_RDBUFF, 0);
+		return adiv5_dp_low_access(dp, ADIV5_LOW_READ, ADIV5_DP_RDBUFF, 0);
 	} else {
 		return firmware_swdp_low_access(dp, ADIV5_LOW_READ, addr, 0);
 	}
 }
 
- uint32_t firmware_swdp_error(ADIv5_DP_t *dp)
+uint32_t firmware_swdp_error(ADIv5_DP_t *dp)
 {
-	if ((dp->fault && (dp->idcode & ADIV5_DP_DPIDR_VERSION_MASK) == ADIV5_DP_DPIDR_VERSION_DPv2) &&
-		dp->dp_low_write) {
+	if ((dp->fault && (dp->idcode & ADIV5_DP_DPIDR_VERSION_MASK) == ADIV5_DP_DPIDR_VERSION_DPv2) && dp->dp_low_write) {
 		/* On protocoll error target gets deselected.
 		 * With DP Change, another target needs selection.
 		 * => Reselect with right target! */
@@ -198,17 +196,16 @@ uint32_t firmware_swdp_read(ADIv5_DP_t *dp, uint16_t addr)
 		/* Exception here is unexpected, so do not catch */
 	}
 	uint32_t err, clr = 0;
-	err = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT) &
-		(ADIV5_DP_CTRLSTAT_STICKYORUN | ADIV5_DP_CTRLSTAT_STICKYCMP |
-		ADIV5_DP_CTRLSTAT_STICKYERR | ADIV5_DP_CTRLSTAT_WDATAERR);
+	err = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT) & (ADIV5_DP_CTRLSTAT_STICKYORUN | ADIV5_DP_CTRLSTAT_STICKYCMP |
+													 ADIV5_DP_CTRLSTAT_STICKYERR | ADIV5_DP_CTRLSTAT_WDATAERR);
 
-	if(err & ADIV5_DP_CTRLSTAT_STICKYORUN)
+	if (err & ADIV5_DP_CTRLSTAT_STICKYORUN)
 		clr |= ADIV5_DP_ABORT_ORUNERRCLR;
-	if(err & ADIV5_DP_CTRLSTAT_STICKYCMP)
+	if (err & ADIV5_DP_CTRLSTAT_STICKYCMP)
 		clr |= ADIV5_DP_ABORT_STKCMPCLR;
-	if(err & ADIV5_DP_CTRLSTAT_STICKYERR)
+	if (err & ADIV5_DP_CTRLSTAT_STICKYERR)
 		clr |= ADIV5_DP_ABORT_STKERRCLR;
-	if(err & ADIV5_DP_CTRLSTAT_WDATAERR)
+	if (err & ADIV5_DP_CTRLSTAT_WDATAERR)
 		clr |= ADIV5_DP_ABORT_WDERRCLR;
 
 	adiv5_dp_write(dp, ADIV5_DP_ABORT, clr);
@@ -217,8 +214,7 @@ uint32_t firmware_swdp_read(ADIv5_DP_t *dp, uint16_t addr)
 	return err;
 }
 
-uint32_t firmware_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
-				      uint16_t addr, uint32_t value)
+uint32_t firmware_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW, uint16_t addr, uint32_t value)
 {
 	uint32_t request = make_packet_request(RnW, addr);
 	uint32_t response = 0;
