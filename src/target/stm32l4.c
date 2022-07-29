@@ -515,7 +515,7 @@ bool stm32l4_probe(target *t)
 		idcode = (ap->dp->targetid >> 16) & 0xfff;
 	} else {
 		uint32_t idcode_reg = STM32L4_DBGMCU_IDCODE_PHYS;
-		if (ap->dp->idcode == 0x0Be12477)
+		if (ap->dp->debug_port_id == 0x0Be12477)
 			idcode_reg = STM32L5_DBGMCU_IDCODE_PHYS;
 		idcode = target_mem_read32(t, idcode_reg) & 0xfff;
 		DEBUG_INFO("Idcode %08" PRIx32 "\n", idcode);

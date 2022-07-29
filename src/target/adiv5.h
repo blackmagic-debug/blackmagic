@@ -38,7 +38,7 @@
 #define ADIV5_DP_BANK4 0x40U
 
 /* ADIv5 DP Register addresses */
-#define ADIV5_DP_IDCODE    ADIV5_DP_REG(0x0U)
+#define ADIV5_DP_DPIDR     ADIV5_DP_REG(0x0U)
 #define ADIV5_DP_ABORT     ADIV5_DP_REG(0x0U)
 #define ADIV5_DP_CTRLSTAT  ADIV5_DP_REG(0x4U)
 #define ADIV5_DP_TARGETID  (ADIV5_DP_BANK2 | ADIV5_DP_REG(0x4U))
@@ -204,7 +204,7 @@ typedef struct ADIv5_AP_s ADIv5_AP_t;
 typedef struct ADIv5_DP_s {
 	int refcnt;
 
-	uint32_t idcode;
+	uint32_t debug_port_id;
 	uint32_t targetid; /* Contains IDCODE for DPv2 devices.*/
 
 	void (*seq_out)(uint32_t tms_states, size_t clock_cycles);

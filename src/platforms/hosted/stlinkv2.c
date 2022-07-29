@@ -1077,14 +1077,14 @@ int stlink_enter_debug_swd(bmp_info_t *info, ADIv5_DP_t *dp)
 	stlink_send_recv_retry(cmd, 16, data, 2);
 	if (stlink_usb_error_check(data, true))
 		exit( -1);
-	dp->idcode = stlink_read_coreid();
+	dp->debug_port_id = stlink_read_coreid();
 	dp->dp_read = stlink_dp_read;
 	dp->error = stlink_dp_error;
 	dp->low_access = stlink_dp_low_access;
 	dp->abort = stlink_dp_abort;
 
 	stlink_dp_error(dp);
-	if ((dp->idcode & ADIV5_DP_DPIDR_VERSION_MASK) == ADIV5_DP_DPIDR_VERSION_DPv2) {
+	if ((dp->debug_port_id & ADIV5_DP_DPIDR_VERSION_MASK) == ADIV5_DP_DPIDR_VERSION_DPv2) {
 		adiv5_dp_write(dp, ADIV5_DP_SELECT, 2);
 		dp->targetid = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT);
 		adiv5_dp_write(dp, ADIV5_DP_SELECT, 0);

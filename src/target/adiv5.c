@@ -332,7 +332,7 @@ static uint32_t cortexm_initial_halt(ADIv5_AP_t *ap)
 
 	const uint32_t dhcsr_ctl = CORTEXM_DHCSR_DBGKEY | CORTEXM_DHCSR_C_DEBUGEN | CORTEXM_DHCSR_C_HALT;
 	const uint32_t dhcsr_valid = CORTEXM_DHCSR_S_HALT | CORTEXM_DHCSR_C_DEBUGEN;
-	const bool use_low_access = !(ap->dp->idcode & ADIV5_DP_DPIDR_MINDP);
+	const bool use_low_access = !(ap->dp->debug_port_id & ADIV5_DP_DPIDR_MINDP);
 
 	platform_timeout halt_timeout;
 	platform_timeout_set(&halt_timeout, cortexm_wait_timeout);
@@ -682,25 +682,24 @@ static void rp_rescue_setup(ADIv5_DP_t *dp)
 
 void adiv5_dp_init(ADIv5_DP_t *dp)
 {
-	/* Check IDCODE for a valid manufacturer and sensible PARTNO */
-	/* TODO: this needs clarification, as DPIDR != IDCODE */
-	if ((dp->idcode & ADIV5_DP_DPIDR_DESIGNER_MASK) == 0 ||
-		(dp->idcode & ADIV5_DP_DPIDR_PARTNO_MASK) == ADIV5_DP_DPIDR_PARTNO_MASK) {
-		DEBUG_WARN("Invalid DP DPIDR %08" PRIx32 "\n", dp->idcode);
+	/* Check DPIDR for a valid manufacturer and sensible PARTNO */
+	if ((dp->debug_port_id & ADIV5_DP_DPIDR_DESIGNER_MASK) == 0 ||
+		(dp->debug_port_id & ADIV5_DP_DPIDR_PARTNO_MASK) == ADIV5_DP_DPIDR_PARTNO_MASK) {
+		DEBUG_WARN("Invalid DP DPIDR %08" PRIx32 "\n", dp->debug_port_id);
 		free(dp);
 		return;
 	}
 
 	/* TODO: this could with a non 'magic number' */
-	if (dp->idcode == 0x10212927) {
+	if (dp->debug_port_id == 0x10212927) {
 		rp_rescue_setup(dp);
 		return;
 	}
 
-	DEBUG_INFO("DPIDR 0x%08" PRIx32 " (v%d %srev%d)\n", dp->idcode,
-		(uint8_t)((dp->idcode & ADIV5_DP_DPIDR_VERSION_MASK) >> ADIV5_DP_DPIDR_VERSION_OFFSET),
-		(dp->idcode & ADIV5_DP_DPIDR_MINDP) ? "MINDP " : "",
-		(uint8_t)((dp->idcode & ADIV5_DP_DPIDR_REVISION_MASK) >> ADIV5_DP_DPIDR_REVISION_OFFSET));
+	DEBUG_INFO("DPIDR 0x%08" PRIx32 " (v%d %srev%d)\n", dp->debug_port_id,
+		(uint8_t)((dp->debug_port_id & ADIV5_DP_DPIDR_VERSION_MASK) >> ADIV5_DP_DPIDR_VERSION_OFFSET),
+		(dp->debug_port_id & ADIV5_DP_DPIDR_MINDP) ? "MINDP " : "",
+		(uint8_t)((dp->debug_port_id & ADIV5_DP_DPIDR_REVISION_MASK) >> ADIV5_DP_DPIDR_REVISION_OFFSET));
 
 #if PC_HOSTED == 1
 	platform_adiv5_dp_defaults(dp);
