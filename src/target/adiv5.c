@@ -64,9 +64,9 @@
  *                                 V
  *                           Component ID
  */
-#define CID_PREAMBLE    0xB105000DUL
-#define CID_CLASS_MASK  0x0000F000UL
-#define CID_CLASS_SHIFT 12UL
+#define CID_PREAMBLE    UINT32_C(0xB105000D)
+#define CID_CLASS_MASK  UINT32_C(0x0000F000)
+#define CID_CLASS_SHIFT 12U
 
 /* The following enum is based on the Component Class value table 13-3 of the
  * ADIv5 standard.
@@ -474,7 +474,7 @@ static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, const size_t re
 
 	/* CIDR preamble sanity check */
 	if ((cidr & ~CID_CLASS_MASK) != CID_PREAMBLE) {
-		DEBUG_WARN("%s%" PRIu32 " 0x%08" PRIx32 ": 0x%08" PRIx32 " <- does not match preamble (0x%lX)\n", indent + 1,
+		DEBUG_WARN("%s%" PRIu32 " 0x%08" PRIx32 ": 0x%08" PRIx32 " <- does not match preamble (0x%08" PRIx32 ")\n", indent + 1,
 			num_entry, addr, cidr, CID_PREAMBLE);
 		return;
 	}
