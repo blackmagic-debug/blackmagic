@@ -36,6 +36,7 @@
 #include "cortexm.h"
 #include "command.h"
 #include "gdb_packet.h"
+#include "semihosting.h"
 
 #include <unistd.h>
 
@@ -1137,50 +1138,6 @@ static bool cortexm_vector_catch(target *t, int argc, char *argv[])
 	return true;
 }
 
-/* Windows defines this with some other meaning... */
-#ifdef SYS_OPEN
-#undef SYS_OPEN
-#endif
-
-/* Semihosting support */
-
-/*
- * If the target wants to read the special filename ":semihosting-features"
- * to know what semihosting features are supported, it's easiest to create
- * that file on the host in the directory where gdb runs,
- * or, if using pc-hosted, where blackmagic_hosted runs.
- *
- * $ echo -e 'SHFB\x03' > ":semihosting-features"
- * $ chmod 0444 ":semihosting-features"
- */
-
-/* ARM Semihosting syscall numbers, from "Semihosting for AArch32 and AArch64 Version 3.0" */
-
-#define SYS_CLOCK         0x10
-#define SYS_CLOSE         0x02
-#define SYS_ELAPSED       0x30
-#define SYS_ERRNO         0x13
-#define SYS_EXIT          0x18
-#define SYS_EXIT_EXTENDED 0x20
-#define SYS_FLEN          0x0C
-#define SYS_GET_CMDLINE   0x15
-#define SYS_HEAPINFO      0x16
-#define SYS_ISERROR       0x08
-#define SYS_ISTTY         0x09
-#define SYS_OPEN          0x01
-#define SYS_READ          0x06
-#define SYS_READC         0x07
-#define SYS_REMOVE        0x0E
-#define SYS_RENAME        0x0F
-#define SYS_SEEK          0x0A
-#define SYS_SYSTEM        0x12
-#define SYS_TICKFREQ      0x31
-#define SYS_TIME          0x11
-#define SYS_TMPNAM        0x0D
-#define SYS_WRITE         0x05
-#define SYS_WRITEC        0x03
-#define SYS_WRITE0        0x04
-
 #ifdef PLATFORM_HAS_USBUART
 static bool cortexm_redirect_stdout(target *t, int argc, const char **argv)
 {
@@ -1223,7 +1180,7 @@ static int cortexm_hostio_request(target *t)
 	t->tc->interrupted = false;
 	target_regs_read(t, arm_regs);
 	uint32_t syscall = arm_regs[0];
-	if (syscall != SYS_EXIT)
+	if (syscall != SEMIHOSTING_SYS_EXIT)
 		target_mem_read(t, params, arm_regs[1], sizeof(params));
 	int32_t ret = 0;
 
@@ -1234,7 +1191,7 @@ static int cortexm_hostio_request(target *t)
 
 		/* code that runs in pc-hosted process. use linux system calls. */
 
-	case SYS_OPEN: { /* open */
+	case SEMIHOSTING_SYS_OPEN: { /* open */
 		target_addr fnam_taddr = params[0];
 		uint32_t fnam_len = params[2];
 		ret = -1;
@@ -1283,11 +1240,11 @@ static int cortexm_hostio_request(target *t)
 		break;
 	}
 
-	case SYS_CLOSE: /* close */
+	case SEMIHOSTING_SYS_CLOSE: /* close */
 		ret = close(params[0] - 1);
 		break;
 
-	case SYS_READ: { /* read */
+	case SEMIHOSTING_SYS_READ: { /* read */
 		ret = -1;
 		target_addr buf_taddr = params[1];
 		uint32_t buf_len = params[2];
@@ -1311,7 +1268,7 @@ static int cortexm_hostio_request(target *t)
 		break;
 	}
 
-	case SYS_WRITE: { /* write */
+	case SEMIHOSTING_SYS_WRITE: { /* write */
 		ret = -1;
 		target_addr buf_taddr = params[1];
 		uint32_t buf_len = params[2];
@@ -1336,7 +1293,7 @@ static int cortexm_hostio_request(target *t)
 		break;
 	}
 
-	case SYS_WRITEC: { /* writec */
+	case SEMIHOSTING_SYS_WRITEC: { /* writec */
 		ret = -1;
 		uint8_t ch;
 		target_addr ch_taddr = arm_regs[1];
@@ -1350,7 +1307,7 @@ static int cortexm_hostio_request(target *t)
 		break;
 	}
 
-	case SYS_WRITE0: { /* write0 */
+	case SEMIHOSTING_SYS_WRITE0: { /* write0 */
 		ret = -1;
 		uint8_t ch;
 		target_addr str = arm_regs[1];
@@ -1365,11 +1322,11 @@ static int cortexm_hostio_request(target *t)
 		break;
 	}
 
-	case SYS_ISTTY: /* isatty */
+	case SEMIHOSTING_SYS_ISTTY: /* isatty */
 		ret = isatty(params[0] - 1);
 		break;
 
-	case SYS_SEEK: { /* lseek */
+	case SEMIHOSTING_SYS_SEEK: { /* lseek */
 		off_t pos = params[1];
 		if (lseek(params[0] - 1, pos, SEEK_SET) == (off_t)pos)
 			ret = 0;
@@ -1378,7 +1335,7 @@ static int cortexm_hostio_request(target *t)
 		break;
 	}
 
-	case SYS_RENAME: { /* rename */
+	case SEMIHOSTING_SYS_RENAME: { /* rename */
 		ret = -1;
 		target_addr fnam1_taddr = params[0];
 		uint32_t fnam1_len = params[1];
@@ -1419,7 +1376,7 @@ static int cortexm_hostio_request(target *t)
 		break;
 	}
 
-	case SYS_REMOVE: { /* unlink */
+	case SEMIHOSTING_SYS_REMOVE: { /* unlink */
 		ret = -1;
 		target_addr fnam_taddr = params[0];
 		if (fnam_taddr == TARGET_NULL)
@@ -1441,7 +1398,7 @@ static int cortexm_hostio_request(target *t)
 		break;
 	}
 
-	case SYS_SYSTEM: { /* system */
+	case SEMIHOSTING_SYS_SYSTEM: { /* system */
 		ret = -1;
 		target_addr cmd_taddr = params[0];
 		if (cmd_taddr == TARGET_NULL)
@@ -1463,7 +1420,7 @@ static int cortexm_hostio_request(target *t)
 		break;
 	}
 
-	case SYS_FLEN: { /* file length */
+	case SEMIHOSTING_SYS_FLEN: { /* file length */
 		ret = -1;
 		struct stat stat_buf;
 		if (fstat(params[0] - 1, &stat_buf) != 0)
@@ -1474,7 +1431,7 @@ static int cortexm_hostio_request(target *t)
 		break;
 	}
 
-	case SYS_CLOCK: { /* clock */
+	case SEMIHOSTING_SYS_CLOCK: { /* clock */
 		/* can't use clock() because that would give cpu time of pc-hosted process */
 		ret = -1;
 		struct timeval timeval_buf;
@@ -1491,15 +1448,15 @@ static int cortexm_hostio_request(target *t)
 		break;
 	}
 
-	case SYS_TIME: /* time */
+	case SEMIHOSTING_SYS_TIME: /* time */
 		ret = time(NULL);
 		break;
 
-	case SYS_READC: /* readc */
+	case SEMIHOSTING_SYS_READC: /* readc */
 		ret = getchar();
 		break;
 
-	case SYS_ERRNO: /* errno */
+	case SEMIHOSTING_SYS_ERRNO: /* errno */
 		ret = errno;
 		break;
 
@@ -1507,7 +1464,7 @@ static int cortexm_hostio_request(target *t)
 
 		/* code that runs in probe. use gdb fileio calls. */
 
-	case SYS_OPEN: { /* open */
+	case SEMIHOSTING_SYS_OPEN: { /* open */
 		/* Translate stupid fopen modes to open flags.
 		 * See DUI0471C, Table 8-3 */
 		static const uint32_t flags[] = {
@@ -1540,23 +1497,23 @@ static int cortexm_hostio_request(target *t)
 		break;
 	}
 
-	case SYS_CLOSE: /* close */
+	case SEMIHOSTING_SYS_CLOSE: /* close */
 		ret = tc_close(t, params[0] - 1);
 		break;
-	case SYS_READ: /* read */
+	case SEMIHOSTING_SYS_READ: /* read */
 		ret = tc_read(t, params[0] - 1, params[1], params[2]);
 		if (ret >= 0)
 			ret = params[2] - ret;
 		break;
-	case SYS_WRITE: /* write */
+	case SEMIHOSTING_SYS_WRITE: /* write */
 		ret = tc_write(t, params[0] - 1, params[1], params[2]);
 		if (ret >= 0)
 			ret = params[2] - ret;
 		break;
-	case SYS_WRITEC: /* writec */
+	case SEMIHOSTING_SYS_WRITEC: /* writec */
 		ret = tc_write(t, STDERR_FILENO, arm_regs[1], 1);
 		break;
-	case SYS_WRITE0: { /* write0 */
+	case SEMIHOSTING_SYS_WRITE0: { /* write0 */
 		ret = -1;
 		target_addr str_begin = arm_regs[1];
 		target_addr str_end = str_begin;
@@ -1574,27 +1531,27 @@ static int cortexm_hostio_request(target *t)
 		ret = 0;
 		break;
 	}
-	case SYS_ISTTY: /* isatty */
+	case SEMIHOSTING_SYS_ISTTY: /* isatty */
 		ret = tc_isatty(t, params[0] - 1);
 		break;
-	case SYS_SEEK: /* lseek */
+	case SEMIHOSTING_SYS_SEEK: /* lseek */
 		if (tc_lseek(t, params[0] - 1, params[1], TARGET_SEEK_SET) == (long)params[1])
 			ret = 0;
 		else
 			ret = -1;
 		break;
-	case SYS_RENAME: /* rename */
+	case SEMIHOSTING_SYS_RENAME: /* rename */
 		ret = tc_rename(t, params[0], params[1] + 1, params[2], params[3] + 1);
 		break;
-	case SYS_REMOVE: /* unlink */
+	case SEMIHOSTING_SYS_REMOVE: /* unlink */
 		ret = tc_unlink(t, params[0], params[1] + 1);
 		break;
-	case SYS_SYSTEM: /* system */
+	case SEMIHOSTING_SYS_SYSTEM: /* system */
 		/* before use first enable system calls with the following gdb command: 'set remote system-call-allowed 1' */
 		ret = tc_system(t, params[0], params[1] + 1);
 		break;
 
-	case SYS_FLEN: { /* file length */
+	case SEMIHOSTING_SYS_FLEN: { /* file length */
 		ret = -1;
 		uint32_t fio_stat[16]; /* same size as fio_stat in gdb/include/gdb/fileio.h */
 		//DEBUG("SYS_FLEN fio_stat addr %p\n", fio_stat);
@@ -1619,8 +1576,8 @@ static int cortexm_hostio_request(target *t)
 		break;
 	}
 
-	case SYS_CLOCK:  /* clock */
-	case SYS_TIME: { /* time */
+	case SEMIHOSTING_SYS_CLOCK:  /* clock */
+	case SEMIHOSTING_SYS_TIME: { /* time */
 		/* use same code for SYS_CLOCK and SYS_TIME, more compact */
 		ret = -1;
 		struct __attribute__((packed, aligned(4))) {
@@ -1642,7 +1599,7 @@ static int cortexm_hostio_request(target *t)
 			break;                                             /* tc_gettimeofday() failed */
 		uint32_t sec = __builtin_bswap32(fio_timeval.ftv_sec); /* convert from bigendian to target order */
 		uint64_t usec = __builtin_bswap64(fio_timeval.ftv_usec);
-		if (syscall == SYS_TIME) { /* SYS_TIME: time in seconds */
+		if (syscall == SEMIHOSTING_SYS_TIME) { /* SYS_TIME: time in seconds */
 			ret = sec;
 		} else { /* SYS_CLOCK: time in hundredths of seconds */
 			if (time0_sec > sec)
@@ -1655,7 +1612,7 @@ static int cortexm_hostio_request(target *t)
 		break;
 	}
 
-	case SYS_READC: { /* readc */
+	case SEMIHOSTING_SYS_READC: { /* readc */
 		uint8_t ch = '?';
 		//DEBUG("SYS_READC ch addr %p\n", &ch);
 		void (*saved_mem_read)(target * t, void *dest, target_addr src, size_t len);
@@ -1674,22 +1631,22 @@ static int cortexm_hostio_request(target *t)
 		break;
 	}
 
-	case SYS_ERRNO: /* Return last errno from GDB */
+	case SEMIHOSTING_SYS_ERRNO: /* Return last errno from GDB */
 		ret = t->tc->errno_;
 		break;
 #endif
 
-	case SYS_EXIT: /* _exit() */
+	case SEMIHOSTING_SYS_EXIT: /* _exit() */
 		tc_printf(t, "_exit(0x%x)\n", arm_regs[1]);
 		target_halt_resume(t, 1);
 		break;
 
-	case SYS_EXIT_EXTENDED:                                      /* _exit() */
+	case SEMIHOSTING_SYS_EXIT_EXTENDED:                          /* _exit() */
 		tc_printf(t, "_exit(0x%x%08x)\n", params[1], params[0]); /* exit() with 64bit exit value */
 		target_halt_resume(t, 1);
 		break;
 
-	case SYS_GET_CMDLINE: { /* get_cmdline */
+	case SEMIHOSTING_SYS_GET_CMDLINE: { /* get_cmdline */
 		uint32_t retval[2];
 		ret = -1;
 		target_addr buf_ptr = params[0];
@@ -1706,7 +1663,7 @@ static int cortexm_hostio_request(target *t)
 		break;
 	}
 
-	case SYS_ISERROR: { /* iserror */
+	case SEMIHOSTING_SYS_ISERROR: { /* iserror */
 		int errorNo = params[0];
 		ret = errorNo == TARGET_EPERM || errorNo == TARGET_ENOENT || errorNo == TARGET_EINTR || errorNo == TARGET_EIO ||
 		      errorNo == TARGET_EBADF || errorNo == TARGET_EACCES || errorNo == TARGET_EFAULT ||
@@ -1718,11 +1675,11 @@ static int cortexm_hostio_request(target *t)
 		break;
 	}
 
-	case SYS_HEAPINFO:                                                       /* heapinfo */
+	case SEMIHOSTING_SYS_HEAPINFO:                                           /* heapinfo */
 		target_mem_write(t, arm_regs[1], &t->heapinfo, sizeof(t->heapinfo)); /* See newlib/libc/sys/arm/crt0.S */
 		break;
 
-	case SYS_TMPNAM: { /* tmpnam */
+	case SEMIHOSTING_SYS_TMPNAM: { /* tmpnam */
 		/* Given a target identifier between 0 and 255, returns a temporary name */
 		target_addr buf_ptr = params[0];
 		int target_id = params[1];
@@ -1746,8 +1703,8 @@ static int cortexm_hostio_request(target *t)
 	}
 
 	// not implemented yet:
-	case SYS_ELAPSED:  /* elapsed */
-	case SYS_TICKFREQ: /* tickfreq */
+	case SEMIHOSTING_SYS_ELAPSED:  /* elapsed */
+	case SEMIHOSTING_SYS_TICKFREQ: /* tickfreq */
 		ret = -1;
 		break;
 	}
