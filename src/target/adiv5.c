@@ -487,14 +487,15 @@ static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, const size_t re
 	if (pidr & PIDR_JEP106_USED) {
 		/* (OFFSET - 8) because we want it on bits 11:8 of new code, see "JEP-106 code list" */
 		designer_code = (pidr & PIDR_JEP106_CONT_MASK) >> (PIDR_JEP106_CONT_OFFSET - 8) |
-		           (pidr & PIDR_JEP106_CODE_MASK) >> PIDR_JEP106_CODE_OFFSET;
+		                (pidr & PIDR_JEP106_CODE_MASK) >> PIDR_JEP106_CODE_OFFSET;
 
 		if (designer_code == JEP106_MANUFACTURER_ERRATA_STM32WX || designer_code == JEP106_MANUFACTURER_ERRATA_CS) {
 			/**
 			 * see 'JEP-106 code list' for context, here we are aliasing codes that are non compliant with the
 			 * JEP-106 standard to their expected codes, this is later used to determine the correct probe function.
 			 */
-			DEBUG_WARN("Patching Designer code 0x%03" PRIx16 " -> 0x%03" PRIx16 "\n", designer_code, JEP106_MANUFACTURER_STM);
+			DEBUG_WARN(
+				"Patching Designer code 0x%03" PRIx16 " -> 0x%03" PRIx16 "\n", designer_code, JEP106_MANUFACTURER_STM);
 			designer_code = JEP106_MANUFACTURER_STM;
 		}
 	} else {
