@@ -117,9 +117,6 @@ struct target_s {
 	/* target-defined options */
 	unsigned target_options;
 
-	uint16_t designer_code;
-	uint16_t part_id;
-
 	void *target_storage;
 	union {
 		bool unsafe_enabled;
@@ -144,6 +141,13 @@ struct target_s {
 
 	void *priv;
 	void (*priv_free)(void *);
+
+	/* Target designer and id / partno */
+	uint16_t designer_code;
+	/* targetid partno if available (>= DPv2)
+	 * fallback to ap partno
+	 */
+	uint16_t part_id;
 };
 
 void target_print_progress(platform_timeout *timeout);
