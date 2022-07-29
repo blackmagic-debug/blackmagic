@@ -93,8 +93,6 @@ int adiv5_swdp_scan(uint32_t targetid)
 	 * 0x1a Arm CoreSight SW-DP activation sequence
 	 * 20 bits start of reset another reset sequence*/
 	initial_dp->seq_out(0x1a0, 12);
-	uint32_t dpidr = 0;
-	volatile uint32_t target_id = 0;
 	bool scan_multidrop = true;
 	if (!targetid || !initial_dp->dp_low_write) {
 		/* No targetID given on the command line or probe can not
@@ -102,7 +100,7 @@ int adiv5_swdp_scan(uint32_t targetid)
 		dp_line_reset(initial_dp);
 
 		TRY_CATCH (e, EXCEPTION_ALL) {
-			dpidr = initial_dp->dp_read(initial_dp, ADIV5_DP_DPIDR);
+			initial_dp->debug_port_id = initial_dp->dp_read(initial_dp, ADIV5_DP_DPIDR);
 		}
 		if (e.type || initial_dp->fault) {
 			scan_multidrop = false;
@@ -114,24 +112,27 @@ int adiv5_swdp_scan(uint32_t targetid)
 			initial_dp->fault = 0;
 
 			TRY_CATCH (e, EXCEPTION_ALL) {
-				dpidr = initial_dp->dp_read(initial_dp, ADIV5_DP_DPIDR);
+				initial_dp->debug_port_id = initial_dp->dp_read(initial_dp, ADIV5_DP_DPIDR);
 			}
 			if (e.type || initial_dp->fault) {
 				DEBUG_WARN("No usable DP found\n");
 				return -1;
 			}
 		}
-		if ((dpidr & ADIV5_DP_DPIDR_VERSION_MASK) == ADIV5_DP_DPIDR_VERSION_DPv2) {
+
+		initial_dp->version =
+			(initial_dp->debug_port_id & ADIV5_DP_DPIDR_VERSION_MASK) >> ADIV5_DP_DPIDR_VERSION_OFFSET;
+		if (initial_dp->version >= 2) {
 			scan_multidrop = true;
 			/* Read TargetID. Can be done with device in WFI, sleep or reset!*/
-			adiv5_dp_write(initial_dp, ADIV5_DP_SELECT, 2);
-			target_id = adiv5_dp_read(initial_dp, ADIV5_DP_CTRLSTAT);
+			adiv5_dp_write(initial_dp, ADIV5_DP_SELECT, 2); /* TARGETID is on bank 2 */
+			initial_dp->target_id = adiv5_dp_read(initial_dp, ADIV5_DP_TARGETID);
 			adiv5_dp_write(initial_dp, ADIV5_DP_SELECT, 0);
-			DEBUG_INFO("TARGETID %08" PRIx32 "\n", target_id);
 
 			const uint16_t tdesigner =
-				(target_id & ADIV5_DP_TARGETID_TDESIGNER_MASK) >> ADIV5_DP_TARGETID_TDESIGNER_OFFSET;
-			const uint16_t tpartno = (target_id & ADIV5_DP_TARGETID_TPARTNO_MASK) >> ADIV5_DP_TARGETID_TPARTNO_OFFSET;
+				(initial_dp->target_id & ADIV5_DP_TARGETID_TDESIGNER_MASK) >> ADIV5_DP_TARGETID_TDESIGNER_OFFSET;
+			const uint16_t tpartno =
+				(initial_dp->target_id & ADIV5_DP_TARGETID_TPARTNO_MASK) >> ADIV5_DP_TARGETID_TPARTNO_OFFSET;
 			/* convert it to our internal representation, See JEP-106 code list */
 			const uint16_t designer_code = (tdesigner & ADIV5_DP_DESIGNER_JEP106_CONT_MASK) << 1U |
 			                               (tdesigner & ADIV5_DP_DESIGNER_JEP106_CODE_MASK);
@@ -150,23 +151,25 @@ int adiv5_swdp_scan(uint32_t targetid)
 			scan_multidrop = false;
 		}
 	} else {
-		target_id = targetid;
+		initial_dp->target_id = targetid;
 	}
 	const volatile size_t nr_dps = (scan_multidrop) ? 16U : 1U;
 	volatile uint32_t dp_targetid;
+	volatile uint32_t dp_debug_port_id;
 	for (volatile size_t i = 0; i < nr_dps; i++) {
 		if (scan_multidrop) {
 			dp_line_reset(initial_dp);
-			dp_targetid = (i << 28U) | (target_id & 0x0fffffffU);
+			dp_targetid = (i << 28U) | (initial_dp->target_id & 0x0fffffffU);
 			initial_dp->dp_low_write(initial_dp, ADIV5_DP_TARGETSEL, dp_targetid);
 			TRY_CATCH (e, EXCEPTION_ALL) {
-				dpidr = initial_dp->dp_read(initial_dp, ADIV5_DP_DPIDR);
+				dp_debug_port_id = initial_dp->dp_read(initial_dp, ADIV5_DP_DPIDR);
 			}
 			if (e.type || initial_dp->fault) {
 				continue;
 			}
 		} else {
-			dp_targetid = target_id;
+			dp_debug_port_id = initial_dp->debug_port_id;
+			dp_targetid = initial_dp->target_id;
 		}
 		ADIv5_DP_t *dp = calloc(1, sizeof(*dp));
 		if (!dp) { /* calloc failed: heap exhaustion */
@@ -174,8 +177,9 @@ int adiv5_swdp_scan(uint32_t targetid)
 			continue;
 		}
 		memcpy(dp, initial_dp, sizeof(ADIv5_DP_t));
-		dp->debug_port_id = dpidr;
-		dp->targetid = dp_targetid;
+		dp->version = (dp_debug_port_id & ADIV5_DP_DPIDR_VERSION_MASK) >> ADIV5_DP_DPIDR_VERSION_OFFSET;
+		dp->debug_port_id = dp_debug_port_id;
+		dp->target_id = dp_targetid;
 		adiv5_dp_init(dp);
 	}
 	return target_list ? 1U : 0U;
@@ -193,12 +197,12 @@ uint32_t firmware_swdp_read(ADIv5_DP_t *dp, uint16_t addr)
 
 uint32_t firmware_swdp_error(ADIv5_DP_t *dp)
 {
-	if ((dp->fault && (dp->debug_port_id & ADIV5_DP_DPIDR_VERSION_MASK) == ADIV5_DP_DPIDR_VERSION_DPv2) && dp->dp_low_write) {
-		/* On protocoll error target gets deselected.
+	if (dp->version >= 2 && dp->dp_low_write) {
+		/* On protocol error target gets deselected.
 		 * With DP Change, another target needs selection.
 		 * => Reselect with right target! */
 		dp_line_reset(dp);
-		dp->dp_low_write(dp, ADIV5_DP_TARGETSEL, dp->targetid);
+		dp->dp_low_write(dp, ADIV5_DP_TARGETSEL, dp->target_id);
 		dp->dp_read(dp, ADIV5_DP_DPIDR);
 		/* Exception here is unexpected, so do not catch */
 	}

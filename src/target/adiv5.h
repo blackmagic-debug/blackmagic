@@ -41,7 +41,7 @@
 #define ADIV5_DP_DPIDR     ADIV5_DP_REG(0x0U)
 #define ADIV5_DP_ABORT     ADIV5_DP_REG(0x0U)
 #define ADIV5_DP_CTRLSTAT  ADIV5_DP_REG(0x4U)
-#define ADIV5_DP_TARGETID  (ADIV5_DP_BANK2 | ADIV5_DP_REG(0x4U))
+#define ADIV5_DP_TARGETID  ADIV5_DP_REG(0x4U) /* ADIV5_DP_BANK2 */
 #define ADIV5_DP_SELECT    ADIV5_DP_REG(0x8U)
 #define ADIV5_DP_RDBUFF    ADIV5_DP_REG(0xCU)
 #define ADIV5_DP_TARGETSEL ADIV5_DP_REG(0xCU)
@@ -68,7 +68,7 @@
 #define ADIV5_DP_TARGETID_TDESIGNER_OFFSET 1U
 #define ADIV5_DP_TARGETID_TDESIGNER_MASK   (0x7ffU << ADIV5_DP_TARGETID_TDESIGNER_OFFSET)
 
-/* DP DPIDR/TARGETID DESIGNER */
+/* DP DPIDR/TARGETID/IDCODE DESIGNER */
 /* Bits 10:7 - JEP-106 Continuation code */
 /* Bits 6:0 - JEP-106 Identity code */
 #define ADIV5_DP_DESIGNER_JEP106_CONT_OFFSET 7U
@@ -146,6 +146,14 @@
 #define ADIV5_ROM_ROMENTRY_PRESENT (1U << 0U)
 #define ADIV5_ROM_ROMENTRY_OFFSET  (0xFFFFF000U)
 
+/* JTAG TAP IDCODE */
+#define JTAG_IDCODE_VERSION_OFFSET  28U
+#define JTAG_IDCODE_VERSION_MASK    (0xfU << JTAG_IDCODE_VERSION_OFFSET)
+#define JTAG_IDCODE_PARTNO_OFFSET   12U
+#define JTAG_IDCODE_PARTNO_MASK     (0xffffU << JTAG_IDCODE_PARTNO_OFFSET)
+#define JTAG_IDCODE_DESIGNER_OFFSET 1U
+#define JTAG_IDCODE_DESIGNER_MASK   (0x7ffU << JTAG_IDCODE_DESIGNER_OFFSET)
+
 /* Constants to make RnW parameters more clear in code */
 #define ADIV5_LOW_WRITE 0
 #define ADIV5_LOW_READ  1
@@ -220,11 +228,7 @@ typedef struct ADIv5_DP_s {
 	int refcnt;
 
 	uint32_t debug_port_id;
-
-	uint16_t designer_code;
-	uint16_t partno;
-
-	uint32_t targetid; /* Contains IDCODE for DPv2 devices.*/
+	uint32_t target_id; /* present on DPv2 or later */
 
 	void (*seq_out)(uint32_t tms_states, size_t clock_cycles);
 	void (*seq_out_parity)(uint32_t tms_states, size_t clock_cycles);
@@ -254,6 +258,15 @@ typedef struct ADIv5_DP_s {
 	void (*mem_write_sized)(ADIv5_AP_t *ap, uint32_t dest, const void *src, size_t len, enum align align);
 	uint8_t dp_jd_index;
 	uint8_t fault;
+
+	uint8_t version;
+
+	uint8_t revision;
+	bool mindp;
+
+	/* DP designer (not implementer!) and partno */
+	uint16_t designer_code;
+	uint16_t partno;
 } ADIv5_DP_t;
 
 struct ADIv5_AP_s {

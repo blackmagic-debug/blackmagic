@@ -511,14 +511,14 @@ bool stm32l4_probe(target *t)
 {
 	ADIv5_AP_t *ap = cortexm_ap(t);
 	uint32_t device_id;
-	if (ap->dp->targetid > 1) { /* STM32L552 has invalid TARGETID 1 */
-		/* todo: cleanup, this does not look correct, nothing in TARGETID register has offset 16 */
-		device_id = (ap->dp->targetid >> 16) & 0xfff;
+	if (ap->dp->version >= 2 && ap->dp->target_id > 1) { /* STM32L552 has invalid TARGETID 1 */
+		/* FIXME: this does not look correct, nothing in TARGETID register has offset 16 */
+		device_id = (ap->dp->target_id >> 16U) & 0xfffU;
 	} else {
 		uint32_t idcode_reg = STM32L4_DBGMCU_IDCODE_PHYS;
-		if (ap->dp->debug_port_id == 0x0Be12477)
+		if (ap->dp->debug_port_id == 0x0be12477U)
 			idcode_reg = STM32L5_DBGMCU_IDCODE_PHYS;
-		device_id = target_mem_read32(t, idcode_reg) & 0xfff;
+		device_id = target_mem_read32(t, idcode_reg) & 0xfffU;
 		DEBUG_INFO("Idcode %08" PRIx32 "\n", device_id);
 	}
 

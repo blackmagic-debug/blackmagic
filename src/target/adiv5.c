@@ -332,7 +332,7 @@ static uint32_t cortexm_initial_halt(ADIv5_AP_t *ap)
 
 	const uint32_t dhcsr_ctl = CORTEXM_DHCSR_DBGKEY | CORTEXM_DHCSR_C_DEBUGEN | CORTEXM_DHCSR_C_HALT;
 	const uint32_t dhcsr_valid = CORTEXM_DHCSR_S_HALT | CORTEXM_DHCSR_C_DEBUGEN;
-	const bool use_low_access = !(ap->dp->debug_port_id & ADIV5_DP_DPIDR_MINDP);
+	const bool use_low_access = !ap->dp->mindp;
 
 	platform_timeout halt_timeout;
 	platform_timeout_set(&halt_timeout, cortexm_wait_timeout);
@@ -682,30 +682,44 @@ static void rp_rescue_setup(ADIv5_DP_t *dp)
 
 void adiv5_dp_init(ADIv5_DP_t *dp)
 {
+	/* designer code is in the same format in IDCODE and DPIDR */
+	/* common handling */
 	/*
-	 * the code in the DPIDR is in the form
+	 * the code in the DPIDR/IDCODE is in the form
 	 * Bits 10:7 - JEP-106 Continuation code
 	 * Bits 6:0 - JEP-106 Identity code
 	 * here we convert it to our internal representation, See JEP-106 code list
 	 * note, this is the code of the designer not the implementer, we expect it to be ARM
 	 */
 	const uint16_t designer = (dp->debug_port_id & ADIV5_DP_DPIDR_DESIGNER_MASK) >> ADIV5_DP_DPIDR_DESIGNER_OFFSET;
-	dp->designer_code = (designer & ADIV5_DP_DESIGNER_JEP106_CONT_MASK) << 1U |
-	                    (designer & ADIV5_DP_DESIGNER_JEP106_CODE_MASK);
-	dp->partno = (dp->debug_port_id & ADIV5_DP_DPIDR_PARTNO_MASK) >> ADIV5_DP_DPIDR_PARTNO_OFFSET;
+	dp->designer_code =
+		(designer & ADIV5_DP_DESIGNER_JEP106_CONT_MASK) << 1U | (designer & ADIV5_DP_DESIGNER_JEP106_CODE_MASK);
 
-	/* Check DPIDR for a valid manufacturer and sensible PARTNO */
-	if (dp->designer_code == 0 || dp->partno == 0xff7fU) {
-		DEBUG_WARN("Invalid DP DPIDR %08" PRIx32 "\n", dp->debug_port_id);
+	/* on JTAG IDCODE this is actually the version */
+	dp->revision = (dp->debug_port_id & ADIV5_DP_DPIDR_REVISION_MASK) >> ADIV5_DP_DPIDR_REVISION_OFFSET;
+
+	if (dp->version > 0) {
+		/* debug_port_id is valid DPIDR */
+		dp->partno = (dp->debug_port_id & ADIV5_DP_DPIDR_PARTNO_MASK) >> ADIV5_DP_DPIDR_PARTNO_OFFSET;
+		dp->mindp = !!(dp->debug_port_id & ADIV5_DP_DPIDR_MINDP);
+	} else {
+		/* called from JTAG scan, debug_port_id is JTAG TAP IDCODE */
+		dp->partno = (dp->debug_port_id & JTAG_IDCODE_PARTNO_MASK) >> JTAG_IDCODE_PARTNO_OFFSET;
+		dp->mindp = false;
+	}
+
+	/* Check for a valid designer */
+	if (dp->designer_code == 0) {
+		DEBUG_WARN("Invalid DP ID %08" PRIx32 "\n", dp->debug_port_id);
 		free(dp);
 		return;
 	}
 
-	DEBUG_INFO("DPIDR 0x%08" PRIx32 " (v%d %srev%d) designer 0x%" PRIx32 " partno 0x%" PRIx32 "\n", dp->debug_port_id,
-		(uint8_t)((dp->debug_port_id & ADIV5_DP_DPIDR_VERSION_MASK) >> ADIV5_DP_DPIDR_VERSION_OFFSET),
-		(dp->debug_port_id & ADIV5_DP_DPIDR_MINDP) ? "MINDP " : "",
-		(uint8_t)((dp->debug_port_id & ADIV5_DP_DPIDR_REVISION_MASK) >> ADIV5_DP_DPIDR_REVISION_OFFSET), dp->designer_code,
-		dp->partno);
+	DEBUG_INFO("DP ID 0x%08" PRIx32 " (v%d %srev%d) designer 0x%" PRIx32 " partno 0x%" PRIx32 "\n", dp->debug_port_id,
+		dp->version, dp->mindp ? "MINDP " : "", dp->revision, dp->designer_code, dp->partno);
+
+	if (dp->version >= 2 && dp->target_id != 0)
+		DEBUG_INFO("TARGETID 0x%08" PRIx32 "\n", dp->target_id);
 
 	if (dp->designer_code == JEP106_MANUFACTURER_RASPBERRY && dp->partno == 0x2) {
 		rp_rescue_setup(dp);

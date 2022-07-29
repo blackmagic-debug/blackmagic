@@ -283,8 +283,19 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 	}
 
 	adiv5_ap_ref(ap);
-	t->designer_code = ap->designer_code;
-	t->part_id = ap->ap_partno;
+	if (ap->dp->version >= 2 && ap->dp->target_id != 0) {
+		/* Use TARGETID register to identify target */
+		const uint16_t tdesigner =
+			(ap->dp->target_id & ADIV5_DP_TARGETID_TDESIGNER_MASK) >> ADIV5_DP_TARGETID_TDESIGNER_OFFSET;
+		/* convert it to our internal representation, See JEP-106 code list */
+		t->designer_code =
+			(tdesigner & ADIV5_DP_DESIGNER_JEP106_CONT_MASK) << 1U | (tdesigner & ADIV5_DP_DESIGNER_JEP106_CODE_MASK);
+		t->part_id = (ap->dp->target_id & ADIV5_DP_TARGETID_TPARTNO_MASK) >> ADIV5_DP_TARGETID_TPARTNO_OFFSET;
+	} else {
+		/* Use AP DESIGNER and AP PARTNO to identify target */
+		t->designer_code = ap->designer_code;
+		t->part_id = ap->partno;
+	}
 	struct cortexm_priv *priv = calloc(1, sizeof(*priv));
 	if (!priv) { /* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
@@ -401,10 +412,10 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 	} while (0)
 #endif
 
-	switch (ap->designer_code) {
+	switch (t->designer_code) {
 	case JEP106_MANUFACTURER_FREESCALE:
 		PROBE(kinetis_probe);
-		if (ap->ap_partno == 0x88c) {
+		if (t->part_id == 0x88c) {
 			t->driver = "MIMXRT10xx(no flash)";
 			target_halt_resume(t, 0);
 		}
@@ -444,36 +455,21 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 	case JEP106_MANUFACTURER_SPECULAR:
 		PROBE(lpc11xx_probe); /* LPC845 */
 		break;
-	default:
-		if (ap->designer_code != JEP106_MANUFACTURER_ARM) {
-			/* Report unexpected designers */
-#if PC_HOSTED == 0
-			gdb_outf("Please report probed device with Designer code 0x%3x and Partno 0x%3x\n", ap->designer_code,
-				ap->ap_partno);
-#else
-			DEBUG_WARN("Please report probed device with Designer code 0x%3x and Partno 0x%3x\n", ap->designer_code,
-				ap->ap_partno);
-#endif
-		}
-		if (ap->ap_partno == 0x4c0) { /* Cortex-M0+ ROM */
-			const uint16_t tdesigner =
-				(ap->dp->targetid & ADIV5_DP_TARGETID_TDESIGNER_MASK) >> ADIV5_DP_TARGETID_TDESIGNER_OFFSET;
-			/* convert it to our internal representation, See JEP-106 code list */
-			const uint16_t designer_code = (tdesigner & ADIV5_DP_DESIGNER_JEP106_CONT_MASK) << 1U |
-			                               (tdesigner & ADIV5_DP_DESIGNER_JEP106_CODE_MASK);
-			if (designer_code == JEP106_MANUFACTURER_RASPBERRY)
-				PROBE(rp_probe);
-			PROBE(lpc11xx_probe);            /* LPC8 */
-		} else if (ap->ap_partno == 0x4c3) { /* Cortex-M3 ROM */
+	case JEP106_MANUFACTURER_RASPBERRY:
+		PROBE(rp_probe);
+		break;
+	case JEP106_MANUFACTURER_ARM:
+		if (t->part_id == 0x4c0) {        /* Cortex-M0+ ROM */
+			PROBE(lpc11xx_probe);         /* LPC8 */
+		} else if (t->part_id == 0x4c3) { /* Cortex-M3 ROM */
 			PROBE(lmi_probe);
 			PROBE(ch32f1_probe);
-			PROBE(stm32f1_probe);            /* Care for other STM32F1 clones (?) */
-			PROBE(lpc15xx_probe);            /* Thanks to JojoS for testing */
-			PROBE(lpc11xx_probe);            /* LPC1343 */
-		} else if (ap->ap_partno == 0x471) { /* Cortex-M0 ROM */
-			PROBE(lpc11xx_probe);            /* LPC24C11 */
+			PROBE(stm32f1_probe);         /* Care for other STM32F1 clones (?) */
+			PROBE(lpc15xx_probe);         /* Thanks to JojoS for testing */
+		} else if (t->part_id == 0x471) { /* Cortex-M0 ROM */
+			PROBE(lpc11xx_probe);         /* LPC24C11 */
 			PROBE(lpc43xx_probe);
-		} else if (ap->ap_partno == 0x4c4) { /* Cortex-M4 ROM */
+		} else if (t->part_id == 0x4c4) { /* Cortex-M4 ROM */
 			PROBE(lmi_probe);
 			/* The LPC546xx and LPC43xx parts present with the same AP ROM Part
 			Number, so we need to probe both. Unfortunately, when probing for
@@ -483,19 +479,28 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 			probe for the LPC546xx first, which experimentally doesn't harm
 			LPC43xx detection. */
 			PROBE(lpc546xx_probe);
-
 			PROBE(lpc43xx_probe);
-			PROBE(kinetis_probe);            /* Older K-series */
-		} else if (ap->ap_partno == 0x4cb) { /* Cortex-M23 ROM */
-			PROBE(gd32f1_probe);             /* GD32E23x uses GD32F1 peripherals */
-		} else if (ap->ap_partno == 0x4c0) { /* Cortex-M0+ ROM */
-			PROBE(lpc11xx_probe);            /* some of the LPC8xx series, like LPC802 */
+			PROBE(kinetis_probe);         /* Older K-series */
+		} else if (t->part_id == 0x4cb) { /* Cortex-M23 ROM */
+			PROBE(gd32f1_probe);          /* GD32E23x uses GD32F1 peripherals */
 		}
-		/* Info on PIDR of these parts wanted! */
+		break;
+	case ASCII_CODE_FLAG:
+		/*
+		 * these devices enumerate an AP with an empty ascii code,
+		 * and have no available designer code elsewhere
+		 */
 		PROBE(sam3x_probe);
 		PROBE(ke04_probe);
 		PROBE(lpc17xx_probe);
+		PROBE(lpc11xx_probe); /* LPC1343 */
+		break;
 	}
+#if PC_HOSTED == 0
+	gdb_outf("Please report unknown device with Designer %x Part ID %x\n", ap->designer_code, ap->partno);
+#else
+	DEBUG_WARN("Please report unknown device with Designer %x Part ID %x\n", ap->designer_code, ap->partno);
+#endif
 #undef PROBE
 	return true;
 }

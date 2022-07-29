@@ -180,12 +180,22 @@ int jlink_swdp_scan(bmp_info_t *info)
 		free(dp);
 		return 0;
 	}
+	dp->version = (dp->debug_port_id & ADIV5_DP_DPIDR_VERSION_MASK) >> ADIV5_DP_DPIDR_VERSION_OFFSET;
+
 	dp->dp_read = jlink_adiv5_swdp_read;
 	dp->error = jlink_adiv5_swdp_error;
 	dp->low_access = jlink_adiv5_swdp_low_access;
 	dp->abort = jlink_adiv5_swdp_abort;
 
 	jlink_adiv5_swdp_error(dp);
+
+	if (dp->version >= 2) {
+		/* READ TARGETID, only available on DPv2 or later */
+		adiv5_dp_write(dp, ADIV5_DP_SELECT, 2); /* TARGETID is on bank 2 */
+		dp->target_id = adiv5_dp_read(dp, ADIV5_DP_TARGETID);
+		adiv5_dp_write(dp, ADIV5_DP_SELECT, 0);
+	}
+
 	adiv5_dp_init(dp);
 	return target_list?1:0;
 }
