@@ -540,7 +540,7 @@ bool efm32_probe(target *t)
 
 	/* Read the IDCODE register from the SW-DP */
 	ADIv5_AP_t *ap = cortexm_ap(t);
-	uint32_t ap_idcode = ap->dp->idcode;
+	uint32_t ap_idcode = ap->dp->debug_port_id;
 
 	/* Check the idcode. See AN0062 Section 2.2 */
 	if (ap_idcode == 0x2BA01477) {

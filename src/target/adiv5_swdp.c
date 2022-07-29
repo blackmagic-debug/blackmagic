@@ -93,7 +93,7 @@ int adiv5_swdp_scan(uint32_t targetid)
 	 * 0x1a Arm CoreSight SW-DP activation sequence
 	 * 20 bits start of reset another reset sequence*/
 	initial_dp->seq_out(0x1a0, 12);
-	uint32_t idcode = 0;
+	uint32_t dpidr = 0;
 	volatile uint32_t target_id = 0;
 	bool scan_multidrop = true;
 	if (!targetid || !initial_dp->dp_low_write) {
@@ -102,7 +102,7 @@ int adiv5_swdp_scan(uint32_t targetid)
 		dp_line_reset(initial_dp);
 
 		TRY_CATCH (e, EXCEPTION_ALL) {
-			idcode = initial_dp->dp_read(initial_dp, ADIV5_DP_IDCODE);
+			dpidr = initial_dp->dp_read(initial_dp, ADIV5_DP_DPIDR);
 		}
 		if (e.type || initial_dp->fault) {
 			scan_multidrop = false;
@@ -114,14 +114,14 @@ int adiv5_swdp_scan(uint32_t targetid)
 			initial_dp->fault = 0;
 
 			TRY_CATCH (e, EXCEPTION_ALL) {
-				idcode = initial_dp->dp_read(initial_dp, ADIV5_DP_IDCODE);
+				dpidr = initial_dp->dp_read(initial_dp, ADIV5_DP_DPIDR);
 			}
 			if (e.type || initial_dp->fault) {
 				DEBUG_WARN("No usable DP found\n");
 				return -1;
 			}
 		}
-		if ((idcode & ADIV5_DP_DPIDR_VERSION_MASK) == ADIV5_DP_DPIDR_VERSION_DPv2) {
+		if ((dpidr & ADIV5_DP_DPIDR_VERSION_MASK) == ADIV5_DP_DPIDR_VERSION_DPv2) {
 			scan_multidrop = true;
 			/* Read TargetID. Can be done with device in WFI, sleep or reset!*/
 			adiv5_dp_write(initial_dp, ADIV5_DP_SELECT, 2);
@@ -153,7 +153,7 @@ int adiv5_swdp_scan(uint32_t targetid)
 			dp_targetid = (i << 28U) | (target_id & 0x0fffffffU);
 			initial_dp->dp_low_write(initial_dp, ADIV5_DP_TARGETSEL, dp_targetid);
 			TRY_CATCH (e, EXCEPTION_ALL) {
-				idcode = initial_dp->dp_read(initial_dp, ADIV5_DP_IDCODE);
+				dpidr = initial_dp->dp_read(initial_dp, ADIV5_DP_DPIDR);
 			}
 			if (e.type || initial_dp->fault) {
 				continue;
@@ -167,7 +167,7 @@ int adiv5_swdp_scan(uint32_t targetid)
 			continue;
 		}
 		memcpy(dp, initial_dp, sizeof(ADIv5_DP_t));
-		dp->idcode = idcode;
+		dp->debug_port_id = dpidr;
 		dp->targetid = dp_targetid;
 		adiv5_dp_init(dp);
 	}
@@ -186,13 +186,13 @@ uint32_t firmware_swdp_read(ADIv5_DP_t *dp, uint16_t addr)
 
 uint32_t firmware_swdp_error(ADIv5_DP_t *dp)
 {
-	if ((dp->fault && (dp->idcode & ADIV5_DP_DPIDR_VERSION_MASK) == ADIV5_DP_DPIDR_VERSION_DPv2) && dp->dp_low_write) {
+	if ((dp->fault && (dp->debug_port_id & ADIV5_DP_DPIDR_VERSION_MASK) == ADIV5_DP_DPIDR_VERSION_DPv2) && dp->dp_low_write) {
 		/* On protocoll error target gets deselected.
 		 * With DP Change, another target needs selection.
 		 * => Reselect with right target! */
 		dp_line_reset(dp);
 		dp->dp_low_write(dp, ADIV5_DP_TARGETSEL, dp->targetid);
-		dp->dp_read(dp, ADIV5_DP_IDCODE);
+		dp->dp_read(dp, ADIV5_DP_DPIDR);
 		/* Exception here is unexpected, so do not catch */
 	}
 	uint32_t err, clr = 0;

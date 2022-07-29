@@ -173,10 +173,10 @@ int jlink_swdp_scan(bmp_info_t *info)
 		return 0;
 	volatile struct exception e;
 	TRY_CATCH (e, EXCEPTION_ALL) {
-		dp->idcode = jlink_adiv5_swdp_low_access(dp, 1, ADIV5_DP_IDCODE, 0);
+		dp->debug_port_id = jlink_adiv5_swdp_low_access(dp, ADIV5_LOW_READ, ADIV5_DP_DPIDR, 0);
 	}
 	if (e.type) {
-		DEBUG_WARN("DP not responding for IDCODE! Reset stuck low?\n");
+		DEBUG_WARN("DP not responding for DPIDR! Reset stuck low?\n");
 		free(dp);
 		return 0;
 	}

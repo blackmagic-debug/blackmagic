@@ -48,7 +48,12 @@ void adiv5_jtag_dp_handler(uint8_t jd_index)
 	}
 
 	dp->dp_jd_index = jd_index;
-	dp->idcode = jtag_devs[jd_index].jd_idcode;
+	/* From the ADI spec :
+	 * The architecture does not require that the TAP IDCODE
+	 * register value and the DPIDR (ADIv5) value are the same
+	 * should read DPIDR here
+	 */
+	dp->debug_port_id = jtag_devs[jd_index].jd_idcode;
 	if ((PC_HOSTED == 0 ) || (!platform_jtag_dp_init(dp))) {
 		dp->dp_read = fw_adiv5_jtagdp_read;
 		dp->error = adiv5_jtagdp_error;
