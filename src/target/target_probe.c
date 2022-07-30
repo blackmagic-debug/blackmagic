@@ -59,6 +59,7 @@ bool rp_rescue_probe(ADIv5_AP_t *ap) CORTEXM_PROBE_WEAK_NOP;
 bool ch32f1_probe(target *t) TARGET_PROBE_WEAK_NOP;
 bool gd32f1_probe(target *t) TARGET_PROBE_WEAK_NOP;
 bool stm32f1_probe(target *t) TARGET_PROBE_WEAK_NOP;
+bool at32fxx_probe(target *t) TARGET_PROBE_WEAK_NOP;
 bool stm32f4_probe(target *t) TARGET_PROBE_WEAK_NOP;
 bool stm32h7_probe(target *t) TARGET_PROBE_WEAK_NOP;
 bool stm32l0_probe(target *t) TARGET_PROBE_WEAK_NOP;
