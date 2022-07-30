@@ -276,7 +276,7 @@ static int ch32f1_upload(target *t, uint32_t dest, const void *src, uint32_t off
 	\fn ch32f1_buffer_clear
 	\brief clear the write buffer
 */
-int ch32f1_buffer_clear(target *t)
+static int ch32f1_buffer_clear(target *t)
 {
 	volatile uint32_t sr;
 	SET_CR(FLASH_CR_FTPG_CH32); // Fast page program 4-
