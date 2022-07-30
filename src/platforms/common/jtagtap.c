@@ -108,6 +108,7 @@ static void jtagtap_tms_seq_no_delay(uint32_t tms_states, size_t ticks)
 		gpio_set_val(TMS_PORT, TMS_PIN, state);
 		gpio_set(TCK_PORT, TCK_PIN);
 		tms_states >>= 1;
+		__asm__("nop");
 		ticks--;
 		gpio_clear(TCK_PORT, TCK_PIN);
 	}
