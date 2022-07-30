@@ -37,6 +37,7 @@ bool efm32_aap_probe(ADIv5_AP_t *ap);
 bool rp_rescue_probe(ADIv5_AP_t *ap);
 
 bool ch32f1_probe(target *t); // will catch all the clones
+bool at32fxx_probe(target *t); // STM32 clones from Artery
 bool gd32f1_probe(target *t);
 bool stm32f1_probe(target *t);
 bool stm32f4_probe(target *t);
