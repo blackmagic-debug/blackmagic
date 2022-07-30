@@ -129,7 +129,7 @@ static void ch32f1_add_flash(target *t, uint32_t addr, size_t length, size_t era
   \fn ch32f1_flash_unlock
   \brief unlock ch32f103 in fast mode
 */
-static int ch32f1_flash_unlock(target *t)
+static bool ch32f1_flash_unlock(target *t)
 {
 	DEBUG_INFO("CH32: flash unlock \n");
 
@@ -141,9 +141,9 @@ static int ch32f1_flash_unlock(target *t)
 	uint32_t cr = target_mem_read32(t, FLASH_CR);
 	if (cr & FLASH_CR_FLOCK_CH32) {
 		DEBUG_WARN("Fast unlock failed, cr: 0x%08" PRIx32 "\n", cr);
-		return -1;
+		return true;
 	}
-	return 0;
+	return false;
 }
 
 static int ch32f1_flash_lock(target *t)
