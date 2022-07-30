@@ -150,6 +150,12 @@ static int ch32f1_flash_lock(target *t)
 {
 	DEBUG_INFO("CH32: flash lock \n");
 	SET_CR(FLASH_CR_LOCK);
+	uint32_t cr = target_mem_read32(t, FLASH_CR);
+	// FLASH_CR_FLOCK_CH32 bit does not exists on *regular* clones and defaults to '0' (see PM0075 for STM32F1xx)
+	if ((cr & FLASH_CR_FLOCK_CH32) == 0) {
+		DEBUG_WARN("Fast lock failed, cr: 0x%08" PRIx32 "\n", cr);
+		return -1;
+	}
 	return 0;
 }
 
@@ -165,8 +171,9 @@ bool ch32f1_probe(target *t)
 	if (idcode != 0x410) // only ch32f103
 		return false;
 
-	// try to flock
-	ch32f1_flash_lock(t);
+	// try to flock (if this fails it is not a CH32 chip)
+	if (ch32f1_flash_lock(t))
+		return false;
 	// if this fails it is not a CH32 chip
 	if (ch32f1_flash_unlock(t))
 		return false;
