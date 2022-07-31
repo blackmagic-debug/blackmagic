@@ -49,9 +49,11 @@ void platform_init(void)
 	rcc_periph_clock_enable(RCC_GPIOA);
 	rcc_periph_clock_enable(RCC_GPIOC);
 	rcc_periph_clock_enable(RCC_GPIOB);
-
+    gpio_mode_setup(GPIOA, GPIO_MODE_INPUT,
+					GPIO_PUPD_PULLUP, GPIO0);
 	/* Check the USER button*/
-	if (gpio_get(GPIOA, GPIO0) ||
+	/*blackpillv2 userkey is active low but wo the pullup acts crazy and seemed..sorta active high*/
+	if (!gpio_get(GPIOA, GPIO0) ||
 		((magic[0] == BOOTMAGIC0) && (magic[1] == BOOTMAGIC1)))
 	{
 		magic[0] = 0;
@@ -74,8 +76,9 @@ void platform_init(void)
 	rcc_periph_clock_enable(RCC_CRC);
 
 	/* Set up USB Pins and alternate function*/
-	gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO9 | GPIO11 | GPIO12);
-	gpio_set_af(GPIOA, GPIO_AF10, GPIO9 | GPIO10 | GPIO11 | GPIO12);
+	/*not using PA9 for vbus on blackpillv2 so leavem alone */ 
+	gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE,  GPIO11 | GPIO12);
+	gpio_set_af(GPIOA, GPIO_AF10, GPIO11 | GPIO12);
 
 	GPIOA_OSPEEDR &= 0x3C00000C;
 	GPIOA_OSPEEDR |= 0x28000008;
@@ -105,6 +108,8 @@ void platform_init(void)
 					GPIO_PUPD_NONE,
 					PWR_BR_PIN);
 #endif
+        /* for dfu-util to boot directly into the newly flashed app*/
+	SCB_VTOR = (uint32_t) 0x08000000;
 
 	platform_timing_init();
 	usbuart_init();
@@ -128,6 +133,8 @@ void platform_request_boot(void)
 	uint32_t *magic = (uint32_t *)&_ebss;
 	magic[0] = BOOTMAGIC0;
 	magic[1] = BOOTMAGIC1;
+	/* Reset core to enter bootloader */
+
 	scb_reset_system();
 }
 
