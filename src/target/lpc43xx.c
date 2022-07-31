@@ -74,10 +74,7 @@ static void lpc43xx_add_flash(
 
 bool lpc43xx_probe(target_s *t)
 {
-	uint32_t chipid;
-	uint32_t iap_entry;
-
-	chipid = target_mem_read32(t, LPC43XX_CHIPID);
+	const uint32_t chipid = target_mem_read32(t, LPC43XX_CHIPID);
 
 	switch (chipid) {
 	case 0x4906002bU: /* Parts with on-chip flash */
@@ -87,7 +84,7 @@ bool lpc43xx_probe(target_s *t)
 			t->driver = "LPC43xx Cortex-M4";
 			if (t->cpuid == 0x410fc241U) {
 				/* LPC4337 */
-				iap_entry = target_mem_read32(t, IAP_ENTRYPOINT_LOCATION);
+				const uint32_t iap_entry = target_mem_read32(t, IAP_ENTRYPOINT_LOCATION);
 				target_add_ram(t, 0, 0x1a000000);
 				lpc43xx_add_flash(t, iap_entry, 0, 0, 0x1a000000, 0x10000, 0x2000);
 				lpc43xx_add_flash(t, iap_entry, 0, 8, 0x1a010000, 0x70000, 0x10000);
