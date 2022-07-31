@@ -54,8 +54,11 @@ static void lpc43xx_set_internal_clock(target_s *t);
 static void lpc43xx_wdt_set_period(target_s *t);
 static void lpc43xx_wdt_pet(target_s *t);
 
-const command_s lpc43xx_cmd_list[] = {{"reset", lpc43xx_cmd_reset, "Reset target"},
-	{"mkboot", lpc43xx_cmd_mkboot, "Make flash bank bootable"}, {NULL, NULL, NULL}};
+const command_s lpc43xx_cmd_list[] = {
+	{"reset", lpc43xx_cmd_reset, "Reset target"},
+	{"mkboot", lpc43xx_cmd_mkboot, "Make flash bank bootable"},
+	{NULL, NULL, NULL},
+};
 
 static void lpc43xx_add_flash(
 	target_s *t, uint32_t iap_entry, uint8_t bank, uint8_t base_sector, uint32_t addr, size_t len, size_t erasesize)
@@ -129,7 +132,7 @@ static bool lpc43xx_mass_erase(target_s *t)
 	platform_timeout_set(&timeout, 500);
 	lpc43xx_flash_init(t);
 
-	for (int bank = 0; bank < (int)FLASH_NUM_BANK; bank++) {
+	for (size_t bank = 0; bank < FLASH_NUM_BANK; ++bank) {
 		lpc_flash_s *f = (lpc_flash_s *)t->flash;
 		if (lpc_iap_call(f, NULL, IAP_CMD_PREPARE, 0, FLASH_NUM_SECTOR - 1U, bank) ||
 			lpc_iap_call(f, NULL, IAP_CMD_ERASE, 0, FLASH_NUM_SECTOR - 1U, CPU_CLK_KHZ, bank))
@@ -202,9 +205,8 @@ static bool lpc43xx_cmd_mkboot(target_s *t, int argc, const char **argv)
 		return false;
 	}
 
-	const long int bank = strtol(argv[1], NULL, 0);
-
-	if ((bank != 0) && (bank != 1)) {
+	const uint32_t bank = strtoul(argv[1], NULL, 0);
+	if (bank > 1) {
 		tc_printf(t, "Unexpected bank number, should be 0 or 1.\n");
 		return false;
 	}
