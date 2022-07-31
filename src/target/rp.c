@@ -100,7 +100,9 @@ const struct command_s rp_cmd_list[] = {
 static int rp_flash_erase(struct target_flash *f, target_addr addr, size_t len);
 static int rp_flash_write(struct target_flash *f, target_addr dest, const void *src, size_t len);
 
+static bool rp2040_fill_table(struct rp_priv_s *priv, uint16_t *table, int max);
 static bool rp_attach(target *t);
+static uint32_t rp_get_flash_length(target *t);
 static bool rp_mass_erase(target *t);
 
 static void rp_add_flash(target *t, uint32_t addr, size_t length)
@@ -145,6 +147,30 @@ bool rp_probe(target *t)
 	t->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
 	t->attach = rp_attach;
 	target_add_commands(t, rp_cmd_list, RP_ID);
+	return true;
+}
+
+static bool rp_attach(target *t)
+{
+	if (!cortexm_attach(t))
+		return false;
+
+	struct rp_priv_s *ps = (struct rp_priv_s*)t->target_storage;
+	uint16_t table[RP_MAX_TABLE_SIZE];
+	uint16_t table_offset = target_mem_read32( t, BOOTROM_MAGIC_ADDR + 4);
+	if (target_mem_read(t, table, table_offset, RP_MAX_TABLE_SIZE) ||
+		rp2040_fill_table(ps, table, RP_MAX_TABLE_SIZE))
+		return false;
+
+	/* Free previously loaded memory map */
+	target_mem_map_free(t);
+
+	size_t size = rp_get_flash_length(t);
+	DEBUG_INFO("Flash size: %zu MB\n", size / (1024U * 1024U));
+
+	rp_add_flash(t, XIP_FLASH_START, size);
+	target_add_ram(t, SRAM_START, SRAM_SIZE);
+
 	return true;
 }
 
@@ -463,31 +489,6 @@ static uint32_t rp_get_flash_length(target *t)
 		size = 1 << size_log2;
 
 	return size;
-}
-
-static bool rp_attach(target *t)
-{
-	if (!cortexm_attach(t))
-		return false;
-
-	struct rp_priv_s *ps = (struct rp_priv_s*)t->target_storage;
-	uint16_t table[RP_MAX_TABLE_SIZE];
-	uint16_t table_offset = target_mem_read32( t, BOOTROM_MAGIC_ADDR + 4);
-	if (target_mem_read(t, table, table_offset, RP_MAX_TABLE_SIZE))
-		return false;
-	if (rp2040_fill_table(ps, table, RP_MAX_TABLE_SIZE))
-		return false;
-
-	/* Free previously loaded memory map */
-	target_mem_map_free(t);
-
-	size_t size = rp_get_flash_length(t);
-	DEBUG_INFO("Flash size: %zu MB\n", size / (1024U * 1024U));
-
-	rp_add_flash(t, XIP_FLASH_START, size);
-	target_add_ram(t, SRAM_START, SRAM_SIZE);
-
-	return true;
 }
 
 static bool rp_cmd_erase_sector(target *t, int argc, const char **argv)
