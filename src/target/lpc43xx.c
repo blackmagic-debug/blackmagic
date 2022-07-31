@@ -33,6 +33,8 @@
 
 /* Cortex-M4 Application Interrupt and Reset Control Register */
 #define LPC43xx_AIRCR 0xe000ed0cU
+/* Magic value reset key */
+#define LPC43xx_AIRCR_RESET 0x05fa0004U
 
 #define LPC43xx_WDT_MODE       0x40080000U
 #define LPC43xx_WDT_CNT        0x40080004U
@@ -181,11 +183,8 @@ static bool lpc43xx_cmd_reset(target_s *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
-	/* Magic value key */
-	static const uint32_t reset_val = 0x05fa0004U;
-
 	/* System reset on target */
-	target_mem_write(t, LPC43xx_AIRCR, &reset_val, sizeof(reset_val));
+	target_mem_write32(t, LPC43xx_AIRCR, LPC43xx_AIRCR_RESET);
 	return true;
 }
 
