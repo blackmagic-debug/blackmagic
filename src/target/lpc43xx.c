@@ -28,17 +28,20 @@
 
 #define IAP_ENTRYPOINT_LOCATION 0x10400100U
 
-#define LPC43XX_ETBAHB_SRAM_BASE 0x2000c000U
-#define LPC43XX_ETBAHB_SRAM_SIZE (16U * 1024U)
+#define LPC43xx_ETBAHB_SRAM_BASE 0x2000c000U
+#define LPC43xx_ETBAHB_SRAM_SIZE (16U * 1024U)
 
-#define LPC43XX_WDT_MODE       0x40080000U
-#define LPC43XX_WDT_CNT        0x40080004U
-#define LPC43XX_WDT_FEED       0x40080008U
-#define LPC43XX_WDT_PERIOD_MAX 0xffffffU
-#define LPC43XX_WDT_PROTECT    (1U << 4U)
+/* Cortex-M4 Application Interrupt and Reset Control Register */
+#define LPC43xx_AIRCR 0xe000ed0cU
 
-#define IAP_RAM_SIZE LPC43XX_ETBAHB_SRAM_SIZE
-#define IAP_RAM_BASE LPC43XX_ETBAHB_SRAM_BASE
+#define LPC43xx_WDT_MODE       0x40080000U
+#define LPC43xx_WDT_CNT        0x40080004U
+#define LPC43xx_WDT_FEED       0x40080008U
+#define LPC43xx_WDT_PERIOD_MAX 0xffffffU
+#define LPC43xx_WDT_PROTECT    (1U << 4U)
+
+#define IAP_RAM_SIZE LPC43xx_ETBAHB_SRAM_SIZE
+#define IAP_RAM_BASE LPC43xx_ETBAHB_SRAM_BASE
 
 #define IAP_PGM_CHUNKSIZE 4096U
 
@@ -178,15 +181,11 @@ static bool lpc43xx_cmd_reset(target_s *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
-
-	/* Cortex-M4 Application Interrupt and Reset Control Register */
-	static const uint32_t AIRCR = 0xe000ed0cU;
 	/* Magic value key */
 	static const uint32_t reset_val = 0x05fa0004U;
 
 	/* System reset on target */
-	target_mem_write(t, AIRCR, &reset_val, sizeof(reset_val));
-
+	target_mem_write(t, LPC43xx_AIRCR, &reset_val, sizeof(reset_val));
 	return true;
 }
 
@@ -227,21 +226,21 @@ static bool lpc43xx_cmd_mkboot(target_s *t, int argc, const char **argv)
 static void lpc43xx_wdt_set_period(target_s *t)
 {
 	/* Check if WDT is on */
-	uint32_t wdt_mode = target_mem_read32(t, LPC43XX_WDT_MODE);
+	uint32_t wdt_mode = target_mem_read32(t, LPC43xx_WDT_MODE);
 
 	/* If WDT on, we can't disable it, but we may be able to set a long period */
-	if (wdt_mode && !(wdt_mode & LPC43XX_WDT_PROTECT))
-		target_mem_write32(t, LPC43XX_WDT_CNT, LPC43XX_WDT_PERIOD_MAX);
+	if (wdt_mode && !(wdt_mode & LPC43xx_WDT_PROTECT))
+		target_mem_write32(t, LPC43xx_WDT_CNT, LPC43xx_WDT_PERIOD_MAX);
 }
 
 static void lpc43xx_wdt_pet(target_s *t)
 {
 	/* Check if WDT is on */
-	uint32_t wdt_mode = target_mem_read32(t, LPC43XX_WDT_MODE);
+	uint32_t wdt_mode = target_mem_read32(t, LPC43xx_WDT_MODE);
 
 	/* If WDT on, pet */
 	if (wdt_mode) {
-		target_mem_write32(t, LPC43XX_WDT_FEED, 0xaa);
-		target_mem_write32(t, LPC43XX_WDT_FEED, 0xff);
+		target_mem_write32(t, LPC43xx_WDT_FEED, 0xaa);
+		target_mem_write32(t, LPC43xx_WDT_FEED, 0xff);
 	}
 }
