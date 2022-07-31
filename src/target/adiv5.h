@@ -267,8 +267,10 @@ struct ADIv5_AP_s {
 	uint32_t csw;
 	uint32_t ap_cortexm_demcr; /* Copy of demcr when starting */
 	uint32_t ap_storage;       /* E.g to hold STM32F7 initial DBGMCU_CR value.*/
+
+	/* AP designer and partno */
 	uint16_t designer_code;
-	uint16_t ap_partno;
+	uint16_t partno;
 };
 
 unsigned int make_packet_request(uint8_t RnW, uint16_t addr);

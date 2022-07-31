@@ -510,9 +510,9 @@ static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, const size_t re
 	if (cid_class == cidc_romtab) {
 		if (recursion == 0) {
 			ap->designer_code = designer_code;
-			ap->ap_partno = part_number;
+			ap->partno = part_number;
 
-			if (ap->designer_code == JEP106_MANUFACTURER_ATMEL && ap->ap_partno == 0xcd0) {
+			if (ap->designer_code == JEP106_MANUFACTURER_ATMEL && ap->partno == 0xcd0) {
 				uint32_t ctrlstat = adiv5_mem_read32(ap, SAMX5X_DSU_CTRLSTAT);
 				if (ctrlstat & SAMX5X_STATUSB_PROT) {
 					/* A protected SAMx5x device is found.
