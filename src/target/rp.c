@@ -100,7 +100,7 @@ const struct command_s rp_cmd_list[] = {
 static int rp_flash_erase(struct target_flash *f, target_addr addr, size_t len);
 static int rp_flash_write(struct target_flash *f, target_addr dest, const void *src, size_t len);
 
-static bool rp2040_fill_table(struct rp_priv_s *priv, uint16_t *table, int max);
+static bool rp_fill_table(struct rp_priv_s *priv, uint16_t *table, int max);
 static bool rp_attach(target *t);
 static uint32_t rp_get_flash_length(target *t);
 static bool rp_mass_erase(target *t);
@@ -159,7 +159,7 @@ static bool rp_attach(target *t)
 	uint16_t table[RP_MAX_TABLE_SIZE];
 	uint16_t table_offset = target_mem_read32( t, BOOTROM_MAGIC_ADDR + 4);
 	if (target_mem_read(t, table, table_offset, RP_MAX_TABLE_SIZE) ||
-		rp2040_fill_table(ps, table, RP_MAX_TABLE_SIZE))
+		rp_fill_table(ps, table, RP_MAX_TABLE_SIZE))
 		return false;
 
 	/* Free previously loaded memory map */
@@ -174,7 +174,7 @@ static bool rp_attach(target *t)
 	return true;
 }
 
-static bool rp2040_fill_table(struct rp_priv_s *priv, uint16_t *table, int max)
+static bool rp_fill_table(struct rp_priv_s *priv, uint16_t *table, int max)
 {
 	uint16_t tag = *table++;
 	int check = 0;
