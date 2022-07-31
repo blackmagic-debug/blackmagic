@@ -45,8 +45,8 @@
 #define FLASH_NUM_BANK   2U
 #define FLASH_NUM_SECTOR 15U
 
-static bool lpc43xx_cmd_reset(target_s *t, int argc, const char *argv[]);
-static bool lpc43xx_cmd_mkboot(target_s *t, int argc, const char *argv[]);
+static bool lpc43xx_cmd_reset(target_s *t, int argc, const char **argv);
+static bool lpc43xx_cmd_mkboot(target_s *t, int argc, const char **argv);
 static int lpc43xx_flash_init(target_s *t);
 static bool lpc43xx_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 static bool lpc43xx_mass_erase(target_s *t);
@@ -123,23 +123,6 @@ bool lpc43xx_probe(target_s *t)
 	return false;
 }
 
-/* Reset all major systems _except_ debug */
-static bool lpc43xx_cmd_reset(target_s *t, int argc, const char *argv[])
-{
-	(void)argc;
-	(void)argv;
-
-	/* Cortex-M4 Application Interrupt and Reset Control Register */
-	static const uint32_t AIRCR = 0xe000ed0cU;
-	/* Magic value key */
-	static const uint32_t reset_val = 0x05fa0004U;
-
-	/* System reset on target */
-	target_mem_write(t, AIRCR, &reset_val, sizeof(reset_val));
-
-	return true;
-}
-
 static bool lpc43xx_mass_erase(target_s *t)
 {
 	platform_timeout_s timeout;
@@ -187,6 +170,23 @@ static void lpc43xx_set_internal_clock(target_s *t)
 	target_mem_write32(t, 0x40050000U + 0x06cU, val2);
 }
 
+/* Reset all major systems _except_ debug */
+static bool lpc43xx_cmd_reset(target_s *t, int argc, const char **argv)
+{
+	(void)argc;
+	(void)argv;
+
+	/* Cortex-M4 Application Interrupt and Reset Control Register */
+	static const uint32_t AIRCR = 0xe000ed0cU;
+	/* Magic value key */
+	static const uint32_t reset_val = 0x05fa0004U;
+
+	/* System reset on target */
+	target_mem_write(t, AIRCR, &reset_val, sizeof(reset_val));
+
+	return true;
+}
+
 /*
  * Call Boot ROM code to make a flash bank bootable by computing and writing the
  * correct signature into the exception table near the start of the bank.
@@ -194,7 +194,7 @@ static void lpc43xx_set_internal_clock(target_s *t)
  * This is done independently of writing to give the user a chance to verify flash
  * before changing it.
  */
-static bool lpc43xx_cmd_mkboot(target_s *t, int argc, const char *argv[])
+static bool lpc43xx_cmd_mkboot(target_s *t, int argc, const char **argv)
 {
 	/* Usage: mkboot 0 or mkboot 1 */
 	if (argc != 2) {
