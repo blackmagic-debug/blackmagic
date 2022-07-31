@@ -380,46 +380,11 @@ static int rp_flash_write(struct target_flash *f, target_addr dest, const void *
 	return ret;
 }
 
-static bool rp_cmd_reset_usb_boot(target *t, int argc, const char **argv)
-{
-	struct rp_priv_s *ps = (struct rp_priv_s *)t->target_storage;
-	if (argc > 2) {
-		ps->regs[1] = atoi(argv[2]);
-	} else if (argc < 3) {
-		ps->regs[0] = atoi(argv[1]);
-	} else {
-		ps->regs[0] = 0;
-		ps->regs[1] = 0;
-	}
-	rp_rom_call(t, ps->regs, ps->reset_usb_boot, 0);
-	return true;
-}
-
 static bool rp_mass_erase(target *t)
 {
 	struct rp_priv_s *ps = (struct rp_priv_s *)t->target_storage;
 	ps->is_monitor = true;
 	const bool result = rp_flash_erase(t->flash, t->flash->start, t->flash->length) == 0;
-	ps->is_monitor = false;
-	return result;
-}
-
-static bool rp_cmd_erase_sector(target *t, int argc, const char **argv)
-{
-	uint32_t start = t->flash->start;
-	uint32_t length;
-
-	if (argc == 3) {
-		start = strtoul(argv[1], NULL, 0);
-		length = strtoul(argv[2], NULL, 0);
-	} else if (argc == 2)
-		length = strtoul(argv[1], NULL, 0);
-	else
-		return -1;
-
-	struct rp_priv_s *ps = (struct rp_priv_s *)t->target_storage;
-	ps->is_monitor = true;
-	const bool result = rp_flash_erase(t->flash, start, length) == 0;
 	ps->is_monitor = false;
 	return result;
 }
@@ -522,6 +487,41 @@ static bool rp_attach(target *t)
 	rp_add_flash(t, XIP_FLASH_START, size);
 	target_add_ram(t, SRAM_START, SRAM_SIZE);
 
+	return true;
+}
+
+static bool rp_cmd_erase_sector(target *t, int argc, const char **argv)
+{
+	uint32_t start = t->flash->start;
+	uint32_t length;
+
+	if (argc == 3) {
+		start = strtoul(argv[1], NULL, 0);
+		length = strtoul(argv[2], NULL, 0);
+	} else if (argc == 2)
+		length = strtoul(argv[1], NULL, 0);
+	else
+		return -1;
+
+	struct rp_priv_s *ps = (struct rp_priv_s *)t->target_storage;
+	ps->is_monitor = true;
+	const bool result = rp_flash_erase(t->flash, start, length) == 0;
+	ps->is_monitor = false;
+	return result;
+}
+
+static bool rp_cmd_reset_usb_boot(target *t, int argc, const char **argv)
+{
+	struct rp_priv_s *ps = (struct rp_priv_s *)t->target_storage;
+	if (argc > 2) {
+		ps->regs[1] = atoi(argv[2]);
+	} else if (argc < 3) {
+		ps->regs[0] = atoi(argv[1]);
+	} else {
+		ps->regs[0] = 0;
+		ps->regs[1] = 0;
+	}
+	rp_rom_call(t, ps->regs, ps->reset_usb_boot, 0);
 	return true;
 }
 
