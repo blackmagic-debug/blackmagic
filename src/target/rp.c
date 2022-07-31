@@ -88,6 +88,66 @@ struct rp_priv_s {
 	uint32_t regs[0x20]; /* Register playground*/
 };
 
+static bool rp_cmd_erase_sector(target *t, int argc, const char **argv);
+static bool rp_cmd_reset_usb_boot(target *t, int argc, const char **argv);
+
+const struct command_s rp_cmd_list[] = {
+	{"erase_sector", rp_cmd_erase_sector, "Erase a sector: [start address] length"},
+	{"reset_usb_boot", rp_cmd_reset_usb_boot, "Reboot the device into BOOTSEL mode"},
+	{NULL, NULL, NULL}
+};
+
+static int rp_flash_erase(struct target_flash *f, target_addr addr, size_t len);
+static int rp_flash_write(struct target_flash *f, target_addr dest, const void *src, size_t len);
+
+static bool rp_attach(target *t);
+static bool rp_mass_erase(target *t);
+
+static void rp_add_flash(target *t, uint32_t addr, size_t length)
+{
+	struct target_flash *f = calloc(1, sizeof(*f));
+	if (!f) { /* calloc failed: heap exhaustion */
+		DEBUG_WARN("calloc: failed in %s\n", __func__);
+		return;
+	}
+
+	f->start = addr;
+	f->length = length;
+	f->blocksize = 0x1000;
+	f->erase = rp_flash_erase;
+	f->write = rp_flash_write;
+	f->buf_size = 2048; /* Max buffer size used otherwise */
+	f->erased = 0xFF;
+	target_add_flash(t, f);
+}
+
+bool rp_probe(target *t)
+{
+	/* Check bootrom magic*/
+	uint32_t boot_magic = target_mem_read32(t, BOOTROM_MAGIC_ADDR);
+	if ((boot_magic & 0x00ffffff) != BOOTROM_MAGIC) {
+		DEBUG_WARN("Wrong Bootmagic %08" PRIx32 " found!\n", boot_magic);
+		return false;
+	}
+#if defined(ENABLE_DEBUG)
+	if ((boot_magic >> 24) == 1)
+		DEBUG_WARN("Old Bootrom Version 1!\n");
+#endif
+	struct rp_priv_s *priv_storage = calloc(1, sizeof(struct rp_priv_s));
+	if (!priv_storage) { /* calloc failed: heap exhaustion */
+		DEBUG_WARN("calloc: failed in %s\n", __func__);
+		return false;
+	}
+	t->target_storage = (void *)priv_storage;
+
+	t->mass_erase = rp_mass_erase;
+	t->driver = RP_ID;
+	t->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
+	t->attach = rp_attach;
+	target_add_commands(t, rp_cmd_list, RP_ID);
+	return true;
+}
+
 static bool rp2040_fill_table(struct rp_priv_s *priv, uint16_t *table, int max)
 {
 	uint16_t tag = *table++;
@@ -320,7 +380,7 @@ static int rp_flash_write(struct target_flash *f, target_addr dest, const void *
 	return ret;
 }
 
-static bool rp_cmd_reset_usb_boot(target *t, int argc, const char *argv[])
+static bool rp_cmd_reset_usb_boot(target *t, int argc, const char **argv)
 {
 	struct rp_priv_s *ps = (struct rp_priv_s *)t->target_storage;
 	if (argc > 2) {
@@ -344,7 +404,7 @@ static bool rp_mass_erase(target *t)
 	return result;
 }
 
-static bool rp_cmd_erase_sector(target *t, int argc, const char *argv[])
+static bool rp_cmd_erase_sector(target *t, int argc, const char **argv)
 {
 	uint32_t start = t->flash->start;
 	uint32_t length;
@@ -362,27 +422,6 @@ static bool rp_cmd_erase_sector(target *t, int argc, const char *argv[])
 	const bool result = rp_flash_erase(t->flash, start, length) == 0;
 	ps->is_monitor = false;
 	return result;
-}
-
-const struct command_s rp_cmd_list[] = {{"erase_sector", rp_cmd_erase_sector, "Erase a sector: [start address] length"},
-	{"reset_usb_boot", rp_cmd_reset_usb_boot, "Reboot the device into BOOTSEL mode"}, {NULL, NULL, NULL}};
-
-static void rp_add_flash(target *t, uint32_t addr, size_t length)
-{
-	struct target_flash *f = calloc(1, sizeof(*f));
-	if (!f) { /* calloc failed: heap exhaustion */
-		DEBUG_WARN("calloc: failed in %s\n", __func__);
-		return;
-	}
-
-	f->start = addr;
-	f->length = length;
-	f->blocksize = 0x1000;
-	f->erase = rp_flash_erase;
-	f->write = rp_flash_write;
-	f->buf_size = 2048; /* Max buffer size used otherwise */
-	f->erased = 0xFF;
-	target_add_flash(t, f);
 }
 
 static void rp_ssel_active(target *t, bool active)
@@ -483,33 +522,6 @@ static bool rp_attach(target *t)
 	rp_add_flash(t, XIP_FLASH_START, size);
 	target_add_ram(t, SRAM_START, SRAM_SIZE);
 
-	return true;
-}
-
-bool rp_probe(target *t)
-{
-	/* Check bootrom magic*/
-	uint32_t boot_magic = target_mem_read32(t, BOOTROM_MAGIC_ADDR);
-	if ((boot_magic & 0x00ffffff) != BOOTROM_MAGIC) {
-		DEBUG_WARN("Wrong Bootmagic %08" PRIx32 " found!\n", boot_magic);
-		return false;
-	}
-#if defined(ENABLE_DEBUG)
-	if ((boot_magic >> 24) == 1)
-		DEBUG_WARN("Old Bootrom Version 1!\n");
-#endif
-	struct rp_priv_s *priv_storage = calloc(1, sizeof(struct rp_priv_s));
-	if (!priv_storage) { /* calloc failed: heap exhaustion */
-		DEBUG_WARN("calloc: failed in %s\n", __func__);
-		return false;
-	}
-	t->target_storage = (void *)priv_storage;
-
-	t->mass_erase = rp_mass_erase;
-	t->driver = RP_ID;
-	t->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
-	t->attach = rp_attach;
-	target_add_commands(t, rp_cmd_list, RP_ID);
 	return true;
 }
 
