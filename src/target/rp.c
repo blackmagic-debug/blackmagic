@@ -467,9 +467,9 @@ static uint32_t rp_get_flash_length(target *t)
 		uint32_t mirrorsec[16];
 		while (size > FLASHSIZE_4K_SECTOR) {
 			target_mem_read(t, mirrorsec, XIP_FLASH_START + size, sizeof(bootsec));
-			if (memcmp(bootsec, mirrorsec, sizeof(bootsec)))
-				return size << 1;
-			size >>= 1;
+			if (memcmp(bootsec, mirrorsec, sizeof(bootsec)) != 0)
+				return size << 1U;
+			size >>= 1U;
 		}
 	}
 
