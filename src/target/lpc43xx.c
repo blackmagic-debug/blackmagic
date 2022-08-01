@@ -33,6 +33,29 @@
 #define LPC43xx_CHIPID_CORE_TYPE_M0   0x4100c200U
 #define LPC43xx_CHIPID_CORE_TYPE_M4   0x4100c240U
 
+#define LPC43xx_PARTID_LOW     0x40045000U
+#define LPC43xx_PARTID_HIGH    0x40045004U
+#define LPC43xx_PARTID_INVALID 0x00000000U
+
+/* Flashless parts */
+#define LPC43xx_PARTID_LPC4310 0xa00acb3fU
+#define LPC43xx_PARTID_LPC4320 0xa000cb3cU
+#define LPC43xx_PARTID_LPC4330 0xa0000a30U
+#define LPC43xx_PARTID_LPC4350 0xa0000830U
+#define LPC43xx_PARTID_LPC4370 0x00000230U
+
+/* On-chip Flash parts */
+#define LPC43xx_PARTID_LPC4312 0xa00bcb3fU
+#define LPC43xx_PARTID_LPC4315 0xa001cb3fU
+#define LPC43xx_PARTID_LPC4322 0xa00bcb3cU
+#define LPC43xx_PARTID_LPC4325 0xa001cb3cU
+#define LPC43xx_PARTID_LPC433x 0xa0010a30U
+#define LPC43xx_PARTID_LPC435x 0xa0010830U
+
+/* Flash configurations */
+#define LPC43xx_PARTID_FLASH_CONFIG_MASK 0x000000ffU
+#define LPC43xx_PARTID_FLASH_CONFIG_NONE 0x00U
+
 #define IAP_ENTRYPOINT_LOCATION 0x10400100U
 
 #define LPC43xx_ETBAHB_SRAM_BASE 0x2000c000U
@@ -62,9 +85,15 @@
 #define FLASH_NUM_BANK   2U
 #define FLASH_NUM_SECTOR 15U
 
+typedef struct lpc43xx_partid {
+	uint32_t part;
+	uint8_t flash_config;
+} lpc43xx_partid_s;
+
 static bool lpc43xx_cmd_reset(target_s *t, int argc, const char **argv);
 static bool lpc43xx_cmd_mkboot(target_s *t, int argc, const char **argv);
 
+static lpc43xx_partid_s lpc43xx_read_partid(target_s *t);
 static bool lpc43xx_flash_init(target_flash_s *flash);
 static bool lpc43xx_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 static bool lpc43xx_mass_erase(target_s *t);
@@ -105,7 +134,6 @@ static void lpc43xx_detect_flash(target_s *const t, const uint32_t core_type)
 	lpc43xx_add_flash(t, iap_entry, 1, 8, 0x1b010000, 0x70000, 0x10000);
 	target_add_commands(t, lpc43xx_cmd_list, "LPC43xx");
 	target_add_ram(t, 0x1b080000, 0xe4f80000UL);
-	t->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
 }
 
 static void lpc43xx_detect_flashless(target_s *const t, const uint32_t core_type)
@@ -123,8 +151,14 @@ bool lpc43xx_probe(target_s *const t)
 	const uint32_t core_type = t->cpuid & LPC43xx_CHIPID_CORE_TYPE_MASK;
 	const uint32_t chip_code = (chipid & LPC43xx_CHIPID_CHIP_MASK) >> LPC43xx_CHIPID_CHIP_SHIFT;
 
+	t->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
 	t->driver = "LPC43xx";
 	t->mass_erase = lpc43xx_mass_erase;
+
+	lpc43xx_partid_s part_id = lpc43xx_read_partid(t);
+	DEBUG_WARN("LPC43xx part ID: 0x%08" PRIx32 ":%02x\n", part_id.part, part_id.flash_config);
+	if (part_id.part == LPC43xx_PARTID_INVALID)
+		return false;
 
 	/* 4 is for parts with on-chip Flash, 7 is undocumented but might be for LM43S parts */
 	if (chip_code == 4U || chip_code == 7U)
@@ -165,6 +199,18 @@ static bool lpc43xx_flash_init(target_flash_s *const flash)
 
 	/* Initialize flash IAP */
 	return lpc_iap_call(f, NULL, IAP_CMD_INIT) == IAP_STATUS_CMD_SUCCESS;
+}
+
+/*
+ * It is for reasons of errata that we don't use the IAP device identification mechanism here.
+ * Instead, we have to read out the bank 0 OTP bytes to fetch the part identification code.
+ */
+static lpc43xx_partid_s lpc43xx_read_partid(target_s *const t)
+{
+	lpc43xx_partid_s result;
+	result.part = target_mem_read32(t, LPC43xx_PARTID_LOW);
+	result.flash_config = target_mem_read32(t, LPC43xx_PARTID_HIGH) & LPC43xx_PARTID_FLASH_CONFIG_MASK;
+	return result;
 }
 
 static bool lpc43xx_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
