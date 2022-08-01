@@ -185,8 +185,11 @@ int jlink_init(bmp_info_t *info)
 		if ((desc.idProduct != USB_PID_SEGGER_0101) &&
 			(desc.idProduct != USB_PID_SEGGER_0105) &&
 			(desc.idProduct != USB_PID_SEGGER_1015) &&
-			(desc.idProduct != USB_PID_SEGGER_1020))
-			continue;
+			(desc.idProduct != USB_PID_SEGGER_1020)) {
+				DEBUG_WARN("Ignored device with product id 0x%04x, please report if this is a valid J-Link probe\n",
+				desc.idProduct);
+				continue;
+		}
 		int res = libusb_open(dev, &jl->ul_libusb_device_handle);
 		if (res != LIBUSB_SUCCESS)
 			continue;
