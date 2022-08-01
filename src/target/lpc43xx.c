@@ -182,8 +182,34 @@ static void lpc43xx_detect_flash(target_s *const t, const lpc43xx_partid_s part_
 
 static void lpc43xx_detect_flashless(target_s *const t, const lpc43xx_partid_s part_id)
 {
-	(void)t;
-	(void)part_id;
+	switch (part_id.part) {
+	case LPC43xx_PARTID_LPC4310:
+		t->driver = "LPC4310";
+		target_add_ram(t, LPC43xx_LOCAL_SRAM1_BASE, LPC4310_LOCAL_SRAM1_SIZE);
+		target_add_ram(t, LPC43xx_LOCAL_SRAM2_BASE, LPC43xx_LOCAL_SRAM2_SIZE);
+		target_add_ram(t, LPC43xx_AHB_SRAM_BASE, LPC43x2_AHB_SRAM_SIZE);
+		break;
+	case LPC43xx_PARTID_LPC4320:
+		t->driver = "LPC4320";
+		target_add_ram(t, LPC43xx_LOCAL_SRAM1_BASE, LPC4310_LOCAL_SRAM1_SIZE);
+		target_add_ram(t, LPC43xx_LOCAL_SRAM2_BASE, LPC43xx_LOCAL_SRAM2_SIZE);
+		target_add_ram(t, LPC43xx_AHB_SRAM_BASE, LPC43x5_AHB_SRAM_SIZE);
+		break;
+	case LPC43xx_PARTID_LPC4330:
+	case LPC43xx_PARTID_LPC4350:
+		t->driver = "LPC4330/50";
+		target_add_ram(t, LPC43xx_LOCAL_SRAM1_BASE, LPC4330_LOCAL_SRAM1_SIZE);
+		target_add_ram(t, LPC43xx_LOCAL_SRAM2_BASE, LPC43x0_LOCAL_SRAM2_SIZE);
+		target_add_ram(t, LPC43xx_AHB_SRAM_BASE, LPC43x5_AHB_SRAM_SIZE);
+		break;
+	case LPC43xx_PARTID_LPC4370:
+		t->driver = "LPC4370";
+		target_add_ram(t, LPC43xx_LOCAL_SRAM1_BASE, LPC4330_LOCAL_SRAM1_SIZE);
+		target_add_ram(t, LPC43xx_LOCAL_SRAM2_BASE, LPC43x0_LOCAL_SRAM2_SIZE);
+		target_add_ram(t, LPC4370_M0_SRAM_BASE, LPC4370_M0_SRAM_SIZE);
+		target_add_ram(t, LPC43xx_AHB_SRAM_BASE, LPC43x5_AHB_SRAM_SIZE);
+		break;
+	}
 }
 
 bool lpc43xx_probe(target_s *const t)
