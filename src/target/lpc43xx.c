@@ -168,6 +168,7 @@ typedef struct lpc43xx_partid {
 
 typedef struct lpc43xx_spi_flash {
 	target_flash_s f;
+	uint32_t read_command;
 } lpc43xx_spi_flash_s;
 
 static bool lpc43xx_cmd_reset(target_s *t, int argc, const char **argv);
@@ -281,7 +282,7 @@ static void lpc43xx_detect_flash(target_s *const t, const lpc43xx_partid_s part_
 	target_add_commands(t, lpc43xx_cmd_list, "LPC43xx");
 }
 
-static void lpc43xx_add_spi_flash(target_s *const t, const size_t length)
+static void lpc43xx_add_spi_flash(target_s *const t, const size_t length, const uint32_t read_command)
 {
 	lpc43xx_spi_flash_s *const flash = calloc(1, sizeof(*flash));
 	if (!flash) {
@@ -297,6 +298,8 @@ static void lpc43xx_add_spi_flash(target_s *const t, const size_t length)
 	//f->erase = lpc43xx_spi_flash_erase;
 	f->erased = 0xffU;
 	target_add_flash(t, f);
+
+	flash->read_command = read_command;
 }
 
 static void lpc43xx_detect_flashless(target_s *const t, const lpc43xx_partid_s part_id)
@@ -331,6 +334,7 @@ static void lpc43xx_detect_flashless(target_s *const t, const lpc43xx_partid_s p
 		break;
 	}
 
+	const uint32_t read_command = target_mem_read32(t, LPC43x0_SPIFI_MCMD);
 	spi_flash_id_s flash_id;
 	lpc43x0_spi_read(t, SPI_FLASH_CMD_READ_JEDEC_ID, &flash_id, sizeof(flash_id));
 
@@ -339,8 +343,10 @@ static void lpc43xx_detect_flashless(target_s *const t, const lpc43xx_partid_s p
 		const uint32_t capacity = 1U << flash_id.capacity;
 		DEBUG_WARN("SPI Flash: mfr = %02x, type = %02x, capacity = %08" PRIx32 "\n", flash_id.manufacturer,
 			flash_id.type, capacity);
-		lpc43xx_add_spi_flash(t, capacity);
+		lpc43xx_add_spi_flash(t, capacity, read_command);
 	}
+	/* Restore the read command as using the other command register clobbers this. */
+	target_mem_write32(t, LPC43x0_SPIFI_MCMD, read_command);
 }
 
 bool lpc43xx_probe(target_s *const t)
@@ -408,7 +414,7 @@ static void lpc43x0_spi_write(target_s *const t, const uint32_t command, const v
 }
 #pragma GCC diagnostic pop
 
-static bool lpc43xx_spi_mass_erase(target_s *t)
+static bool lpc43xx_spi_mass_erase(target_s *const t)
 {
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500);
@@ -422,6 +428,8 @@ static bool lpc43xx_spi_mass_erase(target_s *t)
 		target_print_progress(&timeout);
 	}
 
+	const lpc43xx_spi_flash_s *const flash = (lpc43xx_spi_flash_s *)t->flash;
+	target_mem_write32(t, LPC43x0_SPIFI_MCMD, flash->read_command);
 	return true;
 }
 
