@@ -35,9 +35,9 @@
 
 #define USB_VID_SEGGER       0x1366
 
-/* Only two devices PIDS tested so long */
 #define USB_PID_SEGGER_0101  0x0101
 #define USB_PID_SEGGER_0105  0x0105
+#define USB_PID_SEGGER_1015  0x1015
 #define USB_PID_SEGGER_1020  0x1020
 
 static uint32_t emu_caps;
@@ -184,6 +184,7 @@ int jlink_init(bmp_info_t *info)
 			continue;
 		if ((desc.idProduct != USB_PID_SEGGER_0101) &&
 			(desc.idProduct != USB_PID_SEGGER_0105) &&
+			(desc.idProduct != USB_PID_SEGGER_1015) &&
 			(desc.idProduct != USB_PID_SEGGER_1020))
 			continue;
 		int res = libusb_open(dev, &jl->ul_libusb_device_handle);
