@@ -57,7 +57,11 @@
 
 /* Flash configurations */
 #define LPC43xx_PARTID_FLASH_CONFIG_MASK 0x000000ffU
-#define LPC43xx_PARTID_FLASH_CONFIG_NONE 0x00U
+#define LPC43xx_PARTID_FLASH_CONFIG_NONE 0xffU
+#define LPC43xx_PARTID_FLASH_CONFIG_43x2 0x80U
+#define LPC43xx_PARTID_FLASH_CONFIG_43x3 0x44U
+#define LPC43xx_PARTID_FLASH_CONFIG_43x5 0x22U
+#define LPC43xx_PARTID_FLASH_CONFIG_43x7 0x00U
 
 #define IAP_ENTRYPOINT_LOCATION 0x10400100U
 
@@ -101,6 +105,16 @@
 
 #define FLASH_NUM_BANK   2U
 #define FLASH_NUM_SECTOR 15U
+
+#define LPC43xx_FLASH_BANK_A      0U
+#define LPC43xx_FLASH_BANK_A_BASE 0x1a000000U
+#define LPC43xx_FLASH_BANK_B      1U
+#define LPC43xx_FLASH_BANK_B_BASE 0x1b000000U
+#define LPC43xx_FLASH_8kiB        (8U * 1024U)
+#define LPC43xx_FLASH_64kiB       (64U * 1024U)
+#define LPC43xx_FLASH_128kiB      (128U * 1024U)
+#define LPC43xx_FLASH_192kiB      (192U * 1024U)
+#define LPC43xx_FLASH_256kiB      (256U * 1024U)
 
 typedef struct lpc43xx_partid {
 	uint32_t part;
@@ -174,12 +188,43 @@ static void lpc43xx_detect_flash(target_s *const t, const lpc43xx_partid_s part_
 	target_add_ram(t, LPC43xx_LOCAL_SRAM2_BASE, LPC43xx_LOCAL_SRAM2_SIZE);
 	target_add_ram(t, LPC43xx_ETBAHB_SRAM_BASE, LPC43xx_ETBAHB_SRAM_SIZE);
 
-	target_add_ram(t, 0x1a080000, 0xf80000);
-	target_add_ram(t, 0x1b080000, 0xe4f80000UL);
-	lpc43xx_add_iap_flash(t, iap_entry, 0, 0, 0x1a000000, 0x10000, 0x2000);
-	lpc43xx_add_iap_flash(t, iap_entry, 0, 8, 0x1a010000, 0x70000, 0x10000);
-	lpc43xx_add_iap_flash(t, iap_entry, 1, 0, 0x1b000000, 0x10000, 0x2000);
-	lpc43xx_add_iap_flash(t, iap_entry, 1, 8, 0x1b010000, 0x70000, 0x10000);
+	/* All parts with Flash have the first 64kiB bank A region */
+	lpc43xx_add_iap_flash(
+		t, iap_entry, LPC43xx_FLASH_BANK_A, 0U, LPC43xx_FLASH_BANK_A_BASE, LPC43xx_FLASH_64kiB, LPC43xx_FLASH_8kiB);
+	/* All parts other than LP43x2 with Flash have the first 64kiB bank B region */
+	if (part_id.flash_config != LPC43xx_PARTID_FLASH_CONFIG_43x2)
+		lpc43xx_add_iap_flash(
+			t, iap_entry, LPC43xx_FLASH_BANK_B, 0U, LPC43xx_FLASH_BANK_B_BASE, LPC43xx_FLASH_64kiB, LPC43xx_FLASH_8kiB);
+
+	switch (part_id.flash_config) {
+	case LPC43xx_PARTID_FLASH_CONFIG_43x2:
+		/* LP43x2 parts have a full bank A but not bank B */
+		lpc43xx_add_iap_flash(t, iap_entry, LPC43xx_FLASH_BANK_A, 8U, LPC43xx_FLASH_BANK_A_BASE + LPC43xx_FLASH_64kiB,
+			LPC43xx_FLASH_192kiB + LPC43xx_FLASH_256kiB, LPC43xx_FLASH_64kiB);
+		break;
+	case LPC43xx_PARTID_FLASH_CONFIG_43x3:
+		/* LP43x3 parts have the first 256kiB of both bank A and bank B */
+		lpc43xx_add_iap_flash(t, iap_entry, LPC43xx_FLASH_BANK_A, 8U, LPC43xx_FLASH_BANK_A_BASE + LPC43xx_FLASH_64kiB,
+			LPC43xx_FLASH_192kiB, LPC43xx_FLASH_64kiB);
+		lpc43xx_add_iap_flash(t, iap_entry, LPC43xx_FLASH_BANK_B, 8U, LPC43xx_FLASH_BANK_B_BASE + LPC43xx_FLASH_64kiB,
+			LPC43xx_FLASH_192kiB, LPC43xx_FLASH_64kiB);
+		break;
+	case LPC43xx_PARTID_FLASH_CONFIG_43x5:
+		/* LP43x3 parts have the first 256kiB and an additional 128kiB of both bank A and bank B */
+		lpc43xx_add_iap_flash(t, iap_entry, LPC43xx_FLASH_BANK_A, 8U, LPC43xx_FLASH_BANK_A_BASE + LPC43xx_FLASH_64kiB,
+			LPC43xx_FLASH_192kiB + LPC43xx_FLASH_128kiB, LPC43xx_FLASH_64kiB);
+		lpc43xx_add_iap_flash(t, iap_entry, LPC43xx_FLASH_BANK_B, 8U, LPC43xx_FLASH_BANK_B_BASE + LPC43xx_FLASH_64kiB,
+			LPC43xx_FLASH_192kiB + LPC43xx_FLASH_128kiB, LPC43xx_FLASH_64kiB);
+		break;
+	case LPC43xx_PARTID_FLASH_CONFIG_43x7:
+		/* LP43x3 parts have the full 512kiB each of both bank A and bank B */
+		lpc43xx_add_iap_flash(t, iap_entry, LPC43xx_FLASH_BANK_A, 8U, LPC43xx_FLASH_BANK_A_BASE + LPC43xx_FLASH_64kiB,
+			LPC43xx_FLASH_192kiB + LPC43xx_FLASH_256kiB, LPC43xx_FLASH_64kiB);
+		lpc43xx_add_iap_flash(t, iap_entry, LPC43xx_FLASH_BANK_B, 8U, LPC43xx_FLASH_BANK_B_BASE + LPC43xx_FLASH_64kiB,
+			LPC43xx_FLASH_192kiB + LPC43xx_FLASH_256kiB, LPC43xx_FLASH_64kiB);
+		break;
+	}
+
 	target_add_commands(t, lpc43xx_cmd_list, "LPC43xx");
 }
 
@@ -257,7 +302,7 @@ static lpc43xx_partid_s lpc43xx_read_partid_flashless(target_s *const t)
 {
 	lpc43xx_partid_s result;
 	result.part = target_mem_read32(t, LPC43xx_PARTID_LOW);
-	result.flash_config = 0;
+	result.flash_config = LPC43xx_PARTID_FLASH_CONFIG_NONE;
 	return result;
 }
 
