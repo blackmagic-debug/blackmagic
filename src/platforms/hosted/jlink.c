@@ -33,12 +33,12 @@
 #include "cli.h"
 #include "jlink.h"
 
-#define USB_PID_SEGGER       0x1366
+#define USB_VID_SEGGER       0x1366
 
 /* Only two devices PIDS tested so long */
-#define USB_VID_SEGGER_0101  0x0101
-#define USB_VID_SEGGER_0105  0x0105
-#define USB_VID_SEGGER_1020  0x1020
+#define USB_PID_SEGGER_0101  0x0101
+#define USB_PID_SEGGER_0105  0x0105
+#define USB_PID_SEGGER_1020  0x1020
 
 static uint32_t emu_caps;
 static uint32_t emu_speed_kHz;
@@ -180,11 +180,11 @@ int jlink_init(bmp_info_t *info)
             DEBUG_WARN( "libusb_get_device_descriptor() failed");
 			goto error;;
 		}
-		if (desc.idVendor !=  USB_PID_SEGGER)
+		if (desc.idVendor !=  USB_VID_SEGGER)
 			continue;
-		if ((desc.idProduct != USB_VID_SEGGER_0101) &&
-			(desc.idProduct != USB_VID_SEGGER_0105) &&
-			(desc.idProduct != USB_VID_SEGGER_1020))
+		if ((desc.idProduct != USB_PID_SEGGER_0101) &&
+			(desc.idProduct != USB_PID_SEGGER_0105) &&
+			(desc.idProduct != USB_PID_SEGGER_1020))
 			continue;
 		int res = libusb_open(dev, &jl->ul_libusb_device_handle);
 		if (res != LIBUSB_SUCCESS)
