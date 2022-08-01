@@ -58,6 +58,20 @@
 
 #define IAP_ENTRYPOINT_LOCATION 0x10400100U
 
+#define LPC43xx_SHADOW_BASE      0x00000000U
+#define LPC43xx_SHADOW_SIZE      0x10000000U
+#define LPC43xx_LOCAL_SRAM1_BASE 0x10000000U
+#define LPC43xx_LOCAL_SRAM1_SIZE (32U * 1024U)
+#define LPC4310_LOCAL_SRAM1_SIZE (96U * 1024U)
+#define LPC4330_LOCAL_SRAM1_SIZE (128U * 1024U)
+#define LPC43xx_LOCAL_SRAM2_BASE 0x10080000U
+#define LPC43xx_LOCAL_SRAM2_SIZE (40U * 1024U)
+#define LPC43x0_LOCAL_SRAM2_SIZE (72U * 1024U)
+#define LPC4370_M0_SRAM_BASE     0x18000000U
+#define LPC4370_M0_SRAM_SIZE     (18U * 1024U)
+#define LPC43xx_AHB_SRAM_BASE    0x20000000U
+#define LPC43x2_AHB_SRAM_SIZE    (16U * 1024U)
+#define LPC43x5_AHB_SRAM_SIZE    (48U * 1024U)
 #define LPC43xx_ETBAHB_SRAM_BASE 0x2000c000U
 #define LPC43xx_ETBAHB_SRAM_SIZE (16U * 1024U)
 
@@ -107,7 +121,7 @@ const command_s lpc43xx_cmd_list[] = {
 	{NULL, NULL, NULL},
 };
 
-static void lpc43xx_add_flash(
+static void lpc43xx_add_iap_flash(
 	target_s *t, uint32_t iap_entry, uint8_t bank, uint8_t base_sector, uint32_t addr, size_t len, size_t erasesize)
 {
 	lpc_flash_s *lf = lpc_add_flash(t, addr, len);
@@ -124,17 +138,46 @@ static void lpc43xx_add_flash(
 
 static void lpc43xx_detect_flash(target_s *const t, const lpc43xx_partid_s part_id)
 {
-	(void)part_id;
-	/* LPC4337 */
 	const uint32_t iap_entry = target_mem_read32(t, IAP_ENTRYPOINT_LOCATION);
-	target_add_ram(t, 0, 0x1a000000);
-	lpc43xx_add_flash(t, iap_entry, 0, 0, 0x1a000000, 0x10000, 0x2000);
-	lpc43xx_add_flash(t, iap_entry, 0, 8, 0x1a010000, 0x70000, 0x10000);
+
+	switch (part_id.part) {
+	case LPC43xx_PARTID_LPC4312:
+		t->driver = "LPC4312/3";
+		target_add_ram(t, LPC43xx_AHB_SRAM_BASE, LPC43x2_AHB_SRAM_SIZE);
+		break;
+	case LPC43xx_PARTID_LPC4315:
+		t->driver = "LPC4315/7";
+		target_add_ram(t, LPC43xx_AHB_SRAM_BASE, LPC43x5_AHB_SRAM_SIZE);
+		break;
+	case LPC43xx_PARTID_LPC4322:
+		t->driver = "LPC4322/3";
+		target_add_ram(t, LPC43xx_AHB_SRAM_BASE, LPC43x2_AHB_SRAM_SIZE);
+		break;
+	case LPC43xx_PARTID_LPC4325:
+		t->driver = "LPC4325/7";
+		target_add_ram(t, LPC43xx_AHB_SRAM_BASE, LPC43x5_AHB_SRAM_SIZE);
+		break;
+	case LPC43xx_PARTID_LPC433x:
+		t->driver = "LPC433x";
+		target_add_ram(t, LPC43xx_AHB_SRAM_BASE, LPC43x5_AHB_SRAM_SIZE);
+		break;
+	case LPC43xx_PARTID_LPC435x:
+		t->driver = "LPC435x";
+		target_add_ram(t, LPC43xx_AHB_SRAM_BASE, LPC43x5_AHB_SRAM_SIZE);
+		break;
+	}
+	target_add_ram(t, LPC43xx_SHADOW_BASE, LPC43xx_SHADOW_SIZE);
+	target_add_ram(t, LPC43xx_LOCAL_SRAM1_BASE, LPC43xx_LOCAL_SRAM1_SIZE);
+	target_add_ram(t, LPC43xx_LOCAL_SRAM2_BASE, LPC43xx_LOCAL_SRAM2_SIZE);
+	target_add_ram(t, LPC43xx_ETBAHB_SRAM_BASE, LPC43xx_ETBAHB_SRAM_SIZE);
+
 	target_add_ram(t, 0x1a080000, 0xf80000);
-	lpc43xx_add_flash(t, iap_entry, 1, 0, 0x1b000000, 0x10000, 0x2000);
-	lpc43xx_add_flash(t, iap_entry, 1, 8, 0x1b010000, 0x70000, 0x10000);
-	target_add_commands(t, lpc43xx_cmd_list, "LPC43xx");
 	target_add_ram(t, 0x1b080000, 0xe4f80000UL);
+	lpc43xx_add_iap_flash(t, iap_entry, 0, 0, 0x1a000000, 0x10000, 0x2000);
+	lpc43xx_add_iap_flash(t, iap_entry, 0, 8, 0x1a010000, 0x70000, 0x10000);
+	lpc43xx_add_iap_flash(t, iap_entry, 1, 0, 0x1b000000, 0x10000, 0x2000);
+	lpc43xx_add_iap_flash(t, iap_entry, 1, 8, 0x1b010000, 0x70000, 0x10000);
+	target_add_commands(t, lpc43xx_cmd_list, "LPC43xx");
 }
 
 static void lpc43xx_detect_flashless(target_s *const t, const lpc43xx_partid_s part_id)
