@@ -146,10 +146,17 @@
 #define SPI_FLASH_CMD_SECTOR_ERASE   0x20U
 #define SPI_FLASH_CMD_BLOCK32K_ERASE 0x52U
 #define SPI_FLASH_CMD_BLOCK64K_ERASE 0xd8U
-#define SPI_FLASH_CMD_CHIP_ERASE     (LPC43x0_SPIFI_CMD_SERIAL | LPC43x0_SPIFI_OPCODE(0x60U))
+#define SPI_FLASH_CMD_CHIP_ERASE                                                                \
+	(LPC43x0_SPIFI_CMD_SERIAL | LPC43x0_SPIFI_FRAME_OPCODE_ONLY | LPC43x0_SPIFI_OPCODE(0x60U) | \
+		LPC43x0_SPIFI_DATA_LENGTH(0) | LPC43x0_SPIFI_INTER_LENGTH(0))
+#define SPI_FLASH_CMD_READ_STATUS                                                               \
+	(LPC43x0_SPIFI_CMD_SERIAL | LPC43x0_SPIFI_FRAME_OPCODE_ONLY | LPC43x0_SPIFI_OPCODE(0x05U) | \
+		LPC43x0_SPIFI_DATA_LENGTH(1) | LPC43x0_SPIFI_DATA_IN | LPC43x0_SPIFI_INTER_LENGTH(0))
 #define SPI_FLASH_CMD_READ_JEDEC_ID                                                             \
 	(LPC43x0_SPIFI_CMD_SERIAL | LPC43x0_SPIFI_FRAME_OPCODE_ONLY | LPC43x0_SPIFI_OPCODE(0x9fU) | \
 		LPC43x0_SPIFI_DATA_LENGTH(3) | LPC43x0_SPIFI_DATA_IN | LPC43x0_SPIFI_INTER_LENGTH(0))
+
+#define SPI_FLASH_STATUS_BUSY 0x01U
 
 typedef struct lpc43xx_partid {
 	uint32_t part;
@@ -166,6 +173,7 @@ static bool lpc43xx_cmd_mkboot(target_s *t, int argc, const char **argv);
 static lpc43xx_partid_s lpc43x0_spi_read_partid(target_s *t);
 static void lpc43x0_spi_read(target_s *t, uint32_t command, void *buffer, size_t length);
 static void lpc43x0_spi_write(target_s *t, uint32_t command, const void *buffer, size_t length);
+static bool lpc43xx_spi_mass_erase(target_s *t);
 
 static bool lpc43xx_iap_init(target_flash_s *flash);
 static lpc43xx_partid_s lpc43xx_iap_read_partid(target_s *t);
@@ -355,6 +363,7 @@ bool lpc43xx_probe(target_s *const t)
 		if (part_id.part == LPC43xx_PARTID_INVALID)
 			return false;
 
+		t->mass_erase = lpc43xx_spi_mass_erase;
 		lpc43xx_detect_flashless(t, part_id);
 	} else
 		return false;
@@ -394,6 +403,23 @@ static void lpc43x0_spi_write(target_s *const t, const uint32_t command, const v
 		target_mem_write8(t, LPC43x0_SPIFI_DATA, data[i]);
 }
 #pragma GCC diagnostic pop
+
+static bool lpc43xx_spi_mass_erase(target_s *t)
+{
+	platform_timeout_s timeout;
+	platform_timeout_set(&timeout, 500);
+	target_mem_write32(t, LPC43x0_SPIFI_CMD, SPI_FLASH_CMD_CHIP_ERASE);
+
+	while (true) {
+		uint8_t status;
+		lpc43x0_spi_read(t, SPI_FLASH_CMD_READ_STATUS, &status, sizeof(status));
+		if ((status & SPI_FLASH_STATUS_BUSY) != SPI_FLASH_STATUS_BUSY)
+			break;
+		target_print_progress(&timeout);
+	}
+
+	return true;
+}
 
 /* LPC43xx IAP On-board Flash part routines */
 
