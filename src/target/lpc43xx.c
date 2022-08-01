@@ -106,15 +106,17 @@
 #define FLASH_NUM_BANK   2U
 #define FLASH_NUM_SECTOR 15U
 
-#define LPC43xx_FLASH_BANK_A      0U
-#define LPC43xx_FLASH_BANK_A_BASE 0x1a000000U
-#define LPC43xx_FLASH_BANK_B      1U
-#define LPC43xx_FLASH_BANK_B_BASE 0x1b000000U
-#define LPC43xx_FLASH_8kiB        (8U * 1024U)
-#define LPC43xx_FLASH_64kiB       (64U * 1024U)
-#define LPC43xx_FLASH_128kiB      (128U * 1024U)
-#define LPC43xx_FLASH_192kiB      (192U * 1024U)
-#define LPC43xx_FLASH_256kiB      (256U * 1024U)
+#define LPC43xx_FLASH_BANK_A        0U
+#define LPC43xx_FLASH_BANK_A_BASE   0x1a000000U
+#define LPC43xx_FLASH_BANK_B        1U
+#define LPC43xx_FLASH_BANK_B_BASE   0x1b000000U
+#define LPC43xx_FLASH_8kiB          (8U * 1024U)
+#define LPC43xx_FLASH_64kiB         (64U * 1024U)
+#define LPC43xx_FLASH_128kiB        (128U * 1024U)
+#define LPC43xx_FLASH_192kiB        (192U * 1024U)
+#define LPC43xx_FLASH_256kiB        (256U * 1024U)
+#define LPC43x0_SPI_FLASH_LOW_BASE  0x14000000U
+#define LPC43x0_SPI_FLASH_HIGH_BASE 0x80000000U
 
 #define LPC43x0_SPIFI_BASE 0x40003000U
 #define LPC43x0_SPIFI_CTRL (LPC43x0_SPIFI_BASE + 0x000U)
@@ -152,6 +154,10 @@ typedef struct lpc43xx_partid {
 	uint32_t part;
 	uint8_t flash_config;
 } lpc43xx_partid_s;
+
+typedef struct lpc43xx_spi_flash {
+	target_flash_s f;
+} lpc43xx_spi_flash_s;
 
 static bool lpc43xx_cmd_reset(target_s *t, int argc, const char **argv);
 static bool lpc43xx_cmd_mkboot(target_s *t, int argc, const char **argv);
@@ -260,6 +266,23 @@ static void lpc43xx_detect_flash(target_s *const t, const lpc43xx_partid_s part_
 	target_add_commands(t, lpc43xx_cmd_list, "LPC43xx");
 }
 
+static void lpc43xx_add_spi_flash(target_s *const t, const size_t length)
+{
+	lpc43xx_spi_flash_s *const flash = calloc(1, sizeof(*flash));
+	if (!flash) {
+		DEBUG_WARN("calloc: failed in %s\n", __func__);
+		return;
+	}
+
+	target_flash_s *const f = &flash->f;
+	f->start = LPC43x0_SPI_FLASH_LOW_BASE;
+	f->length = length;
+	//f->write = lpc43xx_spi_flash_write;
+	//f->erase = lpc43xx_spi_flash_erase;
+	f->erased = 0xffU;
+	target_add_flash(t, f);
+}
+
 static void lpc43xx_detect_flashless(target_s *const t, const lpc43xx_partid_s part_id)
 {
 	switch (part_id.part) {
@@ -296,7 +319,11 @@ static void lpc43xx_detect_flashless(target_s *const t, const lpc43xx_partid_s p
 	const uint8_t manufacturer = target_mem_read8(t, LPC43x0_SPIFI_DATA);
 	const uint8_t type = target_mem_read8(t, LPC43x0_SPIFI_DATA);
 	const uint32_t capacity = 1U << target_mem_read8(t, LPC43x0_SPIFI_DATA);
-	gdb_outf("SPI Flash: mfr = %02x, type = %02x, capacity = %08" PRIx32 "\n", manufacturer, type, capacity);
+	DEBUG_WARN("SPI Flash: mfr = %02x, type = %02x, capacity = %08" PRIx32 "\n", manufacturer, type, capacity);
+
+	/* If we read out valid Flash information, set up a region for it */
+	if (manufacturer != 0xffU && type != 0xffU)
+		lpc43xx_add_spi_flash(t, capacity);
 }
 
 bool lpc43xx_probe(target_s *const t)
