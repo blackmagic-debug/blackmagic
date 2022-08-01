@@ -24,7 +24,11 @@
 #include "cortexm.h"
 #include "lpc_common.h"
 
-#define LPC43XX_CHIPID 0x40043200U
+#define LPC43xx_CHIPID             0x40043200U
+#define LPC43xx_CHIPID_FAMILY_MASK 0x0fffffffU
+#define LPC43xx_CHIPID_FAMILY_CODE 0x0906002bU
+#define LPC43xx_CHIPID_PART_MASK   0xf0000000U
+#define LPC43xx_CHIPID_PART_SHIFT  28U
 
 #define IAP_ENTRYPOINT_LOCATION 0x10400100U
 
@@ -86,14 +90,18 @@ static void lpc43xx_add_flash(
 
 bool lpc43xx_probe(target_s *t)
 {
-	const uint32_t chipid = target_mem_read32(t, LPC43XX_CHIPID);
+	const uint32_t chipid = target_mem_read32(t, LPC43xx_CHIPID);
+	if ((chipid & LPC43xx_CHIPID_FAMILY_MASK) != LPC43xx_CHIPID_FAMILY_CODE)
+		return false;
 
-	switch (chipid) {
-	case 0x4906002bU: /* Parts with on-chip flash */
-	case 0x7906002bU: /* LM43S?? - Undocumented? */
+	const uint32_t part_code = (chipid & LPC43xx_CHIPID_PART_MASK) >> LPC43xx_CHIPID_PART_SHIFT;
+	switch (part_code) {
+	case 4U: /* Parts with on-chip flash */
+	case 7U: /* LM43S?? - Undocumented? */
 		switch (t->cpuid & 0xff00fff0U) {
 		case 0x4100c240U:
 			t->driver = "LPC43xx Cortex-M4";
+			//				0x4100c240U
 			if (t->cpuid == 0x410fc241U) {
 				/* LPC4337 */
 				const uint32_t iap_entry = target_mem_read32(t, IAP_ENTRYPOINT_LOCATION);
@@ -116,8 +124,8 @@ bool lpc43xx_probe(target_s *t)
 		}
 		t->mass_erase = lpc43xx_mass_erase;
 		return true;
-	case 0x5906002bU: /* Flashless parts */
-	case 0x6906002bU:
+	case 5U: /* Flashless parts */
+	case 6U:
 		switch (t->cpuid & 0xff00fff0U) {
 		case 0x4100c240U:
 			t->driver = "LPC43xx Cortex-M4";
