@@ -94,7 +94,7 @@ static bool lpc43xx_cmd_reset(target_s *t, int argc, const char **argv);
 static bool lpc43xx_cmd_mkboot(target_s *t, int argc, const char **argv);
 
 static lpc43xx_partid_s lpc43xx_read_partid(target_s *t);
-static bool lpc43xx_flash_init(target_flash_s *flash);
+static bool lpc43xx_iap_init(target_flash_s *flash);
 static bool lpc43xx_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 static bool lpc43xx_mass_erase(target_s *t);
 static void lpc43xx_wdt_set_period(target_s *t);
@@ -174,7 +174,7 @@ static bool lpc43xx_mass_erase(target_s *t)
 {
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500);
-	lpc43xx_flash_init(t->flash);
+	lpc43xx_iap_init(t->flash);
 
 	for (size_t bank = 0; bank < FLASH_NUM_BANK; ++bank) {
 		lpc_flash_s *f = (lpc_flash_s *)t->flash;
@@ -187,7 +187,7 @@ static bool lpc43xx_mass_erase(target_s *t)
 	return true;
 }
 
-static bool lpc43xx_flash_init(target_flash_s *const flash)
+static bool lpc43xx_iap_init(target_flash_s *const flash)
 {
 	target_s *const t = flash->t;
 	lpc_flash_s *const f = (lpc_flash_s *)flash;
@@ -215,7 +215,7 @@ static lpc43xx_partid_s lpc43xx_read_partid(target_s *const t)
 
 static bool lpc43xx_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
-	if (!lpc43xx_flash_init(f))
+	if (!lpc43xx_iap_init(f))
 		return false;
 	return lpc_flash_erase(f, addr, len);
 }
@@ -251,7 +251,7 @@ static bool lpc43xx_cmd_mkboot(target_s *t, int argc, const char **argv)
 		return false;
 	}
 
-	lpc43xx_flash_init(t->flash);
+	lpc43xx_iap_init(t->flash);
 
 	/* special command to compute/write magic vector for signature */
 	lpc_flash_s *f = (lpc_flash_s *)t->flash;
