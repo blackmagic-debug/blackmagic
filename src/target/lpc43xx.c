@@ -165,6 +165,7 @@ static bool lpc43xx_cmd_mkboot(target_s *t, int argc, const char **argv);
 
 static lpc43xx_partid_s lpc43x0_spi_read_partid(target_s *t);
 static void lpc43x0_spi_read(target_s *t, uint32_t command, void *buffer, size_t length);
+static void lpc43x0_spi_write(target_s *t, uint32_t command, const void *buffer, size_t length);
 
 static bool lpc43xx_iap_init(target_flash_s *flash);
 static lpc43xx_partid_s lpc43xx_iap_read_partid(target_s *t);
@@ -382,6 +383,17 @@ static void lpc43x0_spi_read(target_s *const t, const uint32_t command, void *co
 	for (size_t i = 0; i < length; ++i)
 		data[i] = target_mem_read8(t, LPC43x0_SPIFI_DATA);
 }
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+static void lpc43x0_spi_write(target_s *const t, const uint32_t command, const void *const buffer, const size_t length)
+{
+	target_mem_write32(t, LPC43x0_SPIFI_CMD, command);
+	const uint8_t *const data = (const uint8_t *)buffer;
+	for (size_t i = 0; i < length; ++i)
+		target_mem_write8(t, LPC43x0_SPIFI_DATA, data[i]);
+}
+#pragma GCC diagnostic pop
 
 /* LPC43xx IAP On-board Flash part routines */
 
