@@ -162,11 +162,11 @@ typedef struct lpc43xx_spi_flash {
 static bool lpc43xx_cmd_reset(target_s *t, int argc, const char **argv);
 static bool lpc43xx_cmd_mkboot(target_s *t, int argc, const char **argv);
 
-static lpc43xx_partid_s lpc43xx_read_partid_onchip_flash(target_s *t);
+static lpc43xx_partid_s lpc43xx_iap_read_partid(target_s *t);
 static lpc43xx_partid_s lpc43xx_read_partid_flashless(target_s *t);
 static bool lpc43xx_iap_init(target_flash_s *flash);
-static bool lpc43xx_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
-static bool lpc43xx_mass_erase(target_s *t);
+static bool lpc43xx_iap_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
+static bool lpc43xx_iap_mass_erase(target_s *t);
 static void lpc43xx_wdt_set_period(target_s *t);
 static void lpc43xx_wdt_kick(target_s *t);
 
@@ -180,7 +180,7 @@ static void lpc43xx_add_iap_flash(
 	target_s *t, uint32_t iap_entry, uint8_t bank, uint8_t base_sector, uint32_t addr, size_t len, size_t erasesize)
 {
 	lpc_flash_s *lf = lpc_add_flash(t, addr, len);
-	lf->f.erase = lpc43xx_flash_erase;
+	lf->f.erase = lpc43xx_iap_flash_erase;
 	lf->f.blocksize = erasesize;
 	lf->f.writesize = IAP_PGM_CHUNKSIZE;
 	lf->bank = bank;
@@ -337,12 +337,12 @@ bool lpc43xx_probe(target_s *const t)
 
 	/* 4 is for parts with on-chip Flash, 7 is undocumented but might be for LM43S parts */
 	if (chip_code == 4U || chip_code == 7U) {
-		const lpc43xx_partid_s part_id = lpc43xx_read_partid_onchip_flash(t);
+		const lpc43xx_partid_s part_id = lpc43xx_iap_read_partid(t);
 		DEBUG_WARN("LPC43xx part ID: 0x%08" PRIx32 ":%02x\n", part_id.part, part_id.flash_config);
 		if (part_id.part == LPC43xx_PARTID_INVALID)
 			return false;
 
-		t->mass_erase = lpc43xx_mass_erase;
+		t->mass_erase = lpc43xx_iap_mass_erase;
 		lpc43xx_detect_flash(t, part_id);
 	} else if (chip_code == 5U || chip_code == 6U) {
 		const lpc43xx_partid_s part_id = lpc43xx_read_partid_flashless(t);
@@ -373,11 +373,25 @@ static lpc43xx_partid_s lpc43xx_read_partid_flashless(target_s *const t)
 
 /* LPC43xx IAP On-board Flash part routines */
 
+static bool lpc43xx_iap_init(target_flash_s *const flash)
+{
+	target_s *const t = flash->t;
+	lpc_flash_s *const f = (lpc_flash_s *)flash;
+	/* Deal with WDT */
+	lpc43xx_wdt_set_period(t);
+
+	/* Force internal clock */
+	target_mem_write32(t, LPC43xx_CGU_CPU_CLK, LPC43xx_CGU_BASE_CLK_AUTOBLOCK | LPC43xx_CGU_BASE_CLK_SEL_IRC);
+
+	/* Initialize flash IAP */
+	return lpc_iap_call(f, NULL, IAP_CMD_INIT) == IAP_STATUS_CMD_SUCCESS;
+}
+
 /*
  * We can for the on-chip Flash parts use the IAP, so do so as this way the ID codes line up with
  * the ones in the datasheet.
  */
-static lpc43xx_partid_s lpc43xx_read_partid_onchip_flash(target_s *const t)
+static lpc43xx_partid_s lpc43xx_iap_read_partid(target_s *const t)
 {
 	/* Define a fake Flash structure so we can invoke the IAP system */
 	lpc_flash_s flash;
@@ -406,7 +420,14 @@ static lpc43xx_partid_s lpc43xx_read_partid_onchip_flash(target_s *const t)
 	return result;
 }
 
-static bool lpc43xx_mass_erase(target_s *t)
+static bool lpc43xx_iap_flash_erase(target_flash_s *f, const target_addr_t addr, const size_t len)
+{
+	if (!lpc43xx_iap_init(f))
+		return false;
+	return lpc_flash_erase(f, addr, len);
+}
+
+static bool lpc43xx_iap_mass_erase(target_s *t)
 {
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500);
@@ -421,27 +442,6 @@ static bool lpc43xx_mass_erase(target_s *t)
 	}
 
 	return true;
-}
-
-static bool lpc43xx_iap_init(target_flash_s *const flash)
-{
-	target_s *const t = flash->t;
-	lpc_flash_s *const f = (lpc_flash_s *)flash;
-	/* Deal with WDT */
-	lpc43xx_wdt_set_period(t);
-
-	/* Force internal clock */
-	target_mem_write32(t, LPC43xx_CGU_CPU_CLK, LPC43xx_CGU_BASE_CLK_AUTOBLOCK | LPC43xx_CGU_BASE_CLK_SEL_IRC);
-
-	/* Initialize flash IAP */
-	return lpc_iap_call(f, NULL, IAP_CMD_INIT) == IAP_STATUS_CMD_SUCCESS;
-}
-
-static bool lpc43xx_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
-{
-	if (!lpc43xx_iap_init(f))
-		return false;
-	return lpc_flash_erase(f, addr, len);
 }
 
 /* Reset all major systems _except_ debug */
