@@ -61,7 +61,7 @@ static int lpc43xx_flash_init(target_s *t);
 static bool lpc43xx_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 static bool lpc43xx_mass_erase(target_s *t);
 static void lpc43xx_wdt_set_period(target_s *t);
-static void lpc43xx_wdt_pet(target_s *t);
+static void lpc43xx_wdt_kick(target_s *t);
 
 const command_s lpc43xx_cmd_list[] = {
 	{"reset", lpc43xx_cmd_reset, "Reset target"},
@@ -81,7 +81,7 @@ static void lpc43xx_add_flash(
 	lf->iap_entry = iap_entry;
 	lf->iap_ram = IAP_RAM_BASE;
 	lf->iap_msp = IAP_RAM_BASE + IAP_RAM_SIZE;
-	lf->wdt_kick = lpc43xx_wdt_pet;
+	lf->wdt_kick = lpc43xx_wdt_kick;
 }
 
 bool lpc43xx_probe(target_s *t)
@@ -230,12 +230,12 @@ static void lpc43xx_wdt_set_period(target_s *t)
 		target_mem_write32(t, LPC43xx_WDT_CNT, LPC43xx_WDT_PERIOD_MAX);
 }
 
-static void lpc43xx_wdt_pet(target_s *t)
+static void lpc43xx_wdt_kick(target_s *t)
 {
 	/* Check if WDT is on */
 	uint32_t wdt_mode = target_mem_read32(t, LPC43xx_WDT_MODE);
 
-	/* If WDT on, pet */
+	/* If WDT on, kick it so we don't get the target reset */
 	if (wdt_mode) {
 		target_mem_write32(t, LPC43xx_WDT_FEED, 0xaa);
 		target_mem_write32(t, LPC43xx_WDT_FEED, 0xff);
