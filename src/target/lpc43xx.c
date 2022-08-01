@@ -155,6 +155,9 @@
 #define SPI_FLASH_CMD_READ_JEDEC_ID                                                             \
 	(LPC43x0_SPIFI_CMD_SERIAL | LPC43x0_SPIFI_FRAME_OPCODE_ONLY | LPC43x0_SPIFI_OPCODE(0x9fU) | \
 		LPC43x0_SPIFI_DATA_LENGTH(3) | LPC43x0_SPIFI_DATA_IN | LPC43x0_SPIFI_INTER_LENGTH(0))
+#define SPI_FLASH_CMD_READ_SFDP                                                                    \
+	(LPC43x0_SPIFI_CMD_SERIAL | LPC43x0_SPIFI_FRAME_OPCODE_3B_ADDR | LPC43x0_SPIFI_OPCODE(0x5aU) | \
+		LPC43x0_SPIFI_DATA_LENGTH(256) | LPC43x0_SPIFI_DATA_IN | LPC43x0_SPIFI_INTER_LENGTH(1))
 
 #define SPI_FLASH_STATUS_BUSY 0x01U
 
@@ -289,6 +292,7 @@ static void lpc43xx_add_spi_flash(target_s *const t, const size_t length)
 	target_flash_s *const f = &flash->f;
 	f->start = LPC43x0_SPI_FLASH_LOW_BASE;
 	f->length = length;
+	f->blocksize = 256; // TODO: Read the SFDP to determine this and other parameters
 	//f->write = lpc43xx_spi_flash_write;
 	//f->erase = lpc43xx_spi_flash_erase;
 	f->erased = 0xffU;
