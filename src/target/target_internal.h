@@ -32,11 +32,13 @@ struct target_ram {
 	struct target_ram *next;
 };
 
-struct target_flash;
-typedef int (*flash_erase_func)(struct target_flash *f, target_addr addr, size_t len);
-typedef int (*flash_write_func)(struct target_flash *f, target_addr dest,
+typedef struct target_flash target_flash_s;
+
+typedef int (*flash_erase_func)(target_flash_s *f, target_addr addr, size_t len);
+typedef int (*flash_write_func)(target_flash_s *f, target_addr dest,
                                 const void *src, size_t len);
-typedef int (*flash_done_func)(struct target_flash *f);
+typedef int (*flash_done_func)(target_flash_s *f);
+
 struct target_flash {
 	target_addr start;
 	size_t length;
