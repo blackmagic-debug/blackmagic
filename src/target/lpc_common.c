@@ -172,9 +172,9 @@ iap_status_e lpc_iap_call(lpc_flash_s *f, void *result, iap_cmd_e cmd, ...)
 #if defined(ENABLE_DEBUG)
 	if (param.status != IAP_STATUS_CMD_SUCCESS) {
 		if (param.status > (sizeof(iap_error) / sizeof(char *)))
-			DEBUG_WARN("IAP  cmd %d : %" PRIu32 "\n", cmd, param.status);
+			DEBUG_WARN("IAP cmd %d : %" PRIu32 "\n", cmd, param.status);
 		else
-			DEBUG_WARN("IAP  cmd %d : %s\n", cmd, iap_error[param.status]);
+			DEBUG_WARN("IAP cmd %d : %s\n", cmd, iap_error[param.status]);
 		DEBUG_WARN("return parameters: %08" PRIx32 " %08" PRIx32 " %08" PRIx32 " %08" PRIx32 "\n", param.result[0],
 			param.result[1], param.result[2], param.result[3]);
 	}
