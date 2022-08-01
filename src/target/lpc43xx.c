@@ -116,6 +116,38 @@
 #define LPC43xx_FLASH_192kiB      (192U * 1024U)
 #define LPC43xx_FLASH_256kiB      (256U * 1024U)
 
+#define LPC43x0_SPIFI_BASE 0x40003000U
+#define LPC43x0_SPIFI_CTRL (LPC43x0_SPIFI_BASE + 0x000U)
+#define LPC43x0_SPIFI_CMD  (LPC43x0_SPIFI_BASE + 0x004U)
+#define LPC43x0_SPIFI_ADDR (LPC43x0_SPIFI_BASE + 0x008U)
+#define LPC43x0_SPIFI_IDAT (LPC43x0_SPIFI_BASE + 0x00cU)
+#define LPC43x0_SPIFI_DATA (LPC43x0_SPIFI_BASE + 0x014U)
+#define LPC43x0_SPIFI_MCMD (LPC43x0_SPIFI_BASE + 0x018U)
+#define LPC43x0_SPIFI_STAT (LPC43x0_SPIFI_BASE + 0x01cU)
+
+#define LPC43x0_SPIFI_DATA_LENGTH(x)       ((x)&0x00003fffU)
+#define LPC43x0_SPIFI_DATA_IN              (0U << 15U)
+#define LPC43x0_SPIFI_DATA_OUT             (1U << 15U)
+#define LPC43x0_SPIFI_INTER_LENGTH(x)      (((x)&7U) << 16U)
+#define LPC43x0_SPIFI_CMD_SERIAL           (0U << 19U)
+#define LPC43x0_SPIFI_CMD_QUAD_OPCODE      (1U << 19U)
+#define LPC43x0_SPIFI_CMD_SERIAL_OPCODE    (2U << 19U)
+#define LPC43x0_SPIFI_CMD_QUAD             (3U << 19U)
+#define LPC43x0_SPIFI_FRAME_OPCODE_ONLY    (1U << 21U)
+#define LPC43x0_SPIFI_FRAME_OPCODE_1B_ADDR (2U << 21U)
+#define LPC43x0_SPIFI_FRAME_OPCODE_2B_ADDR (3U << 21U)
+#define LPC43x0_SPIFI_FRAME_OPCODE_3B_ADDR (4U << 21U)
+#define LPC43x0_SPIFI_FRAME_OPCODE_4B_ADDR (5U << 21U)
+#define LPC43x0_SPIFI_OPCODE(x)            ((x) << 24U)
+
+#define SPI_FLASH_CMD_SECTOR_ERASE   0x20U
+#define SPI_FLASH_CMD_BLOCK32K_ERASE 0x52U
+#define SPI_FLASH_CMD_BLOCK64K_ERASE 0xd8U
+#define SPI_FLASH_CMD_CHIP_ERASE     (LPC43x0_SPIFI_CMD_SERIAL | LPC43x0_SPIFI_OPCODE(0x60U))
+#define SPI_FLASH_CMD_READ_JEDEC_ID                                                             \
+	(LPC43x0_SPIFI_CMD_SERIAL | LPC43x0_SPIFI_FRAME_OPCODE_ONLY | LPC43x0_SPIFI_OPCODE(0x9fU) | \
+		LPC43x0_SPIFI_DATA_LENGTH(3) | LPC43x0_SPIFI_DATA_IN | LPC43x0_SPIFI_INTER_LENGTH(0))
+
 typedef struct lpc43xx_partid {
 	uint32_t part;
 	uint8_t flash_config;
@@ -259,6 +291,12 @@ static void lpc43xx_detect_flashless(target_s *const t, const lpc43xx_partid_s p
 		target_add_ram(t, LPC43xx_AHB_SRAM_BASE, LPC43x5_AHB_SRAM_SIZE);
 		break;
 	}
+
+	target_mem_write32(t, LPC43x0_SPIFI_CMD, SPI_FLASH_CMD_READ_JEDEC_ID);
+	const uint8_t manufacturer = target_mem_read8(t, LPC43x0_SPIFI_DATA);
+	const uint8_t type = target_mem_read8(t, LPC43x0_SPIFI_DATA);
+	const uint32_t capacity = 1U << target_mem_read8(t, LPC43x0_SPIFI_DATA);
+	gdb_outf("SPI Flash: mfr = %02x, type = %02x, capacity = %08" PRIx32 "\n", manufacturer, type, capacity);
 }
 
 bool lpc43xx_probe(target_s *const t)
