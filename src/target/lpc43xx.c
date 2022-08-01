@@ -44,6 +44,9 @@
 #define LPC43xx_PARTID_LPC4350 0xa0000830U
 #define LPC43xx_PARTID_LPC4370 0x00000230U
 
+/* Errata values for the part codes */
+#define LPC43xx_PARTID_LPC4370_ERRATA 0x00000030U
+
 /* On-chip Flash parts */
 #define LPC43xx_PARTID_LPC4312 0xa00bcb3fU
 #define LPC43xx_PARTID_LPC4315 0xa001cb3fU
@@ -203,6 +206,7 @@ static void lpc43xx_detect_flashless(target_s *const t, const lpc43xx_partid_s p
 		target_add_ram(t, LPC43xx_AHB_SRAM_BASE, LPC43x5_AHB_SRAM_SIZE);
 		break;
 	case LPC43xx_PARTID_LPC4370:
+	case LPC43xx_PARTID_LPC4370_ERRATA:
 		t->driver = "LPC4370";
 		target_add_ram(t, LPC43xx_LOCAL_SRAM1_BASE, LPC4330_LOCAL_SRAM1_SIZE);
 		target_add_ram(t, LPC43xx_LOCAL_SRAM2_BASE, LPC43x0_LOCAL_SRAM2_SIZE);
@@ -224,8 +228,7 @@ bool lpc43xx_probe(target_s *const t)
 	/* 4 is for parts with on-chip Flash, 7 is undocumented but might be for LM43S parts */
 	if (chip_code == 4U || chip_code == 7U) {
 		const lpc43xx_partid_s part_id = lpc43xx_read_partid_onchip_flash(t);
-		// DEBUG_WARN("LPC43xx part ID: 0x%08" PRIx32 ":%02x\n", part_id.part, part_id.flash_config);
-		gdb_outf("LPC43xx part ID: 0x%08" PRIx32 ":%02x\n", part_id.part, part_id.flash_config);
+		DEBUG_WARN("LPC43xx part ID: 0x%08" PRIx32 ":%02x\n", part_id.part, part_id.flash_config);
 		if (part_id.part == LPC43xx_PARTID_INVALID)
 			return false;
 
@@ -233,8 +236,7 @@ bool lpc43xx_probe(target_s *const t)
 		lpc43xx_detect_flash(t, part_id);
 	} else if (chip_code == 5U || chip_code == 6U) {
 		const lpc43xx_partid_s part_id = lpc43xx_read_partid_flashless(t);
-		// DEBUG_WARN("LPC43xx part ID: 0x%08" PRIx32 ":%02x\n", part_id.part, part_id.flash_config);
-		gdb_outf("LPC43xx part ID: 0x%08" PRIx32 ":%02x\n", part_id.part, part_id.flash_config);
+		DEBUG_WARN("LPC43xx part ID: 0x%08" PRIx32 ":%02x\n", part_id.part, part_id.flash_config);
 		if (part_id.part == LPC43xx_PARTID_INVALID)
 			return false;
 
@@ -284,7 +286,7 @@ static lpc43xx_partid_s lpc43xx_read_partid_flashless(target_s *const t)
 {
 	lpc43xx_partid_s result;
 	result.part = target_mem_read32(t, LPC43xx_PARTID_LOW);
-	result.flash_config = target_mem_read32(t, LPC43xx_PARTID_HIGH) & LPC43xx_PARTID_FLASH_CONFIG_MASK;
+	result.flash_config = 0;
 	return result;
 }
 
