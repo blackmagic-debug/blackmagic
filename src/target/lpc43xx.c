@@ -141,11 +141,15 @@
 #define LPC43x0_SPIFI_FRAME_OPCODE_2B_ADDR (3U << 21U)
 #define LPC43x0_SPIFI_FRAME_OPCODE_3B_ADDR (4U << 21U)
 #define LPC43x0_SPIFI_FRAME_OPCODE_4B_ADDR (5U << 21U)
+#define LPC43x0_SPIFI_FRAME_MASK           0x00e00000U
 #define LPC43x0_SPIFI_OPCODE(x)            ((x) << 24U)
 
-#define SPI_FLASH_CMD_SECTOR_ERASE   0x20U
-#define SPI_FLASH_CMD_BLOCK32K_ERASE 0x52U
-#define SPI_FLASH_CMD_BLOCK64K_ERASE 0xd8U
+#define SPI_FLASH_CMD_WRITE_ENABLE                                                              \
+	(LPC43x0_SPIFI_CMD_SERIAL | LPC43x0_SPIFI_FRAME_OPCODE_ONLY | LPC43x0_SPIFI_OPCODE(0x06U) | \
+		LPC43x0_SPIFI_DATA_LENGTH(0) | LPC43x0_SPIFI_INTER_LENGTH(0))
+#define SPI_FLASH_CMD_SECTOR_ERASE                                                                 \
+	(LPC43x0_SPIFI_CMD_SERIAL | LPC43x0_SPIFI_FRAME_OPCODE_3B_ADDR | LPC43x0_SPIFI_OPCODE(0x20U) | \
+		LPC43x0_SPIFI_DATA_LENGTH(0) | LPC43x0_SPIFI_INTER_LENGTH(0))
 #define SPI_FLASH_CMD_CHIP_ERASE                                                                \
 	(LPC43x0_SPIFI_CMD_SERIAL | LPC43x0_SPIFI_FRAME_OPCODE_ONLY | LPC43x0_SPIFI_OPCODE(0x60U) | \
 		LPC43x0_SPIFI_DATA_LENGTH(0) | LPC43x0_SPIFI_INTER_LENGTH(0))
@@ -176,8 +180,9 @@ static bool lpc43xx_cmd_mkboot(target_s *t, int argc, const char **argv);
 
 static lpc43xx_partid_s lpc43x0_spi_read_partid(target_s *t);
 static void lpc43x0_spi_read(target_s *t, uint32_t command, void *buffer, size_t length);
-static void lpc43x0_spi_write(target_s *t, uint32_t command, const void *buffer, size_t length);
+static void lpc43x0_spi_write(target_s *t, uint32_t command, target_addr_t address, const void *buffer, size_t length);
 static bool lpc43xx_spi_mass_erase(target_s *t);
+static bool lpc43xx_spi_flash_erase(target_flash_s *f, target_addr_t addr, size_t length);
 
 static bool lpc43xx_iap_init(target_flash_s *flash);
 static lpc43xx_partid_s lpc43xx_iap_read_partid(target_s *t);
@@ -293,9 +298,9 @@ static void lpc43xx_add_spi_flash(target_s *const t, const size_t length, const 
 	target_flash_s *const f = &flash->f;
 	f->start = LPC43x0_SPI_FLASH_LOW_BASE;
 	f->length = length;
-	f->blocksize = 256; // TODO: Read the SFDP to determine this and other parameters
+	f->blocksize = 4096; // TODO: Read the SFDP to determine this and other parameters
 	//f->write = lpc43xx_spi_flash_write;
-	//f->erase = lpc43xx_spi_flash_erase;
+	f->erase = lpc43xx_spi_flash_erase;
 	f->erased = 0xffU;
 	target_add_flash(t, f);
 
@@ -403,16 +408,16 @@ static void lpc43x0_spi_read(target_s *const t, const uint32_t command, void *co
 		data[i] = target_mem_read8(t, LPC43x0_SPIFI_DATA);
 }
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-function"
-static void lpc43x0_spi_write(target_s *const t, const uint32_t command, const void *const buffer, const size_t length)
+static void lpc43x0_spi_write(target_s *const t, const uint32_t command, const target_addr_t address,
+	const void *const buffer, const size_t length)
 {
+	if ((command & LPC43x0_SPIFI_FRAME_MASK) != LPC43x0_SPIFI_FRAME_OPCODE_ONLY)
+		target_mem_write32(t, LPC43x0_SPIFI_ADDR, address);
 	target_mem_write32(t, LPC43x0_SPIFI_CMD, command);
 	const uint8_t *const data = (const uint8_t *)buffer;
 	for (size_t i = 0; i < length; ++i)
 		target_mem_write8(t, LPC43x0_SPIFI_DATA, data[i]);
 }
-#pragma GCC diagnostic pop
 
 static bool lpc43xx_spi_mass_erase(target_s *const t)
 {
@@ -430,6 +435,20 @@ static bool lpc43xx_spi_mass_erase(target_s *const t)
 
 	const lpc43xx_spi_flash_s *const flash = (lpc43xx_spi_flash_s *)t->flash;
 	target_mem_write32(t, LPC43x0_SPIFI_MCMD, flash->read_command);
+	return true;
+}
+
+static bool lpc43xx_spi_flash_erase(target_flash_s *f, target_addr_t addr, size_t length)
+{
+	target_s *const t = f->t;
+	const target_addr_t begin = addr - f->start;
+	for (size_t offset = 0; offset < length; offset += f->blocksize) {
+		lpc43x0_spi_write(t, SPI_FLASH_CMD_WRITE_ENABLE, 0, NULL, 0);
+		lpc43x0_spi_write(t, SPI_FLASH_CMD_SECTOR_ERASE, begin + offset, NULL, 0);
+		uint8_t status = SPI_FLASH_STATUS_BUSY;
+		while ((status & SPI_FLASH_STATUS_BUSY) == SPI_FLASH_STATUS_BUSY)
+			lpc43x0_spi_read(t, SPI_FLASH_CMD_READ_STATUS, &status, sizeof(status));
+	}
 	return true;
 }
 
