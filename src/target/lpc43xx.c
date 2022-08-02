@@ -182,7 +182,7 @@ static bool lpc43xx_cmd_reset(target_s *t, int argc, const char **argv);
 static bool lpc43xx_cmd_mkboot(target_s *t, int argc, const char **argv);
 
 static lpc43xx_partid_s lpc43x0_spi_read_partid(target_s *t);
-static void lpc43x0_spi_read(target_s *t, uint32_t command, void *buffer, size_t length);
+static void lpc43x0_spi_read(target_s *t, uint32_t command, target_addr_t address, void *buffer, size_t length);
 static void lpc43x0_spi_write(target_s *t, uint32_t command, target_addr_t address, const void *buffer, size_t length);
 static bool lpc43xx_spi_mass_erase(target_s *t);
 static bool lpc43xx_spi_flash_erase(target_flash_s *f, target_addr_t addr, size_t length);
@@ -345,7 +345,7 @@ static void lpc43xx_detect_flashless(target_s *const t, const lpc43xx_partid_s p
 
 	const uint32_t read_command = target_mem_read32(t, LPC43x0_SPIFI_MCMD);
 	spi_flash_id_s flash_id;
-	lpc43x0_spi_read(t, SPI_FLASH_CMD_READ_JEDEC_ID, &flash_id, sizeof(flash_id));
+	lpc43x0_spi_read(t, SPI_FLASH_CMD_READ_JEDEC_ID, 0, &flash_id, sizeof(flash_id));
 
 	/* If we read out valid Flash information, set up a region for it */
 	if (flash_id.manufacturer != 0xffU && flash_id.type != 0xffU && flash_id.capacity != 0xffU) {
@@ -404,8 +404,11 @@ static lpc43xx_partid_s lpc43x0_spi_read_partid(target_s *const t)
 	return result;
 }
 
-static void lpc43x0_spi_read(target_s *const t, const uint32_t command, void *const buffer, const size_t length)
+static void lpc43x0_spi_read(
+	target_s *const t, const uint32_t command, const target_addr_t address, void *const buffer, const size_t length)
 {
+	if ((command & LPC43x0_SPIFI_FRAME_MASK) != LPC43x0_SPIFI_FRAME_OPCODE_ONLY)
+		target_mem_write32(t, LPC43x0_SPIFI_ADDR, address);
 	target_mem_write32(t, LPC43x0_SPIFI_CMD, command | LPC43x0_SPIFI_DATA_LENGTH(length));
 	uint8_t *const data = (uint8_t *)buffer;
 	for (size_t i = 0; i < length; ++i)
@@ -432,7 +435,7 @@ static bool lpc43xx_spi_mass_erase(target_s *const t)
 
 	while (true) {
 		uint8_t status;
-		lpc43x0_spi_read(t, SPI_FLASH_CMD_READ_STATUS, &status, sizeof(status));
+		lpc43x0_spi_read(t, SPI_FLASH_CMD_READ_STATUS, 0, &status, sizeof(status));
 		if ((status & SPI_FLASH_STATUS_BUSY) != SPI_FLASH_STATUS_BUSY)
 			break;
 		target_print_progress(&timeout);
@@ -452,7 +455,7 @@ static bool lpc43xx_spi_flash_erase(target_flash_s *f, target_addr_t addr, size_
 		lpc43x0_spi_write(t, SPI_FLASH_CMD_SECTOR_ERASE, begin + offset, NULL, 0);
 		uint8_t status = SPI_FLASH_STATUS_BUSY;
 		while ((status & SPI_FLASH_STATUS_BUSY) == SPI_FLASH_STATUS_BUSY)
-			lpc43x0_spi_read(t, SPI_FLASH_CMD_READ_STATUS, &status, sizeof(status));
+			lpc43x0_spi_read(t, SPI_FLASH_CMD_READ_STATUS, 0, &status, sizeof(status));
 	}
 
 	const lpc43xx_spi_flash_s *const flash = (lpc43xx_spi_flash_s *)t->flash;
@@ -471,7 +474,7 @@ static bool lpc43xx_spi_flash_write(target_flash_s *f, target_addr_t dest, const
 		lpc43x0_spi_write(t, SPI_FLASH_CMD_PAGE_PROGRAM, begin + offset, buffer + offset, amount);
 		uint8_t status = SPI_FLASH_STATUS_BUSY;
 		while ((status & SPI_FLASH_STATUS_BUSY) == SPI_FLASH_STATUS_BUSY)
-			lpc43x0_spi_read(t, SPI_FLASH_CMD_READ_STATUS, &status, sizeof(status));
+			lpc43x0_spi_read(t, SPI_FLASH_CMD_READ_STATUS, 0, &status, sizeof(status));
 	}
 
 	const lpc43xx_spi_flash_s *const flash = (lpc43xx_spi_flash_s *)t->flash;
