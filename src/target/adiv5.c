@@ -643,7 +643,7 @@ ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel)
 	tmpap.csw = adiv5_ap_read(&tmpap, ADIV5_AP_CSW) & ~(ADIV5_AP_CSW_SIZE_MASK | ADIV5_AP_CSW_ADDRINC_MASK);
 
 	if (tmpap.csw & ADIV5_AP_CSW_TRINPROG) {
-		DEBUG_WARN("AP %d: Transaction in progress. AP is not be usable!\n", apsel);
+		DEBUG_WARN("AP %d: Transaction in progress. AP is not usable!\n", apsel);
 		return NULL;
 	}
 
