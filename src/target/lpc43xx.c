@@ -168,7 +168,8 @@
 	(LPC43x0_SPIFI_CMD_SERIAL | LPC43x0_SPIFI_FRAME_OPCODE_3B_ADDR | LPC43x0_SPIFI_OPCODE(0x5aU) | \
 		LPC43x0_SPIFI_DATA_IN | LPC43x0_SPIFI_INTER_LENGTH(1))
 
-#define SPI_FLASH_STATUS_BUSY 0x01U
+#define SPI_FLASH_STATUS_BUSY          0x01U
+#define SPI_FLASH_STATUS_WRITE_ENABLED 0x02U
 
 typedef struct lpc43xx_partid {
 	uint32_t part;
@@ -448,20 +449,31 @@ static void lpc43x0_spi_write(target_s *const t, const uint32_t command, const t
 	lpc43x0_spi_wait_complete(t);
 }
 
+static inline uint8_t lpc43x0_spi_read_status(target_s *const t)
+{
+	uint8_t status;
+	lpc43x0_spi_read(t, SPI_FLASH_CMD_READ_STATUS, 0, &status, sizeof(status));
+	return status;
+}
+
+static void lpc43x0_spi_run_command(target_s *const t, const uint32_t command)
+{
+	target_mem_write32(t, LPC43x0_SPIFI_CMD, command);
+	lpc43x0_spi_wait_complete(t);
+}
+
 static bool lpc43x0_spi_mass_erase(target_s *const t)
 {
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500);
-	target_mem_write32(t, LPC43x0_SPIFI_CMD, SPI_FLASH_CMD_WRITE_ENABLE);
-	target_mem_write32(t, LPC43x0_SPIFI_CMD, SPI_FLASH_CMD_CHIP_ERASE);
+	lpc43x0_spi_abort(t);
+	lpc43x0_spi_run_command(t, SPI_FLASH_CMD_WRITE_ENABLE);
+	if (!(lpc43x0_spi_read_status(t) & SPI_FLASH_STATUS_WRITE_ENABLED))
+		return false;
 
-	while (true) {
-		uint8_t status;
-		lpc43x0_spi_read(t, SPI_FLASH_CMD_READ_STATUS, 0, &status, sizeof(status));
-		if ((status & SPI_FLASH_STATUS_BUSY) != SPI_FLASH_STATUS_BUSY)
-			break;
+	lpc43x0_spi_run_command(t, SPI_FLASH_CMD_CHIP_ERASE);
+	while (lpc43x0_spi_read_status(t) & SPI_FLASH_STATUS_BUSY)
 		target_print_progress(&timeout);
-	}
 
 	const lpc43xx_spi_flash_s *const flash = (lpc43xx_spi_flash_s *)t->flash;
 	target_mem_write32(t, LPC43x0_SPIFI_MCMD, flash->read_command);
