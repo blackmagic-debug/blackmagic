@@ -341,6 +341,9 @@ static void lpc43xx_detect_flashless(target_s *const t, const lpc43xx_partid_s p
 		target_add_ram(t, LPC4370_M0_SRAM_BASE, LPC4370_M0_SRAM_SIZE);
 		target_add_ram(t, LPC43xx_AHB_SRAM_BASE, LPC43x5_AHB_SRAM_SIZE);
 		break;
+	default:
+		DEBUG_WARN("Probable LPC43x0 with ID errata: %08" PRIx32 "\n", part_id.part);
+		break;
 	}
 
 	const uint32_t read_command = target_mem_read32(t, LPC43x0_SPIFI_MCMD);
