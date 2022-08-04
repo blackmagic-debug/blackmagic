@@ -39,7 +39,7 @@
 #include "target_internal.h"
 #include "cortexm.h"
 
-static int samd_flash_erase(struct target_flash *t, target_addr addr, size_t len);
+static int samd_flash_erase(struct target_flash *f, target_addr addr, size_t len);
 static int samd_flash_write(struct target_flash *f, target_addr dest, const void *src, size_t len);
 bool samd_mass_erase(target *t);
 
@@ -99,8 +99,8 @@ const struct command_s samd_cmd_list[] = {
 #define SAMD_NVM_USER_ROW_LOW		0x00804000
 #define SAMD_NVM_USER_ROW_HIGH		0x00804004
 #define SAMD_NVM_CALIBRATION		0x00806020
-#define SAMD_NVM_SERIAL(n)		(0x0080A00C + (0x30 * ((n + 3) / 4)) + \
-					 (0x4 * n))
+#define SAMD_NVM_SERIAL(n)		(0x0080A00C + (0x30 * (((n) + 3) / 4)) + \
+					 ((n) * 4))
 
 /* -------------------------------------------------------------------------- */
 /* Device Service Unit (DSU) Registers */
@@ -379,7 +379,7 @@ struct samd_descr samd_parse_device_id(uint32_t did)
 		default: samd.series = 0; break;
 	}
 	/* Revision */
-	samd.revision = 'A' + revision;
+	samd.revision = (char)('A' + revision);
 
 	switch (samd.series) {
 	case 20: /* SAM D20 */
