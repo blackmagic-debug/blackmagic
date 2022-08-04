@@ -135,7 +135,7 @@ const struct command_s samd_cmd_list[] = {
 #define SAMD_DID_REVISION_POS		8
 #define SAMD_DID_SERIES_MASK		0x1F
 #define SAMD_DID_SERIES_POS		16
-#define SAMD_DID_FAMILY_MASK		0x1F
+#define SAMD_DID_FAMILY_MASK		0x3F
 #define SAMD_DID_FAMILY_POS		23
 
 /* Peripheral ID */
