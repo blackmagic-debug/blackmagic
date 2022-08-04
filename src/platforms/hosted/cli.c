@@ -235,6 +235,7 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 	opt->opt_flash_start = 0xffffffff;
 	opt->opt_max_swj_frequency = 4000000;
 	opt->opt_scanmode = BMP_SCAN_SWD;
+	opt->opt_mode = BMP_MODE_DEBUG;
 	while((c = getopt_long(argc, argv, "eEhHv:d:f:s:I:c:Cln:m:M:wVtTa:S:jApP:rR::", long_options, NULL)) != -1) {
 		switch(c) {
 		case 'c':
