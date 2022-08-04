@@ -53,14 +53,14 @@ static bool samd_cmd_mbist(target *t, int argc, const char **argv);
 static bool samd_cmd_ssb(target *t, int argc, const char **argv);
 
 const struct command_s samd_cmd_list[] = {
-	{"lock_flash", (cmd_handler)samd_cmd_lock_flash, "Locks flash against spurious commands"},
-	{"unlock_flash", (cmd_handler)samd_cmd_unlock_flash, "Unlocks flash"},
-	{"lock_bootprot", (cmd_handler)samd_cmd_lock_bootprot, "Lock the boot protections to maximum"},
-	{"unlock_bootprot", (cmd_handler)samd_cmd_unlock_bootprot, "Unlock the boot protections to minimum"},
-	{"user_row", (cmd_handler)samd_cmd_read_userrow, "Prints user row from flash"},
-	{"serial", (cmd_handler)samd_cmd_serial, "Prints serial number"},
-	{"mbist", (cmd_handler)samd_cmd_mbist, "Runs the built-in memory test"},
-	{"set_security_bit", (cmd_handler)samd_cmd_ssb, "Sets the Security Bit"},
+	{"lock_flash", samd_cmd_lock_flash, "Locks flash against spurious commands"},
+	{"unlock_flash", samd_cmd_unlock_flash, "Unlocks flash"},
+	{"lock_bootprot", samd_cmd_lock_bootprot, "Lock the boot protections to maximum"},
+	{"unlock_bootprot", samd_cmd_unlock_bootprot, "Unlock the boot protections to minimum"},
+	{"user_row", samd_cmd_read_userrow, "Prints user row from flash"},
+	{"serial", samd_cmd_serial, "Prints serial number"},
+	{"mbist", samd_cmd_mbist, "Runs the built-in memory test"},
+	{"set_security_bit", samd_cmd_ssb, "Sets the Security Bit"},
 	{NULL, NULL, NULL}
 };
 
