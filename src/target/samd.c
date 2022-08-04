@@ -65,85 +65,84 @@ const struct command_s samd_cmd_list[] = {
 };
 
 /* Non-Volatile Memory Controller (NVMC) Parameters */
-#define SAMD_ROW_SIZE			256
-#define SAMD_PAGE_SIZE			64
+#define SAMD_ROW_SIZE  256
+#define SAMD_PAGE_SIZE 64
 
 /* -------------------------------------------------------------------------- */
 /* Non-Volatile Memory Controller (NVMC) Registers */
 /* -------------------------------------------------------------------------- */
 
-#define SAMD_NVMC			0x41004000
-#define SAMD_NVMC_CTRLA			(SAMD_NVMC + 0x0)
-#define SAMD_NVMC_CTRLB			(SAMD_NVMC + 0x04)
-#define SAMD_NVMC_PARAM			(SAMD_NVMC + 0x08)
-#define SAMD_NVMC_INTFLAG		(SAMD_NVMC + 0x14)
-#define SAMD_NVMC_STATUS		(SAMD_NVMC + 0x18)
-#define SAMD_NVMC_ADDRESS		(SAMD_NVMC + 0x1C)
+#define SAMD_NVMC         0x41004000
+#define SAMD_NVMC_CTRLA   (SAMD_NVMC + 0x0)
+#define SAMD_NVMC_CTRLB   (SAMD_NVMC + 0x04)
+#define SAMD_NVMC_PARAM   (SAMD_NVMC + 0x08)
+#define SAMD_NVMC_INTFLAG (SAMD_NVMC + 0x14)
+#define SAMD_NVMC_STATUS  (SAMD_NVMC + 0x18)
+#define SAMD_NVMC_ADDRESS (SAMD_NVMC + 0x1C)
 
 /* Control A Register (CTRLA) */
-#define SAMD_CTRLA_CMD_KEY		0xA500
-#define SAMD_CTRLA_CMD_ERASEROW		0x0002
-#define SAMD_CTRLA_CMD_WRITEPAGE	0x0004
-#define SAMD_CTRLA_CMD_ERASEAUXROW	0x0005
-#define SAMD_CTRLA_CMD_WRITEAUXPAGE	0x0006
-#define SAMD_CTRLA_CMD_LOCK		0x0040
-#define SAMD_CTRLA_CMD_UNLOCK		0x0041
-#define SAMD_CTRLA_CMD_PAGEBUFFERCLEAR	0x0044
-#define SAMD_CTRLA_CMD_SSB		0x0045
-#define SAMD_CTRLA_CMD_INVALL		0x0046
+#define SAMD_CTRLA_CMD_KEY             0xA500
+#define SAMD_CTRLA_CMD_ERASEROW        0x0002
+#define SAMD_CTRLA_CMD_WRITEPAGE       0x0004
+#define SAMD_CTRLA_CMD_ERASEAUXROW     0x0005
+#define SAMD_CTRLA_CMD_WRITEAUXPAGE    0x0006
+#define SAMD_CTRLA_CMD_LOCK            0x0040
+#define SAMD_CTRLA_CMD_UNLOCK          0x0041
+#define SAMD_CTRLA_CMD_PAGEBUFFERCLEAR 0x0044
+#define SAMD_CTRLA_CMD_SSB             0x0045
+#define SAMD_CTRLA_CMD_INVALL          0x0046
 
 /* Interrupt Flag Register (INTFLAG) */
-#define SAMD_NVMC_READY			(1 << 0)
+#define SAMD_NVMC_READY (1 << 0)
 
 /* Non-Volatile Memory Calibration and Auxiliary Registers */
-#define SAMD_NVM_USER_ROW_LOW		0x00804000
-#define SAMD_NVM_USER_ROW_HIGH		0x00804004
-#define SAMD_NVM_CALIBRATION		0x00806020
-#define SAMD_NVM_SERIAL(n)		(0x0080A00C + (0x30 * (((n) + 3) / 4)) + \
-					 ((n) * 4))
+#define SAMD_NVM_USER_ROW_LOW  0x00804000
+#define SAMD_NVM_USER_ROW_HIGH 0x00804004
+#define SAMD_NVM_CALIBRATION   0x00806020
+#define SAMD_NVM_SERIAL(n)     (0x0080A00C + (0x30 * (((n) + 3) / 4)) + ((n)*4))
 
 /* -------------------------------------------------------------------------- */
 /* Device Service Unit (DSU) Registers */
 /* -------------------------------------------------------------------------- */
 
-#define SAMD_DSU			0x41002000
-#define SAMD_DSU_EXT_ACCESS		(SAMD_DSU + 0x100)
-#define SAMD_DSU_CTRLSTAT		(SAMD_DSU_EXT_ACCESS + 0x0)
-#define SAMD_DSU_ADDRESS		(SAMD_DSU_EXT_ACCESS + 0x4)
-#define SAMD_DSU_LENGTH			(SAMD_DSU_EXT_ACCESS + 0x8)
-#define SAMD_DSU_DID			(SAMD_DSU_EXT_ACCESS + 0x018)
-#define SAMD_DSU_PID			(SAMD_DSU + 0x1000)
-#define SAMD_DSU_CID			(SAMD_DSU + 0x1010)
+#define SAMD_DSU            0x41002000
+#define SAMD_DSU_EXT_ACCESS (SAMD_DSU + 0x100)
+#define SAMD_DSU_CTRLSTAT   (SAMD_DSU_EXT_ACCESS + 0x0)
+#define SAMD_DSU_ADDRESS    (SAMD_DSU_EXT_ACCESS + 0x4)
+#define SAMD_DSU_LENGTH     (SAMD_DSU_EXT_ACCESS + 0x8)
+#define SAMD_DSU_DID        (SAMD_DSU_EXT_ACCESS + 0x018)
+#define SAMD_DSU_PID        (SAMD_DSU + 0x1000)
+#define SAMD_DSU_CID        (SAMD_DSU + 0x1010)
 
 /* Control and Status Register (CTRLSTAT) */
-#define SAMD_CTRL_CHIP_ERASE		(1 << 4)
-#define SAMD_CTRL_MBIST			(1 << 3)
-#define SAMD_CTRL_CRC			(1 << 2)
-#define SAMD_STATUSA_PERR		(1 << 12)
-#define SAMD_STATUSA_FAIL		(1 << 11)
-#define SAMD_STATUSA_BERR		(1 << 10)
-#define SAMD_STATUSA_CRSTEXT		(1 << 9)
-#define SAMD_STATUSA_DONE		(1 << 8)
-#define SAMD_STATUSB_PROT		(1 << 16)
+#define SAMD_CTRL_CHIP_ERASE (1 << 4)
+#define SAMD_CTRL_MBIST      (1 << 3)
+#define SAMD_CTRL_CRC        (1 << 2)
+#define SAMD_STATUSA_PERR    (1 << 12)
+#define SAMD_STATUSA_FAIL    (1 << 11)
+#define SAMD_STATUSA_BERR    (1 << 10)
+#define SAMD_STATUSA_CRSTEXT (1 << 9)
+#define SAMD_STATUSA_DONE    (1 << 8)
+#define SAMD_STATUSB_PROT    (1 << 16)
 
 /* Device Identification Register (DID) */
-#define SAMD_DID_MASK			0xFF380000
-#define SAMD_DID_CONST_VALUE		0x10000000
-#define SAMD_DID_DEVSEL_MASK		0xFF
-#define SAMD_DID_DEVSEL_POS		0
-#define SAMD_DID_REVISION_MASK		0x0F
-#define SAMD_DID_REVISION_POS		8
-#define SAMD_DID_SERIES_MASK		0x1F
-#define SAMD_DID_SERIES_POS		16
-#define SAMD_DID_FAMILY_MASK		0x3F
-#define SAMD_DID_FAMILY_POS		23
+#define SAMD_DID_MASK          0xFF380000
+#define SAMD_DID_CONST_VALUE   0x10000000
+#define SAMD_DID_DEVSEL_MASK   0xFF
+#define SAMD_DID_DEVSEL_POS    0
+#define SAMD_DID_REVISION_MASK 0x0F
+#define SAMD_DID_REVISION_POS  8
+#define SAMD_DID_SERIES_MASK   0x1F
+#define SAMD_DID_SERIES_POS    16
+#define SAMD_DID_FAMILY_MASK   0x3F
+#define SAMD_DID_FAMILY_POS    23
 
 /* Peripheral ID */
-#define SAMD_PID_MASK			0x00F7FFFF
-#define SAMD_PID_CONST_VALUE		0x0001FCD0
+#define SAMD_PID_MASK        0x00F7FFFF
+#define SAMD_PID_CONST_VALUE 0x0001FCD0
 
 /* Component ID */
-#define SAMD_CID_VALUE			0xB105100D
+#define SAMD_CID_VALUE 0xB105100D
 
 /* Family parts */
 struct samd_part {
