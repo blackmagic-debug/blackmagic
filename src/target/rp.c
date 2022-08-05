@@ -148,8 +148,16 @@ static int rp_flash_write(struct target_flash *f, target_addr dest, const void *
 
 static bool rp_read_rom_func_table(target *t);
 static bool rp_attach(target *t);
+static void rp_flash_prepare(target *t);
+static void rp_flash_resume(target *t);
+static void rp_spi_read(target *t, uint16_t command, target_addr address, void *buffer, size_t length);
 static uint32_t rp_get_flash_length(target *t);
 static bool rp_mass_erase(target *t);
+
+static void rp_spi_read_sfdp(target *const t, const uint32_t address, void *const buffer, const size_t length)
+{
+	rp_spi_read(t, SPI_FLASH_CMD_READ_SFDP, address, buffer, length);
+}
 
 static void rp_add_flash(target *t, uint32_t addr, size_t length)
 {
@@ -206,10 +214,19 @@ static bool rp_attach(target *t)
 	/* Free previously loaded memory map */
 	target_mem_map_free(t);
 
-	size_t size = rp_get_flash_length(t);
-	DEBUG_INFO("Flash size: %zu MB\n", size / (1024U * 1024U));
+	spi_parameters_s spi_parameters;
+	rp_flash_prepare(t);
+	if (!sfdp_read_parameters(t, &spi_parameters, rp_spi_read_sfdp)) {
+		rp_flash_resume(t);
+		/* SFDP readout failed, so make some assumptions and hope for the best. */
+		spi_parameters.capacity = rp_get_flash_length(t);
+	}
+	else
+		rp_flash_resume(t);
 
-	rp_add_flash(t, RP_XIP_FLASH_BASE, size);
+	DEBUG_INFO("Flash size: %zu MB\n", spi_parameters.capacity / (1024U * 1024U));
+
+	rp_add_flash(t, RP_XIP_FLASH_BASE, spi_parameters.capacity);
 	target_add_ram(t, RP_SRAM_BASE, RP_SRAM_SIZE);
 
 	return true;
