@@ -34,10 +34,16 @@
 #include "target_internal.h"
 #include "target_probe.h"
 #include "cortexm.h"
+#include "gdb_reg.h"
 #include "command.h"
 #include "gdb_packet.h"
 #include "semihosting.h"
+#include "platform.h"
 
+#include <string.h>
+#include <assert.h>
+#include <malloc.h>
+#include <stdio.h>
 #include <unistd.h>
 
 #if PC_HOSTED == 1
@@ -56,6 +62,8 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #endif
+
+#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
 
 static const char cortexm_driver_str[] = "ARM Cortex-M";
 
@@ -134,8 +142,98 @@ static const uint32_t regnum_cortex_mf[] = {
 	0x58, 0x59, 0x5a, 0x5b, 0x5c, 0x5d, 0x5e, 0x5f, /* s24-s31 */
 };
 
-/* clang-format off */
-static const char tdesc_cortex_m[] =
+
+
+/**
+ * Fields for Cortex-M special purpose registers, used in the generation of GDB's target description XML.
+ * The general purpose registers r0-r12 and the vector floating point registers d0-d15 all follow a very
+ * regular format, so we only need to store fields for the special purpose registers.
+ * The arrays for each SPR field have the same order as each other, making each of them a pseudo
+ * 'associative array'.
+ */
+
+
+// Strings for the names of the Cortex-M's special purpose registers.
+static const char *cortex_m_spr_names[] = {
+	"sp",
+	"lr",
+	"pc",
+	"xpsr",
+	"msp",
+	"psp",
+	"primask",
+	"basepri",
+	"faultmask",
+	"control",
+};
+
+// The "type" field for each Cortex-M special purpose register.
+static const gdb_reg_type_e cortex_m_spr_types[] = {
+	GDB_TYPE_DATA_PTR,    // sp
+	GDB_TYPE_CODE_PTR,    // lr
+	GDB_TYPE_CODE_PTR,    // pc
+	GDB_TYPE_UNSPECIFIED, // xpsr
+	GDB_TYPE_DATA_PTR,    // msp
+	GDB_TYPE_DATA_PTR,    // psp
+	GDB_TYPE_UNSPECIFIED, // primask
+	GDB_TYPE_UNSPECIFIED, // basepri
+	GDB_TYPE_UNSPECIFIED, // faultmask
+	GDB_TYPE_UNSPECIFIED, // control
+};
+
+static_assert(ARRAY_SIZE(cortex_m_spr_types) == ARRAY_SIZE(cortex_m_spr_names),
+	"SPR array length mismatch! SPR type array should have the same length as SPR name array."
+);
+
+
+// The "save-restore" field of each SPR.
+static const gdb_reg_save_restore_e cortex_m_spr_save_restores[] = {
+	GDB_SAVE_RESTORE_UNSPECIFIED, // sp
+	GDB_SAVE_RESTORE_UNSPECIFIED, // lr
+	GDB_SAVE_RESTORE_UNSPECIFIED, // pc
+	GDB_SAVE_RESTORE_UNSPECIFIED, // xpsr
+	GDB_SAVE_RESTORE_NO,          // msp
+	GDB_SAVE_RESTORE_NO,          // psp
+	GDB_SAVE_RESTORE_NO,          // primask
+	GDB_SAVE_RESTORE_NO,          // basepri
+	GDB_SAVE_RESTORE_NO,          // faultmask
+	GDB_SAVE_RESTORE_NO,          // control
+};
+
+static_assert(ARRAY_SIZE(cortex_m_spr_save_restores) == ARRAY_SIZE(cortex_m_spr_names),
+	"SPR array length mismatch! SPR save-restore array should have the same length as SPR name array."
+);
+
+
+// The "bitsize" field of each SPR.
+static const uint8_t cortex_m_spr_bitsizes[] = {
+	32, // sp
+	32, // lr
+	32, // pc
+	32, // xpsr
+	32, // msp
+	32, // psp
+	 8, // primask
+	 8, // basepri
+	 8, // faultmask
+	 8, // control
+};
+
+static_assert(ARRAY_SIZE(cortex_m_spr_bitsizes) == ARRAY_SIZE(cortex_m_spr_names),
+	"SPR array length mismatch! SPR bitsize array should have the same length as SPR name array."
+);
+
+
+// Creates the target description XML string for a Cortex-M. Like snprintf(), this function
+// will write no more than max_len and returns the amount of bytes written. Or, if max_len is 0,
+// then this function will return the amount of bytes that _would_ be necessary to create this
+// string.
+//
+// This function is hand-optimized to decrease string duplication and thus code size, making it
+// unforunately much less readable than the string literal it is equivalent to.
+//
+// The string it creates is XML-equivalent to the following:
+/*
 	"<?xml version=\"1.0\"?>"
 	"<!DOCTYPE target SYSTEM \"gdb-target.dtd\">"
 	"<target>"
@@ -165,9 +263,80 @@ static const char tdesc_cortex_m[] =
 	"    <reg name=\"faultmask\" bitsize=\"8\" save-restore=\"no\"/>"
 	"    <reg name=\"control\" bitsize=\"8\" save-restore=\"no\"/>"
 	"  </feature>"
-	"</target>";
+	"</target>"
+*/
+static size_t create_tdesc_cortex_m(char *buffer, size_t max_len)
+{
+	size_t total = 0;
 
-static const char tdesc_cortex_mf[] =
+	// We can't just repeatedly pass max_len to snprintf, because we keep changing the start
+	// of buffer (effectively changing its size), so we have to repeatedly compute the size
+	// passed to snprintf by subtracting the current total from max_len.
+	// ...Unless max_len is 0, in which case that subtraction will result in an (underflowed)
+	// negative number. So we also have to repatedly check if max_len is 0 before performing
+	// that subtraction.
+	size_t printsz = max_len;
+
+	if (buffer != NULL)
+		memset(buffer, 0, max_len);
+
+	// Start with the "preamble", which is generic across ARM targets,
+	// ...save for one word, so we'll have to do the preamble in halves.
+	total += snprintf(buffer, printsz,
+		"%s target %s "
+		"<feature name=\"org.gnu.gdb.arm.m-profile\">",
+		gdb_arm_preamble_first,
+		gdb_arm_preamble_second
+	);
+
+	// Then the general purpose registers, which have names of r0 to r12,
+	// and all the same bitsize.
+	for (uint8_t i = 0; i <= 12; ++i) {
+
+		if (max_len != 0)
+			printsz = max_len - total;
+
+		total += snprintf(buffer + total, printsz, "<reg name=\"r%d\" bitsize=\"32\"/>", i);
+	}
+
+	// Now for sp, lr, pc, xpsr, msp, psp, primask, basepri, faultmask, and control.
+	// These special purpose registers are a little more complicated.
+	// Some of them have different bitsizes, specified types, or specified save-restore values.
+	// We'll use the 'associative arrays' defined for those values.
+	for (size_t i = 0; i < ARRAY_SIZE(cortex_m_spr_names); ++i) {
+
+		if (max_len != 0)
+			printsz = max_len - total;
+
+		gdb_reg_type_e type = cortex_m_spr_types[i];
+		gdb_reg_save_restore_e save_restore = cortex_m_spr_save_restores[i];
+
+		total += snprintf(buffer + total, printsz, "<reg name=\"%s\" bitsize=\"%d\"%s%s/>",
+			cortex_m_spr_names[i],
+			cortex_m_spr_bitsizes[i],
+			gdb_reg_save_restore_strings[save_restore],
+			gdb_reg_type_strings[type]
+		);
+	}
+
+	if (max_len != 0)
+		printsz = max_len - total;
+
+	total += snprintf(buffer + total, printsz, "</feature></target>");
+
+	return total;
+}
+
+// Creates the target description XML string for a Cortex-MF. Like snprintf(), this function
+// will write no more than max_len and returns the amount of bytes written. Or, if max_len is 0,
+// then this function will return the amount of bytes that _would_ be necessary to create this
+// string.
+//
+// This function is hand-optimized to decrease string duplication and thus code size, making it
+// unforunately much less readable than the string literal it is equivalent to.
+//
+// The string it creates is XML-equivalent to the following:
+/*
 	"<?xml version=\"1.0\"?>"
 	"<!DOCTYPE target SYSTEM \"gdb-target.dtd\">"
 	"<target>"
@@ -216,8 +385,52 @@ static const char tdesc_cortex_mf[] =
 	"    <reg name=\"d14\" bitsize=\"64\" type=\"float\"/>"
 	"    <reg name=\"d15\" bitsize=\"64\" type=\"float\"/>"
 	"  </feature>"
-	"</target>";
-/* clang-format on */
+	"</target>"
+*/
+static size_t create_tdesc_cortex_mf(char *buffer, size_t max_len)
+{
+	// The first part of the target description for the Cortex-MF is identical to the Cortex-M
+	// target description.
+	size_t total = create_tdesc_cortex_m(buffer, max_len);
+
+	// We can't just repeatedly pass max_len to snprintf, because we keep changing the start
+	// of buffer (effectively changing its size), so we have to repeatedly compute the size
+	// passed to snprintf by subtracting the current total from max_len.
+	// ...Unless max_len is 0, in which case that subtraction will result in an (underflowed)
+	// negative number. So we also have to repatedly check if max_len is 0 before perofmring
+	// that subtraction.
+	size_t printsz = max_len;
+
+	if (max_len != 0) {
+		// Minor hack: subtract the target closing tag, since we have a bit more to add.
+		total -= strlen("</target>");
+
+		printsz = max_len - total;
+	}
+
+
+	total += snprintf(buffer + total, printsz,
+		"<feature name=\"org.gnu.gdb.arm.vfp\">"
+		"<reg name=\"fpscr\" bitsize=\"32\"/>"
+	);
+
+	// After fpscr, the rest of the vfp registers follow a regular format: d0-d15, bitsize 64, type float.
+	for (uint8_t i = 0; i <= 15; ++i) {
+
+		if (max_len != 0)
+			printsz = max_len - total;
+
+		total += snprintf(buffer + total, printsz, "<reg name=\"d%u\" bitsize=\"64\" type=\"float\"/>", i);
+	}
+
+	if (max_len != 0)
+		printsz = max_len - total;
+
+	total += snprintf(buffer + total, printsz, "</feature></target>");
+
+	return total;
+}
+
 
 ADIv5_AP_t *cortexm_ap(target *t)
 {
@@ -351,8 +564,32 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 	t->attach = cortexm_attach;
 	t->detach = cortexm_detach;
 
+	/* Probe for FP extension. */
+	bool is_cortexmf = false;
+	uint32_t cpacr = target_mem_read32(t, CORTEXM_CPACR);
+	cpacr |= 0x00F00000; /* CP10 = 0b11, CP11 = 0b11 */
+	target_mem_write32(t, CORTEXM_CPACR, cpacr);
+	if (target_mem_read32(t, CORTEXM_CPACR) == cpacr)
+		is_cortexmf = true;
+
+
 	/* Should probe here to make sure it's Cortex-M3 */
-	t->tdesc = tdesc_cortex_m;
+
+	// Find the buffer size needed for the target description string we need to send to GDB,
+	// and then compute the string itself.
+	size_t size_needed;
+	char *buffer;
+	if (!is_cortexmf) {
+		size_needed = create_tdesc_cortex_m(NULL, 0) + 1;
+		buffer = malloc(size_needed);
+		create_tdesc_cortex_m(buffer, size_needed);
+	} else {
+		size_needed = create_tdesc_cortex_mf(NULL, 0) + 1;
+		buffer = malloc(size_needed);
+		create_tdesc_cortex_mf(buffer, size_needed);
+	}
+
+	t->tdesc = buffer;
 	t->regs_read = cortexm_regs_read;
 	t->regs_write = cortexm_regs_write;
 	t->reg_read = cortexm_reg_read;
@@ -369,14 +606,9 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 
 	target_add_commands(t, cortexm_cmd_list, cortexm_driver_str);
 
-	/* Probe for FP extension */
-	uint32_t cpacr = target_mem_read32(t, CORTEXM_CPACR);
-	cpacr |= 0x00F00000; /* CP10 = 0b11, CP11 = 0b11 */
-	target_mem_write32(t, CORTEXM_CPACR, cpacr);
-	if (target_mem_read32(t, CORTEXM_CPACR) == cpacr) {
+	if (is_cortexmf) {
 		t->target_options |= TOPT_FLAVOUR_V7MF;
 		t->regs_size += sizeof(regnum_cortex_mf);
-		t->tdesc = tdesc_cortex_mf;
 	}
 
 	/* Default vectors to catch */

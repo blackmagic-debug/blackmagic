@@ -31,7 +31,12 @@
 #include "exception.h"
 #include "adiv5.h"
 #include "target.h"
+#include "gdb_reg.h"
 #include "target_internal.h"
+
+#include <assert.h>
+
+#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
 
 static const char cortexa_driver_str[] = "ARM Cortex-A";
 
@@ -154,8 +159,46 @@ struct cortexa_priv {
 /* Thumb mode bit in CPSR */
 #define CPSR_THUMB               (1 << 5)
 
-/* GDB register map / target description */
-static const char tdesc_cortex_a[] =
+
+/**
+ * Fields for Cortex-A special purpose registers, used in the generation of GDB's target description XML.
+ * The general purpose registers r0-r12 and the vector floating point registers d0-d15 all follow a very
+ * regular format, so we only need to store fields for the special purpose registers.
+ * The arrays for each SPR field have the same order as each other, making each of them as pseduo
+ * 'associative array'.
+ */
+
+// Strings for the names of the Cortex-A's special purpose registers.
+static const char *cortex_a_spr_names[] = {
+	"sp",
+	"lr",
+	"pc",
+	"cpsr"
+};
+
+// The "type" field for each Cortex-A special purpose register.
+static const gdb_reg_type_e cortex_a_spr_types[] = {
+	GDB_TYPE_DATA_PTR,   // sp
+	GDB_TYPE_CODE_PTR,   // lr
+	GDB_TYPE_CODE_PTR,   // pc
+	GDB_TYPE_UNSPECIFIED // cpsr
+};
+
+static_assert(ARRAY_SIZE(cortex_a_spr_types) == ARRAY_SIZE(cortex_a_spr_names),
+	"SPR array length mixmatch! SPR type array should have the same length as SPR name array."
+);
+
+
+// Creates the target description XML string for a Cortex-A. Like snprintf(), this function
+// will write no more than max_len and returns the amount of bytes written. Or, if max_len is 0,
+// then this function will return the amount of bytes that _would_ be necessary to create this
+// string.
+//
+// This function is hand-optimized to decrease string duplication and thus code size, making it
+// Unfortunately much less readable than the string literal it is equivalent to.
+//
+// The string it creates is XML-equivalent to the following:
+/*
 	"<?xml version=\"1.0\"?>"
 	"<!DOCTYPE feature SYSTEM \"gdb-target.dtd\">"
 	"<target>"
@@ -199,6 +242,90 @@ static const char tdesc_cortex_a[] =
 	"    <reg name=\"d15\" bitsize=\"64\" type=\"float\"/>"
 	"  </feature>"
 	"</target>";
+*/
+// Returns the amount of characters written to the buffer.
+static size_t create_tdesc_cortex_a(char *buffer, size_t max_len)
+{
+	size_t total = 0;
+
+	// We can't just repeatedly pass max_len to snprintf, because we keep changing the start
+	// of buffer (effectively changing its size), so we have to repeatedly compute the size
+	// passed to snprintf by subtracting the current total from max_len.
+	// ...Unless max_len is 0, in which case that subtraction will result in an (underflowed)
+	// negative number. So we also have to repeatedly check if max_len is 0 before performing
+	// that subtraction.
+	size_t printsz = max_len;
+
+
+	if (buffer != NULL)
+		memset(buffer, 0, max_len);
+
+	// Start with the "preamble", which is generic across ARM targets,
+	// ...save for one word, so we'll have to do the preamble in halves, and then we'll
+	// follow it with the GDB ARM Core feature tag.
+	total += snprintf(buffer, printsz,
+		"%s feature %s "
+		"<feature name=\"org.gnu.gdb.arm.core\">",
+		gdb_arm_preamble_first,
+		gdb_arm_preamble_second
+	);
+
+	// Then the general purpose registers, which have names of r0 to r12.
+	for (uint8_t i = 0; i <= 12; ++i) {
+
+		if (max_len != 0)
+			printsz = max_len - total;
+
+		total += snprintf(buffer + total, printsz, "<reg name=\"r%d\" bitsize=\"32\"/>", i);
+	}
+
+	// The special purpose registers are a slightly more complicated.
+	// Some of them have different types specified, however unlike the Cortex-M SPRs,
+	// all of the Cortex-A target description SPRs have the same bitsize, and none of them
+	// have a specified save-restore value. So we only need one "associative array" here.
+	for (size_t i = 0; i < ARRAY_SIZE(cortex_a_spr_names); ++i) {
+
+		gdb_reg_type_e type = cortex_a_spr_types[i];
+
+		if (max_len != 0)
+			printsz = max_len - total;
+
+		total += snprintf(buffer + total, printsz, "<reg name=\"%s\" bitsize=\"32\"%s/>",
+			cortex_a_spr_names[i],
+			gdb_reg_type_strings[type]
+		);
+	}
+
+	if (max_len != 0)
+		printsz = max_len - total;
+
+	// Now onto the floating point registers.
+	// The first register is unique; the rest all follow the same format.
+	total += snprintf(buffer + total, printsz,
+		"</feature>"
+		"<feature name=\"org.gnu.gdb.arm.vfp\">"
+		"<reg name=\"fpscr\" bitsize=\"32\"/>"
+	);
+
+	// Now onto the simple ones.
+	for (uint8_t i = 0; i <= 15; ++i) {
+		if (max_len != 0)
+			printsz = max_len - total;
+
+		total += snprintf(buffer + total, printsz,
+			"<reg name=\"d%d\" bitsize=\"64\" type=\"float\"/>",
+			i
+		);
+	}
+
+	if (max_len != 0)
+		printsz = max_len - total;
+
+	total += snprintf(buffer + total, printsz, "</feature></target>");
+
+	return total;
+}
+
 
 static void apb_write(target *t, uint16_t reg, uint32_t val)
 {
@@ -373,7 +500,13 @@ bool cortexa_probe(ADIv5_AP_t *apb, uint32_t debug_base)
 	t->attach = cortexa_attach;
 	t->detach = cortexa_detach;
 
-	t->tdesc = tdesc_cortex_a;
+	// Find the buffer size needed for the target description string we need to send to GDB,
+	// and then compute the string itself.
+	size_t size_needed = create_tdesc_cortex_a(NULL, 0) + 1;
+	char *buffer = malloc(size_needed);
+	create_tdesc_cortex_a(buffer, size_needed);
+
+	t->tdesc = buffer;
 	t->regs_read = cortexa_regs_read;
 	t->regs_write = cortexa_regs_write;
 	t->reg_read = cortexa_reg_read;
