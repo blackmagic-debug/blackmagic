@@ -55,6 +55,7 @@
 #define QSPI_CTRL_ADDR        0x4001800cU
 
 #define BOOTROM_FUNC_TABLE_ADDR  0x00000014U
+#define BOOTROM_FUNC_TABLE_TAG(x, y) ((uint8_t)(x) | ((uint8_t)(y) << 8U))
 #define FLASHSIZE_4K_SECTOR      (4U * 1024U)
 #define FLASHSIZE_32K_BLOCK      (32U * 1024U)
 #define FLASHSIZE_64K_BLOCK      (64U * 1024U)
@@ -189,31 +190,31 @@ static bool rp_fill_table(struct rp_priv_s *priv, uint16_t *table, int max)
 		check++;
 		max -= 2;
 		switch (tag) {
-		case ('D' | ('T' << 8)):
+		case BOOTROM_FUNC_TABLE_TAG('D', 'T'):
 			priv->rom_debug_trampoline_begin = data;
 			break;
-		case ('D' | ('E' << 8)):
+		case BOOTROM_FUNC_TABLE_TAG('D', 'E'):
 			priv->rom_debug_trampoline_end = data;
 			break;
-		case ('I' | ('F' << 8)):
+		case BOOTROM_FUNC_TABLE_TAG('I', 'F'):
 			priv->rom_connect_internal_flash = data;
 			break;
-		case ('C' | ('X' << 8)):
+		case BOOTROM_FUNC_TABLE_TAG('C', 'X'):
 			priv->rom_flash_enter_xip = data;
 			break;
-		case ('E' | ('X' << 8)):
+		case BOOTROM_FUNC_TABLE_TAG('E', 'X'):
 			priv->rom_flash_exit_xip = data;
 			break;
-		case ('R' | ('E' << 8)):
+		case BOOTROM_FUNC_TABLE_TAG('R', 'E'):
 			priv->rom_flash_range_erase = data;
 			break;
-		case ('R' | ('P' << 8)):
+		case BOOTROM_FUNC_TABLE_TAG('R', 'P'):
 			priv->rom_flash_range_program = data;
 			break;
-		case ('F' | ('C' << 8)):
+		case BOOTROM_FUNC_TABLE_TAG('F', 'C'):
 			priv->rom_flash_flush_cache = data;
 			break;
-		case ('U' | ('B' << 8)):
+		case BOOTROM_FUNC_TABLE_TAG('U', 'B'):
 			priv->rom_reset_usb_boot = data;
 			break;
 		default:
