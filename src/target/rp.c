@@ -51,8 +51,16 @@
 #define XIP_FLASH_START       0x10000000U
 #define SRAM_START            0x20000000U
 #define SRAM_SIZE             0x42000U
-#define SSI_DR0_ADDR          0x18000060U
-#define QSPI_CTRL_ADDR        0x4001800cU
+
+#define RP_GPIO_QSPI_BASE_ADDR     0x40018000U
+#define RP_GPIO_QSPI_CS_CTRL       (RP_GPIO_QSPI_BASE_ADDR + 0x0cU)
+#define RP_GPIO_QSPI_CS_DRIVE_LOW  (2U << 8U)
+#define RP_GPIO_QSPI_CS_DRIVE_HIGH (3U << 8U)
+#define RP_GPIO_QSPI_CS_DRIVE_MASK 0x00000300U
+
+#define RP_SSI_BASE_ADDR 0x18000000U
+#define RP_SSI_CTRL0     (RP_SSI_BASE_ADDR + 0x00U)
+#define RP_SSI_DR0       (RP_SSI_BASE_ADDR + 0x60U)
 
 #define BOOTROM_FUNC_TABLE_ADDR  0x00000014U
 #define BOOTROM_FUNC_TABLE_TAG(x, y) ((uint8_t)(x) | ((uint8_t)(y) << 8U))
@@ -425,34 +433,31 @@ static bool rp_mass_erase(target *t)
 	return result;
 }
 
-static void rp_ssel_active(target *t, bool active)
+static void rp_spi_chip_select(target *const t, const bool active)
 {
-	const uint32_t qspi_ctrl_outover_low = 2UL << 8;
-	const uint32_t qspi_ctrl_outover_high = 3UL << 8;
-	uint32_t state = (active) ? qspi_ctrl_outover_low : qspi_ctrl_outover_high;
-	uint32_t val = target_mem_read32(t, QSPI_CTRL_ADDR);
-	val = (val & ~qspi_ctrl_outover_high) | state;
-	target_mem_write32(t, QSPI_CTRL_ADDR, val);
+	const uint32_t state = active ? RP_GPIO_QSPI_CS_DRIVE_LOW : RP_GPIO_QSPI_CS_DRIVE_HIGH;
+	const uint32_t value = target_mem_read32(t, RP_GPIO_QSPI_CS_CTRL);
+	target_mem_write32(t, RP_GPIO_QSPI_CS_CTRL, (value & ~RP_GPIO_QSPI_CS_DRIVE_MASK) | state);
 }
 
 static uint32_t rp_read_flash_chip(target *t, uint32_t cmd)
 {
 	uint32_t value = 0;
 
-	rp_ssel_active(t, true);
+	rp_spi_chip_select(t, true);
 
 	/* write command into SPI peripheral's FIFO */
 	for (size_t i = 0; i < 4; i++)
-		target_mem_write32(t, SSI_DR0_ADDR, cmd);
+		target_mem_write32(t, RP_SSI_DR0, cmd);
 
 	/* now we have an entry in the receive FIFO for each write */
 	for (size_t i = 0; i < 4; i++) {
-		uint32_t status = target_mem_read32(t, SSI_DR0_ADDR);
+		uint32_t status = target_mem_read32(t, RP_SSI_DR0);
 		value |= (status & 0xFF) << 24;
 		value >>= 8;
 	}
 
-	rp_ssel_active(t, false);
+	rp_spi_chip_select(t, false);
 
 	return value;
 }
