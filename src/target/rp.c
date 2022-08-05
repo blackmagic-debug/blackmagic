@@ -41,6 +41,7 @@
 #include "target.h"
 #include "target_internal.h"
 #include "cortexm.h"
+#include "sfdp.h"
 
 #define RP_ID                 "Raspberry RP2040"
 #define RP_MAX_TABLE_SIZE     0x80U
@@ -58,9 +59,32 @@
 #define RP_GPIO_QSPI_CS_DRIVE_HIGH (3U << 8U)
 #define RP_GPIO_QSPI_CS_DRIVE_MASK 0x00000300U
 
-#define RP_SSI_BASE_ADDR 0x18000000U
-#define RP_SSI_CTRL0     (RP_SSI_BASE_ADDR + 0x00U)
-#define RP_SSI_DR0       (RP_SSI_BASE_ADDR + 0x60U)
+#define RP_SSI_BASE_ADDR                       0x18000000U
+#define RP_SSI_CTRL0                           (RP_SSI_BASE_ADDR + 0x00U)
+#define RP_SSI_CTRL1                           (RP_SSI_BASE_ADDR + 0x04U)
+#define RP_SSI_ENABLE                          (RP_SSI_BASE_ADDR + 0x08U)
+#define RP_SSI_DR0                             (RP_SSI_BASE_ADDR + 0x60U)
+#define RP_SSI_XIP_SPI_CTRL0                   (RP_SSI_BASE_ADDR + 0xf4U)
+#define RP_SSI_CTRL0_FRF_MASK                  0x00600000U
+#define RP_SSI_CTRL0_FRF_SERIAL                (0U << 21U)
+#define RP_SSI_CTRL0_FRF_DUAL                  (1U << 21U)
+#define RP_SSI_CTRL0_FRF_QUAD                  (2U << 21U)
+#define RP_SSI_CTRL0_TMOD_MASK                 0x00000300U
+#define RP_SSI_CTRL0_TMOD_BIDI                 (0U << 8U)
+#define RP_SSI_CTRL0_TMOD_TX_ONLY              (1U << 8U)
+#define RP_SSI_CTRL0_TMOD_RX_ONLY              (2U << 8U)
+#define RP_SSI_CTRL0_TMOD_EEPROM               (3U << 8U)
+#define RP_SSI_CTRL0_DATA_BIT_MASK             0x001f0000U
+#define RP_SSI_CTRL0_DATA_BIT_SHIFT            16U
+#define RP_SSI_CTRL0_DATA_BITS(x)              (((x) - 1U) << RP_SSI_CTRL0_DATA_BIT_SHIFT)
+#define RP_SSI_CTRL0_MASK                      (RP_SSI_CTRL0_FRF_MASK | RP_SSI_CTRL0_TMOD_MASK | RP_SSI_CTRL0_DATA_BIT_MASK)
+#define RP_SSI_ENABLE_SSI                      (1U << 0U)
+#define RP_SSI_XIP_SPI_CTRL0_FORMAT_STD_SPI    (0U << 0U)
+#define RP_SSI_XIP_SPI_CTRL0_FORMAT_SPLIT      (1U << 0U)
+#define RP_SSI_XIP_SPI_CTRL0_FORMAT_FRF        (2U << 0U)
+#define RP_SSI_XIP_SPI_CTRL0_ADDRESS_LENGTH(x) (((x) * 2U) << 2U)
+#define RP_SSI_XIP_SPI_CTRL0_INSTR_LENGTH_8b   (2U << 8U)
+#define RP_SSI_XIP_SPI_CTRL0_WAIT_CYCLES(x)    (((x) * 8U) << 11U)
 
 #define BOOTROM_FUNC_TABLE_ADDR  0x00000014U
 #define BOOTROM_FUNC_TABLE_TAG(x, y) ((uint8_t)(x) | ((uint8_t)(y) << 8U))
@@ -70,6 +94,15 @@
 #define FLASHSIZE_32K_BLOCK_MASK ~(FLASHSIZE_32K_BLOCK - 1U)
 #define FLASHSIZE_64K_BLOCK_MASK ~(FLASHSIZE_64K_BLOCK - 1U)
 #define MAX_FLASH                (16U * 1024U * 1024U)
+
+#define RP_SPI_OPCODE(x)            (x)
+#define RP_SPI_OPCODE_MASK          0x00ffU
+#define RP_SPI_INTER_SHIFT          8U
+#define RP_SPI_INTER_LENGTH(x)      (((x) & 7U) << RP_SPI_INTER_SHIFT)
+#define RP_SPI_INTER_MASK           0x0700U
+#define RP_SPI_FRAME_OPCODE_ONLY    (1 << 11U)
+#define RP_SPI_FRAME_OPCODE_3B_ADDR (2 << 11U)
+#define RP_SPI_FRAME_MASK           0x1800U
 
 /* Instruction codes taken from Winbond W25Q16JV datasheet, as used on the
  * original Pico board from Raspberry Pi.
@@ -83,7 +116,8 @@
 #define FLASHCMD_BLOCK32K_ERASE 0x52
 #define FLASHCMD_BLOCK64K_ERASE 0xd8
 #define FLASHCMD_CHIP_ERASE     0x60
-#define FLASHCMD_READ_JEDEC_ID  0x9F
+#define SPI_FLASH_CMD_READ_JEDEC_ID (RP_SPI_OPCODE(0x9fU) | RP_SPI_INTER_LENGTH(0) | RP_SPI_FRAME_OPCODE_ONLY)
+#define SPI_FLASH_CMD_READ_SFDP     (RP_SPI_OPCODE(0x5aU) | RP_SPI_INTER_LENGTH(1) | RP_SPI_FRAME_OPCODE_3B_ADDR)
 
 typedef struct rp_priv {
 	uint16_t rom_debug_trampoline_begin;
@@ -440,26 +474,62 @@ static void rp_spi_chip_select(target *const t, const bool active)
 	target_mem_write32(t, RP_GPIO_QSPI_CS_CTRL, (value & ~RP_GPIO_QSPI_CS_DRIVE_MASK) | state);
 }
 
-static uint32_t rp_read_flash_chip(target *t, uint32_t cmd)
+static void rp_spi_read(
+	target *const t, const uint16_t command, const target_addr address, void *const buffer, const size_t length)
 {
-	uint32_t value = 0;
-
+	/* Ensure the controller is in the correct serial SPI mode and select the Flash */
+	const uint32_t ssi_enabled = target_mem_read32(t, RP_SSI_ENABLE);
+	target_mem_write32(t, RP_SSI_ENABLE, 0);
+	const uint32_t ctrl0 = target_mem_read32(t, RP_SSI_CTRL0);
+	const uint32_t ctrl1 = target_mem_read32(t, RP_SSI_CTRL1);
+	const uint32_t xpi_ctrl0 = target_mem_read32(t, RP_SSI_XIP_SPI_CTRL0);
+	target_mem_write32(t, RP_SSI_CTRL0,
+		(ctrl0 & RP_SSI_CTRL0_MASK) | RP_SSI_CTRL0_FRF_SERIAL | RP_SSI_CTRL0_TMOD_BIDI | RP_SSI_CTRL0_DATA_BITS(8));
+	target_mem_write32(t, RP_SSI_XIP_SPI_CTRL0,
+		RP_SSI_XIP_SPI_CTRL0_FORMAT_FRF | RP_SSI_XIP_SPI_CTRL0_ADDRESS_LENGTH(0) |
+			RP_SSI_XIP_SPI_CTRL0_INSTR_LENGTH_8b | RP_SSI_XIP_SPI_CTRL0_WAIT_CYCLES(0));
+	target_mem_write32(t, RP_SSI_CTRL1, length);
+	target_mem_write32(t, RP_SSI_ENABLE, RP_SSI_ENABLE_SSI);
 	rp_spi_chip_select(t, true);
 
-	/* write command into SPI peripheral's FIFO */
-	for (size_t i = 0; i < 4; i++)
-		target_mem_write32(t, RP_SSI_DR0, cmd);
+	/* Set up the instruction */
+	const uint8_t opcode = command & RP_SPI_OPCODE_MASK;
+	target_mem_write32(t, RP_SSI_DR0, opcode);
+	target_mem_read32(t, RP_SSI_DR0);
 
-	/* now we have an entry in the receive FIFO for each write */
-	for (size_t i = 0; i < 4; i++) {
-		uint32_t status = target_mem_read32(t, RP_SSI_DR0);
-		value |= (status & 0xFF) << 24;
-		value >>= 8;
+	const uint16_t addr_mode = command & RP_SPI_FRAME_MASK;
+	if (addr_mode == RP_SPI_FRAME_OPCODE_3B_ADDR) {
+		/* For each byte sent here, we have to manually clean up from the controller with a read */
+		target_mem_write32(t, RP_SSI_DR0, (address >> 16U) & 0xffU);
+		target_mem_read32(t, RP_SSI_DR0);
+		target_mem_write32(t, RP_SSI_DR0, (address >> 8U) & 0xffU);
+		target_mem_read32(t, RP_SSI_DR0);
+		target_mem_write32(t, RP_SSI_DR0, address & 0xffU);
+		target_mem_read32(t, RP_SSI_DR0);
 	}
 
-	rp_spi_chip_select(t, false);
+	const size_t inter_length = (command & RP_SPI_INTER_MASK) >> RP_SPI_INTER_SHIFT;
+	for (size_t i = 0; i < inter_length; ++i) {
+		/* For each byte sent here, we have to manually clean up from the controller with a read */
+		target_mem_write32(t, RP_SSI_DR0, 0);
+		target_mem_read32(t, RP_SSI_DR0);
+	}
 
-	return value;
+	/* Now read back the data that elicited */
+	uint8_t *const data = (uint8_t *const)buffer;
+	for (size_t i = 0; i < length; ++i) {
+		/* Do a write to read */
+		target_mem_write32(t, RP_SSI_DR0, 0);
+		data[i] = target_mem_read32(t, RP_SSI_DR0) & 0xffU;
+	}
+
+	/* Deselect the Flash and put things back to how they were */
+	rp_spi_chip_select(t, false);
+	target_mem_write32(t, RP_SSI_ENABLE, 0);
+	target_mem_write32(t, RP_SSI_CTRL1, ctrl1);
+	target_mem_write32(t, RP_SSI_CTRL0, ctrl0);
+	target_mem_write32(t, RP_SSI_XIP_SPI_CTRL0, xpi_ctrl0);
+	target_mem_write32(t, RP_SSI_ENABLE, ssi_enabled);
 }
 
 static uint32_t rp_get_flash_length(target *t)
@@ -494,14 +564,13 @@ static uint32_t rp_get_flash_length(target *t)
 	size = MAX_FLASH;
 
 	rp_flash_prepare(t);
-	uint32_t flash_id = rp_read_flash_chip(t, FLASHCMD_READ_JEDEC_ID);
+	spi_flash_id_s flash_id;
+	rp_spi_read(t, SPI_FLASH_CMD_READ_JEDEC_ID, 0, &flash_id, sizeof(flash_id));
 	rp_flash_resume(t);
 
-	DEBUG_INFO("Flash device ID: %08" PRIx32 "\n", flash_id);
-
-	uint8_t size_log2 = (flash_id & 0xff0000) >> 16;
-	if (size_log2 >= 8 && size_log2 <= 34)
-		size = 1 << size_log2;
+	DEBUG_INFO("Flash device ID: %02x %02x %02x\n", flash_id.manufacturer, flash_id.type, flash_id.capacity);
+	if (flash_id.capacity >= 8 && flash_id.capacity <= 34)
+		size = 1 << flash_id.capacity;
 
 	return size;
 }
