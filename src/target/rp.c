@@ -77,15 +77,15 @@
 #define FLASHCMD_READ_JEDEC_ID  0x9F
 
 struct rp_priv_s {
-	uint16_t _debug_trampoline;
-	uint16_t _debug_trampoline_end;
-	uint16_t _connect_internal_flash;
-	uint16_t _flash_exit_xip;
-	uint16_t _flash_range_erase;
-	uint16_t flash_range_program;
-	uint16_t _flash_flush_cache;
-	uint16_t _flash_enter_cmd_xip;
-	uint16_t reset_usb_boot;
+	uint16_t rom_debug_trampoline_begin;
+	uint16_t rom_debug_trampoline_end;
+	uint16_t rom_connect_internal_flash;
+	uint16_t rom_flash_enter_xip;
+	uint16_t rom_flash_exit_xip;
+	uint16_t rom_flash_range_erase;
+	uint16_t rom_flash_range_program;
+	uint16_t rom_flash_flush_cache;
+	uint16_t rom_reset_usb_boot;
 	bool is_prepared;
 	bool is_monitor;
 	uint32_t regs[0x20]; /* Register playground*/
@@ -190,45 +190,45 @@ static bool rp_fill_table(struct rp_priv_s *priv, uint16_t *table, int max)
 		max -= 2;
 		switch (tag) {
 		case ('D' | ('T' << 8)):
-			priv->_debug_trampoline = data;
+			priv->rom_debug_trampoline_begin = data;
 			break;
 		case ('D' | ('E' << 8)):
-			priv->_debug_trampoline_end = data;
+			priv->rom_debug_trampoline_end = data;
 			break;
 		case ('I' | ('F' << 8)):
-			priv->_connect_internal_flash = data;
-			break;
-		case ('E' | ('X' << 8)):
-			priv->_flash_exit_xip = data;
-			break;
-		case ('R' | ('E' << 8)):
-			priv->_flash_range_erase = data;
-			break;
-		case ('R' | ('P' << 8)):
-			priv->flash_range_program = data;
-			break;
-		case ('F' | ('C' << 8)):
-			priv->_flash_flush_cache = data;
+			priv->rom_connect_internal_flash = data;
 			break;
 		case ('C' | ('X' << 8)):
-			priv->_flash_enter_cmd_xip = data;
+			priv->rom_flash_enter_xip = data;
+			break;
+		case ('E' | ('X' << 8)):
+			priv->rom_flash_exit_xip = data;
+			break;
+		case ('R' | ('E' << 8)):
+			priv->rom_flash_range_erase = data;
+			break;
+		case ('R' | ('P' << 8)):
+			priv->rom_flash_range_program = data;
+			break;
+		case ('F' | ('C' << 8)):
+			priv->rom_flash_flush_cache = data;
 			break;
 		case ('U' | ('B' << 8)):
-			priv->reset_usb_boot = data;
+			priv->rom_reset_usb_boot = data;
 			break;
 		default:
 			check--;
 		}
 		tag = *table++;
 	}
-	DEBUG_TARGET("connect %04x debug_trampoline %04x end %04x\n", priv->_connect_internal_flash,
-		priv->_debug_trampoline, priv->_debug_trampoline_end);
+	DEBUG_TARGET("connect %04x debug_trampoline %04x end %04x\n", priv->rom_connect_internal_flash,
+		priv->rom_debug_trampoline_begin, priv->rom_debug_trampoline_end);
 	return (check != 9);
 }
 
 /* RP ROM functions calls
  *
- * timout == 0: Do not wait for poll, use for reset_usb_boot()
+ * timout == 0: Do not wait for poll, use for rom_reset_usb_boot()
  * timeout > 500 (ms) : display spinner
  */
 static bool rp_rom_call(target *t, uint32_t *regs, uint32_t cmd, uint32_t timeout)
@@ -237,8 +237,8 @@ static bool rp_rom_call(target *t, uint32_t *regs, uint32_t cmd, uint32_t timeou
 	int spinindex = 0;
 	struct rp_priv_s *ps = (struct rp_priv_s *)t->target_storage;
 	regs[7] = cmd;
-	regs[REG_LR] = ps->_debug_trampoline_end;
-	regs[REG_PC] = ps->_debug_trampoline;
+	regs[REG_LR] = ps->rom_debug_trampoline_end;
+	regs[REG_PC] = ps->rom_debug_trampoline_begin;
 	regs[REG_MSP] = 0x20042000;
 	regs[REG_XPSR] = CORTEXM_XPSR_THUMB;
 	uint32_t dbg_regs[t->regs_size / sizeof(uint32_t)];
@@ -269,7 +269,7 @@ static bool rp_rom_call(target *t, uint32_t *regs, uint32_t cmd, uint32_t timeou
 	} while (!target_halt_poll(t, NULL));
 	/* Debug */
 	target_regs_read(t, dbg_regs);
-	bool ret = ((dbg_regs[REG_PC] & ~1) != (ps->_debug_trampoline_end & ~1));
+	bool ret = ((dbg_regs[REG_PC] & ~1) != (ps->rom_debug_trampoline_end & ~1));
 	if (ret) {
 		DEBUG_WARN("rp_rom_call cmd %04" PRIx32 " failed, PC %08" PRIx32 "\n", cmd, dbg_regs[REG_PC]);
 	}
@@ -282,9 +282,9 @@ static void rp_flash_prepare(target *t)
 	if (!ps->is_prepared) {
 		DEBUG_INFO("rp_flash_prepare\n");
 		/* connect*/
-		rp_rom_call(t, ps->regs, ps->_connect_internal_flash, 100);
+		rp_rom_call(t, ps->regs, ps->rom_connect_internal_flash, 100);
 		/* exit_xip */
-		rp_rom_call(t, ps->regs, ps->_flash_exit_xip, 100);
+		rp_rom_call(t, ps->regs, ps->rom_flash_exit_xip, 100);
 		ps->is_prepared = true;
 	}
 }
@@ -295,9 +295,9 @@ static void rp_flash_resume(target *t)
 	if (ps->is_prepared) {
 		DEBUG_INFO("rp_flash_resume\n");
 		/* flush */
-		rp_rom_call(t, ps->regs, ps->_flash_flush_cache, 100);
+		rp_rom_call(t, ps->regs, ps->rom_flash_flush_cache, 100);
 		/* enter_cmd_xip */
-		rp_rom_call(t, ps->regs, ps->_flash_enter_cmd_xip, 100);
+		rp_rom_call(t, ps->regs, ps->rom_flash_enter_xip, 100);
 		ps->is_prepared = false;
 	}
 }
@@ -339,7 +339,7 @@ static int rp_flash_erase(struct target_flash *f, target_addr addr, size_t len)
 			ps->regs[2] = FLASHSIZE_64K_BLOCK;
 			ps->regs[3] = FLASHCMD_BLOCK64K_ERASE;
 			DEBUG_WARN("64k_ERASE addr 0x%08" PRIx32 " len 0x%" PRIx32 "\n", addr, chunk);
-			ret = rp_rom_call(t, ps->regs, ps->_flash_range_erase, 25100);
+			ret = rp_rom_call(t, ps->regs, ps->rom_flash_range_erase, 25100);
 			len -= chunk;
 			addr += chunk;
 		} else if (len >= FLASHSIZE_32K_BLOCK) {
@@ -349,7 +349,7 @@ static int rp_flash_erase(struct target_flash *f, target_addr addr, size_t len)
 			ps->regs[2] = FLASHSIZE_32K_BLOCK;
 			ps->regs[3] = FLASHCMD_BLOCK32K_ERASE;
 			DEBUG_WARN("32k_ERASE addr 0x%08" PRIx32 " len 0x%" PRIx32 "\n", addr, chunk);
-			ret = rp_rom_call(t, ps->regs, ps->_flash_range_erase, 1700);
+			ret = rp_rom_call(t, ps->regs, ps->rom_flash_range_erase, 1700);
 			len -= chunk;
 			addr += chunk;
 		} else {
@@ -358,7 +358,7 @@ static int rp_flash_erase(struct target_flash *f, target_addr addr, size_t len)
 			ps->regs[2] = FLASHSIZE_4K_SECTOR;
 			ps->regs[3] = FLASHCMD_SECTOR_ERASE;
 			DEBUG_WARN("Sector_ERASE addr 0x%08" PRIx32 " len 0x%" PRIx32 "\n", addr, (uint32_t)len);
-			ret = rp_rom_call(t, ps->regs, ps->_flash_range_erase, 410);
+			ret = rp_rom_call(t, ps->regs, ps->rom_flash_range_erase, 410);
 			len = 0;
 		}
 		if (ret) {
@@ -398,7 +398,7 @@ static int rp_flash_write(struct target_flash *f, target_addr dest, const void *
 		 * however it takes much longer if the XOSC is not enabled
 		 * so lets give ourselves a little bit more time (x10)
 		 */
-		ret |= rp_rom_call(t, ps->regs, ps->flash_range_program, (3 * chunksize * 10) >> 8);
+		ret |= rp_rom_call(t, ps->regs, ps->rom_flash_range_program, (3 * chunksize * 10) >> 8);
 		if (ret) {
 			DEBUG_WARN("Write failed!\n");
 			break;
@@ -528,7 +528,7 @@ static bool rp_cmd_reset_usb_boot(target *t, int argc, const char **argv)
 		ps->regs[0] = 0;
 		ps->regs[1] = 0;
 	}
-	rp_rom_call(t, ps->regs, ps->reset_usb_boot, 0);
+	rp_rom_call(t, ps->regs, ps->rom_reset_usb_boot, 0);
 	return true;
 }
 
