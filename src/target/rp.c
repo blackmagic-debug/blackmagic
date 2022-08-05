@@ -104,7 +104,7 @@ const struct command_s rp_cmd_list[] = {
 static int rp_flash_erase(struct target_flash *f, target_addr addr, size_t len);
 static int rp_flash_write(struct target_flash *f, target_addr dest, const void *src, size_t len);
 
-static bool rp_fill_table(struct rp_priv_s *priv, uint16_t *table, int max);
+static bool rp_read_rom_func_table(target *t);
 static bool rp_attach(target *t);
 static uint32_t rp_get_flash_length(target *t);
 static bool rp_mass_erase(target *t);
@@ -158,15 +158,7 @@ bool rp_probe(target *t)
 
 static bool rp_attach(target *t)
 {
-	if (!cortexm_attach(t))
-		return false;
-
-	rp_priv_s *ps = (rp_priv_s*)t->target_storage;
-	uint16_t table[RP_MAX_TABLE_SIZE];
-	/* We have to do a 32-bit read here but the pointer contained is only 16-bit. */
-	uint16_t table_offset = target_mem_read32(t, BOOTROM_FUNC_TABLE_ADDR) & 0x0000ffffU;
-	if (target_mem_read(t, table, table_offset, RP_MAX_TABLE_SIZE) ||
-		rp_fill_table(ps, table, RP_MAX_TABLE_SIZE))
+	if (!cortexm_attach(t) || !rp_read_rom_func_table(t))
 		return false;
 
 	/* Free previously loaded memory map */
@@ -181,14 +173,25 @@ static bool rp_attach(target *t)
 	return true;
 }
 
-static bool rp_fill_table(rp_priv_s *priv, uint16_t *table, int max)
+/*
+ * Parse out the ROM function table for routines we need.
+ * Entries in the table are in pairs of 16-bit integers:
+ *  * A two character tag for the routine (see section 2.8.3 of the datasheet)
+ *  * The 16-bit pointer associated with that routine
+ */
+static bool rp_read_rom_func_table(target *const t)
 {
-	uint16_t tag = *table++;
-	int check = 0;
-	while ((tag != 0) && max) {
-		uint16_t data = *table++;
-		check++;
-		max -= 2;
+	rp_priv_s *const priv = (rp_priv_s *)t->target_storage;
+	/* We have to do a 32-bit read here but the pointer contained is only 16-bit. */
+	const uint16_t table_offset = target_mem_read32(t, BOOTROM_FUNC_TABLE_ADDR) & 0x0000ffffU;
+	uint16_t table[RP_MAX_TABLE_SIZE];
+	if (target_mem_read(t, table, table_offset, RP_MAX_TABLE_SIZE))
+		return false;
+
+	size_t check = 0;
+	for (size_t i = 0; i < RP_MAX_TABLE_SIZE; i += 2) {
+		const uint16_t tag = table[i];
+		const uint16_t data = table[i + 1];
 		switch (tag) {
 		case BOOTROM_FUNC_TABLE_TAG('D', 'T'):
 			priv->rom_debug_trampoline_begin = data;
@@ -218,13 +221,13 @@ static bool rp_fill_table(rp_priv_s *priv, uint16_t *table, int max)
 			priv->rom_reset_usb_boot = data;
 			break;
 		default:
-			check--;
+			continue;
 		}
-		tag = *table++;
+		++check;
 	}
 	DEBUG_TARGET("connect %04x debug_trampoline %04x end %04x\n", priv->rom_connect_internal_flash,
 		priv->rom_debug_trampoline_begin, priv->rom_debug_trampoline_end);
-	return (check != 9);
+	return check == 9;
 }
 
 /* RP ROM functions calls
