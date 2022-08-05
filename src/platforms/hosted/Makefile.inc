@@ -49,15 +49,14 @@ else ifneq (filter, macosx darwin, $(SYS))
 endif
 
 ifneq ($(HOSTED_BMP_ONLY), 1)
-    ifneq ($(shell pkg-config --exists libusb; echo $$?), 0)
-        $(error Please install libusb dependency or set HOSTED_BMP_ONLY to 1)
+    ifneq ($(shell pkg-config --exists libusb-1.0; echo $$?), 0)
+        $(error Please install libusb-1.0 dependency or set HOSTED_BMP_ONLY to 1)
     endif
     ifneq ($(shell pkg-config --exists libftdi1; echo $$?), 0)
         $(error Please install libftdi1 dependency or set HOSTED_BMP_ONLY to 1)
     endif
-    LDFLAGS += -lusb-1.0
-    CFLAGS += $(shell pkg-config --cflags libftdi1)
-    LDFLAGS += $(shell pkg-config --libs libftdi1)
+    CFLAGS += $(shell pkg-config --cflags libusb-1.0) $(shell pkg-config --cflags libftdi1)
+    LDFLAGS += $(shell pkg-config --libs libusb-1.0) $(shell pkg-config --libs libftdi1)
     CFLAGS += -Wno-missing-field-initializers
 endif
 
