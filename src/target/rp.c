@@ -48,9 +48,9 @@
 #define BOOTROM_MAGIC         ('M' | ('u' << 8) | (0x01 << 16))
 #define BOOTROM_MAGIC_MASK    0x00ffffffU
 #define BOOTROM_VERSION_SHIFT 24U
-#define XIP_FLASH_START       0x10000000U
-#define SRAM_START            0x20000000U
-#define SRAM_SIZE             0x42000U
+#define RP_XIP_FLASH_BASE     0x10000000U
+#define RP_SRAM_BASE          0x20000000U
+#define RP_SRAM_SIZE          0x42000U
 
 #define RP_GPIO_QSPI_BASE_ADDR     0x40018000U
 #define RP_GPIO_QSPI_CS_CTRL       (RP_GPIO_QSPI_BASE_ADDR + 0x0cU)
@@ -175,8 +175,8 @@ static bool rp_attach(target *t)
 	size_t size = rp_get_flash_length(t);
 	DEBUG_INFO("Flash size: %zu MB\n", size / (1024U * 1024U));
 
-	rp_add_flash(t, XIP_FLASH_START, size);
-	target_add_ram(t, SRAM_START, SRAM_SIZE);
+	rp_add_flash(t, RP_XIP_FLASH_BASE, size);
+	target_add_ram(t, RP_SRAM_BASE, RP_SRAM_SIZE);
 
 	return true;
 }
@@ -401,10 +401,10 @@ static int rp_flash_write(struct target_flash *f, target_addr dest, const void *
 #define MAX_WRITE_CHUNK 0x1000
 	while (len) {
 		uint32_t chunksize = (len <= MAX_WRITE_CHUNK) ? len : MAX_WRITE_CHUNK;
-		target_mem_write(t, SRAM_START, src, chunksize);
+		target_mem_write(t, RP_SRAM_BASE, src, chunksize);
 		/* Programm range */
 		ps->regs[0] = dest;
-		ps->regs[1] = SRAM_START;
+		ps->regs[1] = RP_SRAM_BASE;
 		ps->regs[2] = chunksize;
 		/* Loading takes 3 ms per 256 byte page
 		 * however it takes much longer if the XOSC is not enabled
@@ -468,7 +468,7 @@ static uint32_t rp_get_flash_length(target *t)
 	uint32_t bootsec[16];
 	size_t i;
 
-	target_mem_read(t, bootsec, XIP_FLASH_START, sizeof(bootsec));
+	target_mem_read(t, bootsec, RP_XIP_FLASH_BASE, sizeof(bootsec));
 	for (i = 0; i < 16; i++) {
 		if ((bootsec[i] != 0x00) && (bootsec[i] != 0xff))
 			break;
@@ -481,7 +481,7 @@ static uint32_t rp_get_flash_length(target *t)
 		// when we try to read out of bounds.
 		uint32_t mirrorsec[16];
 		while (size > FLASHSIZE_4K_SECTOR) {
-			target_mem_read(t, mirrorsec, XIP_FLASH_START + size, sizeof(bootsec));
+			target_mem_read(t, mirrorsec, RP_XIP_FLASH_BASE + size, sizeof(bootsec));
 			if (memcmp(bootsec, mirrorsec, sizeof(bootsec)) != 0)
 				return size << 1U;
 			size >>= 1U;
