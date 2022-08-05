@@ -498,9 +498,9 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 		break;
 	}
 #if PC_HOSTED == 0
-	gdb_outf("Please report unknown device with Designer %x Part ID %x\n", ap->designer_code, ap->partno);
+	gdb_outf("Please report unknown device with Designer 0x%x Part ID 0x%x\n", t->designer_code, t->part_id);
 #else
-	DEBUG_WARN("Please report unknown device with Designer %x Part ID %x\n", ap->designer_code, ap->partno);
+	DEBUG_WARN("Please report unknown device with Designer 0x%x Part ID 0x%x\n", t->designer_code, t->part_id);
 #endif
 #undef PROBE
 	return true;
