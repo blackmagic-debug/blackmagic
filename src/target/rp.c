@@ -77,7 +77,7 @@
 #define FLASHCMD_CHIP_ERASE     0x60
 #define FLASHCMD_READ_JEDEC_ID  0x9F
 
-struct rp_priv_s {
+typedef struct rp_priv {
 	uint16_t rom_debug_trampoline_begin;
 	uint16_t rom_debug_trampoline_end;
 	uint16_t rom_connect_internal_flash;
@@ -90,7 +90,7 @@ struct rp_priv_s {
 	bool is_prepared;
 	bool is_monitor;
 	uint32_t regs[0x20]; /* Register playground*/
-};
+} rp_priv_s;
 
 static bool rp_cmd_erase_sector(target *t, int argc, const char **argv);
 static bool rp_cmd_reset_usb_boot(target *t, int argc, const char **argv);
@@ -141,7 +141,7 @@ bool rp_probe(target *t)
 		DEBUG_WARN("Old Bootrom Version 1!\n");
 #endif
 
-	struct rp_priv_s *priv_storage = calloc(1, sizeof(struct rp_priv_s));
+	rp_priv_s *priv_storage = calloc(1, sizeof(rp_priv_s));
 	if (!priv_storage) { /* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return false;
@@ -161,7 +161,7 @@ static bool rp_attach(target *t)
 	if (!cortexm_attach(t))
 		return false;
 
-	struct rp_priv_s *ps = (struct rp_priv_s*)t->target_storage;
+	rp_priv_s *ps = (rp_priv_s*)t->target_storage;
 	uint16_t table[RP_MAX_TABLE_SIZE];
 	/* We have to do a 32-bit read here but the pointer contained is only 16-bit. */
 	uint16_t table_offset = target_mem_read32(t, BOOTROM_FUNC_TABLE_ADDR) & 0x0000ffffU;
@@ -181,7 +181,7 @@ static bool rp_attach(target *t)
 	return true;
 }
 
-static bool rp_fill_table(struct rp_priv_s *priv, uint16_t *table, int max)
+static bool rp_fill_table(rp_priv_s *priv, uint16_t *table, int max)
 {
 	uint16_t tag = *table++;
 	int check = 0;
@@ -236,7 +236,7 @@ static bool rp_rom_call(target *t, uint32_t *regs, uint32_t cmd, uint32_t timeou
 {
 	const char spinner[] = "|/-\\";
 	int spinindex = 0;
-	struct rp_priv_s *ps = (struct rp_priv_s *)t->target_storage;
+	rp_priv_s *ps = (rp_priv_s *)t->target_storage;
 	regs[7] = cmd;
 	regs[REG_LR] = ps->rom_debug_trampoline_end;
 	regs[REG_PC] = ps->rom_debug_trampoline_begin;
@@ -279,7 +279,7 @@ static bool rp_rom_call(target *t, uint32_t *regs, uint32_t cmd, uint32_t timeou
 
 static void rp_flash_prepare(target *t)
 {
-	struct rp_priv_s *ps = (struct rp_priv_s *)t->target_storage;
+	rp_priv_s *ps = (rp_priv_s *)t->target_storage;
 	if (!ps->is_prepared) {
 		DEBUG_INFO("rp_flash_prepare\n");
 		/* connect*/
@@ -292,7 +292,7 @@ static void rp_flash_prepare(target *t)
 
 static void rp_flash_resume(target *t)
 {
-	struct rp_priv_s *ps = (struct rp_priv_s *)t->target_storage;
+	rp_priv_s *ps = (rp_priv_s *)t->target_storage;
 	if (ps->is_prepared) {
 		DEBUG_INFO("rp_flash_resume\n");
 		/* flush */
@@ -324,7 +324,7 @@ static int rp_flash_erase(struct target_flash *f, target_addr addr, size_t len)
 	addr -= t->flash->start;
 	len = ALIGN(len, FLASHSIZE_4K_SECTOR);
 	len = MIN(len, t->flash->length - addr);
-	struct rp_priv_s *ps = (struct rp_priv_s *)t->target_storage;
+	rp_priv_s *ps = (rp_priv_s *)t->target_storage;
 	const bool full_erase = addr == f->start && len == f->length;
 	platform_timeout timeout;
 	platform_timeout_set(&timeout, 500);
@@ -383,7 +383,7 @@ static int rp_flash_write(struct target_flash *f, target_addr dest, const void *
 		return -1;
 	}
 	dest -= t->flash->start;
-	struct rp_priv_s *ps = (struct rp_priv_s *)t->target_storage;
+	rp_priv_s *ps = (rp_priv_s *)t->target_storage;
 	/* Write payload to target ram */
 	rp_flash_prepare(t);
 	bool ret = 0;
@@ -415,7 +415,7 @@ static int rp_flash_write(struct target_flash *f, target_addr dest, const void *
 
 static bool rp_mass_erase(target *t)
 {
-	struct rp_priv_s *ps = (struct rp_priv_s *)t->target_storage;
+	rp_priv_s *ps = (rp_priv_s *)t->target_storage;
 	ps->is_monitor = true;
 	const bool result = rp_flash_erase(t->flash, t->flash->start, t->flash->length) == 0;
 	ps->is_monitor = false;
@@ -511,7 +511,7 @@ static bool rp_cmd_erase_sector(target *t, int argc, const char **argv)
 	else
 		return -1;
 
-	struct rp_priv_s *ps = (struct rp_priv_s *)t->target_storage;
+	rp_priv_s *ps = (rp_priv_s *)t->target_storage;
 	ps->is_monitor = true;
 	const bool result = rp_flash_erase(t->flash, start, length) == 0;
 	ps->is_monitor = false;
@@ -520,7 +520,7 @@ static bool rp_cmd_erase_sector(target *t, int argc, const char **argv)
 
 static bool rp_cmd_reset_usb_boot(target *t, int argc, const char **argv)
 {
-	struct rp_priv_s *ps = (struct rp_priv_s *)t->target_storage;
+	rp_priv_s *ps = (rp_priv_s *)t->target_storage;
 	if (argc > 2) {
 		ps->regs[1] = strtoul(argv[2], NULL, 0);
 	} else if (argc < 3) {
