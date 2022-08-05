@@ -159,7 +159,9 @@ int adiv5_swdp_scan(uint32_t targetid)
 	for (volatile size_t i = 0; i < nr_dps; i++) {
 		if (scan_multidrop) {
 			dp_line_reset(initial_dp);
-			dp_targetid = (i << 28U) | (initial_dp->target_id & 0x0fffffffU);
+			dp_targetid =
+				(i << ADIV5_DP_TARGETSEL_TINSTANCE_OFFSET) |
+				(initial_dp->target_id & (ADIV5_DP_TARGETSEL_TPARTNO_MASK | ADIV5_DP_TARGETSEL_TDESIGNER_MASK | 1U));
 			initial_dp->dp_low_write(initial_dp, ADIV5_DP_TARGETSEL, dp_targetid);
 			TRY_CATCH (e, EXCEPTION_ALL) {
 				dp_debug_port_id = initial_dp->dp_read(initial_dp, ADIV5_DP_DPIDR);
