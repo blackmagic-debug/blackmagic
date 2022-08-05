@@ -250,41 +250,41 @@ static bool rp_read_rom_func_table(target *const t)
 	size_t check = 0;
 	for (size_t i = 0; i < RP_MAX_TABLE_SIZE; i += 2) {
 		const uint16_t tag = table[i];
-		const uint16_t data = table[i + 1];
+		const uint16_t addr = table[i + 1];
 		switch (tag) {
 		case BOOTROM_FUNC_TABLE_TAG('D', 'T'):
-			priv->rom_debug_trampoline_begin = data;
+			priv->rom_debug_trampoline_begin = addr;
 			break;
 		case BOOTROM_FUNC_TABLE_TAG('D', 'E'):
-			priv->rom_debug_trampoline_end = data;
+			priv->rom_debug_trampoline_end = addr;
 			break;
 		case BOOTROM_FUNC_TABLE_TAG('I', 'F'):
-			priv->rom_connect_internal_flash = data;
+			priv->rom_connect_internal_flash = addr;
 			break;
 		case BOOTROM_FUNC_TABLE_TAG('C', 'X'):
-			priv->rom_flash_enter_xip = data;
+			priv->rom_flash_enter_xip = addr;
 			break;
 		case BOOTROM_FUNC_TABLE_TAG('E', 'X'):
-			priv->rom_flash_exit_xip = data;
+			priv->rom_flash_exit_xip = addr;
 			break;
 		case BOOTROM_FUNC_TABLE_TAG('R', 'E'):
-			priv->rom_flash_range_erase = data;
+			priv->rom_flash_range_erase = addr;
 			break;
 		case BOOTROM_FUNC_TABLE_TAG('R', 'P'):
-			priv->rom_flash_range_program = data;
+			priv->rom_flash_range_program = addr;
 			break;
 		case BOOTROM_FUNC_TABLE_TAG('F', 'C'):
-			priv->rom_flash_flush_cache = data;
+			priv->rom_flash_flush_cache = addr;
 			break;
 		case BOOTROM_FUNC_TABLE_TAG('U', 'B'):
-			priv->rom_reset_usb_boot = data;
+			priv->rom_reset_usb_boot = addr;
 			break;
 		default:
 			continue;
 		}
 		++check;
 	}
-	DEBUG_TARGET("connect %04x debug_trampoline %04x end %04x\n", priv->rom_connect_internal_flash,
+	DEBUG_TARGET("RP ROM routines connect %04x debug_trampoline %04x end %04x\n", priv->rom_connect_internal_flash,
 		priv->rom_debug_trampoline_begin, priv->rom_debug_trampoline_end);
 	return check == 9;
 }
