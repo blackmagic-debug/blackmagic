@@ -40,6 +40,12 @@
 
 #include "target.h"
 
+typedef struct spi_flash_id {
+	uint8_t manufacturer;
+	uint8_t type;
+	uint8_t capacity;
+} spi_flash_id_s;
+
 typedef struct spi_parameters {
 	uint32_t page_size;
 	uint32_t sector_size;
