@@ -54,6 +54,7 @@
 #define SSI_DR0_ADDR          0x18000060U
 #define QSPI_CTRL_ADDR        0x4001800cU
 
+#define BOOTROM_FUNC_TABLE_ADDR  0x00000014U
 #define FLASHSIZE_4K_SECTOR      (4U * 1024U)
 #define FLASHSIZE_32K_BLOCK      (32U * 1024U)
 #define FLASHSIZE_64K_BLOCK      (64U * 1024U)
@@ -161,7 +162,8 @@ static bool rp_attach(target *t)
 
 	struct rp_priv_s *ps = (struct rp_priv_s*)t->target_storage;
 	uint16_t table[RP_MAX_TABLE_SIZE];
-	uint16_t table_offset = target_mem_read32( t, BOOTROM_MAGIC_ADDR + 4);
+	/* We have to do a 32-bit read here but the pointer contained is only 16-bit. */
+	uint16_t table_offset = target_mem_read32(t, BOOTROM_FUNC_TABLE_ADDR) & 0x0000ffffU;
 	if (target_mem_read(t, table, table_offset, RP_MAX_TABLE_SIZE) ||
 		rp_fill_table(ps, table, RP_MAX_TABLE_SIZE))
 		return false;
