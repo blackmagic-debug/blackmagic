@@ -179,6 +179,8 @@ typedef struct lpc43xx_partid {
 typedef struct lpc43xx_spi_flash {
 	target_flash_s f;
 	uint32_t read_command;
+	uint32_t page_size;
+	uint8_t sector_erase_opcode;
 } lpc43xx_spi_flash_s;
 
 static bool lpc43xx_cmd_reset(target_s *t, int argc, const char **argv);
@@ -295,6 +297,11 @@ static void lpc43xx_detect(target_s *const t, const lpc43xx_partid_s part_id)
 	target_add_commands(t, lpc43xx_cmd_list, "LPC43xx");
 }
 
+static void lpc43x0_spi_read_sfdp(target_s *const t, const uint32_t address, void *const buffer, const size_t length)
+{
+	lpc43x0_spi_read(t, SPI_FLASH_CMD_READ_SFDP, address, buffer, length);
+}
+
 static void lpc43x0_add_spi_flash(target_s *const t, const size_t length, const uint32_t read_command)
 {
 	lpc43xx_spi_flash_s *const flash = calloc(1, sizeof(*flash));
@@ -303,16 +310,27 @@ static void lpc43x0_add_spi_flash(target_s *const t, const size_t length, const 
 		return;
 	}
 
+	spi_parameters_s spi_parameters;
+	if (!sfdp_read_parameters(t, &spi_parameters, lpc43x0_spi_read_sfdp)) {
+		/* SFDP readout failed, so make some assumptions and hope for the best. */
+		spi_parameters.page_size = 256U;
+		spi_parameters.sector_size = 4096U;
+		spi_parameters.capacity = length;
+		spi_parameters.sector_erase_opcode = 0x20U;
+	}
+
 	target_flash_s *const f = &flash->f;
 	f->start = LPC43x0_SPI_FLASH_LOW_BASE;
-	f->length = length;
-	f->blocksize = 4096; // TODO: Read the SFDP to determine this and other parameters
+	f->length = spi_parameters.capacity;
+	f->blocksize = spi_parameters.sector_size;
 	f->write = lpc43x0_spi_flash_write;
 	f->erase = lpc43x0_spi_flash_erase;
 	f->erased = 0xffU;
 	target_add_flash(t, f);
 
 	flash->read_command = read_command;
+	flash->page_size = spi_parameters.page_size;
+	flash->sector_erase_opcode = spi_parameters.sector_erase_opcode;
 }
 
 static void lpc43x0_detect(target_s *const t, const lpc43xx_partid_s part_id)
