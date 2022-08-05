@@ -36,8 +36,7 @@ static uint32_t jlink_adiv5_swdp_read(ADIv5_DP_t *dp, uint16_t addr);
 
 static uint32_t jlink_adiv5_swdp_error(ADIv5_DP_t *dp);
 
-static uint32_t jlink_adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
-				      uint16_t addr, uint32_t value);
+static uint32_t jlink_adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW, uint16_t addr, uint32_t value);
 
 static void jlink_adiv5_swdp_abort(ADIv5_DP_t *dp, uint32_t abort);
 
@@ -50,53 +49,31 @@ enum {
 *  idle cyccles at the end*/
 static int line_reset(bmp_info_t *info)
 {
-        uint8_t cmd[44];
-        cmd[0]  = CMD_HW_JTAG3;
-        cmd[1]  = 0;
-        /* write 19 Bytes.*/
-        cmd[2]  = 19 * 8;
-        cmd[3]  = 0;
-        uint8_t *direction = cmd + 4;
-        direction[0]  = 0;
-        direction[1]  = 0;
-        direction[2]  = 0;
-        direction[3]  = 0;
-        direction[4]  = 0;
-        direction[5]  = 0xff;
-        direction[6]  = 0xff;
-        direction[7]  = 0xff;
-        direction[8]  = 0xff;
-        direction[9]  = 0xff;
-        direction[10] = 0xff;
-        direction[11] = 0xff;
-        direction[12] = 0xff;
-        direction[13] = 0xff;
-        direction[14] = 0x0;
-        direction[15] = 0x0;
-        direction[16] = 0x0;
-        direction[17] = 0x0;
-        direction[18] = 0xe0;
-        uint8_t *data = direction + 19;
-        data[5] =  0xff;
-        data[6] =  0xff;
-        data[7] =  0xff;
-        data[8] =  0xff;
-        data[9] =  0xff;
-        data[10] = 0xff;
-        data[11] = 0xff;
-        data[12] = 0;
-        data[13] = 0xa5;
-        data[18] = 0;
+	uint8_t cmd[44];
+	memset(cmd, 0, sizeof(cmd));
 
-        uint8_t res[19];
-        send_recv(info->usb_link, cmd, 42, res, 19);
-        send_recv(info->usb_link, NULL, 0, res,  1);
+	cmd[0] = CMD_HW_JTAG3;
+	/* write 19 Bytes.*/
+	cmd[2] = 19 * 8;
+	uint8_t *direction = cmd + 4;
+	memset(direction, 0, 5);
+	memset(direction + 5, 0xffU, 9);
+	memset(direction + 14, 0xffU, 4);
+	direction[18] = 0xe0;
+	uint8_t *data = direction + 19;
+	memset(data + 5, 0xffU, 7);
+	data[13] = 0xa5;
 
-        if (res[0] != 0) {
-                DEBUG_WARN( "Line reset failed\n");
-                return -1;
-        }
-        return 0;
+	uint8_t res[19];
+	send_recv(info->usb_link, cmd, 42, res, 19);
+	send_recv(info->usb_link, NULL, 0, res, 1);
+
+	if (res[0] != 0) {
+		DEBUG_WARN("Line reset failed\n");
+		return -1;
+	}
+
+	return 0;
 }
 
 static int jlink_swdptap_init(bmp_info_t *info)
@@ -104,73 +81,55 @@ static int jlink_swdptap_init(bmp_info_t *info)
 	uint8_t cmd[2] = {CMD_GET_SELECT_IF, JLINK_IF_GET_AVAILABLE};
 	uint8_t res[4];
 	send_recv(info->usb_link, cmd, 2, res, sizeof(res));
+
 	if (!(res[0] & JLINK_IF_SWD))
 		return -1;
+
 	cmd[1] = SELECT_IF_SWD;
 	send_recv(info->usb_link, cmd, 2, res, sizeof(res));
+
 	platform_delay(10);
+
 	/* SWD speed is fixed. Do not set it here*/
+
 	return 0;
 }
 
 int jlink_swdp_scan(bmp_info_t *info)
 {
-	jlink_swdptap_init(info);
 	target_list_free();
+
+	jlink_swdptap_init(info);
+
 	uint8_t cmd[44];
-	cmd[0]  = CMD_HW_JTAG3;
-	cmd[1]  = 0;
+	memset(cmd, 0, sizeof(cmd));
+
+	cmd[0] = CMD_HW_JTAG3;
 	/* write 18 Bytes.*/
-	cmd[2]  = 17 * 8;
-	cmd[3]  = 0;
+	cmd[2] = 17U * 8U;
 	uint8_t *direction = cmd + 4;
-	direction[0]  = 0xff;
-	direction[1]  = 0xff;
-	direction[2]  = 0xff;
-	direction[3]  = 0xff;
-	direction[4]  = 0xff;
-	direction[5]  = 0xff;
-	direction[6]  = 0xff;
-	direction[7]  = 0xff;
-	direction[8]  = 0xff;
-	direction[9]  = 0xff;
-	direction[10] = 0xff;
-	direction[11] = 0xff;
-	direction[12] = 0xff;
-	direction[13] = 0xff;
-	direction[14] = 0xff;
-	direction[15] = 0xff;
-	direction[16] = 0xff;
+	memset(direction, 0xffU, 17);
 	uint8_t *data = direction + 17;
-	data[0] = 0xff;
-	data[1] = 0xff;
-	data[2] = 0xff;
-	data[3] = 0xff;
-	data[4] = 0xff;
-	data[5] = 0xff;
-	data[6] = 0xff;
+	memset(data, 0xffU, 7);
 	data[7] = 0x9e;
 	data[8] = 0xe7;
-	data[9] = 0xff;
-	data[10] = 0xff;
-	data[11] = 0xff;
-	data[12] = 0xff;
-	data[13] = 0xff;
-	data[14] = 0xff;
-	data[15] = 0;
-	data[16] = 0;
+	memset(data + 9, 0xffU, 6);
 
 	uint8_t res[18];
 	send_recv(info->usb_link, cmd, 38, res, 17);
-	send_recv(info->usb_link, NULL, 0, res,  1);
+	send_recv(info->usb_link, NULL, 0, res, 1);
 
 	if (res[0] != 0) {
-		DEBUG_WARN( "Line reset failed\n");
+		DEBUG_WARN("Line reset failed\n");
 		return 0;
 	}
-	ADIv5_DP_t *dp = (void*)calloc(1, sizeof(*dp));
-	if (!dp) /* calloc failed: heap exhaustion */
+
+	ADIv5_DP_t *dp = calloc(1, sizeof(*dp));
+	if (!dp) { /* calloc failed: heap exhaustion */
+		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return 0;
+	}
+
 	volatile struct exception e;
 	TRY_CATCH (e, EXCEPTION_ALL) {
 		dp->debug_port_id = jlink_adiv5_swdp_low_access(dp, ADIV5_LOW_READ, ADIV5_DP_DPIDR, 0);
@@ -197,15 +156,14 @@ int jlink_swdp_scan(bmp_info_t *info)
 	}
 
 	adiv5_dp_init(dp);
-	return target_list?1:0;
+	return target_list ? 1U : 0U;
 }
 
 static uint32_t jlink_adiv5_swdp_read(ADIv5_DP_t *dp, uint16_t addr)
 {
 	if (addr & ADIV5_APnDP) {
 		adiv5_dp_low_access(dp, ADIV5_LOW_READ, addr, 0);
-		return adiv5_dp_low_access(dp, ADIV5_LOW_READ,
-		                           ADIV5_DP_RDBUFF, 0);
+		return adiv5_dp_low_access(dp, ADIV5_LOW_READ, ADIV5_DP_RDBUFF, 0);
 	} else {
 		return jlink_adiv5_swdp_low_access(dp, ADIV5_LOW_READ, addr, 0);
 	}
@@ -214,113 +172,126 @@ static uint32_t jlink_adiv5_swdp_read(ADIv5_DP_t *dp, uint16_t addr)
 static uint32_t jlink_adiv5_swdp_error(ADIv5_DP_t *dp)
 {
 	uint32_t err, clr = 0;
-	err = jlink_adiv5_swdp_read(dp, ADIV5_DP_CTRLSTAT) &
-		(ADIV5_DP_CTRLSTAT_STICKYORUN | ADIV5_DP_CTRLSTAT_STICKYCMP |
-		ADIV5_DP_CTRLSTAT_STICKYERR | ADIV5_DP_CTRLSTAT_WDATAERR);
+	err = jlink_adiv5_swdp_read(dp, ADIV5_DP_CTRLSTAT) & (ADIV5_DP_CTRLSTAT_STICKYORUN | ADIV5_DP_CTRLSTAT_STICKYCMP |
+															 ADIV5_DP_CTRLSTAT_STICKYERR | ADIV5_DP_CTRLSTAT_WDATAERR);
 
-	if(err & ADIV5_DP_CTRLSTAT_STICKYORUN)
+	if (err & ADIV5_DP_CTRLSTAT_STICKYORUN)
 		clr |= ADIV5_DP_ABORT_ORUNERRCLR;
-	if(err & ADIV5_DP_CTRLSTAT_STICKYCMP)
+	if (err & ADIV5_DP_CTRLSTAT_STICKYCMP)
 		clr |= ADIV5_DP_ABORT_STKCMPCLR;
-	if(err & ADIV5_DP_CTRLSTAT_STICKYERR)
+	if (err & ADIV5_DP_CTRLSTAT_STICKYERR)
 		clr |= ADIV5_DP_ABORT_STKERRCLR;
-	if(err & ADIV5_DP_CTRLSTAT_WDATAERR)
+	if (err & ADIV5_DP_CTRLSTAT_WDATAERR)
 		clr |= ADIV5_DP_ABORT_WDERRCLR;
 	if (clr)
 		adiv5_dp_write(dp, ADIV5_DP_ABORT, clr);
 	if (dp->fault)
-		err |= 0x8000;
+		err |= 0x8000U;
 	dp->fault = 0;
 
 	return err;
 }
 
-static uint32_t jlink_adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW,
-				      uint16_t addr, uint32_t value)
+static uint32_t jlink_adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW, uint16_t addr, uint32_t value)
 {
 	bool APnDP = addr & ADIV5_APnDP;
-	uint8_t addr8 = addr & 0xff;
-	uint8_t request = 0x81;
+	uint8_t addr8 = addr & 0xffU;
+	uint8_t request = 0x81U;
 	uint32_t response = 0;
 	uint8_t ack;
 	platform_timeout timeout;
 
-	if(APnDP && dp->fault) return 0;
+	if (APnDP && dp->fault)
+		return 0;
 
-	if(APnDP) request ^= 0x22;
-	if(RnW)   request ^= 0x24;
+	if (APnDP)
+		request ^= 0x22U;
+	if (RnW)
+		request ^= 0x24U;
 
-	addr8 &= 0xC;
-	request |= (addr8 << 1) & 0x18;
-	if((addr8 == 4) || (addr8 == 8))
-		request ^= 0x20;
+	addr8 &= 0xCU;
+	request |= (addr8 << 1U) & 0x18U;
+	if ((addr8 == 4U) || (addr8 == 8U))
+		request ^= 0x20U;
+
 	uint8_t cmd[16];
+	memset(cmd, 0, sizeof(cmd));
+
 	uint8_t res[8];
 	cmd[0] = CMD_HW_JTAG3;
-	cmd[1] = 0;
+
 	/* It seems, JLINK samples read data at end of previous clock.
 	 * So target data read must start at the 12'th clock, while
 	 * write starts as expected at the 14'th clock (8 cmd, 3 response,
 	 * 2 turn around.
 	 */
-	cmd[2] = (RnW) ? 11 : 13;
-	cmd[3] = 0;
+	cmd[2] = RnW ? 11 : 13;
+
 	cmd[4] = 0xff; /* 8 bits command OUT */
 	cmd[5] = 0xf0; /* one IN bit to turn around to read, read 2
 					  (read) or 3 (write) IN bits for response and
 					  and one OUT bit to turn around to write on write*/
 	cmd[6] = request;
-	cmd[7] = 0x00;
+
 	platform_timeout_set(&timeout, 2000);
 	do {
-		send_recv(info.usb_link, cmd,  8, res, 2);
-		send_recv(info.usb_link, NULL, 0, res + 2 , 1);
+		send_recv(info.usb_link, cmd, 8, res, 2);
+		send_recv(info.usb_link, NULL, 0, res + 2, 1);
+
 		if (res[2] != 0)
 			raise_exception(EXCEPTION_ERROR, "Low access setup failed");
+
 		ack = res[1] & 7;
 	} while (ack == SWDP_ACK_WAIT && !platform_timeout_is_expired(&timeout));
+
 	if (ack == SWDP_ACK_WAIT)
 		raise_exception(EXCEPTION_TIMEOUT, "SWDP ACK timeout");
 
-	if(ack == SWDP_ACK_FAULT) {
+	if (ack == SWDP_ACK_FAULT) {
 		if (cl_debuglevel & BMP_DEBUG_TARGET)
-			DEBUG_WARN( "Fault\n");
+			DEBUG_WARN("Fault\n");
 		dp->fault = 1;
 		return 0;
 	}
 
-	if(ack != SWDP_ACK_OK) {
+	if (ack != SWDP_ACK_OK) {
 		if (cl_debuglevel & BMP_DEBUG_TARGET)
-			DEBUG_WARN( "Protocol %d\n", ack);
+			DEBUG_WARN("Protocol %d\n", ack);
 		line_reset(&info);
 		return 0;
 	}
+
 	/* Always append 8 idle cycle (SWDIO = 0)!*/
-	if(RnW) {
+	if (RnW) {
 		memset(cmd + 4, 0, 10);
 		cmd[2] = 33 + 2; /* 2 idle cycles */
 		cmd[8] = 0xfe;
 		send_recv(info.usb_link, cmd, 14, res, 5);
 		send_recv(info.usb_link, NULL, 0, res + 5, 1);
+
 		if (res[5] != 0)
 			raise_exception(EXCEPTION_ERROR, "Low access read failed");
-		response = res[0] | res[1] << 8 | res[2] << 16 | res[3] << 24;
-		int parity = res[4] & 1;
-		int bit_count  = __builtin_popcount (response) + parity;
-		if (bit_count & 1)	/* Give up on parity error */
+
+		response = res[0] | res[1] << 8U | res[2] << 16U | res[3] << 24U;
+
+		const unsigned int parity = res[4] & 1;
+		const unsigned int bit_count = __builtin_popcount(response) + parity;
+		if (bit_count & 1) /* Give up on parity error */
 			raise_exception(EXCEPTION_ERROR, "SWDP Parity error");
 	} else {
 		cmd[2] = 33 + 8; /* 8 idle cycle  to move data through SW-DP */
-		memset(cmd + 4, 0xff, 6);
-		cmd[10] = ((value >>  0) & 0xff);
-		cmd[11] = ((value >>  8) & 0xff);
-		cmd[12] = ((value >> 16) & 0xff);
-		cmd[13] = ((value >> 24) & 0xff);
-		int bit_count  = __builtin_popcount(value);
+		memset(cmd + 4, 0xffU, 6);
+		cmd[10] = ((value >> 0U) & 0xffU);
+		cmd[11] = ((value >> 8U) & 0xffU);
+		cmd[12] = ((value >> 16U) & 0xffU);
+		cmd[13] = ((value >> 24U) & 0xffU);
+		const unsigned int bit_count = __builtin_popcount(value);
 		cmd[14] = bit_count & 1;
 		cmd[15] = 0;
+
 		send_recv(info.usb_link, cmd, 16, res, 6);
 		send_recv(info.usb_link, NULL, 0, res, 1);
+
 		if (res[0] != 0)
 			raise_exception(EXCEPTION_ERROR, "Low access write failed");
 	}
