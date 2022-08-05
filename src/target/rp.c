@@ -42,15 +42,17 @@
 #include "target_internal.h"
 #include "cortexm.h"
 
-#define RP_ID              "Raspberry RP2040"
-#define RP_MAX_TABLE_SIZE  0x80
-#define BOOTROM_MAGIC      ('M' | ('u' << 8) | (0x01 << 16))
-#define BOOTROM_MAGIC_ADDR 0x00000010
-#define XIP_FLASH_START    0x10000000
-#define SRAM_START         0x20000000
-#define SRAM_SIZE          0x42000
-#define SSI_DR0_ADDR       0x18000060
-#define QSPI_CTRL_ADDR     0x4001800c
+#define RP_ID                 "Raspberry RP2040"
+#define RP_MAX_TABLE_SIZE     0x80U
+#define BOOTROM_MAGIC_ADDR    0x00000010U
+#define BOOTROM_MAGIC         ('M' | ('u' << 8) | (0x01 << 16))
+#define BOOTROM_MAGIC_MASK    0x00ffffffU
+#define BOOTROM_VERSION_SHIFT 24U
+#define XIP_FLASH_START       0x10000000U
+#define SRAM_START            0x20000000U
+#define SRAM_SIZE             0x42000U
+#define SSI_DR0_ADDR          0x18000060U
+#define QSPI_CTRL_ADDR        0x4001800cU
 
 #define FLASHSIZE_4K_SECTOR      (4U * 1024U)
 #define FLASHSIZE_32K_BLOCK      (32U * 1024U)
@@ -127,14 +129,16 @@ bool rp_probe(target *t)
 {
 	/* Check bootrom magic*/
 	uint32_t boot_magic = target_mem_read32(t, BOOTROM_MAGIC_ADDR);
-	if ((boot_magic & 0x00ffffff) != BOOTROM_MAGIC) {
+	if ((boot_magic & BOOTROM_MAGIC_MASK) != BOOTROM_MAGIC) {
 		DEBUG_WARN("Wrong Bootmagic %08" PRIx32 " found!\n", boot_magic);
 		return false;
 	}
+
 #if defined(ENABLE_DEBUG)
-	if ((boot_magic >> 24) == 1)
+	if ((boot_magic >> BOOTROM_VERSION_SHIFT) == 1)
 		DEBUG_WARN("Old Bootrom Version 1!\n");
 #endif
+
 	struct rp_priv_s *priv_storage = calloc(1, sizeof(struct rp_priv_s));
 	if (!priv_storage) { /* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
