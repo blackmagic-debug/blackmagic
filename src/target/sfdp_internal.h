@@ -48,6 +48,15 @@
 #define SFDP_TABLE_ADDRESS(header) \
 	(((header).table_address[2] << 16U) | ((header).table_address[1] << 8U) | (header).table_address[0])
 
+#define SFDP_DENSITY_IS_EXPONENTIAL(density) ((density)[3] & 0x80U)
+#define SFDP_DENSITY_VALUE(density) \
+	((((density)[3] & 0x7FU) << 24U) | ((density)[2] << 16U) | ((density)[1] << 8U) | (density)[0])
+
+#define SFDP_ERASE_TYPES            4U
+#define SFDP_ERASE_SIZE(erase_type) (1U << ((erase_type)->erase_size_exponent))
+#define SFDP_PAGE_SIZE(parameter_table) \
+	(1U << ((parameter_table).programming_and_chip_erase_timing.programming_timing_ratio_and_page_size >> 4U))
+
 typedef struct sfdp_header {
 	char magic[4];
 	uint8_t version_minor;
@@ -64,5 +73,51 @@ typedef struct sfdp_parameter_table_header {
 	uint8_t table_address[3];
 	uint8_t jedec_parameter_id_high;
 } sfdp_parameter_table_header_s;
+
+typedef struct timings_and_opcode {
+	uint8_t timings;
+	uint8_t opcode;
+} timings_and_opcode_s;
+
+typedef struct erase_parameters {
+	uint8_t erase_size_exponent;
+	uint8_t opcode;
+} erase_parameters_s;
+
+typedef struct programming_and_chip_erase_timing {
+	uint8_t programming_timing_ratio_and_page_size;
+	uint8_t erase_timings[3];
+} programming_and_chip_erase_timing_s;
+
+typedef struct sfdp_basic_parameter_table {
+	uint8_t value1;
+	uint8_t sector_erase_opcode;
+	uint8_t value2;
+	uint8_t reserved1;
+	uint8_t memory_density[4];
+	timings_and_opcode_s fast_quad_io;
+	timings_and_opcode_s fast_quad_output;
+	timings_and_opcode_s fast_dual_output;
+	timings_and_opcode_s fast_dual_io;
+	uint8_t fast_support_flags;
+	uint8_t reserved2[5];
+	timings_and_opcode_s fast_dual_dpi;
+	uint8_t reserved3[2];
+	timings_and_opcode_s fast_quad_qpi;
+	erase_parameters_s erase_types[SFDP_ERASE_TYPES];
+	uint32_t erase_timing;
+	programming_and_chip_erase_timing_s programming_and_chip_erase_timing;
+	uint8_t operational_prohibitions;
+	uint8_t suspend_latency_specs[3];
+	uint8_t program_resume_opcode;
+	uint8_t program_suspend_opcode;
+	uint8_t resume_opcode;
+	uint8_t suspend_opcode;
+	uint8_t status_register_polling_flags;
+	uint8_t deep_powerdown[3];
+	uint8_t dual_and_quad_mode[3];
+	uint8_t reserved4;
+	uint32_t status_and_addressing_mode;
+} sfdp_basic_parameter_table_s;
 
 #endif /*SFDP_INTERNAL_H*/
