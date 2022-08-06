@@ -167,7 +167,7 @@ static void rp_spi_read_sfdp(target *const t, const uint32_t address, void *cons
 #endif
 }
 
-static void rp_add_flash(target *t, uint32_t addr, size_t length)
+static void rp_add_flash(target *t)
 {
 	struct target_flash *f = calloc(1, sizeof(*f));
 	if (!f) { /* calloc failed: heap exhaustion */
@@ -175,13 +175,26 @@ static void rp_add_flash(target *t, uint32_t addr, size_t length)
 		return;
 	}
 
-	f->start = addr;
-	f->length = length;
-	f->blocksize = 0x1000;
+	spi_parameters_s spi_parameters;
+	rp_flash_prepare(t);
+	if (!sfdp_read_parameters(t, &spi_parameters, rp_spi_read_sfdp)) {
+		/* SFDP readout failed, so make some assumptions and hope for the best. */
+		spi_parameters.page_size = 256U;
+		spi_parameters.sector_size = 4096U;
+		spi_parameters.capacity = rp_get_flash_length(t);
+		spi_parameters.sector_erase_opcode = 0x20U;
+	}
+	rp_flash_resume(t);
+
+	DEBUG_INFO("Flash size: %zu MB\n", spi_parameters.capacity / (1024U * 1024U));
+
+	f->start = RP_XIP_FLASH_BASE;
+	f->length = spi_parameters.capacity;
+	f->blocksize = spi_parameters.sector_size;
 	f->erase = rp_flash_erase;
 	f->write = rp_flash_write;
 	f->buf_size = 2048; /* Max buffer size used otherwise */
-	f->erased = 0xFF;
+	f->erased = 0xffU;
 	target_add_flash(t, f);
 }
 
@@ -221,20 +234,7 @@ static bool rp_attach(target *t)
 
 	/* Free previously loaded memory map */
 	target_mem_map_free(t);
-
-	spi_parameters_s spi_parameters;
-	rp_flash_prepare(t);
-	if (!sfdp_read_parameters(t, &spi_parameters, rp_spi_read_sfdp)) {
-		rp_flash_resume(t);
-		/* SFDP readout failed, so make some assumptions and hope for the best. */
-		spi_parameters.capacity = rp_get_flash_length(t);
-	}
-	else
-		rp_flash_resume(t);
-
-	DEBUG_INFO("Flash size: %zu MB\n", spi_parameters.capacity / (1024U * 1024U));
-
-	rp_add_flash(t, RP_XIP_FLASH_BASE, spi_parameters.capacity);
+	rp_add_flash(t);
 	target_add_ram(t, RP_SRAM_BASE, RP_SRAM_SIZE);
 
 	return true;
@@ -563,6 +563,7 @@ static uint32_t rp_get_flash_length(target *t)
 	uint32_t bootsec[16];
 	size_t i;
 
+	rp_flash_resume(t);
 	target_mem_read(t, bootsec, RP_XIP_FLASH_BASE, sizeof(bootsec));
 	for (i = 0; i < 16; i++) {
 		if ((bootsec[i] != 0x00) && (bootsec[i] != 0xff))
