@@ -383,11 +383,12 @@ static void rp_flash_resume(target *t)
 	}
 }
 
-/* FLASHCMD_SECTOR_ERASE  45/  400 ms
- * 32k block erase       120/ 1600 ms
- * 64k block erase       150/ 2000 ms
- * chip erase           5000/25000 ms
- * page programm           0.4/  3 ms
+/*
+ * 4k sector erase    45/  400 ms
+ * 32k block erase   120/ 1600 ms
+ * 64k block erase   150/ 2000 ms
+ * chip erase       5000/25000 ms
+ * page programm       0.4/  3 ms
  */
 static int rp_flash_erase(target_flash_s *f, target_addr addr, size_t len)
 {
@@ -397,13 +398,13 @@ static int rp_flash_erase(target_flash_s *f, target_addr addr, size_t len)
 		DEBUG_WARN("Unaligned erase\n");
 		return -1;
 	}
-	if ((addr < t->flash->start) || (addr >= t->flash->start + t->flash->length)) {
+	if ((addr < f->start) || (addr >= f->start + f->length)) {
 		DEBUG_WARN("Address is invalid\n");
 		return -1;
 	}
-	addr -= t->flash->start;
+	addr -= f->start;
 	len = ALIGN(len, FLASHSIZE_4K_SECTOR);
-	len = MIN(len, t->flash->length - addr);
+	len = MIN(len, f->length - addr);
 	rp_priv_s *ps = (rp_priv_s *)t->target_storage;
 	const bool full_erase = addr == f->start && len == f->length;
 	platform_timeout timeout;
@@ -462,7 +463,7 @@ static int rp_flash_write(target_flash_s *f, target_addr dest, const void *src, 
 		DEBUG_WARN("Unaligned write\n");
 		return -1;
 	}
-	dest -= t->flash->start;
+	dest -= f->start;
 	rp_priv_s *ps = (rp_priv_s *)t->target_storage;
 	/* Write payload to target ram */
 	rp_flash_prepare(t);
