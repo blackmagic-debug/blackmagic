@@ -67,7 +67,7 @@ bool firmware_dp_low_write(ADIv5_DP_t *dp, uint16_t addr, const uint32_t data)
  * If target id given, scan DPs 0 .. 15 on that device and return.
  * Otherwise
  */
-int adiv5_swdp_scan(uint32_t targetid)
+uint32_t adiv5_swdp_scan(uint32_t targetid)
 {
 	volatile struct exception e;
 
@@ -83,7 +83,7 @@ int adiv5_swdp_scan(uint32_t targetid)
 	ADIv5_DP_t *initial_dp = &idp;
 
 	if (swdptap_init(initial_dp))
-		return -1;
+		return 0;
 
 	/* DORMANT-> SWD sequence*/
 	initial_dp->seq_out(0xFFFFFFFF, 32);
@@ -127,7 +127,7 @@ int adiv5_swdp_scan(uint32_t targetid)
 			}
 			if (e.type || initial_dp->fault) {
 				DEBUG_WARN("No usable DP found\n");
-				return -1;
+				return 0;
 			}
 		}
 

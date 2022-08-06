@@ -35,10 +35,10 @@ typedef uint32_t target_addr;
 struct target_controller;
 
 #if PC_HOSTED == 1
-int platform_adiv5_swdp_scan(uint32_t targetid);
-int platform_jtag_scan(const uint8_t *lrlens);
+uint32_t platform_adiv5_swdp_scan(uint32_t targetid);
+uint32_t platform_jtag_scan(const uint8_t *lrlens);
 #endif
-int adiv5_swdp_scan(uint32_t targetid);
+uint32_t adiv5_swdp_scan(uint32_t targetid);
 uint32_t jtag_scan(const uint8_t *lrlens);
 
 int target_foreach(void (*cb)(int i, target *t, void *context), void *context);
