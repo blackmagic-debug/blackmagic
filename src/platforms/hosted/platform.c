@@ -147,24 +147,8 @@ int platform_adiv5_swdp_scan(uint32_t targetid)
 		return adiv5_swdp_scan(targetid);
 		break;
 
-	case BMP_TYPE_STLINKV2: {
-		target_list_free();
-
-		ADIv5_DP_t *dp = calloc(1, sizeof(*dp));
-		if (!dp) { /* calloc failed: heap exhaustion */
-			DEBUG_WARN("calloc: failed in %s\n", __func__);
-			return 0;
-		}
-
-		if (stlink_enter_debug_swd(&info, dp)) {
-			free(dp);
-		} else {
-			adiv5_dp_init(dp);
-			if (target_list)
-				return 1;
-		}
-		break;
-	}
+	case BMP_TYPE_STLINKV2:
+		return stlink_swdp_scan(&info);
 
 	case BMP_TYPE_JLINK:
 		return jlink_swdp_scan(&info);
