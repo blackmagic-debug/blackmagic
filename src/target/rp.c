@@ -86,8 +86,9 @@
 #define RP_SSI_XIP_SPI_CTRL0_INSTR_LENGTH_8b   (2U << 8U)
 #define RP_SSI_XIP_SPI_CTRL0_WAIT_CYCLES(x)    (((x) * 8U) << 11U)
 
-#define BOOTROM_FUNC_TABLE_ADDR  0x00000014U
+#define BOOTROM_FUNC_TABLE_ADDR      0x00000014U
 #define BOOTROM_FUNC_TABLE_TAG(x, y) ((uint8_t)(x) | ((uint8_t)(y) << 8U))
+
 #define FLASHSIZE_4K_SECTOR      (4U * 1024U)
 #define FLASHSIZE_32K_BLOCK      (32U * 1024U)
 #define FLASHSIZE_64K_BLOCK      (64U * 1024U)
@@ -112,7 +113,7 @@
  * not support these commands
  */
 
-#define FLASHCMD_SECTOR_ERASE   0x20
+#define SPI_FLASH_CMD_SECTOR_ERASE  0x20
 #define FLASHCMD_BLOCK32K_ERASE 0x52
 #define FLASHCMD_BLOCK64K_ERASE 0xd8
 #define FLASHCMD_CHIP_ERASE     0x60
@@ -188,7 +189,7 @@ static void rp_add_flash(target *t)
 		spi_parameters.page_size = 256U;
 		spi_parameters.sector_size = 4096U;
 		spi_parameters.capacity = rp_get_flash_length(t);
-		spi_parameters.sector_erase_opcode = 0x20U;
+		spi_parameters.sector_erase_opcode = SPI_FLASH_CMD_SECTOR_ERASE;
 	}
 	rp_flash_resume(t);
 
@@ -394,7 +395,7 @@ static int rp_flash_erase(target_flash_s *f, target_addr addr, size_t len)
 {
 	DEBUG_INFO("Erase addr 0x%08" PRIx32 " len 0x%" PRIx32 "\n", addr, (uint32_t)len);
 	target *t = f->t;
-	if (addr & (FLASHSIZE_4K_SECTOR - 1)) {
+	if (addr & (f->blocksize - 1)) {
 		DEBUG_WARN("Unaligned erase\n");
 		return -1;
 	}
@@ -403,7 +404,7 @@ static int rp_flash_erase(target_flash_s *f, target_addr addr, size_t len)
 		return -1;
 	}
 	addr -= f->start;
-	len = ALIGN(len, FLASHSIZE_4K_SECTOR);
+	len = ALIGN(len, f->blocksize);
 	len = MIN(len, f->length - addr);
 	rp_priv_s *ps = (rp_priv_s *)t->target_storage;
 	const bool full_erase = addr == f->start && len == f->length;
@@ -435,10 +436,11 @@ static int rp_flash_erase(target_flash_s *f, target_addr addr, size_t len)
 			len -= chunk;
 			addr += chunk;
 		} else {
+			rp_flash_s *flash = (rp_flash_s *)f;
 			ps->regs[0] = addr;
 			ps->regs[1] = len;
-			ps->regs[2] = FLASHSIZE_4K_SECTOR;
-			ps->regs[3] = FLASHCMD_SECTOR_ERASE;
+			ps->regs[2] = f->blocksize;
+			ps->regs[3] = flash->sector_erase_opcode;
 			DEBUG_WARN("Sector_ERASE addr 0x%08" PRIx32 " len 0x%" PRIx32 "\n", addr, (uint32_t)len);
 			ret = rp_rom_call(t, ps->regs, ps->rom_flash_range_erase, 410);
 			len = 0;
