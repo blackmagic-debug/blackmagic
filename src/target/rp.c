@@ -149,8 +149,8 @@ const struct command_s rp_cmd_list[] = {
 	{NULL, NULL, NULL}
 };
 
-static int rp_flash_erase(struct target_flash *f, target_addr addr, size_t len);
-static int rp_flash_write(struct target_flash *f, target_addr dest, const void *src, size_t len);
+static int rp_flash_erase(target_flash_s *f, target_addr addr, size_t len);
+static int rp_flash_write(target_flash_s *f, target_addr dest, const void *src, size_t len);
 
 static bool rp_read_rom_func_table(target *t);
 static bool rp_attach(target *t);
@@ -389,7 +389,7 @@ static void rp_flash_resume(target *t)
  * chip erase           5000/25000 ms
  * page programm           0.4/  3 ms
  */
-static int rp_flash_erase(struct target_flash *f, target_addr addr, size_t len)
+static int rp_flash_erase(target_flash_s *f, target_addr addr, size_t len)
 {
 	DEBUG_INFO("Erase addr 0x%08" PRIx32 " len 0x%" PRIx32 "\n", addr, (uint32_t)len);
 	target *t = f->t;
@@ -454,7 +454,7 @@ static int rp_flash_erase(struct target_flash *f, target_addr addr, size_t len)
 	return ret;
 }
 
-static int rp_flash_write(struct target_flash *f, target_addr dest, const void *src, size_t len)
+static int rp_flash_write(target_flash_s *f, target_addr dest, const void *src, size_t len)
 {
 	DEBUG_INFO("RP Write 0x%08" PRIx32 " len 0x%" PRIx32 "\n", dest, (uint32_t)len);
 	target *t = f->t;
