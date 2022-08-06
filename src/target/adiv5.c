@@ -474,8 +474,8 @@ static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, const size_t re
 
 	/* CIDR preamble sanity check */
 	if ((cidr & ~CID_CLASS_MASK) != CID_PREAMBLE) {
-		DEBUG_WARN("%s%" PRIu32 " 0x%08" PRIx32 ": 0x%08" PRIx32 " <- does not match preamble (0x%08" PRIx32 ")\n", indent + 1,
-			num_entry, addr, cidr, CID_PREAMBLE);
+		DEBUG_WARN("%s%" PRIu32 " 0x%08" PRIx32 ": 0x%08" PRIx32 " <- does not match preamble (0x%08" PRIx32 ")\n",
+			indent + 1, num_entry, addr, cidr, CID_PREAMBLE);
 		return;
 	}
 
@@ -586,8 +586,8 @@ static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, const size_t re
 				arm_component_lut[i].arch_id != arch_id)
 				continue;
 
-			DEBUG_INFO("%s%" PRIu32 " 0x%" PRIx32 ": %s - %s %s (PIDR = 0x%08" PRIx32 "%08" PRIx32
-				"  DEVTYPE = 0x%02x ARCHID = 0x%04x)\n",
+			DEBUG_INFO("%s%" PRIu32 " 0x%" PRIx32 ": %s - %s %s (PIDR = 0x%08" PRIx32 "%08" PRIx32 "  DEVTYPE = 0x%02x "
+					   "ARCHID = 0x%04x)\n",
 				indent + 1, num_entry, addr, cidc_debug_strings[cid_class], arm_component_lut[i].type,
 				arm_component_lut[i].full, (uint32_t)(pidr >> 32U), (uint32_t)pidr, dev_type, arch_id);
 
@@ -612,8 +612,9 @@ static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, const size_t re
 			break;
 		}
 		if (arm_component_lut[i].arch == aa_end) {
-			DEBUG_WARN("%s%" PRIu32 " 0x%" PRIx32 ": %s - Unknown (PIDR = 0x%08" PRIx32 "%08" PRIx32
-				" DEVTYPE = 0x%02x ARCHID = 0x%04x)\n",
+			DEBUG_WARN("%s%" PRIu32 " 0x%" PRIx32 ": %s - Unknown (PIDR = 0x%08" PRIx32 "%08" PRIx32 " DEVTYPE = "
+					   "0x%02x ARCHID = "
+					   "0x%04x)\n",
 				indent, num_entry, addr, cidc_debug_strings[cid_class], (uint32_t)(pidr >> 32U), (uint32_t)pidr,
 				dev_type, arch_id);
 		}
@@ -682,44 +683,82 @@ static void rp_rescue_setup(ADIv5_DP_t *dp)
 
 void adiv5_dp_init(ADIv5_DP_t *dp)
 {
-	/* designer code is in the same format in IDCODE and DPIDR */
-	/* common handling */
 	/*
-	 * the code in the DPIDR/IDCODE is in the form
-	 * Bits 10:7 - JEP-106 Continuation code
-	 * Bits 6:0 - JEP-106 Identity code
-	 * here we convert it to our internal representation, See JEP-106 code list
-	 * note, this is the code of the designer not the implementer, we expect it to be ARM
+	 * Assume DP v1 or later.
+	 * this may not be true for JTAG-DP
+	 * in such cases (DPv0) DPIDR is not implemented
+	 * and reads are UNPREDICTABLE.
+	 *
+	 * for SWD-DP, we are guaranteed to be DP v1 or later.
 	 */
-	const uint16_t designer = (dp->debug_port_id & ADIV5_DP_DPIDR_DESIGNER_MASK) >> ADIV5_DP_DPIDR_DESIGNER_OFFSET;
-	dp->designer_code =
-		(designer & ADIV5_DP_DESIGNER_JEP106_CONT_MASK) << 1U | (designer & ADIV5_DP_DESIGNER_JEP106_CODE_MASK);
-
-	/* on JTAG IDCODE this is actually the version */
-	dp->revision = (dp->debug_port_id & ADIV5_DP_DPIDR_REVISION_MASK) >> ADIV5_DP_DPIDR_REVISION_OFFSET;
-
-	if (dp->version > 0) {
-		/* debug_port_id is valid DPIDR */
-		dp->partno = (dp->debug_port_id & ADIV5_DP_DPIDR_PARTNO_MASK) >> ADIV5_DP_DPIDR_PARTNO_OFFSET;
-		dp->mindp = !!(dp->debug_port_id & ADIV5_DP_DPIDR_MINDP);
-	} else {
-		/* called from JTAG scan, debug_port_id is JTAG TAP IDCODE */
-		dp->partno = (dp->debug_port_id & JTAG_IDCODE_PARTNO_MASK) >> JTAG_IDCODE_PARTNO_OFFSET;
-		dp->mindp = false;
+	volatile uint32_t dpidr;
+	volatile struct exception e;
+	TRY_CATCH (e, EXCEPTION_ALL) {
+		dpidr = adiv5_dp_read(dp, ADIV5_DP_DPIDR);
 	}
-
-	/* Check for a valid designer */
-	if (dp->designer_code == 0) {
-		DEBUG_WARN("Invalid DP ID %08" PRIx32 "\n", dp->debug_port_id);
+	if (e.type) {
+		DEBUG_WARN("DP not responding!...\n");
 		free(dp);
 		return;
 	}
 
-	DEBUG_INFO("DP ID 0x%08" PRIx32 " (v%d %srev%d) designer 0x%" PRIx32 " partno 0x%" PRIx32 "\n", dp->debug_port_id,
-		dp->version, dp->mindp ? "MINDP " : "", dp->revision, dp->designer_code, dp->partno);
+	dp->version = (dpidr & ADIV5_DP_DPIDR_VERSION_MASK) >> ADIV5_DP_DPIDR_VERSION_OFFSET;
+	if (dp->version > 0 && (dpidr & 1U)) {
+		/*
+		* the code in the DPIDR is in the form
+		* Bits 10:7 - JEP-106 Continuation code
+		* Bits 6:0 - JEP-106 Identity code
+		* here we convert it to our internal representation, See JEP-106 code list
+		*
+		* note: this is the code of the designer not the implementer, we expect it to be ARM
+		*/
+		const uint16_t designer = (dpidr & ADIV5_DP_DPIDR_DESIGNER_MASK) >> ADIV5_DP_DPIDR_DESIGNER_OFFSET;
+		dp->designer_code =
+			(designer & ADIV5_DP_DESIGNER_JEP106_CONT_MASK) << 1U | (designer & ADIV5_DP_DESIGNER_JEP106_CODE_MASK);
+		dp->partno = (dpidr & ADIV5_DP_DPIDR_PARTNO_MASK) >> ADIV5_DP_DPIDR_PARTNO_OFFSET;
 
-	if (dp->version >= 2 && dp->target_id != 0)
-		DEBUG_INFO("TARGETID 0x%08" PRIx32 "\n", dp->target_id);
+		dp->mindp = !!(dpidr & ADIV5_DP_DPIDR_MINDP);
+
+		/* Check for a valid DPIDR / designer */
+		if (dp->designer_code != 0) {
+			DEBUG_INFO("DP DPIDR 0x%08" PRIx32 " (v%d %srev%d) designer 0x%" PRIx32 " partno 0x%" PRIx32 "\n", dpidr,
+				dp->version, dp->mindp ? "MINDP " : "",
+				(dpidr & ADIV5_DP_DPIDR_REVISION_MASK) >> ADIV5_DP_DPIDR_REVISION_OFFSET, dp->designer_code,
+				dp->partno);
+		} else {
+			DEBUG_WARN("Invalid DPIDR %08" PRIx32 " assuming DP version 0\n", dpidr);
+			dp->version = 0;
+		}
+
+	}
+	if (dp->version == 0) {
+		/* DP v0 */
+		DEBUG_WARN("DPv0 detected, no designer code available\n", dpidr);
+		dp->designer_code = 0;
+		dp->partno = 0;
+		dp->mindp = 0;
+	}
+
+	if (dp->version >= 2) {
+		adiv5_dp_write(dp, ADIV5_DP_SELECT, 2); /* TARGETID is on bank 2 */
+		const uint32_t targetid = adiv5_dp_read(dp, ADIV5_DP_TARGETID);
+		adiv5_dp_write(dp, ADIV5_DP_SELECT, 0);
+
+		/* Use TARGETID register to identify target */
+		const uint16_t tdesigner = (targetid & ADIV5_DP_TARGETID_TDESIGNER_MASK) >> ADIV5_DP_TARGETID_TDESIGNER_OFFSET;
+
+		/* convert it to our internal representation, See JEP-106 code list */
+		dp->target_designer_code =
+			(tdesigner & ADIV5_DP_DESIGNER_JEP106_CONT_MASK) << 1U | (tdesigner & ADIV5_DP_DESIGNER_JEP106_CODE_MASK);
+
+		dp->target_partno = (targetid & ADIV5_DP_TARGETID_TPARTNO_MASK) >> ADIV5_DP_TARGETID_TPARTNO_OFFSET;
+
+		DEBUG_INFO("TARGETID 0x%08" PRIx32 " designer 0x%" PRIx32 " partno 0x%" PRIx32 "\n", targetid,
+			dp->target_designer_code, dp->target_partno);
+
+		dp->targetsel = dp->instance << ADIV5_DP_TARGETSEL_TINSTANCE_OFFSET |
+		                (targetid & (ADIV5_DP_TARGETID_TDESIGNER_MASK | ADIV5_DP_TARGETID_TPARTNO_MASK)) | 1U;
+	}
 
 	if (dp->designer_code == JEP106_MANUFACTURER_RASPBERRY && dp->partno == 0x2) {
 		rp_rescue_setup(dp);
@@ -744,7 +783,6 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 #endif
 
 	volatile uint32_t ctrlstat = 0;
-	volatile struct exception e;
 	TRY_CATCH (e, EXCEPTION_TIMEOUT) {
 		ctrlstat = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT);
 	}
