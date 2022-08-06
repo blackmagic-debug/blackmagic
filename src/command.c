@@ -43,7 +43,11 @@
 #include "traceswo.h"
 #endif
 
+#if defined(_WIN32) || defined(__CYGWIN__)
+#include <malloc.h>
+#else
 #include <alloca.h>
+#endif
 
 static bool cmd_version(target *t, int argc, const char **argv);
 static bool cmd_help(target *t, int argc, const char **argv);

@@ -39,7 +39,11 @@
 #include "rtt.h"
 #endif
 
+#if defined(_WIN32) || defined(__CYGWIN__)
+#include <malloc.h>
+#else
 #include <alloca.h>
+#endif
 
 enum gdb_signal {
 	GDB_SIGINT = 2,
