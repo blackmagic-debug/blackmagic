@@ -278,24 +278,20 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 	target *t;
 
 	t = target_new();
-	if (!t) {
+	if (!t)
 		return false;
-	}
 
 	adiv5_ap_ref(ap);
-	if (ap->dp->version >= 2 && ap->dp->target_id != 0) {
+	if (ap->dp->version >= 2 && ap->dp->target_designer_code != 0) {
 		/* Use TARGETID register to identify target */
-		const uint16_t tdesigner =
-			(ap->dp->target_id & ADIV5_DP_TARGETID_TDESIGNER_MASK) >> ADIV5_DP_TARGETID_TDESIGNER_OFFSET;
-		/* convert it to our internal representation, See JEP-106 code list */
-		t->designer_code =
-			(tdesigner & ADIV5_DP_DESIGNER_JEP106_CONT_MASK) << 1U | (tdesigner & ADIV5_DP_DESIGNER_JEP106_CODE_MASK);
-		t->part_id = (ap->dp->target_id & ADIV5_DP_TARGETID_TPARTNO_MASK) >> ADIV5_DP_TARGETID_TPARTNO_OFFSET;
+		t->designer_code = ap->dp->target_designer_code;
+		t->part_id = ap->dp->target_partno;
 	} else {
 		/* Use AP DESIGNER and AP PARTNO to identify target */
 		t->designer_code = ap->designer_code;
 		t->part_id = ap->partno;
 	}
+
 	struct cortexm_priv *priv = calloc(1, sizeof(*priv));
 	if (!priv) { /* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);

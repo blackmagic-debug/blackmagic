@@ -673,15 +673,15 @@ static int stlink_enter_debug_jtag(bmp_info_t *info)
 	return stlink_usb_error_check(data, true);
 }
 
-static uint32_t stlink_read_coreid(void)
-{
-	uint8_t cmd[16] = {STLINK_DEBUG_COMMAND, STLINK_DEBUG_APIV2_READ_IDCODES};
-	uint8_t data[12];
-	send_recv(info.usb_link, cmd, 16, data, 12);
-	uint32_t id =  data[4] | data[5] << 8 | data[6] << 16 | data[7] << 24;
-	DEBUG_INFO("Read Core ID: 0x%08" PRIx32 "\n", id);
-	return id;
-}
+// static uint32_t stlink_read_coreid(void)
+// {
+// 	uint8_t cmd[16] = {STLINK_DEBUG_COMMAND, STLINK_DEBUG_APIV2_READ_IDCODES};
+// 	uint8_t data[12];
+// 	send_recv(info.usb_link, cmd, 16, data, 12);
+// 	uint32_t id =  data[4] | data[5] << 8 | data[6] << 16 | data[7] << 24;
+// 	DEBUG_INFO("Read Core ID: 0x%08" PRIx32 "\n", id);
+// 	return id;
+// }
 
 static int stlink_read_idcodes(bmp_info_t *info, uint32_t *idcodes)
 {
@@ -1070,15 +1070,16 @@ void stlink_adiv5_dp_defaults(ADIv5_DP_t *dp)
 int stlink_enter_debug_swd(bmp_info_t *info, ADIv5_DP_t *dp)
 {
 	stlink_leave_state(info);
+
 	uint8_t cmd[16] = {STLINK_DEBUG_COMMAND,
 					  STLINK_DEBUG_APIV2_ENTER,
 					  STLINK_DEBUG_ENTER_SWD_NO_RESET};
 	uint8_t data[2];
+
 	stlink_send_recv_retry(cmd, 16, data, 2);
+
 	if (stlink_usb_error_check(data, true))
 		exit( -1);
-	dp->debug_port_id = stlink_read_coreid();
-	dp->version = (dp->debug_port_id & ADIV5_DP_DPIDR_VERSION_MASK) >> ADIV5_DP_DPIDR_VERSION_OFFSET;
 
 	dp->dp_read = stlink_dp_read;
 	dp->error = stlink_dp_error;
@@ -1087,12 +1088,6 @@ int stlink_enter_debug_swd(bmp_info_t *info, ADIv5_DP_t *dp)
 
 	stlink_dp_error(dp);
 
-	if (dp->version >= 2) {
-		/* READ TARGETID, only available on DPv2 or later */
-		adiv5_dp_write(dp, ADIV5_DP_SELECT, 2); /* TARGETID is on bank 2 */
-		dp->target_id = adiv5_dp_read(dp, ADIV5_DP_TARGETID);
-		adiv5_dp_write(dp, ADIV5_DP_SELECT, 0);
-	}
 	return 0;
 }
 

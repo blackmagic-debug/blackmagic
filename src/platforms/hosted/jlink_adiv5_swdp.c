@@ -130,17 +130,6 @@ int jlink_swdp_scan(bmp_info_t *info)
 		return 0;
 	}
 
-	volatile struct exception e;
-	TRY_CATCH (e, EXCEPTION_ALL) {
-		dp->debug_port_id = jlink_adiv5_swdp_low_access(dp, ADIV5_LOW_READ, ADIV5_DP_DPIDR, 0);
-	}
-	if (e.type) {
-		DEBUG_WARN("DP not responding for DPIDR! Reset stuck low?\n");
-		free(dp);
-		return 0;
-	}
-	dp->version = (dp->debug_port_id & ADIV5_DP_DPIDR_VERSION_MASK) >> ADIV5_DP_DPIDR_VERSION_OFFSET;
-
 	dp->dp_read = jlink_adiv5_swdp_read;
 	dp->error = jlink_adiv5_swdp_error;
 	dp->low_access = jlink_adiv5_swdp_low_access;
@@ -148,14 +137,8 @@ int jlink_swdp_scan(bmp_info_t *info)
 
 	jlink_adiv5_swdp_error(dp);
 
-	if (dp->version >= 2) {
-		/* READ TARGETID, only available on DPv2 or later */
-		adiv5_dp_write(dp, ADIV5_DP_SELECT, 2); /* TARGETID is on bank 2 */
-		dp->target_id = adiv5_dp_read(dp, ADIV5_DP_TARGETID);
-		adiv5_dp_write(dp, ADIV5_DP_SELECT, 0);
-	}
-
 	adiv5_dp_init(dp);
+
 	return target_list ? 1U : 0U;
 }
 

@@ -235,9 +235,6 @@ typedef struct ADIv5_AP_s ADIv5_AP_t;
 typedef struct ADIv5_DP_s {
 	int refcnt;
 
-	uint32_t debug_port_id;
-	uint32_t target_id; /* present on DPv2 or later */
-
 	void (*seq_out)(uint32_t tms_states, size_t clock_cycles);
 	void (*seq_out_parity)(uint32_t tms_states, size_t clock_cycles);
 	uint32_t (*seq_in)(size_t clock_cycles);
@@ -267,14 +264,21 @@ typedef struct ADIv5_DP_s {
 	uint8_t dp_jd_index;
 	uint8_t fault;
 
+	/* targetsel DPv2 */
+	uint8_t instance;
+	uint32_t targetsel;
+
 	uint8_t version;
 
-	uint8_t revision;
 	bool mindp;
 
 	/* DP designer (not implementer!) and partno */
 	uint16_t designer_code;
 	uint16_t partno;
+
+	/* TARGETID designer and partno, present on DPv2 */
+	uint16_t target_designer_code;
+	uint16_t target_partno;
 } ADIv5_DP_t;
 
 struct ADIv5_AP_s {
