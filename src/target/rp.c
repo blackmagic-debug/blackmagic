@@ -134,6 +134,12 @@ typedef struct rp_priv {
 	uint32_t regs[0x20]; /* Register playground*/
 } rp_priv_s;
 
+typedef struct rp_flash {
+	target_flash_s f;
+	uint32_t page_size;
+	uint8_t sector_erase_opcode;
+} rp_flash_s;
+
 static bool rp_cmd_erase_sector(target *t, int argc, const char **argv);
 static bool rp_cmd_reset_usb_boot(target *t, int argc, const char **argv);
 
@@ -169,14 +175,14 @@ static void rp_spi_read_sfdp(target *const t, const uint32_t address, void *cons
 
 static void rp_add_flash(target *t)
 {
-	struct target_flash *f = calloc(1, sizeof(*f));
-	if (!f) { /* calloc failed: heap exhaustion */
+	rp_flash_s *flash = calloc(1, sizeof(*flash));
+	if (!flash) { /* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return;
 	}
 
-	spi_parameters_s spi_parameters;
 	rp_flash_prepare(t);
+	spi_parameters_s spi_parameters;
 	if (!sfdp_read_parameters(t, &spi_parameters, rp_spi_read_sfdp)) {
 		/* SFDP readout failed, so make some assumptions and hope for the best. */
 		spi_parameters.page_size = 256U;
@@ -188,6 +194,7 @@ static void rp_add_flash(target *t)
 
 	DEBUG_INFO("Flash size: %zu MB\n", spi_parameters.capacity / (1024U * 1024U));
 
+	target_flash_s *const f = &flash->f;
 	f->start = RP_XIP_FLASH_BASE;
 	f->length = spi_parameters.capacity;
 	f->blocksize = spi_parameters.sector_size;
@@ -196,6 +203,9 @@ static void rp_add_flash(target *t)
 	f->buf_size = 2048; /* Max buffer size used otherwise */
 	f->erased = 0xffU;
 	target_add_flash(t, f);
+
+	flash->page_size = spi_parameters.page_size;
+	flash->sector_erase_opcode = spi_parameters.sector_erase_opcode;
 }
 
 bool rp_probe(target *t)
