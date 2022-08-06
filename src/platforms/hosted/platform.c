@@ -276,22 +276,22 @@ char *platform_ident(void)
 {
 	switch (info.bmp_type) {
 	case BMP_TYPE_NONE:
-		return "NONE";
+		return "None";
 
 	case BMP_TYPE_BMP:
 		return "BMP";
 
 	case BMP_TYPE_STLINKV2:
-		return "STLINKV2";
+		return "ST-Link v2";
 
 	case BMP_TYPE_LIBFTDI:
-		return "LIBFTDI";
+		return "libFTDI";
 
 	case BMP_TYPE_CMSIS_DAP:
-		return "CMSIS_DAP";
+		return "CMSIS-DAP";
 
 	case BMP_TYPE_JLINK:
-		return "JLINK";
+		return "J-Link";
 
 	default:
 		return NULL;
