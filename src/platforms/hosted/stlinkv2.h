@@ -32,7 +32,7 @@ int stlink_hwversion(void) { return -1; }
 const char *stlink_target_voltage(bmp_info_t *info) { return "ERROR"; }
 void stlink_nrst_set_val(bmp_info_t *info, bool assert) { }
 bool stlink_nrst_get_val(void) { return true; }
-int stlink_enter_debug_swd(bmp_info_t *info, ADIv5_DP_t *dp) { return -1; }
+int stlink_swdp_scan(bmp_info_t *info) { return 0; }
 void stlink_adiv5_dp_defaults(ADIv5_DP_t *dp) { }
 int stlink_jtag_dp_init(ADIv5_DP_t *dp) { return false; }
 int jtag_scan_stlinkv2(bmp_info_t *info, const uint8_t *irlens) { return 0; }
@@ -46,7 +46,7 @@ int stlink_hwversion(void);
 const char *stlink_target_voltage(bmp_info_t *info);
 void stlink_nrst_set_val(bmp_info_t *info, bool assert);
 bool stlink_nrst_get_val(void);
-int stlink_enter_debug_swd(bmp_info_t *info, ADIv5_DP_t *dp);
+int stlink_swdp_scan(bmp_info_t *info);
 void stlink_adiv5_dp_defaults(ADIv5_DP_t *dp);
 int stlink_jtag_dp_init(ADIv5_DP_t *dp);
 int jtag_scan_stlinkv2(bmp_info_t *info, const uint8_t *irlens);

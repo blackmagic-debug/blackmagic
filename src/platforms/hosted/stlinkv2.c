@@ -33,6 +33,7 @@
 #include "jtag_devs.h"
 #include "target.h"
 #include "cortexm.h"
+#include "target_internal.h"
 
 #include <assert.h>
 #include <unistd.h>
@@ -1067,8 +1068,10 @@ void stlink_adiv5_dp_defaults(ADIv5_DP_t *dp)
 	dp->mem_write_sized = stlink_mem_write_sized;
 }
 
-int stlink_enter_debug_swd(bmp_info_t *info, ADIv5_DP_t *dp)
+int stlink_swdp_scan(bmp_info_t *info)
 {
+	target_list_free();
+
 	stlink_leave_state(info);
 
 	uint8_t cmd[16] = {STLINK_DEBUG_COMMAND,
@@ -1079,7 +1082,13 @@ int stlink_enter_debug_swd(bmp_info_t *info, ADIv5_DP_t *dp)
 	stlink_send_recv_retry(cmd, 16, data, 2);
 
 	if (stlink_usb_error_check(data, true))
-		exit( -1);
+		return 0;
+
+	ADIv5_DP_t *dp = calloc(1, sizeof(*dp));
+	if (!dp) { /* calloc failed: heap exhaustion */
+		DEBUG_WARN("calloc: failed in %s\n", __func__);
+		return 0;
+	}
 
 	dp->dp_read = stlink_dp_read;
 	dp->error = stlink_dp_error;
@@ -1088,7 +1097,9 @@ int stlink_enter_debug_swd(bmp_info_t *info, ADIv5_DP_t *dp)
 
 	stlink_dp_error(dp);
 
-	return 0;
+	adiv5_dp_init(dp);
+
+	return target_list ? 1U : 0U;
 }
 
 #define V2_USED_SWD_CYCLES       20
