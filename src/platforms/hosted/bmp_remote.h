@@ -33,7 +33,7 @@ int remote_swdptap_init(ADIv5_DP_t *dp);
 int remote_jtagtap_init(jtag_proc_t *jtag_proc);
 bool remote_target_get_power(void);
 const char *remote_target_voltage(void);
-bool remote_target_set_power(bool power);
+bool remote_target_set_power(const bool power);
 void remote_nrst_set_val(bool assert);
 bool remote_nrst_get_val(void);
 void remote_max_frequency_set(uint32_t freq);

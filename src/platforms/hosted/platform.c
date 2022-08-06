@@ -424,7 +424,7 @@ uint32_t platform_max_frequency_get(void)
 	}
 }
 
-void platform_target_set_power(bool power)
+void platform_target_set_power(const bool power)
 {
 	switch (info.bmp_type) {
 	case BMP_TYPE_BMP:
