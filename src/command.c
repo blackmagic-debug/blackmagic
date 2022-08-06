@@ -201,7 +201,7 @@ static bool cmd_jtag_scan(target *t, int argc, const char **argv)
 	if (connect_assert_nrst)
 		platform_nrst_set_val(true); /* will be deasserted after attach */
 
-	int devs = -1;
+	uint32_t devs = 0;
 	volatile struct exception e;
 	TRY_CATCH (e, EXCEPTION_ALL) {
 #if PC_HOSTED == 1
@@ -242,7 +242,7 @@ bool cmd_swdp_scan(target *t, int argc, const char **argv)
 	if (connect_assert_nrst)
 		platform_nrst_set_val(true); /* will be deasserted after attach */
 
-	int devs = -1;
+	uint32_t devs = 0;
 	volatile struct exception e;
 	TRY_CATCH (e, EXCEPTION_ALL) {
 #if PC_HOSTED == 1
@@ -260,7 +260,7 @@ bool cmd_swdp_scan(target *t, int argc, const char **argv)
 		break;
 	}
 
-	if (devs <= 0) {
+	if (devs == 0) {
 		platform_nrst_set_val(false);
 		gdb_out("SW-DP scan failed!\n");
 		return false;
@@ -282,7 +282,7 @@ bool cmd_auto_scan(target *t, int argc, const char **argv)
 	if (connect_assert_nrst)
 		platform_nrst_set_val(true); /* will be deasserted after attach */
 
-	int devs = -1;
+	uint32_t devs = 0;
 	volatile struct exception e;
 	TRY_CATCH (e, EXCEPTION_ALL) {
 #if PC_HOSTED == 1
@@ -314,7 +314,7 @@ bool cmd_auto_scan(target *t, int argc, const char **argv)
 		gdb_outf("Exception: %s\n", e.msg);
 		break;
 	}
-	if (devs <= 0) {
+	if (devs == 0) {
 		platform_nrst_set_val(false);
 		gdb_out("auto scan failed!\n");
 		return false;

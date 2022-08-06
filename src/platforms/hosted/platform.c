@@ -135,7 +135,7 @@ void platform_init(int argc, char **argv)
 	}
 }
 
-int platform_adiv5_swdp_scan(uint32_t targetid)
+uint32_t platform_adiv5_swdp_scan(uint32_t targetid)
 {
 	info.is_jtag = false;
 	platform_max_frequency_set(cl_opts.opt_max_swj_frequency);
@@ -156,7 +156,6 @@ int platform_adiv5_swdp_scan(uint32_t targetid)
 	default:
 		return 0;
 	}
-	return 0;
 }
 
 int swdptap_init(ADIv5_DP_t *dp)
@@ -186,7 +185,7 @@ void platform_add_jtag_dev(uint32_t i, const jtag_dev_t *jtag_dev)
 		remote_add_jtag_dev(i, jtag_dev);
 }
 
-int platform_jtag_scan(const uint8_t *lrlens)
+uint32_t platform_jtag_scan(const uint8_t *lrlens)
 {
 	info.is_jtag = true;
 
@@ -203,7 +202,7 @@ int platform_jtag_scan(const uint8_t *lrlens)
 		return jtag_scan_stlinkv2(&info, lrlens);
 
 	default:
-		return -1;
+		return 0;
 	}
 }
 

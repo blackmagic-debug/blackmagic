@@ -684,7 +684,7 @@ static int stlink_enter_debug_jtag(bmp_info_t *info)
 // 	return id;
 // }
 
-static int stlink_read_idcodes(bmp_info_t *info, uint32_t *idcodes)
+static size_t stlink_read_idcodes(bmp_info_t *info, uint32_t *idcodes)
 {
 	uint8_t cmd[16] = {STLINK_DEBUG_COMMAND,
 					   STLINK_DEBUG_APIV2_READ_IDCODES};
@@ -692,10 +692,10 @@ static int stlink_read_idcodes(bmp_info_t *info, uint32_t *idcodes)
 	send_recv(info->usb_link, cmd, 16, data, 12);
 	if (stlink_usb_error_check(data, true))
 		return 0;
-	uint8_t *p = data + 4;
-	idcodes[0] = p[0] | p[1] << 8 | p[2] << 16 | p[3] << 24;
-	p += 4;
-	idcodes[1] = p[0] | p[1] << 8 | p[2] << 16 | p[3] << 24;
+	uint8_t *p = data + 4U;
+	idcodes[0] = p[0] | p[1] << 8U | p[2] << 16U | p[3] << 24U;
+	p += 4U;
+	idcodes[1] = p[0] | p[1] << 8U | p[2] << 16U | p[3] << 24U;
 	return 2;
 }
 
@@ -1018,7 +1018,7 @@ static uint32_t stlink_ap_read(ADIv5_AP_t *ap, uint16_t addr)
 	return ret;
 }
 
-int jtag_scan_stlinkv2(bmp_info_t *info, const uint8_t *irlens)
+uint32_t jtag_scan_stlinkv2(bmp_info_t *info, const uint8_t *irlens)
 {
 	uint32_t idcodes[JTAG_MAX_DEVS+1];
 	(void) *irlens;
@@ -1032,14 +1032,16 @@ int jtag_scan_stlinkv2(bmp_info_t *info, const uint8_t *irlens)
 	/* Check for known devices and handle accordingly */
 	for(uint32_t i = 0; i < jtag_dev_count; i++)
 		jtag_devs[i].jd_idcode = idcodes[i];
-	for(uint32_t i = 0; i < jtag_dev_count; i++)
-		for(size_t j = 0; dev_descr[j].idcode; j++)
+	for(uint32_t i = 0; i < jtag_dev_count; i++) {
+		for(size_t j = 0; dev_descr[j].idcode; j++) {
 			if((jtag_devs[i].jd_idcode & dev_descr[j].idmask) ==
 			   dev_descr[j].idcode) {
 				if(dev_descr[j].handler)
 					dev_descr[j].handler(i);
 				break;
 			}
+		}
+	}
 
 	return jtag_dev_count;
 }
@@ -1068,7 +1070,7 @@ void stlink_adiv5_dp_defaults(ADIv5_DP_t *dp)
 	dp->mem_write_sized = stlink_mem_write_sized;
 }
 
-int stlink_swdp_scan(bmp_info_t *info)
+uint32_t stlink_swdp_scan(bmp_info_t *info)
 {
 	target_list_free();
 

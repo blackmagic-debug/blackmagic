@@ -76,14 +76,14 @@ static int line_reset(bmp_info_t *info)
 	return 0;
 }
 
-static int jlink_swdptap_init(bmp_info_t *info)
+static bool jlink_swdptap_init(bmp_info_t *info)
 {
 	uint8_t cmd[2] = {CMD_GET_SELECT_IF, JLINK_IF_GET_AVAILABLE};
 	uint8_t res[4];
 	send_recv(info->usb_link, cmd, 2, res, sizeof(res));
 
 	if (!(res[0] & JLINK_IF_SWD))
-		return -1;
+		return false;
 
 	cmd[1] = SELECT_IF_SWD;
 	send_recv(info->usb_link, cmd, 2, res, sizeof(res));
@@ -92,14 +92,15 @@ static int jlink_swdptap_init(bmp_info_t *info)
 
 	/* SWD speed is fixed. Do not set it here*/
 
-	return 0;
+	return true;
 }
 
-int jlink_swdp_scan(bmp_info_t *info)
+uint32_t jlink_swdp_scan(bmp_info_t *info)
 {
 	target_list_free();
 
-	jlink_swdptap_init(info);
+	if (!jlink_swdptap_init(info))
+		return 0;
 
 	uint8_t cmd[44];
 	memset(cmd, 0, sizeof(cmd));
