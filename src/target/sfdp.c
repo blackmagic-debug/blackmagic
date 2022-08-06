@@ -32,12 +32,29 @@
  */
 
 #include <string.h>
+#include "general.h"
 #include "sfdp_internal.h"
 
 #ifdef MIN
 #undef MIN
 #endif
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
+
+static inline void sfdp_debug_print(const uint32_t address, const void *const buffer, const uint32_t length)
+{
+#if ENABLE_DEBUG
+	DEBUG_INFO("%" PRIu32 " byte SFDP read at 0x%" PRIx32 ":\n", length, address);
+	const uint8_t *const data = buffer;
+	for (size_t i = 0; i < length; i += 8U) {
+		DEBUG_INFO("\t%02x %02x %02x %02x %02x %02x %02x %02x\n", data[i + 0], data[i + 1], data[i + 2], data[i + 3],
+			data[i + 4], data[i + 5], data[i + 6], data[i + 7]);
+	}
+#else
+	(void)address;
+	(void)buffer;
+	(void)length;
+#endif
+}
 
 static inline size_t sfdp_memory_density_to_capacity_bits(const uint8_t *const density)
 {
@@ -72,12 +89,14 @@ bool sfdp_read_parameters(target *const t, spi_parameters_s *params, const read_
 {
 	sfdp_header_s header;
 	sfdp_read(t, SFDP_HEADER_ADDRESS, &header, sizeof(header));
+	sfdp_debug_print(SFDP_HEADER_ADDRESS, &header, sizeof(header));
 	if (memcmp(header.magic, SFDP_MAGIC, 4) != 0)
 		return false;
 
 	for (size_t i = 0; i <= header.parameter_headers_count; ++i) {
 		sfdp_parameter_table_header_s table_header;
 		sfdp_read(t, SFDP_TABLE_HEADER_ADDRESS + (sizeof(table_header) * i), &table_header, sizeof(table_header));
+		sfdp_debug_print(SFDP_TABLE_HEADER_ADDRESS + (sizeof(table_header) * i), &table_header, sizeof(table_header));
 		const uint16_t jedec_parameter_id = SFDP_JEDEC_PARAMETER_ID(table_header);
 		if (jedec_parameter_id == SFDP_BASIC_SPI_PARAMETER_TABLE) {
 			const uint32_t table_address = SFDP_TABLE_ADDRESS(table_header);
