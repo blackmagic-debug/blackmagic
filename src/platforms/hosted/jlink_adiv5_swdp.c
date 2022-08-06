@@ -178,25 +178,14 @@ static uint32_t jlink_adiv5_swdp_error(ADIv5_DP_t *dp)
 
 static uint32_t jlink_adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW, uint16_t addr, uint32_t value)
 {
+	uint8_t request = make_packet_request(RnW, addr);
 	bool APnDP = addr & ADIV5_APnDP;
-	uint8_t addr8 = addr & 0xffU;
-	uint8_t request = 0x81U;
 	uint32_t response = 0;
 	uint8_t ack;
 	platform_timeout timeout;
 
 	if (APnDP && dp->fault)
 		return 0;
-
-	if (APnDP)
-		request ^= 0x22U;
-	if (RnW)
-		request ^= 0x24U;
-
-	addr8 &= 0xCU;
-	request |= (addr8 << 1U) & 0x18U;
-	if ((addr8 == 4U) || (addr8 == 8U))
-		request ^= 0x20U;
 
 	uint8_t cmd[16];
 	memset(cmd, 0, sizeof(cmd));

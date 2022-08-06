@@ -298,7 +298,7 @@ struct ADIv5_AP_s {
 	uint16_t partno;
 };
 
-unsigned int make_packet_request(uint8_t RnW, uint16_t addr);
+uint8_t make_packet_request(uint8_t RnW, uint16_t addr);
 
 #if PC_HOSTED == 0
 static inline uint32_t adiv5_dp_read(ADIv5_DP_t *dp, uint16_t addr)

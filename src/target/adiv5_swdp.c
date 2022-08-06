@@ -29,11 +29,14 @@
 #include "target.h"
 #include "target_internal.h"
 
-unsigned int make_packet_request(uint8_t RnW, uint16_t addr)
+uint8_t make_packet_request(uint8_t RnW, uint16_t addr)
 {
 	bool APnDP = addr & ADIV5_APnDP;
+
 	addr &= 0xffU;
-	unsigned int request = 0x81U; /* Park and Startbit */
+
+	uint8_t request = 0x81U; /* Park and Startbit */
+
 	if (APnDP)
 		request ^= 0x22U;
 	if (RnW)
@@ -43,6 +46,7 @@ unsigned int make_packet_request(uint8_t RnW, uint16_t addr)
 	request |= (addr << 1U) & 0x18U;
 	if (addr == 4U || addr == 8U)
 		request ^= 0x20U;
+
 	return request;
 }
 
@@ -235,7 +239,7 @@ uint32_t firmware_swdp_error(ADIv5_DP_t *dp)
 
 uint32_t firmware_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW, uint16_t addr, uint32_t value)
 {
-	uint32_t request = make_packet_request(RnW, addr);
+	uint8_t request = make_packet_request(RnW, addr);
 	uint32_t response = 0;
 	uint32_t ack = SWDP_ACK_WAIT;
 	platform_timeout timeout;
