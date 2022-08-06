@@ -71,7 +71,7 @@ bool remote_target_get_power(void)
 	return construct[1] == '1';
 }
 
-bool remote_target_set_power(bool power)
+bool remote_target_set_power(const bool power)
 {
 	uint8_t construct[REMOTE_MAX_MSG_SIZE];
 	int s;
