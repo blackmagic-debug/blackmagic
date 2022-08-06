@@ -157,6 +157,14 @@ static bool rp_mass_erase(target *t);
 static void rp_spi_read_sfdp(target *const t, const uint32_t address, void *const buffer, const size_t length)
 {
 	rp_spi_read(t, SPI_FLASH_CMD_READ_SFDP, address, buffer, length);
+#if ENABLE_DEBUG
+	DEBUG_INFO("%" PRIu32 " byte SFDP read at 0x%" PRIx32 ":\n", (uint32_t)length, address);
+	const uint8_t *const data = buffer;
+	for (size_t i = 0; i < length; i += 8U) {
+		DEBUG_INFO("\t%02x %02x %02x %02x %02x %02x %02x %02x\n", data[i + 0], data[i + 1], data[i + 2], data[i + 3],
+			data[i + 4], data[i + 5], data[i + 6], data[i + 7]);
+	}
+#endif
 }
 
 static void rp_add_flash(target *t, uint32_t addr, size_t length)
