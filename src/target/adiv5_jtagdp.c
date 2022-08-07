@@ -95,7 +95,7 @@ uint32_t fw_adiv5_jtagdp_low_access(ADIv5_DP_t *dp, uint8_t RnW, uint16_t addr, 
 		dp->fault = 1;
 		return 0;
 	}
-	if ((ack != JTAGDP_ACK_OK))
+	if (ack != JTAGDP_ACK_OK)
 		raise_exception(EXCEPTION_ERROR, "JTAG-DP invalid ACK");
 
 	return (uint32_t)(response >> 3);
