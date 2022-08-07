@@ -996,6 +996,8 @@ void firmware_mem_write_sized(ADIv5_AP_t *ap, uint32_t dest, const void *src, si
 			adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR, dest);
 		}
 	}
+	/* Make sure this write is complete by doing a dummy read */
+	adiv5_dp_read(ap->dp, ADIV5_DP_RDBUFF);
 }
 
 void firmware_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value)
