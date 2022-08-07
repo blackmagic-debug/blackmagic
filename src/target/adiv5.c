@@ -721,7 +721,7 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 
 		/* Check for a valid DPIDR / designer */
 		if (dp->designer_code != 0) {
-			DEBUG_INFO("DP DPIDR 0x%08" PRIx32 " (v%d %srev%d) designer 0x%" PRIx32 " partno 0x%" PRIx32 "\n", dpidr,
+			DEBUG_INFO("DP DPIDR 0x%08" PRIx32 " (v%x %srev%"PRId32") designer 0x%x partno 0x%x\n", dpidr,
 				dp->version, dp->mindp ? "MINDP " : "",
 				(dpidr & ADIV5_DP_DPIDR_REVISION_MASK) >> ADIV5_DP_DPIDR_REVISION_OFFSET, dp->designer_code,
 				dp->partno);
@@ -733,7 +733,7 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 	}
 	if (dp->version == 0) {
 		/* DP v0 */
-		DEBUG_WARN("DPv0 detected, no designer code available\n", dpidr);
+		DEBUG_WARN("DPv0 detected, no designer code available\n");
 		dp->designer_code = 0;
 		dp->partno = 0;
 		dp->mindp = 0;
@@ -753,7 +753,7 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 
 		dp->target_partno = (targetid & ADIV5_DP_TARGETID_TPARTNO_MASK) >> ADIV5_DP_TARGETID_TPARTNO_OFFSET;
 
-		DEBUG_INFO("TARGETID 0x%08" PRIx32 " designer 0x%" PRIx32 " partno 0x%" PRIx32 "\n", targetid,
+		DEBUG_INFO("TARGETID 0x%08" PRIx32 " designer 0x%x partno 0x%x\n", targetid,
 			dp->target_designer_code, dp->target_partno);
 
 		dp->targetsel = dp->instance << ADIV5_DP_TARGETSEL_TINSTANCE_OFFSET |
