@@ -423,6 +423,9 @@ static void dap_mem_write_sized( ADIv5_AP_t *ap, uint32_t dest, const void *src,
 			src       += transfersize;
 		}
 	}
+
+	/* Make sure this write is complete by doing a dummy read */
+	adiv5_dp_read(ap->dp, ADIV5_DP_RDBUFF);
 	DEBUG_WIRE("memwrite done\n");
 }
 
