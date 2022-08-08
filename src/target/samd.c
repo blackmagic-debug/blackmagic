@@ -217,13 +217,13 @@ static const struct samd_part samd_l22_parts[] = {
 	{0xFF, 0, 0, 0}
 };
 
-/**
+/*
  * Overloads the default cortexm reset function with a version that
  * removes the target from extended reset where required.
  */
 void samd_reset(target *t)
 {
-	/**
+	/*
 	 * nRST is not asserted here as it appears to reset the adiv5
 	 * logic, meaning that subsequent adiv5_* calls PLATFORM_FATAL_ERROR.
 	 *
@@ -242,22 +242,22 @@ void samd_reset(target *t)
 	/* Read DHCSR here to clear S_RESET_ST bit before reset */
 	target_mem_read32(t, CORTEXM_DHCSR);
 
-	/* Request System Reset from NVIC: nRST doesn't work correctly */
-	/* This could be VECTRESET: 0x05FA0001 (reset only core)
+	/*
+	 * Request System Reset from NVIC: nRST doesn't work correctly
+	 * This could be VECTRESET: 0x05FA0001 (reset only core)
 	 *          or SYSRESETREQ: 0x05FA0004 (system reset)
 	 */
 	target_mem_write32(t, CORTEXM_AIRCR,
 	                   CORTEXM_AIRCR_VECTKEY | CORTEXM_AIRCR_SYSRESETREQ);
 
 	/* Exit extended reset */
-	if (target_mem_read32(t, SAMD_DSU_CTRLSTAT) &
-	    SAMD_STATUSA_CRSTEXT) {
+	if (target_mem_read32(t, SAMD_DSU_CTRLSTAT) & SAMD_STATUSA_CRSTEXT)
 		/* Write bit to clear from extended reset */
 		target_mem_write32(t, SAMD_DSU_CTRLSTAT, SAMD_STATUSA_CRSTEXT);
-	}
 
 	/* Poll for release from reset */
-	while (target_mem_read32(t, CORTEXM_DHCSR) & CORTEXM_DHCSR_S_RESET_ST);
+	while (target_mem_read32(t, CORTEXM_DHCSR) & CORTEXM_DHCSR_S_RESET_ST)
+		continue;
 
 	/* Reset DFSR flags */
 	target_mem_write32(t, CORTEXM_DFSR, CORTEXM_DFSR_RESETALL);
@@ -266,48 +266,39 @@ void samd_reset(target *t)
 	target_check_error(t);
 }
 
-/**
+/*
  * Overloads the default cortexm detached function with a version that
  * removes the target from extended reset where required.
  *
  * Only required for SAM D20 _Revision B_ Silicon
  */
-static void
-samd20_revB_detach(target *t)
+static void samd20_revB_detach(target *t)
 {
 	cortexm_detach(t);
 
-	/* ---- Additional ---- */
 	/* Exit extended reset */
-	if (target_mem_read32(t, SAMD_DSU_CTRLSTAT) &
-	    SAMD_STATUSA_CRSTEXT) {
+	if (target_mem_read32(t, SAMD_DSU_CTRLSTAT) & SAMD_STATUSA_CRSTEXT)
 		/* Write bit to clear from extended reset */
-		target_mem_write32(t, SAMD_DSU_CTRLSTAT,
-		                   SAMD_STATUSA_CRSTEXT);
-	}
+		target_mem_write32(t, SAMD_DSU_CTRLSTAT, SAMD_STATUSA_CRSTEXT);
 }
 
-/**
+/*
  * Overloads the default cortexm halt_resume function with a version
  * that removes the target from extended reset where required.
  *
  * Only required for SAM D20 _Revision B_ Silicon
  */
-static void
-samd20_revB_halt_resume(target *t, bool step)
+static void samd20_revB_halt_resume(target *t, bool step)
 {
 	target_halt_resume(t, step);
 
-	/* ---- Additional ---- */
 	/* Exit extended reset */
-	if (target_mem_read32(t, SAMD_DSU_CTRLSTAT) & SAMD_STATUSA_CRSTEXT) {
+	if (target_mem_read32(t, SAMD_DSU_CTRLSTAT) & SAMD_STATUSA_CRSTEXT)
 		/* Write bit to clear from extended reset */
-		target_mem_write32(t, SAMD_DSU_CTRLSTAT,
-		                   SAMD_STATUSA_CRSTEXT);
-	}
+		target_mem_write32(t, SAMD_DSU_CTRLSTAT, SAMD_STATUSA_CRSTEXT);
 }
 
-/**
+/*
  * Overload the default cortexm attach for when the samd is protected.
  *
  * If the samd is protected then the default cortexm attach will
@@ -325,7 +316,7 @@ bool samd_protected_attach(target *t)
 	return true;
 }
 
-/**
+/*
  * Use the DSU Device Indentification Register to populate a struct
  * describing the SAM D device.
  */
@@ -508,16 +499,16 @@ bool samd_probe(target *t)
 	t->reset = samd_reset;
 
 	if (samd.series == 20 && samd.revision == 'B') {
-		/**
-		 * These functions check for and
-		 * extended reset. Appears to be
-		 * related to Errata 35.4.1 ref 12015
+		/*
+		 * These functions check for an extended reset.
+		 * Appears to be related to Errata 35.4.1 ref 12015
 		 */
 		t->detach      = samd20_revB_detach;
 		t->halt_resume = samd20_revB_halt_resume;
 	}
+
 	if (protected) {
-		/**
+		/*
 		 * Overload the default cortexm attach
 		 * for when the samd is protected.
 		 * This function allows users to
@@ -547,7 +538,7 @@ bool samd_probe(target *t)
 	return true;
 }
 
-/**
+/*
  * Temporary (until next reset) flash memory locking / unlocking
  */
 static void samd_lock_current_address(target *t)
@@ -563,7 +554,7 @@ static void samd_unlock_current_address(target *t)
 	                   SAMD_CTRLA_CMD_KEY | SAMD_CTRLA_CMD_UNLOCK);
 }
 
-/**
+/*
  * Erase flash row by row
  */
 static int samd_flash_erase(struct target_flash *f, target_addr addr, size_t len)
@@ -598,7 +589,7 @@ static int samd_flash_erase(struct target_flash *f, target_addr addr, size_t len
 	return 0;
 }
 
-/**
+/*
  * Write flash page by page
  */
 static int samd_flash_write(struct target_flash *f,
@@ -627,7 +618,7 @@ static int samd_flash_write(struct target_flash *f,
 	return 0;
 }
 
-/**
+/*
  * Uses the Device Service Unit to erase the entire flash
  */
 bool samd_mass_erase(target *t)
@@ -665,7 +656,7 @@ bool samd_mass_erase(target *t)
 	return true;
 }
 
-/**
+/*
  * Sets the NVM region lock bits in the User Row. This value is read
  * at startup as the default value for the lock bits, and hence does
  * not take effect until a reset.
@@ -829,7 +820,7 @@ static bool samd_cmd_read_userrow(target *t, int argc, const char **argv)
 	return true;
 }
 
-/**
+/*
  * Reads the 128-bit serial number from the NVM
  */
 static bool samd_cmd_serial(target *t, int argc, const char **argv)
@@ -847,7 +838,7 @@ static bool samd_cmd_serial(target *t, int argc, const char **argv)
 	return true;
 }
 
-/**
+/*
  * Returns the size (in bytes) of the current SAM D20's flash memory.
  */
 static uint32_t samd_flash_size(target *t)
@@ -862,7 +853,7 @@ static uint32_t samd_flash_size(target *t)
 	return (0x40000 >> (devsel % 5));
 }
 
-/**
+/*
  * Runs the Memory Built In Self Test (MBIST)
  */
 static bool samd_cmd_mbist(target *t, int argc, const char **argv)
@@ -902,7 +893,7 @@ static bool samd_cmd_mbist(target *t, int argc, const char **argv)
 
 	return true;
 }
-/**
+/*
  * Sets the security bit
  */
 static bool samd_cmd_ssb(target *t, int argc, const char **argv)
