@@ -187,7 +187,7 @@
 #define REMOTE_MEM_WRITE_SIZED_STR (char []){ REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_AP_MEM_WRITE_SIZED, \
 			'%','0', '2', 'x', '%','0','2','x', HEX_U32(address), HEX_U32(count), 0}
 
-uint64_t remotehston(uint32_t limit, char *s);
+uint64_t remotehston(uint32_t limit, const char *s);
 void remotePacketProcess(unsigned int i, char *packet);
 
 #endif

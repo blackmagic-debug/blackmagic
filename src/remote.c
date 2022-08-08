@@ -31,32 +31,21 @@
 #include "target.h"
 #include "hex_utils.h"
 
+#define NTOH(x)    (((x) <= 9) ? (x) + '0' : 'a' + (x) - 10)
+#define HTON(x)    (((x) <= '9') ? (x) - '0' : ((TOUPPER(x)) - 'A' + 10))
+#define TOUPPER(x) ((((x) >= 'a') && ((x) <= 'z')) ? ((x) - ('a' - 'A')) : (x))
+#define ISHEX(x)   ((((x) >= '0') && ((x) <= '9')) || (((x) >= 'A') && ((x) <= 'F')) || (((x) >= 'a') && ((x) <= 'f')))
 
-#define NTOH(x) ((x<=9)?x+'0':'a'+x-10)
-#define HTON(x) ((x<='9')?x-'0':((TOUPPER(x))-'A'+10))
-#define TOUPPER(x) ((((x)>='a') && ((x)<='z'))?((x)-('a'-'A')):(x))
-#define ISHEX(x) (						\
-		(((x)>='0') && ((x)<='9')) ||					\
-		(((x)>='A') && ((x)<='F')) ||					\
-		(((x)>='a') && ((x)<='f'))						\
-		)
-
-
-uint64_t remotehston(uint32_t limit, char *s)
-
-/* Return numeric version of string, until illegal hex digit, or limit */
-
+/* Return numeric version of string, until illegal hex digit, or max */
+uint64_t remotehston(const uint32_t max, const char *const str)
 {
-	uint64_t ret=0L;
-	char c;
-
-	while (limit--) {
-		c=*s++;
-		if (!ISHEX(c))
+	uint64_t ret = 0;
+	for (size_t i = 0; i < max; ++i) {
+		const char value = str[i];
+		if (!ISHEX(value))
 			return ret;
-		ret=(ret<<4)|HTON(c);
-    }
-
+		ret = (ret << 4U) | HTON(value);
+	}
 	return ret;
 }
 
