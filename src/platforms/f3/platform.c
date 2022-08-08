@@ -115,3 +115,8 @@ void platform_request_boot(void)
 	magic[1] = BOOTMAGIC1;
 	scb_reset_system();
 }
+
+void platform_target_clk_output_enable(bool enable)
+{
+	(void)enable;
+}

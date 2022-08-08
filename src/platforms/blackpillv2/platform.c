@@ -142,3 +142,8 @@ void platform_target_set_power(const bool power)
 	gpio_set_val(PWR_BR_PORT, PWR_BR_PIN, !power);
 }
 #endif
+
+void platform_target_clk_output_enable(bool enable)
+{
+	(void)enable;
+}

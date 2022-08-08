@@ -101,3 +101,8 @@ void platform_request_boot(void)
 	SYSCFG_MEMRM &= ~3;
 	SYSCFG_MEMRM |=  1;
 }
+
+void platform_target_clk_output_enable(bool enable)
+{
+	(void)enable;
+}
