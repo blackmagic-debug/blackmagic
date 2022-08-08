@@ -190,3 +190,8 @@ void set_idle_state(int state)
 		break;
 	}
 }
+
+void platform_target_clk_output_enable(bool enable)
+{
+	(void)enable;
+}
