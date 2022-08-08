@@ -156,17 +156,11 @@ void platform_init(void)
 
 	/* Setup GPIO ports */
 	gpio_clear(USB_PU_PORT, USB_PU_PIN);
-	gpio_set_mode(USB_PU_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT,
-			USB_PU_PIN);
+	gpio_set_mode(USB_PU_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, USB_PU_PIN);
 
-	gpio_set_mode(JTAG_PORT, GPIO_MODE_OUTPUT_50_MHZ,
-			GPIO_CNF_OUTPUT_PUSHPULL,
-			TMS_DIR_PIN | TMS_PIN | TCK_PIN | TDI_PIN);
-	gpio_set_mode(JTAG_PORT, GPIO_MODE_OUTPUT_50_MHZ,
-			GPIO_CNF_OUTPUT_PUSHPULL,
-			TMS_DIR_PIN | TCK_PIN | TDI_PIN);
-	gpio_set_mode(JTAG_PORT, GPIO_MODE_OUTPUT_50_MHZ,
-			GPIO_CNF_INPUT_FLOAT, TMS_PIN);
+	gpio_set_mode(JTAG_PORT, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, TMS_DIR_PIN | TCK_PIN | TDI_PIN);
+	gpio_set_mode(JTAG_PORT, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_INPUT_FLOAT, TMS_PIN);
+
 	/* This needs some fixing... */
 	/* Toggle required to sort out line drivers... */
 	gpio_port_write(GPIOA, 0x8102);
@@ -181,9 +175,7 @@ void platform_init(void)
 		gpio_clear(TCK_DIR_PORT, TCK_DIR_PIN);
 	}
 
-	gpio_set_mode(LED_PORT, GPIO_MODE_OUTPUT_2_MHZ,
-			GPIO_CNF_OUTPUT_PUSHPULL,
-			LED_UART | LED_IDLE_RUN | LED_ERROR);
+	gpio_set_mode(LED_PORT, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, LED_UART | LED_IDLE_RUN | LED_ERROR);
 
 	/* Enable nRST output. Original uses a NPN to pull down, so setting the
 	 * output HIGH asserts. Mini is directly connected so use open drain output
@@ -191,40 +183,33 @@ void platform_init(void)
 	 */
 	platform_nrst_set_val(false);
 	gpio_set_mode(NRST_PORT, GPIO_MODE_OUTPUT_50_MHZ,
-			(((platform_hwversion() == 0) ||
-			  (platform_hwversion() >= 3))
-			 ? GPIO_CNF_OUTPUT_PUSHPULL
-			 : GPIO_CNF_OUTPUT_OPENDRAIN),
-			NRST_PIN);
+		(((platform_hwversion() == 0) || (platform_hwversion() >= 3)) ? GPIO_CNF_OUTPUT_PUSHPULL
+																	  : GPIO_CNF_OUTPUT_OPENDRAIN),
+		NRST_PIN);
 	/* FIXME: Gareth, Esden, what versions need this fix? */
-	if (platform_hwversion() < 3) {
+	if (platform_hwversion() < 3)
 		/* FIXME: This pin in intended to be input, but the TXS0108 fails
 		 * to release the device from reset if this floats. */
-		gpio_set_mode(NRST_SENSE_PORT, GPIO_MODE_OUTPUT_2_MHZ,
-					  GPIO_CNF_OUTPUT_PUSHPULL, NRST_SENSE_PIN);
-	} else {
+		gpio_set_mode(NRST_SENSE_PORT, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, NRST_SENSE_PIN);
+	else {
 		gpio_set(NRST_SENSE_PORT, NRST_SENSE_PIN);
-		gpio_set_mode(NRST_SENSE_PORT, GPIO_MODE_INPUT,
-		              GPIO_CNF_INPUT_PULL_UPDOWN, NRST_SENSE_PIN);
+		gpio_set_mode(NRST_SENSE_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, NRST_SENSE_PIN);
 	}
 	/* Enable internal pull-up on PWR_BR so that we don't drive
 	   TPWR locally or inadvertently supply power to the target. */
-	if (platform_hwversion () == 1) {
+	if (platform_hwversion() == 1) {
 		gpio_set(PWR_BR_PORT, PWR_BR_PIN);
-		gpio_set_mode(PWR_BR_PORT, GPIO_MODE_INPUT,
-		              GPIO_CNF_INPUT_PULL_UPDOWN, PWR_BR_PIN);
+		gpio_set_mode(PWR_BR_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, PWR_BR_PIN);
 	} else if (platform_hwversion() > 1) {
 		gpio_set(PWR_BR_PORT, PWR_BR_PIN);
-		gpio_set_mode(PWR_BR_PORT, GPIO_MODE_OUTPUT_50_MHZ,
-		              GPIO_CNF_OUTPUT_OPENDRAIN, PWR_BR_PIN);
+		gpio_set_mode(PWR_BR_PORT, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_OPENDRAIN, PWR_BR_PIN);
 	}
 
-	if (platform_hwversion() > 0) {
+	if (platform_hwversion() > 0)
 		adc_init();
-	} else {
+	else {
 		gpio_clear(GPIOB, GPIO0);
-		gpio_set_mode(GPIOB, GPIO_MODE_INPUT,
-				GPIO_CNF_INPUT_PULL_UPDOWN, GPIO0);
+		gpio_set_mode(GPIOB, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, GPIO0);
 	}
 	/* Relocate interrupt vector table here */
 	extern int vector_table;
@@ -235,9 +220,7 @@ void platform_init(void)
 
 	/* On hardware version 1 and 2, UART and SWD share connector pins.
 	 * Don't enable UART if we're being debugged. */
-	if (platform_hwversion() == 0 ||
-	    platform_hwversion() >= 3 ||
-	    !(SCS_DEMCR & SCS_DEMCR_TRCENA))
+	if (platform_hwversion() == 0 || platform_hwversion() >= 3 || !(SCS_DEMCR & SCS_DEMCR_TRCENA))
 		usbuart_init();
 
 	setup_vbus_irq();
