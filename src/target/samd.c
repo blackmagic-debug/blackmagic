@@ -299,6 +299,22 @@ static void samd20_revB_halt_resume(target *t, bool step)
 }
 
 /*
+ * Release the target from extended reset before running the normal cortexm_attach routine.
+ * This prevents tripping up over errata ref 9905
+ *
+ * Only required for SAM D11 silicon.
+ */
+static bool samd11_attach(target *t)
+{
+	/* Exit extended reset */
+	if (target_mem_read32(t, SAMD_DSU_CTRLSTAT) & SAMD_STATUSA_CRSTEXT)
+		/* Write bit to clear from extended reset */
+		target_mem_write32(t, SAMD_DSU_CTRLSTAT, SAMD_STATUSA_CRSTEXT);
+
+	return cortexm_attach(t);
+}
+
+/*
  * Overload the default cortexm attach for when the samd is protected.
  *
  * If the samd is protected then the default cortexm attach will
@@ -505,6 +521,12 @@ bool samd_probe(target *t)
 		 */
 		t->detach      = samd20_revB_detach;
 		t->halt_resume = samd20_revB_halt_resume;
+	} else if (samd.series == 11) {
+		/*
+		 * Attach routine that checks for an extended reset and releases it.
+		 * This works around Errata 38.2.5 ref 9905
+		 */
+		t->attach = samd11_attach;
 	}
 
 	if (protected) {
