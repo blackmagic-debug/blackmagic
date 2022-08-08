@@ -56,9 +56,7 @@ static int line_reset(bmp_info_t *info)
 	/* write 19 Bytes.*/
 	cmd[2] = 19 * 8;
 	uint8_t *direction = cmd + 4;
-	memset(direction, 0, 5);
 	memset(direction + 5, 0xffU, 9);
-	memset(direction + 14, 0xffU, 4);
 	direction[18] = 0xe0;
 	uint8_t *data = direction + 19;
 	memset(data + 5, 0xffU, 7);
