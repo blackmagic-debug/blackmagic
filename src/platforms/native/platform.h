@@ -64,6 +64,7 @@ int usbuart_debug_write(const char *buf, size_t len);
  *          = PA7  (output) -- Hardware 6 and newer
  * TMS      = PA4  (input/output for SWDIO)
  * TCK      = PA5  (output SWCLK)
+ * TCK_DIR  = PC15 (output) -- Hardware 6 and newer
  * TDO      = PA6  (input)
  * TRACESWO = PB7  (input)  -- To allow trace decoding using USART1
  *                             Hardware 4 has a normally open jumper between TDO and TRACESWO
@@ -110,11 +111,13 @@ int usbuart_debug_write(const char *buf, size_t len);
 #define TMS_DIR_PORT	JTAG_PORT
 #define TMS_PORT	JTAG_PORT
 #define TCK_PORT	JTAG_PORT
+#define TCK_DIR_PORT GPIOC
 #define TDO_PORT	JTAG_PORT
 #define TDI_PIN		HW_SWITCH(6, GPIO3, GPIO7)
 #define TMS_DIR_PIN	GPIO1
 #define TMS_PIN		GPIO4
 #define TCK_PIN		GPIO5
+#define TCK_DIR_PIN GPIO15
 #define TDO_PIN		GPIO6
 
 #define SWDIO_DIR_PORT	JTAG_PORT

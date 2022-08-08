@@ -149,6 +149,8 @@ void platform_init(void)
 	rcc_periph_clock_enable(RCC_USB);
 	rcc_periph_clock_enable(RCC_GPIOA);
 	rcc_periph_clock_enable(RCC_GPIOB);
+	if (platform_hwversion() >= 6)
+		rcc_periph_clock_enable(RCC_GPIOC);
 	rcc_periph_clock_enable(RCC_AFIO);
 	rcc_periph_clock_enable(RCC_CRC);
 
@@ -172,6 +174,12 @@ void platform_init(void)
 
 	gpio_port_write(GPIOA, 0x8182);
 	gpio_port_write(GPIOB, 0x2002);
+
+	if (platform_hwversion() >= 6) {
+		gpio_set_mode(TCK_DIR_PORT, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, TCK_DIR_PIN);
+		gpio_set_mode(TCK_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, TCK_PIN);
+		gpio_clear(TCK_DIR_PORT, TCK_DIR_PIN);
+	}
 
 	gpio_set_mode(LED_PORT, GPIO_MODE_OUTPUT_2_MHZ,
 			GPIO_CNF_OUTPUT_PUSHPULL,
@@ -345,6 +353,12 @@ void platform_request_boot(void)
 	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ,
 			GPIO_CNF_OUTPUT_PUSHPULL, GPIO12);
 	gpio_clear(GPIOB, GPIO12);
+}
+
+void platform_target_clk_output_enable(bool enable)
+{
+	if (platform_hwversion() >= 6)
+		gpio_set_val(TCK_DIR_PORT, TCK_DIR_PIN, enable);
 }
 
 void exti15_10_isr(void)
