@@ -117,7 +117,6 @@ static ADIv5_DP_t remote_dp = {
 	.mem_write_sized = firmware_mem_write_sized,
 };
 
-
 static void remotePacketProcessSWD(unsigned i, char *packet)
 {
 	uint8_t ticks;

@@ -116,32 +116,61 @@
 
 /* SWDP protocol elements */
 #define REMOTE_SWDP_PACKET 'S'
-#define REMOTE_SWDP_INIT_STR (char []){ REMOTE_SOM, REMOTE_SWDP_PACKET, REMOTE_INIT, REMOTE_EOM, 0 }
+#define REMOTE_SWDP_INIT_STR                                       \
+	(char[])                                                       \
+	{                                                              \
+		REMOTE_SOM, REMOTE_SWDP_PACKET, REMOTE_INIT, REMOTE_EOM, 0 \
+	}
 
-#define REMOTE_SWDP_IN_PAR_STR (char []){ REMOTE_SOM, REMOTE_SWDP_PACKET, REMOTE_IN_PAR, \
-                                          '%','0','2','x',REMOTE_EOM, 0 }
+#define REMOTE_SWDP_IN_PAR_STR                                                           \
+	(char[])                                                                             \
+	{                                                                                    \
+		REMOTE_SOM, REMOTE_SWDP_PACKET, REMOTE_IN_PAR, '%', '0', '2', 'x', REMOTE_EOM, 0 \
+	}
 
-#define REMOTE_SWDP_IN_STR (char []){ REMOTE_SOM, REMOTE_SWDP_PACKET, REMOTE_IN, \
-                                      '%','0','2','x',REMOTE_EOM, 0 }
+#define REMOTE_SWDP_IN_STR                                                           \
+	(char[])                                                                         \
+	{                                                                                \
+		REMOTE_SOM, REMOTE_SWDP_PACKET, REMOTE_IN, '%', '0', '2', 'x', REMOTE_EOM, 0 \
+	}
 
-#define REMOTE_SWDP_OUT_STR (char []){ REMOTE_SOM, REMOTE_SWDP_PACKET, REMOTE_OUT, \
-                                       '%','0','2','x','%','x',REMOTE_EOM, 0 }
+#define REMOTE_SWDP_OUT_STR                                                                     \
+	(char[])                                                                                    \
+	{                                                                                           \
+		REMOTE_SOM, REMOTE_SWDP_PACKET, REMOTE_OUT, '%', '0', '2', 'x', '%', 'x', REMOTE_EOM, 0 \
+	}
 
-#define REMOTE_SWDP_OUT_PAR_STR (char []){ REMOTE_SOM, REMOTE_SWDP_PACKET, REMOTE_OUT_PAR, \
-                                           '%','0','2','x','%','x',REMOTE_EOM, 0 }
+#define REMOTE_SWDP_OUT_PAR_STR                                                                     \
+	(char[])                                                                                        \
+	{                                                                                               \
+		REMOTE_SOM, REMOTE_SWDP_PACKET, REMOTE_OUT_PAR, '%', '0', '2', 'x', '%', 'x', REMOTE_EOM, 0 \
+	}
 
 /* JTAG protocol elements */
 #define REMOTE_JTAG_PACKET 'J'
+#define REMOTE_JTAG_INIT_STR                                                        \
+	(char[])                                                                        \
+	{                                                                               \
+		'+', REMOTE_EOM, REMOTE_SOM, REMOTE_JTAG_PACKET, REMOTE_INIT, REMOTE_EOM, 0 \
+	}
 
-#define REMOTE_JTAG_INIT_STR (char []){ '+',REMOTE_EOM, REMOTE_SOM, REMOTE_JTAG_PACKET, REMOTE_INIT, REMOTE_EOM, 0 }
+#define REMOTE_JTAG_RESET_STR                                                        \
+	(char[])                                                                         \
+	{                                                                                \
+		'+', REMOTE_EOM, REMOTE_SOM, REMOTE_JTAG_PACKET, REMOTE_RESET, REMOTE_EOM, 0 \
+	}
 
-#define REMOTE_JTAG_RESET_STR (char []){ '+',REMOTE_EOM, REMOTE_SOM, REMOTE_JTAG_PACKET, REMOTE_RESET, REMOTE_EOM, 0 }
+#define REMOTE_JTAG_TMS_STR                                                                     \
+	(char[])                                                                                    \
+	{                                                                                           \
+		REMOTE_SOM, REMOTE_JTAG_PACKET, REMOTE_TMS, '%', '0', '2', 'x', '%', 'x', REMOTE_EOM, 0 \
+	}
 
-#define REMOTE_JTAG_TMS_STR (char []){ REMOTE_SOM, REMOTE_JTAG_PACKET, REMOTE_TMS, \
-                                           '%','0','2','x','%','x',REMOTE_EOM, 0 }
-
-#define REMOTE_JTAG_TDIDO_STR (char []){ REMOTE_SOM, REMOTE_JTAG_PACKET, '%', 'c', \
-      '%','0','2','x','%','l', 'x', REMOTE_EOM, 0 }
+#define REMOTE_JTAG_TDIDO_STR                                                                      \
+	(char[])                                                                                       \
+	{                                                                                              \
+		REMOTE_SOM, REMOTE_JTAG_PACKET, '%', 'c', '%', '0', '2', 'x', '%', 'l', 'x', REMOTE_EOM, 0 \
+	}
 
 #define REMOTE_JTAG_CYCLE_STR                                                                               \
 	(char[])                                                                                                \
@@ -154,6 +183,7 @@
 	{                                                                                  \
 		REMOTE_SOM, REMOTE_JTAG_PACKET, REMOTE_NEXT, '%', 'u', '%', 'u', REMOTE_EOM, 0 \
 	}
+
 /* HL protocol elements */
 #define HEX '%', '0', '2', 'x'
 #define HEX_U32(x) '%', '0', '8', 'x'
