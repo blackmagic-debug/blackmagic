@@ -146,11 +146,13 @@ enum STM32G0_DEV_ID {
 	STM32G07_8 = 0x460,
 	STM32G0B_C = 0x467
 };
+
 struct stm32g0_saved_regs_s {
 	uint32_t rcc_apbenr1;
 	uint32_t dbg_cr;
 	uint32_t dbg_apb_fz1;
 };
+
 struct stm32g0_priv_s {
 	struct stm32g0_saved_regs_s saved_regs;
 	bool irreversible_enabled;
@@ -168,14 +170,13 @@ static bool stm32g0_cmd_option(target *t, int argc, const char **argv);
 static bool stm32g0_cmd_irreversible(target *t, int argc, const char **argv);
 
 const struct command_s stm32g0_cmd_list[] = {
-	{ "erase_bank 1|2", stm32g0_cmd_erase_bank, "Erase specified Flash bank" },
-	{ "option", stm32g0_cmd_option, "Manipulate option bytes" },
-	{ "irreversible", stm32g0_cmd_irreversible, "Allow irreversible operations: (enable|disable)" },
-	{ NULL, NULL, NULL },
+	{"erase_bank 1|2", stm32g0_cmd_erase_bank, "Erase specified Flash bank"},
+	{"option", stm32g0_cmd_option, "Manipulate option bytes"},
+	{"irreversible", stm32g0_cmd_irreversible, "Allow irreversible operations: (enable|disable)"},
+	{NULL, NULL, NULL},
 };
 
-static void stm32g0_add_flash(target *t, uint32_t addr, size_t length,
-                              size_t blocksize)
+static void stm32g0_add_flash(target *t, uint32_t addr, size_t length, size_t blocksize)
 {
 	target_flash_s *f = calloc(1, sizeof(*f));
 	if (!f) { /* calloc failed: heap exhaustion */
@@ -189,7 +190,7 @@ static void stm32g0_add_flash(target *t, uint32_t addr, size_t length,
 	f->erase = stm32g0_flash_erase;
 	f->write = stm32g0_flash_write;
 	f->buf_size = blocksize;
-	f->erased = 0xFF;
+	f->erased = 0xffU;
 	target_add_flash(t, f);
 }
 
@@ -235,6 +236,7 @@ bool stm32g0_probe(target *t)
 	default:
 		return false;
 	}
+
 	t->mass_erase = stm32g0_mass_erase;
 	target_add_ram(t, RAM_START, ram_size);
 	/* Dual banks: contiguous in memory */
@@ -247,7 +249,7 @@ bool stm32g0_probe(target *t)
 	/* Save private storage */
 	struct stm32g0_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
 	priv_storage->irreversible_enabled = false;
-	t->target_storage = (void*)priv_storage;
+	t->target_storage = priv_storage;
 
 	/* OTP Flash area */
 	stm32g0_add_flash(t, FLASH_OTP_START, FLASH_OTP_SIZE, FLASH_OTP_BLOCKSIZE);
@@ -265,20 +267,18 @@ bool stm32g0_probe(target *t)
  */
 static bool stm32g0_attach(target *t)
 {
-	struct stm32g0_priv_s *ps = (struct stm32g0_priv_s*)t->target_storage;
+	struct stm32g0_priv_s *ps = (struct stm32g0_priv_s *)t->target_storage;
 
 	if (!cortexm_attach(t))
 		return false;
 
 	ps->saved_regs.rcc_apbenr1 = target_mem_read32(t, RCC_APBENR1);
-	target_mem_write32(t, RCC_APBENR1, ps->saved_regs.rcc_apbenr1 |
-	                   RCC_APBENR1_DBGEN);
+	target_mem_write32(t, RCC_APBENR1, ps->saved_regs.rcc_apbenr1 | RCC_APBENR1_DBGEN);
 	ps->saved_regs.dbg_cr = target_mem_read32(t, DBG_CR);
-	target_mem_write32(t, DBG_CR, ps->saved_regs.dbg_cr |
-	                   (DBG_CR_DBG_STANDBY | DBG_CR_DBG_STOP));
+	target_mem_write32(t, DBG_CR, ps->saved_regs.dbg_cr | (DBG_CR_DBG_STANDBY | DBG_CR_DBG_STOP));
 	ps->saved_regs.dbg_apb_fz1 = target_mem_read32(t, DBG_APB_FZ1);
-	target_mem_write32(t, DBG_APB_FZ1, ps->saved_regs.dbg_apb_fz1 |
-	                   (DBG_APB_FZ1_DBG_IWDG_STOP | DBG_APB_FZ1_DBG_WWDG_STOP));
+	target_mem_write32(
+		t, DBG_APB_FZ1, ps->saved_regs.dbg_apb_fz1 | (DBG_APB_FZ1_DBG_IWDG_STOP | DBG_APB_FZ1_DBG_WWDG_STOP));
 
 	return true;
 }
@@ -290,14 +290,13 @@ static bool stm32g0_attach(target *t)
  */
 static void stm32g0_detach(target *t)
 {
-	struct stm32g0_priv_s *ps = (struct stm32g0_priv_s*)t->target_storage;
+	struct stm32g0_priv_s *ps = (struct stm32g0_priv_s *)t->target_storage;
 
 	/*
 	 * First re-enable DBGEN clock, in case it got disabled in the meantime
 	 * (happens during flash), so that writes to DBG_* registers below succeed.
 	 */
-	target_mem_write32(t, RCC_APBENR1, ps->saved_regs.rcc_apbenr1 |
-	                   RCC_APBENR1_DBGEN);
+	target_mem_write32(t, RCC_APBENR1, ps->saved_regs.rcc_apbenr1 | RCC_APBENR1_DBGEN);
 
 	/*
 	 * Then restore the DBG_* registers and clock settings.
@@ -367,8 +366,7 @@ static int stm32g0_flash_erase(target_flash_s *f, target_addr addr, size_t len)
 			page_nb = FLASH_BANK2_START_PAGE_NB;
 		}
 		/* Erase */
-		uint32_t flash_cr = (uint32_t)((page_nb << FLASH_CR_PNB_SHIFT) |
-		                               FLASH_CR_PER);
+		uint32_t flash_cr = (uint32_t)((page_nb << FLASH_CR_PNB_SHIFT) | FLASH_CR_PER);
 		if (on_bank2)
 			flash_cr |= (uint32_t)(FLASH_CR_BKER);
 
@@ -389,8 +387,7 @@ static int stm32g0_flash_erase(target_flash_s *f, target_addr addr, size_t len)
 	/* Check for error */
 	uint32_t flash_sr = target_mem_read32(t, FLASH_SR);
 	if (flash_sr & FLASH_SR_ERROR_MASK) {
-		DEBUG_WARN("stm32g0 flash erase error: sr 0x%" PRIx32 "\n",
-		           flash_sr);
+		DEBUG_WARN("stm32g0 flash erase error: sr 0x%" PRIx32 "\n", flash_sr);
 		goto exit_error;
 	}
 	goto exit_cleanup;
@@ -411,12 +408,11 @@ exit_cleanup:
  * OTP area is programmed as the "program" area. It can be programmed 8-bytes
  * by 8-bytes.
  */
-static int stm32g0_flash_write(target_flash_s *f, target_addr dest,
-                               const void *src, size_t len)
+static int stm32g0_flash_write(target_flash_s *f, target_addr dest, const void *src, size_t len)
 {
-	target *t = f->t;
+	target *const t = f->t;
 	int ret = 0;
-	struct stm32g0_priv_s *ps = (struct stm32g0_priv_s*)t->target_storage;
+	struct stm32g0_priv_s *ps = (struct stm32g0_priv_s *)t->target_storage;
 
 	if ((dest >= (target_addr)FLASH_OTP_START) && !ps->irreversible_enabled) {
 		tc_printf(t, "Irreversible operations disabled\n");
@@ -438,12 +434,10 @@ static int stm32g0_flash_write(target_flash_s *f, target_addr dest,
 	} while (flash_sr & FLASH_SR_BSY_MASK);
 
 	if (flash_sr & FLASH_SR_ERROR_MASK) {
-		DEBUG_WARN("stm32g0 flash write error: sr 0x%" PRIx32 "\n",
-		           flash_sr);
+		DEBUG_WARN("stm32g0 flash write error: sr 0x%" PRIx32 "\n", flash_sr);
 		goto exit_error;
 	}
-	if ((dest == (target_addr)FLASH_START) &&
-	    target_mem_read32(t, FLASH_START) != 0xFFFFFFFF) {
+	if ((dest == (target_addr)FLASH_START) && target_mem_read32(t, FLASH_START) != 0xFFFFFFFF) {
 		uint32_t flash_acr = target_mem_read32(t, FLASH_ACR);
 		flash_acr &= ~(uint32_t)FLASH_ACR_EMPTY;
 		target_mem_write32(t, FLASH_ACR, flash_acr);
@@ -586,20 +580,18 @@ static const struct registers_s options_def[NB_REG_OPT] = {
 	[SECR_ENUM]           = { FLASH_SECR,          0x00000000 }
 };
 
-static void write_registers(target *t, const struct registers_s *regs,
-                            uint8_t nb_regs)
+static void write_registers(target *const t, const struct registers_s *const regs, const size_t nb_regs)
 {
-	for (uint8_t i = 0U; i < nb_regs; i++) {
-		if (regs[i].addr > 0U)
-			target_mem_write32(t, regs[i].addr, regs[i].val);
+	for (size_t reg = 0U; reg < nb_regs; ++reg) {
+		if (regs[reg].addr > 0U)
+			target_mem_write32(t, regs[reg].addr, regs[reg].val);
 	}
 }
 
 /*
  * Option bytes programming.
  */
-static bool stm32g0_option_write(target *t,
-                                 const struct registers_s *options_req)
+static bool stm32g0_option_write(target *const t, const struct registers_s *const options_req)
 {
 	stm32g0_flash_unlock(t);
 	stm32g0_flash_option_unlock(t);
@@ -633,14 +625,13 @@ exit_error:
  * This table is further written to the target.
  * The register is added only if its address is valid.
  */
-static bool add_reg_value(struct registers_s *reg_req,
-                          const struct registers_s *reg_def,
-                          uint8_t reg_def_len, uint32_t addr, uint32_t val)
+static bool add_reg_value(struct registers_s *const reg_req, const struct registers_s *const reg_def,
+	const size_t reg_def_len, const uint32_t addr, const uint32_t val)
 {
-	for (uint8_t j = 0U; j < reg_def_len; j++) {
-		if (addr == reg_def[j].addr) {
-			reg_req[j].addr = addr;
-			reg_req[j].val = val;
+	for (size_t reg = 0U; reg < reg_def_len; ++reg) {
+		if (addr == reg_def[reg].addr) {
+			reg_req[reg].addr = addr;
+			reg_req[reg].val = val;
 			return true;
 		}
 	}
@@ -650,26 +641,19 @@ static bool add_reg_value(struct registers_s *reg_req,
 /*
  * Parse (address, value) register pairs given on the command line.
  */
-static bool parse_cmdline_registers(int args_nb, const char **reg_str,
-                                    struct registers_s *reg_req,
-                                    const struct registers_s *reg_def,
-                                    uint8_t reg_def_len)
+static bool parse_cmdline_registers(const uint32_t argc, const char *const *const argv,
+	struct registers_s *const reg_req, const struct registers_s *const reg_def, const size_t reg_def_len)
 {
-	uint32_t addr = 0U;
-	uint32_t val = 0U;
-	uint8_t valid_regs_nb = 0U;
+	uint32_t valid_regs = 0U;
 
-	for (uint8_t i = 0U; i < args_nb; i += 2U) {
-		addr = strtoul(reg_str[i], NULL, 0);
-		val = strtoul(reg_str[i + 1], NULL, 0);
+	for (uint32_t i = 0U; i < argc; i += 2U) {
+		const uint32_t addr = strtoul(argv[i], NULL, 0);
+		const uint32_t val = strtoul(argv[i + 1], NULL, 0);
 		if (add_reg_value(reg_req, reg_def, reg_def_len, addr, val))
-			valid_regs_nb++;
+			++valid_regs;
 	}
 
-	if (valid_regs_nb > 0U)
-		return true;
-	else
-		return false;
+	return valid_regs > 0U;
 }
 
 /*
@@ -678,24 +662,19 @@ static bool parse_cmdline_registers(int args_nb, const char **reg_str,
  */
 static bool validate_options(target *t, const struct registers_s *options_req)
 {
-	struct stm32g0_priv_s *ps = (struct stm32g0_priv_s*)t->target_storage;
+	struct stm32g0_priv_s *ps = (struct stm32g0_priv_s *)t->target_storage;
 
-	if (((options_req[OPTR_ENUM].val & FLASH_OPTR_RDP_MASK) ==
-	     (uint32_t)0xCC) &&
-	    !ps->irreversible_enabled) {
+	if ((options_req[OPTR_ENUM].val & FLASH_OPTR_RDP_MASK) == 0xccU && !ps->irreversible_enabled) {
 		tc_printf(t, "Irreversible operations disabled\n");
 		return false;
 	}
 	return true;
 }
 
-static void display_registers(target *t, const struct registers_s *reg_def,
-                              uint8_t len)
+static void display_registers(target *t, const struct registers_s *reg_def, const size_t len)
 {
-	uint32_t val = 0U;
-
-	for (uint8_t i = 0U; i < len; i++) {
-		val = target_mem_read32(t, reg_def[i].addr);
+	for (size_t i = 0; i < len; i++) {
+		const uint32_t val = target_mem_read32(t, reg_def[i].addr);
 		tc_printf(t, "0x%08X: 0x%08X\n", reg_def[i].addr, val);
 	}
 }
@@ -709,15 +688,13 @@ static void display_registers(target *t, const struct registers_s *reg_def,
  */
 static bool stm32g0_cmd_option(target *t, int argc, const char **argv)
 {
-	struct registers_s options_req[NB_REG_OPT] = { { 0U, 0U } };
+	struct registers_s options_req[NB_REG_OPT] = {{0U, 0U}};
 
-	if ((argc == 2) && !strcmp(argv[1], "erase")) {
+	if (argc == 2 && !strcmp(argv[1], "erase")) {
 		if (!stm32g0_option_write(t, options_def))
 			goto exit_error;
-	} else if ((argc > 2) && (argc % 2U == 0U) &&
-	           !strcmp(argv[1], "write")) {
-		if (!parse_cmdline_registers(argc - 2, argv + 2, options_req,
-		                             options_def, NB_REG_OPT))
+	} else if ((argc > 2) && (argc % 2U == 0U) && !strcmp(argv[1], "write")) {
+		if (!parse_cmdline_registers((uint32_t)argc - 2U, argv + 2U, options_req, options_def, NB_REG_OPT))
 			goto exit_error;
 		if (!validate_options(t, options_req))
 			goto exit_error;
@@ -741,15 +718,13 @@ exit_error:
  */
 static bool stm32g0_cmd_irreversible(target *t, int argc, const char **argv)
 {
-	struct stm32g0_priv_s *ps = (struct stm32g0_priv_s*)t->target_storage;
+	struct stm32g0_priv_s *ps = (struct stm32g0_priv_s *)t->target_storage;
 	bool ret = true;
 
 	if (argc == 2) {
-		if (!parse_enable_or_disable(argv[1],
-		                   &(ps->irreversible_enabled)))
+		if (!parse_enable_or_disable(argv[1], &(ps->irreversible_enabled)))
 			ret = false;
 	}
-	tc_printf(t, "Irreversible operations: %s\n",
-	          ps->irreversible_enabled ? "enabled" : "disabled");
+	tc_printf(t, "Irreversible operations: %s\n", ps->irreversible_enabled ? "enabled" : "disabled");
 	return ret;
 }
