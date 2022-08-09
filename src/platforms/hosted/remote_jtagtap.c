@@ -50,11 +50,10 @@ static inline unsigned int bool_to_int(const bool value)
 
 int remote_jtagtap_init(jtag_proc_t *jtag_proc)
 {
-	char buffer[REMOTE_MAX_MSG_SIZE];
-	int length = snprintf(buffer, REMOTE_MAX_MSG_SIZE, "%s", REMOTE_JTAG_INIT_STR);
-	platform_buffer_write((uint8_t *)buffer, length);
+	platform_buffer_write((uint8_t *)REMOTE_JTAG_INIT_STR, sizeof(REMOTE_JTAG_INIT_STR));
 
-	length = platform_buffer_read((uint8_t *)buffer, REMOTE_MAX_MSG_SIZE);
+	char buffer[REMOTE_MAX_MSG_SIZE];
+	int length = platform_buffer_read((uint8_t *)buffer, REMOTE_MAX_MSG_SIZE);
 	if ((!length) || (buffer[0] == REMOTE_RESP_ERR)) {
 		DEBUG_WARN("jtagtap_init failed, error %s\n", length ? buffer + 1 : "unknown");
 		exit(-1);
