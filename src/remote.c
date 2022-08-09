@@ -124,48 +124,48 @@ static void remotePacketProcessSWD(unsigned i, char *packet)
 	bool badParity;
 
 	switch (packet[1]) {
-    case REMOTE_INIT: /* SS = initialise =============================== */
-		if (i==2) {
+	case REMOTE_INIT: /* SS = initialise =============================== */
+		if (i == 2) {
 			remote_dp.dp_read = firmware_swdp_read;
 			remote_dp.low_access = firmware_swdp_low_access;
 			remote_dp.abort = firmware_swdp_abort;
 			swdptap_init(&remote_dp);
 			remote_respond(REMOTE_RESP_OK, 0);
 		} else {
-			remote_respond(REMOTE_RESP_ERR,REMOTE_ERROR_WRONGLEN);
+			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_WRONGLEN);
 		}
 		break;
 
-    case REMOTE_IN_PAR: /* SI = In parity ============================= */
-		ticks=remotehston(2,&packet[2]);
+	case REMOTE_IN_PAR: /* SI = In parity ============================= */
+		ticks = remotehston(2, &packet[2]);
 		badParity = remote_dp.seq_in_parity(&param, ticks);
-		remote_respond(badParity?REMOTE_RESP_PARERR:REMOTE_RESP_OK,param);
+		remote_respond(badParity ? REMOTE_RESP_PARERR : REMOTE_RESP_OK, param);
 		break;
 
-    case REMOTE_IN: /* Si = In ======================================= */
-		ticks=remotehston(2,&packet[2]);
+	case REMOTE_IN: /* Si = In ======================================= */
+		ticks = remotehston(2, &packet[2]);
 		param = remote_dp.seq_in(ticks);
-		remote_respond(REMOTE_RESP_OK,param);
+		remote_respond(REMOTE_RESP_OK, param);
 		break;
 
-    case REMOTE_OUT: /* So= Out ====================================== */
-		ticks=remotehston(2,&packet[2]);
-		param=remotehston(-1, &packet[4]);
+	case REMOTE_OUT: /* So= Out ====================================== */
+		ticks = remotehston(2, &packet[2]);
+		param = remotehston(-1, &packet[4]);
 		remote_dp.seq_out(param, ticks);
 		remote_respond(REMOTE_RESP_OK, 0);
 		break;
 
-    case REMOTE_OUT_PAR: /* SO = Out parity ========================== */
-		ticks=remotehston(2,&packet[2]);
-		param=remotehston(-1, &packet[4]);
+	case REMOTE_OUT_PAR: /* SO = Out parity ========================== */
+		ticks = remotehston(2, &packet[2]);
+		param = remotehston(-1, &packet[4]);
 		remote_dp.seq_out_parity(param, ticks);
 		remote_respond(REMOTE_RESP_OK, 0);
 		break;
 
-    default:
-		remote_respond(REMOTE_RESP_ERR,REMOTE_ERROR_UNRECOGNISED);
+	default:
+		remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_UNRECOGNISED);
 		break;
-    }
+	}
 }
 
 static void remotePacketProcessJTAG(unsigned i, char *packet)
@@ -176,7 +176,7 @@ static void remotePacketProcessJTAG(unsigned i, char *packet)
 	uint64_t DI;
 	jtag_dev_t jtag_dev;
 	switch (packet[1]) {
-    case REMOTE_INIT: /* JS = initialise ============================= */
+	case REMOTE_INIT: /* JS = initialise ============================= */
 		remote_dp.dp_read = fw_adiv5_jtagdp_read;
 		remote_dp.low_access = fw_adiv5_jtagdp_low_access;
 		remote_dp.abort = adiv5_jtagdp_abort;
@@ -184,19 +184,19 @@ static void remotePacketProcessJTAG(unsigned i, char *packet)
 		remote_respond(REMOTE_RESP_OK, 0);
 		break;
 
-    case REMOTE_RESET: /* JR = reset ================================= */
+	case REMOTE_RESET: /* JR = reset ================================= */
 		jtag_proc.jtagtap_reset();
 		remote_respond(REMOTE_RESP_OK, 0);
 		break;
 
-    case REMOTE_TMS: /* JT = TMS Sequence ============================ */
-		ticks=remotehston(2,&packet[2]);
-		MS=remotehston(2,&packet[4]);
+	case REMOTE_TMS: /* JT = TMS Sequence ============================ */
+		ticks = remotehston(2, &packet[2]);
+		MS = remotehston(2, &packet[4]);
 
-		if (i<4) {
-			remote_respond(REMOTE_RESP_ERR,REMOTE_ERROR_WRONGLEN);
+		if (i < 4) {
+			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_WRONGLEN);
 		} else {
-			jtag_proc.jtagtap_tms_seq( MS, ticks);
+			jtag_proc.jtagtap_tms_seq(MS, ticks);
 			remote_respond(REMOTE_RESP_OK, 0);
 		}
 		break;
@@ -213,12 +213,12 @@ static void remotePacketProcessJTAG(unsigned i, char *packet)
 	case REMOTE_TDITDO_TMS: /* JD = TDI/TDO  ========================================= */
 	case REMOTE_TDITDO_NOTMS:
 
-		if (i<5) {
-			remote_respond(REMOTE_RESP_ERR,REMOTE_ERROR_WRONGLEN);
+		if (i < 5) {
+			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_WRONGLEN);
 		} else {
-			ticks=remotehston(2,&packet[2]);
-			DI=remotehston(-1,&packet[4]);
-			jtag_proc.jtagtap_tdi_tdo_seq((void *)&DO, (packet[1]==REMOTE_TDITDO_TMS), (void *)&DI, ticks);
+			ticks = remotehston(2, &packet[2]);
+			DI = remotehston(-1, &packet[4]);
+			jtag_proc.jtagtap_tdi_tdo_seq((void *)&DO, (packet[1] == REMOTE_TDITDO_TMS), (void *)&DI, ticks);
 
 			/* Mask extra bits on return value... */
 			if (ticks < 64)
@@ -228,7 +228,7 @@ static void remotePacketProcessJTAG(unsigned i, char *packet)
 		}
 		break;
 
-    case REMOTE_NEXT: /* JN = NEXT ======================================== */
+	case REMOTE_NEXT: /* JN = NEXT ======================================== */
 		if (i != 4)
 			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_WRONGLEN);
 		else {
@@ -237,27 +237,27 @@ static void remotePacketProcessJTAG(unsigned i, char *packet)
 		}
 		break;
 
-    case REMOTE_ADD_JTAG_DEV: /* JJ = fill firmware jtag_devs */
+	case REMOTE_ADD_JTAG_DEV: /* JJ = fill firmware jtag_devs */
 		if (i < 22) {
-			remote_respond(REMOTE_RESP_ERR,REMOTE_ERROR_WRONGLEN);
+			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_WRONGLEN);
 		} else {
 			memset(&jtag_dev, 0, sizeof(jtag_dev));
-			const uint32_t index = remotehston(2, &packet[ 2]);
-			jtag_dev.dr_prescan  = remotehston(2, &packet[ 4]);
-			jtag_dev.dr_postscan = remotehston(2, &packet[ 6]);
-			jtag_dev.ir_len      = remotehston(2, &packet[ 8]);
-			jtag_dev.ir_prescan  = remotehston(2, &packet[10]);
+			const uint32_t index = remotehston(2, &packet[2]);
+			jtag_dev.dr_prescan = remotehston(2, &packet[4]);
+			jtag_dev.dr_postscan = remotehston(2, &packet[6]);
+			jtag_dev.ir_len = remotehston(2, &packet[8]);
+			jtag_dev.ir_prescan = remotehston(2, &packet[10]);
 			jtag_dev.ir_postscan = remotehston(2, &packet[12]);
-			jtag_dev.current_ir  = remotehston(8, &packet[14]);
+			jtag_dev.current_ir = remotehston(8, &packet[14]);
 			jtag_add_device(index, &jtag_dev);
 			remote_respond(REMOTE_RESP_OK, 0);
 		}
 		break;
 
-    default:
-		remote_respond(REMOTE_RESP_ERR,REMOTE_ERROR_UNRECOGNISED);
+	default:
+		remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_UNRECOGNISED);
 		break;
-    }
+	}
 }
 
 static void remotePacketProcessGEN(unsigned i, char *packet)
