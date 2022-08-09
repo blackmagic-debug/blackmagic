@@ -418,16 +418,13 @@ static int stm32g0_flash_write(target_flash_s *f, target_addr dest, const void *
 	target_mem_write32(t, FLASH_CR, FLASH_CR_PG);
 	target_mem_write(t, dest, src, len);
 	/* Wait for completion or an error */
-	uint32_t status = FLASH_SR_BSY_MASK;
-	while (status & FLASH_SR_BSY_MASK) {
-		status = target_mem_read32(t, FLASH_SR);
-		if (target_check_error(t)) {
-			DEBUG_WARN("stm32g0 flash write: comm error\n");
-			stm32g0_flash_op_finish(t);
-			return -1;
-		}
+	if (!stm32g0_wait_busy(t)) {
+		DEBUG_WARN("stm32g0 flash write: comm error\n");
+		stm32g0_flash_op_finish(t);
+		return -1;
 	}
 
+	const uint32_t status = target_mem_read32(t, FLASH_SR);
 	if (status & FLASH_SR_ERROR_MASK) {
 		DEBUG_WARN("stm32g0 flash write error: sr 0x%" PRIx32 "\n", status);
 		stm32g0_flash_op_finish(t);
