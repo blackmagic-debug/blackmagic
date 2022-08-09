@@ -340,8 +340,16 @@ void platform_request_boot(void)
 
 void platform_target_clk_output_enable(bool enable)
 {
-	if (platform_hwversion() >= 6)
+	if (platform_hwversion() >= 6) {
+		/* If we're switching to tristate mode, first convert the processor pin to an input */
+		if (!enable)
+			gpio_set_mode(TCK_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, TCK_PIN);
+		/* Reconfigure the logic levelt translator */
 		gpio_set_val(TCK_DIR_PORT, TCK_DIR_PIN, enable);
+		/* If we're switching back out of tristate mode, we're now safe to make the processor pin an output again */
+		if (enable)
+			gpio_set_mode(TCK_PORT, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, TCK_PIN);
+	}
 }
 
 void exti15_10_isr(void)
