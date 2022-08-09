@@ -327,11 +327,7 @@ static void stm32g0_flash_lock(target *t)
 static int stm32g0_flash_erase(target_flash_s *f, target_addr addr, size_t len)
 {
 	target *t = f->t;
-	target_addr end = addr + len - 1U;
-	uint16_t page_nb = 0U;
-	uint16_t nb_pages_to_erase = 0U;
-	uint16_t bank1_end_page_nb = FLASH_BANK2_START_PAGE_NB - 1U; // Max
-	bool on_bank2 = false;
+	const target_addr end = addr + len - 1U;
 	int ret = 0;
 
 	if (end > (f->start + f->length - 1U))
@@ -351,13 +347,15 @@ static int stm32g0_flash_erase(target_flash_s *f, target_addr addr, size_t len)
 	if (addr >= (target_addr)FLASH_OTP_START)
 		goto exit_cleanup;
 
-	nb_pages_to_erase = (uint16_t)((len - 1U) / f->blocksize) + 1U;
+	size_t nb_pages_to_erase = ((len - 1U) / f->blocksize) + 1U;
+	size_t bank1_end_page_nb = FLASH_BANK2_START_PAGE_NB - 1U;
 	if (t->part_id == STM32G0B_C) // Dual-bank devices
 		bank1_end_page_nb = ((f->length / 2U) - 1U) / f->blocksize;
-	page_nb = (uint16_t)((addr - f->start) / f->blocksize);
+	uint32_t page_nb = (addr - f->start) / f->blocksize;
 
 	stm32g0_flash_unlock(t);
 
+	bool on_bank2 = false;
 	do {
 		if (!on_bank2 && (page_nb > bank1_end_page_nb)) {
 			/* Jump on bank 2 */
