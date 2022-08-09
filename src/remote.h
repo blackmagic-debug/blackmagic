@@ -57,9 +57,9 @@
 #define REMOTE_ERROR_WRONGLEN     2
 
 /* Start and end of message identifiers */
-#define REMOTE_SOM         '!'
-#define REMOTE_EOM         '#'
-#define REMOTE_RESP        '&'
+#define REMOTE_SOM  '!'
+#define REMOTE_EOM  '#'
+#define REMOTE_RESP '&'
 
 /* Generic protocol elements */
 #define REMOTE_START        'A'
@@ -90,29 +90,59 @@
 #define REMOTE_RESP_NOTSUP 'N'
 
 /* High level protocol elements */
-#define REMOTE_HL_CHECK     'C'
-#define REMOTE_HL_PACKET 'H'
-#define REMOTE_DP_READ      'd'
-#define REMOTE_LOW_ACCESS   'L'
-#define REMOTE_AP_READ      'a'
-#define REMOTE_AP_WRITE     'A'
-#define REMOTE_AP_MEM_READ  'M'
+#define REMOTE_HL_CHECK           'C'
+#define REMOTE_HL_PACKET          'H'
+#define REMOTE_DP_READ            'd'
+#define REMOTE_LOW_ACCESS         'L'
+#define REMOTE_AP_READ            'a'
+#define REMOTE_AP_WRITE           'A'
+#define REMOTE_AP_MEM_READ        'M'
 #define REMOTE_MEM_READ           'h'
 #define REMOTE_MEM_WRITE_SIZED    'H'
 #define REMOTE_AP_MEM_WRITE_SIZED 'm'
 
-
 /* Generic protocol elements */
 #define REMOTE_GEN_PACKET  'G'
-
-#define REMOTE_START_STR (char []){ '+', REMOTE_EOM, REMOTE_SOM, REMOTE_GEN_PACKET, REMOTE_START, REMOTE_EOM, 0 }
-#define REMOTE_VOLTAGE_STR (char []){ REMOTE_SOM, REMOTE_GEN_PACKET, REMOTE_VOLTAGE, REMOTE_EOM, 0 }
-#define REMOTE_NRST_SET_STR (char []){ REMOTE_SOM, REMOTE_GEN_PACKET, REMOTE_NRST_SET, '%', 'c', REMOTE_EOM, 0 }
-#define REMOTE_NRST_GET_STR (char []){ REMOTE_SOM, REMOTE_GEN_PACKET, REMOTE_NRST_GET, REMOTE_EOM, 0 }
-#define REMOTE_FREQ_SET_STR (char []){ REMOTE_SOM, REMOTE_GEN_PACKET, REMOTE_FREQ_SET, '%', '0', '8', 'x', REMOTE_EOM, 0 }
-#define REMOTE_FREQ_GET_STR (char []){ REMOTE_SOM, REMOTE_GEN_PACKET, REMOTE_FREQ_GET, REMOTE_EOM, 0 }
-#define REMOTE_PWR_SET_STR (char []){ REMOTE_SOM, REMOTE_GEN_PACKET, REMOTE_PWR_SET, '%', 'c', REMOTE_EOM, 0 }
-#define REMOTE_PWR_GET_STR (char []){ REMOTE_SOM, REMOTE_GEN_PACKET, REMOTE_PWR_GET, REMOTE_EOM, 0 }
+#define REMOTE_START_STR                                                            \
+	(char[])                                                                        \
+	{                                                                               \
+		'+', REMOTE_EOM, REMOTE_SOM, REMOTE_GEN_PACKET, REMOTE_START, REMOTE_EOM, 0 \
+	}
+#define REMOTE_VOLTAGE_STR                                           \
+	(char[])                                                         \
+	{                                                                \
+		REMOTE_SOM, REMOTE_GEN_PACKET, REMOTE_VOLTAGE, REMOTE_EOM, 0 \
+	}
+#define REMOTE_NRST_SET_STR                                                     \
+	(char[])                                                                    \
+	{                                                                           \
+		REMOTE_SOM, REMOTE_GEN_PACKET, REMOTE_NRST_SET, '%', 'c', REMOTE_EOM, 0 \
+	}
+#define REMOTE_NRST_GET_STR                                           \
+	(char[])                                                          \
+	{                                                                 \
+		REMOTE_SOM, REMOTE_GEN_PACKET, REMOTE_NRST_GET, REMOTE_EOM, 0 \
+	}
+#define REMOTE_FREQ_SET_STR                                                               \
+	(char[])                                                                              \
+	{                                                                                     \
+		REMOTE_SOM, REMOTE_GEN_PACKET, REMOTE_FREQ_SET, '%', '0', '8', 'x', REMOTE_EOM, 0 \
+	}
+#define REMOTE_FREQ_GET_STR                                           \
+	(char[])                                                          \
+	{                                                                 \
+		REMOTE_SOM, REMOTE_GEN_PACKET, REMOTE_FREQ_GET, REMOTE_EOM, 0 \
+	}
+#define REMOTE_PWR_SET_STR                                                     \
+	(char[])                                                                   \
+	{                                                                          \
+		REMOTE_SOM, REMOTE_GEN_PACKET, REMOTE_PWR_SET, '%', 'c', REMOTE_EOM, 0 \
+	}
+#define REMOTE_PWR_GET_STR                                           \
+	(char[])                                                         \
+	{                                                                \
+		REMOTE_SOM, REMOTE_GEN_PACKET, REMOTE_PWR_GET, REMOTE_EOM, 0 \
+	}
 
 /* SWDP protocol elements */
 #define REMOTE_SWDP_PACKET 'S'
@@ -200,22 +230,52 @@
 			HEX_U32(current_ir), /* current_ir */						\
 			REMOTE_EOM, 0}
 
-#define REMOTE_HL_CHECK_STR (char []){ REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_HL_CHECK, REMOTE_EOM, 0 }
-#define REMOTE_DP_READ_STR (char []){ REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_DP_READ, \
-			'%','0', '2', 'x', 'f', 'f', '%', '0', '4', 'x', REMOTE_EOM, 0 }
-#define REMOTE_LOW_ACCESS_STR (char []){ REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_LOW_ACCESS, \
-			'%','0', '2', 'x', '%','0', '2', 'x', '%', '0', '4', 'x', HEX_U32(csw), REMOTE_EOM, 0 }
-#define REMOTE_AP_READ_STR (char []){ REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_AP_READ, \
-			'%','0', '2', 'x', '%','0','2','x', '%', '0', '4', 'x', REMOTE_EOM, 0 }
-#define REMOTE_AP_WRITE_STR (char []){ REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_AP_WRITE, \
-			'%','0', '2', 'x', '%','0','2','x', '%', '0', '4', 'x', HEX_U32(csw), REMOTE_EOM, 0 }
-#define REMOTE_AP_MEM_READ_STR (char []){ REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_AP_MEM_READ, \
-			'%','0', '2', 'x', '%','0','2','x',HEX_U32(csw), HEX_U32(address), HEX_U32(count), \
-			REMOTE_EOM, 0 }
-#define REMOTE_AP_MEM_WRITE_SIZED_STR (char []){ REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_AP_MEM_WRITE_SIZED, \
-			'%','0', '2', 'x', '%', '0', '2', 'x', HEX_U32(csw), '%', '0', '2', 'x', HEX_U32(address), HEX_U32(count), 0}
-#define REMOTE_MEM_WRITE_SIZED_STR (char []){ REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_AP_MEM_WRITE_SIZED, \
-			'%','0', '2', 'x', '%','0','2','x', HEX_U32(address), HEX_U32(count), 0}
+#define REMOTE_HL_CHECK_STR                                          \
+	(char[])                                                         \
+	{                                                                \
+		REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_HL_CHECK, REMOTE_EOM, 0 \
+	}
+#define REMOTE_DP_READ_STR                                                                                            \
+	(char[])                                                                                                          \
+	{                                                                                                                 \
+		REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_DP_READ, '%', '0', '2', 'x', 'f', 'f', '%', '0', '4', 'x', REMOTE_EOM, 0 \
+	}
+#define REMOTE_LOW_ACCESS_STR                                                                                        \
+	(char[])                                                                                                         \
+	{                                                                                                                \
+		REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_LOW_ACCESS, '%', '0', '2', 'x', '%', '0', '2', 'x', '%', '0', '4', 'x', \
+			HEX_U32(csw), REMOTE_EOM, 0                                                                              \
+	}
+#define REMOTE_AP_READ_STR                                                                                        \
+	(char[])                                                                                                      \
+	{                                                                                                             \
+		REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_AP_READ, '%', '0', '2', 'x', '%', '0', '2', 'x', '%', '0', '4', 'x', \
+			REMOTE_EOM, 0                                                                                         \
+	}
+#define REMOTE_AP_WRITE_STR                                                                                        \
+	(char[])                                                                                                       \
+	{                                                                                                              \
+		REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_AP_WRITE, '%', '0', '2', 'x', '%', '0', '2', 'x', '%', '0', '4', 'x', \
+			HEX_U32(csw), REMOTE_EOM, 0                                                                            \
+	}
+#define REMOTE_AP_MEM_READ_STR                                                                                  \
+	(char[])                                                                                                    \
+	{                                                                                                           \
+		REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_AP_MEM_READ, '%', '0', '2', 'x', '%', '0', '2', 'x', HEX_U32(csw), \
+			HEX_U32(address), HEX_U32(count), REMOTE_EOM, 0                                                     \
+	}
+#define REMOTE_AP_MEM_WRITE_SIZED_STR                                                                                  \
+	(char[])                                                                                                           \
+	{                                                                                                                  \
+		REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_AP_MEM_WRITE_SIZED, '%', '0', '2', 'x', '%', '0', '2', 'x', HEX_U32(csw), \
+			'%', '0', '2', 'x', HEX_U32(address), HEX_U32(count), 0                                                    \
+	}
+#define REMOTE_MEM_WRITE_SIZED_STR                                                                       \
+	(char[])                                                                                             \
+	{                                                                                                    \
+		REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_AP_MEM_WRITE_SIZED, '%', '0', '2', 'x', '%', '0', '2', 'x', \
+			HEX_U32(address), HEX_U32(count), 0                                                          \
+	}
 
 uint64_t remotehston(uint32_t limit, const char *s);
 void remotePacketProcess(unsigned int i, char *packet);
