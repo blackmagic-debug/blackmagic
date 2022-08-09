@@ -483,6 +483,18 @@ void platform_buffer_flush(void)
 	}
 }
 
+void platform_target_clk_output_enable(const bool enable)
+{
+	switch (info.bmp_type) {
+	case BMP_TYPE_BMP:
+		remote_target_clk_output_enable(enable);
+		break;
+
+	default:
+		break;
+	}
+}
+
 static void ap_decode_access(uint16_t addr, uint8_t RnW)
 {
 	if (RnW)
