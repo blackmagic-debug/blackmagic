@@ -16,8 +16,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.	 If not, see <http://www.gnu.org/licenses/>.
  */
-#if !defined(__BMP_REMOTE_H_)
-#define      __BMP_REMOTE_H_
+#ifndef __BMP_REMOTE_H_
+#define __BMP_REMOTE_H_
+
 #include "jtagtap.h"
 #include "adiv5.h"
 #include "target.h"
@@ -33,13 +34,14 @@ int remote_swdptap_init(ADIv5_DP_t *dp);
 int remote_jtagtap_init(jtag_proc_t *jtag_proc);
 bool remote_target_get_power(void);
 const char *remote_target_voltage(void);
-bool remote_target_set_power(const bool power);
+bool remote_target_set_power(bool power);
 void remote_nrst_set_val(bool assert);
 bool remote_nrst_get_val(void);
 void remote_max_frequency_set(uint32_t freq);
 uint32_t remote_max_frequency_get(void);
-const char *platform_target_voltage(void);
+void remote_target_clk_output_enable(bool enable);
+
 void remote_adiv5_dp_defaults(ADIv5_DP_t *dp);
 void remote_add_jtag_dev(uint32_t i, const jtag_dev_t *jtag_dev);
-#define __BMP_REMOTE_H_
-#endif
+
+#endif /*__BMP_REMOTE_H_*/
