@@ -320,6 +320,15 @@ static void stm32g0_flash_lock(target *t)
 	target_mem_write32(t, FLASH_CR, flash_cr);
 }
 
+static bool stm32g0_wait_busy(target *const t)
+{
+	while (target_mem_read32(t, FLASH_SR) & FLASH_SR_BSY_MASK) {
+		if (target_check_error(t))
+			return false;
+	}
+	return true;
+}
+
 /*
  * Flash erasure function.
  * OTP case: this function clears any previous error and returns.
@@ -336,10 +345,8 @@ static int stm32g0_flash_erase(target_flash_s *f, target_addr addr, size_t len)
 		goto exit_cleanup;
 
 	/* Wait for Flash ready */
-	while (target_mem_read32(t, FLASH_SR) & FLASH_SR_BSY_MASK) {
-		if (target_check_error(t))
-			goto exit_error;
-	}
+	if (!stm32g0_wait_busy(t))
+		goto exit_error;
 
 	/* Clear any previous programming error */
 	target_mem_write32(t, FLASH_SR, target_mem_read32(t, FLASH_SR));
@@ -372,10 +379,8 @@ static int stm32g0_flash_erase(target_flash_s *f, target_addr addr, size_t len)
 		flash_cr |= (uint32_t)FLASH_CR_STRT;
 		target_mem_write32(t, FLASH_CR, flash_cr);
 
-		while (target_mem_read32(t, FLASH_SR) & FLASH_SR_BSY_MASK) {
-			if (target_check_error(t))
-				goto exit_error;
-		}
+		if (!stm32g0_wait_busy(t))
+			goto exit_error;
 
 		page_nb++;
 		nb_pages_to_erase--;
@@ -505,20 +510,16 @@ static bool stm32g0_cmd_erase_bank(target *t, int argc, const char **argv)
 	stm32g0_flash_unlock(t);
 	target_mem_write32(t, FLASH_CR, flash_cr);
 
-	bool error = true;
 	/* Read FLASH_SR to poll for BSY bits */
-	while (target_mem_read32(t, FLASH_SR) & FLASH_SR_BSY_MASK) {
-		if ((error = target_check_error(t)))
-			goto exit_cleanup;
+	if (!stm32g0_wait_busy(t)) {
+		stm32g0_flash_lock(t);
+		return false;
 	}
 
 	/* Check for error */
-	uint16_t flash_sr = target_mem_read32(t, FLASH_SR);
-	error = flash_sr & FLASH_SR_ERROR_MASK;
-
-exit_cleanup:
+	const uint16_t flash_sr = target_mem_read32(t, FLASH_SR);
 	stm32g0_flash_lock(t);
-	return !error;
+	return !(flash_sr & FLASH_SR_ERROR_MASK);
 }
 
 static void stm32g0_flash_option_unlock(target *t)
@@ -594,18 +595,14 @@ static bool stm32g0_option_write(target *const t, const registers_s *const optio
 	stm32g0_flash_option_unlock(t);
 
 	/* Wait for Flash ready */
-	while (target_mem_read32(t, FLASH_SR) & FLASH_SR_BSY_MASK) {
-		if (target_check_error(t))
-			goto exit_error;
-	}
+	if (!stm32g0_wait_busy(t))
+		goto exit_error;
 
 	write_registers(t, options_req, NB_REG_OPT);
 
 	target_mem_write32(t, FLASH_CR, FLASH_CR_OPTSTRT);
-	while (target_mem_read32(t, FLASH_SR) & FLASH_SR_BSY_MASK) {
-		if (target_check_error(t))
-			goto exit_error;
-	}
+	if (!stm32g0_wait_busy(t))
+		goto exit_error;
 
 	/* Option bytes loading generates a system reset */
 	target_mem_write32(t, FLASH_CR, FLASH_CR_OBL_LAUNCH);
