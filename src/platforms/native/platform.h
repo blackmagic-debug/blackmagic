@@ -190,27 +190,30 @@ int usbuart_debug_write(const char *buf, size_t len);
 #define AUX_VBAT       GPIO0
 
 # define SWD_CR   GPIO_CRL(SWDIO_PORT)
-# define SWD_CR_MULT (1 << (4 << 2))
+# define SWD_CR_SHIFT (4U << 2U)
 
 #define TMS_SET_MODE() do { \
 	gpio_set(TMS_DIR_PORT, TMS_DIR_PIN); \
 	gpio_set_mode(TMS_PORT, GPIO_MODE_OUTPUT_50_MHZ, \
 	              GPIO_CNF_OUTPUT_PUSHPULL, TMS_PIN); \
 } while(0)
+
 #define SWDIO_MODE_FLOAT() do { \
 	uint32_t cr = SWD_CR; \
-	cr  &= ~(0xf * SWD_CR_MULT); \
-	cr  |=  (0x4 * SWD_CR_MULT); \
+	cr  &= ~(0xfU << SWD_CR_SHIFT); \
+	cr  |=  (0x4U << SWD_CR_SHIFT); \
 	GPIO_BRR(SWDIO_DIR_PORT) = SWDIO_DIR_PIN; \
 	SWD_CR = cr; \
 } while(0)
+
 #define SWDIO_MODE_DRIVE() do { \
 	uint32_t cr = SWD_CR; \
-	cr  &= ~(0xf * SWD_CR_MULT); \
-	cr  |=  (0x1 * SWD_CR_MULT); \
+	cr  &= ~(0xfU << SWD_CR_SHIFT); \
+	cr  |=  (0x1U << SWD_CR_SHIFT); \
 	GPIO_BSRR(SWDIO_DIR_PORT) = SWDIO_DIR_PIN; \
 	SWD_CR = cr; \
 } while(0)
+
 #define UART_PIN_SETUP() do { \
 	gpio_set_mode(USBUSART_PORT, GPIO_MODE_OUTPUT_50_MHZ, \
 	              GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, USBUSART_TX_PIN); \
