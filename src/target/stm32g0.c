@@ -48,17 +48,17 @@
 #include "command.h"
 
 /* FLASH */
-#define FLASH_START                     0x08000000
-#define FLASH_MEMORY_SIZE               0x1FFF75E0
-#define FLASH_PAGE_SIZE                 0x800
-#define FLASH_BANK2_START_PAGE_NB       256U
-#define FLASH_OTP_START                 0x1FFF7000
-#define FLASH_OTP_SIZE                  0x400
-#define FLASH_OTP_BLOCKSIZE             0x8
-#define FLASH_SIZE_MAX_G03_4            (64U * 1024U)    // 64 kiB
-#define FLASH_SIZE_MAX_G05_6            (64U * 1024U)    // 64 kiB
-#define FLASH_SIZE_MAX_G07_8            (128U * 1024U)   // 128 kiB
-#define FLASH_SIZE_MAX_G0B_C            (512U * 1024U)   // 512 kiB
+#define FLASH_START            0x08000000
+#define FLASH_MEMORY_SIZE      0x1FFF75E0
+#define FLASH_PAGE_SIZE        0x800
+#define FLASH_BANK2_START_PAGE 256U
+#define FLASH_OTP_START        0x1FFF7000
+#define FLASH_OTP_SIZE         0x400
+#define FLASH_OTP_BLOCKSIZE    0x8
+#define FLASH_SIZE_MAX_G03_4   (64U * 1024U)  // 64 kiB
+#define FLASH_SIZE_MAX_G05_6   (64U * 1024U)  // 64 kiB
+#define FLASH_SIZE_MAX_G07_8   (128U * 1024U) // 128 kiB
+#define FLASH_SIZE_MAX_G0B_C   (512U * 1024U) // 512 kiB
 
 #define G0_FLASH_BASE                   0x40022000
 #define FLASH_ACR                       (G0_FLASH_BASE + 0x000)
@@ -70,8 +70,8 @@
 #define FLASH_CR                        (G0_FLASH_BASE + 0x014)
 #define FLASH_CR_LOCK                   (1U << 31U)
 #define FLASH_CR_OBL_LAUNCH             (1U << 27U)
-#define FLASH_CR_OPTSTRT                (1U << 17U)
-#define FLASH_CR_STRT                   (1U << 16U)
+#define FLASH_CR_OPTSTART               (1U << 17U)
+#define FLASH_CR_START                  (1U << 16U)
 #define FLASH_CR_MER2                   (1U << 15U)
 #define FLASH_CR_MER1                   (1U << 2U)
 #define FLASH_CR_BKER                   (1U << 13U)
@@ -339,9 +339,9 @@ static int stm32g0_flash_erase(target_flash_s *f, target_addr addr, size_t len)
 	const target_addr end = addr + len - 1U;
 	int ret = 0;
 
-	if (end > (f->start + f->length - 1U))
+	if (end > f->start + f->length - 1U)
 		goto exit_error;
-	if (len == (size_t)0U)
+	if (!len)
 		goto exit_cleanup;
 
 	/* Wait for Flash ready */
@@ -351,45 +351,39 @@ static int stm32g0_flash_erase(target_flash_s *f, target_addr addr, size_t len)
 	/* Clear any previous programming error */
 	target_mem_write32(t, FLASH_SR, target_mem_read32(t, FLASH_SR));
 
-	if (addr >= (target_addr)FLASH_OTP_START)
+	if (addr >= FLASH_OTP_START)
 		goto exit_cleanup;
 
-	size_t nb_pages_to_erase = ((len - 1U) / f->blocksize) + 1U;
-	size_t bank1_end_page_nb = FLASH_BANK2_START_PAGE_NB - 1U;
+	const size_t pages_to_erase = ((len - 1U) / f->blocksize) + 1U;
+	size_t bank1_end_page = FLASH_BANK2_START_PAGE - 1U;
 	if (t->part_id == STM32G0B_C) // Dual-bank devices
-		bank1_end_page_nb = ((f->length / 2U) - 1U) / f->blocksize;
-	uint32_t page_nb = (addr - f->start) / f->blocksize;
+		bank1_end_page = ((f->length / 2U) - 1U) / f->blocksize;
+	uint32_t page = (addr - f->start) / f->blocksize;
 
 	stm32g0_flash_unlock(t);
 
-	bool on_bank2 = false;
-	do {
-		if (!on_bank2 && (page_nb > bank1_end_page_nb)) {
-			/* Jump on bank 2 */
-			on_bank2 = true;
-			page_nb = FLASH_BANK2_START_PAGE_NB;
-		}
+	for (size_t pages_erased = 0U; pages_erased < pages_to_erase; ++pages_erased) {
+		if (page < FLASH_BANK2_START_PAGE && page > bank1_end_page)
+			page = FLASH_BANK2_START_PAGE;
+
 		/* Erase */
-		uint32_t flash_cr = (uint32_t)((page_nb << FLASH_CR_PNB_SHIFT) | FLASH_CR_PER);
-		if (on_bank2)
-			flash_cr |= (uint32_t)(FLASH_CR_BKER);
+		uint32_t ctrl = (page << FLASH_CR_PNB_SHIFT) | FLASH_CR_PER;
+		if (page >= FLASH_BANK2_START_PAGE)
+			ctrl |= FLASH_CR_BKER;
+		++page;
 
-		target_mem_write32(t, FLASH_CR, flash_cr);
-
-		flash_cr |= (uint32_t)FLASH_CR_STRT;
-		target_mem_write32(t, FLASH_CR, flash_cr);
+		target_mem_write32(t, FLASH_CR, ctrl);
+		ctrl |= FLASH_CR_START;
+		target_mem_write32(t, FLASH_CR, ctrl);
 
 		if (!stm32g0_wait_busy(t))
 			goto exit_error;
-
-		page_nb++;
-		nb_pages_to_erase--;
-	} while (nb_pages_to_erase > 0U);
+	}
 
 	/* Check for error */
-	uint32_t flash_sr = target_mem_read32(t, FLASH_SR);
-	if (flash_sr & FLASH_SR_ERROR_MASK) {
-		DEBUG_WARN("stm32g0 flash erase error: sr 0x%" PRIx32 "\n", flash_sr);
+	const uint32_t status = target_mem_read32(t, FLASH_SR);
+	if (status & FLASH_SR_ERROR_MASK) {
+		DEBUG_WARN("stm32g0 flash erase error: sr 0x%" PRIx32 "\n", status);
 		goto exit_error;
 	}
 	goto exit_cleanup;
@@ -397,7 +391,7 @@ static int stm32g0_flash_erase(target_flash_s *f, target_addr addr, size_t len)
 exit_error:
 	ret = -1;
 exit_cleanup:
-	target_mem_write32(t, FLASH_SR, (uint32_t)FLASH_SR_EOP); // Clear EOP
+	target_mem_write32(t, FLASH_SR, FLASH_SR_EOP); // Clear EOP
 	stm32g0_flash_lock(t);
 	return ret;
 }
@@ -458,7 +452,7 @@ exit_cleanup:
 
 static bool stm32g0_mass_erase(target *t)
 {
-	const uint32_t flash_cr = FLASH_CR_MER1 | FLASH_CR_MER2 | FLASH_CR_STRT;
+	const uint32_t flash_cr = FLASH_CR_MER1 | FLASH_CR_MER2 | FLASH_CR_START;
 
 	stm32g0_flash_unlock(t);
 	target_mem_write32(t, FLASH_CR, flash_cr);
@@ -494,10 +488,10 @@ static bool stm32g0_cmd_erase_bank(target *t, int argc, const char **argv)
 	if (argc == 2) {
 		switch (argv[1][0]) {
 		case '1':
-			flash_cr = FLASH_CR_MER1 | FLASH_CR_STRT;
+			flash_cr = FLASH_CR_MER1 | FLASH_CR_START;
 			break;
 		case '2':
-			flash_cr = FLASH_CR_MER2 | FLASH_CR_STRT;
+			flash_cr = FLASH_CR_MER2 | FLASH_CR_START;
 			break;
 		}
 	}
@@ -600,7 +594,7 @@ static bool stm32g0_option_write(target *const t, const registers_s *const optio
 
 	write_registers(t, options_req, NB_REG_OPT);
 
-	target_mem_write32(t, FLASH_CR, FLASH_CR_OPTSTRT);
+	target_mem_write32(t, FLASH_CR, FLASH_CR_OPTSTART);
 	if (!stm32g0_wait_busy(t))
 		goto exit_error;
 
