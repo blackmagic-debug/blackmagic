@@ -158,8 +158,8 @@ struct stm32g0_priv_s {
 
 static bool stm32g0_attach(target *t);
 static void stm32g0_detach(target *t);
-static int stm32g0_flash_erase(struct target_flash *f, target_addr addr, size_t len);
-static int stm32g0_flash_write(struct target_flash *f, target_addr dest, const void *src, size_t len);
+static int stm32g0_flash_erase(target_flash_s *f, target_addr addr, size_t len);
+static int stm32g0_flash_write(target_flash_s *f, target_addr dest, const void *src, size_t len);
 static bool stm32g0_mass_erase(target *t);
 
 /* Custom commands */
@@ -177,7 +177,7 @@ const struct command_s stm32g0_cmd_list[] = {
 static void stm32g0_add_flash(target *t, uint32_t addr, size_t length,
                               size_t blocksize)
 {
-	struct target_flash *f = calloc(1, sizeof(*f));
+	target_flash_s *f = calloc(1, sizeof(*f));
 	if (!f) { /* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return;
@@ -326,7 +326,7 @@ static void stm32g0_flash_lock(target *t)
  * Flash erasure function.
  * OTP case: this function clears any previous error and returns.
  */
-static int stm32g0_flash_erase(struct target_flash *f, target_addr addr, size_t len)
+static int stm32g0_flash_erase(target_flash_s *f, target_addr addr, size_t len)
 {
 	target *t = f->t;
 	target_addr end = addr + len - 1U;
@@ -411,7 +411,7 @@ exit_cleanup:
  * OTP area is programmed as the "program" area. It can be programmed 8-bytes
  * by 8-bytes.
  */
-static int stm32g0_flash_write(struct target_flash *f, target_addr dest,
+static int stm32g0_flash_write(target_flash_s *f, target_addr dest,
                                const void *src, size_t len)
 {
 	target *t = f->t;
