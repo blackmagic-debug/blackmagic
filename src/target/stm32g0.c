@@ -168,10 +168,10 @@ static bool stm32g0_cmd_option(target *t, int argc, const char **argv);
 static bool stm32g0_cmd_irreversible(target *t, int argc, const char **argv);
 
 const struct command_s stm32g0_cmd_list[] = {
-	{ "erase_bank 1|2", (cmd_handler)stm32g0_cmd_erase_bank, "Erase specified Flash bank" },
-	{ "option", (cmd_handler)stm32g0_cmd_option, "Manipulate option bytes" },
-	{ "irreversible", (cmd_handler)stm32g0_cmd_irreversible, "Allow irreversible operations: (enable|disable)" },
-	{ NULL, NULL, NULL }
+	{ "erase_bank 1|2", stm32g0_cmd_erase_bank, "Erase specified Flash bank" },
+	{ "option", stm32g0_cmd_option, "Manipulate option bytes" },
+	{ "irreversible", stm32g0_cmd_irreversible, "Allow irreversible operations: (enable|disable)" },
+	{ NULL, NULL, NULL },
 };
 
 static void stm32g0_add_flash(target *t, uint32_t addr, size_t length,
