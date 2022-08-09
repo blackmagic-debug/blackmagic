@@ -143,7 +143,7 @@ Setting an identifier string is optional. RTT gives the same output at the same 
 
 ## Operating systems
 
-[Configuration](https://github.com/blacksphere/blackmagic/wiki/Getting-Started) instructions for windows, linux and macos.
+[Configuration](https://black-magic.org/getting-started.html) instructions for windows, linux and macos.
 
 ### Windows
 

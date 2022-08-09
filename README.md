@@ -14,11 +14,11 @@ standard USB interface. The user is able to control exactly what happens
 using the GNU source level debugging software, GDB.
 Serial Wire Output (SWO) allows the target to write tracing and logging to the host
 without using usb or serial port. Decoding SWO in the probe itself
-makes [SWO viewing as simple as connecting to a serial port](https://github.com/blackmagic-debug/blackmagic/wiki/Serial-Wire-Output).
+makes [SWO viewing as simple as connecting to a serial port](https://black-magic.org/usage/swo.html).
 
 ## Resources
 
-* [Documentation](https://github.com/blackmagic-debug/blackmagic/wiki)
+* [Official website](https://black-magic.org/index.html)
 * [Binary builds](http://builds.blacksphere.co.nz/blackmagic)
 
 ## Toolchain specific remarks
