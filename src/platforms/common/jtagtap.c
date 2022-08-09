@@ -37,6 +37,7 @@ static void jtagtap_cycle(bool tms, bool tdi, size_t clock_cycles);
 
 int jtagtap_init()
 {
+	platform_target_clk_output_enable(true);
 	TMS_SET_MODE();
 
 	jtag_proc.jtagtap_reset = jtagtap_reset;

@@ -224,6 +224,7 @@ static bool cmd_jtag_scan(target *t, int argc, const char **argv)
 	}
 
 	if (devs == 0) {
+		platform_target_clk_output_enable(false);
 		platform_nrst_set_val(false);
 		gdb_out("JTAG device scan failed!\n");
 		return false;
@@ -319,6 +320,7 @@ bool cmd_auto_scan(target *t, int argc, const char **argv)
 		break;
 	}
 	if (devs == 0) {
+		platform_target_clk_output_enable(false);
 		platform_nrst_set_val(false);
 		gdb_out("auto scan failed!\n");
 		return false;
