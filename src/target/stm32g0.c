@@ -210,26 +210,26 @@ bool stm32g0_probe(target *t)
 	switch (t->part_id) {
 	case STM32G03_4:
 		/* SRAM 8 kiB, Flash up to 64 kiB */
-		ram_size = (uint32_t)RAM_SIZE_G03_4;
-		flash_size = (uint32_t)FLASH_SIZE_MAX_G03_4;
+		ram_size = RAM_SIZE_G03_4;
+		flash_size = FLASH_SIZE_MAX_G03_4;
 		t->driver = "STM32G03/4";
 		break;
 	case STM32G05_6:
 		/* SRAM 18 kiB, Flash up to 64 kiB */
-		ram_size = (uint32_t)RAM_SIZE_G05_6;
-		flash_size = (uint32_t)FLASH_SIZE_MAX_G05_6;
+		ram_size = RAM_SIZE_G05_6;
+		flash_size = FLASH_SIZE_MAX_G05_6;
 		t->driver = "STM32G05/6";
 		break;
 	case STM32G07_8:
 		/* SRAM 36 kiB, Flash up to 128 kiB */
-		ram_size = (uint32_t)RAM_SIZE_G07_8;
-		flash_size = (uint32_t)FLASH_SIZE_MAX_G07_8;
+		ram_size = RAM_SIZE_G07_8;
+		flash_size = FLASH_SIZE_MAX_G07_8;
 		t->driver = "STM32G07/8";
 		break;
 	case STM32G0B_C:
 		/* SRAM 144 kiB, Flash up to 512 kiB */
-		ram_size = (uint32_t)RAM_SIZE_G0B_C;
-		flash_size = (size_t)target_mem_read16(t, FLASH_MEMORY_SIZE);
+		ram_size = RAM_SIZE_G0B_C;
+		flash_size = target_mem_read16(t, FLASH_MEMORY_SIZE);
 		flash_size *= 1024U;
 		t->driver = "STM32G0B/C";
 		break;
