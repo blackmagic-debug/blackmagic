@@ -156,8 +156,14 @@ def stm32_scan(args, test):
 if __name__ == "__main__":
 	print("-")
 	print("USB Device Firmware Upgrade - Host Utility -- version 1.2")
-	print("Copyright (C) 2011  Black Sphere Technologies")
+	print("Copyright (C) 2011 Black Sphere Technologies")
 	print("License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>")
+	print("-")
+	print("** WARNING: This utility has been deprecated in favour of bmputil and dfu-util **")
+	print("   Please see https://github.com/blackmagic-debug/bmputil")
+	print("-")
+	print("If this utility fails then for native please run `dfu-util -d 1d50:6018,:6017 -s 0x08002000:leave -D src/blackmagic.bin`")
+	print("otherwise see the readme for your platform for the dfu-util line to use.")
 	print("-")
 
 	parser = argparse.ArgumentParser()
