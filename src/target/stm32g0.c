@@ -331,6 +331,8 @@ static bool stm32g0_wait_busy(target *const t)
 static void stm32g0_flash_op_finish(target *t)
 {
 	target_mem_write32(t, FLASH_SR, FLASH_SR_EOP); // Clear EOP
+	/* Clear PG: half-word access not to clear unwanted bits */
+	target_mem_write16(t, FLASH_CR, 0);
 	stm32g0_flash_lock(t);
 }
 
@@ -403,12 +405,12 @@ static int stm32g0_flash_erase(target_flash_s *f, target_addr addr, size_t len)
 static int stm32g0_flash_write(target_flash_s *f, target_addr dest, const void *src, size_t len)
 {
 	target *const t = f->t;
-	int ret = 0;
 	stm32g0_priv_s *ps = (stm32g0_priv_s *)t->target_storage;
 
 	if ((dest >= (target_addr)FLASH_OTP_START) && !ps->irreversible_enabled) {
 		tc_printf(t, "Irreversible operations disabled\n");
-		goto exit_error;
+		stm32g0_flash_op_finish(t);
+		return -1;
 	}
 
 	stm32g0_flash_unlock(t);
@@ -421,28 +423,24 @@ static int stm32g0_flash_write(target_flash_s *f, target_addr dest, const void *
 		flash_sr = target_mem_read32(t, FLASH_SR);
 		if (target_check_error(t)) {
 			DEBUG_WARN("stm32g0 flash write: comm error\n");
-			goto exit_error;
+			stm32g0_flash_op_finish(t);
+			return -1;
 		}
 	} while (flash_sr & FLASH_SR_BSY_MASK);
 
 	if (flash_sr & FLASH_SR_ERROR_MASK) {
 		DEBUG_WARN("stm32g0 flash write error: sr 0x%" PRIx32 "\n", flash_sr);
-		goto exit_error;
+		stm32g0_flash_op_finish(t);
+		return -1;
 	}
 	if ((dest == (target_addr)FLASH_START) && target_mem_read32(t, FLASH_START) != 0xFFFFFFFF) {
 		uint32_t flash_acr = target_mem_read32(t, FLASH_ACR);
 		flash_acr &= ~(uint32_t)FLASH_ACR_EMPTY;
 		target_mem_write32(t, FLASH_ACR, flash_acr);
 	}
-	goto exit_cleanup;
 
-exit_error:
-	ret = -1;
-exit_cleanup:
-	/* Clear PG: half-word access not to clear unwanted bits */
-	target_mem_write16(t, FLASH_CR, (uint16_t)0x0);
 	stm32g0_flash_op_finish(t);
-	return ret;
+	return 0;
 }
 
 static bool stm32g0_mass_erase(target *t)
