@@ -229,8 +229,7 @@ bool stm32g0_probe(target *t)
 	case STM32G0B_C:
 		/* SRAM 144 kiB, Flash up to 512 kiB */
 		ram_size = RAM_SIZE_G0B_C;
-		flash_size = target_mem_read16(t, FLASH_MEMORY_SIZE);
-		flash_size *= 1024U;
+		flash_size = target_mem_read16(t, FLASH_MEMORY_SIZE) * 1024U;
 		t->driver = "STM32G0B/C";
 		break;
 	default:
