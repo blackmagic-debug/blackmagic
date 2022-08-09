@@ -336,13 +336,7 @@ static bool stm32g0_wait_busy(target *const t)
 static int stm32g0_flash_erase(target_flash_s *f, target_addr addr, size_t len)
 {
 	target *t = f->t;
-	const target_addr end = addr + len - 1U;
 	int ret = 0;
-
-	if (end > f->start + f->length - 1U)
-		goto exit_error;
-	if (!len)
-		goto exit_cleanup;
 
 	/* Wait for Flash ready */
 	if (!stm32g0_wait_busy(t))
