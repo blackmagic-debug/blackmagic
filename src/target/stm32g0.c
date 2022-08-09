@@ -329,24 +329,33 @@ static bool stm32g0_wait_busy(target *const t)
 	return true;
 }
 
+static void stm32g0_flash_op_finish(target *t)
+{
+	target_mem_write32(t, FLASH_SR, FLASH_SR_EOP); // Clear EOP
+	stm32g0_flash_lock(t);
+}
+
 /*
  * Flash erasure function.
  * OTP case: this function clears any previous error and returns.
  */
 static int stm32g0_flash_erase(target_flash_s *f, target_addr addr, size_t len)
 {
-	target *t = f->t;
-	int ret = 0;
+	target *const t = f->t;
 
 	/* Wait for Flash ready */
-	if (!stm32g0_wait_busy(t))
-		goto exit_error;
+	if (!stm32g0_wait_busy(t)) {
+		stm32g0_flash_op_finish(t);
+		return -1;
+	}
 
 	/* Clear any previous programming error */
 	target_mem_write32(t, FLASH_SR, target_mem_read32(t, FLASH_SR));
 
-	if (addr >= FLASH_OTP_START)
-		goto exit_cleanup;
+	if (addr >= FLASH_OTP_START) {
+		stm32g0_flash_op_finish(t);
+		return 0;
+	}
 
 	const size_t pages_to_erase = ((len - 1U) / f->blocksize) + 1U;
 	size_t bank1_end_page = FLASH_BANK2_START_PAGE - 1U;
@@ -370,24 +379,18 @@ static int stm32g0_flash_erase(target_flash_s *f, target_addr addr, size_t len)
 		ctrl |= FLASH_CR_START;
 		target_mem_write32(t, FLASH_CR, ctrl);
 
-		if (!stm32g0_wait_busy(t))
-			goto exit_error;
+		if (!stm32g0_wait_busy(t)) {
+			stm32g0_flash_op_finish(t);
+			return -1;
+		}
 	}
 
 	/* Check for error */
 	const uint32_t status = target_mem_read32(t, FLASH_SR);
-	if (status & FLASH_SR_ERROR_MASK) {
+	if (status & FLASH_SR_ERROR_MASK)
 		DEBUG_WARN("stm32g0 flash erase error: sr 0x%" PRIx32 "\n", status);
-		goto exit_error;
-	}
-	goto exit_cleanup;
-
-exit_error:
-	ret = -1;
-exit_cleanup:
-	target_mem_write32(t, FLASH_SR, FLASH_SR_EOP); // Clear EOP
-	stm32g0_flash_lock(t);
-	return ret;
+	stm32g0_flash_op_finish(t);
+	return (status & FLASH_SR_ERROR_MASK) ? -1 : 0;
 }
 
 /*
@@ -437,10 +440,9 @@ static int stm32g0_flash_write(target_flash_s *f, target_addr dest, const void *
 exit_error:
 	ret = -1;
 exit_cleanup:
-	target_mem_write32(t, FLASH_SR, (uint32_t)FLASH_SR_EOP); // Clear EOP
 	/* Clear PG: half-word access not to clear unwanted bits */
 	target_mem_write16(t, FLASH_CR, (uint16_t)0x0);
-	stm32g0_flash_lock(t);
+	stm32g0_flash_op_finish(t);
 	return ret;
 }
 
