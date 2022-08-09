@@ -315,9 +315,8 @@ static void stm32g0_flash_unlock(target *t)
 
 static void stm32g0_flash_lock(target *t)
 {
-	uint32_t flash_cr = target_mem_read32(t, FLASH_CR);
-	flash_cr |= (uint32_t)FLASH_CR_LOCK;
-	target_mem_write32(t, FLASH_CR, flash_cr);
+	const uint32_t ctrl = target_mem_read32(t, FLASH_CR) | FLASH_CR_LOCK;
+	target_mem_write32(t, FLASH_CR, ctrl);
 }
 
 static bool stm32g0_wait_busy(target *const t)
