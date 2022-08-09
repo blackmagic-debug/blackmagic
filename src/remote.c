@@ -117,7 +117,7 @@ static ADIv5_DP_t remote_dp = {
 	.mem_write_sized = firmware_mem_write_sized,
 };
 
-static void remotePacketProcessSWD(unsigned i, char *packet)
+static void remote_packet_process_swd(unsigned i, char *packet)
 {
 	uint8_t ticks;
 	uint32_t param;
@@ -168,7 +168,7 @@ static void remotePacketProcessSWD(unsigned i, char *packet)
 	}
 }
 
-static void remotePacketProcessJTAG(unsigned i, char *packet)
+static void remote_packet_process_jtag(unsigned i, char *packet)
 {
 	uint32_t MS;
 	uint64_t DO;
@@ -434,11 +434,11 @@ void remotePacketProcess(unsigned i, char *packet)
 {
 	switch (packet[0]) {
     case REMOTE_SWDP_PACKET:
-		remotePacketProcessSWD(i,packet);
+		remote_packet_process_swd(i,packet);
 		break;
 
     case REMOTE_JTAG_PACKET:
-		remotePacketProcessJTAG(i,packet);
+		remote_packet_process_jtag(i,packet);
 		break;
 
     case REMOTE_GEN_PACKET:
