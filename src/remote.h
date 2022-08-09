@@ -62,26 +62,27 @@
 #define REMOTE_RESP '&'
 
 /* Generic protocol elements */
-#define REMOTE_START        'A'
-#define REMOTE_TDITDO_TMS   'D'
-#define REMOTE_TDITDO_NOTMS 'd'
-#define REMOTE_CYCLE        'c'
-#define REMOTE_IN_PAR       'I'
-#define REMOTE_FREQ_SET     'F'
-#define REMOTE_FREQ_GET     'f'
-#define REMOTE_IN           'i'
-#define REMOTE_NEXT         'N'
-#define REMOTE_OUT_PAR      'O'
-#define REMOTE_OUT          'o'
-#define REMOTE_PWR_SET      'P'
-#define REMOTE_PWR_GET      'p'
-#define REMOTE_RESET        'R'
-#define REMOTE_INIT         'S'
-#define REMOTE_TMS          'T'
-#define REMOTE_VOLTAGE      'V'
-#define REMOTE_NRST_SET     'Z'
-#define REMOTE_NRST_GET     'z'
-#define REMOTE_ADD_JTAG_DEV 'J'
+#define REMOTE_START         'A'
+#define REMOTE_TDITDO_TMS    'D'
+#define REMOTE_TDITDO_NOTMS  'd'
+#define REMOTE_CYCLE         'c'
+#define REMOTE_IN_PAR        'I'
+#define REMOTE_TARGET_CLK_OE 'E'
+#define REMOTE_FREQ_SET      'F'
+#define REMOTE_FREQ_GET      'f'
+#define REMOTE_IN            'i'
+#define REMOTE_NEXT          'N'
+#define REMOTE_OUT_PAR       'O'
+#define REMOTE_OUT           'o'
+#define REMOTE_PWR_SET       'P'
+#define REMOTE_PWR_GET       'p'
+#define REMOTE_RESET         'R'
+#define REMOTE_INIT          'S'
+#define REMOTE_TMS           'T'
+#define REMOTE_VOLTAGE       'V'
+#define REMOTE_NRST_SET      'Z'
+#define REMOTE_NRST_GET      'z'
+#define REMOTE_ADD_JTAG_DEV  'J'
 
 /* Protocol response options */
 #define REMOTE_RESP_OK     'K'
@@ -142,6 +143,11 @@
 	(char[])                                                         \
 	{                                                                \
 		REMOTE_SOM, REMOTE_GEN_PACKET, REMOTE_PWR_GET, REMOTE_EOM, 0 \
+	}
+#define REMOTE_TARGET_CLK_OE_STR                                                     \
+	(char[])                                                                         \
+	{                                                                                \
+		REMOTE_SOM, REMOTE_GEN_PACKET, REMOTE_TARGET_CLK_OE, '%', 'c', REMOTE_EOM, 0 \
 	}
 
 /* SWDP protocol elements */

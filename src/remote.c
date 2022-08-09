@@ -261,7 +261,6 @@ static void remote_packet_process_jtag(unsigned i, char *packet)
 }
 
 static void remotePacketProcessGEN(unsigned i, char *packet)
-
 {
 	(void)i;
     uint32_t freq;
@@ -318,6 +317,11 @@ static void remotePacketProcessGEN(unsigned i, char *packet)
 #endif
 	case REMOTE_START:
 		remote_respond_string(REMOTE_RESP_OK, PLATFORM_IDENT ""  FIRMWARE_VERSION);
+		break;
+
+	case REMOTE_TARGET_CLK_OE:
+		platform_target_clk_output_enable(packet[2] != '0');
+		remote_respond(REMOTE_RESP_OK, 0);
 		break;
 
     default:
