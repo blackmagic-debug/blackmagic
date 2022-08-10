@@ -49,7 +49,8 @@
 #include <libopencm3/usb/cdc.h>
 
 static int configured;
-static int cdcacm_gdb_dtr = 1;
+
+static int gdb_uart_dtr = 1;
 
 static void cdcacm_set_modem_state(usbd_device *dev, uint16_t iface, uint8_t ep);
 
@@ -65,7 +66,7 @@ static enum usbd_request_return_codes gdb_uart_control_request(usbd_device *dev,
 	switch (req->bRequest) {
 	case USB_CDC_REQ_SET_CONTROL_LINE_STATE:
 		cdcacm_set_modem_state(dev, req->wIndex, CDCACM_GDB_ENDPOINT);
-		cdcacm_gdb_dtr = req->wValue & 1;
+		gdb_uart_dtr = req->wValue & 1;
 		return USBD_REQ_HANDLED;
 	case USB_CDC_REQ_SET_LINE_CODING:
 		if (*len < sizeof(struct usb_cdc_line_coding))
@@ -107,9 +108,9 @@ int cdcacm_get_config(void)
 	return configured;
 }
 
-int cdcacm_get_dtr(void)
+int gdb_uart_get_dtr(void)
 {
-	return cdcacm_gdb_dtr;
+	return gdb_uart_dtr;
 }
 
 static void cdcacm_set_modem_state(usbd_device *dev, const uint16_t iface, const uint8_t ep)

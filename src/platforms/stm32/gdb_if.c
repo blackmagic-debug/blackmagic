@@ -43,7 +43,7 @@ void gdb_if_putchar(unsigned char c, int flush)
 	if(flush || (count_in == CDCACM_PACKET_SIZE)) {
 		/* Refuse to send if USB isn't configured, and
 		 * don't bother if nobody's listening */
-		if((cdcacm_get_config() != 1) || !cdcacm_get_dtr()) {
+		if((cdcacm_get_config() != 1) || !gdb_uart_get_dtr()) {
 			count_in = 0;
 			return;
 		}
@@ -105,7 +105,7 @@ unsigned char gdb_if_getchar(void)
 
 	while (!(out_ptr < count_out)) {
 		/* Detach if port closed */
-		if (!cdcacm_get_dtr()) {
+		if (!gdb_uart_get_dtr()) {
 			__WFI();
 			return 0x04;
 		}
@@ -123,7 +123,7 @@ unsigned char gdb_if_getchar_to(int timeout)
 
 	if (!(out_ptr < count_out)) do {
 		/* Detach if port closed */
-			if (!cdcacm_get_dtr()) {
+			if (!gdb_uart_get_dtr()) {
 				__WFI(); /* systick will wake up too!*/
 				return 0x04;
 			}
