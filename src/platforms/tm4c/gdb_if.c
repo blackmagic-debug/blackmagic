@@ -40,7 +40,7 @@ void gdb_if_putchar(unsigned char c, int flush)
 	if(flush || (count_in == CDCACM_PACKET_SIZE)) {
 		/* Refuse to send if USB isn't configured, and
 		 * don't bother if nobody's listening */
-		if((cdcacm_get_config() != 1) || !cdcacm_get_dtr()) {
+		if((cdcacm_get_config() != 1) || !gdb_uart_get_dtr()) {
 			count_in = 0;
 			return;
 		}
@@ -59,7 +59,7 @@ void gdb_usb_out_cb(usbd_device *dev, uint8_t ep)
         uint32_t count = usbd_ep_read_packet(dev, CDCACM_GDB_ENDPOINT,
                                         (uint8_t *)buf, CDCACM_PACKET_SIZE);
 
-	
+
 	uint32_t idx;
 	for (idx=0; idx<count; idx++) {
 		buffer_out[head_out++ % sizeof(buffer_out)] = buf[idx];
@@ -73,7 +73,7 @@ unsigned char gdb_if_getchar(void)
 
 	while(tail_out == head_out) {
 		/* Detach if port closed */
-		if(!cdcacm_get_dtr())
+		if(!gdb_uart_get_dtr())
 			return 0x04;
 
 		while(cdcacm_get_config() != 1);
@@ -89,7 +89,7 @@ unsigned char gdb_if_getchar_to(int timeout)
 
 	if(head_out == tail_out) do {
 		/* Detach if port closed */
-		if(!cdcacm_get_dtr())
+		if(!gdb_uart_get_dtr())
 			return 0x04;
 
 		while(cdcacm_get_config() != 1);
@@ -100,4 +100,3 @@ unsigned char gdb_if_getchar_to(int timeout)
 
 	return -1;
 }
-
