@@ -45,4 +45,7 @@ extern uint16_t usb_config;
 
 void blackmagic_usb_init(void);
 
+/* Returns current usb configuration, or 0 if not configured. */
+uint16_t usb_get_config(void);
+
 #endif /*USB_H*/

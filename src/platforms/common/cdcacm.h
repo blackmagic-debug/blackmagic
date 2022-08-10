@@ -33,8 +33,6 @@
 #include "usb.h"
 
 void usb_serial_set_config(usbd_device *dev, uint16_t wValue);
-/* Returns current usb configuration, or 0 if not configured. */
-uint16_t usb_get_config(void);
 
 bool gdb_uart_get_dtr(void);
 
