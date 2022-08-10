@@ -47,86 +47,57 @@
 #include "usbuart.h"
 
 #include <libopencm3/usb/cdc.h>
-#include <libopencm3/cm3/scb.h>
-#include <libopencm3/usb/dfu.h>
 
 static int configured;
 static int cdcacm_gdb_dtr = 1;
 
 static void cdcacm_set_modem_state(usbd_device *dev, int iface, bool dsr, bool dcd);
 
-static void dfu_detach_complete(usbd_device *dev, struct usb_setup_data *req)
+static enum usbd_request_return_codes gdb_uart_control_request(usbd_device *dev, struct usb_setup_data *req,
+	uint8_t **buf, uint16_t *const len, void (**complete)(usbd_device *dev, struct usb_setup_data *req))
 {
-	(void)dev;
-	(void)req;
-
-	platform_request_boot();
-
-	/* Reset core to enter bootloader */
-#if defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7EM__)
-	scb_reset_core();
-#endif
-}
-
-static enum usbd_request_return_codes  cdcacm_control_request(usbd_device *dev,
-		struct usb_setup_data *req, uint8_t **buf, uint16_t *len,
-		void (**complete)(usbd_device *dev, struct usb_setup_data *req))
-{
-	(void)dev;
-	(void)complete;
 	(void)buf;
-	(void)len;
+	(void)complete;
+	/* Is the request for the GDB UART interface? */
+	if (req->wIndex != GDB_IF_NO)
+		return USBD_REQ_NEXT_CALLBACK;
 
-	switch(req->bRequest) {
+	switch (req->bRequest) {
 	case USB_CDC_REQ_SET_CONTROL_LINE_STATE:
 		cdcacm_set_modem_state(dev, req->wIndex, true, true);
-        switch(req->wIndex) {
-			case UART_IF_NO:
-			    #ifdef USBUSART_DTR_PIN
-				gpio_set_val(USBUSART_PORT, USBUSART_DTR_PIN, !(req->wValue & 1));
-				#endif
-				#ifdef USBUSART_RTS_PIN
-				gpio_set_val(USBUSART_PORT, USBUSART_RTS_PIN, !((req->wValue >> 1) & 1));
-				#endif
-				return USBD_REQ_HANDLED;
-			case GDB_IF_NO:
-				cdcacm_gdb_dtr = req->wValue & 1;
-				return USBD_REQ_HANDLED;
-			default:
-				return USBD_REQ_NOTSUPP;
-		}
+		cdcacm_gdb_dtr = req->wValue & 1;
+		return USBD_REQ_HANDLED;
 	case USB_CDC_REQ_SET_LINE_CODING:
-		if(*len < sizeof(struct usb_cdc_line_coding))
+		if (*len < sizeof(struct usb_cdc_line_coding))
 			return USBD_REQ_NOTSUPP;
+		return USBD_REQ_HANDLED; /* Ignore on GDB Port */
+	}
+	return USBD_REQ_NOTSUPP;
+}
 
-		switch(req->wIndex) {
-		case UART_IF_NO:
-			usbuart_set_line_coding((struct usb_cdc_line_coding*)*buf);
-			return USBD_REQ_HANDLED;
-		case GDB_IF_NO:
-			return USBD_REQ_HANDLED; /* Ignore on GDB Port */
-		default:
+static enum usbd_request_return_codes debug_uart_control_request(usbd_device *dev, struct usb_setup_data *req,
+	uint8_t **buf, uint16_t *const len, void (**complete)(usbd_device *dev, struct usb_setup_data *req))
+{
+	(void)complete;
+	/* Is the request for the physical/debug UART interface? */
+	if (req->wIndex != UART_IF_NO)
+		return USBD_REQ_NEXT_CALLBACK;
+
+	switch (req->bRequest) {
+	case USB_CDC_REQ_SET_CONTROL_LINE_STATE:
+		cdcacm_set_modem_state(dev, req->wIndex, true, true);
+#ifdef USBUSART_DTR_PIN
+		gpio_set_val(USBUSART_PORT, USBUSART_DTR_PIN, !(req->wValue & 1));
+#endif
+#ifdef USBUSART_RTS_PIN
+		gpio_set_val(USBUSART_PORT, USBUSART_RTS_PIN, !((req->wValue >> 1) & 1));
+#endif
+		return USBD_REQ_HANDLED;
+	case USB_CDC_REQ_SET_LINE_CODING:
+		if (*len < sizeof(struct usb_cdc_line_coding))
 			return USBD_REQ_NOTSUPP;
-		}
-	case DFU_GETSTATUS:
-		if(req->wIndex == DFU_IF_NO) {
-			(*buf)[0] = DFU_STATUS_OK;
-			(*buf)[1] = 0;
-			(*buf)[2] = 0;
-			(*buf)[3] = 0;
-			(*buf)[4] = STATE_APP_IDLE;
-			(*buf)[5] = 0;	/* iString not used here */
-			*len = 6;
-
-			return USBD_REQ_HANDLED;
-		}
-		return USBD_REQ_NOTSUPP;
-	case DFU_DETACH:
-		if(req->wIndex == DFU_IF_NO) {
-			*complete = dfu_detach_complete;
-			return USBD_REQ_HANDLED;
-		}
-		return USBD_REQ_NOTSUPP;
+		usbuart_set_line_coding((struct usb_cdc_line_coding *)*buf);
+		return USBD_REQ_HANDLED;
 	}
 	return USBD_REQ_NOTSUPP;
 }
@@ -189,10 +160,10 @@ void cdcacm_set_config(usbd_device *dev, uint16_t wValue)
 					64, trace_buf_drain);
 #endif
 
-	usbd_register_control_callback(dev,
-			USB_REQ_TYPE_CLASS | USB_REQ_TYPE_INTERFACE,
-			USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT,
-			cdcacm_control_request);
+	usbd_register_control_callback(dev, USB_REQ_TYPE_CLASS | USB_REQ_TYPE_INTERFACE,
+		USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT, debug_uart_control_request);
+	usbd_register_control_callback(dev, USB_REQ_TYPE_CLASS | USB_REQ_TYPE_INTERFACE,
+		USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT, gdb_uart_control_request);
 
 	/* Notify the host that DCD is asserted.
 	 * Allows the use of /dev/tty* devices on *BSD/MacOS

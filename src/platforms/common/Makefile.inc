@@ -21,7 +21,8 @@
 VPATH += platforms/common
 CFLAGS += -Iplatforms/common
 
-SRC +=        \
-	jtagtap.c \
-	swdptap.c \
-	usb.c     \
+SRC +=             \
+	jtagtap.c      \
+	swdptap.c      \
+	usb.c          \
+	usb_dfu_stub.c \
