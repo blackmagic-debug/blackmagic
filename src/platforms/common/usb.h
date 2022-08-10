@@ -41,4 +41,6 @@ extern usbd_device *usbdev;
 #define TOTAL_INTERFACES 5
 #endif
 
+void blackmagic_usb_init(void);
+
 #endif /*USB_H*/
