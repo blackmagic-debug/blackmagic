@@ -19,7 +19,7 @@
 /* Print decoded swo stream on the usb serial */
 
 #include "general.h"
-#include "cdcacm.h"
+#include "usb_serial.h"
 #include "traceswo.h"
 
 /* SWO decoding */

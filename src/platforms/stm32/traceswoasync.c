@@ -29,7 +29,7 @@
  */
 
 #include "general.h"
-#include "cdcacm.h"
+#include "usb.h"
 #include "traceswo.h"
 
 #include <libopencmsis/core_cm3.h>

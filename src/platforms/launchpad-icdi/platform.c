@@ -16,7 +16,7 @@
  */
 #include "general.h"
 #include "gdb_if.h"
-#include "cdcacm.h"
+#include "usb.h"
 #include "usbuart.h"
 
 #include <libopencm3/lm4f/rcc.h>

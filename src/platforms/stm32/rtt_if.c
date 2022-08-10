@@ -27,7 +27,7 @@
 #include "general.h"
 #include "platform.h"
 #include <assert.h>
-#include "cdcacm.h"
+#include "usb_serial.h"
 #include "rtt.h"
 #include "rtt_if.h"
 

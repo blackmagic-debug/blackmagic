@@ -25,7 +25,7 @@
 
 #include "general.h"
 #include "gdb_if.h"
-#include "cdcacm.h"
+#include "usb_serial.h"
 
 #include <libopencm3/usb/usbd.h>
 

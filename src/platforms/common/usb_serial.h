@@ -25,8 +25,8 @@
  *
  * The device's unique id is used as the USB serial number string.
  */
-#ifndef __CDCACM_H
-#define __CDCACM_H
+#ifndef USB_SERIAL_H
+#define USB_SERIAL_H
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -36,4 +36,4 @@ void usb_serial_set_config(usbd_device *dev, uint16_t wValue);
 
 bool gdb_uart_get_dtr(void);
 
-#endif
+#endif /*USB_SERIAL_H*/

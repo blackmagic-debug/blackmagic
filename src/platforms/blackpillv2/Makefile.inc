@@ -27,8 +27,8 @@ endif
 
 VPATH += platforms/stm32
 
-SRC += 	cdcacm.c	\
-	traceswodecode.c	\
+SRC +=               \
+	traceswodecode.c \
 	traceswo.c	\
 	usbuart.c	\
 	serialno.c	\

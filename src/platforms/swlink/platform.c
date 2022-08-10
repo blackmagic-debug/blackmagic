@@ -24,7 +24,7 @@
  */
 
 #include "general.h"
-#include "cdcacm.h"
+#include "usb.h"
 #include "usbuart.h"
 
 #include <libopencm3/stm32/rcc.h>

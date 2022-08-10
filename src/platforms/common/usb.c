@@ -23,8 +23,8 @@
 #include "general.h"
 #include "usb.h"
 #include "usb_descriptors.h"
+#include "usb_serial.h"
 #include "usb_dfu_stub.h"
-#include "cdcacm.h"
 #include "serialno.h"
 
 usbd_device *usbdev = NULL;
