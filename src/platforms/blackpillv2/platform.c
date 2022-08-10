@@ -108,7 +108,7 @@ void platform_init(void)
 
 	platform_timing_init();
 	usbuart_init();
-	cdcacm_init();
+	blackmagic_usb_init();
 
 	// https://github.com/libopencm3/libopencm3/pull/1256#issuecomment-779424001
 	OTG_FS_GCCFG |= OTG_GCCFG_NOVBUSSENS | OTG_GCCFG_PWRDWN;

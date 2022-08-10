@@ -107,7 +107,7 @@ void platform_init(void)
 
 	platform_timing_init();
 	usbuart_init();
-	cdcacm_init();
+	blackmagic_usb_init();
 }
 
 void platform_nrst_set_val(bool assert) { (void)assert; }

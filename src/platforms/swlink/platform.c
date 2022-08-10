@@ -109,7 +109,7 @@ void platform_init(void)
 	SCB_VTOR = (uint32_t)&vector_table;
 
 	platform_timing_init();
-	cdcacm_init();
+	blackmagic_usb_init();
 	usbuart_init();
 }
 

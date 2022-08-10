@@ -88,7 +88,7 @@ void platform_init(void)
 	/* Set up USB Pins and alternate function*/
 	gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO11 | GPIO12);
 	gpio_set_af(GPIOA, GPIO_AF14, GPIO11 | GPIO12);
-	cdcacm_init();
+	blackmagic_usb_init();
 	usbuart_init();
 }
 

@@ -572,17 +572,14 @@ static void cdcacm_set_config(usbd_device *dev, uint16_t wValue)
 }
 
 /* We need a special large control buffer for this device: */
-uint8_t usbd_control_buffer[256];
+static uint8_t usbd_control_buffer[256];
 
-void cdcacm_init(void)
+void blackmagic_usb_init(void)
 {
-	void exti15_10_isr(void);
-
 	serial_no_read(serial_no);
 
-	usbdev = usbd_init(&USB_DRIVER, &dev_desc, &config, usb_strings,
-			    sizeof(usb_strings)/sizeof(char *),
-			    usbd_control_buffer, sizeof(usbd_control_buffer));
+	usbdev = usbd_init(&USB_DRIVER, &dev_desc, &config, usb_strings, sizeof(usb_strings) / sizeof(char *),
+		usbd_control_buffer, sizeof(usbd_control_buffer));
 
 	usbd_register_set_config_callback(usbdev, cdcacm_set_config);
 

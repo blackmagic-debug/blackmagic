@@ -84,7 +84,7 @@ void platform_init(void)
 	gpio_set_output_options(NRST_PORT, GPIO_OTYPE_OD,
 							GPIO_OSPEED_2MHZ, NRST_PIN);
 	platform_timing_init();
-	cdcacm_init();
+	blackmagic_usb_init();
 	usbuart_init();
 }
 

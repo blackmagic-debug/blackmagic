@@ -223,7 +223,7 @@ void platform_init(void)
 	SCB_VTOR = (uint32_t)&vector_table;
 
 	platform_timing_init();
-	cdcacm_init();
+	blackmagic_usb_init();
 
 	/* On hardware version 1 and 2, UART and SWD share connector pins.
 	 * Don't enable UART if we're being debugged. */
