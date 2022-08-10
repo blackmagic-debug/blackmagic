@@ -121,7 +121,7 @@ bool rtt_nodata()
 /* rtt target to host: write string */
 uint32_t rtt_write(const char *buf, uint32_t len)
 {
-	if (len != 0 && usbdev && cdcacm_get_config() && gdb_uart_get_dtr()) {
+	if (len != 0 && usbdev && usb_get_config() && gdb_uart_get_dtr()) {
 		for (uint32_t p = 0; p < len; p += CDCACM_PACKET_SIZE) {
 			uint32_t plen = MIN(CDCACM_PACKET_SIZE, len - p);
 			while(usbd_ep_write_packet(usbdev, CDCACM_UART_ENDPOINT, buf + p, plen) <= 0);

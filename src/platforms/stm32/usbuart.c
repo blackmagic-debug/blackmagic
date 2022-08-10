@@ -358,7 +358,7 @@ static void usbuart_send_rx_packet(void)
 
 	/* Forcibly empty fifo if no USB endpoint.
 	 * If fifo empty, nothing further to do. */
-	if (cdcacm_get_config() != 1 || (buf_rx_in == buf_rx_out
+	if (usb_get_config() != 1 || (buf_rx_in == buf_rx_out
 #ifdef USBUART_DEBUG
 		&& usb_dbg_in == usb_dbg_out
 #endif

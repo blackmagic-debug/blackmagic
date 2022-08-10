@@ -103,7 +103,7 @@ static enum usbd_request_return_codes debug_uart_control_request(usbd_device *de
 	return USBD_REQ_NOTSUPP;
 }
 
-int cdcacm_get_config(void)
+int usb_get_config(void)
 {
 	return configured;
 }
