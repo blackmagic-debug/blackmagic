@@ -53,7 +53,7 @@ static uint32_t max_address;
 
 static enum dfu_state usbdfu_state = STATE_DFU_IDLE;
 
-static char *get_dev_unique_id(char *serial_no);
+static void get_dev_unique_id(void);
 
 static struct {
 	uint8_t buf[sizeof(usbd_control_buffer)];
@@ -125,7 +125,6 @@ const struct usb_config_descriptor config = {
 	.interface = ifaces,
 };
 
-static char serial_no[DFU_SERIAL_LENGTH];
 static char if_string[] = DFU_IFACE_STRING;
 #define BOARD_IDENT_DFU(BOARD_TYPE) "Black Magic Probe DFU " PLATFORM_IDENT  "" FIRMWARE_VERSION
 
@@ -291,7 +290,7 @@ static enum usbd_request_return_codes usbdfu_control_request(usbd_device *dev,
 
 void dfu_init(const usbd_driver *driver)
 {
-	get_dev_unique_id(serial_no);
+	get_dev_unique_id();
 
 	usbdev = usbd_init(driver, &dev_desc, &config,
 			   usb_strings, 4,
@@ -337,7 +336,7 @@ static void set_dfu_iface_string(uint32_t size)
 # define set_dfu_iface_string(x)
 #endif
 
-static char *get_dev_unique_id(char *s)
+static void get_dev_unique_id(void)
 {
 	uint32_t fuse_flash_size;
 
@@ -348,5 +347,5 @@ static char *get_dev_unique_id(char *s)
 		fuse_flash_size = 0x80;
 	set_dfu_iface_string(fuse_flash_size - 8);
 	max_address = FLASH_BASE + (fuse_flash_size << 10);
-	return serial_no_read(s);
+	serial_no_read();
 }
