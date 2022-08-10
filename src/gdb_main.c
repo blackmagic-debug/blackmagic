@@ -313,12 +313,11 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 
 		case 'r':	/* Reset the target system */
 		case 'R':	/* Restart the target program */
-			if(cur_target)
+			if (cur_target)
 				target_reset(cur_target);
-			else if(last_target) {
-				cur_target = target_attach(last_target,
-						           &gdb_controller);
-				if(cur_target)
+			else if (last_target) {
+				cur_target = target_attach(last_target, &gdb_controller);
+				if (cur_target)
 					morse(NULL, false);
 				target_reset(cur_target);
 			}
