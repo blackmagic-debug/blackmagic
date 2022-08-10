@@ -185,9 +185,12 @@ target *target_attach(target *t, struct target_controller *tc)
 		t->tc->destroy_callback(t->tc, t);
 
 	t->tc = tc;
+	platform_target_clk_output_enable(true);
 
-	if (!t->attach(t))
+	if (!t->attach(t)) {
+		platform_target_clk_output_enable(false);
 		return NULL;
+	}
 
 	t->attached = true;
 	return t;
@@ -378,6 +381,7 @@ void target_print_progress(platform_timeout *const timeout)
 void target_detach(target *t)
 {
 	t->detach(t);
+	platform_target_clk_output_enable(false);
 	t->attached = false;
 #if PC_HOSTED == 1
 	platform_buffer_flush();
@@ -387,8 +391,7 @@ void target_detach(target *t)
 bool target_check_error(target *t) {
 	if (t)
 		return t->check_error(t);
-	else
-		return false;
+	return false;
 }
 
 bool target_attached(target *t) { return t->attached; }
