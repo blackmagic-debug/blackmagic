@@ -22,7 +22,7 @@
 
 char serial_no[DFU_SERIAL_LENGTH];
 
-void serial_no_read(void)
+void read_serial_number(void)
 {
 #if DFU_SERIAL_LENGTH == 9
 	const volatile uint32_t *const unique_id_p = (uint32_t *)DESIG_UNIQUE_ID_BASE;

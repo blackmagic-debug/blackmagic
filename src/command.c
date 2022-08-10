@@ -608,7 +608,6 @@ static bool cmd_traceswo(target *t, int argc, const char **argv)
 	traceswo_init(swo_channelmask);
 #endif
 
-	serial_no_read();
 	gdb_outf("Trace enabled for BMP serial %s, USB EP 5\n", serial_no);
 	return true;
 }

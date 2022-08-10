@@ -26,6 +26,6 @@
 
 extern char serial_no[DFU_SERIAL_LENGTH];
 
-void serial_no_read(void);
+void read_serial_number(void);
 
 #endif

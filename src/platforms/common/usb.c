@@ -33,7 +33,7 @@ static uint8_t usbd_control_buffer[256];
 
 void blackmagic_usb_init(void)
 {
-	serial_no_read();
+	read_serial_number();
 
 	usbdev = usbd_init(&USB_DRIVER, &dev_desc, &config, usb_strings, sizeof(usb_strings) / sizeof(char *),
 		usbd_control_buffer, sizeof(usbd_control_buffer));

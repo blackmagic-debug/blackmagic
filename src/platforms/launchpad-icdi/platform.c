@@ -116,7 +116,7 @@ const char *platform_target_voltage(void)
 	return NULL;
 }
 
-void serial_no_read(void)
+void read_serial_number(void)
 {
 	/* FIXME: Store a unique serial number somewhere and retreive here */
 	uint32_t unique_id = SERIAL_NO;
