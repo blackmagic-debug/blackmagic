@@ -42,15 +42,15 @@ static uint8_t double_buffer_out[CDCACM_PACKET_SIZE];
 void gdb_if_putchar(unsigned char c, int flush)
 {
 	buffer_in[count_in++] = c;
-	if(flush || (count_in == CDCACM_PACKET_SIZE)) {
+	if (flush || (count_in == CDCACM_PACKET_SIZE)) {
 		/* Refuse to send if USB isn't configured, and
 		 * don't bother if nobody's listening */
-		if((usb_get_config() != 1) || !gdb_uart_get_dtr()) {
+		if (usb_get_config() != 1 || !gdb_uart_get_dtr()) {
 			count_in = 0;
 			return;
 		}
-		while(usbd_ep_write_packet(usbdev, CDCACM_GDB_ENDPOINT,
-			buffer_in, count_in) <= 0);
+		while (usbd_ep_write_packet(usbdev, CDCACM_GDB_ENDPOINT, buffer_in, count_in) <= 0)
+			continue;
 
 		if (flush && (count_in == CDCACM_PACKET_SIZE)) {
 			/* We need to send an empty packet for some hosts
@@ -59,8 +59,8 @@ void gdb_if_putchar(unsigned char c, int flush)
 			 * that transfer is complete, so we just send a packet
 			 * containing a null byte for now.
 			 */
-			while (usbd_ep_write_packet(usbdev, CDCACM_GDB_ENDPOINT,
-				"\0", 1) <= 0);
+			while (usbd_ep_write_packet(usbdev, CDCACM_GDB_ENDPOINT, "\0", 1) <= 0)
+				continue;
 		}
 
 		count_in = 0;
