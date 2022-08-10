@@ -31,4 +31,14 @@ extern usbd_device *usbdev;
 #define CDCACM_UART_ENDPOINT 3
 #define TRACE_ENDPOINT       5
 
+#define GDB_IF_NO  0
+#define UART_IF_NO 2
+#define DFU_IF_NO  4
+#ifdef PLATFORM_HAS_TRACESWO
+#define TRACE_IF_NO      5
+#define TOTAL_INTERFACES 6
+#else
+#define TOTAL_INTERFACES 5
+#endif
+
 #endif /*USB_H*/

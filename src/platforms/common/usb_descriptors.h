@@ -26,18 +26,9 @@
 #include <libopencm3/usb/dfu.h>
 
 #include "usb.h"
+#include "version.h"
 
 #define BOARD_IDENT "Black Magic Probe " PLATFORM_IDENT FIRMWARE_VERSION
-
-#define GDB_IF_NO  0
-#define UART_IF_NO 2
-#define DFU_IF_NO  4
-#ifdef PLATFORM_HAS_TRACESWO
-#define TRACE_IF_NO      5
-#define TOTAL_INTERFACES 6
-#else
-#define TOTAL_INTERFACES 5
-#endif
 
 extern char serial_no[DFU_SERIAL_LENGTH];
 
