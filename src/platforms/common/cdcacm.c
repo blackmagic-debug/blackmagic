@@ -51,7 +51,7 @@
 static int configured;
 static int cdcacm_gdb_dtr = 1;
 
-static void cdcacm_set_modem_state(usbd_device *dev, int iface, bool dsr, bool dcd);
+static void cdcacm_set_modem_state(usbd_device *dev, uint16_t iface, uint8_t ep);
 
 static enum usbd_request_return_codes gdb_uart_control_request(usbd_device *dev, struct usb_setup_data *req,
 	uint8_t **buf, uint16_t *const len, void (**complete)(usbd_device *dev, struct usb_setup_data *req))
@@ -64,7 +64,7 @@ static enum usbd_request_return_codes gdb_uart_control_request(usbd_device *dev,
 
 	switch (req->bRequest) {
 	case USB_CDC_REQ_SET_CONTROL_LINE_STATE:
-		cdcacm_set_modem_state(dev, req->wIndex, true, true);
+		cdcacm_set_modem_state(dev, req->wIndex, CDCACM_GDB_ENDPOINT);
 		cdcacm_gdb_dtr = req->wValue & 1;
 		return USBD_REQ_HANDLED;
 	case USB_CDC_REQ_SET_LINE_CODING:
@@ -85,7 +85,7 @@ static enum usbd_request_return_codes debug_uart_control_request(usbd_device *de
 
 	switch (req->bRequest) {
 	case USB_CDC_REQ_SET_CONTROL_LINE_STATE:
-		cdcacm_set_modem_state(dev, req->wIndex, true, true);
+		cdcacm_set_modem_state(dev, req->wIndex, CDCACM_UART_ENDPOINT);
 #ifdef USBUSART_DTR_PIN
 		gpio_set_val(USBUSART_PORT, USBUSART_DTR_PIN, !(req->wValue & 1));
 #endif
@@ -112,9 +112,9 @@ int cdcacm_get_dtr(void)
 	return cdcacm_gdb_dtr;
 }
 
-static void cdcacm_set_modem_state(usbd_device *dev, int iface, bool dsr, bool dcd)
+static void cdcacm_set_modem_state(usbd_device *dev, const uint16_t iface, const uint8_t ep)
 {
-	char buf[10];
+	uint8_t buf[10];
 	struct usb_cdc_notification *notif = (void*)buf;
 	/* We echo signals back to host as notification */
 	notif->bmRequestType = 0xA1;
@@ -122,10 +122,10 @@ static void cdcacm_set_modem_state(usbd_device *dev, int iface, bool dsr, bool d
 	notif->wValue = 0;
 	notif->wIndex = iface;
 	notif->wLength = 2;
-	buf[8] = (dsr ? 2 : 0) | (dcd ? 1 : 0);
-	buf[9] = 0;
+	buf[8] = 3U;
+	buf[9] = 0U;
 	/* FIXME: Remove magic numbers */
-	usbd_ep_write_packet(dev, 0x82 + iface, buf, 10);
+	usbd_ep_write_packet(dev, ep, buf, sizeof(buf));
 }
 
 void cdcacm_set_config(usbd_device *dev, uint16_t wValue)
@@ -168,6 +168,6 @@ void cdcacm_set_config(usbd_device *dev, uint16_t wValue)
 	/* Notify the host that DCD is asserted.
 	 * Allows the use of /dev/tty* devices on *BSD/MacOS
 	 */
-	cdcacm_set_modem_state(dev, GDB_IF_NO, true, true);
-	cdcacm_set_modem_state(dev, UART_IF_NO, true, true);
+	cdcacm_set_modem_state(dev, GDB_IF_NO, CDCACM_GDB_ENDPOINT);
+	cdcacm_set_modem_state(dev, UART_IF_NO, CDCACM_UART_ENDPOINT);
 }
