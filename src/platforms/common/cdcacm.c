@@ -50,7 +50,7 @@
 
 static int configured;
 
-static int gdb_uart_dtr = 1;
+static bool gdb_uart_dtr = true;
 
 static void cdcacm_set_modem_state(usbd_device *dev, uint16_t iface, uint8_t ep);
 
@@ -108,7 +108,7 @@ int cdcacm_get_config(void)
 	return configured;
 }
 
-int gdb_uart_get_dtr(void)
+bool gdb_uart_get_dtr(void)
 {
 	return gdb_uart_dtr;
 }
