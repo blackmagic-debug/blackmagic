@@ -19,7 +19,7 @@ endif
 
 VPATH += platforms/stm32
 
-SRC += 	cdcacm.c	\
+SRC +=          \
 	usbuart.c 	\
 	serialno.c	\
 	timing.c	\
@@ -36,4 +36,3 @@ blackmagic_dfu.elf: usbdfu.o dfucore.o dfu_f1.o platform_common.o serialno.o
 
 host_clean:
 	-$(Q)$(RM) blackmagic.bin blackmagic_dfu blackmagic_dfu.bin blackmagic_dfu.hex
-

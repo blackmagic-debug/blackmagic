@@ -22,7 +22,7 @@
  */
 
 #include "general.h"
-#include "cdcacm.h"
+#include "usb.h"
 #include "usbuart.h"
 #include "morse.h"
 

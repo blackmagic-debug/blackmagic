@@ -25,4 +25,5 @@ SRC +=             \
 	jtagtap.c      \
 	swdptap.c      \
 	usb.c          \
+	usb_serial.c   \
 	usb_dfu_stub.c \

@@ -40,7 +40,7 @@
 
 #include "general.h"
 #include "gdb_if.h"
-#include "cdcacm.h"
+#include "usb_serial.h"
 #if defined(PLATFORM_HAS_TRACESWO)
 #	include "traceswo.h"
 #endif
