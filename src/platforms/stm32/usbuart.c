@@ -29,7 +29,7 @@
 #include <libopencm3/usb/cdc.h>
 
 #include "general.h"
-#include "cdcacm.h"
+#include "usb.h"
 
 #ifdef DMA_STREAM0
 #define dma_channel_reset(dma, channel) dma_stream_reset(dma, channel)
