@@ -68,8 +68,8 @@ void platform_init(void)
 	gpio_mode_setup(LED_PORT_ERROR, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED_ERROR);
 
 	platform_timing_init();
-	usbuart_init();
 	blackmagic_usb_init();
+	usbuart_init();
 }
 
 void platform_nrst_set_val(bool assert)

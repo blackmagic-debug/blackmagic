@@ -76,8 +76,8 @@ void platform_init(void)
 			LED_UART | LED_IDLE_RUN | LED_ERROR | LED_BOOTLOADER);
 
 	platform_timing_init();
-	usbuart_init();
 	blackmagic_usb_init();
+	usbuart_init();
 }
 
 void platform_nrst_set_val(bool assert) { (void)assert; }
