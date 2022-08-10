@@ -36,7 +36,7 @@
 #define CDCACM_UART_ENDPOINT	3
 #define TRACE_ENDPOINT			5
 
-void cdcacm_init(void);
+void blackmagic_usb_init(void);
 /* Returns current usb configuration, or 0 if not configured. */
 int cdcacm_get_config(void);
 int cdcacm_get_dtr(void);
