@@ -48,8 +48,6 @@
 
 #include <libopencm3/usb/cdc.h>
 
-static int configured;
-
 static bool gdb_uart_dtr = true;
 
 static void usb_serial_set_state(usbd_device *dev, uint16_t iface, uint8_t ep);
@@ -103,11 +101,6 @@ static enum usbd_request_return_codes debug_uart_control_request(usbd_device *de
 	return USBD_REQ_NOTSUPP;
 }
 
-int usb_get_config(void)
-{
-	return configured;
-}
-
 bool gdb_uart_get_dtr(void)
 {
 	return gdb_uart_dtr;
@@ -130,7 +123,7 @@ void usb_serial_set_state(usbd_device *const dev, const uint16_t iface, const ui
 
 void usb_serial_set_config(usbd_device *dev, uint16_t wValue)
 {
-	configured = wValue;
+	usb_config = wValue;
 
 	/* GDB interface */
 #if defined(STM32F4) || defined(LM4F)

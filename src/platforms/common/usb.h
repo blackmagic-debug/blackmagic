@@ -21,9 +21,11 @@
 #ifndef USB_H
 #define USB_H
 
+#include <stdint.h>
 #include <libopencm3/usb/usbd.h>
 
 extern usbd_device *usbdev;
+extern uint16_t usb_config;
 
 #define CDCACM_PACKET_SIZE 64
 
