@@ -28,6 +28,7 @@
 #include "serialno.h"
 
 usbd_device *usbdev = NULL;
+uint16_t usb_config;
 
 /* We need a special large control buffer for this device: */
 static uint8_t usbd_control_buffer[256];
@@ -44,6 +45,11 @@ void blackmagic_usb_init(void)
 
 	nvic_set_priority(USB_IRQ, IRQ_PRI_USB);
 	nvic_enable_irq(USB_IRQ);
+}
+
+uint16_t usb_get_config(void)
+{
+	return usb_config;
 }
 
 void USB_ISR(void)
