@@ -165,7 +165,7 @@ void USBUART_ISR(void)
 
 	if (flush) {
 		/* forcibly empty fifo if no USB endpoint */
-		if (cdcacm_get_config() != 1)
+		if (usb_get_config() != 1)
 		{
 			buf_rx_out = buf_rx_in;
 			return;

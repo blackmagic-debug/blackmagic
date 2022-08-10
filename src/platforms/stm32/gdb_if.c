@@ -45,7 +45,7 @@ void gdb_if_putchar(unsigned char c, int flush)
 	if(flush || (count_in == CDCACM_PACKET_SIZE)) {
 		/* Refuse to send if USB isn't configured, and
 		 * don't bother if nobody's listening */
-		if((cdcacm_get_config() != 1) || !gdb_uart_get_dtr()) {
+		if((usb_get_config() != 1) || !gdb_uart_get_dtr()) {
 			count_in = 0;
 			return;
 		}
@@ -82,7 +82,7 @@ void gdb_usb_out_cb(usbd_device *dev, uint8_t ep)
 
 static void gdb_if_update_buf(void)
 {
-	while (cdcacm_get_config() != 1);
+	while (usb_get_config() != 1);
 #ifdef STM32F4
 	__asm__ volatile("cpsid i; isb");
 	if (count_new) {
