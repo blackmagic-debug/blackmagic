@@ -20,7 +20,12 @@
 #ifndef __SERIALNO_H
 #define __SERIALNO_H
 
-char *serial_no_read(char *s);
-
+#ifndef DFU_SERIAL_LENGTH
+#define DFU_SERIAL_LENGTH
 #endif
 
+extern char serial_no[DFU_SERIAL_LENGTH];
+
+void serial_no_read(void);
+
+#endif

@@ -26,11 +26,10 @@
 #include <libopencm3/usb/dfu.h>
 
 #include "usb.h"
+#include "serialno.h"
 #include "version.h"
 
 #define BOARD_IDENT "Black Magic Probe " PLATFORM_IDENT FIRMWARE_VERSION
-
-extern char serial_no[DFU_SERIAL_LENGTH];
 
 /* Top-level device descriptor */
 static const struct usb_device_descriptor dev_desc = {

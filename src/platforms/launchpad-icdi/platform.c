@@ -30,6 +30,7 @@
 
 extern void trace_tick(void);
 
+char serial_no[DFU_SERIAL_LENGTH];
 volatile platform_timeout * volatile head_timeout;
 uint8_t running_status;
 static volatile uint32_t time_ms;
@@ -115,19 +116,18 @@ const char *platform_target_voltage(void)
 	return NULL;
 }
 
-char *serial_no_read(char *s)
+void serial_no_read(void)
 {
 	/* FIXME: Store a unique serial number somewhere and retreive here */
 	uint32_t unique_id = SERIAL_NO;
 
 	/* Fetch serial number from chip's unique ID */
 	for (size_t i = 0; i < DFU_SERIAL_LENGTH - 1; i++) {
-		s[7U - i] = ((unique_id >> (4 * i)) & 0x0FU) + '0';
-		if (s[7U - i] > '9')
-			s[7U - i] += 7; /* 'A' - '9' = 8, less 1 gives 7. */
+		serial_no[7U - i] = ((unique_id >> (4 * i)) & 0x0FU) + '0';
+		if (serial_no[7U - i] > '9')
+			serial_no[7U - i] += 7; /* 'A' - '9' = 8, less 1 gives 7. */
 	}
-	s[DFU_SERIAL_LENGTH - 1] = 0;
-	return s;
+	serial_no[DFU_SERIAL_LENGTH - 1] = 0;
 }
 
 void platform_request_boot(void) { }
