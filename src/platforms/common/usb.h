@@ -25,4 +25,10 @@
 
 extern usbd_device *usbdev;
 
+#define CDCACM_PACKET_SIZE 64
+
+#define CDCACM_GDB_ENDPOINT  1
+#define CDCACM_UART_ENDPOINT 3
+#define TRACE_ENDPOINT       5
+
 #endif /*USB_H*/
