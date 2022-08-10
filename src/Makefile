@@ -64,7 +64,6 @@ SRC =			\
 	target.c	\
 	target_probe.c
 
-
 include $(PLATFORM_DIR)/Makefile.inc
 
 ifneq ($(PC_HOSTED),1)
@@ -91,10 +90,8 @@ endif
 ifdef PC_HOSTED
 CFLAGS += -DPC_HOSTED=1
 else
-SRC += swdptap.c jtagtap.c
 CFLAGS += -DPC_HOSTED=0
-VPATH += platforms/common
-CFLAGS += -Iplatforms/common
+include platforms/common/Makefile.inc
 endif
 
 ifeq ($(ENABLE_RTT), 1)
@@ -150,6 +147,9 @@ all_platforms:
 	$(MAKE) clean ;\
 	for i in platforms/*/Makefile.inc ; do \
 		export DIRNAME=`dirname $$i` ;\
+		if [ "$$DIRNAME" = "platforms/common" ]; then \
+			continue; \
+		fi; \
 		export PROBE_HOST=`basename $$DIRNAME` ;\
 		export CFLAGS=-Werror ;\
 		echo "Building for hardware platform: $$PROBE_HOST" ;\
