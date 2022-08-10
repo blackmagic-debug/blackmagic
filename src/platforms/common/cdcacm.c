@@ -45,23 +45,15 @@
 #	include "traceswo.h"
 #endif
 #include "usbuart.h"
-#include "serialno.h"
-#include "version.h"
 
-#include <libopencm3/cm3/nvic.h>
 #include <libopencm3/usb/cdc.h>
 #include <libopencm3/cm3/scb.h>
-
-#include "usb_descriptors.h"
-
-usbd_device * usbdev;
+#include <libopencm3/usb/dfu.h>
 
 static int configured;
 static int cdcacm_gdb_dtr = 1;
 
 static void cdcacm_set_modem_state(usbd_device *dev, int iface, bool dsr, bool dcd);
-
-char serial_no[DFU_SERIAL_LENGTH];
 
 static void dfu_detach_complete(usbd_device *dev, struct usb_setup_data *req)
 {
@@ -165,7 +157,7 @@ static void cdcacm_set_modem_state(usbd_device *dev, int iface, bool dsr, bool d
 	usbd_ep_write_packet(dev, 0x82 + iface, buf, 10);
 }
 
-static void cdcacm_set_config(usbd_device *dev, uint16_t wValue)
+void cdcacm_set_config(usbd_device *dev, uint16_t wValue)
 {
 	configured = wValue;
 
@@ -207,20 +199,4 @@ static void cdcacm_set_config(usbd_device *dev, uint16_t wValue)
 	 */
 	cdcacm_set_modem_state(dev, GDB_IF_NO, true, true);
 	cdcacm_set_modem_state(dev, UART_IF_NO, true, true);
-}
-
-/* We need a special large control buffer for this device: */
-static uint8_t usbd_control_buffer[256];
-
-void blackmagic_usb_init(void)
-{
-	serial_no_read(serial_no);
-
-	usbdev = usbd_init(&USB_DRIVER, &dev_desc, &config, usb_strings, sizeof(usb_strings) / sizeof(char *),
-		usbd_control_buffer, sizeof(usbd_control_buffer));
-
-	usbd_register_set_config_callback(usbdev, cdcacm_set_config);
-
-	nvic_set_priority(USB_IRQ, IRQ_PRI_USB);
-	nvic_enable_irq(USB_IRQ);
 }

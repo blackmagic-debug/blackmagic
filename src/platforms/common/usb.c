@@ -18,8 +18,32 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <libopencm3/cm3/nvic.h>
+
 #include "general.h"
 #include "usb.h"
+#include "usb_descriptors.h"
+#include "cdcacm.h"
+#include "serialno.h"
+
+char serial_no[DFU_SERIAL_LENGTH];
+usbd_device *usbdev = NULL;
+
+/* We need a special large control buffer for this device: */
+static uint8_t usbd_control_buffer[256];
+
+void blackmagic_usb_init(void)
+{
+	serial_no_read(serial_no);
+
+	usbdev = usbd_init(&USB_DRIVER, &dev_desc, &config, usb_strings, sizeof(usb_strings) / sizeof(char *),
+		usbd_control_buffer, sizeof(usbd_control_buffer));
+
+	usbd_register_set_config_callback(usbdev, cdcacm_set_config);
+
+	nvic_set_priority(USB_IRQ, IRQ_PRI_USB);
+	nvic_enable_irq(USB_IRQ);
+}
 
 void USB_ISR(void)
 {
