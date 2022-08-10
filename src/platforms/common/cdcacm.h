@@ -30,7 +30,6 @@
 
 #include "usb.h"
 
-void blackmagic_usb_init(void);
 void cdcacm_set_config(usbd_device *dev, uint16_t wValue);
 /* Returns current usb configuration, or 0 if not configured. */
 int cdcacm_get_config(void);
