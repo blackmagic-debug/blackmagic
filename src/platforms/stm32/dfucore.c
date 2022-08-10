@@ -347,5 +347,5 @@ static void get_dev_unique_id(void)
 		fuse_flash_size = 0x80;
 	set_dfu_iface_string(fuse_flash_size - 8);
 	max_address = FLASH_BASE + (fuse_flash_size << 10);
-	serial_no_read();
+	read_serial_number();
 }
