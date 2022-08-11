@@ -37,10 +37,11 @@ void blackmagic_usb_init(void)
 {
 	read_serial_number();
 
-	usbdev = usbd_init(&USB_DRIVER, &dev_desc, &config, usb_strings, sizeof(usb_strings) / sizeof(char *),
+	usbdev = usbd_init(&USB_DRIVER, &dev_desc, &config, usb_strings, ARRAY_LENGTH(usb_strings),
 		usbd_control_buffer, sizeof(usbd_control_buffer));
 
 	usbd_register_bos_descriptor(usbdev, &bos);
+	microsoft_os_register_descriptor_sets(usbdev, microsoft_os_descriptor_sets, DESCRIPTOR_SETS);
 	usbd_register_set_config_callback(usbdev, usb_serial_set_config);
 	usbd_register_set_config_callback(usbdev, dfu_set_config);
 
