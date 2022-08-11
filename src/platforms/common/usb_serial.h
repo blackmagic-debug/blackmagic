@@ -32,7 +32,7 @@
 #include <stdbool.h>
 #include "usb.h"
 
-void usb_serial_set_config(usbd_device *dev, uint16_t wValue);
+void usb_serial_set_config(usbd_device *dev, uint16_t value);
 
 bool gdb_uart_get_dtr(void);
 
