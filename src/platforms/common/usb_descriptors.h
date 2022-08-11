@@ -416,14 +416,64 @@ static const char *const usb_strings[] = {
 	"Black Magic GDB Server",
 	"Black Magic UART Port",
 	"Black Magic DFU",
-#if defined(PLATFORM_HAS_TRACESWO)
+#ifdef PLATFORM_HAS_TRACESWO
 	"Black Magic Trace Capture",
 #endif
 };
 
+#define DESCRIPTOR_SETS 1U
+
+static const microsoft_os_descriptor_function_subset_header microsoft_os_descriptor_function_subsets[] = {
+	{
+		.wLength = MICROSOFT_OS_DESCRIPTOR_FUNCTION_SUBSET_HEADER_SIZE,
+		.wDescriptorType = MICROSOFT_OS_SUBSET_HEADER_FUNCTION,
+		.bFirstInterface = DFU_IF_NO,
+		.bReserved = 0,
+		.wTotalLength = 0,
+	},
+#ifdef PLATFORM_HAS_TRACESWO
+	{
+		.wLength = MICROSOFT_OS_DESCRIPTOR_FUNCTION_SUBSET_HEADER_SIZE,
+		.wDescriptorType = MICROSOFT_OS_SUBSET_HEADER_FUNCTION,
+		.bFirstInterface = TRACE_IF_NO,
+		.bReserved = 0,
+		.wTotalLength = 0,
+	},
+#endif
+};
+
+static const microsoft_os_descriptor_config_subset_header microsoft_os_descriptor_config_subset = {
+	.wLength = MICROSOFT_OS_DESCRIPTOR_CONFIG_SUBSET_HEADER_SIZE,
+	.wDescriptorType = MICROSOFT_OS_SUBSET_HEADER_CONFIGURATION,
+	.bConfigurationValue = 0,
+	.bReserved = 0,
+	.wTotalLength = 0,
+
+	.function_subset_headers = microsoft_os_descriptor_function_subsets,
+	.num_function_subset_headers = ARRAY_LENGTH(microsoft_os_descriptor_function_subsets),
+};
+
+static const microsoft_os_descriptor_set_header microsoft_os_descriptor_sets[DESCRIPTOR_SETS] = {
+	{
+		.wLength = MICROSOFT_OS_DESCRIPTOR_SET_HEADER_SIZE,
+		.wDescriptorType = MICROSOFT_OS_SET_HEADER,
+		.dwWindowsVersion = MICROSOFT_WINDOWS_VERSION_WINBLUE,
+		.wTotalLength = 0,
+
+		.vendor_code = 1,
+		.num_config_subset_headers = 1,
+		.config_subset_headers = &microsoft_os_descriptor_config_subset,
+	}
+};
+
 static const microsoft_os_descriptor_set_information microsoft_os_descriptor_set_info = {
 	.dwWindowsVersion = MICROSOFT_WINDOWS_VERSION_WINBLUE,
-	.wMSOSDescriptorSetTotalLength = 0,
+	.wMSOSDescriptorSetTotalLength = MICROSOFT_OS_DESCRIPTOR_SET_HEADER_SIZE +
+		MICROSOFT_OS_DESCRIPTOR_CONFIG_SUBSET_HEADER_SIZE +
+#ifdef PLATFORM_HAS_TRACESWO
+		MICROSOFT_OS_DESCRIPTOR_FUNCTION_SUBSET_HEADER_SIZE +
+#endif
+		MICROSOFT_OS_DESCRIPTOR_FUNCTION_SUBSET_HEADER_SIZE,
 	.bMS_VendorCode = 1,
 	.bAltEnumCode = 0,
 };
