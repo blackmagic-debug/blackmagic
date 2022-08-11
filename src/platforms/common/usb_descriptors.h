@@ -22,8 +22,10 @@
 #define PLATFORMS_COMMON_USB_DESCRIPTORS_H
 
 #include <libopencm3/usb/usbd.h>
+#include <libopencm3/usb/bos.h>
 #include <libopencm3/usb/cdc.h>
 #include <libopencm3/usb/dfu.h>
+#include <libopencm3/usb/microsoft.h>
 
 #include "usb.h"
 #include "serialno.h"
@@ -417,6 +419,40 @@ static const char *const usb_strings[] = {
 #if defined(PLATFORM_HAS_TRACESWO)
 	"Black Magic Trace Capture",
 #endif
+};
+
+static const microsoft_os_descriptor_set_information microsoft_os_descriptor_set_info = {
+	.dwWindowsVersion = MICROSOFT_WINDOWS_VERSION_WINBLUE,
+	.wMSOSDescriptorSetTotalLength = 0,
+	.bMS_VendorCode = 1,
+	.bAltEnumCode = 0,
+};
+
+static const struct {
+	usb_platform_device_capability_descriptor platform_descriptor;
+} __attribute__((packed)) device_capability_descriptors = {
+	.platform_descriptor =
+		{
+			.device_capability_descriptor =
+				{
+					.bLength = USB_DCT_PLATFORM_SIZE + MICROSOFT_OS_DESCRIPTOR_SET_INFORMATION_SIZE,
+					.bDescriptorType = USB_DT_DEVICE_CAPABILITY,
+					.bDevCapabilityType = USB_DCT_PLATFORM,
+				},
+			.bReserved = 0,
+			.PlatformCapabilityUUID = MICROSOFT_OS_DESCRIPTOR_PLATFORM_CAPABILITY_ID,
+
+			.CapabilityData = &microsoft_os_descriptor_set_info,
+		},
+};
+
+static const usb_bos_descriptor bos = {
+	.bLength = USB_DT_BOS_SIZE,
+	.bDescriptorType = USB_DT_BOS,
+	.wTotalLength = 0,
+	.bNumDeviceCaps = 1,
+
+	.device_capability_descriptors = &device_capability_descriptors,
 };
 
 #endif /* PLATFORMS_COMMON_USB_DESCRIPTORS_H */
