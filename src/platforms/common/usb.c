@@ -40,6 +40,7 @@ void blackmagic_usb_init(void)
 	usbdev = usbd_init(&USB_DRIVER, &dev_desc, &config, usb_strings, sizeof(usb_strings) / sizeof(char *),
 		usbd_control_buffer, sizeof(usbd_control_buffer));
 
+	usbd_register_bos_descriptor(usbdev, &bos);
 	usbd_register_set_config_callback(usbdev, usb_serial_set_config);
 	usbd_register_set_config_callback(usbdev, dfu_set_config);
 
