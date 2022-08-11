@@ -419,7 +419,8 @@ static const char *usb_strings[] = {
 	serial_no,
 	"Black Magic GDB Server",
 	"Black Magic UART Port",
-	"Black Magic DFU",
+	/* Required, the line for stm32f1s is "@Internal Flash   /0x08000000/8*001Ka,56*001Kg" maybe use an if statement? */
+	"@Internal Flash   /0x08000000/04*016Kg,01*064Kg,03*128Kg",
 #if defined(PLATFORM_HAS_TRACESWO)
 	"Black Magic Trace Capture",
 #endif
