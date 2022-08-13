@@ -423,6 +423,38 @@ static const char *const usb_strings[] = {
 
 #define DESCRIPTOR_SETS 1U
 
+static const struct {
+	microsoft_os_feature_compatible_id_descriptor driver_binding;
+} microsoft_os_dfu_if_features = {
+	.driver_binding =
+		{
+			.header =
+				{
+					.wLength = MICROSOFT_OS_FEATURE_COMPATIBLE_ID_DESCRIPTOR_SIZE,
+					.wDescriptorType = MICROSOFT_OS_FEATURE_COMPATIBLE_ID,
+				},
+			.compatible_id = MICROSOFT_OS_COMPATIBLE_ID_WINUSB,
+			.sub_compatible_id = MICROSOFT_OS_COMPATIBLE_ID_NONE,
+		},
+};
+
+#ifdef PLATFORM_HAS_TRACESWO
+static const struct {
+	microsoft_os_feature_compatible_id_descriptor driver_binding;
+} microsoft_os_trace_if_features = {
+	.driver_binding =
+		{
+			.header =
+				{
+					.wLength = MICROSOFT_OS_FEATURE_COMPATIBLE_ID_DESCRIPTOR_SIZE,
+					.wDescriptorType = MICROSOFT_OS_FEATURE_COMPATIBLE_ID,
+				},
+			.compatible_id = MICROSOFT_OS_COMPATIBLE_ID_WINUSB,
+			.sub_compatible_id = MICROSOFT_OS_COMPATIBLE_ID_NONE,
+		},
+};
+#endif
+
 static const microsoft_os_descriptor_function_subset_header microsoft_os_descriptor_function_subsets[] = {
 	{
 		.wLength = MICROSOFT_OS_DESCRIPTOR_FUNCTION_SUBSET_HEADER_SIZE,
@@ -430,6 +462,9 @@ static const microsoft_os_descriptor_function_subset_header microsoft_os_descrip
 		.bFirstInterface = DFU_IF_NO,
 		.bReserved = 0,
 		.wTotalLength = 0,
+
+		.feature_descriptors = &microsoft_os_dfu_if_features,
+		.num_feature_descriptors = 1,
 	},
 #ifdef PLATFORM_HAS_TRACESWO
 	{
@@ -438,6 +473,9 @@ static const microsoft_os_descriptor_function_subset_header microsoft_os_descrip
 		.bFirstInterface = TRACE_IF_NO,
 		.bReserved = 0,
 		.wTotalLength = 0,
+
+		.feature_descriptors = &microsoft_os_trace_if_features,
+		.num_feature_descriptors = 1,
 	},
 #endif
 };
@@ -463,7 +501,7 @@ static const microsoft_os_descriptor_set_header microsoft_os_descriptor_sets[DES
 		.vendor_code = 1,
 		.num_config_subset_headers = 1,
 		.config_subset_headers = &microsoft_os_descriptor_config_subset,
-	}
+	},
 };
 
 static const microsoft_os_descriptor_set_information microsoft_os_descriptor_set_info = {
@@ -471,9 +509,9 @@ static const microsoft_os_descriptor_set_information microsoft_os_descriptor_set
 	.wMSOSDescriptorSetTotalLength = MICROSOFT_OS_DESCRIPTOR_SET_HEADER_SIZE +
 		MICROSOFT_OS_DESCRIPTOR_CONFIG_SUBSET_HEADER_SIZE +
 #ifdef PLATFORM_HAS_TRACESWO
-		MICROSOFT_OS_DESCRIPTOR_FUNCTION_SUBSET_HEADER_SIZE +
+		MICROSOFT_OS_DESCRIPTOR_FUNCTION_SUBSET_HEADER_SIZE + MICROSOFT_OS_FEATURE_COMPATIBLE_ID_DESCRIPTOR_SIZE +
 #endif
-		MICROSOFT_OS_DESCRIPTOR_FUNCTION_SUBSET_HEADER_SIZE,
+		MICROSOFT_OS_DESCRIPTOR_FUNCTION_SUBSET_HEADER_SIZE + MICROSOFT_OS_FEATURE_COMPATIBLE_ID_DESCRIPTOR_SIZE,
 	.bMS_VendorCode = 1,
 	.bAltEnumCode = 0,
 };
