@@ -310,10 +310,7 @@ bool cmd_auto_scan(target *t, int argc, const char **argv)
 		if (devs > 0)
 			break;
 
-		platform_target_clk_output_enable(false);
-		platform_nrst_set_val(false);
-		gdb_out("SW-DP scan failed!\n");
-		return false;
+		gdb_out("SW-DP scan found no devices.\n");
 	}
 	switch (e.type) {
 	case EXCEPTION_TIMEOUT:
@@ -323,6 +320,7 @@ bool cmd_auto_scan(target *t, int argc, const char **argv)
 		gdb_outf("Exception: %s\n", e.msg);
 		break;
 	}
+
 	if (devs == 0) {
 		platform_target_clk_output_enable(false);
 		platform_nrst_set_val(false);
