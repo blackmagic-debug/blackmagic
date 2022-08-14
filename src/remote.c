@@ -171,9 +171,9 @@ static void remote_packet_process_swd(unsigned i, char *packet)
 static void remote_packet_process_jtag(unsigned i, char *packet)
 {
 	uint32_t MS;
-	uint64_t DO;
+	uint64_t DO = 0;
 	size_t ticks;
-	uint64_t DI;
+	uint64_t DI = 0;
 	jtag_dev_t jtag_dev;
 	switch (packet[1]) {
 	case REMOTE_INIT: /* JS = initialise ============================= */
@@ -218,11 +218,9 @@ static void remote_packet_process_jtag(unsigned i, char *packet)
 		} else {
 			ticks = remotehston(2, &packet[2]);
 			DI = remotehston(-1, &packet[4]);
-			jtag_proc.jtagtap_tdi_tdo_seq((void *)&DO, (packet[1] == REMOTE_TDITDO_TMS), (void *)&DI, ticks);
-
-			/* Mask extra bits on return value... */
-			if (ticks < 64)
-				DO &= (1LL << ticks) - 1;
+			const uint8_t *const data_in = (uint8_t *)&DI;
+			uint8_t *data_out = (uint8_t *)&DO;
+			jtag_proc.jtagtap_tdi_tdo_seq(data_out, packet[1] == REMOTE_TDITDO_TMS, data_in, ticks);
 
 			remote_respond(REMOTE_RESP_OK, DO);
 		}
