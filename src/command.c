@@ -231,6 +231,7 @@ static bool cmd_jtag_scan(target *t, int argc, const char **argv)
 	}
 
 	cmd_targets(NULL, 0, NULL);
+	platform_target_clk_output_enable(false);
 	morse(NULL, false);
 	return true;
 }
@@ -273,6 +274,7 @@ bool cmd_swdp_scan(target *t, int argc, const char **argv)
 	}
 
 	cmd_targets(NULL, 0, NULL);
+	platform_target_clk_output_enable(false);
 	morse(NULL, false);
 	return true;
 }
@@ -308,6 +310,7 @@ bool cmd_auto_scan(target *t, int argc, const char **argv)
 		if (devs > 0)
 			break;
 
+		platform_target_clk_output_enable(false);
 		platform_nrst_set_val(false);
 		gdb_out("SW-DP scan failed!\n");
 		return false;
@@ -328,6 +331,7 @@ bool cmd_auto_scan(target *t, int argc, const char **argv)
 	}
 
 	cmd_targets(NULL, 0, NULL);
+	platform_target_clk_output_enable(false);
 	morse(NULL, false);
 	return true;
 }
