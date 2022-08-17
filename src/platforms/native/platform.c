@@ -228,7 +228,7 @@ void platform_init(void)
 
 void platform_nrst_set_val(bool assert)
 {
-	gpio_set_val(TMS_PORT, TMS_PIN, 1);
+	gpio_set(TMS_PORT, TMS_PIN);
 	if ((platform_hwversion() == 0) ||
 	    (platform_hwversion() >= 3)) {
 		gpio_set_val(NRST_PORT, NRST_PIN, assert);
@@ -270,8 +270,7 @@ static void adc_init(void)
 {
 	rcc_periph_clock_enable(RCC_ADC1);
 
-	gpio_set_mode(GPIOB, GPIO_MODE_INPUT,
-			GPIO_CNF_INPUT_ANALOG, GPIO0);
+	gpio_set_mode(GPIOB, GPIO_MODE_INPUT, GPIO_CNF_INPUT_ANALOG, GPIO0);
 
 	adc_power_off(ADC1);
 	adc_disable_scan_mode(ADC1);
@@ -333,8 +332,7 @@ void platform_request_boot(void)
 	gpio_set_mode(USB_PU_PORT, GPIO_MODE_INPUT, 0, USB_PU_PIN);
 
 	/* Drive boot request pin */
-	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ,
-			GPIO_CNF_OUTPUT_PUSHPULL, GPIO12);
+	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, GPIO12);
 	gpio_clear(GPIOB, GPIO12);
 }
 
