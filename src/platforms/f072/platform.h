@@ -145,7 +145,6 @@
 
 #ifdef ENABLE_DEBUG
 extern bool debug_bmp;
-int usbuart_debug_write(const char *buf, size_t len);
 # define DEBUG printf
 #else
 # define DEBUG(...)
