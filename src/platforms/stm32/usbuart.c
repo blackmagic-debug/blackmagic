@@ -580,59 +580,80 @@ void USBUSART_DMA_RXTX_ISR(void)
 #endif
 
 #ifdef ENABLE_DEBUG
+/*
+ * newlib defines _write as a weak link'd function for user code to override.
+ *
+ * This function forms the root of the implementation of a variety of functions
+ * that can write to stdout/stderr, including printf().
+ *
+ * The result of this function is the number of bytes written.
+ */
+/* NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp) */
+int _write(const int file, const void *const ptr, const size_t len)
+{
+	(void)file;
+#ifdef PLATFORM_HAS_DEBUG
+	if (debug_bmp)
+		return usbuart_debug_write(ptr, len);
+#endif
+	return len;
+}
+
+/*
+ * newlib defines isatty as a weak link'd function for user code to override.
+ *
+ * The result of this function is always 'true'.
+ */
+int isatty(const int file)
+{
+	(void)file;
+	return true;
+}
+
 enum {
 	RDI_SYS_OPEN = 0x01,
-	RDI_SYS_WRITE = 0x05,
-	RDI_SYS_ISTTY = 0x09,
 };
 
-int rdi_write(int fn, const char *buf, size_t len)
+typedef struct ex_frame {
+	uint32_t r0;
+	const uint32_t *params;
+	uint32_t r2;
+	uint32_t r3;
+	uint32_t r12;
+	uintptr_t lr;
+	uintptr_t return_address;
+} ex_frame_s;
+
+void debug_monitor_handler(void) __attribute__((used)) __attribute__((naked));
+
+/*
+ * This implements the other half of the newlib syscall puzzle.
+ * When newlib is built for ARM, various calls that do file IO
+ * such as printf end up calling [_swiwrite](https://github.com/mirror/newlib-cygwin/blob/master/newlib/libc/sys/arm/syscalls.c#L317)
+ * and other similar low-level implementation functions. These
+ * generate `swi` instructions for the "RDI Monitor" and that lands us.. here.
+ *
+ * The RDI calling convention sticks the file number in r0, the buffer pointer in r1, and length in r2.
+ * ARMv7-M's SWI (SVC) instruction then takes all that and maps it into an exception frame on the stack.
+ */
+void debug_monitor_handler(void)
 {
-	(void)fn;
-#if defined(PLATFORM_HAS_DEBUG)
-	if (debug_bmp)
-		return len - usbuart_debug_write(buf, len);
-#else
-	(void)buf;
-	(void)len;
-#endif
-	return 0;
-}
+	ex_frame_s *frame;
+	__asm__(
+		"mov %[frame], sp" :
+		[frame] "=r" (frame)
+	);
 
-struct ex_frame {
-	union {
-		int syscall;
-		int retval;
-	};
-	const int *params;
-	uint32_t r2, r3, r12, lr, pc;
-};
+	/* Make sure to return to the instruction after the SWI/BKPT */
+	frame->return_address += 2U;
 
-void debug_monitor_handler_c(struct ex_frame *sp)
-{
-	/* Return to after breakpoint instruction */
-	sp->pc += 2;
-
-	switch (sp->syscall) {
+	switch (frame->r0) {
 	case RDI_SYS_OPEN:
-		sp->retval = 1;
-		break;
-	case RDI_SYS_WRITE:
-		sp->retval = rdi_write(sp->params[0], (void*)sp->params[1], sp->params[2]);
-		break;
-	case RDI_SYS_ISTTY:
-		sp->retval = 1;
+		frame->r0 = 1;
 		break;
 	default:
-		sp->retval = -1;
+		frame->r0 = UINT32_MAX;
 	}
-
+	__asm__("bx lr");
 }
-
-__asm__(".globl debug_monitor_handler\n"
-    ".thumb_func\n"
-    "debug_monitor_handler: \n"
-    "    mov r0, sp\n"
-    "    b debug_monitor_handler_c\n");
-
 #endif
