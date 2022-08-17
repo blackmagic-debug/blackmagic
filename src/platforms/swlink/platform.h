@@ -33,7 +33,6 @@
 # define PLATFORM_HAS_DEBUG
 # define USBUART_DEBUG
 extern bool debug_bmp;
-int usbuart_debug_write(const char *buf, size_t len);
 #endif
 
 #define PLATFORM_HAS_USBUART

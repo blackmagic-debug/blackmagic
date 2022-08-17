@@ -319,7 +319,7 @@ void usbuart_usb_out_cb(usbd_device *dev, uint8_t ep)
 #endif
 
 #ifdef USBUART_DEBUG
-int usbuart_debug_write(const char *buf, size_t len)
+size_t usbuart_debug_write(const char *buf, const size_t len)
 {
 	if (nvic_get_active_irq(USB_IRQ) || nvic_get_active_irq(USBUSART_IRQ) || nvic_get_active_irq(USBUSART_DMA_RX_IRQ))
 		return 0;
