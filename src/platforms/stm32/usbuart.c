@@ -105,7 +105,7 @@ static void usbuart_set_led_state(uint8_t ledn, bool state)
 	}
 }
 
-void usbuart_init(void)
+void aux_serial_init(void)
 {
 	/* Enable clocks */
 	rcc_periph_clock_enable(USBUSART_CLK);

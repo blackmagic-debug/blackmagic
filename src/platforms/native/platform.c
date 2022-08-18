@@ -221,7 +221,7 @@ void platform_init(void)
 	/* On hardware version 1 and 2, UART and SWD share connector pins.
 	 * Don't enable UART if we're being debugged. */
 	if (platform_hwversion() == 0 || platform_hwversion() >= 3 || !(SCS_DEMCR & SCS_DEMCR_TRCENA))
-		usbuart_init();
+		aux_serial_init();
 
 	setup_vbus_irq();
 }

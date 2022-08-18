@@ -89,8 +89,8 @@ void platform_init(void)
 
 	/* Don't enable UART if we're being debugged. */
 	if (!(SCS_DEMCR & SCS_DEMCR_TRCENA))
-		usbuart_init();
-        adc_init();
+		aux_serial_init();
+	adc_init();
 }
 
 void platform_nrst_set_val(bool assert)

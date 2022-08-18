@@ -39,12 +39,14 @@ static uint8_t buf_rx_in;
 /* Fifo out pointer, writes assumed to be atomic, should be only incremented outside RX ISR */
 static uint8_t buf_rx_out;
 
-void usbuart_init(void)
+void aux_serial_init(void)
 {
 	UART_PIN_SETUP();
 
 	periph_clock_enable(USBUART_CLK);
-	__asm__("nop"); __asm__("nop"); __asm__("nop");
+	__asm__("nop");
+	__asm__("nop");
+	__asm__("nop");
 
 	uart_disable(USBUART);
 
