@@ -76,32 +76,6 @@ void aux_serial_init(void)
 	nvic_enable_irq(USBUART_IRQ);
 }
 
-void usbuart_set_line_coding(struct usb_cdc_line_coding *coding)
-{
-	uart_set_baudrate(USBUART, coding->dwDTERate);
-	uart_set_databits(USBUART, coding->bDataBits);
-	switch(coding->bCharFormat) {
-	case 0:
-	case 1:
-		uart_set_stopbits(USBUART, 1);
-		break;
-	case 2:
-		uart_set_stopbits(USBUART, 2);
-		break;
-	}
-	switch(coding->bParityType) {
-	case 0:
-		uart_set_parity(USBUART, UART_PARITY_NONE);
-		break;
-	case 1:
-		uart_set_parity(USBUART, UART_PARITY_ODD);
-		break;
-	case 2:
-		uart_set_parity(USBUART, UART_PARITY_EVEN);
-		break;
-	}
-}
-
 #ifndef ENABLE_RTT
 void usbuart_usb_out_cb(usbd_device *dev, uint8_t ep)
 {
