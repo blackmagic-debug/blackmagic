@@ -631,14 +631,12 @@ static bool rp_cmd_erase_sector(target *t, int argc, const char **argv)
 static bool rp_cmd_reset_usb_boot(target *t, int argc, const char **argv)
 {
 	rp_priv_s *ps = (rp_priv_s *)t->target_storage;
-	if (argc > 2) {
-		ps->regs[1] = strtoul(argv[2], NULL, 0);
-	} else if (argc < 3) {
+	ps->regs[0] = 0;
+	ps->regs[1] = 0;
+	if (argc > 1)
 		ps->regs[0] = strtoul(argv[1], NULL, 0);
-	} else {
-		ps->regs[0] = 0;
-		ps->regs[1] = 0;
-	}
+	if (argc > 2)
+		ps->regs[1] = strtoul(argv[2], NULL, 0);
 	rp_rom_call(t, ps->regs, ps->rom_reset_usb_boot, 0);
 	return true;
 }
