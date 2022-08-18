@@ -46,6 +46,7 @@
 #endif
 #include "usbuart.h"
 
+#include <libopencm3/cm3/nvic.h>
 #include <libopencm3/usb/cdc.h>
 
 static bool gdb_uart_dtr = true;
@@ -169,4 +170,18 @@ void usb_serial_set_config(usbd_device *dev, uint16_t value)
 #ifdef ENABLE_DEBUG
 	initialise_monitor_handles();
 #endif
+}
+
+void usbuart_send_stdout(const uint8_t *data, uint32_t len)
+{
+	while (len) {
+		uint32_t cnt = CDCACM_PACKET_SIZE;
+		if (cnt > len)
+			cnt = len;
+		nvic_disable_irq(USB_IRQ);
+		cnt = usbd_ep_write_packet(usbdev, CDCACM_UART_ENDPOINT, data, cnt);
+		nvic_enable_irq(USB_IRQ);
+		data += cnt;
+		len -= cnt;
+	}
 }
