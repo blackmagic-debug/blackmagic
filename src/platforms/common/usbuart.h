@@ -21,13 +21,9 @@
 #define __USBUART_H
 
 #include <libopencm3/usb/usbd.h>
-#include <libopencm3/usb/cdc.h>
 
 #include "general.h"
 
-void aux_serial_init(void);
-
-void aux_serial_set_encoding(struct usb_cdc_line_coding *coding);
 void usbuart_usb_out_cb(usbd_device *dev, uint8_t ep);
 void usbuart_usb_in_cb(usbd_device *dev, uint8_t ep);
 

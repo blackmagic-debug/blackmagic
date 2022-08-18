@@ -31,6 +31,7 @@
 #include "general.h"
 #include "usbuart.h"
 #include "usb.h"
+#include "aux_serial.h"
 
 void aux_serial_set_encoding(struct usb_cdc_line_coding *coding)
 {

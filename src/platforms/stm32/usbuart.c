@@ -31,6 +31,7 @@
 #include "general.h"
 #include "usbuart.h"
 #include "usb.h"
+#include "aux_serial.h"
 
 #ifdef DMA_STREAM0
 #define dma_channel_reset(dma, channel) dma_stream_reset(dma, channel)
