@@ -172,16 +172,13 @@ void usb_serial_set_config(usbd_device *dev, uint16_t value)
 #endif
 }
 
-void debug_uart_send_stdout(const uint8_t *data, size_t len)
+void debug_uart_send_stdout(const uint8_t *const data, const size_t len)
 {
-	while (len) {
-		uint32_t cnt = CDCACM_PACKET_SIZE;
-		if (cnt > len)
-			cnt = len;
+	for (size_t offset = 0; offset < len; offset += CDCACM_PACKET_SIZE) {
+		const size_t count = MIN(len - offset, CDCACM_PACKET_SIZE);
 		nvic_disable_irq(USB_IRQ);
-		cnt = usbd_ep_write_packet(usbdev, CDCACM_UART_ENDPOINT, data, cnt);
+		/* XXX: Do we actually care if this fails? Possibly not.. */
+		usbd_ep_write_packet(usbdev, CDCACM_UART_ENDPOINT, data + offset, count);
 		nvic_enable_irq(USB_IRQ);
-		data += cnt;
-		len -= cnt;
 	}
 }
