@@ -172,7 +172,7 @@ void usb_serial_set_config(usbd_device *dev, uint16_t value)
 #endif
 }
 
-void usbuart_send_stdout(const uint8_t *data, uint32_t len)
+void debug_uart_send_stdout(const uint8_t *data, size_t len)
 {
 	while (len) {
 		uint32_t cnt = CDCACM_PACKET_SIZE;

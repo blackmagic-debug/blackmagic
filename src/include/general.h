@@ -78,7 +78,7 @@ enum BMP_DEBUG {
 # define DEBUG_WIRE(...) do {} while(0)
 # define DEBUG_GDB_WIRE(...) do {} while(0)
 
-void usbuart_send_stdout(const uint8_t *data, uint32_t len);
+void debug_uart_send_stdout(const uint8_t *data, size_t len);
 #else
 # include <stdarg.h>
 extern int cl_debuglevel;
