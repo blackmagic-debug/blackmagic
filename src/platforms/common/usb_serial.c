@@ -48,6 +48,7 @@
 #endif
 #include "usbuart.h"
 
+#include <libopencm3/cm3/cortex.h>
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/usb/cdc.h>
 
@@ -184,3 +185,31 @@ void debug_uart_send_stdout(const uint8_t *const data, const size_t len)
 		nvic_enable_irq(USB_IRQ);
 	}
 }
+
+#ifdef ENABLE_DEBUG
+size_t usbuart_debug_write(const char *buf, const size_t len)
+{
+	if (nvic_get_active_irq(USB_IRQ) || nvic_get_active_irq(USBUSART_IRQ) || nvic_get_active_irq(USBUSART_DMA_RX_IRQ))
+		return 0;
+
+	CM_ATOMIC_CONTEXT();
+
+	for (size_t i = 0; i < len && (usb_dbg_in + 1) % RX_FIFO_SIZE != usb_dbg_out; ++i)
+	{
+		if (buf[i] == '\n')
+		{
+			usb_dbg_buf[usb_dbg_in++] = '\r';
+			usb_dbg_in %= RX_FIFO_SIZE;
+
+			if ((usb_dbg_in + 1) % RX_FIFO_SIZE == usb_dbg_out)
+				break;
+		}
+		usb_dbg_buf[usb_dbg_in++] = buf[i];
+		usb_dbg_in %= RX_FIFO_SIZE;
+	}
+
+	usbuart_run();
+
+	return len;
+}
+#endif
