@@ -23,7 +23,7 @@
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/cdc.h>
 
-void usbuart_init(void);
+void aux_serial_init(void);
 
 void usbuart_set_line_coding(struct usb_cdc_line_coding *coding);
 void usbuart_usb_out_cb(usbd_device *dev, uint8_t ep);

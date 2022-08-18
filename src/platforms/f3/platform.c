@@ -89,7 +89,7 @@ void platform_init(void)
 	gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO11 | GPIO12);
 	gpio_set_af(GPIOA, GPIO_AF14, GPIO11 | GPIO12);
 	blackmagic_usb_init();
-	usbuart_init();
+	aux_serial_init();
 }
 
 void platform_nrst_set_val(bool assert)

@@ -82,7 +82,7 @@ void platform_init(void)
 	__asm__("nop"); __asm__("nop"); __asm__("nop");
 	gpio_mode_setup(GPIOD_BASE, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, GPIO4|GPIO5);
 	blackmagic_usb_init();
-	usbuart_init();
+	aux_serial_init();
 
 	usb_enable_interrupts(USB_INT_RESET | USB_INT_DISCON |
 		USB_INT_RESUME | USB_INT_SUSPEND, 0xff, 0xff);
