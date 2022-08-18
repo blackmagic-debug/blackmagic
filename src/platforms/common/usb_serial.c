@@ -41,8 +41,8 @@
 #include "general.h"
 #include "gdb_if.h"
 #include "usb_serial.h"
-#if defined(PLATFORM_HAS_TRACESWO)
-#	include "traceswo.h"
+#ifdef PLATFORM_HAS_TRACESWO
+#include "traceswo.h"
 #endif
 #include "usbuart.h"
 
@@ -51,6 +51,16 @@
 static bool gdb_uart_dtr = true;
 
 static void usb_serial_set_state(usbd_device *dev, uint16_t iface, uint8_t ep);
+
+#ifdef ENABLE_DEBUG
+/*
+ * This call initialises "SemiHosting", only we then do our own SVC interrupt things to
+ * route all output through to the debug USB serial interface if debug_bmp is true.
+ *
+ * https://github.com/mirror/newlib-cygwin/blob/master/newlib/libc/sys/arm/syscalls.c#L115
+ */
+void initialise_monitor_handles(void);
+#endif
 
 static enum usbd_request_return_codes gdb_uart_control_request(usbd_device *dev, struct usb_setup_data *req,
 	uint8_t **buf, uint16_t *const len, void (**complete)(usbd_device *dev, struct usb_setup_data *req))
@@ -140,7 +150,7 @@ void usb_serial_set_config(usbd_device *dev, uint16_t value)
 		dev, CDCACM_UART_ENDPOINT | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE, usbuart_usb_in_cb);
 	usbd_ep_setup(dev, (CDCACM_UART_ENDPOINT + 1) | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
 
-#if defined(PLATFORM_HAS_TRACESWO)
+#ifdef PLATFORM_HAS_TRACESWO
 	/* Trace interface */
 	usbd_ep_setup(dev, TRACE_ENDPOINT | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_BULK, 64, trace_buf_drain);
 #endif
@@ -155,4 +165,8 @@ void usb_serial_set_config(usbd_device *dev, uint16_t value)
 	 */
 	usb_serial_set_state(dev, GDB_IF_NO, CDCACM_GDB_ENDPOINT);
 	usb_serial_set_state(dev, UART_IF_NO, CDCACM_UART_ENDPOINT);
+
+#ifdef ENABLE_DEBUG
+	initialise_monitor_handles();
+#endif
 }

@@ -50,10 +50,6 @@ void platform_init(void)
 {
 	uint32_t data;
 	SCS_DEMCR |= SCS_DEMCR_VC_MON_EN;
-#ifdef ENABLE_DEBUG
-	void initialise_monitor_handles(void);
-	initialise_monitor_handles();
-#endif
 	rcc_clock_setup_pll(&rcc_hse_configs[RCC_CLOCK_HSE8_72MHZ]);
 	rev =  detect_rev();
 	/* Enable peripherals */
