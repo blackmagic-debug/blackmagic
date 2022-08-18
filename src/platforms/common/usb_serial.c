@@ -194,10 +194,8 @@ size_t debug_uart_write(const char *buf, const size_t len)
 
 	CM_ATOMIC_CONTEXT();
 
-	for (size_t i = 0; i < len && (usb_dbg_in + 1) % RX_FIFO_SIZE != usb_dbg_out; ++i)
-	{
-		if (buf[i] == '\n')
-		{
+	for (size_t i = 0; i < len && (usb_dbg_in + 1) % RX_FIFO_SIZE != usb_dbg_out; ++i) {
+		if (buf[i] == '\n') {
 			usb_dbg_buf[usb_dbg_in++] = '\r';
 			usb_dbg_in %= RX_FIFO_SIZE;
 
@@ -209,7 +207,6 @@ size_t debug_uart_write(const char *buf, const size_t len)
 	}
 
 	usbuart_run();
-
 	return len;
 }
 
