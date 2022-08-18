@@ -162,6 +162,8 @@
 #define JTAG_IDCODE_DESIGNER_OFFSET 1U
 #define JTAG_IDCODE_DESIGNER_MASK   (0x7ffU << JTAG_IDCODE_DESIGNER_OFFSET)
 
+#define JTAG_IDCODE_ARM_DPv0 0x4ba00477U
+
 /* Constants to make RnW parameters more clear in code */
 #define ADIV5_LOW_WRITE 0
 #define ADIV5_LOW_READ  1
@@ -358,7 +360,7 @@ void adiv5_mem_write_sized(ADIv5_AP_t *ap, uint32_t dest, const void *src, size_
 void adiv5_dp_write(ADIv5_DP_t *dp, uint16_t addr, uint32_t value);
 #endif
 
-void adiv5_dp_init(ADIv5_DP_t *dp);
+void adiv5_dp_init(ADIv5_DP_t *dp, uint32_t idcode);
 void platform_adiv5_dp_defaults(ADIv5_DP_t *dp);
 ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel);
 void remote_jtag_dev(const jtag_dev_t *jtag_dev);

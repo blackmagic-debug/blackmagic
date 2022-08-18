@@ -194,7 +194,7 @@ uint32_t adiv5_swdp_scan(uint32_t targetid)
 		memcpy(dp, initial_dp, sizeof(ADIv5_DP_t));
 		dp->instance = i;
 
-		adiv5_dp_init(dp);
+		adiv5_dp_init(dp, 0);
 	}
 	return target_list ? 1U : 0U;
 }
