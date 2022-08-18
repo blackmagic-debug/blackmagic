@@ -400,7 +400,7 @@ bool lpc43xx_probe(target_s *const t)
 	const uint32_t chip_code = (chipid & LPC43xx_CHIPID_CHIP_MASK) >> LPC43xx_CHIPID_CHIP_SHIFT;
 	t->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
 
-	/* 4 is for parts with on-chip Flash, 7 is undocumented but might be for LM43S parts */
+	/* 4 is for rev '-' parts with on-chip Flash, 7 is for rev 'A' parts with on-chip Flash */
 	if (chip_code == 4U || chip_code == 7U) {
 		const lpc43xx_partid_s part_id = lpc43xx_iap_read_partid(t);
 		DEBUG_WARN("LPC43xx part ID: 0x%08" PRIx32 ":%02x\n", part_id.part, part_id.flash_config);
