@@ -136,7 +136,7 @@ uint32_t jlink_swdp_scan(bmp_info_t *info)
 
 	jlink_adiv5_swdp_error(dp);
 
-	adiv5_dp_init(dp);
+	adiv5_dp_init(dp, 0);
 
 	return target_list ? 1U : 0U;
 }

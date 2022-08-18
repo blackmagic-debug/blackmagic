@@ -1099,7 +1099,7 @@ uint32_t stlink_swdp_scan(bmp_info_t *info)
 
 	stlink_dp_error(dp);
 
-	adiv5_dp_init(dp);
+	adiv5_dp_init(dp, 0);
 
 	return target_list ? 1U : 0U;
 }

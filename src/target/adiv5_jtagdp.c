@@ -56,7 +56,7 @@ void adiv5_jtag_dp_handler(uint8_t jd_index)
 		dp->abort = adiv5_jtagdp_abort;
 	}
 
-	adiv5_dp_init(dp);
+	adiv5_dp_init(dp, jtag_devs[jd_index].jd_idcode);
 }
 
 uint32_t fw_adiv5_jtagdp_read(ADIv5_DP_t *dp, uint16_t addr)

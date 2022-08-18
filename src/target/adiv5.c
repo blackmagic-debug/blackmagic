@@ -681,7 +681,7 @@ static void rp_rescue_setup(ADIv5_DP_t *dp)
 	return;
 }
 
-void adiv5_dp_init(ADIv5_DP_t *dp)
+void adiv5_dp_init(ADIv5_DP_t *dp, const uint32_t idcode)
 {
 	/*
 	 * Assume DP v1 or later.
@@ -691,10 +691,11 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 	 *
 	 * for SWD-DP, we are guaranteed to be DP v1 or later.
 	 */
-	volatile uint32_t dpidr;
+	volatile uint32_t dpidr = 0;
 	volatile struct exception e;
 	TRY_CATCH (e, EXCEPTION_ALL) {
-		dpidr = adiv5_dp_read(dp, ADIV5_DP_DPIDR);
+		if (idcode != JTAG_IDCODE_ARM_DPv0)
+			dpidr = adiv5_dp_read(dp, ADIV5_DP_DPIDR);
 	}
 	if (e.type) {
 		DEBUG_WARN("DP not responding!...\n");
@@ -728,16 +729,13 @@ void adiv5_dp_init(ADIv5_DP_t *dp)
 		} else {
 			DEBUG_WARN("Invalid DPIDR %08" PRIx32 " assuming DP version 0\n", dpidr);
 			dp->version = 0;
+			dp->designer_code = 0;
+			dp->partno = 0;
+			dp->mindp = false;
 		}
-
-	}
-	if (dp->version == 0) {
+	} else if (dp->version == 0)
 		/* DP v0 */
-		DEBUG_WARN("DPv0 detected, no designer code available\n");
-		dp->designer_code = 0;
-		dp->partno = 0;
-		dp->mindp = 0;
-	}
+		DEBUG_WARN("DPv0 detected based on JTAG IDCode\n");
 
 	if (dp->version >= 2) {
 		adiv5_dp_write(dp, ADIV5_DP_SELECT, 2); /* TARGETID is on bank 2 */
