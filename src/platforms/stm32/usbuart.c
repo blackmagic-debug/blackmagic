@@ -29,6 +29,7 @@
 #include <libopencm3/usb/cdc.h>
 
 #include "general.h"
+#include "usbuart.h"
 #include "usb.h"
 
 #ifdef DMA_STREAM0
@@ -50,13 +51,6 @@
 #define TX_LED_ACT (1 << 0)
 #define RX_LED_ACT (1 << 1)
 
-/* F072 with st_usbfs_v2_usb_drive drops characters at the 64 byte boundary!*/
-#if !defined(USART_DMA_BUF_SIZE)
-# define USART_DMA_BUF_SIZE 128
-#endif
-#define RX_FIFO_SIZE (USART_DMA_BUF_SIZE)
-#define TX_BUF_SIZE (USART_DMA_BUF_SIZE)
-
 /* TX double buffer */
 static uint8_t buf_tx[TX_BUF_SIZE * 2];
 /* Active buffer part idx */
@@ -72,16 +66,14 @@ static uint8_t buf_rx_out;
 /* RX usb transfer complete */
 static bool rx_usb_trfr_cplt = true;
 
-#ifdef USBUART_DEBUG
+#ifdef ENABLE_DEBUG
 /* Debug Fifo buffer with space for copy fn overrun */
-static uint8_t usb_dbg_buf[RX_FIFO_SIZE + sizeof(uint64_t)];
+char usb_dbg_buf[RX_FIFO_SIZE + sizeof(uint64_t)];
 /* Debug Fifo in pointer */
-static uint8_t usb_dbg_in;
+uint8_t usb_dbg_in;
 /* Debug Fifo out pointer */
-static uint8_t usb_dbg_out;
+uint8_t usb_dbg_out;
 #endif
-
-static void usbuart_run(void);
 
 /*
  * Update led state atomically respecting RX anb TX states.
@@ -309,12 +301,12 @@ static void usbuart_send_rx_packet(void)
 	/* Forcibly empty fifo if no USB endpoint.
 	 * If fifo empty, nothing further to do. */
 	if (usb_get_config() != 1 || (buf_rx_in == buf_rx_out
-#ifdef USBUART_DEBUG
+#ifdef ENABLE_DEBUG
 		&& usb_dbg_in == usb_dbg_out
 #endif
 	))
 	{
-#ifdef USBUART_DEBUG
+#ifdef ENABLE_DEBUG
 		usb_dbg_out = usb_dbg_in;
 #endif
 		buf_rx_out = buf_rx_in;
@@ -330,9 +322,9 @@ static void usbuart_send_rx_packet(void)
 		uint8_t packet_buf[CDCACM_PACKET_SIZE - 1 + sizeof(uint64_t)];
 		uint32_t packet_size;
 
-#ifdef USBUART_DEBUG
+#ifdef ENABLE_DEBUG
 		/* Copy data from DEBUG FIFO into local usb packet buffer */
-		packet_size = copy_from_fifo(packet_buf, usb_dbg_buf, usb_dbg_out, usb_dbg_in, CDCACM_PACKET_SIZE - 1, RX_FIFO_SIZE);
+		packet_size = copy_from_fifo(packet_buf, (uint8_t *)usb_dbg_buf, usb_dbg_out, usb_dbg_in, CDCACM_PACKET_SIZE - 1, RX_FIFO_SIZE);
 		/* Send if buffer not empty */
 		if (packet_size)
 		{
@@ -359,7 +351,7 @@ void usbuart_usb_in_cb(usbd_device *dev, uint8_t ep)
 	usbuart_send_rx_packet();
 }
 
-static void usbuart_run(void)
+void usbuart_run(void)
 {
 	nvic_disable_irq(USB_IRQ);
 
