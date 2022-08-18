@@ -1,8 +1,10 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2011  Black Sphere Technologies Ltd.
+ * Copyright (C) 2011 Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
+ * Copyright (C) 2022 1BitSquared <info@1bitsquared.com>
+ * Written by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -106,7 +108,7 @@ static enum usbd_request_return_codes debug_uart_control_request(usbd_device *de
 	case USB_CDC_REQ_SET_LINE_CODING:
 		if (*len < sizeof(struct usb_cdc_line_coding))
 			return USBD_REQ_NOTSUPP;
-		usbuart_set_line_coding((struct usb_cdc_line_coding *)*buf);
+		aux_serial_set_encoding((struct usb_cdc_line_coding *)*buf);
 		return USBD_REQ_HANDLED;
 	}
 	return USBD_REQ_NOTSUPP;

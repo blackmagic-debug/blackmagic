@@ -32,7 +32,7 @@
 #include "usbuart.h"
 #include "usb.h"
 
-void usbuart_set_line_coding(struct usb_cdc_line_coding *coding)
+void aux_serial_set_encoding(struct usb_cdc_line_coding *coding)
 {
 	usart_set_baudrate(USBUSART, coding->dwDTERate);
 
