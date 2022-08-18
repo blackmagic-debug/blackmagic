@@ -76,20 +76,6 @@ void aux_serial_init(void)
 	nvic_enable_irq(USBUART_IRQ);
 }
 
-void usbuart_send_stdout(const uint8_t *data, uint32_t len)
-{
-	while (len) {
-		uint32_t cnt = CDCACM_PACKET_SIZE;
-		if (cnt > len)
-			cnt = len;
-		nvic_disable_irq(USBUART_IRQ);
-		cnt = usbd_ep_write_packet(usbdev, CDCACM_UART_ENDPOINT, data, cnt);
-		nvic_enable_irq(USBUART_IRQ);
-		data += cnt;
-		len -= cnt;
-	}
-}
-
 void usbuart_set_line_coding(struct usb_cdc_line_coding *coding)
 {
 	uart_set_baudrate(USBUART, coding->dwDTERate);
