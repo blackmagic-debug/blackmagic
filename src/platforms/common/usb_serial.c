@@ -187,7 +187,7 @@ void debug_uart_send_stdout(const uint8_t *const data, const size_t len)
 }
 
 #ifdef ENABLE_DEBUG
-size_t usbuart_debug_write(const char *buf, const size_t len)
+size_t debug_uart_write(const char *buf, const size_t len)
 {
 	if (nvic_get_active_irq(USB_IRQ) || nvic_get_active_irq(USBUSART_IRQ) || nvic_get_active_irq(USBUSART_DMA_RX_IRQ))
 		return 0;
@@ -227,7 +227,7 @@ int _write(const int file, const void *const ptr, const size_t len)
 	(void)file;
 #ifdef PLATFORM_HAS_DEBUG
 	if (debug_bmp)
-		return usbuart_debug_write(ptr, len);
+		return debug_uart_write(ptr, len);
 #endif
 	return len;
 }
