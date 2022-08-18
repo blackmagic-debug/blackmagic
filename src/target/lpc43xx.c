@@ -104,7 +104,6 @@
 
 #define IAP_PGM_CHUNKSIZE 4096U
 
-#define FLASH_NUM_BANK   2U
 #define FLASH_NUM_SECTOR 15U
 
 #define LPC43xx_FLASH_BANK_A        0U
@@ -183,6 +182,10 @@ typedef struct lpc43xx_spi_flash {
 	uint8_t sector_erase_opcode;
 } lpc43xx_spi_flash_s;
 
+typedef struct lpc43xx_priv {
+	uint8_t flash_banks;
+} lpc43xx_priv_s;
+
 static bool lpc43xx_cmd_reset(target_s *t, int argc, const char **argv);
 static bool lpc43xx_cmd_mkboot(target_s *t, int argc, const char **argv);
 
@@ -224,6 +227,7 @@ static void lpc43xx_add_iap_flash(
 
 static void lpc43xx_detect(target_s *const t, const lpc43xx_partid_s part_id)
 {
+	lpc43xx_priv_s *const priv = (lpc43xx_priv_s *)t->target_storage;
 	const uint32_t iap_entry = target_mem_read32(t, IAP_ENTRYPOINT_LOCATION);
 
 	switch (part_id.part) {
@@ -261,9 +265,12 @@ static void lpc43xx_detect(target_s *const t, const lpc43xx_partid_s part_id)
 	lpc43xx_add_iap_flash(
 		t, iap_entry, LPC43xx_FLASH_BANK_A, 0U, LPC43xx_FLASH_BANK_A_BASE, LPC43xx_FLASH_64kiB, LPC43xx_FLASH_8kiB);
 	/* All parts other than LP43x2 with Flash have the first 64kiB bank B region */
-	if (part_id.flash_config != LPC43xx_PARTID_FLASH_CONFIG_43x2)
+	if (part_id.flash_config != LPC43xx_PARTID_FLASH_CONFIG_43x2) {
 		lpc43xx_add_iap_flash(
 			t, iap_entry, LPC43xx_FLASH_BANK_B, 0U, LPC43xx_FLASH_BANK_B_BASE, LPC43xx_FLASH_64kiB, LPC43xx_FLASH_8kiB);
+		priv->flash_banks = 2;
+	} else
+		priv->flash_banks = 1;
 
 	switch (part_id.flash_config) {
 	case LPC43xx_PARTID_FLASH_CONFIG_43x2:
@@ -399,6 +406,13 @@ bool lpc43xx_probe(target_s *const t)
 		DEBUG_WARN("LPC43xx part ID: 0x%08" PRIx32 ":%02x\n", part_id.part, part_id.flash_config);
 		if (part_id.part == LPC43xx_PARTID_INVALID)
 			return false;
+
+		lpc43xx_priv_s *priv = calloc(1, sizeof(lpc43xx_priv_s));
+		if (!priv) { /* calloc failed: heap exhaustion */
+			DEBUG_WARN("calloc: failed in %s\n", __func__);
+			return false;
+		}
+		t->target_storage = priv;
 
 		t->mass_erase = lpc43xx_iap_mass_erase;
 		lpc43xx_detect(t, part_id);
@@ -598,11 +612,12 @@ static bool lpc43xx_iap_flash_erase(target_flash_s *f, const target_addr_t addr,
 
 static bool lpc43xx_iap_mass_erase(target_s *t)
 {
+	lpc43xx_priv_s *const priv = (lpc43xx_priv_s *)t->target_storage;
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500);
 	lpc43xx_iap_init(t->flash);
 
-	for (size_t bank = 0; bank < FLASH_NUM_BANK; ++bank) {
+	for (size_t bank = 0; bank < priv->flash_banks; ++bank) {
 		lpc_flash_s *const f = (lpc_flash_s *)t->flash;
 		if (lpc_iap_call(f, NULL, IAP_CMD_PREPARE, 0, FLASH_NUM_SECTOR - 1U, bank) ||
 			lpc_iap_call(f, NULL, IAP_CMD_ERASE, 0, FLASH_NUM_SECTOR - 1U, CPU_CLK_KHZ, bank))
