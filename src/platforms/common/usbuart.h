@@ -23,10 +23,30 @@
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/cdc.h>
 
+#include "general.h"
+
 void aux_serial_init(void);
 
 void aux_serial_set_encoding(struct usb_cdc_line_coding *coding);
 void usbuart_usb_out_cb(usbd_device *dev, uint8_t ep);
 void usbuart_usb_in_cb(usbd_device *dev, uint8_t ep);
+
+void usbuart_run(void);
+
+/* F072 with st_usbfs_v2_usb_drive drops characters at the 64 byte boundary!*/
+#if !defined(USART_DMA_BUF_SIZE)
+# define USART_DMA_BUF_SIZE 128
+#endif
+#define RX_FIFO_SIZE (USART_DMA_BUF_SIZE)
+#define TX_BUF_SIZE (USART_DMA_BUF_SIZE)
+
+#ifdef ENABLE_DEBUG
+/* Debug Fifo buffer with space for copy fn overrun */
+extern char usb_dbg_buf[RX_FIFO_SIZE + sizeof(uint64_t)];
+/* Debug Fifo in pointer */
+extern uint8_t usb_dbg_in;
+/* Debug Fifo out pointer */
+extern uint8_t usb_dbg_out;
+#endif
 
 #endif
