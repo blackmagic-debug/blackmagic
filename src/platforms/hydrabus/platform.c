@@ -25,6 +25,7 @@
 #include "general.h"
 #include "usb.h"
 #include "usbuart.h"
+#include "aux_serial.h"
 #include "morse.h"
 
 #include <libopencm3/stm32/rcc.h>

@@ -47,6 +47,7 @@
 #include "traceswo.h"
 #endif
 #include "usbuart.h"
+#include "aux_serial.h"
 
 #include <libopencm3/cm3/cortex.h>
 #include <libopencm3/cm3/nvic.h>
