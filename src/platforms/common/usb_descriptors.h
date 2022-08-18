@@ -52,7 +52,7 @@ static const usb_device_descriptor_s dev_desc = {
 #endif
 	.idVendor = 0x1d50,
 	.idProduct = 0x6018,
-	.bcdDevice = 0x0100,
+	.bcdDevice = 0x0109,
 	.iManufacturer = 1,
 	.iProduct = 2,
 	.iSerialNumber = 3,
