@@ -192,42 +192,6 @@ void aux_serial_init(void)
 	usart_enable_rx_dma(USBUSART);
 }
 
-void usbuart_set_line_coding(struct usb_cdc_line_coding *coding)
-{
-	usart_set_baudrate(USBUSART, coding->dwDTERate);
-
-	if (coding->bParityType)
-		usart_set_databits(USBUSART, (coding->bDataBits + 1 <= 8 ? 8 : 9));
-	else
-		usart_set_databits(USBUSART, (coding->bDataBits <= 8 ? 8 : 9));
-
-	switch(coding->bCharFormat) {
-	case 0:
-		usart_set_stopbits(USBUSART, USART_STOPBITS_1);
-		break;
-	case 1:
-		usart_set_stopbits(USBUSART, USART_STOPBITS_1_5);
-		break;
-	case 2:
-	default:
-		usart_set_stopbits(USBUSART, USART_STOPBITS_2);
-		break;
-	}
-
-	switch(coding->bParityType) {
-	case 0:
-		usart_set_parity(USBUSART, USART_PARITY_NONE);
-		break;
-	case 1:
-		usart_set_parity(USBUSART, USART_PARITY_ODD);
-		break;
-	case 2:
-	default:
-		usart_set_parity(USBUSART, USART_PARITY_EVEN);
-		break;
-	}
-}
-
 /*
  * Copy data from fifo into continuous buffer. Return copied length.
  */

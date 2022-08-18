@@ -27,3 +27,4 @@ SRC +=             \
 	usb.c          \
 	usb_serial.c   \
 	usb_dfu_stub.c \
+	aux_serial.c
