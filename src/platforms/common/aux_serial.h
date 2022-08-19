@@ -20,15 +20,22 @@
 #ifndef AUX_SERIAL_H
 #define AUX_SERIAL_H
 
+#include <stddef.h>
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/cdc.h>
 
 void aux_serial_init(void);
 void aux_serial_set_encoding(struct usb_cdc_line_coding *coding);
-char *aux_serial_current_transmit_buffer(void);
 
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
 void aux_serial_switch_transmit_buffers(void);
 #endif
+
+/* Get the current transmit buffer to stage data into */
+char *aux_serial_current_transmit_buffer(void);
+/* Get how full the current transmit buffer is */
+size_t aux_serial_transmit_buffer_fullness(void);
+/* Send a number of bytes staged into the current transmit bufer */
+void aux_serial_send(size_t len);
 
 #endif /*AUX_SERIAL_H*/
