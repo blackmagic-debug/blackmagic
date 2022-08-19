@@ -28,11 +28,14 @@ void debug_uart_run(void);
 #define TX_LED_ACT (1 << 0)
 #define RX_LED_ACT (1 << 1)
 
-#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
-/* F072 with st_usbfs_v2_usb_drive drops characters at the 64 byte boundary!*/
-#if !defined(USART_DMA_BUF_SIZE)
-# define USART_DMA_BUF_SIZE 128
+/* XXX: Does the st_usbfs_v2_usb_driver work on F3 with 128 byte buffers? */
+#if defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
+#define USART_DMA_BUF_SIZE 128
+#elif defined(STM32F0)
+/* The st_usbfs_v2_usb_driver only works with up to 64-byte buffers on the F0 parts */
+#define USART_DMA_BUF_SIZE  64
 #endif
+
 #define RX_FIFO_SIZE (USART_DMA_BUF_SIZE)
 #define TX_BUF_SIZE (USART_DMA_BUF_SIZE)
 

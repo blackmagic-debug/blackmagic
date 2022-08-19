@@ -90,8 +90,6 @@
 #define SWDIO_MODE_DRIVE() \
 	gpio_mode_setup(SWDIO_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, SWDIO_PIN);
 
-/* FIXME: Does st_usbfs_v2_usb_driver work on F3 with 128 Bytes buffer*/
-#define USART_DMA_BUF_SIZE  64
 #define USB_DRIVER      st_usbfs_v2_usb_driver
 #define USB_IRQ         NVIC_USB_IRQ
 #define USB_ISR(x)      usb_isr(x)
