@@ -90,12 +90,6 @@ void usbuart_usb_out_cb(usbd_device *dev, uint8_t ep)
 }
 #endif
 
-void usbuart_usb_in_cb(usbd_device *dev, uint8_t ep)
-{
-	(void) dev;
-	(void) ep;
-}
-
 /*
  * Read a character from the UART RX and stuff it in a software FIFO.
  * Allowed to read from FIFO out pointer, but not write to it.
