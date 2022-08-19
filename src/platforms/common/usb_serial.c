@@ -311,14 +311,13 @@ static void debug_uart_send_callback(usbd_device *dev, uint8_t ep)
 #ifndef ENABLE_RTT
 static void debug_uart_receive_callback(usbd_device *dev, uint8_t ep)
 {
-	(void)ep;
+	char *const tx_buf_ptr = aux_serial_current_transmit_buffer();
 
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
-	usbd_ep_nak_set(dev, CDCACM_UART_ENDPOINT, 1);
+	usbd_ep_nak_set(dev, ep, 1);
 
 	/* Read new packet directly into TX buffer */
-	char *const tx_buf_ptr = aux_serial_current_transmit_buffer();
-	const uint16_t len = usbd_ep_read_packet(dev, CDCACM_UART_ENDPOINT, tx_buf_ptr + buf_tx_act_sz, CDCACM_PACKET_SIZE);
+	const uint16_t len = usbd_ep_read_packet(dev, ep, tx_buf_ptr + buf_tx_act_sz, CDCACM_PACKET_SIZE);
 
 #if defined(BLACKMAGIC)
 	/* Don't bother if uart is disabled.
@@ -327,7 +326,7 @@ static void debug_uart_receive_callback(usbd_device *dev, uint8_t ep)
 	if(!(RCC_APB2ENR & RCC_APB2ENR_USART1EN) &&
 	   !(RCC_APB1ENR & RCC_APB1ENR_USART2EN))
 	{
-		usbd_ep_nak_set(dev, CDCACM_UART_ENDPOINT, 0);
+		usbd_ep_nak_set(dev, ep, 0);
 		return;
 	}
 #endif
@@ -349,14 +348,12 @@ static void debug_uart_receive_callback(usbd_device *dev, uint8_t ep)
 
 	/* Enable USBUART TX packet reception if buffer has enough space */
 	if (TX_BUF_SIZE - buf_tx_act_sz >= CDCACM_PACKET_SIZE)
-		usbd_ep_nak_set(dev, CDCACM_UART_ENDPOINT, 0);
+		usbd_ep_nak_set(dev, ep, 0);
 #elif defined(LM4F)
-	char buf[CDCACM_PACKET_SIZE];
-	int len = usbd_ep_read_packet(dev, CDCACM_UART_ENDPOINT,
-					buf, CDCACM_PACKET_SIZE);
+	const uint16_t len = usbd_ep_read_packet(dev, ep, tx_buf_ptr, CDCACM_PACKET_SIZE);
 
-	for(int i = 0; i < len; i++)
-		uart_send_blocking(USBUART, buf[i]);
+	for(uint16_t i = 0; i < len; i++)
+		uart_send_blocking(USBUART, tx_buf_ptr[i]);
 #endif
 }
 #endif
