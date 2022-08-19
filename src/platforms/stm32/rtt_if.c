@@ -59,10 +59,10 @@ inline static bool recv_set_nak()
 	return recv_bytes_free() < 2 * CDCACM_PACKET_SIZE;
 }
 
-/* usbuart_usb_out_cb is called when usb uart has received new data for target.
+/* debug_uart_receive_callback is called when usb uart has received new data for target.
    this routine has to be fast */
 
-void usbuart_usb_out_cb(usbd_device *dev, uint8_t ep)
+void debug_uart_receive_callback(usbd_device *dev, uint8_t ep)
 {
 	(void)dev;
 	(void)ep;

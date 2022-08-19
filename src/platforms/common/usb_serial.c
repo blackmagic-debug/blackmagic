@@ -62,7 +62,7 @@ static bool gdb_uart_dtr = true;
 static void usb_serial_set_state(usbd_device *dev, uint16_t iface, uint8_t ep);
 
 static void debug_uart_send_callback(usbd_device *dev, uint8_t ep);
-static void usbuart_usb_out_cb(usbd_device *dev, uint8_t ep);
+static void debug_uart_receive_callback(usbd_device *dev, uint8_t ep);
 
 #ifdef ENABLE_DEBUG
 /*
@@ -157,7 +157,7 @@ void usb_serial_set_config(usbd_device *dev, uint16_t value)
 	usbd_ep_setup(dev, (CDCACM_GDB_ENDPOINT + 1) | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
 
 	/* Serial interface */
-	usbd_ep_setup(dev, CDCACM_UART_ENDPOINT, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE / 2, usbuart_usb_out_cb);
+	usbd_ep_setup(dev, CDCACM_UART_ENDPOINT, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE / 2, debug_uart_receive_callback);
 	usbd_ep_setup(
 		dev, CDCACM_UART_ENDPOINT | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE, debug_uart_send_callback);
 	usbd_ep_setup(dev, (CDCACM_UART_ENDPOINT + 1) | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
@@ -309,7 +309,7 @@ static void debug_uart_send_callback(usbd_device *dev, uint8_t ep)
 }
 
 #ifndef ENABLE_RTT
-static void usbuart_usb_out_cb(usbd_device *dev, uint8_t ep)
+static void debug_uart_receive_callback(usbd_device *dev, uint8_t ep)
 {
 	(void)ep;
 
