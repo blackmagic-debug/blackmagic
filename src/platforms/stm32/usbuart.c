@@ -49,8 +49,6 @@
 #define DMA_CGIF DMA_IFCR_CGIF_BIT
 #endif
 
-/* Active buffer part used capacity */
-uint8_t buf_tx_act_sz;
 /* TX transfer complete */
 bool tx_trfr_cplt = true;
 /* RX Fifo buffer with space for copy fn overrun */
@@ -257,7 +255,7 @@ void USBUSART2_ISR(void)
 	/* If new buffer is ready, continue transmission.			\
 	 * Otherwise report transfer completion.				\
 	 */									\
-	if (buf_tx_act_sz)							\
+	if (aux_serial_transmit_buffer_fullness())							\
 	{									\
 		aux_serial_switch_transmit_buffers();					\
 		usbd_ep_nak_set(usbdev, CDCACM_UART_ENDPOINT, 0);		\

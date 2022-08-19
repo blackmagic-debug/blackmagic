@@ -41,8 +41,6 @@ void debug_uart_run(void);
 #define RX_FIFO_SIZE (USART_DMA_BUF_SIZE)
 #define TX_BUF_SIZE (USART_DMA_BUF_SIZE)
 
-/* Active buffer part used capacity */
-extern uint8_t buf_tx_act_sz;
 /* TX transfer complete */
 extern bool tx_trfr_cplt;
 /* RX Fifo buffer with space for copy fn overrun */

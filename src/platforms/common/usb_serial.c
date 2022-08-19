@@ -311,50 +311,23 @@ static void debug_uart_send_callback(usbd_device *dev, uint8_t ep)
 #ifndef ENABLE_RTT
 static void debug_uart_receive_callback(usbd_device *dev, uint8_t ep)
 {
-	char *const transmit_buffer = aux_serial_current_transmit_buffer()
-#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
-	                              + buf_tx_act_sz
-#endif
-		;
-
+	char *const transmit_buffer = aux_serial_current_transmit_buffer() + aux_serial_transmit_buffer_fullness();
 	const uint16_t len = usbd_ep_read_packet(dev, ep, transmit_buffer, CDCACM_PACKET_SIZE);
-
-#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
-	usbd_ep_nak_set(dev, ep, 1);
 
 #if defined(BLACKMAGIC)
 	/* Don't bother if uart is disabled.
 	 * This will be the case on mini while we're being debugged.
 	 */
-	if(!(RCC_APB2ENR & RCC_APB2ENR_USART1EN) &&
-	   !(RCC_APB1ENR & RCC_APB1ENR_USART2EN))
-	{
-		usbd_ep_nak_set(dev, ep, 0);
+	if (!(RCC_APB2ENR & RCC_APB2ENR_USART1EN) && !(RCC_APB1ENR & RCC_APB1ENR_USART2EN))
 		return;
-	}
 #endif
 
-	if (len)
-	{
-		buf_tx_act_sz += len;
+	aux_serial_send(len);
 
-		/* If DMA is idle, schedule new transfer */
-		if (tx_trfr_cplt)
-		{
-			tx_trfr_cplt = false;
-			aux_serial_switch_transmit_buffers();
-
-			/* Enable LED */
-			usbuart_set_led_state(TX_LED_ACT, true);
-		}
-	}
-
-	/* Enable USBUART TX packet reception if buffer has enough space */
-	if (TX_BUF_SIZE - buf_tx_act_sz >= CDCACM_PACKET_SIZE)
-		usbd_ep_nak_set(dev, ep, 0);
-#elif defined(LM4F)
-	for(uint16_t i = 0; i < len; i++)
-		uart_send_blocking(USBUART, transmit_buffer[i]);
+#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
+	/* Disable USBUART TX packet reception if buffer does not have enough space */
+	if (TX_BUF_SIZE - aux_serial_transmit_buffer_fullness() < CDCACM_PACKET_SIZE)
+		usbd_ep_nak_set(dev, ep, 1);
 #endif
 }
 #endif
