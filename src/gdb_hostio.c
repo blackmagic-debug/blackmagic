@@ -47,9 +47,8 @@ int hostio_reply(struct target_controller *tc, char *pbuf, int len)
 }
 
 /* Interface to host system calls */
-int hostio_open(struct target_controller *tc,
-	        target_addr path, size_t path_len,
-                enum target_open_flags flags, mode_t mode)
+int hostio_open(
+	struct target_controller *tc, target_addr_t path, size_t path_len, enum target_open_flags flags, mode_t mode)
 {
 	gdb_putpacket_f("Fopen,%08X/%X,%08X,%08X", path, path_len, flags, mode);
 	return gdb_main_loop(tc, true);
@@ -61,58 +60,50 @@ int hostio_close(struct target_controller *tc, int fd)
 	return gdb_main_loop(tc, true);
 }
 
-int hostio_read(struct target_controller *tc,
-	         int fd, target_addr buf, unsigned int count)
+int hostio_read(struct target_controller *tc, int fd, target_addr_t buf, unsigned int count)
 {
 	gdb_putpacket_f("Fread,%08X,%08X,%08X", fd, buf, count);
 	return gdb_main_loop(tc, true);
 }
 
-int hostio_write(struct target_controller *tc,
-	          int fd, target_addr buf, unsigned int count)
+int hostio_write(struct target_controller *tc, int fd, target_addr_t buf, unsigned int count)
 {
 	gdb_putpacket_f("Fwrite,%08X,%08X,%08X", fd, buf, count);
 	return gdb_main_loop(tc, true);
 }
 
-long hostio_lseek(struct target_controller *tc,
-	           int fd, long offset, enum target_seek_flag flag)
+long hostio_lseek(struct target_controller *tc, int fd, long offset, enum target_seek_flag flag)
 {
 	gdb_putpacket_f("Flseek,%08X,%08X,%08X", fd, offset, flag);
 	return gdb_main_loop(tc, true);
 }
 
-int hostio_rename(struct target_controller *tc,
-	           target_addr oldpath, size_t old_len,
-	           target_addr newpath, size_t new_len)
+int hostio_rename(
+	struct target_controller *tc, target_addr_t oldpath, size_t old_len, target_addr_t newpath, size_t new_len)
 {
-	gdb_putpacket_f("Frename,%08X/%X,%08X/%X",
-	                oldpath, old_len, newpath, new_len);
+	gdb_putpacket_f("Frename,%08X/%X,%08X/%X", oldpath, old_len, newpath, new_len);
 	return gdb_main_loop(tc, true);
 }
 
-int hostio_unlink(struct target_controller *tc,
-	           target_addr path, size_t path_len)
+int hostio_unlink(struct target_controller *tc, target_addr_t path, size_t path_len)
 {
 	gdb_putpacket_f("Funlink,%08X/%X", path, path_len);
 	return gdb_main_loop(tc, true);
 }
 
-int hostio_stat(struct target_controller *tc,
-	         target_addr path, size_t path_len, target_addr buf)
+int hostio_stat(struct target_controller *tc, target_addr_t path, size_t path_len, target_addr_t buf)
 {
 	gdb_putpacket_f("Fstat,%08X/%X,%08X", path, path_len, buf);
 	return gdb_main_loop(tc, true);
 }
 
-int hostio_fstat(struct target_controller *tc, int fd, target_addr buf)
+int hostio_fstat(struct target_controller *tc, int fd, target_addr_t buf)
 {
 	gdb_putpacket_f("Ffstat,%X,%08X", fd, buf);
 	return gdb_main_loop(tc, true);
 }
 
-int hostio_gettimeofday(struct target_controller *tc,
-		         target_addr tv, target_addr tz)
+int hostio_gettimeofday(struct target_controller *tc, target_addr_t tv, target_addr_t tz)
 {
 	gdb_putpacket_f("Fgettimeofday,%08X,%08X", tv, tz);
 	return gdb_main_loop(tc, true);
@@ -124,8 +115,7 @@ int hostio_isatty(struct target_controller *tc, int fd)
 	return gdb_main_loop(tc, true);
 }
 
-int hostio_system(struct target_controller *tc,
-	          target_addr cmd, size_t cmd_len)
+int hostio_system(struct target_controller *tc, target_addr_t cmd, size_t cmd_len)
 {
 	gdb_putpacket_f("Fsystem,%08X/%X", cmd, cmd_len);
 	return gdb_main_loop(tc, true);

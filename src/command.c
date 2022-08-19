@@ -641,10 +641,10 @@ static bool cmd_heapinfo(target *t, int argc, const char **argv)
 	if (t == NULL)
 		gdb_out("not attached\n");
 	else if (argc == 5) {
-		target_addr heap_base = strtoul(argv[1], NULL, 16);
-		target_addr heap_limit = strtoul(argv[2], NULL, 16);
-		target_addr stack_base = strtoul(argv[3], NULL, 16);
-		target_addr stack_limit = strtoul(argv[4], NULL, 16);
+		target_addr_t heap_base = strtoul(argv[1], NULL, 16);
+		target_addr_t heap_limit = strtoul(argv[2], NULL, 16);
+		target_addr_t stack_base = strtoul(argv[3], NULL, 16);
+		target_addr_t stack_limit = strtoul(argv[4], NULL, 16);
 		gdb_outf("heapinfo heap_base: %p heap_limit: %p stack_base: %p stack_limit: %p\n", heap_base, heap_limit,
 			stack_base, stack_limit);
 		target_set_heapinfo(t, heap_base, heap_limit, stack_base, stack_limit);

@@ -47,8 +47,8 @@ const struct command_s stm32f4_cmd_list[] = {
 };
 
 static bool stm32f4_attach(target *t);
-static int stm32f4_flash_erase(target_flash_s *f, target_addr addr, size_t len);
-static int stm32f4_flash_write(target_flash_s *f, target_addr dest, const void *src, size_t len);
+static int stm32f4_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
+static int stm32f4_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 static bool stm32f4_mass_erase(target *t);
 
 /* Flash Program and Erase Controller Register Map */
@@ -390,7 +390,7 @@ static void stm32f4_flash_unlock(target *t)
 	}
 }
 
-static int stm32f4_flash_erase(target_flash_s *f, target_addr addr, size_t len)
+static int stm32f4_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
 	target *t = f->t;
 	struct stm32f4_flash *sf = (struct stm32f4_flash *)f;
@@ -437,7 +437,7 @@ static int stm32f4_flash_erase(target_flash_s *f, target_addr addr, size_t len)
 	return 0;
 }
 
-static int stm32f4_flash_write(target_flash_s *f, target_addr dest, const void *src, size_t len)
+static int stm32f4_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
 	/* Translate ITCM addresses to AXIM */
 	if ((dest >= ITCM_BASE) && (dest < AXIM_BASE)) {

@@ -52,8 +52,8 @@ const struct command_s stm32h7_cmd_list[] = {
 	{NULL, NULL, NULL}
 };
 
-static int stm32h7_flash_erase(target_flash_s *f, target_addr addr, size_t len);
-static int stm32h7_flash_write(target_flash_s *f, target_addr dest, const void *src, size_t len);
+static int stm32h7_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
+static int stm32h7_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 static bool stm32h7_mass_erase(target *t);
 
 static const char stm32h7_driver_str[] = "STM32H7";
@@ -267,7 +267,7 @@ static bool stm32h7_flash_unlock(target *t, const uint32_t addr)
 	return !(target_mem_read32(t, regbase + FLASH_CR) & FLASH_CR_LOCK);
 }
 
-static int stm32h7_flash_erase(target_flash_s *f, target_addr addr, size_t len)
+static int stm32h7_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
 	target *t = f->t;
 	struct stm32h7_flash *sf = (struct stm32h7_flash *)f;
@@ -307,7 +307,7 @@ static int stm32h7_flash_erase(target_flash_s *f, target_addr addr, size_t len)
 	return 0;
 }
 
-static int stm32h7_flash_write(target_flash_s *f, target_addr dest, const void *src, size_t len)
+static int stm32h7_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
 	target *t = f->t;
 	struct stm32h7_flash *sf = (struct stm32h7_flash *)f;

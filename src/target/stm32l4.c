@@ -53,8 +53,8 @@ const struct command_s stm32l4_cmd_list[] = {
 	{NULL, NULL, NULL}
 };
 
-static int stm32l4_flash_erase(target_flash_s *f, target_addr addr, size_t len);
-static int stm32l4_flash_write(target_flash_s *f, target_addr dest, const void *src, size_t len);
+static int stm32l4_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
+static int stm32l4_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 static bool stm32l4_mass_erase(target *t);
 
 /* Flash Program ad Erase Controller Register Map */
@@ -569,7 +569,7 @@ static void stm32l4_flash_unlock(target *t)
 	}
 }
 
-static int stm32l4_flash_erase(target_flash_s *f, target_addr addr, size_t len)
+static int stm32l4_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
 	target *t = f->t;
 	stm32l4_flash_unlock(t);
@@ -614,7 +614,7 @@ static int stm32l4_flash_erase(target_flash_s *f, target_addr addr, size_t len)
 	return 0;
 }
 
-static int stm32l4_flash_write(target_flash_s *f, target_addr dest, const void *src, size_t len)
+static int stm32l4_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
 	target *t = f->t;
 	stm32l4_flash_write32(t, FLASH_CR, FLASH_CR_PG);

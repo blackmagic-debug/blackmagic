@@ -116,8 +116,8 @@ static const uint8_t cmdLen[] = {
 
 /* Flash routines */
 static bool ke04_command(target *t, uint8_t cmd, uint32_t addr, const uint8_t data[8]);
-static int ke04_flash_erase(target_flash_s *f, target_addr addr, size_t len);
-static int ke04_flash_write(target_flash_s *f, target_addr dest, const void *src, size_t len);
+static int ke04_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
+static int ke04_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 static int ke04_flash_done(target_flash_s *f);
 static bool ke04_mass_erase(target *t);
 
@@ -322,7 +322,7 @@ static bool ke04_command(target *t, uint8_t cmd, uint32_t addr, const uint8_t da
 	return true;
 }
 
-static int ke04_flash_erase(target_flash_s *f, target_addr addr, size_t len)
+static int ke04_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
 	while (len) {
 		if (ke04_command(f->t, CMD_ERASE_FLASH_SECTOR, addr, NULL)) {
@@ -336,7 +336,7 @@ static int ke04_flash_erase(target_flash_s *f, target_addr addr, size_t len)
 	return 0;
 }
 
-static int ke04_flash_write(target_flash_s *f, target_addr dest, const void *src, size_t len)
+static int ke04_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
 	/* Ensure we don't write something horrible over the security byte */
 	target *t = f->t;

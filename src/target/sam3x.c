@@ -28,9 +28,9 @@
 #include "target.h"
 #include "target_internal.h"
 
-static int sam_flash_erase(target_flash_s *f, target_addr addr, size_t len);
-static int sam3_flash_erase(target_flash_s *f, target_addr addr, size_t len);
-static int sam_flash_write(target_flash_s *f, target_addr dest, const void *src, size_t len);
+static int sam_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
+static int sam3_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
+static int sam_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 
 static int sam_gpnvm_get(target *t, uint32_t base, uint32_t *gpnvm);
 
@@ -535,7 +535,7 @@ static enum sam_driver sam_driver(target *t)
 	return DRIVER_SAMX7X;
 }
 
-static int sam_flash_erase(target_flash_s *f, target_addr addr, size_t len)
+static int sam_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
 	target *t = f->t;
 	uint32_t base = ((struct sam_flash *)f)->eefc_base;
@@ -561,7 +561,7 @@ static int sam_flash_erase(target_flash_s *f, target_addr addr, size_t len)
 	return 0;
 }
 
-static int sam3_flash_erase(target_flash_s *f, target_addr addr, size_t len)
+static int sam3_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
 	/* The SAM3X/SAM3N don't really have a page erase function.
 	 * We do nothing here and use Erase/Write page in flash_write.
@@ -570,7 +570,7 @@ static int sam3_flash_erase(target_flash_s *f, target_addr addr, size_t len)
 	return 0;
 }
 
-static int sam_flash_write(target_flash_s *f, target_addr dest, const void *src, size_t len)
+static int sam_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
 	target *t = f->t;
 	struct sam_flash *sf = (struct sam_flash *)f;

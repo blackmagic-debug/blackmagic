@@ -285,7 +285,7 @@ static rtt_retval read_rtt(target *cur_target, uint32_t i)
 /* target_mem_read, word aligned for speed.
    note: dest has to be len + 8 bytes, to allow for alignment and padding.
  */
-int target_aligned_mem_read(target *t, void *dest, target_addr src, size_t len)
+int target_aligned_mem_read(target *t, void *dest, target_addr_t src, size_t len)
 {
 	uint32_t src0 = src;
 	uint32_t len0 = len;
@@ -395,7 +395,7 @@ void poll_rtt(target *cur_target)
 	bool rtt_busy = false;
 
 	if (last_poll_ms + poll_ms <= now || now < last_poll_ms) {
-		target_addr watch;
+		target_addr_t watch;
 		enum target_halt_reason reason;
 		bool resume_target = false;
 		if (!rtt_found)

@@ -150,14 +150,14 @@ const struct command_s rp_cmd_list[] = {
 	{NULL, NULL, NULL}
 };
 
-static int rp_flash_erase(target_flash_s *f, target_addr addr, size_t len);
-static int rp_flash_write(target_flash_s *f, target_addr dest, const void *src, size_t len);
+static int rp_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
+static int rp_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 
 static bool rp_read_rom_func_table(target *t);
 static bool rp_attach(target *t);
 static void rp_flash_prepare(target *t);
 static void rp_flash_resume(target *t);
-static void rp_spi_read(target *t, uint16_t command, target_addr address, void *buffer, size_t length);
+static void rp_spi_read(target *t, uint16_t command, target_addr_t address, void *buffer, size_t length);
 static uint32_t rp_get_flash_length(target *t);
 static bool rp_mass_erase(target *t);
 
@@ -383,7 +383,7 @@ static void rp_flash_resume(target *t)
  * chip erase       5000/25000 ms
  * page programm       0.4/  3 ms
  */
-static int rp_flash_erase(target_flash_s *f, target_addr addr, size_t len)
+static int rp_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
 	DEBUG_INFO("Erase addr 0x%08" PRIx32 " len 0x%" PRIx32 "\n", addr, (uint32_t)len);
 	target *t = f->t;
@@ -449,7 +449,7 @@ static int rp_flash_erase(target_flash_s *f, target_addr addr, size_t len)
 	return ret;
 }
 
-static int rp_flash_write(target_flash_s *f, target_addr dest, const void *src, size_t len)
+static int rp_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
 	DEBUG_INFO("RP Write 0x%08" PRIx32 " len 0x%" PRIx32 "\n", dest, (uint32_t)len);
 	target *t = f->t;
@@ -505,7 +505,7 @@ static void rp_spi_chip_select(target *const t, const bool active)
 }
 
 static void rp_spi_read(
-	target *const t, const uint16_t command, const target_addr address, void *const buffer, const size_t length)
+	target *const t, const uint16_t command, const target_addr_t address, void *const buffer, const size_t length)
 {
 	/* Ensure the controller is in the correct serial SPI mode and select the Flash */
 	const uint32_t ssi_enabled = target_mem_read32(t, RP_SSI_ENABLE);
