@@ -33,11 +33,11 @@
 #define FIFO_SIZE 128
 
 /* RX Fifo buffer */
-static uint8_t buf_rx[FIFO_SIZE];
+char buf_rx[FIFO_SIZE];
 /* Fifo in pointer, writes assumed to be atomic, should be only incremented within RX ISR */
-static uint8_t buf_rx_in;
+uint8_t buf_rx_in;
 /* Fifo out pointer, writes assumed to be atomic, should be only incremented outside RX ISR */
-static uint8_t buf_rx_out;
+uint8_t buf_rx_out;
 
 void aux_serial_init(void)
 {
@@ -75,20 +75,6 @@ void aux_serial_init(void)
 	//nvic_set_priority(USBUSART_IRQ, IRQ_PRI_USBUSART);
 	nvic_enable_irq(USBUART_IRQ);
 }
-
-#ifndef ENABLE_RTT
-void usbuart_usb_out_cb(usbd_device *dev, uint8_t ep)
-{
-	(void)ep;
-
-	char buf[CDCACM_PACKET_SIZE];
-	int len = usbd_ep_read_packet(dev, CDCACM_UART_ENDPOINT,
-					buf, CDCACM_PACKET_SIZE);
-
-	for(int i = 0; i < len; i++)
-		uart_send_blocking(USBUART, buf[i]);
-}
-#endif
 
 /*
  * Read a character from the UART RX and stuff it in a software FIFO.

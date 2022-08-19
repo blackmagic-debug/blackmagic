@@ -50,11 +50,11 @@
 #endif
 
 /* TX double buffer */
-static uint8_t buf_tx[TX_BUF_SIZE * 2];
+char buf_tx[TX_BUF_SIZE * 2];
 /* Active buffer part idx */
-static uint8_t buf_tx_act_idx;
+uint8_t buf_tx_act_idx;
 /* Active buffer part used capacity */
-static uint8_t buf_tx_act_sz;
+uint8_t buf_tx_act_sz;
 /* TX transfer complete */
 bool tx_trfr_cplt = true;
 /* RX Fifo buffer with space for copy fn overrun */
@@ -186,13 +186,13 @@ void aux_serial_init(void)
  * Changes USBUSART TX buffer in which data is accumulated from USB.
  * Filled buffer is submitted to DMA for transfer.
  */
-static void usbuart_change_dma_tx_buf(void)
+void usbuart_change_dma_tx_buf(void)
 {
 	/* Select buffer for transmission */
-	uint8_t *const tx_buf_ptr = &buf_tx[buf_tx_act_idx * TX_BUF_SIZE];
+	char *const tx_buf_ptr = &buf_tx[buf_tx_act_idx * TX_BUF_SIZE];
 
 	/* Configure DMA */
-	dma_set_memory_address(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN, (uint32_t)tx_buf_ptr);
+	dma_set_memory_address(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN, (uintptr_t)tx_buf_ptr);
 	dma_set_number_of_data(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN, buf_tx_act_sz);
 	dma_enable_channel(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN);
 
@@ -200,51 +200,6 @@ static void usbuart_change_dma_tx_buf(void)
 	buf_tx_act_sz = 0;
 	buf_tx_act_idx ^= 1;
 }
-
-#ifndef ENABLE_RTT
-void usbuart_usb_out_cb(usbd_device *dev, uint8_t ep)
-{
-	(void)ep;
-
-	usbd_ep_nak_set(dev, CDCACM_UART_ENDPOINT, 1);
-
-	/* Read new packet directly into TX buffer */
-	uint8_t *const tx_buf_ptr = &buf_tx[buf_tx_act_idx * TX_BUF_SIZE];
-	const uint16_t len = usbd_ep_read_packet(dev, CDCACM_UART_ENDPOINT,
-						tx_buf_ptr + buf_tx_act_sz, CDCACM_PACKET_SIZE);
-
-#if defined(BLACKMAGIC)
-	/* Don't bother if uart is disabled.
-	 * This will be the case on mini while we're being debugged.
-	 */
-	if(!(RCC_APB2ENR & RCC_APB2ENR_USART1EN) &&
-	   !(RCC_APB1ENR & RCC_APB1ENR_USART2EN))
-	{
-		usbd_ep_nak_set(dev, CDCACM_UART_ENDPOINT, 0);
-		return;
-	}
-#endif
-
-	if (len)
-	{
-		buf_tx_act_sz += len;
-
-		/* If DMA is idle, schedule new transfer */
-		if (tx_trfr_cplt)
-		{
-			tx_trfr_cplt = false;
-			usbuart_change_dma_tx_buf();
-
-			/* Enable LED */
-			usbuart_set_led_state(TX_LED_ACT, true);
-		}
-	}
-
-	/* Enable USBUART TX packet reception if buffer has enough space */
-	if (TX_BUF_SIZE - buf_tx_act_sz >= CDCACM_PACKET_SIZE)
-		usbd_ep_nak_set(dev, CDCACM_UART_ENDPOINT, 0);
-}
-#endif
 
 #if defined(USART_ICR)
 #define USBUSART_ISR_TEMPLATE(USART, DMA_IRQ) do {			\

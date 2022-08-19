@@ -20,18 +20,16 @@
 #ifndef __USBUART_H
 #define __USBUART_H
 
-#include <libopencm3/usb/usbd.h>
-
 #include "general.h"
 
-void usbuart_usb_out_cb(usbd_device *dev, uint8_t ep);
-
 void usbuart_set_led_state(uint8_t ledn, bool state);
+void usbuart_change_dma_tx_buf(void);
 void debug_uart_run(void);
 
 #define TX_LED_ACT (1 << 0)
 #define RX_LED_ACT (1 << 1)
 
+#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
 /* F072 with st_usbfs_v2_usb_drive drops characters at the 64 byte boundary!*/
 #if !defined(USART_DMA_BUF_SIZE)
 # define USART_DMA_BUF_SIZE 128
@@ -39,6 +37,12 @@ void debug_uart_run(void);
 #define RX_FIFO_SIZE (USART_DMA_BUF_SIZE)
 #define TX_BUF_SIZE (USART_DMA_BUF_SIZE)
 
+/* TX double buffer */
+extern char buf_tx[TX_BUF_SIZE * 2];
+/* Active buffer part idx */
+extern uint8_t buf_tx_act_idx;
+/* Active buffer part used capacity */
+extern uint8_t buf_tx_act_sz;
 /* TX transfer complete */
 extern bool tx_trfr_cplt;
 /* RX Fifo buffer with space for copy fn overrun */
@@ -55,6 +59,16 @@ extern char usb_dbg_buf[RX_FIFO_SIZE + sizeof(uint64_t)];
 extern uint8_t usb_dbg_in;
 /* Debug Fifo out pointer */
 extern uint8_t usb_dbg_out;
+#endif
+#elif defined(LM4F)
+#define FIFO_SIZE 128
+
+/* RX Fifo buffer */
+extern char buf_rx[FIFO_SIZE];
+/* Fifo in pointer, writes assumed to be atomic, should be only incremented within RX ISR */
+extern uint8_t buf_rx_in;
+/* Fifo out pointer, writes assumed to be atomic, should be only incremented outside RX ISR */
+extern uint8_t buf_rx_out;
 #endif
 
 #endif
