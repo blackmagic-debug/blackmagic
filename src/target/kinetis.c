@@ -111,12 +111,12 @@ static bool kinetis_cmd_unsafe(target *t, int argc, char **argv)
 	return true;
 }
 
-static int kinetis_flash_cmd_erase(struct target_flash *f, target_addr addr, size_t len);
-static int kinetis_flash_cmd_write(struct target_flash *f, target_addr dest, const void *src, size_t len);
-static int kinetis_flash_done(struct target_flash *f);
+static int kinetis_flash_cmd_erase(target_flash_s *f, target_addr addr, size_t len);
+static int kinetis_flash_cmd_write(target_flash_s *f, target_addr dest, const void *src, size_t len);
+static int kinetis_flash_done(target_flash_s *f);
 
 struct kinetis_flash {
-	struct target_flash f;
+	target_flash_s f;
 	uint8_t write_len;
 };
 
@@ -124,7 +124,7 @@ static void kinetis_add_flash(
 	target *const t, const uint32_t addr, const size_t length, const size_t erasesize, const size_t write_len)
 {
 	struct kinetis_flash *kf = calloc(1, sizeof(*kf));
-	struct target_flash *f;
+	target_flash_s *f;
 
 	if (!kf) { /* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
@@ -432,7 +432,7 @@ static bool kinetis_fccob_cmd(target *t, uint8_t cmd, uint32_t addr, const uint3
 	return true;
 }
 
-static int kinetis_flash_cmd_erase(struct target_flash *const f, target_addr addr, size_t len)
+static int kinetis_flash_cmd_erase(target_flash_s *const f, target_addr addr, size_t len)
 {
 	while (len) {
 		if (kinetis_fccob_cmd(f->t, FTFx_CMD_ERASE_SECTOR, addr, NULL, 0)) {
@@ -449,7 +449,7 @@ static int kinetis_flash_cmd_erase(struct target_flash *const f, target_addr add
 	return 0;
 }
 
-static int kinetis_flash_cmd_write(struct target_flash *f, target_addr dest, const void *src, size_t len)
+static int kinetis_flash_cmd_write(target_flash_s *f, target_addr dest, const void *src, size_t len)
 {
 	struct kinetis_flash *const kf = (struct kinetis_flash *)f;
 
@@ -479,7 +479,7 @@ static int kinetis_flash_cmd_write(struct target_flash *f, target_addr dest, con
 	return 0;
 }
 
-static int kinetis_flash_done(struct target_flash *const f)
+static int kinetis_flash_done(target_flash_s *const f)
 {
 	struct kinetis_flash *const kf = (struct kinetis_flash *)f;
 

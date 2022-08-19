@@ -38,10 +38,8 @@
 #include "target_internal.h"
 #include "cortexm.h"
 
-static int samx5x_flash_erase(struct target_flash *t, target_addr addr,
-			      size_t len);
-static int samx5x_flash_write(struct target_flash *f,
-			      target_addr dest, const void *src, size_t len);
+static int samx5x_flash_erase(target_flash_s *f, target_addr addr, size_t len);
+static int samx5x_flash_write(target_flash_s *f, target_addr dest, const void *src, size_t len);
 static bool samx5x_cmd_lock_flash(target *t, int argc, const char **argv);
 static bool samx5x_cmd_unlock_flash(target *t, int argc, const char **argv);
 static bool samx5x_cmd_unlock_bootprot(target *t, int argc, const char **argv);
@@ -317,11 +315,10 @@ struct samx5x_descr samx5x_parse_device_id(uint32_t did)
 	return samd;
 }
 
-static void samx5x_add_flash(target *t, uint32_t addr, size_t length,
-			     size_t erase_block_size, size_t write_page_size)
+static void samx5x_add_flash(target *t, uint32_t addr, size_t length, size_t erase_block_size, size_t write_page_size)
 {
-	struct target_flash *f = calloc(1, sizeof(*f));
-	if (!f) {			/* calloc failed: heap exhaustion */
+	target_flash_s *f = calloc(1, sizeof(*f));
+	if (!f) { /* calloc failed: heap exhaustion */
 		DEBUG_INFO("calloc: failed in %s\n", __func__);
 		return;
 	}
@@ -331,7 +328,7 @@ static void samx5x_add_flash(target *t, uint32_t addr, size_t length,
 	f->blocksize = erase_block_size;
 	f->erase = samx5x_flash_erase;
 	f->write = samx5x_flash_write;
-	f->buf_size = write_page_size;
+	f->writesize = write_page_size;
 	target_add_flash(t, f);
 }
 
@@ -499,8 +496,7 @@ static int samx5x_check_nvm_error(target *t)
 /**
  * Erase flash block by block
  */
-static int samx5x_flash_erase(struct target_flash *f, target_addr addr,
-			      size_t len)
+static int samx5x_flash_erase(target_flash_s *f, target_addr addr, size_t len)
 {
 	target *t = f->t;
 	uint16_t errs = samx5x_read_nvm_error(t);
@@ -566,8 +562,7 @@ static int samx5x_flash_erase(struct target_flash *f, target_addr addr,
 /**
  * Write flash page by page
  */
-static int samx5x_flash_write(struct target_flash *f,
-			      target_addr dest, const void *src, size_t len)
+static int samx5x_flash_write(target_flash_s *f, target_addr dest, const void *src, size_t len)
 {
 	target *t = f->t;
 	bool error = false;

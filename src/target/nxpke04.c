@@ -116,10 +116,9 @@ static const uint8_t cmdLen[] = {
 
 /* Flash routines */
 static bool ke04_command(target *t, uint8_t cmd, uint32_t addr, const uint8_t data[8]);
-static int ke04_flash_erase(struct target_flash *f, target_addr addr, size_t len);
-static int ke04_flash_write(struct target_flash *f,
-			    target_addr dest, const void *src, size_t len);
-static int ke04_flash_done(struct target_flash *f);
+static int ke04_flash_erase(target_flash_s *f, target_addr addr, size_t len);
+static int ke04_flash_write(target_flash_s *f, target_addr dest, const void *src, size_t len);
+static int ke04_flash_done(target_flash_s *f);
 static bool ke04_mass_erase(target *t);
 
 /* Target specific commands */
@@ -138,7 +137,7 @@ static bool ke04_cmd_sector_erase(target *t, int argc, char **argv)
 		tc_printf(t, "usage: monitor sector_erase <addr>\n");
 
 	char *eos;
-	struct target_flash *f = t->flash;
+	target_flash_s *f = t->flash;
 	uint32_t addr = strtoul(argv[1], &eos, 0);
 
 	/* check that addr is a valid number and inside the flash range */
@@ -224,8 +223,8 @@ bool ke04_probe(target *t)
 	target_add_ram(t, RAM_BASE_ADDR, ramsize);           /* Higher RAM */
 
 	/* Add flash, all KE04 have same write and erase size */
-	struct target_flash *f = calloc(1, sizeof(*f));
-	if (!f) {			/* calloc failed: heap exhaustion */
+	target_flash_s *f = calloc(1, sizeof(*f));
+	if (!f) { /* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return false;
 	}
@@ -323,7 +322,7 @@ static bool ke04_command(target *t, uint8_t cmd, uint32_t addr, const uint8_t da
 	return true;
 }
 
-static int ke04_flash_erase(struct target_flash *f, target_addr addr, size_t len)
+static int ke04_flash_erase(target_flash_s *f, target_addr addr, size_t len)
 {
 	while (len) {
 		if (ke04_command(f->t, CMD_ERASE_FLASH_SECTOR, addr, NULL)) {
@@ -337,8 +336,7 @@ static int ke04_flash_erase(struct target_flash *f, target_addr addr, size_t len
 	return 0;
 }
 
-static int ke04_flash_write(struct target_flash *f,
-                              target_addr dest, const void *src, size_t len)
+static int ke04_flash_write(target_flash_s *f, target_addr dest, const void *src, size_t len)
 {
 	/* Ensure we don't write something horrible over the security byte */
 	target *t = f->t;
@@ -361,7 +359,7 @@ static int ke04_flash_write(struct target_flash *f,
 	return 0;
 }
 
-static int ke04_flash_done(struct target_flash *f)
+static int ke04_flash_done(target_flash_s *f)
 {
 	target *t = f->t;
 	if (t->unsafe_enabled)

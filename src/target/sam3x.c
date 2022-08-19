@@ -28,10 +28,9 @@
 #include "target.h"
 #include "target_internal.h"
 
-static int sam_flash_erase(struct target_flash *f, target_addr addr, size_t len);
-static int sam3_flash_erase(struct target_flash *f, target_addr addr, size_t len);
-static int sam_flash_write(struct target_flash *f, target_addr dest,
-                             const void *src, size_t len);
+static int sam_flash_erase(target_flash_s *f, target_addr addr, size_t len);
+static int sam3_flash_erase(target_flash_s *f, target_addr addr, size_t len);
+static int sam_flash_write(target_flash_s *f, target_addr dest, const void *src, size_t len);
 
 static int sam_gpnvm_get(target *t, uint32_t base, uint32_t *gpnvm);
 
@@ -173,7 +172,7 @@ enum sam_driver {
 };
 
 struct sam_flash {
-	struct target_flash f;
+	target_flash_s f;
 	uint32_t eefc_base;
 	uint8_t write_cmd;
 };
@@ -192,11 +191,10 @@ struct sam_priv_s {
 	char sam_variant_string[16];
 };
 
-static void sam3_add_flash(target *t,
-                           uint32_t eefc_base, uint32_t addr, size_t length)
+static void sam3_add_flash(target *t, uint32_t eefc_base, uint32_t addr, size_t length)
 {
 	struct sam_flash *sf = calloc(1, sizeof(*sf));
-	struct target_flash *f;
+	target_flash_s *f;
 
 	if (!sf) {			/* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
@@ -209,17 +207,16 @@ static void sam3_add_flash(target *t,
 	f->blocksize = SAM_SMALL_PAGE_SIZE;
 	f->erase = sam3_flash_erase;
 	f->write = sam_flash_write;
-	f->buf_size = SAM_SMALL_PAGE_SIZE;
+	f->writesize = SAM_SMALL_PAGE_SIZE;
 	sf->eefc_base = eefc_base;
 	sf->write_cmd = EEFC_FCR_FCMD_EWP;
 	target_add_flash(t, f);
 }
 
-static void sam_add_flash(target *t,
-                           uint32_t eefc_base, uint32_t addr, size_t length)
+static void sam_add_flash(target *t, uint32_t eefc_base, uint32_t addr, size_t length)
 {
 	struct sam_flash *sf = calloc(1, sizeof(*sf));
-	struct target_flash *f;
+	target_flash_s *f;
 
 	if (!sf) {			/* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
@@ -232,7 +229,7 @@ static void sam_add_flash(target *t,
 	f->blocksize = SAM_LARGE_PAGE_SIZE * 8;
 	f->erase = sam_flash_erase;
 	f->write = sam_flash_write;
-	f->buf_size = SAM_LARGE_PAGE_SIZE;
+	f->writesize = SAM_LARGE_PAGE_SIZE;
 	sf->eefc_base = eefc_base;
 	sf->write_cmd = EEFC_FCR_FCMD_WP;
 	target_add_flash(t, f);
@@ -538,7 +535,7 @@ static enum sam_driver sam_driver(target *t)
 	return DRIVER_SAMX7X;
 }
 
-static int sam_flash_erase(struct target_flash *f, target_addr addr, size_t len)
+static int sam_flash_erase(target_flash_s *f, target_addr addr, size_t len)
 {
 	target *t = f->t;
 	uint32_t base = ((struct sam_flash *)f)->eefc_base;
@@ -564,7 +561,7 @@ static int sam_flash_erase(struct target_flash *f, target_addr addr, size_t len)
 	return 0;
 }
 
-static int sam3_flash_erase(struct target_flash *f, target_addr addr, size_t len)
+static int sam3_flash_erase(target_flash_s *f, target_addr addr, size_t len)
 {
 	/* The SAM3X/SAM3N don't really have a page erase function.
 	 * We do nothing here and use Erase/Write page in flash_write.
@@ -573,13 +570,12 @@ static int sam3_flash_erase(struct target_flash *f, target_addr addr, size_t len
 	return 0;
 }
 
-static int sam_flash_write(struct target_flash *f, target_addr dest,
-                             const void *src, size_t len)
+static int sam_flash_write(target_flash_s *f, target_addr dest, const void *src, size_t len)
 {
 	target *t = f->t;
 	struct sam_flash *sf = (struct sam_flash *)f;
 	uint32_t base = sf->eefc_base;
-	unsigned chunk = (dest - f->start) / f->buf_size;
+	unsigned chunk = (dest - f->start) / f->writesize;
 
 	target_mem_write(t, dest, src, len);
 	if(sam_flash_cmd(t, base, sf->write_cmd, chunk))

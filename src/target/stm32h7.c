@@ -52,9 +52,8 @@ const struct command_s stm32h7_cmd_list[] = {
 	{NULL, NULL, NULL}
 };
 
-
-static int stm32h7_flash_erase(struct target_flash *f, target_addr addr, size_t len);
-static int stm32h7_flash_write(struct target_flash *f, target_addr dest, const void *src, size_t len);
+static int stm32h7_flash_erase(target_flash_s *f, target_addr addr, size_t len);
+static int stm32h7_flash_write(target_flash_s *f, target_addr dest, const void *src, size_t len);
 static bool stm32h7_mass_erase(target *t);
 
 static const char stm32h7_driver_str[] = "STM32H7";
@@ -152,7 +151,7 @@ enum ID_STM32H7 {
 };
 
 struct stm32h7_flash {
-	struct target_flash f;
+	target_flash_s f;
 	enum align psize;
 	uint32_t regbase;
 };
@@ -164,18 +163,18 @@ struct stm32h7_priv_s {
 static void stm32h7_add_flash(target *t, uint32_t addr, size_t length, size_t blocksize)
 {
 	struct stm32h7_flash *sf = calloc(1, sizeof(*sf));
-	if (!sf) {			/* calloc failed: heap exhaustion */
+	if (!sf) { /* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return;
 	}
 
-	struct target_flash *f = &sf->f;
+	target_flash_s *f = &sf->f;
 	f->start = addr;
 	f->length = length;
 	f->blocksize = blocksize;
 	f->erase = stm32h7_flash_erase;
 	f->write = stm32h7_flash_write;
-	f->buf_size = 2048;
+	f->writesize = 2048;
 	f->erased = 0xff;
 	sf->regbase = FPEC1_BASE;
 	if (addr >= BANK2_START)
@@ -268,7 +267,7 @@ static bool stm32h7_flash_unlock(target *t, const uint32_t addr)
 	return !(target_mem_read32(t, regbase + FLASH_CR) & FLASH_CR_LOCK);
 }
 
-static int stm32h7_flash_erase(struct target_flash *f, target_addr addr, size_t len)
+static int stm32h7_flash_erase(target_flash_s *f, target_addr addr, size_t len)
 {
 	target *t = f->t;
 	struct stm32h7_flash *sf = (struct stm32h7_flash *)f;
@@ -308,7 +307,7 @@ static int stm32h7_flash_erase(struct target_flash *f, target_addr addr, size_t 
 	return 0;
 }
 
-static int stm32h7_flash_write(struct target_flash *f, target_addr dest, const void *src, size_t len)
+static int stm32h7_flash_write(target_flash_s *f, target_addr dest, const void *src, size_t len)
 {
 	target *t = f->t;
 	struct stm32h7_flash *sf = (struct stm32h7_flash *)f;
@@ -376,7 +375,7 @@ static bool stm32h7_check_bank(target *const t, const uint32_t reg_base)
 static bool stm32h7_mass_erase(target *t)
 {
 	enum align psize = ALIGN_DWORD;
-	for (struct target_flash *flash = t->flash; flash; flash = flash->next) {
+	for (target_flash_s *flash = t->flash; flash; flash = flash->next) {
 		if (flash->write == stm32h7_flash_write)
 			psize = ((struct stm32h7_flash *)flash)->psize;
 	}
@@ -469,7 +468,7 @@ static bool stm32h7_cmd_psize(target *t, int argc, char *argv[])
 	(void)argv;
 	if (argc == 1) {
 		enum align psize = ALIGN_DWORD;
-		for (struct target_flash *f = t->flash; f; f = f->next) {
+		for (target_flash_s *f = t->flash; f; f = f->next) {
 			if (f->write == stm32h7_flash_write) {
 				psize = ((struct stm32h7_flash *)f)->psize;
 			}
@@ -492,7 +491,7 @@ static bool stm32h7_cmd_psize(target *t, int argc, char *argv[])
 			tc_printf(t, "usage: monitor psize (x8|x16|x32|x64)\n");
 			return false;
 		}
-		for (struct target_flash *f = t->flash; f; f = f->next) {
+		for (target_flash_s *f = t->flash; f; f = f->next) {
 			if (f->write == stm32h7_flash_write) {
 				((struct stm32h7_flash *)f)->psize = psize;
 			}

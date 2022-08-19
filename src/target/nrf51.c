@@ -27,9 +27,8 @@
 #include "cortexm.h"
 #include "adiv5.h"
 
-static int nrf51_flash_erase(struct target_flash *f, target_addr addr, size_t len);
-static int nrf51_flash_write(struct target_flash *f,
-                             target_addr dest, const void *src, size_t len);
+static int nrf51_flash_erase(target_flash_s *f, target_addr addr, size_t len);
+static int nrf51_flash_write(target_flash_s *f, target_addr dest, const void *src, size_t len);
 static bool nrf51_mass_erase(target *t);
 
 static bool nrf51_cmd_erase_uicr(target *t, int argc, const char **argv);
@@ -104,7 +103,7 @@ const struct command_s nrf51_read_cmd_list[] = {
 static void nrf51_add_flash(target *t,
                             uint32_t addr, size_t length, size_t erasesize)
 {
-	struct target_flash *f = calloc(1, sizeof(*f));
+	target_flash_s *f = calloc(1, sizeof(*f));
 	if (!f) {			/* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return;
@@ -160,7 +159,7 @@ bool nrf51_probe(target *t)
 	return true;
 }
 
-static int nrf51_flash_erase(struct target_flash *f, target_addr addr, size_t len)
+static int nrf51_flash_erase(target_flash_s *f, target_addr addr, size_t len)
 {
 	target *t = f->t;
 	/* Enable erase */
@@ -204,8 +203,7 @@ static int nrf51_flash_erase(struct target_flash *f, target_addr addr, size_t le
 	return 0;
 }
 
-static int nrf51_flash_write(struct target_flash *f,
-                             target_addr dest, const void *src, size_t len)
+static int nrf51_flash_write(target_flash_s *f, target_addr dest, const void *src, size_t len)
 {
 	target *t = f->t;
 

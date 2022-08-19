@@ -34,24 +34,25 @@ struct target_ram {
 
 typedef struct target_flash target_flash_s;
 
+typedef int (*flash_prepare_func)(target_flash_s *f);
 typedef int (*flash_erase_func)(target_flash_s *f, target_addr addr, size_t len);
-typedef int (*flash_write_func)(target_flash_s *f, target_addr dest,
-                                const void *src, size_t len);
+typedef int (*flash_write_func)(target_flash_s *f, target_addr dest, const void *src, size_t len);
 typedef int (*flash_done_func)(target_flash_s *f);
 
 struct target_flash {
-	target_addr start;
-	size_t length;
-	size_t blocksize;
-	flash_erase_func erase;
-	flash_write_func write;
-	flash_done_func done;
-	target *t;
-	uint8_t erased;
-	size_t buf_size;
-	struct target_flash *next;
-	target_addr buf_addr;
-	void *buf;
+	target *t;                  /* Target this flash is attached to */
+	target_addr start;          /* start address of flash */
+	size_t length;              /* flash length */
+	size_t blocksize;           /* erase block size */
+	size_t writesize;           /* write operation size, must be <= blocksize */
+	uint8_t erased;             /* byte erased state */
+	flash_prepare_func prepare; /* prepare for flash operations */
+	flash_erase_func erase;     /* erase a range of flash */
+	flash_write_func write;     /* write to flash */
+	flash_done_func done;       /* finish flash operations */
+	void *buf;                  /* buffer for flash operations */
+	target_addr buf_addr;       /* address of block this buffer is for */
+	target_flash_s *next;       /* next flash in list */
 };
 
 typedef bool (*cmd_handler)(target *t, int argc, const char **argv);
@@ -88,10 +89,8 @@ struct target_s {
 	bool (*check_error)(target *t);
 
 	/* Memory access functions */
-	void (*mem_read)(target *t, void *dest, target_addr src,
-	                 size_t len);
-	void (*mem_write)(target *t, target_addr dest,
-	                  const void *src, size_t len);
+	void (*mem_read)(target *t, void *dest, target_addr src, size_t len);
+	void (*mem_write)(target *t, target_addr dest, const void *src, size_t len);
 
 	/* Register access functions */
 	size_t regs_size;
@@ -109,8 +108,8 @@ struct target_s {
 	void (*halt_resume)(target *t, bool step);
 
 	/* Break-/watchpoint functions */
-	int (*breakwatch_set)(target *t, struct breakwatch*);
-	int (*breakwatch_clear)(target *t, struct breakwatch*);
+	int (*breakwatch_set)(target *t, struct breakwatch *);
+	int (*breakwatch_clear)(target *t, struct breakwatch *);
 	struct breakwatch *bw_list;
 
 	/* Recovery functions */
@@ -126,7 +125,7 @@ struct target_s {
 	};
 
 	struct target_ram *ram;
-	struct target_flash *flash;
+	target_flash_s *flash;
 
 	/* Other stuff */
 	const char *driver;
@@ -158,9 +157,9 @@ void target_flash_map_free(target *t);
 void target_mem_map_free(target *t);
 void target_add_commands(target *t, const struct command_s *cmds, const char *name);
 void target_add_ram(target *t, target_addr start, uint32_t len);
-void target_add_flash(target *t, struct target_flash *f);
+void target_add_flash(target *t, target_flash_s *f);
 
-struct target_flash *target_flash_for_addr(target *t, uint32_t addr);
+target_flash_s *target_flash_for_addr(target *t, uint32_t addr);
 
 /* Convenience function for MMIO access */
 uint32_t target_mem_read32(target *t, uint32_t addr);
@@ -175,15 +174,12 @@ bool target_check_error(target *t);
 void tc_printf(target *t, const char *fmt, ...);
 
 /* Interface to host system calls */
-int tc_open(target *, target_addr path, size_t plen,
-            enum target_open_flags flags, mode_t mode);
+int tc_open(target *, target_addr path, size_t plen, enum target_open_flags flags, mode_t mode);
 int tc_close(target *t, int fd);
 int tc_read(target *t, int fd, target_addr buf, unsigned int count);
 int tc_write(target *t, int fd, target_addr buf, unsigned int count);
-long tc_lseek(target *t, int fd, long offset,
-              enum target_seek_flag flag);
-int tc_rename(target *t, target_addr oldpath, size_t oldlen,
-                         target_addr newpath, size_t newlen);
+long tc_lseek(target *t, int fd, long offset, enum target_seek_flag flag);
+int tc_rename(target *t, target_addr oldpath, size_t oldlen, target_addr newpath, size_t newlen);
 int tc_unlink(target *t, target_addr path, size_t plen);
 int tc_stat(target *t, target_addr path, size_t plen, target_addr buf);
 int tc_fstat(target *t, int fd, target_addr buf);

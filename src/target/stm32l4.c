@@ -53,8 +53,8 @@ const struct command_s stm32l4_cmd_list[] = {
 	{NULL, NULL, NULL}
 };
 
-static int stm32l4_flash_erase(struct target_flash *f, target_addr addr, size_t len);
-static int stm32l4_flash_write(struct target_flash *f, target_addr dest, const void *src, size_t len);
+static int stm32l4_flash_erase(target_flash_s *f, target_addr addr, size_t len);
+static int stm32l4_flash_write(target_flash_s *f, target_addr dest, const void *src, size_t len);
 static bool stm32l4_mass_erase(target *t);
 
 /* Flash Program ad Erase Controller Register Map */
@@ -128,7 +128,7 @@ enum {
 #define L5_FLASH_SIZE_REG  0x0bfa05e0
 
 struct stm32l4_flash {
-	struct target_flash f;
+	target_flash_s f;
 	uint32_t bank1_start;
 };
 
@@ -367,18 +367,18 @@ static void stm32l4_flash_write32(target *t, enum stm32l4_flash_regs reg, uint32
 static void stm32l4_add_flash(target *t, uint32_t addr, size_t length, size_t blocksize, uint32_t bank1_start)
 {
 	struct stm32l4_flash *sf = calloc(1, sizeof(*sf));
-	if (!sf) {			/* calloc failed: heap exhaustion */
+	if (!sf) { /* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return;
 	}
 
-	struct target_flash *f = &sf->f;
+	target_flash_s *f = &sf->f;
 	f->start = addr;
 	f->length = length;
 	f->blocksize = blocksize;
 	f->erase = stm32l4_flash_erase;
 	f->write = stm32l4_flash_write;
-	f->buf_size = 2048;
+	f->writesize = 2048;
 	f->erased = 0xff;
 	sf->bank1_start = bank1_start;
 	target_add_flash(t, f);
@@ -569,7 +569,7 @@ static void stm32l4_flash_unlock(target *t)
 	}
 }
 
-static int stm32l4_flash_erase(struct target_flash *f, target_addr addr, size_t len)
+static int stm32l4_flash_erase(target_flash_s *f, target_addr addr, size_t len)
 {
 	target *t = f->t;
 	stm32l4_flash_unlock(t);
@@ -614,7 +614,7 @@ static int stm32l4_flash_erase(struct target_flash *f, target_addr addr, size_t 
 	return 0;
 }
 
-static int stm32l4_flash_write(struct target_flash *f, target_addr dest, const void *src, size_t len)
+static int stm32l4_flash_write(target_flash_s *f, target_addr dest, const void *src, size_t len)
 {
 	target *t = f->t;
 	stm32l4_flash_write32(t, FLASH_CR, FLASH_CR_PG);

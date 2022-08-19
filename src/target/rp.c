@@ -193,7 +193,7 @@ static void rp_add_flash(target *t)
 	f->blocksize = spi_parameters.sector_size;
 	f->erase = rp_flash_erase;
 	f->write = rp_flash_write;
-	f->buf_size = 2048; /* Max buffer size used otherwise */
+	f->writesize = 2048; /* Max buffer size used otherwise */
 	f->erased = 0xffU;
 	target_add_flash(t, f);
 

@@ -29,8 +29,8 @@ target *target_list = NULL;
 
 #define STDOUT_READ_BUF_SIZE	64
 
-static int target_flash_write_buffered(struct target_flash *f, target_addr dest, const void *src, size_t len);
-static int target_flash_done_buffered(struct target_flash *f);
+static int target_flash_write_buffered(target_flash_s *f, target_addr dest, const void *src, size_t len);
+static int target_flash_done_buffered(target_flash_s *f);
 
 static bool target_cmd_mass_erase(target *t, int argc, const char **argv);
 static bool target_cmd_range_erase(target *t, int argc, const char **argv);
@@ -210,10 +210,10 @@ void target_add_ram(target *t, target_addr start, uint32_t len)
 	t->ram = ram;
 }
 
-void target_add_flash(target *t, struct target_flash *f)
+void target_add_flash(target *t, target_flash_s *f)
 {
-	if (f->buf_size == 0)
-		f->buf_size = MIN(f->blocksize, 0x400);
+	if (f->writesize == 0)
+		f->writesize = f->blocksize;
 	f->t = t;
 	f->next = t->flash;
 	t->flash = f;
@@ -226,7 +226,7 @@ static ssize_t map_ram(char *buf, size_t len, struct target_ram *ram)
 	                          ram->start, (uint32_t)ram->length);
 }
 
-static ssize_t map_flash(char *buf, size_t len, struct target_flash *f)
+static ssize_t map_flash(char *buf, size_t len, target_flash_s *f)
 {
 	int i = 0;
 	i += snprintf(&buf[i], len - i, "<memory type=\"flash\" start=\"0x%08"PRIx32
@@ -246,7 +246,7 @@ bool target_mem_map(target *t, char *tmp, size_t len)
 	for (struct target_ram *r = t->ram; r; r = r->next)
 		i += map_ram(&tmp[i], len - i, r);
 	/* Map each defined Flash */
-	for (struct target_flash *f = t->flash; f; f = f->next)
+	for (target_flash_s *f = t->flash; f; f = f->next)
 		i += map_flash(&tmp[i], len - i, f);
 	i += snprintf(&tmp[i], len - i, "</memory-map>");
 
@@ -255,9 +255,9 @@ bool target_mem_map(target *t, char *tmp, size_t len)
 	return true;
 }
 
-struct target_flash *target_flash_for_addr(target *t, uint32_t addr)
+target_flash_s *target_flash_for_addr(target *t, uint32_t addr)
 {
-	for (struct target_flash *f = t->flash; f; f = f->next)
+	for (target_flash_s *f = t->flash; f; f = f->next)
 		if ((f->start <= addr) &&
 		    (addr < (f->start + f->length)))
 			return f;
@@ -268,7 +268,7 @@ int target_flash_erase(target *t, target_addr addr, size_t len)
 {
 	int ret = 0;
 	while (len) {
-		struct target_flash *f = target_flash_for_addr(t, addr);
+		target_flash_s *f = target_flash_for_addr(t, addr);
 		if (!f) {
 			DEBUG_WARN("Erase stopped at 0x%06" PRIx32 "\n", addr);
 			return ret;
@@ -286,7 +286,7 @@ int target_flash_write(target *t, target_addr dest, const void *src, size_t len)
 {
 	int ret = 0;
 	while (len) {
-		struct target_flash *f = target_flash_for_addr(t, dest);
+		target_flash_s *f = target_flash_for_addr(t, dest);
 		if (!f)
 			return 1;
 		size_t tmptarget = MIN(dest + len, f->start + f->length);
@@ -306,7 +306,7 @@ int target_flash_write(target *t, target_addr dest, const void *src, size_t len)
 
 int target_flash_done(target *t)
 {
-	for (struct target_flash *f = t->flash; f; f = f->next) {
+	for (target_flash_s *f = t->flash; f; f = f->next) {
 		int tmp = target_flash_done_buffered(f);
 		if (tmp)
 			return tmp;
@@ -319,34 +319,33 @@ int target_flash_done(target *t)
 	return 0;
 }
 
-int target_flash_write_buffered(struct target_flash *f, target_addr dest, const void *src, size_t len)
+int target_flash_write_buffered(target_flash_s *f, target_addr dest, const void *src, size_t len)
 {
 	int ret = 0;
 
 	if (f->buf == NULL) {
 		/* Allocate flash sector buffer */
-		f->buf = malloc(f->buf_size);
-		if (!f->buf) {			/* malloc failed: heap exhaustion */
+		f->buf = malloc(f->writesize);
+		if (!f->buf) { /* malloc failed: heap exhaustion */
 			DEBUG_WARN("malloc: failed in %s\n", __func__);
 			return 1;
 		}
 		f->buf_addr = -1;
 	}
 	while (len) {
-		uint32_t offset = dest % f->buf_size;
+		uint32_t offset = dest % f->writesize;
 		uint32_t base = dest - offset;
 		if (base != f->buf_addr) {
 			if (f->buf_addr != (uint32_t)-1) {
 				/* Write sector to flash if valid */
-				ret |= f->write(f, f->buf_addr,
-				                f->buf, f->buf_size);
+				ret |= f->write(f, f->buf_addr, f->buf, f->writesize);
 			}
 			/* Setup buffer for a new sector */
 			f->buf_addr = base;
-			memset(f->buf, f->erased, f->buf_size);
+			memset(f->buf, f->erased, f->writesize);
 		}
 		/* Copy chunk into sector buffer */
-		size_t sectlen = MIN(f->buf_size - offset, len);
+		size_t sectlen = MIN(f->writesize - offset, len);
 		memcpy(f->buf + offset, src, sectlen);
 		dest += sectlen;
 		src += sectlen;
@@ -355,12 +354,12 @@ int target_flash_write_buffered(struct target_flash *f, target_addr dest, const 
 	return ret;
 }
 
-int target_flash_done_buffered(struct target_flash *f)
+int target_flash_done_buffered(target_flash_s *f)
 {
 	int ret = 0;
-	if ((f->buf != NULL) &&(f->buf_addr != (uint32_t)-1)) {
+	if ((f->buf != NULL) && (f->buf_addr != (uint32_t)-1)) {
 		/* Write sector to flash if valid */
-		ret = f->write(f, f->buf_addr, f->buf, f->buf_size);
+		ret = f->write(f, f->buf_addr, f->buf, f->writesize);
 		f->buf_addr = -1;
 		free(f->buf);
 		f->buf = NULL;
@@ -554,7 +553,7 @@ static bool target_cmd_range_erase(target *const t, const int argc, const char *
 	}
 	const uint32_t addr = strtoul(argv[1], NULL, 0);
 	const uint32_t length = strtoul(argv[2], NULL, 0);
-	struct target_flash *flash = target_flash_for_addr(t, addr);
+	target_flash_s *flash = target_flash_for_addr(t, addr);
 
 	if (flash == NULL) {
 		gdb_out("Requested address is outside the valid range for this target");

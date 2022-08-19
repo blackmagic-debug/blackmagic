@@ -478,10 +478,10 @@ found_targets:
 	uint32_t lowest_flash_start = 0xffffffff;
 	uint32_t lowest_flash_size = 0;
 	int n_flash = 0;
-	for (struct target_flash *f = t->flash; f; f = f->next)
+	for (target_flash_s *f = t->flash; f; f = f->next)
 		n_flash++;
-	for (int n = n_flash; n >= 0; n --) {
-		struct target_flash *f = t->flash;
+	for (int n = n_flash; n >= 0; n--) {
+		target_flash_s *f = t->flash;
 		for (int i = 1; f; f = f->next, i++)
 			if (i == n) {
 				DEBUG_INFO("Flash Start: 0x%08" PRIx32 " length = 0x%" PRIx32

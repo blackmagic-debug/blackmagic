@@ -39,8 +39,8 @@
 #include "target_internal.h"
 #include "cortexm.h"
 
-static int samd_flash_erase(struct target_flash *f, target_addr addr, size_t len);
-static int samd_flash_write(struct target_flash *f, target_addr dest, const void *src, size_t len);
+static int samd_flash_erase(target_flash_s *f, target_addr addr, size_t len);
+static int samd_flash_write(target_flash_s *f, target_addr dest, const void *src, size_t len);
 bool samd_mass_erase(target *t);
 
 static bool samd_cmd_lock_flash(target *t, int argc, const char **argv);
@@ -445,8 +445,8 @@ struct samd_descr samd_parse_device_id(uint32_t did)
 
 static void samd_add_flash(target *t, uint32_t addr, size_t length)
 {
-	struct target_flash *f = calloc(1, sizeof(*f));
-	if (!f) {			/* calloc failed: heap exhaustion */
+	target_flash_s *f = calloc(1, sizeof(*f));
+	if (!f) { /* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return;
 	}
@@ -456,7 +456,7 @@ static void samd_add_flash(target *t, uint32_t addr, size_t length)
 	f->blocksize = SAMD_ROW_SIZE;
 	f->erase = samd_flash_erase;
 	f->write = samd_flash_write;
-	f->buf_size = SAMD_PAGE_SIZE;
+	f->writesize = SAMD_PAGE_SIZE;
 	target_add_flash(t, f);
 }
 
@@ -579,7 +579,7 @@ static void samd_unlock_current_address(target *t)
 /*
  * Erase flash row by row
  */
-static int samd_flash_erase(struct target_flash *f, target_addr addr, size_t len)
+static int samd_flash_erase(target_flash_s *f, target_addr addr, size_t len)
 {
 	target *t = f->t;
 	while (len) {
@@ -614,7 +614,7 @@ static int samd_flash_erase(struct target_flash *f, target_addr addr, size_t len
 /*
  * Write flash page by page
  */
-static int samd_flash_write(struct target_flash *f,
+static int samd_flash_write(target_flash_s *f,
                             target_addr dest, const void *src, size_t len)
 {
 	target *t = f->t;

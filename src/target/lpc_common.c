@@ -70,13 +70,12 @@ char *iap_error[] = {
 	"Page is invalid",
 };
 
-static int lpc_flash_write(struct target_flash *tf,
-						   target_addr dest, const void *src, size_t len);
+static int lpc_flash_write(target_flash_s *tf, target_addr dest, const void *src, size_t len);
 
 struct lpc_flash *lpc_add_flash(target *t, target_addr addr, size_t length)
 {
 	struct lpc_flash *lf = calloc(1, sizeof(*lf));
-	struct target_flash *f;
+	target_flash_s *f;
 
 	if (!lf) {			/* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
@@ -183,7 +182,7 @@ enum iap_status lpc_iap_call(struct lpc_flash *f, void *result, enum iap_cmd cmd
 #define LPX80X_SECTOR_SIZE 0x400
 #define LPX80X_PAGE_SIZE    0x40
 
-int lpc_flash_erase(struct target_flash *tf, target_addr addr, size_t len)
+int lpc_flash_erase(target_flash_s *tf, target_addr addr, size_t len)
 {
 	struct lpc_flash *f = (struct lpc_flash *)tf;
 	const uint32_t start = lpc_sector_for_addr(f, addr);
@@ -221,8 +220,7 @@ int lpc_flash_erase(struct target_flash *tf, target_addr addr, size_t len)
 	return 0;
 }
 
-static int lpc_flash_write(struct target_flash *tf,
-                    target_addr dest, const void *src, size_t len)
+static int lpc_flash_write(target_flash_s *tf, target_addr dest, const void *src, size_t len)
 {
 	struct lpc_flash *f = (struct lpc_flash *)tf;
 	/* prepare... */
@@ -259,8 +257,7 @@ static int lpc_flash_write(struct target_flash *tf,
 	return 0;
 }
 
-int lpc_flash_write_magic_vect(struct target_flash *f,
-                               target_addr dest, const void *src, size_t len)
+int lpc_flash_write_magic_vect(target_flash_s *f, target_addr dest, const void *src, size_t len)
 {
 	if (dest == 0) {
 		/* Fill in the magic vector to allow booting the flash */
