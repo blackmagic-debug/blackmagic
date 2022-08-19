@@ -79,7 +79,7 @@ void aux_serial_set_encoding(struct usb_cdc_line_coding *coding)
  * Changes USBUSART TX buffer in which data is accumulated from USB.
  * Filled buffer is submitted to DMA for transfer.
  */
-void usbuart_change_dma_tx_buf(void)
+void aux_serial_switch_transmit_buffers(void)
 {
 	/* Select buffer for transmission */
 	char *const tx_buf_ptr = &buf_tx[buf_tx_act_idx * TX_BUF_SIZE];

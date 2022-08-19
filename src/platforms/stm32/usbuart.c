@@ -263,7 +263,7 @@ void USBUSART2_ISR(void)
 	 */									\
 	if (buf_tx_act_sz)							\
 	{									\
-		usbuart_change_dma_tx_buf();					\
+		aux_serial_switch_transmit_buffers();					\
 		usbd_ep_nak_set(usbdev, CDCACM_UART_ENDPOINT, 0);		\
 	}									\
 	else									\
