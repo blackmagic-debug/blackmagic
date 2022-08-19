@@ -25,10 +25,8 @@
 #include "general.h"
 
 void usbuart_usb_out_cb(usbd_device *dev, uint8_t ep);
-void usbuart_usb_in_cb(usbd_device *dev, uint8_t ep);
 
 void usbuart_set_led_state(uint8_t ledn, bool state);
-void debug_uart_send_rx_packet(void);
 void debug_uart_run(void);
 
 #define TX_LED_ACT (1 << 0)
