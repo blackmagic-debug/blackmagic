@@ -63,8 +63,6 @@
 #include <fcntl.h>
 #endif
 
-#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
-
 static const char cortexm_driver_str[] = "ARM Cortex-M";
 
 static bool cortexm_vector_catch(target *t, int argc, char *argv[]);

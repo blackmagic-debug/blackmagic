@@ -36,8 +36,6 @@
 
 #include <assert.h>
 
-#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
-
 static const char cortexa_driver_str[] = "ARM Cortex-A";
 
 static bool cortexa_attach(target *t);
