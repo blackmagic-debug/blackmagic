@@ -49,10 +49,6 @@
 #define DMA_CGIF DMA_IFCR_CGIF_BIT
 #endif
 
-/* TX double buffer */
-char buf_tx[TX_BUF_SIZE * 2];
-/* Active buffer part idx */
-uint8_t buf_tx_act_idx;
 /* Active buffer part used capacity */
 uint8_t buf_tx_act_sz;
 /* TX transfer complete */

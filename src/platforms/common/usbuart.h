@@ -36,10 +36,6 @@ void debug_uart_run(void);
 #define RX_FIFO_SIZE (USART_DMA_BUF_SIZE)
 #define TX_BUF_SIZE (USART_DMA_BUF_SIZE)
 
-/* TX double buffer */
-extern char buf_tx[TX_BUF_SIZE * 2];
-/* Active buffer part idx */
-extern uint8_t buf_tx_act_idx;
 /* Active buffer part used capacity */
 extern uint8_t buf_tx_act_sz;
 /* TX transfer complete */
