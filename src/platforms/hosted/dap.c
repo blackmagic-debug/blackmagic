@@ -372,7 +372,7 @@ void dap_write_reg(ADIv5_DP_t *dp, uint8_t reg, uint32_t data)
 	dap_index = dp->dp_jd_index;
 	buf[1] = dap_index;
 	buf[2] = 0x01; // Request size
-	buf[3] = reg & ~DAP_TRANSFER_RnW;;
+	buf[3] = reg & ~DAP_TRANSFER_RnW;
 	buf[4] = data & 0xff;
 	buf[5] = (data >> 8) & 0xff;
 	buf[6] = (data >> 16) & 0xff;

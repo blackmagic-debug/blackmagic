@@ -51,7 +51,7 @@ int hostio_open(struct target_controller *tc,
 	        target_addr path, size_t path_len,
                 enum target_open_flags flags, mode_t mode)
 {
-	gdb_putpacket_f("Fopen,%08X/%X,%08X,%08X", path, path_len, flags, mode);;;;
+	gdb_putpacket_f("Fopen,%08X/%X,%08X,%08X", path, path_len, flags, mode);
 	return gdb_main_loop(tc, true);
 }
 

@@ -178,7 +178,7 @@ int jlink_init(bmp_info_t *info)
 		struct libusb_device_descriptor desc;
 		if (libusb_get_device_descriptor(dev, &desc) < 0) {
             DEBUG_WARN( "libusb_get_device_descriptor() failed");
-			goto error;;
+			goto error;
 		}
 		if (desc.idVendor !=  USB_VID_SEGGER)
 			continue;
