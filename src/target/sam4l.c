@@ -103,9 +103,8 @@
 #define FLASHCALW_FGPFRLO			(FLASHCALW_BASE + 0x18)
 
 static void sam4l_extended_reset(target *t);
-static int sam4l_flash_erase(struct target_flash *f, target_addr addr, size_t len);
-static int sam4l_flash_write_buf(struct target_flash *f, target_addr dest,
-									const void *src, size_t len);
+static int sam4l_flash_erase(target_flash_s *f, target_addr addr, size_t len);
+static int sam4l_flash_write_buf(target_flash_s *f, target_addr dest, const void *src, size_t len);
 
 /* why Atmel couldn't make it sequential ... */
 static const size_t __ram_size[16] = {
@@ -168,8 +167,8 @@ static const size_t __nvp_size[16] = {
  */
 static void sam4l_add_flash(target *t, uint32_t addr, size_t length)
 {
-	struct target_flash *f = calloc(1, sizeof(struct target_flash));
-	if (!f) {			/* calloc failed: heap exhaustion */
+	target_flash_s *f = calloc(1, sizeof(target_flash_s));
+	if (!f) { /* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return;
 	}
@@ -179,7 +178,7 @@ static void sam4l_add_flash(target *t, uint32_t addr, size_t length)
 	f->blocksize = SAM4L_PAGE_SIZE;
 	f->erase = sam4l_flash_erase;
 	f->write = sam4l_flash_write_buf;
-	f->buf_size = SAM4L_PAGE_SIZE;
+	f->writesize = SAM4L_PAGE_SIZE;
 	f->erased = 0xff;
 	/* add it into the target structures flash chain */
 	target_add_flash(t, f);
@@ -330,8 +329,7 @@ sam4l_flash_command(target *t, uint32_t page, uint32_t cmd)
  * Write data from 'src' into flash using the algorithim provided by
  * Atmel in their data sheet.
  */
-static int
-sam4l_flash_write_buf(struct target_flash *f, target_addr addr, const void *src, size_t len)
+static int sam4l_flash_write_buf(target_flash_s *f, target_addr addr, const void *src, size_t len)
 {
 	target *t = f->t;
 	uint32_t *src_data = (uint32_t *)src;
@@ -379,8 +377,7 @@ sam4l_flash_write_buf(struct target_flash *f, target_addr addr, const void *src,
 /*
  * Erase flash across the addresses specified by addr and len
  */
-static int
-sam4l_flash_erase(struct target_flash *f, target_addr addr, size_t len)
+static int sam4l_flash_erase(target_flash_s *f, target_addr addr, size_t len)
 {
 	target *t = f->t;
 	uint16_t page;

@@ -54,7 +54,7 @@ static bool lpc546xx_cmd_write_sector(target *t, int argc, const char *argv[]);
 
 static void lpc546xx_reset_attach(target *t);
 static int lpc546xx_flash_init(target *t);
-static int lpc546xx_flash_erase(struct target_flash *f, target_addr addr, size_t len);
+static int lpc546xx_flash_erase(target_flash_s *f, target_addr addr, size_t len);
 static bool lpc546xx_mass_erase(target *t);
 static void lpc546xx_wdt_set_period(target *t);
 static void lpc546xx_wdt_pet(target *t);
@@ -73,9 +73,8 @@ const struct command_s lpc546xx_cmd_list[] = {
 	{ NULL, NULL, NULL }
 };
 
-static void lpc546xx_add_flash(target *t, uint32_t iap_entry,
-			uint8_t base_sector, uint32_t addr,
-			size_t len, size_t erasesize)
+static void lpc546xx_add_flash(
+	target *t, uint32_t iap_entry, uint8_t base_sector, uint32_t addr, size_t len, size_t erasesize)
 {
 	struct lpc_flash *lf = lpc_add_flash(t, addr, len);
 	lf->f.erase = lpc546xx_flash_erase;
@@ -85,7 +84,7 @@ static void lpc546xx_add_flash(target *t, uint32_t iap_entry,
 	lf->f.write = lpc_flash_write_magic_vect;
 
 	lf->f.blocksize = erasesize;
-	lf->f.buf_size = IAP_PGM_CHUNKSIZE;
+	lf->f.writesize = IAP_PGM_CHUNKSIZE;
 	lf->bank = 0;
 	lf->base_sector = base_sector;
 	lf->iap_entry = iap_entry;
@@ -292,7 +291,7 @@ static int lpc546xx_flash_init(target *t)
 	return 0;
 }
 
-static int lpc546xx_flash_erase(struct target_flash *tf, target_addr addr, size_t len)
+static int lpc546xx_flash_erase(target_flash_s *tf, target_addr addr, size_t len)
 {
 	if (lpc546xx_flash_init(tf->t))
 		return -1;

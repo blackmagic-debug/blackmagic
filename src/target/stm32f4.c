@@ -47,8 +47,8 @@ const struct command_s stm32f4_cmd_list[] = {
 };
 
 static bool stm32f4_attach(target *t);
-static int stm32f4_flash_erase(struct target_flash *f, target_addr addr, size_t len);
-static int stm32f4_flash_write(struct target_flash *f, target_addr dest, const void *src, size_t len);
+static int stm32f4_flash_erase(target_flash_s *f, target_addr addr, size_t len);
+static int stm32f4_flash_write(target_flash_s *f, target_addr dest, const void *src, size_t len);
 static bool stm32f4_mass_erase(target *t);
 
 /* Flash Program and Erase Controller Register Map */
@@ -110,7 +110,7 @@ static bool stm32f4_mass_erase(target *t);
 #define DBGMCU_CR_DBG_STANDBY	(0x1U << 2U)
 
 struct stm32f4_flash {
-	struct target_flash f;
+	target_flash_s f;
 	enum align psize;
 	uint8_t base_sector;
 	uint8_t bank_split;
@@ -137,25 +137,24 @@ enum IDS_STM32F247 {
 	ID_STM32F413  = 0x463
 };
 
-static void stm32f4_add_flash(target *t,
-                              uint32_t addr, size_t length, size_t blocksize,
-                              unsigned int base_sector, int split)
+static void stm32f4_add_flash(
+	target *t, uint32_t addr, size_t length, size_t blocksize, unsigned int base_sector, int split)
 {
 	if (length == 0)
 		return;
 	struct stm32f4_flash *sf = calloc(1, sizeof(*sf));
-	if (!sf) {			/* calloc failed: heap exhaustion */
+	if (!sf) { /* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return;
 	}
 
-	struct target_flash *f = &sf->f;
+	target_flash_s *f = &sf->f;
 	f->start = addr;
 	f->length = length;
 	f->blocksize = blocksize;
 	f->erase = stm32f4_flash_erase;
 	f->write = stm32f4_flash_write;
-	f->buf_size = 1024;
+	f->writesize = 1024;
 	f->erased = 0xff;
 	sf->base_sector = base_sector;
 	sf->bank_split = split;
@@ -391,8 +390,7 @@ static void stm32f4_flash_unlock(target *t)
 	}
 }
 
-static int stm32f4_flash_erase(struct target_flash *f, target_addr addr,
-							   size_t len)
+static int stm32f4_flash_erase(target_flash_s *f, target_addr addr, size_t len)
 {
 	target *t = f->t;
 	struct stm32f4_flash *sf = (struct stm32f4_flash *)f;
@@ -402,7 +400,7 @@ static int stm32f4_flash_erase(struct target_flash *f, target_addr addr,
 	stm32f4_flash_unlock(t);
 
 	enum align psize = ALIGN_WORD;
-	for (struct target_flash *currf = t->flash; currf; currf = currf->next) {
+	for (target_flash_s *currf = t->flash; currf; currf = currf->next) {
 		if (currf->write == stm32f4_flash_write) {
 			psize = ((struct stm32f4_flash *)currf)->psize;
 		}
@@ -439,8 +437,7 @@ static int stm32f4_flash_erase(struct target_flash *f, target_addr addr,
 	return 0;
 }
 
-static int stm32f4_flash_write(struct target_flash *f,
-                               target_addr dest, const void *src, size_t len)
+static int stm32f4_flash_write(target_flash_s *f, target_addr dest, const void *src, size_t len)
 {
 	/* Translate ITCM addresses to AXIM */
 	if ((dest >= ITCM_BASE) && (dest < AXIM_BASE)) {
@@ -707,7 +704,7 @@ static bool stm32f4_cmd_psize(target *t, int argc, char *argv[])
 {
 	if (argc == 1) {
 		enum align psize = ALIGN_WORD;
-		for (struct target_flash *f = t->flash; f; f = f->next) {
+		for (target_flash_s *f = t->flash; f; f = f->next) {
 			if (f->write == stm32f4_flash_write) {
 				psize = ((struct stm32f4_flash *)f)->psize;
 			}
@@ -730,7 +727,7 @@ static bool stm32f4_cmd_psize(target *t, int argc, char *argv[])
 			tc_printf(t, "usage: monitor psize (x8|x16|x32|x32)\n");
 			return false;
 		}
-		for (struct target_flash *f = t->flash; f; f = f->next) {
+		for (target_flash_s *f = t->flash; f; f = f->next) {
 			if (f->write == stm32f4_flash_write) {
 				((struct stm32f4_flash *)f)->psize = psize;
 			}

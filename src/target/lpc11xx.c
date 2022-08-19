@@ -64,7 +64,7 @@ static void lpc11xx_add_flash(target *t, const uint32_t addr, const size_t len, 
 {
 	struct lpc_flash *lf = lpc_add_flash(t, addr, len);
 	lf->f.blocksize = erase_block_len;
-	lf->f.buf_size = IAP_PGM_CHUNKSIZE;
+	lf->f.writesize = IAP_PGM_CHUNKSIZE;
 	lf->f.write = lpc_flash_write_magic_vect;
 	lf->iap_entry = iap_entry;
 	lf->iap_ram = IAP_RAM_BASE;

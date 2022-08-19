@@ -45,8 +45,8 @@
 #define SRAM_BASE        0x20000000
 #define STUB_BUFFER_BASE ALIGN(SRAM_BASE + sizeof(efm32_flash_write_stub), 4)
 
-static int efm32_flash_erase(struct target_flash *t, target_addr addr, size_t len);
-static int efm32_flash_write(struct target_flash *f, target_addr dest, const void *src, size_t len);
+static int efm32_flash_erase(target_flash_s *f, target_addr addr, size_t len);
+static int efm32_flash_write(target_flash_s *f, target_addr dest, const void *src, size_t len);
 static bool efm32_mass_erase(target *t);
 
 static const uint16_t efm32_flash_write_stub[] = {
@@ -496,7 +496,7 @@ static efm32_v2_di_miscchip_t efm32_v2_read_miscchip(target *t, uint8_t di_versi
 
 static void efm32_add_flash(target *t, target_addr addr, size_t length, size_t page_size)
 {
-	struct target_flash *f = calloc(1, sizeof(*f));
+	target_flash_s *f = calloc(1, sizeof(*f));
 	if (!f) { /* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return;
@@ -507,7 +507,7 @@ static void efm32_add_flash(target *t, target_addr addr, size_t length, size_t p
 	f->blocksize = page_size;
 	f->erase = efm32_flash_erase;
 	f->write = efm32_flash_write;
-	f->buf_size = page_size;
+	f->writesize = page_size;
 	target_add_flash(t, f);
 }
 
@@ -595,7 +595,7 @@ bool efm32_probe(target *t)
 }
 
 /* Erase flash row by row */
-static int efm32_flash_erase(struct target_flash *f, target_addr addr, size_t len)
+static int efm32_flash_erase(target_flash_s *f, target_addr addr, size_t len)
 {
 	target *t = f->t;
 
@@ -636,7 +636,7 @@ static int efm32_flash_erase(struct target_flash *f, target_addr addr, size_t le
 }
 
 /* Write flash page by page */
-static int efm32_flash_write(struct target_flash *f, target_addr dest, const void *src, size_t len)
+static int efm32_flash_write(target_flash_s *f, target_addr dest, const void *src, size_t len)
 {
 	(void)len;
 

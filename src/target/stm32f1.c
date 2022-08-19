@@ -46,8 +46,8 @@ const struct command_s stm32f1_cmd_list[] = {
 	{NULL, NULL, NULL}
 };
 
-static int stm32f1_flash_erase(struct target_flash *f, target_addr addr, size_t len);
-static int stm32f1_flash_write(struct target_flash *f, target_addr dest, const void *src, size_t len);
+static int stm32f1_flash_erase(target_flash_s *f, target_addr addr, size_t len);
+static int stm32f1_flash_write(target_flash_s *f, target_addr dest, const void *src, size_t len);
 static bool stm32f1_mass_erase(target *t);
 
 /* Flash Program ad Erase Controller Register Map */
@@ -96,7 +96,7 @@ static bool stm32f1_mass_erase(target *t);
 
 static void stm32f1_add_flash(target *t, uint32_t addr, size_t length, size_t erasesize)
 {
-	struct target_flash *f = calloc(1, sizeof(*f));
+	target_flash_s *f = calloc(1, sizeof(*f));
 	if (!f) { /* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return;
@@ -107,7 +107,7 @@ static void stm32f1_add_flash(target *t, uint32_t addr, size_t length, size_t er
 	f->blocksize = erasesize;
 	f->erase = stm32f1_flash_erase;
 	f->write = stm32f1_flash_write;
-	f->buf_size = erasesize;
+	f->writesize = erasesize;
 	f->erased = 0xff;
 	target_add_flash(t, f);
 }
@@ -357,7 +357,7 @@ static int stm32f1_flash_unlock(target *t, uint32_t bank_offset)
 	return 0;
 }
 
-static int stm32f1_flash_erase(struct target_flash *f, target_addr addr, size_t len)
+static int stm32f1_flash_erase(target_flash_s *f, target_addr addr, size_t len)
 {
 	target *t = f->t;
 	target_addr end = addr + len - 1;
@@ -418,7 +418,7 @@ static int stm32f1_flash_erase(struct target_flash *f, target_addr addr, size_t 
 	return 0;
 }
 
-static int stm32f1_flash_write(struct target_flash *f, target_addr dest, const void *src, size_t len)
+static int stm32f1_flash_write(target_flash_s *f, target_addr dest, const void *src, size_t len)
 {
 	target *t = f->t;
 	uint32_t sr;

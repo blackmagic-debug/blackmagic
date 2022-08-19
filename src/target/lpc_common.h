@@ -69,7 +69,7 @@ enum iap_status {
 #define CPU_CLK_KHZ 12000
 
 struct lpc_flash {
-	struct target_flash f;
+	target_flash_s f;
 	uint8_t base_sector;
 	uint8_t bank;
 	uint8_t reserved_pages;
@@ -82,8 +82,7 @@ struct lpc_flash {
 
 struct lpc_flash *lpc_add_flash(target *t, target_addr addr, size_t length);
 enum iap_status lpc_iap_call(struct lpc_flash *f, void *result, enum iap_cmd cmd, ...);
-int lpc_flash_erase(struct target_flash *f, target_addr addr, size_t len);
-int lpc_flash_write_magic_vect(struct target_flash *f,
-                               target_addr dest, const void *src, size_t len);
+int lpc_flash_erase(target_flash_s *f, target_addr addr, size_t len);
+int lpc_flash_write_magic_vect(target_flash_s *f, target_addr dest, const void *src, size_t len);
 
 #endif /* TARGET_LPC_COMMON_H */

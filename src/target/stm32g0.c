@@ -189,7 +189,7 @@ static void stm32g0_add_flash(target *t, uint32_t addr, size_t length, size_t bl
 	f->blocksize = blocksize;
 	f->erase = stm32g0_flash_erase;
 	f->write = stm32g0_flash_write;
-	f->buf_size = blocksize;
+	f->writesize = blocksize;
 	f->erased = 0xffU;
 	target_add_flash(t, f);
 }
