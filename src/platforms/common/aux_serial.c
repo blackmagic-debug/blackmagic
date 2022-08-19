@@ -35,9 +35,8 @@
 #include "aux_serial.h"
 
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
-static char aux_serial_transmit_buffer[TX_BUF_SIZE * 2];
-/* Active buffer part idx */
-static uint8_t buf_tx_act_idx;
+static char aux_serial_transmit_buffer[TX_BUF_SIZE * 2U];
+static uint8_t aux_serial_transmit_buffer_index;
 #elif defined(LM4F)
 static char aux_serial_transmit_buffer[FIFO_SIZE];
 #endif
@@ -83,6 +82,11 @@ void aux_serial_set_encoding(struct usb_cdc_line_coding *coding)
 }
 
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
+char *aux_serial_current_transmit_buffer(void)
+{
+	return aux_serial_transmit_buffer + (aux_serial_transmit_buffer_index << USART_DMA_BUF_SHIFT);
+}
+
 /*
  * Changes USBUSART TX buffer in which data is accumulated from USB.
  * Filled buffer is submitted to DMA for transfer.
@@ -90,7 +94,7 @@ void aux_serial_set_encoding(struct usb_cdc_line_coding *coding)
 void aux_serial_switch_transmit_buffers(void)
 {
 	/* Select buffer for transmission */
-	char *const tx_buf_ptr = &aux_serial_transmit_buffer[buf_tx_act_idx * TX_BUF_SIZE];
+	char *const tx_buf_ptr = aux_serial_current_transmit_buffer();
 
 	/* Configure DMA */
 	dma_set_memory_address(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN, (uintptr_t)tx_buf_ptr);
@@ -99,12 +103,7 @@ void aux_serial_switch_transmit_buffers(void)
 
 	/* Change active buffer */
 	buf_tx_act_sz = 0;
-	buf_tx_act_idx ^= 1;
-}
-
-char *aux_serial_current_transmit_buffer(void)
-{
-	return aux_serial_transmit_buffer + (buf_tx_act_idx * TX_BUF_SIZE);
+	aux_serial_transmit_buffer_index ^= 1;
 }
 #elif defined(LM4F)
 
