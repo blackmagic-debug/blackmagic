@@ -52,6 +52,7 @@
 #include <libopencm3/cm3/cortex.h>
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/usb/cdc.h>
+#include <libopencm3/stm32/dma.h>
 
 static bool gdb_uart_dtr = true;
 
@@ -209,6 +210,73 @@ size_t debug_uart_write(const char *buf, const size_t len)
 
 	debug_uart_run();
 	return len;
+}
+
+/*
+ * Copy data from fifo into continuous buffer. Return copied length.
+ */
+static uint32_t copy_from_fifo(char *dst, const char *src, uint32_t start, uint32_t end, uint32_t len, uint32_t fifo_sz)
+{
+	uint32_t out_len = 0;
+	for (uint32_t buf_out = start; buf_out != end && out_len < len; buf_out %= fifo_sz)
+		dst[out_len++] = src[buf_out++];
+
+	return out_len;
+}
+
+/*
+ * Runs deferred processing for USBUSART RX, draining RX FIFO by sending
+ * characters to host PC via CDCACM. Allowed to write to FIFO OUT pointer.
+ */
+void usbuart_send_rx_packet(void)
+{
+	rx_usb_trfr_cplt = false;
+	/* Calculate writing position in the FIFO */
+	const uint32_t buf_rx_in = (RX_FIFO_SIZE - dma_get_number_of_data(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN)) % RX_FIFO_SIZE;
+
+	/* Forcibly empty fifo if no USB endpoint.
+	 * If fifo empty, nothing further to do. */
+	if (usb_get_config() != 1 || (buf_rx_in == buf_rx_out
+#ifdef ENABLE_DEBUG
+		&& usb_dbg_in == usb_dbg_out
+#endif
+	))
+	{
+#ifdef ENABLE_DEBUG
+		usb_dbg_out = usb_dbg_in;
+#endif
+		buf_rx_out = buf_rx_in;
+		/* Turn off LED */
+		usbuart_set_led_state(RX_LED_ACT, false);
+		rx_usb_trfr_cplt = true;
+	}
+	else
+	{
+		/* To avoid the need of sending ZLP don't transmit full packet.
+		 * Also reserve space for copy function overrun.
+		 */
+		char packet_buf[CDCACM_PACKET_SIZE - 1 + sizeof(uint64_t)];
+		uint32_t packet_size;
+
+#ifdef ENABLE_DEBUG
+		/* Copy data from DEBUG FIFO into local usb packet buffer */
+		packet_size = copy_from_fifo(packet_buf, usb_dbg_buf, usb_dbg_out, usb_dbg_in, CDCACM_PACKET_SIZE - 1, RX_FIFO_SIZE);
+		/* Send if buffer not empty */
+		if (packet_size)
+		{
+			const uint16_t written = usbd_ep_write_packet(usbdev, CDCACM_UART_ENDPOINT, packet_buf, packet_size);
+			usb_dbg_out = (usb_dbg_out + written) % RX_FIFO_SIZE;
+			return;
+		}
+#endif
+
+		/* Copy data from uart RX FIFO into local usb packet buffer */
+		packet_size = copy_from_fifo(packet_buf, buf_rx, buf_rx_out, buf_rx_in, CDCACM_PACKET_SIZE - 1, RX_FIFO_SIZE);
+
+		/* Advance fifo out pointer by amount written */
+		const uint16_t written = usbd_ep_write_packet(usbdev, CDCACM_UART_ENDPOINT, packet_buf, packet_size);
+		buf_rx_out = (buf_rx_out + written) % RX_FIFO_SIZE;
+	}
 }
 
 void debug_uart_run(void)
