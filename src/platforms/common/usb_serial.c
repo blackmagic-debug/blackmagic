@@ -299,8 +299,9 @@ static void usbuart_usb_in_cb(usbd_device *dev, uint8_t ep)
 {
 	(void) ep;
 	(void) dev;
-
+#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
 	debug_uart_send_rx_packet();
+#endif
 }
 
 /*
