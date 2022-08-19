@@ -58,6 +58,8 @@ static bool gdb_uart_dtr = true;
 
 static void usb_serial_set_state(usbd_device *dev, uint16_t iface, uint8_t ep);
 
+static void usbuart_usb_in_cb(usbd_device *dev, uint8_t ep);
+
 #ifdef ENABLE_DEBUG
 /*
  * This call initialises "SemiHosting", only we then do our own SVC interrupt things to
@@ -228,7 +230,7 @@ static uint32_t copy_from_fifo(char *dst, const char *src, uint32_t start, uint3
  * Runs deferred processing for USBUSART RX, draining RX FIFO by sending
  * characters to host PC via CDCACM. Allowed to write to FIFO OUT pointer.
  */
-void debug_uart_send_rx_packet(void)
+static void debug_uart_send_rx_packet(void)
 {
 	rx_usb_trfr_cplt = false;
 	/* Calculate writing position in the FIFO */
@@ -291,6 +293,14 @@ void debug_uart_run(void)
 		debug_uart_send_rx_packet();
 
 	nvic_enable_irq(USB_IRQ);
+}
+
+static void usbuart_usb_in_cb(usbd_device *dev, uint8_t ep)
+{
+	(void) ep;
+	(void) dev;
+
+	debug_uart_send_rx_packet();
 }
 
 /*
