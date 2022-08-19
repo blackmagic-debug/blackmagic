@@ -340,7 +340,7 @@ static void usbuart_usb_out_cb(usbd_device *dev, uint8_t ep)
 		if (tx_trfr_cplt)
 		{
 			tx_trfr_cplt = false;
-			usbuart_change_dma_tx_buf();
+			aux_serial_switch_transmit_buffers();
 
 			/* Enable LED */
 			usbuart_set_led_state(TX_LED_ACT, true);
