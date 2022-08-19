@@ -25,10 +25,10 @@
 
 void aux_serial_init(void);
 void aux_serial_set_encoding(struct usb_cdc_line_coding *coding);
+char *aux_serial_current_transmit_buffer(void);
 
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
 void aux_serial_switch_transmit_buffers(void);
-char *aux_serial_current_transmit_buffer(void);
 #endif
 
 #endif /*AUX_SERIAL_H*/

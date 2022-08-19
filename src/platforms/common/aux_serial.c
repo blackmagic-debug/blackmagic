@@ -34,6 +34,15 @@
 #include "usb.h"
 #include "aux_serial.h"
 
+#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
+/* TX double buffer */
+char buf_tx[TX_BUF_SIZE * 2];
+/* Active buffer part idx */
+uint8_t buf_tx_act_idx;
+#elif defined(LM4F)
+char buf_tx[FIFO_SIZE];
+#endif
+
 void aux_serial_set_encoding(struct usb_cdc_line_coding *coding)
 {
 	usart_set_baudrate(USBUSART, coding->dwDTERate);
@@ -97,5 +106,11 @@ void aux_serial_switch_transmit_buffers(void)
 char *aux_serial_current_transmit_buffer(void)
 {
 	return buf_tx + (buf_tx_act_idx * TX_BUF_SIZE);
+}
+#elif defined(LM4F)
+
+char *aux_serial_current_transmit_buffer(void)
+{
+	return buf_tx;
 }
 #endif
