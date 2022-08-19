@@ -211,6 +211,20 @@ size_t debug_uart_write(const char *buf, const size_t len)
 	return len;
 }
 
+void usbuart_run(void)
+{
+	nvic_disable_irq(USB_IRQ);
+
+	/* Enable LED */
+	usbuart_set_led_state(RX_LED_ACT, true);
+
+	/* Try to send a packet if usb is idle */
+	if (rx_usb_trfr_cplt)
+		usbuart_send_rx_packet();
+
+	nvic_enable_irq(USB_IRQ);
+}
+
 /*
  * newlib defines _write as a weak link'd function for user code to override.
  *

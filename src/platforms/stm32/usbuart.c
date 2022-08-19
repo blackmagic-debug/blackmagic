@@ -49,9 +49,6 @@
 #define DMA_CGIF DMA_IFCR_CGIF_BIT
 #endif
 
-#define TX_LED_ACT (1 << 0)
-#define RX_LED_ACT (1 << 1)
-
 /* TX double buffer */
 static uint8_t buf_tx[TX_BUF_SIZE * 2];
 /* Active buffer part idx */
@@ -59,13 +56,13 @@ static uint8_t buf_tx_act_idx;
 /* Active buffer part used capacity */
 static uint8_t buf_tx_act_sz;
 /* TX transfer complete */
-static bool tx_trfr_cplt = true;
+bool tx_trfr_cplt = true;
 /* RX Fifo buffer with space for copy fn overrun */
 static uint8_t buf_rx[RX_FIFO_SIZE + sizeof(uint64_t)];
 /* RX Fifo out pointer, writes assumed to be atomic */
 static uint8_t buf_rx_out;
 /* RX usb transfer complete */
-static bool rx_usb_trfr_cplt = true;
+bool rx_usb_trfr_cplt = true;
 
 #ifdef ENABLE_DEBUG
 /* Debug Fifo buffer with space for copy fn overrun */
@@ -79,7 +76,7 @@ uint8_t usb_dbg_out;
 /*
  * Update led state atomically respecting RX anb TX states.
  */
-static void usbuart_set_led_state(uint8_t ledn, bool state)
+void usbuart_set_led_state(uint8_t ledn, bool state)
 {
 	CM_ATOMIC_CONTEXT();
 
@@ -265,7 +262,7 @@ void usbuart_usb_out_cb(usbd_device *dev, uint8_t ep)
  * Runs deferred processing for USBUSART RX, draining RX FIFO by sending
  * characters to host PC via CDCACM. Allowed to write to FIFO OUT pointer.
  */
-static void usbuart_send_rx_packet(void)
+void usbuart_send_rx_packet(void)
 {
 	rx_usb_trfr_cplt = false;
 	/* Calculate writing position in the FIFO */
@@ -322,20 +319,6 @@ void usbuart_usb_in_cb(usbd_device *dev, uint8_t ep)
 	(void) dev;
 
 	usbuart_send_rx_packet();
-}
-
-void usbuart_run(void)
-{
-	nvic_disable_irq(USB_IRQ);
-
-	/* Enable LED */
-	usbuart_set_led_state(RX_LED_ACT, true);
-
-	/* Try to send a packet if usb is idle */
-	if (rx_usb_trfr_cplt)
-		usbuart_send_rx_packet();
-
-	nvic_enable_irq(USB_IRQ);
 }
 
 #if defined(USART_ICR)
