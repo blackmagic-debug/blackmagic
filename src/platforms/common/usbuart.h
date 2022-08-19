@@ -27,7 +27,12 @@
 void usbuart_usb_out_cb(usbd_device *dev, uint8_t ep);
 void usbuart_usb_in_cb(usbd_device *dev, uint8_t ep);
 
+void usbuart_set_led_state(uint8_t ledn, bool state);
+void usbuart_send_rx_packet(void);
 void usbuart_run(void);
+
+#define TX_LED_ACT (1 << 0)
+#define RX_LED_ACT (1 << 1)
 
 /* F072 with st_usbfs_v2_usb_drive drops characters at the 64 byte boundary!*/
 #if !defined(USART_DMA_BUF_SIZE)
@@ -35,6 +40,9 @@ void usbuart_run(void);
 #endif
 #define RX_FIFO_SIZE (USART_DMA_BUF_SIZE)
 #define TX_BUF_SIZE (USART_DMA_BUF_SIZE)
+
+extern bool tx_trfr_cplt;
+extern bool rx_usb_trfr_cplt;
 
 #ifdef ENABLE_DEBUG
 /* Debug Fifo buffer with space for copy fn overrun */
