@@ -41,8 +41,7 @@ void debug_uart_run(void);
 #define RX_FIFO_SIZE (USART_DMA_BUF_SIZE)
 #define TX_BUF_SIZE (USART_DMA_BUF_SIZE)
 
-/* TX transfer complete */
-extern bool tx_trfr_cplt;
+extern bool aux_serial_transmit_complete;
 /* RX Fifo buffer with space for copy fn overrun */
 extern char buf_rx[RX_FIFO_SIZE + sizeof(uint64_t)];
 /* RX Fifo out pointer, writes assumed to be atomic */

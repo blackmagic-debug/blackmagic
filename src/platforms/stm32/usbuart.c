@@ -50,7 +50,7 @@
 #endif
 
 /* TX transfer complete */
-bool tx_trfr_cplt = true;
+bool aux_serial_transmit_complete = true;
 /* RX Fifo buffer with space for copy fn overrun */
 char buf_rx[RX_FIFO_SIZE + sizeof(uint64_t)];
 /* RX Fifo out pointer, writes assumed to be atomic */
@@ -263,7 +263,7 @@ void USBUSART2_ISR(void)
 	else									\
 	{									\
 		usbuart_set_led_state(TX_LED_ACT, false);			\
-		tx_trfr_cplt = true;						\
+		aux_serial_transmit_complete = true;						\
 	}									\
 										\
 	nvic_enable_irq(USB_IRQ);						\

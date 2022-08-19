@@ -114,9 +114,9 @@ void aux_serial_send(const size_t len)
 	aux_serial_transmit_buffer_consumed += len;
 
 	/* If DMA is idle, schedule new transfer */
-	if (len && tx_trfr_cplt)
+	if (len && aux_serial_transmit_complete)
 	{
-		tx_trfr_cplt = false;
+		aux_serial_transmit_complete = false;
 		aux_serial_switch_transmit_buffers();
 
 		/* Enable LED */
