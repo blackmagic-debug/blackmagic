@@ -52,13 +52,17 @@
 #include <libopencm3/cm3/cortex.h>
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/usb/cdc.h>
+#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
+#include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/dma.h>
+#endif
 
 static bool gdb_uart_dtr = true;
 
 static void usb_serial_set_state(usbd_device *dev, uint16_t iface, uint8_t ep);
 
 static void debug_uart_send_callback(usbd_device *dev, uint8_t ep);
+static void usbuart_usb_out_cb(usbd_device *dev, uint8_t ep);
 
 #ifdef ENABLE_DEBUG
 /*
@@ -303,6 +307,59 @@ static void debug_uart_send_callback(usbd_device *dev, uint8_t ep)
 	debug_uart_send_rx_packet();
 #endif
 }
+
+#ifndef ENABLE_RTT
+static void usbuart_usb_out_cb(usbd_device *dev, uint8_t ep)
+{
+	(void)ep;
+
+#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
+	usbd_ep_nak_set(dev, CDCACM_UART_ENDPOINT, 1);
+
+	/* Read new packet directly into TX buffer */
+	char *const tx_buf_ptr = &buf_tx[buf_tx_act_idx * TX_BUF_SIZE];
+	const uint16_t len = usbd_ep_read_packet(dev, CDCACM_UART_ENDPOINT, tx_buf_ptr + buf_tx_act_sz, CDCACM_PACKET_SIZE);
+
+#if defined(BLACKMAGIC)
+	/* Don't bother if uart is disabled.
+	 * This will be the case on mini while we're being debugged.
+	 */
+	if(!(RCC_APB2ENR & RCC_APB2ENR_USART1EN) &&
+	   !(RCC_APB1ENR & RCC_APB1ENR_USART2EN))
+	{
+		usbd_ep_nak_set(dev, CDCACM_UART_ENDPOINT, 0);
+		return;
+	}
+#endif
+
+	if (len)
+	{
+		buf_tx_act_sz += len;
+
+		/* If DMA is idle, schedule new transfer */
+		if (tx_trfr_cplt)
+		{
+			tx_trfr_cplt = false;
+			usbuart_change_dma_tx_buf();
+
+			/* Enable LED */
+			usbuart_set_led_state(TX_LED_ACT, true);
+		}
+	}
+
+	/* Enable USBUART TX packet reception if buffer has enough space */
+	if (TX_BUF_SIZE - buf_tx_act_sz >= CDCACM_PACKET_SIZE)
+		usbd_ep_nak_set(dev, CDCACM_UART_ENDPOINT, 0);
+#elif defined(LM4F)
+	char buf[CDCACM_PACKET_SIZE];
+	int len = usbd_ep_read_packet(dev, CDCACM_UART_ENDPOINT,
+					buf, CDCACM_PACKET_SIZE);
+
+	for(int i = 0; i < len; i++)
+		uart_send_blocking(USBUART, buf[i]);
+#endif
+}
+#endif
 
 /*
  * newlib defines _write as a weak link'd function for user code to override.
