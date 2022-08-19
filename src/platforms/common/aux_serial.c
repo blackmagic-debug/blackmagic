@@ -35,7 +35,7 @@
 #include "aux_serial.h"
 
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
-static char aux_serial_transmit_buffer[TX_BUF_SIZE * 2U];
+static char aux_serial_transmit_buffer[2U][TX_BUF_SIZE];
 static uint8_t aux_serial_transmit_buffer_index;
 #elif defined(LM4F)
 static char aux_serial_transmit_buffer[FIFO_SIZE];
@@ -84,7 +84,7 @@ void aux_serial_set_encoding(struct usb_cdc_line_coding *coding)
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
 char *aux_serial_current_transmit_buffer(void)
 {
-	return aux_serial_transmit_buffer + (aux_serial_transmit_buffer_index << USART_DMA_BUF_SHIFT);
+	return aux_serial_transmit_buffer[aux_serial_transmit_buffer_index];
 }
 
 /*
@@ -93,11 +93,8 @@ char *aux_serial_current_transmit_buffer(void)
  */
 void aux_serial_switch_transmit_buffers(void)
 {
-	/* Select buffer for transmission */
-	char *const tx_buf_ptr = aux_serial_current_transmit_buffer();
-
-	/* Configure DMA */
-	dma_set_memory_address(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN, (uintptr_t)tx_buf_ptr);
+	/* Make the buffer we've been filling the active DMA buffer, and swap to the other */
+	dma_set_memory_address(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN, (uintptr_t)aux_serial_current_transmit_buffer());
 	dma_set_number_of_data(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN, buf_tx_act_sz);
 	dma_enable_channel(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN);
 
