@@ -20,6 +20,7 @@
 
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
 #include <libopencm3/stm32/usart.h>
+#include <libopencm3/stm32/dma.h>
 #elif defined(LM4F)
 #include <libopencm3/lm4f/uart.h>
 #else
@@ -72,3 +73,24 @@ void aux_serial_set_encoding(struct usb_cdc_line_coding *coding)
 		break;
 	}
 }
+
+#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
+/*
+ * Changes USBUSART TX buffer in which data is accumulated from USB.
+ * Filled buffer is submitted to DMA for transfer.
+ */
+void usbuart_change_dma_tx_buf(void)
+{
+	/* Select buffer for transmission */
+	char *const tx_buf_ptr = &buf_tx[buf_tx_act_idx * TX_BUF_SIZE];
+
+	/* Configure DMA */
+	dma_set_memory_address(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN, (uintptr_t)tx_buf_ptr);
+	dma_set_number_of_data(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN, buf_tx_act_sz);
+	dma_enable_channel(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN);
+
+	/* Change active buffer */
+	buf_tx_act_sz = 0;
+	buf_tx_act_idx ^= 1;
+}
+#endif
