@@ -39,43 +39,6 @@ uint8_t buf_rx_in;
 /* Fifo out pointer, writes assumed to be atomic, should be only incremented outside RX ISR */
 uint8_t buf_rx_out;
 
-void aux_serial_init(void)
-{
-	UART_PIN_SETUP();
-
-	periph_clock_enable(USBUART_CLK);
-	__asm__("nop");
-	__asm__("nop");
-	__asm__("nop");
-
-	uart_disable(USBUART);
-
-	/* Setup UART parameters. */
-	uart_clock_from_sysclk(USBUART);
-	uart_set_baudrate(USBUART, 38400);
-	uart_set_databits(USBUART, 8);
-	uart_set_stopbits(USBUART, 1);
-	uart_set_parity(USBUART, UART_PARITY_NONE);
-
-	// Enable FIFO
-	uart_enable_fifo(USBUART);
-
-	// Set FIFO interrupt trigger levels to 1/8 full for RX buffer and
-	// 7/8 empty (1/8 full) for TX buffer
-	uart_set_fifo_trigger_levels(USBUART, UART_FIFO_RX_TRIG_1_8, UART_FIFO_TX_TRIG_7_8);
-
-	uart_clear_interrupt_flag(USBUART, UART_INT_RX | UART_INT_RT);
-
-	/* Enable interrupts */
-	uart_enable_interrupts(UART0, UART_INT_RX| UART_INT_RT);
-
-	/* Finally enable the USART. */
-	uart_enable(USBUART);
-
-	//nvic_set_priority(USBUSART_IRQ, IRQ_PRI_USBUSART);
-	nvic_enable_irq(USBUART_IRQ);
-}
-
 /*
  * Read a character from the UART RX and stuff it in a software FIFO.
  * Allowed to read from FIFO out pointer, but not write to it.
