@@ -207,11 +207,11 @@ size_t debug_uart_write(const char *buf, const size_t len)
 		usb_dbg_in %= RX_FIFO_SIZE;
 	}
 
-	usbuart_run();
+	debug_uart_run();
 	return len;
 }
 
-void usbuart_run(void)
+void debug_uart_run(void)
 {
 	nvic_disable_irq(USB_IRQ);
 

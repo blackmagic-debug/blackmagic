@@ -332,7 +332,7 @@ void usbuart_usb_in_cb(usbd_device *dev, uint8_t ep)
 	/* If line is now idle, then transmit a packet */		\
 	if (isIdle) {							\
 		USART_ICR(USART) = USART_ICR_IDLECF;			\
-		usbuart_run();						\
+		debug_uart_run();						\
 	}								\
 									\
 	nvic_enable_irq(DMA_IRQ);					\
@@ -350,7 +350,7 @@ void usbuart_usb_in_cb(usbd_device *dev, uint8_t ep)
 		/* On the older uarts, the sequence "read flags", */	\
 		/* "read DR" clears the flags                     */	\
 									\
-		usbuart_run();						\
+		debug_uart_run();						\
 	}								\
 									\
 	nvic_enable_irq(DMA_IRQ);					\
@@ -441,7 +441,7 @@ void USBUSART2_DMA_TX_ISR(void)
 	/* Clear flags */							\
 	dma_clear_interrupt_flags(USBUSART_DMA_BUS, DMA_RX_CHAN, DMA_CGIF);	\
 	/* Transmit a packet */							\
-	usbuart_run();								\
+	debug_uart_run();								\
 										\
 	nvic_enable_irq(USART_IRQ);						\
 } while(0)

@@ -29,7 +29,7 @@ void usbuart_usb_in_cb(usbd_device *dev, uint8_t ep);
 
 void usbuart_set_led_state(uint8_t ledn, bool state);
 void usbuart_send_rx_packet(void);
-void usbuart_run(void);
+void debug_uart_run(void);
 
 #define TX_LED_ACT (1 << 0)
 #define RX_LED_ACT (1 << 1)
