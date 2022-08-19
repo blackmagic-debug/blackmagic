@@ -58,7 +58,7 @@ static bool gdb_uart_dtr = true;
 
 static void usb_serial_set_state(usbd_device *dev, uint16_t iface, uint8_t ep);
 
-static void usbuart_usb_in_cb(usbd_device *dev, uint8_t ep);
+static void debug_uart_send_callback(usbd_device *dev, uint8_t ep);
 
 #ifdef ENABLE_DEBUG
 /*
@@ -155,7 +155,7 @@ void usb_serial_set_config(usbd_device *dev, uint16_t value)
 	/* Serial interface */
 	usbd_ep_setup(dev, CDCACM_UART_ENDPOINT, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE / 2, usbuart_usb_out_cb);
 	usbd_ep_setup(
-		dev, CDCACM_UART_ENDPOINT | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE, usbuart_usb_in_cb);
+		dev, CDCACM_UART_ENDPOINT | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE, debug_uart_send_callback);
 	usbd_ep_setup(dev, (CDCACM_UART_ENDPOINT + 1) | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
 
 #ifdef PLATFORM_HAS_TRACESWO
@@ -295,7 +295,7 @@ void debug_uart_run(void)
 	nvic_enable_irq(USB_IRQ);
 }
 
-static void usbuart_usb_in_cb(usbd_device *dev, uint8_t ep)
+static void debug_uart_send_callback(usbd_device *dev, uint8_t ep)
 {
 	(void) ep;
 	(void) dev;
