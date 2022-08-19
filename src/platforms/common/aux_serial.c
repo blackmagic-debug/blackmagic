@@ -37,8 +37,7 @@
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
 static char aux_serial_transmit_buffer[2U][TX_BUF_SIZE];
 static uint8_t aux_serial_transmit_buffer_index;
-/* Active buffer part used capacity */
-static uint8_t buf_tx_act_sz;
+static uint8_t aux_serial_transmit_buffer_consumed;
 #elif defined(LM4F)
 static char aux_serial_transmit_buffer[FIFO_SIZE];
 #endif
@@ -91,7 +90,7 @@ char *aux_serial_current_transmit_buffer(void)
 
 size_t aux_serial_transmit_buffer_fullness(void)
 {
-	return buf_tx_act_sz;
+	return aux_serial_transmit_buffer_consumed;
 }
 
 /*
@@ -102,17 +101,17 @@ void aux_serial_switch_transmit_buffers(void)
 {
 	/* Make the buffer we've been filling the active DMA buffer, and swap to the other */
 	dma_set_memory_address(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN, (uintptr_t)aux_serial_current_transmit_buffer());
-	dma_set_number_of_data(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN, buf_tx_act_sz);
+	dma_set_number_of_data(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN, aux_serial_transmit_buffer_consumed);
 	dma_enable_channel(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN);
 
 	/* Change active buffer */
-	buf_tx_act_sz = 0;
+	aux_serial_transmit_buffer_consumed = 0;
 	aux_serial_transmit_buffer_index ^= 1;
 }
 
 void aux_serial_send(const size_t len)
 {
-	buf_tx_act_sz += len;
+	aux_serial_transmit_buffer_consumed += len;
 
 	/* If DMA is idle, schedule new transfer */
 	if (len && tx_trfr_cplt)
