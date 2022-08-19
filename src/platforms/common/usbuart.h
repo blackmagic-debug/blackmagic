@@ -23,7 +23,6 @@
 #include "general.h"
 
 void usbuart_set_led_state(uint8_t ledn, bool state);
-void aux_serial_switch_transmit_buffers(void);
 void debug_uart_run(void);
 
 #define TX_LED_ACT (1 << 0)

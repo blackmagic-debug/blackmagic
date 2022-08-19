@@ -317,7 +317,7 @@ static void debug_uart_receive_callback(usbd_device *dev, uint8_t ep)
 	usbd_ep_nak_set(dev, CDCACM_UART_ENDPOINT, 1);
 
 	/* Read new packet directly into TX buffer */
-	char *const tx_buf_ptr = &buf_tx[buf_tx_act_idx * TX_BUF_SIZE];
+	char *const tx_buf_ptr = aux_serial_current_transmit_buffer();
 	const uint16_t len = usbd_ep_read_packet(dev, CDCACM_UART_ENDPOINT, tx_buf_ptr + buf_tx_act_sz, CDCACM_PACKET_SIZE);
 
 #if defined(BLACKMAGIC)

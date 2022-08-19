@@ -93,4 +93,9 @@ void aux_serial_switch_transmit_buffers(void)
 	buf_tx_act_sz = 0;
 	buf_tx_act_idx ^= 1;
 }
+
+char *aux_serial_current_transmit_buffer(void)
+{
+	return buf_tx + (buf_tx_act_idx * TX_BUF_SIZE);
+}
 #endif
