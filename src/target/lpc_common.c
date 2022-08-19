@@ -70,9 +70,9 @@ char *iap_error[] = {
 	"Page is invalid",
 };
 
-static int lpc_flash_write(target_flash_s *tf, target_addr dest, const void *src, size_t len);
+static int lpc_flash_write(target_flash_s *tf, target_addr_t dest, const void *src, size_t len);
 
-struct lpc_flash *lpc_add_flash(target *t, target_addr addr, size_t length)
+struct lpc_flash *lpc_add_flash(target *t, target_addr_t addr, size_t length)
 {
 	struct lpc_flash *lf = calloc(1, sizeof(*lf));
 	target_flash_s *f;
@@ -99,7 +99,7 @@ static uint8_t lpc_sector_for_addr(struct lpc_flash *f, uint32_t addr)
 
 static inline bool lpc_is_full_erase(struct lpc_flash *f, const uint32_t begin, const uint32_t end)
 {
-	const target_addr addr = f->f.start;
+	const target_addr_t addr = f->f.start;
 	const size_t len = f->f.length;
 	return begin == lpc_sector_for_addr(f, addr) && end == lpc_sector_for_addr(f, addr + len - 1U);
 }
@@ -182,7 +182,7 @@ enum iap_status lpc_iap_call(struct lpc_flash *f, void *result, enum iap_cmd cmd
 #define LPX80X_SECTOR_SIZE 0x400
 #define LPX80X_PAGE_SIZE    0x40
 
-int lpc_flash_erase(target_flash_s *tf, target_addr addr, size_t len)
+int lpc_flash_erase(target_flash_s *tf, target_addr_t addr, size_t len)
 {
 	struct lpc_flash *f = (struct lpc_flash *)tf;
 	const uint32_t start = lpc_sector_for_addr(f, addr);
@@ -220,7 +220,7 @@ int lpc_flash_erase(target_flash_s *tf, target_addr addr, size_t len)
 	return 0;
 }
 
-static int lpc_flash_write(target_flash_s *tf, target_addr dest, const void *src, size_t len)
+static int lpc_flash_write(target_flash_s *tf, target_addr_t dest, const void *src, size_t len)
 {
 	struct lpc_flash *f = (struct lpc_flash *)tf;
 	/* prepare... */
@@ -257,7 +257,7 @@ static int lpc_flash_write(target_flash_s *tf, target_addr dest, const void *src
 	return 0;
 }
 
-int lpc_flash_write_magic_vect(target_flash_s *f, target_addr dest, const void *src, size_t len)
+int lpc_flash_write_magic_vect(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
 	if (dest == 0) {
 		/* Fill in the magic vector to allow booting the flash */

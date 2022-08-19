@@ -29,7 +29,7 @@ target *target_list = NULL;
 
 #define STDOUT_READ_BUF_SIZE	64
 
-static int target_flash_write_buffered(target_flash_s *f, target_addr dest, const void *src, size_t len);
+static int target_flash_write_buffered(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 static int target_flash_done_buffered(target_flash_s *f);
 
 static bool target_cmd_mass_erase(target *t, int argc, const char **argv);
@@ -196,7 +196,7 @@ target *target_attach(target *t, struct target_controller *tc)
 	return t;
 }
 
-void target_add_ram(target *t, target_addr start, uint32_t len)
+void target_add_ram(target *t, target_addr_t start, uint32_t len)
 {
 	struct target_ram *ram = malloc(sizeof(*ram));
 	if (!ram) {			/* malloc failed: heap exhaustion */
@@ -264,7 +264,7 @@ target_flash_s *target_flash_for_addr(target *t, uint32_t addr)
 	return NULL;
 }
 
-int target_flash_erase(target *t, target_addr addr, size_t len)
+int target_flash_erase(target *t, target_addr_t addr, size_t len)
 {
 	int ret = 0;
 	while (len) {
@@ -282,7 +282,7 @@ int target_flash_erase(target *t, target_addr addr, size_t len)
 	return ret;
 }
 
-int target_flash_write(target *t, target_addr dest, const void *src, size_t len)
+int target_flash_write(target *t, target_addr_t dest, const void *src, size_t len)
 {
 	int ret = 0;
 	while (len) {
@@ -319,7 +319,7 @@ int target_flash_done(target *t)
 	return 0;
 }
 
-int target_flash_write_buffered(target_flash_s *f, target_addr dest, const void *src, size_t len)
+int target_flash_write_buffered(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
 	int ret = 0;
 
@@ -396,13 +396,13 @@ bool target_check_error(target *t) {
 bool target_attached(target *t) { return t->attached; }
 
 /* Memory access functions */
-int target_mem_read(target *t, void *dest, target_addr src, size_t len)
+int target_mem_read(target *t, void *dest, target_addr_t src, size_t len)
 {
 	t->mem_read(t, dest, src, len);
 	return target_check_error(t);
 }
 
-int target_mem_write(target *t, target_addr dest, const void *src, size_t len)
+int target_mem_write(target *t, target_addr_t dest, const void *src, size_t len)
 {
 	t->mem_write(t, dest, src, len);
 	return target_check_error(t);
@@ -443,7 +443,7 @@ void target_regs_write(target *t, const void *data)
 /* Halt/resume functions */
 void target_reset(target *t) { t->reset(t); }
 void target_halt_request(target *t) { t->halt_request(t); }
-enum target_halt_reason target_halt_poll(target *t, target_addr *watch)
+enum target_halt_reason target_halt_poll(target *t, target_addr_t *watch)
 {
 	return t->halt_poll(t, watch);
 }
@@ -460,8 +460,8 @@ void target_set_cmdline(target *t, char *cmdline) {
 }
 
 /* Set heapinfo for semihosting */
-void target_set_heapinfo(target *t, target_addr heap_base, target_addr heap_limit,
-	target_addr stack_base, target_addr stack_limit) {
+void target_set_heapinfo(target *t, target_addr_t heap_base, target_addr_t heap_limit,
+	target_addr_t stack_base, target_addr_t stack_limit) {
 	if (t == NULL) return;
 	t->heapinfo[0] = heap_base;
 	t->heapinfo[1] = heap_limit;
@@ -471,7 +471,7 @@ void target_set_heapinfo(target *t, target_addr heap_base, target_addr heap_limi
 
 /* Break-/watchpoint functions */
 int target_breakwatch_set(target *t,
-                          enum target_breakwatch type, target_addr addr, size_t len)
+                          enum target_breakwatch type, target_addr_t addr, size_t len)
 {
 	struct breakwatch bw = {
 		.type = type,
@@ -501,7 +501,7 @@ int target_breakwatch_set(target *t,
 }
 
 int target_breakwatch_clear(target *t,
-                            enum target_breakwatch type, target_addr addr, size_t len)
+                            enum target_breakwatch type, target_addr_t addr, size_t len)
 {
 	struct breakwatch *bwp = NULL, *bw;
 	int ret = 1;
@@ -560,7 +560,7 @@ static bool target_cmd_range_erase(target *const t, const int argc, const char *
 		return false;
 	}
 
-	const target_addr aligned_addr = addr & ~(flash->blocksize - 1U);
+	const target_addr_t aligned_addr = addr & ~(flash->blocksize - 1U);
 	const uint32_t aligned_length = length + (addr - aligned_addr);
 	return target_flash_erase(t, aligned_addr, aligned_length) == 0;
 }
@@ -665,8 +665,7 @@ void tc_printf(target *t, const char *fmt, ...)
 }
 
 /* Interface to host system calls */
-int tc_open(target *t, target_addr path, size_t plen,
-            enum target_open_flags flags, mode_t mode)
+int tc_open(target *t, target_addr_t path, size_t plen, enum target_open_flags flags, mode_t mode)
 {
 	if (t->tc->open == NULL) {
 		t->tc->errno_ = TARGET_ENFILE;
@@ -684,14 +683,14 @@ int tc_close(target *t, int fd)
 	return t->tc->close(t->tc, fd);
 }
 
-int tc_read(target *t, int fd, target_addr buf, unsigned int count)
+int tc_read(target *t, int fd, target_addr_t buf, unsigned int count)
 {
 	if (t->tc->read == NULL)
 		return 0;
 	return t->tc->read(t->tc, fd, buf, count);
 }
 
-int tc_write(target *t, int fd, target_addr buf, unsigned int count)
+int tc_write(target *t, int fd, target_addr_t buf, unsigned int count)
 {
 #ifdef PLATFORM_HAS_USBUART
 	if (t->stdout_redirected && (fd == STDOUT_FILENO || fd == STDERR_FILENO)) {
@@ -721,8 +720,7 @@ long tc_lseek(target *t, int fd, long offset, enum target_seek_flag flag)
 	return t->tc->lseek(t->tc, fd, offset, flag);
 }
 
-int tc_rename(target *t, target_addr oldpath, size_t oldlen,
-                         target_addr newpath, size_t newlen)
+int tc_rename(target *t, target_addr_t oldpath, size_t oldlen, target_addr_t newpath, size_t newlen)
 {
 	if (t->tc->rename == NULL) {
 		t->tc->errno_ = TARGET_ENOENT;
@@ -731,7 +729,7 @@ int tc_rename(target *t, target_addr oldpath, size_t oldlen,
 	return t->tc->rename(t->tc, oldpath, oldlen, newpath, newlen);
 }
 
-int tc_unlink(target *t, target_addr path, size_t plen)
+int tc_unlink(target *t, target_addr_t path, size_t plen)
 {
 	if (t->tc->unlink == NULL) {
 		t->tc->errno_ = TARGET_ENOENT;
@@ -740,7 +738,7 @@ int tc_unlink(target *t, target_addr path, size_t plen)
 	return t->tc->unlink(t->tc, path, plen);
 }
 
-int tc_stat(target *t, target_addr path, size_t plen, target_addr buf)
+int tc_stat(target *t, target_addr_t path, size_t plen, target_addr_t buf)
 {
 	if (t->tc->stat == NULL) {
 		t->tc->errno_ = TARGET_ENOENT;
@@ -749,7 +747,7 @@ int tc_stat(target *t, target_addr path, size_t plen, target_addr buf)
 	return t->tc->stat(t->tc, path, plen, buf);
 }
 
-int tc_fstat(target *t, int fd, target_addr buf)
+int tc_fstat(target *t, int fd, target_addr_t buf)
 {
 	if (t->tc->fstat == NULL) {
 		return 0;
@@ -757,7 +755,7 @@ int tc_fstat(target *t, int fd, target_addr buf)
 	return t->tc->fstat(t->tc, fd, buf);
 }
 
-int tc_gettimeofday(target *t, target_addr tv, target_addr tz)
+int tc_gettimeofday(target *t, target_addr_t tv, target_addr_t tz)
 {
 	if (t->tc->gettimeofday == NULL) {
 		return -1;
@@ -773,7 +771,7 @@ int tc_isatty(target *t, int fd)
 	return t->tc->isatty(t->tc, fd);
 }
 
-int tc_system(target *t, target_addr cmd, size_t cmdlen)
+int tc_system(target *t, target_addr_t cmd, size_t cmdlen)
 {
 	if (t->tc->system == NULL) {
 		return -1;

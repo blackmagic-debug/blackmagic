@@ -38,8 +38,8 @@
 #include "target_internal.h"
 #include "cortexm.h"
 
-static int samx5x_flash_erase(target_flash_s *f, target_addr addr, size_t len);
-static int samx5x_flash_write(target_flash_s *f, target_addr dest, const void *src, size_t len);
+static int samx5x_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
+static int samx5x_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 static bool samx5x_cmd_lock_flash(target *t, int argc, const char **argv);
 static bool samx5x_cmd_unlock_flash(target *t, int argc, const char **argv);
 static bool samx5x_cmd_unlock_bootprot(target *t, int argc, const char **argv);
@@ -496,7 +496,7 @@ static int samx5x_check_nvm_error(target *t)
 /**
  * Erase flash block by block
  */
-static int samx5x_flash_erase(target_flash_s *f, target_addr addr, size_t len)
+static int samx5x_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
 	target *t = f->t;
 	uint16_t errs = samx5x_read_nvm_error(t);
@@ -562,7 +562,7 @@ static int samx5x_flash_erase(target_flash_s *f, target_addr addr, size_t len)
 /**
  * Write flash page by page
  */
-static int samx5x_flash_write(target_flash_s *f, target_addr dest, const void *src, size_t len)
+static int samx5x_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
 	target *t = f->t;
 	bool error = false;

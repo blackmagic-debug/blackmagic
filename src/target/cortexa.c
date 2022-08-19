@@ -46,9 +46,8 @@ static void cortexa_regs_write_internal(target *t);
 static ssize_t cortexa_reg_read(target *t, int reg, void *data, size_t max);
 static ssize_t cortexa_reg_write(target *t, int reg, const void *data, size_t max);
 
-
 static void cortexa_reset(target *t);
-static enum target_halt_reason cortexa_halt_poll(target *t, target_addr *watch);
+static enum target_halt_reason cortexa_halt_poll(target *t, target_addr_t *watch);
 static void cortexa_halt_request(target *t);
 
 static int cortexa_breakwatch_set(target *t, struct breakwatch *);
@@ -234,7 +233,7 @@ static uint32_t va_to_pa(target *t, uint32_t va)
 	return pa;
 }
 
-static void cortexa_slow_mem_read(target *t, void *dest, target_addr src, size_t len)
+static void cortexa_slow_mem_read(target *t, void *dest, target_addr_t src, size_t len)
 {
 	struct cortexa_priv *priv = t->priv;
 	unsigned words = (len + (src & 3) + 3) / 4;
@@ -273,7 +272,7 @@ static void cortexa_slow_mem_read(target *t, void *dest, target_addr src, size_t
 	}
 }
 
-static void cortexa_slow_mem_write_bytes(target *t, target_addr dest, const uint8_t *src, size_t len)
+static void cortexa_slow_mem_write_bytes(target *t, target_addr_t dest, const uint8_t *src, size_t len)
 {
 	struct cortexa_priv *priv = t->priv;
 
@@ -292,7 +291,7 @@ static void cortexa_slow_mem_write_bytes(target *t, target_addr dest, const uint
 	}
 }
 
-static void cortexa_slow_mem_write(target *t, target_addr dest, const void *src, size_t len)
+static void cortexa_slow_mem_write(target *t, target_addr_t dest, const void *src, size_t len)
 {
 	struct cortexa_priv *priv = t->priv;
 	if (len == 0)
@@ -622,7 +621,7 @@ static void cortexa_halt_request(target *t)
 	}
 }
 
-static enum target_halt_reason cortexa_halt_poll(target *t, target_addr *watch)
+static enum target_halt_reason cortexa_halt_poll(target *t, target_addr_t *watch)
 {
 	volatile uint32_t dbgdscr = 0;
 	volatile struct exception e;

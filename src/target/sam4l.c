@@ -103,8 +103,8 @@
 #define FLASHCALW_FGPFRLO			(FLASHCALW_BASE + 0x18)
 
 static void sam4l_extended_reset(target *t);
-static int sam4l_flash_erase(target_flash_s *f, target_addr addr, size_t len);
-static int sam4l_flash_write_buf(target_flash_s *f, target_addr dest, const void *src, size_t len);
+static int sam4l_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
+static int sam4l_flash_write_buf(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 
 /* why Atmel couldn't make it sequential ... */
 static const size_t __ram_size[16] = {
@@ -329,7 +329,7 @@ sam4l_flash_command(target *t, uint32_t page, uint32_t cmd)
  * Write data from 'src' into flash using the algorithim provided by
  * Atmel in their data sheet.
  */
-static int sam4l_flash_write_buf(target_flash_s *f, target_addr addr, const void *src, size_t len)
+static int sam4l_flash_write_buf(target_flash_s *f, target_addr_t addr, const void *src, size_t len)
 {
 	target *t = f->t;
 	uint32_t *src_data = (uint32_t *)src;
@@ -377,7 +377,7 @@ static int sam4l_flash_write_buf(target_flash_s *f, target_addr addr, const void
 /*
  * Erase flash across the addresses specified by addr and len
  */
-static int sam4l_flash_erase(target_flash_s *f, target_addr addr, size_t len)
+static int sam4l_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
 	target *t = f->t;
 	uint16_t page;

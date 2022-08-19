@@ -27,8 +27,8 @@
 #include "cortexm.h"
 #include "adiv5.h"
 
-static int nrf51_flash_erase(target_flash_s *f, target_addr addr, size_t len);
-static int nrf51_flash_write(target_flash_s *f, target_addr dest, const void *src, size_t len);
+static int nrf51_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
+static int nrf51_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 static bool nrf51_mass_erase(target *t);
 
 static bool nrf51_cmd_erase_uicr(target *t, int argc, const char **argv);
@@ -159,7 +159,7 @@ bool nrf51_probe(target *t)
 	return true;
 }
 
-static int nrf51_flash_erase(target_flash_s *f, target_addr addr, size_t len)
+static int nrf51_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
 	target *t = f->t;
 	/* Enable erase */
@@ -203,7 +203,7 @@ static int nrf51_flash_erase(target_flash_s *f, target_addr addr, size_t len)
 	return 0;
 }
 
-static int nrf51_flash_write(target_flash_s *f, target_addr dest, const void *src, size_t len)
+static int nrf51_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
 	target *t = f->t;
 

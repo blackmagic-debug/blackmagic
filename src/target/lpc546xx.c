@@ -54,7 +54,7 @@ static bool lpc546xx_cmd_write_sector(target *t, int argc, const char *argv[]);
 
 static void lpc546xx_reset_attach(target *t);
 static int lpc546xx_flash_init(target *t);
-static int lpc546xx_flash_erase(target_flash_s *f, target_addr addr, size_t len);
+static int lpc546xx_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 static bool lpc546xx_mass_erase(target *t);
 static void lpc546xx_wdt_set_period(target *t);
 static void lpc546xx_wdt_pet(target *t);
@@ -291,7 +291,7 @@ static int lpc546xx_flash_init(target *t)
 	return 0;
 }
 
-static int lpc546xx_flash_erase(target_flash_s *tf, target_addr addr, size_t len)
+static int lpc546xx_flash_erase(target_flash_s *tf, target_addr_t addr, size_t len)
 {
 	if (lpc546xx_flash_init(tf->t))
 		return -1;

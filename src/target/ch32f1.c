@@ -34,8 +34,8 @@
 
 extern const struct command_s stm32f1_cmd_list[]; // Reuse stm32f1 stuff
 
-static int ch32f1_flash_erase(target_flash_s *f, target_addr addr, size_t len);
-static int ch32f1_flash_write(target_flash_s *f, target_addr dest, const void *src, size_t len);
+static int ch32f1_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
+static int ch32f1_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 
 // these are common with stm32f1/gd32f1/...
 #define FPEC_BASE						0x40022000
@@ -200,7 +200,7 @@ bool ch32f1_probe(target *t)
   \fn ch32f1_flash_erase
   \brief fast erase of CH32
 */
-int ch32f1_flash_erase(target_flash_s *f, target_addr addr, size_t len)
+int ch32f1_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
 	volatile uint32_t sr, magic;
 	target *t = f->t;
@@ -297,13 +297,13 @@ static int ch32f1_buffer_clear(target *t)
 /**
 
 */
-static int ch32f1_flash_write(target_flash_s *f, target_addr dest, const void *src, size_t len)
+static int ch32f1_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
 	volatile uint32_t sr, magic;
 	target *t = f->t;
 	size_t length = len;
 #ifdef CH32_VERIFY
-	target_addr org_dest = dest;
+	target_addr_t org_dest = dest;
 	const void *org_src = src;
 #endif
 	DEBUG_INFO("CH32: flash write 0x%" PRIx32 " ,size=%" PRIu32 "\n", dest, (uint32_t)len);

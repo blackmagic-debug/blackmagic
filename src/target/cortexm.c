@@ -49,7 +49,7 @@
  * where gdb runs, using gdb file i/o calls.
  */
 
-#define TARGET_NULL ((target_addr)0)
+#define TARGET_NULL ((target_addr_t)0)
 #include <errno.h>
 #include <time.h>
 #include <sys/time.h>
@@ -83,14 +83,14 @@ static ssize_t cortexm_reg_read(target *t, int reg, void *data, size_t max);
 static ssize_t cortexm_reg_write(target *t, int reg, const void *data, size_t max);
 
 static void cortexm_reset(target *t);
-static enum target_halt_reason cortexm_halt_poll(target *t, target_addr *watch);
+static enum target_halt_reason cortexm_halt_poll(target *t, target_addr_t *watch);
 static void cortexm_halt_resume(target *t, bool step);
 static void cortexm_halt_request(target *t);
 static int cortexm_fault_unwind(target *t);
 
 static int cortexm_breakwatch_set(target *t, struct breakwatch *);
 static int cortexm_breakwatch_clear(target *t, struct breakwatch *);
-static target_addr cortexm_check_watch(target *t);
+static target_addr_t cortexm_check_watch(target *t);
 
 #define CORTEXM_MAX_WATCHPOINTS 4U /* architecture says up to 15, no implementation has > 4 */
 #define CORTEXM_MAX_BREAKPOINTS 8U /* architecture says up to 127, no implementation has > 8 */
@@ -224,7 +224,7 @@ ADIv5_AP_t *cortexm_ap(target *t)
 	return ((struct cortexm_priv *)t->priv)->ap;
 }
 
-static void cortexm_cache_clean(target *t, target_addr addr, size_t len, bool invalidate)
+static void cortexm_cache_clean(target *t, target_addr_t addr, size_t len, bool invalidate)
 {
 	struct cortexm_priv *priv = t->priv;
 	if (!priv->has_cache || (priv->dcache_minline == 0))
@@ -233,11 +233,11 @@ static void cortexm_cache_clean(target *t, target_addr addr, size_t len, bool in
 	size_t minline = priv->dcache_minline;
 
 	/* flush data cache for RAM regions that intersect requested region */
-	target_addr mem_end = addr + len; /* following code is NOP if wraparound */
+	target_addr_t mem_end = addr + len; /* following code is NOP if wraparound */
 	/* requested region is [src, src_end) */
 	for (struct target_ram *r = t->ram; r; r = r->next) {
-		target_addr ram = r->start;
-		target_addr ram_end = r->start + r->length;
+		target_addr_t ram = r->start;
+		target_addr_t ram_end = r->start + r->length;
 		/* RAM region is [ram, ram_end) */
 		if (addr > ram)
 			ram = addr;
@@ -249,13 +249,13 @@ static void cortexm_cache_clean(target *t, target_addr addr, size_t len, bool in
 	}
 }
 
-static void cortexm_mem_read(target *t, void *dest, target_addr src, size_t len)
+static void cortexm_mem_read(target *t, void *dest, target_addr_t src, size_t len)
 {
 	cortexm_cache_clean(t, src, len, false);
 	adiv5_mem_read(cortexm_ap(t), dest, src, len);
 }
 
-static void cortexm_mem_write(target *t, target_addr dest, const void *src, size_t len)
+static void cortexm_mem_write(target *t, target_addr_t dest, const void *src, size_t len)
 {
 	cortexm_cache_clean(t, dest, len, true);
 	adiv5_mem_write(cortexm_ap(t), dest, src, len);
@@ -675,7 +675,7 @@ static void cortexm_regs_write(target *t, const void *data)
 	}
 }
 
-int cortexm_mem_write_sized(target *t, target_addr dest, const void *src, size_t len, enum align align)
+int cortexm_mem_write_sized(target *t, target_addr_t dest, const void *src, size_t len, enum align align)
 {
 	cortexm_cache_clean(t, dest, len, true);
 	adiv5_mem_write_sized(cortexm_ap(t), dest, src, len, align);
@@ -779,7 +779,7 @@ static void cortexm_halt_request(target *t)
 	}
 }
 
-static enum target_halt_reason cortexm_halt_poll(target *t, target_addr *watch)
+static enum target_halt_reason cortexm_halt_poll(target *t, target_addr_t *watch)
 {
 	struct cortexm_priv *priv = t->priv;
 
@@ -1089,7 +1089,7 @@ static int cortexm_breakwatch_clear(target *t, struct breakwatch *bw)
 	}
 }
 
-static target_addr cortexm_check_watch(target *t)
+static target_addr_t cortexm_check_watch(target *t)
 {
 	struct cortexm_priv *priv = t->priv;
 	unsigned i;
@@ -1158,7 +1158,7 @@ static bool cortexm_redirect_stdout(target *t, int argc, const char **argv)
 
 #if PC_HOSTED == 0
 /* probe memory access functions */
-static void probe_mem_read(target *t __attribute__((unused)), void *probe_dest, target_addr target_src, size_t len)
+static void probe_mem_read(target *t __attribute__((unused)), void *probe_dest, target_addr_t target_src, size_t len)
 {
 	uint8_t *dst = (uint8_t *)probe_dest;
 	uint8_t *src = (uint8_t *)target_src;
@@ -1169,7 +1169,7 @@ static void probe_mem_read(target *t __attribute__((unused)), void *probe_dest, 
 }
 
 static void probe_mem_write(
-	target *t __attribute__((unused)), target_addr target_dest, const void *probe_src, size_t len)
+	target *t __attribute__((unused)), target_addr_t target_dest, const void *probe_src, size_t len)
 {
 	uint8_t *dst = (uint8_t *)target_dest;
 	uint8_t *src = (uint8_t *)probe_src;
@@ -1199,7 +1199,7 @@ static int cortexm_hostio_request(target *t)
 		/* code that runs in pc-hosted process. use linux system calls. */
 
 	case SEMIHOSTING_SYS_OPEN: { /* open */
-		target_addr fnam_taddr = params[0];
+		target_addr_t fnam_taddr = params[0];
 		uint32_t fnam_len = params[2];
 		ret = -1;
 		if (fnam_taddr == TARGET_NULL || fnam_len == 0)
@@ -1253,7 +1253,7 @@ static int cortexm_hostio_request(target *t)
 
 	case SEMIHOSTING_SYS_READ: { /* read */
 		ret = -1;
-		target_addr buf_taddr = params[1];
+		target_addr_t buf_taddr = params[1];
 		uint32_t buf_len = params[2];
 		if (buf_taddr == TARGET_NULL)
 			break;
@@ -1277,7 +1277,7 @@ static int cortexm_hostio_request(target *t)
 
 	case SEMIHOSTING_SYS_WRITE: { /* write */
 		ret = -1;
-		target_addr buf_taddr = params[1];
+		target_addr_t buf_taddr = params[1];
 		uint32_t buf_len = params[2];
 		if (buf_taddr == TARGET_NULL)
 			break;
@@ -1303,7 +1303,7 @@ static int cortexm_hostio_request(target *t)
 	case SEMIHOSTING_SYS_WRITEC: { /* writec */
 		ret = -1;
 		uint8_t ch;
-		target_addr ch_taddr = arm_regs[1];
+		target_addr_t ch_taddr = arm_regs[1];
 		if (ch_taddr == TARGET_NULL)
 			break;
 		ch = target_mem_read8(t, ch_taddr);
@@ -1317,7 +1317,7 @@ static int cortexm_hostio_request(target *t)
 	case SEMIHOSTING_SYS_WRITE0: { /* write0 */
 		ret = -1;
 		uint8_t ch;
-		target_addr str = arm_regs[1];
+		target_addr_t str = arm_regs[1];
 		if (str == TARGET_NULL)
 			break;
 		while ((ch = target_mem_read8(t, str++)) != '\0') {
@@ -1344,13 +1344,13 @@ static int cortexm_hostio_request(target *t)
 
 	case SEMIHOSTING_SYS_RENAME: { /* rename */
 		ret = -1;
-		target_addr fnam1_taddr = params[0];
+		target_addr_t fnam1_taddr = params[0];
 		uint32_t fnam1_len = params[1];
 		if (fnam1_taddr == TARGET_NULL)
 			break;
 		if (fnam1_len == 0)
 			break;
-		target_addr fnam2_taddr = params[2];
+		target_addr_t fnam2_taddr = params[2];
 		uint32_t fnam2_len = params[3];
 		if (fnam2_taddr == TARGET_NULL)
 			break;
@@ -1385,7 +1385,7 @@ static int cortexm_hostio_request(target *t)
 
 	case SEMIHOSTING_SYS_REMOVE: { /* unlink */
 		ret = -1;
-		target_addr fnam_taddr = params[0];
+		target_addr_t fnam_taddr = params[0];
 		if (fnam_taddr == TARGET_NULL)
 			break;
 		uint32_t fnam_len = params[1];
@@ -1407,7 +1407,7 @@ static int cortexm_hostio_request(target *t)
 
 	case SEMIHOSTING_SYS_SYSTEM: { /* system */
 		ret = -1;
-		target_addr cmd_taddr = params[0];
+		target_addr_t cmd_taddr = params[0];
 		if (cmd_taddr == TARGET_NULL)
 			break;
 		uint32_t cmd_len = params[1];
@@ -1522,8 +1522,8 @@ static int cortexm_hostio_request(target *t)
 		break;
 	case SEMIHOSTING_SYS_WRITE0: { /* write0 */
 		ret = -1;
-		target_addr str_begin = arm_regs[1];
-		target_addr str_end = str_begin;
+		target_addr_t str_begin = arm_regs[1];
+		target_addr_t str_end = str_begin;
 		while (target_mem_read8(t, str_end) != 0) {
 			if (target_check_error(t))
 				break;
@@ -1562,13 +1562,13 @@ static int cortexm_hostio_request(target *t)
 		ret = -1;
 		uint32_t fio_stat[16]; /* same size as fio_stat in gdb/include/gdb/fileio.h */
 		//DEBUG("SYS_FLEN fio_stat addr %p\n", fio_stat);
-		void (*saved_mem_read)(target * t, void *dest, target_addr src, size_t len);
-		void (*saved_mem_write)(target * t, target_addr dest, const void *src, size_t len);
+		void (*saved_mem_read)(target * t, void *dest, target_addr_t src, size_t len);
+		void (*saved_mem_write)(target * t, target_addr_t dest, const void *src, size_t len);
 		saved_mem_read = t->mem_read;
 		saved_mem_write = t->mem_write;
 		t->mem_read = probe_mem_read;
 		t->mem_write = probe_mem_write;
-		int rc = tc_fstat(t, params[0] - 1, (target_addr)fio_stat); /* write fstat() result in fio_stat[] */
+		int rc = tc_fstat(t, params[0] - 1, (target_addr_t)fio_stat); /* write fstat() result in fio_stat[] */
 		t->mem_read = saved_mem_read;
 		t->mem_write = saved_mem_write;
 		if (rc)
@@ -1592,14 +1592,14 @@ static int cortexm_hostio_request(target *t)
 			uint64_t ftv_usec;
 		} fio_timeval;
 		//DEBUG("SYS_TIME fio_timeval addr %p\n", &fio_timeval);
-		void (*saved_mem_read)(target * t, void *dest, target_addr src, size_t len);
-		void (*saved_mem_write)(target * t, target_addr dest, const void *src, size_t len);
+		void (*saved_mem_read)(target *t, void *dest, target_addr_t src, size_t len);
+		void (*saved_mem_write)(target *t, target_addr_t dest, const void *src, size_t len);
 		saved_mem_read = t->mem_read;
 		saved_mem_write = t->mem_write;
 		t->mem_read = probe_mem_read;
 		t->mem_write = probe_mem_write;
 		int rc = tc_gettimeofday(
-			t, (target_addr)&fio_timeval, (target_addr)NULL); /* write gettimeofday() result in fio_timeval[] */
+			t, (target_addr_t)&fio_timeval, (target_addr_t)NULL); /* write gettimeofday() result in fio_timeval[] */
 		t->mem_read = saved_mem_read;
 		t->mem_write = saved_mem_write;
 		if (rc)
@@ -1622,13 +1622,13 @@ static int cortexm_hostio_request(target *t)
 	case SEMIHOSTING_SYS_READC: { /* readc */
 		uint8_t ch = '?';
 		//DEBUG("SYS_READC ch addr %p\n", &ch);
-		void (*saved_mem_read)(target * t, void *dest, target_addr src, size_t len);
-		void (*saved_mem_write)(target * t, target_addr dest, const void *src, size_t len);
+		void (*saved_mem_read)(target *t, void *dest, target_addr_t src, size_t len);
+		void (*saved_mem_write)(target *t, target_addr_t dest, const void *src, size_t len);
 		saved_mem_read = t->mem_read;
 		saved_mem_write = t->mem_write;
 		t->mem_read = probe_mem_read;
 		t->mem_write = probe_mem_write;
-		int rc = tc_read(t, STDIN_FILENO, (target_addr)&ch, 1); /* read a character in ch */
+		int rc = tc_read(t, STDIN_FILENO, (target_addr_t) &ch, 1); /* read a character in ch */
 		t->mem_read = saved_mem_read;
 		t->mem_write = saved_mem_write;
 		if (rc == 1)
@@ -1656,8 +1656,8 @@ static int cortexm_hostio_request(target *t)
 	case SEMIHOSTING_SYS_GET_CMDLINE: { /* get_cmdline */
 		uint32_t retval[2];
 		ret = -1;
-		target_addr buf_ptr = params[0];
-		target_addr buf_len = params[1];
+		target_addr_t buf_ptr = params[0];
+		target_addr_t buf_len = params[1];
 		if (strlen(t->cmdline) + 1 > buf_len)
 			break;
 		if (target_mem_write(t, buf_ptr, t->cmdline, strlen(t->cmdline) + 1))
@@ -1688,7 +1688,7 @@ static int cortexm_hostio_request(target *t)
 
 	case SEMIHOSTING_SYS_TMPNAM: { /* tmpnam */
 		/* Given a target identifier between 0 and 255, returns a temporary name */
-		target_addr buf_ptr = params[0];
+		target_addr_t buf_ptr = params[0];
 		int target_id = params[1];
 		int buf_size = params[2];
 		char fnam[] = "tempXX.tmp";

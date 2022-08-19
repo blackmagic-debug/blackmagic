@@ -143,11 +143,11 @@
 #define STM32L1_NVM_OPTR_BOR_LEV_M  (0xf)
 #define STM32L1_NVM_OPTR_SPRMOD     (1 << 8)
 
-static int stm32lx_nvm_prog_erase(target_flash_s *f, target_addr addr, size_t len);
-static int stm32lx_nvm_prog_write(target_flash_s *f, target_addr destination, const void *src, size_t size);
+static int stm32lx_nvm_prog_erase(target_flash_s *f, target_addr_t addr, size_t len);
+static int stm32lx_nvm_prog_write(target_flash_s *f, target_addr_t destination, const void *src, size_t size);
 
-static int stm32lx_nvm_data_erase(target_flash_s *f, target_addr addr, size_t len);
-static int stm32lx_nvm_data_write(target_flash_s *f, target_addr destination, const void *source, size_t size);
+static int stm32lx_nvm_data_erase(target_flash_s *f, target_addr_t addr, size_t len);
+static int stm32lx_nvm_data_write(target_flash_s *f, target_addr_t destination, const void *source, size_t size);
 
 static bool stm32lx_cmd_option(target *t, int argc, char **argv);
 static bool stm32lx_cmd_eeprom(target *t, int argc, char **argv);
@@ -325,7 +325,7 @@ static bool stm32lx_nvm_opt_unlock(target *t, uint32_t nvm)
     interface.  This is slower than stubbed versions(see NOTES).  The
     flash array is erased for all pages from addr to addr+len
     inclusive.  NVM register file address chosen from target. */
-static int stm32lx_nvm_prog_erase(target_flash_s *f, target_addr addr, size_t len)
+static int stm32lx_nvm_prog_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
 	target *t = f->t;
 	const size_t page_size = f->blocksize;
@@ -372,7 +372,7 @@ static int stm32lx_nvm_prog_erase(target_flash_s *f, target_addr addr, size_t le
 
 /** Write to program flash using operations through the debug
     interface. */
-static int stm32lx_nvm_prog_write(target_flash_s *f, target_addr dest, const void *src, size_t size)
+static int stm32lx_nvm_prog_write(target_flash_s *f, target_addr_t dest, const void *src, size_t size)
 {
 	target *t = f->t;
 	const uint32_t nvm = stm32lx_nvm_phys(t);
@@ -408,7 +408,7 @@ static int stm32lx_nvm_prog_write(target_flash_s *f, target_addr dest, const voi
     interface .  The flash is erased for all pages from addr to
     addr+len, inclusive, on a word boundary.  NVM register file
     address chosen from target. */
-static int stm32lx_nvm_data_erase(target_flash_s *f, target_addr addr, size_t len)
+static int stm32lx_nvm_data_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
 	target *t = f->t;
 	const size_t page_size = f->blocksize;
@@ -458,7 +458,7 @@ static int stm32lx_nvm_data_erase(target_flash_s *f, target_addr addr, size_t le
     NVM register file address chosen from target.  Unaligned
     destination writes are supported (though unaligned sources are
     not). */
-static int stm32lx_nvm_data_write(target_flash_s *f, target_addr destination, const void *src, size_t size)
+static int stm32lx_nvm_data_write(target_flash_s *f, target_addr_t destination, const void *src, size_t size)
 {
 	target *t = f->t;
 	const uint32_t nvm = stm32lx_nvm_phys(t);

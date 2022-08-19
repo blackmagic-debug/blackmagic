@@ -26,28 +26,19 @@
 int hostio_reply(struct target_controller *tc, char *packet, int len);
 
 /* Interface to host system calls */
-int hostio_open(struct target_controller *,
-	        target_addr path, size_t path_len,
-                enum target_open_flags flags, mode_t mode);
+int hostio_open(
+	struct target_controller *, target_addr_t path, size_t path_len, enum target_open_flags flags, mode_t mode);
 int hostio_close(struct target_controller *, int fd);
-int hostio_read(struct target_controller *,
-	         int fd, target_addr buf, unsigned int count);
-int hostio_write(struct target_controller *,
-	          int fd, target_addr buf, unsigned int count);
-long hostio_lseek(struct target_controller *,
-	           int fd, long offset, enum target_seek_flag flag);
-int hostio_rename(struct target_controller *,
-	           target_addr oldpath, size_t old_len,
-	           target_addr newpath, size_t new_len);
-int hostio_unlink(struct target_controller *,
-	           target_addr path, size_t path_len);
-int hostio_stat(struct target_controller *,
-	         target_addr path, size_t path_len, target_addr buf);
-int hostio_fstat(struct target_controller *, int fd, target_addr buf);
-int hostio_gettimeofday(struct target_controller *,
-		         target_addr tv, target_addr tz);
+int hostio_read(struct target_controller *, int fd, target_addr_t buf, unsigned int count);
+int hostio_write(struct target_controller *, int fd, target_addr_t buf, unsigned int count);
+long hostio_lseek(struct target_controller *, int fd, long offset, enum target_seek_flag flag);
+int hostio_rename(
+	struct target_controller *, target_addr_t oldpath, size_t old_len, target_addr_t newpath, size_t new_len);
+int hostio_unlink(struct target_controller *, target_addr_t path, size_t path_len);
+int hostio_stat(struct target_controller *, target_addr_t path, size_t path_len, target_addr_t buf);
+int hostio_fstat(struct target_controller *, int fd, target_addr_t buf);
+int hostio_gettimeofday(struct target_controller *, target_addr_t tv, target_addr_t tz);
 int hostio_isatty(struct target_controller *, int fd);
-int hostio_system(struct target_controller *,
-	           target_addr cmd, size_t cmd_len);
+int hostio_system(struct target_controller *, target_addr_t cmd, size_t cmd_len);
 
 #endif /* GDB_HOSTIO_H */

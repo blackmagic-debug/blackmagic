@@ -111,8 +111,8 @@ static bool kinetis_cmd_unsafe(target *t, int argc, char **argv)
 	return true;
 }
 
-static int kinetis_flash_cmd_erase(target_flash_s *f, target_addr addr, size_t len);
-static int kinetis_flash_cmd_write(target_flash_s *f, target_addr dest, const void *src, size_t len);
+static int kinetis_flash_cmd_erase(target_flash_s *f, target_addr_t addr, size_t len);
+static int kinetis_flash_cmd_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 static int kinetis_flash_done(target_flash_s *f);
 
 struct kinetis_flash {
@@ -432,7 +432,7 @@ static bool kinetis_fccob_cmd(target *t, uint8_t cmd, uint32_t addr, const uint3
 	return true;
 }
 
-static int kinetis_flash_cmd_erase(target_flash_s *const f, target_addr addr, size_t len)
+static int kinetis_flash_cmd_erase(target_flash_s *const f, target_addr_t addr, size_t len)
 {
 	while (len) {
 		if (kinetis_fccob_cmd(f->t, FTFx_CMD_ERASE_SECTOR, addr, NULL, 0)) {
@@ -449,7 +449,7 @@ static int kinetis_flash_cmd_erase(target_flash_s *const f, target_addr addr, si
 	return 0;
 }
 
-static int kinetis_flash_cmd_write(target_flash_s *f, target_addr dest, const void *src, size_t len)
+static int kinetis_flash_cmd_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
 	struct kinetis_flash *const kf = (struct kinetis_flash *)f;
 
@@ -524,7 +524,7 @@ const struct command_s kinetis_mdm_cmd_list[] = {
 	{NULL, NULL, NULL},
 };
 
-enum target_halt_reason mdm_halt_poll(target *t, const target_addr *const watch)
+enum target_halt_reason mdm_halt_poll(target *t, const target_addr_t *const watch)
 {
 	(void)t;
 	(void)watch;
