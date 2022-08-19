@@ -228,7 +228,7 @@ static uint32_t copy_from_fifo(char *dst, const char *src, uint32_t start, uint3
  * Runs deferred processing for USBUSART RX, draining RX FIFO by sending
  * characters to host PC via CDCACM. Allowed to write to FIFO OUT pointer.
  */
-void usbuart_send_rx_packet(void)
+void debug_uart_send_rx_packet(void)
 {
 	rx_usb_trfr_cplt = false;
 	/* Calculate writing position in the FIFO */
@@ -288,7 +288,7 @@ void debug_uart_run(void)
 
 	/* Try to send a packet if usb is idle */
 	if (rx_usb_trfr_cplt)
-		usbuart_send_rx_packet();
+		debug_uart_send_rx_packet();
 
 	nvic_enable_irq(USB_IRQ);
 }

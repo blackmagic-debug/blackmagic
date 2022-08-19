@@ -251,7 +251,7 @@ void usbuart_usb_in_cb(usbd_device *dev, uint8_t ep)
 	(void) ep;
 	(void) dev;
 
-	usbuart_send_rx_packet();
+	debug_uart_send_rx_packet();
 }
 
 #if defined(USART_ICR)
