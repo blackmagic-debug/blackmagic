@@ -42,8 +42,6 @@
 char buf_rx[RX_FIFO_SIZE + sizeof(uint64_t)];
 /* RX Fifo out pointer, writes assumed to be atomic */
 uint8_t buf_rx_out;
-/* RX usb transfer complete */
-bool aux_serial_receive_complete = true;
 
 #ifdef ENABLE_DEBUG
 /* Debug Fifo buffer with space for copy fn overrun */
