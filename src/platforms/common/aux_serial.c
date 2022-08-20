@@ -23,6 +23,7 @@
 #include <libopencm3/stm32/usart.h>
 #include <libopencm3/stm32/dma.h>
 #elif defined(LM4F)
+#include <libopencm3/lm4f/rcc.h>
 #include <libopencm3/lm4f/uart.h>
 #else
 #error "Unknown processor target"
@@ -35,6 +36,11 @@
 #include "usbuart.h"
 #include "usb.h"
 #include "aux_serial.h"
+
+/* Fifo in pointer, writes assumed to be atomic, should be only incremented within RX ISR */
+uint8_t buf_rx_in;
+/* Fifo out pointer, writes assumed to be atomic, should be only incremented outside RX ISR */
+uint8_t buf_rx_out;
 
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
 static char aux_serial_transmit_buffer[2U][AUX_UART_BUFFER_SIZE];
