@@ -420,4 +420,57 @@ void aux_serial_send(const size_t len)
 	for(size_t i = 0; i < len; ++i)
 		uart_send_blocking(USBUART, aux_serial_transmit_buffer[i]);
 }
+
+/*
+ * Read a character from the UART RX and stuff it in a software FIFO.
+ * Allowed to read from FIFO out pointer, but not write to it.
+ * Allowed to write to FIFO in pointer.
+ */
+void USBUART_ISR(void)
+{
+	bool flush = uart_is_interrupt_source(USBUART, UART_INT_RT);
+
+	while (!uart_is_rx_fifo_empty(USBUART)) {
+		const char c = uart_recv(USBUART);
+
+		/* If the next increment of rx_in would put it at the same point
+		* as rx_out, the FIFO is considered full.
+		*/
+		if (((buf_rx_in + 1) % FIFO_SIZE) != buf_rx_out) {
+			/* insert into FIFO */
+			buf_rx[buf_rx_in++] = c;
+
+			/* wrap out pointer */
+			if (buf_rx_in >= FIFO_SIZE)
+				buf_rx_in = 0;
+		} else
+			flush = true;
+	}
+
+	if (flush) {
+		/* forcibly empty fifo if no USB endpoint */
+		if (usb_get_config() != 1) {
+			buf_rx_out = buf_rx_in;
+			return;
+		}
+
+		char packet_buf[CDCACM_PACKET_SIZE];
+		uint8_t packet_size = 0;
+		uint8_t buf_out = buf_rx_out;
+
+		/* copy from uart FIFO into local usb packet buffer */
+		while (buf_rx_in != buf_out && packet_size < CDCACM_PACKET_SIZE) {
+			packet_buf[packet_size++] = buf_rx[buf_out++];
+
+			/* wrap out pointer */
+			if (buf_out >= FIFO_SIZE)
+				buf_out = 0;
+		}
+
+		/* advance fifo out pointer by amount written */
+		buf_rx_out += usbd_ep_write_packet(usbdev,
+				CDCACM_UART_ENDPOINT, packet_buf, packet_size);
+		buf_rx_out %= FIFO_SIZE;
+	}
+}
 #endif
