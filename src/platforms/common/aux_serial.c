@@ -309,6 +309,17 @@ static void aux_serial_dma_transmit_isr(const uint8_t dma_tx_channel)
 	nvic_enable_irq(USB_IRQ);
 }
 
+static void aux_serial_dma_receive_isr(const uint8_t usart_irq, const uint8_t dma_rx_channel)
+{
+	nvic_disable_irq(usart_irq);
+
+	/* Clear flags and transmit a packet*/
+	dma_clear_interrupt_flags(USBUSART_DMA_BUS, dma_rx_channel, DMA_CGIF);
+	debug_uart_run();
+
+	nvic_enable_irq(usart_irq);
+}
+
 #if defined(USBUSART_ISR)
 void USBUSART_ISR(void)
 {
@@ -363,6 +374,36 @@ void USBUSART2_DMA_TX_ISR(void)
 }
 #endif
 
+#if defined(USBUSART_DMA_RX_ISR)
+void USBUSART_DMA_RX_ISR(void)
+{
+	aux_serial_dma_receive_isr(USBUSART_IRQ, USBUSART_DMA_RX_CHAN);
+}
+#endif
+
+#if defined(USBUSART1_DMA_RX_ISR)
+void USBUSART1_DMA_RX_ISR(void)
+{
+	aux_serial_dma_receive_isr(USBUSART1_IRQ, USBUSART1_DMA_RX_CHAN);
+}
+#endif
+
+#if defined(USBUSART2_DMA_RX_ISR)
+void USBUSART2_DMA_RX_ISR(void)
+{
+	aux_serial_dma_receive_isr(USBUSART2_IRQ, USBUSART2_DMA_RX_CHAN);
+}
+#endif
+
+#if defined(USBUSART_DMA_RXTX_ISR)
+void USBUSART_DMA_RXTX_ISR(void)
+{
+	if (dma_get_interrupt_flag(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN, DMA_CGIF))
+		USBUSART_DMA_RX_ISR();
+	if (dma_get_interrupt_flag(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN, DMA_CGIF))
+		USBUSART_DMA_TX_ISR();
+}
+#endif
 #elif defined(LM4F)
 char *aux_serial_current_transmit_buffer(void)
 {
