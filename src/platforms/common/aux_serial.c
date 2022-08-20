@@ -265,6 +265,59 @@ void aux_serial_send(const size_t len)
 		usbuart_set_led_state(TX_LED_ACT, true);
 	}
 }
+
+static void aux_serial_receive_isr(const uint32_t usart, const uint8_t dma_irq)
+{
+	nvic_disable_irq(dma_irq);
+
+	/* Get IDLE flag and reset interrupt flags */
+	const bool is_idle = usart_get_flag(usart, USART_FLAG_IDLE);
+	usart_recv(usart);
+
+	/* If line is now idle, then transmit a packet */
+	if (is_idle) {
+#ifdef USART_ICR
+		USART_ICR(usart) = USART_ICR_IDLECF;
+#endif
+		debug_uart_run();
+	}
+
+	nvic_enable_irq(dma_irq);
+}
+
+#if defined(USBUSART_ISR)
+void USBUSART_ISR(void)
+{
+#if defined(USBUSART_DMA_RXTX_IRQ)
+	aux_serial_receive_isr(USBUSART, USBUSART_DMA_RXTX_IRQ);
+#else
+	aux_serial_receive_isr(USBUSART, USBUSART_DMA_RX_IRQ);
+#endif
+}
+#endif
+
+#if defined(USBUSART1_ISR)
+void USBUSART1_ISR(void)
+{
+#if defined(USBUSART1_DMA_RXTX_IRQ)
+	aux_serial_receive_isr(USBUSART1, USBUSART1_DMA_RXTX_IRQ);
+#else
+	aux_serial_receive_isr(USBUSART1, USBUSART1_DMA_RX_IRQ);
+#endif
+}
+#endif
+
+#if defined(USBUSART2_ISR)
+void USBUSART2_ISR(void)
+{
+#if defined(USBUSART2_DMA_RXTX_IRQ)
+	aux_serial_receive_isr(USBUSART2, USBUSART2_DMA_RXTX_IRQ);
+#else
+	aux_serial_receive_isr(USBUSART2, USBUSART2_DMA_RX_IRQ);
+#endif
+}
+#endif
+
 #elif defined(LM4F)
 char *aux_serial_current_transmit_buffer(void)
 {
