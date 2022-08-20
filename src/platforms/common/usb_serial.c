@@ -204,16 +204,16 @@ size_t debug_uart_write(const char *buf, const size_t len)
 
 	CM_ATOMIC_CONTEXT();
 
-	for (size_t i = 0; i < len && (usb_dbg_in + 1) % RX_FIFO_SIZE != usb_dbg_out; ++i) {
+	for (size_t i = 0; i < len && (usb_dbg_in + 1) % AUX_UART_BUFFER_SIZE != usb_dbg_out; ++i) {
 		if (buf[i] == '\n') {
 			usb_dbg_buf[usb_dbg_in++] = '\r';
-			usb_dbg_in %= RX_FIFO_SIZE;
+			usb_dbg_in %= AUX_UART_BUFFER_SIZE;
 
-			if ((usb_dbg_in + 1) % RX_FIFO_SIZE == usb_dbg_out)
+			if ((usb_dbg_in + 1) % AUX_UART_BUFFER_SIZE == usb_dbg_out)
 				break;
 		}
 		usb_dbg_buf[usb_dbg_in++] = buf[i];
-		usb_dbg_in %= RX_FIFO_SIZE;
+		usb_dbg_in %= AUX_UART_BUFFER_SIZE;
 	}
 
 	debug_uart_run();
@@ -240,7 +240,8 @@ static void debug_uart_send_rx_packet(void)
 {
 	aux_serial_receive_complete = false;
 	/* Calculate writing position in the FIFO */
-	const uint32_t buf_rx_in = (RX_FIFO_SIZE - dma_get_number_of_data(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN)) % RX_FIFO_SIZE;
+	const uint32_t buf_rx_in =
+		(AUX_UART_BUFFER_SIZE - dma_get_number_of_data(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN)) % AUX_UART_BUFFER_SIZE;
 
 	/* Forcibly empty fifo if no USB endpoint.
 	 * If fifo empty, nothing further to do. */
@@ -268,22 +269,22 @@ static void debug_uart_send_rx_packet(void)
 
 #ifdef ENABLE_DEBUG
 		/* Copy data from DEBUG FIFO into local usb packet buffer */
-		packet_size = copy_from_fifo(packet_buf, usb_dbg_buf, usb_dbg_out, usb_dbg_in, CDCACM_PACKET_SIZE - 1, RX_FIFO_SIZE);
+		packet_size = copy_from_fifo(packet_buf, usb_dbg_buf, usb_dbg_out, usb_dbg_in, CDCACM_PACKET_SIZE - 1, AUX_UART_BUFFER_SIZE);
 		/* Send if buffer not empty */
 		if (packet_size)
 		{
 			const uint16_t written = usbd_ep_write_packet(usbdev, CDCACM_UART_ENDPOINT, packet_buf, packet_size);
-			usb_dbg_out = (usb_dbg_out + written) % RX_FIFO_SIZE;
+			usb_dbg_out = (usb_dbg_out + written) % AUX_UART_BUFFER_SIZE;
 			return;
 		}
 #endif
 
 		/* Copy data from uart RX FIFO into local usb packet buffer */
-		packet_size = copy_from_fifo(packet_buf, buf_rx, buf_rx_out, buf_rx_in, CDCACM_PACKET_SIZE - 1, RX_FIFO_SIZE);
+		packet_size = copy_from_fifo(packet_buf, buf_rx, buf_rx_out, buf_rx_in, CDCACM_PACKET_SIZE - 1, AUX_UART_BUFFER_SIZE);
 
 		/* Advance fifo out pointer by amount written */
 		const uint16_t written = usbd_ep_write_packet(usbdev, CDCACM_UART_ENDPOINT, packet_buf, packet_size);
-		buf_rx_out = (buf_rx_out + written) % RX_FIFO_SIZE;
+		buf_rx_out = (buf_rx_out + written) % AUX_UART_BUFFER_SIZE;
 	}
 }
 
@@ -328,7 +329,7 @@ static void debug_uart_receive_callback(usbd_device *dev, uint8_t ep)
 
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
 	/* Disable USBUART TX packet reception if buffer does not have enough space */
-	if (TX_BUF_SIZE - aux_serial_transmit_buffer_fullness() < CDCACM_PACKET_SIZE)
+	if (AUX_UART_BUFFER_SIZE - aux_serial_transmit_buffer_fullness() < CDCACM_PACKET_SIZE)
 		usbd_ep_nak_set(dev, ep, 1);
 #endif
 }

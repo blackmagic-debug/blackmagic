@@ -37,7 +37,7 @@
 #include "aux_serial.h"
 
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
-static char aux_serial_transmit_buffer[2U][TX_BUF_SIZE];
+static char aux_serial_transmit_buffer[2U][AUX_UART_BUFFER_SIZE];
 static uint8_t aux_serial_transmit_buffer_index;
 static uint8_t aux_serial_transmit_buffer_consumed;
 static bool aux_serial_transmit_complete = true;
@@ -86,7 +86,7 @@ void aux_serial_init(void)
 # define USBUSART_RDR USART_DR(USBUSART)
 #endif
 	dma_channel_reset(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN);
-	dma_set_peripheral_address(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN, (uint32_t)&USBUSART_TDR);
+	dma_set_peripheral_address(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN, (uintptr_t)&USBUSART_TDR);
 	dma_enable_memory_increment_mode(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN);
 	dma_set_peripheral_size(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN, DMA_PSIZE_8BIT);
 	dma_set_memory_size(USBUSART_DMA_BUS, USBUSART_DMA_TX_CHAN, DMA_MSIZE_8BIT);
@@ -103,9 +103,9 @@ void aux_serial_init(void)
 
 	/* Setup USART RX DMA */
 	dma_channel_reset(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN);
-	dma_set_peripheral_address(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN, (uint32_t)&USBUSART_RDR);
-	dma_set_memory_address(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN, (uint32_t)buf_rx);
-	dma_set_number_of_data(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN, RX_FIFO_SIZE);
+	dma_set_peripheral_address(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN, (uintptr_t)&USBUSART_RDR);
+	dma_set_memory_address(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN, (uintptr_t)buf_rx);
+	dma_set_number_of_data(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN, AUX_UART_BUFFER_SIZE);
 	dma_enable_memory_increment_mode(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN);
 	dma_enable_circular_mode(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN);
 	dma_set_peripheral_size(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN, DMA_PSIZE_8BIT);
@@ -145,7 +145,7 @@ void aux_serial_init(void)
 	usart_enable_rx_dma(USBUSART);
 }
 #elif defined(LM4F)
-static char aux_serial_transmit_buffer[FIFO_SIZE];
+static char aux_serial_transmit_buffer[AUX_UART_BUFFER_SIZE];
 
 void aux_serial_init(void)
 {
@@ -436,12 +436,12 @@ void USBUART_ISR(void)
 		/* If the next increment of rx_in would put it at the same point
 		* as rx_out, the FIFO is considered full.
 		*/
-		if (((buf_rx_in + 1) % FIFO_SIZE) != buf_rx_out) {
+		if (((buf_rx_in + 1) % AUX_UART_BUFFER_SIZE) != buf_rx_out) {
 			/* insert into FIFO */
 			buf_rx[buf_rx_in++] = c;
 
 			/* wrap out pointer */
-			if (buf_rx_in >= FIFO_SIZE)
+			if (buf_rx_in >= AUX_UART_BUFFER_SIZE)
 				buf_rx_in = 0;
 		} else
 			flush = true;
@@ -463,14 +463,14 @@ void USBUART_ISR(void)
 			packet_buf[packet_size++] = buf_rx[buf_out++];
 
 			/* wrap out pointer */
-			if (buf_out >= FIFO_SIZE)
+			if (buf_out >= AUX_UART_BUFFER_SIZE)
 				buf_out = 0;
 		}
 
 		/* advance fifo out pointer by amount written */
 		buf_rx_out += usbd_ep_write_packet(usbdev,
 				CDCACM_UART_ENDPOINT, packet_buf, packet_size);
-		buf_rx_out %= FIFO_SIZE;
+		buf_rx_out %= AUX_UART_BUFFER_SIZE;
 	}
 }
 #endif
