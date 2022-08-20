@@ -46,7 +46,7 @@ extern char buf_rx[RX_FIFO_SIZE + sizeof(uint64_t)];
 /* RX Fifo out pointer, writes assumed to be atomic */
 extern uint8_t buf_rx_out;
 /* RX usb transfer complete */
-extern bool rx_usb_trfr_cplt;
+extern bool aux_serial_receive_complete;
 
 #ifdef ENABLE_DEBUG
 /* Debug Fifo buffer with space for copy fn overrun */
