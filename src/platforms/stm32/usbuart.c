@@ -39,7 +39,7 @@
 #endif
 
 /* RX Fifo buffer with space for copy fn overrun */
-char buf_rx[AUX_UART_BUFFER_SIZE + sizeof(uint64_t)];
+char aux_serial_receive_buffer[AUX_UART_BUFFER_SIZE + sizeof(uint64_t)];
 
 #ifdef ENABLE_DEBUG
 /* Debug Fifo buffer with space for copy fn overrun */
