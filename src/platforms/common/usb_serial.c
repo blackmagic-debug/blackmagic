@@ -64,6 +64,8 @@ static void usb_serial_set_state(usbd_device *dev, uint16_t iface, uint8_t ep);
 static void debug_uart_send_callback(usbd_device *dev, uint8_t ep);
 static void debug_uart_receive_callback(usbd_device *dev, uint8_t ep);
 
+static bool aux_serial_receive_complete = true;
+
 #ifdef ENABLE_DEBUG
 /*
  * This call initialises "SemiHosting", only we then do our own SVC interrupt things to
