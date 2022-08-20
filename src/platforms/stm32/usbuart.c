@@ -38,8 +38,6 @@
 #define DMA_CGIF DMA_IFCR_CGIF_BIT
 #endif
 
-/* TX transfer complete */
-bool aux_serial_transmit_complete = true;
 /* RX Fifo buffer with space for copy fn overrun */
 char buf_rx[RX_FIFO_SIZE + sizeof(uint64_t)];
 /* RX Fifo out pointer, writes assumed to be atomic */
@@ -77,51 +75,6 @@ void usbuart_set_led_state(uint8_t ledn, bool state)
 			gpio_clear(LED_PORT_UART, LED_UART);
 	}
 }
-
-#define USBUSART_DMA_TX_ISR_TEMPLATE(DMA_TX_CHAN) do {				\
-	nvic_disable_irq(USB_IRQ);						\
-										\
-	/* Stop DMA */								\
-	dma_disable_channel(USBUSART_DMA_BUS, DMA_TX_CHAN);			\
-	dma_clear_interrupt_flags(USBUSART_DMA_BUS, DMA_TX_CHAN, DMA_CGIF);	\
-										\
-	/* If new buffer is ready, continue transmission.			\
-	 * Otherwise report transfer completion.				\
-	 */									\
-	if (aux_serial_transmit_buffer_fullness())							\
-	{									\
-		aux_serial_switch_transmit_buffers();					\
-		usbd_ep_nak_set(usbdev, CDCACM_UART_ENDPOINT, 0);		\
-	}									\
-	else									\
-	{									\
-		usbuart_set_led_state(TX_LED_ACT, false);			\
-		aux_serial_transmit_complete = true;						\
-	}									\
-										\
-	nvic_enable_irq(USB_IRQ);						\
-} while(0)
-
-#if defined(USBUSART_DMA_TX_ISR)
-void USBUSART_DMA_TX_ISR(void)
-{
-	USBUSART_DMA_TX_ISR_TEMPLATE(USBUSART_DMA_TX_CHAN);
-}
-#endif
-
-#if defined(USBUSART1_DMA_TX_ISR)
-void USBUSART1_DMA_TX_ISR(void)
-{
-	USBUSART_DMA_TX_ISR_TEMPLATE(USBUSART1_DMA_TX_CHAN);
-}
-#endif
-
-#if defined(USBUSART2_DMA_TX_ISR)
-void USBUSART2_DMA_TX_ISR(void)
-{
-	USBUSART_DMA_TX_ISR_TEMPLATE(USBUSART2_DMA_TX_CHAN);
-}
-#endif
 
 #define USBUSART_DMA_RX_ISR_TEMPLATE(USART_IRQ, DMA_RX_CHAN) do {		\
 	nvic_disable_irq(USART_IRQ);						\
