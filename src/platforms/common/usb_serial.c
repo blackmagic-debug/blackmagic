@@ -231,12 +231,12 @@ static uint32_t copy_from_fifo(char *dst, const char *src, uint32_t start, uint3
 }
 
 /*
- * Runs deferred processing for USBUSART RX, draining RX FIFO by sending
- * characters to host PC via CDCACM. Allowed to write to FIFO OUT pointer.
+ * Runs deferred processing for AUX serial RX, draining RX FIFO by sending
+ * characters to host PC via the debug serial interface. Allowed to write to FIFO OUT pointer.
  */
 static void debug_uart_send_rx_packet(void)
 {
-	rx_usb_trfr_cplt = false;
+	aux_serial_receive_complete = false;
 	/* Calculate writing position in the FIFO */
 	const uint32_t buf_rx_in = (RX_FIFO_SIZE - dma_get_number_of_data(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN)) % RX_FIFO_SIZE;
 
@@ -254,7 +254,7 @@ static void debug_uart_send_rx_packet(void)
 		buf_rx_out = buf_rx_in;
 		/* Turn off LED */
 		usbuart_set_led_state(RX_LED_ACT, false);
-		rx_usb_trfr_cplt = true;
+		aux_serial_receive_complete = true;
 	}
 	else
 	{
@@ -293,7 +293,7 @@ void debug_uart_run(void)
 	usbuart_set_led_state(RX_LED_ACT, true);
 
 	/* Try to send a packet if usb is idle */
-	if (rx_usb_trfr_cplt)
+	if (aux_serial_receive_complete)
 		debug_uart_send_rx_packet();
 
 	nvic_enable_irq(USB_IRQ);
