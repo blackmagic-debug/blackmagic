@@ -42,8 +42,6 @@ void debug_uart_run(void);
 
 /* RX Fifo buffer with space for copy fn overrun */
 extern char buf_rx[AUX_UART_BUFFER_SIZE + sizeof(uint64_t)];
-/* RX Fifo out pointer, writes assumed to be atomic */
-extern uint8_t buf_rx_out;
 
 #ifdef ENABLE_DEBUG
 /* Debug Fifo buffer with space for copy fn overrun */
@@ -58,10 +56,8 @@ extern uint8_t usb_dbg_out;
 
 /* RX Fifo buffer */
 extern char buf_rx[AUX_UART_BUFFER_SIZE];
-/* Fifo in pointer, writes assumed to be atomic, should be only incremented within RX ISR */
-extern uint8_t buf_rx_in;
-/* Fifo out pointer, writes assumed to be atomic, should be only incremented outside RX ISR */
-extern uint8_t buf_rx_out;
 #endif
+
+extern uint8_t buf_rx_out;
 
 #endif

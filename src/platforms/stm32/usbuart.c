@@ -40,8 +40,6 @@
 
 /* RX Fifo buffer with space for copy fn overrun */
 char buf_rx[AUX_UART_BUFFER_SIZE + sizeof(uint64_t)];
-/* RX Fifo out pointer, writes assumed to be atomic */
-uint8_t buf_rx_out;
 
 #ifdef ENABLE_DEBUG
 /* Debug Fifo buffer with space for copy fn overrun */

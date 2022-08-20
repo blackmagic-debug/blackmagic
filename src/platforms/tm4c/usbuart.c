@@ -24,7 +24,6 @@
 #include <libopencm3/cm3/scs.h>
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/cdc.h>
-#include <libopencm3/lm4f/rcc.h>
 #include <libopencm3/lm4f/uart.h>
 
 #include "general.h"
@@ -32,7 +31,3 @@
 
 /* RX Fifo buffer */
 char buf_rx[AUX_UART_BUFFER_SIZE];
-/* Fifo in pointer, writes assumed to be atomic, should be only incremented within RX ISR */
-uint8_t buf_rx_in;
-/* Fifo out pointer, writes assumed to be atomic, should be only incremented outside RX ISR */
-uint8_t buf_rx_out;
