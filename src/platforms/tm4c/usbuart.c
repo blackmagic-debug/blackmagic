@@ -30,4 +30,4 @@
 #include "usb.h"
 
 /* RX Fifo buffer */
-char buf_rx[AUX_UART_BUFFER_SIZE];
+char aux_serial_receive_buffer[AUX_UART_BUFFER_SIZE];

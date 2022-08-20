@@ -280,7 +280,7 @@ static void debug_uart_send_rx_packet(void)
 #endif
 
 		/* Copy data from uart RX FIFO into local usb packet buffer */
-		packet_size = copy_from_fifo(packet_buf, buf_rx, aux_serial_receive_read_index, aux_serial_receive_write_index, CDCACM_PACKET_SIZE - 1, AUX_UART_BUFFER_SIZE);
+		packet_size = copy_from_fifo(packet_buf, aux_serial_receive_buffer, aux_serial_receive_read_index, aux_serial_receive_write_index, CDCACM_PACKET_SIZE - 1, AUX_UART_BUFFER_SIZE);
 
 		/* Advance fifo out pointer by amount written */
 		const uint16_t written = usbd_ep_write_packet(usbdev, CDCACM_UART_ENDPOINT, packet_buf, packet_size);

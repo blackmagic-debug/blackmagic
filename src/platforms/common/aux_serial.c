@@ -110,7 +110,7 @@ void aux_serial_init(void)
 	/* Setup USART RX DMA */
 	dma_channel_reset(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN);
 	dma_set_peripheral_address(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN, (uintptr_t)&USBUSART_RDR);
-	dma_set_memory_address(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN, (uintptr_t)buf_rx);
+	dma_set_memory_address(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN, (uintptr_t)aux_serial_receive_buffer);
 	dma_set_number_of_data(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN, AUX_UART_BUFFER_SIZE);
 	dma_enable_memory_increment_mode(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN);
 	dma_enable_circular_mode(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN);
@@ -444,7 +444,7 @@ void USBUART_ISR(void)
 		*/
 		if (((aux_serial_receive_write_index + 1) % AUX_UART_BUFFER_SIZE) != aux_serial_receive_read_index) {
 			/* insert into FIFO */
-			buf_rx[aux_serial_receive_write_index++] = c;
+			aux_serial_receive_buffer[aux_serial_receive_write_index++] = c;
 
 			/* wrap out pointer */
 			if (aux_serial_receive_write_index >= AUX_UART_BUFFER_SIZE)
@@ -466,7 +466,7 @@ void USBUART_ISR(void)
 
 		/* copy from uart FIFO into local usb packet buffer */
 		while (aux_serial_receive_write_index != buf_out && packet_size < CDCACM_PACKET_SIZE) {
-			packet_buf[packet_size++] = buf_rx[buf_out++];
+			packet_buf[packet_size++] = aux_serial_receive_buffer[buf_out++];
 
 			/* wrap out pointer */
 			if (buf_out >= AUX_UART_BUFFER_SIZE)
@@ -474,8 +474,7 @@ void USBUART_ISR(void)
 		}
 
 		/* advance fifo out pointer by amount written */
-		aux_serial_receive_read_index += usbd_ep_write_packet(usbdev,
-				CDCACM_UART_ENDPOINT, packet_buf, packet_size);
+		aux_serial_receive_read_index += usbd_ep_write_packet(usbdev, CDCACM_UART_ENDPOINT, packet_buf, packet_size);
 		aux_serial_receive_read_index %= AUX_UART_BUFFER_SIZE;
 	}
 }
