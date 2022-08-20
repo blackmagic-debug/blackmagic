@@ -38,9 +38,9 @@
 #include "aux_serial.h"
 
 /* Fifo in pointer, writes assumed to be atomic, should be only incremented within RX ISR */
-uint8_t buf_rx_in;
+uint8_t aux_serial_receive_write_index;
 /* Fifo out pointer, writes assumed to be atomic, should be only incremented outside RX ISR */
-uint8_t buf_rx_out;
+uint8_t aux_serial_receive_read_index;
 
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
 static char aux_serial_transmit_buffer[2U][AUX_UART_BUFFER_SIZE];
@@ -442,13 +442,13 @@ void USBUART_ISR(void)
 		/* If the next increment of rx_in would put it at the same point
 		* as rx_out, the FIFO is considered full.
 		*/
-		if (((buf_rx_in + 1) % AUX_UART_BUFFER_SIZE) != buf_rx_out) {
+		if (((aux_serial_receive_write_index + 1) % AUX_UART_BUFFER_SIZE) != aux_serial_receive_read_index) {
 			/* insert into FIFO */
-			buf_rx[buf_rx_in++] = c;
+			buf_rx[aux_serial_receive_write_index++] = c;
 
 			/* wrap out pointer */
-			if (buf_rx_in >= AUX_UART_BUFFER_SIZE)
-				buf_rx_in = 0;
+			if (aux_serial_receive_write_index >= AUX_UART_BUFFER_SIZE)
+				aux_serial_receive_write_index = 0;
 		} else
 			flush = true;
 	}
@@ -456,16 +456,16 @@ void USBUART_ISR(void)
 	if (flush) {
 		/* forcibly empty fifo if no USB endpoint */
 		if (usb_get_config() != 1) {
-			buf_rx_out = buf_rx_in;
+			aux_serial_receive_read_index = aux_serial_receive_write_index;
 			return;
 		}
 
 		char packet_buf[CDCACM_PACKET_SIZE];
 		uint8_t packet_size = 0;
-		uint8_t buf_out = buf_rx_out;
+		uint8_t buf_out = aux_serial_receive_read_index;
 
 		/* copy from uart FIFO into local usb packet buffer */
-		while (buf_rx_in != buf_out && packet_size < CDCACM_PACKET_SIZE) {
+		while (aux_serial_receive_write_index != buf_out && packet_size < CDCACM_PACKET_SIZE) {
 			packet_buf[packet_size++] = buf_rx[buf_out++];
 
 			/* wrap out pointer */
@@ -474,9 +474,9 @@ void USBUART_ISR(void)
 		}
 
 		/* advance fifo out pointer by amount written */
-		buf_rx_out += usbd_ep_write_packet(usbdev,
+		aux_serial_receive_read_index += usbd_ep_write_packet(usbdev,
 				CDCACM_UART_ENDPOINT, packet_buf, packet_size);
-		buf_rx_out %= AUX_UART_BUFFER_SIZE;
+		aux_serial_receive_read_index %= AUX_UART_BUFFER_SIZE;
 	}
 }
 #endif

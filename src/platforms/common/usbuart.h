@@ -58,6 +58,6 @@ extern uint8_t usb_dbg_out;
 extern char buf_rx[AUX_UART_BUFFER_SIZE];
 #endif
 
-extern uint8_t buf_rx_out;
+extern uint8_t aux_serial_receive_read_index;
 
 #endif
