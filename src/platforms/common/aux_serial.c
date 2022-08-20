@@ -40,6 +40,7 @@
 static char aux_serial_transmit_buffer[2U][TX_BUF_SIZE];
 static uint8_t aux_serial_transmit_buffer_index;
 static uint8_t aux_serial_transmit_buffer_consumed;
+static bool aux_serial_transmit_complete = true;
 
 #ifdef DMA_STREAM0
 #define dma_channel_reset(dma, channel) dma_stream_reset(dma, channel)
@@ -285,6 +286,29 @@ static void aux_serial_receive_isr(const uint32_t usart, const uint8_t dma_irq)
 	nvic_enable_irq(dma_irq);
 }
 
+static void aux_serial_dma_transmit_isr(const uint8_t dma_tx_channel)
+{
+	nvic_disable_irq(USB_IRQ);
+
+	/* Stop DMA */
+	dma_disable_channel(USBUSART_DMA_BUS, dma_tx_channel);
+	dma_clear_interrupt_flags(USBUSART_DMA_BUS, dma_tx_channel, DMA_CGIF);
+
+	/*
+	 * If a new buffer is ready, continue transmission.
+	 * Otherwise we report the transfer has completed.
+	 */
+	if (aux_serial_transmit_buffer_fullness()) {
+		aux_serial_switch_transmit_buffers();
+		usbd_ep_nak_set(usbdev, CDCACM_UART_ENDPOINT, 0);
+	} else {
+		usbuart_set_led_state(TX_LED_ACT, false);
+		aux_serial_transmit_complete = true;
+	}
+
+	nvic_enable_irq(USB_IRQ);
+}
+
 #if defined(USBUSART_ISR)
 void USBUSART_ISR(void)
 {
@@ -315,6 +339,27 @@ void USBUSART2_ISR(void)
 #else
 	aux_serial_receive_isr(USBUSART2, USBUSART2_DMA_RX_IRQ);
 #endif
+}
+#endif
+
+#if defined(USBUSART_DMA_TX_ISR)
+void USBUSART_DMA_TX_ISR(void)
+{
+	aux_serial_dma_transmit_isr(USBUSART_DMA_TX_CHAN);
+}
+#endif
+
+#if defined(USBUSART1_DMA_TX_ISR)
+void USBUSART1_DMA_TX_ISR(void)
+{
+	aux_serial_dma_transmit_isr(USBUSART1_DMA_TX_CHAN);
+}
+#endif
+
+#if defined(USBUSART2_DMA_TX_ISR)
+void USBUSART2_DMA_TX_ISR(void)
+{
+	aux_serial_dma_transmit_isr(USBUSART2_DMA_TX_CHAN);
 }
 #endif
 
