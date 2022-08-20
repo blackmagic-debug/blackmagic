@@ -30,10 +30,8 @@
 #include "general.h"
 #include "usb.h"
 
-#define FIFO_SIZE 128
-
 /* RX Fifo buffer */
-char buf_rx[FIFO_SIZE];
+char buf_rx[AUX_UART_BUFFER_SIZE];
 /* Fifo in pointer, writes assumed to be atomic, should be only incremented within RX ISR */
 uint8_t buf_rx_in;
 /* Fifo out pointer, writes assumed to be atomic, should be only incremented outside RX ISR */

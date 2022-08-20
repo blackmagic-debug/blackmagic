@@ -38,27 +38,26 @@ void debug_uart_run(void);
 #endif
 
 #define USART_DMA_BUF_SIZE  (1U << USART_DMA_BUF_SHIFT)
-#define RX_FIFO_SIZE (USART_DMA_BUF_SIZE)
-#define TX_BUF_SIZE (USART_DMA_BUF_SIZE)
+#define AUX_UART_BUFFER_SIZE (USART_DMA_BUF_SIZE)
 
 /* RX Fifo buffer with space for copy fn overrun */
-extern char buf_rx[RX_FIFO_SIZE + sizeof(uint64_t)];
+extern char buf_rx[AUX_UART_BUFFER_SIZE + sizeof(uint64_t)];
 /* RX Fifo out pointer, writes assumed to be atomic */
 extern uint8_t buf_rx_out;
 
 #ifdef ENABLE_DEBUG
 /* Debug Fifo buffer with space for copy fn overrun */
-extern char usb_dbg_buf[RX_FIFO_SIZE + sizeof(uint64_t)];
+extern char usb_dbg_buf[AUX_UART_BUFFER_SIZE + sizeof(uint64_t)];
 /* Debug Fifo in pointer */
 extern uint8_t usb_dbg_in;
 /* Debug Fifo out pointer */
 extern uint8_t usb_dbg_out;
 #endif
 #elif defined(LM4F)
-#define FIFO_SIZE 128
+#define AUX_UART_BUFFER_SIZE 128
 
 /* RX Fifo buffer */
-extern char buf_rx[FIFO_SIZE];
+extern char buf_rx[AUX_UART_BUFFER_SIZE];
 /* Fifo in pointer, writes assumed to be atomic, should be only incremented within RX ISR */
 extern uint8_t buf_rx_in;
 /* Fifo out pointer, writes assumed to be atomic, should be only incremented outside RX ISR */
