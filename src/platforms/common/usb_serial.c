@@ -61,7 +61,9 @@ static bool gdb_serial_dtr = true;
 static void usb_serial_set_state(usbd_device *dev, uint16_t iface, uint8_t ep);
 
 static void debug_serial_send_callback(usbd_device *dev, uint8_t ep);
+#ifndef ENABLE_RTT
 static void debug_serial_receive_callback(usbd_device *dev, uint8_t ep);
+#endif
 
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
 static bool debug_serial_send_complete = true;
