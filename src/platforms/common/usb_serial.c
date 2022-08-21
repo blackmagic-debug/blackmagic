@@ -57,12 +57,12 @@
 #include <libopencm3/stm32/dma.h>
 #endif
 
-static bool gdb_uart_dtr = true;
+static bool gdb_serial_dtr = true;
 
 static void usb_serial_set_state(usbd_device *dev, uint16_t iface, uint8_t ep);
 
-static void debug_uart_send_callback(usbd_device *dev, uint8_t ep);
-static void debug_uart_receive_callback(usbd_device *dev, uint8_t ep);
+static void debug_serial_send_callback(usbd_device *dev, uint8_t ep);
+static void debug_serial_receive_callback(usbd_device *dev, uint8_t ep);
 
 static bool debug_serial_send_complete = true;
 
@@ -80,7 +80,7 @@ static uint8_t debug_serial_debug_write_index;
 static uint8_t debug_serial_debug_read_index;
 #endif
 
-static enum usbd_request_return_codes gdb_uart_control_request(usbd_device *dev, struct usb_setup_data *req,
+static enum usbd_request_return_codes gdb_serial_control_request(usbd_device *dev, struct usb_setup_data *req,
 	uint8_t **buf, uint16_t *const len, void (**complete)(usbd_device *dev, struct usb_setup_data *req))
 {
 	(void)buf;
@@ -92,7 +92,7 @@ static enum usbd_request_return_codes gdb_uart_control_request(usbd_device *dev,
 	switch (req->bRequest) {
 	case USB_CDC_REQ_SET_CONTROL_LINE_STATE:
 		usb_serial_set_state(dev, req->wIndex, CDCACM_GDB_ENDPOINT);
-		gdb_uart_dtr = req->wValue & 1;
+		gdb_serial_dtr = req->wValue & 1;
 		return USBD_REQ_HANDLED;
 	case USB_CDC_REQ_SET_LINE_CODING:
 		if (*len < sizeof(struct usb_cdc_line_coding))
@@ -102,7 +102,12 @@ static enum usbd_request_return_codes gdb_uart_control_request(usbd_device *dev,
 	return USBD_REQ_NOTSUPP;
 }
 
-static enum usbd_request_return_codes debug_uart_control_request(usbd_device *dev, struct usb_setup_data *req,
+bool gdb_serial_get_dtr(void)
+{
+	return gdb_serial_dtr;
+}
+
+static enum usbd_request_return_codes debug_serial_control_request(usbd_device *dev, struct usb_setup_data *req,
 	uint8_t **buf, uint16_t *const len, void (**complete)(usbd_device *dev, struct usb_setup_data *req))
 {
 	(void)complete;
@@ -127,11 +132,6 @@ static enum usbd_request_return_codes debug_uart_control_request(usbd_device *de
 		return USBD_REQ_HANDLED;
 	}
 	return USBD_REQ_NOTSUPP;
-}
-
-bool gdb_uart_get_dtr(void)
-{
-	return gdb_uart_dtr;
 }
 
 void usb_serial_set_state(usbd_device *const dev, const uint16_t iface, const uint8_t ep)
@@ -163,9 +163,9 @@ void usb_serial_set_config(usbd_device *dev, uint16_t value)
 	usbd_ep_setup(dev, (CDCACM_GDB_ENDPOINT + 1) | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
 
 	/* Serial interface */
-	usbd_ep_setup(dev, CDCACM_UART_ENDPOINT, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE / 2, debug_uart_receive_callback);
+	usbd_ep_setup(dev, CDCACM_UART_ENDPOINT, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE / 2, debug_serial_receive_callback);
 	usbd_ep_setup(
-		dev, CDCACM_UART_ENDPOINT | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE, debug_uart_send_callback);
+		dev, CDCACM_UART_ENDPOINT | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE, debug_serial_send_callback);
 	usbd_ep_setup(dev, (CDCACM_UART_ENDPOINT + 1) | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
 
 #ifdef PLATFORM_HAS_TRACESWO
@@ -174,9 +174,9 @@ void usb_serial_set_config(usbd_device *dev, uint16_t value)
 #endif
 
 	usbd_register_control_callback(dev, USB_REQ_TYPE_CLASS | USB_REQ_TYPE_INTERFACE,
-		USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT, debug_uart_control_request);
+		USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT, debug_serial_control_request);
 	usbd_register_control_callback(dev, USB_REQ_TYPE_CLASS | USB_REQ_TYPE_INTERFACE,
-		USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT, gdb_uart_control_request);
+		USB_REQ_TYPE_TYPE | USB_REQ_TYPE_RECIPIENT, gdb_serial_control_request);
 
 	/* Notify the host that DCD is asserted.
 	 * Allows the use of /dev/tty* devices on *BSD/MacOS
@@ -189,7 +189,7 @@ void usb_serial_set_config(usbd_device *dev, uint16_t value)
 #endif
 }
 
-void debug_uart_send_stdout(const uint8_t *const data, const size_t len)
+void debug_serial_send_stdout(const uint8_t *const data, const size_t len)
 {
 	for (size_t offset = 0; offset < len; offset += CDCACM_PACKET_SIZE) {
 		const size_t count = MIN(len - offset, CDCACM_PACKET_SIZE);
@@ -230,7 +230,7 @@ static bool debug_serial_fifo_buffer_empty(void)
  * Runs deferred processing for AUX serial RX, draining RX FIFO by sending
  * characters to host PC via the debug serial interface.
  */
-static void debug_uart_send_aux_serial_data(void)
+static void debug_serial_send_data(void)
 {
 	debug_serial_send_complete = false;
 	aux_serial_update_receive_buffer_fullness();
@@ -255,7 +255,7 @@ static void debug_uart_send_aux_serial_data(void)
 	}
 }
 
-void debug_uart_run(void)
+void debug_serial_run(void)
 {
 	nvic_disable_irq(USB_IRQ);
 
@@ -264,7 +264,7 @@ void debug_uart_run(void)
 
 	/* Try to send a packet if usb is idle */
 	if (debug_serial_send_complete)
-		debug_uart_send_aux_serial_data();
+		debug_serial_send_data();
 
 	nvic_enable_irq(USB_IRQ);
 }
@@ -277,7 +277,7 @@ static void debug_serial_append_char(const char c)
 	debug_serial_debug_write_index %= AUX_UART_BUFFER_SIZE;
 }
 
-size_t debug_uart_write(const char *buf, const size_t len)
+size_t debug_serial_debug_write(const char *buf, const size_t len)
 {
 	if (nvic_get_active_irq(USB_IRQ) || nvic_get_active_irq(USBUSART_IRQ) || nvic_get_active_irq(USBUSART_DMA_RX_IRQ))
 		return 0;
@@ -296,21 +296,21 @@ size_t debug_uart_write(const char *buf, const size_t len)
 		debug_serial_append_char(buf[offset]);
 	}
 
-	debug_uart_run();
+	debug_serial_run();
 	return offset;
 }
 
-static void debug_uart_send_callback(usbd_device *dev, uint8_t ep)
+static void debug_serial_send_callback(usbd_device *dev, uint8_t ep)
 {
 	(void) ep;
 	(void) dev;
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
-	debug_uart_send_aux_serial_data();
+	debug_serial_send_data();
 #endif
 }
 
 #ifndef ENABLE_RTT
-static void debug_uart_receive_callback(usbd_device *dev, uint8_t ep)
+static void debug_serial_receive_callback(usbd_device *dev, uint8_t ep)
 {
 	char *const transmit_buffer = aux_serial_current_transmit_buffer() + aux_serial_transmit_buffer_fullness();
 	const uint16_t len = usbd_ep_read_packet(dev, ep, transmit_buffer, CDCACM_PACKET_SIZE);
@@ -347,7 +347,7 @@ int _write(const int file, const void *const ptr, const size_t len)
 	(void)file;
 #ifdef PLATFORM_HAS_DEBUG
 	if (debug_bmp)
-		return debug_uart_write(ptr, len);
+		return debug_serial_debug_write(ptr, len);
 #endif
 	return len;
 }

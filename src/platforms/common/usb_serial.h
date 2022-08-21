@@ -34,6 +34,6 @@
 
 void usb_serial_set_config(usbd_device *dev, uint16_t value);
 
-bool gdb_uart_get_dtr(void);
+bool gdb_serial_get_dtr(void);
 
 #endif /*USB_SERIAL_H*/
