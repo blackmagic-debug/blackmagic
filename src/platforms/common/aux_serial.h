@@ -43,7 +43,13 @@ void aux_serial_init(void);
 void aux_serial_set_encoding(struct usb_cdc_line_coding *coding);
 
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
-void usbuart_set_led_state(uint8_t ledn, bool state);
+typedef enum aux_serial_led {
+	AUX_SERIAL_LED_TX = (1U << 0U),
+	AUX_SERIAL_LED_RX = (1U << 1U)
+} aux_serial_led_e;
+
+void aux_serial_set_led(aux_serial_led_e led);
+void aux_serial_clear_led(aux_serial_led_e led);
 
 void aux_serial_switch_transmit_buffers(void);
 #endif

@@ -46,7 +46,6 @@
 #ifdef PLATFORM_HAS_TRACESWO
 #include "traceswo.h"
 #endif
-#include "usbuart.h"
 #include "aux_serial.h"
 
 #include <libopencm3/cm3/cortex.h>
@@ -261,9 +260,7 @@ static void debug_serial_send_data(void)
 void debug_serial_run(void)
 {
 	nvic_disable_irq(USB_IRQ);
-
-	/* Enable LED */
-	usbuart_set_led_state(RX_LED_ACT, true);
+	aux_serial_set_led(AUX_SERIAL_LED_RX);
 
 	/* Try to send a packet if usb is idle */
 	if (debug_serial_send_complete)
