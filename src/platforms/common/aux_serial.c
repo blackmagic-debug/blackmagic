@@ -35,7 +35,7 @@
 
 #include "general.h"
 #include "usbuart.h"
-#include "usb.h"
+#include "usb_serial.h"
 #include "aux_serial.h"
 
 static char aux_serial_receive_buffer[AUX_UART_BUFFER_SIZE];

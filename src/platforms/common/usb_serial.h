@@ -1,8 +1,8 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2015  Black Sphere Technologies Ltd.
- * Written by Gareth McMullin <gareth@blacksphere.co.nz>
+ * Copyright (C) 2022 1BitSquared <info@1bitsquared.com>
+ * Written by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,13 +18,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file implements a the USB Communications Device Class - Abstract
- * Control Model (CDC-ACM) as defined in CDC PSTN subclass 1.2.
- * A Device Firmware Upgrade (DFU 1.1) class interface is provided for
- * field firmware upgrade.
- *
- * The device's unique id is used as the USB serial number string.
- */
 #ifndef USB_SERIAL_H
 #define USB_SERIAL_H
 
@@ -35,5 +28,8 @@
 void usb_serial_set_config(usbd_device *dev, uint16_t value);
 
 bool gdb_serial_get_dtr(void);
+
+void debug_serial_run(void);
+uint32_t debug_serial_fifo_send(const char *fifo, uint32_t fifo_begin, uint32_t fifo_end);
 
 #endif /*USB_SERIAL_H*/
