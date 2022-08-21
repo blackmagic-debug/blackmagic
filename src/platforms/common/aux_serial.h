@@ -38,8 +38,12 @@ size_t aux_serial_transmit_buffer_fullness(void);
 /* Send a number of bytes staged into the current transmit bufer */
 void aux_serial_send(size_t len);
 
-size_t aux_serial_update_receive_buffer_fullness(void);
+void aux_serial_update_receive_buffer_fullness(void);
 bool aux_serial_receive_has_data(void);
 void aux_serial_drain_receive_buffer(void);
+#ifdef ENABLE_DEBUG
+void aux_serial_stage_debug_buffer(void);
+#endif
+void aux_serial_stage_receive_buffer(void);
 
 #endif /*AUX_SERIAL_H*/

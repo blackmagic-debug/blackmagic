@@ -221,26 +221,13 @@ size_t debug_uart_write(const char *buf, const size_t len)
 }
 
 /*
- * Copy data from fifo into continuous buffer. Return copied length.
- */
-static uint32_t copy_from_fifo(char *dst, const char *src, uint32_t start, uint32_t end, uint32_t len, uint32_t fifo_sz)
-{
-	uint32_t out_len = 0;
-	for (uint32_t buf_out = start; buf_out != end && out_len < len; buf_out %= fifo_sz)
-		dst[out_len++] = src[buf_out++];
-
-	return out_len;
-}
-
-/*
  * Runs deferred processing for AUX serial RX, draining RX FIFO by sending
  * characters to host PC via the debug serial interface. Allowed to write to FIFO OUT pointer.
  */
 static void debug_uart_send_aux_serial_data(void)
 {
 	aux_serial_receive_complete = false;
-	/* Calculate writing position in the FIFO */
-	const size_t aux_serial_receive_write_index = aux_serial_update_receive_buffer_fullness();
+	aux_serial_update_receive_buffer_fullness();
 
 	/* Forcibly empty fifo if no USB endpoint.
 	 * If fifo empty, nothing further to do. */
@@ -248,30 +235,10 @@ static void debug_uart_send_aux_serial_data(void)
 		aux_serial_drain_receive_buffer();
 		aux_serial_receive_complete = true;
 	} else {
-		/* To avoid the need of sending ZLP don't transmit full packet.
-		 * Also reserve space for copy function overrun.
-		 */
-		char packet_buf[CDCACM_PACKET_SIZE - 1 + sizeof(uint64_t)];
-		uint32_t packet_size;
-
 #ifdef ENABLE_DEBUG
-		/* Copy data from DEBUG FIFO into local usb packet buffer */
-		packet_size = copy_from_fifo(packet_buf, usb_dbg_buf, usb_dbg_out, usb_dbg_in, CDCACM_PACKET_SIZE - 1, AUX_UART_BUFFER_SIZE);
-		/* Send if buffer not empty */
-		if (packet_size)
-		{
-			const uint16_t written = usbd_ep_write_packet(usbdev, CDCACM_UART_ENDPOINT, packet_buf, packet_size);
-			usb_dbg_out = (usb_dbg_out + written) % AUX_UART_BUFFER_SIZE;
-			return;
-		}
+		aux_serial_stage_debug_buffer();
 #endif
-
-		/* Copy data from uart RX FIFO into local usb packet buffer */
-		packet_size = copy_from_fifo(packet_buf, aux_serial_receive_buffer, aux_serial_receive_read_index, aux_serial_receive_write_index, CDCACM_PACKET_SIZE - 1, AUX_UART_BUFFER_SIZE);
-
-		/* Advance fifo out pointer by amount written */
-		const uint16_t written = usbd_ep_write_packet(usbdev, CDCACM_UART_ENDPOINT, packet_buf, packet_size);
-		aux_serial_receive_read_index = (aux_serial_receive_read_index + written) % AUX_UART_BUFFER_SIZE;
+		aux_serial_stage_receive_buffer();
 	}
 }
 
