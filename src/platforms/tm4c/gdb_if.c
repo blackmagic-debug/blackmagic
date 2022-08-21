@@ -40,7 +40,7 @@ void gdb_if_putchar(unsigned char c, int flush)
 	if (flush || count_in == CDCACM_PACKET_SIZE) {
 		/* Refuse to send if USB isn't configured, and
 		 * don't bother if nobody's listening */
-		if (usb_get_config() != 1 || !gdb_uart_get_dtr()) {
+		if (usb_get_config() != 1 || !gdb_serial_get_dtr()) {
 			count_in = 0;
 			return;
 		}
@@ -68,7 +68,7 @@ unsigned char gdb_if_getchar(void)
 {
 	while (tail_out == head_out) {
 		/* Detach if port closed */
-		if (!gdb_uart_get_dtr())
+		if (!gdb_serial_get_dtr())
 			return 0x04;
 
 		while (usb_get_config() != 1)
@@ -86,7 +86,7 @@ unsigned char gdb_if_getchar_to(int timeout)
 	if (head_out == tail_out)
 		do {
 			/* Detach if port closed */
-			if (!gdb_uart_get_dtr())
+			if (!gdb_serial_get_dtr())
 				return 0x04;
 
 			while (usb_get_config() != 1)

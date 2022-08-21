@@ -702,7 +702,7 @@ int tc_write(target *t, int fd, target_addr buf, unsigned int count)
 			if (cnt > count)
 				cnt = count;
 			target_mem_read(t, tmp, buf, cnt);
-			debug_uart_send_stdout(tmp, cnt);
+			debug_serial_send_stdout(tmp, cnt);
 			count -= cnt;
 			buf += cnt;
 		}

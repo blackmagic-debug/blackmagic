@@ -335,7 +335,7 @@ static void aux_serial_receive_isr(const uint32_t usart, const uint8_t dma_irq)
 #ifdef USART_ICR
 		USART_ICR(usart) = USART_ICR_IDLECF;
 #endif
-		debug_uart_run();
+		debug_serial_run();
 	}
 
 	nvic_enable_irq(dma_irq);
@@ -370,7 +370,7 @@ static void aux_serial_dma_receive_isr(const uint8_t usart_irq, const uint8_t dm
 
 	/* Clear flags and transmit a packet*/
 	dma_clear_interrupt_flags(USBUSART_DMA_BUS, dma_rx_channel, DMA_CGIF);
-	debug_uart_run();
+	debug_serial_run();
 
 	nvic_enable_irq(usart_irq);
 }
