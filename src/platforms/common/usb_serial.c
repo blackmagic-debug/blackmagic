@@ -283,19 +283,21 @@ size_t debug_uart_write(const char *buf, const size_t len)
 		return 0;
 
 	CM_ATOMIC_CONTEXT();
+	size_t offset = 0;
 
-	for (size_t i = 0; i < len && (debug_serial_debug_write_index + 1) % AUX_UART_BUFFER_SIZE != debug_serial_debug_read_index; ++i) {
-		if (buf[i] == '\n') {
+	for (; offset < len && (debug_serial_debug_write_index + 1) % AUX_UART_BUFFER_SIZE != debug_serial_debug_read_index;
+		 ++offset) {
+		if (buf[offset] == '\n') {
 			debug_serial_append_char('\r');
 
 			if ((debug_serial_debug_write_index + 1) % AUX_UART_BUFFER_SIZE == debug_serial_debug_read_index)
 				break;
 		}
-		debug_serial_append_char(buf[i]);
+		debug_serial_append_char(buf[offset]);
 	}
 
 	debug_uart_run();
-	return len;
+	return offset;
 }
 
 static void debug_uart_send_callback(usbd_device *dev, uint8_t ep)
