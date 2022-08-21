@@ -31,10 +31,6 @@
 
 #define PLATFORM_HAS_TRACESWO
 
-#ifdef ENABLE_DEBUG
-#define PLATFORM_HAS_DEBUG
-#endif
-
 #define PLATFORM_IDENT   "(F3-IF) "
 
 /* Important pin mappings for STM32 implementation:
