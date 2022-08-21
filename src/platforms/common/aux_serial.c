@@ -22,6 +22,7 @@
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/usart.h>
 #include <libopencm3/stm32/dma.h>
+#include <libopencm3/cm3/cortex.h>
 #elif defined(LM4F)
 #include <libopencm3/lm4f/rcc.h>
 #include <libopencm3/lm4f/uart.h>
@@ -233,6 +234,28 @@ void aux_serial_set_encoding(struct usb_cdc_line_coding *coding)
 }
 
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
+/*
+ * Update led state atomically respecting RX anb TX states.
+ */
+void usbuart_set_led_state(uint8_t ledn, bool state)
+{
+	CM_ATOMIC_CONTEXT();
+
+	static uint8_t led_state = 0;
+
+	if (state)
+	{
+		led_state |= ledn;
+		gpio_set(LED_PORT_UART, LED_UART);
+	}
+	else
+	{
+		led_state &= ~ledn;
+		if (!led_state)
+			gpio_clear(LED_PORT_UART, LED_UART);
+	}
+}
+
 char *aux_serial_current_transmit_buffer(void)
 {
 	return aux_serial_transmit_buffer[aux_serial_transmit_buffer_index];
