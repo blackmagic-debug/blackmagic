@@ -37,6 +37,7 @@
 #include "usb.h"
 #include "aux_serial.h"
 
+static char aux_serial_receive_buffer[AUX_UART_BUFFER_SIZE];
 /* Fifo in pointer, writes assumed to be atomic, should be only incremented within RX ISR */
 static uint8_t aux_serial_receive_write_index;
 /* Fifo out pointer, writes assumed to be atomic, should be only incremented outside RX ISR */
