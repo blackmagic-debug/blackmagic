@@ -197,6 +197,13 @@ void debug_uart_send_stdout(const uint8_t *const data, const size_t len)
 }
 
 #ifdef ENABLE_DEBUG
+static void debug_serial_append_char(const char c)
+{
+	usb_dbg_buf[usb_dbg_in] = c;
+	++usb_dbg_in;
+	usb_dbg_in %= AUX_UART_BUFFER_SIZE;
+}
+
 size_t debug_uart_write(const char *buf, const size_t len)
 {
 	if (nvic_get_active_irq(USB_IRQ) || nvic_get_active_irq(USBUSART_IRQ) || nvic_get_active_irq(USBUSART_DMA_RX_IRQ))
@@ -206,14 +213,12 @@ size_t debug_uart_write(const char *buf, const size_t len)
 
 	for (size_t i = 0; i < len && (usb_dbg_in + 1) % AUX_UART_BUFFER_SIZE != usb_dbg_out; ++i) {
 		if (buf[i] == '\n') {
-			usb_dbg_buf[usb_dbg_in++] = '\r';
-			usb_dbg_in %= AUX_UART_BUFFER_SIZE;
+			debug_serial_append_char('\r');
 
 			if ((usb_dbg_in + 1) % AUX_UART_BUFFER_SIZE == usb_dbg_out)
 				break;
 		}
-		usb_dbg_buf[usb_dbg_in++] = buf[i];
-		usb_dbg_in %= AUX_UART_BUFFER_SIZE;
+		debug_serial_append_char(buf[i]);
 	}
 
 	debug_uart_run();
