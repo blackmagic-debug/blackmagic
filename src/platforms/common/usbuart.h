@@ -23,6 +23,7 @@
 #include "general.h"
 
 void debug_uart_run(void);
+uint32_t debug_serial_fifo_send(const char *const fifo, const uint32_t fifo_begin, const uint32_t fifo_end);
 
 #define TX_LED_ACT (1 << 0)
 #define RX_LED_ACT (1 << 1)

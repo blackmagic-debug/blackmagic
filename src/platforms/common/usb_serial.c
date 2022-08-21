@@ -196,6 +196,61 @@ void debug_uart_send_stdout(const uint8_t *const data, const size_t len)
 	}
 }
 
+uint32_t debug_serial_fifo_send(const char *const fifo, const uint32_t fifo_begin, const uint32_t fifo_end)
+{
+	/*
+	 * To avoid the need of sending ZLP don't transmit full packet.
+	 * Also reserve space for copy function overrun.
+	 */
+	char packet[CDCACM_PACKET_SIZE - 1];
+	uint32_t packet_len = 0;
+	for (uint32_t fifo_index = fifo_begin; fifo_index != fifo_end && packet_len < CDCACM_PACKET_SIZE - 1U;
+		 fifo_index %= AUX_UART_BUFFER_SIZE)
+		packet[packet_len++] = fifo[fifo_index++];
+
+	if (packet_len) {
+		const uint16_t written = usbd_ep_write_packet(usbdev, CDCACM_UART_ENDPOINT, packet, packet_len);
+		return (fifo_begin + written) % AUX_UART_BUFFER_SIZE;
+	}
+	return fifo_begin;
+}
+
+/*
+ * Runs deferred processing for AUX serial RX, draining RX FIFO by sending
+ * characters to host PC via the debug serial interface.
+ */
+static void debug_uart_send_aux_serial_data(void)
+{
+	aux_serial_receive_complete = false;
+	aux_serial_update_receive_buffer_fullness();
+
+	/* Forcibly empty fifo if no USB endpoint.
+	 * If fifo empty, nothing further to do. */
+	if (usb_get_config() != 1 || !aux_serial_receive_has_data()) {
+		aux_serial_drain_receive_buffer();
+		aux_serial_receive_complete = true;
+	} else {
+#ifdef ENABLE_DEBUG
+		usb_dbg_out = debug_serial_fifo_send(usb_dbg_buf, usb_dbg_out, usb_dbg_in);
+#endif
+		aux_serial_stage_receive_buffer();
+	}
+}
+
+void debug_uart_run(void)
+{
+	nvic_disable_irq(USB_IRQ);
+
+	/* Enable LED */
+	usbuart_set_led_state(RX_LED_ACT, true);
+
+	/* Try to send a packet if usb is idle */
+	if (aux_serial_receive_complete)
+		debug_uart_send_aux_serial_data();
+
+	nvic_enable_irq(USB_IRQ);
+}
+
 #ifdef ENABLE_DEBUG
 static void debug_serial_append_char(const char c)
 {
@@ -223,42 +278,6 @@ size_t debug_uart_write(const char *buf, const size_t len)
 
 	debug_uart_run();
 	return len;
-}
-
-/*
- * Runs deferred processing for AUX serial RX, draining RX FIFO by sending
- * characters to host PC via the debug serial interface.
- */
-static void debug_uart_send_aux_serial_data(void)
-{
-	aux_serial_receive_complete = false;
-	aux_serial_update_receive_buffer_fullness();
-
-	/* Forcibly empty fifo if no USB endpoint.
-	 * If fifo empty, nothing further to do. */
-	if (usb_get_config() != 1 || !aux_serial_receive_has_data()) {
-		aux_serial_drain_receive_buffer();
-		aux_serial_receive_complete = true;
-	} else {
-#ifdef ENABLE_DEBUG
-		aux_serial_stage_debug_buffer();
-#endif
-		aux_serial_stage_receive_buffer();
-	}
-}
-
-void debug_uart_run(void)
-{
-	nvic_disable_irq(USB_IRQ);
-
-	/* Enable LED */
-	usbuart_set_led_state(RX_LED_ACT, true);
-
-	/* Try to send a packet if usb is idle */
-	if (aux_serial_receive_complete)
-		debug_uart_send_aux_serial_data();
-
-	nvic_enable_irq(USB_IRQ);
 }
 
 static void debug_uart_send_callback(usbd_device *dev, uint8_t ep)
