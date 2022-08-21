@@ -223,9 +223,9 @@ uint32_t debug_serial_fifo_send(const char *const fifo, const uint32_t fifo_begi
 }
 
 #ifdef ENABLE_DEBUG
-static bool debug_serial_fifo_has_data(void)
+static bool debug_serial_fifo_buffer_empty(void)
 {
-	return usb_dbg_in != usb_dbg_out;
+	return usb_dbg_in == usb_dbg_out;
 }
 #endif
 
@@ -240,11 +240,11 @@ static void debug_uart_send_aux_serial_data(void)
 
 	/* Forcibly empty fifo if no USB endpoint.
 	 * If fifo empty, nothing further to do. */
-	if (usb_get_config() != 1 || (!aux_serial_receive_has_data()
+	if (usb_get_config() != 1 || (aux_serial_receive_buffer_empty()
 #ifdef ENABLE_DEBUG
-									 && !debug_serial_fifo_has_data())
+									 && debug_serial_fifo_buffer_empty()
 #endif
-	) {
+	)) {
 #ifdef ENABLE_DEBUG
 		usb_dbg_out = usb_dbg_in;
 #endif

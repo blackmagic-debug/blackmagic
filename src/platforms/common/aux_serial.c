@@ -304,9 +304,9 @@ void aux_serial_update_receive_buffer_fullness(void)
 	aux_serial_receive_write_index %= AUX_UART_BUFFER_SIZE;
 }
 
-bool aux_serial_receive_has_data(void)
+bool aux_serial_receive_buffer_empty(void)
 {
-	return aux_serial_receive_write_index != aux_serial_receive_read_index;
+	return aux_serial_receive_write_index == aux_serial_receive_read_index;
 }
 
 void aux_serial_drain_receive_buffer(void)
