@@ -64,7 +64,7 @@ static void usb_serial_set_state(usbd_device *dev, uint16_t iface, uint8_t ep);
 static void debug_uart_send_callback(usbd_device *dev, uint8_t ep);
 static void debug_uart_receive_callback(usbd_device *dev, uint8_t ep);
 
-static bool aux_serial_receive_complete = true;
+static bool debug_serial_send_complete = true;
 
 #ifdef ENABLE_DEBUG
 /*
@@ -232,7 +232,7 @@ static bool debug_serial_fifo_buffer_empty(void)
  */
 static void debug_uart_send_aux_serial_data(void)
 {
-	aux_serial_receive_complete = false;
+	debug_serial_send_complete = false;
 	aux_serial_update_receive_buffer_fullness();
 
 	/* Forcibly empty fifo if no USB endpoint.
@@ -246,7 +246,7 @@ static void debug_uart_send_aux_serial_data(void)
 		debug_serial_debug_read_index = debug_serial_debug_write_index;
 #endif
 		aux_serial_drain_receive_buffer();
-		aux_serial_receive_complete = true;
+		debug_serial_send_complete = true;
 	} else {
 #ifdef ENABLE_DEBUG
 		debug_serial_debug_read_index = debug_serial_fifo_send(debug_serial_debug_buffer, debug_serial_debug_read_index, debug_serial_debug_write_index);
@@ -263,7 +263,7 @@ void debug_uart_run(void)
 	usbuart_set_led_state(RX_LED_ACT, true);
 
 	/* Try to send a packet if usb is idle */
-	if (aux_serial_receive_complete)
+	if (debug_serial_send_complete)
 		debug_uart_send_aux_serial_data();
 
 	nvic_enable_irq(USB_IRQ);
