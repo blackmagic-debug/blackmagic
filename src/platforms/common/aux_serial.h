@@ -42,7 +42,7 @@ void aux_serial_send(size_t len);
 
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
 void aux_serial_update_receive_buffer_fullness(void);
-bool aux_serial_receive_has_data(void);
+bool aux_serial_receive_buffer_empty(void);
 void aux_serial_drain_receive_buffer(void);
 #ifdef ENABLE_DEBUG
 void aux_serial_stage_debug_buffer(void);
