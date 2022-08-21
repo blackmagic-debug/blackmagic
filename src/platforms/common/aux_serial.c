@@ -34,21 +34,22 @@
 #include <libopencm3/usb/cdc.h>
 
 #include "general.h"
-#include "usbuart.h"
 #include "usb_serial.h"
 #include "aux_serial.h"
 
 static char aux_serial_receive_buffer[AUX_UART_BUFFER_SIZE];
 /* Fifo in pointer, writes assumed to be atomic, should be only incremented within RX ISR */
-static uint8_t aux_serial_receive_write_index;
+static uint8_t aux_serial_receive_write_index = 0;
 /* Fifo out pointer, writes assumed to be atomic, should be only incremented outside RX ISR */
-static uint8_t aux_serial_receive_read_index;
+static uint8_t aux_serial_receive_read_index = 0;
 
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
 static char aux_serial_transmit_buffer[2U][AUX_UART_BUFFER_SIZE];
-static uint8_t aux_serial_transmit_buffer_index;
-static uint8_t aux_serial_transmit_buffer_consumed;
+static uint8_t aux_serial_transmit_buffer_index = 0;
+static uint8_t aux_serial_transmit_buffer_consumed = 0;
 static bool aux_serial_transmit_complete = true;
+
+static volatile uint8_t aux_serial_led_state = 0;
 
 #ifdef DMA_STREAM0
 #define dma_channel_reset(dma, channel) dma_stream_reset(dma, channel)
@@ -248,26 +249,17 @@ void aux_serial_set_encoding(struct usb_cdc_line_coding *coding)
 }
 
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
-/*
- * Update led state atomically respecting RX anb TX states.
- */
-void usbuart_set_led_state(uint8_t ledn, bool state)
+void aux_serial_set_led(const aux_serial_led_e led)
 {
-	CM_ATOMIC_CONTEXT();
+	aux_serial_led_state |= led;
+	gpio_set(LED_PORT_UART, LED_UART);
+}
 
-	static uint8_t led_state = 0;
-
-	if (state)
-	{
-		led_state |= ledn;
-		gpio_set(LED_PORT_UART, LED_UART);
-	}
-	else
-	{
-		led_state &= ~ledn;
-		if (!led_state)
-			gpio_clear(LED_PORT_UART, LED_UART);
-	}
+void aux_serial_clear_led(const aux_serial_led_e led)
+{
+	aux_serial_led_state &= ~led;
+	if (!aux_serial_led_state)
+		gpio_clear(LED_PORT_UART, LED_UART);
 }
 
 char *aux_serial_current_transmit_buffer(void)
@@ -305,9 +297,7 @@ void aux_serial_send(const size_t len)
 	{
 		aux_serial_transmit_complete = false;
 		aux_serial_switch_transmit_buffers();
-
-		/* Enable LED */
-		usbuart_set_led_state(TX_LED_ACT, true);
+		aux_serial_set_led(AUX_SERIAL_LED_TX);
 	}
 }
 
@@ -326,8 +316,7 @@ bool aux_serial_receive_buffer_empty(void)
 void aux_serial_drain_receive_buffer(void)
 {
 	aux_serial_receive_read_index = aux_serial_receive_write_index;
-	/* Turn off LED */
-	usbuart_set_led_state(RX_LED_ACT, false);
+	aux_serial_clear_led(AUX_SERIAL_LED_RX);
 }
 
 void aux_serial_stage_receive_buffer(void)
@@ -371,7 +360,7 @@ static void aux_serial_dma_transmit_isr(const uint8_t dma_tx_channel)
 		aux_serial_switch_transmit_buffers();
 		usbd_ep_nak_set(usbdev, CDCACM_UART_ENDPOINT, 0);
 	} else {
-		usbuart_set_led_state(TX_LED_ACT, false);
+		aux_serial_clear_led(AUX_SERIAL_LED_TX);
 		aux_serial_transmit_complete = true;
 	}
 
