@@ -273,6 +273,33 @@ void aux_serial_send(const size_t len)
 	}
 }
 
+size_t aux_serial_update_receive_buffer_fullness(void)
+{
+	aux_serial_receive_write_index =
+		AUX_UART_BUFFER_SIZE - dma_get_number_of_data(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN);
+	aux_serial_receive_write_index %= AUX_UART_BUFFER_SIZE;
+	return aux_serial_receive_write_index;
+}
+
+bool aux_serial_receive_has_data(void)
+{
+	return
+#ifdef ENABLE_DEBUG
+		usb_dbg_in != usb_dbg_out ||
+#endif
+		aux_serial_receive_write_index != aux_serial_receive_read_index;
+}
+
+void aux_serial_drain_receive_buffer(void)
+{
+#ifdef ENABLE_DEBUG
+	usb_dbg_out = usb_dbg_in;
+#endif
+	aux_serial_receive_read_index = aux_serial_receive_write_index;
+	/* Turn off LED */
+	usbuart_set_led_state(RX_LED_ACT, false);
+}
+
 static void aux_serial_receive_isr(const uint32_t usart, const uint8_t dma_irq)
 {
 	nvic_disable_irq(dma_irq);

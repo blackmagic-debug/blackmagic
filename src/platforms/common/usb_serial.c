@@ -236,31 +236,18 @@ static uint32_t copy_from_fifo(char *dst, const char *src, uint32_t start, uint3
  * Runs deferred processing for AUX serial RX, draining RX FIFO by sending
  * characters to host PC via the debug serial interface. Allowed to write to FIFO OUT pointer.
  */
-static void debug_uart_send_rx_packet(void)
+static void debug_uart_send_aux_serial_data(void)
 {
 	aux_serial_receive_complete = false;
 	/* Calculate writing position in the FIFO */
-	const uint32_t aux_serial_receive_write_index =
-		(AUX_UART_BUFFER_SIZE - dma_get_number_of_data(USBUSART_DMA_BUS, USBUSART_DMA_RX_CHAN)) % AUX_UART_BUFFER_SIZE;
+	const size_t aux_serial_receive_write_index = aux_serial_update_receive_buffer_fullness();
 
 	/* Forcibly empty fifo if no USB endpoint.
 	 * If fifo empty, nothing further to do. */
-	if (usb_get_config() != 1 || (aux_serial_receive_write_index == aux_serial_receive_read_index
-#ifdef ENABLE_DEBUG
-		&& usb_dbg_in == usb_dbg_out
-#endif
-	))
-	{
-#ifdef ENABLE_DEBUG
-		usb_dbg_out = usb_dbg_in;
-#endif
-		aux_serial_receive_read_index = aux_serial_receive_write_index;
-		/* Turn off LED */
-		usbuart_set_led_state(RX_LED_ACT, false);
+	if (usb_get_config() != 1 || !aux_serial_receive_has_data()) {
+		aux_serial_drain_receive_buffer();
 		aux_serial_receive_complete = true;
-	}
-	else
-	{
+	} else {
 		/* To avoid the need of sending ZLP don't transmit full packet.
 		 * Also reserve space for copy function overrun.
 		 */
@@ -297,7 +284,7 @@ void debug_uart_run(void)
 
 	/* Try to send a packet if usb is idle */
 	if (aux_serial_receive_complete)
-		debug_uart_send_rx_packet();
+		debug_uart_send_aux_serial_data();
 
 	nvic_enable_irq(USB_IRQ);
 }
@@ -307,7 +294,7 @@ static void debug_uart_send_callback(usbd_device *dev, uint8_t ep)
 	(void) ep;
 	(void) dev;
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
-	debug_uart_send_rx_packet();
+	debug_uart_send_aux_serial_data();
 #endif
 }
 
