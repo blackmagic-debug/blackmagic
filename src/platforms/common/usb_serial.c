@@ -269,37 +269,6 @@ void debug_serial_run(void)
 	nvic_enable_irq(USB_IRQ);
 }
 
-#ifdef ENABLE_DEBUG
-static void debug_serial_append_char(const char c)
-{
-	debug_serial_debug_buffer[debug_serial_debug_write_index] = c;
-	++debug_serial_debug_write_index;
-	debug_serial_debug_write_index %= AUX_UART_BUFFER_SIZE;
-}
-
-size_t debug_serial_debug_write(const char *buf, const size_t len)
-{
-	if (nvic_get_active_irq(USB_IRQ) || nvic_get_active_irq(USBUSART_IRQ) || nvic_get_active_irq(USBUSART_DMA_RX_IRQ))
-		return 0;
-
-	CM_ATOMIC_CONTEXT();
-	size_t offset = 0;
-
-	for (; offset < len && (debug_serial_debug_write_index + 1) % AUX_UART_BUFFER_SIZE != debug_serial_debug_read_index;
-		 ++offset) {
-		if (buf[offset] == '\n') {
-			debug_serial_append_char('\r');
-
-			if ((debug_serial_debug_write_index + 1) % AUX_UART_BUFFER_SIZE == debug_serial_debug_read_index)
-				break;
-		}
-		debug_serial_append_char(buf[offset]);
-	}
-
-	debug_serial_run();
-	return offset;
-}
-
 static void debug_serial_send_callback(usbd_device *dev, uint8_t ep)
 {
 	(void) ep;
@@ -332,6 +301,37 @@ static void debug_serial_receive_callback(usbd_device *dev, uint8_t ep)
 #endif
 }
 #endif
+
+#ifdef ENABLE_DEBUG
+static void debug_serial_append_char(const char c)
+{
+	debug_serial_debug_buffer[debug_serial_debug_write_index] = c;
+	++debug_serial_debug_write_index;
+	debug_serial_debug_write_index %= AUX_UART_BUFFER_SIZE;
+}
+
+size_t debug_serial_debug_write(const char *buf, const size_t len)
+{
+	if (nvic_get_active_irq(USB_IRQ) || nvic_get_active_irq(USBUSART_IRQ) || nvic_get_active_irq(USBUSART_DMA_RX_IRQ))
+		return 0;
+
+	CM_ATOMIC_CONTEXT();
+	size_t offset = 0;
+
+	for (; offset < len && (debug_serial_debug_write_index + 1) % AUX_UART_BUFFER_SIZE != debug_serial_debug_read_index;
+		 ++offset) {
+		if (buf[offset] == '\n') {
+			debug_serial_append_char('\r');
+
+			if ((debug_serial_debug_write_index + 1) % AUX_UART_BUFFER_SIZE == debug_serial_debug_read_index)
+				break;
+		}
+		debug_serial_append_char(buf[offset]);
+	}
+
+	debug_serial_run();
+	return offset;
+}
 
 /*
  * newlib defines _write as a weak link'd function for user code to override.
