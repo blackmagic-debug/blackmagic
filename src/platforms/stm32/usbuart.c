@@ -32,12 +32,6 @@
 #include "usb.h"
 #include "aux_serial.h"
 
-#ifdef DMA_STREAM0
-#define DMA_CGIF DMA_ISR_FLAGS
-#else
-#define DMA_CGIF DMA_IFCR_CGIF_BIT
-#endif
-
 #ifdef ENABLE_DEBUG
 /* Debug Fifo buffer with space for copy fn overrun */
 char usb_dbg_buf[AUX_UART_BUFFER_SIZE];

@@ -222,7 +222,7 @@ size_t debug_uart_write(const char *buf, const size_t len)
 
 /*
  * Runs deferred processing for AUX serial RX, draining RX FIFO by sending
- * characters to host PC via the debug serial interface. Allowed to write to FIFO OUT pointer.
+ * characters to host PC via the debug serial interface.
  */
 static void debug_uart_send_aux_serial_data(void)
 {
