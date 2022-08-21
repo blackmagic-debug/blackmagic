@@ -58,6 +58,4 @@ extern uint8_t usb_dbg_out;
 extern char aux_serial_receive_buffer[AUX_UART_BUFFER_SIZE];
 #endif
 
-extern uint8_t aux_serial_receive_read_index;
-
 #endif
