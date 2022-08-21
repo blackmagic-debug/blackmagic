@@ -75,12 +75,9 @@ static bool aux_serial_receive_complete = true;
  */
 void initialise_monitor_handles(void);
 
-/* Debug Fifo buffer with space for copy fn overrun */
-char usb_dbg_buf[AUX_UART_BUFFER_SIZE];
-/* Debug Fifo in pointer */
-uint8_t usb_dbg_in;
-/* Debug Fifo out pointer */
-uint8_t usb_dbg_out;
+static char debug_serial_debug_buffer[AUX_UART_BUFFER_SIZE];
+static uint8_t debug_serial_debug_write_index;
+static uint8_t debug_serial_debug_read_index;
 #endif
 
 static enum usbd_request_return_codes gdb_uart_control_request(usbd_device *dev, struct usb_setup_data *req,
@@ -225,7 +222,7 @@ uint32_t debug_serial_fifo_send(const char *const fifo, const uint32_t fifo_begi
 #ifdef ENABLE_DEBUG
 static bool debug_serial_fifo_buffer_empty(void)
 {
-	return usb_dbg_in == usb_dbg_out;
+	return debug_serial_debug_write_index == debug_serial_debug_read_index;
 }
 #endif
 
@@ -246,13 +243,13 @@ static void debug_uart_send_aux_serial_data(void)
 #endif
 	)) {
 #ifdef ENABLE_DEBUG
-		usb_dbg_out = usb_dbg_in;
+		debug_serial_debug_read_index = debug_serial_debug_write_index;
 #endif
 		aux_serial_drain_receive_buffer();
 		aux_serial_receive_complete = true;
 	} else {
 #ifdef ENABLE_DEBUG
-		usb_dbg_out = debug_serial_fifo_send(usb_dbg_buf, usb_dbg_out, usb_dbg_in);
+		debug_serial_debug_read_index = debug_serial_fifo_send(debug_serial_debug_buffer, debug_serial_debug_read_index, debug_serial_debug_write_index);
 #endif
 		aux_serial_stage_receive_buffer();
 	}
@@ -275,9 +272,9 @@ void debug_uart_run(void)
 #ifdef ENABLE_DEBUG
 static void debug_serial_append_char(const char c)
 {
-	usb_dbg_buf[usb_dbg_in] = c;
-	++usb_dbg_in;
-	usb_dbg_in %= AUX_UART_BUFFER_SIZE;
+	debug_serial_debug_buffer[debug_serial_debug_write_index] = c;
+	++debug_serial_debug_write_index;
+	debug_serial_debug_write_index %= AUX_UART_BUFFER_SIZE;
 }
 
 size_t debug_uart_write(const char *buf, const size_t len)
@@ -287,11 +284,11 @@ size_t debug_uart_write(const char *buf, const size_t len)
 
 	CM_ATOMIC_CONTEXT();
 
-	for (size_t i = 0; i < len && (usb_dbg_in + 1) % AUX_UART_BUFFER_SIZE != usb_dbg_out; ++i) {
+	for (size_t i = 0; i < len && (debug_serial_debug_write_index + 1) % AUX_UART_BUFFER_SIZE != debug_serial_debug_read_index; ++i) {
 		if (buf[i] == '\n') {
 			debug_serial_append_char('\r');
 
-			if ((usb_dbg_in + 1) % AUX_UART_BUFFER_SIZE == usb_dbg_out)
+			if ((debug_serial_debug_write_index + 1) % AUX_UART_BUFFER_SIZE == debug_serial_debug_read_index)
 				break;
 		}
 		debug_serial_append_char(buf[i]);
