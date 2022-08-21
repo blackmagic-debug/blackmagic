@@ -16,7 +16,6 @@ LDFLAGS = -nostartfiles -lc $(CPU_FLAGS) -nodefaultlibs -T$(LINKER_SCRIPT) -Wl,-
 VPATH += platforms/tm4c
 
 SRC +=          \
-	usbuart.c	\
 	timing.c        \
 	traceswo.o
 
