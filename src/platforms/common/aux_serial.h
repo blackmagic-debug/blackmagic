@@ -24,6 +24,21 @@
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/cdc.h>
 
+#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
+/* XXX: Does the st_usbfs_v2_usb_driver work on F3 with 128 byte buffers? */
+#if defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
+#define USART_DMA_BUF_SHIFT 7U
+#elif defined(STM32F0)
+/* The st_usbfs_v2_usb_driver only works with up to 64-byte buffers on the F0 parts */
+#define USART_DMA_BUF_SHIFT 6U
+#endif
+
+#define USART_DMA_BUF_SIZE  (1U << USART_DMA_BUF_SHIFT)
+#define AUX_UART_BUFFER_SIZE (USART_DMA_BUF_SIZE)
+#elif defined(LM4F)
+#define AUX_UART_BUFFER_SIZE 128
+#endif
+
 void aux_serial_init(void);
 void aux_serial_set_encoding(struct usb_cdc_line_coding *coding);
 
