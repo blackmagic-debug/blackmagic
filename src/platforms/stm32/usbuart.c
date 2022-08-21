@@ -46,25 +46,3 @@ uint8_t usb_dbg_in;
 /* Debug Fifo out pointer */
 uint8_t usb_dbg_out;
 #endif
-
-/*
- * Update led state atomically respecting RX anb TX states.
- */
-void usbuart_set_led_state(uint8_t ledn, bool state)
-{
-	CM_ATOMIC_CONTEXT();
-
-	static uint8_t led_state = 0;
-
-	if (state)
-	{
-		led_state |= ledn;
-		gpio_set(LED_PORT_UART, LED_UART);
-	}
-	else
-	{
-		led_state &= ~ledn;
-		if (!led_state)
-			gpio_clear(LED_PORT_UART, LED_UART);
-	}
-}

@@ -28,6 +28,8 @@ void aux_serial_init(void);
 void aux_serial_set_encoding(struct usb_cdc_line_coding *coding);
 
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
+void usbuart_set_led_state(uint8_t ledn, bool state);
+
 void aux_serial_switch_transmit_buffers(void);
 #endif
 
@@ -38,6 +40,7 @@ size_t aux_serial_transmit_buffer_fullness(void);
 /* Send a number of bytes staged into the current transmit bufer */
 void aux_serial_send(size_t len);
 
+#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
 void aux_serial_update_receive_buffer_fullness(void);
 bool aux_serial_receive_has_data(void);
 void aux_serial_drain_receive_buffer(void);
@@ -45,5 +48,6 @@ void aux_serial_drain_receive_buffer(void);
 void aux_serial_stage_debug_buffer(void);
 #endif
 void aux_serial_stage_receive_buffer(void);
+#endif
 
 #endif /*AUX_SERIAL_H*/
