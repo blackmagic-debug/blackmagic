@@ -33,8 +33,7 @@
 #define PLATFORM_HAS_USBUART
 
 #ifdef ENABLE_DEBUG
-# define PLATFORM_HAS_DEBUG
-# define USBUART_DEBUG
+#define PLATFORM_HAS_DEBUG
 extern bool debug_bmp;
 #endif
 

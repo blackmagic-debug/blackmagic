@@ -33,8 +33,7 @@
 #include <libopencm3/usb/usbd.h>
 
 #ifdef ENABLE_DEBUG
-# define PLATFORM_HAS_DEBUG
-# define USBUART_DEBUG
+#define PLATFORM_HAS_DEBUG
 extern bool debug_bmp;
 #endif
 
