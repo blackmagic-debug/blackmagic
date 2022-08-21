@@ -65,7 +65,23 @@ static bool aux_serial_transmit_complete = true;
 #define DMA_PL_HIGH	DMA_CCR_PL_HIGH
 #define DMA_CGIF DMA_IFCR_CGIF_BIT
 #endif
+#elif defined(LM4F)
+static char aux_serial_transmit_buffer[AUX_UART_BUFFER_SIZE];
 
+#define USBUSART           USBUART
+#define USART_STOPBITS_1   1
+#define USART_STOPBITS_1_5 1
+#define USART_STOPBITS_2   2
+#define USART_PARITY_NONE  UART_PARITY_NONE
+#define USART_PARITY_ODD   UART_PARITY_ODD
+#define USART_PARITY_EVEN  UART_PARITY_EVEN
+
+#define usart_set_baudrate(uart, baud)     uart_set_baudrate(uart, baud)
+#define usart_set_stopbits(uart, stopbits) uart_set_stopbits(uart, stopbits)
+#define usart_set_parity(uart, parity)     uart_set_parity(uart, parity)
+#endif
+
+#if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
 void aux_serial_init(void)
 {
 	/* Enable clocks */
@@ -153,8 +169,6 @@ void aux_serial_init(void)
 	usart_enable_rx_dma(USBUSART);
 }
 #elif defined(LM4F)
-static char aux_serial_transmit_buffer[AUX_UART_BUFFER_SIZE];
-
 void aux_serial_init(void)
 {
 	UART_PIN_SETUP();
