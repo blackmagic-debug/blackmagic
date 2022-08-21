@@ -323,35 +323,9 @@ void aux_serial_drain_receive_buffer(void)
 	usbuart_set_led_state(RX_LED_ACT, false);
 }
 
-uint32_t aux_serial_stage_buffer(const char *const fifo, const uint32_t fifo_begin, const uint32_t fifo_end)
-{
-	/*
-	 * To avoid the need of sending ZLP don't transmit full packet.
-	 * Also reserve space for copy function overrun.
-	 */
-	char packet[CDCACM_PACKET_SIZE - 1];
-	uint32_t packet_len = 0;
-	for (uint32_t fifo_index = fifo_begin; fifo_index != fifo_end && packet_len < CDCACM_PACKET_SIZE - 1U;
-		 fifo_index %= AUX_UART_BUFFER_SIZE)
-		packet[packet_len++] = fifo[fifo_index++];
-
-	if (packet_len) {
-		const uint16_t written = usbd_ep_write_packet(usbdev, CDCACM_UART_ENDPOINT, packet, packet_len);
-		return (fifo_begin + written) % AUX_UART_BUFFER_SIZE;
-	}
-	return fifo_begin;
-}
-
-#ifdef ENABLE_DEBUG
-void aux_serial_stage_debug_buffer(void)
-{
-	usb_dbg_out = aux_serial_stage_buffer(usb_dbg_buf, usb_dbg_out, usb_dbg_in);
-}
-#endif
-
 void aux_serial_stage_receive_buffer(void)
 {
-	aux_serial_receive_read_index = aux_serial_stage_buffer(
+	aux_serial_receive_read_index = debug_serial_fifo_send(
 		aux_serial_receive_buffer, aux_serial_receive_read_index, aux_serial_receive_write_index);
 }
 
