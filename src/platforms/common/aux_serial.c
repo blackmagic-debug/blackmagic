@@ -306,18 +306,11 @@ void aux_serial_update_receive_buffer_fullness(void)
 
 bool aux_serial_receive_has_data(void)
 {
-	return
-#ifdef ENABLE_DEBUG
-		usb_dbg_in != usb_dbg_out ||
-#endif
-		aux_serial_receive_write_index != aux_serial_receive_read_index;
+	return aux_serial_receive_write_index != aux_serial_receive_read_index;
 }
 
 void aux_serial_drain_receive_buffer(void)
 {
-#ifdef ENABLE_DEBUG
-	usb_dbg_out = usb_dbg_in;
-#endif
 	aux_serial_receive_read_index = aux_serial_receive_write_index;
 	/* Turn off LED */
 	usbuart_set_led_state(RX_LED_ACT, false);

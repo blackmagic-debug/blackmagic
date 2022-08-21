@@ -74,6 +74,13 @@ static bool aux_serial_receive_complete = true;
  * https://github.com/mirror/newlib-cygwin/blob/master/newlib/libc/sys/arm/syscalls.c#L115
  */
 void initialise_monitor_handles(void);
+
+/* Debug Fifo buffer with space for copy fn overrun */
+char usb_dbg_buf[AUX_UART_BUFFER_SIZE];
+/* Debug Fifo in pointer */
+uint8_t usb_dbg_in;
+/* Debug Fifo out pointer */
+uint8_t usb_dbg_out;
 #endif
 
 static enum usbd_request_return_codes gdb_uart_control_request(usbd_device *dev, struct usb_setup_data *req,
@@ -215,6 +222,13 @@ uint32_t debug_serial_fifo_send(const char *const fifo, const uint32_t fifo_begi
 	return fifo_begin;
 }
 
+#ifdef ENABLE_DEBUG
+static bool debug_serial_fifo_has_data(void)
+{
+	return usb_dbg_in != usb_dbg_out;
+}
+#endif
+
 /*
  * Runs deferred processing for AUX serial RX, draining RX FIFO by sending
  * characters to host PC via the debug serial interface.
@@ -226,7 +240,14 @@ static void debug_uart_send_aux_serial_data(void)
 
 	/* Forcibly empty fifo if no USB endpoint.
 	 * If fifo empty, nothing further to do. */
-	if (usb_get_config() != 1 || !aux_serial_receive_has_data()) {
+	if (usb_get_config() != 1 || (!aux_serial_receive_has_data()
+#ifdef ENABLE_DEBUG
+									 && !debug_serial_fifo_has_data())
+#endif
+	) {
+#ifdef ENABLE_DEBUG
+		usb_dbg_out = usb_dbg_in;
+#endif
 		aux_serial_drain_receive_buffer();
 		aux_serial_receive_complete = true;
 	} else {

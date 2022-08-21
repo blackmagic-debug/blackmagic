@@ -31,12 +31,3 @@
 #include "usbuart.h"
 #include "usb.h"
 #include "aux_serial.h"
-
-#ifdef ENABLE_DEBUG
-/* Debug Fifo buffer with space for copy fn overrun */
-char usb_dbg_buf[AUX_UART_BUFFER_SIZE];
-/* Debug Fifo in pointer */
-uint8_t usb_dbg_in;
-/* Debug Fifo out pointer */
-uint8_t usb_dbg_out;
-#endif
