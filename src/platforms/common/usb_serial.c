@@ -68,7 +68,7 @@ static void debug_serial_receive_callback(usbd_device *dev, uint8_t ep);
 static bool debug_serial_send_complete = true;
 #endif
 
-#ifdef ENABLE_DEBUG
+#if defined(ENABLE_DEBUG) && defined(PLATFORM_HAS_DEBUG)
 /*
  * This call initialises "SemiHosting", only we then do our own SVC interrupt things to
  * route all output through to the debug USB serial interface if debug_bmp is true.
@@ -186,7 +186,7 @@ void usb_serial_set_config(usbd_device *dev, uint16_t value)
 	usb_serial_set_state(dev, GDB_IF_NO, CDCACM_GDB_ENDPOINT);
 	usb_serial_set_state(dev, UART_IF_NO, CDCACM_UART_ENDPOINT);
 
-#ifdef ENABLE_DEBUG
+#if defined(ENABLE_DEBUG) && defined(PLATFORM_HAS_DEBUG)
 	initialise_monitor_handles();
 #endif
 }
@@ -221,7 +221,7 @@ uint32_t debug_serial_fifo_send(const char *const fifo, const uint32_t fifo_begi
 	return fifo_begin;
 }
 
-#ifdef ENABLE_DEBUG
+#if defined(ENABLE_DEBUG) && defined(PLATFORM_HAS_DEBUG)
 static bool debug_serial_fifo_buffer_empty(void)
 {
 	return debug_serial_debug_write_index == debug_serial_debug_read_index;
@@ -241,17 +241,17 @@ static void debug_serial_send_data(void)
 	/* Forcibly empty fifo if no USB endpoint.
 	 * If fifo empty, nothing further to do. */
 	if (usb_get_config() != 1 || (aux_serial_receive_buffer_empty()
-#ifdef ENABLE_DEBUG
+#if defined(ENABLE_DEBUG) && defined(PLATFORM_HAS_DEBUG)
 									 && debug_serial_fifo_buffer_empty()
 #endif
 	)) {
-#ifdef ENABLE_DEBUG
+#if defined(ENABLE_DEBUG) && defined(PLATFORM_HAS_DEBUG)
 		debug_serial_debug_read_index = debug_serial_debug_write_index;
 #endif
 		aux_serial_drain_receive_buffer();
 		debug_serial_send_complete = true;
 	} else {
-#ifdef ENABLE_DEBUG
+#if defined(ENABLE_DEBUG) && defined(PLATFORM_HAS_DEBUG)
 		debug_serial_debug_read_index = debug_serial_fifo_send(debug_serial_debug_buffer, debug_serial_debug_read_index, debug_serial_debug_write_index);
 #endif
 		aux_serial_stage_receive_buffer();
@@ -307,6 +307,7 @@ static void debug_serial_receive_callback(usbd_device *dev, uint8_t ep)
 #endif
 
 #ifdef ENABLE_DEBUG
+#ifdef PLATFORM_HAS_DEBUG
 static void debug_serial_append_char(const char c)
 {
 	debug_serial_debug_buffer[debug_serial_debug_write_index] = c;
@@ -314,7 +315,7 @@ static void debug_serial_append_char(const char c)
 	debug_serial_debug_write_index %= AUX_UART_BUFFER_SIZE;
 }
 
-size_t debug_serial_debug_write(const char *buf, const size_t len)
+static size_t debug_serial_debug_write(const char *buf, const size_t len)
 {
 	if (nvic_get_active_irq(USB_IRQ) || nvic_get_active_irq(USBUSART_IRQ) || nvic_get_active_irq(USBUSART_DMA_RX_IRQ))
 		return 0;
@@ -336,6 +337,7 @@ size_t debug_serial_debug_write(const char *buf, const size_t len)
 	debug_serial_run();
 	return offset;
 }
+#endif
 
 /*
  * newlib defines _write as a weak link'd function for user code to override.
@@ -352,6 +354,8 @@ int _write(const int file, const void *const ptr, const size_t len)
 #ifdef PLATFORM_HAS_DEBUG
 	if (debug_bmp)
 		return debug_serial_debug_write(ptr, len);
+#else
+	(void)ptr;
 #endif
 	return len;
 }
