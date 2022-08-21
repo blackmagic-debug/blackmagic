@@ -17,7 +17,6 @@
 #include "general.h"
 #include "gdb_if.h"
 #include "usb.h"
-#include "usbuart.h"
 #include "aux_serial.h"
 
 #include <libopencm3/lm4f/rcc.h>

@@ -24,7 +24,6 @@
 
 #include "general.h"
 #include "usb.h"
-#include "usbuart.h"
 #include "aux_serial.h"
 #include "morse.h"
 
