@@ -38,12 +38,9 @@
 #define DMA_CGIF DMA_IFCR_CGIF_BIT
 #endif
 
-/* RX Fifo buffer with space for copy fn overrun */
-char aux_serial_receive_buffer[AUX_UART_BUFFER_SIZE + sizeof(uint64_t)];
-
 #ifdef ENABLE_DEBUG
 /* Debug Fifo buffer with space for copy fn overrun */
-char usb_dbg_buf[AUX_UART_BUFFER_SIZE + sizeof(uint64_t)];
+char usb_dbg_buf[AUX_UART_BUFFER_SIZE];
 /* Debug Fifo in pointer */
 uint8_t usb_dbg_in;
 /* Debug Fifo out pointer */

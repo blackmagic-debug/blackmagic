@@ -40,12 +40,9 @@ void debug_uart_run(void);
 #define USART_DMA_BUF_SIZE  (1U << USART_DMA_BUF_SHIFT)
 #define AUX_UART_BUFFER_SIZE (USART_DMA_BUF_SIZE)
 
-/* RX Fifo buffer with space for copy fn overrun */
-extern char aux_serial_receive_buffer[AUX_UART_BUFFER_SIZE + sizeof(uint64_t)];
-
 #ifdef ENABLE_DEBUG
 /* Debug Fifo buffer with space for copy fn overrun */
-extern char usb_dbg_buf[AUX_UART_BUFFER_SIZE + sizeof(uint64_t)];
+extern char usb_dbg_buf[AUX_UART_BUFFER_SIZE];
 /* Debug Fifo in pointer */
 extern uint8_t usb_dbg_in;
 /* Debug Fifo out pointer */
@@ -53,9 +50,6 @@ extern uint8_t usb_dbg_out;
 #endif
 #elif defined(LM4F)
 #define AUX_UART_BUFFER_SIZE 128
-
-/* RX Fifo buffer */
-extern char aux_serial_receive_buffer[AUX_UART_BUFFER_SIZE];
 #endif
 
 #endif
