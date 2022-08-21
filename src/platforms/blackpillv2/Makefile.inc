@@ -30,7 +30,6 @@ VPATH += platforms/stm32
 SRC +=               \
 	traceswodecode.c \
 	traceswo.c	\
-	usbuart.c	\
 	serialno.c	\
 	timing.c	\
 	timing_stm32.c	\
