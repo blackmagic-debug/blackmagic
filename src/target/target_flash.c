@@ -38,8 +38,8 @@
 #include "general.h"
 #include "target_internal.h"
 
-static int target_flash_write_buffered(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
-static int target_flash_done_buffered(target_flash_s *f);
+static int flash_buffered_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
+static int flash_buffered_flush(target_flash_s *f);
 
 target_flash_s *target_flash_for_addr(target *t, uint32_t addr)
 {
@@ -156,19 +156,28 @@ int target_flash_write(target *t, target_addr_t dest, const void *src, size_t le
 		if (!f)
 			return 1;
 
-		flash_prepare(f)
+		/* terminate flash operations if we're not in the same target flash */
+		for (target_flash_s *target_f = t->flash; target_f; target_f = target_f->next) {
+			if (target_f != f) {
+				ret |= flash_buffered_flush(target_f);
+				ret |= flash_done(target_f);
+			}
+		}
 
-		size_t tmptarget = MIN(dest + len, f->start + f->length);
-		size_t tmplen = tmptarget - dest;
-		ret |= target_flash_write_buffered(f, dest, src, tmplen);
-		dest += tmplen;
-		src += tmplen;
-		len -= tmplen;
-		/* If the current chunk of Flash is now full from this operation
-		 * then finish operations on the Flash chunk and free the internal buffer.
-		 */
-		if (dest == f->start + f->length)
-			ret |= target_flash_done_buffered(f);
+		const target_addr_t local_end_addr = MIN(dest + len, f->start + f->length);
+		const target_addr_t local_length = local_end_addr - dest;
+
+		ret |= flash_buffered_write(f, dest, src, local_length);
+
+		dest = local_end_addr;
+		src += local_length;
+		len -= local_length;
+
+		/* Flush operations if we reached the end of Flash */
+		if (dest == f->start + f->length) {
+			ret |= flash_buffered_flush(f);
+			ret |= flash_done(f);
+		}
 	}
 	return ret;
 }
@@ -180,57 +189,84 @@ int target_flash_complete(target *t)
 
 	int ret = 0;
 	for (target_flash_s *f = t->flash; f; f = f->next) {
-		ret |= target_flash_done_buffered(f);
+		ret |= flash_buffered_flush(f);
 		ret |= flash_done(f);
 	}
+
 	target_exit_flash_mode(t);
 	return ret;
 }
 
-int target_flash_write_buffered(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
+static int flash_buffered_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
-	int ret = 0;
-
 	if (f->buf == NULL) {
-		/* Allocate flash sector buffer */
-		f->buf = malloc(f->writesize);
+		/* Allocate buffer */
+		f->buf = malloc(f->blocksize);
 		if (!f->buf) { /* malloc failed: heap exhaustion */
 			DEBUG_WARN("malloc: failed in %s\n", __func__);
-			return 1;
+			return -1;
 		}
-		f->buf_addr = -1;
+		f->buf_addr_base = UINT32_MAX;
+		f->buf_addr_low = UINT32_MAX;
+		f->buf_addr_high = 0;
 	}
+
+	int ret = 0;
 	while (len) {
-		uint32_t offset = dest % f->writesize;
-		uint32_t base = dest - offset;
-		if (base != f->buf_addr) {
-			if (f->buf_addr != (uint32_t)-1) {
-				/* Write sector to flash if valid */
-				ret |= f->write(f, f->buf_addr, f->buf, f->writesize);
-			}
-			/* Setup buffer for a new sector */
-			f->buf_addr = base;
-			memset(f->buf, f->erased, f->writesize);
+		const target_addr_t base_addr = dest & ~(f->blocksize - 1U);
+
+		/* check for base address change */
+		if (base_addr != f->buf_addr_base) {
+			ret |= flash_buffered_flush(f);
+
+			/* Setup buffer */
+			f->buf_addr_base = base_addr;
+			memset(f->buf, f->erased, f->blocksize);
 		}
+
+		const size_t offset = dest % f->blocksize;
+		const size_t local_len = MIN(f->blocksize - offset, len);
+
 		/* Copy chunk into sector buffer */
-		size_t sectlen = MIN(f->writesize - offset, len);
-		memcpy(f->buf + offset, src, sectlen);
-		dest += sectlen;
-		src += sectlen;
-		len -= sectlen;
+		memcpy(f->buf + offset, src, local_len);
+
+		/* this allows for writes smaller than blocksize when flushing in the future */
+		f->buf_addr_low = MIN(f->buf_addr_low, dest);
+		f->buf_addr_high = MAX(f->buf_addr_high, dest + local_len);
+
+		dest += local_len;
+		src += local_len;
+		len -= local_len;
 	}
 	return ret;
 }
 
-int target_flash_done_buffered(target_flash_s *f)
+static int flash_buffered_flush(target_flash_s *f)
 {
 	int ret = 0;
-	if ((f->buf != NULL) && (f->buf_addr != (uint32_t)-1)) {
-		/* Write sector to flash if valid */
-		ret = f->write(f, f->buf_addr, f->buf, f->writesize);
-		f->buf_addr = -1;
-		free(f->buf);
-		f->buf = NULL;
+	if (f->buf && f->buf_addr_base != UINT32_MAX && f->buf_addr_low != UINT32_MAX &&
+		f->buf_addr_low < f->buf_addr_high) {
+		/* Write buffer to flash */
+
+		if (flash_prepare(f) != 0)
+			return -1;
+
+		target_addr_t aligned_addr = f->buf_addr_low & ~(f->writesize - 1U);
+
+		const uint8_t *src = f->buf + (aligned_addr - f->buf_addr_base);
+		uint32_t len = f->buf_addr_high - aligned_addr;
+
+		while (len) {
+			ret = f->write(f, aligned_addr, src, f->writesize);
+
+			aligned_addr += f->writesize;
+			src += f->writesize;
+			len -= MIN(len, f->writesize);
+		}
+
+		f->buf_addr_base = UINT32_MAX;
+		f->buf_addr_low = UINT32_MAX;
+		f->buf_addr_high = 0;
 	}
 
 	return ret;

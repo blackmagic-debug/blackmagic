@@ -40,20 +40,22 @@ typedef int (*flash_write_func)(target_flash_s *f, target_addr_t dest, const voi
 typedef int (*flash_done_func)(target_flash_s *f);
 
 struct target_flash {
-	target *t;                  /* Target this flash is attached to */
-	target_addr_t start;        /* start address of flash */
-	size_t length;              /* flash length */
-	size_t blocksize;           /* erase block size */
-	size_t writesize;           /* write operation size, must be <= blocksize */
-	uint8_t erased;             /* byte erased state */
-	bool ready;              	/* true if flash is in flash mode/prepared */
-	flash_prepare_func prepare; /* prepare for flash operations */
-	flash_erase_func erase;     /* erase a range of flash */
-	flash_write_func write;     /* write to flash */
-	flash_done_func done;       /* finish flash operations */
-	void *buf;                  /* buffer for flash operations */
-	target_addr_t buf_addr;     /* address of block this buffer is for */
-	target_flash_s *next;       /* next flash in list */
+	target *t;                   /* Target this flash is attached to */
+	target_addr_t start;         /* start address of flash */
+	size_t length;               /* flash length */
+	size_t blocksize;            /* erase block size */
+	size_t writesize;            /* write operation size, must be <= blocksize */
+	uint8_t erased;              /* byte erased state */
+	bool ready;                  /* true if flash is in flash mode/prepared */
+	flash_prepare_func prepare;  /* prepare for flash operations */
+	flash_erase_func erase;      /* erase a range of flash */
+	flash_write_func write;      /* write to flash */
+	flash_done_func done;        /* finish flash operations */
+	void *buf;                   /* buffer for flash operations */
+	target_addr_t buf_addr_base; /* address of block this buffer is for */
+	target_addr_t buf_addr_low;  /* address of lowest byte written */
+	target_addr_t buf_addr_high; /* address of highest byte written */
+	target_flash_s *next;        /* next flash in list */
 };
 
 typedef bool (*cmd_handler)(target *t, int argc, const char **argv);
