@@ -46,6 +46,7 @@ struct target_flash {
 	size_t blocksize;           /* erase block size */
 	size_t writesize;           /* write operation size, must be <= blocksize */
 	uint8_t erased;             /* byte erased state */
+	bool ready;              	/* true if flash is in flash mode/prepared */
 	flash_prepare_func prepare; /* prepare for flash operations */
 	flash_erase_func erase;     /* erase a range of flash */
 	flash_write_func write;     /* write to flash */
