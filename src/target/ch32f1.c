@@ -167,8 +167,17 @@ bool ch32f1_probe(target *t)
 {
 	if ((t->cpuid & CPUID_PARTNO_MASK) != CORTEX_M3)
 		return false;
-	const uint32_t device_id = target_mem_read32(t, DBGMCU_IDCODE) & 0x00000fffU;
-	if (device_id != 0x410) // only ch32f103
+
+	const uint32_t dbgmcu_idcode = target_mem_read32(t, DBGMCU_IDCODE);
+	const uint32_t device_id = dbgmcu_idcode & 0x00000fffU;
+	const uint32_t revision_id = (dbgmcu_idcode & 0xffff0000U) >> 16;
+
+	DEBUG_WARN("DBGMCU_IDCODE %x, DEVID %x, REVID %x \n", dbgmcu_idcode, device_id, revision_id);
+
+	if (device_id != 0x410) // ch32f103, cks32f103, apm32f103
+		return false;
+
+	if (revision_id != 0x2000) // (hopefully!) only ch32f103
 		return false;
 
 	// try to flock (if this fails it is not a CH32 chip)
