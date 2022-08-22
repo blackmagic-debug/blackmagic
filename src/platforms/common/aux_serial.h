@@ -44,6 +44,7 @@ typedef struct usb_cdc_line_coding usb_cdc_line_coding_s;
 
 void aux_serial_init(void);
 void aux_serial_set_encoding(const usb_cdc_line_coding_s *coding);
+void aux_serial_get_encoding(usb_cdc_line_coding_s *coding);
 
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7)
 typedef enum aux_serial_led {

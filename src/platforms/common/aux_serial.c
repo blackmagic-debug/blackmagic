@@ -80,7 +80,10 @@ static char aux_serial_transmit_buffer[AUX_UART_BUFFER_SIZE];
 #define usart_enable(uart)                 uart_enable(uart)
 #define usart_disable(uart)                uart_disable(uart)
 #define usart_set_baudrate(uart, baud)     uart_set_baudrate(uart, baud)
+#define usart_get_databits(uart)           uart_get_databits(uart)
+#define usart_get_stopbits(uart)           uart_get_stopbits(uart)
 #define usart_set_stopbits(uart, stopbits) uart_set_stopbits(uart, stopbits)
+#define usart_get_parity(uart)             uart_get_parity(uart)
 #define usart_set_parity(uart, parity)     uart_set_parity(uart, parity)
 #endif
 
@@ -259,6 +262,49 @@ void aux_serial_set_encoding(const usb_cdc_line_coding_s *const coding)
 		break;
 	}
 	usart_enable(USBUSART);
+}
+
+void aux_serial_get_encoding(usb_cdc_line_coding_s *const coding)
+{
+	coding->dwDTERate = aux_serial_active_baud_rate;
+
+	switch (usart_get_stopbits(USBUSART)) {
+	case USART_STOPBITS_1:
+		coding->bCharFormat = USB_CDC_1_STOP_BITS;
+		break;
+#if !defined(LM4F)
+	/*
+	 * Only include this back mapping on non-Tiva-C platforms as USART_STOPBITS_1 and
+	 * USART_STOPBITS_1_5 are the same thing on LM4F
+	 */
+	case USART_STOPBITS_1_5:
+		coding->bCharFormat = USB_CDC_1_5_STOP_BITS;
+		break;
+#endif
+	case USART_STOPBITS_2:
+	default:
+		coding->bCharFormat = USB_CDC_2_STOP_BITS;
+		break;
+	}
+
+	switch (usart_get_parity(USBUSART)) {
+	case USART_PARITY_NONE:
+	default:
+		coding->bParityType = USB_CDC_NO_PARITY;
+		break;
+	case USART_PARITY_ODD:
+		coding->bParityType = USB_CDC_ODD_PARITY;
+		break;
+	case USART_PARITY_EVEN:
+		coding->bParityType = USB_CDC_EVEN_PARITY;
+		break;
+	}
+
+	const uint32_t data_bits = usart_get_databits(USBUSART);
+	if (coding->bParityType == USB_CDC_NO_PARITY)
+		coding->bDataBits = data_bits;
+	else
+		coding->bDataBits = data_bits - 1;
 }
 
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7)
