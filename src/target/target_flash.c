@@ -85,10 +85,44 @@ static int target_exit_flash_mode(target *t)
 	return ret;
 }
 
+static int flash_prepare(target_flash_s *f)
+{
+	if (f->ready)
+		return 0;
+
+	int ret = 0;
+	if (f->prepare)
+		ret = f->prepare(f);
+
+	if (ret == 0)
+		f->ready = true;
+
+	return ret;
+}
+
+static int flash_done(target_flash_s *f)
+{
+	if (!f->ready)
+		return 0;
+
+	int ret = 0;
+	if (f->done)
+		ret = f->done(f);
+
+	if (f->buf) {
+		free(f->buf);
+		f->buf = NULL;
+	}
+
+	f->ready = false;
+
+	return ret;
+}
+
 int target_flash_erase(target *t, target_addr_t addr, size_t len)
 {
-	if (!t->flash_mode)
-		target_enter_flash_mode(t);
+	if (target_enter_flash_mode(t) != 0)
+		return 1;
 
 	int ret = 0;
 	while (len) {
@@ -101,7 +135,9 @@ int target_flash_erase(target *t, target_addr_t addr, size_t len)
 		const target_addr_t local_start_addr = addr & ~(f->blocksize - 1U);
 		const target_addr_t local_end_addr = local_start_addr + f->blocksize;
 
-		ret |= f->erase(f, local_start_addr, f->blocksize);
+		if (flash_prepare(f) == 0)
+			ret |= f->erase(f, local_start_addr, f->blocksize);
+		flash_done(f);
 
 		len -= MIN(local_end_addr - addr, len);
 		addr = local_end_addr;
@@ -111,14 +147,17 @@ int target_flash_erase(target *t, target_addr_t addr, size_t len)
 
 int target_flash_write(target *t, target_addr_t dest, const void *src, size_t len)
 {
-	if (!t->flash_mode)
-		target_enter_flash_mode(t);
+	if (target_enter_flash_mode(t) != 0)
+		return 1;
 
 	int ret = 0;
 	while (len) {
 		target_flash_s *f = target_flash_for_addr(t, dest);
 		if (!f)
 			return 1;
+
+		flash_prepare(f)
+
 		size_t tmptarget = MIN(dest + len, f->start + f->length);
 		size_t tmplen = tmptarget - dest;
 		ret |= target_flash_write_buffered(f, dest, src, tmplen);
@@ -142,8 +181,7 @@ int target_flash_complete(target *t)
 	int ret = 0;
 	for (target_flash_s *f = t->flash; f; f = f->next) {
 		ret |= target_flash_done_buffered(f);
-		if (f->done)
-			ret |= f->done(f);
+		ret |= flash_done(f);
 	}
 	target_exit_flash_mode(t);
 	return ret;
