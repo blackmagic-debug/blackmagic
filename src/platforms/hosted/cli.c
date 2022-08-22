@@ -577,7 +577,7 @@ found_targets:
 													  map.data, map.size);
 			/* Buffered write cares for padding*/
 			if (!flashed)
-				flashed = target_flash_done(t);
+				flashed = target_flash_complete(t);
 			if (flashed) {
 				DEBUG_WARN("Flashing failed!\n");
 				res = -1;

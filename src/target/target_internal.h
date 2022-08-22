@@ -115,6 +115,11 @@ struct target_s {
 	/* Recovery functions */
 	bool (*mass_erase)(target *t);
 
+	/* Flash functions */
+	int (*enter_flash_mode)(target *t);
+	int (*exit_flash_mode)(target *t);
+	bool flash_mode;
+
 	/* target-defined options */
 	unsigned target_options;
 

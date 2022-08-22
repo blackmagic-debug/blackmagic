@@ -49,8 +49,47 @@ target_flash_s *target_flash_for_addr(target *t, uint32_t addr)
 	return NULL;
 }
 
+static int target_enter_flash_mode(target *t)
+{
+	if (t->flash_mode)
+		return 0;
+
+	int ret = 0;
+	if (t->enter_flash_mode)
+		ret = t->enter_flash_mode(t);
+	else
+		/* Reset target on flash command */
+		/* This saves us if we're interrupted in IRQ context */
+		target_reset(t);
+
+	if (ret == 0)
+		t->flash_mode = true;
+
+	return ret;
+}
+
+static int target_exit_flash_mode(target *t)
+{
+	if (!t->flash_mode)
+		return 0;
+
+	int ret = 0;
+	if (t->exit_flash_mode)
+		ret = t->exit_flash_mode(t);
+	else
+		/* Reset target to known state when done flashing */
+		target_reset(t);
+
+	t->flash_mode = false;
+
+	return ret;
+}
+
 int target_flash_erase(target *t, target_addr_t addr, size_t len)
 {
+	if (!t->flash_mode)
+		target_enter_flash_mode(t);
+
 	int ret = 0;
 	while (len) {
 		target_flash_s *f = target_flash_for_addr(t, addr);
@@ -72,6 +111,9 @@ int target_flash_erase(target *t, target_addr_t addr, size_t len)
 
 int target_flash_write(target *t, target_addr_t dest, const void *src, size_t len)
 {
+	if (!t->flash_mode)
+		target_enter_flash_mode(t);
+
 	int ret = 0;
 	while (len) {
 		target_flash_s *f = target_flash_for_addr(t, dest);
@@ -92,19 +134,19 @@ int target_flash_write(target *t, target_addr_t dest, const void *src, size_t le
 	return ret;
 }
 
-int target_flash_done(target *t)
+int target_flash_complete(target *t)
 {
+	if (!t->flash_mode)
+		return -1;
+
+	int ret = 0;
 	for (target_flash_s *f = t->flash; f; f = f->next) {
-		int tmp = target_flash_done_buffered(f);
-		if (tmp)
-			return tmp;
-		if (f->done) {
-			tmp = f->done(f);
-			if (tmp)
-				return tmp;
-		}
+		ret |= target_flash_done_buffered(f);
+		if (f->done)
+			ret |= f->done(f);
 	}
-	return 0;
+	target_exit_flash_mode(t);
+	return ret;
 }
 
 int target_flash_write_buffered(target_flash_s *f, target_addr_t dest, const void *src, size_t len)

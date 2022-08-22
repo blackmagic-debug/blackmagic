@@ -543,7 +543,6 @@ static void handle_v_packet(char *packet, const size_t plen)
 	uint32_t addr = 0;
 	uint32_t len = 0;
 	int bin;
-	static uint8_t flash_mode = 0;
 
 	if (sscanf(packet, "vAttach;%08" PRIx32, &addr) == 1) {
 		/* Attach to remote target processor */
@@ -631,16 +630,10 @@ static void handle_v_packet(char *packet, const size_t plen)
 			return;
 		}
 
-		if (!flash_mode) {
-			/* Reset target if first flash command! */
-			/* This saves us if we're interrupted in IRQ context */
-			target_reset(cur_target);
-			flash_mode = 1;
-		}
 		if (target_flash_erase(cur_target, addr, len) == 0)
 			gdb_putpacketz("OK");
 		else {
-			flash_mode = 0;
+			target_flash_complete(cur_target);
 			gdb_putpacketz("EFF");
 		}
 
@@ -651,14 +644,16 @@ static void handle_v_packet(char *packet, const size_t plen)
 		if (cur_target && target_flash_write(cur_target, addr, (void*)packet + bin, count) == 0)
 			gdb_putpacketz("OK");
 		else {
-			flash_mode = 0;
+			target_flash_complete(cur_target);
 			gdb_putpacketz("EFF");
 		}
 
 	} else if (!strcmp(packet, "vFlashDone")) {
 		/* Commit flash operations. */
-		gdb_putpacketz(target_flash_done(cur_target) ? "EFF" : "OK");
-		flash_mode = 0;
+		if (target_flash_complete(cur_target) == 0)
+			gdb_putpacketz("OK");
+		else
+			gdb_putpacketz("EFF");
 
 	} else if (!strcmp(packet, "vStopped")) {
 		if (gdb_needs_detach_notify) {
