@@ -172,7 +172,7 @@ bool ch32f1_probe(target *t)
 	const uint32_t device_id = dbgmcu_idcode & 0x00000fffU;
 	const uint32_t revision_id = (dbgmcu_idcode & 0xffff0000U) >> 16;
 
-	DEBUG_WARN("DBGMCU_IDCODE %x, DEVID %x, REVID %x \n", dbgmcu_idcode, device_id, revision_id);
+	DEBUG_WARN("DBGMCU_IDCODE 0x%" PRIx32 ", DEVID 0x%" PRIx32 ", REVID 0x%" PRIx32 " \n", dbgmcu_idcode, device_id, revision_id);
 
 	if (device_id != 0x410) // ch32f103, cks32f103, apm32f103
 		return false;
@@ -309,7 +309,7 @@ static int ch32f1_flash_write(struct target_flash *f,
 	target_addr org_dest = dest;
 	const void *org_src = src;
 #endif
-	DEBUG_INFO("CH32: flash write 0x%" PRIx32 " ,size=%zu\n", dest, len);
+	DEBUG_INFO("CH32: flash write 0x%" PRIx32 " ,size=%" PRIu32 "\n", dest, (uint32_t)len);
 
 	while (length > 0)
 	{
@@ -365,9 +365,9 @@ static int ch32f1_flash_write(struct target_flash *f,
 		const uint32_t actual = target_mem_read32(t, org_dest + i);
 		if (expected != actual)
 		{
-			DEBUG_WARN(">>>>write mistmatch at address 0x%x\n", org_dest + i);
-			DEBUG_WARN(">>>>expected: 0x%x\n", expected);
-			DEBUG_WARN(">>>>  actual: 0x%x\n", actual);
+			DEBUG_WARN(">>>>write mistmatch at address 0x%" PRIx32 "\n", org_dest + i);
+			DEBUG_WARN(">>>>expected: 0x%" PRIx32 "\n", expected);
+			DEBUG_WARN(">>>>  actual: 0x%" PRIx32 "\n", actual);
 			return -1;
 		}
 	}
