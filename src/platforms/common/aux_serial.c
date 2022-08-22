@@ -30,8 +30,6 @@
 #error "Unknown processor target"
 #endif
 #include <libopencm3/cm3/nvic.h>
-#include <libopencm3/usb/usbd.h>
-#include <libopencm3/usb/cdc.h>
 
 #include "general.h"
 #include "usb_serial.h"
@@ -218,7 +216,7 @@ void aux_serial_init(void)
 }
 #endif
 
-void aux_serial_set_encoding(usb_cdc_line_coding_s *coding)
+void aux_serial_set_encoding(const usb_cdc_line_coding_s *const coding)
 {
 	/* Some devices require that the usart is disabled before
 	 * changing the usart registers. */
@@ -226,7 +224,7 @@ void aux_serial_set_encoding(usb_cdc_line_coding_s *coding)
 	aux_serial_set_baudrate(coding->dwDTERate);
 
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7)
-	if (coding->bParityType)
+	if (coding->bParityType != USB_CDC_NO_PARITY)
 		usart_set_databits(USBUSART, coding->bDataBits + 1U <= 8U ? 8 : 9);
 	else
 		usart_set_databits(USBUSART, coding->bDataBits <= 8U ? 8 : 9);
@@ -234,28 +232,29 @@ void aux_serial_set_encoding(usb_cdc_line_coding_s *coding)
 	uart_set_databits(USBUART, coding->bDataBits);
 #endif
 
+	uint32_t stop_bits = USART_STOPBITS_2;
 	switch (coding->bCharFormat) {
-	case 0:
-		usart_set_stopbits(USBUSART, USART_STOPBITS_1);
+	case USB_CDC_1_STOP_BITS:
+		stop_bits = USART_STOPBITS_1;
 		break;
-	case 1:
-		usart_set_stopbits(USBUSART, USART_STOPBITS_1_5);
+	case USB_CDC_1_5_STOP_BITS:
+		stop_bits = USART_STOPBITS_1_5;
 		break;
-	case 2:
+	case USB_CDC_2_STOP_BITS:
 	default:
-		usart_set_stopbits(USBUSART, USART_STOPBITS_2);
 		break;
 	}
+	usart_set_stopbits(USBUSART, stop_bits);
 
 	switch (coding->bParityType) {
-	case 0:
+	case USB_CDC_NO_PARITY:
+	default:
 		usart_set_parity(USBUSART, USART_PARITY_NONE);
 		break;
-	case 1:
+	case USB_CDC_ODD_PARITY:
 		usart_set_parity(USBUSART, USART_PARITY_ODD);
 		break;
-	case 2:
-	default:
+	case USB_CDC_EVEN_PARITY:
 		usart_set_parity(USBUSART, USART_PARITY_EVEN);
 		break;
 	}
