@@ -161,8 +161,17 @@ bool ch32f1_probe(target *t)
 {
 	if ((t->cpuid & CPUID_PARTNO_MASK) != CORTEX_M3)
 		return false;
-	const uint32_t idcode = target_mem_read32(t, DBGMCU_IDCODE) & 0x00000fffU;
-	if (idcode != 0x410) // only ch32f103
+
+	const uint32_t dbgmcu_idcode = target_mem_read32(t, DBGMCU_IDCODE);
+	const uint32_t idcode = dbgmcu_idcode & 0x00000fffU;
+	const uint32_t revid = (dbgmcu_idcode & 0xffff0000U) >> 16;
+
+	DEBUG_WARN("DBGMCU_IDCODE %x, DEVID %x, REVID %x \n", dbgmcu_idcode, idcode, revid);
+
+	if (idcode != 0x410) // ch32f103, cks32f103, apm32f103
+		return false;
+
+	if (revid != 0x2000) // (hopefully!) only ch32f103
 		return false;
 
 	// try to flock
