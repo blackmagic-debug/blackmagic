@@ -132,15 +132,25 @@ int target_flash_erase(target *t, target_addr_t addr, size_t len)
 			return 1;
 		}
 
+		/* terminate flash operations if we're not in the same target flash */
+		for (target_flash_s *target_f = t->flash; target_f; target_f = target_f->next)
+			if (target_f != f)
+				ret |= flash_done(target_f);
+
 		const target_addr_t local_start_addr = addr & ~(f->blocksize - 1U);
 		const target_addr_t local_end_addr = local_start_addr + f->blocksize;
 
-		if (flash_prepare(f) == 0)
-			ret |= f->erase(f, local_start_addr, f->blocksize);
-		flash_done(f);
+		if (flash_prepare(f) != 0)
+			return -1;
+
+		ret |= f->erase(f, local_start_addr, f->blocksize);
 
 		len -= MIN(local_end_addr - addr, len);
 		addr = local_end_addr;
+
+		/* Issue flash done on last operation */
+		if (len == 0)
+			ret |= flash_done(f);
 	}
 	return ret;
 }
