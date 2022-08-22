@@ -270,14 +270,17 @@ int target_flash_erase(target *t, target_addr_t addr, size_t len)
 	while (len) {
 		target_flash_s *f = target_flash_for_addr(t, addr);
 		if (!f) {
-			DEBUG_WARN("Erase stopped at 0x%06" PRIx32 "\n", addr);
-			return ret;
+			DEBUG_WARN("Requested address is outside the valid range 0x%06" PRIx32 "\n", addr);
+			return 1;
 		}
-		size_t tmptarget = MIN(addr + len, f->start + f->length);
-		size_t tmplen = tmptarget - addr;
-		ret |= f->erase(f, addr, tmplen);
-		addr += tmplen;
-		len -= tmplen;
+
+		const target_addr_t local_start_addr = addr & ~(f->blocksize - 1U);
+		const target_addr_t local_end_addr = local_start_addr + f->blocksize;
+
+		ret |= f->erase(f, local_start_addr, f->blocksize);
+
+		len -= MIN(local_end_addr - addr, len);
+		addr = local_end_addr;
 	}
 	return ret;
 }
@@ -553,16 +556,8 @@ static bool target_cmd_range_erase(target *const t, const int argc, const char *
 	}
 	const uint32_t addr = strtoul(argv[1], NULL, 0);
 	const uint32_t length = strtoul(argv[2], NULL, 0);
-	target_flash_s *flash = target_flash_for_addr(t, addr);
 
-	if (flash == NULL) {
-		gdb_out("Requested address is outside the valid range for this target");
-		return false;
-	}
-
-	const target_addr_t aligned_addr = addr & ~(flash->blocksize - 1U);
-	const uint32_t aligned_length = length + (addr - aligned_addr);
-	return target_flash_erase(t, aligned_addr, aligned_length) == 0;
+	return target_flash_erase(t, addr, length) == 0;
 }
 
 /* Accessor functions */
