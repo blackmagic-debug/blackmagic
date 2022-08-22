@@ -153,6 +153,11 @@ static usbd_request_return_codes_e debug_serial_control_request(usbd_device *dev
 			return USBD_REQ_NOTSUPP;
 		aux_serial_set_encoding((usb_cdc_line_coding_s *)*buf);
 		return USBD_REQ_HANDLED;
+	case USB_CDC_REQ_GET_LINE_CODING:
+		if (*len < sizeof(usb_cdc_line_coding_s))
+			return USBD_REQ_NOTSUPP;
+		aux_serial_get_encoding((usb_cdc_line_coding_s *)*buf);
+		return USBD_REQ_HANDLED;
 	}
 	return USBD_REQ_NOTSUPP;
 }
