@@ -37,6 +37,8 @@
 #include "usb_serial.h"
 #include "aux_serial.h"
 
+static uint32_t aux_serial_active_baud_rate;
+
 static char aux_serial_receive_buffer[AUX_UART_BUFFER_SIZE];
 /* Fifo in pointer, writes assumed to be atomic, should be only incremented within RX ISR */
 static uint8_t aux_serial_receive_write_index = 0;
@@ -84,6 +86,12 @@ static char aux_serial_transmit_buffer[AUX_UART_BUFFER_SIZE];
 #define usart_set_parity(uart, parity)     uart_set_parity(uart, parity)
 #endif
 
+static void aux_serial_set_baudrate(const uint32_t baud_rate)
+{
+	usart_set_baudrate(USBUSART, baud_rate);
+	aux_serial_active_baud_rate = baud_rate;
+}
+
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7)
 void aux_serial_init(void)
 {
@@ -93,7 +101,7 @@ void aux_serial_init(void)
 
 	/* Setup UART parameters */
 	UART_PIN_SETUP();
-	usart_set_baudrate(USBUSART, 38400);
+	aux_serial_set_baudrate(38400);
 	usart_set_databits(USBUSART, 8);
 	usart_set_stopbits(USBUSART, USART_STOPBITS_1);
 	usart_set_mode(USBUSART, USART_MODE_TX_RX);
@@ -185,7 +193,7 @@ void aux_serial_init(void)
 
 	/* Setup UART parameters. */
 	uart_clock_from_sysclk(USBUART);
-	uart_set_baudrate(USBUART, 38400);
+	aux_serial_set_baudrate(38400);
 	uart_set_databits(USBUART, 8);
 	uart_set_stopbits(USBUART, 1);
 	uart_set_parity(USBUART, UART_PARITY_NONE);
@@ -215,7 +223,7 @@ void aux_serial_set_encoding(usb_cdc_line_coding_s *coding)
 	/* Some devices require that the usart is disabled before
 	 * changing the usart registers. */
 	usart_disable(USBUSART);
-	usart_set_baudrate(USBUSART, coding->dwDTERate);
+	aux_serial_set_baudrate(coding->dwDTERate);
 
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7)
 	if (coding->bParityType)
