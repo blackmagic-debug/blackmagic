@@ -279,9 +279,6 @@ static size_t create_tdesc_cortex_m(char *buffer, size_t max_len)
 	// that subtraction.
 	size_t printsz = max_len;
 
-	if (buffer != NULL)
-		memset(buffer, 0, max_len);
-
 	// Start with the "preamble", which is generic across ARM targets,
 	// ...save for one word, so we'll have to do the preamble in halves.
 	total += snprintf(buffer, printsz,
@@ -305,6 +302,7 @@ static size_t create_tdesc_cortex_m(char *buffer, size_t max_len)
 	// These special purpose registers are a little more complicated.
 	// Some of them have different bitsizes, specified types, or specified save-restore values.
 	// We'll use the 'associative arrays' defined for those values.
+	// NOTE: unlike the other loops, this loop uses a size_t for its counter, as it's used to index into arrays.
 	for (size_t i = 0; i < ARRAY_SIZE(cortex_m_spr_names); ++i) {
 
 		if (max_len != 0)
@@ -748,11 +746,11 @@ bool cortexm_attach(target *t)
 		size_t size_needed;
 		if (!is_cortexmf) {
 			size_needed = create_tdesc_cortex_m(NULL, 0) + 1;
-			t->tdesc = malloc(size_needed);
+			t->tdesc = calloc(1, size_needed);
 			create_tdesc_cortex_m(t->tdesc, size_needed);
 		} else {
 			size_needed = create_tdesc_cortex_mf(NULL, 0) + 1;
-			t->tdesc = malloc(size_needed);
+			t->tdesc = calloc(1, size_needed);
 			create_tdesc_cortex_mf(t->tdesc, size_needed);
 		}
 	} else {

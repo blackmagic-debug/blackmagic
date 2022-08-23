@@ -258,10 +258,6 @@ static size_t create_tdesc_cortex_a(char *buffer, size_t max_len)
 	// that subtraction.
 	size_t printsz = max_len;
 
-
-	if (buffer != NULL)
-		memset(buffer, 0, max_len);
-
 	// Start with the "preamble", which is generic across ARM targets,
 	// ...save for one word, so we'll have to do the preamble in halves, and then we'll
 	// follow it with the GDB ARM Core feature tag.
@@ -285,6 +281,7 @@ static size_t create_tdesc_cortex_a(char *buffer, size_t max_len)
 	// Some of them have different types specified, however unlike the Cortex-M SPRs,
 	// all of the Cortex-A target description SPRs have the same bitsize, and none of them
 	// have a specified save-restore value. So we only need one "associative array" here.
+	// NOTE: unlike the other loops, this loop uses a size_t for its counter, as it's used to index into arrays.
 	for (size_t i = 0; i < ARRAY_SIZE(cortex_a_spr_names); ++i) {
 
 		gdb_reg_type_e type = cortex_a_spr_types[i];
@@ -532,7 +529,7 @@ bool cortexa_attach(target *t)
 		// Find the buffer size needed for the target description string we need to send to GDB,
 		// and then compute the string itself.
 		size_t size_needed = create_tdesc_cortex_a(NULL, 0) + 1;
-		t->tdesc = malloc(size_needed);
+		t->tdesc = calloc(1, size_needed);
 		create_tdesc_cortex_a(t->tdesc, size_needed);
 	} else {
 		DEBUG_WARN("Cortex-A: target description already allocated before attach");
