@@ -42,7 +42,9 @@
 #include "platform.h"
 #include "platform_support.h"
 
-#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
+#ifndef ARRAY_LENGTH
+#define ARRAY_LENGTH(arr) (sizeof(arr) / sizeof(arr[0]))
+#endif
 
 extern uint32_t delay_cnt;
 

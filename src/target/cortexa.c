@@ -174,7 +174,7 @@ static const gdb_reg_type_e cortex_a_spr_types[] = {
 	GDB_TYPE_UNSPECIFIED // cpsr
 };
 
-static_assert(ARRAY_SIZE(cortex_a_spr_types) == ARRAY_SIZE(cortex_a_spr_names), "SPR array length mixmatch! SPR type "
+static_assert(ARRAY_LENGTH(cortex_a_spr_types) == ARRAY_LENGTH(cortex_a_spr_names), "SPR array length mixmatch! SPR type "
                                                                                 "array should have the same length as "
                                                                                 "SPR name array.");
 
@@ -270,7 +270,7 @@ static size_t create_tdesc_cortex_a(char *buffer, size_t max_len)
 	// all of the Cortex-A target description SPRs have the same bitsize, and none of them
 	// have a specified save-restore value. So we only need one "associative array" here.
 	// NOTE: unlike the other loops, this loop uses a size_t for its counter, as it's used to index into arrays.
-	for (size_t i = 0; i < ARRAY_SIZE(cortex_a_spr_names); ++i) {
+	for (size_t i = 0; i < ARRAY_LENGTH(cortex_a_spr_names); ++i) {
 		gdb_reg_type_e type = cortex_a_spr_types[i];
 
 		if (max_len != 0)
