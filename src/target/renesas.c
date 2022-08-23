@@ -585,11 +585,6 @@ static int renesas_rv40_flash_write(target_flash_s *f, target_addr_t dest, const
 			/* copy data from source address to destination */
 			target_mem_write16(t, RV40_CMD, *(uint16_t *)src);
 
-			while (target_mem_read32(t, RV40_FSTATR) & RV40_FSTATR_DBFULL) {
-				if (target_check_error(t) || platform_timeout_is_expired(&timeout))
-					return -1;
-			}
-
 			/* 2 bytes of data */
 			src += 2U;
 		}
