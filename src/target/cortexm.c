@@ -140,8 +140,6 @@ static const uint32_t regnum_cortex_mf[] = {
 	0x58, 0x59, 0x5a, 0x5b, 0x5c, 0x5d, 0x5e, 0x5f, /* s24-s31 */
 };
 
-
-
 /**
  * Fields for Cortex-M special purpose registers, used in the generation of GDB's target description XML.
  * The general purpose registers r0-r12 and the vector floating point registers d0-d15 all follow a very
@@ -149,7 +147,6 @@ static const uint32_t regnum_cortex_mf[] = {
  * The arrays for each SPR field have the same order as each other, making each of them a pseudo
  * 'associative array'.
  */
-
 
 // Strings for the names of the Cortex-M's special purpose registers.
 static const char *cortex_m_spr_names[] = {
@@ -179,10 +176,9 @@ static const gdb_reg_type_e cortex_m_spr_types[] = {
 	GDB_TYPE_UNSPECIFIED, // control
 };
 
-static_assert(ARRAY_SIZE(cortex_m_spr_types) == ARRAY_SIZE(cortex_m_spr_names),
-	"SPR array length mismatch! SPR type array should have the same length as SPR name array."
-);
-
+static_assert(ARRAY_SIZE(cortex_m_spr_types) == ARRAY_SIZE(cortex_m_spr_names), "SPR array length mismatch! SPR type "
+                                                                                "array should have the same length as "
+                                                                                "SPR name array.");
 
 // The "save-restore" field of each SPR.
 static const gdb_reg_save_restore_e cortex_m_spr_save_restores[] = {
@@ -198,10 +194,10 @@ static const gdb_reg_save_restore_e cortex_m_spr_save_restores[] = {
 	GDB_SAVE_RESTORE_NO,          // control
 };
 
-static_assert(ARRAY_SIZE(cortex_m_spr_save_restores) == ARRAY_SIZE(cortex_m_spr_names),
-	"SPR array length mismatch! SPR save-restore array should have the same length as SPR name array."
-);
-
+static_assert(ARRAY_SIZE(cortex_m_spr_save_restores) == ARRAY_SIZE(cortex_m_spr_names), "SPR array length mismatch! "
+                                                                                        "SPR save-restore array should "
+                                                                                        "have the same length as SPR "
+                                                                                        "name array.");
 
 // The "bitsize" field of each SPR.
 static const uint8_t cortex_m_spr_bitsizes[] = {
@@ -211,16 +207,15 @@ static const uint8_t cortex_m_spr_bitsizes[] = {
 	32, // xpsr
 	32, // msp
 	32, // psp
-	 8, // primask
-	 8, // basepri
-	 8, // faultmask
-	 8, // control
+	8,  // primask
+	8,  // basepri
+	8,  // faultmask
+	8,  // control
 };
 
-static_assert(ARRAY_SIZE(cortex_m_spr_bitsizes) == ARRAY_SIZE(cortex_m_spr_names),
-	"SPR array length mismatch! SPR bitsize array should have the same length as SPR name array."
-);
-
+static_assert(ARRAY_SIZE(cortex_m_spr_bitsizes) == ARRAY_SIZE(cortex_m_spr_names), "SPR array length mismatch! SPR "
+                                                                                   "bitsize array should have the same "
+                                                                                   "length as SPR name array.");
 
 // Creates the target description XML string for a Cortex-M. Like snprintf(), this function
 // will write no more than max_len and returns the amount of bytes written. Or, if max_len is 0,
@@ -284,16 +279,13 @@ static size_t create_tdesc_cortex_m(char *buffer, size_t max_len)
 	total += snprintf(buffer, printsz,
 		"%s target %s "
 		"<feature name=\"org.gnu.gdb.arm.m-profile\">",
-		gdb_arm_preamble_first,
-		gdb_arm_preamble_second
-	);
+		gdb_arm_preamble_first, gdb_arm_preamble_second);
 
 	// Then the general purpose registers, which have names of r0 to r12,
 	// and all the same bitsize.
 	for (uint8_t i = 0; i <= 12; ++i) {
-
 		if (max_len != 0)
-			printsz = max_len - (size_t) total;
+			printsz = max_len - (size_t)total;
 
 		total += snprintf(buffer + total, printsz, "<reg name=\"r%u\" bitsize=\"32\"/>", i);
 	}
@@ -304,23 +296,18 @@ static size_t create_tdesc_cortex_m(char *buffer, size_t max_len)
 	// We'll use the 'associative arrays' defined for those values.
 	// NOTE: unlike the other loops, this loop uses a size_t for its counter, as it's used to index into arrays.
 	for (size_t i = 0; i < ARRAY_SIZE(cortex_m_spr_names); ++i) {
-
 		if (max_len != 0)
-			printsz = max_len - (size_t) total;
+			printsz = max_len - (size_t)total;
 
 		gdb_reg_type_e type = cortex_m_spr_types[i];
 		gdb_reg_save_restore_e save_restore = cortex_m_spr_save_restores[i];
 
-		total += snprintf(buffer + total, printsz, "<reg name=\"%s\" bitsize=\"%u\"%s%s/>",
-			cortex_m_spr_names[i],
-			cortex_m_spr_bitsizes[i],
-			gdb_reg_save_restore_strings[save_restore],
-			gdb_reg_type_strings[type]
-		);
+		total += snprintf(buffer + total, printsz, "<reg name=\"%s\" bitsize=\"%u\"%s%s/>", cortex_m_spr_names[i],
+			cortex_m_spr_bitsizes[i], gdb_reg_save_restore_strings[save_restore], gdb_reg_type_strings[type]);
 	}
 
 	if (max_len != 0)
-		printsz = max_len - (size_t) total;
+		printsz = max_len - (size_t)total;
 
 	total += snprintf(buffer + total, printsz, "</feature></target>");
 
@@ -328,7 +315,7 @@ static size_t create_tdesc_cortex_m(char *buffer, size_t max_len)
 	// these functions are given static input that should not ever be able to fail -- and if it
 	// does, then there's nothing we can do about it, so we'll just discard the signedness
 	// of total when we return it.
-	return (size_t) total;
+	return (size_t)total;
 }
 
 // Creates the target description XML string for a Cortex-MF. Like snprintf(), this function
@@ -404,7 +391,7 @@ static size_t create_tdesc_cortex_mf(char *buffer, size_t max_len)
 
 	// The first part of the target description for the Cortex-MF is identical to the Cortex-M
 	// target description.
-	total = (int) create_tdesc_cortex_m(buffer, max_len);
+	total = (int)create_tdesc_cortex_m(buffer, max_len);
 
 	// We can't just repeatedly pass max_len to snprintf, because we keep changing the start
 	// of buffer (effectively changing its size), so we have to repeatedly compute the size
@@ -418,26 +405,23 @@ static size_t create_tdesc_cortex_mf(char *buffer, size_t max_len)
 		// Minor hack: subtract the target closing tag, since we have a bit more to add.
 		total -= strlen("</target>");
 
-		printsz = max_len - (size_t) total;
+		printsz = max_len - (size_t)total;
 	}
-
 
 	total += snprintf(buffer + total, printsz,
 		"<feature name=\"org.gnu.gdb.arm.vfp\">"
-		"<reg name=\"fpscr\" bitsize=\"32\"/>"
-	);
+		"<reg name=\"fpscr\" bitsize=\"32\"/>");
 
 	// After fpscr, the rest of the vfp registers follow a regular format: d0-d15, bitsize 64, type float.
 	for (uint8_t i = 0; i <= 15; ++i) {
-
 		if (max_len != 0)
-			printsz = max_len - (size_t) total;
+			printsz = max_len - (size_t)total;
 
 		total += snprintf(buffer + total, printsz, "<reg name=\"d%u\" bitsize=\"64\" type=\"float\"/>", i);
 	}
 
 	if (max_len != 0)
-		printsz = max_len - (size_t) total;
+		printsz = max_len - (size_t)total;
 
 	total += snprintf(buffer + total, printsz, "</feature></target>");
 
@@ -445,9 +429,8 @@ static size_t create_tdesc_cortex_mf(char *buffer, size_t max_len)
 	// these functions are given static input that should not ever be able to fail -- and if it
 	// does, then there's nothing we can do about it, so we'll just discard the signedness
 	// of total when we return it.
-	return (size_t) total;
+	return (size_t)total;
 }
-
 
 ADIv5_AP_t *cortexm_ap(target *t)
 {
@@ -589,7 +572,6 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 	if (target_mem_read32(t, CORTEXM_CPACR) == cpacr)
 		is_cortexmf = true;
 
-
 	/* Should probe here to make sure it's Cortex-M3 */
 
 	t->regs_read = cortexm_regs_read;
@@ -710,7 +692,7 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 			LPC43xx detection. */
 			PROBE(lpc546xx_probe);
 			PROBE(lpc43xx_probe);
-			PROBE(kinetis_probe);         /* Older K-series */
+			PROBE(kinetis_probe); /* Older K-series */
 			PROBE(at32fxx_probe);
 		} else if (t->part_id == 0x4cb) { /* Cortex-M23 ROM */
 			PROBE(gd32f1_probe);          /* GD32E23x uses GD32F1 peripherals */
@@ -756,7 +738,6 @@ bool cortexm_attach(target *t)
 	} else {
 		DEBUG_WARN("Cortex-M: target description already allocated before attach");
 	}
-
 
 	ADIv5_AP_t *ap = cortexm_ap(t);
 	ap->dp->fault = 1; /* Force switch to this multi-drop device*/

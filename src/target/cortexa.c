@@ -49,7 +49,6 @@ static void cortexa_regs_write_internal(target *t);
 static ssize_t cortexa_reg_read(target *t, int reg, void *data, size_t max);
 static ssize_t cortexa_reg_write(target *t, int reg, const void *data, size_t max);
 
-
 static void cortexa_reset(target *t);
 static enum target_halt_reason cortexa_halt_poll(target *t, target_addr *watch);
 static void cortexa_halt_request(target *t);
@@ -82,13 +81,13 @@ struct cortexa_priv {
 };
 
 /* This may be specific to Cortex-A9 */
-#define CACHE_LINE_LENGTH        (8*4)
+#define CACHE_LINE_LENGTH (8 * 4)
 
 /* Debug APB registers */
-#define DBGDIDR                  0
+#define DBGDIDR 0
 
-#define DBGDTRRX                 32 /* DCC: Host to target */
-#define DBGITR                   33
+#define DBGDTRRX 32 /* DCC: Host to target */
+#define DBGITR   33
 
 #define DBGDSCR                  34
 #define DBGDSCR_TXFULL           (1 << 29)
@@ -108,55 +107,53 @@ struct cortexa_priv {
 #define DBGDSCR_RESTARTED        (1 << 1)
 #define DBGDSCR_HALTED           (1 << 0)
 
-#define DBGDTRTX                 35 /* DCC: Target to host */
+#define DBGDTRTX 35 /* DCC: Target to host */
 
-#define DBGDRCR                  36
-#define DBGDRCR_CSE              (1 << 2)
-#define DBGDRCR_RRQ              (1 << 1)
-#define DBGDRCR_HRQ              (1 << 0)
+#define DBGDRCR     36
+#define DBGDRCR_CSE (1 << 2)
+#define DBGDRCR_RRQ (1 << 1)
+#define DBGDRCR_HRQ (1 << 0)
 
-#define DBGBVR(i)                (64+(i))
-#define DBGBCR(i)                (80+(i))
-#define DBGBCR_INST_MISMATCH     (4 << 20)
-#define DBGBCR_BAS_ANY           (0xf << 5)
-#define DBGBCR_BAS_LOW_HW        (0x3 << 5)
-#define DBGBCR_BAS_HIGH_HW       (0xc << 5)
-#define DBGBCR_EN                (1 << 0)
+#define DBGBVR(i)            (64 + (i))
+#define DBGBCR(i)            (80 + (i))
+#define DBGBCR_INST_MISMATCH (4 << 20)
+#define DBGBCR_BAS_ANY       (0xf << 5)
+#define DBGBCR_BAS_LOW_HW    (0x3 << 5)
+#define DBGBCR_BAS_HIGH_HW   (0xc << 5)
+#define DBGBCR_EN            (1 << 0)
 
-#define DBGWVR(i)                (96+(i))
-#define DBGWCR(i)                (112+(i))
-#define DBGWCR_LSC_LOAD          (0b01 << 3)
-#define DBGWCR_LSC_STORE         (0b10 << 3)
-#define DBGWCR_LSC_ANY           (0b11 << 3)
-#define DBGWCR_BAS_BYTE          (0b0001 << 5)
-#define DBGWCR_BAS_HALFWORD      (0b0011 << 5)
-#define DBGWCR_BAS_WORD          (0b1111 << 5)
-#define DBGWCR_PAC_ANY           (0b11 << 1)
-#define DBGWCR_EN                (1 << 0)
+#define DBGWVR(i)           (96 + (i))
+#define DBGWCR(i)           (112 + (i))
+#define DBGWCR_LSC_LOAD     (0b01 << 3)
+#define DBGWCR_LSC_STORE    (0b10 << 3)
+#define DBGWCR_LSC_ANY      (0b11 << 3)
+#define DBGWCR_BAS_BYTE     (0b0001 << 5)
+#define DBGWCR_BAS_HALFWORD (0b0011 << 5)
+#define DBGWCR_BAS_WORD     (0b1111 << 5)
+#define DBGWCR_PAC_ANY      (0b11 << 1)
+#define DBGWCR_EN           (1 << 0)
 
 /* Instruction encodings for accessing the coprocessor interface */
 #define MCR 0xee000010
 #define MRC 0xee100010
 #define CPREG(coproc, opc1, rt, crn, crm, opc2) \
-	(((opc1) << 21) | ((crn) << 16) | ((rt) << 12) | \
-        ((coproc) << 8) | ((opc2) << 5) | (crm))
+	(((opc1) << 21) | ((crn) << 16) | ((rt) << 12) | ((coproc) << 8) | ((opc2) << 5) | (crm))
 
 /* Debug registers CP14 */
 #define DBGDTRRXint CPREG(14, 0, 0, 0, 5, 0)
 #define DBGDTRTXint CPREG(14, 0, 0, 0, 5, 0)
 
 /* Address translation registers CP15 */
-#define PAR         CPREG(15, 0, 0, 7, 4, 0)
-#define ATS1CPR     CPREG(15, 0, 0, 7, 8, 0)
+#define PAR     CPREG(15, 0, 0, 7, 4, 0)
+#define ATS1CPR CPREG(15, 0, 0, 7, 8, 0)
 
 /* Cache management registers CP15 */
-#define ICIALLU     CPREG(15, 0, 0, 7, 5, 0)
-#define DCCIMVAC    CPREG(15, 0, 0, 7, 14, 1)
-#define DCCMVAC     CPREG(15, 0, 0, 7, 10, 1)
+#define ICIALLU  CPREG(15, 0, 0, 7, 5, 0)
+#define DCCIMVAC CPREG(15, 0, 0, 7, 14, 1)
+#define DCCMVAC  CPREG(15, 0, 0, 7, 10, 1)
 
 /* Thumb mode bit in CPSR */
-#define CPSR_THUMB               (1 << 5)
-
+#define CPSR_THUMB (1 << 5)
 
 /**
  * Fields for Cortex-A special purpose registers, used in the generation of GDB's target description XML.
@@ -167,12 +164,7 @@ struct cortexa_priv {
  */
 
 // Strings for the names of the Cortex-A's special purpose registers.
-static const char *cortex_a_spr_names[] = {
-	"sp",
-	"lr",
-	"pc",
-	"cpsr"
-};
+static const char *cortex_a_spr_names[] = {"sp", "lr", "pc", "cpsr"};
 
 // The "type" field for each Cortex-A special purpose register.
 static const gdb_reg_type_e cortex_a_spr_types[] = {
@@ -182,10 +174,9 @@ static const gdb_reg_type_e cortex_a_spr_types[] = {
 	GDB_TYPE_UNSPECIFIED // cpsr
 };
 
-static_assert(ARRAY_SIZE(cortex_a_spr_types) == ARRAY_SIZE(cortex_a_spr_names),
-	"SPR array length mixmatch! SPR type array should have the same length as SPR name array."
-);
-
+static_assert(ARRAY_SIZE(cortex_a_spr_types) == ARRAY_SIZE(cortex_a_spr_names), "SPR array length mixmatch! SPR type "
+                                                                                "array should have the same length as "
+                                                                                "SPR name array.");
 
 // Creates the target description XML string for a Cortex-A. Like snprintf(), this function
 // will write no more than max_len and returns the amount of bytes written. Or, if max_len is 0,
@@ -264,15 +255,12 @@ static size_t create_tdesc_cortex_a(char *buffer, size_t max_len)
 	total += snprintf(buffer, printsz,
 		"%s feature %s "
 		"<feature name=\"org.gnu.gdb.arm.core\">",
-		gdb_arm_preamble_first,
-		gdb_arm_preamble_second
-	);
+		gdb_arm_preamble_first, gdb_arm_preamble_second);
 
 	// Then the general purpose registers, which have names of r0 to r12.
 	for (uint8_t i = 0; i <= 12; ++i) {
-
 		if (max_len != 0)
-			printsz = max_len - (size_t) total;
+			printsz = max_len - (size_t)total;
 
 		total += snprintf(buffer + total, printsz, "<reg name=\"r%u\" bitsize=\"32\"/>", i);
 	}
@@ -283,42 +271,35 @@ static size_t create_tdesc_cortex_a(char *buffer, size_t max_len)
 	// have a specified save-restore value. So we only need one "associative array" here.
 	// NOTE: unlike the other loops, this loop uses a size_t for its counter, as it's used to index into arrays.
 	for (size_t i = 0; i < ARRAY_SIZE(cortex_a_spr_names); ++i) {
-
 		gdb_reg_type_e type = cortex_a_spr_types[i];
 
 		if (max_len != 0)
-			printsz = max_len - (size_t) total;
+			printsz = max_len - (size_t)total;
 
-		total += snprintf(buffer + total, printsz, "<reg name=\"%s\" bitsize=\"32\"%s/>",
-			cortex_a_spr_names[i],
-			gdb_reg_type_strings[type]
-		);
+		total += snprintf(buffer + total, printsz, "<reg name=\"%s\" bitsize=\"32\"%s/>", cortex_a_spr_names[i],
+			gdb_reg_type_strings[type]);
 	}
 
 	if (max_len != 0)
-		printsz = max_len - (size_t) total;
+		printsz = max_len - (size_t)total;
 
 	// Now onto the floating point registers.
 	// The first register is unique; the rest all follow the same format.
 	total += snprintf(buffer + total, printsz,
 		"</feature>"
 		"<feature name=\"org.gnu.gdb.arm.vfp\">"
-		"<reg name=\"fpscr\" bitsize=\"32\"/>"
-	);
+		"<reg name=\"fpscr\" bitsize=\"32\"/>");
 
 	// Now onto the simple ones.
 	for (uint8_t i = 0; i <= 15; ++i) {
 		if (max_len != 0)
-			printsz = max_len - (size_t) total;
+			printsz = max_len - (size_t)total;
 
-		total += snprintf(buffer + total, printsz,
-			"<reg name=\"d%u\" bitsize=\"64\" type=\"float\"/>",
-			i
-		);
+		total += snprintf(buffer + total, printsz, "<reg name=\"d%u\" bitsize=\"64\" type=\"float\"/>", i);
 	}
 
 	if (max_len != 0)
-		printsz = max_len - (size_t) total;
+		printsz = max_len - (size_t)total;
 
 	total += snprintf(buffer + total, printsz, "</feature></target>");
 
@@ -326,15 +307,14 @@ static size_t create_tdesc_cortex_a(char *buffer, size_t max_len)
 	// these functions are given static input that should not ever be able to fail -- and if it
 	// does, then there's nothing we can do about it, so we'll just discard the signedness
 	// of total when we return it.
-	return (size_t) total;
+	return (size_t)total;
 }
-
 
 static void apb_write(target *t, uint16_t reg, uint32_t val)
 {
 	struct cortexa_priv *priv = t->priv;
 	ADIv5_AP_t *ap = priv->apb;
-	uint32_t addr = priv->base + 4*reg;
+	uint32_t addr = priv->base + 4 * reg;
 	adiv5_ap_write(ap, ADIV5_AP_TAR, addr);
 	adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DRW, val);
 }
@@ -343,7 +323,7 @@ static uint32_t apb_read(target *t, uint16_t reg)
 {
 	struct cortexa_priv *priv = t->priv;
 	ADIv5_AP_t *ap = priv->apb;
-	uint32_t addr = priv->base + 4*reg;
+	uint32_t addr = priv->base + 4 * reg;
 	adiv5_ap_write(ap, ADIV5_AP_TAR, addr);
 	adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_AP_DRW, 0);
 	return adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_DP_RDBUFF, 0);
@@ -359,8 +339,7 @@ static uint32_t va_to_pa(target *t, uint32_t va)
 	if (par & 1)
 		priv->mmu_fault = true;
 	uint32_t pa = (par & ~0xfff) | (va & 0xfff);
-	DEBUG_INFO("%s: VA = 0x%08"PRIx32", PAR = 0x%08"PRIx32", PA = 0x%08"PRIX32"\n",
-              __func__, va, par, pa);
+	DEBUG_INFO("%s: VA = 0x%08" PRIx32 ", PAR = 0x%08" PRIx32 ", PA = 0x%08" PRIX32 "\n", __func__, va, par, pa);
 	return pa;
 }
 
@@ -388,7 +367,7 @@ static void cortexa_slow_mem_read(target *t, void *dest, target_addr src, size_t
 	for (unsigned i = 0; i < words; i++)
 		dest32[i] = apb_read(t, DBGDTRTX);
 
-	memcpy(dest, (uint8_t*)dest32 + (src & 3), len);
+	memcpy(dest, (uint8_t *)dest32 + (src & 3), len);
 
 	/* Switch back to stalling DCC mode */
 	dbgdscr = (dbgdscr & ~DBGDSCR_EXTDCCMODE_MASK) | DBGDSCR_EXTDCCMODE_STALL;
@@ -465,7 +444,6 @@ static bool cortexa_check_error(target *t)
 	return err;
 }
 
-
 bool cortexa_probe(ADIv5_AP_t *apb, uint32_t debug_base)
 {
 	target *t;
@@ -477,7 +455,7 @@ bool cortexa_probe(ADIv5_AP_t *apb, uint32_t debug_base)
 
 	adiv5_ap_ref(apb);
 	struct cortexa_priv *priv = calloc(1, sizeof(*priv));
-	if (!priv) {			/* calloc failed: heap exhaustion */
+	if (!priv) { /* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return false;
 	}
@@ -493,8 +471,8 @@ bool cortexa_probe(ADIv5_AP_t *apb, uint32_t debug_base)
 	uint32_t csw = apb->csw | ADIV5_AP_CSW_SIZE_WORD;
 	adiv5_ap_write(apb, ADIV5_AP_CSW, csw);
 	uint32_t dbgdidr = apb_read(t, DBGDIDR);
-	priv->hw_breakpoint_max = ((dbgdidr >> 24) & 15)+1;
-	priv->hw_watchpoint_max = ((dbgdidr >> 28) & 15)+1;
+	priv->hw_breakpoint_max = ((dbgdidr >> 24) & 15) + 1;
+	priv->hw_watchpoint_max = ((dbgdidr >> 28) & 15) + 1;
 
 	t->check_error = cortexa_check_error;
 
@@ -543,17 +521,17 @@ bool cortexa_attach(target *t)
 	dbgdscr |= DBGDSCR_HDBGEN | DBGDSCR_ITREN;
 	dbgdscr = (dbgdscr & ~DBGDSCR_EXTDCCMODE_MASK) | DBGDSCR_EXTDCCMODE_STALL;
 	apb_write(t, DBGDSCR, dbgdscr);
-	DEBUG_INFO("DBGDSCR = 0x%08"PRIx32"\n", dbgdscr);
+	DEBUG_INFO("DBGDSCR = 0x%08" PRIx32 "\n", dbgdscr);
 
 	target_halt_request(t);
 	tries = 10;
-	while(!platform_nrst_get_val() && !target_halt_poll(t, NULL) && --tries)
+	while (!platform_nrst_get_val() && !target_halt_poll(t, NULL) && --tries)
 		platform_delay(200);
-	if(!tries)
+	if (!tries)
 		return false;
 
 	/* Clear any stale breakpoints */
-	for(unsigned i = 0; i < priv->hw_breakpoint_max; i++) {
+	for (unsigned i = 0; i < priv->hw_breakpoint_max; i++) {
 		apb_write(t, DBGBCR(i), 0);
 	}
 	priv->hw_breakpoint_mask = 0;
@@ -577,7 +555,7 @@ void cortexa_detach(target *t)
 	}
 
 	/* Clear any stale breakpoints */
-	for(unsigned i = 0; i < priv->hw_breakpoint_max; i++) {
+	for (unsigned i = 0; i < priv->hw_breakpoint_max; i++) {
 		apb_write(t, DBGBCR(i), 0);
 	}
 
@@ -593,8 +571,7 @@ void cortexa_detach(target *t)
 	uint32_t dbgdscr;
 	do {
 		dbgdscr = apb_read(t, DBGDSCR);
-	} while (!(dbgdscr & DBGDSCR_INSTRCOMPL) &&
-	         !platform_timeout_is_expired(&to));
+	} while (!(dbgdscr & DBGDSCR_INSTRCOMPL) && !platform_timeout_is_expired(&to));
 
 	/* Disable halting debug mode */
 	dbgdscr &= ~(DBGDSCR_HDBGEN | DBGDSCR_ITREN);
@@ -602,7 +579,6 @@ void cortexa_detach(target *t)
 	/* Clear sticky error and resume */
 	apb_write(t, DBGDRCR, DBGDRCR_CSE | DBGDRCR_RRQ);
 }
-
 
 static uint32_t read_gpreg(target *t, uint8_t regno)
 {
@@ -791,7 +767,7 @@ static enum target_halt_reason cortexa_halt_poll(target *t, target_addr *watch)
 	if (!(dbgdscr & DBGDSCR_HALTED)) /* Not halted */
 		return TARGET_HALT_RUNNING;
 
-	DEBUG_INFO("%s: DBGDSCR = 0x%08"PRIx32"\n", __func__, dbgdscr);
+	DEBUG_INFO("%s: DBGDSCR = 0x%08" PRIx32 "\n", __func__, dbgdscr);
 	/* Reenable DBGITR */
 	dbgdscr |= DBGDSCR_ITREN;
 	apb_write(t, DBGDSCR, dbgdscr);
@@ -807,9 +783,8 @@ static enum target_halt_reason cortexa_halt_poll(target *t, target_addr *watch)
 		/* How do we know which watchpoint was hit? */
 		/* If there is only one set, it's that */
 		for (struct breakwatch *bw = t->bw_list; bw; bw = bw->next) {
-			if ((bw->type != TARGET_WATCH_READ) &&
-			    (bw->type != TARGET_WATCH_WRITE) &&
-			    (bw->type != TARGET_WATCH_ACCESS))
+			if ((bw->type != TARGET_WATCH_READ) && (bw->type != TARGET_WATCH_WRITE) &&
+				(bw->type != TARGET_WATCH_ACCESS))
 				continue;
 			if (reason == TARGET_HALT_WATCHPOINT) {
 				/* More than one watchpoint set,
@@ -837,11 +812,10 @@ void cortexa_halt_resume(target *t, bool step)
 	if (step) {
 		uint32_t addr = priv->reg_cache.r[15];
 		uint32_t bas = bp_bas(addr, (priv->reg_cache.cpsr & CPSR_THUMB) ? 2 : 4);
-		DEBUG_INFO("step 0x%08"PRIx32"  %"PRIx32"\n", addr, bas);
+		DEBUG_INFO("step 0x%08" PRIx32 "  %" PRIx32 "\n", addr, bas);
 		/* Set match any breakpoint */
 		apb_write(t, DBGBVR(0), priv->reg_cache.r[15] & ~3);
-		apb_write(t, DBGBCR(0), DBGBCR_INST_MISMATCH | bas |
-		                             DBGBCR_EN);
+		apb_write(t, DBGBCR(0), DBGBCR_INST_MISMATCH | bas | DBGBCR_EN);
 	} else {
 		apb_write(t, DBGBVR(0), priv->bvr0);
 		apb_write(t, DBGBCR(0), priv->bcr0);
@@ -859,10 +833,9 @@ void cortexa_halt_resume(target *t, bool step)
 	uint32_t dbgdscr;
 	do {
 		dbgdscr = apb_read(t, DBGDSCR);
-	} while (!(dbgdscr & DBGDSCR_INSTRCOMPL) &&
-	         !platform_timeout_is_expired(&to));
+	} while (!(dbgdscr & DBGDSCR_INSTRCOMPL) && !platform_timeout_is_expired(&to));
 
-	 /* Disable DBGITR.  Not sure why, but RRQ is ignored otherwise. */
+	/* Disable DBGITR.  Not sure why, but RRQ is ignored otherwise. */
 	if (step)
 		dbgdscr |= DBGDSCR_INTDIS;
 	else
@@ -873,9 +846,8 @@ void cortexa_halt_resume(target *t, bool step)
 	do {
 		apb_write(t, DBGDRCR, DBGDRCR_CSE | DBGDRCR_RRQ);
 		dbgdscr = apb_read(t, DBGDSCR);
-		DEBUG_INFO("%s: DBGDSCR = 0x%08"PRIx32"\n", __func__, dbgdscr);
-	} while (!(dbgdscr & DBGDSCR_RESTARTED) &&
-	         !platform_timeout_is_expired(&to));
+		DEBUG_INFO("%s: DBGDSCR = 0x%08" PRIx32 "\n", __func__, dbgdscr);
+	} while (!(dbgdscr & DBGDSCR_RESTARTED) && !platform_timeout_is_expired(&to));
 }
 
 /* Breakpoints */
@@ -923,7 +895,7 @@ static int cortexa_breakwatch_set(target *t, struct breakwatch *bw)
 		priv->hw_breakpoint_mask |= (1 << i);
 
 		uint32_t addr = va_to_pa(t, bw->addr);
-		uint32_t bcr =  bp_bas(addr, bw->size) | DBGBCR_EN;
+		uint32_t bcr = bp_bas(addr, bw->size) | DBGBCR_EN;
 		apb_write(t, DBGBVR(i), addr & ~3);
 		apb_write(t, DBGBCR(i), bcr);
 		if (i == 0) {
@@ -949,28 +921,39 @@ static int cortexa_breakwatch_set(target *t, struct breakwatch *bw)
 		{
 			uint32_t wcr = DBGWCR_PAC_ANY | DBGWCR_EN;
 			uint32_t bas = 0;
-			switch(bw->size) { /* Convert bytes size to BAS bits */
-				case 1: bas = DBGWCR_BAS_BYTE; break;
-				case 2: bas = DBGWCR_BAS_HALFWORD; break;
-				case 4: bas = DBGWCR_BAS_WORD; break;
-				default:
-					return -1;
+			switch (bw->size) { /* Convert bytes size to BAS bits */
+			case 1:
+				bas = DBGWCR_BAS_BYTE;
+				break;
+			case 2:
+				bas = DBGWCR_BAS_HALFWORD;
+				break;
+			case 4:
+				bas = DBGWCR_BAS_WORD;
+				break;
+			default:
+				return -1;
 			}
 			/* Apply shift based on address LSBs */
 			wcr |= bas << (bw->addr & 3);
 
 			switch (bw->type) { /* Convert gdb type */
-				case TARGET_WATCH_WRITE: wcr |= DBGWCR_LSC_STORE; break;
-				case TARGET_WATCH_READ: wcr |= DBGWCR_LSC_LOAD; break;
-				case TARGET_WATCH_ACCESS: wcr |= DBGWCR_LSC_ANY; break;
-				default:
-					return -1;
+			case TARGET_WATCH_WRITE:
+				wcr |= DBGWCR_LSC_STORE;
+				break;
+			case TARGET_WATCH_READ:
+				wcr |= DBGWCR_LSC_LOAD;
+				break;
+			case TARGET_WATCH_ACCESS:
+				wcr |= DBGWCR_LSC_ANY;
+				break;
+			default:
+				return -1;
 			}
 
 			apb_write(t, DBGWCR(i), wcr);
 			apb_write(t, DBGWVR(i), bw->addr & ~3);
-			DEBUG_INFO("Watchpoint set WCR = 0x%08"PRIx32", WVR = %08"PRIx32"\n",
-				apb_read(t, DBGWCR(i)),
+			DEBUG_INFO("Watchpoint set WCR = 0x%08" PRIx32 ", WVR = %08" PRIx32 "\n", apb_read(t, DBGWCR(i)),
 				apb_read(t, DBGWVR(i)));
 		}
 		return 0;
