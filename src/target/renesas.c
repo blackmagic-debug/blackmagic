@@ -482,32 +482,6 @@ static int renesas_rv40_flash_erase(target_flash_s *f, target_addr_t addr, size_
 	/* code flash or data flash operation */
 	const bool code_flash = addr < RENESAS_CF_END;
 
-	if (code_flash) {
-		/* align start address */
-		uint32_t start_align = 0;
-		if (addr < RV40_CF_REGION0_SIZE)
-			start_align = addr % RV40_CF_REGION0_BLOCK_SIZE;
-		else
-			start_align = addr % RV40_CF_REGION1_BLOCK_SIZE;
-		len += start_align;
-		addr -= start_align;
-
-		/* align len */
-		if (addr + len > RV40_CF_REGION0_SIZE)
-			len += RV40_CF_REGION1_BLOCK_SIZE - len % RV40_CF_REGION1_BLOCK_SIZE;
-		else
-			len += RV40_CF_REGION0_BLOCK_SIZE - len % RV40_CF_REGION0_BLOCK_SIZE;
-
-	} else {
-		/* align start address */
-		const uint32_t start_align = addr % RV40_DF_BLOCK_SIZE;
-		len += start_align;
-		addr -= start_align;
-
-		/* align len */
-		len += RV40_DF_BLOCK_SIZE - len % RV40_DF_BLOCK_SIZE;
-	}
-
 	if (!(target_mem_read32(t, RV40_FSTATR) & RV40_FSTATR_RDY) || target_mem_read16(t, RV40_FENTRYR) != 0) {
 		DEBUG_WARN("flash is not ready, may be hanging mid unfinished command due to something going wrong, "
 				   "please power on reset the device\n");
@@ -579,9 +553,6 @@ static int renesas_rv40_flash_write(target_flash_s *f, target_addr_t dest, const
 
 	/* write size for code flash / data flash */
 	const uint8_t write_size = code_flash ? RV40_CF_WRITE_SIZE : RV40_DF_WRITE_SIZE;
-
-	if (dest % write_size || len % write_size) /* dest/len must be aligned to write_size */
-		return -1;
 
 	if (!(target_mem_read32(t, RV40_FSTATR) & RV40_FSTATR_RDY) || target_mem_read16(t, RV40_FENTRYR) != 0) {
 		DEBUG_WARN("flash is not ready, may be hanging mid unfinished command due to something going wrong, "
