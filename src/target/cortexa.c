@@ -244,7 +244,11 @@ static_assert(ARRAY_SIZE(cortex_a_spr_types) == ARRAY_SIZE(cortex_a_spr_names),
 // Returns the amount of characters written to the buffer.
 static size_t create_tdesc_cortex_a(char *buffer, size_t max_len)
 {
-	size_t total = 0;
+	// Minor hack: technically snprintf returns an int for possibility of error, but in this case
+	// these functions are given static input that should not be able to fail -- and if it does,
+	// then there's nothing we can do about it, so we'll repatedly cast this variable to a size_t
+	// when calculating printsz (see below).
+	int total = 0;
 
 	// We can't just repeatedly pass max_len to snprintf, because we keep changing the start
 	// of buffer (effectively changing its size), so we have to repeatedly compute the size
@@ -272,9 +276,9 @@ static size_t create_tdesc_cortex_a(char *buffer, size_t max_len)
 	for (uint8_t i = 0; i <= 12; ++i) {
 
 		if (max_len != 0)
-			printsz = max_len - total;
+			printsz = max_len - (size_t) total;
 
-		total += snprintf(buffer + total, printsz, "<reg name=\"r%d\" bitsize=\"32\"/>", i);
+		total += snprintf(buffer + total, printsz, "<reg name=\"r%u\" bitsize=\"32\"/>", i);
 	}
 
 	// The special purpose registers are a slightly more complicated.
@@ -286,7 +290,7 @@ static size_t create_tdesc_cortex_a(char *buffer, size_t max_len)
 		gdb_reg_type_e type = cortex_a_spr_types[i];
 
 		if (max_len != 0)
-			printsz = max_len - total;
+			printsz = max_len - (size_t) total;
 
 		total += snprintf(buffer + total, printsz, "<reg name=\"%s\" bitsize=\"32\"%s/>",
 			cortex_a_spr_names[i],
@@ -295,7 +299,7 @@ static size_t create_tdesc_cortex_a(char *buffer, size_t max_len)
 	}
 
 	if (max_len != 0)
-		printsz = max_len - total;
+		printsz = max_len - (size_t) total;
 
 	// Now onto the floating point registers.
 	// The first register is unique; the rest all follow the same format.
@@ -308,20 +312,24 @@ static size_t create_tdesc_cortex_a(char *buffer, size_t max_len)
 	// Now onto the simple ones.
 	for (uint8_t i = 0; i <= 15; ++i) {
 		if (max_len != 0)
-			printsz = max_len - total;
+			printsz = max_len - (size_t) total;
 
 		total += snprintf(buffer + total, printsz,
-			"<reg name=\"d%d\" bitsize=\"64\" type=\"float\"/>",
+			"<reg name=\"d%u\" bitsize=\"64\" type=\"float\"/>",
 			i
 		);
 	}
 
 	if (max_len != 0)
-		printsz = max_len - total;
+		printsz = max_len - (size_t) total;
 
 	total += snprintf(buffer + total, printsz, "</feature></target>");
 
-	return total;
+	// Minor hack: technically snprintf returns an int for possibility of error, but in this case
+	// these functions are given static input that should not ever be able to fail -- and if it
+	// does, then there's nothing we can do about it, so we'll just discard the signedness
+	// of total when we return it.
+	return (size_t) total;
 }
 
 
