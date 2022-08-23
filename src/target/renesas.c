@@ -479,9 +479,6 @@ static int renesas_rv40_flash_erase(target_flash_s *f, target_addr_t addr, size_
 {
 	target *t = f->t;
 
-	/* permit flash operations */
-	target_mem_write8(t, SYSC_FWEPROR, SYSC_FWEPROR_PERMIT);
-
 	/* code flash or data flash operation */
 	const bool code_flash = addr < RENESAS_CF_END;
 
@@ -576,9 +573,6 @@ exit:
 static int renesas_rv40_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
 	target *t = f->t;
-
-	/* permit flash operations */
-	target_mem_write8(t, SYSC_FWEPROR, SYSC_FWEPROR_PERMIT);
 
 	/* code flash or data flash operation */
 	const bool code_flash = dest < RENESAS_CF_END;
@@ -736,6 +730,7 @@ static void renesas_add_flash(target *t, target_addr_t addr, size_t length)
 	case PNR_SERIES_RA6M5:
 	case PNR_SERIES_RA6T1:
 	case PNR_SERIES_RA6T2:
+		t->enter_flash_mode = renesas_enter_flash_mode;
 		return renesas_add_rv40_flash(t, addr, length);
 
 	default:
