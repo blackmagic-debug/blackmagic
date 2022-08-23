@@ -505,13 +505,6 @@ bool cortexa_probe(ADIv5_AP_t *apb, uint32_t debug_base)
 	t->attach = cortexa_attach;
 	t->detach = cortexa_detach;
 
-	// Find the buffer size needed for the target description string we need to send to GDB,
-	// and then compute the string itself.
-	size_t size_needed = create_tdesc_cortex_a(NULL, 0) + 1;
-	char *buffer = malloc(size_needed);
-	create_tdesc_cortex_a(buffer, size_needed);
-
-	t->tdesc = buffer;
 	t->regs_read = cortexa_regs_read;
 	t->regs_write = cortexa_regs_write;
 	t->reg_read = cortexa_reg_read;
@@ -533,6 +526,16 @@ bool cortexa_attach(target *t)
 {
 	struct cortexa_priv *priv = t->priv;
 	int tries;
+
+	if (!t->tdesc) {
+		// Find the buffer size needed for the target description string we need to send to GDB,
+		// and then compute the string itself.
+		size_t size_needed = create_tdesc_cortex_a(NULL, 0) + 1;
+		t->tdesc = malloc(size_needed);
+		create_tdesc_cortex_a(t->tdesc, size_needed);
+	} else {
+		DEBUG_WARN("Cortex-A: target description already allocated before attach");
+	}
 
 	/* Clear any pending fault condition */
 	target_check_error(t);
@@ -566,6 +569,14 @@ bool cortexa_attach(target *t)
 void cortexa_detach(target *t)
 {
 	struct cortexa_priv *priv = t->priv;
+
+	if (t->tdesc) {
+		// Free the target description string that was allocated in cortexa_attach().
+		free(t->tdesc);
+		t->tdesc = NULL;
+	} else {
+		DEBUG_WARN("Cortex-A: target description already NULL before detach");
+	}
 
 	/* Clear any stale breakpoints */
 	for(unsigned i = 0; i < priv->hw_breakpoint_max; i++) {
