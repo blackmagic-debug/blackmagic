@@ -17,8 +17,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef __TRACESWO_H
-#define __TRACESWO_H
+#ifndef PLATFORMS_COMMON_TRACESWO_H
+#define PLATFORMS_COMMON_TRACESWO_H
 
 #include <libopencm3/usb/usbd.h>
 
@@ -39,4 +39,4 @@ void traceswo_setmask(uint32_t mask);
 uint16_t traceswo_decode(usbd_device *usbd_dev, uint8_t addr,
 				const void *buf, uint16_t len);
 
-#endif
+#endif /* PLATFORMS_COMMON_TRACESWO_H */

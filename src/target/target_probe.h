@@ -17,8 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __TARGET_PROBE_H
-#define __TARGET_PROBE_H
+#ifndef TARGET_TARGET_PROBE_H
+#define TARGET_TARGET_PROBE_H
 
 #include "target.h"
 #include "adiv5.h"
@@ -64,4 +64,4 @@ bool msp432_probe(target *t);
 bool ke04_probe(target *t);
 bool rp_probe(target *t);
 
-#endif /* __TARGET_PROBE_H */
+#endif /* TARGET_TARGET_PROBE_H */

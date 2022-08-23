@@ -18,8 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __COMMAND_H
-#define __COMMAND_H
+#ifndef INCLUDE_COMMAND_H
+#define INCLUDE_COMMAND_H
 
 #include <stdbool.h>
 
@@ -35,5 +35,4 @@ int command_process(target *t, char *cmd);
  */
 bool parse_enable_or_disable(const char *s, bool *out);
 
-#endif
-
+#endif /* INCLUDE_COMMAND_H */

@@ -26,8 +26,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _DAP_H_
-#define _DAP_H_
+#ifndef PLATFORMS_HOSTED_DAP_H
+#define PLATFORMS_HOSTED_DAP_H
 
 #include <stdint.h>
 #include <stddef.h>
@@ -86,4 +86,4 @@ int dap_jtag_configure(void);
 void dap_swdptap_seq_out(uint32_t tms_states, size_t clock_cycles);
 void dap_swdptap_seq_out_parity(uint32_t tms_states, size_t clock_cycles);
 
-#endif // _DAP_H_
+#endif /* PLATFORMS_HOSTED_DAP_H */

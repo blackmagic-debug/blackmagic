@@ -16,8 +16,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef __CORTEXM_H
-#define __CORTEXM_H
+
+#ifndef TARGET_CORTEXM_H
+#define TARGET_CORTEXM_H
 
 #include "target.h"
 #include "adiv5.h"
@@ -192,4 +193,4 @@ void cortexm_detach(target *t);
 int cortexm_run_stub(target *t, uint32_t loadaddr, uint32_t r0, uint32_t r1, uint32_t r2, uint32_t r3);
 int cortexm_mem_write_sized(target *t, target_addr dest, const void *src, size_t len, enum align align);
 
-#endif
+#endif /* TARGET_CORTEXM_H */

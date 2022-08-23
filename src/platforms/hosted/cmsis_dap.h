@@ -16,8 +16,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.	 If not, see <http://www.gnu.org/licenses/>.
  */
-#if !defined(__CMSIS_DAP_H_)
-#define __CMSIS_DAP_H_
+
+#ifndef PLATFORMS_HOSTED_CMSIS_DAP_H
+#define PLATFORMS_HOSTED_CMSIS_DAP_H
 
 #include "adiv5.h"
 #include "cli.h"
@@ -53,4 +54,4 @@ void dap_nrst_set_val(bool assert) { }
 
 #endif
 
-#endif
+#endif /* PLATFORMS_HOSTED_CMSIS_DAP_H */

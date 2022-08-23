@@ -21,8 +21,9 @@
 /* This file implements the platform specific functions for the STM32
  * implementation.
  */
-#ifndef __PLATFORM_H
-#define __PLATFORM_H
+
+#ifndef PLATFORMS_NATIVE_PLATFORM_H
+#define PLATFORMS_NATIVE_PLATFORM_H
 
 #include "gpio.h"
 #include "timing.h"
@@ -309,4 +310,4 @@ extern bool debug_bmp;
 #define snprintf sniprintf
 #endif
 
-#endif
+#endif /* PLATFORMS_NATIVE_PLATFORM_H */

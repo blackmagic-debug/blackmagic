@@ -24,8 +24,8 @@
  * SOFTWARE.
  */
 
-#ifndef RTT_H
-#define RTT_H
+#ifndef INCLUDE_RTT_H
+#define INCLUDE_RTT_H
 #include <target.h>
 
 #define MAX_RTT_CHAN 16
@@ -57,4 +57,5 @@ extern struct rtt_channel_struct rtt_channel[MAX_RTT_CHAN];
 // true if target memory access does not work when target running
 bool target_no_background_memory_access(target *cur_target);
 void poll_rtt(target *cur_target);
-#endif
+
+#endif /* INCLUDE_RTT_H */

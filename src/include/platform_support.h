@@ -17,10 +17,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __PLATFORM_SUPPORT_H
-#define __PLATFORM_SUPPORT_H
+#ifndef INCLUDE_PLATFORM_SUPPORT_H
+#define INCLUDE_PLATFORM_SUPPORT_H
 
-#ifndef __GENERAL_H
+#ifndef INCLUDE_GENERAL_H
 #	error "Include 'general.h' instead"
 #endif
 
@@ -52,4 +52,4 @@ uint32_t platform_max_frequency_get(void);
 
 void platform_target_clk_output_enable(bool enable);
 
-#endif
+#endif /* INCLUDE_PLATFORM_SUPPORT_H */

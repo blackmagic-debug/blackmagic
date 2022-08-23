@@ -18,8 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef USB_SERIAL_H
-#define USB_SERIAL_H
+#ifndef PLATFORMS_COMMON_USB_SERIAL_H
+#define PLATFORMS_COMMON_USB_SERIAL_H
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -36,4 +36,4 @@ uint32_t debug_serial_fifo_send(const char *fifo, uint32_t fifo_begin, uint32_t 
 void debug_serial_receive_callback(usbd_device *dev, uint8_t ep);
 #endif
 
-#endif /*USB_SERIAL_H*/
+#endif /* PLATFORMS_COMMON_USB_SERIAL_H */

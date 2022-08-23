@@ -18,8 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __GDB_IF_H
-#define __GDB_IF_H
+#ifndef INCLUDE_GDB_IF_H
+#define INCLUDE_GDB_IF_H
 
 #if PC_HOSTED == 0
 #include <libopencm3/usb/usbd.h>
@@ -33,5 +33,4 @@ unsigned char gdb_if_getchar_to(int timeout);
 /* sending gdb_if_putchar(0, true) seems to work as keep alive */
 void gdb_if_putchar(unsigned char c, int flush);
 
-#endif
-
+#endif /* INCLUDE_GDB_IF_H */

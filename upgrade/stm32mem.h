@@ -17,8 +17,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef __STM32MEM_H
-#define __STM32MEM_H
+
+#ifndef STM32MEM_H
+#define STM32MEM_H
 
 #ifdef WIN32
 #   include <lusb0_usb.h>
@@ -30,5 +31,4 @@ int stm32_mem_erase(usb_dev_handle *dev, uint16_t iface, uint32_t addr);
 int stm32_mem_write(usb_dev_handle *dev, uint16_t iface, void *data, int size, uint32_t addr);
 int stm32_mem_manifest(usb_dev_handle *dev, uint16_t iface);
 
-#endif
-
+#endif /* STM32MEM_H */

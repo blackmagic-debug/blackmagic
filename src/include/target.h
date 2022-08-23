@@ -22,8 +22,8 @@
  * implemented by a target driver when a supported device is detected.
  */
 
-#ifndef __TARGET_H
-#define __TARGET_H
+#ifndef INCLUDE_TARGET_H
+#define INCLUDE_TARGET_H
 
 #include <stdarg.h>
 #include <stdbool.h>
@@ -178,4 +178,4 @@ struct target_controller {
 	bool interrupted;
 };
 
-#endif
+#endif /* INCLUDE_TARGET_H */

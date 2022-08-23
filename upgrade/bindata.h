@@ -17,8 +17,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef __BINDATA_H
-#define __BINDATA_H
+
+#ifndef BINDATA_H
+#define BINDATA_H
 
 #ifndef WIN32
 #define bindatalen _bindatalen
@@ -28,5 +29,4 @@
 extern const uint32_t bindatalen;
 extern const uint8_t bindata[];
 
-#endif
-
+#endif /* BINDATA_H */

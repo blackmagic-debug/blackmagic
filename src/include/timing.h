@@ -17,8 +17,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef __TIMING_H
-#define __TIMING_H
+
+#ifndef INCULUDE_TIMING_H
+#define INCULUDE_TIMING_H
 
 struct platform_timeout {
 	uint32_t time;
@@ -27,4 +28,4 @@ struct platform_timeout {
 extern int32_t swj_delay_cnt;
 uint32_t platform_time_ms(void);
 
-#endif /* __TIMING_H */
+#endif /* INCULUDE_TIMING_H */

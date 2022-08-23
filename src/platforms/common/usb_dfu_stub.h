@@ -18,11 +18,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef USB_DFU_STUB_H
-#define USB_DFU_STUB_H
+#ifndef PLATFORMS_COMMON_USB_DFU_STUB_H
+#define PLATFORMS_COMMON_USB_DFU_STUB_H
 
 #include "usb.h"
 
 void dfu_set_config(usbd_device *dev, uint16_t value);
 
-#endif /*USB_DFU_STUB_H*/
+#endif /* PLATFORMS_COMMON_USB_DFU_STUB_H */

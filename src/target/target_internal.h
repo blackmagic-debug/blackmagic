@@ -18,8 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __TARGET_INTERNAL_H
-#define __TARGET_INTERNAL_H
+#ifndef TARGET_TARGET_INTERNAL_H
+#define TARGET_TARGET_INTERNAL_H
 
 #include "platform_support.h"
 
@@ -191,4 +191,4 @@ int tc_gettimeofday(target *t, target_addr tv, target_addr tz);
 int tc_isatty(target *t, int fd);
 int tc_system(target *t, target_addr cmd, size_t cmdlen);
 
-#endif
+#endif /* TARGET_TARGET_INTERNAL_H */

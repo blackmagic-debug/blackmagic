@@ -39,8 +39,8 @@
  * Can't use break, return, goto, etc from inside the TRY_CATCH block.
  */
 
-#ifndef __EXCEPTION_H
-#define __EXCEPTION_H
+#ifndef INCLUDE_EXCEPTION_H
+#define INCLUDE_EXCEPTION_H
 
 #include <setjmp.h>
 #include <stdint.h>
@@ -70,5 +70,4 @@ extern struct exception *innermost_exception;
 
 void raise_exception(uint32_t type, const char *msg);
 
-#endif
-
+#endif /* INCLUDE_EXCEPTION_H */

@@ -18,8 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __JTAGTAP_H
-#define __JTAGTAP_H
+#ifndef INCLUDE_JTAGTAP_H
+#define INCLUDE_JTAGTAP_H
 
 #include <stdint.h>
 #include <stddef.h>
@@ -79,4 +79,4 @@ int platform_jtagtap_init(void);
 int jtagtap_init(void);
 #endif
 
-#endif /*__JTAGTAP_H*/
+#endif /* INCLUDE_JTAGTAP_H */

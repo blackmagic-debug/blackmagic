@@ -17,8 +17,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef __SERIALNO_H
-#define __SERIALNO_H
+
+#ifndef INCLUDE_SERIALNO_H
+#define INCLUDE_SERIALNO_H
 
 #ifndef DFU_SERIAL_LENGTH
 #define DFU_SERIAL_LENGTH
@@ -28,4 +29,4 @@ extern char serial_no[DFU_SERIAL_LENGTH];
 
 void read_serial_number(void);
 
-#endif
+#endif /* INCLUDE_SERIALNO_H */

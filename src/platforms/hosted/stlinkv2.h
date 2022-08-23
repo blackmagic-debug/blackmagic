@@ -16,7 +16,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.	 If not, see <http://www.gnu.org/licenses/>.
  */
-#if !defined(__STLINKV2_H_)
+
+#ifndef PLATFORMS_HOSTED_STLINKV2_H
+#define PLATFORMS_HOSTED_STLINKV2_H
 
 #define STLINK_ERROR_FAIL -1
 #define STLINK_ERROR_OK 0
@@ -54,4 +56,5 @@ void stlink_exit_function(bmp_info_t *info);
 void stlink_max_frequency_set(bmp_info_t *info, uint32_t freq);
 uint32_t stlink_max_frequency_get(bmp_info_t *info);
 #endif
-#endif
+
+#endif /* PLATFORMS_HOSTED_STLINKV2_H */

@@ -16,8 +16,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.	 If not, see <http://www.gnu.org/licenses/>.
  */
-#if !defined(__JLINK_H_)
-#define __JLINK_H_
+
+#ifndef PLATFORMS_HOSTED_JLINK_H
+#define PLATFORMS_HOSTED_JLINK_H
 
 #include "bmp_hosted.h"
 #include "jtagtap.h"
@@ -105,4 +106,5 @@ bool jlink_nrst_get_val(bmp_info_t *info);
 void jlink_max_frequency_set(bmp_info_t *info, uint32_t freq);
 uint32_t jlink_max_frequency_get(bmp_info_t *info);
 #endif
-#endif
+
+#endif /* PLATFORMS_HOSTED_JLINK_H */
