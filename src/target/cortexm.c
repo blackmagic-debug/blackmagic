@@ -594,21 +594,6 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 
 	/* Should probe here to make sure it's Cortex-M3 */
 
-	// Find the buffer size needed for the target description string we need to send to GDB,
-	// and then compute the string itself.
-	size_t size_needed;
-	char *buffer;
-	if (!is_cortexmf) {
-		size_needed = create_tdesc_cortex_m(NULL, 0) + 1;
-		buffer = malloc(size_needed);
-		create_tdesc_cortex_m(buffer, size_needed);
-	} else {
-		size_needed = create_tdesc_cortex_mf(NULL, 0) + 1;
-		buffer = malloc(size_needed);
-		create_tdesc_cortex_mf(buffer, size_needed);
-	}
-
-	t->tdesc = buffer;
 	t->regs_read = cortexm_regs_read;
 	t->regs_write = cortexm_regs_write;
 	t->reg_read = cortexm_reg_read;
@@ -755,6 +740,26 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 
 bool cortexm_attach(target *t)
 {
+	bool is_cortexmf = (t->target_options & TOPT_FLAVOUR_V7MF) == TOPT_FLAVOUR_V7MF;
+
+	if (!t->tdesc) {
+		// Find the buffer size needed for the target description string we need to send to GDB,
+		// and then compute the string itself.
+		size_t size_needed;
+		if (!is_cortexmf) {
+			size_needed = create_tdesc_cortex_m(NULL, 0) + 1;
+			t->tdesc = malloc(size_needed);
+			create_tdesc_cortex_m(t->tdesc, size_needed);
+		} else {
+			size_needed = create_tdesc_cortex_mf(NULL, 0) + 1;
+			t->tdesc = malloc(size_needed);
+			create_tdesc_cortex_mf(t->tdesc, size_needed);
+		}
+	} else {
+		DEBUG_WARN("Cortex-M: target description already allocated before attach");
+	}
+
+
 	ADIv5_AP_t *ap = cortexm_ap(t);
 	ap->dp->fault = 1; /* Force switch to this multi-drop device*/
 	struct cortexm_priv *priv = t->priv;
@@ -819,6 +824,14 @@ void cortexm_detach(target *t)
 {
 	struct cortexm_priv *priv = t->priv;
 	unsigned i;
+
+	if (t->tdesc) {
+		// Free the target description string that was allocated in cortexm_attach().
+		free(t->tdesc);
+		t->tdesc = NULL;
+	} else {
+		DEBUG_WARN("Cortex-M: target description already NULL before detach");
+	}
 
 	/* Clear any stale breakpoints */
 	for (i = 0; i < priv->hw_breakpoint_max; i++)

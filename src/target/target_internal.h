@@ -95,7 +95,7 @@ struct target_s {
 
 	/* Register access functions */
 	size_t regs_size;
-	const char *tdesc;
+	char *tdesc;
 	void (*regs_read)(target *t, void *data);
 	void (*regs_write)(target *t, const void *data);
 	ssize_t (*reg_read)(target *t, int reg, void *data, size_t max);
