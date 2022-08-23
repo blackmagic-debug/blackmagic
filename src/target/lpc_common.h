@@ -17,8 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __LPC_COMMON_H
-#define __LPC_COMMON_H
+#ifndef TARGET_LPC_COMMON_H
+#define TARGET_LPC_COMMON_H
 
 enum iap_cmd {
 	IAP_CMD_READ_FACTORY_SETTINGS = 40,
@@ -86,5 +86,4 @@ int lpc_flash_erase(struct target_flash *f, target_addr addr, size_t len);
 int lpc_flash_write_magic_vect(struct target_flash *f,
                                target_addr dest, const void *src, size_t len);
 
-#endif
-
+#endif /* TARGET_LPC_COMMON_H */

@@ -18,11 +18,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __HEX_UTILS_H
-#define __HEX_UTILS_H
+#ifndef INCLUDE_HEX_UTILS_H
+#define INCLUDE_HEX_UTILS_H
 
 char * hexify(char *hex, const void *buf, size_t size);
 char * unhexify(void *buf, const char *hex, size_t size);
 
-#endif
-
+#endif /* INCLUDE_HEX_UTILS_H */

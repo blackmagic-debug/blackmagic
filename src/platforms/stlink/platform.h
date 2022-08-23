@@ -21,8 +21,9 @@
 /* This file implements the platform specific functions for the STM32
  * implementation.
  */
-#ifndef __PLATFORM_H
-#define __PLATFORM_H
+
+#ifndef PLATFORMS_STLINK_PLATFORM_H
+#define PLATFORMS_STLINK_PLATFORM_H
 
 #include "gpio.h"
 #include "timing.h"
@@ -187,4 +188,4 @@ extern uint32_t detect_rev(void);
 #define snprintf sniprintf
 #endif
 
-#endif
+#endif /* PLATFORMS_STLINK_PLATFORM_H */

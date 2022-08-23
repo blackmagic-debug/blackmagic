@@ -16,13 +16,13 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef __TIMING_STM32_H
-#define __TIMING_STM32_H
+
+#ifndef PLATFORMS_STM32_TIMING_STM32_H
+#define PLATFORMS_STM32_TIMING_STM32_H
 
 extern uint32_t swd_delay_cnt;
 extern uint8_t running_status;
 
 void platform_timing_init(void);
 
-#endif
-
+#endif /* PLATFORMS_STM32_TIMING_STM32_H */

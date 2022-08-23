@@ -18,8 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _REMOTE_
-#define _REMOTE_
+#ifndef REMOTE_H
+#define REMOTE_H
 
 #include <inttypes.h>
 #include "general.h"
@@ -286,4 +286,4 @@
 uint64_t remotehston(uint32_t limit, const char *s);
 void remotePacketProcess(unsigned int i, char *packet);
 
-#endif
+#endif /* REMOTE_H */

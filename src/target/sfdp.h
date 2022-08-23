@@ -31,8 +31,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef SFDP_H
-#define SFDP_H
+#ifndef TARGET_SFDP_H
+#define TARGET_SFDP_H
 
 #include <stdint.h>
 #include <stddef.h>
@@ -57,4 +57,4 @@ typedef void (*read_sfdp_func)(target *t, uint32_t address, void *buffer, size_t
 
 bool sfdp_read_parameters(target *t, spi_parameters_s *params, read_sfdp_func sfdp_read);
 
-#endif /*SFDP_H*/
+#endif /* TARGET_SFDP_H */

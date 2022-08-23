@@ -17,8 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __SEMIHOSTING_H
-#define __SEMIHOSTING_H
+#ifndef TARGET_SEMIHOSTING_H
+#define TARGET_SEMIHOSTING_H
 
 /* Semihosting support */
 
@@ -59,4 +59,4 @@
 #define SEMIHOSTING_SYS_WRITEC        0x03U
 #define SEMIHOSTING_SYS_WRITE0        0x04U
 
-#endif /* __SEMIHOSTING_H */
+#endif /* TARGET_SEMIHOSTING_H */

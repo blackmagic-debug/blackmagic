@@ -31,8 +31,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef SFDP_INTERNAL_H
-#define SFDP_INTERNAL_H
+#ifndef TARGET_SFDP_INTERNAL_H
+#define TARGET_SFDP_INTERNAL_H
 
 #include "sfdp.h"
 
@@ -120,4 +120,4 @@ typedef struct sfdp_basic_parameter_table {
 	uint32_t status_and_addressing_mode;
 } sfdp_basic_parameter_table_s;
 
-#endif /*SFDP_INTERNAL_H*/
+#endif /* TARGET_SFDP_INTERNAL_H */

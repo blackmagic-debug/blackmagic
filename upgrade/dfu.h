@@ -17,8 +17,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef __DFU_H
-#define __DFU_H
+#ifndef DFU_H
+#define DFU_H
 
 #include <stdint.h>
 
@@ -82,5 +82,4 @@ int dfu_abort(usb_dev_handle *dev, uint16_t iface);
 int dfu_makeidle(usb_dev_handle *dev, uint16_t iface);
 
 
-#endif
-
+#endif /* DFU_H */

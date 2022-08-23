@@ -21,8 +21,9 @@
 /* This file implements the platform specific functions for the STM32
  * implementation.
  */
-#ifndef __PLATFORM_H
-#define __PLATFORM_H
+
+#ifndef PLATFORMS_96B_CARBON_PLATFORM_H
+#define PLATFORMS_96B_CARBON_PLATFORM_H
 
 #include "gpio.h"
 #include "timing.h"
@@ -161,4 +162,4 @@ static inline int platform_hwversion(void)
 #define vasprintf vasiprintf
 #define snprintf sniprintf
 
-#endif
+#endif /* PLATFORMS_96B_CARBON_PLATFORM_H */

@@ -14,8 +14,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef __PLATFORM_H
-#define __PLATFORM_H
+#ifndef PLATFORMS_LAUNCHPAD_ICDI_PLATFORM_H
+#define PLATFORMS_LAUNCHPAD_ICDI_PLATFORM_H
 
 #include <libopencm3/lm4f/gpio.h>
 #include <libopencm3/usb/usbd.h>
@@ -114,4 +114,4 @@ inline static uint8_t gpio_get(uint32_t port, uint8_t pin) {
 
 static inline int platform_hwversion(void) { return 0; }
 
-#endif
+#endif /* PLATFORMS_LAUNCHPAD_ICDI_PLATFORM_H */

@@ -17,8 +17,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef AUX_SERIAL_H
-#define AUX_SERIAL_H
+#ifndef PLATFORMS_COMMON_AUX_SERIAL_H
+#define PLATFORMS_COMMON_AUX_SERIAL_H
 
 #include <stddef.h>
 #include <libopencm3/usb/usbd.h>
@@ -71,4 +71,4 @@ void aux_serial_stage_debug_buffer(void);
 void aux_serial_stage_receive_buffer(void);
 #endif
 
-#endif /*AUX_SERIAL_H*/
+#endif /* PLATFORMS_COMMON_AUX_SERIAL_H */

@@ -18,8 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __GDB_PACKET_H
-#define __GDB_PACKET_H
+#ifndef INCLUDE_GDB_PACKET_H
+#define INCLUDE_GDB_PACKET_H
 
 #include <stddef.h>
 #include <stdarg.h>
@@ -36,4 +36,4 @@ void gdb_out(const char *buf);
 void gdb_voutf(const char *fmt, va_list);
 void gdb_outf(const char *fmt, ...);
 
-#endif
+#endif /* INCLUDE_GDB_PACKET_H */

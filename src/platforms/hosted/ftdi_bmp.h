@@ -19,8 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __FTDI_BMP_H
-#define __FTDI_BMP_H
+#ifndef PLATFORMS_HOSTED_FTDI_BMP_H
+#define PLATFORMS_HOSTED_FTDI_BMP_H
 
 #include "cli.h"
 #include "jtagtap.h"
@@ -151,4 +151,5 @@ bool libftdi_nrst_get_val(void);
 #define PIN5     0x20
 #define PIN6     0x40
 #define PIN7     0x80
-#endif
+
+#endif /* PLATFORMS_HOSTED_FTDI_BMP_H */

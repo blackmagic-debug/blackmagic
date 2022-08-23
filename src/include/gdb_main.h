@@ -18,10 +18,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __GDB_MAIN_H
-#define __GDB_MAIN_H
+#ifndef INCLUDE_GDB_MAIN_H
+#define INCLUDE_GDB_MAIN_H
 
 void gdb_main(void);
 
-#endif
-
+#endif /* INCLUDE_GDB_MAIN_H */

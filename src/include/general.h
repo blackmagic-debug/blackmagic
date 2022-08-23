@@ -18,8 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __GENERAL_H
-#define __GENERAL_H
+#ifndef INCLUDE_GENERAL_H
+#define INCLUDE_GENERAL_H
 
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
@@ -175,4 +175,4 @@ static inline void DEBUG_WIRE(const char *format, ...)
 #define SYSTICKMS (1000 / SYSTICKHZ)
 #define MORSECNT ((SYSTICKHZ / 10) - 1)
 
-#endif
+#endif /* INCLUDE_GENERAL_H */

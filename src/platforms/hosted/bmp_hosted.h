@@ -32,8 +32,8 @@
  * SUCH DAMAGE.
  */
 
-#if !defined(__BMP_LIBUSB_H)
-#define      __BMP_LIBUSB_H
+#ifndef PLATFORMS_HOSTED_BMP_HOSTED_H
+#define PLATFORMS_HOSTED_BMP_HOSTED_H
 
 #include "cli.h"
 
@@ -91,4 +91,4 @@ void libusb_exit_function(bmp_info_t *info);
 #define PRINT_INFO(fmt, ...) printf((fmt), ##__VA_ARGS__)
 #endif
 
-#endif
+#endif /* PLATFORMS_HOSTED_BMP_HOSTED_H */

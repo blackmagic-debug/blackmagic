@@ -17,8 +17,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef __GDB_SYSCALLS_H
-#define __GDB_SYSCALLS_H
+
+#ifndef GDB_HOSTIO_H
+#define GDB_HOSTIO_H
 
 #include "target.h"
 
@@ -49,5 +50,4 @@ int hostio_isatty(struct target_controller *, int fd);
 int hostio_system(struct target_controller *,
 	           target_addr cmd, size_t cmd_len);
 
-#endif
-
+#endif /* GDB_HOSTIO_H */

@@ -17,8 +17,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef __JTAG_SCAN_H
-#define __JTAG_SCAN_H
+
+#ifndef TARGET_JTAG_SCAN_H
+#define TARGET_JTAG_SCAN_H
 
 #include <stddef.h>
 #include "jtagtap.h"
@@ -49,4 +50,4 @@ void jtag_dev_write_ir(jtag_proc_t *jp, uint8_t jd_index, uint32_t ir);
 void jtag_dev_shift_dr(jtag_proc_t *jp, uint8_t jd_index, uint8_t *dout, const uint8_t *din, size_t ticks);
 void jtag_add_device(uint32_t dev_index, const jtag_dev_t *jtag_dev);
 
-#endif /*__JTAG_SCAN_H*/
+#endif /* TARGET_JTAG_SCAN_H */

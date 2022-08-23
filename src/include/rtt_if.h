@@ -24,8 +24,9 @@
  * SOFTWARE.
  */
 
-#ifndef RTT_IF_H
-#define RTT_IF_H
+#ifndef INCLUDE_RTT_IF_H
+#define INCLUDE_RTT_IF_H
+
 /* rtt i/o to terminal */
 
 /* default buffer sizes, 8 bytes added to up buffer for alignment and padding */
@@ -59,4 +60,4 @@ int32_t rtt_getchar();
 /* host to target: true if no characters available for reading */
 bool rtt_nodata();
 
-#endif
+#endif /* INCLUDE_RTT_IF_H */

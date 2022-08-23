@@ -16,8 +16,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.	 If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef __BMP_REMOTE_H_
-#define __BMP_REMOTE_H_
+
+#ifndef PLATFORMS_HOSTED_BMP_REMOTE_H_
+#define PLATFORMS_HOSTED_BMP_REMOTE_H_
 
 #include "jtagtap.h"
 #include "adiv5.h"
@@ -44,4 +45,4 @@ void remote_target_clk_output_enable(bool enable);
 void remote_adiv5_dp_defaults(ADIv5_DP_t *dp);
 void remote_add_jtag_dev(uint32_t i, const jtag_dev_t *jtag_dev);
 
-#endif /*__BMP_REMOTE_H_*/
+#endif /* PLATFORMS_HOSTED_BMP_REMOTE_H */

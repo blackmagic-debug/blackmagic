@@ -21,8 +21,8 @@
 /* This file implements the interface to command line command for PC-Hosted
  * platforms.
  */
-#if !defined(__CLI_H)
-#define __CLI_H
+#ifndef PLATFORMS_HOSTED_CLI_H
+#define PLATFORMS_HOSTED_CLI_H
 
 #include "cortexm.h"
 
@@ -73,4 +73,5 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv);
 int cl_execute(BMP_CL_OPTIONS_t *opt);
 int serial_open(BMP_CL_OPTIONS_t *opt, char *serial);
 void serial_close(void);
-#endif
+
+#endif /* PLATFORMS_HOSTED_CLI_H */

@@ -18,8 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __ADIV5_H
-#define __ADIV5_H
+#ifndef TARGET_ADIV5_H
+#define TARGET_ADIV5_H
 
 #include "jtag_scan.h"
 
@@ -389,4 +389,5 @@ uint32_t firmware_swdp_error(ADIv5_DP_t *dp);
 
 void firmware_swdp_abort(ADIv5_DP_t *dp, uint32_t abort);
 void adiv5_jtagdp_abort(ADIv5_DP_t *dp, uint32_t abort);
-#endif
+
+#endif /* TARGET_ADIV5_H */

@@ -17,8 +17,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef __GPIO_H
-#define __GPIO_H
+
+#ifndef PLATFORMS_STM32_GPIO_H
+#define PLATFORMS_STM32_GPIO_H
 
 #include <libopencm3/cm3/common.h>
 
@@ -66,5 +67,4 @@ static inline uint16_t _gpio_get(uint32_t gpioport, uint16_t gpios)
 #define gpio_get _gpio_get
 #endif
 
-#endif
-
+#endif /* PLATFORMS_STM32_GPIO_H */
