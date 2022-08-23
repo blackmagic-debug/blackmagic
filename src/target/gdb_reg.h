@@ -21,7 +21,6 @@
 #ifndef __GDB_REG_H
 #define __GDB_REG_H
 
-
 // The beginning XML for GDB target descriptions that are common to ARM targets,
 // save for one word: the word after DOCTYPE, which is "target" for Cortex-M, and "feature"
 // for Cortex-A. The "preamble" is thus split into two halves, with this single word missing
@@ -34,7 +33,6 @@ extern const char *gdb_arm_preamble_first;
 // and as the split point.
 extern const char *gdb_arm_preamble_second;
 
-
 // The "type" field of a register tag.
 typedef enum gdb_reg_type {
 	GDB_TYPE_UNSPECIFIED = 0,
@@ -44,7 +42,6 @@ typedef enum gdb_reg_type {
 
 // The strings for the "type" field of a register tag, respective to its gdb_reg_type_e value.
 extern const char *gdb_reg_type_strings[];
-
 
 // The "save-restore" field of a register tag.
 typedef enum gdb_reg_save_restore {

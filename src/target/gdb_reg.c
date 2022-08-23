@@ -20,27 +20,21 @@
 
 #include "gdb_reg.h"
 
+const char *gdb_arm_preamble_first = "<?xml version=\"1.0\"?>"
+									 "<!DOCTYPE";
 
-const char *gdb_arm_preamble_first =
-	"<?xml version=\"1.0\"?>"
-	"<!DOCTYPE";
-
-const char *gdb_arm_preamble_second =
-	"SYSTEM "
-	"\"gdb-target.dtd\">"
-	"<target>"
-	"  <architecture>arm</architecture>";
-
-
+const char *gdb_arm_preamble_second = "SYSTEM "
+									  "\"gdb-target.dtd\">"
+									  "<target>"
+									  "  <architecture>arm</architecture>";
 
 const char *gdb_reg_type_strings[] = {
-	"", // GDB_TYPE_UNSPECIFIED.
+	"",                   // GDB_TYPE_UNSPECIFIED.
 	" type=\"data_ptr\"", // GDB_TYPE_DATA_PTR.
 	" type=\"code_ptr\"", // GDB_TYPE_CODE_PTR.
 };
 
-
 const char *gdb_reg_save_restore_strings[] = {
-	"", // GDB_SAVE_RESTORE_UNSPECIFIED.
+	"",                    // GDB_SAVE_RESTORE_UNSPECIFIED.
 	" save-restore=\"no\"" // GDB_SAVE_RESTORE_NO.
 };
