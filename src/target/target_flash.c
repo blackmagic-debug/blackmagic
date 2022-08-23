@@ -211,7 +211,7 @@ static int flash_buffered_write(target_flash_s *f, target_addr_t dest, const voi
 {
 	if (f->buf == NULL) {
 		/* Allocate buffer */
-		f->buf = malloc(f->blocksize);
+		f->buf = malloc(f->writebufsize);
 		if (!f->buf) { /* malloc failed: heap exhaustion */
 			DEBUG_WARN("malloc: failed in %s\n", __func__);
 			return -1;
@@ -223,7 +223,7 @@ static int flash_buffered_write(target_flash_s *f, target_addr_t dest, const voi
 
 	int ret = 0;
 	while (len) {
-		const target_addr_t base_addr = dest & ~(f->blocksize - 1U);
+		const target_addr_t base_addr = dest & ~(f->writebufsize - 1U);
 
 		/* check for base address change */
 		if (base_addr != f->buf_addr_base) {
@@ -231,11 +231,11 @@ static int flash_buffered_write(target_flash_s *f, target_addr_t dest, const voi
 
 			/* Setup buffer */
 			f->buf_addr_base = base_addr;
-			memset(f->buf, f->erased, f->blocksize);
+			memset(f->buf, f->erased, f->writebufsize);
 		}
 
-		const size_t offset = dest % f->blocksize;
-		const size_t local_len = MIN(f->blocksize - offset, len);
+		const size_t offset = dest % f->writebufsize;
+		const size_t local_len = MIN(f->writebufsize - offset, len);
 
 		/* Copy chunk into sector buffer */
 		memcpy(f->buf + offset, src, local_len);
