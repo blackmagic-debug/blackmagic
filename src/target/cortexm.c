@@ -176,7 +176,7 @@ static const gdb_reg_type_e cortex_m_spr_types[] = {
 	GDB_TYPE_UNSPECIFIED, // control
 };
 
-static_assert(ARRAY_SIZE(cortex_m_spr_types) == ARRAY_SIZE(cortex_m_spr_names), "SPR array length mismatch! SPR type "
+static_assert(ARRAY_LENGTH(cortex_m_spr_types) == ARRAY_LENGTH(cortex_m_spr_names), "SPR array length mismatch! SPR type "
                                                                                 "array should have the same length as "
                                                                                 "SPR name array.");
 
@@ -194,7 +194,7 @@ static const gdb_reg_save_restore_e cortex_m_spr_save_restores[] = {
 	GDB_SAVE_RESTORE_NO,          // control
 };
 
-static_assert(ARRAY_SIZE(cortex_m_spr_save_restores) == ARRAY_SIZE(cortex_m_spr_names), "SPR array length mismatch! "
+static_assert(ARRAY_LENGTH(cortex_m_spr_save_restores) == ARRAY_LENGTH(cortex_m_spr_names), "SPR array length mismatch! "
                                                                                         "SPR save-restore array should "
                                                                                         "have the same length as SPR "
                                                                                         "name array.");
@@ -213,7 +213,7 @@ static const uint8_t cortex_m_spr_bitsizes[] = {
 	8,  // control
 };
 
-static_assert(ARRAY_SIZE(cortex_m_spr_bitsizes) == ARRAY_SIZE(cortex_m_spr_names), "SPR array length mismatch! SPR "
+static_assert(ARRAY_LENGTH(cortex_m_spr_bitsizes) == ARRAY_LENGTH(cortex_m_spr_names), "SPR array length mismatch! SPR "
                                                                                    "bitsize array should have the same "
                                                                                    "length as SPR name array.");
 
@@ -295,7 +295,7 @@ static size_t create_tdesc_cortex_m(char *buffer, size_t max_len)
 	// Some of them have different bitsizes, specified types, or specified save-restore values.
 	// We'll use the 'associative arrays' defined for those values.
 	// NOTE: unlike the other loops, this loop uses a size_t for its counter, as it's used to index into arrays.
-	for (size_t i = 0; i < ARRAY_SIZE(cortex_m_spr_names); ++i) {
+	for (size_t i = 0; i < ARRAY_LENGTH(cortex_m_spr_names); ++i) {
 		if (max_len != 0)
 			printsz = max_len - (size_t)total;
 
