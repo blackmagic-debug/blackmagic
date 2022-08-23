@@ -211,6 +211,8 @@ void target_add_flash(target *t, target_flash_s *f)
 {
 	if (f->writesize == 0)
 		f->writesize = f->blocksize;
+	if (f->writebufsize == 0)
+		f->writebufsize = f->writesize;
 	f->t = t;
 	f->next = t->flash;
 	t->flash = f;

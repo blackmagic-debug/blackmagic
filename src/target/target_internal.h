@@ -44,7 +44,8 @@ struct target_flash {
 	target_addr_t start;         /* start address of flash */
 	size_t length;               /* flash length */
 	size_t blocksize;            /* erase block size */
-	size_t writesize;            /* write operation size, must be <= blocksize */
+	size_t writesize;            /* write operation size, must be <= blocksize/writebufsize */
+	size_t writebufsize;         /* size of write buffer */
 	uint8_t erased;              /* byte erased state */
 	bool ready;                  /* true if flash is in flash mode/prepared */
 	flash_prepare_func prepare;  /* prepare for flash operations */
