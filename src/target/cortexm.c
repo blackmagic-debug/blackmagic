@@ -265,7 +265,11 @@ static_assert(ARRAY_SIZE(cortex_m_spr_bitsizes) == ARRAY_SIZE(cortex_m_spr_names
 */
 static size_t create_tdesc_cortex_m(char *buffer, size_t max_len)
 {
-	size_t total = 0;
+	// Minor hack: technically snprintf returns an int for possibility of error, but in this case
+	// these functions are given static input that should not be able to fail -- and if it does,
+	// then there's nothing we can do about it, so we'll repatedly cast this variable to a size_t
+	// when calculating printsz (see below).
+	int total = 0;
 
 	// We can't just repeatedly pass max_len to snprintf, because we keep changing the start
 	// of buffer (effectively changing its size), so we have to repeatedly compute the size
@@ -292,9 +296,9 @@ static size_t create_tdesc_cortex_m(char *buffer, size_t max_len)
 	for (uint8_t i = 0; i <= 12; ++i) {
 
 		if (max_len != 0)
-			printsz = max_len - total;
+			printsz = max_len - (size_t) total;
 
-		total += snprintf(buffer + total, printsz, "<reg name=\"r%d\" bitsize=\"32\"/>", i);
+		total += snprintf(buffer + total, printsz, "<reg name=\"r%u\" bitsize=\"32\"/>", i);
 	}
 
 	// Now for sp, lr, pc, xpsr, msp, psp, primask, basepri, faultmask, and control.
@@ -304,12 +308,12 @@ static size_t create_tdesc_cortex_m(char *buffer, size_t max_len)
 	for (size_t i = 0; i < ARRAY_SIZE(cortex_m_spr_names); ++i) {
 
 		if (max_len != 0)
-			printsz = max_len - total;
+			printsz = max_len - (size_t) total;
 
 		gdb_reg_type_e type = cortex_m_spr_types[i];
 		gdb_reg_save_restore_e save_restore = cortex_m_spr_save_restores[i];
 
-		total += snprintf(buffer + total, printsz, "<reg name=\"%s\" bitsize=\"%d\"%s%s/>",
+		total += snprintf(buffer + total, printsz, "<reg name=\"%s\" bitsize=\"%u\"%s%s/>",
 			cortex_m_spr_names[i],
 			cortex_m_spr_bitsizes[i],
 			gdb_reg_save_restore_strings[save_restore],
@@ -318,11 +322,15 @@ static size_t create_tdesc_cortex_m(char *buffer, size_t max_len)
 	}
 
 	if (max_len != 0)
-		printsz = max_len - total;
+		printsz = max_len - (size_t) total;
 
 	total += snprintf(buffer + total, printsz, "</feature></target>");
 
-	return total;
+	// Minor hack: technically snprintf returns an int for possibility of error, but in this case
+	// these functions are given static input that should not ever be able to fail -- and if it
+	// does, then there's nothing we can do about it, so we'll just discard the signedness
+	// of total when we return it.
+	return (size_t) total;
 }
 
 // Creates the target description XML string for a Cortex-MF. Like snprintf(), this function
@@ -387,9 +395,18 @@ static size_t create_tdesc_cortex_m(char *buffer, size_t max_len)
 */
 static size_t create_tdesc_cortex_mf(char *buffer, size_t max_len)
 {
+	// Minor hack: technically snprintf returns an int for possibility of error, but in this case
+	// these functions are given static input that should not be able to fail -- and if it does,
+	// then there's not really anything we can do about it, so we repatedly cast this variable
+	// to a size_t when calculating printsz (see below). Likewise, create_tdesc_cortex_m()
+	// has static inputs and shouldn't ever return a value large enough for casting it to a
+	// signed int to change its value, and if it does, then again there's something wrong that
+	// we can't really do anything about.
+	int total = 0;
+
 	// The first part of the target description for the Cortex-MF is identical to the Cortex-M
 	// target description.
-	size_t total = create_tdesc_cortex_m(buffer, max_len);
+	total = (int) create_tdesc_cortex_m(buffer, max_len);
 
 	// We can't just repeatedly pass max_len to snprintf, because we keep changing the start
 	// of buffer (effectively changing its size), so we have to repeatedly compute the size
@@ -403,7 +420,7 @@ static size_t create_tdesc_cortex_mf(char *buffer, size_t max_len)
 		// Minor hack: subtract the target closing tag, since we have a bit more to add.
 		total -= strlen("</target>");
 
-		printsz = max_len - total;
+		printsz = max_len - (size_t) total;
 	}
 
 
@@ -416,17 +433,21 @@ static size_t create_tdesc_cortex_mf(char *buffer, size_t max_len)
 	for (uint8_t i = 0; i <= 15; ++i) {
 
 		if (max_len != 0)
-			printsz = max_len - total;
+			printsz = max_len - (size_t) total;
 
 		total += snprintf(buffer + total, printsz, "<reg name=\"d%u\" bitsize=\"64\" type=\"float\"/>", i);
 	}
 
 	if (max_len != 0)
-		printsz = max_len - total;
+		printsz = max_len - (size_t) total;
 
 	total += snprintf(buffer + total, printsz, "</feature></target>");
 
-	return total;
+	// Minor hack: technically snprintf returns an int for possibility of error, but in this case
+	// these functions are given static input that should not ever be able to fail -- and if it
+	// does, then there's nothing we can do about it, so we'll just discard the signedness
+	// of total when we return it.
+	return (size_t) total;
 }
 
 
