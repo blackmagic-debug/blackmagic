@@ -196,5 +196,5 @@ static bool lmi_flash_write(target_flash_s *f, target_addr_t dest, const void *s
 
 static bool lmi_mass_erase(target *t)
 {
-	return lmi_flash_erase(t->flash, t->flash->start, t->flash->length) == 0;
+	return lmi_flash_erase(t->flash, t->flash->start, t->flash->length);
 }
