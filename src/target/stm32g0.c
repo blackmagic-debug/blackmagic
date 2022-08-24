@@ -160,8 +160,8 @@ typedef struct stm32g0_priv {
 
 static bool stm32g0_attach(target *t);
 static void stm32g0_detach(target *t);
-static int stm32g0_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
-static int stm32g0_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
+static bool stm32g0_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
+static bool stm32g0_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 static bool stm32g0_mass_erase(target *t);
 
 /* Custom commands */
@@ -340,14 +340,14 @@ static void stm32g0_flash_op_finish(target *t)
  * Flash erasure function.
  * OTP case: this function clears any previous error and returns.
  */
-static int stm32g0_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
+static bool stm32g0_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
 	target *const t = f->t;
 
 	/* Wait for Flash ready */
 	if (!stm32g0_wait_busy(t)) {
 		stm32g0_flash_op_finish(t);
-		return -1;
+		return false;
 	}
 
 	/* Clear any previous programming error */
@@ -355,7 +355,7 @@ static int stm32g0_flash_erase(target_flash_s *f, target_addr_t addr, size_t len
 
 	if (addr >= FLASH_OTP_START) {
 		stm32g0_flash_op_finish(t);
-		return 0;
+		return true;
 	}
 
 	const size_t pages_to_erase = ((len - 1U) / f->blocksize) + 1U;
@@ -382,7 +382,7 @@ static int stm32g0_flash_erase(target_flash_s *f, target_addr_t addr, size_t len
 
 		if (!stm32g0_wait_busy(t)) {
 			stm32g0_flash_op_finish(t);
-			return -1;
+			return false;
 		}
 	}
 
@@ -391,7 +391,7 @@ static int stm32g0_flash_erase(target_flash_s *f, target_addr_t addr, size_t len
 	if (status & FLASH_SR_ERROR_MASK)
 		DEBUG_WARN("stm32g0 flash erase error: sr 0x%" PRIx32 "\n", status);
 	stm32g0_flash_op_finish(t);
-	return (status & FLASH_SR_ERROR_MASK) ? -1 : 0;
+	return !(status & FLASH_SR_ERROR_MASK);
 }
 
 /*
@@ -402,7 +402,7 @@ static int stm32g0_flash_erase(target_flash_s *f, target_addr_t addr, size_t len
  * OTP area is programmed as the "program" area. It can be programmed 8-bytes
  * by 8-bytes.
  */
-static int stm32g0_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
+static bool stm32g0_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
 	target *const t = f->t;
 	stm32g0_priv_s *ps = (stm32g0_priv_s *)t->target_storage;
@@ -410,7 +410,7 @@ static int stm32g0_flash_write(target_flash_s *f, target_addr_t dest, const void
 	if (dest >= FLASH_OTP_START && !ps->irreversible_enabled) {
 		tc_printf(t, "Irreversible operations disabled\n");
 		stm32g0_flash_op_finish(t);
-		return -1;
+		return false;
 	}
 
 	stm32g0_flash_unlock(t);
@@ -421,14 +421,14 @@ static int stm32g0_flash_write(target_flash_s *f, target_addr_t dest, const void
 	if (!stm32g0_wait_busy(t)) {
 		DEBUG_WARN("stm32g0 flash write: comm error\n");
 		stm32g0_flash_op_finish(t);
-		return -1;
+		return false;
 	}
 
 	const uint32_t status = target_mem_read32(t, FLASH_SR);
 	if (status & FLASH_SR_ERROR_MASK) {
 		DEBUG_WARN("stm32g0 flash write error: sr 0x%" PRIx32 "\n", status);
 		stm32g0_flash_op_finish(t);
-		return -1;
+		return false;
 	}
 
 	if (dest == FLASH_START && target_mem_read32(t, FLASH_START) != 0xFFFFFFFF) {
@@ -437,7 +437,7 @@ static int stm32g0_flash_write(target_flash_s *f, target_addr_t dest, const void
 	}
 
 	stm32g0_flash_op_finish(t);
-	return 0;
+	return true;
 }
 
 static bool stm32g0_mass_erase(target *t)

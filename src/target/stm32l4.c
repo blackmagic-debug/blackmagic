@@ -53,8 +53,8 @@ const struct command_s stm32l4_cmd_list[] = {
 	{NULL, NULL, NULL}
 };
 
-static int stm32l4_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
-static int stm32l4_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
+static bool stm32l4_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
+static bool stm32l4_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 static bool stm32l4_mass_erase(target *t);
 
 /* Flash Program ad Erase Controller Register Map */
@@ -569,16 +569,28 @@ static void stm32l4_flash_unlock(target *t)
 	}
 }
 
-static int stm32l4_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
+static bool stm32l4_flash_busy_wait(target *t)
+{
+	/* Read FLASH_SR to poll for BSY bit */
+	uint32_t sr;
+	do {
+		sr = stm32l4_flash_read32(t, FLASH_SR);
+		if ((sr & FLASH_SR_ERROR_MASK) || target_check_error(t)) {
+			DEBUG_WARN("stm32l4 flash error: sr 0x%" PRIx32 "\n", sr);
+			return false;
+		}
+	} while (sr & FLASH_SR_BSY);
+
+	return true;
+}
+
+static bool stm32l4_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
 	target *t = f->t;
 	stm32l4_flash_unlock(t);
 
-	/* Read FLASH_SR to poll for BSY bit */
-	while (stm32l4_flash_read32(t, FLASH_SR) & FLASH_SR_BSY) {
-		if (target_check_error(t))
-			return -1;
-	}
+	if (!stm32l4_flash_busy_wait(t))
+		return false;
 
 	/* Fixme: OPTVER always set after reset! Wrong option defaults?*/
 	stm32l4_flash_write32(t, FLASH_SR, stm32l4_flash_read32(t, FLASH_SR));
@@ -595,11 +607,9 @@ static int stm32l4_flash_erase(target_flash_s *f, target_addr_t addr, size_t len
 		ctrl_reg |= FLASH_CR_STRT;
 		stm32l4_flash_write32(t, FLASH_CR, ctrl_reg);
 
-		/* Read FLASH_SR to poll for BSY bit */
-		while (stm32l4_flash_read32(t, FLASH_SR) & FLASH_SR_BSY) {
-			if (target_check_error(t))
-				return -1;
-		}
+		if (!stm32l4_flash_busy_wait(t))
+			return false;
+
 		if (len > blocksize)
 			len  -= blocksize;
 		else
@@ -608,32 +618,17 @@ static int stm32l4_flash_erase(target_flash_s *f, target_addr_t addr, size_t len
 		page++;
 	}
 
-	/* Check for error */
-	if (stm32l4_flash_read32(t, FLASH_SR) & FLASH_SR_ERROR_MASK)
-		return -1;
-	return 0;
+	return true;
 }
 
-static int stm32l4_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
+static bool stm32l4_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
 	target *t = f->t;
 	stm32l4_flash_write32(t, FLASH_CR, FLASH_CR_PG);
 	target_mem_write(t, dest, src, len);
-	/* Wait for completion or an error */
-	uint32_t status;
-	do {
-		status = stm32l4_flash_read32(t, FLASH_SR);
-		if (target_check_error(t)) {
-			DEBUG_WARN("stm32l4 flash write: comm error\n");
-			return -1;
-		}
-	} while (status & FLASH_SR_BSY);
 
-	if (status & FLASH_SR_ERROR_MASK) {
-		DEBUG_WARN("stm32l4 flash write error: sr 0x%" PRIx32 "\n", status);
-		return -1;
-	}
-	return 0;
+	/* Wait for completion or an error */
+	return stm32l4_flash_busy_wait(t);
 }
 
 static bool stm32l4_cmd_erase(target *const t, const uint32_t action)
@@ -644,17 +639,19 @@ static bool stm32l4_cmd_erase(target *const t, const uint32_t action)
 	stm32l4_flash_write32(t, FLASH_CR, action);
 	stm32l4_flash_write32(t, FLASH_CR, action | FLASH_CR_STRT);
 
+	/* Read FLASH_SR to poll for BSY bit */
+	uint32_t sr;
 	platform_timeout timeout;
 	platform_timeout_set(&timeout, 500);
-	/* Read FLASH_SR to poll for BSY bit */
-	while (stm32l4_flash_read32(t, FLASH_SR) & FLASH_SR_BSY) {
-		if(target_check_error(t))
+	do {
+		sr = stm32l4_flash_read32(t, FLASH_SR);
+		if ((sr & FLASH_SR_ERROR_MASK) || target_check_error(t))
 			return false;
 		target_print_progress(&timeout);
-	}
+	} while (sr & FLASH_SR_BSY);
 
 	/* Check for error */
-	return !(stm32l4_flash_read32(t, FLASH_SR) & FLASH_SR_ERROR_MASK);
+	return true;
 }
 
 static bool stm32l4_mass_erase(target *const t)
@@ -701,15 +698,13 @@ static bool stm32l4_option_write(
 	stm32l4_flash_unlock(t);
 	stm32l4_flash_write32(t, FLASH_OPTKEYR, OPTKEY1);
 	stm32l4_flash_write32(t, FLASH_OPTKEYR, OPTKEY2);
-	while (stm32l4_flash_read32(t, FLASH_SR) & FLASH_SR_BSY)
-		if(target_check_error(t))
-			return true;
+	if (!stm32l4_flash_busy_wait(t))
+		return true;
 	for (int i = 0; i < len; i++)
 		target_mem_write32(t, fpec_base + i2offset[i], values[i]);
 	stm32l4_flash_write32(t, FLASH_CR, FLASH_CR_OPTSTRT);
-	while (stm32l4_flash_read32(t, FLASH_SR) & FLASH_SR_BSY)
-		if(target_check_error(t))
-			return true;
+	if (!stm32l4_flash_busy_wait(t))
+		return false;
 	stm32l4_flash_write32(t, FLASH_CR, FLASH_CR_OBL_LAUNCH);
 	while (stm32l4_flash_read32(t, FLASH_CR) & FLASH_CR_OBL_LAUNCH)
 		if(target_check_error(t))

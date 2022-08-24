@@ -46,8 +46,8 @@ const struct command_s stm32f1_cmd_list[] = {
 	{NULL, NULL, NULL}
 };
 
-static int stm32f1_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
-static int stm32f1_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
+static bool stm32f1_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
+static bool stm32f1_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 static bool stm32f1_mass_erase(target *t);
 
 /* Flash Program ad Erase Controller Register Map */
@@ -357,19 +357,33 @@ static int stm32f1_flash_unlock(target *t, uint32_t bank_offset)
 	return 0;
 }
 
-static int stm32f1_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
+static bool stm32f1_flash_busy_wait(target *t, uint32_t bank_offset)
+{
+	/* Read FLASH_SR to poll for BSY bit */
+	uint32_t sr;
+	do {
+		sr = target_mem_read32(t, FLASH_SR + bank_offset);
+		if ((sr & SR_ERROR_MASK) || !(sr & SR_EOP) || target_check_error(t)) {
+			DEBUG_WARN("stm32f1 flash error 0x%" PRIx32 "\n", sr);
+			return false;
+		}
+	} while (sr & FLASH_SR_BSY);
+
+	return true;
+}
+
+static bool stm32f1_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
 	target *t = f->t;
 	target_addr_t end = addr + len - 1;
-	target_addr_t start = addr;
 
 	if (t->part_id == 0x430 && end >= FLASH_BANK_SPLIT)
 		if (stm32f1_flash_unlock(t, FLASH_BANK2_OFFSET))
-			return -1;
+			return false;
 
 	if (addr < FLASH_BANK_SPLIT)
 		if (stm32f1_flash_unlock(t, 0))
-			return -1;
+			return false;
 
 	while (len) {
 		uint32_t bank_offset = 0;
@@ -383,13 +397,9 @@ static int stm32f1_flash_erase(target_flash_s *f, target_addr_t addr, size_t len
 		/* Flash page erase start instruction */
 		target_mem_write32(t, FLASH_CR + bank_offset, FLASH_CR_STRT | FLASH_CR_PER);
 
-		/* Read FLASH_SR to poll for BSY bit */
-		while (target_mem_read32(t, FLASH_SR + bank_offset) & FLASH_SR_BSY) {
-			if (target_check_error(t)) {
-				DEBUG_WARN("stm32f1 flash erase: comm error\n");
-				return -1;
-			}
-		}
+		/* Wait for completion or an error */
+		if (!stm32f1_flash_busy_wait(t, bank_offset))
+			return false;
 
 		if (len > f->blocksize)
 			len -= f->blocksize;
@@ -399,29 +409,12 @@ static int stm32f1_flash_erase(target_flash_s *f, target_addr_t addr, size_t len
 		addr += f->blocksize;
 	}
 
-	/* Check for error */
-	if (start < FLASH_BANK_SPLIT) {
-		const uint32_t status = target_mem_read32(t, FLASH_SR);
-		if ((status & SR_ERROR_MASK) || !(status & SR_EOP)) {
-			DEBUG_INFO("stm32f1 flash erase error 0x%" PRIx32 "\n", status);
-			return -1;
-		}
-	}
-	if (t->part_id == 0x430 && end >= FLASH_BANK_SPLIT) {
-		const uint32_t status = target_mem_read32(t, FLASH_SR + FLASH_BANK2_OFFSET);
-		if ((status & SR_ERROR_MASK) || !(status & SR_EOP)) {
-			DEBUG_INFO("stm32f1 bank 2 flash erase error 0x%" PRIx32 "\n", status);
-			return -1;
-		}
-	}
-
-	return 0;
+	return true;
 }
 
-static int stm32f1_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
+static bool stm32f1_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
 	target *t = f->t;
-	uint32_t sr;
 	size_t length = 0;
 
 	if (dest < FLASH_BANK_SPLIT) {
@@ -433,20 +426,10 @@ static int stm32f1_flash_write(target_flash_s *f, target_addr_t dest, const void
 		target_mem_write32(t, FLASH_CR, FLASH_CR_PG);
 		cortexm_mem_write_sized(t, dest, src, length, ALIGN_HALFWORD);
 
-		/* Read FLASH_SR to poll for BSY bit */
 		/* Wait for completion or an error */
-		do {
-			sr = target_mem_read32(t, FLASH_SR);
-			if (target_check_error(t)) {
-				DEBUG_WARN("stm32f1 flash write: comm error\n");
-				return -1;
-			}
-		} while (sr & FLASH_SR_BSY);
+		if (!stm32f1_flash_busy_wait(t, 0))
+			return false;
 
-		if (sr & SR_ERROR_MASK) {
-			DEBUG_WARN("stm32f1 flash write error 0x%" PRIx32 "\n", sr);
-			return -1;
-		}
 		dest += length;
 		src += length;
 	}
@@ -455,23 +438,13 @@ static int stm32f1_flash_write(target_flash_s *f, target_addr_t dest, const void
 	if (t->part_id == 0x430 && length) { /* Write on bank 2 */
 		target_mem_write32(t, FLASH_CR + FLASH_BANK2_OFFSET, FLASH_CR_PG);
 		cortexm_mem_write_sized(t, dest, src, length, ALIGN_HALFWORD);
-		/* Read FLASH_SR to poll for BSY bit */
-		/* Wait for completion or an error */
-		do {
-			sr = target_mem_read32(t, FLASH_SR + FLASH_BANK2_OFFSET);
-			if (target_check_error(t)) {
-				DEBUG_WARN("stm32f1 flash bank2 write: comm error\n");
-				return -1;
-			}
-		} while (sr & FLASH_SR_BSY);
 
-		if (sr & SR_ERROR_MASK) {
-			DEBUG_WARN("stm32f1 flash bank2 write error 0x%" PRIx32 "\n", sr);
-			return -1;
-		}
+		/* Wait for completion or an error */
+		if (!stm32f1_flash_busy_wait(t, FLASH_BANK2_OFFSET))
+			return false;
 	}
 
-	return 0;
+	return true;
 }
 
 static bool stm32f1_mass_erase(target *t)
@@ -479,6 +452,7 @@ static bool stm32f1_mass_erase(target *t)
 	if (stm32f1_flash_unlock(t, 0))
 		return false;
 
+	uint32_t sr;
 	platform_timeout timeout;
 	platform_timeout_set(&timeout, 500);
 
@@ -486,17 +460,15 @@ static bool stm32f1_mass_erase(target *t)
 	target_mem_write32(t, FLASH_CR, FLASH_CR_MER);
 	target_mem_write32(t, FLASH_CR, FLASH_CR_STRT | FLASH_CR_MER);
 
-	/* Read FLASH_SR to poll for BSY bit */
-	while (target_mem_read32(t, FLASH_SR) & FLASH_SR_BSY) {
-		if (target_check_error(t))
+	/* Wait for completion or an error */
+	do {
+		sr = target_mem_read32(t, FLASH_SR);
+		if ((sr & SR_ERROR_MASK) || !(sr & SR_EOP) || target_check_error(t)) {
+			DEBUG_WARN("stm32f1 flash error 0x%" PRIx32 "\n", sr);
 			return false;
+		}
 		target_print_progress(&timeout);
-	}
-
-	/* Check for error */
-	uint16_t sr = target_mem_read32(t, FLASH_SR);
-	if ((sr & SR_ERROR_MASK) || !(sr & SR_EOP))
-		return false;
+	} while (sr & FLASH_SR_BSY);
 
 	if (t->part_id == 0x430) {
 		if (stm32f1_flash_unlock(t, FLASH_BANK2_OFFSET))
@@ -506,15 +478,15 @@ static bool stm32f1_mass_erase(target *t)
 		target_mem_write32(t, FLASH_CR + FLASH_BANK2_OFFSET, FLASH_CR_MER);
 		target_mem_write32(t, FLASH_CR + FLASH_BANK2_OFFSET, FLASH_CR_STRT | FLASH_CR_MER);
 
-		/* Read FLASH_SR to poll for BSY bit */
-		while (target_mem_read32(t, FLASH_SR + FLASH_BANK2_OFFSET) & FLASH_SR_BSY)
-			if (target_check_error(t))
+		/* Wait for completion or an error */
+		do {
+			sr = target_mem_read32(t, FLASH_SR + FLASH_BANK2_OFFSET);
+			if ((sr & SR_ERROR_MASK) || !(sr & SR_EOP) || target_check_error(t)) {
+				DEBUG_WARN("stm32f1 flash error 0x%" PRIx32 "\n", sr);
 				return false;
-
-		/* Check for error */
-		sr = target_mem_read32(t, FLASH_SR + FLASH_BANK2_OFFSET);
-		if ((sr & SR_ERROR_MASK) || !(sr & SR_EOP))
-			return false;
+			}
+			target_print_progress(&timeout);
+		} while (sr & FLASH_SR_BSY);
 	}
 
 	return true;
@@ -526,12 +498,8 @@ static bool stm32f1_option_erase(target *t)
 	target_mem_write32(t, FLASH_CR, FLASH_CR_OPTER | FLASH_CR_OPTWRE);
 	target_mem_write32(t, FLASH_CR, FLASH_CR_STRT | FLASH_CR_OPTER | FLASH_CR_OPTWRE);
 
-	/* Read FLASH_SR to poll for BSY bit */
-	while (target_mem_read32(t, FLASH_SR) & FLASH_SR_BSY)
-		if (target_check_error(t))
-			return false;
-
-	return true;
+	/* Wait for completion or an error */
+	return stm32f1_flash_busy_wait(t, 0);
 }
 
 static bool stm32f1_option_write_erased(target *t, uint32_t addr, uint16_t value, bool width_word)
@@ -547,12 +515,8 @@ static bool stm32f1_option_write_erased(target *t, uint32_t addr, uint16_t value
 	else
 		target_mem_write16(t, addr, value);
 
-	/* Read FLASH_SR to poll for BSY bit */
-	while (target_mem_read32(t, FLASH_SR) & FLASH_SR_BSY)
-		if (target_check_error(t))
-			return false;
-
-	return true;
+	/* Wait for completion or an error */
+	return stm32f1_flash_busy_wait(t, 0);
 }
 
 static bool stm32f1_option_write(target *t, uint32_t addr, uint16_t value)

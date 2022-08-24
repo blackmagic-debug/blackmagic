@@ -47,8 +47,8 @@ const struct command_s stm32f4_cmd_list[] = {
 };
 
 static bool stm32f4_attach(target *t);
-static int stm32f4_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
-static int stm32f4_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
+static bool stm32f4_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
+static bool stm32f4_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 static bool stm32f4_mass_erase(target *t);
 
 /* Flash Program and Erase Controller Register Map */
@@ -390,11 +390,26 @@ static void stm32f4_flash_unlock(target *t)
 	}
 }
 
-static int stm32f4_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
+static bool stm32f4_flash_busy_wait(target *t)
+{
+	/* Read FLASH_SR to poll for BSY bit */
+	uint32_t sr;
+	do {
+		sr = target_mem_read32(t, FLASH_SR);
+		if ((sr & SR_ERROR_MASK) || target_check_error(t)) {
+			DEBUG_WARN("stm32f4 flash error 0x%" PRIx32 "\n", sr);
+			return false;
+		}
+	} while (sr & FLASH_SR_BSY);
+
+	return true;
+}
+
+static bool stm32f4_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
 	target *t = f->t;
 	struct stm32f4_flash *sf = (struct stm32f4_flash *)f;
-	uint32_t sr;
+
 	/* No address translation is needed here, as we erase by sector number */
 	uint8_t sector = sf->base_sector + (addr - f->start)/f->blocksize;
 	stm32f4_flash_unlock(t);
@@ -413,12 +428,10 @@ static int stm32f4_flash_erase(target_flash_s *f, target_addr_t addr, size_t len
 		/* write address to FMA */
 		target_mem_write32(t, FLASH_CR, cr | FLASH_CR_STRT);
 
-		/* Read FLASH_SR to poll for BSY bit */
-		while(target_mem_read32(t, FLASH_SR) & FLASH_SR_BSY)
-			if(target_check_error(t)) {
-				DEBUG_WARN("stm32f4 flash erase: comm error\n");
-				return -1;
-			}
+		/* Wait for completion or an error */
+		if (!stm32f4_flash_busy_wait(t))
+			return false;
+
 		if (len > f->blocksize)
 			len -= f->blocksize;
 		else
@@ -428,42 +441,23 @@ static int stm32f4_flash_erase(target_flash_s *f, target_addr_t addr, size_t len
 			sector = 16;
 	}
 
-	/* Check for error */
-	sr = target_mem_read32(t, FLASH_SR);
-	if(sr & SR_ERROR_MASK) {
-		DEBUG_WARN("stm32f4 flash erase: sr error: 0x%" PRIx32 "\n", sr);
-		return -1;
-	}
-	return 0;
+	return true;
 }
 
-static int stm32f4_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
+static bool stm32f4_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
 	/* Translate ITCM addresses to AXIM */
 	if ((dest >= ITCM_BASE) && (dest < AXIM_BASE)) {
 		dest = AXIM_BASE + (dest - ITCM_BASE);
 	}
 	target *t = f->t;
-	uint32_t sr;
-	enum align psize = ((struct stm32f4_flash *)f)->psize;
-	target_mem_write32(t, FLASH_CR,
-					   (psize * FLASH_CR_PSIZE16) | FLASH_CR_PG);
-	cortexm_mem_write_sized(t, dest, src, len, psize);
-	/* Read FLASH_SR to poll for BSY bit */
-	/* Wait for completion or an error */
-	do {
-		sr = target_mem_read32(t, FLASH_SR);
-		if(target_check_error(t)) {
-			DEBUG_WARN("stm32f4 flash write: comm error\n");
-			return -1;
-		}
-	} while (sr & FLASH_SR_BSY);
 
-	if (sr & SR_ERROR_MASK) {
-		DEBUG_WARN("stm32f4 flash write error 0x%" PRIx32 "\n", sr);
-			return -1;
-	}
-	return 0;
+	enum align psize = ((struct stm32f4_flash *)f)->psize;
+	target_mem_write32(t, FLASH_CR, (psize * FLASH_CR_PSIZE16) | FLASH_CR_PG);
+	cortexm_mem_write_sized(t, dest, src, len, psize);
+
+	/* Wait for completion or an error */
+	return stm32f4_flash_busy_wait(t);
 }
 
 static bool stm32f4_mass_erase(target *t)
@@ -481,15 +475,15 @@ static bool stm32f4_mass_erase(target *t)
 	platform_timeout timeout;
 	platform_timeout_set(&timeout, 500);
 	/* Read FLASH_SR to poll for BSY bit */
-	while (target_mem_read32(t, FLASH_SR) & FLASH_SR_BSY) {
-		if (target_check_error(t))
+	uint32_t sr;
+	do {
+		sr = target_mem_read32(t, FLASH_SR);
+		if ((sr & SR_ERROR_MASK) || target_check_error(t))
 			return false;
 		target_print_progress(&timeout);
-	}
+	} while (sr & FLASH_SR_BSY);
 
-	/* Check for error */
-	const uint32_t result = target_mem_read32(t, FLASH_SR);
-	return !(result & SR_ERROR_MASK);
+	return true;
 }
 
 /* Dev   | DOC  |Rev|ID |OPTCR    |OPTCR   |OPTCR1   |OPTCR1 | OPTCR2
@@ -574,9 +568,9 @@ static bool stm32f4_option_write(target *t, uint32_t *val, int count)
 	}
 	target_mem_write32(t, FLASH_OPTKEYR, OPTKEY1);
 	target_mem_write32(t, FLASH_OPTKEYR, OPTKEY2);
-	while (target_mem_read32(t, FLASH_SR) & FLASH_SR_BSY)
-		if(target_check_error(t))
-			return -1;
+
+	if (!stm32f4_flash_busy_wait(t))
+		return false;
 
 	/* WRITE option bytes instruction */
 	if (((t->part_id == ID_STM32F42X) || (t->part_id == ID_STM32F46X) ||
@@ -589,18 +583,22 @@ static bool stm32f4_option_write(target *t, uint32_t *val, int count)
 
 	target_mem_write32(t, FLASH_OPTCR, val[0]);
 	target_mem_write32(t, FLASH_OPTCR, val[0] | FLASH_OPTCR_OPTSTRT);
-	const char spinner[] = "|/-\\";
-	int spinindex = 0;
+
 	tc_printf(t, "Erasing flash... This may take a few seconds.  ");
+
 	/* Read FLASH_SR to poll for BSY bit */
-	while(target_mem_read32(t, FLASH_SR) & FLASH_SR_BSY) {
-		platform_delay(100);
-		tc_printf(t, "\b%c", spinner[spinindex++ % 4]);
-		if(target_check_error(t)) {
+	platform_timeout timeout;
+	platform_timeout_set(&timeout, 100);
+	uint32_t sr;
+	do {
+		sr = target_mem_read32(t, FLASH_SR);
+		if ((sr & SR_ERROR_MASK) || target_check_error(t)) {
 			tc_printf(t, " failed\n");
 			return false;
 		}
-	}
+		target_print_progress(&timeout);
+	} while (sr & FLASH_SR_BSY);
+
 	tc_printf(t, "\n");
 	target_mem_write32(t, FLASH_OPTCR, FLASH_OPTCR_OPTLOCK);
 	/* Reset target to reload option bits.*/
