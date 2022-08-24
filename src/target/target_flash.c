@@ -143,7 +143,7 @@ bool target_flash_erase(target *t, target_addr_t addr, size_t len)
 		if (!flash_prepare(f))
 			return false;
 
-		ret &= f->erase(f, local_start_addr, f->blocksize) == 0;
+		ret &= f->erase(f, local_start_addr, f->blocksize);
 
 		len -= MIN(local_end_addr - addr, len);
 		addr = local_end_addr;
@@ -267,7 +267,7 @@ static bool flash_buffered_flush(target_flash_s *f)
 		uint32_t len = f->buf_addr_high - aligned_addr;
 
 		for (size_t offset = 0; offset < len; offset += f->writesize)
-			ret &= f->write(f, aligned_addr + offset, src + offset, f->writesize) == 0;
+			ret &= f->write(f, aligned_addr + offset, src + offset, f->writesize);
 
 		f->buf_addr_base = UINT32_MAX;
 		f->buf_addr_low = UINT32_MAX;
