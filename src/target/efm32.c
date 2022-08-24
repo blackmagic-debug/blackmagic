@@ -45,8 +45,8 @@
 #define SRAM_BASE        0x20000000
 #define STUB_BUFFER_BASE ALIGN(SRAM_BASE + sizeof(efm32_flash_write_stub), 4)
 
-static int efm32_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
-static int efm32_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
+static bool efm32_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
+static bool efm32_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 static bool efm32_mass_erase(target *t);
 
 static const uint16_t efm32_flash_write_stub[] = {
@@ -595,7 +595,7 @@ bool efm32_probe(target *t)
 }
 
 /* Erase flash row by row */
-static int efm32_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
+static bool efm32_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
 	target *t = f->t;
 
@@ -622,7 +622,7 @@ static int efm32_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 		/* Poll MSC Busy */
 		while ((target_mem_read32(t, EFM32_MSC_STATUS(msc)) & EFM32_MSC_STATUS_BUSY)) {
 			if (target_check_error(t))
-				return -1;
+				return false;
 		}
 
 		addr += f->blocksize;
@@ -632,11 +632,11 @@ static int efm32_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 			len = 0;
 	}
 
-	return 0;
+	return true;
 }
 
 /* Write flash page by page */
-static int efm32_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
+static bool efm32_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
 	(void)len;
 
@@ -651,7 +651,7 @@ static int efm32_flash_write(target_flash_s *f, target_addr_t dest, const void *
 	/* Write Buffer */
 	target_mem_write(t, STUB_BUFFER_BASE, src, len);
 	/* Run flashloader */
-	int ret = cortexm_run_stub(t, SRAM_BASE, dest, STUB_BUFFER_BASE, len, priv_storage->device->msc_addr);
+	const bool ret = cortexm_run_stub(t, SRAM_BASE, dest, STUB_BUFFER_BASE, len, priv_storage->device->msc_addr) == 0;
 
 #ifdef ENABLE_DEBUG
 	/* Check the MSC_IF */
