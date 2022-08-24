@@ -111,8 +111,8 @@ static bool kinetis_cmd_unsafe(target *t, int argc, char **argv)
 	return true;
 }
 
-static int kinetis_flash_cmd_erase(target_flash_s *f, target_addr_t addr, size_t len);
-static int kinetis_flash_cmd_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
+static bool kinetis_flash_cmd_erase(target_flash_s *f, target_addr_t addr, size_t len);
+static bool kinetis_flash_cmd_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 static bool kinetis_flash_done(target_flash_s *f);
 
 struct kinetis_flash {
@@ -432,24 +432,23 @@ static bool kinetis_fccob_cmd(target *t, uint8_t cmd, uint32_t addr, const uint3
 	return true;
 }
 
-static int kinetis_flash_cmd_erase(target_flash_s *const f, target_addr_t addr, size_t len)
+static bool kinetis_flash_cmd_erase(target_flash_s *const f, target_addr_t addr, size_t len)
 {
 	while (len) {
-		if (kinetis_fccob_cmd(f->t, FTFx_CMD_ERASE_SECTOR, addr, NULL, 0)) {
-			/* Different targets have different flash erase sizes */
-			if (len > f->blocksize)
-				len -= f->blocksize;
-			else
-				len = 0;
-			addr += f->blocksize;
-		} else {
-			return 1;
-		}
+		if (!kinetis_fccob_cmd(f->t, FTFx_CMD_ERASE_SECTOR, addr, NULL, 0))
+			return false;
+
+		/* Different targets have different flash erase sizes */
+		if (len > f->blocksize)
+			len -= f->blocksize;
+		else
+			len = 0;
+		addr += f->blocksize;
 	}
-	return 0;
+	return true;
 }
 
-static int kinetis_flash_cmd_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
+static bool kinetis_flash_cmd_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
 	struct kinetis_flash *const kf = (struct kinetis_flash *)f;
 
@@ -466,17 +465,18 @@ static int kinetis_flash_cmd_write(target_flash_s *f, target_addr_t dest, const 
 		write_cmd = FTFx_CMD_PROGRAM_LONGWORD;
 
 	while (len) {
-		if (kinetis_fccob_cmd(f->t, write_cmd, dest, src, kf->write_len >> 2U)) {
-			if (len > kf->write_len)
-				len -= kf->write_len;
-			else
-				len = 0;
-			dest += kf->write_len;
-			src += kf->write_len;
-		} else
-			return 1;
+		if (!kinetis_fccob_cmd(f->t, write_cmd, dest, src, kf->write_len >> 2U))
+			return false;
+
+		if (len > kf->write_len)
+			len -= kf->write_len;
+		else
+			len = 0;
+		dest += kf->write_len;
+		src += kf->write_len;
 	}
-	return 0;
+
+	return true;
 }
 
 static bool kinetis_flash_done(target_flash_s *const f)
