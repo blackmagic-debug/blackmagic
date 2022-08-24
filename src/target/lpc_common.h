@@ -82,7 +82,7 @@ struct lpc_flash {
 
 struct lpc_flash *lpc_add_flash(target *t, target_addr_t addr, size_t length);
 enum iap_status lpc_iap_call(struct lpc_flash *f, void *result, enum iap_cmd cmd, ...);
-int lpc_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
-int lpc_flash_write_magic_vect(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
+bool lpc_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
+bool lpc_flash_write_magic_vect(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 
 #endif /* TARGET_LPC_COMMON_H */
