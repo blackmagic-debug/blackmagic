@@ -514,7 +514,7 @@ static bool cmd_rtt(target *t, int argc, const char **argv)
 			gdb_out("auto ");
 		for (size_t i = 0; i < MAX_RTT_CHAN; i++) {
 			if (rtt_channel[i].is_enabled)
-				gdb_outf("%d ", i);
+				gdb_outf("%" PRIu32 " ", (uint32_t)i);
 		}
 		gdb_outf(
 			"\nmax poll ms: %u min poll ms: %u max errs: %u\n", rtt_max_poll_ms, rtt_min_poll_ms, rtt_max_poll_errs);
@@ -542,10 +542,11 @@ static bool cmd_rtt(target *t, int argc, const char **argv)
 		gdb_outf("cbaddr: 0x%x\n", rtt_cbaddr);
 		gdb_out("ch ena cfg i/o buf@        size head@      tail@      flg\n");
 		for (size_t i = 0; i < MAX_RTT_CHAN; ++i) {
-			gdb_outf("%2zu   %c   %c %s 0x%08x %5d 0x%08x 0x%08x   %d\n", i, rtt_channel[i].is_enabled ? 'y' : 'n',
-				rtt_channel[i].is_configured ? 'y' : 'n', rtt_channel[i].is_output ? "out" : "in ",
-				rtt_channel[i].buf_addr, rtt_channel[i].buf_size, rtt_channel[i].head_addr, rtt_channel[i].tail_addr,
-				rtt_channel[i].flag);
+			gdb_outf("%2" PRIu32 "   %c   %c %s 0x%08" PRIx32 " %5" PRIu32 " 0x%08" PRIx32 " 0x%08" PRIx32 "   %"
+					 PRIu32 "\n",
+				(uint32_t)i, rtt_channel[i].is_enabled ? 'y' : 'n', rtt_channel[i].is_configured ? 'y' : 'n',
+				rtt_channel[i].is_output ? "out" : "in ", rtt_channel[i].buf_addr, rtt_channel[i].buf_size,
+				rtt_channel[i].head_addr, rtt_channel[i].tail_addr, rtt_channel[i].flag);
 		}
 	} else if (argc == 3 && !strncmp(argv[1], "ident", command_len)) {
 		strncpy(rtt_ident, argv[2], sizeof(rtt_ident));
