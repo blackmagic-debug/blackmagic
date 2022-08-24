@@ -118,7 +118,7 @@ static const uint8_t cmdLen[] = {
 static bool ke04_command(target *t, uint8_t cmd, uint32_t addr, const uint8_t data[8]);
 static int ke04_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 static int ke04_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
-static int ke04_flash_done(target_flash_s *f);
+static bool ke04_flash_done(target_flash_s *f);
 static bool ke04_mass_erase(target *t);
 
 /* Target specific commands */
@@ -359,22 +359,20 @@ static int ke04_flash_write(target_flash_s *f, target_addr_t dest, const void *s
 	return 0;
 }
 
-static int ke04_flash_done(target_flash_s *f)
+static bool ke04_flash_done(target_flash_s *f)
 {
 	target *t = f->t;
 	if (t->unsafe_enabled)
-		return 0;
+		return true;
 
-	if (target_mem_read8(f->t, FLASH_SECURITY_BYTE_ADDRESS) ==
-	    FLASH_SECURITY_BYTE_UNSECURED)
-		return 0;
+	if (target_mem_read8(f->t, FLASH_SECURITY_BYTE_ADDRESS) == FLASH_SECURITY_BYTE_UNSECURED)
+		return true;
 
 	/* Load the security byte from its field */
 	/* Note: Cumulative programming is not allowed according to the RM */
 	uint32_t vals[2] = {target_mem_read32(f->t, FLASH_SECURITY_WORD_ADDRESS), 0};
 	vals[0] = (vals[0] & 0xff00ffff) | (FLASH_SECURITY_BYTE_UNSECURED << 16);
-	ke04_command(f->t, CMD_PROGRAM_FLASH_32,
-				 FLASH_SECURITY_WORD_ADDRESS, (uint8_t *)&vals);
+	ke04_command(f->t, CMD_PROGRAM_FLASH_32, FLASH_SECURITY_WORD_ADDRESS, (uint8_t *)&vals);
 
-	return 0;
+	return true;
 }

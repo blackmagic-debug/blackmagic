@@ -38,8 +38,8 @@
 #include "general.h"
 #include "target_internal.h"
 
-static int flash_buffered_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
-static int flash_buffered_flush(target_flash_s *f);
+static bool flash_buffered_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
+static bool flash_buffered_flush(target_flash_s *f);
 
 target_flash_s *target_flash_for_addr(target *t, uint32_t addr)
 {
@@ -49,12 +49,12 @@ target_flash_s *target_flash_for_addr(target *t, uint32_t addr)
 	return NULL;
 }
 
-static int target_enter_flash_mode(target *t)
+static bool target_enter_flash_mode(target *t)
 {
 	if (t->flash_mode)
-		return 0;
+		return true;
 
-	int ret = 0;
+	bool ret = true;
 	if (t->enter_flash_mode)
 		ret = t->enter_flash_mode(t);
 	else
@@ -62,18 +62,18 @@ static int target_enter_flash_mode(target *t)
 		/* This saves us if we're interrupted in IRQ context */
 		target_reset(t);
 
-	if (ret == 0)
+	if (ret == true)
 		t->flash_mode = true;
 
 	return ret;
 }
 
-static int target_exit_flash_mode(target *t)
+static bool target_exit_flash_mode(target *t)
 {
 	if (!t->flash_mode)
-		return 0;
+		return true;
 
-	int ret = 0;
+	bool ret = true;
 	if (t->exit_flash_mode)
 		ret = t->exit_flash_mode(t);
 	else
@@ -85,27 +85,27 @@ static int target_exit_flash_mode(target *t)
 	return ret;
 }
 
-static int flash_prepare(target_flash_s *f)
+static bool flash_prepare(target_flash_s *f)
 {
 	if (f->ready)
-		return 0;
+		return true;
 
-	int ret = 0;
+	bool ret = true;
 	if (f->prepare)
 		ret = f->prepare(f);
 
-	if (ret == 0)
+	if (ret == true)
 		f->ready = true;
 
 	return ret;
 }
 
-static int flash_done(target_flash_s *f)
+static bool flash_done(target_flash_s *f)
 {
 	if (!f->ready)
-		return 0;
+		return true;
 
-	int ret = 0;
+	bool ret = true;
 	if (f->done)
 		ret = f->done(f);
 
@@ -119,65 +119,65 @@ static int flash_done(target_flash_s *f)
 	return ret;
 }
 
-int target_flash_erase(target *t, target_addr_t addr, size_t len)
+bool target_flash_erase(target *t, target_addr_t addr, size_t len)
 {
-	if (target_enter_flash_mode(t) != 0)
-		return 1;
+	if (!target_enter_flash_mode(t))
+		return false;
 
-	int ret = 0;
+	bool ret = true; /* catch false returns with &= */
 	while (len) {
 		target_flash_s *f = target_flash_for_addr(t, addr);
 		if (!f) {
 			DEBUG_WARN("Requested address is outside the valid range 0x%06" PRIx32 "\n", addr);
-			return 1;
+			return false;
 		}
 
 		/* terminate flash operations if we're not in the same target flash */
 		for (target_flash_s *target_f = t->flash; target_f; target_f = target_f->next)
 			if (target_f != f)
-				ret |= flash_done(target_f);
+				ret &= flash_done(target_f);
 
 		const target_addr_t local_start_addr = addr & ~(f->blocksize - 1U);
 		const target_addr_t local_end_addr = local_start_addr + f->blocksize;
 
-		if (flash_prepare(f) != 0)
-			return -1;
+		if (!flash_prepare(f))
+			return false;
 
-		ret |= f->erase(f, local_start_addr, f->blocksize);
+		ret &= f->erase(f, local_start_addr, f->blocksize) == 0;
 
 		len -= MIN(local_end_addr - addr, len);
 		addr = local_end_addr;
 
 		/* Issue flash done on last operation */
 		if (len == 0)
-			ret |= flash_done(f);
+			ret &= flash_done(f);
 	}
 	return ret;
 }
 
-int target_flash_write(target *t, target_addr_t dest, const void *src, size_t len)
+bool target_flash_write(target *t, target_addr_t dest, const void *src, size_t len)
 {
-	if (target_enter_flash_mode(t) != 0)
-		return 1;
+	if (!target_enter_flash_mode(t))
+		return false;
 
-	int ret = 0;
+	bool ret = true; /* catch false returns with &= */
 	while (len) {
 		target_flash_s *f = target_flash_for_addr(t, dest);
 		if (!f)
-			return 1;
+			return false;
 
 		/* terminate flash operations if we're not in the same target flash */
 		for (target_flash_s *target_f = t->flash; target_f; target_f = target_f->next) {
 			if (target_f != f) {
-				ret |= flash_buffered_flush(target_f);
-				ret |= flash_done(target_f);
+				ret &= flash_buffered_flush(target_f);
+				ret &= flash_done(target_f);
 			}
 		}
 
 		const target_addr_t local_end_addr = MIN(dest + len, f->start + f->length);
 		const target_addr_t local_length = local_end_addr - dest;
 
-		ret |= flash_buffered_write(f, dest, src, local_length);
+		ret &= flash_buffered_write(f, dest, src, local_length);
 
 		dest = local_end_addr;
 		src += local_length;
@@ -185,49 +185,49 @@ int target_flash_write(target *t, target_addr_t dest, const void *src, size_t le
 
 		/* Flush operations if we reached the end of Flash */
 		if (dest == f->start + f->length) {
-			ret |= flash_buffered_flush(f);
-			ret |= flash_done(f);
+			ret &= flash_buffered_flush(f);
+			ret &= flash_done(f);
 		}
 	}
 	return ret;
 }
 
-int target_flash_complete(target *t)
+bool target_flash_complete(target *t)
 {
 	if (!t->flash_mode)
-		return -1;
+		return false;
 
-	int ret = 0;
+	bool ret = true; /* catch false returns with &= */
 	for (target_flash_s *f = t->flash; f; f = f->next) {
-		ret |= flash_buffered_flush(f);
-		ret |= flash_done(f);
+		ret &= flash_buffered_flush(f);
+		ret &= flash_done(f);
 	}
 
 	target_exit_flash_mode(t);
 	return ret;
 }
 
-static int flash_buffered_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
+static bool flash_buffered_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
 	if (f->buf == NULL) {
 		/* Allocate buffer */
 		f->buf = malloc(f->writebufsize);
 		if (!f->buf) { /* malloc failed: heap exhaustion */
 			DEBUG_WARN("malloc: failed in %s\n", __func__);
-			return -1;
+			return false;
 		}
 		f->buf_addr_base = UINT32_MAX;
 		f->buf_addr_low = UINT32_MAX;
 		f->buf_addr_high = 0;
 	}
 
-	int ret = 0;
+	bool ret = true; /* catch false returns with &= */
 	while (len) {
 		const target_addr_t base_addr = dest & ~(f->writebufsize - 1U);
 
 		/* check for base address change */
 		if (base_addr != f->buf_addr_base) {
-			ret |= flash_buffered_flush(f);
+			ret &= flash_buffered_flush(f);
 
 			/* Setup buffer */
 			f->buf_addr_base = base_addr;
@@ -251,15 +251,15 @@ static int flash_buffered_write(target_flash_s *f, target_addr_t dest, const voi
 	return ret;
 }
 
-static int flash_buffered_flush(target_flash_s *f)
+static bool flash_buffered_flush(target_flash_s *f)
 {
-	int ret = 0;
+	bool ret = true; /* catch false returns with &= */
 	if (f->buf && f->buf_addr_base != UINT32_MAX && f->buf_addr_low != UINT32_MAX &&
 		f->buf_addr_low < f->buf_addr_high) {
 		/* Write buffer to flash */
 
-		if (flash_prepare(f) != 0)
-			return -1;
+		if (!flash_prepare(f))
+			return false;
 
 		target_addr_t aligned_addr = f->buf_addr_low & ~(f->writesize - 1U);
 
@@ -267,7 +267,7 @@ static int flash_buffered_flush(target_flash_s *f)
 		uint32_t len = f->buf_addr_high - aligned_addr;
 
 		while (len) {
-			ret = f->write(f, aligned_addr, src, f->writesize);
+			ret &= f->write(f, aligned_addr, src, f->writesize) == 0;
 
 			aligned_addr += f->writesize;
 			src += f->writesize;

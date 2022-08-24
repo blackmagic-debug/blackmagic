@@ -113,7 +113,7 @@ static bool kinetis_cmd_unsafe(target *t, int argc, char **argv)
 
 static int kinetis_flash_cmd_erase(target_flash_s *f, target_addr_t addr, size_t len);
 static int kinetis_flash_cmd_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
-static int kinetis_flash_done(target_flash_s *f);
+static bool kinetis_flash_done(target_flash_s *f);
 
 struct kinetis_flash {
 	target_flash_s f;
@@ -479,15 +479,15 @@ static int kinetis_flash_cmd_write(target_flash_s *f, target_addr_t dest, const 
 	return 0;
 }
 
-static int kinetis_flash_done(target_flash_s *const f)
+static bool kinetis_flash_done(target_flash_s *const f)
 {
 	struct kinetis_flash *const kf = (struct kinetis_flash *)f;
 
 	if (f->t->unsafe_enabled)
-		return 0;
+		return true;
 
 	if (target_mem_read8(f->t, FLASH_SECURITY_BYTE_ADDRESS) == FLASH_SECURITY_BYTE_UNSECURED)
-		return 0;
+		return true;
 
 	/* Load the security byte based on the alignment (determine 8 byte phrases
 	 * vs 4 byte phrases).
@@ -505,7 +505,7 @@ static int kinetis_flash_done(target_flash_s *const f)
 		kinetis_fccob_cmd(f->t, FTFx_CMD_PROGRAM_LONGWORD, FLASH_SECURITY_BYTE_ADDRESS, &val, 1);
 	}
 
-	return 0;
+	return true;
 }
 
 /*** Kinetis recovery mode using the MDM-AP ***/
