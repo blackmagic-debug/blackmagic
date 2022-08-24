@@ -38,8 +38,8 @@
 #include "target_internal.h"
 #include "cortexm.h"
 
-static int samx5x_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
-static int samx5x_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
+static bool samx5x_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
+static bool samx5x_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 static bool samx5x_cmd_lock_flash(target *t, int argc, const char **argv);
 static bool samx5x_cmd_unlock_flash(target *t, int argc, const char **argv);
 static bool samx5x_cmd_unlock_bootprot(target *t, int argc, const char **argv);
@@ -496,7 +496,7 @@ static int samx5x_check_nvm_error(target *t)
 /**
  * Erase flash block by block
  */
-static int samx5x_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
+static bool samx5x_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
 	target *t = f->t;
 	uint16_t errs = samx5x_read_nvm_error(t);
@@ -517,12 +517,12 @@ static int samx5x_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 
 	if (addr < (15 - bootprot) * 8192) {
             DEBUG_WARN("Bootprot\n");
-            return -1;
+            return false;
         }
 
 	if (~runlock & (1 << addr / lock_region_size)) {
             DEBUG_WARN("runlock\n");
-            return -1;
+            return false;
         }
 
 	while (len) {
@@ -541,12 +541,12 @@ static int samx5x_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 			SAMX5X_STATUS_READY) == 0)
                     if (target_check_error(t) || samx5x_check_nvm_error(t)) {
                         DEBUG_WARN("NVM Ready\n");
-                        return -1;
+                        return false;
                     }
 
 		if (target_check_error(t) || samx5x_check_nvm_error(t)) {
                     DEBUG_WARN("Error\n");
-                    return -1;
+                    return false;
                 }
 
 		/* Lock */
@@ -556,13 +556,13 @@ static int samx5x_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 		len -= f->blocksize;
 	}
 
-	return 0;
+	return true;
 }
 
 /**
  * Write flash page by page
  */
-static int samx5x_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
+static bool samx5x_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
 	target *t = f->t;
 	bool error = false;
@@ -595,13 +595,13 @@ static int samx5x_flash_write(target_flash_s *f, target_addr_t dest, const void 
 	if (error || target_check_error(t) || samx5x_check_nvm_error(t)) {
 		DEBUG_WARN("Error writing flash page at 0x%08"PRIx32
 		      " (len 0x%08zx)\n",  dest, len);
-		return -1;
+		return false;
 	}
 
 	/* Lock */
 	samx5x_lock_current_address(t);
 
-	return 0;
+	return true;
 }
 
 /**

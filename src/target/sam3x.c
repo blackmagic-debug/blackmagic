@@ -28,9 +28,9 @@
 #include "target.h"
 #include "target_internal.h"
 
-static int sam_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
-static int sam3_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
-static int sam_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
+static bool sam_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
+static bool sam3_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
+static bool sam_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 
 static int sam_gpnvm_get(target *t, uint32_t base, uint32_t *gpnvm);
 
@@ -498,24 +498,20 @@ bool sam3x_probe(target *t)
 	return false;
 }
 
-static int
-sam_flash_cmd(target *t, uint32_t base, uint8_t cmd, uint16_t arg)
+static bool sam_flash_cmd(target *t, uint32_t base, uint8_t cmd, uint16_t arg)
 {
-	DEBUG_INFO("%s: base = 0x%08"PRIx32" cmd = 0x%02X, arg = 0x%06X\n",
-		__func__, base, cmd, arg);
+	DEBUG_INFO("%s: base = 0x%08" PRIx32 " cmd = 0x%02X, arg = 0x%06X\n", __func__, base, cmd, arg);
 
-	if(base == 0)
-		return -1;
+	if (base == 0)
+		return false;
 
-	target_mem_write32(t, EEFC_FCR(base),
-	                   EEFC_FCR_FKEY | cmd | ((uint32_t)arg << 8));
+	target_mem_write32(t, EEFC_FCR(base), EEFC_FCR_FKEY | cmd | ((uint32_t)arg << 8));
 
 	while (!(target_mem_read32(t, EEFC_FSR(base)) & EEFC_FSR_FRDY))
-		if(target_check_error(t))
-			return -1;
+		if (target_check_error(t))
+			return false;
 
-	uint32_t sr = target_mem_read32(t, EEFC_FSR(base));
-	return sr & EEFC_FSR_ERROR;
+	return !(target_mem_read32(t, EEFC_FSR(base)) & EEFC_FSR_ERROR);
 }
 
 static enum sam_driver sam_driver(target *t)
@@ -535,7 +531,7 @@ static enum sam_driver sam_driver(target *t)
 	return DRIVER_SAMX7X;
 }
 
-static int sam_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
+static bool sam_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
 	target *t = f->t;
 	uint32_t base = ((struct sam_flash *)f)->eefc_base;
@@ -549,8 +545,8 @@ static int sam_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 
 	while (len) {
 		int16_t arg = chunk | 0x1;
-		if(sam_flash_cmd(t, base, EEFC_FCR_FCMD_EPA, arg))
-			return -1;
+		if(!sam_flash_cmd(t, base, EEFC_FCR_FCMD_EPA, arg))
+			return false;
 
 		if (len > f->blocksize)
 			len -= f->blocksize;
@@ -558,19 +554,22 @@ static int sam_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 			len = 0;
 		chunk += 8;
 	}
-	return 0;
+	return true;
 }
 
-static int sam3_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
+static bool sam3_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
 	/* The SAM3X/SAM3N don't really have a page erase function.
 	 * We do nothing here and use Erase/Write page in flash_write.
 	 */
-	(void)f; (void)addr; (void)len;
-	return 0;
+	(void)f;
+	(void)addr;
+	(void)len;
+
+	return true;
 }
 
-static int sam_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
+static bool sam_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
 	target *t = f->t;
 	struct sam_flash *sf = (struct sam_flash *)f;
@@ -578,15 +577,13 @@ static int sam_flash_write(target_flash_s *f, target_addr_t dest, const void *sr
 	unsigned chunk = (dest - f->start) / f->writesize;
 
 	target_mem_write(t, dest, src, len);
-	if(sam_flash_cmd(t, base, sf->write_cmd, chunk))
-		return -1;
 
-	return 0;
+	return sam_flash_cmd(t, base, sf->write_cmd, chunk);
 }
 
 static int sam_gpnvm_get(target *t, uint32_t base, uint32_t *gpnvm)
 {
-	if(!gpnvm || sam_flash_cmd(t, base, EEFC_FCR_FCMD_GGPB, 0))
+	if(!gpnvm || !sam_flash_cmd(t, base, EEFC_FCR_FCMD_GGPB, 0))
 		return -1;
 
 	*gpnvm = target_mem_read32(t, EEFC_FRR(base));
@@ -652,7 +649,7 @@ static bool sam_cmd_gpnvm(target *t, int argc, const char **argv)
 		{
 			if (work_mask & 1) {
 				uint8_t cmd = (work_values & 1) ? EEFC_FCR_FCMD_SGPB : EEFC_FCR_FCMD_CGPB;
-				if(sam_flash_cmd(t, base, cmd, bit))
+				if(!sam_flash_cmd(t, base, cmd, bit))
 					return false;
 			}
 			work_mask >>= 1;

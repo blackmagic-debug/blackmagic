@@ -103,8 +103,8 @@
 #define FLASHCALW_FGPFRLO			(FLASHCALW_BASE + 0x18)
 
 static void sam4l_extended_reset(target *t);
-static int sam4l_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
-static int sam4l_flash_write_buf(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
+static bool sam4l_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
+static bool sam4l_flash_write_buf(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 
 /* why Atmel couldn't make it sequential ... */
 static const size_t __ram_size[16] = {
@@ -159,7 +159,7 @@ static const size_t __nvp_size[16] = {
 
 
 /* Arbitrary time to wait for FLASH controller to be ready */
-#define FLASH_TIMEOUT	10000
+#define FLASH_TIMEOUT	1000 /* ms */
 
 /*
  * Populate a target_flash struct with the necessary function pointers
@@ -292,63 +292,55 @@ sam4l_extended_reset(target *t)
  * Need the target struct to call the mem_read32 and mem_write32 function
  * pointers.
  */
-static int
-sam4l_flash_command(target *t, uint32_t page, uint32_t cmd)
+static bool sam4l_flash_command(target *t, uint32_t page, uint32_t cmd)
 {
-	uint32_t cmd_reg;
-	uint32_t status;
-	int	timeout;
-	DEBUG_INFO("\nSAM4L: sam4l_flash_command: FSR: 0x%08x, page = %d, "
-			   "command = %d\n", (unsigned int)(FLASHCALW_FSR),
-			   (int) page, (int) cmd);
+	DEBUG_INFO(
+		"\nSAM4L: sam4l_flash_command: FSR: 0x%08" PRIx32 ", page = %lu, command = %lu\n", FLASHCALW_FSR, page, cmd);
+
 	/* wait for Flash controller ready */
-	for (timeout = 0; timeout < FLASH_TIMEOUT; timeout++) {
-		status = target_mem_read32(t, FLASHCALW_FSR);
-		if (status & FLASHCALW_FSR_FRDY) {
-			break;
+	platform_timeout timeout;
+	platform_timeout_set(&timeout, FLASH_TIMEOUT);
+	while (!(target_mem_read32(t, FLASHCALW_FSR) & FLASHCALW_FSR_FRDY)) {
+		if (platform_timeout_is_expired(&timeout)) {
+			DEBUG_WARN("\nSAM4L: sam4l_flash_command: Not ready!\n");
+			return false;
 		}
 	}
-	if (timeout == FLASH_TIMEOUT) {
-		DEBUG_WARN("\nSAM4L: sam4l_flash_command: Not ready! "
-				   "Status = 0x%08x\n", (unsigned int) status);
-		return -1; /* Failed */
-	}
+
 	/* load up the new command */
-	cmd_reg = (cmd & FLASHCALW_FCMD_CMD_MASK) |
-			  ((page & FLASHCALW_FCMD_PAGEN_MASK) << FLASHCALW_FCMD_PAGEN_SHIFT) |
-		  	  (0xA5 << FLASHCALW_FCMD_KEY_SHIFT);
-	DEBUG_INFO("\nSAM4L: sam4l_flash_command: Wrting command word 0x%08x\n",
-			   (unsigned int) cmd_reg);
+	const uint32_t cmd_reg = (cmd & FLASHCALW_FCMD_CMD_MASK) |
+	                         ((page & FLASHCALW_FCMD_PAGEN_MASK) << FLASHCALW_FCMD_PAGEN_SHIFT) |
+	                         (0xA5U << FLASHCALW_FCMD_KEY_SHIFT);
+
+	DEBUG_INFO("\nSAM4L: sam4l_flash_command: Wrting command word 0x%08" PRIx32 "\n", cmd_reg);
+
 	/* and kick it off */
 	target_mem_write32(t, FLASHCALW_FCMD, cmd_reg);
+
 	/* don't actually wait for it to finish, the next command will stall if it is not done */
-	return 0;
+	return true;
 }
 
 /*
  * Write data from 'src' into flash using the algorithim provided by
  * Atmel in their data sheet.
  */
-static int sam4l_flash_write_buf(target_flash_s *f, target_addr_t addr, const void *src, size_t len)
+static bool sam4l_flash_write_buf(target_flash_s *f, target_addr_t addr, const void *src, size_t len)
 {
 	target *t = f->t;
 	uint32_t *src_data = (uint32_t *)src;
-	uint32_t ndx;
-	uint16_t page;
 
-	DEBUG_INFO("\nSAM4L: sam4l_flash_write_buf: addr = 0x%08lx, len %d\n",
-			   (long unsigned int) addr, (int) len);
+	DEBUG_INFO("\nSAM4L: sam4l_flash_write_buf: addr = 0x%08" PRIx32 ", len %d\n", addr, len);
+
 	/* This will fail with unaligned writes, the write_buf version */
-	page = addr / SAM4L_PAGE_SIZE;
+	const uint16_t page = addr / SAM4L_PAGE_SIZE;
 
-	if (len != SAM4L_PAGE_SIZE) {
-		return -1;
-	}
+	if (len != SAM4L_PAGE_SIZE)
+		return false;
 
 	/* clear the page buffer */
-	if (sam4l_flash_command(t, 0, FLASH_CMD_CPB)) {
-		return -1;
-	}
+	if (!sam4l_flash_command(t, 0, FLASH_CMD_CPB))
+		return false;
 
 	/* Now fill page buffer with our 512 bytes of data */
 
@@ -356,7 +348,7 @@ static int sam4l_flash_write_buf(target_flash_s *f, target_addr_t addr, const vo
 	 * last 64 bits (8 bytes) to be incorrect on even pages (0, 2, 4, ...)
 	 * since it works this way I've not investigated further.
 	 */
-	for (ndx = 0; ndx < SAM4L_PAGE_SIZE; ndx += 4) {
+	for (size_t ndx = 0; ndx < SAM4L_PAGE_SIZE; ndx += 4) {
 		/*
  		 * the page buffer overlaps flash, its only 512 bytes long
 		 * and no matter where you write it from it goes to the page
@@ -364,26 +356,23 @@ static int sam4l_flash_write_buf(target_flash_s *f, target_addr_t addr, const vo
 		 * instead we just write 0 - pagelen (512) and that fills our
 		 * buffer correctly.
 		 */
-		target_mem_write32(t, addr+ndx, *src_data);
+		target_mem_write32(t, addr + ndx, *src_data);
 		src_data++;
 	}
+
 	/* write the page */
-	if (sam4l_flash_command(t, page, FLASH_CMD_WP)) {
-		return -1;
-	}
-	return 0;
+	return sam4l_flash_command(t, page, FLASH_CMD_WP);
 }
 
 /*
  * Erase flash across the addresses specified by addr and len
  */
-static int sam4l_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
+static bool sam4l_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
 	target *t = f->t;
 	uint16_t page;
 
-	DEBUG_INFO("SAM4L: flash erase address 0x%08x for %d bytes\n",
-		(unsigned int) addr, (unsigned int) len);
+	DEBUG_INFO("SAM4L: flash erase address 0x%08" PRIx32 " for %d bytes\n", addr, len);
 	/*
 	 *  NB: if addr isn't aligned to a page boundary, or length
 	 * is not an even multiple of page sizes, we may end up
@@ -392,14 +381,15 @@ static int sam4l_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 
 	while (len) {
 		page = addr / SAM4L_PAGE_SIZE;
-		if (sam4l_flash_command(t, page, FLASH_CMD_EP)) {
-			return -1;
-		}
+		if (!sam4l_flash_command(t, page, FLASH_CMD_EP))
+			return false;
+
 		if (len > SAM4L_PAGE_SIZE)
 			len -= SAM4L_PAGE_SIZE;
 		else
 			len = 0;
+
 		addr += SAM4L_PAGE_SIZE;
 	}
-	return 0;
+	return true;
 }
