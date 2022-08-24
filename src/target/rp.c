@@ -150,8 +150,8 @@ const struct command_s rp_cmd_list[] = {
 	{NULL, NULL, NULL}
 };
 
-static int rp_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
-static int rp_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
+static bool rp_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
+static bool rp_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 
 static bool rp_read_rom_func_table(target *t);
 static bool rp_attach(target *t);
@@ -343,8 +343,8 @@ static bool rp_rom_call(target *t, uint32_t *regs, uint32_t cmd, uint32_t timeou
 	} while (!target_halt_poll(t, NULL));
 	/* Debug */
 	target_regs_read(t, dbg_regs);
-	bool ret = ((dbg_regs[REG_PC] & ~1) != (ps->rom_debug_trampoline_end & ~1));
-	if (ret) {
+	const bool ret = (dbg_regs[REG_PC] & ~1U) == (ps->rom_debug_trampoline_end & ~1U);
+	if (!ret) {
 		DEBUG_WARN("rp_rom_call cmd %04" PRIx32 " failed, PC %08" PRIx32 "\n", cmd, dbg_regs[REG_PC]);
 	}
 	return ret;
@@ -383,17 +383,17 @@ static void rp_flash_resume(target *t)
  * chip erase       5000/25000 ms
  * page programm       0.4/  3 ms
  */
-static int rp_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
+static bool rp_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
 	DEBUG_INFO("Erase addr 0x%08" PRIx32 " len 0x%" PRIx32 "\n", addr, (uint32_t)len);
 	target *t = f->t;
 	if (addr & (f->blocksize - 1)) {
 		DEBUG_WARN("Unaligned erase\n");
-		return -1;
+		return false;
 	}
 	if ((addr < f->start) || (addr >= f->start + f->length)) {
 		DEBUG_WARN("Address is invalid\n");
-		return -1;
+		return false;
 	}
 	addr -= f->start;
 	len = ALIGN(len, f->blocksize);
@@ -405,7 +405,7 @@ static int rp_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 
 	/* erase */
 	rp_flash_prepare(t);
-	bool ret = 0;
+	bool ret = false;
 	while (len) {
 		if (len >= FLASHSIZE_64K_BLOCK) {
 			const uint32_t chunk = len & FLASHSIZE_64K_BLOCK_MASK;
@@ -437,7 +437,7 @@ static int rp_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 			ret = rp_rom_call(t, ps->regs, ps->rom_flash_range_erase, 410);
 			len = 0;
 		}
-		if (ret) {
+		if (!ret) {
 			DEBUG_WARN("Erase failed!\n");
 			break;
 		}
@@ -449,13 +449,13 @@ static int rp_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 	return ret;
 }
 
-static int rp_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
+static bool rp_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
 	DEBUG_INFO("RP Write 0x%08" PRIx32 " len 0x%" PRIx32 "\n", dest, (uint32_t)len);
 	target *t = f->t;
 	if ((dest & 0xff) || (len & 0xff)) {
 		DEBUG_WARN("Unaligned write\n");
-		return -1;
+		return false;
 	}
 	dest -= f->start;
 	rp_priv_s *ps = (rp_priv_s *)t->target_storage;
@@ -485,14 +485,14 @@ static int rp_flash_write(target_flash_s *f, target_addr_t dest, const void *src
 	}
 	rp_flash_resume(t);
 	DEBUG_INFO("Write done!\n");
-	return ret;
+	return !ret;
 }
 
 static bool rp_mass_erase(target *t)
 {
 	rp_priv_s *ps = (rp_priv_s *)t->target_storage;
 	ps->is_monitor = true;
-	const bool result = rp_flash_erase(t->flash, t->flash->start, t->flash->length) == 0;
+	const bool result = rp_flash_erase(t->flash, t->flash->start, t->flash->length);
 	ps->is_monitor = false;
 	return result;
 }
@@ -621,7 +621,7 @@ static bool rp_cmd_erase_sector(target *t, int argc, const char **argv)
 
 	rp_priv_s *ps = (rp_priv_s *)t->target_storage;
 	ps->is_monitor = true;
-	const bool result = rp_flash_erase(t->flash, start, length) == 0;
+	const bool result = rp_flash_erase(t->flash, start, length);
 	ps->is_monitor = false;
 	return result;
 }
