@@ -34,8 +34,8 @@
 
 extern const struct command_s stm32f1_cmd_list[]; // Reuse stm32f1 stuff
 
-static int ch32f1_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
-static int ch32f1_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
+static bool ch32f1_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
+static bool ch32f1_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 
 // these are common with stm32f1/gd32f1/...
 #define FPEC_BASE						0x40022000
@@ -200,7 +200,7 @@ bool ch32f1_probe(target *t)
   \fn ch32f1_flash_erase
   \brief fast erase of CH32
 */
-int ch32f1_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
+bool ch32f1_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
 	volatile uint32_t sr, magic;
 	target *t = f->t;
@@ -208,7 +208,7 @@ int ch32f1_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 
 	if (ch32f1_flash_unlock(t)) {
 		DEBUG_WARN("CH32: Unlock failed\n");
-		return -1;
+		return false;
 	}
 	// Fast Erase 128 bytes pages (ch32 mode)
 	while (len) {
@@ -232,9 +232,9 @@ int ch32f1_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 	ch32f1_flash_lock(t);
 	if (sr & SR_ERROR_MASK) {
 		DEBUG_WARN("ch32f1 flash erase error 0x%" PRIx32 "\n", sr);
-		return -1;
+		return false;
 	}
-	return 0;
+	return true;
 }
 
 /**
@@ -297,7 +297,7 @@ static int ch32f1_buffer_clear(target *t)
 /**
 
 */
-static int ch32f1_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
+static bool ch32f1_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
 	volatile uint32_t sr, magic;
 	target *t = f->t;
@@ -312,7 +312,7 @@ static int ch32f1_flash_write(target_flash_s *f, target_addr_t dest, const void 
 	{
 		if (ch32f1_flash_unlock(t)) {
 			DEBUG_WARN("ch32f1 cannot fast unlock\n");
-			return -1;
+			return false;
 		}
 		WAIT_BUSY();
 
@@ -320,12 +320,12 @@ static int ch32f1_flash_write(target_flash_s *f, target_addr_t dest, const void 
 		ch32f1_buffer_clear(t);
 		// Load 128 bytes to buffer
 		if (!ch32f1_wait_flash_ready(t,dest))
-			return -1;
+			return false;
 
 		for (size_t i = 0; i < 8; i++) {
 			if (ch32f1_upload(t, dest, src, i * 16U)) {
 	  			DEBUG_WARN("Cannot upload to buffer\n");
-				return -1;
+				return false;
 			}
 		}
 		// write buffer
@@ -350,7 +350,7 @@ static int ch32f1_flash_write(target_flash_s *f, target_addr_t dest, const void 
 		ch32f1_flash_lock(t);
 		if (sr & SR_ERROR_MASK) {
 			DEBUG_WARN("ch32f1 flash write error 0x%" PRIx32 "\n", sr);
-			return -1;
+			return false;
 		}
 	}
 
@@ -365,10 +365,10 @@ static int ch32f1_flash_write(target_flash_s *f, target_addr_t dest, const void 
 			DEBUG_WARN(">>>>write mistmatch at address 0x%" PRIx32 "\n", org_dest + i);
 			DEBUG_WARN(">>>>expected: 0x%" PRIx32 "\n", expected);
 			DEBUG_WARN(">>>>  actual: 0x%" PRIx32 "\n", actual);
-			return -1;
+			return false;
 		}
 	}
 #endif
 
-	return 0;
+	return true;
 }
