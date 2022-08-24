@@ -108,8 +108,8 @@ struct msp432_flash {
 
 /* Flash operations */
 static bool msp432_sector_erase(target_flash_s *f, target_addr_t addr);
-static int msp432_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
-static int msp432_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
+static bool msp432_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
+static bool msp432_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 
 /* Utility functions */
 /* Find the the target flash that conatins a specific address */
@@ -253,15 +253,15 @@ static bool msp432_sector_erase(target_flash_s *f, target_addr_t addr)
 	/* Restore original protection */
 	target_mem_write32(t, mf->flash_protect_register, old_prot);
 
-	return !regs[0];
+	return !!regs[0];
 }
 
 /* Erase from addr for len bytes */
-static int msp432_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
+static bool msp432_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
-	int ret = 0;
+	bool ret = true;
 	while (len) {
-		ret |= msp432_sector_erase(f, addr);
+		ret &= msp432_sector_erase(f, addr);
 
 		/* update len and addr */
 		len -= f->blocksize;
@@ -275,7 +275,7 @@ static int msp432_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 }
 
 /* Program flash */
-static int msp432_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
+static bool msp432_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
 	struct msp432_flash *mf = (struct msp432_flash *)f;
 	target *t = f->t;
@@ -304,8 +304,9 @@ static int msp432_flash_write(target_flash_s *f, target_addr_t dest, const void 
 	target_mem_write32(t, mf->flash_protect_register, old_prot);
 
 	DEBUG_INFO("ROM return value: %"PRIu32"\n", regs[0]);
+
 	// Result value in R0 is true for success
-	return !regs[0];
+	return !!regs[0];
 }
 
 /* Optional commands handlers */
@@ -321,11 +322,11 @@ static bool msp432_cmd_erase_main(target *t, int argc, const char **argv)
 
 	/* Erase first bank */
 	target_flash_s *f = get_target_flash(t, MAIN_FLASH_BASE);
-	bool ret = msp432_flash_erase(f, MAIN_FLASH_BASE, banksize);
+	bool ret = !msp432_flash_erase(f, MAIN_FLASH_BASE, banksize);
 
 	/* Erase second bank */
 	f = get_target_flash(t, MAIN_FLASH_BASE + banksize);
-	ret |= msp432_flash_erase(f, MAIN_FLASH_BASE + banksize, banksize);
+	ret |= !msp432_flash_erase(f, MAIN_FLASH_BASE + banksize, banksize);
 
 	return ret;
 }
@@ -341,7 +342,7 @@ static bool msp432_cmd_sector_erase(target *t, int argc, const char **argv)
 	target_flash_s *f = get_target_flash(t, addr);
 
 	if (f)
-		return msp432_sector_erase(f, addr);
+		return !msp432_sector_erase(f, addr);
 	tc_printf(t, "Invalid sector address\n");
 	return false;
 }
