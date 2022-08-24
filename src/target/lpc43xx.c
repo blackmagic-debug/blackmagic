@@ -116,7 +116,9 @@
 #define LPC43xx_FLASH_192kiB        (192U * 1024U)
 #define LPC43xx_FLASH_256kiB        (256U * 1024U)
 #define LPC43x0_SPI_FLASH_LOW_BASE  0x14000000U
+#define LPC43x0_SPI_FLASH_LOW_SIZE  0x04000000U
 #define LPC43x0_SPI_FLASH_HIGH_BASE 0x80000000U
+#define LPC43x0_SPI_FLASH_HIGH_SIZE 0x08000000U
 
 #define LPC43x0_SPIFI_BASE 0x40003000U
 #define LPC43x0_SPIFI_CTRL (LPC43x0_SPIFI_BASE + 0x000U)
@@ -176,7 +178,8 @@ typedef struct lpc43xx_partid {
 } lpc43xx_partid_s;
 
 typedef struct lpc43xx_spi_flash {
-	target_flash_s f;
+	target_flash_s flash_low;
+	target_flash_s flash_high;
 	uint32_t read_command;
 	uint32_t page_size;
 	uint8_t sector_erase_opcode;
@@ -326,14 +329,29 @@ static void lpc43x0_add_spi_flash(target_s *const t, const size_t length, const 
 		spi_parameters.sector_erase_opcode = 0x20U;
 	}
 
-	target_flash_s *const f = &flash->f;
-	f->start = LPC43x0_SPI_FLASH_LOW_BASE;
-	f->length = spi_parameters.capacity;
-	f->blocksize = spi_parameters.sector_size;
-	f->write = lpc43x0_spi_flash_write;
-	f->erase = lpc43x0_spi_flash_erase;
-	f->erased = 0xffU;
-	target_add_flash(t, f);
+	/* Add the high region first so it appears second in the map */
+	target_flash_s *const flash_high = &flash->flash_high;
+	flash_high->start = LPC43x0_SPI_FLASH_HIGH_BASE;
+	flash_high->length = MIN(spi_parameters.capacity, LPC43x0_SPI_FLASH_HIGH_SIZE);
+	flash_high->blocksize = spi_parameters.sector_size;
+	flash_high->write = lpc43x0_spi_flash_write;
+	flash_high->erase = lpc43x0_spi_flash_erase;
+	flash_high->erased = 0xffU;
+	target_add_flash(t, flash_high);
+
+	/*
+	 * Then add the low region - the reason for this is that
+	 * target_add_flash inserts new entries to the beginning of the
+	 * Flash linked-list in the target structure, so this becomes t->flash.
+	 */
+	target_flash_s *const flash_low = &flash->flash_low;
+	flash_low->start = LPC43x0_SPI_FLASH_LOW_BASE;
+	flash_low->length = MIN(spi_parameters.capacity, LPC43x0_SPI_FLASH_LOW_SIZE);
+	flash_low->blocksize = spi_parameters.sector_size;
+	flash_low->write = lpc43x0_spi_flash_write;
+	flash_low->erase = lpc43x0_spi_flash_erase;
+	flash_low->erased = 0xffU;
+	target_add_flash(t, flash_low);
 
 	flash->read_command = read_command;
 	flash->page_size = spi_parameters.page_size;
