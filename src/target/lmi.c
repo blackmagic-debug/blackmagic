@@ -60,8 +60,8 @@
 #define LMI_FLASH_FMC_COMT   (1 << 3)
 #define LMI_FLASH_FMC_WRKEY  0xA4420000
 
-static int lmi_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
-static int lmi_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
+static bool lmi_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
+static bool lmi_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 static bool lmi_mass_erase(target *t);
 
 static const char lmi_driver_str[] = "TI Stellaris/Tiva";
@@ -156,7 +156,7 @@ bool lmi_probe(target *const t)
 	}
 }
 
-static int lmi_flash_erase(target_flash_s *f, target_addr_t addr, const size_t len)
+static bool lmi_flash_erase(target_flash_s *f, target_addr_t addr, const size_t len)
 {
 	target  *t = f->t;
 	target_check_error(t);
@@ -175,22 +175,23 @@ static int lmi_flash_erase(target_flash_s *f, target_addr_t addr, const size_t l
 		}
 
 		if (target_check_error(t))
-			return -1;
+			return false;
+
 		addr += BLOCK_SIZE;
 	}
-	return 0;
+	return true;
 }
 
-static int lmi_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
+static bool lmi_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
 	target  *t = f->t;
 	target_check_error(t);
 	target_mem_write(t, SRAM_BASE, lmi_flash_write_stub, sizeof(lmi_flash_write_stub));
 	target_mem_write(t, STUB_BUFFER_BASE, src, len);
 	if (target_check_error(t))
-		return -1;
+		return false;
 
-	return cortexm_run_stub(t, SRAM_BASE, dest, STUB_BUFFER_BASE, len, 0);
+	return cortexm_run_stub(t, SRAM_BASE, dest, STUB_BUFFER_BASE, len, 0) == 0;
 }
 
 static bool lmi_mass_erase(target *t)
