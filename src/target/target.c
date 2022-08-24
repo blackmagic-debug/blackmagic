@@ -440,7 +440,7 @@ static bool target_cmd_range_erase(target *const t, const int argc, const char *
 	const uint32_t addr = strtoul(argv[1], NULL, 0);
 	const uint32_t length = strtoul(argv[2], NULL, 0);
 
-	return target_flash_erase(t, addr, length) == 0;
+	return target_flash_erase(t, addr, length);
 }
 
 /* Accessor functions */
