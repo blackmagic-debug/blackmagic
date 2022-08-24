@@ -116,8 +116,8 @@ static const uint8_t cmdLen[] = {
 
 /* Flash routines */
 static bool ke04_command(target *t, uint8_t cmd, uint32_t addr, const uint8_t data[8]);
-static int ke04_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
-static int ke04_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
+static bool ke04_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
+static bool ke04_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 static bool ke04_flash_done(target_flash_s *f);
 static bool ke04_mass_erase(target *t);
 
@@ -322,21 +322,20 @@ static bool ke04_command(target *t, uint8_t cmd, uint32_t addr, const uint8_t da
 	return true;
 }
 
-static int ke04_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
+static bool ke04_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
 	while (len) {
-		if (ke04_command(f->t, CMD_ERASE_FLASH_SECTOR, addr, NULL)) {
-			/* Different targets have different flash erase sizes */
-			len  -= f->blocksize;
-			addr += f->blocksize;
-		} else {
-			return 1;
-		}
+		if (!ke04_command(f->t, CMD_ERASE_FLASH_SECTOR, addr, NULL))
+			return false;
+
+		/* Different targets have different flash erase sizes */
+		len  -= f->blocksize;
+		addr += f->blocksize;
 	}
-	return 0;
+	return true;
 }
 
-static int ke04_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
+static bool ke04_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
 	/* Ensure we don't write something horrible over the security byte */
 	target *t = f->t;
@@ -348,15 +347,14 @@ static int ke04_flash_write(target_flash_s *f, target_addr_t dest, const void *s
 	}
 
 	while (len) {
-		if (ke04_command(f->t, CMD_PROGRAM_FLASH, dest, src)) {
-			len  -= KE04_WRITE_LEN;
-			dest += KE04_WRITE_LEN;
-			src  += KE04_WRITE_LEN;
-		} else {
-			return 1;
-		}
+		if (!ke04_command(f->t, CMD_PROGRAM_FLASH, dest, src))
+			return false;
+
+		len  -= KE04_WRITE_LEN;
+		dest += KE04_WRITE_LEN;
+		src  += KE04_WRITE_LEN;
 	}
-	return 0;
+	return true;
 }
 
 static bool ke04_flash_done(target_flash_s *f)
