@@ -39,8 +39,8 @@
 #include "target_internal.h"
 #include "cortexm.h"
 
-static int samd_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
-static int samd_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
+static bool samd_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
+static bool samd_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 bool samd_mass_erase(target *t);
 
 static bool samd_cmd_lock_flash(target *t, int argc, const char **argv);
@@ -579,7 +579,7 @@ static void samd_unlock_current_address(target *t)
 /*
  * Erase flash row by row
  */
-static int samd_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
+static bool samd_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
 	target *t = f->t;
 	while (len) {
@@ -596,7 +596,7 @@ static int samd_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 		/* Poll for NVM Ready */
 		while ((target_mem_read32(t, SAMD_NVMC_INTFLAG) & SAMD_NVMC_READY) == 0)
 			if (target_check_error(t))
-				return -1;
+				return false;
 
 		/* Lock */
 		samd_lock_current_address(t);
@@ -608,14 +608,13 @@ static int samd_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 			len = 0;
 	}
 
-	return 0;
+	return true;
 }
 
 /*
  * Write flash page by page
  */
-static int samd_flash_write(target_flash_s *f,
-                            target_addr_t dest, const void *src, size_t len)
+static bool samd_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
 	target *t = f->t;
 
@@ -632,12 +631,12 @@ static int samd_flash_write(target_flash_s *f,
 	/* Poll for NVM Ready */
 	while ((target_mem_read32(t, SAMD_NVMC_INTFLAG) & SAMD_NVMC_READY) == 0)
 		if (target_check_error(t))
-			return -1;
+			return false;
 
 	/* Lock */
 	samd_lock_current_address(t);
 
-	return 0;
+	return true;
 }
 
 /*
