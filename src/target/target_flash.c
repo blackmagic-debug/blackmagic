@@ -266,13 +266,8 @@ static bool flash_buffered_flush(target_flash_s *f)
 		const uint8_t *src = f->buf + (aligned_addr - f->buf_addr_base);
 		uint32_t len = f->buf_addr_high - aligned_addr;
 
-		while (len) {
-			ret &= f->write(f, aligned_addr, src, f->writesize) == 0;
-
-			aligned_addr += f->writesize;
-			src += f->writesize;
-			len -= MIN(len, f->writesize);
-		}
+		for (size_t offset = 0; offset < len; offset += f->writesize)
+			ret &= f->write(f, aligned_addr + offset, src + offset, f->writesize) == 0;
 
 		f->buf_addr_base = UINT32_MAX;
 		f->buf_addr_low = UINT32_MAX;
