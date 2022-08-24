@@ -36,3 +36,28 @@ jobs:
 
       - name: Build full BMDA binary
         run: make PROBE_HOST=hosted
+
+  size-diff:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: numworks/setup-arm-toolchain@2020-q4
+
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.base_ref }}
+          path: base
+
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: head
+
+      - name: Build base
+        run: make -C base > base/build.log
+
+      - name: Build head
+        run: make -C head > head/build.log
+
+      - name: Diff
+        run: head/scripts/diff_size.py base/build.log head/build.log
