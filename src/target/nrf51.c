@@ -27,8 +27,8 @@
 #include "cortexm.h"
 #include "adiv5.h"
 
-static int nrf51_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
-static int nrf51_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
+static bool nrf51_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
+static bool nrf51_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 static bool nrf51_mass_erase(target *t);
 
 static bool nrf51_cmd_erase_uicr(target *t, int argc, const char **argv);
@@ -159,7 +159,7 @@ bool nrf51_probe(target *t)
 	return true;
 }
 
-static int nrf51_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
+static bool nrf51_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
 	target *t = f->t;
 	/* Enable erase */
@@ -168,7 +168,7 @@ static int nrf51_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 	/* Poll for NVMC_READY */
 	while (target_mem_read32(t, NRF51_NVMC_READY) == 0)
 		if(target_check_error(t))
-			return -1;
+			return false;
 
 	while (len) {
 		if (addr == NRF51_UICR) // Special Case
@@ -181,7 +181,7 @@ static int nrf51_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 		/* Poll for NVMC_READY */
 		while (target_mem_read32(t, NRF51_NVMC_READY) == 0) {
 			if (target_check_error(t))
-				return -1;
+				return false;
 		}
 
 		addr += f->blocksize;
@@ -197,13 +197,13 @@ static int nrf51_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 	/* Poll for NVMC_READY */
 	while (target_mem_read32(t, NRF51_NVMC_READY) == 0) {
 		if (target_check_error(t))
-			return -1;
+			return false;
 	}
 
-	return 0;
+	return true;
 }
 
-static int nrf51_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
+static bool nrf51_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
 	target *t = f->t;
 
@@ -212,15 +212,15 @@ static int nrf51_flash_write(target_flash_s *f, target_addr_t dest, const void *
 	/* Poll for NVMC_READY */
 	while (target_mem_read32(t, NRF51_NVMC_READY) == 0)
 		if(target_check_error(t))
-			return -1;
+			return false;
 	target_mem_write(t, dest, src, len);
 	/* Poll for NVMC_READY */
 	while (target_mem_read32(t, NRF51_NVMC_READY) == 0)
 		if(target_check_error(t))
-			return -1;
+			return false;
 	/* Return to read-only */
 	target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_REN);
-	return 0;
+	return true;
 }
 
 static bool nrf51_mass_erase(target *t)
