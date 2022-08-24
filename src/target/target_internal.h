@@ -34,10 +34,10 @@ struct target_ram {
 
 typedef struct target_flash target_flash_s;
 
-typedef int (*flash_prepare_func)(target_flash_s *f);
+typedef bool (*flash_prepare_func)(target_flash_s *f);
 typedef int (*flash_erase_func)(target_flash_s *f, target_addr_t addr, size_t len);
 typedef int (*flash_write_func)(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
-typedef int (*flash_done_func)(target_flash_s *f);
+typedef bool (*flash_done_func)(target_flash_s *f);
 
 struct target_flash {
 	target *t;                   /* Target this flash is attached to */

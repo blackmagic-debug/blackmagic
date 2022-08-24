@@ -59,9 +59,9 @@ bool target_mem_map(target *t, char *buf, size_t len);
 int target_mem_read(target *t, void *dest, target_addr_t src, size_t len);
 int target_mem_write(target *t, target_addr_t dest, const void *src, size_t len);
 /* Flash memory access functions */
-int target_flash_erase(target *t, target_addr_t addr, size_t len);
-int target_flash_write(target *t, target_addr_t dest, const void *src, size_t len);
-int target_flash_complete(target *t);
+bool target_flash_erase(target *t, target_addr_t addr, size_t len);
+bool target_flash_write(target *t, target_addr_t dest, const void *src, size_t len);
+bool target_flash_complete(target *t);
 
 /* Register access functions */
 size_t target_regs_size(target *t);

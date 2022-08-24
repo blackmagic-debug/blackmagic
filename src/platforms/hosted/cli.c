@@ -549,36 +549,24 @@ found_targets:
 	if (opt->opt_mode == BMP_MODE_RESET) {
 		target_reset(t);
 	} else if (opt->opt_mode == BMP_MODE_FLASH_ERASE) {
-		DEBUG_INFO("Erase %zu bytes at 0x%08" PRIx32 "\n", opt->opt_flash_size,
-			  opt->opt_flash_start);
-		unsigned int erased = target_flash_erase(t, opt->opt_flash_start,
-												 opt->opt_flash_size);
-		if (erased) {
+		DEBUG_INFO("Erase %zu bytes at 0x%08" PRIx32 "\n", opt->opt_flash_size, opt->opt_flash_start);
+		if (!target_flash_erase(t, opt->opt_flash_start, opt->opt_flash_size)) {
 			DEBUG_WARN("Erasure failed!\n");
 			res = -1;
 			goto free_map;
 		}
 		target_reset(t);
-	} else if ((opt->opt_mode == BMP_MODE_FLASH_WRITE) ||
-	           (opt->opt_mode == BMP_MODE_FLASH_WRITE_VERIFY)) {
-		DEBUG_INFO("Erase    %zu bytes at 0x%08" PRIx32 "\n", map.size,
-			  opt->opt_flash_start);
+	} else if ((opt->opt_mode == BMP_MODE_FLASH_WRITE) || (opt->opt_mode == BMP_MODE_FLASH_WRITE_VERIFY)) {
+		DEBUG_INFO("Erase    %zu bytes at 0x%08" PRIx32 "\n", map.size, opt->opt_flash_start);
 		uint32_t start_time = platform_time_ms();
-		unsigned int erased = target_flash_erase(t, opt->opt_flash_start,
-												 map.size);
-		if (erased) {
+		if (!target_flash_erase(t, opt->opt_flash_start, map.size)) {
 			DEBUG_WARN("Erasure failed!\n");
 			res = -1;
 			goto free_map;
 		} else {
-			DEBUG_INFO("Flashing %zu bytes at 0x%08" PRIx32 "\n",
-				  map.size, opt->opt_flash_start);
-			unsigned int flashed = target_flash_write(t, opt->opt_flash_start,
-													  map.data, map.size);
+			DEBUG_INFO("Flashing %zu bytes at 0x%08" PRIx32 "\n", map.size, opt->opt_flash_start);
 			/* Buffered write cares for padding*/
-			if (!flashed)
-				flashed = target_flash_complete(t);
-			if (flashed) {
+			if (!target_flash_write(t, opt->opt_flash_start, map.data, map.size) || !target_flash_complete(t)) {
 				DEBUG_WARN("Flashing failed!\n");
 				res = -1;
 				goto free_map;
