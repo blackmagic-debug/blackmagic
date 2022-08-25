@@ -503,7 +503,7 @@ static bool renesas_rv40_done(target_flash_s *f)
 }
 
 /* !TODO: implement blank check */
-static int renesas_rv40_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
+static bool renesas_rv40_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
 	target *t = f->t;
 
@@ -541,17 +541,17 @@ static int renesas_rv40_flash_erase(target_flash_s *f, target_addr_t addr, size_
 		/* Read FRDY bit until it has been set to 1 indicating that the current  operation is complete.*/
 		while (!(target_mem_read32(t, RV40_FSTATR) & RV40_FSTATR_RDY)) {
 			if (target_check_error(t) || platform_timeout_is_expired(&timeout))
-				return -1;
+				return false;
 		}
 
 		if (renesas_rv40_error_check(t, RV40_FSTATR_ERSERR | RV40_FSTATR_ILGLERR))
-			return -1;
+			return false;
 	}
 
-	return 0;
+	return true;
 }
 
-static int renesas_rv40_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
+static bool renesas_rv40_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
 	target *t = f->t;
 
@@ -596,14 +596,11 @@ static int renesas_rv40_flash_write(target_flash_s *f, target_addr_t dest, const
 		/* read FRDY bit until it has been set to 1 indicating that the current operation is complete.*/
 		while (!(target_mem_read32(t, RV40_FSTATR) & RV40_FSTATR_RDY)) {
 			if (target_check_error(t) || platform_timeout_is_expired(&timeout))
-				return -1;
+				return false;
 		}
 	}
 
-	if (renesas_rv40_error_check(t, RV40_FSTATR_PRGERR | RV40_FSTATR_ILGLERR))
-		return -1;
-
-	return 0;
+	return !renesas_rv40_error_check(t, RV40_FSTATR_PRGERR | RV40_FSTATR_ILGLERR);
 }
 
 static void renesas_add_rv40_flash(target *t, target_addr_t addr, size_t length)
