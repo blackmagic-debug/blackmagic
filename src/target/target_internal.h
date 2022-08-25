@@ -120,8 +120,8 @@ struct target_s {
 	bool (*mass_erase)(target *t);
 
 	/* Flash functions */
-	int (*enter_flash_mode)(target *t);
-	int (*exit_flash_mode)(target *t);
+	bool (*enter_flash_mode)(target *t);
+	bool (*exit_flash_mode)(target *t);
 	bool flash_mode;
 
 	/* target-defined options */

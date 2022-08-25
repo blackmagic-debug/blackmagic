@@ -363,14 +363,14 @@ static uint32_t renesas_flash_size(const uint8_t *pnr)
 	}
 }
 
-static int renesas_enter_flash_mode(target *t)
+static bool renesas_enter_flash_mode(target *t)
 {
 	target_reset(t);
 
 	/* permit flash operations */
 	target_mem_write8(t, SYSC_FWEPROR, SYSC_FWEPROR_PERMIT);
 
-	return 0;
+	return true;
 }
 
 typedef enum pe_mode {
