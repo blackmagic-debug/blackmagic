@@ -52,3 +52,30 @@ notice, and then close the check block at the bottom of the file with a matching
 
 #endif /*PATH_TO_HEADER_H*/
 ```
+
+## typedef and structure, enumeration and union naming
+
+Within the code base you will find all kinds of `struct`s, `enum`s, etc. If you find yourself needing to write
+a new one or modify an existing one, here are the naming rules we expect to see applied when submitting a pull
+request:
+
+* The identifiers used should use lower_snake_case
+* The type's name should not be prefixed or suffixed in any way - for example, if you are writing a structure
+  to hold information on the Flash for the LPC43xx series, name it `lpc43xx_flash`.
+* The type should be `typedef`d as part of its definition with the same name as the bare type, but with a suffix
+  for what kind of definition is being `typedef`d added.
+
+The suffixes expected are `_s` for a `struct`, `_e` for an `enum`, `_u` for a `union`, and `_t` for other
+miscelaneous types.
+
+A complete example for what this looks like is this:
+
+```c
+typedef enum target_halt_reason {
+	/* values */
+} target_halt_reason_e;
+
+typedef struct lpc43xx_flash {
+	/* contents */
+} lpc43xx_flash_s;
+```
