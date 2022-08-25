@@ -18,8 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __GDB_REG_H
-#define __GDB_REG_H
+#ifndef TARGET_GDB_REG_H
+#define TARGET_GDB_REG_H
 
 // The beginning XML for GDB target descriptions that are common to ARM targets,
 // save for one word: the word after DOCTYPE, which is "target" for Cortex-M, and "feature"
