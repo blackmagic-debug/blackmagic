@@ -25,3 +25,30 @@ In summary, the following applies:
 
 The upshot of this is that to inhibit physical reset in the ARM ADIv5/Cortex-M code, set
 `CORTEXM_TOPT_INHIBIT_NRST`, which refers to inhibiting the ADIv5 spec 'SRST'.
+
+## Multiple-inclusion guarding
+
+At this time, the project uses include guard macros in headers to prevent multiple-inclusion issues.
+It's simple enough, and it works across platforms and configurations - but how to name the guard macro?
+
+The answer to this question is that you should take the full path to the file, including its name, relative
+to the src/ directory this file is in, and turn that into a capitalised, underscored name - for example:
+
+`src/platforms/common/usb.h` => `PLATFORMS_COMMON_USB_H`
+
+This creates a consistent, standards compliant name for the macro that's unique to that header and so
+free from conflicts. Please check and define it at the top of the header under the copyright and license
+notice, and then close the check block at the bottom of the file with a matching comment like so:
+
+```c
+/*
+ * [copyright notice]
+ */
+
+#ifndef PATH_TO_HEADER_H
+#define PATH_TO_HEADER_H
+
+/* [...] contents here */
+
+#endif /*PATH_TO_HEADER_H*/
+```
