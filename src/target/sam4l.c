@@ -32,7 +32,7 @@
 /*
  * Flash Controller defines
  */
-#define FLASHCALW_BASE				0x400A0000
+#define FLASHCALW_BASE				UINT32_C(0x400A0000)
 
 /* Flash Control Register */
 #define	FLASHCALW_FCR				(FLASHCALW_BASE + 0x00)
@@ -295,7 +295,8 @@ sam4l_extended_reset(target *t)
 static bool sam4l_flash_command(target *t, uint32_t page, uint32_t cmd)
 {
 	DEBUG_INFO(
-		"\nSAM4L: sam4l_flash_command: FSR: 0x%08" PRIx32 ", page = %lu, command = %lu\n", FLASHCALW_FSR, page, cmd);
+		"\nSAM4L: sam4l_flash_command: FSR: 0x%08" PRIx32
+		", page = %" PRIu32 ", command = %" PRIu32 "\n", FLASHCALW_FSR, page, cmd);
 
 	/* wait for Flash controller ready */
 	platform_timeout timeout;
