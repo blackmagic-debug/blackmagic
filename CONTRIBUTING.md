@@ -66,3 +66,16 @@ to dip into the commit descriptions as this improves the general Git experience 
 Try to keep commits focused on a single small and atomic change to ease review, and aid the process if we end up having to `git bisect` through your changes, or `git revert` in the extreme case something seriously broke.
 
 We use rebasing to merge pull requests, so please keep this in mind.
+
+## Licensing
+
+When making contributions to existing code, we ask that you update the copyright and authorship notice at
+the top with any authorship information you wish to provide. This is so you get proper attribution.
+The contribution must be made under the existing code's license terms as stated per file.
+
+When making original contributions as new files to the project, this presents a choice on licensing.
+Historically the project uses GPLv3+, however contributions have been made using compatible licensing such
+as MIT and BSD-3-Clause. We would ask that you preferentially choose between GPLv3+ and BSD-3-Clause.
+
+Keep in mind that the resulting binary is GPLv3+ licensed due to how the license is worded, but the individual
+contributions retain their source licensing when considering re-use in other projects.
