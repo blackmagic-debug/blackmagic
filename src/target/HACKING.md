@@ -1,5 +1,11 @@
 # Information and terminology guide
 
+Table of Contents:
+
+* [Reset nomenclature](#reset-nomenclature)
+* [Multiple-inclusion guarding](#multiple-inclusion-guarding)
+* [typedef and structure, enumeration and union naming](#typedef-and-structure-enumeration-and-union-naming)
+
 ## Reset nomenclature
 
 Within this code base, we refer to the physical reset pin of a target device by 'nRST'/'nRESET'.
