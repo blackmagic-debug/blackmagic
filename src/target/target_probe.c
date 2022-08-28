@@ -19,24 +19,39 @@
 
 #include "target_probe.h"
 
-#define CORTEXA_PROBE_WEAK_NOP __attribute__((weak, alias("cortexa_probe_nop")))
-#define CORTEXM_PROBE_WEAK_NOP __attribute__((weak, alias("cortexm_probe_nop")))
-#define TARGET_PROBE_WEAK_NOP __attribute__((weak, alias("target_probe_nop")))
+#ifdef __APPLE__
+// https://bugs.llvm.org/show_bug.cgi?id=17775
+#define APPLE_STATIC
+// https://gcc.gnu.org/onlinedocs/cpp/Pragmas.html
+#define DO_PRAGMA_(x) _Pragma(#x)
+#define DO_PRAGMA(x)  DO_PRAGMA_(x)
+// __attribute__((alias)) is not supported in AppleClang.
+#define weak_alias(name, aliasname)  DO_PRAGMA(weak name = aliasname)
+#define CORTEXA_PROBE_WEAK_NOP(name) weak_alias(name, cortexa_probe_nop)
+#define CORTEXM_PROBE_WEAK_NOP(name) weak_alias(name, cortexm_probe_nop)
+#define TARGET_PROBE_WEAK_NOP(name)  weak_alias(name, target_probe_nop)
+#else
+#define APPLE_STATIC static inline
+#define CORTEXA_PROBE_WEAK_NOP(name) \
+	extern bool name(ADIv5_AP_t *, uint32_t) __attribute__((weak, alias("cortexa_probe_nop")));
+#define CORTEXM_PROBE_WEAK_NOP(name) extern bool name(ADIv5_AP_t *) __attribute__((weak, alias("cortexm_probe_nop")));
+#define TARGET_PROBE_WEAK_NOP(name)  extern bool name(target *) __attribute__((weak, alias("target_probe_nop")));
+#endif
 
-static inline bool cortexa_probe_nop(ADIv5_AP_t *apb, uint32_t debug_base)
+APPLE_STATIC bool cortexa_probe_nop(ADIv5_AP_t *apb, uint32_t debug_base)
 {
 	(void)apb;
 	(void)debug_base;
 	return false;
 }
 
-static inline bool cortexm_probe_nop(ADIv5_AP_t *ap)
+APPLE_STATIC bool cortexm_probe_nop(ADIv5_AP_t *ap)
 {
 	(void)ap;
 	return false;
 }
 
-static inline bool target_probe_nop(target *t)
+APPLE_STATIC bool target_probe_nop(target *t)
 {
 	(void)t;
 	return false;
@@ -47,40 +62,40 @@ static inline bool target_probe_nop(target *t)
  * to be disabled by not compiling/linking them in.
  */
 
-bool cortexa_probe(ADIv5_AP_t *apb, uint32_t debug_base) CORTEXA_PROBE_WEAK_NOP;
+CORTEXA_PROBE_WEAK_NOP(cortexa_probe)
 
-bool cortexm_probe(ADIv5_AP_t *ap) CORTEXM_PROBE_WEAK_NOP;
+CORTEXM_PROBE_WEAK_NOP(cortexm_probe)
 
-bool kinetis_mdm_probe(ADIv5_AP_t *ap) CORTEXM_PROBE_WEAK_NOP;
-bool nrf51_mdm_probe(ADIv5_AP_t *ap) CORTEXM_PROBE_WEAK_NOP;
-bool efm32_aap_probe(ADIv5_AP_t *ap) CORTEXM_PROBE_WEAK_NOP;
-bool rp_rescue_probe(ADIv5_AP_t *ap) CORTEXM_PROBE_WEAK_NOP;
+CORTEXM_PROBE_WEAK_NOP(kinetis_mdm_probe)
+CORTEXM_PROBE_WEAK_NOP(nrf51_mdm_probe)
+CORTEXM_PROBE_WEAK_NOP(efm32_aap_probe)
+CORTEXM_PROBE_WEAK_NOP(rp_rescue_probe)
 
-bool ch32f1_probe(target *t) TARGET_PROBE_WEAK_NOP;
-bool gd32f1_probe(target *t) TARGET_PROBE_WEAK_NOP;
-bool stm32f1_probe(target *t) TARGET_PROBE_WEAK_NOP;
-bool at32fxx_probe(target *t) TARGET_PROBE_WEAK_NOP;
-bool stm32f4_probe(target *t) TARGET_PROBE_WEAK_NOP;
-bool stm32h7_probe(target *t) TARGET_PROBE_WEAK_NOP;
-bool stm32l0_probe(target *t) TARGET_PROBE_WEAK_NOP;
-bool stm32l1_probe(target *t) TARGET_PROBE_WEAK_NOP;
-bool stm32l4_probe(target *t) TARGET_PROBE_WEAK_NOP;
-bool stm32g0_probe(target *t) TARGET_PROBE_WEAK_NOP;
-bool lmi_probe(target *t) TARGET_PROBE_WEAK_NOP;
-bool lpc11xx_probe(target *t) TARGET_PROBE_WEAK_NOP;
-bool lpc15xx_probe(target *t) TARGET_PROBE_WEAK_NOP;
-bool lpc17xx_probe(target *t) TARGET_PROBE_WEAK_NOP;
-bool lpc43xx_probe(target *t) TARGET_PROBE_WEAK_NOP;
-bool lpc546xx_probe(target *t) TARGET_PROBE_WEAK_NOP;
-bool samx7x_probe(target *t) TARGET_PROBE_WEAK_NOP;
-bool sam3x_probe(target *t) TARGET_PROBE_WEAK_NOP;
-bool sam4l_probe(target *t) TARGET_PROBE_WEAK_NOP;
-bool nrf51_probe(target *t) TARGET_PROBE_WEAK_NOP;
-bool samd_probe(target *t) TARGET_PROBE_WEAK_NOP;
-bool samx5x_probe(target *t) TARGET_PROBE_WEAK_NOP;
-bool kinetis_probe(target *t) TARGET_PROBE_WEAK_NOP;
-bool efm32_probe(target *t) TARGET_PROBE_WEAK_NOP;
-bool msp432_probe(target *t) TARGET_PROBE_WEAK_NOP;
-bool ke04_probe(target *t) TARGET_PROBE_WEAK_NOP;
-bool rp_probe(target *t) TARGET_PROBE_WEAK_NOP;
-bool renesas_probe(target *t) TARGET_PROBE_WEAK_NOP;
+TARGET_PROBE_WEAK_NOP(ch32f1_probe)
+TARGET_PROBE_WEAK_NOP(gd32f1_probe)
+TARGET_PROBE_WEAK_NOP(stm32f1_probe)
+TARGET_PROBE_WEAK_NOP(at32fxx_probe)
+TARGET_PROBE_WEAK_NOP(stm32f4_probe)
+TARGET_PROBE_WEAK_NOP(stm32h7_probe)
+TARGET_PROBE_WEAK_NOP(stm32l0_probe)
+TARGET_PROBE_WEAK_NOP(stm32l1_probe)
+TARGET_PROBE_WEAK_NOP(stm32l4_probe)
+TARGET_PROBE_WEAK_NOP(stm32g0_probe)
+TARGET_PROBE_WEAK_NOP(lmi_probe)
+TARGET_PROBE_WEAK_NOP(lpc11xx_probe)
+TARGET_PROBE_WEAK_NOP(lpc15xx_probe)
+TARGET_PROBE_WEAK_NOP(lpc17xx_probe)
+TARGET_PROBE_WEAK_NOP(lpc43xx_probe)
+TARGET_PROBE_WEAK_NOP(lpc546xx_probe)
+TARGET_PROBE_WEAK_NOP(samx7x_probe)
+TARGET_PROBE_WEAK_NOP(sam3x_probe)
+TARGET_PROBE_WEAK_NOP(sam4l_probe)
+TARGET_PROBE_WEAK_NOP(nrf51_probe)
+TARGET_PROBE_WEAK_NOP(samd_probe)
+TARGET_PROBE_WEAK_NOP(samx5x_probe)
+TARGET_PROBE_WEAK_NOP(kinetis_probe)
+TARGET_PROBE_WEAK_NOP(efm32_probe)
+TARGET_PROBE_WEAK_NOP(msp432_probe)
+TARGET_PROBE_WEAK_NOP(ke04_probe)
+TARGET_PROBE_WEAK_NOP(rp_probe)
+TARGET_PROBE_WEAK_NOP(renesas_probe)
