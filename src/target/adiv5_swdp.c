@@ -140,10 +140,11 @@ uint32_t adiv5_swdp_scan(uint32_t targetid)
 		if (dp_version >= 2) {
 			scan_multidrop = true;
 
-			/* Read TargetID. Can be done with device in WFI, sleep or reset!*/
-			adiv5_dp_write(initial_dp, ADIV5_DP_SELECT, 2); /* TARGETID is on bank 2 */
+			/* Read TargetID. Can be done with device in WFI, sleep or reset! */
+			/* TARGETID is on bank 2 */
+			adiv5_dp_write(initial_dp, ADIV5_DP_SELECT, ADIV5_DP_BANK2);
 			dp_targetid = adiv5_dp_read(initial_dp, ADIV5_DP_TARGETID);
-			adiv5_dp_write(initial_dp, ADIV5_DP_SELECT, 0);
+			adiv5_dp_write(initial_dp, ADIV5_DP_SELECT, ADIV5_DP_BANK0);
 
 			const uint16_t tdesigner =
 				(dp_targetid & ADIV5_DP_TARGETID_TDESIGNER_MASK) >> ADIV5_DP_TARGETID_TDESIGNER_OFFSET;
