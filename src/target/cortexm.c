@@ -42,7 +42,11 @@
 
 #include <string.h>
 #include <assert.h>
+#if defined(_WIN32) || defined(__CYGWIN__)
 #include <malloc.h>
+#else
+#include <alloca.h>
+#endif
 #include <stdio.h>
 #include <unistd.h>
 
