@@ -8,7 +8,9 @@ MAKEFLAGS += --no-print-dir
 Q := @
 endif
 
-CFLAGS += -Wall -Wextra -Werror -Wno-char-subscripts \
+CFLAGS += -Wall -Wextra -Werror -Wmaybe-uninitialized \
+	-Wreturn-type -Wstringop-overflow -Wunsafe-loop-optimizations \
+	-Wno-char-subscripts \
 	-std=c11 -g3 -MD -I./target \
 	-I. -Iinclude -I$(PLATFORM_DIR)
 
