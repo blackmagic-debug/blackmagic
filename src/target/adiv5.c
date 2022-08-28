@@ -739,9 +739,10 @@ void adiv5_dp_init(ADIv5_DP_t *dp, const uint32_t idcode)
 		DEBUG_WARN("DPv0 detected based on JTAG IDCode\n");
 
 	if (dp->version >= 2) {
-		adiv5_dp_write(dp, ADIV5_DP_SELECT, 2); /* TARGETID is on bank 2 */
+		/* TARGETID is on bank 2 */
+		adiv5_dp_write(dp, ADIV5_DP_SELECT, ADIV5_DP_BANK2);
 		const uint32_t targetid = adiv5_dp_read(dp, ADIV5_DP_TARGETID);
-		adiv5_dp_write(dp, ADIV5_DP_SELECT, 0);
+		adiv5_dp_write(dp, ADIV5_DP_SELECT, ADIV5_DP_BANK0);
 
 		/* Use TARGETID register to identify target */
 		const uint16_t tdesigner = (targetid & ADIV5_DP_TARGETID_TDESIGNER_MASK) >> ADIV5_DP_TARGETID_TDESIGNER_OFFSET;
