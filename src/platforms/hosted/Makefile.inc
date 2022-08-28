@@ -19,7 +19,10 @@ endif
 CFLAGS += -DHOSTED_BMP_ONLY=$(HOSTED_BMP_ONLY)
 
 ifeq ($(ASAN), 1)
-    CFLAGS += -fsanitize=address  -Wno-format-truncation
+    CFLAGS += -fsanitize=address
+    ifeq (, $(findstring darwin, $(SYS)))
+        CFLAGS += -Wno-format-truncation
+    endif
     LDFLAGS += -fsanitize=address
 endif
 
