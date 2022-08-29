@@ -40,6 +40,8 @@
 #define LPC55xx_CHIPID 0x50000ff8U
 #define LPC55_DMAP_IDR 0x002a0000U
 
+static bool lpc55_dmap_cmd(adiv5_access_port_s *ap, uint32_t cmd);
+
 static void lpc55_dmap_ap_free(void *priv);
 
 bool lpc55xx_probe(target_s *const target)
@@ -87,4 +89,30 @@ bool lpc55_dmap_probe(adiv5_access_port_s *ap)
 static void lpc55_dmap_ap_free(void *priv)
 {
 	adiv5_ap_unref(priv);
+}
+
+static bool lpc55_dmap_cmd(adiv5_access_port_s *const ap, const uint32_t cmd)
+{
+	platform_timeout_s timeout;
+	platform_timeout_set(&timeout, 20);
+	while (true) {
+		const uint32_t csw = adiv5_ap_read(ap, ADIV5_AP_CSW);
+		if (csw == 0)
+			break;
+		if (platform_timeout_is_expired(&timeout))
+			return false;
+	}
+
+	adiv5_ap_write(ap, ADIV5_AP_TAR, cmd);
+
+	platform_timeout_set(&timeout, 20);
+	while (true) {
+		const uint16_t value = (uint16_t)adiv5_ap_read(ap, ADIV5_AP_DRW);
+		if (value == 0)
+			return true;
+		if (platform_timeout_is_expired(&timeout)) {
+			DEBUG_WARN("LPC55 cmd %" PRIx32 " failed\n", cmd);
+			return false;
+		}
+	}
 }
