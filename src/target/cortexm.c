@@ -490,6 +490,48 @@ static void cortexm_priv_free(void *priv)
 	free(priv);
 }
 
+static void cortexm_read_cpuid(target *const t, const ADIv5_AP_t *const ap)
+{
+	/* The CPUID register is defined in the ARMv7-M and ARMv8-M
+	 * architecture manuals. The PARTNO field is implementation defined,
+	 * that is, the actual values are found in the Technical Reference Manual
+	 * for each Cortex-M core.
+	 */
+	t->cpuid = target_mem_read32(t, CORTEXM_CPUID);
+	const uint16_t cpuid_partno = t->cpuid & CPUID_PARTNO_MASK;
+	switch (cpuid_partno) {
+	case CORTEX_M33:
+		t->core = "M33";
+		break;
+	case CORTEX_M23:
+		t->core = "M23";
+		break;
+	case CORTEX_M3:
+		t->core = "M3";
+		break;
+	case CORTEX_M4:
+		t->core = "M4";
+		break;
+	case CORTEX_M7:
+		t->core = "M7";
+		if ((t->cpuid & CPUID_REVISION_MASK) == 0 && (t->cpuid & CPUID_PATCH_MASK) < 2)
+			DEBUG_WARN("Silicon bug: Single stepping will enter pending "
+					   "exception handler with this M7 core revision!\n");
+		break;
+	case CORTEX_M0P:
+		t->core = "M0+";
+		break;
+	case CORTEX_M0:
+		t->core = "M0";
+		break;
+	default:
+		if (ap->designer_code != JEP106_MANUFACTURER_ATMEL) /* Protected Atmel device?*/
+			DEBUG_WARN("Unexpected Cortex-M CPU partno %04" PRIx32 "\n", cpuid_partno);
+	}
+	DEBUG_INFO("CPUID 0x%08" PRIx32 " (%s var %" PRIx32 " rev %" PRIx32 ")\n", t->cpuid, t->core,
+		(t->cpuid & CPUID_REVISION_MASK) >> 20, t->cpuid & CPUID_PATCH_MASK);
+}
+
 bool cortexm_probe(ADIv5_AP_t *ap)
 {
 	target *t;
@@ -525,45 +567,7 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 
 	t->driver = cortexm_driver_str;
 
-	/* The CPUID register is defined in the ARMv7-M and ARMv8-M
-	 * architecture manuals. The PARTNO field is implementation defined,
-	 * that is, the actual values are found in the Technical Reference Manual
-	 * for each Cortex-M core.
-	 */
-	t->cpuid = target_mem_read32(t, CORTEXM_CPUID);
-	uint32_t cpuid_partno = t->cpuid & CPUID_PARTNO_MASK;
-	switch (cpuid_partno) {
-	case CORTEX_M33:
-		t->core = "M33";
-		break;
-	case CORTEX_M23:
-		t->core = "M23";
-		break;
-	case CORTEX_M3:
-		t->core = "M3";
-		break;
-	case CORTEX_M4:
-		t->core = "M4";
-		break;
-	case CORTEX_M7:
-		t->core = "M7";
-		if (((t->cpuid & CPUID_REVISION_MASK) == 0) && (t->cpuid & CPUID_PATCH_MASK) < 2) {
-			DEBUG_WARN("Silicon bug: Single stepping will enter pending "
-					   "exception handler with this M7 core revision!\n");
-		}
-		break;
-	case CORTEX_M0P:
-		t->core = "M0+";
-		break;
-	case CORTEX_M0:
-		t->core = "M0";
-		break;
-	default:
-		if (ap->designer_code != JEP106_MANUFACTURER_ATMEL) /* Protected Atmel device?*/
-			DEBUG_WARN("Unexpected CortexM CPUID partno %04" PRIx32 "\n", cpuid_partno);
-	}
-	DEBUG_INFO("CPUID 0x%08" PRIx32 " (%s var %" PRIx32 " rev %" PRIx32 ")\n", t->cpuid, t->core,
-		(t->cpuid & CPUID_REVISION_MASK) >> 20, t->cpuid & CPUID_PATCH_MASK);
+	cortexm_read_cpuid(t, ap);
 
 	t->attach = cortexm_attach;
 	t->detach = cortexm_detach;
