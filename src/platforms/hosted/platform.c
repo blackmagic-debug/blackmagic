@@ -483,6 +483,12 @@ void platform_buffer_flush(void)
 	}
 }
 
+void platform_pace_poll(void)
+{
+	if (!cl_opts.fast_poll)
+		platform_delay(8);
+}
+
 void platform_target_clk_output_enable(const bool enable)
 {
 	switch (info.bmp_type) {

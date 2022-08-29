@@ -53,13 +53,14 @@ typedef struct BMP_CL_OPTIONS_s {
 	bool opt_list_only;
 	bool opt_connect_under_reset;
 	bool external_resistor_swd;
+	bool fast_poll;
 	bool opt_no_hl;
 	char *opt_flash_file;
 	char *opt_device;
 	char *opt_serial;
 	uint32_t opt_targetid;
 	char *opt_ident_string;
-	int  opt_position;
+	int opt_position;
 	char *opt_cable;
 	char *opt_monitor;
 	int opt_debuglevel;
@@ -67,7 +68,7 @@ typedef struct BMP_CL_OPTIONS_s {
 	uint32_t opt_flash_start;
 	uint32_t opt_max_swj_frequency;
 	size_t opt_flash_size;
-}BMP_CL_OPTIONS_t;
+} BMP_CL_OPTIONS_t;
 
 void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv);
 int cl_execute(BMP_CL_OPTIONS_t *opt);
