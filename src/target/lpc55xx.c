@@ -40,8 +40,10 @@
 #define LPC55xx_CHIPID 0x50000ff8U
 #define LPC55_DMAP_IDR 0x002a0000U
 
-static bool lpc55_dmap_cmd(adiv5_access_port_s *ap, uint32_t cmd);
+#define LPC55_DMAP_BULK_ERASE 0x02U
 
+static bool lpc55_dmap_cmd(adiv5_access_port_s *ap, uint32_t cmd);
+static bool lpc55_dmap_mass_erase(target_s *target);
 static void lpc55_dmap_ap_free(void *priv);
 
 bool lpc55xx_probe(target_s *const target)
@@ -82,6 +84,7 @@ bool lpc55_dmap_probe(adiv5_access_port_s *ap)
 
 	target->driver = "LPC55 Debug Mailbox";
 	target->regs_size = 0;
+	target->mass_erase = lpc55_dmap_mass_erase;
 
 	return true;
 }
@@ -115,4 +118,9 @@ static bool lpc55_dmap_cmd(adiv5_access_port_s *const ap, const uint32_t cmd)
 			return false;
 		}
 	}
+}
+
+static bool lpc55_dmap_mass_erase(target_s *target)
+{
+	return lpc55_dmap_cmd(cortexm_ap(target), LPC55_DMAP_BULK_ERASE);
 }
