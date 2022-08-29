@@ -40,11 +40,41 @@
 #define LPC55xx_CHIPID 0x50000ff8U
 #define LPC55_DMAP_IDR 0x002a0000U
 
-#define LPC55_DMAP_BULK_ERASE 0x02U
+#define LPC55_DMAP_BULK_ERASE          0x02U
+#define LPC55_DMAP_START_DEBUG_SESSION 0x07U
 
 static bool lpc55_dmap_cmd(adiv5_access_port_s *ap, uint32_t cmd);
 static bool lpc55_dmap_mass_erase(target_s *target);
 static void lpc55_dmap_ap_free(void *priv);
+
+void lpc55_dp_prepare(adiv5_debug_port_s *const dp)
+{
+	/* Reading targetid again here upsets the LPC55 and STM32U5!*/
+	/* UM11126, 51.6.1
+	 * Debug session with uninitialized/invalid flash image or ISP mode
+	 */
+	adiv5_dp_abort(dp, ADIV5_DP_ABORT_DAPABORT);
+	/* Set up a dummy Access Port on the stack */
+	adiv5_access_port_s ap = {};
+	ap.dp = dp;
+	ap.apsel = 2;
+	/* Read out the ID register and check it's the LPC55's Debug Mailbox ID */
+	ap.idr = adiv5_ap_read(&ap, ADIV5_AP_IDR);
+	if (ap.idr != LPC55_DMAP_IDR)
+		return; /* Return early if this likely is not an LPC55 */
+
+	/* Try reading out the AP 0 IDR */
+	ap.apsel = 0;
+	ap.idr = adiv5_ap_read(&ap, ADIV5_AP_IDR);
+	/* If that failed, then we have to activate the debug mailbox */
+	if (ap.idr == 0) {
+		DEBUG_INFO("Running LPC55 activation sequence\n");
+		ap.apsel = 2;
+		adiv5_ap_write(&ap, ADIV5_AP_CSW, 0x21);
+		lpc55_dmap_cmd(&ap, LPC55_DMAP_START_DEBUG_SESSION);
+	}
+	/* At this point we assume that we've got access to the debug mailbox and can continue normally. */
+}
 
 bool lpc55xx_probe(target_s *const target)
 {
