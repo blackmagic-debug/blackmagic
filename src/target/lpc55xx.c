@@ -38,6 +38,9 @@
 #include "cortexm.h"
 
 #define LPC55xx_CHIPID 0x50000ff8U
+#define LPC55_DMAP_IDR 0x002a0000U
+
+static void lpc55_dmap_ap_free(void *priv);
 
 bool lpc55xx_probe(target_s *const target)
 {
@@ -60,4 +63,28 @@ bool lpc55xx_probe(target_s *const target)
 		break;
 	}
 	return true;
+}
+
+bool lpc55_dmap_probe(adiv5_access_port_s *ap)
+{
+	if (ap->idr != LPC55_DMAP_IDR)
+		return false;
+
+	target_s *target = target_new();
+	if (!target)
+		return false;
+
+	adiv5_ap_ref(ap);
+	target->priv = ap;
+	target->priv_free = lpc55_dmap_ap_free;
+
+	target->driver = "LPC55 Debug Mailbox";
+	target->regs_size = 0;
+
+	return true;
+}
+
+static void lpc55_dmap_ap_free(void *priv)
+{
+	adiv5_ap_unref(priv);
 }
