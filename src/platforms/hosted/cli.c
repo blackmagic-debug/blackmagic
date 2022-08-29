@@ -159,6 +159,8 @@ static void cl_help(char **argv)
 		"\t-j, --jtag       Use JTAG instead of SWD\n"
 		"\t-A, --auto-scan  Automatic scanning - try JTAG first, then SWD\n"
 		"\t-C, --hw-reset   Connect to target under hardware reset\n"
+		"\t-F, --fast-poll  Poll the target for execution status at maximum speed at\n"
+		"\t                  the expense of increased CPU and USB resource utilisation.\n"
 		"\t-t, --list-chain Perform a chain scan and display information about the\n"
 		"\t                   conected devices\n"
 		"\t-T, --timing     Perform continues read- or write-back of a value to allow\n"
@@ -205,6 +207,7 @@ static const struct option long_options[] = {
 	{"probe", required_argument, NULL, 'P'},
 	{"serial", required_argument, NULL, 's'},
 	{"ftdi-type", required_argument, NULL, 'c'},
+	{"fast-poll", no_argument, NULL, 'F'},
 	{"number", required_argument, NULL, 'n'},
 	{"jtag", no_argument, NULL, 'j'},
 	{"auto-scan", no_argument, NULL, 'A'},
@@ -236,7 +239,7 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 	opt->opt_max_swj_frequency = 4000000;
 	opt->opt_scanmode = BMP_SCAN_SWD;
 	opt->opt_mode = BMP_MODE_DEBUG;
-	while((c = getopt_long(argc, argv, "eEhHv:d:f:s:I:c:Cln:m:M:wVtTa:S:jApP:rR::", long_options, NULL)) != -1) {
+	while((c = getopt_long(argc, argv, "eEFhHv:d:f:s:I:c:Cln:m:M:wVtTa:S:jApP:rR::", long_options, NULL)) != -1) {
 		switch(c) {
 		case 'c':
 			if (optarg)
@@ -272,6 +275,9 @@ void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
 		case 'd':
 			if (optarg)
 				opt->opt_device = optarg;
+			break;
+		case 'F':
+			opt->fast_poll = true;
 			break;
 		case 'f':
 			if (optarg) {
