@@ -857,6 +857,9 @@ void adiv5_dp_init(adiv5_debug_port_s *dp, const uint32_t idcode)
 	/* Write request for debug reset release */
 	adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT, ctrlstat & ~ADIV5_DP_CTRLSTAT_CDBGRSTREQ);
 
+	if (dp->target_designer_code == JEP106_MANUFACTURER_NXP)
+		lpc55_dp_prepare(dp);
+
 	/* Probe for APs on this DP */
 	size_t invalid_aps = 0;
 	dp->refcnt++;
@@ -887,6 +890,7 @@ void adiv5_dp_init(adiv5_debug_port_s *dp, const uint32_t idcode)
 		kinetis_mdm_probe(ap);
 		nrf51_mdm_probe(ap);
 		efm32_aap_probe(ap);
+		lpc55_dmap_probe(ap);
 
 		/* Halt the device and release from reset if reset is active! */
 		if (!ap->apsel && (ap->idr & 0xfU) == ARM_AP_TYPE_AHB)
