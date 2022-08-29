@@ -54,6 +54,7 @@
 
 #define JEP106_MANUFACTURER_ARM          0x43bU /* ARM Ltd. */
 #define JEP106_MANUFACTURER_FREESCALE    0x00eU /* Freescale */
+#define JEP106_MANUFACTURER_NXP          0x015U /* NXP */
 #define JEP106_MANUFACTURER_TEXAS        0x017U /* Texas Instruments */
 #define JEP106_MANUFACTURER_ATMEL        0x01fU /* Atmel */
 #define JEP106_MANUFACTURER_STM          0x020U /* STMicroelectronics */

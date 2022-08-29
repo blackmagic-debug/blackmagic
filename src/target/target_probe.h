@@ -36,6 +36,7 @@ bool kinetis_mdm_probe(adiv5_access_port_s *ap);
 bool nrf51_mdm_probe(adiv5_access_port_s *ap);
 bool efm32_aap_probe(adiv5_access_port_s *ap);
 bool rp_rescue_probe(adiv5_access_port_s *ap);
+bool lpc55_dmap_probe(adiv5_access_port_s *ap);
 
 bool ch32f1_probe(target_s *t);  // will catch all the clones
 bool at32fxx_probe(target_s *t); // STM32 clones from Artery
@@ -56,6 +57,7 @@ bool lpc15xx_probe(target_s *t);
 bool lpc17xx_probe(target_s *t);
 bool lpc43xx_probe(target_s *t);
 bool lpc546xx_probe(target_s *t);
+bool lpc55xx_probe(target_s *t);
 bool samx7x_probe(target_s *t);
 bool sam3x_probe(target_s *t);
 bool sam4l_probe(target_s *t);
@@ -68,5 +70,7 @@ bool msp432_probe(target_s *t);
 bool ke04_probe(target_s *t);
 bool rp_probe(target_s *t);
 bool renesas_probe(target_s *t);
+
+void lpc55_dp_prepare(adiv5_debug_port_s *dp);
 
 #endif /* TARGET_TARGET_PROBE_H */

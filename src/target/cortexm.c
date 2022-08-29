@@ -703,6 +703,12 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 	case JEP106_MANUFACTURER_RENESAS:
 		PROBE(renesas_probe);
 		break;
+	case JEP106_MANUFACTURER_NXP:
+		if ((t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M33)
+			PROBE(lpc55xx_probe);
+		else
+			DEBUG_WARN("Unhandled NXP device\n");
+		break;
 	case JEP106_MANUFACTURER_ARM_CHINA:
 		PROBE(mm32f3xx_probe); /* MindMotion Star-MC1 */
 		break;
