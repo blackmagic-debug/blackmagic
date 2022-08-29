@@ -679,7 +679,6 @@ static void rp_rescue_setup(ADIv5_DP_t *dp)
 	ap->dp = dp;
 
 	rp_rescue_probe(ap);
-	return;
 }
 
 void adiv5_dp_init(ADIv5_DP_t *dp, const uint32_t idcode)
@@ -797,7 +796,7 @@ void adiv5_dp_init(ADIv5_DP_t *dp, const uint32_t idcode)
 	/* Write request for system and debug power up */
 	adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT, ctrlstat |= ADIV5_DP_CTRLSTAT_CSYSPWRUPREQ | ADIV5_DP_CTRLSTAT_CDBGPWRUPREQ);
 	/* Wait for acknowledge */
-	while (1) {
+	while (true) {
 		ctrlstat = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT);
 		uint32_t check = ctrlstat & (ADIV5_DP_CTRLSTAT_CSYSPWRUPACK | ADIV5_DP_CTRLSTAT_CDBGPWRUPACK);
 		if (check == (ADIV5_DP_CTRLSTAT_CSYSPWRUPACK | ADIV5_DP_CTRLSTAT_CDBGPWRUPACK))
@@ -819,7 +818,7 @@ void adiv5_dp_init(ADIv5_DP_t *dp, const uint32_t idcode)
 	/* Write request for debug reset release */
 	adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT, ctrlstat &= ~ADIV5_DP_CTRLSTAT_CDBGRSTREQ);
 	/* Wait for acknowledge */
-	while (1) {
+	while (true) {
 		platform_delay(20);
 		ctrlstat = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT);
 		if (ctrlstat & ADIV5_DP_CTRLSTAT_CDBGRSTACK) {
@@ -859,8 +858,8 @@ void adiv5_dp_init(ADIv5_DP_t *dp, const uint32_t idcode)
 		nrf51_mdm_probe(ap);
 		efm32_aap_probe(ap);
 
-		/* Halt the device and release from reset if reset is active!*/
-		if (!ap->apsel && ((ap->idr & 0xf) == ARM_AP_TYPE_AHB))
+		/* Halt the device and release from reset if reset is active! */
+		if (!ap->apsel && (ap->idr & 0xfU) == ARM_AP_TYPE_AHB)
 			cortexm_prepare(ap);
 		/* Should probe further here to make sure it's a valid target.
 		 * AP should be unref'd if not valid.
