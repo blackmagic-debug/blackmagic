@@ -17,8 +17,8 @@
  * along with this program.	 If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef PLATFORMS_HOSTED_BMP_REMOTE_H_
-#define PLATFORMS_HOSTED_BMP_REMOTE_H_
+#ifndef PLATFORMS_HOSTED_BMP_REMOTE_H
+#define PLATFORMS_HOSTED_BMP_REMOTE_H
 
 #include "jtagtap.h"
 #include "adiv5.h"
