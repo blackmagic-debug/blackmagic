@@ -52,4 +52,4 @@ typedef enum gdb_reg_save_restore {
 // The strings for the "save-restore" field of a register tag, respective to its gdb_reg_save_restore_e value.
 extern const char *gdb_reg_save_restore_strings[];
 
-#endif
+#endif /* TARGET_GDB_REG_H */
