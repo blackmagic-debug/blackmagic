@@ -122,33 +122,32 @@ static bool swdptap_seq_in_parity(uint32_t *ret, size_t clock_cycles)
 static void swdptap_seq_out_swd_delay(uint32_t tms_states, size_t clock_cycles) __attribute__((optimize(3)));
 static void swdptap_seq_out_swd_delay(const uint32_t tms_states, const size_t clock_cycles)
 {
-	for (size_t cycle = 0; cycle < clock_cycles;) {
-		++cycle;
+	for (size_t cycle = 0; cycle < clock_cycles; ++cycle) {
+		gpio_clear(SWCLK_PORT, SWCLK_PIN);
+		gpio_set_val(SWDIO_PORT, SWDIO_PIN, tms_states & (1 << cycle));
+		for (volatile int32_t cnt = swd_delay_cnt - 2; cnt > 0; cnt--)
+			continue;
 		gpio_set(SWCLK_PORT, SWCLK_PIN);
 		for (volatile int32_t cnt = swd_delay_cnt - 2; cnt > 0; cnt--)
 			continue;
-		gpio_set_val(SWDIO_PORT, SWDIO_PIN, tms_states & (1 << cycle));
-		gpio_clear(SWCLK_PORT, SWCLK_PIN);
-		for (volatile int32_t cnt = swd_delay_cnt - 2; cnt > 0; cnt--)
-			continue;
 	}
+	gpio_clear(SWCLK_PORT, SWCLK_PIN);
 }
 
 static void swdptap_seq_out_no_delay(uint32_t tms_states, size_t clock_cycles) __attribute__((optimize(3)));
 static void swdptap_seq_out_no_delay(const uint32_t tms_states, const size_t clock_cycles)
 {
-	for (size_t cycle = 0; cycle < clock_cycles;) {
-		++cycle;
-		gpio_set(SWCLK_PORT, SWCLK_PIN);
-		gpio_set_val(SWDIO_PORT, SWDIO_PIN, tms_states & (1 << cycle));
+	for (size_t cycle = 0; cycle < clock_cycles; ++cycle) {
 		gpio_clear(SWCLK_PORT, SWCLK_PIN);
+		gpio_set_val(SWDIO_PORT, SWDIO_PIN, tms_states & (1 << cycle));
+		gpio_set(SWCLK_PORT, SWCLK_PIN);
 	}
+	gpio_clear(SWCLK_PORT, SWCLK_PIN);
 }
 
 static void swdptap_seq_out(const uint32_t tms_states, const size_t clock_cycles)
 {
 	swdptap_turnaround(SWDIO_STATUS_DRIVE);
-	gpio_set_val(SWDIO_PORT, SWDIO_PIN, tms_states & 1U);
 	if (swd_delay_cnt)
 		swdptap_seq_out_swd_delay(tms_states, clock_cycles);
 	else
@@ -160,12 +159,12 @@ static void swdptap_seq_out_parity(const uint32_t tms_states, const size_t clock
 	int parity = __builtin_popcount(tms_states);
 	swdptap_seq_out(tms_states, clock_cycles);
 	gpio_set_val(SWDIO_PORT, SWDIO_PIN, parity & 1U);
+	for (volatile int32_t cnt = swd_delay_cnt - 2; cnt > 0; cnt--)
+		continue;
 	gpio_set(SWCLK_PORT, SWCLK_PIN);
 	for (volatile int32_t cnt = swd_delay_cnt - 2; cnt > 0; cnt--)
 		continue;
 	gpio_clear(SWCLK_PORT, SWCLK_PIN);
-	for (volatile int32_t cnt = swd_delay_cnt - 2; cnt > 0; cnt--)
-		continue;
 }
 
 int swdptap_init(ADIv5_DP_t *dp)
