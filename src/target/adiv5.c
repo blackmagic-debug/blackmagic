@@ -846,8 +846,7 @@ void adiv5_dp_init(ADIv5_DP_t *dp, const uint32_t idcode)
 				dp->ap_cleanup(i);
 #endif
 			if (++invalid_aps == 8) {
-				adiv5_dp_unref(dp);
-				return;
+				break;
 			}
 			continue;
 		}
