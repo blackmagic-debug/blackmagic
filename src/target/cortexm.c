@@ -526,7 +526,7 @@ static void cortexm_read_cpuid(target *const t, const ADIv5_AP_t *const ap)
 		break;
 	default:
 		if (ap->designer_code != JEP106_MANUFACTURER_ATMEL) /* Protected Atmel device?*/
-			DEBUG_WARN("Unexpected Cortex-M CPU partno %04" PRIx32 "\n", cpuid_partno);
+			DEBUG_WARN("Unexpected Cortex-M CPU partno %04x\n", cpuid_partno);
 	}
 	DEBUG_INFO("CPUID 0x%08" PRIx32 " (%s var %" PRIx32 " rev %" PRIx32 ")\n", t->cpuid, t->core,
 		(t->cpuid & CPUID_REVISION_MASK) >> 20, t->cpuid & CPUID_PATCH_MASK);
