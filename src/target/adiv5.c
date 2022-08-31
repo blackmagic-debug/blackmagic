@@ -431,7 +431,7 @@ static bool cortexm_prepare(ADIv5_AP_t *ap)
 	platform_timeout reset_timeout;
 	platform_timeout_set(&reset_timeout, cortexm_wait_timeout);
 	platform_nrst_set_val(false);
-	while (1) {
+	while (true) {
 		dhcsr = adiv5_mem_read32(ap, CORTEXM_DHCSR);
 		if (!(dhcsr & CORTEXM_DHCSR_S_RESET_ST))
 			break;
@@ -810,16 +810,12 @@ void adiv5_dp_init(ADIv5_DP_t *dp, const uint32_t idcode)
 	/* This AP reset logic is described in ADIv5, but fails to work
 	 * correctly on STM32.	CDBGRSTACK is never asserted, and we
 	 * just wait forever.  This scenario is described in B2.4.1
-	 * so we have a timeout mechanism in addition to the sensing one.
-	 *
-	 * Write request for debug reset */
+	 * so we have a timeout mechanism in addition to the sensing one. */
+	platform_timeout_set(&timeout, 201);
+	/* Write request for debug reset */
 	adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT, ctrlstat |= ADIV5_DP_CTRLSTAT_CDBGRSTREQ);
-
-	/* Write request for debug reset release */
-	adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT, ctrlstat &= ~ADIV5_DP_CTRLSTAT_CDBGRSTREQ);
 	/* Wait for acknowledge */
 	while (true) {
-		platform_delay(20);
 		ctrlstat = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT);
 		if (ctrlstat & ADIV5_DP_CTRLSTAT_CDBGRSTACK) {
 			DEBUG_INFO("RESET_SEQ succeeded.\n");
@@ -830,6 +826,8 @@ void adiv5_dp_init(ADIv5_DP_t *dp, const uint32_t idcode)
 			break;
 		}
 	}
+	/* Write request for debug reset release */
+	adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT, ctrlstat &= ~ADIV5_DP_CTRLSTAT_CDBGRSTREQ);
 
 	/* Probe for APs on this DP */
 	size_t invalid_aps = 0;
