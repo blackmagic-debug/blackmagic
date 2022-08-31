@@ -38,8 +38,9 @@
 #include "cortexm.h"
 #include "adiv5.h"
 
-#define RENESAS_PARTID_RA6M2 0x0150
+#define RENESAS_PARTID_RA4M2 0x0340
 #define RENESAS_PARTID_RA4M3 0x0310
+#define RENESAS_PARTID_RA6M2 0x0150
 
 /*
  * Part numbering scheme
@@ -148,7 +149,7 @@ typedef enum {
  * ra2e2 - Fixed location 1
  * ra2a1 - *undocummented
  * ra4m1 - *undocummented
- * ra4m2 - *undocummented
+ * ra4m2 - Fixed location 2 *undocummented
  * ra4m3 - Fixed location 2 *undocummented
  * ra4e1 - Fixed location 2
  * ra4w1 - *undocummented
@@ -709,6 +710,7 @@ bool renesas_probe(target *t)
 		//	return false;
 		// break;
 
+	case RENESAS_PARTID_RA4M2:
 	case RENESAS_PARTID_RA4M3:
 		/* mcus with PNR located at 0x010080F0
 		 * ra4e1 (part_id wanted)
@@ -745,7 +747,6 @@ bool renesas_probe(target *t)
 		/*
 		 * ra2a1 *undocummented (part_id + pnr loc wanted)
 		 * ra4m1 *undocummented (part_id + pnr loc wanted)
-		 * ra4m2 *undocummented (part_id + pnr loc wanted)
 		 * ra4w1 *undocummented (part_id + pnr loc wanted)
 		 */
 
