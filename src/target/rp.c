@@ -461,7 +461,7 @@ static bool rp_flash_write(target_flash_s *f, target_addr_t dest, const void *sr
 	rp_priv_s *ps = (rp_priv_s *)t->target_storage;
 	/* Write payload to target ram */
 	rp_flash_prepare(t);
-	bool ret = 0;
+	bool ret = true;
 #define MAX_WRITE_CHUNK 0x1000
 	while (len) {
 		uint32_t chunksize = (len <= MAX_WRITE_CHUNK) ? len : MAX_WRITE_CHUNK;
@@ -474,8 +474,8 @@ static bool rp_flash_write(target_flash_s *f, target_addr_t dest, const void *sr
 		 * however it takes much longer if the XOSC is not enabled
 		 * so lets give ourselves a little bit more time (x10)
 		 */
-		ret |= rp_rom_call(t, ps->regs, ps->rom_flash_range_program, (3 * chunksize * 10) >> 8);
-		if (ret) {
+		ret = rp_rom_call(t, ps->regs, ps->rom_flash_range_program, (3 * chunksize * 10) >> 8);
+		if (!ret) {
 			DEBUG_WARN("Write failed!\n");
 			break;
 		}
@@ -485,7 +485,7 @@ static bool rp_flash_write(target_flash_s *f, target_addr_t dest, const void *sr
 	}
 	rp_flash_resume(t);
 	DEBUG_INFO("Write done!\n");
-	return !ret;
+	return ret;
 }
 
 static bool rp_mass_erase(target *t)
