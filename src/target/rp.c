@@ -174,31 +174,21 @@ static void rp_add_flash(target *t)
 		return;
 	}
 
-	rp_flash_prepare(t);
-	spi_parameters_s spi_parameters;
-	if (!sfdp_read_parameters(t, &spi_parameters, rp_spi_read_sfdp)) {
-		/* SFDP readout failed, so make some assumptions and hope for the best. */
-		spi_parameters.page_size = 256U;
-		spi_parameters.sector_size = 4096U;
-		spi_parameters.capacity = rp_get_flash_length(t);
-		spi_parameters.sector_erase_opcode = SPI_FLASH_CMD_SECTOR_ERASE;
-	}
-	rp_flash_resume(t);
-
-	DEBUG_INFO("Flash size: %zu MB\n", spi_parameters.capacity / (1024U * 1024U));
-
+	/* Make some assumptions and hope for the best. */
 	target_flash_s *const f = &flash->f;
 	f->start = RP_XIP_FLASH_BASE;
-	f->length = spi_parameters.capacity;
-	f->blocksize = spi_parameters.sector_size;
+	f->length = rp_get_flash_length(t);
+	f->blocksize = 4096U;
 	f->erase = rp_flash_erase;
 	f->write = rp_flash_write;
 	f->writesize = 2048; /* Max buffer size used otherwise */
 	f->erased = 0xffU;
 	target_add_flash(t, f);
 
-	flash->page_size = spi_parameters.page_size;
-	flash->sector_erase_opcode = spi_parameters.sector_erase_opcode;
+	DEBUG_INFO("Flash size: %d MB\n", f->length / (1024U * 1024U));
+
+	flash->page_size = 256U;
+	flash->sector_erase_opcode = SPI_FLASH_CMD_SECTOR_ERASE;
 }
 
 bool rp_probe(target *t)
@@ -220,6 +210,8 @@ bool rp_probe(target *t)
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return false;
 	}
+	priv_storage->is_prepared = false;
+	priv_storage->is_monitor = false;
 	t->target_storage = (void *)priv_storage;
 
 	t->mass_erase = rp_mass_erase;
@@ -387,12 +379,25 @@ static bool rp_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
 	DEBUG_INFO("Erase addr 0x%08" PRIx32 " len 0x%" PRIx32 "\n", addr, (uint32_t)len);
 	target *t = f->t;
+
+	/* Update our assumptions with the SFDP params */
+	rp_flash_prepare(t);
+	spi_parameters_s spi_parameters;
+	rp_flash_s *flash = (rp_flash_s *)f;
+	if (sfdp_read_parameters(t, &spi_parameters, rp_spi_read_sfdp)) {
+		 f->blocksize = spi_parameters.sector_size;
+	     flash->page_size = spi_parameters.page_size;
+	     flash->sector_erase_opcode = spi_parameters.sector_erase_opcode;
+	}
+
 	if (addr & (f->blocksize - 1)) {
 		DEBUG_WARN("Unaligned erase\n");
+		rp_flash_resume(t);
 		return false;
 	}
 	if ((addr < f->start) || (addr >= f->start + f->length)) {
 		DEBUG_WARN("Address is invalid\n");
+		rp_flash_resume(t);
 		return false;
 	}
 	addr -= f->start;
@@ -404,7 +409,6 @@ static bool rp_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 	platform_timeout_set(&timeout, 500);
 
 	/* erase */
-	rp_flash_prepare(t);
 	bool ret = false;
 	while (len) {
 		if (len >= FLASHSIZE_64K_BLOCK) {
@@ -428,7 +432,6 @@ static bool rp_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 			len -= chunk;
 			addr += chunk;
 		} else {
-			rp_flash_s *flash = (rp_flash_s *)f;
 			ps->regs[0] = addr;
 			ps->regs[1] = len;
 			ps->regs[2] = f->blocksize;
@@ -568,7 +571,6 @@ static uint32_t rp_get_flash_length(target *t)
 	uint32_t bootsec[16];
 	size_t i;
 
-	rp_flash_resume(t);
 	target_mem_read(t, bootsec, RP_XIP_FLASH_BASE, sizeof(bootsec));
 	for (i = 0; i < 16; i++) {
 		if ((bootsec[i] != 0x00) && (bootsec[i] != 0xff))
