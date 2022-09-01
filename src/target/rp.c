@@ -644,8 +644,21 @@ static bool rp_cmd_reset_usb_boot(target *t, int argc, const char **argv)
 static bool rp_rescue_do_reset(target *t)
 {
 	ADIv5_AP_t *ap = (ADIv5_AP_t *)t->priv;
-	ap->dp->low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_DP_CTRLSTAT, ADIV5_DP_CTRLSTAT_CDBGPWRUPREQ);
-	ap->dp->low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_DP_CTRLSTAT, 0);
+	uint32_t ctrlstat = ap->dp->low_access(ap->dp, ADIV5_LOW_READ, ADIV5_DP_CTRLSTAT, 0);
+	ap->dp->low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_DP_CTRLSTAT, ctrlstat | ADIV5_DP_CTRLSTAT_CDBGPWRUPREQ);
+	platform_timeout timeout;
+	platform_timeout_set(&timeout, 100);
+	while (true) {
+		ctrlstat = ap->dp->low_access(ap->dp, ADIV5_LOW_READ, ADIV5_DP_CTRLSTAT, 0);
+		if (!(ctrlstat & ADIV5_DP_CTRLSTAT_CDBGRSTACK)) {
+			DEBUG_INFO("RP RESCUE succeeded.\n");
+			break;
+		}
+		if (platform_timeout_is_expired(&timeout)) {
+			DEBUG_INFO("RP RESCUE failed\n");
+			break;
+		}
+	}
 	return false;
 }
 
