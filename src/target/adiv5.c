@@ -811,7 +811,7 @@ void adiv5_dp_init(ADIv5_DP_t *dp, const uint32_t idcode)
 	 * correctly on STM32.	CDBGRSTACK is never asserted, and we
 	 * just wait forever.  This scenario is described in B2.4.1
 	 * so we have a timeout mechanism in addition to the sensing one. */
-	platform_timeout_set(&timeout, 201);
+	platform_timeout_set(&timeout, 200);
 	/* Write request for debug reset */
 	adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT, ctrlstat |= ADIV5_DP_CTRLSTAT_CDBGRSTREQ);
 	/* Wait for acknowledge */
@@ -845,9 +845,12 @@ void adiv5_dp_init(ADIv5_DP_t *dp, const uint32_t idcode)
 			if (dp->ap_cleanup)
 				dp->ap_cleanup(i);
 #endif
-			if (++invalid_aps == 8) {
+			/* We have probably found all APs on this DP so no need to keep looking.
+			 * Continue with rest of init function down below.
+			 */
+			if (++invalid_aps == 8)				
 				break;
-			}
+
 			continue;
 		}
 
