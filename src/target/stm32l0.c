@@ -326,11 +326,10 @@ static bool stm32lx_nvm_busy_wait(target *t, uint32_t nvm)
 	uint32_t sr;
 	do {
 		sr = target_mem_read32(t, STM32Lx_NVM_SR(nvm));
-		if ((sr & STM32Lx_NVM_SR_ERR_M) || !(sr & STM32Lx_NVM_SR_EOP) || target_check_error(t))
+		if  (target_check_error(t)) /* Check for communication errors */
 			return false;
 	} while (sr & STM32Lx_NVM_SR_BSY);
-
-	return true;
+	return (!((sr & STM32Lx_NVM_SR_ERR_M) || !(sr & STM32Lx_NVM_SR_EOP)));
 }
 
 /** Erase a region of program flash using operations through the debug
