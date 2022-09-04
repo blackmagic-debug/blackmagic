@@ -140,6 +140,7 @@ typedef struct rp_flash {
 	target_flash_s f;
 	uint32_t page_size;
 	uint8_t sector_erase_opcode;
+	bool table_has_been_read;
 } rp_flash_s;
 
 static bool rp_cmd_erase_sector(target *t, int argc, const char **argv);
@@ -177,6 +178,7 @@ static void rp_add_flash(target *t)
 
 	flash->page_size = 256U;
 	flash->sector_erase_opcode = SPI_FLASH_CMD_SECTOR_ERASE;
+	flash->table_has_been_read = false;
 
 	/* Make some assumptions and hope for the best. */
 	target_flash_s *const f = &flash->f;
@@ -385,10 +387,11 @@ static bool rp_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 	rp_flash_prepare(t);
 	spi_parameters_s spi_parameters;
 	rp_flash_s *flash = (rp_flash_s *)f;
-	if (sfdp_read_parameters(t, &spi_parameters, rp_spi_read_sfdp)) {
-		 f->blocksize = spi_parameters.sector_size;
-	     flash->page_size = spi_parameters.page_size;
-	     flash->sector_erase_opcode = spi_parameters.sector_erase_opcode;
+	if (!(flash->table_has_been_read) && sfdp_read_parameters(t, &spi_parameters, rp_spi_read_sfdp)) {
+		flash->table_has_been_read = true;
+		f->blocksize = spi_parameters.sector_size;
+	    flash->page_size = spi_parameters.page_size;
+	    flash->sector_erase_opcode = spi_parameters.sector_erase_opcode;
 	}
 
 	if (addr & (f->blocksize - 1)) {
@@ -599,8 +602,9 @@ static uint32_t rp_get_flash_length(target *t, rp_flash_s *flash)
 	rp_flash_prepare(t);
 
 	spi_parameters_s spi_parameters;
-	if (sfdp_read_parameters(t, &spi_parameters, rp_spi_read_sfdp)) {
+	if (!(flash->table_has_been_read) && sfdp_read_parameters(t, &spi_parameters, rp_spi_read_sfdp)) {
 		target_flash_s *const f = &flash->f;
+		flash->table_has_been_read = true;
 		f->length = spi_parameters.capacity;
 		f->blocksize = spi_parameters.sector_size;
 	    flash->page_size = spi_parameters.page_size;
