@@ -159,7 +159,7 @@ static bool rp_attach(target *t);
 static void rp_flash_prepare(target *t);
 static void rp_flash_resume(target *t);
 static void rp_spi_read(target *t, uint16_t command, target_addr_t address, void *buffer, size_t length);
-static uint32_t rp_get_flash_length(target *t);
+static uint32_t rp_get_flash_length(target *t, rp_flash_s *flash);
 static bool rp_mass_erase(target *t);
 
 static void rp_spi_read_sfdp(target *const t, const uint32_t address, void *const buffer, const size_t length)
@@ -175,10 +175,13 @@ static void rp_add_flash(target *t)
 		return;
 	}
 
+	flash->page_size = 256U;
+	flash->sector_erase_opcode = SPI_FLASH_CMD_SECTOR_ERASE;
+
 	/* Make some assumptions and hope for the best. */
 	target_flash_s *const f = &flash->f;
 	f->start = RP_XIP_FLASH_BASE;
-	f->length = rp_get_flash_length(t);
+	f->length = rp_get_flash_length(t, flash);
 	f->blocksize = 4096U;
 	f->erase = rp_flash_erase;
 	f->write = rp_flash_write;
@@ -187,9 +190,6 @@ static void rp_add_flash(target *t)
 	target_add_flash(t, f);
 
 	DEBUG_INFO("Flash size: %d MB\n", f->length / (1024U * 1024U));
-
-	flash->page_size = 256U;
-	flash->sector_erase_opcode = SPI_FLASH_CMD_SECTOR_ERASE;
 }
 
 bool rp_probe(target *t)
@@ -565,7 +565,7 @@ static void rp_spi_read(
 	target_mem_write32(t, RP_SSI_ENABLE, ssi_enabled);
 }
 
-static uint32_t rp_get_flash_length(target *t)
+static uint32_t rp_get_flash_length(target *t, rp_flash_s *flash)
 {
 	uint32_t size = MAX_FLASH;
 	uint32_t bootsec[16];
@@ -597,6 +597,21 @@ static uint32_t rp_get_flash_length(target *t)
 	size = MAX_FLASH;
 
 	rp_flash_prepare(t);
+
+	spi_parameters_s spi_parameters;
+	if (sfdp_read_parameters(t, &spi_parameters, rp_spi_read_sfdp)) {
+		target_flash_s *const f = &flash->f;
+		f->length = spi_parameters.capacity;
+		f->blocksize = spi_parameters.sector_size;
+	    flash->page_size = spi_parameters.page_size;
+	    flash->sector_erase_opcode = spi_parameters.sector_erase_opcode;
+		rp_flash_resume(t);
+		return spi_parameters.capacity;
+	}
+
+	// We couldn't find the SFDP table so our last chance it to read the JEDEC
+	// ID and try to decode that.
+
 	spi_flash_id_s flash_id;
 	rp_spi_read(t, SPI_FLASH_CMD_READ_JEDEC_ID, 0, &flash_id, sizeof(flash_id));
 	rp_flash_resume(t);
