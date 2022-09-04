@@ -95,6 +95,7 @@
 #define FLASHSIZE_32K_BLOCK_MASK ~(FLASHSIZE_32K_BLOCK - 1U)
 #define FLASHSIZE_64K_BLOCK_MASK ~(FLASHSIZE_64K_BLOCK - 1U)
 #define MAX_FLASH                (16U * 1024U * 1024U)
+#define MAX_WRITE_CHUNK          0x1000
 
 #define RP_SPI_OPCODE(x)            (x)
 #define RP_SPI_OPCODE_MASK          0x00ffU
@@ -181,7 +182,7 @@ static void rp_add_flash(target *t)
 	f->blocksize = 4096U;
 	f->erase = rp_flash_erase;
 	f->write = rp_flash_write;
-	f->writesize = 2048; /* Max buffer size used otherwise */
+	f->writesize = MAX_WRITE_CHUNK; /* Max buffer size used otherwise */
 	f->erased = 0xffU;
 	target_add_flash(t, f);
 
@@ -465,7 +466,6 @@ static bool rp_flash_write(target_flash_s *f, target_addr_t dest, const void *sr
 	/* Write payload to target ram */
 	rp_flash_prepare(t);
 	bool ret = true;
-#define MAX_WRITE_CHUNK 0x1000
 	while (len) {
 		uint32_t chunksize = (len <= MAX_WRITE_CHUNK) ? len : MAX_WRITE_CHUNK;
 		target_mem_write(t, RP_SRAM_BASE, src, chunksize);
