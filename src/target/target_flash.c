@@ -161,6 +161,7 @@ bool target_flash_write(target *t, target_addr_t dest, const void *src, size_t l
 	if (!target_enter_flash_mode(t))
 		return false;
 
+	target_flash_s *active_flash = target_flash_for_addr(t, dest);
 	bool ret = true; /* catch false returns with &= */
 	while (len) {
 		target_flash_s *f = target_flash_for_addr(t, dest);
@@ -168,11 +169,10 @@ bool target_flash_write(target *t, target_addr_t dest, const void *src, size_t l
 			return false;
 
 		/* terminate flash operations if we're not in the same target flash */
-		for (target_flash_s *target_f = t->flash; target_f; target_f = target_f->next) {
-			if (target_f != f) {
-				ret &= flash_buffered_flush(target_f);
-				ret &= flash_done(target_f);
-			}
+		if (f != active_flash) {
+			ret &= flash_buffered_flush(active_flash);
+			ret &= flash_done(active_flash);
+			active_flash = f;
 		}
 
 		const target_addr_t local_end_addr = MIN(dest + len, f->start + f->length);
@@ -183,13 +183,10 @@ bool target_flash_write(target *t, target_addr_t dest, const void *src, size_t l
 		dest = local_end_addr;
 		src += local_length;
 		len -= local_length;
-
-		/* Flush operations if we reached the end of Flash */
-		if (dest == f->start + f->length) {
-			ret &= flash_buffered_flush(f);
-			ret &= flash_done(f);
-		}
 	}
+	/* Flush operations if we reached the of Flash operations */
+	ret &= flash_buffered_flush(active_flash);
+	ret &= flash_done(active_flash);
 	return ret;
 }
 
