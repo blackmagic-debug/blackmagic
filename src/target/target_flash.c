@@ -125,6 +125,7 @@ bool target_flash_erase(target *t, target_addr_t addr, size_t len)
 	if (!target_enter_flash_mode(t))
 		return false;
 
+	target_flash_s *active_flash = target_flash_for_addr(t, addr);
 	bool ret = true; /* catch false returns with &= */
 	while (len) {
 		target_flash_s *f = target_flash_for_addr(t, addr);
@@ -134,9 +135,10 @@ bool target_flash_erase(target *t, target_addr_t addr, size_t len)
 		}
 
 		/* terminate flash operations if we're not in the same target flash */
-		for (target_flash_s *target_f = t->flash; target_f; target_f = target_f->next)
-			if (target_f != f)
-				ret &= flash_done(target_f);
+		if (f != active_flash) {
+			ret &= flash_done(active_flash);
+			active_flash = f;
+		}
 
 		const target_addr_t local_start_addr = addr & ~(f->blocksize - 1U);
 		const target_addr_t local_end_addr = local_start_addr + f->blocksize;
@@ -148,11 +150,9 @@ bool target_flash_erase(target *t, target_addr_t addr, size_t len)
 
 		len -= MIN(local_end_addr - addr, len);
 		addr = local_end_addr;
-
-		/* Issue flash done on last operation */
-		if (len == 0)
-			ret &= flash_done(f);
 	}
+	/* Issue flash done on last operation */
+	ret &= flash_done(active_flash);
 	return ret;
 }
 
