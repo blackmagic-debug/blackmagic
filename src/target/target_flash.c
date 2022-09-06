@@ -43,9 +43,10 @@ static bool flash_buffered_flush(target_flash_s *f);
 
 target_flash_s *target_flash_for_addr(target *t, uint32_t addr)
 {
-	for (target_flash_s *f = t->flash; f; f = f->next)
-		if ((f->start <= addr) && (addr < (f->start + f->length)))
+	for (target_flash_s *f = t->flash; f; f = f->next) {
+		if (f->start <= addr && addr < f->start + f->length)
 			return f;
+	}
 	return NULL;
 }
 
