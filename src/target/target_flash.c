@@ -183,6 +183,10 @@ bool target_flash_write(target *t, target_addr_t dest, const void *src, size_t l
 		const target_addr_t local_length = local_end_addr - dest;
 
 		ret &= flash_buffered_write(f, dest, src, local_length);
+		if (!ret) {
+			DEBUG_WARN("Write failed at %" PRIx32 "\n", dest);
+			break;
+		}
 
 		dest = local_end_addr;
 		src += local_length;
