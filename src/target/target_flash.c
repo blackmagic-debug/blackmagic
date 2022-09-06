@@ -147,6 +147,10 @@ bool target_flash_erase(target *t, target_addr_t addr, size_t len)
 			return false;
 
 		ret &= f->erase(f, local_start_addr, f->blocksize);
+		if (!ret) {
+			DEBUG_WARN("Erase failed at %" PRIx32 "\n", local_start_addr);
+			break;
+		}
 
 		len -= MIN(local_end_addr - addr, len);
 		addr = local_end_addr;
