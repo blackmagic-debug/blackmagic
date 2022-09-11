@@ -128,7 +128,7 @@ uint32_t rtt_write(const char *buf, uint32_t len)
 		}
 		/* flush 64-byte packet on full-speed */
 		if (CDCACM_PACKET_SIZE == 64 && (len % CDCACM_PACKET_SIZE) == 0)
-			while(usbd_ep_write_packet(usbdev, CDCACM_UART_ENDPOINT, NULL, 0) <= 0);
+			usbd_ep_write_packet(usbdev, CDCACM_UART_ENDPOINT, NULL, 0);
 	}
 	return len;
 }
