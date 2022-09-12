@@ -176,11 +176,11 @@ static void rp_add_flash(target *t)
 		return;
 	}
 
+	/* Make some assumptions and hope for the best. */
 	flash->page_size = 256U;
 	flash->sector_erase_opcode = SPI_FLASH_CMD_SECTOR_ERASE;
 	flash->table_has_been_read = false;
 
-	/* Make some assumptions and hope for the best. */
 	target_flash_s *const f = &flash->f;
 	f->start = RP_XIP_FLASH_BASE;
 	f->length = rp_get_flash_length(t, flash);
@@ -340,41 +340,41 @@ static bool rp_rom_call(target *t, uint32_t *regs, uint32_t cmd, uint32_t timeou
 	} while (!target_halt_poll(t, NULL));
 	/* Debug */
 	target_regs_read(t, dbg_regs);
-	const bool ret = (dbg_regs[REG_PC] & ~1U) == (ps->rom_debug_trampoline_end & ~1U);
-	if (!ret) {
+	const bool result = (dbg_regs[REG_PC] & ~1U) == (ps->rom_debug_trampoline_end & ~1U);
+	if (!result) {
 		DEBUG_WARN("rp_rom_call cmd %04" PRIx32 " failed, PC %08" PRIx32 "\n", cmd, dbg_regs[REG_PC]);
 	}
-	return ret;
+	return result;
 }
 
 static bool rp_flash_prepare(target *t)
 {
 	rp_priv_s *ps = (rp_priv_s *)t->target_storage;
-	bool ret = true; /* catch false returns with &= */
+	bool result = true; /* catch false returns with &= */
 	if (!ps->is_prepared) {
 		DEBUG_INFO("rp_flash_prepare\n");
 		/* connect*/
-		ret &= rp_rom_call(t, ps->regs, ps->rom_connect_internal_flash, 100);
+		result &= rp_rom_call(t, ps->regs, ps->rom_connect_internal_flash, 100);
 		/* exit_xip */
-		ret &= rp_rom_call(t, ps->regs, ps->rom_flash_exit_xip, 100);
+		result &= rp_rom_call(t, ps->regs, ps->rom_flash_exit_xip, 100);
 		ps->is_prepared = true;
 	}
-	return ret;
+	return result;
 }
 
 static bool rp_flash_resume(target *t)
 {
 	rp_priv_s *ps = (rp_priv_s *)t->target_storage;
-	bool ret = true; /* catch false returns with &= */
+	bool result = true; /* catch false returns with &= */
 	if (ps->is_prepared) {
 		DEBUG_INFO("rp_flash_resume\n");
 		/* flush */
-		ret &= rp_rom_call(t, ps->regs, ps->rom_flash_flush_cache, 100);
+		result &= rp_rom_call(t, ps->regs, ps->rom_flash_flush_cache, 100);
 		/* enter_cmd_xip */
-		ret &= rp_rom_call(t, ps->regs, ps->rom_flash_enter_xip, 100);
+		result &= rp_rom_call(t, ps->regs, ps->rom_flash_enter_xip, 100);
 		ps->is_prepared = false;
 	}
-	return ret;
+	return result;
 }
 
 /*
@@ -392,7 +392,7 @@ static bool rp_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 	/* Update our assumptions with the SFDP params */
 	spi_parameters_s spi_parameters;
 	rp_flash_s *flash = (rp_flash_s *)f;
-	if (!(flash->table_has_been_read) && sfdp_read_parameters(t, &spi_parameters, rp_spi_read_sfdp)) {
+	if (flash->table_has_been_read && sfdp_read_parameters(t, &spi_parameters, rp_spi_read_sfdp)) {
 		flash->table_has_been_read = true;
 		f->blocksize = spi_parameters.sector_size;
 	    flash->page_size = spi_parameters.page_size;
@@ -416,7 +416,7 @@ static bool rp_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 	platform_timeout_set(&timeout, 500);
 
 	/* erase */
-	bool ret = false;
+	bool result = false;
 	while (len) {
 		if (len >= FLASHSIZE_64K_BLOCK) {
 			const uint32_t chunk = len & FLASHSIZE_64K_BLOCK_MASK;
@@ -425,7 +425,7 @@ static bool rp_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 			ps->regs[2] = FLASHSIZE_64K_BLOCK;
 			ps->regs[3] = FLASHCMD_BLOCK64K_ERASE;
 			DEBUG_WARN("64k_ERASE addr 0x%08" PRIx32 " len 0x%" PRIx32 "\n", addr, chunk);
-			ret = rp_rom_call(t, ps->regs, ps->rom_flash_range_erase, 25100);
+			result = rp_rom_call(t, ps->regs, ps->rom_flash_range_erase, 25100);
 			len -= chunk;
 			addr += chunk;
 		} else if (len >= FLASHSIZE_32K_BLOCK) {
@@ -435,7 +435,7 @@ static bool rp_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 			ps->regs[2] = FLASHSIZE_32K_BLOCK;
 			ps->regs[3] = FLASHCMD_BLOCK32K_ERASE;
 			DEBUG_WARN("32k_ERASE addr 0x%08" PRIx32 " len 0x%" PRIx32 "\n", addr, chunk);
-			ret = rp_rom_call(t, ps->regs, ps->rom_flash_range_erase, 1700);
+			result = rp_rom_call(t, ps->regs, ps->rom_flash_range_erase, 1700);
 			len -= chunk;
 			addr += chunk;
 		} else {
@@ -444,10 +444,10 @@ static bool rp_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 			ps->regs[2] = f->blocksize;
 			ps->regs[3] = flash->sector_erase_opcode;
 			DEBUG_WARN("Sector_ERASE addr 0x%08" PRIx32 " len 0x%" PRIx32 "\n", addr, (uint32_t)len);
-			ret = rp_rom_call(t, ps->regs, ps->rom_flash_range_erase, 410);
+			result = rp_rom_call(t, ps->regs, ps->rom_flash_range_erase, 410);
 			len = 0;
 		}
-		if (!ret) {
+		if (!result) {
 			DEBUG_WARN("Erase failed!\n");
 			break;
 		}
@@ -455,7 +455,7 @@ static bool rp_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 			target_print_progress(&timeout);
 	}
 	DEBUG_INFO("Erase done!\n");
-	return ret;
+	return result;
 }
 
 static bool rp_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
@@ -469,7 +469,7 @@ static bool rp_flash_write(target_flash_s *f, target_addr_t dest, const void *sr
 	dest -= f->start;
 	rp_priv_s *ps = (rp_priv_s *)t->target_storage;
 	/* Write payload to target ram */
-	bool ret = true;
+	bool result = true;
 	while (len) {
 		uint32_t chunksize = (len <= MAX_WRITE_CHUNK) ? len : MAX_WRITE_CHUNK;
 		target_mem_write(t, RP_SRAM_BASE, src, chunksize);
@@ -481,8 +481,8 @@ static bool rp_flash_write(target_flash_s *f, target_addr_t dest, const void *sr
 		 * however it takes much longer if the XOSC is not enabled
 		 * so lets give ourselves a little bit more time (x10)
 		 */
-		ret = rp_rom_call(t, ps->regs, ps->rom_flash_range_program, (3 * chunksize * 10) >> 8);
-		if (!ret) {
+		result = rp_rom_call(t, ps->regs, ps->rom_flash_range_program, (3 * chunksize * 10) >> 8);
+		if (!result) {
 			DEBUG_WARN("Write failed!\n");
 			break;
 		}
@@ -491,19 +491,19 @@ static bool rp_flash_write(target_flash_s *f, target_addr_t dest, const void *sr
 		dest += chunksize;
 	}
 	DEBUG_INFO("Write done!\n");
-	return ret;
+	return result;
 }
 
 static bool rp_mass_erase(target *t)
 {
 	rp_priv_s *ps = (rp_priv_s *)t->target_storage;
 	ps->is_monitor = true;
-	bool ret = true; /* catch false returns with &= */
-	ret &= rp_flash_prepare(t);
-	ret &= rp_flash_erase(t->flash, t->flash->start, t->flash->length);
-	ret &= rp_flash_resume(t);
+	bool result = true; /* catch false returns with &= */
+	result &= rp_flash_prepare(t);
+	result &= rp_flash_erase(t->flash, t->flash->start, t->flash->length);
+	result &= rp_flash_resume(t);
 	ps->is_monitor = false;
-	return ret;
+	return result;
 }
 
 static void rp_spi_chip_select(target *const t, const bool active)
@@ -605,7 +605,7 @@ static uint32_t rp_get_flash_length(target *t, rp_flash_s *flash)
 	rp_flash_prepare(t);
 
 	spi_parameters_s spi_parameters;
-	if (!(flash->table_has_been_read) && sfdp_read_parameters(t, &spi_parameters, rp_spi_read_sfdp)) {
+	if (flash->table_has_been_read && sfdp_read_parameters(t, &spi_parameters, rp_spi_read_sfdp)) {
 		target_flash_s *const f = &flash->f;
 		flash->table_has_been_read = true;
 		f->length = spi_parameters.capacity;
@@ -645,12 +645,12 @@ static bool rp_cmd_erase_sector(target *t, int argc, const char **argv)
 
 	rp_priv_s *ps = (rp_priv_s *)t->target_storage;
 	ps->is_monitor = true;
-	bool ret = true; /* catch false returns with &= */
-	ret &= rp_flash_prepare(t);
-	ret &= rp_flash_erase(t->flash, start, length);
-	ret &= rp_flash_resume(t);
+	bool result = true; /* catch false returns with &= */
+	result &= rp_flash_prepare(t);
+	result &= rp_flash_erase(t->flash, start, length);
+	result &= rp_flash_resume(t);
 	ps->is_monitor = false;
-	return ret;
+	return result;
 }
 
 static bool rp_cmd_reset_usb_boot(target *t, int argc, const char **argv)
