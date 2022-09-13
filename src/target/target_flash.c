@@ -234,8 +234,20 @@ bool target_flash_write(target *t, target_addr_t dest, const void *src, size_t l
 	if (!target_enter_flash_mode(t))
 		return false;
 
-	target_flash_s *active_flash = target_flash_for_addr(t, dest);
 	bool ret = true; /* Catch false returns with &= */
+	target_flash_s *active_flash = NULL;
+
+	for (target_flash_s *f = t->flash; f; f = f->next) {
+		if (f->start <= dest && dest < f->start + f->length)
+			active_flash = f;
+		else if (f->buf) {
+			ret &= flash_buffered_flush(f);
+			ret &= flash_done(f);
+		}
+	}
+	if (!active_flash || !ret)
+		return false;
+
 	while (len) {
 		target_flash_s *f = target_flash_for_addr(t, dest);
 		if (!f)
