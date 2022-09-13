@@ -38,9 +38,6 @@
 #include "general.h"
 #include "target_internal.h"
 
-static bool flash_buffered_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
-static bool flash_buffered_flush(target_flash_s *f);
-
 target_flash_s *target_flash_for_addr(target *t, uint32_t addr)
 {
 	for (target_flash_s *f = t->flash; f; f = f->next) {
@@ -174,6 +171,64 @@ bool flash_buffer_alloc(target_flash_s *flash)
 	return true;
 }
 
+static bool flash_buffered_flush(target_flash_s *f)
+{
+	bool ret = true; /* catch false returns with &= */
+	if (f->buf && f->buf_addr_base != UINT32_MAX && f->buf_addr_low != UINT32_MAX &&
+		f->buf_addr_low < f->buf_addr_high) {
+		/* Write buffer to flash */
+
+		if (!flash_prepare(f))
+			return false;
+
+		target_addr_t aligned_addr = f->buf_addr_low & ~(f->writesize - 1U);
+
+		const uint8_t *src = f->buf + (aligned_addr - f->buf_addr_base);
+		uint32_t len = f->buf_addr_high - aligned_addr;
+
+		for (size_t offset = 0; offset < len; offset += f->writesize)
+			ret &= f->write(f, aligned_addr + offset, src + offset, f->writesize);
+
+		f->buf_addr_base = UINT32_MAX;
+		f->buf_addr_low = UINT32_MAX;
+		f->buf_addr_high = 0;
+	}
+
+	return ret;
+}
+
+static bool flash_buffered_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
+{
+	bool ret = true; /* catch false returns with &= */
+	while (len) {
+		const target_addr_t base_addr = dest & ~(f->writebufsize - 1U);
+
+		/* check for base address change */
+		if (base_addr != f->buf_addr_base) {
+			ret &= flash_buffered_flush(f);
+
+			/* Setup buffer */
+			f->buf_addr_base = base_addr;
+			memset(f->buf, f->erased, f->writebufsize);
+		}
+
+		const size_t offset = dest % f->writebufsize;
+		const size_t local_len = MIN(f->writebufsize - offset, len);
+
+		/* Copy chunk into sector buffer */
+		memcpy(f->buf + offset, src, local_len);
+
+		/* this allows for writes smaller than blocksize when flushing in the future */
+		f->buf_addr_low = MIN(f->buf_addr_low, dest);
+		f->buf_addr_high = MAX(f->buf_addr_high, dest + local_len);
+
+		dest += local_len;
+		src += local_len;
+		len -= local_len;
+	}
+	return ret;
+}
+
 bool target_flash_write(target *t, target_addr_t dest, const void *src, size_t len)
 {
 	if (!target_enter_flash_mode(t))
@@ -215,60 +270,17 @@ bool target_flash_write(target *t, target_addr_t dest, const void *src, size_t l
 	return ret;
 }
 
-static bool flash_buffered_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
+bool target_flash_complete(target *t)
 {
+	if (!t->flash_mode)
+		return false;
+
 	bool ret = true; /* catch false returns with &= */
-	while (len) {
-		const target_addr_t base_addr = dest & ~(f->writebufsize - 1U);
-
-		/* check for base address change */
-		if (base_addr != f->buf_addr_base) {
-			ret &= flash_buffered_flush(f);
-
-			/* Setup buffer */
-			f->buf_addr_base = base_addr;
-			memset(f->buf, f->erased, f->writebufsize);
-		}
-
-		const size_t offset = dest % f->writebufsize;
-		const size_t local_len = MIN(f->writebufsize - offset, len);
-
-		/* Copy chunk into sector buffer */
-		memcpy(f->buf + offset, src, local_len);
-
-		/* this allows for writes smaller than blocksize when flushing in the future */
-		f->buf_addr_low = MIN(f->buf_addr_low, dest);
-		f->buf_addr_high = MAX(f->buf_addr_high, dest + local_len);
-
-		dest += local_len;
-		src += local_len;
-		len -= local_len;
-	}
-	return ret;
-}
-
-static bool flash_buffered_flush(target_flash_s *f)
-{
-	bool ret = true; /* catch false returns with &= */
-	if (f->buf && f->buf_addr_base != UINT32_MAX && f->buf_addr_low != UINT32_MAX &&
-		f->buf_addr_low < f->buf_addr_high) {
-		/* Write buffer to flash */
-
-		if (!flash_prepare(f))
-			return false;
-
-		target_addr_t aligned_addr = f->buf_addr_low & ~(f->writesize - 1U);
-
-		const uint8_t *src = f->buf + (aligned_addr - f->buf_addr_base);
-		uint32_t len = f->buf_addr_high - aligned_addr;
-
-		for (size_t offset = 0; offset < len; offset += f->writesize)
-			ret &= f->write(f, aligned_addr + offset, src + offset, f->writesize);
-
-		f->buf_addr_base = UINT32_MAX;
-		f->buf_addr_low = UINT32_MAX;
-		f->buf_addr_high = 0;
+	for (target_flash_s *f = t->flash; f; f = f->next) {
+		ret &= flash_buffered_flush(f);
+		ret &= flash_done(f);
 	}
 
+	target_exit_flash_mode(t);
 	return ret;
 }
