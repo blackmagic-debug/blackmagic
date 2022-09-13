@@ -160,24 +160,44 @@ bool target_flash_erase(target *t, target_addr_t addr, size_t len)
 	return ret;
 }
 
+bool flash_buffer_alloc(target_flash_s *flash)
+{
+	/* Allocate buffer */
+	flash->buf = malloc(flash->writebufsize);
+	if (!flash->buf) { /* malloc failed: heap exhaustion */
+		DEBUG_WARN("malloc: failed in %s\n", __func__);
+		return false;
+	}
+	flash->buf_addr_base = UINT32_MAX;
+	flash->buf_addr_low = UINT32_MAX;
+	flash->buf_addr_high = 0;
+	return true;
+}
+
 bool target_flash_write(target *t, target_addr_t dest, const void *src, size_t len)
 {
 	if (!target_enter_flash_mode(t))
 		return false;
 
 	target_flash_s *active_flash = target_flash_for_addr(t, dest);
-	bool ret = true; /* catch false returns with &= */
+	bool ret = true; /* Catch false returns with &= */
 	while (len) {
 		target_flash_s *f = target_flash_for_addr(t, dest);
 		if (!f)
 			return false;
 
-		/* terminate flash operations if we're not in the same target flash */
+		/* Terminate flash operations if we're not in the same target flash */
 		if (f != active_flash) {
 			ret &= flash_buffered_flush(active_flash);
 			ret &= flash_done(active_flash);
 			active_flash = f;
 		}
+		if (!f->buf)
+			ret &= flash_buffer_alloc(f);
+
+		/* Early exit if any of the flushing and cleanup steps above failed */
+		if (!ret)
+			break;
 
 		const target_addr_t local_end_addr = MIN(dest + len, f->start + f->length);
 		const target_addr_t local_length = local_end_addr - dest;
@@ -192,41 +212,11 @@ bool target_flash_write(target *t, target_addr_t dest, const void *src, size_t l
 		src += local_length;
 		len -= local_length;
 	}
-	/* Flush operations if we reached the of Flash operations */
-	ret &= flash_buffered_flush(active_flash);
-	ret &= flash_done(active_flash);
-	return ret;
-}
-
-bool target_flash_complete(target *t)
-{
-	if (!t->flash_mode)
-		return false;
-
-	bool ret = true; /* catch false returns with &= */
-	for (target_flash_s *f = t->flash; f; f = f->next) {
-		ret &= flash_buffered_flush(f);
-		ret &= flash_done(f);
-	}
-
-	target_exit_flash_mode(t);
 	return ret;
 }
 
 static bool flash_buffered_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
-	if (f->buf == NULL) {
-		/* Allocate buffer */
-		f->buf = malloc(f->writebufsize);
-		if (!f->buf) { /* malloc failed: heap exhaustion */
-			DEBUG_WARN("malloc: failed in %s\n", __func__);
-			return false;
-		}
-		f->buf_addr_base = UINT32_MAX;
-		f->buf_addr_low = UINT32_MAX;
-		f->buf_addr_high = 0;
-	}
-
 	bool ret = true; /* catch false returns with &= */
 	while (len) {
 		const target_addr_t base_addr = dest & ~(f->writebufsize - 1U);
