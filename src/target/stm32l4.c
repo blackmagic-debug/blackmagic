@@ -147,8 +147,8 @@ enum ID_STM32L4 {
 	ID_STM32G47  = 0x469u, /* RM0440, Rev.1 */
 	ID_STM32G49  = 0x479u, /* RM0440, Rev.6 */
 	ID_STM32L55  = 0x472u, /* RM0438, Rev.4 */
-	ID_STM32WLXX = 0x497u, /* RM0461, Rev.3, RM453, Rev.1 */
-	ID_STM32WBXX = 0x495u, /* RM0434, Rev.9 */
+	ID_STM32WLXX = 0x497u, /* RM0461, Rev.3 */
+	ID_STM32WBXX = 0x495u, /* RM0434, Rev.9, DP_TARGETIDR */
 };
 
 enum FAM_STM32L4 {
@@ -510,31 +510,18 @@ static void stm32l4_detach(target *t)
 bool stm32l4_probe(target *t)
 {
 	ADIv5_AP_t *ap = cortexm_ap(t);
-	uint32_t device_id;
-	if (ap->dp->version >= 2 && ap->dp->target_partno > 1) { /* STM32L552 has invalid TARGETID 1 */
-		/* FIXME: ids likely no longer match and need fixing */
-		device_id = ap->dp->target_partno;
-	} else {
-		uint32_t idcode_reg = STM32L4_DBGMCU_IDCODE_PHYS;
-		/* FIXME: we probaly want to check if this is a C-M33 via cpuid */
-		if (ap->dp->partno == 0xbe)
-			idcode_reg = STM32L5_DBGMCU_IDCODE_PHYS;
-		device_id = target_mem_read32(t, idcode_reg) & 0xfffU;
-		DEBUG_INFO("Idcode %08" PRIx32 "\n", device_id);
-	}
-
-	struct stm32l4_info const *chip = stm32l4_get_chip_info(device_id);
+	struct stm32l4_info const *chip = stm32l4_get_chip_info(t->part_id);
 
 	if( !chip->device_id )	/* Not found */
 		return false;
 
 	t->driver = chip->designator;
-	switch (device_id) {
+	switch (t->part_id) {
 		case ID_STM32WLXX:
 		case ID_STM32WBXX:
 			if ((stm32l4_flash_read32(t, FLASH_OPTR)) &	FLASH_OPTR_ESE) {
 				DEBUG_WARN("STM32W security enabled\n");
-				t->driver = (device_id == ID_STM32WLXX) ?
+				t->driver = (t->part_id == ID_STM32WLXX) ?
 					"STM32WLxx(secure)" : "STM32WBxx(secure)";
 			}
 			if (ap->apsel == 0) {

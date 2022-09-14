@@ -145,9 +145,9 @@ enum stm32h7_regs {
 #define FLASH_SECTOR_SIZE 	0x20000
 #define BANK2_START         0x08100000
 enum ID_STM32H7 {
-	ID_STM32H74x  = 0x4500,      /* RM0433, RM0399 */
-	ID_STM32H7Bx  = 0x4800,      /* RM0455 */
-	ID_STM32H72x  = 0x4830,      /* RM0468 */
+	ID_STM32H74x  = 0x450,      /* RM0433, RM0399 */
+	ID_STM32H7Bx  = 0x480,      /* RM0455 */
+	ID_STM32H72x  = 0x483,      /* RM0468 */
 };
 
 struct stm32h7_flash {

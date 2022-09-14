@@ -644,6 +644,7 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 		PROBE(gd32f1_probe);
 		break;
 	case JEP106_MANUFACTURER_STM:
+		t->part_id = ap->partno;
 		PROBE(stm32f1_probe);
 		PROBE(stm32f4_probe);
 		PROBE(stm32h7_probe);
