@@ -123,7 +123,7 @@ bool target_flash_erase(target *t, target_addr_t addr, size_t len)
 		return false;
 
 	target_flash_s *active_flash = target_flash_for_addr(t, addr);
-	bool ret = true; /* catch false returns with &= */
+	bool ret = true; /* Catch false returns with &= */
 	while (len) {
 		target_flash_s *f = target_flash_for_addr(t, addr);
 		if (!f) {
@@ -131,7 +131,7 @@ bool target_flash_erase(target *t, target_addr_t addr, size_t len)
 			return false;
 		}
 
-		/* terminate flash operations if we're not in the same target flash */
+		/* Terminate flash operations if we're not in the same target flash */
 		if (f != active_flash) {
 			ret &= flash_done(active_flash);
 			active_flash = f;
@@ -173,7 +173,7 @@ bool flash_buffer_alloc(target_flash_s *flash)
 
 static bool flash_buffered_flush(target_flash_s *f)
 {
-	bool ret = true; /* catch false returns with &= */
+	bool ret = true; /* Catch false returns with &= */
 	if (f->buf && f->buf_addr_base != UINT32_MAX && f->buf_addr_low != UINT32_MAX &&
 		f->buf_addr_low < f->buf_addr_high) {
 		/* Write buffer to flash */
@@ -199,11 +199,11 @@ static bool flash_buffered_flush(target_flash_s *f)
 
 static bool flash_buffered_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
-	bool ret = true; /* catch false returns with &= */
+	bool ret = true; /* Catch false returns with &= */
 	while (len) {
 		const target_addr_t base_addr = dest & ~(f->writebufsize - 1U);
 
-		/* check for base address change */
+		/* Check for base address change */
 		if (base_addr != f->buf_addr_base) {
 			ret &= flash_buffered_flush(f);
 
@@ -218,7 +218,7 @@ static bool flash_buffered_write(target_flash_s *f, target_addr_t dest, const vo
 		/* Copy chunk into sector buffer */
 		memcpy(f->buf + offset, src, local_len);
 
-		/* this allows for writes smaller than blocksize when flushing in the future */
+		/* This allows for writes smaller than writebufsize when flushing in the future */
 		f->buf_addr_low = MIN(f->buf_addr_low, dest);
 		f->buf_addr_high = MAX(f->buf_addr_high, dest + local_len);
 
@@ -287,7 +287,7 @@ bool target_flash_complete(target *t)
 	if (!t->flash_mode)
 		return false;
 
-	bool ret = true; /* catch false returns with &= */
+	bool ret = true; /* Catch false returns with &= */
 	for (target_flash_s *f = t->flash; f; f = f->next) {
 		ret &= flash_buffered_flush(f);
 		ret &= flash_done(f);
