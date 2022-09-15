@@ -35,6 +35,7 @@
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
+#include "cortexm.h"
 
 #define HC32L110_FLASH_BASE 0x00000000U
 #define HC32L110_BLOCKSIZE  512U
@@ -50,6 +51,7 @@
 #define HC32L110_FLASH_CR_OP_ERASE_SECTOR 2U
 #define HC32L110_FLASH_CR_OP_ERASE_CHIP   3U
 
+static bool hc32l110_enter_flash_mode(target_s *target);
 static bool hc32l110_flash_prepare(target_flash_s *flash);
 static bool hc32l110_flash_done(target_flash_s *flash);
 static bool hc32l110_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
@@ -91,6 +93,9 @@ bool hc32l110_probe(target_s *t)
 	default:
 		return false;
 	}
+
+	t->enter_flash_mode = hc32l110_enter_flash_mode;
+
 	hc32l110_add_flash(t, flash_size);
 	return true;
 }
@@ -127,6 +132,19 @@ static void hc32l110_slock_unlock_all(target_s *const target)
 {
 	hc32l110_flash_cr_unlock(target);
 	target_mem_write32(target, HC32L110_FLASH_SLOCK_ADDR, 0xffffU);
+}
+
+static bool hc32l110_enter_flash_mode(target_s *const target)
+{
+	target_reset(target);
+
+	/*
+	 * The Flash controller requires the core's program counter to be
+	 * outside of the Flash to unlock all regions of the Flash
+	 * (Whatever sector it is left in becomes stuck in a locked state)
+	 */
+	const uint32_t pc = 0xfffffffeU;
+	return target_reg_write(target, REG_PC, &pc, sizeof(pc)) == sizeof(pc);
 }
 
 static bool hc32l110_flash_prepare(target_flash_s *const flash)
