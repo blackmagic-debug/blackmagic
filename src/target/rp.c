@@ -205,10 +205,12 @@ static uint32_t rp_get_flash_length(target *t);
 static bool rp_mass_erase(target *t);
 
 // Our own implementation of bootloader functions for handling flash chip
-static void __attribute__((unused)) rp_flash_connect_internal(target *t);
-static void rp_flash_exit_xip(target *t);
-static void __attribute__((unused)) rp_flash_flush_cache(target *t);
-static void rp_flash_enter_xip(target *t);
+static void rp_flash_exit_xip(target *const t);
+static void rp_flash_enter_xip(target *const t);
+#if 0
+static void rp_flash_connect_internal(target *const t);
+static void rp_flash_flush_cache(target *const t);
+#endif
 
 static void rp_spi_read_sfdp(target *const t, const uint32_t address, void *const buffer, const size_t length)
 {
@@ -236,7 +238,7 @@ static void rp_add_flash(target *t)
 
 	rp_flash_enter_xip(t);
 
-	DEBUG_INFO("Flash size: %" PRIu16 " MB\n", spi_parameters.capacity / (1024U * 1024U));
+	DEBUG_INFO("Flash size: %" PRIu16 "MiB\n", spi_parameters.capacity / (1024U * 1024U));
 
 	target_flash_s *const f = &flash->f;
 	f->start = RP_XIP_FLASH_BASE;
@@ -619,16 +621,19 @@ static void rp_spi_read(
 	target_mem_write32(t, RP_SSI_ENABLE, ssi_enabled);
 }
 
+#if 0
 // Connect the XIP controller to the flash pads
-static void rp_flash_connect_internal(target *t)
+static void rp_flash_connect_internal(target *const t)
 {
 	// Use hard reset to force IO and pad controls to known state (don't touch
 	// IO_BANK0 as that does not affect XIP signals)
-	uint32_t reset = target_mem_read32(t, RP_RESETS_RESET);
-	target_mem_write32(t, RP_RESETS_RESET, reset | RP_RESETS_RESET_IO_QSPI_BITS | RP_RESETS_RESET_PADS_QSPI_BITS);
+	const uint32_t reset = target_mem_read32(t, RP_RESETS_RESET);
+	const uint32_t io_pads_bits = RP_RESETS_RESET_IO_QSPI_BITS | RP_RESETS_RESET_PADS_QSPI_BITS;
+	target_mem_write32(t, RP_RESETS_RESET, reset | io_pads_bits);
 	target_mem_write32(t, RP_RESETS_RESET, reset);
-	while (
-		~target_mem_read32(t, RP_RESETS_RESET_DONE) & (RP_RESETS_RESET_IO_QSPI_BITS | RP_RESETS_RESET_PADS_QSPI_BITS));
+	const uint32_t reset_done = target_mem_read32(t, RP_RESETS_RESET_DONE);
+	while (~reset_done & io_pads_bits)
+		continue;
 
 	// Then mux XIP block onto internal QSPI flash pads
 	target_mem_write32(t, RP_GPIO_QSPI_SCLK_CTRL, 0);
@@ -638,12 +643,13 @@ static void rp_flash_connect_internal(target *t)
 	target_mem_write32(t, RP_GPIO_QSPI_SD2_CTRL, 0);
 	target_mem_write32(t, RP_GPIO_QSPI_SD3_CTRL, 0);
 }
+#endif
 
 // Set up the SSI controller for standard SPI mode,i.e. for every byte sent we get one back
 // This is only called by flash_exit_xip(), not by any of the other functions.
 // This makes it possible for the debugger or user code to edit SPI settings
 // e.g. baud rate, CPOL/CPHA.
-static void rp_flash_init_spi(target *t)
+static void rp_flash_init_spi(target *const t)
 {
 	// Disable SSI for further config
 	target_mem_write32(t, RP_SSI_ENABLE, 0);
@@ -665,7 +671,7 @@ static void rp_flash_init_spi(target *t)
 
 // Also allow any unbounded loops to check whether the above abort condition
 // was asserted, and terminate early
-static int rp_flash_was_aborted(target *t)
+static int rp_flash_was_aborted(target *const t)
 {
 	return target_mem_read32(t, RP_GPIO_QSPI_SD1_CTRL) & RP_GPIO_QSPI_SD1_CTRL_INOVER_BITS;
 }
@@ -678,7 +684,7 @@ static int rp_flash_was_aborted(target *t)
 // If rx_skip is nonzero, this many bytes will first be consumed from the FIFO,
 // before reading a further count bytes into *rx.
 // E.g. if you have written a command+address just before calling this function.
-static void rp_flash_put_get(target *t, const uint8_t *tx, uint8_t *rx, size_t count, size_t rx_skip)
+static void rp_flash_put_get(target *const t, const uint8_t *tx, uint8_t *rx, const size_t count, size_t rx_skip)
 {
 	// Make sure there is never more data in flight than the depth of the RX
 	// FIFO. Otherwise, when we are interrupted for long periods, hardware
@@ -688,8 +694,8 @@ static void rp_flash_put_get(target *t, const uint8_t *tx, uint8_t *rx, size_t c
 	size_t rx_count = count;
 	while (tx_count || rx_skip || rx_count) {
 		// NB order of reads, for pessimism rather than optimism
-		uint32_t tx_level = target_mem_read32(t, RP_SSI_TXFLR);
-		uint32_t rx_level = target_mem_read32(t, RP_SSI_RXFLR);
+		const uint32_t tx_level = target_mem_read32(t, RP_SSI_TXFLR);
+		const uint32_t rx_level = target_mem_read32(t, RP_SSI_RXFLR);
 		bool did_something = false; // Expect this to be folded into control flow, not register
 		if (tx_count && tx_level + rx_level < max_in_flight) {
 			target_mem_write32(t, RP_SSI_DR0, (uint32_t)(tx ? *tx++ : 0));
@@ -699,9 +705,9 @@ static void rp_flash_put_get(target *t, const uint8_t *tx, uint8_t *rx, size_t c
 		if (rx_level) {
 			uint8_t rxbyte = target_mem_read32(t, RP_SSI_DR0);
 			did_something = true;
-			if (rx_skip) {
+			if (rx_skip)
 				--rx_skip;
-			} else {
+			else {
 				if (rx)
 					*rx++ = rxbyte;
 				--rx_count;
@@ -722,7 +728,7 @@ static void rp_flash_put_get(target *t, const uint8_t *tx, uint8_t *rx, size_t c
 //
 // Part 4 is the sequence suggested in W25X10CL datasheet.
 // Parts 1 and 2 are to improve compatibility with Micron parts
-static void rp_flash_exit_xip(target *t)
+static void rp_flash_exit_xip(target *const t)
 {
 	uint8_t buf[2];
 	buf[0] = 0xff;
@@ -738,7 +744,7 @@ static void rp_flash_exit_xip(target *t)
 	// First two 32-clock sequences
 	// CSn is held high for the first 32 clocks, then asserted low for next 32
 	rp_spi_chip_select(t, RP_GPIO_QSPI_CS_DRIVE_HIGH);
-	for (int i = 0; i < 2; ++i) {
+	for (size_t i = 0; i < 2; ++i) {
 		// This gives 4 16-bit offset store instructions. Anything else seems to
 		// produce a large island of constants
 		target_mem_write32(t, RP_PADS_QSPI_GPIO_SD0, padctrl_tmp);
@@ -772,11 +778,12 @@ static void rp_flash_exit_xip(target *t)
 	target_mem_write32(t, RP_GPIO_QSPI_CS_CTRL, 0);
 }
 
+#if 0
 // This is a hook for steps to be taken in between programming the flash and
 // doing cached XIP reads from the flash. Called by the bootrom before
 // entering flash second stage, and called by the debugger after flash
 // programming.
-static void rp_flash_flush_cache(target *t)
+static void rp_flash_flush_cache(target *const t)
 {
 	target_mem_write32(t, RP_XIP_FLUSH, 1);
 	// Read blocks until flush completion
@@ -786,11 +793,12 @@ static void rp_flash_flush_cache(target *t)
 	target_mem_write32(t, RP_XIP_CTRL, ctrl | RP_XIP_CTRL_ENABLE);
 	rp_spi_chip_select(t, RP_GPIO_QSPI_CS_DRIVE_NORMAL);
 }
+#endif
 
 // Put the SSI into a mode where XIP accesses translate to standard
 // serial 03h read commands. The flash remains in its default serial command
 // state, so will still respond to other commands.
-static void rp_flash_enter_xip(target *t)
+static void rp_flash_enter_xip(target *const t)
 {
 	target_mem_write32(t, RP_SSI_ENABLE, 0);
 	target_mem_write32(t, RP_SSI_CTRL0,
@@ -807,7 +815,7 @@ static void rp_flash_enter_xip(target *t)
 	target_mem_write32(t, RP_SSI_ENABLE, RP_SSI_ENABLE_SSI);
 }
 
-static uint32_t rp_get_flash_length(target *t)
+static uint32_t rp_get_flash_length(target *const t)
 {
 	// Read the JEDEC ID and try to decode it
 	spi_flash_id_s flash_id;
