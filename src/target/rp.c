@@ -731,8 +731,7 @@ static void rp_flash_put_get(target *const t, const uint8_t *tx, uint8_t *rx, co
 static void rp_flash_exit_xip(target *const t)
 {
 	uint8_t buf[2];
-	buf[0] = 0xff;
-	buf[1] = 0xff;
+	memset(buf, 0xffU, sizeof(buf));
 
 	rp_flash_init_spi(t);
 
