@@ -109,16 +109,16 @@ static void hc32l110_flash_cr_unlock(target_s *const target)
 	target_mem_write32(target, HC32L110_FLASH_BYPASS_ADDR, 0xa5a5U);
 }
 
-static bool hc32l110_check_flash_completion(target_s *const target, const uint32_t timeout)
+static bool hc32l110_check_flash_completion(target_s *const target, const uint32_t timeout_ms)
 {
-	(void)timeout;
-
-	while (true) {
-		const uint32_t status = target_mem_read32(target, HC32L110_FLASH_CR_ADDR);
-		if ((status & HC32L110_FLASH_CR_BUSY) == 0)
-			break;
+	platform_timeout_s timeout;
+	platform_timeout_set(&timeout, timeout_ms);
+	uint32_t status = HC32L110_FLASH_CR_BUSY;
+	while (status & HC32L110_FLASH_CR_BUSY) {
+		status = target_mem_read32(target, HC32L110_FLASH_CR_ADDR);
+		if (target_check_error(target) || platform_timeout_is_expired(&timeout))
+			return false;
 	}
-
 	return true;
 }
 
@@ -165,17 +165,13 @@ static bool hc32l110_flash_prepare(target_flash_s *const flash)
 		return false;
 	}
 
-	hc32l110_check_flash_completion(flash->t, 1000);
 	hc32l110_slock_unlock_all(flash->t);
-
 	return true;
 }
 
 static bool hc32l110_flash_done(target_flash_s *const flash)
 {
 	hc32l110_slock_lock_all(flash->t);
-	hc32l110_check_flash_completion(flash->t, 1000);
-
 	return true;
 }
 
@@ -185,7 +181,10 @@ static bool hc32l110_flash_erase(target_flash_s *const flash, const target_addr_
 	// The Flash controller automatically erases the whole sector after one write operation
 	target_mem_write32(flash->t, addr, 0);
 
-	return hc32l110_check_flash_completion(flash->t, 2000);
+	const bool result = hc32l110_check_flash_completion(flash->t, 1000);
+	if (!result)
+		DEBUG_ERROR("Failed to erase %" PRIx32 " bytes at 0x%08" PRIx32 "\n", (uint32_t)len, addr);
+	return result;
 }
 
 static bool hc32l110_flash_write(
@@ -195,9 +194,12 @@ static bool hc32l110_flash_write(
 	for (size_t offset = 0; offset < len; offset += 4U) {
 		uint32_t val = buffer[offset >> 2U];
 		target_mem_write32(flash->t, dest + offset, val);
-		hc32l110_check_flash_completion(flash->t, 2000);
+		if (!hc32l110_check_flash_completion(flash->t, 1000)) {
+			DEBUG_ERROR(
+				"Failed to write %" PRIu32 " bytes at 0x%08" PRIx32 "\n", (uint32_t)len, (uint32_t)(dest + offset));
+			return false;
+		}
 	}
-
 	return true;
 }
 
@@ -207,15 +209,15 @@ static bool hc32l110_mass_erase(target_s *target)
 
 	hc32l110_flash_cr_unlock(target);
 	target_mem_write32(target, HC32L110_FLASH_CR_ADDR, HC32L110_FLASH_CR_OP_ERASE_CHIP);
-	hc32l110_check_flash_completion(target, 1000);
+	if (!hc32l110_check_flash_completion(target, 500))
+		return false;
 
 	hc32l110_slock_unlock_all(target);
 
 	// The Flash controller automatically erases the whole Flash after one write operation
 	target_mem_write32(target, 0, 0);
-	hc32l110_check_flash_completion(target, 4000);
+	const bool result = hc32l110_check_flash_completion(target, 4000);
 
 	hc32l110_slock_lock_all(target);
-
-	return true;
+	return result;
 }
