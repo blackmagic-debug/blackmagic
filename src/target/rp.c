@@ -2,6 +2,9 @@
  * This file is part of the Black Magic Debug project.
  *
  * Copyright (C) 2021 Uwe Bonnes (bon@elektron.ikp.physik.tu-darmstadt.de)
+ * Copyright (C) 2022 James Turton
+ * Includes extracts from pico-bootrom
+ * Copyright (C) 2020 Raspberry Pi (Trading) Ltd
  *
  * All rights reserved.
  *
@@ -53,16 +56,30 @@
 #define RP_SRAM_BASE          0x20000000U
 #define RP_SRAM_SIZE          0x42000U
 
-#define RP_GPIO_QSPI_BASE_ADDR     0x40018000U
-#define RP_GPIO_QSPI_CS_CTRL       (RP_GPIO_QSPI_BASE_ADDR + 0x0cU)
-#define RP_GPIO_QSPI_CS_DRIVE_LOW  (2U << 8U)
-#define RP_GPIO_QSPI_CS_DRIVE_HIGH (3U << 8U)
-#define RP_GPIO_QSPI_CS_DRIVE_MASK 0x00000300U
+#define RP_GPIO_QSPI_BASE_ADDR                 0x40018000U
+#define RP_GPIO_QSPI_SCLK_CTRL                 (RP_GPIO_QSPI_BASE_ADDR + 0x04U)
+#define RP_GPIO_QSPI_CS_CTRL                   (RP_GPIO_QSPI_BASE_ADDR + 0x0cU)
+#define RP_GPIO_QSPI_SD0_CTRL                  (RP_GPIO_QSPI_BASE_ADDR + 0x14U)
+#define RP_GPIO_QSPI_SD1_CTRL                  (RP_GPIO_QSPI_BASE_ADDR + 0x1cU)
+#define RP_GPIO_QSPI_SD2_CTRL                  (RP_GPIO_QSPI_BASE_ADDR + 0x24U)
+#define RP_GPIO_QSPI_SD3_CTRL                  (RP_GPIO_QSPI_BASE_ADDR + 0x2cU)
+#define RP_GPIO_QSPI_CS_DRIVE_NORMAL           (0U << 8U)
+#define RP_GPIO_QSPI_CS_DRIVE_INVERT           (1U << 8U)
+#define RP_GPIO_QSPI_CS_DRIVE_LOW              (2U << 8U)
+#define RP_GPIO_QSPI_CS_DRIVE_HIGH             (3U << 8U)
+#define RP_GPIO_QSPI_CS_DRIVE_MASK             0x00000300U
+#define RP_GPIO_QSPI_SD1_CTRL_INOVER_BITS      0x00030000U
 
 #define RP_SSI_BASE_ADDR                       0x18000000U
 #define RP_SSI_CTRL0                           (RP_SSI_BASE_ADDR + 0x00U)
 #define RP_SSI_CTRL1                           (RP_SSI_BASE_ADDR + 0x04U)
 #define RP_SSI_ENABLE                          (RP_SSI_BASE_ADDR + 0x08U)
+#define RP_SSI_SER                             (RP_SSI_BASE_ADDR + 0x10U)
+#define RP_SSI_BAUD                            (RP_SSI_BASE_ADDR + 0x14U)
+#define RP_SSI_TXFLR                           (RP_SSI_BASE_ADDR + 0x20U)
+#define RP_SSI_RXFLR                           (RP_SSI_BASE_ADDR + 0x24U)
+#define RP_SSI_SR                              (RP_SSI_BASE_ADDR + 0x28U)
+#define RP_SSI_ICR                             (RP_SSI_BASE_ADDR + 0x48U)
 #define RP_SSI_DR0                             (RP_SSI_BASE_ADDR + 0x60U)
 #define RP_SSI_XIP_SPI_CTRL0                   (RP_SSI_BASE_ADDR + 0xf4U)
 #define RP_SSI_CTRL0_FRF_MASK                  0x00600000U
@@ -85,6 +102,31 @@
 #define RP_SSI_XIP_SPI_CTRL0_ADDRESS_LENGTH(x) (((x) * 2U) << 2U)
 #define RP_SSI_XIP_SPI_CTRL0_INSTR_LENGTH_8b   (2U << 8U)
 #define RP_SSI_XIP_SPI_CTRL0_WAIT_CYCLES(x)    (((x) * 8U) << 11U)
+#define RP_SSI_XIP_SPI_CTRL0_XIP_CMD_SHIFT     24U
+#define RP_SSI_XIP_SPI_CTRL0_XIP_CMD(x)        ((x) << RP_SSI_XIP_SPI_CTRL0_XIP_CMD_SHIFT)
+#define RP_SSI_XIP_SPI_CTRL0_TRANS_1C1A        (0U << 0U)
+#define RP_SSI_XIP_SPI_CTRL0_TRANS_1C2A        (1U << 0U)
+#define RP_SSI_XIP_SPI_CTRL0_TRANS_2C2A        (2U << 0U)
+
+#define RP_PADS_QSPI_BASE_ADDR                 0x40020000U
+#define RP_PADS_QSPI_GPIO_SD0                  (RP_PADS_QSPI_BASE_ADDR + 0x08U)
+#define RP_PADS_QSPI_GPIO_SD1                  (RP_PADS_QSPI_BASE_ADDR + 0x0cU)
+#define RP_PADS_QSPI_GPIO_SD2                  (RP_PADS_QSPI_BASE_ADDR + 0x10U)
+#define RP_PADS_QSPI_GPIO_SD3                  (RP_PADS_QSPI_BASE_ADDR + 0x14U)
+#define RP_PADS_QSPI_GPIO_SD0_OD_BITS          0x00000080U
+#define RP_PADS_QSPI_GPIO_SD0_PUE_BITS         0x00000008U
+#define RP_PADS_QSPI_GPIO_SD0_PDE_BITS         0x00000004U
+
+#define RP_XIP_BASE_ADDR                       0x14000000U
+#define RP_XIP_CTRL                            (RP_XIP_BASE_ADDR + 0x00U)
+#define RP_XIP_FLUSH                           (RP_XIP_BASE_ADDR + 0x04U)
+#define RP_XIP_CTRL_ENABLE                     0x00000001U
+
+#define RP_RESETS_BASE_ADDR                    0x4000c000U
+#define RP_RESETS_RESET                        (RP_RESETS_BASE_ADDR + 0x00U)
+#define RP_RESETS_RESET_DONE                   (RP_RESETS_BASE_ADDR + 0x08U)
+#define RP_RESETS_RESET_IO_QSPI_BITS           0x00000040U
+#define RP_RESETS_RESET_PADS_QSPI_BITS         0x00000200U
 
 #define BOOTROM_FUNC_TABLE_ADDR      0x00000014U
 #define BOOTROM_FUNC_TABLE_TAG(x, y) ((uint8_t)(x) | ((uint8_t)(y) << 8U))
@@ -140,7 +182,6 @@ typedef struct rp_flash {
 	target_flash_s f;
 	uint32_t page_size;
 	uint8_t sector_erase_opcode;
-	bool table_has_been_read;
 } rp_flash_s;
 
 static bool rp_cmd_erase_sector(target *t, int argc, const char **argv);
@@ -160,8 +201,14 @@ static bool rp_attach(target *t);
 static bool rp_flash_prepare(target *t);
 static bool rp_flash_resume(target *t);
 static void rp_spi_read(target *t, uint16_t command, target_addr_t address, void *buffer, size_t length);
-static uint32_t rp_get_flash_length(target *t, rp_flash_s *flash);
+static uint32_t rp_get_flash_length(target *t);
 static bool rp_mass_erase(target *t);
+
+// Our own implementation of bootloader functions for handling flash chip
+static void rp_flash_connect_internal(target *t);
+static void rp_flash_exit_xip(target *t);
+static void rp_flash_flush_cache(target *t);
+static void rp_flash_enter_xip(target *t);
 
 static void rp_spi_read_sfdp(target *const t, const uint32_t address, void *const buffer, const size_t length)
 {
@@ -176,22 +223,35 @@ static void rp_add_flash(target *t)
 		return;
 	}
 
-	/* Make some assumptions and hope for the best. */
-	flash->page_size = 256U;
-	flash->sector_erase_opcode = SPI_FLASH_CMD_SECTOR_ERASE;
-	flash->table_has_been_read = false;
+	rp_flash_connect_internal(t);
+	rp_flash_exit_xip(t);
+
+	spi_parameters_s spi_parameters;
+	if (!sfdp_read_parameters(t, &spi_parameters, rp_spi_read_sfdp)) {
+		/* SFDP readout failed, so make some assumptions and hope for the best. */
+		spi_parameters.page_size = 256U;
+		spi_parameters.sector_size = 4096U;
+		spi_parameters.capacity = rp_get_flash_length(t);
+		spi_parameters.sector_erase_opcode = SPI_FLASH_CMD_SECTOR_ERASE;
+	}
+
+	rp_flash_flush_cache(t);
+	rp_flash_enter_xip(t);
+
+	DEBUG_INFO("Flash size: %" PRIu16 " MB\n", spi_parameters.capacity / (1024U * 1024U));
 
 	target_flash_s *const f = &flash->f;
 	f->start = RP_XIP_FLASH_BASE;
-	f->length = rp_get_flash_length(t, flash);
-	f->blocksize = 4096U;
+	f->length = spi_parameters.capacity;
+	f->blocksize = spi_parameters.sector_size;
 	f->erase = rp_flash_erase;
 	f->write = rp_flash_write;
 	f->writesize = MAX_WRITE_CHUNK; /* Max buffer size used otherwise */
 	f->erased = 0xffU;
 	target_add_flash(t, f);
 
-	DEBUG_INFO("Flash size: %d MB\n", f->length / (1024U * 1024U));
+	flash->page_size = spi_parameters.page_size;
+	flash->sector_erase_opcode = spi_parameters.sector_erase_opcode;
 }
 
 bool rp_probe(target *t)
@@ -389,16 +449,6 @@ static bool rp_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 	DEBUG_INFO("Erase addr 0x%08" PRIx32 " len 0x%" PRIx32 "\n", addr, (uint32_t)len);
 	target *t = f->t;
 
-	/* Update our assumptions with the SFDP params */
-	spi_parameters_s spi_parameters;
-	rp_flash_s *flash = (rp_flash_s *)f;
-	if (flash->table_has_been_read && sfdp_read_parameters(t, &spi_parameters, rp_spi_read_sfdp)) {
-		flash->table_has_been_read = true;
-		f->blocksize = spi_parameters.sector_size;
-	    flash->page_size = spi_parameters.page_size;
-	    flash->sector_erase_opcode = spi_parameters.sector_erase_opcode;
-	}
-
 	if (addr & (f->blocksize - 1)) {
 		DEBUG_WARN("Unaligned erase\n");
 		return false;
@@ -439,6 +489,7 @@ static bool rp_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 			len -= chunk;
 			addr += chunk;
 		} else {
+			rp_flash_s *flash = (rp_flash_s *)f;
 			ps->regs[0] = addr;
 			ps->regs[1] = len;
 			ps->regs[2] = f->blocksize;
@@ -506,9 +557,8 @@ static bool rp_mass_erase(target *t)
 	return result;
 }
 
-static void rp_spi_chip_select(target *const t, const bool active)
+static void rp_spi_chip_select(target *const t, const uint32_t state)
 {
-	const uint32_t state = active ? RP_GPIO_QSPI_CS_DRIVE_LOW : RP_GPIO_QSPI_CS_DRIVE_HIGH;
 	const uint32_t value = target_mem_read32(t, RP_GPIO_QSPI_CS_CTRL);
 	target_mem_write32(t, RP_GPIO_QSPI_CS_CTRL, (value & ~RP_GPIO_QSPI_CS_DRIVE_MASK) | state);
 }
@@ -529,7 +579,7 @@ static void rp_spi_read(
 			RP_SSI_XIP_SPI_CTRL0_INSTR_LENGTH_8b | RP_SSI_XIP_SPI_CTRL0_WAIT_CYCLES(0));
 	target_mem_write32(t, RP_SSI_CTRL1, length);
 	target_mem_write32(t, RP_SSI_ENABLE, RP_SSI_ENABLE_SSI);
-	rp_spi_chip_select(t, true);
+	rp_spi_chip_select(t, RP_GPIO_QSPI_CS_DRIVE_LOW);
 
 	/* Set up the instruction */
 	const uint8_t opcode = command & RP_SPI_OPCODE_MASK;
@@ -563,7 +613,7 @@ static void rp_spi_read(
 	}
 
 	/* Deselect the Flash and put things back to how they were */
-	rp_spi_chip_select(t, false);
+	rp_spi_chip_select(t, RP_GPIO_QSPI_CS_DRIVE_HIGH);
 	target_mem_write32(t, RP_SSI_ENABLE, 0);
 	target_mem_write32(t, RP_SSI_CTRL1, ctrl1);
 	target_mem_write32(t, RP_SSI_CTRL0, ctrl0);
@@ -571,63 +621,208 @@ static void rp_spi_read(
 	target_mem_write32(t, RP_SSI_ENABLE, ssi_enabled);
 }
 
-static uint32_t rp_get_flash_length(target *t, rp_flash_s *flash)
+// Connect the XIP controller to the flash pads
+static void rp_flash_connect_internal(target *t)
 {
-	uint32_t size = MAX_FLASH;
-	uint32_t bootsec[16];
-	size_t i;
+    // Use hard reset to force IO and pad controls to known state (don't touch
+    // IO_BANK0 as that does not affect XIP signals)
+	uint32_t reset = target_mem_read32(t, RP_RESETS_RESET);
+    target_mem_write32(t, RP_RESETS_RESET, reset | RP_RESETS_RESET_IO_QSPI_BITS | RP_RESETS_RESET_PADS_QSPI_BITS);
+    target_mem_write32(t, RP_RESETS_RESET, reset);
+	while (~target_mem_read32(t, RP_RESETS_RESET_DONE) & (RP_RESETS_RESET_IO_QSPI_BITS | RP_RESETS_RESET_PADS_QSPI_BITS));
 
-	target_mem_read(t, bootsec, RP_XIP_FLASH_BASE, sizeof(bootsec));
-	for (i = 0; i < 16; i++) {
-		if ((bootsec[i] != 0x00) && (bootsec[i] != 0xff))
-			break;
-	}
+    // Then mux XIP block onto internal QSPI flash pads
+	target_mem_write32(t, RP_GPIO_QSPI_SCLK_CTRL, 0);
+	target_mem_write32(t, RP_GPIO_QSPI_CS_CTRL, 0);
+	target_mem_write32(t, RP_GPIO_QSPI_SD0_CTRL, 0);
+	target_mem_write32(t, RP_GPIO_QSPI_SD1_CTRL, 0);
+	target_mem_write32(t, RP_GPIO_QSPI_SD2_CTRL, 0);
+	target_mem_write32(t, RP_GPIO_QSPI_SD3_CTRL, 0);
+}
 
-	if (i < 16) {
-		// We have some data (hopefully a valid program) stored in the start
-		// of the flash memory. We can check if the start of this data is
-		// mirrored anywhere else in the flash as the flash region will repeat
-		// when we try to read out of bounds.
-		uint32_t mirrorsec[16];
-		while (size > FLASHSIZE_4K_SECTOR) {
-			target_mem_read(t, mirrorsec, RP_XIP_FLASH_BASE + size, sizeof(bootsec));
-			if (memcmp(bootsec, mirrorsec, sizeof(bootsec)) != 0)
-				return size << 1U;
-			size >>= 1U;
-		}
-	}
+// Set up the SSI controller for standard SPI mode,i.e. for every byte sent we get one back
+// This is only called by flash_exit_xip(), not by any of the other functions.
+// This makes it possible for the debugger or user code to edit SPI settings
+// e.g. baud rate, CPOL/CPHA.
+static void rp_flash_init_spi(target *t)
+{
+	// Disable SSI for further config
+	target_mem_write32(t, RP_SSI_ENABLE, 0);
+	// Clear sticky errors (clear-on-read)
+	target_mem_read32(t, RP_SSI_SR);
+	target_mem_read32(t, RP_SSI_ICR);
+	// Hopefully-conservative baud rate for boot and programming
+	target_mem_write32(t, RP_SSI_BAUD, 6);
+	target_mem_write32(t, RP_SSI_CTRL0,
+			RP_SSI_CTRL0_FRF_SERIAL |	// Standard 1-bit SPI serial frames
+			RP_SSI_CTRL0_DATA_BITS(8) |	// 8 clocks per data frame
+			RP_SSI_CTRL0_TMOD_BIDI		// TX and RX FIFOs are both used for every byte
+	);
+	// Slave selected when transfers in progress
+	target_mem_write32(t, RP_SSI_SER, 1);
+	// Re-enable
+	target_mem_write32(t, RP_SSI_ENABLE, 1);
+}
 
-	// That approach didn't work. Most likely because there was no data found in
-	// at the start of the flash memory. If we have no valid program it's ok to
-	// interrupt the flash execution to check the JEDEC ID of the flash chip.
-	size = MAX_FLASH;
+// Also allow any unbounded loops to check whether the above abort condition
+// was asserted, and terminate early
+static int rp_flash_was_aborted(target *t) {
+    return target_mem_read32(t, RP_GPIO_QSPI_SD1_CTRL) & RP_GPIO_QSPI_SD1_CTRL_INOVER_BITS;
+}
 
-	rp_flash_prepare(t);
+// Put bytes from one buffer, and get bytes into another buffer.
+// These can be the same buffer.
+// If tx is NULL then send zeroes.
+// If rx is NULL then all read data will be dropped.
+//
+// If rx_skip is nonzero, this many bytes will first be consumed from the FIFO,
+// before reading a further count bytes into *rx.
+// E.g. if you have written a command+address just before calling this function.
+static void rp_flash_put_get(target *t, const uint8_t *tx, uint8_t *rx, size_t count, size_t rx_skip) {
+    // Make sure there is never more data in flight than the depth of the RX
+    // FIFO. Otherwise, when we are interrupted for long periods, hardware
+    // will overflow the RX FIFO.
+    const uint max_in_flight = 16 - 2; // account for data internal to SSI
+    size_t tx_count = count;
+    size_t rx_count = count;
+    while (tx_count || rx_skip || rx_count) {
+        // NB order of reads, for pessimism rather than optimism
+        uint32_t tx_level = target_mem_read32(t, RP_SSI_TXFLR);
+        uint32_t rx_level = target_mem_read32(t, RP_SSI_RXFLR);
+        bool did_something = false; // Expect this to be folded into control flow, not register
+        if (tx_count && tx_level + rx_level < max_in_flight) {
+            target_mem_write32(t, RP_SSI_DR0, (uint32_t) (tx ? *tx++ : 0));
+            --tx_count;
+            did_something = true;
+        }
+        if (rx_level) {
+            uint8_t rxbyte = target_mem_read32(t, RP_SSI_DR0);
+            did_something = true;
+            if (rx_skip) {
+                --rx_skip;
+            } else {
+                if (rx)
+                    *rx++ = rxbyte;
+                --rx_count;
+            }
+        }
+        // APB load costs 4 cycles, so only do it on idle loops (our budget is 48 cyc/byte)
+        if (!did_something && rp_flash_was_aborted(t))
+            break;
+    }
+    rp_spi_chip_select(t, RP_GPIO_QSPI_CS_DRIVE_HIGH);
+}
 
-	spi_parameters_s spi_parameters;
-	if (flash->table_has_been_read && sfdp_read_parameters(t, &spi_parameters, rp_spi_read_sfdp)) {
-		target_flash_s *const f = &flash->f;
-		flash->table_has_been_read = true;
-		f->length = spi_parameters.capacity;
-		f->blocksize = spi_parameters.sector_size;
-	    flash->page_size = spi_parameters.page_size;
-	    flash->sector_erase_opcode = spi_parameters.sector_erase_opcode;
-		rp_flash_resume(t);
-		return spi_parameters.capacity;
-	}
+// Sequence:
+// 1. CSn = 1, IO = 4'h0 (via pulldown to avoid contention), x32 clocks
+// 2. CSn = 0, IO = 4'hf (via pullup to avoid contention), x32 clocks
+// 3. CSn = 1 (brief deassertion)
+// 4. CSn = 0, MOSI = 1'b1 driven, x16 clocks
+//
+// Part 4 is the sequence suggested in W25X10CL datasheet.
+// Parts 1 and 2 are to improve compatibility with Micron parts
+static void rp_flash_exit_xip(target *t)
+{
+    uint8_t buf[2];
+    buf[0] = 0xff;
+    buf[1] = 0xff;
 
-	// We couldn't find the SFDP table so our last chance it to read the JEDEC
-	// ID and try to decode that.
+	rp_flash_init_spi(t);
 
+	uint32_t padctrl_save = target_mem_read32(t, RP_PADS_QSPI_GPIO_SD0);
+    uint32_t padctrl_tmp = (padctrl_save
+                            & ~(RP_PADS_QSPI_GPIO_SD0_OD_BITS | RP_PADS_QSPI_GPIO_SD0_PUE_BITS |
+                                RP_PADS_QSPI_GPIO_SD0_PDE_BITS)
+                           ) | RP_PADS_QSPI_GPIO_SD0_OD_BITS | RP_PADS_QSPI_GPIO_SD0_PDE_BITS;
+
+    // First two 32-clock sequences
+    // CSn is held high for the first 32 clocks, then asserted low for next 32
+    rp_spi_chip_select(t, RP_GPIO_QSPI_CS_DRIVE_HIGH);
+    for (int i = 0; i < 2; ++i) {
+        // This gives 4 16-bit offset store instructions. Anything else seems to
+        // produce a large island of constants
+        target_mem_write32(t, RP_PADS_QSPI_GPIO_SD0, padctrl_tmp);
+        target_mem_write32(t, RP_PADS_QSPI_GPIO_SD1, padctrl_tmp);
+        target_mem_write32(t, RP_PADS_QSPI_GPIO_SD2, padctrl_tmp);
+        target_mem_write32(t, RP_PADS_QSPI_GPIO_SD3, padctrl_tmp);
+
+        // Brief delay (~6000 cyc) for pulls to take effect
+		platform_delay(10);
+
+        rp_flash_put_get(t, NULL, NULL, 4, 0);
+
+        padctrl_tmp = (padctrl_tmp
+                       & ~RP_PADS_QSPI_GPIO_SD0_PDE_BITS)
+                      | RP_PADS_QSPI_GPIO_SD0_PUE_BITS;
+
+        rp_spi_chip_select(t, RP_GPIO_QSPI_CS_DRIVE_LOW);
+    }
+
+    // Restore IO/pad controls, and send 0xff, 0xff. Put pullup on IO2/IO3 as
+    // these may be used as WPn/HOLDn at this point, and we are now starting
+    // to issue serial commands.
+
+    target_mem_write32(t, RP_PADS_QSPI_GPIO_SD0, padctrl_save);
+    target_mem_write32(t, RP_PADS_QSPI_GPIO_SD1, padctrl_save);
+    padctrl_save = (padctrl_save
+        & ~RP_PADS_QSPI_GPIO_SD0_PDE_BITS
+    ) | RP_PADS_QSPI_GPIO_SD0_PUE_BITS;
+    target_mem_write32(t, RP_PADS_QSPI_GPIO_SD2, padctrl_save);
+    target_mem_write32(t, RP_PADS_QSPI_GPIO_SD3, padctrl_save);
+
+    rp_spi_chip_select(t, RP_GPIO_QSPI_CS_DRIVE_LOW);
+    rp_flash_put_get(t, buf, NULL, 2, 0);
+
+	target_mem_write32(t, RP_GPIO_QSPI_CS_CTRL, 0);
+}
+
+// This is a hook for steps to be taken in between programming the flash and
+// doing cached XIP reads from the flash. Called by the bootrom before
+// entering flash second stage, and called by the debugger after flash
+// programming.
+static void rp_flash_flush_cache(target *t)
+{
+    target_mem_write32(t, RP_XIP_FLUSH, 1);
+    // Read blocks until flush completion
+    target_mem_read32(t, RP_XIP_FLUSH);
+    // Enable the cache
+	const uint32_t ctrl = target_mem_read32(t, RP_XIP_CTRL);
+	target_mem_write32(t, RP_XIP_CTRL, ctrl | RP_XIP_CTRL_ENABLE);
+    rp_spi_chip_select(t, RP_GPIO_QSPI_CS_DRIVE_NORMAL);
+}
+
+// Put the SSI into a mode where XIP accesses translate to standard
+// serial 03h read commands. The flash remains in its default serial command
+// state, so will still respond to other commands.
+static void rp_flash_enter_xip(target *t)
+{
+	target_mem_write32(t, RP_SSI_ENABLE, 0);
+	target_mem_write32(t, RP_SSI_CTRL0,
+			RP_SSI_CTRL0_FRF_SERIAL |					// Standard 1-bit SPI serial frames
+			RP_SSI_CTRL0_DATA_BITS(32) | 				// 32 clocks per data frame
+			RP_SSI_CTRL0_TMOD_EEPROM					// Send instr + addr, receive data
+	);
+	target_mem_write32(t, RP_SSI_XIP_SPI_CTRL0,
+			RP_SSI_XIP_SPI_CTRL0_XIP_CMD(0x03) |	 	// Standard 03h read
+			RP_SSI_XIP_SPI_CTRL0_INSTR_LENGTH_8b | 	 	// 8-bit instruction prefix
+			RP_SSI_XIP_SPI_CTRL0_ADDRESS_LENGTH(0x03) |	// 24-bit addressing for 03h commands
+			RP_SSI_XIP_SPI_CTRL0_TRANS_1C1A				// Command and address both in serial format
+	);
+	target_mem_write32(t, RP_SSI_ENABLE, RP_SSI_ENABLE_SSI);
+}
+
+static uint32_t rp_get_flash_length(target *t)
+{
+	// Read the JEDEC ID and try to decode it
 	spi_flash_id_s flash_id;
 	rp_spi_read(t, SPI_FLASH_CMD_READ_JEDEC_ID, 0, &flash_id, sizeof(flash_id));
-	rp_flash_resume(t);
 
 	DEBUG_INFO("Flash device ID: %02x %02x %02x\n", flash_id.manufacturer, flash_id.type, flash_id.capacity);
 	if (flash_id.capacity >= 8 && flash_id.capacity <= 34)
-		size = 1 << flash_id.capacity;
-
-	return size;
+		return 1 << flash_id.capacity;
+	
+	// Guess maximum flash size
+	return MAX_FLASH;
 }
 
 static bool rp_cmd_erase_sector(target *t, int argc, const char **argv)
