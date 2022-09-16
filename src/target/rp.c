@@ -381,14 +381,14 @@ static bool rp_rom_call(target *t, uint32_t *regs, uint32_t cmd, uint32_t timeou
 	platform_timeout_set(&operation_timeout, timeout);
 	platform_timeout wait_timeout;
 	platform_timeout_set(&wait_timeout, 500);
-	do {
+	while (!target_halt_poll(t, NULL)) {
 		if (ps->is_monitor)
 			target_print_progress(&wait_timeout);
 		if (platform_timeout_is_expired(&operation_timeout)) {
 			DEBUG_WARN("RP Run timout %ums reached: ", timeout);
 			break;
 		}
-	} while (!target_halt_poll(t, NULL));
+	}
 	/* Debug */
 	target_regs_read(t, dbg_regs);
 	const bool result = (dbg_regs[REG_PC] & ~1U) == (ps->rom_debug_trampoline_end & ~1U);
