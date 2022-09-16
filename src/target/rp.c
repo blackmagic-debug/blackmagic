@@ -205,9 +205,9 @@ static uint32_t rp_get_flash_length(target *t);
 static bool rp_mass_erase(target *t);
 
 // Our own implementation of bootloader functions for handling flash chip
-static void rp_flash_connect_internal(target *t);
+static void __attribute__((unused))rp_flash_connect_internal(target *t);
 static void rp_flash_exit_xip(target *t);
-static void rp_flash_flush_cache(target *t);
+static void __attribute__((unused))rp_flash_flush_cache(target *t);
 static void rp_flash_enter_xip(target *t);
 
 static void rp_spi_read_sfdp(target *const t, const uint32_t address, void *const buffer, const size_t length)
@@ -223,7 +223,6 @@ static void rp_add_flash(target *t)
 		return;
 	}
 
-	rp_flash_connect_internal(t);
 	rp_flash_exit_xip(t);
 
 	spi_parameters_s spi_parameters;
@@ -235,7 +234,6 @@ static void rp_add_flash(target *t)
 		spi_parameters.sector_erase_opcode = SPI_FLASH_CMD_SECTOR_ERASE;
 	}
 
-	rp_flash_flush_cache(t);
 	rp_flash_enter_xip(t);
 
 	DEBUG_INFO("Flash size: %" PRIu16 " MB\n", spi_parameters.capacity / (1024U * 1024U));
