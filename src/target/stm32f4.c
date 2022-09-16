@@ -207,37 +207,35 @@ static void stm32f4_detach(target *t)
 
 bool stm32f4_probe(target *t)
 {
-	uint16_t stored_idcode = t->idcode;
 	t->idcode = target_mem_read32(t, DBGMCU_IDCODE) & 0xFFF;
 
 	if (t->idcode == ID_STM32F20X) {
 		/* F405 revision A have a wrong IDCODE, use ARM_CPUID to make the
-		* distinction with F205. Revision is also wrong (0x2000 instead
-		* of 0x1000). See F40x/F41x errata. */
+		 * distinction with F205. Revision is also wrong (0x2000 instead
+		 * of 0x1000). See F40x/F41x errata. */
 		if ((t->cpuid & 0xFFF0) == CORTEX_M4)
-		t->idcode = ID_STM32F40X;
+			t->idcode = ID_STM32F40X;
 	}
 	switch (t->idcode) {
-		case ID_STM32F74X:  /* F74x RM0385 Rev.4 */
-		case ID_STM32F76X:  /* F76x F77x RM0410 */
-		case ID_STM32F72X:  /* F72x F73x RM0431 */
-		case ID_STM32F40X:
-		case ID_STM32F42X:  /* 427/437 */
-		case ID_STM32F46X:  /* 469/479 */
-		case ID_STM32F20X:  /* F205 */
-		case ID_STM32F446:  /* F446 */
-		case ID_STM32F401C: /* F401 B/C RM0368 Rev.3 */
-		case ID_STM32F411:  /* F411     RM0383 Rev.4 */
-		case ID_STM32F412:  /* F412     RM0402 Rev.4, 256 kB Ram */
-		case ID_STM32F401E: /* F401 D/E RM0368 Rev.3 */
-		case ID_STM32F413:  /* F413     RM0430 Rev.2, 320 kB Ram, 1.5 MB flash. */
-			t->detach = stm32f4_detach;
-			t->driver = stm32f4_get_chip_name(t->idcode);
-			t->attach = stm32f4_attach;
+	case ID_STM32F74X: /* F74x RM0385 Rev.4 */
+	case ID_STM32F76X: /* F76x F77x RM0410 */
+	case ID_STM32F72X: /* F72x F73x RM0431 */
+	case ID_STM32F40X:
+	case ID_STM32F42X:  /* 427/437 */
+	case ID_STM32F46X:  /* 469/479 */
+	case ID_STM32F20X:  /* F205 */
+	case ID_STM32F446:  /* F446 */
+	case ID_STM32F401C: /* F401 B/C RM0368 Rev.3 */
+	case ID_STM32F411:  /* F411     RM0383 Rev.4 */
+	case ID_STM32F412:  /* F412     RM0402 Rev.4, 256 kB Ram */
+	case ID_STM32F401E: /* F401 D/E RM0368 Rev.3 */
+	case ID_STM32F413:  /* F413     RM0430 Rev.2, 320 kB Ram, 1.5 MB flash. */
+		t->detach = stm32f4_detach;
+		t->driver = stm32f4_get_chip_name(t->idcode);
+		t->attach = stm32f4_attach;
 		target_add_commands(t, stm32f4_cmd_list, t->driver);
 		return true;
-		default:
-			t->idcode = stored_idcode;
+	default:
 		return false;
 	}
 }
