@@ -684,37 +684,38 @@ static int rp_flash_was_aborted(target *const t)
 // If rx_skip is nonzero, this many bytes will first be consumed from the FIFO,
 // before reading a further count bytes into *rx.
 // E.g. if you have written a command+address just before calling this function.
-static void rp_flash_put_get(target *const t, const uint8_t *tx, uint8_t *rx, const size_t count, size_t rx_skip)
+static void rp_flash_put_get(
+	target *const t, const uint8_t *const tx, uint8_t *const rx, const size_t count, size_t rx_skip)
 {
 	// Make sure there is never more data in flight than the depth of the RX
 	// FIFO. Otherwise, when we are interrupted for long periods, hardware
 	// will overflow the RX FIFO.
-	const uint max_in_flight = 16 - 2; // account for data internal to SSI
-	size_t tx_count = count;
-	size_t rx_count = count;
-	while (tx_count || rx_skip || rx_count) {
+	static const size_t max_in_flight = 16 - 2; // account for data internal to SSI
+	size_t tx_count = 0;
+	size_t rx_count = 0;
+	while (tx_count < count || rx_count < count || rx_skip) {
 		// NB order of reads, for pessimism rather than optimism
 		const uint32_t tx_level = target_mem_read32(t, RP_SSI_TXFLR);
 		const uint32_t rx_level = target_mem_read32(t, RP_SSI_RXFLR);
-		bool did_something = false; // Expect this to be folded into control flow, not register
-		if (tx_count && tx_level + rx_level < max_in_flight) {
-			target_mem_write32(t, RP_SSI_DR0, (uint32_t)(tx ? *tx++ : 0));
-			--tx_count;
-			did_something = true;
+		bool idle = true; // Expect this to be folded into control flow, not register
+		if (tx_count < count && tx_level + rx_level < max_in_flight) {
+			target_mem_write32(t, RP_SSI_DR0, (uint32_t)(tx ? tx[tx_count] : 0));
+			++tx_count;
+			idle = false;
 		}
 		if (rx_level) {
-			uint8_t rxbyte = target_mem_read32(t, RP_SSI_DR0);
-			did_something = true;
+			const uint8_t data = target_mem_read32(t, RP_SSI_DR0);
 			if (rx_skip)
 				--rx_skip;
 			else {
 				if (rx)
-					*rx++ = rxbyte;
-				--rx_count;
+					rx[rx_count] = data;
+				++rx_count;
 			}
+			idle = false;
 		}
 		// APB load costs 4 cycles, so only do it on idle loops (our budget is 48 cyc/byte)
-		if (!did_something && rp_flash_was_aborted(t))
+		if (idle && rp_flash_was_aborted(t))
 			break;
 	}
 	rp_spi_chip_select(t, RP_GPIO_QSPI_CS_DRIVE_HIGH);
