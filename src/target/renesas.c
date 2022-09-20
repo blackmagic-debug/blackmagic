@@ -38,6 +38,7 @@
 #include "cortexm.h"
 #include "adiv5.h"
 
+#define RENESAS_PARTID_RA2A1 0x01b0
 #define RENESAS_PARTID_RA4M2 0x0340
 #define RENESAS_PARTID_RA4M3 0x0310
 #define RENESAS_PARTID_RA6M2 0x0150
@@ -147,7 +148,7 @@ typedef enum {
  * ra2l1 - Fixed location 1
  * ra2e1 - Fixed location 1
  * ra2e2 - Fixed location 1
- * ra2a1 - *undocummented
+ * ra2a1 - Flash Root Table *undocummented
  * ra4m1 - *undocummented
  * ra4m2 - Fixed location 2 *undocummented
  * ra4m3 - Fixed location 2 *undocummented
@@ -723,6 +724,7 @@ bool renesas_probe(target *t)
 			return false;
 		break;
 
+	case RENESAS_PARTID_RA2A1:
 	case RENESAS_PARTID_RA6M2:
 		/* mcus with Flash Root Table
 		 * ra6m1 (part_id wanted)
@@ -745,7 +747,6 @@ bool renesas_probe(target *t)
 		 * memory accesses in case of failure, and is the most common case
 		 */
 		/*
-		 * ra2a1 *undocummented (part_id + pnr loc wanted)
 		 * ra4m1 *undocummented (part_id + pnr loc wanted)
 		 * ra4w1 *undocummented (part_id + pnr loc wanted)
 		 */
