@@ -207,16 +207,17 @@ static void stm32f4_detach(target *t)
 
 bool stm32f4_probe(target *t)
 {
-	const uint16_t mcu_idcode = target_mem_read32(t, DBGMCU_IDCODE) & 0xfffU;
-	switch (mcu_idcode) {
-	/* F405 revision A has the wrong IDCODE, use ARM_CPUID to make the
-	 * distinction vs the F205. Revision is also wrong (0x2000 instead
-	 * of 0x1000). See F40x/F41x errata. */
-	case ID_STM32F20X:
-		if ((t->cpuid & 0xfff0U) != CORTEX_M4)
-			break;
-		mcu_idcode = ID_STM32F40X;
+	uint16_t mcu_idcode = target_mem_read32(t, DBGMCU_IDCODE) & 0xfffU;
 
+	if (mcu_idcode == ID_STM32F20X) {
+		/* F405 revision A have a wrong IDCODE, use ARM_CPUID to make the
+		 * distinction with F205. Revision is also wrong (0x2000 instead
+		 * of 0x1000). See F40x/F41x errata. */
+		if ((t->cpuid & 0xFFF0) == CORTEX_M4)
+			mcu_idcode = ID_STM32F40X;
+	}
+
+	switch (mcu_idcode) {
 	case ID_STM32F74X: /* F74x RM0385 Rev.4 */
 	case ID_STM32F76X: /* F76x F77x RM0410 */
 	case ID_STM32F72X: /* F72x F73x RM0431 */
