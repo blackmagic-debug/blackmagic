@@ -233,6 +233,7 @@ bool stm32f4_probe(target *t)
 	case ID_STM32F413:  /* F413     RM0430 Rev.2, 320 kB Ram, 1.5 MB flash. */
 		t->attach = stm32f4_attach;
 		t->detach = stm32f4_detach;
+		t->mass_erase = stm32f4_mass_erase;
 		t->driver = stm32f4_get_chip_name(t->part_id);
 		t->part_id = mcu_idcode;
 		target_add_commands(t, stm32f4_cmd_list, t->driver);
