@@ -323,13 +323,12 @@ static bool stm32lx_nvm_opt_unlock(target *t, uint32_t nvm)
 
 static bool stm32lx_nvm_busy_wait(target *t, uint32_t nvm)
 {
-	uint32_t sr;
-	do {
-		sr = target_mem_read32(t, STM32Lx_NVM_SR(nvm));
-		if  (target_check_error(t)) /* Check for communication errors */
+	while (target_mem_read32(t, STM32Lx_NVM_SR(nvm)) & STM32Lx_NVM_SR_BSY) {
+		if (target_check_error(t))
 			return false;
-	} while (sr & STM32Lx_NVM_SR_BSY);
-	return (!((sr & STM32Lx_NVM_SR_ERR_M) || !(sr & STM32Lx_NVM_SR_EOP)));
+	}
+	const uint32_t status = target_mem_read32(t, STM32Lx_NVM_SR(nvm));
+	return !target_check_error(t) && !(status & STM32Lx_NVM_SR_ERR_M);
 }
 
 /** Erase a region of program flash using operations through the debug
