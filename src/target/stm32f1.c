@@ -564,9 +564,10 @@ static bool stm32f1_option_write(target *t, uint32_t addr, uint16_t value)
 		width_word = true;
 	}
 
-	for (size_t i = 0; i < 8; i++)
+	for (size_t i = 0; i < 8; i++) {
 		if (!stm32f1_option_write_erased(t, FLASH_OBP_RDP + i * 2, opt_val[i], width_word))
 			return false;
+	}
 
 	return true;
 }
