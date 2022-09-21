@@ -567,6 +567,7 @@ static bool stm32f1_option_write(target *const t, const uint32_t addr, const uin
 	for (size_t i = 0; i < 8; i++)
 		if (!stm32f1_option_write_erased(t, FLASH_OBP_RDP + (i * 2U), opt_val[i], write16_broken))
 			return false;
+	}
 
 	return true;
 }
