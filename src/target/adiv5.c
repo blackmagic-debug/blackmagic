@@ -606,10 +606,9 @@ static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, const size_t re
 
 			const cid_class_e adjusted_class = adiv5_class_from_cid(part_number, arch_id, cid_class);
 			/* Perform sanity check, if we know what to expect as * component ID class. */
-			if (arm_component_lut[i].cidc != cidc_unknown && adjusted_class != arm_component_lut[i].cidc) {
-				DEBUG_WARN("%sWARNING: \"%s\" !match expected \"%s\"\n", indent + 1, cidc_debug_strings[adjusted_class],
-					cidc_debug_strings[arm_component_lut[i].cidc]);
-			}
+			if (arm_component_lut[i].cidc != cidc_unknown && adjusted_class != arm_component_lut[i].cidc)
+				DEBUG_WARN("%sWARNING: \"%s\" expected, got \"%s\"\n", indent + 1,
+					cidc_debug_strings[arm_component_lut[i].cidc], cidc_debug_strings[adjusted_class]);
 
 			switch (arm_component_lut[i].arch) {
 			case aa_cortexm:
