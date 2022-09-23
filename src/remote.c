@@ -31,7 +31,7 @@
 #include "target.h"
 #include "hex_utils.h"
 
-#define NTOH(x)    (((x) <= 9) ? (x) + '0' : 'a' + (x) - 10)
+#define NTOH(x)    (((x) <= 9) ? (x) + '0' : 'a' + (x)-10)
 #define HTON(x)    (((x) <= '9') ? (x) - '0' : ((TOUPPER(x)) - 'A' + 10))
 #define TOUPPER(x) ((((x) >= 'a') && ((x) <= 'z')) ? ((x) - ('a' - 'A')) : (x))
 #define ISHEX(x)   ((((x) >= '0') && ((x) <= '9')) || (((x) >= 'A') && ((x) <= 'F')) || (((x) >= 'a') && ((x) <= 'f')))
@@ -261,34 +261,33 @@ static void remote_packet_process_jtag(unsigned i, char *packet)
 static void remotePacketProcessGEN(unsigned i, char *packet)
 {
 	(void)i;
-    uint32_t freq;
+	uint32_t freq;
 	switch (packet[1]) {
-    case REMOTE_VOLTAGE:
+	case REMOTE_VOLTAGE:
 		remote_respond_string(REMOTE_RESP_OK, platform_target_voltage());
 		break;
 
-    case REMOTE_NRST_SET:
+	case REMOTE_NRST_SET:
 		platform_nrst_set_val(packet[2] == '1');
 		remote_respond(REMOTE_RESP_OK, 0);
 		break;
 
-    case REMOTE_NRST_GET:
+	case REMOTE_NRST_GET:
 		remote_respond(REMOTE_RESP_OK, platform_nrst_get_val());
 		break;
-    case REMOTE_FREQ_SET:
-		platform_max_frequency_set( remotehston(8, packet + 2));
+	case REMOTE_FREQ_SET:
+		platform_max_frequency_set(remotehston(8, packet + 2));
 		remote_respond(REMOTE_RESP_OK, 0);
 		break;
-    case REMOTE_FREQ_GET:
+	case REMOTE_FREQ_GET:
 		freq = platform_max_frequency_get();
-		remote_respond_buf(REMOTE_RESP_OK, (uint8_t*)&freq, 4);
+		remote_respond_buf(REMOTE_RESP_OK, (uint8_t *)&freq, 4);
 		break;
 
-    case REMOTE_PWR_SET:
+	case REMOTE_PWR_SET:
 #ifdef PLATFORM_HAS_POWER_SWITCH
-		if (packet[2]=='1'
-			&& !platform_target_get_power()
-			&& platform_target_voltage_sense() > POWER_CONFLICT_THRESHOLD) {
+		if (packet[2] == '1' && !platform_target_get_power() &&
+			platform_target_voltage_sense() > POWER_CONFLICT_THRESHOLD) {
 			/* want to enable target power, but voltage > 0.5V sensed
 			 * on the pin -> cancel
 			 */
@@ -302,7 +301,7 @@ static void remotePacketProcessGEN(unsigned i, char *packet)
 #endif
 		break;
 
-    case REMOTE_PWR_GET:
+	case REMOTE_PWR_GET:
 #ifdef PLATFORM_HAS_POWER_SWITCH
 		remote_respond(REMOTE_RESP_OK, platform_target_get_power());
 #else
@@ -311,10 +310,10 @@ static void remotePacketProcessGEN(unsigned i, char *packet)
 		break;
 
 #if !defined(BOARD_IDENT) && defined(BOARD_IDENT)
-# define PLATFORM_IDENT() BOARD_IDENT
+#define PLATFORM_IDENT() BOARD_IDENT
 #endif
 	case REMOTE_START:
-		remote_respond_string(REMOTE_RESP_OK, PLATFORM_IDENT ""  FIRMWARE_VERSION);
+		remote_respond_string(REMOTE_RESP_OK, PLATFORM_IDENT "" FIRMWARE_VERSION);
 		break;
 
 	case REMOTE_TARGET_CLK_OE:
@@ -322,10 +321,10 @@ static void remotePacketProcessGEN(unsigned i, char *packet)
 		remote_respond(REMOTE_RESP_OK, 0);
 		break;
 
-    default:
+	default:
 		remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_UNRECOGNISED);
 		break;
-    }
+	}
 }
 
 static void remotePacketProcessHL(unsigned i, char *packet)
@@ -348,11 +347,11 @@ static void remotePacketProcessHL(unsigned i, char *packet)
 	remote_ap.apsel = remotehston(2, packet);
 	remote_ap.dp = &remote_dp;
 	switch (index) {
-	case REMOTE_DP_READ:  /* Hd = Read from DP register */
+	case REMOTE_DP_READ: /* Hd = Read from DP register */
 		packet += 2;
 		uint16_t addr16 = remotehston(4, packet);
 		uint32_t data = adiv5_dp_read(&remote_dp, addr16);
-		remote_respond_buf(REMOTE_RESP_OK, (uint8_t*)&data, 4);
+		remote_respond_buf(REMOTE_RESP_OK, (uint8_t *)&data, 4);
 		break;
 	case REMOTE_LOW_ACCESS: /* HL = Low level access */
 		packet += 2;
@@ -360,15 +359,15 @@ static void remotePacketProcessHL(unsigned i, char *packet)
 		packet += 4;
 		uint32_t value = remotehston(8, packet);
 		data = remote_dp.low_access(&remote_dp, remote_ap.apsel, addr16, value);
-		remote_respond_buf(REMOTE_RESP_OK, (uint8_t*)&data, 4);
+		remote_respond_buf(REMOTE_RESP_OK, (uint8_t *)&data, 4);
 		break;
 	case REMOTE_AP_READ: /* Ha = Read from AP register*/
 		packet += 2;
 		addr16 = remotehston(4, packet);
 		data = adiv5_ap_read(&remote_ap, addr16);
-		remote_respond_buf(REMOTE_RESP_OK, (uint8_t*)&data, 4);
+		remote_respond_buf(REMOTE_RESP_OK, (uint8_t *)&data, 4);
 		break;
-	case REMOTE_AP_WRITE:  /* Ha = Write to AP register*/
+	case REMOTE_AP_WRITE: /* Ha = Write to AP register*/
 		packet += 2;
 		addr16 = remotehston(4, packet);
 		packet += 4;
@@ -381,7 +380,7 @@ static void remotePacketProcessHL(unsigned i, char *packet)
 		remote_ap.csw = remotehston(8, packet);
 		packet += 6;
 		/*fall through*/
-	case REMOTE_MEM_READ:   /* Hh = Read from Mem */
+	case REMOTE_MEM_READ: /* Hh = Read from Mem */
 		packet += 2;
 		uint32_t address = remotehston(8, packet);
 		packet += 8;
@@ -405,7 +404,7 @@ static void remotePacketProcessHL(unsigned i, char *packet)
 		enum align align = remotehston(2, packet);
 		packet += 2;
 		uint32_t dest = remotehston(8, packet);
-		packet+= 8;
+		packet += 8;
 		size_t len = remotehston(8, packet);
 		packet += 8;
 		if (len & ((1 << align) - 1)) {
@@ -425,35 +424,34 @@ static void remotePacketProcessHL(unsigned i, char *packet)
 		remote_respond(REMOTE_RESP_OK, 0);
 		break;
 	default:
-		remote_respond(REMOTE_RESP_ERR,REMOTE_ERROR_UNRECOGNISED);
+		remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_UNRECOGNISED);
 		break;
 	}
 	SET_IDLE_STATE(1);
 }
 
-
 void remotePacketProcess(unsigned i, char *packet)
 {
 	switch (packet[0]) {
-    case REMOTE_SWDP_PACKET:
-		remote_packet_process_swd(i,packet);
+	case REMOTE_SWDP_PACKET:
+		remote_packet_process_swd(i, packet);
 		break;
 
-    case REMOTE_JTAG_PACKET:
-		remote_packet_process_jtag(i,packet);
+	case REMOTE_JTAG_PACKET:
+		remote_packet_process_jtag(i, packet);
 		break;
 
-    case REMOTE_GEN_PACKET:
-		remotePacketProcessGEN(i,packet);
+	case REMOTE_GEN_PACKET:
+		remotePacketProcessGEN(i, packet);
 		break;
 
-    case REMOTE_HL_PACKET:
+	case REMOTE_HL_PACKET:
 		remotePacketProcessHL(i, packet);
 		break;
 
-    default: /* Oh dear, unrecognised, return an error */
-		remote_respond(REMOTE_RESP_ERR,REMOTE_ERROR_UNRECOGNISED);
+	default: /* Oh dear, unrecognised, return an error */
+		remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_UNRECOGNISED);
 		break;
-    }
+	}
 }
 #endif
