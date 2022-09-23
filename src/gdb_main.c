@@ -52,13 +52,15 @@ enum gdb_signal {
 	GDB_SIGLOST = 29,
 };
 
-#define BUF_SIZE	1024U
+#define BUF_SIZE 1024U
 
-#define ERROR_IF_NO_TARGET()	\
-	if(!cur_target) { gdb_putpacketz("EFF"); break; }
+#define ERROR_IF_NO_TARGET()   \
+	if (!cur_target) {         \
+		gdb_putpacketz("EFF"); \
+		break;                 \
+	}
 
-typedef struct
-{
+typedef struct {
 	const char *cmd_prefix;
 	void (*func)(const char *packet, size_t len);
 } cmd_executer;
@@ -88,8 +90,7 @@ static void gdb_target_destroy_callback(struct target_controller *tc, target *t)
 		last_target = NULL;
 }
 
-static void gdb_target_printf(struct target_controller *tc,
-                              const char *fmt, va_list ap)
+static void gdb_target_printf(struct target_controller *tc, const char *fmt, va_list ap)
 {
 	(void)tc;
 	gdb_voutf(fmt, ap);
@@ -125,7 +126,7 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 		if ((pbuf[0] != 0x04) || cur_target) {
 			SET_IDLE_STATE(0);
 		}
-		switch(pbuf[0]) {
+		switch (pbuf[0]) {
 		/* Implementation of these is mandatory! */
 		case 'g': { /* 'g': Read general registers */
 			ERROR_IF_NO_TARGET();
@@ -134,7 +135,7 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 			gdb_putpacket(hexify(pbuf, gp_regs, sizeof(gp_regs)), sizeof(gp_regs) * 2U);
 			break;
 		}
-		case 'm': {	/* 'm addr,len': Read len bytes from addr */
+		case 'm': { /* 'm addr,len': Read len bytes from addr */
 			uint32_t addr, len;
 			ERROR_IF_NO_TARGET();
 			sscanf(pbuf, "m%" SCNx32 ",%" SCNx32, &addr, &len);
@@ -142,8 +143,7 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 				gdb_putpacketz("E02");
 				break;
 			}
-			DEBUG_GDB("m packet: addr = %" PRIx32 ", len = %" PRIx32 "\n",
-					  addr, len);
+			DEBUG_GDB("m packet: addr = %" PRIx32 ", len = %" PRIx32 "\n", addr, len);
 			uint8_t mem[len];
 			if (target_mem_read(cur_target, mem, addr, len))
 				gdb_putpacketz("E01");
@@ -151,7 +151,7 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 				gdb_putpacket(hexify(pbuf, mem, len), len * 2U);
 			break;
 		}
-		case 'G': {	/* 'G XX': Write general registers */
+		case 'G': { /* 'G XX': Write general registers */
 			ERROR_IF_NO_TARGET();
 			uint8_t gp_regs[target_regs_size(cur_target)];
 			unhexify(gp_regs, &pbuf[1], sizeof(gp_regs));
@@ -169,8 +169,7 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 				gdb_putpacketz("E02");
 				break;
 			}
-			DEBUG_GDB("M packet: addr = %" PRIx32 ", len = %" PRIx32 "\n",
-					  addr, len);
+			DEBUG_GDB("M packet: addr = %" PRIx32 ", len = %" PRIx32 "\n", addr, len);
 			uint8_t mem[len];
 			unhexify(mem, pbuf + hex, len);
 			if (target_mem_write(cur_target, addr, mem, len))
@@ -192,10 +191,10 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 				gdb_putpacketz("E01");
 			break;
 		}
-		case 's':	/* 's [addr]': Single step [start at addr] */
+		case 's': /* 's [addr]': Single step [start at addr] */
 			single_step = true;
 			/* fall through */
-		case 'c':	/* 'c [addr]': Continue [at addr] */
+		case 'c': /* 'c [addr]': Continue [at addr] */
 			if (!cur_target) {
 				gdb_putpacketz("X1D");
 				break;
@@ -205,7 +204,7 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 			SET_RUN_STATE(1);
 			single_step = false;
 			/* fall through */
-		case '?': {	/* '?': Request reason for target halt */
+		case '?': { /* '?': Request reason for target halt */
 			/* This packet isn't documented as being mandatory,
 			 * but GDB doesn't work without it. */
 			target_addr_t watch;
@@ -218,15 +217,15 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 			}
 
 			/* Wait for target halt */
-			while(!(reason = target_halt_poll(cur_target, &watch))) {
+			while (!(reason = target_halt_poll(cur_target, &watch))) {
 				char c = (char)gdb_if_getchar_to(0);
-				if(c == '\x03' || c == '\x04')
+				if (c == '\x03' || c == '\x04')
 					target_halt_request(cur_target);
 				platform_pace_poll();
-				#ifdef ENABLE_RTT
+#ifdef ENABLE_RTT
 				if (rtt_enabled)
 					poll_rtt(cur_target);
-				#endif
+#endif
 			}
 			SET_RUN_STATE(0);
 
@@ -279,7 +278,7 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 			break;
 		}
 
-		case 'F':	/* Semihosting call finished */
+		case 'F': /* Semihosting call finished */
 			if (in_syscall)
 				return hostio_reply(tc, pbuf, size);
 			else {
@@ -288,7 +287,7 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 			}
 			break;
 
-		case '!':	/* Enable Extended GDB Protocol. */
+		case '!': /* Enable Extended GDB Protocol. */
 			/* This doesn't do anything, we support the extended
 			 * protocol anyway, but GDB will never send us a 'R'
 			 * packet unless we answer 'OK' here.
@@ -297,8 +296,8 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 			break;
 
 		case 0x04:
-		case 'D':	/* GDB 'detach' command. */
-			if(cur_target) {
+		case 'D': /* GDB 'detach' command. */
+			if (cur_target) {
 				SET_RUN_STATE(1);
 				target_detach(cur_target);
 				last_target = cur_target;
@@ -308,12 +307,12 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 				gdb_putpacketz("OK");
 			break;
 
-		case 'k':	/* Kill the target */
+		case 'k': /* Kill the target */
 			handle_kill_target();
 			break;
 
-		case 'r':	/* Reset the target system */
-		case 'R':	/* Restart the target program */
+		case 'r': /* Reset the target system */
+		case 'R': /* Restart the target program */
 			if (cur_target)
 				target_reset(cur_target);
 			else if (last_target) {
@@ -333,8 +332,7 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 				gdb_putpacketz("E02");
 				break;
 			}
-			DEBUG_GDB("X packet: addr = %" PRIx32 ", len = %" PRIx32 "\n",
-					  addr, len);
+			DEBUG_GDB("X packet: addr = %" PRIx32 ", len = %" PRIx32 "\n", addr, len);
 			if (target_mem_write(cur_target, addr, pbuf + bin, len))
 				gdb_putpacketz("E01");
 			else
@@ -342,22 +340,22 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 			break;
 		}
 
-		case 'q':	/* General query packet */
+		case 'q': /* General query packet */
 			handle_q_packet(pbuf, size);
 			break;
 
-		case 'v':	/* Verbose command packet */
+		case 'v': /* Verbose command packet */
 			handle_v_packet(pbuf, size);
 			break;
 
 		/* These packet implement hardware break-/watchpoints */
-		case 'Z':	/* Z type,addr,len: Set breakpoint packet */
-		case 'z':	/* z type,addr,len: Clear breakpoint packet */
+		case 'Z': /* Z type,addr,len: Set breakpoint packet */
+		case 'z': /* z type,addr,len: Clear breakpoint packet */
 			ERROR_IF_NO_TARGET();
 			handle_z_packet(pbuf, size);
 			break;
 
-		default: 	/* Packet not implemented */
+		default: /* Packet not implemented */
 			DEBUG_GDB("*** Unsupported packet: %s\n", pbuf);
 			gdb_putpacketz("");
 		}
@@ -386,7 +384,7 @@ static void exec_q_rcmd(const char *packet, const size_t length)
 	char *data = alloca(datalen + 1);
 	/* dehexify command */
 	unhexify(data, packet, datalen);
-	data[datalen] = 0;	/* add terminating null */
+	data[datalen] = 0; /* add terminating null */
 
 	const int c = command_process(cur_target, data);
 	if (c < 0)
@@ -394,8 +392,7 @@ static void exec_q_rcmd(const char *packet, const size_t length)
 	else if (c == 0)
 		gdb_putpacketz("OK");
 	else
-		gdb_putpacket(hexify(pbuf, "Failed\n", strlen("Failed\n")),
-				2 * strlen("Failed\n"));
+		gdb_putpacket(hexify(pbuf, "Failed\n", strlen("Failed\n")), 2 * strlen("Failed\n"));
 }
 
 static void handle_q_string_reply(const char *reply, const char *param)
@@ -436,8 +433,7 @@ static void exec_q_memory_map(const char *packet, const size_t length)
 	/* Read target XML memory map */
 	if ((!cur_target) && last_target) {
 		/* Attach to last target if detached. */
-		cur_target = target_attach(last_target,
-				   &gdb_controller);
+		cur_target = target_attach(last_target, &gdb_controller);
 	}
 	if (!cur_target) {
 		gdb_putpacketz("E01");
@@ -453,12 +449,12 @@ static void exec_q_feature_read(const char *packet, const size_t length)
 	(void)length;
 	/* Read target description */
 	if ((!cur_target) && last_target) {
-	  /* Attach to last target if detached. */
-	  cur_target = target_attach(last_target, &gdb_controller);
+		/* Attach to last target if detached. */
+		cur_target = target_attach(last_target, &gdb_controller);
 	}
 	if (!cur_target) {
-	  gdb_putpacketz("E01");
-	  return;
+		gdb_putpacketz("E01");
+		return;
 	}
 	handle_q_string_reply(target_tdesc(cur_target), packet);
 }
@@ -508,16 +504,15 @@ static void exec_q_thread_info(const char *packet, const size_t length)
 		gdb_putpacketz("l");
 }
 
-static const cmd_executer q_commands[]=
-{
-	{"qRcmd,",                         exec_q_rcmd},
-	{"qSupported",                     exec_q_supported},
-	{"qXfer:memory-map:read::",        exec_q_memory_map},
-	{"qXfer:features:read:target.xml:",exec_q_feature_read},
-	{"qCRC:",                          exec_q_crc},
-	{"qC",                             exec_q_c},
-	{"qfThreadInfo",                   exec_q_thread_info},
-	{"qsThreadInfo",                   exec_q_thread_info},
+static const cmd_executer q_commands[] = {
+	{"qRcmd,", exec_q_rcmd},
+	{"qSupported", exec_q_supported},
+	{"qXfer:memory-map:read::", exec_q_memory_map},
+	{"qXfer:features:read:target.xml:", exec_q_feature_read},
+	{"qCRC:", exec_q_crc},
+	{"qC", exec_q_c},
+	{"qfThreadInfo", exec_q_thread_info},
+	{"qsThreadInfo", exec_q_thread_info},
 	{NULL, NULL},
 };
 
@@ -548,7 +543,7 @@ static void handle_v_packet(char *packet, const size_t plen)
 	if (sscanf(packet, "vAttach;%08" PRIx32, &addr) == 1) {
 		/* Attach to remote target processor */
 		cur_target = target_attach_n(addr, &gdb_controller);
-		if(cur_target) {
+		if (cur_target) {
 			morse(NULL, false);
 			/*
 			 * We don't actually support threads, but GDB 11 and 12 can't work without
@@ -576,7 +571,7 @@ static void handle_v_packet(char *packet, const size_t plen)
 		if (*tok == ';')
 			++tok;
 		cmdline[0] = '\0';
-		while(*tok != '\0') {
+		while (*tok != '\0') {
 			if (strlen(cmdline) + 3 >= sizeof(cmdline))
 				break;
 			if (*tok == ';') {
@@ -598,18 +593,17 @@ static void handle_v_packet(char *packet, const size_t plen)
 			}
 			break;
 		}
-		#ifdef ENABLE_RTT
+#ifdef ENABLE_RTT
 		/* force searching rtt control block */
 		rtt_found = false;
-		#endif
+#endif
 		/* Run target program. For us (embedded) this means reset. */
 		if (cur_target) {
 			target_set_cmdline(cur_target, cmdline);
 			target_reset(cur_target);
 			gdb_putpacketz("T05");
 		} else if (last_target) {
-			cur_target = target_attach(last_target,
-						   &gdb_controller);
+			cur_target = target_attach(last_target, &gdb_controller);
 
 			/* If we were able to attach to the target again */
 			if (cur_target) {
@@ -642,7 +636,7 @@ static void handle_v_packet(char *packet, const size_t plen)
 		/* Write Flash Memory */
 		const uint32_t count = plen - bin;
 		DEBUG_GDB("Flash Write %08" PRIX32 " %08" PRIX32 "\n", addr, count);
-		if (cur_target && target_flash_write(cur_target, addr, (void*)packet + bin, count))
+		if (cur_target && target_flash_write(cur_target, addr, (void *)packet + bin, count))
 			gdb_putpacketz("OK");
 		else {
 			target_flash_complete(cur_target);
