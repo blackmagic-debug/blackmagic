@@ -81,7 +81,7 @@ static char xmit_buf[RTT_UP_BUF_SIZE];
 **********************************************************************
 */
 
-static uint32_t fast_search(target *cur_target, uint32_t ram_start, uint32_t ram_end)
+static uint32_t fast_search(target *const cur_target, const uint32_t ram_start, const uint32_t ram_end)
 {
 	static const uint32_t m = 16;
 	static const uint64_t p = 0x444110cd;
@@ -111,7 +111,7 @@ static uint32_t fast_search(target *cur_target, uint32_t ram_start, uint32_t ram
 	return 0;
 }
 
-static uint32_t memory_search(target *cur_target, uint32_t ram_start, uint32_t ram_end)
+static uint32_t memory_search(target *const cur_target, const uint32_t ram_start, const uint32_t ram_end)
 {
 	char *srch_str = rtt_ident;
 	uint32_t srch_str_len = strlen(srch_str);
@@ -134,7 +134,7 @@ static uint32_t memory_search(target *cur_target, uint32_t ram_start, uint32_t r
 	return 0;
 }
 
-static void find_rtt(target *cur_target)
+static void find_rtt(target *const cur_target)
 {
 	rtt_found = false;
 	poll_ms = rtt_max_poll_ms;
@@ -147,9 +147,9 @@ static void find_rtt(target *cur_target)
 	rtt_cbaddr = 0;
 	if (!rtt_flag_ram) {
 		/* search all of target ram */
-		for (struct target_ram *r = cur_target->ram; r; r = r->next) {
-			uint32_t ram_start = r->start;
-			uint32_t ram_end = r->start + r->length;
+		for (const struct target_ram *r = cur_target->ram; r; r = r->next) {
+			const uint32_t ram_start = r->start;
+			const uint32_t ram_end = r->start + r->length;
 			if (rtt_ident[0] == 0)
 				rtt_cbaddr = fast_search(cur_target, ram_start, ram_end);
 			else
@@ -210,7 +210,6 @@ static void find_rtt(target *cur_target)
 		rtt_found = true;
 		DEBUG_INFO("rtt found\n");
 	}
-	return;
 }
 
 /*********************************************************************
@@ -221,7 +220,7 @@ static void find_rtt(target *cur_target)
 */
 
 /* poll if host has new data for target */
-static rtt_retval read_rtt(target *cur_target, uint32_t i)
+static rtt_retval read_rtt(target *const cur_target, const uint32_t i)
 {
 	uint32_t head_addr = 0;
 	uint32_t next_head;
@@ -275,20 +274,19 @@ int rtt_aligned_mem_read(target *t, void *dest, target_addr_t src, size_t len)
 	uint32_t offset = src & 0x3;
 	src0 -= offset;
 	len0 += offset;
-	if ((len0 & 0x3) != 0)
+	if (len0 & 0x3)
 		len0 = (len0 + 4) & ~0x3;
 
 	if (src0 == src && len0 == len)
 		return target_mem_read(t, dest, src, len);
-	else {
-		uint32_t retval = target_mem_read(t, dest, src0, len0);
-		memmove(dest, dest + offset, len);
-		return retval;
-	}
+
+	const uint32_t retval = target_mem_read(t, dest, src0, len0);
+	memmove(dest, dest + offset, len);
+	return retval;
 }
 
 /* poll if target has new data for host */
-static rtt_retval print_rtt(target *cur_target, uint32_t i)
+static rtt_retval print_rtt(target *const cur_target, const uint32_t i)
 {
 	uint32_t tail_addr;
 
@@ -297,7 +295,7 @@ static rtt_retval print_rtt(target *cur_target, uint32_t i)
 
 	if (rtt_channel[i].head >= rtt_channel[i].buf_size || rtt_channel[i].tail >= rtt_channel[i].buf_size)
 		return RTT_ERR;
-	else if (rtt_channel[i].head == rtt_channel[i].tail)
+	if (rtt_channel[i].head == rtt_channel[i].tail)
 		return RTT_IDLE;
 
 	uint32_t bytes_free = sizeof(xmit_buf) - 8; /* need 8 bytes for alignment and padding */
@@ -342,7 +340,7 @@ static rtt_retval print_rtt(target *cur_target, uint32_t i)
 **********************************************************************
 */
 
-void poll_rtt(target *cur_target)
+void poll_rtt(target *const cur_target)
 {
 	uint32_t cblock_header[6]; // first 24 bytes of control block
 
@@ -432,5 +430,4 @@ void poll_rtt(target *cur_target)
 			}
 		}
 	}
-	return;
 }
