@@ -37,4 +37,3 @@ void raise_exception(uint32_t type, const char *msg)
 	DEBUG_WARN("Unhandled exception: %s\n", msg);
 	abort();
 }
-
