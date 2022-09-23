@@ -39,8 +39,8 @@ uint32_t rtt_cbaddr = 0;
 bool rtt_auto_channel = true;
 struct rtt_channel_struct rtt_channel[MAX_RTT_CHAN];
 
-uint32_t rtt_min_poll_ms = 8;    /* 8 ms */
-uint32_t rtt_max_poll_ms = 256;  /* 0.256 s */
+uint32_t rtt_min_poll_ms = 8;   /* 8 ms */
+uint32_t rtt_max_poll_ms = 256; /* 0.256 s */
 uint32_t rtt_max_poll_errs = 10;
 static uint32_t poll_ms;
 static uint32_t poll_errs;
@@ -56,7 +56,7 @@ typedef enum rtt_retval {
 } rtt_retval;
 
 #ifdef RTT_IDENT
-#define Q(x) #x
+#define Q(x)     #x
 #define QUOTE(x) Q(x)
 char rtt_ident[16] = QUOTE(RTT_IDENT);
 #else
@@ -81,7 +81,7 @@ uint32_t fastsrch(target *cur_target)
 	const uint64_t p = 0x444110cd;
 	const uint32_t stride = 128;
 	uint64_t t = 0;
-	uint8_t srch_buf[m+stride];
+	uint8_t srch_buf[m + stride];
 
 	for (struct target_ram *r = cur_target->ram; r; r = r->next) {
 		const uint32_t ram_start = r->start;
@@ -101,7 +101,7 @@ uint32_t fastsrch(target *cur_target)
 				t = (t + q - rm * srch_buf[i] % q) % q;
 				t = ((t << 8) + srch_buf[i + m]) % q;
 				if (p == t) {
-					uint32_t offset =  i - m + 1;
+					const uint32_t offset = i - m + 1;
 					return addr + offset;
 				}
 			}
@@ -120,8 +120,8 @@ uint32_t memsrch(target *cur_target)
 	if (srch_str_len == 0 || srch_str_len > sizeof(srch_buf) / 2)
 		return 0;
 
-	if (rtt_cbaddr && !target_mem_read(cur_target, srch_buf, rtt_cbaddr, srch_str_len)
-		&& strncmp((const char *)(srch_buf), srch_str, srch_str_len) == 0)
+	if (rtt_cbaddr && !target_mem_read(cur_target, srch_buf, rtt_cbaddr, srch_str_len) &&
+		strncmp((const char *)(srch_buf), srch_str, srch_str_len) == 0)
 		/* still at same place */
 		return rtt_cbaddr;
 
@@ -173,7 +173,8 @@ static void find_rtt(target *cur_target)
 			gdb_out("rtt: bad cblock\r\n");
 			rtt_enabled = false;
 			return;
-		} else if (num_up_buf == 0 && num_down_buf == 0)
+		}
+		if (num_up_buf == 0 && num_down_buf == 0)
 			gdb_out("rtt: empty cblock\r\n");
 
 		for (int32_t i = 0; i < MAX_RTT_CHAN; i++) {
@@ -223,7 +224,6 @@ static void find_rtt(target *cur_target)
 		rtt_found = true;
 		DEBUG_INFO("rtt found\n");
 	}
-	return;
 }
 
 /*********************************************************************
@@ -274,7 +274,6 @@ static rtt_retval read_rtt(target *cur_target, uint32_t i)
 	return RTT_OK;
 }
 
-
 /*********************************************************************
 *
 *       rtt from target to host
@@ -297,11 +296,10 @@ int target_aligned_mem_read(target *t, void *dest, target_addr_t src, size_t len
 
 	if (src0 == src && len0 == len)
 		return target_mem_read(t, dest, src, len);
-	else {
-		uint32_t retval = target_mem_read(t, dest, src0, len0);
-		memmove(dest, dest + offset, len);
-		return retval;
-	}
+
+	uint32_t retval = target_mem_read(t, dest, src0, len0);
+	memmove(dest, dest + offset, len);
+	return retval;
 }
 
 /* poll if target has new data for host */
@@ -321,7 +319,7 @@ static rtt_retval print_rtt(target *cur_target, uint32_t i)
 
 	if (head >= rtt_channel[i].buf_size || tail >= rtt_channel[i].buf_size)
 		return RTT_ERR;
-	else if (head == tail)
+	if (head == tail)
 		return RTT_IDLE;
 
 	uint32_t bytes_free = sizeof(xmit_buf) - 8; /* need 8 bytes for alignment and padding */
@@ -357,7 +355,6 @@ static rtt_retval print_rtt(target *cur_target, uint32_t i)
 
 	return RTT_OK;
 }
-
 
 /*********************************************************************
 *
@@ -404,7 +401,7 @@ void poll_rtt(target *cur_target)
 		if (rtt_halt && target_halt_poll(cur_target, &watch) == TARGET_HALT_RUNNING) {
 			/* briefly halt target during target memory access */
 			target_halt_request(cur_target);
-			while((reason = target_halt_poll(cur_target, &watch)) == TARGET_HALT_RUNNING)
+			while ((reason = target_halt_poll(cur_target, &watch)) == TARGET_HALT_RUNNING)
 				continue;
 			resume_target = reason == TARGET_HALT_REQUEST;
 		}
@@ -420,8 +417,10 @@ void poll_rtt(target *cur_target)
 						v = print_rtt(cur_target, i);
 					else
 						v = read_rtt(cur_target, i);
-					if (v == RTT_OK) rtt_busy = true;
-					else if (v == RTT_ERR) rtt_err = true;
+					if (v == RTT_OK)
+						rtt_busy = true;
+					else if (v == RTT_ERR)
+						rtt_err = true;
 				}
 			}
 		}
@@ -452,5 +451,4 @@ void poll_rtt(target *cur_target)
 			}
 		}
 	}
-	return;
 }
