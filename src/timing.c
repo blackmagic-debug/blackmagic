@@ -17,6 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 #include "general.h"
 
 void platform_timeout_set(platform_timeout *t, uint32_t ms)
