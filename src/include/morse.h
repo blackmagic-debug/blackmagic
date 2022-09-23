@@ -21,9 +21,11 @@
 #ifndef INCLUDE_MORSE_H
 #define INCLUDE_MORSE_H
 
+#include <stdbool.h>
+
 extern const char *morse_msg;
 
-void morse(const char *msg, char repeat);
+void morse(const char *msg, bool repeat);
 bool morse_update(void);
 
 #endif /* INCLUDE_MORSE_H */
