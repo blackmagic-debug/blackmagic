@@ -18,8 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* Convenience function to convert to/from ascii strings of hex digits.
- */
+/* Convenience function to convert to/from ascii strings of hex digits. */
 
 #include "general.h"
 #include "hex_utils.h"
