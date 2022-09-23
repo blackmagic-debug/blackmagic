@@ -88,7 +88,8 @@ const command_t cmd_list[] = {
 	{"halt_timeout", cmd_halt_timeout, "Timeout (ms) to wait until Cortex-M is halted: (Default 2000)"},
 	{"connect_rst", cmd_connect_reset, "Configure connect under reset: (enable|disable)"},
 	{"reset", cmd_reset, "Pulse the nRST line - disconnects target"},
-	{"tdi_low_reset", cmd_tdi_low_reset, "Pulse nRST with TDI set low to attempt to wake certain targets up (eg LPC82x)"},
+	{"tdi_low_reset", cmd_tdi_low_reset,
+		"Pulse nRST with TDI set low to attempt to wake certain targets up (eg LPC82x)"},
 #ifdef PLATFORM_HAS_POWER_SWITCH
 	{"tpwr", cmd_target_power, "Supplies power to the target: (enable|disable)"},
 #endif
@@ -164,7 +165,7 @@ bool cmd_version(target *t, int argc, const char **argv)
 	gdb_outf(", Hardware Version %d\n", platform_hwversion());
 	gdb_out("Copyright (C) 2022 Black Magic Debug Project\n");
 	gdb_out("License GPLv3+: GNU GPL version 3 or later "
-		"<http://gnu.org/licenses/gpl.html>\n\n");
+			"<http://gnu.org/licenses/gpl.html>\n\n");
 #endif
 
 	return true;
@@ -397,8 +398,7 @@ bool cmd_morse(target *t, int argc, const char **argv)
 	if (morse_msg) {
 		gdb_outf("%s\n", morse_msg);
 		DEBUG_WARN("%s\n", morse_msg);
-	}
-	else
+	} else
 		gdb_out("No message\n");
 	return true;
 }
@@ -542,8 +542,8 @@ static bool cmd_rtt(target *t, int argc, const char **argv)
 		gdb_outf("cbaddr: 0x%x\n", rtt_cbaddr);
 		gdb_out("ch ena cfg i/o buf@        size head@      tail@      flg\n");
 		for (size_t i = 0; i < MAX_RTT_CHAN; ++i) {
-			gdb_outf("%2" PRIu32 "   %c   %c %s 0x%08" PRIx32 " %5" PRIu32 " 0x%08" PRIx32 " 0x%08" PRIx32 "   %"
-					 PRIu32 "\n",
+			gdb_outf("%2" PRIu32 "   %c   %c %s 0x%08" PRIx32 " %5" PRIu32 " 0x%08" PRIx32 " 0x%08" PRIx32 "   %" PRIu32
+					 "\n",
 				(uint32_t)i, rtt_channel[i].is_enabled ? 'y' : 'n', rtt_channel[i].is_configured ? 'y' : 'n',
 				rtt_channel[i].is_output ? "out" : "in ", rtt_channel[i].buf_addr, rtt_channel[i].buf_size,
 				rtt_channel[i].head_addr, rtt_channel[i].tail_addr, rtt_channel[i].flag);
@@ -626,8 +626,7 @@ static bool cmd_debug_bmp(target *t, int argc, const char **argv)
 	if (argc == 2) {
 		if (!parse_enable_or_disable(argv[1], &debug_bmp))
 			return false;
-	}
-	else if (argc > 2) {
+	} else if (argc > 2) {
 		gdb_outf("usage: monitor debug [enable|disable]\n");
 		return false;
 	}
