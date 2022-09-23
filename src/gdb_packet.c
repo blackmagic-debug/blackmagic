@@ -37,7 +37,7 @@ size_t gdb_getpacket(char *packet, size_t size)
 	size_t offset = 0;
 
 	while (1) {
-	    /* Wait for packet start */
+		/* Wait for packet start */
 		do {
 			/* Spin waiting for a start of packet character - either a gdb
              * start ('$') or a BMP remote packet start ('!').
@@ -91,14 +91,13 @@ size_t gdb_getpacket(char *packet, size_t size)
 				packet[0] = 0;
 			}
 #endif
-	    } while (packet[0] != '$');
+		} while (packet[0] != '$');
 
 		offset = 0;
 		csum = 0;
 		char c;
 		/* Capture packet data into buffer */
 		while ((c = (char)gdb_if_getchar()) != '#') {
-
 			/* If we run out of buffer space, exit early */
 			if (offset == size)
 				break;
@@ -157,8 +156,7 @@ static void gdb_next_char(char c, unsigned char *csum)
 		gdb_if_putchar('}', 0);
 		gdb_if_putchar(c ^ 0x20, 0);
 		*csum += '}' + (c ^ 0x20);
-	}
-	else {
+	} else {
 		gdb_if_putchar(c, 0);
 		*csum += c;
 	}
