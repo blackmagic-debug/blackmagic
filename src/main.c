@@ -18,9 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* Provides main entry point.  Initialise subsystems and enter GDB
- * protocol loop.
- */
+/* Provides main entry point. Initialise subsystems and enter GDB protocol loop. */
 
 #include "general.h"
 #include "gdb_if.h"
@@ -30,30 +28,28 @@
 #include "gdb_packet.h"
 #include "morse.h"
 
-int
-main(int argc, char **argv)
+int main(int argc, char **argv)
 {
 #if PC_HOSTED == 1
 	platform_init(argc, argv);
 #else
-	(void) argc;
-	(void) argv;
+	(void)argc;
+	(void)argv;
 	platform_init();
 #endif
 
 	while (true) {
 		volatile struct exception e;
-		TRY_CATCH(e, EXCEPTION_ALL) {
+		TRY_CATCH (e, EXCEPTION_ALL) {
 			gdb_main();
 		}
 		if (e.type) {
 			gdb_putpacketz("EFF");
 			target_list_free();
-			morse("TARGET LOST.", 1);
+			morse("TARGET LOST.", true);
 		}
 	}
 
 	/* Should never get here */
 	return 0;
 }
-
