@@ -243,12 +243,17 @@ cable_desc_t cable_desc[] = {
 		.name = "ft232h"
 	},
 	{
-		/* Direct connection from FTDI to Jtag/Swd assumed.*/
+		/* MPSSE-SK (AD0) ----------- SWCLK/JTCK
+		 * MPSSE-DO (AD1) ----------- SWDIO/JTMS
+		 * MPSSE-DI (AD2) -- 330 R -- SWDIO/JTMS
+		 *                  (470 R or similar also fine)
+		 */
 		.vendor = 0x0403,
 		.product = 0x6011,
 		.interface = INTERFACE_A,
-		.bb_swdio_in_port_cmd = GET_BITS_LOW,
-		.bb_swdio_in_pin = MPSSE_CS,
+		.mpsse_swd_read.set_data_low  = MPSSE_DI,
+		.mpsse_swd_write.set_data_low = MPSSE_DO,
+		.description = "FT4232H-56Q MiniModule",
 		.name = "ft4232h"
 	},
 	{
