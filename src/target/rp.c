@@ -210,10 +210,8 @@ static bool rp_mass_erase(target_s *t);
 // Our own implementation of bootloader functions for handling flash chip
 static void rp_flash_exit_xip(target_s *const t);
 static void rp_flash_enter_xip(target_s *const t);
-#if 0
 static void rp_flash_connect_internal(target_s *const t);
 static void rp_flash_flush_cache(target_s *const t);
-#endif
 
 static void rp_spi_read_sfdp(target_s *const t, const uint32_t address, void *const buffer, const size_t length)
 {
@@ -228,6 +226,7 @@ static void rp_add_flash(target_s *t)
 		return;
 	}
 
+	rp_flash_connect_internal(t);
 	rp_flash_exit_xip(t);
 
 	spi_parameters_s spi_parameters;
@@ -239,6 +238,7 @@ static void rp_add_flash(target_s *t)
 		spi_parameters.sector_erase_opcode = SPI_FLASH_CMD_SECTOR_ERASE;
 	}
 
+	rp_flash_flush_cache(t);
 	rp_flash_enter_xip(t);
 
 	DEBUG_INFO("Flash size: %uMiB\n", spi_parameters.capacity / (1024U * 1024U));
@@ -615,7 +615,6 @@ static void rp_spi_read(
 	target_mem_write32(t, RP_SSI_ENABLE, ssi_enabled);
 }
 
-#if 0
 // Connect the XIP controller to the flash pads
 static void rp_flash_connect_internal(target_s *const t)
 {
@@ -637,7 +636,6 @@ static void rp_flash_connect_internal(target_s *const t)
 	target_mem_write32(t, RP_GPIO_QSPI_SD2_CTRL, 0);
 	target_mem_write32(t, RP_GPIO_QSPI_SD3_CTRL, 0);
 }
-#endif
 
 // Set up the SSI controller for standard SPI mode,i.e. for every byte sent we get one back
 // This is only called by flash_exit_xip(), not by any of the other functions.
@@ -773,7 +771,6 @@ static void rp_flash_exit_xip(target_s *const t)
 	target_mem_write32(t, RP_GPIO_QSPI_CS_CTRL, 0);
 }
 
-#if 0
 // This is a hook for steps to be taken in between programming the flash and
 // doing cached XIP reads from the flash. Called by the bootrom before
 // entering flash second stage, and called by the debugger after flash
@@ -788,7 +785,6 @@ static void rp_flash_flush_cache(target_s *const t)
 	target_mem_write32(t, RP_XIP_CTRL, ctrl | RP_XIP_CTRL_ENABLE);
 	rp_spi_chip_select(t, RP_GPIO_QSPI_CS_DRIVE_NORMAL);
 }
-#endif
 
 // Put the SSI into a mode where XIP accesses translate to standard
 // serial 03h read commands. The flash remains in its default serial command
