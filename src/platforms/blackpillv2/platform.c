@@ -18,9 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file implements the platform specific functions for the STM32
- * implementation.
- */
+/* This file implements the platform specific functions for the Blackpillv2 implementation. */
 
 #include "general.h"
 #include "usb.h"
@@ -49,15 +47,17 @@ void platform_init(void)
 	rcc_periph_clock_enable(RCC_GPIOC);
 	rcc_periph_clock_enable(RCC_GPIOB);
 
-	/* Check the USER button*/
+	/* Check the USER button */
 	if (gpio_get(GPIOA, GPIO0) || ((magic[0] == BOOTMAGIC0) && (magic[1] == BOOTMAGIC1))) {
 		magic[0] = 0;
 		magic[1] = 0;
 		/* Assert blue LED as indicator we are in the bootloader */
 		gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED_BOOTLOADER);
 		gpio_set(LED_PORT, LED_BOOTLOADER);
-		/* Jump to the built in bootloader by mapping System flash.
-		   As we just come out of reset, no other deinit is needed!*/
+		/*
+		 * Jump to the built in bootloader by mapping System flash.
+		 * As we just come out of reset, no other deinit is needed!
+		 */
 		rcc_periph_clock_enable(RCC_SYSCFG);
 		SYSCFG_MEMRM &= ~3;
 		SYSCFG_MEMRM |= 1;
@@ -69,7 +69,7 @@ void platform_init(void)
 	rcc_periph_clock_enable(RCC_OTGFS);
 	rcc_periph_clock_enable(RCC_CRC);
 
-	/* Set up USB Pins and alternate function*/
+	/* Set up USB Pins and alternate function */
 	gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO9 | GPIO11 | GPIO12);
 	gpio_set_af(GPIOA, GPIO_AF10, GPIO9 | GPIO10 | GPIO11 | GPIO12);
 
@@ -95,7 +95,7 @@ void platform_init(void)
 	blackmagic_usb_init();
 	aux_serial_init();
 
-	// https://github.com/libopencm3/libopencm3/pull/1256#issuecomment-779424001
+	/* https://github.com/libopencm3/libopencm3/pull/1256#issuecomment-779424001 */
 	OTG_FS_GCCFG |= OTG_GCCFG_NOVBUSSENS | OTG_GCCFG_PWRDWN;
 	OTG_FS_GCCFG &= ~(OTG_GCCFG_VBUSBSEN | OTG_GCCFG_VBUSASEN);
 }
