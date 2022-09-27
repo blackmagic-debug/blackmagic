@@ -17,9 +17,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file implements the platform specific functions for the STM32
- * implementation.
- */
+/* This file provides the platform specific declarations for the STM32F3-IF implementation. */
 
 #ifndef PLATFORMS_F3_PLATFORM_H
 #define PLATFORMS_F3_PLATFORM_H
@@ -34,7 +32,8 @@
 
 #define PLATFORM_IDENT "(F3-IF) "
 
-/* Important pin mappings for STM32 implementation:
+/*
+ * Important pin mappings for STM32 implementation:
  *
  * LED0 = 	PB5	(Green  LED : Running)
  * LED1 = 	PB6	(Orange LED : Idle)
@@ -73,7 +72,7 @@
 #define LED_UART      GPIO6
 #define LED_IDLE_RUN  GPIO5
 #define LED_ERROR     GPIO7
-/* PORTB does not stay active in system bootloader!*/
+/* PORTB does not stay active in system bootloader! */
 #define LED_BOOTLOADER GPIO6
 
 #define BOOTMAGIC0 0xb007da7a
@@ -87,7 +86,8 @@
 #define USB_IRQ    NVIC_USB_LP_CAN1_RX0_IRQ
 #define USB_ISR(x) usb_lp_can1_rx0_isr(x)
 
-/* Interrupt priorities.  Low numbers are high priority.
+/*
+ * Interrupt priorities. Low numbers are high priority.
  * TIM3 is used for traceswo capture and must be highest priority.
  */
 #define IRQ_PRI_USB          (1 << 4)
@@ -115,7 +115,7 @@
 #define USBUSART_DMA_RX_IRQ    NVIC_DMA1_CHANNEL6_IRQ
 #define USBUSART_DMA_RX_ISR(x) dma1_channel6_isr(x)
 
-/* TX/RX on the REV 0/1 boards are swapped against ftdijtag.*/
+/* TX/RX on the REV 0/1 boards are swapped against FTDI JTAG. */
 #define UART_PIN_SETUP()                                                                                   \
 	do {                                                                                                   \
 		gpio_mode_setup(USBUSART_PORT, GPIO_MODE_AF, GPIO_PUPD_PULLUP, USBUSART_TX_PIN | USBUSART_RX_PIN); \
@@ -132,7 +132,9 @@
 extern bool debug_bmp;
 #define DEBUG printf
 #else
-#define DEBUG(...)
+#define DEBUG(...) \
+	do {           \
+	} while (false)
 #endif
 
 #define SET_RUN_STATE(state)      \
@@ -153,10 +155,26 @@ static inline int platform_hwversion(void)
 	return 0;
 }
 
-/* Use newlib provided integer only stdio functions */
-#define sscanf    siscanf
-#define sprintf   siprintf
+/* Use newlib provided integer-only stdio functions */
+
+#ifdef sscanf
+#undef sscanf
+#endif
+#define sscanf siscanf
+
+#ifdef sprintf
+#undef sprintf
+#endif
+#define sprintf siprintf
+
+#ifdef vasprintf
+#undef vasprintf
+#endif
 #define vasprintf vasiprintf
-#define snprintf  sniprintf
+
+#ifdef snprintf
+#undef snprintf
+#endif
+#define snprintf sniprintf
 
 #endif /* PLATFORMS_F3_PLATFORM_H */
