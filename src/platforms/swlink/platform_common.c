@@ -33,11 +33,9 @@ uint8_t detect_rev()
 	rcc_periph_clock_enable(RCC_GPIOA);
 	rcc_periph_clock_enable(RCC_GPIOB);
 	rcc_periph_clock_enable(RCC_USB);
-	gpio_set_mode(GPIOB, GPIO_MODE_INPUT,
-			GPIO_CNF_INPUT_PULL_UPDOWN, GPIO9);
+	gpio_set_mode(GPIOB, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, GPIO9);
 	gpio_set(GPIOB, GPIO9);
-	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ,
-			GPIO_CNF_OUTPUT_PUSHPULL, GPIO10);
+	gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, GPIO10);
 	while (!gpio_get(GPIOB, GPIO10))
 		gpio_set(GPIOB, GPIO10);
 	while (gpio_get(GPIOB, GPIO10))
@@ -46,27 +44,23 @@ uint8_t detect_rev()
 	if (gpio_get(GPIOB, GPIO9))
 		rev = 1;
 	/* Release PB9/10 */
-	gpio_set_mode(GPIOB, GPIO_MODE_INPUT,
-			GPIO_CNF_INPUT_FLOAT, GPIO9 | GPIO10);
+	gpio_set_mode(GPIOB, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, GPIO9 | GPIO10);
 	gpio_set(GPIOB, GPIO9);
 	switch (rev) {
 	case 0:
 		gpio_clear(GPIOA, GPIO8);
-		gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
-					  GPIO_CNF_OUTPUT_PUSHPULL, GPIO8);
+		gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, GPIO8);
 		break;
 	case 1:
 		rcc_periph_clock_enable(RCC_GPIOC);
 		gpio_set(GPIOC, GPIO13); /* LED on Blupill is active low!*/
-		gpio_set_mode(GPIOC, GPIO_MODE_OUTPUT_2_MHZ,
-					  GPIO_CNF_OUTPUT_PUSHPULL, GPIO13);
+		gpio_set_mode(GPIOC, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, GPIO13);
 		break;
 	}
 	/* Disconnect USB after reset:
 	 * Pull USB_DP low. Device will reconnect automatically
 	 * when USB is set up later, as Pull-Up is hard wired*/
-	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
-				  GPIO_CNF_OUTPUT_OPENDRAIN, GPIO12);
+	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_OPENDRAIN, GPIO12);
 	gpio_clear(GPIOA, GPIO12);
 	rcc_periph_reset_pulse(RST_USB);
 	rcc_periph_clock_enable(RCC_USB);
