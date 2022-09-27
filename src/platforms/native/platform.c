@@ -80,18 +80,13 @@ int platform_hwversion(void)
 
 	/* Check if the hwversion is set in the user option byte. */
 	if (hwversion == -1) {
-		if ((BMP_HWVERSION_BYTE != 0xFFFF) &&
-		    (BMP_HWVERSION_BYTE != 0x00FF)) {
+		if ((BMP_HWVERSION_BYTE != 0xFFFF) && (BMP_HWVERSION_BYTE != 0x00FF)) {
 			/* Check if the data is valid.
 			 * When valid it should only have values 4 and higher.
 			 */
-			if (((BMP_HWVERSION_BYTE >> 8) !=
-			     (~BMP_HWVERSION_BYTE & 0xFF)) ||
-			    ((BMP_HWVERSION_BYTE & 0xFF) < 4)) {
+			if (((BMP_HWVERSION_BYTE >> 8) != (~BMP_HWVERSION_BYTE & 0xFF)) || (BMP_HWVERSION_BYTE & 0xFF) < 4)
 				return -2;
-			} else {
-				hwversion = BMP_HWVERSION_BYTE & 0xFF;
-			}
+			hwversion = BMP_HWVERSION_BYTE & 0xFF;
 		}
 	}
 
@@ -100,15 +95,14 @@ int platform_hwversion(void)
 	 */
 	if (hwversion == -1) {
 		/* Configure the hardware version pins as input pull-up/down */
-		gpio_set_mode(GPIOB, GPIO_MODE_INPUT,
-				GPIO_CNF_INPUT_PULL_UPDOWN,
-				hwversion_pins);
+		gpio_set_mode(GPIOB, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, hwversion_pins);
 
 		/* Enable the weak pull up. */
 		gpio_set(GPIOB, hwversion_pins);
 
 		/* Wait a little to make sure the pull up is in effect... */
-		for(int i = 0; i < 100; i++) __asm__("nop");
+		for (int i = 0; i < 100; i++)
+			__asm__("nop");
 
 		/* Get all pins that are pulled low in hardware.
 		 * This also sets all the "unused" pins to 1.
@@ -119,7 +113,8 @@ int platform_hwversion(void)
 		gpio_clear(GPIOB, hwversion_pins);
 
 		/* Wait a little to make sure the pull down is in effect... */
-		for(int i = 0; i < 100; i++) __asm__("nop");
+		for (int i = 0; i < 100; i++)
+			__asm__("nop");
 
 		/* Get all the pins that are pulled high in hardware. */
 		uint16_t pins_positive = gpio_get(GPIOB, hwversion_pins);
@@ -225,41 +220,37 @@ void platform_init(void)
 void platform_nrst_set_val(bool assert)
 {
 	gpio_set(TMS_PORT, TMS_PIN);
-	if ((platform_hwversion() == 0) ||
-	    (platform_hwversion() >= 3)) {
+	if (platform_hwversion() == 0 || platform_hwversion() >= 3)
 		gpio_set_val(NRST_PORT, NRST_PIN, assert);
-	} else {
+	else
 		gpio_set_val(NRST_PORT, NRST_PIN, !assert);
-	}
+
 	if (assert) {
-		for(int i = 0; i < 10000; i++) __asm__("nop");
+		for (int i = 0; i < 10000; i++)
+			__asm__("nop");
 	}
 }
 
 bool platform_nrst_get_val(void)
 {
-	if (platform_hwversion() == 0) {
+	if (platform_hwversion() == 0)
 		return gpio_get(NRST_SENSE_PORT, NRST_SENSE_PIN) == 0;
-	} else if (platform_hwversion() >= 3) {
+	if (platform_hwversion() >= 3)
 		return gpio_get(NRST_SENSE_PORT, NRST_SENSE_PIN) != 0;
-	} else {
-		return gpio_get(NRST_PORT, NRST_PIN) == 0;
-	}
+	return gpio_get(NRST_PORT, NRST_PIN) == 0;
 }
 
 bool platform_target_get_power(void)
 {
-	if (platform_hwversion() > 0) {
+	if (platform_hwversion() > 0)
 		return !gpio_get(PWR_BR_PORT, PWR_BR_PIN);
-  	}
 	return 0;
 }
 
 void platform_target_set_power(const bool power)
 {
-	if (platform_hwversion() > 0) {
+	if (platform_hwversion() > 0)
 		gpio_set_val(PWR_BR_PORT, PWR_BR_PIN, !power);
-	}
 }
 
 static void adc_init(void)
@@ -278,7 +269,7 @@ static void adc_init(void)
 	adc_power_on(ADC1);
 
 	/* Wait for ADC starting up. */
-	for (int i = 0; i < 800000; i++)    /* Wait a bit. */
+	for (int i = 0; i < 800000; i++) /* Wait a bit. */
 		__asm__("nop");
 
 	adc_reset_calibration(ADC1);
@@ -296,12 +287,13 @@ uint32_t platform_target_voltage_sense(void)
 		return 0;
 
 	const uint8_t channel = 8;
-	adc_set_regular_sequence(ADC1, 1, (uint8_t*)&channel);
+	adc_set_regular_sequence(ADC1, 1, (uint8_t *)&channel);
 
 	adc_start_conversion_direct(ADC1);
 
 	/* Wait for end of conversion. */
-	while (!adc_eoc(ADC1));
+	while (!adc_eoc(ADC1))
+		continue;
 
 	uint32_t val = adc_read_regular(ADC1); /* 0-4095 */
 	/* Clear EOC bit. The GD32F103 does not automatically reset it on ADC read. */
@@ -359,15 +351,12 @@ void exti15_10_isr(void)
 		usb_vbus_pin = USB_VBUS5_PIN;
 	}
 
-	if (gpio_get(usb_vbus_port, usb_vbus_pin)) {
+	if (gpio_get(usb_vbus_port, usb_vbus_pin))
 		/* Drive pull-up high if VBUS connected */
-		gpio_set_mode(USB_PU_PORT, GPIO_MODE_OUTPUT_10_MHZ,
-				GPIO_CNF_OUTPUT_PUSHPULL, USB_PU_PIN);
-	} else {
+		gpio_set_mode(USB_PU_PORT, GPIO_MODE_OUTPUT_10_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, USB_PU_PIN);
+	else
 		/* Allow pull-up to float if VBUS disconnected */
-		gpio_set_mode(USB_PU_PORT, GPIO_MODE_INPUT,
-				GPIO_CNF_INPUT_FLOAT, USB_PU_PIN);
-	}
+		gpio_set_mode(USB_PU_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, USB_PU_PIN);
 
 	exti_reset_request(usb_vbus_pin);
 }
@@ -391,8 +380,7 @@ static void setup_vbus_irq(void)
 	gpio_set(usb_vbus_port, usb_vbus_pin);
 	gpio_set(USB_PU_PORT, USB_PU_PIN);
 
-	gpio_set_mode(usb_vbus_port, GPIO_MODE_INPUT,
-			GPIO_CNF_INPUT_PULL_UPDOWN, usb_vbus_pin);
+	gpio_set_mode(usb_vbus_port, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, usb_vbus_pin);
 
 	/* Configure EXTI for USB VBUS monitor */
 	exti_select_source(usb_vbus_pin, usb_vbus_port);

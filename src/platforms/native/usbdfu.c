@@ -109,7 +109,7 @@ void sys_tick_handler(void)
 			break;
 		case 2:
 			gpio_toggle(LED_PORT, LED_0); /* LED0 on/off */
-			count=0;
+			count = 0;
 			break;
 		}
 	}
