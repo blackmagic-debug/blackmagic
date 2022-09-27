@@ -27,8 +27,8 @@
 #include "general.h"
 #include "platform.h"
 
-uint32_t app_address = 0x08004000;
-extern char _ebss[];
+uint32_t app_address = 0x08004000U;
+extern uint32_t _ebss; // NOLINT(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)
 
 void dfu_detach(void)
 {
@@ -37,14 +37,18 @@ void dfu_detach(void)
 
 int main(void)
 {
-	volatile uint32_t *magic = (uint32_t *)_ebss;
+	volatile uint32_t *magic = &_ebss;
 	rcc_periph_clock_enable(RCC_GPIOA);
-	if (gpio_get(GPIOA, GPIO0) || ((magic[0] == BOOTMAGIC0) && (magic[1] == BOOTMAGIC1))) {
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
+	if (gpio_get(GPIOA, GPIO0) || (magic[0] == BOOTMAGIC0 && magic[1] == BOOTMAGIC1)) {
 		magic[0] = 0;
 		magic[1] = 0;
-	} else {
+	} else
 		dfu_jump_app_if_valid();
-	}
+#pragma GCC diagnostic pop
+
 	rcc_clock_setup_pll(&rcc_hse_8mhz_3v3[RCC_CLOCK_3V3_168MHZ]);
 
 	/* Assert blue LED as indicator we are in the bootloader */
