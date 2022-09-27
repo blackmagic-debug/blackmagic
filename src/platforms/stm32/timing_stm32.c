@@ -34,7 +34,7 @@ void platform_timing_init(void)
 	/* Setup heartbeat timer */
 	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
 	/* Interrupt us at 10 Hz */
-	systick_set_reload(rcc_ahb_frequency / (8 * SYSTICKHZ) );
+	systick_set_reload(rcc_ahb_frequency / (8 * SYSTICKHZ));
 	/* SYSTICK_IRQ with low priority */
 	nvic_set_priority(NVIC_SYSTICK_IRQ, 14 << 4);
 	systick_interrupt_enable();
@@ -45,7 +45,8 @@ void platform_delay(uint32_t ms)
 {
 	platform_timeout timeout;
 	platform_timeout_set(&timeout, ms);
-	while (!platform_timeout_is_expired(&timeout));
+	while (!platform_timeout_is_expired(&timeout))
+		continue;
 }
 
 void sys_tick_handler(void)
@@ -53,13 +54,12 @@ void sys_tick_handler(void)
 	time_ms += SYSTICKMS;
 
 	if (morse_tick >= MORSECNT) {
-		if(running_status)
+		if (running_status)
 			gpio_toggle(LED_PORT, LED_IDLE_RUN);
 		SET_ERROR_STATE(morse_update());
 		morse_tick = 0;
-	} else {
-		morse_tick++;
-	}
+	} else
+		++morse_tick;
 }
 
 uint32_t platform_time_ms(void)
@@ -73,7 +73,7 @@ uint32_t platform_time_ms(void)
 
 /* Values for STM32F103 at 72 MHz */
 #define USED_SWD_CYCLES 22
-#define CYCLES_PER_CNT 10
+#define CYCLES_PER_CNT  10
 void platform_max_frequency_set(uint32_t freq)
 {
 	int divisor = rcc_ahb_frequency - USED_SWD_CYCLES * freq;
@@ -82,9 +82,9 @@ void platform_max_frequency_set(uint32_t freq)
 		return;
 	}
 	divisor /= 2;
-	swd_delay_cnt = divisor/(CYCLES_PER_CNT * freq);
+	swd_delay_cnt = divisor / (CYCLES_PER_CNT * freq);
 	if ((swd_delay_cnt * (CYCLES_PER_CNT * freq)) < (unsigned int)divisor)
-		swd_delay_cnt++;
+		++swd_delay_cnt;
 }
 
 uint32_t platform_max_frequency_get(void)
