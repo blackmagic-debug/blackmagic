@@ -99,17 +99,16 @@ void trace_buf_push(void)
 {
 	size_t len;
 
-	if (buf_rx_in == buf_rx_out) {
+	if (buf_rx_in == buf_rx_out)
 		return;
-	} else if (buf_rx_in > buf_rx_out) {
-		len = buf_rx_in - buf_rx_out;
-	} else {
-		len = FIFO_SIZE - buf_rx_out;
-	}
 
-	if (len > 64) {
+	if (buf_rx_in > buf_rx_out)
+		len = buf_rx_in - buf_rx_out;
+	else
+		len = FIFO_SIZE - buf_rx_out;
+
+	if (len > 64)
 		len = 64;
-	}
 
 	if (usbd_ep_write_packet(usbdev, 0x85, (uint8_t *)&buf_rx[buf_rx_out], len) == len) {
 		buf_rx_out += len;
@@ -134,7 +133,7 @@ void TRACEUART_ISR(void)
 	uint32_t flush = uart_is_interrupt_source(TRACEUART, UART_INT_RT);
 
 	while (!uart_is_rx_fifo_empty(TRACEUART)) {
-		uint32_t c = uart_recv(TRACEUART);
+		const uint32_t c = uart_recv(TRACEUART);
 
 		/* If the next increment of rx_in would put it at the same point
 		* as rx_out, the FIFO is considered full.
@@ -144,17 +143,15 @@ void TRACEUART_ISR(void)
 			buf_rx[buf_rx_in++] = c;
 
 			/* wrap out pointer */
-			if (buf_rx_in >= FIFO_SIZE) {
+			if (buf_rx_in >= FIFO_SIZE)
 				buf_rx_in = 0;
-			}
 		} else {
 			flush = 1;
 			break;
 		}
 	}
 
-	if (flush) {
+	if (flush)
 		/* advance fifo out pointer by amount written */
 		trace_buf_push();
-	}
 }
