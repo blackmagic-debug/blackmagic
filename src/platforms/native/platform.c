@@ -18,9 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file implements the platform specific functions for the STM32
- * implementation.
- */
+/* This file implements the platform specific functions for the native implementation. */
 
 #include "general.h"
 #include "usb.h"
@@ -40,7 +38,11 @@
 static void adc_init(void);
 static void setup_vbus_irq(void);
 
-/* Starting with hardware version 4 we are storing the hardware version in the
+/* This is defined by the linker script */
+extern char vector_table;
+
+/*
+ * Starting with hardware version 4 we are storing the hardware version in the
  * flash option user Data1 byte.
  * The hardware version 4 was the transition version that had it's hardware
  * pins strapped to 3 but contains version 4 in the Data1 byte.
@@ -53,7 +55,8 @@ static void setup_vbus_irq(void);
  */
 #define BMP_HWVERSION_BYTE FLASH_OPTION_BYTE_2
 
-/* Pins PB[7:5] are used to detect hardware revision.
+/*
+ * Pins PB[7:5] are used to detect hardware revision.
  * User option byte Data1 is used starting with hardware revision 4.
  * Pin -  OByte - Rev - Description
  * 000 - 0xFFFF -   0 - Original production build.
@@ -76,25 +79,19 @@ int platform_hwversion(void)
 {
 	static int hwversion = -1;
 	uint16_t hwversion_pins = GPIO7 | GPIO6 | GPIO5;
-	uint16_t unused_pins = hwversion_pins ^ 0xFFFF;
+	uint16_t unused_pins = hwversion_pins ^ 0xffffU;
 
 	/* Check if the hwversion is set in the user option byte. */
 	if (hwversion == -1) {
-		if ((BMP_HWVERSION_BYTE != 0xFFFF) && (BMP_HWVERSION_BYTE != 0x00FF)) {
-			/* Check if the data is valid.
-			 * When valid it should only have values 4 and higher.
-			 */
-			if (((BMP_HWVERSION_BYTE >> 8) != (~BMP_HWVERSION_BYTE & 0xFF)) || ((BMP_HWVERSION_BYTE & 0xFF) < 4)) {
+		if (BMP_HWVERSION_BYTE != 0xffffU && BMP_HWVERSION_BYTE != 0x00ffU) {
+			/* Check if the data is valid. When valid it should only have values 4 and higher. */
+			if ((BMP_HWVERSION_BYTE >> 8U) != (~BMP_HWVERSION_BYTE & 0xffU) || (BMP_HWVERSION_BYTE & 0xffU) < 4)
 				return -2;
-			} else {
-				hwversion = BMP_HWVERSION_BYTE & 0xFF;
-			}
+			hwversion = BMP_HWVERSION_BYTE & 0xffU;
 		}
 	}
 
-	/* If the hwversion is not set in option bytes check
-	 * the hw pin strapping.
-	 */
+	/* If the hwversion is not set in option bytes check the hw pin strapping. */
 	if (hwversion == -1) {
 		/* Configure the hardware version pins as input pull-up/down */
 		gpio_set_mode(GPIOB, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, hwversion_pins);
@@ -103,10 +100,11 @@ int platform_hwversion(void)
 		gpio_set(GPIOB, hwversion_pins);
 
 		/* Wait a little to make sure the pull up is in effect... */
-		for (int i = 0; i < 100; i++)
-			__asm__("nop");
+		for (volatile size_t i = 0; i < 100; ++i)
+			continue;
 
-		/* Get all pins that are pulled low in hardware.
+		/*
+		 * Get all pins that are pulled low in hardware.
 		 * This also sets all the "unused" pins to 1.
 		 */
 		uint16_t pins_negative = gpio_get(GPIOB, hwversion_pins) | unused_pins;
@@ -115,18 +113,23 @@ int platform_hwversion(void)
 		gpio_clear(GPIOB, hwversion_pins);
 
 		/* Wait a little to make sure the pull down is in effect... */
-		for (int i = 0; i < 100; i++)
-			__asm__("nop");
+		for (volatile size_t i = 0; i < 100; ++i)
+			continue;
 
 		/* Get all the pins that are pulled high in hardware. */
 		uint16_t pins_positive = gpio_get(GPIOB, hwversion_pins);
 
-		/* Hardware version is the id defined by the pins that are
+		/*
+		 * The hardware version is the ID defined by the pins that are
 		 * asserted low or high by the hardware. This means that pins
 		 * that are left floating are 0 and those that are either
 		 * pulled high or low are 1.
+		 *
+		 * XXX: This currently converts `uint16_t`'s to `int`. It should not do this,
+		 * it should remain unsigned at all times, but this requires changing how the invalid
+		 * hardware version should be returned.
 		 */
-		hwversion = (((pins_positive ^ pins_negative) ^ 0xFFFF) & hwversion_pins) >> 5;
+		hwversion = (((pins_positive ^ pins_negative) ^ 0xffff) & hwversion_pins) >> 5U;
 	}
 
 	return hwversion;
@@ -170,26 +173,30 @@ void platform_init(void)
 
 	gpio_set_mode(LED_PORT, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, LED_UART | LED_IDLE_RUN | LED_ERROR);
 
-	/* Enable nRST output. Original uses a NPN to pull down, so setting the
+	/*
+	 * Enable nRST output. Original uses a NPN to pull down, so setting the
 	 * output HIGH asserts. Mini is directly connected so use open drain output
 	 * and set LOW to assert.
 	 */
 	platform_nrst_set_val(false);
 	gpio_set_mode(NRST_PORT, GPIO_MODE_OUTPUT_50_MHZ,
-		(((platform_hwversion() == 0) || (platform_hwversion() >= 3)) ? GPIO_CNF_OUTPUT_PUSHPULL
-																	  : GPIO_CNF_OUTPUT_OPENDRAIN),
+		platform_hwversion() == 0 || platform_hwversion() >= 3 ? GPIO_CNF_OUTPUT_PUSHPULL : GPIO_CNF_OUTPUT_OPENDRAIN,
 		NRST_PIN);
 	/* FIXME: Gareth, Esden, what versions need this fix? */
 	if (platform_hwversion() < 3)
-		/* FIXME: This pin in intended to be input, but the TXS0108 fails
-		 * to release the device from reset if this floats. */
+		/*
+		 * FIXME: This pin in intended to be input, but the TXS0108 fails
+		 * to release the device from reset if this floats.
+		 */
 		gpio_set_mode(NRST_SENSE_PORT, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, NRST_SENSE_PIN);
 	else {
 		gpio_set(NRST_SENSE_PORT, NRST_SENSE_PIN);
 		gpio_set_mode(NRST_SENSE_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, NRST_SENSE_PIN);
 	}
-	/* Enable internal pull-up on PWR_BR so that we don't drive
-	   TPWR locally or inadvertently supply power to the target. */
+	/*
+	 * Enable internal pull-up on PWR_BR so that we don't drive
+	 * TPWR locally or inadvertently supply power to the target.
+	 */
 	if (platform_hwversion() == 1) {
 		gpio_set(PWR_BR_PORT, PWR_BR_PIN);
 		gpio_set_mode(PWR_BR_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, PWR_BR_PIN);
@@ -204,15 +211,16 @@ void platform_init(void)
 		gpio_clear(GPIOB, GPIO0);
 		gpio_set_mode(GPIOB, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, GPIO0);
 	}
-	/* Relocate interrupt vector table here */
-	extern int vector_table;
-	SCB_VTOR = (uint32_t)&vector_table;
+	/* Set up the NVIC vector table for the firmware */
+	SCB_VTOR = (uint32_t)&vector_table; // NOLINT(clang-diagnostic-pointer-to-int-cast)
 
 	platform_timing_init();
 	blackmagic_usb_init();
 
-	/* On hardware version 1 and 2, UART and SWD share connector pins.
-	 * Don't enable UART if we're being debugged. */
+	/*
+	 * On hardware version 1 and 2, UART and SWD share connector pins.
+	 * Don't enable UART if we're being debugged.
+	 */
 	if (platform_hwversion() == 0 || platform_hwversion() >= 3 || !(SCS_DEMCR & SCS_DEMCR_TRCENA))
 		aux_serial_init();
 
@@ -222,41 +230,37 @@ void platform_init(void)
 void platform_nrst_set_val(bool assert)
 {
 	gpio_set(TMS_PORT, TMS_PIN);
-	if ((platform_hwversion() == 0) || (platform_hwversion() >= 3)) {
+	if (platform_hwversion() == 0 || platform_hwversion() >= 3)
 		gpio_set_val(NRST_PORT, NRST_PIN, assert);
-	} else {
+	else
 		gpio_set_val(NRST_PORT, NRST_PIN, !assert);
-	}
+
 	if (assert) {
-		for (int i = 0; i < 10000; i++)
-			__asm__("nop");
+		for (volatile size_t i = 0; i < 10000; ++i)
+			continue;
 	}
 }
 
 bool platform_nrst_get_val(void)
 {
-	if (platform_hwversion() == 0) {
+	if (platform_hwversion() == 0)
 		return gpio_get(NRST_SENSE_PORT, NRST_SENSE_PIN) == 0;
-	} else if (platform_hwversion() >= 3) {
+	if (platform_hwversion() >= 3)
 		return gpio_get(NRST_SENSE_PORT, NRST_SENSE_PIN) != 0;
-	} else {
-		return gpio_get(NRST_PORT, NRST_PIN) == 0;
-	}
+	return gpio_get(NRST_PORT, NRST_PIN) == 0;
 }
 
 bool platform_target_get_power(void)
 {
-	if (platform_hwversion() > 0) {
+	if (platform_hwversion() > 0)
 		return !gpio_get(PWR_BR_PORT, PWR_BR_PIN);
-	}
 	return 0;
 }
 
 void platform_target_set_power(const bool power)
 {
-	if (platform_hwversion() > 0) {
+	if (platform_hwversion() > 0)
 		gpio_set_val(PWR_BR_PORT, PWR_BR_PIN, !power);
-	}
 }
 
 static void adc_init(void)
@@ -274,9 +278,9 @@ static void adc_init(void)
 
 	adc_power_on(ADC1);
 
-	/* Wait for ADC starting up. */
-	for (int i = 0; i < 800000; i++) /* Wait a bit. */
-		__asm__("nop");
+	/* Wait for the ADC to finish starting up */
+	for (volatile size_t i = 0; i < 800000; ++i)
+		continue;
 
 	adc_reset_calibration(ADC1);
 	adc_calibrate(ADC1);
@@ -284,27 +288,28 @@ static void adc_init(void)
 
 uint32_t platform_target_voltage_sense(void)
 {
-	/* returns the voltage in volt scaled by 10 (so 33 means 3.3V), except
-	 * for hardware version 1
-	 * this function is only needed for implementations that allow the
+	/*
+	 * Returns the voltage in tenths of a volt (so 33 means 3.3V),
+	 * except for hardware version 1.
+	 * This function is only needed for implementations that allow the
 	 * target to be powered from the debug probe
 	 */
 	if (platform_hwversion() == 0)
 		return 0;
 
-	const uint8_t channel = 8;
-	adc_set_regular_sequence(ADC1, 1, (uint8_t *)&channel);
+	uint8_t channel = 8;
+	adc_set_regular_sequence(ADC1, 1, &channel);
 
 	adc_start_conversion_direct(ADC1);
 
 	/* Wait for end of conversion. */
 	while (!adc_eoc(ADC1))
-		;
+		continue;
 
 	uint32_t val = adc_read_regular(ADC1); /* 0-4095 */
 	/* Clear EOC bit. The GD32F103 does not automatically reset it on ADC read. */
 	ADC_SR(ADC1) &= ~ADC_SR_EOC;
-	return (val * 99) / 8191;
+	return (val * 99U) / 8191U;
 }
 
 const char *platform_target_voltage(void)
@@ -357,13 +362,12 @@ void exti15_10_isr(void)
 		usb_vbus_pin = USB_VBUS5_PIN;
 	}
 
-	if (gpio_get(usb_vbus_port, usb_vbus_pin)) {
+	if (gpio_get(usb_vbus_port, usb_vbus_pin))
 		/* Drive pull-up high if VBUS connected */
 		gpio_set_mode(USB_PU_PORT, GPIO_MODE_OUTPUT_10_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, USB_PU_PIN);
-	} else {
+	else
 		/* Allow pull-up to float if VBUS disconnected */
 		gpio_set_mode(USB_PU_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, USB_PU_PIN);
-	}
 
 	exti_reset_request(usb_vbus_pin);
 }
