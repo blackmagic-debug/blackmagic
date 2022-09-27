@@ -53,49 +53,49 @@
  */
 
 /* Hardware definitions... */
-#define JTAG_PORT 	GPIOC
-#define TDI_PORT	JTAG_PORT
-#define TMS_PORT	JTAG_PORT
-#define TCK_PORT	JTAG_PORT
-#define TDO_PORT	GPIOC
-#define TDI_PIN		GPIO2
-#define TMS_PIN		GPIO4
-#define TCK_PIN		GPIO5
-#define TDO_PIN		GPIO6
+#define JTAG_PORT GPIOC
+#define TDI_PORT  JTAG_PORT
+#define TMS_PORT  JTAG_PORT
+#define TCK_PORT  JTAG_PORT
+#define TDO_PORT  GPIOC
+#define TDI_PIN   GPIO2
+#define TMS_PIN   GPIO4
+#define TCK_PIN   GPIO5
+#define TDO_PIN   GPIO6
 
-#define SWDIO_PORT 	JTAG_PORT
-#define SWCLK_PORT 	JTAG_PORT
-#define SWDIO_PIN	TMS_PIN
-#define SWCLK_PIN	TCK_PIN
+#define SWDIO_PORT JTAG_PORT
+#define SWCLK_PORT JTAG_PORT
+#define SWDIO_PIN  TMS_PIN
+#define SWCLK_PIN  TCK_PIN
 
-#define TRST_PORT	GPIOC
-#define TRST_PIN	GPIO1
-#define NRST_PORT	GPIOC
-#define NRST_PIN	GPIO8
+#define TRST_PORT GPIOC
+#define TRST_PIN  GPIO1
+#define NRST_PORT GPIOC
+#define NRST_PIN  GPIO8
 
-#define LED_PORT	GPIOD
-#define LED_PORT_UART	GPIOD
-#define LED_UART	GPIO12
-#define LED_IDLE_RUN	GPIO13
-#define LED_ERROR	GPIO14
-#define LED_BOOTLOADER	GPIO15
+#define LED_PORT       GPIOD
+#define LED_PORT_UART  GPIOD
+#define LED_UART       GPIO12
+#define LED_IDLE_RUN   GPIO13
+#define LED_ERROR      GPIO14
+#define LED_BOOTLOADER GPIO15
 
-#define USBUSART USART3
-#define USBUSART_CR1 USART3_CR1
-#define USBUSART_DR USART3_DR
-#define USBUSART_IRQ NVIC_USART3_IRQ
-#define USBUSART_CLK RCC_USART3
-#define USBUSART_PORT GPIOD
-#define USBUSART_TX_PIN GPIO8
-#define USBUSART_RX_PIN GPIO9
-#define USBUSART_ISR(x) usart3_isr(x)
-#define USBUSART_DMA_BUS DMA1
-#define USBUSART_DMA_CLK RCC_DMA1
-#define USBUSART_DMA_TX_CHAN DMA_STREAM3
-#define USBUSART_DMA_TX_IRQ NVIC_DMA1_STREAM3_IRQ
+#define USBUSART               USART3
+#define USBUSART_CR1           USART3_CR1
+#define USBUSART_DR            USART3_DR
+#define USBUSART_IRQ           NVIC_USART3_IRQ
+#define USBUSART_CLK           RCC_USART3
+#define USBUSART_PORT          GPIOD
+#define USBUSART_TX_PIN        GPIO8
+#define USBUSART_RX_PIN        GPIO9
+#define USBUSART_ISR(x)        usart3_isr(x)
+#define USBUSART_DMA_BUS       DMA1
+#define USBUSART_DMA_CLK       RCC_DMA1
+#define USBUSART_DMA_TX_CHAN   DMA_STREAM3
+#define USBUSART_DMA_TX_IRQ    NVIC_DMA1_STREAM3_IRQ
 #define USBUSART_DMA_TX_ISR(x) dma1_stream3_isr(x)
-#define USBUSART_DMA_RX_CHAN DMA_STREAM1
-#define USBUSART_DMA_RX_IRQ NVIC_DMA1_STREAM1_IRQ
+#define USBUSART_DMA_RX_CHAN   DMA_STREAM1
+#define USBUSART_DMA_RX_IRQ    NVIC_DMA1_STREAM1_IRQ
 #define USBUSART_DMA_RX_ISR(x) dma1_stream1_isr(x)
 /* For STM32F4 DMA trigger source must be specified */
 #define USBUSART_DMA_TRG DMA_SxCR_CHSEL_4
@@ -103,56 +103,56 @@
 #define BOOTMAGIC0 0xb007da7a
 #define BOOTMAGIC1 0xbaadfeed
 
-#define TMS_SET_MODE() \
-	gpio_mode_setup(TMS_PORT, GPIO_MODE_OUTPUT, \
-	                GPIO_PUPD_NONE, TMS_PIN);
-#define SWDIO_MODE_FLOAT() \
-	gpio_mode_setup(SWDIO_PORT, GPIO_MODE_INPUT, \
-	                GPIO_PUPD_NONE, SWDIO_PIN);
+#define TMS_SET_MODE()     gpio_mode_setup(TMS_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TMS_PIN);
+#define SWDIO_MODE_FLOAT() gpio_mode_setup(SWDIO_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, SWDIO_PIN);
 
-#define SWDIO_MODE_DRIVE() \
-	gpio_mode_setup(SWDIO_PORT, GPIO_MODE_OUTPUT, \
-	                GPIO_PUPD_NONE, SWDIO_PIN);
-#define UART_PIN_SETUP() do { \
-	gpio_mode_setup(USBUSART_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, \
-	                USBUSART_TX_PIN); \
-	gpio_set_output_options(USBUSART_PORT, GPIO_OTYPE_PP, \
-					GPIO_OSPEED_100MHZ, USBUSART_TX_PIN); \
-	gpio_set_af(USBUSART_PORT, GPIO_AF7, USBUSART_TX_PIN); \
-	gpio_mode_setup(USBUSART_PORT, GPIO_MODE_AF, GPIO_PUPD_PULLUP, \
-	                USBUSART_RX_PIN); \
-	gpio_set_output_options(USBUSART_PORT, GPIO_OTYPE_OD, \
-					GPIO_OSPEED_100MHZ, USBUSART_RX_PIN); \
-	gpio_set_af(USBUSART_PORT, GPIO_AF7, USBUSART_RX_PIN); \
-} while(0)
+#define SWDIO_MODE_DRIVE() gpio_mode_setup(SWDIO_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, SWDIO_PIN);
+#define UART_PIN_SETUP()                                                                            \
+	do {                                                                                            \
+		gpio_mode_setup(USBUSART_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, USBUSART_TX_PIN);              \
+		gpio_set_output_options(USBUSART_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_100MHZ, USBUSART_TX_PIN); \
+		gpio_set_af(USBUSART_PORT, GPIO_AF7, USBUSART_TX_PIN);                                      \
+		gpio_mode_setup(USBUSART_PORT, GPIO_MODE_AF, GPIO_PUPD_PULLUP, USBUSART_RX_PIN);            \
+		gpio_set_output_options(USBUSART_PORT, GPIO_OTYPE_OD, GPIO_OSPEED_100MHZ, USBUSART_RX_PIN); \
+		gpio_set_af(USBUSART_PORT, GPIO_AF7, USBUSART_RX_PIN);                                      \
+	} while (0)
 
-#define USB_DRIVER      stm32f107_usb_driver
-#define USB_IRQ         NVIC_OTG_FS_IRQ
-#define USB_ISR(x)      otg_fs_isr(x)
+#define USB_DRIVER stm32f107_usb_driver
+#define USB_IRQ    NVIC_OTG_FS_IRQ
+#define USB_ISR(x) otg_fs_isr(x)
 /* Interrupt priorities.  Low numbers are high priority.
  * TIM3 is used for traceswo capture and must be highest priority.
  */
-#define IRQ_PRI_USB		(1 << 4)
-#define IRQ_PRI_USBUSART	(2 << 4)
-#define IRQ_PRI_USBUSART_DMA 	(2 << 4)
-#define IRQ_PRI_TRACE		(0 << 4)
+#define IRQ_PRI_USB          (1 << 4)
+#define IRQ_PRI_USBUSART     (2 << 4)
+#define IRQ_PRI_USBUSART_DMA (2 << 4)
+#define IRQ_PRI_TRACE        (0 << 4)
 
-
-#define TRACE_TIM TIM3
+#define TRACE_TIM          TIM3
 #define TRACE_TIM_CLK_EN() rcc_periph_clock_enable(RCC_TIM3)
-#define TRACE_IRQ   NVIC_TIM3_IRQ
-#define TRACE_ISR(x) tim3_isr(x)
+#define TRACE_IRQ          NVIC_TIM3_IRQ
+#define TRACE_ISR(x)       tim3_isr(x)
 
-#define gpio_set_val(port, pin, val) do {	\
-	if(val)					\
-		gpio_set((port), (pin));	\
-	else					\
-		gpio_clear((port), (pin));	\
-} while(0)
+#define gpio_set_val(port, pin, val)   \
+	do {                               \
+		if (val)                       \
+			gpio_set((port), (pin));   \
+		else                           \
+			gpio_clear((port), (pin)); \
+	} while (0)
 
-#define SET_RUN_STATE(state)	{running_status = (state);}
-#define SET_IDLE_STATE(state)	{gpio_set_val(LED_PORT, LED_IDLE_RUN, state);}
-#define SET_ERROR_STATE(state)	{gpio_set_val(LED_PORT, LED_ERROR, state);}
+#define SET_RUN_STATE(state)      \
+	{                             \
+		running_status = (state); \
+	}
+#define SET_IDLE_STATE(state)                        \
+	{                                                \
+		gpio_set_val(LED_PORT, LED_IDLE_RUN, state); \
+	}
+#define SET_ERROR_STATE(state)                    \
+	{                                             \
+		gpio_set_val(LED_PORT, LED_ERROR, state); \
+	}
 
 static inline int platform_hwversion(void)
 {
