@@ -37,27 +37,25 @@
 #include <libopencm3/cm3/systick.h>
 #include <libopencm3/cm3/cortex.h>
 
-
 jmp_buf fatal_error_jmpbuf;
-extern char _ebss[];
+extern uint32_t _ebss; // NOLINT(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
 void platform_init(void)
 {
-	volatile uint32_t *magic = (uint32_t *)_ebss;
+	volatile uint32_t *magic = &_ebss;
 	/* Enable GPIO peripherals */
 	rcc_periph_clock_enable(RCC_GPIOA);
 	rcc_periph_clock_enable(RCC_GPIOC);
 	rcc_periph_clock_enable(RCC_GPIOD);
 
 	/* Check the USER button*/
-	if (gpio_get(GPIOA, GPIO0) ||
-		((magic[0] == BOOTMAGIC0) && (magic[1] == BOOTMAGIC1)))
-	{
+	if (gpio_get(GPIOA, GPIO0) || ((magic[0] == BOOTMAGIC0) && (magic[1] == BOOTMAGIC1))) {
 		magic[0] = 0;
 		magic[1] = 0;
 		/* Assert blue LED as indicator we are in the bootloader */
-		gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT,
-						GPIO_PUPD_NONE, LED_BOOTLOADER);
+		gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED_BOOTLOADER);
 		gpio_set(LED_PORT, LED_BOOTLOADER);
 		/* Jump to the built in bootloader by mapping System flash.
 		   As we just come out of reset, no other deinit is needed!*/
@@ -79,30 +77,19 @@ void platform_init(void)
 	GPIOC_OSPEEDR &= ~0xF30;
 	GPIOC_OSPEEDR |= 0xA20;
 
-	gpio_mode_setup(JTAG_PORT, GPIO_MODE_OUTPUT,
-					GPIO_PUPD_NONE,
-					TCK_PIN | TDI_PIN);
-	gpio_mode_setup(JTAG_PORT, GPIO_MODE_INPUT,
-					GPIO_PUPD_NONE, TMS_PIN);
-	gpio_set_output_options(JTAG_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ,
-							TCK_PIN | TDI_PIN | TMS_PIN);
-	gpio_mode_setup(TDO_PORT, GPIO_MODE_INPUT,
-					GPIO_PUPD_NONE,
-					TDO_PIN);
-	gpio_set_output_options(TDO_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ,
-							TDO_PIN | TMS_PIN);
+	gpio_mode_setup(JTAG_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TCK_PIN | TDI_PIN);
+	gpio_mode_setup(JTAG_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, TMS_PIN);
+	gpio_set_output_options(JTAG_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ, TCK_PIN | TDI_PIN | TMS_PIN);
+	gpio_mode_setup(TDO_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, TDO_PIN);
+	gpio_set_output_options(TDO_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ, TDO_PIN | TMS_PIN);
 
-	gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT,
-					GPIO_PUPD_NONE,
-					LED_IDLE_RUN | LED_ERROR | LED_BOOTLOADER);
+	gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED_IDLE_RUN | LED_ERROR | LED_BOOTLOADER);
 
 	gpio_mode_setup(LED_PORT_UART, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED_UART);
 
 #ifdef PLATFORM_HAS_POWER_SWITCH
 	gpio_set(PWR_BR_PORT, PWR_BR_PIN);
-	gpio_mode_setup(PWR_BR_PORT, GPIO_MODE_OUTPUT,
-					GPIO_PUPD_NONE,
-					PWR_BR_PIN);
+	gpio_mode_setup(PWR_BR_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, PWR_BR_PIN);
 #endif
 
 	platform_timing_init();
@@ -110,8 +97,14 @@ void platform_init(void)
 	aux_serial_init();
 }
 
-void platform_nrst_set_val(bool assert) { (void)assert; }
-bool platform_nrst_get_val(void) { return false; }
+void platform_nrst_set_val(bool assert)
+{
+	(void)assert;
+}
+bool platform_nrst_get_val(void)
+{
+	return false;
+}
 
 const char *platform_target_voltage(void)
 {
@@ -125,6 +118,7 @@ void platform_request_boot(void)
 	magic[1] = BOOTMAGIC1;
 	scb_reset_system();
 }
+#pragma GCC diagnostic pop
 
 #ifdef PLATFORM_HAS_POWER_SWITCH
 bool platform_target_get_power(void)
