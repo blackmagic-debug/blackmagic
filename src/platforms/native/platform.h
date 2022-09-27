@@ -18,9 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file implements the platform specific functions for the STM32
- * implementation.
- */
+/* This file provides the platform specific declarations for the native implementation. */
 
 #ifndef PLATFORMS_NATIVE_PLATFORM_H
 #define PLATFORMS_NATIVE_PLATFORM_H
@@ -41,12 +39,14 @@ extern bool debug_bmp;
 #define PLATFORM_IDENT   ""
 #define UPD_IFACE_STRING "@Internal Flash   /0x08000000/8*001Kg"
 
-/* Hardware version switcher helper
- * when the hardware version is smaller than ver
- * it outputs opt1, otherwise opt2 */
-#define HW_SWITCH(ver, opt1, opt2) ((platform_hwversion() < (ver)) ? (opt1) : (opt2))
+/*
+ * Hardware version switcher helper - when the hardware
+ * version is smaller than ver it outputs opt1, otherwise opt2
+ */
+#define HW_SWITCH(ver, opt1, opt2) (platform_hwversion() < (ver) ? (opt1) : (opt2))
 
-/* Important pin mappings for STM32 implementation:
+/*
+ * Important pin mappings for native implementation:
  *
  * LED0     = PB2   (Yellow LED : Running)
  * LED1     = PB10  (Orange LED : Idle)
@@ -224,7 +224,8 @@ extern bool debug_bmp;
 #define USB_DRIVER st_usbfs_v1_usb_driver
 #define USB_IRQ    NVIC_USB_LP_CAN_RX0_IRQ
 #define USB_ISR(x) usb_lp_can_rx0_isr(x)
-/* Interrupt priorities.  Low numbers are high priority.
+/*
+ * Interrupt priorities. Low numbers are high priority.
  * TIM3 is used for traceswo capture and must be highest priority.
  */
 #define IRQ_PRI_USB          (1 << 4)
@@ -272,50 +273,30 @@ extern bool debug_bmp;
 #define TRACE_IRQ          NVIC_TIM3_IRQ
 #define TRACE_ISR(x)       tim3_isr(x)
 
-#define SET_RUN_STATE(state)      \
-	{                             \
-		running_status = (state); \
-	}
-#define SET_IDLE_STATE(state)                        \
-	{                                                \
-		gpio_set_val(LED_PORT, LED_IDLE_RUN, state); \
-	}
-#define SET_ERROR_STATE(state)                    \
-	{                                             \
-		gpio_set_val(LED_PORT, LED_ERROR, state); \
-	}
+#define SET_RUN_STATE(state)   running_status = (state)
+#define SET_IDLE_STATE(state)  gpio_set_val(LED_PORT, LED_IDLE_RUN, state)
+#define SET_ERROR_STATE(state) gpio_set_val(LED_PORT, LED_ERROR, state)
 
-/*
- * Use newlib provided integer only stdio functions
- */
+/* Use newlib provided integer-only stdio functions */
 
-/* sscanf */
 #ifdef sscanf
 #undef sscanf
-#define sscanf siscanf
-#else
-#define sscanf siscanf
 #endif
-/* sprintf */
+#define sscanf siscanf
+
 #ifdef sprintf
 #undef sprintf
-#define sprintf siprintf
-#else
-#define sprintf siprintf
 #endif
-/* vasprintf */
+#define sprintf siprintf
+
 #ifdef vasprintf
 #undef vasprintf
-#define vasprintf vasiprintf
-#else
-#define vasprintf vasiprintf
 #endif
-/* snprintf */
+#define vasprintf vasiprintf
+
 #ifdef snprintf
 #undef snprintf
-#define snprintf sniprintf
-#else
-#define snprintf sniprintf
 #endif
+#define snprintf sniprintf
 
 #endif /* PLATFORMS_NATIVE_PLATFORM_H */
