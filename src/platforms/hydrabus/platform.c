@@ -41,7 +41,7 @@ void platform_init(void)
 {
 	/* Check the USER button*/
 	rcc_peripheral_enable_clock(&RCC_AHB1ENR, RCC_AHB1ENR_IOPAEN);
-	if(gpio_get(GPIOA, GPIO0)) {
+	if (gpio_get(GPIOA, GPIO0)) {
 		platform_request_boot();
 		scb_reset_core();
 	}
@@ -55,33 +55,31 @@ void platform_init(void)
 	rcc_peripheral_enable_clock(&RCC_AHB1ENR, RCC_AHB1ENR_CRCEN);
 
 	/* Set up USB Pins and alternate function*/
-	gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE,
-		GPIO9 | GPIO11 | GPIO12);
+	gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO9 | GPIO11 | GPIO12);
 	gpio_set_af(GPIOA, GPIO_AF10, GPIO9 | GPIO11 | GPIO12);
 
-	GPIOC_OSPEEDR &=~0xF30;
+	GPIOC_OSPEEDR &= ~0xF30;
 	GPIOC_OSPEEDR |= 0xA20;
-	gpio_mode_setup(JTAG_PORT, GPIO_MODE_OUTPUT,
-			GPIO_PUPD_NONE,
-			TCK_PIN | TDI_PIN);
-	gpio_mode_setup(JTAG_PORT, GPIO_MODE_INPUT,
-			GPIO_PUPD_NONE, TMS_PIN);
+	gpio_mode_setup(JTAG_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TCK_PIN | TDI_PIN);
+	gpio_mode_setup(JTAG_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, TMS_PIN);
 
-	gpio_mode_setup(TDO_PORT, GPIO_MODE_INPUT,
-			GPIO_PUPD_NONE,
-			TDO_PIN);
+	gpio_mode_setup(TDO_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, TDO_PIN);
 
-	gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT,
-			GPIO_PUPD_NONE,
-			LED_UART | LED_IDLE_RUN | LED_ERROR | LED_BOOTLOADER);
+	gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED_UART | LED_IDLE_RUN | LED_ERROR | LED_BOOTLOADER);
 
 	platform_timing_init();
 	blackmagic_usb_init();
 	aux_serial_init();
 }
 
-void platform_nrst_set_val(bool assert) { (void)assert; }
-bool platform_nrst_get_val(void) { return false; }
+void platform_nrst_set_val(bool assert)
+{
+	(void)assert;
+}
+bool platform_nrst_get_val(void)
+{
+	return false;
+}
 
 const char *platform_target_voltage(void)
 {
@@ -96,14 +94,13 @@ void platform_request_boot(void)
 
 	/* Assert blue LED as indicator we are in the bootloader */
 	rcc_peripheral_enable_clock(&RCC_AHB1ENR, RCC_AHB1ENR_IOPDEN);
-	gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT,
-		GPIO_PUPD_NONE, LED_BOOTLOADER);
+	gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED_BOOTLOADER);
 	gpio_set(LED_PORT, LED_BOOTLOADER);
 
 	/* Jump to the built in bootloader by mapping System flash */
 	rcc_peripheral_enable_clock(&RCC_APB2ENR, RCC_APB2ENR_SYSCFGEN);
 	SYSCFG_MEMRM &= ~3;
-	SYSCFG_MEMRM |=  1;
+	SYSCFG_MEMRM |= 1;
 }
 
 void platform_target_clk_output_enable(bool enable)
