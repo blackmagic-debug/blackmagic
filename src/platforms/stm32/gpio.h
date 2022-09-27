@@ -28,12 +28,13 @@
 
 #define INLINE_GPIO
 
-#define gpio_set_val(port, pin, val) do {	\
-	if(val)					\
-		gpio_set((port), (pin));	\
-	else					\
-		gpio_clear((port), (pin));	\
-} while(0)
+#define gpio_set_val(port, pin, val)   \
+	do {                               \
+		if (val)                       \
+			gpio_set((port), (pin));   \
+		else                           \
+			gpio_clear((port), (pin)); \
+	} while (0)
 
 #ifdef INLINE_GPIO
 static inline void _gpio_set(uint32_t gpioport, uint16_t gpios)
@@ -49,13 +50,13 @@ static inline void _gpio_set(uint32_t gpioport, uint16_t gpios)
 static inline void _gpio_clear(uint32_t gpioport, uint16_t gpios)
 {
 #if defined(STM32F4)
-	GPIO_BSRR(gpioport) = gpios<<16;
+	GPIO_BSRR(gpioport) = gpios << 16;
 	/* FIXME: Check if doubling is still needed */
-	GPIO_BSRR(gpioport) = gpios<<16;
+	GPIO_BSRR(gpioport) = gpios << 16;
 #elif defined(GPIO_BRR)
 	GPIO_BRR(gpioport) = gpios;
 #else
-	GPIO_BSRR(gpioport) = gpios<<16;
+	GPIO_BSRR(gpioport) = gpios << 16;
 #endif
 }
 #define gpio_clear _gpio_clear
