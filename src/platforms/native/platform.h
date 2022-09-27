@@ -38,14 +38,13 @@
 extern bool debug_bmp;
 #endif
 
-#define PLATFORM_IDENT          " "
-#define UPD_IFACE_STRING        "@Internal Flash   /0x08000000/8*001Kg"
+#define PLATFORM_IDENT   " "
+#define UPD_IFACE_STRING "@Internal Flash   /0x08000000/8*001Kg"
 
 /* Hardware version switcher helper
  * when the hardware version is smaller than ver
  * it outputs opt1, otherwise opt2 */
-#define HW_SWITCH(ver, opt1, opt2) \
-	((platform_hwversion() < (ver))?(opt1):(opt2))
+#define HW_SWITCH(ver, opt1, opt2) ((platform_hwversion() < (ver)) ? (opt1) : (opt2))
 
 /* Important pin mappings for STM32 implementation:
  *
@@ -105,88 +104,88 @@ extern bool debug_bmp;
  */
 
 /* Hardware definitions... */
-#define JTAG_PORT 	GPIOA
-#define TDI_PORT	JTAG_PORT
-#define TMS_DIR_PORT	JTAG_PORT
-#define TMS_PORT	JTAG_PORT
-#define TCK_PORT	JTAG_PORT
+#define JTAG_PORT    GPIOA
+#define TDI_PORT     JTAG_PORT
+#define TMS_DIR_PORT JTAG_PORT
+#define TMS_PORT     JTAG_PORT
+#define TCK_PORT     JTAG_PORT
 #define TCK_DIR_PORT GPIOC
-#define TDO_PORT	JTAG_PORT
-#define TDI_PIN		HW_SWITCH(6, GPIO3, GPIO7)
-#define TMS_DIR_PIN	GPIO1
-#define TMS_PIN		GPIO4
-#define TCK_PIN		GPIO5
-#define TCK_DIR_PIN GPIO15
-#define TDO_PIN		GPIO6
+#define TDO_PORT     JTAG_PORT
+#define TDI_PIN      HW_SWITCH(6, GPIO3, GPIO7)
+#define TMS_DIR_PIN  GPIO1
+#define TMS_PIN      GPIO4
+#define TCK_PIN      GPIO5
+#define TCK_DIR_PIN  GPIO15
+#define TDO_PIN      GPIO6
 
-#define SWDIO_DIR_PORT	JTAG_PORT
-#define SWDIO_PORT 	JTAG_PORT
-#define SWCLK_PORT 	JTAG_PORT
-#define SWDIO_DIR_PIN	TMS_DIR_PIN
-#define SWDIO_PIN	TMS_PIN
-#define SWCLK_PIN	TCK_PIN
+#define SWDIO_DIR_PORT JTAG_PORT
+#define SWDIO_PORT     JTAG_PORT
+#define SWCLK_PORT     JTAG_PORT
+#define SWDIO_DIR_PIN  TMS_DIR_PIN
+#define SWDIO_PIN      TMS_PIN
+#define SWCLK_PIN      TCK_PIN
 
-#define TRST_PORT	GPIOB
-#define TRST_PIN	GPIO1
-#define PWR_BR_PORT	GPIOB
-#define PWR_BR_PIN	GPIO1
-#define NRST_PORT	GPIOA
-#define NRST_PIN	HW_SWITCH(6, GPIO2, GPIO9)
-#define NRST_SENSE_PORT	GPIOA
+#define TRST_PORT       GPIOB
+#define TRST_PIN        GPIO1
+#define PWR_BR_PORT     GPIOB
+#define PWR_BR_PIN      GPIO1
+#define NRST_PORT       GPIOA
+#define NRST_PIN        HW_SWITCH(6, GPIO2, GPIO9)
+#define NRST_SENSE_PORT GPIOA
 #define NRST_SENSE_PIN  HW_SWITCH(6, GPIO7, GPIO13)
 
-#define USB_PU_PORT	GPIOA
-#define USB_PU_PIN	GPIO8
+#define USB_PU_PORT GPIOA
+#define USB_PU_PIN  GPIO8
 
 /* For HW Rev 4 and older */
-#define USB_VBUS_PORT	GPIOB
-#define USB_VBUS_PIN	GPIO13
+#define USB_VBUS_PORT GPIOB
+#define USB_VBUS_PIN  GPIO13
 /* IRQ stays the same for all hw revisions. */
-#define USB_VBUS_IRQ	NVIC_EXTI15_10_IRQ
+#define USB_VBUS_IRQ NVIC_EXTI15_10_IRQ
 
 /* For HW Rev 5 and newer */
-#define USB_VBUS5_PORT	GPIOA
-#define USB_VBUS5_PIN	GPIO15
+#define USB_VBUS5_PORT GPIOA
+#define USB_VBUS5_PIN  GPIO15
 
-#define LED_PORT	GPIOB
-#define LED_PORT_UART	GPIOB
-#define LED_0		GPIO2
-#define LED_1		GPIO10
-#define LED_2		GPIO11
-#define LED_UART	LED_0
-#define LED_IDLE_RUN	LED_1
-#define LED_ERROR	LED_2
+#define LED_PORT      GPIOB
+#define LED_PORT_UART GPIOB
+#define LED_0         GPIO2
+#define LED_1         GPIO10
+#define LED_2         GPIO11
+#define LED_UART      LED_0
+#define LED_IDLE_RUN  LED_1
+#define LED_ERROR     LED_2
 
 /* OTG Flash HW Rev 5 and newer */
-#define OTG_PORT       GPIOB
-#define OTG_CS         GPIO5
-#define OTG_SCLK       GPIO13
-#define OTG_COPI       GPIO15
-#define OTG_CIPO       GPIO14
+#define OTG_PORT GPIOB
+#define OTG_CS   GPIO5
+#define OTG_SCLK GPIO13
+#define OTG_COPI GPIO15
+#define OTG_CIPO GPIO14
 
 /* AUX Port HW Rev 5 and newer */
-#define AUX_PORT       GPIOB
-#define AUX_SCLK_PORT  AUX_PORT
-#define AUX_COPI_PORT  AUX_PORT
-#define AUX_CIPO_PORT  AUX_PORT
-#define AUX_FCS_PORT   AUX_PORT
-#define AUX_SDCS_PORT  AUX_PORT
-#define AUX_DCS_PORT   AUX_PORT
-#define AUX_DDC_PORT   AUX_PORT
-#define AUX_BTN1_PORT  AUX_PORT
-#define AUX_BTN2_PORT  AUX_PORT
-#define AUX_VBAT_PORT  GPIOA
-#define AUX_SCLK       GPIO13
-#define AUX_COPI       GPIO15
-#define AUX_CIPO       GPIO14
-#define AUX_FCS        GPIO5
-#define AUX_SDCS       GPIO6
-#define AUX_DCS        GPIO6
-#define AUX_DCS6       GPIO7
-#define AUX_DDC        GPIO8
-#define AUX_BTN1       GPIO12
-#define AUX_BTN2       GPIO9
-#define AUX_VBAT       GPIO0
+#define AUX_PORT      GPIOB
+#define AUX_SCLK_PORT AUX_PORT
+#define AUX_COPI_PORT AUX_PORT
+#define AUX_CIPO_PORT AUX_PORT
+#define AUX_FCS_PORT  AUX_PORT
+#define AUX_SDCS_PORT AUX_PORT
+#define AUX_DCS_PORT  AUX_PORT
+#define AUX_DDC_PORT  AUX_PORT
+#define AUX_BTN1_PORT AUX_PORT
+#define AUX_BTN2_PORT AUX_PORT
+#define AUX_VBAT_PORT GPIOA
+#define AUX_SCLK      GPIO13
+#define AUX_COPI      GPIO15
+#define AUX_CIPO      GPIO14
+#define AUX_FCS       GPIO5
+#define AUX_SDCS      GPIO6
+#define AUX_DCS       GPIO6
+#define AUX_DCS6      GPIO7
+#define AUX_DDC       GPIO8
+#define AUX_BTN1      GPIO12
+#define AUX_BTN2      GPIO9
+#define AUX_VBAT      GPIO0
 
 #define SWD_CR       GPIO_CRL(SWDIO_PORT)
 #define SWD_CR_SHIFT (4U << 2U)
@@ -228,54 +227,63 @@ extern bool debug_bmp;
 /* Interrupt priorities.  Low numbers are high priority.
  * TIM3 is used for traceswo capture and must be highest priority.
  */
-#define IRQ_PRI_USB             (1 << 4)
-#define IRQ_PRI_USBUSART        (2 << 4)
-#define IRQ_PRI_USBUSART_DMA 	(2 << 4)
-#define IRQ_PRI_USB_VBUS        (14 << 4)
-#define IRQ_PRI_TRACE           (0 << 4)
+#define IRQ_PRI_USB          (1 << 4)
+#define IRQ_PRI_USBUSART     (2 << 4)
+#define IRQ_PRI_USBUSART_DMA (2 << 4)
+#define IRQ_PRI_USB_VBUS     (14 << 4)
+#define IRQ_PRI_TRACE        (0 << 4)
 
-#define USBUSART HW_SWITCH(6, USBUSART1, USBUSART2)
-#define USBUSART_IRQ HW_SWITCH(6, NVIC_USART1_IRQ, NVIC_USART2_IRQ)
-#define USBUSART_CLK HW_SWITCH(6, RCC_USART1, RCC_USART2)
-#define USBUSART_PORT GPIOA
+#define USBUSART        HW_SWITCH(6, USBUSART1, USBUSART2)
+#define USBUSART_IRQ    HW_SWITCH(6, NVIC_USART1_IRQ, NVIC_USART2_IRQ)
+#define USBUSART_CLK    HW_SWITCH(6, RCC_USART1, RCC_USART2)
+#define USBUSART_PORT   GPIOA
 #define USBUSART_TX_PIN HW_SWITCH(6, GPIO9, GPIO2)
 #define USBUSART_RX_PIN HW_SWITCH(6, GPIO10, GPIO3)
 
-#define USBUSART_DMA_BUS DMA1
-#define USBUSART_DMA_CLK RCC_DMA1
+#define USBUSART_DMA_BUS     DMA1
+#define USBUSART_DMA_CLK     RCC_DMA1
 #define USBUSART_DMA_TX_CHAN HW_SWITCH(6, USBUSART1_DMA_TX_CHAN, USBUSART2_DMA_TX_CHAN)
 #define USBUSART_DMA_RX_CHAN HW_SWITCH(6, USBUSART1_DMA_RX_CHAN, USBUSART2_DMA_RX_CHAN)
-#define USBUSART_DMA_TX_IRQ HW_SWITCH(6, USBUSART1_DMA_TX_IRQ, USBUSART2_DMA_TX_IRQ)
-#define USBUSART_DMA_RX_IRQ HW_SWITCH(6, USBUSART1_DMA_RX_IRQ, USBUSART2_DMA_RX_IRQ)
+#define USBUSART_DMA_TX_IRQ  HW_SWITCH(6, USBUSART1_DMA_TX_IRQ, USBUSART2_DMA_TX_IRQ)
+#define USBUSART_DMA_RX_IRQ  HW_SWITCH(6, USBUSART1_DMA_RX_IRQ, USBUSART2_DMA_RX_IRQ)
 
-#define USBUSART1 USART1
-#define USBUSART1_IRQ NVIC_USART1_IRQ
-#define USBUSART1_ISR(x) usart1_isr(x)
-#define USBUSART1_DMA_TX_CHAN DMA_CHANNEL4
-#define USBUSART1_DMA_TX_IRQ NVIC_DMA1_CHANNEL4_IRQ
+#define USBUSART1               USART1
+#define USBUSART1_IRQ           NVIC_USART1_IRQ
+#define USBUSART1_ISR(x)        usart1_isr(x)
+#define USBUSART1_DMA_TX_CHAN   DMA_CHANNEL4
+#define USBUSART1_DMA_TX_IRQ    NVIC_DMA1_CHANNEL4_IRQ
 #define USBUSART1_DMA_TX_ISR(x) dma1_channel4_isr(x)
-#define USBUSART1_DMA_RX_CHAN DMA_CHANNEL5
-#define USBUSART1_DMA_RX_IRQ NVIC_DMA1_CHANNEL5_IRQ
+#define USBUSART1_DMA_RX_CHAN   DMA_CHANNEL5
+#define USBUSART1_DMA_RX_IRQ    NVIC_DMA1_CHANNEL5_IRQ
 #define USBUSART1_DMA_RX_ISR(x) dma1_channel5_isr(x)
 
-#define USBUSART2 USART2
-#define USBUSART2_IRQ NVIC_USART2_IRQ
-#define USBUSART2_ISR(x) usart2_isr(x)
-#define USBUSART2_DMA_TX_CHAN DMA_CHANNEL7
-#define USBUSART2_DMA_TX_IRQ NVIC_DMA1_CHANNEL7_IRQ
+#define USBUSART2               USART2
+#define USBUSART2_IRQ           NVIC_USART2_IRQ
+#define USBUSART2_ISR(x)        usart2_isr(x)
+#define USBUSART2_DMA_TX_CHAN   DMA_CHANNEL7
+#define USBUSART2_DMA_TX_IRQ    NVIC_DMA1_CHANNEL7_IRQ
 #define USBUSART2_DMA_TX_ISR(x) dma1_channel7_isr(x)
-#define USBUSART2_DMA_RX_CHAN DMA_CHANNEL6
-#define USBUSART2_DMA_RX_IRQ NVIC_DMA1_CHANNEL6_IRQ
+#define USBUSART2_DMA_RX_CHAN   DMA_CHANNEL6
+#define USBUSART2_DMA_RX_IRQ    NVIC_DMA1_CHANNEL6_IRQ
 #define USBUSART2_DMA_RX_ISR(x) dma1_channel6_isr(x)
 
-#define TRACE_TIM TIM3
+#define TRACE_TIM          TIM3
 #define TRACE_TIM_CLK_EN() rcc_periph_clock_enable(RCC_TIM3)
-#define TRACE_IRQ   NVIC_TIM3_IRQ
-#define TRACE_ISR(x)  tim3_isr(x)
+#define TRACE_IRQ          NVIC_TIM3_IRQ
+#define TRACE_ISR(x)       tim3_isr(x)
 
-#define SET_RUN_STATE(state)	{running_status = (state);}
-#define SET_IDLE_STATE(state)	{gpio_set_val(LED_PORT, LED_IDLE_RUN, state);}
-#define SET_ERROR_STATE(state)	{gpio_set_val(LED_PORT, LED_ERROR, state);}
+#define SET_RUN_STATE(state)      \
+	{                             \
+		running_status = (state); \
+	}
+#define SET_IDLE_STATE(state)                        \
+	{                                                \
+		gpio_set_val(LED_PORT, LED_IDLE_RUN, state); \
+	}
+#define SET_ERROR_STATE(state)                    \
+	{                                             \
+		gpio_set_val(LED_PORT, LED_ERROR, state); \
+	}
 
 /*
  * Use newlib provided integer only stdio functions
