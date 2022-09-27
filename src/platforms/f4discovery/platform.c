@@ -18,9 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file implements the platform specific functions for the STM32
- * implementation.
- */
+/* This file implements the platform specific functions for the F4 Discovery implementation. */
 
 #include "general.h"
 #include "usb.h"
@@ -38,25 +36,30 @@
 #include <libopencm3/cm3/cortex.h>
 
 jmp_buf fatal_error_jmpbuf;
-extern char _ebss[];
+extern uint32_t _ebss; // NOLINT(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
 
 void platform_init(void)
 {
-	volatile uint32_t *magic = (uint32_t *)_ebss;
+	volatile uint32_t *magic = &_ebss;
 	/* Enable GPIO peripherals */
 	rcc_periph_clock_enable(RCC_GPIOA);
 	rcc_periph_clock_enable(RCC_GPIOC);
 	rcc_periph_clock_enable(RCC_GPIOD);
 
-	/* Check the USER button*/
-	if (gpio_get(GPIOA, GPIO0) || ((magic[0] == BOOTMAGIC0) && (magic[1] == BOOTMAGIC1))) {
+	/* Check the USER button */
+	if (gpio_get(GPIOA, GPIO0) || (magic[0] == BOOTMAGIC0 && magic[1] == BOOTMAGIC1)) {
 		magic[0] = 0;
 		magic[1] = 0;
-		/* Assert blue LED as indicator we are in the bootloader */
+		/* Assert blue LED as indicator we are in the firmware */
 		gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED_BOOTLOADER);
 		gpio_set(LED_PORT, LED_BOOTLOADER);
-		/* Jump to the built in bootloader by mapping System flash.
-		   As we just come out of reset, no other deinit is needed!*/
+		/*
+		 * Jump to the built in bootloader by mapping System flash.
+		 * As we just come out of reset, no other deinit is needed!
+		 */
 		rcc_periph_clock_enable(RCC_SYSCFG);
 		SYSCFG_MEMRM &= ~3;
 		SYSCFG_MEMRM |= 1;
@@ -68,7 +71,7 @@ void platform_init(void)
 	rcc_periph_clock_enable(RCC_OTGFS);
 	rcc_periph_clock_enable(RCC_CRC);
 
-	/* Set up USB Pins and alternate function*/
+	/* Set up USB pins and alternate function */
 	gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO9 | GPIO11 | GPIO12);
 	gpio_set_af(GPIOA, GPIO_AF10, GPIO9 | GPIO10 | GPIO11 | GPIO12);
 
@@ -117,6 +120,8 @@ void platform_request_boot(void)
 	magic[1] = BOOTMAGIC1;
 	scb_reset_system();
 }
+
+#pragma GCC diagnostic pop
 
 #ifdef PLATFORM_HAS_POWER_SWITCH
 bool platform_target_get_power(void)
