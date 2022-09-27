@@ -31,7 +31,7 @@
 
 static volatile uint32_t head_out, tail_out;
 static volatile uint32_t count_in;
-static volatile uint8_t buffer_out[16*CDCACM_PACKET_SIZE];
+static volatile uint8_t buffer_out[16 * CDCACM_PACKET_SIZE];
 static volatile uint8_t buffer_in[CDCACM_PACKET_SIZE];
 
 void gdb_if_putchar(unsigned char c, int flush)
@@ -58,7 +58,7 @@ void gdb_usb_out_cb(usbd_device *dev, uint8_t ep)
 	usbd_ep_nak_set(dev, CDCACM_GDB_ENDPOINT, 1);
 	uint32_t count = usbd_ep_read_packet(dev, CDCACM_GDB_ENDPOINT, (uint8_t *)buf, CDCACM_PACKET_SIZE);
 
-	for (uint32_t idx = 0; idx < count; idx++)
+	for (uint32_t idx = 0; idx < count; ++idx)
 		buffer_out[head_out++ % sizeof(buffer_out)] = buf[idx];
 
 	usbd_ep_nak_set(dev, CDCACM_GDB_ENDPOINT, 0);
@@ -80,18 +80,17 @@ unsigned char gdb_if_getchar(void)
 
 unsigned char gdb_if_getchar_to(int timeout)
 {
-	platform_timeout t;
-	platform_timeout_set(&t, timeout);
+	platform_timeout receive_timeout;
+	platform_timeout_set(&receive_timeout, timeout);
 
-	if (head_out == tail_out)
-		do {
-			/* Detach if port closed */
-			if (!gdb_serial_get_dtr())
-				return 0x04;
+	while (head_out == tail_out && !platform_timeout_is_expired(&receive_timeout)) {
+		/* Detach if port closed */
+		if (!gdb_serial_get_dtr())
+			return 0x04;
 
-			while (usb_get_config() != 1)
-				continue;
-		} while (!platform_timeout_is_expired(&t) && head_out == tail_out);
+		while (usb_get_config() != 1)
+			continue;
+	}
 
 	if (head_out != tail_out)
 		return gdb_if_getchar();
