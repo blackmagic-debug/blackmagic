@@ -66,6 +66,7 @@ static void swdptap_turnaround(const swdio_status_t dir)
 }
 
 static uint32_t swdptap_seq_in_swd_delay(size_t clock_cycles) __attribute__((optimize(3)));
+
 static uint32_t swdptap_seq_in_swd_delay(const size_t clock_cycles)
 {
 	uint32_t value = 0;
@@ -83,6 +84,7 @@ static uint32_t swdptap_seq_in_swd_delay(const size_t clock_cycles)
 }
 
 static uint32_t swdptap_seq_in_no_delay(size_t clock_cycles) __attribute__((optimize(3)));
+
 static uint32_t swdptap_seq_in_no_delay(const size_t clock_cycles)
 {
 	uint32_t value = 0;
@@ -125,6 +127,7 @@ static bool swdptap_seq_in_parity(uint32_t *ret, size_t clock_cycles)
 }
 
 static void swdptap_seq_out_swd_delay(uint32_t tms_states, size_t clock_cycles) __attribute__((optimize(3)));
+
 static void swdptap_seq_out_swd_delay(const uint32_t tms_states, const size_t clock_cycles)
 {
 	for (size_t cycle = 0; cycle < clock_cycles; ++cycle) {
@@ -140,6 +143,7 @@ static void swdptap_seq_out_swd_delay(const uint32_t tms_states, const size_t cl
 }
 
 static void swdptap_seq_out_no_delay(uint32_t tms_states, size_t clock_cycles) __attribute__((optimize(3)));
+
 static void swdptap_seq_out_no_delay(const uint32_t tms_states, const size_t clock_cycles)
 {
 	for (size_t cycle = 0; cycle < clock_cycles; ++cycle) {
