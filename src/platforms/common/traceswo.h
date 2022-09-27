@@ -17,6 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 #ifndef PLATFORMS_COMMON_TRACESWO_H
 #define PLATFORMS_COMMON_TRACESWO_H
 
@@ -32,10 +33,10 @@ void traceswo_init(uint32_t swo_chan_bitmask);
 
 void trace_buf_drain(usbd_device *dev, uint8_t ep);
 
-/* set bitmask of swo channels to be decoded */
+/* Set bitmask of SWO channels to be decoded */
 void traceswo_setmask(uint32_t mask);
 
-/* print decoded swo packet on usb serial */
+/* Print decoded SWO packet on USB serial */
 uint16_t traceswo_decode(usbd_device *usbd_dev, uint8_t addr, const void *buf, uint16_t len);
 
 #endif /* PLATFORMS_COMMON_TRACESWO_H */

@@ -22,32 +22,33 @@
 #include <libopencm3/stm32/flash.h>
 #include <libopencm3/cm3/scb.h>
 
-#define FLASH_OBP_RDP   0x1FFFF800
-#define FLASH_OBP_WRP10 0x1FFFF808
+#define FLASH_OBP_RDP   0x1ffff800U
+#define FLASH_OBP_WRP10 0x1ffff808U
 
-#define FLASH_OBP_RDP_KEY 0x5aa5
+#define FLASH_OBP_RDP_KEY 0x5aa5U
 
 #if defined(STM32_CAN)
-#define FLASHBLOCKSIZE 2048
+#define FLASHBLOCKSIZE 2048U
 #else
-#define FLASHBLOCKSIZE 1024
+#define FLASHBLOCKSIZE 1024U
 #endif
 
-static uint32_t last_erased_page = 0xffffffff;
+static uint32_t last_erased_page = 0xffffffffU;
 
 void dfu_check_and_do_sector_erase(uint32_t sector)
 {
-	sector &= (~(FLASHBLOCKSIZE - 1));
+	sector &= ~(FLASHBLOCKSIZE - 1);
 	if (sector != last_erased_page) {
 		flash_erase_page(sector);
 		last_erased_page = sector;
 	}
 }
 
-void dfu_flash_program_buffer(uint32_t baseaddr, void *buf, int len)
+void dfu_flash_program_buffer(const uint32_t baseaddr, const void *const buf, const size_t len)
 {
-	for (int i = 0; i < len; i += 2)
-		flash_program_half_word(baseaddr + i, *(uint16_t *)(buf + i));
+	const uint16_t *const buffer = (const uint16_t *)buf;
+	for (size_t i = 0; i < len; i += 2U)
+		flash_program_half_word(baseaddr + i, buffer[i >> 1U]);
 
 	/* Call the platform specific dfu event callback. */
 	dfu_event();
@@ -63,20 +64,23 @@ uint32_t dfu_poll_timeout(uint8_t cmd, uint32_t addr, uint16_t blocknum)
 
 void dfu_protect(bool enable)
 {
-	if (enable) {
 #ifdef DFU_SELF_PROTECT
-		if ((FLASH_WRPR & 0x03) != 0x00) {
+	if (enable) {
+		if (FLASH_WRPR & 0x03) {
 			flash_unlock();
 			FLASH_CR = 0;
 			flash_erase_option_bytes();
 			flash_program_option_bytes(FLASH_OBP_RDP, FLASH_OBP_RDP_KEY);
-			/* CL Device: Protect 2 bits with (2 * 2k pages each)*/
-			/* MD Device: Protect 2 bits with (4 * 1k pages each)*/
+			/* CL Device: Protect 2 bits with (2 * 2k pages each) */
+			/* MD Device: Protect 2 bits with (4 * 1k pages each) */
 			flash_program_option_bytes(FLASH_OBP_WRP10, 0x03FC);
 		}
-#endif
 	}
-	/* There is no way we can update the bootloader with a programm running
+#else
+	(void)enable;
+#endif
+	/*
+	 * There is no way we can update the bootloader with a programm running
 	 * on the same device when the bootloader pages are write
 	 * protected or the device is read protected!
 	 *
@@ -88,7 +92,7 @@ void dfu_protect(bool enable)
 	 * erase, crashing the update (PM0075, 2.4.2, Unprotection, Case 1).
      */
 #if 0
-    else if ((mode == UPD_MODE) && ((FLASH_WRPR & 0x03) != 0x03)) {
+    else if (mode == UPD_MODE && (FLASH_WRPR & 0x03) != 0x03) {
 		flash_unlock();
 		FLASH_CR = 0;
 		flash_erase_option_bytes();
@@ -99,13 +103,24 @@ void dfu_protect(bool enable)
 
 void dfu_jump_app_if_valid(void)
 {
+	const uint32_t stack_pointer = *((uint32_t *)app_address);
 	/* Boot the application if it's valid */
-	if ((*(volatile uint32_t *)app_address & 0x2FFE0000) == 0x20000000) {
-		/* Set vector table base address */
-		SCB_VTOR = app_address & 0x1FFFFF; /* Max 2 MByte Flash*/
-		/* Initialise master stack pointer */
-		__asm__ volatile("msr msp, %0" ::"g"(*(volatile uint32_t *)app_address));
-		/* Jump to application */
-		(*(void (**)())(app_address + 4))();
+	if ((stack_pointer & 0x2ffe0000) == 0x20000000) {
+		/*
+		 * Set vector table base address
+		 * Max 2MiB Flash
+		 * XXX: Does this not want to be a direct assignment of `app_address`? This seems wrong.
+		 */
+		SCB_VTOR = app_address & 0x001fffffU;
+		/* clang-format off */
+		__asm__(
+			"msr msp, %1\n"     /* Load the system stack register with the new stack pointer */
+			"ldr pc, [%0, 4]\n" /* Jump to application */
+			: : "g"(app_address), "g"(stack_pointer) : "r0"
+		);
+		/* clang-format on */
+
+		while (true)
+			continue;
 	}
 }

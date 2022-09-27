@@ -20,8 +20,11 @@
 #ifndef PLATFORMS_STM32_TIMING_STM32_H
 #define PLATFORMS_STM32_TIMING_STM32_H
 
+#include <stdint.h>
+#include <stdbool.h>
+
 extern uint32_t swd_delay_cnt;
-extern uint8_t running_status;
+extern bool running_status;
 
 void platform_timing_init(void);
 

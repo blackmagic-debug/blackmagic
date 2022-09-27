@@ -18,16 +18,17 @@
  * along with this program.	 If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file implements capture of the TRACESWO output using ASYNC signalling.
+/*
+ * This file implements capture of the Trace/SWO output using async signalling.
  *
  * ARM DDI 0403D - ARMv7M Architecture Reference Manual
  * ARM DDI 0337I - Cortex-M3 Technical Reference Manual
  * ARM DDI 0314H - CoreSight Components Technical Reference Manual
  */
 
-/* TDO/TRACESWO signal comes into the SWOUSART RX pin.
- */
+/* TDO/TRACESWO signal comes into the SWOUSART RX pin. */
 
+#include <stdatomic.h>
 #include "general.h"
 #include "usb.h"
 #include "traceswo.h"
@@ -42,8 +43,8 @@
 /* For speed this is set to the USB transfer size */
 #define FULL_SWO_PACKET (64)
 
-static volatile uint32_t w; /* Packet currently received via UART */
-static volatile uint32_t r; /* Packet currently waiting to transmit to USB */
+static volatile uint32_t write_index; /* Packet currently received via UART */
+static volatile uint32_t read_index;  /* Packet currently waiting to transmit to USB */
 /* Packets arrived from the SWO interface */
 static uint8_t trace_rx_buf[NUM_TRACE_PACKETS * FULL_SWO_PACKET];
 /* Packet pingpong buffer used for receiving packets */
@@ -53,24 +54,25 @@ static bool decoding = false;
 
 void trace_buf_drain(usbd_device *dev, uint8_t ep)
 {
-	static volatile char inBufDrain;
+	static atomic_flag reentry_flag = ATOMIC_FLAG_INIT;
 
 	/* If we are already in this routine then we don't need to come in again */
-	if (__atomic_test_and_set(&inBufDrain, __ATOMIC_RELAXED))
+	if (atomic_flag_test_and_set_explicit(&reentry_flag, memory_order_relaxed))
 		return;
 	/* Attempt to write everything we buffered */
-	if (w != r) {
-		uint16_t rc;
+	if (write_index != read_index) {
+		uint16_t result;
 		if (decoding)
 			/* write decoded swo packets to the uart port */
-			rc = traceswo_decode(dev, CDCACM_UART_ENDPOINT, &trace_rx_buf[r * FULL_SWO_PACKET], FULL_SWO_PACKET);
+			result = traceswo_decode(
+				dev, CDCACM_UART_ENDPOINT, &trace_rx_buf[read_index * FULL_SWO_PACKET], FULL_SWO_PACKET);
 		else
 			/* write raw swo packets to the trace port */
-			rc = usbd_ep_write_packet(dev, ep, &trace_rx_buf[r * FULL_SWO_PACKET], FULL_SWO_PACKET);
-		if (rc)
-			r = (r + 1) % NUM_TRACE_PACKETS;
+			result = usbd_ep_write_packet(dev, ep, &trace_rx_buf[read_index * FULL_SWO_PACKET], FULL_SWO_PACKET);
+		if (result)
+			read_index = (read_index + 1) % NUM_TRACE_PACKETS;
 	}
-	__atomic_clear(&inBufDrain, __ATOMIC_RELAXED);
+	atomic_flag_clear_explicit(&reentry_flag, memory_order_relaxed);
 }
 
 void traceswo_setspeed(uint32_t baudrate)
@@ -84,7 +86,7 @@ void traceswo_setspeed(uint32_t baudrate)
 	usart_set_parity(SWO_UART, USART_PARITY_NONE);
 	usart_set_flow_control(SWO_UART, USART_FLOWCONTROL_NONE);
 
-	/* Set up DMA channel*/
+	/* Set up DMA channel */
 	dma_channel_reset(SWO_DMA_BUS, SWO_DMA_CHAN);
 	dma_set_peripheral_address(SWO_DMA_BUS, SWO_DMA_CHAN, (uint32_t)&SWO_UART_DR);
 	dma_set_read_from_peripheral(SWO_DMA_BUS, SWO_DMA_CHAN);
@@ -98,7 +100,7 @@ void traceswo_setspeed(uint32_t baudrate)
 
 	usart_enable(SWO_UART);
 	nvic_enable_irq(SWO_DMA_IRQ);
-	w = r = 0;
+	write_index = read_index = 0;
 	dma_set_memory_address(SWO_DMA_BUS, SWO_DMA_CHAN, (uint32_t)pingpong_buf);
 	dma_set_number_of_data(SWO_DMA_BUS, SWO_DMA_CHAN, 2 * FULL_SWO_PACKET);
 	dma_enable_channel(SWO_DMA_BUS, SWO_DMA_CHAN);
@@ -109,14 +111,14 @@ void SWO_DMA_ISR(void)
 {
 	if (DMA_ISR(SWO_DMA_BUS) & DMA_ISR_HTIF(SWO_DMA_CHAN)) {
 		DMA_IFCR(SWO_DMA_BUS) |= DMA_ISR_HTIF(SWO_DMA_CHAN);
-		memcpy(&trace_rx_buf[w * FULL_SWO_PACKET], pingpong_buf, FULL_SWO_PACKET);
+		memcpy(&trace_rx_buf[write_index * FULL_SWO_PACKET], pingpong_buf, FULL_SWO_PACKET);
 	}
 	if (DMA_ISR(SWO_DMA_BUS) & DMA_ISR_TCIF(SWO_DMA_CHAN)) {
 		DMA_IFCR(SWO_DMA_BUS) |= DMA_ISR_TCIF(SWO_DMA_CHAN);
-		memcpy(&trace_rx_buf[w * FULL_SWO_PACKET], &pingpong_buf[FULL_SWO_PACKET], FULL_SWO_PACKET);
+		memcpy(&trace_rx_buf[write_index * FULL_SWO_PACKET], &pingpong_buf[FULL_SWO_PACKET], FULL_SWO_PACKET);
 	}
-	w = (w + 1) % NUM_TRACE_PACKETS;
-	trace_buf_drain(usbdev, 0x85);
+	write_index = (write_index + 1) % NUM_TRACE_PACKETS;
+	trace_buf_drain(usbdev, TRACE_ENDPOINT | USB_REQ_TYPE_IN);
 }
 
 void traceswo_init(uint32_t baudrate, uint32_t swo_chan_bitmask)
@@ -128,7 +130,7 @@ void traceswo_init(uint32_t baudrate, uint32_t swo_chan_bitmask)
 	rcc_periph_clock_enable(SWO_DMA_CLK);
 
 	gpio_set_mode(SWO_UART_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, SWO_UART_RX_PIN);
-	/* Pull SWO pin high to keep open SWO line ind uart idle state!*/
+	/* Pull SWO pin high to keep open SWO line ind uart idle state! */
 	gpio_set(SWO_UART_PORT, SWO_UART_RX_PIN);
 	nvic_set_priority(SWO_DMA_IRQ, IRQ_PRI_SWO_DMA);
 	nvic_enable_irq(SWO_DMA_IRQ);
