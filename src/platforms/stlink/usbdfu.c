@@ -37,8 +37,7 @@ uint32_t app_address = 0x08002000;
 static bool stlink_test_nrst(void)
 {
 	uint16_t nrst;
-	gpio_set_mode(GPIOB, GPIO_MODE_INPUT,
-	              GPIO_CNF_INPUT_PULL_UPDOWN, pin_nrst);
+	gpio_set_mode(GPIOB, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, pin_nrst);
 	gpio_set(GPIOB, pin_nrst);
 	for (int i = 0; i < 10000; i++)
 		nrst = gpio_get(GPIOB, pin_nrst);
@@ -61,14 +60,13 @@ int main(void)
 		pin_nrst = GPIO0;
 	}
 
-	if(((GPIOA_CRL & 0x40) == 0x40) && stlink_test_nrst())
+	if (((GPIOA_CRL & 0x40) == 0x40) && stlink_test_nrst())
 		dfu_jump_app_if_valid();
 	dfu_protect(false);
 
 	rcc_clock_setup_pll(&rcc_hse_configs[RCC_CLOCK_HSE8_72MHZ]);
 	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
 	systick_set_reload(900000);
-
 
 	systick_interrupt_enable();
 	systick_counter_enable();
@@ -90,12 +88,10 @@ void sys_tick_handler(void)
 		gpio_toggle(GPIOA, led_bootloader);
 	} else {
 		if (led2_state & 1) {
-			gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
-				GPIO_CNF_OUTPUT_PUSHPULL, led_bootloader);
+			gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, led_bootloader);
 			gpio_clear(GPIOA, led_bootloader);
 		} else {
-			gpio_set_mode(GPIOA, GPIO_MODE_INPUT,
-				GPIO_CNF_INPUT_ANALOG, led_bootloader);
+			gpio_set_mode(GPIOA, GPIO_MODE_INPUT, GPIO_CNF_INPUT_ANALOG, led_bootloader);
 		}
 		led2_state++;
 	}
