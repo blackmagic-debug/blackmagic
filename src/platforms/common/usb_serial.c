@@ -140,7 +140,7 @@ static enum usbd_request_return_codes debug_serial_control_request(usbd_device *
 void usb_serial_set_state(usbd_device *const dev, const uint16_t iface, const uint8_t ep)
 {
 	uint8_t buf[10];
-	struct usb_cdc_notification *notif = (void*)buf;
+	struct usb_cdc_notification *notif = (void *)buf;
 	/* We echo signals back to host as notification */
 	notif->bmRequestType = 0xA1;
 	notif->bNotification = USB_CDC_NOTIFY_SERIAL_STATE;
@@ -166,9 +166,10 @@ void usb_serial_set_config(usbd_device *dev, uint16_t value)
 	usbd_ep_setup(dev, (CDCACM_GDB_ENDPOINT + 1) | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
 
 	/* Serial interface */
-	usbd_ep_setup(dev, CDCACM_UART_ENDPOINT, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE / 2, debug_serial_receive_callback);
 	usbd_ep_setup(
-		dev, CDCACM_UART_ENDPOINT | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE, debug_serial_send_callback);
+		dev, CDCACM_UART_ENDPOINT, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE / 2, debug_serial_receive_callback);
+	usbd_ep_setup(dev, CDCACM_UART_ENDPOINT | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE,
+		debug_serial_send_callback);
 	usbd_ep_setup(dev, (CDCACM_UART_ENDPOINT + 1) | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
 
 #ifdef PLATFORM_HAS_TRACESWO
@@ -245,7 +246,7 @@ static void debug_serial_send_data(void)
 #if defined(ENABLE_DEBUG) && defined(PLATFORM_HAS_DEBUG)
 									 && debug_serial_fifo_buffer_empty()
 #endif
-	)) {
+										 )) {
 #if defined(ENABLE_DEBUG) && defined(PLATFORM_HAS_DEBUG)
 		debug_serial_debug_read_index = debug_serial_debug_write_index;
 #endif
@@ -253,7 +254,8 @@ static void debug_serial_send_data(void)
 		debug_serial_send_complete = true;
 	} else {
 #if defined(ENABLE_DEBUG) && defined(PLATFORM_HAS_DEBUG)
-		debug_serial_debug_read_index = debug_serial_fifo_send(debug_serial_debug_buffer, debug_serial_debug_read_index, debug_serial_debug_write_index);
+		debug_serial_debug_read_index = debug_serial_fifo_send(
+			debug_serial_debug_buffer, debug_serial_debug_read_index, debug_serial_debug_write_index);
 #endif
 		aux_serial_stage_receive_buffer();
 	}
@@ -274,8 +276,8 @@ void debug_serial_run(void)
 
 static void debug_serial_send_callback(usbd_device *dev, uint8_t ep)
 {
-	(void) ep;
-	(void) dev;
+	(void)ep;
+	(void)dev;
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
 	debug_serial_send_data();
 #endif
@@ -399,10 +401,7 @@ void debug_monitor_handler(void) __attribute__((used)) __attribute__((naked));
 void debug_monitor_handler(void)
 {
 	ex_frame_s *frame;
-	__asm__(
-		"mov %[frame], sp" :
-		[frame] "=r" (frame)
-	);
+	__asm__("mov %[frame], sp" : [frame] "=r"(frame));
 
 	/* Make sure to return to the instruction after the SWI/BKPT */
 	frame->return_address += 2U;
