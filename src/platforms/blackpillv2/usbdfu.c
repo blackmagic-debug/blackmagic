@@ -28,16 +28,19 @@
 #include "platform.h"
 
 uint32_t app_address = 0x08004000U;
-extern char _ebss[];
+extern uint32_t _ebss; // NOLINT(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)
 
 void dfu_detach(void)
 {
 	scb_reset_system();
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
+
 int main(void)
 {
-	volatile uint32_t *magic = (uint32_t *)_ebss;
+	volatile uint32_t *magic = (uint32_t *)&_ebss;
 	rcc_periph_clock_enable(RCC_GPIOA);
 
 #pragma GCC diagnostic push
@@ -67,6 +70,8 @@ int main(void)
 	dfu_init(&USB_DRIVER);
 	dfu_main();
 }
+
+#pragma GCC diagnostic pop
 
 void dfu_event(void)
 {
