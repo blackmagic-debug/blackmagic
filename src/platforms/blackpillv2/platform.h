@@ -18,9 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file implements the platform specific functions for the STM32
- * implementation.
- */
+/* This file provides the platform specific declarations for the Blackpillv2 implementation. */
 
 #ifndef PLATFORMS_BLACKPILLV2_PLATFORM_H
 #define PLATFORMS_BLACKPILLV2_PLATFORM_H
@@ -33,20 +31,21 @@
 
 #define PLATFORM_HAS_TRACESWO
 #define PLATFORM_IDENT "(BlackPillV2) "
-/* Important pin mappings for STM32 implementation:
-        * JTAG/SWD
-                * PA1: TDI
-                * PA13: TMS/SWDIO
-                * PA14: TCK/SWCLK
-                * PB3: TDO/TRACESWO
-                * PB5: TRST
-                * PB4: nRST
-        * USB USART
-                * PB6: USART1 TX
-                * PB7: USART1 RX
-        * +3V3
-                * PB8 - turn on IRLML5103 transistor
-        * Force DFU mode button: PA0
+/*
+ * Important pin mappings for STM32 implementation:
+ *   * JTAG/SWD
+ *     * PA1: TDI
+ *     * PA13: TMS/SWDIO
+ *     * PA14: TCK/SWCLK
+ *     * PB3: TDO/TRACESWO
+ *     * PB5: TRST
+ *     * PB4: nRST
+ *   * USB USART
+ *     * PB6: USART1 TX
+ *     * PB7: USART1 RX
+ *   * +3V3
+ *     * PB8 - turn on IRLML5103 transistor
+ *   * Force DFU mode button: PA0
  */
 
 /* Hardware definitions... */
@@ -120,7 +119,8 @@
 #define USB_DRIVER stm32f107_usb_driver
 #define USB_IRQ    NVIC_OTG_FS_IRQ
 #define USB_ISR(x) otg_fs_isr(x)
-/* Interrupt priorities.  Low numbers are high priority.
+/*
+ * Interrupt priorities.  Low numbers are high priority.
  * TIM3 is used for traceswo capture and must be highest priority.
  */
 #define IRQ_PRI_USB          (1 << 4)
@@ -132,14 +132,6 @@
 #define TRACE_TIM_CLK_EN() rcc_periph_clock_enable(RCC_TIM3)
 #define TRACE_IRQ          NVIC_TIM3_IRQ
 #define TRACE_ISR(x)       tim3_isr(x)
-
-#define gpio_set_val(port, pin, val)   \
-	do {                               \
-		if (val)                       \
-			gpio_set((port), (pin));   \
-		else                           \
-			gpio_clear((port), (pin)); \
-	} while (0)
 
 #define SET_RUN_STATE(state)      \
 	{                             \
@@ -159,37 +151,26 @@ static inline int platform_hwversion(void)
 	return 0;
 }
 
-/*
- * Use newlib provided integer only stdio functions
- */
+/* Use newlib provided integer-only stdio functions */
 
-/* sscanf */
 #ifdef sscanf
 #undef sscanf
-#define sscanf siscanf
-#else
-#define sscanf siscanf
 #endif
-/* sprintf */
+#define sscanf siscanf
+
 #ifdef sprintf
 #undef sprintf
-#define sprintf siprintf
-#else
-#define sprintf siprintf
 #endif
-/* vasprintf */
+#define sprintf siprintf
+
 #ifdef vasprintf
 #undef vasprintf
-#define vasprintf vasiprintf
-#else
-#define vasprintf vasiprintf
 #endif
-/* snprintf */
+#define vasprintf vasiprintf
+
 #ifdef snprintf
 #undef snprintf
-#define snprintf sniprintf
-#else
-#define snprintf sniprintf
 #endif
+#define snprintf sniprintf
 
 #endif /* PLATFORMS_BLACKPILLV2_PLATFORM_H */
