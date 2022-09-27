@@ -120,6 +120,7 @@ void platform_request_boot(void)
 	magic[1] = BOOTMAGIC1;
 	scb_reset_system();
 }
+#pragma GCC diagnostic pop
 
 #pragma GCC diagnostic pop
 
