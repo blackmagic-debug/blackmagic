@@ -42,16 +42,14 @@ uint32_t detect_rev(void)
 	 *  00 for ST-Link V2, e.g. on F4 Discovery, tag as rev 1
 	 *  01 for ST-Link V2, else,                 tag as rev 1
 	 */
-	gpio_set_mode(GPIOC, GPIO_MODE_INPUT,
-				  GPIO_CNF_INPUT_PULL_UPDOWN, GPIO14 | GPIO13);
+	gpio_set_mode(GPIOC, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, GPIO14 | GPIO13);
 	gpio_set(GPIOC, GPIO14 | GPIO13);
-	gpio_set_mode(GPIOB, GPIO_MODE_INPUT,
-				  GPIO_CNF_INPUT_PULL_UPDOWN, GPIO11);
+	gpio_set_mode(GPIOB, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, GPIO11);
 	gpio_clear(GPIOB, GPIO11);
-	for (int i = 0; i < 100; i ++)
+	for (int i = 0; i < 100; i++)
 		res = gpio_get(GPIOC, GPIO13);
 	if (res)
-		rev = (gpio_get(GPIOB, GPIO11))? 1 : 0;
+		rev = (gpio_get(GPIOB, GPIO11)) ? 1 : 0;
 	else {
 		/* Check for V2.1 boards.
 		 * PA15/TDI is USE_RENUM, pulled with 10 k to U5V on V2.1,
@@ -59,20 +57,17 @@ uint32_t detect_rev(void)
 		 * it is V2.1.*/
 		rcc_periph_clock_enable(RCC_AFIO);
 		AFIO_MAPR |= 0x02000000; /* Release from TDI.*/
-		gpio_set_mode(GPIOA, GPIO_MODE_INPUT,
-                                 GPIO_CNF_INPUT_PULL_UPDOWN, GPIO15);
+		gpio_set_mode(GPIOA, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, GPIO15);
 		gpio_clear(GPIOA, GPIO15);
 		for (int i = 0; i < 100; i++)
-			res =  gpio_get(GPIOA, GPIO15);
+			res = gpio_get(GPIOA, GPIO15);
 		if (res) {
 			rev = 2;
 			/* Pull PWR_ENn low.*/
-			gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ,
-						  GPIO_CNF_OUTPUT_OPENDRAIN, GPIO15);
+			gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_OPENDRAIN, GPIO15);
 			gpio_clear(GPIOB, GPIO15);
 			/* Pull USB_RENUM low!*/
-			gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
-						  GPIO_CNF_OUTPUT_OPENDRAIN, GPIO15);
+			gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_OPENDRAIN, GPIO15);
 			gpio_clear(GPIOA, GPIO15);
 		} else
 			/* Catch F4 Disco board with both resistors fitted.*/
@@ -80,13 +75,11 @@ uint32_t detect_rev(void)
 		/* On Rev > 0 unconditionally activate MCO on PORTA8 with HSE! */
 		RCC_CFGR &= ~(0xf << 24);
 		RCC_CFGR |= (RCC_CFGR_MCO_HSE << 24);
-		gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ,
-		GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO8);
+		gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO8);
 	}
 	if (rev < 2) {
 		gpio_clear(GPIOA, GPIO12);
-		gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
-					  GPIO_CNF_OUTPUT_OPENDRAIN, GPIO12);
+		gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_OPENDRAIN, GPIO12);
 	}
 	return rev;
 }
