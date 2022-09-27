@@ -18,9 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file implements the platform specific functions for the STM32
- * implementation.
- */
+/* This file provides the platform specific declarations for the 96Boards Carbon implementation. */
 
 #ifndef PLATFORMS_96B_CARBON_PLATFORM_H
 #define PLATFORMS_96B_CARBON_PLATFORM_H
@@ -35,7 +33,8 @@
 #define PLATFORM_HAS_TRACESWO
 #define PLATFORM_IDENT "(Carbon)"
 
-/* Important pin mappings for Carbon implementation:
+/*
+ * Important pin mappings for Carbon implementation:
  *
  * LED0 = 	   PA15 (Green USR2 : Idle))
  * LED1 = 	   PD5  (Green USR1 : UART)
@@ -87,7 +86,8 @@
 #define USB_DRIVER otgfs_usb_driver
 #define USB_IRQ    NVIC_OTG_FS_IRQ
 #define USB_ISR    otg_fs_isr
-/* Interrupt priorities. Low numbers are high priority.
+/*
+ * Interrupt priorities. Low numbers are high priority.
  * TIM3 is used for traceswo capture and must be highest priority.
  * USBUSART can be lowest priority as it is using DMA to transfer
  * data to the buffer and thus is less critical than USB.
@@ -130,15 +130,9 @@
 #define TRACE_IRQ          NVIC_TIM3_IRQ
 #define TRACE_ISR(x)       tim3_isr(x)
 
-#define DEBUG(...)
-
-#define gpio_set_val(port, pin, val)   \
-	do {                               \
-		if (val)                       \
-			gpio_set((port), (pin));   \
-		else                           \
-			gpio_clear((port), (pin)); \
-	} while (0)
+#define DEBUG(...) \
+	do {           \
+	} while (false)
 
 #define SET_RUN_STATE(state)      \
 	{                             \
@@ -158,10 +152,26 @@ static inline int platform_hwversion(void)
 	return 0;
 }
 
-/* Use newlib provided integer only stdio functions */
-#define sscanf    siscanf
-#define sprintf   siprintf
+/* Use newlib provided integer-only stdio functions */
+
+#ifdef sscanf
+#undef sscanf
+#endif
+#define sscanf siscanf
+
+#ifdef sprintf
+#undef sprintf
+#endif
+#define sprintf siprintf
+
+#ifdef vasprintf
+#undef vasprintf
+#endif
 #define vasprintf vasiprintf
-#define snprintf  sniprintf
+
+#ifdef snprintf
+#undef snprintf
+#endif
+#define snprintf sniprintf
 
 #endif /* PLATFORMS_96B_CARBON_PLATFORM_H */
