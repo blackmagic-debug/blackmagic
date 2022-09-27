@@ -18,9 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file implements the platform specific functions for the STM32
- * implementation.
- */
+/* This file implements the platform specific functions for the Hydrabus implementation. */
 
 #include "general.h"
 #include "usb.h"
@@ -39,7 +37,7 @@ jmp_buf fatal_error_jmpbuf;
 
 void platform_init(void)
 {
-	/* Check the USER button*/
+	/* Check the USER button */
 	rcc_peripheral_enable_clock(&RCC_AHB1ENR, RCC_AHB1ENR_IOPAEN);
 	if (gpio_get(GPIOA, GPIO0)) {
 		platform_request_boot();
@@ -54,7 +52,7 @@ void platform_init(void)
 	rcc_peripheral_enable_clock(&RCC_AHB1ENR, RCC_AHB1ENR_IOPDEN);
 	rcc_peripheral_enable_clock(&RCC_AHB1ENR, RCC_AHB1ENR_CRCEN);
 
-	/* Set up USB Pins and alternate function*/
+	/* Set up USB Pins and alternate function */
 	gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO9 | GPIO11 | GPIO12);
 	gpio_set_af(GPIOA, GPIO_AF10, GPIO9 | GPIO11 | GPIO12);
 
