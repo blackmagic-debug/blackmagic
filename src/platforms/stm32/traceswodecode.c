@@ -35,8 +35,9 @@ uint16_t traceswo_decode(usbd_device *usbd_dev, uint8_t addr, const void *buf, u
 {
 	if (usbd_dev == NULL)
 		return 0;
-	for (int i = 0; i < len; i++) {
-		uint8_t ch = ((uint8_t *)buf)[i];
+	const uint8_t *const data = (const uint8_t *)buf;
+	for (uint16_t i = 0; i < len; i++) {
+		const uint8_t ch = data[i];
 		if (swo_pkt_len == 0) {                   /* header */
 			uint32_t channel = (uint32_t)ch >> 3; /* channel number */
 			uint32_t size = ch & 0x7;             /* drop channel number */

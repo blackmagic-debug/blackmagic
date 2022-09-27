@@ -22,53 +22,53 @@
 #define PLATFORMS_STM32_GPIO_H
 
 #include <libopencm3/cm3/common.h>
-
 #include <libopencm3/stm32/memorymap.h>
 #include <libopencm3/stm32/gpio.h>
 
-#define INLINE_GPIO
-
-#define gpio_set_val(port, pin, val)   \
-	do {                               \
-		if (val)                       \
-			gpio_set((port), (pin));   \
-		else                           \
-			gpio_clear((port), (pin)); \
-	} while (0)
-
-#ifdef INLINE_GPIO
-static inline void _gpio_set(uint32_t gpioport, uint16_t gpios)
+static inline void bmp_gpio_set(const uint32_t gpioport, const uint16_t gpios)
 {
+	/* NOLINTNEXTLINE(clang-diagnostic-int-to-pointer-cast) */
 	GPIO_BSRR(gpioport) = gpios;
 #ifdef STM32F4
 	/* FIXME: Check if doubling is still needed */
+	/* NOLINTNEXTLINE(clang-diagnostic-int-to-pointer-cast) */
 	GPIO_BSRR(gpioport) = gpios;
 #endif
 }
 
-#define gpio_set _gpio_set
+#define gpio_set bmp_gpio_set
 
-static inline void _gpio_clear(uint32_t gpioport, uint16_t gpios)
+static inline void bmp_gpio_clear(const uint32_t gpioport, const uint16_t gpios)
 {
-#if defined(STM32F4)
-	GPIO_BSRR(gpioport) = gpios << 16;
-	/* FIXME: Check if doubling is still needed */
-	GPIO_BSRR(gpioport) = gpios << 16;
-#elif defined(GPIO_BRR)
+#ifdef GPIO_BRR
+	/* NOLINTNEXTLINE(clang-diagnostic-int-to-pointer-cast) */
 	GPIO_BRR(gpioport) = gpios;
 #else
-	GPIO_BSRR(gpioport) = gpios << 16;
+#ifdef STM32F4
+	/* NOLINTNEXTLINE(clang-diagnostic-int-to-pointer-cast) */
+	GPIO_BSRR(gpioport) = gpios << 16U;
+#endif
+	/* NOLINTNEXTLINE(clang-diagnostic-int-to-pointer-cast) */
+	GPIO_BSRR(gpioport) = gpios << 16U;
 #endif
 }
 
-#define gpio_clear _gpio_clear
+#define gpio_clear bmp_gpio_clear
 
-static inline uint16_t _gpio_get(uint32_t gpioport, uint16_t gpios)
+static inline uint16_t bmp_gpio_get(const uint32_t gpioport, const uint16_t gpios)
 {
-	return (uint16_t)GPIO_IDR(gpioport) & gpios;
+	/* NOLINTNEXTLINE(clang-diagnostic-int-to-pointer-cast) */
+	return GPIO_IDR(gpioport) & gpios;
 }
 
-#define gpio_get _gpio_get
-#endif
+#define gpio_get bmp_gpio_get
+
+static inline void gpio_set_val(const uint32_t gpioport, const uint16_t gpios, const bool val)
+{
+	if (val)
+		gpio_set(gpioport, gpios);
+	else
+		gpio_clear(gpioport, gpios);
+}
 
 #endif /* PLATFORMS_STM32_GPIO_H */

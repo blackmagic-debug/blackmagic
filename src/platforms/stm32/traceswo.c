@@ -42,6 +42,9 @@
 /* SWO decoding */
 static bool decoding = false;
 
+static uint8_t trace_usb_buf[64];
+static uint8_t trace_usb_buf_size;
+
 void traceswo_init(uint32_t swo_chan_bitmask)
 {
 	TRACE_TIM_CLK_EN();
@@ -81,9 +84,6 @@ void traceswo_init(uint32_t swo_chan_bitmask)
 	decoding = (swo_chan_bitmask != 0);
 }
 
-static uint8_t trace_usb_buf[64];
-static uint8_t trace_usb_buf_size;
-
 void trace_buf_push(uint8_t *buf, int len)
 {
 	if (decoding)
@@ -116,8 +116,7 @@ void trace_buf_drain(usbd_device *dev, uint8_t ep)
 
 void TRACE_ISR(void)
 {
-	uint16_t sr = TIM_SR(TRACE_TIM);
-	uint16_t duty, cycle;
+	uint16_t status = TIM_SR(TRACE_TIM);
 	static uint16_t bt;
 	static uint8_t lastbit;
 	static uint8_t decbuf[17];
@@ -126,20 +125,20 @@ void TRACE_ISR(void)
 	static uint8_t notstart;
 
 	/* Reset decoder state if capture overflowed */
-	if (sr & (TIM_SR_CC1OF | TIM_SR_UIF)) {
+	if (status & (TIM_SR_CC1OF | TIM_SR_UIF)) {
 		timer_clear_flag(TRACE_TIM, TIM_SR_CC1OF | TIM_SR_UIF);
-		if (!(sr & (TIM_SR_CC2IF | TIM_SR_CC1IF)))
+		if (!(status & (TIM_SR_CC2IF | TIM_SR_CC1IF)))
 			goto flush_and_reset;
 	}
 
-	cycle = TIM_CCR1(TRACE_TIM);
-	duty = TIM_CCR2(TRACE_TIM);
+	const uint16_t cycle = TIM_CCR1(TRACE_TIM);
+	uint16_t duty = TIM_CCR2(TRACE_TIM);
 
-	/* Reset decoder state if crazy shit happened */
-	if ((bt && (((duty / bt) > 2) || ((duty / bt) == 0))) || (duty == 0))
+	/* Reset decoder state if crazy things happened */
+	if ((bt && (duty / bt > 2 || duty / bt == 0)) || duty == 0)
 		goto flush_and_reset;
 
-	if (!(sr & TIM_SR_CC1IF))
+	if (!(status & TIM_SR_CC1IF))
 		notstart = 1;
 
 	if (!bt) {
@@ -149,7 +148,8 @@ void TRACE_ISR(void)
 		}
 		/* First bit, sync decoder */
 		duty -= ALLOWED_DUTY_ERROR;
-		if (((cycle / duty) != 2) && ((cycle / duty) != 3))
+		const uint16_t duty_cycle = cycle / duty;
+		if (duty_cycle != 2 && duty_cycle != 3)
 			return;
 		bt = duty;
 		lastbit = 1;
@@ -159,27 +159,27 @@ void TRACE_ISR(void)
 		timer_enable_irq(TRACE_TIM, TIM_DIER_UIE);
 	} else {
 		/* If high time is extended we need to flip the bit */
-		if ((duty / bt) > 1) {
+		if (duty / bt > 1) {
 			if (!halfbit) /* lost sync somehow */
 				goto flush_and_reset;
 			halfbit = 0;
 			lastbit ^= 1;
 		}
 		decbuf[decbuf_pos >> 3] |= lastbit << (decbuf_pos & 7);
-		decbuf_pos++;
+		++decbuf_pos;
 	}
 
-	if (!(sr & TIM_SR_CC1IF) || (((cycle - duty) / bt) > 2))
+	if (!(status & TIM_SR_CC1IF) || (cycle - duty) / bt > 2)
 		goto flush_and_reset;
 
-	if (((cycle - duty) / bt) > 1) {
+	if ((cycle - duty) / bt > 1) {
 		/* If low time extended we need to pack another bit. */
 		if (halfbit) /* this is a valid stop-bit or we lost sync */
 			goto flush_and_reset;
 		halfbit = 1;
 		lastbit ^= 1;
 		decbuf[decbuf_pos >> 3] |= lastbit << (decbuf_pos & 7);
-		decbuf_pos++;
+		++decbuf_pos;
 	}
 
 	if (decbuf_pos < 128)

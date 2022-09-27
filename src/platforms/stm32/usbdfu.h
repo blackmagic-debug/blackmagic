@@ -33,7 +33,7 @@ void dfu_main(void);
 
 /* Device specific functions */
 void dfu_check_and_do_sector_erase(uint32_t sector);
-void dfu_flash_program_buffer(uint32_t baseaddr, void *buf, int len);
+void dfu_flash_program_buffer(uint32_t baseaddr, const void *buf, size_t len);
 uint32_t dfu_poll_timeout(uint8_t cmd, uint32_t addr, uint16_t blocknum);
 void dfu_protect(bool enable);
 void dfu_jump_app_if_valid(void);

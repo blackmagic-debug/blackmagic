@@ -201,7 +201,7 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 			}
 
 			target_halt_resume(cur_target, single_step);
-			SET_RUN_STATE(1);
+			SET_RUN_STATE(true);
 			single_step = false;
 			/* fall through */
 		case '?': { /* '?': Request reason for target halt */
@@ -227,7 +227,7 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 					poll_rtt(cur_target);
 #endif
 			}
-			SET_RUN_STATE(0);
+			SET_RUN_STATE(false);
 
 			/* Translate reason to GDB signal */
 			switch (reason) {
@@ -298,7 +298,7 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 		case 0x04:
 		case 'D': /* GDB 'detach' command. */
 			if (cur_target) {
-				SET_RUN_STATE(1);
+				SET_RUN_STATE(true);
 				target_detach(cur_target);
 				last_target = cur_target;
 				cur_target = NULL;

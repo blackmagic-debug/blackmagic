@@ -27,10 +27,10 @@ void gdb_usb_out_cb(usbd_device *dev, uint8_t ep);
 #endif
 
 int gdb_if_init(void);
-unsigned char gdb_if_getchar(void);
-unsigned char gdb_if_getchar_to(int timeout);
+char gdb_if_getchar(void);
+char gdb_if_getchar_to(uint32_t timeout);
 
 /* sending gdb_if_putchar(0, true) seems to work as keep alive */
-void gdb_if_putchar(unsigned char c, int flush);
+void gdb_if_putchar(char c, int flush);
 
 #endif /* INCLUDE_GDB_IF_H */
