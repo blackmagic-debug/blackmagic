@@ -24,6 +24,7 @@
 #include <libopencm3/stm32/flash.h>
 #include <libopencm3/cm3/scb.h>
 
+/* clang-format off */
 static uint32_t sector_addr[] = {
 	0x8000000,
 	0x8004000,
