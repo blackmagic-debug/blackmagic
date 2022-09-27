@@ -19,9 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file implements the platform specific functions for the STM32
- * implementation.
- */
+/* This file provides the platform specific declarations for the Hydrabus implementation. */
+
 #ifndef PLATFORMS_HYDRABUS_PLATFORM_H
 #define PLATFORMS_HYDRABUS_PLATFORM_H
 
@@ -35,7 +34,8 @@
 #define PLATFORM_HAS_TRACESWO
 #define PLATFORM_IDENT " (HydraBus))"
 
-/* Important pin mappings for STM32 implementation:
+/*
+ * Important pin mappings for STM32 implementation:
  *
  * LED0 = 	PA4	(Green LED : Running)
  * LED0 = 	PA4	(Green LED : Idle)
@@ -98,7 +98,8 @@
 #define USB_DRIVER stm32f107_usb_driver
 #define USB_IRQ    NVIC_OTG_FS_IRQ
 #define USB_ISR(x) otg_fs_isr(x)
-/* Interrupt priorities.  Low numbers are high priority.
+/*
+ * Interrupt priorities. Low numbers are high priority.
  * TIM3 is used for traceswo capture and must be highest priority.
  */
 #define IRQ_PRI_USB          (1 << 4)
@@ -131,14 +132,6 @@
 #define TRACE_IRQ          NVIC_TIM3_IRQ
 #define TRACE_ISR(x)       tim3_isr(x)
 
-#define gpio_set_val(port, pin, val)   \
-	do {                               \
-		if (val)                       \
-			gpio_set((port), (pin));   \
-		else                           \
-			gpio_clear((port), (pin)); \
-	} while (0)
-
 #define SET_RUN_STATE(state)      \
 	{                             \
 		running_status = (state); \
@@ -157,37 +150,26 @@ static inline int platform_hwversion(void)
 	return 0;
 }
 
-/*
- * Use newlib provided integer only stdio functions
- */
+/* Use newlib provided integer-only stdio functions */
 
-/* sscanf */
 #ifdef sscanf
 #undef sscanf
-#define sscanf siscanf
-#else
-#define sscanf siscanf
 #endif
-/* sprintf */
+#define sscanf siscanf
+
 #ifdef sprintf
 #undef sprintf
-#define sprintf siprintf
-#else
-#define sprintf siprintf
 #endif
-/* vasprintf */
+#define sprintf siprintf
+
 #ifdef vasprintf
 #undef vasprintf
-#define vasprintf vasiprintf
-#else
-#define vasprintf vasiprintf
 #endif
-/* snprintf */
+#define vasprintf vasiprintf
+
 #ifdef snprintf
 #undef snprintf
-#define snprintf sniprintf
-#else
-#define snprintf sniprintf
 #endif
+#define snprintf sniprintf
 
 #endif /* PLATFORMS_HYDRABUS_PLATFORM_H */

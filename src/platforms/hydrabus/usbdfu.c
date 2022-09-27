@@ -44,7 +44,7 @@ int main(void)
 	/* Set up clock*/
 	rcc_clock_setup_hse_3v3(&hse_8mhz_3v3[CLOCK_3V3_168MHZ]);
 	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
-	systick_set_reload(2100000);
+	systick_set_reload(2100000U);
 
 	systick_interrupt_enable();
 	systick_counter_enable();
