@@ -17,9 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file implements the platform specific functions for the STM32
- * implementation.
- */
+/* This file provides the platform specific declarations for the STM32F072-IF implementation. */
+
 #ifndef PLATFORMS_F072_PLATFORM_H
 #define PLATFORMS_F072_PLATFORM_H
 
@@ -33,7 +32,8 @@
 
 #define PLATFORM_IDENT "(F072-IF) "
 
-/* Important pin mappings for STM32 implementation:
+/*
+ * Important pin mappings for STM32 implementation:
  *
  * LED0 = 	PB5	(Green  LED : Running)
  * LED1 = 	PB6	(Orange LED : Idle)
@@ -72,7 +72,7 @@
 #define LED_UART      GPIO6
 #define LED_IDLE_RUN  GPIO5
 #define LED_ERROR     GPIO7
-/* PORTB does not stay active in system bootloader!*/
+/* PORTB does not stay active in system bootloader! */
 #define LED_BOOTLOADER GPIO6
 
 #define BOOTMAGIC0 0xb007da7a
@@ -86,7 +86,8 @@
 #define USB_IRQ    NVIC_USB_IRQ
 #define USB_ISR(x) usb_isr(x)
 
-/* Interrupt priorities.  Low numbers are high priority.
+/*
+ * Interrupt priorities. Low numbers are high priority.
  * For now USART1 preempts USB which may spin while buffer is drained.
  * TIM3 is used for traceswo capture and must be highest priority.
  */
@@ -108,8 +109,10 @@
 
 #define USBUSART_DMA_BUS DMA1
 #define USBUSART_DMA_CLK RCC_DMA1
-/* This needs corresponding remapping bit cleared in the SYSCFG_CFGR1.
- * As we come out of reset, the bit is cleared!*/
+/*
+ * This needs corresponding remapping bit cleared in the SYSCFG_CFGR1.
+ * As we come out of reset, the bit is cleared.
+ */
 #define USBUSART_DMA_TX_CHAN     DMA_CHANNEL4
 #define USBUSART_DMA_TX_ISR(x)   dma1_channel4_7_isr(x)
 #define USBUSART_DMA_RX_CHAN     DMA_CHANNEL5
@@ -119,7 +122,7 @@
 
 #define STK_CSR_CLKSOURCE_AHB_DIV8 STK_CSR_CLKSOURCE_AHB
 
-/* TX/RX on the REV 0/1 boards are swapped against ftdijtag.*/
+/* TX/RX on the REV 0/1 boards are swapped against FTDI JTAG. */
 #define UART_PIN_SETUP()                                                                                   \
 	do {                                                                                                   \
 		gpio_mode_setup(USBUSART_PORT, GPIO_MODE_AF, GPIO_PUPD_PULLUP, USBUSART_TX_PIN | USBUSART_RX_PIN); \
@@ -136,7 +139,9 @@
 extern bool debug_bmp;
 #define DEBUG printf
 #else
-#define DEBUG(...)
+#define DEBUG(...) \
+	do {           \
+	} while (false)
 #endif
 
 #define SET_RUN_STATE(state)      \
@@ -157,10 +162,26 @@ static inline int platform_hwversion(void)
 	return 0;
 }
 
-/* Use newlib provided integer only stdio functions */
-#define sscanf    siscanf
-#define sprintf   siprintf
+/* Use newlib provided integer-only stdio functions */
+
+#ifdef sscanf
+#undef sscanf
+#endif
+#define sscanf siscanf
+
+#ifdef sprintf
+#undef sprintf
+#endif
+#define sprintf siprintf
+
+#ifdef vasprintf
+#undef vasprintf
+#endif
 #define vasprintf vasiprintf
-#define snprintf  sniprintf
+
+#ifdef snprintf
+#undef snprintf
+#endif
+#define snprintf sniprintf
 
 #endif /* PLATFORMS_F072_PLATFORM_H */
