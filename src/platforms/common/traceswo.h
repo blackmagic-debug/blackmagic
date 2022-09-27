@@ -36,7 +36,6 @@ void trace_buf_drain(usbd_device *dev, uint8_t ep);
 void traceswo_setmask(uint32_t mask);
 
 /* print decoded swo packet on usb serial */
-uint16_t traceswo_decode(usbd_device *usbd_dev, uint8_t addr,
-				const void *buf, uint16_t len);
+uint16_t traceswo_decode(usbd_device *usbd_dev, uint8_t addr, const void *buf, uint16_t len);
 
 #endif /* PLATFORMS_COMMON_TRACESWO_H */

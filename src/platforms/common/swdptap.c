@@ -170,10 +170,10 @@ static void swdptap_seq_out_parity(const uint32_t tms_states, const size_t clock
 
 int swdptap_init(ADIv5_DP_t *dp)
 {
-	dp->seq_in  = swdptap_seq_in;
-	dp->seq_in_parity  = swdptap_seq_in_parity;
+	dp->seq_in = swdptap_seq_in;
+	dp->seq_in_parity = swdptap_seq_in_parity;
 	dp->seq_out = swdptap_seq_out;
-	dp->seq_out_parity  = swdptap_seq_out_parity;
+	dp->seq_out_parity = swdptap_seq_out_parity;
 
 	return 0;
 }
