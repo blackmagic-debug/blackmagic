@@ -20,7 +20,9 @@
 #ifndef PLATFORMS_HOSTED_STLINKV2_H
 #define PLATFORMS_HOSTED_STLINKV2_H
 
-#define STLINK_ERROR_FAIL -1
+#include "bmp_hosted.h"
+
+#define STLINK_ERROR_FAIL (-1)
 #define STLINK_ERROR_OK   0
 #define STLINK_ERROR_WAIT 1
 
