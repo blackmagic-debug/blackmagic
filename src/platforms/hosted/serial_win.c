@@ -22,7 +22,7 @@
 #include "remote.h"
 #include "cli.h"
 
-static HANDLE hComm;
+static HANDLE port_handle;
 
 static char *find_bmp_by_serial(const char *serial)
 {
@@ -77,26 +77,27 @@ int serial_open(BMP_CL_OPTIONS_t *const cl_opts, const char *const serial)
 		strcpy(device, "\\\\.\\");
 		strncat(device, cl_opts->opt_device, sizeof(device) - strlen(device) - 1);
 	}
-	hComm = CreateFile(device,        //port name
-		GENERIC_READ | GENERIC_WRITE, //Read/Write
+	port_handle = CreateFile(device,        // NT path to the port
+		GENERIC_READ | GENERIC_WRITE, // Read/Write
 		0,                            // No Sharing
 		NULL,                         // No Security
 		OPEN_EXISTING,                // Open existing port only
 		0,                            // Non Overlapped I/O
-		NULL);                        // Null for Comm Devices}
-	if (hComm == INVALID_HANDLE_VALUE) {
+		NULL);                        // Null for Comm Devices
+	if (port_handle == INVALID_HANDLE_VALUE) {
 		DEBUG_WARN("Could not open %s: %ld\n", device, GetLastError());
 		return -1;
 	}
-	DCB dcbSerialParams;
-	dcbSerialParams.DCBlength = sizeof(dcbSerialParams);
-	if (!GetCommState(hComm, &dcbSerialParams)) {
+	DCB serial_params;
+	memset(&serial_params, 0, sizeof(DCB));
+	serial_params.DCBlength = sizeof(serial_params);
+	if (!GetCommState(port_handle, &serial_params)) {
 		DEBUG_WARN("GetCommState failed %ld\n", GetLastError());
 		return -1;
 	}
-	dcbSerialParams.ByteSize = 8;
-	dcbSerialParams.fDtrControl = DTR_CONTROL_ENABLE;
-	if (!SetCommState(hComm, &dcbSerialParams)) {
+	serial_params.ByteSize = 8;
+	serial_params.fDtrControl = DTR_CONTROL_ENABLE;
+	if (!SetCommState(port_handle, &serial_params)) {
 		DEBUG_WARN("SetCommState failed %ld\n", GetLastError());
 		return -1;
 	}
@@ -106,7 +107,7 @@ int serial_open(BMP_CL_OPTIONS_t *const cl_opts, const char *const serial)
 	timeouts.ReadTotalTimeoutMultiplier = 10;
 	timeouts.WriteTotalTimeoutConstant = 10;
 	timeouts.WriteTotalTimeoutMultiplier = 10;
-	if (!SetCommTimeouts(hComm, &timeouts)) {
+	if (!SetCommTimeouts(port_handle, &timeouts)) {
 		DEBUG_WARN("SetCommTimeouts failed %ld\n", GetLastError());
 		return -1;
 	}
@@ -115,59 +116,60 @@ int serial_open(BMP_CL_OPTIONS_t *const cl_opts, const char *const serial)
 
 void serial_close(void)
 {
-	CloseHandle(hComm);
+	CloseHandle(port_handle);
 }
 
+/* XXX: This should return bool and the size parameter should be size_t as it cannot be negative. */
 int platform_buffer_write(const uint8_t *data, int size)
 {
 	DEBUG_WIRE("%s\n", data);
-	int s = 0;
-
-	do {
-		DWORD written;
-		if (!WriteFile(hComm, data + s, size - s, &written, NULL)) {
-			DEBUG_WARN("Serial write failed %ld, written %d\n", GetLastError(), s);
+	DWORD written = 0;
+	for (size_t offset = 0; offset < (size_t)size; offset += written)
+		if (!WriteFile(port_handle, data + offset, size - offset, &written, NULL)) {
+			DEBUG_WARN("Serial write failed %lu, written %\u\n", GetLastError(), offset);
 			return -1;
 		}
-		s += written;
-	} while (s < size);
+		offset += written;
+	}
 	return 0;
 }
 
+/* XXX: The size parameter should be size_t and we should either return size_t or bool */
+/* XXX: This needs documenting that it can abort the program with exit(), or the error handling fixed */
 int platform_buffer_read(uint8_t *data, int maxsize)
 {
-	DWORD s;
-	uint8_t response = 0;
-	uint32_t startTime = platform_time_ms();
-	uint32_t endTime = platform_time_ms() + cortexm_wait_timeout;
-	do {
-		if (!ReadFile(hComm, &response, 1, &s, NULL)) {
-			DEBUG_WARN("ERROR on read RESP\n");
+	DWORD read = 0;
+	char response = 0;
+	const uint32_t start_time = platform_time_ms();
+	const uint32_t end_time = start_time + cortexm_wait_timeout;
+	/* Drain the buffer for the remote till we see a start-of-response byte */
+	while (response != REMOTE_RESP) {
+		if (!ReadFile(port_handle, &response, 1, &read, NULL)) {
+			DEBUG_WARN("error occured while reading response: %lu\n", GetLastError());
 			exit(-3);
 		}
-		if (platform_time_ms() > endTime) {
-			DEBUG_WARN("Timeout on read RESP\n");
+		if (platform_time_ms() > end_time) {
+			DEBUG_WARN("Timeout while waiting for BMP response\n");
 			exit(-4);
 		}
-	} while (response != REMOTE_RESP);
-	uint8_t *c = data;
-	do {
-		if (!ReadFile(hComm, c, 1, &s, NULL)) {
+	}
+	/* Now collect the response */
+	for (size_t offset = 0; offset < (size_t)maxsize && platform_time_ms() < end_time;) {
+		if (!ReadFile(port_handle, data + offset, 1, &read, NULL)) {
 			DEBUG_WARN("Error on read\n");
 			exit(-3);
 		}
-		if (s > 0) {
-			DEBUG_WIRE("%c", *c);
-			if (*c == REMOTE_EOM) {
-				*c = 0;
+		if (read > 0) {
+			DEBUG_WIRE("%c", data[offset]);
+			if (data[offset] == REMOTE_EOM) {
+				data[offset] = 0;
 				DEBUG_WIRE("\n");
-				return (c - data);
-			} else {
-				c++;
+				return offset;
 			}
+			++offset
 		}
-	} while (((c - data) < maxsize) && (platform_time_ms() < endTime));
-	DEBUG_WARN("Failed to read EOM at %d\n", platform_time_ms() - startTime);
+	}
+	DEBUG_WARN("Failed to read EOM at %u\n", platform_time_ms() - start_time);
 	exit(-3);
 	return 0;
 }
