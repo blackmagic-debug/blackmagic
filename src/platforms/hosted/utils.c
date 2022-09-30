@@ -24,9 +24,12 @@
 /* This file deduplicates codes used in several pc-hosted platforms
  */
 
-#include <stdint.h>
+#include <string.h>
 #include <unistd.h>
 #include <sys/time.h>
+
+#include "general.h"
+#include "timing.h"
 
 #if defined(_WIN32) && !defined(__MINGW32__)
 #warning "This vasprintf() is dubious!"
@@ -59,4 +62,36 @@ uint32_t platform_time_ms(void)
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
 	return (tv.tv_sec * 1000) + (tv.tv_usec / 1000);
+}
+
+bool begins_with(const char *const str, const size_t str_length, const char *const value)
+{
+	const size_t value_length = strlen(value);
+	if (str_length < value_length)
+		return false;
+	return memcmp(str, value, value_length) == 0;
+}
+
+bool ends_with(const char *const str, const size_t str_length, const char *const value)
+{
+	const size_t value_length = strlen(value);
+	if (str_length < value_length)
+		return false;
+	const size_t offset = str_length - value_length;
+	return memcmp(str + offset, value, value_length) == 0;
+}
+
+bool constains_substring(const char *const str, const size_t str_len, const char *const search)
+{
+	const size_t search_len = strlen(search);
+	if (str_len < search_len)
+		return false;
+	/* For each possible valid offset */
+	for (size_t offset = 0; offset <= str_len - search_len; ++offset) {
+		/* If we have a match, we're done */
+		if (memcmp(str + offset, search, search_len) == 0)
+			return true;
+	}
+	/* We failed to find a match */
+	return false;
 }
