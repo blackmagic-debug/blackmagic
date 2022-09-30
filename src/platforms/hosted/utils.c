@@ -35,7 +35,7 @@ int vasprintf(char **strp, const char *fmt, va_list ap)
 	int size = 128, ret = 0;
 
 	*strp = malloc(size);
-	while(*strp && ((ret = vsnprintf(*strp, size, fmt, ap)) == size))
+	while (*strp && ((ret = vsnprintf(*strp, size, fmt, ap)) == size))
 		*strp = realloc(*strp, size <<= 1);
 
 	return ret;
@@ -47,9 +47,9 @@ void platform_delay(uint32_t ms)
 #if defined(_WIN32) && !defined(__MINGW32__)
 	Sleep(ms);
 #else
-# if !defined(usleep)
+#if !defined(usleep)
 	int usleep(unsigned int);
-# endif
+#endif
 	usleep(ms * 1000);
 #endif
 }

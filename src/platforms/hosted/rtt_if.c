@@ -77,7 +77,8 @@ int32_t rtt_getchar()
 	char ch;
 	int len;
 	len = read(0, &ch, 1);
-	if (len == 1) return ch;
+	if (len == 1)
+		return ch;
 	return -1;
 }
 
