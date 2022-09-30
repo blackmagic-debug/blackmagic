@@ -27,7 +27,7 @@
 #include <unistd.h>
 
 #include "remote.h"
-#include "cli.h"
+#include "bmp_hosted.h"
 #include "cortexm.h"
 
 static int fd; /* File descriptor for connection to GDB remote */
@@ -99,58 +99,93 @@ int serial_open(BMP_CL_OPTIONS_t *cl_opts, char *serial)
 #define BMP_IDSTRING_BLACKMAGIC  "usb-Black_Magic_Debug_Black_Magic_Probe"
 #define BMP_IDSTRING_1BITSQUARED "usb-1BitSquared_Black_Magic_Probe"
 #define DEVICE_BY_ID             "/dev/serial/by-id/"
+
+static bool begins_with(const char *const str, const size_t str_length, const char *const value)
+{
+	const size_t value_length = strlen(value);
+	if (str_length < value_length)
+		return false;
+	return memcmp(str, value, value_length) == 0;
+}
+
+static bool ends_with(const char *const str, const size_t str_length, const char *const value)
+{
+	const size_t value_length = strlen(value);
+	if (str_length < value_length)
+		return false;
+	const size_t offset = str_length - value_length;
+	return memcmp(str + offset, value, value_length) == 0;
+}
+
+bool device_is_bmp_gdb_port(const char *const name)
+{
+	const size_t length = strlen(name);
+	if (begins_with(name, length, BMP_IDSTRING_BLACKSPHERE) || begins_with(name, length, BMP_IDSTRING_BLACKMAGIC) ||
+		begins_with(name, length, BMP_IDSTRING_1BITSQUARED)) {
+		return ends_with(name, length, "-if00");
+	}
+	return false;
+}
+
 int serial_open(BMP_CL_OPTIONS_t *cl_opts, char *serial)
 {
 	char name[4096];
 	if (!cl_opts->opt_device) {
 		/* Try to find some BMP if0*/
-		struct dirent *dp;
 		DIR *dir = opendir(DEVICE_BY_ID);
 		if (!dir) {
-			DEBUG_WARN("No serial device found\n");
+			DEBUG_WARN("No serial devices found\n");
 			return -1;
 		}
-		int num_devices = 0;
-		int num_total = 0;
-		while ((dp = readdir(dir)) != NULL) {
-			if ((strstr(dp->d_name, BMP_IDSTRING_BLACKSPHERE) || strstr(dp->d_name, BMP_IDSTRING_BLACKMAGIC) ||
-					strstr(dp->d_name, BMP_IDSTRING_1BITSQUARED)) &&
-				(strstr(dp->d_name, "-if00"))) {
-				num_total++;
-				if ((serial) && (!strstr(dp->d_name, serial)))
+		size_t matches = 0;
+		size_t total = 0;
+		while (true) {
+			const struct dirent *const entry = readdir(dir);
+			if (entry == NULL)
+				break;
+			if (device_is_bmp_gdb_port(entry->d_name)) {
+				++total;
+				if (serial && strstr(entry->d_name, serial) == 0)
 					continue;
-				num_devices++;
-				strcpy(name, DEVICE_BY_ID);
-				strncat(name, dp->d_name, sizeof(name) - strlen(name) - 1);
+				++matches;
+				const size_t path_len = sizeof(DEVICE_BY_ID) - 1U;
+				memcpy(name, DEVICE_BY_ID, path_len);
+				const size_t name_len = strlen(entry->d_name);
+				const size_t truncated_len = MIN(name_len, sizeof(name) - path_len - 2U);
+				memcpy(name + path_len, entry->d_name, truncated_len);
+				name[path_len + truncated_len] = '\0';
 			}
 		}
 		closedir(dir);
-		if ((num_devices == 0) && (num_total == 0)) {
-			DEBUG_WARN("No BMP probe found\n");
+		if (total == 0) {
+			DEBUG_WARN("No Black Magic Probes found\n");
 			return -1;
-		} else if (num_devices != 1) {
+		}
+		if (matches != 1) {
 			DEBUG_INFO("Available Probes:\n");
 			dir = opendir(DEVICE_BY_ID);
 			if (dir) {
-				while ((dp = readdir(dir)) != NULL) {
-					if ((strstr(dp->d_name, BMP_IDSTRING_BLACKSPHERE) || strstr(dp->d_name, BMP_IDSTRING_BLACKMAGIC) ||
-							strstr(dp->d_name, BMP_IDSTRING_1BITSQUARED)) &&
-						(strstr(dp->d_name, "-if00")))
-						DEBUG_WARN("%s\n", dp->d_name);
+				while (true) {
+					const struct dirent *const entry = readdir(dir);
+					if (entry == NULL)
+						break;
+					if (device_is_bmp_gdb_port(entry->d_name))
+						DEBUG_WARN("%s\n", entry->d_name);
 				}
 				closedir(dir);
 				if (serial)
-					DEBUG_WARN("Do no match given serial \"%s\"\n", serial);
+					DEBUG_WARN("No match for (partial) serial number \"%s\"\n", serial);
 				else
-					DEBUG_WARN("Select Probe with -s <(Partial) Serial "
-							   "Number\n");
-			} else {
-				DEBUG_WARN("Could not opendir %s: %s\n", name, strerror(errno));
-			}
+					DEBUG_WARN("Select probe with `-s <(Partial) Serial Number>`\n");
+			} else
+				DEBUG_WARN("Could not scan %s: %s\n", name, strerror(errno));
 			return -1;
 		}
 	} else {
-		strncpy(name, cl_opts->opt_device, sizeof(name) - 1);
+		const size_t path_len = strlen(cl_opts->opt_device);
+		const size_t truncated_len = MIN(path_len, sizeof(name) - 1U);
+		memcpy(name, cl_opts->opt_device, truncated_len);
+		name[truncated_len] = '\0';
 	}
 	fd = open(name, O_RDWR | O_SYNC | O_NOCTTY);
 	if (fd < 0) {
@@ -171,73 +206,71 @@ void serial_close(void)
 
 int platform_buffer_write(const uint8_t *data, int size)
 {
-	int s;
-
 	DEBUG_WIRE("%s\n", data);
-	s = write(fd, data, size);
-	if (s < 0) {
+	const int written = write(fd, data, size);
+	if (written < 0) {
 		DEBUG_WARN("Failed to write\n");
 		exit(-2);
 	}
-
 	return size;
 }
 
+/* XXX: The size parameter should be size_t and we should either return size_t or bool */
+/* XXX: This needs documenting that it can abort the program with exit(), or the error handling fixed */
 int platform_buffer_read(uint8_t *data, int maxsize)
 {
-	uint8_t *c;
-	int s;
-	int ret;
-	fd_set rset;
-	struct timeval tv;
+	char response = 0;
+	struct timeval timeout = {
+		.tv_sec = cortexm_wait_timeout / 1000,
+		.tv_usec = 1000 * (cortexm_wait_timeout % 1000)
+	};
 
-	c = data;
-	tv.tv_sec = 0;
+	/* Drain the buffer for the remote till we see a start-of-response byte */
+	while (response != REMOTE_RESP) {
+		fd_set select_set;
+		FD_ZERO(&select_set);
+		FD_SET(fd, &select_set);
 
-	tv.tv_sec = cortexm_wait_timeout / 1000;
-	tv.tv_usec = 1000 * (cortexm_wait_timeout % 1000);
-
-	/* Look for start of response */
-	do {
-		FD_ZERO(&rset);
-		FD_SET(fd, &rset);
-
-		ret = select(fd + 1, &rset, NULL, NULL, &tv);
-		if (ret < 0) {
+		const int result = select(FD_SETSIZE, &select_set, NULL, NULL, &timeout);
+		if (result < 0) {
 			DEBUG_WARN("Failed on select\n");
-			return (-3);
+			return -3;
 		}
-		if (ret == 0) {
-			DEBUG_WARN("Timeout on read RESP\n");
-			return (-4);
+		if (result == 0) {
+			DEBUG_WARN("Timeout while waiting for BMP response\n");
+			return -4;
 		}
-
-		s = read(fd, c, 1);
-	} while ((s > 0) && (*c != REMOTE_RESP));
+		if (read(fd, &response, 1) != 1) {
+			DEBUG_WARN("Failed to read response\n");
+			return -6;
+		}
+	}
 	/* Now collect the response */
-	do {
-		FD_ZERO(&rset);
-		FD_SET(fd, &rset);
-		ret = select(fd + 1, &rset, NULL, NULL, &tv);
-		if (ret < 0) {
+	for (size_t offset = 0; offset < (size_t)maxsize;) {
+		fd_set select_set;
+		FD_ZERO(&select_set);
+		FD_SET(fd, &select_set);
+		const int result = select(FD_SETSIZE, &select_set, NULL, NULL, &timeout);
+		if (result < 0) {
 			DEBUG_WARN("Failed on select\n");
 			exit(-4);
 		}
-		if (ret == 0) {
+		if (result == 0) {
 			DEBUG_WARN("Timeout on read\n");
-			return (-5);
+			return -5;
 		}
-		s = read(fd, c, 1);
-		if (*c == REMOTE_EOM) {
-			*c = 0;
+		if (read(fd, data + offset, 1) != 1) {
+			DEBUG_WARN("Failed to read response\n");
+			return -6;
+		}
+		if (data[offset] == REMOTE_EOM) {
+			data[offset] = 0;
 			DEBUG_WIRE("       %s\n", data);
-			return (c - data);
-		} else {
-			c++;
+			return offset;
 		}
-	} while ((s >= 0) && ((c - data) < maxsize));
+		++offset;
+	}
 
 	DEBUG_WARN("Failed to read\n");
-	return (-6);
-	return 0;
+	return -6;
 }
