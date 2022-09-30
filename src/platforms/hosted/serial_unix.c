@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include "general.h"
+
 #include <sys/stat.h>
 #include <sys/select.h>
 #include <dirent.h>
@@ -26,8 +26,10 @@
 #include <termios.h>
 #include <unistd.h>
 
+#include "general.h"
 #include "remote.h"
 #include "bmp_hosted.h"
+#include "utils.h"
 #include "cortexm.h"
 
 static int fd; /* File descriptor for connection to GDB remote */
@@ -99,39 +101,6 @@ int serial_open(BMP_CL_OPTIONS_t *cl_opts, char *serial)
 #define BMP_IDSTRING_BLACKMAGIC  "usb-Black_Magic_Debug_Black_Magic_Probe"
 #define BMP_IDSTRING_1BITSQUARED "usb-1BitSquared_Black_Magic_Probe"
 #define DEVICE_BY_ID             "/dev/serial/by-id/"
-
-static bool begins_with(const char *const str, const size_t str_length, const char *const value)
-{
-	const size_t value_length = strlen(value);
-	if (str_length < value_length)
-		return false;
-	return memcmp(str, value, value_length) == 0;
-}
-
-static bool ends_with(const char *const str, const size_t str_length, const char *const value)
-{
-	const size_t value_length = strlen(value);
-	if (str_length < value_length)
-		return false;
-	const size_t offset = str_length - value_length;
-	return memcmp(str + offset, value, value_length) == 0;
-}
-
-static bool constains_substring(
-	const char *const str, const size_t str_len, const char *const search)
-{
-	const size_t search_len = strlen(search);
-	if (str_len < search_len)
-		return false;
-	/* For each possible valid offset */
-	for (size_t offset = 0; offset <= str_len - search_len; ++offset) {
-		/* If we have a match, we're done */
-		if (memcmp(str + offset, search, search_len) == 0)
-			return true;
-	}
-	/* We failed to find a match */
-	return false;
-}
 
 bool device_is_bmp_gdb_port(const char *const device)
 {
