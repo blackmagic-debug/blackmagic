@@ -35,11 +35,13 @@
 #ifndef PLATFORMS_HOSTED_BMP_HOSTED_H
 #define PLATFORMS_HOSTED_BMP_HOSTED_H
 
+#if HOSTED_BMP_ONLY != 1
+#include <libusb.h>
+#endif
 #include "cli.h"
+#include "platform.h"
 
 #if HOSTED_BMP_ONLY != 1
-#include <libusb-1.0/libusb.h>
-
 struct trans_ctx {
 #define TRANS_FLAGS_IS_DONE   (1 << 0)
 #define TRANS_FLAGS_HAS_ERROR (1 << 1)
@@ -58,7 +60,7 @@ typedef struct usb_link_s {
 
 int send_recv(usb_link_t *link, uint8_t *txbuf, size_t txsize, uint8_t *rxbuf, size_t rxsize);
 #endif
-typedef struct bmp_info_s {
+typedef struct bmp_info {
 	bmp_type_t bmp_type;
 	char dev;
 	char serial[64];
