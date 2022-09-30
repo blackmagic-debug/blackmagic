@@ -117,17 +117,47 @@ static bool ends_with(const char *const str, const size_t str_length, const char
 	return memcmp(str + offset, value, value_length) == 0;
 }
 
-bool device_is_bmp_gdb_port(const char *const name)
+static bool constains_substring(
+	const char *const str, const size_t str_len, const char *const search)
 {
-	const size_t length = strlen(name);
-	if (begins_with(name, length, BMP_IDSTRING_BLACKSPHERE) || begins_with(name, length, BMP_IDSTRING_BLACKMAGIC) ||
-		begins_with(name, length, BMP_IDSTRING_1BITSQUARED)) {
-		return ends_with(name, length, "-if00");
+	const size_t search_len = strlen(search);
+	if (str_len < search_len)
+		return false;
+	/* For each possible valid offset */
+	for (size_t offset = 0; offset <= str_len - search_len; ++offset) {
+		/* If we have a match, we're done */
+		if (memcmp(str + offset, search, search_len) == 0)
+			return true;
+	}
+	/* We failed to find a match */
+	return false;
+}
+
+bool device_is_bmp_gdb_port(const char *const device)
+{
+	const size_t length = strlen(device);
+	if (begins_with(device, length, BMP_IDSTRING_BLACKSPHERE) || begins_with(device, length, BMP_IDSTRING_BLACKMAGIC) ||
+		begins_with(device, length, BMP_IDSTRING_1BITSQUARED)) {
+		return ends_with(device, length, "-if00");
 	}
 	return false;
 }
 
-int serial_open(BMP_CL_OPTIONS_t *cl_opts, char *serial)
+static bool match_serial(const char *const device, const char *const serial)
+{
+	const char *const last_underscore = strrchr(device, '_');
+	/* Fail the match if we can't find the _ just before the serial string. */
+	if (!last_underscore)
+		return false;
+	/* This represents the first byte of the serial number string */
+	const char *const begin = last_underscore + 1;
+	/* This represents one past the last byte of the serial number string */
+	const char *const end = device + strlen(device) - 5;
+	/* Try to match the (partial) serial string in the correct part of the device string */
+	return constains_substring(begin, end - begin, serial);
+}
+
+int serial_open(const BMP_CL_OPTIONS_t *const cl_opts, const char *const serial)
 {
 	char name[4096];
 	if (!cl_opts->opt_device) {
@@ -145,7 +175,7 @@ int serial_open(BMP_CL_OPTIONS_t *cl_opts, char *serial)
 				break;
 			if (device_is_bmp_gdb_port(entry->d_name)) {
 				++total;
-				if (serial && strstr(entry->d_name, serial) == 0)
+				if (serial && !match_serial(entry->d_name, serial))
 					continue;
 				++matches;
 				const size_t path_len = sizeof(DEVICE_BY_ID) - 1U;
@@ -220,10 +250,7 @@ int platform_buffer_write(const uint8_t *data, int size)
 int platform_buffer_read(uint8_t *data, int maxsize)
 {
 	char response = 0;
-	struct timeval timeout = {
-		.tv_sec = cortexm_wait_timeout / 1000,
-		.tv_usec = 1000 * (cortexm_wait_timeout % 1000)
-	};
+	struct timeval timeout = {.tv_sec = cortexm_wait_timeout / 1000, .tv_usec = 1000 * (cortexm_wait_timeout % 1000)};
 
 	/* Drain the buffer for the remote till we see a start-of-response byte */
 	while (response != REMOTE_RESP) {
