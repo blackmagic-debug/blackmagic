@@ -57,9 +57,8 @@ typedef struct usb_link_s {
 	struct libusb_transfer *rep_trans;
 	void *priv;
 } usb_link_t;
-
-int send_recv(usb_link_t *link, uint8_t *txbuf, size_t txsize, uint8_t *rxbuf, size_t rxsize);
 #endif
+
 typedef struct bmp_info {
 	bmp_type_t bmp_type;
 	char dev;
@@ -84,6 +83,12 @@ extern bmp_info_t info;
 void bmp_ident(bmp_info_t *info);
 int find_debuggers(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info);
 void libusb_exit_function(bmp_info_t *info);
+
+#if HOSTED_BMP_ONLY == 1
+bool device_is_bmp_gdb_port(const char *device);
+#else
+int send_recv(usb_link_t *link, uint8_t *txbuf, size_t txsize, uint8_t *rxbuf, size_t rxsize);
+#endif
 
 #if defined(_WIN32) || defined(__CYGWIN__)
 #include <wchar.h>
