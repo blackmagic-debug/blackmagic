@@ -62,7 +62,7 @@ static char *find_bmp_by_serial(const char *serial)
 	return strdup((char *)port);
 }
 
-int serial_open(BMP_CL_OPTIONS_t *cl_opts, char *serial)
+int serial_open(const BMP_CL_OPTIONS_t *const cl_opts, const char *const serial)
 {
 	char device[256];
 	if (!cl_opts->opt_device)

@@ -60,7 +60,7 @@ typedef struct BMP_CL_OPTIONS_s {
 	char *opt_serial;
 	uint32_t opt_targetid;
 	char *opt_ident_string;
-	int opt_position;
+	size_t opt_position;
 	char *opt_cable;
 	char *opt_monitor;
 	int opt_debuglevel;
@@ -72,7 +72,7 @@ typedef struct BMP_CL_OPTIONS_s {
 
 void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv);
 int cl_execute(BMP_CL_OPTIONS_t *opt);
-int serial_open(BMP_CL_OPTIONS_t *opt, char *serial);
+int serial_open(const BMP_CL_OPTIONS_t *opt, const char *serial);
 void serial_close(void);
 
 #endif /* PLATFORMS_HOSTED_CLI_H */
