@@ -28,7 +28,6 @@
 #include <ftdi.h>
 #include "ftdi_bmp.h"
 
-
 extern cable_desc_t *active_cable;
 extern struct ftdi_context *ftdic;
 
@@ -42,38 +41,35 @@ int libftdi_jtagtap_init(jtag_proc_t *jtag_proc)
 	if ((active_cable->mpsse_swd_read.set_data_low == MPSSE_DO) &&
 		(active_cable->mpsse_swd_write.set_data_low == MPSSE_DO)) {
 		printf("Jtag not possible with resistor SWD!\n");
-			return -1;
+		return -1;
 	}
 	jtag_proc->jtagtap_reset = jtagtap_reset;
-	jtag_proc->jtagtap_next =jtagtap_next;
+	jtag_proc->jtagtap_next = jtagtap_next;
 	jtag_proc->jtagtap_tms_seq = jtagtap_tms_seq;
 	jtag_proc->jtagtap_tdi_tdo_seq = libftdi_jtagtap_tdi_tdo_seq;
 	jtag_proc->jtagtap_tdi_seq = jtagtap_tdi_seq;
 
-	active_state.data_low  |=   active_cable->jtag.set_data_low |
-		MPSSE_CS | MPSSE_DI | MPSSE_DO;
-	active_state.data_low  &= ~(active_cable->jtag.clr_data_low | MPSSE_SK);
-	active_state.ddr_low   |=   MPSSE_CS | MPSSE_DO | MPSSE_SK;
-	active_state.ddr_low   &= ~(MPSSE_DI);
-	active_state.data_high |=   active_cable->jtag.set_data_high;
+	active_state.data_low |= active_cable->jtag.set_data_low | MPSSE_CS | MPSSE_DI | MPSSE_DO;
+	active_state.data_low &= ~(active_cable->jtag.clr_data_low | MPSSE_SK);
+	active_state.ddr_low |= MPSSE_CS | MPSSE_DO | MPSSE_SK;
+	active_state.ddr_low &= ~(MPSSE_DI);
+	active_state.data_high |= active_cable->jtag.set_data_high;
 	active_state.data_high &= ~(active_cable->jtag.clr_data_high);
 	uint8_t gab[16];
-	int garbage =  ftdi_read_data(ftdic, gab, sizeof(gab));
+	int garbage = ftdi_read_data(ftdic, gab, sizeof(gab));
 	if (garbage > 0) {
 		DEBUG_WARN("FTDI JTAG init got garbage:");
 		for (int i = 0; i < garbage; i++)
 			DEBUG_WARN(" %02x", gab[i]);
 		DEBUG_WARN("\n");
 	}
-	uint8_t cmd_write[16] = {
-		SET_BITS_LOW,  active_state.data_low,
-		active_state.ddr_low,
-		SET_BITS_HIGH, active_state.data_high, active_state.ddr_high};
+	uint8_t cmd_write[16] = {SET_BITS_LOW, active_state.data_low, active_state.ddr_low, SET_BITS_HIGH,
+		active_state.data_high, active_state.ddr_high};
 	libftdi_buffer_write(cmd_write, 6);
 	libftdi_buffer_flush();
 	/* Write out start condition and pull garbage from read buffer.
 	 * FT2232D otherwise misbehaves on runs follwoing the first run.*/
-	garbage =  ftdi_read_data(ftdic, cmd_write, sizeof(cmd_write));
+	garbage = ftdi_read_data(ftdic, cmd_write, sizeof(cmd_write));
 	if (garbage > 0) {
 		DEBUG_WARN("FTDI JTAG end init got garbage:");
 		for (int i = 0; i < garbage; i++)
@@ -82,8 +78,8 @@ int libftdi_jtagtap_init(jtag_proc_t *jtag_proc)
 	}
 	/* Go to JTAG mode for SWJ-DP */
 	for (int i = 0; i <= 50; i++)
-		jtag_proc->jtagtap_next(1, 0);          /* Reset SW-DP */
-	jtag_proc->jtagtap_tms_seq(0xE73C, 16);		/* SWD to JTAG sequence */
+		jtag_proc->jtagtap_next(1, 0);      /* Reset SW-DP */
+	jtag_proc->jtagtap_tms_seq(0xE73C, 16); /* SWD to JTAG sequence */
 	jtag_proc->jtagtap_tms_seq(0x1F, 6);
 
 	return 0;
@@ -112,15 +108,14 @@ static void jtagtap_tms_seq(uint32_t tms_states, size_t ticks)
 
 static void jtagtap_tdi_seq(const bool final_tms, const uint8_t *DI, size_t ticks)
 {
-	return libftdi_jtagtap_tdi_tdo_seq(NULL,  final_tms, DI, ticks);
+	return libftdi_jtagtap_tdi_tdo_seq(NULL, final_tms, DI, ticks);
 }
 
 static bool jtagtap_next(bool dTMS, bool dTDI)
 {
 	uint8_t ret;
-	uint8_t tmp[3] = {MPSSE_WRITE_TMS | MPSSE_DO_READ | MPSSE_LSB |
-					  MPSSE_BITMODE | MPSSE_WRITE_NEG, 0, 0};
-	tmp[2] = (dTDI?0x80:0) | (dTMS?0x01:0);
+	uint8_t tmp[3] = {MPSSE_WRITE_TMS | MPSSE_DO_READ | MPSSE_LSB | MPSSE_BITMODE | MPSSE_WRITE_NEG, 0, 0};
+	tmp[2] = (dTDI ? 0x80 : 0) | (dTMS ? 0x01 : 0);
 	libftdi_buffer_write(tmp, 3);
 	libftdi_buffer_read(&ret, 1);
 
