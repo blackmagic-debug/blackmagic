@@ -27,6 +27,8 @@ endif
 
 ifeq ($(SWIM_AS_UART), 1)
 CFLAGS += -DSWIM_AS_UART=1
+else
+SRC += traceswoasync.c
 endif
 
 VPATH += platforms/stm32
@@ -36,7 +38,6 @@ SRC +=          \
 	timing.c	\
 	timing_stm32.c	\
 	traceswodecode.c	\
-	traceswoasync.c	\
 	stlink_common.c \
 
 ifeq ($(ST_BOOTLOADER), 1)
