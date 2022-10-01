@@ -32,14 +32,14 @@ typedef struct data_desc_s {
 	int16_t ddr_low;
 	int16_t data_high;
 	int16_t ddr_high;
-}data_desc_t;
+} data_desc_t;
 
 typedef struct pin_settings_s {
 	uint8_t set_data_low;
 	uint8_t clr_data_low;
 	uint8_t set_data_high;
 	uint8_t clr_data_high;
-}pin_settings_t;
+} pin_settings_t;
 
 typedef struct cable_desc_s {
 	int vendor;
@@ -96,27 +96,62 @@ typedef struct cable_desc_s {
 	/* USB readable description of the device.*/
 	char *description;
 	/* Command line argument to -c option to select this device.*/
-	char * name;
-}cable_desc_t;
+	char *name;
+} cable_desc_t;
 
 #if HOSTED_BMP_ONLY == 1
-# pragma GCC diagnostic push
-# pragma GCC diagnostic ignored "-Wunused-parameter"
-int ftdi_bmp_init(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info) { return -1; }
-int libftdi_swdptap_init(ADIv5_DP_t *dp) { return -1; }
-int libftdi_jtagtap_init(jtag_proc_t *jtag_proc) { return 0; }
-void libftdi_buffer_flush(void) { }
-size_t libftdi_buffer_write(const uint8_t *data, size_t size) { return size; }
-int libftdi_buffer_read(uint8_t *data, int size) { return size; }
-const char *libftdi_target_voltage(void) { return "ERROR"; }
-void libftdi_jtagtap_tdi_tdo_seq(uint8_t *const data_out, const bool final_tms,
-	const uint8_t *const data_in, const size_t ticks) { }
-bool  libftdi_swd_possible(bool *do_mpsse, bool *direct_bb_swd) { return false; }
-void libftdi_max_frequency_set(uint32_t freq) { }
-uint32_t libftdi_max_frequency_get(void) { return 0; }
-void libftdi_nrst_set_val(bool assert) { }
-bool libftdi_nrst_get_val(void) { return false; }
-# pragma GCC diagnostic pop
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+int ftdi_bmp_init(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info)
+{
+	return -1;
+}
+int libftdi_swdptap_init(ADIv5_DP_t *dp)
+{
+	return -1;
+}
+int libftdi_jtagtap_init(jtag_proc_t *jtag_proc)
+{
+	return 0;
+}
+void libftdi_buffer_flush(void)
+{
+}
+size_t libftdi_buffer_write(const uint8_t *data, size_t size)
+{
+	return size;
+}
+int libftdi_buffer_read(uint8_t *data, int size)
+{
+	return size;
+}
+const char *libftdi_target_voltage(void)
+{
+	return "ERROR";
+}
+void libftdi_jtagtap_tdi_tdo_seq(
+	uint8_t *const data_out, const bool final_tms, const uint8_t *const data_in, const size_t ticks)
+{
+}
+bool libftdi_swd_possible(bool *do_mpsse, bool *direct_bb_swd)
+{
+	return false;
+}
+void libftdi_max_frequency_set(uint32_t freq)
+{
+}
+uint32_t libftdi_max_frequency_get(void)
+{
+	return 0;
+}
+void libftdi_nrst_set_val(bool assert)
+{
+}
+bool libftdi_nrst_get_val(void)
+{
+	return false;
+}
+#pragma GCC diagnostic pop
 #else
 #include <ftdi.h>
 extern cable_desc_t cable_desc[];
@@ -132,7 +167,7 @@ size_t libftdi_buffer_write(const uint8_t *data, size_t size);
 int libftdi_buffer_read(uint8_t *data, int size);
 const char *libftdi_target_voltage(void);
 void libftdi_jtagtap_tdi_tdo_seq(uint8_t *data_out, bool final_tms, const uint8_t *data_in, size_t ticks);
-bool  libftdi_swd_possible(bool *do_mpsse, bool *direct_bb_swd);
+bool libftdi_swd_possible(bool *do_mpsse, bool *direct_bb_swd);
 void libftdi_max_frequency_set(uint32_t freq);
 uint32_t libftdi_max_frequency_get(void);
 void libftdi_nrst_set_val(bool assert);
