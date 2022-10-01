@@ -206,7 +206,7 @@ char *extract_serial(const char *const device, const size_t length)
  */
 static int scan_linux_id(const char *name, char **const type, char **const version, char **const serial)
 {
-	const size_t name_len = strlen(name);
+	const size_t name_len = strlen(name) + 1U;
 	/* Find the correct prefix */
 	size_t prefix_length = find_prefix_length(name, name_len);
 	/* and skip past any leading _'s */
@@ -217,12 +217,14 @@ static int scan_linux_id(const char *name, char **const type, char **const versi
 		return -1;
 	}
 
-	size_t offsets[2] = {0, 0};
+	size_t offsets[3][2] = {{prefix_length, 0U}, {0U, 0U}};
 	size_t underscores = 0;
 	for (size_t offset = prefix_length; offset < name_len; ++offset) {
 		if (name[offset] == '_') {
+			offsets[underscores][1] = offset - offsets[underscores][0];
+			++underscores;
 			/* Device paths with more than 2 underscore delimited sections can't be valid BMP strings. */
-			if (underscores >= 2)
+			if (underscores > 2)
 				return -1;
 			/* Skip over consecutive strings of underscores */
 			while (name[offset + 1U] == '_' && offset < name_len)
@@ -230,9 +232,10 @@ static int scan_linux_id(const char *name, char **const type, char **const versi
 			/* Bounds check it */
 			if (offset == name_len)
 				break;
-			offsets[underscores++] = offset;
+			offsets[underscores][0] = offset;
 		}
 	}
+	offsets[underscores][1] = name_len - offsets[underscores][0];
 
 	*serial = extract_serial(name, name_len);
 	if (!*serial)
@@ -242,23 +245,23 @@ static int scan_linux_id(const char *name, char **const type, char **const versi
 	if (underscores == 0) {
 		*version = strdup("Unknown");
 		*type = strdup("Native");
-	/*
-	 * If the device name has two underscores delimted sections after the prefix,
-	 * it's a non-native device running the Black Magic Firmware.
-	 */
+		/*
+		 * If the device name has two underscores delimted sections after the prefix,
+		 * it's a non-native device running the Black Magic Firmware.
+		 */
 	} else if (underscores == 2) {
-		*version = strndup(name + prefix_length, offsets[0] - prefix_length - 1U);
-		*type = strndup(name + offsets[0], offsets[1] - offsets[0] - 1U);
-	/* Otherwise it's a native BMP */
+		*version = strndup(name + offsets[0][0], offsets[0][1]);
+		*type = strndup(name + offsets[1][0], offsets[1][1]);
+		/* Otherwise it's a native BMP */
 	} else {
 		/* The first section should start with a 'v' indicating the version info */
 		if (name[prefix_length] == 'v') {
-			*version = strndup(name + prefix_length, offsets[0] - prefix_length - 1U);
+			*version = strndup(name + offsets[0][0], offsets[0][1]);
 			*type = strdup("Native");
-		/* But if not then it's actually a non-native device and has no version string. */
+			/* But if not then it's actually a non-native device and has no version string. */
 		} else {
 			*version = strdup("Unknown");
-			*type = strndup(name + prefix_length, offsets[0] - prefix_length - 1U);
+			*type = strndup(name + offsets[0][0], offsets[0][1]);
 		}
 	}
 	return 0;
@@ -275,7 +278,11 @@ void copy_to_info(bmp_info_t *const info, const char *const type, const char *co
 	info->version[version_len] = '\0';
 
 	const int result = snprintf(info->manufacturer, sizeof(info->manufacturer), "Black Magic Probe (%s)", type);
-	if (result)
+	if (result < 0) {
+		const int error = errno;
+		DEBUG_WARN("sprintf() failed with result %d while generating manufacturer string: %s", error, strerror(error));
+	}
+	if ((size_t)result >= sizeof(info->manufacturer))
 		DEBUG_WARN("snprintf() overflowed while generating manfacturer string\n");
 }
 
