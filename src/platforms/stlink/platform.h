@@ -65,7 +65,10 @@ extern bool debug_bmp;
 #define LED_PORT_UART	GPIOA
 #define LED_UART	GPIO9
 
+#ifndef SWIM_AS_UART
 #define PLATFORM_HAS_TRACESWO	1
+#endif
+
 #define NUM_TRACE_PACKETS		(128)		/* This is an 8K buffer */
 #define TRACESWO_PROTOCOL		2			/* 1 = Manchester, 2 = NRZ / async */
 
@@ -112,6 +115,15 @@ extern bool debug_bmp;
 #define USBUSART_IRQ NVIC_USART1_IRQ
 #define USBUSART_CLK RCC_USART1
 #define USBUSART_ISR(x) usart1_isr(x)
+#define USBUSART_PORT GPIOB
+#define USBUSART_TX_PIN GPIO6
+#define USBUSART_RX_PIN GPIO7
+#define USBUSART_DMA_TX_CHAN DMA_CHANNEL4
+#define USBUSART_DMA_TX_IRQ NVIC_DMA1_CHANNEL4_IRQ
+#define USBUSART_DMA_TX_ISR(x) dma1_channel4_isr(x)
+#define USBUSART_DMA_RX_CHAN DMA_CHANNEL5
+#define USBUSART_DMA_RX_IRQ NVIC_DMA1_CHANNEL5_IRQ
+#define USBUSART_DMA_RX_ISR(x) dma1_channel5_isr(x)
 #else
 #define USBUSART USART2
 #define USBUSART_CR1 USART2_CR1
@@ -119,19 +131,19 @@ extern bool debug_bmp;
 #define USBUSART_IRQ NVIC_USART2_IRQ
 #define USBUSART_CLK RCC_USART2
 #define USBUSART_ISR(x) usart2_isr(x)
-#endif
 #define USBUSART_PORT GPIOA
 #define USBUSART_TX_PIN GPIO2
 #define USBUSART_RX_PIN GPIO3
-
-#define USBUSART_DMA_BUS DMA1
-#define USBUSART_DMA_CLK RCC_DMA1
 #define USBUSART_DMA_TX_CHAN DMA_CHANNEL7
 #define USBUSART_DMA_TX_IRQ NVIC_DMA1_CHANNEL7_IRQ
 #define USBUSART_DMA_TX_ISR(x) dma1_channel7_isr(x)
 #define USBUSART_DMA_RX_CHAN DMA_CHANNEL6
 #define USBUSART_DMA_RX_IRQ NVIC_DMA1_CHANNEL6_IRQ
 #define USBUSART_DMA_RX_ISR(x) dma1_channel6_isr(x)
+#endif
+
+#define USBUSART_DMA_BUS DMA1
+#define USBUSART_DMA_CLK RCC_DMA1
 
 /* On F103, only USART1 is on AHB2 and can reach 4.5 MBaud at 72 MHz.*/
 #define SWO_UART				USART1
