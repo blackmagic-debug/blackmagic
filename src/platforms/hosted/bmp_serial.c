@@ -167,7 +167,12 @@ print_probes_info:
 #define BMP_IDSTRING_BLACKSPHERE "usb-Black_Sphere_Technologies_Black_Magic_Probe"
 #define BMP_IDSTRING_BLACKMAGIC  "usb-Black_Magic_Debug_Black_Magic_Probe"
 #define BMP_IDSTRING_1BITSQUARED "usb-1BitSquared_Black_Magic_Probe"
-#define DEVICE_BY_ID             "/dev/serial/by-id/"
+#define DEVICE_BY_ID             "/dev/serial/by-id"
+
+typedef enum scan_mode {
+	SCAN_FIND,
+	SCAN_LIST
+} scan_mode_e;
 
 size_t find_prefix_length(const char *name, const size_t name_len)
 {
@@ -204,7 +209,7 @@ char *extract_serial(const char *const device, const size_t length)
  *
  * Old versions have different strings. Try to cope!
  */
-static int scan_linux_id(const char *name, char **const type, char **const version, char **const serial)
+static bool scan_linux_id(const char *name, char **const type, char **const version, char **const serial)
 {
 	const size_t name_len = strlen(name) + 1U;
 	/* Find the correct prefix */
@@ -214,7 +219,7 @@ static int scan_linux_id(const char *name, char **const type, char **const versi
 		++prefix_length;
 	if (prefix_length == name_len) {
 		DEBUG_WARN("Unexpected end\n");
-		return -1;
+		return false;
 	}
 
 	size_t offsets[3][2] = {{prefix_length, 0U}, {0U, 0U}};
@@ -225,7 +230,7 @@ static int scan_linux_id(const char *name, char **const type, char **const versi
 			++underscores;
 			/* Device paths with more than 2 underscore delimited sections can't be valid BMP strings. */
 			if (underscores > 2)
-				return -1;
+				return false;
 			/* Skip over consecutive strings of underscores */
 			while (name[offset + 1U] == '_' && offset < name_len)
 				++offset;
@@ -239,7 +244,7 @@ static int scan_linux_id(const char *name, char **const type, char **const versi
 
 	*serial = extract_serial(name, name_len);
 	if (!*serial)
-		return -1;
+		return false;
 
 	/* If the device name has no underscores after the prefix, it's an original BMP */
 	if (underscores == 0) {
@@ -264,7 +269,7 @@ static int scan_linux_id(const char *name, char **const type, char **const versi
 			*type = strndup(name + offsets[0][0], offsets[0][1]);
 		}
 	}
-	return 0;
+	return true;
 }
 
 void copy_to_info(bmp_info_t *const info, const char *const type, const char *const version, const char *const serial)
@@ -286,80 +291,59 @@ void copy_to_info(bmp_info_t *const info, const char *const type, const char *co
 		DEBUG_WARN("snprintf() overflowed while generating manfacturer string\n");
 }
 
+size_t scan_devices(scan_mode_e mode, bmp_info_t *info, const char *const search_serial, const size_t search_position)
+{
+	DIR *dir = opendir(DEVICE_BY_ID);
+	if (!dir) /* /dev/serial/by-id is unavailable */
+		return false;
+	bool done = false;
+	size_t devices = 0;
+	while (!done) {
+		const struct dirent *const entry = readdir(dir);
+		if (entry == NULL)
+			break;
+		if (device_is_bmp_gdb_port(entry->d_name)) {
+			++devices;
+			char *type = NULL;
+			char *version = NULL;
+			char *serial = NULL;
+			if (!scan_linux_id(entry->d_name, &type, &version, &serial))
+				DEBUG_WARN("Error parsing device name \"%s\"\n", entry->d_name);
+
+			if (mode == SCAN_FIND) {
+				if ((search_serial && strstr(serial, search_serial)) ||
+					(search_position && devices == search_position)) {
+					copy_to_info(info, type, version, serial);
+					devices = 1;
+					done = true;
+				}
+			} else if (mode == SCAN_LIST)
+				DEBUG_WARN("%2d: %s, Black Magic Debug, Black Magic Probe (%s), %s\n", devices, serial, type, version);
+
+			free(type);
+			free(version);
+			free(serial);
+		}
+	}
+	closedir(dir);
+	return devices;
+}
+
 int find_debuggers(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info)
 {
 	if (cl_opts->opt_device)
 		return 1;
 	info->bmp_type = BMP_TYPE_BMP;
-	DIR *dir = opendir(DEVICE_BY_ID);
-	if (!dir) /* No serial device connected!*/
-		return 0;
-	size_t total = 0;
-	while (true) {
-		const struct dirent *const entry = readdir(dir);
-		if (entry == NULL)
-			break;
-		if (device_is_bmp_gdb_port(entry->d_name)) {
-			++total;
-			char *type = NULL;
-			char *version = NULL;
-			char *serial = NULL;
-			if (scan_linux_id(entry->d_name, &type, &version, &serial))
-				DEBUG_WARN("Unexpected device name found \"%s\"\n", entry->d_name);
-
-			/* If either the (partial) serial matches, or the device is in the right position in the detection order */
-			if ((cl_opts->opt_serial && strstr(serial, cl_opts->opt_serial)) ||
-				(cl_opts->opt_position && cl_opts->opt_position == total)) {
-				copy_to_info(info, type, version, serial);
-				total = 1;
-				free(type);
-				free(version);
-				free(serial);
-				break;
-			}
-			free(type);
-			free(version);
-			free(serial);
-		}
-	}
-	closedir(dir);
+	const size_t total = scan_devices(SCAN_FIND, info, cl_opts->opt_serial, cl_opts->opt_position);
 	if (!total) {
 		DEBUG_WARN("No BMP probe found\n");
 		return -1;
 	}
-	if (total > 1 || cl_opts->opt_list_only)
+	if (total > 1 || cl_opts->opt_list_only) {
 		DEBUG_WARN("Available Probes:\n");
-	dir = opendir(DEVICE_BY_ID);
-	size_t i = 0;
-	while (true) {
-		const struct dirent *const entry = readdir(dir);
-		if (entry == NULL)
-			break;
-		if (device_is_bmp_gdb_port(entry->d_name)) {
-			++i;
-			char *type = NULL;
-			char *version = NULL;
-			char *serial = NULL;
-			if (scan_linux_id(entry->d_name, &type, &version, &serial)) {
-				DEBUG_WARN("Unexpected device name found \"%s\"\n", entry->d_name);
-			} else if (total == 1 && !cl_opts->opt_list_only) {
-				copy_to_info(info, type, version, serial);
-				total = 1;
-				free(type);
-				free(version);
-				free(serial);
-				break;
-			} else if (total > 0) {
-				DEBUG_WARN("%2d: %s, Black Magic Debug, Black Magic "
-						   "Probe (%s), %s\n",
-					i, serial, type, version);
-			}
-			free(type);
-			free(version);
-			free(serial);
-		}
-	}
-	closedir(dir);
-	return (total == 1 && !cl_opts->opt_list_only) ? 0 : 1;
+		scan_devices(SCAN_LIST, NULL, NULL, 0);
+	} else if (total == 1 && !cl_opts->opt_serial && !cl_opts->opt_position)
+		scan_devices(SCAN_FIND, info, NULL, 1);
+	return total == 1 && !cl_opts->opt_list_only ? 0 : 1;
 }
 #endif
