@@ -366,11 +366,11 @@ int ftdi_bmp_init(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info)
 	/* If swd_(read|write) is not given for the selected cable and
 	   the 'e' command line argument is give, assume resistor SWD
 	   connection.*/
-	if (cl_opts->external_resistor_swd && (active_cable->mpsse_swd_read.set_data_low == 0) &&
-		(active_cable->mpsse_swd_read.clr_data_low == 0) && (active_cable->mpsse_swd_read.set_data_high == 0) &&
-		(active_cable->mpsse_swd_read.clr_data_high == 0) && (active_cable->mpsse_swd_write.set_data_low == 0) &&
-		(active_cable->mpsse_swd_write.clr_data_low == 0) && (active_cable->mpsse_swd_write.set_data_high == 0) &&
-		(active_cable->mpsse_swd_write.clr_data_high == 0)) {
+	if (cl_opts->external_resistor_swd && active_cable->mpsse_swd_read.set_data_low == 0 &&
+		active_cable->mpsse_swd_read.clr_data_low == 0 && active_cable->mpsse_swd_read.set_data_high == 0 &&
+		active_cable->mpsse_swd_read.clr_data_high == 0 && active_cable->mpsse_swd_write.set_data_low == 0 &&
+		active_cable->mpsse_swd_write.clr_data_low == 0 && active_cable->mpsse_swd_write.set_data_high == 0 &&
+		active_cable->mpsse_swd_write.clr_data_high == 0) {
 		DEBUG_INFO("Using external resistor SWD\n");
 		active_cable->mpsse_swd_read.set_data_low = MPSSE_DO;
 		active_cable->mpsse_swd_write.set_data_low = MPSSE_DO;
@@ -383,30 +383,35 @@ int ftdi_bmp_init(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info)
 		ftdi_free(ftdic);
 		ftdic = NULL;
 	}
-	if ((ftdic = ftdi_new()) == NULL) {
+	ftdic = ftdi_new();
+	if (ftdic == NULL) {
 		DEBUG_WARN("ftdi_new: %s\n", ftdi_get_error_string(ftdic));
 		abort();
 	}
 	info->ftdic = ftdic;
-	if ((err = ftdi_set_interface(ftdic, active_cable->interface)) != 0) {
+	err = ftdi_set_interface(ftdic, active_cable->interface);
+	if (err != 0) {
 		DEBUG_WARN("ftdi_set_interface: %d: %s\n", err, ftdi_get_error_string(ftdic));
 		goto error_1;
 	}
-	if ((err = ftdi_usb_open_desc(ftdic, active_cable->vendor, active_cable->product, active_cable->description,
-			 cl_opts->opt_serial)) != 0) {
+	err = ftdi_usb_open_desc(
+		ftdic, active_cable->vendor, active_cable->product, active_cable->description, cl_opts->opt_serial);
+	if (err != 0) {
 		DEBUG_WARN("unable to open ftdi device: %d (%s)\n", err, ftdi_get_error_string(ftdic));
 		goto error_1;
 	}
-
-	if ((err = ftdi_set_latency_timer(ftdic, 1)) != 0) {
+	err = ftdi_set_latency_timer(ftdic, 1);
+	if (err != 0) {
 		DEBUG_WARN("ftdi_set_latency_timer: %d: %s\n", err, ftdi_get_error_string(ftdic));
 		goto error_2;
 	}
-	if ((err = ftdi_set_baudrate(ftdic, 1000000)) != 0) {
+	err = ftdi_set_baudrate(ftdic, 1000000);
+	if (err != 0) {
 		DEBUG_WARN("ftdi_set_baudrate: %d: %s\n", err, ftdi_get_error_string(ftdic));
 		goto error_2;
 	}
-	if ((err = ftdi_write_data_set_chunksize(ftdic, BUF_SIZE)) != 0) {
+	err = ftdi_write_data_set_chunksize(ftdic, BUF_SIZE);
+	if (err != 0) {
 		DEBUG_WARN("ftdi_write_data_set_chunksize: %d: %s\n", err, ftdi_get_error_string(ftdic));
 		goto error_2;
 	}
@@ -441,7 +446,7 @@ int ftdi_bmp_init(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info)
 			DEBUG_WARN(" %02x", ftdi_init[i]);
 		DEBUG_WARN("\n");
 	}
-	int index = 0;
+	size_t index = 0;
 	ftdi_init[index++] = LOOPBACK_END; /* FT2232D gets upset otherwise*/
 	switch (ftdic->type) {
 	case TYPE_2232H:
