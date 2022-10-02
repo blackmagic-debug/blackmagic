@@ -257,14 +257,19 @@ void swdptap_bit_out(bool val)
 {
 	swdptap_turnaround(SWDIO_STATUS_DRIVE);
 	if (do_mpsse) {
-		uint8_t cmd[3] = {MPSSE_TDO_SHIFT, 0, (val) ? 1 : 0};
-		libftdi_buffer_write(cmd, sizeof(cmd));
+		const uint8_t cmd[3] = {
+			MPSSE_TDO_SHIFT,
+			0,
+			val ? 1 : 0,
+		};
+		libftdi_buffer_write_arr(cmd);
 	} else {
-		uint8_t cmd[3];
-		cmd[0] = MPSSE_TMS_SHIFT;
-		cmd[1] = 0;
-		cmd[2] = (val) ? 1 : 0;
-		libftdi_buffer_write(cmd, sizeof(cmd));
+		const uint8_t cmd[3] = {
+			MPSSE_TMS_SHIFT,
+			0,
+			val ? 1 : 0,
+		};
+		libftdi_buffer_write_arr(cmd);
 	}
 }
 
