@@ -46,35 +46,31 @@ static uint32_t swdptap_seq_in(size_t clock_cycles);
 static void swdptap_seq_out(uint32_t tms_states, size_t clock_cycles);
 static void swdptap_seq_out_parity(uint32_t tms_states, size_t clock_cycles);
 
-bool libftdi_swd_possible(bool *do_mpsse, bool *direct_bb_swd)
+bool libftdi_swd_possible(void)
 {
 	const bool swd_read = active_cable->mpsse_swd_read.set_data_low || active_cable->mpsse_swd_read.clr_data_low ||
 	                      active_cable->mpsse_swd_read.set_data_high || active_cable->mpsse_swd_read.clr_data_high;
 	const bool swd_write = active_cable->mpsse_swd_write.set_data_low || active_cable->mpsse_swd_write.clr_data_low ||
 	                       active_cable->mpsse_swd_write.set_data_high || active_cable->mpsse_swd_write.clr_data_high;
-	const bool mpsse = swd_read && swd_write;
+	do_mpsse = swd_read && swd_write;
 	if (do_mpsse)
-		*do_mpsse = mpsse;
-	if (!mpsse) {
-		const bool bb_swd_read = active_cable->bb_swd_read.set_data_low || active_cable->bb_swd_read.clr_data_low ||
-		                         active_cable->bb_swd_read.set_data_high || active_cable->bb_swd_read.clr_data_high;
-		const bool bb_swd_write = active_cable->bb_swd_write.set_data_low || active_cable->bb_swd_write.clr_data_low ||
-		                          active_cable->bb_swd_write.set_data_high || active_cable->bb_swd_write.clr_data_high;
-		const bool bb_direct_possible =
-			active_cable->bb_swdio_in_port_cmd == GET_BITS_LOW && active_cable->bb_swdio_in_pin == MPSSE_CS;
-		if (!bb_swd_read && !bb_swd_write) {
-			if (!bb_direct_possible)
-				return false;
-		}
-		if (direct_bb_swd)
-			*direct_bb_swd = true;
-	}
+		return true;
+
+	const bool bb_swd_read = active_cable->bb_swd_read.set_data_low || active_cable->bb_swd_read.clr_data_low ||
+	                         active_cable->bb_swd_read.set_data_high || active_cable->bb_swd_read.clr_data_high;
+	const bool bb_swd_write = active_cable->bb_swd_write.set_data_low || active_cable->bb_swd_write.clr_data_low ||
+	                          active_cable->bb_swd_write.set_data_high || active_cable->bb_swd_write.clr_data_high;
+	const bool bb_direct_possible =
+		active_cable->bb_swdio_in_port_cmd == GET_BITS_LOW && active_cable->bb_swdio_in_pin == MPSSE_CS;
+	if (!bb_swd_read && !bb_swd_write && !bb_direct_possible)
+		return false;
+	direct_bb_swd = true;
 	return true;
 }
 
 int libftdi_swdptap_init(ADIv5_DP_t *dp)
 {
-	if (!libftdi_swd_possible(&do_mpsse, &direct_bb_swd)) {
+	if (!libftdi_swd_possible()) {
 		DEBUG_WARN("SWD not possible or missing item in cable description.\n");
 		return -1;
 	}
