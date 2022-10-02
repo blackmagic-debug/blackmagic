@@ -99,6 +99,8 @@ typedef struct cable_desc_s {
 	char *name;
 } cable_desc_t;
 
+#define libftdi_buffer_write_arr(array) libftdi_buffer_write(array, sizeof(array))
+
 #if HOSTED_BMP_ONLY == 1
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
