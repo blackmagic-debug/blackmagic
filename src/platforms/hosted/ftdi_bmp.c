@@ -587,7 +587,7 @@ size_t libftdi_buffer_write(const uint8_t *data, size_t size)
 	return size;
 }
 
-int libftdi_buffer_read(uint8_t *data, int size)
+size_t libftdi_buffer_read(uint8_t *data, size_t size)
 {
 #if defined(USE_USB_VERSION_BIT)
 	struct ftdi_transfer_control *tc;
@@ -596,17 +596,17 @@ int libftdi_buffer_read(uint8_t *data, int size)
 	tc = ftdi_read_data_submit(ftdic, data, size);
 	ftdi_transfer_data_done(tc);
 #else
-	int index = 0;
+	size_t index = 0;
 	const uint8_t cmd[1] = {SEND_IMMEDIATE};
 	libftdi_buffer_write(cmd, 1);
 	libftdi_buffer_flush();
-	while ((index += ftdi_read_data(ftdic, data + index, size - index)) != size)
-		;
+	for (size_t index = 0; index != size; )
+		index += ftdi_read_data(ftdic, data + index, size - index);
 #endif
 	DEBUG_WIRE("Read  %d bytes:", size);
-	for (int i = 0; i < size; i++) {
+	for (size_t i = 0; i < size; i++) {
 		DEBUG_WIRE(" %02x", data[i]);
-		if (i && (i & 0xf) == 0xf)
+		if ((i & 0xf) == 0xf)
 			DEBUG_WIRE("\n\t");
 	}
 	DEBUG_WIRE("\n");

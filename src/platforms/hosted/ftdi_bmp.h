@@ -100,6 +100,8 @@ typedef struct cable_desc_s {
 } cable_desc_t;
 
 #define libftdi_buffer_write_arr(array) libftdi_buffer_write(array, sizeof(array))
+#define libftdi_buffer_read_arr(array) libftdi_buffer_read(array, sizeof(array))
+#define libftdi_buffer_read_val(value) libftdi_buffer_read(&(value), sizeof(value))
 
 #if HOSTED_BMP_ONLY == 1
 #pragma GCC diagnostic push
@@ -123,7 +125,7 @@ size_t libftdi_buffer_write(const uint8_t *data, size_t size)
 {
 	return size;
 }
-int libftdi_buffer_read(uint8_t *data, int size)
+size_t libftdi_buffer_read(uint8_t *data, size_t size)
 {
 	return size;
 }
@@ -166,7 +168,7 @@ int libftdi_swdptap_init(ADIv5_DP_t *dp);
 int libftdi_jtagtap_init(jtag_proc_t *jtag_proc);
 void libftdi_buffer_flush(void);
 size_t libftdi_buffer_write(const uint8_t *data, size_t size);
-int libftdi_buffer_read(uint8_t *data, int size);
+size_t libftdi_buffer_read(uint8_t *data, size_t size);
 const char *libftdi_target_voltage(void);
 void libftdi_jtagtap_tdi_tdo_seq(uint8_t *data_out, bool final_tms, const uint8_t *data_in, size_t ticks);
 bool libftdi_swd_possible(bool *do_mpsse, bool *direct_bb_swd);
