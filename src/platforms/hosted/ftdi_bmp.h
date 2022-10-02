@@ -146,7 +146,7 @@ void libftdi_jtagtap_tdi_tdo_seq(
 {
 }
 
-bool libftdi_swd_possible(bool *do_mpsse, bool *direct_bb_swd)
+bool libftdi_swd_possible(void)
 {
 	return false;
 }
@@ -185,7 +185,7 @@ size_t libftdi_buffer_write(const uint8_t *data, size_t size);
 size_t libftdi_buffer_read(uint8_t *data, size_t size);
 const char *libftdi_target_voltage(void);
 void libftdi_jtagtap_tdi_tdo_seq(uint8_t *data_out, bool final_tms, const uint8_t *data_in, size_t ticks);
-bool libftdi_swd_possible(bool *do_mpsse, bool *direct_bb_swd);
+bool libftdi_swd_possible(void);
 void libftdi_max_frequency_set(uint32_t freq);
 uint32_t libftdi_max_frequency_get(void);
 void libftdi_nrst_set_val(bool assert);
