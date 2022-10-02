@@ -41,6 +41,86 @@ static bool direct_bb_swd;
 #define MPSSE_TMS_SHIFT (MPSSE_WRITE_TMS | MPSSE_LSB | MPSSE_BITMODE | MPSSE_WRITE_NEG)
 #define MPSSE_TDO_SHIFT (MPSSE_DO_WRITE | MPSSE_LSB | MPSSE_BITMODE | MPSSE_WRITE_NEG)
 
+static bool swdptap_seq_in_parity(uint32_t *res, size_t clock_cycles);
+static uint32_t swdptap_seq_in(size_t clock_cycles);
+static void swdptap_seq_out(uint32_t tms_states, size_t clock_cycles);
+static void swdptap_seq_out_parity(uint32_t tms_states, size_t clock_cycles);
+
+bool libftdi_swd_possible(bool *do_mpsse, bool *direct_bb_swd)
+{
+	const bool swd_read = active_cable->mpsse_swd_read.set_data_low || active_cable->mpsse_swd_read.clr_data_low ||
+	                      active_cable->mpsse_swd_read.set_data_high || active_cable->mpsse_swd_read.clr_data_high;
+	const bool swd_write = active_cable->mpsse_swd_write.set_data_low || active_cable->mpsse_swd_write.clr_data_low ||
+	                       active_cable->mpsse_swd_write.set_data_high || active_cable->mpsse_swd_write.clr_data_high;
+	const bool mpsse = swd_read && swd_write;
+	if (do_mpsse)
+		*do_mpsse = mpsse;
+	if (!mpsse) {
+		const bool bb_swd_read = active_cable->bb_swd_read.set_data_low || active_cable->bb_swd_read.clr_data_low ||
+		                         active_cable->bb_swd_read.set_data_high || active_cable->bb_swd_read.clr_data_high;
+		const bool bb_swd_write = active_cable->bb_swd_write.set_data_low || active_cable->bb_swd_write.clr_data_low ||
+		                          active_cable->bb_swd_write.set_data_high || active_cable->bb_swd_write.clr_data_high;
+		const bool bb_direct_possible =
+			active_cable->bb_swdio_in_port_cmd == GET_BITS_LOW && active_cable->bb_swdio_in_pin == MPSSE_CS;
+		if (!bb_swd_read && !bb_swd_write) {
+			if (!bb_direct_possible)
+				return false;
+		}
+		if (direct_bb_swd)
+			*direct_bb_swd = true;
+	}
+	return true;
+}
+
+int libftdi_swdptap_init(ADIv5_DP_t *dp)
+{
+	if (!libftdi_swd_possible(&do_mpsse, &direct_bb_swd)) {
+		DEBUG_WARN("SWD not possible or missing item in cable description.\n");
+		return -1;
+	}
+	active_state.data_low |= MPSSE_CS | MPSSE_DI | MPSSE_DO;
+	active_state.data_low &= MPSSE_SK;
+	active_state.ddr_low |= MPSSE_SK;
+	active_state.ddr_low &= ~(MPSSE_CS | MPSSE_DI | MPSSE_DO);
+	if (do_mpsse) {
+		DEBUG_INFO("Using genuine MPSSE for SWD.\n");
+		active_state.data_low |= active_cable->mpsse_swd_read.set_data_low;
+		active_state.data_low &= ~(active_cable->mpsse_swd_read.clr_data_low);
+		active_state.data_high |= active_cable->mpsse_swd_read.set_data_high;
+		active_state.data_high &= ~(active_cable->mpsse_swd_read.clr_data_high);
+	} else if (direct_bb_swd) {
+		DEBUG_INFO("Using direct bitbang with SWDIO %cBUS%d.\n",
+			(active_cable->bb_swdio_in_port_cmd == GET_BITS_LOW) ? 'C' : 'D',
+			__builtin_ctz(active_cable->bb_swdio_in_pin));
+	} else {
+		DEBUG_INFO("Using switched bitbang for SWD.\n");
+		active_state.data_low |= active_cable->bb_swd_read.set_data_low;
+		active_state.data_low &= ~(active_cable->bb_swd_read.clr_data_low);
+		active_state.data_high |= active_cable->bb_swd_read.set_data_high;
+		active_state.data_high &= ~(active_cable->bb_swd_read.clr_data_high);
+		active_state.ddr_low |= MPSSE_CS;
+		if (active_cable->bb_swdio_in_port_cmd == GET_BITS_LOW)
+			active_state.ddr_low &= ~active_cable->bb_swdio_in_pin;
+		else if (active_cable->bb_swdio_in_port_cmd == GET_BITS_HIGH)
+			active_state.ddr_high &= ~active_cable->bb_swdio_in_pin;
+	}
+	uint8_t cmd_write[6] = {SET_BITS_LOW, active_state.data_low, active_state.ddr_low, SET_BITS_HIGH,
+		active_state.data_high, active_state.ddr_high};
+	libftdi_buffer_write(cmd_write, 6);
+	libftdi_buffer_flush();
+	olddir = SWDIO_STATUS_FLOAT;
+
+	dp->seq_in = swdptap_seq_in;
+	dp->seq_in_parity = swdptap_seq_in_parity;
+	dp->seq_out = swdptap_seq_out;
+	dp->seq_out_parity = swdptap_seq_out_parity;
+	dp->dp_read = firmware_swdp_read;
+	dp->error = firmware_swdp_error;
+	dp->low_access = firmware_swdp_low_access;
+	dp->abort = firmware_swdp_abort;
+	return 0;
+}
+
 static void swdptap_turnaround_mpsse(const swdio_status_e dir)
 {
 	if (dir == SWDIO_STATUS_FLOAT) { /* SWDIO goes to input */
@@ -141,86 +221,6 @@ static void swdptap_turnaround(const swdio_status_e dir)
 		swdptap_turnaround_mpsse(dir);
 	else
 		swdptap_turnaround_raw(dir);
-}
-
-static bool swdptap_seq_in_parity(uint32_t *res, size_t clock_cycles);
-static uint32_t swdptap_seq_in(size_t clock_cycles);
-static void swdptap_seq_out(uint32_t tms_states, size_t clock_cycles);
-static void swdptap_seq_out_parity(uint32_t tms_states, size_t clock_cycles);
-
-bool libftdi_swd_possible(bool *do_mpsse, bool *direct_bb_swd)
-{
-	const bool swd_read = active_cable->mpsse_swd_read.set_data_low || active_cable->mpsse_swd_read.clr_data_low ||
-	                      active_cable->mpsse_swd_read.set_data_high || active_cable->mpsse_swd_read.clr_data_high;
-	const bool swd_write = active_cable->mpsse_swd_write.set_data_low || active_cable->mpsse_swd_write.clr_data_low ||
-	                       active_cable->mpsse_swd_write.set_data_high || active_cable->mpsse_swd_write.clr_data_high;
-	const bool mpsse = swd_read && swd_write;
-	if (do_mpsse)
-		*do_mpsse = mpsse;
-	if (!mpsse) {
-		const bool bb_swd_read = active_cable->bb_swd_read.set_data_low || active_cable->bb_swd_read.clr_data_low ||
-		                         active_cable->bb_swd_read.set_data_high || active_cable->bb_swd_read.clr_data_high;
-		const bool bb_swd_write = active_cable->bb_swd_write.set_data_low || active_cable->bb_swd_write.clr_data_low ||
-		                          active_cable->bb_swd_write.set_data_high || active_cable->bb_swd_write.clr_data_high;
-		const bool bb_direct_possible =
-			active_cable->bb_swdio_in_port_cmd == GET_BITS_LOW && active_cable->bb_swdio_in_pin == MPSSE_CS;
-		if (!bb_swd_read && !bb_swd_write) {
-			if (!bb_direct_possible)
-				return false;
-		}
-		if (direct_bb_swd)
-			*direct_bb_swd = true;
-	}
-	return true;
-}
-
-int libftdi_swdptap_init(ADIv5_DP_t *dp)
-{
-	if (!libftdi_swd_possible(&do_mpsse, &direct_bb_swd)) {
-		DEBUG_WARN("SWD not possible or missing item in cable description.\n");
-		return -1;
-	}
-	active_state.data_low |= MPSSE_CS | MPSSE_DI | MPSSE_DO;
-	active_state.data_low &= MPSSE_SK;
-	active_state.ddr_low |= MPSSE_SK;
-	active_state.ddr_low &= ~(MPSSE_CS | MPSSE_DI | MPSSE_DO);
-	if (do_mpsse) {
-		DEBUG_INFO("Using genuine MPSSE for SWD.\n");
-		active_state.data_low |= active_cable->mpsse_swd_read.set_data_low;
-		active_state.data_low &= ~(active_cable->mpsse_swd_read.clr_data_low);
-		active_state.data_high |= active_cable->mpsse_swd_read.set_data_high;
-		active_state.data_high &= ~(active_cable->mpsse_swd_read.clr_data_high);
-	} else if (direct_bb_swd) {
-		DEBUG_INFO("Using direct bitbang with SWDIO %cBUS%d.\n",
-			(active_cable->bb_swdio_in_port_cmd == GET_BITS_LOW) ? 'C' : 'D',
-			__builtin_ctz(active_cable->bb_swdio_in_pin));
-	} else {
-		DEBUG_INFO("Using switched bitbang for SWD.\n");
-		active_state.data_low |= active_cable->bb_swd_read.set_data_low;
-		active_state.data_low &= ~(active_cable->bb_swd_read.clr_data_low);
-		active_state.data_high |= active_cable->bb_swd_read.set_data_high;
-		active_state.data_high &= ~(active_cable->bb_swd_read.clr_data_high);
-		active_state.ddr_low |= MPSSE_CS;
-		if (active_cable->bb_swdio_in_port_cmd == GET_BITS_LOW)
-			active_state.ddr_low &= ~active_cable->bb_swdio_in_pin;
-		else if (active_cable->bb_swdio_in_port_cmd == GET_BITS_HIGH)
-			active_state.ddr_high &= ~active_cable->bb_swdio_in_pin;
-	}
-	uint8_t cmd_write[6] = {SET_BITS_LOW, active_state.data_low, active_state.ddr_low, SET_BITS_HIGH,
-		active_state.data_high, active_state.ddr_high};
-	libftdi_buffer_write(cmd_write, 6);
-	libftdi_buffer_flush();
-	olddir = SWDIO_STATUS_FLOAT;
-
-	dp->seq_in = swdptap_seq_in;
-	dp->seq_in_parity = swdptap_seq_in_parity;
-	dp->seq_out = swdptap_seq_out;
-	dp->seq_out_parity = swdptap_seq_out_parity;
-	dp->dp_read = firmware_swdp_read;
-	dp->error = firmware_swdp_error;
-	dp->low_access = firmware_swdp_low_access;
-	dp->abort = firmware_swdp_abort;
-	return 0;
 }
 
 bool swdptap_bit_in(void)
