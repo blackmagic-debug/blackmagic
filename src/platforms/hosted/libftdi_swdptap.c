@@ -74,10 +74,10 @@ int libftdi_swdptap_init(ADIv5_DP_t *dp)
 		DEBUG_WARN("SWD not possible or missing item in cable description.\n");
 		return -1;
 	}
+	active_state.data_low &= ~MPSSE_SK;
 	active_state.data_low |= MPSSE_CS | MPSSE_DI | MPSSE_DO;
-	active_state.data_low &= MPSSE_SK;
-	active_state.ddr_low |= MPSSE_SK;
 	active_state.ddr_low &= ~(MPSSE_CS | MPSSE_DI | MPSSE_DO);
+	active_state.ddr_low |= MPSSE_SK;
 	if (do_mpsse) {
 		DEBUG_INFO("Using genuine MPSSE for SWD.\n");
 		active_state.data_low |= active_cable->mpsse_swd_read.set_data_low;
