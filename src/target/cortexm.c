@@ -682,7 +682,7 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 		PROBE(renesas_probe);
 		break;
 	case JEP106_MANUFACTURER_ARM:
-		if (t->part_id == 0x4c0) {        /* Cortex-M0+ ROM */
+		if (t->part_id == 0x4c0 || t->part_id == 0x4c1) { /* Cortex-M0+ ROM (0x4c1 is for some newer LPC11U6xx)*/
 			PROBE(lpc11xx_probe);         /* LPC8 */
 		} else if (t->part_id == 0x4c3) { /* Cortex-M3 ROM */
 			PROBE(lmi_probe);
