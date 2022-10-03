@@ -137,7 +137,7 @@ int find_debuggers(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info)
 		return -1;
 	}
 	bool report = false;
-	int found_debuggers;
+	size_t found_debuggers;
 	struct libusb_device_descriptor desc;
 	char serial[64];
 	char manufacturer[128];
