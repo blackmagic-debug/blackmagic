@@ -72,7 +72,7 @@ typedef struct BMP_CL_OPTIONS_s {
 
 void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv);
 int cl_execute(BMP_CL_OPTIONS_t *opt);
-int serial_open(const BMP_CL_OPTIONS_t *opt, const char *serial);
+int serial_open(BMP_CL_OPTIONS_t *opt, const char *serial);
 void serial_close(void);
 
 #endif /* PLATFORMS_HOSTED_CLI_H */
