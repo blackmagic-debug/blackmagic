@@ -62,7 +62,7 @@ static char *find_bmp_by_serial(const char *serial)
 	return strdup((char *)port);
 }
 
-int serial_open(const BMP_CL_OPTIONS_t *const cl_opts, const char *const serial)
+int serial_open(BMP_CL_OPTIONS_t *const cl_opts, const char *const serial)
 {
 	char device[256];
 	if (!cl_opts->opt_device)
@@ -77,7 +77,7 @@ int serial_open(const BMP_CL_OPTIONS_t *const cl_opts, const char *const serial)
 		strcpy(device, "\\\\.\\");
 		strncat(device, cl_opts->opt_device, sizeof(device) - strlen(device) - 1);
 	}
-	port_handle = CreateFile(device,        // NT path to the port
+	port_handle = CreateFile(device,  // NT path to the port
 		GENERIC_READ | GENERIC_WRITE, // Read/Write
 		0,                            // No Sharing
 		NULL,                         // No Security
@@ -124,9 +124,9 @@ int platform_buffer_write(const uint8_t *data, int size)
 {
 	DEBUG_WIRE("%s\n", data);
 	DWORD written = 0;
-	for (size_t offset = 0; offset < (size_t)size; offset += written)
+	for (size_t offset = 0; offset < (size_t)size; offset += written) {
 		if (!WriteFile(port_handle, data + offset, size - offset, &written, NULL)) {
-			DEBUG_WARN("Serial write failed %lu, written %\u\n", GetLastError(), offset);
+			DEBUG_WARN("Serial write failed %lu, written %zu\n", GetLastError(), offset);
 			return -1;
 		}
 		offset += written;
@@ -166,7 +166,7 @@ int platform_buffer_read(uint8_t *data, int maxsize)
 				DEBUG_WIRE("\n");
 				return offset;
 			}
-			++offset
+			++offset ;
 		}
 	}
 	DEBUG_WARN("Failed to read EOM at %u\n", platform_time_ms() - start_time);
