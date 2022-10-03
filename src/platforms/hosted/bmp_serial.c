@@ -88,7 +88,7 @@ int find_debuggers(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info)
 	SP_DEVINFO_DATA DeviceInfoData;
 	TCHAR szDeviceInstanceID[MAX_DEVICE_ID_LEN];
 	WCHAR busReportedDeviceSesc[4096];
-	int probes_found = 0;
+	size_t probes_found = 0;
 	bool is_printing_probes_info = cl_opts->opt_list_only != 0;
 
 	info->bmp_type = BMP_TYPE_BMP;
