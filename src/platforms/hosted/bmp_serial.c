@@ -80,7 +80,7 @@ int find_debuggers(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info)
 	SP_DEVINFO_DATA DeviceInfoData;
 	TCHAR szDeviceInstanceID[MAX_DEVICE_ID_LEN];
 	WCHAR busReportedDeviceSesc[4096];
-	int probes_found = 0;
+	size_t probes_found = 0;
 	bool is_printing_probes_info = cl_opts->opt_list_only != 0;
 
 	info->bmp_type = BMP_TYPE_BMP;
@@ -226,9 +226,9 @@ int find_debuggers(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info)
 	DIR *dir = opendir(DEVICE_BY_ID);
 	if (!dir) /* No serial device connected!*/
 		return 0;
-	int found_bmps = 0;
+	size_t found_bmps = 0;
 	struct dirent *dp;
-	int i = 0;
+	size_t i = 0;
 	while ((dp = readdir(dir)) != NULL) {
 		if ((strstr(dp->d_name, BMP_IDSTRING_BLACKMAGIC) || strstr(dp->d_name, BMP_IDSTRING_BLACKSPHERE) ||
 				strstr(dp->d_name, BMP_IDSTRING_1BITSQUARED)) &&
