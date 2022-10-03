@@ -320,42 +320,48 @@ static bool swdptap_seq_in_parity(uint32_t *const result, const size_t clock_cyc
 	return swdptap_seq_in_parity_raw(result, clock_cycles);
 }
 
-static uint32_t swdptap_seq_in(size_t clock_cycles)
+static uint32_t swdptap_seq_in_mpsse(const size_t clock_cycles)
 {
-	if (!clock_cycles)
-		return 0;
+	uint8_t data_out[4];
+	libftdi_jtagtap_tdi_tdo_seq(data_out, 0, NULL, clock_cycles);
+	size_t bytes = clock_cycles >> 3;
+	if (clock_cycles & 7)
+		bytes++;
 	uint32_t result = 0;
-	swdptap_turnaround(SWDIO_STATUS_FLOAT);
-	if (do_mpsse) {
-		uint8_t DO[4];
-		libftdi_jtagtap_tdi_tdo_seq(DO, 0, NULL, clock_cycles);
-		int bytes = clock_cycles >> 3;
-		if (clock_cycles & 7)
-			bytes++;
-		for (int i = 0; i < bytes; i++) {
-			result |= DO[i] << (8 * i);
-		}
-	} else {
-		size_t index = clock_cycles;
-		uint8_t cmd[4];
+	for (size_t i = 0; i < bytes; i++)
+		result |= data_out[i] << (8U * i);
+	return result;
+}
 
-		cmd[0] = active_cable->bb_swdio_in_port_cmd;
-		cmd[1] = MPSSE_TMS_SHIFT;
-		cmd[2] = 0;
-		cmd[3] = 0;
+static uint32_t swdptap_seq_in_raw(const size_t clock_cycles)
+{
+	const uint8_t cmd[4] = {
+		active_cable->bb_swdio_in_port_cmd,
+		MPSSE_TMS_SHIFT,
+		0,
+		0,
+	};
+	for (size_t clock_cycle = 0; clock_cycle < clock_cycles; ++clock_cycle)
+		libftdi_buffer_write_arr(cmd);
 
-		while (index--) {
-			libftdi_buffer_write(cmd, sizeof(cmd));
-		}
-		uint8_t data[32];
-		libftdi_buffer_read(data, clock_cycles);
-		index = clock_cycles;
-		while (index--) {
-			if (data[index] & active_cable->bb_swdio_in_pin)
-				result |= (1 << index);
-		}
+	uint8_t data[32];
+	libftdi_buffer_read(data, clock_cycles);
+	uint32_t result = 0;
+	for (size_t clock_cycle = 0; clock_cycle < clock_cycles; ++clock_cycle) {
+		if (data[clock_cycle] & active_cable->bb_swdio_in_pin)
+			result |= (1 << clock_cycle);
 	}
 	return result;
+}
+
+static uint32_t swdptap_seq_in(size_t clock_cycles)
+{
+	if (!clock_cycles || clock_cycles > 32U)
+		return 0;
+	swdptap_turnaround(SWDIO_STATUS_FLOAT);
+	if (do_mpsse)
+		return swdptap_seq_in_mpsse(clock_cycles);
+	return swdptap_seq_in_raw(clock_cycles);
 }
 
 static void swdptap_seq_out(uint32_t tms_states, size_t clock_cycles)
