@@ -30,6 +30,7 @@
 #include <errno.h>
 #include "general.h"
 #include "bmp_hosted.h"
+#include "probe_info.h"
 #include "utils.h"
 #include "version.h"
 
@@ -168,6 +169,7 @@ print_probes_info:
 #define BMP_IDSTRING_BLACKMAGIC  "usb-Black_Magic_Debug_Black_Magic_Probe"
 #define BMP_IDSTRING_1BITSQUARED "usb-1BitSquared_Black_Magic_Probe"
 #define DEVICE_BY_ID             "/dev/serial/by-id"
+#define MFR_FORMAT_STRING        "Black Magic Probe (%s)"
 
 typedef enum scan_mode {
 	SCAN_FIND,
@@ -203,14 +205,9 @@ char *extract_serial(const char *const device, const size_t length)
 	return result;
 }
 
-/*
- * Extract type, version and serial from /dev/serial/by_id
- * Return 0 on success
- *
- * Old versions have different strings. Try to cope!
- */
-static bool scan_linux_id(const char *name, char **const type, char **const version, char **const serial)
+static probe_info_s *parse_device_node(const char *name, probe_info_s *probe_list)
 {
+	/* Starting with a string such as 'usb-Black_Magic_Debug_Black_Magic_Probe_v1.8.0-650-g829308db_8BB20695-if00' */
 	const size_t name_len = strlen(name) + 1U;
 	/* Find the correct prefix */
 	size_t prefix_length = find_prefix_length(name, name_len);
@@ -219,9 +216,11 @@ static bool scan_linux_id(const char *name, char **const type, char **const vers
 		++prefix_length;
 	if (prefix_length == name_len) {
 		DEBUG_WARN("Unexpected end\n");
-		return false;
+		return probe_list;
 	}
 
+	/* With the remaining string, scan for _'s and index where the string chunks lie either side */
+	/* This operates on a string such as 'v1.8.0-650-g829308db_8BB20695-if00' */
 	size_t offsets[3][2] = {{prefix_length, 0U}, {0U, 0U}};
 	size_t underscores = 0;
 	for (size_t offset = prefix_length; offset < name_len; ++offset) {
@@ -230,7 +229,7 @@ static bool scan_linux_id(const char *name, char **const type, char **const vers
 			++underscores;
 			/* Device paths with more than 2 underscore delimited sections can't be valid BMP strings. */
 			if (underscores > 2)
-				return false;
+				return probe_list;
 			/* Skip over consecutive strings of underscores */
 			while (name[offset + 1U] == '_' && offset < name_len)
 				++offset;
@@ -242,108 +241,123 @@ static bool scan_linux_id(const char *name, char **const type, char **const vers
 	}
 	offsets[underscores][1] = name_len - offsets[underscores][0];
 
-	*serial = extract_serial(name, name_len);
+	/* Now we know where everything is, start by extracting the serial string on the end. */
+	char *const serial = extract_serial(name, name_len);
 	if (!*serial)
-		return false;
+		return probe_list;
+
+	/* Now extract the underlying probe type and versioning information */
+	char *version = NULL;
+	char *type = NULL;
 
 	/* If the device name has no underscores after the prefix, it's an original BMP */
 	if (underscores == 0) {
-		*version = strdup("Unknown");
-		*type = strdup("Native");
+		version = strdup("Unknown");
+		type = strdup("Native");
 		/*
 		 * If the device name has two underscores delimted sections after the prefix,
 		 * it's a non-native device running the Black Magic Firmware.
 		 */
 	} else if (underscores == 2) {
-		*version = strndup(name + offsets[0][0], offsets[0][1]);
-		*type = strndup(name + offsets[1][0], offsets[1][1]);
+		version = strndup(name + offsets[0][0], offsets[0][1]);
+		type = strndup(name + offsets[1][0], offsets[1][1]);
 		/* Otherwise it's a native BMP */
 	} else {
 		/* The first section should start with a 'v' indicating the version info */
 		if (name[prefix_length] == 'v') {
-			*version = strndup(name + offsets[0][0], offsets[0][1]);
-			*type = strdup("Native");
+			version = strndup(name + offsets[0][0], offsets[0][1]);
+			type = strdup("Native");
 			/* But if not then it's actually a non-native device and has no version string. */
 		} else {
-			*version = strdup("Unknown");
-			*type = strndup(name + offsets[0][0], offsets[0][1]);
+			version = strdup("Unknown");
+			type = strndup(name + offsets[0][0], offsets[0][1]);
 		}
 	}
-	return true;
-}
 
-void copy_to_info(bmp_info_t *const info, const char *const type, const char *const version, const char *const serial)
-{
-	const size_t serial_len = MIN(strlen(serial), sizeof(info->serial) - 1U);
-	memcpy(info->serial, serial, serial_len);
-	info->serial[serial_len] = '\0';
-
-	const size_t version_len = MIN(strlen(version), sizeof(info->version) - 1U);
-	memcpy(info->version, version, version_len);
-	info->version[version_len] = '\0';
-
-	const int result = snprintf(info->manufacturer, sizeof(info->manufacturer), "Black Magic Probe (%s)", type);
-	if (result < 0) {
-		const int error = errno;
-		DEBUG_WARN("sprintf() failed with result %d while generating manufacturer string: %s", error, strerror(error));
+	if (!version || !type) {
+		DEBUG_WARN("Failed to construct version of type string");
+		free(serial);
+		free(version);
+		free(type);
+		return probe_list;
 	}
-	if ((size_t)result >= sizeof(info->manufacturer))
-		DEBUG_WARN("snprintf() overflowed while generating manfacturer string\n");
+
+	const size_t mfr_length = strlen(type) + sizeof(MFR_FORMAT_STRING) - 2U;
+	char *const mfr = malloc(mfr_length);
+	if (!mfr) {
+		DEBUG_WARN("Failed to allocate space for manufacturer string");
+		free(serial);
+		free(version);
+		free(type);
+		return probe_list;
+	}
+
+	snprintf(mfr, mfr_length, MFR_FORMAT_STRING, type);
+	free(type);
+	return probe_info_add(probe_list, BMP_TYPE_BMP, mfr, serial, version);
 }
 
-size_t scan_devices(scan_mode_e mode, bmp_info_t *info, const char *const search_serial, const size_t search_position)
+static const probe_info_s *scan_for_devices(void)
 {
 	DIR *dir = opendir(DEVICE_BY_ID);
 	if (!dir) /* /dev/serial/by-id is unavailable */
-		return false;
-	bool done = false;
-	size_t devices = 0;
-	while (!done) {
+		return NULL;
+	probe_info_s *probe_list = NULL;
+	while (true) {
 		const struct dirent *const entry = readdir(dir);
 		if (entry == NULL)
 			break;
 		if (device_is_bmp_gdb_port(entry->d_name)) {
-			++devices;
-			char *type = NULL;
-			char *version = NULL;
-			char *serial = NULL;
-			if (!scan_linux_id(entry->d_name, &type, &version, &serial))
+			probe_info_s *probe_info = parse_device_node(entry->d_name, probe_list);
+			/* If the operation would have succeeded but probe_info_add fails, we exhausted memory. */
+			if (!probe_info) {
+				probe_info_list_free(probe_list);
+				probe_list = NULL;
+				break;
+			}
+			/* If the operation returned the probe_list unchanged, it failed to parse the node */
+			if (probe_info == probe_list)
 				DEBUG_WARN("Error parsing device name \"%s\"\n", entry->d_name);
-
-			if (mode == SCAN_FIND) {
-				if ((search_serial && strstr(serial, search_serial)) ||
-					(search_position && devices == search_position)) {
-					copy_to_info(info, type, version, serial);
-					devices = 1;
-					done = true;
-				}
-			} else if (mode == SCAN_LIST)
-				DEBUG_WARN("%2d: %s, Black Magic Debug, Black Magic Probe (%s), %s\n", devices, serial, type, version);
-
-			free(type);
-			free(version);
-			free(serial);
+			probe_list = probe_info;
 		}
 	}
 	closedir(dir);
-	return devices;
+	return probe_info_correct_order(probe_list);
 }
 
 int find_debuggers(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info)
 {
 	if (cl_opts->opt_device)
 		return 1;
-	info->bmp_type = BMP_TYPE_BMP;
-	const size_t total = scan_devices(SCAN_FIND, info, cl_opts->opt_serial, cl_opts->opt_position);
-	if (!total) {
+	/* Scan for all possible probes on the system */
+	const probe_info_s *const probe_list = scan_for_devices();
+	if (!probe_list) {
 		DEBUG_WARN("No BMP probe found\n");
 		return -1;
 	}
-	if (total > 1 || cl_opts->opt_list_only) {
+	/* Count up how many were found and filter the list for a match to the program options request */
+	const size_t probes = probe_info_count(probe_list);
+	const probe_info_s *probe = NULL;
+	/* If there's just one probe and we didn't get match critera, pick it */
+	if (probes == 1 && !cl_opts->opt_serial && !cl_opts->opt_position)
+		probe = probe_list;
+	else /* Otherwise filter the list */
+		probe = probe_info_filter(probe_list, cl_opts->opt_serial, cl_opts->opt_position);
+
+	/* If we found no matching probes, or we're in list-only mode */
+	if (!probe || cl_opts->opt_list_only) {
 		DEBUG_WARN("Available Probes:\n");
-		scan_devices(SCAN_LIST, NULL, NULL, 0);
-	} else if (total == 1 && !cl_opts->opt_serial && !cl_opts->opt_position)
-		scan_devices(SCAN_FIND, info, NULL, 1);
-	return total == 1 && !cl_opts->opt_list_only ? 0 : 1;
+		probe = probe_list;
+		for (size_t position = 1; probe; probe = probe->next, ++position)
+			DEBUG_WARN(
+				"%2zu: %s, Black Magic Debug, %s, %s\n", position, probe->serial, probe->manufacturer, probe->version);
+		probe_info_list_free(probe_list);
+		return 1; // false;
+	}
+
+	/* We found a matching probe, populate bmp_info_t and signal success */
+	probe_info_to_bmp_info(probe, info);
+	probe_info_list_free(probe_list);
+	return 0; // true;
 }
 #endif
