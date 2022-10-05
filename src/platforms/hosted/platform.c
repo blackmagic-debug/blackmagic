@@ -83,6 +83,10 @@ static void exit_function(void)
 #ifdef ENABLE_RTT
 	rtt_if_exit();
 #endif
+#if HOSTED_BMP_ONLY == 0
+	if (info.libusb_ctx)
+		libusb_exit(info.libusb_ctx);
+#endif
 	fflush(stdout);
 }
 

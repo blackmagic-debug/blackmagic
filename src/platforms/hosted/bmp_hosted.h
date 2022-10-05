@@ -49,6 +49,7 @@ typedef struct transfer_ctx {
 	volatile size_t flags;
 } transfer_ctx_s;
 
+typedef struct libusb_device_descriptor libusb_device_descriptor_s;
 typedef struct libusb_config_descriptor libusb_config_descriptor_s;
 typedef struct libusb_interface_descriptor libusb_interface_descriptor_s;
 typedef struct libusb_endpoint_descriptor libusb_endpoint_descriptor_s;
