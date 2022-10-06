@@ -32,7 +32,7 @@ extern cable_desc_t *active_cable;
 extern struct ftdi_context *ftdic;
 
 static void jtagtap_reset(void);
-static void jtagtap_tms_seq(uint32_t tms_states, size_t ticks);
+static void jtagtap_tms_seq(uint32_t tms_states, size_t clock_cycles);
 static void jtagtap_tdi_seq(bool final_tms, const uint8_t *data_in, size_t clock_cycles);
 static bool jtagtap_next(bool tms, bool tdi);
 
@@ -90,19 +90,16 @@ static void jtagtap_reset(void)
 	jtagtap_soft_reset();
 }
 
-static void jtagtap_tms_seq(uint32_t tms_states, size_t ticks)
+static void jtagtap_tms_seq(uint32_t tms_states, const size_t clock_cycles)
 {
-	uint8_t tmp[3] = {MPSSE_WRITE_TMS | MPSSE_LSB | MPSSE_BITMODE | MPSSE_WRITE_NEG, 0, 0};
-	while (ticks > 0) {
-		tmp[1] = ticks < 7 ? ticks - 1 : 6;
-		tmp[2] = 0x80 | (tms_states & 0x7F);
-
-		libftdi_buffer_write(tmp, 3);
-		tms_states >>= 7;
-		if (ticks < 7)
-			ticks = 0;
-		else
-			ticks -= 7;
+	for (size_t cycle = 0; cycle < clock_cycles; cycle += 7) {
+		const uint8_t cmd[3] = {
+			MPSSE_WRITE_TMS | MPSSE_LSB | MPSSE_BITMODE | MPSSE_WRITE_NEG,
+			MIN(7U, clock_cycles - cycle) - 1U,
+			0x80U | (tms_states & 0x7FU),
+		};
+		tms_states >>= 7U;
+		libftdi_buffer_write_arr(cmd);
 	}
 }
 
