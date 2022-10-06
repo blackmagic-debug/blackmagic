@@ -33,7 +33,7 @@ extern struct ftdi_context *ftdic;
 
 static void jtagtap_reset(void);
 static void jtagtap_tms_seq(uint32_t tms_states, size_t ticks);
-static void jtagtap_tdi_seq(bool final_tms, const uint8_t *DI, size_t ticks);
+static void jtagtap_tdi_seq(bool final_tms, const uint8_t *data_in, size_t clock_cycles);
 static bool jtagtap_next(bool tms, bool tdi);
 
 int libftdi_jtagtap_init(jtag_proc_t *jtag_proc)
@@ -106,9 +106,9 @@ static void jtagtap_tms_seq(uint32_t tms_states, size_t ticks)
 	}
 }
 
-static void jtagtap_tdi_seq(const bool final_tms, const uint8_t *DI, size_t ticks)
+static void jtagtap_tdi_seq(const bool final_tms, const uint8_t *const data_in, const size_t clock_cycles)
 {
-	return libftdi_jtagtap_tdi_tdo_seq(NULL, final_tms, DI, ticks);
+	return libftdi_jtagtap_tdi_tdo_seq(NULL, final_tms, data_in, clock_cycles);
 }
 
 static bool jtagtap_next(bool tms, bool tdi)
