@@ -276,7 +276,7 @@ void swdptap_bit_out(bool val)
 static bool swdptap_seq_in_parity_mpsse(uint32_t *const result, const size_t clock_cycles)
 {
 	uint8_t data_out[5];
-	libftdi_jtagtap_tdi_tdo_seq(data_out, 0, NULL, clock_cycles + 1);
+	libftdi_jtagtap_tdi_tdo_seq(data_out, false, NULL, clock_cycles + 1);
 	const uint32_t data = data_out[0] + (data_out[1] << 8) + (data_out[2] << 16) + (data_out[3] << 24);
 	uint8_t parity = __builtin_parity(data & ((1U << clock_cycles) - 1)) & 1;
 	parity ^= data_out[4] & 1;
@@ -323,7 +323,7 @@ static bool swdptap_seq_in_parity(uint32_t *const result, const size_t clock_cyc
 static uint32_t swdptap_seq_in_mpsse(const size_t clock_cycles)
 {
 	uint8_t data_out[4];
-	libftdi_jtagtap_tdi_tdo_seq(data_out, 0, NULL, clock_cycles);
+	libftdi_jtagtap_tdi_tdo_seq(data_out, false, NULL, clock_cycles);
 	size_t bytes = clock_cycles >> 3;
 	if (clock_cycles & 7)
 		bytes++;
@@ -364,36 +364,39 @@ static uint32_t swdptap_seq_in(size_t clock_cycles)
 	return swdptap_seq_in_raw(clock_cycles);
 }
 
-static void swdptap_seq_out(uint32_t tms_states, size_t clock_cycles)
+static void swdptap_seq_out_mpsse(const uint32_t tms_states, const size_t clock_cycles)
 {
-	if (!clock_cycles)
+	const uint8_t data_in[4] = {
+		tms_states & 0xffU,
+		(tms_states >> 8U) & 0xffU,
+		(tms_states >> 16U) & 0xffU,
+		(tms_states >> 24U) & 0xffU
+	};
+	libftdi_jtagtap_tdi_tdo_seq(NULL, false, data_in, clock_cycles);
+}
+
+static void swdptap_seq_out_raw(uint32_t tms_states, const size_t clock_cycles)
+{
+	uint8_t cmd[15] = {};
+	size_t offset = 0;
+	for (size_t cycle = 0; cycle < clock_cycles; cycle += 7, offset += 3) {
+		const size_t cycles = MIN(7U, clock_cycles - cycle);
+		cmd[offset] = MPSSE_TMS_SHIFT;
+		cmd[offset + 1] = cycles - 1U;
+		cmd[offset + 2] = tms_states & 0x7fU;
+	}
+	libftdi_buffer_write(cmd, offset);
+}
+
+static void swdptap_seq_out(const uint32_t tms_states, const size_t clock_cycles)
+{
+	if (!clock_cycles || clock_cycles > 32U)
 		return;
 	swdptap_turnaround(SWDIO_STATUS_DRIVE);
-	if (do_mpsse) {
-		uint8_t DI[4];
-		DI[0] = (tms_states >> 0) & 0xff;
-		DI[1] = (tms_states >> 8) & 0xff;
-		DI[2] = (tms_states >> 16) & 0xff;
-		DI[3] = (tms_states >> 24) & 0xff;
-		libftdi_jtagtap_tdi_tdo_seq(NULL, 0, DI, clock_cycles);
-	} else {
-		uint8_t cmd[16];
-		size_t index = 0;
-		while (clock_cycles) {
-			cmd[index++] = MPSSE_TMS_SHIFT;
-			if (clock_cycles >= 7) {
-				cmd[index++] = 6;
-				cmd[index++] = tms_states & 0x7f;
-				tms_states >>= 7;
-				clock_cycles -= 7;
-			} else {
-				cmd[index++] = clock_cycles - 1;
-				cmd[index++] = tms_states & 0x7f;
-				clock_cycles = 0;
-			}
-		}
-		libftdi_buffer_write(cmd, index);
-	}
+	if (do_mpsse)
+		swdptap_seq_out_mpsse(tms_states, clock_cycles);
+	else
+		swdptap_seq_out_raw(tms_states, clock_cycles);
 }
 
 /* ARM Debug Interface Architecture Specification ADIv5.0 to ADIv5.2
