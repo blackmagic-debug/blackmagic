@@ -34,7 +34,7 @@ extern struct ftdi_context *ftdic;
 static void jtagtap_reset(void);
 static void jtagtap_tms_seq(uint32_t tms_states, size_t ticks);
 static void jtagtap_tdi_seq(bool final_tms, const uint8_t *DI, size_t ticks);
-static bool jtagtap_next(bool dTMS, bool dTDI);
+static bool jtagtap_next(bool tms, bool tdi);
 
 int libftdi_jtagtap_init(jtag_proc_t *jtag_proc)
 {
@@ -111,15 +111,16 @@ static void jtagtap_tdi_seq(const bool final_tms, const uint8_t *DI, size_t tick
 	return libftdi_jtagtap_tdi_tdo_seq(NULL, final_tms, DI, ticks);
 }
 
-static bool jtagtap_next(bool dTMS, bool dTDI)
+static bool jtagtap_next(bool tms, bool tdi)
 {
-	uint8_t ret;
-	uint8_t tmp[3] = {MPSSE_WRITE_TMS | MPSSE_DO_READ | MPSSE_LSB | MPSSE_BITMODE | MPSSE_WRITE_NEG, 0, 0};
-	tmp[2] = (dTDI ? 0x80 : 0) | (dTMS ? 0x01 : 0);
-	libftdi_buffer_write(tmp, 3);
-	libftdi_buffer_read(&ret, 1);
+	const uint8_t cmd[3] = {
+		MPSSE_WRITE_TMS | MPSSE_DO_READ | MPSSE_LSB | MPSSE_BITMODE | MPSSE_WRITE_NEG,
+		0,
+		(tdi ? 0x80U : 0U) | (tms ? 0x01U : 0U),
+	};
+	libftdi_buffer_write_arr(cmd);
 
-	ret &= 0x80;
-
-	return ret;
+	uint8_t ret = 0;
+	libftdi_buffer_read_val(ret);
+	return ret & 0x80U;
 }
