@@ -23,6 +23,7 @@
 
 #include "general.h"
 #include <assert.h>
+#include <stdlib.h>
 
 #include <ftdi.h>
 #include "ftdi_bmp.h"
@@ -399,48 +400,82 @@ static void swdptap_seq_out(const uint32_t tms_states, const size_t clock_cycles
 		swdptap_seq_out_raw(tms_states, clock_cycles);
 }
 
-/* ARM Debug Interface Architecture Specification ADIv5.0 to ADIv5.2
- * tells to clock the data through SW-DP to either :
- * - immediate start a new transaction
+/*
+ * The ADI Specification v5.0 through v5.2 states that when clocking data
+ * in SWD mode, when we finish we must either:
+ * - immediately start a new transaction
  * - continue to drive idle cycles
- * - or clock at least 8 idle cycles
+ * - or clock at least 8 idle cycles to complete the transaction.
  *
- * Implement last option to favour correctness over
- *   slight speed decrease
+ * We implement the last option to favour correctness over a slight speed decrease
  */
+
+static void swdptap_seq_out_parity_mpsse(const uint32_t tms_states, const uint8_t parity, const size_t clock_cycles)
+{
+	uint8_t data_in[6] = {
+		tms_states & 0xffU,
+		(tms_states >> 8U) & 0xffU,
+		(tms_states >> 16U) & 0xffU,
+		(tms_states >> 24U) & 0xffU,
+		0,
+		0,
+	};
+	/* Figure out which byte we should write the parity to */
+	const size_t parity_offset = clock_cycles >> 3U;
+	/* Then which bit in that byte */
+	const size_t parity_shift = clock_cycles & 7U;
+	data_in[parity_offset] = parity << parity_shift;
+	/*
+		* This clocks out the requested number of clock cycles,
+		* then an additional 1 for the parity, and finally
+		* 8 more to complete the idle cycles.
+		*/
+	libftdi_jtagtap_tdi_tdo_seq(NULL, false, data_in, clock_cycles + 9);
+}
+
+static void swdptap_seq_out_parity_raw(const uint32_t tms_states, const uint8_t parity, const size_t clock_cycles)
+{
+	uint8_t cmd[18] = {};
+	size_t offset = 0;
+	for (size_t cycle = 0; cycle < clock_cycles; cycle += 7, offset += 3) {
+		const size_t cycles = MIN(7U, clock_cycles - cycle);
+		cmd[offset] = MPSSE_TMS_SHIFT;
+		cmd[offset + 1] = cycles - 1U;
+		cmd[offset + 2] = tms_states & 0x7fU;
+	}
+	/* Calculate which command block the parity goes in */
+	const div_t parity_index = div(clock_cycles, 7U);
+	const size_t parity_offset = parity_index.quot * 3U;
+	cmd[parity_offset] = MPSSE_TMS_SHIFT;
+	cmd[parity_offset + 1] = 6;                             /* Increase that block's cycle count to 7 cycles */
+	cmd[parity_offset + 2] |= (parity << parity_index.rem); /* And write the parity bit in */
+	size_t idle_remaining = parity_index.rem + 2U;
+	/* clock_cycles is not allowed to exceed 32, so the next step is always safe. */
+	/* First, we put together a packet for up to 7 idle cycles */
+	const size_t idle_cycles = MIN(7U, idle_remaining);
+	cmd[offset] = MPSSE_TMS_SHIFT;
+	cmd[offset + 1] = idle_cycles - 1U;
+	cmd[offset + 2] = 0;
+	offset += 3;
+	/* Then, if idle_remaining was actually 8 (the remainder of the division was 6) */
+	if (idle_remaining == 8) {
+		/* Deal with the single missing idle cycle */
+		cmd[offset] = MPSSE_TMS_SHIFT;
+		cmd[offset + 1] = 0;
+		cmd[offset + 2] = 0;
+		offset += 3;
+	}
+	libftdi_buffer_write(cmd, offset);
+}
+
 static void swdptap_seq_out_parity(uint32_t tms_states, size_t clock_cycles)
 {
-	(void)clock_cycles;
-	int parity = __builtin_parity(tms_states) & 1;
-	size_t index = 0;
+	if (clock_cycles > 32U)
+		return;
+	const uint8_t parity = __builtin_parity(tms_states) & 1U;
 	swdptap_turnaround(SWDIO_STATUS_DRIVE);
-	if (do_mpsse) {
-		uint8_t DI[8];
-		DI[0] = (tms_states >> 0) & 0xff;
-		DI[1] = (tms_states >> 8) & 0xff;
-		DI[2] = (tms_states >> 16) & 0xff;
-		DI[3] = (tms_states >> 24) & 0xff;
-		DI[4] = parity;
-		DI[5] = 0;
-		libftdi_jtagtap_tdi_tdo_seq(NULL, 0, DI, 32 + 1 + 8);
-	} else {
-		uint8_t cmd[32];
-		size_t steps = clock_cycles;
-		while (steps) {
-			cmd[index++] = MPSSE_TMS_SHIFT;
-			cmd[index++] = 6;
-			if (steps >= 7) {
-				cmd[index++] = tms_states & 0x7f;
-				tms_states >>= 7;
-				steps -= 7;
-			} else {
-				cmd[index++] = (tms_states & 0x7f) | (parity << 4);
-				steps = 0;
-			}
-		}
-		cmd[index++] = MPSSE_TMS_SHIFT;
-		cmd[index++] = 4;
-		cmd[index++] = 0;
-		libftdi_buffer_write(cmd, index);
-	}
+	if (do_mpsse)
+		swdptap_seq_out_parity_mpsse(tms_states, parity, clock_cycles);
+	else
+		swdptap_seq_out_parity_raw(tms_states, parity, clock_cycles);
 }
