@@ -41,6 +41,7 @@
 typedef struct probe_info {
 	bmp_type_t type;
 	const char *manufacturer;
+	const char *product;
 	const char *serial;
 	const char *version;
 
