@@ -114,7 +114,7 @@ int libftdi_swdptap_init(ADIv5_DP_t *dp)
 {
 	return -1;
 }
-int libftdi_jtagtap_init(jtag_proc_t *jtag_proc)
+int libftdi_jtagtap_init(void)
 {
 	return 0;
 }
@@ -165,7 +165,7 @@ extern data_desc_t active_state;
 
 int ftdi_bmp_init(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info);
 int libftdi_swdptap_init(ADIv5_DP_t *dp);
-int libftdi_jtagtap_init(jtag_proc_t *jtag_proc);
+int libftdi_jtagtap_init(void);
 void libftdi_buffer_flush(void);
 size_t libftdi_buffer_write(const uint8_t *data, size_t size);
 size_t libftdi_buffer_read(uint8_t *data, size_t size);
