@@ -33,12 +33,12 @@
 #include "cli.h"
 #include "jlink.h"
 
-#define USB_VID_SEGGER       0x1366
+#define USB_VID_SEGGER 0x1366
 
-#define USB_PID_SEGGER_0101  0x0101
-#define USB_PID_SEGGER_0105  0x0105
-#define USB_PID_SEGGER_1015  0x1015
-#define USB_PID_SEGGER_1020  0x1020
+#define USB_PID_SEGGER_0101 0x0101
+#define USB_PID_SEGGER_0105 0x0105
+#define USB_PID_SEGGER_1015 0x1015
+#define USB_PID_SEGGER_1020 0x1020
 
 static uint32_t emu_caps;
 static uint32_t emu_speed_kHz;
@@ -56,8 +56,7 @@ static void jlink_print_caps(bmp_info_t *info)
 		uint8_t cmd[1] = {CMD_GET_HW_VERSION};
 		send_recv(info->usb_link, cmd, 1, NULL, 0);
 		send_recv(info->usb_link, NULL, 0, res, sizeof(res));
-		DEBUG_INFO("HW: Type %d, Major %d, Minor %d, Rev %d\n",
-			   res[3], res[2], res[1], res[0]);
+		DEBUG_INFO("HW: Type %d, Major %d, Minor %d, Rev %d\n", res[3], res[2], res[1], res[0]);
 	}
 }
 static void jlink_print_speed(bmp_info_t *info)
@@ -65,12 +64,10 @@ static void jlink_print_speed(bmp_info_t *info)
 	uint8_t cmd[1] = {CMD_GET_SPEEDS};
 	uint8_t res[6];
 	send_recv(info->usb_link, cmd, 1, res, sizeof(res));
-	emu_speed_kHz = (res[0] | (res[1] << 8) | (res[2] << 16) | (res[3] << 24)) /
-					 1000;
+	emu_speed_kHz = (res[0] | (res[1] << 8) | (res[2] << 16) | (res[3] << 24)) / 1000;
 	emu_min_divisor = res[4] | (res[5] << 8);
-	DEBUG_INFO("Emulator speed %d kHz, Mindiv %d%s\n", emu_speed_kHz,
-			   emu_min_divisor,
-			   (emu_caps & JLINK_CAP_GET_SPEEDS) ? "" : ", fixed");
+	DEBUG_INFO("Emulator speed %d kHz, Mindiv %d%s\n", emu_speed_kHz, emu_min_divisor,
+		(emu_caps & JLINK_CAP_GET_SPEEDS) ? "" : ", fixed");
 }
 
 static void jlink_print_version(bmp_info_t *info)
@@ -80,7 +77,7 @@ static void jlink_print_version(bmp_info_t *info)
 	send_recv(info->usb_link, cmd, 1, len_str, sizeof(len_str));
 	uint8_t version[0x70];
 	send_recv(info->usb_link, NULL, 0, version, sizeof(version));
-	DEBUG_INFO("%s\n", version );
+	DEBUG_INFO("%s\n", version);
 }
 
 static void jlink_print_interfaces(bmp_info_t *info)
@@ -91,15 +88,12 @@ static void jlink_print_interfaces(bmp_info_t *info)
 	cmd[1] = JLINK_IF_GET_AVAILABLE;
 	uint8_t res1[4];
 	send_recv(info->usb_link, cmd, 2, res1, sizeof(res1));
-	DEBUG_INFO("%s active", (res[0] == SELECT_IF_SWD) ? "SWD":
-		   (res[0] == SELECT_IF_JTAG) ? "JTAG" : "NONE");
+	DEBUG_INFO("%s active", (res[0] == SELECT_IF_SWD) ? "SWD" : (res[0] == SELECT_IF_JTAG) ? "JTAG" : "NONE");
 	uint8_t other_interface = res1[0] - (res[0] + 1);
 	if (other_interface)
-		DEBUG_INFO(", %s available\n",
-			   (other_interface == JLINK_IF_SWD) ? "SWD": "JTAG");
+		DEBUG_INFO(", %s available\n", (other_interface == JLINK_IF_SWD) ? "SWD" : "JTAG");
 	else
-		DEBUG_INFO(", %s not available\n",
-			   ((res[0] + 1) == JLINK_IF_SWD) ? "JTAG": "SWD");
+		DEBUG_INFO(", %s not available\n", ((res[0] + 1) == JLINK_IF_SWD) ? "JTAG" : "SWD");
 }
 
 static void jlink_info(bmp_info_t *info)
@@ -114,10 +108,9 @@ static void jlink_info(bmp_info_t *info)
 static int initialize_handle(bmp_info_t *info, libusb_device *dev)
 {
 	struct libusb_config_descriptor *config;
-	int ret =  libusb_get_active_config_descriptor(dev, &config);
+	int ret = libusb_get_active_config_descriptor(dev, &config);
 	if (ret != LIBUSB_SUCCESS) {
-		DEBUG_WARN( "Failed to get configuration descriptor: %s.",
-				libusb_error_name(ret));
+		DEBUG_WARN("Failed to get configuration descriptor: %s.", libusb_error_name(ret));
 		return -1;
 	}
 	const struct libusb_interface *interface;
@@ -133,15 +126,14 @@ static int initialize_handle(bmp_info_t *info, libusb_device *dev)
 		if (desc->bNumEndpoints < 2)
 			continue;
 		found_interface = true;
-		if (libusb_claim_interface (
-				info->usb_link->ul_libusb_device_handle, i)) {
-			DEBUG_WARN( " Can not claim handle\n");
+		if (libusb_claim_interface(info->usb_link->ul_libusb_device_handle, i)) {
+			DEBUG_WARN(" Can not claim handle\n");
 			found_interface = false;
 		}
 		break;
 	}
 	if (!found_interface) {
-		DEBUG_WARN( "No suitable interface found.");
+		DEBUG_WARN("No suitable interface found.");
 		libusb_free_config_descriptor(config);
 		return -1;
 	}
@@ -168,34 +160,32 @@ int jlink_init(bmp_info_t *info)
 	jl->ul_libusb_ctx = info->libusb_ctx;
 	int ret = -1;
 	libusb_device **devs;
-    if (libusb_get_device_list(info->libusb_ctx, &devs) < 0) {
-        DEBUG_WARN( "libusb_get_device_list() failed");
+	if (libusb_get_device_list(info->libusb_ctx, &devs) < 0) {
+		DEBUG_WARN("libusb_get_device_list() failed");
 		return ret;
 	}
 	int i = 0;
-	for (;  devs[i]; i++) {
-		libusb_device *dev =  devs[i];
+	for (; devs[i]; i++) {
+		libusb_device *dev = devs[i];
 		struct libusb_device_descriptor desc;
 		if (libusb_get_device_descriptor(dev, &desc) < 0) {
-            DEBUG_WARN( "libusb_get_device_descriptor() failed");
+			DEBUG_WARN("libusb_get_device_descriptor() failed");
 			goto error;
 		}
-		if (desc.idVendor !=  USB_VID_SEGGER)
+		if (desc.idVendor != USB_VID_SEGGER)
 			continue;
-		if ((desc.idProduct != USB_PID_SEGGER_0101) &&
-			(desc.idProduct != USB_PID_SEGGER_0105) &&
-			(desc.idProduct != USB_PID_SEGGER_1015) &&
-			(desc.idProduct != USB_PID_SEGGER_1020)) {
-				DEBUG_WARN("Ignored device with product id 0x%04x, please report if this is a valid J-Link probe\n",
+		if ((desc.idProduct != USB_PID_SEGGER_0101) && (desc.idProduct != USB_PID_SEGGER_0105) &&
+			(desc.idProduct != USB_PID_SEGGER_1015) && (desc.idProduct != USB_PID_SEGGER_1020)) {
+			DEBUG_WARN("Ignored device with product id 0x%04x, please report if this is a valid J-Link probe\n",
 				desc.idProduct);
-				continue;
+			continue;
 		}
 		int res = libusb_open(dev, &jl->ul_libusb_device_handle);
 		if (res != LIBUSB_SUCCESS)
 			continue;
 		char buf[32];
-		res = libusb_get_string_descriptor_ascii(jl->ul_libusb_device_handle,
-			desc.iSerialNumber, (uint8_t*) buf, sizeof(buf));
+		res = libusb_get_string_descriptor_ascii(
+			jl->ul_libusb_device_handle, desc.iSerialNumber, (uint8_t *)buf, sizeof(buf));
 		if ((res <= 0) || (!strstr(buf, info->serial))) {
 			libusb_close(jl->ul_libusb_device_handle);
 			continue;
@@ -208,55 +198,54 @@ int jlink_init(bmp_info_t *info)
 		goto error;
 	jl->req_trans = libusb_alloc_transfer(0);
 	jl->rep_trans = libusb_alloc_transfer(0);
-	if (!jl->req_trans || !jl->rep_trans ||
-		!jl->ep_tx || !jl->ep_rx) {
+	if (!jl->req_trans || !jl->rep_trans || !jl->ep_tx || !jl->ep_rx) {
 		DEBUG_WARN("Device setup failed\n");
 		goto error;
 	}
 	libusb_free_device_list(devs, 1);
 	jlink_info(info);
 	return 0;
-  error:
+error:
 	libusb_free_device_list(devs, 1);
 	return -1;
-
 }
 
 const char *jlink_target_voltage(bmp_info_t *info)
 {
-        uint8_t cmd[1] = {CMD_GET_HW_STATUS};
-		uint8_t res[8];
-        send_recv(info->usb_link, cmd, 1, res, sizeof(res));
-        uint16_t mVolt = res[0] | (res[1] << 8);
-        static char ret[7];
-        sprintf(ret, "%2d.%03d", mVolt / 1000, mVolt % 1000);
-        return ret;
+	uint8_t cmd[1] = {CMD_GET_HW_STATUS};
+	uint8_t res[8];
+	send_recv(info->usb_link, cmd, 1, res, sizeof(res));
+	uint16_t mVolt = res[0] | (res[1] << 8);
+	static char ret[7];
+	sprintf(ret, "%2d.%03d", mVolt / 1000, mVolt % 1000);
+	return ret;
 }
 
 static bool nrst_status = false;
 void jlink_nrst_set_val(bmp_info_t *info, bool assert)
 {
-        uint8_t cmd[1];
-        cmd[0]= (assert)? CMD_HW_RESET0: CMD_HW_RESET1;
-        send_recv(info->usb_link, cmd, 1, NULL, 0);
-        platform_delay(2);
-        nrst_status = assert;
+	uint8_t cmd[1];
+	cmd[0] = (assert) ? CMD_HW_RESET0 : CMD_HW_RESET1;
+	send_recv(info->usb_link, cmd, 1, NULL, 0);
+	platform_delay(2);
+	nrst_status = assert;
 }
 
-bool jlink_nrst_get_val(bmp_info_t *info) {
-        uint8_t cmd[1] = {CMD_GET_HW_STATUS};
-        uint8_t res[8];
-        send_recv(info->usb_link, cmd, 1, res, sizeof(res));
-        return !(res[6]);
+bool jlink_nrst_get_val(bmp_info_t *info)
+{
+	uint8_t cmd[1] = {CMD_GET_HW_STATUS};
+	uint8_t res[8];
+	send_recv(info->usb_link, cmd, 1, res, sizeof(res));
+	return !(res[6]);
 }
 
 void jlink_max_frequency_set(bmp_info_t *info, uint32_t freq)
 {
-	if (!(emu_caps &  JLINK_CAP_GET_SPEEDS))
+	if (!(emu_caps & JLINK_CAP_GET_SPEEDS))
 		return;
 	if (!info->is_jtag)
 		return;
-	uint16_t freq_kHz = freq /1000;
+	uint16_t freq_kHz = freq / 1000;
 	uint16_t divisor = (emu_speed_kHz + freq_kHz - 1) / freq_kHz;
 	if (divisor < emu_min_divisor)
 		divisor = emu_min_divisor;
@@ -270,6 +259,6 @@ void jlink_max_frequency_set(bmp_info_t *info, uint32_t freq)
 uint32_t jlink_max_frequency_get(bmp_info_t *info)
 {
 	if ((emu_caps & JLINK_CAP_GET_SPEEDS) && (info->is_jtag))
-		return (emu_speed_kHz * 1000L)/ emu_current_divisor;
+		return (emu_speed_kHz * 1000L) / emu_current_divisor;
 	return FREQ_FIXED;
 }
