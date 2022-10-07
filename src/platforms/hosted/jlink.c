@@ -33,70 +33,80 @@
 #include "cli.h"
 #include "jlink.h"
 
-#define USB_VID_SEGGER 0x1366
+#define USB_VID_SEGGER 0x1366U
 
-#define USB_PID_SEGGER_0101 0x0101
-#define USB_PID_SEGGER_0105 0x0105
-#define USB_PID_SEGGER_1015 0x1015
-#define USB_PID_SEGGER_1020 0x1020
+#define USB_PID_SEGGER_0101 0x0101U
+#define USB_PID_SEGGER_0105 0x0105U
+#define USB_PID_SEGGER_1015 0x1015U
+#define USB_PID_SEGGER_1020 0x1020U
 
 static uint32_t emu_caps;
 static uint32_t emu_speed_kHz;
 static uint16_t emu_min_divisor;
 static uint16_t emu_current_divisor;
 
-static void jlink_print_caps(bmp_info_t *info)
+static void jlink_print_caps(bmp_info_t *const info)
 {
-	uint8_t cmd[1] = {CMD_GET_CAPS};
+	uint8_t cmd = CMD_GET_CAPS;
 	uint8_t res[4];
-	send_recv(info->usb_link, cmd, 1, res, sizeof(res));
+	send_recv(info->usb_link, &cmd, 1, res, sizeof(res));
 	emu_caps = res[0] | (res[1] << 8) | (res[2] << 16) | (res[3] << 24);
 	DEBUG_INFO("Caps %" PRIx32 "\n", emu_caps);
 	if (emu_caps & JLINK_CAP_GET_HW_VERSION) {
-		uint8_t cmd[1] = {CMD_GET_HW_VERSION};
-		send_recv(info->usb_link, cmd, 1, NULL, 0);
+		uint8_t cmd = CMD_GET_HW_VERSION;
+		send_recv(info->usb_link, &cmd, 1, NULL, 0);
 		send_recv(info->usb_link, NULL, 0, res, sizeof(res));
-		DEBUG_INFO("HW: Type %d, Major %d, Minor %d, Rev %d\n", res[3], res[2], res[1], res[0]);
+		DEBUG_INFO("HW: Type %u, Major %u, Minor %u, Rev %u\n", res[3], res[2], res[1], res[0]);
 	}
 }
-static void jlink_print_speed(bmp_info_t *info)
+
+static void jlink_print_speed(bmp_info_t *const info)
 {
-	uint8_t cmd[1] = {CMD_GET_SPEEDS};
+	uint8_t cmd = CMD_GET_SPEEDS;
 	uint8_t res[6];
-	send_recv(info->usb_link, cmd, 1, res, sizeof(res));
-	emu_speed_kHz = (res[0] | (res[1] << 8) | (res[2] << 16) | (res[3] << 24)) / 1000;
+	send_recv(info->usb_link, &cmd, 1, res, sizeof(res));
+	emu_speed_kHz = (res[0] | (res[1] << 8) | (res[2] << 16) | (res[3] << 24)) / 1000U;
 	emu_min_divisor = res[4] | (res[5] << 8);
-	DEBUG_INFO("Emulator speed %d kHz, Mindiv %d%s\n", emu_speed_kHz, emu_min_divisor,
+	DEBUG_INFO("Emulator speed %ukHz, minimum divisor %u%s\n", emu_speed_kHz, emu_min_divisor,
 		(emu_caps & JLINK_CAP_GET_SPEEDS) ? "" : ", fixed");
 }
 
-static void jlink_print_version(bmp_info_t *info)
+static void jlink_print_version(bmp_info_t *const info)
 {
-	uint8_t cmd[1] = {CMD_GET_VERSION};
+	uint8_t cmd = CMD_GET_VERSION;
 	uint8_t len_str[2];
-	send_recv(info->usb_link, cmd, 1, len_str, sizeof(len_str));
+	send_recv(info->usb_link, &cmd, 1, len_str, sizeof(len_str));
 	uint8_t version[0x70];
 	send_recv(info->usb_link, NULL, 0, version, sizeof(version));
+	version[0x6F] = '\0';
 	DEBUG_INFO("%s\n", version);
 }
 
-static void jlink_print_interfaces(bmp_info_t *info)
+static void jlink_print_interfaces(bmp_info_t *const info)
 {
-	uint8_t cmd[2] = {CMD_GET_SELECT_IF, JLINK_IF_GET_ACTIVE};
-	uint8_t res[4];
-	send_recv(info->usb_link, cmd, 2, res, sizeof(res));
+	uint8_t cmd[2] = {
+		CMD_GET_SELECT_IF,
+		JLINK_IF_GET_ACTIVE,
+	};
+	uint8_t selected_if[4];
+	send_recv(info->usb_link, cmd, 2, selected_if, sizeof(selected_if));
 	cmd[1] = JLINK_IF_GET_AVAILABLE;
-	uint8_t res1[4];
-	send_recv(info->usb_link, cmd, 2, res1, sizeof(res1));
-	DEBUG_INFO("%s active", (res[0] == SELECT_IF_SWD) ? "SWD" : (res[0] == SELECT_IF_JTAG) ? "JTAG" : "NONE");
-	uint8_t other_interface = res1[0] - (res[0] + 1);
-	if (other_interface)
-		DEBUG_INFO(", %s available\n", (other_interface == JLINK_IF_SWD) ? "SWD" : "JTAG");
+	uint8_t available_ifs[4];
+	send_recv(info->usb_link, cmd, 2, available_ifs, sizeof(available_ifs));
+	if (selected_if[0] == SELECT_IF_SWD)
+		DEBUG_INFO("SWD active");
+	else if (selected_if[0] == SELECT_IF_JTAG)
+		DEBUG_INFO("JTAG active");
 	else
-		DEBUG_INFO(", %s not available\n", ((res[0] + 1) == JLINK_IF_SWD) ? "JTAG" : "SWD");
+		DEBUG_INFO("No interfaces active");
+	const uint8_t other_interface = available_ifs[0] - (selected_if[0] + 1U);
+	if (other_interface)
+		DEBUG_INFO(", %s available\n", other_interface == JLINK_IF_SWD ? "SWD" : "JTAG");
+	else
+		DEBUG_INFO(", %s not available\n", selected_if[0] + 1U == JLINK_IF_SWD ? "JTAG" : "SWD");
 }
 
-static void jlink_info(bmp_info_t *info)
+static void jlink_info(bmp_info_t *const info)
 {
 	jlink_print_version(info);
 	jlink_print_caps(info);
@@ -148,10 +158,11 @@ static int initialize_handle(bmp_info_t *info, libusb_device *dev)
 	libusb_free_config_descriptor(config);
 	return 0;
 }
+
 /* Return 0 if single J-Link device connected or
  * serial given matches one of several J-Link devices.
  */
-int jlink_init(bmp_info_t *info)
+int jlink_init(bmp_info_t *const info)
 {
 	usb_link_t *jl = calloc(1, sizeof(usb_link_t));
 	if (!jl)
