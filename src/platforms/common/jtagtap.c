@@ -48,12 +48,11 @@ int jtagtap_init()
 	jtag_proc.jtagtap_cycle = jtagtap_cycle;
 	jtag_proc.tap_idle_cycles = 1;
 
-	/* Go to JTAG mode for SWJ-DP */
+	/* Ensure we're in JTAG mode */
 	for (size_t i = 0; i <= 50U; ++i)
-		jtagtap_next(1, 0);        /* Reset SW-DP */
+		jtagtap_next(true, false); /* 50 idle cylces for SWD reset */
 	jtagtap_tms_seq(0xe73cU, 16U); /* SWD to JTAG sequence */
 	jtagtap_soft_reset();
-
 	return 0;
 }
 
