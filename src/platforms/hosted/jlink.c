@@ -114,49 +114,49 @@ static void jlink_info(bmp_info_t *const info)
 	jlink_print_interfaces(info);
 }
 
-/* On success endpoints are set and return 0, !0 else */
-static int initialize_handle(bmp_info_t *info, libusb_device *dev)
+/*
+ * On success this copies the endpoint addresses identified into the
+ * usb_link_t sub-structure of bmp_info_t (info->usb_link) for later use.
+ * Returns true for sucess, false for failure.
+ */
+static bool claim_jlink_interface(bmp_info_t *info, libusb_device *dev)
 {
 	struct libusb_config_descriptor *config;
-	int ret = libusb_get_active_config_descriptor(dev, &config);
-	if (ret != LIBUSB_SUCCESS) {
-		DEBUG_WARN("Failed to get configuration descriptor: %s.", libusb_error_name(ret));
-		return -1;
+	const int result = libusb_get_active_config_descriptor(dev, &config);
+	if (result != LIBUSB_SUCCESS) {
+		DEBUG_WARN("Failed to get configuration descriptor: %s\n", libusb_error_name(result));
+		return false;
 	}
-	const struct libusb_interface *interface;
-	bool found_interface = false;
-	const struct libusb_interface_descriptor *desc;
-	for (size_t i = 0; i < config->bNumInterfaces; i++) {
-		interface = &config->interface[i];
-		desc = &interface->altsetting[0];
-		if (desc->bInterfaceClass != LIBUSB_CLASS_VENDOR_SPEC)
-			continue;
-		if (desc->bInterfaceSubClass != LIBUSB_CLASS_VENDOR_SPEC)
-			continue;
-		if (desc->bNumEndpoints < 2)
-			continue;
-		found_interface = true;
-		if (libusb_claim_interface(info->usb_link->ul_libusb_device_handle, i)) {
-			DEBUG_WARN(" Can not claim handle\n");
-			found_interface = false;
+	const struct libusb_interface_descriptor *descriptor = NULL;
+	for (size_t i = 0; i < config->bNumInterfaces; ++i) {
+		const struct libusb_interface *const interface = &config->interface[i];
+		// XXX: This fails to handle multile alt-modes being present correctly.
+		const struct libusb_interface_descriptor *const interface_desc = &interface->altsetting[0];
+		if (interface_desc->bInterfaceClass == LIBUSB_CLASS_VENDOR_SPEC &&
+			interface_desc->bInterfaceSubClass == LIBUSB_CLASS_VENDOR_SPEC && interface_desc->bNumEndpoints > 1) {
+			const int result = libusb_claim_interface(info->usb_link->ul_libusb_device_handle, i);
+			if (result) {
+				DEBUG_WARN("Can not claim handle: %s\n", libusb_error_name(result));
+				break;
+			}
+			info->usb_link->interface = i;
+			descriptor = interface_desc;
 		}
-		break;
 	}
-	if (!found_interface) {
-		DEBUG_WARN("No suitable interface found.");
+	if (!descriptor) {
+		DEBUG_WARN("No suitable interface found\n");
 		libusb_free_config_descriptor(config);
-		return -1;
+		return false;
 	}
-	for (size_t i = 0; i < desc->bNumEndpoints; i++) {
-		const struct libusb_endpoint_descriptor *epdesc = &desc->endpoint[i];
-		if (epdesc->bEndpointAddress & LIBUSB_ENDPOINT_IN) {
-			info->usb_link->ep_rx = epdesc->bEndpointAddress;
-		} else {
-			info->usb_link->ep_tx = epdesc->bEndpointAddress;
-		}
+	for (size_t i = 0; i < descriptor->bNumEndpoints; i++) {
+		const struct libusb_endpoint_descriptor *endpoint = &descriptor->endpoint[i];
+		if (endpoint->bEndpointAddress & LIBUSB_ENDPOINT_IN)
+			info->usb_link->ep_rx = endpoint->bEndpointAddress;
+		else
+			info->usb_link->ep_tx = endpoint->bEndpointAddress;
 	}
 	libusb_free_config_descriptor(config);
-	return 0;
+	return true;
 }
 
 /* Return 0 if single J-Link device connected or
@@ -205,7 +205,7 @@ int jlink_init(bmp_info_t *const info)
 	}
 	if (!devs[i])
 		goto error;
-	if (initialize_handle(info, devs[i]))
+	if (!claim_jlink_interface(info, devs[i]))
 		goto error;
 	jl->req_trans = libusb_alloc_transfer(0);
 	jl->rep_trans = libusb_alloc_transfer(0);
