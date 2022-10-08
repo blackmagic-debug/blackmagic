@@ -606,11 +606,10 @@ size_t libftdi_buffer_read(uint8_t *data, size_t size)
 	tc = ftdi_read_data_submit(ftdic, data, size);
 	ftdi_transfer_data_done(tc);
 #else
-	size_t index = 0;
-	const uint8_t cmd[1] = {SEND_IMMEDIATE};
-	libftdi_buffer_write(cmd, 1);
+	const uint8_t cmd = SEND_IMMEDIATE;
+	libftdi_buffer_write(&cmd, 1);
 	libftdi_buffer_flush();
-	for (size_t index = 0; index != size; )
+	for (size_t index = 0; index != size;)
 		index += ftdi_read_data(ftdic, data + index, size - index);
 #endif
 	DEBUG_WIRE("Read  %d bytes:", size);
