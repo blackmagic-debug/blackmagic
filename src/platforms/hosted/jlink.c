@@ -131,7 +131,7 @@ static bool claim_jlink_interface(bmp_info_t *info, libusb_device *dev)
 	const struct libusb_interface_descriptor *descriptor = NULL;
 	for (size_t i = 0; i < config->bNumInterfaces; ++i) {
 		const struct libusb_interface *const interface = &config->interface[i];
-		// XXX: This fails to handle multile alt-modes being present correctly.
+		// XXX: This fails to handle multiple alt-modes being present correctly.
 		const struct libusb_interface_descriptor *const interface_desc = &interface->altsetting[0];
 		if (interface_desc->bInterfaceClass == LIBUSB_CLASS_VENDOR_SPEC &&
 			interface_desc->bInterfaceSubClass == LIBUSB_CLASS_VENDOR_SPEC && interface_desc->bNumEndpoints > 1) {
