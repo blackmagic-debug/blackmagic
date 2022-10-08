@@ -115,7 +115,7 @@ void platform_init(int argc, char **argv)
 		break;
 
 	case BMP_TYPE_JLINK:
-		if (jlink_init(&info))
+		if (!jlink_init(&info))
 			exit(-1);
 		break;
 
@@ -131,7 +131,6 @@ void platform_init(int argc, char **argv)
 #ifdef ENABLE_RTT
 		rtt_if_init();
 #endif
-		return;
 	}
 }
 
