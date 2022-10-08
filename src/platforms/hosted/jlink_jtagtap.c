@@ -25,6 +25,7 @@
 #include <unistd.h>
 #include <assert.h>
 #include <memory.h>
+#include <stdlib.h>
 
 #include "exception.h"
 #include "jtagtap.h"
@@ -168,19 +169,20 @@ static void jtagtap_tdi_seq(const bool final_tms, const uint8_t *const data_in, 
 
 static bool jtagtap_next(bool tms, bool tdi)
 {
-	DEBUG_PROBE("jtagtap_next TMS 0x%02x, TDI %02x\n", tms, tdi);
+	DEBUG_PROBE("jtagtap_next tms: %u, tdi %u\n", tms ? 1 : 0, tdi ? 1 : 0);
 	uint8_t cmd[6];
+	memset(cmd, 0, sizeof(cmd));
 	cmd[0] = CMD_HW_JTAG3;
-	cmd[1] = 0;
 	cmd[2] = 1;
-	cmd[3] = 0;
-	cmd[4] = tms ? 0xff : 0;
-	cmd[5] = tdi ? 0xff : 0;
-	uint8_t ret[1];
-	send_recv(info.usb_link, cmd, 6, ret, 1);
-	uint8_t res[1];
-	send_recv(info.usb_link, NULL, 0, res, 1);
-	if (res[0] != 0)
+	if (tms)
+		cmd[4] = 1;
+	if (tdi)
+		cmd[5] = 1;
+	uint8_t tdo;
+	send_recv(info.usb_link, cmd, 6, &tdo, 1);
+	uint8_t result;
+	send_recv(info.usb_link, NULL, 0, &result, 1);
+	if (result != 0)
 		raise_exception(EXCEPTION_ERROR, "jtagtap_next failed");
-	return (ret[0] & 1);
+	return tdo & 1;
 }
