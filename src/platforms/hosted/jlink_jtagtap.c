@@ -149,21 +149,21 @@ static void jtagtap_tdi_tdo_seq(
 		raise_exception(EXCEPTION_ERROR, "jtagtap_tdi_tdi failed");
 }
 
-static void jtagtap_tdi_seq(const bool final_tms, const uint8_t *data_in, size_t ticks)
+static void jtagtap_tdi_seq(const bool final_tms, const uint8_t *const data_in, const size_t clock_cycles)
 {
 	if (cl_debuglevel & BMP_DEBUG_PROBE) {
-		DEBUG_PROBE("jtagtap_tdi_seq %s:", (final_tms) ? "final_tms" : "");
-		const uint8_t *p = data_in;
-		unsigned int i = (ticks & 7) & ~7;
-		if (i > 16)
-			i = 16;
-		while (i--)
-			DEBUG_PROBE(" %02x", *p++);
-		if (ticks > (16 * 8))
-			DEBUG_PROBE(" ...");
+		DEBUG_PROBE("jtagtap_tdi_seq final tms: %u, data_in: ", final_tms ? 1 : 0);
+		for (size_t cycle = 0; cycle < clock_cycles; cycle += 8) {
+			const size_t chunk = cycle >> 3U;
+			if (chunk > 16) {
+				DEBUG_PROBE(" ...");
+				break;
+			}
+			DEBUG_PROBE(" %02x", data_in[chunk]);
+		}
 		DEBUG_PROBE("\n");
 	}
-	return jtagtap_tdi_tdo_seq(NULL, final_tms, data_in, ticks);
+	return jtagtap_tdi_tdo_seq(NULL, final_tms, data_in, clock_cycles);
 }
 
 static bool jtagtap_next(bool tms, bool tdi)
