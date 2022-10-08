@@ -81,15 +81,13 @@ bool jlink_jtagtap_init(bmp_info_t *const info)
 	};
 	send_recv(info->usb_link, jtag_speed, 3, NULL, 0);
 	uint8_t cmd[22];
+	memset(cmd, 0, 22);
 	cmd[0] = CMD_HW_JTAG3;
-	cmd[1] = 0;
-	/* write 8 Bytes.*/
+	/* write 9 bytes */
 	cmd[2] = 9 * 8;
-	cmd[3] = 0;
 	memset(cmd + 4, 0xffU, 7);
 	cmd[11] = 0x3c;
 	cmd[12] = 0xe7;
-	memset(cmd + 13, 0, 9);
 	send_recv(info->usb_link, cmd, 22, cmd, 9);
 	send_recv(info->usb_link, NULL, 0, res, 1);
 
