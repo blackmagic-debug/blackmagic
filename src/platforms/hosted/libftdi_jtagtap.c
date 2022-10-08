@@ -33,6 +33,26 @@ static void jtagtap_tms_seq(uint32_t tms_states, size_t clock_cycles);
 static void jtagtap_tdi_seq(bool final_tms, const uint8_t *data_in, size_t clock_cycles);
 static bool jtagtap_next(bool tms, bool tdi);
 
+/*
+ * Througout this file you will see command buffers being built which have the following basic form:
+ *
+ * The command block (3 bytes):
+ * ┌─────────┬─────────────┬───────────┐
+ * │    0    │      1      │     2     │
+ * ├─────────┼─────────────┼───────────┤
+ * │ Command │ Cycle count │ Data bits │
+ * │         │     (-1)    │    LBE    │
+ * └─────────┴─────────────┴───────────┘
+ * Where LBE == Little Bit Endian.
+ *
+ * These are then sequenced into command buffers:
+ * ┌─────────────────┬─────┐
+ * │ Command block 0 │ ... │
+ * └─────────────────┴─────┘
+ *
+ * Each command block is allowed to handle at most 7 clock cycles - why not 8 is undocumented.
+ */
+
 void libftdi_drain_potential_garbage(void)
 {
 	uint8_t data[16];
