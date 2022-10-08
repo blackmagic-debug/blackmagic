@@ -114,39 +114,38 @@ static void jtagtap_tms_seq(const uint32_t tms_states, const size_t clock_cycles
 		raise_exception(EXCEPTION_ERROR, "tagtap_tms_seq failed");
 }
 
-static void jtagtap_tdi_tdo_seq(uint8_t *data_out, const bool final_tms, const uint8_t *data_in, size_t ticks)
+static void jtagtap_tdi_tdo_seq(
+	uint8_t *const data_out, const bool final_tms, const uint8_t *const data_in, const size_t clock_cycles)
 {
-	if (!ticks)
+	if (!clock_cycles)
 		return;
-	int len = (ticks + 7) / 8;
+	const size_t total_chunks = (clock_cycles >> 3U) + ((clock_cycles & 7U) ? 1U : 0U);
 	if (cl_debuglevel & BMP_DEBUG_PROBE) {
-		DEBUG_PROBE("jtagtap_tdi_tdo %s, ticks %d, data_in: ", (final_tms) ? "Final TMS" : "", ticks);
-		for (int i = 0; i < len; i++) {
+		DEBUG_PROBE("jtagtap_tdi_tdo final tms: %u, clock cycles: %u, data_in: ", final_tms ? 1 : 0, clock_cycles);
+		for (size_t i = 0; i < total_chunks; ++i)
 			DEBUG_PROBE("%02x", data_in[i]);
-		}
 		DEBUG_PROBE("\n");
 	}
-	uint8_t *cmd = alloca(4 + 2 * len);
+	const size_t cmd_len = 4 + (total_chunks * 2U);
+	uint8_t *cmd = calloc(1, cmd_len);
 	cmd[0] = CMD_HW_JTAG3;
-	cmd[1] = 0;
-	cmd[2] = ticks;
-	cmd[3] = 0;
-	uint8_t *tms = cmd + 4;
-	for (int i = 0; i < len; i++)
-		*tms++ = 0;
-	if (final_tms)
-		cmd[4 + (ticks - 1) / 8] |= (1 << ((ticks - 1) % 8));
-	uint8_t *tdi = tms;
-	if (data_in)
-		for (int i = 0; i < len; i++)
-			*tdi++ = data_in[i];
-	if (data_out)
-		send_recv(info.usb_link, cmd, 4 + 2 * len, data_out, len);
-	else
-		send_recv(info.usb_link, cmd, 4 + 2 * len, cmd, len);
-	uint8_t res[1];
-	send_recv(info.usb_link, NULL, 0, res, 1);
-	if (res[0] != 0)
+	cmd[2] = clock_cycles;
+	if (final_tms) {
+		const size_t bit_offset = (clock_cycles - 1U) & 7U;
+		cmd[4 + total_chunks - 1U] |= 1U << bit_offset;
+	}
+	if (data_in) {
+		for (size_t cycle = 0; cycle < clock_cycles; cycle += 8) {
+			const size_t chunk = cycle >> 3U;
+			const size_t index = 4 + total_chunks + chunk;
+			cmd[index] = data_in[chunk];
+		}
+	}
+	uint8_t result[4];
+	send_recv(info.usb_link, cmd, cmd_len, data_out ? data_out : result, total_chunks);
+	send_recv(info.usb_link, NULL, 0, result, 1);
+	free(cmd);
+	if (result[0] != 0)
 		raise_exception(EXCEPTION_ERROR, "jtagtap_tdi_tdi failed");
 }
 
