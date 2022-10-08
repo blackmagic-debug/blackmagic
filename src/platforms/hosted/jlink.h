@@ -22,28 +22,27 @@
 
 #include <stdbool.h>
 #include "bmp_hosted.h"
-#include "jtagtap.h"
 
 /** @cond PRIVATE */
-#define CMD_GET_VERSION    0x01
-#define CMD_SET_SPEED      0x05
-#define CMD_GET_HW_STATUS  0x07
-#define CMD_GET_SPEEDS     0xc0
-#define CMD_GET_SELECT_IF  0xc7
-#define CMD_HW_JTAG3       0xcf
-#define CMD_HW_RESET0      0xdc
-#define CMD_HW_RESET1      0xdd
-#define CMD_GET_CAPS       0xe8
-#define CMD_GET_EXT_CAPS   0xed
-#define CMD_GET_HW_VERSION 0xf0
+#define CMD_GET_VERSION    0x01U
+#define CMD_SET_SPEED      0x05U
+#define CMD_GET_HW_STATUS  0x07U
+#define CMD_GET_SPEEDS     0xc0U
+#define CMD_GET_SELECT_IF  0xc7U
+#define CMD_HW_JTAG3       0xcfU
+#define CMD_HW_RESET0      0xdcU
+#define CMD_HW_RESET1      0xddU
+#define CMD_GET_CAPS       0xe8U
+#define CMD_GET_EXT_CAPS   0xedU
+#define CMD_GET_HW_VERSION 0xf0U
 
-#define JLINK_IF_GET_ACTIVE    0xfe
-#define JLINK_IF_GET_AVAILABLE 0xff
+#define JLINK_IF_GET_ACTIVE    0xfeU
+#define JLINK_IF_GET_AVAILABLE 0xffU
 
-#define JLINK_CAP_GET_SPEEDS     (1 << 9)
-#define JLINK_CAP_GET_HW_VERSION (1 << 1)
-#define JLINK_IF_JTAG            1
-#define JLINK_IF_SWD             2
+#define JLINK_CAP_GET_SPEEDS     (1U << 9U)
+#define JLINK_CAP_GET_HW_VERSION (1U << 1U)
+#define JLINK_IF_JTAG            1U
+#define JLINK_IF_SWD             2U
 
 #define SELECT_IF_JTAG 0
 #define SELECT_IF_SWD  1
@@ -59,9 +58,9 @@ uint32_t jlink_swdp_scan(bmp_info_t *info)
 {
 	return 0;
 }
-int jlink_jtagtap_init(bmp_info_t *info, jtag_proc_t *jtag_proc)
+bool jlink_jtagtap_init(bmp_info_t *info)
 {
-	return 0;
+	return false;
 }
 const char *jlink_target_voltage(bmp_info_t *info)
 {
@@ -121,7 +120,7 @@ enum jaylink_device_capability {
 
 bool jlink_init(bmp_info_t *info);
 uint32_t jlink_swdp_scan(bmp_info_t *info);
-int jlink_jtagtap_init(bmp_info_t *info, jtag_proc_t *jtag_proc);
+bool jlink_jtagtap_init(bmp_info_t *infp);
 const char *jlink_target_voltage(bmp_info_t *info);
 void jlink_nrst_set_val(bmp_info_t *info, bool assert);
 bool jlink_nrst_get_val(bmp_info_t *info);
