@@ -368,9 +368,11 @@ int ftdi_bmp_init(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info)
 
 	active_cable = cable;
 	memcpy(&active_state, &active_cable->init, sizeof(data_desc_t));
-	/* If swd_(read|write) is not given for the selected cable and
-	   the 'e' command line argument is give, assume resistor SWD
-	   connection.*/
+	/*
+	 * If swd_(read|write) is not given for the selected cable and
+	 * the 'e' command line argument is give, assume resistor SWD
+	 * connection.
+	 */
 	if (cl_opts->external_resistor_swd && active_cable->mpsse_swd_read.set_data_low == 0 &&
 		active_cable->mpsse_swd_read.clr_data_low == 0 && active_cable->mpsse_swd_read.set_data_high == 0 &&
 		active_cable->mpsse_swd_read.clr_data_high == 0 && active_cable->mpsse_swd_write.set_data_low == 0 &&
@@ -606,11 +608,10 @@ size_t libftdi_buffer_read(uint8_t *data, size_t size)
 	tc = ftdi_read_data_submit(ftdic, data, size);
 	ftdi_transfer_data_done(tc);
 #else
-	size_t index = 0;
-	const uint8_t cmd[1] = {SEND_IMMEDIATE};
-	libftdi_buffer_write(cmd, 1);
+	const uint8_t cmd = SEND_IMMEDIATE;
+	libftdi_buffer_write(&cmd, 1);
 	libftdi_buffer_flush();
-	for (size_t index = 0; index != size; )
+	for (size_t index = 0; index < size;)
 		index += ftdi_read_data(ftdic, data + index, size - index);
 #endif
 	DEBUG_WIRE("Read  %d bytes:", size);
@@ -704,8 +705,7 @@ const char *libftdi_target_voltage(void)
 			res = !(data[0] & ~pin);
 		if (res)
 			return "Present";
-		else
-			return "Absent";
+		return "Absent";
 	}
 	return NULL;
 }
