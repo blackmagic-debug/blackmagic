@@ -91,26 +91,26 @@ static void jtagtap_reset(void)
 	jtagtap_soft_reset();
 }
 
-static void jtagtap_tms_seq(uint32_t tms_states, size_t ticks)
+static void jtagtap_tms_seq(const uint32_t tms_states, const size_t clock_cycles)
 {
-	DEBUG_PROBE("jtagtap_tms_seq 0x%08" PRIx32 ", ticks %d\n", tms_states, ticks);
-	int len = (ticks + 7) / 8;
+	if (clock_cycles > 32)
+		return;
+	DEBUG_PROBE("jtagtap_tms_seq 0x%08" PRIx32 ", clock cycles: %zu\n", tms_states, clock_cycles);
+	const size_t len = (clock_cycles + 7U) / 8U;
 	uint8_t cmd[12];
+	memset(cmd, 0, sizeof(cmd));
 	cmd[0] = CMD_HW_JTAG3;
-	cmd[1] = 0;
-	cmd[2] = ticks;
-	cmd[3] = 0;
-	uint8_t *tms = cmd + 4;
-	for (int i = 0; i < len; i++) {
-		*tms = tms_states & 0xff;
-		*(tms + len) = *tms;
-		tms++;
-		tms_states >>= 8;
+	cmd[2] = clock_cycles;
+	const size_t total_chunks = (clock_cycles >> 3U) + ((clock_cycles & 7U) ? 1U : 0U);
+	for (size_t cycle = 0; cycle < clock_cycles; cycle += 8) {
+		const size_t index = 4 + (cycle >> 3U);
+		cmd[index] = (tms_states >> cycle) & 0xffU;
+		cmd[index + total_chunks] = cmd[index];
 	}
-	uint8_t res[4];
-	send_recv(info.usb_link, cmd, 4 + 2 * len, res, len);
-	send_recv(info.usb_link, NULL, 0, res, 1);
-	if (res[0] != 0)
+	uint8_t result[4];
+	send_recv(info.usb_link, cmd, 4U + (total_chunks * 2U), result, len);
+	send_recv(info.usb_link, NULL, 0, result, 1);
+	if (result[0] != 0)
 		raise_exception(EXCEPTION_ERROR, "tagtap_tms_seq failed");
 }
 
