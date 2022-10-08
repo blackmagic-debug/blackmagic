@@ -617,50 +617,49 @@ size_t libftdi_buffer_read(uint8_t *data, size_t size)
 	return size;
 }
 
-void libftdi_jtagtap_tdi_tdo_seq(uint8_t *DO, const bool final_tms, const uint8_t *DI, size_t ticks)
+void libftdi_jtagtap_tdi_tdo_seq(uint8_t *data_out, const bool final_tms, const uint8_t *data_in, size_t ticks)
 {
-	int rsize, rticks;
-
 	if (!ticks)
 		return;
-	if (!DI && !DO)
+	if (!data_in && !data_out)
 		return;
 
-	DEBUG_WIRE(
-		"libftdi_jtagtap_tdi_tdo_seq %s ticks: %d\n", (DI && DO) ? "read/write" : ((DI) ? "write" : "read"), ticks);
+	DEBUG_WIRE("libftdi_jtagtap_tdi_tdo_seq %s ticks: %d\n",
+		data_in && data_out ? "read/write" : data_in ? "write" : "read", ticks);
 	if (final_tms)
 		--ticks;
-	rticks = ticks & 7;
+	uint8_t rticks = ticks & 7U;
 	ticks >>= 3;
 	uint8_t data[8];
-	uint8_t cmd = ((DO) ? MPSSE_DO_READ : 0) | ((DI) ? (MPSSE_DO_WRITE | MPSSE_WRITE_NEG) : 0) | MPSSE_LSB;
-	rsize = ticks;
+	uint8_t cmd = ((data_out) ? MPSSE_DO_READ : 0) | ((data_in) ? (MPSSE_DO_WRITE | MPSSE_WRITE_NEG) : 0) | MPSSE_LSB;
+	size_t rsize = ticks;
 	if (ticks) {
 		data[0] = cmd;
 		data[1] = ticks - 1;
 		data[2] = 0;
 		libftdi_buffer_write(data, 3);
-		if (DI)
-			libftdi_buffer_write(DI, ticks);
+		if (data_in)
+			libftdi_buffer_write(data_in, ticks);
 	}
 	int index = 0;
 	if (rticks) {
 		rsize++;
 		data[index++] = cmd | MPSSE_BITMODE;
 		data[index++] = rticks - 1;
-		if (DI)
-			data[index++] = DI[ticks];
+		if (data_in)
+			data[index++] = data_in[ticks];
 	}
 	if (final_tms) {
 		rsize++;
-		data[index++] = MPSSE_WRITE_TMS | ((DO) ? MPSSE_DO_READ : 0) | MPSSE_LSB | MPSSE_BITMODE | MPSSE_WRITE_NEG;
+		data[index++] =
+			MPSSE_WRITE_TMS | ((data_out) ? MPSSE_DO_READ : 0) | MPSSE_LSB | MPSSE_BITMODE | MPSSE_WRITE_NEG;
 		data[index++] = 0;
-		if (DI)
-			data[index++] = (DI[ticks] & (1 << rticks)) ? 0x81 : 0x01;
+		if (data_in)
+			data[index++] = (data_in[ticks] & (1 << rticks)) ? 0x81 : 0x01;
 	}
 	if (index)
 		libftdi_buffer_write(data, index);
-	if (DO) {
+	if (data_out) {
 		int index = 0;
 		uint8_t *tmp = alloca(rsize);
 		libftdi_buffer_read(tmp, rsize);
@@ -668,19 +667,19 @@ void libftdi_jtagtap_tdi_tdo_seq(uint8_t *DO, const bool final_tms, const uint8_
 			rsize--;
 
 		while (rsize--)
-			*DO++ = tmp[index++];
+			*data_out++ = tmp[index++];
 		if (rticks == 0)
-			*DO++ = 0;
+			*data_out++ = 0;
 
 		if (final_tms) {
 			rticks++;
-			*(--DO) >>= 1;
-			*DO |= tmp[index] & 0x80;
+			*(--data_out) >>= 1;
+			*data_out |= tmp[index] & 0x80;
 		} else
-			--DO;
+			--data_out;
 
 		if (rticks)
-			*DO >>= (8 - rticks);
+			*data_out >>= (8 - rticks);
 	}
 }
 
