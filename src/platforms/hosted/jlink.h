@@ -20,6 +20,7 @@
 #ifndef PLATFORMS_HOSTED_JLINK_H
 #define PLATFORMS_HOSTED_JLINK_H
 
+#include <stdbool.h>
 #include "bmp_hosted.h"
 #include "jtagtap.h"
 
@@ -51,9 +52,9 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 
-int jlink_init(bmp_info_t *info)
+bool jlink_init(bmp_info_t *info)
 {
-	return -1;
+	return false;
 }
 
 uint32_t jlink_swdp_scan(bmp_info_t *info)
@@ -127,7 +128,7 @@ enum jaylink_device_capability {
 	JAYLINK_DEV_CAP_ETHERNET = 38
 };
 
-int jlink_init(bmp_info_t *info);
+bool jlink_init(bmp_info_t *info);
 uint32_t jlink_swdp_scan(bmp_info_t *info);
 int jlink_jtagtap_init(bmp_info_t *info, jtag_proc_t *jtag_proc);
 const char *jlink_target_voltage(bmp_info_t *info);
