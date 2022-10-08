@@ -45,14 +45,14 @@ enum {
  * Write at least 50 bits high, two bits low and read DP_IDR and put
  * idle cycles at the end
  */
-static bool line_reset(bmp_info_t *info)
+static bool line_reset(bmp_info_t *const info)
 {
 	uint8_t cmd[44];
 	memset(cmd, 0, sizeof(cmd));
 
 	cmd[0] = CMD_HW_JTAG3;
 	/* write 19 bytes */
-	cmd[2] = 19 * 8;
+	cmd[2] = 19U * 8U;
 	uint8_t *const direction = cmd + 4U;
 	memset(direction + 5U, 0xffU, 9U);
 	direction[18] = 0xe0U;
@@ -71,9 +71,12 @@ static bool line_reset(bmp_info_t *info)
 	return true;
 }
 
-static bool jlink_swdptap_init(bmp_info_t *info)
+static bool jlink_swdptap_init(bmp_info_t *const info)
 {
-	uint8_t cmd[2] = {CMD_GET_SELECT_IF, JLINK_IF_GET_AVAILABLE};
+	uint8_t cmd[2] = {
+		CMD_GET_SELECT_IF,
+		JLINK_IF_GET_AVAILABLE,
+	};
 	uint8_t res[4];
 	send_recv(info->usb_link, cmd, 2, res, sizeof(res));
 
@@ -84,16 +87,13 @@ static bool jlink_swdptap_init(bmp_info_t *info)
 	send_recv(info->usb_link, cmd, 2, res, sizeof(res));
 
 	platform_delay(10);
-
 	/* SWD speed is fixed. Do not set it here*/
-
 	return true;
 }
 
-uint32_t jlink_swdp_scan(bmp_info_t *info)
+uint32_t jlink_swdp_scan(bmp_info_t *const info)
 {
 	target_list_free();
-
 	if (!jlink_swdptap_init(info))
 		return 0;
 
@@ -103,17 +103,17 @@ uint32_t jlink_swdp_scan(bmp_info_t *info)
 	cmd[0] = CMD_HW_JTAG3;
 	/* write 18 Bytes.*/
 	cmd[2] = 17U * 8U;
-	uint8_t *direction = cmd + 4;
-	memset(direction, 0xffU, 17);
-	uint8_t *data = direction + 17;
-	memset(data, 0xffU, 7);
-	data[7] = 0x9e;
-	data[8] = 0xe7;
-	memset(data + 9, 0xffU, 6);
+	uint8_t *direction = cmd + 4U;
+	memset(direction, 0xffU, 17U);
+	uint8_t *data = direction + 17U;
+	memset(data, 0xffU, 7U);
+	data[7] = 0x9eU;
+	data[8] = 0xe7U;
+	memset(data + 9U, 0xffU, 6U);
 
 	uint8_t res[18];
-	send_recv(info->usb_link, cmd, 38, res, 17);
-	send_recv(info->usb_link, NULL, 0, res, 1);
+	send_recv(info->usb_link, cmd, 38U, res, 17U);
+	send_recv(info->usb_link, NULL, 0U, res, 1U);
 
 	if (res[0] != 0) {
 		DEBUG_WARN("Line reset failed\n");
@@ -132,27 +132,25 @@ uint32_t jlink_swdp_scan(bmp_info_t *info)
 	dp->abort = jlink_adiv5_swdp_abort;
 
 	jlink_adiv5_swdp_error(dp);
-
 	adiv5_dp_init(dp, 0);
-
 	return target_list ? 1U : 0U;
 }
 
-static uint32_t jlink_adiv5_swdp_read(ADIv5_DP_t *dp, uint16_t addr)
+static uint32_t jlink_adiv5_swdp_read(ADIv5_DP_t *const dp, const uint16_t addr)
 {
 	if (addr & ADIV5_APnDP) {
 		adiv5_dp_low_access(dp, ADIV5_LOW_READ, addr, 0);
 		return adiv5_dp_low_access(dp, ADIV5_LOW_READ, ADIV5_DP_RDBUFF, 0);
-	} else {
-		return jlink_adiv5_swdp_low_access(dp, ADIV5_LOW_READ, addr, 0);
 	}
+	return jlink_adiv5_swdp_low_access(dp, ADIV5_LOW_READ, addr, 0);
 }
 
-static uint32_t jlink_adiv5_swdp_error(ADIv5_DP_t *dp)
+static uint32_t jlink_adiv5_swdp_error(ADIv5_DP_t *const dp)
 {
-	uint32_t err, clr = 0;
-	err = jlink_adiv5_swdp_read(dp, ADIV5_DP_CTRLSTAT) & (ADIV5_DP_CTRLSTAT_STICKYORUN | ADIV5_DP_CTRLSTAT_STICKYCMP |
-															 ADIV5_DP_CTRLSTAT_STICKYERR | ADIV5_DP_CTRLSTAT_WDATAERR);
+	uint32_t err = jlink_adiv5_swdp_read(dp, ADIV5_DP_CTRLSTAT);
+	err &= (ADIV5_DP_CTRLSTAT_STICKYORUN | ADIV5_DP_CTRLSTAT_STICKYCMP | ADIV5_DP_CTRLSTAT_STICKYERR |
+			ADIV5_DP_CTRLSTAT_WDATAERR);
+	uint32_t clr = 0;
 
 	if (err & ADIV5_DP_CTRLSTAT_STICKYORUN)
 		clr |= ADIV5_DP_ABORT_ORUNERRCLR;
@@ -266,7 +264,7 @@ static uint32_t jlink_adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW, uint16_
 	return response;
 }
 
-static void jlink_adiv5_swdp_abort(ADIv5_DP_t *dp, uint32_t abort)
+static void jlink_adiv5_swdp_abort(ADIv5_DP_t *const dp, const uint32_t abort)
 {
 	adiv5_dp_write(dp, ADIV5_DP_ABORT, abort);
 }
