@@ -38,6 +38,24 @@ static void jtagtap_tdi_tdo_seq(uint8_t *data_out, const bool final_tms, const u
 static void jtagtap_tdi_seq(bool final_tms, const uint8_t *data_in, size_t clock_cycles);
 static bool jtagtap_next(bool tms, bool tdi);
 
+/*
+ * In this file, command buffers with the command code CMD_HW_JTAG3 are built.
+ * These have the following format:
+ * ┌─────────┬─────────┬───────────────┬─────────┐
+ * │    0    │    1    │       2       │    3    │
+ * ├╌╌╌╌╌╌╌╌╌┼╌╌╌╌╌╌╌╌╌┼╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌┼╌╌╌╌╌╌╌╌╌┤
+ * │ Command │ Unknown │  Cycle count  │ Unknown │
+ * ├─────────┼─────────┼───────────────┼─────────┤
+ * │    4    │    …    │ 4 + tms_bytes │    …    │
+ * ├╌╌╌╌╌╌╌╌╌┼╌╌╌╌╌╌╌╌╌┼╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌┼╌╌╌╌╌╌╌╌╌┤
+ * │  TMS data bytes…  │     TDI data bytes…     │
+ * └─────────┴─────────┴───────────────┴─────────┘
+ * Where the byte counts for each of TDI and TMS are defined by:
+ * count = ⌈cycle_count / 8
+ *
+ * ⌈ is defined as the ceiling function.
+ */
+
 bool jlink_jtagtap_init(bmp_info_t *const info)
 {
 	DEBUG_PROBE("jtap_init\n");
