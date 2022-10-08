@@ -45,12 +45,12 @@ void libftdi_drain_potential_garbage(void)
 	}
 }
 
-int libftdi_jtagtap_init(void)
+bool libftdi_jtagtap_init(void)
 {
 	if (active_cable->mpsse_swd_read.set_data_low == MPSSE_DO &&
 		active_cable->mpsse_swd_write.set_data_low == MPSSE_DO) {
 		DEBUG_WARN("JTAG not possible with resistor SWD!\n");
-		return -1;
+		return false;
 	}
 
 	jtag_proc.jtagtap_reset = jtagtap_reset;
@@ -86,7 +86,7 @@ int libftdi_jtagtap_init(void)
 		jtagtap_next(true, false); /* 50 idle cylces for SWD reset */
 	jtagtap_tms_seq(0xe73cU, 16);  /* SWD to JTAG sequence */
 	jtagtap_soft_reset();
-	return 0;
+	return true;
 }
 
 static void jtagtap_reset(void)

@@ -215,7 +215,7 @@ int platform_jtagtap_init(void)
 		return 0;
 
 	case BMP_TYPE_LIBFTDI:
-		return libftdi_jtagtap_init();
+		return libftdi_jtagtap_init() ? 0 : -1;
 
 	case BMP_TYPE_JLINK:
 		return jlink_jtagtap_init(&info) ? 0 : -1;
