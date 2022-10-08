@@ -26,9 +26,70 @@
 #include <assert.h>
 
 #include "exception.h"
-
+#include "jtagtap.h"
 #include "jlink.h"
 #include "cli.h"
+
+static void jtagtap_reset(void);
+static void jtagtap_tms_seq(uint32_t tms_states, size_t clock_cycles);
+static void jtagtap_tdi_tdo_seq(uint8_t *data_out, const bool final_tms, const uint8_t *data_in, size_t clock_cycles);
+static void jtagtap_tdi_seq(bool final_tms, const uint8_t *data_in, size_t clock_cycles);
+static bool jtagtap_next(bool tms, bool tdi);
+
+bool jlink_jtagtap_init(bmp_info_t *const info)
+{
+	DEBUG_PROBE("jtap_init\n");
+	uint8_t cmd_switch[2] = {
+		CMD_GET_SELECT_IF,
+		JLINK_IF_GET_AVAILABLE,
+	};
+	uint8_t res[4];
+	send_recv(info->usb_link, cmd_switch, 2, res, sizeof(res));
+	if (!(res[0] & JLINK_IF_JTAG)) {
+		DEBUG_WARN("JTAG not available\n");
+		return false;
+	}
+	cmd_switch[1] = SELECT_IF_JTAG;
+	send_recv(info->usb_link, cmd_switch, 2, res, sizeof(res));
+	platform_delay(10);
+	/* Set speed 256 kHz*/
+	const uint16_t speed = 2000;
+	uint8_t jtag_speed[3] = {
+		5U,
+		speed & 0xffU,
+		speed >> 8U,
+	};
+	send_recv(info->usb_link, jtag_speed, 3, NULL, 0);
+	uint8_t cmd[44];
+	cmd[0] = CMD_HW_JTAG3;
+	cmd[1] = 0;
+	/* write 8 Bytes.*/
+	cmd[2] = 9 * 8;
+	cmd[3] = 0;
+	uint8_t *tms = cmd + 4;
+	tms[0] = 0xff;
+	tms[1] = 0xff;
+	tms[2] = 0xff;
+	tms[3] = 0xff;
+	tms[4] = 0xff;
+	tms[5] = 0xff;
+	tms[6] = 0xff;
+	tms[7] = 0x3c;
+	tms[8] = 0xe7;
+	send_recv(info->usb_link, cmd, 4 + 2 * 9, cmd, 9);
+	send_recv(info->usb_link, NULL, 0, res, 1);
+
+	if (res[0] != 0) {
+		DEBUG_WARN("Switch to JTAG failed\n");
+		return false;
+	}
+	jtag_proc.jtagtap_reset = jtagtap_reset;
+	jtag_proc.jtagtap_next = jtagtap_next;
+	jtag_proc.jtagtap_tms_seq = jtagtap_tms_seq;
+	jtag_proc.jtagtap_tdi_tdo_seq = jtagtap_tdi_tdo_seq;
+	jtag_proc.jtagtap_tdi_seq = jtagtap_tdi_seq;
+	return true;
+}
 
 static void jtagtap_reset(void)
 {
@@ -128,52 +189,4 @@ static bool jtagtap_next(bool tms, bool tdi)
 	if (res[0] != 0)
 		raise_exception(EXCEPTION_ERROR, "jtagtap_next failed");
 	return (ret[0] & 1);
-}
-
-int jlink_jtagtap_init(bmp_info_t *info, jtag_proc_t *jtag_proc)
-{
-	DEBUG_PROBE("jtap_init\n");
-	uint8_t cmd_switch[2] = {CMD_GET_SELECT_IF, JLINK_IF_GET_AVAILABLE};
-	uint8_t res[4];
-	send_recv(info->usb_link, cmd_switch, 2, res, sizeof(res));
-	if (!(res[0] & JLINK_IF_JTAG)) {
-		DEBUG_WARN("JTAG not available\n");
-		return -1;
-	}
-	cmd_switch[1] = SELECT_IF_JTAG;
-	send_recv(info->usb_link, cmd_switch, 2, res, sizeof(res));
-	platform_delay(10);
-	/* Set speed 256 kHz*/
-	unsigned int speed = 2000;
-	uint8_t jtag_speed[3] = {5, speed & 0xff, speed >> 8};
-	send_recv(info->usb_link, jtag_speed, 3, NULL, 0);
-	uint8_t cmd[44];
-	cmd[0] = CMD_HW_JTAG3;
-	cmd[1] = 0;
-	/* write 8 Bytes.*/
-	cmd[2] = 9 * 8;
-	cmd[3] = 0;
-	uint8_t *tms = cmd + 4;
-	tms[0] = 0xff;
-	tms[1] = 0xff;
-	tms[2] = 0xff;
-	tms[3] = 0xff;
-	tms[4] = 0xff;
-	tms[5] = 0xff;
-	tms[6] = 0xff;
-	tms[7] = 0x3c;
-	tms[8] = 0xe7;
-	send_recv(info->usb_link, cmd, 4 + 2 * 9, cmd, 9);
-	send_recv(info->usb_link, NULL, 0, res, 1);
-
-	if (res[0] != 0) {
-		DEBUG_WARN("Switch to JTAG failed\n");
-		return 0;
-	}
-	jtag_proc->jtagtap_reset = jtagtap_reset;
-	jtag_proc->jtagtap_next = jtagtap_next;
-	jtag_proc->jtagtap_tms_seq = jtagtap_tms_seq;
-	jtag_proc->jtagtap_tdi_tdo_seq = jtagtap_tdi_tdo_seq;
-	jtag_proc->jtagtap_tdi_seq = jtagtap_tdi_seq;
-	return 0;
 }
