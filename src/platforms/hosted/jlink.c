@@ -159,66 +159,72 @@ static bool claim_jlink_interface(bmp_info_t *info, libusb_device *dev)
 	return true;
 }
 
-/* Return 0 if single J-Link device connected or
+/*
+ * Return true if single J-Link device connected or
  * serial given matches one of several J-Link devices.
  */
-int jlink_init(bmp_info_t *const info)
+bool jlink_init(bmp_info_t *const info)
 {
-	usb_link_t *jl = calloc(1, sizeof(usb_link_t));
-	if (!jl)
-		return -1;
-	info->usb_link = jl;
-	jl->ul_libusb_ctx = info->libusb_ctx;
-	int ret = -1;
-	libusb_device **devs;
-	if (libusb_get_device_list(info->libusb_ctx, &devs) < 0) {
+	usb_link_t *link = calloc(1, sizeof(usb_link_t));
+	if (!link)
+		return false;
+	info->usb_link = link;
+	link->ul_libusb_ctx = info->libusb_ctx;
+	libusb_device **device_list = NULL;
+	const ssize_t devices = libusb_get_device_list(info->libusb_ctx, &device_list);
+	if (devices < 0) {
 		DEBUG_WARN("libusb_get_device_list() failed");
-		return ret;
+		return false;
 	}
-	int i = 0;
-	for (; devs[i]; i++) {
-		libusb_device *dev = devs[i];
-		struct libusb_device_descriptor desc;
-		if (libusb_get_device_descriptor(dev, &desc) < 0) {
+	libusb_device *dev = NULL;
+	for (ssize_t index = 0; index < devices; ++index) {
+		if (!device_list[index])
+			continue;
+		libusb_device *const device = device_list[index];
+		struct libusb_device_descriptor dev_desc;
+		if (libusb_get_device_descriptor(device, &dev_desc) < 0) {
 			DEBUG_WARN("libusb_get_device_descriptor() failed");
-			goto error;
+			libusb_free_device_list(device_list, devices);
+			return false;
 		}
-		if (desc.idVendor != USB_VID_SEGGER)
+		if (dev_desc.idVendor != USB_VID_SEGGER)
 			continue;
-		if ((desc.idProduct != USB_PID_SEGGER_0101) && (desc.idProduct != USB_PID_SEGGER_0105) &&
-			(desc.idProduct != USB_PID_SEGGER_1015) && (desc.idProduct != USB_PID_SEGGER_1020)) {
+		if (dev_desc.idProduct != USB_PID_SEGGER_0101 && dev_desc.idProduct != USB_PID_SEGGER_0105 &&
+			dev_desc.idProduct != USB_PID_SEGGER_1015 && dev_desc.idProduct != USB_PID_SEGGER_1020) {
 			DEBUG_WARN("Ignored device with product id 0x%04x, please report if this is a valid J-Link probe\n",
-				desc.idProduct);
+				dev_desc.idProduct);
 			continue;
 		}
-		int res = libusb_open(dev, &jl->ul_libusb_device_handle);
-		if (res != LIBUSB_SUCCESS)
+		int result = libusb_open(device, &link->ul_libusb_device_handle);
+		if (result != LIBUSB_SUCCESS)
 			continue;
-		char buf[32];
-		res = libusb_get_string_descriptor_ascii(
-			jl->ul_libusb_device_handle, desc.iSerialNumber, (uint8_t *)buf, sizeof(buf));
-		if ((res <= 0) || (!strstr(buf, info->serial))) {
-			libusb_close(jl->ul_libusb_device_handle);
-			continue;
+		if (dev_desc.iSerialNumber != 0) {
+			char serial[32]; // XXX: Static buffers like this considered harmful.
+			const int result = libusb_get_string_descriptor_ascii(
+				link->ul_libusb_device_handle, dev_desc.iSerialNumber, (uint8_t *)serial, sizeof(serial));
+			if (result > 0 && strstr(serial, info->serial)) {
+				dev = device;
+				break;
+			}
 		}
-		break;
+		libusb_close(link->ul_libusb_device_handle);
 	}
-	if (!devs[i])
-		goto error;
-	if (!claim_jlink_interface(info, devs[i]))
-		goto error;
-	jl->req_trans = libusb_alloc_transfer(0);
-	jl->rep_trans = libusb_alloc_transfer(0);
-	if (!jl->req_trans || !jl->rep_trans || !jl->ep_tx || !jl->ep_rx) {
+	if (!dev || !claim_jlink_interface(info, dev)) {
+		libusb_free_device_list(device_list, devices);
+		return false;
+	}
+	link->req_trans = libusb_alloc_transfer(0);
+	link->rep_trans = libusb_alloc_transfer(0);
+	if (!link->req_trans || !link->rep_trans || !link->ep_tx || !link->ep_rx) {
 		DEBUG_WARN("Device setup failed\n");
-		goto error;
+		libusb_release_interface(info->usb_link->ul_libusb_device_handle, info->usb_link->interface);
+		libusb_close(info->usb_link->ul_libusb_device_handle);
+		libusb_free_device_list(device_list, devices);
+		return false;
 	}
-	libusb_free_device_list(devs, 1);
+	libusb_free_device_list(device_list, devices);
 	jlink_info(info);
-	return 0;
-error:
-	libusb_free_device_list(devs, 1);
-	return -1;
+	return true;
 }
 
 const char *jlink_target_voltage(bmp_info_t *info)
