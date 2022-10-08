@@ -29,6 +29,7 @@
 #include <signal.h>
 #include <ctype.h>
 #include <sys/time.h>
+#include <libusb.h>
 
 #include "cli.h"
 #include "jlink.h"
@@ -41,7 +42,7 @@
 #define USB_PID_SEGGER_1020 0x1020U
 
 static uint32_t emu_caps;
-static uint32_t emu_speed_kHz;
+static uint32_t emu_speed_khz;
 static uint16_t emu_min_divisor;
 static uint16_t emu_current_divisor;
 
@@ -65,9 +66,9 @@ static void jlink_print_speed(bmp_info_t *const info)
 	uint8_t cmd = CMD_GET_SPEEDS;
 	uint8_t res[6];
 	send_recv(info->usb_link, &cmd, 1, res, sizeof(res));
-	emu_speed_kHz = (res[0] | (res[1] << 8) | (res[2] << 16) | (res[3] << 24)) / 1000U;
+	emu_speed_khz = (res[0] | (res[1] << 8) | (res[2] << 16) | (res[3] << 24)) / 1000U;
 	emu_min_divisor = res[4] | (res[5] << 8);
-	DEBUG_INFO("Emulator speed %ukHz, minimum divisor %u%s\n", emu_speed_kHz, emu_min_divisor,
+	DEBUG_INFO("Emulator speed %ukHz, minimum divisor %u%s\n", emu_speed_khz, emu_min_divisor,
 		(emu_caps & JLINK_CAP_GET_SPEEDS) ? "" : ", fixed");
 }
 
@@ -227,55 +228,57 @@ bool jlink_init(bmp_info_t *const info)
 	return true;
 }
 
-const char *jlink_target_voltage(bmp_info_t *info)
+const char *jlink_target_voltage(bmp_info_t *const info)
 {
-	uint8_t cmd[1] = {CMD_GET_HW_STATUS};
-	uint8_t res[8];
-	send_recv(info->usb_link, cmd, 1, res, sizeof(res));
-	uint16_t mVolt = res[0] | (res[1] << 8);
 	static char ret[7];
-	sprintf(ret, "%2d.%03d", mVolt / 1000, mVolt % 1000);
+	uint8_t cmd = CMD_GET_HW_STATUS;
+	uint8_t res[8];
+	send_recv(info->usb_link, &cmd, 1, res, sizeof(res));
+	const uint16_t millivolts = res[0] | (res[1] << 8);
+	snprintf(ret, sizeof(ret), "%2u.%03u", millivolts / 1000U, millivolts % 1000U);
 	return ret;
 }
 
-static bool nrst_status = false;
-void jlink_nrst_set_val(bmp_info_t *info, bool assert)
+void jlink_nrst_set_val(bmp_info_t *const info, const bool assert)
 {
-	uint8_t cmd[1];
-	cmd[0] = (assert) ? CMD_HW_RESET0 : CMD_HW_RESET1;
-	send_recv(info->usb_link, cmd, 1, NULL, 0);
+	uint8_t cmd = assert ? CMD_HW_RESET0 : CMD_HW_RESET1;
+	send_recv(info->usb_link, &cmd, 1, NULL, 0);
 	platform_delay(2);
-	nrst_status = assert;
 }
 
-bool jlink_nrst_get_val(bmp_info_t *info)
+bool jlink_nrst_get_val(bmp_info_t *const info)
 {
 	uint8_t cmd[1] = {CMD_GET_HW_STATUS};
 	uint8_t res[8];
 	send_recv(info->usb_link, cmd, 1, res, sizeof(res));
-	return !(res[6]);
+	return res[6] == 0;
 }
 
-void jlink_max_frequency_set(bmp_info_t *info, uint32_t freq)
+void jlink_max_frequency_set(bmp_info_t *const info, const uint32_t freq)
 {
 	if (!(emu_caps & JLINK_CAP_GET_SPEEDS))
 		return;
 	if (!info->is_jtag)
 		return;
-	uint16_t freq_kHz = freq / 1000;
-	uint16_t divisor = (emu_speed_kHz + freq_kHz - 1) / freq_kHz;
-	if (divisor < emu_min_divisor)
-		divisor = emu_min_divisor;
-	emu_current_divisor = divisor;
-	uint16_t speed_kHz = emu_speed_kHz / divisor;
-	uint8_t cmd[3] = {CMD_SET_SPEED, speed_kHz & 0xff, speed_kHz >> 8};
-	DEBUG_WARN("Set Speed %d\n", speed_kHz);
+	const uint16_t freq_khz = freq / 1000;
+	const uint16_t divisor = (emu_speed_khz + freq_khz - 1U) / freq_khz;
+	if (divisor > emu_min_divisor)
+		emu_current_divisor = divisor;
+	else
+		emu_current_divisor = emu_min_divisor;
+	const uint16_t speed_khz = emu_speed_khz / emu_current_divisor;
+	uint8_t cmd[3] = {
+		CMD_SET_SPEED,
+		speed_khz & 0xffU,
+		speed_khz >> 8U,
+	};
+	DEBUG_WARN("Set Speed %d\n", speed_khz);
 	send_recv(info->usb_link, cmd, 3, NULL, 0);
 }
 
-uint32_t jlink_max_frequency_get(bmp_info_t *info)
+uint32_t jlink_max_frequency_get(bmp_info_t *const info)
 {
-	if ((emu_caps & JLINK_CAP_GET_SPEEDS) && (info->is_jtag))
-		return (emu_speed_kHz * 1000L) / emu_current_divisor;
+	if ((emu_caps & JLINK_CAP_GET_SPEEDS) && info->is_jtag)
+		return (emu_speed_khz * 1000U) / emu_current_divisor;
 	return FREQ_FIXED;
 }
