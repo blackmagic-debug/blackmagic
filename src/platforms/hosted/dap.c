@@ -252,7 +252,7 @@ void dap_swd_configure(uint8_t cfg)
 }
 
 //-----------------------------------------------------------------------------
-size_t dap_info(const dap_info_t info, uint8_t *const data, const size_t size)
+size_t dap_info(const dap_info_e info, uint8_t *const data, const size_t size)
 {
 	uint8_t buf[256];
 	size_t rsize;

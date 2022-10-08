@@ -34,36 +34,36 @@
 #include <stdbool.h>
 #include "adiv5.h"
 
-typedef enum dap_info_e {
-	DAP_INFO_VENDOR = 0x01,
-	DAP_INFO_PRODUCT = 0x02,
-	DAP_INFO_SER_NUM = 0x03,
-	DAP_INFO_FW_VER = 0x04,
-	DAP_INFO_DEVICE_VENDOR = 0x05,
-	DAP_INFO_DEVICE_NAME = 0x06,
-	DAP_INFO_CAPABILITIES = 0xf0,
-	DAP_INFO_TDT = 0xf1,
-	DAP_INFO_SWO_BUF_SIZE = 0xfd,
-	DAP_INFO_PACKET_COUNT = 0xfe,
-	DAP_INFO_PACKET_SIZE = 0xff,
-} dap_info_t;
+typedef enum dap_info {
+	DAP_INFO_VENDOR = 0x01U,
+	DAP_INFO_PRODUCT = 0x02U,
+	DAP_INFO_SER_NUM = 0x03U,
+	DAP_INFO_FW_VER = 0x04U,
+	DAP_INFO_DEVICE_VENDOR = 0x05U,
+	DAP_INFO_DEVICE_NAME = 0x06U,
+	DAP_INFO_CAPABILITIES = 0xf0U,
+	DAP_INFO_TDT = 0xf1U,
+	DAP_INFO_SWO_BUF_SIZE = 0xfdU,
+	DAP_INFO_PACKET_COUNT = 0xfeU,
+	DAP_INFO_PACKET_SIZE = 0xffU,
+} dap_info_e;
 
-typedef enum dap_cap_e {
-	DAP_CAP_SWD = (1 << 0),
-	DAP_CAP_JTAG = (1 << 1),
-	DAP_CAP_SWO_UART = (1 << 2),
-	DAP_CAP_SWO_MANCHESTER = (1 << 3),
-	DAP_CAP_ATOMIC_CMD = (1 << 4),
-	DAP_CAP_TDT = (1 << 5),
-	DAP_CAP_SWO_STREAMING = (1 << 6),
-} dap_cap_t;
+typedef enum dap_cap {
+	DAP_CAP_SWD = (1U << 0U),
+	DAP_CAP_JTAG = (1U << 1U),
+	DAP_CAP_SWO_UART = (1U << 2U),
+	DAP_CAP_SWO_MANCHESTER = (1U << 3U),
+	DAP_CAP_ATOMIC_CMD = (1U << 4U),
+	DAP_CAP_TDT = (1U << 5U),
+	DAP_CAP_SWO_STREAMING = (1U << 6U),
+} dap_cap_e;
 
 void dap_led(int index, int state);
 void dap_connect(bool jtag);
 void dap_disconnect(void);
 void dap_transfer_configure(uint8_t idle, uint16_t count, uint16_t retry);
 void dap_swd_configure(uint8_t cfg);
-size_t dap_info(dap_info_t info, uint8_t *data, size_t size);
+size_t dap_info(dap_info_e info, uint8_t *data, size_t size);
 void dap_reset_target(void);
 void dap_nrst_set_val(bool assert);
 void dap_trst_reset(void);
