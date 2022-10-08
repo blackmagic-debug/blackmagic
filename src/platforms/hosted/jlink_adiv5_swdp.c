@@ -41,33 +41,34 @@ enum {
 	SWDIO_READ
 };
 
-/* Write at least 50 bits high, two bits low and read DP_IDR and put
-*  idle cyccles at the end*/
-static int line_reset(bmp_info_t *info)
+/*
+ * Write at least 50 bits high, two bits low and read DP_IDR and put
+ * idle cycles at the end
+ */
+static bool line_reset(bmp_info_t *info)
 {
 	uint8_t cmd[44];
 	memset(cmd, 0, sizeof(cmd));
 
 	cmd[0] = CMD_HW_JTAG3;
-	/* write 19 Bytes.*/
+	/* write 19 bytes */
 	cmd[2] = 19 * 8;
-	uint8_t *direction = cmd + 4;
-	memset(direction + 5, 0xffU, 9);
-	direction[18] = 0xe0;
-	uint8_t *data = direction + 19;
-	memset(data + 5, 0xffU, 7);
-	data[13] = 0xa5;
+	uint8_t *const direction = cmd + 4U;
+	memset(direction + 5U, 0xffU, 9U);
+	direction[18] = 0xe0U;
+	uint8_t *const data = direction + 19U;
+	memset(data + 5U, 0xffU, 7U);
+	data[13] = 0xa5U;
 
 	uint8_t res[19];
-	send_recv(info->usb_link, cmd, 42, res, 19);
-	send_recv(info->usb_link, NULL, 0, res, 1);
+	send_recv(info->usb_link, cmd, 42U, res, 19U);
+	send_recv(info->usb_link, NULL, 0U, res, 1U);
 
 	if (res[0] != 0) {
 		DEBUG_WARN("Line reset failed\n");
-		return -1;
+		return false;
 	}
-
-	return 0;
+	return true;
 }
 
 static bool jlink_swdptap_init(bmp_info_t *info)
