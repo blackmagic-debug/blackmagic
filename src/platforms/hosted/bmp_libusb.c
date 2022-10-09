@@ -81,6 +81,14 @@ void libusb_exit_function(bmp_info_s *info)
 	}
 }
 
+static char *get_device_descriptor_string(libusb_device_handle *handle, uint16_t string_index)
+{
+	char read_string[128] = {0};
+	if (string_index != 0)
+		libusb_get_string_descriptor_ascii(handle, string_index, (uint8_t *)read_string, sizeof(read_string));
+	return strdup(read_string);
+}
+
 #if defined(_WIN32) || defined(__CYGWIN__)
 static probe_info_s *process_ftdi_probe(void)
 {
@@ -125,6 +133,34 @@ static probe_info_s *process_ftdi_probe(void)
 }
 #endif
 
+static bool process_vid_pid_table_probe(
+	libusb_device_descriptor_s *device_descriptor, libusb_device *device, probe_info_s **probe_list)
+{
+	bool probe_added = false;
+	for (size_t index = 0; debugger_devices[index].type != BMP_TYPE_NONE; ++index) {
+		/* Check for a match, skip the entry if we don't get one */
+		if (device_descriptor->idVendor != debugger_devices[index].vendor ||
+			(device_descriptor->idProduct != debugger_devices[index].product &&
+				debugger_devices[index].product != PRODUCT_ID_UNKNOWN))
+			continue;
+
+		libusb_device_handle *handle = NULL;
+		/* Try to open the device */
+		if (libusb_open(device, &handle) != LIBUSB_SUCCESS)
+			break;
+		char *product = get_device_descriptor_string(handle, device_descriptor->iProduct);
+		char *manufacturer = get_device_descriptor_string(handle, device_descriptor->iManufacturer);
+		char *serial = get_device_descriptor_string(handle, device_descriptor->iSerialNumber);
+		char *version = strdup("---");
+
+		*probe_list = probe_info_add_by_id(*probe_list, debugger_devices[index].type, device_descriptor->idVendor,
+			device_descriptor->idProduct, manufacturer, product, serial, version);
+		probe_added = true;
+		libusb_close(handle);
+	}
+	return probe_added;
+}
+
 static const probe_info_s *scan_for_devices(void)
 {
 	/*
@@ -133,26 +169,30 @@ static const probe_info_s *scan_for_devices(void)
 	 */
 #if defined(_WIN32) || defined(__CYGWIN__)
 	probe_info_s *probe_list = process_ftdi_probe();
-	if (probe_list == NULL) {
-		DEBUG_WARN("No probes found\n");
-	} else {
-		size_t number = 1;
-		while (probe_list != NULL) {
-			DEBUG_WARN("%d. %s\n", number++, probe_list->manufacturer);
-			probe_list = probe_list->next;
-		}
-	}
-	while (true)
-		continue;
+	const bool skip_ftdi = probe_list != NULL;
 #else
 	probe_info_s *probe_list = NULL;
+	const bool skip_ftdi = false;
 #endif
 
 	libusb_device **device_list;
 	const ssize_t cnt = libusb_get_device_list(info.libusb_ctx, &device_list);
-	if (cnt > 0)
-		libusb_free_device_list(device_list, (int)cnt);
-	return NULL;
+	if (cnt <= 0)
+		return probe_info_correct_order(probe_list);
+	/* Parse the list of USB devices found */
+	for (size_t device_index = 0; device_list[device_index]; ++device_index) {
+		libusb_device *const device = device_list[device_index];
+		libusb_device_descriptor_s device_descriptor;
+		const int result = libusb_get_device_descriptor(device, &device_descriptor);
+		if (result < 0) {
+			DEBUG_ERROR("Failed to get device descriptor (%d): %s\n", result, libusb_error_name(result));
+			return NULL;
+		}
+		if (device_descriptor.idVendor != VENDOR_ID_FTDI || !skip_ftdi)
+			process_vid_pid_table_probe(&device_descriptor, device, &probe_list);
+	}
+	libusb_free_device_list(device_list, (int)cnt);
+	return probe_info_correct_order(probe_list);
 }
 
 int find_debuggers(bmda_cli_options_s *cl_opts, bmp_info_s *info)
