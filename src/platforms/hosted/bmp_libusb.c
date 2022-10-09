@@ -82,67 +82,83 @@ void libusb_exit_function(bmp_info_s *info)
 }
 
 #if defined(_WIN32) || defined(__CYGWIN__)
-static size_t process_ftdi_probe(probe_info_s *probe_list)
+static probe_info_s *process_ftdi_probe(void)
 {
 	DWORD ftdi_dev_count = 0;
 	if (FT_CreateDeviceInfoList(&ftdi_dev_count) != FT_OK)
-		return 0;
+		return NULL;
 
 	FT_DEVICE_LIST_INFO_NODE *dev_info =
 		(FT_DEVICE_LIST_INFO_NODE *)malloc(sizeof(FT_DEVICE_LIST_INFO_NODE) * ftdi_dev_count);
 	if (dev_info == NULL) {
 		DEBUG_ERROR("%s: Memory allocation failed\n", __func__);
-		return 0;
+		return NULL;
 	}
 
 	if (FT_GetDeviceInfoList(dev_info, &ftdi_dev_count) != FT_OK) {
 		free(dev_info);
-		return 0;
+		return NULL;
 	}
 
-	size_t devices_found = 0;
-	// Device list is loaded, iterate over the found probes
+	probe_info_s *probe_list = NULL;
+	/* Device list is loaded, iterate over the found probes */
 	for (size_t index = 0; index < ftdi_dev_count; ++index) {
-		probe_list->manufactuer = strdup(dev_info[index].Description);
-		const size_t serial_len = strlen(dev_info[index].SerialNumber) - 1U;
-		if (dev_info[index].SerialNumber[serial_len] == 'A')
-			dev_info[index].SerialNumber[serial_len] = '\0';
-
-		if (serial_len == 0)
-			probe_list->serial = strdup("Unknown");
-		else
-			probe_list->serial = strdup(dev_info[index].SerialNumber);
-		++devices_found;
-		++probe_list;
+		const uint16_t vid = (dev_info[index].ID >> 16U) & 0xffffU;
+		const uint16_t pid = dev_info[index].ID & 0xffffU;
+		char *serial = strdup(dev_info[index].SerialNumber);
+		const char *const product = strdup(dev_info[index].Description);
+		size_t serial_len = strlen(serial);
+		if (serial_len <= 1) {
+			free(serial);
+			serial = strdup("Unknown serial");
+		} else {
+			--serial_len;
+			if (serial[serial_len] == 'A')
+				serial[serial_len] = '\0';
+		}
+		const char *const manufacturer = strdup("FTDI");
+		probe_list =
+			probe_info_add_by_id(probe_list, BMP_TYPE_LIBFTDI, vid, pid, manufacturer, product, serial, strdup("---"));
 	}
-	return devices_found;
+	free(dev_info);
+	return probe_list;
 }
 #endif
 
-static int scan_for_probes(void)
+static const probe_info_s *scan_for_devices(void)
 {
-	size_t debugger_count = 0;
 	/*
 	 * If we are running on Windows the proprietary FTD2XX library is used
 	 * to collect debugger information.
 	 */
 #if defined(_WIN32) || defined(__CYGWIN__)
-	debugger_count += process_ftdi_probe(probes);
-	const bool skip_ftdi = true;
+	probe_info_s *probe_list = process_ftdi_probe();
+	if (probe_list == NULL) {
+		DEBUG_WARN("No probes found\n");
+	} else {
+		size_t number = 1;
+		while (probe_list != NULL) {
+			DEBUG_WARN("%d. %s\n", number++, probe_list->manufacturer);
+			probe_list = probe_list->next;
+		}
+	}
+	while (true)
+		continue;
 #else
-	const bool skip_ftdi = false;
+	probe_info_s *probe_list = NULL;
 #endif
 
 	libusb_device **device_list;
 	const ssize_t cnt = libusb_get_device_list(info.libusb_ctx, &device_list);
 	if (cnt > 0)
 		libusb_free_device_list(device_list, (int)cnt);
-	return debugger_count == 1 ? 0 : -1;
+	return NULL;
 }
 
 int find_debuggers(bmda_cli_options_s *cl_opts, bmp_info_s *info)
 {
-	(void)cl_opts;
+	if (cl_opts->opt_device)
+		return 1;
 
 	const int result = libusb_init(&info->libusb_ctx);
 	if (result != LIBUSB_SUCCESS) {
@@ -150,7 +166,13 @@ int find_debuggers(bmda_cli_options_s *cl_opts, bmp_info_s *info)
 		return -1;
 	}
 
-	return scan_for_probes();
+	/* Scan for all possible probes on the system */
+	const probe_info_s *const probe_list = scan_for_devices();
+	if (!probe_list) {
+		DEBUG_WARN("No probes found\n");
+		return -1;
+	}
+	return 1;
 }
 
 /*
