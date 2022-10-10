@@ -38,7 +38,7 @@
 extern bool debug_bmp;
 #endif
 
-#define PLATFORM_IDENT   " "
+#define PLATFORM_IDENT   ""
 #define UPD_IFACE_STRING "@Internal Flash   /0x08000000/8*001Kg"
 
 /* Hardware version switcher helper
