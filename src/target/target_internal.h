@@ -26,11 +26,11 @@
 extern target *target_list;
 target *target_new(void);
 
-struct target_ram {
+typedef struct target_ram {
 	target_addr_t start;
 	size_t length;
 	struct target_ram *next;
-};
+} target_ram_s;
 
 typedef struct target_flash target_flash_s;
 
@@ -133,7 +133,7 @@ struct target_s {
 		bool ke04_mode;
 	};
 
-	struct target_ram *ram;
+	target_ram_s *ram;
 	target_flash_s *flash;
 
 	/* Other stuff */
