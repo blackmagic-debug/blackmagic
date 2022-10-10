@@ -27,15 +27,15 @@
 
 target *target_list = NULL;
 
-#define STDOUT_READ_BUF_SIZE	64
+#define STDOUT_READ_BUF_SIZE 64
 
 static bool target_cmd_mass_erase(target *t, int argc, const char **argv);
 static bool target_cmd_range_erase(target *t, int argc, const char **argv);
 
 const struct command_s target_cmd_list[] = {
-	{"erase_mass", (cmd_handler)target_cmd_mass_erase, "Erase whole device Flash"},
-	{"erase_range", (cmd_handler)target_cmd_range_erase, "Erase a range of memory on a device"},
-	{NULL, NULL, NULL}
+	{"erase_mass", target_cmd_mass_erase, "Erase whole device Flash"},
+	{"erase_range", target_cmd_range_erase, "Erase a range of memory on a device"},
+	{NULL, NULL, NULL},
 };
 
 static bool nop_function(void)
@@ -50,8 +50,8 @@ static bool false_function(void)
 
 target *target_new(void)
 {
-	target *t = (void*)calloc(1, sizeof(*t));
-	if (!t) {			/* calloc failed: heap exhaustion */
+	target *t = calloc(1, sizeof(*t));
+	if (!t) { /* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return NULL;
 	}
@@ -65,19 +65,19 @@ target *target_new(void)
 		target_list = t;
 	}
 
-	t->attach = (void*)nop_function;
-	t->detach = (void*)nop_function;
-	t->mem_read = (void*)nop_function;
-	t->mem_write = (void*)nop_function;
-	t->reg_read = (void*)nop_function;
-	t->reg_write = (void*)nop_function;
-	t->regs_read = (void*)nop_function;
-	t->regs_write = (void*)nop_function;
-	t->reset = (void*)nop_function;
-	t->halt_request = (void*)nop_function;
-	t->halt_poll = (void*)nop_function;
-	t->halt_resume = (void*)nop_function;
-	t->check_error = (void*)false_function;
+	t->attach = (void *)nop_function;
+	t->detach = (void *)nop_function;
+	t->mem_read = (void *)nop_function;
+	t->mem_write = (void *)nop_function;
+	t->reg_read = (void *)nop_function;
+	t->reg_write = (void *)nop_function;
+	t->regs_read = (void *)nop_function;
+	t->regs_write = (void *)nop_function;
+	t->reset = (void *)nop_function;
+	t->halt_request = (void *)nop_function;
+	t->halt_poll = (void *)nop_function;
+	t->halt_resume = (void *)nop_function;
+	t->check_error = (void *)false_function;
 
 	t->target_storage = NULL;
 
@@ -94,18 +94,19 @@ int target_foreach(void (*cb)(int, target *t, void *context), void *context)
 	return i;
 }
 
-
-void target_ram_map_free(target *t) {
+void target_ram_map_free(target *t)
+{
 	while (t->ram) {
-		void * next = t->ram->next;
+		void *next = t->ram->next;
 		free(t->ram);
 		t->ram = next;
 	}
 }
 
-void target_flash_map_free(target *t) {
+void target_flash_map_free(target *t)
+{
 	while (t->flash) {
-		void * next = t->flash->next;
+		void *next = t->flash->next;
 		if (t->flash->buf)
 			free(t->flash->buf);
 		free(t->flash);
@@ -137,7 +138,7 @@ void target_list_free(void)
 		free(target_list->target_storage);
 		target_mem_map_free(target_list);
 		while (target_list->bw_list) {
-			void * next = target_list->bw_list->next;
+			void *next = target_list->bw_list->next;
 			free(target_list->bw_list);
 			target_list->bw_list = next;
 		}
@@ -149,14 +150,15 @@ void target_list_free(void)
 void target_add_commands(target *t, const struct command_s *cmds, const char *name)
 {
 	struct target_command_s *tc = malloc(sizeof(*tc));
-	if (!tc) {			/* malloc failed: heap exhaustion */
+	if (!tc) { /* malloc failed: heap exhaustion */
 		DEBUG_WARN("malloc: failed in %s\n", __func__);
 		return;
 	}
 
 	if (t->commands) {
 		struct target_command_s *tail;
-		for (tail = t->commands; tail->next; tail = tail->next);
+		for (tail = t->commands; tail->next; tail = tail->next)
+			continue;
 		tail->next = tc;
 	} else
 		t->commands = tc;
@@ -168,7 +170,7 @@ void target_add_commands(target *t, const struct command_s *cmds, const char *na
 
 target *target_attach_n(const size_t n, struct target_controller *tc)
 {
-	target *t  = target_list;
+	target *t = target_list;
 	for (size_t i = 1; t; t = t->next, ++i) {
 		if (i == n)
 			return target_attach(t, tc);
@@ -196,7 +198,7 @@ target *target_attach(target *t, struct target_controller *tc)
 void target_add_ram(target *t, target_addr_t start, uint32_t len)
 {
 	struct target_ram *ram = malloc(sizeof(*ram));
-	if (!ram) {			/* malloc failed: heap exhaustion */
+	if (!ram) { /* malloc failed: heap exhaustion */
 		DEBUG_WARN("malloc: failed in %s\n", __func__);
 		return;
 	}
@@ -220,20 +222,17 @@ void target_add_flash(target *t, target_flash_s *f)
 
 static ssize_t map_ram(char *buf, size_t len, struct target_ram *ram)
 {
-	return snprintf(buf, len, "<memory type=\"ram\" start=\"0x%08"PRIx32
-	                          "\" length=\"0x%"PRIx32"\"/>",
-	                          ram->start, (uint32_t)ram->length);
+	return snprintf(buf, len, "<memory type=\"ram\" start=\"0x%08" PRIx32 "\" length=\"0x%" PRIx32 "\"/>", ram->start,
+		(uint32_t)ram->length);
 }
 
 static ssize_t map_flash(char *buf, size_t len, target_flash_s *f)
 {
 	int i = 0;
-	i += snprintf(&buf[i], len - i, "<memory type=\"flash\" start=\"0x%08"PRIx32
-	                                "\" length=\"0x%"PRIx32"\">",
-	                                f->start, (uint32_t)f->length);
-	i += snprintf(&buf[i], len - i, "<property name=\"blocksize\">0x%"PRIx32
-	                            "</property></memory>",
-	                            (uint32_t)f->blocksize);
+	i += snprintf(&buf[i], len - i, "<memory type=\"flash\" start=\"0x%08" PRIx32 "\" length=\"0x%" PRIx32 "\">",
+		f->start, (uint32_t)f->length);
+	i += snprintf(
+		&buf[i], len - i, "<property name=\"blocksize\">0x%" PRIx32 "</property></memory>", (uint32_t)f->blocksize);
 	return i;
 }
 
@@ -249,7 +248,7 @@ bool target_mem_map(target *t, char *tmp, size_t len)
 		i += map_flash(&tmp[i], len - i, f);
 	i += snprintf(&tmp[i], len - i, "</memory-map>");
 
-	if (i > (len -2))
+	if (i > (len - 2))
 		return false;
 	return true;
 }
@@ -273,13 +272,17 @@ void target_detach(target *t)
 #endif
 }
 
-bool target_check_error(target *t) {
+bool target_check_error(target *t)
+{
 	if (t)
 		return t->check_error(t);
 	return false;
 }
 
-bool target_attached(target *t) { return t->attached; }
+bool target_attached(target *t)
+{
+	return t->attached;
+}
 
 /* Memory access functions */
 int target_mem_read(target *t, void *dest, target_addr_t src, size_t len)
@@ -311,9 +314,8 @@ void target_regs_read(target *t, void *data)
 		t->regs_read(t, data);
 		return;
 	}
-	for (size_t x = 0, i = 0; x < t->regs_size; ) {
+	for (size_t x = 0, i = 0; x < t->regs_size;)
 		x += t->reg_read(t, i++, data + x, t->regs_size - x);
-	}
 }
 void target_regs_write(target *t, const void *data)
 {
@@ -321,34 +323,47 @@ void target_regs_write(target *t, const void *data)
 		t->regs_write(t, data);
 		return;
 	}
-	for (size_t x = 0, i = 0; x < t->regs_size; ) {
+	for (size_t x = 0, i = 0; x < t->regs_size;)
 		x += t->reg_write(t, i++, data + x, t->regs_size - x);
-	}
 }
 
 /* Halt/resume functions */
-void target_reset(target *t) { t->reset(t); }
-void target_halt_request(target *t) { t->halt_request(t); }
+void target_reset(target *t)
+{
+	t->reset(t);
+}
+
+void target_halt_request(target *t)
+{
+	t->halt_request(t);
+}
+
 enum target_halt_reason target_halt_poll(target *t, target_addr_t *watch)
 {
 	return t->halt_poll(t, watch);
 }
 
-void target_halt_resume(target *t, bool step) { t->halt_resume(t, step); }
+void target_halt_resume(target *t, bool step)
+{
+	t->halt_resume(t, step);
+}
 
 /* Command line for semihosting get_cmdline */
-void target_set_cmdline(target *t, char *cmdline) {
+void target_set_cmdline(target *t, char *cmdline)
+{
 	uint32_t len_dst;
-	len_dst = sizeof(t->cmdline)-1;
-	strncpy(t->cmdline, cmdline, len_dst -1);
-	t->cmdline[strlen(t->cmdline)]='\0';
+	len_dst = sizeof(t->cmdline) - 1;
+	strncpy(t->cmdline, cmdline, len_dst - 1);
+	t->cmdline[strlen(t->cmdline)] = '\0';
 	DEBUG_INFO("cmdline: >%s<\n", t->cmdline);
 }
 
 /* Set heapinfo for semihosting */
-void target_set_heapinfo(target *t, target_addr_t heap_base, target_addr_t heap_limit,
-	target_addr_t stack_base, target_addr_t stack_limit) {
-	if (t == NULL) return;
+void target_set_heapinfo(
+	target *t, target_addr_t heap_base, target_addr_t heap_limit, target_addr_t stack_base, target_addr_t stack_limit)
+{
+	if (t == NULL)
+		return;
 	t->heapinfo[0] = heap_base;
 	t->heapinfo[1] = heap_limit;
 	t->heapinfo[2] = stack_base;
@@ -356,8 +371,7 @@ void target_set_heapinfo(target *t, target_addr_t heap_base, target_addr_t heap_
 }
 
 /* Break-/watchpoint functions */
-int target_breakwatch_set(target *t,
-                          enum target_breakwatch type, target_addr_t addr, size_t len)
+int target_breakwatch_set(target *t, enum target_breakwatch type, target_addr_t addr, size_t len)
 {
 	struct breakwatch bw = {
 		.type = type,
@@ -371,8 +385,8 @@ int target_breakwatch_set(target *t,
 
 	if (ret == 0) {
 		/* Success, make a heap copy */
-		struct breakwatch *bwm = malloc(sizeof bw);
-		if (!bwm) {			/* malloc failed: heap exhaustion */
+		struct breakwatch *bwm = malloc(sizeof(bw));
+		if (!bwm) { /* malloc failed: heap exhaustion */
 			DEBUG_WARN("malloc: failed in %s\n", __func__);
 			return 1;
 		}
@@ -386,16 +400,14 @@ int target_breakwatch_set(target *t,
 	return ret;
 }
 
-int target_breakwatch_clear(target *t,
-                            enum target_breakwatch type, target_addr_t addr, size_t len)
+int target_breakwatch_clear(target *t, enum target_breakwatch type, target_addr_t addr, size_t len)
 {
 	struct breakwatch *bwp = NULL, *bw;
 	int ret = 1;
-	for (bw = t->bw_list; bw; bwp = bw, bw = bw->next)
-		if ((bw->type == type) &&
-		    (bw->addr == addr) &&
-		    (bw->size == len))
+	for (bw = t->bw_list; bw; bwp = bw, bw = bw->next) {
+		if ((bw->type == type) && (bw->addr == addr) && (bw->size == len))
 			break;
+	}
 
 	if (bw == NULL)
 		return -1;
@@ -404,11 +416,10 @@ int target_breakwatch_clear(target *t,
 		ret = t->breakwatch_clear(t, bw);
 
 	if (ret == 0) {
-		if (bwp == NULL) {
+		if (bwp == NULL)
 			t->bw_list = bw->next;
-		} else {
+		else
 			bwp->next = bw->next;
-		}
 		free(bw);
 	}
 	return ret;
@@ -514,17 +525,19 @@ void target_command_help(target *t)
 {
 	for (struct target_command_s *tc = t->commands; tc; tc = tc->next) {
 		tc_printf(t, "%s specific commands:\n", tc->specific_name);
-		for(const struct command_s *c = tc->cmds; c->cmd; c++)
+		for (const struct command_s *c = tc->cmds; c->cmd; c++)
 			tc_printf(t, "\t%s -- %s\n", c->cmd, c->help);
 	}
 }
 
 int target_command(target *t, int argc, const char *argv[])
 {
-	for (struct target_command_s *tc = t->commands; tc; tc = tc->next)
-		for(const struct command_s *c = tc->cmds; c->cmd; c++)
-			if(!strncmp(argv[0], c->cmd, strlen(argv[0])))
+	for (struct target_command_s *tc = t->commands; tc; tc = tc->next) {
+		for (const struct command_s *c = tc->cmds; c->cmd; c++) {
+			if (!strncmp(argv[0], c->cmd, strlen(argv[0])))
 				return (c->handler(t, argc, argv)) ? 0 : 1;
+		}
+	}
 	return -1;
 }
 
