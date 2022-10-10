@@ -359,25 +359,25 @@ static int stm32f1_flash_unlock(target *t, uint32_t bank_offset)
 	return 0;
 }
 
-static inline void stm32f1_flash_clear_eop(target * const t, const uint32_t bank_offset)
+static inline void stm32f1_flash_clear_eop(target *const t, const uint32_t bank_offset)
 {
 	const uint32_t status = target_mem_read32(t, FLASH_SR + bank_offset);
 	target_mem_write32(t, FLASH_SR + bank_offset, status | SR_EOP); /* EOP is W1C */
 }
 
-static bool stm32f1_flash_busy_wait(target * const t, const uint32_t bank_offset, platform_timeout * const timeout)
+static bool stm32f1_flash_busy_wait(target *const t, const uint32_t bank_offset, platform_timeout *const timeout)
 {
 	/* Read FLASH_SR to poll for BSY bit */
-	uint32_t sr;
+	uint32_t status;
 	do {
-		sr = target_mem_read32(t, FLASH_SR + bank_offset);
-		if ((sr & SR_ERROR_MASK) || target_check_error(t)) {
-			DEBUG_WARN("stm32f1 flash error 0x%" PRIx32 "\n", sr);
+		status = target_mem_read32(t, FLASH_SR + bank_offset);
+		if ((status & SR_ERROR_MASK) || target_check_error(t)) {
+			DEBUG_WARN("stm32f1 flash error 0x%" PRIx32 "\n", status);
 			return false;
 		}
 		if (timeout)
 			target_print_progress(timeout);
-	} while (!(sr & SR_EOP) && (sr & FLASH_SR_BSY));
+	} while (!(status & SR_EOP) && (status & FLASH_SR_BSY));
 
 	return true;
 }
