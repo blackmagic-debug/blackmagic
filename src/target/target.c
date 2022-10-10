@@ -38,12 +38,12 @@ const struct command_s target_cmd_list[] = {
 	{NULL, NULL, NULL},
 };
 
-static bool nop_function(void)
+static bool nop_function()
 {
 	return true;
 }
 
-static bool false_function(void)
+static bool false_function()
 {
 	return false;
 }
@@ -61,9 +61,8 @@ target *target_new(void)
 		while (c->next)
 			c = c->next;
 		c->next = t;
-	} else {
+	} else
 		target_list = t;
-	}
 
 	t->attach = (void *)nop_function;
 	t->detach = (void *)nop_function;
@@ -87,10 +86,9 @@ target *target_new(void)
 
 int target_foreach(void (*cb)(int, target *t, void *context), void *context)
 {
-	int i = 1;
-	target *t = target_list;
-	for (; t; t = t->next, i++)
-		cb(i, t, context);
+	size_t i = 0;
+	for (target *t = target_list; t; t = t->next)
+		cb(++i, t, context);
 	return i;
 }
 
@@ -247,10 +245,7 @@ bool target_mem_map(target *t, char *tmp, size_t len)
 	for (target_flash_s *f = t->flash; f; f = f->next)
 		i += map_flash(&tmp[i], len - i, f);
 	i += snprintf(&tmp[i], len - i, "</memory-map>");
-
-	if (i > (len - 2))
-		return false;
-	return true;
+	return i < len - 1;
 }
 
 void target_print_progress(platform_timeout *const timeout)
@@ -351,10 +346,10 @@ void target_halt_resume(target *t, bool step)
 /* Command line for semihosting get_cmdline */
 void target_set_cmdline(target *t, char *cmdline)
 {
-	uint32_t len_dst;
-	len_dst = sizeof(t->cmdline) - 1;
-	strncpy(t->cmdline, cmdline, len_dst - 1);
-	t->cmdline[strlen(t->cmdline)] = '\0';
+	const size_t cmdline_len = strlen(cmdline);
+	const size_t copy_len = MIN(sizeof(t->cmdline) - 1U, cmdline_len);
+	memcpy(t->cmdline, cmdline, copy_len);
+	t->cmdline[copy_len] = '\0';
 	DEBUG_INFO("cmdline: >%s<\n", t->cmdline);
 }
 
