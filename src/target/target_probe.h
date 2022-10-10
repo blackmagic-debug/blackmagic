@@ -23,7 +23,8 @@
 #include "target.h"
 #include "adiv5.h"
 
-/* Probe for various targets.
+/*
+ * Probe for various targets.
  * Actual functions implemented in their respective drivers.
  */
 
