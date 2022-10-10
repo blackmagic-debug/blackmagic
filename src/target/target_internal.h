@@ -128,6 +128,7 @@ struct target_s {
 	unsigned target_options;
 
 	void *target_storage;
+
 	union {
 		bool unsafe_enabled;
 		bool ke04_mode;
