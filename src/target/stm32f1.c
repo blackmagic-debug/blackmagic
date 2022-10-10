@@ -366,18 +366,19 @@ static inline void stm32f1_flash_clear_eop(target *const t, const uint32_t bank_
 static bool stm32f1_flash_busy_wait(target *const t, const uint32_t bank_offset, platform_timeout *const timeout)
 {
 	/* Read FLASH_SR to poll for BSY bit */
-	uint32_t status;
-	do {
+	uint32_t status = FLASH_SR_BSY;
+	while (!(status & SR_EOP) && (status & FLASH_SR_BSY)) {
 		status = target_mem_read32(t, FLASH_SR + bank_offset);
-		if ((status & SR_ERROR_MASK) || target_check_error(t)) {
-			DEBUG_WARN("stm32f1 flash error 0x%" PRIx32 "\n", status);
+		if (target_check_error(t)) {
+			DEBUG_WARN("Lost communications with target");
 			return false;
 		}
 		if (timeout)
 			target_print_progress(timeout);
-	} while (!(status & SR_EOP) && (status & FLASH_SR_BSY));
-
-	return true;
+	};
+	if (status & SR_ERROR_MASK)
+		DEBUG_WARN("stm32f1 flash error 0x%" PRIx32 "\n", status);
+	return !(status & SR_ERROR_MASK);
 }
 
 static bool stm32f1_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
