@@ -99,6 +99,7 @@ enum target_breakwatch {
 	TARGET_WATCH_READ,
 	TARGET_WATCH_ACCESS,
 };
+
 int target_breakwatch_set(target *t, enum target_breakwatch, target_addr_t, size_t);
 int target_breakwatch_clear(target *t, enum target_breakwatch, target_addr_t, size_t);
 
