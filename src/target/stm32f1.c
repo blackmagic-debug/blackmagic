@@ -369,6 +369,13 @@ static bool stm32f1_flash_busy_wait(target *const t, const uint32_t bank_offset,
 {
 	/* Read FLASH_SR to poll for BSY bit */
 	uint32_t status = FLASH_SR_BSY;
+	/*
+	 * Please note that checking EOP here is only legal because every operation is preceeded by
+	 * a call to stm32f1_flash_clear_eop. Without this the flag could be stale from a previous
+	 * operation and is always set at the end of every program/erase operation.
+	 * For more information, see FLASH_SR register description §3.4 pg 25.
+	 * https://www.st.com/resource/en/programming_manual/pm0075-stm32f10xxx-flash-memory-microcontrollers-stmicroelectronics.pdf
+	 */
 	while (!(status & SR_EOP) && (status & FLASH_SR_BSY)) {
 		status = target_mem_read32(t, FLASH_SR + bank_offset);
 		if (target_check_error(t)) {
