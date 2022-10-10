@@ -41,22 +41,22 @@ typedef bool (*flash_done_func)(target_flash_s *f);
 
 struct target_flash {
 	target *t;                   /* Target this flash is attached to */
-	target_addr_t start;         /* start address of flash */
-	size_t length;               /* flash length */
-	size_t blocksize;            /* erase block size */
-	size_t writesize;            /* write operation size, must be <= blocksize/writebufsize */
-	size_t writebufsize;         /* size of write buffer */
-	uint8_t erased;              /* byte erased state */
-	bool ready;                  /* true if flash is in flash mode/prepared */
-	flash_prepare_func prepare;  /* prepare for flash operations */
-	flash_erase_func erase;      /* erase a range of flash */
-	flash_write_func write;      /* write to flash */
-	flash_done_func done;        /* finish flash operations */
-	void *buf;                   /* buffer for flash operations */
-	target_addr_t buf_addr_base; /* address of block this buffer is for */
-	target_addr_t buf_addr_low;  /* address of lowest byte written */
-	target_addr_t buf_addr_high; /* address of highest byte written */
-	target_flash_s *next;        /* next flash in list */
+	target_addr_t start;         /* Start address of flash */
+	size_t length;               /* Flash length */
+	size_t blocksize;            /* Erase block size */
+	size_t writesize;            /* Write operation size, must be <= blocksize/writebufsize */
+	size_t writebufsize;         /* Size of write buffer */
+	uint8_t erased;              /* Byte erased state */
+	bool ready;                  /* True if flash is in flash mode/prepared */
+	flash_prepare_func prepare;  /* Prepare for flash operations */
+	flash_erase_func erase;      /* Erase a range of flash */
+	flash_write_func write;      /* Write to flash */
+	flash_done_func done;        /* Finish flash operations */
+	void *buf;                   /* Buffer for flash operations */
+	target_addr_t buf_addr_base; /* Address of block this buffer is for */
+	target_addr_t buf_addr_low;  /* Address of lowest byte written */
+	target_addr_t buf_addr_high; /* Address of highest byte written */
+	target_flash_s *next;        /* Next flash in list */
 };
 
 typedef bool (*cmd_handler)(target *t, int argc, const char **argv);
@@ -78,7 +78,7 @@ struct breakwatch {
 	enum target_breakwatch type;
 	target_addr_t addr;
 	size_t size;
-	uint32_t reserved[4]; /* for use by the implementing driver */
+	uint32_t reserved[4]; /* For use by the implementing driver */
 };
 
 #define MAX_CMDLINE 81
@@ -124,7 +124,7 @@ struct target_s {
 	bool (*exit_flash_mode)(target *t);
 	bool flash_mode;
 
-	/* target-defined options */
+	/* Target-defined options */
 	unsigned target_options;
 
 	void *target_storage;
@@ -152,10 +152,11 @@ struct target_s {
 	void *priv;
 	void (*priv_free)(void *);
 
-	/* Target designer and id / partno */
+	/* Target designer and ID / partno */
 	uint16_t designer_code;
-	/* targetid partno if available (>= DPv2)
-	 * fallback to ap partno
+	/*
+	 * Target ID partno if available (>= DPv2)
+	 * fallback to AP partno
 	 */
 	uint16_t part_id;
 };
