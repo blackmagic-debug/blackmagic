@@ -139,11 +139,14 @@ static bool ch32f1_flash_unlock(target *t)
 	uint32_t cr = target_mem_read32(t, FLASH_CR);
 	if (cr & FLASH_CR_FLOCK_CH32) {
 		DEBUG_WARN("Fast unlock failed, cr: 0x%08" PRIx32 "\n", cr);
-		return true;
+		return false ;
 	}
-	return false;
+	return true;
 }
-
+/**
+  \fn ch32f1_flash_lock
+  \brief lock ch32f103 in fast mode
+*/
 static bool ch32f1_flash_lock(target *t)
 {
 	DEBUG_INFO("CH32: flash lock \n");
@@ -152,9 +155,36 @@ static bool ch32f1_flash_lock(target *t)
 	// FLASH_CR_FLOCK_CH32 bit does not exists on *regular* clones and defaults to '0' (see PM0075 for STM32F1xx)
 	if (!(cr & FLASH_CR_FLOCK_CH32)) {
 		DEBUG_WARN("Fast lock failed, cr: 0x%08" PRIx32 "\n", cr);
-		return true;
+		return  false ;
 	}
-	return false;
+	return true;
+}
+/**
+	\fn ch32f1_has_fastUnlock
+	\brief check fastUnlock is there, if so it is a CH32fx
+*/
+static bool ch32f1_has_fastUnlock(target *t)
+{
+	DEBUG_INFO("CH32: has fatunlock \n");
+	// reset fast unlock
+	SET_CR(FLASH_CR_FLOCK_CH32);
+	platform_delay(1); // The flash controller is timing sensitive 
+	uint32_t cr=target_mem_read32(t, FLASH_CR) ;
+	if(!(cr & FLASH_CR_FLOCK_CH32))
+	{
+		return false;
+	}
+	// send unlock sequence
+	target_mem_write32(t, FLASH_KEYR, KEY1);
+	target_mem_write32(t, FLASH_KEYR, KEY2);
+	platform_delay(1); // The flash controller is timing sensitive 
+	// send fast unlock sequence
+	target_mem_write32(t, FLASH_MODEKEYR_CH32, KEY1);
+	target_mem_write32(t, FLASH_MODEKEYR_CH32, KEY2);
+	platform_delay(1); // The flash controller is timing sensitive 
+	
+	cr = target_mem_read32(t, FLASH_CR);
+	return !(cr  & FLASH_CR_FLOCK_CH32);
 }
 
 /**
@@ -179,12 +209,9 @@ bool ch32f1_probe(target *t)
 		return false;
 
 	// try to flock (if this fails it is not a CH32 chip)
-	if (ch32f1_flash_lock(t))
+	if(!ch32f1_has_fastUnlock(t)) {
 		return false;
-	// if this fails it is not a CH32 chip
-	if (ch32f1_flash_unlock(t))
-		return false;
-
+	}
 	t->part_id = device_id;
 	uint32_t signature = target_mem_read32(t, FLASHSIZE);
 	uint32_t flashSize = signature & 0xFFFF;
@@ -206,7 +233,7 @@ bool ch32f1_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 	target *t = f->t;
 	DEBUG_INFO("CH32: flash erase \n");
 
-	if (ch32f1_flash_unlock(t)) {
+	if (!ch32f1_flash_unlock(t)) {
 		DEBUG_WARN("CH32: Unlock failed\n");
 		return false;
 	}
@@ -310,7 +337,7 @@ static bool ch32f1_flash_write(target_flash_s *f, target_addr_t dest, const void
 
 	while (length > 0)
 	{
-		if (ch32f1_flash_unlock(t)) {
+		if (!ch32f1_flash_unlock(t)) {
 			DEBUG_WARN("ch32f1 cannot fast unlock\n");
 			return false;
 		}
