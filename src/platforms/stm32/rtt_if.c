@@ -62,7 +62,7 @@ inline static bool recv_set_nak()
 /* debug_serial_receive_callback is called when usb uart has received new data for target.
    this routine has to be fast */
 
-void debug_serial_receive_callback(usbd_device *dev, uint8_t ep)
+void rtt_serial_receive_callback(usbd_device *dev, uint8_t ep)
 {
 	(void)dev;
 	(void)ep;
