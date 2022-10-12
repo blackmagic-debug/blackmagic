@@ -1139,11 +1139,10 @@ static int cortexm_fault_unwind(target *t)
 		/* Unwind exception */
 		uint32_t regs[t->regs_size / 4];
 		uint32_t stack[8];
-		uint32_t retcode, framesize;
 		/* Read registers for post-exception stack pointer */
 		target_regs_read(t, regs);
 		/* save retcode currently in lr */
-		retcode = regs[REG_LR];
+		const uint32_t retcode = regs[REG_LR];
 		bool spsel = retcode & (1U << 2U);
 		bool fpca = !(retcode & (1U << 4U));
 		/* Read stack for pre-exception registers */
@@ -1155,16 +1154,15 @@ static int cortexm_fault_unwind(target *t)
 		regs[REG_PC] = stack[6]; /* restore PC to pre-exception state */
 
 		/* adjust stack to pop exception state */
-		framesize = fpca ? 0x68U : 0x20U; /* check for basic vs. extended frame */
-		if (stack[7] & (1U << 9U))        /* check for stack alignment fixup */
+		uint32_t framesize = fpca ? 0x68U : 0x20U; /* check for basic vs. extended frame */
+		if (stack[7] & (1U << 9U))                 /* check for stack alignment fixup */
 			framesize += 4U;
 
 		if (spsel) {
 			regs[REG_SPECIAL] |= 0x4000000U;
 			regs[REG_SP] = regs[REG_PSP] += framesize;
-		} else {
+		} else
 			regs[REG_SP] = regs[REG_MSP] += framesize;
-		}
 
 		if (fpca)
 			regs[REG_SPECIAL] |= 0x2000000U;
