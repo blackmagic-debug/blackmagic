@@ -857,10 +857,9 @@ static uint32_t bp_bas(uint32_t addr, uint8_t len)
 {
 	if (len == 4)
 		return DBGBCR_BAS_ANY;
-	else if (addr & 2)
+	if (addr & 2)
 		return DBGBCR_BAS_HIGH_HW;
-	else
-		return DBGBCR_BAS_LOW_HW;
+	return DBGBCR_BAS_LOW_HW;
 }
 
 static int cortexa_breakwatch_set(target *t, struct breakwatch *bw)
