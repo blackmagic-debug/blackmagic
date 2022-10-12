@@ -1857,17 +1857,19 @@ static int cortexm_hostio_request(target *t)
 		saved_mem_write = t->mem_write;
 		t->mem_read = probe_mem_read;
 		t->mem_write = probe_mem_write;
-		int rc = tc_gettimeofday(
-			t, (target_addr_t)&fio_timeval, (target_addr_t)NULL); /* write gettimeofday() result in fio_timeval[] */
+		/* write gettimeofday() result in fio_timeval[] */
+		int rc = tc_gettimeofday(t, (target_addr_t)&fio_timeval, (target_addr_t)NULL);
 		t->mem_read = saved_mem_read;
 		t->mem_write = saved_mem_write;
-		if (rc)
-			break;                                             /* tc_gettimeofday() failed */
-		uint32_t sec = __builtin_bswap32(fio_timeval.ftv_sec); /* convert from bigendian to target order */
+		if (rc) /* tc_gettimeofday() failed */
+			break;
+		/* convert from bigendian to target order */
+		/* XXX: Replace this madness with endian-aware IO */
+		uint32_t sec = __builtin_bswap32(fio_timeval.ftv_sec);
 		uint64_t usec = __builtin_bswap64(fio_timeval.ftv_usec);
-		if (syscall == SEMIHOSTING_SYS_TIME) { /* SYS_TIME: time in seconds */
+		if (syscall == SEMIHOSTING_SYS_TIME) /* SYS_TIME: time in seconds */
 			ret = sec;
-		} else { /* SYS_CLOCK: time in hundredths of seconds */
+		else { /* SYS_CLOCK: time in hundredths of seconds */
 			if (time0_sec > sec)
 				time0_sec = sec; /* set sys_clock time origin */
 			sec -= time0_sec;
@@ -1930,14 +1932,13 @@ static int cortexm_hostio_request(target *t)
 	}
 
 	case SEMIHOSTING_SYS_ISERROR: { /* iserror */
-		int errorNo = params[0];
-		ret = errorNo == TARGET_EPERM || errorNo == TARGET_ENOENT || errorNo == TARGET_EINTR || errorNo == TARGET_EIO ||
-		      errorNo == TARGET_EBADF || errorNo == TARGET_EACCES || errorNo == TARGET_EFAULT ||
-		      errorNo == TARGET_EBUSY || errorNo == TARGET_EEXIST || errorNo == TARGET_ENODEV ||
-		      errorNo == TARGET_ENOTDIR || errorNo == TARGET_EISDIR || errorNo == TARGET_EINVAL ||
-		      errorNo == TARGET_ENFILE || errorNo == TARGET_EMFILE || errorNo == TARGET_EFBIG ||
-		      errorNo == TARGET_ENOSPC || errorNo == TARGET_ESPIPE || errorNo == TARGET_EROFS ||
-		      errorNo == TARGET_ENOSYS || errorNo == TARGET_ENAMETOOLONG || errorNo == TARGET_EUNKNOWN;
+		int error = params[0];
+		ret = error == TARGET_EPERM || error == TARGET_ENOENT || error == TARGET_EINTR || error == TARGET_EIO ||
+		      error == TARGET_EBADF || error == TARGET_EACCES || error == TARGET_EFAULT || error == TARGET_EBUSY ||
+		      error == TARGET_EEXIST || error == TARGET_ENODEV || error == TARGET_ENOTDIR || error == TARGET_EISDIR ||
+		      error == TARGET_EINVAL || error == TARGET_ENFILE || error == TARGET_EMFILE || error == TARGET_EFBIG ||
+		      error == TARGET_ENOSPC || error == TARGET_ESPIPE || error == TARGET_EROFS || error == TARGET_ENOSYS ||
+		      error == TARGET_ENAMETOOLONG || error == TARGET_EUNKNOWN;
 		break;
 	}
 
