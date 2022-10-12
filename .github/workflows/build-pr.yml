@@ -31,6 +31,12 @@ jobs:
       - name: Clean
         run: make clean
 
+      - name: Build all platform firmwares with RTT
+        run: make all_platforms HOSTED_BMP_ONLY=1 ENABLE_RTT=1
+
+      - name: Clean
+        run: make clean
+
       - name: Install BMDA dependencies
         run: sudo apt-get -y install libusb-dev libftdi1-dev libhidapi-dev
 
