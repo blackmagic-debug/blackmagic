@@ -180,9 +180,11 @@ static const gdb_reg_type_e cortex_m_spr_types[] = {
 	GDB_TYPE_UNSPECIFIED, // control
 };
 
-static_assert(ARRAY_LENGTH(cortex_m_spr_types) == ARRAY_LENGTH(cortex_m_spr_names), "SPR array length mismatch! SPR type "
-                                                                                "array should have the same length as "
-                                                                                "SPR name array.");
+// clang-format off
+static_assert(ARRAY_LENGTH(cortex_m_spr_types) == ARRAY_LENGTH(cortex_m_spr_names),
+	"SPR array length mismatch! SPR type array should have the same length as SPR name array."
+);
+// clang-format on
 
 // The "save-restore" field of each SPR.
 static const gdb_reg_save_restore_e cortex_m_spr_save_restores[] = {
@@ -198,10 +200,11 @@ static const gdb_reg_save_restore_e cortex_m_spr_save_restores[] = {
 	GDB_SAVE_RESTORE_NO,          // control
 };
 
-static_assert(ARRAY_LENGTH(cortex_m_spr_save_restores) == ARRAY_LENGTH(cortex_m_spr_names), "SPR array length mismatch! "
-                                                                                        "SPR save-restore array should "
-                                                                                        "have the same length as SPR "
-                                                                                        "name array.");
+// clang-format off
+static_assert(ARRAY_LENGTH(cortex_m_spr_save_restores) == ARRAY_LENGTH(cortex_m_spr_names),
+	"SPR array length mismatch! SPR save-restore array should have the same length as SPR name array."
+);
+// clang-format on
 
 // The "bitsize" field of each SPR.
 static const uint8_t cortex_m_spr_bitsizes[] = {
@@ -217,9 +220,11 @@ static const uint8_t cortex_m_spr_bitsizes[] = {
 	8,  // control
 };
 
-static_assert(ARRAY_LENGTH(cortex_m_spr_bitsizes) == ARRAY_LENGTH(cortex_m_spr_names), "SPR array length mismatch! SPR "
-                                                                                   "bitsize array should have the same "
-                                                                                   "length as SPR name array.");
+// clang-format off
+static_assert(ARRAY_LENGTH(cortex_m_spr_bitsizes) == ARRAY_LENGTH(cortex_m_spr_names),
+	"SPR array length mismatch! SPR bitsize array should have the same length as SPR name array."
+);
+// clang-format on
 
 // Creates the target description XML string for a Cortex-M. Like snprintf(), this function
 // will write no more than max_len and returns the amount of bytes written. Or, if max_len is 0,
@@ -684,7 +689,7 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 	case JEP106_MANUFACTURER_ARM:
 		if (t->part_id == 0x4c0) {        /* Cortex-M0+ ROM */
 			PROBE(lpc11xx_probe);         /* LPC8 */
-		}else if (  t->part_id == 0x4c1) { /* Cortex-M0+ ROM */
+		} else if (t->part_id == 0x4c1) { /* NXP Cortex-M0+ ROM */
 			PROBE(lpc11xx_probe);         /* newer LPC11U6x */
 		} else if (t->part_id == 0x4c3) { /* Cortex-M3 ROM */
 			PROBE(lmi_probe);
@@ -1848,8 +1853,8 @@ static int cortexm_hostio_request(target *t)
 			uint64_t ftv_usec;
 		} fio_timeval;
 		//DEBUG("SYS_TIME fio_timeval addr %p\n", &fio_timeval);
-		void (*saved_mem_read)(target *t, void *dest, target_addr_t src, size_t len);
-		void (*saved_mem_write)(target *t, target_addr_t dest, const void *src, size_t len);
+		void (*saved_mem_read)(target * t, void *dest, target_addr_t src, size_t len);
+		void (*saved_mem_write)(target * t, target_addr_t dest, const void *src, size_t len);
 		saved_mem_read = t->mem_read;
 		saved_mem_write = t->mem_write;
 		t->mem_read = probe_mem_read;
@@ -1878,13 +1883,13 @@ static int cortexm_hostio_request(target *t)
 	case SEMIHOSTING_SYS_READC: { /* readc */
 		uint8_t ch = '?';
 		//DEBUG("SYS_READC ch addr %p\n", &ch);
-		void (*saved_mem_read)(target *t, void *dest, target_addr_t src, size_t len);
-		void (*saved_mem_write)(target *t, target_addr_t dest, const void *src, size_t len);
+		void (*saved_mem_read)(target * t, void *dest, target_addr_t src, size_t len);
+		void (*saved_mem_write)(target * t, target_addr_t dest, const void *src, size_t len);
 		saved_mem_read = t->mem_read;
 		saved_mem_write = t->mem_write;
 		t->mem_read = probe_mem_read;
 		t->mem_write = probe_mem_write;
-		int rc = tc_read(t, STDIN_FILENO, (target_addr_t) &ch, 1); /* read a character in ch */
+		int rc = tc_read(t, STDIN_FILENO, (target_addr_t)&ch, 1); /* read a character in ch */
 		t->mem_read = saved_mem_read;
 		t->mem_write = saved_mem_write;
 		if (rc == 1)
