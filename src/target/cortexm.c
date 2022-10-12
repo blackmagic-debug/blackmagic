@@ -1373,30 +1373,28 @@ static bool cortexm_vector_catch(target *t, int argc, char *argv[])
 	uint32_t tmp = 0;
 	unsigned i;
 
-	if (argc < 3) {
-		tc_printf(t, "usage: monitor vector_catch (enable|disable) "
-					 "(hard|int|bus|stat|chk|nocp|mm|reset)\n");
-	} else {
+	if (argc < 3)
+		tc_printf(t, "usage: monitor vector_catch (enable|disable) (hard|int|bus|stat|chk|nocp|mm|reset)\n");
+	else {
 		for (int j = 0; j < argc; j++)
-			for (i = 0; i < sizeof(vectors) / sizeof(char *); i++) {
+			for (i = 0; i < ARRAY_LENGTH(vectors); i++) {
 				if (vectors[i] && !strcmp(vectors[i], argv[j]))
 					tmp |= 1 << i;
 			}
 
 		bool enable;
 		if (parse_enable_or_disable(argv[1], &enable)) {
-			if (enable) {
+			if (enable)
 				priv->demcr |= tmp;
-			} else {
+			else
 				priv->demcr &= ~tmp;
-			}
 
 			target_mem_write32(t, CORTEXM_DEMCR, priv->demcr);
 		}
 	}
 
 	tc_printf(t, "Catching vectors: ");
-	for (i = 0; i < sizeof(vectors) / sizeof(char *); i++) {
+	for (i = 0; i < ARRAY_LENGTH(vectors); i++) {
 		if (!vectors[i])
 			continue;
 		if (priv->demcr & (1 << i))
