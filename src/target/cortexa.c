@@ -174,9 +174,11 @@ static const gdb_reg_type_e cortex_a_spr_types[] = {
 	GDB_TYPE_UNSPECIFIED // cpsr
 };
 
-static_assert(ARRAY_LENGTH(cortex_a_spr_types) == ARRAY_LENGTH(cortex_a_spr_names), "SPR array length mixmatch! SPR type "
-                                                                                "array should have the same length as "
-                                                                                "SPR name array.");
+// clang-format off
+static_assert(ARRAY_LENGTH(cortex_a_spr_types) == ARRAY_LENGTH(cortex_a_spr_names),
+	"SPR array length mixmatch! SPR type array should have the same length as SPR name array."
+);
+// clang-format on
 
 // Creates the target description XML string for a Cortex-A. Like snprintf(), this function
 // will write no more than max_len and returns the amount of bytes written. Or, if max_len is 0,
