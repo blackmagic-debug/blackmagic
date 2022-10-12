@@ -98,8 +98,8 @@ static void cortexm_halt_resume(target *t, bool step);
 static void cortexm_halt_request(target *t);
 static int cortexm_fault_unwind(target *t);
 
-static int cortexm_breakwatch_set(target *t, struct breakwatch *);
-static int cortexm_breakwatch_clear(target *t, struct breakwatch *);
+static int cortexm_breakwatch_set(target *t, struct breakwatch *bw);
+static int cortexm_breakwatch_clear(target *t, struct breakwatch *bw);
 static target_addr_t cortexm_check_watch(target *t);
 
 #define CORTEXM_MAX_WATCHPOINTS 4U /* architecture says up to 15, no implementation has > 4 */
@@ -1295,9 +1295,10 @@ static int cortexm_breakwatch_set(target *t, struct breakwatch *bw)
 		}
 		val |= 1U;
 
-		for (i = 0; i < priv->hw_breakpoint_max; i++)
+		for (i = 0; i < priv->hw_breakpoint_max; i++) {
 			if (!priv->hw_breakpoint[i])
 				break;
+		}
 
 		if (i == priv->hw_breakpoint_max)
 			return -1;
@@ -1310,9 +1311,10 @@ static int cortexm_breakwatch_set(target *t, struct breakwatch *bw)
 	case TARGET_WATCH_WRITE:
 	case TARGET_WATCH_READ:
 	case TARGET_WATCH_ACCESS:
-		for (i = 0; i < priv->hw_watchpoint_max; i++)
+		for (i = 0; i < priv->hw_watchpoint_max; i++) {
 			if (!priv->hw_watchpoint[i])
 				break;
+		}
 
 		if (i == priv->hw_watchpoint_max)
 			return -1;
@@ -1355,10 +1357,11 @@ static target_addr_t cortexm_check_watch(target *t)
 	struct cortexm_priv *priv = t->priv;
 	unsigned i;
 
-	for (i = 0; i < priv->hw_watchpoint_max; i++)
+	for (i = 0; i < priv->hw_watchpoint_max; i++) {
 		/* if SET and MATCHED then break */
 		if (priv->hw_watchpoint[i] && (target_mem_read32(t, CORTEXM_DWT_FUNC(i)) & CORTEXM_DWT_FUNC_MATCHED))
 			break;
+	}
 
 	if (i == priv->hw_watchpoint_max)
 		return 0;
