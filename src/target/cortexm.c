@@ -532,7 +532,7 @@ static void cortexm_read_cpuid(target *const t, const ADIv5_AP_t *const ap)
 			DEBUG_WARN("Unexpected Cortex-M CPU partno %04x\n", cpuid_partno);
 	}
 	DEBUG_INFO("CPUID 0x%08" PRIx32 " (%s var %" PRIx32 " rev %" PRIx32 ")\n", t->cpuid, t->core,
-		(t->cpuid & CPUID_REVISION_MASK) >> 20, t->cpuid & CPUID_PATCH_MASK);
+		(t->cpuid & CPUID_REVISION_MASK) >> 20U, t->cpuid & CPUID_PATCH_MASK);
 }
 
 bool cortexm_probe(ADIv5_AP_t *ap)
@@ -614,9 +614,9 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 	if ((ctr >> 29) == 4) {
 		priv->has_cache = true;
 		priv->dcache_minline = 4 << (ctr & 0xf);
-	} else {
+	} else
 		target_check_error(t);
-	}
+
 #if PC_HOSTED
 #define STRINGIFY(x) #x
 #define PROBE(x)                                  \
@@ -685,6 +685,10 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 		PROBE(renesas_probe);
 		break;
 	case JEP106_MANUFACTURER_ARM:
+		/*
+		 * All of these have braces as a brake from the standard so they're completely
+		 * consistent and easier to add new probe calls to.
+		 */
 		if (t->part_id == 0x4c0) {        /* Cortex-M0+ ROM */
 			PROBE(lpc11xx_probe);         /* LPC8 */
 		} else if (t->part_id == 0x4c1) { /* NXP Cortex-M0+ ROM */
@@ -751,9 +755,8 @@ bool cortexm_attach(target *t)
 			t->tdesc = calloc(1, size_needed);
 			create_tdesc_cortex_mf(t->tdesc, size_needed);
 		}
-	} else {
+	} else
 		DEBUG_WARN("Cortex-M: target description already allocated before attach");
-	}
 
 	ADIv5_AP_t *ap = cortexm_ap(t);
 	ap->dp->fault = 1; /* Force switch to this multi-drop device*/
@@ -772,14 +775,14 @@ bool cortexm_attach(target *t)
 	/* size the break/watchpoint units */
 	priv->hw_breakpoint_max = CORTEXM_MAX_BREAKPOINTS;
 	const uint32_t flash_break_cfg = target_mem_read32(t, CORTEXM_FPB_CTRL);
-	const uint32_t breakpoints = ((flash_break_cfg >> 4U) & 0xf);
+	const uint32_t breakpoints = ((flash_break_cfg >> 4U) & 0xfU);
 	if (breakpoints < priv->hw_breakpoint_max) /* only look at NUM_COMP1 */
 		priv->hw_breakpoint_max = breakpoints;
 	priv->flash_patch_revision = flash_break_cfg >> 28U;
 
 	priv->hw_watchpoint_max = CORTEXM_MAX_WATCHPOINTS;
 	const uint32_t watchpoints = target_mem_read32(t, CORTEXM_DWT_CTRL);
-	if ((watchpoints >> 28) < priv->hw_watchpoint_max)
+	if ((watchpoints >> 28U) < priv->hw_watchpoint_max)
 		priv->hw_watchpoint_max = watchpoints >> 28U;
 
 	/* Clear any stale breakpoints */
@@ -824,9 +827,8 @@ void cortexm_detach(target *t)
 		// Free the target description string that was allocated in cortexm_attach().
 		free(t->tdesc);
 		t->tdesc = NULL;
-	} else {
+	} else
 		DEBUG_WARN("Cortex-M: target description already NULL before detach");
-	}
 
 	/* Clear any stale breakpoints */
 	for (i = 0; i < priv->hw_breakpoint_max; i++)
