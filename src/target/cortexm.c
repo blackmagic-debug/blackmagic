@@ -1002,15 +1002,15 @@ static void cortexm_reset(target *t)
 	}
 	uint32_t dhcsr = target_mem_read32(t, CORTEXM_DHCSR);
 	if ((dhcsr & CORTEXM_DHCSR_S_RESET_ST) == 0) {
-		/* No reset seen yet, maybe as nRST is not connected, or device has
-         * CORTEXM_TOPT_INHIBIT_NRST set.
-		 * Trigger reset by AIRCR.*/
+		/*
+		 * No reset seen yet, maybe as nRST is not connected, or device has CORTEXM_TOPT_INHIBIT_NRST set.
+		 * Trigger reset by AIRCR.
+		 */
 		target_mem_write32(t, CORTEXM_AIRCR, CORTEXM_AIRCR_VECTKEY | CORTEXM_AIRCR_SYSRESETREQ);
 	}
 	/* If target needs to do something extra (see Atmel SAM4L for example) */
-	if (t->extended_reset != NULL) {
+	if (t->extended_reset != NULL)
 		t->extended_reset(t);
-	}
 	/* Wait for CORTEXM_DHCSR_S_RESET_ST to read 0, meaning reset released.*/
 	platform_timeout_set(&reset_timeout, 1000);
 	while ((target_mem_read32(t, CORTEXM_DHCSR) & CORTEXM_DHCSR_S_RESET_ST) &&
@@ -1035,9 +1035,8 @@ static void cortexm_halt_request(target *t)
 	TRY_CATCH (e, EXCEPTION_TIMEOUT) {
 		target_mem_write32(t, CORTEXM_DHCSR, CORTEXM_DHCSR_DBGKEY | CORTEXM_DHCSR_C_HALT | CORTEXM_DHCSR_C_DEBUGEN);
 	}
-	if (e.type) {
+	if (e.type)
 		tc_printf(t, "Timeout sending interrupt, is target in WFI?\n");
-	}
 }
 
 static enum target_halt_reason cortexm_halt_poll(target *t, target_addr_t *watch)
@@ -1080,12 +1079,11 @@ static enum target_halt_reason cortexm_halt_poll(target *t, target_addr_t *watch
 		uint16_t bkpt_instr;
 		bkpt_instr = target_mem_read16(t, pc);
 		if (bkpt_instr == 0xbeabU) {
-			if (cortexm_hostio_request(t)) {
+			if (cortexm_hostio_request(t))
 				return TARGET_HALT_REQUEST;
-			} else {
-				target_halt_resume(t, priv->stepping);
-				return 0;
-			}
+
+			target_halt_resume(t, priv->stepping);
+			return TARGET_HALT_RUNNING;
 		}
 	}
 
