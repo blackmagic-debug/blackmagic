@@ -133,7 +133,7 @@ static const uint32_t regnum_cortex_m[] = {
 	0x10,                                                 /* xpsr */
 	0x11,                                                 /* msp */
 	0x12,                                                 /* psp */
-	0x14                                                  /* special */
+	0x14,                                                 /* special */
 };
 
 static const uint32_t regnum_cortex_mf[] = {
@@ -285,9 +285,7 @@ static size_t create_tdesc_cortex_m(char *buffer, size_t max_len)
 
 	// Start with the "preamble", which is generic across ARM targets,
 	// ...save for one word, so we'll have to do the preamble in halves.
-	total += snprintf(buffer, printsz,
-		"%s target %s "
-		"<feature name=\"org.gnu.gdb.arm.m-profile\">",
+	total += snprintf(buffer, printsz, "%s target %s <feature name=\"org.gnu.gdb.arm.m-profile\">",
 		gdb_arm_preamble_first, gdb_arm_preamble_second);
 
 	// Then the general purpose registers, which have names of r0 to r12,
@@ -885,11 +883,12 @@ static void cortexm_regs_read(target *t, void *data)
 			adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DB(DB_DCRSR), regnum_cortex_m[i]);
 			*regs++ = adiv5_dp_read(ap->dp, ADIV5_AP_DB(DB_DCRDR));
 		}
-		if (t->target_options & TOPT_FLAVOUR_V7MF)
+		if (t->target_options & TOPT_FLAVOUR_V7MF) {
 			for (i = 0; i < sizeof(regnum_cortex_mf) / 4; i++) {
 				adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DB(DB_DCRSR), regnum_cortex_mf[i]);
 				*regs++ = adiv5_dp_read(ap->dp, ADIV5_AP_DB(DB_DCRDR));
 			}
+		}
 	}
 }
 
@@ -928,11 +927,12 @@ static void cortexm_regs_write(target *t, const void *data)
 			adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DB(DB_DCRDR), *regs++);
 			adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DB(DB_DCRSR), 0x10000 | regnum_cortex_m[i]);
 		}
-		if (t->target_options & TOPT_FLAVOUR_V7MF)
+		if (t->target_options & TOPT_FLAVOUR_V7MF) {
 			for (i = 0; i < sizeof(regnum_cortex_mf) / 4; i++) {
 				adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DB(DB_DCRDR), *regs++);
 				adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DB(DB_DCRSR), 0x10000 | regnum_cortex_mf[i]);
 			}
+		}
 	}
 }
 
@@ -945,15 +945,13 @@ int cortexm_mem_write_sized(target *t, target_addr_t dest, const void *src, size
 
 static int dcrsr_regnum(target *t, unsigned reg)
 {
-	if (reg < sizeof(regnum_cortex_m) / 4U) {
+	if (reg < sizeof(regnum_cortex_m) / 4U)
 		return regnum_cortex_m[reg];
-	} else if ((t->target_options & TOPT_FLAVOUR_V7MF) &&
-			   (reg < (sizeof(regnum_cortex_m) + sizeof(regnum_cortex_mf)) / 4)) {
+	if ((t->target_options & TOPT_FLAVOUR_V7MF) && reg < (sizeof(regnum_cortex_m) + sizeof(regnum_cortex_mf)) / 4)
 		return regnum_cortex_mf[reg - sizeof(regnum_cortex_m) / 4U];
-	} else {
-		return -1;
-	}
+	return -1;
 }
+
 static ssize_t cortexm_reg_read(target *t, int reg, void *data, size_t max)
 {
 	if (max < 4)
