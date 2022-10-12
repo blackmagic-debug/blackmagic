@@ -40,6 +40,12 @@ max poll ms: 256 min poll ms: 8 max errs: 10
 The terminal emulator displays RTT output from the target, and characters typed
 in the terminal emulator are sent via RTT to the target.
 
+It is possible to use RTT and the built-in serial port at the same time. If both RTT and the built-in serial port are used at the same time, the terminal will show both RTT and serial port output, interleaved.
+
+Characters typed in at the terminal go to RTT if RTT is enabled, or to the serial port if RTT is not enabled.
+
+- ``monitor rtt``: If RTT is enabled, characters typed in at the terminal are sent to target RTT.
+- ``monitor rtt disable``: if RTT is disabled (default), characters typed in at the terminal are sent to the built-in serial port.
 
 ## GDB Commands
 

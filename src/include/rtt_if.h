@@ -29,6 +29,13 @@
 
 /* rtt i/o to terminal */
 
+#if PC_HOSTED == 0
+#include <libopencm3/usb/usbd.h>
+
+/* usb rx callback */
+void rtt_serial_receive_callback(usbd_device *dev, uint8_t ep);
+#endif
+
 /* default buffer sizes, 8 bytes added to up buffer for alignment and padding */
 /* override RTT_UP_BUF_SIZE and RTT_DOWN_BUF_SIZE in platform.h if needed */
 

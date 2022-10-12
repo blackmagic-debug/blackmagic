@@ -32,8 +32,4 @@ bool gdb_serial_get_dtr(void);
 void debug_serial_run(void);
 uint32_t debug_serial_fifo_send(const char *fifo, uint32_t fifo_begin, uint32_t fifo_end);
 
-#ifdef ENABLE_RTT
-void debug_serial_receive_callback(usbd_device *dev, uint8_t ep);
-#endif
-
 #endif /* PLATFORMS_COMMON_USB_SERIAL_H */
