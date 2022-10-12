@@ -69,15 +69,15 @@
 
 static const char cortexm_driver_str[] = "ARM Cortex-M";
 
-static bool cortexm_vector_catch(target *t, int argc, char *argv[]);
+static bool cortexm_vector_catch(target *t, int argc, const char **argv);
 #ifdef PLATFORM_HAS_USBUART
 static bool cortexm_redirect_stdout(target *t, int argc, const char **argv);
 #endif
 
 const struct command_s cortexm_cmd_list[] = {
-	{"vector_catch", (cmd_handler)cortexm_vector_catch, "Catch exception vectors"},
+	{"vector_catch", cortexm_vector_catch, "Catch exception vectors"},
 #ifdef PLATFORM_HAS_USBUART
-	{"redirect_stdout", (cmd_handler)cortexm_redirect_stdout, "Redirect semihosting stdout to USB UART"},
+	{"redirect_stdout", cortexm_redirect_stdout, "Redirect semihosting stdout to USB UART"},
 #endif
 	{NULL, NULL, NULL},
 };
@@ -1367,38 +1367,35 @@ static target_addr_t cortexm_check_watch(target *t)
 	return target_mem_read32(t, CORTEXM_DWT_COMP(i));
 }
 
-static bool cortexm_vector_catch(target *t, int argc, char *argv[])
+static bool cortexm_vector_catch(target *t, int argc, const char **argv)
 {
 	struct cortexm_priv *priv = t->priv;
 	static const char *vectors[] = {"reset", NULL, NULL, NULL, "mm", "nocp", "chk", "stat", "bus", "int", "hard"};
 	uint32_t tmp = 0;
 	unsigned i;
 
-	if (argc < 3) {
-		tc_printf(t,
-			"usage: monitor vector_catch (enable|disable) "
-			"(hard|int|bus|stat|chk|nocp|mm|reset)\n");
-	} else {
+	if (argc < 3)
+		tc_printf(t, "usage: monitor vector_catch (enable|disable) (hard|int|bus|stat|chk|nocp|mm|reset)\n");
+	else {
 		for (int j = 0; j < argc; j++)
-			for (i = 0; i < sizeof(vectors) / sizeof(char *); i++) {
+			for (i = 0; i < ARRAY_LENGTH(vectors); i++) {
 				if (vectors[i] && !strcmp(vectors[i], argv[j]))
 					tmp |= 1 << i;
 			}
 
 		bool enable;
 		if (parse_enable_or_disable(argv[1], &enable)) {
-			if (enable) {
+			if (enable)
 				priv->demcr |= tmp;
-			} else {
+			else
 				priv->demcr &= ~tmp;
-			}
 
 			target_mem_write32(t, CORTEXM_DEMCR, priv->demcr);
 		}
 	}
 
 	tc_printf(t, "Catching vectors: ");
-	for (i = 0; i < sizeof(vectors) / sizeof(char *); i++) {
+	for (i = 0; i < ARRAY_LENGTH(vectors); i++) {
 		if (!vectors[i])
 			continue;
 		if (priv->demcr & (1 << i))
