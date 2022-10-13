@@ -24,7 +24,7 @@
 #include "adiv5.h"
 #include "jtag_devs.h"
 
-jtag_dev_descr_t dev_descr[] = {
+const jtag_dev_descr_s dev_descr[] = {
 	{
 		.idcode = 0x0ba00477U,
 		.idmask = 0x0fff0fffU,
