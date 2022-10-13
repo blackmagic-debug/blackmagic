@@ -275,7 +275,7 @@ void remote_adiv5_dp_defaults(ADIv5_DP_t *dp)
 	dp->mem_write_sized = remote_ap_mem_write_sized;
 }
 
-void remote_add_jtag_dev(uint32_t i, const jtag_dev_t *jtag_dev)
+void remote_add_jtag_dev(uint32_t i, const jtag_dev_s *jtag_dev)
 {
 	uint8_t construct[REMOTE_MAX_MSG_SIZE];
 	const int s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE, REMOTE_JTAG_ADD_DEV_STR, i, jtag_dev->dr_prescan,
