@@ -43,6 +43,6 @@ uint32_t remote_max_frequency_get(void);
 void remote_target_clk_output_enable(bool enable);
 
 void remote_adiv5_dp_defaults(ADIv5_DP_t *dp);
-void remote_add_jtag_dev(uint32_t i, const jtag_dev_t *jtag_dev);
+void remote_add_jtag_dev(uint32_t i, const jtag_dev_s *jtag_dev);
 
 #endif /* PLATFORMS_HOSTED_BMP_REMOTE_H */
