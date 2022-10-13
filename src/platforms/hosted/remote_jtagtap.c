@@ -48,7 +48,7 @@ static inline unsigned int bool_to_int(const bool value)
 	return value ? 1 : 0;
 }
 
-int remote_jtagtap_init(jtag_proc_t *jtag_proc)
+int remote_jtagtap_init(jtag_proc_s *jtag_proc)
 {
 	platform_buffer_write((uint8_t *)REMOTE_JTAG_INIT_STR, sizeof(REMOTE_JTAG_INIT_STR));
 

@@ -26,7 +26,7 @@
 #include "jtagtap.h"
 #include "gdb_packet.h"
 
-jtag_proc_t jtag_proc;
+jtag_proc_s jtag_proc;
 
 static void jtagtap_reset(void);
 static void jtagtap_tms_seq(uint32_t tms_states, size_t ticks);
