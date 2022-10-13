@@ -31,7 +31,7 @@
 #include "adiv5.h"
 #include "jtag_devs.h"
 
-struct jtag_dev_s jtag_devs[JTAG_MAX_DEVS+1];
+struct jtag_dev_s jtag_devs[JTAG_MAX_DEVS + 1];
 uint32_t jtag_dev_count = 0;
 
 /* bucket of ones for don't care TDI */
@@ -91,13 +91,12 @@ uint32_t jtag_scan(const uint8_t *irlens)
 		jtagtap_shift_ir();
 
 		size_t device = 0;
-		for (size_t prescan = 0; device <= JTAG_MAX_DEVS && jtag_devs[device].ir_len <= JTAG_MAX_IR_LEN;
-			++device) {
+		for (size_t prescan = 0; device <= JTAG_MAX_DEVS && jtag_devs[device].ir_len <= JTAG_MAX_IR_LEN; ++device) {
 			if (irlens[device] == 0)
 				break;
 
 			uint32_t irout = 0;
-			jtag_proc.jtagtap_tdi_tdo_seq((uint8_t*)&irout, 0, ones, irlens[device]);
+			jtag_proc.jtagtap_tdi_tdo_seq((uint8_t *)&irout, 0, ones, irlens[device]);
 
 			/* IEEE 1149.1 requires the first bit to be a 1, but not all devices conform (see #1130 on GH) */
 			if (!(irout & 1))
@@ -192,7 +191,6 @@ uint32_t jtag_scan(const uint8_t *irlens)
 			if (jtag_proc.jtagtap_next(false, true))
 				jtag_devs[device].jd_idcode |= 1U << bit;
 		}
-
 	}
 	DEBUG_INFO("Return to Run-Test/Idle\n");
 	jtag_proc.jtagtap_next(true, true);
