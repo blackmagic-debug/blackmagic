@@ -231,7 +231,7 @@ uint32_t jtag_scan(const uint8_t *irlens)
 	return jtag_dev_count;
 }
 
-void jtag_dev_write_ir(jtag_proc_t *jp, const uint8_t dev_index, const uint32_t ir)
+void jtag_dev_write_ir(const uint8_t dev_index, const uint32_t ir)
 {
 	jtag_dev_s *d = &jtag_devs[dev_index];
 	if (ir == d->current_ir)
@@ -242,22 +242,21 @@ void jtag_dev_write_ir(jtag_proc_t *jp, const uint8_t dev_index, const uint32_t 
 	d->current_ir = ir;
 
 	jtagtap_shift_ir();
-	jp->jtagtap_tdi_seq(false, ones, d->ir_prescan);
-	jp->jtagtap_tdi_seq(!d->ir_postscan, (const uint8_t *)&ir, d->ir_len);
-	jp->jtagtap_tdi_seq(true, ones, d->ir_postscan);
+	jtag_proc.jtagtap_tdi_seq(false, ones, d->ir_prescan);
+	jtag_proc.jtagtap_tdi_seq(!d->ir_postscan, (const uint8_t *)&ir, d->ir_len);
+	jtag_proc.jtagtap_tdi_seq(true, ones, d->ir_postscan);
 	jtagtap_return_idle(1);
 }
 
-void jtag_dev_shift_dr(
-	jtag_proc_t *jp, const uint8_t dev_index, uint8_t *data_out, const uint8_t *data_in, const size_t clock_cycles)
+void jtag_dev_shift_dr(const uint8_t dev_index, uint8_t *data_out, const uint8_t *data_in, const size_t clock_cycles)
 {
 	jtag_dev_s *d = &jtag_devs[dev_index];
 	jtagtap_shift_dr();
-	jp->jtagtap_tdi_seq(false, ones, d->dr_prescan);
+	jtag_proc.jtagtap_tdi_seq(false, ones, d->dr_prescan);
 	if (data_out)
-		jp->jtagtap_tdi_tdo_seq((uint8_t *)data_out, !d->dr_postscan, (const uint8_t *)data_in, clock_cycles);
+		jtag_proc.jtagtap_tdi_tdo_seq((uint8_t *)data_out, !d->dr_postscan, (const uint8_t *)data_in, clock_cycles);
 	else
-		jp->jtagtap_tdi_seq(!d->dr_postscan, (const uint8_t *)data_in, clock_cycles);
-	jp->jtagtap_tdi_seq(true, ones, d->dr_postscan);
+		jtag_proc.jtagtap_tdi_seq(!d->dr_postscan, (const uint8_t *)data_in, clock_cycles);
+	jtag_proc.jtagtap_tdi_seq(true, ones, d->dr_postscan);
 	jtagtap_return_idle(1);
 }
