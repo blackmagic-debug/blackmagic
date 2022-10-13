@@ -25,7 +25,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-typedef struct jtag_proc_s {
+typedef struct jtag_proc {
 	/* Note: Signal names are as for the device under test. */
 
 	void (*jtagtap_reset)(void);
@@ -57,9 +57,9 @@ typedef struct jtag_proc_s {
 	 * allow the desirable skipping of the entire state under some circumstances.
 	 */
 	uint8_t tap_idle_cycles;
-} jtag_proc_t;
+} jtag_proc_s;
 
-extern jtag_proc_t jtag_proc;
+extern jtag_proc_s jtag_proc;
 
 /* generic soft reset: 1, 1, 1, 1, 1, 0 */
 #define jtagtap_soft_reset() jtag_proc.jtagtap_tms_seq(0x1fU, 6)
