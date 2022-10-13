@@ -178,7 +178,7 @@ int swdptap_init(ADIv5_DP_t *dp)
 	}
 }
 
-void platform_add_jtag_dev(uint32_t i, const jtag_dev_t *jtag_dev)
+void platform_add_jtag_dev(uint32_t i, const jtag_dev_s *jtag_dev)
 {
 	if (info.bmp_type == BMP_TYPE_BMP)
 		remote_add_jtag_dev(i, jtag_dev);
