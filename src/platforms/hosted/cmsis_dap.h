@@ -27,7 +27,7 @@
 int dap_init(bmp_info_t *info);
 void dap_exit_function(void);
 void dap_adiv5_dp_defaults(ADIv5_DP_t *dp);
-int cmsis_dap_jtagtap_init(jtag_proc_t *jtag_proc);
+int cmsis_dap_jtagtap_init(jtag_proc_s *jtag_proc);
 int dap_swdptap_init(ADIv5_DP_t *dp);
 int dap_jtag_dp_init(ADIv5_DP_t *dp);
 uint32_t dap_swj_clock(uint32_t clock);
@@ -57,7 +57,7 @@ void dap_adiv5_dp_defaults(ADIv5_DP_t *dp)
 {
 }
 
-int cmsis_dap_jtagtap_init(jtag_proc_t *jtag_proc)
+int cmsis_dap_jtagtap_init(jtag_proc_s *jtag_proc)
 {
 	return -1;
 }
