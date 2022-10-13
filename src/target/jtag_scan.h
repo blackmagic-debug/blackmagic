@@ -24,8 +24,8 @@
 #include <stddef.h>
 #include "jtagtap.h"
 
-#define JTAG_MAX_DEVS	32
-#define JTAG_MAX_IR_LEN	16
+#define JTAG_MAX_DEVS   32
+#define JTAG_MAX_IR_LEN 16
 
 typedef struct jtag_dev_s {
 	const char *jd_descr;
@@ -36,6 +36,7 @@ typedef struct jtag_dev_s {
 		uint8_t jd_dev;
 		uint8_t dr_prescan;
 	};
+
 	uint8_t dr_postscan;
 
 	uint8_t ir_len;
