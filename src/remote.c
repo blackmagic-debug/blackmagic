@@ -174,7 +174,7 @@ static void remote_packet_process_jtag(unsigned i, char *packet)
 	uint64_t DO = 0;
 	size_t ticks;
 	uint64_t DI = 0;
-	jtag_dev_t jtag_dev;
+	jtag_dev_s jtag_dev;
 	switch (packet[1]) {
 	case REMOTE_INIT: /* JS = initialise ============================= */
 		remote_dp.dp_read = fw_adiv5_jtagdp_read;
