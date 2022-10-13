@@ -31,7 +31,7 @@
 #include "adiv5.h"
 #include "jtag_devs.h"
 
-jtag_dev_s jtag_devs[JTAG_MAX_DEVS + 1];
+jtag_dev_s jtag_devs[JTAG_MAX_DEVS + 1U];
 uint32_t jtag_dev_count = 0;
 
 /* bucket of ones for don't care TDI */
@@ -231,9 +231,9 @@ uint32_t jtag_scan(const uint8_t *irlens)
 	return jtag_dev_count;
 }
 
-void jtag_dev_write_ir(jtag_proc_t *jp, const uint8_t jd_index, const uint32_t ir)
+void jtag_dev_write_ir(jtag_proc_t *jp, const uint8_t dev_index, const uint32_t ir)
 {
-	jtag_dev_s *d = &jtag_devs[jd_index];
+	jtag_dev_s *d = &jtag_devs[dev_index];
 	if (ir == d->current_ir)
 		return;
 
@@ -249,15 +249,15 @@ void jtag_dev_write_ir(jtag_proc_t *jp, const uint8_t jd_index, const uint32_t i
 }
 
 void jtag_dev_shift_dr(
-	jtag_proc_t *jp, const uint8_t jd_index, uint8_t *dout, const uint8_t *din, const size_t clock_cycles)
+	jtag_proc_t *jp, const uint8_t dev_index, uint8_t *data_out, const uint8_t *data_in, const size_t clock_cycles)
 {
-	jtag_dev_s *d = &jtag_devs[jd_index];
+	jtag_dev_s *d = &jtag_devs[dev_index];
 	jtagtap_shift_dr();
 	jp->jtagtap_tdi_seq(false, ones, d->dr_prescan);
-	if (dout)
-		jp->jtagtap_tdi_tdo_seq((uint8_t *)dout, !d->dr_postscan, (const uint8_t *)din, clock_cycles);
+	if (data_out)
+		jp->jtagtap_tdi_tdo_seq((uint8_t *)data_out, !d->dr_postscan, (const uint8_t *)data_in, clock_cycles);
 	else
-		jp->jtagtap_tdi_seq(!d->dr_postscan, (const uint8_t *)din, clock_cycles);
+		jp->jtagtap_tdi_seq(!d->dr_postscan, (const uint8_t *)data_in, clock_cycles);
 	jp->jtagtap_tdi_seq(true, ones, d->dr_postscan);
 	jtagtap_return_idle(1);
 }
