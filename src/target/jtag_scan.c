@@ -31,18 +31,18 @@
 #include "adiv5.h"
 #include "jtag_devs.h"
 
-struct jtag_dev_s jtag_devs[JTAG_MAX_DEVS + 1U];
+jtag_dev_s jtag_devs[JTAG_MAX_DEVS + 1U];
 uint32_t jtag_dev_count = 0;
 
 /* bucket of ones for don't care TDI */
 static const uint8_t ones[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
 #if PC_HOSTED == 0
-void jtag_add_device(const uint32_t dev_index, const jtag_dev_t *jtag_dev)
+void jtag_add_device(const uint32_t dev_index, const jtag_dev_s *jtag_dev)
 {
 	if (dev_index == 0)
 		memset(&jtag_devs, 0, sizeof(jtag_devs));
-	memcpy(&jtag_devs[dev_index], jtag_dev, sizeof(jtag_dev_t));
+	memcpy(&jtag_devs[dev_index], jtag_dev, sizeof(jtag_dev_s));
 	jtag_dev_count = dev_index + 1;
 }
 #endif
@@ -233,7 +233,7 @@ uint32_t jtag_scan(const uint8_t *irlens)
 
 void jtag_dev_write_ir(const uint8_t dev_index, const uint32_t ir)
 {
-	jtag_dev_t *device = &jtag_devs[dev_index];
+	jtag_dev_s *device = &jtag_devs[dev_index];
 	if (ir == device->current_ir)
 		return;
 
@@ -250,7 +250,7 @@ void jtag_dev_write_ir(const uint8_t dev_index, const uint32_t ir)
 
 void jtag_dev_shift_dr(const uint8_t dev_index, uint8_t *data_out, const uint8_t *data_in, const size_t clock_cycles)
 {
-	jtag_dev_t *device = &jtag_devs[dev_index];
+	jtag_dev_s *device = &jtag_devs[dev_index];
 	jtagtap_shift_dr();
 	jtag_proc.jtagtap_tdi_seq(false, ones, device->dr_prescan);
 	if (data_out)
