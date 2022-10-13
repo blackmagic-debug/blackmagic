@@ -750,7 +750,7 @@ int dap_jtag_configure(void)
 	uint8_t buf[64], *p = &buf[2];
 	uint32_t i = 0;
 	for (; i < jtag_dev_count; i++) {
-		struct jtag_dev_s *jtag_dev = &jtag_devs[i];
+		jtag_dev_s *jtag_dev = &jtag_devs[i];
 		*p++ = jtag_dev->ir_len;
 		DEBUG_PROBE("irlen %d\n", jtag_dev->ir_len);
 	}

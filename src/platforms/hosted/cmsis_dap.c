@@ -503,7 +503,7 @@ static bool cmsis_dap_jtagtap_next(const bool tms, const bool tdi)
 	return tdo;
 }
 
-int cmsis_dap_jtagtap_init(jtag_proc_t *jtag_proc)
+int cmsis_dap_jtagtap_init(jtag_proc_s *jtag_proc)
 {
 	DEBUG_PROBE("jtap_init\n");
 	if (!(dap_caps & DAP_CAP_JTAG))

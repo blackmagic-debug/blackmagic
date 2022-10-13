@@ -43,7 +43,7 @@
 
 bmp_info_t info;
 
-jtag_proc_t jtag_proc;
+jtag_proc_s jtag_proc;
 
 static BMP_CL_OPTIONS_t cl_opts;
 
