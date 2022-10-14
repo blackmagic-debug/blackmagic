@@ -170,30 +170,31 @@ static void jtagtap_tdi_tdo_seq_swd_delay(
 }
 
 static void jtagtap_tdi_tdo_seq_no_delay(
-	const uint8_t *const data_in, uint8_t *const data_out, const bool final_tms, size_t clock_cycles)
+	const uint8_t *const data_in, uint8_t *const data_out, const bool final_tms, const size_t clock_cycles)
 {
-	size_t byte = 0;
-	size_t index = 0;
 	uint8_t value = 0;
-	while (clock_cycles--) {
+	for (size_t cycle = 0; cycle < clock_cycles; ++cycle) {
+		const size_t bit = cycle & 7U;
+		const size_t byte = cycle >> 3U;
 		/* On the last tick, assert final_tms to TMS_PIN */
-		gpio_set_val(TMS_PORT, TMS_PIN, clock_cycles ? false : final_tms);
+		gpio_set_val(TMS_PORT, TMS_PIN, cycle + 1 >= clock_cycles && final_tms);
 		/* Set up the TDI pin and start the clock cycle */
-		gpio_set_val(TDI_PORT, TDI_PIN, data_in[byte] & (1U << index));
+		gpio_set_val(TDI_PORT, TDI_PIN, data_in[byte] & (1U << bit));
 		gpio_set(TCK_PORT, TCK_PIN);
 		/* If TDO is high, store a 1 in the appropriate position in the value being accumulated */
 		if (gpio_get(TDO_PORT, TDO_PIN))
-			value |= (1 << index);
+			value |= (1 << bit);
 		/* If we've got to the next whole byte, store the accumulated value and reset state */
-		if (index++ == 7U) {
-			data_out[byte++] = value;
-			index = 0;
+		if (bit == 7U) {
+			data_out[byte] = value;
 			value = 0;
 		}
 		/* Finish the clock cycle */
 		gpio_clear(TCK_PORT, TCK_PIN);
 	}
-	if (index)
+	const size_t bit = (clock_cycles - 1U) & 7U;
+	const size_t byte = (clock_cycles - 1U) >> 3U;
+	if (bit)
 		data_out[byte] = value;
 }
 
