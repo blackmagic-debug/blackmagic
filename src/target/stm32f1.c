@@ -136,6 +136,8 @@ bool gd32f1_probe(target *t)
 	case 0x410: /* Gigadevice gd32f103, gd32e230 */
 		if ((t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M23)
 			t->driver = "GD32E230";
+		else if ((t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M4)
+			t->driver = "GD32F3";
 		else
 			t->driver = "GD32F1";
 		break;
