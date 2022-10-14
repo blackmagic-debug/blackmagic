@@ -24,11 +24,11 @@
 #include "general.h"
 #include "jtagtap.h"
 
-void jtagtap_tms_seq(uint32_t MS, int ticks)
+void jtagtap_tms_seq(const uint32_t tms_states, const size_t clock_cycles)
 {
-	while(ticks--) {
-		jtagtap_next(MS & 1, 1);
-		MS >>= 1;
+	for (size_t cycle = 0; cycle < clock_cycles; ++cycle) {
+		const bool tms = (tms_states >> cycle) & 1U;
+		jtag_proc.jtagtap_next(tms, true);
 	}
 }
 
