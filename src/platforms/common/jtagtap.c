@@ -199,14 +199,14 @@ static void jtagtap_tdi_tdo_seq_no_delay(
 }
 
 static void jtagtap_tdi_tdo_seq(
-	uint8_t *const data_out, const bool final_tms, const uint8_t *const data_in, size_t ticks)
+	uint8_t *const data_out, const bool final_tms, const uint8_t *const data_in, size_t clock_cycles)
 {
 	gpio_clear(TMS_PORT, TMS_PIN);
 	gpio_clear(TDI_PORT, TDI_PIN);
 	if (swd_delay_cnt)
-		jtagtap_tdi_tdo_seq_swd_delay(data_in, data_out, final_tms, ticks);
+		jtagtap_tdi_tdo_seq_swd_delay(data_in, data_out, final_tms, clock_cycles);
 	else
-		jtagtap_tdi_tdo_seq_no_delay(data_in, data_out, final_tms, ticks);
+		jtagtap_tdi_tdo_seq_no_delay(data_in, data_out, final_tms, clock_cycles);
 }
 
 static void jtagtap_tdi_seq_swd_delay(const uint8_t *const data_in, const bool final_tms, size_t clock_cycles)
