@@ -52,15 +52,13 @@ void jtagtap_tdi_tdo_seq(
 	}
 }
 
-void jtagtap_tdi_seq(const uint8_t final_tms, const uint8_t *DI, int ticks)
+void jtagtap_tdi_seq(const uint8_t final_tms, const uint8_t *const data_in, const size_t clock_cycles)
 {
-	uint8_t index = 1;
-	while(ticks--) {
-		jtagtap_next(ticks?0:final_tms, *DI & index);
-		if(!(index <<= 1)) {
-			index = 1;
-			DI++;
-		}
+	for (size_t cycle = 0; cycle < clock_cycles; ++cycle) {
+		const size_t bit = cycle & 7U;
+		const size_t byte = cycle >> 3U;
+		const bool tms = cycle + 1 >= clock_cycles && final_tms;
+		const bool tdi = data_in[byte] & (1U << bit);
+		jtag_proc.jtagtap_next(tms, tdi);
 	}
 }
-
