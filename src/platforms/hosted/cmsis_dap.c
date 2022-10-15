@@ -141,7 +141,7 @@ static void dap_hid_print_permissions(const uint16_t vid, const uint16_t pid, co
 }
 #endif
 
-static bool dap_init_hid(const bmp_info_t *const info)
+static bool dap_init_hid(const bmp_info_s *const info)
 {
 	DEBUG_INFO("Using hid transfer\n");
 	if (hid_init())
@@ -179,7 +179,7 @@ static bool dap_init_hid(const bmp_info_t *const info)
 	return true;
 }
 
-static bool dap_init_bulk(const bmp_info_t *const info)
+static bool dap_init_bulk(const bmp_info_s *const info)
 {
 	DEBUG_INFO("Using bulk transfer\n");
 	usb_handle = libusb_open_device_with_vid_pid(info->libusb_ctx, info->vid, info->pid);
@@ -197,7 +197,7 @@ static bool dap_init_bulk(const bmp_info_t *const info)
 }
 
 /* LPC845 Breakout Board Rev. 0 report invalid response with > 65 bytes */
-int dap_init(bmp_info_t *info)
+int dap_init(bmp_info_s *info)
 {
 	type = (info->in_ep && info->out_ep) ? CMSIS_TYPE_BULK : CMSIS_TYPE_HID;
 
