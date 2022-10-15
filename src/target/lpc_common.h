@@ -20,6 +20,9 @@
 #ifndef TARGET_LPC_COMMON_H
 #define TARGET_LPC_COMMON_H
 
+#include <stdint.h>
+#include "target_internal.h"
+
 enum iap_cmd {
 	IAP_CMD_READ_FACTORY_SETTINGS = 40,
 	IAP_CMD_INIT = 49,
@@ -68,7 +71,7 @@ enum iap_status {
 /* CPU Frequency */
 #define CPU_CLK_KHZ 12000
 
-struct lpc_flash {
+typedef struct lpc_flash {
 	target_flash_s f;
 	uint8_t base_sector;
 	uint8_t bank;
@@ -78,9 +81,9 @@ struct lpc_flash {
 	uint32_t iap_entry;
 	uint32_t iap_ram;
 	uint32_t iap_msp;
-};
+} lpc_flash_s;
 
-struct lpc_flash *lpc_add_flash(target *t, target_addr_t addr, size_t length);
+lpc_flash_s *lpc_add_flash(target *t, target_addr_t addr, size_t length);
 enum iap_status lpc_iap_call(struct lpc_flash *f, void *result, enum iap_cmd cmd, ...);
 bool lpc_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 bool lpc_flash_write_magic_vect(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
