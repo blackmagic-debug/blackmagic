@@ -37,7 +37,7 @@ extern const struct command_s stm32f1_cmd_list[]; // Reuse stm32f1 stuff
 static bool ch32f1_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 static bool ch32f1_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 
-// these are common with stm32f1/gd32f1/...
+// These are common with stm32f1/gd32f1/...
 #define FPEC_BASE     0x40022000
 #define FLASH_ACR     (FPEC_BASE + 0x00)
 #define FLASH_KEYR    (FPEC_BASE + 0x04)
@@ -54,21 +54,18 @@ static bool ch32f1_flash_write(target_flash_s *f, target_addr_t dest, const void
 #define DBGMCU_IDCODE 0xE0042000
 #define FLASHSIZE     0x1FFFF7E0
 
-// these are specific to ch32f1
+// These are specific to ch32f1
 #define FLASH_MAGIC              (FPEC_BASE + 0x34)
 #define FLASH_MODEKEYR_CH32      (FPEC_BASE + 0x24) // Fast mode for CH32F10x
-#define FLASH_CR_FLOCK_CH32      (1 << 15)          // fast unlock
-#define FLASH_CR_FTPG_CH32       (1 << 16)          // fast page program
-#define FLASH_CR_FTER_CH32       (1 << 17)          // fast page erase
+#define FLASH_CR_FLOCK_CH32      (1 << 15)          // Fast unlock
+#define FLASH_CR_FTPG_CH32       (1 << 16)          // Fast page program
+#define FLASH_CR_FTER_CH32       (1 << 17)          // Fast page erase
 #define FLASH_CR_BUF_LOAD_CH32   (1 << 18)          // Buffer load
 #define FLASH_CR_BUF_RESET_CH32  (1 << 19)          // Buffer reset
 #define FLASH_SR_EOP             (1 << 5)           // End of programming
 #define FLASH_BEGIN_ADDRESS_CH32 0x8000000
 
-/**
-		\fn ch32f1_add_flash
-		\brief "fast" flash driver for CH32F10x chips
-*/
+/* "fast" Flash driver for CH32F10x chips */
 static void ch32f1_add_flash(target *t, uint32_t addr, size_t length, size_t erasesize)
 {
 	target_flash_s *f = calloc(1, sizeof(*f));
@@ -119,7 +116,7 @@ static void ch32f1_add_flash(target *t, uint32_t addr, size_t length, size_t era
 		target_mem_write32(t, FLASH_CR, cr);                           \
 	} while (0)
 
-// Which one is the right value ?
+// Which one is the right value?
 #define MAGIC_WORD 0x100
 // #define MAGIC_WORD 0x1000
 #define MAGIC(addr)                                        \
@@ -128,10 +125,7 @@ static void ch32f1_add_flash(target *t, uint32_t addr, size_t length, size_t era
 		target_mem_write32(t, FLASH_MAGIC, magic);         \
 	} while (0)
 
-/**
-  \fn ch32f1_flash_unlock
-  \brief unlock ch32f103 in fast mode
-*/
+/* Unlock ch32f103 in fast mode */
 static bool ch32f1_flash_unlock(target *t)
 {
 	DEBUG_INFO("CH32: flash unlock \n");
@@ -162,10 +156,10 @@ static bool ch32f1_flash_lock(target *t)
 	return false;
 }
 
-/**
-	\brief identify the ch32f1 chip
-				Actually grab all cortex m3 with designer = arm not caught earlier...
-*/
+/*
+ * Identify the ch32f1 chip
+ * (Actually grab all cortex m3 with designer = arm not caught earlier...)
+ */
 bool ch32f1_probe(target *t)
 {
 	if ((t->cpuid & CPUID_PARTNO_MASK) != CORTEX_M3)
@@ -181,13 +175,13 @@ bool ch32f1_probe(target *t)
 	if (device_id != 0x410) // ch32f103, cks32f103, apm32f103
 		return false;
 
-	if (revision_id != 0x2000) // (hopefully!) only ch32f103
+	if (revision_id != 0x2000) // (Hopefully!) only ch32f103
 		return false;
 
-	// try to flock (if this fails it is not a CH32 chip)
+	// Try to flock (if this fails it is not a CH32 chip)
 	if (ch32f1_flash_lock(t))
 		return false;
-	// if this fails it is not a CH32 chip
+	// If this fails it is not a CH32 chip
 	if (ch32f1_flash_unlock(t))
 		return false;
 
@@ -202,10 +196,7 @@ bool ch32f1_probe(target *t)
 	return true;
 }
 
-/**
-  \fn ch32f1_flash_erase
-  \brief fast erase of CH32
-*/
+/* Fast erase of CH32 */
 bool ch32f1_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
 	volatile uint32_t sr, magic;
@@ -219,7 +210,7 @@ bool ch32f1_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 	// Fast Erase 128 bytes pages (ch32 mode)
 	while (len) {
 		SET_CR(FLASH_CR_FTER_CH32); // CH32 PAGE_ER
-		/* write address to FMA */
+		/* Write address to FMA */
 		target_mem_write32(t, FLASH_AR, addr);
 		/* Flash page erase start instruction */
 		SET_CR(FLASH_CR_STRT);
@@ -243,14 +234,12 @@ bool ch32f1_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 	return true;
 }
 
-/**
-	\fn ch32f1_wait_flash_ready
-	\brief   Wait a bit for the previous operation to finish
-			As per test result we need a time similar to 10 read operation over SWD
-			We do 32 to have a bit of headroom, then we check we read ffff (erased flash)
-			NB: Just reading fff is not enough as it could be a transient previous operation value
-*/
-
+/*
+ * Wait a bit for the previous operation to finish
+ * As per test result we need a time similar to 10 read operation over SWD
+ * We do 32 to have a bit of headroom, then we check we read ffff (erased flash)
+ * NB: Just reading fff is not enough as it could be a transient previous operation value
+ */
 static bool ch32f1_wait_flash_ready(target *t, uint32_t addr)
 {
 	uint32_t ff = 0;
@@ -263,11 +252,7 @@ static bool ch32f1_wait_flash_ready(target *t, uint32_t addr)
 	return true;
 }
 
-/**
-  \fn ch32f1_flash_write
-  \brief fast flash for ch32. Load 128 bytes chunk and then flash them
-*/
-
+/* Fast flash for ch32. Load 128 bytes chunk and then flash them */
 static int ch32f1_upload(target *t, uint32_t dest, const void *src, uint32_t offset)
 {
 	volatile uint32_t sr, magic;
@@ -287,10 +272,7 @@ static int ch32f1_upload(target *t, uint32_t dest, const void *src, uint32_t off
 	return 0;
 }
 
-/**
-	\fn ch32f1_buffer_clear
-	\brief clear the write buffer
-*/
+/* Clear the write buffer */
 static int ch32f1_buffer_clear(target *t)
 {
 	volatile uint32_t sr;
@@ -301,14 +283,9 @@ static int ch32f1_buffer_clear(target *t)
 	return 0;
 }
 
-//#define CH32_VERIFY
-
-/**
-
-*/
 static bool ch32f1_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
-	volatile uint32_t sr, magic;
+	volatile uint32_t sr;
 	target *t = f->t;
 	size_t length = len;
 #ifdef CH32_VERIFY
@@ -344,6 +321,7 @@ static bool ch32f1_flash_write(target_flash_s *f, target_addr_t dest, const void
 		CLEAR_EOP();
 		CLEAR_CR(FLASH_CR_FTPG_CH32);
 
+		uint32_t magic;
 		MAGIC(dest);
 
 		// next
