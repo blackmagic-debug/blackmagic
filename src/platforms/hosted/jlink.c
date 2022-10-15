@@ -117,7 +117,7 @@ static void jlink_info(bmp_info_t *const info)
 
 /*
  * On success this copies the endpoint addresses identified into the
- * usb_link_t sub-structure of bmp_info_t (info->usb_link) for later use.
+ * usb_link_s sub-structure of bmp_info_t (info->usb_link) for later use.
  * Returns true for sucess, false for failure.
  */
 static bool claim_jlink_interface(bmp_info_t *info, libusb_device *dev)
@@ -166,7 +166,7 @@ static bool claim_jlink_interface(bmp_info_t *info, libusb_device *dev)
  */
 bool jlink_init(bmp_info_t *const info)
 {
-	usb_link_t *link = calloc(1, sizeof(usb_link_t));
+	usb_link_s *link = calloc(1, sizeof(usb_link_s));
 	if (!link)
 		return false;
 	info->usb_link = link;
