@@ -32,7 +32,7 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 
-int stlink_init(bmp_info_t *info)
+int stlink_init(bmp_info_s *info)
 {
 	return -1;
 }
@@ -42,12 +42,12 @@ int stlink_hwversion(void)
 	return -1;
 }
 
-const char *stlink_target_voltage(bmp_info_t *info)
+const char *stlink_target_voltage(bmp_info_s *info)
 {
 	return "ERROR";
 }
 
-void stlink_nrst_set_val(bmp_info_t *info, bool assert)
+void stlink_nrst_set_val(bmp_info_s *info, bool assert)
 {
 }
 
@@ -56,7 +56,7 @@ bool stlink_nrst_get_val(void)
 	return true;
 }
 
-uint32_t stlink_swdp_scan(bmp_info_t *info)
+uint32_t stlink_swdp_scan(bmp_info_s *info)
 {
 	return 0;
 }
@@ -70,38 +70,38 @@ int stlink_jtag_dp_init(adiv5_debug_port_s *dp)
 	return false;
 }
 
-uint32_t jtag_scan_stlinkv2(bmp_info_t *info, const uint8_t *irlens)
+uint32_t jtag_scan_stlinkv2(bmp_info_s *info, const uint8_t *irlens)
 {
 	return 0;
 }
 
-void stlink_exit_function(bmp_info_t *info)
+void stlink_exit_function(bmp_info_s *info)
 {
 }
 
-void stlink_max_frequency_set(bmp_info_t *info, uint32_t freq)
+void stlink_max_frequency_set(bmp_info_s *info, uint32_t freq)
 {
 }
 
-uint32_t stlink_max_frequency_get(bmp_info_t *info)
+uint32_t stlink_max_frequency_get(bmp_info_s *info)
 {
 	return 0;
 }
 
 #pragma GCC diagnostic pop
 #else
-int stlink_init(bmp_info_t *info);
+int stlink_init(bmp_info_s *info);
 int stlink_hwversion(void);
-const char *stlink_target_voltage(bmp_info_t *info);
-void stlink_nrst_set_val(bmp_info_t *info, bool assert);
+const char *stlink_target_voltage(bmp_info_s *info);
+void stlink_nrst_set_val(bmp_info_s *info, bool assert);
 bool stlink_nrst_get_val(void);
-uint32_t stlink_swdp_scan(bmp_info_t *info);
+uint32_t stlink_swdp_scan(bmp_info_s *info);
 void stlink_adiv5_dp_defaults(adiv5_debug_port_s *dp);
 int stlink_jtag_dp_init(adiv5_debug_port_s *dp);
-uint32_t jtag_scan_stlinkv2(bmp_info_t *info, const uint8_t *irlens);
-void stlink_exit_function(bmp_info_t *info);
-void stlink_max_frequency_set(bmp_info_t *info, uint32_t freq);
-uint32_t stlink_max_frequency_get(bmp_info_t *info);
+uint32_t jtag_scan_stlinkv2(bmp_info_s *info, const uint8_t *irlens);
+void stlink_exit_function(bmp_info_s *info);
+void stlink_max_frequency_set(bmp_info_s *info, uint32_t freq);
+uint32_t stlink_max_frequency_get(bmp_info_s *info);
 #endif
 
 #endif /* PLATFORMS_HOSTED_STLINKV2_H */

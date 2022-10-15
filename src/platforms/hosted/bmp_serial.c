@@ -33,7 +33,7 @@
 #include "utils.h"
 #include "version.h"
 
-void bmp_ident(bmp_info_t *info)
+void bmp_ident(bmp_info_s *info)
 {
 	PRINT_INFO("Black Magic Debug App (for BMP only) %s\n", FIRMWARE_VERSION);
 	if (!info)
@@ -41,13 +41,13 @@ void bmp_ident(bmp_info_t *info)
 	PRINT_INFO("Using:\n %s %s %s\n", info->manufacturer, info->version, info->serial);
 }
 
-void libusb_exit_function(bmp_info_t *info)
+void libusb_exit_function(bmp_info_s *info)
 {
 	(void)info;
 };
 
 #ifdef __APPLE__
-int find_debuggers(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info)
+int find_debuggers(BMP_CL_OPTIONS_t *cl_opts, bmp_info_s *info)
 {
 	DEBUG_WARN("Please implement find_debuggers for MACOS!\n");
 	(void)cl_opts;
@@ -78,7 +78,7 @@ DEFINE_DEVPROPKEY(DEVPKEY_Device_BusReportedDeviceDesc, 0x540b947e, 0x8b40, 0x45
 
 /* List all USB devices with some additional information.
  * Unfortunately, this code is quite ugly. */
-int find_debuggers(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info)
+int find_debuggers(BMP_CL_OPTIONS_t *cl_opts, bmp_info_s *info)
 {
 	unsigned i;
 	DWORD dwSize;
@@ -272,7 +272,7 @@ static bool scan_linux_id(const char *name, char **const type, char **const vers
 	return true;
 }
 
-void copy_to_info(bmp_info_t *const info, const char *const type, const char *const version, const char *const serial)
+void copy_to_info(bmp_info_s *const info, const char *const type, const char *const version, const char *const serial)
 {
 	const size_t serial_len = MIN(strlen(serial), sizeof(info->serial) - 1U);
 	memcpy(info->serial, serial, serial_len);
@@ -291,7 +291,7 @@ void copy_to_info(bmp_info_t *const info, const char *const type, const char *co
 		DEBUG_WARN("snprintf() overflowed while generating manfacturer string\n");
 }
 
-size_t scan_devices(scan_mode_e mode, bmp_info_t *info, const char *const search_serial, const size_t search_position)
+size_t scan_devices(scan_mode_e mode, bmp_info_s *info, const char *const search_serial, const size_t search_position)
 {
 	DIR *dir = opendir(DEVICE_BY_ID);
 	if (!dir) /* /dev/serial/by-id is unavailable */
@@ -329,7 +329,7 @@ size_t scan_devices(scan_mode_e mode, bmp_info_t *info, const char *const search
 	return devices;
 }
 
-int find_debuggers(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info)
+int find_debuggers(BMP_CL_OPTIONS_t *cl_opts, bmp_info_s *info)
 {
 	if (cl_opts->opt_device)
 		return 1;
