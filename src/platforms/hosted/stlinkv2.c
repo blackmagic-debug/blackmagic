@@ -332,7 +332,7 @@ static int stlink_send_recv_retry(uint8_t *txbuf, size_t txsize, uint8_t *rxbuf,
 	uint32_t start = platform_time_ms();
 	int res;
 	int first_res = STLINK_ERROR_OK;
-	usb_link_t *link = info.usb_link;
+	usb_link_s *link = info.usb_link;
 	while (true) {
 		send_recv(link, txbuf, txsize, rxbuf, rxsize);
 		res = stlink_usb_error_check(rxbuf, false);
@@ -380,7 +380,7 @@ static int write_retry(uint8_t *cmdbuf, size_t cmdsize, uint8_t *txbuf, size_t t
 {
 	uint32_t start = platform_time_ms();
 	int res;
-	usb_link_t *link = info.usb_link;
+	usb_link_s *link = info.usb_link;
 	while (true) {
 		send_recv(link, cmdbuf, cmdsize, NULL, 0);
 		send_recv(link, txbuf, txsize, NULL, 0);
@@ -514,7 +514,7 @@ static void stlink_resetsys(bmp_info_t *info)
 
 int stlink_init(bmp_info_t *info)
 {
-	usb_link_t *sl = calloc(1, sizeof(usb_link_t));
+	usb_link_s *sl = calloc(1, sizeof(usb_link_s));
 	if (!sl)
 		return -1;
 	info->usb_link = sl;
@@ -898,7 +898,7 @@ static void stlink_readmem(adiv5_access_port_s *ap, void *dest, uint32_t src, si
 	DEBUG_PROBE("stlink_readmem from %" PRIx32 " to %p, len %zu\n", src, dest, len);
 }
 
-static void stlink_writemem8(usb_link_t *link, adiv5_access_port_s *ap, uint32_t addr, size_t len, uint8_t *buffer)
+static void stlink_writemem8(usb_link_s *link, adiv5_access_port_s *ap, uint32_t addr, size_t len, uint8_t *buffer)
 {
 	while (len) {
 		size_t length;
@@ -926,7 +926,7 @@ static void stlink_writemem8(usb_link_t *link, adiv5_access_port_s *ap, uint32_t
 	}
 }
 
-static void stlink_writemem16(usb_link_t *link, adiv5_access_port_s *ap, uint32_t addr, size_t len, uint16_t *buffer)
+static void stlink_writemem16(usb_link_s *link, adiv5_access_port_s *ap, uint32_t addr, size_t len, uint16_t *buffer)
 {
 	uint8_t cmd[16];
 	memset(cmd, 0, sizeof(cmd));
@@ -1012,7 +1012,7 @@ static void stlink_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const
 {
 	if (len == 0)
 		return;
-	usb_link_t *link = info.usb_link;
+	usb_link_s *link = info.usb_link;
 	switch (align) {
 	case ALIGN_BYTE:
 		stlink_writemem8(link, ap, dest, len, (uint8_t *)src);
