@@ -72,7 +72,7 @@ static void lpc11xx_add_flash(target *t, const uint32_t addr, const size_t len, 
 	lf->reserved_pages = reserved_pages;
 }
 
-bool lpc11xx_probe(target *t)
+static bool lpc11xx_detect(target *const t)
 {
 	/*
 	 * Read the device ID register
@@ -84,7 +84,7 @@ bool lpc11xx_probe(target *t)
 	 *   2) the LPC11U3x series, see UM10462 Rev.5.5 §3.1
 	 * But see the comment for the LPC8xx series below.
 	 */
-	uint32_t device_id = target_mem_read32(t, LPC11XX_DEVICE_ID);
+	const uint32_t device_id = target_mem_read32(t, LPC11XX_DEVICE_ID);
 
 	switch (device_id) {
 	case 0x0A07102B: /* LPC1110 - 4K Flash 1K SRAM */
@@ -161,9 +161,14 @@ bool lpc11xx_probe(target *t)
 		target_add_commands(t, lpc11xx_cmd_list, "LPC8N04");
 		return true;
 	}
-	if ((t->designer_code != JEP106_MANUFACTURER_SPECULAR) && device_id) {
+
+	if (device_id && t->designer_code != JEP106_MANUFACTURER_SPECULAR)
 		DEBUG_INFO("LPC11xx: Unknown Device ID 0x%08" PRIx32 "\n", device_id);
-	}
+	return false;
+}
+
+static bool lpc8xx_detect(target *const t)
+{
 	/*
 	 * For LPC802, see UM11045 Rev. 1.4 §6.6.29 Table 84
 	 * For LPC804, see UM11065 Rev. 1.0 §6.6.31 Table 87
@@ -176,7 +181,8 @@ bool lpc11xx_probe(target *t)
 	 * for the LPC8xx series is also valid for the LPC11xx "XL" and the
 	 * LPC11U3x variants.
 	 */
-	device_id = target_mem_read32(t, LPC8XX_DEVICE_ID);
+	const uint32_t device_id = target_mem_read32(t, LPC8XX_DEVICE_ID);
+
 	switch (device_id) {
 	case 0x00008021: /* LPC802M001JDH20 - 16K Flash 2K SRAM */
 	case 0x00008022: /* LPC802M011JDH20 */
@@ -276,11 +282,15 @@ bool lpc11xx_probe(target *t)
 		target_add_commands(t, lpc11xx_cmd_list, "LPC11xx-XL");
 		return true;
 	}
-	if (device_id) {
-		DEBUG_INFO("LPC8xx: Unknown Device ID 0x%08" PRIx32 "\n", device_id);
-	}
 
+	if (device_id)
+		DEBUG_INFO("LPC8xx: Unknown Device ID 0x%08" PRIx32 "\n", device_id);
 	return false;
+}
+
+bool lpc11xx_probe(target *t)
+{
+	return lpc11xx_detect(t) || lpc8xx_detect(t);
 }
 
 static bool lpc11xx_read_uid(target *t, int argc, const char **argv)
