@@ -234,9 +234,10 @@ typedef enum align {
 } align_e;
 
 typedef struct adiv5_access_port adiv5_access_port_s;
+typedef struct adiv5_debug_port adiv5_debug_port_s;
 
 /* Try to keep this somewhat absract for later adding SW-DP */
-typedef struct adiv5_debug_port {
+struct adiv5_debug_port {
 	int refcnt;
 
 	void (*seq_out)(uint32_t tms_states, size_t clock_cycles);
@@ -244,11 +245,11 @@ typedef struct adiv5_debug_port {
 	uint32_t (*seq_in)(size_t clock_cycles);
 	bool (*seq_in_parity)(uint32_t *ret, size_t clock_cycles);
 	/* dp_low_write returns true if no OK resonse, but ignores errors */
-	bool (*dp_low_write)(struct adiv5_debug_port *dp, uint16_t addr, const uint32_t data);
-	uint32_t (*dp_read)(struct adiv5_debug_port *dp, uint16_t addr);
-	uint32_t (*error)(struct adiv5_debug_port *dp);
-	uint32_t (*low_access)(struct adiv5_debug_port *dp, uint8_t RnW, uint16_t addr, uint32_t value);
-	void (*abort)(struct adiv5_debug_port *dp, uint32_t abort);
+	bool (*dp_low_write)(adiv5_debug_port_s *dp, uint16_t addr, const uint32_t data);
+	uint32_t (*dp_read)(adiv5_debug_port_s *dp, uint16_t addr);
+	uint32_t (*error)(adiv5_debug_port_s *dp);
+	uint32_t (*low_access)(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value);
+	void (*abort)(adiv5_debug_port_s *dp, uint32_t abort);
 
 #if PC_HOSTED == 1
 	bmp_type_t dp_bmp_type;
@@ -283,7 +284,7 @@ typedef struct adiv5_debug_port {
 	/* TARGETID designer and partno, present on DPv2 */
 	uint16_t target_designer_code;
 	uint16_t target_partno;
-} adiv5_debug_port_s;
+};
 
 struct adiv5_access_port {
 	int refcnt;
