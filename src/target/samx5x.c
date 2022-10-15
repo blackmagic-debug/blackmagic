@@ -338,7 +338,7 @@ struct samx5x_priv_s {
 
 bool samx5x_probe(target *t)
 {
-	ADIv5_AP_t *ap = cortexm_ap(t);
+	adiv5_access_port_s *ap = cortexm_ap(t);
 	uint32_t cid = adiv5_ap_read_pidr(ap, SAMX5X_DSU_CID);
 	uint32_t pid = adiv5_ap_read_pidr(ap, SAMX5X_DSU_PID);
 

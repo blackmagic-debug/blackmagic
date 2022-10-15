@@ -930,7 +930,7 @@ struct efm32_aap_priv_s {
 	char aap_driver_string[42];
 };
 
-bool efm32_aap_probe(ADIv5_AP_t *ap)
+bool efm32_aap_probe(adiv5_access_port_s *ap)
 {
 	if ((ap->idr & EFM32_APP_IDR_MASK) == EFM32_AAP_IDR) {
 		/* It's an EFM32 AAP! */
@@ -966,7 +966,7 @@ bool efm32_aap_probe(ADIv5_AP_t *ap)
 
 static bool efm32_aap_mass_erase(target *t)
 {
-	ADIv5_AP_t *ap = t->priv;
+	adiv5_access_port_s *ap = t->priv;
 	uint32_t status;
 
 	/* Read status */

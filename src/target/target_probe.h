@@ -28,14 +28,14 @@
  * Actual functions implemented in their respective drivers.
  */
 
-bool cortexa_probe(ADIv5_AP_t *apb, uint32_t debug_base);
+bool cortexa_probe(adiv5_access_port_s *apb, uint32_t debug_base);
 
-bool cortexm_probe(ADIv5_AP_t *ap);
+bool cortexm_probe(adiv5_access_port_s *ap);
 
-bool kinetis_mdm_probe(ADIv5_AP_t *ap);
-bool nrf51_mdm_probe(ADIv5_AP_t *ap);
-bool efm32_aap_probe(ADIv5_AP_t *ap);
-bool rp_rescue_probe(ADIv5_AP_t *ap);
+bool kinetis_mdm_probe(adiv5_access_port_s *ap);
+bool nrf51_mdm_probe(adiv5_access_port_s *ap);
+bool efm32_aap_probe(adiv5_access_port_s *ap);
+bool rp_rescue_probe(adiv5_access_port_s *ap);
 
 bool ch32f1_probe(target *t); // will catch all the clones
 bool at32fxx_probe(target *t); // STM32 clones from Artery

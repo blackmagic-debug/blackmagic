@@ -531,7 +531,7 @@ enum target_halt_reason mdm_halt_poll(target *t, const target_addr_t *const watc
 	return TARGET_HALT_REQUEST;
 }
 
-bool kinetis_mdm_probe(ADIv5_AP_t *ap)
+bool kinetis_mdm_probe(adiv5_access_port_s *ap)
 {
 	switch (ap->idr) {
 	case KINETIS_MDM_IDR_KZ03: /* Also valid for KE04, no way to check! */
@@ -572,7 +572,7 @@ static bool kinetis_mdm_cmd_ke04_mode(target *t, int argc, const char **argv)
 
 static bool kinetis_mdm_mass_erase(target *t)
 {
-	ADIv5_AP_t *ap = t->priv;
+	adiv5_access_port_s *ap = t->priv;
 
 	/* Keep the MCU in reset as stated in KL25PxxM48SF0RM */
 	if (t->ke04_mode)

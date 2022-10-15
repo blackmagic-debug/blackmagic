@@ -110,7 +110,7 @@ static int cortexm_hostio_request(target *t);
 static uint32_t time0_sec = UINT32_MAX; /* sys_clock time origin */
 
 struct cortexm_priv {
-	ADIv5_AP_t *ap;
+	adiv5_access_port_s *ap;
 	bool stepping;
 	bool on_bkpt;
 	/* Watchpoint unit status */
@@ -439,7 +439,7 @@ static size_t create_tdesc_cortex_mf(char *buffer, size_t max_len)
 	return (size_t)total;
 }
 
-ADIv5_AP_t *cortexm_ap(target *t)
+adiv5_access_port_s *cortexm_ap(target *t)
 {
 	return ((struct cortexm_priv *)t->priv)->ap;
 }
@@ -483,7 +483,7 @@ static void cortexm_mem_write(target *t, target_addr_t dest, const void *src, si
 
 static bool cortexm_check_error(target *t)
 {
-	ADIv5_AP_t *ap = cortexm_ap(t);
+	adiv5_access_port_s *ap = cortexm_ap(t);
 	return adiv5_dp_error(ap->dp) != 0;
 }
 
@@ -493,7 +493,7 @@ static void cortexm_priv_free(void *priv)
 	free(priv);
 }
 
-static void cortexm_read_cpuid(target *const t, const ADIv5_AP_t *const ap)
+static void cortexm_read_cpuid(target *const t, const adiv5_access_port_s *const ap)
 {
 	/* The CPUID register is defined in the ARMv7-M and ARMv8-M
 	 * architecture manuals. The PARTNO field is implementation defined,
@@ -535,7 +535,7 @@ static void cortexm_read_cpuid(target *const t, const ADIv5_AP_t *const ap)
 		(t->cpuid & CPUID_REVISION_MASK) >> 20U, t->cpuid & CPUID_PATCH_MASK);
 }
 
-bool cortexm_probe(ADIv5_AP_t *ap)
+bool cortexm_probe(adiv5_access_port_s *ap)
 {
 	target *t;
 
@@ -758,7 +758,7 @@ bool cortexm_attach(target *t)
 	} else
 		DEBUG_WARN("Cortex-M: target description already allocated before attach");
 
-	ADIv5_AP_t *ap = cortexm_ap(t);
+	adiv5_access_port_s *ap = cortexm_ap(t);
 	ap->dp->fault = 1; /* Force switch to this multi-drop device*/
 	struct cortexm_priv *priv = t->priv;
 
@@ -839,7 +839,7 @@ void cortexm_detach(target *t)
 		target_mem_write32(t, CORTEXM_DWT_FUNC(i), 0);
 
 	/* Restort DEMCR*/
-	ADIv5_AP_t *ap = cortexm_ap(t);
+	adiv5_access_port_s *ap = cortexm_ap(t);
 	target_mem_write32(t, CORTEXM_DEMCR, ap->ap_cortexm_demcr);
 	/* Disable debug */
 	target_mem_write32(t, CORTEXM_DHCSR, CORTEXM_DHCSR_DBGKEY);
@@ -855,7 +855,7 @@ enum {
 static void cortexm_regs_read(target *t, void *data)
 {
 	uint32_t *regs = data;
-	ADIv5_AP_t *ap = cortexm_ap(t);
+	adiv5_access_port_s *ap = cortexm_ap(t);
 	size_t i;
 #if PC_HOSTED == 1
 	if ((ap->dp->ap_reg_read) && (ap->dp->ap_regs_read)) {
@@ -897,7 +897,7 @@ static void cortexm_regs_read(target *t, void *data)
 static void cortexm_regs_write(target *t, const void *data)
 {
 	const uint32_t *regs = data;
-	ADIv5_AP_t *ap = cortexm_ap(t);
+	adiv5_access_port_s *ap = cortexm_ap(t);
 #if PC_HOSTED == 1
 	if (ap->dp->ap_reg_write) {
 		for (size_t z = 0; z < sizeof(regnum_cortex_m) / 4; z++) {

@@ -262,7 +262,7 @@ bool stm32f1_probe(target *t)
 		stm32f1_add_flash(t, 0x8000000, 0x20000, 0x400);
 		target_add_commands(t, stm32f1_cmd_list, "STM32 LD/MD/VL-LD/VL-MD");
 		/* Test for clone parts with Core rev 2*/
-		ADIv5_AP_t *ap = cortexm_ap(t);
+		adiv5_access_port_s *ap = cortexm_ap(t);
 		if ((ap->idr >> 28) > 1) {
 			t->driver = "STM32F1 (clone) medium density";
 			DEBUG_WARN("Detected clone STM32F1\n");

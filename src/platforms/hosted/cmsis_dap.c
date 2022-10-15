@@ -382,7 +382,7 @@ int dbg_dap_cmd(uint8_t *data, int size, int rsize)
 #define ALIGNOF(x) (((x) & 3) == 0 ? ALIGN_WORD :					\
                     (((x) & 1) == 0 ? ALIGN_HALFWORD : ALIGN_BYTE))
 
-static void dap_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
+static void dap_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t len)
 {
 	if (len == 0)
 		return;
@@ -420,7 +420,7 @@ static void dap_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
     DEBUG_WIRE("memread res last data %08" PRIx32 "\n", ((uint32_t*)dest)[-1]);
 }
 
-static void dap_mem_write_sized( ADIv5_AP_t *ap, uint32_t dest, const void *src, size_t len, enum align align)
+static void dap_mem_write_sized( adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, enum align align)
 {
 	if (len == 0)
 		return;

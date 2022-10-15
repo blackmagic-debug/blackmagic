@@ -290,7 +290,7 @@ static bool nrf51_cmd_protect_flash(target *t, int argc, const char **argv)
 		if(target_check_error(t))
 			return false;
 	}
-	
+
 	target_mem_write32(t, NRF51_APPROTECT, 0xFFFFFF00);
 
 	/* Poll for NVMC_READY */
@@ -436,7 +436,7 @@ static bool nrf51_mdm_mass_erase(target *t);
 #define MDM_CONTROL ADIV5_AP_REG(0x04)
 #define MDM_PROT_EN  ADIV5_AP_REG(0x0C)
 
-bool nrf51_mdm_probe(ADIv5_AP_t *ap)
+bool nrf51_mdm_probe(adiv5_access_port_s *ap)
 {
 	switch(ap->idr) {
 	case NRF52_MDM_IDR:
@@ -468,7 +468,7 @@ bool nrf51_mdm_probe(ADIv5_AP_t *ap)
 
 static bool nrf51_mdm_mass_erase(target *t)
 {
-	ADIv5_AP_t *ap = t->priv;
+	adiv5_access_port_s *ap = t->priv;
 
 	uint32_t status = adiv5_ap_read(ap, MDM_STATUS);
 	adiv5_dp_write(ap->dp, MDM_POWER_EN, 0x50000000);

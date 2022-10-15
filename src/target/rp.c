@@ -858,7 +858,7 @@ static bool rp_cmd_reset_usb_boot(target *t, int argc, const char **argv)
 
 static bool rp_rescue_do_reset(target *t)
 {
-	ADIv5_AP_t *ap = (ADIv5_AP_t *)t->priv;
+	adiv5_access_port_s *ap = (adiv5_access_port_s *)t->priv;
 	uint32_t ctrlstat = ap->dp->low_access(ap->dp, ADIV5_LOW_READ, ADIV5_DP_CTRLSTAT, 0);
 	ap->dp->low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_DP_CTRLSTAT, ctrlstat | ADIV5_DP_CTRLSTAT_CDBGPWRUPREQ);
 	platform_timeout timeout;
@@ -881,7 +881,7 @@ static bool rp_rescue_do_reset(target *t)
  *
  * Attach to this DP will do the reset, but will fail to attach!
  */
-bool rp_rescue_probe(ADIv5_AP_t *ap)
+bool rp_rescue_probe(adiv5_access_port_s *ap)
 {
 	target *t = target_new();
 	if (!t) {
