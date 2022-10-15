@@ -74,13 +74,14 @@ static void lpc11xx_add_flash(target *t, const uint32_t addr, const size_t len, 
 
 bool lpc11xx_probe(target *t)
 {
-	/* read the device ID register */
-	/* For LPC11xx & LPC11Cxx see UM10398 Rev. 12.4 Chapter 26.5.11 Table 387
-	 * For LPC11Uxx see UM10462 Rev. 5.5 Chapter 20.13.11 Table 377
-	 * Nota Bene: the DEVICE_ID register at address 0x400483F4 is not valid
-	 * for:
-	 *   1) the LPC11xx & LPC11Cxx "XL" series, see UM10398 Rev.12.4 Chapter 3.1
-	 *   2) the LPC11U3x series, see UM10462 Rev.5.5 Chapter 3.1
+	/*
+	 * Read the device ID register
+	 *
+	 * For LPC11xx & LPC11Cxx see UM10398 Rev. 12.4 §26.5.11 Table 387
+	 * For LPC11Uxx see UM10462 Rev. 5.5 §20.13.11 Table 377
+	 * Nota Bene: the DEVICE_ID register at address 0x400483F4 is not valid for:
+	 *   1) the LPC11xx & LPC11Cxx "XL" series, see UM10398 Rev.12.4 §3.1
+	 *   2) the LPC11U3x series, see UM10462 Rev.5.5 §3.1
 	 * But see the comment for the LPC8xx series below.
 	 */
 	uint32_t device_id = target_mem_read32(t, LPC11XX_DEVICE_ID);
@@ -110,7 +111,7 @@ bool lpc11xx_probe(target *t)
 	case 0x2540902B: /* LPC1114/201/202 - 32K Flash 4K SRAM */
 	case 0x0444102B: /* LPC1114/301 - 32K Flash 8K SRAM */
 	case 0x2540102B: /* LPC1114/301/302 & LPC11D14/302 - 32K Flash 8K SRAM */
-	case 0x00050080: /* LPC1115/303 - 64K Flash 8K SRAM (redundant? see UM10398, XL has Device ID at different address) */
+	case 0x00050080: /* LPC1115/303 - 64K Flash 8K SRAM (Redundant? see UM10398, XL has Device ID at different address) */
 	case 0x1421102B: /* LPC11c12/301 - 16K Flash 8K SRAM */
 	case 0x1440102B: /* LPC11c14/301 - 32K Flash 8K SRAM */
 	case 0x1431102B: /* LPC11c22/301 - 16K Flash 8K SRAM */
@@ -137,7 +138,7 @@ bool lpc11xx_probe(target *t)
 		target_add_ram(t, 0x10000000, 0x1000);
 		lpc11xx_add_flash(t, 0x00000000, 0x10000, 0x1000, IAP_ENTRY_MOST, 0);
 		return true;
-	case 0x1000002b: // FX LPC11U6 32 kB SRAM/256 kB flash (max)
+	case 0x1000002b: /* FX LPC11U6 32 kB SRAM/256 kB flash (max) */
 		t->driver = "LPC11U6";
 		target_add_ram(t, 0x10000000, 0x8000);
 		lpc11xx_add_flash(t, 0x00000000, 0x40000, 0x1000, IAP_ENTRY_MOST, 0);
@@ -148,12 +149,14 @@ bool lpc11xx_probe(target *t)
 		target_add_ram(t, 0x10000000, 0x2000);
 		lpc11xx_add_flash(t, 0x00000000, 0x8000, 0x1000, IAP_ENTRY_MOST, 0);
 		return true;
-	case 0x00008A04: /* LPC8N04 (see UM11074 Rev.1.3 section 4.5.19) */
+	case 0x00008A04: /* LPC8N04 (see UM11074 Rev.1.3 §4.5.19) */
 		t->driver = "LPC8N04";
 		target_add_ram(t, 0x10000000, 0x2000);
-		/* UM11074/ Flash controller/15.2: The two topmost sectors
+		/*
+		 * UM11074/ Flash controller/15.2: The two topmost sectors
 		 * contain the initialization code and IAP firmware.
-		 * Do not touch them! */
+		 * Do not touch them!
+		 */
 		lpc11xx_add_flash(t, 0x00000000, 0x7800, 0x400, IAP_ENTRY_MOST, 0);
 		target_add_commands(t, lpc11xx_cmd_list, "LPC8N04");
 		return true;
@@ -161,12 +164,13 @@ bool lpc11xx_probe(target *t)
 	if ((t->designer_code != JEP106_MANUFACTURER_SPECULAR) && device_id) {
 		DEBUG_INFO("LPC11xx: Unknown Device ID 0x%08" PRIx32 "\n", device_id);
 	}
-	/* For LPC802, see UM11045 Rev. 1.4 Chapter 6.6.29 Table 84
-	 * For LPC804, see UM11065 Rev. 1.0 Chapter 6.6.31 Table 87
-	 * For LPC81x, see UM10601 Rev. 1.6 Chapter 4.6.33 Table 50
-	 * For LPC82x, see UM10800 Rev. 1.2 Chapter 5.6.34 Table 55
-	 * For LPC83x, see UM11021 Rev. 1.1 Chapter 5.6.34 Table 53
-	 * For LPC84x, see UM11029 Rev. 1.4 Chapter 8.6.49 Table 174
+	/*
+	 * For LPC802, see UM11045 Rev. 1.4 §6.6.29 Table 84
+	 * For LPC804, see UM11065 Rev. 1.0 §6.6.31 Table 87
+	 * For LPC81x, see UM10601 Rev. 1.6 §4.6.33 Table 50
+	 * For LPC82x, see UM10800 Rev. 1.2 §5.6.34 Table 55
+	 * For LPC83x, see UM11021 Rev. 1.1 §5.6.34 Table 53
+	 * For LPC84x, see UM11029 Rev. 1.4 §8.6.49 Table 174
 	 *
 	 * Not documented, but the DEVICE_ID register at address 0x400483F8
 	 * for the LPC8xx series is also valid for the LPC11xx "XL" and the
