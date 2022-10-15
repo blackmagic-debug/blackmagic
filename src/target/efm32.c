@@ -17,7 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file implements EFM32 target specific functions for
+/*
+ * This file implements EFM32 target specific functions for
  * detecting the device, providing the memory map and Flash memory
  * programming.
  *
@@ -27,7 +28,6 @@
  * Tested with:
  * * EZR32LG230 (EZR Leopard Gecko M3)
  * * EFR32BG13P532F512GM32 (EFR Blue Gecko)
- * *
  */
 
 /* Refer to the family reference manuals:
@@ -58,9 +58,9 @@ static bool efm32_cmd_efm_info(target *t, int argc, const char **argv);
 static bool efm32_cmd_bootloader(target *t, int argc, const char **argv);
 
 const struct command_s efm32_cmd_list[] = {
-	{"serial", (cmd_handler)efm32_cmd_serial, "Prints unique number"},
-	{"efm_info", (cmd_handler)efm32_cmd_efm_info, "Prints information about the device"},
-	{"bootloader", (cmd_handler)efm32_cmd_bootloader, "Bootloader status in CLW0"},
+	{"serial", efm32_cmd_serial, "Prints unique number"},
+	{"efm_info", efm32_cmd_efm_info, "Prints information about the device"},
+	{"bootloader", efm32_cmd_bootloader, "Bootloader status in CLW0"},
 	{NULL, NULL, NULL},
 };
 
@@ -334,19 +334,19 @@ efm32_device_t const efm32_devices[] = {
 };
 
 /* miscchip */
-typedef struct efm32_v2_di_miscchip_t {
+typedef struct efm32_v2_di_miscchip {
 	uint8_t pincount;
 	uint8_t pkgtype;
 	uint8_t tempgrade;
-} efm32_v2_di_miscchip_t;
+} efm32_v2_di_miscchip_s;
 
 /* pkgtype */
-typedef struct efm32_v2_di_pkgtype_t {
+typedef struct efm32_v2_di_pkgtype {
 	uint8_t pkgtype;
 	char *name;
-} efm32_v2_di_pkgtype_t;
+} efm32_v2_di_pkgtype_s;
 
-efm32_v2_di_pkgtype_t const efm32_v2_di_pkgtypes[] = {
+efm32_v2_di_pkgtype_s const efm32_v2_di_pkgtypes[] = {
 	{74, "WLCSP"}, /* WLCSP package */
 	{76, "BGA"},   /* BGA package */
 	{77, "QFN"},   /* QFN package */
@@ -354,12 +354,12 @@ efm32_v2_di_pkgtype_t const efm32_v2_di_pkgtypes[] = {
 };
 
 /* tempgrade */
-typedef struct efm32_v2_di_tempgrade_t {
+typedef struct efm32_v2_di_tempgrade {
 	uint8_t tempgrade;
 	char *name;
-} efm32_v2_di_tempgrade_t;
+} efm32_v2_di_tempgrade_s;
 
-efm32_v2_di_tempgrade_t const efm32_v2_di_tempgrades[] = {
+efm32_v2_di_tempgrade_s const efm32_v2_di_tempgrades[] = {
 	{0, "-40 to 85degC"},
 	{1, "-40 to 125degC"},
 	{2, "-40 to 105degC"},
@@ -473,11 +473,11 @@ static uint16_t efm32_read_radio_part_number(target *t, uint8_t di_version)
 }
 
 /* Reads the EFM32 Misc. Chip definitions */
-static efm32_v2_di_miscchip_t efm32_v2_read_miscchip(target *t, uint8_t di_version)
+static efm32_v2_di_miscchip_s efm32_v2_read_miscchip(target *t, uint8_t di_version)
 {
 	uint32_t meminfo;
-	efm32_v2_di_miscchip_t miscchip;
-	memset(&miscchip, 0, sizeof(efm32_v2_di_miscchip_t) / sizeof(char));
+	efm32_v2_di_miscchip_s miscchip;
+	memset(&miscchip, 0, sizeof(efm32_v2_di_miscchip_s) / sizeof(char));
 
 	switch (di_version) {
 	case 2:
@@ -796,16 +796,16 @@ static bool efm32_cmd_efm_info(target *t, int argc, const char **argv)
 	tc_printf(t, "\n");
 
 	if (di_version == 2) {
-		efm32_v2_di_miscchip_t miscchip = efm32_v2_read_miscchip(t, di_version);
-		efm32_v2_di_pkgtype_t const *pkgtype = NULL;
-		efm32_v2_di_tempgrade_t const *tempgrade;
+		efm32_v2_di_miscchip_s miscchip = efm32_v2_read_miscchip(t, di_version);
+		efm32_v2_di_pkgtype_s const *pkgtype = NULL;
+		efm32_v2_di_tempgrade_s const *tempgrade;
 
-		for (size_t i = 0; i < (sizeof(efm32_v2_di_pkgtypes) / sizeof(efm32_v2_di_pkgtype_t)); i++) {
+		for (size_t i = 0; i < (sizeof(efm32_v2_di_pkgtypes) / sizeof(efm32_v2_di_pkgtype_s)); i++) {
 			if (efm32_v2_di_pkgtypes[i].pkgtype == miscchip.pkgtype) {
 				pkgtype = &efm32_v2_di_pkgtypes[i];
 			}
 		}
-		for (size_t i = 0; i < (sizeof(efm32_v2_di_tempgrades) / sizeof(efm32_v2_di_tempgrade_t)); i++) {
+		for (size_t i = 0; i < (sizeof(efm32_v2_di_tempgrades) / sizeof(efm32_v2_di_tempgrade_s)); i++) {
 			if (efm32_v2_di_tempgrades[i].tempgrade == miscchip.tempgrade) {
 				tempgrade = &efm32_v2_di_tempgrades[i];
 			}
