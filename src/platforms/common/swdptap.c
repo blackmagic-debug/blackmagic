@@ -176,7 +176,7 @@ static void swdptap_seq_out_parity(const uint32_t tms_states, const size_t clock
 	gpio_clear(SWCLK_PORT, SWCLK_PIN);
 }
 
-int swdptap_init(ADIv5_DP_t *dp)
+int swdptap_init(adiv5_debug_port_s *dp)
 {
 	dp->seq_in = swdptap_seq_in;
 	dp->seq_in_parity = swdptap_seq_in_parity;

@@ -37,11 +37,11 @@
 #define IR_DPACC 0xAU
 #define IR_APACC 0xBU
 
-static uint32_t adiv5_jtagdp_error(ADIv5_DP_t *dp);
+static uint32_t adiv5_jtagdp_error(adiv5_debug_port_s *dp);
 
 void adiv5_jtag_dp_handler(uint8_t jd_index)
 {
-	ADIv5_DP_t *dp = calloc(1, sizeof(*dp));
+	adiv5_debug_port_s *dp = calloc(1, sizeof(*dp));
 	if (!dp) { /* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return;
@@ -59,19 +59,19 @@ void adiv5_jtag_dp_handler(uint8_t jd_index)
 	adiv5_dp_init(dp, jtag_devs[jd_index].jd_idcode);
 }
 
-uint32_t fw_adiv5_jtagdp_read(ADIv5_DP_t *dp, uint16_t addr)
+uint32_t fw_adiv5_jtagdp_read(adiv5_debug_port_s *dp, uint16_t addr)
 {
 	fw_adiv5_jtagdp_low_access(dp, ADIV5_LOW_READ, addr, 0);
 	return fw_adiv5_jtagdp_low_access(dp, ADIV5_LOW_READ, ADIV5_DP_RDBUFF, 0);
 }
 
-static uint32_t adiv5_jtagdp_error(ADIv5_DP_t *dp)
+static uint32_t adiv5_jtagdp_error(adiv5_debug_port_s *dp)
 {
 	fw_adiv5_jtagdp_low_access(dp, ADIV5_LOW_READ, ADIV5_DP_CTRLSTAT, 0);
 	return fw_adiv5_jtagdp_low_access(dp, ADIV5_LOW_WRITE, ADIV5_DP_CTRLSTAT, 0xf0000032U) & 0x32U;
 }
 
-uint32_t fw_adiv5_jtagdp_low_access(ADIv5_DP_t *dp, uint8_t RnW, uint16_t addr, uint32_t value)
+uint32_t fw_adiv5_jtagdp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value)
 {
 	const bool APnDP = addr & ADIV5_APnDP;
 	addr &= 0xff;
@@ -101,7 +101,7 @@ uint32_t fw_adiv5_jtagdp_low_access(ADIv5_DP_t *dp, uint8_t RnW, uint16_t addr, 
 	return (uint32_t)(response >> 3);
 }
 
-void adiv5_jtagdp_abort(ADIv5_DP_t *dp, uint32_t abort)
+void adiv5_jtagdp_abort(adiv5_debug_port_s *dp, uint32_t abort)
 {
 	uint64_t request = (uint64_t)abort << 3;
 	jtag_dev_write_ir(dp->dp_jd_index, IR_ABORT);
