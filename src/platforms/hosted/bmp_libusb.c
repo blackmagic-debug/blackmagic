@@ -358,7 +358,7 @@ static void LIBUSB_CALL on_trans_done(struct libusb_transfer *trans)
 	ctx->flags |= TRANS_FLAGS_IS_DONE;
 }
 
-static int submit_wait(usb_link_t *link, struct libusb_transfer *trans)
+static int submit_wait(usb_link_s *link, struct libusb_transfer *trans)
 {
 	struct trans_ctx trans_ctx;
 	enum libusb_error error;
@@ -399,7 +399,7 @@ static int submit_wait(usb_link_t *link, struct libusb_transfer *trans)
 }
 
 /* One USB transaction */
-int send_recv(usb_link_t *link, uint8_t *txbuf, size_t txsize, uint8_t *rxbuf, size_t rxsize)
+int send_recv(usb_link_s *link, uint8_t *txbuf, size_t txsize, uint8_t *rxbuf, size_t rxsize)
 {
 	int res = 0;
 	if (txsize) {
