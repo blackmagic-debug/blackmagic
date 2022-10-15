@@ -64,7 +64,7 @@ static uint32_t read_gpreg(target *t, uint8_t regno);
 
 struct cortexa_priv {
 	uint32_t base;
-	ADIv5_AP_t *apb;
+	adiv5_access_port_s *apb;
 	struct {
 		uint32_t r[16];
 		uint32_t cpsr;
@@ -315,7 +315,7 @@ static size_t create_tdesc_cortex_a(char *buffer, size_t max_len)
 static void apb_write(target *t, uint16_t reg, uint32_t val)
 {
 	struct cortexa_priv *priv = t->priv;
-	ADIv5_AP_t *ap = priv->apb;
+	adiv5_access_port_s *ap = priv->apb;
 	uint32_t addr = priv->base + 4 * reg;
 	adiv5_ap_write(ap, ADIV5_AP_TAR, addr);
 	adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DRW, val);
@@ -324,7 +324,7 @@ static void apb_write(target *t, uint16_t reg, uint32_t val)
 static uint32_t apb_read(target *t, uint16_t reg)
 {
 	struct cortexa_priv *priv = t->priv;
-	ADIv5_AP_t *ap = priv->apb;
+	adiv5_access_port_s *ap = priv->apb;
 	uint32_t addr = priv->base + 4 * reg;
 	adiv5_ap_write(ap, ADIV5_AP_TAR, addr);
 	adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_AP_DRW, 0);
@@ -446,7 +446,7 @@ static bool cortexa_check_error(target *t)
 	return err;
 }
 
-bool cortexa_probe(ADIv5_AP_t *apb, uint32_t debug_base)
+bool cortexa_probe(adiv5_access_port_s *apb, uint32_t debug_base)
 {
 	target *t;
 

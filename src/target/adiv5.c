@@ -276,7 +276,7 @@ static const struct {
 #define SAMX5X_DSU_CTRLSTAT 0x41002100U
 #define SAMX5X_STATUSB_PROT (1U << 16U)
 
-void adiv5_ap_ref(ADIv5_AP_t *ap)
+void adiv5_ap_ref(adiv5_access_port_s *ap)
 {
 	if (ap->refcnt == 0)
 		ap->dp->refcnt++;
@@ -289,7 +289,7 @@ static void adiv5_dp_unref(adiv5_debug_port_s *dp)
 		free(dp);
 }
 
-void adiv5_ap_unref(ADIv5_AP_t *ap)
+void adiv5_ap_unref(adiv5_access_port_s *ap)
 {
 	if (--(ap->refcnt) == 0) {
 		adiv5_dp_unref(ap->dp);
@@ -297,14 +297,14 @@ void adiv5_ap_unref(ADIv5_AP_t *ap)
 	}
 }
 
-static uint32_t adiv5_mem_read32(ADIv5_AP_t *ap, uint32_t addr)
+static uint32_t adiv5_mem_read32(adiv5_access_port_s *ap, uint32_t addr)
 {
 	uint32_t ret;
 	adiv5_mem_read(ap, &ret, addr, sizeof(ret));
 	return ret;
 }
 
-static uint32_t adiv5_ap_read_id(ADIv5_AP_t *ap, uint32_t addr)
+static uint32_t adiv5_ap_read_id(adiv5_access_port_s *ap, uint32_t addr)
 {
 	uint32_t res = 0;
 	uint8_t data[16];
@@ -314,7 +314,7 @@ static uint32_t adiv5_ap_read_id(ADIv5_AP_t *ap, uint32_t addr)
 	return res;
 }
 
-uint64_t adiv5_ap_read_pidr(ADIv5_AP_t *ap, uint32_t addr)
+uint64_t adiv5_ap_read_pidr(adiv5_access_port_s *ap, uint32_t addr)
 {
 	uint64_t pidr = adiv5_ap_read_id(ap, addr + PIDR4_OFFSET);
 	pidr = pidr << 32 | adiv5_ap_read_id(ap, addr + PIDR0_OFFSET);
@@ -327,7 +327,7 @@ uint64_t adiv5_ap_read_pidr(ADIv5_AP_t *ap, uint32_t addr)
  * Repeat the write command with the highest possible value
  * of the trannsaction counter, if not on MINDP
  */
-static uint32_t cortexm_initial_halt(ADIv5_AP_t *ap)
+static uint32_t cortexm_initial_halt(adiv5_access_port_s *ap)
 {
 	const uint32_t ctrlstat = adiv5_dp_read(ap->dp, ADIV5_DP_CTRLSTAT);
 
@@ -412,7 +412,7 @@ static uint32_t cortexm_initial_halt(ADIv5_AP_t *ap)
  * Keep a copy of DEMCR at startup to restore with exit, to
  * not interrupt tracing initiated by the CPU.
  */
-static bool cortexm_prepare(ADIv5_AP_t *ap)
+static bool cortexm_prepare(adiv5_access_port_s *ap)
 {
 #if ((PC_HOSTED == 1) || (ENABLE_DEBUG == 1))
 	uint32_t start_time = platform_time_ms();
@@ -444,7 +444,7 @@ static bool cortexm_prepare(ADIv5_AP_t *ap)
 }
 
 /* Return true if we find a debuggable device.*/
-static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, const size_t recursion, const uint32_t num_entry)
+static void adiv5_component_probe(adiv5_access_port_s *ap, uint32_t addr, const size_t recursion, const uint32_t num_entry)
 {
 	(void)num_entry;
 
@@ -622,9 +622,9 @@ static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, const size_t re
 	}
 }
 
-ADIv5_AP_t *adiv5_new_ap(adiv5_debug_port_s *dp, uint8_t apsel)
+adiv5_access_port_s *adiv5_new_ap(adiv5_debug_port_s *dp, uint8_t apsel)
 {
-	ADIv5_AP_t *ap, tmpap;
+	adiv5_access_port_s *ap, tmpap;
 	/* Assume valid and try to read IDR */
 	memset(&tmpap, 0, sizeof(tmpap));
 	tmpap.dp = dp;
@@ -671,7 +671,7 @@ ADIv5_AP_t *adiv5_new_ap(adiv5_debug_port_s *dp, uint8_t apsel)
 /* No real AP on RP2040. Special setup.*/
 static void rp_rescue_setup(adiv5_debug_port_s *dp)
 {
-	ADIv5_AP_t *ap = calloc(1, sizeof(*ap));
+	adiv5_access_port_s *ap = calloc(1, sizeof(*ap));
 	if (!ap) { /* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return;
@@ -833,7 +833,7 @@ void adiv5_dp_init(adiv5_debug_port_s *dp, const uint32_t idcode)
 	size_t invalid_aps = 0;
 	dp->refcnt++;
 	for (size_t i = 0; i < 256 && invalid_aps < 8; ++i) {
-		ADIv5_AP_t *ap = NULL;
+		adiv5_access_port_s *ap = NULL;
 #if PC_HOSTED == 1
 		if ((!dp->ap_setup) || dp->ap_setup(i))
 			ap = adiv5_new_ap(dp, i);
@@ -885,7 +885,7 @@ void adiv5_dp_init(adiv5_debug_port_s *dp, const uint32_t idcode)
 #define ALIGNOF(x) (((x)&3) == 0 ? ALIGN_WORD : (((x)&1) == 0 ? ALIGN_HALFWORD : ALIGN_BYTE))
 
 /* Program the CSW and TAR for sequencial access at a given width */
-static void ap_mem_access_setup(ADIv5_AP_t *ap, uint32_t addr, enum align align)
+static void ap_mem_access_setup(adiv5_access_port_s *ap, uint32_t addr, enum align align)
 {
 	uint32_t csw = ap->csw | ADIV5_AP_CSW_ADDRINC_SINGLE;
 
@@ -923,7 +923,7 @@ void *extract(void *dest, uint32_t src, uint32_t val, enum align align)
 	return (uint8_t *)dest + (1 << align);
 }
 
-void firmware_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
+void firmware_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t len)
 {
 	uint32_t tmp;
 	uint32_t osrc = src;
@@ -951,7 +951,7 @@ void firmware_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
 	extract(dest, src, tmp, align);
 }
 
-void firmware_mem_write_sized(ADIv5_AP_t *ap, uint32_t dest, const void *src, size_t len, enum align align)
+void firmware_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, enum align align)
 {
 	uint32_t odest = dest;
 
@@ -986,13 +986,13 @@ void firmware_mem_write_sized(ADIv5_AP_t *ap, uint32_t dest, const void *src, si
 	adiv5_dp_read(ap->dp, ADIV5_DP_RDBUFF);
 }
 
-void firmware_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value)
+void firmware_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value)
 {
 	adiv5_dp_write(ap->dp, ADIV5_DP_SELECT, ((uint32_t)ap->apsel << 24) | (addr & 0xF0));
 	adiv5_dp_write(ap->dp, addr, value);
 }
 
-uint32_t firmware_ap_read(ADIv5_AP_t *ap, uint16_t addr)
+uint32_t firmware_ap_read(adiv5_access_port_s *ap, uint16_t addr)
 {
 	uint32_t ret;
 	adiv5_dp_write(ap->dp, ADIV5_DP_SELECT, ((uint32_t)ap->apsel << 24) | (addr & 0xF0));
@@ -1000,7 +1000,7 @@ uint32_t firmware_ap_read(ADIv5_AP_t *ap, uint16_t addr)
 	return ret;
 }
 
-void adiv5_mem_write(ADIv5_AP_t *ap, uint32_t dest, const void *src, size_t len)
+void adiv5_mem_write(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len)
 {
 	enum align align = MIN(ALIGNOF(dest), ALIGNOF(len));
 	adiv5_mem_write_sized(ap, dest, src, len, align);

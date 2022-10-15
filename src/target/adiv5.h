@@ -233,7 +233,7 @@ enum align {
 	ALIGN_DWORD = 3
 };
 
-typedef struct ADIv5_AP_s ADIv5_AP_t;
+typedef struct adiv5_access_port adiv5_access_port_s;
 
 /* Try to keep this somewhat absract for later adding SW-DP */
 typedef struct adiv5_debug_port {
@@ -254,17 +254,17 @@ typedef struct adiv5_debug_port {
 	bmp_type_t dp_bmp_type;
 	bool (*ap_setup)(int i);
 	void (*ap_cleanup)(int i);
-	void (*ap_regs_read)(ADIv5_AP_t *ap, void *data);
-	uint32_t (*ap_reg_read)(ADIv5_AP_t *ap, int num);
-	void (*ap_reg_write)(ADIv5_AP_t *ap, int num, uint32_t value);
+	void (*ap_regs_read)(adiv5_access_port_s *ap, void *data);
+	uint32_t (*ap_reg_read)(adiv5_access_port_s *ap, int num);
+	void (*ap_reg_write)(adiv5_access_port_s *ap, int num, uint32_t value);
 	void (*read_block)(uint32_t addr, uint8_t *data, int size);
 	void (*dap_write_block_sized)(uint32_t addr, uint8_t *data, int size, enum align align);
 #endif
-	uint32_t (*ap_read)(ADIv5_AP_t *ap, uint16_t addr);
-	void (*ap_write)(ADIv5_AP_t *ap, uint16_t addr, uint32_t value);
+	uint32_t (*ap_read)(adiv5_access_port_s *ap, uint16_t addr);
+	void (*ap_write)(adiv5_access_port_s *ap, uint16_t addr, uint32_t value);
 
-	void (*mem_read)(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len);
-	void (*mem_write_sized)(ADIv5_AP_t *ap, uint32_t dest, const void *src, size_t len, enum align align);
+	void (*mem_read)(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t len);
+	void (*mem_write_sized)(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, enum align align);
 	uint8_t dp_jd_index;
 	uint8_t fault;
 
@@ -285,7 +285,7 @@ typedef struct adiv5_debug_port {
 	uint16_t target_partno;
 } adiv5_debug_port_s;
 
-struct ADIv5_AP_s {
+struct adiv5_access_port {
 	int refcnt;
 
 	adiv5_debug_port_s *dp;
@@ -325,22 +325,22 @@ static inline void adiv5_dp_abort(adiv5_debug_port_s *dp, uint32_t abort)
 	return dp->abort(dp, abort);
 }
 
-static inline uint32_t adiv5_ap_read(ADIv5_AP_t *ap, uint16_t addr)
+static inline uint32_t adiv5_ap_read(adiv5_access_port_s *ap, uint16_t addr)
 {
 	return ap->dp->ap_read(ap, addr);
 }
 
-static inline void adiv5_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value)
+static inline void adiv5_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value)
 {
 	return ap->dp->ap_write(ap, addr, value);
 }
 
-static inline void adiv5_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
+static inline void adiv5_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t len)
 {
 	return ap->dp->mem_read(ap, dest, src, len);
 }
 
-static inline void adiv5_mem_write_sized(ADIv5_AP_t *ap, uint32_t dest, const void *src, size_t len, enum align align)
+static inline void adiv5_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, enum align align)
 {
 	return ap->dp->mem_write_sized(ap, dest, src, len, align);
 }
@@ -355,33 +355,33 @@ uint32_t adiv5_dp_read(adiv5_debug_port_s *dp, uint16_t addr);
 uint32_t adiv5_dp_error(adiv5_debug_port_s *dp);
 uint32_t adiv5_dp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value);
 void adiv5_dp_abort(adiv5_debug_port_s *dp, uint32_t abort);
-uint32_t adiv5_ap_read(ADIv5_AP_t *ap, uint16_t addr);
-void adiv5_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value);
-void adiv5_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len);
-void adiv5_mem_write_sized(ADIv5_AP_t *ap, uint32_t dest, const void *src, size_t len, enum align align);
+uint32_t adiv5_ap_read(adiv5_access_port_s *ap, uint16_t addr);
+void adiv5_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value);
+void adiv5_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t len);
+void adiv5_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, enum align align);
 void adiv5_dp_write(adiv5_debug_port_s *dp, uint16_t addr, uint32_t value);
 #endif
 
 void adiv5_dp_init(adiv5_debug_port_s *dp, uint32_t idcode);
 void platform_adiv5_dp_defaults(adiv5_debug_port_s *dp);
-ADIv5_AP_t *adiv5_new_ap(adiv5_debug_port_s *dp, uint8_t apsel);
+adiv5_access_port_s *adiv5_new_ap(adiv5_debug_port_s *dp, uint8_t apsel);
 void remote_jtag_dev(const jtag_dev_s *jtag_dev);
-void adiv5_ap_ref(ADIv5_AP_t *ap);
-void adiv5_ap_unref(ADIv5_AP_t *ap);
+void adiv5_ap_ref(adiv5_access_port_s *ap);
+void adiv5_ap_unref(adiv5_access_port_s *ap);
 void platform_add_jtag_dev(uint32_t dev_index, const jtag_dev_s *jtag_dev);
 
 void adiv5_jtag_dp_handler(uint8_t jd_index);
 int platform_jtag_dp_init(adiv5_debug_port_s *dp);
 int swdptap_init(adiv5_debug_port_s *dp);
 
-void adiv5_mem_write(ADIv5_AP_t *ap, uint32_t dest, const void *src, size_t len);
-uint64_t adiv5_ap_read_pidr(ADIv5_AP_t *ap, uint32_t addr);
+void adiv5_mem_write(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len);
+uint64_t adiv5_ap_read_pidr(adiv5_access_port_s *ap, uint32_t addr);
 void *extract(void *dest, uint32_t src, uint32_t val, enum align align);
 
-void firmware_mem_write_sized(ADIv5_AP_t *ap, uint32_t dest, const void *src, size_t len, enum align align);
-void firmware_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len);
-void firmware_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value);
-uint32_t firmware_ap_read(ADIv5_AP_t *ap, uint16_t addr);
+void firmware_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, enum align align);
+void firmware_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t len);
+void firmware_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value);
+uint32_t firmware_ap_read(adiv5_access_port_s *ap, uint16_t addr);
 uint32_t firmware_swdp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value);
 uint32_t fw_adiv5_jtagdp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value);
 uint32_t firmware_swdp_read(adiv5_debug_port_s *dp, uint16_t addr);

@@ -397,7 +397,7 @@ void dap_write_reg(adiv5_debug_port_s *dp, uint8_t reg, uint32_t data)
 	}
 }
 
-unsigned int dap_read_block(ADIv5_AP_t *ap, void *dest, uint32_t src,
+unsigned int dap_read_block(adiv5_access_port_s *ap, void *dest, uint32_t src,
 							size_t len, enum align align)
 {
 	uint8_t buf[1024];
@@ -432,7 +432,7 @@ unsigned int dap_read_block(ADIv5_AP_t *ap, void *dest, uint32_t src,
 	return (buf[2] > DAP_TRANSFER_WAIT) ? 1 : 0;
 }
 
-unsigned int dap_write_block(ADIv5_AP_t *ap, uint32_t dest, const void *src,
+unsigned int dap_write_block(adiv5_access_port_s *ap, uint32_t dest, const void *src,
 							 size_t len, enum align align)
 {
 	uint8_t buf[1024];
@@ -521,7 +521,7 @@ uint32_t dap_read_idcode(adiv5_debug_port_s *dp)
 	return dap_read_reg(dp, SWD_DP_R_IDCODE);
 }
 
-static uint8_t *mem_access_setup(ADIv5_AP_t *ap, uint8_t *p,
+static uint8_t *mem_access_setup(adiv5_access_port_s *ap, uint8_t *p,
 								 uint32_t addr, enum align align)
 {
 	uint32_t csw = ap->csw | ADIV5_AP_CSW_ADDRINC_SINGLE;
@@ -560,14 +560,14 @@ static uint8_t *mem_access_setup(ADIv5_AP_t *ap, uint8_t *p,
 	return p;
 }
 
-void dap_ap_mem_access_setup(ADIv5_AP_t *ap, uint32_t addr, enum align align)
+void dap_ap_mem_access_setup(adiv5_access_port_s *ap, uint32_t addr, enum align align)
 {
 	uint8_t buf[63];
 	uint8_t *p = mem_access_setup(ap, buf, addr, align);
 	dbg_dap_cmd(buf, sizeof(buf), p - buf);
 }
 
-uint32_t dap_ap_read(ADIv5_AP_t *ap, uint16_t addr)
+uint32_t dap_ap_read(adiv5_access_port_s *ap, uint16_t addr)
 {
 	DEBUG_PROBE("dap_ap_read_start addr %x\n", addr);
 	uint8_t buf[63], *p = buf;
@@ -591,7 +591,7 @@ uint32_t dap_ap_read(ADIv5_AP_t *ap, uint16_t addr)
 	return res;
 }
 
-void dap_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value)
+void dap_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value)
 {
 	DEBUG_PROBE("dap_ap_write addr %04x value %08x\n", addr, value);
 	uint8_t buf[63], *p = buf;
@@ -616,7 +616,7 @@ void dap_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value)
 	}
 }
 
-void dap_read_single(ADIv5_AP_t *ap, void *dest, uint32_t src, enum align align)
+void dap_read_single(adiv5_access_port_s *ap, void *dest, uint32_t src, enum align align)
 {
 	uint8_t buf[63];
 	uint8_t *p = mem_access_setup(ap, buf, src, align);
@@ -627,7 +627,7 @@ void dap_read_single(ADIv5_AP_t *ap, void *dest, uint32_t src, enum align align)
 	dest = extract(dest, src, tmp, align);
 }
 
-void dap_write_single(ADIv5_AP_t *ap, uint32_t dest, const void *src,
+void dap_write_single(adiv5_access_port_s *ap, uint32_t dest, const void *src,
 					  enum align align)
 {
 	uint8_t buf[63];

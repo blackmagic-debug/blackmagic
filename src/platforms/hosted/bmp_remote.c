@@ -225,7 +225,7 @@ static uint32_t remote_adiv5_low_access(
 	return dest[0];
 }
 
-static uint32_t remote_adiv5_ap_read(ADIv5_AP_t *ap, uint16_t addr)
+static uint32_t remote_adiv5_ap_read(adiv5_access_port_s *ap, uint16_t addr)
 {
 	uint8_t construct[REMOTE_MAX_MSG_SIZE];
 	int s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE,REMOTE_AP_READ_STR,
@@ -240,7 +240,7 @@ static uint32_t remote_adiv5_ap_read(ADIv5_AP_t *ap, uint16_t addr)
 	return dest[0];
 }
 
-static void remote_adiv5_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value)
+static void remote_adiv5_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value)
 {
 	uint8_t construct[REMOTE_MAX_MSG_SIZE];
 	int s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE,REMOTE_AP_WRITE_STR,
@@ -255,7 +255,7 @@ static void remote_adiv5_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value)
 
 #if 0
 static void remote_mem_read(
-	ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
+	adiv5_access_port_s *ap, void *dest, uint32_t src, size_t len)
 {
 	(void)ap;
 	if (len == 0)
@@ -297,7 +297,7 @@ static void remote_mem_read(
 #endif
 
 static void remote_ap_mem_read(
-	ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
+	adiv5_access_port_s *ap, void *dest, uint32_t src, size_t len)
 {
 	(void)ap;
 	if (len == 0)
@@ -335,7 +335,7 @@ static void remote_ap_mem_read(
 }
 
 static void remote_ap_mem_write_sized(
-	ADIv5_AP_t *ap, uint32_t dest, const void *src, size_t len,
+	adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len,
 	enum align align)
 {
 	(void)ap;

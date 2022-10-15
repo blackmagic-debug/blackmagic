@@ -620,7 +620,7 @@ uint32_t adiv5_dp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr,
 	return ret;
 }
 
-uint32_t adiv5_ap_read(ADIv5_AP_t *ap, uint16_t addr)
+uint32_t adiv5_ap_read(adiv5_access_port_s *ap, uint16_t addr)
 {
 	uint32_t ret = ap->dp->ap_read(ap, addr);
 	if (cl_debuglevel & BMP_DEBUG_TARGET) {
@@ -630,7 +630,7 @@ uint32_t adiv5_ap_read(ADIv5_AP_t *ap, uint16_t addr)
 	return ret;
 }
 
-void adiv5_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value)
+void adiv5_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value)
 {
 	if (cl_debuglevel & BMP_DEBUG_TARGET) {
 		ap_decode_access(addr, ADIV5_LOW_WRITE);
@@ -639,7 +639,7 @@ void adiv5_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value)
 	return ap->dp->ap_write(ap, addr, value);
 }
 
-void adiv5_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
+void adiv5_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t len)
 {
 	ap->dp->mem_read(ap, dest, src, len);
 	if (cl_debuglevel & BMP_DEBUG_TARGET) {
@@ -660,7 +660,7 @@ void adiv5_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
 	}
 	return;
 }
-void adiv5_mem_write_sized(ADIv5_AP_t *ap, uint32_t dest, const void *src, size_t len, enum align align)
+void adiv5_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, enum align align)
 {
 	if (cl_debuglevel & BMP_DEBUG_TARGET) {
 		fprintf(stderr, "ap_mem_write_sized @ %" PRIx32 " len %" PRIx32 ", align %d:", dest, (uint32_t)len, 1 << align);

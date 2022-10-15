@@ -509,7 +509,7 @@ static void stm32l4_detach(target *t)
 
 bool stm32l4_probe(target *t)
 {
-	ADIv5_AP_t *ap = cortexm_ap(t);
+	adiv5_access_port_s *ap = cortexm_ap(t);
 	uint32_t device_id;
 	if (ap->dp->version >= 2 && ap->dp->target_partno > 1) { /* STM32L552 has invalid TARGETID 1 */
 		/* FIXME: ids likely no longer match and need fixing */

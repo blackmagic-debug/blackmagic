@@ -185,7 +185,7 @@ extern unsigned cortexm_wait_timeout;
 #define CPUID_REVISION_MASK 0x00f00000U
 #define CPUID_PATCH_MASK    0xfU
 
-ADIv5_AP_t *cortexm_ap(target *t);
+adiv5_access_port_s *cortexm_ap(target *t);
 
 bool cortexm_attach(target *t);
 void cortexm_detach(target *t);

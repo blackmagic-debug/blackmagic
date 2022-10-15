@@ -333,7 +333,7 @@ static void remotePacketProcessHL(unsigned i, char *packet)
 	(void)i;
 	SET_IDLE_STATE(0);
 
-	ADIv5_AP_t remote_ap;
+	adiv5_access_port_s remote_ap;
 	/* Re-use packet buffer. Align to DWORD! */
 	void *src = (void *)(((uint32_t)packet + 7) & ~7);
 	char index = packet[1];
