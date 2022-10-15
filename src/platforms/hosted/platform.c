@@ -41,7 +41,7 @@
 #include "jlink.h"
 #include "cmsis_dap.h"
 
-bmp_info_t info;
+bmp_info_s info;
 
 jtag_proc_s jtag_proc;
 
