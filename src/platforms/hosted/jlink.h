@@ -50,33 +50,33 @@
 #if HOSTED_BMP_ONLY == 1
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
-bool jlink_init(bmp_info_t *info)
+bool jlink_init(bmp_info_s *info)
 {
 	return false;
 }
-uint32_t jlink_swdp_scan(bmp_info_t *info)
+uint32_t jlink_swdp_scan(bmp_info_s *info)
 {
 	return 0;
 }
-bool jlink_jtagtap_init(bmp_info_t *info)
+bool jlink_jtagtap_init(bmp_info_s *info)
 {
 	return false;
 }
-const char *jlink_target_voltage(bmp_info_t *info)
+const char *jlink_target_voltage(bmp_info_s *info)
 {
 	return "ERROR";
 }
-void jlink_nrst_set_val(bmp_info_t *info, bool assert)
+void jlink_nrst_set_val(bmp_info_s *info, bool assert)
 {
 }
-bool jlink_nrst_get_val(bmp_info_t *info)
+bool jlink_nrst_get_val(bmp_info_s *info)
 {
 	return true;
 }
-void jlink_max_frequency_set(bmp_info_t *info, uint32_t freq)
+void jlink_max_frequency_set(bmp_info_s *info, uint32_t freq)
 {
 }
-uint32_t jlink_max_frequency_get(bmp_info_t *info)
+uint32_t jlink_max_frequency_get(bmp_info_s *info)
 {
 	return 0;
 }
@@ -118,14 +118,14 @@ enum jaylink_device_capability {
 	JAYLINK_DEV_CAP_ETHERNET = 38
 };
 
-bool jlink_init(bmp_info_t *info);
-uint32_t jlink_swdp_scan(bmp_info_t *info);
-bool jlink_jtagtap_init(bmp_info_t *infp);
-const char *jlink_target_voltage(bmp_info_t *info);
-void jlink_nrst_set_val(bmp_info_t *info, bool assert);
-bool jlink_nrst_get_val(bmp_info_t *info);
-void jlink_max_frequency_set(bmp_info_t *info, uint32_t freq);
-uint32_t jlink_max_frequency_get(bmp_info_t *info);
+bool jlink_init(bmp_info_s *info);
+uint32_t jlink_swdp_scan(bmp_info_s *info);
+bool jlink_jtagtap_init(bmp_info_s *infp);
+const char *jlink_target_voltage(bmp_info_s *info);
+void jlink_nrst_set_val(bmp_info_s *info, bool assert);
+bool jlink_nrst_get_val(bmp_info_s *info);
+void jlink_max_frequency_set(bmp_info_s *info, uint32_t freq);
+uint32_t jlink_max_frequency_get(bmp_info_s *info);
 #endif
 
 #endif /* PLATFORMS_HOSTED_JLINK_H */

@@ -352,7 +352,7 @@ cable_desc_t cable_desc[] = {
 	{},
 };
 
-int ftdi_bmp_init(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info)
+int ftdi_bmp_init(BMP_CL_OPTIONS_t *cl_opts, bmp_info_s *info)
 {
 	int err;
 	cable_desc_t *cable = &cable_desc[0];

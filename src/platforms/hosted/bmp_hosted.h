@@ -78,12 +78,12 @@ typedef struct bmp_info {
 	uint8_t in_ep;
 	uint8_t out_ep;
 #endif
-} bmp_info_t;
+} bmp_info_s;
 
-extern bmp_info_t info;
-void bmp_ident(bmp_info_t *info);
-int find_debuggers(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info);
-void libusb_exit_function(bmp_info_t *info);
+extern bmp_info_s info;
+void bmp_ident(bmp_info_s *info);
+int find_debuggers(BMP_CL_OPTIONS_t *cl_opts, bmp_info_s *info);
+void libusb_exit_function(bmp_info_s *info);
 
 #if HOSTED_BMP_ONLY == 1
 bool device_is_bmp_gdb_port(const char *device);

@@ -399,7 +399,7 @@ static int write_retry(uint8_t *cmdbuf, size_t cmdsize, uint8_t *txbuf, size_t t
 /* Version data is at 0x080103f8 with STLINKV3 bootloader flashed with
  * STLinkUpgrade_v3[3|5].jar
  */
-static void stlink_version(bmp_info_t *info)
+static void stlink_version(bmp_info_s *info)
 {
 	if (stlink.ver_hw == 30) {
 		uint8_t cmd[16];
@@ -448,7 +448,7 @@ static void stlink_version(bmp_info_t *info)
 	DEBUG_INFO("\n");
 }
 
-static bool stlink_leave_state(bmp_info_t *info)
+static bool stlink_leave_state(bmp_info_s *info)
 {
 	uint8_t cmd[16];
 	uint8_t data[2];
@@ -484,7 +484,7 @@ static bool stlink_leave_state(bmp_info_t *info)
 	return false;
 }
 
-const char *stlink_target_voltage(bmp_info_t *info)
+const char *stlink_target_voltage(bmp_info_s *info)
 {
 	uint8_t cmd[16];
 	uint8_t data[8];
@@ -502,7 +502,7 @@ const char *stlink_target_voltage(bmp_info_t *info)
 	return res;
 }
 
-static void stlink_resetsys(bmp_info_t *info)
+static void stlink_resetsys(bmp_info_s *info)
 {
 	uint8_t cmd[16];
 	uint8_t data[2];
@@ -512,7 +512,7 @@ static void stlink_resetsys(bmp_info_t *info)
 	send_recv(info->usb_link, cmd, 16, data, 2);
 }
 
-int stlink_init(bmp_info_t *info)
+int stlink_init(bmp_info_s *info)
 {
 	usb_link_s *sl = calloc(1, sizeof(usb_link_s));
 	if (!sl)
@@ -641,7 +641,7 @@ int stlink_init(bmp_info_t *info)
 	return 0;
 }
 
-void stlink_nrst_set_val(bmp_info_t *info, bool assert)
+void stlink_nrst_set_val(bmp_info_s *info, bool assert)
 {
 	uint8_t cmd[16];
 	uint8_t data[2];
@@ -664,7 +664,7 @@ int stlink_hwversion(void)
 	return stlink.ver_stlink;
 }
 
-static int stlink_enter_debug_jtag(bmp_info_t *info)
+static int stlink_enter_debug_jtag(bmp_info_s *info)
 {
 	stlink_leave_state(info);
 	uint8_t cmd[16];
@@ -687,7 +687,7 @@ static int stlink_enter_debug_jtag(bmp_info_t *info)
 // 	return id;
 // }
 
-static size_t stlink_read_idcodes(bmp_info_t *info, uint32_t *idcodes)
+static size_t stlink_read_idcodes(bmp_info_s *info, uint32_t *idcodes)
 {
 	uint8_t cmd[16];
 	uint8_t data[12];
@@ -1039,7 +1039,7 @@ static uint32_t stlink_ap_read(adiv5_access_port_s *ap, uint16_t addr)
 	return ret;
 }
 
-uint32_t jtag_scan_stlinkv2(bmp_info_t *info, const uint8_t *irlens)
+uint32_t jtag_scan_stlinkv2(bmp_info_s *info, const uint8_t *irlens)
 {
 	uint32_t idcodes[JTAG_MAX_DEVS + 1U];
 	(void)*irlens;
@@ -1089,7 +1089,7 @@ void stlink_adiv5_dp_defaults(adiv5_debug_port_s *dp)
 	dp->mem_write_sized = stlink_mem_write_sized;
 }
 
-uint32_t stlink_swdp_scan(bmp_info_t *info)
+uint32_t stlink_swdp_scan(bmp_info_s *info)
 {
 	target_list_free();
 
@@ -1144,7 +1144,7 @@ int main(void)
 
 static uint32_t divisor;
 static unsigned int v3_freq[2];
-void stlink_max_frequency_set(bmp_info_t *info, uint32_t freq)
+void stlink_max_frequency_set(bmp_info_s *info, uint32_t freq)
 {
 	uint8_t cmd[16];
 	if (stlink.ver_hw == 30U) {
@@ -1214,7 +1214,7 @@ void stlink_max_frequency_set(bmp_info_t *info, uint32_t freq)
 	}
 }
 
-uint32_t stlink_max_frequency_get(bmp_info_t *info)
+uint32_t stlink_max_frequency_get(bmp_info_s *info)
 {
 	if (stlink.ver_hw == 30U)
 		return v3_freq[info->is_jtag ? STLINK_MODE_JTAG : STLINK_MODE_SWD];

@@ -45,7 +45,7 @@ enum {
  * Write at least 50 bits high, two bits low and read DP_IDR and put
  * idle cycles at the end
  */
-static bool line_reset(bmp_info_t *const info)
+static bool line_reset(bmp_info_s *const info)
 {
 	uint8_t cmd[44];
 	memset(cmd, 0, sizeof(cmd));
@@ -71,7 +71,7 @@ static bool line_reset(bmp_info_t *const info)
 	return true;
 }
 
-static bool jlink_swdptap_init(bmp_info_t *const info)
+static bool jlink_swdptap_init(bmp_info_s *const info)
 {
 	uint8_t cmd[2] = {
 		CMD_GET_SELECT_IF,
@@ -91,7 +91,7 @@ static bool jlink_swdptap_init(bmp_info_t *const info)
 	return true;
 }
 
-uint32_t jlink_swdp_scan(bmp_info_t *const info)
+uint32_t jlink_swdp_scan(bmp_info_s *const info)
 {
 	target_list_free();
 	if (!jlink_swdptap_init(info))

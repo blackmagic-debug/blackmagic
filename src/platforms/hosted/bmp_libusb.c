@@ -26,7 +26,7 @@
 
 #define NO_SERIAL_NUMBER "<no serial number>"
 
-void bmp_ident(bmp_info_t *info)
+void bmp_ident(bmp_info_s *info)
 {
 	PRINT_INFO("Black Magic Debug App %s\n for Black Magic Probe, ST-Link v2 and v3, CMSIS-DAP,"
 			   " JLink and libftdi/MPSSE\n",
@@ -37,7 +37,7 @@ void bmp_ident(bmp_info_t *info)
 	}
 }
 
-void libusb_exit_function(bmp_info_t *info)
+void libusb_exit_function(bmp_info_s *info)
 {
 	if (!info->usb_link)
 		return;
@@ -49,7 +49,7 @@ void libusb_exit_function(bmp_info_t *info)
 	}
 }
 
-static bmp_type_t find_cmsis_dap_interface(libusb_device *dev, bmp_info_t *info)
+static bmp_type_t find_cmsis_dap_interface(libusb_device *dev, bmp_info_s *info)
 {
 	bmp_type_t type = BMP_TYPE_NONE;
 
@@ -110,7 +110,7 @@ static bmp_type_t find_cmsis_dap_interface(libusb_device *dev, bmp_info_t *info)
 	return type;
 }
 
-int find_debuggers(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info)
+int find_debuggers(BMP_CL_OPTIONS_t *cl_opts, bmp_info_s *info)
 {
 	libusb_device **devs;
 	int res = libusb_init(&info->libusb_ctx);
