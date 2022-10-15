@@ -110,7 +110,7 @@ static void remote_respond_string(char respCode, const char *s)
 	gdb_if_putchar(REMOTE_EOM, 1);
 }
 
-static ADIv5_DP_t remote_dp = {
+static adiv5_debug_port_s remote_dp = {
 	.ap_read = firmware_ap_read,
 	.ap_write = firmware_ap_write,
 	.mem_read = firmware_mem_read,

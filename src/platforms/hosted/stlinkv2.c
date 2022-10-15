@@ -702,9 +702,9 @@ static size_t stlink_read_idcodes(bmp_info_t *info, uint32_t *idcodes)
 	return 2;
 }
 
-uint32_t stlink_dp_low_access(ADIv5_DP_t *dp, uint8_t RnW, uint16_t addr, uint32_t value);
+uint32_t stlink_dp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value);
 
-static uint32_t stlink_dp_read(ADIv5_DP_t *dp, uint16_t addr)
+static uint32_t stlink_dp_read(adiv5_debug_port_s *dp, uint16_t addr)
 {
 	if (addr & ADIV5_APnDP) {
 		stlink_dp_low_access(dp, ADIV5_LOW_READ, addr, 0);
@@ -713,7 +713,7 @@ static uint32_t stlink_dp_read(ADIv5_DP_t *dp, uint16_t addr)
 	return stlink_dp_low_access(dp, ADIV5_LOW_READ, addr, 0);
 }
 
-uint32_t stlink_dp_error(ADIv5_DP_t *dp)
+uint32_t stlink_dp_error(adiv5_debug_port_s *dp)
 {
 	uint32_t err =
 		stlink_dp_read(dp, ADIV5_DP_CTRLSTAT) & (ADIV5_DP_CTRLSTAT_STICKYORUN | ADIV5_DP_CTRLSTAT_STICKYCMP |
@@ -738,7 +738,7 @@ uint32_t stlink_dp_error(ADIv5_DP_t *dp)
 	return err;
 }
 
-void stlink_dp_abort(ADIv5_DP_t *dp, uint32_t abort)
+void stlink_dp_abort(adiv5_debug_port_s *dp, uint32_t abort)
 {
 	adiv5_dp_write(dp, ADIV5_DP_ABORT, abort);
 }
@@ -790,7 +790,7 @@ static int stlink_write_dp_register(uint16_t port, uint16_t addr, uint32_t val)
 	return stlink_usb_error_check(data, true);
 }
 
-uint32_t stlink_dp_low_access(ADIv5_DP_t *dp, uint8_t RnW, uint16_t addr, uint32_t value)
+uint32_t stlink_dp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value)
 {
 	uint32_t response = 0;
 	int res;
@@ -1066,7 +1066,7 @@ uint32_t jtag_scan_stlinkv2(bmp_info_t *info, const uint8_t *irlens)
 	return jtag_dev_count;
 }
 
-int stlink_jtag_dp_init(ADIv5_DP_t *dp)
+int stlink_jtag_dp_init(adiv5_debug_port_s *dp)
 {
 	dp->dp_read = stlink_dp_read;
 	dp->error = stlink_dp_error;
@@ -1076,7 +1076,7 @@ int stlink_jtag_dp_init(ADIv5_DP_t *dp)
 	return true;
 }
 
-void stlink_adiv5_dp_defaults(ADIv5_DP_t *dp)
+void stlink_adiv5_dp_defaults(adiv5_debug_port_s *dp)
 {
 	dp->ap_regs_read = stlink_regs_read;
 	dp->ap_reg_read = stlink_reg_read;
@@ -1107,7 +1107,7 @@ uint32_t stlink_swdp_scan(bmp_info_t *info)
 	if (stlink_usb_error_check(data, true))
 		return 0;
 
-	ADIv5_DP_t *dp = calloc(1, sizeof(*dp));
+	adiv5_debug_port_s *dp = calloc(1, sizeof(*dp));
 	if (!dp) { /* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return 0;
