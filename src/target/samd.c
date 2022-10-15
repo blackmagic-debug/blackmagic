@@ -495,7 +495,7 @@ typedef struct samd_priv {
 
 bool samd_probe(target *t)
 {
-	ADIv5_AP_t *ap = cortexm_ap(t);
+	adiv5_access_port_s *ap = cortexm_ap(t);
 	const uint32_t cid = adiv5_ap_read_pidr(ap, SAMD_DSU_CID);
 	const uint32_t pid = adiv5_ap_read_pidr(ap, SAMD_DSU_PID);
 
