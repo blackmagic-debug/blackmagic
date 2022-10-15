@@ -133,6 +133,73 @@ static probe_info_s *process_ftdi_probe(void)
 }
 #endif
 
+static bool process_cmsis_interface_probe(
+	libusb_device_descriptor_s *device_descriptor, libusb_device *device, probe_info_s **probe_list)
+{
+	/* Try to get the active configuration descriptor for the device */
+	libusb_config_descriptor_s *config;
+	if (libusb_get_active_config_descriptor(device, &config) != 0)
+		return false;
+
+	/* Try to open the device */
+	libusb_device_handle *handle;
+	if (libusb_open(device, &handle) != 0) {
+		libusb_free_config_descriptor(config);
+		return false;
+	}
+	char read_string[128];
+
+	bool cmsis_dap = false;
+	for (size_t iface = 0; iface < config->bNumInterfaces && !cmsis_dap; ++iface) {
+		const libusb_interface_s *interface = &config->interface[iface];
+		for (int descriptorIndex = 0; descriptorIndex < interface->num_altsetting; ++descriptorIndex) {
+			const libusb_interface_descriptor_s *descriptor = &interface->altsetting[descriptorIndex];
+			uint8_t string_index = descriptor->iInterface;
+			if (string_index == 0)
+				continue;
+			if (libusb_get_string_descriptor_ascii(
+					handle, string_index, (unsigned char *)read_string, sizeof(read_string)) < 0)
+				continue; /* We failed but that's a soft error at this point. */
+
+			if (strstr(read_string, "CMSIS") != NULL) {
+				char *serial;
+				if (device_descriptor->iSerialNumber == 0)
+					serial = strdup("Unknown serial number");
+				else {
+					if (libusb_get_string_descriptor_ascii(handle, device_descriptor->iSerialNumber,
+							(unsigned char *)read_string, sizeof(read_string)) < 0)
+						continue; /* We failed but that's a soft error at this point. */
+					serial = strdup(read_string);
+				}
+				char *manufacturer;
+				if (device_descriptor->iManufacturer == 0)
+					manufacturer = strdup("Unknown manufacturer");
+				else {
+					if (libusb_get_string_descriptor_ascii(handle, device_descriptor->iManufacturer,
+							(unsigned char *)read_string, sizeof(read_string)) < 0)
+						continue; /* We failed but that's a soft error at this point. */
+					manufacturer = strdup(read_string);
+				}
+				char *product;
+				if (device_descriptor->iProduct == 0) {
+					product = strdup("Unknown product");
+				} else {
+					if (libusb_get_string_descriptor_ascii(
+							handle, device_descriptor->iProduct, (unsigned char *)read_string, sizeof(read_string)) < 0)
+						continue; /* We failed but that's a soft error at this point. */
+					product = strdup(read_string);
+				}
+				*probe_list = probe_info_add_by_id(*probe_list, BMP_TYPE_CMSIS_DAP, device_descriptor->idVendor,
+					device_descriptor->idProduct, manufacturer, product, serial, strdup("---"));
+				cmsis_dap = true;
+			}
+		}
+	}
+	libusb_close(handle);
+	libusb_free_config_descriptor(config);
+	return cmsis_dap;
+}
+
 static bool process_vid_pid_table_probe(
 	libusb_device_descriptor_s *device_descriptor, libusb_device *device, probe_info_s **probe_list)
 {
@@ -188,8 +255,10 @@ static const probe_info_s *scan_for_devices(void)
 			DEBUG_ERROR("Failed to get device descriptor (%d): %s\n", result, libusb_error_name(result));
 			return NULL;
 		}
-		if (device_descriptor.idVendor != VENDOR_ID_FTDI || !skip_ftdi)
-			process_vid_pid_table_probe(&device_descriptor, device, &probe_list);
+		if (device_descriptor.idVendor != VENDOR_ID_FTDI || !skip_ftdi) {
+			if (!process_vid_pid_table_probe(&device_descriptor, device, &probe_list))
+				process_cmsis_interface_probe(&device_descriptor, device, &probe_list);
+		}
 	}
 	libusb_free_device_list(device_list, (int)cnt);
 	return probe_info_correct_order(probe_list);
