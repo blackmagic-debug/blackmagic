@@ -347,7 +347,7 @@ static uint32_t wait_word(uint8_t *buf, int size, int len, uint8_t *dp_fault)
 }
 
 //-----------------------------------------------------------------------------
-uint32_t dap_read_reg(ADIv5_DP_t *dp, uint8_t reg)
+uint32_t dap_read_reg(adiv5_debug_port_s *dp, uint8_t reg)
 {
 	uint8_t buf[8];
 	uint8_t dap_index = 0;
@@ -362,7 +362,7 @@ uint32_t dap_read_reg(ADIv5_DP_t *dp, uint8_t reg)
 }
 
 //-----------------------------------------------------------------------------
-void dap_write_reg(ADIv5_DP_t *dp, uint8_t reg, uint32_t data)
+void dap_write_reg(adiv5_debug_port_s *dp, uint8_t reg, uint32_t data)
 {
 	uint8_t buf[8];
 	DEBUG_PROBE("\tdap_write_reg %02x %08x\n", reg, data);
@@ -516,7 +516,7 @@ void dap_reset_link(bool jtag)
 }
 
 //-----------------------------------------------------------------------------
-uint32_t dap_read_idcode(ADIv5_DP_t *dp)
+uint32_t dap_read_idcode(adiv5_debug_port_s *dp)
 {
 	return dap_read_reg(dp, SWD_DP_R_IDCODE);
 }

@@ -69,7 +69,7 @@ bool libftdi_swd_possible(void)
 	return true;
 }
 
-int libftdi_swdptap_init(ADIv5_DP_t *dp)
+int libftdi_swdptap_init(adiv5_debug_port_s *dp)
 {
 	if (!libftdi_swd_possible()) {
 		DEBUG_WARN("SWD not possible or missing item in cable description.\n");

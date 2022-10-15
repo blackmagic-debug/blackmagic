@@ -191,7 +191,7 @@ void remote_target_clk_output_enable(const bool enable)
 		DEBUG_WARN("remote_target_clk_output_enable failed, error %s\n", length ? buffer + 1 : "unknown");
 }
 
-static uint32_t remote_adiv5_dp_read(ADIv5_DP_t *dp, uint16_t addr)
+static uint32_t remote_adiv5_dp_read(adiv5_debug_port_s *dp, uint16_t addr)
 {
 	(void)dp;
 	uint8_t construct[REMOTE_MAX_MSG_SIZE];
@@ -209,7 +209,7 @@ static uint32_t remote_adiv5_dp_read(ADIv5_DP_t *dp, uint16_t addr)
 }
 
 static uint32_t remote_adiv5_low_access(
-	ADIv5_DP_t *dp, uint8_t RnW, uint16_t addr, uint32_t value)
+	adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value)
 {
 	(void)dp;
 	uint8_t construct[REMOTE_MAX_MSG_SIZE];
@@ -375,7 +375,7 @@ static void remote_ap_mem_write_sized(
 	}
 }
 
-void remote_adiv5_dp_defaults(ADIv5_DP_t *dp)
+void remote_adiv5_dp_defaults(adiv5_debug_port_s *dp)
 {
 	uint8_t construct[REMOTE_MAX_MSG_SIZE];
 	int s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE, "%s",

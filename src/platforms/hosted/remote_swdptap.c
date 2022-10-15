@@ -35,7 +35,7 @@ static uint32_t swdptap_seq_in(size_t clock_cycles);
 static void swdptap_seq_out(uint32_t tms_states, size_t clock_cycles);
 static void swdptap_seq_out_parity(uint32_t tms_states, size_t clock_cycles);
 
-int remote_swdptap_init(ADIv5_DP_t *dp)
+int remote_swdptap_init(adiv5_debug_port_s *dp)
 {
 	DEBUG_WIRE("remote_swdptap_init\n");
 	uint8_t construct[REMOTE_MAX_MSG_SIZE];

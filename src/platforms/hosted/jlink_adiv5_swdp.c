@@ -31,10 +31,10 @@
 #include "jlink.h"
 #include "cli.h"
 
-static uint32_t jlink_adiv5_swdp_read(ADIv5_DP_t *dp, uint16_t addr);
-static uint32_t jlink_adiv5_swdp_error(ADIv5_DP_t *dp);
-static uint32_t jlink_adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW, uint16_t addr, uint32_t value);
-static void jlink_adiv5_swdp_abort(ADIv5_DP_t *dp, uint32_t abort);
+static uint32_t jlink_adiv5_swdp_read(adiv5_debug_port_s *dp, uint16_t addr);
+static uint32_t jlink_adiv5_swdp_error(adiv5_debug_port_s *dp);
+static uint32_t jlink_adiv5_swdp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value);
+static void jlink_adiv5_swdp_abort(adiv5_debug_port_s *dp, uint32_t abort);
 
 enum {
 	SWDIO_WRITE,
@@ -120,7 +120,7 @@ uint32_t jlink_swdp_scan(bmp_info_t *const info)
 		return 0;
 	}
 
-	ADIv5_DP_t *dp = calloc(1, sizeof(*dp));
+	adiv5_debug_port_s *dp = calloc(1, sizeof(*dp));
 	if (!dp) { /* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return 0;
@@ -136,7 +136,7 @@ uint32_t jlink_swdp_scan(bmp_info_t *const info)
 	return target_list ? 1U : 0U;
 }
 
-static uint32_t jlink_adiv5_swdp_read(ADIv5_DP_t *const dp, const uint16_t addr)
+static uint32_t jlink_adiv5_swdp_read(adiv5_debug_port_s *const dp, const uint16_t addr)
 {
 	if (addr & ADIV5_APnDP) {
 		adiv5_dp_low_access(dp, ADIV5_LOW_READ, addr, 0);
@@ -145,7 +145,7 @@ static uint32_t jlink_adiv5_swdp_read(ADIv5_DP_t *const dp, const uint16_t addr)
 	return jlink_adiv5_swdp_low_access(dp, ADIV5_LOW_READ, addr, 0);
 }
 
-static uint32_t jlink_adiv5_swdp_error(ADIv5_DP_t *const dp)
+static uint32_t jlink_adiv5_swdp_error(adiv5_debug_port_s *const dp)
 {
 	uint32_t err = jlink_adiv5_swdp_read(dp, ADIV5_DP_CTRLSTAT);
 	err &= (ADIV5_DP_CTRLSTAT_STICKYORUN | ADIV5_DP_CTRLSTAT_STICKYCMP | ADIV5_DP_CTRLSTAT_STICKYERR |
@@ -214,7 +214,7 @@ static void jlink_adiv5_swdp_low_write(const uint32_t value)
 		raise_exception(EXCEPTION_ERROR, "Low access write failed");
 }
 
-static uint32_t jlink_adiv5_swdp_low_access(ADIv5_DP_t *const dp, const uint8_t RnW, const uint16_t addr, const uint32_t value)
+static uint32_t jlink_adiv5_swdp_low_access(adiv5_debug_port_s *const dp, const uint8_t RnW, const uint16_t addr, const uint32_t value)
 {
 	if ((addr & ADIV5_APnDP) && dp->fault)
 		return 0;
@@ -277,7 +277,7 @@ static uint32_t jlink_adiv5_swdp_low_access(ADIv5_DP_t *const dp, const uint8_t 
 	return 0;
 }
 
-static void jlink_adiv5_swdp_abort(ADIv5_DP_t *const dp, const uint32_t abort)
+static void jlink_adiv5_swdp_abort(adiv5_debug_port_s *const dp, const uint32_t abort)
 {
 	adiv5_dp_write(dp, ADIV5_DP_ABORT, abort);
 }
