@@ -46,7 +46,7 @@ static uint32_t emu_speed_khz;
 static uint16_t emu_min_divisor;
 static uint16_t emu_current_divisor;
 
-static void jlink_print_caps(bmp_info_t *const info)
+static void jlink_print_caps(bmp_info_s *const info)
 {
 	uint8_t cmd = CMD_GET_CAPS;
 	uint8_t res[4];
@@ -61,7 +61,7 @@ static void jlink_print_caps(bmp_info_t *const info)
 	}
 }
 
-static void jlink_print_speed(bmp_info_t *const info)
+static void jlink_print_speed(bmp_info_s *const info)
 {
 	uint8_t cmd = CMD_GET_SPEEDS;
 	uint8_t res[6];
@@ -72,7 +72,7 @@ static void jlink_print_speed(bmp_info_t *const info)
 		(emu_caps & JLINK_CAP_GET_SPEEDS) ? "" : ", fixed");
 }
 
-static void jlink_print_version(bmp_info_t *const info)
+static void jlink_print_version(bmp_info_s *const info)
 {
 	uint8_t cmd = CMD_GET_VERSION;
 	uint8_t len_str[2];
@@ -83,7 +83,7 @@ static void jlink_print_version(bmp_info_t *const info)
 	DEBUG_INFO("%s\n", version);
 }
 
-static void jlink_print_interfaces(bmp_info_t *const info)
+static void jlink_print_interfaces(bmp_info_s *const info)
 {
 	uint8_t cmd[2] = {
 		CMD_GET_SELECT_IF,
@@ -107,7 +107,7 @@ static void jlink_print_interfaces(bmp_info_t *const info)
 		DEBUG_INFO(", %s not available\n", selected_if[0] + 1U == JLINK_IF_SWD ? "JTAG" : "SWD");
 }
 
-static void jlink_info(bmp_info_t *const info)
+static void jlink_info(bmp_info_s *const info)
 {
 	jlink_print_version(info);
 	jlink_print_caps(info);
@@ -117,10 +117,10 @@ static void jlink_info(bmp_info_t *const info)
 
 /*
  * On success this copies the endpoint addresses identified into the
- * usb_link_s sub-structure of bmp_info_t (info->usb_link) for later use.
+ * usb_link_s sub-structure of bmp_info_s (info->usb_link) for later use.
  * Returns true for sucess, false for failure.
  */
-static bool claim_jlink_interface(bmp_info_t *info, libusb_device *dev)
+static bool claim_jlink_interface(bmp_info_s *info, libusb_device *dev)
 {
 	struct libusb_config_descriptor *config;
 	const int result = libusb_get_active_config_descriptor(dev, &config);
@@ -164,7 +164,7 @@ static bool claim_jlink_interface(bmp_info_t *info, libusb_device *dev)
  * Return true if single J-Link device connected or
  * serial given matches one of several J-Link devices.
  */
-bool jlink_init(bmp_info_t *const info)
+bool jlink_init(bmp_info_s *const info)
 {
 	usb_link_s *link = calloc(1, sizeof(usb_link_s));
 	if (!link)
@@ -228,7 +228,7 @@ bool jlink_init(bmp_info_t *const info)
 	return true;
 }
 
-const char *jlink_target_voltage(bmp_info_t *const info)
+const char *jlink_target_voltage(bmp_info_s *const info)
 {
 	static char ret[7];
 	uint8_t cmd = CMD_GET_HW_STATUS;
@@ -239,14 +239,14 @@ const char *jlink_target_voltage(bmp_info_t *const info)
 	return ret;
 }
 
-void jlink_nrst_set_val(bmp_info_t *const info, const bool assert)
+void jlink_nrst_set_val(bmp_info_s *const info, const bool assert)
 {
 	uint8_t cmd = assert ? CMD_HW_RESET0 : CMD_HW_RESET1;
 	send_recv(info->usb_link, &cmd, 1, NULL, 0);
 	platform_delay(2);
 }
 
-bool jlink_nrst_get_val(bmp_info_t *const info)
+bool jlink_nrst_get_val(bmp_info_s *const info)
 {
 	uint8_t cmd[1] = {CMD_GET_HW_STATUS};
 	uint8_t res[8];
@@ -254,7 +254,7 @@ bool jlink_nrst_get_val(bmp_info_t *const info)
 	return res[6] == 0;
 }
 
-void jlink_max_frequency_set(bmp_info_t *const info, const uint32_t freq)
+void jlink_max_frequency_set(bmp_info_s *const info, const uint32_t freq)
 {
 	if (!(emu_caps & JLINK_CAP_GET_SPEEDS))
 		return;
@@ -276,7 +276,7 @@ void jlink_max_frequency_set(bmp_info_t *const info, const uint32_t freq)
 	send_recv(info->usb_link, cmd, 3, NULL, 0);
 }
 
-uint32_t jlink_max_frequency_get(bmp_info_t *const info)
+uint32_t jlink_max_frequency_get(bmp_info_s *const info)
 {
 	if ((emu_caps & JLINK_CAP_GET_SPEEDS) && info->is_jtag)
 		return (emu_speed_khz * 1000U) / emu_current_divisor;

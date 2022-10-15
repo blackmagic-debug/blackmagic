@@ -56,7 +56,7 @@ static bool jtagtap_next(bool tms, bool tdi);
  * ⌈ is defined as the ceiling function.
  */
 
-bool jlink_jtagtap_init(bmp_info_t *const info)
+bool jlink_jtagtap_init(bmp_info_s *const info)
 {
 	DEBUG_PROBE("jtap_init\n");
 	uint8_t cmd_switch[2] = {
