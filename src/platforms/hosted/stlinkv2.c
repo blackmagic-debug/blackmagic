@@ -854,7 +854,7 @@ static int stlink_usb_get_rw_status(bool verbose)
 	return stlink_usb_error_check(data, verbose);
 }
 
-static void stlink_readmem(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
+static void stlink_readmem(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t len)
 {
 	if (len == 0)
 		return;
@@ -898,7 +898,7 @@ static void stlink_readmem(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
 	DEBUG_PROBE("stlink_readmem from %" PRIx32 " to %p, len %zu\n", src, dest, len);
 }
 
-static void stlink_writemem8(usb_link_t *link, ADIv5_AP_t *ap, uint32_t addr, size_t len, uint8_t *buffer)
+static void stlink_writemem8(usb_link_t *link, adiv5_access_port_s *ap, uint32_t addr, size_t len, uint8_t *buffer)
 {
 	while (len) {
 		size_t length;
@@ -926,7 +926,7 @@ static void stlink_writemem8(usb_link_t *link, ADIv5_AP_t *ap, uint32_t addr, si
 	}
 }
 
-static void stlink_writemem16(usb_link_t *link, ADIv5_AP_t *ap, uint32_t addr, size_t len, uint16_t *buffer)
+static void stlink_writemem16(usb_link_t *link, adiv5_access_port_s *ap, uint32_t addr, size_t len, uint16_t *buffer)
 {
 	uint8_t cmd[16];
 	memset(cmd, 0, sizeof(cmd));
@@ -944,7 +944,7 @@ static void stlink_writemem16(usb_link_t *link, ADIv5_AP_t *ap, uint32_t addr, s
 	stlink_usb_get_rw_status(true);
 }
 
-static void stlink_writemem32(ADIv5_AP_t *ap, uint32_t addr, size_t len, uint32_t *buffer)
+static void stlink_writemem32(adiv5_access_port_s *ap, uint32_t addr, size_t len, uint32_t *buffer)
 {
 	uint8_t cmd[16];
 	memset(cmd, 0, sizeof(cmd));
@@ -960,7 +960,7 @@ static void stlink_writemem32(ADIv5_AP_t *ap, uint32_t addr, size_t len, uint32_
 	write_retry(cmd, 16, (void *)buffer, len);
 }
 
-static void stlink_regs_read(ADIv5_AP_t *ap, void *data)
+static void stlink_regs_read(adiv5_access_port_s *ap, void *data)
 {
 	uint8_t cmd[16];
 	uint8_t res[88];
@@ -974,7 +974,7 @@ static void stlink_regs_read(ADIv5_AP_t *ap, void *data)
 	memcpy(data, res + 4, 84);
 }
 
-static uint32_t stlink_reg_read(ADIv5_AP_t *ap, int num)
+static uint32_t stlink_reg_read(adiv5_access_port_s *ap, int num)
 {
 	uint8_t cmd[16];
 	uint8_t res[8];
@@ -990,7 +990,7 @@ static uint32_t stlink_reg_read(ADIv5_AP_t *ap, int num)
 	return ret;
 }
 
-static void stlink_reg_write(ADIv5_AP_t *ap, int num, uint32_t val)
+static void stlink_reg_write(adiv5_access_port_s *ap, int num, uint32_t val)
 {
 	uint8_t cmd[16];
 	uint8_t res[2];
@@ -1008,7 +1008,7 @@ static void stlink_reg_write(ADIv5_AP_t *ap, int num, uint32_t val)
 	stlink_usb_error_check(res, true);
 }
 
-static void stlink_mem_write_sized(ADIv5_AP_t *ap, uint32_t dest, const void *src, size_t len, enum align align)
+static void stlink_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, enum align align)
 {
 	if (len == 0)
 		return;
@@ -1027,12 +1027,12 @@ static void stlink_mem_write_sized(ADIv5_AP_t *ap, uint32_t dest, const void *sr
 	}
 }
 
-static void stlink_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value)
+static void stlink_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value)
 {
 	stlink_write_dp_register(ap->apsel, addr, value);
 }
 
-static uint32_t stlink_ap_read(ADIv5_AP_t *ap, uint16_t addr)
+static uint32_t stlink_ap_read(adiv5_access_port_s *ap, uint16_t addr)
 {
 	uint32_t ret;
 	stlink_read_dp_register(ap->apsel, addr, &ret);

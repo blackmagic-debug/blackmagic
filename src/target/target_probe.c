@@ -33,19 +33,19 @@
 #else
 #define APPLE_STATIC static inline
 #define CORTEXA_PROBE_WEAK_NOP(name) \
-	extern bool name(ADIv5_AP_t *, uint32_t) __attribute__((weak, alias("cortexa_probe_nop")));
-#define CORTEXM_PROBE_WEAK_NOP(name) extern bool name(ADIv5_AP_t *) __attribute__((weak, alias("cortexm_probe_nop")));
+	extern bool name(adiv5_access_port_s *, uint32_t) __attribute__((weak, alias("cortexa_probe_nop")));
+#define CORTEXM_PROBE_WEAK_NOP(name) extern bool name(adiv5_access_port_s *) __attribute__((weak, alias("cortexm_probe_nop")));
 #define TARGET_PROBE_WEAK_NOP(name)  extern bool name(target *) __attribute__((weak, alias("target_probe_nop")));
 #endif
 
-APPLE_STATIC bool cortexa_probe_nop(ADIv5_AP_t *apb, uint32_t debug_base)
+APPLE_STATIC bool cortexa_probe_nop(adiv5_access_port_s *apb, uint32_t debug_base)
 {
 	(void)apb;
 	(void)debug_base;
 	return false;
 }
 
-APPLE_STATIC bool cortexm_probe_nop(ADIv5_AP_t *ap)
+APPLE_STATIC bool cortexm_probe_nop(adiv5_access_port_s *ap)
 {
 	(void)ap;
 	return false;
