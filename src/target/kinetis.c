@@ -18,7 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file implements KL25 target specific functions providing
+/*
+ * This file implements KL25 target specific functions providing
  * the XML memory map and Flash memory programming.
  *
  * According to Freescale doc KL25P80M48SF0RM:
@@ -94,14 +95,14 @@
 /* 8 byte phrases need to be written to the k64 flash */
 #define K64_WRITE_LEN 8
 
-static bool kinetis_cmd_unsafe(target *t, int argc, char **argv);
+static bool kinetis_cmd_unsafe(target *t, int argc, const char **argv);
 
 const struct command_s kinetis_cmd_list[] = {
-	{"unsafe", (cmd_handler)kinetis_cmd_unsafe, "Allow programming security byte (enable|disable)"},
+	{"unsafe", kinetis_cmd_unsafe, "Allow programming security byte (enable|disable)"},
 	{NULL, NULL, NULL},
 };
 
-static bool kinetis_cmd_unsafe(target *t, int argc, char **argv)
+static bool kinetis_cmd_unsafe(target *t, int argc, const char **argv)
 {
 	if (argc == 1) {
 		tc_printf(t, "Allow programming security byte: %s\n", t->unsafe_enabled ? "enabled" : "disabled");
@@ -124,14 +125,12 @@ static void kinetis_add_flash(
 	target *const t, const uint32_t addr, const size_t length, const size_t erasesize, const size_t write_len)
 {
 	struct kinetis_flash *kf = calloc(1, sizeof(*kf));
-	target_flash_s *f;
-
 	if (!kf) { /* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return;
 	}
 
-	f = &kf->f;
+	target_flash_s *f = &kf->f;
 	f->start = addr;
 	f->length = length;
 	f->blocksize = erasesize;
@@ -184,7 +183,7 @@ bool kinetis_probe(target *const t)
 			break;
 		}
 
-		/* flash memory size */
+		/* Flash memory size */
 		switch ((fcfg1 >> 24) & 0x0f) {
 		case 0x03: /* 32 KB */
 			t->driver = "KL16Z32Vxxx";
@@ -280,7 +279,8 @@ bool kinetis_probe(target *const t)
 		kinetis_add_flash(t, 0x40000, 0x40000, 0x800, KL_WRITE_LEN);
 		break;
 	case 0x620: /* K64F family. */
-		/* This should be 0x640, but according to the  errata sheet
+		/*
+		 * This should be 0x640, but according to the  errata sheet
 		 * (KINETIS_1N83J) K64 and K24's will show up with the
 		 * subfamily nibble as 2
 		 */
@@ -355,7 +355,7 @@ bool kinetis_probe(target *const t)
 		kinetis_add_flash(t, 0x00000000, 0x00040000, 0x800, K64_WRITE_LEN); /* P-Flash, 256 KB, 2 KB Sectors */
 		kinetis_add_flash(t, 0x10000000, 0x00008000, 0x800, K64_WRITE_LEN); /* FlexNVM, 32 KB, 2 KB Sectors */
 		break;
-	/* gen1 s32k14x */
+	/* Gen1 S32K14X */
 	case 0x142: /* S32K142 */
 	case 0x143: /* S32K142W */
 		/* SRAM_L = 16KiB */
@@ -398,7 +398,7 @@ static bool kinetis_fccob_cmd(target *t, uint8_t cmd, uint32_t addr, const uint3
 {
 	uint8_t fstat;
 
-	/* clear errors unconditionally, so we can start a new operation */
+	/* Clear errors unconditionally, so we can start a new operation */
 	target_mem_write8(t, FTFx_FSTAT, (FTFx_FSTAT_ACCERR | FTFx_FSTAT_FPVIOL));
 
 	/* Wait for CCIF to be high */
@@ -489,7 +489,8 @@ static bool kinetis_flash_done(target_flash_s *const f)
 	if (target_mem_read8(f->t, FLASH_SECURITY_BYTE_ADDRESS) == FLASH_SECURITY_BYTE_UNSECURED)
 		return true;
 
-	/* Load the security byte based on the alignment (determine 8 byte phrases
+	/*
+	 * Load the security byte based on the alignment (determine 8 byte phrases
 	 * vs 4 byte phrases).
 	 */
 	if (kf->write_len == K64_WRITE_LEN) {
@@ -508,9 +509,10 @@ static bool kinetis_flash_done(target_flash_s *const f)
 	return true;
 }
 
-/*** Kinetis recovery mode using the MDM-AP ***/
-
-/* Kinetis security bits are stored in regular flash, so it is possible
+/*
+ * Kinetis recovery mode using the MDM-AP
+ *
+ * Kinetis security bits are stored in regular flash, so it is possible
  * to enable protection by accident when flashing a bad binary.
  * a backdoor AP is provided which may allow a mass erase to recover the
  * device.  This provides a fake target to allow a monitor command interface
@@ -520,7 +522,7 @@ static bool kinetis_mdm_mass_erase(target *t);
 static bool kinetis_mdm_cmd_ke04_mode(target *t, int argc, const char **argv);
 
 const struct command_s kinetis_mdm_cmd_list[] = {
-	{"ke04_mode", (cmd_handler)kinetis_mdm_cmd_ke04_mode, "Allow erase for KE04"},
+	{"ke04_mode", kinetis_mdm_cmd_ke04_mode, "Allow erase for KE04"},
 	{NULL, NULL, NULL},
 };
 
