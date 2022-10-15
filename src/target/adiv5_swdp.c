@@ -52,13 +52,13 @@ uint8_t make_packet_request(uint8_t RnW, uint16_t addr)
 
 /* Provide bare DP access functions without timeout and exception */
 
-static void dp_line_reset(ADIv5_DP_t *dp)
+static void dp_line_reset(adiv5_debug_port_s *dp)
 {
 	dp->seq_out(0xFFFFFFFFU, 32U);
 	dp->seq_out(0x0FFFFFFFU, 32U);
 }
 
-bool firmware_dp_low_write(ADIv5_DP_t *dp, uint16_t addr, const uint32_t data)
+bool firmware_dp_low_write(adiv5_debug_port_s *dp, uint16_t addr, const uint32_t data)
 {
 	unsigned int request = make_packet_request(ADIV5_LOW_WRITE, addr & 0xfU);
 	dp->seq_out(request, 8);
@@ -77,14 +77,14 @@ uint32_t adiv5_swdp_scan(uint32_t targetid)
 
 	target_list_free();
 
-	ADIv5_DP_t idp = {
+	adiv5_debug_port_s idp = {
 		.dp_low_write = firmware_dp_low_write,
 		.error = firmware_swdp_error,
 		.dp_read = firmware_swdp_read,
 		.low_access = firmware_swdp_low_access,
 		.abort = firmware_swdp_abort,
 	};
-	ADIv5_DP_t *initial_dp = &idp;
+	adiv5_debug_port_s *initial_dp = &idp;
 
 	if (swdptap_init(initial_dp))
 		return 0;
@@ -172,13 +172,13 @@ uint32_t adiv5_swdp_scan(uint32_t targetid)
 				continue;
 		}
 
-		ADIv5_DP_t *dp = calloc(1, sizeof(*dp));
+		adiv5_debug_port_s *dp = calloc(1, sizeof(*dp));
 		if (!dp) { /* calloc failed: heap exhaustion */
 			DEBUG_WARN("calloc: failed in %s\n", __func__);
 			continue;
 		}
 
-		memcpy(dp, initial_dp, sizeof(ADIv5_DP_t));
+		memcpy(dp, initial_dp, sizeof(adiv5_debug_port_s));
 		dp->instance = i;
 
 		adiv5_dp_init(dp, 0);
@@ -186,7 +186,7 @@ uint32_t adiv5_swdp_scan(uint32_t targetid)
 	return target_list ? 1U : 0U;
 }
 
-uint32_t firmware_swdp_read(ADIv5_DP_t *dp, uint16_t addr)
+uint32_t firmware_swdp_read(adiv5_debug_port_s *dp, uint16_t addr)
 {
 	if (addr & ADIV5_APnDP) {
 		adiv5_dp_low_access(dp, ADIV5_LOW_READ, addr, 0);
@@ -195,7 +195,7 @@ uint32_t firmware_swdp_read(ADIv5_DP_t *dp, uint16_t addr)
 		return firmware_swdp_low_access(dp, ADIV5_LOW_READ, addr, 0);
 }
 
-uint32_t firmware_swdp_error(ADIv5_DP_t *dp)
+uint32_t firmware_swdp_error(adiv5_debug_port_s *dp)
 {
 	if (dp->version >= 2 && dp->dp_low_write) {
 		/* On protocol error target gets deselected.
@@ -225,7 +225,7 @@ uint32_t firmware_swdp_error(ADIv5_DP_t *dp)
 	return err;
 }
 
-uint32_t firmware_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW, uint16_t addr, uint32_t value)
+uint32_t firmware_swdp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value)
 {
 	uint8_t request = make_packet_request(RnW, addr);
 	uint32_t response = 0;
@@ -280,7 +280,7 @@ uint32_t firmware_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW, uint16_t addr, ui
 	return response;
 }
 
-void firmware_swdp_abort(ADIv5_DP_t *dp, uint32_t abort)
+void firmware_swdp_abort(adiv5_debug_port_s *dp, uint32_t abort)
 {
 	adiv5_dp_write(dp, ADIV5_DP_ABORT, abort);
 }

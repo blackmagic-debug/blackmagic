@@ -54,10 +54,10 @@ uint32_t stlink_swdp_scan(bmp_info_t *info)
 {
 	return 0;
 }
-void stlink_adiv5_dp_defaults(ADIv5_DP_t *dp)
+void stlink_adiv5_dp_defaults(adiv5_debug_port_s *dp)
 {
 }
-int stlink_jtag_dp_init(ADIv5_DP_t *dp)
+int stlink_jtag_dp_init(adiv5_debug_port_s *dp)
 {
 	return false;
 }
@@ -83,8 +83,8 @@ const char *stlink_target_voltage(bmp_info_t *info);
 void stlink_nrst_set_val(bmp_info_t *info, bool assert);
 bool stlink_nrst_get_val(void);
 uint32_t stlink_swdp_scan(bmp_info_t *info);
-void stlink_adiv5_dp_defaults(ADIv5_DP_t *dp);
-int stlink_jtag_dp_init(ADIv5_DP_t *dp);
+void stlink_adiv5_dp_defaults(adiv5_debug_port_s *dp);
+int stlink_jtag_dp_init(adiv5_debug_port_s *dp);
 uint32_t jtag_scan_stlinkv2(bmp_info_t *info, const uint8_t *irlens);
 void stlink_exit_function(bmp_info_t *info);
 void stlink_max_frequency_set(bmp_info_t *info, uint32_t freq);

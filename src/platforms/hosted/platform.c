@@ -157,7 +157,7 @@ uint32_t platform_adiv5_swdp_scan(uint32_t targetid)
 	}
 }
 
-int swdptap_init(ADIv5_DP_t *dp)
+int swdptap_init(adiv5_debug_port_s *dp)
 {
 	switch (info.bmp_type) {
 	case BMP_TYPE_BMP:
@@ -228,7 +228,7 @@ int platform_jtagtap_init(void)
 	}
 }
 
-void platform_adiv5_dp_defaults(ADIv5_DP_t *dp)
+void platform_adiv5_dp_defaults(adiv5_debug_port_s *dp)
 {
 	dp->dp_bmp_type = info.bmp_type;
 
@@ -251,7 +251,7 @@ void platform_adiv5_dp_defaults(ADIv5_DP_t *dp)
 	}
 }
 
-int platform_jtag_dp_init(ADIv5_DP_t *dp)
+int platform_jtag_dp_init(adiv5_debug_port_s *dp)
 {
 	switch (info.bmp_type) {
 	case BMP_TYPE_BMP:
@@ -584,7 +584,7 @@ static void ap_decode_access(uint16_t addr, uint8_t RnW)
 	}
 }
 
-void adiv5_dp_write(ADIv5_DP_t *dp, uint16_t addr, uint32_t value)
+void adiv5_dp_write(adiv5_debug_port_s *dp, uint16_t addr, uint32_t value)
 {
 	if (cl_debuglevel & BMP_DEBUG_TARGET) {
 		ap_decode_access(addr, ADIV5_LOW_WRITE);
@@ -593,7 +593,7 @@ void adiv5_dp_write(ADIv5_DP_t *dp, uint16_t addr, uint32_t value)
 	dp->low_access(dp, ADIV5_LOW_WRITE, addr, value);
 }
 
-uint32_t adiv5_dp_read(ADIv5_DP_t *dp, uint16_t addr)
+uint32_t adiv5_dp_read(adiv5_debug_port_s *dp, uint16_t addr)
 {
 	uint32_t ret = dp->dp_read(dp, addr);
 	if (cl_debuglevel & BMP_DEBUG_TARGET) {
@@ -603,14 +603,14 @@ uint32_t adiv5_dp_read(ADIv5_DP_t *dp, uint16_t addr)
 	return ret;
 }
 
-uint32_t adiv5_dp_error(ADIv5_DP_t *dp)
+uint32_t adiv5_dp_error(adiv5_debug_port_s *dp)
 {
 	uint32_t ret = dp->error(dp);
 	DEBUG_TARGET("DP Error 0x%08" PRIx32 "\n", ret);
 	return ret;
 }
 
-uint32_t adiv5_dp_low_access(struct ADIv5_DP_s *dp, uint8_t RnW, uint16_t addr, uint32_t value)
+uint32_t adiv5_dp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value)
 {
 	uint32_t ret = dp->low_access(dp, RnW, addr, value);
 	if (cl_debuglevel & BMP_DEBUG_TARGET) {
@@ -682,7 +682,7 @@ void adiv5_mem_write_sized(ADIv5_AP_t *ap, uint32_t dest, const void *src, size_
 	return ap->dp->mem_write_sized(ap, dest, src, len, align);
 }
 
-void adiv5_dp_abort(struct ADIv5_DP_s *dp, uint32_t abort)
+void adiv5_dp_abort(adiv5_debug_port_s *dp, uint32_t abort)
 {
 	DEBUG_TARGET("Abort: %08" PRIx32 "\n", abort);
 	return dp->abort(dp, abort);

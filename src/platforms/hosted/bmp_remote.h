@@ -31,7 +31,7 @@ int platform_buffer_write(const uint8_t *data, int size);
 int platform_buffer_read(uint8_t *data, int size);
 
 int remote_init(void);
-int remote_swdptap_init(ADIv5_DP_t *dp);
+int remote_swdptap_init(adiv5_debug_port_s *dp);
 int remote_jtagtap_init(jtag_proc_s *jtag_proc);
 bool remote_target_get_power(void);
 const char *remote_target_voltage(void);
@@ -42,7 +42,7 @@ void remote_max_frequency_set(uint32_t freq);
 uint32_t remote_max_frequency_get(void);
 void remote_target_clk_output_enable(bool enable);
 
-void remote_adiv5_dp_defaults(ADIv5_DP_t *dp);
+void remote_adiv5_dp_defaults(adiv5_debug_port_s *dp);
 void remote_add_jtag_dev(uint32_t i, const jtag_dev_s *jtag_dev);
 
 #endif /* PLATFORMS_HOSTED_BMP_REMOTE_H */

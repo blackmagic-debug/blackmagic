@@ -283,7 +283,7 @@ void adiv5_ap_ref(ADIv5_AP_t *ap)
 	ap->refcnt++;
 }
 
-static void adiv5_dp_unref(ADIv5_DP_t *dp)
+static void adiv5_dp_unref(adiv5_debug_port_s *dp)
 {
 	if (--(dp->refcnt) == 0)
 		free(dp);
@@ -622,7 +622,7 @@ static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, const size_t re
 	}
 }
 
-ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel)
+ADIv5_AP_t *adiv5_new_ap(adiv5_debug_port_s *dp, uint8_t apsel)
 {
 	ADIv5_AP_t *ap, tmpap;
 	/* Assume valid and try to read IDR */
@@ -669,7 +669,7 @@ ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel)
 }
 
 /* No real AP on RP2040. Special setup.*/
-static void rp_rescue_setup(ADIv5_DP_t *dp)
+static void rp_rescue_setup(adiv5_debug_port_s *dp)
 {
 	ADIv5_AP_t *ap = calloc(1, sizeof(*ap));
 	if (!ap) { /* calloc failed: heap exhaustion */
@@ -681,7 +681,7 @@ static void rp_rescue_setup(ADIv5_DP_t *dp)
 	rp_rescue_probe(ap);
 }
 
-void adiv5_dp_init(ADIv5_DP_t *dp, const uint32_t idcode)
+void adiv5_dp_init(adiv5_debug_port_s *dp, const uint32_t idcode)
 {
 	/*
 	 * Assume DP v1 or later.

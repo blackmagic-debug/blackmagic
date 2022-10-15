@@ -236,7 +236,7 @@ enum align {
 typedef struct ADIv5_AP_s ADIv5_AP_t;
 
 /* Try to keep this somewhat absract for later adding SW-DP */
-typedef struct ADIv5_DP_s {
+typedef struct adiv5_debug_port {
 	int refcnt;
 
 	void (*seq_out)(uint32_t tms_states, size_t clock_cycles);
@@ -244,11 +244,11 @@ typedef struct ADIv5_DP_s {
 	uint32_t (*seq_in)(size_t clock_cycles);
 	bool (*seq_in_parity)(uint32_t *ret, size_t clock_cycles);
 	/* dp_low_write returns true if no OK resonse, but ignores errors */
-	bool (*dp_low_write)(struct ADIv5_DP_s *dp, uint16_t addr, const uint32_t data);
-	uint32_t (*dp_read)(struct ADIv5_DP_s *dp, uint16_t addr);
-	uint32_t (*error)(struct ADIv5_DP_s *dp);
-	uint32_t (*low_access)(struct ADIv5_DP_s *dp, uint8_t RnW, uint16_t addr, uint32_t value);
-	void (*abort)(struct ADIv5_DP_s *dp, uint32_t abort);
+	bool (*dp_low_write)(struct adiv5_debug_port *dp, uint16_t addr, const uint32_t data);
+	uint32_t (*dp_read)(struct adiv5_debug_port *dp, uint16_t addr);
+	uint32_t (*error)(struct adiv5_debug_port *dp);
+	uint32_t (*low_access)(struct adiv5_debug_port *dp, uint8_t RnW, uint16_t addr, uint32_t value);
+	void (*abort)(struct adiv5_debug_port *dp, uint32_t abort);
 
 #if PC_HOSTED == 1
 	bmp_type_t dp_bmp_type;
@@ -283,12 +283,12 @@ typedef struct ADIv5_DP_s {
 	/* TARGETID designer and partno, present on DPv2 */
 	uint16_t target_designer_code;
 	uint16_t target_partno;
-} ADIv5_DP_t;
+} adiv5_debug_port_s;
 
 struct ADIv5_AP_s {
 	int refcnt;
 
-	ADIv5_DP_t *dp;
+	adiv5_debug_port_s *dp;
 	uint8_t apsel;
 
 	uint32_t idr;
@@ -305,22 +305,22 @@ struct ADIv5_AP_s {
 uint8_t make_packet_request(uint8_t RnW, uint16_t addr);
 
 #if PC_HOSTED == 0
-static inline uint32_t adiv5_dp_read(ADIv5_DP_t *dp, uint16_t addr)
+static inline uint32_t adiv5_dp_read(adiv5_debug_port_s *dp, uint16_t addr)
 {
 	return dp->dp_read(dp, addr);
 }
 
-static inline uint32_t adiv5_dp_error(ADIv5_DP_t *dp)
+static inline uint32_t adiv5_dp_error(adiv5_debug_port_s *dp)
 {
 	return dp->error(dp);
 }
 
-static inline uint32_t adiv5_dp_low_access(struct ADIv5_DP_s *dp, uint8_t RnW, uint16_t addr, uint32_t value)
+static inline uint32_t adiv5_dp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value)
 {
 	return dp->low_access(dp, RnW, addr, value);
 }
 
-static inline void adiv5_dp_abort(struct ADIv5_DP_s *dp, uint32_t abort)
+static inline void adiv5_dp_abort(adiv5_debug_port_s *dp, uint32_t abort)
 {
 	return dp->abort(dp, abort);
 }
@@ -345,34 +345,34 @@ static inline void adiv5_mem_write_sized(ADIv5_AP_t *ap, uint32_t dest, const vo
 	return ap->dp->mem_write_sized(ap, dest, src, len, align);
 }
 
-static inline void adiv5_dp_write(ADIv5_DP_t *dp, uint16_t addr, uint32_t value)
+static inline void adiv5_dp_write(adiv5_debug_port_s *dp, uint16_t addr, uint32_t value)
 {
 	dp->low_access(dp, ADIV5_LOW_WRITE, addr, value);
 }
 
 #else
-uint32_t adiv5_dp_read(ADIv5_DP_t *dp, uint16_t addr);
-uint32_t adiv5_dp_error(ADIv5_DP_t *dp);
-uint32_t adiv5_dp_low_access(struct ADIv5_DP_s *dp, uint8_t RnW, uint16_t addr, uint32_t value);
-void adiv5_dp_abort(struct ADIv5_DP_s *dp, uint32_t abort);
+uint32_t adiv5_dp_read(adiv5_debug_port_s *dp, uint16_t addr);
+uint32_t adiv5_dp_error(adiv5_debug_port_s *dp);
+uint32_t adiv5_dp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value);
+void adiv5_dp_abort(adiv5_debug_port_s *dp, uint32_t abort);
 uint32_t adiv5_ap_read(ADIv5_AP_t *ap, uint16_t addr);
 void adiv5_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value);
 void adiv5_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len);
 void adiv5_mem_write_sized(ADIv5_AP_t *ap, uint32_t dest, const void *src, size_t len, enum align align);
-void adiv5_dp_write(ADIv5_DP_t *dp, uint16_t addr, uint32_t value);
+void adiv5_dp_write(adiv5_debug_port_s *dp, uint16_t addr, uint32_t value);
 #endif
 
-void adiv5_dp_init(ADIv5_DP_t *dp, uint32_t idcode);
-void platform_adiv5_dp_defaults(ADIv5_DP_t *dp);
-ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel);
+void adiv5_dp_init(adiv5_debug_port_s *dp, uint32_t idcode);
+void platform_adiv5_dp_defaults(adiv5_debug_port_s *dp);
+ADIv5_AP_t *adiv5_new_ap(adiv5_debug_port_s *dp, uint8_t apsel);
 void remote_jtag_dev(const jtag_dev_s *jtag_dev);
 void adiv5_ap_ref(ADIv5_AP_t *ap);
 void adiv5_ap_unref(ADIv5_AP_t *ap);
 void platform_add_jtag_dev(uint32_t dev_index, const jtag_dev_s *jtag_dev);
 
 void adiv5_jtag_dp_handler(uint8_t jd_index);
-int platform_jtag_dp_init(ADIv5_DP_t *dp);
-int swdptap_init(ADIv5_DP_t *dp);
+int platform_jtag_dp_init(adiv5_debug_port_s *dp);
+int swdptap_init(adiv5_debug_port_s *dp);
 
 void adiv5_mem_write(ADIv5_AP_t *ap, uint32_t dest, const void *src, size_t len);
 uint64_t adiv5_ap_read_pidr(ADIv5_AP_t *ap, uint32_t addr);
@@ -382,14 +382,14 @@ void firmware_mem_write_sized(ADIv5_AP_t *ap, uint32_t dest, const void *src, si
 void firmware_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len);
 void firmware_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value);
 uint32_t firmware_ap_read(ADIv5_AP_t *ap, uint16_t addr);
-uint32_t firmware_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW, uint16_t addr, uint32_t value);
-uint32_t fw_adiv5_jtagdp_low_access(ADIv5_DP_t *dp, uint8_t RnW, uint16_t addr, uint32_t value);
-uint32_t firmware_swdp_read(ADIv5_DP_t *dp, uint16_t addr);
-uint32_t fw_adiv5_jtagdp_read(ADIv5_DP_t *dp, uint16_t addr);
+uint32_t firmware_swdp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value);
+uint32_t fw_adiv5_jtagdp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value);
+uint32_t firmware_swdp_read(adiv5_debug_port_s *dp, uint16_t addr);
+uint32_t fw_adiv5_jtagdp_read(adiv5_debug_port_s *dp, uint16_t addr);
 
-uint32_t firmware_swdp_error(ADIv5_DP_t *dp);
+uint32_t firmware_swdp_error(adiv5_debug_port_s *dp);
 
-void firmware_swdp_abort(ADIv5_DP_t *dp, uint32_t abort);
-void adiv5_jtagdp_abort(ADIv5_DP_t *dp, uint32_t abort);
+void firmware_swdp_abort(adiv5_debug_port_s *dp, uint32_t abort);
+void adiv5_jtagdp_abort(adiv5_debug_port_s *dp, uint32_t abort);
 
 #endif /* TARGET_ADIV5_H */

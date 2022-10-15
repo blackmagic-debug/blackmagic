@@ -248,13 +248,13 @@ void dap_nrst_set_val(bool assert)
 	dap_reset_pin(!assert);
 }
 
-static void dap_dp_abort(ADIv5_DP_t *dp, uint32_t abort)
+static void dap_dp_abort(adiv5_debug_port_s *dp, uint32_t abort)
 {
 	/* DP Write to Reg 0.*/
 	dap_write_reg(dp, ADIV5_DP_ABORT, abort);
 }
 
-static uint32_t dap_dp_error(ADIv5_DP_t *dp)
+static uint32_t dap_dp_error(adiv5_debug_port_s *dp)
 {
 	/* Not used for SWD debugging, so no TARGETID switch needed!*/
 	uint32_t ctrlstat = dap_read_reg(dp, ADIV5_DP_CTRLSTAT);
@@ -275,7 +275,7 @@ static uint32_t dap_dp_error(ADIv5_DP_t *dp)
 	return err;
 }
 
-static uint32_t dap_dp_low_access(struct ADIv5_DP_s *dp, uint8_t RnW,
+static uint32_t dap_dp_low_access(adiv5_debug_port_s *dp, uint8_t RnW,
                                uint16_t addr, uint32_t value)
 {
 	bool APnDP = addr & ADIV5_APnDP;
@@ -290,7 +290,7 @@ static uint32_t dap_dp_low_access(struct ADIv5_DP_s *dp, uint8_t RnW,
 	return res;
 }
 
-static uint32_t dap_dp_read_reg(ADIv5_DP_t *dp, uint16_t addr)
+static uint32_t dap_dp_read_reg(adiv5_debug_port_s *dp, uint16_t addr)
 {
 	uint32_t res = dap_dp_low_access(dp, ADIV5_LOW_READ, addr, 0);
 	DEBUG_PROBE("dp_read %04x %08" PRIx32 "\n", addr, res);
@@ -457,7 +457,7 @@ static void dap_mem_write_sized( ADIv5_AP_t *ap, uint32_t dest, const void *src,
 	DEBUG_WIRE("memwrite done\n");
 }
 
-void dap_adiv5_dp_defaults(ADIv5_DP_t *dp)
+void dap_adiv5_dp_defaults(adiv5_debug_port_s *dp)
 {
 	if ((mode == DAP_CAP_JTAG) && dap_jtag_configure())
 		return;
@@ -520,7 +520,7 @@ int cmsis_dap_jtagtap_init(jtag_proc_s *jtag_proc)
 	return 0;
 }
 
-int dap_jtag_dp_init(ADIv5_DP_t *dp)
+int dap_jtag_dp_init(adiv5_debug_port_s *dp)
 {
 	dp->dp_read = dap_dp_read_reg;
 	dp->error = dap_dp_error;
@@ -532,7 +532,7 @@ int dap_jtag_dp_init(ADIv5_DP_t *dp)
 
 #define SWD_SEQUENCE_IN 0x80
 #define DAP_SWD_SEQUENCE 0x1d
-static bool dap_dp_low_write(ADIv5_DP_t *dp, uint16_t addr, const uint32_t data)
+static bool dap_dp_low_write(adiv5_debug_port_s *dp, uint16_t addr, const uint32_t data)
 {
 	DEBUG_PROBE("dap_dp_low_write %08" PRIx32 "\n", data);
 	(void)dp;
@@ -560,7 +560,7 @@ static bool dap_dp_low_write(ADIv5_DP_t *dp, uint16_t addr, const uint32_t data)
 	return (ack != SWDP_ACK_OK);
 }
 
-int dap_swdptap_init(ADIv5_DP_t *dp)
+int dap_swdptap_init(adiv5_debug_port_s *dp)
 {
 	if (!(dap_caps & DAP_CAP_SWD))
 		return 1;
