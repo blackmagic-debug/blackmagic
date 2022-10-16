@@ -48,7 +48,7 @@ typedef struct probe_info {
 	struct probe_info *next;
 } probe_info_s;
 
-char *extract_serial(const char *const device, const size_t length) ;
+char *extract_serial(const char *device, size_t length);
 probe_info_s *probe_info_add(
 	probe_info_s *list, bmp_type_t type, const char *mfr, const char *product, const char *serial, const char *version);
 size_t probe_info_count(const probe_info_s *list);
