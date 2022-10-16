@@ -106,16 +106,11 @@ typedef struct msp432_flash {
 	target_addr_t flash_program_fn;       /* Flash programming routine in ROM */
 } msp432_flash_s;
 
-/* Flash operations */
 static bool msp432_sector_erase(target_flash_s *f, target_addr_t addr);
 static bool msp432_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 static bool msp432_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 
-/* Utility functions */
-/* Find the the target flash that conatins a specific address */
-static target_flash_s *get_target_flash(target *t, target_addr_t addr);
-
-/* Call a subroutine in the MSP432 ROM (or anywhere else...)*/
+/* Call a function in the MSP432 ROM (or anywhere else...)*/
 static void msp432_call_rom(target *t, uint32_t address, uint32_t *regs);
 
 /* Protect or unprotect the sector containing address */
@@ -252,7 +247,6 @@ static bool msp432_sector_erase(target_flash_s *f, target_addr_t addr)
 
 	/* Restore original protection */
 	target_mem_write32(t, mf->flash_protect_register, old_prot);
-
 	return regs[0] != 0;
 }
 
@@ -316,18 +310,20 @@ static bool msp432_cmd_erase_main(target *t, int argc, const char **argv)
 	/* The mass erase routine in ROM will also erase the Info Flash. */
 	/* Usually, this is not wanted, so go sector by sector...        */
 
-	uint32_t banksize = target_mem_read32(t, SYS_FLASH_SIZE) / 2;
+	uint32_t banksize = target_mem_read32(t, SYS_FLASH_SIZE) / 2U;
 	DEBUG_INFO("Bank Size: 0x%08" PRIX32 "\n", banksize);
 
+	bool result = true;
+
 	/* Erase first bank */
-	target_flash_s *f = get_target_flash(t, MAIN_FLASH_BASE);
-	bool ret = !msp432_flash_erase(f, MAIN_FLASH_BASE, banksize);
+	target_flash_s *f = target_flash_for_addr(t, MAIN_FLASH_BASE);
+	result &= msp432_flash_erase(f, MAIN_FLASH_BASE, banksize);
 
 	/* Erase second bank */
-	f = get_target_flash(t, MAIN_FLASH_BASE + banksize);
-	ret |= !msp432_flash_erase(f, MAIN_FLASH_BASE + banksize, banksize);
+	f = target_flash_for_addr(t, MAIN_FLASH_BASE + banksize);
+	result &= msp432_flash_erase(f, MAIN_FLASH_BASE + banksize, banksize);
 
-	return ret;
+	return result;
 }
 
 static bool msp432_cmd_sector_erase(target *t, int argc, const char **argv)
@@ -338,24 +334,12 @@ static bool msp432_cmd_sector_erase(target *t, int argc, const char **argv)
 	uint32_t addr = strtoul(argv[1], NULL, 0);
 
 	/* Find the flash structure (for the rigth protect register) */
-	target_flash_s *f = get_target_flash(t, addr);
+	target_flash_s *f = target_flash_for_addr(t, addr);
 
 	if (f)
 		return msp432_sector_erase(f, addr);
 	tc_printf(t, "Invalid sector address\n");
 	return false;
-}
-
-/* Returns flash bank containing addr, or NULL if not found */
-static target_flash_s *get_target_flash(target *t, target_addr_t addr)
-{
-	target_flash_s *f = t->flash;
-	while (f) {
-		if ((f->start <= addr) && (addr < f->start + f->length))
-			break;
-		f = f->next;
-	}
-	return f;
 }
 
 /* MSP432 ROM routine invocation */
