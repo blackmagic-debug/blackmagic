@@ -294,7 +294,7 @@ static probe_info_s *parse_device_node(const char *name, probe_info_s *probe_lis
 
 	snprintf(mfr, mfr_length, MFR_FORMAT_STRING, type);
 	free(type);
-	return probe_info_add(probe_list, BMP_TYPE_BMP, mfr, serial, version);
+	return probe_info_add(probe_list, BMP_TYPE_BMP, mfr, NULL, serial, version);
 }
 
 static const probe_info_s *scan_for_devices(void)
