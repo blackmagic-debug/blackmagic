@@ -24,28 +24,28 @@
 #include "lpc_common.h"
 #include "adiv5.h"
 
-#define IAP_PGM_CHUNKSIZE			4096
+#define IAP_PGM_CHUNKSIZE 4096
 
-#define MIN_RAM_SIZE				8192 // LPC1751
-#define RAM_USAGE_FOR_IAP_ROUTINES	32 // IAP routines use 32 bytes at top of ram
+#define MIN_RAM_SIZE               8192 // LPC1751
+#define RAM_USAGE_FOR_IAP_ROUTINES 32   // IAP routines use 32 bytes at top of ram
 
-#define IAP_ENTRYPOINT				0x1FFF1FF1
-#define IAP_RAM_BASE				0x10000000
+#define IAP_ENTRYPOINT 0x1FFF1FF1
+#define IAP_RAM_BASE   0x10000000
 
-#define MEMMAP						0x400FC040
-#define FLASH_NUM_SECTOR			30
+#define MEMMAP           0x400FC040
+#define FLASH_NUM_SECTOR 30
 
-struct flash_param {
+typedef struct flash_param {
 	uint16_t opcode;
 	uint16_t pad0;
 	uint32_t command;
 	uint32_t words[4];
-	uint32_t result[5]; // return code and maximum of 4 result parameters
-} __attribute__((aligned(4)));
+	uint32_t result[5]; // Return code and maximum of 4 result parameters
+} __attribute__((aligned(4))) flash_param_s;
 
 static void lpc17xx_extended_reset(target *t);
 static bool lpc17xx_mass_erase(target *t);
-enum iap_status lpc17xx_iap_call(target *t, struct flash_param *param, enum iap_cmd cmd, ...);
+enum iap_status lpc17xx_iap_call(target *t, flash_param_s *param, enum iap_cmd cmd, ...);
 
 static void lpc17xx_add_flash(target *t, uint32_t addr, size_t len, size_t erasesize, unsigned int base_sector)
 {
@@ -59,10 +59,9 @@ static void lpc17xx_add_flash(target *t, uint32_t addr, size_t len, size_t erase
 	lf->iap_msp = IAP_RAM_BASE + MIN_RAM_SIZE - RAM_USAGE_FOR_IAP_ROUTINES;
 }
 
-bool
-lpc17xx_probe(target *t)
+bool lpc17xx_probe(target *t)
 {
-	if ((t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M3)  {
+	if ((t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M3) {
 		/*
 		 * Now that we're sure it's a Cortex-M3, we need to halt the
 		 * target and make an IAP call to get the part number.
@@ -71,39 +70,36 @@ lpc17xx_probe(target *t)
 		target_halt_request(t);
 
 		/* Read the Part ID */
-		struct flash_param param;
+		flash_param_s param;
 		lpc17xx_iap_call(t, &param, IAP_CMD_PARTID);
 		target_halt_resume(t, 0);
 
-		if (param.result[0]) {
+		if (param.result[0])
 			return false;
-		}
 
 		switch (param.result[1]) {
-			case 0x26113F37: /* LPC1769 */
-			case 0x26013F37: /* LPC1768 */
-			case 0x26012837: /* LPC1767 */
-			case 0x26013F33: /* LPC1766 */
-			case 0x26013733: /* LPC1765 */
-			case 0x26011922: /* LPC1764 */
-			case 0x25113737: /* LPC1759 */
-			case 0x25013F37: /* LPC1758 */
-			case 0x25011723: /* LPC1756 */
-			case 0x25011722: /* LPC1754 */
-			case 0x25001121: /* LPC1752 */
-			case 0x25001118: /* LPC1751 */
-			case 0x25001110: /* LPC1751 (No CRP) */
-
-				t->mass_erase = lpc17xx_mass_erase;
-				t->driver = "LPC17xx";
-				t->extended_reset = lpc17xx_extended_reset;
-				target_add_ram(t, 0x10000000, 0x8000);
-				target_add_ram(t, 0x2007C000, 0x4000);
-				target_add_ram(t, 0x20080000, 0x4000);
-				lpc17xx_add_flash(t, 0x00000000, 0x10000, 0x1000, 0);
-				lpc17xx_add_flash(t, 0x00010000, 0x70000, 0x8000, 16);
-
-				return true;
+		case 0x26113F37: /* LPC1769 */
+		case 0x26013F37: /* LPC1768 */
+		case 0x26012837: /* LPC1767 */
+		case 0x26013F33: /* LPC1766 */
+		case 0x26013733: /* LPC1765 */
+		case 0x26011922: /* LPC1764 */
+		case 0x25113737: /* LPC1759 */
+		case 0x25013F37: /* LPC1758 */
+		case 0x25011723: /* LPC1756 */
+		case 0x25011722: /* LPC1754 */
+		case 0x25001121: /* LPC1752 */
+		case 0x25001118: /* LPC1751 */
+		case 0x25001110: /* LPC1751 (No CRP) */
+			t->mass_erase = lpc17xx_mass_erase;
+			t->driver = "LPC17xx";
+			t->extended_reset = lpc17xx_extended_reset;
+			target_add_ram(t, 0x10000000, 0x8000);
+			target_add_ram(t, 0x2007C000, 0x4000);
+			target_add_ram(t, 0x20080000, 0x4000);
+			lpc17xx_add_flash(t, 0x00000000, 0x10000, 0x1000, 0);
+			lpc17xx_add_flash(t, 0x00010000, 0x70000, 0x8000, 16);
+			return true;
 		}
 	}
 	return false;
@@ -111,7 +107,7 @@ lpc17xx_probe(target *t)
 
 static bool lpc17xx_mass_erase(target *t)
 {
-	struct flash_param param;
+	flash_param_s param;
 
 	if (lpc17xx_iap_call(t, &param, IAP_CMD_PREPARE, 0, FLASH_NUM_SECTOR - 1U)) {
 		DEBUG_WARN("lpc17xx_cmd_erase: prepare failed %" PRIu32 "\n", param.result[0]);
@@ -127,6 +123,7 @@ static bool lpc17xx_mass_erase(target *t)
 		DEBUG_WARN("lpc17xx_cmd_erase: blankcheck failed %" PRIu32 "\n", param.result[0]);
 		return false;
 	}
+
 	tc_printf(t, "Erase OK.\n");
 	return true;
 }
@@ -141,26 +138,26 @@ static void lpc17xx_extended_reset(target *t)
 	target_mem_write32(t, MEMMAP, 1);
 }
 
-enum iap_status lpc17xx_iap_call(target *t, struct flash_param *param, enum iap_cmd cmd, ...)
+enum iap_status lpc17xx_iap_call(target *t, flash_param_s *param, enum iap_cmd cmd, ...)
 {
 	param->opcode = ARM_THUMB_BREAKPOINT;
 	param->command = cmd;
 
-	/* fill out the remainder of the parameters */
+	/* Fill out the remainder of the parameters */
 	va_list ap;
 	va_start(ap, cmd);
 	for (int i = 0; i < 4; i++)
 		param->words[i] = va_arg(ap, uint32_t);
 	va_end(ap);
 
-	/* copy the structure to RAM */
-	target_mem_write(t, IAP_RAM_BASE, param, sizeof(struct flash_param));
+	/* Copy the structure to RAM */
+	target_mem_write(t, IAP_RAM_BASE, param, sizeof(flash_param_s));
 
-	/* set up for the call to the IAP ROM */
+	/* Set up for the call to the IAP ROM */
 	uint32_t regs[t->regs_size / sizeof(uint32_t)];
 	target_regs_read(t, regs);
-	regs[0] = IAP_RAM_BASE + offsetof(struct flash_param, command);
-	regs[1] = IAP_RAM_BASE + offsetof(struct flash_param, result);
+	regs[0] = IAP_RAM_BASE + offsetof(flash_param_s, command);
+	regs[1] = IAP_RAM_BASE + offsetof(flash_param_s, result);
 	regs[REG_MSP] = IAP_RAM_BASE + MIN_RAM_SIZE - RAM_USAGE_FOR_IAP_ROUTINES;
 	regs[REG_LR] = IAP_RAM_BASE | 1;
 	regs[REG_PC] = IAP_ENTRYPOINT;
@@ -168,14 +165,14 @@ enum iap_status lpc17xx_iap_call(target *t, struct flash_param *param, enum iap_
 
 	platform_timeout timeout;
 	platform_timeout_set(&timeout, 500);
-	/* start the target and wait for it to halt again */
+	/* Start the target and wait for it to halt again */
 	target_halt_resume(t, false);
 	while (!target_halt_poll(t, NULL)) {
 		if (cmd == IAP_CMD_ERASE)
 			target_print_progress(&timeout);
 	}
 
-	/* copy back just the parameters structure */
-	target_mem_read(t, (void *)param, IAP_RAM_BASE, sizeof(struct flash_param));
+	/* Copy back just the parameters structure */
+	target_mem_read(t, (void *)param, IAP_RAM_BASE, sizeof(flash_param_s));
 	return param->result[0];
 }
