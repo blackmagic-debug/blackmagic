@@ -385,7 +385,7 @@ static bool rp_rom_call(target *t, uint32_t *regs, uint32_t cmd, uint32_t timeou
 		if (ps->is_monitor)
 			target_print_progress(&wait_timeout);
 		if (platform_timeout_is_expired(&operation_timeout)) {
-			DEBUG_WARN("RP Run timout %ums reached: ", timeout);
+			DEBUG_WARN("RP Run timout %" PRIu32 "ms reached: ", timeout);
 			break;
 		}
 	}
