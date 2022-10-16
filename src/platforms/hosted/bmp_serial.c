@@ -169,6 +169,7 @@ print_probes_info:
 #define BMP_IDSTRING_BLACKMAGIC  "usb-Black_Magic_Debug_Black_Magic_Probe"
 #define BMP_IDSTRING_1BITSQUARED "usb-1BitSquared_Black_Magic_Probe"
 #define DEVICE_BY_ID             "/dev/serial/by-id"
+#define BMP_PRODUCT_STRING       "Black Magic Probe"
 #define MFR_FORMAT_STRING        "Black Magic Probe (%s)"
 
 typedef enum scan_mode {
@@ -243,12 +244,18 @@ static probe_info_s *parse_device_node(const char *name, probe_info_s *probe_lis
 
 	/* Now we know where everything is, start by extracting the serial string on the end. */
 	char *const serial = extract_serial(name, name_len);
-	if (!*serial)
+	if (!serial)
 		return probe_list;
 
 	/* Now extract the underlying probe type and versioning information */
 	char *version = NULL;
 	char *type = NULL;
+	char *product = strdup(BMP_PRODUCT_STRING);
+
+	if (!product) {
+		free(serial);
+		return probe_list;
+	}
 
 	/* If the device name has no underscores after the prefix, it's an original BMP */
 	if (underscores == 0) {
@@ -279,6 +286,7 @@ static probe_info_s *parse_device_node(const char *name, probe_info_s *probe_lis
 		free(serial);
 		free(version);
 		free(type);
+		free(product);
 		return probe_list;
 	}
 
@@ -289,12 +297,13 @@ static probe_info_s *parse_device_node(const char *name, probe_info_s *probe_lis
 		free(serial);
 		free(version);
 		free(type);
+		free(product);
 		return probe_list;
 	}
 
 	snprintf(mfr, mfr_length, MFR_FORMAT_STRING, type);
 	free(type);
-	return probe_info_add(probe_list, BMP_TYPE_BMP, mfr, NULL, serial, version);
+	return probe_info_add(probe_list, BMP_TYPE_BMP, mfr, product, serial, version);
 }
 
 static const probe_info_s *scan_for_devices(void)
