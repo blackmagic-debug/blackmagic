@@ -60,6 +60,20 @@ debugger_device_s debugger_devices[] = {
 	{0, 0, BMP_TYPE_NONE, ""},
 };
 
+bmp_type_t get_type_from_vid_pid(const uint16_t probe_vid, const uint16_t probe_pid)
+{
+	bmp_type_t probe_type = BMP_TYPE_NONE;
+	/* Segger probe PIDs are unknown, if we have a Segger probe force the type to JLink */
+	if (probe_vid == VENDOR_ID_SEGGER)
+		return BMP_TYPE_JLINK;
+
+	for (size_t index = 0; debugger_devices[index].type != BMP_TYPE_NONE; index++) {
+		if (debugger_devices[index].vendor == probe_vid && debugger_devices[index].product == probe_pid)
+			return debugger_devices[index].type;
+	}
+	return probe_type;
+}
+
 void bmp_ident(bmp_info_s *info)
 {
 	DEBUG_INFO("Black Magic Debug App %s\n for Black Magic Probe, ST-Link v2 and v3, CMSIS-DAP, "
@@ -215,12 +229,14 @@ static bool process_vid_pid_table_probe(
 		/* Try to open the device */
 		if (libusb_open(device, &handle) != LIBUSB_SUCCESS)
 			break;
+
+		const bmp_type_t probe_type = get_type_from_vid_pid(device_descriptor->idVendor, device_descriptor->idProduct);
 		char *product = get_device_descriptor_string(handle, device_descriptor->iProduct);
 		char *manufacturer = get_device_descriptor_string(handle, device_descriptor->iManufacturer);
 		char *serial = get_device_descriptor_string(handle, device_descriptor->iSerialNumber);
 		char *version = strdup("---");
 
-		*probe_list = probe_info_add_by_id(*probe_list, debugger_devices[index].type, device_descriptor->idVendor,
+		*probe_list = probe_info_add_by_id(*probe_list, probe_type, device_descriptor->idVendor,
 			device_descriptor->idProduct, manufacturer, product, serial, version);
 		probe_added = true;
 		libusb_close(handle);
