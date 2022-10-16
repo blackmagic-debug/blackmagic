@@ -114,7 +114,14 @@ void probe_info_to_bmp_info(const probe_info_s *const probe, bmp_info_s *info)
 	memcpy(info->version, probe->version, version_len);
 	info->version[version_len] = '\0';
 
-	const size_t manufacturer_len = MIN(strlen(probe->manufacturer), sizeof(info->manufacturer) - 1U);
-	memcpy(info->manufacturer, probe->manufacturer, manufacturer_len);
-	info->manufacturer[manufacturer_len] = '\0';
+	const size_t product_len = strlen(probe->product);
+	const size_t manufacturer_len = strlen(probe->manufacturer);
+	/* + 4 as we're including two parens, a space and C's NUL character requirement */
+	const size_t descriptor_len = MIN(product_len + manufacturer_len + 4, sizeof(info->manufacturer));
+
+	if (snprintf(info->manufacturer, descriptor_len, "%s (%s)", probe->product, probe->manufacturer) !=
+		(int)descriptor_len - 1) {
+		DEBUG_WARN("Probe descriptor string '%s (%s)' exceeds allowable manufacturer description length\n",
+			probe->product, probe->manufacturer);
+	}
 }
