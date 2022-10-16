@@ -35,7 +35,7 @@
 #include "probe_info.h"
 #include "general.h"
 
-char *extract_serial(const char *const device, const size_t length)
+char *extract_serial(const char *device, size_t length)
 {
 	const char *const last_underscore = strrchr(device, '_');
 	/* Fail the match if we can't find the _ just before the serial string. */
