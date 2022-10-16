@@ -170,7 +170,6 @@ print_probes_info:
 #define BMP_IDSTRING_1BITSQUARED "usb-1BitSquared_Black_Magic_Probe"
 #define DEVICE_BY_ID             "/dev/serial/by-id"
 #define BMP_PRODUCT_STRING       "Black Magic Probe"
-#define MFR_FORMAT_STRING        "Black Magic Probe (%s)"
 
 typedef enum scan_mode {
 	SCAN_FIND,
@@ -290,20 +289,7 @@ static probe_info_s *parse_device_node(const char *name, probe_info_s *probe_lis
 		return probe_list;
 	}
 
-	const size_t mfr_length = strlen(type) + sizeof(MFR_FORMAT_STRING) - 2U;
-	char *const mfr = malloc(mfr_length);
-	if (!mfr) {
-		DEBUG_WARN("Failed to allocate space for manufacturer string");
-		free(serial);
-		free(version);
-		free(type);
-		free(product);
-		return probe_list;
-	}
-
-	snprintf(mfr, mfr_length, MFR_FORMAT_STRING, type);
-	free(type);
-	return probe_info_add(probe_list, BMP_TYPE_BMP, mfr, product, serial, version);
+	return probe_info_add(probe_list, BMP_TYPE_BMP, type, product, serial, version);
 }
 
 static const probe_info_s *scan_for_devices(void)
