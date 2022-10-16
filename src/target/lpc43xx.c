@@ -54,11 +54,8 @@ static void lpc43xx_set_internal_clock(target *t);
 static void lpc43xx_wdt_set_period(target *t);
 static void lpc43xx_wdt_pet(target *t);
 
-const struct command_s lpc43xx_cmd_list[] = {
-	{"reset", lpc43xx_cmd_reset, "Reset target"},
-	{"mkboot", lpc43xx_cmd_mkboot, "Make flash bank bootable"},
-	{NULL, NULL, NULL},
-};
+const struct command_s lpc43xx_cmd_list[] = {{"reset", lpc43xx_cmd_reset, "Reset target"},
+	{"mkboot", lpc43xx_cmd_mkboot, "Make flash bank bootable"}, {NULL, NULL, NULL}};
 
 static void lpc43xx_add_flash(
 	target *t, uint32_t iap_entry, uint8_t bank, uint8_t base_sector, uint32_t addr, size_t len, size_t erasesize)
