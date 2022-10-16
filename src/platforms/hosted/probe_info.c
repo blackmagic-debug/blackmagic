@@ -36,7 +36,7 @@
 #include "general.h"
 
 probe_info_s *probe_info_add(probe_info_s *const list, const bmp_type_t type, const char *const mfr,
-	const char *const serial, const char *const version)
+	const char *const product, const char *const serial, const char *const version)
 {
 	probe_info_s *probe_info = malloc(sizeof(*probe_info));
 	if (!probe_info) {
@@ -46,6 +46,7 @@ probe_info_s *probe_info_add(probe_info_s *const list, const bmp_type_t type, co
 
 	probe_info->type = type;
 	probe_info->manufacturer = mfr;
+	probe_info->product = product;
 	probe_info->serial = serial;
 	probe_info->version = version;
 
@@ -64,6 +65,7 @@ size_t probe_info_count(const probe_info_s *const list)
 void probe_info_free(probe_info_s *const probe_info)
 {
 	free((void *)probe_info->manufacturer);
+	free((void *)probe_info->product);
 	free((void *)probe_info->serial);
 	free((void *)probe_info->version);
 	free(probe_info);
@@ -100,7 +102,7 @@ const probe_info_s *probe_info_filter(const probe_info_s *const list, const char
 	return NULL;
 }
 
-void probe_info_to_bmp_info(const probe_info_s *const probe, bmp_info_t *info)
+void probe_info_to_bmp_info(const probe_info_s *const probe, bmp_info_s *info)
 {
 	info->bmp_type = probe->type;
 

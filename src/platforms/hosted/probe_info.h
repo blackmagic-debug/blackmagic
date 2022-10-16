@@ -49,12 +49,12 @@ typedef struct probe_info {
 } probe_info_s;
 
 probe_info_s *probe_info_add(
-	probe_info_s *list, bmp_type_t type, const char *mfr, const char *serial, const char *version);
+	probe_info_s *list, bmp_type_t type, const char *mfr, const char *product, const char *serial, const char *version);
 size_t probe_info_count(const probe_info_s *list);
 void probe_info_list_free(const probe_info_s *list);
 
 const probe_info_s *probe_info_correct_order(probe_info_s *list);
 const probe_info_s *probe_info_filter(const probe_info_s *list, const char *serial, size_t position);
-void probe_info_to_bmp_info(const probe_info_s *probe, bmp_info_t *info);
+void probe_info_to_bmp_info(const probe_info_s *probe, bmp_info_s *info);
 
 #endif /* PLATFORMS_HOSTED_PROBE_INFO_H */
