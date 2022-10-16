@@ -35,6 +35,24 @@
 #include "probe_info.h"
 #include "general.h"
 
+char *extract_serial(const char *const device, const size_t length)
+{
+	const char *const last_underscore = strrchr(device, '_');
+	/* Fail the match if we can't find the _ just before the serial string. */
+	if (!last_underscore)
+		return NULL;
+	/* This represents the first byte of the serial number string */
+	const char *const begin = last_underscore + 1;
+	/* This represents one past the last byte of the serial number string */
+	const char *const end = device + length - 5;
+	/* We now allocate memory for the chunk and copy it */
+	const size_t result_length = end - begin;
+	char *const result = (char *)malloc(result_length);
+	memcpy(result, begin, result_length);
+	result[result_length - 1] = '\0';
+	return result;
+}
+
 probe_info_s *probe_info_add(probe_info_s *const list, const bmp_type_t type, const char *const mfr,
 	const char *const product, const char *const serial, const char *const version)
 {

@@ -187,24 +187,6 @@ size_t find_prefix_length(const char *name, const size_t name_len)
 	return 0;
 }
 
-char *extract_serial(const char *const device, const size_t length)
-{
-	const char *const last_underscore = strrchr(device, '_');
-	/* Fail the match if we can't find the _ just before the serial string. */
-	if (!last_underscore)
-		return NULL;
-	/* This represents the first byte of the serial number string */
-	const char *const begin = last_underscore + 1;
-	/* This represents one past the last byte of the serial number string */
-	const char *const end = device + length - 5;
-	/* We now allocate memory for the chunk and copy it */
-	const size_t result_length = end - begin;
-	char *const result = (char *)malloc(result_length);
-	memcpy(result, begin, result_length);
-	result[result_length - 1] = '\0';
-	return result;
-}
-
 static probe_info_s *parse_device_node(const char *name, probe_info_s *probe_list)
 {
 	/* Starting with a string such as 'usb-Black_Magic_Debug_Black_Magic_Probe_v1.8.0-650-g829308db_8BB20695-if00' */
