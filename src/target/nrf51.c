@@ -157,17 +157,26 @@ bool nrf51_probe(target *t)
 	return true;
 }
 
-static bool nrf51_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
+static bool nrf51_wait_ready(target *const t, platform_timeout *const timeout)
 {
-	target *t = f->t;
-	/* Enable erase */
-	target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_EEN);
-
 	/* Poll for NVMC_READY */
 	while (target_mem_read32(t, NRF51_NVMC_READY) == 0) {
 		if (target_check_error(t))
 			return false;
+		if (timeout)
+			target_print_progress(timeout);
 	}
+	return true;
+}
+
+static bool nrf51_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
+{
+	target *t = f->t;
+
+	/* Enable erase */
+	target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_EEN);
+	if (!nrf51_wait_ready(t, NULL))
+		return false;
 
 	for (size_t offset = 0; offset < len; offset += f->blocksize) {
 		/* If the address to erase is the UICR, we have to handle that seperately */
@@ -178,23 +187,13 @@ static bool nrf51_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 			/* Write address of first word in page to erase it */
 			target_mem_write32(t, NRF51_NVMC_ERASEPAGE, addr + offset);
 
-		/* Poll for NVMC_READY */
-		while (target_mem_read32(t, NRF51_NVMC_READY) == 0) {
-			if (target_check_error(t))
-				return false;
-		}
+		if (!nrf51_wait_ready(t, NULL))
+			return false;
 	}
 
 	/* Return to read-only */
 	target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_REN);
-
-	/* Poll for NVMC_READY */
-	while (target_mem_read32(t, NRF51_NVMC_READY) == 0) {
-		if (target_check_error(t))
-			return false;
-	}
-
-	return true;
+	return nrf51_wait_ready(t, NULL);
 }
 
 static bool nrf51_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
@@ -203,17 +202,12 @@ static bool nrf51_flash_write(target_flash_s *f, target_addr_t dest, const void 
 
 	/* Enable write */
 	target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_WEN);
-	/* Poll for NVMC_READY */
-	while (target_mem_read32(t, NRF51_NVMC_READY) == 0) {
-		if (target_check_error(t))
-			return false;
-	}
+	if (!nrf51_wait_ready(t, NULL))
+		return false;
+	/* Write the data */
 	target_mem_write(t, dest, src, len);
-	/* Poll for NVMC_READY */
-	while (target_mem_read32(t, NRF51_NVMC_READY) == 0) {
-		if (target_check_error(t))
-			return false;
-	}
+	if (!nrf51_wait_ready(t, NULL))
+		return false;
 	/* Return to read-only */
 	target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_REN);
 	return true;
@@ -225,26 +219,14 @@ static bool nrf51_mass_erase(target *t)
 
 	/* Enable erase */
 	target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_EEN);
-
-	/* Poll for NVMC_READY */
-	while (target_mem_read32(t, NRF51_NVMC_READY) == 0) {
-		if (target_check_error(t))
-			return false;
-	}
+	if (!nrf51_wait_ready(t, NULL))
+		return false;
 
 	platform_timeout timeout = {};
 	platform_timeout_set(&timeout, 500);
 	/* Erase all */
 	target_mem_write32(t, NRF51_NVMC_ERASEALL, 1);
-
-	/* Poll for NVMC_READY */
-	while (target_mem_read32(t, NRF51_NVMC_READY) == 0) {
-		if (target_check_error(t))
-			return false;
-		target_print_progress(&timeout);
-	}
-
-	return true;
+	return nrf51_wait_ready(t, &timeout);
 }
 
 static bool nrf51_cmd_erase_uicr(target *t, int argc, const char **argv)
@@ -255,23 +237,12 @@ static bool nrf51_cmd_erase_uicr(target *t, int argc, const char **argv)
 
 	/* Enable erase */
 	target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_EEN);
-
-	/* Poll for NVMC_READY */
-	while (target_mem_read32(t, NRF51_NVMC_READY) == 0) {
-		if (target_check_error(t))
-			return false;
-	}
+	if (!nrf51_wait_ready(t, NULL))
+		return false;
 
 	/* Erase UICR */
 	target_mem_write32(t, NRF51_NVMC_ERASEUICR, 1);
-
-	/* Poll for NVMC_READY */
-	while (target_mem_read32(t, NRF51_NVMC_READY) == 0) {
-		if (target_check_error(t))
-			return false;
-	}
-
-	return true;
+	return nrf51_wait_ready(t, NULL);
 }
 
 static bool nrf51_cmd_protect_flash(target *t, int argc, const char **argv)
@@ -282,22 +253,11 @@ static bool nrf51_cmd_protect_flash(target *t, int argc, const char **argv)
 
 	/* Enable write */
 	target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_WEN);
-
-	/* Poll for NVMC_READY */
-	while (target_mem_read32(t, NRF51_NVMC_READY) == 0) {
-		if (target_check_error(t))
-			return false;
-	}
+	if (!nrf51_wait_ready(t, NULL))
+		return false;
 
 	target_mem_write32(t, NRF51_APPROTECT, 0xFFFFFF00);
-
-	/* Poll for NVMC_READY */
-	while (target_mem_read32(t, NRF51_NVMC_READY) == 0) {
-		if (target_check_error(t))
-			return false;
-	}
-
-	return true;
+	return nrf51_wait_ready(t, NULL);
 }
 
 static bool nrf51_cmd_read_hwid(target *t, int argc, const char **argv)
