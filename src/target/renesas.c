@@ -68,6 +68,7 @@
 /* family + series + group no */
 #define PNR_FAMILY_INDEX                   3
 #define PNR_SERIES(pnr3, pnr4, pnr5, pnr6) (((pnr3) << 24) | ((pnr4) << 16) | ((pnr5) << 8) | (pnr6))
+
 typedef enum {
 	PNR_SERIES_RA2L1 = PNR_SERIES('A', '2', 'L', '1'),
 	PNR_SERIES_RA2E1 = PNR_SERIES('A', '2', 'E', '1'),
@@ -90,6 +91,7 @@ typedef enum {
 
 /* Code flash memory size */
 #define PNR_MEMSIZE_INDEX 8
+
 typedef enum {
 	PNR_MEMSIZE_16KB = '3',
 	PNR_MEMSIZE_32KB = '5',
