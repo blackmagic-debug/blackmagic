@@ -30,8 +30,9 @@ ifndef NO_LIBOPENCM3
 endif
 	$(Q)$(MAKE) $(MFLAGS) -C src $@
 
+clang-tidy: SYSTEM_INCLUDE_PATHS=$(shell pkg-config --silence-errors --cflags libusb-1.0 libftdi1)
 clang-tidy:
-	$(Q)scripts/run-clang-tidy.py -s "$(PWD)"
+	$(Q)scripts/run-clang-tidy.py -s "$(PWD)" $(SYSTEM_INCLUDE_PATHS)
 
 clang-format:
 	$(Q)$(MAKE) $(MFLAGS) -C src $@

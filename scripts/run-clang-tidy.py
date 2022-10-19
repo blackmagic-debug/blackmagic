@@ -15,6 +15,8 @@ parser.add_argument('-s', required = True, type = str, metavar = 'sourcePath',
 	dest = 'sourcePath', help = 'Path to the source directory to run clang-tidy in')
 parser.add_argument('-p', type = str, metavar = 'buildPath',
 	dest = 'buildPath', help = 'Path to the build directory containing a compile_commands.json')
+parser.add_argument('-I', type = str, action = 'append', metavar = 'includePaths',
+	dest = 'includePaths', default = [], help = 'Additional include paths to use')
 args = parser.parse_args()
 
 def globFiles():
@@ -31,9 +33,10 @@ def gatherFiles():
 			yield file
 
 extraArgs = [
-	'-Isrc/target', '-Isrc', '-Isrc/include', '-Isrc/platforms/native',
-	'-Ilibopencm3/include', '-Isrc/platforms/stm32'
-]
+	'-Isrc/target', '-Isrc', '-Isrc/include', '-Isrc/platforms/common',
+	'-Isrc/platforms/native', '-Ilibopencm3/include', '-Isrc/platforms/stm32'
+] + args.includePaths
+
 for i, arg in enumerate(extraArgs):
 	extraArgs[i] = f'--extra-arg={arg}'
 
