@@ -18,7 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file implements TI/LMI LM3S target specific functions providing
+/*
+ * This file implements TI/LMI LM3S target specific functions providing
  * the XML memory map and Flash memory programming.
  *
  * According to: TivaTM TM4C123GH6PM Microcontroller Datasheet
