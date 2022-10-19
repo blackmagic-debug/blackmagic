@@ -41,8 +41,8 @@ void banner(void)
 	puts("Copyright (C) 2022 Black Magic Debug Project");
 	puts("License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>\n");
 	puts("");
-	puts("** WARNING: This utility has been deprecated in favour of bmputil")
-	puts("   Please see https://github.com/blackmagic-debug/bmputil")
+	puts("** WARNING: This utility has been deprecated in favour of bmputil");
+	puts("   Please see https://github.com/blackmagic-debug/bmputil");
 }
 
 
