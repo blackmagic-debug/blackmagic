@@ -2,6 +2,8 @@
  * This file is part of the Black Magic Debug project.
  *
  * Copyright (C) 2021 Uwe Bonnes (bon@elektron.ikp.physik.tu-darmstadt.de)
+ * Copyright (C) 2022 1BitSquared <info@1bitsquared.com>
+ * Significantly rewritten in 2022 by Rachel Mant <git@dragonmux.network>
  * Copyright (C) 2022 James Turton
  * Includes extracts from pico-bootrom
  * Copyright (C) 2020 Raspberry Pi (Trading) Ltd
@@ -35,7 +37,8 @@
  * SUCH DAMAGE.
  */
 
-/* This file implements Raspberry Pico (RP2040) target specific functions
+/*
+ * This file implements Raspberry Pico (RP2040) target specific functions
  * for detecting the device, providing the XML memory map and
  * Flash memory programming.
  */
@@ -190,7 +193,7 @@ static bool rp_cmd_reset_usb_boot(target *t, int argc, const char **argv);
 const struct command_s rp_cmd_list[] = {
 	{"erase_sector", rp_cmd_erase_sector, "Erase a sector: [start address] length"},
 	{"reset_usb_boot", rp_cmd_reset_usb_boot, "Reboot the device into BOOTSEL mode"},
-	{NULL, NULL, NULL}
+	{NULL, NULL, NULL},
 };
 
 static bool rp_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
@@ -728,9 +731,10 @@ static void rp_flash_exit_xip(target *const t)
 	rp_flash_init_spi(t);
 
 	uint32_t padctrl_save = target_mem_read32(t, RP_PADS_QSPI_GPIO_SD0);
-	uint32_t padctrl_tmp = (padctrl_save & ~(RP_PADS_QSPI_GPIO_SD0_OD_BITS | RP_PADS_QSPI_GPIO_SD0_PUE_BITS |
-											   RP_PADS_QSPI_GPIO_SD0_PDE_BITS)) |
-	                       RP_PADS_QSPI_GPIO_SD0_OD_BITS | RP_PADS_QSPI_GPIO_SD0_PDE_BITS;
+	uint32_t padctrl_tmp =
+		(padctrl_save &
+			~(RP_PADS_QSPI_GPIO_SD0_OD_BITS | RP_PADS_QSPI_GPIO_SD0_PUE_BITS | RP_PADS_QSPI_GPIO_SD0_PDE_BITS)) |
+		RP_PADS_QSPI_GPIO_SD0_OD_BITS | RP_PADS_QSPI_GPIO_SD0_PDE_BITS;
 
 	// First two 32-clock sequences
 	// CSn is held high for the first 32 clocks, then asserted low for next 32
