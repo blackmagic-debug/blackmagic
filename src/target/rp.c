@@ -2,6 +2,8 @@
  * This file is part of the Black Magic Debug project.
  *
  * Copyright (C) 2021 Uwe Bonnes (bon@elektron.ikp.physik.tu-darmstadt.de)
+ * Copyright (C) 2022 1BitSquared <info@1bitsquared.com>
+ * Significantly rewritten in 2022 by Rachel Mant <git@dragonmux.network>
  * Copyright (C) 2022 James Turton
  * Includes extracts from pico-bootrom
  * Copyright (C) 2020 Raspberry Pi (Trading) Ltd
@@ -35,7 +37,8 @@
  * SUCH DAMAGE.
  */
 
-/* This file implements Raspberry Pico (RP2040) target specific functions
+/*
+ * This file implements Raspberry Pico (RP2040) target specific functions
  * for detecting the device, providing the XML memory map and
  * Flash memory programming.
  */
