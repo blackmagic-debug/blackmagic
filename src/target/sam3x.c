@@ -161,21 +161,21 @@ const struct command_s sam_cmd_list[] = {
 #define GPNVM_SAMX7X_TCM_64K        (0x2U << GPNVM_SAMX7X_TCM_BIT_OFFSET)
 #define GPNVM_SAMX7X_TCM_128K       (0x3U << GPNVM_SAMX7X_TCM_BIT_OFFSET)
 
-enum sam_driver {
+typedef enum sam_driver {
 	DRIVER_SAM3X,
 	DRIVER_SAM3U,
 	DRIVER_SAM4S,
 	DRIVER_SAM3NS,
 	DRIVER_SAMX7X,
-};
+} sam_driver_e;
 
-struct sam_flash {
+typedef struct sam_flash {
 	target_flash_s f;
 	uint32_t eefc_base;
 	uint8_t write_cmd;
-};
+} sam_flash_s;
 
-struct samx7x_descr {
+typedef struct samx7x_descr {
 	char product_code;
 	uint8_t product_id;
 	char pins;
@@ -183,16 +183,16 @@ struct samx7x_descr {
 	uint32_t flash_size;
 	uint8_t density;
 	char revision;
-};
+} samx7x_descr_s;
 
-struct sam_priv_s {
-	struct samx7x_descr descr;
+typedef struct sam_priv {
+	samx7x_descr_s descr;
 	char sam_variant_string[16];
-};
+} sam_priv_s;
 
 static void sam3_add_flash(target *t, uint32_t eefc_base, uint32_t addr, size_t length)
 {
-	struct sam_flash *sf = calloc(1, sizeof(*sf));
+	sam_flash_s *sf = calloc(1, sizeof(*sf));
 	if (!sf) { /* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return;
@@ -212,7 +212,7 @@ static void sam3_add_flash(target *t, uint32_t eefc_base, uint32_t addr, size_t 
 
 static void sam_add_flash(target *t, uint32_t eefc_base, uint32_t addr, size_t length)
 {
-	struct sam_flash *sf = calloc(1, sizeof(*sf));
+	sam_flash_s *sf = calloc(1, sizeof(*sf));
 	if (!sf) { /* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return;
@@ -294,9 +294,9 @@ static size_t sam_sram_size(uint32_t cidr)
 	}
 }
 
-struct samx7x_descr samx7x_parse_id(uint32_t cidr, uint32_t exid)
+samx7x_descr_s samx7x_parse_id(uint32_t cidr, uint32_t exid)
 {
-	struct samx7x_descr descr = {};
+	samx7x_descr_s descr = {};
 
 	switch (cidr & CHIPID_CIDR_ARCH_MASK) {
 	case CHIPID_CIDR_ARCH_SAME70:
@@ -387,12 +387,12 @@ bool samx7x_probe(target *t)
 		return false;
 	}
 
-	struct sam_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
+	sam_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
 	if (!priv_storage) { /* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return false;
 	}
-	t->target_storage = (void *)priv_storage;
+	t->target_storage = priv_storage;
 
 	priv_storage->descr = samx7x_parse_id(cidr, exid);
 
@@ -402,9 +402,7 @@ bool samx7x_probe(target *t)
 	tcm_config &= GPNVM_SAMX7X_TCM_BIT_MASK;
 
 	samx7x_add_ram(t, tcm_config, priv_storage->descr.ram_size);
-
 	sam_add_flash(t, SAMX7X_EEFC_BASE, 0x00400000, priv_storage->descr.flash_size);
-
 	target_add_commands(t, sam_cmd_list, "SAMX7X");
 
 	sprintf(priv_storage->sam_variant_string, "SAM%c%02d%c%d%c", priv_storage->descr.product_code,
@@ -516,7 +514,7 @@ static enum sam_driver sam_driver(target *t)
 static bool sam_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
 	target *t = f->t;
-	const uint32_t base = ((struct sam_flash *)f)->eefc_base;
+	const uint32_t base = ((sam_flash_s *)f)->eefc_base;
 
 	/* The SAM4S is the only supported device with a page erase command.
 	 * Erasing is done in 8-page chunks. arg[15:2] contains the page
@@ -547,8 +545,8 @@ static bool sam3_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 
 static bool sam_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
-	target *t = f->t;
-	struct sam_flash *sf = (struct sam_flash *)f;
+	target *const t = f->t;
+	sam_flash_s *const sf = (sam_flash_s *)f;
 	const uint32_t base = sf->eefc_base;
 	const uint32_t chunk = (dest - f->start) / f->writesize;
 
@@ -574,7 +572,7 @@ static bool sam_cmd_gpnvm(target *t, int argc, const char **argv)
 	if (arglen == 0)
 		goto bad_usage;
 
-	const enum sam_driver drv = sam_driver(t);
+	const sam_driver_e drv = sam_driver(t);
 	uint32_t base = 0;
 	uint32_t gpnvm_mask = 0;
 	switch (drv) {
@@ -636,7 +634,7 @@ static bool sam_cmd_gpnvm(target *t, int argc, const char **argv)
 	tc_printf(t, "GPNVM: 0x%08X\n", gpnvm);
 
 	if (drv == DRIVER_SAMX7X && (mask & GPNVM_SAMX7X_TCM_BIT_MASK)) {
-		struct sam_priv_s *storage = (struct sam_priv_s *)t->target_storage;
+		sam_priv_s *storage = (sam_priv_s *)t->target_storage;
 
 		target_ram_map_free(t);
 		samx7x_add_ram(t, gpnvm & GPNVM_SAMX7X_TCM_BIT_MASK, storage->descr.ram_size);
