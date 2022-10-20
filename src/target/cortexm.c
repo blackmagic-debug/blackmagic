@@ -94,7 +94,6 @@ static ssize_t cortexm_reg_write(target *t, int reg, const void *data, size_t ma
 
 static void cortexm_reset(target *t);
 static enum target_halt_reason cortexm_halt_poll(target *t, target_addr_t *watch);
-static void cortexm_halt_resume(target *t, bool step);
 static void cortexm_halt_request(target *t);
 static int cortexm_fault_unwind(target *t);
 
@@ -1101,7 +1100,7 @@ static enum target_halt_reason cortexm_halt_poll(target *t, target_addr_t *watch
 	return TARGET_HALT_BREAKPOINT;
 }
 
-static void cortexm_halt_resume(target *t, bool step)
+void cortexm_halt_resume(target *t, bool step)
 {
 	struct cortexm_priv *priv = t->priv;
 	uint32_t dhcsr = CORTEXM_DHCSR_DBGKEY | CORTEXM_DHCSR_C_DEBUGEN;
