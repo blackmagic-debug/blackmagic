@@ -17,7 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file implements Atmel SAM D target specific functions for
+/*
+ * This file implements Atmel SAM D target specific functions for
  * detecting the device, providing the XML memory map and Flash memory
  * programming.
  *
@@ -27,11 +28,12 @@
  * * SAMD20J18A (rev B)
  * * SAMD21J18A (rev B)
  * * SAML21J17B (rev B)
- * *
  */
-/* Refer to the SAM D20 Datasheet:
+
+/*
+ * Refer to the SAM D20 Datasheet:
  * http://www.atmel.com/Images/Atmel-42129-SAM-D20_Datasheet.pdf
- * particularly Sections 12. DSU and 20. NVMCTRL
+ * particularly sections 12. DSU and 20. NVMCTRL
  */
 
 #include "general.h"
@@ -41,6 +43,7 @@
 
 static bool samd_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 static bool samd_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
+/* NB: This is not marked static on purpose as it's used by samx5x.c. */
 bool samd_mass_erase(target *t);
 
 static bool samd_cmd_lock_flash(target *t, int argc, const char **argv);
@@ -78,10 +81,10 @@ const struct command_s samd_cmd_list[] = {
 #define SAMD_NVMC_PARAM   (SAMD_NVMC + 0x08U)
 #define SAMD_NVMC_INTFLAG (SAMD_NVMC + 0x14U)
 #define SAMD_NVMC_STATUS  (SAMD_NVMC + 0x18U)
-#define SAMD_NVMC_ADDRESS (SAMD_NVMC + 0x1CU)
+#define SAMD_NVMC_ADDRESS (SAMD_NVMC + 0x1cU)
 
 /* Control A Register (CTRLA) */
-#define SAMD_CTRLA_CMD_KEY             0xA500U
+#define SAMD_CTRLA_CMD_KEY             0xa500U
 #define SAMD_CTRLA_CMD_ERASEROW        0x0002U
 #define SAMD_CTRLA_CMD_WRITEPAGE       0x0004U
 #define SAMD_CTRLA_CMD_ERASEAUXROW     0x0005U
@@ -99,7 +102,7 @@ const struct command_s samd_cmd_list[] = {
 #define SAMD_NVM_USER_ROW_LOW  0x00804000U
 #define SAMD_NVM_USER_ROW_HIGH 0x00804004U
 #define SAMD_NVM_CALIBRATION   0x00806020U
-#define SAMD_NVM_SERIAL(n)     (0x0080A00CU + (0x30U * (((n) + 3U) / 4U)) + ((n)*4U))
+#define SAMD_NVM_SERIAL(n)     (0x0080a00cU + (0x30U * (((n) + 3U) / 4U)) + ((n)*4U))
 
 /* -------------------------------------------------------------------------- */
 /* Device Service Unit (DSU) Registers */
@@ -126,33 +129,33 @@ const struct command_s samd_cmd_list[] = {
 #define SAMD_STATUSB_PROT    (1U << 16U)
 
 /* Device Identification Register (DID) */
-#define SAMD_DID_MASK          0xFF380000U
+#define SAMD_DID_MASK          0xff380000U
 #define SAMD_DID_CONST_VALUE   0x10000000U
-#define SAMD_DID_DEVSEL_MASK   0xFFU
+#define SAMD_DID_DEVSEL_MASK   0xffU
 #define SAMD_DID_DEVSEL_POS    0U
-#define SAMD_DID_REVISION_MASK 0x0FU
+#define SAMD_DID_REVISION_MASK 0x0fU
 #define SAMD_DID_REVISION_POS  8U
-#define SAMD_DID_SERIES_MASK   0x1FU
+#define SAMD_DID_SERIES_MASK   0x1fU
 #define SAMD_DID_SERIES_POS    16U
-#define SAMD_DID_FAMILY_MASK   0x3FU
+#define SAMD_DID_FAMILY_MASK   0x3fU
 #define SAMD_DID_FAMILY_POS    23U
 
 /* Peripheral ID */
-#define SAMD_PID_MASK        0x00F7FFFFU
-#define SAMD_PID_CONST_VALUE 0x0001FCD0U
+#define SAMD_PID_MASK        0x00f7ffffU
+#define SAMD_PID_CONST_VALUE 0x0001fcd0U
 
 /* Component ID */
-#define SAMD_CID_VALUE 0xB105100DU
+#define SAMD_CID_VALUE 0xb105100dU
 
 /* Family parts */
-struct samd_part {
+typedef struct samd_part {
 	uint8_t devsel;
 	char pin;
 	uint8_t mem;
 	uint8_t variant;
-};
+} samd_part_s;
 
-static const struct samd_part samd_d21_parts[] = {
+static const samd_part_s samd_d21_parts[] = {
 	{0x00, 'J', 18, 'A'}, /* SAMD21J18A */
 	{0x01, 'J', 17, 'A'}, /* SAMD21J17A */
 	{0x02, 'J', 16, 'A'}, /* SAMD21J16A */
@@ -161,11 +164,11 @@ static const struct samd_part samd_d21_parts[] = {
 	{0x06, 'G', 17, 'A'}, /* SAMD21G17A */
 	{0x07, 'G', 16, 'A'}, /* SAMD21G16A */
 	{0x08, 'G', 15, 'A'}, /* SAMD21G15A */
-	{0x0A, 'E', 18, 'A'}, /* SAMD21E18A */
-	{0x0B, 'E', 17, 'A'}, /* SAMD21E17A */
-	{0x0C, 'E', 16, 'A'}, /* SAMD21E16A */
-	{0x0D, 'E', 15, 'A'}, /* SAMD21E15A */
-	{0x0F, 'G', 18, 'A'}, /* SAMD21G18A (WLCSP) */
+	{0x0a, 'E', 18, 'A'}, /* SAMD21E18A */
+	{0x0b, 'E', 17, 'A'}, /* SAMD21E17A */
+	{0x0c, 'E', 16, 'A'}, /* SAMD21E16A */
+	{0x0d, 'E', 15, 'A'}, /* SAMD21E15A */
+	{0x0f, 'G', 18, 'A'}, /* SAMD21G18A (WLCSP) */
 	{0x10, 'G', 17, 'A'}, /* SAMD21G17A (WLCSP) */
 	{0x20, 'J', 16, 'B'}, /* SAMD21J16B */
 	{0x21, 'J', 15, 'B'}, /* SAMD21J15B */
@@ -177,44 +180,44 @@ static const struct samd_part samd_d21_parts[] = {
 	{0x56, 'E', 15, 'B'}, /* SAMD21E15B (WLCSP) */
 	{0x62, 'E', 16, 'C'}, /* SAMD21E16C (WLCSP) */
 	{0x63, 'E', 15, 'C'}, /* SAMD21E15C (WLCSP) */
-	{0xFF, 0, 0, 0},
+	{0xff, 0, 0, 0},      /* Sentinel entry */
 };
 
-static const struct samd_part samd_l21_parts[] = {
+static const samd_part_s samd_l21_parts[] = {
 	{0x00, 'J', 18, 'A'}, /* SAML21J18A */
 	{0x01, 'J', 17, 'A'}, /* SAML21J17A */
 	{0x02, 'J', 16, 'A'}, /* SAML21J16A */
 	{0x05, 'G', 18, 'A'}, /* SAML21G18A */
 	{0x06, 'G', 17, 'A'}, /* SAML21G17A */
 	{0x07, 'G', 16, 'A'}, /* SAML21G16A */
-	{0x0A, 'E', 18, 'A'}, /* SAML21E18A */
-	{0x0B, 'E', 17, 'A'}, /* SAML21E17A */
-	{0x0C, 'E', 16, 'A'}, /* SAML21E16A */
-	{0x0D, 'E', 15, 'A'}, /* SAML21E15A */
-	{0x0F, 'J', 18, 'B'}, /* SAML21J18B */
+	{0x0a, 'E', 18, 'A'}, /* SAML21E18A */
+	{0x0b, 'E', 17, 'A'}, /* SAML21E17A */
+	{0x0c, 'E', 16, 'A'}, /* SAML21E16A */
+	{0x0d, 'E', 15, 'A'}, /* SAML21E15A */
+	{0x0f, 'J', 18, 'B'}, /* SAML21J18B */
 	{0x10, 'J', 17, 'B'}, /* SAML21J17B */
 	{0x11, 'J', 16, 'B'}, /* SAML21J16B */
 	{0x14, 'G', 18, 'B'}, /* SAML21G18B */
 	{0x15, 'G', 17, 'B'}, /* SAML21G17B */
 	{0x16, 'G', 16, 'B'}, /* SAML21G16B */
 	{0x19, 'E', 18, 'B'}, /* SAML21E18B */
-	{0x1A, 'E', 17, 'B'}, /* SAML21E17B */
-	{0x1B, 'E', 16, 'B'}, /* SAML21E16B */
-	{0x1C, 'E', 15, 'B'}, /* SAML21E15B */
-	{0xFF, 0, 0, 0},
+	{0x1a, 'E', 17, 'B'}, /* SAML21E17B */
+	{0x1b, 'E', 16, 'B'}, /* SAML21E16B */
+	{0x1c, 'E', 15, 'B'}, /* SAML21E15B */
+	{0xff, 0, 0, 0},      /* Sentinel entry */
 };
 
-static const struct samd_part samd_l22_parts[] = {
+static const samd_part_s samd_l22_parts[] = {
 	{0x00, 'N', 18, 'A'}, /* SAML22N18 */
 	{0x01, 'N', 17, 'A'}, /* SAML22N17 */
 	{0x02, 'N', 16, 'A'}, /* SAML22N16 */
 	{0x05, 'J', 18, 'A'}, /* SAML22J18 */
 	{0x06, 'J', 17, 'A'}, /* SAML22J17 */
 	{0x07, 'J', 16, 'A'}, /* SAML22J16 */
-	{0x0A, 'G', 18, 'A'}, /* SAML22G18 */
-	{0x0B, 'G', 17, 'A'}, /* SAML22G17 */
-	{0x0C, 'G', 16, 'A'}, /* SAML22G16 */
-	{0xFF, 0, 0, 0},
+	{0x0a, 'G', 18, 'A'}, /* SAML22G18 */
+	{0x0b, 'G', 17, 'A'}, /* SAML22G17 */
+	{0x0c, 'G', 16, 'A'}, /* SAML22G16 */
+	{0xff, 0, 0, 0},      /* Sentinel entry */
 };
 
 /*
@@ -232,11 +235,12 @@ void samd_reset(target *t)
 	 * something else) then having SWCLK low on reset should get you
 	 * debug access (cold-plugging). TODO: Confirm this
 	 *
-	 * See the SAM D20 datasheet §12.6 Debug Operation for more
-	 * details.
+	 * See the SAM D20 datasheet §12.6 Debug Operation for more details.
 	 *
 	 * jtagtap_nrst(true);
 	 * jtagtap_nrst(false);
+	 *
+	 * XXX: Should this actually call cortexm_reset()?
 	 */
 
 	/* Read DHCSR here to clear S_RESET_ST bit before reset */
@@ -244,8 +248,8 @@ void samd_reset(target *t)
 
 	/*
 	 * Request System Reset from NVIC: nRST doesn't work correctly
-	 * This could be VECTRESET: 0x05FA0001 (reset only core)
-	 *          or SYSRESETREQ: 0x05FA0004 (system reset)
+	 * This could be VECTRESET: 0x05fa0001 (reset only core)
+	 *          or SYSRESETREQ: 0x05fa0004 (system reset)
 	 */
 	target_mem_write32(t, CORTEXM_AIRCR, CORTEXM_AIRCR_VECTKEY | CORTEXM_AIRCR_SYSRESETREQ);
 
@@ -289,7 +293,7 @@ static void samd20_revB_detach(target *t)
  */
 static void samd20_revB_halt_resume(target *t, bool step)
 {
-	target_halt_resume(t, step);
+	cortexm_halt_resume(t, step);
 
 	/* Exit extended reset */
 	if (target_mem_read32(t, SAMD_DSU_CTRLSTAT) & SAMD_STATUSA_CRSTEXT)
@@ -335,7 +339,7 @@ bool samd_protected_attach(target *t)
  * Use the DSU Device Indentification Register to populate a struct
  * describing the SAM D device.
  */
-struct samd_descr {
+typedef struct samd_descr {
 	char family;
 	uint8_t series;
 	char revision;
@@ -345,23 +349,17 @@ struct samd_descr {
 	uint8_t mem;
 	char variant;
 	char package[3];
-};
+} samd_descr_s;
 
-struct samd_descr samd_parse_device_id(uint32_t did)
+samd_descr_s samd_parse_device_id(uint32_t did)
 {
-	struct samd_descr samd;
-	uint8_t i = 0;
-	const struct samd_part *parts = samd_d21_parts;
-	memset(samd.package, 0, 3);
+	samd_descr_s samd = {};
+	const samd_part_s *parts = samd_d21_parts;
 	samd.ram_size = 0x8000;
 	samd.flash_size = 0x40000;
 
-	uint8_t family = (did >> SAMD_DID_FAMILY_POS) & SAMD_DID_FAMILY_MASK;
-	uint8_t series = (did >> SAMD_DID_SERIES_POS) & SAMD_DID_SERIES_MASK;
-	uint8_t revision = (did >> SAMD_DID_REVISION_POS) & SAMD_DID_REVISION_MASK;
-	uint8_t devsel = (did >> SAMD_DID_DEVSEL_POS) & SAMD_DID_DEVSEL_MASK;
-
 	/* Family */
+	const uint8_t family = (did >> SAMD_DID_FAMILY_POS) & SAMD_DID_FAMILY_MASK;
 	switch (family) {
 	case 0:
 		samd.family = 'D';
@@ -375,6 +373,7 @@ struct samd_descr samd_parse_device_id(uint32_t did)
 		break;
 	}
 	/* Series */
+	const uint8_t series = (did >> SAMD_DID_SERIES_POS) & SAMD_DID_SERIES_MASK;
 	switch (series) {
 	case 0:
 		samd.series = 20;
@@ -386,9 +385,8 @@ struct samd_descr samd_parse_device_id(uint32_t did)
 		if (family == 1) {
 			samd.series = 22;
 			parts = samd_l22_parts;
-		} else {
+		} else
 			samd.series = 10;
-		}
 		break;
 	case 3:
 		samd.series = 11;
@@ -401,8 +399,10 @@ struct samd_descr samd_parse_device_id(uint32_t did)
 		break;
 	}
 	/* Revision */
+	const uint8_t revision = (did >> SAMD_DID_REVISION_POS) & SAMD_DID_REVISION_MASK;
 	samd.revision = (char)('A' + revision);
 
+	const uint8_t devsel = (did >> SAMD_DID_DEVSEL_POS) & SAMD_DID_DEVSEL_MASK;
 	switch (samd.series) {
 	case 20: /* SAM D20 */
 		switch (devsel / 5) {
@@ -424,20 +424,18 @@ struct samd_descr samd_parse_device_id(uint32_t did)
 		break;
 	case 21: /* SAM D21/L21 */
 	case 22: /* SAM L22 */
-		i = 0;
-		while (parts[i].devsel != 0xFF) {
+		for (size_t i = 0; parts[i].devsel != 0xff; ++i) {
 			if (parts[i].devsel == devsel) {
 				samd.pin = parts[i].pin;
 				samd.mem = parts[i].mem;
 				samd.variant = parts[i].variant;
 				break;
 			}
-			i++;
 		}
 		break;
 	case 10: /* SAM D10 */
 	case 11: /* SAM D11 */
-		switch (devsel / 3) {
+		switch (devsel / 3U) {
 		case 0:
 			samd.package[0] = 'M';
 			break;
@@ -447,7 +445,7 @@ struct samd_descr samd_parse_device_id(uint32_t did)
 			break;
 		}
 		samd.pin = 'D';
-		samd.mem = 14 - (devsel % 3);
+		samd.mem = 14 - (devsel % 3U);
 		samd.variant = 'A';
 		break;
 	case 9: /* SAM D09 */
@@ -489,49 +487,46 @@ static void samd_add_flash(target *t, uint32_t addr, size_t length)
 	target_add_flash(t, f);
 }
 
-struct samd_priv_s {
-	char samd_variant_string[60];
-};
+#define SAMD_VARIANT_STR_LENGTH 60U
+
+typedef struct samd_priv {
+	char samd_variant_string[SAMD_VARIANT_STR_LENGTH];
+} samd_priv_s;
 
 bool samd_probe(target *t)
 {
 	ADIv5_AP_t *ap = cortexm_ap(t);
-	uint32_t cid = adiv5_ap_read_pidr(ap, SAMD_DSU_CID);
-	uint32_t pid = adiv5_ap_read_pidr(ap, SAMD_DSU_PID);
+	const uint32_t cid = adiv5_ap_read_pidr(ap, SAMD_DSU_CID);
+	const uint32_t pid = adiv5_ap_read_pidr(ap, SAMD_DSU_PID);
 
 	/* Check the ARM Coresight Component and Perhiperal IDs */
-	if ((cid != SAMD_CID_VALUE) || ((pid & SAMD_PID_MASK) != SAMD_PID_CONST_VALUE))
+	if (cid != SAMD_CID_VALUE || (pid & SAMD_PID_MASK) != SAMD_PID_CONST_VALUE)
 		return false;
 
 	/* Read the Device ID */
-	uint32_t did = target_mem_read32(t, SAMD_DSU_DID);
+	const uint32_t did = target_mem_read32(t, SAMD_DSU_DID);
 
 	/* If the Device ID matches */
 	if ((did & SAMD_DID_MASK) != SAMD_DID_CONST_VALUE)
 		return false;
 
-	t->mass_erase = samd_mass_erase;
-	struct samd_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
-	t->target_storage = (void *)priv_storage;
+	samd_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
+	t->target_storage = priv_storage;
 
-	uint32_t ctrlstat = target_mem_read32(t, SAMD_DSU_CTRLSTAT);
-	struct samd_descr samd = samd_parse_device_id(did);
+	const uint32_t ctrlstat = target_mem_read32(t, SAMD_DSU_CTRLSTAT);
+	const samd_descr_s samd = samd_parse_device_id(did);
 
 	/* Protected? */
-	bool protected = (ctrlstat & SAMD_STATUSB_PROT);
+	const bool protected = (ctrlstat & SAMD_STATUSB_PROT);
 
-	/* Part String */
-	if (protected) {
-		sprintf(priv_storage->samd_variant_string, "Atmel SAM%c%02d%c%d%c%s (rev %c) (PROT=1)", samd.family,
-			samd.series, samd.pin, samd.mem, samd.variant, samd.package, samd.revision);
-	} else {
-		sprintf(priv_storage->samd_variant_string, "Atmel SAM%c%02d%c%d%c%s (rev %c)", samd.family, samd.series,
-			samd.pin, samd.mem, samd.variant, samd.package, samd.revision);
-	}
+	snprintf(priv_storage->samd_variant_string, SAMD_VARIANT_STR_LENGTH, "Atmel SAM%c%02d%c%d%c%s (rev %c)%s",
+		samd.family, samd.series, samd.pin, samd.mem, samd.variant, samd.package, samd.revision,
+		protected ? " protected" : "");
 
 	/* Setup Target */
 	t->driver = priv_storage->samd_variant_string;
 	t->reset = samd_reset;
+	t->mass_erase = samd_mass_erase;
 
 	if (samd.series == 20 && samd.revision == 'B') {
 		/*
@@ -567,40 +562,38 @@ bool samd_probe(target *t)
 	if (!platform_nrst_get_val()) {
 		/* We'll have to release the target from
 		 * extended reset to make attach possible */
-		if (target_mem_read32(t, SAMD_DSU_CTRLSTAT) & SAMD_STATUSA_CRSTEXT) {
+		if (target_mem_read32(t, SAMD_DSU_CTRLSTAT) & SAMD_STATUSA_CRSTEXT)
 			/* Write bit to clear from extended reset */
 			target_mem_write32(t, SAMD_DSU_CTRLSTAT, SAMD_STATUSA_CRSTEXT);
-		}
 	}
 
 	return true;
 }
 
-/*
- * Temporary (until next reset) flash memory locking / unlocking
- */
+/* Temporary (until next reset) flash memory locking */
 static void samd_lock_current_address(target *t)
 {
-	/* Issue the unlock command */
+	/* Issue the lock command */
 	target_mem_write32(t, SAMD_NVMC_CTRLA, SAMD_CTRLA_CMD_KEY | SAMD_CTRLA_CMD_LOCK);
 }
 
+/* Temporary (until next reset) flash memory unlocking */
 static void samd_unlock_current_address(target *t)
 {
 	/* Issue the unlock command */
 	target_mem_write32(t, SAMD_NVMC_CTRLA, SAMD_CTRLA_CMD_KEY | SAMD_CTRLA_CMD_UNLOCK);
 }
 
-/*
- * Erase flash row by row
- */
-static bool samd_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
+/* Erase flash row by row */
+static bool samd_flash_erase(target_flash_s *const f, const target_addr_t addr, const size_t len)
 {
 	target *t = f->t;
-	while (len) {
-		/* Write address of first word in row to erase it */
-		/* Must be shifted right for 16-bit address, see Datasheet §20.8.8 Address */
-		target_mem_write32(t, SAMD_NVMC_ADDRESS, addr >> 1);
+	for (size_t offset = 0; offset < len; offset += f->blocksize) {
+		/*
+		 * Write address of first word in row to erase it
+		 * Must be shifted right for 16-bit address, see Datasheet §20.8.8 Address
+		 */
+		target_mem_write32(t, SAMD_NVMC_ADDRESS, (addr + offset) >> 1U);
 
 		/* Unlock */
 		samd_unlock_current_address(t);
@@ -608,18 +601,13 @@ static bool samd_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 		/* Issue the erase command */
 		target_mem_write32(t, SAMD_NVMC_CTRLA, SAMD_CTRLA_CMD_KEY | SAMD_CTRLA_CMD_ERASEROW);
 		/* Poll for NVM Ready */
-		while ((target_mem_read32(t, SAMD_NVMC_INTFLAG) & SAMD_NVMC_READY) == 0)
+		while ((target_mem_read32(t, SAMD_NVMC_INTFLAG) & SAMD_NVMC_READY) == 0) {
 			if (target_check_error(t))
 				return false;
+		}
 
 		/* Lock */
 		samd_lock_current_address(t);
-
-		addr += f->blocksize;
-		if (len > f->blocksize)
-			len -= f->blocksize;
-		else
-			len = 0;
 	}
 
 	return true;
@@ -642,9 +630,10 @@ static bool samd_flash_write(target_flash_s *f, target_addr_t dest, const void *
 	target_mem_write32(t, SAMD_NVMC_CTRLA, SAMD_CTRLA_CMD_KEY | SAMD_CTRLA_CMD_WRITEPAGE);
 
 	/* Poll for NVM Ready */
-	while ((target_mem_read32(t, SAMD_NVMC_INTFLAG) & SAMD_NVMC_READY) == 0)
+	while ((target_mem_read32(t, SAMD_NVMC_INTFLAG) & SAMD_NVMC_READY) == 0) {
 		if (target_check_error(t))
 			return false;
+	}
 
 	/* Lock */
 	samd_lock_current_address(t);
@@ -652,9 +641,7 @@ static bool samd_flash_write(target_flash_s *f, target_addr_t dest, const void *
 	return true;
 }
 
-/*
- * Uses the Device Service Unit to erase the entire flash
- */
+/* Uses the Device Service Unit to erase the entire flash */
 bool samd_mass_erase(target *t)
 {
 	/* Clear the DSU status bits */
@@ -666,9 +653,9 @@ bool samd_mass_erase(target *t)
 	platform_timeout timeout;
 	platform_timeout_set(&timeout, 500);
 	/* Poll for DSU Ready */
-	uint32_t status;
-	while (((status = target_mem_read32(t, SAMD_DSU_CTRLSTAT)) &
-			   (SAMD_STATUSA_DONE | SAMD_STATUSA_PERR | SAMD_STATUSA_FAIL)) == 0) {
+	uint32_t status = 0;
+	while ((status & (SAMD_STATUSA_DONE | SAMD_STATUSA_PERR | SAMD_STATUSA_FAIL)) == 0) {
+		status = target_mem_read32(t, SAMD_DSU_CTRLSTAT);
 		if (target_check_error(t))
 			return false;
 		target_print_progress(&timeout);
@@ -681,11 +668,7 @@ bool samd_mass_erase(target *t)
 	}
 
 	/* Test the fail bit in Status A */
-	if (status & SAMD_STATUSA_FAIL) {
-		tc_printf(t, "Erase failed.\n");
-		return true;
-	}
-	return true;
+	return !(status & SAMD_STATUSA_FAIL);
 }
 
 /*
@@ -693,7 +676,7 @@ bool samd_mass_erase(target *t)
  * at startup as the default value for the lock bits, and hence does
  * not take effect until a reset.
  *
- * 0x0000 = Lock, 0xFFFF = Unlock (default)
+ * 0x0000 = Lock, 0xffff = Unlock (default)
  */
 static bool samd_set_flashlock(target *t, uint16_t value, const char **argv)
 {
@@ -703,18 +686,19 @@ static bool samd_set_flashlock(target *t, uint16_t value, const char **argv)
 
 	/* Write address of a word in the row to erase it */
 	/* Must be shifted right for 16-bit address, see Datasheet §20.8.8 Address */
-	target_mem_write32(t, SAMD_NVMC_ADDRESS, SAMD_NVM_USER_ROW_LOW >> 1);
+	target_mem_write32(t, SAMD_NVMC_ADDRESS, SAMD_NVM_USER_ROW_LOW >> 1U);
 
 	/* Issue the erase command */
 	target_mem_write32(t, SAMD_NVMC_CTRLA, SAMD_CTRLA_CMD_KEY | SAMD_CTRLA_CMD_ERASEAUXROW);
 
 	/* Poll for NVM Ready */
-	while ((target_mem_read32(t, SAMD_NVMC_INTFLAG) & SAMD_NVMC_READY) == 0)
+	while ((target_mem_read32(t, SAMD_NVMC_INTFLAG) & SAMD_NVMC_READY) == 0) {
 		if (target_check_error(t))
-			return -1;
+			return false;
+	}
 
 	/* Modify the high byte of the user row */
-	high = (high & 0x0000FFFF) | ((value << 16) & 0xFFFF0000);
+	high = (high & 0x0000ffff) | ((value << 16) & 0xffff0000);
 
 	/* Write back */
 	target_mem_write32(t, SAMD_NVM_USER_ROW_LOW, low);
@@ -772,7 +756,7 @@ static bool samd_cmd_unlock_flash(target *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
-	return samd_set_flashlock(t, 0xFFFF, NULL);
+	return samd_set_flashlock(t, 0xffff, NULL);
 }
 
 static bool samd_set_bootprot(target *t, uint16_t value, const char **argv)
@@ -781,20 +765,23 @@ static bool samd_set_bootprot(target *t, uint16_t value, const char **argv)
 	uint32_t high = target_mem_read32(t, SAMD_NVM_USER_ROW_HIGH);
 	uint32_t low = target_mem_read32(t, SAMD_NVM_USER_ROW_LOW);
 
-	/* Write address of a word in the row to erase it */
-	/* Must be shifted right for 16-bit address, see Datasheet §20.8.8 Address */
+	/*
+	 * Write address of a word in the row to erase it
+	 * Must be shifted right for 16-bit address, see Datasheet §20.8.8 Address
+	 */
 	target_mem_write32(t, SAMD_NVMC_ADDRESS, SAMD_NVM_USER_ROW_LOW >> 1);
 
 	/* Issue the erase command */
 	target_mem_write32(t, SAMD_NVMC_CTRLA, SAMD_CTRLA_CMD_KEY | SAMD_CTRLA_CMD_ERASEAUXROW);
 
 	/* Poll for NVM Ready */
-	while ((target_mem_read32(t, SAMD_NVMC_INTFLAG) & SAMD_NVMC_READY) == 0)
+	while ((target_mem_read32(t, SAMD_NVMC_INTFLAG) & SAMD_NVMC_READY) == 0) {
 		if (target_check_error(t))
 			return -1;
+	}
 
 	/* Modify the low word of the user row */
-	low = (low & 0xFFFFFFF8) | ((value << 0) & 0x00000007);
+	low = (low & 0xfffffff8) | ((value << 0) & 0x00000007);
 
 	/* Write back */
 	target_mem_write32(t, SAMD_NVM_USER_ROW_LOW, low);
@@ -808,7 +795,7 @@ static bool samd_set_bootprot(target *t, uint16_t value, const char **argv)
 
 static bool samd_cmd_lock_bootprot(target *t, int argc, const char **argv)
 {
-	/* locks first 0x7 .. 0, 0x6 .. 512, 0x5 .. 1024, ..., 0x0 .. 32768 bytes of flash*/
+	/* Locks first 0x7 .. 0, 0x6 .. 512, 0x5 .. 1024, ..., 0x0 .. 32768 bytes of flash*/
 	if (argc > 2) {
 		tc_printf(t, "usage: monitor lock_bootprot [number]\n");
 		return false;
@@ -841,48 +828,37 @@ static bool samd_cmd_read_userrow(target *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
-	tc_printf(t, "User Row: 0x%08x%08x\n", target_mem_read32(t, SAMD_NVM_USER_ROW_HIGH),
+	tc_printf(t, "User Row: 0x%08" PRIx32 "%08" PRIx32 "\n", target_mem_read32(t, SAMD_NVM_USER_ROW_HIGH),
 		target_mem_read32(t, SAMD_NVM_USER_ROW_LOW));
 
 	return true;
 }
 
-/*
- * Reads the 128-bit serial number from the NVM
- */
+/* Reads the 128-bit serial number from the NVM */
 static bool samd_cmd_serial(target *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
 	tc_printf(t, "Serial Number: 0x");
 
-	for (uint32_t i = 0; i < 4; i++) {
+	for (size_t i = 0; i < 4; ++i)
 		tc_printf(t, "%08x", target_mem_read32(t, SAMD_NVM_SERIAL(i)));
-	}
-
 	tc_printf(t, "\n");
-
 	return true;
 }
 
-/*
- * Returns the size (in bytes) of the current SAM D20's flash memory.
- */
+/* Returns the size (in bytes) of the current SAM D20's flash memory. */
 static uint32_t samd_flash_size(target *t)
 {
 	/* Read the Device ID */
-	uint32_t did = target_mem_read32(t, SAMD_DSU_DID);
-
+	const uint32_t did = target_mem_read32(t, SAMD_DSU_DID);
 	/* Mask off the device select bits */
-	uint8_t devsel = did & SAMD_DID_DEVSEL_MASK;
-
+	const uint8_t devsel = did & SAMD_DID_DEVSEL_MASK;
 	/* Shift the maximum flash size (256KB) down as appropriate */
 	return (0x40000 >> (devsel % 5));
 }
 
-/*
- * Runs the Memory Built In Self Test (MBIST)
- */
+/* Runs the Memory Built In Self Test (MBIST) */
 static bool samd_cmd_mbist(target *t, int argc, const char **argv)
 {
 	(void)argc;
@@ -898,11 +874,12 @@ static bool samd_cmd_mbist(target *t, int argc, const char **argv)
 	target_mem_write32(t, SAMD_DSU_CTRLSTAT, SAMD_CTRL_MBIST);
 
 	/* Poll for DSU Ready */
-	uint32_t status;
-	while (((status = target_mem_read32(t, SAMD_DSU_CTRLSTAT)) &
-			   (SAMD_STATUSA_DONE | SAMD_STATUSA_PERR | SAMD_STATUSA_FAIL)) == 0)
+	uint32_t status = 0;
+	while ((status & (SAMD_STATUSA_DONE | SAMD_STATUSA_PERR | SAMD_STATUSA_FAIL)) == 0) {
+		status = target_mem_read32(t, SAMD_DSU_CTRLSTAT);
 		if (target_check_error(t))
 			return false;
+	}
 
 	/* Test the protection error bit in Status A */
 	if (status & SAMD_STATUSA_PERR) {
@@ -911,12 +888,10 @@ static bool samd_cmd_mbist(target *t, int argc, const char **argv)
 	}
 
 	/* Test the fail bit in Status A */
-	if (status & SAMD_STATUSA_FAIL) {
-		tc_printf(t, "MBIST Fail @ 0x%08x\n", target_mem_read32(t, SAMD_DSU_ADDRESS));
-	} else {
+	if (status & SAMD_STATUSA_FAIL)
+		tc_printf(t, "MBIST Fail @ 0x%08" PRIx32 "\n", target_mem_read32(t, SAMD_DSU_ADDRESS));
+	else
 		tc_printf(t, "MBIST Passed!\n");
-	}
-
 	return true;
 }
 
@@ -931,9 +906,10 @@ static bool samd_cmd_ssb(target *t, int argc, const char **argv)
 	target_mem_write32(t, SAMD_NVMC_CTRLA, SAMD_CTRLA_CMD_KEY | SAMD_CTRLA_CMD_SSB);
 
 	/* Poll for NVM Ready */
-	while ((target_mem_read32(t, SAMD_NVMC_INTFLAG) & SAMD_NVMC_READY) == 0)
+	while ((target_mem_read32(t, SAMD_NVMC_INTFLAG) & SAMD_NVMC_READY) == 0) {
 		if (target_check_error(t))
 			return -1;
+	}
 
 	tc_printf(t, "Security bit set!\nScan again, attach and issue 'monitor erase_mass' to reset.\n");
 
