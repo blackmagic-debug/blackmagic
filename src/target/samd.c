@@ -594,6 +594,20 @@ static bool samd_wait_nvm_ready(target *t)
 	return true;
 }
 
+static bool samd_wait_dsu_ready(target *const t, uint32_t *const result, platform_timeout *const timeout)
+{
+	uint32_t status = 0;
+	while ((status & (SAMD_STATUSA_DONE | SAMD_STATUSA_PERR | SAMD_STATUSA_FAIL)) == 0) {
+		status = target_mem_read32(t, SAMD_DSU_CTRLSTAT);
+		if (target_check_error(t))
+			return false;
+		if (timeout)
+			target_print_progress(timeout);
+	}
+	*result = status;
+	return true;
+}
+
 /* Erase flash row by row */
 static bool samd_flash_erase(target_flash_s *const f, const target_addr_t addr, const size_t len)
 {
@@ -653,16 +667,11 @@ bool samd_mass_erase(target *t)
 	/* Erase all */
 	target_mem_write32(t, SAMD_DSU_CTRLSTAT, SAMD_CTRL_CHIP_ERASE);
 
+	uint32_t status = 0;
 	platform_timeout timeout;
 	platform_timeout_set(&timeout, 500);
-	/* Poll for DSU Ready */
-	uint32_t status = 0;
-	while ((status & (SAMD_STATUSA_DONE | SAMD_STATUSA_PERR | SAMD_STATUSA_FAIL)) == 0) {
-		status = target_mem_read32(t, SAMD_DSU_CTRLSTAT);
-		if (target_check_error(t))
-			return false;
-		target_print_progress(&timeout);
-	}
+	if (!samd_wait_dsu_ready(t, &status, &timeout))
+		return false;
 
 	/* Test the protection error bit in Status A */
 	if (status & SAMD_STATUSA_PERR) {
@@ -867,13 +876,9 @@ static bool samd_cmd_mbist(target *t, int argc, const char **argv)
 	/* Write the MBIST command */
 	target_mem_write32(t, SAMD_DSU_CTRLSTAT, SAMD_CTRL_MBIST);
 
-	/* Poll for DSU Ready */
 	uint32_t status = 0;
-	while ((status & (SAMD_STATUSA_DONE | SAMD_STATUSA_PERR | SAMD_STATUSA_FAIL)) == 0) {
-		status = target_mem_read32(t, SAMD_DSU_CTRLSTAT);
-		if (target_check_error(t))
-			return false;
-	}
+	if (!samd_wait_dsu_ready(t, &status, NULL))
+		return false;
 
 	/* Test the protection error bit in Status A */
 	if (status & SAMD_STATUSA_PERR) {
