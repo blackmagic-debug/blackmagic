@@ -584,6 +584,16 @@ static void samd_unlock_current_address(target *t)
 	target_mem_write32(t, SAMD_NVMC_CTRLA, SAMD_CTRLA_CMD_KEY | SAMD_CTRLA_CMD_UNLOCK);
 }
 
+static bool samd_wait_nvm_ready(target *t)
+{
+	/* Poll for NVM Ready */
+	while ((target_mem_read32(t, SAMD_NVMC_INTFLAG) & SAMD_NVMC_READY) == 0) {
+		if (target_check_error(t))
+			return false;
+	}
+	return true;
+}
+
 /* Erase flash row by row */
 static bool samd_flash_erase(target_flash_s *const f, const target_addr_t addr, const size_t len)
 {
@@ -600,11 +610,8 @@ static bool samd_flash_erase(target_flash_s *const f, const target_addr_t addr, 
 
 		/* Issue the erase command */
 		target_mem_write32(t, SAMD_NVMC_CTRLA, SAMD_CTRLA_CMD_KEY | SAMD_CTRLA_CMD_ERASEROW);
-		/* Poll for NVM Ready */
-		while ((target_mem_read32(t, SAMD_NVMC_INTFLAG) & SAMD_NVMC_READY) == 0) {
-			if (target_check_error(t))
-				return false;
-		}
+		if (!samd_wait_nvm_ready(t))
+			return false;
 
 		/* Lock */
 		samd_lock_current_address(t);
@@ -628,12 +635,8 @@ static bool samd_flash_write(target_flash_s *f, target_addr_t dest, const void *
 
 	/* Issue the write page command */
 	target_mem_write32(t, SAMD_NVMC_CTRLA, SAMD_CTRLA_CMD_KEY | SAMD_CTRLA_CMD_WRITEPAGE);
-
-	/* Poll for NVM Ready */
-	while ((target_mem_read32(t, SAMD_NVMC_INTFLAG) & SAMD_NVMC_READY) == 0) {
-		if (target_check_error(t))
-			return false;
-	}
+	if (!samd_wait_nvm_ready(t))
+		return false;
 
 	/* Lock */
 	samd_lock_current_address(t);
@@ -690,12 +693,8 @@ static bool samd_set_flashlock(target *t, uint16_t value, const char **argv)
 
 	/* Issue the erase command */
 	target_mem_write32(t, SAMD_NVMC_CTRLA, SAMD_CTRLA_CMD_KEY | SAMD_CTRLA_CMD_ERASEAUXROW);
-
-	/* Poll for NVM Ready */
-	while ((target_mem_read32(t, SAMD_NVMC_INTFLAG) & SAMD_NVMC_READY) == 0) {
-		if (target_check_error(t))
-			return false;
-	}
+	if (!samd_wait_nvm_ready(t))
+		return false;
 
 	/* Modify the high byte of the user row */
 	high = (high & 0x0000FFFF) | ((value << 16) & 0xFFFF0000);
@@ -762,7 +761,7 @@ static bool samd_cmd_unlock_flash(target *t, int argc, const char **argv)
 static bool samd_set_bootprot(target *t, uint16_t value, const char **argv)
 {
 	(void)argv;
-	uint32_t high = target_mem_read32(t, SAMD_NVM_USER_ROW_HIGH);
+	const uint32_t high = target_mem_read32(t, SAMD_NVM_USER_ROW_HIGH);
 	uint32_t low = target_mem_read32(t, SAMD_NVM_USER_ROW_LOW);
 
 	/*
@@ -773,15 +772,11 @@ static bool samd_set_bootprot(target *t, uint16_t value, const char **argv)
 
 	/* Issue the erase command */
 	target_mem_write32(t, SAMD_NVMC_CTRLA, SAMD_CTRLA_CMD_KEY | SAMD_CTRLA_CMD_ERASEAUXROW);
-
-	/* Poll for NVM Ready */
-	while ((target_mem_read32(t, SAMD_NVMC_INTFLAG) & SAMD_NVMC_READY) == 0) {
-		if (target_check_error(t))
-			return -1;
-	}
+	if (!samd_wait_nvm_ready(t))
+		return false;
 
 	/* Modify the low word of the user row */
-	low = (low & 0xFFFFFFF8) | ((value << 0) & 0x00000007);
+	low = (low & 0xFFFFFFF8U) | ((value << 0U) & 0x00000007U);
 
 	/* Write back */
 	target_mem_write32(t, SAMD_NVM_USER_ROW_LOW, low);
@@ -789,7 +784,6 @@ static bool samd_set_bootprot(target *t, uint16_t value, const char **argv)
 
 	/* Issue the page write command */
 	target_mem_write32(t, SAMD_NVMC_CTRLA, SAMD_CTRLA_CMD_KEY | SAMD_CTRLA_CMD_WRITEAUXPAGE);
-
 	return true;
 }
 
@@ -904,12 +898,8 @@ static bool samd_cmd_ssb(target *t, int argc, const char **argv)
 	(void)argv;
 	/* Issue the ssb command */
 	target_mem_write32(t, SAMD_NVMC_CTRLA, SAMD_CTRLA_CMD_KEY | SAMD_CTRLA_CMD_SSB);
-
-	/* Poll for NVM Ready */
-	while ((target_mem_read32(t, SAMD_NVMC_INTFLAG) & SAMD_NVMC_READY) == 0) {
-		if (target_check_error(t))
-			return -1;
-	}
+	if (!samd_wait_nvm_ready(t))
+		return false;
 
 	tc_printf(t, "Security bit set!\nScan again, attach and issue 'monitor erase_mass' to reset.\n");
 
