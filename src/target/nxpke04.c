@@ -114,7 +114,7 @@
 static const uint8_t cmd_lens[] = {4, 1, 2, 3, 6, 0, 6, 6, 1, 2, 2, 1, 5, 3, 3};
 
 /* Flash routines */
-static bool ke04_command(target *t, uint8_t cmd, uint32_t addr, const uint8_t data[8]);
+static bool ke04_command(target *t, uint8_t cmd, uint32_t addr, const uint8_t *data);
 static bool ke04_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 static bool ke04_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 static bool ke04_flash_done(target_flash_s *f);
