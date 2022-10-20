@@ -232,7 +232,8 @@ static void sam_add_flash(target *t, uint32_t eefc_base, uint32_t addr, size_t l
 
 static void samx7x_add_ram(target *t, uint32_t tcm_config, uint32_t ram_size)
 {
-	uint32_t itcm_size = 0, dtcm_size = 0;
+	uint32_t itcm_size = 0;
+	uint32_t dtcm_size = 0;
 
 	switch (tcm_config) {
 	case GPNVM_SAMX7X_TCM_32K:
@@ -568,7 +569,7 @@ static bool sam_cmd_gpnvm(target *t, int argc, const char **argv)
 	if (argc != 2 && argc != 4)
 		goto bad_usage;
 
-	uint8_t arglen = strlen(argv[1]);
+	const uint8_t arglen = strlen(argv[1]);
 	if (arglen == 0)
 		goto bad_usage;
 
@@ -602,27 +603,21 @@ static bool sam_cmd_gpnvm(target *t, int argc, const char **argv)
 	}
 
 	uint32_t mask = 0;
-	uint32_t values = 0;
 	/* If `gpnvm set` is requested, handle set arguments */
 	if (strncmp(argv[1], "set", arglen) == 0) {
-		char *eos;
-		mask = strtoul(argv[2], &eos, 0);
-		values = strtoul(argv[3], &eos, 0);
-
-		if (mask == 0 || mask & ~gpnvm_mask)
-			/* trying to write invalid bits */
+		mask = strtoul(argv[2], NULL, 0);
+		if (mask == 0 || (mask & ~gpnvm_mask))
+			/* Trying to write invalid bits */
 			goto bad_usage;
 
-		uint32_t work_mask = mask;
-		uint32_t work_values = values;
-		for (uint16_t bit = 0; work_mask > 0; bit++) {
-			if (work_mask & 1) {
-				uint8_t cmd = (work_values & 1) ? EEFC_FCR_FCMD_SGPB : EEFC_FCR_FCMD_CGPB;
+		const uint32_t values = strtoul(argv[3], NULL, 0);
+		for (size_t bit = 0; bit < 32; ++bit) {
+			const uint32_t index = 1U << bit;
+			if (mask & index) {
+				uint8_t cmd = (values & index) ? EEFC_FCR_FCMD_SGPB : EEFC_FCR_FCMD_CGPB;
 				if (!sam_flash_cmd(t, base, cmd, bit))
 					return false;
 			}
-			work_mask >>= 1;
-			work_values >>= 1;
 		}
 		/* Otherwise, if anything other than `gpnvm get` is requested, it's bad usage */
 	} else if (strncmp(argv[1], "get", arglen) != 0)
