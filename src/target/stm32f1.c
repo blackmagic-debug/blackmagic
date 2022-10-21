@@ -96,6 +96,11 @@ static bool stm32f1_mass_erase(target *t);
 #define GD32Fx_FLASHSIZE 0x1ffff7e0U
 #define GD32F0_FLASHSIZE 0x1ffff7ccU
 
+#define AT32F4x_IDCODE_SERIES_MASK 0xfffff000U
+#define AT32F4x_IDCODE_PART_MASK   0x00000fffU
+#define AT32F41_SERIES             0x70030000U
+#define AT32F40_SERIES             0x70050000U
+
 static void stm32f1_add_flash(target *t, uint32_t addr, size_t length, size_t erasesize)
 {
 	target_flash_s *f = calloc(1, sizeof(*f));
@@ -153,87 +158,98 @@ bool gd32f1_probe(target *t)
 	return true;
 }
 
-/**
-	\brief identify at32fxx chips (Cortex-M4)
-*/
+static bool at32f40_detect(target *t, const uint16_t part_id)
+{
+	// Current driver supports only *default* memory layout (256 KB Flash / 96 KB SRAM)
+	// (*) Support for external Flash for 512KB and 1024KB parts requires specific flash code (not implement)
+	switch (part_id) {
+	case 0x0240: // AT32F403AVCT7 256KB / LQFP100
+	case 0x0241: // AT32F403ARCT7 256KB / LQFP64
+	case 0x0242: // AT32F403ACCT7 256KB / LQFP48
+	case 0x0243: // AT32F403ACCU7 256KB / QFN48
+	case 0x0249: // AT32F407VCT7 256KB / LQFP100
+	case 0x024a: // AT32F407RCT7 256KB / LQFP64
+	case 0x0254: // AT32F407AVCT7 256KB / LQFP100
+	case 0x02cd: // AT32F403AVET7 512KB / LQFP100 (*)
+	case 0x02ce: // AT32F403ARET7 512KB / LQFP64 (*)
+	case 0x02cf: // AT32F403ACET7 512KB / LQFP48 (*)
+	case 0x02d0: // AT32F403ACEU7 512KB / QFN48 (*)
+	case 0x02d1: // AT32F407VET7 512KB / LQFP100 (*)
+	case 0x02d2: // AT32F407RET7 512KB / LQFP64 (*)
+	case 0x0344: // AT32F403AVGT7 1024KB / LQFP100 (*)
+	case 0x0345: // AT32F403ARGT7 1024KB / LQFP64 (*)
+	case 0x0346: // AT32F403ACGT7 1024KB / LQFP48 (*)
+	case 0x0347: // AT32F403ACGU7 1024KB / QFN48 (found on BlackPill+ WeAct Studio) (*)
+	case 0x034b: // AT32F407VGT7 1024KB / LQFP100 (*)
+	case 0x034c: // AT32F407VGT7 1024KB / LQFP64 (*)
+	case 0x0353: // AT32F407AVGT7 1024KB / LQFP100 (*)
+		// Flash: 256 KB / 2KB per block
+		stm32f1_add_flash(t, 0x08000000, 256 * 1024, 2 * 1024);
+		break;
+	// Unknown/undocumented
+	default:
+		return false;
+	}
+	// All parts have 96KB SRAM
+	target_add_ram(t, 0x20000000, 96 * 1024);
+	t->driver = "AT32F403A/407";
+	t->mass_erase = stm32f1_mass_erase;
+	return true;
+}
+
+static bool at32f41_detect(target *t, const uint16_t part_id)
+{
+	switch (part_id) {
+	case 0x0240: // LQFP64_10x10
+	case 0x0241: // LQFP48_7x7
+	case 0x0242: // QFN32_4x4
+	case 0x0243: // LQFP64_7x7
+	case 0x024c: // QFN48_6x6
+		// Flash: 256 KB / 2KB per block
+		stm32f1_add_flash(t, 0x08000000, 256 * 1024, 2 * 1024);
+		break;
+	case 0x01c4: // LQFP64_10x10
+	case 0x01c5: // LQFP48_7x7
+	case 0x01c6: // QFN32_4x4
+	case 0x01c7: // LQFP64_7x7
+	case 0x01cd: // QFN48_6x6
+		// Flash: 128 KB / 2KB per block
+		stm32f1_add_flash(t, 0x08000000, 128 * 1024, 2 * 1024);
+		break;
+	case 0x0108: // LQFP64_10x10
+	case 0x0109: // LQFP48_7x7
+	case 0x010a: // QFN32_4x4
+		// Flash: 64 KB / 2KB per block
+		stm32f1_add_flash(t, 0x08000000, 64 * 1024, 2 * 1024);
+		break;
+	// Unknown/undocumented
+	default:
+		return false;
+	}
+	// All parts have 32KB SRAM
+	target_add_ram(t, 0x20000000, 32 * 1024);
+	t->driver = "AT32F415";
+	t->mass_erase = stm32f1_mass_erase;
+	return true;
+}
+
+/* Identify AT32F4x devices (Cortex-M4) */
 bool at32fxx_probe(target *t)
 {
-	// Artery clones uses Cortex M4 cores
+	// Artery clones use Cortex M4 cores
 	if ((t->cpuid & CPUID_PARTNO_MASK) != CORTEX_M4)
 		return false;
+
 	// Artery chips use the complete idcode word for identification
 	const uint32_t idcode = target_mem_read32(t, DBGMCU_IDCODE);
-	// AT32F415 Series?
-	if ((idcode & 0xfffff000U) == 0x70030000) {
-		switch (idcode & 0x00000FFF) {
-		case 0x0240: // LQFP64_10x10
-		case 0x0241: // LQFP48_7x7
-		case 0x0242: // QFN32_4x4
-		case 0x0243: // LQFP64_7x7
-		case 0x024c: // QFN48_6x6
-			// Flash: 256 KB / 2KB per block
-			stm32f1_add_flash(t, 0x08000000, 256 * 1024, 2 * 1024);
-			break;
-		case 0x01c4: // LQFP64_10x10
-		case 0x01c5: // LQFP48_7x7
-		case 0x01c6: // QFN32_4x4
-		case 0x01c7: // LQFP64_7x7
-		case 0x01cd: // QFN48_6x6
-			// Flash: 128 KB / 2KB per block
-			stm32f1_add_flash(t, 0x08000000, 128 * 1024, 2 * 1024);
-			break;
-		case 0x0108: // LQFP64_10x10
-		case 0x0109: // LQFP48_7x7
-		case 0x010a: // QFN32_4x4
-			// Flash: 64 KB / 2KB per block
-			stm32f1_add_flash(t, 0x08000000, 64 * 1024, 2 * 1024);
-			break;
-		// Unknown/undocumented
-		default:
-			return false;
-		}
-		// All parts have 32KB SRAM
-		target_add_ram(t, 0x20000000, 32 * 1024);
-		t->driver = "AT32F415";
-	}
-	// AT32F403A/407 Series?
-	else if ((idcode & 0xfffff000U) == 0x70050000) {
-		// Current driver supports only *default* memory layout (256 KB Flash / 96 KB SRAM)
-		// (*) Support for external Flash for 512KB and 1024KB parts requires specific flash code (not implement)
-		switch (idcode & 0x00000FFF) {
-		case 0x0240: // AT32F403AVCT7 256KB / LQFP100
-		case 0x0241: // AT32F403ARCT7 256KB / LQFP64
-		case 0x0242: // AT32F403ACCT7 256KB / LQFP48
-		case 0x0243: // AT32F403ACCU7 256KB / QFN48
-		case 0x0249: // AT32F407VCT7 256KB / LQFP100
-		case 0x024a: // AT32F407RCT7 256KB / LQFP64
-		case 0x0254: // AT32F407AVCT7 256KB / LQFP100
-		case 0x02cd: // AT32F403AVET7 512KB / LQFP100 (*)
-		case 0x02ce: // AT32F403ARET7 512KB / LQFP64 (*)
-		case 0x02cf: // AT32F403ACET7 512KB / LQFP48 (*)
-		case 0x02d0: // AT32F403ACEU7 512KB / QFN48 (*)
-		case 0x02d1: // AT32F407VET7 512KB / LQFP100 (*)
-		case 0x02d2: // AT32F407RET7 512KB / LQFP64 (*)
-		case 0x0344: // AT32F403AVGT7 1024KB / LQFP100 (*)
-		case 0x0345: // AT32F403ARGT7 1024KB / LQFP64 (*)
-		case 0x0346: // AT32F403ACGT7 1024KB / LQFP48 (*)
-		case 0x0347: // AT32F403ACGU7 1024KB / QFN48 (found on BlackPill+ WeAct Studio) (*)
-		case 0x034b: // AT32F407VGT7 1024KB / LQFP100 (*)
-		case 0x034c: // AT32F407VGT7 1024KB / LQFP64 (*)
-		case 0x0353: // AT32F407AVGT7 1024KB / LQFP100 (*)
-			// Flash: 256 KB / 2KB per block
-			stm32f1_add_flash(t, 0x08000000, 256 * 1024, 2 * 1024);
-			break;
-		// Unknown/undocumented
-		default:
-			return false;
-		}
-		// All parts have 96KB SRAM
-		target_add_ram(t, 0x20000000, 96 * 1024);
-		t->driver = "AT32F403A/407";
-	} else
-		return false;
-	return true;
+	const uint32_t series = idcode & AT32F4x_IDCODE_SERIES_MASK;
+	const uint16_t part_id = idcode & AT32F4x_IDCODE_PART_MASK;
+
+	if (series == AT32F40_SERIES)
+		return at32f40_detect(t, part_id);
+	if (series == AT32F41_SERIES)
+		return at32f41_detect(t, part_id);
+	return false;
 }
 
 /* Identify real STM32F0/F1/F3 devices */
