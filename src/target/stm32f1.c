@@ -401,6 +401,13 @@ static uint32_t stm32f1_bank_offset_for(target_addr_t addr)
 	return FLASH_BANK1_OFFSET;
 }
 
+static uint32_t stm32f1_bank_offset_for(target_addr_t addr)
+{
+	if (addr >= FLASH_BANK_SPLIT)
+		return FLASH_BANK2_OFFSET;
+	return FLASH_BANK1_OFFSET;
+}
+
 static bool stm32f1_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
 	target *t = f->t;
