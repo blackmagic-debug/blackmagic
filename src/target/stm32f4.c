@@ -211,6 +211,19 @@ static uint16_t stm32f4_read_idcode(target *const t)
 	return idcode;
 }
 
+static uint16_t stm32f4_read_idcode(target *const t)
+{
+	const uint16_t idcode = target_mem_read32(t, DBGMCU_IDCODE) & 0xfffU;
+	/*
+	 * F405 revision A has the wrong IDCODE, use ARM_CPUID to make the
+	 * distinction with F205. Revision is also wrong (0x2000 instead
+	 * of 0x1000). See F40x/F41x errata.
+	 */
+	if (idcode == ID_STM32F20X && (t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M4)
+		return ID_STM32F40X;
+	return idcode;
+}
+
 bool stm32f4_probe(target *t)
 {
 	const uint16_t device_id = stm32f4_read_idcode(t);
@@ -711,6 +724,20 @@ static bool stm32f4_cmd_option(target *t, int argc, const char **argv)
 	}
 	tc_printf(t, "\n");
 	return true;
+}
+
+static bool stm32f4_cmd_psize(target *t, int argc, const char **argv)
+{
+	switch (psize) {
+	case ALIGN_DWORD:
+		return "x64";
+	case ALIGN_WORD:
+		return "x32";
+	case ALIGN_HALFWORD:
+		return "x16";
+	default:
+		return "x8";
+	}
 }
 
 static bool stm32f4_cmd_psize(target *t, int argc, const char **argv)
