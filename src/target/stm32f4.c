@@ -137,6 +137,8 @@ typedef struct stm32f4_priv {
 #define ID_STM32F72X  0x452U
 #define ID_STM32F410  0x458U
 #define ID_STM32F413  0x463U
+#define ID_GD32F450   0x2b3U
+#define ID_GD32F470   0xa2eU
 
 static void stm32f4_add_flash(target_s *const t, const uint32_t addr, const size_t length, const size_t blocksize,
 	const uint8_t base_sector, const uint8_t split)
@@ -193,6 +195,10 @@ static char *stm32f4_get_chip_name(const uint32_t device_id)
 		return "STM32F76x";
 	case ID_STM32F72X: /* F72/3xC/E RM0431 */
 		return "STM32F72x";
+	case ID_GD32F450: /* GigaDevice F450 */
+		return "GD32F450";
+	case ID_GD32F470: /* GigaDevice F470 */
+		return "GD32F470";
 	default:
 		return NULL;
 	}
@@ -237,6 +243,39 @@ bool stm32f4_probe(target_s *t)
 		return true;
 	}
 	return false;
+}
+
+bool gd32f4_probe(target_s *t)
+{
+	if (t->part_id != ID_GD32F450 && t->part_id != ID_GD32F470)
+		return false;
+
+	t->attach = cortexm_attach;
+	t->detach = cortexm_detach;
+	t->mass_erase = stm32f4_mass_erase;
+	t->driver = stm32f4_get_chip_name(t->part_id);
+	target_add_commands(t, stm32f4_cmd_list, t->driver);
+
+	target_mem_map_free(t);
+	target_add_ram(t, 0x10000000, 0x10000); /* 64 k CCM Ram*/
+	target_add_ram(t, 0x20000000, 0x50000); /* 320 k RAM */
+
+	/* TODO implement DBS mode */
+	const uint8_t split = 12;
+	/* Bank 1*/
+	stm32f4_add_flash(t, 0x8000000, 0x10000, 0x4000, 0, split);  /* 4 16K */
+	stm32f4_add_flash(t, 0x8010000, 0x10000, 0x10000, 4, split); /* 1 64K */
+	stm32f4_add_flash(t, 0x8020000, 0xe0000, 0x20000, 5, split); /* 7 128K */
+
+	/* Bank 2 */
+	stm32f4_add_flash(t, 0x8100000, 0x10000, 0x4000, 16, split);  /* 4 16K */
+	stm32f4_add_flash(t, 0x8110000, 0x10000, 0x10000, 20, split); /* 1 64K */
+	stm32f4_add_flash(t, 0x8120000, 0xe0000, 0x20000, 21, split); /* 7 128K */
+
+	/* Third MB composed of 4 256 KB sectors, and uses sector values 12-15 */
+	stm32f4_add_flash(t, 0x8200000, 0x100000, 0x40000, 12, split);
+
+	return true;
 }
 
 static inline bool stm32f4_device_is_f7(const uint16_t part_id)
@@ -541,6 +580,8 @@ static bool optcr_mask(target_s *const t, uint32_t *const val)
 		break;
 	case ID_STM32F46X:
 	case ID_STM32F42X:
+	case ID_GD32F450:
+	case ID_GD32F470:
 		val[0] &= ~0x30000000U;
 		val[1] &= 0x0fff0000U;
 		break;
@@ -580,6 +621,8 @@ static size_t stm32f4_opt_bytes_for(const uint16_t part_id)
 	if (part_id == ID_STM32F72X)
 		return 3;
 	if (part_id == ID_STM32F42X || part_id == ID_STM32F46X || part_id == ID_STM32F74X || part_id == ID_STM32F76X)
+		return 2;
+	if (part_id == ID_GD32F450 || part_id == ID_GD32F470)
 		return 2;
 	return 1;
 }
@@ -636,6 +679,8 @@ static bool stm32f4_option_write_default(target_s *t)
 	switch (t->part_id) {
 	case ID_STM32F42X:
 	case ID_STM32F46X:
+	case ID_GD32F450:
+	case ID_GD32F470:
 		val[0] = 0x0fffaaedU;
 		val[1] = 0x0fff0000U;
 		return stm32f4_option_write(t, val, 2);
