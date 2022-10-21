@@ -163,7 +163,7 @@ bool gd32f1_probe(target *t)
 static bool at32f40_detect(target *t, const uint16_t part_id)
 {
 	// Current driver supports only *default* memory layout (256 KB Flash / 96 KB SRAM)
-	// (*) Support for external Flash for 512KB and 1024KB parts requires specific flash code (not implement)
+	// XXX: Support for external Flash for 512KB and 1024KB parts requires specific flash code (not implement)
 	switch (part_id) {
 	case 0x0240: // AT32F403AVCT7 256KB / LQFP100
 	case 0x0241: // AT32F403ARCT7 256KB / LQFP64
@@ -464,39 +464,31 @@ static bool stm32f1_flash_write(target_flash_s *f, target_addr_t dest, const voi
 	return true;
 }
 
-static bool stm32f1_mass_erase(target *t)
+static bool stm32f1_mass_erase_bank(target *const t, const uint32_t bank_offset, platform_timeout *const timeout)
 {
-	if (!stm32f1_flash_unlock(t, 0))
+	/* Unlock the bank */
+	if (!stm32f1_flash_unlock(t, bank_offset))
 		return false;
-
-	platform_timeout timeout;
-	platform_timeout_set(&timeout, 500);
-
-	stm32f1_flash_clear_eop(t, 0);
+	stm32f1_flash_clear_eop(t, bank_offset);
 
 	/* Flash mass erase start instruction */
-	target_mem_write32(t, FLASH_CR, FLASH_CR_MER);
-	target_mem_write32(t, FLASH_CR, FLASH_CR_STRT | FLASH_CR_MER);
+	target_mem_write32(t, FLASH_CR + bank_offset, FLASH_CR_MER);
+	target_mem_write32(t, FLASH_CR + bank_offset, FLASH_CR_STRT | FLASH_CR_MER);
 
 	/* Wait for completion or an error */
-	if (!stm32f1_flash_busy_wait(t, 0, &timeout))
+	return stm32f1_flash_busy_wait(t, bank_offset, timeout);
+}
+
+static bool stm32f1_mass_erase(target *t)
+{
+	platform_timeout timeout;
+	platform_timeout_set(&timeout, 500);
+	if (!stm32f1_mass_erase_bank(t, FLASH_BANK1_OFFSET, &timeout))
 		return false;
 
-	if (t->part_id == 0x430) {
-		if (!stm32f1_flash_unlock(t, FLASH_BANK2_OFFSET))
-			return false;
-
-		stm32f1_flash_clear_eop(t, FLASH_BANK2_OFFSET);
-
-		/* Flash mass erase start instruction on bank 2*/
-		target_mem_write32(t, FLASH_CR + FLASH_BANK2_OFFSET, FLASH_CR_MER);
-		target_mem_write32(t, FLASH_CR + FLASH_BANK2_OFFSET, FLASH_CR_STRT | FLASH_CR_MER);
-
-		/* Wait for completion or an error */
-		if (!stm32f1_flash_busy_wait(t, FLASH_BANK2_OFFSET, &timeout))
-			return false;
-	}
-
+	/* If we're on a part that has a second bank, mass erase that bank too */
+	if (t->part_id == 0x430)
+		return stm32f1_mass_erase_bank(t, FLASH_BANK2_OFFSET, &timeout);
 	return true;
 }
 
