@@ -64,8 +64,8 @@ static inline size_t sfdp_memory_density_to_capacity_bits(const uint8_t *const d
 		return SFDP_DENSITY_VALUE(density) + 1U;
 }
 
-static spi_parameters_s sfdp_read_basic_parameter_table(target *const t, const uint32_t address, const size_t length,
-	const read_sfdp_func sfdp_read)
+static spi_parameters_s sfdp_read_basic_parameter_table(
+	target *const t, const uint32_t address, const size_t length, const read_sfdp_func sfdp_read)
 {
 	sfdp_basic_parameter_table_s parameter_table;
 	const size_t table_length = MIN(sizeof(sfdp_basic_parameter_table_s), length);
