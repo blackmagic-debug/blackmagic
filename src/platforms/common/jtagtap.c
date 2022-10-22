@@ -99,31 +99,30 @@ static bool jtagtap_next(const bool tms, const bool tdi)
 		return jtagtap_next_no_delay();
 }
 
-static void jtagtap_tms_seq_swd_delay(uint32_t tms_states, size_t ticks)
+static void jtagtap_tms_seq_swd_delay(uint32_t tms_states, const size_t clock_cycles)
 {
-	while (ticks) {
-		const bool state = tms_states & 1;
+	for (size_t cycle = 0; cycle < clock_cycles; ++cycle) {
+		const bool state = tms_states & 1U;
 		gpio_set_val(TMS_PORT, TMS_PIN, state);
 		gpio_set(TCK_PORT, TCK_PIN);
 		for (volatile int32_t cnt = swd_delay_cnt - 2; cnt > 0; cnt--)
 			continue;
-		tms_states >>= 1;
-		ticks--;
+		tms_states >>= 1U;
 		gpio_clear(TCK_PORT, TCK_PIN);
 		for (volatile int32_t cnt = swd_delay_cnt - 2; cnt > 0; cnt--)
 			continue;
 	}
 }
 
-static void jtagtap_tms_seq_no_delay(uint32_t tms_states, size_t ticks)
+static void jtagtap_tms_seq_no_delay(uint32_t tms_states, const size_t clock_cycles)
 {
-	while (ticks) {
-		const bool state = tms_states & 1;
+	for (size_t cycle = 0; cycle < clock_cycles; ++cycle) {
+		const bool state = tms_states & 1U;
 		gpio_set_val(TMS_PORT, TMS_PIN, state);
 		gpio_set(TCK_PORT, TCK_PIN);
-		tms_states >>= 1;
+		tms_states >>= 1U;
 		__asm__("nop");
-		ticks--;
+		__asm__("nop");
 		gpio_clear(TCK_PORT, TCK_PIN);
 	}
 }
