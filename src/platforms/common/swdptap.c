@@ -71,8 +71,7 @@ static uint32_t swdptap_seq_in_swd_delay(const size_t clock_cycles)
 	uint32_t value = 0;
 	for (size_t cycle = 0; cycle < clock_cycles; ++cycle) {
 		gpio_clear(SWCLK_PORT, SWCLK_PIN);
-		if (gpio_get(SWDIO_PORT, SWDIO_PIN))
-			value |= (1U << cycle);
+		value |= gpio_get(SWDIO_PORT, SWDIO_PIN) ? 1U << cycle : 0U;
 		for (volatile int32_t cnt = swd_delay_cnt - 2; cnt > 0; cnt--)
 			continue;
 		gpio_set(SWCLK_PORT, SWCLK_PIN);
@@ -89,9 +88,9 @@ static uint32_t swdptap_seq_in_no_delay(const size_t clock_cycles)
 	uint32_t value = 0;
 	for (size_t cycle = 0; cycle < clock_cycles; ++cycle) {
 		gpio_clear(SWCLK_PORT, SWCLK_PIN);
-		if (gpio_get(SWDIO_PORT, SWDIO_PIN))
-			value |= (1U << cycle);
+		value |= gpio_get(SWDIO_PORT, SWDIO_PIN) ? 1U << cycle : 0U;
 		gpio_set(SWCLK_PORT, SWCLK_PIN);
+		__asm__("nop");
 	}
 	gpio_clear(SWCLK_PORT, SWCLK_PIN);
 	return value;
