@@ -37,27 +37,32 @@
 
 #define NO_SERIAL_NUMBER "<no serial number>"
 
+void bmp_read_product_version(libusb_device_descriptor_s *device_descriptor, libusb_device *device,
+	libusb_device_handle *handle, char **product, char **manufacturer, char **serial, char **version);
+
 typedef struct debugger_device {
 	uint16_t vendor;
 	uint16_t product;
 	bmp_type_t type;
+	void (*function)(
+		libusb_device_descriptor_s *, libusb_device *, libusb_device_handle *, char **, char **, char **, char **);
 	char *type_string;
 } debugger_device_s;
 
 /* Create the list of debuggers BMDA works with */
 debugger_device_s debugger_devices[] = {
-	{VENDOR_ID_BMP, PRODUCT_ID_BMP, BMP_TYPE_BMP, "Black Magic Probe"},
-	{VENDOR_ID_STLINK, PRODUCT_ID_STLINKV2, BMP_TYPE_STLINK_V2, "ST-Link v2"},
-	{VENDOR_ID_STLINK, PRODUCT_ID_STLINKV21, BMP_TYPE_STLINK_V2, "ST-Link v2.1"},
-	{VENDOR_ID_STLINK, PRODUCT_ID_STLINKV21_MSD, BMP_TYPE_STLINK_V2, "ST-Link v2.1 MSD"},
-	{VENDOR_ID_STLINK, PRODUCT_ID_STLINKV3_NO_MSD, BMP_TYPE_STLINK_V2, "ST-Link v2.1 No MSD"},
-	{VENDOR_ID_STLINK, PRODUCT_ID_STLINKV3, BMP_TYPE_STLINK_V2, "ST-Link v3"},
-	{VENDOR_ID_STLINK, PRODUCT_ID_STLINKV3E, BMP_TYPE_STLINK_V2, "ST-Link v3E"},
-	{VENDOR_ID_SEGGER, PRODUCT_ID_UNKNOWN, BMP_TYPE_JLINK, "Segger JLink"},
-	{VENDOR_ID_FTDI, PRODUCT_ID_FTDI_FT2232, BMP_TYPE_FTDI, "FTDI FT2232"},
-	{VENDOR_ID_FTDI, PRODUCT_ID_FTDI_FT4232, BMP_TYPE_FTDI, "FTDI FT4232"},
-	{VENDOR_ID_FTDI, PRODUCT_ID_FTDI_FT232, BMP_TYPE_FTDI, "FTDI FT232"},
-	{0, 0, BMP_TYPE_NONE, ""},
+	{VENDOR_ID_BMP, PRODUCT_ID_BMP, BMP_TYPE_BMP, bmp_read_product_version, "Black Magic Probe"},
+	{VENDOR_ID_STLINK, PRODUCT_ID_STLINKV2, BMP_TYPE_STLINK_V2, NULL, "ST-Link v2"},
+	{VENDOR_ID_STLINK, PRODUCT_ID_STLINKV21, BMP_TYPE_STLINK_V2, NULL, "ST-Link v2.1"},
+	{VENDOR_ID_STLINK, PRODUCT_ID_STLINKV21_MSD, BMP_TYPE_STLINK_V2, NULL, "ST-Link v2.1 MSD"},
+	{VENDOR_ID_STLINK, PRODUCT_ID_STLINKV3_NO_MSD, BMP_TYPE_STLINK_V2, NULL, "ST-Link v2.1 No MSD"},
+	{VENDOR_ID_STLINK, PRODUCT_ID_STLINKV3, BMP_TYPE_STLINK_V2, NULL, "ST-Link v3"},
+	{VENDOR_ID_STLINK, PRODUCT_ID_STLINKV3E, BMP_TYPE_STLINK_V2, NULL, "ST-Link v3E"},
+	{VENDOR_ID_SEGGER, PRODUCT_ID_UNKNOWN, BMP_TYPE_JLINK, NULL, "Segger JLink"},
+	{VENDOR_ID_FTDI, PRODUCT_ID_FTDI_FT2232, BMP_TYPE_FTDI, NULL, "FTDI FT2232"},
+	{VENDOR_ID_FTDI, PRODUCT_ID_FTDI_FT4232, BMP_TYPE_FTDI, NULL, "FTDI FT4232"},
+	{VENDOR_ID_FTDI, PRODUCT_ID_FTDI_FT232, BMP_TYPE_FTDI, NULL, "FTDI FT232"},
+	{0, 0, BMP_TYPE_NONE, NULL, ""},
 };
 
 bmp_type_t get_type_from_vid_pid(const uint16_t probe_vid, const uint16_t probe_pid)
@@ -101,6 +106,33 @@ static char *get_device_descriptor_string(libusb_device_handle *handle, uint16_t
 	if (string_index != 0)
 		libusb_get_string_descriptor_ascii(handle, string_index, (uint8_t *)read_string, sizeof(read_string));
 	return strdup(read_string);
+}
+
+/*
+ * BMP Probes have their version information in the product string.
+ *
+ * Extract the product and version, skip the manufacturer string
+ */
+void bmp_read_product_version(libusb_device_descriptor_s *device_descriptor, libusb_device *device,
+	libusb_device_handle *handle, char **product, char **manufacturer, char **serial, char **version)
+{
+	(void)device;
+	(void)serial;
+	(void)manufacturer;
+	char *start_of_version;
+	*product = get_device_descriptor_string(handle, device_descriptor->iProduct);
+	start_of_version = strrchr(*product, ' ');
+	if (start_of_version == NULL) {
+		version = NULL;
+	} else {
+		while (start_of_version[0] == ' ' && start_of_version != *product)
+			--start_of_version;
+		start_of_version[1] = '\0';
+		start_of_version += 2;
+		while (start_of_version[0] == ' ' && start_of_version[0] != '\0')
+			++start_of_version;
+		*version = strdup(start_of_version);
+	}
 }
 
 #if defined(_WIN32) || defined(__CYGWIN__)
@@ -231,10 +263,30 @@ static bool process_vid_pid_table_probe(
 			break;
 
 		const bmp_type_t probe_type = get_type_from_vid_pid(device_descriptor->idVendor, device_descriptor->idProduct);
-		char *product = get_device_descriptor_string(handle, device_descriptor->iProduct);
-		char *manufacturer = get_device_descriptor_string(handle, device_descriptor->iManufacturer);
-		char *serial = get_device_descriptor_string(handle, device_descriptor->iSerialNumber);
-		char *version = strdup("---");
+		char *product = NULL;
+		char *manufacturer = NULL;
+		char *serial = NULL;
+		char *version = NULL;
+		/*
+		 * If the probe has a custom string reader available, use it first.
+		 *
+		 * This will read and process any strings that need special work, e.g., extracting
+		 * a version string from a product string (BMP native)
+		 */
+		if (debugger_devices[index].function != NULL)
+			debugger_devices[index].function(
+				device_descriptor, device, handle, &product, &manufacturer, &serial, &version);
+
+		/* Now read any strings that have not been set by a custom reader function */
+		if (product == NULL)
+			product = get_device_descriptor_string(handle, device_descriptor->iProduct);
+		if (manufacturer == NULL)
+			manufacturer = get_device_descriptor_string(handle, device_descriptor->iManufacturer);
+		if (serial == NULL)
+			serial = get_device_descriptor_string(handle, device_descriptor->iSerialNumber);
+
+		if (version == NULL)
+			version = strdup("---");
 
 		*probe_list = probe_info_add_by_id(*probe_list, probe_type, device_descriptor->idVendor,
 			device_descriptor->idProduct, manufacturer, product, serial, version);
