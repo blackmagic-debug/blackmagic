@@ -364,8 +364,6 @@ static bool rp_read_rom_func_table(target *const t)
  */
 static bool rp_rom_call(target *t, uint32_t *regs, uint32_t cmd, uint32_t timeout)
 {
-	const char spinner[] = "|/-\\";
-	int spinindex = 0;
 	rp_priv_s *ps = (rp_priv_s *)t->target_storage;
 	regs[7] = cmd;
 	regs[REG_LR] = ps->rom_debug_trampoline_end;
@@ -381,23 +379,16 @@ static bool rp_rom_call(target *t, uint32_t *regs, uint32_t cmd, uint32_t timeou
 	DEBUG_INFO("Call cmd %04" PRIx32 "\n", cmd);
 	platform_timeout operation_timeout;
 	platform_timeout_set(&operation_timeout, timeout);
-	platform_timeout spinner_timeout;
-	if (timeout > 500)
-		platform_timeout_set(&spinner_timeout, 500);
-	else
-		/* never trigger if timeout is short */
-		platform_timeout_set(&spinner_timeout, timeout + 1);
-	do {
-		if (platform_timeout_is_expired(&spinner_timeout)) {
-			if (ps->is_monitor)
-				tc_printf(t, "\b%c", spinner[spinindex++ % 4]);
-			platform_timeout_set(&spinner_timeout, 500);
-		}
+	platform_timeout wait_timeout;
+	platform_timeout_set(&wait_timeout, 500);
+	while (!target_halt_poll(t, NULL)) {
+		if (ps->is_monitor)
+			target_print_progress(&wait_timeout);
 		if (platform_timeout_is_expired(&operation_timeout)) {
-			DEBUG_WARN("RP Run timout %d ms reached: ", (int)timeout);
+			DEBUG_WARN("RP Run timout %" PRIu32 "ms reached: ", timeout);
 			break;
 		}
-	} while (!target_halt_poll(t, NULL));
+	}
 	/* Debug */
 	target_regs_read(t, dbg_regs);
 	const bool result = (dbg_regs[REG_PC] & ~1U) == (ps->rom_debug_trampoline_end & ~1U);

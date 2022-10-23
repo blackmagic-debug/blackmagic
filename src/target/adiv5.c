@@ -71,7 +71,7 @@
 /* The following enum is based on the Component Class value table 13-3 of the
  * ADIv5 standard.
  */
-enum cid_class {
+typedef enum cid_class {
 	cidc_gvc = 0x0,    /* Generic verification component*/
 	cidc_romtab = 0x1, /* ROM Table, std. layout (ADIv5 Chapter 14) */
 	/* 0x2 - 0x8 */    /* Reserved */
@@ -83,7 +83,7 @@ enum cid_class {
 	cidc_gipc = 0xE,   /* Generic IP Component */
 	cidc_sys = 0xF,    /* CoreLink, PrimeCell, or other system component with no standard register layout */
 	cidc_unknown = 0x10
-};
+} cid_class_e;
 
 #ifdef ENABLE_DEBUG
 /* The reserved ones only have an R in them, to save a bit of space. */
@@ -443,7 +443,19 @@ static bool cortexm_prepare(ADIv5_AP_t *ap)
 	return true;
 }
 
-/* Return true if we find a debuggable device.*/
+static cid_class_e adiv5_class_from_cid(const uint16_t part_number, const uint16_t arch_id, const cid_class_e cid_class)
+{
+	/* Cortex-M23 and 33 incorectly list their SCS's as a debug component,
+	 * but they're a generic IP component, so we adjust the cid_class.
+	 */
+	if ((part_number == 0xd20U || part_number == 0xd21U) && arch_id == 0x2a04U && cid_class == cidc_dc)
+		return cidc_gipc;
+	return cid_class;
+}
+
+/*
+ * Return true if we find a debuggable device.
+ * NOLINTNEXTLINE(misc-no-recursion) */
 static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, const size_t recursion, const uint32_t num_entry)
 {
 	(void)num_entry;
@@ -592,11 +604,11 @@ static void adiv5_component_probe(ADIv5_AP_t *ap, uint32_t addr, const size_t re
 				indent + 1, num_entry, addr, cidc_debug_strings[cid_class], arm_component_lut[i].type,
 				arm_component_lut[i].full, (uint32_t)(pidr >> 32U), (uint32_t)pidr, dev_type, arch_id);
 
+			const cid_class_e adjusted_class = adiv5_class_from_cid(part_number, arch_id, cid_class);
 			/* Perform sanity check, if we know what to expect as * component ID class. */
-			if (arm_component_lut[i].cidc != cidc_unknown && cid_class != arm_component_lut[i].cidc) {
-				DEBUG_WARN("%sWARNING: \"%s\" !match expected \"%s\"\n", indent + 1, cidc_debug_strings[cid_class],
-					cidc_debug_strings[arm_component_lut[i].cidc]);
-			}
+			if (arm_component_lut[i].cidc != cidc_unknown && adjusted_class != arm_component_lut[i].cidc)
+				DEBUG_WARN("%sWARNING: \"%s\" expected, got \"%s\"\n", indent + 1,
+					cidc_debug_strings[arm_component_lut[i].cidc], cidc_debug_strings[adjusted_class]);
 
 			switch (arm_component_lut[i].arch) {
 			case aa_cortexm:
@@ -848,7 +860,7 @@ void adiv5_dp_init(ADIv5_DP_t *dp, const uint32_t idcode)
 			/* We have probably found all APs on this DP so no need to keep looking.
 			 * Continue with rest of init function down below.
 			 */
-			if (++invalid_aps == 8)				
+			if (++invalid_aps == 8)
 				break;
 
 			continue;
