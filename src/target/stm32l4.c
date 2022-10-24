@@ -486,6 +486,64 @@ static uint32_t stm32l4_main_sram_length(const target *const t)
 	return (device->sram1 + device->sram2 + device->sram3) * 1024U;
 }
 
+bool stm32l4_probe(target *const t)
+{
+	adiv5_access_port_s *ap = cortexm_ap(t);
+	uint32_t device_id;
+	if (ap->dp->version >= 2 && ap->dp->target_partno > 1) /* STM32L552 has invalid TARGETID 1 */
+		/* FIXME: ids likely no longer match and need fixing */
+		device_id = ap->dp->target_partno;
+	else {
+		uint32_t idcode_addr = STM32L4_DBGMCU_IDCODE_PHYS;
+		/* FIXME: we probaly want to check if this is a C-M33 via cpuid */
+		if (ap->dp->partno == 0xbe)
+			idcode_addr = STM32L5_DBGMCU_IDCODE_PHYS;
+		device_id = target_mem_read32(t, idcode_addr) & 0xfffU;
+		DEBUG_INFO("IDCode %08" PRIx32 "\n", device_id);
+	}
+
+	const stm32l4_device_info_s *device = stm32l4_get_device_info(device_id);
+	/* If the call returned the sentinel, it's not a supported L4 device */
+	if (!device->device_id)
+		return false;
+
+	/* Save private storage */
+	stm32l4_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
+	priv_storage->device = device;
+	t->target_storage = (void *)priv_storage;
+
+	t->driver = device->designator;
+	switch (device_id) {
+	case ID_STM32WLXX:
+	case ID_STM32WBXX:
+		if ((stm32l4_flash_read32(t, FLASH_OPTR)) & FLASH_OPTR_ESE) {
+			DEBUG_WARN("STM32W security enabled\n");
+			t->driver = device_id == ID_STM32WLXX ? "STM32WLxx (secure)" : "STM32WBxx (secure)";
+		}
+		if (ap->apsel == 0) {
+			/*
+			 * Enable CPU2 from CPU1.
+			 * CPU2 does not boot after reset w/o C2BOOT set.
+			 * RM0453/RM0434, §6.6.4. PWR control register 4 (PWR_CR4)
+			 */
+			const uint32_t pwr_ctrl4 = target_mem_read32(t, PWR_CR4);
+			target_mem_write32(t, PWR_CR4, pwr_ctrl4 | PWR_CR4_C2BOOT);
+		}
+		break;
+	case ID_STM32L55:
+		if ((stm32l4_flash_read32(t, FLASH_OPTR)) & STM32L5_FLASH_OPTR_TZEN) {
+			DEBUG_WARN("STM32L5 Trust Zone enabled\n");
+			t->core = "M33+TZ";
+			break;
+		}
+	}
+	t->mass_erase = stm32l4_mass_erase;
+	t->attach = stm32l4_attach;
+	t->detach = stm32l4_detach;
+	target_add_commands(t, stm32l4_cmd_list, device->designator);
+	return true;
+}
+
 static bool stm32l4_attach(target *const t)
 {
 	if (!cortexm_attach(t))
@@ -581,64 +639,6 @@ static void stm32l4_detach(target *const t)
 	/*reverse all changes to DBGMCU_CR*/
 	target_mem_write32(t, DBGMCU_CR(STM32L4_DBGMCU_IDCODE_PHYS), ps->dbgmcu_cr);
 	cortexm_detach(t);
-}
-
-bool stm32l4_probe(target *const t)
-{
-	adiv5_access_port_s *ap = cortexm_ap(t);
-	uint32_t device_id;
-	if (ap->dp->version >= 2 && ap->dp->target_partno > 1) /* STM32L552 has invalid TARGETID 1 */
-		/* FIXME: ids likely no longer match and need fixing */
-		device_id = ap->dp->target_partno;
-	else {
-		uint32_t idcode_addr = STM32L4_DBGMCU_IDCODE_PHYS;
-		/* FIXME: we probaly want to check if this is a C-M33 via cpuid */
-		if (ap->dp->partno == 0xbe)
-			idcode_addr = STM32L5_DBGMCU_IDCODE_PHYS;
-		device_id = target_mem_read32(t, idcode_addr) & 0xfffU;
-		DEBUG_INFO("IDCode %08" PRIx32 "\n", device_id);
-	}
-
-	const stm32l4_device_info_s *device = stm32l4_get_device_info(device_id);
-	/* If the call returned the sentinel, it's not a supported L4 device */
-	if (!device->device_id)
-		return false;
-
-	/* Save private storage */
-	stm32l4_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
-	priv_storage->device = device;
-	t->target_storage = (void *)priv_storage;
-
-	t->driver = device->designator;
-	switch (device_id) {
-	case ID_STM32WLXX:
-	case ID_STM32WBXX:
-		if ((stm32l4_flash_read32(t, FLASH_OPTR)) & FLASH_OPTR_ESE) {
-			DEBUG_WARN("STM32W security enabled\n");
-			t->driver = device_id == ID_STM32WLXX ? "STM32WLxx (secure)" : "STM32WBxx (secure)";
-		}
-		if (ap->apsel == 0) {
-			/*
-			 * Enable CPU2 from CPU1.
-			 * CPU2 does not boot after reset w/o C2BOOT set.
-			 * RM0453/RM0434, §6.6.4. PWR control register 4 (PWR_CR4)
-			 */
-			const uint32_t pwr_ctrl4 = target_mem_read32(t, PWR_CR4);
-			target_mem_write32(t, PWR_CR4, pwr_ctrl4 | PWR_CR4_C2BOOT);
-		}
-		break;
-	case ID_STM32L55:
-		if ((stm32l4_flash_read32(t, FLASH_OPTR)) & STM32L5_FLASH_OPTR_TZEN) {
-			DEBUG_WARN("STM32L5 Trust Zone enabled\n");
-			t->core = "M33+TZ";
-			break;
-		}
-	}
-	t->mass_erase = stm32l4_mass_erase;
-	t->attach = stm32l4_attach;
-	t->detach = stm32l4_detach;
-	target_add_commands(t, stm32l4_cmd_list, device->designator);
-	return true;
 }
 
 static void stm32l4_flash_unlock(target *const t)
