@@ -37,6 +37,7 @@
 #include "target.h"
 #include "target_internal.h"
 #include "cortexm.h"
+#include "stm32_common.h"
 
 static bool stm32f4_cmd_option(target *t, int argc, const char **argv);
 static bool stm32f4_cmd_psize(target *t, int argc, const char **argv);
@@ -711,20 +712,6 @@ static bool stm32f4_cmd_option(target *t, int argc, const char **argv)
 	return true;
 }
 
-static const char *stm32f4_psize_to_string(const enum align psize)
-{
-	switch (psize) {
-	case ALIGN_DWORD:
-		return "x64";
-	case ALIGN_WORD:
-		return "x32";
-	case ALIGN_HALFWORD:
-		return "x16";
-	default:
-		return "x8";
-	}
-}
-
 static bool stm32f4_cmd_psize(target *t, int argc, const char **argv)
 {
 	if (argc == 1) {
@@ -738,25 +725,15 @@ static bool stm32f4_cmd_psize(target *t, int argc, const char **argv)
 			if (f->write == stm32f4_flash_write)
 				psize = ((stm32f4_flash_s *)f)->psize;
 		}
-		tc_printf(t, "Flash write parallelism: %s\n", stm32f4_psize_to_string(psize));
+		tc_printf(t, "Flash write parallelism: %s\n", stm32_psize_to_string(psize));
 	} else {
-		enum align psize = ALIGN_BYTE;
-		if (strcasecmp(argv[1], "x8") == 0)
-			psize = ALIGN_BYTE;
-		else if (strcasecmp(argv[1], "x16") == 0)
-			psize = ALIGN_HALFWORD;
-		else if (strcasecmp(argv[1], "x32") == 0)
-			psize = ALIGN_WORD;
-		else if (strcasecmp(argv[1], "x64") == 0)
-			psize = ALIGN_DWORD;
-		else {
-			tc_printf(t, "usage: monitor psize (x8|x16|x32|x32)\n");
+		enum align psize;
+		if (!stm32_psize_from_string(t, argv[1], &psize))
 			return false;
-		}
 
 		/*
 		 * XXX: What is this and why does it exist?
-		 * A dry-run walk-through says it'll overwrite psize for every Flash region added first by stm32f4_attach()
+		 * A dry-run walk-through says it'll overwrite psize for every Flash region added by stm32f4_attach()
 		 * because all Flash regions added by stm32f4_add_flash match the if condition. This looks redundant and wrong.
 		 */
 		for (target_flash_s *f = t->flash; f; f = f->next) {
