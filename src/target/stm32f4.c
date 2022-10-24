@@ -49,6 +49,7 @@ const struct command_s stm32f4_cmd_list[] = {
 };
 
 static bool stm32f4_attach(target *t);
+static void stm32f4_detach(target *t);
 static bool stm32f4_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 static bool stm32f4_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 static bool stm32f4_mass_erase(target *t);
@@ -197,14 +198,6 @@ static char *stm32f4_get_chip_name(const uint32_t device_id)
 	}
 }
 
-static void stm32f4_detach(target *t)
-{
-	stm32f4_priv_s *ps = t->target_storage;
-	/*reverse all changes to DBGMCU_CR*/
-	target_mem_write32(t, DBGMCU_CR, ps->dbgmcu_cr);
-	cortexm_detach(t);
-}
-
 static uint16_t stm32f4_read_idcode(target *const t)
 {
 	const uint16_t idcode = target_mem_read32(t, DBGMCU_IDCODE) & 0xfffU;
@@ -330,7 +323,7 @@ static bool stm32f4_attach(target *t)
 	target_mem_write32(
 		t, DBGMCU_CR, priv_storage->dbgmcu_cr | DBGMCU_CR_DBG_SLEEP | DBGMCU_CR_DBG_STANDBY | DBGMCU_CR_DBG_STOP);
 
-	/* Free previously loaded memory map */
+	/* Free any previously built memory map */
 	target_mem_map_free(t);
 	/* And rebuild the RAM map */
 	bool use_dual_bank = !is_f7 && dual_bank;
@@ -411,6 +404,14 @@ static bool stm32f4_attach(target *t)
 		}
 	}
 	return true;
+}
+
+static void stm32f4_detach(target *t)
+{
+	stm32f4_priv_s *ps = t->target_storage;
+	/*reverse all changes to DBGMCU_CR*/
+	target_mem_write32(t, DBGMCU_CR, ps->dbgmcu_cr);
+	cortexm_detach(t);
 }
 
 static void stm32f4_flash_unlock(target *t)
