@@ -420,7 +420,7 @@ static bool nrf51_cmd_read(target *t, int argc, const char **argv)
 			 * So 'mon ver' will match 'monitor version'
 			 */
 			if(!strncmp(argv[1], c->cmd, strlen(argv[1])))
-				return !c->handler(t, argc - 1, &argv[1]);
+				return c->handler(t, argc - 1, &argv[1]);
 		}
 	}
 	return nrf51_cmd_read_help(t, 0, NULL);
