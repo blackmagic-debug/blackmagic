@@ -141,13 +141,13 @@ const struct command_s sam_cmd_list[] = {
 
 #define CHIPID_CIDR_EXT (0x01U << 31U)
 
-#define CHIPID_EXID_SAMX7X_PINS_MASK   0x3U
-#define CHIPID_EXID_SAMX7X_PINS_Q      0x2U
-#define CHIPID_EXID_SAMX7X_PINS_N      0x1U
-#define CHIPID_EXID_SAMX7X_PINS_J      0x0U
+#define CHIPID_EXID_SAMX7X_PINS_MASK 0x3U
+#define CHIPID_EXID_SAMX7X_PINS_Q    0x2U
+#define CHIPID_EXID_SAMX7X_PINS_N    0x1U
+#define CHIPID_EXID_SAMX7X_PINS_J    0x0U
 
 /* GPNVM */
-#define GPNVM_SAMX7X_SECURITY_BIT_MASK   0x1
+#define GPNVM_SAMX7X_SECURITY_BIT_MASK 0x1
 
 #define GPNVM_SAMX7X_BOOT_BIT_OFFSET 1U
 #define GPNVM_SAMX7X_BOOT_BIT_MASK   (0x1U << GPNVM_SAMX7X_BOOT_BIT_OFFSET)
@@ -443,7 +443,6 @@ bool sam3x_probe(target *t)
 		t->driver = "Atmel SAM3N/S";
 		target_add_ram(t, 0x20000000, 0x200000);
 		/* These devices only have a single bank */
-		size = sam_flash_size(cidr);
 		sam3_add_flash(t, SAM3N_EEFC_BASE, 0x400000, size);
 		target_add_commands(t, sam_cmd_list, "SAM3N/S");
 		return true;
@@ -466,7 +465,6 @@ bool sam3x_probe(target *t)
 	case CHIPID_CIDR_ARCH_SAM4SDC | CHIPID_CIDR_EPROC_CM4:
 		t->driver = "Atmel SAM4S";
 		target_add_ram(t, 0x20000000, 0x400000);
-		size = sam_flash_size(cidr);
 		/* Smaller devices have a single bank */
 		if (size <= 0x80000)
 			sam_add_flash(t, SAM4S_EEFC_BASE(0), 0x400000, size);
