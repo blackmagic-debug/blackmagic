@@ -234,13 +234,13 @@ bool stm32g0_probe(target *t)
 		return false;
 	}
 
-	t->mass_erase = stm32g0_mass_erase;
 	target_add_ram(t, RAM_START, ram_size);
 	/* Even dual Flash bank devices have a contiguous Flash memory space */
 	stm32g0_add_flash(t, FLASH_START, flash_size, FLASH_PAGE_SIZE);
 
 	t->attach = stm32g0_attach;
 	t->detach = stm32g0_detach;
+	t->mass_erase = stm32g0_mass_erase;
 	target_add_commands(t, stm32g0_cmd_list, t->driver);
 
 	/* Save private storage */
