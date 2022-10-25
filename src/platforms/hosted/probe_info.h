@@ -40,6 +40,8 @@
 
 typedef struct probe_info {
 	bmp_type_t type;
+	uint16_t vid;
+	uint16_t pid;
 	const char *manufacturer;
 	const char *product;
 	const char *serial;
@@ -48,7 +50,7 @@ typedef struct probe_info {
 	struct probe_info *next;
 } probe_info_s;
 
-probe_info_s *probe_info_add(
+probe_info_s *probe_info_add_by_serial(
 	probe_info_s *list, bmp_type_t type, const char *mfr, const char *product, const char *serial, const char *version);
 size_t probe_info_count(const probe_info_s *list);
 void probe_info_list_free(const probe_info_s *list);
