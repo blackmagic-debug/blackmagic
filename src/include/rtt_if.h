@@ -29,7 +29,7 @@
 
 /* rtt i/o to terminal */
 
-#if PC_HOSTED == 0
+#if PC_HOSTED == 0 && NO_LIBOPENCM3 != 1
 #include <libopencm3/usb/usbd.h>
 
 /* usb rx callback */
