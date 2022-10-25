@@ -29,6 +29,8 @@
 
 /* rtt i/o to terminal */
 
+#include "platform.h"
+
 #if PC_HOSTED == 0 && NO_LIBOPENCM3 != 1
 #include <libopencm3/usb/usbd.h>
 
