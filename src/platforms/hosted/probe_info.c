@@ -44,7 +44,7 @@ probe_info_s *probe_info_add_by_serial(probe_info_s *const list, const bmp_type_
 probe_info_s *probe_info_add_by_id(probe_info_s *const list, const bmp_type_t type, uint16_t vid, uint16_t pid,
 	const char *const mfr, const char *const product, const char *const serial, const char *const version)
 {
-	return probe_info_add_by_id(list, type, 0, 0, mfr, product, serial, version) ;
+	return probe_info_add_by_id(list, type, 0, 0, mfr, product, serial, version);
 }
 
 probe_info_s *probe_info_add_by_id(probe_info_s *const list, const bmp_type_t type, uint16_t vid, uint16_t pid,
@@ -65,7 +65,8 @@ probe_info_s *probe_info_add_by_id(probe_info_s *const list, const bmp_type_t ty
 	probe_info->version = version;
 
 	probe_info->next = list;
-	return probe_info;}
+	return probe_info;
+}
 
 size_t probe_info_count(const probe_info_s *const list)
 {
