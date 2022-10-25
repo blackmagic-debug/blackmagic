@@ -29,9 +29,12 @@
 
 /* rtt i/o to terminal */
 
+/* Define NO_LIBOPENCM3 either in "platform.h" or on the command line
+ * in order to avoid including "libopencm3/usb/usbd.h".
+ */
 #include "platform.h"
 
-#if PC_HOSTED == 0 && NO_LIBOPENCM3 != 1
+#if PC_HOSTED == 0 && !defined(NO_LIBOPENCM3)
 #include <libopencm3/usb/usbd.h>
 
 /* usb rx callback */
