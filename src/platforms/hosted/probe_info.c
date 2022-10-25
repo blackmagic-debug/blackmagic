@@ -53,7 +53,7 @@ char *extract_serial(const char *device, size_t length)
 	return result;
 }
 
-probe_info_s *probe_info_add(probe_info_s *const list, const bmp_type_t type, const char *const mfr,
+probe_info_s *probe_info_add_by_serial(probe_info_s *const list, const bmp_type_t type, const char *const mfr,
 	const char *const product, const char *const serial, const char *const version)
 {
 	probe_info_s *probe_info = malloc(sizeof(*probe_info));

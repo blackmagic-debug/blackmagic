@@ -271,7 +271,7 @@ static probe_info_s *parse_device_node(const char *name, probe_info_s *probe_lis
 		return probe_list;
 	}
 
-	return probe_info_add(probe_list, BMP_TYPE_BMP, type, product, serial, version);
+	return probe_info_add_by_serial(probe_list, BMP_TYPE_BMP, type, product, serial, version);
 }
 
 static const probe_info_s *scan_for_devices(void)
@@ -286,7 +286,7 @@ static const probe_info_s *scan_for_devices(void)
 			break;
 		if (device_is_bmp_gdb_port(entry->d_name)) {
 			probe_info_s *probe_info = parse_device_node(entry->d_name, probe_list);
-			/* If the operation would have succeeded but probe_info_add fails, we exhausted memory. */
+			/* If the operation would have succeeded but probe_info_add_by_serial fails, we exhausted memory. */
 			if (!probe_info) {
 				probe_info_list_free(probe_list);
 				probe_list = NULL;
