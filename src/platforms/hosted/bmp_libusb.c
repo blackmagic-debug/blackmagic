@@ -338,13 +338,31 @@ int find_debuggers(bmda_cli_options_s *cl_opts, bmp_info_s *info)
 		DEBUG_WARN("No probes found\n");
 		return -1;
 	}
-	DEBUG_WARN("     %-20s %-25s %-25s %s\n", "Name", "Serial #", "Manufacturer", "Version");
-	for (size_t position = 1; probe_list != NULL; ++position) {
-		DEBUG_WARN(" %2zu. %-20s %-25s %-25s %s\n", position, probe_list->product, probe_list->serial,
-			probe_list->manufacturer, probe_list->version);
-		probe_list = probe_list->next;
+	/* Count up how many were found and filter the list for a match to the program options request */
+	const size_t probes = probe_info_count(probe_list);
+	const probe_info_s *probe = NULL;
+	/* If there's just one probe and we didn't get match critera, pick it */
+	if (probes == 1 && !cl_opts->opt_serial && !cl_opts->opt_position)
+		probe = probe_list;
+	else /* Otherwise filter the list */
+		probe = probe_info_filter(probe_list, cl_opts->opt_serial, cl_opts->opt_position);
+
+	/* If we found no matching probes, or we're in list-only mode */
+	if (!probe || cl_opts->opt_list_only) {
+		DEBUG_WARN("Available Probes:\n");
+		probe = probe_list;
+		DEBUG_WARN("     %-20s %-25s %-25s %s\n", "Name", "Serial #", "Manufacturer", "Version");
+		for (size_t position = 1; probe; probe = probe->next, ++position)
+			DEBUG_WARN(" %2zu. %-20s %-25s %-25s %s\n", position, probe->product, probe->serial, probe->manufacturer,
+				probe->version);
+		probe_info_list_free(probe_list);
+		return 1; // false;
 	}
-	return 1;
+
+	/* We found a matching probe, populate bmp_info_s and signal success */
+	probe_info_to_bmp_info(probe, info);
+	probe_info_list_free(probe_list);
+	return 0; // true;
 }
 
 /*
