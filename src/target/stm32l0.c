@@ -86,26 +86,26 @@
 #define STM32Lx_NVM_SR(p)      ((p) + 0x18U)
 #define STM32Lx_NVM_OPTR(p)    ((p) + 0x1cU)
 
-#define STM32L0_NVM_PHYS             (0x40022000UL)
-#define STM32L0_NVM_OPT_SIZE         (12U)
+#define STM32L0_NVM_PHYS             UINT32_C(0x40022000)
+#define STM32L0_NVM_OPT_SIZE         12U
 #define STM32L0_NVM_EEPROM_CAT1_SIZE (1U * 512U)
 #define STM32L0_NVM_EEPROM_CAT2_SIZE (1U * 1024U)
 #define STM32L0_NVM_EEPROM_CAT3_SIZE (2U * 1024U)
 #define STM32L0_NVM_EEPROM_CAT5_SIZE (6U * 1024U)
 
-#define STM32L1_NVM_PHYS        (0x40023c00UL)
-#define STM32L1_NVM_OPT_SIZE    (32U)
+#define STM32L1_NVM_PHYS        UINT32_C(0x40023c00)
+#define STM32L1_NVM_OPT_SIZE    32U
 #define STM32L1_NVM_EEPROM_SIZE (16U * 1024U)
 
-#define STM32Lx_NVM_OPT_PHYS    0x1ff80000UL
-#define STM32Lx_NVM_EEPROM_PHYS 0x08080000UL
+#define STM32Lx_NVM_OPT_PHYS    UINT32_C(0x1ff80000)
+#define STM32Lx_NVM_EEPROM_PHYS UINT32_C(0x08080000)
 
-#define STM32Lx_NVM_PEKEY1  (0x89abcdefUL)
-#define STM32Lx_NVM_PEKEY2  (0x02030405UL)
-#define STM32Lx_NVM_PRGKEY1 (0x8c9daebfUL)
-#define STM32Lx_NVM_PRGKEY2 (0x13141516UL)
-#define STM32Lx_NVM_OPTKEY1 (0xfbead9c8UL)
-#define STM32Lx_NVM_OPTKEY2 (0x24252627UL)
+#define STM32Lx_NVM_PEKEY1  UINT32_C(0x89abcdef)
+#define STM32Lx_NVM_PEKEY2  UINT32_C(0x02030405)
+#define STM32Lx_NVM_PRGKEY1 UINT32_C(0x8c9daebf)
+#define STM32Lx_NVM_PRGKEY2 UINT32_C(0x13141516)
+#define STM32Lx_NVM_OPTKEY1 UINT32_C(0xfbead9c8)
+#define STM32Lx_NVM_OPTKEY2 UINT32_C(0x24252627)
 
 #define STM32Lx_NVM_PECR_OBL_LAUNCH (1U << 18U)
 #define STM32Lx_NVM_PECR_ERRIE      (1U << 17U)
@@ -131,49 +131,40 @@
 #define STM32L0_NVM_OPTR_BOOT1    (1U << 31U)
 #define STM32Lx_NVM_OPTR_WDG_SW   (1U << 20U)
 #define STM32L0_NVM_OPTR_WPRMOD   (1U << 8U)
-#define STM32Lx_NVM_OPTR_RDPROT_S (0U)
-#define STM32Lx_NVM_OPTR_RDPROT_M (0xffU)
-#define STM32Lx_NVM_OPTR_RDPROT_0 (0xaaU)
-#define STM32Lx_NVM_OPTR_RDPROT_2 (0xccU)
+#define STM32Lx_NVM_OPTR_RDPROT_S 0U
+#define STM32Lx_NVM_OPTR_RDPROT_M 0xffU
+#define STM32Lx_NVM_OPTR_RDPROT_0 0xaaU
+#define STM32Lx_NVM_OPTR_RDPROT_2 0xccU
 
 #define STM32L1_NVM_OPTR_nBFB2      (1U << 23U)
 #define STM32L1_NVM_OPTR_nRST_STDBY (1U << 22U)
 #define STM32L1_NVM_OPTR_nRST_STOP  (1U << 21U)
-#define STM32L1_NVM_OPTR_BOR_LEV_S  (16U)
-#define STM32L1_NVM_OPTR_BOR_LEV_M  (0xfU)
+#define STM32L1_NVM_OPTR_BOR_LEV_S  16U
+#define STM32L1_NVM_OPTR_BOR_LEV_M  0xfU
 #define STM32L1_NVM_OPTR_SPRMOD     (1U << 8U)
 
+#define STM32L0_DBGMCU_IDCODE_PHYS UINT32_C(0x40015800)
+#define STM32L1_DBGMCU_IDCODE_PHYS UINT32_C(0xe0042000)
+
 static bool stm32lx_nvm_prog_erase(target_flash_s *f, target_addr_t addr, size_t len);
-static bool stm32lx_nvm_prog_write(target_flash_s *f, target_addr_t destination, const void *src, size_t size);
+static bool stm32lx_nvm_prog_write(target_flash_s *f, target_addr_t dest, const void *src, size_t size);
 
 static bool stm32lx_nvm_data_erase(target_flash_s *f, target_addr_t addr, size_t len);
-static bool stm32lx_nvm_data_write(target_flash_s *f, target_addr_t destination, const void *source, size_t size);
+static bool stm32lx_nvm_data_write(target_flash_s *f, target_addr_t dest, const void *src, size_t size);
 
-static bool stm32lx_cmd_option(target *t, int argc, char **argv);
-static bool stm32lx_cmd_eeprom(target *t, int argc, char **argv);
+static bool stm32lx_cmd_option(target *t, int argc, const char **argv);
+static bool stm32lx_cmd_eeprom(target *t, int argc, const char **argv);
 
 static const struct command_s stm32lx_cmd_list[] = {
-	{"option", (cmd_handler)stm32lx_cmd_option, "Manipulate option bytes"},
-	{"eeprom", (cmd_handler)stm32lx_cmd_eeprom, "Manipulate EEPROM(NVM data) memory"},
+	{"option", stm32lx_cmd_option, "Manipulate option bytes"},
+	{"eeprom", stm32lx_cmd_eeprom, "Manipulate EEPROM (NVM data) memory"},
 	{NULL, NULL, NULL},
-};
-
-enum stm32l_idcode_e {
-	STM32L0_DBGMCU_IDCODE_PHYS = 0x40015800,
-	STM32L1_DBGMCU_IDCODE_PHYS = 0xe0042000,
 };
 
 static bool stm32lx_is_stm32l1(target *t)
 {
-	switch (t->part_id) {
-	case 0x457: /* STM32L0xx Cat1 */
-	case 0x425: /* STM32L0xx Cat2 */
-	case 0x417: /* STM32L0xx Cat3 */
-	case 0x447: /* STM32L0xx Cat5 */
-		return false;
-	default: /* STM32L1xx */
-		return true;
-	}
+	return t->part_id != 0x457U /* STM32L0xx Cat1 */ && t->part_id != 0x425U /* STM32L0xx Cat2 */ &&
+		t->part_id != 0x417U /* STM32L0xx Cat3 */ && t->part_id != 0x447U /* STM32L0xx Cat5 */;
 }
 
 static uint32_t stm32lx_nvm_eeprom_size(target *t)
@@ -194,28 +185,16 @@ static uint32_t stm32lx_nvm_eeprom_size(target *t)
 
 static uint32_t stm32lx_nvm_phys(target *t)
 {
-	switch (t->part_id) {
-	case 0x457: /* STM32L0xx Cat1 */
-	case 0x425: /* STM32L0xx Cat2 */
-	case 0x417: /* STM32L0xx Cat3 */
-	case 0x447: /* STM32L0xx Cat5 */
-		return STM32L0_NVM_PHYS;
-	default: /* STM32L1xx */
+	if (stm32lx_is_stm32l1(t))
 		return STM32L1_NVM_PHYS;
-	}
+	return STM32L0_NVM_PHYS;
 }
 
 static uint32_t stm32lx_nvm_option_size(target *t)
 {
-	switch (t->part_id) {
-	case 0x457: /* STM32L0xx Cat1 */
-	case 0x425: /* STM32L0xx Cat2 */
-	case 0x417: /* STM32L0xx Cat3 */
-	case 0x447: /* STM32L0xx Cat5 */
-		return STM32L0_NVM_OPT_SIZE;
-	default: /* STM32L1xx */
+	if (stm32lx_is_stm32l1(t))
 		return STM32L1_NVM_OPT_SIZE;
-	}
+	return STM32L0_NVM_OPT_SIZE;
 }
 
 static void stm32l_add_flash(target *t, uint32_t addr, size_t length, size_t erasesize)
@@ -251,9 +230,11 @@ static void stm32l_add_eeprom(target *t, uint32_t addr, size_t length)
 	target_add_flash(t, f);
 }
 
-/** Query MCU memory for an indication as to whether or not the
-    currently attached target is served by this module.  We detect the
-    STM32L0xx parts as well as the STM32L1xx's. */
+/*
+ * Query MCU memory for an indication as to whether or not the
+ * currently attached target is served by this module.
+ * We detect the STM32L0xx parts as well as the STM32L1xx's.
+ */
 bool stm32l0_probe(target *t)
 {
 	switch (t->part_id) {
@@ -285,18 +266,19 @@ bool stm32l0_probe(target *t)
 	return false;
 }
 
-/** Lock the NVM control registers preventing writes or erases. */
+/* Lock the NVM control registers preventing writes or erases. */
 static void stm32lx_nvm_lock(target *t, uint32_t nvm)
 {
 	target_mem_write32(t, STM32Lx_NVM_PECR(nvm), STM32Lx_NVM_PECR_PELOCK);
 }
 
-/** Unlock the NVM control registers for modifying program or
-    data flash.  Returns true if the unlock succeeds. */
+/*
+ * Unlock the NVM control registers for modifying program or data flash.
+ * Returns true if the unlock succeeds.
+ */
 static bool stm32lx_nvm_prog_data_unlock(target *t, uint32_t nvm)
 {
-	/* Always lock first because that's the only way to know that the
-           unlock can succeed on the STM32L0's. */
+	/* Always lock first because that's the only way to know that the unlock can succeed on the STM32L0's. */
 	target_mem_write32(t, STM32Lx_NVM_PECR(nvm), STM32Lx_NVM_PECR_PELOCK);
 	target_mem_write32(t, STM32Lx_NVM_PEKEYR(nvm), STM32Lx_NVM_PEKEY1);
 	target_mem_write32(t, STM32Lx_NVM_PEKEYR(nvm), STM32Lx_NVM_PEKEY2);
@@ -306,12 +288,13 @@ static bool stm32lx_nvm_prog_data_unlock(target *t, uint32_t nvm)
 	return !(target_mem_read32(t, STM32Lx_NVM_PECR(nvm)) & STM32Lx_NVM_PECR_PRGLOCK);
 }
 
-/** Unlock the NVM control registers for modifying option bytes.
-    Returns true if the unlock succeeds. */
+/*
+ * Unlock the NVM control registers for modifying option bytes.
+ * Returns true if the unlock succeeds.
+ */
 static bool stm32lx_nvm_opt_unlock(target *t, uint32_t nvm)
 {
-	/* Always lock first because that's the only way to know that the
-           unlock can succeed on the STM32L0's. */
+	/* Always lock first because that's the only way to know that the unlock can succeed on the STM32L0's. */
 	target_mem_write32(t, STM32Lx_NVM_PECR(nvm), STM32Lx_NVM_PECR_PELOCK);
 	target_mem_write32(t, STM32Lx_NVM_PEKEYR(nvm), STM32Lx_NVM_PEKEY1);
 	target_mem_write32(t, STM32Lx_NVM_PEKEYR(nvm), STM32Lx_NVM_PEKEY2);
@@ -331,49 +314,44 @@ static bool stm32lx_nvm_busy_wait(target *t, uint32_t nvm)
 	return !target_check_error(t) && !(status & STM32Lx_NVM_SR_ERR_M);
 }
 
-/** Erase a region of program flash using operations through the debug
-    interface.  This is slower than stubbed versions(see NOTES).  The
-    flash array is erased for all pages from addr to addr+len
-    inclusive.  NVM register file address chosen from target. */
-static bool stm32lx_nvm_prog_erase(target_flash_s *f, target_addr_t addr, size_t len)
+/*
+ * Erase a region of program flash using operations through the debug interface.
+ * This is slower than stubbed versions(see NOTES).
+ * The flash array is erased for all pages from addr to addr+len inclusive.
+ * NVM register file address chosen from target.
+ */
+static bool stm32lx_nvm_prog_erase(target_flash_s *const f, const target_addr_t addr, const size_t len)
 {
 	target *t = f->t;
-	const size_t page_size = f->blocksize;
 	const uint32_t nvm = stm32lx_nvm_phys(t);
-
 	if (!stm32lx_nvm_prog_data_unlock(t, nvm))
 		return false;
 
 	/* Flash page erase instruction */
 	target_mem_write32(t, STM32Lx_NVM_PECR(nvm), STM32Lx_NVM_PECR_ERASE | STM32Lx_NVM_PECR_PROG);
 
-	const uint32_t pecr = target_mem_read32(t, STM32Lx_NVM_PECR(nvm));
-	if ((pecr & (STM32Lx_NVM_PECR_PROG | STM32Lx_NVM_PECR_ERASE)) != (STM32Lx_NVM_PECR_PROG | STM32Lx_NVM_PECR_ERASE))
+	const uint32_t pecr =
+		target_mem_read32(t, STM32Lx_NVM_PECR(nvm)) & (STM32Lx_NVM_PECR_PROG | STM32Lx_NVM_PECR_ERASE);
+	if (pecr != (STM32Lx_NVM_PECR_PROG | STM32Lx_NVM_PECR_ERASE))
 		return false;
 
-	/* Clear errors.  Note that this only works when we wait for the NVM
-	   block to complete the last operation. */
+	/*
+	 * Clear errors.
+	 * Note that this only works when we wait for the NVM block to complete the last operation.
+	 */
 	target_mem_write32(t, STM32Lx_NVM_SR(nvm), STM32Lx_NVM_SR_ERR_M);
 
-	while (len > 0) {
-		/* Write first word of page to 0 */
-		target_mem_write32(t, addr, 0);
-		if (len > page_size)
-			len -= page_size;
-		else
-			len = 0;
-		addr += page_size;
-	}
+	for (size_t offset = 0; offset < len; offset += f->blocksize)
+		/* Trigger the erase by writing the first uint32_t of the page to 0 */
+		target_mem_write32(t, addr + offset, 0);
 
 	/* Disable further programming by locking PECR */
 	stm32lx_nvm_lock(t, nvm);
-
 	/* Wait for completion or an error */
 	return stm32lx_nvm_busy_wait(t, nvm);
 }
 
-/** Write to program flash using operations through the debug
-    interface. */
+/* Write to program flash using operations through the debug interface. */
 static bool stm32lx_nvm_prog_write(target_flash_s *f, target_addr_t dest, const void *src, size_t size)
 {
 	target *t = f->t;
@@ -382,8 +360,10 @@ static bool stm32lx_nvm_prog_write(target_flash_s *f, target_addr_t dest, const 
 	if (!stm32lx_nvm_prog_data_unlock(t, nvm))
 		return false;
 
-	/* Wait for BSY to clear because we cannot write the PECR until
-	   the previous operation completes on STM32Lxxx. */
+	/*
+	 * Wait for BSY to clear because we cannot write the PECR until
+	 * the previous operation completes on STM32Lxxx.
+	 */
 	if (!stm32lx_nvm_busy_wait(t, nvm))
 		return false;
 
@@ -397,40 +377,28 @@ static bool stm32lx_nvm_prog_write(target_flash_s *f, target_addr_t dest, const 
 	return stm32lx_nvm_busy_wait(t, nvm);
 }
 
-/** Erase a region of data flash using operations through the debug
-    interface .  The flash is erased for all pages from addr to
-    addr+len, inclusive, on a word boundary.  NVM register file
-    address chosen from target. */
-static bool stm32lx_nvm_data_erase(target_flash_s *f, target_addr_t addr, size_t len)
+/*
+ * Erase a region of data flash using operations through the debug interface.
+ * The flash is erased for all pages from addr to addr+len, inclusive, on a word boundary.
+ * NVM register file address chosen from target.
+ */
+static bool stm32lx_nvm_data_erase(target_flash_s *const f, const target_addr_t addr, const size_t len)
 {
 	target *t = f->t;
-	const size_t page_size = f->blocksize;
 	const uint32_t nvm = stm32lx_nvm_phys(t);
-
-	/* Word align */
-	len += (addr & 3);
-	addr &= ~3;
-
 	if (!stm32lx_nvm_prog_data_unlock(t, nvm))
 		return false;
 
 	/* Flash data erase instruction */
 	target_mem_write32(t, STM32Lx_NVM_PECR(nvm), STM32Lx_NVM_PECR_ERASE | STM32Lx_NVM_PECR_DATA);
 
-	uint32_t pecr = target_mem_read32(t, STM32Lx_NVM_PECR(nvm));
-	if ((pecr & (STM32Lx_NVM_PECR_ERASE | STM32Lx_NVM_PECR_DATA)) != (STM32Lx_NVM_PECR_ERASE | STM32Lx_NVM_PECR_DATA))
+	uint32_t pecr = target_mem_read32(t, STM32Lx_NVM_PECR(nvm)) & (STM32Lx_NVM_PECR_ERASE | STM32Lx_NVM_PECR_DATA);
+	if (pecr != (STM32Lx_NVM_PECR_ERASE | STM32Lx_NVM_PECR_DATA))
 		return false;
 
-	while (len > 0) {
-		/* Write first word of page to 0 */
-		target_mem_write32(t, addr, 0);
-
-		if (len > page_size)
-			len -= page_size;
-		else
-			len = 0;
-		addr += page_size;
-	}
+	for (size_t offset = 0; offset < len; offset += f->blocksize)
+		/* Trigger the erase by writing the first uint32_t of the page to 0 */
+		target_mem_write32(t, (addr & ~3U) + offset, 0);
 
 	/* Disable further programming by locking PECR */
 	stm32lx_nvm_lock(t, nvm);
@@ -439,45 +407,46 @@ static bool stm32lx_nvm_data_erase(target_flash_s *f, target_addr_t addr, size_t
 	return stm32lx_nvm_busy_wait(t, nvm);
 }
 
-/** Write to data flash using operations through the debug interface.
-    NVM register file address chosen from target.  Unaligned
-    destination writes are supported (though unaligned sources are
-    not). */
-static bool stm32lx_nvm_data_write(target_flash_s *f, target_addr_t destination, const void *src, size_t size)
+/*
+ * Write to data flash using operations through the debug interface.
+ * NVM register file address chosen from target.
+ * Unaligned destination writes are supported (though unaligned sources are not).
+ */
+static bool stm32lx_nvm_data_write(
+	target_flash_s *const f, const target_addr_t dest, const void *const src, const size_t size)
 {
 	target *t = f->t;
 	const uint32_t nvm = stm32lx_nvm_phys(t);
 	const bool is_stm32l1 = stm32lx_is_stm32l1(t);
-	uint32_t *source = (uint32_t *)src;
+	const uint32_t *const data = (const uint32_t *)src;
 
 	if (!stm32lx_nvm_prog_data_unlock(t, nvm))
 		return false;
 
 	target_mem_write32(t, STM32Lx_NVM_PECR(nvm), is_stm32l1 ? 0 : STM32Lx_NVM_PECR_DATA);
 
-	while (size) {
-		size -= 4;
-		uint32_t v = *source++;
-		target_mem_write32(t, destination, v);
-		destination += 4;
-
+	/* Sling data to the target one uint32_t at a time */
+	for (size_t offset = 0; offset < size; offset += 4) {
+		/* XXX: Why is this not able to use target_mem_write()? */
+		target_mem_write32(t, dest + offset, data[offset]);
 		if (target_check_error(t))
 			return false;
 	}
 
 	/* Disable further programming by locking PECR */
 	stm32lx_nvm_lock(t, nvm);
-
 	/* Wait for completion or an error */
 	return stm32lx_nvm_busy_wait(t, nvm);
 }
 
-/** Write one option word.  The address is the physical address of the
-    word and the value is a complete word value.  The caller is
-    responsible for making sure that the value satisfies the proper
-    format where the upper 16 bits are the 1s complement of the lower
-    16 bits.  The funtion returns when the operation is complete.
-    The return value is true if the write succeeded. */
+/*
+ * Write one option word.
+ * The address is the physical address of the word and the value is a complete word value.
+ * The caller is responsible for making sure that the value satisfies the proper
+ * format where the upper 16 bits are the 1s complement of the lower 16 bits.
+ * The funtion returns when the operation is complete.
+ * The return value is true if the write succeeded.
+ */
 static bool stm32lx_option_write(target *t, uint32_t address, uint32_t value)
 {
 	const uint32_t nvm = stm32lx_nvm_phys(t);
@@ -489,13 +458,14 @@ static bool stm32lx_option_write(target *t, uint32_t address, uint32_t value)
 	return stm32lx_nvm_busy_wait(t, nvm);
 }
 
-/** Write one eeprom value.  This version is more flexible than that
-    bulk version used for writing data from the executable file.  The
-    address is the physical address of the word and the value is a
-    complete word value.  The funtion returns when the operation is
-    complete.  The return value is true if the write succeeded.
-    FWIW, byte writing isn't supported because the adiv5 layer
-    doesn't support byte-level operations. */
+/*
+ * Write one eeprom value.
+ * This version is more flexible than that bulk version used for writing data from the executable file.
+ * The address is the physical address of the word and the value is a complete word value.
+ * The funtion returns when the operation is complete.
+ * The return value is true if the write succeeded.
+ * FWIW, byte writing isn't supported because the ADIv5 layer doesn't support byte-level operations.
+ */
 static bool stm32lx_eeprom_write(target *t, uint32_t address, size_t cb, uint32_t value)
 {
 	const uint32_t nvm = stm32lx_nvm_phys(t);
@@ -515,10 +485,11 @@ static bool stm32lx_eeprom_write(target *t, uint32_t address, size_t cb, uint32_
 	else
 		return false;
 
+	/* Wait for completion or an error */
 	return stm32lx_nvm_busy_wait(t, nvm);
 }
 
-static bool stm32lx_cmd_option(target *t, int argc, char **argv)
+static bool stm32lx_cmd_option(target *t, int argc, const char **argv)
 {
 	const uint32_t nvm = stm32lx_nvm_phys(t);
 	const size_t opt_size = stm32lx_nvm_option_size(t);
@@ -530,39 +501,39 @@ static bool stm32lx_cmd_option(target *t, int argc, char **argv)
 
 	if (argc < 2)
 		goto usage;
-	size_t cb = strlen(argv[1]);
+	const size_t command_len = strlen(argv[1]);
 
-	if (argc == 2 && !strncasecmp(argv[1], "obl_launch", cb)) {
+	if (argc == 2 && strncasecmp(argv[1], "obl_launch", command_len) == 0)
 		target_mem_write32(t, STM32Lx_NVM_PECR(nvm), STM32Lx_NVM_PECR_OBL_LAUNCH);
-	} else if (argc == 4 && !strncasecmp(argv[1], "raw", cb)) {
-		uint32_t addr = strtoul(argv[2], NULL, 0);
-		uint32_t val = strtoul(argv[3], NULL, 0);
+	else if (argc == 4 && strncasecmp(argv[1], "raw", command_len) == 0) {
+		const uint32_t addr = strtoul(argv[2], NULL, 0);
+		const uint32_t val = strtoul(argv[3], NULL, 0);
 		tc_printf(t, "raw %08x <- %08x\n", addr, val);
-		if (addr < STM32Lx_NVM_OPT_PHYS || addr >= STM32Lx_NVM_OPT_PHYS + opt_size || (addr & 3))
+		if (addr < STM32Lx_NVM_OPT_PHYS || addr >= STM32Lx_NVM_OPT_PHYS + opt_size || (addr & 3U))
 			goto usage;
 		if (!stm32lx_option_write(t, addr, val))
 			tc_printf(t, "option write failed\n");
-	} else if (argc == 4 && !strncasecmp(argv[1], "write", cb)) {
-		uint32_t addr = strtoul(argv[2], NULL, 0);
+	} else if (argc == 4 && strncasecmp(argv[1], "write", command_len) == 0) {
+		const uint32_t addr = strtoul(argv[2], NULL, 0);
 		uint32_t val = strtoul(argv[3], NULL, 0);
-		val = (val & 0xffff) | ((~val & 0xffff) << 16);
+		val = (val & 0xffffU) | ((~val & 0xffffU) << 16U);
 		tc_printf(t, "write %08x <- %08x\n", addr, val);
-		if (addr < STM32Lx_NVM_OPT_PHYS || addr >= STM32Lx_NVM_OPT_PHYS + opt_size || (addr & 3))
+		if (addr < STM32Lx_NVM_OPT_PHYS || addr >= STM32Lx_NVM_OPT_PHYS + opt_size || (addr & 3U))
 			goto usage;
 		if (!stm32lx_option_write(t, addr, val))
 			tc_printf(t, "option write failed\n");
 	}
 
 	/* Report the current option values */
-	for (unsigned i = 0; i < opt_size; i += sizeof(uint32_t)) {
-		uint32_t addr = STM32Lx_NVM_OPT_PHYS + i;
-		uint32_t val = target_mem_read32(t, addr);
-		tc_printf(t, "0x%08x: 0x%04x 0x%04x %s\n", addr, val & 0xffff, (val >> 16) & 0xffff,
-			((val & 0xffff) == ((~val >> 16) & 0xffff)) ? "OK" : "ERR");
+	for (size_t i = 0; i < opt_size; i += sizeof(uint32_t)) {
+		const uint32_t addr = STM32Lx_NVM_OPT_PHYS + i;
+		const uint32_t val = target_mem_read32(t, addr);
+		tc_printf(t, "0x%08" PRIx32 ": 0x%04" PRIx32 " 0x%04" PRIx32 " %s\n", addr, val & 0xffffU,
+			(val >> 16U) & 0xffffU, (val & 0xffffU) == ((~val >> 16U) & 0xffffU) ? "OK" : "ERR");
 	}
 
 	if (stm32lx_is_stm32l1(t)) {
-		uint32_t optr = target_mem_read32(t, STM32Lx_NVM_OPTR(nvm));
+		const uint32_t optr = target_mem_read32(t, STM32Lx_NVM_OPTR(nvm));
 		uint8_t rdprot = (optr >> STM32Lx_NVM_OPTR_RDPROT_S) & STM32Lx_NVM_OPTR_RDPROT_M;
 		if (rdprot == STM32Lx_NVM_OPTR_RDPROT_0)
 			rdprot = 0;
@@ -570,16 +541,15 @@ static bool stm32lx_cmd_option(target *t, int argc, char **argv)
 			rdprot = 2;
 		else
 			rdprot = 1;
+
 		tc_printf(t,
-			"OPTR: 0x%08x, RDPRT %d, SPRMD %d, "
-			"BOR %d, WDG_SW %d, nRST_STP %d, nRST_STBY %d, "
-			"nBFB2 %d\n",
-			optr, rdprot, (optr & STM32L1_NVM_OPTR_SPRMOD) ? 1 : 0,
+			"OPTR: 0x%08" PRIx32 ", RDPRT %d, SPRMD %d, BOR %d, WDG_SW %d, nRST_STP %d, nRST_STBY %d, nBFB2 %d\n", optr,
+			rdprot, (optr & STM32L1_NVM_OPTR_SPRMOD) ? 1 : 0,
 			(optr >> STM32L1_NVM_OPTR_BOR_LEV_S) & STM32L1_NVM_OPTR_BOR_LEV_M, (optr & STM32Lx_NVM_OPTR_WDG_SW) ? 1 : 0,
 			(optr & STM32L1_NVM_OPTR_nRST_STOP) ? 1 : 0, (optr & STM32L1_NVM_OPTR_nRST_STDBY) ? 1 : 0,
 			(optr & STM32L1_NVM_OPTR_nBFB2) ? 1 : 0);
 	} else {
-		uint32_t optr = target_mem_read32(t, STM32Lx_NVM_OPTR(nvm));
+		const uint32_t optr = target_mem_read32(t, STM32Lx_NVM_OPTR(nvm));
 		uint8_t rdprot = (optr >> STM32Lx_NVM_OPTR_RDPROT_S) & STM32Lx_NVM_OPTR_RDPROT_M;
 		if (rdprot == STM32Lx_NVM_OPTR_RDPROT_0)
 			rdprot = 0;
@@ -587,10 +557,9 @@ static bool stm32lx_cmd_option(target *t, int argc, char **argv)
 			rdprot = 2;
 		else
 			rdprot = 1;
-		tc_printf(t,
-			"OPTR: 0x%08x, RDPROT %d, WPRMOD %d, WDG_SW %d, "
-			"BOOT1 %d\n",
-			optr, rdprot, (optr & STM32L0_NVM_OPTR_WPRMOD) ? 1 : 0, (optr & STM32Lx_NVM_OPTR_WDG_SW) ? 1 : 0,
+
+		tc_printf(t, "OPTR: 0x%08" PRIx32 ", RDPROT %u, WPRMOD %d, WDG_SW %d, BOOT1 %d\n", optr, rdprot,
+			(optr & STM32L0_NVM_OPTR_WPRMOD) ? 1 : 0, (optr & STM32Lx_NVM_OPTR_WDG_SW) ? 1 : 0,
 			(optr & STM32L0_NVM_OPTR_BOOT1) ? 1 : 0);
 	}
 
@@ -598,23 +567,19 @@ static bool stm32lx_cmd_option(target *t, int argc, char **argv)
 
 usage:
 	tc_printf(t, "usage: monitor option [ARGS]\n");
-	tc_printf(t, "  show                   - Show options in NVM and as"
-				 " loaded\n");
+	tc_printf(t, "  show                   - Show options in NVM and as loaded\n");
 	tc_printf(t, "  obl_launch             - Reload options from NVM\n");
-	tc_printf(t, "  write <addr> <value16> - Set option half-word; "
-				 "complement computed\n");
+	tc_printf(t, "  write <addr> <value16> - Set option half-word; complement computed\n");
 	tc_printf(t, "  raw <addr> <value32>   - Set option word\n");
-	tc_printf(t,
-		"The value of <addr> must be word aligned and from 0x%08x "
-		"to +0x%x\n",
-		STM32Lx_NVM_OPT_PHYS, STM32Lx_NVM_OPT_PHYS + opt_size - sizeof(uint32_t));
+	tc_printf(t, "The value of <addr> must be word aligned and from 0x%08" PRIx32 " to +0x%" PRIx32 "\n",
+		STM32Lx_NVM_OPT_PHYS, STM32Lx_NVM_OPT_PHYS + (uint32_t)(opt_size - sizeof(uint32_t)));
 
 done:
 	stm32lx_nvm_lock(t, nvm);
 	return true;
 }
 
-static bool stm32lx_cmd_eeprom(target *t, int argc, char **argv)
+static bool stm32lx_cmd_eeprom(target *t, int argc, const char **argv)
 {
 	const uint32_t nvm = stm32lx_nvm_phys(t);
 
@@ -623,8 +588,6 @@ static bool stm32lx_cmd_eeprom(target *t, int argc, char **argv)
 		return true;
 	}
 
-	size_t cb = strlen(argv[1]);
-
 	if (argc == 4) {
 		uint32_t addr = strtoul(argv[2], NULL, 0);
 		uint32_t val = strtoul(argv[3], NULL, 0);
@@ -632,18 +595,19 @@ static bool stm32lx_cmd_eeprom(target *t, int argc, char **argv)
 		if (addr < STM32Lx_NVM_EEPROM_PHYS || addr >= STM32Lx_NVM_EEPROM_PHYS + stm32lx_nvm_eeprom_size(t))
 			goto usage;
 
-		if (!strncasecmp(argv[1], "byte", cb)) {
+		const size_t command_len = strlen(argv[1]);
+		if (!strncasecmp(argv[1], "byte", command_len)) {
 			tc_printf(t, "write byte 0x%08x <- 0x%08x\n", addr, val);
 			if (!stm32lx_eeprom_write(t, addr, 1, val))
 				tc_printf(t, "eeprom write failed\n");
-		} else if (!strncasecmp(argv[1], "halfword", cb)) {
+		} else if (!strncasecmp(argv[1], "halfword", command_len)) {
 			val &= 0xffff;
 			tc_printf(t, "write halfword 0x%08x <- 0x%04x\n", addr, val);
 			if (addr & 1)
 				goto usage;
 			if (!stm32lx_eeprom_write(t, addr, 2, val))
 				tc_printf(t, "eeprom write failed\n");
-		} else if (!strncasecmp(argv[1], "word", cb)) {
+		} else if (!strncasecmp(argv[1], "word", command_len)) {
 			tc_printf(t, "write word 0x%08x <- 0x%08x\n", addr, val);
 			if (addr & 3)
 				goto usage;
