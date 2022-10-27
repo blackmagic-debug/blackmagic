@@ -31,21 +31,21 @@
 // MAX_RTT_CHAN can be set as low as 6.
 #define MAX_RTT_CHAN 16
 
-extern char rtt_ident[16];	    // string
-extern bool rtt_enabled;	    // rtt on/off
-extern bool rtt_found;              // control block found
-extern uint32_t rtt_cbaddr;         // control block address
-extern uint32_t rtt_num_up_chan;    // number of 'up' channels
-extern uint32_t rtt_num_down_chan;  // number of 'down' channels
-extern uint32_t rtt_min_poll_ms;    // min time between polls (ms)
-extern uint32_t rtt_max_poll_ms;    // max time between polls (ms)
-extern uint32_t rtt_max_poll_errs;  // max number of errors before disconnect
-extern bool rtt_flag_ram;           // limit ram scanned by rtt to range rtt_ram_start .. rtt_ram_end
-extern uint32_t rtt_ram_start;      // if rtt_flag_ram set, lower limit of ram scanned by rtt
-extern uint32_t rtt_ram_end;        // if rtt_flag_ram set, upper limit of ram scanned by rtt
-extern bool rtt_auto_channel;       // manual or auto channel selection
-extern bool rtt_flag_skip;          // skip if host-to-target fifo full
-extern bool rtt_flag_block;         // block if host-to-target fifo full
+extern char rtt_ident[16];                     // string
+extern bool rtt_enabled;                       // rtt on/off
+extern bool rtt_found;                         // control block found
+extern uint32_t rtt_cbaddr;                    // control block address
+extern uint32_t rtt_num_up_chan;               // number of 'up' channels
+extern uint32_t rtt_num_down_chan;             // number of 'down' channels
+extern uint32_t rtt_min_poll_ms;               // min time between polls (ms)
+extern uint32_t rtt_max_poll_ms;               // max time between polls (ms)
+extern uint32_t rtt_max_poll_errs;             // max number of errors before disconnect
+extern bool rtt_flag_ram;                      // limit ram scanned by rtt to range rtt_ram_start .. rtt_ram_end
+extern uint32_t rtt_ram_start;                 // if rtt_flag_ram set, lower limit of ram scanned by rtt
+extern uint32_t rtt_ram_end;                   // if rtt_flag_ram set, upper limit of ram scanned by rtt
+extern bool rtt_auto_channel;                  // manual or auto channel selection
+extern bool rtt_flag_skip;                     // skip if host-to-target fifo full
+extern bool rtt_flag_block;                    // block if host-to-target fifo full
 extern bool rtt_channel_enabled[MAX_RTT_CHAN]; // true if user wants to see channel
 
 struct rtt_channel_struct {

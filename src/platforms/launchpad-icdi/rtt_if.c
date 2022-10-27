@@ -124,7 +124,8 @@ uint32_t rtt_write(const char *buf, uint32_t len)
 	if (len != 0 && usbdev && usb_get_config() && gdb_serial_get_dtr()) {
 		for (uint32_t p = 0; p < len; p += CDCACM_PACKET_SIZE) {
 			uint32_t plen = MIN(CDCACM_PACKET_SIZE, len - p);
-			while(usbd_ep_write_packet(usbdev, CDCACM_UART_ENDPOINT, buf + p, plen) <= 0);
+			while (usbd_ep_write_packet(usbdev, CDCACM_UART_ENDPOINT, buf + p, plen) <= 0)
+				;
 		}
 		/* flush 64-byte packet on full-speed */
 		if (CDCACM_PACKET_SIZE == 64 && (len % CDCACM_PACKET_SIZE) == 0)
