@@ -602,7 +602,7 @@ static bool kinetis_mdm_mass_erase(target *t)
 	}
 
 	adiv5_ap_write(ap, MDM_CONTROL, MDM_CONTROL_MASS_ERASE);
-	platform_timeout timeout;
+	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500);
 
 	do {

@@ -163,7 +163,7 @@ enum iap_status lpc17xx_iap_call(target *t, flash_param_s *param, enum iap_cmd c
 	regs[REG_PC] = IAP_ENTRYPOINT;
 	target_regs_write(t, regs);
 
-	platform_timeout timeout;
+	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500);
 	/* Start the target and wait for it to halt again */
 	target_halt_resume(t, false);

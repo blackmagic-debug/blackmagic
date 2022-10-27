@@ -43,7 +43,7 @@ void platform_timing_init(void)
 
 void platform_delay(uint32_t ms)
 {
-	platform_timeout timeout;
+	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, ms);
 	while (!platform_timeout_is_expired(&timeout))
 		continue;

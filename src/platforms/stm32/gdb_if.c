@@ -123,7 +123,7 @@ char gdb_if_getchar(void)
 
 char gdb_if_getchar_to(const uint32_t timeout)
 {
-	platform_timeout receive_timeout;
+	platform_timeout_s receive_timeout;
 	platform_timeout_set(&receive_timeout, timeout);
 
 	/* Wait while we need more data or until the timeout expires */

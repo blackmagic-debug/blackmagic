@@ -335,7 +335,7 @@ static uint32_t cortexm_initial_halt(ADIv5_AP_t *ap)
 	const uint32_t dhcsr_valid = CORTEXM_DHCSR_S_HALT | CORTEXM_DHCSR_C_DEBUGEN;
 	const bool use_low_access = !ap->dp->mindp;
 
-	platform_timeout halt_timeout;
+	platform_timeout_s halt_timeout;
 	platform_timeout_set(&halt_timeout, cortexm_wait_timeout);
 
 	if (use_low_access) {
@@ -428,7 +428,7 @@ static bool cortexm_prepare(ADIv5_AP_t *ap)
 	ap->ap_cortexm_demcr = adiv5_mem_read32(ap, CORTEXM_DEMCR);
 	const uint32_t demcr = CORTEXM_DEMCR_TRCENA | CORTEXM_DEMCR_VC_HARDERR | CORTEXM_DEMCR_VC_CORERESET;
 	adiv5_mem_write(ap, CORTEXM_DEMCR, &demcr, sizeof(demcr));
-	platform_timeout reset_timeout;
+	platform_timeout_s reset_timeout;
 	platform_timeout_set(&reset_timeout, cortexm_wait_timeout);
 	platform_nrst_set_val(false);
 	while (true) {
@@ -803,7 +803,7 @@ void adiv5_dp_init(ADIv5_DP_t *dp, const uint32_t idcode)
 		ctrlstat = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT);
 	}
 
-	platform_timeout timeout;
+	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 201);
 	/* Write request for system and debug power up */
 	adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT, ctrlstat |= ADIV5_DP_CTRLSTAT_CSYSPWRUPREQ | ADIV5_DP_CTRLSTAT_CDBGPWRUPREQ);
