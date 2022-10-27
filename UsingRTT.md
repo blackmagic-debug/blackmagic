@@ -3,11 +3,8 @@
 When debugging ARM processors, there are multiple ways for the target to print debug messages on
 the host: a dedicated UART port (USB to Serial) aka. AUX Serial, Semihosting, Serial Wire Output SWO, and Real-Time Transfer RTT.
 
-This RTT implementation replaces the AUX USB serial port with RTT. To enable RTT in [Black
-Magic Debug](https://black-magic.org) (BMD) Firmware the `ENABLE_RTT=1` flag has to be set
-during compilation. RTT is not compiled in by default into the release binaries as it replaces
-the AUX USB to Serial conversion capability. For more details refer to the [Build
-Instructions](#build-instructions) section.
+To enable RTT in [Black Magic Debug](https://black-magic.org) (BMD) Firmware the `ENABLE_RTT=1` flag has to be set
+during compilation. For more details refer to the [Build Instructions](#build-instructions) section.
 
 The RTT solution implemented in BMD is using a novel way to detect RTT automatically, making
 the use fast and convenient.
@@ -94,6 +91,29 @@ control block has been found and rtt is active.
 	enables the given RTT channel numbers. Channels are numbers from 0 to 15, inclusive.
         Eg. ``monitor rtt channel 0 1 4`` to enable channels 0, 1, and 4.
 
+- ``monitor rtt ram``
+
+	rtt scans all of target memory for the rtt control block. (default)
+
+- ``monitor rtt ram startaddress endaddress``
+
+	limit rtt scan of target memory to address range given. Values in hex. Use if scanning memory hangs the debugger. E.g. to limit rtt scans to the first 8kbyte of ram, beginning at 0x20000000:
+
+```
+(gdb) mon rtt ram 0x20000000 0x20002000
+(gdb) mon rtt status
+rtt: off found: no ident: off halt: off channels: auto ram: 0x20000000 0x20002000
+max poll ms: 256 min poll ms: 8 max errs: 10
+```
+
+If automatic detection fails, please take the linker map of your firmware, and search for a symbol that contains the word RTT somewhere at the beginning of ram. Look for a block with size a multiple of 24 decimal, word-aligned. For instance:
+
+```
+grep 2000 HelloWorld.ino.map | grep RTT
+```
+
+ For bmp to find the rtt control block, the rtt control block has to exist, be within the address range of `(gdb)info mem`, or if `mon rtt ram` has been specified, within the address range of `mon rtt ram`.
+
 - ``monitor rtt ident string``
 
 	sets RTT ident to *string*. If *string* contains a space, replace the space with an
@@ -110,44 +130,22 @@ control block has been found and rtt is active.
 
 ```
 (gdb) mon rtt cb
-cbaddr: 0x200000a0
-ch ena cfg i/o buf@        size head@      tail@      flg
- 0   y   y out 0x20000148  1024 0x200000c4 0x200000c8   2
- 1   y   n out 0x00000000     0 0x200000dc 0x200000e0   0
- 2   n   n out 0x00000000     0 0x200000f4 0x200000f8   0
- 3   y   y in  0x20000548    16 0x2000010c 0x20000110   0
- 4   n   n in  0x00000000     0 0x20000124 0x20000128   0
- 5   n   n in  0x00000000     0 0x2000013c 0x20000140   0
- 6   n   n in  0x00000000     0 0x00000000 0x00000000   0
- 7   n   n in  0x00000000     0 0x00000000 0x00000000   0
- 8   n   n in  0x00000000     0 0x00000000 0x00000000   0
- 9   n   n in  0x00000000     0 0x00000000 0x00000000   0
-10   n   n in  0x00000000     0 0x00000000 0x00000000   0
-11   n   n in  0x00000000     0 0x00000000 0x00000000   0
-12   n   n in  0x00000000     0 0x00000000 0x00000000   0
-13   n   n in  0x00000000     0 0x00000000 0x00000000   0
-14   n   n in  0x00000000     0 0x00000000 0x00000000   0
-15   n   n in  0x00000000     0 0x00000000 0x00000000   0
+cbaddr: 0x2000071c
+ch ena i/o buffer@      size   head   tail flag
+ 0   y out 0x200000ac   1024     14     14    0
+ 1   y out 0x00000000      0      0      0    0
+ 2   n out 0x00000000      0      0      0    0
+ 3   y in  0x2000009c     16      0      0    0
+ 4   n in  0x00000000      0      0      0    0
+ 5   n in  0x00000000      0      0      0    0
 ```
 
-Channels are listed, one channel per line. The columns are: channel, enabled, configured,
-input/output, buffer address, buffer size, address of head pointer, address of tail pointer,
-flag. Each channel is a circular buffer with head and tail pointer.
-
-Note the columns `ena` for enabled, `cfg` for configured.
-
-Configured channels have a non-zero buffer address and non-zero size.  Configured channels are
-marked  yes `y` in the column `cfg` . What channels are configured depends upon target
-software.
+Channels are listed, one channel per line. The columns are: channel, enabled, input/output, buffer address, buffer size, head pointer, tail pointer, flag. Each channel is a circular buffer with head and tail pointer. The column 'flag' is the action taken when the buffer is full.
 
 Channels the user wants to see are marked yes `y` in the column enabled `ena`. The user can
 change which channels are shown with the `monitor rtt channel` command.
 
-Output channels are displayed, and Input channels receive keyboard input, if they are marked
-yes in both *enabled* and *configured*.
-
-The control block is cached for speed. In an interrupted program, `monitor rtt` will force a
-reload of the control block when the program continues.
+``monitor rtt enable`` forces searching the control block next time the program runs.
 
 ## Identifier String
 
@@ -308,10 +306,9 @@ make ENABLE_RTT=1 "RTT_IDENT=IDENT\ STR"
 Note the backslash \\ before the space.
 
 When compiling for other targets like bluepill, blackpill or stlink, the `PROBE_HOST` variable
-has to be also set appropriately, selecting the correct host target. 
+has to be also set appropriately, selecting the correct host target.
 
 ## Links
  - [OpenOCD](https://openocd.org/doc/html/General-Commands.html#Real-Time-Transfer-_0028RTT_0029)
  - [probe-rs](https://probe.rs/) and [rtt-target](https://github.com/mvirkkunen/rtt-target) for the _rust_ programming language.
  - [RTT Stream](https://github.com/koendv/Arduino-RTTStream) for Arduino on arm processors
- - [\[WIP\] RTT support - PR from katyo](https://github.com/blacksphere/blackmagic/pull/833)
