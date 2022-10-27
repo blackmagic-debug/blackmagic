@@ -21,6 +21,8 @@
 #ifndef INCLUDE_HEX_UTILS_H
 #define INCLUDE_HEX_UTILS_H
 
+#include <stddef.h>
+
 char *hexify(char *hex, const void *buf, size_t size);
 char *unhexify(void *buf, const char *hex, size_t size);
 
