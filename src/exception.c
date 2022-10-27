@@ -21,9 +21,9 @@
 #include "general.h"
 #include "exception.h"
 
-struct exception *innermost_exception;
+struct exception *innermost_exception = NULL;
 
-void raise_exception(uint32_t type, const char *msg)
+void raise_exception(const uint32_t type, const char *const msg)
 {
 	struct exception *e;
 	for (e = innermost_exception; e; e = e->outer) {
