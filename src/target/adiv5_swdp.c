@@ -231,7 +231,7 @@ uint32_t firmware_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW, uint16_t addr, ui
 	uint8_t request = make_packet_request(RnW, addr);
 	uint32_t response = 0;
 	uint32_t ack = SWDP_ACK_WAIT;
-	platform_timeout timeout;
+	platform_timeout_s timeout;
 
 	if ((addr & ADIV5_APnDP) && dp->fault)
 		return 0;

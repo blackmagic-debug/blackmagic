@@ -422,7 +422,7 @@ static bool renesas_rv40_pe_mode(target *t, pe_mode_e pe_mode)
 	}
 	target_mem_write16(t, RV40_FENTRYR, FENTRYR_KEY | fentryr);
 
-	platform_timeout timeout;
+	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 10);
 
 	/* Wait for the operation to complete or timeout, Read until FENTRYR and FRDY is set */
@@ -461,7 +461,7 @@ static bool renesas_rv40_error_check(target *t, uint32_t error_bits)
 		/* Stop the flash */
 		target_mem_write8(t, RV40_CMD, RV40_CMD_FORCED_STOP);
 
-		platform_timeout timeout;
+		platform_timeout_s timeout;
 		platform_timeout_set(&timeout, 10);
 
 		/* Wait until the operation has completed or timeout */
@@ -538,7 +538,7 @@ static bool renesas_rv40_flash_erase(target_flash_s *f, target_addr_t addr, size
 		/* according to reference manual the max erase time for a 32K block is around 1040ms
 		 * this is with a FCLK of 4MHz
 		 */
-		platform_timeout timeout;
+		platform_timeout_s timeout;
 		platform_timeout_set(&timeout, 1100);
 
 		/* Wait until the operation has completed or timeout */
@@ -581,7 +581,7 @@ static bool renesas_rv40_flash_write(target_flash_s *f, target_addr_t dest, cons
 		 * this is with a FCLK of 4MHz
 		 * a complete should take less than 1 msec.
 		 */
-		platform_timeout timeout;
+		platform_timeout_s timeout;
 		platform_timeout_set(&timeout, 10);
 
 		/* write one chunk */

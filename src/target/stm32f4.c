@@ -423,7 +423,7 @@ static void stm32f4_flash_unlock(target *t)
 	}
 }
 
-static bool stm32f4_flash_busy_wait(target *const t, platform_timeout *const timeout)
+static bool stm32f4_flash_busy_wait(target *const t, platform_timeout_s *const timeout)
 {
 	/* Read FLASH_SR to poll for BSY bit */
 	uint32_t status = FLASH_SR_BSY;
@@ -504,7 +504,7 @@ static bool stm32f4_mass_erase(target *t)
 	target_mem_write32(t, FLASH_CR, ctrl);
 	target_mem_write32(t, FLASH_CR, ctrl | FLASH_CR_STRT);
 
-	platform_timeout timeout;
+	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500);
 	/* Wait for completion or an error */
 	return stm32f4_flash_busy_wait(t, &timeout);
@@ -617,7 +617,7 @@ static bool stm32f4_option_write(target *t, uint32_t *const val, size_t count)
 
 	tc_printf(t, "Erasing flash\nThis may take a few seconds...\n");
 
-	platform_timeout timeout;
+	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 100);
 	/* Wait for completion or an error */
 	if (!stm32f4_flash_busy_wait(t, &timeout))

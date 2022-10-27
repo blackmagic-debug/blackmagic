@@ -304,7 +304,7 @@ static bool ke04_command(target *t, uint8_t cmd, uint32_t addr, const uint8_t *d
 	/* Enable execution by clearing CCIF */
 	target_mem_write8(t, FTMRE_FSTAT, FTMRE_FSTAT_CCIF);
 
-	platform_timeout timeout;
+	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500);
 	/* Wait for execution to complete */
 	uint8_t fstat = 0;

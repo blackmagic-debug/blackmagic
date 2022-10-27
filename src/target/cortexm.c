@@ -803,7 +803,7 @@ bool cortexm_attach(target *t)
 	(void)target_mem_read32(t, CORTEXM_DHCSR);
 	if (target_mem_read32(t, CORTEXM_DHCSR) & CORTEXM_DHCSR_S_RESET_ST) {
 		platform_nrst_set_val(false);
-		platform_timeout timeout;
+		platform_timeout_s timeout;
 		platform_timeout_set(&timeout, 1000);
 		while (1) {
 			const uint32_t reset_status = target_mem_read32(t, CORTEXM_DHCSR);
@@ -992,7 +992,7 @@ static void cortexm_reset(target *t)
 {
 	/* Read DHCSR here to clear S_RESET_ST bit before reset */
 	target_mem_read32(t, CORTEXM_DHCSR);
-	platform_timeout reset_timeout;
+	platform_timeout_s reset_timeout;
 	if ((t->target_options & CORTEXM_TOPT_INHIBIT_NRST) == 0) {
 		platform_nrst_set_val(true);
 		platform_nrst_set_val(false);
@@ -1208,7 +1208,7 @@ bool cortexm_run_stub(target *t, uint32_t loadaddr, uint32_t r0, uint32_t r1, ui
 	target_regs_read(t, arm_regs_start);
 #endif
 	cortexm_halt_resume(t, 0);
-	platform_timeout timeout;
+	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 5000);
 	while (reason == TARGET_HALT_RUNNING) {
 		if (platform_timeout_is_expired(&timeout)) {

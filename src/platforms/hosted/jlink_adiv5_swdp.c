@@ -242,7 +242,7 @@ static uint32_t jlink_adiv5_swdp_low_access(
 	cmd[6] = make_packet_request(RnW, addr);
 
 	uint8_t res[8];
-	platform_timeout timeout;
+	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 2000);
 	uint8_t ack = SWDP_ACK_WAIT;
 	while (ack == SWDP_ACK_WAIT && !platform_timeout_is_expired(&timeout)) {

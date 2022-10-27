@@ -145,7 +145,7 @@ static bool lpc43xx_cmd_reset(target *t, int argc, const char *argv[])
 
 static bool lpc43xx_mass_erase(target *t)
 {
-	platform_timeout timeout;
+	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500);
 	lpc43xx_flash_init(t);
 

@@ -594,7 +594,7 @@ static bool samd_wait_nvm_ready(target *t)
 	return true;
 }
 
-static bool samd_wait_dsu_ready(target *const t, uint32_t *const result, platform_timeout *const timeout)
+static bool samd_wait_dsu_ready(target *const t, uint32_t *const result, platform_timeout_s *const timeout)
 {
 	uint32_t status = 0;
 	while ((status & (SAMD_STATUSA_DONE | SAMD_STATUSA_PERR | SAMD_STATUSA_FAIL)) == 0) {
@@ -668,7 +668,7 @@ bool samd_mass_erase(target *t)
 	target_mem_write32(t, SAMD_DSU_CTRLSTAT, SAMD_CTRL_CHIP_ERASE);
 
 	uint32_t status = 0;
-	platform_timeout timeout;
+	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500);
 	if (!samd_wait_dsu_ready(t, &status, &timeout))
 		return false;
