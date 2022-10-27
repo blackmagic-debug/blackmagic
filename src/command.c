@@ -93,7 +93,7 @@ const command_t cmd_list[] = {
 	{"tpwr", cmd_target_power, "Supplies power to the target: (enable|disable)"},
 #endif
 #ifdef ENABLE_RTT
-	{"rtt", cmd_rtt, "enable|disable|status|channel 0..15|ident (str)|cblock|poll maxms minms maxerr"},
+	{"rtt", cmd_rtt, "enable|disable|status|channel 0..15|ident (str)|cblock|ram|poll maxms minms maxerr"},
 #endif
 #ifdef PLATFORM_HAS_TRACESWO
 #if defined TRACESWO_PROTOCOL && TRACESWO_PROTOCOL == 2
@@ -499,31 +499,36 @@ static bool cmd_rtt(target *t, int argc, const char **argv)
 {
 	(void)t;
 	const size_t command_len = strlen(argv[1]);
-	if (argc == 1 || (argc == 2 && !strncmp(argv[1], "enabled", command_len))) {
+	if (argc == 1 || (argc == 2 && strncmp(argv[1], "enabled", command_len) == 0)) {
 		rtt_enabled = true;
 		rtt_found = false;
-	} else if ((argc == 2) && !strncmp(argv[1], "disabled", command_len)) {
+		memset(rtt_channel, 0, sizeof(rtt_channel));
+	} else if (argc == 2 && strncmp(argv[1], "disabled", command_len) == 0) {
 		rtt_enabled = false;
 		rtt_found = false;
-	} else if ((argc == 2) && !strncmp(argv[1], "status", command_len)) {
-		gdb_outf("rtt: %s found: %s ident: \"%s\"", on_or_off(rtt_enabled), rtt_found ? "yes" : "no",
-			rtt_ident[0] == '\0' ? "off" : rtt_ident);
-		gdb_outf(" halt: %s", on_or_off(target_no_background_memory_access(t)));
+	} else if (argc == 2 && strncmp(argv[1], "status", command_len) == 0) {
+		gdb_outf("rtt: %s found: %s ident: ", on_or_off(rtt_enabled), rtt_found ? "yes" : "no");
+		if (rtt_ident[0] == '\0')
+			gdb_out("off");
+		else
+			gdb_outf("\"%s\"", rtt_ident);
+		gdb_outf(" halt: %s", on_or_off(target_mem_access_needs_halt(t)));
 		gdb_out(" channels: ");
 		if (rtt_auto_channel)
 			gdb_out("auto ");
 		for (size_t i = 0; i < MAX_RTT_CHAN; i++) {
-			if (rtt_channel[i].is_enabled)
+			if (rtt_channel_enabled[i])
 				gdb_outf("%" PRIu32 " ", (uint32_t)i);
 		}
+		if (rtt_flag_ram)
+			gdb_outf("ram: 0x%08" PRIx32 " 0x%08" PRIx32, rtt_ram_start, rtt_ram_end);
 		gdb_outf(
 			"\nmax poll ms: %u min poll ms: %u max errs: %u\n", rtt_max_poll_ms, rtt_min_poll_ms, rtt_max_poll_errs);
-	} else if (argc >= 2 && !strncmp(argv[1], "channel", command_len)) {
+	} else if (argc >= 2 && strncmp(argv[1], "channel", command_len) == 0) {
 		/* mon rtt channel switches to auto rtt channel selection
 		   mon rtt channel number... selects channels given */
 		for (size_t i = 0; i < MAX_RTT_CHAN; i++)
-			rtt_channel[i].is_enabled = false;
-
+			rtt_channel_enabled[i] = false;
 		if (argc == 2)
 			rtt_auto_channel = true;
 		else {
@@ -531,31 +536,37 @@ static bool cmd_rtt(target *t, int argc, const char **argv)
 			for (size_t i = 2; i < (size_t)argc; ++i) {
 				const uint32_t channel = strtoul(argv[i], NULL, 0);
 				if (channel < MAX_RTT_CHAN)
-					rtt_channel[channel].is_enabled = true;
+					rtt_channel_enabled[channel] = true;
 			}
 		}
-	} else if (argc == 2 && !strncmp(argv[1], "ident", command_len))
+	} else if (argc == 2 && strncmp(argv[1], "ident", command_len) == 0)
 		rtt_ident[0] = '\0';
-	else if (argc == 2 && !strncmp(argv[1], "poll", command_len))
+	else if (argc == 2 && strncmp(argv[1], "poll", command_len) == 0)
 		gdb_outf("%u %u %u\n", rtt_max_poll_ms, rtt_min_poll_ms, rtt_max_poll_errs);
-	else if (argc == 2 && !strncmp(argv[1], "cblock", command_len)) {
+	else if (argc == 2 && strncmp(argv[1], "cblock", command_len) == 0) {
 		gdb_outf("cbaddr: 0x%x\n", rtt_cbaddr);
-		gdb_out("ch ena cfg i/o buf@        size head@      tail@      flg\n");
-		for (size_t i = 0; i < MAX_RTT_CHAN; ++i) {
-			gdb_outf("%2" PRIu32 "   %c   %c %s 0x%08" PRIx32 " %5" PRIu32 " 0x%08" PRIx32 " 0x%08" PRIx32 "   %"
-					 PRIu32 "\n",
-				(uint32_t)i, rtt_channel[i].is_enabled ? 'y' : 'n', rtt_channel[i].is_configured ? 'y' : 'n',
-				rtt_channel[i].is_output ? "out" : "in ", rtt_channel[i].buf_addr, rtt_channel[i].buf_size,
-				rtt_channel[i].head_addr, rtt_channel[i].tail_addr, rtt_channel[i].flag);
+		gdb_out("ch ena i/o buffer@      size   head   tail flag\n");
+		for (uint32_t i = 0; i < rtt_num_up_chan + rtt_num_down_chan; ++i) {
+			gdb_outf("%2" PRIu32 "   %c %s 0x%08" PRIx32 " %6" PRIu32 " %6" PRIu32 " %6" PRIu32 " %4" PRIu32 "\n", i,
+				rtt_channel_enabled[i] ? 'y' : 'n', i < rtt_num_down_chan ? "out" : "in ", rtt_channel[i].buf_addr,
+				rtt_channel[i].buf_size, rtt_channel[i].head, rtt_channel[i].tail, rtt_channel[i].flag);
 		}
-	} else if (argc == 3 && !strncmp(argv[1], "ident", command_len)) {
+	} else if (argc == 3 && strncmp(argv[1], "ident", command_len) == 0) {
 		strncpy(rtt_ident, argv[2], sizeof(rtt_ident));
 		rtt_ident[sizeof(rtt_ident) - 1] = '\0';
 		for (size_t i = 0; i < sizeof(rtt_ident); i++) {
 			if (rtt_ident[i] == '_')
 				rtt_ident[i] = ' ';
 		}
-	} else if (argc == 5 && !strncmp(argv[1], "poll", command_len)) {
+	} else if (argc == 2 && strncmp(argv[1], "ram", command_len) == 0)
+		rtt_flag_ram = false;
+	else if (argc == 4 && strncmp(argv[1], "ram", command_len) == 0) {
+		const int cnt1 = sscanf(argv[2], "%" SCNx32, &rtt_ram_start);
+		const int cnt2 = sscanf(argv[3], "%" SCNx32, &rtt_ram_end);
+		rtt_flag_ram = cnt1 == 1 && cnt2 == 1 && rtt_ram_end > rtt_ram_start;
+		if (!rtt_flag_ram)
+			gdb_out("address?\n");
+	} else if (argc == 5 && strncmp(argv[1], "poll", command_len) == 0) {
 		/* set polling params */
 		rtt_max_poll_ms = strtoul(argv[2], NULL, 0);
 		rtt_min_poll_ms = strtoul(argv[3], NULL, 0);
