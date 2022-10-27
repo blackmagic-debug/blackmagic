@@ -30,7 +30,7 @@
 
 #include <stdarg.h>
 
-size_t gdb_getpacket(char *packet, size_t size)
+size_t gdb_getpacket(char *const packet, const size_t size)
 {
 	unsigned char csum;
 	char recv_csum[3];
@@ -144,7 +144,7 @@ size_t gdb_getpacket(char *packet, size_t size)
 	return offset;
 }
 
-static void gdb_next_char(char c, unsigned char *csum)
+static void gdb_next_char(const char c, unsigned char *const csum)
 {
 #if PC_HOSTED == 1
 	if ((c >= 32) && (c < 127))
@@ -162,7 +162,7 @@ static void gdb_next_char(char c, unsigned char *csum)
 	}
 }
 
-void gdb_putpacket2(const char *packet1, size_t size1, const char *packet2, size_t size2)
+void gdb_putpacket2(const char *const packet1, const size_t size1, const char *const packet2, const size_t size2)
 {
 	char xmit_csum[3];
 	size_t tries = 0;
@@ -185,7 +185,7 @@ void gdb_putpacket2(const char *packet1, size_t size1, const char *packet2, size
 	} while (gdb_if_getchar_to(2000) != '+' && tries++ < 3);
 }
 
-void gdb_putpacket(const char *packet, size_t size)
+void gdb_putpacket(const char *const packet, const size_t size)
 {
 	char xmit_csum[3];
 	size_t tries = 0;
@@ -220,7 +220,7 @@ void gdb_put_notification(const char *const packet, const size_t size)
 	DEBUG_GDB_WIRE("\n");
 }
 
-void gdb_putpacket_f(const char *fmt, ...)
+void gdb_putpacket_f(const char *const fmt, ...)
 {
 	va_list ap;
 	char *buf;
@@ -233,7 +233,7 @@ void gdb_putpacket_f(const char *fmt, ...)
 	va_end(ap);
 }
 
-void gdb_out(const char *buf)
+void gdb_out(const char *const buf)
 {
 	int l = strlen(buf);
 	char *hexdata = calloc(1, 2 * l + 1);
@@ -244,7 +244,7 @@ void gdb_out(const char *buf)
 	free(hexdata);
 }
 
-void gdb_voutf(const char *fmt, va_list ap)
+void gdb_voutf(const char *const fmt, va_list ap)
 {
 	char *buf;
 
@@ -254,7 +254,7 @@ void gdb_voutf(const char *fmt, va_list ap)
 	free(buf);
 }
 
-void gdb_outf(const char *fmt, ...)
+void gdb_outf(const char *const fmt, ...)
 {
 	va_list ap;
 
