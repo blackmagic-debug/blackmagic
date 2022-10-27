@@ -148,7 +148,7 @@ enum iap_status lpc_iap_call(struct lpc_flash *f, void *result, enum iap_cmd cmd
 	regs[REG_PC] = f->iap_entry;
 	target_regs_write(t, regs);
 
-	platform_timeout timeout;
+	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500);
 	const bool full_erase = cmd == IAP_CMD_ERASE && lpc_is_full_erase(f, param.words[0], param.words[1]);
 	/* Start the target and wait for it to halt again */

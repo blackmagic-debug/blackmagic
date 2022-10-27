@@ -380,9 +380,9 @@ static bool rp_rom_call(target *t, uint32_t *regs, uint32_t cmd, uint32_t timeou
 	if (!timeout)
 		return false;
 	DEBUG_INFO("Call cmd %04" PRIx32 "\n", cmd);
-	platform_timeout operation_timeout;
+	platform_timeout_s operation_timeout;
 	platform_timeout_set(&operation_timeout, timeout);
-	platform_timeout wait_timeout;
+	platform_timeout_s wait_timeout;
 	platform_timeout_set(&wait_timeout, 500);
 	while (!target_halt_poll(t, NULL)) {
 		if (ps->is_monitor)
@@ -456,7 +456,7 @@ static bool rp_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 	len = MIN(len, f->length - addr);
 	rp_priv_s *ps = (rp_priv_s *)t->target_storage;
 	const bool full_erase = addr == f->start && len == f->length;
-	platform_timeout timeout;
+	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500);
 
 	/* erase */
@@ -865,7 +865,7 @@ static bool rp_rescue_do_reset(target *t)
 	ADIv5_AP_t *ap = (ADIv5_AP_t *)t->priv;
 	uint32_t ctrlstat = ap->dp->low_access(ap->dp, ADIV5_LOW_READ, ADIV5_DP_CTRLSTAT, 0);
 	ap->dp->low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_DP_CTRLSTAT, ctrlstat | ADIV5_DP_CTRLSTAT_CDBGPWRUPREQ);
-	platform_timeout timeout;
+	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 100);
 	while (true) {
 		ctrlstat = ap->dp->low_access(ap->dp, ADIV5_LOW_READ, ADIV5_DP_CTRLSTAT, 0);

@@ -688,7 +688,7 @@ static bool efm32_mass_erase(target *t)
 	/* Erase operation */
 	target_mem_write32(t, EFM32_MSC_WRITECMD(msc), EFM32_MSC_WRITECMD_ERASEMAIN0);
 
-	platform_timeout timeout;
+	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500);
 	/* Poll MSC Busy */
 	while ((target_mem_read32(t, EFM32_MSC_STATUS(msc)) & EFM32_MSC_STATUS_BUSY)) {
@@ -983,7 +983,7 @@ static bool efm32_aap_mass_erase(target *t)
 	adiv5_ap_write(ap, AAP_CMDKEY, CMDKEY);
 	adiv5_ap_write(ap, AAP_CMD, 1);
 
-	platform_timeout timeout;
+	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500);
 	/* Read until 0, probably should have a timeout here... */
 	do {

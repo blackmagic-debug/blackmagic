@@ -343,7 +343,7 @@ static bool stm32h7_erase_bank(
 	return true;
 }
 
-static bool stm32h7_wait_erase_bank(target *const t, platform_timeout *const timeout, const uint32_t reg_base)
+static bool stm32h7_wait_erase_bank(target *const t, platform_timeout_s *const timeout, const uint32_t reg_base)
 {
 	while (target_mem_read32(t, reg_base + FLASH_SR) & FLASH_SR_QW) {
 		if (target_check_error(t)) {
@@ -380,7 +380,7 @@ static bool stm32h7_mass_erase(target *t)
 	if (!stm32h7_erase_bank(t, psize, BANK1_START, FPEC1_BASE) || stm32h7_erase_bank(t, psize, BANK2_START, FPEC2_BASE))
 		return false;
 
-	platform_timeout timeout;
+	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500);
 	/* Wait for the banks to finish erasing */
 	if (!stm32h7_wait_erase_bank(t, &timeout, FPEC1_BASE) || !stm32h7_wait_erase_bank(t, &timeout, FPEC2_BASE))

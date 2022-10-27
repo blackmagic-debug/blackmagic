@@ -569,7 +569,7 @@ void cortexa_detach(target *t)
 	/* Invalidate cache */
 	apb_write(t, DBGITR, MCR | ICIALLU);
 
-	platform_timeout to;
+	platform_timeout_s to;
 	platform_timeout_set(&to, 200);
 
 	/* Wait for instruction to complete */
@@ -723,7 +723,7 @@ static void cortexa_reset(target *t)
 	platform_nrst_set_val(false);
 
 	/* Spin until Xilinx reconnects us */
-	platform_timeout timeout;
+	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 1000);
 	volatile struct exception e;
 	do {
@@ -831,7 +831,7 @@ void cortexa_halt_resume(target *t, bool step)
 
 	apb_write(t, DBGITR, MCR | ICIALLU); /* invalidate cache */
 
-	platform_timeout to;
+	platform_timeout_s to;
 	platform_timeout_set(&to, 200);
 
 	/* Wait for instruction to complete */

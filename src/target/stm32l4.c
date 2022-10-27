@@ -650,7 +650,7 @@ static void stm32l4_flash_unlock(target *const t)
 	}
 }
 
-static bool stm32l4_flash_busy_wait(target *const t, platform_timeout *timeout)
+static bool stm32l4_flash_busy_wait(target *const t, platform_timeout_s *timeout)
 {
 	/* Read FLASH_SR to poll for BSY bit */
 	uint32_t status = FLASH_SR_BSY;
@@ -713,7 +713,7 @@ static bool stm32l4_cmd_erase(target *const t, const uint32_t action)
 	stm32l4_flash_write32(t, FLASH_CR, action);
 	stm32l4_flash_write32(t, FLASH_CR, action | FLASH_CR_STRT);
 
-	platform_timeout timeout;
+	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500);
 	/* Wait for completion or an error */
 	return stm32l4_flash_busy_wait(t, &timeout);

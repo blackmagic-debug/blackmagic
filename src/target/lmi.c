@@ -163,7 +163,7 @@ static bool lmi_flash_erase(target_flash_s *f, target_addr_t addr, const size_t 
 	target_check_error(t);
 
 	const bool full_erase = addr == f->start && len == f->length;
-	platform_timeout timeout;
+	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500);
 
 	for (size_t erased = 0; erased < len; erased += BLOCK_SIZE) {

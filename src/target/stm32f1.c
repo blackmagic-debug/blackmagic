@@ -369,7 +369,7 @@ static inline void stm32f1_flash_clear_eop(target *const t, const uint32_t bank_
 	target_mem_write32(t, FLASH_SR + bank_offset, status | SR_EOP); /* EOP is W1C */
 }
 
-static bool stm32f1_flash_busy_wait(target *const t, const uint32_t bank_offset, platform_timeout *const timeout)
+static bool stm32f1_flash_busy_wait(target *const t, const uint32_t bank_offset, platform_timeout_s *const timeout)
 {
 	/* Read FLASH_SR to poll for BSY bit */
 	uint32_t status = FLASH_SR_BSY;
@@ -472,7 +472,7 @@ static bool stm32f1_flash_write(target_flash_s *f, target_addr_t dest, const voi
 	return true;
 }
 
-static bool stm32f1_mass_erase_bank(target *const t, const uint32_t bank_offset, platform_timeout *const timeout)
+static bool stm32f1_mass_erase_bank(target *const t, const uint32_t bank_offset, platform_timeout_s *const timeout)
 {
 	/* Unlock the bank */
 	if (!stm32f1_flash_unlock(t, bank_offset))
@@ -492,7 +492,7 @@ static bool stm32f1_mass_erase(target *t)
 	if (!stm32f1_flash_unlock(t, 0))
 		return false;
 
-	platform_timeout timeout;
+	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500);
 	if (!stm32f1_mass_erase_bank(t, FLASH_BANK1_OFFSET, &timeout))
 		return false;

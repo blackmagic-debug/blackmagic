@@ -80,7 +80,7 @@ unsigned char gdb_if_getchar(void)
 
 unsigned char gdb_if_getchar_to(int timeout)
 {
-	platform_timeout receive_timeout;
+	platform_timeout_s receive_timeout;
 	platform_timeout_set(&receive_timeout, timeout);
 
 	while (head_out == tail_out && !platform_timeout_is_expired(&receive_timeout)) {

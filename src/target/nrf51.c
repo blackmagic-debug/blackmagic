@@ -157,7 +157,7 @@ bool nrf51_probe(target *t)
 	return true;
 }
 
-static bool nrf51_wait_ready(target *const t, platform_timeout *const timeout)
+static bool nrf51_wait_ready(target *const t, platform_timeout_s *const timeout)
 {
 	/* Poll for NVMC_READY */
 	while (target_mem_read32(t, NRF51_NVMC_READY) == 0) {
@@ -222,7 +222,7 @@ static bool nrf51_mass_erase(target *t)
 	if (!nrf51_wait_ready(t, NULL))
 		return false;
 
-	platform_timeout timeout = {};
+	platform_timeout_s timeout = {};
 	platform_timeout_set(&timeout, 500);
 	/* Erase all */
 	target_mem_write32(t, NRF51_NVMC_ERASEALL, 1);
@@ -435,7 +435,7 @@ static bool nrf51_mdm_mass_erase(target *t)
 	adiv5_dp_write(ap->dp, MDM_SELECT_AP, 0x01000000);
 	adiv5_ap_write(ap, MDM_CONTROL, 0x00000001);
 
-	platform_timeout timeout;
+	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500);
 	// Read until 0, probably should have a timeout here...
 	do {

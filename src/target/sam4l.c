@@ -279,7 +279,7 @@ static bool sam4l_flash_command(target *t, uint32_t page, uint32_t cmd)
 		"%s: FSR: 0x%08" PRIx32 ", page = %" PRIu32 ", command = %" PRIu32 "\n", __func__, FLASHCALW_FSR, page, cmd);
 
 	/* Wait for Flash controller ready */
-	platform_timeout timeout;
+	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, FLASH_TIMEOUT);
 	while (!(target_mem_read32(t, FLASHCALW_FSR) & FLASHCALW_FSR_FRDY)) {
 		if (platform_timeout_is_expired(&timeout)) {

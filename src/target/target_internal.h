@@ -162,7 +162,7 @@ struct target_s {
 	uint16_t part_id;
 };
 
-void target_print_progress(platform_timeout *timeout);
+void target_print_progress(platform_timeout_s *timeout);
 void target_ram_map_free(target *t);
 void target_flash_map_free(target *t);
 void target_mem_map_free(target *t);

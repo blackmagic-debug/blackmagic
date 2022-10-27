@@ -314,7 +314,7 @@ static void stm32g0_flash_lock(target *t)
 	target_mem_write32(t, FLASH_CR, ctrl);
 }
 
-static bool stm32g0_wait_busy(target *const t, platform_timeout *const timeout)
+static bool stm32g0_wait_busy(target *const t, platform_timeout_s *const timeout)
 {
 	while (target_mem_read32(t, FLASH_SR) & FLASH_SR_BSY_MASK) {
 		if (target_check_error(t))
@@ -446,7 +446,7 @@ static bool stm32g0_mass_erase(target *t)
 	stm32g0_flash_unlock(t);
 	target_mem_write32(t, FLASH_CR, ctrl);
 
-	platform_timeout timeout;
+	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500);
 	/* Wait for completion or an error */
 	if (!stm32g0_wait_busy(t, &timeout)) {

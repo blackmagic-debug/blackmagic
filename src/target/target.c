@@ -248,7 +248,7 @@ bool target_mem_map(target *t, char *tmp, size_t len)
 	return i < len - 1;
 }
 
-void target_print_progress(platform_timeout *const timeout)
+void target_print_progress(platform_timeout_s *const timeout)
 {
 	if (platform_timeout_is_expired(timeout)) {
 		gdb_out(".");
