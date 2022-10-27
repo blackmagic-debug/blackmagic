@@ -20,14 +20,14 @@
 
 #include "general.h"
 
-void platform_timeout_set(platform_timeout *t, uint32_t ms)
+void platform_timeout_set(platform_timeout *const t, uint32_t ms)
 {
-	if (ms <= SYSTICKMS)
+	if (ms < SYSTICKMS)
 		ms = SYSTICKMS;
 	t->time = platform_time_ms() + ms;
 }
 
-bool platform_timeout_is_expired(platform_timeout *t)
+bool platform_timeout_is_expired(const platform_timeout *const t)
 {
 	return platform_time_ms() > t->time;
 }
