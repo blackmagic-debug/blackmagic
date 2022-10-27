@@ -46,17 +46,17 @@ void rtt_serial_receive_callback(usbd_device *dev, uint8_t ep);
 
 #if !defined(RTT_UP_BUF_SIZE) || !defined(RTT_DOWN_BUF_SIZE)
 #if (PC_HOSTED == 1)
-#define RTT_UP_BUF_SIZE    (4096 + 8)
-#define RTT_DOWN_BUF_SIZE  (512)
+#define RTT_UP_BUF_SIZE   (4096 + 8)
+#define RTT_DOWN_BUF_SIZE (512)
 #elif defined(STM32F7)
-#define RTT_UP_BUF_SIZE    (4096 + 8)
-#define RTT_DOWN_BUF_SIZE  (2048)
+#define RTT_UP_BUF_SIZE   (4096 + 8)
+#define RTT_DOWN_BUF_SIZE (2048)
 #elif defined(STM32F4)
-#define RTT_UP_BUF_SIZE    (2048 + 8)
-#define RTT_DOWN_BUF_SIZE  (256)
+#define RTT_UP_BUF_SIZE   (2048 + 8)
+#define RTT_DOWN_BUF_SIZE (256)
 #else /* stm32f103 */
-#define RTT_UP_BUF_SIZE    (1024 + 8)
-#define RTT_DOWN_BUF_SIZE  (256)
+#define RTT_UP_BUF_SIZE   (1024 + 8)
+#define RTT_DOWN_BUF_SIZE (256)
 #endif
 #endif
 
