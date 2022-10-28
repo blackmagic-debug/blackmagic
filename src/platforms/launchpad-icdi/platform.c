@@ -25,13 +25,13 @@
 #include <libopencm3/cm3/systick.h>
 #include <libopencm3/lm4f/usb.h>
 
-#define PLL_DIV_80MHZ	5
-#define PLL_DIV_25MHZ	16
+#define PLL_DIV_80MHZ 5
+#define PLL_DIV_25MHZ 16
 
 extern void trace_tick(void);
 
 char serial_no[DFU_SERIAL_LENGTH];
-volatile platform_timeout * volatile head_timeout;
+volatile platform_timeout *volatile head_timeout;
 uint8_t running_status;
 static volatile uint32_t time_ms;
 
@@ -79,13 +79,14 @@ void platform_init(void)
 	nvic_enable_irq(NVIC_UART0_IRQ);
 
 	periph_clock_enable(RCC_GPIOD);
-	__asm__("nop"); __asm__("nop"); __asm__("nop");
-	gpio_mode_setup(GPIOD_BASE, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, GPIO4|GPIO5);
+	__asm__("nop");
+	__asm__("nop");
+	__asm__("nop");
+	gpio_mode_setup(GPIOD_BASE, GPIO_MODE_ANALOG, GPIO_PUPD_NONE, GPIO4 | GPIO5);
 	blackmagic_usb_init();
 	aux_serial_init();
 
-	usb_enable_interrupts(USB_INT_RESET | USB_INT_DISCON |
-		USB_INT_RESUME | USB_INT_SUSPEND, 0xff, 0xff);
+	usb_enable_interrupts(USB_INT_RESET | USB_INT_DISCON | USB_INT_RESUME | USB_INT_SUSPEND, 0xff, 0xff);
 }
 
 void platform_nrst_set_val(bool assert)
@@ -93,7 +94,8 @@ void platform_nrst_set_val(bool assert)
 	volatile int i;
 	if (assert) {
 		gpio_clear(NRST_PORT, NRST_PIN);
-		for(i = 0; i < 10000; i++) __asm__("nop");
+		for (i = 0; i < 10000; i++)
+			__asm__("nop");
 	} else {
 		gpio_set(NRST_PORT, NRST_PIN);
 	}
@@ -108,7 +110,8 @@ void platform_delay(uint32_t ms)
 {
 	platform_timeout timeout;
 	platform_timeout_set(&timeout, ms);
-	while (!platform_timeout_is_expired(&timeout));
+	while (!platform_timeout_is_expired(&timeout))
+		;
 }
 
 const char *platform_target_voltage(void)
@@ -130,7 +133,9 @@ void read_serial_number(void)
 	serial_no[DFU_SERIAL_LENGTH - 1] = 0;
 }
 
-void platform_request_boot(void) { }
+void platform_request_boot(void)
+{
+}
 
 void platform_max_frequency_set(uint32_t freq)
 {
