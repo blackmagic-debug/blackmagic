@@ -37,8 +37,7 @@ void dfu_detach(void)
 	rcc_periph_clock_enable(RCC_USB);
 	rcc_periph_clock_enable(RCC_GPIOA);
 	gpio_clear(GPIOA, GPIO12);
-	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ,
-		GPIO_CNF_OUTPUT_OPENDRAIN, GPIO12);
+	gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_OPENDRAIN, GPIO12);
 	scb_reset_system();
 }
 
@@ -53,11 +52,9 @@ int main(void)
 		 * forced to GND, Jumper CN7 PIN3/4 is plugged).
 		 * Switch PB5 high. Read PB6 low means jumper plugged.
 		 */
-		gpio_set_mode(GPIOB, GPIO_MODE_INPUT,
-					  GPIO_CNF_INPUT_PULL_UPDOWN, GPIO6);
+		gpio_set_mode(GPIOB, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, GPIO6);
 		gpio_set(GPIOB, GPIO6);
-		gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ,
-					  GPIO_CNF_OUTPUT_PUSHPULL, GPIO5);
+		gpio_set_mode(GPIOB, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, GPIO5);
 		while (gpio_get(GPIOB, GPIO5))
 			gpio_clear(GPIOB, GPIO5);
 		while (!gpio_get(GPIOB, GPIO5))
@@ -68,11 +65,10 @@ int main(void)
 		/* Boot0/1 pins have 100k between Jumper and MCU
 		 * and are jumperd to low by default.
 		 * If we read PB2 high, force bootloader entry.*/
-		gpio_set_mode(GPIOB, GPIO_MODE_INPUT,
-					  GPIO_CNF_INPUT_FLOAT, GPIO2);
+		gpio_set_mode(GPIOB, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, GPIO2);
 		normal_boot = !(gpio_get(GPIOB, GPIO2));
 	}
-	if(((GPIOA_CRL & 0x40) == 0x40) && normal_boot)
+	if (((GPIOA_CRL & 0x40) == 0x40) && normal_boot)
 		dfu_jump_app_if_valid();
 
 	dfu_protect(false);
