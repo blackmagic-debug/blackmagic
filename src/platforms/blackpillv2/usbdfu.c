@@ -39,8 +39,7 @@ int main(void)
 {
 	volatile uint32_t *magic = (uint32_t *)_ebss;
 	rcc_periph_clock_enable(RCC_GPIOA);
-	if (gpio_get(GPIOA, GPIO0) ||
-	   ((magic[0] == BOOTMAGIC0) && (magic[1] == BOOTMAGIC1))) {
+	if (gpio_get(GPIOA, GPIO0) || ((magic[0] == BOOTMAGIC0) && (magic[1] == BOOTMAGIC1))) {
 		magic[0] = 0;
 		magic[1] = 0;
 	} else {
@@ -50,8 +49,7 @@ int main(void)
 
 	/* Assert blue LED as indicator we are in the bootloader */
 	rcc_periph_clock_enable(RCC_GPIOD);
-	gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT,
-					GPIO_PUPD_NONE, LED_BOOTLOADER);
+	gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED_BOOTLOADER);
 	gpio_set(LED_PORT, LED_BOOTLOADER);
 
 	/* Enable peripherals */
@@ -64,10 +62,8 @@ int main(void)
 	dfu_protect(false);
 	dfu_init(&USB_DRIVER);
 	dfu_main();
-
 }
 
 void dfu_event(void)
 {
 }
-
