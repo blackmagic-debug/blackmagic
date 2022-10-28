@@ -38,7 +38,6 @@
 #include <libopencm3/cm3/cortex.h>
 #include <libopencm3/usb/dwc/otg_fs.h>
 
-
 jmp_buf fatal_error_jmpbuf;
 extern char _ebss[];
 
@@ -51,14 +50,11 @@ void platform_init(void)
 	rcc_periph_clock_enable(RCC_GPIOB);
 
 	/* Check the USER button*/
-	if (gpio_get(GPIOA, GPIO0) ||
-		((magic[0] == BOOTMAGIC0) && (magic[1] == BOOTMAGIC1)))
-	{
+	if (gpio_get(GPIOA, GPIO0) || ((magic[0] == BOOTMAGIC0) && (magic[1] == BOOTMAGIC1))) {
 		magic[0] = 0;
 		magic[1] = 0;
 		/* Assert blue LED as indicator we are in the bootloader */
-		gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT,
-						GPIO_PUPD_NONE, LED_BOOTLOADER);
+		gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED_BOOTLOADER);
 		gpio_set(LED_PORT, LED_BOOTLOADER);
 		/* Jump to the built in bootloader by mapping System flash.
 		   As we just come out of reset, no other deinit is needed!*/
@@ -80,30 +76,19 @@ void platform_init(void)
 	GPIOA_OSPEEDR &= 0x3C00000C;
 	GPIOA_OSPEEDR |= 0x28000008;
 
-	gpio_mode_setup(JTAG_PORT, GPIO_MODE_OUTPUT,
-					GPIO_PUPD_NONE,
-					TCK_PIN | TDI_PIN);
-	gpio_mode_setup(JTAG_PORT, GPIO_MODE_INPUT,
-					GPIO_PUPD_NONE, TMS_PIN);
-	gpio_set_output_options(JTAG_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ,
-							TCK_PIN | TDI_PIN | TMS_PIN);
-	gpio_mode_setup(TDO_PORT, GPIO_MODE_INPUT,
-					GPIO_PUPD_NONE,
-					TDO_PIN);
-	gpio_set_output_options(TDO_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ,
-							TDO_PIN | TMS_PIN);
+	gpio_mode_setup(JTAG_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TCK_PIN | TDI_PIN);
+	gpio_mode_setup(JTAG_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, TMS_PIN);
+	gpio_set_output_options(JTAG_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ, TCK_PIN | TDI_PIN | TMS_PIN);
+	gpio_mode_setup(TDO_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, TDO_PIN);
+	gpio_set_output_options(TDO_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ, TDO_PIN | TMS_PIN);
 
-	gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT,
-					GPIO_PUPD_NONE,
-					LED_IDLE_RUN | LED_ERROR | LED_BOOTLOADER);
+	gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED_IDLE_RUN | LED_ERROR | LED_BOOTLOADER);
 
 	gpio_mode_setup(LED_PORT_UART, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED_UART);
 
 #ifdef PLATFORM_HAS_POWER_SWITCH
 	gpio_set(PWR_BR_PORT, PWR_BR_PIN);
-	gpio_mode_setup(PWR_BR_PORT, GPIO_MODE_OUTPUT,
-					GPIO_PUPD_NONE,
-					PWR_BR_PIN);
+	gpio_mode_setup(PWR_BR_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, PWR_BR_PIN);
 #endif
 
 	platform_timing_init();
