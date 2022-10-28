@@ -38,7 +38,7 @@ extern uint32_t _ebss[];
 
 void platform_init(void)
 {
-	volatile uint32_t *magic = (uint32_t *) &_ebss;
+	volatile uint32_t *magic = (uint32_t *)&_ebss;
 	/* If RCC_CFGR is not at it's reset value, the bootloader was executed
 	 * and SET_ADDRESS got us to this place. On F3, without further efforts,
 	 * application does not start in that case.
@@ -53,7 +53,7 @@ void platform_init(void)
 		magic[1] = 0;
 		/* Jump to the built in bootloader by mapping System flash.
 		   As we just come out of reset, no other deinit is needed!*/
-		SYSCFG_MEMRM |=  1;
+		SYSCFG_MEMRM |= 1;
 		scb_reset_core();
 	}
 
@@ -75,15 +75,12 @@ void platform_init(void)
 
 	GPIOA_OSPEEDR &= ~0xF00C;
 	GPIOA_OSPEEDR |= 0x5004; /* Set medium speed on PA1, PA6 and PA7*/
-	gpio_mode_setup(JTAG_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE,
-					TMS_PIN | TCK_PIN |TDI_PIN);
+	gpio_mode_setup(JTAG_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TMS_PIN | TCK_PIN | TDI_PIN);
 	gpio_mode_setup(TDO_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, TDO_PIN);
-	gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE,
-					LED_UART | LED_IDLE_RUN | LED_ERROR | LED_BOOTLOADER);
+	gpio_mode_setup(LED_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED_UART | LED_IDLE_RUN | LED_ERROR | LED_BOOTLOADER);
 	gpio_mode_setup(NRST_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, NRST_PIN);
 	gpio_set(NRST_PORT, NRST_PIN);
-	gpio_set_output_options(NRST_PORT, GPIO_OTYPE_OD,
-							GPIO_OSPEED_2MHZ, NRST_PIN);
+	gpio_set_output_options(NRST_PORT, GPIO_OTYPE_OD, GPIO_OSPEED_2MHZ, NRST_PIN);
 	platform_timing_init();
 	/* Set up USB Pins and alternate function*/
 	gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO11 | GPIO12);
@@ -110,7 +107,7 @@ const char *platform_target_voltage(void)
 void platform_request_boot(void)
 {
 	/* Bootloader cares for reenumeration */
-	uint32_t *magic = (uint32_t *) &_ebss;
+	uint32_t *magic = (uint32_t *)&_ebss;
 	magic[0] = BOOTMAGIC0;
 	magic[1] = BOOTMAGIC1;
 	scb_reset_system();
