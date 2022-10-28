@@ -18,9 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file implements the platform specific functions for the ST-Link
- * implementation.
- */
+/* This file implements the platform specific functions for the ST-Link implementation. */
 
 #include "general.h"
 #include "usb.h"
@@ -71,8 +69,8 @@ void platform_init(void)
 	gpio_set_mode(LED_PORT, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, led_idle_run);
 
 	/* Relocate interrupt vector table here */
-	extern int vector_table;
-	SCB_VTOR = (uint32_t)&vector_table;
+	extern uint32_t vector_table;
+	SCB_VTOR = (uintptr_t)&vector_table;
 
 	platform_timing_init();
 	if (rev > 1) /* Reconnect USB */
@@ -120,9 +118,9 @@ static void adc_init(void)
 	adc_enable_temperature_sensor();
 	adc_power_on(ADC1);
 
-	/* Wait for ADC starting up. */
-	for (int i = 0; i < 800000; i++) /* Wait a bit. */
-		__asm__("nop");
+	/* Wait for the ADC to finish starting up */
+	for (volatile size_t i = 0; i < 800000; ++i)
+		continue;
 
 	adc_reset_calibration(ADC1);
 	adc_calibrate(ADC1);
@@ -130,13 +128,13 @@ static void adc_init(void)
 
 const char *platform_target_voltage(void)
 {
-	static char ret[] = "0.00V";
+	static char ret[6] = "0.00V";
 	const uint8_t channel = 0;
 	adc_set_regular_sequence(ADC1, 1, (uint8_t *)&channel);
 	adc_start_conversion_direct(ADC1);
 	/* Wait for end of conversion. */
 	while (!adc_eoc(ADC1))
-		;
+		continue;
 	uint32_t platform_adc_value = adc_read_regular(ADC1);
 
 	const uint8_t ref_channel = 17;
@@ -144,10 +142,10 @@ const char *platform_target_voltage(void)
 	adc_start_conversion_direct(ADC1);
 	/* Wait for end of conversion. */
 	while (!adc_eoc(ADC1))
-		;
+		continue;
 	uint32_t vrefint_value = adc_read_regular(ADC1);
 
-	/* Value in mV*/
+	/* Value in milivolts */
 	uint32_t val = (platform_adc_value * 2400) / vrefint_value;
 	ret[0] = '0' + val / 1000;
 	ret[2] = '0' + (val / 100) % 10;
