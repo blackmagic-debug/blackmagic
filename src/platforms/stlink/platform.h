@@ -18,9 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file implements the platform specific functions for the STM32
- * implementation.
- */
+/* This file provides the platform specific declarations for the ST-Link implementation. */
 
 #ifndef PLATFORMS_STLINK_PLATFORM_H
 #define PLATFORMS_STLINK_PLATFORM_H
@@ -39,7 +37,7 @@ extern bool debug_bmp;
 #endif
 
 #define PLATFORM_HAS_USBUART
-#define PLATFORM_IDENT "(STLINK/V2) "
+#define PLATFORM_IDENT "(ST-Link/v2) "
 
 /* Hardware definitions... */
 #define TDI_PORT GPIOA
@@ -65,7 +63,7 @@ extern bool debug_bmp;
 #else
 #define LED_PORT GPIOA
 #endif
-/* Use PC14 for a "dummy" uart led. So we can observere at least with scope*/
+/* Use PC14 for a "dummy" UART LED so we can observere at least with scope */
 #define LED_PORT_UART GPIOA
 #define LED_UART      GPIO9
 
@@ -104,7 +102,7 @@ extern bool debug_bmp;
 #define USB_DRIVER st_usbfs_v1_usb_driver
 #define USB_IRQ    NVIC_USB_LP_CAN_RX0_IRQ
 #define USB_ISR(x) usb_lp_can_rx0_isr(x)
-/* Interrupt priorities.  Low numbers are high priority. */
+/* Interrupt priorities. Low numbers are high priority. */
 #define IRQ_PRI_USB          (1 << 4)
 #define IRQ_PRI_USBUSART     (2 << 4)
 #define IRQ_PRI_USBUSART_DMA (2 << 4)
@@ -148,7 +146,7 @@ extern bool debug_bmp;
 #define USBUSART_DMA_BUS DMA1
 #define USBUSART_DMA_CLK RCC_DMA1
 
-/* On F103, only USART1 is on AHB2 and can reach 4.5 MBaud at 72 MHz.*/
+/* On F103, only USART1 is on AHB2 and can reach 4.5MBaud at 72 MHz. */
 #define SWO_UART        USART1
 #define SWO_UART_DR     USART1_DR
 #define SWO_UART_CLK    RCC_USART1
@@ -176,37 +174,26 @@ extern uint16_t led_idle_run;
 
 extern uint32_t detect_rev(void);
 
-/*
- * Use newlib provided integer only stdio functions
- */
+/* Use newlib provided integer-only stdio functions */
 
-/* sscanf */
 #ifdef sscanf
 #undef sscanf
-#define sscanf siscanf
-#else
-#define sscanf siscanf
 #endif
-/* sprintf */
+#define sscanf siscanf
+
 #ifdef sprintf
 #undef sprintf
-#define sprintf siprintf
-#else
-#define sprintf siprintf
 #endif
-/* vasprintf */
+#define sprintf siprintf
+
 #ifdef vasprintf
 #undef vasprintf
-#define vasprintf vasiprintf
-#else
-#define vasprintf vasiprintf
 #endif
-/* snprintf */
+#define vasprintf vasiprintf
+
 #ifdef snprintf
 #undef snprintf
-#define snprintf sniprintf
-#else
-#define snprintf sniprintf
 #endif
+#define snprintf sniprintf
 
 #endif /* PLATFORMS_STLINK_PLATFORM_H */
