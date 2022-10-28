@@ -286,6 +286,6 @@
 	}
 
 uint64_t remotehston(uint32_t limit, const char *s);
-void remotePacketProcess(unsigned int i, char *packet);
+void remote_packet_process(unsigned int i, char *packet);
 
 #endif /* REMOTE_H */

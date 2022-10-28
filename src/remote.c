@@ -430,7 +430,7 @@ static void remotePacketProcessHL(unsigned i, char *packet)
 	SET_IDLE_STATE(1);
 }
 
-void remotePacketProcess(unsigned i, char *packet)
+void remote_packet_process(unsigned i, char *packet)
 {
 	switch (packet[0]) {
 	case REMOTE_SWDP_PACKET:
