@@ -18,9 +18,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file implements the platform specific functions for ST-Link
- * on the STM8S discovery and STM32F103 Minimum System Development Board, also
- * known as bluepill.
+/*
+ * This file implements the platform specific functions for the "swlink" (ST-Link clones) implementation.
+ * This is targeted to STM8S discovery and STM32F103 Minimum System Development Board (also known as the bluepill).
  */
 
 #include "general.h"
@@ -70,7 +70,7 @@ void platform_init(void)
 
 	switch (rev) {
 	case 0:
-		/* LED GPIO already set in detect_rev()*/
+		/* LED GPIO already set in detect_rev() */
 		led_error_port = GPIOA;
 		led_error_pin = GPIO8;
 		adc_init();
@@ -78,7 +78,7 @@ void platform_init(void)
 	case 1:
 		led_error_port = GPIOC;
 		led_error_pin = GPIO13;
-		/* Enable MCO Out on PA8*/
+		/* Enable MCO Out on PA8 */
 		RCC_CFGR &= ~(0xf << 24);
 		RCC_CFGR |= (RCC_CFGR_MCO_HSE << 24);
 		gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO8);
@@ -86,7 +86,8 @@ void platform_init(void)
 	}
 	platform_nrst_set_val(false);
 
-	/* Remap TIM2 TIM2_REMAP[1]
+	/*
+	 * Remap TIM2 TIM2_REMAP[1]
 	 * TIM2_CH1_ETR -> PA15 (TDI, set as output above)
 	 * TIM2_CH2     -> PB3  (TDO)
 	 */
@@ -106,15 +107,15 @@ void platform_init(void)
 
 void platform_nrst_set_val(bool assert)
 {
-	/* We reuse nTRST as nRST.*/
+	/* We reuse nTRST as nRST. */
 	if (assert) {
 		gpio_set_mode(TRST_PORT, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_OPENDRAIN, TRST_PIN);
-		/* Wait until requested value is active.*/
+		/* Wait until requested value is active. */
 		while (gpio_get(TRST_PORT, TRST_PIN))
 			gpio_clear(TRST_PORT, TRST_PIN);
 	} else {
 		gpio_set_mode(TRST_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, TRST_PIN);
-		/* Wait until requested value is active.*/
+		/* Wait until requested value is active .*/
 		while (!gpio_get(TRST_PORT, TRST_PIN))
 			gpio_set(TRST_PORT, TRST_PIN);
 	}
@@ -128,7 +129,7 @@ bool platform_nrst_get_val(void)
 static void adc_init(void)
 {
 	rcc_periph_clock_enable(RCC_ADC1);
-	/* PA0 measures CN7 Pin 1 VDD divided by two.*/
+	/* PA0 measures CN7 Pin 1 VDD divided by two. */
 	gpio_set_mode(GPIOA, GPIO_MODE_INPUT, GPIO_CNF_INPUT_ANALOG, GPIO0);
 	adc_power_off(ADC1);
 	adc_disable_scan_mode(ADC1);
@@ -139,9 +140,9 @@ static void adc_init(void)
 
 	adc_power_on(ADC1);
 
-	/* Wait for ADC starting up. */
-	for (int i = 0; i < 800000; i++) /* Wait a bit. */
-		__asm__("nop");
+	/* Wait for the ADC to finish starting up */
+	for (volatile size_t i = 0; i < 800000; ++i)
+		continue;
 
 	adc_reset_calibration(ADC1);
 	adc_calibrate(ADC1);
@@ -157,12 +158,15 @@ const char *platform_target_voltage(void)
 		adc_start_conversion_direct(ADC1);
 		/* Wait for end of conversion. */
 		while (!adc_eoc(ADC1))
-			;
-		/* Referencevoltage is 3.3 Volt, measured voltage is half of
-		 * actual voltag. */
-		uint32_t val_in_100mV = (adc_read_regular(ADC1) * 33 * 2) / 4096;
-		ret[0] = '0' + val_in_100mV / 10;
-		ret[2] = '0' + val_in_100mV % 10;
+			continue;
+		/*
+		 * Reference voltage is 3.3V.
+		 * We expect the measured voltage to be half of the actual voltage.
+		 * The computed value read is expressed in 0.1mV steps
+		 */
+		uint32_t value = (adc_read_regular(ADC1) * 66U) / 4096U;
+		ret[0] = '0' + value / 10;
+		ret[2] = '0' + value % 10;
 		return ret;
 	}
 	return NULL;
@@ -175,7 +179,7 @@ void set_idle_state(int state)
 		gpio_set_val(GPIOA, GPIO8, state);
 		break;
 	case 1:
-		gpio_set_val(GPIOC, GPIO13, (!state));
+		gpio_set_val(GPIOC, GPIO13, !state);
 		break;
 	}
 }
