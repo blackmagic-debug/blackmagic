@@ -14,6 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 #include "general.h"
 #include "gdb_if.h"
 #include "usb.h"
@@ -31,7 +32,6 @@
 extern void trace_tick(void);
 
 char serial_no[DFU_SERIAL_LENGTH];
-volatile platform_timeout *volatile head_timeout;
 uint8_t running_status;
 static volatile uint32_t time_ms;
 
@@ -50,12 +50,12 @@ uint32_t platform_time_ms(void)
 
 void platform_init(void)
 {
-	for (int i = 0; i < 1000000; ++i)
+	for (volatile size_t i = 0; i < 1000000; ++i)
 		continue;
 
 	rcc_sysclk_config(OSCSRC_MOSC, XTAL_16M, PLL_DIV_80MHZ);
 
-	// Enable all JTAG ports and set pins to output
+	/* Enable all JTAG ports and set pins to output */
 	periph_clock_enable(RCC_GPIOA);
 	periph_clock_enable(RCC_GPIOB);
 
@@ -91,14 +91,12 @@ void platform_init(void)
 
 void platform_nrst_set_val(bool assert)
 {
-	volatile int i;
 	if (assert) {
 		gpio_clear(NRST_PORT, NRST_PIN);
-		for (i = 0; i < 10000; i++)
-			__asm__("nop");
-	} else {
+		for (volatile size_t i = 0; i < 10000; ++i)
+			continue;
+	} else
 		gpio_set(NRST_PORT, NRST_PIN);
-	}
 }
 
 bool platform_nrst_get_val(void)
@@ -111,7 +109,7 @@ void platform_delay(uint32_t ms)
 	platform_timeout timeout;
 	platform_timeout_set(&timeout, ms);
 	while (!platform_timeout_is_expired(&timeout))
-		;
+		continue;
 }
 
 const char *platform_target_voltage(void)
@@ -125,7 +123,7 @@ void read_serial_number(void)
 	uint32_t unique_id = SERIAL_NO;
 
 	/* Fetch serial number from chip's unique ID */
-	for (size_t i = 0; i < DFU_SERIAL_LENGTH - 1; i++) {
+	for (size_t i = 0; i < DFU_SERIAL_LENGTH - 1; ++i) {
 		serial_no[7U - i] = ((unique_id >> (4 * i)) & 0x0FU) + '0';
 		if (serial_no[7U - i] > '9')
 			serial_no[7U - i] += 7; /* 'A' - '9' = 8, less 1 gives 7. */

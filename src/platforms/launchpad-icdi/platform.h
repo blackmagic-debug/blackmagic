@@ -14,6 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 #ifndef PLATFORMS_LAUNCHPAD_ICDI_PLATFORM_H
 #define PLATFORMS_LAUNCHPAD_ICDI_PLATFORM_H
 
@@ -96,12 +97,6 @@ extern const usbd_driver lm4f_usb_driver;
 #define TRACEUART_IRQ NVIC_UART2_IRQ
 #define TRACEUART_ISR uart2_isr
 
-/* Use newlib provided integer only stdio functions */
-#define sscanf    siscanf
-#define sprintf   siprintf
-#define vasprintf vasiprintf
-#define snprintf  sniprintf
-
 #define SET_RUN_STATE(state)      \
 	{                             \
 		running_status = (state); \
@@ -133,5 +128,27 @@ static inline int platform_hwversion(void)
 {
 	return 0;
 }
+
+/* Use newlib provided integer-only stdio functions */
+
+#ifdef sscanf
+#undef sscanf
+#endif
+#define sscanf siscanf
+
+#ifdef sprintf
+#undef sprintf
+#endif
+#define sprintf siprintf
+
+#ifdef vasprintf
+#undef vasprintf
+#endif
+#define vasprintf vasiprintf
+
+#ifdef snprintf
+#undef snprintf
+#endif
+#define snprintf sniprintf
 
 #endif /* PLATFORMS_LAUNCHPAD_ICDI_PLATFORM_H */
