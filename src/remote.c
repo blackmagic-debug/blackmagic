@@ -258,7 +258,7 @@ static void remote_packet_process_jtag(unsigned i, char *packet)
 	}
 }
 
-static void remotePacketProcessGEN(unsigned i, char *packet)
+static void remote_packet_process_general(unsigned i, char *packet)
 {
 	(void)i;
 	uint32_t freq;
@@ -327,7 +327,7 @@ static void remotePacketProcessGEN(unsigned i, char *packet)
 	}
 }
 
-static void remotePacketProcessHL(unsigned i, char *packet)
+static void remote_packet_process_high_level(unsigned i, char *packet)
 
 {
 	(void)i;
@@ -442,11 +442,11 @@ void remote_packet_process(unsigned i, char *packet)
 		break;
 
 	case REMOTE_GEN_PACKET:
-		remotePacketProcessGEN(i, packet);
+		remote_packet_process_general(i, packet);
 		break;
 
 	case REMOTE_HL_PACKET:
-		remotePacketProcessHL(i, packet);
+		remote_packet_process_high_level(i, packet);
 		break;
 
 	default: /* Oh dear, unrecognised, return an error */
