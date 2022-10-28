@@ -19,9 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file implements the platform specific functions for the STM32
- * implementation.
- */
+/* This file provides the platform specific declarations for the "swlink" (ST-Link clones) implementation. */
+
 #ifndef PLATFORMS_SWLINK_PLATFORM_H
 #define PLATFORMS_SWLINK_PLATFORM_H
 
@@ -54,7 +53,7 @@ extern bool debug_bmp;
 #define SWDIO_PIN  TMS_PIN
 #define SWCLK_PIN  TCK_PIN
 
-/* Use PC14 for a "dummy" uart led. So we can observere at least with scope*/
+/* Use PC14 for a "dummy" UART LED so we can observere at least with scope */
 #define LED_PORT_UART GPIOC
 #define LED_UART      GPIO14
 
@@ -93,7 +92,8 @@ extern bool debug_bmp;
 #define USB_DRIVER st_usbfs_v1_usb_driver
 #define USB_IRQ    NVIC_USB_LP_CAN_RX0_IRQ
 #define USB_ISR(x) usb_lp_can_rx0_isr(x)
-/* Interrupt priorities.  Low numbers are high priority.
+/*
+ * Interrupt priorities. Low numbers are high priority.
  * TIM2 is used for traceswo capture and must be highest priority.
  */
 #define IRQ_PRI_USB          (1 << 4)
@@ -129,8 +129,11 @@ extern bool debug_bmp;
 #define TRACE_IC_IN        TIM_IC_IN_TI2
 #define TRACE_TRIG_IN      TIM_SMCR_TS_IT1FP2
 
-/* On F103, only USART1 is on AHB2 and can reach 4.5 MBaud at 72 MHz.
- * USART1 is already used. sp maximum speed is 2.25 MBaud. */
+/*
+ * On F103, only USART1 is on AHB2 and can reach 4.5MBaud at 72 MHz.
+ * Unfortunately, USART1 is already used, so the maximum speed
+ * we can hit is 2.25 MBaud.
+ */
 #define SWO_UART        USART2
 #define SWO_UART_DR     USART2_DR
 #define SWO_UART_CLK    RCC_USART2
@@ -153,37 +156,26 @@ extern void set_idle_state(int state);
 
 extern uint8_t detect_rev(void);
 
-/*
- * Use newlib provided integer only stdio functions
- */
+/* Use newlib provided integer-only stdio functions */
 
-/* sscanf */
 #ifdef sscanf
 #undef sscanf
-#define sscanf siscanf
-#else
-#define sscanf siscanf
 #endif
-/* sprintf */
+#define sscanf siscanf
+
 #ifdef sprintf
 #undef sprintf
-#define sprintf siprintf
-#else
-#define sprintf siprintf
 #endif
-/* vasprintf */
+#define sprintf siprintf
+
 #ifdef vasprintf
 #undef vasprintf
-#define vasprintf vasiprintf
-#else
-#define vasprintf vasiprintf
 #endif
-/* snprintf */
+#define vasprintf vasiprintf
+
 #ifdef snprintf
 #undef snprintf
-#define snprintf sniprintf
-#else
-#define snprintf sniprintf
 #endif
+#define snprintf sniprintf
 
 #endif /* PLATFORMS_SWLINK_PLATFORM_H */
