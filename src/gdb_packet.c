@@ -65,7 +65,7 @@ size_t gdb_getpacket(char *const packet, const size_t size)
 
 					case REMOTE_EOM: /* Complete packet for processing */
 						packet[offset] = 0;
-						remotePacketProcess(offset, packet);
+						remote_packet_process(offset, packet);
 						getting_remote_packet = false;
 						break;
 
@@ -85,7 +85,7 @@ size_t gdb_getpacket(char *const packet, const size_t size)
 				}
 				/*
 				 * Reset the packet buffer start character to zero, because function
-				 * 'remotePacketProcess()' above overwrites this buffer, and
+				 * 'remote_packet_process()' above overwrites this buffer, and
 				 * an arbitrary character may have been placed there. If this is a '$'
 				 * character, this will cause this loop to be terminated, which is wrong.
 				 */
