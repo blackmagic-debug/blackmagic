@@ -72,9 +72,8 @@ void gdb_usb_out_cb(usbd_device *dev, uint8_t ep)
 {
 	(void)ep;
 	usbd_ep_nak_set(dev, CDCACM_GDB_ENDPOINT, 1);
-	count_new = usbd_ep_read_packet(dev, CDCACM_GDB_ENDPOINT,
-	                                double_buffer_out, CDCACM_PACKET_SIZE);
-	if(!count_new) {
+	count_new = usbd_ep_read_packet(dev, CDCACM_GDB_ENDPOINT, double_buffer_out, CDCACM_PACKET_SIZE);
+	if (!count_new) {
 		usbd_ep_nak_set(dev, CDCACM_GDB_ENDPOINT, 0);
 	}
 }
@@ -82,7 +81,8 @@ void gdb_usb_out_cb(usbd_device *dev, uint8_t ep)
 
 static void gdb_if_update_buf(void)
 {
-	while (usb_get_config() != 1);
+	while (usb_get_config() != 1)
+		;
 #ifdef STM32F4
 	__asm__ volatile("cpsid i; isb");
 	if (count_new) {
@@ -94,8 +94,7 @@ static void gdb_if_update_buf(void)
 	}
 	__asm__ volatile("cpsie i; isb");
 #else
-	count_out = usbd_ep_read_packet(usbdev, CDCACM_GDB_ENDPOINT,
-	                                buffer_out, CDCACM_PACKET_SIZE);
+	count_out = usbd_ep_read_packet(usbdev, CDCACM_GDB_ENDPOINT, buffer_out, CDCACM_PACKET_SIZE);
 	out_ptr = 0;
 #endif
 	if (!count_out)
@@ -104,7 +103,6 @@ static void gdb_if_update_buf(void)
 
 unsigned char gdb_if_getchar(void)
 {
-
 	while (!(out_ptr < count_out)) {
 		/* Detach if port closed */
 		if (!gdb_serial_get_dtr()) {
@@ -123,17 +121,18 @@ unsigned char gdb_if_getchar_to(int timeout)
 	platform_timeout t;
 	platform_timeout_set(&t, timeout);
 
-	if (!(out_ptr < count_out)) do {
-		/* Detach if port closed */
+	if (!(out_ptr < count_out))
+		do {
+			/* Detach if port closed */
 			if (!gdb_serial_get_dtr()) {
 				__WFI(); /* systick will wake up too!*/
 				return 0x04;
 			}
 
-		gdb_if_update_buf();
-	} while (!platform_timeout_is_expired(&t) && !(out_ptr < count_out));
+			gdb_if_update_buf();
+		} while (!platform_timeout_is_expired(&t) && !(out_ptr < count_out));
 
-	if(out_ptr < count_out)
+	if (out_ptr < count_out)
 		return gdb_if_getchar();
 
 	return -1;

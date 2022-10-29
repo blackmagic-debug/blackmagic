@@ -22,15 +22,15 @@
 #include <libopencm3/stm32/flash.h>
 #include <libopencm3/cm3/scb.h>
 
-#define FLASH_OBP_RDP 0x1FFFF800
+#define FLASH_OBP_RDP   0x1FFFF800
 #define FLASH_OBP_WRP10 0x1FFFF808
 
 #define FLASH_OBP_RDP_KEY 0x5aa5
 
-#if defined (STM32_CAN)
-#	define FLASHBLOCKSIZE 2048
+#if defined(STM32_CAN)
+#define FLASHBLOCKSIZE 2048
 #else
-#	define FLASHBLOCKSIZE 1024
+#define FLASHBLOCKSIZE 1024
 #endif
 
 static uint32_t last_erased_page = 0xffffffff;
@@ -46,9 +46,8 @@ void dfu_check_and_do_sector_erase(uint32_t sector)
 
 void dfu_flash_program_buffer(uint32_t baseaddr, void *buf, int len)
 {
-	for(int i = 0; i < len; i += 2)
-		flash_program_half_word(baseaddr + i,
-				*(uint16_t*)(buf+i));
+	for (int i = 0; i < len; i += 2)
+		flash_program_half_word(baseaddr + i, *(uint16_t *)(buf + i));
 
 	/* Call the platform specific dfu event callback. */
 	dfu_event();
@@ -64,20 +63,20 @@ uint32_t dfu_poll_timeout(uint8_t cmd, uint32_t addr, uint16_t blocknum)
 
 void dfu_protect(bool enable)
 {
-    if (enable) {
+	if (enable) {
 #ifdef DFU_SELF_PROTECT
-	if ((FLASH_WRPR & 0x03) != 0x00) {
-		flash_unlock();
-		FLASH_CR = 0;
-		flash_erase_option_bytes();
-		flash_program_option_bytes(FLASH_OBP_RDP, FLASH_OBP_RDP_KEY);
-		/* CL Device: Protect 2 bits with (2 * 2k pages each)*/
-		/* MD Device: Protect 2 bits with (4 * 1k pages each)*/
-		flash_program_option_bytes(FLASH_OBP_WRP10, 0x03FC);
-	}
+		if ((FLASH_WRPR & 0x03) != 0x00) {
+			flash_unlock();
+			FLASH_CR = 0;
+			flash_erase_option_bytes();
+			flash_program_option_bytes(FLASH_OBP_RDP, FLASH_OBP_RDP_KEY);
+			/* CL Device: Protect 2 bits with (2 * 2k pages each)*/
+			/* MD Device: Protect 2 bits with (4 * 1k pages each)*/
+			flash_program_option_bytes(FLASH_OBP_WRP10, 0x03FC);
+		}
 #endif
-    }
-    /* There is no way we can update the bootloader with a programm running
+	}
+	/* There is no way we can update the bootloader with a programm running
 	 * on the same device when the bootloader pages are write
 	 * protected or the device is read protected!
 	 *
@@ -101,13 +100,12 @@ void dfu_protect(bool enable)
 void dfu_jump_app_if_valid(void)
 {
 	/* Boot the application if it's valid */
-	if((*(volatile uint32_t*)app_address & 0x2FFE0000) == 0x20000000) {
+	if ((*(volatile uint32_t *)app_address & 0x2FFE0000) == 0x20000000) {
 		/* Set vector table base address */
 		SCB_VTOR = app_address & 0x1FFFFF; /* Max 2 MByte Flash*/
 		/* Initialise master stack pointer */
-		__asm__ volatile("msr msp, %0"::"g"
-				(*(volatile uint32_t*)app_address));
+		__asm__ volatile("msr msp, %0" ::"g"(*(volatile uint32_t *)app_address));
 		/* Jump to application */
-		(*(void(**)())(app_address + 4))();
+		(*(void (**)())(app_address + 4))();
 	}
 }
