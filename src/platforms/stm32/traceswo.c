@@ -139,7 +139,8 @@ void TRACE_ISR(void)
 	if ((bt && (((duty / bt) > 2) || ((duty / bt) == 0))) || (duty == 0))
 		goto flush_and_reset;
 
-	if(!(sr & TIM_SR_CC1IF)) notstart = 1;
+	if (!(sr & TIM_SR_CC1IF))
+		notstart = 1;
 
 	if (!bt) {
 		if (notstart) {
@@ -148,8 +149,7 @@ void TRACE_ISR(void)
 		}
 		/* First bit, sync decoder */
 		duty -= ALLOWED_DUTY_ERROR;
-		if (((cycle / duty) != 2) &&
-		    ((cycle / duty) != 3))
+		if (((cycle / duty) != 2) && ((cycle / duty) != 3))
 			return;
 		bt = duty;
 		lastbit = 1;
