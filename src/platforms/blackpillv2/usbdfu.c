@@ -27,7 +27,7 @@
 #include "general.h"
 #include "platform.h"
 
-uint32_t app_address = 0x08004000;
+uintptr_t app_address = 0x08004000;
 extern char _ebss[];
 
 void dfu_detach(void)

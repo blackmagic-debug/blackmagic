@@ -26,7 +26,7 @@
 #include "usbdfu.h"
 #include "platform.h"
 
-uint32_t app_address = 0x08002000;
+uintptr_t app_address = 0x08002000;
 int dfu_activity_counter = 0;
 
 void dfu_detach(void)
