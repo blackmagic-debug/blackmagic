@@ -355,7 +355,7 @@ void poll_rtt(target *const cur_target)
 
 	if (last_poll_ms + poll_ms <= now || now < last_poll_ms) {
 		target_addr_t watch;
-		enum target_halt_reason reason;
+		target_halt_reason_e reason;
 		bool resume_target = false;
 		if (!rtt_found)
 			/* check if target needs to be halted during memory access */
