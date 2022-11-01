@@ -208,7 +208,7 @@ int gdb_main_loop(struct target_controller *tc, bool in_syscall)
 			/* This packet isn't documented as being mandatory,
 			 * but GDB doesn't work without it. */
 			target_addr_t watch;
-			enum target_halt_reason reason;
+			target_halt_reason_e reason;
 
 			if (!cur_target) {
 				/* Report "target exited" if no target */

@@ -50,7 +50,7 @@ static ssize_t cortexa_reg_read(target *t, int reg, void *data, size_t max);
 static ssize_t cortexa_reg_write(target *t, int reg, const void *data, size_t max);
 
 static void cortexa_reset(target *t);
-static enum target_halt_reason cortexa_halt_poll(target *t, target_addr_t *watch);
+static target_halt_reason_e cortexa_halt_poll(target *t, target_addr_t *watch);
 static void cortexa_halt_request(target *t);
 
 static int cortexa_breakwatch_set(target *t, struct breakwatch *);
@@ -750,7 +750,7 @@ static void cortexa_halt_request(target *t)
 	}
 }
 
-static enum target_halt_reason cortexa_halt_poll(target *t, target_addr_t *watch)
+static target_halt_reason_e cortexa_halt_poll(target *t, target_addr_t *watch)
 {
 	volatile uint32_t dbgdscr = 0;
 	volatile struct exception e;
@@ -778,7 +778,7 @@ static enum target_halt_reason cortexa_halt_poll(target *t, target_addr_t *watch
 	apb_write(t, DBGDSCR, dbgdscr);
 
 	/* Find out why we halted */
-	enum target_halt_reason reason = TARGET_HALT_BREAKPOINT;
+	target_halt_reason_e reason = TARGET_HALT_BREAKPOINT;
 	switch (dbgdscr & DBGDSCR_MOE_MASK) {
 	case DBGDSCR_MOE_HALT_REQ:
 		reason = TARGET_HALT_REQUEST;

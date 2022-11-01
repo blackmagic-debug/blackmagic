@@ -73,7 +73,7 @@ ssize_t target_reg_read(target *t, int reg, void *data, size_t max);
 ssize_t target_reg_write(target *t, int reg, const void *data, size_t size);
 
 /* Halt/resume functions */
-enum target_halt_reason {
+typedef enum target_halt_reason {
 	TARGET_HALT_RUNNING = 0, /* Target not halted */
 	TARGET_HALT_ERROR,       /* Failed to read target status */
 	TARGET_HALT_REQUEST,
@@ -81,11 +81,11 @@ enum target_halt_reason {
 	TARGET_HALT_BREAKPOINT,
 	TARGET_HALT_WATCHPOINT,
 	TARGET_HALT_FAULT,
-};
+} target_halt_reason_e;
 
 void target_reset(target *t);
 void target_halt_request(target *t);
-enum target_halt_reason target_halt_poll(target *t, target_addr_t *watch);
+target_halt_reason_e target_halt_poll(target *t, target_addr_t *watch);
 void target_halt_resume(target *t, bool step);
 void target_set_cmdline(target *t, char *cmdline);
 void target_set_heapinfo(

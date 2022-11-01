@@ -343,7 +343,7 @@ void target_halt_request(target *t)
 	t->halt_request(t);
 }
 
-enum target_halt_reason target_halt_poll(target *t, target_addr_t *watch)
+target_halt_reason_e target_halt_poll(target *t, target_addr_t *watch)
 {
 	return t->halt_poll(t, watch);
 }

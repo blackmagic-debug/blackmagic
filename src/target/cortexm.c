@@ -93,7 +93,7 @@ static ssize_t cortexm_reg_read(target *t, int reg, void *data, size_t max);
 static ssize_t cortexm_reg_write(target *t, int reg, const void *data, size_t max);
 
 static void cortexm_reset(target *t);
-static enum target_halt_reason cortexm_halt_poll(target *t, target_addr_t *watch);
+static target_halt_reason_e cortexm_halt_poll(target *t, target_addr_t *watch);
 static void cortexm_halt_request(target *t);
 static int cortexm_fault_unwind(target *t);
 
@@ -1039,7 +1039,7 @@ static void cortexm_halt_request(target *t)
 		tc_printf(t, "Timeout sending interrupt, is target in WFI?\n");
 }
 
-static enum target_halt_reason cortexm_halt_poll(target *t, target_addr_t *watch)
+static target_halt_reason_e cortexm_halt_poll(target *t, target_addr_t *watch)
 {
 	struct cortexm_priv *priv = t->priv;
 
@@ -1202,7 +1202,7 @@ bool cortexm_run_stub(target *t, uint32_t loadaddr, uint32_t r0, uint32_t r1, ui
 		return false;
 
 	/* Execute the stub */
-	enum target_halt_reason reason = TARGET_HALT_RUNNING;
+	target_halt_reason_e reason = TARGET_HALT_RUNNING;
 #if defined(PLATFORM_HAS_DEBUG)
 	uint32_t arm_regs_start[t->regs_size];
 	target_regs_read(t, arm_regs_start);

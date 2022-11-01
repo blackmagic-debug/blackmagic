@@ -524,7 +524,7 @@ const struct command_s kinetis_mdm_cmd_list[] = {
 	{NULL, NULL, NULL},
 };
 
-enum target_halt_reason mdm_halt_poll(target *t, const target_addr_t *const watch)
+target_halt_reason_e mdm_halt_poll(target *t, const target_addr_t *const watch)
 {
 	(void)t;
 	(void)watch;
