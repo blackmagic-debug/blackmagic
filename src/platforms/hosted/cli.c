@@ -456,11 +456,11 @@ found_targets:
 
 	/* List each defined RAM region */
 	size_t ram_regions = 0;
-	for (struct target_ram *r = t->ram; r; r = r->next)
+	for (target_ram_s *r = t->ram; r; r = r->next)
 		++ram_regions;
 
 	for (size_t region = 0; region < ram_regions; ++region) {
-		struct target_ram *r = t->ram;
+		target_ram_s *r = t->ram;
 		for (size_t i = ram_regions - 1U; r; r = r->next, --i) {
 			if (region == i) {
 				DEBUG_INFO("RAM   Start: 0x%08" PRIx32 " length = 0x%zx\n", r->start, r->length);
