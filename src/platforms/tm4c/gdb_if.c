@@ -31,7 +31,7 @@
 
 static volatile uint32_t head_out, tail_out;
 static volatile uint32_t count_in;
-static volatile uint8_t buffer_out[16*CDCACM_PACKET_SIZE];
+static volatile uint8_t buffer_out[16 * CDCACM_PACKET_SIZE];
 static volatile uint8_t buffer_in[CDCACM_PACKET_SIZE];
 
 void gdb_if_putchar(unsigned char c, int flush)
