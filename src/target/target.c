@@ -195,7 +195,7 @@ target *target_attach(target *t, struct target_controller *tc)
 
 void target_add_ram(target *t, target_addr_t start, uint32_t len)
 {
-	struct target_ram *ram = malloc(sizeof(*ram));
+	target_ram_s *ram = malloc(sizeof(*ram));
 	if (!ram) { /* malloc failed: heap exhaustion */
 		DEBUG_WARN("malloc: failed in %s\n", __func__);
 		return;
@@ -218,7 +218,7 @@ void target_add_flash(target *t, target_flash_s *f)
 	t->flash = f;
 }
 
-static ssize_t map_ram(char *buf, size_t len, struct target_ram *ram)
+static ssize_t map_ram(char *buf, size_t len, target_ram_s *ram)
 {
 	return snprintf(buf, len, "<memory type=\"ram\" start=\"0x%08" PRIx32 "\" length=\"0x%" PRIx32 "\"/>", ram->start,
 		(uint32_t)ram->length);
@@ -239,7 +239,7 @@ bool target_mem_map(target *t, char *tmp, size_t len)
 	size_t i = 0;
 	i = snprintf(&tmp[i], len - i, "<memory-map>");
 	/* Map each defined RAM */
-	for (struct target_ram *r = t->ram; r; r = r->next)
+	for (target_ram_s *r = t->ram; r; r = r->next)
 		i += map_ram(&tmp[i], len - i, r);
 	/* Map each defined Flash */
 	for (target_flash_s *f = t->flash; f; f = f->next)

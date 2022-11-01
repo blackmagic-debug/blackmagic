@@ -455,7 +455,7 @@ static void cortexm_cache_clean(target *t, target_addr_t addr, size_t len, bool 
 	/* flush data cache for RAM regions that intersect requested region */
 	target_addr_t mem_end = addr + len; /* following code is NOP if wraparound */
 	/* requested region is [src, src_end) */
-	for (struct target_ram *r = t->ram; r; r = r->next) {
+	for (target_ram_s *r = t->ram; r; r = r->next) {
 		target_addr_t ram = r->start;
 		target_addr_t ram_end = r->start + r->length;
 		/* RAM region is [ram, ram_end) */
