@@ -40,7 +40,9 @@ void traceswo_init(void)
 {
 	periph_clock_enable(RCC_GPIOD);
 	periph_clock_enable(TRACEUART_CLK);
-	__asm__("nop"); __asm__("nop"); __asm__("nop");
+	__asm__("nop");
+	__asm__("nop");
+	__asm__("nop");
 
 	gpio_mode_setup(SWO_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, SWO_PIN);
 	gpio_set_af(SWO_PORT, 1, SWO_PIN); /* U2RX */
@@ -117,8 +119,8 @@ void trace_buf_push(void)
 
 void trace_buf_drain(usbd_device *dev, uint8_t ep)
 {
-	(void) dev;
-	(void) ep;
+	(void)dev;
+	(void)ep;
 	trace_buf_push();
 }
 
@@ -137,14 +139,12 @@ void TRACEUART_ISR(void)
 		/* If the next increment of rx_in would put it at the same point
 		* as rx_out, the FIFO is considered full.
 		*/
-		if (((buf_rx_in + 1) % FIFO_SIZE) != buf_rx_out)
-		{
+		if (((buf_rx_in + 1) % FIFO_SIZE) != buf_rx_out) {
 			/* insert into FIFO */
 			buf_rx[buf_rx_in++] = c;
 
 			/* wrap out pointer */
-			if (buf_rx_in >= FIFO_SIZE)
-			{
+			if (buf_rx_in >= FIFO_SIZE) {
 				buf_rx_in = 0;
 			}
 		} else {
