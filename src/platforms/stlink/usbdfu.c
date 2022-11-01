@@ -32,7 +32,7 @@ static uint16_t led_bootloader;
 static uint16_t pin_nrst;
 static uint32_t led2_state = 0;
 
-uint32_t app_address = 0x08002000U;
+uintptr_t app_address = 0x08002000U;
 
 static bool stlink_test_nrst(void)
 {

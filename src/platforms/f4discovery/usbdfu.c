@@ -27,7 +27,7 @@
 #include "general.h"
 #include "platform.h"
 
-uint32_t app_address = 0x08004000U;
+uintptr_t app_address = 0x08004000U;
 extern uint32_t _ebss; // NOLINT(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)
 
 void dfu_detach(void)

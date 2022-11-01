@@ -20,12 +20,13 @@
 #ifndef PLATFORMS_STM32_USBDFU_H
 #define PLATFORMS_STM32_USBDFU_H
 
+#include <stddef.h>
 #include <libopencm3/usb/usbd.h>
 
 /* Commands sent with wBlockNum == 0 as per ST implementation. */
 #define CMD_SETADDR 0x21
 #define CMD_ERASE   0x41
-extern uint32_t app_address;
+extern uintptr_t app_address;
 
 /* dfucore.c - DFU core, common to libopencm3 platforms. */
 void dfu_init(const usbd_driver *driver);
