@@ -24,16 +24,16 @@
  */
 
 #if defined(_WIN32) || defined(__CYGWIN__)
-#   define __USE_MINGW_ANSI_STDIO 1
-#   include <winsock2.h>
-#   include <windows.h>
-#   include <ws2tcpip.h>
+#define __USE_MINGW_ANSI_STDIO 1
+#include <winsock2.h>
+#include <windows.h>
+#include <ws2tcpip.h>
 #else
-#   include <sys/socket.h>
-#   include <netinet/in.h>
-#   include <netinet/tcp.h>
-#   include <sys/select.h>
-#   include <fcntl.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <sys/select.h>
+#include <fcntl.h>
 #endif
 
 #include "general.h"
@@ -44,14 +44,15 @@
 #include "gdb_if.h"
 
 static int gdb_if_serv, gdb_if_conn;
-#define DEFAULT_PORT 2000
+#define DEFAULT_PORT   2000
 #define NUM_GDB_SERVER 4
+
 int gdb_if_init(void)
 {
 #if defined(_WIN32) || defined(__CYGWIN__)
 	int iResult;
 	WSADATA wsaData;
-	iResult =  WSAStartup(MAKEWORD(2, 2), &wsaData);
+	iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
 	if (iResult != NO_ERROR) {
 		DEBUG_WARN("WSAStartup failed with error: %ld\n", iResult);
 		exit(1);
@@ -62,65 +63,58 @@ int gdb_if_init(void)
 	int port = DEFAULT_PORT - 1;
 
 	do {
-		port ++;
+		port++;
 		if (port > DEFAULT_PORT + NUM_GDB_SERVER)
-			return - 1;
+			return -1;
 		addr.sin_family = AF_INET;
 		addr.sin_port = htons(port);
 		addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
 		gdb_if_serv = socket(PF_INET, SOCK_STREAM, 0);
 		if (gdb_if_serv == -1) {
-			DEBUG_WARN("PF_INET %d\n",gdb_if_serv);
+			DEBUG_WARN("PF_INET %d\n", gdb_if_serv);
 			continue;
 		}
 
 		opt = 1;
-		if (setsockopt(gdb_if_serv, SOL_SOCKET, SO_REUSEADDR, (void*)&opt, sizeof(opt)) == -1) {
+		if (setsockopt(gdb_if_serv, SOL_SOCKET, SO_REUSEADDR, (void *)&opt, sizeof(opt)) == -1) {
 #if defined(_WIN32) || defined(__CYGWIN__)
-		    DEBUG_WARN("error setsockopt SOL_SOCKET : %d error: %d\n", gdb_if_serv,
-			WSAGetLastError());
+			DEBUG_WARN("error setsockopt SOL_SOCKET : %d error: %d\n", gdb_if_serv, WSAGetLastError());
 #else
-			DEBUG_WARN("error setsockopt SOL_SOCKET : %d error: %d\n", gdb_if_serv,
-			strerror(errno));
+			DEBUG_WARN("error setsockopt SOL_SOCKET : %d error: %d\n", gdb_if_serv, strerror(errno));
 #endif
 			close(gdb_if_serv);
 			continue;
 		}
-		if (setsockopt(gdb_if_serv, IPPROTO_TCP, TCP_NODELAY, (void*)&opt, sizeof(opt)) == -1) {
+		if (setsockopt(gdb_if_serv, IPPROTO_TCP, TCP_NODELAY, (void *)&opt, sizeof(opt)) == -1) {
 #if defined(_WIN32) || defined(__CYGWIN__)
-			DEBUG_WARN("error setsockopt IPPROTO_TCP : %d error: %d\n", gdb_if_serv,
-			WSAGetLastError());
+			DEBUG_WARN("error setsockopt IPPROTO_TCP : %d error: %d\n", gdb_if_serv, WSAGetLastError());
 #else
-			DEBUG_WARN("error setsockopt IPPROTO_TCP : %d error: %d\n", gdb_if_serv,
-			strerror(errno));
+			DEBUG_WARN("error setsockopt IPPROTO_TCP : %d error: %d\n", gdb_if_serv, strerror(errno));
 #endif
 			close(gdb_if_serv);
 			continue;
 		}
-		if (bind(gdb_if_serv, (void*)&addr, sizeof(addr)) == -1) {
+		if (bind(gdb_if_serv, (void *)&addr, sizeof(addr)) == -1) {
 #if defined(_WIN32) || defined(__CYGWIN__)
-			DEBUG_WARN("error when binding socket: %d error: %d\n", gdb_if_serv,
-			WSAGetLastError());
+			DEBUG_WARN("error when binding socket: %d error: %d\n", gdb_if_serv, WSAGetLastError());
 #else
-			DEBUG_WARN("error when binding socket: %d error: %d\n", gdb_if_serv,
-			strerror(errno));
+			DEBUG_WARN("error when binding socket: %d error: %d\n", gdb_if_serv, strerror(errno));
 #endif
 			close(gdb_if_serv);
 			continue;
 		}
 		if (listen(gdb_if_serv, 1) == -1) {
-			DEBUG_WARN("listen closed %d\n",gdb_if_serv);
+			DEBUG_WARN("listen closed %d\n", gdb_if_serv);
 			close(gdb_if_serv);
 			continue;
 		}
 		break;
-	} while(1);
+	} while (1);
 	DEBUG_WARN("Listening on TCP: %4d\n", port);
 
 	return 0;
 }
-
 
 unsigned char gdb_if_getchar(void)
 {
@@ -132,8 +126,8 @@ unsigned char gdb_if_getchar(void)
 #else
 	int flags;
 #endif
-	while(i <= 0) {
-		if(gdb_if_conn <= 0) {
+	while (i <= 0) {
+		if (gdb_if_conn <= 0) {
 #if defined(_WIN32) || defined(__CYGWIN__)
 			opt = 1;
 			iResult = ioctlsocket(gdb_if_serv, FIONBIO, &opt);
@@ -144,7 +138,7 @@ unsigned char gdb_if_getchar(void)
 			flags = fcntl(gdb_if_serv, F_GETFL);
 			fcntl(gdb_if_serv, F_SETFL, flags | O_NONBLOCK);
 #endif
-			while(1) {
+			while (1) {
 				gdb_if_conn = accept(gdb_if_serv, NULL, NULL);
 				if (gdb_if_conn == -1) {
 #if defined(_WIN32) || defined(__CYGWIN__)
@@ -156,11 +150,9 @@ unsigned char gdb_if_getchar(void)
 						platform_delay(100);
 					} else {
 #if defined(_WIN32) || defined(__CYGWIN__)
-						DEBUG_WARN("error when accepting connection: %d",
-								   WSAGetLastError());
+						DEBUG_WARN("error when accepting connection: %d", WSAGetLastError());
 #else
-						DEBUG_WARN("error when accepting connection: %s",
-								   strerror(errno));
+						DEBUG_WARN("error when accepting connection: %s", strerror(errno));
 #endif
 						exit(1);
 					}
@@ -183,8 +175,8 @@ unsigned char gdb_if_getchar(void)
 			fcntl(gdb_if_conn, F_SETFL, flags & ~O_NONBLOCK);
 #endif
 		}
-		i = recv(gdb_if_conn, (void*)&ret, 1, 0);
-		if(i <= 0) {
+		i = recv(gdb_if_conn, (void *)&ret, 1, 0);
+		if (i <= 0) {
 			gdb_if_conn = -1;
 #if defined(_WIN32) || defined(__CYGWIN__)
 			DEBUG_INFO("Dropped broken connection: %d\n", WSAGetLastError());
@@ -201,13 +193,14 @@ unsigned char gdb_if_getchar(void)
 unsigned char gdb_if_getchar_to(int timeout)
 {
 	fd_set fds;
-# if defined(__CYGWIN__)
-        TIMEVAL tv;
+#if defined(__CYGWIN__)
+	TIMEVAL tv;
 #else
 	struct timeval tv;
 #endif
 
-	if(gdb_if_conn == -1) return -1;
+	if (gdb_if_conn == -1)
+		return -1;
 
 	tv.tv_sec = timeout / 1000;
 	tv.tv_usec = (timeout % 1000) * 1000;
@@ -215,7 +208,7 @@ unsigned char gdb_if_getchar_to(int timeout)
 	FD_ZERO(&fds);
 	FD_SET(gdb_if_conn, &fds);
 
-	if(select(gdb_if_conn+1, &fds, NULL, NULL, &tv) > 0)
+	if (select(gdb_if_conn + 1, &fds, NULL, NULL, &tv) > 0)
 		return gdb_if_getchar();
 
 	return -1;

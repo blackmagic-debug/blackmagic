@@ -38,25 +38,25 @@
 #include "cli.h"
 
 #if HOSTED_BMP_ONLY != 1
-# include <libusb-1.0/libusb.h>
+#include <libusb-1.0/libusb.h>
+
 struct trans_ctx {
-#define TRANS_FLAGS_IS_DONE (1 << 0)
+#define TRANS_FLAGS_IS_DONE   (1 << 0)
 #define TRANS_FLAGS_HAS_ERROR (1 << 1)
-    volatile unsigned long flags;
+	volatile unsigned long flags;
 };
 
 typedef struct usb_link_s {
-	libusb_context        *ul_libusb_ctx;
-	libusb_device_handle  *ul_libusb_device_handle;
-	unsigned char         ep_tx;
-	unsigned char         ep_rx;
-	struct libusb_transfer* req_trans;
-	struct libusb_transfer* rep_trans;
-	void                  *priv;
+	libusb_context *ul_libusb_ctx;
+	libusb_device_handle *ul_libusb_device_handle;
+	unsigned char ep_tx;
+	unsigned char ep_rx;
+	struct libusb_transfer *req_trans;
+	struct libusb_transfer *rep_trans;
+	void *priv;
 } usb_link_t;
 
-int send_recv(usb_link_t *link, uint8_t *txbuf, size_t txsize,
-			  uint8_t *rxbuf, size_t rxsize);
+int send_recv(usb_link_t *link, uint8_t *txbuf, size_t txsize, uint8_t *rxbuf, size_t rxsize);
 #endif
 typedef struct bmp_info_s {
 	bmp_type_t bmp_type;
@@ -80,12 +80,12 @@ typedef struct bmp_info_s {
 
 extern bmp_info_t info;
 void bmp_ident(bmp_info_t *info);
-int find_debuggers(BMP_CL_OPTIONS_t *cl_opts,bmp_info_t *info);
+int find_debuggers(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info);
 void libusb_exit_function(bmp_info_t *info);
 
 #if defined(_WIN32) || defined(__CYGWIN__)
 #include <wchar.h>
-#define PRINT_INFO(fmt, ...) wprintf(L ## fmt, ##__VA_ARGS__)
+#define PRINT_INFO(fmt, ...) wprintf(L##fmt, ##__VA_ARGS__)
 #else
 #include <stdio.h>
 #define PRINT_INFO(fmt, ...) printf((fmt), ##__VA_ARGS__)
