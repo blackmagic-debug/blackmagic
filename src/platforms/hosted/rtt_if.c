@@ -67,7 +67,7 @@ int rtt_if_exit()
 uint32_t rtt_write(const char *buf, uint32_t len)
 {
 	int unused = write(1, buf, len);
-	(void) unused;
+	(void)unused;
 	return len;
 }
 
@@ -78,7 +78,8 @@ int32_t rtt_getchar()
 	char ch;
 	int len;
 	len = read(0, &ch, 1);
-	if (len == 1) return ch;
+	if (len == 1)
+		return ch;
 	return -1;
 }
 
