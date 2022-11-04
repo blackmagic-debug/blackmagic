@@ -82,8 +82,8 @@ typedef struct bmp_info {
 	libusb_context *libusb_ctx;
 	ftdi_context_s *ftdic;
 	usb_link_s *usb_link;
-	unsigned int vid;
-	unsigned int pid;
+	uint16_t vid;
+	uint16_t pid;
 	uint8_t interface_num;
 	uint8_t in_ep;
 	uint8_t out_ep;
