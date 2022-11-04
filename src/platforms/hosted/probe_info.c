@@ -131,7 +131,8 @@ const probe_info_s *probe_info_filter(const probe_info_s *const list, const char
 void probe_info_to_bmp_info(const probe_info_s *const probe, bmp_info_s *info)
 {
 	info->bmp_type = probe->type;
-
+	info->pid = probe->pid;
+	info->vid = probe->vid;
 	const size_t serial_len = MIN(strlen(probe->serial), sizeof(info->serial) - 1U);
 	memcpy(info->serial, probe->serial, serial_len);
 	info->serial[serial_len] = '\0';
