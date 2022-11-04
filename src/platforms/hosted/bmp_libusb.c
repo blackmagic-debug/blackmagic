@@ -34,6 +34,7 @@
 #include "ftdi_bmp.h"
 #include "version.h"
 #include "probe_info.h"
+#include "utils.h"
 
 #define NO_SERIAL_NUMBER "<no serial number>"
 
@@ -179,9 +180,36 @@ static probe_info_s *process_ftdi_probe(void)
 }
 #endif
 
-static bool process_cmsis_interface_probe(
-	libusb_device_descriptor_s *device_descriptor, libusb_device *device, probe_info_s **probe_list)
+void orbtrace_read_version(libusb_device *device, libusb_device_handle *handle, char *version, size_t buffer_size)
 {
+	libusb_config_descriptor_s *config;
+	if (libusb_get_active_config_descriptor(device, &config) != 0)
+		return;
+	for (size_t iface = 0; iface < config->bNumInterfaces; ++iface) {
+		const libusb_interface_s *interface = &config->interface[iface];
+		for (int altmode = 0; altmode < interface->num_altsetting; ++altmode) {
+			const libusb_interface_descriptor_s *descriptor = &interface->altsetting[altmode];
+			uint8_t string_index = descriptor->iInterface;
+			if (string_index == 0)
+				continue;
+			if (libusb_get_string_descriptor_ascii(handle, string_index, (uint8_t *)version, (int)buffer_size) < 0)
+				continue; /* We failed but that's a soft error at this point. */
+
+			const size_t version_len = strlen(version);
+			if (begins_with(version, version_len, "Version")) {
+				/* Chop off the "Version: " prefix */
+				memmove(version, version + 9, version_len - 8);
+				break;
+			}
+		}
+	}
+	libusb_free_config_descriptor(config);
+}
+
+static bool process_cmsis_interface_probe(
+	libusb_device_descriptor_s *device_descriptor, libusb_device *device, probe_info_s **probe_list, bmp_info_s *info)
+{
+	(void)info;
 	/* Try to get the active configuration descriptor for the device */
 	libusb_config_descriptor_s *config;
 	if (libusb_get_active_config_descriptor(device, &config) != 0)
@@ -199,7 +227,7 @@ static bool process_cmsis_interface_probe(
 	for (size_t iface = 0; iface < config->bNumInterfaces && !cmsis_dap; ++iface) {
 		const libusb_interface_s *interface = &config->interface[iface];
 		for (int descriptorIndex = 0; descriptorIndex < interface->num_altsetting; ++descriptorIndex) {
-			const libusb_interface_descriptor_s *descriptor = &interface->altsetting[descriptorIndex];
+			const libusb_interface_descriptor_s *descriptor = &interface->altsetting[0];
 			uint8_t string_index = descriptor->iInterface;
 			if (string_index == 0)
 				continue;
@@ -208,6 +236,13 @@ static bool process_cmsis_interface_probe(
 				continue; /* We failed but that's a soft error at this point. */
 
 			if (strstr(read_string, "CMSIS") != NULL) {
+				char *version;
+				if (device_descriptor->idVendor == VENDOR_ID_ORBCODE &&
+					device_descriptor->idProduct == PRODUCT_ID_ORBTRACE) {
+					orbtrace_read_version(device, handle, read_string, sizeof(read_string));
+					version = strdup(read_string);
+				} else
+					version = strdup("---");
 				char *serial;
 				if (device_descriptor->iSerialNumber == 0)
 					serial = strdup("Unknown serial number");
@@ -225,7 +260,7 @@ static bool process_cmsis_interface_probe(
 					product = get_device_descriptor_string(handle, device_descriptor->iProduct);
 
 				*probe_list = probe_info_add_by_id(*probe_list, BMP_TYPE_CMSIS_DAP, device_descriptor->idVendor,
-					device_descriptor->idProduct, manufacturer, product, serial, strdup("---"));
+					device_descriptor->idProduct, manufacturer, product, serial, version);
 				cmsis_dap = true;
 			}
 		}
@@ -285,7 +320,7 @@ static bool process_vid_pid_table_probe(
 	return probe_added;
 }
 
-static const probe_info_s *scan_for_devices(void)
+static const probe_info_s *scan_for_devices(bmp_info_s *info)
 {
 	/*
 	 * If we are running on Windows the proprietary FTD2XX library is used
@@ -300,7 +335,7 @@ static const probe_info_s *scan_for_devices(void)
 #endif
 
 	libusb_device **device_list;
-	const ssize_t cnt = libusb_get_device_list(info.libusb_ctx, &device_list);
+	const ssize_t cnt = libusb_get_device_list(info->libusb_ctx, &device_list);
 	if (cnt <= 0)
 		return probe_info_correct_order(probe_list);
 	/* Parse the list of USB devices found */
@@ -314,7 +349,7 @@ static const probe_info_s *scan_for_devices(void)
 		}
 		if (device_descriptor.idVendor != VENDOR_ID_FTDI || !skip_ftdi) {
 			if (!process_vid_pid_table_probe(&device_descriptor, device, &probe_list))
-				process_cmsis_interface_probe(&device_descriptor, device, &probe_list);
+				process_cmsis_interface_probe(&device_descriptor, device, &probe_list, info);
 		}
 	}
 	libusb_free_device_list(device_list, (int)cnt);
@@ -333,7 +368,7 @@ int find_debuggers(bmda_cli_options_s *cl_opts, bmp_info_s *info)
 	}
 
 	/* Scan for all possible probes on the system */
-	const probe_info_s *probe_list = scan_for_devices();
+	const probe_info_s *probe_list = scan_for_devices(info);
 	if (!probe_list) {
 		DEBUG_WARN("No probes found\n");
 		return -1;
@@ -360,6 +395,7 @@ int find_debuggers(bmda_cli_options_s *cl_opts, bmp_info_s *info)
 	}
 
 	/* We found a matching probe, populate bmp_info_s and signal success */
+	DEBUG_WARN("Using: %-20s %-20s %-25s %s\n", probe->product, probe->serial, probe->manufacturer, probe->version);
 	probe_info_to_bmp_info(probe, info);
 	/* If the selected probe is an FTDI adapter try to resolve the adaptor type */
 	if (probe->vid == VENDOR_ID_FTDI && !ftdi_lookup_adapter_from_vid_pid(cl_opts, probe)) {
