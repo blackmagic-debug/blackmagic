@@ -100,7 +100,7 @@ int serial_open(BMP_CL_OPTIONS_t *cl_opts, char *serial)
 #define BMP_IDSTRING_1BITSQUARED "usb-1BitSquared_Black_Magic_Probe"
 #define DEVICE_BY_ID             "/dev/serial/by-id/"
 
-int serial_open(BMP_CL_OPTIONS_t *cl_opts, char *serial)
+int serial_open(BMP_CL_OPTIONS_t *const cl_opts, const char *const serial)
 {
 	char name[4096];
 	if (!cl_opts->opt_device) {
