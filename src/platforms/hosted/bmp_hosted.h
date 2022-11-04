@@ -68,12 +68,12 @@ typedef struct bmp_info {
 	char product[256];
 	char version[256];
 	bool is_jtag;
+	uint16_t vid;
+	uint16_t pid;
 #if HOSTED_BMP_ONLY != 1
 	libusb_context *libusb_ctx;
 	struct ftdi_context *ftdic;
 	usb_link_t *usb_link;
-	unsigned int vid;
-	unsigned int pid;
 	uint8_t interface_num;
 	uint8_t in_ep;
 	uint8_t out_ep;
