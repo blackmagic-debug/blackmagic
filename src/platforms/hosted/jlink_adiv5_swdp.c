@@ -3,8 +3,7 @@
  *
  * Copyright (C) 2011  Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
- * Copyright (C) 2019 - 2021 Uwe Bonnes
- *                           (bon@elektron.ikp.physik.tu-darmstadt.de)
+ * Copyright (C) 2019 - 2021 Uwe Bonnes bon@elektron.ikp.physik.tu-darmstadt.de
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,15 +32,12 @@
 #include "cli.h"
 
 static uint32_t jlink_adiv5_swdp_read(ADIv5_DP_t *dp, uint16_t addr);
-
 static uint32_t jlink_adiv5_swdp_error(ADIv5_DP_t *dp);
-
 static uint32_t jlink_adiv5_swdp_low_access(ADIv5_DP_t *dp, uint8_t RnW, uint16_t addr, uint32_t value);
-
 static void jlink_adiv5_swdp_abort(ADIv5_DP_t *dp, uint32_t abort);
 
 enum {
-	SWDIO_WRITE = 0,
+	SWDIO_WRITE,
 	SWDIO_READ
 };
 
@@ -154,8 +150,9 @@ static uint32_t jlink_adiv5_swdp_read(ADIv5_DP_t *dp, uint16_t addr)
 static uint32_t jlink_adiv5_swdp_error(ADIv5_DP_t *dp)
 {
 	uint32_t err, clr = 0;
-	err = jlink_adiv5_swdp_read(dp, ADIV5_DP_CTRLSTAT) & (ADIV5_DP_CTRLSTAT_STICKYORUN | ADIV5_DP_CTRLSTAT_STICKYCMP |
-															 ADIV5_DP_CTRLSTAT_STICKYERR | ADIV5_DP_CTRLSTAT_WDATAERR);
+	err = jlink_adiv5_swdp_read(dp, ADIV5_DP_CTRLSTAT) &
+		(ADIV5_DP_CTRLSTAT_STICKYORUN | ADIV5_DP_CTRLSTAT_STICKYCMP | ADIV5_DP_CTRLSTAT_STICKYERR |
+			ADIV5_DP_CTRLSTAT_WDATAERR);
 
 	if (err & ADIV5_DP_CTRLSTAT_STICKYORUN)
 		clr |= ADIV5_DP_ABORT_ORUNERRCLR;
