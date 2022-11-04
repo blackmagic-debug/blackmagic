@@ -21,6 +21,8 @@
 #ifndef INCLUDE_TIMING_H
 #define INCLUDE_TIMING_H
 
+#include <stdint.h>
+
 struct platform_timeout {
 	uint32_t time;
 };
