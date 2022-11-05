@@ -238,11 +238,15 @@ static rtt_retval read_rtt(target *cur_target, uint32_t i)
 		return RTT_ERR;
 
 	/* write recv_buf to target rtt 'down' buf */
-	while ((next_head = ((rtt_channel[i].head + 1) % rtt_channel[i].buf_size)) != rtt_channel[i].tail &&
-		   (ch = rtt_getchar()) != -1) {
+	while (true) {
+		next_head = (rtt_channel[i].head + 1) % rtt_channel[i].buf_size;
+		if (next_head == rtt_channel[i].tail)
+			break;
+		ch = rtt_getchar();
+		if (ch == -1)
+			break;
 		if (target_mem_write(cur_target, rtt_channel[i].buf_addr + rtt_channel[i].head, &ch, 1))
 			return RTT_ERR;
-
 		/* advance head pointer */
 		rtt_channel[i].head = next_head;
 	}

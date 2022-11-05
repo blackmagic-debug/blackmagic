@@ -548,7 +548,7 @@ static bool cmd_rtt(target *t, int argc, const char **argv)
 		gdb_out("ch ena i/o buffer@      size   head   tail flag\n");
 		for (uint32_t i = 0; i < rtt_num_up_chan + rtt_num_down_chan; ++i) {
 			gdb_outf("%2" PRIu32 "   %c %s 0x%08" PRIx32 " %6" PRIu32 " %6" PRIu32 " %6" PRIu32 " %4" PRIu32 "\n", i,
-				rtt_channel_enabled[i] ? 'y' : 'n', i < rtt_num_down_chan ? "out" : "in ", rtt_channel[i].buf_addr,
+				rtt_channel_enabled[i] ? 'y' : 'n', i < rtt_num_up_chan ? "out" : "in ", rtt_channel[i].buf_addr,
 				rtt_channel[i].buf_size, rtt_channel[i].head, rtt_channel[i].tail, rtt_channel[i].flag);
 		}
 	} else if (argc == 3 && strncmp(argv[1], "ident", command_len) == 0) {
