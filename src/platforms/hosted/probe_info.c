@@ -121,7 +121,7 @@ const probe_info_s *probe_info_correct_order(probe_info_s *list)
 const probe_info_s *probe_info_filter(const probe_info_s *const list, const char *const serial, const size_t position)
 {
 	const probe_info_s *probe_info = list;
-	for (size_t probe = 0; probe_info; probe_info = probe_info->next, ++probe) {
+	for (size_t probe = 1; probe_info; probe_info = probe_info->next, ++probe) {
 		if ((serial && strstr(probe_info->serial, serial)) || (position && probe == position))
 			return probe_info;
 	}
