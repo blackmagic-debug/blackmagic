@@ -165,19 +165,18 @@ static bool ch32f1_flash_lock(target *t)
 	return true;
 }
 /**
-	\fn ch32f1_has_fastUnlock
-	\brief check fastUnlock is there, if so it is a CH32fx
+	\fn ch32f1_has_fast_unlock
+	\brief check fast_unlock is there, if so it is a CH32fx
 */
-static bool ch32f1_has_fastUnlock(target *t)
+static bool ch32f1_has_fast_unlock(target *t)
 {
-	DEBUG_INFO("CH32: has fatunlock \n");
+	DEBUG_INFO("CH32: has fast unlock \n");
 	// reset fast unlock
 	SET_CR(FLASH_CR_FLOCK_CH32);
 	platform_delay(1); // The flash controller is timing sensitive
-	uint32_t cr = target_mem_read32(t, FLASH_CR);
-	if (!(cr & FLASH_CR_FLOCK_CH32)) {
+	const uint32_t ctrl1 = target_mem_read32(t, FLASH_CR);
+	if (!(ctrl1 & FLASH_CR_FLOCK_CH32)) 
 		return false;
-	}
 	// send unlock sequence
 	target_mem_write32(t, FLASH_KEYR, KEY1);
 	target_mem_write32(t, FLASH_KEYR, KEY2);
@@ -187,8 +186,8 @@ static bool ch32f1_has_fastUnlock(target *t)
 	target_mem_write32(t, FLASH_MODEKEYR_CH32, KEY2);
 	platform_delay(1); // The flash controller is timing sensitive
 
-	cr = target_mem_read32(t, FLASH_CR);
-	return !(cr & FLASH_CR_FLOCK_CH32);
+	const uint32_t ctrl2 = target_mem_read32(t, FLASH_CR);
+	return !(ctrl2 & FLASH_CR_FLOCK_CH32);
 }
 
 /**
@@ -214,7 +213,7 @@ bool ch32f1_probe(target *t)
 		return false;
 
 	// try to flock (if this fails it is not a CH32 chip)
-	if (!ch32f1_has_fastUnlock(t)) {
+	if (!ch32f1_has_fast_unlock(t)) {
 		return false;
 	}
 	t->part_id = device_id;
