@@ -65,10 +65,9 @@ static bool ch32f1_flash_write(target_flash_s *f, target_addr_t dest, const void
 #define FLASH_SR_EOP             (1 << 5)           // End of programming
 #define FLASH_BEGIN_ADDRESS_CH32 0x8000000
 
-/**
-		\fn ch32f1_add_flash
-		\brief "fast" flash driver for CH32F10x chips
-*/
+/*
+ *	add "fast" flash driver for CH32F10x chips
+ */
 static void ch32f1_add_flash(target *t, uint32_t addr, size_t length, size_t erasesize)
 {
 	target_flash_s *f = calloc(1, sizeof(*f));
