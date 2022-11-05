@@ -29,11 +29,11 @@
 void bmp_ident(bmp_info_t *info)
 {
 	PRINT_INFO("Black Magic Debug App %s\n for Black Magic Probe, ST-Link v2 and v3, CMSIS-DAP,"
-		" JLink and libftdi/MPSSE\n", FIRMWARE_VERSION);
+			   " JLink and libftdi/MPSSE\n",
+		FIRMWARE_VERSION);
 	if (info && info->vid && info->pid) {
 		PRINT_INFO("Using %04x:%04x %s %s\n %s\n", info->vid, info->pid,
-			(info->serial[0]) ? info->serial : NO_SERIAL_NUMBER,
-			info->manufacturer, info->product);
+			(info->serial[0]) ? info->serial : NO_SERIAL_NUMBER, info->manufacturer, info->product);
 	}
 }
 
@@ -44,13 +44,13 @@ void libusb_exit_function(bmp_info_t *info)
 	libusb_free_transfer(info->usb_link->req_trans);
 	libusb_free_transfer(info->usb_link->rep_trans);
 	if (info->usb_link->ul_libusb_device_handle) {
-		libusb_release_interface (
-			info->usb_link->ul_libusb_device_handle, 0);
+		libusb_release_interface(info->usb_link->ul_libusb_device_handle, 0);
 		libusb_close(info->usb_link->ul_libusb_device_handle);
 	}
 }
 
-static bmp_type_t find_cmsis_dap_interface(libusb_device *dev,bmp_info_t *info) {
+static bmp_type_t find_cmsis_dap_interface(libusb_device *dev, bmp_info_t *info)
+{
 	bmp_type_t type = BMP_TYPE_NONE;
 
 	struct libusb_config_descriptor *conf;
@@ -58,16 +58,14 @@ static bmp_type_t find_cmsis_dap_interface(libusb_device *dev,bmp_info_t *info) 
 
 	int res = libusb_get_active_config_descriptor(dev, &conf);
 	if (res < 0) {
-		DEBUG_WARN( "WARN: libusb_get_active_config_descriptor() failed: %s",
-				libusb_strerror(res));
+		DEBUG_WARN("WARN: libusb_get_active_config_descriptor() failed: %s", libusb_strerror(res));
 		return type;
 	}
 
 	libusb_device_handle *handle;
 	res = libusb_open(dev, &handle);
 	if (res != LIBUSB_SUCCESS) {
-		DEBUG_INFO("INFO: libusb_open() failed: %s\n",
-					libusb_strerror(res));
+		DEBUG_INFO("INFO: libusb_open() failed: %s\n", libusb_strerror(res));
 		libusb_free_config_descriptor(conf);
 		return type;
 	}
@@ -80,11 +78,9 @@ static bmp_type_t find_cmsis_dap_interface(libusb_device *dev,bmp_info_t *info) 
 		}
 
 		res = libusb_get_string_descriptor_ascii(
-			handle, interface->iInterface, (uint8_t*)interface_string,
-			sizeof(interface_string));
+			handle, interface->iInterface, (uint8_t *)interface_string, sizeof(interface_string));
 		if (res < 0) {
-			DEBUG_WARN( "WARN: libusb_get_string_descriptor_ascii() failed: %s\n",
-					libusb_strerror(res));
+			DEBUG_WARN("WARN: libusb_get_string_descriptor_ascii() failed: %s\n", libusb_strerror(res));
 			continue;
 		}
 
@@ -119,13 +115,11 @@ int find_debuggers(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info)
 	libusb_device **devs;
 	int res = libusb_init(&info->libusb_ctx);
 	if (res) {
-		DEBUG_WARN( "Fatal: Failed to get USB context: %s\n",
-				libusb_strerror(res));
+		DEBUG_WARN("Fatal: Failed to get USB context: %s\n", libusb_strerror(res));
 		exit(-1);
 	}
 	if (cl_opts->opt_cable) {
-		if (!strcmp(cl_opts->opt_cable, "list") ||
-			!strcmp(cl_opts->opt_cable, "l")) {
+		if (!strcmp(cl_opts->opt_cable, "list") || !strcmp(cl_opts->opt_cable, "l")) {
 			cable_desc_t *cable = cable_desc;
 			DEBUG_WARN("Available cables:\n");
 			for (; cable->name; ++cable) {
@@ -138,8 +132,8 @@ int find_debuggers(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info)
 		info->bmp_type = BMP_TYPE_LIBFTDI;
 	}
 	int n_devs = libusb_get_device_list(info->libusb_ctx, &devs);
-    if (n_devs < 0) {
-        DEBUG_WARN( "WARN:libusb_get_device_list() failed");
+	if (n_devs < 0) {
+		DEBUG_WARN("WARN:libusb_get_device_list() failed");
 		return -1;
 	}
 	bool report = false;
@@ -164,8 +158,7 @@ rescan:
 		libusb_device *dev = devs[i];
 		int res = libusb_get_device_descriptor(dev, &desc);
 		if (res < 0) {
-            DEBUG_WARN( "WARN: libusb_get_device_descriptor() failed: %s",
-					libusb_strerror(res));
+			DEBUG_WARN("WARN: libusb_get_device_descriptor() failed: %s", libusb_strerror(res));
 			libusb_free_device_list(devs, 1);
 			continue;
 		}
@@ -179,16 +172,15 @@ rescan:
 		res = libusb_open(dev, &handle);
 		if (res != LIBUSB_SUCCESS) {
 			if (!access_problems) {
-				DEBUG_INFO("INFO: Open USB %04x:%04x class %2x failed\n",
-						   desc.idVendor, desc.idProduct, desc.bDeviceClass);
+				DEBUG_INFO(
+					"INFO: Open USB %04x:%04x class %2x failed\n", desc.idVendor, desc.idProduct, desc.bDeviceClass);
 				access_problems = true;
 			}
 			continue;
 		}
 		/* If the device even has a serial number string, fetch it */
 		if (desc.iSerialNumber) {
-			res = libusb_get_string_descriptor_ascii(handle, desc.iSerialNumber,
-				(uint8_t *)serial, sizeof(serial));
+			res = libusb_get_string_descriptor_ascii(handle, desc.iSerialNumber, (uint8_t *)serial, sizeof(serial));
 			/* If the call fails and it's not because the device gave us STALL, continue to the next one */
 			if (res < 0 && res != LIBUSB_ERROR_PIPE) {
 				libusb_close(handle);
@@ -197,8 +189,7 @@ rescan:
 			/* Device has no serial and that's ok. */
 			else if (res <= 0)
 				serial[0] = '\0';
-		}
-		else
+		} else
 			serial[0] = '\0';
 		if (cl_opts->opt_serial && !strstr(serial, cl_opts->opt_serial)) {
 			libusb_close(handle);
@@ -206,8 +197,8 @@ rescan:
 		}
 		/* Attempt to get the manufacturer string */
 		if (desc.iManufacturer) {
-			res = libusb_get_string_descriptor_ascii(handle, desc.iManufacturer,
-				(uint8_t *)manufacturer, sizeof(manufacturer));
+			res = libusb_get_string_descriptor_ascii(
+				handle, desc.iManufacturer, (uint8_t *)manufacturer, sizeof(manufacturer));
 			/* If the call fails and it's not because the device gave us STALL, continue to the next one */
 			if (res < 0 && res != LIBUSB_ERROR_PIPE) {
 				DEBUG_WARN("WARN: libusb_get_string_descriptor_ascii() call to fetch manufacturer string failed: %s\n",
@@ -218,13 +209,11 @@ rescan:
 			/* Device has no manufacturer string and that's ok. */
 			else if (res <= 0)
 				manufacturer[0] = '\0';
-		}
-		else
+		} else
 			manufacturer[0] = '\0';
 		/* Attempt to get the product string */
 		if (desc.iProduct) {
-			res = libusb_get_string_descriptor_ascii(handle, desc.iProduct,
-				(uint8_t *)product, sizeof(product));
+			res = libusb_get_string_descriptor_ascii(handle, desc.iProduct, (uint8_t *)product, sizeof(product));
 			/* If the call fails and it's not because the device gave us STALL, continue to the next one */
 			if (res < 0 && res != LIBUSB_ERROR_PIPE) {
 				DEBUG_WARN("WARN: libusb_get_string_descriptor_ascii() call to fetch product string failed: %s\n",
@@ -235,8 +224,7 @@ rescan:
 			/* Device has no product string and that's ok. */
 			else if (res <= 0)
 				product[0] = '\0';
-		}
-		else
+		} else
 			product[0] = '\0';
 		libusb_close(handle);
 		if (cl_opts->opt_ident_string) {
@@ -257,26 +245,22 @@ rescan:
 					DEBUG_WARN("BMP in bootloader mode found. Restart or reflash!\n");
 				continue;
 			}
-		} else if (type == BMP_TYPE_NONE &&
-				   (type = find_cmsis_dap_interface(dev, info)) != BMP_TYPE_NONE) {
+		} else if (type == BMP_TYPE_NONE && (type = find_cmsis_dap_interface(dev, info)) != BMP_TYPE_NONE) {
 			/* find_cmsis_dap_interface has set valid type*/
 		} else if (strstr(manufacturer, "CMSIS") || strstr(product, "CMSIS"))
 			type = BMP_TYPE_CMSIS_DAP;
-		else if (desc.idVendor ==  VENDOR_ID_STLINK) {
-			if (desc.idProduct == PRODUCT_ID_STLINKV2 ||
-				desc.idProduct == PRODUCT_ID_STLINKV21 ||
-				desc.idProduct == PRODUCT_ID_STLINKV21_MSD ||
-				desc.idProduct == PRODUCT_ID_STLINKV3_NO_MSD ||
-				desc.idProduct == PRODUCT_ID_STLINKV3_BL ||
-				desc.idProduct == PRODUCT_ID_STLINKV3 ||
+		else if (desc.idVendor == VENDOR_ID_STLINK) {
+			if (desc.idProduct == PRODUCT_ID_STLINKV2 || desc.idProduct == PRODUCT_ID_STLINKV21 ||
+				desc.idProduct == PRODUCT_ID_STLINKV21_MSD || desc.idProduct == PRODUCT_ID_STLINKV3_NO_MSD ||
+				desc.idProduct == PRODUCT_ID_STLINKV3_BL || desc.idProduct == PRODUCT_ID_STLINKV3 ||
 				desc.idProduct == PRODUCT_ID_STLINKV3E)
 				type = BMP_TYPE_STLINKV2;
 			else {
 				if (desc.idProduct == PRODUCT_ID_STLINKV1)
-					DEBUG_WARN( "INFO: STLINKV1 not supported\n");
+					DEBUG_WARN("INFO: STLINKV1 not supported\n");
 				continue;
 			}
-		} else if (desc.idVendor ==  VENDOR_ID_SEGGER)
+		} else if (desc.idVendor == VENDOR_ID_SEGGER)
 			type = BMP_TYPE_JLINK;
 		else {
 			cable_desc_t *cable = cable_desc;
@@ -295,11 +279,11 @@ rescan:
 						continue; /* discriptions do not match*/
 					else
 						found = true;
-				} else { /* VID/PID fits, but no cl_opts->opt_cable and no description*/
-					if (cable->vendor == 0x0403 && /* FTDI*/
-						(cable->product == 0x6010 || /* FT2232C/D/H*/
-						 cable->product == 0x6011 || /* FT4232H Quad HS USB-UART/FIFO IC */
-						 cable->product == 0x6014)) {  /* FT232H Single HS USB-UART/FIFO IC */
+				} else {                                 /* VID/PID fits, but no cl_opts->opt_cable and no description*/
+					if (cable->vendor == 0x0403 &&       /* FTDI*/
+						(cable->product == 0x6010 ||     /* FT2232C/D/H*/
+							cable->product == 0x6011 ||  /* FT4232H Quad HS USB-UART/FIFO IC */
+							cable->product == 0x6014)) { /* FT232H Single HS USB-UART/FIFO IC */
 						ftdi_unknown = true;
 						continue; /* Cable name is needed */
 					}
@@ -314,9 +298,8 @@ rescan:
 				continue;
 		}
 		if (report) {
-			DEBUG_WARN("%2d: %s, %s, %s\n", found_debuggers + 1,
-				serial[0] ? serial :  NO_SERIAL_NUMBER,
-				manufacturer,product);
+			DEBUG_WARN(
+				"%2d: %s, %s, %s\n", found_debuggers + 1, serial[0] ? serial : NO_SERIAL_NUMBER, manufacturer, product);
 		}
 		info->vid = desc.idVendor;
 		info->pid = desc.idProduct;
@@ -324,8 +307,7 @@ rescan:
 		strncpy(info->serial, serial, sizeof(info->serial));
 		strncpy(info->product, product, sizeof(info->product));
 		strncpy(info->manufacturer, manufacturer, sizeof(info->manufacturer));
-		if (cl_opts->opt_position &&
-			cl_opts->opt_position == found_debuggers + 1) {
+		if (cl_opts->opt_position && cl_opts->opt_position == found_debuggers + 1) {
 			found_debuggers = 1;
 			break;
 		} else
@@ -337,13 +319,12 @@ rescan:
 		cl_opts->opt_cable = active_cable;
 	if (!found_debuggers && cl_opts->opt_list_only)
 		DEBUG_WARN("No usable debugger found\n");
-	if (found_debuggers > 1 ||
-		(found_debuggers == 1 && cl_opts->opt_list_only)) {
+	if (found_debuggers > 1 || (found_debuggers == 1 && cl_opts->opt_list_only)) {
 		if (!report) {
 			if (found_debuggers > 1)
 				DEBUG_WARN("%d debuggers found!\nSelect with -P <pos> "
 						   "or -s <(partial)serial no.>\n",
-						   found_debuggers);
+					found_debuggers);
 			report = true;
 			goto rescan;
 		} else {
@@ -353,33 +334,32 @@ rescan:
 		}
 	}
 	if (!found_debuggers && access_problems)
-		DEBUG_WARN(
-			"No debugger found. Please check access rights to USB devices!\n");
+		DEBUG_WARN("No debugger found. Please check access rights to USB devices!\n");
 	libusb_free_device_list(devs, 1);
 	return found_debuggers == 1 ? 0 : -1;
 }
 
 static void LIBUSB_CALL on_trans_done(struct libusb_transfer *trans)
 {
-    struct trans_ctx * const ctx = trans->user_data;
+	struct trans_ctx *const ctx = trans->user_data;
 
-    if (trans->status != LIBUSB_TRANSFER_COMPLETED)
-    {
+	if (trans->status != LIBUSB_TRANSFER_COMPLETED) {
 		DEBUG_WARN("on_trans_done: ");
-        if (trans->status == LIBUSB_TRANSFER_TIMED_OUT)
-            DEBUG_WARN(" Timeout\n");
-        else if (trans->status == LIBUSB_TRANSFER_CANCELLED)
-            DEBUG_WARN(" cancelled\n");
-        else if (trans->status == LIBUSB_TRANSFER_NO_DEVICE)
-            DEBUG_WARN(" no device\n");
-        else
-            DEBUG_WARN(" unknown\n");
-        ctx->flags |= TRANS_FLAGS_HAS_ERROR;
-    }
-    ctx->flags |= TRANS_FLAGS_IS_DONE;
+		if (trans->status == LIBUSB_TRANSFER_TIMED_OUT)
+			DEBUG_WARN(" Timeout\n");
+		else if (trans->status == LIBUSB_TRANSFER_CANCELLED)
+			DEBUG_WARN(" cancelled\n");
+		else if (trans->status == LIBUSB_TRANSFER_NO_DEVICE)
+			DEBUG_WARN(" no device\n");
+		else
+			DEBUG_WARN(" unknown\n");
+		ctx->flags |= TRANS_FLAGS_HAS_ERROR;
+	}
+	ctx->flags |= TRANS_FLAGS_IS_DONE;
 }
 
-static int submit_wait(usb_link_t *link, struct libusb_transfer *trans) {
+static int submit_wait(usb_link_t *link, struct libusb_transfer *trans)
+{
 	struct trans_ctx trans_ctx;
 	enum libusb_error error;
 
@@ -390,8 +370,7 @@ static int submit_wait(usb_link_t *link, struct libusb_transfer *trans) {
 	trans->user_data = &trans_ctx;
 
 	if ((error = libusb_submit_transfer(trans))) {
-		DEBUG_WARN("libusb_submit_transfer(%d): %s\n", error,
-			  libusb_strerror(error));
+		DEBUG_WARN("libusb_submit_transfer(%d): %s\n", error, libusb_strerror(error));
 		exit(-1);
 	}
 
@@ -420,17 +399,12 @@ static int submit_wait(usb_link_t *link, struct libusb_transfer *trans) {
 }
 
 /* One USB transaction */
-int send_recv(usb_link_t *link,
-					 uint8_t *txbuf, size_t txsize,
-					 uint8_t *rxbuf, size_t rxsize)
+int send_recv(usb_link_t *link, uint8_t *txbuf, size_t txsize, uint8_t *rxbuf, size_t rxsize)
 {
 	int res = 0;
 	if (txsize) {
-		libusb_fill_bulk_transfer(link->req_trans,
-								  link->ul_libusb_device_handle,
-								  link->ep_tx | LIBUSB_ENDPOINT_OUT,
-								  txbuf, txsize,
-								  NULL, NULL, 0);
+		libusb_fill_bulk_transfer(link->req_trans, link->ul_libusb_device_handle, link->ep_tx | LIBUSB_ENDPOINT_OUT,
+			txbuf, txsize, NULL, NULL, 0);
 		size_t i = 0;
 		DEBUG_WIRE(" Send (%3zu): ", txsize);
 		for (; i < txsize; ++i) {
@@ -450,9 +424,8 @@ int send_recv(usb_link_t *link,
 	/* send_only */
 	if (rxsize != 0) {
 		/* read the response */
-		libusb_fill_bulk_transfer(link->rep_trans, link->ul_libusb_device_handle,
-								  link->ep_rx | LIBUSB_ENDPOINT_IN,
-								  rxbuf, rxsize, NULL, NULL, 0);
+		libusb_fill_bulk_transfer(link->rep_trans, link->ul_libusb_device_handle, link->ep_rx | LIBUSB_ENDPOINT_IN,
+			rxbuf, rxsize, NULL, NULL, 0);
 
 		if (submit_wait(link, link->rep_trans)) {
 			DEBUG_WARN("clear 1\n");
@@ -463,7 +436,7 @@ int send_recv(usb_link_t *link,
 		if (res > 0) {
 			const size_t rxlen = (size_t)res;
 			DEBUG_WIRE(" Rec (%zu/%zu)", rxsize, rxlen);
-			for (size_t i = 0; i < rxlen && i < 32 ; ++i) {
+			for (size_t i = 0; i < rxlen && i < 32; ++i) {
 				if (i && ((i & 7U) == 0U))
 					DEBUG_WIRE(".");
 				DEBUG_WIRE("%02x", rxbuf[i]);
