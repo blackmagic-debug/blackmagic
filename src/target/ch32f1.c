@@ -128,10 +128,9 @@ static void ch32f1_add_flash(target *t, uint32_t addr, size_t length, size_t era
 		target_mem_write32(t, FLASH_MAGIC, magic);         \
 	} while (0)
 
-/**
-  \fn ch32f1_flash_unlock
-  \brief unlock ch32f103 in fast mode
-*/
+/*
+ * attempt to unlock ch32f103 in fast mode
+ */
 static bool ch32f1_flash_unlock(target *t)
 {
 	DEBUG_INFO("CH32: flash unlock \n");
@@ -143,15 +142,14 @@ static bool ch32f1_flash_unlock(target *t)
 	target_mem_write32(t, FLASH_MODEKEYR_CH32, KEY2);
 	uint32_t cr = target_mem_read32(t, FLASH_CR);
 	if (cr & FLASH_CR_FLOCK_CH32) {
-		DEBUG_WARN("Fast unlock failed, cr: 0x%08" PRIx32 "\n", cr);
-		return false;
+		DEBUG_WARN("Fast unlock failed, cr: 0x%08" PRIx32 "\n", cr);		
 	}
-	return true;
+	return !(cr & FLASH_CR_FLOCK_CH32);
 }
-/**
-  \fn ch32f1_flash_lock
-  \brief lock ch32f103 in fast mode
-*/
+
+/*
+ * lock ch32f103 in fast mode
+ */
 static bool ch32f1_flash_lock(target *t)
 {
 	DEBUG_INFO("CH32: flash lock \n");
@@ -164,18 +162,17 @@ static bool ch32f1_flash_lock(target *t)
 	}
 	return true;
 }
-/**
-	\fn ch32f1_has_fast_unlock
-	\brief check fast_unlock is there, if so it is a CH32fx
-*/
+
+/*
+ *check fast_unlock is there, if so it is a CH32fx
+ */
 static bool ch32f1_has_fast_unlock(target *t)
 {
 	DEBUG_INFO("CH32: has fast unlock \n");
 	// reset fast unlock
 	SET_CR(FLASH_CR_FLOCK_CH32);
-	platform_delay(1); // The flash controller is timing sensitive
-	const uint32_t ctrl1 = target_mem_read32(t, FLASH_CR);
-	if (!(ctrl1 & FLASH_CR_FLOCK_CH32)) 
+	platform_delay(1); // The flash controller is timing sensitive	
+	if (!(target_mem_read32(t, FLASH_CR) & FLASH_CR_FLOCK_CH32)) 
 		return false;
 	// send unlock sequence
 	target_mem_write32(t, FLASH_KEYR, KEY1);
@@ -184,16 +181,13 @@ static bool ch32f1_has_fast_unlock(target *t)
 	// send fast unlock sequence
 	target_mem_write32(t, FLASH_MODEKEYR_CH32, KEY1);
 	target_mem_write32(t, FLASH_MODEKEYR_CH32, KEY2);
-	platform_delay(1); // The flash controller is timing sensitive
-
-	const uint32_t ctrl2 = target_mem_read32(t, FLASH_CR);
-	return !(ctrl2 & FLASH_CR_FLOCK_CH32);
+	platform_delay(1); // The flash controller is timing sensitive	
+	return !(target_mem_read32(t, FLASH_CR) & FLASH_CR_FLOCK_CH32);
 }
 
-/**
-	\brief identify the ch32f1 chip
-				Actually grab all cortex m3 with designer = arm not caught earlier...
-*/
+/*
+ *	 try to identify the ch32f1 chip				
+ */
 bool ch32f1_probe(target *t)
 {
 	if ((t->cpuid & CPUID_PARTNO_MASK) != CORTEX_M3)
@@ -213,9 +207,9 @@ bool ch32f1_probe(target *t)
 		return false;
 
 	// try to flock (if this fails it is not a CH32 chip)
-	if (!ch32f1_has_fast_unlock(t)) {
+	if (!ch32f1_has_fast_unlock(t))
 		return false;
-	}
+
 	t->part_id = device_id;
 	uint32_t signature = target_mem_read32(t, FLASHSIZE);
 	uint32_t flashSize = signature & 0xFFFF;
@@ -227,10 +221,9 @@ bool ch32f1_probe(target *t)
 	return true;
 }
 
-/**
-  \fn ch32f1_flash_erase
-  \brief fast erase of CH32
-*/
+/*
+ * erase using CH32 fast erase 
+ */
 bool ch32f1_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
 	volatile uint32_t sr, magic;
@@ -268,14 +261,12 @@ bool ch32f1_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 	return true;
 }
 
-/**
-	\fn ch32f1_wait_flash_ready
-	\brief   Wait a bit for the previous operation to finish
-			As per test result we need a time similar to 10 read operation over SWD
-			We do 32 to have a bit of headroom, then we check we read ffff (erased flash)
-			NB: Just reading fff is not enough as it could be a transient previous operation value
-*/
-
+/*
+ *  Wait a bit for the previous operation to finish.
+ * As per test result we need a time similar to 10 read operation over SWD
+ * We do 32 to have a bit of headroom, then we check we read ffff (erased flash)
+ * NB: Just reading fff is not enough as it could be a transient previous operation value
+ */
 static bool ch32f1_wait_flash_ready(target *t, uint32_t addr)
 {
 	uint32_t ff = 0;
@@ -287,11 +278,10 @@ static bool ch32f1_wait_flash_ready(target *t, uint32_t addr)
 	}
 	return true;
 }
-/**
-  \fn ch32f1_flash_write
-  \brief fast flash for ch32. Load 128 bytes chunk and then flash them
-*/
 
+/*  
+ * CH32 fast flash. Load 128 bytes chunk and then write them
+ */
 static int ch32f1_upload(target *t, uint32_t dest, const void *src, uint32_t offset)
 {
 	volatile uint32_t sr, magic;
@@ -310,10 +300,10 @@ static int ch32f1_upload(target *t, uint32_t dest, const void *src, uint32_t off
 	MAGIC(dest + offset);
 	return 0;
 }
-/**
-	\fn ch32f1_buffer_clear
-	\brief clear the write buffer
-*/
+
+/*
+ *	clear the write buffer
+ */
 static int ch32f1_buffer_clear(target *t)
 {
 	volatile uint32_t sr;
@@ -325,9 +315,9 @@ static int ch32f1_buffer_clear(target *t)
 }
 //#define CH32_VERIFY
 
-/**
-
-*/
+/*
+ * CH32 implementation of flash_write using the CH32 specific fast write
+ */
 static bool ch32f1_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
 	volatile uint32_t sr, magic;
