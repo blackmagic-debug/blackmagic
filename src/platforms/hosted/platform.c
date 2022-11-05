@@ -661,6 +661,7 @@ void adiv5_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
 	}
 	return;
 }
+
 void adiv5_mem_write_sized(ADIv5_AP_t *ap, uint32_t dest, const void *src, size_t len, enum align align)
 {
 	if (cl_debuglevel & BMP_DEBUG_TARGET) {
