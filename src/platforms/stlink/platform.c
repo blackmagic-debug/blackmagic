@@ -49,6 +49,10 @@ void platform_init(void)
 	rev = detect_rev();
 	SCS_DEMCR |= SCS_DEMCR_VC_MON_EN;
 	rcc_clock_setup_pll(&rcc_hse_configs[RCC_CLOCK_HSE8_72MHZ]);
+#ifdef BLUEPILL
+	led_idle_run = GPIO13;
+	nrst_pin = NRST_PIN_V1;
+#else
 	if (rev == 0) {
 		led_idle_run = GPIO8;
 		nrst_pin = NRST_PIN_V1;
@@ -56,6 +60,7 @@ void platform_init(void)
 		led_idle_run = GPIO9;
 		nrst_pin = NRST_PIN_V2;
 	}
+#endif
 	/* Setup GPIO ports */
 	gpio_set_mode(TMS_PORT, GPIO_MODE_OUTPUT_2_MHZ,
 	              GPIO_CNF_INPUT_FLOAT, TMS_PIN);

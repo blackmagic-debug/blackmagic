@@ -60,7 +60,11 @@ extern bool debug_bmp;
 #define NRST_PIN_V1	GPIO1
 #define NRST_PIN_V2	GPIO0
 
+#ifdef BLUEPILL
+#define LED_PORT	GPIOC
+#else
 #define LED_PORT	GPIOA
+#endif
 /* Use PC14 for a "dummy" uart led. So we can observere at least with scope*/
 #define LED_PORT_UART	GPIOA
 #define LED_UART	GPIO9
