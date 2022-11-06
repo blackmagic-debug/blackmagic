@@ -180,9 +180,11 @@ static const gdb_reg_type_e cortex_m_spr_types[] = {
 	GDB_TYPE_UNSPECIFIED, // control
 };
 
-static_assert(ARRAY_LENGTH(cortex_m_spr_types) == ARRAY_LENGTH(cortex_m_spr_names), "SPR array length mismatch! SPR type "
-                                                                                "array should have the same length as "
-                                                                                "SPR name array.");
+// clang-format off
+static_assert(ARRAY_LENGTH(cortex_m_spr_types) == ARRAY_LENGTH(cortex_m_spr_names),
+	"SPR array length mismatch! SPR type array should have the same length as SPR name array."
+);
+// clang-format on
 
 // The "save-restore" field of each SPR.
 static const gdb_reg_save_restore_e cortex_m_spr_save_restores[] = {
@@ -198,10 +200,11 @@ static const gdb_reg_save_restore_e cortex_m_spr_save_restores[] = {
 	GDB_SAVE_RESTORE_NO,          // control
 };
 
-static_assert(ARRAY_LENGTH(cortex_m_spr_save_restores) == ARRAY_LENGTH(cortex_m_spr_names), "SPR array length mismatch! "
-                                                                                        "SPR save-restore array should "
-                                                                                        "have the same length as SPR "
-                                                                                        "name array.");
+// clang-format off
+static_assert(ARRAY_LENGTH(cortex_m_spr_save_restores) == ARRAY_LENGTH(cortex_m_spr_names),
+	"SPR array length mismatch! SPR save-restore array should have the same length as SPR name array."
+);
+// clang-format on
 
 // The "bitsize" field of each SPR.
 static const uint8_t cortex_m_spr_bitsizes[] = {
@@ -217,9 +220,12 @@ static const uint8_t cortex_m_spr_bitsizes[] = {
 	8,  // control
 };
 
-static_assert(ARRAY_LENGTH(cortex_m_spr_bitsizes) == ARRAY_LENGTH(cortex_m_spr_names), "SPR array length mismatch! SPR "
-                                                                                   "bitsize array should have the same "
-                                                                                   "length as SPR name array.");
+// clang-format off
+static_assert(ARRAY_LENGTH(cortex_m_spr_bitsizes) == ARRAY_LENGTH(cortex_m_spr_names),
+	"SPR array length mismatch! SPR bitsize array should have the same length as SPR name array."
+);
+
+// clang-format on
 
 // Creates the target description XML string for a Cortex-M. Like snprintf(), this function
 // will write no more than max_len and returns the amount of bytes written. Or, if max_len is 0,
@@ -684,7 +690,7 @@ bool cortexm_probe(ADIv5_AP_t *ap)
 	case JEP106_MANUFACTURER_ARM:
 		if (t->part_id == 0x4c0) {        /* Cortex-M0+ ROM */
 			PROBE(lpc11xx_probe);         /* LPC8 */
-		}else if (  t->part_id == 0x4c1) { /* Cortex-M0+ ROM */
+		} else if (t->part_id == 0x4c1) { /* NXP Cortex-M0+ ROM */
 			PROBE(lpc11xx_probe);         /* newer LPC11U6x */
 		} else if (t->part_id == 0x4c3) { /* Cortex-M3 ROM */
 			PROBE(lmi_probe);
@@ -943,12 +949,13 @@ static int dcrsr_regnum(target *t, unsigned reg)
 	if (reg < sizeof(regnum_cortex_m) / 4U) {
 		return regnum_cortex_m[reg];
 	} else if ((t->target_options & TOPT_FLAVOUR_V7MF) &&
-			   (reg < (sizeof(regnum_cortex_m) + sizeof(regnum_cortex_mf)) / 4)) {
+		(reg < (sizeof(regnum_cortex_m) + sizeof(regnum_cortex_mf)) / 4)) {
 		return regnum_cortex_mf[reg - sizeof(regnum_cortex_m) / 4U];
 	} else {
 		return -1;
 	}
 }
+
 static ssize_t cortexm_reg_read(target *t, int reg, void *data, size_t max)
 {
 	if (max < 4)
@@ -1009,7 +1016,7 @@ static void cortexm_reset(target *t)
 	/* Wait for CORTEXM_DHCSR_S_RESET_ST to read 0, meaning reset released.*/
 	platform_timeout_set(&reset_timeout, 1000);
 	while ((target_mem_read32(t, CORTEXM_DHCSR) & CORTEXM_DHCSR_S_RESET_ST) &&
-		   !platform_timeout_is_expired(&reset_timeout))
+		!platform_timeout_is_expired(&reset_timeout))
 		continue;
 #if defined(PLATFORM_HAS_DEBUG)
 	if (platform_timeout_is_expired(&reset_timeout))
@@ -1369,8 +1376,9 @@ static bool cortexm_vector_catch(target *t, int argc, char *argv[])
 	unsigned i;
 
 	if (argc < 3) {
-		tc_printf(t, "usage: monitor vector_catch (enable|disable) "
-					 "(hard|int|bus|stat|chk|nocp|mm|reset)\n");
+		tc_printf(t,
+			"usage: monitor vector_catch (enable|disable) "
+			"(hard|int|bus|stat|chk|nocp|mm|reset)\n");
 	} else {
 		for (int j = 0; j < argc; j++)
 			for (i = 0; i < sizeof(vectors) / sizeof(char *); i++) {
@@ -1843,13 +1851,15 @@ static int cortexm_hostio_request(target *t)
 	case SEMIHOSTING_SYS_TIME: { /* time */
 		/* use same code for SYS_CLOCK and SYS_TIME, more compact */
 		ret = -1;
+
 		struct __attribute__((packed, aligned(4))) {
 			uint32_t ftv_sec;
 			uint64_t ftv_usec;
 		} fio_timeval;
+
 		//DEBUG("SYS_TIME fio_timeval addr %p\n", &fio_timeval);
-		void (*saved_mem_read)(target *t, void *dest, target_addr_t src, size_t len);
-		void (*saved_mem_write)(target *t, target_addr_t dest, const void *src, size_t len);
+		void (*saved_mem_read)(target * t, void *dest, target_addr_t src, size_t len);
+		void (*saved_mem_write)(target * t, target_addr_t dest, const void *src, size_t len);
 		saved_mem_read = t->mem_read;
 		saved_mem_write = t->mem_write;
 		t->mem_read = probe_mem_read;
@@ -1878,13 +1888,13 @@ static int cortexm_hostio_request(target *t)
 	case SEMIHOSTING_SYS_READC: { /* readc */
 		uint8_t ch = '?';
 		//DEBUG("SYS_READC ch addr %p\n", &ch);
-		void (*saved_mem_read)(target *t, void *dest, target_addr_t src, size_t len);
-		void (*saved_mem_write)(target *t, target_addr_t dest, const void *src, size_t len);
+		void (*saved_mem_read)(target * t, void *dest, target_addr_t src, size_t len);
+		void (*saved_mem_write)(target * t, target_addr_t dest, const void *src, size_t len);
 		saved_mem_read = t->mem_read;
 		saved_mem_write = t->mem_write;
 		t->mem_read = probe_mem_read;
 		t->mem_write = probe_mem_write;
-		int rc = tc_read(t, STDIN_FILENO, (target_addr_t) &ch, 1); /* read a character in ch */
+		int rc = tc_read(t, STDIN_FILENO, (target_addr_t)&ch, 1); /* read a character in ch */
 		t->mem_read = saved_mem_read;
 		t->mem_write = saved_mem_write;
 		if (rc == 1)
@@ -1929,12 +1939,12 @@ static int cortexm_hostio_request(target *t)
 	case SEMIHOSTING_SYS_ISERROR: { /* iserror */
 		int errorNo = params[0];
 		ret = errorNo == TARGET_EPERM || errorNo == TARGET_ENOENT || errorNo == TARGET_EINTR || errorNo == TARGET_EIO ||
-		      errorNo == TARGET_EBADF || errorNo == TARGET_EACCES || errorNo == TARGET_EFAULT ||
-		      errorNo == TARGET_EBUSY || errorNo == TARGET_EEXIST || errorNo == TARGET_ENODEV ||
-		      errorNo == TARGET_ENOTDIR || errorNo == TARGET_EISDIR || errorNo == TARGET_EINVAL ||
-		      errorNo == TARGET_ENFILE || errorNo == TARGET_EMFILE || errorNo == TARGET_EFBIG ||
-		      errorNo == TARGET_ENOSPC || errorNo == TARGET_ESPIPE || errorNo == TARGET_EROFS ||
-		      errorNo == TARGET_ENOSYS || errorNo == TARGET_ENAMETOOLONG || errorNo == TARGET_EUNKNOWN;
+			errorNo == TARGET_EBADF || errorNo == TARGET_EACCES || errorNo == TARGET_EFAULT ||
+			errorNo == TARGET_EBUSY || errorNo == TARGET_EEXIST || errorNo == TARGET_ENODEV ||
+			errorNo == TARGET_ENOTDIR || errorNo == TARGET_EISDIR || errorNo == TARGET_EINVAL ||
+			errorNo == TARGET_ENFILE || errorNo == TARGET_EMFILE || errorNo == TARGET_EFBIG ||
+			errorNo == TARGET_ENOSPC || errorNo == TARGET_ESPIPE || errorNo == TARGET_EROFS ||
+			errorNo == TARGET_ENOSYS || errorNo == TARGET_ENAMETOOLONG || errorNo == TARGET_EUNKNOWN;
 		break;
 	}
 

@@ -173,11 +173,11 @@ extern unsigned cortexm_wait_timeout;
 
 #define CORTEXM_TOPT_INHIBIT_NRST (1U << 2U)
 
-#define CORTEX_M0 0xc200U
+#define CORTEX_M0  0xc200U
 #define CORTEX_M0P 0xc600U
-#define CORTEX_M3 0xc230U
-#define CORTEX_M4 0xc240U
-#define CORTEX_M7 0xc270U
+#define CORTEX_M3  0xc230U
+#define CORTEX_M4  0xc240U
+#define CORTEX_M7  0xc270U
 #define CORTEX_M23 0xd200U
 #define CORTEX_M33 0xd210U
 
