@@ -115,8 +115,22 @@ void platform_init(void)
 	OTG_FS_GCCFG &= ~(OTG_GCCFG_VBUSBSEN | OTG_GCCFG_VBUSASEN);
 }
 
-void platform_nrst_set_val(bool assert) { (void)assert; }
-bool platform_nrst_get_val(void) { return false; }
+void platform_nrst_set_val(bool assert)
+{
+	if (assert) {
+		gpio_mode_setup(NRST_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, NRST_PIN);
+		gpio_set_output_options(NRST_PORT, GPIO_OTYPE_OD, GPIO_OSPEED_2MHZ, NRST_PIN);
+		gpio_clear(NRST_PORT, NRST_PIN);
+	} else {
+		gpio_mode_setup(NRST_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, NRST_PIN);
+		gpio_set(NRST_PORT, NRST_PIN);
+	}
+}
+
+bool platform_nrst_get_val(void)
+{
+	return gpio_get(NRST_PORT, NRST_PIN) == 0;
+}
 
 const char *platform_target_voltage(void)
 {
