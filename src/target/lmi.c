@@ -18,7 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file implements TI/LMI LM3S target specific functions providing
+/*
+ * This file implements TI/LMI LM3S target specific functions providing
  * the XML memory map and Flash memory programming.
  *
  * According to: TivaTM TM4C123GH6PM Microcontroller Datasheet
@@ -29,30 +30,30 @@
 #include "target_internal.h"
 #include "cortexm.h"
 
-#define SRAM_BASE            0x20000000
-#define STUB_BUFFER_BASE     ALIGN(SRAM_BASE + sizeof(lmi_flash_write_stub), 4)
+#define SRAM_BASE        0x20000000
+#define STUB_BUFFER_BASE ALIGN(SRAM_BASE + sizeof(lmi_flash_write_stub), 4)
 
-#define BLOCK_SIZE           0x400
+#define BLOCK_SIZE 0x400
 
-#define LMI_SCB_BASE         0x400FE000U
-#define LMI_SCB_DID0         (LMI_SCB_BASE + 0x000U)
-#define LMI_SCB_DID1         (LMI_SCB_BASE + 0x004U)
+#define LMI_SCB_BASE 0x400FE000U
+#define LMI_SCB_DID0 (LMI_SCB_BASE + 0x000U)
+#define LMI_SCB_DID1 (LMI_SCB_BASE + 0x004U)
 
 #define DID0_CLASS_MASK           0x00FF0000U
 #define DID0_CLASS_STELLARIS_FURY 0x00010000U
 #define DID0_CLASS_STELLARIS_DUST 0x00030000U
 #define DID0_CLASS_TIVA           0x00050000U
 
-#define DID1_LM3S3748        0x1049U
-#define DID1_LM3S5732        0x1096U
-#define DID1_LM3S8962        0x10A6U
-#define DID1_TM4C123GH6PM    0x10A1U
-#define DID1_TM4C1230C3PM    0x1022U
-#define DID1_TM4C1294NCPDT   0x101FU
+#define DID1_LM3S3748      0x1049U
+#define DID1_LM3S5732      0x1096U
+#define DID1_LM3S8962      0x10A6U
+#define DID1_TM4C123GH6PM  0x10A1U
+#define DID1_TM4C1230C3PM  0x1022U
+#define DID1_TM4C1294NCPDT 0x101FU
 
-#define LMI_FLASH_BASE       0x400FD000
-#define LMI_FLASH_FMA        (LMI_FLASH_BASE + 0x000)
-#define LMI_FLASH_FMC        (LMI_FLASH_BASE + 0x008)
+#define LMI_FLASH_BASE 0x400FD000
+#define LMI_FLASH_FMA  (LMI_FLASH_BASE + 0x000)
+#define LMI_FLASH_FMC  (LMI_FLASH_BASE + 0x008)
 
 #define LMI_FLASH_FMC_WRITE  (1 << 0)
 #define LMI_FLASH_FMC_ERASE  (1 << 1)
@@ -73,7 +74,7 @@ static const uint16_t lmi_flash_write_stub[] = {
 static void lmi_add_flash(target *t, size_t length)
 {
 	target_flash_s *f = calloc(1, sizeof(*f));
-	if (!f) {			/* calloc failed: heap exhaustion */
+	if (!f) { /* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return;
 	}
@@ -158,7 +159,7 @@ bool lmi_probe(target *const t)
 
 static bool lmi_flash_erase(target_flash_s *f, target_addr_t addr, const size_t len)
 {
-	target  *t = f->t;
+	target *t = f->t;
 	target_check_error(t);
 
 	const bool full_erase = addr == f->start && len == f->length;
@@ -184,7 +185,7 @@ static bool lmi_flash_erase(target_flash_s *f, target_addr_t addr, const size_t 
 
 static bool lmi_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
-	target  *t = f->t;
+	target *t = f->t;
 	target_check_error(t);
 	target_mem_write(t, SRAM_BASE, lmi_flash_write_stub, sizeof(lmi_flash_write_stub));
 	target_mem_write(t, STUB_BUFFER_BASE, src, len);
