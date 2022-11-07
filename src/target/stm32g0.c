@@ -60,85 +60,83 @@
 #define FLASH_SIZE_MAX_G07_8   (128U * 1024U) // 128 kiB
 #define FLASH_SIZE_MAX_G0B_C   (512U * 1024U) // 512 kiB
 
-#define G0_FLASH_BASE                   0x40022000
-#define FLASH_ACR                       (G0_FLASH_BASE + 0x000)
-#define FLASH_ACR_EMPTY                 (1U << 16U)
+#define G0_FLASH_BASE   0x40022000
+#define FLASH_ACR       (G0_FLASH_BASE + 0x000)
+#define FLASH_ACR_EMPTY (1U << 16U)
 
-#define FLASH_KEYR                      (G0_FLASH_BASE + 0x008)
-#define FLASH_KEYR_KEY1                 0x45670123
-#define FLASH_KEYR_KEY2                 0xCDEF89AB
-#define FLASH_CR                        (G0_FLASH_BASE + 0x014)
-#define FLASH_CR_LOCK                   (1U << 31U)
-#define FLASH_CR_OBL_LAUNCH             (1U << 27U)
-#define FLASH_CR_OPTSTART               (1U << 17U)
-#define FLASH_CR_START                  (1U << 16U)
-#define FLASH_CR_MER2                   (1U << 15U)
-#define FLASH_CR_MER1                   (1U << 2U)
-#define FLASH_CR_BKER                   (1U << 13U)
-#define FLASH_CR_PNB_SHIFT              3U
-#define FLASH_CR_PER                    (1U << 1U)
-#define FLASH_CR_PG                     (1U << 0U)
+#define FLASH_KEYR          (G0_FLASH_BASE + 0x008)
+#define FLASH_KEYR_KEY1     0x45670123
+#define FLASH_KEYR_KEY2     0xCDEF89AB
+#define FLASH_CR            (G0_FLASH_BASE + 0x014)
+#define FLASH_CR_LOCK       (1U << 31U)
+#define FLASH_CR_OBL_LAUNCH (1U << 27U)
+#define FLASH_CR_OPTSTART   (1U << 17U)
+#define FLASH_CR_START      (1U << 16U)
+#define FLASH_CR_MER2       (1U << 15U)
+#define FLASH_CR_MER1       (1U << 2U)
+#define FLASH_CR_BKER       (1U << 13U)
+#define FLASH_CR_PNB_SHIFT  3U
+#define FLASH_CR_PER        (1U << 1U)
+#define FLASH_CR_PG         (1U << 0U)
 
-#define FLASH_SR                        (G0_FLASH_BASE + 0x010)
-#define FLASH_SR_BSY2                   (1U << 17U)
-#define FLASH_SR_BSY1                   (1U << 16U)
-#define FLASH_SR_OPTVERR                (1U << 15U)
-#define FLASH_SR_RDERR                  (1U << 14U)
-#define FLASH_SR_FASTERR                (1U << 9U)
-#define FLASH_SR_MISSERR                (1U << 8U)
-#define FLASH_SR_PGSERR                 (1U << 7U)
-#define FLASH_SR_SIZERR                 (1U << 6U)
-#define FLASH_SR_PGAERR                 (1U << 5U)
-#define FLASH_SR_WRPERR                 (1U << 4U)
-#define FLASH_SR_PROGERR                (1U << 3U)
-#define FLASH_SR_OPERR                  (1U << 1U)
-#define FLASH_SR_EOP                    (1U << 0U)
-#define FLASH_SR_ERROR_MASK \
-	(FLASH_SR_OPTVERR | FLASH_SR_RDERR | FLASH_SR_FASTERR | \
-	 FLASH_SR_MISSERR | FLASH_SR_PGSERR | FLASH_SR_SIZERR | \
-	 FLASH_SR_PGAERR | FLASH_SR_WRPERR | FLASH_SR_PROGERR | \
-	 FLASH_SR_OPERR)
-#define FLASH_SR_BSY_MASK               (FLASH_SR_BSY2 | FLASH_SR_BSY1)
+#define FLASH_SR         (G0_FLASH_BASE + 0x010)
+#define FLASH_SR_BSY2    (1U << 17U)
+#define FLASH_SR_BSY1    (1U << 16U)
+#define FLASH_SR_OPTVERR (1U << 15U)
+#define FLASH_SR_RDERR   (1U << 14U)
+#define FLASH_SR_FASTERR (1U << 9U)
+#define FLASH_SR_MISSERR (1U << 8U)
+#define FLASH_SR_PGSERR  (1U << 7U)
+#define FLASH_SR_SIZERR  (1U << 6U)
+#define FLASH_SR_PGAERR  (1U << 5U)
+#define FLASH_SR_WRPERR  (1U << 4U)
+#define FLASH_SR_PROGERR (1U << 3U)
+#define FLASH_SR_OPERR   (1U << 1U)
+#define FLASH_SR_EOP     (1U << 0U)
+#define FLASH_SR_ERROR_MASK                                                                                        \
+	(FLASH_SR_OPTVERR | FLASH_SR_RDERR | FLASH_SR_FASTERR | FLASH_SR_MISSERR | FLASH_SR_PGSERR | FLASH_SR_SIZERR | \
+		FLASH_SR_PGAERR | FLASH_SR_WRPERR | FLASH_SR_PROGERR | FLASH_SR_OPERR)
+#define FLASH_SR_BSY_MASK (FLASH_SR_BSY2 | FLASH_SR_BSY1)
 
-#define FLASH_OPTKEYR                   (G0_FLASH_BASE + 0x00C)
-#define FLASH_OPTKEYR_KEY1              0x08192A3B
-#define FLASH_OPTKEYR_KEY2              0x4C5D6E7F
-#define FLASH_OPTR                      (G0_FLASH_BASE + 0x020)
-#define FLASH_OPTR_RDP_MASK             0xFF
-#define FLASH_PCROP1ASR                 (G0_FLASH_BASE + 0x024)
-#define FLASH_PCROP1AER                 (G0_FLASH_BASE + 0x028)
-#define FLASH_WRP1AR                    (G0_FLASH_BASE + 0x02C)
-#define FLASH_WRP1BR                    (G0_FLASH_BASE + 0x030)
-#define FLASH_PCROP1BSR                 (G0_FLASH_BASE + 0x034)
-#define FLASH_PCROP1BER                 (G0_FLASH_BASE + 0x038)
-#define FLASH_PCROP2ASR                 (G0_FLASH_BASE + 0x044)
-#define FLASH_PCROP2AER                 (G0_FLASH_BASE + 0x048)
-#define FLASH_WRP2AR                    (G0_FLASH_BASE + 0x04C)
-#define FLASH_WRP2BR                    (G0_FLASH_BASE + 0x050)
-#define FLASH_PCROP2BSR                 (G0_FLASH_BASE + 0x054)
-#define FLASH_PCROP2BER                 (G0_FLASH_BASE + 0x058)
-#define FLASH_SECR                      (G0_FLASH_BASE + 0x080)
+#define FLASH_OPTKEYR       (G0_FLASH_BASE + 0x00C)
+#define FLASH_OPTKEYR_KEY1  0x08192A3B
+#define FLASH_OPTKEYR_KEY2  0x4C5D6E7F
+#define FLASH_OPTR          (G0_FLASH_BASE + 0x020)
+#define FLASH_OPTR_RDP_MASK 0xFF
+#define FLASH_PCROP1ASR     (G0_FLASH_BASE + 0x024)
+#define FLASH_PCROP1AER     (G0_FLASH_BASE + 0x028)
+#define FLASH_WRP1AR        (G0_FLASH_BASE + 0x02C)
+#define FLASH_WRP1BR        (G0_FLASH_BASE + 0x030)
+#define FLASH_PCROP1BSR     (G0_FLASH_BASE + 0x034)
+#define FLASH_PCROP1BER     (G0_FLASH_BASE + 0x038)
+#define FLASH_PCROP2ASR     (G0_FLASH_BASE + 0x044)
+#define FLASH_PCROP2AER     (G0_FLASH_BASE + 0x048)
+#define FLASH_WRP2AR        (G0_FLASH_BASE + 0x04C)
+#define FLASH_WRP2BR        (G0_FLASH_BASE + 0x050)
+#define FLASH_PCROP2BSR     (G0_FLASH_BASE + 0x054)
+#define FLASH_PCROP2BER     (G0_FLASH_BASE + 0x058)
+#define FLASH_SECR          (G0_FLASH_BASE + 0x080)
 
 /* RAM */
-#define RAM_START                       0x20000000
-#define RAM_SIZE_G03_4                  (8U * 1024U)    // 8 kiB
-#define RAM_SIZE_G05_6                  (18U * 1024U)   // 18 kiB
-#define RAM_SIZE_G07_8                  (36U * 1024U)   // 36 kiB
-#define RAM_SIZE_G0B_C                  (144U * 1024U)  // 144 kiB
+#define RAM_START      0x20000000
+#define RAM_SIZE_G03_4 (8U * 1024U)   // 8 kiB
+#define RAM_SIZE_G05_6 (18U * 1024U)  // 18 kiB
+#define RAM_SIZE_G07_8 (36U * 1024U)  // 36 kiB
+#define RAM_SIZE_G0B_C (144U * 1024U) // 144 kiB
 
 /* RCC */
-#define G0_RCC_BASE                     0x40021000
-#define RCC_APBENR1                     (G0_RCC_BASE + 0x3C)
-#define RCC_APBENR1_DBGEN               (1U << 27U)
+#define G0_RCC_BASE       0x40021000
+#define RCC_APBENR1       (G0_RCC_BASE + 0x3C)
+#define RCC_APBENR1_DBGEN (1U << 27U)
 
 /* DBG */
-#define DBG_BASE                        0x40015800
-#define DBG_CR                          (DBG_BASE + 0x04)
-#define DBG_CR_DBG_STANDBY              (1U << 2U)
-#define DBG_CR_DBG_STOP                 (1U << 1U)
-#define DBG_APB_FZ1                     (DBG_BASE + 0x08)
-#define DBG_APB_FZ1_DBG_IWDG_STOP       (1U << 12U)
-#define DBG_APB_FZ1_DBG_WWDG_STOP       (1U << 11U)
+#define DBG_BASE                  0x40015800
+#define DBG_CR                    (DBG_BASE + 0x04)
+#define DBG_CR_DBG_STANDBY        (1U << 2U)
+#define DBG_CR_DBG_STOP           (1U << 1U)
+#define DBG_APB_FZ1               (DBG_BASE + 0x08)
+#define DBG_APB_FZ1_DBG_IWDG_STOP (1U << 12U)
+#define DBG_APB_FZ1_DBG_WWDG_STOP (1U << 11U)
 
 enum STM32G0_DEV_ID {
 	STM32G03_4 = 0x466,
@@ -546,20 +544,20 @@ typedef struct registers {
  * The same for PCROP and SECR.
  */
 static const registers_s options_def[NB_REG_OPT] = {
-	[OPTR_ENUM]           = { FLASH_OPTR,          0xFFFFFEAA },
-	[PCROP1ASR_ENUM]      = { FLASH_PCROP1ASR,     0xFFFFFFFF },
-	[PCROP1AER_ENUM]      = { FLASH_PCROP1AER,     0x00000000 },
-	[WRP1AR_ENUM]         = { FLASH_WRP1AR,        0x000000FF },
-	[WRP1BR_ENUM]         = { FLASH_WRP1BR,        0x000000FF },
-	[PCROP1BSR_ENUM]      = { FLASH_PCROP1BSR,     0xFFFFFFFF },
-	[PCROP1BER_ENUM]      = { FLASH_PCROP1BER,     0x00000000 },
-	[PCROP2ASR_ENUM]      = { FLASH_PCROP2ASR,     0xFFFFFFFF },
-	[PCROP2AER_ENUM]      = { FLASH_PCROP2AER,     0x00000000 },
-	[WRP2AR_ENUM]         = { FLASH_WRP2AR,        0x000000FF },
-	[WRP2BR_ENUM]         = { FLASH_WRP2BR,        0x000000FF },
-	[PCROP2BSR_ENUM]      = { FLASH_PCROP2BSR,     0xFFFFFFFF },
-	[PCROP2BER_ENUM]      = { FLASH_PCROP2BER,     0x00000000 },
-	[SECR_ENUM]           = { FLASH_SECR,          0x00000000 }
+	[OPTR_ENUM] = {FLASH_OPTR, 0xFFFFFEAA},
+	[PCROP1ASR_ENUM] = {FLASH_PCROP1ASR, 0xFFFFFFFF},
+	[PCROP1AER_ENUM] = {FLASH_PCROP1AER, 0x00000000},
+	[WRP1AR_ENUM] = {FLASH_WRP1AR, 0x000000FF},
+	[WRP1BR_ENUM] = {FLASH_WRP1BR, 0x000000FF},
+	[PCROP1BSR_ENUM] = {FLASH_PCROP1BSR, 0xFFFFFFFF},
+	[PCROP1BER_ENUM] = {FLASH_PCROP1BER, 0x00000000},
+	[PCROP2ASR_ENUM] = {FLASH_PCROP2ASR, 0xFFFFFFFF},
+	[PCROP2AER_ENUM] = {FLASH_PCROP2AER, 0x00000000},
+	[WRP2AR_ENUM] = {FLASH_WRP2AR, 0x000000FF},
+	[WRP2BR_ENUM] = {FLASH_WRP2BR, 0x000000FF},
+	[PCROP2BSR_ENUM] = {FLASH_PCROP2BSR, 0xFFFFFFFF},
+	[PCROP2BER_ENUM] = {FLASH_PCROP2BER, 0x00000000},
+	[SECR_ENUM] = {FLASH_SECR, 0x00000000},
 };
 
 static void write_registers(target *const t, const registers_s *const regs, const size_t nb_regs)
@@ -603,8 +601,8 @@ exit_error:
  * This table is further written to the target.
  * The register is added only if its address is valid.
  */
-static bool add_reg_value(registers_s *const reg_req, const registers_s *const reg_def,
-	const size_t reg_def_len, const uint32_t addr, const uint32_t val)
+static bool add_reg_value(registers_s *const reg_req, const registers_s *const reg_def, const size_t reg_def_len,
+	const uint32_t addr, const uint32_t val)
 {
 	for (size_t reg = 0U; reg < reg_def_len; ++reg) {
 		if (addr == reg_def[reg].addr) {
@@ -619,8 +617,8 @@ static bool add_reg_value(registers_s *const reg_req, const registers_s *const r
 /*
  * Parse (address, value) register pairs given on the command line.
  */
-static bool parse_cmdline_registers(const uint32_t argc, const char *const *const argv,
-	registers_s *const reg_req, const registers_s *const reg_def, const size_t reg_def_len)
+static bool parse_cmdline_registers(const uint32_t argc, const char *const *const argv, registers_s *const reg_req,
+	const registers_s *const reg_def, const size_t reg_def_len)
 {
 	uint32_t valid_regs = 0U;
 
