@@ -26,7 +26,7 @@
 
 void jtagtap_tms_seq(uint32_t MS, int ticks)
 {
-	while(ticks--) {
+	while (ticks--) {
 		jtagtap_next(MS & 1, 1);
 		MS >>= 1;
 	}
@@ -35,15 +35,16 @@ void jtagtap_tms_seq(uint32_t MS, int ticks)
 void jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms, const uint8_t *DI, int ticks)
 {
 	uint8_t index = 1;
-	while(ticks--) {
-		if(jtagtap_next(ticks?0:final_tms, *DI & index)) {
+	while (ticks--) {
+		if (jtagtap_next(ticks ? 0 : final_tms, *DI & index)) {
 			*DO |= index;
 		} else {
 			*DO &= ~index;
 		}
-		if(!(index <<= 1)) {
+		if (!(index <<= 1)) {
 			index = 1;
-			DI++; DO++;
+			DI++;
+			DO++;
 		}
 	}
 }
@@ -51,12 +52,11 @@ void jtagtap_tdi_tdo_seq(uint8_t *DO, const uint8_t final_tms, const uint8_t *DI
 void jtagtap_tdi_seq(const uint8_t final_tms, const uint8_t *DI, int ticks)
 {
 	uint8_t index = 1;
-	while(ticks--) {
-		jtagtap_next(ticks?0:final_tms, *DI & index);
-		if(!(index <<= 1)) {
+	while (ticks--) {
+		jtagtap_next(ticks ? 0 : final_tms, *DI & index);
+		if (!(index <<= 1)) {
 			index = 1;
 			DI++;
 		}
 	}
 }
-
