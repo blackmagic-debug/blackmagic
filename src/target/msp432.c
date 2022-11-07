@@ -38,39 +38,39 @@
 #include "cortexm.h"
 
 /* TLV: Device info tag, address and expected value */
-#define DEVINFO_TAG_ADDR 0x00201004u
+#define DEVINFO_TAG_ADDR  0x00201004u
 #define DEVINFO_TAG_VALUE 0x0000000Bu
 
 /* TLV: Device info length, address and expected value */
-#define DEVINFO_LEN_ADDR 0x00201008u
+#define DEVINFO_LEN_ADDR  0x00201008u
 #define DEVINFO_LEN_VALUE 0x00000004u
 
 /* TLV: Device ID, address and expected values */
-#define DEVID_ADDR 0x0020100Cu
-#define DEVID_MSP432P401RIPZ 0x0000A000u
-#define DEVID_MSP432P401MIPZ 0x0000A001u
+#define DEVID_ADDR            0x0020100Cu
+#define DEVID_MSP432P401RIPZ  0x0000A000u
+#define DEVID_MSP432P401MIPZ  0x0000A001u
 #define DEVID_MSP432P401RIZXH 0x0000A002u
 #define DEVID_MSP432P401MIZXH 0x0000A003u
 #define DEVID_MSP432P401RIRGC 0x0000A004u
 #define DEVID_MSP432P401MIRGC 0x0000A005u
 
 /* TLV: Hardware revision, address and minimum expected value */
-#define HWREV_ADDR 0x00201010u
+#define HWREV_ADDR      0x00201010u
 #define HWREV_MIN_VALUE 0x00000043u
 
 /* ROM Device Driver Table pointer addresses */
 #define ROM_APITABLE 0x02000800u
 
-#define OFS_FLASHCTLTABLE 28             /* ROM_APITABLE[7] */
+#define OFS_FLASHCTLTABLE             28 /* ROM_APITABLE[7] */
 #define OFS_FlashCtl_performMassErase 32 /* ROM_FLASHCTLTABLE[8] */
-#define OFS_FlashCtl_eraseSector 36      /* ROM_FLASHCTLTABLE[9] */
-#define OFS_FlashCtl_programMemory 40    /* ROM_FLASHCTLTABLE[10] */
+#define OFS_FlashCtl_eraseSector      36 /* ROM_FLASHCTLTABLE[9] */
+#define OFS_FlashCtl_programMemory    40 /* ROM_FLASHCTLTABLE[10] */
 
 /* Memory sizes and base addresses */
 #define MAIN_FLASH_BASE 0x00000000u /* Beginning of Main Flash */
 #define INFO_FLASH_BASE 0x00200000u /* Beginning of Info Flash */
-#define INFO_BANK_SIZE 0x00002000u  /* Size of 1 bank of Info Flash */
-#define SECTOR_SIZE 0x1000u         /* Size of erase page: 4KB */
+#define INFO_BANK_SIZE  0x00002000u /* Size of 1 bank of Info Flash */
+#define SECTOR_SIZE     0x1000u     /* Size of erase page: 4KB */
 
 /* Flash protection registers */
 #define INFO_BANK0_WEPROT 0x400110B0u /* Write/Erase protection Bank 0 Info */
@@ -79,24 +79,24 @@
 #define MAIN_BANK1_WEPROT 0x400110C4u /* Write/Erase protection Bank 1 Main */
 
 /* Main Flash and SRAM size registers */
-#define SYS_SRAM_SIZE 0xE0043010u  /* Size of SRAM in SYSCTL */
+#define SYS_SRAM_SIZE  0xE0043010u /* Size of SRAM in SYSCTL */
 #define SYS_FLASH_SIZE 0xE0043020u /* Size of main flash in SYSCTL */
 
 /* RAM info */
-#define SRAM_BASE 0x20000000u       /* Beginning of SRAM */
-#define SRAM_CODE_BASE 0x01000000u  /* Beginning of SRAM, Code zone alias */
+#define SRAM_BASE       0x20000000u /* Beginning of SRAM */
+#define SRAM_CODE_BASE  0x01000000u /* Beginning of SRAM, Code zone alias */
 #define P401M_SRAM_SIZE 0x00008000u /* Size of SRAM, M: 32KB */
 #define P401R_SRAM_SIZE 0x00010000u /* Size of SRAM, R: 64KB */
 
 /* Flash write buffer and stack */
-#define SRAM_STACK_OFFSET 0x00000200u /* A bit less than 512 stack room */
-#define SRAM_STACK_PTR (SRAM_BASE + SRAM_STACK_OFFSET)
-#define SRAM_WRITE_BUFFER SRAM_STACK_PTR /* Buffer right above stack */
-#define SRAM_WRITE_BUF_SIZE 0x00000400u  /* Write 1024 bytes at a tima */
+#define SRAM_STACK_OFFSET   0x00000200u /* A bit less than 512 stack room */
+#define SRAM_STACK_PTR      (SRAM_BASE + SRAM_STACK_OFFSET)
+#define SRAM_WRITE_BUFFER   SRAM_STACK_PTR /* Buffer right above stack */
+#define SRAM_WRITE_BUF_SIZE 0x00000400u    /* Write 1024 bytes at a tima */
 
 /* Watchdog */
 #define WDT_A_WTDCTL 0x4000480Cu /* Control register for watchdog */
-#define WDT_A_HOLD 0x5A88u       /* Clears and halts the watchdog */
+#define WDT_A_HOLD   0x5A88u     /* Clears and halts the watchdog */
 
 /* Support variables to call code in ROM */
 struct msp432_flash {
@@ -141,7 +141,8 @@ static bool msp432_cmd_sector_erase(target *t, int argc, const char **argv);
 const struct command_s msp432_cmd_list[] = {
 	{"erase", (cmd_handler)msp432_cmd_erase_main, "Erase main flash"},
 	{"sector_erase", (cmd_handler)msp432_cmd_sector_erase, "Erase sector containing given address"},
-	{NULL, NULL, NULL}};
+	{NULL, NULL, NULL},
+};
 
 static void msp432_add_flash(target *t, uint32_t addr, size_t length, target_addr_t prot_reg)
 {
@@ -234,21 +235,20 @@ static bool msp432_sector_erase(target_flash_s *f, target_addr_t addr)
 
 	/* Unprotect sector */
 	uint32_t old_prot = msp432_sector_unprotect(mf, addr);
-	DEBUG_WARN("Flash protect: 0x%08"PRIX32"\n",
-			   target_mem_read32(t, mf->flash_protect_register));
+	DEBUG_WARN("Flash protect: 0x%08" PRIX32 "\n", target_mem_read32(t, mf->flash_protect_register));
 
 	/* Prepare input data */
 	uint32_t regs[t->regs_size / sizeof(uint32_t)]; // Use of VLA
 	target_regs_read(t, regs);
 	regs[0] = addr; // Address of sector to erase in R0
 
-	DEBUG_INFO("Erasing sector at 0x%08"PRIX32"\n", addr);
+	DEBUG_INFO("Erasing sector at 0x%08" PRIX32 "\n", addr);
 
 	/* Call ROM */
 	msp432_call_ROM(t, mf->FlashCtl_eraseSector, regs);
 
 	// Result value in R0 is true for success
-	DEBUG_INFO("ROM return value: %"PRIu32"\n", regs[0]);
+	DEBUG_INFO("ROM return value: %" PRIu32 "\n", regs[0]);
 
 	/* Restore original protection */
 	target_mem_write32(t, mf->flash_protect_register, old_prot);
@@ -286,8 +286,7 @@ static bool msp432_flash_write(target_flash_s *f, target_addr_t dest, const void
 	/* Unprotect sector, len is always < SECTOR_SIZE */
 	uint32_t old_prot = msp432_sector_unprotect(mf, dest);
 
-	DEBUG_WARN("Flash protect: 0x%08"PRIX32"\n",
-			   target_mem_read32(t, mf->flash_protect_register));
+	DEBUG_WARN("Flash protect: 0x%08" PRIX32 "\n", target_mem_read32(t, mf->flash_protect_register));
 
 	/* Prepare input data */
 	uint32_t regs[t->regs_size / sizeof(uint32_t)]; // Use of VLA
@@ -303,7 +302,7 @@ static bool msp432_flash_write(target_flash_s *f, target_addr_t dest, const void
 	/* Restore original protection */
 	target_mem_write32(t, mf->flash_protect_register, old_prot);
 
-	DEBUG_INFO("ROM return value: %"PRIu32"\n", regs[0]);
+	DEBUG_INFO("ROM return value: %" PRIu32 "\n", regs[0]);
 
 	// Result value in R0 is true for success
 	return !!regs[0];
@@ -318,7 +317,7 @@ static bool msp432_cmd_erase_main(target *t, int argc, const char **argv)
 	/* Usually, this is not wanted, so go sector by sector...        */
 
 	uint32_t banksize = target_mem_read32(t, SYS_FLASH_SIZE) / 2;
-	DEBUG_INFO("Bank Size: 0x%08"PRIX32"\n", banksize);
+	DEBUG_INFO("Bank Size: 0x%08" PRIX32 "\n", banksize);
 
 	/* Erase first bank */
 	target_flash_s *f = get_target_flash(t, MAIN_FLASH_BASE);
@@ -377,7 +376,8 @@ static void msp432_call_ROM(target *t, uint32_t address, uint32_t regs[])
 	/* Call ROM */
 	/* start the target and wait for it to halt again */
 	target_halt_resume(t, false);
-	while (!target_halt_poll(t, NULL));
+	while (!target_halt_poll(t, NULL))
+		;
 
 	// Read registers to get result
 	target_regs_read(t, regs);
