@@ -25,15 +25,15 @@
 #include "cortexm.h"
 #include "lpc_common.h"
 
-#define IAP_PGM_CHUNKSIZE	512	/* should fit in RAM on any device */
+#define IAP_PGM_CHUNKSIZE 512 /* should fit in RAM on any device */
 
-#define MIN_RAM_SIZE            1024
-#define RAM_USAGE_FOR_IAP_ROUTINES	32	/* IAP routines use 32 bytes at top of ram */
+#define MIN_RAM_SIZE               1024
+#define RAM_USAGE_FOR_IAP_ROUTINES 32 /* IAP routines use 32 bytes at top of ram */
 
-#define IAP_ENTRYPOINT	0x03000205
-#define IAP_RAM_BASE	0x02000000
+#define IAP_ENTRYPOINT 0x03000205
+#define IAP_RAM_BASE   0x02000000
 
-#define LPC15XX_DEVICE_ID  0x400743F8
+#define LPC15XX_DEVICE_ID 0x400743F8
 
 static bool lpc15xx_read_uid(target *t, int argc, const char *argv[])
 {
@@ -52,7 +52,7 @@ static bool lpc15xx_read_uid(target *t, int argc, const char *argv[])
 
 const struct command_s lpc15xx_cmd_list[] = {
 	{"readuid", lpc15xx_read_uid, "Read out the 16-byte UID."},
-	{NULL, NULL, NULL}
+	{NULL, NULL, NULL},
 };
 
 static void lpc15xx_add_flash(target *t, uint32_t addr, size_t len, size_t erasesize)
@@ -66,8 +66,7 @@ static void lpc15xx_add_flash(target *t, uint32_t addr, size_t len, size_t erase
 	lf->iap_msp = IAP_RAM_BASE + MIN_RAM_SIZE - RAM_USAGE_FOR_IAP_ROUTINES;
 }
 
-bool
-lpc15xx_probe(target *t)
+bool lpc15xx_probe(target *t)
 {
 	uint32_t ram_size = 0;
 
