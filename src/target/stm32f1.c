@@ -43,7 +43,7 @@ static bool stm32f1_cmd_option(target *t, int argc, const char **argv);
 
 const struct command_s stm32f1_cmd_list[] = {
 	{"option", (cmd_handler)stm32f1_cmd_option, "Manipulate option bytes"},
-	{NULL, NULL, NULL}
+	{NULL, NULL, NULL},
 };
 
 static bool stm32f1_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
@@ -166,32 +166,32 @@ bool at32fxx_probe(target *t)
 	const uint32_t idcode = target_mem_read32(t, DBGMCU_IDCODE);
 	// AT32F415 Series?
 	if ((idcode & 0xfffff000U) == 0x70030000) {
-		switch(idcode &0x00000FFF) {
-			case 0x0240:	// LQFP64_10x10
-			case 0x0241:	// LQFP48_7x7
-			case 0x0242:	// QFN32_4x4
-			case 0x0243:	// LQFP64_7x7
-			case 0x024c:	// QFN48_6x6
-				// Flash: 256 KB / 2KB per block
-				stm32f1_add_flash(t, 0x08000000, 256 * 1024, 2 * 1024);
-				break;
-			case 0x01c4:	// LQFP64_10x10
-			case 0x01c5:	// LQFP48_7x7
-			case 0x01c6:	// QFN32_4x4
-			case 0x01c7:	// LQFP64_7x7
-			case 0x01cd:	// QFN48_6x6
-				// Flash: 128 KB / 2KB per block
-				stm32f1_add_flash(t, 0x08000000, 128 * 1024, 2 * 1024);
-				break;
-			case 0x0108:	// LQFP64_10x10
-			case 0x0109:	// LQFP48_7x7
-			case 0x010a:	// QFN32_4x4
-				// Flash: 64 KB / 2KB per block
-				stm32f1_add_flash(t, 0x08000000, 64 * 1024, 2 * 1024);
-				break;
-			// Unknown/undocumented
-			default:
-				return false;
+		switch (idcode & 0x00000FFF) {
+		case 0x0240: // LQFP64_10x10
+		case 0x0241: // LQFP48_7x7
+		case 0x0242: // QFN32_4x4
+		case 0x0243: // LQFP64_7x7
+		case 0x024c: // QFN48_6x6
+			// Flash: 256 KB / 2KB per block
+			stm32f1_add_flash(t, 0x08000000, 256 * 1024, 2 * 1024);
+			break;
+		case 0x01c4: // LQFP64_10x10
+		case 0x01c5: // LQFP48_7x7
+		case 0x01c6: // QFN32_4x4
+		case 0x01c7: // LQFP64_7x7
+		case 0x01cd: // QFN48_6x6
+			// Flash: 128 KB / 2KB per block
+			stm32f1_add_flash(t, 0x08000000, 128 * 1024, 2 * 1024);
+			break;
+		case 0x0108: // LQFP64_10x10
+		case 0x0109: // LQFP48_7x7
+		case 0x010a: // QFN32_4x4
+			// Flash: 64 KB / 2KB per block
+			stm32f1_add_flash(t, 0x08000000, 64 * 1024, 2 * 1024);
+			break;
+		// Unknown/undocumented
+		default:
+			return false;
 		}
 		// All parts have 32KB SRAM
 		target_add_ram(t, 0x20000000, 32 * 1024);
@@ -201,39 +201,38 @@ bool at32fxx_probe(target *t)
 	else if ((idcode & 0xfffff000U) == 0x70050000) {
 		// Current driver supports only *default* memory layout (256 KB Flash / 96 KB SRAM)
 		// (*) Support for external Flash for 512KB and 1024KB parts requires specific flash code (not implement)
-		switch(idcode &0x00000FFF) {
-			case 0x0240:	// AT32F403AVCT7 256KB / LQFP100
-			case 0x0241:	// AT32F403ARCT7 256KB / LQFP64
-			case 0x0242:	// AT32F403ACCT7 256KB / LQFP48
-			case 0x0243:	// AT32F403ACCU7 256KB / QFN48
-			case 0x0249:	// AT32F407VCT7 256KB / LQFP100
-			case 0x024a:	// AT32F407RCT7 256KB / LQFP64
-			case 0x0254:	// AT32F407AVCT7 256KB / LQFP100
-			case 0x02cd:	// AT32F403AVET7 512KB / LQFP100 (*)
-			case 0x02ce:	// AT32F403ARET7 512KB / LQFP64 (*)
-			case 0x02cf:	// AT32F403ACET7 512KB / LQFP48 (*)
-			case 0x02d0:	// AT32F403ACEU7 512KB / QFN48 (*)
-			case 0x02d1:	// AT32F407VET7 512KB / LQFP100 (*)
-			case 0x02d2:	// AT32F407RET7 512KB / LQFP64 (*)
-			case 0x0344:	// AT32F403AVGT7 1024KB / LQFP100 (*)
-			case 0x0345:	// AT32F403ARGT7 1024KB / LQFP64 (*)
-			case 0x0346:	// AT32F403ACGT7 1024KB / LQFP48 (*)
-			case 0x0347:	// AT32F403ACGU7 1024KB / QFN48 (found on BlackPill+ WeAct Studio) (*)
-			case 0x034b:	// AT32F407VGT7 1024KB / LQFP100 (*)
-			case 0x034c:	// AT32F407VGT7 1024KB / LQFP64 (*)
-			case 0x0353:	// AT32F407AVGT7 1024KB / LQFP100 (*)
-				// Flash: 256 KB / 2KB per block
-				stm32f1_add_flash(t, 0x08000000, 256 * 1024, 2 * 1024);
-				break;
-			// Unknown/undocumented
-			default:
-				return false;
+		switch (idcode & 0x00000FFF) {
+		case 0x0240: // AT32F403AVCT7 256KB / LQFP100
+		case 0x0241: // AT32F403ARCT7 256KB / LQFP64
+		case 0x0242: // AT32F403ACCT7 256KB / LQFP48
+		case 0x0243: // AT32F403ACCU7 256KB / QFN48
+		case 0x0249: // AT32F407VCT7 256KB / LQFP100
+		case 0x024a: // AT32F407RCT7 256KB / LQFP64
+		case 0x0254: // AT32F407AVCT7 256KB / LQFP100
+		case 0x02cd: // AT32F403AVET7 512KB / LQFP100 (*)
+		case 0x02ce: // AT32F403ARET7 512KB / LQFP64 (*)
+		case 0x02cf: // AT32F403ACET7 512KB / LQFP48 (*)
+		case 0x02d0: // AT32F403ACEU7 512KB / QFN48 (*)
+		case 0x02d1: // AT32F407VET7 512KB / LQFP100 (*)
+		case 0x02d2: // AT32F407RET7 512KB / LQFP64 (*)
+		case 0x0344: // AT32F403AVGT7 1024KB / LQFP100 (*)
+		case 0x0345: // AT32F403ARGT7 1024KB / LQFP64 (*)
+		case 0x0346: // AT32F403ACGT7 1024KB / LQFP48 (*)
+		case 0x0347: // AT32F403ACGU7 1024KB / QFN48 (found on BlackPill+ WeAct Studio) (*)
+		case 0x034b: // AT32F407VGT7 1024KB / LQFP100 (*)
+		case 0x034c: // AT32F407VGT7 1024KB / LQFP64 (*)
+		case 0x0353: // AT32F407AVGT7 1024KB / LQFP100 (*)
+			// Flash: 256 KB / 2KB per block
+			stm32f1_add_flash(t, 0x08000000, 256 * 1024, 2 * 1024);
+			break;
+		// Unknown/undocumented
+		default:
+			return false;
 		}
 		// All parts have 96KB SRAM
 		target_add_ram(t, 0x20000000, 96 * 1024);
 		t->driver = "AT32F403A/407";
-	}
-	else
+	} else
 		return false;
 	return true;
 }
