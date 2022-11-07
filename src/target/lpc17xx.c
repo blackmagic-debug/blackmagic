@@ -24,16 +24,16 @@
 #include "lpc_common.h"
 #include "adiv5.h"
 
-#define IAP_PGM_CHUNKSIZE			4096
+#define IAP_PGM_CHUNKSIZE 4096
 
-#define MIN_RAM_SIZE				8192 // LPC1751
-#define RAM_USAGE_FOR_IAP_ROUTINES	32 // IAP routines use 32 bytes at top of ram
+#define MIN_RAM_SIZE               8192 // LPC1751
+#define RAM_USAGE_FOR_IAP_ROUTINES 32   // IAP routines use 32 bytes at top of ram
 
-#define IAP_ENTRYPOINT				0x1FFF1FF1
-#define IAP_RAM_BASE				0x10000000
+#define IAP_ENTRYPOINT 0x1FFF1FF1
+#define IAP_RAM_BASE   0x10000000
 
-#define MEMMAP						0x400FC040
-#define FLASH_NUM_SECTOR			30
+#define MEMMAP           0x400FC040
+#define FLASH_NUM_SECTOR 30
 
 struct flash_param {
 	uint16_t opcode;
@@ -59,10 +59,9 @@ static void lpc17xx_add_flash(target *t, uint32_t addr, size_t len, size_t erase
 	lf->iap_msp = IAP_RAM_BASE + MIN_RAM_SIZE - RAM_USAGE_FOR_IAP_ROUTINES;
 }
 
-bool
-lpc17xx_probe(target *t)
+bool lpc17xx_probe(target *t)
 {
-	if ((t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M3)  {
+	if ((t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M3) {
 		/*
 		 * Now that we're sure it's a Cortex-M3, we need to halt the
 		 * target and make an IAP call to get the part number.
@@ -80,30 +79,30 @@ lpc17xx_probe(target *t)
 		}
 
 		switch (param.result[1]) {
-			case 0x26113F37: /* LPC1769 */
-			case 0x26013F37: /* LPC1768 */
-			case 0x26012837: /* LPC1767 */
-			case 0x26013F33: /* LPC1766 */
-			case 0x26013733: /* LPC1765 */
-			case 0x26011922: /* LPC1764 */
-			case 0x25113737: /* LPC1759 */
-			case 0x25013F37: /* LPC1758 */
-			case 0x25011723: /* LPC1756 */
-			case 0x25011722: /* LPC1754 */
-			case 0x25001121: /* LPC1752 */
-			case 0x25001118: /* LPC1751 */
-			case 0x25001110: /* LPC1751 (No CRP) */
+		case 0x26113F37: /* LPC1769 */
+		case 0x26013F37: /* LPC1768 */
+		case 0x26012837: /* LPC1767 */
+		case 0x26013F33: /* LPC1766 */
+		case 0x26013733: /* LPC1765 */
+		case 0x26011922: /* LPC1764 */
+		case 0x25113737: /* LPC1759 */
+		case 0x25013F37: /* LPC1758 */
+		case 0x25011723: /* LPC1756 */
+		case 0x25011722: /* LPC1754 */
+		case 0x25001121: /* LPC1752 */
+		case 0x25001118: /* LPC1751 */
+		case 0x25001110: /* LPC1751 (No CRP) */
 
-				t->mass_erase = lpc17xx_mass_erase;
-				t->driver = "LPC17xx";
-				t->extended_reset = lpc17xx_extended_reset;
-				target_add_ram(t, 0x10000000, 0x8000);
-				target_add_ram(t, 0x2007C000, 0x4000);
-				target_add_ram(t, 0x20080000, 0x4000);
-				lpc17xx_add_flash(t, 0x00000000, 0x10000, 0x1000, 0);
-				lpc17xx_add_flash(t, 0x00010000, 0x70000, 0x8000, 16);
+			t->mass_erase = lpc17xx_mass_erase;
+			t->driver = "LPC17xx";
+			t->extended_reset = lpc17xx_extended_reset;
+			target_add_ram(t, 0x10000000, 0x8000);
+			target_add_ram(t, 0x2007C000, 0x4000);
+			target_add_ram(t, 0x20080000, 0x4000);
+			lpc17xx_add_flash(t, 0x00000000, 0x10000, 0x1000, 0);
+			lpc17xx_add_flash(t, 0x00010000, 0x70000, 0x8000, 16);
 
-				return true;
+			return true;
 		}
 	}
 	return false;
