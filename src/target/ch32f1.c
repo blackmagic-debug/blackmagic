@@ -168,8 +168,8 @@ static bool ch32f1_has_fast_unlock(target *t)
 	DEBUG_INFO("CH32: has fast unlock \n");
 	// reset fast unlock
 	SET_CR(FLASH_CR_FLOCK_CH32);
-	platform_delay(1); // The flash controller is timing sensitive	
-	if (!(target_mem_read32(t, FLASH_CR) & FLASH_CR_FLOCK_CH32)) 
+	platform_delay(1); // The flash controller is timing sensitive
+	if (!(target_mem_read32(t, FLASH_CR) & FLASH_CR_FLOCK_CH32))
 		return false;
 	// send unlock sequence
 	target_mem_write32(t, FLASH_KEYR, KEY1);
@@ -178,12 +178,12 @@ static bool ch32f1_has_fast_unlock(target *t)
 	// send fast unlock sequence
 	target_mem_write32(t, FLASH_MODEKEYR_CH32, KEY1);
 	target_mem_write32(t, FLASH_MODEKEYR_CH32, KEY2);
-	platform_delay(1); // The flash controller is timing sensitive	
+	platform_delay(1); // The flash controller is timing sensitive
 	return !(target_mem_read32(t, FLASH_CR) & FLASH_CR_FLOCK_CH32);
 }
 
 /*
- *	 try to identify the ch32f1 chip				
+ *	 try to identify the ch32f1 chip
  */
 bool ch32f1_probe(target *t)
 {
@@ -219,7 +219,7 @@ bool ch32f1_probe(target *t)
 }
 
 /*
- * erase using CH32 fast erase 
+ * erase using CH32 fast erase
  */
 bool ch32f1_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
@@ -253,7 +253,7 @@ bool ch32f1_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 	ch32f1_flash_lock(t);
 	if (sr & SR_ERROR_MASK)
 		DEBUG_WARN("ch32f1 flash erase error 0x%" PRIx32 "\n", sr);
-	return !(sr & SR_ERROR_MASK) ;
+	return !(sr & SR_ERROR_MASK);
 }
 
 /*
@@ -274,7 +274,7 @@ static bool ch32f1_wait_flash_ready(target *t, uint32_t addr)
 	return true;
 }
 
-/*  
+/*
  * CH32 fast flash. Load 128 bytes chunk and then write them
  */
 static int ch32f1_upload(target *t, uint32_t dest, const void *src, uint32_t offset)
@@ -308,6 +308,7 @@ static int ch32f1_buffer_clear(target *t)
 	CLEAR_CR(FLASH_CR_FTPG_CH32);    // Fast page program 4-
 	return 0;
 }
+
 //#define CH32_VERIFY
 
 /*
