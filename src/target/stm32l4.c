@@ -50,7 +50,7 @@ const struct command_s stm32l4_cmd_list[] = {
 	{"erase_bank1", (cmd_handler)stm32l4_cmd_erase_bank1, "Erase entire bank1 flash memory"},
 	{"erase_bank2", (cmd_handler)stm32l4_cmd_erase_bank2, "Erase entire bank2 flash memory"},
 	{"option", (cmd_handler)stm32l4_cmd_option, "Manipulate option bytes"},
-	{NULL, NULL, NULL}
+	{NULL, NULL, NULL},
 };
 
 static bool stm32l4_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
@@ -58,47 +58,47 @@ static bool stm32l4_flash_write(target_flash_s *f, target_addr_t dest, const voi
 static bool stm32l4_mass_erase(target *t);
 
 /* Flash Program ad Erase Controller Register Map */
-#define L4_FPEC_BASE			0x40022000
-#define L5_FPEC_BASE			0x40022000
-#define WL_FPEC_BASE			0x58004000
-#define WB_FPEC_BASE			0x58004000
+#define L4_FPEC_BASE 0x40022000
+#define L5_FPEC_BASE 0x40022000
+#define WL_FPEC_BASE 0x58004000
+#define WB_FPEC_BASE 0x58004000
 
-#define L5_FLASH_OPTR_TZEN	(1 << 31)
+#define L5_FLASH_OPTR_TZEN (1 << 31)
 
-#define FLASH_OPTR_ESE		(1 <<  8)
-#define PWR_CR4				0x5800040C
-#define PWR_CR4_C2BOOT		(1 << 15)
+#define FLASH_OPTR_ESE (1 << 8)
+#define PWR_CR4        0x5800040C
+#define PWR_CR4_C2BOOT (1 << 15)
 
-#define FLASH_CR_PG			(1 << 0)
-#define FLASH_CR_PER		(1 << 1)
-#define FLASH_CR_MER1		(1 << 2)
-#define FLASH_CR_PAGE_SHIFT	3
-#define FLASH_CR_BKER		(1 << 11)
-#define FLASH_CR_MER2		(1 << 15)
-#define FLASH_CR_STRT		(1 << 16)
-#define FLASH_CR_OPTSTRT	(1 << 17)
-#define FLASH_CR_FSTPG	 	(1 << 18)
-#define FLASH_CR_EOPIE		(1 << 24)
-#define FLASH_CR_ERRIE		(1 << 25)
-#define FLASH_CR_OBL_LAUNCH	(1 << 27)
-#define FLASH_CR_OPTLOCK	(1 << 30)
-#define FLASH_CR_LOCK		(1 << 31)
+#define FLASH_CR_PG         (1 << 0)
+#define FLASH_CR_PER        (1 << 1)
+#define FLASH_CR_MER1       (1 << 2)
+#define FLASH_CR_PAGE_SHIFT 3
+#define FLASH_CR_BKER       (1 << 11)
+#define FLASH_CR_MER2       (1 << 15)
+#define FLASH_CR_STRT       (1 << 16)
+#define FLASH_CR_OPTSTRT    (1 << 17)
+#define FLASH_CR_FSTPG      (1 << 18)
+#define FLASH_CR_EOPIE      (1 << 24)
+#define FLASH_CR_ERRIE      (1 << 25)
+#define FLASH_CR_OBL_LAUNCH (1 << 27)
+#define FLASH_CR_OPTLOCK    (1 << 30)
+#define FLASH_CR_LOCK       (1 << 31)
 
-#define FLASH_SR_EOP		(1 << 0)
-#define FLASH_SR_OPERR		(1 << 1)
-#define FLASH_SR_PROGERR	(1 << 3)
-#define FLASH_SR_WRPERR		(1 << 4)
-#define FLASH_SR_PGAERR		(1 << 5)
-#define FLASH_SR_SIZERR		(1 << 6)
-#define FLASH_SR_PGSERR		(1 << 7)
-#define FLASH_SR_MSERR		(1 << 8)
-#define FLASH_SR_FASTERR	(1 << 9)
-#define FLASH_SR_RDERR		(1 << 14)
-#define FLASH_SR_OPTVERR	(1 << 15)
-#define FLASH_SR_ERROR_MASK	0xC3FA
-#define FLASH_SR_BSY		(1 << 16)
+#define FLASH_SR_EOP        (1 << 0)
+#define FLASH_SR_OPERR      (1 << 1)
+#define FLASH_SR_PROGERR    (1 << 3)
+#define FLASH_SR_WRPERR     (1 << 4)
+#define FLASH_SR_PGAERR     (1 << 5)
+#define FLASH_SR_SIZERR     (1 << 6)
+#define FLASH_SR_PGSERR     (1 << 7)
+#define FLASH_SR_MSERR      (1 << 8)
+#define FLASH_SR_FASTERR    (1 << 9)
+#define FLASH_SR_RDERR      (1 << 14)
+#define FLASH_SR_OPTVERR    (1 << 15)
+#define FLASH_SR_ERROR_MASK 0xC3FA
+#define FLASH_SR_BSY        (1 << 16)
 
-#define FLASH_SIZE_MAX_G4_CAT4  (512U * 1024U)   // 512 kiB
+#define FLASH_SIZE_MAX_G4_CAT4 (512U * 1024U) // 512 kiB
 
 #define KEY1 0x45670123
 #define KEY2 0xCDEF89AB
@@ -106,26 +106,27 @@ static bool stm32l4_mass_erase(target *t);
 #define OPTKEY1 0x08192A3B
 #define OPTKEY2 0x4C5D6E7F
 
-#define SR_ERROR_MASK	0xF2
+#define SR_ERROR_MASK 0xF2
 
 /* Used in STM32L47*/
-#define OR_DUALBANK		(1 << 21)
+#define OR_DUALBANK (1 << 21)
 /* Used in STM32L47R*/
-#define OR_DB1M 		(1 << 21)
+#define OR_DB1M (1 << 21)
 /* Used in STM32L47R, STM32G47 and STM32L55*/
-#define OR_DBANK 		(1 << 22)
+#define OR_DBANK (1 << 22)
 
-#define DBGMCU_CR(dbgmcureg)	(dbgmcureg + 0x04)
-#define DBGMCU_CR_DBG_SLEEP		(0x1U << 0U)
-#define DBGMCU_CR_DBG_STOP		(0x1U << 1U)
-#define DBGMCU_CR_DBG_STANDBY	(0x1U << 2U)
+#define DBGMCU_CR(dbgmcureg)  (dbgmcureg + 0x04)
+#define DBGMCU_CR_DBG_SLEEP   (0x1U << 0U)
+#define DBGMCU_CR_DBG_STOP    (0x1U << 1U)
+#define DBGMCU_CR_DBG_STANDBY (0x1U << 2U)
 
 enum {
-        STM32L4_DBGMCU_IDCODE_PHYS = 0xe0042000,
-        STM32L5_DBGMCU_IDCODE_PHYS = 0xe0044000,
+	STM32L4_DBGMCU_IDCODE_PHYS = 0xe0042000,
+	STM32L5_DBGMCU_IDCODE_PHYS = 0xe0044000,
 };
-#define L4_FLASH_SIZE_REG  0x1FFF75E0
-#define L5_FLASH_SIZE_REG  0x0bfa05e0
+
+#define L4_FLASH_SIZE_REG 0x1FFF75E0
+#define L5_FLASH_SIZE_REG 0x0bfa05e0
 
 struct stm32l4_flash {
 	target_flash_s f;
@@ -137,16 +138,16 @@ struct stm32l4_priv_s {
 };
 
 enum ID_STM32L4 {
-	ID_STM32L41  = 0x464u, /* RM0394, Rev.4 */
-	ID_STM32L43  = 0x435u, /* RM0394, Rev.4 */
-	ID_STM32L45  = 0x462u, /* RM0394, Rev.4 */
-	ID_STM32L47  = 0x415u, /* RM0351, Rev.5 */
-	ID_STM32L49  = 0x461u, /* RM0351, Rev.5 */
-	ID_STM32L4R  = 0x470u, /* RM0432, Rev.5 */
-	ID_STM32G43  = 0x468u, /* RM0440, Rev.1 */
-	ID_STM32G47  = 0x469u, /* RM0440, Rev.1 */
-	ID_STM32G49  = 0x479u, /* RM0440, Rev.6 */
-	ID_STM32L55  = 0x472u, /* RM0438, Rev.4 */
+	ID_STM32L41 = 0x464u,  /* RM0394, Rev.4 */
+	ID_STM32L43 = 0x435u,  /* RM0394, Rev.4 */
+	ID_STM32L45 = 0x462u,  /* RM0394, Rev.4 */
+	ID_STM32L47 = 0x415u,  /* RM0351, Rev.5 */
+	ID_STM32L49 = 0x461u,  /* RM0351, Rev.5 */
+	ID_STM32L4R = 0x470u,  /* RM0432, Rev.5 */
+	ID_STM32G43 = 0x468u,  /* RM0440, Rev.1 */
+	ID_STM32G47 = 0x469u,  /* RM0440, Rev.1 */
+	ID_STM32G49 = 0x479u,  /* RM0440, Rev.6 */
+	ID_STM32L55 = 0x472u,  /* RM0438, Rev.4 */
 	ID_STM32WLXX = 0x497u, /* RM0461, Rev.3, RM453, Rev.1 */
 	ID_STM32WBXX = 0x495u, /* RM0434, Rev.9 */
 };
@@ -160,8 +161,8 @@ enum FAM_STM32L4 {
 	FAM_STM32WLxx = 7,
 };
 
-#define DUAL_BANK	0x80u
-#define RAM_COUNT_MSK	0x07u
+#define DUAL_BANK     0x80u
+#define RAM_COUNT_MSK 0x07u
 
 enum stm32l4_flash_regs {
 	FLASH_KEYR,
@@ -216,7 +217,7 @@ struct stm32l4_info {
 	uint16_t sram3; /* SRAM mapped after SRAM1 and SRAM2 */
 	enum ID_STM32L4 device_id;
 	enum FAM_STM32L4 family;
-	uint8_t flags;          /* Only DUAL_BANK is evaluated for now.*/
+	uint8_t flags; /* Only DUAL_BANK is evaluated for now.*/
 	const uint32_t *flash_regs_map;
 };
 
@@ -307,7 +308,7 @@ static struct stm32l4_info const L4info[] = {
 		.family = FAM_STM32L55x,
 		.designator = "STM32L55",
 		.sram1 = 192, /* SRAM1 and SRAM2 are mapped continuous */
-		.sram2 =  64,
+		.sram2 = 64,
 		.flags = 2,
 		.flash_regs_map = stm32l5_flash_regs_map,
 	},
@@ -336,7 +337,8 @@ static struct stm32l4_info const L4info[] = {
 };
 
 /* Retrieve chip basic information, just add to the vector to extend */
-static struct stm32l4_info const * stm32l4_get_chip_info(uint32_t device_id) {
+static struct stm32l4_info const *stm32l4_get_chip_info(uint32_t device_id)
+{
 	struct stm32l4_info const *p = L4info;
 	while (p->device_id && (p->device_id != device_id))
 		p++;
@@ -384,9 +386,9 @@ static void stm32l4_add_flash(target *t, uint32_t addr, size_t length, size_t bl
 	target_add_flash(t, f);
 }
 
-#define L5_RCC_APB1ENR1        0x50021058
+#define L5_RCC_APB1ENR1       0x50021058
 #define L5_RCC_APB1ENR1_PWREN (1 << 28)
-#define L5_PWR_CR1             0x50007000
+#define L5_PWR_CR1            0x50007000
 #define L5_PWR_CR1_VOS        (3 << 9)
 
 /* For flash programming, L5 needs to be in VOS 0 or 1 while reset set 2 (or even 3?) */
@@ -406,7 +408,7 @@ static bool stm32l4_attach(target *t)
 	struct stm32l4_info const *chip = stm32l4_get_chip_info(t->part_id);
 
 	uint32_t idcodereg;
-	switch(chip->family) {
+	switch (chip->family) {
 	case FAM_STM32L55x:
 		idcodereg = STM32L5_DBGMCU_IDCODE_PHYS;
 		stm32l5_flash_enable(t);
@@ -418,7 +420,7 @@ static bool stm32l4_attach(target *t)
 	/* Save DBGMCU_CR to restore it when detaching*/
 	struct stm32l4_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
 	priv_storage->dbgmcu_cr = target_mem_read32(t, DBGMCU_CR(idcodereg));
-	t->target_storage = (void*)priv_storage;
+	t->target_storage = (void *)priv_storage;
 
 	/* Enable debugging during all low power modes*/
 	target_mem_write32(t, DBGMCU_CR(idcodereg), DBGMCU_CR_DBG_SLEEP | DBGMCU_CR_DBG_STANDBY | DBGMCU_CR_DBG_STOP);
@@ -432,8 +434,7 @@ static bool stm32l4_attach(target *t)
 	else
 		target_add_ram(t, 0x10000000, chip->sram2 << 10);
 	/* All L4 beside L47 alias SRAM2 after SRAM1.*/
-	uint32_t ramsize = (t->part_id == ID_STM32L47)?
-		chip->sram1 : (chip->sram1 + chip->sram2 + chip->sram3);
+	uint32_t ramsize = (t->part_id == ID_STM32L47) ? chip->sram1 : (chip->sram1 + chip->sram2 + chip->sram3);
 	target_add_ram(t, 0x20000000, ramsize << 10);
 
 	uint32_t size = stm32l4_flash_read16(t, FLASHSIZE);
@@ -464,29 +465,27 @@ static bool stm32l4_attach(target *t)
 		if (chip->device_id == ID_STM32G43) {
 			uint32_t banksize = size << 10;
 			stm32l4_add_flash(t, 0x08000000, banksize, 0x0800, -1);
-		}
-		else if (chip->device_id == ID_STM32G49) {
+		} else if (chip->device_id == ID_STM32G49) {
 			// Announce maximum possible flash size on this chip
 			stm32l4_add_flash(t, 0x08000000, FLASH_SIZE_MAX_G4_CAT4, 0x0800, -1);
-		}
-		else {
+		} else {
 			if (options & OR_DBANK) {
 				uint32_t banksize = size << 9;
-				stm32l4_add_flash(t, 0x08000000           , banksize, 0x0800, 0x08000000 + banksize);
+				stm32l4_add_flash(t, 0x08000000, banksize, 0x0800, 0x08000000 + banksize);
 				stm32l4_add_flash(t, 0x08000000 + banksize, banksize, 0x0800, 0x08000000 + banksize);
 			} else {
 				uint32_t banksize = size << 10;
-				stm32l4_add_flash(t, 0x08000000           , banksize, 0x1000, -1);
+				stm32l4_add_flash(t, 0x08000000, banksize, 0x1000, -1);
 			}
 		}
 	} else if (chip->flags & DUAL_BANK) {
 		if (options & OR_DUALBANK) {
 			uint32_t banksize = size << 9;
-			stm32l4_add_flash(t, 0x08000000           , banksize, 0x0800, 0x08000000 + banksize);
+			stm32l4_add_flash(t, 0x08000000, banksize, 0x0800, 0x08000000 + banksize);
 			stm32l4_add_flash(t, 0x08000000 + banksize, banksize, 0x0800, 0x08000000 + banksize);
 		} else {
 			uint32_t banksize = size << 10;
-			stm32l4_add_flash(t, 0x08000000           , banksize, 0x0800, -1);
+			stm32l4_add_flash(t, 0x08000000, banksize, 0x0800, -1);
 		}
 	} else
 		stm32l4_add_flash(t, 0x08000000, size << 10, 0x800, -1);
@@ -499,7 +498,7 @@ static bool stm32l4_attach(target *t)
 
 static void stm32l4_detach(target *t)
 {
-	struct stm32l4_priv_s *ps = (struct stm32l4_priv_s*)t->target_storage;
+	struct stm32l4_priv_s *ps = (struct stm32l4_priv_s *)t->target_storage;
 
 	/*reverse all changes to DBGMCU_CR*/
 	uint32_t idcodereg = STM32L4_DBGMCU_IDCODE_PHYS;
@@ -525,33 +524,32 @@ bool stm32l4_probe(target *t)
 
 	struct stm32l4_info const *chip = stm32l4_get_chip_info(device_id);
 
-	if( !chip->device_id )	/* Not found */
+	if (!chip->device_id) /* Not found */
 		return false;
 
 	t->driver = chip->designator;
 	switch (device_id) {
-		case ID_STM32WLXX:
-		case ID_STM32WBXX:
-			if ((stm32l4_flash_read32(t, FLASH_OPTR)) &	FLASH_OPTR_ESE) {
-				DEBUG_WARN("STM32W security enabled\n");
-				t->driver = (device_id == ID_STM32WLXX) ?
-					"STM32WLxx(secure)" : "STM32WBxx(secure)";
-			}
-			if (ap->apsel == 0) {
-				/* Enable CPU2 from CPU1.
+	case ID_STM32WLXX:
+	case ID_STM32WBXX:
+		if ((stm32l4_flash_read32(t, FLASH_OPTR)) & FLASH_OPTR_ESE) {
+			DEBUG_WARN("STM32W security enabled\n");
+			t->driver = (device_id == ID_STM32WLXX) ? "STM32WLxx(secure)" : "STM32WBxx(secure)";
+		}
+		if (ap->apsel == 0) {
+			/* Enable CPU2 from CPU1.
 				 * CPU2 does not boot after reset w/o C2BOOT set.
 				 * RM0453/RM0434, 6.6.4. PWR control register 4 (PWR_CR4)*/
-				uint32_t pwr_cr4 = target_mem_read32(t, PWR_CR4);
-				pwr_cr4 |= PWR_CR4_C2BOOT;
-				target_mem_write32(t, PWR_CR4, pwr_cr4);
-			}
+			uint32_t pwr_cr4 = target_mem_read32(t, PWR_CR4);
+			pwr_cr4 |= PWR_CR4_C2BOOT;
+			target_mem_write32(t, PWR_CR4, pwr_cr4);
+		}
+		break;
+	case ID_STM32L55:
+		if ((stm32l4_flash_read32(t, FLASH_OPTR)) & L5_FLASH_OPTR_TZEN) {
+			DEBUG_WARN("STM32L5 Trust Zone enabled\n");
+			t->core = "M33(TZ)";
 			break;
-		case ID_STM32L55:
-			if ((stm32l4_flash_read32(t, FLASH_OPTR)) & L5_FLASH_OPTR_TZEN) {
-				DEBUG_WARN("STM32L5 Trust Zone enabled\n");
-				t->core = "M33(TZ)";
-				break;
-			}
+		}
 	}
 	t->mass_erase = stm32l4_mass_erase;
 	t->attach = stm32l4_attach;
@@ -611,7 +609,7 @@ static bool stm32l4_flash_erase(target_flash_s *f, target_addr_t addr, size_t le
 			return false;
 
 		if (len > blocksize)
-			len  -= blocksize;
+			len -= blocksize;
 		else
 			len = 0;
 		addr += blocksize;
@@ -679,20 +677,14 @@ static bool stm32l4_cmd_erase_bank2(target *const t, const int argc, const char 
 	return result;
 }
 
-static const uint8_t l4_i2offset[9] = {
-	0x20, 0x24, 0x28, 0x2c, 0x30, 0x44, 0x48, 0x4c, 0x50
-};
+static const uint8_t l4_i2offset[9] = {0x20, 0x24, 0x28, 0x2c, 0x30, 0x44, 0x48, 0x4c, 0x50};
 
-static const uint8_t g4_i2offset[11] = {
-	0x20, 0x24, 0x28, 0x2c, 0x30, 0x70, 0x44, 0x48, 0x4c, 0x50, 0x74
-};
+static const uint8_t g4_i2offset[11] = {0x20, 0x24, 0x28, 0x2c, 0x30, 0x70, 0x44, 0x48, 0x4c, 0x50, 0x74};
 
-static const uint8_t wl_i2offset[7] = {
-	0x20, 0x24, 0x28, 0x2c, 0x30, 0x34, 0x38
-};
+static const uint8_t wl_i2offset[7] = {0x20, 0x24, 0x28, 0x2c, 0x30, 0x34, 0x38};
 
 static bool stm32l4_option_write(
-	target *t,const uint32_t *values, int len, const uint8_t *i2offset, uint32_t fpec_base)
+	target *t, const uint32_t *values, int len, const uint8_t *i2offset, uint32_t fpec_base)
 {
 	tc_printf(t, "Device will lose connection. Rescan!\n");
 	stm32l4_flash_unlock(t);
@@ -707,7 +699,7 @@ static bool stm32l4_option_write(
 		return false;
 	stm32l4_flash_write32(t, FLASH_CR, FLASH_CR_OBL_LAUNCH);
 	while (stm32l4_flash_read32(t, FLASH_CR) & FLASH_CR_OBL_LAUNCH)
-		if(target_check_error(t))
+		if (target_check_error(t))
 			return true;
 	stm32l4_flash_write32(t, FLASH_CR, FLASH_CR_LOCK);
 	return false;
@@ -743,29 +735,24 @@ static bool stm32l4_cmd_option(target *t, int argc, char *argv[])
 		tc_printf(t, "STM32WLxx options not implemented!\n");
 		return false;
 	}
-	static const uint32_t g4_values[11] = {
-		/* SEC_SIZE1 occupies 9 bits on G49/G4A (cat 4),
+	static const uint32_t g4_values[11] = {/* SEC_SIZE1 occupies 9 bits on G49/G4A (cat 4),
 		 * 8 bits on cat 3 and 7 bits on cat 2.
 		 * It is safe to write 0xFF00FE00 (cat 4 value) in FLASH_SEC1R */
-		0xFFEFF8AA, 0xFFFFFFFF, 0x00FF0000, 0xFF00FFFF, 0xFF00FFFF, 0xFF00FE00,
-		0xFFFFFFFF, 0xFFFFFFFF, 0xFF00FFFF, 0xFF00FFFF, 0xFF00FF00
-	};
+		0xFFEFF8AA, 0xFFFFFFFF, 0x00FF0000, 0xFF00FFFF, 0xFF00FFFF, 0xFF00FE00, 0xFFFFFFFF, 0xFFFFFFFF, 0xFF00FFFF,
+		0xFF00FFFF, 0xFF00FF00};
 
 	static const uint32_t wl_values[11] = {
-		0x3FEFF0AA, 0xFFFFFFFF, 0xFFFFFF00, 0xFF80FFFF, 0xFF80FFFF, 0xFFFFFFFF,
-		0xFFFFFF00
-	};
+		0x3FEFF0AA, 0xFFFFFFFF, 0xFFFFFF00, 0xFF80FFFF, 0xFF80FFFF, 0xFFFFFFFF, 0xFFFFFF00};
 
 	uint32_t val;
-	uint32_t values[11] = { 0xFFEFF8AA, 0xFFFFFFFF, 0, 0x000000ff,
-							0x000000ff, 0xffffffff, 0, 0x000000ff, 0x000000ff };
+	uint32_t values[11] = {0xFFEFF8AA, 0xFFFFFFFF, 0, 0x000000ff, 0x000000ff, 0xffffffff, 0, 0x000000ff, 0x000000ff};
 	int len;
 	bool res = false;
 	uint32_t fpec_base = L4_FPEC_BASE;
 	const uint8_t *i2offset = l4_i2offset;
-	if (t->part_id == ID_STM32L43) {/* L43x */
+	if (t->part_id == ID_STM32L43) { /* L43x */
 		len = 5;
-	} else if (t->part_id == ID_STM32G47) {/* G47 */
+	} else if (t->part_id == ID_STM32G47) { /* G47 */
 		i2offset = g4_i2offset;
 		len = 11;
 		for (int i = 0; i < len; i++)
@@ -776,7 +763,7 @@ static bool stm32l4_cmd_option(target *t, int argc, char *argv[])
 		len = 6;
 		for (int i = 0; i < len; i++)
 			values[i] = g4_values[i];
-	} else if (t->part_id == ID_STM32WLXX) {/* WLxx */
+	} else if (t->part_id == ID_STM32WLXX) { /* WLxx */
 		len = 7;
 		i2offset = wl_i2offset;
 		fpec_base = WL_FPEC_BASE;
@@ -787,7 +774,7 @@ static bool stm32l4_cmd_option(target *t, int argc, char *argv[])
 	}
 	if ((argc == 2) && !strcmp(argv[1], "erase")) {
 		res = stm32l4_option_write(t, values, len, i2offset, fpec_base);
-	} else if ((argc >  2) && !strcmp(argv[1], "write")) {
+	} else if ((argc > 2) && !strcmp(argv[1], "write")) {
 		int i;
 		for (i = 2; i < argc; i++)
 			values[i - 2] = strtoul(argv[i], NULL, 0);
@@ -808,7 +795,7 @@ static bool stm32l4_cmd_option(target *t, int argc, char *argv[])
 		tc_printf(t, "Writing options failed!\n");
 		return false;
 	}
-	for (int i = 0; i < len; i ++) {
+	for (int i = 0; i < len; i++) {
 		uint32_t addr = fpec_base + i2offset[i];
 		val = target_mem_read32(t, fpec_base + i2offset[i]);
 		tc_printf(t, "0x%08X: 0x%08X\n", addr, val);
