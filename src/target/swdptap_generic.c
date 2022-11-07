@@ -71,4 +71,3 @@ void swdptap_seq_out_parity(uint32_t MS, int ticks)
 	}
 	swdptap_bit_out(parity & 1);
 }
-
