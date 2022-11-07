@@ -77,7 +77,7 @@ struct lpc_flash *lpc_add_flash(target *t, target_addr_t addr, size_t length)
 	struct lpc_flash *lf = calloc(1, sizeof(*lf));
 	target_flash_s *f;
 
-	if (!lf) {			/* calloc failed: heap exhaustion */
+	if (!lf) { /* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return NULL;
 	}
@@ -168,20 +168,19 @@ enum iap_status lpc_iap_call(struct lpc_flash *f, void *result, enum iap_cmd cmd
 
 #if defined(ENABLE_DEBUG)
 	if (param.status != IAP_STATUS_CMD_SUCCESS) {
-		if (param.status > (sizeof(iap_error) / sizeof(char*)))
+		if (param.status > (sizeof(iap_error) / sizeof(char *)))
 			DEBUG_WARN("IAP  cmd %d : %" PRIu32 "\n", cmd, param.status);
 		else
 			DEBUG_WARN("IAP  cmd %d : %s\n", cmd, iap_error[param.status]);
-		DEBUG_WARN("return parameters: %08" PRIx32 " %08" PRIx32 " %08" PRIx32
-				   " %08" PRIx32 "\n", param.result[0],
-				   param.result[1], param.result[2], param.result[3]);
+		DEBUG_WARN("return parameters: %08" PRIx32 " %08" PRIx32 " %08" PRIx32 " %08" PRIx32 "\n", param.result[0],
+			param.result[1], param.result[2], param.result[3]);
 	}
 #endif
 	return param.status;
 }
 
 #define LPX80X_SECTOR_SIZE 0x400
-#define LPX80X_PAGE_SIZE    0x40
+#define LPX80X_PAGE_SIZE   0x40
 
 bool lpc_flash_erase(target_flash_s *tf, target_addr_t addr, size_t len)
 {
