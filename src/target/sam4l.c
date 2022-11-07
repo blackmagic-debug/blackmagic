@@ -32,75 +32,75 @@
 /*
  * Flash Controller defines
  */
-#define FLASHCALW_BASE				UINT32_C(0x400A0000)
+#define FLASHCALW_BASE UINT32_C(0x400A0000)
 
 /* Flash Control Register */
-#define	FLASHCALW_FCR				(FLASHCALW_BASE + 0x00)
-#define	FLASHALCW_FCR_WS1OPT		(1 << 7)
-#define	FLASHALCW_FCR_FWS			(1 << 6)
-#define	FLASHALCW_FCR_ECCE			(1 << 4)
-#define	FLASHALCW_FCR_PROGE			(1 << 3)
-#define	FLASHALCW_FCR_LOCKE			(1 << 2)
-#define	FLASHALCW_FCR_FRDY			(1 << 0)
+#define FLASHCALW_FCR        (FLASHCALW_BASE + 0x00)
+#define FLASHALCW_FCR_WS1OPT (1 << 7)
+#define FLASHALCW_FCR_FWS    (1 << 6)
+#define FLASHALCW_FCR_ECCE   (1 << 4)
+#define FLASHALCW_FCR_PROGE  (1 << 3)
+#define FLASHALCW_FCR_LOCKE  (1 << 2)
+#define FLASHALCW_FCR_FRDY   (1 << 0)
 
 /* Flash Command Register */
-#define	FLASHCALW_FCMD				(FLASHCALW_BASE + 0x04)
-#define FLASHCALW_FCMD_KEY_MASK		0xff
-#define FLASHCALW_FCMD_KEY_SHIFT	24
-#define FLASHCALW_FCMD_PAGEN_MASK	0xffff
-#define FLASHCALW_FCMD_PAGEN_SHIFT	8
-#define FLASHCALW_FCMD_CMD_MASK		0x3f
-#define FLASHCALW_FCMD_CMD_SHIFT	0
+#define FLASHCALW_FCMD             (FLASHCALW_BASE + 0x04)
+#define FLASHCALW_FCMD_KEY_MASK    0xff
+#define FLASHCALW_FCMD_KEY_SHIFT   24
+#define FLASHCALW_FCMD_PAGEN_MASK  0xffff
+#define FLASHCALW_FCMD_PAGEN_SHIFT 8
+#define FLASHCALW_FCMD_CMD_MASK    0x3f
+#define FLASHCALW_FCMD_CMD_SHIFT   0
 
-#define FLASH_CMD_NOP		0
-#define FLASH_CMD_WP		1	/* Write Page */
-#define FLASH_CMD_EP		2	/* Erase Page */
-#define FLASH_CMD_CPB		3	/* Clear Page Buffer */
-#define FLASH_CMD_LP		4	/* Lock page region */
-#define FLASH_CMD_UP		5	/* Unlock page region */
-#define FLASH_CMD_EA		6	/* Erase All */
-#define FLASH_CMD_WGPB		7	/* Write General Purpose Fuse Bit */
-#define FLASH_CMD_EGPB		8	/* Erase General Purpose Fuse Bit */
-#define FLASH_CMD_SSB		9	/* Set Security Fuses */
-#define FLASH_CMD_PGPFB		10	/* Program General Purpose Fuse Byte */
-#define FLASH_CMD_EAGPF		11	/* Erase All GP Fuses */
-#define FLASH_CMD_QPR		12	/* Quick Page Read (erase check) */
-#define FLASH_CMD_WUP		13	/* Write User Page */
-#define FLASH_CMD_EUP		14	/* Erase User Page */
-#define FLASH_CMD_QPRUP		15	/* Quick Page Read User Page */
-#define FLASH_CMD_HSEN		16	/* High Speed Enable */
-#define FLASH_CMD_HSDIS		17	/* High Speed Disable */
+#define FLASH_CMD_NOP   0
+#define FLASH_CMD_WP    1  /* Write Page */
+#define FLASH_CMD_EP    2  /* Erase Page */
+#define FLASH_CMD_CPB   3  /* Clear Page Buffer */
+#define FLASH_CMD_LP    4  /* Lock page region */
+#define FLASH_CMD_UP    5  /* Unlock page region */
+#define FLASH_CMD_EA    6  /* Erase All */
+#define FLASH_CMD_WGPB  7  /* Write General Purpose Fuse Bit */
+#define FLASH_CMD_EGPB  8  /* Erase General Purpose Fuse Bit */
+#define FLASH_CMD_SSB   9  /* Set Security Fuses */
+#define FLASH_CMD_PGPFB 10 /* Program General Purpose Fuse Byte */
+#define FLASH_CMD_EAGPF 11 /* Erase All GP Fuses */
+#define FLASH_CMD_QPR   12 /* Quick Page Read (erase check) */
+#define FLASH_CMD_WUP   13 /* Write User Page */
+#define FLASH_CMD_EUP   14 /* Erase User Page */
+#define FLASH_CMD_QPRUP 15 /* Quick Page Read User Page */
+#define FLASH_CMD_HSEN  16 /* High Speed Enable */
+#define FLASH_CMD_HSDIS 17 /* High Speed Disable */
 
 /* Flash Status Register */
-#define FLASHCALW_FSR				(FLASHCALW_BASE + 0x08)
-#define FLASHCALW_FSR_LOCK(x)		(1 << (16 + (x)))
-#define FLASHCALW_FSR_ECCERR		(1 << 9)
-#define FLASHCALW_FSR_ECCERR2		(1 << 8)
-#define FLASHCALW_FSR_HSMODE		(1 << 6)
-#define FLASHCALW_FSR_QPRR			(1 << 5)
-#define FLASHCALW_FSR_SECURITY		(1 << 4)
-#define FLASHCALW_FSR_PROGE			(1 << 3)
-#define FLASHCALW_FSR_LOCKE			(1 << 2)
-#define FLASHCALW_FSR_FRDY			(1 << 0)
+#define FLASHCALW_FSR          (FLASHCALW_BASE + 0x08)
+#define FLASHCALW_FSR_LOCK(x)  (1 << (16 + (x)))
+#define FLASHCALW_FSR_ECCERR   (1 << 9)
+#define FLASHCALW_FSR_ECCERR2  (1 << 8)
+#define FLASHCALW_FSR_HSMODE   (1 << 6)
+#define FLASHCALW_FSR_QPRR     (1 << 5)
+#define FLASHCALW_FSR_SECURITY (1 << 4)
+#define FLASHCALW_FSR_PROGE    (1 << 3)
+#define FLASHCALW_FSR_LOCKE    (1 << 2)
+#define FLASHCALW_FSR_FRDY     (1 << 0)
 
 /* Flash Parameter Register */
-#define FLASHCALW_FPR				(FLASHCALW_BASE + 0x0a)
-#define FLASHCALW_FPR_PSZ_MASK		0x7	/* page size */
-#define FLASHCALW_FPR_PSZ_SHIFT		8
-#define FLASHCALW_FPR_FSZ_MASK		0xf	/* flash size */
-#define FLASHCALW_FPR_FSZ_SHIFT		0
+#define FLASHCALW_FPR           (FLASHCALW_BASE + 0x0a)
+#define FLASHCALW_FPR_PSZ_MASK  0x7 /* page size */
+#define FLASHCALW_FPR_PSZ_SHIFT 8
+#define FLASHCALW_FPR_FSZ_MASK  0xf /* flash size */
+#define FLASHCALW_FPR_FSZ_SHIFT 0
 
 /* Flash Version Register */
-#define FLASHCALW_FVR				(FLASHCALW_BASE + 0x10)
-#define FLASHCALW_FVR_VARIANT_MASK	0xf
-#define FLASHCALW_FVR_VARIANT_SHIFT	16
-#define FLASHCALW_FVR_VERSION_MASK	0xfff
-#define FLASHCALW_FVR_VERSION_SHIFT	0
+#define FLASHCALW_FVR               (FLASHCALW_BASE + 0x10)
+#define FLASHCALW_FVR_VARIANT_MASK  0xf
+#define FLASHCALW_FVR_VARIANT_SHIFT 16
+#define FLASHCALW_FVR_VERSION_MASK  0xfff
+#define FLASHCALW_FVR_VERSION_SHIFT 0
 
 /* Flash General Purpose Registers (high) */
-#define FLASHCALW_FGPFRHI			(FLASHCALW_BASE + 0x14)
+#define FLASHCALW_FGPFRHI (FLASHCALW_BASE + 0x14)
 /* Flash General Purpose Registers (low) */
-#define FLASHCALW_FGPFRLO			(FLASHCALW_BASE + 0x18)
+#define FLASHCALW_FGPFRLO (FLASHCALW_BASE + 0x18)
 
 static void sam4l_extended_reset(target *t);
 static bool sam4l_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
@@ -108,58 +108,56 @@ static bool sam4l_flash_write_buf(target_flash_s *f, target_addr_t dest, const v
 
 /* why Atmel couldn't make it sequential ... */
 static const size_t __ram_size[16] = {
-	48 * 1024,		/*  0: 48K */
-	1 * 1024,		/*  1: 1K */
-	2 * 1024,		/*  2: 2K */
-	6 * 1024,		/*  3: 6K */
-	24 * 1024,		/*  4: 24K */
-	4 * 1024,		/*  5: 4K */
-	80 * 1024,		/*  6: 80K */
-	160 * 1024,		/*  7: 160K */
-	8 * 1024,		/*  8: 8K */
-	16 * 1024,		/*  9: 16K */
-	32 * 1024,		/* 10: 32K */
-	64 * 1024,		/* 11: 64K */
-	128 * 1024,		/* 12: 128K */
-	256 * 1024,		/* 13: 256K */
-	96 * 1024,		/* 14: 96K */
-	512 * 1024		/* 15: 512K */
+	48 * 1024,  /*  0: 48K */
+	1 * 1024,   /*  1: 1K */
+	2 * 1024,   /*  2: 2K */
+	6 * 1024,   /*  3: 6K */
+	24 * 1024,  /*  4: 24K */
+	4 * 1024,   /*  5: 4K */
+	80 * 1024,  /*  6: 80K */
+	160 * 1024, /*  7: 160K */
+	8 * 1024,   /*  8: 8K */
+	16 * 1024,  /*  9: 16K */
+	32 * 1024,  /* 10: 32K */
+	64 * 1024,  /* 11: 64K */
+	128 * 1024, /* 12: 128K */
+	256 * 1024, /* 13: 256K */
+	96 * 1024,  /* 14: 96K */
+	512 * 1024  /* 15: 512K */
 };
 
 static const size_t __nvp_size[16] = {
-	0,				/*  0: none */
-	8 * 1024,		/*  1: 8K */
-	16 * 1024,		/*  2: 16K */
-	32 * 1024,		/*  3: 32K */
-	0,				/*  4: reserved */
-	64 * 1024,		/*  5: 64K */
-	0,				/*  6: reserved */
-	128 * 1024,		/*  7: 128K */
-	0,				/*  8: reserved */
-	256 * 1024,		/*  9: 256K */
-	512 * 1024,		/* 10: 512K */
-	0,				/* 11: reserved */
-	1024 * 1024,	/* 12: 1024K (1M) */
-	0,				/* 13: reserved */
-	2048 * 1024,	/* 14: 2048K (2M) */
-	0				/* 15: reserved */
+	0,           /*  0: none */
+	8 * 1024,    /*  1: 8K */
+	16 * 1024,   /*  2: 16K */
+	32 * 1024,   /*  3: 32K */
+	0,           /*  4: reserved */
+	64 * 1024,   /*  5: 64K */
+	0,           /*  6: reserved */
+	128 * 1024,  /*  7: 128K */
+	0,           /*  8: reserved */
+	256 * 1024,  /*  9: 256K */
+	512 * 1024,  /* 10: 512K */
+	0,           /* 11: reserved */
+	1024 * 1024, /* 12: 1024K (1M) */
+	0,           /* 13: reserved */
+	2048 * 1024, /* 14: 2048K (2M) */
+	0            /* 15: reserved */
 };
 
-
 /* All variants of 4L have a 512 byte page */
-#define SAM4L_PAGE_SIZE 512
-#define SAM4L_ARCH		0xb0
-#define SAM4L_CHIPID_CIDR	0x400E0740
-#define CHIPID_CIDR_ARCH_MASK		0xff
-#define CHIPID_CIDR_ARCH_SHIFT		20
-#define CHIPID_CIDR_SRAMSIZ_MASK	0xf
-#define CHIPID_CIDR_SRAMSIZ_SHIFT	16
-#define CHIPID_CIDR_NVPSIZ_MASK		0xf
-#define CHIPID_CIDR_NVPSIZ_SHIFT	8
-
+#define SAM4L_PAGE_SIZE           512
+#define SAM4L_ARCH                0xb0
+#define SAM4L_CHIPID_CIDR         0x400E0740
+#define CHIPID_CIDR_ARCH_MASK     0xff
+#define CHIPID_CIDR_ARCH_SHIFT    20
+#define CHIPID_CIDR_SRAMSIZ_MASK  0xf
+#define CHIPID_CIDR_SRAMSIZ_SHIFT 16
+#define CHIPID_CIDR_NVPSIZ_MASK   0xf
+#define CHIPID_CIDR_NVPSIZ_SHIFT  8
 
 /* Arbitrary time to wait for FLASH controller to be ready */
-#define FLASH_TIMEOUT	1000 /* ms */
+#define FLASH_TIMEOUT 1000 /* ms */
 
 /*
  * Populate a target_flash struct with the necessary function pointers
@@ -185,37 +183,37 @@ static void sam4l_add_flash(target *t, uint32_t addr, size_t length)
 }
 
 /* Return size of RAM */
-static size_t sam_ram_size(uint32_t cidr) {
+static size_t sam_ram_size(uint32_t cidr)
+{
 	return __ram_size[((cidr >> CHIPID_CIDR_SRAMSIZ_SHIFT) & CHIPID_CIDR_SRAMSIZ_MASK)];
 }
 
 /* Return size of FLASH */
-static size_t sam_nvp_size(uint32_t cidr) {
+static size_t sam_nvp_size(uint32_t cidr)
+{
 	return __nvp_size[((cidr >> CHIPID_CIDR_NVPSIZ_SHIFT) & CHIPID_CIDR_NVPSIZ_MASK)];
 }
 
-#define SMAP_BASE	0x400a3000
-#define SMAP_CR		(SMAP_BASE + 0x00)
-#define SMAP_SR		(SMAP_BASE + 0x04)
-#define SMAP_SR_DONE	(1 << 0)
-#define SMAP_SR_HCR		(1 << 1)
-#define SMAP_SR_BERR	(1 << 2)
-#define SMAP_SR_FAIL	(1 << 3)
-#define SMAP_SR_LCK		(1 << 4)
-#define SMAP_SR_EN		(1 << 8)
-#define SMAP_SR_PROT	(1 << 9)
-#define SMAP_SR_DBGP	(1 << 10)
+#define SMAP_BASE    0x400a3000
+#define SMAP_CR      (SMAP_BASE + 0x00)
+#define SMAP_SR      (SMAP_BASE + 0x04)
+#define SMAP_SR_DONE (1 << 0)
+#define SMAP_SR_HCR  (1 << 1)
+#define SMAP_SR_BERR (1 << 2)
+#define SMAP_SR_FAIL (1 << 3)
+#define SMAP_SR_LCK  (1 << 4)
+#define SMAP_SR_EN   (1 << 8)
+#define SMAP_SR_PROT (1 << 9)
+#define SMAP_SR_DBGP (1 << 10)
 
-
-#define SMAP_SCR	(SMAP_BASE + 0x08)
-#define SMAP_ADDR	(SMAP_BASE + 0x0c)
-#define SMAP_LEN	(SMAP_BASE + 0x10)
-#define SMAP_DATA	(SMAP_BASE + 0x14)
-#define SMAP_VERS	(SMAP_BASE + 0x28)
-#define SMAP_CHIPID	(SMAP_BASE + 0xf0)
-#define SMAP_EXTID	(SMAP_BASE + 0xf4)
-#define SMAP_IDR	(SMAP_BASE + 0xfc)
-
+#define SMAP_SCR    (SMAP_BASE + 0x08)
+#define SMAP_ADDR   (SMAP_BASE + 0x0c)
+#define SMAP_LEN    (SMAP_BASE + 0x10)
+#define SMAP_DATA   (SMAP_BASE + 0x14)
+#define SMAP_VERS   (SMAP_BASE + 0x28)
+#define SMAP_CHIPID (SMAP_BASE + 0xf0)
+#define SMAP_EXTID  (SMAP_BASE + 0xf4)
+#define SMAP_IDR    (SMAP_BASE + 0xfc)
 
 /*
  * The probe function, look where the CIDR register should be, see if
@@ -225,7 +223,7 @@ static size_t sam_nvp_size(uint32_t cidr) {
  */
 bool sam4l_probe(target *t)
 {
-	size_t	ram_size, flash_size;
+	size_t ram_size, flash_size;
 
 	uint32_t cidr = target_mem_read32(t, SAM4L_CHIPID_CIDR);
 	if (((cidr >> CHIPID_CIDR_ARCH_SHIFT) & CHIPID_CIDR_ARCH_MASK) == SAM4L_ARCH) {
@@ -236,9 +234,8 @@ bool sam4l_probe(target *t)
 		target_add_ram(t, 0x20000000, ram_size);
 		flash_size = sam_nvp_size(cidr);
 		sam4l_add_flash(t, 0x0, flash_size);
-		DEBUG_INFO("\nSAM4L: RAM = 0x%x (%dK), FLASH = 0x%x (%dK)\n",
-			(unsigned int) ram_size, (unsigned int) (ram_size / 1024),
-					(unsigned int) flash_size, (unsigned int)(flash_size / 1024));
+		DEBUG_INFO("\nSAM4L: RAM = 0x%x (%dK), FLASH = 0x%x (%dK)\n", (unsigned int)ram_size,
+			(unsigned int)(ram_size / 1024), (unsigned int)flash_size, (unsigned int)(flash_size / 1024));
 
 		/* enable SMAP if not, check for HCR and reset if set */
 		sam4l_extended_reset(t);
@@ -254,17 +251,16 @@ bool sam4l_probe(target *t)
 /*
  * We've been reset, make sure we take the core out of reset
  */
-static void
-sam4l_extended_reset(target *t)
+static void sam4l_extended_reset(target *t)
 {
-	uint32_t	reg;
+	uint32_t reg;
 	int i;
 
 	DEBUG_INFO("SAM4L: Extended Reset\n");
 	/* enable SMAP in case we're dealing with a non-JTAG reset */
 	target_mem_write32(t, SMAP_CR, 0x1); /* enable SMAP */
 	reg = target_mem_read32(t, SMAP_SR);
-	DEBUG_INFO("\nSAM4L: SMAP_SR has 0x%08lx\n", (long unsigned int) reg);
+	DEBUG_INFO("\nSAM4L: SMAP_SR has 0x%08lx\n", (long unsigned int)reg);
 	if ((reg & SMAP_SR_HCR) != 0) {
 		/* write '1' bit to the status clear register */
 		target_mem_write32(t, SMAP_SCR, SMAP_SR_HCR);
@@ -274,8 +270,7 @@ sam4l_extended_reset(target *t)
 		}
 		/* not sure what to do if we can't reset that bit */
 		if (i > 249) {
-			DEBUG_INFO("\nSAM4L: Reset failed. SMAP_SR has 0x%08lx\n",
-					   (long unsigned int) reg);
+			DEBUG_INFO("\nSAM4L: Reset failed. SMAP_SR has 0x%08lx\n", (long unsigned int)reg);
 		}
 	}
 	/* reset bus error if for some reason SMAP was disabled */
@@ -294,9 +289,8 @@ sam4l_extended_reset(target *t)
  */
 static bool sam4l_flash_command(target *t, uint32_t page, uint32_t cmd)
 {
-	DEBUG_INFO(
-		"\nSAM4L: sam4l_flash_command: FSR: 0x%08" PRIx32
-		", page = %" PRIu32 ", command = %" PRIu32 "\n", FLASHCALW_FSR, page, cmd);
+	DEBUG_INFO("\nSAM4L: sam4l_flash_command: FSR: 0x%08" PRIx32 ", page = %" PRIu32 ", command = %" PRIu32 "\n",
+		FLASHCALW_FSR, page, cmd);
 
 	/* wait for Flash controller ready */
 	platform_timeout timeout;
@@ -310,8 +304,7 @@ static bool sam4l_flash_command(target *t, uint32_t page, uint32_t cmd)
 
 	/* load up the new command */
 	const uint32_t cmd_reg = (cmd & FLASHCALW_FCMD_CMD_MASK) |
-	                         ((page & FLASHCALW_FCMD_PAGEN_MASK) << FLASHCALW_FCMD_PAGEN_SHIFT) |
-	                         (0xA5U << FLASHCALW_FCMD_KEY_SHIFT);
+		((page & FLASHCALW_FCMD_PAGEN_MASK) << FLASHCALW_FCMD_PAGEN_SHIFT) | (0xA5U << FLASHCALW_FCMD_KEY_SHIFT);
 
 	DEBUG_INFO("\nSAM4L: sam4l_flash_command: Wrting command word 0x%08" PRIx32 "\n", cmd_reg);
 
