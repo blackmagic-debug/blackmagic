@@ -61,7 +61,7 @@ const struct command_s samd_cmd_list[] = {
 	{"serial", samd_cmd_serial, "Prints serial number"},
 	{"mbist", samd_cmd_mbist, "Runs the built-in memory test"},
 	{"set_security_bit", samd_cmd_ssb, "Sets the Security Bit"},
-	{NULL, NULL, NULL}
+	{NULL, NULL, NULL},
 };
 
 /* Non-Volatile Memory Controller (NVMC) Parameters */
@@ -99,7 +99,7 @@ const struct command_s samd_cmd_list[] = {
 #define SAMD_NVM_USER_ROW_LOW  0x00804000U
 #define SAMD_NVM_USER_ROW_HIGH 0x00804004U
 #define SAMD_NVM_CALIBRATION   0x00806020U
-#define SAMD_NVM_SERIAL(n)     (0x0080A00CU + (0x30U * (((n) + 3U) / 4U)) + ((n) * 4U))
+#define SAMD_NVM_SERIAL(n)     (0x0080A00CU + (0x30U * (((n) + 3U) / 4U)) + ((n)*4U))
 
 /* -------------------------------------------------------------------------- */
 /* Device Service Unit (DSU) Registers */
@@ -177,7 +177,7 @@ static const struct samd_part samd_d21_parts[] = {
 	{0x56, 'E', 15, 'B'}, /* SAMD21E15B (WLCSP) */
 	{0x62, 'E', 16, 'C'}, /* SAMD21E16C (WLCSP) */
 	{0x63, 'E', 15, 'C'}, /* SAMD21E15C (WLCSP) */
-	{0xFF, 0, 0, 0}
+	{0xFF, 0, 0, 0},
 };
 
 static const struct samd_part samd_l21_parts[] = {
@@ -201,20 +201,20 @@ static const struct samd_part samd_l21_parts[] = {
 	{0x1A, 'E', 17, 'B'}, /* SAML21E17B */
 	{0x1B, 'E', 16, 'B'}, /* SAML21E16B */
 	{0x1C, 'E', 15, 'B'}, /* SAML21E15B */
-	{0xFF, 0, 0, 0}
+	{0xFF, 0, 0, 0},
 };
 
 static const struct samd_part samd_l22_parts[] = {
-	{0x00, 'N',	18,	'A'}, /* SAML22N18 */
-	{0x01, 'N',	17,	'A'}, /* SAML22N17 */
-	{0x02, 'N',	16,	'A'}, /* SAML22N16 */
-	{0x05, 'J',	18,	'A'}, /* SAML22J18 */
-	{0x06, 'J',	17,	'A'}, /* SAML22J17 */
-	{0x07, 'J',	16,	'A'}, /* SAML22J16 */
-	{0x0A, 'G',	18,	'A'}, /* SAML22G18 */
-	{0x0B, 'G',	17,	'A'}, /* SAML22G17 */
-	{0x0C, 'G',	16,	'A'}, /* SAML22G16 */
-	{0xFF, 0, 0, 0}
+	{0x00, 'N', 18, 'A'}, /* SAML22N18 */
+	{0x01, 'N', 17, 'A'}, /* SAML22N17 */
+	{0x02, 'N', 16, 'A'}, /* SAML22N16 */
+	{0x05, 'J', 18, 'A'}, /* SAML22J18 */
+	{0x06, 'J', 17, 'A'}, /* SAML22J17 */
+	{0x07, 'J', 16, 'A'}, /* SAML22J16 */
+	{0x0A, 'G', 18, 'A'}, /* SAML22G18 */
+	{0x0B, 'G', 17, 'A'}, /* SAML22G17 */
+	{0x0C, 'G', 16, 'A'}, /* SAML22G16 */
+	{0xFF, 0, 0, 0},
 };
 
 /*
@@ -247,8 +247,7 @@ void samd_reset(target *t)
 	 * This could be VECTRESET: 0x05FA0001 (reset only core)
 	 *          or SYSRESETREQ: 0x05FA0004 (system reset)
 	 */
-	target_mem_write32(t, CORTEXM_AIRCR,
-	                   CORTEXM_AIRCR_VECTKEY | CORTEXM_AIRCR_SYSRESETREQ);
+	target_mem_write32(t, CORTEXM_AIRCR, CORTEXM_AIRCR_VECTKEY | CORTEXM_AIRCR_SYSRESETREQ);
 
 	/* Exit extended reset */
 	if (target_mem_read32(t, SAMD_DSU_CTRLSTAT) & SAMD_STATUSA_CRSTEXT)
@@ -364,25 +363,42 @@ struct samd_descr samd_parse_device_id(uint32_t did)
 
 	/* Family */
 	switch (family) {
-		case 0: samd.family = 'D'; break;
-		case 1: samd.family = 'L'; parts = samd_l21_parts; break;
-		case 2: samd.family = 'C'; break;
+	case 0:
+		samd.family = 'D';
+		break;
+	case 1:
+		samd.family = 'L';
+		parts = samd_l21_parts;
+		break;
+	case 2:
+		samd.family = 'C';
+		break;
 	}
 	/* Series */
 	switch (series) {
-		case 0: samd.series = 20; break;
-		case 1: samd.series = 21; break;
-		case 2:
-			if (family == 1) {
-				samd.series = 22;
-				parts = samd_l22_parts;
-			} else {
-				samd.series = 10;
-			}
-			break;
-		case 3: samd.series = 11; break;
-		case 4: samd.series = 9; break;
-		default: samd.series = 0; break;
+	case 0:
+		samd.series = 20;
+		break;
+	case 1:
+		samd.series = 21;
+		break;
+	case 2:
+		if (family == 1) {
+			samd.series = 22;
+			parts = samd_l22_parts;
+		} else {
+			samd.series = 10;
+		}
+		break;
+	case 3:
+		samd.series = 11;
+		break;
+	case 4:
+		samd.series = 9;
+		break;
+	default:
+		samd.series = 0;
+		break;
 	}
 	/* Revision */
 	samd.revision = (char)('A' + revision);
@@ -390,10 +406,18 @@ struct samd_descr samd_parse_device_id(uint32_t did)
 	switch (samd.series) {
 	case 20: /* SAM D20 */
 		switch (devsel / 5) {
-			case 0: samd.pin = 'J'; break;
-			case 1: samd.pin = 'G'; break;
-			case 2: samd.pin = 'E'; break;
-			default: samd.pin = 'u'; break;
+		case 0:
+			samd.pin = 'J';
+			break;
+		case 1:
+			samd.pin = 'G';
+			break;
+		case 2:
+			samd.pin = 'E';
+			break;
+		default:
+			samd.pin = 'u';
+			break;
 		}
 		samd.mem = 18 - (devsel % 5);
 		samd.variant = 'A';
@@ -414,8 +438,13 @@ struct samd_descr samd_parse_device_id(uint32_t did)
 	case 10: /* SAM D10 */
 	case 11: /* SAM D11 */
 		switch (devsel / 3) {
-			case 0: samd.package[0] = 'M'; break;
-			case 1: samd.package[0] = 'S'; samd.package[1] = 'S'; break;
+		case 0:
+			samd.package[0] = 'M';
+			break;
+		case 1:
+			samd.package[0] = 'S';
+			samd.package[1] = 'S';
+			break;
 		}
 		samd.pin = 'D';
 		samd.mem = 14 - (devsel % 3);
@@ -424,17 +453,17 @@ struct samd_descr samd_parse_device_id(uint32_t did)
 	case 9: /* SAM D09 */
 		samd.ram_size = 4096;
 		switch (devsel) {
-			case 0:
-				samd.pin = 'D';
-				samd.mem = 14;
-				samd.flash_size = 16384;
-				samd.package[0] = 'M';
-				break;
-			case 7:
-				samd.pin = 'C';
-				samd.mem = 13;
-				samd.flash_size = 8192;
-				break;
+		case 0:
+			samd.pin = 'D';
+			samd.mem = 14;
+			samd.flash_size = 16384;
+			samd.package[0] = 'M';
+			break;
+		case 7:
+			samd.pin = 'C';
+			samd.mem = 13;
+			samd.flash_size = 8192;
+			break;
 		}
 		samd.variant = 'A';
 		break;
@@ -464,7 +493,6 @@ struct samd_priv_s {
 	char samd_variant_string[60];
 };
 
-
 bool samd_probe(target *t)
 {
 	ADIv5_AP_t *ap = cortexm_ap(t);
@@ -472,8 +500,7 @@ bool samd_probe(target *t)
 	uint32_t pid = adiv5_ap_read_pidr(ap, SAMD_DSU_PID);
 
 	/* Check the ARM Coresight Component and Perhiperal IDs */
-	if ((cid != SAMD_CID_VALUE) ||
-	    ((pid & SAMD_PID_MASK) != SAMD_PID_CONST_VALUE))
+	if ((cid != SAMD_CID_VALUE) || ((pid & SAMD_PID_MASK) != SAMD_PID_CONST_VALUE))
 		return false;
 
 	/* Read the Device ID */
@@ -485,7 +512,7 @@ bool samd_probe(target *t)
 
 	t->mass_erase = samd_mass_erase;
 	struct samd_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
-	t->target_storage = (void*)priv_storage;
+	t->target_storage = (void *)priv_storage;
 
 	uint32_t ctrlstat = target_mem_read32(t, SAMD_DSU_CTRLSTAT);
 	struct samd_descr samd = samd_parse_device_id(did);
@@ -495,19 +522,11 @@ bool samd_probe(target *t)
 
 	/* Part String */
 	if (protected) {
-		sprintf(priv_storage->samd_variant_string,
-		        "Atmel SAM%c%02d%c%d%c%s (rev %c) (PROT=1)",
-		        samd.family,
-		        samd.series, samd.pin, samd.mem,
-		        samd.variant,
-		        samd.package, samd.revision);
+		sprintf(priv_storage->samd_variant_string, "Atmel SAM%c%02d%c%d%c%s (rev %c) (PROT=1)", samd.family,
+			samd.series, samd.pin, samd.mem, samd.variant, samd.package, samd.revision);
 	} else {
-		sprintf(priv_storage->samd_variant_string,
-		        "Atmel SAM%c%02d%c%d%c%s (rev %c)",
-		        samd.family,
-		        samd.series, samd.pin, samd.mem,
-		        samd.variant,
-		        samd.package, samd.revision);
+		sprintf(priv_storage->samd_variant_string, "Atmel SAM%c%02d%c%d%c%s (rev %c)", samd.family, samd.series,
+			samd.pin, samd.mem, samd.variant, samd.package, samd.revision);
 	}
 
 	/* Setup Target */
@@ -519,7 +538,7 @@ bool samd_probe(target *t)
 		 * These functions check for an extended reset.
 		 * Appears to be related to Errata 35.4.1 ref 12015
 		 */
-		t->detach      = samd20_revB_detach;
+		t->detach = samd20_revB_detach;
 		t->halt_resume = samd20_revB_halt_resume;
 	} else if (samd.series == 11) {
 		/*
@@ -548,12 +567,9 @@ bool samd_probe(target *t)
 	if (!platform_nrst_get_val()) {
 		/* We'll have to release the target from
 		 * extended reset to make attach possible */
-		if (target_mem_read32(t, SAMD_DSU_CTRLSTAT) &
-		    SAMD_STATUSA_CRSTEXT) {
-
+		if (target_mem_read32(t, SAMD_DSU_CTRLSTAT) & SAMD_STATUSA_CRSTEXT) {
 			/* Write bit to clear from extended reset */
-			target_mem_write32(t, SAMD_DSU_CTRLSTAT,
-			                   SAMD_STATUSA_CRSTEXT);
+			target_mem_write32(t, SAMD_DSU_CTRLSTAT, SAMD_STATUSA_CRSTEXT);
 		}
 	}
 
@@ -566,14 +582,13 @@ bool samd_probe(target *t)
 static void samd_lock_current_address(target *t)
 {
 	/* Issue the unlock command */
-	target_mem_write32(t, SAMD_NVMC_CTRLA,
-	                   SAMD_CTRLA_CMD_KEY | SAMD_CTRLA_CMD_LOCK);
+	target_mem_write32(t, SAMD_NVMC_CTRLA, SAMD_CTRLA_CMD_KEY | SAMD_CTRLA_CMD_LOCK);
 }
+
 static void samd_unlock_current_address(target *t)
 {
 	/* Issue the unlock command */
-	target_mem_write32(t, SAMD_NVMC_CTRLA,
-	                   SAMD_CTRLA_CMD_KEY | SAMD_CTRLA_CMD_UNLOCK);
+	target_mem_write32(t, SAMD_NVMC_CTRLA, SAMD_CTRLA_CMD_KEY | SAMD_CTRLA_CMD_UNLOCK);
 }
 
 /*
@@ -591,8 +606,7 @@ static bool samd_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 		samd_unlock_current_address(t);
 
 		/* Issue the erase command */
-		target_mem_write32(t, SAMD_NVMC_CTRLA,
-		                   SAMD_CTRLA_CMD_KEY | SAMD_CTRLA_CMD_ERASEROW);
+		target_mem_write32(t, SAMD_NVMC_CTRLA, SAMD_CTRLA_CMD_KEY | SAMD_CTRLA_CMD_ERASEROW);
 		/* Poll for NVM Ready */
 		while ((target_mem_read32(t, SAMD_NVMC_INTFLAG) & SAMD_NVMC_READY) == 0)
 			if (target_check_error(t))
@@ -625,8 +639,7 @@ static bool samd_flash_write(target_flash_s *f, target_addr_t dest, const void *
 	samd_unlock_current_address(t);
 
 	/* Issue the write page command */
-	target_mem_write32(t, SAMD_NVMC_CTRLA,
-	                   SAMD_CTRLA_CMD_KEY | SAMD_CTRLA_CMD_WRITEPAGE);
+	target_mem_write32(t, SAMD_NVMC_CTRLA, SAMD_CTRLA_CMD_KEY | SAMD_CTRLA_CMD_WRITEPAGE);
 
 	/* Poll for NVM Ready */
 	while ((target_mem_read32(t, SAMD_NVMC_INTFLAG) & SAMD_NVMC_READY) == 0)
@@ -645,9 +658,7 @@ static bool samd_flash_write(target_flash_s *f, target_addr_t dest, const void *
 bool samd_mass_erase(target *t)
 {
 	/* Clear the DSU status bits */
-	target_mem_write32(t, SAMD_DSU_CTRLSTAT,
-	                   SAMD_STATUSA_DONE | SAMD_STATUSA_PERR |
-	                   SAMD_STATUSA_FAIL);
+	target_mem_write32(t, SAMD_DSU_CTRLSTAT, SAMD_STATUSA_DONE | SAMD_STATUSA_PERR | SAMD_STATUSA_FAIL);
 
 	/* Erase all */
 	target_mem_write32(t, SAMD_DSU_CTRLSTAT, SAMD_CTRL_CHIP_ERASE);
@@ -657,7 +668,7 @@ bool samd_mass_erase(target *t)
 	/* Poll for DSU Ready */
 	uint32_t status;
 	while (((status = target_mem_read32(t, SAMD_DSU_CTRLSTAT)) &
-		(SAMD_STATUSA_DONE | SAMD_STATUSA_PERR | SAMD_STATUSA_FAIL)) == 0) {
+			   (SAMD_STATUSA_DONE | SAMD_STATUSA_PERR | SAMD_STATUSA_FAIL)) == 0) {
 		if (target_check_error(t))
 			return false;
 		target_print_progress(&timeout);
@@ -695,8 +706,7 @@ static bool samd_set_flashlock(target *t, uint16_t value, const char **argv)
 	target_mem_write32(t, SAMD_NVMC_ADDRESS, SAMD_NVM_USER_ROW_LOW >> 1);
 
 	/* Issue the erase command */
-	target_mem_write32(t, SAMD_NVMC_CTRLA,
-	                   SAMD_CTRLA_CMD_KEY | SAMD_CTRLA_CMD_ERASEAUXROW);
+	target_mem_write32(t, SAMD_NVMC_CTRLA, SAMD_CTRLA_CMD_KEY | SAMD_CTRLA_CMD_ERASEAUXROW);
 
 	/* Poll for NVM Ready */
 	while ((target_mem_read32(t, SAMD_NVMC_INTFLAG) & SAMD_NVMC_READY) == 0)
@@ -711,8 +721,7 @@ static bool samd_set_flashlock(target *t, uint16_t value, const char **argv)
 	target_mem_write32(t, SAMD_NVM_USER_ROW_HIGH, high);
 
 	/* Issue the page write command */
-	target_mem_write32(t, SAMD_NVMC_CTRLA,
-	                   SAMD_CTRLA_CMD_KEY | SAMD_CTRLA_CMD_WRITEAUXPAGE);
+	target_mem_write32(t, SAMD_NVMC_CTRLA, SAMD_CTRLA_CMD_KEY | SAMD_CTRLA_CMD_WRITEAUXPAGE);
 
 	return true;
 }
@@ -777,8 +786,7 @@ static bool samd_set_bootprot(target *t, uint16_t value, const char **argv)
 	target_mem_write32(t, SAMD_NVMC_ADDRESS, SAMD_NVM_USER_ROW_LOW >> 1);
 
 	/* Issue the erase command */
-	target_mem_write32(t, SAMD_NVMC_CTRLA,
-	                   SAMD_CTRLA_CMD_KEY | SAMD_CTRLA_CMD_ERASEAUXROW);
+	target_mem_write32(t, SAMD_NVMC_CTRLA, SAMD_CTRLA_CMD_KEY | SAMD_CTRLA_CMD_ERASEAUXROW);
 
 	/* Poll for NVM Ready */
 	while ((target_mem_read32(t, SAMD_NVMC_INTFLAG) & SAMD_NVMC_READY) == 0)
@@ -786,15 +794,14 @@ static bool samd_set_bootprot(target *t, uint16_t value, const char **argv)
 			return -1;
 
 	/* Modify the low word of the user row */
-	low = (low & 0xFFFFFFF8) | ((value << 0 ) & 0x00000007);
+	low = (low & 0xFFFFFFF8) | ((value << 0) & 0x00000007);
 
 	/* Write back */
 	target_mem_write32(t, SAMD_NVM_USER_ROW_LOW, low);
 	target_mem_write32(t, SAMD_NVM_USER_ROW_HIGH, high);
 
 	/* Issue the page write command */
-	target_mem_write32(t, SAMD_NVMC_CTRLA,
-	                   SAMD_CTRLA_CMD_KEY | SAMD_CTRLA_CMD_WRITEAUXPAGE);
+	target_mem_write32(t, SAMD_NVMC_CTRLA, SAMD_CTRLA_CMD_KEY | SAMD_CTRLA_CMD_WRITEAUXPAGE);
 
 	return true;
 }
@@ -834,8 +841,7 @@ static bool samd_cmd_read_userrow(target *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
-	tc_printf(t, "User Row: 0x%08x%08x\n",
-		target_mem_read32(t, SAMD_NVM_USER_ROW_HIGH),
+	tc_printf(t, "User Row: 0x%08x%08x\n", target_mem_read32(t, SAMD_NVM_USER_ROW_HIGH),
 		target_mem_read32(t, SAMD_NVM_USER_ROW_LOW));
 
 	return true;
@@ -894,7 +900,7 @@ static bool samd_cmd_mbist(target *t, int argc, const char **argv)
 	/* Poll for DSU Ready */
 	uint32_t status;
 	while (((status = target_mem_read32(t, SAMD_DSU_CTRLSTAT)) &
-		(SAMD_STATUSA_DONE | SAMD_STATUSA_PERR | SAMD_STATUSA_FAIL)) == 0)
+			   (SAMD_STATUSA_DONE | SAMD_STATUSA_PERR | SAMD_STATUSA_FAIL)) == 0)
 		if (target_check_error(t))
 			return false;
 
@@ -906,14 +912,14 @@ static bool samd_cmd_mbist(target *t, int argc, const char **argv)
 
 	/* Test the fail bit in Status A */
 	if (status & SAMD_STATUSA_FAIL) {
-		tc_printf(t, "MBIST Fail @ 0x%08x\n",
-		          target_mem_read32(t, SAMD_DSU_ADDRESS));
+		tc_printf(t, "MBIST Fail @ 0x%08x\n", target_mem_read32(t, SAMD_DSU_ADDRESS));
 	} else {
 		tc_printf(t, "MBIST Passed!\n");
 	}
 
 	return true;
 }
+
 /*
  * Sets the security bit
  */
@@ -922,8 +928,7 @@ static bool samd_cmd_ssb(target *t, int argc, const char **argv)
 	(void)argc;
 	(void)argv;
 	/* Issue the ssb command */
-	target_mem_write32(t, SAMD_NVMC_CTRLA,
-	                   SAMD_CTRLA_CMD_KEY | SAMD_CTRLA_CMD_SSB);
+	target_mem_write32(t, SAMD_NVMC_CTRLA, SAMD_CTRLA_CMD_KEY | SAMD_CTRLA_CMD_SSB);
 
 	/* Poll for NVM Ready */
 	while ((target_mem_read32(t, SAMD_NVMC_INTFLAG) & SAMD_NVMC_READY) == 0)
