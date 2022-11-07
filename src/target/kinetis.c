@@ -493,10 +493,8 @@ static bool kinetis_flash_done(target_flash_s *const f)
 	 * vs 4 byte phrases).
 	 */
 	if (kf->write_len == K64_WRITE_LEN) {
-		uint32_t vals[2] = {
-			target_mem_read32(f->t, FLASH_SECURITY_BYTE_ADDRESS - 4),
-			target_mem_read32(f->t, FLASH_SECURITY_BYTE_ADDRESS)
-		};
+		uint32_t vals[2] = {target_mem_read32(f->t, FLASH_SECURITY_BYTE_ADDRESS - 4),
+			target_mem_read32(f->t, FLASH_SECURITY_BYTE_ADDRESS)};
 		vals[1] = (vals[1] & 0xffffff00U) | FLASH_SECURITY_BYTE_UNSECURED;
 		kinetis_fccob_cmd(f->t, FTFx_CMD_PROGRAM_PHRASE, FLASH_SECURITY_BYTE_ADDRESS - 4, vals, 2);
 	} else {
