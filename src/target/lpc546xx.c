@@ -34,16 +34,16 @@
 /* only SRAM0 bank is enabled after reset */
 #define LPC546XX_ETBAHB_SRAM_SIZE (64 * 1024)
 
-#define LPC546XX_WDT_MODE 0x4000C000
-#define LPC546XX_WDT_CNT 0x4000C004
-#define LPC546XX_WDT_FEED 0x4000C008
+#define LPC546XX_WDT_MODE       0x4000C000
+#define LPC546XX_WDT_CNT        0x4000C004
+#define LPC546XX_WDT_FEED       0x4000C008
 #define LPC546XX_WDT_PERIOD_MAX 0xFFFFFF
-#define LPC546XX_WDT_PROTECT (1 << 4)
+#define LPC546XX_WDT_PROTECT    (1 << 4)
 
 #define LPC546XX_MAINCLKSELA 0x40000280
 #define LPC546XX_MAINCLKSELB 0x40000284
-#define LPC546XX_AHBCLKDIV 0x40000380
-#define LPC546XX_FLASHCFG 0x40000400
+#define LPC546XX_AHBCLKDIV   0x40000380
+#define LPC546XX_FLASHCFG    0x40000400
 
 #define IAP_RAM_SIZE LPC546XX_ETBAHB_SRAM_SIZE
 #define IAP_RAM_BASE LPC546XX_ETBAHB_SRAM_BASE
@@ -65,17 +65,17 @@ static void lpc546xx_wdt_set_period(target *t);
 static void lpc546xx_wdt_pet(target *t);
 
 const struct command_s lpc546xx_cmd_list[] = {
-	{ "erase_sector", lpc546xx_cmd_erase_sector, "Erase a sector by number" },
-	{ "read_partid", lpc546xx_cmd_read_partid, "Read out the 32-bit part ID using IAP." },
-	{ "read_uid", lpc546xx_cmd_read_uid, "Read out the 16-byte UID." },
-	{ "reset_attach", lpc546xx_cmd_reset_attach,
-	  "Reset target. Reset debug registers. Re-attach debugger. This restores "
-	  "the chip to the very start of program execution, after the ROM "
-	  "bootloader." },
-	{ "reset", lpc546xx_cmd_reset, "Reset target" },
-	{ "write_sector", lpc546xx_cmd_write_sector,
-	  "Write incrementing data 8-bit values across a previously erased sector" },
-	{ NULL, NULL, NULL }
+	{"erase_sector", lpc546xx_cmd_erase_sector, "Erase a sector by number"},
+	{"read_partid", lpc546xx_cmd_read_partid, "Read out the 32-bit part ID using IAP."},
+	{"read_uid", lpc546xx_cmd_read_uid, "Read out the 16-byte UID."},
+	{"reset_attach", lpc546xx_cmd_reset_attach,
+		"Reset target. Reset debug registers. Re-attach debugger. This restores "
+		"the chip to the very start of program execution, after the ROM "
+		"bootloader."},
+	{"reset", lpc546xx_cmd_reset, "Reset target"},
+	{"write_sector", lpc546xx_cmd_write_sector,
+		"Write incrementing data 8-bit values across a previously erased sector"},
+	{NULL, NULL, NULL},
 };
 
 static void lpc546xx_add_flash(
@@ -105,7 +105,7 @@ bool lpc546xx_probe(target *t)
 
 	chipid = target_mem_read32(t, LPC546XX_CHIPID);
 
-	switch(chipid) {
+	switch (chipid) {
 	case 0x7F954605:
 		t->driver = "LPC54605J256";
 		flash_size = 0x40000;
@@ -296,7 +296,7 @@ static int lpc546xx_flash_init(target *t)
 
 	target_mem_write32(t, LPC546XX_MAINCLKSELA, 0); // 12MHz FRO
 	target_mem_write32(t, LPC546XX_MAINCLKSELB, 0); // use MAINCLKSELA
-	target_mem_write32(t, LPC546XX_AHBCLKDIV, 0); // Divide by 1
+	target_mem_write32(t, LPC546XX_AHBCLKDIV, 0);   // Divide by 1
 	target_mem_write32(t, LPC546XX_FLASHCFG, 0x1a); // recommended default
 	return 0;
 }
