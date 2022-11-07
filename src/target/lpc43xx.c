@@ -24,26 +24,26 @@
 #include "cortexm.h"
 #include "lpc_common.h"
 
-#define LPC43XX_CHIPID	0x40043200
+#define LPC43XX_CHIPID 0x40043200
 
-#define IAP_ENTRYPOINT_LOCATION	0x10400100
+#define IAP_ENTRYPOINT_LOCATION 0x10400100
 
 #define LPC43XX_ETBAHB_SRAM_BASE 0x2000C000
-#define LPC43XX_ETBAHB_SRAM_SIZE (16*1024)
+#define LPC43XX_ETBAHB_SRAM_SIZE (16 * 1024)
 
-#define LPC43XX_WDT_MODE 0x40080000
-#define LPC43XX_WDT_CNT  0x40080004
-#define LPC43XX_WDT_FEED 0x40080008
+#define LPC43XX_WDT_MODE       0x40080000
+#define LPC43XX_WDT_CNT        0x40080004
+#define LPC43XX_WDT_FEED       0x40080008
 #define LPC43XX_WDT_PERIOD_MAX 0xFFFFFF
-#define LPC43XX_WDT_PROTECT (1 << 4)
+#define LPC43XX_WDT_PROTECT    (1 << 4)
 
-#define IAP_RAM_SIZE	LPC43XX_ETBAHB_SRAM_SIZE
-#define IAP_RAM_BASE	LPC43XX_ETBAHB_SRAM_BASE
+#define IAP_RAM_SIZE LPC43XX_ETBAHB_SRAM_SIZE
+#define IAP_RAM_BASE LPC43XX_ETBAHB_SRAM_BASE
 
-#define IAP_PGM_CHUNKSIZE	4096
+#define IAP_PGM_CHUNKSIZE 4096
 
-#define FLASH_NUM_BANK		2
-#define FLASH_NUM_SECTOR	15
+#define FLASH_NUM_BANK   2
+#define FLASH_NUM_SECTOR 15
 
 static bool lpc43xx_cmd_reset(target *t, int argc, const char *argv[]);
 static bool lpc43xx_cmd_mkboot(target *t, int argc, const char *argv[]);
@@ -57,7 +57,7 @@ static void lpc43xx_wdt_pet(target *t);
 const struct command_s lpc43xx_cmd_list[] = {
 	{"reset", lpc43xx_cmd_reset, "Reset target"},
 	{"mkboot", lpc43xx_cmd_mkboot, "Make flash bank bootable"},
-	{NULL, NULL, NULL}
+	{NULL, NULL, NULL},
 };
 
 static void lpc43xx_add_flash(
@@ -82,27 +82,21 @@ bool lpc43xx_probe(target *t)
 
 	chipid = target_mem_read32(t, LPC43XX_CHIPID);
 
-	switch(chipid) {
-	case 0x4906002B:	/* Parts with on-chip flash */
-	case 0x7906002B:	/* LM43S?? - Undocumented? */
+	switch (chipid) {
+	case 0x4906002B: /* Parts with on-chip flash */
+	case 0x7906002B: /* LM43S?? - Undocumented? */
 		switch (t->cpuid & 0xFF00FFF0) {
 		case 0x4100C240:
 			t->driver = "LPC43xx Cortex-M4";
-			if (t->cpuid == 0x410FC241)
-			{
+			if (t->cpuid == 0x410FC241) {
 				/* LPC4337 */
-				iap_entry = target_mem_read32(t,
-				                  IAP_ENTRYPOINT_LOCATION);
+				iap_entry = target_mem_read32(t, IAP_ENTRYPOINT_LOCATION);
 				target_add_ram(t, 0, 0x1A000000);
-				lpc43xx_add_flash(t, iap_entry, 0, 0,
-				                  0x1A000000, 0x10000, 0x2000);
-				lpc43xx_add_flash(t, iap_entry, 0, 8,
-				                  0x1A010000, 0x70000, 0x10000);
+				lpc43xx_add_flash(t, iap_entry, 0, 0, 0x1A000000, 0x10000, 0x2000);
+				lpc43xx_add_flash(t, iap_entry, 0, 8, 0x1A010000, 0x70000, 0x10000);
 				target_add_ram(t, 0x1A080000, 0xF80000);
-				lpc43xx_add_flash(t, iap_entry, 1, 0,
-				                  0x1B000000, 0x10000, 0x2000);
-				lpc43xx_add_flash(t, iap_entry, 1, 8,
-				                  0x1B010000, 0x70000, 0x10000);
+				lpc43xx_add_flash(t, iap_entry, 1, 0, 0x1B000000, 0x10000, 0x2000);
+				lpc43xx_add_flash(t, iap_entry, 1, 8, 0x1B010000, 0x70000, 0x10000);
 				target_add_commands(t, lpc43xx_cmd_list, "LPC43xx");
 				target_add_ram(t, 0x1B080000, 0xE4F80000UL);
 				t->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
@@ -116,7 +110,7 @@ bool lpc43xx_probe(target *t)
 		}
 		t->mass_erase = lpc43xx_mass_erase;
 		return true;
-	case 0x5906002B:	/* Flashless parts */
+	case 0x5906002B: /* Flashless parts */
 	case 0x6906002B:
 		switch (t->cpuid & 0xFF00FFF0) {
 		case 0x4100C240:
@@ -158,8 +152,7 @@ static bool lpc43xx_mass_erase(target *t)
 	platform_timeout_set(&timeout, 500);
 	lpc43xx_flash_init(t);
 
-	for (int bank = 0; bank < FLASH_NUM_BANK; bank++)
-	{
+	for (int bank = 0; bank < FLASH_NUM_BANK; bank++) {
 		struct lpc_flash *f = (struct lpc_flash *)t->flash;
 		if (lpc_iap_call(f, NULL, IAP_CMD_PREPARE, 0, FLASH_NUM_SECTOR - 1U, bank) ||
 			lpc_iap_call(f, NULL, IAP_CMD_ERASE, 0, FLASH_NUM_SECTOR - 1U, CPU_CLK_KHZ, bank))
