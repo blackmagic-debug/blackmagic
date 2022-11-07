@@ -326,7 +326,7 @@ static bool stm32lx_nvm_busy_wait(target *t, uint32_t nvm)
 	uint32_t sr;
 	do {
 		sr = target_mem_read32(t, STM32Lx_NVM_SR(nvm));
-		if  (target_check_error(t)) /* Check for communication errors */
+		if (target_check_error(t)) /* Check for communication errors */
 			return false;
 	} while (sr & STM32Lx_NVM_SR_BSY);
 	return (!((sr & STM32Lx_NVM_SR_ERR_M) || !(sr & STM32Lx_NVM_SR_EOP)));
@@ -599,11 +599,13 @@ static bool stm32lx_cmd_option(target *t, int argc, char **argv)
 
 usage:
 	tc_printf(t, "usage: monitor option [ARGS]\n");
-	tc_printf(t, "  show                   - Show options in NVM and as"
-				 " loaded\n");
+	tc_printf(t,
+		"  show                   - Show options in NVM and as"
+		" loaded\n");
 	tc_printf(t, "  obl_launch             - Reload options from NVM\n");
-	tc_printf(t, "  write <addr> <value16> - Set option half-word; "
-				 "complement computed\n");
+	tc_printf(t,
+		"  write <addr> <value16> - Set option half-word; "
+		"complement computed\n");
 	tc_printf(t, "  raw <addr> <value32>   - Set option word\n");
 	tc_printf(t,
 		"The value of <addr> must be word aligned and from 0x%08x "
