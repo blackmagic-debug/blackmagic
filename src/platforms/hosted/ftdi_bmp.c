@@ -386,8 +386,13 @@ const cable_desc_s cable_desc[] = {
  */
 bool ftdi_lookup_adapter_from_vid_pid(bmda_cli_options_s *const cl_opts, const probe_info_s *const probe)
 {
+	/* If the user entered an adapter name use it */
+	if (cl_opts->opt_cable)
+		return true;
+
 	size_t adapter_count = 0;
 	const cable_desc_s *selection = NULL;
+
 	for (const cable_desc_s *cable = &cable_desc[0]; cable->vendor; ++cable) {
 		if (cable->vendor == probe->vid && cable->product == probe->pid) {
 			++adapter_count;
