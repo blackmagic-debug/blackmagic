@@ -19,13 +19,13 @@
 #include <stdint.h>
 #include "stub.h"
 
-#define EFM32_MSC_WRITECTRL(msc) *((volatile uint32_t *)(msc + 0x008))
-#define EFM32_MSC_WRITECMD(msc)  *((volatile uint32_t *)(msc + 0x00c))
-#define EFM32_MSC_ADDRB(msc)     *((volatile uint32_t *)(msc + 0x010))
-#define EFM32_MSC_WDATA(msc)     *((volatile uint32_t *)(msc + 0x018))
-#define EFM32_MSC_STATUS(msc)    *((volatile uint32_t *)(msc + 0x01c))
-#define EFM32_MSC_LOCK(msc)      *((volatile uint32_t *)(msc + (msc == 0x400c0000 ? 0x3c : 0x40)))
-#define EFM32_MSC_MASSLOCK(msc)  *((volatile uint32_t *)(msc + 0x054))
+#define EFM32_MSC_WRITECTRL(msc) *((volatile uint32_t *)((msc) + 0x008))
+#define EFM32_MSC_WRITECMD(msc)  *((volatile uint32_t *)((msc) + 0x00c))
+#define EFM32_MSC_ADDRB(msc)     *((volatile uint32_t *)((msc) + 0x010))
+#define EFM32_MSC_WDATA(msc)     *((volatile uint32_t *)((msc) + 0x018))
+#define EFM32_MSC_STATUS(msc)    *((volatile uint32_t *)((msc) + 0x01c))
+#define EFM32_MSC_LOCK(msc)      *((volatile uint32_t *)((msc) + ((msc) == 0x400c0000 ? 0x3c : 0x40)))
+#define EFM32_MSC_MASSLOCK(msc)  *((volatile uint32_t *)((msc) + 0x054))
 
 #define EFM32_MSC_LOCK_LOCKKEY 0x1b71
 
@@ -42,27 +42,27 @@
 #define EFM32_MSC_STATUS_WDATAREADY  (1 << 3)
 #define EFM32_MSC_STATUS_WORDTIMEOUT (1 << 4)
 
-void __attribute__((naked)) efm32_flash_write_stub(uint32_t *dest, uint32_t *src, uint32_t size, uint32_t msc)
+void __attribute__((naked))
+efm32_flash_write_stub(const uint32_t *const dest, const uint32_t *const src, uint32_t size, const uint32_t msc_addr)
 {
-	uint32_t i;
-
+	const uintptr_t msc = msc_addr;
 	EFM32_MSC_LOCK(msc) = EFM32_MSC_LOCK_LOCKKEY;
 	EFM32_MSC_WRITECTRL(msc) = 1;
 
-	for (i = 0; i < size / 4; i++) {
-		EFM32_MSC_ADDRB(msc) = (uint32_t)&dest[i];
+	for (uint32_t i = 0; i < size / 4; i++) {
+		EFM32_MSC_ADDRB(msc) = (uintptr_t)(dest + i);
 		EFM32_MSC_WRITECMD(msc) = EFM32_MSC_WRITECMD_LADDRIM;
 
 		/* Wait for WDATAREADY */
-		while ((EFM32_MSC_STATUS(msc) & EFM32_MSC_STATUS_WDATAREADY) == 0)
-			;
+		while (!(EFM32_MSC_STATUS(msc) & EFM32_MSC_STATUS_WDATAREADY))
+			continue;
 
 		EFM32_MSC_WDATA(msc) = src[i];
 		EFM32_MSC_WRITECMD(msc) = EFM32_MSC_WRITECMD_WRITEONCE;
 
 		/* Wait for BUSY */
 		while ((EFM32_MSC_STATUS(msc) & EFM32_MSC_STATUS_BUSY))
-			;
+			continue;
 	}
 
 	stub_exit(0);
