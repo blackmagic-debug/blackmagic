@@ -55,7 +55,7 @@ SRC =              \
 	main.c         \
 	maths_utils.c  \
 	morse.c        \
-	msp432.c       \
+	msp432p4.c     \
 	nrf51.c        \
 	nxpke04.c      \
 	remote.c       \
