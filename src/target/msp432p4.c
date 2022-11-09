@@ -164,7 +164,7 @@ static void msp432_add_flash(target_s *t, uint32_t addr, size_t length, target_a
 	mf->flash_protect_register = prot_reg;
 }
 
-bool msp432_probe(target_s *t)
+bool msp432p4_probe(target_s *t)
 {
 	/* Check for the right device info tag in the TLV ROM structure */
 	if (target_mem_read32(t, DEVINFO_TAG_ADDR) != DEVINFO_TAG_VALUE)
