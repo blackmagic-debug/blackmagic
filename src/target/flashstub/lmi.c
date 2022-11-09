@@ -31,15 +31,15 @@
 #define LMI_FLASH_FMC_COMT   (1 << 3)
 #define LMI_FLASH_FMC_WRKEY  0xA4420000
 
-void __attribute__((naked)) stm32f1_flash_write_stub(uint32_t *dest, uint32_t *src, uint32_t size)
+void __attribute__((naked))
+stm32f1_flash_write_stub(const uint32_t *const dest, const uint32_t *const src, const uint32_t size)
 {
-	size /= 4;
-	for (int i; i < size; i++) {
-		LMI_FLASH_FMA = (uint32_t)&dest[i];
+	for (uint32_t i; i < (size / 4U); ++i) {
+		LMI_FLASH_FMA = (uintptr_t)(dest + i);
 		LMI_FLASH_FMD = src[i];
 		LMI_FLASH_FMC = LMI_FLASH_FMC_WRKEY | LMI_FLASH_FMC_WRITE;
 		while (LMI_FLASH_FMC & LMI_FLASH_FMC_WRITE)
-			;
+			continue;
 	}
 
 	stub_exit(0);
