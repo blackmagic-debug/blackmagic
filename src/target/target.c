@@ -166,7 +166,7 @@ void target_add_commands(target *t, const struct command_s *cmds, const char *na
 	tc->next = NULL;
 }
 
-target *target_attach_n(const size_t n, struct target_controller *tc)
+target *target_attach_n(const size_t n, target_controller_s *tc)
 {
 	target *t = target_list;
 	for (size_t i = 1; t; t = t->next, ++i) {
@@ -176,7 +176,7 @@ target *target_attach_n(const size_t n, struct target_controller *tc)
 	return NULL;
 }
 
-target *target_attach(target *t, struct target_controller *tc)
+target *target_attach(target *t, target_controller_s *tc)
 {
 	if (t->tc)
 		t->tc->destroy_callback(t->tc, t);

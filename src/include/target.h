@@ -32,7 +32,7 @@
 
 typedef struct target_s target;
 typedef uint32_t target_addr_t;
-struct target_controller;
+typedef struct target_controller target_controller_s;
 
 #if PC_HOSTED == 1
 uint32_t platform_adiv5_swdp_scan(uint32_t targetid);
@@ -45,8 +45,8 @@ int target_foreach(void (*cb)(int i, target *t, void *context), void *context);
 void target_list_free(void);
 
 /* Attach/detach functions */
-target *target_attach(target *t, struct target_controller *);
-target *target_attach_n(size_t n, struct target_controller *);
+target *target_attach(target *t, target_controller_s *);
+target *target_attach_n(size_t n, target_controller_s *);
 void target_detach(target *t);
 bool target_attached(target *t);
 const char *target_driver_name(target *t);
@@ -149,24 +149,22 @@ enum target_seek_flag {
 };
 
 struct target_controller {
-	void (*destroy_callback)(struct target_controller *, target *t);
-	void (*printf)(struct target_controller *, const char *fmt, va_list);
+	void (*destroy_callback)(target_controller_s *, target *t);
+	void (*printf)(target_controller_s *, const char *fmt, va_list);
 
 	/* Interface to host system calls */
-	int (*open)(
-		struct target_controller *, target_addr_t path, size_t path_len, enum target_open_flags flags, mode_t mode);
-	int (*close)(struct target_controller *, int fd);
-	int (*read)(struct target_controller *, int fd, target_addr_t buf, unsigned int count);
-	int (*write)(struct target_controller *, int fd, target_addr_t buf, unsigned int count);
-	long (*lseek)(struct target_controller *, int fd, long offset, enum target_seek_flag flag);
-	int (*rename)(
-		struct target_controller *, target_addr_t oldpath, size_t old_len, target_addr_t newpath, size_t new_len);
-	int (*unlink)(struct target_controller *, target_addr_t path, size_t path_len);
-	int (*stat)(struct target_controller *, target_addr_t path, size_t path_len, target_addr_t buf);
-	int (*fstat)(struct target_controller *, int fd, target_addr_t buf);
-	int (*gettimeofday)(struct target_controller *, target_addr_t tv, target_addr_t tz);
-	int (*isatty)(struct target_controller *, int fd);
-	int (*system)(struct target_controller *, target_addr_t cmd, size_t cmd_len);
+	int (*open)(target_controller_s *, target_addr_t path, size_t path_len, enum target_open_flags flags, mode_t mode);
+	int (*close)(target_controller_s *, int fd);
+	int (*read)(target_controller_s *, int fd, target_addr_t buf, unsigned int count);
+	int (*write)(target_controller_s *, int fd, target_addr_t buf, unsigned int count);
+	long (*lseek)(target_controller_s *, int fd, long offset, enum target_seek_flag flag);
+	int (*rename)(target_controller_s *, target_addr_t oldpath, size_t old_len, target_addr_t newpath, size_t new_len);
+	int (*unlink)(target_controller_s *, target_addr_t path, size_t path_len);
+	int (*stat)(target_controller_s *, target_addr_t path, size_t path_len, target_addr_t buf);
+	int (*fstat)(target_controller_s *, int fd, target_addr_t buf);
+	int (*gettimeofday)(target_controller_s *, target_addr_t tv, target_addr_t tz);
+	int (*isatty)(target_controller_s *, int fd);
+	int (*system)(target_controller_s *, target_addr_t cmd, size_t cmd_len);
 	enum target_errno errno_;
 	bool interrupted;
 };
