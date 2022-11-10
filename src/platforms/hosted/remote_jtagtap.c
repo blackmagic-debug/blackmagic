@@ -107,7 +107,8 @@ static void jtagtap_tms_seq(uint32_t tms_states, size_t clock_cycles)
  * FIXME: Provide and test faster call and keep fallback
  * for old firmware
  */
-static void jtagtap_tdi_tdo_seq(uint8_t *const data_out, const bool final_tms, const uint8_t *const data_in, const size_t clock_cycles)
+static void jtagtap_tdi_tdo_seq(
+	uint8_t *const data_out, const bool final_tms, const uint8_t *const data_in, const size_t clock_cycles)
 {
 	if (!clock_cycles || (!data_in && !data_out))
 		return;
@@ -115,7 +116,7 @@ static void jtagtap_tdi_tdo_seq(uint8_t *const data_out, const bool final_tms, c
 	char buffer[REMOTE_MAX_MSG_SIZE];
 	size_t in_offset = 0;
 	size_t out_offset = 0;
-	for (size_t cycle = 0; cycle < clock_cycles; ) {
+	for (size_t cycle = 0; cycle < clock_cycles;) {
 		size_t chunk;
 		if (clock_cycles - cycle <= 64)
 			chunk = clock_cycles - cycle;
