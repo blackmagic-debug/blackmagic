@@ -21,10 +21,9 @@
 #ifndef TARGET_FLASHSTUB_STUB_H
 #define TARGET_FLASHSTUB_STUB_H
 
-static inline void __attribute__((always_inline))
-stub_exit(const int code)
+static inline void __attribute__((always_inline)) stub_exit(const int code)
 {
-	__asm__("bkpt %0"::"i"(code));
+	__asm__("bkpt %0" ::"i"(code));
 }
 
 #endif /* TARGET_FLASHSTUB_STUB_H */

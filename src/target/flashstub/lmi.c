@@ -20,10 +20,10 @@
 #include <stdint.h>
 #include "stub.h"
 
-#define LMI_FLASH_BASE       ((volatile uint32_t *)0x400FD000)
-#define LMI_FLASH_FMA        LMI_FLASH_BASE[0]
-#define LMI_FLASH_FMD        LMI_FLASH_BASE[1]
-#define LMI_FLASH_FMC        LMI_FLASH_BASE[2]
+#define LMI_FLASH_BASE ((volatile uint32_t *)0x400FD000)
+#define LMI_FLASH_FMA  LMI_FLASH_BASE[0]
+#define LMI_FLASH_FMD  LMI_FLASH_BASE[1]
+#define LMI_FLASH_FMC  LMI_FLASH_BASE[2]
 
 #define LMI_FLASH_FMC_WRITE  (1 << 0)
 #define LMI_FLASH_FMC_ERASE  (1 << 1)
@@ -31,8 +31,7 @@
 #define LMI_FLASH_FMC_COMT   (1 << 3)
 #define LMI_FLASH_FMC_WRKEY  0xA4420000
 
-void __attribute__((naked))
-stm32f1_flash_write_stub(uint32_t *dest, uint32_t *src, uint32_t size)
+void __attribute__((naked)) stm32f1_flash_write_stub(uint32_t *dest, uint32_t *src, uint32_t size)
 {
 	size /= 4;
 	for (int i; i < size; i++) {
@@ -45,5 +44,3 @@ stm32f1_flash_write_stub(uint32_t *dest, uint32_t *src, uint32_t size)
 
 	stub_exit(0);
 }
-
-
