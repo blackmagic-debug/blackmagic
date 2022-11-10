@@ -76,7 +76,7 @@ static void handle_v_packet(char *packet, size_t len);
 static void handle_z_packet(char *packet, size_t len);
 static void handle_kill_target(void);
 
-static void gdb_target_destroy_callback(struct target_controller *tc, target *t)
+static void gdb_target_destroy_callback(target_controller_s *tc, target *t)
 {
 	(void)tc;
 	if (cur_target == t) {
@@ -90,13 +90,13 @@ static void gdb_target_destroy_callback(struct target_controller *tc, target *t)
 		last_target = NULL;
 }
 
-static void gdb_target_printf(struct target_controller *tc, const char *fmt, va_list ap)
+static void gdb_target_printf(target_controller_s *tc, const char *fmt, va_list ap)
 {
 	(void)tc;
 	gdb_voutf(fmt, ap);
 }
 
-static struct target_controller gdb_controller = {
+static target_controller_s gdb_controller = {
 	.destroy_callback = gdb_target_destroy_callback,
 	.printf = gdb_target_printf,
 
@@ -114,7 +114,7 @@ static struct target_controller gdb_controller = {
 	.system = hostio_system,
 };
 
-int gdb_main_loop(struct target_controller *tc, bool in_syscall)
+int gdb_main_loop(target_controller_s *tc, bool in_syscall)
 {
 	bool single_step = false;
 

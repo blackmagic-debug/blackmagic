@@ -46,14 +46,14 @@
 #include <sys/mman.h>
 #endif
 
-static void cl_target_printf(struct target_controller *tc, const char *fmt, va_list ap)
+static void cl_target_printf(target_controller_s *tc, const char *fmt, va_list ap)
 {
 	(void)tc;
 
 	vprintf(fmt, ap);
 }
 
-static struct target_controller cl_controller = {
+static target_controller_s cl_controller = {
 	.printf = cl_target_printf,
 };
 

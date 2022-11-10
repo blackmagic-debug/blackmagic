@@ -87,7 +87,7 @@ struct breakwatch {
 
 struct target_s {
 	bool attached;
-	struct target_controller *tc;
+	target_controller_s *tc;
 
 	/* Attach/Detach funcitons */
 	bool (*attach)(target *t);
