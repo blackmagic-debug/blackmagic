@@ -116,9 +116,9 @@ int gdb_if_init(void)
 	return 0;
 }
 
-unsigned char gdb_if_getchar(void)
+char gdb_if_getchar(void)
 {
-	unsigned char ret;
+	char ret;
 	int i = 0;
 #if defined(_WIN32) || defined(__CYGWIN__)
 	int iResult;
@@ -190,7 +190,7 @@ unsigned char gdb_if_getchar(void)
 	return ret;
 }
 
-unsigned char gdb_if_getchar_to(int timeout)
+char gdb_if_getchar_to(uint32_t timeout)
 {
 	fd_set fds;
 #if defined(__CYGWIN__)
@@ -214,7 +214,7 @@ unsigned char gdb_if_getchar_to(int timeout)
 	return -1;
 }
 
-void gdb_if_putchar(unsigned char c, int flush)
+void gdb_if_putchar(char c, int flush)
 {
 #if defined(__WIN32__) || defined(__CYGWIN__)
 	static char buf[2048];
