@@ -48,8 +48,7 @@ inline static uint32_t recv_bytes_free()
 {
 	if (recv_tail <= recv_head)
 		return RTT_DOWN_BUF_SIZE - recv_head + recv_tail - 1U;
-	else
-		return recv_tail - recv_head - 1U;
+	return recv_tail - recv_head - 1U;
 }
 
 /* data from host to target: true if not enough free buffer space and we need to close flow control */
@@ -91,8 +90,6 @@ void rtt_serial_receive_callback(usbd_device *dev, uint8_t ep)
 	/* block flag: flow control closed if not enough free buffer space */
 	if (!(rtt_flag_block && recv_set_nak()))
 		usbd_ep_nak_set(usbdev, CDCACM_UART_ENDPOINT, 0);
-
-	return;
 }
 
 /* rtt host to target: read one character */
@@ -102,7 +99,7 @@ int32_t rtt_getchar()
 
 	if (recv_head == recv_tail)
 		return -1;
-	retval = recv_buf[recv_tail];
+	retval = (uint8_t)recv_buf[recv_tail];
 	recv_tail = (recv_tail + 1) % sizeof(recv_buf);
 
 	/* open flow control if enough free buffer space */
@@ -125,7 +122,7 @@ uint32_t rtt_write(const char *buf, uint32_t len)
 		for (uint32_t p = 0; p < len; p += CDCACM_PACKET_SIZE) {
 			uint32_t plen = MIN(CDCACM_PACKET_SIZE, len - p);
 			while (usbd_ep_write_packet(usbdev, CDCACM_UART_ENDPOINT, buf + p, plen) <= 0)
-				;
+				continue;
 		}
 		/* flush 64-byte packet on full-speed */
 		if (CDCACM_PACKET_SIZE == 64 && (len % CDCACM_PACKET_SIZE) == 0)
