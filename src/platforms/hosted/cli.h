@@ -60,7 +60,7 @@ typedef struct BMP_CL_OPTIONS_s {
 	char *opt_serial;
 	uint32_t opt_targetid;
 	char *opt_ident_string;
-	int opt_position;
+	size_t opt_position;
 	char *opt_cable;
 	char *opt_monitor;
 	int opt_debuglevel;
