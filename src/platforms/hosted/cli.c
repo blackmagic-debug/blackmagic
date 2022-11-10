@@ -57,7 +57,7 @@ static struct target_controller cl_controller = {
 	.printf = cl_target_printf,
 };
 
-struct mmap_data {
+typedef struct mmap_data {
 	void *data;
 	size_t size;
 	size_t real_size;
@@ -67,11 +67,11 @@ struct mmap_data {
 #else
 	int fd;
 #endif
-};
+} mmap_data_s;
 
 int cl_debuglevel;
 
-static bool bmp_mmap(char *file, struct mmap_data *map)
+static bool bmp_mmap(char *file, mmap_data_s *map)
 {
 #if defined(_WIN32) || defined(__CYGWIN__)
 	map->hFile = CreateFile(file, GENERIC_WRITE | GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_ALWAYS, 0, NULL);
@@ -112,7 +112,7 @@ static bool bmp_mmap(char *file, struct mmap_data *map)
 	return true;
 }
 
-static void bmp_munmap(struct mmap_data *map)
+static void bmp_munmap(mmap_data_s *map)
 {
 #if defined(_WIN32) || defined(__CYGWIN__)
 	UnmapViewOfFile(map->data);
@@ -518,7 +518,7 @@ found_targets:
 	if (opt->opt_mode == BMP_MODE_TEST || opt->opt_mode == BMP_MODE_SWJ_TEST)
 		goto target_detach;
 
-	struct mmap_data map = {};
+	mmap_data_s map = {};
 	if (opt->opt_mode == BMP_MODE_FLASH_WRITE || opt->opt_mode == BMP_MODE_FLASH_VERIFY ||
 		opt->opt_mode == BMP_MODE_FLASH_WRITE_VERIFY) {
 		if (!bmp_mmap(opt->opt_flash_file, &map)) {
