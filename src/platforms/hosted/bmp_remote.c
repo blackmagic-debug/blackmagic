@@ -41,130 +41,97 @@ int remote_init(void)
 	int c = snprintf(construct, REMOTE_MAX_MSG_SIZE, "%s", REMOTE_START_STR);
 	platform_buffer_write((uint8_t *)construct, c);
 	c = platform_buffer_read((uint8_t *)construct, REMOTE_MAX_MSG_SIZE);
-
 	if (c < 1 || construct[0] == REMOTE_RESP_ERR) {
-		DEBUG_WARN("Remote Start failed, error %s\n", c ? (char *)&(construct[1]) : "unknown");
+		DEBUG_WARN("Remote Start failed, error %s\n", c ? construct + 1 : "unknown");
 		return -1;
 	}
-	DEBUG_PROBE("Remote is %s\n", &construct[1]);
+	DEBUG_PROBE("Remote is %s\n", construct + 1);
 	return 0;
 }
 
 bool remote_target_get_power(void)
 {
-	uint8_t construct[REMOTE_MAX_MSG_SIZE];
-	int s;
-
-	s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE, "%s", REMOTE_PWR_GET_STR);
-	platform_buffer_write(construct, s);
-
-	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
-
+	char construct[REMOTE_MAX_MSG_SIZE];
+	int s = snprintf(construct, REMOTE_MAX_MSG_SIZE, "%s", REMOTE_PWR_GET_STR);
+	platform_buffer_write((uint8_t *)construct, s);
+	s = platform_buffer_read((uint8_t *)construct, REMOTE_MAX_MSG_SIZE);
 	if (s < 1 || construct[0] == REMOTE_RESP_ERR) {
-		DEBUG_WARN("platform_target_get_power failed, error %s\n", s ? (char *)&(construct[1]) : "unknown");
+		DEBUG_WARN("platform_target_get_power failed, error %s\n", s ? construct + 1 : "unknown");
 		exit(-1);
 	}
-
 	return construct[1] == '1';
 }
 
 bool remote_target_set_power(const bool power)
 {
-	uint8_t construct[REMOTE_MAX_MSG_SIZE];
-	int s;
-
-	s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE, REMOTE_PWR_SET_STR, power ? '1' : '0');
-	platform_buffer_write(construct, s);
-
-	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
-
-	if (s < 1 || construct[0] == REMOTE_RESP_ERR) {
-		DEBUG_WARN("platform_target_set_power failed, error %s\n", s ? (char *)&(construct[1]) : "unknown");
-		return false;
-	}
-	return true;
+	char construct[REMOTE_MAX_MSG_SIZE];
+	int s = snprintf(construct, REMOTE_MAX_MSG_SIZE, REMOTE_PWR_SET_STR, power ? '1' : '0');
+	platform_buffer_write((uint8_t *)construct, s);
+	s = platform_buffer_read((uint8_t *)construct, REMOTE_MAX_MSG_SIZE);
+	if (s < 1 || construct[0] == REMOTE_RESP_ERR)
+		DEBUG_WARN("platform_target_set_power failed, error %s\n", s ? construct + 1 : "unknown");
+	return s > 0 && construct[0] == REMOTE_RESP_OK;
 }
 
 void remote_nrst_set_val(bool assert)
 {
-	uint8_t construct[REMOTE_MAX_MSG_SIZE];
-	int s;
-
-	s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE, REMOTE_NRST_SET_STR, assert ? '1' : '0');
-	platform_buffer_write(construct, s);
-
-	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
-
+	char construct[REMOTE_MAX_MSG_SIZE];
+	int s = snprintf(construct, REMOTE_MAX_MSG_SIZE, REMOTE_NRST_SET_STR, assert ? '1' : '0');
+	platform_buffer_write((uint8_t *)construct, s);
+	s = platform_buffer_read((uint8_t *)construct, REMOTE_MAX_MSG_SIZE);
 	if (s < 1 || construct[0] == REMOTE_RESP_ERR) {
-		DEBUG_WARN("platform_nrst_set_val failed, error %s\n", s ? (char *)&(construct[1]) : "unknown");
+		DEBUG_WARN("platform_nrst_set_val failed, error %s\n", s ? construct + 1 : "unknown");
 		exit(-1);
 	}
 }
 
 bool remote_nrst_get_val(void)
 {
-	uint8_t construct[REMOTE_MAX_MSG_SIZE];
-	int s;
-
-	s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE, "%s", REMOTE_NRST_GET_STR);
-	platform_buffer_write(construct, s);
-
-	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
-
+	char construct[REMOTE_MAX_MSG_SIZE];
+	int s = snprintf(construct, REMOTE_MAX_MSG_SIZE, "%s", REMOTE_NRST_GET_STR);
+	platform_buffer_write((uint8_t *)construct, s);
+	s = platform_buffer_read((uint8_t *)construct, REMOTE_MAX_MSG_SIZE);
 	if (s < 1 || construct[0] == REMOTE_RESP_ERR) {
-		DEBUG_WARN("platform_nrst_set_val failed, error %s\n", s ? (char *)&(construct[1]) : "unknown");
+		DEBUG_WARN("platform_nrst_set_val failed, error %s\n", s ? construct + 1 : "unknown");
 		exit(-1);
 	}
-	return (construct[1] == '1');
+	return construct[1] == '1';
 }
 
 void remote_max_frequency_set(uint32_t freq)
 {
-	uint8_t construct[REMOTE_MAX_MSG_SIZE];
-	int s;
-	s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE, REMOTE_FREQ_SET_STR, freq);
-	platform_buffer_write(construct, s);
-
-	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
-
-	if (s < 1 || construct[0] == REMOTE_RESP_ERR) {
+	char construct[REMOTE_MAX_MSG_SIZE];
+	int s = snprintf(construct, REMOTE_MAX_MSG_SIZE, REMOTE_FREQ_SET_STR, freq);
+	platform_buffer_write((uint8_t *)construct, s);
+	s = platform_buffer_read((uint8_t *)construct, REMOTE_MAX_MSG_SIZE);
+	if (s < 1 || construct[0] == REMOTE_RESP_ERR)
 		DEBUG_WARN("Update Firmware to allow to set max SWJ frequency\n");
-	}
 }
 
 uint32_t remote_max_frequency_get(void)
 {
-	uint8_t construct[REMOTE_MAX_MSG_SIZE];
-	int s;
-
-	s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE, "%s", REMOTE_FREQ_GET_STR);
-	platform_buffer_write(construct, s);
-
-	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
-
+	char construct[REMOTE_MAX_MSG_SIZE];
+	int s = snprintf(construct, REMOTE_MAX_MSG_SIZE, "%s", REMOTE_FREQ_GET_STR);
+	platform_buffer_write((uint8_t *)construct, s);
+	s = platform_buffer_read((uint8_t *)construct, REMOTE_MAX_MSG_SIZE);
 	if (s < 1 || construct[0] == REMOTE_RESP_ERR)
 		return FREQ_FIXED;
-
-	uint32_t freq[1];
-	unhexify(freq, (const char *)&construct[1], 4);
-	return freq[0];
+	uint32_t freq;
+	unhexify(&freq, construct + 1, 4);
+	return freq;
 }
 
 const char *remote_target_voltage(void)
 {
-	static uint8_t construct[REMOTE_MAX_MSG_SIZE];
-	int s;
-
-	s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE, " %s", REMOTE_VOLTAGE_STR);
-	platform_buffer_write(construct, s);
-
-	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
-
+	static char construct[REMOTE_MAX_MSG_SIZE];
+	int s = snprintf(construct, REMOTE_MAX_MSG_SIZE, " %s", REMOTE_VOLTAGE_STR);
+	platform_buffer_write((uint8_t *)construct, s);
+	s = platform_buffer_read((uint8_t *)construct, REMOTE_MAX_MSG_SIZE);
 	if (s < 1 || construct[0] == REMOTE_RESP_ERR) {
-		DEBUG_WARN("platform_target_voltage failed, error %s\n", s ? (char *)&(construct[1]) : "unknown");
+		DEBUG_WARN("platform_target_voltage failed, error %s\n", s ? construct + 1 : "unknown");
 		exit(-1);
 	}
-	return (char *)&construct[1];
+	return construct + 1;
 }
 
 void remote_target_clk_output_enable(const bool enable)
@@ -172,7 +139,6 @@ void remote_target_clk_output_enable(const bool enable)
 	char buffer[REMOTE_MAX_MSG_SIZE];
 	int length = snprintf(buffer, REMOTE_MAX_MSG_SIZE, REMOTE_TARGET_CLK_OE_STR, enable ? '1' : '0');
 	platform_buffer_write((uint8_t *)buffer, length);
-
 	length = platform_buffer_read((uint8_t *)buffer, REMOTE_MAX_MSG_SIZE);
 	if (length < 1 || buffer[0] == REMOTE_RESP_ERR)
 		DEBUG_WARN("remote_target_clk_output_enable failed, error %s\n", length ? buffer + 1 : "unknown");
@@ -181,103 +147,54 @@ void remote_target_clk_output_enable(const bool enable)
 static uint32_t remote_adiv5_dp_read(ADIv5_DP_t *dp, uint16_t addr)
 {
 	(void)dp;
-	uint8_t construct[REMOTE_MAX_MSG_SIZE];
-	int s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE, REMOTE_DP_READ_STR, dp->dp_jd_index, addr);
-	platform_buffer_write(construct, s);
-	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
-	if (s < 1 || construct[0] == REMOTE_RESP_ERR) {
+	char construct[REMOTE_MAX_MSG_SIZE];
+	int s = snprintf(construct, REMOTE_MAX_MSG_SIZE, REMOTE_DP_READ_STR, dp->dp_jd_index, addr);
+	platform_buffer_write((uint8_t *)construct, s);
+	s = platform_buffer_read((uint8_t *)construct, REMOTE_MAX_MSG_SIZE);
+	if (s < 1 || construct[0] == REMOTE_RESP_ERR)
 		DEBUG_WARN("%s error %d\n", __func__, s);
-	}
-	uint32_t dest[1];
-	unhexify(dest, (const char *)&construct[1], 4);
-	DEBUG_PROBE("dp_read addr %04x: %08" PRIx32 "\n", dest[0]);
-	return dest[0];
+	uint32_t dest;
+	unhexify(&dest, construct + 1, 4);
+	DEBUG_PROBE("dp_read addr %04x: %08" PRIx32 "\n", dest);
+	return dest;
 }
 
 static uint32_t remote_adiv5_low_access(ADIv5_DP_t *dp, uint8_t RnW, uint16_t addr, uint32_t value)
 {
 	(void)dp;
-	uint8_t construct[REMOTE_MAX_MSG_SIZE];
-	int s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE, REMOTE_LOW_ACCESS_STR, dp->dp_jd_index, RnW, addr, value);
-	platform_buffer_write(construct, s);
-	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
-	if (s < 1 || construct[0] == REMOTE_RESP_ERR) {
+	char construct[REMOTE_MAX_MSG_SIZE];
+	int s = snprintf(construct, REMOTE_MAX_MSG_SIZE, REMOTE_LOW_ACCESS_STR, dp->dp_jd_index, RnW, addr, value);
+	platform_buffer_write((uint8_t *)construct, s);
+	s = platform_buffer_read((uint8_t *)construct, REMOTE_MAX_MSG_SIZE);
+	if (s < 1 || construct[0] == REMOTE_RESP_ERR)
 		DEBUG_WARN("%s error %d\n", __func__, s);
-	}
-	uint32_t dest[1];
-	unhexify(dest, (const char *)&construct[1], 4);
-	return dest[0];
+	uint32_t dest;
+	unhexify(&dest, construct + 1, 4);
+	return dest;
 }
 
 static uint32_t remote_adiv5_ap_read(ADIv5_AP_t *ap, uint16_t addr)
 {
-	uint8_t construct[REMOTE_MAX_MSG_SIZE];
-	int s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE, REMOTE_AP_READ_STR, ap->dp->dp_jd_index, ap->apsel, addr);
-	platform_buffer_write(construct, s);
-	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
-	if (s < 1 || construct[0] == REMOTE_RESP_ERR) {
+	char construct[REMOTE_MAX_MSG_SIZE];
+	int s = snprintf(construct, REMOTE_MAX_MSG_SIZE, REMOTE_AP_READ_STR, ap->dp->dp_jd_index, ap->apsel, addr);
+	platform_buffer_write((uint8_t *)construct, s);
+	s = platform_buffer_read((uint8_t *)construct, REMOTE_MAX_MSG_SIZE);
+	if (s < 1 || construct[0] == REMOTE_RESP_ERR)
 		DEBUG_WARN("%s error %d\n", __func__, s);
-	}
-	uint32_t dest[1];
-	unhexify(dest, (const char *)&construct[1], 4);
-	return dest[0];
+	uint32_t dest;
+	unhexify(&dest, construct + 1, 4);
+	return dest;
 }
 
 static void remote_adiv5_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value)
 {
-	uint8_t construct[REMOTE_MAX_MSG_SIZE];
-	int s = snprintf(
-		(char *)construct, REMOTE_MAX_MSG_SIZE, REMOTE_AP_WRITE_STR, ap->dp->dp_jd_index, ap->apsel, addr, value);
-	platform_buffer_write(construct, s);
-	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
-	if (s < 1 || construct[0] == REMOTE_RESP_ERR) {
+	char construct[REMOTE_MAX_MSG_SIZE];
+	int s = snprintf(construct, REMOTE_MAX_MSG_SIZE, REMOTE_AP_WRITE_STR, ap->dp->dp_jd_index, ap->apsel, addr, value);
+	platform_buffer_write((uint8_t *)construct, s);
+	s = platform_buffer_read((uint8_t *)construct, REMOTE_MAX_MSG_SIZE);
+	if (s < 1 || construct[0] == REMOTE_RESP_ERR)
 		DEBUG_WARN("%s error %d\n", __func__, s);
-	}
-	return;
 }
-
-#if 0
-static void remote_mem_read(
-	ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
-{
-	(void)ap;
-	if (len == 0)
-		return;
-	DEBUG_WIRE("memread @ %" PRIx32 " len %ld, start: \n",
-		src, len);
-	uint8_t construct[REMOTE_MAX_MSG_SIZE];
-	int s;
-	int batchsize = (REMOTE_MAX_MSG_SIZE - 32) / 2;
-	while(len) {
-		int count = len;
-		if (count > batchsize)
-			count = batchsize;
-		s = snprintf(construct, REMOTE_MAX_MSG_SIZE,
-					 REMOTE_MEM_READ_STR, src, count);
-		platform_buffer_write(construct, s);
-
-		s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
-		if (s > 0 && construct[0] == REMOTE_RESP_OK) {
-			unhexify(dest, (const char*)&construct[1], count);
-			src += count;
-			dest += count;
-			len -= count;
-
-			continue;
-		} else {
-			if(construct[0] == REMOTE_RESP_ERR) {
-				ap->dp->fault = 1;
-				DEBUG_WARN("%s returned REMOTE_RESP_ERR at addr: 0x%08x\n",
-					   __func__, src);
-				break;
-			} else {
-				DEBUG_WARN("%s error %d\n", __func__, s);
-				break;
-			}
-		}
-	}
-}
-#endif
 
 static void remote_ap_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len)
 {
@@ -285,34 +202,25 @@ static void remote_ap_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t 
 	if (len == 0)
 		return;
 	char construct[REMOTE_MAX_MSG_SIZE];
-	int batchsize = (REMOTE_MAX_MSG_SIZE - 0x20) / 2;
-	while (len) {
-		int s;
-		int count = len;
-		if (count > batchsize)
-			count = batchsize;
-		s = snprintf(construct, REMOTE_MAX_MSG_SIZE, REMOTE_AP_MEM_READ_STR, ap->dp->dp_jd_index, ap->apsel, ap->csw,
-			src, count);
+	size_t batchsize = (REMOTE_MAX_MSG_SIZE - 0x20U) / 2U;
+	for (size_t offset = 0; offset < len; offset += batchsize) {
+		const size_t count = MIN(len - offset, batchsize);
+		int s = snprintf(construct, REMOTE_MAX_MSG_SIZE, REMOTE_AP_MEM_READ_STR, ap->dp->dp_jd_index, ap->apsel,
+			ap->csw, src + offset, count);
 		platform_buffer_write((uint8_t *)construct, s);
 		s = platform_buffer_read((uint8_t *)construct, REMOTE_MAX_MSG_SIZE);
 		if (s > 0 && construct[0] == REMOTE_RESP_OK) {
-			unhexify(dest, (const char *)&construct[1], count);
-			src += count;
-			dest += count;
-			len -= count;
+			unhexify(dest + offset, (const char *)&construct[1], count);
 			continue;
-		} else {
-			if (construct[0] == REMOTE_RESP_ERR) {
-				ap->dp->fault = 1;
-				DEBUG_WARN("%s returned REMOTE_RESP_ERR at apsel %d, "
-						   "addr: 0x%08" PRIx32 "\n",
-					__func__, ap->apsel, src);
-				break;
-			} else {
-				DEBUG_WARN("%s error %d around 0x%08" PRIx32 "\n", __func__, s, src);
-				break;
-			}
 		}
+		if (construct[0] == REMOTE_RESP_ERR) {
+			ap->dp->fault = 1;
+			DEBUG_WARN(
+				"%s returned REMOTE_RESP_ERR at apsel %u, addr: 0x%08zx\n", __func__, ap->apsel, (size_t)src + offset);
+			break;
+		}
+		DEBUG_WARN("%s error %d around 0x%08zx\n", __func__, s, (size_t)src + offset);
+		break;
 	}
 }
 
@@ -323,35 +231,29 @@ static void remote_ap_mem_write_sized(ADIv5_AP_t *ap, uint32_t dest, const void 
 		return;
 	char construct[REMOTE_MAX_MSG_SIZE];
 	/* (5 * 1 (char)) + (2 * 2 (bytes)) + (3 * 8 (words)) */
-	int batchsize = (REMOTE_MAX_MSG_SIZE - 0x30) / 2;
-	while (len) {
-		int count = len;
-		if (count > batchsize)
-			count = batchsize;
+	size_t batchsize = (REMOTE_MAX_MSG_SIZE - 0x30U) / 2U;
+	const char *data = (const char *)src;
+	for (size_t offset = 0; offset < len; offset += batchsize) {
+		const size_t count = MIN(len - offset, batchsize);
 		int s = snprintf(construct, REMOTE_MAX_MSG_SIZE, REMOTE_AP_MEM_WRITE_SIZED_STR, ap->dp->dp_jd_index, ap->apsel,
-			ap->csw, align, dest, count);
-		char *p = construct + s;
-		hexify(p, src, count);
-		p += 2 * count;
-		src += count;
-		dest += count;
-		len -= count;
-		*p++ = REMOTE_EOM;
-		*p = 0;
-		platform_buffer_write((uint8_t *)construct, p - construct);
+			ap->csw, align, dest + offset, count);
+		assert(s > 0);
+		hexify(construct + s, data + offset, count);
+		const size_t hex_length = s + (count * 2U);
+		construct[hex_length] = REMOTE_EOM;
+		construct[hex_length + 1U] = '\0';
+		platform_buffer_write((uint8_t *)construct, hex_length + 2U);
 
 		s = platform_buffer_read((uint8_t *)construct, REMOTE_MAX_MSG_SIZE);
 		if (s > 0 && construct[0] == REMOTE_RESP_OK)
 			continue;
 		if (s > 0 && construct[0] == REMOTE_RESP_ERR) {
 			ap->dp->fault = 1;
-			DEBUG_WARN("%s returned REMOTE_RESP_ERR at apsel %d, "
-					   "addr: 0x%08x\n",
-				__func__, ap->apsel, dest);
-		} else {
-			DEBUG_WARN("%s error %d around address 0x%08" PRIx32 "\n", __func__, s, dest);
-			break;
+			DEBUG_WARN(
+				"%s returned REMOTE_RESP_ERR at apsel %u, addr: 0x%08zx\n", __func__, ap->apsel, (size_t)dest + offset);
 		}
+		DEBUG_WARN("%s error %d around address 0x%08zx\n", __func__, s, (size_t)dest + offset);
+		break;
 	}
 }
 
@@ -376,9 +278,9 @@ void remote_adiv5_dp_defaults(ADIv5_DP_t *dp)
 void remote_add_jtag_dev(uint32_t i, const jtag_dev_t *jtag_dev)
 {
 	uint8_t construct[REMOTE_MAX_MSG_SIZE];
-	int s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE, REMOTE_JTAG_ADD_DEV_STR, i, jtag_dev->dr_prescan,
+	const int s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE, REMOTE_JTAG_ADD_DEV_STR, i, jtag_dev->dr_prescan,
 		jtag_dev->dr_postscan, jtag_dev->ir_len, jtag_dev->ir_prescan, jtag_dev->ir_postscan, jtag_dev->current_ir);
 	platform_buffer_write(construct, s);
-	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
-	/* No check for error here. Done in remote_adiv5_dp_defaults!*/
+	(void)platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
+	/* Don't need to check for error here - it's already done in remote_adiv5_dp_defaults */
 }
