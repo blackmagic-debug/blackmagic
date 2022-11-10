@@ -70,12 +70,11 @@ static bmp_type_t find_cmsis_dap_interface(libusb_device *dev, bmp_info_t *info)
 		return type;
 	}
 
-	for (int i = 0; i < conf->bNumInterfaces; i++) {
+	for (uint8_t i = 0; i < conf->bNumInterfaces; ++i) {
 		const struct libusb_interface_descriptor *interface = &conf->interface[i].altsetting[0];
 
-		if (!interface->iInterface) {
+		if (!interface->iInterface)
 			continue;
-		}
 
 		res = libusb_get_string_descriptor_ascii(
 			handle, interface->iInterface, (uint8_t *)interface_string, sizeof(interface_string));
@@ -84,22 +83,20 @@ static bmp_type_t find_cmsis_dap_interface(libusb_device *dev, bmp_info_t *info)
 			continue;
 		}
 
-		if (!strstr(interface_string, "CMSIS")) {
+		if (!strstr(interface_string, "CMSIS"))
 			continue;
-		}
 		type = BMP_TYPE_CMSIS_DAP;
 
 		if (interface->bInterfaceClass == 0xff && interface->bNumEndpoints == 2) {
 			info->interface_num = interface->bInterfaceNumber;
 
-			for (int j = 0; j < interface->bNumEndpoints; j++) {
+			for (uint8_t j = 0; j < interface->bNumEndpoints; ++j) {
 				uint8_t n = interface->endpoint[j].bEndpointAddress;
 
-				if (n & 0x80) {
+				if (n & 0x80)
 					info->in_ep = n;
-				} else {
+				else
 					info->out_ep = n;
-				}
 			}
 
 			/* V2 is preferred, return early. */
@@ -122,16 +119,15 @@ int find_debuggers(BMP_CL_OPTIONS_t *cl_opts, bmp_info_t *info)
 		if (!strcmp(cl_opts->opt_cable, "list") || !strcmp(cl_opts->opt_cable, "l")) {
 			cable_desc_t *cable = cable_desc;
 			DEBUG_WARN("Available cables:\n");
-			for (; cable->name; ++cable) {
+			for (; cable->name; ++cable)
 				DEBUG_WARN("\t%s%c\n", cable->name, cable->description ? ' ' : '*');
-			}
-			DEBUG_WARN("*: No auto-detection possible!"
-					   " Give cable name as argument!\n");
+
+			DEBUG_WARN("*: No auto-detection possible! Give cable name as argument!\n");
 			exit(0);
 		}
 		info->bmp_type = BMP_TYPE_LIBFTDI;
 	}
-	int n_devs = libusb_get_device_list(info->libusb_ctx, &devs);
+	ssize_t n_devs = libusb_get_device_list(info->libusb_ctx, &devs);
 	if (n_devs < 0) {
 		DEBUG_WARN("WARN:libusb_get_device_list() failed");
 		return -1;
@@ -187,7 +183,7 @@ rescan:
 				continue;
 			}
 			/* Device has no serial and that's ok. */
-			else if (res <= 0)
+			if (res <= 0)
 				serial[0] = '\0';
 		} else
 			serial[0] = '\0';
@@ -207,7 +203,7 @@ rescan:
 				continue;
 			}
 			/* Device has no manufacturer string and that's ok. */
-			else if (res <= 0)
+			if (res <= 0)
 				manufacturer[0] = '\0';
 		} else
 			manufacturer[0] = '\0';
@@ -222,7 +218,7 @@ rescan:
 				continue;
 			}
 			/* Device has no product string and that's ok. */
-			else if (res <= 0)
+			if (res <= 0)
 				product[0] = '\0';
 		} else
 			product[0] = '\0';
@@ -269,16 +265,14 @@ rescan:
 				if (cable->vendor != desc.idVendor || cable->product != desc.idProduct)
 					continue; /* VID/PID do not match*/
 				if (cl_opts->opt_cable) {
-					if (strncmp(cable->name, cl_opts->opt_cable, strlen(cable->name)))
+					if (strncmp(cable->name, cl_opts->opt_cable, strlen(cable->name)) != 0)
 						continue; /* cable names do not match*/
-					else
-						found = true;
+					found = true;
 				}
 				if (cable->description) {
-					if (strncmp(cable->description, product, strlen(cable->description)))
+					if (strncmp(cable->description, product, strlen(cable->description)) != 0)
 						continue; /* discriptions do not match*/
-					else
-						found = true;
+					found = true;
 				} else {                                 /* VID/PID fits, but no cl_opts->opt_cable and no description*/
 					if (cable->vendor == 0x0403 &&       /* FTDI*/
 						(cable->product == 0x6010 ||     /* FT2232C/D/H*/
@@ -297,10 +291,10 @@ rescan:
 			if (!cable->name)
 				continue;
 		}
-		if (report) {
-			DEBUG_WARN(
-				"%2d: %s, %s, %s\n", found_debuggers + 1, serial[0] ? serial : NO_SERIAL_NUMBER, manufacturer, product);
-		}
+		if (report)
+			DEBUG_WARN("%2zu: %s, %s, %s\n", found_debuggers + 1U, serial[0] ? serial : NO_SERIAL_NUMBER, manufacturer,
+				product);
+
 		info->vid = desc.idVendor;
 		info->pid = desc.idProduct;
 		info->bmp_type = type;
@@ -310,8 +304,8 @@ rescan:
 		if (cl_opts->opt_position && cl_opts->opt_position == found_debuggers + 1) {
 			found_debuggers = 1;
 			break;
-		} else
-			++found_debuggers;
+		}
+		++found_debuggers;
 	}
 	if (found_debuggers == 0 && ftdi_unknown && !cl_opts->opt_cable)
 		DEBUG_WARN("Generic FTDI MPSSE VID/PID found. Please specify exact type with \"-c <cable>\" !\n");
@@ -322,16 +316,13 @@ rescan:
 	if (found_debuggers > 1 || (found_debuggers == 1 && cl_opts->opt_list_only)) {
 		if (!report) {
 			if (found_debuggers > 1)
-				DEBUG_WARN("%d debuggers found!\nSelect with -P <pos> "
-						   "or -s <(partial)serial no.>\n",
-					found_debuggers);
+				DEBUG_WARN("%zu debuggers found!\nSelect with -P <pos> or -s <(partial)serial no.>\n", found_debuggers);
 			report = true;
 			goto rescan;
-		} else {
-			if (found_debuggers > 0)
-				access_problems = false;
-			found_debuggers = 0;
 		}
+		if (found_debuggers > 0)
+			access_problems = false;
+		found_debuggers = 0;
 	}
 	if (!found_debuggers && access_problems)
 		DEBUG_WARN("No debugger found. Please check access rights to USB devices!\n");
