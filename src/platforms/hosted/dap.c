@@ -37,105 +37,97 @@
 #include "jtag_scan.h"
 
 /*- Definitions -------------------------------------------------------------*/
-enum
-{
-	ID_DAP_INFO               = 0x00,
-	ID_DAP_LED                = 0x01,
-	ID_DAP_CONNECT            = 0x02,
-	ID_DAP_DISCONNECT         = 0x03,
+enum {
+	ID_DAP_INFO = 0x00,
+	ID_DAP_LED = 0x01,
+	ID_DAP_CONNECT = 0x02,
+	ID_DAP_DISCONNECT = 0x03,
 	ID_DAP_TRANSFER_CONFIGURE = 0x04,
-	ID_DAP_TRANSFER           = 0x05,
-	ID_DAP_TRANSFER_BLOCK     = 0x06,
-	ID_DAP_TRANSFER_ABORT     = 0x07,
-	ID_DAP_WRITE_ABORT        = 0x08,
-	ID_DAP_DELAY              = 0x09,
-	ID_DAP_RESET_TARGET       = 0x0a,
-	ID_DAP_SWJ_PINS           = 0x10,
-	ID_DAP_SWJ_CLOCK          = 0x11,
-	ID_DAP_SWJ_SEQUENCE       = 0x12,
-	ID_DAP_SWD_CONFIGURE      = 0x13,
-	ID_DAP_JTAG_SEQUENCE      = 0x14,
-	ID_DAP_JTAG_CONFIGURE     = 0x15,
-	ID_DAP_JTAG_IDCODE        = 0x16,
-	ID_DAP_SWD_SEQUENCE       = 0x1D,
+	ID_DAP_TRANSFER = 0x05,
+	ID_DAP_TRANSFER_BLOCK = 0x06,
+	ID_DAP_TRANSFER_ABORT = 0x07,
+	ID_DAP_WRITE_ABORT = 0x08,
+	ID_DAP_DELAY = 0x09,
+	ID_DAP_RESET_TARGET = 0x0a,
+	ID_DAP_SWJ_PINS = 0x10,
+	ID_DAP_SWJ_CLOCK = 0x11,
+	ID_DAP_SWJ_SEQUENCE = 0x12,
+	ID_DAP_SWD_CONFIGURE = 0x13,
+	ID_DAP_JTAG_SEQUENCE = 0x14,
+	ID_DAP_JTAG_CONFIGURE = 0x15,
+	ID_DAP_JTAG_IDCODE = 0x16,
+	ID_DAP_SWD_SEQUENCE = 0x1D,
 };
 
-enum
-{
-	DAP_TRANSFER_APnDP        = 1 << 0,
-	DAP_TRANSFER_RnW          = 1 << 1,
-	DAP_TRANSFER_A2           = 1 << 2,
-	DAP_TRANSFER_A3           = 1 << 3,
-	DAP_TRANSFER_MATCH_VALUE  = 1 << 4,
-	DAP_TRANSFER_MATCH_MASK   = 1 << 5,
+enum {
+	DAP_TRANSFER_APnDP = 1 << 0,
+	DAP_TRANSFER_RnW = 1 << 1,
+	DAP_TRANSFER_A2 = 1 << 2,
+	DAP_TRANSFER_A3 = 1 << 3,
+	DAP_TRANSFER_MATCH_VALUE = 1 << 4,
+	DAP_TRANSFER_MATCH_MASK = 1 << 5,
 };
 
-enum
-{
-	DAP_TRANSFER_INVALID      = 0,
-	DAP_TRANSFER_OK           = 1 << 0,
-	DAP_TRANSFER_WAIT         = 1 << 1,
-	DAP_TRANSFER_FAULT        = 1 << 2,
-	DAP_TRANSFER_ERROR        = 1 << 3,
-	DAP_TRANSFER_MISMATCH     = 1 << 4,
-	DAP_TRANSFER_NO_TARGET    = 7,
+enum {
+	DAP_TRANSFER_INVALID = 0,
+	DAP_TRANSFER_OK = 1 << 0,
+	DAP_TRANSFER_WAIT = 1 << 1,
+	DAP_TRANSFER_FAULT = 1 << 2,
+	DAP_TRANSFER_ERROR = 1 << 3,
+	DAP_TRANSFER_MISMATCH = 1 << 4,
+	DAP_TRANSFER_NO_TARGET = 7,
 };
 
-enum
-{
+enum {
 	DAP_SWJ_SWCLK_TCK = 1 << 0,
 	DAP_SWJ_SWDIO_TMS = 1 << 1,
-	DAP_SWJ_TDI       = 1 << 2,
-	DAP_SWJ_TDO       = 1 << 3,
-	DAP_SWJ_nTRST     = 1 << 5,
-	DAP_SWJ_nRESET    = 1 << 7,
+	DAP_SWJ_TDI = 1 << 2,
+	DAP_SWJ_TDO = 1 << 3,
+	DAP_SWJ_nTRST = 1 << 5,
+	DAP_SWJ_nRESET = 1 << 7,
 };
 
-enum
-{
-	DAP_OK    = 0x00,
+enum {
+	DAP_OK = 0x00,
 	DAP_ERROR = 0xff,
 };
 
-enum
-{
-	DAP_JTAG_TMS         = 1 << 6,
+enum {
+	DAP_JTAG_TMS = 1 << 6,
 	DAP_JTAG_TDO_CAPTURE = 1 << 7,
 };
 
-enum
-{
-	SWD_DP_R_IDCODE    = 0x00,
-	SWD_DP_W_ABORT     = 0x00,
+enum {
+	SWD_DP_R_IDCODE = 0x00,
+	SWD_DP_W_ABORT = 0x00,
 	SWD_DP_R_CTRL_STAT = 0x04,
 	SWD_DP_W_CTRL_STAT = 0x04, // When CTRLSEL == 0
-	SWD_DP_W_WCR       = 0x04, // When CTRLSEL == 1
-	SWD_DP_R_RESEND    = 0x08,
-	SWD_DP_W_SELECT    = 0x08,
-	SWD_DP_R_RDBUFF    = 0x0c,
+	SWD_DP_W_WCR = 0x04,       // When CTRLSEL == 1
+	SWD_DP_R_RESEND = 0x08,
+	SWD_DP_W_SELECT = 0x08,
+	SWD_DP_R_RDBUFF = 0x0c,
 };
 
-enum
-{
-	SWD_AP_CSW  = 0x00 | DAP_TRANSFER_APnDP,
-	SWD_AP_TAR  = 0x04 | DAP_TRANSFER_APnDP,
-	SWD_AP_DRW  = 0x0c | DAP_TRANSFER_APnDP,
+enum {
+	SWD_AP_CSW = 0x00 | DAP_TRANSFER_APnDP,
+	SWD_AP_TAR = 0x04 | DAP_TRANSFER_APnDP,
+	SWD_AP_DRW = 0x0c | DAP_TRANSFER_APnDP,
 
-	SWD_AP_DB0  = 0x00 | DAP_TRANSFER_APnDP, // 0x10
-	SWD_AP_DB1  = 0x04 | DAP_TRANSFER_APnDP, // 0x14
-	SWD_AP_DB2  = 0x08 | DAP_TRANSFER_APnDP, // 0x18
-	SWD_AP_DB3  = 0x0c | DAP_TRANSFER_APnDP, // 0x1c
+	SWD_AP_DB0 = 0x00 | DAP_TRANSFER_APnDP, // 0x10
+	SWD_AP_DB1 = 0x04 | DAP_TRANSFER_APnDP, // 0x14
+	SWD_AP_DB2 = 0x08 | DAP_TRANSFER_APnDP, // 0x18
+	SWD_AP_DB3 = 0x0c | DAP_TRANSFER_APnDP, // 0x1c
 
-	SWD_AP_CFG  = 0x04 | DAP_TRANSFER_APnDP, // 0xf4
+	SWD_AP_CFG = 0x04 | DAP_TRANSFER_APnDP,  // 0xf4
 	SWD_AP_BASE = 0x08 | DAP_TRANSFER_APnDP, // 0xf8
-	SWD_AP_IDR  = 0x0c | DAP_TRANSFER_APnDP, // 0xfc
+	SWD_AP_IDR = 0x0c | DAP_TRANSFER_APnDP,  // 0xfc
 };
 
-#define DP_ABORT_DAPABORT      (1 << 0)
-#define DP_ABORT_STKCMPCLR     (1 << 1)
-#define DP_ABORT_STKERRCLR     (1 << 2)
-#define DP_ABORT_WDERRCLR      (1 << 3)
-#define DP_ABORT_ORUNERRCLR    (1 << 4)
+#define DP_ABORT_DAPABORT   (1 << 0)
+#define DP_ABORT_STKCMPCLR  (1 << 1)
+#define DP_ABORT_STKERRCLR  (1 << 2)
+#define DP_ABORT_WDERRCLR   (1 << 3)
+#define DP_ABORT_ORUNERRCLR (1 << 4)
 
 #define DP_CST_ORUNDETECT      (1 << 0)
 #define DP_CST_STICKYORUN      (1 << 1)
@@ -159,17 +151,17 @@ enum
 #define DP_SELECT_APBANKSEL(x) ((x) << 4)
 #define DP_SELECT_APSEL(x)     ((x) << 24)
 
-#define AP_CSW_SIZE_BYTE       (0 << 0)
-#define AP_CSW_SIZE_HALF       (1 << 0)
-#define AP_CSW_SIZE_WORD       (2 << 0)
-#define AP_CSW_ADDRINC_OFF     (0 << 4)
-#define AP_CSW_ADDRINC_SINGLE  (1 << 4)
-#define AP_CSW_ADDRINC_PACKED  (2 << 4)
-#define AP_CSW_DEVICEEN        (1 << 6)
-#define AP_CSW_TRINPROG        (1 << 7)
-#define AP_CSW_SPIDEN          (1 << 23)
-#define AP_CSW_PROT(x)         ((x) << 24)
-#define AP_CSW_DBGSWENABLE     (1 << 31)
+#define AP_CSW_SIZE_BYTE      (0 << 0)
+#define AP_CSW_SIZE_HALF      (1 << 0)
+#define AP_CSW_SIZE_WORD      (2 << 0)
+#define AP_CSW_ADDRINC_OFF    (0 << 4)
+#define AP_CSW_ADDRINC_SINGLE (1 << 4)
+#define AP_CSW_ADDRINC_PACKED (2 << 4)
+#define AP_CSW_DEVICEEN       (1 << 6)
+#define AP_CSW_TRINPROG       (1 << 7)
+#define AP_CSW_SPIDEN         (1 << 23)
+#define AP_CSW_PROT(x)        ((x) << 24)
+#define AP_CSW_DBGSWENABLE    (1 << 31)
 
 /*- Implementations ---------------------------------------------------------*/
 
@@ -192,7 +184,6 @@ void dap_connect(bool jtag)
 	buf[0] = ID_DAP_CONNECT;
 	buf[1] = (jtag) ? DAP_CAP_JTAG : DAP_CAP_SWD;
 	dbg_dap_cmd(buf, sizeof(buf), 2);
-
 }
 
 //-----------------------------------------------------------------------------
@@ -205,6 +196,7 @@ void dap_disconnect(void)
 }
 
 static uint32_t swj_clock;
+
 /* Set/Get JTAG/SWD clock frequency
  *
  * With clock == 0, return last set value.
@@ -276,11 +268,11 @@ void dap_reset_pin(int state)
 
 	buf[0] = ID_DAP_SWJ_PINS;
 	buf[1] = state ? DAP_SWJ_nRESET : 0; // Value
-	buf[2] = DAP_SWJ_nRESET; // Select
-	buf[3] = 0; // Wait
-	buf[4] = 0; // Wait
-	buf[5] = 0; // Wait
-	buf[6] = 0; // Wait
+	buf[2] = DAP_SWJ_nRESET;             // Select
+	buf[3] = 0;                          // Wait
+	buf[4] = 0;                          // Wait
+	buf[5] = 0;                          // Wait
+	buf[6] = 0;                          // Wait
 	dbg_dap_cmd(buf, sizeof(buf), 7);
 }
 
@@ -305,18 +297,7 @@ void dap_trst_reset(void)
 
 static void dap_line_reset(void)
 {
-	uint8_t buf[] = {
-		ID_DAP_SWJ_SEQUENCE,
-		64,
-		0xff,
-		0xff,
-		0xff,
-		0xff,
-		0xff,
-		0xff,
-		0xff,
-		0
-	};
+	uint8_t buf[] = {ID_DAP_SWJ_SEQUENCE, 64, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0};
 	dbg_dap_cmd(buf, sizeof(buf), 10);
 	if (buf[0])
 		DEBUG_WARN("line reset failed\n");
@@ -333,16 +314,14 @@ static uint32_t wait_word(uint8_t *buf, int size, int len, uint8_t *dp_fault)
 			break;
 	} while (buf[1] == DAP_TRANSFER_WAIT);
 
-	if(buf[1] == SWDP_ACK_FAULT) {
+	if (buf[1] == SWDP_ACK_FAULT) {
 		*dp_fault = 1;
 		return 0;
 	}
 
-	if(buf[1] != SWDP_ACK_OK)
+	if (buf[1] != SWDP_ACK_OK)
 		raise_exception(EXCEPTION_ERROR, "SWDP invalid ACK");
-	uint32_t res =
-		((uint32_t)buf[5] << 24) | ((uint32_t)buf[4] << 16) |
-		((uint32_t)buf[3] << 8) | (uint32_t)buf[2];
+	uint32_t res = ((uint32_t)buf[5] << 24) | ((uint32_t)buf[4] << 16) | ((uint32_t)buf[3] << 8) | (uint32_t)buf[2];
 	return res;
 }
 
@@ -391,25 +370,23 @@ void dap_write_reg(ADIv5_DP_t *dp, uint8_t reg, uint32_t data)
 		dp->fault = 1;
 	}
 	if (buf[1] == DAP_TRANSFER_ERROR) {
-		DEBUG_WARN("dap_write_reg %02x data %08x: protocoll error\n",
-					reg, data);
+		DEBUG_WARN("dap_write_reg %02x data %08x: protocoll error\n", reg, data);
 		dap_line_reset();
 	}
 }
 
-unsigned int dap_read_block(ADIv5_AP_t *ap, void *dest, uint32_t src,
-							size_t len, enum align align)
+unsigned int dap_read_block(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len, enum align align)
 {
 	uint8_t buf[1024];
 	unsigned int sz = len >> align;
 	uint8_t dap_index = 0;
 	dap_index = ap->dp->dp_jd_index;
-    buf[0] = ID_DAP_TRANSFER_BLOCK;
-    buf[1] = dap_index;
-    buf[2] =  sz & 0xff;
-    buf[3] = (sz >> 8) & 0xff;
-    buf[4] = SWD_AP_DRW | DAP_TRANSFER_RnW;
-    dbg_dap_cmd(buf, 1023, 5);
+	buf[0] = ID_DAP_TRANSFER_BLOCK;
+	buf[1] = dap_index;
+	buf[2] = sz & 0xff;
+	buf[3] = (sz >> 8) & 0xff;
+	buf[4] = SWD_AP_DRW | DAP_TRANSFER_RnW;
+	dbg_dap_cmd(buf, 1023, 5);
 	unsigned int transferred = buf[0] + (buf[1] << 8);
 	if (buf[2] >= DAP_TRANSFER_FAULT) {
 		DEBUG_WARN("dap_read_block @ %08" PRIx32 " fault -> line reset\n", src);
@@ -422,28 +399,27 @@ unsigned int dap_read_block(ADIv5_AP_t *ap, void *dest, uint32_t src,
 		memcpy(dest, &buf[3], len);
 	else {
 		uint32_t *p = (uint32_t *)&buf[3];
-		while(sz) {
+		while (sz) {
 			dest = extract(dest, src, *p, align);
 			p++;
-			src  += (1 << align);
+			src += (1 << align);
 			sz--;
 		}
 	}
 	return (buf[2] > DAP_TRANSFER_WAIT) ? 1 : 0;
 }
 
-unsigned int dap_write_block(ADIv5_AP_t *ap, uint32_t dest, const void *src,
-							 size_t len, enum align align)
+unsigned int dap_write_block(ADIv5_AP_t *ap, uint32_t dest, const void *src, size_t len, enum align align)
 {
 	uint8_t buf[1024];
 	unsigned int sz = len >> align;
 	uint8_t dap_index = 0;
 	dap_index = ap->dp->dp_jd_index;
-    buf[0] = ID_DAP_TRANSFER_BLOCK;
-    buf[1] = dap_index;
-    buf[2] =  sz & 0xff;
-    buf[3] = (sz >> 8) & 0xff;
-    buf[4] = SWD_AP_DRW;
+	buf[0] = ID_DAP_TRANSFER_BLOCK;
+	buf[1] = dap_index;
+	buf[2] = sz & 0xff;
+	buf[3] = (sz >> 8) & 0xff;
+	buf[4] = SWD_AP_DRW;
 	if (align > ALIGN_HALFWORD)
 		memcpy(&buf[5], src, len);
 	else {
@@ -453,9 +429,9 @@ unsigned int dap_write_block(ADIv5_AP_t *ap, uint32_t dest, const void *src,
 			uint32_t tmp = 0;
 			/* Pack data into correct data lane */
 			if (align == ALIGN_BYTE) {
-				tmp = ((uint32_t)*(uint8_t  *)src) << ((dest & 3) << 3);
+				tmp = ((uint32_t) * (uint8_t *)src) << ((dest & 3) << 3);
 			} else {
-				tmp = ((uint32_t)*(uint16_t *)src) << ((dest & 2) << 3);
+				tmp = ((uint32_t) * (uint16_t *)src) << ((dest & 2) << 3);
 			}
 			src = src + (1 << align);
 			dest += (1 << align);
@@ -521,8 +497,7 @@ uint32_t dap_read_idcode(ADIv5_DP_t *dp)
 	return dap_read_reg(dp, SWD_DP_R_IDCODE);
 }
 
-static uint8_t *mem_access_setup(ADIv5_AP_t *ap, uint8_t *p,
-								 uint32_t addr, enum align align)
+static uint8_t *mem_access_setup(ADIv5_AP_t *ap, uint8_t *p, uint32_t addr, enum align align)
 {
 	uint32_t csw = ap->csw | ADIV5_AP_CSW_ADDRINC_SINGLE;
 	switch (align) {
@@ -548,13 +523,13 @@ static uint8_t *mem_access_setup(ADIv5_AP_t *ap, uint8_t *p,
 	*p++ = 0;
 	*p++ = ap->apsel & 0xff;
 	*p++ = SWD_AP_CSW;
-	*p++ = (csw >>  0) & 0xff;
-	*p++ = (csw >>  8) & 0xff;
+	*p++ = (csw >> 0) & 0xff;
+	*p++ = (csw >> 8) & 0xff;
 	*p++ = (csw >> 16) & 0xff;
 	*p++ = (csw >> 24) & 0xff;
-	*p++ = SWD_AP_TAR ;
-	*p++ = (addr >>  0) & 0xff;
-	*p++ = (addr >>  8) & 0xff;
+	*p++ = SWD_AP_TAR;
+	*p++ = (addr >> 0) & 0xff;
+	*p++ = (addr >> 8) & 0xff;
 	*p++ = (addr >> 16) & 0xff;
 	*p++ = (addr >> 24) & 0xff;
 	return p;
@@ -582,8 +557,7 @@ uint32_t dap_ap_read(ADIv5_AP_t *ap, uint16_t addr)
 	*p++ = 0;
 	*p++ = 0;
 	*p++ = ap->apsel & 0xff;
-	*p++ = (addr & 0x0c) | DAP_TRANSFER_RnW  |
-		((addr & 0x100) ?  DAP_TRANSFER_APnDP : 0);
+	*p++ = (addr & 0x0c) | DAP_TRANSFER_RnW | ((addr & 0x100) ? DAP_TRANSFER_APnDP : 0);
 	uint32_t res = wait_word(buf, 63, p - buf, &ap->dp->fault);
 	if ((buf[0] != 2) || (buf[1] != 1)) {
 		DEBUG_WARN("dap_ap_read error %x\n", buf[1]);
@@ -605,9 +579,9 @@ void dap_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value)
 	*p++ = 0;
 	*p++ = 0;
 	*p++ = ap->apsel & 0xff;
-	*p++ = (addr & 0x0c) | ((addr & 0x100) ?  DAP_TRANSFER_APnDP : 0);
-	*p++ = (value >>  0) & 0xff;
-	*p++ = (value >>  8) & 0xff;
+	*p++ = (addr & 0x0c) | ((addr & 0x100) ? DAP_TRANSFER_APnDP : 0);
+	*p++ = (value >> 0) & 0xff;
+	*p++ = (value >> 8) & 0xff;
 	*p++ = (value >> 16) & 0xff;
 	*p++ = (value >> 24) & 0xff;
 	dbg_dap_cmd(buf, sizeof(buf), p - buf);
@@ -627,8 +601,7 @@ void dap_read_single(ADIv5_AP_t *ap, void *dest, uint32_t src, enum align align)
 	dest = extract(dest, src, tmp, align);
 }
 
-void dap_write_single(ADIv5_AP_t *ap, uint32_t dest, const void *src,
-					  enum align align)
+void dap_write_single(ADIv5_AP_t *ap, uint32_t dest, const void *src, enum align align)
 {
 	uint8_t buf[63];
 	uint8_t *p = mem_access_setup(ap, buf, dest, align);
@@ -637,18 +610,18 @@ void dap_write_single(ADIv5_AP_t *ap, uint32_t dest, const void *src,
 	/* Pack data into correct data lane */
 	switch (align) {
 	case ALIGN_BYTE:
-		tmp = ((uint32_t)*(uint8_t *)src) << ((dest & 3) << 3);
+		tmp = ((uint32_t) * (uint8_t *)src) << ((dest & 3) << 3);
 		break;
 	case ALIGN_HALFWORD:
-		tmp = ((uint32_t)*(uint16_t *)src) << ((dest & 2) << 3);
+		tmp = ((uint32_t) * (uint16_t *)src) << ((dest & 2) << 3);
 		break;
 	case ALIGN_DWORD:
 	case ALIGN_WORD:
 		tmp = *(uint32_t *)src;
 		break;
 	}
-	*p++ = (tmp >>  0) & 0xff;
-	*p++ = (tmp >>  8) & 0xff;
+	*p++ = (tmp >> 0) & 0xff;
+	*p++ = (tmp >> 8) & 0xff;
 	*p++ = (tmp >> 16) & 0xff;
 	*p++ = (tmp >> 24) & 0xff;
 	buf[2] = 4;
@@ -800,13 +773,10 @@ void dap_swdptap_seq_out_parity(uint32_t tms_states, size_t clock_cycles)
 }
 
 #define SWD_SEQUENCE_IN 0x80
+
 uint32_t dap_swdptap_seq_in(int ticks)
 {
-	uint8_t buf[5] = {
-		ID_DAP_SWD_SEQUENCE,
-		1,
-		ticks + SWD_SEQUENCE_IN
-	};
+	uint8_t buf[5] = {ID_DAP_SWD_SEQUENCE, 1, ticks + SWD_SEQUENCE_IN};
 	dbg_dap_cmd(buf, 2 + ((ticks + 7) >> 3), 3);
 	uint32_t res = 0;
 	int len = (ticks + 7) >> 3;
@@ -835,6 +805,6 @@ bool dap_swdptap_seq_in_parity(uint32_t *ret, int ticks)
 	*ret = res;
 	unsigned int parity = __builtin_parity(res) & 1;
 	parity ^= (buf[5] % 1);
-	DEBUG_WARN("Res %08" PRIx32" %d\n", *ret, parity & 1);
+	DEBUG_WARN("Res %08" PRIx32 " %d\n", *ret, parity & 1);
 	return (!(parity & 1));
 }
