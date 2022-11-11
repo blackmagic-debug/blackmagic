@@ -28,9 +28,8 @@ static char *find_bmp_by_serial(const char *serial)
 {
 	char regpath[258];
 	/* First find the containers of the BMP comports */
-	sprintf(regpath,
-			"SYSTEM\\CurrentControlSet\\Enum\\USB\\VID_%04X&PID_%04X\\%s",
-			VENDOR_ID_BMP, PRODUCT_ID_BMP, serial);
+	sprintf(
+		regpath, "SYSTEM\\CurrentControlSet\\Enum\\USB\\VID_%04X&PID_%04X\\%s", VENDOR_ID_BMP, PRODUCT_ID_BMP, serial);
 	HKEY hkeySection;
 	LSTATUS res;
 	res = RegOpenKeyEx(HKEY_LOCAL_MACHINE, regpath, 0, KEY_READ, &hkeySection);
@@ -38,16 +37,15 @@ static char *find_bmp_by_serial(const char *serial)
 		return NULL;
 	BYTE prefix[128];
 	DWORD maxlen = sizeof(prefix);
-	res = RegQueryValueEx(hkeySection, "ParentIdPrefix", NULL, NULL, prefix,
-						  &maxlen);
+	res = RegQueryValueEx(hkeySection, "ParentIdPrefix", NULL, NULL, prefix, &maxlen);
 	RegCloseKey(hkeySection);
 	if (res != ERROR_SUCCESS)
 		return NULL;
 	printf("prefix %s\n", prefix);
 	sprintf(regpath,
-			"SYSTEM\\CurrentControlSet\\Enum\\USB\\VID_%04X&PID_%04X&MI_00\\%s"
-			"&0000\\Device Parameters",
-			VENDOR_ID_BMP, PRODUCT_ID_BMP, prefix);
+		"SYSTEM\\CurrentControlSet\\Enum\\USB\\VID_%04X&PID_%04X&MI_00\\%s"
+		"&0000\\Device Parameters",
+		VENDOR_ID_BMP, PRODUCT_ID_BMP, prefix);
 	printf("%s\n", regpath);
 	res = RegOpenKeyEx(HKEY_LOCAL_MACHINE, regpath, 0, KEY_READ, &hkeySection);
 	if (res != ERROR_SUCCESS) {
@@ -56,15 +54,15 @@ static char *find_bmp_by_serial(const char *serial)
 	}
 	BYTE port[128];
 	maxlen = sizeof(port);
-	res = RegQueryValueEx(hkeySection, "PortName", NULL, NULL, port,  &maxlen);
+	res = RegQueryValueEx(hkeySection, "PortName", NULL, NULL, port, &maxlen);
 	RegCloseKey(hkeySection);
 	if (res != ERROR_SUCCESS)
 		return NULL;
 	printf("Portname %s\n", port);
-	return strdup((char*)port);
+	return strdup((char *)port);
 }
 
-int serial_open(BMP_CL_OPTIONS_t *cl_opts, char * serial)
+int serial_open(BMP_CL_OPTIONS_t *cl_opts, char *serial)
 {
 	char device[256];
 	if (!cl_opts->opt_device)
@@ -76,20 +74,18 @@ int serial_open(BMP_CL_OPTIONS_t *cl_opts, char * serial)
 	if (strstr(cl_opts->opt_device, "\\\\.\\")) {
 		strncpy(device, cl_opts->opt_device, sizeof(device) - 1);
 	} else {
-		strcpy(device,  "\\\\.\\");
-		strncat(device, cl_opts->opt_device,
-				sizeof(device) - strlen(device) - 1);
+		strcpy(device, "\\\\.\\");
+		strncat(device, cl_opts->opt_device, sizeof(device) - strlen(device) - 1);
 	}
-	hComm = CreateFile(device,                //port name
-                      GENERIC_READ | GENERIC_WRITE, //Read/Write
-                      0,                            // No Sharing
-                      NULL,                         // No Security
-                      OPEN_EXISTING,// Open existing port only
-                      0,            // Non Overlapped I/O
-                      NULL);        // Null for Comm Devices}
+	hComm = CreateFile(device,        //port name
+		GENERIC_READ | GENERIC_WRITE, //Read/Write
+		0,                            // No Sharing
+		NULL,                         // No Security
+		OPEN_EXISTING,                // Open existing port only
+		0,                            // Non Overlapped I/O
+		NULL);                        // Null for Comm Devices}
 	if (hComm == INVALID_HANDLE_VALUE) {
-		DEBUG_WARN("Could not open %s: %ld\n", device,
-				GetLastError());
+		DEBUG_WARN("Could not open %s: %ld\n", device, GetLastError());
 		return -1;
 	}
 	DCB dcbSerialParams;
@@ -105,10 +101,10 @@ int serial_open(BMP_CL_OPTIONS_t *cl_opts, char * serial)
 		return -1;
 	}
 	COMMTIMEOUTS timeouts = {0};
-	timeouts.ReadIntervalTimeout         = 10;
-	timeouts.ReadTotalTimeoutConstant    = 10;
-	timeouts.ReadTotalTimeoutMultiplier  = 10;
-	timeouts.WriteTotalTimeoutConstant   = 10;
+	timeouts.ReadIntervalTimeout = 10;
+	timeouts.ReadTotalTimeoutConstant = 10;
+	timeouts.ReadTotalTimeoutMultiplier = 10;
+	timeouts.WriteTotalTimeoutConstant = 10;
 	timeouts.WriteTotalTimeoutMultiplier = 10;
 	if (!SetCommTimeouts(hComm, &timeouts)) {
 		DEBUG_WARN("SetCommTimeouts failed %ld\n", GetLastError());
@@ -124,20 +120,20 @@ void serial_close(void)
 
 int platform_buffer_write(const uint8_t *data, int size)
 {
-	DEBUG_WIRE("%s\n",data);
+	DEBUG_WIRE("%s\n", data);
 	int s = 0;
 
 	do {
 		DWORD written;
 		if (!WriteFile(hComm, data + s, size - s, &written, NULL)) {
-			DEBUG_WARN("Serial write failed %ld, written %d\n",
-					GetLastError(), s);
+			DEBUG_WARN("Serial write failed %ld, written %d\n", GetLastError(), s);
 			return -1;
 		}
 		s += written;
 	} while (s < size);
 	return 0;
 }
+
 int platform_buffer_read(uint8_t *data, int maxsize)
 {
 	DWORD s;
@@ -160,7 +156,7 @@ int platform_buffer_read(uint8_t *data, int maxsize)
 			DEBUG_WARN("Error on read\n");
 			exit(-3);
 		}
-		if (s > 0 ) {
+		if (s > 0) {
 			DEBUG_WIRE("%c", *c);
 			if (*c == REMOTE_EOM) {
 				*c = 0;
@@ -171,8 +167,7 @@ int platform_buffer_read(uint8_t *data, int maxsize)
 			}
 		}
 	} while (((c - data) < maxsize) && (platform_time_ms() < endTime));
-	DEBUG_WARN("Failed to read EOM at %d\n",
-			platform_time_ms() - startTime);
+	DEBUG_WARN("Failed to read EOM at %d\n", platform_time_ms() - startTime);
 	exit(-3);
 	return 0;
 }
