@@ -28,9 +28,14 @@
 
 #if PC_HOSTED == 1
 void platform_init(int argc, char **argv);
-void platform_pace_poll(void);
+#define PLATFORM_HAS_PACE_POLL
 #else
 void platform_init(void);
+#endif
+
+#if defined(PLATFORM_HAS_PACE_POLL)
+void platform_pace_poll(void);
+#else
 inline void platform_pace_poll(void) { }
 #endif
 
