@@ -31,6 +31,10 @@ else
 SRC += traceswoasync.c
 endif
 
+ifeq ($(BLUEPILL), 1)
+CFLAGS += -DBLUEPILL=1
+endif
+
 VPATH += platforms/stm32
 
 SRC +=          \
