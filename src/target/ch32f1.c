@@ -140,9 +140,8 @@ static bool ch32f1_flash_unlock(target *t)
 	target_mem_write32(t, FLASH_MODEKEYR_CH32, KEY1);
 	target_mem_write32(t, FLASH_MODEKEYR_CH32, KEY2);
 	uint32_t cr = target_mem_read32(t, FLASH_CR);
-	if (cr & FLASH_CR_FLOCK_CH32) {
-		DEBUG_WARN("Fast unlock failed, cr: 0x%08" PRIx32 "\n", cr);		
-	}
+	if (cr & FLASH_CR_FLOCK_CH32)
+		DEBUG_WARN("Fast unlock failed, cr: 0x%08" PRIx32 "\n", cr);
 	return !(cr & FLASH_CR_FLOCK_CH32);
 }
 
@@ -157,9 +156,8 @@ static bool ch32f1_flash_lock(target *t)
 	// FLASH_CR_FLOCK_CH32 bit does not exists on *regular* clones and defaults to '0' (see PM0075 for STM32F1xx)
 	if (!(cr & FLASH_CR_FLOCK_CH32)) {
 		DEBUG_WARN("Fast lock failed, cr: 0x%08" PRIx32 "\n", cr);
-		return false;
 	}
-	return true;
+	return cr & FLASH_CR_FLOCK_CH32;
 }
 
 /*
@@ -253,11 +251,9 @@ bool ch32f1_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 	}
 	sr = target_mem_read32(t, FLASH_SR);
 	ch32f1_flash_lock(t);
-	if (sr & SR_ERROR_MASK) {
+	if (sr & SR_ERROR_MASK)
 		DEBUG_WARN("ch32f1 flash erase error 0x%" PRIx32 "\n", sr);
-		return false;
-	}
-	return true;
+	return !(sr & SR_ERROR_MASK) ;
 }
 
 /*
