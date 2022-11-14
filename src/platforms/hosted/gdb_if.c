@@ -52,8 +52,10 @@ static const uint16_t max_port = default_port + 4U;
 
 #if defined(_WIN32) || defined(__CYGWIN__)
 const int op_would_block = WSAEWOULDBLOCK;
+const int op_needs_retry = WSAEINTR;
 #else
 const int op_would_block = EWOULDBLOCK;
+const int op_needs_retry = EINTR;
 static inline int closesocket(const int s) { return close(s); }
 #endif
 
@@ -72,6 +74,8 @@ typedef struct addrinfo addrinfo_s;
 
 #if defined(_WIN32) || defined(__CYGWIN__)
 typedef ADDRESS_FAMILY sa_family_t;
+/* This can strictly be any integral value as long as it's not 0. */
+#define O_NONBLOCK 1
 #endif
 
 #if defined(__CYGWIN__)
@@ -164,6 +168,37 @@ static void handle_error(const int socket, const char *const operation)
 	closesocket(socket);
 }
 
+static bool socket_set_int_opt(const int socket, const int level, const int option, const int value)
+{
+	/* Windows forces the cast to void pointer for the 4th parameter as it defines this as taking `const char *`. */
+	const int result = setsockopt(socket, level, option, (const void *)&value, sizeof(int));
+	if (result == -1)
+		handle_error(socket, "configuring socket");
+	return result != -1;
+}
+
+static int socket_get_flags(const int socket)
+{
+#if defined(_WIN32) || defined(__CYGWIN__)
+	(void)socket;
+	return 0;
+#else
+	return fcntl(socket, F_GETFL);
+#endif
+}
+
+static void socket_set_flags(const int socket, const int flags)
+{
+#if defined(_WIN32) || defined(__CYGWIN__)
+	ULONG option = (flags & O_NONBLOCK) ? 1U : 0U;
+	const int result = ioctlsocket(socket, FIONBIO, &option);
+	if (result != NO_ERROR)
+		DEBUG_WARN("ioctlsocket failed with error: %d\n", result);
+#else
+	fcntl(socket, F_SETFL, flags);
+#endif
+}
+
 int gdb_if_init(void)
 {
 #if defined(_WIN32) || defined(__CYGWIN__)
@@ -211,76 +246,49 @@ int gdb_if_init(void)
 
 char gdb_if_getchar(void)
 {
-	char ret;
-	int i = 0;
-#if defined(_WIN32) || defined(__CYGWIN__)
-	int iResult;
-	unsigned long opt;
-#else
-	int flags;
-#endif
-	while (i <= 0) {
-		if (gdb_if_conn <= 0) {
-#if defined(_WIN32) || defined(__CYGWIN__)
-			opt = 1;
-			iResult = ioctlsocket(gdb_if_serv, FIONBIO, &opt);
-			if (iResult != NO_ERROR) {
-				DEBUG_WARN("ioctlsocket failed with error: %ld\n", iResult);
-			}
-#else
-			flags = fcntl(gdb_if_serv, F_GETFL);
-			fcntl(gdb_if_serv, F_SETFL, flags | O_NONBLOCK);
-#endif
-			while (1) {
-				gdb_if_conn = accept(gdb_if_serv, NULL, NULL);
-				if (gdb_if_conn == -1) {
-#if defined(_WIN32) || defined(__CYGWIN__)
-					if (WSAGetLastError() == WSAEWOULDBLOCK) {
-#else
-					if (errno == EWOULDBLOCK) {
-#endif
-						SET_IDLE_STATE(1);
-						platform_delay(100);
-					} else {
-#if defined(_WIN32) || defined(__CYGWIN__)
-						DEBUG_WARN("error when accepting connection: %d", WSAGetLastError());
-#else
-						DEBUG_WARN("error when accepting connection: %s", strerror(errno));
-#endif
-						exit(1);
-					}
+	if (gdb_if_conn == -1) {
+		const int flags = socket_get_flags(gdb_if_serv);
+		socket_set_flags(gdb_if_serv, flags | O_NONBLOCK);
+		gdb_if_conn = -1;
+		while (gdb_if_conn == -1) {
+			gdb_if_conn = accept(gdb_if_serv, NULL, NULL);
+			if (gdb_if_conn == -1) {
+				const int error = socket_error();
+				if (error == op_would_block) {
+					SET_IDLE_STATE(1);
+					platform_delay(100);
 				} else {
-#if defined(_WIN32) || defined(__CYGWIN__)
-					opt = 0;
-					ioctlsocket(gdb_if_serv, FIONBIO, &opt);
-#else
-					fcntl(gdb_if_serv, F_SETFL, flags);
-#endif
-					break;
+					display_socket_error(error, gdb_if_serv, "accepting connection from socket");
+					exit(1);
 				}
+				continue;
 			}
-			DEBUG_INFO("Got connection\n");
-#if defined(_WIN32) || defined(__CYGWIN__)
-			opt = 0;
-			ioctlsocket(gdb_if_conn, FIONBIO, &opt);
-#else
-			flags = fcntl(gdb_if_conn, F_GETFL);
-			fcntl(gdb_if_conn, F_SETFL, flags & ~O_NONBLOCK);
-#endif
 		}
-		i = recv(gdb_if_conn, (void *)&ret, 1, 0);
-		if (i <= 0) {
+		DEBUG_INFO("Got connection\n");
+		socket_set_flags(gdb_if_serv, flags);
+		socket_set_flags(gdb_if_conn, socket_get_flags(gdb_if_conn) & ~O_NONBLOCK);
+	}
+
+	char value = '\0';
+	int error = op_needs_retry;
+	while (error == op_needs_retry)
+	{
+		const int result = recv(gdb_if_conn, &value, 1, 0);
+		if (result < 0) {
+			error = socket_error();
+			if (error == op_needs_retry)
+				continue;
+		} else
+			error = 0;
+
+		if (result <= 0) {
+			handle_error(gdb_if_conn, "on socket");
 			gdb_if_conn = -1;
-#if defined(_WIN32) || defined(__CYGWIN__)
-			DEBUG_INFO("Dropped broken connection: %d\n", WSAGetLastError());
-#else
-			DEBUG_INFO("Dropped broken connection: %s\n", strerror(errno));
-#endif
 			/* Return '+' in case we were waiting for an ACK */
 			return '+';
 		}
 	}
-	return ret;
+	return value;
 }
 
 char gdb_if_getchar_to(uint32_t timeout)
