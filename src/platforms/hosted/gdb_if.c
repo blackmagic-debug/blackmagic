@@ -23,6 +23,8 @@
  * uses a TCP server on port 2000.
  */
 
+#include "general.h"
+
 #if defined(_WIN32) || defined(__CYGWIN__)
 #define __USE_MINGW_ANSI_STDIO 1
 #include <winsock2.h>
@@ -30,90 +32,171 @@
 #include <ws2tcpip.h>
 #else
 #include <sys/socket.h>
+#include <netdb.h>
+#include <arpa/inet.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <sys/select.h>
 #include <fcntl.h>
 #endif
 
-#include "general.h"
+#include <string.h>
 #include <assert.h>
 #include <errno.h>
 #include <unistd.h>
 
 #include "gdb_if.h"
 
-static int gdb_if_serv, gdb_if_conn;
-#define DEFAULT_PORT   2000
-#define NUM_GDB_SERVER 4
+static const uint16_t default_port = 2000U;
+static const uint16_t max_port = default_port + 4U;
+
+#if defined(_WIN32) || defined(__CYGWIN__)
+const int op_would_block = WSAEWOULDBLOCK;
+#else
+const int op_would_block = EWOULDBLOCK;
+static inline int closesocket(const int s) { return close(s); }
+#endif
+
+static int gdb_if_serv = -1;
+static int gdb_if_conn = -1;
+
+typedef struct sockaddr sockaddr_s;
+typedef struct sockaddr_in sockaddr_in_s;
+typedef struct sockaddr_in6 sockaddr_in6_s;
+typedef struct sockaddr_storage sockaddr_storage_s;
+typedef struct addrinfo addrinfo_s;
+
+#if defined(_WIN32) || defined(__CYGWIN__)
+typedef ADDRESS_FAMILY sa_family_t;
+#endif
+
+static inline size_t family_to_size(const sa_family_t family)
+{
+	if (family == AF_INET)
+		return sizeof(sockaddr_in_s);
+	if (family == AF_INET6)
+		return sizeof(sockaddr_in6_s);
+	return sizeof(sockaddr_storage_s);
+}
+
+static inline uint16_t u16_to_be(const uint16_t value)
+{
+	const uint8_t resultBytes[2] = {(uint8_t)(value >> 8U), (uint8_t)value};
+	uint16_t result = 0;
+	static_assert(sizeof(uint16_t) == sizeof(resultBytes), "uint16_t is not 2 bytes on this platform");
+	memcpy(&result, resultBytes, sizeof(resultBytes));
+	return result;
+}
+
+static sockaddr_storage_s sockaddr_prepare(const uint16_t port)
+{
+	addrinfo_s hints = {};
+	/* Use AF_UNSPEC here to support either IPv4 or v6 */
+	hints.ai_family = AF_UNSPEC;
+	/* Ask for a normal TCP socket */
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_protocol = IPPROTO_TCP;
+	/* This + the first parameter of getaddrinfo() being NULL guarantees an any address */
+	hints.ai_flags = AI_PASSIVE;
+
+	/* See what the host can give us for what we've requested */
+	addrinfo_s *results = NULL;
+	int res = getaddrinfo(NULL, "0", &hints, &results);
+	if (res || !results) {
+		DEBUG_WARN("getaddrinfo returned %d (errno = %d), results is %p\n", res, errno, results);
+		return (sockaddr_storage_s){AF_UNSPEC};
+	}
+
+	/* Pick the first result, copy it and free the list structure getaddrinfo() returns */
+	sockaddr_storage_s service;
+	memcpy(&service, results->ai_addr, family_to_size(results->ai_addr->sa_family));
+	freeaddrinfo(results);
+
+	/* Copy in the port number as appropriate for the returned structure */
+	const uint16_t port_be = u16_to_be(port);
+	if (service.ss_family == AF_INET)
+		((sockaddr_in_s *)&service)->sin_port = port_be;
+	else if (service.ss_family == AF_INET6)
+		((sockaddr_in6_s *)&service)->sin6_port = port_be;
+	else
+		return (sockaddr_storage_s){AF_UNSPEC};
+	/* We now have a valid IPv4 or IPv6 sockaddr to work with so return it */
+	return service;
+}
+
+static int socket_error()
+{
+#if defined(_WIN32) || defined(__CYGWIN__)
+	return WSAGetLastError();
+#else
+	return errno;
+#endif
+}
+
+static void display_socket_error(const int error, const int socket, const char *const operation)
+{
+#if defined(_WIN32) || defined(__CYGWIN__)
+	char *message = NULL;
+	FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL,
+		error, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (char *)&message, 0, NULL);
+#else
+	const char *message = strerror(error);
+#endif
+	DEBUG_WARN("Error %s %d, got error %d: %s\n", operation, socket, error, message);
+#if defined(_WIN32) || defined(__CYGWIN__)
+	LocalFree(message);
+#endif
+}
+
+static void handle_error(const int socket, const char *const operation)
+{
+	display_socket_error(socket_error(), socket, operation);
+	closesocket(socket);
+}
 
 int gdb_if_init(void)
 {
 #if defined(_WIN32) || defined(__CYGWIN__)
-	int iResult;
-	WSADATA wsaData;
-	iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
-	if (iResult != NO_ERROR) {
-		DEBUG_WARN("WSAStartup failed with error: %ld\n", iResult);
-		exit(1);
+	WSADATA wsa_data = {};
+	const int result = WSAStartup(MAKEWORD(2, 2), &wsa_data);
+	if (result != NO_ERROR) {
+		DEBUG_WARN("WSAStartup failed with error: %d\n", result);
+		return -1;
 	}
 #endif
-	struct sockaddr_in addr;
-	int opt;
-	int port = DEFAULT_PORT - 1;
-
-	do {
-		port++;
-		if (port > DEFAULT_PORT + NUM_GDB_SERVER)
+	for (uint16_t port = default_port; port < max_port; ++port) {
+		const sockaddr_storage_s addr = sockaddr_prepare(port);
+		if (addr.ss_family == AF_UNSPEC) {
+			DEBUG_WARN("Failed to get a suitable socket address\n");
 			return -1;
-		addr.sin_family = AF_INET;
-		addr.sin_port = htons(port);
-		addr.sin_addr.s_addr = htonl(INADDR_ANY);
+		}
 
-		gdb_if_serv = socket(PF_INET, SOCK_STREAM, 0);
+		gdb_if_serv = socket(addr.ss_family, SOCK_STREAM, IPPROTO_TCP);
 		if (gdb_if_serv == -1) {
-			DEBUG_WARN("PF_INET %d\n", gdb_if_serv);
+			display_socket_error(socket_error(), gdb_if_serv, "socket returned");
 			continue;
 		}
 
-		opt = 1;
-		if (setsockopt(gdb_if_serv, SOL_SOCKET, SO_REUSEADDR, (void *)&opt, sizeof(opt)) == -1) {
-#if defined(_WIN32) || defined(__CYGWIN__)
-			DEBUG_WARN("error setsockopt SOL_SOCKET : %d error: %d\n", gdb_if_serv, WSAGetLastError());
-#else
-			DEBUG_WARN("error setsockopt SOL_SOCKET : %d error: %d\n", gdb_if_serv, strerror(errno));
-#endif
-			close(gdb_if_serv);
+		if (!socket_set_int_opt(gdb_if_serv, SOL_SOCKET, SO_REUSEADDR, 1) ||
+			!socket_set_int_opt(gdb_if_serv, IPPROTO_TCP, TCP_NODELAY, 1))
+			continue;
+
+		if (bind(gdb_if_serv, (sockaddr_s *)&addr, family_to_size(addr.ss_family)) == -1) {
+			handle_error(gdb_if_serv, "binding socket");
 			continue;
 		}
-		if (setsockopt(gdb_if_serv, IPPROTO_TCP, TCP_NODELAY, (void *)&opt, sizeof(opt)) == -1) {
-#if defined(_WIN32) || defined(__CYGWIN__)
-			DEBUG_WARN("error setsockopt IPPROTO_TCP : %d error: %d\n", gdb_if_serv, WSAGetLastError());
-#else
-			DEBUG_WARN("error setsockopt IPPROTO_TCP : %d error: %d\n", gdb_if_serv, strerror(errno));
-#endif
-			close(gdb_if_serv);
-			continue;
-		}
-		if (bind(gdb_if_serv, (void *)&addr, sizeof(addr)) == -1) {
-#if defined(_WIN32) || defined(__CYGWIN__)
-			DEBUG_WARN("error when binding socket: %d error: %d\n", gdb_if_serv, WSAGetLastError());
-#else
-			DEBUG_WARN("error when binding socket: %d error: %d\n", gdb_if_serv, strerror(errno));
-#endif
-			close(gdb_if_serv);
-			continue;
-		}
+
 		if (listen(gdb_if_serv, 1) == -1) {
-			DEBUG_WARN("listen closed %d\n", gdb_if_serv);
-			close(gdb_if_serv);
+			handle_error(gdb_if_serv, "listening on socket");
 			continue;
 		}
-		break;
-	} while (1);
-	DEBUG_WARN("Listening on TCP: %4d\n", port);
 
-	return 0;
+		DEBUG_WARN("Listening on TCP port: %d\n", port);
+		return 0;
+	}
+
+	DEBUG_WARN("Failed to aquire a port to listen on\n");
+	return -1;
 }
 
 char gdb_if_getchar(void)
