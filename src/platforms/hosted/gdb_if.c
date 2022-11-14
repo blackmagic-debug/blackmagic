@@ -78,6 +78,12 @@ typedef struct addrinfo addrinfo_s;
 typedef ADDRESS_FAMILY sa_family_t;
 #endif
 
+#if defined(__CYGWIN__)
+typedef TIMEVAL timeval_s;
+#else
+typedef struct timeval timeval_s;
+#endif
+
 static inline size_t family_to_size(const sa_family_t family)
 {
 	if (family == AF_INET)
@@ -283,25 +289,19 @@ char gdb_if_getchar(void)
 
 char gdb_if_getchar_to(uint32_t timeout)
 {
-	fd_set fds;
-#if defined(__CYGWIN__)
-	TIMEVAL tv;
-#else
-	struct timeval tv;
-#endif
-
 	if (gdb_if_conn == -1)
 		return -1;
 
-	tv.tv_sec = timeout / 1000;
-	tv.tv_usec = (timeout % 1000) * 1000;
+	timeval_s select_timeout;
+	select_timeout.tv_sec = timeout / 1000;
+	select_timeout.tv_usec = (timeout % 1000) * 1000;
 
+	fd_set fds;
 	FD_ZERO(&fds);
 	FD_SET(gdb_if_conn, &fds);
 
-	if (select(gdb_if_conn + 1, &fds, NULL, NULL, &tv) > 0)
+	if (select(FD_SETSIZE, &fds, NULL, NULL, &select_timeout) > 0)
 		return gdb_if_getchar();
-
 	return -1;
 }
 
