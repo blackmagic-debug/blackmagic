@@ -64,6 +64,10 @@ static inline int closesocket(const int s)
 static int gdb_if_serv = -1;
 static int gdb_if_conn = -1;
 
+#define GDB_BUFFER_LEN 2048U
+static size_t gdb_buffer_used = 0U;
+static char gdb_buffer[GDB_BUFFER_LEN];
+
 typedef struct sockaddr sockaddr_s;
 typedef struct sockaddr_in sockaddr_in_s;
 typedef struct sockaddr_in6 sockaddr_in6_s;
@@ -303,17 +307,11 @@ char gdb_if_getchar_to(uint32_t timeout)
 
 void gdb_if_putchar(char c, int flush)
 {
-#if defined(__WIN32__) || defined(__CYGWIN__)
-	static char buf[2048];
-#else
-	static uint8_t buf[2048];
-#endif
-	static int bufsize = 0;
-	if (gdb_if_conn > 0) {
-		buf[bufsize++] = c;
-		if (flush || (bufsize == sizeof(buf))) {
-			send(gdb_if_conn, buf, bufsize, 0);
-			bufsize = 0;
-		}
+	if (gdb_if_conn == -1)
+		return;
+	gdb_buffer[gdb_buffer_used++] = c;
+	if (flush || gdb_buffer_used == GDB_BUFFER_LEN) {
+		send(gdb_if_conn, gdb_buffer, gdb_buffer_used, 0);
+		gdb_buffer_used = 0;
 	}
 }
