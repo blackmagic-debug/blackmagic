@@ -22,44 +22,106 @@
 #include "remote.h"
 #include "cli.h"
 
-static HANDLE port_handle;
+#include <assert.h>
+#include <string.h>
+#include <stdarg.h>
+#include <stdlib.h>
+#include <stdio.h>
+
+static char *format_string(const char *format, ...) __attribute__((format(printf, 1, 2)));
+
+static char *format_string(const char *format, ...)
+{
+	va_list args;
+	va_start(args, format);
+	const int len = vsnprintf(NULL, 0, format, args);
+	va_end(args);
+	if (len <= 0)
+		return NULL;
+	char *const ret = (char *)malloc(len + 1);
+	if (!ret)
+		return NULL;
+	va_start(args, format);
+	vsprintf(ret, format, args);
+	va_end(args);
+	return ret;
+}
+
+static HANDLE port_handle = INVALID_HANDLE_VALUE;
+
+static void display_error(const LSTATUS error, const char *const operation, const char *const path)
+{
+	char *message = NULL;
+	FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL,
+		error, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (char *)&message, 0, NULL);
+	DEBUG_WARN("Error %s %s, got error %08x: %s\n", operation, path, error, message);
+	LocalFree(message);
+}
+
+static HKEY open_hklm_registry_path(const char *const path, const REGSAM permissions)
+{
+	HKEY handle = INVALID_HANDLE_VALUE;
+	const LSTATUS result = RegOpenKeyEx(HKEY_LOCAL_MACHINE, path, 0, permissions, &handle);
+	if (result != ERROR_SUCCESS) {
+		display_error(result, "opening registry key", path);
+		return INVALID_HANDLE_VALUE;
+	}
+	return handle;
+}
+
+static char *read_key_from_path(const char *const subpath, const char *const key_name)
+{
+	char *key_path = format_string(
+		"SYSTEM\\CurrentControlSet\\Enum\\USB\\VID_%04X&PID_%04X%s", VENDOR_ID_BMP, PRODUCT_ID_BMP, subpath);
+	if (!key_path)
+		return NULL;
+
+	HKEY key_path_handle = open_hklm_registry_path(key_path, KEY_READ);
+	free(key_path);
+	if (key_path_handle == INVALID_HANDLE_VALUE)
+		return NULL;
+
+	DWORD value_len = 0;
+	const LSTATUS result = RegGetValue(key_path_handle, NULL, key_name, RRF_RT_REG_SZ, NULL, NULL, &value_len);
+	if (result != ERROR_MORE_DATA) {
+		display_error(result, "retrieving value for key", key_name);
+		RegCloseKey(key_path_handle);
+		return NULL;
+	}
+
+	char *value = calloc(1, value_len);
+	if (!value) {
+		DEBUG_WARN("Could not allocation sufficient memory for key value\n");
+		RegCloseKey(key_path_handle);
+		return NULL;
+	}
+	assert(RegGetValue(key_path_handle, NULL, key_name, RRF_RT_REG_SZ, NULL, value, &value_len) == ERROR_SUCCESS);
+	RegCloseKey(key_path_handle);
+	return value;
+}
 
 static char *find_bmp_by_serial(const char *serial)
 {
-	char regpath[258];
-	/* First find the containers of the BMP comports */
-	sprintf(
-		regpath, "SYSTEM\\CurrentControlSet\\Enum\\USB\\VID_%04X&PID_%04X\\%s", VENDOR_ID_BMP, PRODUCT_ID_BMP, serial);
-	HKEY hkeySection;
-	LSTATUS res;
-	res = RegOpenKeyEx(HKEY_LOCAL_MACHINE, regpath, 0, KEY_READ, &hkeySection);
-	if (res != ERROR_SUCCESS)
+	char *serial_path = format_string("\\%s", serial);
+	if (!serial_path)
 		return NULL;
-	BYTE prefix[128];
-	DWORD maxlen = sizeof(prefix);
-	res = RegQueryValueEx(hkeySection, "ParentIdPrefix", NULL, NULL, prefix, &maxlen);
-	RegCloseKey(hkeySection);
-	if (res != ERROR_SUCCESS)
+	char *prefix = read_key_from_path(serial_path, "ParentIdPrefix");
+	free(serial_path);
+	if (!prefix)
 		return NULL;
-	printf("prefix %s\n", prefix);
-	sprintf(regpath,
-		"SYSTEM\\CurrentControlSet\\Enum\\USB\\VID_%04X&PID_%04X&MI_00\\%s"
-		"&0000\\Device Parameters",
-		VENDOR_ID_BMP, PRODUCT_ID_BMP, prefix);
-	printf("%s\n", regpath);
-	res = RegOpenKeyEx(HKEY_LOCAL_MACHINE, regpath, 0, KEY_READ, &hkeySection);
-	if (res != ERROR_SUCCESS) {
-		printf("Failuere\n");
+	printf("prefix: %s\n", prefix);
+
+	char *parameter_path = format_string("&MI_00\\%s&0000\\Device Parameters", prefix);
+	if (!parameter_path) {
+		free(prefix);
 		return NULL;
 	}
-	BYTE port[128];
-	maxlen = sizeof(port);
-	res = RegQueryValueEx(hkeySection, "PortName", NULL, NULL, port, &maxlen);
-	RegCloseKey(hkeySection);
-	if (res != ERROR_SUCCESS)
+	char *port_name = read_key_from_path(parameter_path, "PortName");
+	free(prefix);
+	if (!port_name)
 		return NULL;
-	printf("Portname %s\n", port);
-	return strdup((char *)port);
+	printf("Using BMP at %s\n", port_name);
+	return port_name;
 }
 
 int serial_open(BMP_CL_OPTIONS_t *const cl_opts, const char *const serial)
