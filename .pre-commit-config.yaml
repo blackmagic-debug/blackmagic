@@ -13,3 +13,6 @@ repos:
   hooks:
   - id: check-hex-case
     args: [--lower-digits] # edit-in-place, hex number digits to lower case (defaults to upper case), i.e. 0x55aa
+
+  - id: check-accidental-assignment
+    args: [--strict, --skip-keywords, DO_PRAGMA, --] # strict, check in all parentheses found, skip check in DO_PRAGMA macro
