@@ -28,6 +28,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#define NT_DEV_SUFFIX     "\\\\.\\"
+#define NT_DEV_SUFFIX_LEN ARRAY_LENGTH(NT_DEV_SUFFIX)
+
 static char *format_string(const char *format, ...) __attribute__((format(printf, 1, 2)));
 
 static char *format_string(const char *format, ...)
@@ -56,6 +59,18 @@ static void display_error(const LSTATUS error, const char *const operation, cons
 		error, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (char *)&message, 0, NULL);
 	DEBUG_WARN("Error %s %s, got error %08x: %s\n", operation, path, error, message);
 	LocalFree(message);
+}
+
+static void handle_dev_error(HANDLE device, const char *const operation)
+{
+	const DWORD error = GetLastError();
+	char *message = NULL;
+	FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL,
+		error, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (char *)&message, 0, NULL);
+	DEBUG_WARN("Error %s (%08lx): %s\n", operation, error, message);
+	LocalFree(message);
+	if (device != INVALID_HANDLE_VALUE)
+		CloseHandle(device);
 }
 
 static HKEY open_hklm_registry_path(const char *const path, const REGSAM permissions)
@@ -124,53 +139,83 @@ static char *find_bmp_by_serial(const char *serial)
 	return port_name;
 }
 
+static char *device_to_path(const char *const device)
+{
+	if (memcmp(device, NT_DEV_SUFFIX, NT_DEV_SUFFIX_LEN - 1U) == 0)
+		return strdup(device);
+
+	const size_t path_len = strlen(device) + NT_DEV_SUFFIX_LEN;
+	char *const path = malloc(path_len);
+	memcpy(path, NT_DEV_SUFFIX, NT_DEV_SUFFIX_LEN);
+	memcpy(path + NT_DEV_SUFFIX_LEN - 1U, device, path_len - NT_DEV_SUFFIX_LEN);
+	path[path_len - 1U] = '\0';
+	return path;
+}
+
+static char *find_bmp_device(const BMP_CL_OPTIONS_t *const cl_opts, const char *const serial)
+{
+	if (cl_opts->opt_device)
+		return device_to_path(cl_opts->opt_device);
+	char *const device = find_bmp_by_serial(serial);
+	if (!device)
+		return NULL;
+	char *const result = device_to_path(device);
+	free(device);
+	return result;
+}
+
 int serial_open(BMP_CL_OPTIONS_t *const cl_opts, const char *const serial)
 {
-	char device[256];
-	if (!cl_opts->opt_device)
-		cl_opts->opt_device = find_bmp_by_serial(serial);
-	if (!cl_opts->opt_device) {
+	char *const device = find_bmp_device(cl_opts, serial);
+	if (!device) {
 		DEBUG_WARN("Unexpected problems finding the device!\n");
 		return -1;
 	}
-	if (strstr(cl_opts->opt_device, "\\\\.\\")) {
-		strncpy(device, cl_opts->opt_device, sizeof(device) - 1);
-	} else {
-		strcpy(device, "\\\\.\\");
-		strncat(device, cl_opts->opt_device, sizeof(device) - strlen(device) - 1);
-	}
-	port_handle = CreateFile(device,  // NT path to the port
-		GENERIC_READ | GENERIC_WRITE, // Read/Write
-		0,                            // No Sharing
-		NULL,                         // No Security
-		OPEN_EXISTING,                // Open existing port only
-		0,                            // Non Overlapped I/O
-		NULL);                        // Null for Comm Devices
+
+	port_handle = CreateFile(device,                    /* NT path to the device */
+		GENERIC_READ | GENERIC_WRITE,                   /* Read + Write */
+		0,                                              /* No Sharing */
+		NULL,                                           /* Default security attributes */
+		OPEN_EXISTING,                                  /* Open an existing device only */
+		FILE_ATTRIBUTE_NORMAL | FILE_FLAG_NO_BUFFERING, /* Normal I/O without buffering */
+		NULL);                                          /* Do not use a template file */
+	free(device);
+
 	if (port_handle == INVALID_HANDLE_VALUE) {
-		DEBUG_WARN("Could not open %s: %ld\n", device, GetLastError());
+		handle_dev_error(port_handle, "opening device");
 		return -1;
 	}
-	DCB serial_params;
-	memset(&serial_params, 0, sizeof(DCB));
+
+	DCB serial_params = {};
 	serial_params.DCBlength = sizeof(serial_params);
 	if (!GetCommState(port_handle, &serial_params)) {
-		DEBUG_WARN("GetCommState failed %ld\n", GetLastError());
+		handle_dev_error(port_handle, "getting communication state from device");
 		return -1;
 	}
-	serial_params.ByteSize = 8;
+
+	serial_params.fParity = FALSE;
+	serial_params.fOutxCtsFlow = FALSE;
+	serial_params.fOutxDsrFlow = FALSE;
 	serial_params.fDtrControl = DTR_CONTROL_ENABLE;
+	serial_params.fDsrSensitivity = FALSE;
+	serial_params.fOutX = FALSE;
+	serial_params.fInX = FALSE;
+	serial_params.fRtsControl = RTS_CONTROL_DISABLE;
+	serial_params.ByteSize = 8;
+	serial_params.Parity = NOPARITY;
 	if (!SetCommState(port_handle, &serial_params)) {
-		DEBUG_WARN("SetCommState failed %ld\n", GetLastError());
+		handle_dev_error(port_handle, "setting communication state on device");
 		return -1;
 	}
-	COMMTIMEOUTS timeouts = {0};
+
+	COMMTIMEOUTS timeouts = {};
 	timeouts.ReadIntervalTimeout = 10;
 	timeouts.ReadTotalTimeoutConstant = 10;
 	timeouts.ReadTotalTimeoutMultiplier = 10;
 	timeouts.WriteTotalTimeoutConstant = 10;
 	timeouts.WriteTotalTimeoutMultiplier = 10;
 	if (!SetCommTimeouts(port_handle, &timeouts)) {
-		DEBUG_WARN("SetCommTimeouts failed %ld\n", GetLastError());
+		handle_dev_error(port_handle, "setting communication timeouts for device");
 		return -1;
 	}
 	return 0;
@@ -179,6 +224,7 @@ int serial_open(BMP_CL_OPTIONS_t *const cl_opts, const char *const serial)
 void serial_close(void)
 {
 	CloseHandle(port_handle);
+	port_handle = INVALID_HANDLE_VALUE;
 }
 
 /* XXX: This should return bool and the size parameter should be size_t as it cannot be negative. */
