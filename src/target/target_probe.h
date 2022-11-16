@@ -68,6 +68,7 @@ bool samd_probe(target_s *target);
 bool samx5x_probe(target_s *target);
 bool kinetis_probe(target_s *target);
 bool efm32_probe(target_s *target);
+bool msp432e4_probe(target_s *target);
 bool msp432p4_probe(target_s *target);
 bool ke04_probe(target_s *target);
 bool rp_probe(target_s *target);
