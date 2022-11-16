@@ -30,36 +30,36 @@
 #include "target_internal.h"
 #include "cortexm.h"
 
-#define SRAM_BASE        0x20000000
+#define SRAM_BASE        0x20000000U
 #define STUB_BUFFER_BASE ALIGN(SRAM_BASE + sizeof(lmi_flash_write_stub), 4)
 
-#define BLOCK_SIZE 0x400
+#define BLOCK_SIZE 0x400U
 
-#define LMI_SCB_BASE 0x400FE000U
+#define LMI_SCB_BASE 0x400fe000U
 #define LMI_SCB_DID0 (LMI_SCB_BASE + 0x000U)
 #define LMI_SCB_DID1 (LMI_SCB_BASE + 0x004U)
 
-#define DID0_CLASS_MASK           0x00FF0000U
+#define DID0_CLASS_MASK           0x00ff0000U
 #define DID0_CLASS_STELLARIS_FURY 0x00010000U
 #define DID0_CLASS_STELLARIS_DUST 0x00030000U
 #define DID0_CLASS_TIVA           0x00050000U
 
 #define DID1_LM3S3748      0x1049U
 #define DID1_LM3S5732      0x1096U
-#define DID1_LM3S8962      0x10A6U
-#define DID1_TM4C123GH6PM  0x10A1U
+#define DID1_LM3S8962      0x10a6U
+#define DID1_TM4C123GH6PM  0x10a1U
 #define DID1_TM4C1230C3PM  0x1022U
-#define DID1_TM4C1294NCPDT 0x101FU
+#define DID1_TM4C1294NCPDT 0x101fU
 
-#define LMI_FLASH_BASE 0x400FD000
-#define LMI_FLASH_FMA  (LMI_FLASH_BASE + 0x000)
-#define LMI_FLASH_FMC  (LMI_FLASH_BASE + 0x008)
+#define LMI_FLASH_BASE 0x400fd000U
+#define LMI_FLASH_FMA  (LMI_FLASH_BASE + 0x000U)
+#define LMI_FLASH_FMC  (LMI_FLASH_BASE + 0x008U)
 
-#define LMI_FLASH_FMC_WRITE  (1 << 0)
-#define LMI_FLASH_FMC_ERASE  (1 << 1)
-#define LMI_FLASH_FMC_MERASE (1 << 2)
-#define LMI_FLASH_FMC_COMT   (1 << 3)
-#define LMI_FLASH_FMC_WRKEY  0xA4420000
+#define LMI_FLASH_FMC_WRITE  (1U << 0U)
+#define LMI_FLASH_FMC_ERASE  (1U << 1U)
+#define LMI_FLASH_FMC_MERASE (1U << 2U)
+#define LMI_FLASH_FMC_COMT   (1U << 3U)
+#define LMI_FLASH_FMC_WRKEY  0xa4420000U
 
 static bool lmi_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 static bool lmi_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
