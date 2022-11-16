@@ -224,7 +224,7 @@ static const struct option long_options[] = {
 	{NULL, 0, NULL, 0},
 };
 
-void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv)
+void cl_init(bmp_cli_options_s *opt, int argc, char **argv)
 {
 	int c;
 	opt->opt_target_dev = 1;
@@ -397,7 +397,7 @@ static void display_target(int i, target *t, void *context)
 			"*** %2d %c %s %s\n", i, target_attached(t) ? '*' : ' ', target_driver_name(t), core_name ? core_name : "");
 }
 
-int cl_execute(BMP_CL_OPTIONS_t *opt)
+int cl_execute(bmp_cli_options_s *opt)
 {
 	int num_targets;
 	if (opt->opt_tpwr) {

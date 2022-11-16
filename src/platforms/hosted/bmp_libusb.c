@@ -107,7 +107,7 @@ static bmp_type_t find_cmsis_dap_interface(libusb_device *dev, bmp_info_s *info)
 	return type;
 }
 
-int find_debuggers(BMP_CL_OPTIONS_t *cl_opts, bmp_info_s *info)
+int find_debuggers(bmp_cli_options_s *cl_opts, bmp_info_s *info)
 {
 	libusb_device **devs;
 	int res = libusb_init(&info->libusb_ctx);

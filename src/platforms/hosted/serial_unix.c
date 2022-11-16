@@ -72,7 +72,7 @@ static int set_interface_attribs(void)
 }
 
 #ifdef __APPLE__
-int serial_open(const BMP_CL_OPTIONS_t *cl_opts, char *serial)
+int serial_open(const bmp_cli_options_s *cl_opts, char *serial)
 {
 	char name[4096];
 	if (!cl_opts->opt_device) {
@@ -126,7 +126,7 @@ static bool match_serial(const char *const device, const char *const serial)
 	return constains_substring(begin, end - begin, serial);
 }
 
-int serial_open(const BMP_CL_OPTIONS_t *const cl_opts, const char *const serial)
+int serial_open(const bmp_cli_options_s *const cl_opts, const char *const serial)
 {
 	char name[4096];
 	if (!cl_opts->opt_device) {
