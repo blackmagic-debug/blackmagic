@@ -164,7 +164,7 @@ static char *find_bmp_device(const BMP_CL_OPTIONS_t *const cl_opts, const char *
 	return result;
 }
 
-int serial_open(BMP_CL_OPTIONS_t *const cl_opts, const char *const serial)
+int serial_open(const BMP_CL_OPTIONS_t *const cl_opts, const char *const serial)
 {
 	char *const device = find_bmp_device(cl_opts, serial);
 	if (!device) {
