@@ -82,7 +82,7 @@ typedef struct bmp_info {
 
 extern bmp_info_s info;
 void bmp_ident(bmp_info_s *info);
-int find_debuggers(BMP_CL_OPTIONS_t *cl_opts, bmp_info_s *info);
+int find_debuggers(bmp_cli_options_s *cl_opts, bmp_info_s *info);
 void libusb_exit_function(bmp_info_s *info);
 
 #if HOSTED_BMP_ONLY == 1

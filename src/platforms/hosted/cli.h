@@ -46,7 +46,7 @@ typedef enum bmp_scan_mode {
 	BMP_SCAN_AUTO
 } bmp_scan_mode_e;
 
-typedef struct BMP_CL_OPTIONS_s {
+typedef struct bmda_cli_options {
 	enum bmp_cl_mode opt_mode;
 	bmp_scan_mode_e opt_scanmode;
 	bool opt_tpwr;
@@ -68,11 +68,11 @@ typedef struct BMP_CL_OPTIONS_s {
 	uint32_t opt_flash_start;
 	uint32_t opt_max_swj_frequency;
 	size_t opt_flash_size;
-} BMP_CL_OPTIONS_t;
+} bmp_cli_options_s;
 
-void cl_init(BMP_CL_OPTIONS_t *opt, int argc, char **argv);
-int cl_execute(BMP_CL_OPTIONS_t *opt);
-int serial_open(const BMP_CL_OPTIONS_t *opt, const char *serial);
+void cl_init(bmp_cli_options_s *opt, int argc, char **argv);
+int cl_execute(bmp_cli_options_s *opt);
+int serial_open(const bmp_cli_options_s *opt, const char *serial);
 void serial_close(void);
 
 #endif /* PLATFORMS_HOSTED_CLI_H */
