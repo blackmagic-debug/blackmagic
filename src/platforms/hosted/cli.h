@@ -26,7 +26,7 @@
 
 #include "cortexm.h"
 
-enum bmp_cl_mode {
+typedef enum bmda_cli_mode {
 	BMP_MODE_DEBUG,
 	BMP_MODE_TEST,
 	BMP_MODE_RESET,
@@ -38,7 +38,7 @@ enum bmp_cl_mode {
 	BMP_MODE_FLASH_VERIFY,
 	BMP_MODE_SWJ_TEST,
 	BMP_MODE_MONITOR,
-};
+} bmda_cli_mode_e;
 
 typedef enum bmp_scan_mode {
 	BMP_SCAN_JTAG,
@@ -47,7 +47,7 @@ typedef enum bmp_scan_mode {
 } bmp_scan_mode_e;
 
 typedef struct bmda_cli_options {
-	enum bmp_cl_mode opt_mode;
+	bmda_cli_mode_e opt_mode;
 	bmp_scan_mode_e opt_scanmode;
 	bool opt_tpwr;
 	bool opt_list_only;
