@@ -60,10 +60,10 @@ enum gdb_signal {
 		break;                 \
 	}
 
-typedef struct {
+typedef struct cmd_executer {
 	const char *cmd_prefix;
 	void (*func)(const char *packet, size_t len);
-} cmd_executer;
+} cmd_executer_s;
 
 static char pbuf[BUF_SIZE + 1U];
 
@@ -362,7 +362,7 @@ int gdb_main_loop(target_controller_s *tc, bool in_syscall)
 	}
 }
 
-static bool exec_command(char *packet, const size_t length, const cmd_executer *exec)
+static bool exec_command(char *packet, const size_t length, const cmd_executer_s *exec)
 {
 	while (exec->cmd_prefix) {
 		const size_t prefix_length = strlen(exec->cmd_prefix);
@@ -504,7 +504,7 @@ static void exec_q_thread_info(const char *packet, const size_t length)
 		gdb_putpacketz("l");
 }
 
-static const cmd_executer q_commands[] = {
+static const cmd_executer_s q_commands[] = {
 	{"qRcmd,", exec_q_rcmd},
 	{"qSupported", exec_q_supported},
 	{"qXfer:memory-map:read::", exec_q_memory_map},
