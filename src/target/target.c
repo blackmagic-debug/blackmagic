@@ -120,8 +120,6 @@ void target_mem_map_free(target_s *t)
 
 void target_list_free(void)
 {
-	struct target_command_s *tc;
-
 	while (target_list) {
 		target_s *t = target_list->next;
 		if (target_list->tc && target_list->tc->destroy_callback)
@@ -129,7 +127,7 @@ void target_list_free(void)
 		if (target_list->priv)
 			target_list->priv_free(target_list->priv);
 		while (target_list->commands) {
-			tc = target_list->commands->next;
+			target_command_s *const tc = target_list->commands->next;
 			free(target_list->commands);
 			target_list->commands = tc;
 		}
@@ -147,14 +145,14 @@ void target_list_free(void)
 
 void target_add_commands(target_s *t, const command_s *cmds, const char *name)
 {
-	struct target_command_s *tc = malloc(sizeof(*tc));
+	target_command_s *tc = malloc(sizeof(*tc));
 	if (!tc) { /* malloc failed: heap exhaustion */
 		DEBUG_WARN("malloc: failed in %s\n", __func__);
 		return;
 	}
 
 	if (t->commands) {
-		struct target_command_s *tail;
+		target_command_s *tail;
 		for (tail = t->commands; tail->next; tail = tail->next)
 			continue;
 		tail->next = tc;
@@ -528,7 +526,7 @@ void target_mem_write8(target_s *t, uint32_t addr, uint8_t value)
 
 void target_command_help(target_s *t)
 {
-	for (struct target_command_s *tc = t->commands; tc; tc = tc->next) {
+	for (const target_command_s *tc = t->commands; tc; tc = tc->next) {
 		tc_printf(t, "%s specific commands:\n", tc->specific_name);
 		for (const command_s *c = tc->cmds; c->cmd; c++)
 			tc_printf(t, "\t%s -- %s\n", c->cmd, c->help);
@@ -537,7 +535,7 @@ void target_command_help(target_s *t)
 
 int target_command(target_s *t, int argc, const char *argv[])
 {
-	for (struct target_command_s *tc = t->commands; tc; tc = tc->next) {
+	for (const target_command_s *tc = t->commands; tc; tc = tc->next) {
 		for (const command_s *c = tc->cmds; c->cmd; c++) {
 			if (!strncmp(argv[0], c->cmd, strlen(argv[0])))
 				return c->handler(t, argc, argv) ? 0 : 1;
