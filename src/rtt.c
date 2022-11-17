@@ -40,7 +40,7 @@ uint32_t rtt_num_up_chan = 0;
 uint32_t rtt_num_down_chan = 0;
 bool rtt_auto_channel = true;
 bool rtt_channel_enabled[MAX_RTT_CHAN] = {0}; // true if user wants to see channel
-struct rtt_channel_struct rtt_channel[MAX_RTT_CHAN];
+rtt_channel_s rtt_channel[MAX_RTT_CHAN];
 
 uint32_t rtt_min_poll_ms = 8;   /* 8 ms */
 uint32_t rtt_max_poll_ms = 256; /* 0.256 s */

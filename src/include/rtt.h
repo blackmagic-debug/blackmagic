@@ -48,16 +48,16 @@ extern bool rtt_flag_skip;                     // skip if host-to-target fifo fu
 extern bool rtt_flag_block;                    // block if host-to-target fifo full
 extern bool rtt_channel_enabled[MAX_RTT_CHAN]; // true if user wants to see channel
 
-struct rtt_channel_struct {
+typedef struct rtt_channel {
 	uint32_t name_addr;
 	uint32_t buf_addr;
 	uint32_t buf_size;
 	uint32_t head;
 	uint32_t tail;
 	uint32_t flag;
-};
+} rtt_channel_s;
 
-extern struct rtt_channel_struct rtt_channel[MAX_RTT_CHAN];
+extern rtt_channel_s rtt_channel[MAX_RTT_CHAN];
 
 void poll_rtt(target_s *cur_target);
 
