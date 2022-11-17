@@ -77,8 +77,10 @@ struct target_command {
 	target_command_s *next;
 };
 
+typedef struct breakwatch breakwatch_s;
+
 struct breakwatch {
-	struct breakwatch *next;
+	breakwatch_s *next;
 	enum target_breakwatch type;
 	target_addr_t addr;
 	size_t size;
@@ -116,9 +118,9 @@ struct target {
 	void (*halt_resume)(target_s *t, bool step);
 
 	/* Break-/watchpoint functions */
-	int (*breakwatch_set)(target_s *t, struct breakwatch *);
-	int (*breakwatch_clear)(target_s *t, struct breakwatch *);
-	struct breakwatch *bw_list;
+	int (*breakwatch_set)(target_s *t, breakwatch_s *);
+	int (*breakwatch_clear)(target_s *t, breakwatch_s *);
+	breakwatch_s *bw_list;
 
 	/* Recovery functions */
 	bool (*mass_erase)(target_s *t);
