@@ -69,10 +69,12 @@ typedef struct command {
 	const char *help;
 } command_s;
 
-struct target_command_s {
+typedef struct target_command target_command_s;
+
+struct target_command {
 	const char *specific_name;
 	const command_s *cmds;
-	struct target_command_s *next;
+	target_command_s *next;
 };
 
 struct breakwatch {
@@ -145,7 +147,7 @@ struct target {
 	char *core;
 	char cmdline[MAX_CMDLINE];
 	target_addr_t heapinfo[4];
-	struct target_command_s *commands;
+	target_command_s *commands;
 #ifdef PLATFORM_HAS_USBUART
 	bool stdout_redirected;
 #endif
