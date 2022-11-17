@@ -81,7 +81,7 @@ typedef struct breakwatch breakwatch_s;
 
 struct breakwatch {
 	breakwatch_s *next;
-	enum target_breakwatch type;
+	target_breakwatch_e type;
 	target_addr_t addr;
 	size_t size;
 	uint32_t reserved[4]; /* For use by the implementing driver */
