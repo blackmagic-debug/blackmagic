@@ -61,11 +61,11 @@ struct target_flash {
 	target_flash_s *next;        /* Next flash in list */
 };
 
-typedef bool (*cmd_handler)(target_s *t, int argc, const char **argv);
+typedef bool (*cmd_handler_fn)(target_s *t, int argc, const char **argv);
 
 typedef struct command {
 	const char *cmd;
-	cmd_handler handler;
+	cmd_handler_fn handler;
 	const char *help;
 } command_s;
 
