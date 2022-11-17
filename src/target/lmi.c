@@ -63,7 +63,7 @@
 
 static bool lmi_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 static bool lmi_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
-static bool lmi_mass_erase(target *t);
+static bool lmi_mass_erase(target_s *t);
 
 static const char lmi_driver_str[] = "TI Stellaris/Tiva";
 
@@ -71,7 +71,7 @@ static const uint16_t lmi_flash_write_stub[] = {
 #include "flashstub/lmi.stub"
 };
 
-static void lmi_add_flash(target *t, size_t length)
+static void lmi_add_flash(target_s *t, size_t length)
 {
 	target_flash_s *f = calloc(1, sizeof(*f));
 	if (!f) { /* calloc failed: heap exhaustion */
@@ -88,7 +88,7 @@ static void lmi_add_flash(target *t, size_t length)
 	target_add_flash(t, f);
 }
 
-bool lm3s_probe(target *const t, const uint16_t did1)
+bool lm3s_probe(target_s *const t, const uint16_t did1)
 {
 	const char *driver = t->driver;
 	t->driver = lmi_driver_str;
@@ -110,7 +110,7 @@ bool lm3s_probe(target *const t, const uint16_t did1)
 	return true;
 }
 
-bool tm4c_probe(target *const t, const uint16_t did1)
+bool tm4c_probe(target_s *const t, const uint16_t did1)
 {
 	const char *driver = t->driver;
 	t->driver = lmi_driver_str;
@@ -141,7 +141,7 @@ bool tm4c_probe(target *const t, const uint16_t did1)
 	return true;
 }
 
-bool lmi_probe(target *const t)
+bool lmi_probe(target_s *const t)
 {
 	const uint32_t did0 = target_mem_read32(t, LMI_SCB_DID0);
 	const uint16_t did1 = target_mem_read32(t, LMI_SCB_DID1) >> 16U;
@@ -159,7 +159,7 @@ bool lmi_probe(target *const t)
 
 static bool lmi_flash_erase(target_flash_s *f, target_addr_t addr, const size_t len)
 {
-	target *t = f->t;
+	target_s *t = f->t;
 	target_check_error(t);
 
 	const bool full_erase = addr == f->start && len == f->length;
@@ -185,7 +185,7 @@ static bool lmi_flash_erase(target_flash_s *f, target_addr_t addr, const size_t 
 
 static bool lmi_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
-	target *t = f->t;
+	target_s *t = f->t;
 	target_check_error(t);
 	target_mem_write(t, SRAM_BASE, lmi_flash_write_stub, sizeof(lmi_flash_write_stub));
 	target_mem_write(t, STUB_BUFFER_BASE, src, len);
@@ -195,7 +195,7 @@ static bool lmi_flash_write(target_flash_s *f, target_addr_t dest, const void *s
 	return cortexm_run_stub(t, SRAM_BASE, dest, STUB_BUFFER_BASE, len, 0) == 0;
 }
 
-static bool lmi_mass_erase(target *t)
+static bool lmi_mass_erase(target_s *t)
 {
 	return lmi_flash_erase(t->flash, t->flash->start, t->flash->length);
 }

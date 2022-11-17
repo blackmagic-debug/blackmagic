@@ -35,7 +35,7 @@
 
 #define LPC15XX_DEVICE_ID 0x400743f8U
 
-static bool lpc15xx_read_uid(target *t, int argc, const char *argv[])
+static bool lpc15xx_read_uid(target_s *t, int argc, const char *argv[])
 {
 	(void)argc;
 	(void)argv;
@@ -55,7 +55,7 @@ const struct command_s lpc15xx_cmd_list[] = {
 	{NULL, NULL, NULL},
 };
 
-static void lpc15xx_add_flash(target *t, uint32_t addr, size_t len, size_t erasesize)
+static void lpc15xx_add_flash(target_s *t, uint32_t addr, size_t len, size_t erasesize)
 {
 	struct lpc_flash *lf = lpc_add_flash(t, addr, len);
 	lf->f.blocksize = erasesize;
@@ -66,7 +66,7 @@ static void lpc15xx_add_flash(target *t, uint32_t addr, size_t len, size_t erase
 	lf->iap_msp = IAP_RAM_BASE + MIN_RAM_SIZE - RAM_USAGE_FOR_IAP_ROUTINES;
 }
 
-bool lpc15xx_probe(target *t)
+bool lpc15xx_probe(target_s *t)
 {
 	/* read the device ID register */
 	const uint32_t device_id = target_mem_read32(t, LPC15XX_DEVICE_ID);

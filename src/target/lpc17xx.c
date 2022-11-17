@@ -43,11 +43,11 @@ typedef struct flash_param {
 	uint32_t result[5]; // Return code and maximum of 4 result parameters
 } __attribute__((aligned(4))) flash_param_s;
 
-static void lpc17xx_extended_reset(target *t);
-static bool lpc17xx_mass_erase(target *t);
-enum iap_status lpc17xx_iap_call(target *t, flash_param_s *param, enum iap_cmd cmd, ...);
+static void lpc17xx_extended_reset(target_s *t);
+static bool lpc17xx_mass_erase(target_s *t);
+enum iap_status lpc17xx_iap_call(target_s *t, flash_param_s *param, enum iap_cmd cmd, ...);
 
-static void lpc17xx_add_flash(target *t, uint32_t addr, size_t len, size_t erasesize, unsigned int base_sector)
+static void lpc17xx_add_flash(target_s *t, uint32_t addr, size_t len, size_t erasesize, unsigned int base_sector)
 {
 	struct lpc_flash *lf = lpc_add_flash(t, addr, len);
 	lf->f.blocksize = erasesize;
@@ -59,7 +59,7 @@ static void lpc17xx_add_flash(target *t, uint32_t addr, size_t len, size_t erase
 	lf->iap_msp = IAP_RAM_BASE + MIN_RAM_SIZE - RAM_USAGE_FOR_IAP_ROUTINES;
 }
 
-bool lpc17xx_probe(target *t)
+bool lpc17xx_probe(target_s *t)
 {
 	if ((t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M3) {
 		/*
@@ -105,7 +105,7 @@ bool lpc17xx_probe(target *t)
 	return false;
 }
 
-static bool lpc17xx_mass_erase(target *t)
+static bool lpc17xx_mass_erase(target_s *t)
 {
 	flash_param_s param;
 
@@ -132,13 +132,13 @@ static bool lpc17xx_mass_erase(target *t)
  * Target has been reset, make sure to remap the boot ROM
  * from 0x00000000 leaving the user flash visible
  */
-static void lpc17xx_extended_reset(target *t)
+static void lpc17xx_extended_reset(target_s *t)
 {
 	/* From §33.6 Debug memory re-mapping (Page 643) UM10360.pdf (Rev 2) */
 	target_mem_write32(t, MEMMAP, 1);
 }
 
-enum iap_status lpc17xx_iap_call(target *t, flash_param_s *param, enum iap_cmd cmd, ...)
+enum iap_status lpc17xx_iap_call(target_s *t, flash_param_s *param, enum iap_cmd cmd, ...)
 {
 	param->opcode = ARM_THUMB_BREAKPOINT;
 	param->command = cmd;

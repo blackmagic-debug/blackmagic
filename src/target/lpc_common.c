@@ -75,7 +75,7 @@ static const char *const iap_error[] = {
 
 static bool lpc_flash_write(target_flash_s *tf, target_addr_t dest, const void *src, size_t len);
 
-struct lpc_flash *lpc_add_flash(target *t, target_addr_t addr, size_t length)
+struct lpc_flash *lpc_add_flash(target_s *t, target_addr_t addr, size_t length)
 {
 	struct lpc_flash *lf = calloc(1, sizeof(*lf));
 	target_flash_s *f;
@@ -109,7 +109,7 @@ static inline bool lpc_is_full_erase(struct lpc_flash *f, const uint32_t begin, 
 
 enum iap_status lpc_iap_call(struct lpc_flash *f, void *result, enum iap_cmd cmd, ...)
 {
-	target *t = f->f.t;
+	target_s *t = f->f.t;
 	flash_param_s param = {
 		.opcode = ARM_THUMB_BREAKPOINT,
 		.command = cmd,

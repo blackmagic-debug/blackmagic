@@ -49,31 +49,31 @@
 #include <alloca.h>
 #endif
 
-static bool cmd_version(target *t, int argc, const char **argv);
-static bool cmd_help(target *t, int argc, const char **argv);
+static bool cmd_version(target_s *t, int argc, const char **argv);
+static bool cmd_help(target_s *t, int argc, const char **argv);
 
-static bool cmd_jtag_scan(target *t, int argc, const char **argv);
-static bool cmd_swdp_scan(target *t, int argc, const char **argv);
-static bool cmd_auto_scan(target *t, int argc, const char **argv);
-static bool cmd_frequency(target *t, int argc, const char **argv);
-static bool cmd_targets(target *t, int argc, const char **argv);
-static bool cmd_morse(target *t, int argc, const char **argv);
-static bool cmd_halt_timeout(target *t, int argc, const char **argv);
-static bool cmd_connect_reset(target *t, int argc, const char **argv);
-static bool cmd_reset(target *t, int argc, const char **argv);
-static bool cmd_tdi_low_reset(target *t, int argc, const char **argv);
+static bool cmd_jtag_scan(target_s *t, int argc, const char **argv);
+static bool cmd_swdp_scan(target_s *t, int argc, const char **argv);
+static bool cmd_auto_scan(target_s *t, int argc, const char **argv);
+static bool cmd_frequency(target_s *t, int argc, const char **argv);
+static bool cmd_targets(target_s *t, int argc, const char **argv);
+static bool cmd_morse(target_s *t, int argc, const char **argv);
+static bool cmd_halt_timeout(target_s *t, int argc, const char **argv);
+static bool cmd_connect_reset(target_s *t, int argc, const char **argv);
+static bool cmd_reset(target_s *t, int argc, const char **argv);
+static bool cmd_tdi_low_reset(target_s *t, int argc, const char **argv);
 #ifdef PLATFORM_HAS_POWER_SWITCH
-static bool cmd_target_power(target *t, int argc, const char **argv);
+static bool cmd_target_power(target_s *t, int argc, const char **argv);
 #endif
 #ifdef PLATFORM_HAS_TRACESWO
-static bool cmd_traceswo(target *t, int argc, const char **argv);
+static bool cmd_traceswo(target_s *t, int argc, const char **argv);
 #endif
-static bool cmd_heapinfo(target *t, int argc, const char **argv);
+static bool cmd_heapinfo(target_s *t, int argc, const char **argv);
 #ifdef ENABLE_RTT
-static bool cmd_rtt(target *t, int argc, const char **argv);
+static bool cmd_rtt(target_s *t, int argc, const char **argv);
 #endif
 #if defined(PLATFORM_HAS_DEBUG) && (PC_HOSTED == 0)
-static bool cmd_debug_bmp(target *t, int argc, const char **argv);
+static bool cmd_debug_bmp(target_s *t, int argc, const char **argv);
 #endif
 
 const command_t cmd_list[] = {
@@ -116,7 +116,7 @@ bool debug_bmp;
 #endif
 unsigned cortexm_wait_timeout = 2000; /* Timeout to wait for Cortex to react on halt command. */
 
-int command_process(target *t, char *cmd)
+int command_process(target_s *t, char *cmd)
 {
 	/* Initial estimate for argc */
 	size_t argc = 1;
@@ -151,7 +151,7 @@ int command_process(target *t, char *cmd)
 
 #define BOARD_IDENT "Black Magic Probe" PLATFORM_IDENT FIRMWARE_VERSION
 
-bool cmd_version(target *t, int argc, const char **argv)
+bool cmd_version(target_s *t, int argc, const char **argv)
 {
 	(void)t;
 	(void)argc;
@@ -171,7 +171,7 @@ bool cmd_version(target *t, int argc, const char **argv)
 	return true;
 }
 
-bool cmd_help(target *t, int argc, const char **argv)
+bool cmd_help(target_s *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
@@ -188,7 +188,7 @@ bool cmd_help(target *t, int argc, const char **argv)
 	return true;
 }
 
-static bool cmd_jtag_scan(target *t, int argc, const char **argv)
+static bool cmd_jtag_scan(target_s *t, int argc, const char **argv)
 {
 	(void)t;
 	uint8_t irlens[argc];
@@ -237,7 +237,7 @@ static bool cmd_jtag_scan(target *t, int argc, const char **argv)
 	return true;
 }
 
-bool cmd_swdp_scan(target *t, int argc, const char **argv)
+bool cmd_swdp_scan(target_s *t, int argc, const char **argv)
 {
 	(void)t;
 	volatile uint32_t targetid = 0;
@@ -280,7 +280,7 @@ bool cmd_swdp_scan(target *t, int argc, const char **argv)
 	return true;
 }
 
-bool cmd_auto_scan(target *t, int argc, const char **argv)
+bool cmd_auto_scan(target_s *t, int argc, const char **argv)
 {
 	(void)t;
 	(void)argc;
@@ -335,7 +335,7 @@ bool cmd_auto_scan(target *t, int argc, const char **argv)
 	return true;
 }
 
-bool cmd_frequency(target *t, int argc, const char **argv)
+bool cmd_frequency(target_s *t, int argc, const char **argv)
 {
 	(void)t;
 	if (argc == 2) {
@@ -363,7 +363,7 @@ bool cmd_frequency(target *t, int argc, const char **argv)
 	return true;
 }
 
-static void display_target(int i, target *t, void *context)
+static void display_target(int i, target_s *t, void *context)
 {
 	(void)context;
 	const char attached = target_attached(t) ? '*' : ' ';
@@ -375,7 +375,7 @@ static void display_target(int i, target *t, void *context)
 		gdb_outf("%2d   %c  %s %s\n", i, attached, target_driver_name(t), core_name ? core_name : "");
 }
 
-bool cmd_targets(target *t, int argc, const char **argv)
+bool cmd_targets(target_s *t, int argc, const char **argv)
 {
 	(void)t;
 	(void)argc;
@@ -390,7 +390,7 @@ bool cmd_targets(target *t, int argc, const char **argv)
 	return true;
 }
 
-bool cmd_morse(target *t, int argc, const char **argv)
+bool cmd_morse(target_s *t, int argc, const char **argv)
 {
 	(void)t;
 	(void)argc;
@@ -417,7 +417,7 @@ bool parse_enable_or_disable(const char *value, bool *out)
 	return true;
 }
 
-static bool cmd_connect_reset(target *t, int argc, const char **argv)
+static bool cmd_connect_reset(target_s *t, int argc, const char **argv)
 {
 	(void)t;
 	bool print_status = false;
@@ -435,7 +435,7 @@ static bool cmd_connect_reset(target *t, int argc, const char **argv)
 	return true;
 }
 
-static bool cmd_halt_timeout(target *t, int argc, const char **argv)
+static bool cmd_halt_timeout(target_s *t, int argc, const char **argv)
 {
 	(void)t;
 	if (argc > 1)
@@ -444,7 +444,7 @@ static bool cmd_halt_timeout(target *t, int argc, const char **argv)
 	return true;
 }
 
-static bool cmd_reset(target *t, int argc, const char **argv)
+static bool cmd_reset(target_s *t, int argc, const char **argv)
 {
 	(void)t;
 	(void)argc;
@@ -455,7 +455,7 @@ static bool cmd_reset(target *t, int argc, const char **argv)
 	return true;
 }
 
-static bool cmd_tdi_low_reset(target *t, int argc, const char **argv)
+static bool cmd_tdi_low_reset(target_s *t, int argc, const char **argv)
 {
 	(void)t;
 	(void)argc;
@@ -466,7 +466,7 @@ static bool cmd_tdi_low_reset(target *t, int argc, const char **argv)
 }
 
 #ifdef PLATFORM_HAS_POWER_SWITCH
-static bool cmd_target_power(target *t, int argc, const char **argv)
+static bool cmd_target_power(target_s *t, int argc, const char **argv)
 {
 	(void)t;
 	if (argc == 1)
@@ -495,7 +495,7 @@ static const char *on_or_off(const bool value)
 	return value ? "on" : "off";
 }
 
-static bool cmd_rtt(target *t, int argc, const char **argv)
+static bool cmd_rtt(target_s *t, int argc, const char **argv)
 {
 	(void)t;
 	const size_t command_len = strlen(argv[1]);
@@ -578,7 +578,7 @@ static bool cmd_rtt(target *t, int argc, const char **argv)
 #endif
 
 #ifdef PLATFORM_HAS_TRACESWO
-static bool cmd_traceswo(target *t, int argc, const char **argv)
+static bool cmd_traceswo(target_s *t, int argc, const char **argv)
 {
 	(void)t;
 #if TRACESWO_PROTOCOL == 2
@@ -631,7 +631,7 @@ static bool cmd_traceswo(target *t, int argc, const char **argv)
 #endif
 
 #if defined(PLATFORM_HAS_DEBUG) && (PC_HOSTED == 0)
-static bool cmd_debug_bmp(target *t, int argc, const char **argv)
+static bool cmd_debug_bmp(target_s *t, int argc, const char **argv)
 {
 	(void)t;
 	if (argc == 2) {
@@ -647,7 +647,7 @@ static bool cmd_debug_bmp(target *t, int argc, const char **argv)
 }
 #endif
 
-static bool cmd_heapinfo(target *t, int argc, const char **argv)
+static bool cmd_heapinfo(target_s *t, int argc, const char **argv)
 {
 	if (t == NULL)
 		gdb_out("not attached\n");

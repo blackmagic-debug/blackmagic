@@ -65,7 +65,7 @@ static inline size_t sfdp_memory_density_to_capacity_bits(const uint8_t *const d
 }
 
 static spi_parameters_s sfdp_read_basic_parameter_table(
-	target *const t, const uint32_t address, const size_t length, const read_sfdp_func sfdp_read)
+	target_s *const t, const uint32_t address, const size_t length, const read_sfdp_func sfdp_read)
 {
 	sfdp_basic_parameter_table_s parameter_table;
 	const size_t table_length = MIN(sizeof(sfdp_basic_parameter_table_s), length);
@@ -85,7 +85,7 @@ static spi_parameters_s sfdp_read_basic_parameter_table(
 	return result;
 }
 
-bool sfdp_read_parameters(target *const t, spi_parameters_s *params, const read_sfdp_func sfdp_read)
+bool sfdp_read_parameters(target_s *const t, spi_parameters_s *params, const read_sfdp_func sfdp_read)
 {
 	sfdp_header_s header;
 	sfdp_read(t, SFDP_HEADER_ADDRESS, &header, sizeof(header));

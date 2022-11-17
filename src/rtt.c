@@ -81,7 +81,7 @@ static char xmit_buf[RTT_UP_BUF_SIZE];
 **********************************************************************
 */
 
-static uint32_t fast_search(target *const cur_target, const uint32_t ram_start, const uint32_t ram_end)
+static uint32_t fast_search(target_s *const cur_target, const uint32_t ram_start, const uint32_t ram_end)
 {
 	static const uint32_t m = 16;
 	static const uint64_t p = 0x444110cd;
@@ -111,7 +111,7 @@ static uint32_t fast_search(target *const cur_target, const uint32_t ram_start, 
 	return 0;
 }
 
-static uint32_t memory_search(target *const cur_target, const uint32_t ram_start, const uint32_t ram_end)
+static uint32_t memory_search(target_s *const cur_target, const uint32_t ram_start, const uint32_t ram_end)
 {
 	char *srch_str = rtt_ident;
 	uint32_t srch_str_len = strlen(srch_str);
@@ -134,7 +134,7 @@ static uint32_t memory_search(target *const cur_target, const uint32_t ram_start
 	return 0;
 }
 
-static void find_rtt(target *const cur_target)
+static void find_rtt(target_s *const cur_target)
 {
 	rtt_found = false;
 	poll_ms = rtt_max_poll_ms;
@@ -220,7 +220,7 @@ static void find_rtt(target *const cur_target)
 */
 
 /* poll if host has new data for target */
-static rtt_retval read_rtt(target *const cur_target, const uint32_t i)
+static rtt_retval read_rtt(target_s *const cur_target, const uint32_t i)
 {
 	uint32_t head_addr = 0;
 	uint32_t next_head;
@@ -267,7 +267,7 @@ static rtt_retval read_rtt(target *const cur_target, const uint32_t i)
 /* rtt_aligned_mem_read(): same as target_mem_read, but word aligned for speed.
    note: dest has to be len + 8 bytes, to allow for alignment and padding.
  */
-int rtt_aligned_mem_read(target *t, void *dest, target_addr_t src, size_t len)
+int rtt_aligned_mem_read(target_s *t, void *dest, target_addr_t src, size_t len)
 {
 	uint32_t src0 = src;
 	uint32_t len0 = len;
@@ -286,7 +286,7 @@ int rtt_aligned_mem_read(target *t, void *dest, target_addr_t src, size_t len)
 }
 
 /* poll if target has new data for host */
-static rtt_retval print_rtt(target *const cur_target, const uint32_t i)
+static rtt_retval print_rtt(target_s *const cur_target, const uint32_t i)
 {
 	uint32_t tail_addr;
 
@@ -340,7 +340,7 @@ static rtt_retval print_rtt(target *const cur_target, const uint32_t i)
 **********************************************************************
 */
 
-void poll_rtt(target *const cur_target)
+void poll_rtt(target_s *const cur_target)
 {
 	uint32_t cblock_header[6]; // first 24 bytes of control block
 

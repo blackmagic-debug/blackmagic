@@ -38,7 +38,7 @@
 #include "general.h"
 #include "target_internal.h"
 
-target_flash_s *target_flash_for_addr(target *t, uint32_t addr)
+target_flash_s *target_flash_for_addr(target_s *t, uint32_t addr)
 {
 	for (target_flash_s *f = t->flash; f; f = f->next) {
 		if (f->start <= addr && addr < f->start + f->length)
@@ -47,7 +47,7 @@ target_flash_s *target_flash_for_addr(target *t, uint32_t addr)
 	return NULL;
 }
 
-static bool target_enter_flash_mode(target *t)
+static bool target_enter_flash_mode(target_s *t)
 {
 	if (t->flash_mode)
 		return true;
@@ -66,7 +66,7 @@ static bool target_enter_flash_mode(target *t)
 	return ret;
 }
 
-static bool target_exit_flash_mode(target *t)
+static bool target_exit_flash_mode(target_s *t)
 {
 	if (!t->flash_mode)
 		return true;
@@ -117,7 +117,7 @@ static bool flash_done(target_flash_s *f)
 	return ret;
 }
 
-bool target_flash_erase(target *t, target_addr_t addr, size_t len)
+bool target_flash_erase(target_s *t, target_addr_t addr, size_t len)
 {
 	if (!target_enter_flash_mode(t))
 		return false;
@@ -229,7 +229,7 @@ static bool flash_buffered_write(target_flash_s *f, target_addr_t dest, const vo
 	return ret;
 }
 
-bool target_flash_write(target *t, target_addr_t dest, const void *src, size_t len)
+bool target_flash_write(target_s *t, target_addr_t dest, const void *src, size_t len)
 {
 	if (!target_enter_flash_mode(t))
 		return false;
@@ -282,7 +282,7 @@ bool target_flash_write(target *t, target_addr_t dest, const void *src, size_t l
 	return ret;
 }
 
-bool target_flash_complete(target *t)
+bool target_flash_complete(target_s *t)
 {
 	if (!t->flash_mode)
 		return false;

@@ -39,7 +39,7 @@ static inline const char *stm32_psize_to_string(const enum align psize)
 	}
 }
 
-static inline bool stm32_psize_from_string(target *t, const char *const str, enum align *psize)
+static inline bool stm32_psize_from_string(target_s *t, const char *const str, enum align *psize)
 {
 	if (strcasecmp(str, "x8") == 0)
 		*psize = ALIGN_BYTE;

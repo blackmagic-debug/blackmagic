@@ -21,6 +21,6 @@
 #ifndef INCLUDE_CRC32_H
 #define INCLUDE_CRC32_H
 
-int generic_crc32(target *t, uint32_t *crc, uint32_t base, int len);
+int generic_crc32(target_s *t, uint32_t *crc, uint32_t base, int len);
 
 #endif /* INCLUDE_CRC32_H */

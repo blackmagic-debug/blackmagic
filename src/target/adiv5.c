@@ -887,7 +887,7 @@ void adiv5_dp_init(adiv5_debug_port_s *dp, const uint32_t idcode)
 	 * Otherwise, release the devices now.
 	 * Attach() will halt them again.
 	 */
-	for (target *t = target_list; t; t = t->next) {
+	for (target_s *t = target_list; t; t = t->next) {
 		if (!connect_assert_nrst) {
 			target_halt_resume(t, false);
 		}

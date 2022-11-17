@@ -59,6 +59,6 @@ struct rtt_channel_struct {
 
 extern struct rtt_channel_struct rtt_channel[MAX_RTT_CHAN];
 
-void poll_rtt(target *cur_target);
+void poll_rtt(target_s *cur_target);
 
 #endif /* INCLUDE_RTT_H */
