@@ -108,7 +108,7 @@ void target_command_help(target_s *t);
 int target_command(target_s *t, int argc, const char *argv[]);
 
 /* keep target_errno in sync with errno values in gdb/include/gdb/fileio.h */
-enum target_errno {
+typedef enum target_errno {
 	TARGET_EPERM = 1,
 	TARGET_ENOENT = 2,
 	TARGET_EINTR = 4,
@@ -131,7 +131,7 @@ enum target_errno {
 	TARGET_ENOSYS = 88,
 	TARGET_ENAMETOOLONG = 91,
 	TARGET_EUNKNOWN = 9999,
-};
+} target_errno_e;
 
 enum target_open_flags {
 	TARGET_O_RDONLY = 0,
@@ -165,7 +165,7 @@ struct target_controller {
 	int (*gettimeofday)(target_controller_s *, target_addr_t tv, target_addr_t tz);
 	int (*isatty)(target_controller_s *, int fd);
 	int (*system)(target_controller_s *, target_addr_t cmd, size_t cmd_len);
-	enum target_errno errno_;
+	target_errno_e errno_;
 	bool interrupted;
 };
 
