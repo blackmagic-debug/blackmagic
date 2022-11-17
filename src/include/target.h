@@ -133,14 +133,14 @@ typedef enum target_errno {
 	TARGET_EUNKNOWN = 9999,
 } target_errno_e;
 
-enum target_open_flags {
+typedef enum target_open_flags {
 	TARGET_O_RDONLY = 0,
 	TARGET_O_WRONLY = 1,
 	TARGET_O_RDWR = 2,
 	TARGET_O_APPEND = 0x008,
 	TARGET_O_CREAT = 0x200,
 	TARGET_O_TRUNC = 0x400,
-};
+} target_open_flags_e;
 
 enum target_seek_flag {
 	TARGET_SEEK_SET = 0,
@@ -153,7 +153,7 @@ struct target_controller {
 	void (*printf)(target_controller_s *, const char *fmt, va_list);
 
 	/* Interface to host system calls */
-	int (*open)(target_controller_s *, target_addr_t path, size_t path_len, enum target_open_flags flags, mode_t mode);
+	int (*open)(target_controller_s *, target_addr_t path, size_t path_len, target_open_flags_e flags, mode_t mode);
 	int (*close)(target_controller_s *, int fd);
 	int (*read)(target_controller_s *, int fd, target_addr_t buf, unsigned int count);
 	int (*write)(target_controller_s *, int fd, target_addr_t buf, unsigned int count);

@@ -559,7 +559,7 @@ void tc_printf(target_s *t, const char *fmt, ...)
 }
 
 /* Interface to host system calls */
-int tc_open(target_s *t, target_addr_t path, size_t plen, enum target_open_flags flags, mode_t mode)
+int tc_open(target_s *t, target_addr_t path, size_t plen, target_open_flags_e flags, mode_t mode)
 {
 	if (t->tc->open == NULL) {
 		t->tc->errno_ = TARGET_ENFILE;

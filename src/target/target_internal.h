@@ -191,7 +191,7 @@ bool target_check_error(target_s *t);
 void tc_printf(target_s *t, const char *fmt, ...);
 
 /* Interface to host system calls */
-int tc_open(target_s *, target_addr_t path, size_t plen, enum target_open_flags flags, mode_t mode);
+int tc_open(target_s *, target_addr_t path, size_t plen, target_open_flags_e flags, mode_t mode);
 int tc_close(target_s *t, int fd);
 int tc_read(target_s *t, int fd, target_addr_t buf, unsigned int count);
 int tc_write(target_s *t, int fd, target_addr_t buf, unsigned int count);

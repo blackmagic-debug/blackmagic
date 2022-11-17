@@ -26,14 +26,12 @@
 int hostio_reply(target_controller_s *tc, char *packet, int len);
 
 /* Interface to host system calls */
-int hostio_open(
-	target_controller_s *, target_addr_t path, size_t path_len, enum target_open_flags flags, mode_t mode);
+int hostio_open(target_controller_s *, target_addr_t path, size_t path_len, target_open_flags_e flags, mode_t mode);
 int hostio_close(target_controller_s *, int fd);
 int hostio_read(target_controller_s *, int fd, target_addr_t buf, unsigned int count);
 int hostio_write(target_controller_s *, int fd, target_addr_t buf, unsigned int count);
 long hostio_lseek(target_controller_s *, int fd, long offset, enum target_seek_flag flag);
-int hostio_rename(
-	target_controller_s *, target_addr_t oldpath, size_t old_len, target_addr_t newpath, size_t new_len);
+int hostio_rename(target_controller_s *, target_addr_t oldpath, size_t old_len, target_addr_t newpath, size_t new_len);
 int hostio_unlink(target_controller_s *, target_addr_t path, size_t path_len);
 int hostio_stat(target_controller_s *, target_addr_t path, size_t path_len, target_addr_t buf);
 int hostio_fstat(target_controller_s *, int fd, target_addr_t buf);
