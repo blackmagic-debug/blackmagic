@@ -92,16 +92,16 @@ void target_set_heapinfo(target_s *t, target_addr_t heap_base, target_addr_t hea
 	target_addr_t stack_limit);
 
 /* Break-/watchpoint functions */
-enum target_breakwatch {
+typedef enum target_breakwatch {
 	TARGET_BREAK_SOFT,
 	TARGET_BREAK_HARD,
 	TARGET_WATCH_WRITE,
 	TARGET_WATCH_READ,
 	TARGET_WATCH_ACCESS,
-};
+} target_breakwatch_e;
 
-int target_breakwatch_set(target_s *t, enum target_breakwatch, target_addr_t, size_t);
-int target_breakwatch_clear(target_s *t, enum target_breakwatch, target_addr_t, size_t);
+int target_breakwatch_set(target_s *t, target_breakwatch_e, target_addr_t, size_t);
+int target_breakwatch_clear(target_s *t, target_breakwatch_e, target_addr_t, size_t);
 
 /* Command interpreter */
 void target_command_help(target_s *t);

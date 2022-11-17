@@ -1259,7 +1259,7 @@ static uint32_t dwt_mask(size_t len)
 	}
 }
 
-static uint32_t dwt_func(target_s *t, enum target_breakwatch type)
+static uint32_t dwt_func(target_s *t, target_breakwatch_e type)
 {
 	uint32_t x = 0;
 

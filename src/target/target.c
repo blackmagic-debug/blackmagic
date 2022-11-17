@@ -374,7 +374,7 @@ void target_set_heapinfo(
 }
 
 /* Break-/watchpoint functions */
-int target_breakwatch_set(target_s *t, enum target_breakwatch type, target_addr_t addr, size_t len)
+int target_breakwatch_set(target_s *t, target_breakwatch_e type, target_addr_t addr, size_t len)
 {
 	breakwatch_s bw = {
 		.type = type,
@@ -403,7 +403,7 @@ int target_breakwatch_set(target_s *t, enum target_breakwatch type, target_addr_
 	return ret;
 }
 
-int target_breakwatch_clear(target_s *t, enum target_breakwatch type, target_addr_t addr, size_t len)
+int target_breakwatch_clear(target_s *t, target_breakwatch_e type, target_addr_t addr, size_t len)
 {
 	breakwatch_s *bwp = NULL, *bw;
 	int ret = 1;
