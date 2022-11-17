@@ -24,7 +24,7 @@
 
 /* Example usage:
  *
- * volatile struct exception e;
+ * volatile exception_s e;
  * TRY_CATCH (e, EXCEPTION_TIMEOUT) {
  *    ...
  *    raise_exception(EXCEPTION_TIMEOUT, "Timeout occurred");
@@ -45,9 +45,11 @@
 #include <setjmp.h>
 #include <stdint.h>
 
-#define EXCEPTION_ERROR   0x01
-#define EXCEPTION_TIMEOUT 0x02
-#define EXCEPTION_ALL     -1
+#define EXCEPTION_ERROR   0x01U
+#define EXCEPTION_TIMEOUT 0x02U
+#define EXCEPTION_ALL     (-1)
+
+typedef struct exception exception_s;
 
 struct exception {
 	uint32_t type;
@@ -55,10 +57,10 @@ struct exception {
 	/* private */
 	uint32_t mask;
 	jmp_buf jmpbuf;
-	struct exception *outer;
+	exception_s *outer;
 };
 
-extern struct exception *innermost_exception;
+extern exception_s *innermost_exception;
 
 #define TRY_CATCH(e, type_mask)                   \
 	(e).type = 0;                                 \

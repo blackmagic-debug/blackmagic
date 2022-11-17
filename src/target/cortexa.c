@@ -725,7 +725,7 @@ static void cortexa_reset(target *t)
 	/* Spin until Xilinx reconnects us */
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 1000);
-	volatile struct exception e;
+	volatile exception_s e;
 	do {
 		TRY_CATCH (e, EXCEPTION_ALL) {
 			apb_read(t, DBGDIDR);
@@ -741,7 +741,7 @@ static void cortexa_reset(target *t)
 
 static void cortexa_halt_request(target *t)
 {
-	volatile struct exception e;
+	volatile exception_s e;
 	TRY_CATCH (e, EXCEPTION_TIMEOUT) {
 		apb_write(t, DBGDRCR, DBGDRCR_HRQ);
 	}
@@ -753,7 +753,7 @@ static void cortexa_halt_request(target *t)
 static target_halt_reason_e cortexa_halt_poll(target *t, target_addr_t *watch)
 {
 	volatile uint32_t dbgdscr = 0;
-	volatile struct exception e;
+	volatile exception_s e;
 	TRY_CATCH (e, EXCEPTION_ALL) {
 		/* If this times out because the target is in WFI then
 		 * the target is still running. */

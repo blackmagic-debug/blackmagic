@@ -73,7 +73,7 @@ bool firmware_dp_low_write(adiv5_debug_port_s *dp, uint16_t addr, const uint32_t
  */
 uint32_t adiv5_swdp_scan(uint32_t targetid)
 {
-	volatile struct exception e;
+	volatile exception_s e;
 
 	target_list_free();
 
