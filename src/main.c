@@ -39,7 +39,7 @@ int main(int argc, char **argv)
 #endif
 
 	while (true) {
-		volatile struct exception e;
+		volatile exception_s e;
 		TRY_CATCH (e, EXCEPTION_ALL) {
 			gdb_main();
 		}

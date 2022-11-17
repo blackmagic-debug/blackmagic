@@ -207,7 +207,7 @@ static bool cmd_jtag_scan(target *t, int argc, const char **argv)
 		platform_nrst_set_val(true); /* will be deasserted after attach */
 
 	uint32_t devs = 0;
-	volatile struct exception e;
+	volatile exception_s e;
 	TRY_CATCH (e, EXCEPTION_ALL) {
 #if PC_HOSTED == 1
 		devs = platform_jtag_scan(argc > 1 ? irlens : NULL);
@@ -250,7 +250,7 @@ bool cmd_swdp_scan(target *t, int argc, const char **argv)
 		platform_nrst_set_val(true); /* will be deasserted after attach */
 
 	uint32_t devs = 0;
-	volatile struct exception e;
+	volatile exception_s e;
 	TRY_CATCH (e, EXCEPTION_ALL) {
 #if PC_HOSTED == 1
 		devs = platform_adiv5_swdp_scan(targetid);
@@ -292,7 +292,7 @@ bool cmd_auto_scan(target *t, int argc, const char **argv)
 		platform_nrst_set_val(true); /* will be deasserted after attach */
 
 	uint32_t devs = 0;
-	volatile struct exception e;
+	volatile exception_s e;
 	TRY_CATCH (e, EXCEPTION_ALL) {
 #if PC_HOSTED == 1
 		devs = platform_jtag_scan(NULL);

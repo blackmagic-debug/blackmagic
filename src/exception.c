@@ -21,17 +21,16 @@
 #include "general.h"
 #include "exception.h"
 
-struct exception *innermost_exception = NULL;
+exception_s *innermost_exception = NULL;
 
 void raise_exception(const uint32_t type, const char *const msg)
 {
-	struct exception *e;
-	for (e = innermost_exception; e; e = e->outer) {
-		if (e->mask & type) {
-			e->type = type;
-			e->msg = msg;
-			innermost_exception = e->outer;
-			longjmp(e->jmpbuf, type);
+	for (exception_s *exception = innermost_exception; exception; exception = exception->outer) {
+		if (exception->mask & type) {
+			exception->type = type;
+			exception->msg = msg;
+			innermost_exception = exception->outer;
+			longjmp(exception->jmpbuf, type);
 		}
 	}
 	DEBUG_WARN("Unhandled exception: %s\n", msg);

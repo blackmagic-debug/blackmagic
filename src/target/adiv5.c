@@ -705,7 +705,7 @@ void adiv5_dp_init(adiv5_debug_port_s *dp, const uint32_t idcode)
 	 * for SWD-DP, we are guaranteed to be DP v1 or later.
 	 */
 	volatile uint32_t dpidr = 0;
-	volatile struct exception e;
+	volatile exception_s e;
 	TRY_CATCH (e, EXCEPTION_ALL) {
 		if (idcode != JTAG_IDCODE_ARM_DPv0)
 			dpidr = adiv5_dp_read(dp, ADIV5_DP_DPIDR);
