@@ -376,7 +376,7 @@ void target_set_heapinfo(
 /* Break-/watchpoint functions */
 int target_breakwatch_set(target_s *t, enum target_breakwatch type, target_addr_t addr, size_t len)
 {
-	struct breakwatch bw = {
+	breakwatch_s bw = {
 		.type = type,
 		.addr = addr,
 		.size = len,
@@ -388,7 +388,7 @@ int target_breakwatch_set(target_s *t, enum target_breakwatch type, target_addr_
 
 	if (ret == 0) {
 		/* Success, make a heap copy */
-		struct breakwatch *bwm = malloc(sizeof(bw));
+		breakwatch_s *bwm = malloc(sizeof(bw));
 		if (!bwm) { /* malloc failed: heap exhaustion */
 			DEBUG_WARN("malloc: failed in %s\n", __func__);
 			return 1;
@@ -405,7 +405,7 @@ int target_breakwatch_set(target_s *t, enum target_breakwatch type, target_addr_
 
 int target_breakwatch_clear(target_s *t, enum target_breakwatch type, target_addr_t addr, size_t len)
 {
-	struct breakwatch *bwp = NULL, *bw;
+	breakwatch_s *bwp = NULL, *bw;
 	int ret = 1;
 	for (bw = t->bw_list; bw; bwp = bw, bw = bw->next) {
 		if ((bw->type == type) && (bw->addr == addr) && (bw->size == len))

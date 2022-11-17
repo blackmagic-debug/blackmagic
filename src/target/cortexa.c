@@ -53,8 +53,8 @@ static void cortexa_reset(target_s *t);
 static target_halt_reason_e cortexa_halt_poll(target_s *t, target_addr_t *watch);
 static void cortexa_halt_request(target_s *t);
 
-static int cortexa_breakwatch_set(target_s *t, struct breakwatch *);
-static int cortexa_breakwatch_clear(target_s *t, struct breakwatch *);
+static int cortexa_breakwatch_set(target_s *t, breakwatch_s *);
+static int cortexa_breakwatch_clear(target_s *t, breakwatch_s *);
 static uint32_t bp_bas(uint32_t addr, uint8_t len);
 
 static void apb_write(target_s *t, uint16_t reg, uint32_t val);
@@ -787,7 +787,7 @@ static target_halt_reason_e cortexa_halt_poll(target_s *t, target_addr_t *watch)
 	case DBGDSCR_MOE_WATCH_SYNC:
 		/* How do we know which watchpoint was hit? */
 		/* If there is only one set, it's that */
-		for (struct breakwatch *bw = t->bw_list; bw; bw = bw->next) {
+		for (breakwatch_s *bw = t->bw_list; bw; bw = bw->next) {
 			if ((bw->type != TARGET_WATCH_READ) && (bw->type != TARGET_WATCH_WRITE) &&
 				(bw->type != TARGET_WATCH_ACCESS))
 				continue;
@@ -865,7 +865,7 @@ static uint32_t bp_bas(uint32_t addr, uint8_t len)
 	return DBGBCR_BAS_LOW_HW;
 }
 
-static int cortexa_breakwatch_set(target_s *t, struct breakwatch *bw)
+static int cortexa_breakwatch_set(target_s *t, breakwatch_s *bw)
 {
 	struct cortexa_priv *priv = t->priv;
 	unsigned i;
@@ -967,7 +967,7 @@ static int cortexa_breakwatch_set(target_s *t, struct breakwatch *bw)
 	}
 }
 
-static int cortexa_breakwatch_clear(target_s *t, struct breakwatch *bw)
+static int cortexa_breakwatch_clear(target_s *t, breakwatch_s *bw)
 {
 	struct cortexa_priv *priv = t->priv;
 	unsigned i = bw->reserved[0];

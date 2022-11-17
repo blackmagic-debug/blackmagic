@@ -97,8 +97,8 @@ static target_halt_reason_e cortexm_halt_poll(target_s *t, target_addr_t *watch)
 static void cortexm_halt_request(target_s *t);
 static int cortexm_fault_unwind(target_s *t);
 
-static int cortexm_breakwatch_set(target_s *t, struct breakwatch *bw);
-static int cortexm_breakwatch_clear(target_s *t, struct breakwatch *bw);
+static int cortexm_breakwatch_set(target_s *t, breakwatch_s *bw);
+static int cortexm_breakwatch_clear(target_s *t, breakwatch_s *bw);
 static target_addr_t cortexm_check_watch(target_s *t);
 
 #define CORTEXM_MAX_WATCHPOINTS 4U /* architecture says up to 15, no implementation has > 4 */
@@ -1278,7 +1278,7 @@ static uint32_t dwt_func(target_s *t, enum target_breakwatch type)
 	}
 }
 
-static int cortexm_breakwatch_set(target_s *t, struct breakwatch *bw)
+static int cortexm_breakwatch_set(target_s *t, breakwatch_s *bw)
 {
 	struct cortexm_priv *priv = t->priv;
 	size_t i;
@@ -1329,7 +1329,7 @@ static int cortexm_breakwatch_set(target_s *t, struct breakwatch *bw)
 	}
 }
 
-static int cortexm_breakwatch_clear(target_s *t, struct breakwatch *bw)
+static int cortexm_breakwatch_clear(target_s *t, breakwatch_s *bw)
 {
 	struct cortexm_priv *priv = t->priv;
 	unsigned i = bw->reserved[0];
