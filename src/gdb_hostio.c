@@ -47,8 +47,7 @@ int hostio_reply(target_controller_s *tc, char *pbuf, int len)
 }
 
 /* Interface to host system calls */
-int hostio_open(
-	target_controller_s *tc, target_addr_t path, size_t path_len, enum target_open_flags flags, mode_t mode)
+int hostio_open(target_controller_s *tc, target_addr_t path, size_t path_len, target_open_flags_e flags, mode_t mode)
 {
 	gdb_putpacket_f("Fopen,%08X/%X,%08X,%08X", path, path_len, flags, mode);
 	return gdb_main_loop(tc, true);
@@ -78,8 +77,7 @@ long hostio_lseek(target_controller_s *tc, int fd, long offset, enum target_seek
 	return gdb_main_loop(tc, true);
 }
 
-int hostio_rename(
-	target_controller_s *tc, target_addr_t oldpath, size_t old_len, target_addr_t newpath, size_t new_len)
+int hostio_rename(target_controller_s *tc, target_addr_t oldpath, size_t old_len, target_addr_t newpath, size_t new_len)
 {
 	gdb_putpacket_f("Frename,%08X/%X,%08X/%X", oldpath, old_len, newpath, new_len);
 	return gdb_main_loop(tc, true);
