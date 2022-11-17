@@ -281,7 +281,7 @@ typedef enum {
 
 static bool renesas_uid(target_s *t, int argc, const char **argv);
 
-const struct command_s renesas_cmd_list[] = {
+const command_s renesas_cmd_list[] = {
 	{"uid", renesas_uid, "Prints unique number"},
 	{NULL, NULL, NULL},
 };

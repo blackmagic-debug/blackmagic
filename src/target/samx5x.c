@@ -62,7 +62,7 @@ static bool samx5x_cmd_write16(target_s *t, int argc, const char **argv);
 static bool samx5x_cmd_write32(target_s *t, int argc, const char **argv);
 #endif
 
-const struct command_s samx5x_cmd_list[] = {
+const command_s samx5x_cmd_list[] = {
 	{"lock_flash", samx5x_cmd_lock_flash, "Locks flash against spurious commands"},
 	{"unlock_flash", samx5x_cmd_unlock_flash, "Unlocks flash"},
 	{"lock_bootprot", samx5x_cmd_lock_bootprot, "Lock the boot protections to maximum"},

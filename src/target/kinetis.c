@@ -97,7 +97,7 @@
 
 static bool kinetis_cmd_unsafe(target_s *t, int argc, const char **argv);
 
-const struct command_s kinetis_cmd_list[] = {
+const command_s kinetis_cmd_list[] = {
 	{"unsafe", kinetis_cmd_unsafe, "Allow programming security byte (enable|disable)"},
 	{NULL, NULL, NULL},
 };
@@ -519,7 +519,7 @@ static bool kinetis_flash_done(target_flash_s *const f)
 static bool kinetis_mdm_mass_erase(target_s *t);
 static bool kinetis_mdm_cmd_ke04_mode(target_s *t, int argc, const char **argv);
 
-const struct command_s kinetis_mdm_cmd_list[] = {
+const command_s kinetis_mdm_cmd_list[] = {
 	{"ke04_mode", kinetis_mdm_cmd_ke04_mode, "Allow erase for KE04"},
 	{NULL, NULL, NULL},
 };

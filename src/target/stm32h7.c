@@ -45,7 +45,7 @@ static bool stm32h7_crc(target_s *t, int argc, const char **argv);
 static bool stm32h7_cmd_psize(target_s *t, int argc, const char **argv);
 static bool stm32h7_cmd_rev(target_s *t, int argc, const char **argv);
 
-const struct command_s stm32h7_cmd_list[] = {
+const command_s stm32h7_cmd_list[] = {
 	/*{"option", stm32h7_cmd_option, "Manipulate option bytes"},*/
 	{"psize", stm32h7_cmd_psize, "Configure flash write parallelism: (x8|x16|x32|x64(default))"},
 	{"uid", stm32h7_uid, "Print unique device ID"},

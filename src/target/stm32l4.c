@@ -54,7 +54,7 @@ static bool stm32l4_flash_erase(target_flash_s *f, target_addr_t addr, size_t le
 static bool stm32l4_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 static bool stm32l4_mass_erase(target_s *t);
 
-const struct command_s stm32l4_cmd_list[] = {
+const command_s stm32l4_cmd_list[] = {
 	{"erase_bank1", stm32l4_cmd_erase_bank1, "Erase entire bank1 flash memory"},
 	{"erase_bank2", stm32l4_cmd_erase_bank2, "Erase entire bank2 flash memory"},
 	{"option", stm32l4_cmd_option, "Manipulate option bytes"},

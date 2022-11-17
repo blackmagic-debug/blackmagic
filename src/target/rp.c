@@ -190,7 +190,7 @@ typedef struct rp_flash {
 static bool rp_cmd_erase_sector(target_s *t, int argc, const char **argv);
 static bool rp_cmd_reset_usb_boot(target_s *t, int argc, const char **argv);
 
-const struct command_s rp_cmd_list[] = {
+const command_s rp_cmd_list[] = {
 	{"erase_sector", rp_cmd_erase_sector, "Erase a sector: [start address] length"},
 	{"reset_usb_boot", rp_cmd_reset_usb_boot, "Reboot the device into BOOTSEL mode"},
 	{NULL, NULL, NULL},

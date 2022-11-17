@@ -64,7 +64,7 @@ static bool lpc546xx_mass_erase(target_s *t);
 static void lpc546xx_wdt_set_period(target_s *t);
 static void lpc546xx_wdt_kick(target_s *t);
 
-const struct command_s lpc546xx_cmd_list[] = {
+const command_s lpc546xx_cmd_list[] = {
 	{"erase_sector", lpc546xx_cmd_erase_sector, "Erase a sector by number"},
 	{"read_partid", lpc546xx_cmd_read_partid, "Read out the 32-bit part ID using IAP."},
 	{"read_uid", lpc546xx_cmd_read_uid, "Read out the 16-byte UID."},
