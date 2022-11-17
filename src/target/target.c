@@ -607,7 +607,7 @@ int tc_write(target_s *t, int fd, target_addr_t buf, unsigned int count)
 	return t->tc->write(t->tc, fd, buf, count);
 }
 
-long tc_lseek(target_s *t, int fd, long offset, enum target_seek_flag flag)
+long tc_lseek(target_s *t, int fd, long offset, target_seek_flag_e flag)
 {
 	if (t->tc->lseek == NULL)
 		return 0;
