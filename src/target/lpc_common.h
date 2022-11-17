@@ -77,13 +77,13 @@ typedef struct lpc_flash {
 	uint8_t bank;
 	uint8_t reserved_pages;
 	/* Info filled in by specific driver */
-	void (*wdt_kick)(target *t);
+	void (*wdt_kick)(target_s *t);
 	uint32_t iap_entry;
 	uint32_t iap_ram;
 	uint32_t iap_msp;
 } lpc_flash_s;
 
-lpc_flash_s *lpc_add_flash(target *t, target_addr_t addr, size_t length);
+lpc_flash_s *lpc_add_flash(target_s *t, target_addr_t addr, size_t length);
 enum iap_status lpc_iap_call(struct lpc_flash *f, void *result, enum iap_cmd cmd, ...);
 bool lpc_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 bool lpc_flash_write_magic_vect(target_flash_s *f, target_addr_t dest, const void *src, size_t len);

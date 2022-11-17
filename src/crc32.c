@@ -100,7 +100,7 @@ static uint32_t crc32_calc(uint32_t crc, uint8_t data)
 	return (crc << 8) ^ crc32_table[((crc >> 24) ^ data) & 255];
 }
 
-int generic_crc32(target *t, uint32_t *crc_res, uint32_t base, size_t len)
+int generic_crc32(target_s *t, uint32_t *crc_res, uint32_t base, size_t len)
 {
 	uint32_t crc = -1;
 #if PC_HOSTED == 1
@@ -140,7 +140,7 @@ int generic_crc32(target *t, uint32_t *crc_res, uint32_t base, size_t len)
 #else
 #include <libopencm3/stm32/crc.h>
 
-int generic_crc32(target *t, uint32_t *crc_res, uint32_t base, size_t len)
+int generic_crc32(target_s *t, uint32_t *crc_res, uint32_t base, size_t len)
 {
 	uint8_t bytes[128];
 	uint32_t crc;

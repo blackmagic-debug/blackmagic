@@ -47,15 +47,15 @@
 
 static bool efm32_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 static bool efm32_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
-static bool efm32_mass_erase(target *t);
+static bool efm32_mass_erase(target_s *t);
 
 static const uint16_t efm32_flash_write_stub[] = {
 #include "flashstub/efm32.stub"
 };
 
-static bool efm32_cmd_serial(target *t, int argc, const char **argv);
-static bool efm32_cmd_efm_info(target *t, int argc, const char **argv);
-static bool efm32_cmd_bootloader(target *t, int argc, const char **argv);
+static bool efm32_cmd_serial(target_s *t, int argc, const char **argv);
+static bool efm32_cmd_efm_info(target_s *t, int argc, const char **argv);
+static bool efm32_cmd_bootloader(target_s *t, int argc, const char **argv);
 
 const struct command_s efm32_cmd_list[] = {
 	{"serial", efm32_cmd_serial, "Prints unique number"},
@@ -371,13 +371,13 @@ efm32_v2_di_tempgrade_s const efm32_v2_di_tempgrades[] = {
 /* -------------------------------------------------------------------------- */
 
 /* Reads the EFM32 Extended Unique Identifier EUI64 (V1) */
-static uint64_t efm32_v1_read_eui64(target *t)
+static uint64_t efm32_v1_read_eui64(target_s *t)
 {
 	return ((uint64_t)target_mem_read32(t, EFM32_V1_DI_EUI64_1) << 32) | target_mem_read32(t, EFM32_V1_DI_EUI64_0);
 }
 
 /* Reads the Unique Number (DI V2 only) */
-static uint64_t efm32_v2_read_unique(target *t, uint8_t di_version)
+static uint64_t efm32_v2_read_unique(target_s *t, uint8_t di_version)
 {
 	if (di_version != 2)
 		return 0;
@@ -386,7 +386,7 @@ static uint64_t efm32_v2_read_unique(target *t, uint8_t di_version)
 }
 
 /* Reads the EFM32 flash size in kiB */
-static uint16_t efm32_read_flash_size(target *t, uint8_t di_version)
+static uint16_t efm32_read_flash_size(target_s *t, uint8_t di_version)
 {
 	switch (di_version) {
 	case 1:
@@ -399,7 +399,7 @@ static uint16_t efm32_read_flash_size(target *t, uint8_t di_version)
 }
 
 /* Reads the EFM32 RAM size in kiB */
-static uint16_t efm32_read_ram_size(target *t, uint8_t di_version)
+static uint16_t efm32_read_ram_size(target_s *t, uint8_t di_version)
 {
 	switch (di_version) {
 	case 1:
@@ -417,7 +417,7 @@ static uint16_t efm32_read_ram_size(target *t, uint8_t di_version)
  * value. There are errata on the value reported by the EFM32
  * eg. DI_101
  */
-static uint32_t efm32_flash_page_size(target *t, uint8_t di_version)
+static uint32_t efm32_flash_page_size(target_s *t, uint8_t di_version)
 {
 	uint8_t mem_info_page_size;
 
@@ -436,7 +436,7 @@ static uint32_t efm32_flash_page_size(target *t, uint8_t di_version)
 }
 
 /* Reads the EFM32 Part Number */
-static uint16_t efm32_read_part_number(target *t, uint8_t di_version)
+static uint16_t efm32_read_part_number(target_s *t, uint8_t di_version)
 {
 	switch (di_version) {
 	case 1:
@@ -449,7 +449,7 @@ static uint16_t efm32_read_part_number(target *t, uint8_t di_version)
 }
 
 /* Reads the EFM32 Part Family */
-static uint8_t efm32_read_part_family(target *t, uint8_t di_version)
+static uint8_t efm32_read_part_family(target_s *t, uint8_t di_version)
 {
 	switch (di_version) {
 	case 1:
@@ -462,7 +462,7 @@ static uint8_t efm32_read_part_family(target *t, uint8_t di_version)
 }
 
 /* Reads the EFM32 Radio part number (EZR parts with V1 DI only) */
-static uint16_t efm32_read_radio_part_number(target *t, uint8_t di_version)
+static uint16_t efm32_read_radio_part_number(target_s *t, uint8_t di_version)
 {
 	switch (di_version) {
 	case 1:
@@ -473,7 +473,7 @@ static uint16_t efm32_read_radio_part_number(target *t, uint8_t di_version)
 }
 
 /* Reads the EFM32 Misc. Chip definitions */
-static efm32_v2_di_miscchip_s efm32_v2_read_miscchip(target *t, uint8_t di_version)
+static efm32_v2_di_miscchip_s efm32_v2_read_miscchip(target_s *t, uint8_t di_version)
 {
 	uint32_t meminfo;
 	efm32_v2_di_miscchip_s miscchip;
@@ -494,7 +494,7 @@ static efm32_v2_di_miscchip_s efm32_v2_read_miscchip(target *t, uint8_t di_versi
 /* Shared Functions                                                           */
 /* -------------------------------------------------------------------------- */
 
-static void efm32_add_flash(target *t, target_addr_t addr, size_t length, size_t page_size)
+static void efm32_add_flash(target_s *t, target_addr_t addr, size_t length, size_t page_size)
 {
 	target_flash_s *f = calloc(1, sizeof(*f));
 	if (!f) { /* calloc failed: heap exhaustion */
@@ -512,7 +512,7 @@ static void efm32_add_flash(target *t, target_addr_t addr, size_t length, size_t
 }
 
 /* Lookup device */
-static efm32_device_t const *efm32_get_device(target *t, uint8_t di_version)
+static efm32_device_t const *efm32_get_device(target_s *t, uint8_t di_version)
 {
 	uint8_t part_family = efm32_read_part_family(t, di_version);
 
@@ -534,7 +534,7 @@ struct efm32_priv_s {
 	efm32_device_t const *device;
 };
 
-bool efm32_probe(target *t)
+bool efm32_probe(target_s *t)
 {
 	/* Check if the OUI in the EUI is silabs or energymicro.
 	 * Use this to identify the Device Identification (DI) version */
@@ -597,7 +597,7 @@ bool efm32_probe(target *t)
 /* Erase flash row by row */
 static bool efm32_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
-	target *t = f->t;
+	target_s *t = f->t;
 
 	struct efm32_priv_s *priv_storage = (struct efm32_priv_s *)t->target_storage;
 	if (!priv_storage || !priv_storage->device)
@@ -640,7 +640,7 @@ static bool efm32_flash_write(target_flash_s *f, target_addr_t dest, const void 
 {
 	(void)len;
 
-	target *t = f->t;
+	target_s *t = f->t;
 
 	struct efm32_priv_s *priv_storage = (struct efm32_priv_s *)t->target_storage;
 	if (!priv_storage || !priv_storage->device)
@@ -663,7 +663,7 @@ static bool efm32_flash_write(target_flash_s *f, target_addr_t dest, const void 
 }
 
 /* Uses the MSC ERASEMAIN0/1 command to erase the entire flash */
-static bool efm32_mass_erase(target *t)
+static bool efm32_mass_erase(target_s *t)
 {
 	struct efm32_priv_s *priv_storage = (struct efm32_priv_s *)t->target_storage;
 	if (!priv_storage || !priv_storage->device)
@@ -717,7 +717,7 @@ static bool efm32_mass_erase(target *t)
 }
 
 /* Reads the 40-bit unique number */
-static bool efm32_cmd_serial(target *t, int argc, const char **argv)
+static bool efm32_cmd_serial(target_s *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
@@ -751,7 +751,7 @@ static bool efm32_cmd_serial(target *t, int argc, const char **argv)
 }
 
 /* Prints various information we know about the device */
-static bool efm32_cmd_efm_info(target *t, int argc, const char **argv)
+static bool efm32_cmd_efm_info(target_s *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
@@ -830,7 +830,7 @@ static bool efm32_cmd_efm_info(target *t, int argc, const char **argv)
  *
  * This is a bit in flash, so it is possible to clear it only once.
  */
-static bool efm32_cmd_bootloader(target *t, int argc, const char **argv)
+static bool efm32_cmd_bootloader(target_s *t, int argc, const char **argv)
 {
 	/* lookup device and part number */
 	struct efm32_priv_s *priv_storage = (struct efm32_priv_s *)t->target_storage;
@@ -923,7 +923,7 @@ static bool efm32_cmd_bootloader(target *t, int argc, const char **argv)
 
 #define CMDKEY 0xCFACC118
 
-static bool efm32_aap_mass_erase(target *t);
+static bool efm32_aap_mass_erase(target_s *t);
 
 /* AAP Probe */
 struct efm32_aap_priv_s {
@@ -942,7 +942,7 @@ bool efm32_aap_probe(adiv5_access_port_s *ap)
 	uint16_t aap_revision = (uint16_t)((ap->idr & 0xF0000000) >> 28);
 
 	/* New target */
-	target *t = target_new();
+	target_s *t = target_new();
 	if (!t) {
 		return false;
 	}
@@ -964,7 +964,7 @@ bool efm32_aap_probe(adiv5_access_port_s *ap)
 	return true;
 }
 
-static bool efm32_aap_mass_erase(target *t)
+static bool efm32_aap_mass_erase(target_s *t)
 {
 	adiv5_access_port_s *ap = t->priv;
 	uint32_t status;

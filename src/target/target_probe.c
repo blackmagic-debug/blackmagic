@@ -36,7 +36,7 @@
 	extern bool name(adiv5_access_port_s *, uint32_t) __attribute__((weak, alias("cortexa_probe_nop")));
 #define CORTEXM_PROBE_WEAK_NOP(name) \
 	extern bool name(adiv5_access_port_s *) __attribute__((weak, alias("cortexm_probe_nop")));
-#define TARGET_PROBE_WEAK_NOP(name) extern bool name(target *) __attribute__((weak, alias("target_probe_nop")));
+#define TARGET_PROBE_WEAK_NOP(name) extern bool name(target_s *) __attribute__((weak, alias("target_probe_nop")));
 #endif
 
 APPLE_STATIC bool cortexa_probe_nop(adiv5_access_port_s *apb, uint32_t debug_base)
@@ -52,7 +52,7 @@ APPLE_STATIC bool cortexm_probe_nop(adiv5_access_port_s *ap)
 	return false;
 }
 
-APPLE_STATIC bool target_probe_nop(target *t)
+APPLE_STATIC bool target_probe_nop(target_s *t)
 {
 	(void)t;
 	return false;

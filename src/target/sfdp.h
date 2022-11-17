@@ -53,8 +53,8 @@ typedef struct spi_parameters {
 	uint8_t sector_erase_opcode;
 } spi_parameters_s;
 
-typedef void (*read_sfdp_func)(target *t, uint32_t address, void *buffer, size_t length);
+typedef void (*read_sfdp_func)(target_s *t, uint32_t address, void *buffer, size_t length);
 
-bool sfdp_read_parameters(target *t, spi_parameters_s *params, read_sfdp_func sfdp_read);
+bool sfdp_read_parameters(target_s *t, spi_parameters_s *params, read_sfdp_func sfdp_read);
 
 #endif /* TARGET_SFDP_H */

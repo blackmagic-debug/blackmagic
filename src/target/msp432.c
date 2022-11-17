@@ -111,7 +111,7 @@ static bool msp432_flash_erase(target_flash_s *f, target_addr_t addr, size_t len
 static bool msp432_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 
 /* Call a function in the MSP432 ROM (or anywhere else...)*/
-static void msp432_call_rom(target *t, uint32_t address, uint32_t *regs);
+static void msp432_call_rom(target_s *t, uint32_t address, uint32_t *regs);
 
 /* Protect or unprotect the sector containing address */
 static inline uint32_t msp432_sector_unprotect(msp432_flash_s *mf, target_addr_t addr)
@@ -128,9 +128,9 @@ static inline uint32_t msp432_sector_unprotect(msp432_flash_s *mf, target_addr_t
 
 /* Optional commands handlers */
 /* Erase all of main flash */
-static bool msp432_cmd_erase_main(target *t, int argc, const char **argv);
+static bool msp432_cmd_erase_main(target_s *t, int argc, const char **argv);
 /* Erase a single (4KB) sector */
-static bool msp432_cmd_sector_erase(target *t, int argc, const char **argv);
+static bool msp432_cmd_sector_erase(target_s *t, int argc, const char **argv);
 
 /* Optional commands structure*/
 const struct command_s msp432_cmd_list[] = {
@@ -139,7 +139,7 @@ const struct command_s msp432_cmd_list[] = {
 	{NULL, NULL, NULL},
 };
 
-static void msp432_add_flash(target *t, uint32_t addr, size_t length, target_addr_t prot_reg)
+static void msp432_add_flash(target_s *t, uint32_t addr, size_t length, target_addr_t prot_reg)
 {
 	msp432_flash_s *mf = calloc(1, sizeof(*mf));
 	target_flash_s *f;
@@ -164,7 +164,7 @@ static void msp432_add_flash(target *t, uint32_t addr, size_t length, target_add
 	mf->flash_protect_register = prot_reg;
 }
 
-bool msp432_probe(target *t)
+bool msp432_probe(target_s *t)
 {
 	/* Check for the right device info tag in the TLV ROM structure */
 	if (target_mem_read32(t, DEVINFO_TAG_ADDR) != DEVINFO_TAG_VALUE)
@@ -225,7 +225,7 @@ bool msp432_probe(target *t)
 /* Erase a single sector at addr calling the ROM routine*/
 static bool msp432_sector_erase(target_flash_s *f, target_addr_t addr)
 {
-	target *t = f->t;
+	target_s *t = f->t;
 	msp432_flash_s *mf = (msp432_flash_s *)f;
 
 	/* Unprotect sector */
@@ -272,7 +272,7 @@ static bool msp432_flash_erase(target_flash_s *f, target_addr_t addr, size_t len
 static bool msp432_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
 	msp432_flash_s *mf = (msp432_flash_s *)f;
-	target *t = f->t;
+	target_s *t = f->t;
 
 	/* Prepare RAM buffer in target */
 	target_mem_write(t, SRAM_WRITE_BUFFER, src, len);
@@ -303,7 +303,7 @@ static bool msp432_flash_write(target_flash_s *f, target_addr_t dest, const void
 }
 
 /* Optional commands handlers */
-static bool msp432_cmd_erase_main(target *t, int argc, const char **argv)
+static bool msp432_cmd_erase_main(target_s *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
@@ -326,7 +326,7 @@ static bool msp432_cmd_erase_main(target *t, int argc, const char **argv)
 	return result;
 }
 
-static bool msp432_cmd_sector_erase(target *t, int argc, const char **argv)
+static bool msp432_cmd_sector_erase(target_s *t, int argc, const char **argv)
 {
 	if (argc < 2)
 		tc_printf(t, "usage: monitor sector_erase <addr>\n");
@@ -343,7 +343,7 @@ static bool msp432_cmd_sector_erase(target *t, int argc, const char **argv)
 }
 
 /* MSP432 ROM routine invocation */
-static void msp432_call_rom(target *t, uint32_t address, uint32_t *regs)
+static void msp432_call_rom(target_s *t, uint32_t address, uint32_t *regs)
 {
 	/* Kill watchdog */
 	target_mem_write16(t, WDT_A_WTDCTL, WDT_A_HOLD);

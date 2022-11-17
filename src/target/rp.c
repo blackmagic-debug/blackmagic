@@ -187,8 +187,8 @@ typedef struct rp_flash {
 	uint8_t sector_erase_opcode;
 } rp_flash_s;
 
-static bool rp_cmd_erase_sector(target *t, int argc, const char **argv);
-static bool rp_cmd_reset_usb_boot(target *t, int argc, const char **argv);
+static bool rp_cmd_erase_sector(target_s *t, int argc, const char **argv);
+static bool rp_cmd_reset_usb_boot(target_s *t, int argc, const char **argv);
 
 const struct command_s rp_cmd_list[] = {
 	{"erase_sector", rp_cmd_erase_sector, "Erase a sector: [start address] length"},
@@ -199,28 +199,28 @@ const struct command_s rp_cmd_list[] = {
 static bool rp_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 static bool rp_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 
-static bool rp_read_rom_func_table(target *t);
-static bool rp_attach(target *t);
-static bool rp_flash_prepare(target *t);
-static bool rp_flash_resume(target *t);
-static void rp_spi_read(target *t, uint16_t command, target_addr_t address, void *buffer, size_t length);
-static uint32_t rp_get_flash_length(target *t);
-static bool rp_mass_erase(target *t);
+static bool rp_read_rom_func_table(target_s *t);
+static bool rp_attach(target_s *t);
+static bool rp_flash_prepare(target_s *t);
+static bool rp_flash_resume(target_s *t);
+static void rp_spi_read(target_s *t, uint16_t command, target_addr_t address, void *buffer, size_t length);
+static uint32_t rp_get_flash_length(target_s *t);
+static bool rp_mass_erase(target_s *t);
 
 // Our own implementation of bootloader functions for handling flash chip
-static void rp_flash_exit_xip(target *const t);
-static void rp_flash_enter_xip(target *const t);
+static void rp_flash_exit_xip(target_s *const t);
+static void rp_flash_enter_xip(target_s *const t);
 #if 0
-static void rp_flash_connect_internal(target *const t);
-static void rp_flash_flush_cache(target *const t);
+static void rp_flash_connect_internal(target_s *const t);
+static void rp_flash_flush_cache(target_s *const t);
 #endif
 
-static void rp_spi_read_sfdp(target *const t, const uint32_t address, void *const buffer, const size_t length)
+static void rp_spi_read_sfdp(target_s *const t, const uint32_t address, void *const buffer, const size_t length)
 {
 	rp_spi_read(t, SPI_FLASH_CMD_READ_SFDP, address, buffer, length);
 }
 
-static void rp_add_flash(target *t)
+static void rp_add_flash(target_s *t)
 {
 	rp_flash_s *flash = calloc(1, sizeof(*flash));
 	if (!flash) { /* calloc failed: heap exhaustion */
@@ -257,7 +257,7 @@ static void rp_add_flash(target *t)
 	flash->sector_erase_opcode = spi_parameters.sector_erase_opcode;
 }
 
-bool rp_probe(target *t)
+bool rp_probe(target_s *t)
 {
 	/* Check bootrom magic*/
 	uint32_t boot_magic = target_mem_read32(t, BOOTROM_MAGIC_ADDR);
@@ -290,7 +290,7 @@ bool rp_probe(target *t)
 	return true;
 }
 
-static bool rp_attach(target *t)
+static bool rp_attach(target_s *t)
 {
 	if (!cortexm_attach(t) || !rp_read_rom_func_table(t))
 		return false;
@@ -309,7 +309,7 @@ static bool rp_attach(target *t)
  *  * A two character tag for the routine (see section 2.8.3 of the datasheet)
  *  * The 16-bit pointer associated with that routine
  */
-static bool rp_read_rom_func_table(target *const t)
+static bool rp_read_rom_func_table(target_s *const t)
 {
 	rp_priv_s *const priv = (rp_priv_s *)t->target_storage;
 	/* We have to do a 32-bit read here but the pointer contained is only 16-bit. */
@@ -365,7 +365,7 @@ static bool rp_read_rom_func_table(target *const t)
  * timout == 0: Do not wait for poll, use for rom_reset_usb_boot()
  * timeout > 500 (ms) : display spinner
  */
-static bool rp_rom_call(target *t, uint32_t *regs, uint32_t cmd, uint32_t timeout)
+static bool rp_rom_call(target_s *t, uint32_t *regs, uint32_t cmd, uint32_t timeout)
 {
 	rp_priv_s *ps = (rp_priv_s *)t->target_storage;
 	regs[7] = cmd;
@@ -401,7 +401,7 @@ static bool rp_rom_call(target *t, uint32_t *regs, uint32_t cmd, uint32_t timeou
 	return result;
 }
 
-static bool rp_flash_prepare(target *t)
+static bool rp_flash_prepare(target_s *t)
 {
 	rp_priv_s *ps = (rp_priv_s *)t->target_storage;
 	bool result = true; /* catch false returns with &= */
@@ -416,7 +416,7 @@ static bool rp_flash_prepare(target *t)
 	return result;
 }
 
-static bool rp_flash_resume(target *t)
+static bool rp_flash_resume(target_s *t)
 {
 	rp_priv_s *ps = (rp_priv_s *)t->target_storage;
 	bool result = true; /* catch false returns with &= */
@@ -441,7 +441,7 @@ static bool rp_flash_resume(target *t)
 static bool rp_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
 	DEBUG_INFO("Erase addr 0x%08" PRIx32 " len 0x%" PRIx32 "\n", addr, (uint32_t)len);
-	target *t = f->t;
+	target_s *t = f->t;
 
 	if (addr & (f->blocksize - 1)) {
 		DEBUG_WARN("Unaligned erase\n");
@@ -506,7 +506,7 @@ static bool rp_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 static bool rp_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
 	DEBUG_INFO("RP Write 0x%08" PRIx32 " len 0x%" PRIx32 "\n", dest, (uint32_t)len);
-	target *t = f->t;
+	target_s *t = f->t;
 	if ((dest & 0xff) || (len & 0xff)) {
 		DEBUG_WARN("Unaligned write\n");
 		return false;
@@ -539,7 +539,7 @@ static bool rp_flash_write(target_flash_s *f, target_addr_t dest, const void *sr
 	return result;
 }
 
-static bool rp_mass_erase(target *t)
+static bool rp_mass_erase(target_s *t)
 {
 	rp_priv_s *ps = (rp_priv_s *)t->target_storage;
 	ps->is_monitor = true;
@@ -551,14 +551,14 @@ static bool rp_mass_erase(target *t)
 	return result;
 }
 
-static void rp_spi_chip_select(target *const t, const uint32_t state)
+static void rp_spi_chip_select(target_s *const t, const uint32_t state)
 {
 	const uint32_t value = target_mem_read32(t, RP_GPIO_QSPI_CS_CTRL);
 	target_mem_write32(t, RP_GPIO_QSPI_CS_CTRL, (value & ~RP_GPIO_QSPI_CS_DRIVE_MASK) | state);
 }
 
 static void rp_spi_read(
-	target *const t, const uint16_t command, const target_addr_t address, void *const buffer, const size_t length)
+	target_s *const t, const uint16_t command, const target_addr_t address, void *const buffer, const size_t length)
 {
 	/* Ensure the controller is in the correct serial SPI mode and select the Flash */
 	const uint32_t ssi_enabled = target_mem_read32(t, RP_SSI_ENABLE);
@@ -617,7 +617,7 @@ static void rp_spi_read(
 
 #if 0
 // Connect the XIP controller to the flash pads
-static void rp_flash_connect_internal(target *const t)
+static void rp_flash_connect_internal(target_s *const t)
 {
 	// Use hard reset to force IO and pad controls to known state (don't touch
 	// IO_BANK0 as that does not affect XIP signals)
@@ -643,7 +643,7 @@ static void rp_flash_connect_internal(target *const t)
 // This is only called by flash_exit_xip(), not by any of the other functions.
 // This makes it possible for the debugger or user code to edit SPI settings
 // e.g. baud rate, CPOL/CPHA.
-static void rp_flash_init_spi(target *const t)
+static void rp_flash_init_spi(target_s *const t)
 {
 	// Disable SSI for further config
 	target_mem_write32(t, RP_SSI_ENABLE, 0);
@@ -665,7 +665,7 @@ static void rp_flash_init_spi(target *const t)
 
 // Also allow any unbounded loops to check whether the above abort condition
 // was asserted, and terminate early
-static int rp_flash_was_aborted(target *const t)
+static int rp_flash_was_aborted(target_s *const t)
 {
 	return target_mem_read32(t, RP_GPIO_QSPI_SD1_CTRL) & RP_GPIO_QSPI_SD1_CTRL_INOVER_BITS;
 }
@@ -679,7 +679,7 @@ static int rp_flash_was_aborted(target *const t)
 // before reading a further count bytes into *rx.
 // E.g. if you have written a command+address just before calling this function.
 static void rp_flash_put_get(
-	target *const t, const uint8_t *const tx, uint8_t *const rx, const size_t count, size_t rx_skip)
+	target_s *const t, const uint8_t *const tx, uint8_t *const rx, const size_t count, size_t rx_skip)
 {
 	// Make sure there is never more data in flight than the depth of the RX
 	// FIFO. Otherwise, when we are interrupted for long periods, hardware
@@ -723,7 +723,7 @@ static void rp_flash_put_get(
 //
 // Part 4 is the sequence suggested in W25X10CL datasheet.
 // Parts 1 and 2 are to improve compatibility with Micron parts
-static void rp_flash_exit_xip(target *const t)
+static void rp_flash_exit_xip(target_s *const t)
 {
 	uint8_t buf[2];
 	memset(buf, 0xffU, sizeof(buf));
@@ -778,7 +778,7 @@ static void rp_flash_exit_xip(target *const t)
 // doing cached XIP reads from the flash. Called by the bootrom before
 // entering flash second stage, and called by the debugger after flash
 // programming.
-static void rp_flash_flush_cache(target *const t)
+static void rp_flash_flush_cache(target_s *const t)
 {
 	target_mem_write32(t, RP_XIP_FLUSH, 1);
 	// Read blocks until flush completion
@@ -793,7 +793,7 @@ static void rp_flash_flush_cache(target *const t)
 // Put the SSI into a mode where XIP accesses translate to standard
 // serial 03h read commands. The flash remains in its default serial command
 // state, so will still respond to other commands.
-static void rp_flash_enter_xip(target *const t)
+static void rp_flash_enter_xip(target_s *const t)
 {
 	target_mem_write32(t, RP_SSI_ENABLE, 0);
 	target_mem_write32(t, RP_SSI_CTRL0,
@@ -810,7 +810,7 @@ static void rp_flash_enter_xip(target *const t)
 	target_mem_write32(t, RP_SSI_ENABLE, RP_SSI_ENABLE_SSI);
 }
 
-static uint32_t rp_get_flash_length(target *const t)
+static uint32_t rp_get_flash_length(target_s *const t)
 {
 	// Read the JEDEC ID and try to decode it
 	spi_flash_id_s flash_id;
@@ -824,7 +824,7 @@ static uint32_t rp_get_flash_length(target *const t)
 	return MAX_FLASH;
 }
 
-static bool rp_cmd_erase_sector(target *t, int argc, const char **argv)
+static bool rp_cmd_erase_sector(target_s *t, int argc, const char **argv)
 {
 	uint32_t start = t->flash->start;
 	uint32_t length;
@@ -847,7 +847,7 @@ static bool rp_cmd_erase_sector(target *t, int argc, const char **argv)
 	return result;
 }
 
-static bool rp_cmd_reset_usb_boot(target *t, int argc, const char **argv)
+static bool rp_cmd_reset_usb_boot(target_s *t, int argc, const char **argv)
 {
 	rp_priv_s *ps = (rp_priv_s *)t->target_storage;
 	ps->regs[0] = 0;
@@ -860,7 +860,7 @@ static bool rp_cmd_reset_usb_boot(target *t, int argc, const char **argv)
 	return true;
 }
 
-static bool rp_rescue_do_reset(target *t)
+static bool rp_rescue_do_reset(target_s *t)
 {
 	adiv5_access_port_s *ap = (adiv5_access_port_s *)t->priv;
 	uint32_t ctrlstat = ap->dp->low_access(ap->dp, ADIV5_LOW_READ, ADIV5_DP_CTRLSTAT, 0);
@@ -887,7 +887,7 @@ static bool rp_rescue_do_reset(target *t)
  */
 bool rp_rescue_probe(adiv5_access_port_s *ap)
 {
-	target *t = target_new();
+	target_s *t = target_new();
 	if (!t) {
 		return false;
 	}

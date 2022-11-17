@@ -138,7 +138,7 @@
 #define SMAP_EXTID  (SMAP_BASE + 0xf4U)
 #define SMAP_IDR    (SMAP_BASE + 0xfcU)
 
-static void sam4l_extended_reset(target *t);
+static void sam4l_extended_reset(target_s *t);
 static bool sam4l_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 static bool sam4l_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 
@@ -185,7 +185,7 @@ static const uint32_t sam4l_nvp_size[16] = {
  * Populate a target_flash struct with the necessary function pointers
  * and constants to describe our flash.
  */
-static void sam4l_add_flash(target *t, uint32_t addr, size_t length)
+static void sam4l_add_flash(target_s *t, uint32_t addr, size_t length)
 {
 	target_flash_s *f = calloc(1, sizeof(*f));
 	if (!f) { /* calloc failed: heap exhaustion */
@@ -210,7 +210,7 @@ static void sam4l_add_flash(target *t, uint32_t addr, size_t length)
  *
  * Figure out from the register how much RAM and FLASH this variant has.
  */
-bool sam4l_probe(target *t)
+bool sam4l_probe(target_s *t)
 {
 	const uint32_t cidr = target_mem_read32(t, SAM4L_CHIPID_CIDR);
 	if (((cidr >> CHIPID_CIDR_ARCH_SHIFT) & CHIPID_CIDR_ARCH_MASK) != SAM4L_ARCH)
@@ -240,7 +240,7 @@ bool sam4l_probe(target *t)
 /*
  * We've been reset, make sure we take the core out of reset
  */
-static void sam4l_extended_reset(target *t)
+static void sam4l_extended_reset(target_s *t)
 {
 	DEBUG_INFO("SAM4L: Extended Reset\n");
 
@@ -273,7 +273,7 @@ static void sam4l_extended_reset(target *t)
  * Need the target struct to call the mem_read32 and mem_write32 function
  * pointers.
  */
-static bool sam4l_flash_command(target *t, uint32_t page, uint32_t cmd)
+static bool sam4l_flash_command(target_s *t, uint32_t page, uint32_t cmd)
 {
 	DEBUG_INFO(
 		"%s: FSR: 0x%08" PRIx32 ", page = %" PRIu32 ", command = %" PRIu32 "\n", __func__, FLASHCALW_FSR, page, cmd);
@@ -308,7 +308,7 @@ static bool sam4l_flash_write(
 	if (len != SAM4L_PAGE_SIZE)
 		return false;
 
-	target *t = f->t;
+	target_s *t = f->t;
 	/* This will fail with unaligned writes, however the target Flash API guarantees we're called aligned */
 	const uint16_t page = dest / SAM4L_PAGE_SIZE;
 
@@ -349,7 +349,7 @@ static bool sam4l_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 	 * This issue is however mitigated by the target Flash API layer somewhat.
 	 */
 
-	target *t = f->t;
+	target_s *t = f->t;
 
 	for (size_t offset = 0; offset < len; offset += SAM4L_PAGE_SIZE) {
 		const size_t page = (addr + offset) / SAM4L_PAGE_SIZE;

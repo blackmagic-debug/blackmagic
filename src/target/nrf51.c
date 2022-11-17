@@ -29,17 +29,17 @@
 
 static bool nrf51_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 static bool nrf51_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
-static bool nrf51_mass_erase(target *t);
+static bool nrf51_mass_erase(target_s *t);
 
-static bool nrf51_cmd_erase_uicr(target *t, int argc, const char **argv);
-static bool nrf51_cmd_protect_flash(target *t, int argc, const char **argv);
-static bool nrf51_cmd_read_hwid(target *t, int argc, const char **argv);
-static bool nrf51_cmd_read_fwid(target *t, int argc, const char **argv);
-static bool nrf51_cmd_read_deviceid(target *t, int argc, const char **argv);
-static bool nrf51_cmd_read_deviceaddr(target *t, int argc, const char **argv);
-static bool nrf51_cmd_read_deviceinfo(target *t, int argc, const char **argv);
-static bool nrf51_cmd_read_help(target *t, int argc, const char **argv);
-static bool nrf51_cmd_read(target *t, int argc, const char **argv);
+static bool nrf51_cmd_erase_uicr(target_s *t, int argc, const char **argv);
+static bool nrf51_cmd_protect_flash(target_s *t, int argc, const char **argv);
+static bool nrf51_cmd_read_hwid(target_s *t, int argc, const char **argv);
+static bool nrf51_cmd_read_fwid(target_s *t, int argc, const char **argv);
+static bool nrf51_cmd_read_deviceid(target_s *t, int argc, const char **argv);
+static bool nrf51_cmd_read_deviceaddr(target_s *t, int argc, const char **argv);
+static bool nrf51_cmd_read_deviceinfo(target_s *t, int argc, const char **argv);
+static bool nrf51_cmd_read_help(target_s *t, int argc, const char **argv);
+static bool nrf51_cmd_read(target_s *t, int argc, const char **argv);
 
 const struct command_s nrf51_cmd_list[] = {
 	{"erase_uicr", nrf51_cmd_erase_uicr, "Erase UICR registers"},
@@ -101,7 +101,7 @@ const struct command_s nrf51_read_cmd_list[] = {
 #define NRF51_PAGE_SIZE 1024
 #define NRF52_PAGE_SIZE 4096
 
-static void nrf51_add_flash(target *t, uint32_t addr, size_t length, size_t erasesize)
+static void nrf51_add_flash(target_s *t, uint32_t addr, size_t length, size_t erasesize)
 {
 	target_flash_s *f = calloc(1, sizeof(*f));
 	if (!f) { /* calloc failed: heap exhaustion */
@@ -118,7 +118,7 @@ static void nrf51_add_flash(target *t, uint32_t addr, size_t length, size_t eras
 	target_add_flash(t, f);
 }
 
-bool nrf51_probe(target *t)
+bool nrf51_probe(target_s *t)
 {
 	uint32_t page_size = target_mem_read32(t, NRF51_FICR_CODEPAGESIZE);
 	uint32_t code_size = target_mem_read32(t, NRF51_FICR_CODESIZE);
@@ -157,7 +157,7 @@ bool nrf51_probe(target *t)
 	return true;
 }
 
-static bool nrf51_wait_ready(target *const t, platform_timeout_s *const timeout)
+static bool nrf51_wait_ready(target_s *const t, platform_timeout_s *const timeout)
 {
 	/* Poll for NVMC_READY */
 	while (target_mem_read32(t, NRF51_NVMC_READY) == 0) {
@@ -171,7 +171,7 @@ static bool nrf51_wait_ready(target *const t, platform_timeout_s *const timeout)
 
 static bool nrf51_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
-	target *t = f->t;
+	target_s *t = f->t;
 
 	/* Enable erase */
 	target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_EEN);
@@ -198,7 +198,7 @@ static bool nrf51_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 
 static bool nrf51_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
-	target *t = f->t;
+	target_s *t = f->t;
 
 	/* Enable write */
 	target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_WEN);
@@ -213,7 +213,7 @@ static bool nrf51_flash_write(target_flash_s *f, target_addr_t dest, const void 
 	return true;
 }
 
-static bool nrf51_mass_erase(target *t)
+static bool nrf51_mass_erase(target_s *t)
 {
 	target_reset(t);
 
@@ -229,7 +229,7 @@ static bool nrf51_mass_erase(target *t)
 	return nrf51_wait_ready(t, &timeout);
 }
 
-static bool nrf51_cmd_erase_uicr(target *t, int argc, const char **argv)
+static bool nrf51_cmd_erase_uicr(target_s *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
@@ -245,7 +245,7 @@ static bool nrf51_cmd_erase_uicr(target *t, int argc, const char **argv)
 	return nrf51_wait_ready(t, NULL);
 }
 
-static bool nrf51_cmd_protect_flash(target *t, int argc, const char **argv)
+static bool nrf51_cmd_protect_flash(target_s *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
@@ -260,7 +260,7 @@ static bool nrf51_cmd_protect_flash(target *t, int argc, const char **argv)
 	return nrf51_wait_ready(t, NULL);
 }
 
-static bool nrf51_cmd_read_hwid(target *t, int argc, const char **argv)
+static bool nrf51_cmd_read_hwid(target_s *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
@@ -270,7 +270,7 @@ static bool nrf51_cmd_read_hwid(target *t, int argc, const char **argv)
 	return true;
 }
 
-static bool nrf51_cmd_read_fwid(target *t, int argc, const char **argv)
+static bool nrf51_cmd_read_fwid(target_s *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
@@ -280,7 +280,7 @@ static bool nrf51_cmd_read_fwid(target *t, int argc, const char **argv)
 	return true;
 }
 
-static bool nrf51_cmd_read_deviceid(target *t, int argc, const char **argv)
+static bool nrf51_cmd_read_deviceid(target_s *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
@@ -292,7 +292,7 @@ static bool nrf51_cmd_read_deviceid(target *t, int argc, const char **argv)
 	return true;
 }
 
-static bool nrf51_cmd_read_deviceinfo(target *t, int argc, const char **argv)
+static bool nrf51_cmd_read_deviceinfo(target_s *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
@@ -342,7 +342,7 @@ static bool nrf51_cmd_read_deviceinfo(target *t, int argc, const char **argv)
 	return true;
 }
 
-static bool nrf51_cmd_read_deviceaddr(target *t, int argc, const char **argv)
+static bool nrf51_cmd_read_deviceaddr(target_s *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
@@ -358,7 +358,7 @@ static bool nrf51_cmd_read_deviceaddr(target *t, int argc, const char **argv)
 	return true;
 }
 
-static bool nrf51_cmd_read_help(target *t, int argc, const char **argv)
+static bool nrf51_cmd_read_help(target_s *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
@@ -371,7 +371,7 @@ static bool nrf51_cmd_read_help(target *t, int argc, const char **argv)
 	return true;
 }
 
-static bool nrf51_cmd_read(target *t, int argc, const char **argv)
+static bool nrf51_cmd_read(target_s *t, int argc, const char **argv)
 {
 	const struct command_s *c;
 	if (argc > 1) {
@@ -389,7 +389,7 @@ static bool nrf51_cmd_read(target *t, int argc, const char **argv)
 
 #define NRF52_MDM_IDR 0x02880000
 
-static bool nrf51_mdm_mass_erase(target *t);
+static bool nrf51_mdm_mass_erase(target_s *t);
 
 #define MDM_POWER_EN  ADIV5_DP_REG(0x01)
 #define MDM_SELECT_AP ADIV5_DP_REG(0x02)
@@ -406,7 +406,7 @@ bool nrf51_mdm_probe(adiv5_access_port_s *ap)
 		return false;
 	}
 
-	target *t = target_new();
+	target_s *t = target_new();
 	if (!t)
 		return false;
 
@@ -426,7 +426,7 @@ bool nrf51_mdm_probe(adiv5_access_port_s *ap)
 	return true;
 }
 
-static bool nrf51_mdm_mass_erase(target *t)
+static bool nrf51_mdm_mass_erase(target_s *t)
 {
 	adiv5_access_port_s *ap = t->priv;
 

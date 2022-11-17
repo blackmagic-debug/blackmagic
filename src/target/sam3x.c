@@ -32,9 +32,9 @@ static bool sam_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 static bool sam3_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 static bool sam_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 
-static bool sam_gpnvm_get(target *t, uint32_t base, uint32_t *gpnvm);
+static bool sam_gpnvm_get(target_s *t, uint32_t base, uint32_t *gpnvm);
 
-static bool sam_cmd_gpnvm(target *t, int argc, const char **argv);
+static bool sam_cmd_gpnvm(target_s *t, int argc, const char **argv);
 
 const struct command_s sam_cmd_list[] = {
 	{"gpnvm", sam_cmd_gpnvm, "Set/Get GPVNM bits"},
@@ -190,7 +190,7 @@ typedef struct sam_priv {
 	char sam_variant_string[16];
 } sam_priv_s;
 
-static void sam3_add_flash(target *t, uint32_t eefc_base, uint32_t addr, size_t length)
+static void sam3_add_flash(target_s *t, uint32_t eefc_base, uint32_t addr, size_t length)
 {
 	sam_flash_s *sf = calloc(1, sizeof(*sf));
 	if (!sf) { /* calloc failed: heap exhaustion */
@@ -210,7 +210,7 @@ static void sam3_add_flash(target *t, uint32_t eefc_base, uint32_t addr, size_t 
 	target_add_flash(t, f);
 }
 
-static void sam_add_flash(target *t, uint32_t eefc_base, uint32_t addr, size_t length)
+static void sam_add_flash(target_s *t, uint32_t eefc_base, uint32_t addr, size_t length)
 {
 	sam_flash_s *sf = calloc(1, sizeof(*sf));
 	if (!sf) { /* calloc failed: heap exhaustion */
@@ -230,7 +230,7 @@ static void sam_add_flash(target *t, uint32_t eefc_base, uint32_t addr, size_t l
 	target_add_flash(t, f);
 }
 
-static void samx7x_add_ram(target *t, uint32_t tcm_config, uint32_t ram_size)
+static void samx7x_add_ram(target_s *t, uint32_t tcm_config, uint32_t ram_size)
 {
 	uint32_t itcm_size = 0;
 	uint32_t dtcm_size = 0;
@@ -371,7 +371,7 @@ samx7x_descr_s samx7x_parse_id(uint32_t cidr, uint32_t exid)
 	return descr;
 }
 
-bool samx7x_probe(target *t)
+bool samx7x_probe(target_s *t)
 {
 	const uint32_t cidr = target_mem_read32(t, SAM_CHIPID_CIDR);
 	uint32_t exid = 0;
@@ -414,7 +414,7 @@ bool samx7x_probe(target *t)
 	return true;
 }
 
-bool sam3x_probe(target *t)
+bool sam3x_probe(target_s *t)
 {
 	uint32_t cidr = target_mem_read32(t, SAM_CHIPID_CIDR);
 	size_t size = sam_flash_size(cidr);
@@ -479,7 +479,7 @@ bool sam3x_probe(target *t)
 	return false;
 }
 
-static bool sam_flash_cmd(target *t, uint32_t base, uint8_t cmd, uint16_t arg)
+static bool sam_flash_cmd(target_s *t, uint32_t base, uint8_t cmd, uint16_t arg)
 {
 	DEBUG_INFO("%s: base = 0x%08" PRIx32 " cmd = 0x%02X, arg = 0x%06X\n", __func__, base, cmd, arg);
 
@@ -497,7 +497,7 @@ static bool sam_flash_cmd(target *t, uint32_t base, uint8_t cmd, uint16_t arg)
 	return !(status & EEFC_FSR_ERROR);
 }
 
-static sam_driver_e sam_driver(target *t)
+static sam_driver_e sam_driver(target_s *t)
 {
 	if (strcmp(t->driver, "Atmel SAM3X") == 0)
 		return DRIVER_SAM3X;
@@ -512,7 +512,7 @@ static sam_driver_e sam_driver(target *t)
 
 static bool sam_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
-	target *t = f->t;
+	target_s *t = f->t;
 	const uint32_t base = ((sam_flash_s *)f)->eefc_base;
 
 	/* The SAM4S is the only supported device with a page erase command.
@@ -544,7 +544,7 @@ static bool sam3_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 
 static bool sam_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
-	target *const t = f->t;
+	target_s *const t = f->t;
 	sam_flash_s *const sf = (sam_flash_s *)f;
 	const uint32_t base = sf->eefc_base;
 	const uint32_t chunk = (dest - f->start) / f->writesize;
@@ -553,7 +553,7 @@ static bool sam_flash_write(target_flash_s *f, target_addr_t dest, const void *s
 	return sam_flash_cmd(t, base, sf->write_cmd, chunk);
 }
 
-static bool sam_gpnvm_get(target *t, uint32_t base, uint32_t *gpnvm)
+static bool sam_gpnvm_get(target_s *t, uint32_t base, uint32_t *gpnvm)
 {
 	if (!gpnvm || !sam_flash_cmd(t, base, EEFC_FCR_FCMD_GGPB, 0))
 		return false;
@@ -562,7 +562,7 @@ static bool sam_gpnvm_get(target *t, uint32_t base, uint32_t *gpnvm)
 	return true;
 }
 
-static bool sam_cmd_gpnvm(target *t, int argc, const char **argv)
+static bool sam_cmd_gpnvm(target_s *t, int argc, const char **argv)
 {
 	if (argc != 2 && argc != 4)
 		goto bad_usage;

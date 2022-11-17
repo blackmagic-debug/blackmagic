@@ -42,24 +42,24 @@
 
 static bool samx5x_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 static bool samx5x_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
-static bool samx5x_cmd_lock_flash(target *t, int argc, const char **argv);
-static bool samx5x_cmd_unlock_flash(target *t, int argc, const char **argv);
-static bool samx5x_cmd_unlock_bootprot(target *t, int argc, const char **argv);
-static bool samx5x_cmd_lock_bootprot(target *t, int argc, const char **argv);
-static bool samx5x_cmd_read_userpage(target *t, int argc, const char **argv);
-static bool samx5x_cmd_serial(target *t, int argc, const char **argv);
-static bool samx5x_cmd_ssb(target *t, int argc, const char **argv);
-static bool samx5x_cmd_update_user_word(target *t, int argc, const char **argv);
+static bool samx5x_cmd_lock_flash(target_s *t, int argc, const char **argv);
+static bool samx5x_cmd_unlock_flash(target_s *t, int argc, const char **argv);
+static bool samx5x_cmd_unlock_bootprot(target_s *t, int argc, const char **argv);
+static bool samx5x_cmd_lock_bootprot(target_s *t, int argc, const char **argv);
+static bool samx5x_cmd_read_userpage(target_s *t, int argc, const char **argv);
+static bool samx5x_cmd_serial(target_s *t, int argc, const char **argv);
+static bool samx5x_cmd_ssb(target_s *t, int argc, const char **argv);
+static bool samx5x_cmd_update_user_word(target_s *t, int argc, const char **argv);
 
 /* (The SAM D1x/2x implementation of erase_all is reused as it's identical)*/
-bool samd_mass_erase(target *t);
+bool samd_mass_erase(target_s *t);
 #define samx5x_mass_erase samd_mass_erase
 
 #ifdef SAMX5X_EXTRA_CMDS
-static bool samx5x_cmd_mbist(target *t, int argc, const char **argv);
-static bool samx5x_cmd_write8(target *t, int argc, const char **argv);
-static bool samx5x_cmd_write16(target *t, int argc, const char **argv);
-static bool samx5x_cmd_write32(target *t, int argc, const char **argv);
+static bool samx5x_cmd_mbist(target_s *t, int argc, const char **argv);
+static bool samx5x_cmd_write8(target_s *t, int argc, const char **argv);
+static bool samx5x_cmd_write16(target_s *t, int argc, const char **argv);
+static bool samx5x_cmd_write32(target_s *t, int argc, const char **argv);
 #endif
 
 const struct command_s samx5x_cmd_list[] = {
@@ -193,7 +193,7 @@ const struct command_s samx5x_cmd_list[] = {
  *
  * (Reuses the SAM D1x/2x implementation as it is identical)
  */
-extern void samd_reset(target *t);
+extern void samd_reset(target_s *t);
 #define samx5x_reset samd_reset
 
 /*
@@ -206,7 +206,7 @@ extern void samd_reset(target *t);
  *
  * (Reuses the SAM D1x/2x implementation as it is identical)
  */
-extern bool samd_protected_attach(target *t);
+extern bool samd_protected_attach(target_s *t);
 #define samx5x_protected_attach samd_protected_attach
 
 /*
@@ -293,7 +293,7 @@ samx5x_descr_s samx5x_parse_device_id(uint32_t did)
 	return samd;
 }
 
-static void samx5x_add_flash(target *t, uint32_t addr, size_t length, size_t erase_block_size, size_t write_page_size)
+static void samx5x_add_flash(target_s *t, uint32_t addr, size_t length, size_t erase_block_size, size_t write_page_size)
 {
 	target_flash_s *f = calloc(1, sizeof(*f));
 	if (!f) { /* calloc failed: heap exhaustion */
@@ -316,7 +316,7 @@ typedef struct samx5x_priv {
 	char samx5x_variant_string[SAMX5X_VARIANT_STR_LENGTH];
 } samx5x_priv_s;
 
-bool samx5x_probe(target *t)
+bool samx5x_probe(target_s *t)
 {
 	adiv5_access_port_s *ap = cortexm_ap(t);
 	const uint32_t cid = adiv5_ap_read_pidr(ap, SAMX5X_DSU_CID);
@@ -390,14 +390,14 @@ bool samx5x_probe(target *t)
 }
 
 /* Temporary (until next reset) flash memory locking */
-static void samx5x_lock_current_address(target *t)
+static void samx5x_lock_current_address(target_s *t)
 {
 	/* Issue the lock command */
 	target_mem_write32(t, SAMX5X_NVMC_CTRLB, SAMX5X_CTRLB_CMD_KEY | SAMX5X_CTRLB_CMD_LOCK);
 }
 
 /* Temporary (until next reset) flash memory unlocking */
-static void samx5x_unlock_current_address(target *t)
+static void samx5x_unlock_current_address(target_s *t)
 {
 	/* Issue the unlock command */
 	target_mem_write32(t, SAMX5X_NVMC_CTRLB, SAMX5X_CTRLB_CMD_KEY | SAMX5X_CTRLB_CMD_UNLOCK);
@@ -417,20 +417,20 @@ static void samx5x_print_nvm_error(uint16_t errs)
 	DEBUG_WARN("\n");
 }
 
-static uint16_t samx5x_read_nvm_error(target *t)
+static uint16_t samx5x_read_nvm_error(target_s *t)
 {
 	const uint16_t intflag = target_mem_read16(t, SAMX5X_NVMC_INTFLAG);
 	return intflag & (SAMX5X_INTFLAG_ADDRE | SAMX5X_INTFLAG_PROGE | SAMX5X_INTFLAG_LOCKE | SAMX5X_INTFLAG_NVME);
 }
 
-static void samx5x_clear_nvm_error(target *t)
+static void samx5x_clear_nvm_error(target_s *t)
 {
 	target_mem_write16(t, SAMX5X_NVMC_INTFLAG,
 		SAMX5X_INTFLAG_ADDRE | SAMX5X_INTFLAG_PROGE | SAMX5X_INTFLAG_LOCKE | SAMX5X_INTFLAG_NVME);
 }
 
 /* Like target_check_error(), this returns true for error, and false for ok */
-static bool samx5x_check_nvm_error(target *t)
+static bool samx5x_check_nvm_error(target_s *t)
 {
 	uint16_t errs = samx5x_read_nvm_error(t);
 	if (!errs)
@@ -450,7 +450,7 @@ static bool samx5x_check_nvm_error(target *t)
 /* Erase flash block by block */
 static bool samx5x_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
-	target *t = f->t;
+	target_s *t = f->t;
 	const uint16_t errs = samx5x_read_nvm_error(t);
 	if (errs) {
 		DEBUG_WARN(NVM_ERROR_BITS_MSG, "erase", addr, (uint32_t)len);
@@ -506,7 +506,7 @@ static bool samx5x_flash_erase(target_flash_s *f, target_addr_t addr, size_t len
 /* Write flash page by page */
 static bool samx5x_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
-	target *t = f->t;
+	target_s *t = f->t;
 	const uint16_t errs = samx5x_read_nvm_error(t);
 	if (errs) {
 		DEBUG_INFO(NVM_ERROR_BITS_MSG, "write", dest, (uint32_t)len);
@@ -546,7 +546,7 @@ static bool samx5x_flash_write(target_flash_s *f, target_addr_t dest, const void
 /**
  * Erase and write the NVM user page
  */
-static int samx5x_write_user_page(target *t, uint8_t *buffer)
+static int samx5x_write_user_page(target_s *t, uint8_t *buffer)
 {
 	uint16_t errs = samx5x_read_nvm_error(t);
 	if (errs) {
@@ -582,7 +582,7 @@ static int samx5x_write_user_page(target *t, uint8_t *buffer)
 	return 0;
 }
 
-static int samx5x_update_user_word(target *t, uint32_t addr, uint32_t value, uint32_t *value_written, bool force)
+static int samx5x_update_user_word(target_s *t, uint32_t addr, uint32_t value, uint32_t *value_written, bool force)
 {
 	/* clang-format off */
 	uint8_t factory_bits[] = {
@@ -627,7 +627,7 @@ static int samx5x_update_user_word(target *t, uint32_t addr, uint32_t value, uin
  *
  * 0x00000000 = Lock, 0xffffffff = Unlock (default)
  */
-static int samx5x_set_flashlock(target *t, uint32_t value)
+static int samx5x_set_flashlock(target_s *t, uint32_t value)
 {
 	uint8_t buffer[SAMX5X_PAGE_SIZE];
 	target_mem_read(t, buffer, SAMX5X_NVM_USER_PAGE, SAMX5X_PAGE_SIZE);
@@ -640,7 +640,7 @@ static int samx5x_set_flashlock(target *t, uint32_t value)
 	return 0;
 }
 
-static bool samx5x_cmd_lock_flash(target *t, int argc, const char **argv)
+static bool samx5x_cmd_lock_flash(target_s *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
@@ -652,7 +652,7 @@ static bool samx5x_cmd_lock_flash(target *t, int argc, const char **argv)
 	return true;
 }
 
-static bool samx5x_cmd_unlock_flash(target *t, int argc, const char **argv)
+static bool samx5x_cmd_unlock_flash(target_s *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
@@ -672,7 +672,7 @@ static bool samx5x_cmd_unlock_flash(target *t, int argc, const char **argv)
  * Size of protected region at beginning of flash:
  *     (15 - BOOTPROT) * 8192
  */
-static int samx5x_set_bootprot(target *t, uint8_t value)
+static int samx5x_set_bootprot(target_s *t, uint8_t value)
 {
 	uint8_t buffer[SAMX5X_PAGE_SIZE];
 	target_mem_read(t, buffer, SAMX5X_NVM_USER_PAGE, SAMX5X_PAGE_SIZE);
@@ -688,7 +688,7 @@ static int samx5x_set_bootprot(target *t, uint8_t value)
 	return 0;
 }
 
-static bool samx5x_cmd_lock_bootprot(target *t, int argc, const char **argv)
+static bool samx5x_cmd_lock_bootprot(target_s *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
@@ -700,7 +700,7 @@ static bool samx5x_cmd_lock_bootprot(target *t, int argc, const char **argv)
 	return true;
 }
 
-static bool samx5x_cmd_unlock_bootprot(target *t, int argc, const char **argv)
+static bool samx5x_cmd_unlock_bootprot(target_s *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
@@ -712,7 +712,7 @@ static bool samx5x_cmd_unlock_bootprot(target *t, int argc, const char **argv)
 	return true;
 }
 
-static bool samx5x_cmd_read_userpage(target *t, int argc, const char **argv)
+static bool samx5x_cmd_read_userpage(target_s *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
@@ -727,7 +727,7 @@ static bool samx5x_cmd_read_userpage(target *t, int argc, const char **argv)
 }
 
 /* Reads the 128-bit serial number from the NVM */
-static bool samx5x_cmd_serial(target *t, int argc, const char **argv)
+static bool samx5x_cmd_serial(target_s *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
@@ -740,7 +740,7 @@ static bool samx5x_cmd_serial(target *t, int argc, const char **argv)
 }
 
 /* Sets the security bit */
-static bool samx5x_cmd_ssb(target *t, int argc, const char **argv)
+static bool samx5x_cmd_ssb(target_s *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
@@ -768,7 +768,7 @@ static bool samx5x_cmd_ssb(target *t, int argc, const char **argv)
  * Updates a 32-bit word in the NVM user page. Factory setting bits are
  * not modified unless the "force" argument is provided.
  */
-static bool samx5x_cmd_update_user_word(target *t, int argc, const char **argv)
+static bool samx5x_cmd_update_user_word(target_s *t, int argc, const char **argv)
 {
 	if (argc < 3 || argc > 4) {
 		tc_printf(t, "Error: incorrect number of arguments\n");
@@ -810,7 +810,7 @@ static bool samx5x_cmd_update_user_word(target *t, int argc, const char **argv)
 #ifdef SAMX5X_EXTRA_CMDS
 
 /* Returns the size (in bytes) of the RAM. */
-static uint32_t samx5x_ram_size(target *t)
+static uint32_t samx5x_ram_size(target_s *t)
 {
 	/* Read the Device ID */
 	const uint32_t did = target_mem_read32(t, SAMX5X_DSU_DID);
@@ -821,7 +821,7 @@ static uint32_t samx5x_ram_size(target *t)
 }
 
 /* Runs the Memory Built In Self Test (MBIST) */
-static bool samx5x_cmd_mbist(target *t, int argc, const char **argv)
+static bool samx5x_cmd_mbist(target_s *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
@@ -872,7 +872,7 @@ static bool samx5x_cmd_mbist(target *t, int argc, const char **argv)
 }
 
 /* Writes an 8-bit word to the specified address */
-static bool samx5x_cmd_write8(target *t, int argc, const char **argv)
+static bool samx5x_cmd_write8(target_s *t, int argc, const char **argv)
 {
 	if (argc != 3) {
 		tc_printf(t, "Error: incorrect number of arguments\n");
@@ -901,7 +901,7 @@ static bool samx5x_cmd_write8(target *t, int argc, const char **argv)
 }
 
 /* Writes a 16-bit word to the specified address */
-static bool samx5x_cmd_write16(target *t, int argc, const char **argv)
+static bool samx5x_cmd_write16(target_s *t, int argc, const char **argv)
 {
 	if (argc != 3) {
 		tc_printf(t, "Error: incorrect number of arguments\n");
@@ -930,7 +930,7 @@ static bool samx5x_cmd_write16(target *t, int argc, const char **argv)
 }
 
 /* Writes a 32-bit word to the specified address */
-static bool samx5x_cmd_write32(target *t, int argc, const char **argv)
+static bool samx5x_cmd_write32(target_s *t, int argc, const char **argv)
 {
 	if (argc != 3) {
 		tc_printf(t, "Error: incorrect number of arguments\n");

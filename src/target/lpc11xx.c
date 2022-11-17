@@ -52,14 +52,14 @@
  * LPC845  16k   64k   64   1024
  */
 
-static bool lpc11xx_read_uid(target *t, int argc, const char **argv);
+static bool lpc11xx_read_uid(target_s *t, int argc, const char **argv);
 
 const struct command_s lpc11xx_cmd_list[] = {
 	{"readuid", lpc11xx_read_uid, "Read out the 16-byte UID."},
 	{NULL, NULL, NULL},
 };
 
-static void lpc11xx_add_flash(target *t, const uint32_t addr, const size_t len, const size_t erase_block_len,
+static void lpc11xx_add_flash(target_s *t, const uint32_t addr, const size_t len, const size_t erase_block_len,
 	const uint32_t iap_entry, const size_t reserved_pages)
 {
 	struct lpc_flash *lf = lpc_add_flash(t, addr, len);
@@ -72,7 +72,7 @@ static void lpc11xx_add_flash(target *t, const uint32_t addr, const size_t len, 
 	lf->reserved_pages = reserved_pages;
 }
 
-static bool lpc11xx_detect(target *const t)
+static bool lpc11xx_detect(target_s *const t)
 {
 	/*
 	 * Read the device ID register
@@ -167,7 +167,7 @@ static bool lpc11xx_detect(target *const t)
 	return false;
 }
 
-static bool lpc8xx_detect(target *const t)
+static bool lpc8xx_detect(target_s *const t)
 {
 	/*
 	 * For LPC802, see UM11045 Rev. 1.4 §6.6.29 Table 84
@@ -288,12 +288,12 @@ static bool lpc8xx_detect(target *const t)
 	return false;
 }
 
-bool lpc11xx_probe(target *t)
+bool lpc11xx_probe(target_s *t)
 {
 	return lpc11xx_detect(t) || lpc8xx_detect(t);
 }
 
-static bool lpc11xx_read_uid(target *t, int argc, const char **argv)
+static bool lpc11xx_read_uid(target_s *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;

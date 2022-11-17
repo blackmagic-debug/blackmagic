@@ -50,19 +50,19 @@
 
 #define IAP_PGM_CHUNKSIZE 4096
 
-static bool lpc546xx_cmd_erase_sector(target *t, int argc, const char **argv);
-static bool lpc546xx_cmd_read_partid(target *t, int argc, const char **argv);
-static bool lpc546xx_cmd_read_uid(target *t, int argc, const char **argv);
-static bool lpc546xx_cmd_reset_attach(target *t, int argc, const char **argv);
-static bool lpc546xx_cmd_reset(target *t, int argc, const char **argv);
-static bool lpc546xx_cmd_write_sector(target *t, int argc, const char **argv);
+static bool lpc546xx_cmd_erase_sector(target_s *t, int argc, const char **argv);
+static bool lpc546xx_cmd_read_partid(target_s *t, int argc, const char **argv);
+static bool lpc546xx_cmd_read_uid(target_s *t, int argc, const char **argv);
+static bool lpc546xx_cmd_reset_attach(target_s *t, int argc, const char **argv);
+static bool lpc546xx_cmd_reset(target_s *t, int argc, const char **argv);
+static bool lpc546xx_cmd_write_sector(target_s *t, int argc, const char **argv);
 
-static void lpc546xx_reset_attach(target *t);
-static bool lpc546xx_flash_init(target *t);
+static void lpc546xx_reset_attach(target_s *t);
+static bool lpc546xx_flash_init(target_s *t);
 static bool lpc546xx_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
-static bool lpc546xx_mass_erase(target *t);
-static void lpc546xx_wdt_set_period(target *t);
-static void lpc546xx_wdt_kick(target *t);
+static bool lpc546xx_mass_erase(target_s *t);
+static void lpc546xx_wdt_set_period(target_s *t);
+static void lpc546xx_wdt_kick(target_s *t);
 
 const struct command_s lpc546xx_cmd_list[] = {
 	{"erase_sector", lpc546xx_cmd_erase_sector, "Erase a sector by number"},
@@ -78,7 +78,7 @@ const struct command_s lpc546xx_cmd_list[] = {
 };
 
 static void lpc546xx_add_flash(
-	target *t, uint32_t iap_entry, uint8_t base_sector, uint32_t addr, size_t len, size_t erasesize)
+	target_s *t, uint32_t iap_entry, uint8_t base_sector, uint32_t addr, size_t len, size_t erasesize)
 {
 	struct lpc_flash *lf = lpc_add_flash(t, addr, len);
 	lf->f.erase = lpc546xx_flash_erase;
@@ -96,7 +96,7 @@ static void lpc546xx_add_flash(
 	lf->wdt_kick = lpc546xx_wdt_kick;
 }
 
-bool lpc546xx_probe(target *t)
+bool lpc546xx_probe(target_s *t)
 {
 	const uint32_t chipid = target_mem_read32(t, LPC546XX_CHIPID);
 	uint32_t flash_size = 0;
@@ -163,7 +163,7 @@ bool lpc546xx_probe(target *t)
 	return true;
 }
 
-static void lpc546xx_reset_attach(target *t)
+static void lpc546xx_reset_attach(target_s *t)
 {
 	/*
 	 * To reset the LPC546xx into a usable state, we need to reset and let it
@@ -177,7 +177,7 @@ static void lpc546xx_reset_attach(target *t)
 	cortexm_attach(t);
 }
 
-static bool lpc546xx_mass_erase(target *t)
+static bool lpc546xx_mass_erase(target_s *t)
 {
 	const int result = lpc546xx_flash_erase(t->flash, t->flash->start, t->flash->length);
 	if (result != 0)
@@ -185,7 +185,7 @@ static bool lpc546xx_mass_erase(target *t)
 	return result == 0;
 }
 
-static bool lpc546xx_cmd_erase_sector(target *t, int argc, const char **argv)
+static bool lpc546xx_cmd_erase_sector(target_s *t, int argc, const char **argv)
 {
 	if (argc > 1) {
 		uint32_t sector_addr = strtoul(argv[1], NULL, 0);
@@ -195,7 +195,7 @@ static bool lpc546xx_cmd_erase_sector(target *t, int argc, const char **argv)
 	return true;
 }
 
-static bool lpc546xx_cmd_read_partid(target *t, int argc, const char **argv)
+static bool lpc546xx_cmd_read_partid(target_s *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
@@ -207,7 +207,7 @@ static bool lpc546xx_cmd_read_partid(target *t, int argc, const char **argv)
 	return true;
 }
 
-static bool lpc546xx_cmd_read_uid(target *t, int argc, const char **argv)
+static bool lpc546xx_cmd_read_uid(target_s *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
@@ -223,7 +223,7 @@ static bool lpc546xx_cmd_read_uid(target *t, int argc, const char **argv)
 }
 
 /* Reset everything, including debug; single step past the ROM bootloader so the system is in a sane state */
-static bool lpc546xx_cmd_reset_attach(target *t, int argc, const char **argv)
+static bool lpc546xx_cmd_reset_attach(target_s *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
@@ -234,7 +234,7 @@ static bool lpc546xx_cmd_reset_attach(target *t, int argc, const char **argv)
 }
 
 /* Reset all major systems _except_ debug. Note that this will leave the system with the ROM bootloader mapped to 0x0 */
-static bool lpc546xx_cmd_reset(target *t, int argc, const char **argv)
+static bool lpc546xx_cmd_reset(target_s *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
@@ -249,7 +249,7 @@ static bool lpc546xx_cmd_reset(target *t, int argc, const char **argv)
 	return true;
 }
 
-static bool lpc546xx_cmd_write_sector(target *t, int argc, const char **argv)
+static bool lpc546xx_cmd_write_sector(target_s *t, int argc, const char **argv)
 {
 	if (argc > 1) {
 		const uint32_t sector_size = t->flash->blocksize;
@@ -270,7 +270,7 @@ static bool lpc546xx_cmd_write_sector(target *t, int argc, const char **argv)
 	return true;
 }
 
-static bool lpc546xx_flash_init(target *t)
+static bool lpc546xx_flash_init(target_s *t)
 {
 	/*
 	 * Reset the chip. It's unfortunate but we need to make sure the ROM
@@ -298,7 +298,7 @@ static bool lpc546xx_flash_erase(target_flash_s *tf, target_addr_t addr, size_t 
 	return lpc_flash_erase(tf, addr, len);
 }
 
-static void lpc546xx_wdt_set_period(target *t)
+static void lpc546xx_wdt_set_period(target_s *t)
 {
 	/* Check if WDT is on */
 	uint32_t wdt_mode = target_mem_read32(t, LPC546XX_WDT_MODE);
@@ -308,7 +308,7 @@ static void lpc546xx_wdt_set_period(target *t)
 		target_mem_write32(t, LPC546XX_WDT_CNT, LPC546XX_WDT_PERIOD_MAX);
 }
 
-static void lpc546xx_wdt_kick(target *t)
+static void lpc546xx_wdt_kick(target_s *t)
 {
 	/* Check if WDT is on */
 	uint32_t wdt_mode = target_mem_read32(t, LPC546XX_WDT_MODE);

@@ -37,33 +37,33 @@ bool nrf51_mdm_probe(adiv5_access_port_s *ap);
 bool efm32_aap_probe(adiv5_access_port_s *ap);
 bool rp_rescue_probe(adiv5_access_port_s *ap);
 
-bool ch32f1_probe(target *t);  // will catch all the clones
-bool at32fxx_probe(target *t); // STM32 clones from Artery
-bool gd32f1_probe(target *t);
-bool stm32f1_probe(target *t);
-bool stm32f4_probe(target *t);
-bool stm32h7_probe(target *t);
-bool stm32l0_probe(target *t);
-bool stm32l1_probe(target *t);
-bool stm32l4_probe(target *t);
-bool stm32g0_probe(target *t);
-bool lmi_probe(target *t);
-bool lpc11xx_probe(target *t);
-bool lpc15xx_probe(target *t);
-bool lpc17xx_probe(target *t);
-bool lpc43xx_probe(target *t);
-bool lpc546xx_probe(target *t);
-bool samx7x_probe(target *t);
-bool sam3x_probe(target *t);
-bool sam4l_probe(target *t);
-bool nrf51_probe(target *t);
-bool samd_probe(target *t);
-bool samx5x_probe(target *t);
-bool kinetis_probe(target *t);
-bool efm32_probe(target *t);
-bool msp432_probe(target *t);
-bool ke04_probe(target *t);
-bool rp_probe(target *t);
-bool renesas_probe(target *t);
+bool ch32f1_probe(target_s *t);  // will catch all the clones
+bool at32fxx_probe(target_s *t); // STM32 clones from Artery
+bool gd32f1_probe(target_s *t);
+bool stm32f1_probe(target_s *t);
+bool stm32f4_probe(target_s *t);
+bool stm32h7_probe(target_s *t);
+bool stm32l0_probe(target_s *t);
+bool stm32l1_probe(target_s *t);
+bool stm32l4_probe(target_s *t);
+bool stm32g0_probe(target_s *t);
+bool lmi_probe(target_s *t);
+bool lpc11xx_probe(target_s *t);
+bool lpc15xx_probe(target_s *t);
+bool lpc17xx_probe(target_s *t);
+bool lpc43xx_probe(target_s *t);
+bool lpc546xx_probe(target_s *t);
+bool samx7x_probe(target_s *t);
+bool sam3x_probe(target_s *t);
+bool sam4l_probe(target_s *t);
+bool nrf51_probe(target_s *t);
+bool samd_probe(target_s *t);
+bool samx5x_probe(target_s *t);
+bool kinetis_probe(target_s *t);
+bool efm32_probe(target_s *t);
+bool msp432_probe(target_s *t);
+bool ke04_probe(target_s *t);
+bool rp_probe(target_s *t);
+bool renesas_probe(target_s *t);
 
 #endif /* TARGET_TARGET_PROBE_H */

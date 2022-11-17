@@ -385,7 +385,7 @@ void cl_init(bmp_cli_options_s *opt, int argc, char **argv)
 	}
 }
 
-static void display_target(int i, target *t, void *context)
+static void display_target(int i, target_s *t, void *context)
 {
 	(void)context;
 	const char *const core_name = target_core_name(t);
@@ -445,7 +445,7 @@ found_targets:
 		DEBUG_WARN("Given target number %d not available max %d\n", opt->opt_target_dev, num_targets);
 		return -1;
 	}
-	target *t = target_attach_n(opt->opt_target_dev, &cl_controller);
+	target_s *t = target_attach_n(opt->opt_target_dev, &cl_controller);
 
 	int read_file = -1;
 	if (!t) {

@@ -158,16 +158,16 @@ typedef struct stm32g0_priv {
 	bool irreversible_enabled;
 } stm32g0_priv_s;
 
-static bool stm32g0_attach(target *t);
-static void stm32g0_detach(target *t);
+static bool stm32g0_attach(target_s *t);
+static void stm32g0_detach(target_s *t);
 static bool stm32g0_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 static bool stm32g0_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
-static bool stm32g0_mass_erase(target *t);
+static bool stm32g0_mass_erase(target_s *t);
 
 /* Custom commands */
-static bool stm32g0_cmd_erase_bank(target *t, int argc, const char **argv);
-static bool stm32g0_cmd_option(target *t, int argc, const char **argv);
-static bool stm32g0_cmd_irreversible(target *t, int argc, const char **argv);
+static bool stm32g0_cmd_erase_bank(target_s *t, int argc, const char **argv);
+static bool stm32g0_cmd_option(target_s *t, int argc, const char **argv);
+static bool stm32g0_cmd_irreversible(target_s *t, int argc, const char **argv);
 
 const struct command_s stm32g0_cmd_list[] = {
 	{"erase_bank 1|2", stm32g0_cmd_erase_bank, "Erase specified Flash bank"},
@@ -176,7 +176,7 @@ const struct command_s stm32g0_cmd_list[] = {
 	{NULL, NULL, NULL},
 };
 
-static void stm32g0_add_flash(target *t, uint32_t addr, size_t length, size_t blocksize)
+static void stm32g0_add_flash(target_s *t, uint32_t addr, size_t length, size_t blocksize)
 {
 	target_flash_s *f = calloc(1, sizeof(*f));
 	if (!f) { /* calloc failed: heap exhaustion */
@@ -200,7 +200,7 @@ static void stm32g0_add_flash(target *t, uint32_t addr, size_t length, size_t bl
  * Single bank devices are populated with their maximal flash capacity to allow
  * users to program devices with more flash than announced.
  */
-bool stm32g0_probe(target *t)
+bool stm32g0_probe(target_s *t)
 {
 	uint32_t ram_size = 0U;
 	size_t flash_size = 0U;
@@ -261,7 +261,7 @@ bool stm32g0_probe(target *t)
  * allows basic Flash operations (erase/write) if the watchdog is started by
  * hardware or by a previous program without prior power cycle.
  */
-static bool stm32g0_attach(target *t)
+static bool stm32g0_attach(target_s *t)
 {
 	stm32g0_priv_s *ps = (stm32g0_priv_s *)t->target_storage;
 
@@ -284,7 +284,7 @@ static bool stm32g0_attach(target *t)
  * The registers are restored as is to leave the target in the same state as
  * before attachment.
  */
-static void stm32g0_detach(target *t)
+static void stm32g0_detach(target_s *t)
 {
 	stm32g0_priv_s *ps = (stm32g0_priv_s *)t->target_storage;
 
@@ -302,19 +302,19 @@ static void stm32g0_detach(target *t)
 	cortexm_detach(t);
 }
 
-static void stm32g0_flash_unlock(target *t)
+static void stm32g0_flash_unlock(target_s *t)
 {
 	target_mem_write32(t, FLASH_KEYR, FLASH_KEYR_KEY1);
 	target_mem_write32(t, FLASH_KEYR, FLASH_KEYR_KEY2);
 }
 
-static void stm32g0_flash_lock(target *t)
+static void stm32g0_flash_lock(target_s *t)
 {
 	const uint32_t ctrl = target_mem_read32(t, FLASH_CR) | FLASH_CR_LOCK;
 	target_mem_write32(t, FLASH_CR, ctrl);
 }
 
-static bool stm32g0_wait_busy(target *const t, platform_timeout_s *const timeout)
+static bool stm32g0_wait_busy(target_s *const t, platform_timeout_s *const timeout)
 {
 	while (target_mem_read32(t, FLASH_SR) & FLASH_SR_BSY_MASK) {
 		if (target_check_error(t))
@@ -325,7 +325,7 @@ static bool stm32g0_wait_busy(target *const t, platform_timeout_s *const timeout
 	return true;
 }
 
-static void stm32g0_flash_op_finish(target *t)
+static void stm32g0_flash_op_finish(target_s *t)
 {
 	target_mem_write32(t, FLASH_SR, FLASH_SR_EOP); // Clear EOP
 	/* Clear PG: half-word access not to clear unwanted bits */
@@ -335,7 +335,7 @@ static void stm32g0_flash_op_finish(target *t)
 
 static size_t stm32g0_bank1_end_page(target_flash_s *f)
 {
-	target *const t = f->t;
+	target_s *const t = f->t;
 	/* If the part is dual banked, compute the end of the first bank */
 	if (t->part_id == STM32G0B_C)
 		return ((f->length / 2U) - 1U) / f->blocksize;
@@ -346,7 +346,7 @@ static size_t stm32g0_bank1_end_page(target_flash_s *f)
 /* Erase pages of Flash. In the OTP case, this function clears any previous error and returns. */
 static bool stm32g0_flash_erase(target_flash_s *f, const target_addr_t addr, const size_t len)
 {
-	target *const t = f->t;
+	target_s *const t = f->t;
 
 	/* Wait for Flash ready */
 	if (!stm32g0_wait_busy(t, NULL)) {
@@ -403,7 +403,7 @@ static bool stm32g0_flash_erase(target_flash_s *f, const target_addr_t addr, con
  */
 static bool stm32g0_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
-	target *const t = f->t;
+	target_s *const t = f->t;
 	stm32g0_priv_s *ps = (stm32g0_priv_s *)t->target_storage;
 
 	if (f->start == FLASH_OTP_START && !ps->irreversible_enabled) {
@@ -439,7 +439,7 @@ static bool stm32g0_flash_write(target_flash_s *f, target_addr_t dest, const voi
 	return true;
 }
 
-static bool stm32g0_mass_erase(target *t)
+static bool stm32g0_mass_erase(target_s *t)
 {
 	const uint32_t ctrl = FLASH_CR_MER1 | FLASH_CR_MER2 | FLASH_CR_START;
 
@@ -460,7 +460,7 @@ static bool stm32g0_mass_erase(target *t)
 	return !(status & FLASH_SR_ERROR_MASK);
 }
 
-static bool stm32g0_cmd_erase_bank(target *t, int argc, const char **argv)
+static bool stm32g0_cmd_erase_bank(target_s *t, int argc, const char **argv)
 {
 	uint32_t ctrl = 0U;
 	if (argc == 2) {
@@ -495,7 +495,7 @@ static bool stm32g0_cmd_erase_bank(target *t, int argc, const char **argv)
 	return !(status & FLASH_SR_ERROR_MASK);
 }
 
-static void stm32g0_flash_option_unlock(target *t)
+static void stm32g0_flash_option_unlock(target_s *t)
 {
 	target_mem_write32(t, FLASH_OPTKEYR, FLASH_OPTKEYR_KEY1);
 	target_mem_write32(t, FLASH_OPTKEYR, FLASH_OPTKEYR_KEY2);
@@ -551,7 +551,7 @@ static const option_register_s options_def[OPT_REG_COUNT] = {
 	[OPT_REG_SECR] = {FLASH_SECR, 0x00000000},
 };
 
-static void write_registers(target *const t, const option_register_s *const regs, const size_t nb_regs)
+static void write_registers(target_s *const t, const option_register_s *const regs, const size_t nb_regs)
 {
 	for (size_t reg = 0U; reg < nb_regs; ++reg) {
 		if (regs[reg].addr > 0U)
@@ -560,7 +560,7 @@ static void write_registers(target *const t, const option_register_s *const regs
 }
 
 /* Program the option bytes. */
-static bool stm32g0_option_write(target *const t, const option_register_s *const options_req)
+static bool stm32g0_option_write(target_s *const t, const option_register_s *const options_req)
 {
 	/* Unlock the option bytes Flash */
 	stm32g0_flash_unlock(t);
@@ -624,7 +624,7 @@ static bool stm32g0_parse_cmdline_registers(
 }
 
 /* Validates option bytes settings. Only allow level 2 device protection if explicitly allowed. */
-static bool stm32g0_validate_options(target *t, const option_register_s *options_req)
+static bool stm32g0_validate_options(target_s *t, const option_register_s *options_req)
 {
 	stm32g0_priv_s *ps = (stm32g0_priv_s *)t->target_storage;
 	const bool valid = (options_req[OPT_REG_OPTR].val & FLASH_OPTR_RDP_MASK) != 0xccU || ps->irreversible_enabled;
@@ -633,7 +633,7 @@ static bool stm32g0_validate_options(target *t, const option_register_s *options
 	return valid;
 }
 
-static void stm32g0_display_registers(target *t)
+static void stm32g0_display_registers(target_s *t)
 {
 	for (size_t i = 0; i < OPT_REG_COUNT; ++i) {
 		const uint32_t val = target_mem_read32(t, options_def[i].addr);
@@ -646,7 +646,7 @@ static void stm32g0_display_registers(target *t)
  * 1. Increase device protection to level 1 and set PCROP_RDP if not already the case.
  * 2. Reset to defaults.
  */
-static bool stm32g0_cmd_option(target *t, int argc, const char **argv)
+static bool stm32g0_cmd_option(target_s *t, int argc, const char **argv)
 {
 	option_register_s options_req[OPT_REG_COUNT] = {};
 
@@ -670,7 +670,7 @@ exit_error:
 }
 
 /* Enables the irreversible operation that is level 2 device protection. */
-static bool stm32g0_cmd_irreversible(target *t, int argc, const char **argv)
+static bool stm32g0_cmd_irreversible(target_s *t, int argc, const char **argv)
 {
 	stm32g0_priv_s *ps = (stm32g0_priv_s *)t->target_storage;
 	const bool ret = argc != 2 || parse_enable_or_disable(argv[1], &ps->irreversible_enabled);

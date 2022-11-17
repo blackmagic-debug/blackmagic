@@ -39,11 +39,11 @@
 #include "cortexm.h"
 #include "stm32_common.h"
 
-/* static bool stm32h7_cmd_option(target *t, int argc, const char **argv); */
-static bool stm32h7_uid(target *t, int argc, const char **argv);
-static bool stm32h7_crc(target *t, int argc, const char **argv);
-static bool stm32h7_cmd_psize(target *t, int argc, const char **argv);
-static bool stm32h7_cmd_rev(target *t, int argc, const char **argv);
+/* static bool stm32h7_cmd_option(target_s *t, int argc, const char **argv); */
+static bool stm32h7_uid(target_s *t, int argc, const char **argv);
+static bool stm32h7_crc(target_s *t, int argc, const char **argv);
+static bool stm32h7_cmd_psize(target_s *t, int argc, const char **argv);
+static bool stm32h7_cmd_rev(target_s *t, int argc, const char **argv);
 
 const struct command_s stm32h7_cmd_list[] = {
 	/*{"option", stm32h7_cmd_option, "Manipulate option bytes"},*/
@@ -56,7 +56,7 @@ const struct command_s stm32h7_cmd_list[] = {
 
 static bool stm32h7_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 static bool stm32h7_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
-static bool stm32h7_mass_erase(target *t);
+static bool stm32h7_mass_erase(target_s *t);
 
 #define FLASH_ACR       0x00U
 #define FLASH_KEYR      0x04U
@@ -154,7 +154,7 @@ typedef struct stm32h7_priv {
 	uint32_t dbg_cr;
 } stm32h7_priv_s;
 
-static void stm32h7_add_flash(target *t, uint32_t addr, size_t length, size_t blocksize)
+static void stm32h7_add_flash(target_s *t, uint32_t addr, size_t length, size_t blocksize)
 {
 	stm32h7_flash_s *sf = calloc(1, sizeof(*sf));
 	if (!sf) { /* calloc failed: heap exhaustion */
@@ -177,7 +177,7 @@ static void stm32h7_add_flash(target *t, uint32_t addr, size_t length, size_t bl
 	target_add_flash(t, f);
 }
 
-static bool stm32h7_attach(target *t)
+static bool stm32h7_attach(target_s *t)
 {
 	if (!cortexm_attach(t))
 		return false;
@@ -192,14 +192,14 @@ static bool stm32h7_attach(target *t)
 	return true;
 }
 
-static void stm32h7_detach(target *t)
+static void stm32h7_detach(target_s *t)
 {
 	stm32h7_priv_s *ps = (stm32h7_priv_s *)t->target_storage;
 	target_mem_write32(t, DBGMCU_CR, ps->dbg_cr);
 	cortexm_detach(t);
 }
 
-bool stm32h7_probe(target *t)
+bool stm32h7_probe(target_s *t)
 {
 	if (t->part_id != ID_STM32H74x && t->part_id != ID_STM32H7Bx && t->part_id != ID_STM32H72x)
 		return false;
@@ -235,7 +235,7 @@ bool stm32h7_probe(target *t)
 	return true;
 }
 
-static bool stm32h7_flash_busy_wait(target *const t, const uint32_t regbase)
+static bool stm32h7_flash_busy_wait(target_s *const t, const uint32_t regbase)
 {
 	uint32_t status = FLASH_SR_BSY | FLASH_SR_QW;
 	while (status & (FLASH_SR_BSY | FLASH_SR_QW)) {
@@ -256,7 +256,7 @@ static uint32_t stm32h7_flash_bank_base(const uint32_t addr)
 	return FPEC1_BASE;
 }
 
-static bool stm32h7_flash_unlock(target *const t, const uint32_t addr)
+static bool stm32h7_flash_unlock(target_s *const t, const uint32_t addr)
 {
 	const uint32_t regbase = stm32h7_flash_bank_base(addr);
 	/* Wait for any pending operations to complete */
@@ -274,7 +274,7 @@ static bool stm32h7_flash_unlock(target *const t, const uint32_t addr)
 
 static bool stm32h7_flash_erase(target_flash_s *const f, target_addr_t addr, const size_t len)
 {
-	target *t = f->t;
+	target_s *t = f->t;
 	const stm32h7_flash_s *const sf = (stm32h7_flash_s *)f;
 	/* Unlock the Flash */
 	if (!stm32h7_flash_unlock(t, addr))
@@ -305,7 +305,7 @@ static bool stm32h7_flash_erase(target_flash_s *const f, target_addr_t addr, con
 static bool stm32h7_flash_write(
 	target_flash_s *const f, const target_addr_t dest, const void *const src, const size_t len)
 {
-	target *t = f->t;
+	target_s *t = f->t;
 	const stm32h7_flash_s *const sf = (stm32h7_flash_s *)f;
 	/* Unlock the Flash */
 	if (!stm32h7_flash_unlock(t, dest))
@@ -330,7 +330,7 @@ static bool stm32h7_flash_write(
 }
 
 static bool stm32h7_erase_bank(
-	target *const t, const enum align psize, const uint32_t start_addr, const uint32_t reg_base)
+	target_s *const t, const enum align psize, const uint32_t start_addr, const uint32_t reg_base)
 {
 	if (!stm32h7_flash_unlock(t, start_addr)) {
 		DEBUG_WARN("Bank erase: Unlock bank failed\n");
@@ -343,7 +343,7 @@ static bool stm32h7_erase_bank(
 	return true;
 }
 
-static bool stm32h7_wait_erase_bank(target *const t, platform_timeout_s *const timeout, const uint32_t reg_base)
+static bool stm32h7_wait_erase_bank(target_s *const t, platform_timeout_s *const timeout, const uint32_t reg_base)
 {
 	while (target_mem_read32(t, reg_base + FLASH_SR) & FLASH_SR_QW) {
 		if (target_check_error(t)) {
@@ -355,7 +355,7 @@ static bool stm32h7_wait_erase_bank(target *const t, platform_timeout_s *const t
 	return true;
 }
 
-static bool stm32h7_check_bank(target *const t, const uint32_t reg_base)
+static bool stm32h7_check_bank(target_s *const t, const uint32_t reg_base)
 {
 	uint32_t status = target_mem_read32(t, reg_base + FLASH_SR);
 	if (status & FLASH_SR_ERROR_MASK)
@@ -364,7 +364,7 @@ static bool stm32h7_check_bank(target *const t, const uint32_t reg_base)
 }
 
 /* Both banks are erased in parallel.*/
-static bool stm32h7_mass_erase(target *t)
+static bool stm32h7_mass_erase(target_s *t)
 {
 	enum align psize = ALIGN_DWORD;
 	/*
@@ -390,7 +390,7 @@ static bool stm32h7_mass_erase(target *t)
 	return stm32h7_check_bank(t, FPEC1_BASE) && stm32h7_check_bank(t, FPEC2_BASE);
 }
 
-static uint32_t stm32h7_part_uid_addr(target *const t)
+static uint32_t stm32h7_part_uid_addr(target_s *const t)
 {
 	if (t->part_id == ID_STM32H7Bx)
 		return 0x08fff800U; /* 7B3/7A3/7B0 */
@@ -401,7 +401,7 @@ static uint32_t stm32h7_part_uid_addr(target *const t)
  * Print the Unique device ID.
  * Can be reused for other STM32 devices with uid as parameter.
  */
-static bool stm32h7_uid(target *t, int argc, const char **argv)
+static bool stm32h7_uid(target_s *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
@@ -420,7 +420,7 @@ static bool stm32h7_uid(target *t, int argc, const char **argv)
 	return true;
 }
 
-static bool stm32h7_crc_bank(target *t, uint32_t addr)
+static bool stm32h7_crc_bank(target_s *t, uint32_t addr)
 {
 	const uint32_t reg_base = stm32h7_flash_bank_base(addr);
 	if (!stm32h7_flash_unlock(t, addr))
@@ -448,7 +448,7 @@ static bool stm32h7_crc_bank(target *t, uint32_t addr)
 	return true;
 }
 
-static bool stm32h7_crc(target *t, int argc, const char **argv)
+static bool stm32h7_crc(target_s *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
@@ -462,7 +462,7 @@ static bool stm32h7_crc(target *t, int argc, const char **argv)
 	return true;
 }
 
-static bool stm32h7_cmd_psize(target *t, int argc, const char **argv)
+static bool stm32h7_cmd_psize(target_s *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
@@ -507,7 +507,7 @@ static const struct {
 	{0x2003, 'V'},
 };
 
-static bool stm32h7_cmd_rev(target *t, int argc, const char **argv)
+static bool stm32h7_cmd_rev(target_s *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;

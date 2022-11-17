@@ -67,8 +67,8 @@ typedef struct cmd_executer {
 
 static char pbuf[BUF_SIZE + 1U];
 
-static target *cur_target;
-static target *last_target;
+static target_s *cur_target;
+static target_s *last_target;
 static bool gdb_needs_detach_notify = false;
 
 static void handle_q_packet(char *packet, size_t len);
@@ -76,7 +76,7 @@ static void handle_v_packet(char *packet, size_t len);
 static void handle_z_packet(char *packet, size_t len);
 static void handle_kill_target(void);
 
-static void gdb_target_destroy_callback(target_controller_s *tc, target *t)
+static void gdb_target_destroy_callback(target_controller_s *tc, target_s *t)
 {
 	(void)tc;
 	if (cur_target == t) {

@@ -45,20 +45,20 @@
 #define FLASH_NUM_BANK   2
 #define FLASH_NUM_SECTOR 15
 
-static bool lpc43xx_cmd_reset(target *t, int argc, const char *argv[]);
-static bool lpc43xx_cmd_mkboot(target *t, int argc, const char *argv[]);
-static int lpc43xx_flash_init(target *t);
+static bool lpc43xx_cmd_reset(target_s *t, int argc, const char *argv[]);
+static bool lpc43xx_cmd_mkboot(target_s *t, int argc, const char *argv[]);
+static int lpc43xx_flash_init(target_s *t);
 static bool lpc43xx_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
-static bool lpc43xx_mass_erase(target *t);
-static void lpc43xx_set_internal_clock(target *t);
-static void lpc43xx_wdt_set_period(target *t);
-static void lpc43xx_wdt_pet(target *t);
+static bool lpc43xx_mass_erase(target_s *t);
+static void lpc43xx_set_internal_clock(target_s *t);
+static void lpc43xx_wdt_set_period(target_s *t);
+static void lpc43xx_wdt_pet(target_s *t);
 
 const struct command_s lpc43xx_cmd_list[] = {{"reset", lpc43xx_cmd_reset, "Reset target"},
 	{"mkboot", lpc43xx_cmd_mkboot, "Make flash bank bootable"}, {NULL, NULL, NULL}};
 
 static void lpc43xx_add_flash(
-	target *t, uint32_t iap_entry, uint8_t bank, uint8_t base_sector, uint32_t addr, size_t len, size_t erasesize)
+	target_s *t, uint32_t iap_entry, uint8_t bank, uint8_t base_sector, uint32_t addr, size_t len, size_t erasesize)
 {
 	struct lpc_flash *lf = lpc_add_flash(t, addr, len);
 	lf->f.erase = lpc43xx_flash_erase;
@@ -72,7 +72,7 @@ static void lpc43xx_add_flash(
 	lf->wdt_kick = lpc43xx_wdt_pet;
 }
 
-bool lpc43xx_probe(target *t)
+bool lpc43xx_probe(target_s *t)
 {
 	uint32_t chipid;
 	uint32_t iap_entry;
@@ -127,7 +127,7 @@ bool lpc43xx_probe(target *t)
 }
 
 /* Reset all major systems _except_ debug */
-static bool lpc43xx_cmd_reset(target *t, int argc, const char *argv[])
+static bool lpc43xx_cmd_reset(target_s *t, int argc, const char *argv[])
 {
 	(void)argc;
 	(void)argv;
@@ -143,7 +143,7 @@ static bool lpc43xx_cmd_reset(target *t, int argc, const char *argv[])
 	return true;
 }
 
-static bool lpc43xx_mass_erase(target *t)
+static bool lpc43xx_mass_erase(target_s *t)
 {
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500);
@@ -160,7 +160,7 @@ static bool lpc43xx_mass_erase(target *t)
 	return true;
 }
 
-static int lpc43xx_flash_init(target *t)
+static int lpc43xx_flash_init(target_s *t)
 {
 	/* Deal with WDT */
 	lpc43xx_wdt_set_period(t);
@@ -184,7 +184,7 @@ static bool lpc43xx_flash_erase(target_flash_s *f, target_addr_t addr, size_t le
 	return lpc_flash_erase(f, addr, len);
 }
 
-static void lpc43xx_set_internal_clock(target *t)
+static void lpc43xx_set_internal_clock(target_s *t)
 {
 	const uint32_t val2 = (1 << 11) | (1 << 24);
 	target_mem_write32(t, 0x40050000 + 0x06C, val2);
@@ -197,7 +197,7 @@ static void lpc43xx_set_internal_clock(target *t)
  * This is done indepently of writing to give the user a chance to verify flash
  * before changing it.
  */
-static bool lpc43xx_cmd_mkboot(target *t, int argc, const char *argv[])
+static bool lpc43xx_cmd_mkboot(target_s *t, int argc, const char *argv[])
 {
 	/* Usage: mkboot 0 or mkboot 1 */
 	if (argc != 2) {
@@ -225,7 +225,7 @@ static bool lpc43xx_cmd_mkboot(target *t, int argc, const char *argv[])
 	return true;
 }
 
-static void lpc43xx_wdt_set_period(target *t)
+static void lpc43xx_wdt_set_period(target_s *t)
 {
 	/* Check if WDT is on */
 	uint32_t wdt_mode = target_mem_read32(t, LPC43XX_WDT_MODE);
@@ -235,7 +235,7 @@ static void lpc43xx_wdt_set_period(target *t)
 		target_mem_write32(t, LPC43XX_WDT_CNT, LPC43XX_WDT_PERIOD_MAX);
 }
 
-static void lpc43xx_wdt_pet(target *t)
+static void lpc43xx_wdt_pet(target_s *t)
 {
 	/* Check if WDT is on */
 	uint32_t wdt_mode = target_mem_read32(t, LPC43XX_WDT_MODE);

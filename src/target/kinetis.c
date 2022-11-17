@@ -95,14 +95,14 @@
 /* 8 byte phrases need to be written to the k64 flash */
 #define K64_WRITE_LEN 8
 
-static bool kinetis_cmd_unsafe(target *t, int argc, const char **argv);
+static bool kinetis_cmd_unsafe(target_s *t, int argc, const char **argv);
 
 const struct command_s kinetis_cmd_list[] = {
 	{"unsafe", kinetis_cmd_unsafe, "Allow programming security byte (enable|disable)"},
 	{NULL, NULL, NULL},
 };
 
-static bool kinetis_cmd_unsafe(target *t, int argc, const char **argv)
+static bool kinetis_cmd_unsafe(target_s *t, int argc, const char **argv)
 {
 	if (argc == 1) {
 		tc_printf(t, "Allow programming security byte: %s\n", t->unsafe_enabled ? "enabled" : "disabled");
@@ -122,7 +122,7 @@ struct kinetis_flash {
 };
 
 static void kinetis_add_flash(
-	target *const t, const uint32_t addr, const size_t length, const size_t erasesize, const size_t write_len)
+	target_s *const t, const uint32_t addr, const size_t length, const size_t erasesize, const size_t write_len)
 {
 	struct kinetis_flash *kf = calloc(1, sizeof(*kf));
 	if (!kf) { /* calloc failed: heap exhaustion */
@@ -143,7 +143,7 @@ static void kinetis_add_flash(
 }
 
 static void kl_s32k14_setup(
-	target *const t, const uint32_t sram_l, const uint32_t sram_h, const size_t flash_size, const size_t flexmem_size)
+	target_s *const t, const uint32_t sram_l, const uint32_t sram_h, const size_t flash_size, const size_t flexmem_size)
 {
 	t->driver = "S32K14x";
 	target_add_ram(t, sram_l, 0x20000000 - sram_l);
@@ -153,7 +153,7 @@ static void kl_s32k14_setup(
 	kinetis_add_flash(t, 0x10000000, flexmem_size, 0x1000, K64_WRITE_LEN); /* FlexNVM, 4 KB Sectors */
 }
 
-bool kinetis_probe(target *const t)
+bool kinetis_probe(target_s *const t)
 {
 	uint32_t sdid = target_mem_read32(t, SIM_SDID);
 	uint32_t fcfg1 = target_mem_read32(t, SIM_FCFG1);
@@ -394,7 +394,7 @@ bool kinetis_probe(target *const t)
 	return true;
 }
 
-static bool kinetis_fccob_cmd(target *t, uint8_t cmd, uint32_t addr, const uint32_t *data, int n_items)
+static bool kinetis_fccob_cmd(target_s *t, uint8_t cmd, uint32_t addr, const uint32_t *data, int n_items)
 {
 	uint8_t fstat;
 
@@ -516,15 +516,15 @@ static bool kinetis_flash_done(target_flash_s *const f)
  * device.  This provides a fake target to allow a monitor command interface
  */
 
-static bool kinetis_mdm_mass_erase(target *t);
-static bool kinetis_mdm_cmd_ke04_mode(target *t, int argc, const char **argv);
+static bool kinetis_mdm_mass_erase(target_s *t);
+static bool kinetis_mdm_cmd_ke04_mode(target_s *t, int argc, const char **argv);
 
 const struct command_s kinetis_mdm_cmd_list[] = {
 	{"ke04_mode", kinetis_mdm_cmd_ke04_mode, "Allow erase for KE04"},
 	{NULL, NULL, NULL},
 };
 
-target_halt_reason_e mdm_halt_poll(target *t, const target_addr_t *const watch)
+target_halt_reason_e mdm_halt_poll(target_s *t, const target_addr_t *const watch)
 {
 	(void)t;
 	(void)watch;
@@ -541,7 +541,7 @@ bool kinetis_mdm_probe(adiv5_access_port_s *ap)
 		return false;
 	}
 
-	target *t = target_new();
+	target_s *t = target_new();
 	if (!t) {
 		return false;
 	}
@@ -560,7 +560,7 @@ bool kinetis_mdm_probe(adiv5_access_port_s *ap)
 
 /* This is needed as a separate command, as there's no way to  *
  * tell a KE04 from other kinetis in kinetis_mdm_probe()       */
-static bool kinetis_mdm_cmd_ke04_mode(target *t, int argc, const char **argv)
+static bool kinetis_mdm_cmd_ke04_mode(target_s *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
@@ -570,7 +570,7 @@ static bool kinetis_mdm_cmd_ke04_mode(target *t, int argc, const char **argv)
 	return true;
 }
 
-static bool kinetis_mdm_mass_erase(target *t)
+static bool kinetis_mdm_mass_erase(target_s *t)
 {
 	adiv5_access_port_s *ap = t->priv;
 

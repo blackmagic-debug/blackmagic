@@ -66,7 +66,7 @@ static bool ch32f1_flash_write(target_flash_s *f, target_addr_t dest, const void
 #define FLASH_BEGIN_ADDRESS_CH32 0x8000000
 
 /* "fast" Flash driver for CH32F10x chips */
-static void ch32f1_add_flash(target *t, uint32_t addr, size_t length, size_t erasesize)
+static void ch32f1_add_flash(target_s *t, uint32_t addr, size_t length, size_t erasesize)
 {
 	target_flash_s *f = calloc(1, sizeof(*f));
 	if (!f) { /* calloc failed: heap exhaustion */
@@ -126,7 +126,7 @@ static void ch32f1_add_flash(target *t, uint32_t addr, size_t length, size_t era
 	} while (0)
 
 /* Attempt ynlock ch32f103 in fast mode */
-static bool ch32f1_flash_unlock(target *t)
+static bool ch32f1_flash_unlock(target_s *t)
 {
 	DEBUG_INFO("CH32: flash unlock \n");
 
@@ -144,7 +144,7 @@ static bool ch32f1_flash_unlock(target *t)
 /*
  * lock ch32f103 in fast mode
  */
-static bool ch32f1_flash_lock(target *t)
+static bool ch32f1_flash_lock(target_s *t)
 {
 	DEBUG_INFO("CH32: flash lock \n");
 	SET_CR(FLASH_CR_LOCK);
@@ -159,7 +159,7 @@ static bool ch32f1_flash_lock(target *t)
 /*
  *check fast_unlock is there, if so it is a CH32fx
  */
-static bool ch32f1_has_fast_unlock(target *t)
+static bool ch32f1_has_fast_unlock(target_s *t)
 {
 	DEBUG_INFO("CH32: has fast unlock \n");
 	// reset fast unlock
@@ -182,7 +182,7 @@ static bool ch32f1_has_fast_unlock(target *t)
  * Try to identify the ch32f1 chip family
  * (Actually grab all Cortex-M3 with designer == ARM not caught earlier...)
  */
-bool ch32f1_probe(target *t)
+bool ch32f1_probe(target_s *t)
 {
 	if ((t->cpuid & CPUID_PARTNO_MASK) != CORTEX_M3)
 		return false;
@@ -219,7 +219,7 @@ bool ch32f1_probe(target *t)
 bool ch32f1_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
 	volatile uint32_t sr, magic;
-	target *t = f->t;
+	target_s *t = f->t;
 	DEBUG_INFO("CH32: flash erase \n");
 
 	if (!ch32f1_flash_unlock(t)) {
@@ -257,7 +257,7 @@ bool ch32f1_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
  * We do 32 to have a bit of headroom, then we check we read ffff (erased flash)
  * NB: Just reading fff is not enough as it could be a transient previous operation value
  */
-static bool ch32f1_wait_flash_ready(target *t, uint32_t addr)
+static bool ch32f1_wait_flash_ready(target_s *t, uint32_t addr)
 {
 	uint32_t ff = 0;
 	for (size_t i = 0; i < 32; i++)
@@ -270,7 +270,7 @@ static bool ch32f1_wait_flash_ready(target *t, uint32_t addr)
 }
 
 /* Fast flash for ch32. Load 128 bytes chunk and then write them */
-static int ch32f1_upload(target *t, uint32_t dest, const void *src, uint32_t offset)
+static int ch32f1_upload(target_s *t, uint32_t dest, const void *src, uint32_t offset)
 {
 	volatile uint32_t sr, magic;
 	const uint32_t *ss = (const uint32_t *)(src + offset);
@@ -290,7 +290,7 @@ static int ch32f1_upload(target *t, uint32_t dest, const void *src, uint32_t off
 }
 
 /* Clear the write buffer */
-static int ch32f1_buffer_clear(target *t)
+static int ch32f1_buffer_clear(target_s *t)
 {
 	volatile uint32_t sr;
 	SET_CR(FLASH_CR_FTPG_CH32);      // Fast page program 4-
@@ -306,7 +306,7 @@ static int ch32f1_buffer_clear(target *t)
 static bool ch32f1_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
 	volatile uint32_t sr;
-	target *t = f->t;
+	target_s *t = f->t;
 	size_t length = len;
 #ifdef CH32_VERIFY
 	target_addr_t org_dest = dest;

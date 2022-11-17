@@ -39,8 +39,8 @@
 #include "cortexm.h"
 #include "stm32_common.h"
 
-static bool stm32f4_cmd_option(target *t, int argc, const char **argv);
-static bool stm32f4_cmd_psize(target *t, int argc, const char **argv);
+static bool stm32f4_cmd_option(target_s *t, int argc, const char **argv);
+static bool stm32f4_cmd_psize(target_s *t, int argc, const char **argv);
 
 const struct command_s stm32f4_cmd_list[] = {
 	{"option", stm32f4_cmd_option, "Manipulate option bytes"},
@@ -48,11 +48,11 @@ const struct command_s stm32f4_cmd_list[] = {
 	{NULL, NULL, NULL},
 };
 
-static bool stm32f4_attach(target *t);
-static void stm32f4_detach(target *t);
+static bool stm32f4_attach(target_s *t);
+static void stm32f4_detach(target_s *t);
 static bool stm32f4_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 static bool stm32f4_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
-static bool stm32f4_mass_erase(target *t);
+static bool stm32f4_mass_erase(target_s *t);
 
 /* Flash Program and Erase Controller Register Map */
 #define FPEC_BASE     0x40023C00U
@@ -138,7 +138,7 @@ typedef struct stm32f4_priv {
 #define ID_STM32F410  0x458U
 #define ID_STM32F413  0x463U
 
-static void stm32f4_add_flash(target *const t, const uint32_t addr, const size_t length, const size_t blocksize,
+static void stm32f4_add_flash(target_s *const t, const uint32_t addr, const size_t length, const size_t blocksize,
 	const uint8_t base_sector, const uint8_t split)
 {
 	if (length == 0)
@@ -198,7 +198,7 @@ static char *stm32f4_get_chip_name(const uint32_t device_id)
 	}
 }
 
-static uint16_t stm32f4_read_idcode(target *const t)
+static uint16_t stm32f4_read_idcode(target_s *const t)
 {
 	const uint16_t idcode = target_mem_read32(t, DBGMCU_IDCODE) & 0xfffU;
 	/*
@@ -211,7 +211,7 @@ static uint16_t stm32f4_read_idcode(target *const t)
 	return idcode;
 }
 
-bool stm32f4_probe(target *t)
+bool stm32f4_probe(target_s *t)
 {
 	const uint16_t device_id = stm32f4_read_idcode(t);
 	switch (device_id) {
@@ -266,7 +266,7 @@ static uint32_t stm32f4_remaining_bank_length(const uint32_t bank_length, const 
 	return 0;
 }
 
-static bool stm32f4_attach(target *t)
+static bool stm32f4_attach(target_s *t)
 {
 	/* First try and figure out the Flash size (if we don't know the part ID, warn and return false) */
 	uint16_t max_flashsize = 0;
@@ -406,7 +406,7 @@ static bool stm32f4_attach(target *t)
 	return true;
 }
 
-static void stm32f4_detach(target *t)
+static void stm32f4_detach(target_s *t)
 {
 	stm32f4_priv_s *ps = t->target_storage;
 	/*reverse all changes to DBGMCU_CR*/
@@ -414,7 +414,7 @@ static void stm32f4_detach(target *t)
 	cortexm_detach(t);
 }
 
-static void stm32f4_flash_unlock(target *t)
+static void stm32f4_flash_unlock(target_s *t)
 {
 	if (target_mem_read32(t, FLASH_CR) & FLASH_CR_LOCK) {
 		/* Enable FPEC controller access */
@@ -423,7 +423,7 @@ static void stm32f4_flash_unlock(target *t)
 	}
 }
 
-static bool stm32f4_flash_busy_wait(target *const t, platform_timeout_s *const timeout)
+static bool stm32f4_flash_busy_wait(target_s *const t, platform_timeout_s *const timeout)
 {
 	/* Read FLASH_SR to poll for BSY bit */
 	uint32_t status = FLASH_SR_BSY;
@@ -441,7 +441,7 @@ static bool stm32f4_flash_busy_wait(target *const t, platform_timeout_s *const t
 
 static bool stm32f4_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
-	target *t = f->t;
+	target_s *t = f->t;
 	stm32f4_flash_s *sf = (stm32f4_flash_s *)f;
 	stm32f4_flash_unlock(t);
 
@@ -483,7 +483,7 @@ static bool stm32f4_flash_write(target_flash_s *f, target_addr_t dest, const voi
 	/* Translate ITCM addresses to AXIM */
 	if (dest >= ITCM_BASE && dest < AXIM_BASE)
 		dest += AXIM_BASE - ITCM_BASE;
-	target *t = f->t;
+	target_s *t = f->t;
 
 	enum align psize = ((stm32f4_flash_s *)f)->psize;
 	target_mem_write32(t, FLASH_CR, (psize * FLASH_CR_PSIZE16) | FLASH_CR_PG);
@@ -493,7 +493,7 @@ static bool stm32f4_flash_write(target_flash_s *f, target_addr_t dest, const voi
 	return stm32f4_flash_busy_wait(t, NULL);
 }
 
-static bool stm32f4_mass_erase(target *t)
+static bool stm32f4_mass_erase(target_s *t)
 {
 	/* XXX: Is it correct to grab the most recently added Flash region here? What is this really trying to do? */
 	stm32f4_flash_s *sf = (stm32f4_flash_s *)t->flash;
@@ -532,7 +532,7 @@ static bool stm32f4_mass_erase(target *t)
  * * Documentation for F412 with OPTCR default = 0ffffffed seems wrong!
  * * Documentation for F413 with OPTCR default = 0ffffffed seems wrong!
  */
-static bool optcr_mask(target *const t, uint32_t *const val)
+static bool optcr_mask(target_s *const t, uint32_t *const val)
 {
 	switch (t->part_id) {
 	case ID_STM32F20X:
@@ -584,7 +584,7 @@ static size_t stm32f4_opt_bytes_for(const uint16_t part_id)
 	return 1;
 }
 
-static bool stm32f4_option_write(target *t, uint32_t *const val, size_t count)
+static bool stm32f4_option_write(target_s *t, uint32_t *const val, size_t count)
 {
 	val[0] &= ~(FLASH_OPTCR_OPTSTRT | FLASH_OPTCR_OPTLOCK);
 	uint32_t optcr = target_mem_read32(t, FLASH_OPTCR);
@@ -630,7 +630,7 @@ static bool stm32f4_option_write(target *t, uint32_t *const val, size_t count)
 	return true;
 }
 
-static bool stm32f4_option_write_default(target *t)
+static bool stm32f4_option_write_default(target_s *t)
 {
 	uint32_t val[3] = {};
 	switch (t->part_id) {
@@ -672,7 +672,7 @@ static bool partial_match(const char *const str, const char *const what, const s
 	return strncasecmp(str, what, str_len) == 0;
 }
 
-static bool stm32f4_cmd_option(target *t, int argc, const char **argv)
+static bool stm32f4_cmd_option(target_s *t, int argc, const char **argv)
 {
 	const size_t opt_bytes = stm32f4_opt_bytes_for(t->part_id);
 	if (argc == 2 && partial_match(argv[1], option_cmd_erase, OPTION_CMD_LEN(option_cmd_erase)))
@@ -713,7 +713,7 @@ static bool stm32f4_cmd_option(target *t, int argc, const char **argv)
 	return true;
 }
 
-static bool stm32f4_cmd_psize(target *t, int argc, const char **argv)
+static bool stm32f4_cmd_psize(target_s *t, int argc, const char **argv)
 {
 	if (argc == 1) {
 		enum align psize = ALIGN_WORD;

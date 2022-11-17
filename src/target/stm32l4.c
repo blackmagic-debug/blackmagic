@@ -44,15 +44,15 @@
 #include "cortexm.h"
 #include "gdb_packet.h"
 
-static bool stm32l4_cmd_erase_bank1(target *t, int argc, const char **argv);
-static bool stm32l4_cmd_erase_bank2(target *t, int argc, const char **argv);
-static bool stm32l4_cmd_option(target *t, int argc, const char **argv);
+static bool stm32l4_cmd_erase_bank1(target_s *t, int argc, const char **argv);
+static bool stm32l4_cmd_erase_bank2(target_s *t, int argc, const char **argv);
+static bool stm32l4_cmd_option(target_s *t, int argc, const char **argv);
 
-static bool stm32l4_attach(target *t);
-static void stm32l4_detach(target *t);
+static bool stm32l4_attach(target_s *t);
+static void stm32l4_detach(target_s *t);
 static bool stm32l4_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 static bool stm32l4_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
-static bool stm32l4_mass_erase(target *t);
+static bool stm32l4_mass_erase(target_s *t);
 
 const struct command_s stm32l4_cmd_list[] = {
 	{"erase_bank1", stm32l4_cmd_erase_bank1, "Erase entire bank1 flash memory"},
@@ -415,21 +415,21 @@ static const stm32l4_device_info_s *stm32l4_get_device_info(const uint16_t devic
 	return device_info;
 }
 
-static inline uint32_t stm32l4_flash_read16(target *const t, const stm32l4_flash_reg_e reg)
+static inline uint32_t stm32l4_flash_read16(target_s *const t, const stm32l4_flash_reg_e reg)
 {
 	stm32l4_priv_s *ps = (stm32l4_priv_s *)t->target_storage;
 	const stm32l4_device_info_s *const device = ps->device;
 	return target_mem_read16(t, device->flash_regs_map[reg]);
 }
 
-static inline uint32_t stm32l4_flash_read32(target *const t, const stm32l4_flash_reg_e reg)
+static inline uint32_t stm32l4_flash_read32(target_s *const t, const stm32l4_flash_reg_e reg)
 {
 	stm32l4_priv_s *ps = (stm32l4_priv_s *)t->target_storage;
 	const stm32l4_device_info_s *const device = ps->device;
 	return target_mem_read32(t, device->flash_regs_map[reg]);
 }
 
-static inline void stm32l4_flash_write32(target *const t, const stm32l4_flash_reg_e reg, const uint32_t value)
+static inline void stm32l4_flash_write32(target_s *const t, const stm32l4_flash_reg_e reg, const uint32_t value)
 {
 	stm32l4_priv_s *ps = (stm32l4_priv_s *)t->target_storage;
 	const stm32l4_device_info_s *const device = ps->device;
@@ -437,7 +437,7 @@ static inline void stm32l4_flash_write32(target *const t, const stm32l4_flash_re
 }
 
 static void stm32l4_add_flash(
-	target *const t, const uint32_t addr, const size_t length, const size_t blocksize, const uint32_t bank1_start)
+	target_s *const t, const uint32_t addr, const size_t length, const size_t blocksize, const uint32_t bank1_start)
 {
 	stm32l4_flash_s *sf = calloc(1, sizeof(*sf));
 	if (!sf) { /* calloc failed: heap exhaustion */
@@ -458,14 +458,14 @@ static void stm32l4_add_flash(
 }
 
 /* For flash programming, L5 needs to be in VOS 0 or 1 while reset set 2 (or even 3?) */
-static void stm32l5_flash_enable(target *t)
+static void stm32l5_flash_enable(target_s *t)
 {
 	target_mem_write32(t, STM32L5_RCC_APB1ENR1, STM32L5_RCC_APB1ENR1_PWREN);
 	const uint32_t pwr_ctrl1 = target_mem_read32(t, STM32L5_PWR_CR1) & ~STM32L5_PWR_CR1_VOS;
 	target_mem_write32(t, STM32L5_PWR_CR1, pwr_ctrl1);
 }
 
-static uint32_t stm32l4_idcode_reg_address(target *const t)
+static uint32_t stm32l4_idcode_reg_address(target_s *const t)
 {
 	const stm32l4_priv_s *const priv = (const stm32l4_priv_s *)t->target_storage;
 	const stm32l4_device_info_s *const device = priv->device;
@@ -476,7 +476,7 @@ static uint32_t stm32l4_idcode_reg_address(target *const t)
 	return STM32L4_DBGMCU_IDCODE_PHYS;
 }
 
-static uint32_t stm32l4_main_sram_length(const target *const t)
+static uint32_t stm32l4_main_sram_length(const target_s *const t)
 {
 	const stm32l4_priv_s *const priv = (const stm32l4_priv_s *)t->target_storage;
 	const stm32l4_device_info_s *const device = priv->device;
@@ -486,7 +486,7 @@ static uint32_t stm32l4_main_sram_length(const target *const t)
 	return (device->sram1 + device->sram2 + device->sram3) * 1024U;
 }
 
-bool stm32l4_probe(target *const t)
+bool stm32l4_probe(target_s *const t)
 {
 	adiv5_access_port_s *ap = cortexm_ap(t);
 	uint32_t device_id;
@@ -544,7 +544,7 @@ bool stm32l4_probe(target *const t)
 	return true;
 }
 
-static bool stm32l4_attach(target *const t)
+static bool stm32l4_attach(target_s *const t)
 {
 	if (!cortexm_attach(t))
 		return false;
@@ -632,7 +632,7 @@ static bool stm32l4_attach(target *const t)
 	return true;
 }
 
-static void stm32l4_detach(target *const t)
+static void stm32l4_detach(target_s *const t)
 {
 	const stm32l4_priv_s *const ps = (stm32l4_priv_s *)t->target_storage;
 
@@ -641,7 +641,7 @@ static void stm32l4_detach(target *const t)
 	cortexm_detach(t);
 }
 
-static void stm32l4_flash_unlock(target *const t)
+static void stm32l4_flash_unlock(target_s *const t)
 {
 	if ((stm32l4_flash_read32(t, FLASH_CR)) & FLASH_CR_LOCK) {
 		/* Enable FPEC controller access */
@@ -650,7 +650,7 @@ static void stm32l4_flash_unlock(target *const t)
 	}
 }
 
-static bool stm32l4_flash_busy_wait(target *const t, platform_timeout_s *timeout)
+static bool stm32l4_flash_busy_wait(target_s *const t, platform_timeout_s *timeout)
 {
 	/* Read FLASH_SR to poll for BSY bit */
 	uint32_t status = FLASH_SR_BSY;
@@ -668,7 +668,7 @@ static bool stm32l4_flash_busy_wait(target *const t, platform_timeout_s *timeout
 
 static bool stm32l4_flash_erase(target_flash_s *const f, const target_addr_t addr, const size_t len)
 {
-	target *t = f->t;
+	target_s *t = f->t;
 	const stm32l4_flash_s *const sf = (stm32l4_flash_s *)f;
 	/* Unlock the Flash and wait for the operation to complete, reporting any errors */
 	stm32l4_flash_unlock(t);
@@ -697,7 +697,7 @@ static bool stm32l4_flash_erase(target_flash_s *const f, const target_addr_t add
 
 static bool stm32l4_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
-	target *t = f->t;
+	target_s *t = f->t;
 	stm32l4_flash_write32(t, FLASH_CR, FLASH_CR_PG);
 	target_mem_write(t, dest, src, len);
 
@@ -705,7 +705,7 @@ static bool stm32l4_flash_write(target_flash_s *f, target_addr_t dest, const voi
 	return stm32l4_flash_busy_wait(t, NULL);
 }
 
-static bool stm32l4_cmd_erase(target *const t, const uint32_t action)
+static bool stm32l4_cmd_erase(target_s *const t, const uint32_t action)
 {
 	stm32l4_flash_unlock(t);
 	/* Erase time is 25 ms. Timeout logic shouldn't get fired.*/
@@ -719,12 +719,12 @@ static bool stm32l4_cmd_erase(target *const t, const uint32_t action)
 	return stm32l4_flash_busy_wait(t, &timeout);
 }
 
-static bool stm32l4_mass_erase(target *const t)
+static bool stm32l4_mass_erase(target_s *const t)
 {
 	return stm32l4_cmd_erase(t, FLASH_CR_MER1 | FLASH_CR_MER2);
 }
 
-static bool stm32l4_cmd_erase_bank1(target *const t, const int argc, const char **const argv)
+static bool stm32l4_cmd_erase_bank1(target_s *const t, const int argc, const char **const argv)
 {
 	(void)argc;
 	(void)argv;
@@ -734,7 +734,7 @@ static bool stm32l4_cmd_erase_bank1(target *const t, const int argc, const char 
 	return result;
 }
 
-static bool stm32l4_cmd_erase_bank2(target *const t, const int argc, const char **const argv)
+static bool stm32l4_cmd_erase_bank2(target_s *const t, const int argc, const char **const argv)
 {
 	(void)argc;
 	(void)argv;
@@ -744,7 +744,7 @@ static bool stm32l4_cmd_erase_bank2(target *const t, const int argc, const char 
 	return result;
 }
 
-static bool stm32l4_option_write(target *const t, const uint32_t *const values, const size_t len,
+static bool stm32l4_option_write(target_s *const t, const uint32_t *const values, const size_t len,
 	const uint32_t fpec_base, const uint8_t *const opt_reg_offsets)
 {
 	/* Unlock the option registers Flash */
@@ -775,7 +775,7 @@ static bool stm32l4_option_write(target *const t, const uint32_t *const values, 
 	return false;
 }
 
-static uint32_t stm32l4_fpec_base_addr(const target *const t)
+static uint32_t stm32l4_fpec_base_addr(const target_s *const t)
 {
 	if (t->part_id == ID_STM32WLXX)
 		return STM32WL_FPEC_BASE;
@@ -836,7 +836,7 @@ static stm32l4_option_bytes_info_s stm32l4_get_opt_bytes_info(const uint16_t par
  * 0x1ffff828 0          0          0          0          0x000000ff 0xff00ff00
  */
 
-static bool stm32l4_cmd_option(target *t, int argc, const char **argv)
+static bool stm32l4_cmd_option(target_s *t, int argc, const char **argv)
 {
 	if (t->part_id == ID_STM32L55) {
 		tc_printf(t, "STM32L5 options not implemented!\n");

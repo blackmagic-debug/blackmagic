@@ -40,7 +40,7 @@
 #include "target_internal.h"
 #include "cortexm.h"
 
-static bool stm32f1_cmd_option(target *t, int argc, const char **argv);
+static bool stm32f1_cmd_option(target_s *t, int argc, const char **argv);
 
 const struct command_s stm32f1_cmd_list[] = {
 	{"option", stm32f1_cmd_option, "Manipulate option bytes"},
@@ -49,7 +49,7 @@ const struct command_s stm32f1_cmd_list[] = {
 
 static bool stm32f1_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 static bool stm32f1_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
-static bool stm32f1_mass_erase(target *t);
+static bool stm32f1_mass_erase(target_s *t);
 
 /* Flash Program ad Erase Controller Register Map */
 #define FPEC_BASE     0x40022000U
@@ -101,7 +101,7 @@ static bool stm32f1_mass_erase(target *t);
 #define AT32F41_SERIES             0x70030000U
 #define AT32F40_SERIES             0x70050000U
 
-static void stm32f1_add_flash(target *t, uint32_t addr, size_t length, size_t erasesize)
+static void stm32f1_add_flash(target_s *t, uint32_t addr, size_t length, size_t erasesize)
 {
 	target_flash_s *f = calloc(1, sizeof(*f));
 	if (!f) { /* calloc failed: heap exhaustion */
@@ -119,7 +119,7 @@ static void stm32f1_add_flash(target *t, uint32_t addr, size_t length, size_t er
 	target_add_flash(t, f);
 }
 
-static uint16_t stm32f1_read_idcode(target *const t)
+static uint16_t stm32f1_read_idcode(target_s *const t)
 {
 	if ((t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M23)
 		return target_mem_read32(t, DBGMCU_IDCODE_F0) & 0xfffU;
@@ -127,7 +127,7 @@ static uint16_t stm32f1_read_idcode(target *const t)
 }
 
 /* Identify GD32F1 and GD32F3 chips */
-bool gd32f1_probe(target *t)
+bool gd32f1_probe(target_s *t)
 {
 	const uint16_t device_id = stm32f1_read_idcode(t);
 	switch (device_id) {
@@ -160,7 +160,7 @@ bool gd32f1_probe(target *t)
 	return true;
 }
 
-static bool at32f40_detect(target *t, const uint16_t part_id)
+static bool at32f40_detect(target_s *t, const uint16_t part_id)
 {
 	// Current driver supports only *default* memory layout (256 KB Flash / 96 KB SRAM)
 	// XXX: Support for external Flash for 512KB and 1024KB parts requires specific flash code (not implemented)
@@ -199,7 +199,7 @@ static bool at32f40_detect(target *t, const uint16_t part_id)
 	return true;
 }
 
-static bool at32f41_detect(target *t, const uint16_t part_id)
+static bool at32f41_detect(target_s *t, const uint16_t part_id)
 {
 	switch (part_id) {
 	case 0x0240: // LQFP64_10x10
@@ -236,7 +236,7 @@ static bool at32f41_detect(target *t, const uint16_t part_id)
 }
 
 /* Identify AT32F4x devices (Cortex-M4) */
-bool at32fxx_probe(target *t)
+bool at32fxx_probe(target_s *t)
 {
 	// Artery clones use Cortex M4 cores
 	if ((t->cpuid & CPUID_PARTNO_MASK) != CORTEX_M4)
@@ -255,7 +255,7 @@ bool at32fxx_probe(target *t)
 }
 
 /* Identify real STM32F0/F1/F3 devices */
-bool stm32f1_probe(target *t)
+bool stm32f1_probe(target_s *t)
 {
 	const uint16_t device_id = stm32f1_read_idcode(t);
 
@@ -353,7 +353,7 @@ bool stm32f1_probe(target *t)
 	return true;
 }
 
-static bool stm32f1_flash_unlock(target *t, uint32_t bank_offset)
+static bool stm32f1_flash_unlock(target_s *t, uint32_t bank_offset)
 {
 	target_mem_write32(t, FLASH_KEYR + bank_offset, KEY1);
 	target_mem_write32(t, FLASH_KEYR + bank_offset, KEY2);
@@ -363,13 +363,13 @@ static bool stm32f1_flash_unlock(target *t, uint32_t bank_offset)
 	return !(cr & FLASH_CR_LOCK);
 }
 
-static inline void stm32f1_flash_clear_eop(target *const t, const uint32_t bank_offset)
+static inline void stm32f1_flash_clear_eop(target_s *const t, const uint32_t bank_offset)
 {
 	const uint32_t status = target_mem_read32(t, FLASH_SR + bank_offset);
 	target_mem_write32(t, FLASH_SR + bank_offset, status | SR_EOP); /* EOP is W1C */
 }
 
-static bool stm32f1_flash_busy_wait(target *const t, const uint32_t bank_offset, platform_timeout_s *const timeout)
+static bool stm32f1_flash_busy_wait(target_s *const t, const uint32_t bank_offset, platform_timeout_s *const timeout)
 {
 	/* Read FLASH_SR to poll for BSY bit */
 	uint32_t status = FLASH_SR_BSY;
@@ -403,7 +403,7 @@ static uint32_t stm32f1_bank_offset_for(target_addr_t addr)
 
 static bool stm32f1_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
-	target *t = f->t;
+	target_s *t = f->t;
 	target_addr_t end = addr + len - 1;
 
 	/* Unlocked an appropriate flash bank */
@@ -440,7 +440,7 @@ static size_t stm32f1_bank1_length(target_addr_t addr, size_t len)
 
 static bool stm32f1_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
-	target *t = f->t;
+	target_s *t = f->t;
 	const size_t offset = stm32f1_bank1_length(dest, len);
 
 	/* Start by writing any bank 1 data */
@@ -472,7 +472,7 @@ static bool stm32f1_flash_write(target_flash_s *f, target_addr_t dest, const voi
 	return true;
 }
 
-static bool stm32f1_mass_erase_bank(target *const t, const uint32_t bank_offset, platform_timeout_s *const timeout)
+static bool stm32f1_mass_erase_bank(target_s *const t, const uint32_t bank_offset, platform_timeout_s *const timeout)
 {
 	/* Unlock the bank */
 	if (!stm32f1_flash_unlock(t, bank_offset))
@@ -487,7 +487,7 @@ static bool stm32f1_mass_erase_bank(target *const t, const uint32_t bank_offset,
 	return stm32f1_flash_busy_wait(t, bank_offset, timeout);
 }
 
-static bool stm32f1_mass_erase(target *t)
+static bool stm32f1_mass_erase(target_s *t)
 {
 	if (!stm32f1_flash_unlock(t, 0))
 		return false;
@@ -503,7 +503,7 @@ static bool stm32f1_mass_erase(target *t)
 	return true;
 }
 
-static bool stm32f1_option_erase(target *t)
+static bool stm32f1_option_erase(target_s *t)
 {
 	stm32f1_flash_clear_eop(t, FLASH_BANK1_OFFSET);
 
@@ -516,7 +516,7 @@ static bool stm32f1_option_erase(target *t)
 }
 
 static bool stm32f1_option_write_erased(
-	target *const t, const uint32_t addr, const uint16_t value, const bool write16_broken)
+	target_s *const t, const uint32_t addr, const uint16_t value, const bool write16_broken)
 {
 	if (value == 0xffff)
 		return true;
@@ -535,7 +535,7 @@ static bool stm32f1_option_write_erased(
 	return stm32f1_flash_busy_wait(t, 0, NULL);
 }
 
-static bool stm32f1_option_write(target *const t, const uint32_t addr, const uint16_t value)
+static bool stm32f1_option_write(target_s *const t, const uint32_t addr, const uint16_t value)
 {
 	uint32_t index = (addr - FLASH_OBP_RDP) / 2U;
 	/* If index would be negative, the high most bit is set, so we get a giant positive number. */
@@ -571,7 +571,7 @@ static bool stm32f1_option_write(target *const t, const uint32_t addr, const uin
 	return true;
 }
 
-static bool stm32f1_cmd_option(target *t, int argc, const char **argv)
+static bool stm32f1_cmd_option(target_s *t, int argc, const char **argv)
 {
 	uint32_t flash_obp_rdp_key = FLASH_OBP_RDP_KEY;
 	switch (t->part_id) {
