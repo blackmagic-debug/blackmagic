@@ -48,16 +48,14 @@
 
 extern uint32_t delay_cnt;
 
-enum BMP_DEBUG {
-	BMP_DEBUG_NONE = 0,
-	BMP_DEBUG_INFO = 1,
-	BMP_DEBUG_GDB = 2,
-	BMP_DEBUG_TARGET = 4,
-	BMP_DEBUG_PROBE = 8,
-	BMP_DEBUG_WIRE = 0x10,
-	BMP_DEBUG_MAX = 0x20,
-	BMP_DEBUG_STDOUT = 0x8000,
-};
+#define BMP_DEBUG_NONE   0U
+#define BMP_DEBUG_INFO   (1U << 0U)
+#define BMP_DEBUG_GDB    (1U << 1U)
+#define BMP_DEBUG_TARGET (1U << 2U)
+#define BMP_DEBUG_PROBE  (1U << 3U)
+#define BMP_DEBUG_WIRE   (1U << 4U)
+#define BMP_DEBUG_MAX    (1U << 5U)
+#define BMP_DEBUG_STDOUT (1U << 15U)
 
 #define FREQ_FIXED 0xffffffff
 
