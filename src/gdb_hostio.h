@@ -30,7 +30,7 @@ int hostio_open(target_controller_s *, target_addr_t path, size_t path_len, targ
 int hostio_close(target_controller_s *, int fd);
 int hostio_read(target_controller_s *, int fd, target_addr_t buf, unsigned int count);
 int hostio_write(target_controller_s *, int fd, target_addr_t buf, unsigned int count);
-long hostio_lseek(target_controller_s *, int fd, long offset, enum target_seek_flag flag);
+long hostio_lseek(target_controller_s *, int fd, long offset, target_seek_flag_e flag);
 int hostio_rename(target_controller_s *, target_addr_t oldpath, size_t old_len, target_addr_t newpath, size_t new_len);
 int hostio_unlink(target_controller_s *, target_addr_t path, size_t path_len);
 int hostio_stat(target_controller_s *, target_addr_t path, size_t path_len, target_addr_t buf);

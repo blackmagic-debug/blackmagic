@@ -142,11 +142,11 @@ typedef enum target_open_flags {
 	TARGET_O_TRUNC = 0x400,
 } target_open_flags_e;
 
-enum target_seek_flag {
+typedef enum target_seek_flag {
 	TARGET_SEEK_SET = 0,
 	TARGET_SEEK_CUR = 1,
 	TARGET_SEEK_END = 2,
-};
+} target_seek_flag_e;
 
 struct target_controller {
 	void (*destroy_callback)(target_controller_s *, target_s *t);
@@ -157,7 +157,7 @@ struct target_controller {
 	int (*close)(target_controller_s *, int fd);
 	int (*read)(target_controller_s *, int fd, target_addr_t buf, unsigned int count);
 	int (*write)(target_controller_s *, int fd, target_addr_t buf, unsigned int count);
-	long (*lseek)(target_controller_s *, int fd, long offset, enum target_seek_flag flag);
+	long (*lseek)(target_controller_s *, int fd, long offset, target_seek_flag_e flag);
 	int (*rename)(target_controller_s *, target_addr_t oldpath, size_t old_len, target_addr_t newpath, size_t new_len);
 	int (*unlink)(target_controller_s *, target_addr_t path, size_t path_len);
 	int (*stat)(target_controller_s *, target_addr_t path, size_t path_len, target_addr_t buf);

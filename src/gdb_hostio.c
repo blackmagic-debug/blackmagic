@@ -71,7 +71,7 @@ int hostio_write(target_controller_s *tc, int fd, target_addr_t buf, unsigned in
 	return gdb_main_loop(tc, true);
 }
 
-long hostio_lseek(target_controller_s *tc, int fd, long offset, enum target_seek_flag flag)
+long hostio_lseek(target_controller_s *tc, int fd, long offset, target_seek_flag_e flag)
 {
 	gdb_putpacket_f("Flseek,%08X,%08X,%08X", fd, offset, flag);
 	return gdb_main_loop(tc, true);

@@ -195,7 +195,7 @@ int tc_open(target_s *, target_addr_t path, size_t plen, target_open_flags_e fla
 int tc_close(target_s *t, int fd);
 int tc_read(target_s *t, int fd, target_addr_t buf, unsigned int count);
 int tc_write(target_s *t, int fd, target_addr_t buf, unsigned int count);
-long tc_lseek(target_s *t, int fd, long offset, enum target_seek_flag flag);
+long tc_lseek(target_s *t, int fd, long offset, target_seek_flag_e flag);
 int tc_rename(target_s *t, target_addr_t oldpath, size_t oldlen, target_addr_t newpath, size_t newlen);
 int tc_unlink(target_s *t, target_addr_t path, size_t plen);
 int tc_stat(target_s *t, target_addr_t path, size_t plen, target_addr_t buf);
