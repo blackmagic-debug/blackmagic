@@ -133,7 +133,7 @@ static bool msp432_cmd_erase_main(target_s *t, int argc, const char **argv);
 static bool msp432_cmd_sector_erase(target_s *t, int argc, const char **argv);
 
 /* Optional commands structure*/
-const struct command_s msp432_cmd_list[] = {
+const command_s msp432_cmd_list[] = {
 	{"erase", msp432_cmd_erase_main, "Erase main flash"},
 	{"sector_erase", msp432_cmd_sector_erase, "Erase sector containing given address"},
 	{NULL, NULL, NULL},

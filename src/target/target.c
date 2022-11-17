@@ -32,7 +32,7 @@ target_s *target_list = NULL;
 static bool target_cmd_mass_erase(target_s *t, int argc, const char **argv);
 static bool target_cmd_range_erase(target_s *t, int argc, const char **argv);
 
-const struct command_s target_cmd_list[] = {
+const command_s target_cmd_list[] = {
 	{"erase_mass", target_cmd_mass_erase, "Erase whole device Flash"},
 	{"erase_range", target_cmd_range_erase, "Erase a range of memory on a device"},
 	{NULL, NULL, NULL},
@@ -145,7 +145,7 @@ void target_list_free(void)
 	}
 }
 
-void target_add_commands(target_s *t, const struct command_s *cmds, const char *name)
+void target_add_commands(target_s *t, const command_s *cmds, const char *name)
 {
 	struct target_command_s *tc = malloc(sizeof(*tc));
 	if (!tc) { /* malloc failed: heap exhaustion */
@@ -530,7 +530,7 @@ void target_command_help(target_s *t)
 {
 	for (struct target_command_s *tc = t->commands; tc; tc = tc->next) {
 		tc_printf(t, "%s specific commands:\n", tc->specific_name);
-		for (const struct command_s *c = tc->cmds; c->cmd; c++)
+		for (const command_s *c = tc->cmds; c->cmd; c++)
 			tc_printf(t, "\t%s -- %s\n", c->cmd, c->help);
 	}
 }
@@ -538,7 +538,7 @@ void target_command_help(target_s *t)
 int target_command(target_s *t, int argc, const char *argv[])
 {
 	for (struct target_command_s *tc = t->commands; tc; tc = tc->next) {
-		for (const struct command_s *c = tc->cmds; c->cmd; c++) {
+		for (const command_s *c = tc->cmds; c->cmd; c++) {
 			if (!strncmp(argv[0], c->cmd, strlen(argv[0])))
 				return c->handler(t, argc, argv) ? 0 : 1;
 		}

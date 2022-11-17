@@ -54,7 +54,7 @@
 
 static bool lpc11xx_read_uid(target_s *t, int argc, const char **argv);
 
-const struct command_s lpc11xx_cmd_list[] = {
+const command_s lpc11xx_cmd_list[] = {
 	{"readuid", lpc11xx_read_uid, "Read out the 16-byte UID."},
 	{NULL, NULL, NULL},
 };

@@ -41,14 +41,14 @@ static bool nrf51_cmd_read_deviceinfo(target_s *t, int argc, const char **argv);
 static bool nrf51_cmd_read_help(target_s *t, int argc, const char **argv);
 static bool nrf51_cmd_read(target_s *t, int argc, const char **argv);
 
-const struct command_s nrf51_cmd_list[] = {
+const command_s nrf51_cmd_list[] = {
 	{"erase_uicr", nrf51_cmd_erase_uicr, "Erase UICR registers"},
 	{"protect_flash", nrf51_cmd_protect_flash, "Enable flash read/write protection"},
 	{"read", nrf51_cmd_read, "Read device parameters"},
 	{NULL, NULL, NULL},
 };
 
-const struct command_s nrf51_read_cmd_list[] = {
+const command_s nrf51_read_cmd_list[] = {
 	{"help", nrf51_cmd_read_help, "Display help for read commands"},
 	{"hwid", nrf51_cmd_read_hwid, "Read hardware identification number"},
 	{"fwid", nrf51_cmd_read_fwid, "Read pre-loaded firmware ID"},
@@ -362,10 +362,9 @@ static bool nrf51_cmd_read_help(target_s *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
-	const struct command_s *c;
 
 	tc_printf(t, "Read commands:\n");
-	for (c = nrf51_read_cmd_list; c->cmd; c++)
+	for (const command_s *c = nrf51_read_cmd_list; c->cmd; c++)
 		tc_printf(t, "\t%s -- %s\n", c->cmd, c->help);
 
 	return true;
@@ -373,9 +372,8 @@ static bool nrf51_cmd_read_help(target_s *t, int argc, const char **argv)
 
 static bool nrf51_cmd_read(target_s *t, int argc, const char **argv)
 {
-	const struct command_s *c;
 	if (argc > 1) {
-		for (c = nrf51_read_cmd_list; c->cmd; c++) {
+		for (const command_s *c = nrf51_read_cmd_list; c->cmd; c++) {
 			/*
 			 * Accept a partial match as GDB does.
 			 * So 'mon ver' will match 'monitor version'

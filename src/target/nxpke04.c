@@ -124,7 +124,7 @@ static bool ke04_mass_erase(target_s *t);
 static bool kinetis_cmd_unsafe(target_s *t, int argc, const char **argv);
 static bool ke04_cmd_sector_erase(target_s *t, int argc, const char **argv);
 
-const struct command_s ke_cmd_list[] = {
+const command_s ke_cmd_list[] = {
 	{"unsafe", kinetis_cmd_unsafe, "Allow programming security byte (enable|disable)"},
 	{"sector_erase", ke04_cmd_sector_erase, "Erase sector containing given address"},
 	{NULL, NULL, NULL},

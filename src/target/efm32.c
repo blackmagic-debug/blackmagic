@@ -57,7 +57,7 @@ static bool efm32_cmd_serial(target_s *t, int argc, const char **argv);
 static bool efm32_cmd_efm_info(target_s *t, int argc, const char **argv);
 static bool efm32_cmd_bootloader(target_s *t, int argc, const char **argv);
 
-const struct command_s efm32_cmd_list[] = {
+const command_s efm32_cmd_list[] = {
 	{"serial", efm32_cmd_serial, "Prints unique number"},
 	{"efm_info", efm32_cmd_efm_info, "Prints information about the device"},
 	{"bootloader", efm32_cmd_bootloader, "Bootloader status in CLW0"},

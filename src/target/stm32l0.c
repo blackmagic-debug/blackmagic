@@ -155,7 +155,7 @@ static bool stm32lx_nvm_data_write(target_flash_s *f, target_addr_t dest, const 
 static bool stm32lx_cmd_option(target_s *t, int argc, const char **argv);
 static bool stm32lx_cmd_eeprom(target_s *t, int argc, const char **argv);
 
-static const struct command_s stm32lx_cmd_list[] = {
+static const command_s stm32lx_cmd_list[] = {
 	{"option", stm32lx_cmd_option, "Manipulate option bytes"},
 	{"eeprom", stm32lx_cmd_eeprom, "Manipulate EEPROM (NVM data) memory"},
 	{NULL, NULL, NULL},

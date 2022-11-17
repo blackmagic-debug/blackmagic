@@ -76,7 +76,7 @@ static bool cmd_rtt(target_s *t, int argc, const char **argv);
 static bool cmd_debug_bmp(target_s *t, int argc, const char **argv);
 #endif
 
-const command_t cmd_list[] = {
+const command_s cmd_list[] = {
 	{"version", cmd_version, "Display firmware version info"},
 	{"help", cmd_help, "Display help for monitor commands"},
 	{"jtag_scan", cmd_jtag_scan, "Scan JTAG chain for devices"},
@@ -136,7 +136,7 @@ int command_process(target_s *t, char *cmd)
 		argv[argc++] = part;
 
 	/* Look for match and call handler */
-	for (const command_t *cmd = cmd_list; cmd->cmd; ++cmd) {
+	for (const command_s *cmd = cmd_list; cmd->cmd; ++cmd) {
 		/* Accept a partial match as GDB does.
 		 * So 'mon ver' will match 'monitor version'
 		 */
@@ -178,7 +178,7 @@ bool cmd_help(target_s *t, int argc, const char **argv)
 
 	if (!t || t->tc->destroy_callback) {
 		gdb_out("General commands:\n");
-		for (const command_t *cmd = cmd_list; cmd->cmd; cmd++)
+		for (const command_s *cmd = cmd_list; cmd->cmd; cmd++)
 			gdb_outf("\t%s -- %s\n", cmd->cmd, cmd->help);
 		if (!t)
 			return true;

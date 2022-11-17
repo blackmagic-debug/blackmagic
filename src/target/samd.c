@@ -55,7 +55,7 @@ static bool samd_cmd_serial(target_s *t, int argc, const char **argv);
 static bool samd_cmd_mbist(target_s *t, int argc, const char **argv);
 static bool samd_cmd_ssb(target_s *t, int argc, const char **argv);
 
-const struct command_s samd_cmd_list[] = {
+const command_s samd_cmd_list[] = {
 	{"lock_flash", samd_cmd_lock_flash, "Locks flash against spurious commands"},
 	{"unlock_flash", samd_cmd_unlock_flash, "Unlocks flash"},
 	{"lock_bootprot", samd_cmd_lock_bootprot, "Lock the boot protections to maximum"},

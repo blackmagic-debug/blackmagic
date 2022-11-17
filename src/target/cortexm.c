@@ -74,7 +74,7 @@ static bool cortexm_vector_catch(target_s *t, int argc, const char **argv);
 static bool cortexm_redirect_stdout(target_s *t, int argc, const char **argv);
 #endif
 
-const struct command_s cortexm_cmd_list[] = {
+const command_s cortexm_cmd_list[] = {
 	{"vector_catch", cortexm_vector_catch, "Catch exception vectors"},
 #ifdef PLATFORM_HAS_USBUART
 	{"redirect_stdout", cortexm_redirect_stdout, "Redirect semihosting stdout to USB UART"},

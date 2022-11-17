@@ -32,7 +32,7 @@
 #include "target_internal.h"
 #include "cortexm.h"
 
-extern const struct command_s stm32f1_cmd_list[]; // Reuse stm32f1 stuff
+extern const command_s stm32f1_cmd_list[]; // Reuse stm32f1 stuff
 
 static bool ch32f1_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 static bool ch32f1_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);

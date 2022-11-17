@@ -36,7 +36,7 @@ static bool sam_gpnvm_get(target_s *t, uint32_t base, uint32_t *gpnvm);
 
 static bool sam_cmd_gpnvm(target_s *t, int argc, const char **argv);
 
-const struct command_s sam_cmd_list[] = {
+const command_s sam_cmd_list[] = {
 	{"gpnvm", sam_cmd_gpnvm, "Set/Get GPVNM bits"},
 	{NULL, NULL, NULL},
 };

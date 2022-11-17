@@ -169,7 +169,7 @@ static bool stm32g0_cmd_erase_bank(target_s *t, int argc, const char **argv);
 static bool stm32g0_cmd_option(target_s *t, int argc, const char **argv);
 static bool stm32g0_cmd_irreversible(target_s *t, int argc, const char **argv);
 
-const struct command_s stm32g0_cmd_list[] = {
+const command_s stm32g0_cmd_list[] = {
 	{"erase_bank 1|2", stm32g0_cmd_erase_bank, "Erase specified Flash bank"},
 	{"option", stm32g0_cmd_option, "Manipulate option bytes"},
 	{"irreversible", stm32g0_cmd_irreversible, "Allow irreversible operations: (enable|disable)"},

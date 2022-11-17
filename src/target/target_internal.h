@@ -63,15 +63,15 @@ struct target_flash {
 
 typedef bool (*cmd_handler)(target_s *t, int argc, const char **argv);
 
-typedef struct command_s {
+typedef struct command {
 	const char *cmd;
 	cmd_handler handler;
 	const char *help;
-} command_t;
+} command_s;
 
 struct target_command_s {
 	const char *specific_name;
-	const struct command_s *cmds;
+	const command_s *cmds;
 	struct target_command_s *next;
 };
 
@@ -168,7 +168,7 @@ void target_print_progress(platform_timeout_s *timeout);
 void target_ram_map_free(target_s *t);
 void target_flash_map_free(target_s *t);
 void target_mem_map_free(target_s *t);
-void target_add_commands(target_s *t, const struct command_s *cmds, const char *name);
+void target_add_commands(target_s *t, const command_s *cmds, const char *name);
 void target_add_ram(target_s *t, target_addr_t start, uint32_t len);
 void target_add_flash(target_s *t, target_flash_s *f);
 

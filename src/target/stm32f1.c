@@ -42,7 +42,7 @@
 
 static bool stm32f1_cmd_option(target_s *t, int argc, const char **argv);
 
-const struct command_s stm32f1_cmd_list[] = {
+const command_s stm32f1_cmd_list[] = {
 	{"option", stm32f1_cmd_option, "Manipulate option bytes"},
 	{NULL, NULL, NULL},
 };
