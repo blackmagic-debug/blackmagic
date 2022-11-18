@@ -122,7 +122,7 @@ static void jlink_info(bmp_info_s *const info)
  */
 static bool claim_jlink_interface(bmp_info_s *info, libusb_device *dev)
 {
-	struct libusb_config_descriptor *config;
+	libusb_config_descriptor_s *config;
 	const int result = libusb_get_active_config_descriptor(dev, &config);
 	if (result != LIBUSB_SUCCESS) {
 		DEBUG_WARN("Failed to get configuration descriptor: %s\n", libusb_error_name(result));

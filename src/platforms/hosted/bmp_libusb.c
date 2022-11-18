@@ -53,7 +53,7 @@ static bmp_type_t find_cmsis_dap_interface(libusb_device *dev, bmp_info_s *info)
 {
 	bmp_type_t type = BMP_TYPE_NONE;
 
-	struct libusb_config_descriptor *conf;
+	libusb_config_descriptor_s *conf;
 	char interface_string[128];
 
 	int res = libusb_get_active_config_descriptor(dev, &conf);
