@@ -367,7 +367,7 @@ static int submit_wait(usb_link_s *link, libusb_transfer_s *transfer)
 
 	uint32_t start_time = platform_time_ms();
 	while (transfer_ctx.flags == 0) {
-		struct timeval timeout;
+		timeval_s timeout;
 		timeout.tv_sec = 1;
 		timeout.tv_usec = 0;
 		if (libusb_handle_events_timeout(link->ul_libusb_ctx, &timeout)) {

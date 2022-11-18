@@ -221,7 +221,7 @@ int platform_buffer_write(const uint8_t *data, int size)
 int platform_buffer_read(uint8_t *data, int maxsize)
 {
 	char response = 0;
-	struct timeval timeout = {
+	timeval_s timeout = {
 		.tv_sec = cortexm_wait_timeout / 1000,
 		.tv_usec = 1000 * (cortexm_wait_timeout % 1000),
 	};

@@ -46,6 +46,7 @@
 #include <unistd.h>
 
 #include "gdb_if.h"
+#include "bmp_hosted.h"
 
 static const uint16_t default_port = 2000U;
 static const uint16_t max_port = default_port + 4U;
@@ -80,12 +81,6 @@ typedef struct addrinfo addrinfo_s;
 typedef ADDRESS_FAMILY sa_family_t;
 /* This can strictly be any integral value as long as it's not 0. */
 #define O_NONBLOCK 1
-#endif
-
-#if defined(__CYGWIN__)
-typedef TIMEVAL timeval_s;
-#else
-typedef struct timeval timeval_s;
 #endif
 
 static inline size_t family_to_size(const sa_family_t family)
