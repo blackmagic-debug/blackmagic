@@ -128,11 +128,11 @@ static bool claim_jlink_interface(bmp_info_s *info, libusb_device *dev)
 		DEBUG_WARN("Failed to get configuration descriptor: %s\n", libusb_error_name(result));
 		return false;
 	}
-	const struct libusb_interface_descriptor *descriptor = NULL;
+	const libusb_interface_descriptor_s *descriptor = NULL;
 	for (size_t i = 0; i < config->bNumInterfaces; ++i) {
 		const struct libusb_interface *const interface = &config->interface[i];
 		// XXX: This fails to handle multiple alt-modes being present correctly.
-		const struct libusb_interface_descriptor *const interface_desc = &interface->altsetting[0];
+		const libusb_interface_descriptor_s *const interface_desc = &interface->altsetting[0];
 		if (interface_desc->bInterfaceClass == LIBUSB_CLASS_VENDOR_SPEC &&
 			interface_desc->bInterfaceSubClass == LIBUSB_CLASS_VENDOR_SPEC && interface_desc->bNumEndpoints > 1) {
 			const int result = libusb_claim_interface(info->usb_link->ul_libusb_device_handle, i);
