@@ -84,8 +84,8 @@ static uint8_t debug_serial_debug_write_index;
 static uint8_t debug_serial_debug_read_index;
 #endif
 
-static usbd_request_return_codes_e gdb_serial_control_request(usbd_device *dev, struct usb_setup_data *req,
-	uint8_t **buf, uint16_t *const len, void (**complete)(usbd_device *dev, struct usb_setup_data *req))
+static usbd_request_return_codes_e gdb_serial_control_request(usbd_device *dev, usb_setup_data_s *req, uint8_t **buf,
+	uint16_t *const len, void (**complete)(usbd_device *dev, usb_setup_data_s *req))
 {
 	(void)buf;
 	(void)complete;
@@ -111,8 +111,8 @@ bool gdb_serial_get_dtr(void)
 	return gdb_serial_dtr;
 }
 
-static usbd_request_return_codes_e debug_serial_control_request(usbd_device *dev, struct usb_setup_data *req,
-	uint8_t **buf, uint16_t *const len, void (**complete)(usbd_device *dev, struct usb_setup_data *req))
+static usbd_request_return_codes_e debug_serial_control_request(usbd_device *dev, usb_setup_data_s *req, uint8_t **buf,
+	uint16_t *const len, void (**complete)(usbd_device *dev, usb_setup_data_s *req))
 {
 	(void)complete;
 	/* Is the request for the physical/debug UART interface? */

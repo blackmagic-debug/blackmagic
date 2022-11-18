@@ -22,5 +22,6 @@
 #define PLATFORMS_COMMON_USB_TYPES_H
 
 typedef enum usbd_request_return_codes usbd_request_return_codes_e;
+typedef struct usb_setup_data usb_setup_data_s;
 
 #endif /* PLATFORMS_COMMON_USB_TYPES_H */
