@@ -150,7 +150,7 @@ static bool claim_jlink_interface(bmp_info_s *info, libusb_device *dev)
 		return false;
 	}
 	for (size_t i = 0; i < descriptor->bNumEndpoints; i++) {
-		const struct libusb_endpoint_descriptor *endpoint = &descriptor->endpoint[i];
+		const libusb_endpoint_descriptor_s *endpoint = &descriptor->endpoint[i];
 		if (endpoint->bEndpointAddress & LIBUSB_ENDPOINT_IN)
 			info->usb_link->ep_rx = endpoint->bEndpointAddress;
 		else
