@@ -261,7 +261,7 @@ const command_s efm32_cmd_list[] = {
 /* Constants                                                                  */
 /* -------------------------------------------------------------------------- */
 
-typedef struct efm32_device_t {
+typedef struct efm32_device {
 	uint8_t family_id;        /* Family for device matching */
 	bool has_radio;           /* Indicates a device has attached radio */
 	uint16_t flash_page_size; /* Flash page size */
@@ -270,9 +270,9 @@ typedef struct efm32_device_t {
 	uint16_t user_data_size;  /* User Data (UD) region size */
 	uint16_t bootloader_size; /* Bootloader (BL) region size (may be 0 for no BL region) */
 	char *description;        /* Human-readable description */
-} efm32_device_t;
+} efm32_device_s;
 
-efm32_device_t const efm32_devices[] = {
+static const efm32_device_s efm32_devices[] = {
 	/*  First gen micros */
 	{71, false, 512, "EFM32G", 0x400c0000, 512, 0, "Gecko"},
 	{72, false, 2048, "EFM32GG", 0x400c0000, 4096, 0, "Giant Gecko"},
@@ -512,12 +512,12 @@ static void efm32_add_flash(target_s *t, target_addr_t addr, size_t length, size
 }
 
 /* Lookup device */
-static efm32_device_t const *efm32_get_device(target_s *t, uint8_t di_version)
+static efm32_device_s const *efm32_get_device(target_s *t, uint8_t di_version)
 {
 	uint8_t part_family = efm32_read_part_family(t, di_version);
 
 	/* Search for family */
-	for (size_t i = 0; i < (sizeof(efm32_devices) / sizeof(efm32_device_t)); i++) {
+	for (size_t i = 0; i < (sizeof(efm32_devices) / sizeof(efm32_device_s)); i++) {
 		if (efm32_devices[i].family_id == part_family) {
 			return &efm32_devices[i];
 		}
@@ -531,7 +531,7 @@ static efm32_device_t const *efm32_get_device(target_s *t, uint8_t di_version)
 struct efm32_priv_s {
 	char efm32_variant_string[60];
 	uint8_t di_version;
-	efm32_device_t const *device;
+	efm32_device_s const *device;
 };
 
 bool efm32_probe(target_s *t)
@@ -552,7 +552,7 @@ bool efm32_probe(target_s *t)
 	}
 
 	/* Read the part family, and reject if unknown */
-	efm32_device_t const *device = efm32_get_device(t, di_version);
+	efm32_device_s const *device = efm32_get_device(t, di_version);
 	if (!device)
 		return false;
 
@@ -760,7 +760,7 @@ static bool efm32_cmd_efm_info(target_s *t, int argc, const char **argv)
 	if (!priv_storage || !priv_storage->device)
 		return false;
 
-	efm32_device_t const *device = priv_storage->device;
+	efm32_device_s const *device = priv_storage->device;
 	uint8_t di_version = priv_storage->di_version; /* hidden in driver str */
 
 	switch (di_version) {
@@ -926,9 +926,9 @@ static bool efm32_cmd_bootloader(target_s *t, int argc, const char **argv)
 static bool efm32_aap_mass_erase(target_s *t);
 
 /* AAP Probe */
-struct efm32_aap_priv_s {
+typedef struct efm32_aap_priv {
 	char aap_driver_string[42];
-};
+} efm32_aap_priv_s;
 
 bool efm32_aap_probe(adiv5_access_port_s *ap)
 {
@@ -956,7 +956,7 @@ bool efm32_aap_probe(adiv5_access_port_s *ap)
 	/* Read status */
 	DEBUG_INFO("EFM32: AAP STATUS=%08" PRIx32 "\n", adiv5_ap_read(ap, AAP_STATUS));
 
-	struct efm32_aap_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
+	efm32_aap_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
 	sprintf(priv_storage->aap_driver_string, "EFM32 Authentication Access Port rev.%hu", aap_revision);
 	t->driver = priv_storage->aap_driver_string;
 	t->regs_size = 4;
