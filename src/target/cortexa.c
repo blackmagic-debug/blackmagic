@@ -62,7 +62,7 @@ static uint32_t apb_read(target_s *t, uint16_t reg);
 static void write_gpreg(target_s *t, uint8_t regno, uint32_t val);
 static uint32_t read_gpreg(target_s *t, uint8_t regno);
 
-struct cortexa_priv {
+typedef struct cortexa_priv {
 	uint32_t base;
 	adiv5_access_port_s *apb;
 
@@ -80,7 +80,7 @@ struct cortexa_priv {
 	unsigned hw_watchpoint_max;
 	uint16_t hw_watchpoint_mask;
 	bool mmu_fault;
-};
+} cortexa_priv_s;
 
 /* This may be specific to Cortex-A9 */
 #define CACHE_LINE_LENGTH (8 * 4)
@@ -317,7 +317,7 @@ static size_t create_tdesc_cortex_a(char *buffer, size_t max_len)
 
 static void apb_write(target_s *t, uint16_t reg, uint32_t val)
 {
-	struct cortexa_priv *priv = t->priv;
+	cortexa_priv_s *priv = t->priv;
 	adiv5_access_port_s *ap = priv->apb;
 	uint32_t addr = priv->base + 4 * reg;
 	adiv5_ap_write(ap, ADIV5_AP_TAR, addr);
@@ -326,7 +326,7 @@ static void apb_write(target_s *t, uint16_t reg, uint32_t val)
 
 static uint32_t apb_read(target_s *t, uint16_t reg)
 {
-	struct cortexa_priv *priv = t->priv;
+	cortexa_priv_s *priv = t->priv;
 	adiv5_access_port_s *ap = priv->apb;
 	uint32_t addr = priv->base + 4 * reg;
 	adiv5_ap_write(ap, ADIV5_AP_TAR, addr);
@@ -336,7 +336,7 @@ static uint32_t apb_read(target_s *t, uint16_t reg)
 
 static uint32_t va_to_pa(target_s *t, uint32_t va)
 {
-	struct cortexa_priv *priv = t->priv;
+	cortexa_priv_s *priv = t->priv;
 	write_gpreg(t, 0, va);
 	apb_write(t, DBGITR, MCR | ATS1CPR);
 	apb_write(t, DBGITR, MRC | PAR);
@@ -350,7 +350,7 @@ static uint32_t va_to_pa(target_s *t, uint32_t va)
 
 static void cortexa_slow_mem_read(target_s *t, void *dest, target_addr_t src, size_t len)
 {
-	struct cortexa_priv *priv = t->priv;
+	cortexa_priv_s *priv = t->priv;
 	unsigned words = (len + (src & 3) + 3) / 4;
 	uint32_t dest32[words];
 
@@ -389,7 +389,7 @@ static void cortexa_slow_mem_read(target_s *t, void *dest, target_addr_t src, si
 
 static void cortexa_slow_mem_write_bytes(target_s *t, target_addr_t dest, const uint8_t *src, size_t len)
 {
-	struct cortexa_priv *priv = t->priv;
+	cortexa_priv_s *priv = t->priv;
 
 	/* Set r13 to dest address */
 	write_gpreg(t, 13, dest);
@@ -408,7 +408,7 @@ static void cortexa_slow_mem_write_bytes(target_s *t, target_addr_t dest, const 
 
 static void cortexa_slow_mem_write(target_s *t, target_addr_t dest, const void *src, size_t len)
 {
-	struct cortexa_priv *priv = t->priv;
+	cortexa_priv_s *priv = t->priv;
 	if (len == 0)
 		return;
 
@@ -443,7 +443,7 @@ static void cortexa_slow_mem_write(target_s *t, target_addr_t dest, const void *
 
 static bool cortexa_check_error(target_s *t)
 {
-	struct cortexa_priv *priv = t->priv;
+	cortexa_priv_s *priv = t->priv;
 	bool err = priv->mmu_fault;
 	priv->mmu_fault = false;
 	return err;
@@ -459,7 +459,7 @@ bool cortexa_probe(adiv5_access_port_s *apb, uint32_t debug_base)
 	}
 
 	adiv5_ap_ref(apb);
-	struct cortexa_priv *priv = calloc(1, sizeof(*priv));
+	cortexa_priv_s *priv = calloc(1, sizeof(*priv));
 	if (!priv) { /* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return false;
@@ -505,7 +505,7 @@ bool cortexa_probe(adiv5_access_port_s *apb, uint32_t debug_base)
 
 bool cortexa_attach(target_s *t)
 {
-	struct cortexa_priv *priv = t->priv;
+	cortexa_priv_s *priv = t->priv;
 	int tries;
 
 	if (!t->tdesc) {
@@ -549,7 +549,7 @@ bool cortexa_attach(target_s *t)
 
 void cortexa_detach(target_s *t)
 {
-	struct cortexa_priv *priv = t->priv;
+	cortexa_priv_s *priv = t->priv;
 
 	if (t->tdesc) {
 		// Free the target description string that was allocated in cortexa_attach().
@@ -607,19 +607,19 @@ static void write_gpreg(target_s *t, uint8_t regno, uint32_t val)
 
 static void cortexa_regs_read(target_s *t, void *data)
 {
-	struct cortexa_priv *priv = (struct cortexa_priv *)t->priv;
+	cortexa_priv_s *priv = (cortexa_priv_s *)t->priv;
 	memcpy(data, &priv->reg_cache, t->regs_size);
 }
 
 static void cortexa_regs_write(target_s *t, const void *data)
 {
-	struct cortexa_priv *priv = (struct cortexa_priv *)t->priv;
+	cortexa_priv_s *priv = (cortexa_priv_s *)t->priv;
 	memcpy(&priv->reg_cache, data, t->regs_size);
 }
 
 static ssize_t ptr_for_reg(target_s *t, int reg, void **r)
 {
-	struct cortexa_priv *priv = (struct cortexa_priv *)t->priv;
+	cortexa_priv_s *priv = (cortexa_priv_s *)t->priv;
 	switch (reg) {
 	case 0 ... 15:
 		*r = &priv->reg_cache.r[reg];
@@ -660,7 +660,7 @@ static ssize_t cortexa_reg_write(target_s *t, int reg, const void *data, size_t 
 
 static void cortexa_regs_read_internal(target_s *t)
 {
-	struct cortexa_priv *priv = (struct cortexa_priv *)t->priv;
+	cortexa_priv_s *priv = (cortexa_priv_s *)t->priv;
 	/* Read general purpose registers */
 	for (int i = 0; i < 15; i++) {
 		priv->reg_cache.r[i] = read_gpreg(t, i);
@@ -685,7 +685,7 @@ static void cortexa_regs_read_internal(target_s *t)
 
 static void cortexa_regs_write_internal(target_s *t)
 {
-	struct cortexa_priv *priv = (struct cortexa_priv *)t->priv;
+	cortexa_priv_s *priv = (cortexa_priv_s *)t->priv;
 	/* First write back floats */
 	for (int i = 0; i < 16; i++) {
 		write_gpreg(t, 1, priv->reg_cache.d[i] >> 32);
@@ -812,7 +812,7 @@ static target_halt_reason_e cortexa_halt_poll(target_s *t, target_addr_t *watch)
 
 void cortexa_halt_resume(target_s *t, bool step)
 {
-	struct cortexa_priv *priv = t->priv;
+	cortexa_priv_s *priv = t->priv;
 	/* Set breakpoint comarator for single stepping if needed */
 	if (step) {
 		uint32_t addr = priv->reg_cache.r[15];
@@ -867,7 +867,7 @@ static uint32_t bp_bas(uint32_t addr, uint8_t len)
 
 static int cortexa_breakwatch_set(target_s *t, breakwatch_s *bw)
 {
-	struct cortexa_priv *priv = t->priv;
+	cortexa_priv_s *priv = t->priv;
 	unsigned i;
 
 	switch (bw->type) {
@@ -969,7 +969,7 @@ static int cortexa_breakwatch_set(target_s *t, breakwatch_s *bw)
 
 static int cortexa_breakwatch_clear(target_s *t, breakwatch_s *bw)
 {
-	struct cortexa_priv *priv = t->priv;
+	cortexa_priv_s *priv = t->priv;
 	unsigned i = bw->reserved[0];
 	switch (bw->type) {
 	case TARGET_BREAK_SOFT:
