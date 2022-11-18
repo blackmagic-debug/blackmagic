@@ -24,6 +24,7 @@
 
 #include "general.h"
 #include "usb_dfu_stub.h"
+#include "usb_types.h"
 
 static void dfu_detach_complete(usbd_device *const dev, struct usb_setup_data *const req)
 {
@@ -37,7 +38,7 @@ static void dfu_detach_complete(usbd_device *const dev, struct usb_setup_data *c
 #endif
 }
 
-static enum usbd_request_return_codes dfu_control_request(usbd_device *const dev, struct usb_setup_data *req,
+static usbd_request_return_codes_e dfu_control_request(usbd_device *const dev, struct usb_setup_data *req,
 	uint8_t **buf, uint16_t *len, void (**complete)(usbd_device *dev, struct usb_setup_data *req))
 {
 	(void)dev;

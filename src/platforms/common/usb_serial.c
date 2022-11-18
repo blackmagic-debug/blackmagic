@@ -49,6 +49,7 @@
 #include "aux_serial.h"
 #include "rtt.h"
 #include "rtt_if.h"
+#include "usb_types.h"
 
 #include <libopencm3/cm3/cortex.h>
 #include <libopencm3/cm3/nvic.h>
@@ -83,7 +84,7 @@ static uint8_t debug_serial_debug_write_index;
 static uint8_t debug_serial_debug_read_index;
 #endif
 
-static enum usbd_request_return_codes gdb_serial_control_request(usbd_device *dev, struct usb_setup_data *req,
+static usbd_request_return_codes_e gdb_serial_control_request(usbd_device *dev, struct usb_setup_data *req,
 	uint8_t **buf, uint16_t *const len, void (**complete)(usbd_device *dev, struct usb_setup_data *req))
 {
 	(void)buf;
@@ -110,7 +111,7 @@ bool gdb_serial_get_dtr(void)
 	return gdb_serial_dtr;
 }
 
-static enum usbd_request_return_codes debug_serial_control_request(usbd_device *dev, struct usb_setup_data *req,
+static usbd_request_return_codes_e debug_serial_control_request(usbd_device *dev, struct usb_setup_data *req,
 	uint8_t **buf, uint16_t *const len, void (**complete)(usbd_device *dev, struct usb_setup_data *req))
 {
 	(void)complete;

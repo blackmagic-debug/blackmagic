@@ -43,6 +43,7 @@
 #include <libopencm3/usb/dfu.h>
 
 #include "usbdfu.h"
+#include "usb_types.h"
 
 usbd_device *usbdev;
 /* We need a special large control buffer for this device: */
@@ -201,7 +202,7 @@ static void usbdfu_getstatus_complete(usbd_device *dev, struct usb_setup_data *r
 	}
 }
 
-static enum usbd_request_return_codes usbdfu_control_request(usbd_device *dev, struct usb_setup_data *req,
+static usbd_request_return_codes_e usbdfu_control_request(usbd_device *dev, struct usb_setup_data *req,
 	uint8_t **buf, uint16_t *len, void (**complete)(usbd_device *dev, struct usb_setup_data *req))
 {
 	uint8_t *const data = *buf;
