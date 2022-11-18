@@ -528,11 +528,11 @@ static efm32_device_s const *efm32_get_device(target_s *t, uint8_t di_version)
 }
 
 /* Probe */
-struct efm32_priv_s {
+typedef struct efm32_priv {
 	char efm32_variant_string[60];
 	uint8_t di_version;
-	efm32_device_s const *device;
-};
+	const efm32_device_s *device;
+} efm32_priv_s;
 
 bool efm32_probe(target_s *t)
 {
@@ -566,7 +566,7 @@ bool efm32_probe(target_s *t)
 	uint32_t ram_size = ram_kib * 0x400U;
 	uint32_t flash_page_size = device->flash_page_size;
 
-	struct efm32_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
+	efm32_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
 	t->target_storage = (void *)priv_storage;
 
 	priv_storage->di_version = di_version;
@@ -599,7 +599,7 @@ static bool efm32_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
 	target_s *t = f->t;
 
-	struct efm32_priv_s *priv_storage = (struct efm32_priv_s *)t->target_storage;
+	efm32_priv_s *priv_storage = (efm32_priv_s *)t->target_storage;
 	if (!priv_storage || !priv_storage->device)
 		return false;
 
@@ -642,7 +642,7 @@ static bool efm32_flash_write(target_flash_s *f, target_addr_t dest, const void 
 
 	target_s *t = f->t;
 
-	struct efm32_priv_s *priv_storage = (struct efm32_priv_s *)t->target_storage;
+	efm32_priv_s *priv_storage = (efm32_priv_s *)t->target_storage;
 	if (!priv_storage || !priv_storage->device)
 		return false;
 
@@ -665,7 +665,7 @@ static bool efm32_flash_write(target_flash_s *f, target_addr_t dest, const void 
 /* Uses the MSC ERASEMAIN0/1 command to erase the entire flash */
 static bool efm32_mass_erase(target_s *t)
 {
-	struct efm32_priv_s *priv_storage = (struct efm32_priv_s *)t->target_storage;
+	efm32_priv_s *priv_storage = (efm32_priv_s *)t->target_storage;
 	if (!priv_storage || !priv_storage->device)
 		return false;
 
@@ -722,7 +722,7 @@ static bool efm32_cmd_serial(target_s *t, int argc, const char **argv)
 	(void)argc;
 	(void)argv;
 
-	struct efm32_priv_s *priv_storage = (struct efm32_priv_s *)t->target_storage;
+	efm32_priv_s *priv_storage = (efm32_priv_s *)t->target_storage;
 	if (!priv_storage)
 		return false;
 
@@ -756,7 +756,7 @@ static bool efm32_cmd_efm_info(target_s *t, int argc, const char **argv)
 	(void)argc;
 	(void)argv;
 
-	struct efm32_priv_s *priv_storage = (struct efm32_priv_s *)t->target_storage;
+	efm32_priv_s *priv_storage = (efm32_priv_s *)t->target_storage;
 	if (!priv_storage || !priv_storage->device)
 		return false;
 
@@ -833,7 +833,7 @@ static bool efm32_cmd_efm_info(target_s *t, int argc, const char **argv)
 static bool efm32_cmd_bootloader(target_s *t, int argc, const char **argv)
 {
 	/* lookup device and part number */
-	struct efm32_priv_s *priv_storage = (struct efm32_priv_s *)t->target_storage;
+	efm32_priv_s *priv_storage = (efm32_priv_s *)t->target_storage;
 	if (!priv_storage || !priv_storage->device)
 		return false;
 
