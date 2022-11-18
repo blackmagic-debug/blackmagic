@@ -208,7 +208,7 @@ void aux_serial_init(void)
 }
 #endif
 
-void aux_serial_set_encoding(struct usb_cdc_line_coding *coding)
+void aux_serial_set_encoding(usb_cdc_line_coding_s *coding)
 {
 	usart_set_baudrate(USBUSART, coding->dwDTERate);
 

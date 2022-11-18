@@ -23,6 +23,7 @@
 #include <stddef.h>
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/cdc.h>
+#include "usb_types.h"
 
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
 /* XXX: Does the st_usbfs_v2_usb_driver work on F3 with 128 byte buffers? */
@@ -40,7 +41,7 @@
 #endif
 
 void aux_serial_init(void);
-void aux_serial_set_encoding(struct usb_cdc_line_coding *coding);
+void aux_serial_set_encoding(usb_cdc_line_coding_s *coding);
 
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
 typedef enum aux_serial_led {
