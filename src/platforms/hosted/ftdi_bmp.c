@@ -654,38 +654,37 @@ void libftdi_jtagtap_tdi_tdo_seq(uint8_t *data_out, const bool final_tms, const 
 	if (final_tms)
 		--ticks;
 	uint8_t rticks = ticks & 7U;
-	ticks >>= 3;
+	ticks >>= 3U;
 	uint8_t data[8];
-	uint8_t cmd = ((data_out) ? MPSSE_DO_READ : 0) | ((data_in) ? (MPSSE_DO_WRITE | MPSSE_WRITE_NEG) : 0) | MPSSE_LSB;
+	uint8_t cmd = (data_out ? MPSSE_DO_READ : 0U) | (data_in ? (MPSSE_DO_WRITE | MPSSE_WRITE_NEG) : 0U) | MPSSE_LSB;
 	size_t rsize = ticks;
 	if (ticks) {
 		data[0] = cmd;
-		data[1] = ticks - 1;
+		data[1] = ticks - 1U;
 		data[2] = 0;
-		libftdi_buffer_write(data, 3);
+		libftdi_buffer_write(data, 3U);
 		if (data_in)
 			libftdi_buffer_write(data_in, ticks);
 	}
-	int index = 0;
+	size_t index = 0;
 	if (rticks) {
 		rsize++;
 		data[index++] = cmd | MPSSE_BITMODE;
-		data[index++] = rticks - 1;
+		data[index++] = rticks - 1U;
 		if (data_in)
 			data[index++] = data_in[ticks];
 	}
 	if (final_tms) {
 		rsize++;
-		data[index++] =
-			MPSSE_WRITE_TMS | ((data_out) ? MPSSE_DO_READ : 0) | MPSSE_LSB | MPSSE_BITMODE | MPSSE_WRITE_NEG;
+		data[index++] = MPSSE_WRITE_TMS | (data_out ? MPSSE_DO_READ : 0) | MPSSE_LSB | MPSSE_BITMODE | MPSSE_WRITE_NEG;
 		data[index++] = 0;
 		if (data_in)
-			data[index++] = (data_in[ticks] & (1 << rticks)) ? 0x81 : 0x01;
+			data[index++] = (data_in[ticks] & (1U << rticks)) ? 0x81U : 0x01U;
 	}
 	if (index)
 		libftdi_buffer_write(data, index);
 	if (data_out) {
-		int index = 0;
+		size_t index = 0;
 		uint8_t *tmp = alloca(rsize);
 		libftdi_buffer_read(tmp, rsize);
 		if (final_tms)
@@ -699,12 +698,12 @@ void libftdi_jtagtap_tdi_tdo_seq(uint8_t *data_out, const bool final_tms, const 
 		if (final_tms) {
 			rticks++;
 			*(--data_out) >>= 1;
-			*data_out |= tmp[index] & 0x80;
+			*data_out |= tmp[index] & 0x80U;
 		} else
 			--data_out;
 
 		if (rticks)
-			*data_out >>= (8 - rticks);
+			*data_out >>= (8U - rticks);
 	}
 }
 
