@@ -164,7 +164,7 @@ static uint8_t usbdfu_getstatus(uint32_t *poll_timeout)
 	}
 }
 
-static void usbdfu_getstatus_complete(usbd_device *dev, struct usb_setup_data *req)
+static void usbdfu_getstatus_complete(usbd_device *dev, usb_setup_data_s *req)
 {
 	(void)req;
 	(void)dev;
@@ -202,8 +202,8 @@ static void usbdfu_getstatus_complete(usbd_device *dev, struct usb_setup_data *r
 	}
 }
 
-static usbd_request_return_codes_e usbdfu_control_request(usbd_device *dev, struct usb_setup_data *req,
-	uint8_t **buf, uint16_t *len, void (**complete)(usbd_device *dev, struct usb_setup_data *req))
+static usbd_request_return_codes_e usbdfu_control_request(usbd_device *dev, usb_setup_data_s *req, uint8_t **buf,
+	uint16_t *len, void (**complete)(usbd_device *dev, usb_setup_data_s *req))
 {
 	uint8_t *const data = *buf;
 

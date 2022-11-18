@@ -26,7 +26,7 @@
 #include "usb_dfu_stub.h"
 #include "usb_types.h"
 
-static void dfu_detach_complete(usbd_device *const dev, struct usb_setup_data *const req)
+static void dfu_detach_complete(usbd_device *const dev, usb_setup_data_s *const req)
 {
 	(void)dev;
 	(void)req;
@@ -38,8 +38,8 @@ static void dfu_detach_complete(usbd_device *const dev, struct usb_setup_data *c
 #endif
 }
 
-static usbd_request_return_codes_e dfu_control_request(usbd_device *const dev, struct usb_setup_data *req,
-	uint8_t **buf, uint16_t *len, void (**complete)(usbd_device *dev, struct usb_setup_data *req))
+static usbd_request_return_codes_e dfu_control_request(usbd_device *const dev, usb_setup_data_s *req, uint8_t **buf,
+	uint16_t *len, void (**complete)(usbd_device *dev, usb_setup_data_s *req))
 {
 	(void)dev;
 	/* Is the request for the DFU interface? */
