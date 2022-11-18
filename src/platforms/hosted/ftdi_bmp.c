@@ -36,7 +36,7 @@ static uint8_t outbuf[BUF_SIZE];
 static uint16_t bufptr = 0;
 
 cable_desc_t *active_cable;
-data_desc_t active_state;
+data_desc_s active_state;
 
 cable_desc_t cable_desc[] = {
 	{
@@ -382,7 +382,7 @@ int ftdi_bmp_init(bmp_cli_options_s *cl_opts, bmp_info_s *info)
 	}
 
 	active_cable = cable;
-	memcpy(&active_state, &active_cable->init, sizeof(data_desc_t));
+	memcpy(&active_state, &active_cable->init, sizeof(data_desc_s));
 	/*
 	 * If swd_(read|write) is not given for the selected cable and
 	 * the 'e' command line argument is give, assume resistor SWD
@@ -510,7 +510,7 @@ error_1:
 	return -1;
 }
 
-static void libftdi_set_data(data_desc_t *data)
+static void libftdi_set_data(data_desc_s *data)
 {
 	uint8_t cmd[6];
 	size_t index = 0;

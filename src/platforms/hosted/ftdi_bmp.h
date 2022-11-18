@@ -27,12 +27,12 @@
 
 #include "bmp_hosted.h"
 
-typedef struct data_desc_s {
+typedef struct data_desc {
 	int16_t data_low;
 	int16_t ddr_low;
 	int16_t data_high;
 	int16_t ddr_high;
-} data_desc_t;
+} data_desc_s;
 
 typedef struct pin_settings_s {
 	uint8_t set_data_low;
@@ -47,7 +47,7 @@ typedef struct cable_desc_s {
 	int interface;
 	/* Initial (C|D)(Bus|Ddr) values for additional pins.
 	 * MPSSE_CS|DI|DO|SK are initialized accordig to mode.*/
-	data_desc_t init;
+	data_desc_s init;
 	/* MPSSE command to read TMS/SWDIO in bitbanging SWD.
 	 * In many cases this is the TMS port, so then use "GET_PIN_LOW".*/
 	uint8_t bb_swdio_in_port_cmd;
@@ -63,11 +63,11 @@ typedef struct cable_desc_s {
 	/* dbus_data, dbus_ddr, cbus_data, cbus_ddr value to assert nRST.
 	 *	E.g. with CBUS Pin 1 low,
 	 *	give data_high = ~PIN1, ddr_high = PIN1 */
-	data_desc_t assert_nrst;
+	data_desc_s assert_nrst;
 	/*  Bus_data, dbus_ddr, cbus_data, cbus_ddr value to release nRST.
 	 *	E.g. with CBUS Pin 1 floating with internal pull up,
 	 *	give data_high = PIN1, ddr_high = ~PIN1 */
-	data_desc_t deassert_nrst;
+	data_desc_s deassert_nrst;
 	/* Command to read back NRST. If 0, port from assert_nrst is used*/
 	uint8_t nrst_get_port_cmd;
 	/* PIN to read back as NRST. if 0 port from assert_nrst is ised.
@@ -176,7 +176,7 @@ bool libftdi_nrst_get_val(void)
 extern cable_desc_t cable_desc[];
 extern cable_desc_t *active_cable;
 extern struct ftdi_context *ftdic;
-extern data_desc_t active_state;
+extern data_desc_s active_state;
 
 int ftdi_bmp_init(bmp_cli_options_s *cl_opts, bmp_info_s *info);
 int libftdi_swdptap_init(adiv5_debug_port_s *dp);
