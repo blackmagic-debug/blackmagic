@@ -99,7 +99,7 @@ static usbd_request_return_codes_e gdb_serial_control_request(usbd_device *dev, 
 		gdb_serial_dtr = req->wValue & 1;
 		return USBD_REQ_HANDLED;
 	case USB_CDC_REQ_SET_LINE_CODING:
-		if (*len < sizeof(struct usb_cdc_line_coding))
+		if (*len < sizeof(usb_cdc_line_coding_s))
 			return USBD_REQ_NOTSUPP;
 		return USBD_REQ_HANDLED; /* Ignore on GDB Port */
 	}
@@ -130,9 +130,9 @@ static usbd_request_return_codes_e debug_serial_control_request(usbd_device *dev
 #endif
 		return USBD_REQ_HANDLED;
 	case USB_CDC_REQ_SET_LINE_CODING:
-		if (*len < sizeof(struct usb_cdc_line_coding))
+		if (*len < sizeof(usb_cdc_line_coding_s))
 			return USBD_REQ_NOTSUPP;
-		aux_serial_set_encoding((struct usb_cdc_line_coding *)*buf);
+		aux_serial_set_encoding((usb_cdc_line_coding_s *)*buf);
 		return USBD_REQ_HANDLED;
 	}
 	return USBD_REQ_NOTSUPP;
