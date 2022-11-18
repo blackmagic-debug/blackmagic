@@ -116,15 +116,15 @@ static bool kinetis_flash_cmd_erase(target_flash_s *f, target_addr_t addr, size_
 static bool kinetis_flash_cmd_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 static bool kinetis_flash_done(target_flash_s *f);
 
-struct kinetis_flash {
+typedef struct kinetis_flash {
 	target_flash_s f;
 	uint8_t write_len;
-};
+} kinetis_flash_s;
 
 static void kinetis_add_flash(
 	target_s *const t, const uint32_t addr, const size_t length, const size_t erasesize, const size_t write_len)
 {
-	struct kinetis_flash *kf = calloc(1, sizeof(*kf));
+	kinetis_flash_s *kf = calloc(1, sizeof(*kf));
 	if (!kf) { /* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return;
@@ -450,7 +450,7 @@ static bool kinetis_flash_cmd_erase(target_flash_s *const f, target_addr_t addr,
 
 static bool kinetis_flash_cmd_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
-	struct kinetis_flash *const kf = (struct kinetis_flash *)f;
+	kinetis_flash_s *const kf = (kinetis_flash_s *)f;
 
 	/* Ensure we don't write something horrible over the security byte */
 	if (!f->t->unsafe_enabled && dest <= FLASH_SECURITY_BYTE_ADDRESS && dest + len > FLASH_SECURITY_BYTE_ADDRESS) {
@@ -481,7 +481,7 @@ static bool kinetis_flash_cmd_write(target_flash_s *f, target_addr_t dest, const
 
 static bool kinetis_flash_done(target_flash_s *const f)
 {
-	struct kinetis_flash *const kf = (struct kinetis_flash *)f;
+	kinetis_flash_s *const kf = (kinetis_flash_s *)f;
 
 	if (f->t->unsafe_enabled)
 		return true;
