@@ -42,11 +42,11 @@
 #include "platform.h"
 
 #if HOSTED_BMP_ONLY != 1
-#define TRANS_FLAGS_IS_DONE   (1 << 0)
-#define TRANS_FLAGS_HAS_ERROR (1 << 1)
+#define TRANSFER_IS_DONE   (1 << 0)
+#define TRANSFER_HAS_ERROR (1 << 1)
 
 typedef struct transfer_ctx {
-	volatile unsigned long flags;
+	volatile size_t flags;
 } transfer_ctx_s;
 
 typedef struct libusb_config_descriptor libusb_config_descriptor_s;
