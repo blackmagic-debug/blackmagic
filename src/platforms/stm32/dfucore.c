@@ -64,7 +64,7 @@ static struct {
 
 static uint8_t current_error;
 
-const struct usb_device_descriptor dev_desc = {
+const usb_device_descriptor_s dev_desc = {
 	.bLength = USB_DT_DEVICE_SIZE,
 	.bDescriptorType = USB_DT_DEVICE,
 	.bcdUSB = 0x0200,
@@ -81,8 +81,8 @@ const struct usb_device_descriptor dev_desc = {
 	.bNumConfigurations = 1,
 };
 
-const struct usb_dfu_descriptor dfu_function = {
-	.bLength = sizeof(struct usb_dfu_descriptor),
+const usb_dfu_descriptor_s dfu_function = {
+	.bLength = sizeof(usb_dfu_descriptor_s),
 	.bDescriptorType = DFU_FUNCTIONAL,
 	.bmAttributes = USB_DFU_CAN_DOWNLOAD | USB_DFU_CAN_UPLOAD | USB_DFU_WILL_DETACH,
 	.wDetachTimeout = 255,
@@ -90,7 +90,7 @@ const struct usb_dfu_descriptor dfu_function = {
 	.bcdDFUVersion = 0x011A,
 };
 
-const struct usb_interface_descriptor iface = {
+const usb_interface_descriptor_s iface = {
 	.bLength = USB_DT_INTERFACE_SIZE,
 	.bDescriptorType = USB_DT_INTERFACE,
 	.bInterfaceNumber = 0,
@@ -108,12 +108,12 @@ const struct usb_interface_descriptor iface = {
 	.extralen = sizeof(dfu_function),
 };
 
-const struct usb_interface ifaces[] = {{
+const usb_interface_s ifaces[] = {{
 	.num_altsetting = 1,
 	.altsetting = &iface,
 }};
 
-const struct usb_config_descriptor config = {
+const usb_config_descriptor_s config = {
 	.bLength = USB_DT_CONFIGURATION_SIZE,
 	.bDescriptorType = USB_DT_CONFIGURATION,
 	.wTotalLength = 0,
