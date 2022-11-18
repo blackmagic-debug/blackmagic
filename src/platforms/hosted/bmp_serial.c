@@ -169,6 +169,8 @@ print_probes_info:
 #define BMP_IDSTRING_1BITSQUARED "usb-1BitSquared_Black_Magic_Probe"
 #define DEVICE_BY_ID             "/dev/serial/by-id"
 
+typedef struct dirent dirent_s;
+
 typedef enum scan_mode {
 	SCAN_FIND,
 	SCAN_LIST
@@ -299,7 +301,7 @@ size_t scan_devices(scan_mode_e mode, bmp_info_s *info, const char *const search
 	bool done = false;
 	size_t devices = 0;
 	while (!done) {
-		const struct dirent *const entry = readdir(dir);
+		const dirent_s *const entry = readdir(dir);
 		if (entry == NULL)
 			break;
 		if (device_is_bmp_gdb_port(entry->d_name)) {
