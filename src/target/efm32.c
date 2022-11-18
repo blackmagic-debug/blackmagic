@@ -346,7 +346,7 @@ typedef struct efm32_v2_di_pkgtype {
 	char *name;
 } efm32_v2_di_pkgtype_s;
 
-efm32_v2_di_pkgtype_s const efm32_v2_di_pkgtypes[] = {
+static const efm32_v2_di_pkgtype_s efm32_v2_di_pkgtypes[] = {
 	{74, "WLCSP"}, /* WLCSP package */
 	{76, "BGA"},   /* BGA package */
 	{77, "QFN"},   /* QFN package */
@@ -359,7 +359,7 @@ typedef struct efm32_v2_di_tempgrade {
 	char *name;
 } efm32_v2_di_tempgrade_s;
 
-efm32_v2_di_tempgrade_s const efm32_v2_di_tempgrades[] = {
+static const efm32_v2_di_tempgrade_s efm32_v2_di_tempgrades[] = {
 	{0, "-40 to 85degC"},
 	{1, "-40 to 125degC"},
 	{2, "-40 to 105degC"},
