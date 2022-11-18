@@ -56,6 +56,8 @@ typedef struct libusb_interface libusb_interface_s;
 typedef struct libusb_transfer libusb_transfer_s;
 typedef enum libusb_error libusb_error_e;
 
+typedef struct ftdi_context ftdi_context_s;
+
 typedef struct usb_link {
 	libusb_context *ul_libusb_ctx;
 	libusb_device_handle *ul_libusb_device_handle;
@@ -78,7 +80,7 @@ typedef struct bmp_info {
 	bool is_jtag;
 #if HOSTED_BMP_ONLY != 1
 	libusb_context *libusb_ctx;
-	struct ftdi_context *ftdic;
+	ftdi_context_s *ftdic;
 	usb_link_s *usb_link;
 	unsigned int vid;
 	unsigned int pid;

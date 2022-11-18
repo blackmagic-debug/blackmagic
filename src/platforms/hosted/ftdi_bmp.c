@@ -29,7 +29,7 @@
 #include "ftdi_bmp.h"
 #include <ftdi.h>
 
-struct ftdi_context *ftdic;
+ftdi_context_s *ftdic;
 
 #define BUF_SIZE 4096
 static uint8_t outbuf[BUF_SIZE];
