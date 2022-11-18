@@ -48,14 +48,16 @@ struct trans_ctx {
 	volatile unsigned long flags;
 };
 
+typedef struct libusb_transfer libusb_transfer_s;
+
 typedef struct usb_link {
 	libusb_context *ul_libusb_ctx;
 	libusb_device_handle *ul_libusb_device_handle;
 	uint8_t interface;
 	uint8_t ep_tx;
 	uint8_t ep_rx;
-	struct libusb_transfer *req_trans;
-	struct libusb_transfer *rep_trans;
+	libusb_transfer_s *req_trans;
+	libusb_transfer_s *rep_trans;
 	void *priv;
 } usb_link_s;
 #endif

@@ -330,7 +330,7 @@ rescan:
 	return found_debuggers == 1 ? 0 : -1;
 }
 
-static void LIBUSB_CALL on_trans_done(struct libusb_transfer *trans)
+static void LIBUSB_CALL on_trans_done(libusb_transfer_s *trans)
 {
 	struct trans_ctx *const ctx = trans->user_data;
 
@@ -349,7 +349,7 @@ static void LIBUSB_CALL on_trans_done(struct libusb_transfer *trans)
 	ctx->flags |= TRANS_FLAGS_IS_DONE;
 }
 
-static int submit_wait(usb_link_s *link, struct libusb_transfer *trans)
+static int submit_wait(usb_link_s *link, libusb_transfer_s *trans)
 {
 	struct trans_ctx trans_ctx;
 	enum libusb_error error;
