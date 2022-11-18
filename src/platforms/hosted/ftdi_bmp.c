@@ -752,9 +752,9 @@ uint32_t libftdi_max_frequency_get(void)
 {
 	uint32_t clock;
 	if (ftdic->type == TYPE_2232C)
-		clock = 12 * 1000 * 1000;
+		clock = 12U * 1000U * 1000U;
 	else
 		/* Undivided clock set during startup*/
-		clock = 60 * 1000 * 1000;
-	return clock / (2 * (divisor + 1));
+		clock = 60U * 1000U * 1000U;
+	return clock / (2U * (divisor + 1U));
 }
