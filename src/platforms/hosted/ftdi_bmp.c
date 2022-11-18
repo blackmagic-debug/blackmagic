@@ -35,10 +35,10 @@ struct ftdi_context *ftdic;
 static uint8_t outbuf[BUF_SIZE];
 static uint16_t bufptr = 0;
 
-cable_desc_t *active_cable;
+cable_desc_s active_cable;
 data_desc_s active_state;
 
-cable_desc_t cable_desc[] = {
+const cable_desc_s cable_desc[] = {
 	{
 		/*
 		 * Direct connection from FTDI to JTAG/SWD.
@@ -370,7 +370,7 @@ cable_desc_t cable_desc[] = {
 int ftdi_bmp_init(bmp_cli_options_s *cl_opts, bmp_info_s *info)
 {
 	int err;
-	cable_desc_t *cable = &cable_desc[0];
+	const cable_desc_s *cable = cable_desc;
 	for (; cable->name; cable++) {
 		if (strncmp(cable->name, cl_opts->opt_cable, strlen(cable->name)) == 0)
 			break;
@@ -381,21 +381,21 @@ int ftdi_bmp_init(bmp_cli_options_s *cl_opts, bmp_info_s *info)
 		return -1;
 	}
 
-	active_cable = cable;
-	memcpy(&active_state, &active_cable->init, sizeof(data_desc_s));
+	active_cable = *cable;
+	memcpy(&active_state, &active_cable.init, sizeof(data_desc_s));
 	/*
 	 * If swd_(read|write) is not given for the selected cable and
 	 * the 'e' command line argument is give, assume resistor SWD
 	 * connection.
 	 */
-	if (cl_opts->external_resistor_swd && active_cable->mpsse_swd_read.set_data_low == 0 &&
-		active_cable->mpsse_swd_read.clr_data_low == 0 && active_cable->mpsse_swd_read.set_data_high == 0 &&
-		active_cable->mpsse_swd_read.clr_data_high == 0 && active_cable->mpsse_swd_write.set_data_low == 0 &&
-		active_cable->mpsse_swd_write.clr_data_low == 0 && active_cable->mpsse_swd_write.set_data_high == 0 &&
-		active_cable->mpsse_swd_write.clr_data_high == 0) {
+	if (cl_opts->external_resistor_swd && active_cable.mpsse_swd_read.set_data_low == 0 &&
+		active_cable.mpsse_swd_read.clr_data_low == 0 && active_cable.mpsse_swd_read.set_data_high == 0 &&
+		active_cable.mpsse_swd_read.clr_data_high == 0 && active_cable.mpsse_swd_write.set_data_low == 0 &&
+		active_cable.mpsse_swd_write.clr_data_low == 0 && active_cable.mpsse_swd_write.set_data_high == 0 &&
+		active_cable.mpsse_swd_write.clr_data_high == 0) {
 		DEBUG_INFO("Using external resistor SWD\n");
-		active_cable->mpsse_swd_read.set_data_low = MPSSE_DO;
-		active_cable->mpsse_swd_write.set_data_low = MPSSE_DO;
+		active_cable.mpsse_swd_read.set_data_low = MPSSE_DO;
+		active_cable.mpsse_swd_write.set_data_low = MPSSE_DO;
 	} else if (!libftdi_swd_possible() && cl_opts->opt_scanmode != BMP_SCAN_JTAG) {
 		DEBUG_WARN("SWD with cable not possible, trying JTAG\n");
 		cl_opts->opt_scanmode = BMP_SCAN_JTAG;
@@ -411,13 +411,13 @@ int ftdi_bmp_init(bmp_cli_options_s *cl_opts, bmp_info_s *info)
 		abort();
 	}
 	info->ftdic = ftdic;
-	err = ftdi_set_interface(ftdic, active_cable->interface);
+	err = ftdi_set_interface(ftdic, active_cable.interface);
 	if (err != 0) {
 		DEBUG_WARN("ftdi_set_interface: %d: %s\n", err, ftdi_get_error_string(ftdic));
 		goto error_1;
 	}
 	err = ftdi_usb_open_desc(
-		ftdic, active_cable->vendor, active_cable->product, active_cable->description, cl_opts->opt_serial);
+		ftdic, active_cable.vendor, active_cable.product, active_cable.description, cl_opts->opt_serial);
 	if (err != 0) {
 		DEBUG_WARN("unable to open ftdi device: %d (%s)\n", err, ftdi_get_error_string(ftdic));
 		goto error_1;
@@ -549,24 +549,24 @@ static void libftdi_set_data(data_desc_s *data)
 void libftdi_nrst_set_val(bool assert)
 {
 	if (assert)
-		libftdi_set_data(&active_cable->assert_nrst);
+		libftdi_set_data(&active_cable.assert_nrst);
 	else
-		libftdi_set_data(&active_cable->deassert_nrst);
+		libftdi_set_data(&active_cable.deassert_nrst);
 }
 
 bool libftdi_nrst_get_val(void)
 {
 	uint8_t cmd;
 	uint8_t pin = 0;
-	if (active_cable->nrst_get_port_cmd && active_cable->nrst_get_pin) {
-		cmd = active_cable->nrst_get_port_cmd;
-		pin = active_cable->nrst_get_pin;
-	} else if (active_cable->assert_nrst.data_low && active_cable->assert_nrst.ddr_low) {
+	if (active_cable.nrst_get_port_cmd && active_cable.nrst_get_pin) {
+		cmd = active_cable.nrst_get_port_cmd;
+		pin = active_cable.nrst_get_pin;
+	} else if (active_cable.assert_nrst.data_low && active_cable.assert_nrst.ddr_low) {
 		cmd = GET_BITS_LOW;
-		pin = active_cable->assert_nrst.data_low;
-	} else if (active_cable->assert_nrst.data_high && active_cable->assert_nrst.ddr_high) {
+		pin = active_cable.assert_nrst.data_low;
+	} else if (active_cable.assert_nrst.data_high && active_cable.assert_nrst.ddr_high) {
 		cmd = GET_BITS_HIGH;
-		pin = active_cable->assert_nrst.data_high;
+		pin = active_cable.assert_nrst.data_high;
 	} else
 		return false;
 
@@ -709,9 +709,9 @@ void libftdi_jtagtap_tdi_tdo_seq(uint8_t *data_out, const bool final_tms, const 
 
 const char *libftdi_target_voltage(void)
 {
-	uint8_t pin = active_cable->target_voltage_pin;
-	if (active_cable->target_voltage_cmd && pin) {
-		libftdi_buffer_write(&active_cable->target_voltage_cmd, 1);
+	uint8_t pin = active_cable.target_voltage_pin;
+	if (active_cable.target_voltage_cmd && pin) {
+		libftdi_buffer_write(&active_cable.target_voltage_cmd, 1);
 		uint8_t data[1];
 		libftdi_buffer_read(data, 1);
 		bool res = false;

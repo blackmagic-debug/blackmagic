@@ -67,8 +67,7 @@ void libftdi_drain_potential_garbage(void)
 
 bool libftdi_jtagtap_init(void)
 {
-	if (active_cable->mpsse_swd_read.set_data_low == MPSSE_DO &&
-		active_cable->mpsse_swd_write.set_data_low == MPSSE_DO) {
+	if (active_cable.mpsse_swd_read.set_data_low == MPSSE_DO && active_cable.mpsse_swd_write.set_data_low == MPSSE_DO) {
 		DEBUG_WARN("JTAG not possible with resistor SWD!\n");
 		return false;
 	}
@@ -79,12 +78,12 @@ bool libftdi_jtagtap_init(void)
 	jtag_proc.jtagtap_tdi_tdo_seq = libftdi_jtagtap_tdi_tdo_seq;
 	jtag_proc.jtagtap_tdi_seq = jtagtap_tdi_seq;
 
-	active_state.data_low |= active_cable->jtag.set_data_low | MPSSE_CS | MPSSE_DI | MPSSE_DO;
-	active_state.data_low &= ~(active_cable->jtag.clr_data_low | MPSSE_SK);
+	active_state.data_low |= active_cable.jtag.set_data_low | MPSSE_CS | MPSSE_DI | MPSSE_DO;
+	active_state.data_low &= ~(active_cable.jtag.clr_data_low | MPSSE_SK);
 	active_state.ddr_low |= MPSSE_CS | MPSSE_DO | MPSSE_SK;
 	active_state.ddr_low &= ~MPSSE_DI;
-	active_state.data_high |= active_cable->jtag.set_data_high;
-	active_state.data_high &= ~active_cable->jtag.clr_data_high;
+	active_state.data_high |= active_cable.jtag.set_data_high;
+	active_state.data_high &= ~active_cable.jtag.clr_data_high;
 	libftdi_drain_potential_garbage();
 
 	const uint8_t cmd[6] = {
