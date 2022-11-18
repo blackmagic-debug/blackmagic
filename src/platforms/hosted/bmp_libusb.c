@@ -71,7 +71,7 @@ static bmp_type_t find_cmsis_dap_interface(libusb_device *dev, bmp_info_s *info)
 	}
 
 	for (uint8_t i = 0; i < conf->bNumInterfaces; ++i) {
-		const struct libusb_interface_descriptor *interface = &conf->interface[i].altsetting[0];
+		const libusb_interface_descriptor_s *interface = &conf->interface[i].altsetting[0];
 
 		if (!interface->iInterface)
 			continue;
