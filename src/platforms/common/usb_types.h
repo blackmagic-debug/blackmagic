@@ -23,7 +23,10 @@
 
 typedef enum usbd_request_return_codes usbd_request_return_codes_e;
 typedef struct usb_setup_data usb_setup_data_s;
+
 typedef struct usb_cdc_line_coding usb_cdc_line_coding_s;
 typedef struct usb_cdc_notification usb_cdc_notification_s;
+
+typedef enum dfu_state dfu_state_e;
 
 #endif /* PLATFORMS_COMMON_USB_TYPES_H */

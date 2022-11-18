@@ -51,7 +51,7 @@ uint8_t usbd_control_buffer[1024];
 
 static uint32_t max_address;
 
-static enum dfu_state usbdfu_state = STATE_DFU_IDLE;
+static dfu_state_e usbdfu_state = STATE_DFU_IDLE;
 
 static void get_dev_unique_id(void);
 
