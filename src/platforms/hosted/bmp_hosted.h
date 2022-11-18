@@ -50,6 +50,7 @@ struct trans_ctx {
 
 typedef struct libusb_config_descriptor libusb_config_descriptor_s;
 typedef struct libusb_interface_descriptor libusb_interface_descriptor_s;
+typedef struct libusb_endpoint_descriptor libusb_endpoint_descriptor_s;
 typedef struct libusb_interface libusb_interface_s;
 typedef struct libusb_transfer libusb_transfer_s;
 
