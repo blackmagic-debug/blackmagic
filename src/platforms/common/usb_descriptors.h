@@ -28,22 +28,9 @@
 #include "usb.h"
 #include "serialno.h"
 #include "version.h"
+#include "usb_types.h"
 
 #define BOARD_IDENT "Black Magic Probe " PLATFORM_IDENT FIRMWARE_VERSION
-
-typedef struct usb_device_descriptor usb_device_descriptor_s;
-typedef struct usb_config_descriptor usb_config_descriptor_s;
-typedef struct usb_interface_descriptor usb_interface_descriptor_s;
-typedef struct usb_endpoint_descriptor usb_endpoint_descriptor_s;
-typedef struct usb_iface_assoc_descriptor usb_iface_assoc_descriptor_s;
-typedef struct usb_interface usb_interface_s;
-
-typedef struct usb_cdc_header_descriptor usb_cdc_header_descriptor_s;
-typedef struct usb_cdc_call_management_descriptor usb_cdc_call_management_descriptor_s;
-typedef struct usb_cdc_acm_descriptor usb_cdc_acm_descriptor_s;
-typedef struct usb_cdc_union_descriptor usb_cdc_union_descriptor_s;
-
-typedef struct usb_dfu_descriptor usb_dfu_descriptor_s;
 
 /* Top-level device descriptor */
 static const usb_device_descriptor_s dev_desc = {
