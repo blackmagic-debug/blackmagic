@@ -108,7 +108,7 @@ static int cortexm_hostio_request(target_s *t);
 
 static uint32_t time0_sec = UINT32_MAX; /* sys_clock time origin */
 
-struct cortexm_priv {
+typedef struct cortexm_priv {
 	adiv5_access_port_s *ap;
 	bool stepping;
 	bool on_bkpt;
@@ -124,7 +124,7 @@ struct cortexm_priv {
 	/* Cache parameters */
 	bool has_cache;
 	uint32_t dcache_minline;
-};
+} cortexm_priv_s;
 
 /* Register number tables */
 static const uint32_t regnum_cortex_m[] = {
@@ -441,12 +441,12 @@ static size_t create_tdesc_cortex_mf(char *buffer, size_t max_len)
 
 adiv5_access_port_s *cortexm_ap(target_s *t)
 {
-	return ((struct cortexm_priv *)t->priv)->ap;
+	return ((cortexm_priv_s *)t->priv)->ap;
 }
 
 static void cortexm_cache_clean(target_s *t, target_addr_t addr, size_t len, bool invalidate)
 {
-	struct cortexm_priv *priv = t->priv;
+	cortexm_priv_s *priv = t->priv;
 	if (!priv->has_cache || (priv->dcache_minline == 0))
 		return;
 	uint32_t cache_reg = invalidate ? CORTEXM_DCCIMVAC : CORTEXM_DCCMVAC;
@@ -489,7 +489,7 @@ static bool cortexm_check_error(target_s *t)
 
 static void cortexm_priv_free(void *priv)
 {
-	adiv5_ap_unref(((struct cortexm_priv *)priv)->ap);
+	adiv5_ap_unref(((cortexm_priv_s *)priv)->ap);
 	free(priv);
 }
 
@@ -554,7 +554,7 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 		t->part_id = ap->partno;
 	}
 
-	struct cortexm_priv *priv = calloc(1, sizeof(*priv));
+	cortexm_priv_s *priv = calloc(1, sizeof(*priv));
 	if (!priv) { /* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return false;
@@ -760,7 +760,7 @@ bool cortexm_attach(target_s *t)
 
 	adiv5_access_port_s *ap = cortexm_ap(t);
 	ap->dp->fault = 1; /* Force switch to this multi-drop device*/
-	struct cortexm_priv *priv = t->priv;
+	cortexm_priv_s *priv = t->priv;
 
 	/* Clear any pending fault condition */
 	target_check_error(t);
@@ -820,7 +820,7 @@ bool cortexm_attach(target_s *t)
 
 void cortexm_detach(target_s *t)
 {
-	struct cortexm_priv *priv = t->priv;
+	cortexm_priv_s *priv = t->priv;
 	unsigned i;
 
 	if (t->tdesc) {
@@ -1041,7 +1041,7 @@ static void cortexm_halt_request(target_s *t)
 
 static target_halt_reason_e cortexm_halt_poll(target_s *t, target_addr_t *watch)
 {
-	struct cortexm_priv *priv = t->priv;
+	cortexm_priv_s *priv = t->priv;
 
 	volatile uint32_t dhcsr = 0;
 	volatile exception_s e;
@@ -1103,7 +1103,7 @@ static target_halt_reason_e cortexm_halt_poll(target_s *t, target_addr_t *watch)
 
 void cortexm_halt_resume(target_s *t, bool step)
 {
-	struct cortexm_priv *priv = t->priv;
+	cortexm_priv_s *priv = t->priv;
 	uint32_t dhcsr = CORTEXM_DHCSR_DBGKEY | CORTEXM_DHCSR_C_DEBUGEN;
 
 	if (step)
@@ -1280,7 +1280,7 @@ static uint32_t dwt_func(target_s *t, target_breakwatch_e type)
 
 static int cortexm_breakwatch_set(target_s *t, breakwatch_s *bw)
 {
-	struct cortexm_priv *priv = t->priv;
+	cortexm_priv_s *priv = t->priv;
 	size_t i;
 	uint32_t val = bw->addr;
 
@@ -1331,7 +1331,7 @@ static int cortexm_breakwatch_set(target_s *t, breakwatch_s *bw)
 
 static int cortexm_breakwatch_clear(target_s *t, breakwatch_s *bw)
 {
-	struct cortexm_priv *priv = t->priv;
+	cortexm_priv_s *priv = t->priv;
 	unsigned i = bw->reserved[0];
 	switch (bw->type) {
 	case TARGET_BREAK_HARD:
@@ -1351,7 +1351,7 @@ static int cortexm_breakwatch_clear(target_s *t, breakwatch_s *bw)
 
 static target_addr_t cortexm_check_watch(target_s *t)
 {
-	struct cortexm_priv *priv = t->priv;
+	cortexm_priv_s *priv = t->priv;
 	unsigned i;
 
 	for (i = 0; i < priv->hw_watchpoint_max; i++) {
@@ -1368,7 +1368,7 @@ static target_addr_t cortexm_check_watch(target_s *t)
 
 static bool cortexm_vector_catch(target_s *t, int argc, const char **argv)
 {
-	struct cortexm_priv *priv = t->priv;
+	cortexm_priv_s *priv = t->priv;
 	static const char *vectors[] = {"reset", NULL, NULL, NULL, "mm", "nocp", "chk", "stat", "bus", "int", "hard"};
 	uint32_t tmp = 0;
 	unsigned i;
