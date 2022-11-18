@@ -513,29 +513,29 @@ error_1:
 static void libftdi_set_data(data_desc_t *data)
 {
 	uint8_t cmd[6];
-	int index = 0;
-	if ((data->data_low) || (data->ddr_low)) {
+	size_t index = 0;
+	if (data->data_low || data->ddr_low) {
 		if (data->data_low > 0)
-			active_state.data_low |= (data->data_low & 0xff);
+			active_state.data_low |= data->data_low & 0xffU;
 		else if (data->data_low < 0)
-			active_state.data_low &= (data->data_low & 0xff);
+			active_state.data_low &= data->data_low & 0xffU;
 		if (data->ddr_low > 0)
-			active_state.ddr_low |= (data->ddr_low & 0xff);
+			active_state.ddr_low |= data->ddr_low & 0xffU;
 		else if (data->ddr_low < 0)
-			active_state.ddr_low &= (data->ddr_low & 0xff);
+			active_state.ddr_low &= data->ddr_low & 0xffU;
 		cmd[index++] = SET_BITS_LOW;
 		cmd[index++] = active_state.data_low;
 		cmd[index++] = active_state.ddr_low;
 	}
-	if ((data->data_high) || (data->ddr_high)) {
+	if (data->data_high || data->ddr_high) {
 		if (data->data_high > 0)
-			active_state.data_high |= (data->data_high & 0xff);
+			active_state.data_high |= data->data_high & 0xffU;
 		else if (data->data_high < 0)
-			active_state.data_high &= (data->data_high & 0xff);
+			active_state.data_high &= data->data_high & 0xffU;
 		if (data->ddr_high > 0)
-			active_state.ddr_high |= (data->ddr_high & 0xff);
+			active_state.ddr_high |= data->ddr_high & 0xffU;
 		else if (data->ddr_high < 0)
-			active_state.ddr_high &= (data->ddr_high & 0xff);
+			active_state.ddr_high &= data->ddr_high & 0xffU;
 		cmd[index++] = SET_BITS_HIGH;
 		cmd[index++] = active_state.data_high;
 		cmd[index++] = active_state.ddr_high;
