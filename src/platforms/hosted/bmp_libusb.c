@@ -352,7 +352,7 @@ static void LIBUSB_CALL on_trans_done(libusb_transfer_s *const transfer)
 static int submit_wait(usb_link_s *link, libusb_transfer_s *transfer)
 {
 	transfer_ctx_s transfer_ctx;
-	enum libusb_error error;
+	libusb_error_e error;
 
 	transfer_ctx.flags = 0;
 

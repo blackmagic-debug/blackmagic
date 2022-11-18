@@ -54,6 +54,7 @@ typedef struct libusb_interface_descriptor libusb_interface_descriptor_s;
 typedef struct libusb_endpoint_descriptor libusb_endpoint_descriptor_s;
 typedef struct libusb_interface libusb_interface_s;
 typedef struct libusb_transfer libusb_transfer_s;
+typedef enum libusb_error libusb_error_e;
 
 typedef struct usb_link {
 	libusb_context *ul_libusb_ctx;
