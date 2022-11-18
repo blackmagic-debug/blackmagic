@@ -141,7 +141,7 @@ static usbd_request_return_codes_e debug_serial_control_request(usbd_device *dev
 void usb_serial_set_state(usbd_device *const dev, const uint16_t iface, const uint8_t ep)
 {
 	uint8_t buf[10];
-	struct usb_cdc_notification *notif = (void *)buf;
+	usb_cdc_notification_s *notif = (void *)buf;
 	/* We echo signals back to host as notification */
 	notif->bmRequestType = 0xA1;
 	notif->bNotification = USB_CDC_NOTIFY_SERIAL_STATE;
