@@ -40,11 +40,12 @@ data_desc_t active_state;
 
 cable_desc_t cable_desc[] = {
 	{
-		/* Direct connection from FTDI to Jtag/Swd.
+		/*
+		 * Direct connection from FTDI to JTAG/SWD.
 		 * Pin 6 direct connected to RST.
 		 */
-		.vendor = 0x0403,
-		.product = 0x6014,
+		.vendor = 0x0403U,
+		.product = 0x6014U,
 		.interface = INTERFACE_A,
 		// No explicit reset
 		.bb_swdio_in_port_cmd = GET_BITS_LOW,
@@ -53,11 +54,12 @@ cable_desc_t cable_desc[] = {
 		.name = "um232h",
 	},
 	{
-		/* Direct connection from FTDI to Jtag/Swd.
+		/*
+		 * Direct connection from FTDI to JTAG/SWD.
 		 * Pin 6 direct connected to RST.
 		 */
-		.vendor = 0x0403,
-		.product = 0x6010,
+		.vendor = 0x0403U,
+		.product = 0x6010U,
 		.interface = INTERFACE_A,
 		.init.data_low = PIN6, /* PULL nRST high*/
 		.bb_swdio_in_port_cmd = GET_BITS_LOW,
@@ -70,7 +72,8 @@ cable_desc_t cable_desc[] = {
 		.name = "flossjtag",
 	},
 	{
-		/* MPSSE_SK (DB0) ----------- SWDCK/JTCK
+		/*
+		 * MPSSE_SK (DB0) ----------- SWDCK/JTCK
 		 * MPSSE-DO (DB1) -- 470 R -- SWDIO/JTMS
 		 * MPSSE-DI (DB2) ----------- SWDIO/JTMS
 		 * DO is tristated with SWD read, so
@@ -79,8 +82,8 @@ cable_desc_t cable_desc[] = {
 		 * JTAG not possible
 		 * PIN6     (DB6) ----------- NRST
 		 */
-		.vendor = 0x0403,
-		.product = 0x6010, /*FT2232H*/
+		.vendor = 0x0403U,
+		.product = 0x6010U, /*FT2232H*/
 		.interface = INTERFACE_B,
 		.init.data_low = PIN4, /* Pull up pin 4 */
 		.init.ddr_low = PIN4,  /* Pull up pin 4 */
@@ -96,7 +99,8 @@ cable_desc_t cable_desc[] = {
 		.name = "usbmate",
 	},
 	{
-		/* MPSSE_SK (DB0) ----------- SWDCK/JTCK
+		/*
+		 * MPSSE_SK (DB0) ----------- SWDCK/JTCK
 		 * MPSSE-DO (DB1) -- 470 R -- SWDIO/JTMS
 		 * MPSSE-DI (DB2) ----------- SWDIO/JTMS
 		 * DO is tristated with SWD read, so
@@ -104,25 +108,26 @@ cable_desc_t cable_desc[] = {
 		 * from contentions in case of errors.
 		 * JTAG not possible.
 		 */
-		.vendor = 0x0403,
-		.product = 0x6014, /*FT232H*/
+		.vendor = 0x0403U,
+		.product = 0x6014U, /*FT232H*/
 		.interface = INTERFACE_A,
 		.mpsse_swd_read.set_data_low = MPSSE_DO,
 		.mpsse_swd_write.set_data_low = MPSSE_DO,
 		.name = "ft232h_resistor_swd",
 	},
 	{
-		/* Buffered connection from FTDI to Jtag/Swd.
-		 * TCK and TMS not independant switchable!
-		 * SWD not possible.
+		/*
+		 * Buffered connection from FTDI to JTAG/SWD.
+		 * TCK and TMS are not independantly switchable.
+		 * => SWD is not possible.
 		 * PIN4 low enables buffers
 		 * PIN5 Low indicates VRef applied
 		 * PIN6 reads back nRST
 		 * CBUS PIN1 Sets nRST
 		 * CBUS PIN2 low drives nRST
 		 */
-		.vendor = 0x0403,
-		.product = 0x6010,
+		.vendor = 0x0403U,
+		.product = 0x6010U,
 		.interface = INTERFACE_A,
 		.init.ddr_low = PIN4,
 		.init.data_high = PIN4 | PIN3 | PIN2,
@@ -135,22 +140,23 @@ cable_desc_t cable_desc[] = {
 		.name = "ftdijtag",
 	},
 	{
-		/* UART/SWO on Interface A
+		/*
+		 * UART/SWO on Interface A
 		 * JTAG and control on INTERFACE_B
 		 * Bit 5 high selects SWD-WRITE (TMS routed to MPSSE_DI)
 		 * Bit 6 high selects JTAG vs SWD (TMS routed to MPSSE_CS)
 		 * BCBUS 1 (Output) N_RST
-		 * BCBUS 2 (Input/ Internal Pull Up) V_ISO available
+		 * BCBUS 2 (Input/Internal pull-up) V_ISO available
 		 *
 		 * For bitbanged SWD, set Bit 5 low and select SWD read with
 		 * Bit 6 low. Read Connector TMS as MPSSE_DI.
 		 *
-		 * TDO is routed to Interface 0 RXD as SWO or with Uart
+		 * TDO is routed to Interface 0 RXD as SWO or with UART
 		 * Connector pin 10 pulled to ground will connect Interface 0 RXD
 		 * to UART connector RXD
 		 */
-		.vendor = 0x0403,
-		.product = 0x6010,
+		.vendor = 0x0403U,
+		.product = 0x6010U,
 		.interface = INTERFACE_B,
 		.init.data_low = PIN6 | PIN5,
 		.init.ddr_low = PIN6 | PIN5,
@@ -169,23 +175,24 @@ cable_desc_t cable_desc[] = {
 		.description = "FTDISWD",
 	},
 	{
-		.vendor = 0x15b1,
-		.product = 0x0003,
+		.vendor = 0x15b1U,
+		.product = 0x0003U,
 		.interface = INTERFACE_A,
 		.init.ddr_low = PIN5,
 		.name = "olimex",
 	},
 	{
-		/* Buffered connection from FTDI to Jtag/Swd.
-		 * TCK and TMS not independant switchable!
-		 * => SWD not possible.
+		/*
+		 * Buffered connection from FTDI to JTAG/SWD.
+		 * TCK and TMS are not independantly switchable.
+		 * => SWD is not possible.
 		 * DBUS PIN4 / JTAGOE low enables buffers
 		 * DBUS PIN5 / TRST high drives nTRST low OC
 		 * DBUS PIN6 / RST high drives nRST low OC
 		 * CBUS PIN0 reads back nRST
 		 */
-		.vendor = 0x0403,
-		.product = 0xbdc8,
+		.vendor = 0x0403U,
+		.product = 0xbdc8U,
 		.interface = INTERFACE_A,
 		/* Drive low to activate JTAGOE and deassert TRST/RST.*/
 		.init.data_low = 0,
@@ -199,20 +206,21 @@ cable_desc_t cable_desc[] = {
 		.description = "Turtelizer JTAG/RS232 Adapter",
 	},
 	{
-		/* https://reference.digilentinc.com/jtag_hs1/jtag_hs1
+		/*
+		 * https://reference.digilentinc.com/jtag_hs1/jtag_hs1
 		 * No schmeatics available.
-		 * Buffered from FTDI to Jtag/Swd announced
+		 * Buffered from FTDI to JTAG/SWD announced
 		 * Independant switch for TMS not known
 		 * => SWD not possible. */
-		.vendor = 0x0403,
-		.product = 0xbdc8,
+		.vendor = 0x0403U,
+		.product = 0xbdc8U,
 		.interface = INTERFACE_A,
 		.name = "jtaghs1",
 	},
 	{
-		/* Direct connection from FTDI to Jtag/Swd assumed.*/
-		.vendor = 0x0403,
-		.product = 0xbdc8,
+		/* Direct connection from FTDI to JTAG/SWD assumed.*/
+		.vendor = 0x0403U,
+		.product = 0xbdc8U,
 		.interface = INTERFACE_A,
 		.init.data_low = MPSSE_CS | MPSSE_DO | MPSSE_DI,
 		.init.ddr_low = MPSSE_CS | MPSSE_DO | MPSSE_SK,
@@ -222,8 +230,8 @@ cable_desc_t cable_desc[] = {
 	},
 	{
 		/* Product name not unique! Assume SWD not possible.*/
-		.vendor = 0x0403,
-		.product = 0x6014,
+		.vendor = 0x0403U,
+		.product = 0x6014U,
 		.interface = INTERFACE_A,
 		.init.data_low = PIN7,
 		.init.ddr_low = PIN7,
@@ -232,9 +240,9 @@ cable_desc_t cable_desc[] = {
 		.name = "digilent",
 	},
 	{
-		/* Direct connection from FTDI to Jtag/Swd assumed.*/
-		.vendor = 0x0403,
-		.product = 0x6014,
+		/* Direct connection from FTDI to JTAG/SWD assumed.*/
+		.vendor = 0x0403U,
+		.product = 0x6014U,
 		.interface = INTERFACE_A,
 		.init.data_low = MPSSE_CS | MPSSE_DO | MPSSE_DI,
 		.init.ddr_low = MPSSE_CS | MPSSE_DO | MPSSE_SK,
@@ -243,13 +251,14 @@ cable_desc_t cable_desc[] = {
 		.name = "ft232h",
 	},
 	{
-		/* MPSSE-SK (AD0) ----------- SWCLK/JTCK
+		/*
+		 * MPSSE-SK (AD0) ----------- SWCLK/JTCK
 		 * MPSSE-DO (AD1) ----------- SWDIO/JTMS
 		 * MPSSE-DI (AD2) -- 330 R -- SWDIO/JTMS
 		 *                  (470 R or similar also fine)
 		 */
-		.vendor = 0x0403,
-		.product = 0x6011,
+		.vendor = 0x0403U,
+		.product = 0x6011U,
 		.interface = INTERFACE_A,
 		.mpsse_swd_read.set_data_low = MPSSE_DI,
 		.mpsse_swd_write.set_data_low = MPSSE_DO,
@@ -257,12 +266,14 @@ cable_desc_t cable_desc[] = {
 		.name = "ft4232h",
 	},
 	{
-		/* http://www.olimex.com/dev/pdf/ARM-USB-OCD.pdf.
+		/*
+		 * http://www.olimex.com/dev/pdf/ARM-USB-OCD.pdf.
 		 * DBUS 4 global enables JTAG Buffer.
-		 * => TCK and TMS not independant switchable!
-		 * => SWD not possible. */
-		.vendor = 0x15ba,
-		.product = 0x002b,
+		 * TCK and TMS are not independantly switchable.
+		 * => SWD is not possible.
+		 */
+		.vendor = 0x15baU,
+		.product = 0x002bU,
 		.interface = INTERFACE_A,
 		.init.ddr_low = PIN4,
 		.init.data_high = PIN3 | PIN1 | PIN0,
@@ -270,24 +281,25 @@ cable_desc_t cable_desc[] = {
 		.name = "arm-usb-ocd-h",
 	},
 	{
-		/* ESP Prog:
-		 *
+		/*
 		 * JTAG buffered on Interface A -> No SWD
 		 * Standard VID/PID/Product
 		 * No nRST on the 10 pin connectors
 		 *
+		 * This device has no explicit reset.
+		 * => SWD is not possible.
+		 *
 		 * JTAG enabled by default, ESP_EN pulled up,
 		 * inverted by U4 and enabling JTAG by U5
 		 */
-		.vendor = 0x0403,
-		.product = 0x6010,
+		.vendor = 0x0403U,
+		.product = 0x6010U,
 		.interface = INTERFACE_A,
 		.name = "esp-prog",
-		// No explicit reset
-		// SWD not possible
 	},
 	{
-		/* MPSSE_SK (DB0) ----------- SWDCK/JTCK
+		/*
+		 * MPSSE_SK (DB0) ----------- SWDCK/JTCK
 		 * Mode-Switch 1-2/4-5: JTAG
 		 * MPSSE-DO (DB1) ----------- JTAG/TDI
 		 * MPSSE-DI (DB2) ----------- JTAG/TDO
@@ -299,9 +311,10 @@ cable_desc_t cable_desc[] = {
 		 * TRST is Push/Pull, not OD!
 		 * PIN4     (DB5) ----------- TRST
 		 * nRST is Push/Pull, not OD! Keep DDR set.
-		 * PIN5     (DB5) ----------- NRST */
-		.vendor = 0x0403,
-		.product = 0x6010, /*FT2232H*/
+		 * PIN5     (DB5) ----------- NRST
+		 */
+		.vendor = 0x0403U,
+		.product = 0x6010U, /*FT2232H*/
 		.interface = INTERFACE_B,
 		.init.data_high = PIN4 | PIN5, /* High   on PIN4/5 */
 		.init.ddr_high = PIN4 | PIN5,  /* Output on PIN4/5 */
@@ -314,13 +327,14 @@ cable_desc_t cable_desc[] = {
 		.name = "tigard",
 	},
 	{
-		/* https://sifive.cdn.prismic.io/sifive/b5c95ddd-22af-4be0-8021-50327e186b07_hifive1-a-schematics.pdf
-		 * Direct Connection on Interface-A
-		 * Reset on PIN5, Open-Drain, pulled up tp 3.3 Volt
+		/*
+		 * https://sifive.cdn.prismic.io/sifive/b5c95ddd-22af-4be0-8021-50327e186b07_hifive1-a-schematics.pdf
+		 * Direct connection on Interface-A
+		 * Reset on PIN5, Open-Drain, pulled up to 3.3V
 		 * and decoupled from FE310 reset voa Schottky
 		 */
-		.vendor = 0x0403,
-		.product = 0x6010,
+		.vendor = 0x0403U,
+		.product = 0x6010U,
 		.interface = INTERFACE_A,
 		.assert_nrst.data_low = ~PIN5,
 		.assert_nrst.ddr_low = PIN5,
@@ -331,12 +345,13 @@ cable_desc_t cable_desc[] = {
 		.name = "hifive1",
 	},
 	{
-		/* https://www.olimex.com/Products/ARM/JTAG/ARM-USB-TINY-H/
+		/*
+		 * https://www.olimex.com/Products/ARM/JTAG/ARM-USB-TINY-H/
 		 *
 		 * schematics not available
 		 */
-		.vendor = 0x15b1,
-		.product = 0x002a,
+		.vendor = 0x15b1U,
+		.product = 0x002aU,
 		.interface = INTERFACE_A,
 		.init.data_low = PIN4,
 		.init.ddr_low = PIN4 | PIN5,
