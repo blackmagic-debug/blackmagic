@@ -732,19 +732,20 @@ void libftdi_max_frequency_set(uint32_t freq)
 {
 	uint32_t clock;
 	if (ftdic->type == TYPE_2232C)
-		clock = 12 * 1000 * 1000;
+		clock = 12U * 1000U * 1000U;
 	else
 		/* Undivided clock set during startup*/
-		clock = 60 * 1000 * 1000;
-	uint32_t div = (clock + 2 * freq - 1) / freq;
-	if (div < 4 && ftdic->type == TYPE_2232C)
-		div = 4; /* Avoid bad unsymetrict FT2232C clock at 6 MHz*/
-	divisor = div / 2 - 1;
+		clock = 60U * 1000U * 1000U;
+
+	uint32_t div = (clock + 2U * freq - 1U) / freq;
+	if (div < 4U && ftdic->type == TYPE_2232C)
+		div = 4U; /* Avoid bad asymetric FT2232C clock at 6 MHz*/
+	divisor = div / 2U - 1U;
 	uint8_t buf[3];
 	buf[0] = TCK_DIVISOR;
-	buf[1] = divisor & 0xff;
-	buf[2] = (divisor >> 8) & 0xff;
-	libftdi_buffer_write(buf, 3);
+	buf[1] = divisor & 0xffU;
+	buf[2] = (divisor >> 8U) & 0xffU;
+	libftdi_buffer_write_arr(buf);
 }
 
 uint32_t libftdi_max_frequency_get(void)
