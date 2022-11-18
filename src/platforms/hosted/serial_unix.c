@@ -102,6 +102,8 @@ int serial_open(const bmp_cli_options_s *cl_opts, char *serial)
 #define BMP_IDSTRING_1BITSQUARED "usb-1BitSquared_Black_Magic_Probe"
 #define DEVICE_BY_ID             "/dev/serial/by-id/"
 
+typedef struct dirent dirent_s;
+
 bool device_is_bmp_gdb_port(const char *const device)
 {
 	const size_t length = strlen(device);
@@ -139,7 +141,7 @@ int serial_open(const bmp_cli_options_s *const cl_opts, const char *const serial
 		size_t matches = 0;
 		size_t total = 0;
 		while (true) {
-			const struct dirent *const entry = readdir(dir);
+			const dirent_s *const entry = readdir(dir);
 			if (entry == NULL)
 				break;
 			if (device_is_bmp_gdb_port(entry->d_name)) {
@@ -165,7 +167,7 @@ int serial_open(const bmp_cli_options_s *const cl_opts, const char *const serial
 			dir = opendir(DEVICE_BY_ID);
 			if (dir) {
 				while (true) {
-					const struct dirent *const entry = readdir(dir);
+					const dirent_s *const entry = readdir(dir);
 					if (entry == NULL)
 						break;
 					if (device_is_bmp_gdb_port(entry->d_name))
