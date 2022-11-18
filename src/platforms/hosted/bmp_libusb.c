@@ -117,7 +117,7 @@ int find_debuggers(bmp_cli_options_s *cl_opts, bmp_info_s *info)
 	}
 	if (cl_opts->opt_cable) {
 		if (!strcmp(cl_opts->opt_cable, "list") || !strcmp(cl_opts->opt_cable, "l")) {
-			cable_desc_t *cable = cable_desc;
+			const cable_desc_s *cable = cable_desc;
 			DEBUG_WARN("Available cables:\n");
 			for (; cable->name; ++cable)
 				DEBUG_WARN("\t%s%c\n", cable->name, cable->description ? ' ' : '*');
@@ -259,7 +259,7 @@ rescan:
 		} else if (desc.idVendor == VENDOR_ID_SEGGER)
 			type = BMP_TYPE_JLINK;
 		else {
-			cable_desc_t *cable = cable_desc;
+			const cable_desc_s *cable = cable_desc;
 			for (; cable->name; ++cable) {
 				bool found = false;
 				if (cable->vendor != desc.idVendor || cable->product != desc.idProduct)

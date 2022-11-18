@@ -41,7 +41,7 @@ typedef struct pin_settings {
 	uint8_t clr_data_high;
 } pin_settings_s;
 
-typedef struct cable_desc_s {
+typedef struct cable_desc {
 	int vendor;
 	int product;
 	int interface;
@@ -97,7 +97,7 @@ typedef struct cable_desc_s {
 	char *description;
 	/* Command line argument to -c option to select this device.*/
 	char *name;
-} cable_desc_t;
+} cable_desc_s;
 
 #define libftdi_buffer_write_arr(array) libftdi_buffer_write(array, sizeof(array))
 #define libftdi_buffer_write_val(value) libftdi_buffer_write(&(value), sizeof(value))
@@ -173,8 +173,8 @@ bool libftdi_nrst_get_val(void)
 #pragma GCC diagnostic pop
 #else
 #include <ftdi.h>
-extern cable_desc_t cable_desc[];
-extern cable_desc_t *active_cable;
+extern const cable_desc_s cable_desc[];
+extern cable_desc_s active_cable;
 extern struct ftdi_context *ftdic;
 extern data_desc_s active_state;
 
