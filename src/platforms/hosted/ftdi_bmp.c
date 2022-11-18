@@ -556,28 +556,28 @@ void libftdi_nrst_set_val(bool assert)
 
 bool libftdi_nrst_get_val(void)
 {
-	uint8_t cmd[1] = {0};
+	uint8_t cmd;
 	uint8_t pin = 0;
 	if (active_cable->nrst_get_port_cmd && active_cable->nrst_get_pin) {
-		cmd[0] = active_cable->nrst_get_port_cmd;
+		cmd = active_cable->nrst_get_port_cmd;
 		pin = active_cable->nrst_get_pin;
 	} else if (active_cable->assert_nrst.data_low && active_cable->assert_nrst.ddr_low) {
-		cmd[0] = GET_BITS_LOW;
+		cmd = GET_BITS_LOW;
 		pin = active_cable->assert_nrst.data_low;
 	} else if (active_cable->assert_nrst.data_high && active_cable->assert_nrst.ddr_high) {
-		cmd[0] = GET_BITS_HIGH;
+		cmd = GET_BITS_HIGH;
 		pin = active_cable->assert_nrst.data_high;
-	} else {
+	} else
 		return false;
-	}
-	libftdi_buffer_write(cmd, 1);
-	uint8_t data[1];
-	libftdi_buffer_read(data, 1);
+
+	uint8_t data;
+	libftdi_buffer_write_val(cmd);
+	libftdi_buffer_read_val(data);
 	bool res = false;
-	if (pin < 0x7f || pin == PIN7)
-		res = data[0] & pin;
+	if (pin < 0x7fU || pin == PIN7)
+		res = data & pin;
 	else
-		res = !(data[0] & ~pin);
+		res = !(data & ~pin);
 	return res;
 }
 
@@ -605,7 +605,7 @@ size_t libftdi_buffer_write(const uint8_t *data, size_t size)
 	DEBUG_WIRE("Write %d bytes:", size);
 	for (size_t i = 0; i < size; i++) {
 		DEBUG_WIRE(" %02x", data[i]);
-		if (i && (i & 0xf) == 0xf)
+		if (i && (i & 0xfU) == 0xfU)
 			DEBUG_WIRE("\n\t");
 	}
 	DEBUG_WIRE("\n");
