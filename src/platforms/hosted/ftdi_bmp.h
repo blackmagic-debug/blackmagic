@@ -100,6 +100,7 @@ typedef struct cable_desc_s {
 } cable_desc_t;
 
 #define libftdi_buffer_write_arr(array) libftdi_buffer_write(array, sizeof(array))
+#define libftdi_buffer_write_val(value) libftdi_buffer_write(&(value), sizeof(value))
 #define libftdi_buffer_read_arr(array)  libftdi_buffer_read(array, sizeof(array))
 #define libftdi_buffer_read_val(value)  libftdi_buffer_read(&(value), sizeof(value))
 
