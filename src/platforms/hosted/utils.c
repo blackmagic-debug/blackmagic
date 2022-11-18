@@ -30,6 +30,7 @@
 
 #include "general.h"
 #include "timing.h"
+#include "bmp_hosted.h"
 
 #if defined(_WIN32) && !defined(__MINGW32__)
 #warning "This vasprintf() is dubious!"
@@ -60,7 +61,7 @@ void platform_delay(uint32_t ms)
 
 uint32_t platform_time_ms(void)
 {
-	struct timeval tv;
+	timeval_s tv;
 	gettimeofday(&tv, NULL);
 	return (tv.tv_sec * 1000) + (tv.tv_usec / 1000);
 }
