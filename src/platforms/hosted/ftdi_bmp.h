@@ -34,12 +34,12 @@ typedef struct data_desc {
 	int16_t ddr_high;
 } data_desc_s;
 
-typedef struct pin_settings_s {
+typedef struct pin_settings {
 	uint8_t set_data_low;
 	uint8_t clr_data_low;
 	uint8_t set_data_high;
 	uint8_t clr_data_high;
-} pin_settings_t;
+} pin_settings_s;
 
 typedef struct cable_desc_s {
 	int vendor;
@@ -56,10 +56,10 @@ typedef struct cable_desc_s {
 	uint8_t bb_swdio_in_pin;
 	/* Bus data to allow bitbanging switched SWD read.
 	 * TMS is routed to bb_swdio_in_port/pin.*/
-	pin_settings_t bb_swd_read;
+	pin_settings_s bb_swd_read;
 	/* Bus data to allow bitbanging switched SWD write.
 	 * TMS is routed to MPSSE_CS.*/
-	pin_settings_t bb_swd_write;
+	pin_settings_s bb_swd_write;
 	/* dbus_data, dbus_ddr, cbus_data, cbus_ddr value to assert nRST.
 	 *	E.g. with CBUS Pin 1 low,
 	 *	give data_high = ~PIN1, ddr_high = PIN1 */
@@ -84,11 +84,11 @@ typedef struct cable_desc_s {
 	 * are provided, SWD can not be done.
 	 * swd_read.set_data_low ==  swd_write.set_data_low == MPSSE_DO
 	 * indicated resistor SWD and inhibits Jtag.*/
-	pin_settings_t mpsse_swd_read;
+	pin_settings_s mpsse_swd_read;
 	/* dbus data for pure MPSSE SWD write.*/
-	pin_settings_t mpsse_swd_write;
+	pin_settings_s mpsse_swd_write;
 	/* dbus data for jtag.*/
-	pin_settings_t jtag;
+	pin_settings_s jtag;
 	/* Command to read port to check target voltage.*/
 	uint8_t target_voltage_cmd;
 	/* Pin to check target voltage.*/
