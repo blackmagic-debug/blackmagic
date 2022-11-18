@@ -48,6 +48,7 @@ struct trans_ctx {
 	volatile unsigned long flags;
 };
 
+typedef struct libusb_config_descriptor libusb_config_descriptor_s;
 typedef struct libusb_interface_descriptor libusb_interface_descriptor_s;
 typedef struct libusb_transfer libusb_transfer_s;
 
