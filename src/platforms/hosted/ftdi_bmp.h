@@ -175,7 +175,7 @@ bool libftdi_nrst_get_val(void)
 #include <ftdi.h>
 extern const cable_desc_s cable_desc[];
 extern cable_desc_s active_cable;
-extern struct ftdi_context *ftdic;
+extern ftdi_context_s *ftdic;
 extern data_desc_s active_state;
 
 int ftdi_bmp_init(bmp_cli_options_s *cl_opts, bmp_info_s *info);
