@@ -34,15 +34,17 @@
 #ifndef WIN32
 #include <termios.h>
 
+typedef struct termios terminal_io_state_s;
+
 /* linux */
-static struct termios saved_ttystate;
+static terminal_io_state_s saved_ttystate;
 static bool tty_saved = false;
 
 /* set up and tear down */
 
 int rtt_if_init()
 {
-	struct termios ttystate;
+	terminal_io_state_s ttystate;
 	tcgetattr(STDIN_FILENO, &saved_ttystate);
 	tty_saved = true;
 	tcgetattr(STDIN_FILENO, &ttystate);
