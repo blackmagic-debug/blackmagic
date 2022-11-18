@@ -75,9 +75,9 @@ static const char *const iap_error[] = {
 
 static bool lpc_flash_write(target_flash_s *tf, target_addr_t dest, const void *src, size_t len);
 
-struct lpc_flash *lpc_add_flash(target_s *t, target_addr_t addr, size_t length)
+lpc_flash_s *lpc_add_flash(target_s *t, target_addr_t addr, size_t length)
 {
-	struct lpc_flash *lf = calloc(1, sizeof(*lf));
+	lpc_flash_s *lf = calloc(1, sizeof(*lf));
 	target_flash_s *f;
 
 	if (!lf) { /* calloc failed: heap exhaustion */
@@ -95,19 +95,19 @@ struct lpc_flash *lpc_add_flash(target_s *t, target_addr_t addr, size_t length)
 	return lf;
 }
 
-static uint8_t lpc_sector_for_addr(struct lpc_flash *f, uint32_t addr)
+static uint8_t lpc_sector_for_addr(lpc_flash_s *f, uint32_t addr)
 {
 	return f->base_sector + (addr - f->f.start) / f->f.blocksize;
 }
 
-static inline bool lpc_is_full_erase(struct lpc_flash *f, const uint32_t begin, const uint32_t end)
+static inline bool lpc_is_full_erase(lpc_flash_s *f, const uint32_t begin, const uint32_t end)
 {
 	const target_addr_t addr = f->f.start;
 	const size_t len = f->f.length;
 	return begin == lpc_sector_for_addr(f, addr) && end == lpc_sector_for_addr(f, addr + len - 1U);
 }
 
-enum iap_status lpc_iap_call(struct lpc_flash *f, void *result, enum iap_cmd cmd, ...)
+enum iap_status lpc_iap_call(lpc_flash_s *f, void *result, enum iap_cmd cmd, ...)
 {
 	target_s *t = f->f.t;
 	flash_param_s param = {
@@ -187,7 +187,7 @@ enum iap_status lpc_iap_call(struct lpc_flash *f, void *result, enum iap_cmd cmd
 
 bool lpc_flash_erase(target_flash_s *tf, target_addr_t addr, size_t len)
 {
-	struct lpc_flash *f = (struct lpc_flash *)tf;
+	lpc_flash_s *f = (lpc_flash_s *)tf;
 	const uint32_t start = lpc_sector_for_addr(f, addr);
 	const uint32_t end = lpc_sector_for_addr(f, addr + len - 1U);
 	uint32_t last_full_sector = end;
@@ -225,7 +225,7 @@ bool lpc_flash_erase(target_flash_s *tf, target_addr_t addr, size_t len)
 
 static bool lpc_flash_write(target_flash_s *tf, target_addr_t dest, const void *src, size_t len)
 {
-	struct lpc_flash *f = (struct lpc_flash *)tf;
+	lpc_flash_s *f = (lpc_flash_s *)tf;
 	/* Prepare... */
 	const uint32_t sector = lpc_sector_for_addr(f, dest);
 	if (lpc_iap_call(f, NULL, IAP_CMD_PREPARE, sector, sector, f->bank)) {
