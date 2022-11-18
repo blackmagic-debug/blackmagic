@@ -330,17 +330,17 @@ rescan:
 	return found_debuggers == 1 ? 0 : -1;
 }
 
-static void LIBUSB_CALL on_trans_done(libusb_transfer_s *trans)
+static void LIBUSB_CALL on_trans_done(libusb_transfer_s *const transfer)
 {
-	struct trans_ctx *const ctx = trans->user_data;
+	transfer_ctx_s *const ctx = transfer->user_data;
 
-	if (trans->status != LIBUSB_TRANSFER_COMPLETED) {
+	if (transfer->status != LIBUSB_TRANSFER_COMPLETED) {
 		DEBUG_WARN("on_trans_done: ");
-		if (trans->status == LIBUSB_TRANSFER_TIMED_OUT)
+		if (transfer->status == LIBUSB_TRANSFER_TIMED_OUT)
 			DEBUG_WARN(" Timeout\n");
-		else if (trans->status == LIBUSB_TRANSFER_CANCELLED)
+		else if (transfer->status == LIBUSB_TRANSFER_CANCELLED)
 			DEBUG_WARN(" cancelled\n");
-		else if (trans->status == LIBUSB_TRANSFER_NO_DEVICE)
+		else if (transfer->status == LIBUSB_TRANSFER_NO_DEVICE)
 			DEBUG_WARN(" no device\n");
 		else
 			DEBUG_WARN(" unknown\n");
@@ -349,24 +349,24 @@ static void LIBUSB_CALL on_trans_done(libusb_transfer_s *trans)
 	ctx->flags |= TRANS_FLAGS_IS_DONE;
 }
 
-static int submit_wait(usb_link_s *link, libusb_transfer_s *trans)
+static int submit_wait(usb_link_s *link, libusb_transfer_s *transfer)
 {
-	struct trans_ctx trans_ctx;
+	transfer_ctx_s transfer_ctx;
 	enum libusb_error error;
 
-	trans_ctx.flags = 0;
+	transfer_ctx.flags = 0;
 
 	/* brief intrusion inside the libusb interface */
-	trans->callback = on_trans_done;
-	trans->user_data = &trans_ctx;
+	transfer->callback = on_trans_done;
+	transfer->user_data = &transfer_ctx;
 
-	if ((error = libusb_submit_transfer(trans))) {
+	if ((error = libusb_submit_transfer(transfer))) {
 		DEBUG_WARN("libusb_submit_transfer(%d): %s\n", error, libusb_strerror(error));
 		exit(-1);
 	}
 
 	uint32_t start_time = platform_time_ms();
-	while (trans_ctx.flags == 0) {
+	while (transfer_ctx.flags == 0) {
 		struct timeval timeout;
 		timeout.tv_sec = 1;
 		timeout.tv_usec = 0;
@@ -376,12 +376,12 @@ static int submit_wait(usb_link_s *link, libusb_transfer_s *trans)
 		}
 		uint32_t now = platform_time_ms();
 		if (now - start_time > 1000) {
-			libusb_cancel_transfer(trans);
+			libusb_cancel_transfer(transfer);
 			DEBUG_WARN("libusb_handle_events() timeout\n");
 			return -1;
 		}
 	}
-	if (trans_ctx.flags & TRANS_FLAGS_HAS_ERROR) {
+	if (transfer_ctx.flags & TRANS_FLAGS_HAS_ERROR) {
 		DEBUG_WARN("libusb_handle_events() | has_error\n");
 		return -1;
 	}
