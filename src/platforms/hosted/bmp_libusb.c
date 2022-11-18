@@ -344,9 +344,9 @@ static void LIBUSB_CALL on_trans_done(libusb_transfer_s *const transfer)
 			DEBUG_WARN(" no device\n");
 		else
 			DEBUG_WARN(" unknown\n");
-		ctx->flags |= TRANS_FLAGS_HAS_ERROR;
+		ctx->flags |= TRANSFER_HAS_ERROR;
 	}
-	ctx->flags |= TRANS_FLAGS_IS_DONE;
+	ctx->flags |= TRANSFER_IS_DONE;
 }
 
 static int submit_wait(usb_link_s *link, libusb_transfer_s *transfer)
@@ -381,7 +381,7 @@ static int submit_wait(usb_link_s *link, libusb_transfer_s *transfer)
 			return -1;
 		}
 	}
-	if (transfer_ctx.flags & TRANS_FLAGS_HAS_ERROR) {
+	if (transfer_ctx.flags & TRANSFER_HAS_ERROR) {
 		DEBUG_WARN("libusb_handle_events() | has_error\n");
 		return -1;
 	}
