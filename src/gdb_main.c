@@ -470,7 +470,7 @@ static void exec_q_crc(const char *packet, const size_t length)
 			return;
 		}
 		uint32_t crc;
-		if (generic_crc32(cur_target, &crc, addr, addr_length))
+		if (!generic_crc32(cur_target, &crc, addr, addr_length))
 			gdb_putpacketz("E03");
 		else
 			gdb_putpacket_f("C%lx", crc);
