@@ -54,8 +54,8 @@ uint8_t make_packet_request(uint8_t RnW, uint16_t addr)
 
 static void dp_line_reset(adiv5_debug_port_s *dp)
 {
-	dp->seq_out(0xFFFFFFFFU, 32U);
-	dp->seq_out(0x0FFFFFFFU, 32U);
+	dp->seq_out(0xffffffffU, 32U);
+	dp->seq_out(0x0fffffffU, 32U);
 }
 
 bool firmware_dp_low_write(adiv5_debug_port_s *dp, uint16_t addr, const uint32_t data)
@@ -91,8 +91,8 @@ uint32_t adiv5_swdp_scan(uint32_t targetid)
 
 	platform_target_clk_output_enable(true);
 	/* DORMANT-> SWD sequence*/
-	initial_dp->seq_out(0xFFFFFFFF, 32);
-	initial_dp->seq_out(0xFFFFFFFF, 32);
+	initial_dp->seq_out(0xffffffff, 32);
+	initial_dp->seq_out(0xffffffff, 32);
 	/* 128 bit selection alert sequence for SW-DP-V2 */
 	initial_dp->seq_out(0x6209f392, 32);
 	initial_dp->seq_out(0x86852d95, 32);
@@ -119,9 +119,9 @@ uint32_t adiv5_swdp_scan(uint32_t targetid)
 		}
 		if (e.type || initial_dp->fault) {
 			DEBUG_WARN("Trying old JTAG to SWD sequence\n");
-			initial_dp->seq_out(0xFFFFFFFF, 32);
-			initial_dp->seq_out(0xFFFFFFFF, 32);
-			initial_dp->seq_out(0xE79E, 16); /* 0b0111100111100111 */
+			initial_dp->seq_out(0xffffffff, 32);
+			initial_dp->seq_out(0xffffffff, 32);
+			initial_dp->seq_out(0xe79e, 16); /* 0b0111100111100111 */
 
 			dp_line_reset(initial_dp);
 

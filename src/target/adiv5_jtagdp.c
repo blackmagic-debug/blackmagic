@@ -34,8 +34,8 @@
 
 /* 35-bit registers that control the ADIv5 DP */
 #define IR_ABORT 0x8U
-#define IR_DPACC 0xAU
-#define IR_APACC 0xBU
+#define IR_DPACC 0xaU
+#define IR_APACC 0xbU
 
 static uint32_t adiv5_jtagdp_error(adiv5_debug_port_s *dp);
 
@@ -74,7 +74,7 @@ static uint32_t adiv5_jtagdp_error(adiv5_debug_port_s *dp)
 uint32_t fw_adiv5_jtagdp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value)
 {
 	const bool APnDP = addr & ADIV5_APnDP;
-	addr &= 0xff;
+	addr &= 0xffU;
 
 	const uint64_t request = ((uint64_t)value << 3U) | ((addr >> 1U) & 0x06U) | (RnW ? 1U : 0U);
 
@@ -87,7 +87,7 @@ uint32_t fw_adiv5_jtagdp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_
 	platform_timeout_set(&timeout, 250);
 	do {
 		jtag_dev_shift_dr(dp->dp_jd_index, (uint8_t *)&response, (uint8_t *)&request, 35);
-		ack = response & 0x07;
+		ack = response & 0x07U;
 	} while (!platform_timeout_is_expired(&timeout) && ack == JTAGDP_ACK_WAIT);
 
 	if (ack == JTAGDP_ACK_WAIT) {
@@ -98,12 +98,12 @@ uint32_t fw_adiv5_jtagdp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_
 	if (ack != JTAGDP_ACK_OK)
 		raise_exception(EXCEPTION_ERROR, "JTAG-DP invalid ACK");
 
-	return (uint32_t)(response >> 3);
+	return (uint32_t)(response >> 3U);
 }
 
 void adiv5_jtagdp_abort(adiv5_debug_port_s *dp, uint32_t abort)
 {
-	uint64_t request = (uint64_t)abort << 3;
+	uint64_t request = (uint64_t)abort << 3U;
 	jtag_dev_write_ir(dp->dp_jd_index, IR_ABORT);
 	jtag_dev_shift_dr(dp->dp_jd_index, NULL, (const uint8_t *)&request, 35);
 }
