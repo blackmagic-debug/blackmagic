@@ -45,7 +45,7 @@ typedef struct flash_param {
 
 static void lpc17xx_extended_reset(target_s *t);
 static bool lpc17xx_mass_erase(target_s *t);
-enum iap_status lpc17xx_iap_call(target_s *t, flash_param_s *param, enum iap_cmd cmd, ...);
+enum iap_status lpc17xx_iap_call(target_s *t, flash_param_s *param, iap_cmd_e cmd, ...);
 
 static void lpc17xx_add_flash(target_s *t, uint32_t addr, size_t len, size_t erasesize, unsigned int base_sector)
 {
@@ -138,7 +138,7 @@ static void lpc17xx_extended_reset(target_s *t)
 	target_mem_write32(t, MEMMAP, 1);
 }
 
-enum iap_status lpc17xx_iap_call(target_s *t, flash_param_s *param, enum iap_cmd cmd, ...)
+enum iap_status lpc17xx_iap_call(target_s *t, flash_param_s *param, iap_cmd_e cmd, ...)
 {
 	param->opcode = ARM_THUMB_BREAKPOINT;
 	param->command = cmd;

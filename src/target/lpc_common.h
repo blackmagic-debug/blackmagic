@@ -23,7 +23,7 @@
 #include <stdint.h>
 #include "target_internal.h"
 
-enum iap_cmd {
+typedef enum iap_cmd {
 	IAP_CMD_READ_FACTORY_SETTINGS = 40,
 	IAP_CMD_INIT = 49,
 	IAP_CMD_PREPARE = 50,
@@ -41,7 +41,7 @@ enum iap_cmd {
 	IAP_CMD_EXTENDED_READ_SIGNATURE = 73,
 	IAP_CMD_READ_EEPROM_PAGE = 80,
 	IAP_CMD_WRITE_EEPROM_PAGE = 81,
-};
+} iap_cmd_e;
 
 enum iap_status {
 	IAP_STATUS_CMD_SUCCESS = 0,
@@ -84,7 +84,7 @@ typedef struct lpc_flash {
 } lpc_flash_s;
 
 lpc_flash_s *lpc_add_flash(target_s *t, target_addr_t addr, size_t length);
-enum iap_status lpc_iap_call(struct lpc_flash *f, void *result, enum iap_cmd cmd, ...);
+enum iap_status lpc_iap_call(struct lpc_flash *f, void *result, iap_cmd_e cmd, ...);
 bool lpc_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 bool lpc_flash_write_magic_vect(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 
