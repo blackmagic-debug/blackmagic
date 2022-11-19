@@ -501,7 +501,7 @@ static void stm32g0_flash_option_unlock(target_s *t)
 	target_mem_write32(t, FLASH_OPTKEYR, FLASH_OPTKEYR_KEY2);
 }
 
-enum option_bytes_registers {
+typedef enum option_bytes_registers {
 	OPT_REG_OPTR,
 	OPT_REG_PCROP1ASR,
 	OPT_REG_PCROP1AER,
@@ -518,7 +518,7 @@ enum option_bytes_registers {
 	OPT_REG_SECR,
 
 	OPT_REG_COUNT
-};
+} option_bytes_registers_e;
 
 typedef struct option_register {
 	uint32_t addr;
