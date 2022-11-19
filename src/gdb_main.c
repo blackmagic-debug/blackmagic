@@ -45,12 +45,12 @@
 #include <alloca.h>
 #endif
 
-enum gdb_signal {
+typedef enum gdb_signal {
 	GDB_SIGINT = 2,
 	GDB_SIGTRAP = 5,
 	GDB_SIGSEGV = 11,
 	GDB_SIGLOST = 29,
-};
+} gdb_signal_e;
 
 #define BUF_SIZE 1024U
 
