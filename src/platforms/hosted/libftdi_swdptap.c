@@ -33,7 +33,7 @@ typedef enum swdio_status {
 	SWDIO_STATUS_FLOAT,
 } swdio_status_e;
 
-static enum swdio_status olddir;
+static swdio_status_e olddir;
 static bool do_mpsse;
 static bool direct_bb_swd;
 
