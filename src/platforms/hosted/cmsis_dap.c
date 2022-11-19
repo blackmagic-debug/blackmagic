@@ -385,7 +385,7 @@ static void dap_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size
 {
 	if (len == 0)
 		return;
-	enum align align = MIN(ALIGNOF(src), ALIGNOF(len));
+	align_e align = MIN(ALIGNOF(src), ALIGNOF(len));
 	DEBUG_WIRE("memread @ %" PRIx32 " len %ld, align %d , start: \n", src, len, align);
 	if (((unsigned)(1 << align)) == len)
 		return dap_read_single(ap, dest, src, align);
@@ -417,7 +417,7 @@ static void dap_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size
 	DEBUG_WIRE("memread res last data %08" PRIx32 "\n", ((uint32_t *)dest)[-1]);
 }
 
-static void dap_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, enum align align)
+static void dap_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, align_e align)
 {
 	if (len == 0)
 		return;

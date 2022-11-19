@@ -224,7 +224,8 @@ static void remote_ap_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src
 	}
 }
 
-static void remote_ap_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, enum align align)
+static void remote_ap_mem_write_sized(
+	adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, align_e align)
 {
 	(void)ap;
 	if (len == 0)

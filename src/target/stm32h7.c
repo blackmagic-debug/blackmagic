@@ -146,7 +146,7 @@ static bool stm32h7_mass_erase(target_s *t);
 
 typedef struct stm32h7_flash {
 	target_flash_s f;
-	enum align psize;
+	align_e psize;
 	uint32_t regbase;
 } stm32h7_flash_s;
 
@@ -283,7 +283,7 @@ static bool stm32h7_flash_erase(target_flash_s *const f, target_addr_t addr, con
 	target_mem_write32(t, sf->regbase + FLASH_ACR, 0);
 	addr &= (NUM_SECTOR_PER_BANK * FLASH_SECTOR_SIZE) - 1U;
 	const size_t end_sector = (addr + len - 1U) / FLASH_SECTOR_SIZE;
-	const enum align psize = sf->psize;
+	const align_e psize = sf->psize;
 	const uint32_t reg_base = sf->regbase;
 
 	for (size_t begin_sector = addr / FLASH_SECTOR_SIZE; begin_sector <= end_sector; ++begin_sector) {
@@ -330,7 +330,7 @@ static bool stm32h7_flash_write(
 }
 
 static bool stm32h7_erase_bank(
-	target_s *const t, const enum align psize, const uint32_t start_addr, const uint32_t reg_base)
+	target_s *const t, const align_e psize, const uint32_t start_addr, const uint32_t reg_base)
 {
 	if (!stm32h7_flash_unlock(t, start_addr)) {
 		DEBUG_WARN("Bank erase: Unlock bank failed\n");
@@ -366,7 +366,7 @@ static bool stm32h7_check_bank(target_s *const t, const uint32_t reg_base)
 /* Both banks are erased in parallel.*/
 static bool stm32h7_mass_erase(target_s *t)
 {
-	enum align psize = ALIGN_DWORD;
+	align_e psize = ALIGN_DWORD;
 	/*
 	 * XXX: What is this and why does it exist?
 	 * A dry-run walk-through says it'll pull out the psize for the first Flash region added by stm32h7_probe()
@@ -467,7 +467,7 @@ static bool stm32h7_cmd_psize(target_s *t, int argc, const char **argv)
 	(void)argc;
 	(void)argv;
 	if (argc == 1) {
-		enum align psize = ALIGN_DWORD;
+		align_e psize = ALIGN_DWORD;
 		/*
 		 * XXX: What is this and why does it exist?
 		 * A dry-run walk-through says it'll pull out the psize for the first Flash region added by stm32h7_probe()
@@ -479,7 +479,7 @@ static bool stm32h7_cmd_psize(target_s *t, int argc, const char **argv)
 		}
 		tc_printf(t, "Flash write parallelism: %s\n", stm32_psize_to_string(psize));
 	} else {
-		enum align psize;
+		align_e psize;
 		if (!stm32_psize_from_string(t, argv[1], &psize))
 			return false;
 

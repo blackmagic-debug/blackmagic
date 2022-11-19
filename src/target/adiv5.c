@@ -898,7 +898,7 @@ void adiv5_dp_init(adiv5_debug_port_s *dp, const uint32_t idcode)
 #define ALIGNOF(x) (((x)&3) == 0 ? ALIGN_WORD : (((x)&1) == 0 ? ALIGN_HALFWORD : ALIGN_BYTE))
 
 /* Program the CSW and TAR for sequencial access at a given width */
-static void ap_mem_access_setup(adiv5_access_port_s *ap, uint32_t addr, enum align align)
+static void ap_mem_access_setup(adiv5_access_port_s *ap, uint32_t addr, align_e align)
 {
 	uint32_t csw = ap->csw | ADIV5_AP_CSW_ADDRINC_SINGLE;
 
@@ -919,7 +919,7 @@ static void ap_mem_access_setup(adiv5_access_port_s *ap, uint32_t addr, enum ali
 }
 
 /* Extract read data from data lane based on align and src address */
-void *extract(void *dest, uint32_t src, uint32_t val, enum align align)
+void *extract(void *dest, uint32_t src, uint32_t val, align_e align)
 {
 	switch (align) {
 	case ALIGN_BYTE:
@@ -940,7 +940,7 @@ void firmware_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t
 {
 	uint32_t tmp;
 	uint32_t osrc = src;
-	const enum align align = MIN(ALIGNOF(src), ALIGNOF(len));
+	const align_e align = MIN(ALIGNOF(src), ALIGNOF(len));
 
 	if (len == 0)
 		return;
@@ -964,7 +964,7 @@ void firmware_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t
 	extract(dest, src, tmp, align);
 }
 
-void firmware_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, enum align align)
+void firmware_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, align_e align)
 {
 	uint32_t odest = dest;
 
@@ -1015,6 +1015,6 @@ uint32_t firmware_ap_read(adiv5_access_port_s *ap, uint16_t addr)
 
 void adiv5_mem_write(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len)
 {
-	enum align align = MIN(ALIGNOF(dest), ALIGNOF(len));
+	align_e align = MIN(ALIGNOF(dest), ALIGNOF(len));
 	adiv5_mem_write_sized(ap, dest, src, len, align);
 }

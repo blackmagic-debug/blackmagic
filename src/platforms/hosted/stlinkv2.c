@@ -1008,7 +1008,7 @@ static void stlink_reg_write(adiv5_access_port_s *ap, int num, uint32_t val)
 	stlink_usb_error_check(res, true);
 }
 
-static void stlink_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, enum align align)
+static void stlink_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, align_e align)
 {
 	if (len == 0)
 		return;

@@ -191,6 +191,6 @@ bool cortexm_attach(target_s *t);
 void cortexm_detach(target_s *t);
 void cortexm_halt_resume(target_s *t, bool step);
 bool cortexm_run_stub(target_s *t, uint32_t loadaddr, uint32_t r0, uint32_t r1, uint32_t r2, uint32_t r3);
-int cortexm_mem_write_sized(target_s *t, target_addr_t dest, const void *src, size_t len, enum align align);
+int cortexm_mem_write_sized(target_s *t, target_addr_t dest, const void *src, size_t len, align_e align);
 
 #endif /* TARGET_CORTEXM_H */

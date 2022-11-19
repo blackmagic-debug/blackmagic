@@ -25,7 +25,7 @@
 #include "target_internal.h"
 #include "adiv5.h"
 
-static inline const char *stm32_psize_to_string(const enum align psize)
+static inline const char *stm32_psize_to_string(const align_e psize)
 {
 	switch (psize) {
 	case ALIGN_DWORD:
@@ -39,7 +39,7 @@ static inline const char *stm32_psize_to_string(const enum align psize)
 	}
 }
 
-static inline bool stm32_psize_from_string(target_s *t, const char *const str, enum align *psize)
+static inline bool stm32_psize_from_string(target_s *t, const char *const str, align_e *psize)
 {
 	if (strcasecmp(str, "x8") == 0)
 		*psize = ALIGN_BYTE;

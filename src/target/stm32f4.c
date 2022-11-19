@@ -114,7 +114,7 @@ static bool stm32f4_mass_erase(target_s *t);
 
 typedef struct stm32f4_flash {
 	target_flash_s f;
-	enum align psize;
+	align_e psize;
 	uint8_t base_sector;
 	uint8_t bank_split;
 } stm32f4_flash_s;
@@ -445,7 +445,7 @@ static bool stm32f4_flash_erase(target_flash_s *f, target_addr_t addr, size_t le
 	stm32f4_flash_s *sf = (stm32f4_flash_s *)f;
 	stm32f4_flash_unlock(t);
 
-	enum align psize = ALIGN_WORD;
+	align_e psize = ALIGN_WORD;
 	/*
 	 * XXX: What is this and why does it exist?
 	 * A dry-run walk-through says it'll pull out the psize for the Flash region added first by stm32f4_attach()
@@ -485,7 +485,7 @@ static bool stm32f4_flash_write(target_flash_s *f, target_addr_t dest, const voi
 		dest += AXIM_BASE - ITCM_BASE;
 	target_s *t = f->t;
 
-	enum align psize = ((stm32f4_flash_s *)f)->psize;
+	align_e psize = ((stm32f4_flash_s *)f)->psize;
 	target_mem_write32(t, FLASH_CR, (psize * FLASH_CR_PSIZE16) | FLASH_CR_PG);
 	cortexm_mem_write_sized(t, dest, src, len, psize);
 
@@ -716,7 +716,7 @@ static bool stm32f4_cmd_option(target_s *t, int argc, const char **argv)
 static bool stm32f4_cmd_psize(target_s *t, int argc, const char **argv)
 {
 	if (argc == 1) {
-		enum align psize = ALIGN_WORD;
+		align_e psize = ALIGN_WORD;
 		/*
 		 * XXX: What is this and why does it exist?
 		 * A dry-run walk-through says it'll pull out the psize for the Flash region added first by stm32f4_attach()
@@ -728,7 +728,7 @@ static bool stm32f4_cmd_psize(target_s *t, int argc, const char **argv)
 		}
 		tc_printf(t, "Flash write parallelism: %s\n", stm32_psize_to_string(psize));
 	} else {
-		enum align psize;
+		align_e psize;
 		if (!stm32_psize_from_string(t, argv[1], &psize))
 			return false;
 
