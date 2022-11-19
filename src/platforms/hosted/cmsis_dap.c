@@ -76,18 +76,18 @@ uint8_t mode;
 
 #define TRANSFER_TIMEOUT_MS (100)
 
-typedef enum cmsis_type_e {
+typedef enum cmsis_type {
 	CMSIS_TYPE_NONE = 0,
 	CMSIS_TYPE_HID,
 	CMSIS_TYPE_BULK
-} cmsis_type_t;
+} cmsis_type_e;
 
 #ifdef __linux__
 typedef struct hid_device_info hid_device_info_s;
 #endif
 
 /*- Variables ---------------------------------------------------------------*/
-static cmsis_type_t type;
+static cmsis_type_e type;
 static libusb_device_handle *usb_handle = NULL;
 static uint8_t in_ep;
 static uint8_t out_ep;
