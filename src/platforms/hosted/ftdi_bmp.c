@@ -624,10 +624,9 @@ size_t libftdi_buffer_write(const uint8_t *data, size_t size)
 size_t libftdi_buffer_read(uint8_t *data, size_t size)
 {
 #if defined(USE_USB_VERSION_BIT)
-	struct ftdi_transfer_control *tc;
 	outbuf[bufptr++] = SEND_IMMEDIATE;
 	libftdi_buffer_flush();
-	tc = ftdi_read_data_submit(ftdic, data, size);
+	ftdi_transfer_control_s *tc = ftdi_read_data_submit(ftdic, data, size);
 	ftdi_transfer_data_done(tc);
 #else
 	const uint8_t cmd = SEND_IMMEDIATE;
