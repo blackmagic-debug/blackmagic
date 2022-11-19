@@ -119,7 +119,7 @@ static void jtagtap_tms_seq(uint32_t tms_states, const size_t clock_cycles)
 		const uint8_t cmd[3U] = {
 			MPSSE_WRITE_TMS | MPSSE_LSB | MPSSE_BITMODE | MPSSE_WRITE_NEG,
 			MIN(7U, clock_cycles - cycle) - 1U,
-			0x80U | (tms_states & 0x7FU),
+			0x80U | (tms_states & 0x7fU),
 		};
 		tms_states >>= 7U;
 		libftdi_buffer_write_arr(cmd);
