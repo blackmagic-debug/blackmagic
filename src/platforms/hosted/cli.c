@@ -46,6 +46,8 @@
 #include <sys/mman.h>
 #endif
 
+typedef struct option getopt_option_s;
+
 static void cl_target_printf(target_controller_s *tc, const char *fmt, va_list ap)
 {
 	(void)tc;
@@ -193,7 +195,7 @@ static void cl_help(char **argv)
 	exit(0);
 }
 
-static const struct option long_options[] = {
+static const getopt_option_s long_options[] = {
 	{"help", no_argument, NULL, 'h'},
 	{"list", no_argument, NULL, 'l'},
 	{"verbose", required_argument, NULL, 'v'},
