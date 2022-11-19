@@ -379,9 +379,7 @@ int isatty(const int file)
 	return true;
 }
 
-enum {
-	RDI_SYS_OPEN = 0x01,
-};
+#define RDI_SYS_OPEN 0x01U
 
 typedef struct ex_frame {
 	uint32_t r0;
