@@ -49,9 +49,9 @@
 
 /* ID register and related constants */
 #define SIM_SRSID         0x40048000U
-#define SRSID_KE04_MASK   0xFF00U
+#define SRSID_KE04_MASK   0xff00U
 #define SRSID_KE04_FAMILY 0x0400U
-#define SRSID_PIN_MASK    0x000FU
+#define SRSID_PIN_MASK    0x000fU
 #define SRSID_PIN__8      0x0000U
 #define SRSID_PIN_16      0x0001U
 #define SRSID_PIN_20      0x0002U
@@ -61,7 +61,7 @@
 #define SRSID_PIN_48      0x0006U
 #define SRSID_PIN_64      0x0007U
 #define SRSID_PIN_80      0x0008U
-#define SRSID_PIN100      0x000AU
+#define SRSID_PIN100      0x000aU
 
 /* Flash Memory Module registers */
 #define FTMRE_BASE    0x40020000U
@@ -73,8 +73,8 @@
 #define FTMRE_FCCOB   (FTMRE_BASE + 0x08U)
 #define FTMRE_FCCOBLO (FTMRE_BASE + 0x08U)
 #define FTMRE_FCCOBHI (FTMRE_BASE + 0x09U)
-#define FTMRE_FPROT   (FTMRE_BASE + 0x0BU)
-#define FTMRE_FOPT    (FTMRE_BASE + 0x0FU)
+#define FTMRE_FPROT   (FTMRE_BASE + 0x0bU)
+#define FTMRE_FOPT    (FTMRE_BASE + 0x0fU)
 
 /* FTMRE_FSTAT flags */
 #define FTMRE_FSTAT_CCIF    0x80U
@@ -94,21 +94,21 @@
 #define CMD_PROGRAM_ONCE               0x07U /* Unused */
 #define CMD_ERASE_ALL_BLOCKS           0x08U /* Unused */
 #define CMD_ERASE_FLASH_BLOCK          0x09U /* Unused */
-#define CMD_ERASE_FLASH_SECTOR         0x0AU /* Used   */
-#define CMD_UNSECURE_FLASH             0x0BU /* Used   */
-#define CMD_VERIFY_BACKDOOR_ACCESS_KEY 0x0CU /* Unused */
-#define CMD_SET_USER_MARGIN_LEVEL      0x0DU /* Unused */
-#define CMD_SET_FACTORY_MARGIN_LEVEL   0x0EU /* Unused */
+#define CMD_ERASE_FLASH_SECTOR         0x0aU /* Used   */
+#define CMD_UNSECURE_FLASH             0x0bU /* Used   */
+#define CMD_VERIFY_BACKDOOR_ACCESS_KEY 0x0cU /* Unused */
+#define CMD_SET_USER_MARGIN_LEVEL      0x0dU /* Unused */
+#define CMD_SET_FACTORY_MARGIN_LEVEL   0x0eU /* Unused */
 
 /* Flash Memory Module write and erase sizes */
-#define KE04_WRITE_LEN   8
+#define KE04_WRITE_LEN   8U
 #define KE04_SECTOR_SIZE 0x200U
 
 /* Security byte */
-#define FLASH_SECURITY_BYTE_ADDRESS   0x0000040EU
-#define FLASH_SECURITY_BYTE_UNSECURED 0xFEU
-#define FLASH_SECURITY_WORD_ADDRESS   0x0000040CU
-#define FLASH_SECURITY_WORD_UNSECURED 0xFFFEFFFFU
+#define FLASH_SECURITY_BYTE_ADDRESS   0x0000040eU
+#define FLASH_SECURITY_BYTE_UNSECURED 0xfeU
+#define FLASH_SECURITY_WORD_ADDRESS   0x0000040cU
+#define FLASH_SECURITY_WORD_UNSECURED 0xfffeffffU
 
 /* Length in 16bit words of flash commands */
 static const uint8_t cmd_lens[] = {4, 1, 2, 3, 6, 0, 6, 6, 1, 2, 2, 1, 5, 3, 3};
@@ -231,7 +231,7 @@ bool ke04_probe(target_s *t)
 	f->erase = ke04_flash_erase;
 	f->write = ke04_flash_write;
 	f->done = ke04_flash_done;
-	f->erased = 0xFFu;
+	f->erased = 0xffU;
 	target_add_flash(t, f);
 
 	/* Add target specific commands */
@@ -264,7 +264,7 @@ static bool ke04_command(target_s *t, uint8_t cmd, uint32_t addr, const uint8_t 
 {
 	/* Set FCLKDIV to 0x17 for 24MHz (default at reset) */
 	uint8_t fclkdiv = target_mem_read8(t, FTMRE_FCLKDIV);
-	if ((fclkdiv & 0x1FU) != 0x17U) {
+	if ((fclkdiv & 0x1fU) != 0x17U) {
 		if (!ke04_wait_complete(t))
 			return false;
 		/* Write correct value */
@@ -279,7 +279,7 @@ static bool ke04_command(target_s *t, uint8_t cmd, uint32_t addr, const uint8_t 
 	/* Write the flash command and the needed parameters */
 	uint8_t fccob_idx = 0;
 	/* Trim address, probably not needed */
-	addr &= 0x00FFFFFFU;
+	addr &= 0x00ffffffU;
 	const uint8_t cmd_len = cmd_lens[cmd];
 	/* Special case: single 32bits word flashing */
 	if (cmd == CMD_PROGRAM_FLASH_32)
@@ -292,7 +292,7 @@ static bool ke04_command(target_s *t, uint8_t cmd, uint32_t addr, const uint8_t 
 	/* Write first argument (low partof address) */
 	if (cmd_len >= 1) {
 		target_mem_write8(t, FTMRE_FCCOBIX, fccob_idx++);
-		target_mem_write16(t, FTMRE_FCCOB, addr & 0xFFFFU);
+		target_mem_write16(t, FTMRE_FCCOB, addr & 0xffffU);
 	}
 
 	/* Write one or two 32 bit words of data */
