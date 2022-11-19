@@ -114,7 +114,7 @@ size_t gdb_getpacket(char *const packet, const size_t size)
 			if (c == '}') { /* Escaped char */
 				c = gdb_if_getchar();
 				csum += c + '}';
-				packet[offset++] = c ^ 0x20;
+				packet[offset++] = c ^ 0x20U;
 				continue;
 			}
 			csum += c;
@@ -138,7 +138,7 @@ size_t gdb_getpacket(char *const packet, const size_t size)
 	DEBUG_GDB_WIRE("%s : ", __func__);
 	for (size_t j = 0; j < offset; j++) {
 		const char c = packet[j];
-		if (c >= ' ' && c < 0x7F)
+		if (c >= ' ' && c < 0x7f)
 			DEBUG_GDB_WIRE("%c", c);
 		else
 			DEBUG_GDB_WIRE("\\x%02X", c);
@@ -158,8 +158,8 @@ static void gdb_next_char(const char c, uint8_t *const csum)
 #endif
 	if (c == '$' || c == '#' || c == '}' || c == '*') {
 		gdb_if_putchar('}', 0);
-		gdb_if_putchar(c ^ 0x20, 0);
-		*csum += '}' + (c ^ 0x20);
+		gdb_if_putchar(c ^ 0x20U, 0);
+		*csum += '}' + (c ^ 0x20U);
 	} else {
 		gdb_if_putchar(c, 0);
 		*csum += c;
@@ -186,7 +186,7 @@ void gdb_putpacket2(const char *const packet1, const size_t size1, const char *c
 		gdb_if_putchar(xmit_csum[0], 0);
 		gdb_if_putchar(xmit_csum[1], 1);
 		DEBUG_GDB_WIRE("\n");
-	} while (gdb_if_getchar_to(2000) != '+' && tries++ < 3);
+	} while (gdb_if_getchar_to(2000) != '+' && tries++ < 3U);
 }
 
 void gdb_putpacket(const char *const packet, const size_t size)
@@ -205,7 +205,7 @@ void gdb_putpacket(const char *const packet, const size_t size)
 		gdb_if_putchar(xmit_csum[0], 0);
 		gdb_if_putchar(xmit_csum[1], 1);
 		DEBUG_GDB_WIRE("\n");
-	} while (gdb_if_getchar_to(2000) != '+' && tries++ < 3);
+	} while (gdb_if_getchar_to(2000) != '+' && tries++ < 3U);
 }
 
 void gdb_put_notification(const char *const packet, const size_t size)
@@ -239,12 +239,12 @@ void gdb_putpacket_f(const char *const fmt, ...)
 void gdb_out(const char *const buf)
 {
 	const size_t buf_len = strlen(buf);
-	char *hexdata = calloc(1, 2 * buf_len + 1);
+	char *hexdata = calloc(1, 2U * buf_len + 1U);
 	if (!hexdata)
 		return;
 
 	hexify(hexdata, buf, buf_len);
-	gdb_putpacket2("O", 1, hexdata, 2 * buf_len);
+	gdb_putpacket2("O", 1, hexdata, 2U * buf_len);
 	free(hexdata);
 }
 
