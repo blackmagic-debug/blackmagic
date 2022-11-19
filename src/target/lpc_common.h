@@ -43,7 +43,7 @@ typedef enum iap_cmd {
 	IAP_CMD_WRITE_EEPROM_PAGE = 81,
 } iap_cmd_e;
 
-enum iap_status {
+typedef enum iap_status {
 	IAP_STATUS_CMD_SUCCESS = 0,
 	IAP_STATUS_INVALID_COMMAND = 1,
 	IAP_STATUS_SRC_ADDR_ERROR = 2,
@@ -66,7 +66,7 @@ enum iap_status {
 	IAP_STATUS_NO_VALID_IMAGE = 29,
 	IAP_STATUS_FLASH_ERASE = 32,
 	IAP_STATUS_INVALID_PAGE = 33,
-};
+} iap_status_e;
 
 /* CPU Frequency */
 #define CPU_CLK_KHZ 12000
@@ -84,7 +84,7 @@ typedef struct lpc_flash {
 } lpc_flash_s;
 
 lpc_flash_s *lpc_add_flash(target_s *t, target_addr_t addr, size_t length);
-enum iap_status lpc_iap_call(struct lpc_flash *f, void *result, iap_cmd_e cmd, ...);
+iap_status_e lpc_iap_call(struct lpc_flash *f, void *result, iap_cmd_e cmd, ...);
 bool lpc_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 bool lpc_flash_write_magic_vect(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 
