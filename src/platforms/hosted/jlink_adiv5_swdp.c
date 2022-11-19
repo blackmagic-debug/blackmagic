@@ -36,11 +36,6 @@ static uint32_t jlink_adiv5_swdp_error(adiv5_debug_port_s *dp);
 static uint32_t jlink_adiv5_swdp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value);
 static void jlink_adiv5_swdp_abort(adiv5_debug_port_s *dp, uint32_t abort);
 
-enum {
-	SWDIO_WRITE,
-	SWDIO_READ
-};
-
 /*
  * Write at least 50 bits high, two bits low and read DP_IDR and put
  * idle cycles at the end
