@@ -86,11 +86,12 @@
 
 /* AP Abort Register (ABORT) */
 /* Bits 31:5 - Reserved */
+/* Bits 5:1 - DPv1+, reserved in DPv0 */
 #define ADIV5_DP_ABORT_ORUNERRCLR (1U << 4U)
 #define ADIV5_DP_ABORT_WDERRCLR   (1U << 3U)
 #define ADIV5_DP_ABORT_STKERRCLR  (1U << 2U)
 #define ADIV5_DP_ABORT_STKCMPCLR  (1U << 1U)
-/* Bits 5:1 - SW-DP only, reserved in JTAG-DP */
+/* Bit 1 is always defined as DAP Abort. */
 #define ADIV5_DP_ABORT_DAPABORT (1U << 0U)
 
 /* Control/Status Register (CTRLSTAT) */

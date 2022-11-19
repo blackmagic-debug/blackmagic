@@ -694,11 +694,27 @@ static void rp_rescue_setup(adiv5_debug_port_s *dp)
 	rp_rescue_probe(ap);
 }
 
+static void adiv5_dp_clear_sticky_errors(adiv5_debug_port_s *dp)
+{
+	/*
+	 * For DPv1+ APs, this is done by writing through the ABORT register.
+	 * For DPv0 APs, this must be done by writing a 1 back to the appropriate
+	 * CTRL/STATUS register bit
+	 */
+	if (dp->version)
+		adiv5_dp_abort(dp, ADIV5_DP_ABORT_STKERRCLR);
+	else {
+		const uint32_t status = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT);
+		/* If any of the sticky bits are set, simply writing back to this register will clear them */
+		adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT, status);
+	}
+}
+
 void adiv5_dp_init(adiv5_debug_port_s *dp, const uint32_t idcode)
 {
 	/*
-	 * Assume DP v1 or later.
-	 * this may not be true for JTAG-DP
+	 * Start by assuming DP v1 or later.
+	 * this may not be true for JTAG-DP (we attempt to detect this with the part ID code)
 	 * in such cases (DPv0) DPIDR is not implemented
 	 * and reads are UNPREDICTABLE.
 	 *
@@ -749,6 +765,12 @@ void adiv5_dp_init(adiv5_debug_port_s *dp, const uint32_t idcode)
 	} else if (dp->version == 0)
 		/* DP v0 */
 		DEBUG_WARN("DPv0 detected based on JTAG IDCode\n");
+
+	/*
+	 * Ensure that whatever previous accesses happened to this DP before we
+	 * scanned the chain and found it, the sticky error bit is cleared
+	 */
+	adiv5_dp_clear_sticky_errors(dp);
 
 	if (dp->version >= 2) {
 		/* TARGETID is on bank 2 */
