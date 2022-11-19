@@ -661,7 +661,7 @@ void adiv5_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t le
 	return;
 }
 
-void adiv5_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, enum align align)
+void adiv5_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, align_e align)
 {
 	if (cl_debuglevel & BMP_DEBUG_TARGET) {
 		fprintf(stderr, "ap_mem_write_sized @ %" PRIx32 " len %" PRIx32 ", align %d:", dest, (uint32_t)len, 1 << align);

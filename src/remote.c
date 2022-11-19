@@ -401,7 +401,7 @@ static void remote_packet_process_high_level(unsigned i, char *packet)
 		/*fall through*/
 	case REMOTE_MEM_WRITE_SIZED: /* HH = Write to memory*/
 		packet += 2;
-		enum align align = remotehston(2, packet);
+		align_e align = remotehston(2, packet);
 		packet += 2;
 		uint32_t dest = remotehston(8, packet);
 		packet += 8;

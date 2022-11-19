@@ -189,6 +189,7 @@ static inline void DEBUG_WIRE(const char *format, ...)
 #if !defined(SYSTICKHZ)
 #define SYSTICKHZ 100
 #endif
+
 #define SYSTICKMS (1000 / SYSTICKHZ)
 #define MORSECNT  ((SYSTICKHZ / 10) - 1)
 

@@ -226,12 +226,12 @@
  */
 #define JEP106_MANUFACTURER_ERRATA_STM32WX 0x420U
 
-enum align {
+typedef enum align {
 	ALIGN_BYTE = 0,
 	ALIGN_HALFWORD = 1,
 	ALIGN_WORD = 2,
 	ALIGN_DWORD = 3
-};
+} align_e;
 
 typedef struct adiv5_access_port adiv5_access_port_s;
 
@@ -258,13 +258,13 @@ typedef struct adiv5_debug_port {
 	uint32_t (*ap_reg_read)(adiv5_access_port_s *ap, int num);
 	void (*ap_reg_write)(adiv5_access_port_s *ap, int num, uint32_t value);
 	void (*read_block)(uint32_t addr, uint8_t *data, int size);
-	void (*dap_write_block_sized)(uint32_t addr, uint8_t *data, int size, enum align align);
+	void (*dap_write_block_sized)(uint32_t addr, uint8_t *data, int size, align_e align);
 #endif
 	uint32_t (*ap_read)(adiv5_access_port_s *ap, uint16_t addr);
 	void (*ap_write)(adiv5_access_port_s *ap, uint16_t addr, uint32_t value);
 
 	void (*mem_read)(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t len);
-	void (*mem_write_sized)(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, enum align align);
+	void (*mem_write_sized)(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, align_e align);
 	uint8_t dp_jd_index;
 	uint8_t fault;
 
@@ -341,7 +341,7 @@ static inline void adiv5_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t 
 }
 
 static inline void adiv5_mem_write_sized(
-	adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, enum align align)
+	adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, align_e align)
 {
 	return ap->dp->mem_write_sized(ap, dest, src, len, align);
 }
@@ -359,7 +359,7 @@ void adiv5_dp_abort(adiv5_debug_port_s *dp, uint32_t abort);
 uint32_t adiv5_ap_read(adiv5_access_port_s *ap, uint16_t addr);
 void adiv5_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value);
 void adiv5_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t len);
-void adiv5_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, enum align align);
+void adiv5_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, align_e align);
 void adiv5_dp_write(adiv5_debug_port_s *dp, uint16_t addr, uint32_t value);
 #endif
 
@@ -377,9 +377,9 @@ int swdptap_init(adiv5_debug_port_s *dp);
 
 void adiv5_mem_write(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len);
 uint64_t adiv5_ap_read_pidr(adiv5_access_port_s *ap, uint32_t addr);
-void *extract(void *dest, uint32_t src, uint32_t val, enum align align);
+void *extract(void *dest, uint32_t src, uint32_t val, align_e align);
 
-void firmware_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, enum align align);
+void firmware_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, align_e align);
 void firmware_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t len);
 void firmware_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value);
 uint32_t firmware_ap_read(adiv5_access_port_s *ap, uint16_t addr);

@@ -27,7 +27,7 @@ bool running_status = false;
 static volatile uint32_t time_ms = 0;
 uint32_t swd_delay_cnt = 0;
 
-static int morse_tick;
+static size_t morse_tick = 0;
 
 void platform_timing_init(void)
 {
