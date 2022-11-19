@@ -564,9 +564,10 @@ static bool stm32f1_option_write(target_s *const t, const uint32_t addr, const u
 	 * GD32E230 is a special case as target_mem_write16 does not work
 	 */
 	const bool write16_broken = t->part_id == 0x410 && (t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M23;
-	for (size_t i = 0; i < 8; i++)
+	for (size_t i = 0; i < 8; i++) {
 		if (!stm32f1_option_write_erased(t, FLASH_OBP_RDP + (i * 2U), opt_val[i], write16_broken))
 			return false;
+	}
 
 	return true;
 }
