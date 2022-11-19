@@ -199,7 +199,7 @@ static bool cmd_jtag_scan(target_s *t, int argc, const char **argv)
 	if (argc > 1) {
 		/* Accept a list of IR lengths on command line */
 		for (size_t i = 1; i < (size_t)argc; i++)
-			irlens[i - 1] = strtoul(argv[i], NULL, 0);
+			irlens[i - 1U] = strtoul(argv[i], NULL, 0);
 		irlens[argc - 1] = 0;
 	}
 
@@ -553,7 +553,7 @@ static bool cmd_rtt(target_s *t, int argc, const char **argv)
 		}
 	} else if (argc == 3 && strncmp(argv[1], "ident", command_len) == 0) {
 		strncpy(rtt_ident, argv[2], sizeof(rtt_ident));
-		rtt_ident[sizeof(rtt_ident) - 1] = '\0';
+		rtt_ident[sizeof(rtt_ident) - 1U] = '\0';
 		for (size_t i = 0; i < sizeof(rtt_ident); i++) {
 			if (rtt_ident[i] == '_')
 				rtt_ident[i] = ' ';
@@ -597,13 +597,13 @@ static bool cmd_traceswo(target_s *t, int argc, const char **argv)
 #endif
 	/* argument: 'decode' literal */
 	if (argc > decode_arg && !strncmp(argv[decode_arg], "decode", strlen(argv[decode_arg]))) {
-		swo_channelmask = 0xFFFFFFFFU; /* decoding all channels */
+		swo_channelmask = 0xffffffffU; /* decoding all channels */
 		/* arguments: channels to decode */
 		if (argc > decode_arg + 1) {
 			swo_channelmask = 0U;
-			for (size_t i = decode_arg + 1; i < (size_t)argc; ++i) { /* create bitmask of channels to decode */
+			for (size_t i = decode_arg + 1U; i < (size_t)argc; ++i) { /* create bitmask of channels to decode */
 				const uint32_t channel = strtoul(argv[i], NULL, 0);
-				if (channel < 32)
+				if (channel < 32U)
 					swo_channelmask |= 1U << channel;
 			}
 		}
@@ -613,7 +613,7 @@ static bool cmd_traceswo(target_s *t, int argc, const char **argv)
 	gdb_outf("Baudrate: %lu ", baudrate);
 #endif
 	gdb_outf("Channel mask: ");
-	for (size_t i = 0; i < 32; ++i) {
+	for (size_t i = 0; i < 32U; ++i) {
 		const uint32_t bit = (swo_channelmask >> (31U - i)) & 1U;
 		gdb_outf("%" PRIu32, bit);
 	}
