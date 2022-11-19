@@ -107,7 +107,7 @@ static inline bool lpc_is_full_erase(lpc_flash_s *f, const uint32_t begin, const
 	return begin == lpc_sector_for_addr(f, addr) && end == lpc_sector_for_addr(f, addr + len - 1U);
 }
 
-enum iap_status lpc_iap_call(lpc_flash_s *f, void *result, iap_cmd_e cmd, ...)
+iap_status_e lpc_iap_call(lpc_flash_s *f, void *result, iap_cmd_e cmd, ...)
 {
 	target_s *t = f->f.t;
 	flash_param_s param = {
