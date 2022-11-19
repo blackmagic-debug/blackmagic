@@ -37,7 +37,7 @@ static const usb_device_descriptor_s dev_desc = {
 	.bLength = USB_DT_DEVICE_SIZE,
 	.bDescriptorType = USB_DT_DEVICE,
 	.bcdUSB = 0x0200,
-	.bDeviceClass = 0xEF, /* Miscellaneous Device */
+	.bDeviceClass = 0xef, /* Miscellaneous Device */
 	.bDeviceSubClass = 2, /* Common Class */
 	.bDeviceProtocol = 1, /* Interface Association */
 #ifdef LM4F
@@ -45,7 +45,7 @@ static const usb_device_descriptor_s dev_desc = {
 #else
 	.bMaxPacketSize0 = 32,
 #endif
-	.idVendor = 0x1D50,
+	.idVendor = 0x1d50,
 	.idProduct = 0x6018,
 	.bcdDevice = 0x0100,
 	.iManufacturer = 1,
@@ -285,7 +285,7 @@ const usb_dfu_descriptor_s dfu_function = {
 	.bmAttributes = USB_DFU_CAN_DOWNLOAD | USB_DFU_WILL_DETACH,
 	.wDetachTimeout = 255,
 	.wTransferSize = 1024,
-	.bcdDFUVersion = 0x011A,
+	.bcdDFUVersion = 0x011a,
 };
 
 const usb_interface_descriptor_s dfu_iface = {
@@ -294,7 +294,7 @@ const usb_interface_descriptor_s dfu_iface = {
 	.bInterfaceNumber = DFU_IF_NO,
 	.bAlternateSetting = 0,
 	.bNumEndpoints = 0,
-	.bInterfaceClass = 0xFE,
+	.bInterfaceClass = 0xfe,
 	.bInterfaceSubClass = 1,
 	.bInterfaceProtocol = 1,
 	.iInterface = 6,
@@ -308,7 +308,7 @@ static const usb_iface_assoc_descriptor_s dfu_assoc = {
 	.bDescriptorType = USB_DT_INTERFACE_ASSOCIATION,
 	.bFirstInterface = DFU_IF_NO,
 	.bInterfaceCount = 1,
-	.bFunctionClass = 0xFE,
+	.bFunctionClass = 0xfe,
 	.bFunctionSubClass = 1,
 	.bFunctionProtocol = 1,
 	.iFunction = 6,
@@ -332,9 +332,9 @@ const usb_interface_descriptor_s trace_iface = {
 	.bInterfaceNumber = TRACE_IF_NO,
 	.bAlternateSetting = 0,
 	.bNumEndpoints = 1,
-	.bInterfaceClass = 0xFF,
-	.bInterfaceSubClass = 0xFF,
-	.bInterfaceProtocol = 0xFF,
+	.bInterfaceClass = 0xff,
+	.bInterfaceSubClass = 0xff,
+	.bInterfaceProtocol = 0xff,
 	.iInterface = 7,
 
 	.endpoint = &trace_endp,
@@ -345,9 +345,9 @@ static const usb_iface_assoc_descriptor_s trace_assoc = {
 	.bDescriptorType = USB_DT_INTERFACE_ASSOCIATION,
 	.bFirstInterface = TRACE_IF_NO,
 	.bInterfaceCount = 1,
-	.bFunctionClass = 0xFF,
-	.bFunctionSubClass = 0xFF,
-	.bFunctionProtocol = 0xFF,
+	.bFunctionClass = 0xff,
+	.bFunctionSubClass = 0xff,
+	.bFunctionProtocol = 0xff,
 	.iFunction = 7,
 };
 #endif

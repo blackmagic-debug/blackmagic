@@ -143,7 +143,7 @@ void usb_serial_set_state(usbd_device *const dev, const uint16_t iface, const ui
 	uint8_t buf[10];
 	usb_cdc_notification_s *notif = (void *)buf;
 	/* We echo signals back to host as notification */
-	notif->bmRequestType = 0xA1;
+	notif->bmRequestType = 0xa1;
 	notif->bNotification = USB_CDC_NOTIFY_SERIAL_STATE;
 	notif->wValue = 0;
 	notif->wIndex = iface;
