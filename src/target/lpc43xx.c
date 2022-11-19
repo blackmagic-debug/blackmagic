@@ -60,7 +60,7 @@ const command_s lpc43xx_cmd_list[] = {{"reset", lpc43xx_cmd_reset, "Reset target
 static void lpc43xx_add_flash(
 	target_s *t, uint32_t iap_entry, uint8_t bank, uint8_t base_sector, uint32_t addr, size_t len, size_t erasesize)
 {
-	struct lpc_flash *lf = lpc_add_flash(t, addr, len);
+	lpc_flash_s *lf = lpc_add_flash(t, addr, len);
 	lf->f.erase = lpc43xx_flash_erase;
 	lf->f.blocksize = erasesize;
 	lf->f.writesize = IAP_PGM_CHUNKSIZE;
@@ -150,7 +150,7 @@ static bool lpc43xx_mass_erase(target_s *t)
 	lpc43xx_flash_init(t);
 
 	for (int bank = 0; bank < FLASH_NUM_BANK; bank++) {
-		struct lpc_flash *f = (struct lpc_flash *)t->flash;
+		lpc_flash_s *f = (lpc_flash_s *)t->flash;
 		if (lpc_iap_call(f, NULL, IAP_CMD_PREPARE, 0, FLASH_NUM_SECTOR - 1U, bank) ||
 			lpc_iap_call(f, NULL, IAP_CMD_ERASE, 0, FLASH_NUM_SECTOR - 1U, CPU_CLK_KHZ, bank))
 			return false;
@@ -169,7 +169,7 @@ static int lpc43xx_flash_init(target_s *t)
 	lpc43xx_set_internal_clock(t);
 
 	/* Initialize flash IAP */
-	struct lpc_flash *f = (struct lpc_flash *)t->flash;
+	lpc_flash_s *f = (lpc_flash_s *)t->flash;
 	if (lpc_iap_call(f, NULL, IAP_CMD_INIT))
 		return -1;
 
@@ -215,7 +215,7 @@ static bool lpc43xx_cmd_mkboot(target_s *t, int argc, const char *argv[])
 	lpc43xx_flash_init(t);
 
 	/* special command to compute/write magic vector for signature */
-	struct lpc_flash *f = (struct lpc_flash *)t->flash;
+	lpc_flash_s *f = (lpc_flash_s *)t->flash;
 	if (lpc_iap_call(f, NULL, IAP_CMD_SET_ACTIVE_BANK, bank, CPU_CLK_KHZ)) {
 		tc_printf(t, "Set bootable failed.\n");
 		return false;
