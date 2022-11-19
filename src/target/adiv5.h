@@ -37,8 +37,8 @@
 #define ADIV5_DP_CTRLSTAT  ADIV5_DP_REG(0x4U)
 #define ADIV5_DP_TARGETID  ADIV5_DP_REG(0x4U) /* ADIV5_DP_BANK2 */
 #define ADIV5_DP_SELECT    ADIV5_DP_REG(0x8U)
-#define ADIV5_DP_RDBUFF    ADIV5_DP_REG(0xCU)
-#define ADIV5_DP_TARGETSEL ADIV5_DP_REG(0xCU)
+#define ADIV5_DP_RDBUFF    ADIV5_DP_REG(0xcU)
+#define ADIV5_DP_TARGETSEL ADIV5_DP_REG(0xcU)
 
 /* DP DPIDR */
 #define ADIV5_DP_DPIDR_REVISION_OFFSET 28U
@@ -121,12 +121,12 @@
 #define ADIV5_AP_CSW ADIV5_AP_REG(0x00U)
 #define ADIV5_AP_TAR ADIV5_AP_REG(0x04U)
 /* 0x08 - Reserved */
-#define ADIV5_AP_DRW   ADIV5_AP_REG(0x0CU)
+#define ADIV5_AP_DRW   ADIV5_AP_REG(0x0cU)
 #define ADIV5_AP_DB(x) ADIV5_AP_REG(0x10U + (4U * (x)))
-/* 0x20:0xF0 - Reserved */
-#define ADIV5_AP_CFG  ADIV5_AP_REG(0xF4U)
-#define ADIV5_AP_BASE ADIV5_AP_REG(0xF8U)
-#define ADIV5_AP_IDR  ADIV5_AP_REG(0xFCU)
+/* 0x20:0xf0 - Reserved */
+#define ADIV5_AP_CFG  ADIV5_AP_REG(0xf4U)
+#define ADIV5_AP_BASE ADIV5_AP_REG(0xf8U)
+#define ADIV5_AP_IDR  ADIV5_AP_REG(0xfcU)
 
 /* AP Control and Status Word (CSW) */
 #define ADIV5_AP_CSW_DBGSWENABLE (1U << 31U)
@@ -149,14 +149,14 @@
 #define ADIV5_AP_CSW_SIZE_MASK     (7U << 0U)
 
 /* AP Debug Base Address Register (BASE) */
-#define ADIV5_AP_BASE_BASEADDR (0xFFFFF000U)
-#define ADIV5_AP_BASE_PRESENT  (1U << 0)
+#define ADIV5_AP_BASE_BASEADDR UINT32_C(0xfffff000)
+#define ADIV5_AP_BASE_PRESENT  (1U << 0U)
 
 /* ADIv5 Class 0x1 ROM Table Registers */
-#define ADIV5_ROM_MEMTYPE          0xFCCU
+#define ADIV5_ROM_MEMTYPE          0xfccU
 #define ADIV5_ROM_MEMTYPE_SYSMEM   (1U << 0U)
 #define ADIV5_ROM_ROMENTRY_PRESENT (1U << 0U)
-#define ADIV5_ROM_ROMENTRY_OFFSET  (0xFFFFF000U)
+#define ADIV5_ROM_ROMENTRY_OFFSET  UINT32_C(0xfffff000)
 
 /* JTAG TAP IDCODE */
 #define JTAG_IDCODE_VERSION_OFFSET  28U
@@ -166,7 +166,7 @@
 #define JTAG_IDCODE_DESIGNER_OFFSET 1U
 #define JTAG_IDCODE_DESIGNER_MASK   (0x7ffU << JTAG_IDCODE_DESIGNER_OFFSET)
 
-#define JTAG_IDCODE_ARM_DPv0 0x4ba00477U
+#define JTAG_IDCODE_ARM_DPv0 UINT32_C(0x4ba00477)
 
 /* Constants to make RnW parameters more clear in code */
 #define ADIV5_LOW_WRITE 0
@@ -193,7 +193,7 @@
  */
 #define ASCII_CODE_FLAG (1U << 15U) /* flag the code as legacy ASCII */
 
-#define JEP106_MANUFACTURER_ARM          0x43BU /* ARM Ltd. */
+#define JEP106_MANUFACTURER_ARM          0x43bU /* ARM Ltd. */
 #define JEP106_MANUFACTURER_FREESCALE    0x00eU /* Freescale */
 #define JEP106_MANUFACTURER_TEXAS        0x017U /* Texas Instruments */
 #define JEP106_MANUFACTURER_ATMEL        0x01fU /* Atmel */

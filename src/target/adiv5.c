@@ -39,16 +39,16 @@
 
 /* Values from ST RM0436 (STM32MP157), 66.9 APx_IDR
  * and ST RM0438 (STM32L5) 52.3.1, AP_IDR */
-#define ARM_AP_TYPE_AHB  1
-#define ARM_AP_TYPE_APB  3
-#define ARM_AP_TYPE_AXI  4
-#define ARM_AP_TYPE_AHB5 5
+#define ARM_AP_TYPE_AHB  1U
+#define ARM_AP_TYPE_APB  3U
+#define ARM_AP_TYPE_AXI  4U
+#define ARM_AP_TYPE_AHB5 5U
 
 /* ROM table CIDR values */
-#define CIDR0_OFFSET 0xFF0 /* DBGCID0 */
-#define CIDR1_OFFSET 0xFF4 /* DBGCID1 */
-#define CIDR2_OFFSET 0xFF8 /* DBGCID2 */
-#define CIDR3_OFFSET 0xFFC /* DBGCID3 */
+#define CIDR0_OFFSET 0xff0U /* DBGCID0 */
+#define CIDR1_OFFSET 0xff4U /* DBGCID1 */
+#define CIDR2_OFFSET 0xff8U /* DBGCID2 */
+#define CIDR3_OFFSET 0xffcU /* DBGCID3 */
 
 /* Component class ID register can be broken down into the following logical
  * interpretation of the 32bit value consisting of the least significant bytes
@@ -64,8 +64,8 @@
  *                                 V
  *                           Component ID
  */
-#define CID_PREAMBLE    UINT32_C(0xB105000D)
-#define CID_CLASS_MASK  UINT32_C(0x0000F000)
+#define CID_PREAMBLE    UINT32_C(0xb105000d)
+#define CID_CLASS_MASK  UINT32_C(0x0000f000)
 #define CID_CLASS_SHIFT 12U
 
 /* The following enum is based on the Component Class value table 13-3 of the
@@ -76,12 +76,12 @@ typedef enum cid_class {
 	cidc_romtab = 0x1, /* ROM Table, std. layout (ADIv5 Chapter 14) */
 	/* 0x2 - 0x8 */    /* Reserved */
 	cidc_dc = 0x9,     /* Debug component, std. layout (CoreSight Arch. Spec.) */
-	/* 0xA */          /* Reserved */
-	cidc_ptb = 0xB,    /* Peripheral Test Block (PTB) */
-	/* 0xC */          /* Reserved */
-	cidc_dess = 0xD,   /* OptimoDE Data Engine SubSystem (DESS) component */
-	cidc_gipc = 0xE,   /* Generic IP Component */
-	cidc_sys = 0xF,    /* CoreLink, PrimeCell, or other system component with no standard register layout */
+	/* 0xa */          /* Reserved */
+	cidc_ptb = 0xb,    /* Peripheral Test Block (PTB) */
+	/* 0xc */          /* Reserved */
+	cidc_dess = 0xd,   /* OptimoDE Data Engine SubSystem (DESS) component */
+	cidc_gipc = 0xe,   /* Generic IP Component */
+	cidc_sys = 0xf,    /* CoreLink, PrimeCell, or other system component with no standard register layout */
 	cidc_unknown = 0x10
 } cid_class_e;
 
@@ -92,41 +92,41 @@ static const char *const cidc_debug_strings[] = {
 	[cidc_romtab] = "ROM Table",                              /* 0x1 */
 	[0x2 ... 0x8] = "R",                                      /* 0x2 - 0x8 */
 	[cidc_dc] = "Debug component",                            /* 0x9 */
-	[0xA] = "R",                                              /* 0xA */
-	[cidc_ptb] = "Peripheral Test Block",                     /* 0xB */
-	[0xC] = "R",                                              /* 0xC */
-	[cidc_dess] = "OptimoDE Data Engine SubSystem component", /* 0xD */
-	[cidc_gipc] = "Generic IP component",                     /* 0xE */
-	[cidc_sys] = "Non STD System component",                  /* 0xF */
+	[0xa] = "R",                                              /* 0xa */
+	[cidc_ptb] = "Peripheral Test Block",                     /* 0xb */
+	[0xc] = "R",                                              /* 0xc */
+	[cidc_dess] = "OptimoDE Data Engine SubSystem component", /* 0xd */
+	[cidc_gipc] = "Generic IP component",                     /* 0xe */
+	[cidc_sys] = "Non STD System component",                  /* 0xf */
 	[cidc_unknown] = "Unknown component class"                /* 0x10 */
 };
 #endif
 
-#define PIDR0_OFFSET 0xFE0 /* DBGPID0 */
-#define PIDR1_OFFSET 0xFE4 /* DBGPID1 */
-#define PIDR2_OFFSET 0xFE8 /* DBGPID2 */
-#define PIDR3_OFFSET 0xFEC /* DBGPID3 */
-#define PIDR4_OFFSET 0xFD0 /* DBGPID4 */
-#define PIDR5_OFFSET 0xFD4 /* DBGPID5 (Reserved) */
-#define PIDR6_OFFSET 0xFD8 /* DBGPID6 (Reserved) */
-#define PIDR7_OFFSET 0xFDC /* DBGPID7 (Reserved) */
+#define PIDR0_OFFSET 0xfe0U /* DBGPID0 */
+#define PIDR1_OFFSET 0xfe4U /* DBGPID1 */
+#define PIDR2_OFFSET 0xfe8U /* DBGPID2 */
+#define PIDR3_OFFSET 0xfecU /* DBGPID3 */
+#define PIDR4_OFFSET 0xfd0U /* DBGPID4 */
+#define PIDR5_OFFSET 0xfd4U /* DBGPID5 (Reserved) */
+#define PIDR6_OFFSET 0xfd8U /* DBGPID6 (Reserved) */
+#define PIDR7_OFFSET 0xfdcU /* DBGPID7 (Reserved) */
 
-#define PIDR_JEP106_CONT_OFFSET 32ULL                                /*JEP-106 Continuation Code offset */
-#define PIDR_JEP106_CONT_MASK   (0xFULL << PIDR_JEP106_CONT_OFFSET)  /*JEP-106 Continuation Code mask */
-#define PIDR_REV_OFFSET         20ULL                                /* Revision bits offset */
-#define PIDR_REV_MASK           (0xFFFULL << PIDR_REV_OFFSET)        /* Revision bits mask */
-#define PIDR_JEP106_USED_OFFSET 19ULL                                /* JEP-106 code used flag offset */
-#define PIDR_JEP106_USED        (1ULL << PIDR_JEP106_USED_OFFSET)    /* JEP-106 code used flag */
-#define PIDR_JEP106_CODE_OFFSET 12ULL                                /* JEP-106 code offset */
-#define PIDR_JEP106_CODE_MASK   (0x7FULL << PIDR_JEP106_CODE_OFFSET) /* JEP-106 code mask */
-#define PIDR_PN_MASK            (0xFFFULL)                           /* Part number */
+#define PIDR_JEP106_CONT_OFFSET 32U                                         /*JEP-106 Continuation Code offset */
+#define PIDR_JEP106_CONT_MASK   (UINT64_C(0xf) << PIDR_JEP106_CONT_OFFSET)  /*JEP-106 Continuation Code mask */
+#define PIDR_REV_OFFSET         20U                                         /* Revision bits offset */
+#define PIDR_REV_MASK           (UINT64_C(0xfff) << PIDR_REV_OFFSET)        /* Revision bits mask */
+#define PIDR_JEP106_USED_OFFSET 19U                                         /* JEP-106 code used flag offset */
+#define PIDR_JEP106_USED        (UINT64_C(1) << PIDR_JEP106_USED_OFFSET)    /* JEP-106 code used flag */
+#define PIDR_JEP106_CODE_OFFSET 12U                                         /* JEP-106 code offset */
+#define PIDR_JEP106_CODE_MASK   (UINT64_C(0x7f) << PIDR_JEP106_CODE_OFFSET) /* JEP-106 code mask */
+#define PIDR_PN_MASK            UINT64_C(0xfff)                             /* Part number */
 
-#define DEVTYPE_OFFSET 0xFCCU /* CoreSight Device Type Register */
-#define DEVARCH_OFFSET 0xFBCU /* CoreSight Device Architecture Register */
+#define DEVTYPE_OFFSET 0xfccU /* CoreSight Device Type Register */
+#define DEVARCH_OFFSET 0xfbcU /* CoreSight Device Architecture Register */
 
-#define DEVTYPE_MASK        0x000000FFU
-#define DEVARCH_PRESENT     (1U << 20)
-#define DEVARCH_ARCHID_MASK 0x0000FFFFU
+#define DEVTYPE_MASK        0x000000ffU
+#define DEVARCH_PRESENT     (1U << 20U)
+#define DEVARCH_ARCHID_MASK 0x0000ffffU
 
 typedef enum arm_arch {
 	aa_nosupport,
@@ -309,7 +309,7 @@ static uint32_t adiv5_ap_read_id(adiv5_access_port_s *ap, uint32_t addr)
 	uint32_t res = 0;
 	uint8_t data[16];
 	adiv5_mem_read(ap, data, addr, sizeof(data));
-	for (size_t i = 0; i < 4; ++i)
+	for (size_t i = 0; i < 4U; ++i)
 		res |= (data[4U * i] << (i * 8U));
 	return res;
 }
@@ -317,7 +317,7 @@ static uint32_t adiv5_ap_read_id(adiv5_access_port_s *ap, uint32_t addr)
 uint64_t adiv5_ap_read_pidr(adiv5_access_port_s *ap, uint32_t addr)
 {
 	uint64_t pidr = adiv5_ap_read_id(ap, addr + PIDR4_OFFSET);
-	pidr = pidr << 32 | adiv5_ap_read_id(ap, addr + PIDR0_OFFSET);
+	pidr = pidr << 32U | adiv5_ap_read_id(ap, addr + PIDR0_OFFSET);
 	return pidr;
 }
 
@@ -377,8 +377,7 @@ static uint32_t cortexm_initial_halt(adiv5_access_port_s *ap)
 		 * 0x0xA05F0000  may happen.
 		 * M23/33 will have S_SDE set when debug is allowed
 		 */
-		if ((dhcsr != 0xffffffffU) &&       /* Invalid read */
-			((dhcsr & 0xf000fff0U) == 0)) { /* Check RAZ bits */
+		if (dhcsr != 0xffffffffU && (dhcsr & 0xf000fff0U) == 0) { /* (Check for invalid read) && (Check RAZ bits) */
 			if ((dhcsr & CORTEXM_DHCSR_S_RESET_ST) && !reset_seen) {
 				if (connect_assert_nrst)
 					return dhcsr;
@@ -474,7 +473,7 @@ static void adiv5_component_probe(
 		return;
 
 #if defined(ENABLE_DEBUG)
-	char indent[recursion + 1];
+	char indent[recursion + 1U];
 
 	for (size_t i = 0; i < recursion; i++)
 		indent[i] = ' ';
@@ -500,7 +499,7 @@ static void adiv5_component_probe(
 	uint16_t designer_code;
 	if (pidr & PIDR_JEP106_USED) {
 		/* (OFFSET - 8) because we want it on bits 11:8 of new code, see "JEP-106 code list" */
-		designer_code = (pidr & PIDR_JEP106_CONT_MASK) >> (PIDR_JEP106_CONT_OFFSET - 8) |
+		designer_code = (pidr & PIDR_JEP106_CONT_MASK) >> (PIDR_JEP106_CONT_OFFSET - 8U) |
 			(pidr & PIDR_JEP106_CODE_MASK) >> PIDR_JEP106_CODE_OFFSET;
 
 		if (designer_code == JEP106_MANUFACTURER_ERRATA_STM32WX || designer_code == JEP106_MANUFACTURER_ERRATA_CS) {
@@ -526,7 +525,7 @@ static void adiv5_component_probe(
 			ap->designer_code = designer_code;
 			ap->partno = part_number;
 
-			if (ap->designer_code == JEP106_MANUFACTURER_ATMEL && ap->partno == 0xcd0) {
+			if (ap->designer_code == JEP106_MANUFACTURER_ATMEL && ap->partno == 0xcd0U) {
 				uint32_t ctrlstat = adiv5_mem_read32(ap, SAMX5X_DSU_CTRLSTAT);
 				if (ctrlstat & SAMX5X_STATUSB_PROT) {
 					/* A protected SAMx5x device is found.
@@ -550,10 +549,10 @@ static void adiv5_component_probe(
 		DEBUG_INFO("ROM: Table BASE=0x%" PRIx32 " SYSMEM=0x%08" PRIx32 ", Manufacturer %3x Partno %3x\n", addr, memtype,
 			designer_code, part_number);
 #endif
-		for (uint32_t i = 0; i < 960; i++) {
+		for (uint32_t i = 0; i < 960U; i++) {
 			adiv5_dp_error(ap->dp);
 
-			uint32_t entry = adiv5_mem_read32(ap, addr + i * 4);
+			uint32_t entry = adiv5_mem_read32(ap, addr + i * 4U);
 			if (adiv5_dp_error(ap->dp)) {
 				DEBUG_WARN("%sFault reading ROM table entry %" PRIu32 "\n", indent, i);
 				break;
@@ -568,7 +567,7 @@ static void adiv5_component_probe(
 			}
 
 			/* Probe recursively */
-			adiv5_component_probe(ap, addr + (entry & ADIV5_ROM_ROMENTRY_OFFSET), recursion + 1, i);
+			adiv5_component_probe(ap, addr + (entry & ADIV5_ROM_ROMENTRY_OFFSET), recursion + 1U, i);
 		}
 		DEBUG_INFO("%sROM: Table END\n", indent);
 
@@ -646,7 +645,7 @@ adiv5_access_port_s *adiv5_new_ap(adiv5_debug_port_s *dp, uint8_t apsel)
 	tmpap.base = adiv5_ap_read(&tmpap, ADIV5_AP_BASE);
 	/* Check the Debug Base Address register. See ADIv5
 		 * Specification C2.6.1 */
-	if (tmpap.base == 0xffffffff) {
+	if (tmpap.base == 0xffffffffU) {
 		/* Debug Base Address not present in this MEM-AP */
 		/* No debug entries... useless AP */
 		/* AP0 on STM32MP157C reads 0x00000002 */
@@ -675,7 +674,7 @@ adiv5_access_port_s *adiv5_new_ap(adiv5_debug_port_s *dp, uint8_t apsel)
 	uint32_t cfg = adiv5_ap_read(ap, ADIV5_AP_CFG);
 	DEBUG_INFO("AP %3d: IDR=%08" PRIx32 " CFG=%08" PRIx32 " BASE=%08" PRIx32 " CSW=%08" PRIx32, apsel, ap->idr, cfg,
 		ap->base, ap->csw);
-	DEBUG_INFO(" (AHB-AP var%" PRIx32 " rev%" PRIx32 ")\n", (ap->idr >> 4) & 0xf, ap->idr >> 28);
+	DEBUG_INFO(" (AHB-AP var%" PRIx32 " rev%" PRIx32 ")\n", (ap->idr >> 4U) & 0xfU, ap->idr >> 28U);
 #endif
 	adiv5_ap_ref(ap);
 	return ap;
@@ -792,7 +791,7 @@ void adiv5_dp_init(adiv5_debug_port_s *dp, const uint32_t idcode)
 			(targetid & (ADIV5_DP_TARGETID_TDESIGNER_MASK | ADIV5_DP_TARGETID_TPARTNO_MASK)) | 1U;
 	}
 
-	if (dp->designer_code == JEP106_MANUFACTURER_RASPBERRY && dp->partno == 0x2) {
+	if (dp->designer_code == JEP106_MANUFACTURER_RASPBERRY && dp->partno == 0x2U) {
 		rp_rescue_setup(dp);
 		return;
 	}
@@ -865,7 +864,7 @@ void adiv5_dp_init(adiv5_debug_port_s *dp, const uint32_t idcode)
 	/* Probe for APs on this DP */
 	size_t invalid_aps = 0;
 	dp->refcnt++;
-	for (size_t i = 0; i < 256 && invalid_aps < 8; ++i) {
+	for (size_t i = 0; i < 256U && invalid_aps < 8U; ++i) {
 		adiv5_access_port_s *ap = NULL;
 #if PC_HOSTED == 1
 		if ((!dp->ap_setup) || dp->ap_setup(i))
@@ -917,7 +916,7 @@ void adiv5_dp_init(adiv5_debug_port_s *dp, const uint32_t idcode)
 	adiv5_dp_unref(dp);
 }
 
-#define ALIGNOF(x) (((x)&3) == 0 ? ALIGN_WORD : (((x)&1) == 0 ? ALIGN_HALFWORD : ALIGN_BYTE))
+#define ALIGNOF(x) (((x)&3U) == 0 ? ALIGN_WORD : (((x)&1U) == 0 ? ALIGN_HALFWORD : ALIGN_BYTE))
 
 /* Program the CSW and TAR for sequencial access at a given width */
 static void ap_mem_access_setup(adiv5_access_port_s *ap, uint32_t addr, align_e align)
@@ -945,10 +944,10 @@ void *extract(void *dest, uint32_t src, uint32_t val, align_e align)
 {
 	switch (align) {
 	case ALIGN_BYTE:
-		*(uint8_t *)dest = (val >> ((src & 0x3) << 3) & 0xFF);
+		*(uint8_t *)dest = (val >> ((src & 0x3U) << 3U) & 0xffU);
 		break;
 	case ALIGN_HALFWORD:
-		*(uint16_t *)dest = (val >> ((src & 0x2) << 3) & 0xFFFF);
+		*(uint16_t *)dest = (val >> ((src & 0x2U) << 3U) & 0xffffU);
 		break;
 	case ALIGN_DWORD:
 	case ALIGN_WORD:
@@ -997,10 +996,10 @@ void firmware_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void
 		/* Pack data into correct data lane */
 		switch (align) {
 		case ALIGN_BYTE:
-			tmp = ((uint32_t) * (uint8_t *)src) << ((dest & 3) << 3);
+			tmp = ((uint32_t) * (uint8_t *)src) << ((dest & 3U) << 3U);
 			break;
 		case ALIGN_HALFWORD:
-			tmp = ((uint32_t) * (uint16_t *)src) << ((dest & 2) << 3);
+			tmp = ((uint32_t) * (uint16_t *)src) << ((dest & 2U) << 3U);
 			break;
 		case ALIGN_DWORD:
 		case ALIGN_WORD:
@@ -1023,14 +1022,14 @@ void firmware_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void
 
 void firmware_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value)
 {
-	adiv5_dp_write(ap->dp, ADIV5_DP_SELECT, ((uint32_t)ap->apsel << 24) | (addr & 0xF0));
+	adiv5_dp_write(ap->dp, ADIV5_DP_SELECT, ((uint32_t)ap->apsel << 24U) | (addr & 0xf0U));
 	adiv5_dp_write(ap->dp, addr, value);
 }
 
 uint32_t firmware_ap_read(adiv5_access_port_s *ap, uint16_t addr)
 {
 	uint32_t ret;
-	adiv5_dp_write(ap->dp, ADIV5_DP_SELECT, ((uint32_t)ap->apsel << 24) | (addr & 0xF0));
+	adiv5_dp_write(ap->dp, ADIV5_DP_SELECT, ((uint32_t)ap->apsel << 24U) | (addr & 0xf0U));
 	ret = adiv5_dp_read(ap->dp, addr);
 	return ret;
 }
