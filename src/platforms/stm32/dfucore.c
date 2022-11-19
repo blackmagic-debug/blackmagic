@@ -72,7 +72,7 @@ const usb_device_descriptor_s dev_desc = {
 	.bDeviceSubClass = 0,
 	.bDeviceProtocol = 0,
 	.bMaxPacketSize0 = 64,
-	.idVendor = 0x1D50,
+	.idVendor = 0x1d50,
 	.idProduct = 0x6017,
 	.bcdDevice = 0x0100,
 	.iManufacturer = 1,
@@ -87,7 +87,7 @@ const usb_dfu_descriptor_s dfu_function = {
 	.bmAttributes = USB_DFU_CAN_DOWNLOAD | USB_DFU_CAN_UPLOAD | USB_DFU_WILL_DETACH,
 	.wDetachTimeout = 255,
 	.wTransferSize = 1024,
-	.bcdDFUVersion = 0x011A,
+	.bcdDFUVersion = 0x011a,
 };
 
 const usb_interface_descriptor_s iface = {
@@ -96,7 +96,7 @@ const usb_interface_descriptor_s iface = {
 	.bInterfaceNumber = 0,
 	.bAlternateSetting = 0,
 	.bNumEndpoints = 0,
-	.bInterfaceClass = 0xFE, /* Device Firmware Upgrade */
+	.bInterfaceClass = 0xfe, /* Device Firmware Upgrade */
 	.bInterfaceSubClass = 1,
 	.bInterfaceProtocol = 2,
 
@@ -120,7 +120,7 @@ const usb_config_descriptor_s config = {
 	.bNumInterfaces = 1,
 	.bConfigurationValue = 1,
 	.iConfiguration = 0,
-	.bmAttributes = 0xC0,
+	.bmAttributes = 0xc0,
 	.bMaxPower = 0x32,
 
 	.interface = ifaces,
@@ -142,7 +142,7 @@ static const char *const usb_strings[] = {
 static uint32_t get_le32(const void *vp)
 {
 	const uint8_t *p = vp;
-	return ((uint32_t)p[3] << 24) + ((uint32_t)p[2] << 16) + (p[1] << 8) + p[0];
+	return ((uint32_t)p[3] << 24U) + ((uint32_t)p[2] << 16U) + (p[1] << 8U) + p[0];
 }
 
 static uint8_t usbdfu_getstatus(uint32_t *poll_timeout)
