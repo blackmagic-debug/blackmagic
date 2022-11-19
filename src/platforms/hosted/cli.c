@@ -228,15 +228,18 @@ static const getopt_option_s long_options[] = {
 
 void cl_init(bmda_cli_options_s *opt, int argc, char **argv)
 {
-	int c;
 	opt->opt_target_dev = 1;
 	opt->opt_flash_size = 0xffffffff;
 	opt->opt_flash_start = 0xffffffff;
 	opt->opt_max_swj_frequency = 4000000;
 	opt->opt_scanmode = BMP_SCAN_SWD;
 	opt->opt_mode = BMP_MODE_DEBUG;
-	while ((c = getopt_long(argc, argv, "eEFhHv:d:f:s:I:c:Cln:m:M:wVtTa:S:jApP:rR::", long_options, NULL)) != -1) {
-		switch (c) {
+	while (true) {
+		const int option = getopt_long(argc, argv, "eEFhHv:d:f:s:I:c:Cln:m:M:wVtTa:S:jApP:rR::", long_options, NULL);
+		if (option == -1)
+			break;
+
+		switch (option) {
 		case 'c':
 			if (optarg)
 				opt->opt_cable = optarg;
