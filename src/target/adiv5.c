@@ -550,12 +550,12 @@ static void adiv5_component_probe(
 		DEBUG_INFO("ROM: Table BASE=0x%" PRIx32 " SYSMEM=0x%08" PRIx32 ", Manufacturer %3x Partno %3x\n", addr, memtype,
 			designer_code, part_number);
 #endif
-		for (size_t i = 0; i < 960; i++) {
+		for (uint32_t i = 0; i < 960; i++) {
 			adiv5_dp_error(ap->dp);
 
 			uint32_t entry = adiv5_mem_read32(ap, addr + i * 4);
 			if (adiv5_dp_error(ap->dp)) {
-				DEBUG_WARN("%sFault reading ROM table entry %d\n", indent, i);
+				DEBUG_WARN("%sFault reading ROM table entry %" PRIu32 "\n", indent, i);
 				break;
 			}
 
@@ -563,7 +563,7 @@ static void adiv5_component_probe(
 				break;
 
 			if (!(entry & ADIV5_ROM_ROMENTRY_PRESENT)) {
-				DEBUG_INFO("%s%d Entry 0x%" PRIx32 " -> Not present\n", indent, i, entry);
+				DEBUG_INFO("%s%" PRIu32 " Entry 0x%" PRIx32 " -> Not present\n", indent, i, entry);
 				continue;
 			}
 
