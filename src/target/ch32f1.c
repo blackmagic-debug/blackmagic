@@ -38,32 +38,32 @@ static bool ch32f1_flash_erase(target_flash_s *f, target_addr_t addr, size_t len
 static bool ch32f1_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 
 // These are common with stm32f1/gd32f1/...
-#define FPEC_BASE     0x40022000
-#define FLASH_ACR     (FPEC_BASE + 0x00)
-#define FLASH_KEYR    (FPEC_BASE + 0x04)
-#define FLASH_SR      (FPEC_BASE + 0x0C)
-#define FLASH_CR      (FPEC_BASE + 0x10)
-#define FLASH_AR      (FPEC_BASE + 0x14)
-#define FLASH_CR_LOCK (1 << 7)
-#define FLASH_CR_STRT (1 << 6)
-#define FLASH_SR_BSY  (1 << 0)
-#define KEY1          0x45670123
-#define KEY2          0xCDEF89AB
-#define SR_ERROR_MASK 0x14
-#define SR_EOP        0x20
-#define DBGMCU_IDCODE 0xE0042000
-#define FLASHSIZE     0x1FFFF7E0
+#define FPEC_BASE     0x40022000U
+#define FLASH_ACR     (FPEC_BASE + 0x00U)
+#define FLASH_KEYR    (FPEC_BASE + 0x04U)
+#define FLASH_SR      (FPEC_BASE + 0x0cU)
+#define FLASH_CR      (FPEC_BASE + 0x10U)
+#define FLASH_AR      (FPEC_BASE + 0x14U)
+#define FLASH_CR_LOCK (1U << 7U)
+#define FLASH_CR_STRT (1U << 6U)
+#define FLASH_SR_BSY  (1U << 0U)
+#define KEY1          0x45670123U
+#define KEY2          0xcdef89abU
+#define SR_ERROR_MASK 0x14U
+#define SR_EOP        0x20U
+#define DBGMCU_IDCODE 0xe0042000U
+#define FLASHSIZE     0x1ffff7e0U
 
 // These are specific to ch32f1
-#define FLASH_MAGIC              (FPEC_BASE + 0x34)
-#define FLASH_MODEKEYR_CH32      (FPEC_BASE + 0x24) // Fast mode for CH32F10x
-#define FLASH_CR_FLOCK_CH32      (1 << 15)          // Fast unlock
-#define FLASH_CR_FTPG_CH32       (1 << 16)          // Fast page program
-#define FLASH_CR_FTER_CH32       (1 << 17)          // Fast page erase
-#define FLASH_CR_BUF_LOAD_CH32   (1 << 18)          // Buffer load
-#define FLASH_CR_BUF_RESET_CH32  (1 << 19)          // Buffer reset
-#define FLASH_SR_EOP             (1 << 5)           // End of programming
-#define FLASH_BEGIN_ADDRESS_CH32 0x8000000
+#define FLASH_MAGIC              (FPEC_BASE + 0x34U)
+#define FLASH_MODEKEYR_CH32      (FPEC_BASE + 0x24U) // Fast mode for CH32F10x
+#define FLASH_CR_FLOCK_CH32      (1U << 15U)         // Fast unlock
+#define FLASH_CR_FTPG_CH32       (1U << 16U)         // Fast page program
+#define FLASH_CR_FTER_CH32       (1U << 17U)         // Fast page erase
+#define FLASH_CR_BUF_LOAD_CH32   (1U << 18U)         // Buffer load
+#define FLASH_CR_BUF_RESET_CH32  (1U << 19U)         // Buffer reset
+#define FLASH_SR_EOP             (1U << 5U)          // End of programming
+#define FLASH_BEGIN_ADDRESS_CH32 0x8000000U
 
 /* "fast" Flash driver for CH32F10x chips */
 static void ch32f1_add_flash(target_s *t, uint32_t addr, size_t length, size_t erasesize)
@@ -80,7 +80,7 @@ static void ch32f1_add_flash(target_s *t, uint32_t addr, size_t length, size_t e
 	f->erase = ch32f1_flash_erase;
 	f->write = ch32f1_flash_write;
 	f->writesize = erasesize;
-	f->erased = 0xff;
+	f->erased = 0xffU;
 	target_add_flash(t, f);
 }
 
@@ -117,8 +117,8 @@ static void ch32f1_add_flash(target_s *t, uint32_t addr, size_t length, size_t e
 	} while (0)
 
 // Which one is the right value?
-#define MAGIC_WORD 0x100
-// #define MAGIC_WORD 0x1000
+#define MAGIC_WORD 0x100U
+// #define MAGIC_WORD 0x1000U
 #define MAGIC(addr)                                        \
 	do {                                                   \
 		magic = target_mem_read32(t, (addr) ^ MAGIC_WORD); \
@@ -189,15 +189,15 @@ bool ch32f1_probe(target_s *t)
 
 	const uint32_t dbgmcu_idcode = target_mem_read32(t, DBGMCU_IDCODE);
 	const uint32_t device_id = dbgmcu_idcode & 0x00000fffU;
-	const uint32_t revision_id = (dbgmcu_idcode & 0xffff0000U) >> 16;
+	const uint32_t revision_id = (dbgmcu_idcode & 0xffff0000U) >> 16U;
 
 	DEBUG_WARN("DBGMCU_IDCODE 0x%" PRIx32 ", DEVID 0x%" PRIx32 ", REVID 0x%" PRIx32 " \n", dbgmcu_idcode, device_id,
 		revision_id);
 
-	if (device_id != 0x410) // ch32f103, cks32f103, apm32f103
+	if (device_id != 0x410U) // ch32f103, cks32f103, apm32f103
 		return false;
 
-	if (revision_id != 0x2000) // (Hopefully!) only ch32f103
+	if (revision_id != 0x2000U) // (Hopefully!) only ch32f103
 		return false;
 
 	// Try to flock (if this fails it is not a CH32 chip)
@@ -206,10 +206,10 @@ bool ch32f1_probe(target_s *t)
 
 	t->part_id = device_id;
 	uint32_t signature = target_mem_read32(t, FLASHSIZE);
-	uint32_t flashSize = signature & 0xFFFF;
+	uint32_t flashSize = signature & 0xffffU;
 
 	target_add_ram(t, 0x20000000, 0x5000);
-	ch32f1_add_flash(t, FLASH_BEGIN_ADDRESS_CH32, flashSize * 1024, 128);
+	ch32f1_add_flash(t, FLASH_BEGIN_ADDRESS_CH32, flashSize * 1024U, 128);
 	target_add_commands(t, stm32f1_cmd_list, "STM32 LD/MD/VL-LD/VL-MD");
 	t->driver = "CH32F1 medium density (stm32f1 clone)";
 	return true;
@@ -238,11 +238,11 @@ bool ch32f1_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 		CLEAR_CR(FLASH_CR_STRT);
 		// Magic
 		MAGIC(addr);
-		if (len > 128)
-			len -= 128;
+		if (len > 128U)
+			len -= 128U;
 		else
 			len = 0;
-		addr += 128;
+		addr += 128U;
 	}
 	sr = target_mem_read32(t, FLASH_SR);
 	ch32f1_flash_lock(t);
@@ -260,9 +260,9 @@ bool ch32f1_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 static bool ch32f1_wait_flash_ready(target_s *t, uint32_t addr)
 {
 	uint32_t ff = 0;
-	for (size_t i = 0; i < 32; i++)
+	for (size_t i = 0; i < 32U; i++)
 		ff = target_mem_read32(t, addr);
-	if (ff != 0xffffffffUL) {
+	if (ff != 0xffffffffU) {
 		DEBUG_WARN("ch32f1 Not erased properly at %" PRIx32 " or flash access issue\n", addr);
 		return false;
 	}
@@ -278,9 +278,9 @@ static int ch32f1_upload(target_s *t, uint32_t dest, const void *src, uint32_t o
 
 	SET_CR(FLASH_CR_FTPG_CH32);
 	target_mem_write32(t, dd + 0, ss[0]);
-	target_mem_write32(t, dd + 4, ss[1]);
-	target_mem_write32(t, dd + 8, ss[2]);
-	target_mem_write32(t, dd + 12, ss[3]);
+	target_mem_write32(t, dd + 4U, ss[1]);
+	target_mem_write32(t, dd + 8U, ss[2]);
+	target_mem_write32(t, dd + 12U, ss[3]);
 	SET_CR(FLASH_CR_BUF_LOAD_CH32); /* BUF LOAD */
 	WAIT_EOP();
 	CLEAR_EOP();
@@ -327,7 +327,7 @@ static bool ch32f1_flash_write(target_flash_s *f, target_addr_t dest, const void
 		if (!ch32f1_wait_flash_ready(t, dest))
 			return false;
 
-		for (size_t i = 0; i < 8; i++) {
+		for (size_t i = 0; i < 8U; i++) {
 			if (ch32f1_upload(t, dest, src, i * 16U)) {
 				DEBUG_WARN("Cannot upload to buffer\n");
 				return false;
@@ -345,12 +345,12 @@ static bool ch32f1_flash_write(target_flash_s *f, target_addr_t dest, const void
 		MAGIC(dest);
 
 		// next
-		if (length > 128)
-			length -= 128;
+		if (length > 128U)
+			length -= 128U;
 		else
 			length = 0;
-		dest += 128;
-		src += 128;
+		dest += 128U;
+		src += 128U;
 
 		sr = target_mem_read32(t, FLASH_SR); // 13
 		ch32f1_flash_lock(t);
@@ -362,7 +362,7 @@ static bool ch32f1_flash_write(target_flash_s *f, target_addr_t dest, const void
 
 #ifdef CH32_VERIFY
 	DEBUG_INFO("Verifying\n");
-	for (size_t i = 0; i < len; i += 4) {
+	for (size_t i = 0; i < len; i += 4U) {
 		const uint32_t expected = *(uint32_t *)(org_src + i);
 		const uint32_t actual = target_mem_read32(t, org_dest + i);
 		if (expected != actual) {
