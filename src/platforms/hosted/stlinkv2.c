@@ -173,20 +173,10 @@
 
 #define STLINK_V3_MAX_FREQ_NB 10U
 
-/** */
-enum stlink_mode {
-	STLINK_MODE_UNKNOWN = 0,
-	STLINK_MODE_DFU,
-	STLINK_MODE_MASS,
-	STLINK_MODE_DEBUG_JTAG,
-	STLINK_MODE_DEBUG_SWD,
-	STLINK_MODE_DEBUG_SWIM
-};
-
-enum transport_mode_t {
+typedef enum transport_mode {
 	STLINK_MODE_SWD = 0,
 	STLINK_MODE_JTAG
-};
+} transport_mode_e;
 
 typedef struct stlink {
 	libusb_context *libusb_ctx;
@@ -204,9 +194,9 @@ typedef struct stlink {
 	uint8_t ver_bridge;
 	uint16_t block_size;
 	bool ap_error;
-} stlink_t;
+} stlink_s;
 
-stlink_t stlink;
+stlink_s stlink;
 
 static int stlink_usb_get_rw_status(bool verbose);
 
