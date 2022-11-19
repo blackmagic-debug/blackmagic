@@ -829,7 +829,7 @@ void adiv5_dp_init(adiv5_debug_port_s *dp, const uint32_t idcode)
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 201);
 	/* Write request for system and debug power up */
-	adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT, ctrlstat |= ADIV5_DP_CTRLSTAT_CSYSPWRUPREQ | ADIV5_DP_CTRLSTAT_CDBGPWRUPREQ);
+	adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT, ctrlstat | ADIV5_DP_CTRLSTAT_CSYSPWRUPREQ | ADIV5_DP_CTRLSTAT_CDBGPWRUPREQ);
 	/* Wait for acknowledge */
 	while (true) {
 		ctrlstat = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT);
@@ -848,7 +848,7 @@ void adiv5_dp_init(adiv5_debug_port_s *dp, const uint32_t idcode)
 	 * so we have a timeout mechanism in addition to the sensing one. */
 	platform_timeout_set(&timeout, 200);
 	/* Write request for debug reset */
-	adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT, ctrlstat |= ADIV5_DP_CTRLSTAT_CDBGRSTREQ);
+	adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT, ctrlstat | ADIV5_DP_CTRLSTAT_CDBGRSTREQ);
 	/* Wait for acknowledge */
 	while (true) {
 		ctrlstat = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT);
@@ -862,7 +862,7 @@ void adiv5_dp_init(adiv5_debug_port_s *dp, const uint32_t idcode)
 		}
 	}
 	/* Write request for debug reset release */
-	adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT, ctrlstat &= ~ADIV5_DP_CTRLSTAT_CDBGRSTREQ);
+	adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT, ctrlstat & ~ADIV5_DP_CTRLSTAT_CDBGRSTREQ);
 
 	/* Probe for APs on this DP */
 	size_t invalid_aps = 0;
