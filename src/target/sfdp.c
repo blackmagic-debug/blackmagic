@@ -46,8 +46,8 @@ static inline void sfdp_debug_print(const uint32_t address, const void *const bu
 	DEBUG_INFO("%" PRIu32 " byte SFDP read at 0x%" PRIx32 ":\n", length, address);
 	const uint8_t *const data = buffer;
 	for (size_t i = 0; i < length; i += 8U) {
-		DEBUG_INFO("\t%02x %02x %02x %02x %02x %02x %02x %02x\n", data[i + 0], data[i + 1], data[i + 2], data[i + 3],
-			data[i + 4], data[i + 5], data[i + 6], data[i + 7]);
+		DEBUG_INFO("\t%02x %02x %02x %02x %02x %02x %02x %02x\n", data[i], data[i + 1U], data[i + 2U], data[i + 3U],
+			data[i + 4U], data[i + 5U], data[i + 6U], data[i + 7U]);
 	}
 #else
 	(void)address;
