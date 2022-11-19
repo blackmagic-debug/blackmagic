@@ -41,8 +41,12 @@ char *platform_ident(void);
 void platform_buffer_flush(void);
 
 #define PLATFORM_IDENT "(Black Magic Debug App) "
-#define SET_IDLE_STATE(x)
-#define SET_RUN_STATE(x)
+#define SET_IDLE_STATE(x) \
+	do {                  \
+	} while (0)
+#define SET_RUN_STATE(x) \
+	do {                 \
+	} while (0)
 #define PLATFORM_HAS_POWER_SWITCH
 
 #define SYSTICKHZ 1000U
