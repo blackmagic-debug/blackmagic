@@ -37,131 +37,115 @@
 #include "jtag_scan.h"
 
 /*- Definitions -------------------------------------------------------------*/
-enum {
-	ID_DAP_INFO = 0x00,
-	ID_DAP_LED = 0x01,
-	ID_DAP_CONNECT = 0x02,
-	ID_DAP_DISCONNECT = 0x03,
-	ID_DAP_TRANSFER_CONFIGURE = 0x04,
-	ID_DAP_TRANSFER = 0x05,
-	ID_DAP_TRANSFER_BLOCK = 0x06,
-	ID_DAP_TRANSFER_ABORT = 0x07,
-	ID_DAP_WRITE_ABORT = 0x08,
-	ID_DAP_DELAY = 0x09,
-	ID_DAP_RESET_TARGET = 0x0a,
-	ID_DAP_SWJ_PINS = 0x10,
-	ID_DAP_SWJ_CLOCK = 0x11,
-	ID_DAP_SWJ_SEQUENCE = 0x12,
-	ID_DAP_SWD_CONFIGURE = 0x13,
-	ID_DAP_JTAG_SEQUENCE = 0x14,
-	ID_DAP_JTAG_CONFIGURE = 0x15,
-	ID_DAP_JTAG_IDCODE = 0x16,
-	ID_DAP_SWD_SEQUENCE = 0x1D,
-};
+#define ID_DAP_INFO               0x00U
+#define ID_DAP_LED                0x01U
+#define ID_DAP_CONNECT            0x02U
+#define ID_DAP_DISCONNECT         0x03U
+#define ID_DAP_TRANSFER_CONFIGURE 0x04U
+#define ID_DAP_TRANSFER           0x05U
+#define ID_DAP_TRANSFER_BLOCK     0x06U
+#define ID_DAP_TRANSFER_ABORT     0x07U
+#define ID_DAP_WRITE_ABORT        0x08U
+#define ID_DAP_DELAY              0x09U
+#define ID_DAP_RESET_TARGET       0x0aU
+#define ID_DAP_SWJ_PINS           0x10U
+#define ID_DAP_SWJ_CLOCK          0x11U
+#define ID_DAP_SWJ_SEQUENCE       0x12U
+#define ID_DAP_SWD_CONFIGURE      0x13U
+#define ID_DAP_JTAG_SEQUENCE      0x14U
+#define ID_DAP_JTAG_CONFIGURE     0x15U
+#define ID_DAP_JTAG_IDCODE        0x16U
+#define ID_DAP_SWD_SEQUENCE       0x1DU
 
-enum {
-	DAP_TRANSFER_APnDP = 1 << 0,
-	DAP_TRANSFER_RnW = 1 << 1,
-	DAP_TRANSFER_A2 = 1 << 2,
-	DAP_TRANSFER_A3 = 1 << 3,
-	DAP_TRANSFER_MATCH_VALUE = 1 << 4,
-	DAP_TRANSFER_MATCH_MASK = 1 << 5,
-};
+#define DAP_TRANSFER_APnDP       (1U << 0U)
+#define DAP_TRANSFER_RnW         (1U << 1U)
+#define DAP_TRANSFER_A2          (1U << 2U)
+#define DAP_TRANSFER_A3          (1U << 3U)
+#define DAP_TRANSFER_MATCH_VALUE (1U << 4U)
+#define DAP_TRANSFER_MATCH_MASK  (1U << 5U)
 
-enum {
-	DAP_TRANSFER_INVALID = 0,
-	DAP_TRANSFER_OK = 1 << 0,
-	DAP_TRANSFER_WAIT = 1 << 1,
-	DAP_TRANSFER_FAULT = 1 << 2,
-	DAP_TRANSFER_ERROR = 1 << 3,
-	DAP_TRANSFER_MISMATCH = 1 << 4,
-	DAP_TRANSFER_NO_TARGET = 7,
-};
+#define DAP_TRANSFER_INVALID   0U
+#define DAP_TRANSFER_OK        (1U << 0U)
+#define DAP_TRANSFER_WAIT      (1U << 1U)
+#define DAP_TRANSFER_FAULT     (1U << 2U)
+#define DAP_TRANSFER_ERROR     (1U << 3U)
+#define DAP_TRANSFER_MISMATCH  (1U << 4U)
+#define DAP_TRANSFER_NO_TARGET 7U
 
-enum {
-	DAP_SWJ_SWCLK_TCK = 1 << 0,
-	DAP_SWJ_SWDIO_TMS = 1 << 1,
-	DAP_SWJ_TDI = 1 << 2,
-	DAP_SWJ_TDO = 1 << 3,
-	DAP_SWJ_nTRST = 1 << 5,
-	DAP_SWJ_nRESET = 1 << 7,
-};
+#define DAP_SWJ_SWCLK_TCK (1U << 0U)
+#define DAP_SWJ_SWDIO_TMS (1U << 1U)
+#define DAP_SWJ_TDI       (1U << 2U)
+#define DAP_SWJ_TDO       (1U << 3U)
+#define DAP_SWJ_nTRST     (1U << 5U)
+#define DAP_SWJ_nRESET    (1U << 7U)
 
-enum {
-	DAP_OK = 0x00,
-	DAP_ERROR = 0xff,
-};
+#define DAP_OK    0x00U
+#define DAP_ERROR 0xffU
 
-enum {
-	DAP_JTAG_TMS = 1 << 6,
-	DAP_JTAG_TDO_CAPTURE = 1 << 7,
-};
+#define DAP_JTAG_TMS         (1U << 6U)
+#define DAP_JTAG_TDO_CAPTURE (1U << 7U)
 
-enum {
-	SWD_DP_R_IDCODE = 0x00,
-	SWD_DP_W_ABORT = 0x00,
-	SWD_DP_R_CTRL_STAT = 0x04,
-	SWD_DP_W_CTRL_STAT = 0x04, // When CTRLSEL == 0
-	SWD_DP_W_WCR = 0x04,       // When CTRLSEL == 1
-	SWD_DP_R_RESEND = 0x08,
-	SWD_DP_W_SELECT = 0x08,
-	SWD_DP_R_RDBUFF = 0x0c,
-};
+#define SWD_DP_R_IDCODE    0x00U
+#define SWD_DP_W_ABORT     0x00U
+#define SWD_DP_R_CTRL_STAT 0x04U
+#define SWD_DP_W_CTRL_STAT 0x04U // When CTRLSEL == 0
+#define SWD_DP_W_WCR       0x04U // When CTRLSEL == 1
+#define SWD_DP_R_RESEND    0x08U
+#define SWD_DP_W_SELECT    0x08U
+#define SWD_DP_R_RDBUFF    0x0cU
 
-enum {
-	SWD_AP_CSW = 0x00 | DAP_TRANSFER_APnDP,
-	SWD_AP_TAR = 0x04 | DAP_TRANSFER_APnDP,
-	SWD_AP_DRW = 0x0c | DAP_TRANSFER_APnDP,
+#define SWD_AP_CSW (0x00U | DAP_TRANSFER_APnDP)
+#define SWD_AP_TAR (0x04U | DAP_TRANSFER_APnDP)
+#define SWD_AP_DRW (0x0cU | DAP_TRANSFER_APnDP)
 
-	SWD_AP_DB0 = 0x00 | DAP_TRANSFER_APnDP, // 0x10
-	SWD_AP_DB1 = 0x04 | DAP_TRANSFER_APnDP, // 0x14
-	SWD_AP_DB2 = 0x08 | DAP_TRANSFER_APnDP, // 0x18
-	SWD_AP_DB3 = 0x0c | DAP_TRANSFER_APnDP, // 0x1c
+#define SWD_AP_DB0 (0x00U | DAP_TRANSFER_APnDP) // 0x10
+#define SWD_AP_DB1 (0x04U | DAP_TRANSFER_APnDP) // 0x14
+#define SWD_AP_DB2 (0x08U | DAP_TRANSFER_APnDP) // 0x18
+#define SWD_AP_DB3 (0x0cU | DAP_TRANSFER_APnDP) // 0x1c
 
-	SWD_AP_CFG = 0x04 | DAP_TRANSFER_APnDP,  // 0xf4
-	SWD_AP_BASE = 0x08 | DAP_TRANSFER_APnDP, // 0xf8
-	SWD_AP_IDR = 0x0c | DAP_TRANSFER_APnDP,  // 0xfc
-};
+#define SWD_AP_CFG  (0x04U | DAP_TRANSFER_APnDP) // 0xf4
+#define SWD_AP_BASE (0x08U | DAP_TRANSFER_APnDP) // 0xf8
+#define SWD_AP_IDR  (0x0cU | DAP_TRANSFER_APnDP) // 0xfc
 
-#define DP_ABORT_DAPABORT   (1 << 0)
-#define DP_ABORT_STKCMPCLR  (1 << 1)
-#define DP_ABORT_STKERRCLR  (1 << 2)
-#define DP_ABORT_WDERRCLR   (1 << 3)
-#define DP_ABORT_ORUNERRCLR (1 << 4)
+#define DP_ABORT_DAPABORT   (1U << 0U)
+#define DP_ABORT_STKCMPCLR  (1U << 1U)
+#define DP_ABORT_STKERRCLR  (1U << 2U)
+#define DP_ABORT_WDERRCLR   (1U << 3U)
+#define DP_ABORT_ORUNERRCLR (1U << 4U)
 
-#define DP_CST_ORUNDETECT      (1 << 0)
-#define DP_CST_STICKYORUN      (1 << 1)
-#define DP_CST_TRNMODE_NORMAL  (0 << 2)
-#define DP_CST_TRNMODE_VERIFY  (1 << 2)
-#define DP_CST_TRNMODE_COMPARE (2 << 2)
-#define DP_CST_STICKYCMP       (1 << 4)
-#define DP_CST_STICKYERR       (1 << 5)
-#define DP_CST_READOK          (1 << 6)
-#define DP_CST_WDATAERR        (1 << 7)
-#define DP_CST_MASKLANE(x)     ((x) << 8)
-#define DP_CST_TRNCNT(x)       ((x) << 12)
-#define DP_CST_CDBGRSTREQ      (1 << 26)
-#define DP_CST_CDBGRSTACK      (1 << 27)
-#define DP_CST_CDBGPWRUPREQ    (1 << 28)
-#define DP_CST_CDBGPWRUPACK    (1 << 29)
-#define DP_CST_CSYSPWRUPREQ    (1 << 30)
-#define DP_CST_CSYSPWRUPACK    (1 << 31)
+#define DP_CST_ORUNDETECT      (1U << 0U)
+#define DP_CST_STICKYORUN      (1U << 1U)
+#define DP_CST_TRNMODE_NORMAL  (0U << 2U)
+#define DP_CST_TRNMODE_VERIFY  (1U << 2U)
+#define DP_CST_TRNMODE_COMPARE (2U << 2U)
+#define DP_CST_STICKYCMP       (1U << 4U)
+#define DP_CST_STICKYERR       (1U << 5U)
+#define DP_CST_READOK          (1U << 6U)
+#define DP_CST_WDATAERR        (1U << 7U)
+#define DP_CST_MASKLANE(x)     ((x) << 8U)
+#define DP_CST_TRNCNT(x)       ((x) << 12U)
+#define DP_CST_CDBGRSTREQ      (1U << 26U)
+#define DP_CST_CDBGRSTACK      (1U << 27U)
+#define DP_CST_CDBGPWRUPREQ    (1U << 28U)
+#define DP_CST_CDBGPWRUPACK    (1U << 29U)
+#define DP_CST_CSYSPWRUPREQ    (1U << 30U)
+#define DP_CST_CSYSPWRUPACK    (1U << 31U)
 
-#define DP_SELECT_CTRLSEL      (1 << 0)
-#define DP_SELECT_APBANKSEL(x) ((x) << 4)
-#define DP_SELECT_APSEL(x)     ((x) << 24)
+#define DP_SELECT_CTRLSEL      (1U << 0U)
+#define DP_SELECT_APBANKSEL(x) ((x) << 4U)
+#define DP_SELECT_APSEL(x)     ((x) << 24U)
 
-#define AP_CSW_SIZE_BYTE      (0 << 0)
-#define AP_CSW_SIZE_HALF      (1 << 0)
-#define AP_CSW_SIZE_WORD      (2 << 0)
-#define AP_CSW_ADDRINC_OFF    (0 << 4)
-#define AP_CSW_ADDRINC_SINGLE (1 << 4)
-#define AP_CSW_ADDRINC_PACKED (2 << 4)
-#define AP_CSW_DEVICEEN       (1 << 6)
-#define AP_CSW_TRINPROG       (1 << 7)
-#define AP_CSW_SPIDEN         (1 << 23)
-#define AP_CSW_PROT(x)        ((x) << 24)
-#define AP_CSW_DBGSWENABLE    (1 << 31)
+#define AP_CSW_SIZE_BYTE      (0U << 0U)
+#define AP_CSW_SIZE_HALF      (1U << 0U)
+#define AP_CSW_SIZE_WORD      (2U << 0U)
+#define AP_CSW_ADDRINC_OFF    (0U << 4U)
+#define AP_CSW_ADDRINC_SINGLE (1U << 4U)
+#define AP_CSW_ADDRINC_PACKED (2U << 4U)
+#define AP_CSW_DEVICEEN       (1U << 6U)
+#define AP_CSW_TRINPROG       (1U << 7U)
+#define AP_CSW_SPIDEN         (1U << 23U)
+#define AP_CSW_PROT(x)        ((x) << 24U)
+#define AP_CSW_DBGSWENABLE    (1U << 31U)
 
 /*- Implementations ---------------------------------------------------------*/
 
