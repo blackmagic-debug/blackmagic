@@ -67,8 +67,8 @@ uint32_t fw_adiv5_jtagdp_read(adiv5_debug_port_s *dp, uint16_t addr)
 
 static uint32_t adiv5_jtagdp_error(adiv5_debug_port_s *dp)
 {
-	fw_adiv5_jtagdp_low_access(dp, ADIV5_LOW_READ, ADIV5_DP_CTRLSTAT, 0);
-	return fw_adiv5_jtagdp_low_access(dp, ADIV5_LOW_WRITE, ADIV5_DP_CTRLSTAT, 0xf0000032U) & 0x32U;
+	const uint32_t status = fw_adiv5_jtagdp_read(dp, ADIV5_DP_CTRLSTAT) & ADIV5_DP_CTRLSTAT_ERRMASK;
+	return fw_adiv5_jtagdp_low_access(dp, ADIV5_LOW_WRITE, ADIV5_DP_CTRLSTAT, status) & 0x32U;
 }
 
 uint32_t fw_adiv5_jtagdp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value)

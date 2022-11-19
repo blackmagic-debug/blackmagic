@@ -703,11 +703,9 @@ static void adiv5_dp_clear_sticky_errors(adiv5_debug_port_s *dp)
 	 */
 	if (dp->version)
 		adiv5_dp_abort(dp, ADIV5_DP_ABORT_STKERRCLR);
-	else {
-		const uint32_t status = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT);
-		/* If any of the sticky bits are set, simply writing back to this register will clear them */
-		adiv5_dp_write(dp, ADIV5_DP_CTRLSTAT, status);
-	}
+	else
+		/* For JTAG-DPs (which all DPv0 DPs are), use the adiv5_jtagdp_error routine */
+		adiv5_dp_error(dp);
 }
 
 void adiv5_dp_init(adiv5_debug_port_s *dp, const uint32_t idcode)
