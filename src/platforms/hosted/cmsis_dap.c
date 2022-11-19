@@ -82,6 +82,10 @@ typedef enum cmsis_type_e {
 	CMSIS_TYPE_BULK
 } cmsis_type_t;
 
+#ifdef __linux__
+typedef struct hid_device_info hid_device_info_s;
+#endif
+
 /*- Variables ---------------------------------------------------------------*/
 static cmsis_type_t type;
 static libusb_device_handle *usb_handle = NULL;
@@ -110,7 +114,7 @@ static size_t mbslen(const char *str)
 }
 
 #ifdef __linux__
-static void dap_hid_print_permissions_for(const struct hid_device_info *const dev)
+static void dap_hid_print_permissions_for(const hid_device_info_s *const dev)
 {
 	const char *const path = dev->path;
 	PRINT_INFO("Tried device '%s'", path);
@@ -124,10 +128,10 @@ static void dap_hid_print_permissions_for(const struct hid_device_info *const de
 
 static void dap_hid_print_permissions(const uint16_t vid, const uint16_t pid, const wchar_t *const serial)
 {
-	struct hid_device_info *const devs = hid_enumerate(vid, pid);
+	hid_device_info_s *const devs = hid_enumerate(vid, pid);
 	if (!devs)
 		return;
-	for (const struct hid_device_info *dev = devs; dev; dev = dev->next) {
+	for (const hid_device_info_s *dev = devs; dev; dev = dev->next) {
 		if (serial) {
 			if (wcscmp(serial, dev->serial_number) == 0) {
 				dap_hid_print_permissions_for(dev);
