@@ -351,7 +351,6 @@ static void LIBUSB_CALL on_trans_done(libusb_transfer_s *const transfer)
 static int submit_wait(usb_link_s *link, libusb_transfer_s *transfer)
 {
 	transfer_ctx_s transfer_ctx;
-	libusb_error_e error;
 
 	transfer_ctx.flags = 0;
 
@@ -359,12 +358,13 @@ static int submit_wait(usb_link_s *link, libusb_transfer_s *transfer)
 	transfer->callback = on_trans_done;
 	transfer->user_data = &transfer_ctx;
 
-	if ((error = libusb_submit_transfer(transfer))) {
+	const libusb_error_e error = libusb_submit_transfer(transfer);
+	if (error) {
 		DEBUG_WARN("libusb_submit_transfer(%d): %s\n", error, libusb_strerror(error));
 		exit(-1);
 	}
 
-	uint32_t start_time = platform_time_ms();
+	const uint32_t start_time = platform_time_ms();
 	while (transfer_ctx.flags == 0) {
 		timeval_s timeout;
 		timeout.tv_sec = 1;
@@ -373,7 +373,7 @@ static int submit_wait(usb_link_s *link, libusb_transfer_s *transfer)
 			DEBUG_WARN("libusb_handle_events()\n");
 			return -1;
 		}
-		uint32_t now = platform_time_ms();
+		const uint32_t now = platform_time_ms();
 		if (now - start_time > 1000U) {
 			libusb_cancel_transfer(transfer);
 			DEBUG_WARN("libusb_handle_events() timeout\n");
