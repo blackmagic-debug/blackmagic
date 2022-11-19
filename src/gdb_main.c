@@ -207,8 +207,6 @@ int gdb_main_loop(target_controller_s *tc, bool in_syscall)
 		case '?': { /* '?': Request reason for target halt */
 			/* This packet isn't documented as being mandatory,
 			 * but GDB doesn't work without it. */
-			target_addr_t watch;
-			target_halt_reason_e reason;
 
 			if (!cur_target) {
 				/* Report "target exited" if no target */
@@ -217,11 +215,19 @@ int gdb_main_loop(target_controller_s *tc, bool in_syscall)
 			}
 
 			/* Wait for target halt */
-			while (!(reason = target_halt_poll(cur_target, &watch))) {
-				char c = (char)gdb_if_getchar_to(0);
-				if (c == '\x03' || c == '\x04')
+			target_addr_t watch;
+			target_halt_reason_e reason;
+			while (true) {
+				reason = target_halt_poll(cur_target, &watch);
+				if (reason != TARGET_HALT_RUNNING)
+					break;
+
+				const char gdb_ch = (char)gdb_if_getchar_to(0);
+				if (gdb_ch == '\x03' || gdb_ch == '\x04')
 					target_halt_request(cur_target);
+
 				platform_pace_poll();
+
 #ifdef ENABLE_RTT
 				if (rtt_enabled)
 					poll_rtt(cur_target);
