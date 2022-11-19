@@ -876,6 +876,8 @@ void adiv5_dp_init(adiv5_debug_port_s *dp, const uint32_t idcode)
 		ap = adiv5_new_ap(dp, i);
 #endif
 		if (ap == NULL) {
+			/* Clear sticky errors in case scanning for this AP triggered any */
+			adiv5_dp_clear_sticky_errors(dp);
 #if PC_HOSTED == 1
 			if (dp->ap_cleanup)
 				dp->ap_cleanup(i);
