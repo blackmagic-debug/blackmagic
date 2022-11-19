@@ -643,41 +643,31 @@ void adiv5_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t le
 {
 	ap->dp->mem_read(ap, dest, src, len);
 	if (cl_debuglevel & BMP_DEBUG_TARGET) {
-		fprintf(stderr, "ap_memread @ %" PRIx32 " len %" PRIx32 ":", src, (uint32_t)len);
-		uint8_t *p = (uint8_t *)dest;
-		unsigned int i = len;
-
-		if (i > 16)
-			i = 16;
-
-		while (i--)
-			fprintf(stderr, " %02x", *p++);
-
+		fprintf(stderr, "ap_memread @ %" PRIx32 " len %zu:", src, len);
+		const uint8_t *const data = (const uint8_t *)dest;
+		for (size_t offset = 0; offset < len; ++offset) {
+			if (offset == 16)
+				break;
+			fprintf(stderr, " %02x", data[offset]);
+		}
 		if (len > 16)
 			fprintf(stderr, " ...");
-
 		fprintf(stderr, "\n");
 	}
-	return;
 }
 
 void adiv5_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, align_e align)
 {
 	if (cl_debuglevel & BMP_DEBUG_TARGET) {
-		fprintf(stderr, "ap_mem_write_sized @ %" PRIx32 " len %" PRIx32 ", align %d:", dest, (uint32_t)len, 1 << align);
-
-		uint8_t *p = (uint8_t *)src;
-		unsigned int i = len;
-
-		if (i > 16)
-			i = 16;
-
-		while (i--)
-			fprintf(stderr, " %02x", *p++);
-
+		fprintf(stderr, "ap_mem_write_sized @ %" PRIx32 " len %zu, align %d:", dest, len, 1 << align);
+		const uint8_t *const data = (const uint8_t *)src;
+		for (size_t offset = 0; offset < len; ++offset) {
+			if (offset == 16)
+				break;
+			fprintf(stderr, " %02x", data[offset]);
+		}
 		if (len > 16)
 			fprintf(stderr, " ...");
-
 		fprintf(stderr, "\n");
 	}
 	return ap->dp->mem_write_sized(ap, dest, src, len, align);
