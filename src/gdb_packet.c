@@ -231,7 +231,8 @@ void gdb_putpacket_f(const char *const fmt, ...)
 
 	va_start(ap, fmt);
 	const int size = vasprintf(&buf, fmt, ap);
-	gdb_putpacket(buf, size);
+	if (size > 0)
+		gdb_putpacket(buf, size);
 	free(buf);
 	va_end(ap);
 }

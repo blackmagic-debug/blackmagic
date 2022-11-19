@@ -33,17 +33,17 @@
 #include "bmp_hosted.h"
 
 #if defined(_WIN32) && !defined(__MINGW32__)
-#warning "This vasprintf() is dubious!"
-
-int vasprintf(char **strp, const char *fmt, va_list ap)
+int vasprintf(char **strp, const char *const fmt, va_list ap)
 {
-	int size = 128, ret = 0;
+	const int actual_size = vsnprintf(NULL, 0, fmt, ap);
+	if (actual_size < 0)
+		return -1;
 
-	*strp = malloc(size);
-	while (*strp && ((ret = vsnprintf(*strp, size, fmt, ap)) == size))
-		*strp = realloc(*strp, size <<= 1);
+	*strp = malloc(actual_size + 1);
+	if (!*strp)
+		return -1;
 
-	return ret;
+	return vsnprintf(*strp, actual_size + 1, fmt, ap);
 }
 #endif
 
