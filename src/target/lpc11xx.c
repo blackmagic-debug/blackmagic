@@ -62,7 +62,7 @@ const command_s lpc11xx_cmd_list[] = {
 static void lpc11xx_add_flash(target_s *t, const uint32_t addr, const size_t len, const size_t erase_block_len,
 	const uint32_t iap_entry, const size_t reserved_pages)
 {
-	struct lpc_flash *lf = lpc_add_flash(t, addr, len);
+	lpc_flash_s *lf = lpc_add_flash(t, addr, len);
 	lf->f.blocksize = erase_block_len;
 	lf->f.writesize = IAP_PGM_CHUNKSIZE;
 	lf->f.write = lpc_flash_write_magic_vect;
@@ -297,7 +297,7 @@ static bool lpc11xx_read_uid(target_s *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
-	struct lpc_flash *f = (struct lpc_flash *)t->flash;
+	lpc_flash_s *f = (lpc_flash_s *)t->flash;
 	uint8_t uid[16];
 	if (lpc_iap_call(f, uid, IAP_CMD_READUID))
 		return false;
