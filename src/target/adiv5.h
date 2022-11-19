@@ -114,6 +114,8 @@
 #define ADIV5_DP_CTRLSTAT_TRNMODE_MASK (3U << 2U)
 #define ADIV5_DP_CTRLSTAT_STICKYORUN   (1U << 1U)
 #define ADIV5_DP_CTRLSTAT_ORUNDETECT   (1U << 0U)
+/* Mask for bits: sticky overrun, sticky cmp, sticky error, and the system + debug powerup bits */
+#define ADIV5_DP_CTRLSTAT_ERRMASK 0xf0000032U
 
 /* ADIv5 MEM-AP Registers */
 #define ADIV5_AP_CSW ADIV5_AP_REG(0x00U)
