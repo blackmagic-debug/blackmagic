@@ -66,14 +66,14 @@ void dfu_protect(bool enable)
 {
 #ifdef DFU_SELF_PROTECT
 	if (enable) {
-		if (FLASH_WRPR & 0x03) {
+		if (FLASH_WRPR & 0x03U) {
 			flash_unlock();
 			FLASH_CR = 0;
 			flash_erase_option_bytes();
 			flash_program_option_bytes(FLASH_OBP_RDP, FLASH_OBP_RDP_KEY);
 			/* CL Device: Protect 2 bits with (2 * 2k pages each) */
 			/* MD Device: Protect 2 bits with (4 * 1k pages each) */
-			flash_program_option_bytes(FLASH_OBP_WRP10, 0x03FC);
+			flash_program_option_bytes(FLASH_OBP_WRP10, 0x03fc);
 		}
 	}
 #else
