@@ -1571,14 +1571,14 @@ static int cortexm_hostio_request(target_s *t)
 
 	case SEMIHOSTING_SYS_WRITE0: { /* write0 */
 		ret = -1;
-		uint8_t ch;
-		target_addr_t str = arm_regs[1];
-		if (str == TARGET_NULL)
+		target_addr_t str_addr = arm_regs[1];
+		if (str_addr == TARGET_NULL)
 			break;
-		while ((ch = target_mem_read8(t, str++)) != '\0') {
-			if (target_check_error(t))
+		while (true) {
+			const uint8_t str_c = target_mem_read8(t, str_addr++);
+			if (target_check_error(t) || str_c == 0x00)
 				break;
-			fputc(ch, stderr);
+			fputc(str_c, stderr);
 		}
 		ret = 0;
 		break;
