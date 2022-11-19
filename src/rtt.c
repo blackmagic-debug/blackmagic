@@ -354,28 +354,36 @@ void poll_rtt(target_s *const cur_target)
 	bool rtt_busy = false;
 
 	if (last_poll_ms + poll_ms <= now || now < last_poll_ms) {
-		target_addr_t watch;
-		target_halt_reason_e reason;
 		bool resume_target = false;
+
 		if (!rtt_found)
 			/* check if target needs to be halted during memory access */
 			rtt_halt = target_mem_access_needs_halt(cur_target);
+
+		target_addr_t watch;
 		if (rtt_halt && target_halt_poll(cur_target, &watch) == TARGET_HALT_RUNNING) {
 			/* briefly halt target during target memory access */
 			target_halt_request(cur_target);
-			while ((reason = target_halt_poll(cur_target, &watch)) == TARGET_HALT_RUNNING)
-				continue;
+
+			target_halt_reason_e reason;
+			do {
+				reason = target_halt_poll(cur_target, &watch);
+			} while (reason == TARGET_HALT_RUNNING);
+
 			resume_target = reason == TARGET_HALT_REQUEST;
 		}
+
 		if (!rtt_found)
 			/* find rtt control block in target memory */
 			find_rtt(cur_target);
+
 		if (rtt_found) {
 			/* check control block not changed or corrupted */
 			if (target_mem_read(cur_target, cblock_header, rtt_cbaddr, sizeof(cblock_header)) ||
 				memcmp(saved_cblock_header, cblock_header, sizeof(cblock_header)) != 0)
 				rtt_found = false; // force searching control block next poll_rtt()
 		}
+
 		/* do rtt i/o if control block found */
 		if (rtt_found && rtt_cbaddr) {
 			/* copy control block from target */
@@ -403,6 +411,7 @@ void poll_rtt(target_s *const cur_target)
 				}
 			}
 		}
+
 		/* continue target if halted */
 		if (resume_target)
 			target_halt_resume(cur_target, false);
