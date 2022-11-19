@@ -128,12 +128,12 @@ static const char *const cidc_debug_strings[] = {
 #define DEVARCH_PRESENT     (1U << 20)
 #define DEVARCH_ARCHID_MASK 0x0000FFFFU
 
-enum arm_arch {
+typedef enum arm_arch {
 	aa_nosupport,
 	aa_cortexm,
 	aa_cortexa,
 	aa_end
-};
+} arm_arch_e;
 
 #ifdef ENABLE_DEBUG
 #define ARM_COMPONENT_STR(...) __VA_ARGS__
@@ -183,8 +183,8 @@ static const struct {
 	uint16_t part_number;
 	uint8_t dev_type;
 	uint16_t arch_id;
-	enum arm_arch arch;
-	enum cid_class cidc;
+	arm_arch_e arch;
+	cid_class_e cidc;
 #ifdef ENABLE_DEBUG
 	const char *type;
 	const char *full;
