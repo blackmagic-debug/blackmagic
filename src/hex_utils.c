@@ -31,10 +31,10 @@ char *hexify(char *const hex, const void *const buf, const size_t size)
 	const uint8_t *const src = buf;
 
 	for (size_t idx = 0; idx < size; ++idx) {
-		*dst++ = hexdigits[src[idx] >> 4];
-		*dst++ = hexdigits[src[idx] & 0xF];
+		*dst++ = hexdigits[src[idx] >> 4U];
+		*dst++ = hexdigits[src[idx] & 0xfU];
 	}
-	*dst++ = 0;
+	*dst = 0;
 
 	return hex;
 }
@@ -42,9 +42,9 @@ char *hexify(char *const hex, const void *const buf, const size_t size)
 static uint8_t unhex_digit(const char hex)
 {
 	uint8_t tmp = hex - '0';
-	if (tmp > 9)
-		tmp -= 'A' - '0' - 10;
-	if (tmp > 16)
+	if (tmp > 9U)
+		tmp -= 'A' - '0' - 10U;
+	if (tmp > 16U)
 		tmp -= 'a' - 'A';
 	return tmp;
 }
@@ -52,7 +52,7 @@ static uint8_t unhex_digit(const char hex)
 char *unhexify(void *const buf, const char *hex, const size_t size)
 {
 	uint8_t *const dst = buf;
-	for (size_t idx = 0; idx < size; ++idx, hex += 2)
-		dst[idx] = (unhex_digit(hex[0]) << 4) | unhex_digit(hex[1]);
+	for (size_t idx = 0; idx < size; ++idx, hex += 2U)
+		dst[idx] = (unhex_digit(hex[0]) << 4U) | unhex_digit(hex[1]);
 	return buf;
 }
