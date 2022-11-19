@@ -210,7 +210,8 @@ int platform_buffer_write(const uint8_t *data, int size)
 	DEBUG_WIRE("%s\n", data);
 	const int written = write(fd, data, size);
 	if (written < 0) {
-		DEBUG_WARN("Failed to write\n");
+		const int error = errno;
+		DEBUG_WARN("Failed to write (%d): %s\n", errno, strerror(error));
 		exit(-2);
 	}
 	return size;
@@ -242,7 +243,8 @@ int platform_buffer_read(uint8_t *data, int maxsize)
 			return -4;
 		}
 		if (read(fd, &response, 1) != 1) {
-			DEBUG_WARN("Failed to read response\n");
+			const int error = errno;
+			DEBUG_WARN("Failed to read response (%d): %s\n", error, strerror(error));
 			return -6;
 		}
 	}
@@ -261,7 +263,8 @@ int platform_buffer_read(uint8_t *data, int maxsize)
 			return -5;
 		}
 		if (read(fd, data + offset, 1) != 1) {
-			DEBUG_WARN("Failed to read response\n");
+			const int error = errno;
+			DEBUG_WARN("Failed to read response (%d): %s\n", error, strerror(error));
 			return -6;
 		}
 		if (data[offset] == REMOTE_EOM) {
