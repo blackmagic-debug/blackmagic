@@ -29,6 +29,10 @@
 #include "ftdi_bmp.h"
 #include <ftdi.h>
 
+#if defined(USE_USB_VERSION_BIT)
+typedef struct ftdi_transfer_control ftdi_transfer_control_s;
+#endif
+
 ftdi_context_s *ftdic;
 
 #define BUF_SIZE 4096
@@ -581,13 +585,16 @@ bool libftdi_nrst_get_val(void)
 	return res;
 }
 
+#if defined(USE_USB_VERSION_BIT)
+static ftdi_transfer_control_s *tc_write = NULL;
+#endif
+
 void libftdi_buffer_flush(void)
 {
 	if (!bufptr)
 		return;
 	DEBUG_WIRE("Flush %d\n", bufptr);
 #if defined(USE_USB_VERSION_BIT)
-	static struct ftdi_transfer_control *tc_write = NULL;
 	if (tc_write)
 		ftdi_transfer_data_done(tc_write);
 	tc_write = ftdi_write_data_submit(ftdic, outbuf, bufptr);
