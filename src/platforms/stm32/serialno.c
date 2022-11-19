@@ -29,7 +29,7 @@ void read_serial_number(void)
 	const uint32_t unique_id = unique_id_p[0] + unique_id_p[1] + unique_id_p[2];
 	/* Fetch serial number from chip's unique ID */
 	for (size_t i = 0; i < 8U; ++i) {
-		serial_no[7U - i] = ((unique_id >> (i * 4U)) & 0x0FU) + '0';
+		serial_no[7U - i] = ((unique_id >> (i * 4U)) & 0x0fU) + '0';
 		/* If the character is something above 9, then add the offset to make it ASCII A-F */
 		if (serial_no[7U - i] > '9')
 			serial_no[7U - i] += 7; /* 'A' - '9' = 8, less 1 gives 7. */
@@ -52,7 +52,7 @@ void read_serial_number(void)
 		const size_t idx = (chunk << 3U) + (7U - nibble);
 		if (nibble == 0)
 			unique_id = unique_id_p[chunk];
-		serial_no[idx] = ((unique_id >> (nibble * 4U)) & 0x0F) + '0';
+		serial_no[idx] = ((unique_id >> (nibble * 4U)) & 0x0f) + '0';
 
 		/* If the character is something above 9, then add the offset to make it ASCII A-F */
 		if (serial_no[idx] > '9')
