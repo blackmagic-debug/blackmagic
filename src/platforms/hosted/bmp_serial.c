@@ -309,8 +309,10 @@ size_t scan_devices(scan_mode_e mode, bmp_info_s *info, const char *const search
 			char *type = NULL;
 			char *version = NULL;
 			char *serial = NULL;
-			if (!scan_linux_id(entry->d_name, &type, &version, &serial))
+			if (!scan_linux_id(entry->d_name, &type, &version, &serial)) {
 				DEBUG_WARN("Error parsing device name \"%s\"\n", entry->d_name);
+				continue;
+			}
 
 			if (mode == SCAN_FIND) {
 				if ((search_serial && strstr(serial, search_serial)) ||
@@ -320,7 +322,7 @@ size_t scan_devices(scan_mode_e mode, bmp_info_s *info, const char *const search
 					done = true;
 				}
 			} else if (mode == SCAN_LIST)
-				DEBUG_WARN("%2d: %s, Black Magic Debug, Black Magic Probe (%s), %s\n", devices, serial, type, version);
+				DEBUG_WARN("%2zu: %s, Black Magic Debug, Black Magic Probe (%s), %s\n", devices, serial, type, version);
 
 			free(type);
 			free(version);
