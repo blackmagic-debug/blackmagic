@@ -40,9 +40,9 @@
 #define SFDP_TABLE_HEADER_ADDRESS sizeof(sfdp_header_s)
 
 #define SFDP_MAGIC                     "SFDP"
-#define SFDP_BASIC_SPI_PARAMETER_TABLE 0xFF00U
+#define SFDP_BASIC_SPI_PARAMETER_TABLE 0xff00U
 
-#define SFDP_ACCESS_PROTOCOL_LEGACY_JESD216B 0xFFU
+#define SFDP_ACCESS_PROTOCOL_LEGACY_JESD216B 0xffU
 
 #define SFDP_JEDEC_PARAMETER_ID(header) (((header).jedec_parameter_id_high << 8U) | (header).jedec_parameter_id_low)
 #define SFDP_TABLE_ADDRESS(header) \
@@ -50,7 +50,7 @@
 
 #define SFDP_DENSITY_IS_EXPONENTIAL(density) ((density)[3] & 0x80U)
 #define SFDP_DENSITY_VALUE(density) \
-	((((density)[3] & 0x7FU) << 24U) | ((density)[2] << 16U) | ((density)[1] << 8U) | (density)[0])
+	((((density)[3] & 0x7fU) << 24U) | ((density)[2] << 16U) | ((density)[1] << 8U) | (density)[0])
 
 #define SFDP_ERASE_TYPES            4U
 #define SFDP_ERASE_SIZE(erase_type) (1U << ((erase_type)->erase_size_exponent))
