@@ -1034,7 +1034,7 @@ static void stlink_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t val
 
 static uint32_t stlink_ap_read(adiv5_access_port_s *ap, uint16_t addr)
 {
-	uint32_t ret;
+	uint32_t ret = 0;
 	stlink_read_dp_register(ap->apsel, addr, &ret);
 	return ret;
 }
