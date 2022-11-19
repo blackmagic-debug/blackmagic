@@ -149,7 +149,6 @@ rescan:
 	active_cable = NULL;
 	ftdi_unknown = false;
 	for (size_t i = 0; devs[i]; ++i) {
-		bmp_type_t type = BMP_TYPE_NONE;
 		libusb_device *dev = devs[i];
 		int res = libusb_get_device_descriptor(dev, &desc);
 		if (res < 0) {
@@ -232,6 +231,7 @@ rescan:
 		}
 		/* Either serial and/or ident_string match or are not given.
 		 * Check type.*/
+		bmp_type_t type = BMP_TYPE_NONE;
 		if (desc.idVendor == VENDOR_ID_BMP) {
 			if (desc.idProduct == PRODUCT_ID_BMP)
 				type = BMP_TYPE_BMP;
@@ -240,19 +240,23 @@ rescan:
 					DEBUG_WARN("BMP in bootloader mode found. Restart or reflash!\n");
 				continue;
 			}
-		} else if (type == BMP_TYPE_NONE && (type = find_cmsis_dap_interface(dev, info)) != BMP_TYPE_NONE) {
-			/* find_cmsis_dap_interface has set valid type*/
-		} else if (strstr(manufacturer, "CMSIS") || strstr(product, "CMSIS"))
+		} else if (find_cmsis_dap_interface(dev, info) == BMP_TYPE_CMSIS_DAP || strstr(manufacturer, "CMSIS") ||
+			strstr(product, "CMSIS"))
 			type = BMP_TYPE_CMSIS_DAP;
 		else if (desc.idVendor == VENDOR_ID_STLINK) {
-			if (desc.idProduct == PRODUCT_ID_STLINKV2 || desc.idProduct == PRODUCT_ID_STLINKV21 ||
-				desc.idProduct == PRODUCT_ID_STLINKV21_MSD || desc.idProduct == PRODUCT_ID_STLINKV3_NO_MSD ||
-				desc.idProduct == PRODUCT_ID_STLINKV3_BL || desc.idProduct == PRODUCT_ID_STLINKV3 ||
-				desc.idProduct == PRODUCT_ID_STLINKV3E)
+			switch (desc.idProduct) {
+			case PRODUCT_ID_STLINKV2:
+			case PRODUCT_ID_STLINKV21:
+			case PRODUCT_ID_STLINKV21_MSD:
+			case PRODUCT_ID_STLINKV3_NO_MSD:
+			case PRODUCT_ID_STLINKV3_BL:
+			case PRODUCT_ID_STLINKV3:
+			case PRODUCT_ID_STLINKV3E:
 				type = BMP_TYPE_STLINKV2;
-			else {
-				if (desc.idProduct == PRODUCT_ID_STLINKV1)
-					DEBUG_WARN("INFO: STLINKV1 not supported\n");
+				break;
+			case PRODUCT_ID_STLINKV1:
+				DEBUG_WARN("INFO: STLINKV1 not supported\n");
+			default:
 				continue;
 			}
 		} else if (desc.idVendor == VENDOR_ID_SEGGER)
@@ -290,6 +294,7 @@ rescan:
 			if (!cable->name)
 				continue;
 		}
+
 		if (report)
 			DEBUG_WARN("%2zu: %s, %s, %s\n", found_debuggers + 1U, serial[0] ? serial : NO_SERIAL_NUMBER, manufacturer,
 				product);
