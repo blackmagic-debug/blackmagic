@@ -79,7 +79,7 @@ static void jlink_print_version(bmp_info_s *const info)
 	send_recv(info->usb_link, &cmd, 1, len_str, sizeof(len_str));
 	uint8_t version[0x70];
 	send_recv(info->usb_link, NULL, 0, version, sizeof(version));
-	version[0x6F] = '\0';
+	version[0x6f] = '\0';
 	DEBUG_INFO("%s\n", version);
 }
 
