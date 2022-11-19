@@ -241,18 +241,24 @@ uint32_t firmware_swdp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t 
 		dp->seq_out(request, 8);
 		ack = dp->seq_in(3);
 		if (ack == SWDP_ACK_FAULT) {
+			DEBUG_WARN("SWD access resulted in fault, retrying\n");
 			/* On fault, abort the request and repeat */
-			dp->error(dp);
+			/* Yes, this is self-recursive.. no, we can't think of a better option */
+			adiv5_dp_write(dp, ADIV5_DP_ABORT,
+				ADIV5_DP_ABORT_ORUNERRCLR | ADIV5_DP_ABORT_WDERRCLR | ADIV5_DP_ABORT_STKERRCLR |
+					ADIV5_DP_ABORT_STKCMPCLR);
 		}
 	} while ((ack == SWDP_ACK_WAIT || ack == SWDP_ACK_FAULT) && !platform_timeout_is_expired(&timeout));
 
 	if (ack == SWDP_ACK_WAIT) {
+		DEBUG_WARN("SWD access resulted in wait, aborting\n");
 		dp->abort(dp, ADIV5_DP_ABORT_DAPABORT);
 		dp->fault = 1;
 		return 0;
 	}
 
 	if (ack == SWDP_ACK_FAULT) {
+		DEBUG_WARN("SWD access resulted in fault\n");
 		dp->fault = 1;
 		return 0;
 	}
