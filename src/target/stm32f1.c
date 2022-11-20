@@ -512,7 +512,7 @@ static bool stm32f1_option_erase(target_s *t)
 	target_mem_write32(t, FLASH_CR, FLASH_CR_STRT | FLASH_CR_OPTER | FLASH_CR_OPTWRE);
 
 	/* Wait for completion or an error */
-	return stm32f1_flash_busy_wait(t, 0, NULL);
+	return stm32f1_flash_busy_wait(t, FLASH_BANK1_OFFSET, NULL);
 }
 
 static bool stm32f1_option_write_erased(
@@ -532,7 +532,7 @@ static bool stm32f1_option_write_erased(
 		target_mem_write16(t, addr, value);
 
 	/* Wait for completion or an error */
-	return stm32f1_flash_busy_wait(t, 0, NULL);
+	return stm32f1_flash_busy_wait(t, FLASH_BANK1_OFFSET, NULL);
 }
 
 static bool stm32f1_option_write(target_s *const t, const uint32_t addr, const uint16_t value)
