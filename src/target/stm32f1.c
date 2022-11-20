@@ -544,7 +544,7 @@ static bool stm32f1_option_write(target_s *const t, const uint32_t addr, const u
 
 	uint16_t opt_val[8];
 	/* Retrieve old values */
-	for (size_t i = 0; i < 16; i += 4) {
+	for (size_t i = 0U; i < 16U; i += 4U) {
 		const size_t offset = i >> 1U;
 		uint32_t val = target_mem_read32(t, FLASH_OBP_RDP + i);
 		opt_val[offset] = val & 0xffffU;
@@ -563,8 +563,8 @@ static bool stm32f1_option_write(target_s *const t, const uint32_t addr, const u
 	 * Write changed values, taking into account if we can use 32- or have to use 16-bit writes.
 	 * GD32E230 is a special case as target_mem_write16 does not work
 	 */
-	const bool write16_broken = t->part_id == 0x410 && (t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M23;
-	for (size_t i = 0; i < 8; i++) {
+	const bool write16_broken = t->part_id == 0x410U && (t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M23;
+	for (size_t i = 0U; i < 8U; ++i) {
 		if (!stm32f1_option_write_erased(t, FLASH_OBP_RDP + (i * 2U), opt_val[i], write16_broken))
 			return false;
 	}
@@ -601,7 +601,7 @@ static bool stm32f1_cmd_option(target_s *t, int argc, const char **argv)
 		 * Write OBD RDP key, taking into account if we can use 32- or have to use 16-bit writes.
 		 * GD32E230 is a special case as target_mem_write16 does not work
 		 */
-		const bool write16_broken = t->part_id == 0x410 && (t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M23;
+		const bool write16_broken = t->part_id == 0x410U && (t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M23;
 		stm32f1_option_write_erased(t, FLASH_OBP_RDP, flash_obp_rdp_key, write16_broken);
 	} else if (rdprt) {
 		tc_printf(t, "Device is Read Protected\nUse `monitor option erase` to unprotect and erase device\n");
@@ -613,11 +613,11 @@ static bool stm32f1_cmd_option(target_s *t, int argc, const char **argv)
 	} else
 		tc_printf(t, "usage: monitor option erase\nusage: monitor option <addr> <value>\n");
 
-	for (size_t i = 0; i < 16; i += 4) {
+	for (size_t i = 0U; i < 16U; i += 4U) {
 		const uint32_t addr = FLASH_OBP_RDP + i;
 		const uint32_t val = target_mem_read32(t, addr);
-		tc_printf(t, "0x%08X: 0x%04X\n", addr, val & 0xFFFF);
-		tc_printf(t, "0x%08X: 0x%04X\n", addr + 2, val >> 16);
+		tc_printf(t, "0x%08X: 0x%04X\n", addr, val & 0xffffU);
+		tc_printf(t, "0x%08X: 0x%04X\n", addr + 2, val >> 16U);
 	}
 
 	return true;
