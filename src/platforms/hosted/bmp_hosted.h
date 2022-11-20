@@ -98,7 +98,7 @@ typedef struct timeval timeval_s;
 
 extern bmp_info_s info;
 void bmp_ident(bmp_info_s *info);
-int find_debuggers(bmp_cli_options_s *cl_opts, bmp_info_s *info);
+int find_debuggers(bmda_cli_options_s *cl_opts, bmp_info_s *info);
 void libusb_exit_function(bmp_info_s *info);
 
 #if HOSTED_BMP_ONLY == 1
