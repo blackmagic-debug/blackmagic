@@ -45,7 +45,7 @@ bmp_info_s info;
 
 jtag_proc_s jtag_proc;
 
-static bmp_cli_options_s cl_opts;
+static bmda_cli_options_s cl_opts;
 
 void gdb_ident(char *p, int count)
 {
