@@ -208,10 +208,10 @@ static uint32_t rp_get_flash_length(target_s *t);
 static bool rp_mass_erase(target_s *t);
 
 // Our own implementation of bootloader functions for handling flash chip
-static void rp_flash_exit_xip(target_s *const t);
-static void rp_flash_enter_xip(target_s *const t);
-static void rp_flash_connect_internal(target_s *const t);
-static void rp_flash_flush_cache(target_s *const t);
+static void rp_flash_exit_xip(target_s *t);
+static void rp_flash_enter_xip(target_s *t);
+static void rp_flash_connect_internal(target_s *t);
+static void rp_flash_flush_cache(target_s *t);
 
 static void rp_spi_read_sfdp(target_s *const t, const uint32_t address, void *const buffer, const size_t length)
 {
