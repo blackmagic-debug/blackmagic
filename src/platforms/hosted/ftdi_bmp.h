@@ -108,7 +108,7 @@ typedef struct cable_desc {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 
-int ftdi_bmp_init(bmp_cli_options_s *cl_opts, bmp_info_s *info)
+int ftdi_bmp_init(bmda_cli_options_s *cl_opts, bmp_info_s *info)
 {
 	return -1;
 }

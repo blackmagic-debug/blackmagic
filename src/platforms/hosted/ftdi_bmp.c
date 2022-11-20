@@ -371,7 +371,7 @@ const cable_desc_s cable_desc[] = {
 	{},
 };
 
-int ftdi_bmp_init(bmp_cli_options_s *cl_opts, bmp_info_s *info)
+int ftdi_bmp_init(bmda_cli_options_s *cl_opts, bmp_info_s *info)
 {
 	int err;
 	const cable_desc_s *cable = cable_desc;
