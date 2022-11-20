@@ -140,18 +140,26 @@ const command_s stm32l4_cmd_list[] = {
 #define RAM_COUNT_MSK 0x07U
 
 typedef enum stm32l4_device_id {
-	ID_STM32L41 = 0x464U,  /* RM0394, Rev.4 */
-	ID_STM32L43 = 0x435U,  /* RM0394, Rev.4 */
-	ID_STM32L45 = 0x462U,  /* RM0394, Rev.4 */
-	ID_STM32L47 = 0x415U,  /* RM0351, Rev.5 */
-	ID_STM32L49 = 0x461U,  /* RM0351, Rev.5 */
-	ID_STM32L4R = 0x470U,  /* RM0432, Rev.5 */
-	ID_STM32G43 = 0x468U,  /* RM0440, Rev.1 */
-	ID_STM32G47 = 0x469U,  /* RM0440, Rev.1 */
-	ID_STM32G49 = 0x479U,  /* RM0440, Rev.6 */
-	ID_STM32L55 = 0x472U,  /* RM0438, Rev.4 */
-	ID_STM32WLXX = 0x497U, /* RM0461, Rev.3, RM453, Rev.1 */
-	ID_STM32WBXX = 0x495U, /* RM0434, Rev.9 */
+	/* This first block of devices uses an ID code register located in the DBG_MCU block at 0xe0042000 */
+	ID_STM32L41 = 0x464U, /* RM0394, Rev.4 §46.6.1 MCU device ID code */
+	ID_STM32L43 = 0x435U, /* RM0394, Rev.4 §46.6.1 MCU device ID code */
+	ID_STM32L45 = 0x462U, /* RM0394, Rev.4 §46.6.1 MCU device ID code */
+	ID_STM32L47 = 0x415U, /* RM0351, Rev.9 §48.6.1 MCU device ID code */
+	ID_STM32L49 = 0x461U, /* RM0351, Rev.9 §48.6.1 MCU device ID code */
+	ID_STM32L4R = 0x470U, /* RM0432, Rev.9 §57.6.1 MCU device ID code */
+	ID_STM32L4P = 0x471U, /* RM0432, Rev.9 §57.6.1 MCU device ID code */
+	ID_STM32G43 = 0x468U, /* RM0440, Rev.7 §47.6.1 MCU device ID code Cat 2 */
+	ID_STM32G47 = 0x469U, /* RM0440, Rev.7 §47.6.1 MCU device ID code Cat 3 */
+	ID_STM32G49 = 0x479U, /* RM0440, Rev.7 §47.6.1 MCU device ID code Cat 4 */
+	/* This part is a bit funky to identify as it's both DPv1 (JTAG) and DPv2 (SWD) */
+	ID_STM32L55 = 0x0472U, /* RM0438, Rev.7 §52.2.10 for DPv2, §52.4.1 (MCU ROM table PIDR) for DPv1 */
+	/*
+	 * The following are all DPv2 parts which are then identified using their "DP target identification register"
+	 * which is ADIv5 DP register TARGETID in bank 2 from the ADIv5.2 spec §B2.2.10.
+	 * The references after the values are the sections to look at in the respective reference manuals.
+	 */
+	ID_STM32WLXX = 0x4970U, /* from RM0461, Rev.5 §36.4.5, and RM0453, Rev.3 §38.4.5 */
+	ID_STM32WBXX = 0x4950U, /* from RM0434, Rev.10 §41.4.8 */
 } stm32l4_device_id_e;
 
 typedef enum stm32l4_family {
