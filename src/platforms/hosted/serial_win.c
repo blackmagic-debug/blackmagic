@@ -152,7 +152,7 @@ static char *device_to_path(const char *const device)
 	return path;
 }
 
-static char *find_bmp_device(const bmp_cli_options_s *const cl_opts, const char *const serial)
+static char *find_bmp_device(const bmda_cli_options_s *const cl_opts, const char *const serial)
 {
 	if (cl_opts->opt_device)
 		return device_to_path(cl_opts->opt_device);
@@ -164,7 +164,7 @@ static char *find_bmp_device(const bmp_cli_options_s *const cl_opts, const char 
 	return result;
 }
 
-int serial_open(const bmp_cli_options_s *const cl_opts, const char *const serial)
+int serial_open(const bmda_cli_options_s *const cl_opts, const char *const serial)
 {
 	char *const device = find_bmp_device(cl_opts, serial);
 	if (!device) {
