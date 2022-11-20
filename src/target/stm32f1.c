@@ -565,7 +565,7 @@ static bool stm32f1_option_write(target_s *const t, const uint32_t addr, const u
 	 */
 	const bool write16_broken = t->part_id == 0x410U && (t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M23;
 	for (size_t i = 0U; i < 8U; ++i) {
-		if (!stm32f1_option_write_erased(t, FLASH_OBP_RDP + (i * 2U), opt_val[i], write16_broken))
+		if (!stm32f1_option_write_erased(t, FLASH_OBP_RDP + (i * 2U), opt_val[i], write16_broken) && i != 0)
 			return false;
 	}
 
