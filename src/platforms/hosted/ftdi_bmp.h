@@ -178,7 +178,7 @@ extern cable_desc_s active_cable;
 extern ftdi_context_s *ftdic;
 extern data_desc_s active_state;
 
-int ftdi_bmp_init(bmp_cli_options_s *cl_opts, bmp_info_s *info);
+int ftdi_bmp_init(bmda_cli_options_s *cl_opts, bmp_info_s *info);
 int libftdi_swdptap_init(adiv5_debug_port_s *dp);
 bool libftdi_jtagtap_init(void);
 void libftdi_buffer_flush(void);
