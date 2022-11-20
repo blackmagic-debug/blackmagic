@@ -505,18 +505,11 @@ static uint32_t stm32l4_main_sram_length(const target_s *const t)
 bool stm32l4_probe(target_s *const t)
 {
 	adiv5_access_port_s *ap = cortexm_ap(t);
-	uint32_t device_id;
-	if (ap->dp->version >= 2 && ap->dp->target_partno > 1) /* STM32L552 has invalid TARGETID 1 */
-		/* FIXME: ids likely no longer match and need fixing */
-		device_id = ap->dp->target_partno;
-	else {
-		uint32_t idcode_addr = STM32L4_DBGMCU_IDCODE_PHYS;
-		/* FIXME: we probaly want to check if this is a C-M33 via cpuid */
-		if (ap->dp->partno == 0xbe)
-			idcode_addr = STM32L5_DBGMCU_IDCODE_PHYS;
-		device_id = target_mem_read32(t, idcode_addr) & 0xfffU;
-		DEBUG_INFO("IDCode %08" PRIx32 "\n", device_id);
-	}
+	uint32_t device_id = ap->dp->version >= 2 ? ap->dp->target_partno : ap->partno;
+	/* If the part is DPv0 or DPv1, we must use the L4 ID register, except if we've already identified an L5 part */
+	if (ap->dp->version < 2 && device_id != ID_STM32L55)
+		device_id = target_mem_read32(t, STM32L4_DBGMCU_IDCODE_PHYS) & 0xfffU;
+	DEBUG_INFO("ID Code: %08" PRIx32 "\n", device_id);
 
 	const stm32l4_device_info_s *device = stm32l4_get_device_info(device_id);
 	/* If the call returned the sentinel, it's not a supported L4 device */
