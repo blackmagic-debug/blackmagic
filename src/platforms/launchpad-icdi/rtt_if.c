@@ -54,8 +54,8 @@ inline static uint32_t recv_bytes_free()
 /* data from host to target: true if not enough free buffer space and we need to close flow control */
 inline static bool recv_set_nak()
 {
-	assert(sizeof(recv_buf) > 2 * CDCACM_PACKET_SIZE);
-	return recv_bytes_free() < 2 * CDCACM_PACKET_SIZE;
+	assert(sizeof(recv_buf) > 2U * CDCACM_PACKET_SIZE);
+	return recv_bytes_free() < 2U * CDCACM_PACKET_SIZE;
 }
 
 /* debug_serial_receive_callback is called when usb uart has received new data for target.
@@ -80,7 +80,7 @@ void rtt_serial_receive_callback(usbd_device *dev, uint8_t ep)
 
 	/* copy data to recv_buf */
 	for (int i = 0; i < len; i++) {
-		uint32_t next_recv_head = (recv_head + 1) % sizeof(recv_buf);
+		uint32_t next_recv_head = (recv_head + 1U) % sizeof(recv_buf);
 		if (next_recv_head == recv_tail)
 			break; /* overflow */
 		recv_buf[recv_head] = usb_buf[i];
@@ -100,7 +100,7 @@ int32_t rtt_getchar()
 	if (recv_head == recv_tail)
 		return -1;
 	retval = (uint8_t)recv_buf[recv_tail];
-	recv_tail = (recv_tail + 1) % sizeof(recv_buf);
+	recv_tail = (recv_tail + 1U) % sizeof(recv_buf);
 
 	/* open flow control if enough free buffer space */
 	if (!recv_set_nak())

@@ -40,7 +40,7 @@ uint32_t swd_delay_cnt = 0;
 void sys_tick_handler(void)
 {
 	trace_tick();
-	time_ms += 10;
+	time_ms += 10U;
 }
 
 uint32_t platform_time_ms(void)
@@ -50,7 +50,7 @@ uint32_t platform_time_ms(void)
 
 void platform_init(void)
 {
-	for (volatile size_t i = 0; i < 1000000; ++i)
+	for (volatile size_t i = 0; i < 1000000U; ++i)
 		continue;
 
 	rcc_sysclk_config(OSCSRC_MOSC, XTAL_16M, PLL_DIV_80MHZ);
@@ -70,7 +70,7 @@ void platform_init(void)
 	gpio_set(NRST_PORT, NRST_PIN);
 
 	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
-	systick_set_reload(rcc_get_system_clock_frequency() / (SYSTICKHZ * 8));
+	systick_set_reload(rcc_get_system_clock_frequency() / (SYSTICKHZ * 8U));
 
 	systick_interrupt_enable();
 	systick_counter_enable();
@@ -93,7 +93,7 @@ void platform_nrst_set_val(bool assert)
 {
 	if (assert) {
 		gpio_clear(NRST_PORT, NRST_PIN);
-		for (volatile size_t i = 0; i < 10000; ++i)
+		for (volatile size_t i = 0; i < 10000U; ++i)
 			continue;
 	} else
 		gpio_set(NRST_PORT, NRST_PIN);
@@ -123,12 +123,12 @@ void read_serial_number(void)
 	uint32_t unique_id = SERIAL_NO;
 
 	/* Fetch serial number from chip's unique ID */
-	for (size_t i = 0; i < DFU_SERIAL_LENGTH - 1; ++i) {
-		serial_no[7U - i] = ((unique_id >> (4 * i)) & 0x0FU) + '0';
+	for (size_t i = 0; i < DFU_SERIAL_LENGTH - 1U; ++i) {
+		serial_no[7U - i] = ((unique_id >> (4U * i)) & 0xfU) + '0';
 		if (serial_no[7U - i] > '9')
 			serial_no[7U - i] += 7; /* 'A' - '9' = 8, less 1 gives 7. */
 	}
-	serial_no[DFU_SERIAL_LENGTH - 1] = 0;
+	serial_no[DFU_SERIAL_LENGTH - 1U] = 0;
 }
 
 void platform_request_boot(void)
