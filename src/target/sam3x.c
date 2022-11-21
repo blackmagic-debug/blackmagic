@@ -42,17 +42,17 @@ const command_s sam_cmd_list[] = {
 };
 
 /* Enhanced Embedded Flash Controller (EEFC) Register Map */
-#define SAMX7X_EEFC_BASE   0x400E0C00U
-#define SAM3N_EEFC_BASE    0x400E0A00U
-#define SAM3X_EEFC_BASE(x) (0x400E0A00U + ((x)*0x200U))
-#define SAM3U_EEFC_BASE(x) (0x400E0800U + ((x)*0x200U))
-#define SAM4S_EEFC_BASE(x) (0x400E0A00U + ((x)*0x200U))
+#define SAMX7X_EEFC_BASE   0x400e0c00U
+#define SAM3N_EEFC_BASE    0x400e0a00U
+#define SAM3X_EEFC_BASE(x) (0x400e0a00U + ((x)*0x200U))
+#define SAM3U_EEFC_BASE(x) (0x400e0800U + ((x)*0x200U))
+#define SAM4S_EEFC_BASE(x) (0x400e0a00U + ((x)*0x200U))
 #define EEFC_FMR(base)     ((base) + 0x00U)
 #define EEFC_FCR(base)     ((base) + 0x04U)
 #define EEFC_FSR(base)     ((base) + 0x08U)
-#define EEFC_FRR(base)     ((base) + 0x0CU)
+#define EEFC_FRR(base)     ((base) + 0x0cU)
 
-#define EEFC_FCR_FKEY      (0x5AU << 24U)
+#define EEFC_FCR_FKEY      (0x5aU << 24U)
 #define EEFC_FCR_FCMD_GETD 0x00U
 #define EEFC_FCR_FCMD_WP   0x01U
 #define EEFC_FCR_FCMD_WPL  0x02U
@@ -62,12 +62,12 @@ const command_s sam_cmd_list[] = {
 #define EEFC_FCR_FCMD_EPA  0x07U
 #define EEFC_FCR_FCMD_SLB  0x08U
 #define EEFC_FCR_FCMD_CLB  0x09U
-#define EEFC_FCR_FCMD_GLB  0x0AU
-#define EEFC_FCR_FCMD_SGPB 0x0BU
-#define EEFC_FCR_FCMD_CGPB 0x0CU
-#define EEFC_FCR_FCMD_GGPB 0x0DU
-#define EEFC_FCR_FCMD_STUI 0x0EU
-#define EEFC_FCR_FCMD_SPUI 0x0FU
+#define EEFC_FCR_FCMD_GLB  0x0aU
+#define EEFC_FCR_FCMD_SGPB 0x0bU
+#define EEFC_FCR_FCMD_CGPB 0x0cU
+#define EEFC_FCR_FCMD_GGPB 0x0dU
+#define EEFC_FCR_FCMD_STUI 0x0eU
+#define EEFC_FCR_FCMD_SPUI 0x0fU
 
 #define EEFC_FSR_FRDY   (1U << 0U)
 #define EEFC_FSR_FCMDE  (1U << 1U)
@@ -78,12 +78,12 @@ const command_s sam_cmd_list[] = {
 #define SAM_LARGE_PAGE_SIZE 512U
 
 /* CHIPID Register Map */
-#define SAM_CHIPID_CIDR      0x400E0940U
-#define SAM34NSU_CHIPID_CIDR 0x400E0740U
+#define SAM_CHIPID_CIDR      0x400e0940U
+#define SAM34NSU_CHIPID_CIDR 0x400e0740U
 
 #define SAM_CHIPID_EXID (SAM_CHIPID_CIDR + 0x4U)
 
-#define CHIPID_CIDR_VERSION_MASK 0x1FU
+#define CHIPID_CIDR_VERSION_MASK 0x1fU
 
 #define CHIPID_CIDR_EPROC_OFFSET 5U
 #define CHIPID_CIDR_EPROC_MASK   (0x7U << CHIPID_CIDR_EPROC_OFFSET)
@@ -92,27 +92,27 @@ const command_s sam_cmd_list[] = {
 #define CHIPID_CIDR_EPROC_CM4    (0x7U << CHIPID_CIDR_EPROC_OFFSET)
 
 #define CHIPID_CIDR_NVPSIZ_OFFSET 8U
-#define CHIPID_CIDR_NVPSIZ_MASK   (0xFU << CHIPID_CIDR_NVPSIZ_OFFSET)
+#define CHIPID_CIDR_NVPSIZ_MASK   (0xfU << CHIPID_CIDR_NVPSIZ_OFFSET)
 #define CHIPID_CIDR_NVPSIZ_8K     (0x1U << CHIPID_CIDR_NVPSIZ_OFFSET)
 #define CHIPID_CIDR_NVPSIZ_16K    (0x2U << CHIPID_CIDR_NVPSIZ_OFFSET)
 #define CHIPID_CIDR_NVPSIZ_32K    (0x3U << CHIPID_CIDR_NVPSIZ_OFFSET)
 #define CHIPID_CIDR_NVPSIZ_64K    (0x5U << CHIPID_CIDR_NVPSIZ_OFFSET)
 #define CHIPID_CIDR_NVPSIZ_128K   (0x7U << CHIPID_CIDR_NVPSIZ_OFFSET)
 #define CHIPID_CIDR_NVPSIZ_256K   (0x9U << CHIPID_CIDR_NVPSIZ_OFFSET)
-#define CHIPID_CIDR_NVPSIZ_512K   (0xAU << CHIPID_CIDR_NVPSIZ_OFFSET)
-#define CHIPID_CIDR_NVPSIZ_1024K  (0xCU << CHIPID_CIDR_NVPSIZ_OFFSET)
-#define CHIPID_CIDR_NVPSIZ_2048K  (0xEU << CHIPID_CIDR_NVPSIZ_OFFSET)
+#define CHIPID_CIDR_NVPSIZ_512K   (0xaU << CHIPID_CIDR_NVPSIZ_OFFSET)
+#define CHIPID_CIDR_NVPSIZ_1024K  (0xcU << CHIPID_CIDR_NVPSIZ_OFFSET)
+#define CHIPID_CIDR_NVPSIZ_2048K  (0xeU << CHIPID_CIDR_NVPSIZ_OFFSET)
 
 #define CHIPID_CIDR_NVPSIZ2_OFFSET 12U
-#define CHIPID_CIDR_NVPSIZ2_MASK   (0xFU << CHIPID_CIDR_NVPSIZ2_OFFSET)
+#define CHIPID_CIDR_NVPSIZ2_MASK   (0xfU << CHIPID_CIDR_NVPSIZ2_OFFSET)
 
 #define CHIPID_CIDR_SRAMSIZ_OFFSET 16U
-#define CHIPID_CIDR_SRAMSIZ_MASK   (0xFU << CHIPID_CIDR_SRAMSIZ_OFFSET)
+#define CHIPID_CIDR_SRAMSIZ_MASK   (0xfU << CHIPID_CIDR_SRAMSIZ_OFFSET)
 #define CHIPID_CIDR_SRAMSIZ_384K   (0x2U << CHIPID_CIDR_SRAMSIZ_OFFSET)
-#define CHIPID_CIDR_SRAMSIZ_256K   (0xDU << CHIPID_CIDR_SRAMSIZ_OFFSET)
+#define CHIPID_CIDR_SRAMSIZ_256K   (0xdU << CHIPID_CIDR_SRAMSIZ_OFFSET)
 
 #define CHIPID_CIDR_ARCH_OFFSET  20U
-#define CHIPID_CIDR_ARCH_MASK    (0xFFU << CHIPID_CIDR_ARCH_OFFSET)
+#define CHIPID_CIDR_ARCH_MASK    (0xffU << CHIPID_CIDR_ARCH_OFFSET)
 #define CHIPID_CIDR_ARCH_SAME70  (0x10U << CHIPID_CIDR_ARCH_OFFSET)
 #define CHIPID_CIDR_ARCH_SAMS70  (0x11U << CHIPID_CIDR_ARCH_OFFSET)
 #define CHIPID_CIDR_ARCH_SAMV71  (0x12U << CHIPID_CIDR_ARCH_OFFSET)
@@ -127,12 +127,12 @@ const command_s sam_cmd_list[] = {
 #define CHIPID_CIDR_ARCH_SAM3NxC (0x95U << CHIPID_CIDR_ARCH_OFFSET)
 #define CHIPID_CIDR_ARCH_SAM3SxA (0x88U << CHIPID_CIDR_ARCH_OFFSET)
 #define CHIPID_CIDR_ARCH_SAM3SxB (0x89U << CHIPID_CIDR_ARCH_OFFSET)
-#define CHIPID_CIDR_ARCH_SAM3SxC (0x8AU << CHIPID_CIDR_ARCH_OFFSET)
+#define CHIPID_CIDR_ARCH_SAM3SxC (0x8aU << CHIPID_CIDR_ARCH_OFFSET)
 #define CHIPID_CIDR_ARCH_SAM4SxA (0x88U << CHIPID_CIDR_ARCH_OFFSET)
 #define CHIPID_CIDR_ARCH_SAM4SxB (0x89U << CHIPID_CIDR_ARCH_OFFSET)
-#define CHIPID_CIDR_ARCH_SAM4SxC (0x8AU << CHIPID_CIDR_ARCH_OFFSET)
+#define CHIPID_CIDR_ARCH_SAM4SxC (0x8aU << CHIPID_CIDR_ARCH_OFFSET)
 #define CHIPID_CIDR_ARCH_SAM4SDB (0x99U << CHIPID_CIDR_ARCH_OFFSET)
-#define CHIPID_CIDR_ARCH_SAM4SDC (0x9AU << CHIPID_CIDR_ARCH_OFFSET)
+#define CHIPID_CIDR_ARCH_SAM4SDC (0x9aU << CHIPID_CIDR_ARCH_OFFSET)
 
 #define CHIPID_CIDR_NVPTYP_OFFSET    28U
 #define CHIPID_CIDR_NVPTYP_MASK      (0x7U << CHIPID_CIDR_NVPTYP_OFFSET)
@@ -221,7 +221,7 @@ static void sam_add_flash(target_s *t, uint32_t eefc_base, uint32_t addr, size_t
 	target_flash_s *f = &sf->f;
 	f->start = addr;
 	f->length = length;
-	f->blocksize = SAM_LARGE_PAGE_SIZE * 8;
+	f->blocksize = SAM_LARGE_PAGE_SIZE * 8U;
 	f->erase = sam_flash_erase;
 	f->write = sam_flash_write;
 	f->writesize = SAM_LARGE_PAGE_SIZE;
@@ -261,23 +261,23 @@ static size_t sam_flash_size(uint32_t cidr)
 {
 	switch (cidr & CHIPID_CIDR_NVPSIZ_MASK) {
 	case CHIPID_CIDR_NVPSIZ_8K:
-		return 0x2000;
+		return 0x2000U;
 	case CHIPID_CIDR_NVPSIZ_16K:
-		return 0x4000;
+		return 0x4000U;
 	case CHIPID_CIDR_NVPSIZ_32K:
-		return 0x8000;
+		return 0x8000U;
 	case CHIPID_CIDR_NVPSIZ_64K:
-		return 0x10000;
+		return 0x10000U;
 	case CHIPID_CIDR_NVPSIZ_128K:
-		return 0x20000;
+		return 0x20000U;
 	case CHIPID_CIDR_NVPSIZ_256K:
-		return 0x40000;
+		return 0x40000U;
 	case CHIPID_CIDR_NVPSIZ_512K:
-		return 0x80000;
+		return 0x80000U;
 	case CHIPID_CIDR_NVPSIZ_1024K:
-		return 0x100000;
+		return 0x100000U;
 	case CHIPID_CIDR_NVPSIZ_2048K:
-		return 0x200000;
+		return 0x200000U;
 	default:
 		return 0;
 	}
@@ -287,9 +287,9 @@ static size_t sam_sram_size(uint32_t cidr)
 {
 	switch (cidr & CHIPID_CIDR_SRAMSIZ_MASK) {
 	case CHIPID_CIDR_SRAMSIZ_256K:
-		return 0x40000;
+		return 0x40000U;
 	case CHIPID_CIDR_SRAMSIZ_384K:
-		return 0x60000;
+		return 0x60000U;
 	default:
 		return 0;
 	}
@@ -354,13 +354,13 @@ samx7x_descr_s samx7x_parse_id(uint32_t cidr, uint32_t exid)
 	// 20 = 1024 KB
 	// 19 = 512 KB
 	switch (descr.flash_size) {
-	case 0x200000:
+	case 0x200000U:
 		descr.density = 21;
 		break;
-	case 0x100000:
+	case 0x100000U:
 		descr.density = 20;
 		break;
-	case 0x80000:
+	case 0x80000U:
 		descr.density = 19;
 		break;
 	default:
@@ -426,7 +426,7 @@ bool sam3x_probe(target_s *t)
 		target_add_ram(t, 0x20000000, 0x200000);
 		/* 2 Flash memories back-to-back starting at 0x80000 */
 		sam3_add_flash(t, SAM3X_EEFC_BASE(0), 0x80000, size / 2U);
-		sam3_add_flash(t, SAM3X_EEFC_BASE(1), 0x80000 + size / 2U, size / 2U);
+		sam3_add_flash(t, SAM3X_EEFC_BASE(1U), 0x80000 + size / 2U, size / 2U);
 		target_add_commands(t, sam_cmd_list, "SAM3X");
 		return true;
 	}
@@ -453,8 +453,8 @@ bool sam3x_probe(target_s *t)
 		/* One flash up to 512K at 0x80000 */
 		sam3_add_flash(t, SAM3U_EEFC_BASE(0), 0x80000, MIN(size, 0x80000));
 		/* Larger devices have a second bank at 0x100000 */
-		if (size >= 0x80000)
-			sam3_add_flash(t, SAM3U_EEFC_BASE(1), 0x100000, 0x80000);
+		if (size >= 0x80000U)
+			sam3_add_flash(t, SAM3U_EEFC_BASE(1U), 0x100000, 0x80000);
 
 		target_add_commands(t, sam_cmd_list, "SAM3U");
 		return true;
@@ -466,12 +466,12 @@ bool sam3x_probe(target_s *t)
 		t->driver = "Atmel SAM4S";
 		target_add_ram(t, 0x20000000, 0x400000);
 		/* Smaller devices have a single bank */
-		if (size <= 0x80000)
+		if (size <= 0x80000U)
 			sam_add_flash(t, SAM4S_EEFC_BASE(0), 0x400000, size);
 		else {
 			/* Larger devices are split evenly between 2 */
 			sam_add_flash(t, SAM4S_EEFC_BASE(0), 0x400000, size / 2U);
-			sam_add_flash(t, SAM4S_EEFC_BASE(1), 0x400000 + size / 2U, size / 2U);
+			sam_add_flash(t, SAM4S_EEFC_BASE(1U), 0x400000 + size / 2U, size / 2U);
 		}
 		target_add_commands(t, sam_cmd_list, "SAM4S");
 		return true;
@@ -522,10 +522,10 @@ static bool sam_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 	uint32_t chunk = (addr - f->start) / SAM_LARGE_PAGE_SIZE;
 
 	for (size_t offset = 0; offset < len; offset += f->blocksize) {
-		int16_t arg = chunk | 0x1;
+		int16_t arg = chunk | 0x1U;
 		if (!sam_flash_cmd(t, base, EEFC_FCR_FCMD_EPA, arg))
 			return false;
-		chunk += 8;
+		chunk += 8U;
 	}
 	return true;
 }
@@ -576,23 +576,23 @@ static bool sam_cmd_gpnvm(target_s *t, int argc, const char **argv)
 	uint32_t gpnvm_mask = 0;
 	switch (drv) {
 	case DRIVER_SAM3X:
-		gpnvm_mask = 0x7;
+		gpnvm_mask = 0x7U;
 		base = SAM3X_EEFC_BASE(0);
 		break;
 	case DRIVER_SAM3U:
-		gpnvm_mask = 0x7;
+		gpnvm_mask = 0x7U;
 		base = SAM3U_EEFC_BASE(0);
 		break;
 	case DRIVER_SAM4S:
-		gpnvm_mask = 0x7;
+		gpnvm_mask = 0x7U;
 		base = SAM4S_EEFC_BASE(0);
 		break;
 	case DRIVER_SAM3NS:
-		gpnvm_mask = 0x3;
+		gpnvm_mask = 0x3U;
 		base = SAM3N_EEFC_BASE;
 		break;
 	case DRIVER_SAMX7X:
-		gpnvm_mask = 0x1BF;
+		gpnvm_mask = 0x1bfU;
 		base = SAMX7X_EEFC_BASE;
 		break;
 	default:
@@ -609,7 +609,7 @@ static bool sam_cmd_gpnvm(target_s *t, int argc, const char **argv)
 			goto bad_usage;
 
 		const uint32_t values = strtoul(argv[3], NULL, 0);
-		for (size_t bit = 0; bit < 32; ++bit) {
+		for (size_t bit = 0; bit < 32U; ++bit) {
 			const uint32_t index = 1U << bit;
 			if (mask & index) {
 				uint8_t cmd = (values & index) ? EEFC_FCR_FCMD_SGPB : EEFC_FCR_FCMD_CGPB;
