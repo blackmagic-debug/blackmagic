@@ -84,8 +84,8 @@ bool jlink_jtagtap_init(bmp_info_s *const info)
 	memset(cmd, 0, 22);
 	cmd[0] = CMD_HW_JTAG3;
 	/* write 9 bytes */
-	cmd[2] = 9 * 8;
-	memset(cmd + 4, 0xffU, 7);
+	cmd[2] = 9U * 8U;
+	memset(cmd + 4U, 0xffU, 7);
 	cmd[11] = 0x3c;
 	cmd[12] = 0xe7;
 	send_recv(info->usb_link, cmd, 22, cmd, 9);
@@ -110,7 +110,7 @@ static void jtagtap_reset(void)
 
 static void jtagtap_tms_seq(const uint32_t tms_states, const size_t clock_cycles)
 {
-	if (clock_cycles > 32)
+	if (clock_cycles > 32U)
 		return;
 	DEBUG_PROBE("jtagtap_tms_seq 0x%08" PRIx32 ", clock cycles: %zu\n", tms_states, clock_cycles);
 	const size_t len = (clock_cycles + 7U) / 8U;
@@ -119,7 +119,7 @@ static void jtagtap_tms_seq(const uint32_t tms_states, const size_t clock_cycles
 	cmd[0] = CMD_HW_JTAG3;
 	cmd[2] = clock_cycles;
 	const size_t total_chunks = (clock_cycles >> 3U) + ((clock_cycles & 7U) ? 1U : 0U);
-	for (size_t cycle = 0; cycle < clock_cycles; cycle += 8) {
+	for (size_t cycle = 0; cycle < clock_cycles; cycle += 8U) {
 		const size_t index = 4 + (cycle >> 3U);
 		cmd[index] = (tms_states >> cycle) & 0xffU;
 		cmd[index + total_chunks] = cmd[index];
@@ -152,7 +152,7 @@ static void jtagtap_tdi_tdo_seq(
 		cmd[4 + total_chunks - 1U] |= 1U << bit_offset;
 	}
 	if (data_in) {
-		for (size_t cycle = 0; cycle < clock_cycles; cycle += 8) {
+		for (size_t cycle = 0; cycle < clock_cycles; cycle += 8U) {
 			const size_t chunk = cycle >> 3U;
 			const size_t index = 4 + total_chunks + chunk;
 			cmd[index] = data_in[chunk];
@@ -170,9 +170,9 @@ static void jtagtap_tdi_seq(const bool final_tms, const uint8_t *const data_in, 
 {
 	if (cl_debuglevel & BMP_DEBUG_PROBE) {
 		DEBUG_PROBE("jtagtap_tdi_seq final tms: %u, data_in: ", final_tms ? 1 : 0);
-		for (size_t cycle = 0; cycle < clock_cycles; cycle += 8) {
+		for (size_t cycle = 0; cycle < clock_cycles; cycle += 8U) {
 			const size_t chunk = cycle >> 3U;
-			if (chunk > 16) {
+			if (chunk > 16U) {
 				DEBUG_PROBE(" ...");
 				break;
 			}
@@ -200,5 +200,5 @@ static bool jtagtap_next(bool tms, bool tdi)
 	send_recv(info.usb_link, NULL, 0, &result, 1);
 	if (result != 0)
 		raise_exception(EXCEPTION_ERROR, "jtagtap_next failed");
-	return tdo & 1;
+	return tdo & 1U;
 }

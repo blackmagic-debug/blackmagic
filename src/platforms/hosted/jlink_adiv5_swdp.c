@@ -170,19 +170,19 @@ static uint32_t jlink_adiv5_swdp_low_read(void)
 	uint8_t result[6];
 	memset(cmd, 0, sizeof(cmd));
 	cmd[0] = CMD_HW_JTAG3;
-	cmd[2] = 33 + 2; /* 2 idle cycles */
+	cmd[2] = 33U + 2U; /* 2 idle cycles */
 	cmd[8] = 0xfe;
 	send_recv(info.usb_link, cmd, 14, result, 5);
-	send_recv(info.usb_link, NULL, 0, result + 5, 1);
+	send_recv(info.usb_link, NULL, 0, result + 5U, 1);
 
 	if (result[5] != 0)
 		raise_exception(EXCEPTION_ERROR, "Low access read failed");
 
 	const uint32_t response = result[0] | result[1] << 8U | result[2] << 16U | result[3] << 24U;
 
-	const uint8_t parity = result[4] & 1;
+	const uint8_t parity = result[4] & 1U;
 	const uint32_t bit_count = __builtin_popcount(response) + parity;
-	if (bit_count & 1) /* Give up on parity error */
+	if (bit_count & 1U) /* Give up on parity error */
 		raise_exception(EXCEPTION_ERROR, "SWDP Parity error");
 	return response;
 }
@@ -192,14 +192,14 @@ static void jlink_adiv5_swdp_low_write(const uint32_t value)
 	uint8_t cmd[16];
 	uint8_t result[6];
 	memset(cmd, 0, sizeof(cmd));
-	cmd[2] = 33 + 8; /* 8 idle cycle  to move data through SW-DP */
-	memset(cmd + 4, 0xffU, 6);
+	cmd[2] = 33U + 8U; /* 8 idle cycle  to move data through SW-DP */
+	memset(cmd + 4U, 0xffU, 6);
 	cmd[10] = value & 0xffU;
 	cmd[11] = (value >> 8U) & 0xffU;
 	cmd[12] = (value >> 16U) & 0xffU;
 	cmd[13] = (value >> 24U) & 0xffU;
 	const uint8_t bit_count = __builtin_popcount(value);
-	cmd[14] = bit_count & 1;
+	cmd[14] = bit_count & 1U;
 	cmd[15] = 0;
 
 	send_recv(info.usb_link, cmd, 16, result, 6);
@@ -242,7 +242,7 @@ static uint32_t jlink_adiv5_swdp_low_access(
 	uint8_t ack = SWDP_ACK_WAIT;
 	while (ack == SWDP_ACK_WAIT && !platform_timeout_is_expired(&timeout)) {
 		send_recv(info.usb_link, cmd, 8U, res, 2U);
-		send_recv(info.usb_link, NULL, 0U, res + 2, 1U);
+		send_recv(info.usb_link, NULL, 0U, res + 2U, 1U);
 
 		if (res[2] != 0)
 			raise_exception(EXCEPTION_ERROR, "Low access setup failed");

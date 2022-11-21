@@ -44,8 +44,8 @@
 #define JLINK_IF_JTAG            1U
 #define JLINK_IF_SWD             2U
 
-#define SELECT_IF_JTAG 0
-#define SELECT_IF_SWD  1
+#define SELECT_IF_JTAG 0U
+#define SELECT_IF_SWD  1U
 
 #if HOSTED_BMP_ONLY == 1
 #pragma GCC diagnostic push
