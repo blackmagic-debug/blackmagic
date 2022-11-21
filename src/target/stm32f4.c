@@ -55,7 +55,7 @@ static bool stm32f4_flash_write(target_flash_s *f, target_addr_t dest, const voi
 static bool stm32f4_mass_erase(target_s *t);
 
 /* Flash Program and Erase Controller Register Map */
-#define FPEC_BASE     0x40023C00U
+#define FPEC_BASE     0x40023c00U
 #define FLASH_ACR     (FPEC_BASE + 0x00U)
 #define FLASH_KEYR    (FPEC_BASE + 0x04U)
 #define FLASH_OPTKEYR (FPEC_BASE + 0x08U)
@@ -339,7 +339,7 @@ static bool stm32f4_attach(target_s *t)
 		if (has_ccm_ram)
 			target_add_ram(t, 0x10000000, 0x10000); /* 64kiB CCM RAM */
 		target_add_ram(t, 0x20000000, 0x50000);     /* 320kiB RAM */
-		if (dual_bank && max_flashsize < 2048) {
+		if (dual_bank && max_flashsize < 2048U) {
 			/* Check the dual-bank status on 1MiB Flash devices */
 			const uint32_t option_ctrl = target_mem_read32(t, FLASH_OPTCR);
 			use_dual_bank = !(option_ctrl & FLASH_OPTCR_DB1M);
@@ -384,7 +384,7 @@ static bool stm32f4_attach(target_s *t)
 		if (is_f7)
 			stm32f4_add_flash(t, ITCM_BASE, 0x10000, 0x4000, 0, split);
 		stm32f4_add_flash(t, AXIM_BASE, 0x10000, 0x4000, 0, split);
-		if (bank_length > 0x10000) {
+		if (bank_length > 0x10000U) {
 			stm32f4_add_flash(t, 0x8010000, 0x10000, 0x10000, 4, split);
 			if (remaining_bank_length)
 				stm32f4_add_flash(t, 0x8020000, remaining_bank_length, 0x20000, 5, split);
@@ -394,13 +394,13 @@ static bool stm32f4_attach(target_s *t)
 			if (is_f7) {
 				const uint32_t bank1_base = ITCM_BASE + bank_length;
 				stm32f4_add_flash(t, bank1_base, 0x10000, 0x4000, 0, split);
-				stm32f4_add_flash(t, bank1_base + 0x10000, 0x10000, 0x10000, 4, split);
-				stm32f4_add_flash(t, bank1_base + 0x20000, remaining_bank_length, 0x20000, 5, split);
+				stm32f4_add_flash(t, bank1_base + 0x10000U, 0x10000, 0x10000, 4, split);
+				stm32f4_add_flash(t, bank1_base + 0x20000U, remaining_bank_length, 0x20000, 5, split);
 			}
 			const uint32_t bank2_base = AXIM_BASE + bank_length;
 			stm32f4_add_flash(t, bank2_base, 0x10000, 0x4000, 16, split);
-			stm32f4_add_flash(t, bank2_base + 0x10000, 0x10000, 0x10000, 20, split);
-			stm32f4_add_flash(t, bank2_base + 0x20000, remaining_bank_length, 0x20000, 21, split);
+			stm32f4_add_flash(t, bank2_base + 0x10000U, 0x10000, 0x10000, 20, split);
+			stm32f4_add_flash(t, bank2_base + 0x20000U, remaining_bank_length, 0x20000, 21, split);
 		}
 	}
 	return true;
@@ -605,11 +605,11 @@ static bool stm32f4_option_write(target_s *t, uint32_t *const val, size_t count)
 
 	const uint16_t part_id = t->part_id;
 	/* Write option bytes instruction */
-	if (stm32f4_opt_bytes_for(part_id) > 1 && count > 1) {
+	if (stm32f4_opt_bytes_for(part_id) > 1U && count > 1U) {
 		/* XXX: Do we need to read old value and then set it? */
-		target_mem_write32(t, FLASH_OPTCR + 4, val[1]);
-		if (part_id == ID_STM32F72X && count > 2)
-			target_mem_write32(t, FLASH_OPTCR + 8, val[2]);
+		target_mem_write32(t, FLASH_OPTCR + 4U, val[1]);
+		if (part_id == ID_STM32F72X && count > 2U)
+			target_mem_write32(t, FLASH_OPTCR + 8U, val[2]);
 	}
 
 	target_mem_write32(t, FLASH_OPTCR, val[0]);
@@ -679,7 +679,7 @@ static bool stm32f4_cmd_option(target_s *t, int argc, const char **argv)
 		stm32f4_option_write_default(t);
 	else if (argc > 2 && partial_match(argv[1], option_cmd_write, OPTION_CMD_LEN(option_cmd_write))) {
 		uint32_t val[3] = {};
-		size_t count = argc > 4 ? 3 : argc - 1U;
+		size_t count = argc > 4 ? 3 : argc - 1;
 		val[0] = strtoul(argv[2], NULL, 0);
 		if (argc > 3) {
 			val[1] = strtoul(argv[3], NULL, 0);
@@ -698,15 +698,15 @@ static bool stm32f4_cmd_option(target_s *t, int argc, const char **argv)
 	uint32_t val[3] = {};
 	val[0] = target_mem_read32(t, FLASH_OPTCR);
 	if (opt_bytes > 1U) {
-		val[1] = target_mem_read32(t, FLASH_OPTCR + 4);
+		val[1] = target_mem_read32(t, FLASH_OPTCR + 4U);
 		if (opt_bytes == 3U)
-			val[2] = target_mem_read32(t, FLASH_OPTCR + 8);
+			val[2] = target_mem_read32(t, FLASH_OPTCR + 8U);
 	}
 	optcr_mask(t, val);
 	tc_printf(t, "OPTCR: 0x%08" PRIx32, val[0]);
-	if (opt_bytes > 1) {
+	if (opt_bytes > 1U) {
 		tc_printf(t, " OPTCR1: 0x%08" PRIx32, val[1]);
-		if (opt_bytes > 2)
+		if (opt_bytes > 2U)
 			tc_printf(t, " OPTCR2: 0x%08" PRIx32, val[2]);
 	}
 	tc_printf(t, "\n");
