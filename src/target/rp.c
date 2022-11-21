@@ -249,7 +249,7 @@ static void rp_add_flash(target_s *t)
 		rp_flash_flush_cache(t);
 	rp_flash_enter_xip(t);
 
-	DEBUG_INFO("Flash size: %uMiB\n", spi_parameters.capacity / (1024U * 1024U));
+	DEBUG_INFO("Flash size: %" PRIu32 "MiB\n", (uint32_t)spi_parameters.capacity / (1024U * 1024U));
 
 	target_flash_s *const f = &flash->f;
 	f->start = RP_XIP_FLASH_BASE;
