@@ -120,7 +120,7 @@ print_probes_info:
 				if ((cl_opts->opt_serial && strstr(serial_number, cl_opts->opt_serial)) ||
 					(cl_opts->opt_position && cl_opts->opt_position == probes_found) ||
 					/* Special case for the very first probe found. */
-					(probe_identified = false, probes_found == 1)) {
+					(probe_identified = false, probes_found == 1U)) {
 					strncpy(info->serial, serial_number, sizeof info->serial);
 					strncpy(info->manufacturer, "BMP", sizeof info->manufacturer);
 					snprintf(info->product, sizeof info->product, "%ls", busReportedDeviceSesc);
@@ -139,11 +139,11 @@ print_probes_info:
 	}
 	if (is_printing_probes_info)
 		return 1;
-	if (probes_found == 1)
+	if (probes_found == 1U)
 		/* Exactly one probe found. Its information has already been filled
 		 * in the detection loop, so use this probe. */
 		return 0;
-	if (probes_found < 1) {
+	if (probes_found < 1U) {
 		DEBUG_WARN("No BMP probe found\n");
 		return -1;
 	}
@@ -201,7 +201,7 @@ char *extract_serial(const char *const device, const size_t length)
 	const size_t result_length = end - begin;
 	char *const result = (char *)malloc(result_length);
 	memcpy(result, begin, result_length);
-	result[result_length - 1] = '\0';
+	result[result_length - 1U] = '\0';
 	return result;
 }
 
@@ -231,7 +231,7 @@ static bool scan_linux_id(const char *name, char **const type, char **const vers
 			offsets[underscores][1] = offset - offsets[underscores][0];
 			++underscores;
 			/* Device paths with more than 2 underscore delimited sections can't be valid BMP strings. */
-			if (underscores > 2)
+			if (underscores > 2U)
 				return false;
 			/* Skip over consecutive strings of underscores */
 			while (name[offset + 1U] == '_' && offset < name_len)
@@ -343,11 +343,11 @@ int find_debuggers(bmp_cli_options_s *cl_opts, bmp_info_s *info)
 		DEBUG_WARN("No BMP probe found\n");
 		return -1;
 	}
-	if (total > 1 || cl_opts->opt_list_only) {
+	if (total > 1U || cl_opts->opt_list_only) {
 		DEBUG_WARN("Available Probes:\n");
 		scan_devices(SCAN_LIST, NULL, NULL, 0);
-	} else if (total == 1 && !cl_opts->opt_serial && !cl_opts->opt_position)
+	} else if (total == 1U && !cl_opts->opt_serial && !cl_opts->opt_position)
 		scan_devices(SCAN_FIND, info, NULL, 1);
-	return total == 1 && !cl_opts->opt_list_only ? 0 : 1;
+	return total == 1U && !cl_opts->opt_list_only ? 0 : 1;
 }
 #endif

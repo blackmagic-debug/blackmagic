@@ -87,13 +87,12 @@ static bmp_type_t find_cmsis_dap_interface(libusb_device *dev, bmp_info_s *info)
 			continue;
 		type = BMP_TYPE_CMSIS_DAP;
 
-		if (interface->bInterfaceClass == 0xff && interface->bNumEndpoints == 2) {
+		if (interface->bInterfaceClass == 0xffU && interface->bNumEndpoints == 2U) {
 			info->interface_num = interface->bInterfaceNumber;
 
 			for (uint8_t j = 0; j < interface->bNumEndpoints; ++j) {
-				uint8_t n = interface->endpoint[j].bEndpointAddress;
-
-				if (n & 0x80)
+				const uint8_t n = interface->endpoint[j].bEndpointAddress;
+				if (n & 0x80U)
 					info->in_ep = n;
 				else
 					info->out_ep = n;
@@ -301,7 +300,7 @@ rescan:
 		strncpy(info->serial, serial, sizeof(info->serial));
 		strncpy(info->product, product, sizeof(info->product));
 		strncpy(info->manufacturer, manufacturer, sizeof(info->manufacturer));
-		if (cl_opts->opt_position && cl_opts->opt_position == found_debuggers + 1) {
+		if (cl_opts->opt_position && cl_opts->opt_position == found_debuggers + 1U) {
 			found_debuggers = 1;
 			break;
 		}
@@ -309,13 +308,13 @@ rescan:
 	}
 	if (found_debuggers == 0 && ftdi_unknown && !cl_opts->opt_cable)
 		DEBUG_WARN("Generic FTDI MPSSE VID/PID found. Please specify exact type with \"-c <cable>\" !\n");
-	if (found_debuggers == 1 && !cl_opts->opt_cable && info->bmp_type == BMP_TYPE_LIBFTDI)
+	if (found_debuggers == 1U && !cl_opts->opt_cable && info->bmp_type == BMP_TYPE_LIBFTDI)
 		cl_opts->opt_cable = active_cable;
 	if (!found_debuggers && cl_opts->opt_list_only)
 		DEBUG_WARN("No usable debugger found\n");
-	if (found_debuggers > 1 || (found_debuggers == 1 && cl_opts->opt_list_only)) {
+	if (found_debuggers > 1U || (found_debuggers == 1U && cl_opts->opt_list_only)) {
 		if (!report) {
-			if (found_debuggers > 1)
+			if (found_debuggers > 1U)
 				DEBUG_WARN("%zu debuggers found!\nSelect with -P <pos> or -s <(partial)serial no.>\n", found_debuggers);
 			report = true;
 			goto rescan;
@@ -327,7 +326,7 @@ rescan:
 	if (!found_debuggers && access_problems)
 		DEBUG_WARN("No debugger found. Please check access rights to USB devices!\n");
 	libusb_free_device_list(devs, 1);
-	return found_debuggers == 1 ? 0 : -1;
+	return found_debuggers == 1U ? 0 : -1;
 }
 
 static void LIBUSB_CALL on_trans_done(libusb_transfer_s *const transfer)
@@ -375,7 +374,7 @@ static int submit_wait(usb_link_s *link, libusb_transfer_s *transfer)
 			return -1;
 		}
 		uint32_t now = platform_time_ms();
-		if (now - start_time > 1000) {
+		if (now - start_time > 1000U) {
 			libusb_cancel_transfer(transfer);
 			DEBUG_WARN("libusb_handle_events() timeout\n");
 			return -1;
@@ -427,7 +426,7 @@ int send_recv(usb_link_s *link, uint8_t *txbuf, size_t txsize, uint8_t *rxbuf, s
 		if (res > 0) {
 			const size_t rxlen = (size_t)res;
 			DEBUG_WIRE(" Rec (%zu/%zu)", rxsize, rxlen);
-			for (size_t i = 0; i < rxlen && i < 32; ++i) {
+			for (size_t i = 0; i < rxlen && i < 32U; ++i) {
 				if (i && ((i & 7U) == 0U))
 					DEBUG_WIRE(".");
 				DEBUG_WIRE("%02x", rxbuf[i]);

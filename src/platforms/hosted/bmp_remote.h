@@ -25,7 +25,7 @@
 #include "target.h"
 #include "target_internal.h"
 
-#define REMOTE_MAX_MSG_SIZE (1024)
+#define REMOTE_MAX_MSG_SIZE 1024U
 
 int platform_buffer_write(const uint8_t *data, int size);
 int platform_buffer_read(uint8_t *data, int size);

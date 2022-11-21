@@ -42,8 +42,8 @@
 #include "platform.h"
 
 #if HOSTED_BMP_ONLY != 1
-#define TRANSFER_IS_DONE   (1 << 0)
-#define TRANSFER_HAS_ERROR (1 << 1)
+#define TRANSFER_IS_DONE   (1U << 0U)
+#define TRANSFER_HAS_ERROR (1U << 1U)
 
 typedef struct transfer_ctx {
 	volatile size_t flags;
