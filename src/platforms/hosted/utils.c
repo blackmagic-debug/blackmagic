@@ -55,7 +55,7 @@ void platform_delay(uint32_t ms)
 #if !defined(usleep)
 	int usleep(unsigned int);
 #endif
-	usleep(ms * 1000);
+	usleep(ms * 1000U);
 #endif
 }
 
@@ -63,7 +63,7 @@ uint32_t platform_time_ms(void)
 {
 	timeval_s tv;
 	gettimeofday(&tv, NULL);
-	return (tv.tv_sec * 1000) + (tv.tv_usec / 1000);
+	return (tv.tv_sec * 1000U) + (tv.tv_usec / 1000U);
 }
 
 bool begins_with(const char *const str, const size_t str_length, const char *const value)

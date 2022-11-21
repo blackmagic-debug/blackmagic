@@ -250,7 +250,7 @@ void cl_init(bmp_cli_options_s *opt, int argc, char **argv)
 			break;
 		case 'v':
 			if (optarg)
-				cl_debuglevel = strtol(optarg, NULL, 0) & (BMP_DEBUG_MAX - 1);
+				cl_debuglevel = strtol(optarg, NULL, 0) & (BMP_DEBUG_MAX - 1U);
 			break;
 		case 'j':
 			opt->opt_scanmode = BMP_SCAN_JTAG;
@@ -281,10 +281,10 @@ void cl_init(bmp_cli_options_s *opt, int argc, char **argv)
 				uint32_t frequency = strtol(optarg, &p, 10);
 				switch (*p) {
 				case 'k':
-					frequency *= 1000;
+					frequency *= 1000U;
 					break;
 				case 'M':
-					frequency *= 1000 * 1000;
+					frequency *= 1000U * 1000U;
 					break;
 				}
 				opt->opt_max_swj_frequency = frequency;
@@ -360,11 +360,11 @@ void cl_init(bmp_cli_options_s *opt, int argc, char **argv)
 					switch (endptr[0]) {
 					case 'k':
 					case 'K':
-						opt->opt_flash_size *= 1024;
+						opt->opt_flash_size *= 1024U;
 						break;
 					case 'm':
 					case 'M':
-						opt->opt_flash_size *= 1024 * 1024;
+						opt->opt_flash_size *= 1024U * 1024U;
 						break;
 					}
 				}
@@ -581,7 +581,7 @@ found_targets:
 	}
 	if (opt->opt_mode == BMP_MODE_FLASH_READ || opt->opt_mode == BMP_MODE_FLASH_VERIFY ||
 		opt->opt_mode == BMP_MODE_FLASH_WRITE_VERIFY) {
-#define WORKSIZE 0x1000
+#define WORKSIZE 0x1000U
 		uint8_t data[WORKSIZE];
 		if (opt->opt_mode == BMP_MODE_FLASH_READ)
 			DEBUG_INFO("Reading flash from 0x%08" PRIx32 " for %zu bytes to %s\n", opt->opt_flash_start,

@@ -277,10 +277,10 @@ void swdptap_bit_out(bool val)
 static bool swdptap_seq_in_parity_mpsse(uint32_t *const result, const size_t clock_cycles)
 {
 	uint8_t data_out[5];
-	libftdi_jtagtap_tdi_tdo_seq(data_out, false, NULL, clock_cycles + 1);
-	const uint32_t data = data_out[0] + (data_out[1] << 8) + (data_out[2] << 16) + (data_out[3] << 24);
-	uint8_t parity = __builtin_parity(data & ((1U << clock_cycles) - 1)) & 1;
-	parity ^= data_out[4] & 1;
+	libftdi_jtagtap_tdi_tdo_seq(data_out, false, NULL, clock_cycles + 1U);
+	const uint32_t data = data_out[0] + (data_out[1] << 8U) + (data_out[2] << 16U) + (data_out[3] << 24U);
+	uint8_t parity = __builtin_parity(data & ((1U << clock_cycles) - 1U)) & 1U;
+	parity ^= data_out[4] & 1U;
 	*result = data;
 	return parity;
 }
@@ -303,7 +303,7 @@ static bool swdptap_seq_in_parity_raw(uint32_t *const result, const size_t clock
 	uint32_t data = 0;
 	for (size_t clock_cycle = 0; clock_cycle < clock_cycles; ++clock_cycle) {
 		if (raw_data[clock_cycle] & active_cable.bb_swdio_in_pin) {
-			parity ^= 1;
+			parity ^= 1U;
 			data |= 1U << clock_cycle;
 		}
 	}
