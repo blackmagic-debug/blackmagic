@@ -404,27 +404,27 @@ samd_descr_s samd_parse_device_id(uint32_t did)
 
 	const uint8_t devsel = (did >> SAMD_DID_DEVSEL_POS) & SAMD_DID_DEVSEL_MASK;
 	switch (samd.series) {
-	case 20: /* SAM D20 */
-		switch (devsel / 5) {
-		case 0:
+	case 20U: /* SAM D20 */
+		switch (devsel / 5U) {
+		case 0U:
 			samd.pin = 'J';
 			break;
-		case 1:
+		case 1U:
 			samd.pin = 'G';
 			break;
-		case 2:
+		case 2U:
 			samd.pin = 'E';
 			break;
 		default:
 			samd.pin = 'u';
 			break;
 		}
-		samd.mem = 18 - (devsel % 5);
+		samd.mem = 18U - (devsel % 5U);
 		samd.variant = 'A';
 		break;
-	case 21: /* SAM D21/L21 */
-	case 22: /* SAM L22 */
-		for (size_t i = 0; parts[i].devsel != 0xff; ++i) {
+	case 21U: /* SAM D21/L21 */
+	case 22U: /* SAM L22 */
+		for (size_t i = 0; parts[i].devsel != 0xffU; ++i) {
 			if (parts[i].devsel == devsel) {
 				samd.pin = parts[i].pin;
 				samd.mem = parts[i].mem;
@@ -433,31 +433,31 @@ samd_descr_s samd_parse_device_id(uint32_t did)
 			}
 		}
 		break;
-	case 10: /* SAM D10 */
-	case 11: /* SAM D11 */
+	case 10U: /* SAM D10 */
+	case 11U: /* SAM D11 */
 		switch (devsel / 3U) {
-		case 0:
+		case 0U:
 			samd.package[0] = 'M';
 			break;
-		case 1:
+		case 1U:
 			samd.package[0] = 'S';
 			samd.package[1] = 'S';
 			break;
 		}
 		samd.pin = 'D';
-		samd.mem = 14 - (devsel % 3U);
+		samd.mem = 14U - (devsel % 3U);
 		samd.variant = 'A';
 		break;
-	case 9: /* SAM D09 */
+	case 9U: /* SAM D09 */
 		samd.ram_size = 4096;
 		switch (devsel) {
-		case 0:
+		case 0U:
 			samd.pin = 'D';
 			samd.mem = 14;
 			samd.flash_size = 16384;
 			samd.package[0] = 'M';
 			break;
-		case 7:
+		case 7U:
 			samd.pin = 'C';
 			samd.mem = 13;
 			samd.flash_size = 8192;
@@ -706,7 +706,7 @@ static bool samd_set_flashlock(target_s *t, uint16_t value, const char **argv)
 		return false;
 
 	/* Modify the high byte of the user row */
-	high = (high & 0x0000ffff) | ((value << 16) & 0xffff0000);
+	high = (high & 0x0000ffffU) | ((value << 16U) & 0xffff0000U);
 
 	/* Write back */
 	target_mem_write32(t, SAMD_NVM_USER_ROW_LOW, low);
@@ -725,7 +725,7 @@ static bool parse_unsigned(const char *str, uint32_t *val)
 
 	size_t len = strlen(str);
 	// TODO: port to use substrate::toInt_t<> style parser for robustness and smaller code size
-	if (len > 2 && str[0] == '0' && (str[1] == 'x' || str[1] == 'X'))
+	if (len > 2U && str[0] == '0' && (str[1] == 'x' || str[1] == 'X'))
 		result = sscanf(str + 2, "%lx", &num);
 	else
 		result = sscanf(str, "%lu", &num);
@@ -777,7 +777,7 @@ static bool samd_set_bootprot(target_s *t, uint16_t value, const char **argv)
 	 * Write address of a word in the row to erase it
 	 * Must be shifted right for 16-bit address, see Datasheet §20.8.8 Address
 	 */
-	target_mem_write32(t, SAMD_NVMC_ADDRESS, SAMD_NVM_USER_ROW_LOW >> 1);
+	target_mem_write32(t, SAMD_NVMC_ADDRESS, SAMD_NVM_USER_ROW_LOW >> 1U);
 
 	/* Issue the erase command */
 	target_mem_write32(t, SAMD_NVMC_CTRLA, SAMD_CTRLA_CMD_KEY | SAMD_CTRLA_CMD_ERASEAUXROW);
@@ -810,7 +810,7 @@ static bool samd_cmd_lock_bootprot(target_s *t, int argc, const char **argv)
 			return false;
 		}
 
-		if (val > 7) {
+		if (val > 7U) {
 			tc_printf(t, "number must be between 0 and 7\n");
 			return false;
 		}
@@ -844,7 +844,7 @@ static bool samd_cmd_serial(target_s *t, int argc, const char **argv)
 	(void)argv;
 	tc_printf(t, "Serial Number: 0x");
 
-	for (size_t i = 0; i < 4; ++i)
+	for (size_t i = 0; i < 4U; ++i)
 		tc_printf(t, "%08x", target_mem_read32(t, SAMD_NVM_SERIAL(i)));
 	tc_printf(t, "\n");
 	return true;
@@ -858,7 +858,7 @@ static uint32_t samd_flash_size(target_s *t)
 	/* Mask off the device select bits */
 	const uint8_t devsel = did & SAMD_DID_DEVSEL_MASK;
 	/* Shift the maximum flash size (256KB) down as appropriate */
-	return (0x40000 >> (devsel % 5));
+	return (0x40000U >> (devsel % 5U));
 }
 
 /* Runs the Memory Built In Self Test (MBIST) */
