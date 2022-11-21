@@ -243,7 +243,7 @@ bool target_mem_map(target_s *t, char *tmp, size_t len)
 	for (target_flash_s *f = t->flash; f; f = f->next)
 		i += map_flash(&tmp[i], len - i, f);
 	i += snprintf(&tmp[i], len - i, "</memory-map>");
-	return i < len - 1;
+	return i < len - 1U;
 }
 
 void target_print_progress(platform_timeout_s *const timeout)
