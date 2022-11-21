@@ -38,10 +38,10 @@
 #include "cortexm.h"
 #include "adiv5.h"
 
-#define RENESAS_PARTID_RA2A1 0x01b0
-#define RENESAS_PARTID_RA4M2 0x0340
-#define RENESAS_PARTID_RA4M3 0x0310
-#define RENESAS_PARTID_RA6M2 0x0150
+#define RENESAS_PARTID_RA2A1 0x01b0U
+#define RENESAS_PARTID_RA4M2 0x0340U
+#define RENESAS_PARTID_RA4M3 0x0310U
+#define RENESAS_PARTID_RA6M2 0x0150U
 
 /*
  * Part numbering scheme
@@ -67,7 +67,7 @@
 
 /* family + series + group no */
 #define PNR_FAMILY_INDEX                   3
-#define PNR_SERIES(pnr3, pnr4, pnr5, pnr6) (((pnr3) << 24) | ((pnr4) << 16) | ((pnr5) << 8) | (pnr6))
+#define PNR_SERIES(pnr3, pnr4, pnr5, pnr6) (((pnr3) << 24U) | ((pnr4) << 16U) | ((pnr5) << 8U) | (pnr6))
 
 typedef enum {
 	PNR_SERIES_RA2L1 = PNR_SERIES('A', '2', 'L', '1'),
@@ -165,24 +165,24 @@ typedef enum {
  * ra6t1 - Flash Root Table
  * ra6t2 - Fixed location 2
  */
-#define RENESAS_FIXED1_UID    0x01001C00UL /* Unique ID Register */
-#define RENESAS_FIXED1_PNR    0x01001C10UL /* Part Numbering Register */
-#define RENESAS_FIXED1_MCUVER 0x01001C20UL /* MCU Version Register */
+#define RENESAS_FIXED1_UID    UINT32_C(0x01001c00) /* Unique ID Register */
+#define RENESAS_FIXED1_PNR    UINT32_C(0x01001c10) /* Part Numbering Register */
+#define RENESAS_FIXED1_MCUVER UINT32_C(0x01001c20) /* MCU Version Register */
 
-#define RENESAS_FIXED2_UID    0x01008190UL /* Unique ID Register */
-#define RENESAS_FIXED2_PNR    0x010080F0UL /* Part Numbering Register */
-#define RENESAS_FIXED2_MCUVER 0x010081B0UL /* MCU Version Register */
+#define RENESAS_FIXED2_UID    UINT32_C(0x01008190) /* Unique ID Register */
+#define RENESAS_FIXED2_PNR    UINT32_C(0x010080f0) /* Part Numbering Register */
+#define RENESAS_FIXED2_MCUVER UINT32_C(0x010081b0) /* MCU Version Register */
 
 /* The FMIFRT is a read-only register that stores the Flash Root Table address */
-#define RENESAS_FMIFRT             0x407FB19CUL
-#define RENESAS_FMIFRT_UID(frt)    (frt + 0x14UL) /* UID Register offset from Flash Root Table */
-#define RENESAS_FMIFRT_PNR(frt)    (frt + 0x24UL) /* PNR Register offset from Flash Root Table */
-#define RENESAS_FMIFRT_MCUVER(frt) (frt + 0x44UL) /* MCUVER Register offset from Flash Root Table */
+#define RENESAS_FMIFRT             UINT32_C(0x407fb19c)
+#define RENESAS_FMIFRT_UID(frt)    ((frt) + 0x14U) /* UID Register offset from Flash Root Table */
+#define RENESAS_FMIFRT_PNR(frt)    ((frt) + 0x24U) /* PNR Register offset from Flash Root Table */
+#define RENESAS_FMIFRT_MCUVER(frt) ((frt) + 0x44U) /* MCUVER Register offset from Flash Root Table */
 
 /* System Control OCD Control */
-#define SYSC_BASE 0x4001E000UL
+#define SYSC_BASE UINT32_C(0x4001e000)
 
-#define SYSC_SYOCDCR  (SYSC_BASE + 0x40EU) /* System Control OCD Control Register */
+#define SYSC_SYOCDCR  (SYSC_BASE + 0x40eU) /* System Control OCD Control Register */
 #define SYOCDCR_DBGEN (1U << 7U)           /* Debug Enable */
 
 #define SYSC_FWEPROR          (SYSC_BASE + 0x416U) /* Flash P/E Protect Register */
@@ -190,15 +190,14 @@ typedef enum {
 #define SYSC_FWEPROR_PROHIBIT (0x10U)
 
 /* Flash Memory Control */
-
-#define RENESAS_CF_END (0x00200000UL)
-
 #define FENTRYR_KEY_OFFSET 8U
-#define FENTRYR_KEY        (0xAAU << FENTRYR_KEY_OFFSET)
+#define FENTRYR_KEY        (0xaaU << FENTRYR_KEY_OFFSET)
 #define FENTRYR_PE_CF      (1U)
 #define FENTRYR_PE_DF      (1U << 7U)
 
 /* Renesas RA MCUs can have one of two kinds of flash memory, MF3/4 and RV40 */
+
+#define RENESAS_CF_END UINT32_C(0x00200000) /* End of Flash (maximum possible accross families) */
 
 /* MF3/4 Flash */
 /*
@@ -220,7 +219,7 @@ typedef enum {
  * Program/Erase unit Program: Code area: 128 Bytes, Data area: 4/8/16 Bytes
  *					  Erase: 1 block
  */
-#define RV40_CF_REGION0_SIZE       (0x10000UL)
+#define RV40_CF_REGION0_SIZE       (0x10000U)
 #define RV40_CF_REGION0_BLOCK_SIZE (0x2000U)
 #define RV40_CF_REGION1_BLOCK_SIZE (0x8000U)
 #define RV40_DF_BLOCK_SIZE         (0x40U)
@@ -228,23 +227,23 @@ typedef enum {
 #define RV40_DF_WRITE_SIZE         (0x4U)
 
 /* RV40 Flash Commands */
-#define RV40_CMD               0x407E0000UL
-#define RV40_CMD_PROGRAM       (0xE8U)
-#define RV40_CMD_PROGRAM_CF    (0x80U)
-#define RV40_CMD_PROGRAM_DF    (0x02U)
-#define RV40_CMD_BLOCK_ERASE   (0x20U)
-#define RV40_CMD_PE_SUSPEND    (0xB0U)
-#define RV40_CMD_PE_RESUME     (0xD0U)
-#define RV40_CMD_STATUS_CLEAR  (0x50U)
-#define RV40_CMD_FORCED_STOP   (0xB3U)
-#define RV40_CMD_BLANK_CHECK   (0x71U)
-#define RV40_CMD_CONFIG_SET_1  (0x40U)
-#define RV40_CMD_CONFIG_SET_2  (0x08U)
-#define RV40_CMD_LOCK_BIT_PGM  (0x77U)
-#define RV40_CMD_LOCK_BIT_READ (0x71U)
-#define RV40_CMD_FINAL         (0xD0U)
+#define RV40_CMD               UINT32_C(0x407e0000)
+#define RV40_CMD_PROGRAM       0xe8U
+#define RV40_CMD_PROGRAM_CF    0x80U
+#define RV40_CMD_PROGRAM_DF    0x02U
+#define RV40_CMD_BLOCK_ERASE   0x20U
+#define RV40_CMD_PE_SUSPEND    0xb0U
+#define RV40_CMD_PE_RESUME     0xd0U
+#define RV40_CMD_STATUS_CLEAR  0x50U
+#define RV40_CMD_FORCED_STOP   0xb3U
+#define RV40_CMD_BLANK_CHECK   0x71U
+#define RV40_CMD_CONFIG_SET_1  0x40U
+#define RV40_CMD_CONFIG_SET_2  0x08U
+#define RV40_CMD_LOCK_BIT_PGM  0x77U
+#define RV40_CMD_LOCK_BIT_READ 0x71U
+#define RV40_CMD_FINAL         0xd0U
 
-#define RV40_BASE 0x407FE000UL
+#define RV40_BASE UINT32_C(0x407fe000)
 
 #define RV40_FASTAT       (RV40_BASE + 0x10U) /* Flash Access Status */
 #define RV40_FASTAT_CMDLK (1U << 4U)          /* Command Lock */
@@ -265,16 +264,16 @@ typedef enum {
 #define RV40_FSADDR (RV40_BASE + 0x30U)
 
 #define RV40_FMEPROT        (RV40_BASE + 0x44U)
-#define RV40_FMEPROT_LOCK   (0xD901U)
-#define RV40_FMEPROT_UNLOCK (0xD900U)
+#define RV40_FMEPROT_LOCK   (0xd901U)
+#define RV40_FMEPROT_UNLOCK (0xd900U)
 
 #define RV40_FENTRYR            (RV40_BASE + 0x84U)
 #define RV40_FENTRYR_KEY_OFFSET 8U
-#define RV40_FENTRYR_KEY        (0xAAU << RV40_FENTRYR_KEY_OFFSET)
+#define RV40_FENTRYR_KEY        (0xaaU << RV40_FENTRYR_KEY_OFFSET)
 #define RV40_FENTRYR_PE_CF      (1U)
 #define RV40_FENTRYR_PE_DF      (1U << 7U)
 
-#define RV40_FCPSR         (RV40_BASE + 0xE0U)
+#define RV40_FCPSR         (RV40_BASE + 0xe0U)
 #define RV40_FCPSR_ESUSPMD 1U
 
 static bool renesas_uid(target_s *t, int argc, const char **argv);
@@ -316,9 +315,9 @@ static bool renesas_pnr_read(target_s *t, const uint32_t base, uint8_t *pnr)
 		/* reverse order, see 'Part numbering scheme' note for context */
 		for (size_t i = 0U; i < 13U; i++)
 			pnr[i] = pnrr[3U - (i + 3U) / 4U] >> (24U - ((i + 3U) & 3U) * 8U); /* & 3U == % 4U */
-		memset(pnr + 13, 0x20, 3);
+		memset(pnr + 13U, 0x20, 3);
 	} else {
-		for (size_t i = 0; i < 16; i++)
+		for (size_t i = 0; i < 16U; i++)
 			pnr[i] = pnrr[i / 4U] >> (i & 3U) * 8U; /* & 3U == % 4U */
 	}
 
@@ -329,8 +328,8 @@ static bool renesas_pnr_read(target_s *t, const uint32_t base, uint8_t *pnr)
 static pnr_series_t renesas_series(const uint8_t *pnr)
 {
 	uint32_t series = 0;
-	for (size_t i = 0; i < 4; i++)
-		series = (series << 8) | pnr[PNR_FAMILY_INDEX + i];
+	for (size_t i = 0; i < 4U; i++)
+		series = (series << 8U) | pnr[PNR_FAMILY_INDEX + i];
 
 	return (pnr_series_t)series;
 }
@@ -702,7 +701,7 @@ bool renesas_probe(target_s *t)
 	/* Read the PNR */
 	switch (t->part_id) {
 		// case :
-		/* mcus with PNR located at 0x01001C10
+		/* mcus with PNR located at 0x01001c10
 		 * ra2l1 (part_id wanted)
 		 * ra2e1 (part_id wanted)
 		 * ra2e2 (part_id wanted)
@@ -713,7 +712,7 @@ bool renesas_probe(target_s *t)
 
 	case RENESAS_PARTID_RA4M2:
 	case RENESAS_PARTID_RA4M3:
-		/* mcus with PNR located at 0x010080F0
+		/* mcus with PNR located at 0x010080f0
 		 * ra4e1 (part_id wanted)
 		 * ra6m4 (part_id wanted)
 		 * ra6m5 (part_id wanted)
@@ -791,78 +790,78 @@ bool renesas_probe(target_s *t)
 	case PNR_SERIES_RA2L1:
 	case PNR_SERIES_RA2A1:
 	case PNR_SERIES_RA4M1:
-		renesas_add_flash(t, 0x40100000, 8UL * 1024UL); /* Data flash memory 8 KB 0x40100000 */
-		target_add_ram(t, 0x20000000, 32UL * 1024UL);   /* SRAM 32 KB 0x20000000 */
+		renesas_add_flash(t, 0x40100000, 8U * 1024U); /* Data flash memory 8 KB 0x40100000 */
+		target_add_ram(t, 0x20000000, 32U * 1024U);   /* SRAM 32 KB 0x20000000 */
 		break;
 
 	case PNR_SERIES_RA2E1:
-		renesas_add_flash(t, 0x40100000, 4UL * 1024UL); /* Data flash memory 4 KB 0x40100000 */
-		target_add_ram(t, 0x20004000, 16UL * 1024UL);   /* SRAM 16 KB 0x20004000 */
+		renesas_add_flash(t, 0x40100000, 4U * 1024U); /* Data flash memory 4 KB 0x40100000 */
+		target_add_ram(t, 0x20004000, 16U * 1024U);   /* SRAM 16 KB 0x20004000 */
 		break;
 
 	case PNR_SERIES_RA2E2:
-		renesas_add_flash(t, 0x40100000, 2UL * 1024UL); /* Data flash memory 2 KB 0x40100000 */
-		target_add_ram(t, 0x20004000, 8UL * 1024UL);    /* SRAM 8 KB 0x20004000 */
+		renesas_add_flash(t, 0x40100000, 2U * 1024U); /* Data flash memory 2 KB 0x40100000 */
+		target_add_ram(t, 0x20004000, 8U * 1024U);    /* SRAM 8 KB 0x20004000 */
 		break;
 
 	case PNR_SERIES_RA4M2:
 	case PNR_SERIES_RA4M3:
 	case PNR_SERIES_RA4E1:
-		renesas_add_flash(t, 0x08000000, 8UL * 1024UL); /* Data flash memory 8 KB 0x08000000 */
-		target_add_ram(t, 0x20000000, 128UL * 1024UL);  /* SRAM 128 KB 0x20000000 */
-		target_add_ram(t, 0x28000000, 1024UL);          /* Standby SRAM 1 KB 0x28000000 */
+		renesas_add_flash(t, 0x08000000, 8U * 1024U); /* Data flash memory 8 KB 0x08000000 */
+		target_add_ram(t, 0x20000000, 128U * 1024U);  /* SRAM 128 KB 0x20000000 */
+		target_add_ram(t, 0x28000000, 1024U);         /* Standby SRAM 1 KB 0x28000000 */
 		break;
 
 	case PNR_SERIES_RA4W1:
-		renesas_add_flash(t, 0x40100000, 8UL * 1024UL); /* Data flash memory 8 KB 0x40100000 */
-		target_add_ram(t, 0x20000000, 96UL * 1024UL);   /* SRAM 96 KB 0x20000000 */
+		renesas_add_flash(t, 0x40100000, 8U * 1024U); /* Data flash memory 8 KB 0x40100000 */
+		target_add_ram(t, 0x20000000, 96U * 1024U);   /* SRAM 96 KB 0x20000000 */
 		break;
 
 	case PNR_SERIES_RA6M1:
 		/* conflicting information in the datasheet, here be dragons */
-		renesas_add_flash(t, 0x40100000, 8UL * 1024UL); /* Data flash memory 8 KB 0x40100000 */
-		target_add_ram(t, 0x20000000, 128UL * 1024UL);  /* SRAM 128 KB 0x20000000 */
-		target_add_ram(t, 0x1FFE0000, 128UL * 1024UL);  /* SRAMHS 128 KB 0x1FFE0000 */
-		target_add_ram(t, 0x200FE000, 8UL * 1024UL);    /* Standby SRAM 8 KB 0x200FE000 */
+		renesas_add_flash(t, 0x40100000, 8U * 1024U); /* Data flash memory 8 KB 0x40100000 */
+		target_add_ram(t, 0x20000000, 128U * 1024U);  /* SRAM 128 KB 0x20000000 */
+		target_add_ram(t, 0x1ffe0000, 128U * 1024U);  /* SRAMHS 128 KB 0x1ffe0000 */
+		target_add_ram(t, 0x200fe000, 8U * 1024U);    /* Standby SRAM 8 KB 0x200fe000 */
 		break;
 
 	case PNR_SERIES_RA6M2:
-		renesas_add_flash(t, 0x40100000, 32UL * 1024UL); /* Data flash memory 32 KB 0x40100000 */
-		target_add_ram(t, 0x20000000, 256UL * 1024UL);   /* SRAM 256 KB 0x20000000 */
-		target_add_ram(t, 0x1FFE0000, 128UL * 1024UL);   /* SRAMHS 128 KB 0x1FFE0000 */
-		target_add_ram(t, 0x200FE000, 8UL * 1024UL);     /* Standby SRAM 8 KB 0x200FE000 */
+		renesas_add_flash(t, 0x40100000, 32U * 1024U); /* Data flash memory 32 KB 0x40100000 */
+		target_add_ram(t, 0x20000000, 256U * 1024U);   /* SRAM 256 KB 0x20000000 */
+		target_add_ram(t, 0x1ffe0000, 128U * 1024U);   /* SRAMHS 128 KB 0x1ffe0000 */
+		target_add_ram(t, 0x200fe000, 8U * 1024U);     /* Standby SRAM 8 KB 0x200fe000 */
 		break;
 
 	case PNR_SERIES_RA6M3:
-		renesas_add_flash(t, 0x40100000, 64UL * 1024UL); /* Data flash memory 64 KB 0x40100000 */
-		target_add_ram(t, 0x20000000, 256UL * 1024UL);   /* SRAM0 256 KB 0x20000000 */
-		target_add_ram(t, 0x20040000, 256UL * 1024UL);   /* SRAM1 256 KB 0x20040000 */
-		target_add_ram(t, 0x1FFE0000, 128UL * 1024UL);   /* SRAMHS 128 KB 0x1FFE0000 */
-		target_add_ram(t, 0x200FE000, 8UL * 1024UL);     /* Standby SRAM 8 KB 0x200FE000 */
+		renesas_add_flash(t, 0x40100000, 64U * 1024U); /* Data flash memory 64 KB 0x40100000 */
+		target_add_ram(t, 0x20000000, 256U * 1024U);   /* SRAM0 256 KB 0x20000000 */
+		target_add_ram(t, 0x20040000, 256U * 1024U);   /* SRAM1 256 KB 0x20040000 */
+		target_add_ram(t, 0x1ffe0000, 128U * 1024U);   /* SRAMHS 128 KB 0x1ffe0000 */
+		target_add_ram(t, 0x200fe000, 8U * 1024U);     /* Standby SRAM 8 KB 0x200fe000 */
 		break;
 
 	case PNR_SERIES_RA6M4:
 	case PNR_SERIES_RA6E1:
-		renesas_add_flash(t, 0x08000000, 8UL * 1024UL); /* Data flash memory 8 KB 0x08000000 */
-		target_add_ram(t, 0x20000000, 256UL * 1024UL);  /* SRAM 256 KB 0x20000000 */
-		target_add_ram(t, 0x28000000, 1024UL);          /* Standby SRAM 1 KB 0x28000000 */
+		renesas_add_flash(t, 0x08000000, 8U * 1024U); /* Data flash memory 8 KB 0x08000000 */
+		target_add_ram(t, 0x20000000, 256U * 1024U);  /* SRAM 256 KB 0x20000000 */
+		target_add_ram(t, 0x28000000, 1024U);         /* Standby SRAM 1 KB 0x28000000 */
 		break;
 
 	case PNR_SERIES_RA6M5:
-		renesas_add_flash(t, 0x08000000, 8UL * 1024UL); /* Data flash memory 8 KB 0x08000000 */
-		target_add_ram(t, 0x20000000, 512UL * 1024UL);  /* SRAM 512 KB 0x20000000 */
-		target_add_ram(t, 0x28000000, 1024UL);          /* Standby SRAM 1 KB 0x28000000 */
+		renesas_add_flash(t, 0x08000000, 8U * 1024U); /* Data flash memory 8 KB 0x08000000 */
+		target_add_ram(t, 0x20000000, 512U * 1024U);  /* SRAM 512 KB 0x20000000 */
+		target_add_ram(t, 0x28000000, 1024U);         /* Standby SRAM 1 KB 0x28000000 */
 		break;
 
 	case PNR_SERIES_RA6T1:
-		renesas_add_flash(t, 0x40100000, 8UL * 1024UL); /* Data flash memory 8 KB 0x40100000 */
-		target_add_ram(t, 0x1FFE0000, 64UL * 1024UL);   /* SRAMHS 64 KB 0x1FFE0000 */
+		renesas_add_flash(t, 0x40100000, 8U * 1024U); /* Data flash memory 8 KB 0x40100000 */
+		target_add_ram(t, 0x1ffe0000, 64U * 1024U);   /* SRAMHS 64 KB 0x1ffe0000 */
 		break;
 
 	case PNR_SERIES_RA6T2:
-		renesas_add_flash(t, 0x08000000, 16UL * 1024UL); /* Data flash memory 16 KB 0x08000000 */
-		target_add_ram(t, 0x20000000, 64UL * 1024UL);    /* SRAM 64 KB 0x20000000 */
-		target_add_ram(t, 0x28000000, 1024UL);           /* Standby SRAM 1 KB 0x28000000 */
+		renesas_add_flash(t, 0x08000000, 16U * 1024U); /* Data flash memory 16 KB 0x08000000 */
+		target_add_ram(t, 0x20000000, 64U * 1024U);    /* SRAM 64 KB 0x20000000 */
+		target_add_ram(t, 0x28000000, 1024U);          /* Standby SRAM 1 KB 0x28000000 */
 		break;
 
 	default:
