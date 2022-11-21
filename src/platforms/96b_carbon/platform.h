@@ -92,10 +92,10 @@
  * USBUSART can be lowest priority as it is using DMA to transfer
  * data to the buffer and thus is less critical than USB.
  */
-#define IRQ_PRI_USB          (1 << 4)
-#define IRQ_PRI_USBUSART     (2 << 4)
-#define IRQ_PRI_USBUSART_DMA (2 << 4)
-#define IRQ_PRI_TRACE        (0 << 4)
+#define IRQ_PRI_USB          (1U << 4U)
+#define IRQ_PRI_USBUSART     (2U << 4U)
+#define IRQ_PRI_USBUSART_DMA (2U << 4U)
+#define IRQ_PRI_TRACE        (0U << 4U)
 
 #define USBUSART               USART2
 #define USBUSART_CR1           USART2_CR1

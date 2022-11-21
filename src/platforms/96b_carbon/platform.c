@@ -93,8 +93,8 @@ void platform_request_boot(void)
 
 	/* Jump to the built in bootloader by mapping System flash */
 	rcc_periph_clock_enable(RCC_SYSCFG);
-	SYSCFG_MEMRM &= ~3;
-	SYSCFG_MEMRM |= 1;
+	SYSCFG_MEMRM &= ~3U;
+	SYSCFG_MEMRM |= 1U;
 }
 
 void platform_target_clk_output_enable(bool enable)
