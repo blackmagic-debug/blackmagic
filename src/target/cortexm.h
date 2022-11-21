@@ -67,7 +67,7 @@ extern unsigned cortexm_wait_timeout;
 
 /* Application Interrupt and Reset Control Register (AIRCR) */
 #define CORTEXM_AIRCR_VECTKEY (0x05faU << 16U)
-/* Bits 31:16 - Read as VECTKETSTAT, 0xFA05 */
+/* Bits 31:16 - Read as VECTKETSTAT, 0xfa05 */
 #define CORTEXM_AIRCR_ENDIANESS (1U << 15U)
 /* Bits 15:11 - Unused, reserved */
 #define CORTEXM_AIRCR_PRIGROUP (7U << 8U)
@@ -112,11 +112,11 @@ extern unsigned cortexm_wait_timeout;
 #define CORTEXM_DHCSR_C_DEBUGEN  (1U << 0U)
 
 /* Debug Core Register Selector Register (DCRSR) */
-#define CORTEXM_DCRSR_REGWnR      0x00010000
-#define CORTEXM_DCRSR_REGSEL_MASK 0x0000001f
-#define CORTEXM_DCRSR_REGSEL_XPSR 0x00000010
-#define CORTEXM_DCRSR_REGSEL_MSP  0x00000011
-#define CORTEXM_DCRSR_REGSEL_PSP  0x00000012
+#define CORTEXM_DCRSR_REGWnR      0x00010000U
+#define CORTEXM_DCRSR_REGSEL_MASK 0x0000001fU
+#define CORTEXM_DCRSR_REGSEL_XPSR 0x00000010U
+#define CORTEXM_DCRSR_REGSEL_MSP  0x00000011U
+#define CORTEXM_DCRSR_REGSEL_PSP  0x00000012U
 
 /* Debug Exception and Monitor Control Register (DEMCR) */
 /* Bits 31:25 - Reserved */
