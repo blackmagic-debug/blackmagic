@@ -69,7 +69,7 @@ typedef enum iap_status {
 } iap_status_e;
 
 /* CPU Frequency */
-#define CPU_CLK_KHZ 12000
+#define CPU_CLK_KHZ 12000U
 
 typedef struct lpc_flash {
 	target_flash_s f;
