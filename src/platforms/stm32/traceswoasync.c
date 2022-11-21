@@ -70,7 +70,7 @@ void trace_buf_drain(usbd_device *dev, uint8_t ep)
 			/* write raw swo packets to the trace port */
 			result = usbd_ep_write_packet(dev, ep, &trace_rx_buf[read_index * FULL_SWO_PACKET], FULL_SWO_PACKET);
 		if (result)
-			read_index = (read_index + 1) % NUM_TRACE_PACKETS;
+			read_index = (read_index + 1U) % NUM_TRACE_PACKETS;
 	}
 	atomic_flag_clear_explicit(&reentry_flag, memory_order_relaxed);
 }
@@ -117,7 +117,7 @@ void SWO_DMA_ISR(void)
 		DMA_IFCR(SWO_DMA_BUS) |= DMA_ISR_TCIF(SWO_DMA_CHAN);
 		memcpy(&trace_rx_buf[write_index * FULL_SWO_PACKET], &pingpong_buf[FULL_SWO_PACKET], FULL_SWO_PACKET);
 	}
-	write_index = (write_index + 1) % NUM_TRACE_PACKETS;
+	write_index = (write_index + 1U) % NUM_TRACE_PACKETS;
 	trace_buf_drain(usbdev, TRACE_ENDPOINT | USB_REQ_TYPE_IN);
 }
 

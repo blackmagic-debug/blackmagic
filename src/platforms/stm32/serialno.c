@@ -52,7 +52,7 @@ void read_serial_number(void)
 		const size_t idx = (chunk << 3U) + (7U - nibble);
 		if (nibble == 0)
 			unique_id = unique_id_p[chunk];
-		serial_no[idx] = ((unique_id >> (nibble * 4U)) & 0x0f) + '0';
+		serial_no[idx] = ((unique_id >> (nibble * 4U)) & 0xfU) + '0';
 
 		/* If the character is something above 9, then add the offset to make it ASCII A-F */
 		if (serial_no[idx] > '9')

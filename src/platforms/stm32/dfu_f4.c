@@ -60,7 +60,7 @@ static void get_sector_num(uint32_t addr)
 
 	if (!sector_addr[i])
 		return;
-	sector_num = i & 0x1f;
+	sector_num = i & 0x1fU;
 }
 
 void dfu_check_and_do_sector_erase(uint32_t addr)
@@ -72,7 +72,7 @@ void dfu_check_and_do_sector_erase(uint32_t addr)
 void dfu_flash_program_buffer(const uint32_t baseaddr, const void *const buf, const size_t len)
 {
 	const uint32_t *const buffer = (const uint32_t *)buf;
-	for (size_t i = 0; i < len; i += 4)
+	for (size_t i = 0; i < len; i += 4U)
 		flash_program_word(baseaddr + i, buffer[i >> 2U]);
 }
 
@@ -95,7 +95,7 @@ void dfu_protect(bool enable)
 #ifdef DFU_SELF_PROTECT
 	if (enable) {
 		if (FLASH_OPTCR != 0) {
-			flash_program_option_bytes(FLASH_OPTCR & ~0x10000);
+			flash_program_option_bytes(FLASH_OPTCR & ~0x10000U);
 			flash_lock_option_bytes();
 		}
 	}
@@ -108,7 +108,7 @@ void dfu_jump_app_if_valid(void)
 {
 	const uint32_t stack_pointer = *((uint32_t *)app_address);
 	/* Boot the application if it's valid */
-	if ((stack_pointer & 0x2ffc0000) == 0x20000000) {
+	if ((stack_pointer & 0x2ffc0000U) == 0x20000000U) {
 		/*
 		 * Vector table may be anywhere in the main 128kiB RAM,
 		 * however use of CCM is not handled
