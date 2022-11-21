@@ -52,7 +52,7 @@
 #define RP_ID                 "Raspberry RP2040"
 #define RP_MAX_TABLE_SIZE     0x80U
 #define BOOTROM_MAGIC_ADDR    0x00000010U
-#define BOOTROM_MAGIC         ('M' | ('u' << 8) | (0x01 << 16))
+#define BOOTROM_MAGIC         ((unsigned)'M' | ((unsigned)'u' << 8U) | (1U << 16U))
 #define BOOTROM_MAGIC_MASK    0x00ffffffU
 #define BOOTROM_VERSION_SHIFT 24U
 #define RP_XIP_FLASH_BASE     0x10000000U
@@ -140,7 +140,7 @@
 #define FLASHSIZE_32K_BLOCK_MASK ~(FLASHSIZE_32K_BLOCK - 1U)
 #define FLASHSIZE_64K_BLOCK_MASK ~(FLASHSIZE_64K_BLOCK - 1U)
 #define MAX_FLASH                (16U * 1024U * 1024U)
-#define MAX_WRITE_CHUNK          0x1000
+#define MAX_WRITE_CHUNK          0x1000U
 
 #define RP_SPI_OPCODE(x)            (x)
 #define RP_SPI_OPCODE_MASK          0x00ffU
@@ -159,12 +159,12 @@
  * not support these commands
  */
 
-#define SPI_FLASH_CMD_SECTOR_ERASE  0x20
-#define FLASHCMD_BLOCK32K_ERASE     0x52
-#define FLASHCMD_BLOCK64K_ERASE     0xd8
-#define FLASHCMD_CHIP_ERASE         0x60
+#define SPI_FLASH_CMD_SECTOR_ERASE  0x20U
+#define FLASHCMD_BLOCK32K_ERASE     0x52U
+#define FLASHCMD_BLOCK64K_ERASE     0xd8U
+#define FLASHCMD_CHIP_ERASE         0x60U
 #define SPI_FLASH_CMD_READ_JEDEC_ID (RP_SPI_OPCODE(0x9fU) | RP_SPI_INTER_LENGTH(0) | RP_SPI_FRAME_OPCODE_ONLY)
-#define SPI_FLASH_CMD_READ_SFDP     (RP_SPI_OPCODE(0x5aU) | RP_SPI_INTER_LENGTH(1) | RP_SPI_FRAME_OPCODE_3B_ADDR)
+#define SPI_FLASH_CMD_READ_SFDP     (RP_SPI_OPCODE(0x5aU) | RP_SPI_INTER_LENGTH(1U) | RP_SPI_FRAME_OPCODE_3B_ADDR)
 
 typedef struct rp_priv {
 	uint16_t rom_debug_trampoline_begin;
@@ -319,9 +319,9 @@ static bool rp_read_rom_func_table(target_s *const t)
 		return false;
 
 	size_t check = 0;
-	for (size_t i = 0; i < RP_MAX_TABLE_SIZE; i += 2) {
+	for (size_t i = 0; i < RP_MAX_TABLE_SIZE; i += 2U) {
 		const uint16_t tag = table[i];
-		const uint16_t addr = table[i + 1];
+		const uint16_t addr = table[i + 1U];
 		switch (tag) {
 		case BOOTROM_FUNC_TABLE_TAG('D', 'T'):
 			priv->rom_debug_trampoline_begin = addr;
@@ -443,7 +443,7 @@ static bool rp_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 	DEBUG_INFO("Erase addr 0x%08" PRIx32 " len 0x%" PRIx32 "\n", addr, (uint32_t)len);
 	target_s *t = f->t;
 
-	if (addr & (f->blocksize - 1)) {
+	if (addr & (f->blocksize - 1U)) {
 		DEBUG_WARN("Unaligned erase\n");
 		return false;
 	}
@@ -507,7 +507,7 @@ static bool rp_flash_write(target_flash_s *f, target_addr_t dest, const void *sr
 {
 	DEBUG_INFO("RP Write 0x%08" PRIx32 " len 0x%" PRIx32 "\n", dest, (uint32_t)len);
 	target_s *t = f->t;
-	if ((dest & 0xff) || (len & 0xff)) {
+	if ((dest & 0xffU) || (len & 0xffU)) {
 		DEBUG_WARN("Unaligned write\n");
 		return false;
 	}
@@ -526,7 +526,7 @@ static bool rp_flash_write(target_flash_s *f, target_addr_t dest, const void *sr
 		 * however it takes much longer if the XOSC is not enabled
 		 * so lets give ourselves a little bit more time (x10)
 		 */
-		result = rp_rom_call(t, ps->regs, ps->rom_flash_range_program, (3 * chunksize * 10) >> 8);
+		result = rp_rom_call(t, ps->regs, ps->rom_flash_range_program, (3U * chunksize * 10U) >> 8U);
 		if (!result) {
 			DEBUG_WARN("Write failed!\n");
 			break;
@@ -684,7 +684,7 @@ static void rp_flash_put_get(
 	// Make sure there is never more data in flight than the depth of the RX
 	// FIFO. Otherwise, when we are interrupted for long periods, hardware
 	// will overflow the RX FIFO.
-	static const size_t max_in_flight = 16 - 2; // account for data internal to SSI
+	static const size_t max_in_flight = 16U - 2U; // account for data internal to SSI
 	size_t tx_count = 0;
 	size_t rx_count = 0;
 	while (tx_count < count || rx_count < count || rx_skip) {
@@ -739,7 +739,7 @@ static void rp_flash_exit_xip(target_s *const t)
 	// First two 32-clock sequences
 	// CSn is held high for the first 32 clocks, then asserted low for next 32
 	rp_spi_chip_select(t, RP_GPIO_QSPI_CS_DRIVE_HIGH);
-	for (size_t i = 0; i < 2; ++i) {
+	for (size_t i = 0; i < 2U; ++i) {
 		// This gives 4 16-bit offset store instructions. Anything else seems to
 		// produce a large island of constants
 		target_mem_write32(t, RP_PADS_QSPI_GPIO_SD0, padctrl_tmp);
@@ -797,15 +797,15 @@ static void rp_flash_enter_xip(target_s *const t)
 {
 	target_mem_write32(t, RP_SSI_ENABLE, 0);
 	target_mem_write32(t, RP_SSI_CTRL0,
-		RP_SSI_CTRL0_FRF_SERIAL |        // Standard 1-bit SPI serial frames
-			RP_SSI_CTRL0_DATA_BITS(32) | // 32 clocks per data frame
-			RP_SSI_CTRL0_TMOD_EEPROM     // Send instr + addr, receive data
+		RP_SSI_CTRL0_FRF_SERIAL |         // Standard 1-bit SPI serial frames
+			RP_SSI_CTRL0_DATA_BITS(32U) | // 32 clocks per data frame
+			RP_SSI_CTRL0_TMOD_EEPROM      // Send instr + addr, receive data
 	);
 	target_mem_write32(t, RP_SSI_XIP_SPI_CTRL0,
-		RP_SSI_XIP_SPI_CTRL0_XIP_CMD(0x03) |            // Standard 03h read
-			RP_SSI_XIP_SPI_CTRL0_INSTR_LENGTH_8b |      // 8-bit instruction prefix
-			RP_SSI_XIP_SPI_CTRL0_ADDRESS_LENGTH(0x03) | // 24-bit addressing for 03h commands
-			RP_SSI_XIP_SPI_CTRL0_TRANS_1C1A             // Command and address both in serial format
+		RP_SSI_XIP_SPI_CTRL0_XIP_CMD(0x03U) |            // Standard 03h read
+			RP_SSI_XIP_SPI_CTRL0_INSTR_LENGTH_8b |       // 8-bit instruction prefix
+			RP_SSI_XIP_SPI_CTRL0_ADDRESS_LENGTH(0x03U) | // 24-bit addressing for 03h commands
+			RP_SSI_XIP_SPI_CTRL0_TRANS_1C1A              // Command and address both in serial format
 	);
 	target_mem_write32(t, RP_SSI_ENABLE, RP_SSI_ENABLE_SSI);
 }
@@ -817,8 +817,8 @@ static uint32_t rp_get_flash_length(target_s *const t)
 	rp_spi_read(t, SPI_FLASH_CMD_READ_JEDEC_ID, 0, &flash_id, sizeof(flash_id));
 
 	DEBUG_INFO("Flash device ID: %02x %02x %02x\n", flash_id.manufacturer, flash_id.type, flash_id.capacity);
-	if (flash_id.capacity >= 8 && flash_id.capacity <= 34)
-		return 1 << flash_id.capacity;
+	if (flash_id.capacity >= 8U && flash_id.capacity <= 34U)
+		return 1U << flash_id.capacity;
 
 	// Guess maximum flash size
 	return MAX_FLASH;
