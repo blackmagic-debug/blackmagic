@@ -24,26 +24,26 @@
 #include "cortexm.h"
 #include "lpc_common.h"
 
-#define LPC43XX_CHIPID 0x40043200
+#define LPC43XX_CHIPID 0x40043200U
 
-#define IAP_ENTRYPOINT_LOCATION 0x10400100
+#define IAP_ENTRYPOINT_LOCATION 0x10400100U
 
-#define LPC43XX_ETBAHB_SRAM_BASE 0x2000C000
-#define LPC43XX_ETBAHB_SRAM_SIZE (16 * 1024)
+#define LPC43XX_ETBAHB_SRAM_BASE 0x2000c000U
+#define LPC43XX_ETBAHB_SRAM_SIZE (16U * 1024U)
 
-#define LPC43XX_WDT_MODE       0x40080000
-#define LPC43XX_WDT_CNT        0x40080004
-#define LPC43XX_WDT_FEED       0x40080008
-#define LPC43XX_WDT_PERIOD_MAX 0xFFFFFF
-#define LPC43XX_WDT_PROTECT    (1 << 4)
+#define LPC43XX_WDT_MODE       0x40080000U
+#define LPC43XX_WDT_CNT        0x40080004U
+#define LPC43XX_WDT_FEED       0x40080008U
+#define LPC43XX_WDT_PERIOD_MAX 0xffffffU
+#define LPC43XX_WDT_PROTECT    (1U << 4U)
 
 #define IAP_RAM_SIZE LPC43XX_ETBAHB_SRAM_SIZE
 #define IAP_RAM_BASE LPC43XX_ETBAHB_SRAM_BASE
 
-#define IAP_PGM_CHUNKSIZE 4096
+#define IAP_PGM_CHUNKSIZE 4096U
 
-#define FLASH_NUM_BANK   2
-#define FLASH_NUM_SECTOR 15
+#define FLASH_NUM_BANK   2U
+#define FLASH_NUM_SECTOR 15U
 
 static bool lpc43xx_cmd_reset(target_s *t, int argc, const char *argv[]);
 static bool lpc43xx_cmd_mkboot(target_s *t, int argc, const char *argv[]);
@@ -80,26 +80,26 @@ bool lpc43xx_probe(target_s *t)
 	chipid = target_mem_read32(t, LPC43XX_CHIPID);
 
 	switch (chipid) {
-	case 0x4906002B: /* Parts with on-chip flash */
-	case 0x7906002B: /* LM43S?? - Undocumented? */
-		switch (t->cpuid & 0xFF00FFF0) {
-		case 0x4100C240:
+	case 0x4906002bU: /* Parts with on-chip flash */
+	case 0x7906002bU: /* LM43S?? - Undocumented? */
+		switch (t->cpuid & 0xff00fff0U) {
+		case 0x4100c240U:
 			t->driver = "LPC43xx Cortex-M4";
-			if (t->cpuid == 0x410FC241) {
+			if (t->cpuid == 0x410fc241U) {
 				/* LPC4337 */
 				iap_entry = target_mem_read32(t, IAP_ENTRYPOINT_LOCATION);
-				target_add_ram(t, 0, 0x1A000000);
-				lpc43xx_add_flash(t, iap_entry, 0, 0, 0x1A000000, 0x10000, 0x2000);
-				lpc43xx_add_flash(t, iap_entry, 0, 8, 0x1A010000, 0x70000, 0x10000);
-				target_add_ram(t, 0x1A080000, 0xF80000);
-				lpc43xx_add_flash(t, iap_entry, 1, 0, 0x1B000000, 0x10000, 0x2000);
-				lpc43xx_add_flash(t, iap_entry, 1, 8, 0x1B010000, 0x70000, 0x10000);
+				target_add_ram(t, 0, 0x1a000000);
+				lpc43xx_add_flash(t, iap_entry, 0, 0, 0x1a000000, 0x10000, 0x2000);
+				lpc43xx_add_flash(t, iap_entry, 0, 8, 0x1a010000, 0x70000, 0x10000);
+				target_add_ram(t, 0x1a080000, 0xf80000);
+				lpc43xx_add_flash(t, iap_entry, 1, 0, 0x1b000000, 0x10000, 0x2000);
+				lpc43xx_add_flash(t, iap_entry, 1, 8, 0x1b010000, 0x70000, 0x10000);
 				target_add_commands(t, lpc43xx_cmd_list, "LPC43xx");
-				target_add_ram(t, 0x1B080000, 0xE4F80000UL);
+				target_add_ram(t, 0x1b080000, 0xe4f80000UL);
 				t->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
 			}
 			break;
-		case 0x4100C200:
+		case 0x4100c200U:
 			t->driver = "LPC43xx Cortex-M0";
 			break;
 		default:
@@ -107,13 +107,13 @@ bool lpc43xx_probe(target_s *t)
 		}
 		t->mass_erase = lpc43xx_mass_erase;
 		return true;
-	case 0x5906002B: /* Flashless parts */
-	case 0x6906002B:
-		switch (t->cpuid & 0xFF00FFF0) {
-		case 0x4100C240:
+	case 0x5906002bU: /* Flashless parts */
+	case 0x6906002bU:
+		switch (t->cpuid & 0xff00fff0U) {
+		case 0x4100c240U:
 			t->driver = "LPC43xx Cortex-M4";
 			break;
-		case 0x4100C200:
+		case 0x4100c200U:
 			t->driver = "LPC43xx Cortex-M0";
 			break;
 		default:
@@ -133,9 +133,9 @@ static bool lpc43xx_cmd_reset(target_s *t, int argc, const char *argv[])
 	(void)argv;
 
 	/* Cortex-M4 Application Interrupt and Reset Control Register */
-	static const uint32_t AIRCR = 0xE000ED0C;
+	static const uint32_t AIRCR = 0xe000ed0cU;
 	/* Magic value key */
-	static const uint32_t reset_val = 0x05FA0004;
+	static const uint32_t reset_val = 0x05fa0004U;
 
 	/* System reset on target */
 	target_mem_write(t, AIRCR, &reset_val, sizeof(reset_val));
@@ -149,7 +149,7 @@ static bool lpc43xx_mass_erase(target_s *t)
 	platform_timeout_set(&timeout, 500);
 	lpc43xx_flash_init(t);
 
-	for (int bank = 0; bank < FLASH_NUM_BANK; bank++) {
+	for (int bank = 0; bank < (int)FLASH_NUM_BANK; bank++) {
 		lpc_flash_s *f = (lpc_flash_s *)t->flash;
 		if (lpc_iap_call(f, NULL, IAP_CMD_PREPARE, 0, FLASH_NUM_SECTOR - 1U, bank) ||
 			lpc_iap_call(f, NULL, IAP_CMD_ERASE, 0, FLASH_NUM_SECTOR - 1U, CPU_CLK_KHZ, bank))
@@ -186,8 +186,8 @@ static bool lpc43xx_flash_erase(target_flash_s *f, target_addr_t addr, size_t le
 
 static void lpc43xx_set_internal_clock(target_s *t)
 {
-	const uint32_t val2 = (1 << 11) | (1 << 24);
-	target_mem_write32(t, 0x40050000 + 0x06C, val2);
+	const uint32_t val2 = (1U << 11U) | (1U << 24U);
+	target_mem_write32(t, 0x40050000U + 0x06cU, val2);
 }
 
 /*
@@ -242,7 +242,7 @@ static void lpc43xx_wdt_pet(target_s *t)
 
 	/* If WDT on, pet */
 	if (wdt_mode) {
-		target_mem_write32(t, LPC43XX_WDT_FEED, 0xAA);
-		target_mem_write32(t, LPC43XX_WDT_FEED, 0xFF);
+		target_mem_write32(t, LPC43XX_WDT_FEED, 0xaa);
+		target_mem_write32(t, LPC43XX_WDT_FEED, 0xff);
 	}
 }
