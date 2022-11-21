@@ -69,7 +69,7 @@ char gdb_if_getchar(void)
 	while (tail_out == head_out) {
 		/* Detach if port closed */
 		if (!gdb_serial_get_dtr())
-			return 0x04;
+			return '\x04';
 
 		while (usb_get_config() != 1)
 			continue;
@@ -86,7 +86,7 @@ char gdb_if_getchar_to(uint32_t timeout)
 	while (head_out == tail_out && !platform_timeout_is_expired(&receive_timeout)) {
 		/* Detach if port closed */
 		if (!gdb_serial_get_dtr())
-			return 0x04;
+			return '\x04';
 
 		while (usb_get_config() != 1)
 			continue;
