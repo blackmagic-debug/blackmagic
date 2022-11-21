@@ -43,7 +43,7 @@ void jtag_add_device(const uint32_t dev_index, const jtag_dev_s *jtag_dev)
 	if (dev_index == 0)
 		memset(&jtag_devs, 0, sizeof(jtag_devs));
 	memcpy(&jtag_devs[dev_index], jtag_dev, sizeof(jtag_dev_s));
-	jtag_dev_count = dev_index + 1;
+	jtag_dev_count = dev_index + 1U;
 }
 #endif
 
@@ -99,7 +99,7 @@ uint32_t jtag_scan(const uint8_t *irlens)
 			jtag_proc.jtagtap_tdi_tdo_seq((uint8_t *)&irout, 0, ones, irlens[device]);
 
 			/* IEEE 1149.1 requires the first bit to be a 1, but not all devices conform (see #1130 on GH) */
-			if (!(irout & 1))
+			if (!(irout & 1U))
 				DEBUG_WARN("check failed: IR[0] != 1\n");
 
 			jtag_devs[device].ir_len = irlens[device];
@@ -161,7 +161,7 @@ uint32_t jtag_scan(const uint8_t *irlens)
 	jtagtap_shift_dr();
 	size_t device = 0;
 	for (; !jtag_proc.jtagtap_next(false, true) && device <= jtag_dev_count; ++device)
-		jtag_devs[device].dr_postscan = jtag_dev_count - device - 1;
+		jtag_devs[device].dr_postscan = jtag_dev_count - device - 1U;
 
 	if (device != jtag_dev_count) {
 		DEBUG_WARN("jtag_scan: Sanity check failed: BYPASS dev count doesn't match IR scan\n");
@@ -176,8 +176,8 @@ uint32_t jtag_scan(const uint8_t *irlens)
 		return 0;
 
 	/* Fill in the ir_postscan fields */
-	for (size_t device = jtag_dev_count - 1; device > 0; --device)
-		jtag_devs[device - 1].ir_postscan = jtag_devs[device].ir_postscan + jtag_devs[device].ir_len;
+	for (size_t device = jtag_dev_count - 1U; device > 0; --device)
+		jtag_devs[device - 1U].ir_postscan = jtag_devs[device].ir_postscan + jtag_devs[device].ir_len;
 
 	/* Reset jtagtap: should take all devs to IDCODE */
 	jtag_proc.jtagtap_reset();
@@ -187,7 +187,7 @@ uint32_t jtag_scan(const uint8_t *irlens)
 		if (!jtag_proc.jtagtap_next(false, true))
 			continue;
 		jtag_devs[device].jd_idcode = 1U;
-		for (size_t bit = 1; bit < 32; ++bit) {
+		for (size_t bit = 1; bit < 32U; ++bit) {
 			if (jtag_proc.jtagtap_next(false, true))
 				jtag_devs[device].jd_idcode |= 1U << bit;
 		}
