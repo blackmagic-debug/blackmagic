@@ -123,7 +123,7 @@ int gdb_main_loop(target_controller_s *tc, bool in_syscall)
 		SET_IDLE_STATE(1);
 		size_t size = gdb_getpacket(pbuf, BUF_SIZE);
 		// If port closed and target detached, stay idle
-		if ((pbuf[0] != 0x04) || cur_target) {
+		if ((pbuf[0] != '\x04') || cur_target) {
 			SET_IDLE_STATE(0);
 		}
 		switch (pbuf[0]) {
@@ -295,7 +295,7 @@ int gdb_main_loop(target_controller_s *tc, bool in_syscall)
 			gdb_putpacketz("OK");
 			break;
 
-		case 0x04:
+		case '\x04':
 		case 'D': /* GDB 'detach' command. */
 			if (cur_target) {
 				SET_RUN_STATE(true);

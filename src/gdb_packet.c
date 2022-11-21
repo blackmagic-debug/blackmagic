@@ -47,7 +47,7 @@ size_t gdb_getpacket(char *const packet, const size_t size)
 			do {
 				/* Smells like bad code */
 				packet[0] = (char)gdb_if_getchar();
-				if (packet[0] == 0x04)
+				if (packet[0] == '\x04')
 					return 1;
 			} while (packet[0] != '$' && packet[0] != REMOTE_SOM);
 #if PC_HOSTED == 0
@@ -138,7 +138,7 @@ size_t gdb_getpacket(char *const packet, const size_t size)
 	DEBUG_GDB_WIRE("%s : ", __func__);
 	for (size_t j = 0; j < offset; j++) {
 		const char c = packet[j];
-		if (c >= ' ' && c < 0x7f)
+		if (c >= ' ' && c < '\x7f')
 			DEBUG_GDB_WIRE("%c", c);
 		else
 			DEBUG_GDB_WIRE("\\x%02X", c);
