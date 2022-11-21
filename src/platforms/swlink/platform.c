@@ -81,8 +81,8 @@ void platform_init(void)
 		led_error_port = GPIOC;
 		led_error_pin = GPIO13;
 		/* Enable MCO Out on PA8 */
-		RCC_CFGR &= ~(0xf << 24);
-		RCC_CFGR |= (RCC_CFGR_MCO_HSE << 24);
+		RCC_CFGR &= ~(0xfU << 24U);
+		RCC_CFGR |= (RCC_CFGR_MCO_HSE << 24U);
 		gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO8);
 		break;
 	}
@@ -143,7 +143,7 @@ static void adc_init(void)
 	adc_power_on(ADC1);
 
 	/* Wait for the ADC to finish starting up */
-	for (volatile size_t i = 0; i < 800000; ++i)
+	for (volatile size_t i = 0; i < 800000U; ++i)
 		continue;
 
 	adc_reset_calibration(ADC1);
@@ -167,8 +167,8 @@ const char *platform_target_voltage(void)
 		 * The computed value read is expressed in 0.1mV steps
 		 */
 		uint32_t value = (adc_read_regular(ADC1) * 66U) / 4096U;
-		ret[0] = '0' + value / 10;
-		ret[2] = '0' + value % 10;
+		ret[0] = '0' + value / 10U;
+		ret[2] = '0' + value % 10U;
 		return ret;
 	}
 	return NULL;

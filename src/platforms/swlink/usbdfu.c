@@ -68,7 +68,7 @@ int main(void)
 		gpio_set_mode(GPIOB, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, GPIO2);
 		normal_boot = !(gpio_get(GPIOB, GPIO2));
 	}
-	if ((GPIOA_CRL & 0x40) == 0x40 && normal_boot)
+	if ((GPIOA_CRL & 0x40U) == 0x40U && normal_boot)
 		dfu_jump_app_if_valid();
 
 	dfu_protect(false);
