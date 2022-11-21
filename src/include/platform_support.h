@@ -42,7 +42,8 @@ void platform_timeout_set(platform_timeout_s *t, uint32_t ms);
 bool platform_timeout_is_expired(const platform_timeout_s *t);
 void platform_delay(uint32_t ms);
 
-#define POWER_CONFLICT_THRESHOLD 5 /* in 0.1V, so 5 stands for 0.5V */
+#define POWER_CONFLICT_THRESHOLD 5U /* in 0.1V, so 5 stands for 0.5V */
+
 extern bool connect_assert_nrst;
 uint32_t platform_target_voltage_sense(void);
 const char *platform_target_voltage(void);
