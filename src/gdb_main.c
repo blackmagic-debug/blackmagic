@@ -139,7 +139,7 @@ int gdb_main_loop(target_controller_s *tc, bool in_syscall)
 			uint32_t addr, len;
 			ERROR_IF_NO_TARGET();
 			sscanf(pbuf, "m%" SCNx32 ",%" SCNx32, &addr, &len);
-			if (len > sizeof(pbuf) / 2) {
+			if (len > sizeof(pbuf) / 2U) {
 				gdb_putpacketz("E02");
 				break;
 			}
@@ -165,7 +165,7 @@ int gdb_main_loop(target_controller_s *tc, bool in_syscall)
 			int hex;
 			ERROR_IF_NO_TARGET();
 			sscanf(pbuf, "M%" SCNx32 ",%" SCNx32 ":%n", &addr, &len, &hex);
-			if (len > (unsigned)(size - hex) / 2) {
+			if (len > (unsigned)(size - hex) / 2U) {
 				gdb_putpacketz("E02");
 				break;
 			}
@@ -258,7 +258,7 @@ int gdb_main_loop(target_controller_s *tc, bool in_syscall)
 			uint8_t val[8];
 			size_t s = target_reg_read(cur_target, reg, val, sizeof(val));
 			if (s > 0)
-				gdb_putpacket(hexify(pbuf, val, s), s * 2);
+				gdb_putpacket(hexify(pbuf, val, s), s * 2U);
 			else
 				gdb_putpacketz("EFF");
 			break;
@@ -269,7 +269,7 @@ int gdb_main_loop(target_controller_s *tc, bool in_syscall)
 			int n;
 			sscanf(pbuf, "P%" SCNx32 "=%n", &reg, &n);
 			// TODO: FIXME, VLAs considered harmful.
-			uint8_t val[strlen(&pbuf[n]) / 2];
+			uint8_t val[strlen(&pbuf[n]) / 2U];
 			unhexify(val, pbuf + n, sizeof(val));
 			if (target_reg_write(cur_target, reg, val, sizeof(val)) > 0)
 				gdb_putpacketz("OK");
@@ -381,7 +381,7 @@ static void exec_q_rcmd(const char *packet, const size_t length)
 	const size_t datalen = length / 2U;
 	// This needs replacing with something more sensible.
 	// It should be pinging -Wvla among other things, and it failing is straight-up UB
-	char *data = alloca(datalen + 1);
+	char *data = alloca(datalen + 1U);
 	/* dehexify command */
 	unhexify(data, packet, datalen);
 	data[datalen] = 0; /* add terminating null */
@@ -572,7 +572,7 @@ static void handle_v_packet(char *packet, const size_t plen)
 			++tok;
 		cmdline[0] = '\0';
 		while (*tok != '\0') {
-			if (strlen(cmdline) + 3 >= sizeof(cmdline))
+			if (strlen(cmdline) + 3U >= sizeof(cmdline))
 				break;
 			if (*tok == ';') {
 				*pcmdline++ = ' ';
