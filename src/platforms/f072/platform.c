@@ -36,7 +36,7 @@ typedef void (*irq_function_t)(void);
 
 extern uint32_t _ebss; // NOLINT(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)
 
-#define SYSCFG_MEMRM        MMIO32(0x40010000)
+#define SYSCFG_MEMRM        MMIO32(0x40010000U)
 #define SYSMEM_RESET_VECTOR 0x1fffc804U
 
 static const irq_function_t *const volatile reset_vector = (irq_function_t *)(uintptr_t)SYSMEM_RESET_VECTOR;
