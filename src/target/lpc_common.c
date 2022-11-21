@@ -131,7 +131,7 @@ iap_status_e lpc_iap_call(lpc_flash_s *f, void *result, iap_cmd_e cmd, ...)
 	/* Fill out the remainder of the parameters */
 	va_list ap;
 	va_start(ap, cmd);
-	for (size_t i = 0; i < 4; ++i)
+	for (size_t i = 0; i < 4U; ++i)
 		param.words[i] = va_arg(ap, uint32_t);
 	va_end(ap);
 
@@ -182,8 +182,8 @@ iap_status_e lpc_iap_call(lpc_flash_s *f, void *result, iap_cmd_e cmd, ...)
 	return param.status;
 }
 
-#define LPX80X_SECTOR_SIZE 0x400
-#define LPX80X_PAGE_SIZE   0x40
+#define LPX80X_SECTOR_SIZE 0x400U
+#define LPX80X_PAGE_SIZE   0x40U
 
 bool lpc_flash_erase(target_flash_s *tf, target_addr_t addr, size_t len)
 {
@@ -211,7 +211,7 @@ bool lpc_flash_erase(target_flash_s *tf, target_addr_t addr, size_t len)
 
 	if (last_full_sector != end) {
 		const uint32_t page_start = (addr + len - LPX80X_SECTOR_SIZE) / LPX80X_PAGE_SIZE;
-		const uint32_t page_end = page_start + LPX80X_SECTOR_SIZE / LPX80X_PAGE_SIZE - 1 - f->reserved_pages;
+		const uint32_t page_end = page_start + LPX80X_SECTOR_SIZE / LPX80X_PAGE_SIZE - 1U - f->reserved_pages;
 
 		if (lpc_iap_call(f, NULL, IAP_CMD_PREPARE, end, end, f->bank))
 			return false;
@@ -268,10 +268,10 @@ bool lpc_flash_write_magic_vect(target_flash_s *f, target_addr_t dest, const voi
 		uint32_t sum = 0;
 
 		/* compute checksum of first 7 vectors */
-		for (size_t i = 0; i < 7; ++i)
+		for (size_t i = 0; i < 7U; ++i)
 			sum += w[i];
 		/* two's complement is written to 8'th vector */
-		w[7] = ~sum + 1;
+		w[7] = ~sum + 1U;
 	}
 	return lpc_flash_write(f, dest, src, len);
 }
