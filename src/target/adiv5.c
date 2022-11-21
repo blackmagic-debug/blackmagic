@@ -643,12 +643,16 @@ adiv5_access_port_s *adiv5_new_ap(adiv5_debug_port_s *dp, uint8_t apsel)
 	tmpap.apsel = apsel;
 	tmpap.idr = adiv5_ap_read(&tmpap, ADIV5_AP_IDR);
 	tmpap.base = adiv5_ap_read(&tmpap, ADIV5_AP_BASE);
-	/* Check the Debug Base Address register. See ADIv5
-		 * Specification C2.6.1 */
+	/*
+	 * Check the Debug Base Address register. See ADIv5
+	 * Specification C2.6.1
+	 */
 	if (tmpap.base == 0xffffffffU) {
-		/* Debug Base Address not present in this MEM-AP */
-		/* No debug entries... useless AP */
-		/* AP0 on STM32MP157C reads 0x00000002 */
+		/*
+		 * Debug Base Address not present in this MEM-AP
+		 * No debug entries... useless AP
+		 * AP0 on STM32MP157C reads 0x00000002
+		 */
 		return NULL;
 	}
 
