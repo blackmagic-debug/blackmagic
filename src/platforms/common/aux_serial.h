@@ -37,7 +37,7 @@
 #define USART_DMA_BUF_SIZE   (1U << USART_DMA_BUF_SHIFT)
 #define AUX_UART_BUFFER_SIZE (USART_DMA_BUF_SIZE)
 #elif defined(LM4F)
-#define AUX_UART_BUFFER_SIZE 128
+#define AUX_UART_BUFFER_SIZE 128U
 #endif
 
 void aux_serial_init(void);

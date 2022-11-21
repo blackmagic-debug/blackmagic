@@ -27,20 +27,20 @@
 extern usbd_device *usbdev;
 extern uint16_t usb_config;
 
-#define CDCACM_PACKET_SIZE 64
+#define CDCACM_PACKET_SIZE 64U
 
-#define CDCACM_GDB_ENDPOINT  1
-#define CDCACM_UART_ENDPOINT 3
-#define TRACE_ENDPOINT       5
+#define CDCACM_GDB_ENDPOINT  1U
+#define CDCACM_UART_ENDPOINT 3U
+#define TRACE_ENDPOINT       5U
 
-#define GDB_IF_NO  0
-#define UART_IF_NO 2
-#define DFU_IF_NO  4
+#define GDB_IF_NO  0U
+#define UART_IF_NO 2U
+#define DFU_IF_NO  4U
 #ifdef PLATFORM_HAS_TRACESWO
-#define TRACE_IF_NO      5
-#define TOTAL_INTERFACES 6
+#define TRACE_IF_NO      5U
+#define TOTAL_INTERFACES 6U
 #else
-#define TOTAL_INTERFACES 5
+#define TOTAL_INTERFACES 5U
 #endif
 
 void blackmagic_usb_init(void);
