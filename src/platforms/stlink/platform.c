@@ -73,7 +73,7 @@ void platform_init(void)
 	SCB_VTOR = (uintptr_t)&vector_table;
 
 	platform_timing_init();
-	if (rev > 1) /* Reconnect USB */
+	if (rev > 1U) /* Reconnect USB */
 		gpio_set(GPIOA, GPIO15);
 	blackmagic_usb_init();
 
@@ -119,7 +119,7 @@ static void adc_init(void)
 	adc_power_on(ADC1);
 
 	/* Wait for the ADC to finish starting up */
-	for (volatile size_t i = 0; i < 800000; ++i)
+	for (volatile size_t i = 0; i < 800000U; ++i)
 		continue;
 
 	adc_reset_calibration(ADC1);
@@ -146,10 +146,10 @@ const char *platform_target_voltage(void)
 	uint32_t vrefint_value = adc_read_regular(ADC1);
 
 	/* Value in milivolts */
-	uint32_t val = (platform_adc_value * 2400) / vrefint_value;
-	ret[0] = '0' + val / 1000;
-	ret[2] = '0' + (val / 100) % 10;
-	ret[3] = '0' + (val / 10) % 10;
+	uint32_t val = (platform_adc_value * 2400U) / vrefint_value;
+	ret[0] = '0' + val / 1000U;
+	ret[2] = '0' + (val / 100U) % 10U;
+	ret[3] = '0' + (val / 10U) % 10U;
 
 	return ret;
 }
