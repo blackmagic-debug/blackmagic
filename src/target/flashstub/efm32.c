@@ -19,28 +19,28 @@
 #include <stdint.h>
 #include "stub.h"
 
-#define EFM32_MSC_WRITECTRL(msc) *((volatile uint32_t *)((msc) + 0x008))
-#define EFM32_MSC_WRITECMD(msc)  *((volatile uint32_t *)((msc) + 0x00c))
-#define EFM32_MSC_ADDRB(msc)     *((volatile uint32_t *)((msc) + 0x010))
-#define EFM32_MSC_WDATA(msc)     *((volatile uint32_t *)((msc) + 0x018))
-#define EFM32_MSC_STATUS(msc)    *((volatile uint32_t *)((msc) + 0x01c))
-#define EFM32_MSC_LOCK(msc)      *((volatile uint32_t *)((msc) + ((msc) == 0x400c0000 ? 0x3c : 0x40)))
-#define EFM32_MSC_MASSLOCK(msc)  *((volatile uint32_t *)((msc) + 0x054))
+#define EFM32_MSC_WRITECTRL(msc) *((volatile uint32_t *)((msc) + 0x008U))
+#define EFM32_MSC_WRITECMD(msc)  *((volatile uint32_t *)((msc) + 0x00cU))
+#define EFM32_MSC_ADDRB(msc)     *((volatile uint32_t *)((msc) + 0x010U))
+#define EFM32_MSC_WDATA(msc)     *((volatile uint32_t *)((msc) + 0x018U))
+#define EFM32_MSC_STATUS(msc)    *((volatile uint32_t *)((msc) + 0x01cU))
+#define EFM32_MSC_LOCK(msc)      *((volatile uint32_t *)((msc) + ((msc) == 0x400c0000U ? 0x3cU : 0x40U)))
+#define EFM32_MSC_MASSLOCK(msc)  *((volatile uint32_t *)((msc) + 0x054U))
 
-#define EFM32_MSC_LOCK_LOCKKEY 0x1b71
+#define EFM32_MSC_LOCK_LOCKKEY 0x1b71U
 
-#define EFM32_MSC_WRITECMD_LADDRIM    (1 << 0)
-#define EFM32_MSC_WRITECMD_ERASEPAGE  (1 << 1)
-#define EFM32_MSC_WRITECMD_WRITEEND   (1 << 2)
-#define EFM32_MSC_WRITECMD_WRITEONCE  (1 << 3)
-#define EFM32_MSC_WRITECMD_WRITETRIG  (1 << 4)
-#define EFM32_MSC_WRITECMD_ERASEABORT (1 << 5)
+#define EFM32_MSC_WRITECMD_LADDRIM    (1U << 0U)
+#define EFM32_MSC_WRITECMD_ERASEPAGE  (1U << 1U)
+#define EFM32_MSC_WRITECMD_WRITEEND   (1U << 2U)
+#define EFM32_MSC_WRITECMD_WRITEONCE  (1U << 3U)
+#define EFM32_MSC_WRITECMD_WRITETRIG  (1U << 4U)
+#define EFM32_MSC_WRITECMD_ERASEABORT (1U << 5U)
 
-#define EFM32_MSC_STATUS_BUSY        (1 << 0)
-#define EFM32_MSC_STATUS_LOCKED      (1 << 1)
-#define EFM32_MSC_STATUS_INVADDR     (1 << 2)
-#define EFM32_MSC_STATUS_WDATAREADY  (1 << 3)
-#define EFM32_MSC_STATUS_WORDTIMEOUT (1 << 4)
+#define EFM32_MSC_STATUS_BUSY        (1U << 0U)
+#define EFM32_MSC_STATUS_LOCKED      (1U << 1U)
+#define EFM32_MSC_STATUS_INVADDR     (1U << 2U)
+#define EFM32_MSC_STATUS_WDATAREADY  (1U << 3U)
+#define EFM32_MSC_STATUS_WORDTIMEOUT (1U << 4U)
 
 void __attribute__((naked))
 efm32_flash_write_stub(const uint32_t *const dest, const uint32_t *const src, uint32_t size, const uint32_t msc_addr)
@@ -49,7 +49,7 @@ efm32_flash_write_stub(const uint32_t *const dest, const uint32_t *const src, ui
 	EFM32_MSC_LOCK(msc) = EFM32_MSC_LOCK_LOCKKEY;
 	EFM32_MSC_WRITECTRL(msc) = 1;
 
-	for (uint32_t i = 0; i < size / 4; i++) {
+	for (uint32_t i = 0; i < size / 4U; i++) {
 		EFM32_MSC_ADDRB(msc) = (uintptr_t)(dest + i);
 		EFM32_MSC_WRITECMD(msc) = EFM32_MSC_WRITECMD_LADDRIM;
 
