@@ -57,7 +57,7 @@ extern uint32_t delay_cnt;
 #define BMP_DEBUG_MAX    (1U << 5U)
 #define BMP_DEBUG_STDOUT (1U << 15U)
 
-#define FREQ_FIXED 0xffffffff
+#define FREQ_FIXED 0xffffffffU
 
 #if PC_HOSTED == 0
 /*
@@ -187,10 +187,10 @@ static inline void DEBUG_WIRE(const char *format, ...)
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 
 #if !defined(SYSTICKHZ)
-#define SYSTICKHZ 100
+#define SYSTICKHZ 100U
 #endif
 
-#define SYSTICKMS (1000 / SYSTICKHZ)
-#define MORSECNT  ((SYSTICKHZ / 10) - 1)
+#define SYSTICKMS (1000U / SYSTICKHZ)
+#define MORSECNT  ((SYSTICKHZ / 10U) - 1U)
 
 #endif /* INCLUDE_GENERAL_H */
