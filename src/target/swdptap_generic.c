@@ -27,7 +27,7 @@ uint32_t swdptap_seq_in(int ticks)
 	while (ticks--) {
 		if (swdptap_bit_in())
 			ret |= index;
-		index <<= 1;
+		index <<= 1U;
 	}
 
 	return ret;
@@ -42,12 +42,12 @@ bool swdptap_seq_in_parity(uint32_t *ret, int ticks)
 	while (ticks--) {
 		if (swdptap_bit_in()) {
 			*ret |= index;
-			parity ^= 1;
+			parity ^= 1U;
 		}
-		index <<= 1;
+		index <<= 1U;
 	}
 	if (swdptap_bit_in())
-		parity ^= 1;
+		parity ^= 1U;
 
 	return parity;
 }
@@ -55,8 +55,8 @@ bool swdptap_seq_in_parity(uint32_t *ret, int ticks)
 void swdptap_seq_out(uint32_t MS, int ticks)
 {
 	while (ticks--) {
-		swdptap_bit_out(MS & 1);
-		MS >>= 1;
+		swdptap_bit_out(MS & 1U);
+		MS >>= 1U;
 	}
 }
 
@@ -65,9 +65,9 @@ void swdptap_seq_out_parity(uint32_t MS, int ticks)
 	uint8_t parity = 0;
 
 	while (ticks--) {
-		swdptap_bit_out(MS & 1);
+		swdptap_bit_out(MS & 1U);
 		parity ^= MS;
-		MS >>= 1;
+		MS >>= 1U;
 	}
-	swdptap_bit_out(parity & 1);
+	swdptap_bit_out(parity & 1U);
 }
