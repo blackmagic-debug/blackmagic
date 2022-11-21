@@ -72,6 +72,7 @@
 #define RP_GPIO_QSPI_CS_DRIVE_HIGH        (3U << 8U)
 #define RP_GPIO_QSPI_CS_DRIVE_MASK        0x00000300U
 #define RP_GPIO_QSPI_SD1_CTRL_INOVER_BITS 0x00030000U
+#define RP_GPIO_QSPI_SCLK_POR             0x0000001fU
 
 #define RP_SSI_BASE_ADDR                       0x18000000U
 #define RP_SSI_CTRL0                           (RP_SSI_BASE_ADDR + 0x00U)
@@ -123,7 +124,9 @@
 #define RP_XIP_BASE_ADDR   0x14000000U
 #define RP_XIP_CTRL        (RP_XIP_BASE_ADDR + 0x00U)
 #define RP_XIP_FLUSH       (RP_XIP_BASE_ADDR + 0x04U)
+#define RP_XIP_STAT        (RP_XIP_BASE_ADDR + 0x08U)
 #define RP_XIP_CTRL_ENABLE 0x00000001U
+#define RP_XIP_STAT_POR    0x00000002U
 
 #define RP_RESETS_BASE_ADDR            0x4000c000U
 #define RP_RESETS_RESET                (RP_RESETS_BASE_ADDR + 0x00U)
@@ -207,6 +210,7 @@ static void rp_spi_read(target_s *t, uint16_t command, target_addr_t address, vo
 static uint32_t rp_get_flash_length(target_s *t);
 static bool rp_mass_erase(target_s *t);
 
+static bool rp_flash_in_por_state(target_s *t);
 // Our own implementation of bootloader functions for handling flash chip
 static void rp_flash_exit_xip(target_s *t);
 static void rp_flash_enter_xip(target_s *t);
@@ -226,7 +230,10 @@ static void rp_add_flash(target_s *t)
 		return;
 	}
 
-	rp_flash_connect_internal(t);
+	const bool por_state = rp_flash_in_por_state(t);
+	DEBUG_INFO("RP2040 Flash controller %sin POR state, reconfiguring\n", por_state ? "" : "not ");
+	if (por_state)
+		rp_flash_connect_internal(t);
 	rp_flash_exit_xip(t);
 
 	spi_parameters_s spi_parameters;
@@ -238,7 +245,8 @@ static void rp_add_flash(target_s *t)
 		spi_parameters.sector_erase_opcode = SPI_FLASH_CMD_SECTOR_ERASE;
 	}
 
-	rp_flash_flush_cache(t);
+	if (por_state)
+		rp_flash_flush_cache(t);
 	rp_flash_enter_xip(t);
 
 	DEBUG_INFO("Flash size: %uMiB\n", spi_parameters.capacity / (1024U * 1024U));
@@ -613,6 +621,16 @@ static void rp_spi_read(
 	target_mem_write32(t, RP_SSI_CTRL0, ctrl0);
 	target_mem_write32(t, RP_SSI_XIP_SPI_CTRL0, xpi_ctrl0);
 	target_mem_write32(t, RP_SSI_ENABLE, ssi_enabled);
+}
+
+/* Checks if the QSPI and XIP controllers are in their POR state */
+static bool rp_flash_in_por_state(target_s *const t)
+{
+	const uint32_t xip_state = target_mem_read32(t, RP_XIP_STAT);
+	const uint32_t qspi_sclk_state = target_mem_read32(t, RP_GPIO_QSPI_SCLK_CTRL);
+	const uint32_t ssi_state = target_mem_read32(t, RP_SSI_ENABLE);
+	/* Check the XIP, QSPI and SSI controllers for their POR states, indicating we need to configure them */
+	return xip_state == RP_XIP_STAT_POR && qspi_sclk_state == RP_GPIO_QSPI_SCLK_POR && ssi_state == 0U;
 }
 
 // Connect the XIP controller to the flash pads
