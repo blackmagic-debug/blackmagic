@@ -170,13 +170,13 @@ static bool stm32lx_is_stm32l1(target_s *t)
 static uint32_t stm32lx_nvm_eeprom_size(target_s *t)
 {
 	switch (t->part_id) {
-	case 0x457: /* STM32L0xx Cat1 */
+	case 0x457U: /* STM32L0xx Cat1 */
 		return STM32L0_NVM_EEPROM_CAT1_SIZE;
-	case 0x425: /* STM32L0xx Cat2 */
+	case 0x425U: /* STM32L0xx Cat2 */
 		return STM32L0_NVM_EEPROM_CAT2_SIZE;
-	case 0x417: /* STM32L0xx Cat3 */
+	case 0x417U: /* STM32L0xx Cat3 */
 		return STM32L0_NVM_EEPROM_CAT3_SIZE;
-	case 0x447: /* STM32L0xx Cat5 */
+	case 0x447U: /* STM32L0xx Cat5 */
 		return STM32L0_NVM_EEPROM_CAT5_SIZE;
 	default: /* STM32L1xx */
 		return STM32L1_NVM_EEPROM_SIZE;
@@ -210,7 +210,7 @@ static void stm32l_add_flash(target_s *t, uint32_t addr, size_t length, size_t e
 	f->blocksize = erasesize;
 	f->erase = stm32lx_nvm_prog_erase;
 	f->write = stm32lx_nvm_prog_write;
-	f->writesize = erasesize / 2;
+	f->writesize = erasesize / 2U;
 	target_add_flash(t, f);
 }
 
@@ -238,21 +238,21 @@ static void stm32l_add_eeprom(target_s *t, uint32_t addr, size_t length)
 bool stm32l0_probe(target_s *t)
 {
 	switch (t->part_id) {
-	case 0x416: /* CAT. 1 device */
-	case 0x429: /* CAT. 2 device */
-	case 0x427: /* CAT. 3 device */
-	case 0x436: /* CAT. 4 device */
-	case 0x437: /* CAT. 5 device  */
+	case 0x416U: /* CAT. 1 device */
+	case 0x429U: /* CAT. 2 device */
+	case 0x427U: /* CAT. 3 device */
+	case 0x436U: /* CAT. 4 device */
+	case 0x437U: /* CAT. 5 device  */
 		t->driver = "STM32L1x";
 		target_add_ram(t, 0x20000000, 0x14000);
 		stm32l_add_flash(t, 0x8000000, 0x80000, 0x100);
 		//stm32l_add_eeprom(t, 0x8080000, 0x4000);
 		target_add_commands(t, stm32lx_cmd_list, "STM32L1x");
 		return true;
-	case 0x457: /* STM32L0xx Cat1 */
-	case 0x425: /* STM32L0xx Cat2 */
-	case 0x417: /* STM32L0xx Cat3 */
-	case 0x447: /* STM32L0xx Cat5 */
+	case 0x457U: /* STM32L0xx Cat1 */
+	case 0x425U: /* STM32L0xx Cat2 */
+	case 0x417U: /* STM32L0xx Cat3 */
+	case 0x447U: /* STM32L0xx Cat5 */
 		t->driver = "STM32L0x";
 		target_add_ram(t, 0x20000000, 0x5000);
 		stm32l_add_flash(t, 0x8000000, 0x10000, 0x80);
@@ -426,7 +426,7 @@ static bool stm32lx_nvm_data_write(
 	target_mem_write32(t, STM32Lx_NVM_PECR(nvm), is_stm32l1 ? 0 : STM32Lx_NVM_PECR_DATA);
 
 	/* Sling data to the target one uint32_t at a time */
-	for (size_t offset = 0; offset < size; offset += 4) {
+	for (size_t offset = 0; offset < size; offset += 4U) {
 		/* XXX: Why is this not able to use target_mem_write()? */
 		target_mem_write32(t, dest + offset, data[offset]);
 		if (target_check_error(t))
@@ -601,15 +601,15 @@ static bool stm32lx_cmd_eeprom(target_s *t, int argc, const char **argv)
 			if (!stm32lx_eeprom_write(t, addr, 1, val))
 				tc_printf(t, "eeprom write failed\n");
 		} else if (!strncasecmp(argv[1], "halfword", command_len)) {
-			val &= 0xffff;
+			val &= 0xffffU;
 			tc_printf(t, "write halfword 0x%08x <- 0x%04x\n", addr, val);
-			if (addr & 1)
+			if (addr & 1U)
 				goto usage;
 			if (!stm32lx_eeprom_write(t, addr, 2, val))
 				tc_printf(t, "eeprom write failed\n");
 		} else if (!strncasecmp(argv[1], "word", command_len)) {
 			tc_printf(t, "write word 0x%08x <- 0x%08x\n", addr, val);
-			if (addr & 3)
+			if (addr & 3U)
 				goto usage;
 			if (!stm32lx_eeprom_write(t, addr, 4, val))
 				tc_printf(t, "eeprom write failed\n");
