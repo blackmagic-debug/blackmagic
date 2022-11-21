@@ -99,8 +99,8 @@
 /* For STM32F4 DMA trigger source must be specified */
 #define USBUSART_DMA_TRG DMA_SxCR_CHSEL_4
 
-#define BOOTMAGIC0 0xb007da7a
-#define BOOTMAGIC1 0xbaadfeed
+#define BOOTMAGIC0 UINT32_C(0xb007da7a)
+#define BOOTMAGIC1 UINT32_C(0xbaadfeed)
 
 #define TMS_SET_MODE()     gpio_mode_setup(TMS_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TMS_PIN);
 #define SWDIO_MODE_FLOAT() gpio_mode_setup(SWDIO_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, SWDIO_PIN);
@@ -123,10 +123,10 @@
  * Interrupt priorities.  Low numbers are high priority.
  * TIM3 is used for traceswo capture and must be highest priority.
  */
-#define IRQ_PRI_USB          (1 << 4)
-#define IRQ_PRI_USBUSART     (2 << 4)
-#define IRQ_PRI_USBUSART_DMA (2 << 4)
-#define IRQ_PRI_TRACE        (0 << 4)
+#define IRQ_PRI_USB          (1U << 4U)
+#define IRQ_PRI_USBUSART     (2U << 4U)
+#define IRQ_PRI_USBUSART_DMA (2U << 4U)
+#define IRQ_PRI_TRACE        (0U << 4U)
 
 #define TRACE_TIM          TIM3
 #define TRACE_TIM_CLK_EN() rcc_periph_clock_enable(RCC_TIM3)
