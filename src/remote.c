@@ -83,8 +83,8 @@ static void remote_respond(char respCode, uint64_t param)
 	gdb_if_putchar(respCode, 0);
 
 	do {
-		*p++ = NTOH((param & 0x0f));
-		param >>= 4;
+		*p++ = NTOH(param & 0x0fU);
+		param >>= 4U;
 	} while (param);
 
 	/* At this point the number to print is the buf, but backwards, so spool it out */
@@ -193,7 +193,7 @@ static void remote_packet_process_jtag(unsigned i, char *packet)
 		ticks = remotehston(2, &packet[2]);
 		MS = remotehston(2, &packet[4]);
 
-		if (i < 4) {
+		if (i < 4U) {
 			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_WRONGLEN);
 		} else {
 			jtag_proc.jtagtap_tms_seq(MS, ticks);
@@ -213,7 +213,7 @@ static void remote_packet_process_jtag(unsigned i, char *packet)
 	case REMOTE_TDITDO_TMS: /* JD = TDI/TDO  ========================================= */
 	case REMOTE_TDITDO_NOTMS:
 
-		if (i < 5) {
+		if (i < 5U) {
 			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_WRONGLEN);
 		} else {
 			ticks = remotehston(2, &packet[2]);
@@ -227,7 +227,7 @@ static void remote_packet_process_jtag(unsigned i, char *packet)
 		break;
 
 	case REMOTE_NEXT: /* JN = NEXT ======================================== */
-		if (i != 4)
+		if (i != 4U)
 			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_WRONGLEN);
 		else {
 			const bool tdo = jtag_proc.jtagtap_next(packet[2] == '1', packet[3] == '1');
@@ -236,7 +236,7 @@ static void remote_packet_process_jtag(unsigned i, char *packet)
 		break;
 
 	case REMOTE_ADD_JTAG_DEV: /* JJ = fill firmware jtag_devs */
-		if (i < 22) {
+		if (i < 22U) {
 			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_WRONGLEN);
 		} else {
 			memset(&jtag_dev, 0, sizeof(jtag_dev));
@@ -335,7 +335,7 @@ static void remote_packet_process_high_level(unsigned i, char *packet)
 
 	adiv5_access_port_s remote_ap;
 	/* Re-use packet buffer. Align to DWORD! */
-	void *src = (void *)(((uint32_t)packet + 7) & ~7);
+	void *src = (void *)(((uint32_t)packet + 7U) & ~7U);
 	char index = packet[1];
 	if (index == REMOTE_HL_CHECK) {
 		remote_respond(REMOTE_RESP_OK, REMOTE_HL_VERSION);
@@ -407,7 +407,7 @@ static void remote_packet_process_high_level(unsigned i, char *packet)
 		packet += 8;
 		size_t len = remotehston(8, packet);
 		packet += 8;
-		if (len & ((1 << align) - 1)) {
+		if (len & ((1U << align) - 1U)) {
 			/* len  and align do not fit*/
 			remote_respond(REMOTE_RESP_ERR, 0);
 			break;
