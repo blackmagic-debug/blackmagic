@@ -214,9 +214,9 @@ void aux_serial_set_encoding(usb_cdc_line_coding_s *coding)
 
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4)
 	if (coding->bParityType)
-		usart_set_databits(USBUSART, (coding->bDataBits + 1 <= 8 ? 8 : 9));
+		usart_set_databits(USBUSART, coding->bDataBits + 1U <= 8U ? 8 : 9);
 	else
-		usart_set_databits(USBUSART, (coding->bDataBits <= 8 ? 8 : 9));
+		usart_set_databits(USBUSART, coding->bDataBits <= 8U ? 8 : 9);
 #elif defined(LM4F)
 	uart_set_databits(USBUART, coding->bDataBits);
 #endif
@@ -285,7 +285,7 @@ void aux_serial_switch_transmit_buffers(void)
 
 	/* Change active buffer */
 	aux_serial_transmit_buffer_consumed = 0;
-	aux_serial_transmit_buffer_index ^= 1;
+	aux_serial_transmit_buffer_index ^= 1U;
 }
 
 void aux_serial_send(const size_t len)
@@ -493,7 +493,7 @@ void USBUART_ISR(void)
 		/* If the next increment of rx_in would put it at the same point
 		* as rx_out, the FIFO is considered full.
 		*/
-		if (((aux_serial_receive_write_index + 1) % AUX_UART_BUFFER_SIZE) != aux_serial_receive_read_index) {
+		if (((aux_serial_receive_write_index + 1U) % AUX_UART_BUFFER_SIZE) != aux_serial_receive_read_index) {
 			/* insert into FIFO */
 			aux_serial_receive_buffer[aux_serial_receive_write_index++] = c;
 

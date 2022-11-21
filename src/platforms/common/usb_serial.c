@@ -96,7 +96,7 @@ static usbd_request_return_codes_e gdb_serial_control_request(usbd_device *dev, 
 	switch (req->bRequest) {
 	case USB_CDC_REQ_SET_CONTROL_LINE_STATE:
 		usb_serial_set_state(dev, req->wIndex, CDCACM_GDB_ENDPOINT);
-		gdb_serial_dtr = req->wValue & 1;
+		gdb_serial_dtr = req->wValue & 1U;
 		return USBD_REQ_HANDLED;
 	case USB_CDC_REQ_SET_LINE_CODING:
 		if (*len < sizeof(usb_cdc_line_coding_s))
@@ -164,14 +164,14 @@ void usb_serial_set_config(usbd_device *dev, uint16_t value)
 	usbd_ep_setup(dev, CDCACM_GDB_ENDPOINT, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE, NULL);
 #endif
 	usbd_ep_setup(dev, CDCACM_GDB_ENDPOINT | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE, NULL);
-	usbd_ep_setup(dev, (CDCACM_GDB_ENDPOINT + 1) | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
+	usbd_ep_setup(dev, (CDCACM_GDB_ENDPOINT + 1U) | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
 
 	/* Serial interface */
 	usbd_ep_setup(
-		dev, CDCACM_UART_ENDPOINT, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE / 2, debug_serial_receive_callback);
+		dev, CDCACM_UART_ENDPOINT, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE / 2U, debug_serial_receive_callback);
 	usbd_ep_setup(dev, CDCACM_UART_ENDPOINT | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_BULK, CDCACM_PACKET_SIZE,
 		debug_serial_send_callback);
-	usbd_ep_setup(dev, (CDCACM_UART_ENDPOINT + 1) | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
+	usbd_ep_setup(dev, (CDCACM_UART_ENDPOINT + 1U) | USB_REQ_TYPE_IN, USB_ENDPOINT_ATTR_INTERRUPT, 16, NULL);
 
 #ifdef PLATFORM_HAS_TRACESWO
 	/* Trace interface */
@@ -211,7 +211,7 @@ uint32_t debug_serial_fifo_send(const char *const fifo, const uint32_t fifo_begi
 	 * To avoid the need of sending ZLP don't transmit full packet.
 	 * Also reserve space for copy function overrun.
 	 */
-	char packet[CDCACM_PACKET_SIZE - 1];
+	char packet[CDCACM_PACKET_SIZE - 1U];
 	uint32_t packet_len = 0;
 	for (uint32_t fifo_index = fifo_begin; fifo_index != fifo_end && packet_len < CDCACM_PACKET_SIZE - 1U;
 		 fifo_index %= AUX_UART_BUFFER_SIZE)
@@ -331,12 +331,13 @@ static size_t debug_serial_debug_write(const char *buf, const size_t len)
 	CM_ATOMIC_CONTEXT();
 	size_t offset = 0;
 
-	for (; offset < len && (debug_serial_debug_write_index + 1) % AUX_UART_BUFFER_SIZE != debug_serial_debug_read_index;
+	for (;
+		 offset < len && (debug_serial_debug_write_index + 1U) % AUX_UART_BUFFER_SIZE != debug_serial_debug_read_index;
 		 ++offset) {
 		if (buf[offset] == '\n') {
 			debug_serial_append_char('\r');
 
-			if ((debug_serial_debug_write_index + 1) % AUX_UART_BUFFER_SIZE == debug_serial_debug_read_index)
+			if ((debug_serial_debug_write_index + 1U) % AUX_UART_BUFFER_SIZE == debug_serial_debug_read_index)
 				break;
 		}
 		debug_serial_append_char(buf[offset]);

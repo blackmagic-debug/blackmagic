@@ -62,7 +62,7 @@ static const usb_device_descriptor_s dev_desc = {
 static const usb_endpoint_descriptor_s gdb_comm_endp = {
 	.bLength = USB_DT_ENDPOINT_SIZE,
 	.bDescriptorType = USB_DT_ENDPOINT,
-	.bEndpointAddress = (CDCACM_GDB_ENDPOINT + 1) | USB_REQ_TYPE_IN,
+	.bEndpointAddress = (CDCACM_GDB_ENDPOINT + 1U) | USB_REQ_TYPE_IN,
 	.bmAttributes = USB_ENDPOINT_ATTR_INTERRUPT,
 	.wMaxPacketSize = 16,
 	.bInterval = 255,
@@ -106,7 +106,7 @@ static const struct {
 			.bDescriptorType = CS_INTERFACE,
 			.bDescriptorSubtype = USB_CDC_TYPE_CALL_MANAGEMENT,
 			.bmCapabilities = 0,
-			.bDataInterface = GDB_IF_NO + 1,
+			.bDataInterface = GDB_IF_NO + 1U,
 		},
 	.acm =
 		{
@@ -121,7 +121,7 @@ static const struct {
 			.bDescriptorType = CS_INTERFACE,
 			.bDescriptorSubtype = USB_CDC_TYPE_UNION,
 			.bControlInterface = GDB_IF_NO,
-			.bSubordinateInterface0 = GDB_IF_NO + 1,
+			.bSubordinateInterface0 = GDB_IF_NO + 1U,
 		},
 };
 
@@ -145,7 +145,7 @@ static const usb_interface_descriptor_s gdb_comm_iface = {
 static const usb_interface_descriptor_s gdb_data_iface = {
 	.bLength = USB_DT_INTERFACE_SIZE,
 	.bDescriptorType = USB_DT_INTERFACE,
-	.bInterfaceNumber = GDB_IF_NO + 1,
+	.bInterfaceNumber = GDB_IF_NO + 1U,
 	.bAlternateSetting = 0,
 	.bNumEndpoints = 2,
 	.bInterfaceClass = USB_CLASS_DATA,
@@ -172,7 +172,7 @@ static const usb_iface_assoc_descriptor_s gdb_assoc = {
 static const usb_endpoint_descriptor_s uart_comm_endp = {
 	.bLength = USB_DT_ENDPOINT_SIZE,
 	.bDescriptorType = USB_DT_ENDPOINT,
-	.bEndpointAddress = (CDCACM_UART_ENDPOINT + 1) | USB_REQ_TYPE_IN,
+	.bEndpointAddress = (CDCACM_UART_ENDPOINT + 1U) | USB_REQ_TYPE_IN,
 	.bmAttributes = USB_ENDPOINT_ATTR_INTERRUPT,
 	.wMaxPacketSize = 16,
 	.bInterval = 255,
@@ -184,7 +184,7 @@ static const usb_endpoint_descriptor_s uart_data_endp[] = {
 		.bDescriptorType = USB_DT_ENDPOINT,
 		.bEndpointAddress = CDCACM_UART_ENDPOINT,
 		.bmAttributes = USB_ENDPOINT_ATTR_BULK,
-		.wMaxPacketSize = CDCACM_PACKET_SIZE / 2,
+		.wMaxPacketSize = CDCACM_PACKET_SIZE / 2U,
 		.bInterval = 1,
 	},
 	{
@@ -216,7 +216,7 @@ static const struct {
 			.bDescriptorType = CS_INTERFACE,
 			.bDescriptorSubtype = USB_CDC_TYPE_CALL_MANAGEMENT,
 			.bmCapabilities = 0,
-			.bDataInterface = UART_IF_NO + 1,
+			.bDataInterface = UART_IF_NO + 1U,
 		},
 	.acm =
 		{
@@ -231,7 +231,7 @@ static const struct {
 			.bDescriptorType = CS_INTERFACE,
 			.bDescriptorSubtype = USB_CDC_TYPE_UNION,
 			.bControlInterface = UART_IF_NO,
-			.bSubordinateInterface0 = UART_IF_NO + 1,
+			.bSubordinateInterface0 = UART_IF_NO + 1U,
 		},
 };
 
@@ -255,7 +255,7 @@ static const usb_interface_descriptor_s uart_comm_iface = {
 static const usb_interface_descriptor_s uart_data_iface = {
 	.bLength = USB_DT_INTERFACE_SIZE,
 	.bDescriptorType = USB_DT_INTERFACE,
-	.bInterfaceNumber = UART_IF_NO + 1,
+	.bInterfaceNumber = UART_IF_NO + 1U,
 	.bAlternateSetting = 0,
 	.bNumEndpoints = 2,
 	.bInterfaceClass = USB_CLASS_DATA,
