@@ -60,7 +60,7 @@ int main(void)
 		pin_nrst = GPIO0;
 	}
 
-	if ((GPIOA_CRL & 0x40) == 0x40 && stlink_test_nrst())
+	if ((GPIOA_CRL & 0x40U) == 0x40U && stlink_test_nrst())
 		dfu_jump_app_if_valid();
 	dfu_protect(false);
 
@@ -71,7 +71,7 @@ int main(void)
 	systick_interrupt_enable();
 	systick_counter_enable();
 
-	if (rev > 1)
+	if (rev > 1U)
 		gpio_set(GPIOA, GPIO15);
 	dfu_init(&st_usbfs_v1_usb_driver);
 
@@ -87,7 +87,7 @@ void sys_tick_handler(void)
 	if (rev == 0) {
 		gpio_toggle(GPIOA, led_bootloader);
 	} else {
-		if (led2_state & 1) {
+		if (led2_state & 1U) {
 			gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, led_bootloader);
 			gpio_clear(GPIOA, led_bootloader);
 		} else

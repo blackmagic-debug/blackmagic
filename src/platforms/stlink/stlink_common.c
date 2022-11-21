@@ -28,7 +28,7 @@
 static bool stlink_stable_read(const uint32_t gpio_port, const uint16_t gpio)
 {
 	bool result = false;
-	for (volatile size_t i = 0; i < 100; ++i)
+	for (volatile size_t i = 0; i < 100U; ++i)
 		result = gpio_get(gpio_port, gpio);
 	return result;
 }
@@ -69,7 +69,7 @@ uint32_t detect_rev(void)
 		 * Enable internal pull-down on PA15 - if still high it is V2.1.
 		 */
 		rcc_periph_clock_enable(RCC_AFIO);
-		AFIO_MAPR |= 0x02000000; /* Release from TDI. */
+		AFIO_MAPR |= 0x02000000U; /* Release from TDI. */
 		gpio_set_mode(GPIOA, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, GPIO15);
 		gpio_clear(GPIOA, GPIO15);
 		if (stlink_stable_read(GPIOA, GPIO15)) {
@@ -89,7 +89,7 @@ uint32_t detect_rev(void)
 		gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO8);
 	}
 	/* Clean up after ourself on boards that aren't identified as ST-Link v2.1's */
-	if (revision < 2) {
+	if (revision < 2U) {
 		gpio_clear(GPIOA, GPIO12);
 		gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_OPENDRAIN, GPIO12);
 	}

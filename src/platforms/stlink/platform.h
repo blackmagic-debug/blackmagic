@@ -71,26 +71,26 @@ extern bool debug_bmp;
 #define PLATFORM_HAS_TRACESWO 1
 #endif
 
-#define NUM_TRACE_PACKETS (128) /* This is an 8K buffer */
-#define TRACESWO_PROTOCOL 2     /* 1 = Manchester, 2 = NRZ / async */
+#define NUM_TRACE_PACKETS 128U /* This is an 8K buffer */
+#define TRACESWO_PROTOCOL 2U   /* 1 = Manchester, 2 = NRZ / async */
 
 #define SWD_CR      GPIO_CRH(SWDIO_PORT)
-#define SWD_CR_MULT (1 << ((14 - 8) << 2))
+#define SWD_CR_MULT (1U << ((14U - 8U) << 2U))
 
 #define TMS_SET_MODE() gpio_set_mode(TMS_PORT, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, TMS_PIN);
-#define SWDIO_MODE_FLOAT()          \
-	do {                            \
-		uint32_t cr = SWD_CR;       \
-		cr &= ~(0xf * SWD_CR_MULT); \
-		cr |= (0x4 * SWD_CR_MULT);  \
-		SWD_CR = cr;                \
+#define SWDIO_MODE_FLOAT()           \
+	do {                             \
+		uint32_t cr = SWD_CR;        \
+		cr &= ~(0xfU * SWD_CR_MULT); \
+		cr |= (0x4U * SWD_CR_MULT);  \
+		SWD_CR = cr;                 \
 	} while (0)
-#define SWDIO_MODE_DRIVE()          \
-	do {                            \
-		uint32_t cr = SWD_CR;       \
-		cr &= ~(0xf * SWD_CR_MULT); \
-		cr |= (0x1 * SWD_CR_MULT);  \
-		SWD_CR = cr;                \
+#define SWDIO_MODE_DRIVE()           \
+	do {                             \
+		uint32_t cr = SWD_CR;        \
+		cr &= ~(0xfU * SWD_CR_MULT); \
+		cr |= (0x1U * SWD_CR_MULT);  \
+		SWD_CR = cr;                 \
 	} while (0)
 #define UART_PIN_SETUP()                                                                                        \
 	do {                                                                                                        \
@@ -103,11 +103,11 @@ extern bool debug_bmp;
 #define USB_IRQ    NVIC_USB_LP_CAN_RX0_IRQ
 #define USB_ISR(x) usb_lp_can_rx0_isr(x)
 /* Interrupt priorities. Low numbers are high priority. */
-#define IRQ_PRI_USB          (1 << 4)
-#define IRQ_PRI_USBUSART     (2 << 4)
-#define IRQ_PRI_USBUSART_DMA (2 << 4)
-#define IRQ_PRI_USB_VBUS     (14 << 4)
-#define IRQ_PRI_SWO_DMA      (0 << 4)
+#define IRQ_PRI_USB          (1U << 4U)
+#define IRQ_PRI_USBUSART     (2U << 4U)
+#define IRQ_PRI_USBUSART_DMA (2U << 4U)
+#define IRQ_PRI_USB_VBUS     (14U << 4U)
+#define IRQ_PRI_SWO_DMA      (0U << 4U)
 
 #ifdef SWIM_AS_UART
 #define USBUSART               USART1
