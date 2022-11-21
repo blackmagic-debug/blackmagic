@@ -622,11 +622,11 @@ static void rp_flash_connect_internal(target_s *const t)
 	// IO_BANK0 as that does not affect XIP signals)
 	const uint32_t reset = target_mem_read32(t, RP_RESETS_RESET);
 	const uint32_t io_pads_bits = RP_RESETS_RESET_IO_QSPI_BITS | RP_RESETS_RESET_PADS_QSPI_BITS;
-	target_mem_write32(t, RP_RESETS_RESET, reset | io_pads_bits);
-	target_mem_write32(t, RP_RESETS_RESET, reset);
-	const uint32_t reset_done = target_mem_read32(t, RP_RESETS_RESET_DONE);
-	while (~reset_done & io_pads_bits)
-		continue;
+	target_mem_write32(t, RP_RESETS_RESET, reset | io_pads_bits); // Assert the resets
+	target_mem_write32(t, RP_RESETS_RESET, reset);                // Then deassert them
+	uint32_t reset_done = 0;
+	while ((reset_done & io_pads_bits) != io_pads_bits) // Wait until the reset done signals for both come good
+		reset_done = target_mem_read32(t, RP_RESETS_RESET_DONE);
 
 	// Then mux XIP block onto internal QSPI flash pads
 	target_mem_write32(t, RP_GPIO_QSPI_SCLK_CTRL, 0);
@@ -663,7 +663,7 @@ static void rp_flash_init_spi(target_s *const t)
 
 // Also allow any unbounded loops to check whether the above abort condition
 // was asserted, and terminate early
-static int rp_flash_was_aborted(target_s *const t)
+static bool rp_flash_was_aborted(target_s *const t)
 {
 	return target_mem_read32(t, RP_GPIO_QSPI_SD1_CTRL) & RP_GPIO_QSPI_SD1_CTRL_INOVER_BITS;
 }
