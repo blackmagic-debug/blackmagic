@@ -65,10 +65,10 @@ static bool stm32h7_mass_erase(target_s *t);
 #define FLASH_SR        0x10U
 #define FLASH_CCR       0x14U
 #define FLASH_OPTCR     0x18U
-#define FLASH_OPTSR_CUR 0x1CU
+#define FLASH_OPTSR_CUR 0x1cU
 #define FLASH_OPTSR     0x20U
 #define FLASH_CRCCR     0x50U
-#define FLASH_CRCDATA   0x5CU
+#define FLASH_CRCDATA   0x5cU
 
 /* Flash Program and Erase Controller Register Map */
 #define H7_IWDG_BASE        0x58004c00U
@@ -140,9 +140,9 @@ static bool stm32h7_mass_erase(target_s *t);
 #define FLASH_SECTOR_SIZE   0x20000U
 #define BANK2_START         0x08100000U
 
-#define ID_STM32H74x 0x4500 /* RM0433, RM0399 */
-#define ID_STM32H7Bx 0x4800 /* RM0455 */
-#define ID_STM32H72x 0x4830 /* RM0468 */
+#define ID_STM32H74x 0x4500U /* RM0433, RM0399 */
+#define ID_STM32H7Bx 0x4800U /* RM0455 */
+#define ID_STM32H72x 0x4830U /* RM0468 */
 
 typedef struct stm32h7_flash {
 	target_flash_s f;
@@ -409,7 +409,7 @@ static bool stm32h7_uid(target_s *t, int argc, const char **argv)
 	const uint32_t uid_addr = stm32h7_part_uid_addr(t);
 
 	tc_printf(t, "0x");
-	for (size_t i = 0; i < 12; i += 4) {
+	for (size_t i = 0; i < 12U; i += 4U) {
 		uint32_t val = target_mem_read32(t, uid_addr + i);
 		tc_printf(t, "%02X", (val >> 24U) & 0xffU);
 		tc_printf(t, "%02X", (val >> 16U) & 0xffU);
