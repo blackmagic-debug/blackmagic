@@ -567,7 +567,7 @@ static int samx5x_write_user_page(target_s *t, uint8_t *buffer)
 	}
 
 	/* Write back */
-	for (uint32_t offset = 0; offset < SAMX5X_PAGE_SIZE; offset += 16) {
+	for (uint32_t offset = 0; offset < SAMX5X_PAGE_SIZE; offset += 16U) {
 		target_mem_write(t, SAMX5X_NVM_USER_PAGE + offset, buffer + offset, 16);
 
 		/* Issue the write page command */
@@ -604,8 +604,8 @@ static int samx5x_update_user_word(target_s *t, uint32_t addr, uint32_t value, u
 	memcpy(&current_word, buffer + addr, 4);
 
 	uint32_t factory_word = 0;
-	for (size_t i = 0; !force && i < 4 && addr + i < 20; ++i)
-		factory_word |= (uint32_t)factory_bits[addr + i] << (i * 8);
+	for (size_t i = 0; !force && i < 4U && addr + i < 20U; ++i)
+		factory_word |= (uint32_t)factory_bits[addr + i] << (i * 8U);
 
 	const uint32_t new_word = (current_word & factory_word) | (value & ~factory_word);
 	if (value_written != NULL)
@@ -733,7 +733,7 @@ static bool samx5x_cmd_serial(target_s *t, int argc, const char **argv)
 	(void)argv;
 	tc_printf(t, "Serial Number: 0x");
 
-	for (size_t i = 0; i < 4; ++i)
+	for (size_t i = 0; i < 4U; ++i)
 		tc_printf(t, "%08x", target_mem_read32(t, SAMX5X_NVM_SERIAL(i)));
 	tc_printf(t, "\n");
 	return true;
@@ -817,7 +817,7 @@ static uint32_t samx5x_ram_size(target_s *t)
 	/* Mask off the device select bits */
 	const samx5x_descr_s samx5x = samx5x_parse_device_id(did);
 	/* Adjust the maximum ram size (256KB) down as appropriate */
-	return (0x40000 - 0x10000 * (20 - samx5x.mem));
+	return (0x40000U - 0x10000U * (20U - samx5x.mem));
 }
 
 /* Runs the Memory Built In Self Test (MBIST) */
