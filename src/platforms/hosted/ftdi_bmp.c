@@ -35,7 +35,7 @@ typedef struct ftdi_transfer_control ftdi_transfer_control_s;
 
 ftdi_context_s *ftdic;
 
-#define BUF_SIZE 4096
+#define BUF_SIZE 4096U
 static uint8_t outbuf[BUF_SIZE];
 static uint16_t bufptr = 0;
 
@@ -721,7 +721,7 @@ const char *libftdi_target_voltage(void)
 		uint8_t data[1];
 		libftdi_buffer_read(data, 1);
 		bool res = false;
-		if (pin < 0x7f || pin == PIN7)
+		if (pin < 0x7fU || pin == PIN7)
 			res = data[0] & pin;
 		else
 			res = !(data[0] & ~pin);
