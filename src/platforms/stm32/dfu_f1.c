@@ -37,7 +37,7 @@ static uint32_t last_erased_page = 0xffffffffU;
 
 void dfu_check_and_do_sector_erase(uint32_t sector)
 {
-	sector &= ~(FLASHBLOCKSIZE - 1);
+	sector &= ~(FLASHBLOCKSIZE - 1U);
 	if (sector != last_erased_page) {
 		flash_erase_page(sector);
 		last_erased_page = sector;
@@ -92,7 +92,7 @@ void dfu_protect(bool enable)
 	 * erase, crashing the update (PM0075, 2.4.2, Unprotection, Case 1).
      */
 #if 0
-    else if (mode == UPD_MODE && (FLASH_WRPR & 0x03) != 0x03) {
+    else if (mode == UPD_MODE && (FLASH_WRPR & 0x03U) != 0x03U) {
 		flash_unlock();
 		FLASH_CR = 0;
 		flash_erase_option_bytes();
@@ -105,7 +105,7 @@ void dfu_jump_app_if_valid(void)
 {
 	const uint32_t stack_pointer = *((uint32_t *)app_address);
 	/* Boot the application if it's valid */
-	if ((stack_pointer & 0x2ffe0000) == 0x20000000) {
+	if ((stack_pointer & 0x2ffe0000U) == 0x20000000U) {
 		/*
 		 * Set vector table base address
 		 * Max 2MiB Flash

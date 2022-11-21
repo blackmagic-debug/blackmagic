@@ -38,14 +38,14 @@ uint16_t traceswo_decode(usbd_device *usbd_dev, uint8_t addr, const void *buf, u
 	const uint8_t *const data = (const uint8_t *)buf;
 	for (uint16_t i = 0; i < len; i++) {
 		const uint8_t ch = data[i];
-		if (swo_pkt_len == 0) {                   /* header */
-			uint32_t channel = (uint32_t)ch >> 3; /* channel number */
-			uint32_t size = ch & 0x7;             /* drop channel number */
-			if (size == 0x01)
+		if (swo_pkt_len == 0) {                    /* header */
+			uint32_t channel = (uint32_t)ch >> 3U; /* channel number */
+			uint32_t size = ch & 0x7U;             /* drop channel number */
+			if (size == 0x01U)
 				swo_pkt_len = 1; /* SWO packet 0x01XX */
-			else if (size == 0x02)
+			else if (size == 0x02U)
 				swo_pkt_len = 2; /* SWO packet 0x02XXXX */
-			else if (size == 0x03)
+			else if (size == 0x03U)
 				swo_pkt_len = 4; /* SWO packet 0x03XXXXXXXX */
 			swo_print = (swo_pkt_len != 0) && ((swo_decode & (1UL << channel)) != 0UL);
 		} else if (swo_pkt_len <= 4) { /* data */

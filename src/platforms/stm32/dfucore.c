@@ -150,7 +150,7 @@ static uint8_t usbdfu_getstatus(uint32_t *poll_timeout)
 	switch (usbdfu_state) {
 	case STATE_DFU_DNLOAD_SYNC:
 		usbdfu_state = STATE_DFU_DNBUSY;
-		*poll_timeout = dfu_poll_timeout(prog.buf[0], get_le32(prog.buf + 1), prog.blocknum);
+		*poll_timeout = dfu_poll_timeout(prog.buf[0], get_le32(prog.buf + 1U), prog.blocknum);
 		return DFU_STATUS_OK;
 
 	case STATE_DFU_MANIFEST_SYNC:
@@ -174,7 +174,7 @@ static void usbdfu_getstatus_complete(usbd_device *dev, usb_setup_data_s *req)
 
 		flash_unlock();
 		if (prog.blocknum == 0) {
-			const uint32_t addr = get_le32(prog.buf + 1);
+			const uint32_t addr = get_le32(prog.buf + 1U);
 			switch (prog.buf[0]) {
 			case CMD_ERASE:
 				if (addr < app_address || addr >= max_address) {
@@ -185,7 +185,7 @@ static void usbdfu_getstatus_complete(usbd_device *dev, usb_setup_data_s *req)
 				dfu_check_and_do_sector_erase(addr);
 			}
 		} else {
-			const uint32_t baseaddr = prog.addr + ((prog.blocknum - 2) * dfu_function.wTransferSize);
+			const uint32_t baseaddr = prog.addr + ((prog.blocknum - 2U) * dfu_function.wTransferSize);
 			dfu_flash_program_buffer(baseaddr, prog.buf, prog.len);
 		}
 		flash_lock();
@@ -221,7 +221,7 @@ static usbd_request_return_codes_e usbdfu_control_request(usbd_device *dev, usb_
 			prog.len = *len;
 			memcpy(prog.buf, data, *len);
 			if (req->wValue == 0 && prog.buf[0] == CMD_SETADDR) {
-				uint32_t addr = get_le32(prog.buf + 1);
+				uint32_t addr = get_le32(prog.buf + 1U);
 				if (addr < app_address || addr >= max_address) {
 					current_error = DFU_STATUS_ERR_TARGET;
 					usbdfu_state = STATE_DFU_ERROR;
@@ -246,8 +246,8 @@ static usbd_request_return_codes_e usbdfu_control_request(usbd_device *dev, usb_
 			usbdfu_state == STATE_DFU_UPLOAD_IDLE) {
 			prog.blocknum = req->wValue;
 			usbdfu_state = STATE_DFU_UPLOAD_IDLE;
-			if (prog.blocknum > 1) {
-				const uintptr_t baseaddr = prog.addr + ((prog.blocknum - 2) * dfu_function.wTransferSize);
+			if (prog.blocknum > 1U) {
+				const uintptr_t baseaddr = prog.addr + ((prog.blocknum - 2U) * dfu_function.wTransferSize);
 				memcpy(data, (void *)baseaddr, *len);
 			}
 			return USBD_REQ_HANDLED;
@@ -313,9 +313,9 @@ static void set_dfu_iface_string(uint32_t size)
 		return;
 	}
 	p[2] = (char)(48U + (size % 10U));
-	size /= 10;
+	size /= 10U;
 	p[1] = (char)(48U + (size % 10U));
-	size /= 10;
+	size /= 10U;
 	p[0] = (char)(48U + size);
 }
 #else
@@ -327,8 +327,8 @@ static void get_dev_unique_id(void)
 	/* Calculated the upper flash limit from the exported data in the parameter block*/
 	uint32_t fuse_flash_size = desig_get_flash_size();
 	/* Handle F103x8 as F103xB. */
-	if (fuse_flash_size == 0x40)
-		fuse_flash_size = 0x80;
+	if (fuse_flash_size == 0x40U)
+		fuse_flash_size = 0x80U;
 	set_dfu_iface_string(fuse_flash_size - 8U);
 	max_address = FLASH_BASE + (fuse_flash_size << 10U);
 	read_serial_number();

@@ -135,7 +135,7 @@ void TRACE_ISR(void)
 	uint16_t duty = TIM_CCR2(TRACE_TIM);
 
 	/* Reset decoder state if crazy things happened */
-	if ((bt && (duty / bt > 2 || duty / bt == 0)) || duty == 0)
+	if ((bt && (duty / bt > 2U || duty / bt == 0)) || duty == 0)
 		goto flush_and_reset;
 
 	if (!(status & TIM_SR_CC1IF))
@@ -149,23 +149,23 @@ void TRACE_ISR(void)
 		/* First bit, sync decoder */
 		duty -= ALLOWED_DUTY_ERROR;
 		const uint16_t duty_cycle = cycle / duty;
-		if (duty_cycle != 2 && duty_cycle != 3)
+		if (duty_cycle != 2U && duty_cycle != 3U)
 			return;
 		bt = duty;
 		lastbit = 1;
 		halfbit = 0;
-		timer_set_period(TRACE_TIM, duty * 6);
+		timer_set_period(TRACE_TIM, duty * 6U);
 		timer_clear_flag(TRACE_TIM, TIM_SR_UIF);
 		timer_enable_irq(TRACE_TIM, TIM_DIER_UIE);
 	} else {
 		/* If high time is extended we need to flip the bit */
-		if (duty / bt > 1) {
+		if (duty / bt > 1U) {
 			if (!halfbit) /* lost sync somehow */
 				goto flush_and_reset;
 			halfbit = 0;
-			lastbit ^= 1;
+			lastbit ^= 1U;
 		}
-		decbuf[decbuf_pos >> 3] |= lastbit << (decbuf_pos & 7);
+		decbuf[decbuf_pos >> 3U] |= lastbit << (decbuf_pos & 7U);
 		++decbuf_pos;
 	}
 
@@ -177,18 +177,18 @@ void TRACE_ISR(void)
 		if (halfbit) /* this is a valid stop-bit or we lost sync */
 			goto flush_and_reset;
 		halfbit = 1;
-		lastbit ^= 1;
-		decbuf[decbuf_pos >> 3] |= lastbit << (decbuf_pos & 7);
+		lastbit ^= 1U;
+		decbuf[decbuf_pos >> 3U] |= lastbit << (decbuf_pos & 7U);
 		++decbuf_pos;
 	}
 
-	if (decbuf_pos < 128)
+	if (decbuf_pos < 128U)
 		return;
 
 flush_and_reset:
 	timer_set_period(TRACE_TIM, -1);
 	timer_disable_irq(TRACE_TIM, TIM_DIER_UIE);
-	trace_buf_push(decbuf, decbuf_pos >> 3);
+	trace_buf_push(decbuf, decbuf_pos >> 3U);
 	bt = 0;
 	decbuf_pos = 0;
 	memset(decbuf, 0, sizeof(decbuf));
