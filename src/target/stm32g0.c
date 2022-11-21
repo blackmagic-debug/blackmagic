@@ -98,24 +98,24 @@
 		FLASH_SR_PGAERR | FLASH_SR_WRPERR | FLASH_SR_PROGERR | FLASH_SR_OPERR)
 #define FLASH_SR_BSY_MASK (FLASH_SR_BSY2 | FLASH_SR_BSY1)
 
-#define FLASH_OPTKEYR       (G0_FLASH_BASE + 0x00C)
+#define FLASH_OPTKEYR       (G0_FLASH_BASE + 0x00cU)
 #define FLASH_OPTKEYR_KEY1  0x08192a3bU
 #define FLASH_OPTKEYR_KEY2  0x4c5d6e7fU
-#define FLASH_OPTR          (G0_FLASH_BASE + 0x020)
+#define FLASH_OPTR          (G0_FLASH_BASE + 0x020U)
 #define FLASH_OPTR_RDP_MASK 0xffU
-#define FLASH_PCROP1ASR     (G0_FLASH_BASE + 0x024)
-#define FLASH_PCROP1AER     (G0_FLASH_BASE + 0x028)
-#define FLASH_WRP1AR        (G0_FLASH_BASE + 0x02C)
-#define FLASH_WRP1BR        (G0_FLASH_BASE + 0x030)
-#define FLASH_PCROP1BSR     (G0_FLASH_BASE + 0x034)
-#define FLASH_PCROP1BER     (G0_FLASH_BASE + 0x038)
-#define FLASH_PCROP2ASR     (G0_FLASH_BASE + 0x044)
-#define FLASH_PCROP2AER     (G0_FLASH_BASE + 0x048)
-#define FLASH_WRP2AR        (G0_FLASH_BASE + 0x04C)
-#define FLASH_WRP2BR        (G0_FLASH_BASE + 0x050)
-#define FLASH_PCROP2BSR     (G0_FLASH_BASE + 0x054)
-#define FLASH_PCROP2BER     (G0_FLASH_BASE + 0x058)
-#define FLASH_SECR          (G0_FLASH_BASE + 0x080)
+#define FLASH_PCROP1ASR     (G0_FLASH_BASE + 0x024U)
+#define FLASH_PCROP1AER     (G0_FLASH_BASE + 0x028U)
+#define FLASH_WRP1AR        (G0_FLASH_BASE + 0x02cU)
+#define FLASH_WRP1BR        (G0_FLASH_BASE + 0x030U)
+#define FLASH_PCROP1BSR     (G0_FLASH_BASE + 0x034U)
+#define FLASH_PCROP1BER     (G0_FLASH_BASE + 0x038U)
+#define FLASH_PCROP2ASR     (G0_FLASH_BASE + 0x044U)
+#define FLASH_PCROP2AER     (G0_FLASH_BASE + 0x048U)
+#define FLASH_WRP2AR        (G0_FLASH_BASE + 0x04cU)
+#define FLASH_WRP2BR        (G0_FLASH_BASE + 0x050U)
+#define FLASH_PCROP2BSR     (G0_FLASH_BASE + 0x054U)
+#define FLASH_PCROP2BER     (G0_FLASH_BASE + 0x058U)
+#define FLASH_SECR          (G0_FLASH_BASE + 0x080U)
 
 /* RAM */
 #define RAM_START      0x20000000U
@@ -126,7 +126,7 @@
 
 /* RCC */
 #define G0_RCC_BASE       0x40021000U
-#define RCC_APBENR1       (G0_RCC_BASE + 0x3CU)
+#define RCC_APBENR1       (G0_RCC_BASE + 0x3cU)
 #define RCC_APBENR1_DBGEN (1U << 27U)
 
 /* DBG */
@@ -430,7 +430,7 @@ static bool stm32g0_flash_write(target_flash_s *f, target_addr_t dest, const voi
 		return false;
 	}
 
-	if (dest == FLASH_START && target_mem_read32(t, FLASH_START) != 0xFFFFFFFF) {
+	if (dest == FLASH_START && target_mem_read32(t, FLASH_START) != 0xffffffffU) {
 		const uint32_t acr = target_mem_read32(t, FLASH_ACR) & ~FLASH_ACR_EMPTY;
 		target_mem_write32(t, FLASH_ACR, acr);
 	}
@@ -535,18 +535,18 @@ typedef struct option_register {
  * The same for PCROP and SECR.
  */
 static const option_register_s options_def[OPT_REG_COUNT] = {
-	[OPT_REG_OPTR] = {FLASH_OPTR, 0xFFFFFEAA},
-	[OPT_REG_PCROP1ASR] = {FLASH_PCROP1ASR, 0xFFFFFFFF},
+	[OPT_REG_OPTR] = {FLASH_OPTR, 0xfffffeaa},
+	[OPT_REG_PCROP1ASR] = {FLASH_PCROP1ASR, 0xffffffff},
 	[OPT_REG_PCROP1AER] = {FLASH_PCROP1AER, 0x00000000},
-	[OPT_REG_WRP1AR] = {FLASH_WRP1AR, 0x000000FF},
-	[OPT_REG_WRP1BR] = {FLASH_WRP1BR, 0x000000FF},
-	[OPT_REG_PCROP1BSR] = {FLASH_PCROP1BSR, 0xFFFFFFFF},
+	[OPT_REG_WRP1AR] = {FLASH_WRP1AR, 0x000000ff},
+	[OPT_REG_WRP1BR] = {FLASH_WRP1BR, 0x000000ff},
+	[OPT_REG_PCROP1BSR] = {FLASH_PCROP1BSR, 0xffffffff},
 	[OPT_REG_PCROP1BER] = {FLASH_PCROP1BER, 0x00000000},
-	[OPT_REG_PCROP2ASR] = {FLASH_PCROP2ASR, 0xFFFFFFFF},
+	[OPT_REG_PCROP2ASR] = {FLASH_PCROP2ASR, 0xffffffff},
 	[OPT_REG_PCROP2AER] = {FLASH_PCROP2AER, 0x00000000},
-	[OPT_REG_WRP2AR] = {FLASH_WRP2AR, 0x000000FF},
-	[OPT_REG_WRP2BR] = {FLASH_WRP2BR, 0x000000FF},
-	[OPT_REG_PCROP2BSR] = {FLASH_PCROP2BSR, 0xFFFFFFFF},
+	[OPT_REG_WRP2AR] = {FLASH_WRP2AR, 0x000000ff},
+	[OPT_REG_WRP2BR] = {FLASH_WRP2BR, 0x000000ff},
+	[OPT_REG_PCROP2BSR] = {FLASH_PCROP2BSR, 0xffffffff},
 	[OPT_REG_PCROP2BER] = {FLASH_PCROP2BER, 0x00000000},
 	[OPT_REG_SECR] = {FLASH_SECR, 0x00000000},
 };
@@ -615,7 +615,7 @@ static bool stm32g0_parse_cmdline_registers(
 
 	for (uint32_t i = 0U; i < argc; i += 2U) {
 		const uint32_t addr = strtoul(argv[i], NULL, 0);
-		const uint32_t val = strtoul(argv[i + 1], NULL, 0);
+		const uint32_t val = strtoul(argv[i + 1U], NULL, 0);
 		if (stm32g0_add_reg_value(options_regs, addr, val))
 			++valid_regs;
 	}
