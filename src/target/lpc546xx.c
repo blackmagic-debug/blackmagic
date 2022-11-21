@@ -25,30 +25,30 @@
 #include "cortexm.h"
 #include "lpc_common.h"
 
-#define LPC546XX_CHIPID 0x40000FF8
+#define LPC546XX_CHIPID 0x40000ff8U
 
-#define IAP_ENTRYPOINT_LOCATION 0x03000204
+#define IAP_ENTRYPOINT_LOCATION 0x03000204U
 
-#define LPC546XX_ETBAHB_SRAM_BASE 0x20000000
+#define LPC546XX_ETBAHB_SRAM_BASE 0x20000000U
 
 /* Only SRAM0 bank is enabled after reset */
-#define LPC546XX_ETBAHB_SRAM_SIZE (64 * 1024)
+#define LPC546XX_ETBAHB_SRAM_SIZE (64U * 1024U)
 
-#define LPC546XX_WDT_MODE       0x4000C000
-#define LPC546XX_WDT_CNT        0x4000C004
-#define LPC546XX_WDT_FEED       0x4000C008
-#define LPC546XX_WDT_PERIOD_MAX 0xFFFFFF
-#define LPC546XX_WDT_PROTECT    (1 << 4)
+#define LPC546XX_WDT_MODE       0x4000c000U
+#define LPC546XX_WDT_CNT        0x4000c004U
+#define LPC546XX_WDT_FEED       0x4000c008U
+#define LPC546XX_WDT_PERIOD_MAX 0xffffffU
+#define LPC546XX_WDT_PROTECT    (1U << 4U)
 
-#define LPC546XX_MAINCLKSELA 0x40000280
-#define LPC546XX_MAINCLKSELB 0x40000284
-#define LPC546XX_AHBCLKDIV   0x40000380
-#define LPC546XX_FLASHCFG    0x40000400
+#define LPC546XX_MAINCLKSELA 0x40000280U
+#define LPC546XX_MAINCLKSELB 0x40000284U
+#define LPC546XX_AHBCLKDIV   0x40000380U
+#define LPC546XX_FLASHCFG    0x40000400U
 
 #define IAP_RAM_SIZE LPC546XX_ETBAHB_SRAM_SIZE
 #define IAP_RAM_BASE LPC546XX_ETBAHB_SRAM_BASE
 
-#define IAP_PGM_CHUNKSIZE 4096
+#define IAP_PGM_CHUNKSIZE 4096U
 
 static bool lpc546xx_cmd_erase_sector(target_s *t, int argc, const char **argv);
 static bool lpc546xx_cmd_read_partid(target_s *t, int argc, const char **argv);
@@ -102,47 +102,47 @@ bool lpc546xx_probe(target_s *t)
 	uint32_t flash_size = 0;
 
 	switch (chipid) {
-	case 0x7F954605:
+	case 0x7f954605U:
 		t->driver = "LPC54605J256";
 		flash_size = 0x40000;
 		break;
-	case 0x7F954606:
+	case 0x7f954606U:
 		t->driver = "LPC54606J256";
 		flash_size = 0x40000;
 		break;
-	case 0x7F954607:
+	case 0x7f954607U:
 		t->driver = "LPC54607J256";
 		flash_size = 0x40000;
 		break;
-	case 0x7F954616:
+	case 0x7f954616U:
 		t->driver = "LPC54616J256";
 		flash_size = 0x40000;
 		break;
-	case 0xFFF54605:
+	case 0xfff54605U:
 		t->driver = "LPC54605J512";
 		flash_size = 0x80000;
 		break;
-	case 0xFFF54606:
+	case 0xfff54606U:
 		t->driver = "LPC54606J512";
 		flash_size = 0x80000;
 		break;
-	case 0xFFF54607:
+	case 0xfff54607U:
 		t->driver = "LPC54607J512";
 		flash_size = 0x80000;
 		break;
-	case 0xFFF54608:
+	case 0xfff54608U:
 		t->driver = "LPC54608J512";
 		flash_size = 0x80000;
 		break;
-	case 0xFFF54616:
+	case 0xfff54616U:
 		t->driver = "LPC54616J512";
 		flash_size = 0x80000;
 		break;
-	case 0xFFF54618:
+	case 0xfff54618U:
 		t->driver = "LPC54618J512";
 		flash_size = 0x80000;
 		break;
-	case 0xFFF54628:
+	case 0xfff54628U:
 		t->driver = "LPC54628J512";
 		flash_size = 0x80000;
 		break;
@@ -240,9 +240,9 @@ static bool lpc546xx_cmd_reset(target_s *t, int argc, const char **argv)
 	(void)argv;
 
 	/* Cortex-M4 Application Interrupt and Reset Control Register */
-	static const uint32_t AIRCR = 0xE000ED0C;
+	static const uint32_t AIRCR = 0xe000ed0cU;
 	/* Magic value key */
-	static const uint32_t reset_val = 0x05FA0004;
+	static const uint32_t reset_val = 0x05fa0004U;
 
 	/* System reset on target */
 	target_mem_write(t, AIRCR, &reset_val, sizeof(reset_val));
@@ -315,7 +315,7 @@ static void lpc546xx_wdt_kick(target_s *t)
 
 	/* If WDT on, poke it to reset it */
 	if (wdt_mode) {
-		target_mem_write32(t, LPC546XX_WDT_FEED, 0xAA);
-		target_mem_write32(t, LPC546XX_WDT_FEED, 0xFF);
+		target_mem_write32(t, LPC546XX_WDT_FEED, 0xaa);
+		target_mem_write32(t, LPC546XX_WDT_FEED, 0xff);
 	}
 }
