@@ -277,8 +277,6 @@ typedef enum {
 #define RV40_FCPSR         (RV40_BASE + 0xE0U)
 #define RV40_FCPSR_ESUSPMD 1U
 
-#define RENESAS_CF_END (0x00200000UL) /* End of Flash (maximum possible accross families) */
-
 static bool renesas_uid(target_s *t, int argc, const char **argv);
 
 const command_s renesas_cmd_list[] = {
