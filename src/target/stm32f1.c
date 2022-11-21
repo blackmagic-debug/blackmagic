@@ -131,11 +131,11 @@ bool gd32f1_probe(target_s *t)
 {
 	const uint16_t device_id = stm32f1_read_idcode(t);
 	switch (device_id) {
-	case 0x414: /* Gigadevice gd32f303 */
-	case 0x430:
+	case 0x414U: /* Gigadevice gd32f303 */
+	case 0x430U:
 		t->driver = "GD32F3";
 		break;
-	case 0x410: /* Gigadevice gd32f103, gd32e230 */
+	case 0x410U: /* Gigadevice gd32f103, gd32e230 */
 		if ((t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M23)
 			t->driver = "GD32E230";
 		else if ((t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M4)
@@ -153,8 +153,8 @@ bool gd32f1_probe(target_s *t)
 
 	t->part_id = device_id;
 	t->mass_erase = stm32f1_mass_erase;
-	target_add_ram(t, 0x20000000, ram_size * 1024);
-	stm32f1_add_flash(t, 0x8000000, flash_size * 1024, 0x400);
+	target_add_ram(t, 0x20000000, ram_size * 1024U);
+	stm32f1_add_flash(t, 0x8000000, flash_size * 1024U, 0x400);
 	target_add_commands(t, stm32f1_cmd_list, t->driver);
 
 	return true;
@@ -165,35 +165,35 @@ static bool at32f40_detect(target_s *t, const uint16_t part_id)
 	// Current driver supports only *default* memory layout (256 KB Flash / 96 KB SRAM)
 	// XXX: Support for external Flash for 512KB and 1024KB parts requires specific flash code (not implemented)
 	switch (part_id) {
-	case 0x0240: // AT32F403AVCT7 256KB / LQFP100
-	case 0x0241: // AT32F403ARCT7 256KB / LQFP64
-	case 0x0242: // AT32F403ACCT7 256KB / LQFP48
-	case 0x0243: // AT32F403ACCU7 256KB / QFN48
-	case 0x0249: // AT32F407VCT7 256KB / LQFP100
-	case 0x024a: // AT32F407RCT7 256KB / LQFP64
-	case 0x0254: // AT32F407AVCT7 256KB / LQFP100
-	case 0x02cd: // AT32F403AVET7 512KB / LQFP100 (*)
-	case 0x02ce: // AT32F403ARET7 512KB / LQFP64 (*)
-	case 0x02cf: // AT32F403ACET7 512KB / LQFP48 (*)
-	case 0x02d0: // AT32F403ACEU7 512KB / QFN48 (*)
-	case 0x02d1: // AT32F407VET7 512KB / LQFP100 (*)
-	case 0x02d2: // AT32F407RET7 512KB / LQFP64 (*)
-	case 0x0344: // AT32F403AVGT7 1024KB / LQFP100 (*)
-	case 0x0345: // AT32F403ARGT7 1024KB / LQFP64 (*)
-	case 0x0346: // AT32F403ACGT7 1024KB / LQFP48 (*)
-	case 0x0347: // AT32F403ACGU7 1024KB / QFN48 (found on BlackPill+ WeAct Studio) (*)
-	case 0x034b: // AT32F407VGT7 1024KB / LQFP100 (*)
-	case 0x034c: // AT32F407VGT7 1024KB / LQFP64 (*)
-	case 0x0353: // AT32F407AVGT7 1024KB / LQFP100 (*)
+	case 0x0240U: // AT32F403AVCT7 256KB / LQFP100
+	case 0x0241U: // AT32F403ARCT7 256KB / LQFP64
+	case 0x0242U: // AT32F403ACCT7 256KB / LQFP48
+	case 0x0243U: // AT32F403ACCU7 256KB / QFN48
+	case 0x0249U: // AT32F407VCT7 256KB / LQFP100
+	case 0x024aU: // AT32F407RCT7 256KB / LQFP64
+	case 0x0254U: // AT32F407AVCT7 256KB / LQFP100
+	case 0x02cdU: // AT32F403AVET7 512KB / LQFP100 (*)
+	case 0x02ceU: // AT32F403ARET7 512KB / LQFP64 (*)
+	case 0x02cfU: // AT32F403ACET7 512KB / LQFP48 (*)
+	case 0x02d0U: // AT32F403ACEU7 512KB / QFN48 (*)
+	case 0x02d1U: // AT32F407VET7 512KB / LQFP100 (*)
+	case 0x02d2U: // AT32F407RET7 512KB / LQFP64 (*)
+	case 0x0344U: // AT32F403AVGT7 1024KB / LQFP100 (*)
+	case 0x0345U: // AT32F403ARGT7 1024KB / LQFP64 (*)
+	case 0x0346U: // AT32F403ACGT7 1024KB / LQFP48 (*)
+	case 0x0347U: // AT32F403ACGU7 1024KB / QFN48 (found on BlackPill+ WeAct Studio) (*)
+	case 0x034bU: // AT32F407VGT7 1024KB / LQFP100 (*)
+	case 0x034cU: // AT32F407VGT7 1024KB / LQFP64 (*)
+	case 0x0353U: // AT32F407AVGT7 1024KB / LQFP100 (*)
 		// Flash: 256 KB / 2KB per block
-		stm32f1_add_flash(t, 0x08000000, 256 * 1024, 2 * 1024);
+		stm32f1_add_flash(t, 0x08000000, 256U * 1024U, 2U * 1024U);
 		break;
 	// Unknown/undocumented
 	default:
 		return false;
 	}
 	// All parts have 96KB SRAM
-	target_add_ram(t, 0x20000000, 96 * 1024);
+	target_add_ram(t, 0x20000000, 96U * 1024U);
 	t->driver = "AT32F403A/407";
 	t->mass_erase = stm32f1_mass_erase;
 	return true;
@@ -202,34 +202,34 @@ static bool at32f40_detect(target_s *t, const uint16_t part_id)
 static bool at32f41_detect(target_s *t, const uint16_t part_id)
 {
 	switch (part_id) {
-	case 0x0240: // LQFP64_10x10
-	case 0x0241: // LQFP48_7x7
-	case 0x0242: // QFN32_4x4
-	case 0x0243: // LQFP64_7x7
-	case 0x024c: // QFN48_6x6
+	case 0x0240U: // LQFP64_10x10
+	case 0x0241U: // LQFP48_7x7
+	case 0x0242U: // QFN32_4x4
+	case 0x0243U: // LQFP64_7x7
+	case 0x024cU: // QFN48_6x6
 		// Flash: 256 KB / 2KB per block
-		stm32f1_add_flash(t, 0x08000000, 256 * 1024, 2 * 1024);
+		stm32f1_add_flash(t, 0x08000000, 256U * 1024U, 2U * 1024U);
 		break;
-	case 0x01c4: // LQFP64_10x10
-	case 0x01c5: // LQFP48_7x7
-	case 0x01c6: // QFN32_4x4
-	case 0x01c7: // LQFP64_7x7
-	case 0x01cd: // QFN48_6x6
+	case 0x01c4U: // LQFP64_10x10
+	case 0x01c5U: // LQFP48_7x7
+	case 0x01c6U: // QFN32_4x4
+	case 0x01c7U: // LQFP64_7x7
+	case 0x01cdU: // QFN48_6x6
 		// Flash: 128 KB / 2KB per block
-		stm32f1_add_flash(t, 0x08000000, 128 * 1024, 2 * 1024);
+		stm32f1_add_flash(t, 0x08000000, 128U * 1024U, 2U * 1024U);
 		break;
-	case 0x0108: // LQFP64_10x10
-	case 0x0109: // LQFP48_7x7
-	case 0x010a: // QFN32_4x4
+	case 0x0108U: // LQFP64_10x10
+	case 0x0109U: // LQFP48_7x7
+	case 0x010aU: // QFN32_4x4
 		// Flash: 64 KB / 2KB per block
-		stm32f1_add_flash(t, 0x08000000, 64 * 1024, 2 * 1024);
+		stm32f1_add_flash(t, 0x08000000, 64U * 1024U, 2U * 1024U);
 		break;
 	// Unknown/undocumented
 	default:
 		return false;
 	}
 	// All parts have 32KB SRAM
-	target_add_ram(t, 0x20000000, 32 * 1024);
+	target_add_ram(t, 0x20000000, 32U * 1024U);
 	t->driver = "AT32F415";
 	t->mass_erase = stm32f1_mass_erase;
 	return true;
@@ -264,10 +264,10 @@ bool stm32f1_probe(target_s *t)
 	size_t block_size = 0x400;
 
 	switch (device_id) {
-	case 0x29b: /* CS clone */
-	case 0x410: /* Medium density */
-	case 0x412: /* Low density */
-	case 0x420: /* Value Line, Low-/Medium density */
+	case 0x29bU: /* CS clone */
+	case 0x410U: /* Medium density */
+	case 0x412U: /* Low density */
+	case 0x420U: /* Value Line, Low-/Medium density */
 		target_add_ram(t, 0x20000000, 0x5000);
 		stm32f1_add_flash(t, 0x8000000, 0x20000, 0x400);
 		target_add_commands(t, stm32f1_cmd_list, "STM32 LD/MD/VL-LD/VL-MD");
@@ -281,9 +281,9 @@ bool stm32f1_probe(target_s *t)
 		t->part_id = device_id;
 		return true;
 
-	case 0x414: /* High density */
-	case 0x418: /* Connectivity Line */
-	case 0x428: /* Value Line, High Density */
+	case 0x414U: /* High density */
+	case 0x418U: /* Connectivity Line */
+	case 0x428U: /* Value Line, High Density */
 		t->driver = "STM32F1  VL density";
 		t->part_id = device_id;
 		target_add_ram(t, 0x20000000, 0x10000);
@@ -291,7 +291,7 @@ bool stm32f1_probe(target_s *t)
 		target_add_commands(t, stm32f1_cmd_list, "STM32 HF/CL/VL-HD");
 		return true;
 
-	case 0x430: /* XL-density */
+	case 0x430U: /* XL-density */
 		t->driver = "STM32F1  XL density";
 		t->part_id = device_id;
 		target_add_ram(t, 0x20000000, 0x18000);
@@ -300,14 +300,14 @@ bool stm32f1_probe(target_s *t)
 		target_add_commands(t, stm32f1_cmd_list, "STM32 XL/VL-XL");
 		return true;
 
-	case 0x438: /* STM32F303x6/8 and STM32F328 */
-	case 0x422: /* STM32F30x */
-	case 0x446: /* STM32F303xD/E and STM32F398xE */
+	case 0x438U: /* STM32F303x6/8 and STM32F328 */
+	case 0x422U: /* STM32F30x */
+	case 0x446U: /* STM32F303xD/E and STM32F398xE */
 		target_add_ram(t, 0x10000000, 0x4000);
 		/* fall through */
 
-	case 0x432: /* STM32F37x */
-	case 0x439: /* STM32F302C8 */
+	case 0x432U: /* STM32F37x */
+	case 0x439U: /* STM32F302C8 */
 		t->driver = "STM32F3";
 		t->part_id = device_id;
 		target_add_ram(t, 0x20000000, 0x10000);
@@ -315,29 +315,29 @@ bool stm32f1_probe(target_s *t)
 		target_add_commands(t, stm32f1_cmd_list, "STM32F3");
 		return true;
 
-	case 0x444: /* STM32F03 RM0091 Rev.7, STM32F030x[4|6] RM0360 Rev. 4*/
+	case 0x444U: /* STM32F03 RM0091 Rev.7, STM32F030x[4|6] RM0360 Rev. 4*/
 		t->driver = "STM32F03";
 		flash_size = 0x8000;
 		break;
 
-	case 0x445: /* STM32F04 RM0091 Rev.7, STM32F070x6 RM0360 Rev. 4*/
+	case 0x445U: /* STM32F04 RM0091 Rev.7, STM32F070x6 RM0360 Rev. 4*/
 		t->driver = "STM32F04/F070x6";
 		flash_size = 0x8000;
 		break;
 
-	case 0x440: /* STM32F05 RM0091 Rev.7, STM32F030x8 RM0360 Rev. 4*/
+	case 0x440U: /* STM32F05 RM0091 Rev.7, STM32F030x8 RM0360 Rev. 4*/
 		t->driver = "STM32F05/F030x8";
 		flash_size = 0x10000;
 		break;
 
-	case 0x448: /* STM32F07 RM0091 Rev.7, STM32F070xB RM0360 Rev. 4*/
+	case 0x448U: /* STM32F07 RM0091 Rev.7, STM32F070xb RM0360 Rev. 4*/
 		t->driver = "STM32F07";
 		flash_size = 0x20000;
 		block_size = 0x800;
 		break;
 
-	case 0x442: /* STM32F09 RM0091 Rev.7, STM32F030xC RM0360 Rev. 4*/
-		t->driver = "STM32F09/F030xC";
+	case 0x442U: /* STM32F09 RM0091 Rev.7, STM32F030xc RM0360 Rev. 4*/
+		t->driver = "STM32F09/F030xc";
 		flash_size = 0x40000;
 		block_size = 0x800;
 		break;
@@ -404,10 +404,10 @@ static uint32_t stm32f1_bank_offset_for(target_addr_t addr)
 static bool stm32f1_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
 	target_s *t = f->t;
-	target_addr_t end = addr + len - 1;
+	target_addr_t end = addr + len - 1U;
 
 	/* Unlocked an appropriate flash bank */
-	if ((t->part_id == 0x430 && end >= FLASH_BANK_SPLIT && !stm32f1_flash_unlock(t, FLASH_BANK2_OFFSET)) ||
+	if ((t->part_id == 0x430U && end >= FLASH_BANK_SPLIT && !stm32f1_flash_unlock(t, FLASH_BANK2_OFFSET)) ||
 		(addr < FLASH_BANK_SPLIT && !stm32f1_flash_unlock(t, 0)))
 		return false;
 
@@ -457,7 +457,7 @@ static bool stm32f1_flash_write(target_flash_s *f, target_addr_t dest, const voi
 
 	/* If there's anything to write left over and we're on a part with a second bank, write to bank 2 */
 	const size_t remainder = len - offset;
-	if (t->part_id == 0x430 && remainder) {
+	if (t->part_id == 0x430U && remainder) {
 		const uint8_t *data = src;
 		stm32f1_flash_clear_eop(t, FLASH_BANK2_OFFSET);
 
@@ -498,7 +498,7 @@ static bool stm32f1_mass_erase(target_s *t)
 		return false;
 
 	/* If we're on a part that has a second bank, mass erase that bank too */
-	if (t->part_id == 0x430)
+	if (t->part_id == 0x430U)
 		return stm32f1_mass_erase_bank(t, FLASH_BANK2_OFFSET, &timeout);
 	return true;
 }
@@ -518,7 +518,7 @@ static bool stm32f1_option_erase(target_s *t)
 static bool stm32f1_option_write_erased(
 	target_s *const t, const uint32_t addr, const uint16_t value, const bool write16_broken)
 {
-	if (value == 0xffff)
+	if (value == 0xffffU)
 		return true;
 
 	stm32f1_flash_clear_eop(t, FLASH_BANK1_OFFSET);
@@ -548,7 +548,7 @@ static bool stm32f1_option_write(target_s *const t, const uint32_t addr, const u
 		const size_t offset = i >> 1U;
 		uint32_t val = target_mem_read32(t, FLASH_OBP_RDP + i);
 		opt_val[offset] = val & 0xffffU;
-		opt_val[offset + 1] = val >> 16U;
+		opt_val[offset + 1U] = val >> 16U;
 	}
 
 	if (opt_val[index] == value)
@@ -576,14 +576,14 @@ static bool stm32f1_cmd_option(target_s *t, int argc, const char **argv)
 {
 	uint32_t flash_obp_rdp_key = FLASH_OBP_RDP_KEY;
 	switch (t->part_id) {
-	case 0x422: /* STM32F30x */
-	case 0x432: /* STM32F37x */
-	case 0x438: /* STM32F303x6/8 and STM32F328 */
-	case 0x440: /* STM32F0 */
-	case 0x446: /* STM32F303xD/E and STM32F398xE */
-	case 0x445: /* STM32F04 RM0091 Rev.7, STM32F070x6 RM0360 Rev. 4*/
-	case 0x448: /* STM32F07 RM0091 Rev.7, STM32F070xB RM0360 Rev. 4*/
-	case 0x442: /* STM32F09 RM0091 Rev.7, STM32F030xC RM0360 Rev. 4*/
+	case 0x422U: /* STM32F30x */
+	case 0x432U: /* STM32F37x */
+	case 0x438U: /* STM32F303x6/8 and STM32F328 */
+	case 0x440U: /* STM32F0 */
+	case 0x446U: /* STM32F303xD/E and STM32F398xE */
+	case 0x445U: /* STM32F04 RM0091 Rev.7, STM32F070x6 RM0360 Rev. 4*/
+	case 0x448U: /* STM32F07 RM0091 Rev.7, STM32F070xb RM0360 Rev. 4*/
+	case 0x442U: /* STM32F09 RM0091 Rev.7, STM32F030xc RM0360 Rev. 4*/
 		flash_obp_rdp_key = FLASH_OBP_RDP_KEY_F3;
 		break;
 	}
@@ -617,7 +617,7 @@ static bool stm32f1_cmd_option(target_s *t, int argc, const char **argv)
 		const uint32_t addr = FLASH_OBP_RDP + i;
 		const uint32_t val = target_mem_read32(t, addr);
 		tc_printf(t, "0x%08X: 0x%04X\n", addr, val & 0xffffU);
-		tc_printf(t, "0x%08X: 0x%04X\n", addr + 2, val >> 16U);
+		tc_printf(t, "0x%08X: 0x%04X\n", addr + 2U, val >> 16U);
 	}
 
 	return true;
