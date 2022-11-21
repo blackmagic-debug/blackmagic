@@ -59,13 +59,13 @@ extern char vector_table;
  * Pins PB[7:5] are used to detect hardware revision.
  * User option byte Data1 is used starting with hardware revision 4.
  * Pin -  OByte - Rev - Description
- * 000 - 0xFFFF -   0 - Original production build.
- * 001 - 0xFFFF -   1 - Mini production build.
- * 010 - 0xFFFF -   2 - Mini V2.0e and later.
- * 011 - 0xFFFF -   3 - Mini V2.1a and later.
- * 011 - 0xFB04 -   4 - Mini V2.1d and later.
- * xxx - 0xFB05 -   5 - Mini V2.2a and later.
- * xxx - 0xFB06 -   6 - Mini V2.3a and later.
+ * 000 - 0xffff -   0 - Original production build.
+ * 001 - 0xffff -   1 - Mini production build.
+ * 010 - 0xffff -   2 - Mini V2.0e and later.
+ * 011 - 0xffff -   3 - Mini V2.1a and later.
+ * 011 - 0xfb04 -   4 - Mini V2.1d and later.
+ * xxx - 0xfb05 -   5 - Mini V2.2a and later.
+ * xxx - 0xfb06 -   6 - Mini V2.3a and later.
  *
  * This function will return -2 if the version number does not make sense.
  * This can happen when the Data1 byte contains "garbage". For example a
@@ -73,7 +73,7 @@ extern char vector_table;
  * the lower byte.
  * Note: The high byte of the Data1 option byte should always be the binary
  * inverse of the lower byte unless the byte is not set, then all bits in both
- * high and low byte are 0xFF.
+ * high and low byte are 0xff.
  */
 int platform_hwversion(void)
 {
@@ -100,7 +100,7 @@ int platform_hwversion(void)
 		gpio_set(GPIOB, hwversion_pins);
 
 		/* Wait a little to make sure the pull up is in effect... */
-		for (volatile size_t i = 0; i < 100; ++i)
+		for (volatile size_t i = 0; i < 100U; ++i)
 			continue;
 
 		/*
@@ -113,7 +113,7 @@ int platform_hwversion(void)
 		gpio_clear(GPIOB, hwversion_pins);
 
 		/* Wait a little to make sure the pull down is in effect... */
-		for (volatile size_t i = 0; i < 100; ++i)
+		for (volatile size_t i = 0; i < 100U; ++i)
 			continue;
 
 		/* Get all the pins that are pulled high in hardware. */
@@ -129,7 +129,7 @@ int platform_hwversion(void)
 		 * it should remain unsigned at all times, but this requires changing how the invalid
 		 * hardware version should be returned.
 		 */
-		hwversion = (((pins_positive ^ pins_negative) ^ 0xffff) & hwversion_pins) >> 5U;
+		hwversion = (((pins_positive ^ pins_negative) ^ 0xffffU) & hwversion_pins) >> 5U;
 	}
 
 	return hwversion;
@@ -236,7 +236,7 @@ void platform_nrst_set_val(bool assert)
 		gpio_set_val(NRST_PORT, NRST_PIN, !assert);
 
 	if (assert) {
-		for (volatile size_t i = 0; i < 10000; ++i)
+		for (volatile size_t i = 0; i < 10000U; ++i)
 			continue;
 	}
 }
@@ -279,7 +279,7 @@ static void adc_init(void)
 	adc_power_on(ADC1);
 
 	/* Wait for the ADC to finish starting up */
-	for (volatile size_t i = 0; i < 800000; ++i)
+	for (volatile size_t i = 0; i < 800000U; ++i)
 		continue;
 
 	adc_reset_calibration(ADC1);
@@ -319,8 +319,8 @@ const char *platform_target_voltage(void)
 
 	static char ret[] = "0.0V";
 	uint32_t val = platform_target_voltage_sense();
-	ret[0] = '0' + val / 10;
-	ret[2] = '0' + val % 10;
+	ret[0] = '0' + val / 10U;
+	ret[2] = '0' + val % 10U;
 
 	return ret;
 }
