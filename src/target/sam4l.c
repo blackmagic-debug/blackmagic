@@ -33,7 +33,7 @@
 /*
  * Flash Controller defines
  */
-#define FLASHCALW_BASE UINT32_C(0x400A0000)
+#define FLASHCALW_BASE UINT32_C(0x400a0000)
 
 /* Flash Control Register */
 #define FLASHCALW_FCR        FLASHCALW_BASE
@@ -106,7 +106,7 @@
 /* All variants of 4L have a 512 byte page */
 #define SAM4L_PAGE_SIZE           512U
 #define SAM4L_ARCH                0xb0U
-#define SAM4L_CHIPID_CIDR         0x400E0740U
+#define SAM4L_CHIPID_CIDR         0x400e0740U
 #define CHIPID_CIDR_ARCH_MASK     0xffU
 #define CHIPID_CIDR_ARCH_SHIFT    20U
 #define CHIPID_CIDR_SRAMSIZ_MASK  0xfU
@@ -144,41 +144,41 @@ static bool sam4l_flash_write(target_flash_s *f, target_addr_t dest, const void 
 
 /* Why couldn't Atmel make it sequential ... */
 static const uint32_t sam4l_ram_size[16] = {
-	48 * 1024,  /*  0: 48K */
-	1 * 1024,   /*  1: 1K */
-	2 * 1024,   /*  2: 2K */
-	6 * 1024,   /*  3: 6K */
-	24 * 1024,  /*  4: 24K */
-	4 * 1024,   /*  5: 4K */
-	80 * 1024,  /*  6: 80K */
-	160 * 1024, /*  7: 160K */
-	8 * 1024,   /*  8: 8K */
-	16 * 1024,  /*  9: 16K */
-	32 * 1024,  /* 10: 32K */
-	64 * 1024,  /* 11: 64K */
-	128 * 1024, /* 12: 128K */
-	256 * 1024, /* 13: 256K */
-	96 * 1024,  /* 14: 96K */
-	512 * 1024  /* 15: 512K */
+	48U * 1024U,  /*  0: 48K */
+	1U * 1024U,   /*  1: 1K */
+	2U * 1024U,   /*  2: 2K */
+	6U * 1024U,   /*  3: 6K */
+	24U * 1024U,  /*  4: 24K */
+	4U * 1024U,   /*  5: 4K */
+	80U * 1024U,  /*  6: 80K */
+	160U * 1024U, /*  7: 160K */
+	8U * 1024U,   /*  8: 8K */
+	16U * 1024U,  /*  9: 16K */
+	32U * 1024U,  /* 10: 32K */
+	64U * 1024U,  /* 11: 64K */
+	128U * 1024U, /* 12: 128K */
+	256U * 1024U, /* 13: 256K */
+	96U * 1024U,  /* 14: 96K */
+	512U * 1024U  /* 15: 512K */
 };
 
 static const uint32_t sam4l_nvp_size[16] = {
-	0,           /*  0: none */
-	8 * 1024,    /*  1: 8K */
-	16 * 1024,   /*  2: 16K */
-	32 * 1024,   /*  3: 32K */
-	0,           /*  4: reserved */
-	64 * 1024,   /*  5: 64K */
-	0,           /*  6: reserved */
-	128 * 1024,  /*  7: 128K */
-	0,           /*  8: reserved */
-	256 * 1024,  /*  9: 256K */
-	512 * 1024,  /* 10: 512K */
-	0,           /* 11: reserved */
-	1024 * 1024, /* 12: 1024K (1M) */
-	0,           /* 13: reserved */
-	2048 * 1024, /* 14: 2048K (2M) */
-	0            /* 15: reserved */
+	0,             /*  0: none */
+	8U * 1024U,    /*  1: 8K */
+	16U * 1024U,   /*  2: 16K */
+	32U * 1024U,   /*  3: 32K */
+	0,             /*  4: reserved */
+	64U * 1024U,   /*  5: 64K */
+	0,             /*  6: reserved */
+	128U * 1024U,  /*  7: 128K */
+	0,             /*  8: reserved */
+	256U * 1024U,  /*  9: 256K */
+	512U * 1024U,  /* 10: 512K */
+	0,             /* 11: reserved */
+	1024U * 1024U, /* 12: 1024K (1M) */
+	0,             /* 13: reserved */
+	2048U * 1024U, /* 14: 2048K (2M) */
+	0              /* 15: reserved */
 };
 
 /*
@@ -252,7 +252,7 @@ static void sam4l_extended_reset(target_s *t)
 		/* Write '1' bit to the status clear register */
 		target_mem_write32(t, SMAP_SCR, SMAP_SR_HCR);
 		/* Waiting 250 loops for it to reset is arbitrary, it should happen right away */
-		for (size_t i = 0; i < 250; i++) {
+		for (size_t i = 0; i < 250U; i++) {
 			reg = target_mem_read32(t, SMAP_SR);
 			if (!(reg & SMAP_SR_HCR))
 				break;
@@ -268,7 +268,7 @@ static void sam4l_extended_reset(target_s *t)
 /*
  * Helper function, wait for the flash controller to be ready to receive a
  * command. Then send it the command, page number, and the authorization
- * key (always 0xA5) in the command register.
+ * key (always 0xa5) in the command register.
  *
  * Need the target struct to call the mem_read32 and mem_write32 function
  * pointers.
@@ -323,7 +323,7 @@ static bool sam4l_flash_write(
 	 * last 64 bits (8 bytes) to be incorrect on even pages (0, 2, 4, ...)
 	 * since it works this way I've not investigated further.
 	 */
-	for (size_t offset = 0; offset < SAM4L_PAGE_SIZE; offset += 4) {
+	for (size_t offset = 0; offset < SAM4L_PAGE_SIZE; offset += 4U) {
 		/*
  		 * The page buffer overlaps flash, its only 512 bytes long
 		 * and no matter where you write it from it goes to the page
