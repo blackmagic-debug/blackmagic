@@ -357,7 +357,7 @@ static int read_retry(uint8_t *txbuf, size_t txsize, uint8_t *rxbuf, size_t rxsi
 		if (res == STLINK_ERROR_OK)
 			return res;
 		uint32_t now = platform_time_ms();
-		if (now - start > 1000 || res != STLINK_ERROR_WAIT) {
+		if (now - start > 1000U || res != STLINK_ERROR_WAIT) {
 			DEBUG_WARN("read_retry failed.\n");
 			stlink_usb_get_rw_status(true);
 			return res;
@@ -378,7 +378,7 @@ static int write_retry(uint8_t *cmdbuf, size_t cmdsize, uint8_t *txbuf, size_t t
 		if (res == STLINK_ERROR_OK)
 			return res;
 		uint32_t now = platform_time_ms();
-		if (now - start > 1000 || res != STLINK_ERROR_WAIT) {
+		if (now - start > 1000U || res != STLINK_ERROR_WAIT) {
 			stlink_usb_get_rw_status(true);
 			return res;
 		}
@@ -742,7 +742,7 @@ static int stlink_read_dp_register(uint16_t port, uint16_t addr, uint32_t *reg)
 	cmd[2] = port & 0xffU;
 	cmd[3] = port >> 8U;
 	cmd[4] = addr & 0xffU;
-	cmd[5] = addr >> 8;
+	cmd[5] = addr >> 8U;
 	if (port == STLINK_DEBUG_PORT_ACCESS && stlink.dap_select)
 		cmd[4] = ((stlink.dap_select & 0xfU) << 4U) | (addr & 0xfU);
 	else
@@ -771,10 +771,10 @@ static int stlink_write_dp_register(uint16_t port, uint16_t addr, uint32_t val)
 	cmd[3] = port >> 8U;
 	cmd[4] = addr & 0xffU;
 	cmd[5] = addr >> 8U;
-	cmd[6] = val & 0xff;
+	cmd[6] = val & 0xffU;
 	cmd[7] = (val >> 8U) & 0xffU;
 	cmd[8] = (val >> 16U) & 0xffU;
-	cmd[9] = (val >> 24) & 0xffU;
+	cmd[9] = (val >> 24U) & 0xffU;
 	uint8_t data[2];
 	stlink_send_recv_retry(cmd, 16, data, 2);
 	return stlink_usb_error_check(data, true);
@@ -785,9 +785,9 @@ uint32_t stlink_dp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr
 	uint32_t response = 0;
 	int res;
 	if (RnW)
-		res = stlink_read_dp_register((addr < 0x100) ? STLINK_DEBUG_PORT_ACCESS : 0, addr, &response);
+		res = stlink_read_dp_register(addr < 0x100U ? STLINK_DEBUG_PORT_ACCESS : 0, addr, &response);
 	else
-		res = stlink_write_dp_register((addr < 0x100) ? STLINK_DEBUG_PORT_ACCESS : 0, addr, value);
+		res = stlink_write_dp_register(addr < 0x100U ? STLINK_DEBUG_PORT_ACCESS : 0, addr, value);
 
 	if (res == STLINK_ERROR_WAIT)
 		raise_exception(EXCEPTION_TIMEOUT, "DP ACK timeout");
@@ -961,7 +961,7 @@ static void stlink_regs_read(adiv5_access_port_s *ap, void *data)
 	DEBUG_PROBE("AP %hhu: Read all core registers\n", ap->apsel);
 	send_recv(info.usb_link, cmd, 16, res, 88);
 	stlink_usb_error_check(res, true);
-	memcpy(data, res + 4, 84);
+	memcpy(data, res + 4U, 84);
 }
 
 static uint32_t stlink_reg_read(adiv5_access_port_s *ap, int num)
@@ -1115,9 +1115,9 @@ uint32_t stlink_swdp_scan(bmp_info_s *info)
 	return target_list ? 1U : 0U;
 }
 
-#define V2_USED_SWD_CYCLES 20
-#define V2_CYCLES_PER_CNT  20
-#define V2_CLOCK_RATE      (72 * 1000 * 1000)
+#define V2_USED_SWD_CYCLES 20U
+#define V2_CYCLES_PER_CNT  20U
+#define V2_CLOCK_RATE      (72U * 1000U * 1000U)
 /* Above values reproduce the known values for V2
 #include <stdio.h>
 
@@ -1149,9 +1149,9 @@ void stlink_max_frequency_set(bmp_info_s *info, uint32_t freq)
 		uint32_t frequency = 0;
 		DEBUG_INFO("Available speed settings: ");
 		for (size_t i = 0; i < STLINK_V3_MAX_FREQ_NB; ++i) {
-			const size_t offset = 12 + (i * 4);
+			const size_t offset = 12U + (i * 4U);
 			const uint32_t new_freq =
-				data[offset] | (data[offset + 1] << 8U) | (data[offset + 2] << 16U) | (data[offset + 3] << 24U);
+				data[offset] | (data[offset + 1U] << 8U) | (data[offset + 2U] << 16U) | (data[offset + 3U] << 24U);
 			if (!new_freq)
 				break;
 			frequency = new_freq;
@@ -1168,14 +1168,14 @@ void stlink_max_frequency_set(bmp_info_s *info, uint32_t freq)
 		cmd[7] = (frequency >> 24U) & 0xffU;
 		send_recv(info->usb_link, cmd, 16, data, 8);
 		stlink_usb_error_check(data, true);
-		v3_freq[info->is_jtag ? 1 : 0] = frequency * 1000;
+		v3_freq[info->is_jtag ? 1 : 0] = frequency * 1000U;
 	} else {
 		memset(cmd, 0, sizeof(cmd));
 		cmd[0] = STLINK_DEBUG_COMMAND;
 		if (info->is_jtag) {
 			cmd[1] = STLINK_DEBUG_APIV2_JTAG_SET_FREQ;
 			/*  V2_CLOCK_RATE / (4, 8, 16, ... 256)*/
-			uint32_t div = (V2_CLOCK_RATE + (2 * freq) - 1) / (2 * freq);
+			uint32_t div = (V2_CLOCK_RATE + (2U * freq) - 1U) / (2U * freq);
 			if (div & (div - 1U)) { /* Round up */
 				uint32_t clz = __builtin_clz(div);
 				divisor = 1U << (32U - clz);

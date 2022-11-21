@@ -26,7 +26,7 @@
 #define STLINK_ERROR_OK   0
 #define STLINK_ERROR_WAIT 1
 
-#define STLINK_DEBUG_PORT_ACCESS 0xffff
+#define STLINK_DEBUG_PORT_ACCESS 0xffffU
 
 #if HOSTED_BMP_ONLY == 1
 #pragma GCC diagnostic push
