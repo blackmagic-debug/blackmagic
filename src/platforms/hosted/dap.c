@@ -461,7 +461,7 @@ void dap_reset_link(bool jtag)
 		*p++ = 0xff;
 		*p++ = 0xff;
 		*p++ = 0x00;
-		buf[1] = (p - buf + 2) * 8;
+		buf[1] = (p - buf + 2U) * 8U;
 	}
 	dbg_dap_cmd(buf, sizeof(buf), p - buf);
 
@@ -623,14 +623,14 @@ void dap_jtagtap_tdi_tdo_seq(
 		if (final_tms)
 			ticks--;
 		while (ticks) {
-			int transfers = ticks;
-			if (transfers > 64)
+			size_t transfers = ticks;
+			if (transfers > 64U)
 				transfers = 64;
 			uint8_t *p = buf;
 			*p++ = ID_DAP_JTAG_SEQUENCE;
 			*p++ = 1;
-			*p++ = (transfers == 64 ? 0 : transfers) | (data_out ? DAP_JTAG_TDO_CAPTURE : 0);
-			int n_di_bytes = (transfers + 7U) >> 3U;
+			*p++ = (transfers == 64U ? 0 : transfers) | (data_out ? DAP_JTAG_TDO_CAPTURE : 0);
+			size_t n_di_bytes = (transfers + 7U) >> 3U;
 			if (din) {
 				p = memcpy(p, din, n_di_bytes);
 				din += n_di_bytes;
@@ -661,7 +661,7 @@ void dap_jtagtap_tdi_tdo_seq(
 			if (buf[0] == DAP_ERROR)
 				DEBUG_WARN("dap_jtagtap_tdi_tdo_seq failed %02x\n", buf[0]);
 			if (dout) {
-				if (buf[1] & 1)
+				if (buf[1] & 1U)
 					data_out[last_byte] |= 1U << last_bit;
 				else
 					data_out[last_byte] &= ~(1U << last_bit);
@@ -670,13 +670,13 @@ void dap_jtagtap_tdi_tdo_seq(
 	} else {
 		while (ticks) {
 			uint8_t *p = buf;
-			int transfers = ticks;
-			if (transfers > 64)
+			size_t transfers = ticks;
+			if (transfers > 64U)
 				transfers = 64;
 			p = buf;
 			*p++ = ID_DAP_JTAG_SEQUENCE;
 			*p++ = transfers;
-			for (int i = 0; i < transfers; i++) {
+			for (size_t i = 0; i < transfers; i++) {
 				*p++ =
 					1U | (data_out ? DAP_JTAG_TDO_CAPTURE : 0) | (tms[i >> 3U] & (1U << (i & 7U)) ? DAP_JTAG_TMS : 0);
 				if (data_in)
@@ -688,8 +688,8 @@ void dap_jtagtap_tdi_tdo_seq(
 			if (buf[0] == DAP_ERROR)
 				DEBUG_WARN("dap_jtagtap_tdi_tdo_seq failed %02x\n", buf[0]);
 			if (data_out) {
-				for (int i = 0; i < transfers; i++) {
-					if (buf[i + 1])
+				for (size_t i = 0; i < transfers; i++) {
+					if (buf[i + 1U])
 						data_out[i >> 3U] |= (1U << (i & 7U));
 					else
 						data_out[i >> 3U] &= ~(1U << (i & 7U));
@@ -741,7 +741,7 @@ void dap_swdptap_seq_out_parity(uint32_t tms_states, size_t clock_cycles)
 	/* clang-format off */
 	uint8_t buf[] = {
 		ID_DAP_SWJ_SEQUENCE,
-		clock_cycles + 1,
+		clock_cycles + 1U,
 		(tms_states >> 0U) & 0xffU,
 		(tms_states >> 8U) & 0xffU,
 		(tms_states >> 16U) & 0xffU,

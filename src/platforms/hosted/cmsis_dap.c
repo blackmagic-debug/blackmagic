@@ -92,7 +92,7 @@ static libusb_device_handle *usb_handle = NULL;
 static uint8_t in_ep;
 static uint8_t out_ep;
 static hid_device *handle = NULL;
-static uint8_t buffer[1024 + 1];
+static uint8_t buffer[1024U + 1U];
 static int report_size = 64 + 1; // TODO: read actual report size
 static bool has_swd_sequence = false;
 
@@ -151,7 +151,7 @@ static bool dap_init_hid(const bmp_info_s *const info)
 		return false;
 
 	const size_t size = mbslen(info->serial);
-	if (size > 64) {
+	if (size > 64U) {
 		PRINT_INFO("Serial number invalid, aborting\n");
 		hid_exit();
 		return false;
@@ -166,9 +166,9 @@ static bool dap_init_hid(const bmp_info_s *const info)
 	/* Blacklist devices that do not work with 513 byte report length
 	* FIXME: Find a solution to decipher from the device.
 	*/
-	if (info->vid == 0x1fc9 && info->pid == 0x0132) {
+	if (info->vid == 0x1fc9U && info->pid == 0x0132U) {
 		DEBUG_WARN("Blacklist\n");
-		report_size = 64 + 1;
+		report_size = 64U + 1U;
 	}
 	handle = hid_open(info->vid, info->pid, serial[0] ? serial : NULL);
 	if (!handle) {
@@ -221,7 +221,7 @@ int dap_init(bmp_info_s *info)
 		if (sscanf((const char *)buffer, "%d.%d.%d", &major, &minor, &sub)) {
 			if (sub == -1) {
 				if (minor >= 10) {
-					minor /= 10;
+					minor /= 10U;
 					sub = 0;
 				}
 			}
@@ -230,13 +230,13 @@ int dap_init(bmp_info_s *info)
 	}
 	size = dap_info(DAP_INFO_CAPABILITIES, buffer, sizeof(buffer));
 	dap_caps = buffer[0];
-	DEBUG_INFO("Cap (0x%2x): %s%s%s", dap_caps, (dap_caps & 1) ? "SWD" : "", ((dap_caps & 3) == 3) ? "/" : "",
-		(dap_caps & 2) ? "JTAG" : "");
-	if (dap_caps & 4)
+	DEBUG_INFO("Cap (0x%2x): %s%s%s", dap_caps, (dap_caps & 1U) ? "SWD" : "", ((dap_caps & 3U) == 3U) ? "/" : "",
+		(dap_caps & 0x2U) ? "JTAG" : "");
+	if (dap_caps & 0x4U)
 		DEBUG_INFO(", SWO_UART");
-	if (dap_caps & 8)
+	if (dap_caps & 0x8U)
 		DEBUG_INFO(", SWO_MANCHESTER");
-	if (dap_caps & 0x10)
+	if (dap_caps & 0x10U)
 		DEBUG_INFO(", Atomic Cmds");
 	if (has_swd_sequence)
 		DEBUG_INFO(", DAP_SWD_Sequence");
@@ -280,7 +280,7 @@ static uint32_t dap_dp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t 
 {
 	bool APnDP = addr & ADIV5_APnDP;
 	uint32_t res = 0;
-	uint8_t reg = (addr & 0xc) | ((APnDP) ? 1 : 0);
+	uint8_t reg = (addr & 0xcU) | ((APnDP) ? 1 : 0);
 	if (RnW) {
 		res = dap_read_reg(dp, reg);
 	} else {
@@ -391,11 +391,11 @@ static void dap_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size
 		return dap_read_single(ap, dest, src, align);
 	/* One word transfer for every byte/halfword/word
 	 * Total number of bytes in transfer*/
-	unsigned int max_size = ((dbg_get_report_size() - 6) >> (2 - align)) & ~3;
+	unsigned int max_size = ((dbg_get_report_size() - 6U) >> (2U - align)) & ~3U;
 	while (len) {
 		dap_ap_mem_access_setup(ap, src, align);
 		/* Calculate length until next access setup is needed */
-		unsigned int blocksize = (src | 0x3ff) - src + 1;
+		unsigned int blocksize = (src | 0x3ffU) - src + 1U;
 		if (blocksize > len)
 			blocksize = len;
 		while (blocksize) {
@@ -424,10 +424,10 @@ static void dap_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const vo
 	DEBUG_WIRE("memwrite @ %" PRIx32 " len %ld, align %d , %08x start: \n", dest, len, align, *(uint32_t *)src);
 	if (((unsigned)(1 << align)) == len)
 		return dap_write_single(ap, dest, src, align);
-	unsigned int max_size = ((dbg_get_report_size() - 6) >> (2 - align) & ~3);
+	unsigned int max_size = ((dbg_get_report_size() - 6U) >> (2U - align) & ~3U);
 	while (len) {
 		dap_ap_mem_access_setup(ap, dest, align);
-		unsigned int blocksize = (dest | 0x3ff) - dest + 1;
+		unsigned int blocksize = (dest | 0x3ffU) - dest + 1U;
 		if (blocksize > len)
 			blocksize = len;
 		while (blocksize) {
@@ -526,8 +526,8 @@ int dap_jtag_dp_init(adiv5_debug_port_s *dp)
 	return true;
 }
 
-#define SWD_SEQUENCE_IN  0x80
-#define DAP_SWD_SEQUENCE 0x1d
+#define SWD_SEQUENCE_IN  0x80U
+#define DAP_SWD_SEQUENCE 0x1dU
 
 static bool dap_dp_low_write(adiv5_debug_port_s *dp, uint16_t addr, const uint32_t data)
 {
@@ -535,15 +535,15 @@ static bool dap_dp_low_write(adiv5_debug_port_s *dp, uint16_t addr, const uint32
 	(void)dp;
 	unsigned int paket_request = make_packet_request(ADIV5_LOW_WRITE, addr);
 	uint8_t buf[32] = {DAP_SWD_SEQUENCE, 5, 8, paket_request,
-		4 + SWD_SEQUENCE_IN, /* one turn-around + read 3 bit ACK */
-		1,                   /* one bit turn around to drive SWDIO */
-		0, 32,               /* write 32 bit data */
-		(data >> 0) & 0xff, (data >> 8) & 0xff, (data >> 16) & 0xff, (data >> 24) & 0xff, 1, /* write parity biT */
+		4U + SWD_SEQUENCE_IN, /* one turn-around + read 3 bit ACK */
+		1,                    /* one bit turn around to drive SWDIO */
+		0, 32,                /* write 32 bit data */
+		data & 0xffU, (data >> 8U) & 0xffU, (data >> 16U) & 0xffU, (data >> 24U) & 0xffU, 1, /* write parity biT */
 		__builtin_parity(data)};
 	dbg_dap_cmd(buf, sizeof(buf), 14);
 	if (buf[0])
 		DEBUG_WARN("dap_dp_low_write failed\n");
-	uint32_t ack = (buf[1] >> 1) & 7;
+	uint32_t ack = (buf[1] >> 1U) & 7U;
 	return (ack != SWDP_ACK_OK);
 }
 
