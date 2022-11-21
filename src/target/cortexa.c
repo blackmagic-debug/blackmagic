@@ -83,79 +83,79 @@ typedef struct cortexa_priv {
 } cortexa_priv_s;
 
 /* This may be specific to Cortex-A9 */
-#define CACHE_LINE_LENGTH (8 * 4)
+#define CACHE_LINE_LENGTH (8U * 4U)
 
 /* Debug APB registers */
-#define DBGDIDR 0
+#define DBGDIDR 0U
 
-#define DBGDTRRX 32 /* DCC: Host to target */
-#define DBGITR   33
+#define DBGDTRRX 32U /* DCC: Host to target */
+#define DBGITR   33U
 
-#define DBGDSCR                  34
-#define DBGDSCR_TXFULL           (1 << 29)
-#define DBGDSCR_INSTRCOMPL       (1 << 24)
-#define DBGDSCR_EXTDCCMODE_STALL (1 << 20)
-#define DBGDSCR_EXTDCCMODE_FAST  (2 << 20)
-#define DBGDSCR_EXTDCCMODE_MASK  (3 << 20)
-#define DBGDSCR_HDBGEN           (1 << 14)
-#define DBGDSCR_ITREN            (1 << 13)
-#define DBGDSCR_INTDIS           (1 << 11)
-#define DBGDSCR_UND_I            (1 << 8)
-#define DBGDSCR_SDABORT_L        (1 << 6)
-#define DBGDSCR_MOE_MASK         (0xf << 2)
-#define DBGDSCR_MOE_HALT_REQ     (0x0 << 2)
-#define DBGDSCR_MOE_WATCH_ASYNC  (0x2 << 2)
-#define DBGDSCR_MOE_WATCH_SYNC   (0xa << 2)
-#define DBGDSCR_RESTARTED        (1 << 1)
-#define DBGDSCR_HALTED           (1 << 0)
+#define DBGDSCR                  34U
+#define DBGDSCR_TXFULL           (1U << 29U)
+#define DBGDSCR_INSTRCOMPL       (1U << 24U)
+#define DBGDSCR_EXTDCCMODE_STALL (1U << 20U)
+#define DBGDSCR_EXTDCCMODE_FAST  (2U << 20U)
+#define DBGDSCR_EXTDCCMODE_MASK  (3U << 20U)
+#define DBGDSCR_HDBGEN           (1U << 14U)
+#define DBGDSCR_ITREN            (1U << 13U)
+#define DBGDSCR_INTDIS           (1U << 11U)
+#define DBGDSCR_UND_I            (1U << 8U)
+#define DBGDSCR_SDABORT_L        (1U << 6U)
+#define DBGDSCR_MOE_MASK         (0xfU << 2U)
+#define DBGDSCR_MOE_HALT_REQ     (0x0U << 2U)
+#define DBGDSCR_MOE_WATCH_ASYNC  (0x2U << 2U)
+#define DBGDSCR_MOE_WATCH_SYNC   (0xaU << 2U)
+#define DBGDSCR_RESTARTED        (1U << 1U)
+#define DBGDSCR_HALTED           (1U << 0U)
 
-#define DBGDTRTX 35 /* DCC: Target to host */
+#define DBGDTRTX 35U /* DCC: Target to host */
 
-#define DBGDRCR     36
-#define DBGDRCR_CSE (1 << 2)
-#define DBGDRCR_RRQ (1 << 1)
-#define DBGDRCR_HRQ (1 << 0)
+#define DBGDRCR     36U
+#define DBGDRCR_CSE (1U << 2U)
+#define DBGDRCR_RRQ (1U << 1U)
+#define DBGDRCR_HRQ (1U << 0U)
 
-#define DBGBVR(i)            (64 + (i))
-#define DBGBCR(i)            (80 + (i))
-#define DBGBCR_INST_MISMATCH (4 << 20)
-#define DBGBCR_BAS_ANY       (0xf << 5)
-#define DBGBCR_BAS_LOW_HW    (0x3 << 5)
-#define DBGBCR_BAS_HIGH_HW   (0xc << 5)
-#define DBGBCR_EN            (1 << 0)
+#define DBGBVR(i)            (64U + (i))
+#define DBGBCR(i)            (80U + (i))
+#define DBGBCR_INST_MISMATCH (4U << 20U)
+#define DBGBCR_BAS_ANY       (0xfU << 5U)
+#define DBGBCR_BAS_LOW_HW    (0x3U << 5U)
+#define DBGBCR_BAS_HIGH_HW   (0xcU << 5U)
+#define DBGBCR_EN            (1U << 0U)
 
-#define DBGWVR(i)           (96 + (i))
-#define DBGWCR(i)           (112 + (i))
-#define DBGWCR_LSC_LOAD     (0b01 << 3)
-#define DBGWCR_LSC_STORE    (0b10 << 3)
-#define DBGWCR_LSC_ANY      (0b11 << 3)
-#define DBGWCR_BAS_BYTE     (0b0001 << 5)
-#define DBGWCR_BAS_HALFWORD (0b0011 << 5)
-#define DBGWCR_BAS_WORD     (0b1111 << 5)
-#define DBGWCR_PAC_ANY      (0b11 << 1)
-#define DBGWCR_EN           (1 << 0)
+#define DBGWVR(i)           (96U + (i))
+#define DBGWCR(i)           (112U + (i))
+#define DBGWCR_LSC_LOAD     (0b01U << 3U)
+#define DBGWCR_LSC_STORE    (0b10U << 3U)
+#define DBGWCR_LSC_ANY      (0b11U << 3U)
+#define DBGWCR_BAS_BYTE     (0b0001U << 5U)
+#define DBGWCR_BAS_HALFWORD (0b0011U << 5U)
+#define DBGWCR_BAS_WORD     (0b1111U << 5U)
+#define DBGWCR_PAC_ANY      (0b11U << 1U)
+#define DBGWCR_EN           (1U << 0U)
 
 /* Instruction encodings for accessing the coprocessor interface */
-#define MCR 0xee000010
-#define MRC 0xee100010
+#define MCR 0xee000010U
+#define MRC 0xee100010U
 #define CPREG(coproc, opc1, rt, crn, crm, opc2) \
-	(((opc1) << 21) | ((crn) << 16) | ((rt) << 12) | ((coproc) << 8) | ((opc2) << 5) | (crm))
+	(((opc1) << 21U) | ((crn) << 16U) | ((rt) << 12U) | ((coproc) << 8U) | ((opc2) << 5U) | (crm))
 
 /* Debug registers CP14 */
-#define DBGDTRRXint CPREG(14, 0, 0, 0, 5, 0)
-#define DBGDTRTXint CPREG(14, 0, 0, 0, 5, 0)
+#define DBGDTRRXint CPREG(14U, 0U, 0U, 0U, 5U, 0U)
+#define DBGDTRTXint CPREG(14U, 0U, 0U, 0U, 5U, 0U)
 
 /* Address translation registers CP15 */
-#define PAR     CPREG(15, 0, 0, 7, 4, 0)
-#define ATS1CPR CPREG(15, 0, 0, 7, 8, 0)
+#define PAR     CPREG(15U, 0U, 0U, 7U, 4U, 0U)
+#define ATS1CPR CPREG(15U, 0U, 0U, 7U, 8U, 0U)
 
 /* Cache management registers CP15 */
-#define ICIALLU  CPREG(15, 0, 0, 7, 5, 0)
-#define DCCIMVAC CPREG(15, 0, 0, 7, 14, 1)
-#define DCCMVAC  CPREG(15, 0, 0, 7, 10, 1)
+#define ICIALLU  CPREG(15U, 0U, 0U, 7U, 5U, 0U)
+#define DCCIMVAC CPREG(15U, 0U, 0U, 7U, 14U, 1U)
+#define DCCMVAC  CPREG(15U, 0U, 0U, 7U, 10U, 1U)
 
 /* Thumb mode bit in CPSR */
-#define CPSR_THUMB (1 << 5)
+#define CPSR_THUMB (1U << 5U)
 
 /**
  * Fields for Cortex-A special purpose registers, used in the generation of GDB's target description XML.
@@ -319,7 +319,7 @@ static void apb_write(target_s *t, uint16_t reg, uint32_t val)
 {
 	cortexa_priv_s *priv = t->priv;
 	adiv5_access_port_s *ap = priv->apb;
-	uint32_t addr = priv->base + 4 * reg;
+	uint32_t addr = priv->base + 4U * reg;
 	adiv5_ap_write(ap, ADIV5_AP_TAR, addr);
 	adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DRW, val);
 }
@@ -328,7 +328,7 @@ static uint32_t apb_read(target_s *t, uint16_t reg)
 {
 	cortexa_priv_s *priv = t->priv;
 	adiv5_access_port_s *ap = priv->apb;
-	uint32_t addr = priv->base + 4 * reg;
+	uint32_t addr = priv->base + 4U * reg;
 	adiv5_ap_write(ap, ADIV5_AP_TAR, addr);
 	adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_AP_DRW, 0);
 	return adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_DP_RDBUFF, 0);
@@ -341,9 +341,9 @@ static uint32_t va_to_pa(target_s *t, uint32_t va)
 	apb_write(t, DBGITR, MCR | ATS1CPR);
 	apb_write(t, DBGITR, MRC | PAR);
 	uint32_t par = read_gpreg(t, 0);
-	if (par & 1)
+	if (par & 1U)
 		priv->mmu_fault = true;
-	uint32_t pa = (par & ~0xfff) | (va & 0xfff);
+	uint32_t pa = (par & ~0xfffU) | (va & 0xfffU);
 	DEBUG_INFO("%s: VA = 0x%08" PRIx32 ", PAR = 0x%08" PRIx32 ", PA = 0x%08" PRIX32 "\n", __func__, va, par, pa);
 	return pa;
 }
@@ -351,7 +351,7 @@ static uint32_t va_to_pa(target_s *t, uint32_t va)
 static void cortexa_slow_mem_read(target_s *t, void *dest, target_addr_t src, size_t len)
 {
 	cortexa_priv_s *priv = t->priv;
-	unsigned words = (len + (src & 3) + 3) / 4;
+	unsigned words = (len + (src & 3U) + 3U) / 4U;
 	uint32_t dest32[words];
 
 	/* Set r0 to aligned src address */
@@ -372,7 +372,7 @@ static void cortexa_slow_mem_read(target_s *t, void *dest, target_addr_t src, si
 	for (unsigned i = 0; i < words; i++)
 		dest32[i] = apb_read(t, DBGDTRTX);
 
-	memcpy(dest, (uint8_t *)dest32 + (src & 3), len);
+	memcpy(dest, (uint8_t *)dest32 + (src & 3U), len);
 
 	/* Switch back to stalling DCC mode */
 	dbgdscr = (dbgdscr & ~DBGDSCR_EXTDCCMODE_MASK) | DBGDSCR_EXTDCCMODE_STALL;
@@ -412,7 +412,7 @@ static void cortexa_slow_mem_write(target_s *t, target_addr_t dest, const void *
 	if (len == 0)
 		return;
 
-	if ((dest & 3) || (len & 3)) {
+	if ((dest & 3U) || (len & 3U)) {
 		cortexa_slow_mem_write_bytes(t, dest, src, len);
 		return;
 	}
@@ -427,7 +427,7 @@ static void cortexa_slow_mem_write(target_s *t, target_addr_t dest, const void *
 
 	apb_write(t, DBGITR, 0xeca05e01); /* stc 14, cr5, [r0], #4 */
 
-	for (; len; len -= 4)
+	for (; len; len -= 4U)
 		apb_write(t, DBGDTRRX, *src32++);
 
 	/* Switch back to stalling DCC mode */
@@ -476,8 +476,8 @@ bool cortexa_probe(adiv5_access_port_s *apb, uint32_t debug_base)
 	uint32_t csw = apb->csw | ADIV5_AP_CSW_SIZE_WORD;
 	adiv5_ap_write(apb, ADIV5_AP_CSW, csw);
 	uint32_t dbgdidr = apb_read(t, DBGDIDR);
-	priv->hw_breakpoint_max = ((dbgdidr >> 24) & 15) + 1;
-	priv->hw_watchpoint_max = ((dbgdidr >> 28) & 15) + 1;
+	priv->hw_breakpoint_max = ((dbgdidr >> 24U) & 15U) + 1U;
+	priv->hw_watchpoint_max = ((dbgdidr >> 28U) & 15U) + 1U;
 
 	t->check_error = cortexa_check_error;
 
@@ -511,7 +511,7 @@ bool cortexa_attach(target_s *t)
 	if (!t->tdesc) {
 		// Find the buffer size needed for the target description string we need to send to GDB,
 		// and then compute the string itself.
-		size_t size_needed = create_tdesc_cortex_a(NULL, 0) + 1;
+		size_t size_needed = create_tdesc_cortex_a(NULL, 0) + 1U;
 		t->tdesc = calloc(1, size_needed);
 		create_tdesc_cortex_a(t->tdesc, size_needed);
 	} else {
@@ -590,7 +590,7 @@ static uint32_t read_gpreg(target_s *t, uint8_t regno)
 	/* To read a register we use DBGITR to load an MCR instruction
 	 * that sends the value via DCC DBGDTRTX using the CP14 interface.
 	 */
-	uint32_t instr = MCR | DBGDTRTXint | ((regno & 0xf) << 12);
+	uint32_t instr = MCR | DBGDTRTXint | ((regno & 0xfU) << 12U);
 	apb_write(t, DBGITR, instr);
 	/* Return value read from DCC channel */
 	return apb_read(t, DBGDTRTX);
@@ -601,7 +601,7 @@ static void write_gpreg(target_s *t, uint8_t regno, uint32_t val)
 	/* Write value to DCC channel */
 	apb_write(t, DBGDTRRX, val);
 	/* Run instruction to load register */
-	uint32_t instr = MRC | DBGDTRRXint | ((regno & 0xf) << 12);
+	uint32_t instr = MRC | DBGDTRRXint | ((regno & 0xfU) << 12U);
 	apb_write(t, DBGITR, instr);
 }
 
@@ -662,23 +662,23 @@ static void cortexa_regs_read_internal(target_s *t)
 {
 	cortexa_priv_s *priv = (cortexa_priv_s *)t->priv;
 	/* Read general purpose registers */
-	for (int i = 0; i < 15; i++) {
+	for (size_t i = 0; i < 15U; i++)
 		priv->reg_cache.r[i] = read_gpreg(t, i);
-	}
+
 	/* Read PC, via r0.  MCR is UNPREDICTABLE for Rt = r15. */
 	apb_write(t, DBGITR, 0xe1a0000f); /* mov r0, pc */
 	priv->reg_cache.r[15] = read_gpreg(t, 0);
 	/* Read CPSR */
-	apb_write(t, DBGITR, 0xE10F0000); /* mrs r0, CPSR */
+	apb_write(t, DBGITR, 0xe10f0000); /* mrs r0, CPSR */
 	priv->reg_cache.cpsr = read_gpreg(t, 0);
 	/* Read FPSCR */
 	apb_write(t, DBGITR, 0xeef10a10); /* vmrs r0, fpscr */
 	priv->reg_cache.fpscr = read_gpreg(t, 0);
 	/* Read out VFP registers */
-	for (int i = 0; i < 16; i++) {
+	for (size_t i = 0; i < 16U; i++) {
 		/* Read D[i] to R0/R1 */
-		apb_write(t, DBGITR, 0xEC510B10 | i); /* vmov r0, r1, d0 */
-		priv->reg_cache.d[i] = ((uint64_t)read_gpreg(t, 1) << 32) | read_gpreg(t, 0);
+		apb_write(t, DBGITR, 0xec510b10 | i); /* vmov r0, r1, d0 */
+		priv->reg_cache.d[i] = ((uint64_t)read_gpreg(t, 1) << 32U) | read_gpreg(t, 0);
 	}
 	priv->reg_cache.r[15] -= (priv->reg_cache.cpsr & CPSR_THUMB) ? 4 : 8;
 }
@@ -687,10 +687,10 @@ static void cortexa_regs_write_internal(target_s *t)
 {
 	cortexa_priv_s *priv = (cortexa_priv_s *)t->priv;
 	/* First write back floats */
-	for (int i = 0; i < 16; i++) {
-		write_gpreg(t, 1, priv->reg_cache.d[i] >> 32);
+	for (size_t i = 0; i < 16U; i++) {
+		write_gpreg(t, 1, priv->reg_cache.d[i] >> 32U);
 		write_gpreg(t, 0, priv->reg_cache.d[i]);
-		apb_write(t, DBGITR, 0xec410b10 | i); /* vmov d[i], r0, r1 */
+		apb_write(t, DBGITR, 0xec410b10U | i); /* vmov d[i], r0, r1 */
 	}
 	/* Write back FPSCR */
 	write_gpreg(t, 0, priv->reg_cache.fpscr);
@@ -702,9 +702,8 @@ static void cortexa_regs_write_internal(target_s *t)
 	write_gpreg(t, 0, priv->reg_cache.r[15]);
 	apb_write(t, DBGITR, 0xe1a0f000); /* mov pc, r0 */
 	/* Finally the GP registers now that we're done using them */
-	for (int i = 0; i < 15; i++) {
+	for (size_t i = 0; i < 15U; i++)
 		write_gpreg(t, i, priv->reg_cache.r[i]);
-	}
 }
 
 static void cortexa_reset(target_s *t)
@@ -712,9 +711,9 @@ static void cortexa_reset(target_s *t)
 	/* This mess is Xilinx Zynq specific
 	 * See Zynq-7000 TRM, Xilinx doc UG585
 	 */
-#define ZYNQ_SLCR_UNLOCK       0xf8000008
-#define ZYNQ_SLCR_UNLOCK_KEY   0xdf0d
-#define ZYNQ_SLCR_PSS_RST_CTRL 0xf8000200
+#define ZYNQ_SLCR_UNLOCK       0xf8000008U
+#define ZYNQ_SLCR_UNLOCK_KEY   0xdf0dU
+#define ZYNQ_SLCR_PSS_RST_CTRL 0xf8000200U
 	target_mem_write32(t, ZYNQ_SLCR_UNLOCK, ZYNQ_SLCR_UNLOCK_KEY);
 	target_mem_write32(t, ZYNQ_SLCR_PSS_RST_CTRL, 1);
 
@@ -858,9 +857,9 @@ void cortexa_halt_resume(target_s *t, bool step)
 /* Breakpoints */
 static uint32_t bp_bas(uint32_t addr, uint8_t len)
 {
-	if (len == 4)
+	if (len == 4U)
 		return DBGBCR_BAS_ANY;
-	if (addr & 2)
+	if (addr & 2U)
 		return DBGBCR_BAS_HIGH_HW;
 	return DBGBCR_BAS_LOW_HW;
 }
@@ -875,11 +874,11 @@ static int cortexa_breakwatch_set(target_s *t, breakwatch_s *bw)
 		switch (bw->size) {
 		case 2:
 			bw->reserved[0] = target_mem_read16(t, bw->addr);
-			target_mem_write16(t, bw->addr, 0xBE00);
+			target_mem_write16(t, bw->addr, 0xbe00);
 			return target_check_error(t);
 		case 4:
 			bw->reserved[0] = target_mem_read32(t, bw->addr);
-			target_mem_write32(t, bw->addr, 0xE1200070);
+			target_mem_write32(t, bw->addr, 0xe1200070);
 			return target_check_error(t);
 		default:
 			return -1;
@@ -926,20 +925,20 @@ static int cortexa_breakwatch_set(target_s *t, breakwatch_s *bw)
 			uint32_t wcr = DBGWCR_PAC_ANY | DBGWCR_EN;
 			uint32_t bas = 0;
 			switch (bw->size) { /* Convert bytes size to BAS bits */
-			case 1:
+			case 1U:
 				bas = DBGWCR_BAS_BYTE;
 				break;
-			case 2:
+			case 2U:
 				bas = DBGWCR_BAS_HALFWORD;
 				break;
-			case 4:
+			case 4U:
 				bas = DBGWCR_BAS_WORD;
 				break;
 			default:
 				return -1;
 			}
 			/* Apply shift based on address LSBs */
-			wcr |= bas << (bw->addr & 3);
+			wcr |= bas << (bw->addr & 3U);
 
 			switch (bw->type) { /* Convert gdb type */
 			case TARGET_WATCH_WRITE:
@@ -956,7 +955,7 @@ static int cortexa_breakwatch_set(target_s *t, breakwatch_s *bw)
 			}
 
 			apb_write(t, DBGWCR(i), wcr);
-			apb_write(t, DBGWVR(i), bw->addr & ~3);
+			apb_write(t, DBGWVR(i), bw->addr & ~3U);
 			DEBUG_INFO("Watchpoint set WCR = 0x%08" PRIx32 ", WVR = %08" PRIx32 "\n", apb_read(t, DBGWCR(i)),
 				apb_read(t, DBGWVR(i)));
 		}
