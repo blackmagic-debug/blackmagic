@@ -217,39 +217,39 @@ typedef enum stm32l4_flash_reg {
 } stm32l4_flash_reg_e;
 
 static const uint32_t stm32l4_flash_regs_map[FLASH_REGS_COUNT] = {
-	STM32L4_FPEC_BASE + 0x08, /* KEYR */
-	STM32L4_FPEC_BASE + 0x0c, /* OPTKEYR */
-	STM32L4_FPEC_BASE + 0x10, /* SR */
-	STM32L4_FPEC_BASE + 0x14, /* CR */
-	STM32L4_FPEC_BASE + 0x20, /* OPTR */
-	STM32L4_FLASH_SIZE_REG,   /* FLASHSIZE */
+	STM32L4_FPEC_BASE + 0x08U, /* KEYR */
+	STM32L4_FPEC_BASE + 0x0cU, /* OPTKEYR */
+	STM32L4_FPEC_BASE + 0x10U, /* SR */
+	STM32L4_FPEC_BASE + 0x14U, /* CR */
+	STM32L4_FPEC_BASE + 0x20U, /* OPTR */
+	STM32L4_FLASH_SIZE_REG,    /* FLASHSIZE */
 };
 
 static const uint32_t stm32l5_flash_regs_map[FLASH_REGS_COUNT] = {
-	STM32L5_FPEC_BASE + 0x08, /* KEYR */
-	STM32L5_FPEC_BASE + 0x10, /* OPTKEYR */
-	STM32L5_FPEC_BASE + 0x20, /* SR */
-	STM32L5_FPEC_BASE + 0x28, /* CR */
-	STM32L5_FPEC_BASE + 0x40, /* OPTR */
-	STM32L5_FLASH_SIZE_REG,   /* FLASHSIZE */
+	STM32L5_FPEC_BASE + 0x08U, /* KEYR */
+	STM32L5_FPEC_BASE + 0x10U, /* OPTKEYR */
+	STM32L5_FPEC_BASE + 0x20U, /* SR */
+	STM32L5_FPEC_BASE + 0x28U, /* CR */
+	STM32L5_FPEC_BASE + 0x40U, /* OPTR */
+	STM32L5_FLASH_SIZE_REG,    /* FLASHSIZE */
 };
 
 static const uint32_t stm32wl_flash_regs_map[FLASH_REGS_COUNT] = {
-	STM32WL_FPEC_BASE + 0x08, /* KEYR */
-	STM32WL_FPEC_BASE + 0x0c, /* OPTKEYR */
-	STM32WL_FPEC_BASE + 0x10, /* SR */
-	STM32WL_FPEC_BASE + 0x14, /* CR */
-	STM32WL_FPEC_BASE + 0x20, /* OPTR */
-	STM32L4_FLASH_SIZE_REG,   /* FLASHSIZE */
+	STM32WL_FPEC_BASE + 0x08U, /* KEYR */
+	STM32WL_FPEC_BASE + 0x0cU, /* OPTKEYR */
+	STM32WL_FPEC_BASE + 0x10U, /* SR */
+	STM32WL_FPEC_BASE + 0x14U, /* CR */
+	STM32WL_FPEC_BASE + 0x20U, /* OPTR */
+	STM32L4_FLASH_SIZE_REG,    /* FLASHSIZE */
 };
 
 static const uint32_t stm32wb_flash_regs_map[FLASH_REGS_COUNT] = {
-	STM32WB_FPEC_BASE + 0x08, /* KEYR */
-	STM32WB_FPEC_BASE + 0x0c, /* OPTKEYR */
-	STM32WB_FPEC_BASE + 0x10, /* SR */
-	STM32WB_FPEC_BASE + 0x14, /* CR */
-	STM32WB_FPEC_BASE + 0x20, /* OPTR */
-	STM32L4_FLASH_SIZE_REG,   /* FLASHSIZE */
+	STM32WB_FPEC_BASE + 0x08U, /* KEYR */
+	STM32WB_FPEC_BASE + 0x0cU, /* OPTKEYR */
+	STM32WB_FPEC_BASE + 0x10U, /* SR */
+	STM32WB_FPEC_BASE + 0x14U, /* CR */
+	STM32WB_FPEC_BASE + 0x20U, /* OPTR */
+	STM32L4_FLASH_SIZE_REG,    /* FLASHSIZE */
 };
 
 static stm32l4_device_info_s const stm32l4_device_info[] = {
@@ -259,7 +259,7 @@ static stm32l4_device_info_s const stm32l4_device_info[] = {
 		.designator = "STM32L41x",
 		.sram1 = 32U,
 		.sram2 = 8U,
-		.flags = 2,
+		.flags = 2U,
 		.flash_regs_map = stm32l4_flash_regs_map,
 	},
 	{
@@ -268,7 +268,7 @@ static stm32l4_device_info_s const stm32l4_device_info[] = {
 		.designator = "STM32L43x",
 		.sram1 = 48U,
 		.sram2 = 16U,
-		.flags = 2,
+		.flags = 2U,
 		.flash_regs_map = stm32l4_flash_regs_map,
 	},
 	{
@@ -277,7 +277,7 @@ static stm32l4_device_info_s const stm32l4_device_info[] = {
 		.designator = "STM32L45x",
 		.sram1 = 128U,
 		.sram2 = 32U,
-		.flags = 2,
+		.flags = 2U,
 		.flash_regs_map = stm32l4_flash_regs_map,
 	},
 	{
@@ -286,7 +286,7 @@ static stm32l4_device_info_s const stm32l4_device_info[] = {
 		.designator = "STM32L47x",
 		.sram1 = 96U,
 		.sram2 = 32U,
-		.flags = 2 | DUAL_BANK,
+		.flags = 2U | DUAL_BANK,
 		.flash_regs_map = stm32l4_flash_regs_map,
 	},
 	{
@@ -295,7 +295,7 @@ static stm32l4_device_info_s const stm32l4_device_info[] = {
 		.designator = "STM32L49x",
 		.sram1 = 256U,
 		.sram2 = 64U,
-		.flags = 2 | DUAL_BANK,
+		.flags = 2U | DUAL_BANK,
 		.flash_regs_map = stm32l4_flash_regs_map,
 	},
 	{
@@ -305,7 +305,7 @@ static stm32l4_device_info_s const stm32l4_device_info[] = {
 		.sram1 = 192U,
 		.sram2 = 64U,
 		.sram3 = 384U,
-		.flags = 3 | DUAL_BANK,
+		.flags = 3U | DUAL_BANK,
 		.flash_regs_map = stm32l4_flash_regs_map,
 	},
 	{
@@ -322,7 +322,7 @@ static stm32l4_device_info_s const stm32l4_device_info[] = {
 		.designator = "STM32G47",
 		.sram1 = 96U, /* SRAM1 and SRAM2 are mapped continuous */
 		.sram2 = 32U, /* CCM SRAM is mapped as per SRAM2 on G4 */
-		.flags = 2,
+		.flags = 2U,
 		.flash_regs_map = stm32l4_flash_regs_map,
 	},
 	{
@@ -331,7 +331,7 @@ static stm32l4_device_info_s const stm32l4_device_info[] = {
 		.designator = "STM32G49",
 		.sram1 = 96U, /* SRAM1 and SRAM2 are mapped continuously */
 		.sram2 = 16U, /* CCM SRAM is mapped as per SRAM2 on G4 */
-		.flags = 2,
+		.flags = 2U,
 		.flash_regs_map = stm32l4_flash_regs_map,
 	},
 	{
@@ -340,7 +340,7 @@ static stm32l4_device_info_s const stm32l4_device_info[] = {
 		.designator = "STM32L55",
 		.sram1 = 192U, /* SRAM1 and SRAM2 are mapped continuous */
 		.sram2 = 64U,
-		.flags = 2,
+		.flags = 2U,
 		.flash_regs_map = stm32l5_flash_regs_map,
 	},
 	{
@@ -349,7 +349,7 @@ static stm32l4_device_info_s const stm32l4_device_info[] = {
 		.designator = "STM32WLxx",
 		.sram1 = 32U,
 		.sram2 = 32U,
-		.flags = 2,
+		.flags = 2U,
 		.flash_regs_map = stm32wl_flash_regs_map,
 	},
 	{
@@ -358,7 +358,7 @@ static stm32l4_device_info_s const stm32l4_device_info[] = {
 		.designator = "STM32WBxx",
 		.sram1 = 192U,
 		.sram2 = 64U,
-		.flags = 2,
+		.flags = 2U,
 		.flash_regs_map = stm32wb_flash_regs_map,
 	},
 	{
@@ -386,7 +386,7 @@ static const uint32_t stm32l4_default_options_values[9] = {
 /*
  * SEC_SIZE1 occupies 9 bits on G49/G4A (cat 4),
  * 8 bits on cat 3 and 7 bits on cat 2.
- * It is safe to write 0xFF00FE00 (cat 4 value) in FLASH_SEC1R
+ * It is safe to write 0xff00fe00 (cat 4 value) in FLASH_SEC1R
  */
 static const uint32_t stm32g4_default_options_values[11] = {
 	0xffeff8aaU,
@@ -505,9 +505,9 @@ static uint32_t stm32l4_main_sram_length(const target_s *const t)
 bool stm32l4_probe(target_s *const t)
 {
 	adiv5_access_port_s *ap = cortexm_ap(t);
-	uint32_t device_id = ap->dp->version >= 2 ? ap->dp->target_partno : ap->partno;
+	uint32_t device_id = ap->dp->version >= 2U ? ap->dp->target_partno : ap->partno;
 	/* If the part is DPv0 or DPv1, we must use the L4 ID register, except if we've already identified an L5 part */
-	if (ap->dp->version < 2 && device_id != ID_STM32L55)
+	if (ap->dp->version < 2U && device_id != ID_STM32L55)
 		device_id = target_mem_read32(t, STM32L4_DBGMCU_IDCODE_PHYS) & 0xfffU;
 	DEBUG_INFO("ID Code: %08" PRIx32 "\n", device_id);
 
@@ -573,7 +573,7 @@ static bool stm32l4_attach(target_s *const t)
 	target_mem_map_free(t);
 	/* And rebuild the RAM map */
 	if (device->family == STM32L4_FAMILY_L55x)
-		target_add_ram(t, 0x0A000000, device->sram1 + device->sram2);
+		target_add_ram(t, 0x0a000000, device->sram1 + device->sram2);
 	else
 		target_add_ram(t, 0x10000000, device->sram2);
 	target_add_ram(t, 0x20000000, stm32l4_main_sram_length(t));
