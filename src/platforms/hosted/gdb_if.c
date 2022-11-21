@@ -295,8 +295,8 @@ char gdb_if_getchar_to(uint32_t timeout)
 		return -1;
 
 	timeval_s select_timeout;
-	select_timeout.tv_sec = timeout / 1000;
-	select_timeout.tv_usec = (timeout % 1000) * 1000;
+	select_timeout.tv_sec = timeout / 1000U;
+	select_timeout.tv_usec = (timeout % 1000U) * 1000U;
 
 	fd_set fds;
 	FD_ZERO(&fds);

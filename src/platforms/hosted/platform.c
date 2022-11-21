@@ -507,27 +507,27 @@ static void ap_decode_access(uint16_t addr, uint8_t RnW)
 	else
 		fprintf(stderr, "Write ");
 
-	if (addr < 0x100) {
+	if (addr < 0x100U) {
 		switch (addr) {
-		case 0x00:
+		case 0x00U:
 			if (RnW)
 				fprintf(stderr, "DP_DPIDR :");
 			else
 				fprintf(stderr, "DP_ABORT :");
 			break;
 
-		case 0x04:
+		case 0x04U:
 			fprintf(stderr, "CTRL/STAT:");
 			break;
 
-		case 0x08:
+		case 0x08U:
 			if (RnW)
 				fprintf(stderr, "RESEND   :");
 			else
 				fprintf(stderr, "DP_SELECT:");
 			break;
 
-		case 0x0c:
+		case 0x0cU:
 			fprintf(stderr, "DP_RDBUFF:");
 			break;
 
@@ -535,51 +535,51 @@ static void ap_decode_access(uint16_t addr, uint8_t RnW)
 			fprintf(stderr, "Unknown %02x   :", addr);
 		}
 	} else {
-		fprintf(stderr, "AP 0x%02x ", addr >> 8);
+		fprintf(stderr, "AP 0x%02x ", addr >> 8U);
 
-		switch (addr & 0xff) {
-		case 0x00:
+		switch (addr & 0xffU) {
+		case 0x00U:
 			fprintf(stderr, "CSW   :");
 			break;
 
-		case 0x04:
+		case 0x04U:
 			fprintf(stderr, "TAR   :");
 			break;
 
-		case 0x0c:
+		case 0x0cU:
 			fprintf(stderr, "DRW   :");
 			break;
 
-		case 0x10:
+		case 0x10U:
 			fprintf(stderr, "DB0   :");
 			break;
 
-		case 0x14:
+		case 0x14U:
 			fprintf(stderr, "DB1   :");
 			break;
 
-		case 0x18:
+		case 0x18U:
 			fprintf(stderr, "DB2   :");
 			break;
 
-		case 0x1c:
+		case 0x1cU:
 			fprintf(stderr, "DB3   :");
 			break;
 
-		case 0xf8:
+		case 0xf8U:
 			fprintf(stderr, "BASE  :");
 			break;
 
-		case 0xf4:
+		case 0xf4U:
 			fprintf(stderr, "CFG   :");
 			break;
 
-		case 0xfc:
+		case 0xfcU:
 			fprintf(stderr, "IDR   :");
 			break;
 
 		default:
-			fprintf(stderr, "RSVD%02x:", addr & 0xff);
+			fprintf(stderr, "RSVD%02x:", addr & 0xffU);
 		}
 	}
 }
@@ -646,11 +646,11 @@ void adiv5_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t le
 		fprintf(stderr, "ap_memread @ %" PRIx32 " len %zu:", src, len);
 		const uint8_t *const data = (const uint8_t *)dest;
 		for (size_t offset = 0; offset < len; ++offset) {
-			if (offset == 16)
+			if (offset == 16U)
 				break;
 			fprintf(stderr, " %02x", data[offset]);
 		}
-		if (len > 16)
+		if (len > 16U)
 			fprintf(stderr, " ...");
 		fprintf(stderr, "\n");
 	}
@@ -662,11 +662,11 @@ void adiv5_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void *s
 		fprintf(stderr, "ap_mem_write_sized @ %" PRIx32 " len %zu, align %d:", dest, len, 1 << align);
 		const uint8_t *const data = (const uint8_t *)src;
 		for (size_t offset = 0; offset < len; ++offset) {
-			if (offset == 16)
+			if (offset == 16U)
 				break;
 			fprintf(stderr, " %02x", data[offset]);
 		}
-		if (len > 16)
+		if (len > 16U)
 			fprintf(stderr, " ...");
 		fprintf(stderr, "\n");
 	}

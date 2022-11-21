@@ -703,7 +703,7 @@ void libftdi_jtagtap_tdi_tdo_seq(uint8_t *data_out, const bool final_tms, const 
 
 		if (final_tms) {
 			rticks++;
-			*(--data_out) >>= 1;
+			*(--data_out) >>= 1U;
 			*data_out |= tmp[index] & 0x80U;
 		} else
 			--data_out;

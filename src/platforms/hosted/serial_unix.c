@@ -84,7 +84,7 @@ int serial_open(const bmp_cli_options_s *cl_opts, char *serial)
 			sprintf(name, "/dev/cu.usbmodem%s1", serial);
 		}
 	} else {
-		strncpy(name, cl_opts->opt_device, sizeof(name) - 1);
+		strncpy(name, cl_opts->opt_device, sizeof(name) - 1U);
 	}
 	fd = open(name, O_RDWR | O_SYNC | O_NOCTTY);
 	if (fd < 0) {
@@ -123,7 +123,7 @@ static bool match_serial(const char *const device, const char *const serial)
 	/* This represents the first byte of the serial number string */
 	const char *const begin = last_underscore + 1;
 	/* This represents one past the last byte of the serial number string */
-	const char *const end = device + strlen(device) - 5;
+	const char *const end = device + strlen(device) - 5U;
 	/* Try to match the (partial) serial string in the correct part of the device string */
 	return constains_substring(begin, end - begin, serial);
 }
@@ -223,8 +223,8 @@ int platform_buffer_read(uint8_t *data, int maxsize)
 {
 	char response = 0;
 	timeval_s timeout = {
-		.tv_sec = cortexm_wait_timeout / 1000,
-		.tv_usec = 1000 * (cortexm_wait_timeout % 1000),
+		.tv_sec = cortexm_wait_timeout / 1000U,
+		.tv_usec = 1000U * (cortexm_wait_timeout % 1000U),
 	};
 
 	/* Drain the buffer for the remote till we see a start-of-response byte */
