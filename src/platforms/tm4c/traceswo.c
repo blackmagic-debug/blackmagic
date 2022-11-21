@@ -86,7 +86,7 @@ void traceswo_baud(unsigned int baud)
 	uart_set_databits(TRACEUART, 8);
 }
 
-#define FIFO_SIZE 256
+#define FIFO_SIZE 256U
 
 /* RX Fifo buffer */
 static volatile uint8_t buf_rx[FIFO_SIZE];
@@ -107,7 +107,7 @@ void trace_buf_push(void)
 	else
 		len = FIFO_SIZE - buf_rx_out;
 
-	if (len > 64)
+	if (len > 64U)
 		len = 64;
 
 	if (usbd_ep_write_packet(usbdev, 0x85, (uint8_t *)&buf_rx[buf_rx_out], len) == len) {
@@ -138,7 +138,7 @@ void TRACEUART_ISR(void)
 		/* If the next increment of rx_in would put it at the same point
 		* as rx_out, the FIFO is considered full.
 		*/
-		if (((buf_rx_in + 1) % FIFO_SIZE) != buf_rx_out) {
+		if ((buf_rx_in + 1U) % FIFO_SIZE != buf_rx_out) {
 			/* insert into FIFO */
 			buf_rx[buf_rx_in++] = c;
 
