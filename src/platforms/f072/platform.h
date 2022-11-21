@@ -75,8 +75,8 @@
 /* PORTB does not stay active in system bootloader! */
 #define LED_BOOTLOADER GPIO6
 
-#define BOOTMAGIC0 0xb007da7a
-#define BOOTMAGIC1 0xbaadfeed
+#define BOOTMAGIC0 UINT32_C(0xb007da7a)
+#define BOOTMAGIC1 UINT32_C(0xbaadfeed)
 
 #define TMS_SET_MODE()     gpio_mode_setup(TMS_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TMS_PIN);
 #define SWDIO_MODE_FLOAT() gpio_mode_setup(SWDIO_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, SWDIO_PIN);
@@ -91,10 +91,10 @@
  * For now USART1 preempts USB which may spin while buffer is drained.
  * TIM3 is used for traceswo capture and must be highest priority.
  */
-#define IRQ_PRI_USB          (1 << 6)
-#define IRQ_PRI_USBUSART     (2 << 6)
-#define IRQ_PRI_USBUSART_DMA (2 << 6)
-#define IRQ_PRI_TRACE        (0 << 6)
+#define IRQ_PRI_USB          (1U << 6U)
+#define IRQ_PRI_USBUSART     (2U << 6U)
+#define IRQ_PRI_USBUSART_DMA (2U << 6U)
+#define IRQ_PRI_TRACE        (0U << 6U)
 
 #define USBUSART        USART2
 #define USBUSART_CR1    USART2_CR1
