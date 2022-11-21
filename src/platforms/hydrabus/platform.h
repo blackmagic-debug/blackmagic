@@ -102,10 +102,10 @@
  * Interrupt priorities. Low numbers are high priority.
  * TIM3 is used for traceswo capture and must be highest priority.
  */
-#define IRQ_PRI_USB          (1 << 4)
-#define IRQ_PRI_USBUSART     (2 << 4)
-#define IRQ_PRI_USBUSART_DMA (2 << 4)
-#define IRQ_PRI_TRACE        (0 << 4)
+#define IRQ_PRI_USB          (1U << 4U)
+#define IRQ_PRI_USBUSART     (2U << 4U)
+#define IRQ_PRI_USBUSART_DMA (2U << 4U)
+#define IRQ_PRI_TRACE        (0U << 4U)
 
 #define USBUSART               USART1
 #define USBUSART_CR1           USART1_CR1
