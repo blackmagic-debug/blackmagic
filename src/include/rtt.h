@@ -29,7 +29,7 @@
 #include <target.h>
 
 // MAX_RTT_CHAN can be set as low as 6.
-#define MAX_RTT_CHAN 16
+#define MAX_RTT_CHAN 16U
 
 extern char rtt_ident[16];                     // string
 extern bool rtt_enabled;                       // rtt on/off
