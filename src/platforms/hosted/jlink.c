@@ -51,7 +51,7 @@ static void jlink_print_caps(bmp_info_s *const info)
 	uint8_t cmd = CMD_GET_CAPS;
 	uint8_t res[4];
 	send_recv(info->usb_link, &cmd, 1, res, sizeof(res));
-	emu_caps = res[0] | (res[1] << 8) | (res[2] << 16) | (res[3] << 24);
+	emu_caps = res[0] | (res[1] << 8U) | (res[2] << 16U) | (res[3] << 24U);
 	DEBUG_INFO("Caps %" PRIx32 "\n", emu_caps);
 	if (emu_caps & JLINK_CAP_GET_HW_VERSION) {
 		uint8_t cmd = CMD_GET_HW_VERSION;
@@ -66,8 +66,8 @@ static void jlink_print_speed(bmp_info_s *const info)
 	uint8_t cmd = CMD_GET_SPEEDS;
 	uint8_t res[6];
 	send_recv(info->usb_link, &cmd, 1, res, sizeof(res));
-	emu_speed_khz = (res[0] | (res[1] << 8) | (res[2] << 16) | (res[3] << 24)) / 1000U;
-	emu_min_divisor = res[4] | (res[5] << 8);
+	emu_speed_khz = (res[0] | (res[1] << 8U) | (res[2] << 16U) | (res[3] << 24U)) / 1000U;
+	emu_min_divisor = res[4] | (res[5] << 8U);
 	DEBUG_INFO("Emulator speed %ukHz, minimum divisor %u%s\n", emu_speed_khz, emu_min_divisor,
 		(emu_caps & JLINK_CAP_GET_SPEEDS) ? "" : ", fixed");
 }
@@ -134,7 +134,7 @@ static bool claim_jlink_interface(bmp_info_s *info, libusb_device *dev)
 		// XXX: This fails to handle multiple alt-modes being present correctly.
 		const libusb_interface_descriptor_s *const interface_desc = &interface->altsetting[0];
 		if (interface_desc->bInterfaceClass == LIBUSB_CLASS_VENDOR_SPEC &&
-			interface_desc->bInterfaceSubClass == LIBUSB_CLASS_VENDOR_SPEC && interface_desc->bNumEndpoints > 1) {
+			interface_desc->bInterfaceSubClass == LIBUSB_CLASS_VENDOR_SPEC && interface_desc->bNumEndpoints > 1U) {
 			const int result = libusb_claim_interface(info->usb_link->ul_libusb_device_handle, i);
 			if (result) {
 				DEBUG_WARN("Can not claim handle: %s\n", libusb_error_name(result));
@@ -234,7 +234,7 @@ const char *jlink_target_voltage(bmp_info_s *const info)
 	uint8_t cmd = CMD_GET_HW_STATUS;
 	uint8_t res[8];
 	send_recv(info->usb_link, &cmd, 1, res, sizeof(res));
-	const uint16_t millivolts = res[0] | (res[1] << 8);
+	const uint16_t millivolts = res[0] | (res[1] << 8U);
 	snprintf(ret, sizeof(ret), "%2u.%03u", millivolts / 1000U, millivolts % 1000U);
 	return ret;
 }
@@ -260,7 +260,7 @@ void jlink_max_frequency_set(bmp_info_s *const info, const uint32_t freq)
 		return;
 	if (!info->is_jtag)
 		return;
-	const uint16_t freq_khz = freq / 1000;
+	const uint16_t freq_khz = freq / 1000U;
 	const uint16_t divisor = (emu_speed_khz + freq_khz - 1U) / freq_khz;
 	if (divisor > emu_min_divisor)
 		emu_current_divisor = divisor;
