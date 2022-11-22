@@ -195,6 +195,8 @@ static bool lpc43xx_cmd_reset(target_s *t, int argc, const char **argv);
 static bool lpc43xx_cmd_mkboot(target_s *t, int argc, const char **argv);
 
 static lpc43xx_partid_s lpc43x0_spi_read_partid(target_s *t);
+static bool lpc43x0_attach(target_s *t);
+static void lpc43x0_detach(target_s *t);
 static void lpc43x0_spi_abort(target_s *t);
 static void lpc43x0_spi_read(target_s *t, uint32_t command, target_addr_t address, void *buffer, size_t length);
 static void lpc43x0_spi_write(target_s *t, uint32_t command, target_addr_t address, const void *buffer, size_t length);
@@ -321,6 +323,7 @@ static void lpc43x0_add_spi_flash(target_s *const t, const size_t length, const 
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return;
 	}
+	t->target_storage = flash;
 
 	spi_parameters_s spi_parameters;
 	if (!sfdp_read_parameters(t, &spi_parameters, lpc43x0_spi_read_sfdp)) {
@@ -394,21 +397,8 @@ static void lpc43x0_detect(target_s *const t, const lpc43xx_partid_s part_id)
 		DEBUG_WARN("Probable LPC43x0 with ID errata: %08" PRIx32 "\n", part_id.part);
 		break;
 	}
-
-	const uint32_t read_command = target_mem_read32(t, LPC43x0_SPIFI_MCMD);
-	lpc43x0_spi_abort(t);
-	spi_flash_id_s flash_id;
-	lpc43x0_spi_read(t, SPI_FLASH_CMD_READ_JEDEC_ID, 0, &flash_id, sizeof(flash_id));
-
-	/* If we read out valid Flash information, set up a region for it */
-	if (flash_id.manufacturer != 0xffU && flash_id.type != 0xffU && flash_id.capacity != 0xffU) {
-		const uint32_t capacity = 1U << flash_id.capacity;
-		DEBUG_WARN("SPI Flash: mfr = %02x, type = %02x, capacity = %08" PRIx32 "\n", flash_id.manufacturer,
-			flash_id.type, capacity);
-		lpc43x0_add_spi_flash(t, capacity, read_command);
-	}
-	/* Restore the read command as using the other command register clobbers this. */
-	target_mem_write32(t, LPC43x0_SPIFI_MCMD, read_command);
+	t->attach = lpc43x0_attach;
+	t->detach = lpc43x0_detach;
 }
 
 bool lpc43xx_probe(target_s *const t)
@@ -450,6 +440,36 @@ bool lpc43xx_probe(target_s *const t)
 }
 
 /* LPC43xx Flashless part routines */
+
+static bool lpc43x0_attach(target_s *const t)
+{
+	if (!cortexm_attach(t))
+		return false;
+
+	const uint32_t read_command = target_mem_read32(t, LPC43x0_SPIFI_MCMD);
+	lpc43x0_spi_abort(t);
+	spi_flash_id_s flash_id;
+	lpc43x0_spi_read(t, SPI_FLASH_CMD_READ_JEDEC_ID, 0, &flash_id, sizeof(flash_id));
+
+	/* If we read out valid Flash information, set up a region for it */
+	if (flash_id.manufacturer != 0xffU && flash_id.type != 0xffU && flash_id.capacity != 0xffU) {
+		const uint32_t capacity = 1U << flash_id.capacity;
+		DEBUG_WARN("SPI Flash: mfr = %02x, type = %02x, capacity = %08" PRIx32 "\n", flash_id.manufacturer,
+			flash_id.type, capacity);
+		lpc43x0_add_spi_flash(t, capacity, read_command);
+	}
+	/* Restore the read command as using the other command register clobbers this. */
+	target_mem_write32(t, LPC43x0_SPIFI_MCMD, read_command);
+	return true;
+}
+
+static void lpc43x0_detach(target_s *const t)
+{
+	free(t->target_storage);
+	t->target_storage = NULL;
+	t->flash = NULL;
+	cortexm_detach(t);
+}
 
 /*
  * It is for reasons of errata that we don't use the IAP device identification mechanism here.
