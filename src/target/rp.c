@@ -52,7 +52,7 @@
 #define RP_ID                 "Raspberry RP2040"
 #define RP_MAX_TABLE_SIZE     0x80U
 #define BOOTROM_MAGIC_ADDR    0x00000010U
-#define BOOTROM_MAGIC         ((unsigned)'M' | ((unsigned)'u' << 8U) | (1U << 16U))
+#define BOOTROM_MAGIC         ((uint32_t)'M' | ((uint32_t)'u' << 8U) | (1U << 16U))
 #define BOOTROM_MAGIC_MASK    0x00ffffffU
 #define BOOTROM_VERSION_SHIFT 24U
 #define RP_XIP_FLASH_BASE     0x10000000U
