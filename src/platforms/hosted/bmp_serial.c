@@ -47,7 +47,7 @@ void libusb_exit_function(bmp_info_s *info)
 };
 
 #ifdef __APPLE__
-int find_debuggers(bmp_cli_options_s *cl_opts, bmp_info_s *info)
+int find_debuggers(bmda_cli_options_s *cl_opts, bmp_info_s *info)
 {
 	DEBUG_WARN("Please implement find_debuggers for MACOS!\n");
 	(void)cl_opts;
@@ -78,7 +78,7 @@ DEFINE_DEVPROPKEY(DEVPKEY_Device_BusReportedDeviceDesc, 0x540b947e, 0x8b40, 0x45
 
 /* List all USB devices with some additional information.
  * Unfortunately, this code is quite ugly. */
-int find_debuggers(bmp_cli_options_s *cl_opts, bmp_info_s *info)
+int find_debuggers(bmda_cli_options_s *cl_opts, bmp_info_s *info)
 {
 	unsigned i;
 	DWORD dwSize;
@@ -333,7 +333,7 @@ size_t scan_devices(scan_mode_e mode, bmp_info_s *info, const char *const search
 	return devices;
 }
 
-int find_debuggers(bmp_cli_options_s *cl_opts, bmp_info_s *info)
+int find_debuggers(bmda_cli_options_s *cl_opts, bmp_info_s *info)
 {
 	if (cl_opts->opt_device)
 		return 1;
