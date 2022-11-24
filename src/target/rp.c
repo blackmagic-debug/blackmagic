@@ -59,6 +59,11 @@
 #define RP_SRAM_BASE          0x20000000U
 #define RP_SRAM_SIZE          0x42000U
 
+#define RP_REG_ACCESS_NORMAL              0x0000U
+#define RP_REG_ACCESS_WRITE_XOR           0x1000U
+#define RP_REG_ACCESS_WRITE_ATOMIC_BITSET 0x2000U
+#define RP_REG_ACCESS_WRITE_ATOMIC_BITCLR 0x3000U
+
 #define RP_GPIO_QSPI_BASE_ADDR            0x40018000U
 #define RP_GPIO_QSPI_SCLK_CTRL            (RP_GPIO_QSPI_BASE_ADDR + 0x04U)
 #define RP_GPIO_QSPI_CS_CTRL              (RP_GPIO_QSPI_BASE_ADDR + 0x0cU)
@@ -638,10 +643,9 @@ static void rp_flash_connect_internal(target_s *const t)
 {
 	// Use hard reset to force IO and pad controls to known state (don't touch
 	// IO_BANK0 as that does not affect XIP signals)
-	const uint32_t reset = target_mem_read32(t, RP_RESETS_RESET);
 	const uint32_t io_pads_bits = RP_RESETS_RESET_IO_QSPI_BITS | RP_RESETS_RESET_PADS_QSPI_BITS;
-	target_mem_write32(t, RP_RESETS_RESET, reset | io_pads_bits); // Assert the resets
-	target_mem_write32(t, RP_RESETS_RESET, reset);                // Then deassert them
+	target_mem_write32(t, RP_RESETS_RESET | RP_REG_ACCESS_WRITE_ATOMIC_BITSET, io_pads_bits); // Assert the resets
+	target_mem_write32(t, RP_RESETS_RESET | RP_REG_ACCESS_WRITE_ATOMIC_BITCLR, io_pads_bits); // Then deassert them
 	uint32_t reset_done = 0;
 	while ((reset_done & io_pads_bits) != io_pads_bits) // Wait until the reset done signals for both come good
 		reset_done = target_mem_read32(t, RP_RESETS_RESET_DONE);
@@ -799,8 +803,7 @@ static void rp_flash_flush_cache(target_s *const t)
 	// Read blocks until flush completion
 	target_mem_read32(t, RP_XIP_FLUSH);
 	// Enable the cache
-	const uint32_t ctrl = target_mem_read32(t, RP_XIP_CTRL);
-	target_mem_write32(t, RP_XIP_CTRL, ctrl | RP_XIP_CTRL_ENABLE);
+	target_mem_write32(t, RP_XIP_CTRL | RP_REG_ACCESS_WRITE_ATOMIC_BITSET, RP_XIP_CTRL_ENABLE);
 	rp_spi_chip_select(t, RP_GPIO_QSPI_CS_DRIVE_NORMAL);
 }
 
