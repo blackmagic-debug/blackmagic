@@ -64,6 +64,12 @@
 #define RP_REG_ACCESS_WRITE_ATOMIC_BITSET 0x2000U
 #define RP_REG_ACCESS_WRITE_ATOMIC_BITCLR 0x3000U
 
+#define RP_CLOCKS_BASE_ADDR     0x40008000U
+#define RP_CLOCKS_WAKE_EN0      (RP_CLOCKS_BASE_ADDR + 0xa0U)
+#define RP_CLOCKS_WAKE_EN1      (RP_CLOCKS_BASE_ADDR + 0xa4U)
+#define RP_CLOCKS_WAKE_EN0_MASK 0xff0c0f19U
+#define RP_CLOCKS_WAKE_EN1_MASK 0x00002007U
+
 #define RP_GPIO_QSPI_BASE_ADDR            0x40018000U
 #define RP_GPIO_QSPI_SCLK_CTRL            (RP_GPIO_QSPI_BASE_ADDR + 0x04U)
 #define RP_GPIO_QSPI_CS_CTRL              (RP_GPIO_QSPI_BASE_ADDR + 0x0cU)
@@ -631,9 +637,21 @@ static void rp_spi_read(
 /* Checks if the QSPI and XIP controllers are in their POR state */
 static bool rp_flash_in_por_state(target_s *const t)
 {
+	const uint32_t clk_enables0 = target_mem_read32(t, RP_CLOCKS_WAKE_EN0);
+	const uint32_t clk_enables1 = target_mem_read32(t, RP_CLOCKS_WAKE_EN1);
+	if ((clk_enables0 & RP_CLOCKS_WAKE_EN0_MASK) != RP_CLOCKS_WAKE_EN0_MASK ||
+		(clk_enables1 & RP_CLOCKS_WAKE_EN1_MASK) != RP_CLOCKS_WAKE_EN1_MASK) {
+		/* If the right clocks aren't enabled, enable all of them just like the boot ROM does. */
+		target_mem_write32(t, RP_CLOCKS_WAKE_EN0, 0xffffffffU);
+		target_mem_write32(t, RP_CLOCKS_WAKE_EN1, 0xffffffffU);
+		return true;
+	}
 	const uint32_t xip_state = target_mem_read32(t, RP_XIP_STAT);
 	const uint32_t qspi_sclk_state = target_mem_read32(t, RP_GPIO_QSPI_SCLK_CTRL);
 	const uint32_t ssi_state = target_mem_read32(t, RP_SSI_ENABLE);
+	DEBUG_WARN("XIP controller state: %08" PRIx32 ", QSPI controller state: %08" PRIx32 ", SSI controller state: "
+			   "%08" PRIx32,
+		xip_state, qspi_sclk_state, ssi_state);
 	/* Check the XIP, QSPI and SSI controllers for their POR states, indicating we need to configure them */
 	return xip_state == RP_XIP_STAT_POR && qspi_sclk_state == RP_GPIO_QSPI_SCLK_POR && ssi_state == 0U;
 }
