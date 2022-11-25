@@ -365,10 +365,9 @@ void poll_rtt(target_s *const cur_target)
 			/* briefly halt target during target memory access */
 			target_halt_request(cur_target);
 
-			target_halt_reason_e reason;
-			do {
+			target_halt_reason_e reason = TARGET_HALT_RUNNING;
+			while (reason == TARGET_HALT_RUNNING)
 				reason = target_halt_poll(cur_target, &watch);
-			} while (reason == TARGET_HALT_RUNNING);
 
 			resume_target = reason == TARGET_HALT_REQUEST;
 		}
