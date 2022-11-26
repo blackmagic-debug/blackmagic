@@ -95,7 +95,8 @@ static usbd_request_return_codes_e gdb_serial_control_request(usbd_device *dev, 
 
 	switch (req->bRequest) {
 	case USB_CDC_REQ_SET_CONTROL_LINE_STATE:
-		usb_serial_set_state(dev, req->wIndex, CDCACM_GDB_ENDPOINT);
+		/* Send a notification back on the notification endpoint */
+		usb_serial_set_state(dev, req->wIndex, CDCACM_GDB_ENDPOINT + 1U);
 		gdb_serial_dtr = req->wValue & 1U;
 		return USBD_REQ_HANDLED;
 	case USB_CDC_REQ_SET_LINE_CODING:
@@ -121,7 +122,8 @@ static usbd_request_return_codes_e debug_serial_control_request(usbd_device *dev
 
 	switch (req->bRequest) {
 	case USB_CDC_REQ_SET_CONTROL_LINE_STATE:
-		usb_serial_set_state(dev, req->wIndex, CDCACM_UART_ENDPOINT);
+		/* Send a notification back on the notification endpoint */
+		usb_serial_set_state(dev, req->wIndex, CDCACM_UART_ENDPOINT + 1U);
 #ifdef USBUSART_DTR_PIN
 		gpio_set_val(USBUSART_PORT, USBUSART_DTR_PIN, !(req->wValue & 1U));
 #endif
