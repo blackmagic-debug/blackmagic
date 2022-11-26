@@ -30,8 +30,8 @@ jtag_proc_s jtag_proc;
 
 static void jtagtap_reset(void);
 static void jtagtap_tms_seq(uint32_t tms_states, size_t ticks);
-static void jtagtap_tdi_tdo_seq(uint8_t *data_out, bool final_tms, const uint8_t *data_in, size_t ticks);
-static void jtagtap_tdi_seq(bool final_tms, const uint8_t *data_in, size_t ticks);
+static void jtagtap_tdi_tdo_seq(uint8_t *data_out, bool final_tms, const uint8_t *data_in, size_t clock_cycles);
+static void jtagtap_tdi_seq(bool final_tms, const uint8_t *data_in, size_t clock_cycles);
 static bool jtagtap_next(bool tms, bool tdi);
 static void jtagtap_cycle(bool tms, bool tdi, size_t clock_cycles);
 
