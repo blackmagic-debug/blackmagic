@@ -120,7 +120,10 @@ static void jtagtap_tms_seq_no_delay(uint32_t tms_states, const size_t clock_cyc
 		const bool state = tms_states & 1U;
 		gpio_set_val(TMS_PORT, TMS_PIN, state);
 		gpio_set(TCK_PORT, TCK_PIN);
+		/* Block the compiler from re-ordering the TMS states calculation to preserve timings */
+		__asm__ volatile("" ::: "memory");
 		tms_states >>= 1U;
+		__asm__("nop");
 		__asm__("nop");
 		__asm__("nop");
 		gpio_clear(TCK_PORT, TCK_PIN);
