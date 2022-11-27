@@ -123,14 +123,18 @@
 #define RP_SSI_XIP_SPI_CTRL0_TRANS_1C2A        (1U << 0U)
 #define RP_SSI_XIP_SPI_CTRL0_TRANS_2C2A        (2U << 0U)
 
-#define RP_PADS_QSPI_BASE_ADDR         0x40020000U
-#define RP_PADS_QSPI_GPIO_SD0          (RP_PADS_QSPI_BASE_ADDR + 0x08U)
-#define RP_PADS_QSPI_GPIO_SD1          (RP_PADS_QSPI_BASE_ADDR + 0x0cU)
-#define RP_PADS_QSPI_GPIO_SD2          (RP_PADS_QSPI_BASE_ADDR + 0x10U)
-#define RP_PADS_QSPI_GPIO_SD3          (RP_PADS_QSPI_BASE_ADDR + 0x14U)
-#define RP_PADS_QSPI_GPIO_SD0_OD_BITS  0x00000080U
-#define RP_PADS_QSPI_GPIO_SD0_PUE_BITS 0x00000008U
-#define RP_PADS_QSPI_GPIO_SD0_PDE_BITS 0x00000004U
+#define RP_PADS_QSPI_BASE_ADDR           0x40020000U
+#define RP_PADS_QSPI_GPIO_SCLK           (RP_PADS_QSPI_BASE_ADDR + 0x04U)
+#define RP_PADS_QSPI_GPIO_SD0            (RP_PADS_QSPI_BASE_ADDR + 0x08U)
+#define RP_PADS_QSPI_GPIO_SD1            (RP_PADS_QSPI_BASE_ADDR + 0x0cU)
+#define RP_PADS_QSPI_GPIO_SD2            (RP_PADS_QSPI_BASE_ADDR + 0x10U)
+#define RP_PADS_QSPI_GPIO_SD3            (RP_PADS_QSPI_BASE_ADDR + 0x14U)
+#define RP_PADS_QSPI_GPIO_SCLK_FAST_SLEW 0x00000001U
+#define RP_PADS_QSPI_GPIO_SCLK_8mA_DRIVE 0x00000020U
+#define RP_PADS_QSPI_GPIO_SCLK_IE        0x00000040U
+#define RP_PADS_QSPI_GPIO_SD0_OD_BITS    0x00000080U
+#define RP_PADS_QSPI_GPIO_SD0_PUE_BITS   0x00000008U
+#define RP_PADS_QSPI_GPIO_SD0_PDE_BITS   0x00000004U
 
 #define RP_XIP_BASE_ADDR   0x14000000U
 #define RP_XIP_CTRL        (RP_XIP_BASE_ADDR + 0x00U)
@@ -646,12 +650,13 @@ static bool rp_flash_in_por_state(target_s *const t)
 		target_mem_write32(t, RP_CLOCKS_WAKE_EN1, 0xffffffffU);
 		return true;
 	}
+	const uint32_t pad_sclk_state = target_mem_read32(t, RP_PADS_QSPI_GPIO_SCLK);
+	/* If input is enabled on the SPI clock pin, we're not configured. */
+	if (pad_sclk_state & RP_PADS_QSPI_GPIO_SCLK_IE)
+		return true;
 	const uint32_t xip_state = target_mem_read32(t, RP_XIP_STAT);
 	const uint32_t qspi_sclk_state = target_mem_read32(t, RP_GPIO_QSPI_SCLK_CTRL);
 	const uint32_t ssi_state = target_mem_read32(t, RP_SSI_ENABLE);
-	DEBUG_WARN("XIP controller state: %08" PRIx32 ", QSPI controller state: %08" PRIx32 ", SSI controller state: "
-			   "%08" PRIx32,
-		xip_state, qspi_sclk_state, ssi_state);
 	/* Check the XIP, QSPI and SSI controllers for their POR states, indicating we need to configure them */
 	return xip_state == RP_XIP_STAT_POR && qspi_sclk_state == RP_GPIO_QSPI_SCLK_POR && ssi_state == 0U;
 }
