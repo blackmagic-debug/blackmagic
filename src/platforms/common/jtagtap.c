@@ -62,7 +62,7 @@ static void jtagtap_reset(void)
 	if (platform_hwversion() == 0) {
 		gpio_clear(TRST_PORT, TRST_PIN);
 		for (volatile size_t i = 0; i < 10000U; i++)
-			__asm__("nop");
+			continue;
 		gpio_set(TRST_PORT, TRST_PIN);
 	}
 #endif
