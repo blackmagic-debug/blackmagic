@@ -75,6 +75,7 @@ bool samx7x_probe(target_s *target);
 bool sam3x_probe(target_s *target);
 bool sam4l_probe(target_s *target);
 bool nrf51_probe(target_s *target);
+bool nrf91_probe(target_s *target);
 bool samd_probe(target_s *target);
 bool samx5x_probe(target_s *target);
 bool kinetis_probe(target_s *target);

@@ -60,6 +60,7 @@ SRC =              \
 	msp432e4.c     \
 	msp432p4.c     \
 	nrf51.c        \
+	nrf91.c        \
 	nxpke04.c      \
 	remote.c       \
 	rp.c           \
