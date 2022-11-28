@@ -138,7 +138,7 @@ bool generic_crc32(target_s *const t, uint32_t *const crc_res, uint32_t base, si
 	}
 	DEBUG_WARN("%" PRIu32 " ms\n", platform_time_ms() - start_time);
 	*crc_res = crc;
-	return 0;
+	return true;
 }
 #else
 #include <libopencm3/stm32/crc.h>
