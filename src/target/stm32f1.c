@@ -121,7 +121,7 @@ static void stm32f1_add_flash(target_s *t, uint32_t addr, size_t length, size_t 
 
 static uint16_t stm32f1_read_idcode(target_s *const t)
 {
-	if ((t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M23)
+	if ((t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M0 || (t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M23)
 		return target_mem_read32(t, DBGMCU_IDCODE_F0) & 0xfffU;
 	return target_mem_read32(t, DBGMCU_IDCODE) & 0xfffU;
 }
