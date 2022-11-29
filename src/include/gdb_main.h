@@ -21,6 +21,10 @@
 #ifndef INCLUDE_GDB_MAIN_H
 #define INCLUDE_GDB_MAIN_H
 
-void gdb_main(void);
+#include "target.h"
+extern bool gdb_target_running;
+extern target_s *cur_target;
+void gdb_poll_target(void);
+void gdb_main(char *pbuf, size_t size);
 
 #endif /* INCLUDE_GDB_MAIN_H */

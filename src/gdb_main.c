@@ -29,7 +29,6 @@
 #include "hex_utils.h"
 #include "gdb_if.h"
 #include "gdb_packet.h"
-#include "gdb_main.h"
 #include "gdb_hostio.h"
 #include "target.h"
 #include "command.h"
@@ -53,7 +52,7 @@ typedef enum gdb_signal {
 	GDB_SIGLOST = 29,
 } gdb_signal_e;
 
-#define BUF_SIZE 1024U
+#define GDB_MAX_PACKET_SIZE 1024U
 
 #define ERROR_IF_NO_TARGET()   \
 	if (!cur_target) {         \
@@ -66,10 +65,9 @@ typedef struct cmd_executer {
 	void (*func)(const char *packet, size_t len);
 } cmd_executer_s;
 
-static char pbuf[BUF_SIZE + 1U];
-
-static target_s *cur_target;
-static target_s *last_target;
+target_s *cur_target;
+target_s *last_target;
+bool gdb_target_running = false;
 static bool gdb_needs_detach_notify = false;
 
 static void handle_q_packet(char *packet, size_t len);
@@ -97,7 +95,7 @@ static void gdb_target_printf(target_controller_s *tc, const char *fmt, va_list 
 	gdb_voutf(fmt, ap);
 }
 
-static target_controller_s gdb_controller = {
+target_controller_s gdb_controller = {
 	.destroy_callback = gdb_target_destroy_callback,
 	.printf = gdb_target_printf,
 
@@ -115,18 +113,14 @@ static target_controller_s gdb_controller = {
 	.system = hostio_system,
 };
 
-int gdb_main_loop(target_controller_s *tc, bool in_syscall)
+/* execute gdb remote command stored in 'pbuf'. returns immediately, no busy waiting. */
+
+int gdb_main_loop(target_controller_s *tc, char *pbuf, size_t size, bool in_syscall)
 {
 	bool single_step = false;
 
 	/* GDB protocol main loop */
-	while (1) {
-		SET_IDLE_STATE(1);
-		size_t size = gdb_getpacket(pbuf, BUF_SIZE);
-		// If port closed and target detached, stay idle
-		if (pbuf[0] != '\x04' || cur_target) {
-			SET_IDLE_STATE(0);
-		}
+	{
 		switch (pbuf[0]) {
 		/* Implementation of these is mandatory! */
 		case 'g': { /* 'g': Read general registers */
@@ -211,52 +205,10 @@ int gdb_main_loop(target_controller_s *tc, bool in_syscall)
 			 * This packet isn't documented as being mandatory,
 			 * but GDB doesn't work without it.
 			 */
-
-			if (!cur_target) {
-				/* Report "target exited" if no target */
-				gdb_putpacketz("W00");
-				break;
-			}
-
-			/* Wait for target halt */
-			target_addr_t watch;
-			target_halt_reason_e reason;
-			while (true) {
-				reason = target_halt_poll(cur_target, &watch);
-				if (reason != TARGET_HALT_RUNNING)
-					break;
-
-				const char gdb_ch = (char)gdb_if_getchar_to(0);
-				if (gdb_ch == '\x03' || gdb_ch == '\x04')
-					target_halt_request(cur_target);
-
-				platform_pace_poll();
-
-#ifdef ENABLE_RTT
-				if (rtt_enabled)
-					poll_rtt(cur_target);
-#endif
-			}
-			SET_RUN_STATE(false);
-
-			/* Translate reason to GDB signal */
-			switch (reason) {
-			case TARGET_HALT_ERROR:
-				gdb_putpacket_f("X%02X", GDB_SIGLOST);
-				morse("TARGET LOST.", true);
-				break;
-			case TARGET_HALT_REQUEST:
-				gdb_putpacket_f("T%02X", GDB_SIGINT);
-				break;
-			case TARGET_HALT_WATCHPOINT:
-				gdb_putpacket_f("T%02Xwatch:%08X;", GDB_SIGTRAP, watch);
-				break;
-			case TARGET_HALT_FAULT:
-				gdb_putpacket_f("T%02X", GDB_SIGSEGV);
-				break;
-			default:
-				gdb_putpacket_f("T%02X", GDB_SIGTRAP);
-			}
+			if (cur_target)
+				gdb_target_running = true;
+			else
+				gdb_putpacketz("W00"); /* target exited */
 			break;
 		}
 
@@ -374,6 +326,7 @@ int gdb_main_loop(target_controller_s *tc, bool in_syscall)
 			gdb_putpacketz("");
 		}
 	}
+	return 0;
 }
 
 static bool exec_command(char *packet, const size_t length, const cmd_executer_s *exec)
@@ -408,6 +361,7 @@ static void exec_q_rcmd(const char *packet, const size_t length)
 	else {
 		const char *const response = "Failed\n";
 		const size_t length = strlen(response);
+		char pbuf[length * 2 + 1];
 		gdb_putpacket(hexify(pbuf, response, length), 2 * length);
 	}
 }
@@ -440,7 +394,7 @@ static void exec_q_supported(const char *packet, const size_t length)
 {
 	(void)packet;
 	(void)length;
-	gdb_putpacket_f("PacketSize=%X;qXfer:memory-map:read+;qXfer:features:read+", BUF_SIZE);
+	gdb_putpacket_f("PacketSize=%X;qXfer:memory-map:read+;qXfer:features:read+", GDB_MAX_PACKET_SIZE);
 }
 
 static void exec_q_memory_map(const char *packet, const size_t length)
@@ -708,7 +662,58 @@ static void handle_z_packet(char *packet, const size_t plen)
 		gdb_putpacketz("OK");
 }
 
-void gdb_main(void)
+void gdb_main(char *pbuf, size_t size)
 {
-	gdb_main_loop(&gdb_controller, false);
+	gdb_main_loop(&gdb_controller, pbuf, size, false);
+}
+
+/* halt target */
+void gdb_halt_target(void)
+{
+	if (cur_target)
+		target_halt_request(cur_target);
+	else
+		/* Report "target exited" if no target */
+		gdb_putpacketz("W00");
+}
+
+/* poll running target */
+void gdb_poll_target(void)
+{
+	target_addr_t watch;
+	enum target_halt_reason reason;
+	if (!cur_target) {
+		/* Report "target exited" if no target */
+		gdb_putpacketz("W00");
+		return;
+	}
+
+	/* poll target */
+	reason = target_halt_poll(cur_target, &watch);
+	if (!reason)
+		return;
+
+	/* switch polling off */
+	gdb_target_running = false;
+	SET_RUN_STATE(0);
+
+	/* Translate reason to GDB signal */
+	switch (reason) {
+	case TARGET_HALT_ERROR:
+		gdb_putpacket_f("X%02X", GDB_SIGLOST);
+		morse("TARGET LOST.", true);
+		break;
+	case TARGET_HALT_REQUEST:
+		gdb_putpacket_f("T%02X", GDB_SIGINT);
+		break;
+	case TARGET_HALT_WATCHPOINT:
+		gdb_putpacket_f("T%02Xwatch:%08X;", GDB_SIGTRAP, watch);
+		break;
+	case TARGET_HALT_FAULT:
+		gdb_putpacket_f("T%02X", GDB_SIGSEGV);
+		break;
+	default:
+		gdb_putpacket_f("T%02X", GDB_SIGTRAP);
+	}
+	return;
 }
