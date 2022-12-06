@@ -126,6 +126,7 @@ bool nrf51_probe(target_s *t)
 	if (page_size == 0xffffffffU || code_size == 0xffffffffU || page_size == 0 || code_size == 0 ||
 		page_size > 0x10000U || code_size > 0x10000U)
 		return false;
+	DEBUG_INFO("nRF51/52: code page size: %" PRIu32 ", code size: %" PRIu32 "\n", page_size, code_size);
 	/* Check that device identifier makes sense */
 	uint32_t uid0 = target_mem_read32(t, NRF51_FICR_DEVICEID_LOW);
 	uint32_t uid1 = target_mem_read32(t, NRF51_FICR_DEVICEID_HIGH);
