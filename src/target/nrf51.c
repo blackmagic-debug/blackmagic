@@ -29,6 +29,7 @@
 
 static bool nrf51_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 static bool nrf51_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
+static bool nrf51_flash_prepare(target_flash_s *f);
 static bool nrf51_flash_done(target_flash_s *f);
 static bool nrf51_mass_erase(target_s *t);
 
@@ -117,6 +118,7 @@ static void nrf51_add_flash(target_s *t, uint32_t addr, size_t length, size_t er
 	f->writesize = MIN(erasesize, 1024);
 	f->erase = nrf51_flash_erase;
 	f->write = nrf51_flash_write;
+	f->prepare = nrf51_flash_prepare;
 	f->done = nrf51_flash_done;
 	f->erased = 0xff;
 	target_add_flash(t, f);
@@ -174,6 +176,19 @@ static bool nrf51_wait_ready(target_s *const t, platform_timeout_s *const timeou
 	return true;
 }
 
+static bool nrf51_flash_prepare(target_flash_s *f)
+{
+	target_s *t = f->t;
+	/* If there is a buffer allocated, we're in the Flash write phase, otherwise it's erase */
+	if (f->buf)
+		/* Enable write */
+		target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_WEN);
+	else
+		/* Enable erase */
+		target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_EEN);
+	return nrf51_wait_ready(t, NULL);
+}
+
 static bool nrf51_flash_done(target_flash_s *f)
 {
 	target_s *t = f->t;
@@ -185,11 +200,6 @@ static bool nrf51_flash_done(target_flash_s *f)
 static bool nrf51_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
 	target_s *t = f->t;
-
-	/* Enable erase */
-	target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_EEN);
-	if (!nrf51_wait_ready(t, NULL))
-		return false;
 
 	for (size_t offset = 0; offset < len; offset += f->blocksize) {
 		/* If the address to erase is the UICR, we have to handle that seperately */
@@ -209,13 +219,8 @@ static bool nrf51_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 
 static bool nrf51_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
 {
+	/* nrf51_flash_prepare() and nrf51_flash_done() top-and-tail this, just write the data to the target. */
 	target_s *t = f->t;
-
-	/* Enable write */
-	target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_WEN);
-	if (!nrf51_wait_ready(t, NULL))
-		return false;
-	/* Write the data */
 	target_mem_write(t, dest, src, len);
 	return nrf51_wait_ready(t, NULL);
 }
