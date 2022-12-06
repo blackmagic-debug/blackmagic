@@ -622,11 +622,9 @@ static void renesas_add_rv40_flash(target_s *t, target_addr_t addr, size_t lengt
 
 	if (code_flash) {
 		f->blocksize = RV40_CF_REGION1_BLOCK_SIZE;
-		f->writebufsize = RV40_CF_WRITE_SIZE * 8U;
 		f->writesize = RV40_CF_WRITE_SIZE;
 	} else {
 		f->blocksize = RV40_DF_BLOCK_SIZE;
-		f->writebufsize = RV40_DF_BLOCK_SIZE * 8U;
 		f->writesize = RV40_DF_WRITE_SIZE;
 	}
 
