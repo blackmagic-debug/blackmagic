@@ -29,6 +29,7 @@
 
 static bool nrf51_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 static bool nrf51_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
+static bool nrf51_flash_done(target_flash_s *f);
 static bool nrf51_mass_erase(target_s *t);
 
 static bool nrf51_cmd_erase_uicr(target_s *t, int argc, const char **argv);
@@ -114,6 +115,7 @@ static void nrf51_add_flash(target_s *t, uint32_t addr, size_t length, size_t er
 	f->blocksize = erasesize;
 	f->erase = nrf51_flash_erase;
 	f->write = nrf51_flash_write;
+	f->done = nrf51_flash_done;
 	f->erased = 0xff;
 	target_add_flash(t, f);
 }
@@ -170,6 +172,14 @@ static bool nrf51_wait_ready(target_s *const t, platform_timeout_s *const timeou
 	return true;
 }
 
+static bool nrf51_flash_done(target_flash_s *f)
+{
+	target_s *t = f->t;
+	/* Return to read-only */
+	target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_REN);
+	return nrf51_wait_ready(t, NULL);
+}
+
 static bool nrf51_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
 	target_s *t = f->t;
@@ -192,9 +202,7 @@ static bool nrf51_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 			return false;
 	}
 
-	/* Return to read-only */
-	target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_REN);
-	return nrf51_wait_ready(t, NULL);
+	return true;
 }
 
 static bool nrf51_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
@@ -207,11 +215,7 @@ static bool nrf51_flash_write(target_flash_s *f, target_addr_t dest, const void 
 		return false;
 	/* Write the data */
 	target_mem_write(t, dest, src, len);
-	if (!nrf51_wait_ready(t, NULL))
-		return false;
-	/* Return to read-only */
-	target_mem_write32(t, NRF51_NVMC_CONFIG, NRF51_NVMC_CONFIG_REN);
-	return true;
+	return nrf51_wait_ready(t, NULL);
 }
 
 static bool nrf51_mass_erase(target_s *t)
