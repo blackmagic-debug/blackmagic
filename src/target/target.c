@@ -27,7 +27,8 @@
 
 target_s *target_list = NULL;
 
-#define STDOUT_READ_BUF_SIZE 64
+#define STDOUT_READ_BUF_SIZE       64U
+#define FLASH_WRITE_BUFFER_CEILING 1024U
 
 static bool target_cmd_mass_erase(target_s *t, int argc, const char **argv);
 static bool target_cmd_range_erase(target_s *t, int argc, const char **argv);
@@ -189,8 +190,16 @@ void target_add_flash(target_s *t, target_flash_s *f)
 {
 	if (f->writesize == 0)
 		f->writesize = f->blocksize;
-	if (f->writebufsize == 0)
+
+	/* Automatically sized buffer */
+	/* For targets with larger than FLASH_WRITE_BUFFER_CEILING write size, we use a buffer of write size */
+	/* No point doing math if we can't fit at least 2 writesizes in a buffer */
+	if (f->writesize <= FLASH_WRITE_BUFFER_CEILING / 2U) {
+		const size_t count = FLASH_WRITE_BUFFER_CEILING / f->writesize;
+		f->writebufsize = f->writesize * count;
+	} else
 		f->writebufsize = f->writesize;
+
 	f->t = t;
 	f->next = t->flash;
 	t->flash = f;
