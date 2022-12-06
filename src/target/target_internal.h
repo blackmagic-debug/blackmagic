@@ -50,7 +50,7 @@ struct target_flash {
 	size_t length;               /* Flash length */
 	size_t blocksize;            /* Erase block size */
 	size_t writesize;            /* Write operation size, must be <= blocksize/writebufsize */
-	size_t writebufsize;         /* Size of write buffer */
+	size_t writebufsize;         /* Size of write buffer, this is calculated and not set in target code */
 	uint8_t erased;              /* Byte erased state */
 	bool ready;                  /* True if flash is in flash mode/prepared */
 	flash_prepare_func prepare;  /* Prepare for flash operations */
