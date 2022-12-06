@@ -98,7 +98,7 @@ static char *read_key_from_path(const char *const subpath, const char *const key
 
 	DWORD value_len = 0;
 	const LSTATUS result = RegGetValue(key_path_handle, NULL, key_name, RRF_RT_REG_SZ, NULL, NULL, &value_len);
-	if (result != ERROR_MORE_DATA) {
+	if (result != ERROR_SUCCESS && result != ERROR_MORE_DATA) {
 		display_error(result, "retrieving value for key", key_name);
 		RegCloseKey(key_path_handle);
 		return NULL;
