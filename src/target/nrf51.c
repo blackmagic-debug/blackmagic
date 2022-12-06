@@ -136,7 +136,6 @@ bool nrf51_probe(target_s *t)
 	uint32_t uid1 = target_mem_read32(t, NRF51_FICR_DEVICEID_HIGH);
 	if (uid0 == 0xffffffffU || uid1 == 0xffffffffU || uid0 == 0 || uid1 == 0)
 		return false;
-	t->mass_erase = nrf51_mass_erase;
 	/* Test for NRF52 device */
 	uint32_t info_part = target_mem_read32(t, NRF52_PART_INFO);
 	if (info_part != 0xffffffffU && info_part != 0 && (info_part & 0x00ff000U) == 0x52000U) {
@@ -159,6 +158,7 @@ bool nrf51_probe(target_s *t)
 		nrf51_add_flash(t, NRF51_UICR, page_size, page_size);
 		target_add_commands(t, nrf51_cmd_list, "nRF51");
 	}
+	t->mass_erase = nrf51_mass_erase;
 	return true;
 }
 
