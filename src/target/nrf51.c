@@ -113,6 +113,8 @@ static void nrf51_add_flash(target_s *t, uint32_t addr, size_t length, size_t er
 	f->start = addr;
 	f->length = length;
 	f->blocksize = erasesize;
+	/* Limit the write buffer size to 1k to help prevent probe memory exhaustion */
+	f->writesize = MIN(erasesize, 1024);
 	f->erase = nrf51_flash_erase;
 	f->write = nrf51_flash_write;
 	f->done = nrf51_flash_done;
