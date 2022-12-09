@@ -263,12 +263,15 @@ uint32_t firmware_swdp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t 
 		return 0;
 	}
 
-	if (ack != SWDP_ACK_OK)
+	if (ack != SWDP_ACK_OK) {
+		DEBUG_WARN("SWD access has invalid ack %x\n", ack);
 		raise_exception(EXCEPTION_ERROR, "SWD invalid ACK");
+	}
 
 	if (RnW) {
 		if (dp->seq_in_parity(&response, 32)) { /* Give up on parity error */
 			dp->fault = 1;
+			DEBUG_WARN("SWD access resulted in parity error\n");
 			raise_exception(EXCEPTION_ERROR, "SWD parity error");
 		}
 	} else {
