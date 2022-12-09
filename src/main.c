@@ -46,6 +46,7 @@ int main(int argc, char **argv)
 		if (e.type) {
 			gdb_putpacketz("EFF");
 			target_list_free();
+			gdb_outf("Uncaught exception: %s\n", e.msg);
 			morse("TARGET LOST.", true);
 		}
 	}
