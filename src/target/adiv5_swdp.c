@@ -230,7 +230,7 @@ uint32_t firmware_swdp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t 
 {
 	uint8_t request = make_packet_request(RnW, addr);
 	uint32_t response = 0;
-	uint32_t ack = SWDP_ACK_WAIT;
+	uint8_t ack = SWDP_ACK_WAIT;
 	platform_timeout_s timeout;
 
 	if ((addr & ADIV5_APnDP) && dp->fault)
@@ -264,12 +264,12 @@ uint32_t firmware_swdp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t 
 	}
 
 	if (ack != SWDP_ACK_OK)
-		raise_exception(EXCEPTION_ERROR, "SWDP invalid ACK");
+		raise_exception(EXCEPTION_ERROR, "SWD invalid ACK");
 
 	if (RnW) {
 		if (dp->seq_in_parity(&response, 32)) { /* Give up on parity error */
 			dp->fault = 1;
-			raise_exception(EXCEPTION_ERROR, "SWDP Parity error");
+			raise_exception(EXCEPTION_ERROR, "SWD parity error");
 		}
 	} else {
 		dp->seq_out_parity(value, 32);
