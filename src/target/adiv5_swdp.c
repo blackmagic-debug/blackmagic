@@ -113,7 +113,7 @@ uint32_t adiv5_swdp_scan(uint32_t targetid)
 
 		dp_line_reset(initial_dp);
 
-		volatile uint32_t dp_dpidr;
+		volatile uint32_t dp_dpidr = 0;
 		TRY_CATCH (e, EXCEPTION_ALL) {
 			dp_dpidr = initial_dp->dp_read(initial_dp, ADIV5_DP_DPIDR);
 		}
@@ -191,8 +191,8 @@ uint32_t firmware_swdp_read(adiv5_debug_port_s *dp, uint16_t addr)
 	if (addr & ADIV5_APnDP) {
 		adiv5_dp_low_access(dp, ADIV5_LOW_READ, addr, 0);
 		return adiv5_dp_low_access(dp, ADIV5_LOW_READ, ADIV5_DP_RDBUFF, 0);
-	} else
-		return firmware_swdp_low_access(dp, ADIV5_LOW_READ, addr, 0);
+	}
+	return firmware_swdp_low_access(dp, ADIV5_LOW_READ, addr, 0);
 }
 
 uint32_t firmware_swdp_error(adiv5_debug_port_s *dp)
@@ -206,10 +206,10 @@ uint32_t firmware_swdp_error(adiv5_debug_port_s *dp)
 		dp->dp_read(dp, ADIV5_DP_DPIDR);
 		/* Exception here is unexpected, so do not catch */
 	}
-	uint32_t err, clr = 0;
-	err = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT) &
+	const uint32_t err = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT) &
 		(ADIV5_DP_CTRLSTAT_STICKYORUN | ADIV5_DP_CTRLSTAT_STICKYCMP | ADIV5_DP_CTRLSTAT_STICKYERR |
 			ADIV5_DP_CTRLSTAT_WDATAERR);
+	uint32_t clr = 0;
 
 	if (err & ADIV5_DP_CTRLSTAT_STICKYORUN)
 		clr |= ADIV5_DP_ABORT_ORUNERRCLR;
