@@ -498,7 +498,7 @@ static const char *on_or_off(const bool value)
 static bool cmd_rtt(target_s *t, int argc, const char **argv)
 {
 	(void)t;
-	const size_t command_len = strlen(argv[1]);
+	const size_t command_len = argc > 1 ? strlen(argv[1]) : 0;
 	if (argc == 1 || (argc == 2 && strncmp(argv[1], "enabled", command_len) == 0)) {
 		rtt_enabled = true;
 		rtt_found = false;
