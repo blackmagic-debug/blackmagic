@@ -49,7 +49,7 @@ void adiv5_jtag_dp_handler(uint8_t jd_index)
 
 	dp->dp_jd_index = jd_index;
 
-	if ((PC_HOSTED == 0) || (!platform_jtag_dp_init(dp))) {
+	if (PC_HOSTED == 0 || !platform_jtag_dp_init(dp)) {
 		dp->dp_read = fw_adiv5_jtagdp_read;
 		dp->error = adiv5_jtagdp_error;
 		dp->low_access = fw_adiv5_jtagdp_low_access;
