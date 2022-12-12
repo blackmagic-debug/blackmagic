@@ -67,6 +67,16 @@ bool firmware_dp_low_write(adiv5_debug_port_s *dp, const uint16_t addr, const ui
 	return res != SWDP_ACK_OK;
 }
 
+uint32_t firmware_dp_low_read(adiv5_debug_port_s *dp, const uint16_t addr)
+{
+	const uint8_t request = make_packet_request(ADIV5_LOW_READ, addr & 0xfU);
+	dp->seq_out(request, 8);
+	const uint8_t res = dp->seq_in(3);
+	uint32_t data = 0;
+	dp->seq_in_parity(&data, 32);
+	return res == SWDP_ACK_OK ? data : 0;
+}
+
 /* Try first the dormant to SWD procedure.
  * If target id given, scan DPs 0 .. 15 on that device and return.
  * Otherwise
