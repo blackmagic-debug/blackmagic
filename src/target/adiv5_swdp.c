@@ -253,13 +253,19 @@ uint32_t firmware_swdp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t 
 	if (ack == SWDP_ACK_WAIT) {
 		DEBUG_WARN("SWD access resulted in wait, aborting\n");
 		dp->abort(dp, ADIV5_DP_ABORT_DAPABORT);
-		dp->fault = 1;
+		dp->fault = ack;
 		return 0;
 	}
 
 	if (ack == SWDP_ACK_FAULT) {
 		DEBUG_WARN("SWD access resulted in fault\n");
-		dp->fault = 1;
+		dp->fault = ack;
+		return 0;
+	}
+
+	if (ack == SWDP_ACK_NO_RESPONSE) {
+		DEBUG_WARN("SWD access resulted in no response\n");
+		dp->fault = ack;
 		return 0;
 	}
 
