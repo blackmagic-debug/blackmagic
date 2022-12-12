@@ -1026,14 +1026,16 @@ void firmware_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void
 
 void firmware_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value)
 {
-	adiv5_dp_write(ap->dp, ADIV5_DP_SELECT, ((uint32_t)ap->apsel << 24U) | (addr & 0xf0U));
+	adiv5_dp_recoverable_access(
+		ap->dp, ADIV5_LOW_WRITE, ADIV5_DP_SELECT, ((uint32_t)ap->apsel << 24U) | (addr & 0xf0U));
 	adiv5_dp_write(ap->dp, addr, value);
 }
 
 uint32_t firmware_ap_read(adiv5_access_port_s *ap, uint16_t addr)
 {
 	uint32_t ret;
-	adiv5_dp_write(ap->dp, ADIV5_DP_SELECT, ((uint32_t)ap->apsel << 24U) | (addr & 0xf0U));
+	adiv5_dp_recoverable_access(
+		ap->dp, ADIV5_LOW_WRITE, ADIV5_DP_SELECT, ((uint32_t)ap->apsel << 24U) | (addr & 0xf0U));
 	ret = adiv5_dp_read(ap->dp, addr);
 	return ret;
 }
