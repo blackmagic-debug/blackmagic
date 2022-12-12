@@ -172,9 +172,10 @@
 #define ADIV5_LOW_WRITE 0
 #define ADIV5_LOW_READ  1
 
-#define SWDP_ACK_OK    0x01U
-#define SWDP_ACK_WAIT  0x02U
-#define SWDP_ACK_FAULT 0x04U
+#define SWDP_ACK_OK          0x01U
+#define SWDP_ACK_WAIT        0x02U
+#define SWDP_ACK_FAULT       0x04U
+#define SWDP_ACK_NO_RESPONSE 0x07U
 
 /* JEP-106 code list
  * JEP-106 is a JEDEC standard assigning IDs to different manufacturers
