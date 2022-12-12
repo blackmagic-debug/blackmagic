@@ -251,7 +251,7 @@ struct adiv5_debug_port {
 	/* dp_low_write returns true if no OK resonse, but ignores errors */
 	bool (*dp_low_write)(adiv5_debug_port_s *dp, uint16_t addr, const uint32_t data);
 	uint32_t (*dp_read)(adiv5_debug_port_s *dp, uint16_t addr);
-	uint32_t (*error)(adiv5_debug_port_s *dp);
+	uint32_t (*error)(adiv5_debug_port_s *dp, bool protocol_recovery);
 	uint32_t (*low_access)(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value);
 	void (*abort)(adiv5_debug_port_s *dp, uint32_t abort);
 
@@ -317,7 +317,7 @@ static inline uint32_t adiv5_dp_read(adiv5_debug_port_s *dp, uint16_t addr)
 
 static inline uint32_t adiv5_dp_error(adiv5_debug_port_s *dp)
 {
-	return dp->error(dp);
+	return dp->error(dp, false);
 }
 
 static inline uint32_t adiv5_dp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value)
@@ -393,7 +393,7 @@ uint32_t fw_adiv5_jtagdp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_
 uint32_t firmware_swdp_read(adiv5_debug_port_s *dp, uint16_t addr);
 uint32_t fw_adiv5_jtagdp_read(adiv5_debug_port_s *dp, uint16_t addr);
 
-uint32_t firmware_swdp_error(adiv5_debug_port_s *dp);
+uint32_t firmware_swdp_error(adiv5_debug_port_s *dp, bool protocol_recovery);
 
 void firmware_swdp_abort(adiv5_debug_port_s *dp, uint32_t abort);
 void adiv5_jtagdp_abort(adiv5_debug_port_s *dp, uint32_t abort);

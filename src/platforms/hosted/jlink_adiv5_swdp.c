@@ -32,7 +32,7 @@
 #include "cli.h"
 
 static uint32_t jlink_adiv5_swdp_read(adiv5_debug_port_s *dp, uint16_t addr);
-static uint32_t jlink_adiv5_swdp_error(adiv5_debug_port_s *dp);
+static uint32_t jlink_adiv5_swdp_error(adiv5_debug_port_s *dp, bool protocol_recovery);
 static uint32_t jlink_adiv5_swdp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value);
 static void jlink_adiv5_swdp_abort(adiv5_debug_port_s *dp, uint32_t abort);
 
@@ -126,7 +126,7 @@ uint32_t jlink_swdp_scan(bmp_info_s *const info)
 	dp->low_access = jlink_adiv5_swdp_low_access;
 	dp->abort = jlink_adiv5_swdp_abort;
 
-	jlink_adiv5_swdp_error(dp);
+	adiv5_dp_error(dp);
 	adiv5_dp_init(dp, 0);
 	return target_list ? 1U : 0U;
 }
@@ -140,8 +140,9 @@ static uint32_t jlink_adiv5_swdp_read(adiv5_debug_port_s *const dp, const uint16
 	return jlink_adiv5_swdp_low_access(dp, ADIV5_LOW_READ, addr, 0);
 }
 
-static uint32_t jlink_adiv5_swdp_error(adiv5_debug_port_s *const dp)
+static uint32_t jlink_adiv5_swdp_error(adiv5_debug_port_s *const dp, const bool protocol_recovery)
 {
+	(void)protocol_recovery;
 	uint32_t err = jlink_adiv5_swdp_read(dp, ADIV5_DP_CTRLSTAT);
 	err &= (ADIV5_DP_CTRLSTAT_STICKYORUN | ADIV5_DP_CTRLSTAT_STICKYCMP | ADIV5_DP_CTRLSTAT_STICKYERR |
 		ADIV5_DP_CTRLSTAT_WDATAERR);
