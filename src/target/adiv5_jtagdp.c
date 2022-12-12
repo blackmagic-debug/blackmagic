@@ -78,7 +78,7 @@ uint32_t fw_adiv5_jtagdp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_
 
 	const uint64_t request = ((uint64_t)value << 3U) | ((addr >> 1U) & 0x06U) | (RnW ? 1U : 0U);
 
-	uint64_t response;
+	uint32_t result;
 	uint8_t ack;
 
 	jtag_dev_write_ir(dp->dp_jd_index, APnDP ? IR_APACC : IR_DPACC);
@@ -86,19 +86,25 @@ uint32_t fw_adiv5_jtagdp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 250);
 	do {
+		uint64_t response;
 		jtag_dev_shift_dr(dp->dp_jd_index, (uint8_t *)&response, (uint8_t *)&request, 35);
+		result = response >> 3U;
 		ack = response & 0x07U;
 	} while (!platform_timeout_is_expired(&timeout) && ack == JTAGDP_ACK_WAIT);
 
 	if (ack == JTAGDP_ACK_WAIT) {
+		DEBUG_WARN("JTAG access resulted in wait, aborting\n");
 		dp->abort(dp, ADIV5_DP_ABORT_DAPABORT);
 		dp->fault = 1;
 		return 0;
 	}
-	if (ack != JTAGDP_ACK_OK)
-		raise_exception(EXCEPTION_ERROR, "JTAG-DP invalid ACK");
 
-	return (uint32_t)(response >> 3U);
+	if (ack != JTAGDP_ACK_OK) {
+		DEBUG_WARN("JTAG access resulted in: %" PRIx32 ":%x\n", result, ack);
+		raise_exception(EXCEPTION_ERROR, "JTAG-DP invalid ACK");
+	}
+
+	return result;
 }
 
 void adiv5_jtagdp_abort(adiv5_debug_port_s *dp, uint32_t abort)
