@@ -199,10 +199,10 @@ uint32_t adiv5_swdp_scan(uint32_t targetid)
 uint32_t firmware_swdp_read(adiv5_debug_port_s *dp, uint16_t addr)
 {
 	if (addr & ADIV5_APnDP) {
-		adiv5_dp_low_access(dp, ADIV5_LOW_READ, addr, 0);
+		adiv5_dp_recoverable_access(dp, ADIV5_LOW_READ, addr, 0);
 		return adiv5_dp_low_access(dp, ADIV5_LOW_READ, ADIV5_DP_RDBUFF, 0);
 	}
-	return firmware_swdp_low_access(dp, ADIV5_LOW_READ, addr, 0);
+	return adiv5_dp_recoverable_access(dp, ADIV5_LOW_READ, addr, 0);
 }
 
 uint32_t firmware_swdp_error(adiv5_debug_port_s *dp, const bool protocol_recovery)
