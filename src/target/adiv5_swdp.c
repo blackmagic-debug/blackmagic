@@ -58,13 +58,13 @@ static void dp_line_reset(adiv5_debug_port_s *dp)
 	dp->seq_out(0x0fffffffU, 32U);
 }
 
-bool firmware_dp_low_write(adiv5_debug_port_s *dp, uint16_t addr, const uint32_t data)
+bool firmware_dp_low_write(adiv5_debug_port_s *dp, const uint16_t addr, const uint32_t data)
 {
-	unsigned int request = make_packet_request(ADIV5_LOW_WRITE, addr & 0xfU);
+	const uint8_t request = make_packet_request(ADIV5_LOW_WRITE, addr & 0xfU);
 	dp->seq_out(request, 8);
-	int res = dp->seq_in(3);
+	const uint8_t res = dp->seq_in(3);
 	dp->seq_out_parity(data, 32);
-	return (res != 1);
+	return res != SWDP_ACK_OK;
 }
 
 /* Try first the dormant to SWD procedure.
