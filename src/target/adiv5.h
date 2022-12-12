@@ -21,6 +21,7 @@
 #ifndef TARGET_ADIV5_H
 #define TARGET_ADIV5_H
 
+#include "general.h"
 #include "jtag_scan.h"
 
 #if PC_HOSTED == 1
@@ -367,6 +368,21 @@ void adiv5_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t le
 void adiv5_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, align_e align);
 void adiv5_dp_write(adiv5_debug_port_s *dp, uint16_t addr, uint32_t value);
 #endif
+
+static inline uint32_t adiv5_dp_recoverable_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value)
+{
+	const uint32_t result = dp->low_access(dp, RnW, addr, value);
+	/* If the access results in the no-response response, retry after clearing the error state */
+	if (dp->fault == SWDP_ACK_NO_RESPONSE) {
+		uint32_t response;
+		/* Wait the response period, then clear the error */
+		dp->seq_in_parity(&response, 32);
+		DEBUG_WARN("Recovering and re-trying access\n");
+		dp->error(dp, true);
+		return dp->low_access(dp, RnW, addr, value);
+	}
+	return result;
+}
 
 void adiv5_dp_init(adiv5_debug_port_s *dp, uint32_t idcode);
 void platform_adiv5_dp_defaults(adiv5_debug_port_s *dp);
