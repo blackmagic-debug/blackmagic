@@ -236,16 +236,15 @@ uint32_t firmware_swdp_error(adiv5_debug_port_s *dp, const bool protocol_recover
 	return err;
 }
 
-uint32_t firmware_swdp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value)
+uint32_t firmware_swdp_low_access(adiv5_debug_port_s *dp, const uint8_t RnW, const uint16_t addr, const uint32_t value)
 {
-	uint8_t request = make_packet_request(RnW, addr);
-	uint32_t response = 0;
-	uint8_t ack = SWDP_ACK_WAIT;
-	platform_timeout_s timeout;
-
 	if ((addr & ADIV5_APnDP) && dp->fault)
 		return 0;
 
+	const uint8_t request = make_packet_request(RnW, addr);
+	uint32_t response = 0;
+	uint8_t ack = SWDP_ACK_WAIT;
+	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 250);
 	do {
 		dp->seq_out(request, 8);
