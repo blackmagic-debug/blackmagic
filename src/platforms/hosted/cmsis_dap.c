@@ -255,9 +255,11 @@ static void dap_dp_abort(adiv5_debug_port_s *dp, uint32_t abort)
 	dap_write_reg(dp, ADIV5_DP_ABORT, abort);
 }
 
-static uint32_t dap_dp_error(adiv5_debug_port_s *dp)
+/* JTAG DP error recovery function */
+static uint32_t dap_dp_error(adiv5_debug_port_s *dp, const bool protocol_recovery)
 {
-	/* Not used for SWD debugging, so no TARGETID switch needed!*/
+	(void)protocol_recovery;
+	/* XXX: This seems entirely wrong considering adiv5_jtagdp.c adiv5_jtagdp_error */
 	uint32_t ctrlstat = dap_read_reg(dp, ADIV5_DP_CTRLSTAT);
 	uint32_t err = ctrlstat &
 		(ADIV5_DP_CTRLSTAT_STICKYORUN | ADIV5_DP_CTRLSTAT_STICKYCMP | ADIV5_DP_CTRLSTAT_STICKYERR |

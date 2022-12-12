@@ -195,7 +195,7 @@ uint32_t firmware_swdp_read(adiv5_debug_port_s *dp, uint16_t addr)
 	return firmware_swdp_low_access(dp, ADIV5_LOW_READ, addr, 0);
 }
 
-uint32_t firmware_swdp_error(adiv5_debug_port_s *dp)
+uint32_t firmware_swdp_error(adiv5_debug_port_s *dp, const bool protocol_recovery)
 {
 	if (dp->version >= 2 && dp->dp_low_write) {
 		/* On protocol error target gets deselected.

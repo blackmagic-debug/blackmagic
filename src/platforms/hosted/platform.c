@@ -605,7 +605,7 @@ uint32_t adiv5_dp_read(adiv5_debug_port_s *dp, uint16_t addr)
 
 uint32_t adiv5_dp_error(adiv5_debug_port_s *dp)
 {
-	uint32_t ret = dp->error(dp);
+	uint32_t ret = dp->error(dp, false);
 	DEBUG_TARGET("DP Error 0x%08" PRIx32 "\n", ret);
 	return ret;
 }

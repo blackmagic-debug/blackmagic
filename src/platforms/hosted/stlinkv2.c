@@ -703,9 +703,12 @@ static uint32_t stlink_dp_read(adiv5_debug_port_s *dp, uint16_t addr)
 	return stlink_dp_low_access(dp, ADIV5_LOW_READ, addr, 0);
 }
 
-uint32_t stlink_dp_error(adiv5_debug_port_s *dp)
+uint32_t stlink_dp_error(adiv5_debug_port_s *dp, const bool protocol_recovery)
 {
-	uint32_t err = stlink_dp_read(dp, ADIV5_DP_CTRLSTAT) &
+	/* XXX: This should perform a line reset for protocol recovery.. */
+	(void)protocol_recovery;
+
+	uint32_t err = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT) &
 		(ADIV5_DP_CTRLSTAT_STICKYORUN | ADIV5_DP_CTRLSTAT_STICKYCMP | ADIV5_DP_CTRLSTAT_STICKYERR |
 			ADIV5_DP_CTRLSTAT_WDATAERR);
 
@@ -1108,7 +1111,7 @@ uint32_t stlink_swdp_scan(bmp_info_s *info)
 	dp->low_access = stlink_dp_low_access;
 	dp->abort = stlink_dp_abort;
 
-	stlink_dp_error(dp);
+	adiv5_dp_error(dp);
 
 	adiv5_dp_init(dp, 0);
 
