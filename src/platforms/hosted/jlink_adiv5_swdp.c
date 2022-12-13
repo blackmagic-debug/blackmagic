@@ -32,7 +32,6 @@
 #include "jlink.h"
 #include "cli.h"
 
-static uint32_t jlink_adiv5_swdp_read(adiv5_debug_port_s *dp, uint16_t addr);
 static uint32_t jlink_adiv5_swdp_error(adiv5_debug_port_s *dp, bool protocol_recovery);
 static uint32_t jlink_adiv5_swdp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value);
 static void jlink_adiv5_swdp_abort(adiv5_debug_port_s *dp, uint32_t abort);
@@ -122,7 +121,7 @@ uint32_t jlink_swdp_scan(bmp_info_s *const info)
 		return 0;
 	}
 
-	dp->dp_read = jlink_adiv5_swdp_read;
+	dp->dp_read = firmware_swdp_read;
 	dp->error = jlink_adiv5_swdp_error;
 	dp->low_access = jlink_adiv5_swdp_low_access;
 	dp->abort = jlink_adiv5_swdp_abort;
@@ -157,21 +156,12 @@ static void jlink_adiv5_swdp_make_packet_request(
 	cmd[6] = make_packet_request(RnW, addr);
 }
 
-static uint32_t jlink_adiv5_swdp_read(adiv5_debug_port_s *const dp, const uint16_t addr)
-{
-	if (addr & ADIV5_APnDP) {
-		adiv5_dp_low_access(dp, ADIV5_LOW_READ, addr, 0);
-		return adiv5_dp_low_access(dp, ADIV5_LOW_READ, ADIV5_DP_RDBUFF, 0);
-	}
-	return jlink_adiv5_swdp_low_access(dp, ADIV5_LOW_READ, addr, 0);
-}
-
 static uint32_t jlink_adiv5_swdp_error(adiv5_debug_port_s *const dp, const bool protocol_recovery)
 {
 	(void)protocol_recovery;
-	uint32_t err = jlink_adiv5_swdp_read(dp, ADIV5_DP_CTRLSTAT);
-	err &= (ADIV5_DP_CTRLSTAT_STICKYORUN | ADIV5_DP_CTRLSTAT_STICKYCMP | ADIV5_DP_CTRLSTAT_STICKYERR |
-		ADIV5_DP_CTRLSTAT_WDATAERR);
+	uint32_t err = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT) &
+		(ADIV5_DP_CTRLSTAT_STICKYORUN | ADIV5_DP_CTRLSTAT_STICKYCMP | ADIV5_DP_CTRLSTAT_STICKYERR |
+			ADIV5_DP_CTRLSTAT_WDATAERR);
 	uint32_t clr = 0;
 
 	if (err & ADIV5_DP_CTRLSTAT_STICKYORUN)
