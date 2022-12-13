@@ -735,22 +735,21 @@ void dap_swdptap_seq_out(const uint32_t tms_states, const size_t clock_cycles)
 		DEBUG_WARN("dap_swdptap_seq_out error\n");
 }
 
-void dap_swdptap_seq_out_parity(uint32_t tms_states, size_t clock_cycles)
+void dap_swdptap_seq_out_parity(const uint32_t tms_states, const size_t clock_cycles)
 {
-	/* clang-format off */
-	uint8_t buf[] = {
+	uint8_t buf[7] = {
 		ID_DAP_SWJ_SEQUENCE,
 		clock_cycles + 1U,
 		(tms_states >> 0U) & 0xffU,
 		(tms_states >> 8U) & 0xffU,
 		(tms_states >> 16U) & 0xffU,
 		(tms_states >> 24U) & 0xffU,
-		__builtin_parity(tms_states)
+		__builtin_parity(tms_states),
 	};
-	/* clang-format on */
-	dbg_dap_cmd(buf, 1, sizeof(buf));
+	const size_t sequence_bytes = (clock_cycles + 8U) >> 3U;
+	dbg_dap_cmd(buf, 1, 2U + sequence_bytes);
 	if (buf[0])
-		DEBUG_WARN("dap_swdptap_seq_out error\n");
+		DEBUG_WARN("dap_swdptap_seq_out_parity error\n");
 }
 
 #define SWD_SEQUENCE_IN 0x80U
