@@ -23,6 +23,7 @@
  * ARM Debug Interface v5 Architecure Specification, ARM doc IHI0031A.
  */
 
+#include <assert.h>
 #include "general.h"
 #include "exception.h"
 #include "target.h"
@@ -131,6 +132,31 @@ uint32_t jlink_swdp_scan(bmp_info_s *const info)
 	return target_list ? 1U : 0U;
 }
 
+static void jlink_adiv5_swdp_make_packet_request(
+	uint8_t *cmd, size_t cmd_length, const uint8_t RnW, const uint16_t addr)
+{
+	assert(cmd_length == 8U);
+	memset(cmd, 0, cmd_length);
+	cmd[0] = CMD_HW_JTAG3;
+
+	/*
+	 * It seems that JLink samples the data to read at the end of the
+	 * previous clock cycle, so reading target data must start at the
+	 * 12th clock cycle, while writing starts as expected at the 14th
+	 * clock cycle (8 cmd, 3 response, 2 turn around).
+	 */
+	cmd[2] = RnW ? 11 : 13;
+
+	cmd[4] = 0xffU; /* 8 bits command OUT */
+	/*
+	 * one IN bit to turn around to read, read 2
+	 * (read) or 3 (write) IN bits for response and
+	 * and one OUT bit to turn around to write on write
+	 */
+	cmd[5] = 0xf0U;
+	cmd[6] = make_packet_request(RnW, addr);
+}
+
 static uint32_t jlink_adiv5_swdp_read(adiv5_debug_port_s *const dp, const uint16_t addr)
 {
 	if (addr & ADIV5_APnDP) {
@@ -216,28 +242,10 @@ static uint32_t jlink_adiv5_swdp_low_access(
 	if ((addr & ADIV5_APnDP) && dp->fault)
 		return 0;
 
-	uint8_t cmd[16];
-	memset(cmd, 0, sizeof(cmd));
-	cmd[0] = CMD_HW_JTAG3;
+	uint8_t cmd[8];
+	jlink_adiv5_swdp_make_packet_request(cmd, sizeof(cmd), RnW, addr);
 
-	/*
-	 * It seems that JLink samples the data to read at the end of the
-	 * previous clock cycle, so reading target data must start at the
-	 * 12th clock cycle, while writing starts as expected at the 14th
-	 * clock cycle (8 cmd, 3 response, 2 turn around).
-	 */
-	cmd[2] = RnW ? 11 : 13;
-
-	cmd[4] = 0xffU; /* 8 bits command OUT */
-	/*
-	 * one IN bit to turn around to read, read 2
-	 * (read) or 3 (write) IN bits for response and
-	 * and one OUT bit to turn around to write on write
-	 */
-	cmd[5] = 0xf0U;
-	cmd[6] = make_packet_request(RnW, addr);
-
-	uint8_t res[8];
+	uint8_t res[3];
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 2000);
 	uint8_t ack = SWDP_ACK_WAIT;
