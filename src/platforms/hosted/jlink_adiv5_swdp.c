@@ -211,7 +211,11 @@ static uint32_t jlink_adiv5_swdp_read_nocheck(const uint16_t addr)
 
 static uint32_t jlink_adiv5_swdp_error(adiv5_debug_port_s *const dp, const bool protocol_recovery)
 {
-	(void)protocol_recovery;
+	if (dp->version >= 2 || protocol_recovery) {
+		line_reset(&info);
+		jlink_adiv5_swdp_read_nocheck(ADIV5_DP_DPIDR);
+		dp->dp_low_write(dp, ADIV5_DP_TARGETSEL, dp->targetsel);
+	}
 	uint32_t err = jlink_adiv5_swdp_read_nocheck(ADIV5_DP_CTRLSTAT) &
 		(ADIV5_DP_CTRLSTAT_STICKYORUN | ADIV5_DP_CTRLSTAT_STICKYCMP | ADIV5_DP_CTRLSTAT_STICKYERR |
 			ADIV5_DP_CTRLSTAT_WDATAERR);
