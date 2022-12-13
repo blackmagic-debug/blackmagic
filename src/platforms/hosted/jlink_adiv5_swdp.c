@@ -191,7 +191,7 @@ static uint32_t jlink_adiv5_swdp_error(adiv5_debug_port_s *const dp, const bool 
 	return err;
 }
 
-static uint32_t jlink_adiv5_swdp_low_read(void)
+static uint32_t jlink_adiv5_swdp_low_read(adiv5_debug_port_s *const dp)
 {
 	uint8_t cmd[14];
 	uint8_t result[6];
@@ -210,7 +210,11 @@ static uint32_t jlink_adiv5_swdp_low_read(void)
 	const uint8_t parity = result[4] & 1U;
 	const uint32_t bit_count = __builtin_popcount(response) + parity;
 	if (bit_count & 1U) /* Give up on parity error */
-		raise_exception(EXCEPTION_ERROR, "SWDP Parity error");
+	{
+		dp->fault = 1;
+		DEBUG_WARN("SWD access resulted in parity error\n");
+		raise_exception(EXCEPTION_ERROR, "SWD parity error");
+	}
 	return response;
 }
 
@@ -258,26 +262,33 @@ static uint32_t jlink_adiv5_swdp_low_access(
 		ack = res[1] & 7U;
 	};
 
-	if (ack == SWDP_ACK_WAIT)
-		raise_exception(EXCEPTION_TIMEOUT, "SWDP ACK timeout");
+	if (ack == SWDP_ACK_WAIT) {
+		DEBUG_WARN("SWD access resulted in wait, aborting\n");
+		dp->abort(dp, ADIV5_DP_ABORT_DAPABORT);
+		dp->fault = ack;
+		return 0;
+	}
 
 	if (ack == SWDP_ACK_FAULT) {
-		if (cl_debuglevel & BMP_DEBUG_TARGET)
-			DEBUG_WARN("Fault\n");
-		dp->fault = 1;
+		DEBUG_WARN("SWD access resulted in fault\n");
+		dp->fault = ack;
+		return 0;
+	}
+
+	if (ack == SWDP_ACK_NO_RESPONSE) {
+		DEBUG_WARN("SWD access resulted in no response\n");
+		dp->fault = ack;
 		return 0;
 	}
 
 	if (ack != SWDP_ACK_OK) {
-		if (cl_debuglevel & BMP_DEBUG_TARGET)
-			DEBUG_WARN("Protocol %d\n", ack);
-		line_reset(&info);
-		return 0;
+		DEBUG_WARN("SWD access has invalid ack %x\n", ack);
+		raise_exception(EXCEPTION_ERROR, "SWD invalid ACK");
 	}
 
 	/* Always append 8 idle cycles (SWDIO = 0)! */
 	if (RnW)
-		return jlink_adiv5_swdp_low_read();
+		return jlink_adiv5_swdp_low_read(dp);
 	jlink_adiv5_swdp_low_write(value);
 	return 0;
 }
