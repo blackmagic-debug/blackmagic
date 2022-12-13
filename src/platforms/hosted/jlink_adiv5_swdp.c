@@ -32,6 +32,7 @@
 #include "jlink.h"
 #include "cli.h"
 
+static bool jlink_adiv5_swdp_write_nocheck(adiv5_debug_port_s *dp, uint16_t addr, uint32_t data);
 static uint32_t jlink_adiv5_swdp_error(adiv5_debug_port_s *dp, bool protocol_recovery);
 static uint32_t jlink_adiv5_swdp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value);
 static void jlink_adiv5_swdp_abort(adiv5_debug_port_s *dp, uint32_t abort);
@@ -121,6 +122,7 @@ uint32_t jlink_swdp_scan(bmp_info_s *const info)
 		return 0;
 	}
 
+	dp->dp_low_write = jlink_adiv5_swdp_write_nocheck;
 	dp->dp_read = firmware_swdp_read;
 	dp->error = jlink_adiv5_swdp_error;
 	dp->low_access = jlink_adiv5_swdp_low_access;
@@ -156,6 +158,34 @@ static void jlink_adiv5_swdp_make_packet_request(
 	cmd[6] = make_packet_request(RnW, addr);
 }
 
+static bool jlink_adiv5_swdp_write_nocheck(adiv5_debug_port_s *dp, const uint16_t addr, const uint32_t data)
+{
+	(void)dp;
+	uint8_t result[3];
+	uint8_t request[8];
+	jlink_adiv5_swdp_make_packet_request(request, sizeof(request), ADIV5_LOW_WRITE, addr & 0xfU);
+	send_recv(info.usb_link, request, 8U, result, 2U);
+	send_recv(info.usb_link, NULL, 0U, result + 2U, 1U);
+	const uint8_t ack = result[1] & 7U;
+
+	uint8_t response[16];
+	memset(response, 0, sizeof(response));
+	response[2] = 33U + 8U; /* 8 idle cycle  to move data through SW-DP */
+	memset(response + 4U, 0xffU, 6);
+	response[10] = data & 0xffU;
+	response[11] = (data >> 8U) & 0xffU;
+	response[12] = (data >> 16U) & 0xffU;
+	response[13] = (data >> 24U) & 0xffU;
+	const uint8_t bit_count = __builtin_popcount(data);
+	response[14] = bit_count & 1U;
+
+	send_recv(info.usb_link, response, 16, result, 6);
+	send_recv(info.usb_link, NULL, 0, result, 1);
+	if (result[0] != 0)
+		raise_exception(EXCEPTION_ERROR, "Low access write failed");
+	return ack != SWDP_ACK_OK;
+}
+
 static uint32_t jlink_adiv5_swdp_error(adiv5_debug_port_s *const dp, const bool protocol_recovery)
 {
 	(void)protocol_recovery;
@@ -172,12 +202,11 @@ static uint32_t jlink_adiv5_swdp_error(adiv5_debug_port_s *const dp, const bool 
 		clr |= ADIV5_DP_ABORT_STKERRCLR;
 	if (err & ADIV5_DP_CTRLSTAT_WDATAERR)
 		clr |= ADIV5_DP_ABORT_WDERRCLR;
-	if (clr)
-		adiv5_dp_write(dp, ADIV5_DP_ABORT, clr);
+
+	jlink_adiv5_swdp_write_nocheck(dp, ADIV5_DP_ABORT, clr);
 	if (dp->fault)
 		err |= 0x8000U;
 	dp->fault = 0;
-
 	return err;
 }
 
@@ -221,7 +250,6 @@ static void jlink_adiv5_swdp_low_write(const uint32_t value)
 	cmd[13] = (value >> 24U) & 0xffU;
 	const uint8_t bit_count = __builtin_popcount(value);
 	cmd[14] = bit_count & 1U;
-	cmd[15] = 0;
 
 	send_recv(info.usb_link, cmd, 16, result, 6);
 	send_recv(info.usb_link, NULL, 0, result, 1);
