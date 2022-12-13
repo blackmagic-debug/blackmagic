@@ -92,8 +92,8 @@ static libusb_device_handle *usb_handle = NULL;
 static uint8_t in_ep;
 static uint8_t out_ep;
 static hid_device *handle = NULL;
-static uint8_t buffer[1024U + 1U];
-static int report_size = 64 + 1; // TODO: read actual report size
+static uint8_t buffer[1024U];
+static size_t report_size = 64U + 1U; // TODO: read actual report size
 static bool has_swd_sequence = false;
 
 static size_t mbslen(const char *str)
