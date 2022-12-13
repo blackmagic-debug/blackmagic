@@ -86,7 +86,7 @@ void dap_jtagtap_tdi_tdo_seq(
 int dap_jtag_configure(void);
 
 uint32_t dap_swdptap_seq_in(size_t clock_cycles);
-bool dap_swdptap_seq_in_parity(uint32_t *ret, size_t clock_cycles);
+bool dap_swdptap_seq_in_parity(uint32_t *result, size_t clock_cycles);
 void dap_swdptap_seq_out(uint32_t tms_states, size_t clock_cycles);
 void dap_swdptap_seq_out_parity(uint32_t tms_states, size_t clock_cycles);
 

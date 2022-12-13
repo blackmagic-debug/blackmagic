@@ -772,24 +772,23 @@ uint32_t dap_swdptap_seq_in(const size_t clock_cycles)
 	return result;
 }
 
-bool dap_swdptap_seq_in_parity(uint32_t *ret, int ticks)
+bool dap_swdptap_seq_in_parity(uint32_t *const result, const size_t clock_cycles)
 {
-	(void)ticks;
-	uint8_t buf[8] = {
+	uint8_t buf[7] = {
 		ID_DAP_SWD_SEQUENCE,
 		1,
-		33 + SWD_SEQUENCE_IN,
+		clock_cycles + 1U + SWD_SEQUENCE_IN,
 	};
-	dbg_dap_cmd(buf, 7, 4);
-	uint32_t res = 0;
-	int len = 4;
-	while (len--) {
-		res <<= 8U;
-		res += buf[len + 1U];
-	}
-	*ret = res;
-	unsigned int parity = __builtin_parity(res) & 1U;
-	parity ^= (buf[5] % 1U);
-	DEBUG_WARN("Res %08" PRIx32 " %d\n", *ret, parity & 1U);
-	return (!(parity & 1U));
+	const size_t sequence_bytes = (clock_cycles + 8U) >> 3U;
+	dbg_dap_cmd(buf, 2U + sequence_bytes, 4U);
+	if (buf[0])
+		DEBUG_WARN("dap_swdptap_seq_in_parity error\n");
+
+	uint32_t data = 0;
+	for (size_t offset = 0; offset < clock_cycles; offset += 8U)
+		data |= buf[1 + (offset >> 3U)] << offset;
+	*result = data;
+	uint8_t parity = __builtin_parity(data) & 1U;
+	parity ^= buf[5] & 1U;
+	return !parity;
 }
