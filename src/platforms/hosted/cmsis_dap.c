@@ -372,27 +372,29 @@ ssize_t dbg_dap_cmd_bulk(uint8_t *const data, const size_t request_length)
 	return transferred;
 }
 
-int dbg_dap_cmd(uint8_t *data, int response_length, const size_t request_length)
+ssize_t dbg_dap_cmd(uint8_t *data, int response_length, const size_t request_length)
 {
 	char cmd = data[0];
-	int res = -1;
 
 	DEBUG_WIRE(" command: ");
 	for (size_t i = 0; i < request_length; ++i)
 		DEBUG_WIRE("%02x ", data[i]);
 	DEBUG_WIRE("\n");
 
+	ssize_t res = -1;
 	if (type == CMSIS_TYPE_HID)
 		res = dbg_dap_cmd_hid(data, request_length);
 	else if (type == CMSIS_TYPE_BULK)
 		res = dbg_dap_cmd_bulk(data, request_length);
 	if (res < 0)
 		return res;
+	const size_t result = (size_t)res;
 
-	DEBUG_WIRE("cmd res:");
-	for (int i = 0; i < res; i++)
-		DEBUG_WIRE("%02x.", buffer[i]);
+	DEBUG_WIRE("response: ");
+	for (size_t i = 0; i < result; i++)
+		DEBUG_WIRE("%02x ", buffer[i]);
 	DEBUG_WIRE("\n");
+
 	if (buffer[0] != cmd) {
 		DEBUG_WARN("cmd %02x not implemented\n", cmd);
 		buffer[1] = 0xff /*DAP_ERROR*/;
