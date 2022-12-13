@@ -318,8 +318,7 @@ int dbg_get_report_size(void)
 	return report_size;
 }
 
-int dbg_dap_cmd(uint8_t *data, int size, int rsize)
-
+int dbg_dap_cmd(uint8_t *data, int response_length, int request_length)
 {
 	char cmd = data[0];
 	int res = -1;
@@ -327,10 +326,10 @@ int dbg_dap_cmd(uint8_t *data, int size, int rsize)
 	memset(buffer, 0xff, report_size + 1);
 
 	buffer[0] = 0x00; // Report ID??
-	memcpy(&buffer[1], data, rsize);
+	memcpy(&buffer[1], data, request_length);
 
 	DEBUG_WIRE("cmd :   ");
-	for (int i = (type == CMSIS_TYPE_HID) ? 0 : 1; (i < rsize + 1); i++)
+	for (int i = (type == CMSIS_TYPE_HID) ? 0 : 1; (i < request_length + 1); i++)
 		DEBUG_WIRE("%02x.", buffer[i]);
 	DEBUG_WIRE("\n");
 	if (type == CMSIS_TYPE_HID) {
@@ -352,7 +351,7 @@ int dbg_dap_cmd(uint8_t *data, int size, int rsize)
 	} else if (type == CMSIS_TYPE_BULK) {
 		int transferred = 0;
 
-		res = libusb_bulk_transfer(usb_handle, out_ep, data, rsize, &transferred, TRANSFER_TIMEOUT_MS);
+		res = libusb_bulk_transfer(usb_handle, out_ep, data, request_length, &transferred, TRANSFER_TIMEOUT_MS);
 		if (res < 0) {
 			DEBUG_WARN("OUT error: %d\n", res);
 			return res;
@@ -376,8 +375,8 @@ int dbg_dap_cmd(uint8_t *data, int size, int rsize)
 		DEBUG_WARN("cmd %02x not implemented\n", cmd);
 		buffer[1] = 0xff /*DAP_ERROR*/;
 	}
-	if (size)
-		memcpy(data, &buffer[1], (size < res) ? size : res);
+	if (response_length)
+		memcpy(data, &buffer[1], (response_length < res) ? response_length : res);
 	return res;
 }
 
