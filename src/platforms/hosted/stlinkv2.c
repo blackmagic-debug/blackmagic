@@ -694,15 +694,6 @@ static size_t stlink_read_idcodes(bmp_info_s *info, uint32_t *idcodes)
 
 uint32_t stlink_dp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value);
 
-static uint32_t stlink_dp_read(adiv5_debug_port_s *dp, uint16_t addr)
-{
-	if (addr & ADIV5_APnDP) {
-		stlink_dp_low_access(dp, ADIV5_LOW_READ, addr, 0);
-		return stlink_dp_low_access(dp, ADIV5_LOW_READ, ADIV5_DP_RDBUFF, 0);
-	}
-	return stlink_dp_low_access(dp, ADIV5_LOW_READ, addr, 0);
-}
-
 uint32_t stlink_dp_error(adiv5_debug_port_s *dp, const bool protocol_recovery)
 {
 	/* XXX: This should perform a line reset for protocol recovery.. */
@@ -1061,7 +1052,7 @@ uint32_t jtag_scan_stlinkv2(bmp_info_s *info, const uint8_t *irlens)
 
 int stlink_jtag_dp_init(adiv5_debug_port_s *dp)
 {
-	dp->dp_read = stlink_dp_read;
+	dp->dp_read = firmware_swdp_read;
 	dp->error = stlink_dp_error;
 	dp->low_access = stlink_dp_low_access;
 	dp->abort = stlink_dp_abort;
@@ -1106,7 +1097,7 @@ uint32_t stlink_swdp_scan(bmp_info_s *info)
 		return 0;
 	}
 
-	dp->dp_read = stlink_dp_read;
+	dp->dp_read = firmware_swdp_read;
 	dp->error = stlink_dp_error;
 	dp->low_access = stlink_dp_low_access;
 	dp->abort = stlink_dp_abort;
