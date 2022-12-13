@@ -33,6 +33,7 @@
 #include "cli.h"
 
 static bool jlink_adiv5_swdp_write_nocheck(adiv5_debug_port_s *dp, uint16_t addr, uint32_t data);
+static uint32_t jlink_adiv5_swdp_read_nocheck(uint16_t addr);
 static uint32_t jlink_adiv5_swdp_error(adiv5_debug_port_s *dp, bool protocol_recovery);
 static uint32_t jlink_adiv5_swdp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value);
 static void jlink_adiv5_swdp_abort(adiv5_debug_port_s *dp, uint32_t abort);
@@ -186,10 +187,32 @@ static bool jlink_adiv5_swdp_write_nocheck(adiv5_debug_port_s *dp, const uint16_
 	return ack != SWDP_ACK_OK;
 }
 
+static uint32_t jlink_adiv5_swdp_read_nocheck(const uint16_t addr)
+{
+	uint8_t result[6];
+	uint8_t request[8];
+	jlink_adiv5_swdp_make_packet_request(request, sizeof(request), ADIV5_LOW_READ, addr & 0xfU);
+	send_recv(info.usb_link, request, 8U, result, 2U);
+	send_recv(info.usb_link, NULL, 0U, result + 2U, 1U);
+	const uint8_t ack = result[1] & 7U;
+
+	uint8_t response[14];
+	memset(response, 0, sizeof(response));
+	response[0] = CMD_HW_JTAG3;
+	response[2] = 33U + 2U; /* 2 idle cycles */
+	response[8] = 0xfe;
+	send_recv(info.usb_link, response, 14, result, 5);
+	send_recv(info.usb_link, NULL, 0, result + 5U, 1);
+	if (result[5] != 0)
+		raise_exception(EXCEPTION_ERROR, "Low access read failed");
+	const uint32_t data = result[0] | result[1] << 8U | result[2] << 16U | result[3] << 24U;
+	return ack == SWDP_ACK_OK ? data : 0;
+}
+
 static uint32_t jlink_adiv5_swdp_error(adiv5_debug_port_s *const dp, const bool protocol_recovery)
 {
 	(void)protocol_recovery;
-	uint32_t err = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT) &
+	uint32_t err = jlink_adiv5_swdp_read_nocheck(ADIV5_DP_CTRLSTAT) &
 		(ADIV5_DP_CTRLSTAT_STICKYORUN | ADIV5_DP_CTRLSTAT_STICKYCMP | ADIV5_DP_CTRLSTAT_STICKYERR |
 			ADIV5_DP_CTRLSTAT_WDATAERR);
 	uint32_t clr = 0;
