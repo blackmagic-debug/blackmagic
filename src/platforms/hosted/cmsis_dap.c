@@ -318,6 +318,28 @@ int dbg_get_report_size(void)
 	return report_size;
 }
 
+ssize_t dbg_dap_cmd_bulk(uint8_t *const data, const size_t request_length)
+{
+	int transferred = 0;
+	const int result =
+		libusb_bulk_transfer(usb_handle, out_ep, data, request_length, &transferred, TRANSFER_TIMEOUT_MS);
+	if (result < 0) {
+		DEBUG_WARN("CMSIS-DAP write error: %d\n", result);
+		return result;
+	}
+
+	/* We repeat the read in case we're out of step with the transmitter */
+	do {
+		const int result =
+			libusb_bulk_transfer(usb_handle, in_ep, buffer, report_size, &transferred, TRANSFER_TIMEOUT_MS);
+		if (result < 0) {
+			DEBUG_WARN("CMSIS-DAP read error: %d\n", result);
+			return result;
+		}
+	} while (buffer[0] != data[0]);
+	return transferred;
+}
+
 int dbg_dap_cmd(uint8_t *data, int response_length, int request_length)
 {
 	char cmd = data[0];
@@ -348,25 +370,11 @@ int dbg_dap_cmd(uint8_t *data, int response_length, int request_length)
 				exit(-1);
 			}
 		} while (buffer[0] != cmd);
-	} else if (type == CMSIS_TYPE_BULK) {
-		int transferred = 0;
+	} else if (type == CMSIS_TYPE_BULK)
+		res = dbg_dap_cmd_bulk(data, request_length);
+	if (res < 0)
+		return res;
 
-		res = libusb_bulk_transfer(usb_handle, out_ep, data, request_length, &transferred, TRANSFER_TIMEOUT_MS);
-		if (res < 0) {
-			DEBUG_WARN("OUT error: %d\n", res);
-			return res;
-		}
-
-		/* We repeat the read in case we're out of step with the transmitter */
-		do {
-			res = libusb_bulk_transfer(usb_handle, in_ep, buffer, report_size, &transferred, TRANSFER_TIMEOUT_MS);
-			if (res < 0) {
-				DEBUG_WARN("IN error: %d\n", res);
-				return res;
-			}
-		} while (buffer[0] != cmd);
-		res = transferred;
-	}
 	DEBUG_WIRE("cmd res:");
 	for (int i = 0; i < res; i++)
 		DEBUG_WIRE("%02x.", buffer[i]);
