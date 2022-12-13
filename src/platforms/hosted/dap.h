@@ -84,6 +84,9 @@ ssize_t dbg_dap_cmd(uint8_t *data, size_t response_length, size_t request_length
 void dap_jtagtap_tdi_tdo_seq(
 	uint8_t *data_out, bool final_tms, const uint8_t *tms, const uint8_t *data_in, size_t clock_cycles);
 int dap_jtag_configure(void);
+
+uint32_t dap_swdptap_seq_in(size_t clock_cycles);
+bool dap_swdptap_seq_in_parity(uint32_t *ret, size_t clock_cycles);
 void dap_swdptap_seq_out(uint32_t tms_states, size_t clock_cycles);
 void dap_swdptap_seq_out_parity(uint32_t tms_states, size_t clock_cycles);
 
