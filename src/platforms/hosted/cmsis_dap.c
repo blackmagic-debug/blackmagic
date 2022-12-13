@@ -586,7 +586,10 @@ int dap_swdptap_init(adiv5_debug_port_s *dp)
 		dp->dp_low_write = dap_dp_low_write;
 	else
 		dp->dp_low_write = NULL;
+	dp->seq_in = dap_swdptap_seq_in;
+	dp->seq_in_parity = dap_swdptap_seq_in_parity;
 	dp->seq_out = dap_swdptap_seq_out;
+	dp->seq_out_parity = dap_swdptap_seq_out_parity;
 	dp->dp_read = dap_dp_read_reg;
 	/* For error() use the TARGETID switching firmware_swdp_error */
 	dp->low_access = dap_dp_low_access;
