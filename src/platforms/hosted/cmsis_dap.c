@@ -318,6 +318,38 @@ int dbg_get_report_size(void)
 	return report_size;
 }
 
+ssize_t dbg_dap_cmd_hid(const uint8_t *const data, const size_t request_length)
+{
+	if (request_length + 1U > report_size) {
+		DEBUG_WARN(
+			"Attempted to make over-long request of %zu bytes, max length is %zu\n", request_length + 1U, report_size);
+		exit(-1);
+	}
+
+	memset(buffer + request_length + 1U, 0xff, report_size - (request_length + 1U));
+	buffer[0] = 0x00; // Report ID??
+	memcpy(buffer + 1, data, request_length);
+
+	const int result = hid_write(handle, buffer, 65);
+	if (result < 0) {
+		DEBUG_WARN("CMSIS-DAP write error: %ls\n", hid_error(handle));
+		exit(-1);
+	}
+
+	int response = 0;
+	do {
+		response = hid_read_timeout(handle, buffer, 65, 1000);
+		if (response < 0) {
+			DEBUG_WARN("CMSIS-DAP read error: %ls\n", hid_error(handle));
+			exit(-1);
+		} else if (response == 0) {
+			DEBUG_WARN("CMSIS-DAP read timeout\n");
+			exit(-1);
+		}
+	} while (buffer[0] != data[0]);
+	return response;
+}
+
 ssize_t dbg_dap_cmd_bulk(uint8_t *const data, const size_t request_length)
 {
 	int transferred = 0;
@@ -345,32 +377,13 @@ int dbg_dap_cmd(uint8_t *data, int response_length, int request_length)
 	char cmd = data[0];
 	int res = -1;
 
-	memset(buffer, 0xff, report_size + 1);
-
-	buffer[0] = 0x00; // Report ID??
-	memcpy(&buffer[1], data, request_length);
-
 	DEBUG_WIRE("cmd :   ");
-	for (int i = (type == CMSIS_TYPE_HID) ? 0 : 1; (i < request_length + 1); i++)
-		DEBUG_WIRE("%02x.", buffer[i]);
+	for (int i = 0; (i < request_length + 1); i++)
+		DEBUG_WIRE("%02x.", data[i]);
 	DEBUG_WIRE("\n");
-	if (type == CMSIS_TYPE_HID) {
-		res = hid_write(handle, buffer, 65);
-		if (res < 0) {
-			DEBUG_WARN("Error: %ls\n", hid_error(handle));
-			exit(-1);
-		}
-		do {
-			res = hid_read_timeout(handle, buffer, 65, 1000);
-			if (res < 0) {
-				DEBUG_WARN("debugger read(): %ls\n", hid_error(handle));
-				exit(-1);
-			} else if (res == 0) {
-				DEBUG_WARN("timeout\n");
-				exit(-1);
-			}
-		} while (buffer[0] != cmd);
-	} else if (type == CMSIS_TYPE_BULK)
+	if (type == CMSIS_TYPE_HID)
+		res = dbg_dap_cmd_hid(data, request_length);
+	else if (type == CMSIS_TYPE_BULK)
 		res = dbg_dap_cmd_bulk(data, request_length);
 	if (res < 0)
 		return res;
