@@ -719,19 +719,18 @@ int dap_jtag_configure(void)
 	return 0;
 }
 
-void dap_swdptap_seq_out(uint32_t tms_states, size_t clock_cycles)
+void dap_swdptap_seq_out(const uint32_t tms_states, const size_t clock_cycles)
 {
-	/* clang-format off */
-	uint8_t buf[64] = {
+	uint8_t buf[6] = {
 		ID_DAP_SWJ_SEQUENCE,
 		clock_cycles,
 		(tms_states >> 0U) & 0xffU,
 		(tms_states >> 8U) & 0xffU,
 		(tms_states >> 16U) & 0xffU,
-		(tms_states >> 24U) & 0xffU
+		(tms_states >> 24U) & 0xffU,
 	};
-	/* clang-format on */
-	dbg_dap_cmd(buf, 64, 2U + ((clock_cycles + 7U) >> 3U));
+	const size_t sequence_bytes = (clock_cycles + 7U) >> 3U;
+	dbg_dap_cmd(buf, 1U, 2U + sequence_bytes);
 	if (buf[0])
 		DEBUG_WARN("dap_swdptap_seq_out error\n");
 }
