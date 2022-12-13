@@ -372,10 +372,8 @@ ssize_t dbg_dap_cmd_bulk(uint8_t *const data, const size_t request_length)
 	return transferred;
 }
 
-ssize_t dbg_dap_cmd(uint8_t *data, int response_length, const size_t request_length)
+ssize_t dbg_dap_cmd(uint8_t *const data, const size_t response_length, const size_t request_length)
 {
-	char cmd = data[0];
-
 	DEBUG_WIRE(" command: ");
 	for (size_t i = 0; i < request_length; ++i)
 		DEBUG_WIRE("%02x ", data[i]);
@@ -395,12 +393,13 @@ ssize_t dbg_dap_cmd(uint8_t *data, int response_length, const size_t request_len
 		DEBUG_WIRE("%02x ", buffer[i]);
 	DEBUG_WIRE("\n");
 
-	if (buffer[0] != cmd) {
-		DEBUG_WARN("cmd %02x not implemented\n", cmd);
+	if (buffer[0] != data[0]) {
+		DEBUG_WARN("command %02x not implemented\n", data[0]);
 		buffer[1] = 0xff /*DAP_ERROR*/;
 	}
+
 	if (response_length)
-		memcpy(data, &buffer[1], (response_length < res) ? response_length : res);
+		memcpy(data, buffer + 1, MIN(response_length, result));
 	return res;
 }
 
