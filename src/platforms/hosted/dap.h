@@ -80,7 +80,7 @@ uint32_t dap_ap_read(adiv5_access_port_s *ap, uint16_t addr);
 void dap_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value);
 void dap_read_single(adiv5_access_port_s *ap, void *dest, uint32_t src, align_e align);
 void dap_write_single(adiv5_access_port_s *ap, uint32_t dest, const void *src, align_e align);
-int dbg_dap_cmd(uint8_t *data, int size, int rsize);
+int dbg_dap_cmd(uint8_t *data, int response_length, size_t request_length);
 void dap_jtagtap_tdi_tdo_seq(
 	uint8_t *data_out, bool final_tms, const uint8_t *tms, const uint8_t *data_in, size_t clock_cycles);
 int dap_jtag_configure(void);

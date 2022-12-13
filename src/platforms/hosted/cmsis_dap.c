@@ -372,15 +372,16 @@ ssize_t dbg_dap_cmd_bulk(uint8_t *const data, const size_t request_length)
 	return transferred;
 }
 
-int dbg_dap_cmd(uint8_t *data, int response_length, int request_length)
+int dbg_dap_cmd(uint8_t *data, int response_length, const size_t request_length)
 {
 	char cmd = data[0];
 	int res = -1;
 
-	DEBUG_WIRE("cmd :   ");
-	for (int i = 0; (i < request_length + 1); i++)
-		DEBUG_WIRE("%02x.", data[i]);
+	DEBUG_WIRE(" command: ");
+	for (size_t i = 0; i < request_length; ++i)
+		DEBUG_WIRE("%02x ", data[i]);
 	DEBUG_WIRE("\n");
+
 	if (type == CMSIS_TYPE_HID)
 		res = dbg_dap_cmd_hid(data, request_length);
 	else if (type == CMSIS_TYPE_BULK)
