@@ -754,17 +754,22 @@ void dap_swdptap_seq_out_parity(const uint32_t tms_states, const size_t clock_cy
 
 #define SWD_SEQUENCE_IN 0x80U
 
-uint32_t dap_swdptap_seq_in(int ticks)
+uint32_t dap_swdptap_seq_in(const size_t clock_cycles)
 {
-	uint8_t buf[5] = {ID_DAP_SWD_SEQUENCE, 1, ticks + SWD_SEQUENCE_IN};
-	dbg_dap_cmd(buf, 2 + ((ticks + 7U) >> 3U), 3U);
-	uint32_t res = 0;
-	int len = (ticks + 7U) >> 3U;
-	while (len--) {
-		res <<= 8U;
-		res += buf[len + 1U];
-	}
-	return res;
+	uint8_t buf[6] = {
+		ID_DAP_SWD_SEQUENCE,
+		1,
+		clock_cycles + SWD_SEQUENCE_IN,
+	};
+	const size_t sequence_bytes = (clock_cycles + 7U) >> 3U;
+	dbg_dap_cmd(buf, 2U + sequence_bytes, 3U);
+	if (buf[0])
+		DEBUG_WARN("dap_swdptap_seq_in error\n");
+
+	uint32_t result = 0;
+	for (size_t offset = 0; offset < clock_cycles; offset += 8U)
+		result |= buf[1 + (offset >> 3U)] << offset;
+	return result;
 }
 
 bool dap_swdptap_seq_in_parity(uint32_t *ret, int ticks)
