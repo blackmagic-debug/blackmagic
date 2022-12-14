@@ -37,9 +37,10 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include "adiv5.h"
 
-typedef enum dap_command
-{
+typedef enum dap_command {
+	DAP_TRANSFER = 0x05U,
 	DAP_SWJ_SEQUENCE = 0x12U,
 } dap_command_e;
 
@@ -48,11 +49,24 @@ typedef enum dap_response_status {
 	DAP_RESPOSE_ERROR = 0xffU,
 } dap_response_status_e;
 
+typedef enum dap_transfer_status {
+	DAP_TRANSFER_OK = 0x01U,
+	DAP_TRANSFER_WAIT = 0x02U,
+	DAP_TRANSFER_FAULT = 0x04U,
+	DAP_TRANSFER_NO_RESPONSE = 0x07U,
+} dap_transfer_status_e;
+
 typedef struct dap_transfer_request {
 	uint8_t request;
 	uint32_t data;
 } dap_transfer_request_s;
 
+typedef struct dap_transfer_response {
+	uint8_t processed;
+	uint8_t status;
+} dap_transfer_response_s;
+
 bool perform_dap_swj_sequence(size_t clock_cycles, const uint8_t *data);
+bool perform_dap_transfer(const adiv5_debug_port_s *dp, const dap_transfer_request_s *transfer_requests, size_t count);
 
 #endif /*PLATFORMS_HOSTED_DAP_COMMAND_H*/
