@@ -55,6 +55,7 @@
 #include "adiv5.h"
 
 #include <assert.h>
+#include <string.h>
 #include <unistd.h>
 #include <signal.h>
 #include <ctype.h>
@@ -318,7 +319,8 @@ int dbg_get_report_size(void)
 	return report_size;
 }
 
-ssize_t dbg_dap_cmd_hid(const uint8_t *const data, const size_t request_length)
+ssize_t dbg_dap_cmd_hid(const uint8_t *const request_data, const size_t request_length, uint8_t *const response_data,
+	const size_t response_length)
 {
 	if (request_length + 1U > report_size) {
 		DEBUG_WARN(
@@ -328,9 +330,9 @@ ssize_t dbg_dap_cmd_hid(const uint8_t *const data, const size_t request_length)
 
 	memset(buffer + request_length + 1U, 0xff, report_size - (request_length + 1U));
 	buffer[0] = 0x00; // Report ID??
-	memcpy(buffer + 1, data, request_length);
+	memcpy(buffer + 1, request_data, request_length);
 
-	const int result = hid_write(handle, buffer, 65);
+	const int result = hid_write(handle, buffer, report_size);
 	if (result < 0) {
 		DEBUG_WARN("CMSIS-DAP write error: %ls\n", hid_error(handle));
 		exit(-1);
@@ -338,7 +340,7 @@ ssize_t dbg_dap_cmd_hid(const uint8_t *const data, const size_t request_length)
 
 	int response = 0;
 	do {
-		response = hid_read_timeout(handle, buffer, 65, 1000);
+		response = hid_read_timeout(handle, response_data, response_length, 1000);
 		if (response < 0) {
 			DEBUG_WARN("CMSIS-DAP read error: %ls\n", hid_error(handle));
 			exit(-1);
@@ -346,15 +348,16 @@ ssize_t dbg_dap_cmd_hid(const uint8_t *const data, const size_t request_length)
 			DEBUG_WARN("CMSIS-DAP read timeout\n");
 			exit(-1);
 		}
-	} while (buffer[0] != data[0]);
+	} while (response_data[0] != request_data[0]);
 	return response;
 }
 
-ssize_t dbg_dap_cmd_bulk(uint8_t *const data, const size_t request_length)
+ssize_t dbg_dap_cmd_bulk(const uint8_t *const request_data, const size_t request_length, uint8_t *const response_data,
+	const size_t response_length)
 {
 	int transferred = 0;
-	const int result =
-		libusb_bulk_transfer(usb_handle, out_ep, data, request_length, &transferred, TRANSFER_TIMEOUT_MS);
+	const int result = libusb_bulk_transfer(
+		usb_handle, out_ep, (uint8_t *)request_data, request_length, &transferred, TRANSFER_TIMEOUT_MS);
 	if (result < 0) {
 		DEBUG_WARN("CMSIS-DAP write error: %s (%d)\n", libusb_strerror(result), result);
 		return result;
@@ -363,44 +366,47 @@ ssize_t dbg_dap_cmd_bulk(uint8_t *const data, const size_t request_length)
 	/* We repeat the read in case we're out of step with the transmitter */
 	do {
 		const int result =
-			libusb_bulk_transfer(usb_handle, in_ep, buffer, report_size, &transferred, TRANSFER_TIMEOUT_MS);
+			libusb_bulk_transfer(usb_handle, in_ep, response_data, response_length, &transferred, TRANSFER_TIMEOUT_MS);
 		if (result < 0) {
 			DEBUG_WARN("CMSIS-DAP read error: %s (%d)\n", libusb_strerror(result), result);
 			return result;
 		}
-	} while (buffer[0] != data[0]);
+	} while (response_data[0] != request_data[0]);
 	return transferred;
+}
+
+static ssize_t dap_run_cmd_raw(const uint8_t *const request_data, const size_t request_length,
+	uint8_t *const response_data, const size_t response_length)
+{
+	DEBUG_WIRE(" command: ");
+	for (size_t i = 0; i < request_length; ++i)
+		DEBUG_WIRE("%02x ", request_data[i]);
+	DEBUG_WIRE("\n");
+
+	uint8_t data[65];
+
+	ssize_t response = -1;
+	if (type == CMSIS_TYPE_HID)
+		response = dbg_dap_cmd_hid(request_data, request_length, data, report_size);
+	else if (type == CMSIS_TYPE_BULK)
+		response = dbg_dap_cmd_bulk(request_data, request_length, data, report_size);
+	if (response < 0)
+		return response;
+	const size_t result = (size_t)response;
+
+	DEBUG_WIRE("response: ");
+	for (size_t i = 0; i < result; i++)
+		DEBUG_WIRE("%02x ", data[i]);
+	DEBUG_WIRE("\n");
+
+	if (response_length)
+		memcpy(response_data, data + 1, MIN(response_length, result));
+	return response;
 }
 
 ssize_t dbg_dap_cmd(uint8_t *const data, const size_t response_length, const size_t request_length)
 {
-	DEBUG_WIRE(" command: ");
-	for (size_t i = 0; i < request_length; ++i)
-		DEBUG_WIRE("%02x ", data[i]);
-	DEBUG_WIRE("\n");
-
-	ssize_t res = -1;
-	if (type == CMSIS_TYPE_HID)
-		res = dbg_dap_cmd_hid(data, request_length);
-	else if (type == CMSIS_TYPE_BULK)
-		res = dbg_dap_cmd_bulk(data, request_length);
-	if (res < 0)
-		return res;
-	const size_t result = (size_t)res;
-
-	DEBUG_WIRE("response: ");
-	for (size_t i = 0; i < result; i++)
-		DEBUG_WIRE("%02x ", buffer[i]);
-	DEBUG_WIRE("\n");
-
-	if (buffer[0] != data[0]) {
-		DEBUG_WARN("command %02x not implemented\n", data[0]);
-		buffer[1] = 0xff /*DAP_ERROR*/;
-	}
-
-	if (response_length)
-		memcpy(data, buffer + 1, MIN(response_length, result));
-	return res;
+	return dap_run_cmd_raw(data, request_length, data, response_length);
 }
 
 #define ALIGNOF(x) (((x)&3) == 0 ? ALIGN_WORD : (((x)&1) == 0 ? ALIGN_HALFWORD : ALIGN_BYTE))
