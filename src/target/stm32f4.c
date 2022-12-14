@@ -231,7 +231,7 @@ bool stm32f4_probe(target_s *t)
 		t->attach = stm32f4_attach;
 		t->detach = stm32f4_detach;
 		t->mass_erase = stm32f4_mass_erase;
-		t->driver = stm32f4_get_chip_name(t->part_id);
+		t->driver = stm32f4_get_chip_name(device_id);
 		t->part_id = device_id;
 		target_add_commands(t, stm32f4_cmd_list, t->driver);
 		return true;
