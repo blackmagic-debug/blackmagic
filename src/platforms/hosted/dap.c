@@ -34,6 +34,7 @@
 #include <general.h>
 #include "exception.h"
 #include "dap.h"
+#include "dap_command.h"
 #include "jtag_scan.h"
 
 /*- Definitions -------------------------------------------------------------*/
@@ -721,34 +722,26 @@ int dap_jtag_configure(void)
 
 void dap_swdptap_seq_out(const uint32_t tms_states, const size_t clock_cycles)
 {
-	uint8_t buf[6] = {
-		ID_DAP_SWJ_SEQUENCE,
-		clock_cycles,
+	uint8_t data[4] = {
 		(tms_states >> 0U) & 0xffU,
 		(tms_states >> 8U) & 0xffU,
 		(tms_states >> 16U) & 0xffU,
 		(tms_states >> 24U) & 0xffU,
 	};
-	const size_t sequence_bytes = (clock_cycles + 7U) >> 3U;
-	dbg_dap_cmd(buf, 1U, 2U + sequence_bytes);
-	if (buf[0])
+	if (!perform_dap_swj_sequence(clock_cycles, data))
 		DEBUG_WARN("dap_swdptap_seq_out error\n");
 }
 
 void dap_swdptap_seq_out_parity(const uint32_t tms_states, const size_t clock_cycles)
 {
-	uint8_t buf[7] = {
-		ID_DAP_SWJ_SEQUENCE,
-		clock_cycles + 1U,
+	uint8_t data[5] = {
 		(tms_states >> 0U) & 0xffU,
 		(tms_states >> 8U) & 0xffU,
 		(tms_states >> 16U) & 0xffU,
 		(tms_states >> 24U) & 0xffU,
 		__builtin_parity(tms_states),
 	};
-	const size_t sequence_bytes = (clock_cycles + 8U) >> 3U;
-	dbg_dap_cmd(buf, 1, 2U + sequence_bytes);
-	if (buf[0])
+	if (!perform_dap_swj_sequence(clock_cycles + 1U, data))
 		DEBUG_WARN("dap_swdptap_seq_out_parity error\n");
 }
 
