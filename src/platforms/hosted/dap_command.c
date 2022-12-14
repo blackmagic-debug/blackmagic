@@ -50,6 +50,11 @@ static inline void write_le4(uint8_t *const buffer, const size_t offset, const u
 	buffer[offset + 3U] = (value >> 24U) & 0xffU;
 }
 
+static inline uint16_t read_le2(const uint8_t *const buffer, const size_t offset)
+{
+	return buffer[offset] | ((uint16_t)buffer[offset + 1U] << 8U);
+}
+
 static inline uint32_t read_le4(const uint8_t *const buffer, const size_t offset)
 {
 	return buffer[offset] | ((uint32_t)buffer[offset + 1U] << 8U) | ((uint32_t)buffer[offset + 2U] << 16U) |
@@ -128,5 +133,38 @@ bool perform_dap_transfer(adiv5_debug_port_s *const dp, const dap_transfer_reque
 	dp->fault = response.status;
 
 	DEBUG_PROBE("-> transfer failed with %u after processing %u requests\n", response.status, response.processed);
+	return false;
+}
+
+bool perform_dap_transfer_block_read(
+	adiv5_debug_port_s *const dp, const uint8_t reg, const uint16_t block_count, uint32_t *const blocks)
+{
+	if (block_count > 256U)
+		return false;
+
+	DEBUG_PROBE("-> dap_transfer_block (%u transfer blocks)\n", block_count);
+	const uint8_t request[5] = {
+		DAP_TRANSFER_BLOCK,
+		dp->dp_jd_index,
+		block_count & 0xffU,
+		block_count >> 8U,
+		reg | DAP_TRANSFER_RnW,
+	};
+
+	dap_transfer_block_response_s response;
+	/* Run the request having set up the request buffer */
+	if (!dap_run_cmd(request, ARRAY_LENGTH(request), &response, 3U + (block_count * 4U)))
+		return false;
+
+	/* Check the response over */
+	const uint16_t blocks_read = read_le2(response.count, 0);
+	if (blocks_read == block_count && response.status == DAP_TRANSFER_OK) {
+		for (size_t i = 0; i < block_count; ++i)
+			blocks[i] = read_le4(response.data[i], 0);
+		return true;
+	}
+	dp->fault = response.status;
+
+	DEBUG_PROBE("-> transfer failed with %u after processing %u blocks\n", response.status, blocks_read);
 	return false;
 }

@@ -41,6 +41,7 @@
 
 typedef enum dap_command {
 	DAP_TRANSFER = 0x05U,
+	DAP_TRANSFER_BLOCK = 0x06U,
 	DAP_SWJ_SEQUENCE = 0x12U,
 } dap_command_e;
 
@@ -67,8 +68,15 @@ typedef struct dap_transfer_response {
 	uint8_t data[12][4];
 } dap_transfer_response_s;
 
+typedef struct dap_transfer_block_response {
+	uint8_t count[2];
+	uint8_t status;
+	uint8_t data[256][4];
+} dap_transfer_block_response_s;
+
 bool perform_dap_swj_sequence(size_t clock_cycles, const uint8_t *data);
 bool perform_dap_transfer(adiv5_debug_port_s *dp, const dap_transfer_request_s *transfer_requests, size_t requests,
 	uint32_t *response_data, size_t responses);
+bool perform_dap_transfer_block_read(adiv5_debug_port_s *dp, uint8_t reg, uint16_t block_count, uint32_t *blocks);
 
 #endif /*PLATFORMS_HOSTED_DAP_COMMAND_H*/
