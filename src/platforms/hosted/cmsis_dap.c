@@ -441,10 +441,8 @@ static void dap_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size
 			unsigned int transfersize = blocksize;
 			if (transfersize > max_size)
 				transfersize = max_size;
-			unsigned int res = dap_read_block(ap, dest, src, transfersize, align);
-			if (res) {
-				DEBUG_WIRE("mem_read failed %02x\n", res);
-				ap->dp->fault = 1;
+			if (!dap_read_block(ap, dest, src, transfersize, align)) {
+				DEBUG_WIRE("mem_read failed: %u\n", ap->dp->fault);
 				return;
 			}
 			blocksize -= transfersize;

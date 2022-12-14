@@ -73,7 +73,7 @@ uint32_t dap_read_reg(adiv5_debug_port_s *dp, uint8_t reg);
 void dap_write_reg(adiv5_debug_port_s *dp, uint8_t reg, uint32_t data);
 void dap_reset_link(bool jtag);
 uint32_t dap_read_idcode(adiv5_debug_port_s *dp);
-unsigned int dap_read_block(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t len, align_e align);
+bool dap_read_block(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t len, align_e align);
 unsigned int dap_write_block(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, align_e align);
 void dap_ap_mem_access_setup(adiv5_access_port_s *ap, uint32_t addr, align_e align);
 uint32_t dap_ap_read(adiv5_access_port_s *ap, uint16_t addr);
