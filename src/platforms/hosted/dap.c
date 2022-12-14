@@ -481,7 +481,7 @@ uint32_t dap_read_idcode(adiv5_debug_port_s *dp)
 	return dap_read_reg(dp, SWD_DP_R_IDCODE);
 }
 
-static uint8_t *mem_access_setup(adiv5_access_port_s *ap, uint8_t *p, uint32_t addr, align_e align)
+static size_t mem_access_setup(adiv5_access_port_s *ap, uint8_t *buffer, uint32_t addr, align_e align)
 {
 	uint32_t csw = ap->csw | ADIV5_AP_CSW_ADDRINC_SINGLE;
 	switch (align) {
@@ -498,32 +498,32 @@ static uint8_t *mem_access_setup(adiv5_access_port_s *ap, uint8_t *p, uint32_t a
 	}
 	uint8_t dap_index = 0;
 	dap_index = ap->dp->dp_jd_index;
-	*p++ = ID_DAP_TRANSFER;
-	*p++ = dap_index;
-	*p++ = 3; /* Nr transfers */
-	*p++ = SWD_DP_W_SELECT;
-	*p++ = ADIV5_AP_CSW & 0xf0U;
-	*p++ = 0;
-	*p++ = 0;
-	*p++ = ap->apsel & 0xffU;
-	*p++ = SWD_AP_CSW;
-	*p++ = (csw >> 0U) & 0xffU;
-	*p++ = (csw >> 8U) & 0xffU;
-	*p++ = (csw >> 16U) & 0xffU;
-	*p++ = (csw >> 24U) & 0xffU;
-	*p++ = SWD_AP_TAR;
-	*p++ = (addr >> 0U) & 0xffU;
-	*p++ = (addr >> 8U) & 0xffU;
-	*p++ = (addr >> 16U) & 0xffU;
-	*p++ = (addr >> 24U) & 0xffU;
-	return p;
+	buffer[0] = ID_DAP_TRANSFER;
+	buffer[1] = dap_index;
+	buffer[2] = 3; /* Nr transfers */
+	buffer[3] = SWD_DP_W_SELECT;
+	buffer[4] = ADIV5_AP_CSW & 0xf0U;
+	buffer[5] = 0;
+	buffer[6] = 0;
+	buffer[7] = ap->apsel & 0xffU;
+	buffer[8] = SWD_AP_CSW;
+	buffer[9] = (csw >> 0U) & 0xffU;
+	buffer[10] = (csw >> 8U) & 0xffU;
+	buffer[11] = (csw >> 16U) & 0xffU;
+	buffer[12] = (csw >> 24U) & 0xffU;
+	buffer[13] = SWD_AP_TAR;
+	buffer[14] = (addr >> 0U) & 0xffU;
+	buffer[15] = (addr >> 8U) & 0xffU;
+	buffer[16] = (addr >> 16U) & 0xffU;
+	buffer[17] = (addr >> 24U) & 0xffU;
+	return 18U;
 }
 
 void dap_ap_mem_access_setup(adiv5_access_port_s *ap, uint32_t addr, align_e align)
 {
-	uint8_t buf[63];
-	uint8_t *p = mem_access_setup(ap, buf, addr, align);
-	dbg_dap_cmd(buf, sizeof(buf), p - buf);
+	uint8_t buf[64];
+	const size_t length = mem_access_setup(ap, buf, addr, align);
+	dbg_dap_cmd(buf, sizeof(buf), length);
 }
 
 uint32_t dap_ap_read(adiv5_access_port_s *ap, uint16_t addr)
@@ -574,20 +574,20 @@ void dap_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value)
 
 void dap_read_single(adiv5_access_port_s *ap, void *dest, uint32_t src, align_e align)
 {
-	uint8_t buf[63];
-	uint8_t *p = mem_access_setup(ap, buf, src, align);
-	*p++ = SWD_AP_DRW | DAP_TRANSFER_RnW;
-	*p++ = SWD_DP_R_RDBUFF | DAP_TRANSFER_RnW;
-	buf[2] = 5;
-	uint32_t tmp = wait_word(buf, 63, p - buf, &ap->dp->fault);
+	uint8_t buf[64];
+	const uint32_t length = mem_access_setup(ap, buf, src, align);
+	buf[length] = SWD_AP_DRW | DAP_TRANSFER_RnW;
+	buf[length + 1] = SWD_DP_R_RDBUFF | DAP_TRANSFER_RnW;
+	buf[2] += 2; /* Increase the number of transactions by 2 */
+	uint32_t tmp = wait_word(buf, 64, length + 2U, &ap->dp->fault);
 	dest = extract(dest, src, tmp, align);
 }
 
 void dap_write_single(adiv5_access_port_s *ap, uint32_t dest, const void *src, align_e align)
 {
-	uint8_t buf[63];
-	uint8_t *p = mem_access_setup(ap, buf, dest, align);
-	*p++ = SWD_AP_DRW;
+	uint8_t buf[64];
+	const uint32_t length = mem_access_setup(ap, buf, dest, align);
+	buf[length] = SWD_AP_DRW;
 	uint32_t tmp = 0;
 	/* Pack data into correct data lane */
 	switch (align) {
@@ -602,12 +602,12 @@ void dap_write_single(adiv5_access_port_s *ap, uint32_t dest, const void *src, a
 		tmp = *(uint32_t *)src;
 		break;
 	}
-	*p++ = (tmp >> 0U) & 0xffU;
-	*p++ = (tmp >> 8U) & 0xffU;
-	*p++ = (tmp >> 16U) & 0xffU;
-	*p++ = (tmp >> 24U) & 0xffU;
-	buf[2] = 4;
-	dbg_dap_cmd(buf, sizeof(buf), p - buf);
+	buf[length + 1] = (tmp >> 0U) & 0xffU;
+	buf[length + 2] = (tmp >> 8U) & 0xffU;
+	buf[length + 3] = (tmp >> 16U) & 0xffU;
+	buf[length + 4] = (tmp >> 24U) & 0xffU;
+	++buf[2]; /* Increase the number of transactions by 1 */
+	dbg_dap_cmd(buf, sizeof(buf), length + 5U);
 }
 
 void dap_jtagtap_tdi_tdo_seq(
