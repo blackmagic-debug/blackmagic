@@ -35,6 +35,21 @@
 #include "dap.h"
 #include "dap_command.h"
 
+#define DAP_TRANSFER_APnDP       (1U << 0U)
+#define DAP_TRANSFER_RnW         (1U << 1U)
+#define DAP_TRANSFER_A2          (1U << 2U)
+#define DAP_TRANSFER_A3          (1U << 3U)
+#define DAP_TRANSFER_MATCH_VALUE (1U << 4U)
+#define DAP_TRANSFER_MATCH_MASK  (1U << 5U)
+
+static inline void write_le4(uint8_t *buffer, const size_t offset, const uint32_t value)
+{
+	buffer[offset] = value & 0xffU;
+	buffer[offset + 1U] = (value >> 8U) & 0xffU;
+	buffer[offset + 2U] = (value >> 16U) & 0xffU;
+	buffer[offset + 3U] = (value >> 24U) & 0xffU;
+}
+
 bool perform_dap_swj_sequence(size_t clock_cycles, const uint8_t *data)
 {
 	/* Validate that clock_cycles is in range for the request (spec limits it to 256) */
@@ -59,4 +74,17 @@ bool perform_dap_swj_sequence(size_t clock_cycles, const uint8_t *data)
 		return false;
 	/* And check that it succeeded */
 	return response == DAP_RESPONSE_OK;
+}
+
+static size_t dap_encode_transfer(
+	const dap_transfer_request_s *const transfer, uint8_t *const buffer, const size_t offset)
+{
+	buffer[offset] = transfer->request;
+	const uint8_t request_flags = transfer->request & (DAP_TRANSFER_RnW | DAP_TRANSFER_MATCH_VALUE);
+	/* If the transfer is a read and has no match value, the encoded length is 1 (just the command) */
+	if ((request_flags & DAP_TRANSFER_RnW) && !(request_flags & DAP_TRANSFER_MATCH_VALUE))
+		return 1U;
+	/* Otherwise if it's a write or there's a match value, encode that too, making the request length 5 */
+	write_le4(buffer, offset + 1U, transfer->data);
+	return 5U;
 }

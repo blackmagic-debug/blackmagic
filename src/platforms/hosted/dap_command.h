@@ -48,6 +48,11 @@ typedef enum dap_response_status {
 	DAP_RESPOSE_ERROR = 0xffU,
 } dap_response_status_e;
 
+typedef struct dap_transfer_request {
+	uint8_t request;
+	uint32_t data;
+} dap_transfer_request_s;
+
 bool perform_dap_swj_sequence(size_t clock_cycles, const uint8_t *data);
 
 #endif /*PLATFORMS_HOSTED_DAP_COMMAND_H*/
