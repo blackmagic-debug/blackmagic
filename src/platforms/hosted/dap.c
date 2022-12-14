@@ -282,9 +282,17 @@ void dap_trst_reset(void)
 
 static void dap_line_reset(void)
 {
-	uint8_t buf[] = {ID_DAP_SWJ_SEQUENCE, 64, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0};
-	dbg_dap_cmd(buf, sizeof(buf), 10);
-	if (buf[0])
+	const uint8_t data[8] = {
+		0xffU,
+		0xffU,
+		0xffU,
+		0xffU,
+		0xffU,
+		0xffU,
+		0xffU,
+		0x0fU,
+	};
+	if (!perform_dap_swj_sequence(64, data))
 		DEBUG_WARN("line reset failed\n");
 }
 
