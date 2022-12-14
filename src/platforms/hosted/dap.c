@@ -95,6 +95,8 @@
 #define SWD_DP_W_SELECT    0x08U
 #define SWD_DP_R_RDBUFF    0x0cU
 
+#define SWD_DP_REG(reg, apsel) ((reg) | ((apsel) << 24U))
+
 #define SWD_AP_CSW (0x00U | DAP_TRANSFER_APnDP)
 #define SWD_AP_TAR (0x04U | DAP_TRANSFER_APnDP)
 #define SWD_AP_DRW (0x0cU | DAP_TRANSFER_APnDP)
@@ -490,7 +492,8 @@ uint32_t dap_read_idcode(adiv5_debug_port_s *dp)
 	return dap_read_reg(dp, SWD_DP_R_IDCODE);
 }
 
-static size_t mem_access_setup(adiv5_access_port_s *ap, uint8_t *buffer, uint32_t addr, align_e align)
+static void mem_access_setup(const adiv5_access_port_s *const ap, dap_transfer_request_s *const transfer_requests,
+	const uint32_t addr, const align_e align)
 {
 	uint32_t csw = ap->csw | ADIV5_AP_CSW_ADDRINC_SINGLE;
 	switch (align) {
@@ -505,34 +508,42 @@ static size_t mem_access_setup(adiv5_access_port_s *ap, uint8_t *buffer, uint32_
 		csw |= ADIV5_AP_CSW_SIZE_WORD;
 		break;
 	}
-	uint8_t dap_index = 0;
-	dap_index = ap->dp->dp_jd_index;
-	buffer[0] = ID_DAP_TRANSFER;
-	buffer[1] = dap_index;
-	buffer[2] = 3; /* Nr transfers */
-	buffer[3] = SWD_DP_W_SELECT;
-	buffer[4] = ADIV5_AP_CSW & 0xf0U;
-	buffer[5] = 0;
-	buffer[6] = 0;
-	buffer[7] = ap->apsel & 0xffU;
-	buffer[8] = SWD_AP_CSW;
-	buffer[9] = (csw >> 0U) & 0xffU;
-	buffer[10] = (csw >> 8U) & 0xffU;
-	buffer[11] = (csw >> 16U) & 0xffU;
-	buffer[12] = (csw >> 24U) & 0xffU;
-	buffer[13] = SWD_AP_TAR;
-	buffer[14] = (addr >> 0U) & 0xffU;
-	buffer[15] = (addr >> 8U) & 0xffU;
-	buffer[16] = (addr >> 16U) & 0xffU;
-	buffer[17] = (addr >> 24U) & 0xffU;
-	return 18U;
+	/* Select the bank for the CSW register */
+	transfer_requests[0].request = SWD_DP_W_SELECT;
+	transfer_requests[0].data = SWD_DP_REG(ADIV5_AP_CSW & 0xf0U, ap->apsel);
+	/* Then write the CSW register to the new value */
+	transfer_requests[1].request = SWD_AP_CSW;
+	transfer_requests[1].data = csw;
+	/* Finally write the TAR register to its new value */
+	transfer_requests[2].request = SWD_AP_TAR;
+	transfer_requests[2].data = addr;
 }
 
 void dap_ap_mem_access_setup(adiv5_access_port_s *ap, uint32_t addr, align_e align)
 {
-	uint8_t buf[64];
-	const size_t length = mem_access_setup(ap, buf, addr, align);
-	dbg_dap_cmd(buf, sizeof(buf), length);
+	/* Start by setting up the transfer and attempting it */
+	dap_transfer_request_s requests[3];
+	mem_access_setup(ap, requests, addr, align);
+	const bool result = perform_dap_transfer(ap->dp, requests, 3U, NULL, 0U);
+	/* If all went well, we get to early return */
+	if (result)
+		return;
+	adiv5_debug_port_s *dp = ap->dp;
+	/* If it's irrecoverable, handle it */
+	if (!result && dp->fault != DAP_TRANSFER_NO_RESPONSE) {
+		DEBUG_WARN("Transport error, aborting\n");
+		/*
+		 * XXX: This is definitely not the right way to deal with this, but without a deeper rewrite,
+		 * this is the best we can do for now.
+		 */
+		exit(-1);
+	}
+	/* Finally, if the transfer failed recoverably, clear the error and try again as our best and final answer */
+	dp->error(dp, true);
+	if (!perform_dap_transfer(dp, requests, 3U, NULL, 0U)) {
+		DEBUG_WARN("Transaction unrecoverably failed\n");
+		exit(-1);
+	}
 }
 
 uint32_t dap_ap_read(adiv5_access_port_s *ap, uint16_t addr)
@@ -583,40 +594,40 @@ void dap_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value)
 
 void dap_read_single(adiv5_access_port_s *ap, void *dest, uint32_t src, align_e align)
 {
-	uint8_t buf[64];
-	const uint32_t length = mem_access_setup(ap, buf, src, align);
-	buf[length] = SWD_AP_DRW | DAP_TRANSFER_RnW;
-	buf[length + 1] = SWD_DP_R_RDBUFF | DAP_TRANSFER_RnW;
-	buf[2] += 2; /* Increase the number of transactions by 2 */
-	uint32_t tmp = wait_word(buf, 64, length + 2U, &ap->dp->fault);
-	dest = extract(dest, src, tmp, align);
+	dap_transfer_request_s requests[4];
+	mem_access_setup(ap, requests, src, align);
+	requests[3].request = SWD_AP_DRW | DAP_TRANSFER_RnW;
+	uint32_t result;
+	if (!perform_dap_transfer(ap->dp, requests, 4U, &result, 1U)) {
+		DEBUG_WARN("dap_read_single failed\n");
+		memset(dest, 0, 1U << align);
+		return;
+	}
+	/* Pull out the data. AP_DRW access implies an RDBUFF in CMSIS-DAP, so this is safe */
+	extract(dest, src, result, align);
 }
 
 void dap_write_single(adiv5_access_port_s *ap, uint32_t dest, const void *src, align_e align)
 {
-	uint8_t buf[64];
-	const uint32_t length = mem_access_setup(ap, buf, dest, align);
-	buf[length] = SWD_AP_DRW;
-	uint32_t tmp = 0;
+	dap_transfer_request_s requests[4];
+	mem_access_setup(ap, requests, dest, align);
+	requests[3].request = SWD_AP_DRW;
 	/* Pack data into correct data lane */
 	switch (align) {
 	case ALIGN_BYTE:
-		tmp = ((uint32_t) * (uint8_t *)src) << ((dest & 3U) << 3U);
+		requests[3].data = ((uint32_t) * (uint8_t *)src) << ((dest & 3U) << 3U);
 		break;
 	case ALIGN_HALFWORD:
-		tmp = ((uint32_t) * (uint16_t *)src) << ((dest & 2U) << 3U);
+		requests[3].data = ((uint32_t) * (uint16_t *)src) << ((dest & 2U) << 3U);
 		break;
 	case ALIGN_DWORD:
 	case ALIGN_WORD:
-		tmp = *(uint32_t *)src;
+		requests[3].data = *(uint32_t *)src;
 		break;
+	default:
+		requests[3].data = 0;
 	}
-	buf[length + 1] = (tmp >> 0U) & 0xffU;
-	buf[length + 2] = (tmp >> 8U) & 0xffU;
-	buf[length + 3] = (tmp >> 16U) & 0xffU;
-	buf[length + 4] = (tmp >> 24U) & 0xffU;
-	++buf[2]; /* Increase the number of transactions by 1 */
-	dbg_dap_cmd(buf, sizeof(buf), length + 5U);
+	perform_dap_transfer(ap->dp, requests, 4U, NULL, 0U);
 }
 
 void dap_jtagtap_tdi_tdo_seq(
