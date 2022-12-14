@@ -370,38 +370,24 @@ void dap_write_reg(adiv5_debug_port_s *dp, uint8_t reg, uint32_t data)
 	}
 }
 
-unsigned int dap_read_block(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t len, align_e align)
+bool dap_read_block(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t len, align_e align)
 {
-	uint8_t buf[1024];
-	unsigned int sz = len >> align;
-	uint8_t dap_index = 0;
-	dap_index = ap->dp->dp_jd_index;
-	buf[0] = ID_DAP_TRANSFER_BLOCK;
-	buf[1] = dap_index;
-	buf[2] = sz & 0xffU;
-	buf[3] = (sz >> 8U) & 0xffU;
-	buf[4] = SWD_AP_DRW | DAP_TRANSFER_RnW;
-	dbg_dap_cmd(buf, 1023, 5);
-	unsigned int transferred = buf[0] + (buf[1] << 8U);
-	if (buf[2] >= DAP_TRANSFER_FAULT) {
-		DEBUG_WARN("dap_read_block @ %08" PRIx32 " fault -> line reset\n", src);
-		dap_line_reset();
+	const size_t blocks = len >> MAX(align, 2U);
+	uint32_t data[256];
+	if (!perform_dap_transfer_block_read(ap->dp, SWD_AP_DRW, blocks, data)) {
+		DEBUG_WARN("dap_read_block failed\n");
+		return false;
 	}
-	if (sz != transferred)
-		return 1;
 
 	if (align > ALIGN_HALFWORD)
-		memcpy(dest, &buf[3], len);
+		memcpy(dest, data, len);
 	else {
-		uint32_t *p = (uint32_t *)&buf[3];
-		while (sz) {
-			dest = extract(dest, src, *p, align);
-			p++;
+		for (size_t i = 0; i < blocks; ++i) {
+			dest = extract(dest, src, data[i], align);
 			src += (1U << align);
-			sz--;
 		}
 	}
-	return buf[2] > DAP_TRANSFER_WAIT ? 1 : 0;
+	return true;
 }
 
 unsigned int dap_write_block(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, align_e align)
