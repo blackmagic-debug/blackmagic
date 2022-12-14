@@ -404,6 +404,14 @@ static ssize_t dap_run_cmd_raw(const uint8_t *const request_data, const size_t r
 	return response;
 }
 
+bool dap_run_cmd(const uint8_t *const request_data, const size_t request_length, uint8_t *const response_data,
+	const size_t response_length)
+{
+	/* This substracts one off the result to account for the command byte that gets stripped above */
+	const ssize_t result = dap_run_cmd_raw(request_data, request_length, response_data, response_length) - 1U;
+	return (size_t)result == response_length;
+}
+
 ssize_t dbg_dap_cmd(uint8_t *const data, const size_t response_length, const size_t request_length)
 {
 	return dap_run_cmd_raw(data, request_length, data, response_length);
