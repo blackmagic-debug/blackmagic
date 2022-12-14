@@ -88,3 +88,35 @@ static size_t dap_encode_transfer(
 	write_le4(buffer, offset + 1U, transfer->data);
 	return 5U;
 }
+
+bool perform_dap_transfer(
+	const adiv5_debug_port_s *const dp, const dap_transfer_request_s *const transfer_requests, const size_t count)
+{
+	/* Validate that the number of requests this transfer is valid. We artifically limit it to 12 (from 256) */
+	if (!count || count > 12)
+		return false;
+
+	DEBUG_PROBE("-> dap_transfer (%zu requests)\n", count);
+	/* 63 is 3 + (12 * 5) where 5 is the max length of each transfer request */
+	uint8_t request[63] = {
+		DAP_TRANSFER,
+		dp->dp_jd_index,
+		count,
+	};
+	/* Encode the transfers into the buffer */
+	size_t offset = 3;
+	for (size_t i = 0; i < count; ++i)
+		offset += dap_encode_transfer(&transfer_requests[i], request, offset);
+
+	dap_transfer_response_s response;
+	/* Run the request */
+	if (!dap_run_cmd(request, offset, &response, sizeof(response)))
+		return false;
+
+	/* Look at the response and decypher what went on */
+	if (response.processed == count && response.status == DAP_TRANSFER_OK)
+		return true;
+
+	DEBUG_PROBE("-> transfer failed with %u after processing %u requests\n", response.status, response.processed);
+	return false;
+}
