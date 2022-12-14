@@ -42,12 +42,18 @@
 #define DAP_TRANSFER_MATCH_VALUE (1U << 4U)
 #define DAP_TRANSFER_MATCH_MASK  (1U << 5U)
 
-static inline void write_le4(uint8_t *buffer, const size_t offset, const uint32_t value)
+static inline void write_le4(uint8_t *const buffer, const size_t offset, const uint32_t value)
 {
 	buffer[offset] = value & 0xffU;
 	buffer[offset + 1U] = (value >> 8U) & 0xffU;
 	buffer[offset + 2U] = (value >> 16U) & 0xffU;
 	buffer[offset + 3U] = (value >> 24U) & 0xffU;
+}
+
+static inline uint32_t read_le4(const uint8_t *const buffer, const size_t offset)
+{
+	return buffer[offset] | ((uint32_t)buffer[offset + 1U] << 8U) | ((uint32_t)buffer[offset + 2U] << 16U) |
+		((uint32_t)buffer[offset + 3U] << 24U);
 }
 
 bool perform_dap_swj_sequence(size_t clock_cycles, const uint8_t *data)
@@ -89,33 +95,37 @@ static size_t dap_encode_transfer(
 	return 5U;
 }
 
-bool perform_dap_transfer(
-	const adiv5_debug_port_s *const dp, const dap_transfer_request_s *const transfer_requests, const size_t count)
+bool perform_dap_transfer(adiv5_debug_port_s *const dp, const dap_transfer_request_s *const transfer_requests,
+	const size_t requests, uint32_t *const response_data, const size_t responses)
 {
 	/* Validate that the number of requests this transfer is valid. We artifically limit it to 12 (from 256) */
-	if (!count || count > 12)
+	if (!requests || requests > 12 || (responses && !response_data))
 		return false;
 
-	DEBUG_PROBE("-> dap_transfer (%zu requests)\n", count);
+	DEBUG_PROBE("-> dap_transfer (%zu requests)\n", requests);
 	/* 63 is 3 + (12 * 5) where 5 is the max length of each transfer request */
 	uint8_t request[63] = {
 		DAP_TRANSFER,
 		dp->dp_jd_index,
-		count,
+		requests,
 	};
-	/* Encode the transfers into the buffer */
-	size_t offset = 3;
-	for (size_t i = 0; i < count; ++i)
+	/* Encode the transfers into the buffer and detect if we're doing any reads */
+	size_t offset = 3U;
+	for (size_t i = 0; i < requests; ++i)
 		offset += dap_encode_transfer(&transfer_requests[i], request, offset);
 
 	dap_transfer_response_s response;
 	/* Run the request */
-	if (!dap_run_cmd(request, offset, &response, sizeof(response)))
+	if (!dap_run_cmd(request, offset, &response, 2U + (responses * 4U)))
 		return false;
 
 	/* Look at the response and decypher what went on */
-	if (response.processed == count && response.status == DAP_TRANSFER_OK)
+	if (response.processed == requests && response.status == DAP_TRANSFER_OK) {
+		for (size_t i = 0; i < responses; ++i)
+			response_data[i] = read_le4(response.data[i], 0);
 		return true;
+	}
+	dp->fault = response.status;
 
 	DEBUG_PROBE("-> transfer failed with %u after processing %u requests\n", response.status, response.processed);
 	return false;
