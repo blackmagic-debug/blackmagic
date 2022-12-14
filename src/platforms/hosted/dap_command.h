@@ -64,9 +64,11 @@ typedef struct dap_transfer_request {
 typedef struct dap_transfer_response {
 	uint8_t processed;
 	uint8_t status;
+	uint8_t data[12][4];
 } dap_transfer_response_s;
 
 bool perform_dap_swj_sequence(size_t clock_cycles, const uint8_t *data);
-bool perform_dap_transfer(const adiv5_debug_port_s *dp, const dap_transfer_request_s *transfer_requests, size_t count);
+bool perform_dap_transfer(adiv5_debug_port_s *dp, const dap_transfer_request_s *transfer_requests, size_t requests,
+	uint32_t *response_data, size_t responses);
 
 #endif /*PLATFORMS_HOSTED_DAP_COMMAND_H*/
