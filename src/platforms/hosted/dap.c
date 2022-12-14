@@ -30,8 +30,8 @@
  * Copyright (c) 2020-21 Uwe Bonnes bon@elektron.ikp.physik.tu-darmstadt.de
  */
 
-/*- Includes ----------------------------------------------------------------*/
-#include <general.h>
+#include <string.h>
+#include "general.h"
 #include "exception.h"
 #include "dap.h"
 #include "dap_command.h"
