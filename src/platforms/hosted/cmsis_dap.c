@@ -455,34 +455,38 @@ static void dap_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const vo
 {
 	if (len == 0)
 		return;
-	DEBUG_WIRE("memwrite @ %" PRIx32 " len %zu, align %d, data: %08x \n", dest, len, align, *(uint32_t *)src);
-	if (((unsigned)(1 << align)) == len)
+	DEBUG_WIRE("memwrite @ %" PRIx32 " len %zu, align %d\n", dest, len, align);
+	/* If the write can be done in a single transaction, use the dap_write_single() fast-path */
+	if ((1U << align) == len)
 		return dap_write_single(ap, dest, src, align);
-	unsigned int max_size = ((report_size - 6U) >> (2U - align) & ~3U);
-	while (len) {
-		dap_ap_mem_access_setup(ap, dest, align);
-		unsigned int blocksize = (dest | 0x3ffU) - dest + 1U;
-		if (blocksize > len)
-			blocksize = len;
-		while (blocksize) {
-			unsigned int transfersize = blocksize;
-			if (transfersize > max_size)
-				transfersize = max_size;
-			if (!dap_write_block(ap, dest, src, transfersize, align)) {
-				DEBUG_WARN("mem_write failed %u\n", ap->dp->fault);
-				ap->dp->fault = 1;
+	/* Otherwise proceed blockwise */
+	const size_t blocks_per_transfer = (report_size - 4U) >> 2U;
+	const uint8_t *const data = (const uint8_t *)src;
+	for (size_t offset = 0; offset < len;) {
+		/* Setup AP_TAR every loop as failing to do so results in it wrapping */
+		dap_ap_mem_access_setup(ap, dest + offset, align);
+		/*
+		 * dest can start out unaligned to a 1024 byte chunk size,
+		 * so we have to calculate how much is left of the chunk.
+		 * We also have to take into account how much of the chunk the caller
+		 * has requested we fill.
+		 */
+		const size_t chunk_remaining = MIN(1024 - (dest & 0x3ffU), len - offset);
+		const size_t blocks = chunk_remaining >> align;
+		for (size_t i = 0; i < blocks; i += blocks_per_transfer) {
+			/* blocks - i gives how many blocks are left to transfer in this 1024 byte chunk */
+			const size_t transfer_length = MIN(blocks - i, blocks_per_transfer) << align;
+			if (!dap_write_block(ap, dest + offset, data + offset, transfer_length, align)) {
+				DEBUG_WIRE("mem_write failed: %u\n", ap->dp->fault);
 				return;
 			}
-			blocksize -= transfersize;
-			len -= transfersize;
-			dest += transfersize;
-			src += transfersize;
+			offset += transfer_length;
 		}
 	}
+	DEBUG_WIRE("dap_mem_write_sized transfered %zu blocks\n", len >> align);
 
 	/* Make sure this write is complete by doing a dummy read */
 	adiv5_dp_read(ap->dp, ADIV5_DP_RDBUFF);
-	DEBUG_WIRE("memwrite done\n");
 }
 
 void dap_adiv5_dp_defaults(adiv5_debug_port_s *dp)
