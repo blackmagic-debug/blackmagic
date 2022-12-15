@@ -313,14 +313,13 @@ static uint32_t dap_swd_dp_error(adiv5_debug_port_s *dp, const bool protocol_rec
 
 static uint32_t dap_dp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value)
 {
-	bool APnDP = addr & ADIV5_APnDP;
+	const bool APnDP = addr & ADIV5_APnDP;
 	uint32_t res = 0;
-	uint8_t reg = (addr & 0xcU) | ((APnDP) ? 1 : 0);
-	if (RnW) {
+	const uint8_t reg = (addr & 0xcU) | (APnDP ? 1 : 0);
+	if (RnW)
 		res = dap_read_reg(dp, reg);
-	} else {
+	else
 		dap_write_reg(dp, reg, value);
-	}
 	return res;
 }
 
