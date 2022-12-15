@@ -943,19 +943,37 @@ static void ap_mem_access_setup(adiv5_access_port_s *ap, uint32_t addr, align_e 
 	adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR, addr);
 }
 
-/* Extract read data from data lane based on align and src address */
-void *extract(void *dest, uint32_t src, uint32_t val, align_e align)
+/* Unpack data from the source uint32_t value based on data alignment and source address */
+void *extract(void *dest, uint32_t src, uint32_t data, align_e align)
 {
 	switch (align) {
-	case ALIGN_BYTE:
-		*(uint8_t *)dest = (val >> ((src & 0x3U) << 3U) & 0xffU);
+	case ALIGN_BYTE: {
+		/*
+		 * Mask off the bottom 2 bits of the address to figure out which byte of data to use
+		 * then multiply that by 8 and shift the data down by the result to pick one of the 4 possible bytes
+		 */
+		uint8_t value = (data >> (8U * (src & 3U))) & 0xffU;
+		/* Then memcpy() the result to the destination buffer (this avoids doing a possibly UB cast) */
+		memcpy(dest, &value, sizeof(value));
 		break;
-	case ALIGN_HALFWORD:
-		*(uint16_t *)dest = (val >> ((src & 0x2U) << 3U) & 0xffffU);
+	}
+	case ALIGN_HALFWORD: {
+		/*
+		 * Mask off the 2nd bit of the address to figure out which 16 bits of data to use
+		 * then multiply that by 8 and shift the data down by the result to pick one of the 2 possible 16-bit blocks
+		 */
+		uint16_t value = (data >> (8U * (src & 2U))) & 0xffffU;
+		/* Then memcpy() the result to the destination buffer (this avoids unaligned write issues) */
+		memcpy(dest, &value, sizeof(value));
 		break;
+	}
 	case ALIGN_DWORD:
 	case ALIGN_WORD:
-		*(uint32_t *)dest = val;
+		/*
+		 * when using 32- or 64-bit alignment, we don't have to do anything special, just memcpy() the data to the
+		 * destination buffer (this avoids issues with unaligned writes and UB casts)
+		 */
+		memcpy(dest, &data, sizeof(data));
 		break;
 	}
 	return (uint8_t *)dest + (1 << align);
