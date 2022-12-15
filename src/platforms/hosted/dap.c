@@ -298,13 +298,13 @@ void dap_line_reset(void)
 		DEBUG_WARN("line reset failed\n");
 }
 
-static uint32_t wait_word(uint8_t *buf, int size, int len, uint8_t *dp_fault)
+static uint32_t wait_word(uint8_t *buf, size_t response_length, size_t request_length, uint8_t *dp_fault)
 {
-	uint8_t cmd_copy[len];
-	memcpy(cmd_copy, buf, len);
+	uint8_t cmd_copy[request_length];
+	memcpy(cmd_copy, buf, request_length);
 	do {
-		memcpy(buf, cmd_copy, len);
-		dbg_dap_cmd(buf, size, len);
+		memcpy(buf, cmd_copy, request_length);
+		dbg_dap_cmd(buf, response_length, request_length);
 		if (buf[1] < DAP_TRANSFER_WAIT)
 			break;
 	} while (buf[1] == DAP_TRANSFER_WAIT);
