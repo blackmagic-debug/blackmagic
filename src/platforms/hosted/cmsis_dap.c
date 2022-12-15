@@ -314,11 +314,6 @@ void dap_exit_function(void)
 	}
 }
 
-int dbg_get_report_size(void)
-{
-	return report_size;
-}
-
 ssize_t dbg_dap_cmd_hid(const uint8_t *const request_data, const size_t request_length, uint8_t *const response_data,
 	const size_t response_length)
 {
