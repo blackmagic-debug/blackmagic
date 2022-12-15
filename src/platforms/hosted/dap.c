@@ -384,50 +384,32 @@ bool dap_read_block(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t le
 	else {
 		for (size_t i = 0; i < blocks; ++i) {
 			dest = adiv5_unpack_data(dest, src, data[i], align);
-			src += (1U << align);
+			src += 1U << align;
 		}
 	}
 	return true;
 }
 
-unsigned int dap_write_block(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, align_e align)
+bool dap_write_block(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, align_e align)
 {
-	uint8_t buf[1024];
-	unsigned int sz = len >> align;
-	uint8_t dap_index = 0;
-	dap_index = ap->dp->dp_jd_index;
-	buf[0] = ID_DAP_TRANSFER_BLOCK;
-	buf[1] = dap_index;
-	buf[2] = sz & 0xffU;
-	buf[3] = (sz >> 8U) & 0xffU;
-	buf[4] = SWD_AP_DRW;
-	if (align > ALIGN_HALFWORD)
-		memcpy(&buf[5], src, len);
-	else {
-		unsigned int size = len;
-		uint32_t *p = (uint32_t *)&buf[5];
-		while (size) {
-			uint32_t tmp = 0;
-			/* Pack data into correct data lane */
-			if (align == ALIGN_BYTE)
-				tmp = ((uint32_t) * (uint8_t *)src) << ((dest & 3U) << 3U);
-			else
-				tmp = ((uint32_t) * (uint16_t *)src) << ((dest & 2U) << 3U);
+	const size_t blocks = len >> MAX(align, 2U);
+	uint32_t data[256];
 
-			src = src + (1 << align);
-			dest += (1 << align);
-			size--;
-			*p++ = tmp;
+	if (align > ALIGN_HALFWORD)
+		memcpy(data, src, len);
+	else {
+		for (size_t i = 0; i < blocks; ++i) {
+			src = adiv5_pack_data(dest, src, data + i, align);
+			dest += 1U << align;
 		}
 	}
-	dbg_dap_cmd(buf, 1023, 5U + (sz << 2U));
-	if (buf[2] > DAP_TRANSFER_FAULT) {
-		dap_line_reset();
-	}
-	return buf[2] > DAP_TRANSFER_WAIT ? 1 : 0;
+
+	const bool result = perform_dap_transfer_block_write(ap->dp, SWD_AP_DRW, blocks, data);
+	if (!result)
+		DEBUG_WARN("dap_write_block failed\n");
+	return result;
 }
 
-//-----------------------------------------------------------------------------
 void dap_reset_link(bool jtag)
 {
 	uint8_t buf[128], *p = buf;
