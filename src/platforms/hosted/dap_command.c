@@ -174,3 +174,35 @@ bool perform_dap_transfer_block_read(
 	DEBUG_PROBE("-> transfer failed with %u after processing %u blocks\n", response.status, blocks_read);
 	return false;
 }
+
+bool perform_dap_transfer_block_write(
+	adiv5_debug_port_s *const dp, const uint8_t reg, const uint16_t block_count, const uint32_t *const blocks)
+{
+	if (block_count > 256U)
+		return false;
+
+	DEBUG_PROBE("-> dap_transfer_block (%u transfer blocks)\n", block_count);
+	dap_transfer_block_request_write_s request = {
+		DAP_TRANSFER_BLOCK,
+		dp->dp_jd_index,
+		{},
+		reg & ~DAP_TRANSFER_RnW,
+	};
+	write_le2(request.block_count, 0, block_count);
+	for (size_t i = 0; i < block_count; ++i)
+		write_le4(request.data[i], 0, blocks[i]);
+
+	dap_transfer_block_response_write_s response;
+	/* Run the request having set up the request buffer */
+	if (!dap_run_cmd(&request, 5U + (block_count * 4U), &response, sizeof(response)))
+		return false;
+
+	/* Check the response over */
+	const uint16_t blocks_written = read_le2(response.count, 0);
+	if (blocks_written == block_count && response.status == DAP_TRANSFER_OK)
+		return true;
+	dp->fault = response.status;
+
+	DEBUG_PROBE("-> transfer failed with %u after processing %u blocks\n", response.status, blocks_written);
+	return false;
+}

@@ -75,15 +75,30 @@ typedef struct dap_transfer_block_request_read {
 	uint8_t request;
 } dap_transfer_block_request_read_s;
 
+typedef struct dap_transfer_block_request_write {
+	uint8_t command;
+	uint8_t index;
+	uint8_t block_count[2];
+	uint8_t request;
+	uint8_t data[256][4];
+} dap_transfer_block_request_write_s;
+
 typedef struct dap_transfer_block_response_read {
 	uint8_t count[2];
 	uint8_t status;
 	uint8_t data[256][4];
 } dap_transfer_block_response_read_s;
 
+typedef struct dap_transfer_block_response_write {
+	uint8_t count[2];
+	uint8_t status;
+} dap_transfer_block_response_write_s;
+
 bool perform_dap_swj_sequence(size_t clock_cycles, const uint8_t *data);
 bool perform_dap_transfer(adiv5_debug_port_s *dp, const dap_transfer_request_s *transfer_requests, size_t requests,
 	uint32_t *response_data, size_t responses);
 bool perform_dap_transfer_block_read(adiv5_debug_port_s *dp, uint8_t reg, uint16_t block_count, uint32_t *blocks);
+bool perform_dap_transfer_block_write(
+	adiv5_debug_port_s *dp, uint8_t reg, uint16_t block_count, const uint32_t *blocks);
 
 #endif /*PLATFORMS_HOSTED_DAP_COMMAND_H*/
