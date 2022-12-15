@@ -257,7 +257,7 @@ static void dap_dp_abort(adiv5_debug_port_s *dp, uint32_t abort)
 }
 
 /* JTAG DP error recovery function */
-static uint32_t dap_dp_error(adiv5_debug_port_s *dp, const bool protocol_recovery)
+static uint32_t dap_jtag_dp_error(adiv5_debug_port_s *dp, const bool protocol_recovery)
 {
 	(void)protocol_recovery;
 	/* XXX: This seems entirely wrong considering adiv5_jtagdp.c adiv5_jtagdp_error */
@@ -523,7 +523,7 @@ static void dap_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const vo
 
 void dap_adiv5_dp_defaults(adiv5_debug_port_s *dp)
 {
-	if ((mode == DAP_CAP_JTAG) && dap_jtag_configure())
+	if (mode == DAP_CAP_JTAG && dap_jtag_configure())
 		return;
 	dp->ap_read = dap_ap_read;
 	dp->ap_write = dap_ap_write;
@@ -588,7 +588,7 @@ int cmsis_dap_jtagtap_init(jtag_proc_s *jtag_proc)
 int dap_jtag_dp_init(adiv5_debug_port_s *dp)
 {
 	dp->dp_read = dap_dp_read_reg;
-	dp->error = dap_dp_error;
+	dp->error = dap_jtag_dp_error;
 	dp->low_access = dap_dp_low_access;
 	dp->abort = dap_dp_abort;
 
