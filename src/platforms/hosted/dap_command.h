@@ -68,11 +68,18 @@ typedef struct dap_transfer_response {
 	uint8_t data[12][4];
 } dap_transfer_response_s;
 
-typedef struct dap_transfer_block_response {
+typedef struct dap_transfer_block_request_read {
+	uint8_t command;
+	uint8_t index;
+	uint8_t block_count[2];
+	uint8_t request;
+} dap_transfer_block_request_read_s;
+
+typedef struct dap_transfer_block_response_read {
 	uint8_t count[2];
 	uint8_t status;
 	uint8_t data[256][4];
-} dap_transfer_block_response_s;
+} dap_transfer_block_response_read_s;
 
 bool perform_dap_swj_sequence(size_t clock_cycles, const uint8_t *data);
 bool perform_dap_transfer(adiv5_debug_port_s *dp, const dap_transfer_request_s *transfer_requests, size_t requests,

@@ -42,6 +42,12 @@
 #define DAP_TRANSFER_MATCH_VALUE (1U << 4U)
 #define DAP_TRANSFER_MATCH_MASK  (1U << 5U)
 
+static inline void write_le2(uint8_t *const buffer, const size_t offset, const uint16_t value)
+{
+	buffer[offset] = value & 0xffU;
+	buffer[offset + 1U] = (value >> 8U) & 0xffU;
+}
+
 static inline void write_le4(uint8_t *const buffer, const size_t offset, const uint32_t value)
 {
 	buffer[offset] = value & 0xffU;
@@ -143,17 +149,17 @@ bool perform_dap_transfer_block_read(
 		return false;
 
 	DEBUG_PROBE("-> dap_transfer_block (%u transfer blocks)\n", block_count);
-	const uint8_t request[5] = {
+	dap_transfer_block_request_read_s request = {
 		DAP_TRANSFER_BLOCK,
 		dp->dp_jd_index,
-		block_count & 0xffU,
-		block_count >> 8U,
+		{},
 		reg | DAP_TRANSFER_RnW,
 	};
+	write_le2(request.block_count, 0, block_count);
 
-	dap_transfer_block_response_s response;
+	dap_transfer_block_response_read_s response;
 	/* Run the request having set up the request buffer */
-	if (!dap_run_cmd(request, ARRAY_LENGTH(request), &response, 3U + (block_count * 4U)))
+	if (!dap_run_cmd(&request, sizeof(request), &response, 3U + (block_count * 4U)))
 		return false;
 
 	/* Check the response over */
