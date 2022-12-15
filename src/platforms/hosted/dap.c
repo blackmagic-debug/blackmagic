@@ -383,7 +383,7 @@ bool dap_read_block(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t le
 		memcpy(dest, data, len);
 	else {
 		for (size_t i = 0; i < blocks; ++i) {
-			dest = extract(dest, src, data[i], align);
+			dest = adiv5_unpack_data(dest, src, data[i], align);
 			src += (1U << align);
 		}
 	}
@@ -590,7 +590,7 @@ void dap_read_single(adiv5_access_port_s *ap, void *dest, uint32_t src, align_e 
 		return;
 	}
 	/* Pull out the data. AP_DRW access implies an RDBUFF in CMSIS-DAP, so this is safe */
-	extract(dest, src, result, align);
+	adiv5_unpack_data(dest, src, result, align);
 }
 
 void dap_write_single(adiv5_access_port_s *ap, uint32_t dest, const void *src, align_e align)
