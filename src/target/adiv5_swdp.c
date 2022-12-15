@@ -207,14 +207,13 @@ uint32_t firmware_swdp_read(adiv5_debug_port_s *dp, uint16_t addr)
 
 uint32_t firmware_swdp_error(adiv5_debug_port_s *dp, const bool protocol_recovery)
 {
-	if ((dp->version >= 2 && dp->dp_low_write) || protocol_recovery) {
+	if (dp->version >= 2 || protocol_recovery) {
 		/* On protocol error target gets deselected.
 		 * With DP Change, another target needs selection.
 		 * => Reselect with right target! */
 		dp_line_reset(dp);
 		firmware_dp_low_read(dp, ADIV5_DP_DPIDR);
-		if (dp->dp_low_write)
-			dp->dp_low_write(dp, ADIV5_DP_TARGETSEL, dp->targetsel);
+		dp->dp_low_write(dp, ADIV5_DP_TARGETSEL, dp->targetsel);
 		/* Exception here is unexpected, so do not catch */
 	}
 	const uint32_t err = firmware_dp_low_read(dp, ADIV5_DP_CTRLSTAT) &
@@ -231,7 +230,8 @@ uint32_t firmware_swdp_error(adiv5_debug_port_s *dp, const bool protocol_recover
 	if (err & ADIV5_DP_CTRLSTAT_WDATAERR)
 		clr |= ADIV5_DP_ABORT_WDERRCLR;
 
-	firmware_dp_low_write(dp, ADIV5_DP_ABORT, clr);
+	if (clr)
+		firmware_dp_low_write(dp, ADIV5_DP_ABORT, clr);
 	dp->fault = 0;
 	return err;
 }
