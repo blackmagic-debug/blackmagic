@@ -979,6 +979,37 @@ void *adiv5_unpack_data(void *const dest, const uint32_t src, const uint32_t dat
 	return (uint8_t *)dest + (1 << align);
 }
 
+/* Pack data from the source value into a uint32_t based on data alignment and source address */
+const void *adiv5_pack_data(const uint32_t dest, const void *const src, uint32_t *const data, const align_e align)
+{
+	switch (align) {
+	case ALIGN_BYTE: {
+		uint8_t value;
+		/* Copy the data to pack in from the source buffer */
+		memcpy(&value, src, sizeof(value));
+		/* Then shift it up to the appropriate byte in data based on the bottom 2 bits of the destination address */
+		*data = (uint32_t)value << (8U * (dest & 3U));
+		break;
+	}
+	case ALIGN_HALFWORD: {
+		uint16_t value;
+		/* Copy the data to pack in from the source buffer (avoids unaligned read issues) */
+		memcpy(&value, src, sizeof(value));
+		/* Then shift it up to the appropriate 16-bit block in data based on the 2nd bit of the destination address */
+		*data = (uint32_t)value << (8U * (dest & 2U));
+		break;
+	}
+	default:
+		/*
+		 * 32- and 64-bit aligned reads don't need to do anything special beyond using memcpy()
+		 * to avoid doing  an unaligned read of src, or any UB casts.
+		 */
+		memcpy(data, src, sizeof(*data));
+		break;
+	}
+	return (const uint8_t *)src + (1 << align);
+}
+
 void firmware_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t len)
 {
 	uint32_t tmp;
