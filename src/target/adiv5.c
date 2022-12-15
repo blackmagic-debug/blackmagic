@@ -944,7 +944,7 @@ static void ap_mem_access_setup(adiv5_access_port_s *ap, uint32_t addr, align_e 
 }
 
 /* Unpack data from the source uint32_t value based on data alignment and source address */
-void *extract(void *dest, uint32_t src, uint32_t data, align_e align)
+void *adiv5_unpack_data(void *const dest, const uint32_t src, const uint32_t data, const align_e align)
 {
 	switch (align) {
 	case ALIGN_BYTE: {
@@ -993,7 +993,7 @@ void firmware_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t
 	adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_AP_DRW, 0);
 	while (--len) {
 		tmp = adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_AP_DRW, 0);
-		dest = extract(dest, src, tmp, align);
+		dest = adiv5_unpack_data(dest, src, tmp, align);
 
 		src += (1U << align);
 		/* Check for 10 bit address overflow */
@@ -1004,7 +1004,7 @@ void firmware_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t
 		}
 	}
 	tmp = adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_DP_RDBUFF, 0);
-	extract(dest, src, tmp, align);
+	adiv5_unpack_data(dest, src, tmp, align);
 }
 
 void firmware_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, align_e align)
