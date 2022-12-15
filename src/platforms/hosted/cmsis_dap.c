@@ -460,10 +460,10 @@ static void dap_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const vo
 {
 	if (len == 0)
 		return;
-	DEBUG_WIRE("memwrite @ %" PRIx32 " len %ld, align %d , %08x start: \n", dest, len, align, *(uint32_t *)src);
+	DEBUG_WIRE("memwrite @ %" PRIx32 " len %zu, align %d, data: %08x \n", dest, len, align, *(uint32_t *)src);
 	if (((unsigned)(1 << align)) == len)
 		return dap_write_single(ap, dest, src, align);
-	unsigned int max_size = ((dbg_get_report_size() - 6U) >> (2U - align) & ~3U);
+	unsigned int max_size = ((report_size - 6U) >> (2U - align) & ~3U);
 	while (len) {
 		dap_ap_mem_access_setup(ap, dest, align);
 		unsigned int blocksize = (dest | 0x3ffU) - dest + 1U;
@@ -473,9 +473,8 @@ static void dap_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const vo
 			unsigned int transfersize = blocksize;
 			if (transfersize > max_size)
 				transfersize = max_size;
-			unsigned int res = dap_write_block(ap, dest, src, transfersize, align);
-			if (res) {
-				DEBUG_WARN("mem_write failed %02x\n", res);
+			if (!dap_write_block(ap, dest, src, transfersize, align)) {
+				DEBUG_WARN("mem_write failed %u\n", ap->dp->fault);
 				ap->dp->fault = 1;
 				return;
 			}
