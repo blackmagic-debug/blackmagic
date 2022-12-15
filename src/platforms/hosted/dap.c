@@ -282,7 +282,7 @@ void dap_trst_reset(void)
 	dbg_dap_cmd(buf, sizeof(buf), 7);
 }
 
-static void dap_line_reset(void)
+void dap_line_reset(void)
 {
 	const uint8_t data[8] = {
 		0xffU,

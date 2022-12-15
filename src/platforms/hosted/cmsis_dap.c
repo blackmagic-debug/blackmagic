@@ -279,6 +279,38 @@ static uint32_t dap_dp_error(adiv5_debug_port_s *dp, const bool protocol_recover
 	return err;
 }
 
+static uint32_t dap_swd_dp_error(adiv5_debug_port_s *dp, const bool protocol_recovery)
+{
+	DEBUG_PROBE("dap_swd_dp_error (protocol recovery? %s)\n", protocol_recovery ? "true" : "false");
+	if (dp->version >= 2 || protocol_recovery) {
+		/* On protocol error target gets deselected.
+		 * With DP Change, another target needs selection.
+		 * => Reselect with right target! */
+		dap_line_reset();
+		dap_read_reg(dp, ADIV5_DP_DPIDR);
+		dap_write_reg(dp, ADIV5_DP_TARGETSEL, dp->targetsel);
+		/* Exception here is unexpected, so do not catch */
+	}
+	const uint32_t err = dap_read_reg(dp, ADIV5_DP_CTRLSTAT) &
+		(ADIV5_DP_CTRLSTAT_STICKYORUN | ADIV5_DP_CTRLSTAT_STICKYCMP | ADIV5_DP_CTRLSTAT_STICKYERR |
+			ADIV5_DP_CTRLSTAT_WDATAERR);
+	uint32_t clr = 0;
+
+	if (err & ADIV5_DP_CTRLSTAT_STICKYORUN)
+		clr |= ADIV5_DP_ABORT_ORUNERRCLR;
+	if (err & ADIV5_DP_CTRLSTAT_STICKYCMP)
+		clr |= ADIV5_DP_ABORT_STKCMPCLR;
+	if (err & ADIV5_DP_CTRLSTAT_STICKYERR)
+		clr |= ADIV5_DP_ABORT_STKERRCLR;
+	if (err & ADIV5_DP_CTRLSTAT_WDATAERR)
+		clr |= ADIV5_DP_ABORT_WDERRCLR;
+
+	if (clr)
+		dap_write_reg(dp, ADIV5_DP_ABORT, clr);
+	dp->fault = 0;
+	return err;
+}
+
 static uint32_t dap_dp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value)
 {
 	bool APnDP = addr & ADIV5_APnDP;
@@ -604,7 +636,7 @@ int dap_swdptap_init(adiv5_debug_port_s *dp)
 	dp->seq_out = dap_swdptap_seq_out;
 	dp->seq_out_parity = dap_swdptap_seq_out_parity;
 	dp->dp_read = dap_dp_read_reg;
-	/* For error() use the TARGETID switching firmware_swdp_error */
+	dp->error = dap_swd_dp_error;
 	dp->low_access = dap_dp_low_access;
 	dp->abort = dap_dp_abort;
 	return 0;
