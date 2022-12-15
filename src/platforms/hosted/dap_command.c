@@ -142,6 +142,19 @@ bool perform_dap_transfer(adiv5_debug_port_s *const dp, const dap_transfer_reque
 	return false;
 }
 
+bool perform_dap_transfer_recoverable(adiv5_debug_port_s *const dp,
+	const dap_transfer_request_s *const transfer_requests, const size_t requests, uint32_t *const response_data,
+	const size_t responses)
+{
+	const bool result = perform_dap_transfer(dp, transfer_requests, requests, response_data, responses);
+	/* If all went well, or we can't recover, we get to early return */
+	if (result || dp->fault != DAP_TRANSFER_NO_RESPONSE)
+		return result;
+	/* Otherwise clear the error and try again as our best and final answer */
+	dp->error(dp, true);
+	return perform_dap_transfer(dp, transfer_requests, requests, response_data, responses);
+}
+
 bool perform_dap_transfer_block_read(
 	adiv5_debug_port_s *const dp, const uint8_t reg, const uint16_t block_count, uint32_t *const blocks)
 {
