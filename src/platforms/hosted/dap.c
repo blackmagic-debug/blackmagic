@@ -492,24 +492,14 @@ void dap_ap_mem_access_setup(adiv5_access_port_s *ap, uint32_t addr, align_e ali
 	/* Start by setting up the transfer and attempting it */
 	dap_transfer_request_s requests[3];
 	mem_access_setup(ap, requests, addr, align);
-	const bool result = perform_dap_transfer(ap->dp, requests, 3U, NULL, 0U);
-	/* If all went well, we get to early return */
-	if (result)
-		return;
 	adiv5_debug_port_s *dp = ap->dp;
-	/* If it's irrecoverable, handle it */
-	if (!result && dp->fault != DAP_TRANSFER_NO_RESPONSE) {
-		DEBUG_WARN("Transport error, aborting\n");
-		/*
-		 * XXX: This is definitely not the right way to deal with this, but without a deeper rewrite,
-		 * this is the best we can do for now.
-		 */
-		exit(-1);
-	}
-	/* Finally, if the transfer failed recoverably, clear the error and try again as our best and final answer */
-	dp->error(dp, true);
-	if (!perform_dap_transfer(dp, requests, 3U, NULL, 0U)) {
-		DEBUG_WARN("Transaction unrecoverably failed\n");
+	const bool result = perform_dap_transfer_recoverable(dp, requests, 3U, NULL, 0U);
+	/* If it didn't go well, say something and abort */
+	if (!result) {
+		if (dp->fault != DAP_TRANSFER_NO_RESPONSE)
+			DEBUG_WARN("Transport error (%u), aborting\n", dp->fault);
+		else
+			DEBUG_WARN("Transaction unrecoverably failed\n");
 		exit(-1);
 	}
 }
