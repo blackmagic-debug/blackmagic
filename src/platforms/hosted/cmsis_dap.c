@@ -425,33 +425,35 @@ static void dap_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size
 	if (len == 0)
 		return;
 	align_e align = MIN(ALIGNOF(src), ALIGNOF(len));
-	DEBUG_WIRE("memread @ %" PRIx32 " len %ld, align %d , start: \n", src, len, align);
-	if (((unsigned)(1 << align)) == len)
+	DEBUG_WIRE("dap_mem_read @ %" PRIx32 " len %zu, align %d\n", src, len, align);
+	/* If the read can be done in a single transaction, use the dap_read_single() fast-path */
+	if ((1U << align) == len)
 		return dap_read_single(ap, dest, src, align);
-	/* One word transfer for every byte/halfword/word
-	 * Total number of bytes in transfer*/
-	unsigned int max_size = ((dbg_get_report_size() - 6U) >> (2U - align)) & ~3U;
-	while (len) {
-		dap_ap_mem_access_setup(ap, src, align);
-		/* Calculate length until next access setup is needed */
-		unsigned int blocksize = (src | 0x3ffU) - src + 1U;
-		if (blocksize > len)
-			blocksize = len;
-		while (blocksize) {
-			unsigned int transfersize = blocksize;
-			if (transfersize > max_size)
-				transfersize = max_size;
-			if (!dap_read_block(ap, dest, src, transfersize, align)) {
+	/* Otherwise proceed blockwise */
+	const size_t blocks_per_transfer = (report_size - 4U) >> 2U;
+	uint8_t *const data = (uint8_t *)dest;
+	for (size_t offset = 0; offset < len;) {
+		/* Setup AP_TAR every loop as failing to do so results in it wrapping */
+		dap_ap_mem_access_setup(ap, src + offset, align);
+		/*
+		 * src can start out unaligned to a 1024 byte chunk size,
+		 * so we have to calculate how much is left of the chunk.
+		 * We also have to take into account how much of the chunk the caller
+		 * has requested we fill.
+		 */
+		const size_t chunk_remaining = MIN(1024 - (src & 0x3ffU), len - offset);
+		const size_t blocks = chunk_remaining >> align;
+		for (size_t i = 0; i < blocks; i += blocks_per_transfer) {
+			/* blocks - i gives how many blocks are left to transfer in this 1024 byte chunk */
+			const size_t transfer_length = MIN(blocks - i, blocks_per_transfer) << align;
+			if (!dap_read_block(ap, data + offset, src + offset, transfer_length, align)) {
 				DEBUG_WIRE("mem_read failed: %u\n", ap->dp->fault);
 				return;
 			}
-			blocksize -= transfersize;
-			len -= transfersize;
-			dest += transfersize;
-			src += transfersize;
+			offset += transfer_length;
 		}
 	}
-	DEBUG_WIRE("memread res last data %08" PRIx32 "\n", ((uint32_t *)dest)[-1]);
+	DEBUG_WIRE("dap_mem_read transfered %zu blocks\n", len >> align);
 }
 
 static void dap_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, align_e align)
