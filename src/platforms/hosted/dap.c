@@ -556,8 +556,9 @@ void dap_read_single(adiv5_access_port_s *ap, void *dest, uint32_t src, align_e 
 	mem_access_setup(ap, requests, src, align);
 	requests[3].request = SWD_AP_DRW | DAP_TRANSFER_RnW;
 	uint32_t result;
-	if (!perform_dap_transfer(ap->dp, requests, 4U, &result, 1U)) {
-		DEBUG_WARN("dap_read_single failed\n");
+	adiv5_debug_port_s *dp = ap->dp;
+	if (!perform_dap_transfer_recoverable(dp, requests, 4U, &result, 1U)) {
+		DEBUG_WARN("dap_read_single failed (fault = %u)\n", dp->fault);
 		memset(dest, 0, 1U << align);
 		return;
 	}
@@ -585,7 +586,9 @@ void dap_write_single(adiv5_access_port_s *ap, uint32_t dest, const void *src, a
 	default:
 		requests[3].data = 0;
 	}
-	perform_dap_transfer(ap->dp, requests, 4U, NULL, 0U);
+	adiv5_debug_port_s *dp = ap->dp;
+	if (!perform_dap_transfer_recoverable(dp, requests, 4U, NULL, 0U))
+		DEBUG_WARN("dap_write_single failed (fault = %u)\n", dp->fault);
 }
 
 void dap_jtagtap_tdi_tdo_seq(
