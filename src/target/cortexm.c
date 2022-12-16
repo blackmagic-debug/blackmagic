@@ -70,13 +70,13 @@
 static const char cortexm_driver_str[] = "ARM Cortex-M";
 
 static bool cortexm_vector_catch(target_s *t, int argc, const char **argv);
-#ifdef PLATFORM_HAS_USBUART
+#if PC_HOSTED == 0
 static bool cortexm_redirect_stdout(target_s *t, int argc, const char **argv);
 #endif
 
 const command_s cortexm_cmd_list[] = {
 	{"vector_catch", cortexm_vector_catch, "Catch exception vectors"},
-#ifdef PLATFORM_HAS_USBUART
+#if PC_HOSTED == 0
 	{"redirect_stdout", cortexm_redirect_stdout, "Redirect semihosting stdout to USB UART"},
 #endif
 	{NULL, NULL, NULL},
@@ -1400,7 +1400,7 @@ static bool cortexm_vector_catch(target_s *t, int argc, const char **argv)
 	return true;
 }
 
-#ifdef PLATFORM_HAS_USBUART
+#if PC_HOSTED == 0
 static bool cortexm_redirect_stdout(target_s *t, int argc, const char **argv)
 {
 	if (argc == 1)

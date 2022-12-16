@@ -586,7 +586,7 @@ int tc_read(target_s *t, int fd, target_addr_t buf, unsigned int count)
 
 int tc_write(target_s *t, int fd, target_addr_t buf, unsigned int count)
 {
-#ifdef PLATFORM_HAS_USBUART
+#if PC_HOSTED == 0
 	if (t->stdout_redirected && (fd == STDOUT_FILENO || fd == STDERR_FILENO)) {
 		while (count) {
 			uint8_t tmp[STDOUT_READ_BUF_SIZE];

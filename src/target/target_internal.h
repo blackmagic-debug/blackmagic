@@ -150,7 +150,7 @@ struct target {
 	char cmdline[MAX_CMDLINE];
 	target_addr_t heapinfo[4];
 	target_command_s *commands;
-#ifdef PLATFORM_HAS_USBUART
+#if PC_HOSTED == 0
 	bool stdout_redirected;
 #endif
 
