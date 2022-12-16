@@ -33,7 +33,6 @@
 extern bool debug_bmp;
 #endif
 
-#define PLATFORM_HAS_USBUART
 #define PLATFORM_IDENT "(SWLINK) "
 
 /* Hardware definitions... */

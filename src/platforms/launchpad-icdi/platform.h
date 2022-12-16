@@ -23,7 +23,6 @@
 
 #include "timing.h"
 
-#define PLATFORM_HAS_USBUART
 #define PLATFORM_IDENT "(Launchpad ICDI) "
 
 extern uint8_t running_status;
