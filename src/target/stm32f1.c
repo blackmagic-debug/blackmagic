@@ -315,28 +315,28 @@ bool stm32f1_probe(target_s *t)
 		target_add_commands(t, stm32f1_cmd_list, "STM32F3");
 		return true;
 
-	case 0x444U: /* STM32F03 RM0091 Rev.7, STM32F030x[4|6] RM0360 Rev. 4*/
+	case 0x444U: /* STM32F03 RM0091 Rev. 7, STM32F030x[4|6] RM0360 Rev. 4 */
 		t->driver = "STM32F03";
 		flash_size = 0x8000;
 		break;
 
-	case 0x445U: /* STM32F04 RM0091 Rev.7, STM32F070x6 RM0360 Rev. 4*/
+	case 0x445U: /* STM32F04 RM0091 Rev. 7, STM32F070x6 RM0360 Rev. 4 */
 		t->driver = "STM32F04/F070x6";
 		flash_size = 0x8000;
 		break;
 
-	case 0x440U: /* STM32F05 RM0091 Rev.7, STM32F030x8 RM0360 Rev. 4*/
+	case 0x440U: /* STM32F05 RM0091 Rev. 7, STM32F030x8 RM0360 Rev. 4 */
 		t->driver = "STM32F05/F030x8";
 		flash_size = 0x10000;
 		break;
 
-	case 0x448U: /* STM32F07 RM0091 Rev.7, STM32F070xb RM0360 Rev. 4*/
+	case 0x448U: /* STM32F07 RM0091 Rev. 7, STM32F070xb RM0360 Rev. 4 */
 		t->driver = "STM32F07";
 		flash_size = 0x20000;
 		block_size = 0x800;
 		break;
 
-	case 0x442U: /* STM32F09 RM0091 Rev.7, STM32F030xc RM0360 Rev. 4*/
+	case 0x442U: /* STM32F09 RM0091 Rev. 7, STM32F030xc RM0360 Rev. 4 */
 		t->driver = "STM32F09/F030xc";
 		flash_size = 0x40000;
 		block_size = 0x800;
