@@ -396,11 +396,10 @@ static size_t create_tdesc_cortex_mf(char *buffer, size_t max_len)
 	// has static inputs and shouldn't ever return a value large enough for casting it to a
 	// signed int to change its value, and if it does, then again there's something wrong that
 	// we can't really do anything about.
-	int total = 0;
 
 	// The first part of the target description for the Cortex-MF is identical to the Cortex-M
 	// target description.
-	total = (int)create_tdesc_cortex_m(buffer, max_len);
+	int total = (int)create_tdesc_cortex_m(buffer, max_len);
 
 	// We can't just repeatedly pass max_len to snprintf, because we keep changing the start
 	// of buffer (effectively changing its size), so we have to repeatedly compute the size
