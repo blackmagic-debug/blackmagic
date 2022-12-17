@@ -122,6 +122,8 @@ void target_list_free(void)
 {
 	while (target_list) {
 		target_s *t = target_list->next;
+		if (target_list->attached)
+			target_detach(target_list);
 		if (target_list->tc && target_list->tc->destroy_callback)
 			target_list->tc->destroy_callback(target_list->tc, target_list);
 		if (target_list->priv)
