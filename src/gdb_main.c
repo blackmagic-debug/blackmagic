@@ -206,8 +206,10 @@ int gdb_main_loop(target_controller_s *tc, bool in_syscall)
 			single_step = false;
 			/* fall through */
 		case '?': { /* '?': Request reason for target halt */
-			/* This packet isn't documented as being mandatory,
-			 * but GDB doesn't work without it. */
+			/*
+			 * This packet isn't documented as being mandatory,
+			 * but GDB doesn't work without it.
+			 */
 
 			if (!cur_target) {
 				/* Report "target exited" if no target */
