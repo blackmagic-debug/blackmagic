@@ -463,9 +463,7 @@ const char *cortexa_regs_description(target_s *t)
 
 bool cortexa_probe(adiv5_access_port_s *apb, uint32_t debug_base)
 {
-	target_s *t;
-
-	t = target_new();
+	target_s *t = target_new();
 	if (!t) {
 		return false;
 	}
@@ -519,7 +517,6 @@ bool cortexa_probe(adiv5_access_port_s *apb, uint32_t debug_base)
 bool cortexa_attach(target_s *t)
 {
 	cortexa_priv_s *priv = t->priv;
-	int tries;
 
 	/* Clear any pending fault condition */
 	target_check_error(t);
@@ -532,7 +529,7 @@ bool cortexa_attach(target_s *t)
 	DEBUG_INFO("DBGDSCR = 0x%08" PRIx32 "\n", dbgdscr);
 
 	target_halt_request(t);
-	tries = 10;
+	size_t tries = 10;
 	while (!platform_nrst_get_val() && !target_halt_poll(t, NULL) && --tries)
 		platform_delay(200);
 	if (!tries)
@@ -555,9 +552,8 @@ void cortexa_detach(target_s *t)
 	cortexa_priv_s *priv = t->priv;
 
 	/* Clear any stale breakpoints */
-	for (unsigned i = 0; i < priv->hw_breakpoint_max; i++) {
+	for (size_t i = 0; i < priv->hw_breakpoint_max; i++)
 		apb_write(t, DBGBCR(i), 0);
-	}
 
 	/* Restore any clobbered registers */
 	cortexa_regs_write_internal(t);
