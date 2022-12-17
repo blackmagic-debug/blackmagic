@@ -463,9 +463,14 @@ size_t target_regs_size(target_s *t)
 	return t->regs_size;
 }
 
-const char *target_tdesc(target_s *t)
+/*
+ * Get an XML description of the target's registers. Called during the attach phase when
+ * GDB supplies request `qXfer:features:read:target.xml:`. The pointer returned by this call
+ * must be passed to `free()` on conclusion of its use.
+ */
+const char *target_regs_description(target_s *t)
 {
-	return t->tdesc ? t->tdesc : "";
+	return t->regs_description(t);
 }
 
 const char *target_driver_name(target_s *t)
