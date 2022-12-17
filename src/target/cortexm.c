@@ -554,9 +554,7 @@ const char *cortexm_regs_description(target_s *t)
 
 bool cortexm_probe(adiv5_access_port_s *ap)
 {
-	target_s *t;
-
-	t = target_new();
+	target_s *t = target_new();
 	if (!t)
 		return false;
 
@@ -593,12 +591,10 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 	t->detach = cortexm_detach;
 
 	/* Probe for FP extension. */
-	bool is_cortexmf = false;
 	uint32_t cpacr = target_mem_read32(t, CORTEXM_CPACR);
 	cpacr |= 0x00f00000U; /* CP10 = 0b11, CP11 = 0b11 */
 	target_mem_write32(t, CORTEXM_CPACR, cpacr);
-	if (target_mem_read32(t, CORTEXM_CPACR) == cpacr)
-		is_cortexmf = true;
+	bool is_cortexmf = target_mem_read32(t, CORTEXM_CPACR) == cpacr;
 
 	/* Should probe here to make sure it's Cortex-M3 */
 
@@ -821,14 +817,13 @@ bool cortexm_attach(target_s *t)
 void cortexm_detach(target_s *t)
 {
 	cortexm_priv_s *priv = t->priv;
-	unsigned i;
 
 	/* Clear any stale breakpoints */
-	for (i = 0; i < priv->hw_breakpoint_max; i++)
+	for (size_t i = 0; i < priv->hw_breakpoint_max; i++)
 		target_mem_write32(t, CORTEXM_FPB_COMP(i), 0);
 
 	/* Clear any stale watchpoints */
-	for (i = 0; i < priv->hw_watchpoint_max; i++)
+	for (size_t i = 0; i < priv->hw_watchpoint_max; i++)
 		target_mem_write32(t, CORTEXM_DWT_FUNC(i), 0);
 
 	/* Restort DEMCR*/
