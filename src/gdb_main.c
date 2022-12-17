@@ -44,6 +44,7 @@
 #else
 #include <alloca.h>
 #endif
+#include <stdlib.h>
 
 typedef enum gdb_signal {
 	GDB_SIGINT = 2,
@@ -454,15 +455,17 @@ static void exec_q_feature_read(const char *packet, const size_t length)
 {
 	(void)length;
 	/* Read target description */
-	if ((!cur_target) && last_target) {
+	if (!cur_target && last_target)
 		/* Attach to last target if detached. */
 		cur_target = target_attach(last_target, &gdb_controller);
-	}
+
 	if (!cur_target) {
 		gdb_putpacketz("E01");
 		return;
 	}
-	handle_q_string_reply(target_tdesc(cur_target), packet);
+	const char *const description = target_regs_description(cur_target);
+	handle_q_string_reply(description ? description : "", packet);
+	free((void *)description);
 }
 
 static void exec_q_crc(const char *packet, const size_t length)

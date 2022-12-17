@@ -34,6 +34,7 @@
 #include "gdb_reg.h"
 #include "target_internal.h"
 
+#include <stdlib.h>
 #include <assert.h>
 
 static const char cortexa_driver_str[] = "ARM Cortex-A";
@@ -42,6 +43,7 @@ static bool cortexa_attach(target_s *t);
 static void cortexa_detach(target_s *t);
 static void cortexa_halt_resume(target_s *t, bool step);
 
+static const char *cortexa_regs_description(target_s *t);
 static void cortexa_regs_read(target_s *t, void *data);
 static void cortexa_regs_write(target_s *t, const void *data);
 static void cortexa_regs_read_internal(target_s *t);
@@ -449,6 +451,16 @@ static bool cortexa_check_error(target_s *t)
 	return err;
 }
 
+const char *cortexa_regs_description(target_s *t)
+{
+	(void)t;
+	const size_t description_length = create_tdesc_cortex_a(NULL, 0) + 1U;
+	char *const description = malloc(description_length);
+	if (description)
+		create_tdesc_cortex_a(description, description_length);
+	return description;
+}
+
 bool cortexa_probe(adiv5_access_port_s *apb, uint32_t debug_base)
 {
 	target_s *t;
@@ -486,6 +498,7 @@ bool cortexa_probe(adiv5_access_port_s *apb, uint32_t debug_base)
 	t->attach = cortexa_attach;
 	t->detach = cortexa_detach;
 
+	t->regs_description = cortexa_regs_description;
 	t->regs_read = cortexa_regs_read;
 	t->regs_write = cortexa_regs_write;
 	t->reg_read = cortexa_reg_read;
@@ -507,16 +520,6 @@ bool cortexa_attach(target_s *t)
 {
 	cortexa_priv_s *priv = t->priv;
 	int tries;
-
-	if (!t->tdesc) {
-		// Find the buffer size needed for the target description string we need to send to GDB,
-		// and then compute the string itself.
-		size_t size_needed = create_tdesc_cortex_a(NULL, 0) + 1U;
-		t->tdesc = calloc(1, size_needed);
-		create_tdesc_cortex_a(t->tdesc, size_needed);
-	} else {
-		DEBUG_WARN("Cortex-A: target description already allocated before attach");
-	}
 
 	/* Clear any pending fault condition */
 	target_check_error(t);
@@ -550,14 +553,6 @@ bool cortexa_attach(target_s *t)
 void cortexa_detach(target_s *t)
 {
 	cortexa_priv_s *priv = t->priv;
-
-	if (t->tdesc) {
-		// Free the target description string that was allocated in cortexa_attach().
-		free(t->tdesc);
-		t->tdesc = NULL;
-	} else {
-		DEBUG_WARN("Cortex-A: target description already NULL before detach");
-	}
 
 	/* Clear any stale breakpoints */
 	for (unsigned i = 0; i < priv->hw_breakpoint_max; i++) {

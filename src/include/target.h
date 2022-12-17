@@ -66,7 +66,7 @@ bool target_flash_complete(target_s *t);
 
 /* Register access functions */
 size_t target_regs_size(target_s *t);
-const char *target_tdesc(target_s *t);
+const char *target_regs_description(target_s *t);
 void target_regs_read(target_s *t, void *data);
 void target_regs_write(target_s *t, const void *data);
 ssize_t target_reg_read(target_s *t, int reg, void *data, size_t max);

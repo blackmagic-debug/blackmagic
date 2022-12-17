@@ -48,6 +48,7 @@
 #include <alloca.h>
 #endif
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 
 #if PC_HOSTED == 1
@@ -86,6 +87,7 @@ const command_s cortexm_cmd_list[] = {
 #define TOPT_FLAVOUR_V6M  (1U << 0U) /* if not set, target is assumed to be v7m */
 #define TOPT_FLAVOUR_V7MF (1U << 1U) /* if set, floating-point enabled. */
 
+static const char *cortexm_regs_description(target_s *t);
 static void cortexm_regs_read(target_s *t, void *data);
 static void cortexm_regs_write(target_s *t, const void *data);
 static uint32_t cortexm_pc_read(target_s *t);
@@ -535,6 +537,21 @@ static void cortexm_read_cpuid(target_s *const t, const adiv5_access_port_s *con
 		(t->cpuid & CPUID_REVISION_MASK) >> 20U, t->cpuid & CPUID_PATCH_MASK);
 }
 
+const char *cortexm_regs_description(target_s *t)
+{
+	const bool is_cortexmf = t->target_options & TOPT_FLAVOUR_V7MF;
+	const size_t description_length =
+		(is_cortexmf ? create_tdesc_cortex_mf(NULL, 0) : create_tdesc_cortex_m(NULL, 0)) + 1U;
+	char *const description = malloc(description_length);
+	if (description) {
+		if (is_cortexmf)
+			create_tdesc_cortex_mf(description, description_length);
+		else
+			create_tdesc_cortex_m(description, description_length);
+	}
+	return description;
+}
+
 bool cortexm_probe(adiv5_access_port_s *ap)
 {
 	target_s *t;
@@ -585,6 +602,7 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 
 	/* Should probe here to make sure it's Cortex-M3 */
 
+	t->regs_description = cortexm_regs_description;
 	t->regs_read = cortexm_regs_read;
 	t->regs_write = cortexm_regs_write;
 	t->reg_read = cortexm_reg_read;
@@ -740,24 +758,6 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 
 bool cortexm_attach(target_s *t)
 {
-	bool is_cortexmf = (t->target_options & TOPT_FLAVOUR_V7MF) == TOPT_FLAVOUR_V7MF;
-
-	if (!t->tdesc) {
-		// Find the buffer size needed for the target description string we need to send to GDB,
-		// and then compute the string itself.
-		size_t size_needed;
-		if (!is_cortexmf) {
-			size_needed = create_tdesc_cortex_m(NULL, 0) + 1U;
-			t->tdesc = calloc(1, size_needed);
-			create_tdesc_cortex_m(t->tdesc, size_needed);
-		} else {
-			size_needed = create_tdesc_cortex_mf(NULL, 0) + 1U;
-			t->tdesc = calloc(1, size_needed);
-			create_tdesc_cortex_mf(t->tdesc, size_needed);
-		}
-	} else
-		DEBUG_WARN("Cortex-M: target description already allocated before attach");
-
 	adiv5_access_port_s *ap = cortexm_ap(t);
 	ap->dp->fault = 1; /* Force switch to this multi-drop device*/
 	cortexm_priv_s *priv = t->priv;
@@ -822,13 +822,6 @@ void cortexm_detach(target_s *t)
 {
 	cortexm_priv_s *priv = t->priv;
 	unsigned i;
-
-	if (t->tdesc) {
-		// Free the target description string that was allocated in cortexm_attach().
-		free(t->tdesc);
-		t->tdesc = NULL;
-	} else
-		DEBUG_WARN("Cortex-M: target description already NULL before detach");
 
 	/* Clear any stale breakpoints */
 	for (i = 0; i < priv->hw_breakpoint_max; i++)
