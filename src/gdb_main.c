@@ -400,8 +400,11 @@ static void exec_q_rcmd(const char *packet, const size_t length)
 		gdb_putpacketz("");
 	else if (c == 0)
 		gdb_putpacketz("OK");
-	else
-		gdb_putpacket(hexify(pbuf, "Failed\n", strlen("Failed\n")), 2 * strlen("Failed\n"));
+	else {
+		const char *const response = "Failed\n";
+		const size_t length = strlen(response);
+		gdb_putpacket(hexify(pbuf, response, length), 2 * length);
+	}
 }
 
 static void handle_q_string_reply(const char *reply, const char *param)
