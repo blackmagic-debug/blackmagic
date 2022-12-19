@@ -174,6 +174,10 @@
 #define SPI43x0_SSP_SR_RNE 0x00000004U
 #define SPI43x0_SSP_SR_BSY 0x00000010U
 
+#define LPC43xx_GPIO_BASE      0x400f4000U
+#define LPC43xx_GPIO_PORT0_SET (LPC43xx_GPIO_BASE + 0x2200U)
+#define LPC43xx_GPIO_PORT0_CLR (LPC43xx_GPIO_BASE + 0x2280U)
+
 #define SPI_FLASH_CMD_WRITE_ENABLE                                                              \
 	(LPC43x0_SPIFI_CMD_SERIAL | LPC43x0_SPIFI_FRAME_OPCODE_ONLY | LPC43x0_SPIFI_OPCODE(0x06U) | \
 		LPC43x0_SPIFI_INTER_LENGTH(0))
@@ -607,41 +611,95 @@ static inline void lpc43x0_spi_wait_complete(target_s *const t)
 		continue;
 }
 
+static uint8_t lpc43x0_ssp0_transfer(target_s *const t, const uint8_t value)
+{
+	target_mem_write32(t, LPC43x0_SSP0_DR, value);
+	while (target_mem_read32(t, LPC43x0_SSP0_SR) & SPI43x0_SSP_SR_BSY)
+		continue;
+	return target_mem_read32(t, LPC43x0_SSP0_DR) & 0xffU;
+}
+
+static void lpc43x0_ssp0_setup_command(target_s *const t, const uint32_t command, const target_addr_t address)
+{
+	/* Start by sending the command opcode byte */
+	lpc43x0_ssp0_transfer(t, (command >> 24U) & 0xffU);
+	/* Next, if the command has an address, deal with that */
+	const uint8_t address_bytes = ((command & LPC43x0_SPIFI_FRAME_MASK) >> 21U) - 1U;
+	for (size_t i = 0; i < address_bytes; ++i) {
+		const size_t shift = (address_bytes - (i + 1U)) * 8U;
+		lpc43x0_ssp0_transfer(t, (address >> shift) & 0xffU);
+	}
+	/* Now deal with any inter-frame bytes */
+	const uint8_t inter_bytes = (command >> 16) & 7U;
+	for (size_t i = 0; i < inter_bytes; ++i)
+		lpc43x0_ssp0_transfer(t, 0U);
+}
+
 static void lpc43x0_spi_read(
 	target_s *const t, const uint32_t command, const target_addr_t address, void *const buffer, const size_t length)
 {
-	if ((command & LPC43x0_SPIFI_FRAME_MASK) != LPC43x0_SPIFI_FRAME_OPCODE_ONLY)
-		target_mem_write32(t, LPC43x0_SPIFI_ADDR, address);
-	target_mem_write32(t, LPC43x0_SPIFI_CMD, command | LPC43x0_SPIFI_DATA_LENGTH(length));
-	uint8_t *const data = (uint8_t *)buffer;
-	for (size_t i = 0; i < length; ++i)
-		data[i] = target_mem_read8(t, LPC43x0_SPIFI_DATA);
-	lpc43x0_spi_wait_complete(t);
+	lpc43x0_priv_s *const priv = (lpc43x0_priv_s *)t->target_storage;
+	if (priv->interface == FLASH_SPIFI) {
+		if ((command & LPC43x0_SPIFI_FRAME_MASK) != LPC43x0_SPIFI_FRAME_OPCODE_ONLY)
+			target_mem_write32(t, LPC43x0_SPIFI_ADDR, address);
+		target_mem_write32(t, LPC43x0_SPIFI_CMD, command | LPC43x0_SPIFI_DATA_LENGTH(length));
+		uint8_t *const data = (uint8_t *)buffer;
+		for (size_t i = 0; i < length; ++i)
+			data[i] = target_mem_read8(t, LPC43x0_SPIFI_DATA);
+		lpc43x0_spi_wait_complete(t);
+	} else if (priv->interface == FLASH_SPI) {
+		/* Select the Flash */
+		target_mem_write32(t, LPC43xx_GPIO_PORT0_SET, 1U << 6U);
+		lpc43x0_ssp0_setup_command(t, command, address);
+		/* And finally do the meat and potatoes of the transfer */
+		uint8_t *const data = (uint8_t *)buffer;
+		for (size_t i = 0; i < length; ++i)
+			data[i] = lpc43x0_ssp0_transfer(t, 0U);
+		/* Deselect the Flash */
+		target_mem_write32(t, LPC43xx_GPIO_PORT0_CLR, 1U << 6U);
+	}
 }
 
 static void lpc43x0_spi_write(target_s *const t, const uint32_t command, const target_addr_t address,
 	const void *const buffer, const size_t length)
 {
-	if ((command & LPC43x0_SPIFI_FRAME_MASK) != LPC43x0_SPIFI_FRAME_OPCODE_ONLY)
-		target_mem_write32(t, LPC43x0_SPIFI_ADDR, address);
-	target_mem_write32(t, LPC43x0_SPIFI_CMD, command | LPC43x0_SPIFI_DATA_LENGTH(length));
-	const uint8_t *const data = (const uint8_t *)buffer;
-	for (size_t i = 0; i < length; ++i)
-		target_mem_write8(t, LPC43x0_SPIFI_DATA, data[i]);
-	lpc43x0_spi_wait_complete(t);
+	lpc43x0_priv_s *const priv = (lpc43x0_priv_s *)t->target_storage;
+	if (priv->interface == FLASH_SPIFI) {
+		if ((command & LPC43x0_SPIFI_FRAME_MASK) != LPC43x0_SPIFI_FRAME_OPCODE_ONLY)
+			target_mem_write32(t, LPC43x0_SPIFI_ADDR, address);
+		target_mem_write32(t, LPC43x0_SPIFI_CMD, command | LPC43x0_SPIFI_DATA_LENGTH(length));
+		const uint8_t *const data = (const uint8_t *)buffer;
+		for (size_t i = 0; i < length; ++i)
+			target_mem_write8(t, LPC43x0_SPIFI_DATA, data[i]);
+		lpc43x0_spi_wait_complete(t);
+	} else if (priv->interface == FLASH_SPI) {
+		/* Select the Flash */
+		target_mem_write32(t, LPC43xx_GPIO_PORT0_SET, 1U << 6U);
+		lpc43x0_ssp0_setup_command(t, command, address);
+		/* And finally do the meat and potatoes of the transfer */
+		uint8_t *const data = (uint8_t *)buffer;
+		for (size_t i = 0; i < length; ++i)
+			lpc43x0_ssp0_transfer(t, data[i]);
+		/* Deselect the Flash */
+		target_mem_write32(t, LPC43xx_GPIO_PORT0_CLR, 1U << 6U);
+	}
 }
 
 static inline uint8_t lpc43x0_spi_read_status(target_s *const t)
 {
-	uint8_t status;
+	uint8_t status = 0;
 	lpc43x0_spi_read(t, SPI_FLASH_CMD_READ_STATUS, 0, &status, sizeof(status));
 	return status;
 }
 
 static void lpc43x0_spi_run_command(target_s *const t, const uint32_t command)
 {
-	target_mem_write32(t, LPC43x0_SPIFI_CMD, command);
-	lpc43x0_spi_wait_complete(t);
+	lpc43x0_priv_s *const priv = (lpc43x0_priv_s *)t->target_storage;
+	if (priv->interface == FLASH_SPIFI) {
+		target_mem_write32(t, LPC43x0_SPIFI_CMD, command);
+		lpc43x0_spi_wait_complete(t);
+	} else if (priv->interface == FLASH_SPI)
+		lpc43x0_spi_write(t, command, 0U, NULL, 0U);
 }
 
 static bool lpc43x0_spi_mass_erase(target_s *const t)
