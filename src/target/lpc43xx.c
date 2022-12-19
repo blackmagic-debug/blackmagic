@@ -219,6 +219,7 @@ typedef struct lpc43xx_priv {
 } lpc43xx_priv_s;
 
 typedef struct lpc43x0_priv {
+	lpc43xx_spi_flash_s *flash;
 	lpc43x0_flash_interface_e interface;
 } lpc43x0_priv_s;
 
@@ -354,7 +355,8 @@ static void lpc43x0_add_spi_flash(target_s *const t, const size_t length, const 
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return;
 	}
-	t->target_storage = flash;
+	lpc43x0_priv_s *const priv = (lpc43x0_priv_s *)t->target_storage;
+	priv->flash = flash;
 
 	spi_parameters_s spi_parameters;
 	if (!sfdp_read_parameters(t, &spi_parameters, lpc43x0_spi_read_sfdp)) {
@@ -554,8 +556,9 @@ static bool lpc43x0_attach(target_s *const t)
 
 static void lpc43x0_detach(target_s *const t)
 {
-	free(t->target_storage);
-	t->target_storage = NULL;
+	lpc43x0_priv_s *const priv = (lpc43x0_priv_s *)t->target_storage;
+	free(priv->flash);
+	priv->flash = NULL;
 	t->flash = NULL;
 	cortexm_detach(t);
 }
