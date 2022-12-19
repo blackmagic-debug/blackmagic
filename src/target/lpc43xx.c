@@ -199,6 +199,9 @@
 #define SPI_FLASH_CMD_READ_SFDP                                                                    \
 	(LPC43x0_SPIFI_CMD_SERIAL | LPC43x0_SPIFI_FRAME_OPCODE_3B_ADDR | LPC43x0_SPIFI_OPCODE(0x5aU) | \
 		LPC43x0_SPIFI_DATA_IN | LPC43x0_SPIFI_INTER_LENGTH(1))
+#define SPI_FLASH_CMD_WAKE_UP                                                                   \
+	(LPC43x0_SPIFI_CMD_SERIAL | LPC43x0_SPIFI_FRAME_OPCODE_ONLY | LPC43x0_SPIFI_OPCODE(0xabU) | \
+		LPC43x0_SPIFI_INTER_LENGTH(0))
 
 #define SPI_FLASH_STATUS_BUSY          0x01U
 #define SPI_FLASH_STATUS_WRITE_ENABLED 0x02U
@@ -243,6 +246,7 @@ static void lpc43x0_detach(target_s *t);
 static void lpc43x0_spi_abort(target_s *t);
 static void lpc43x0_spi_read(target_s *t, uint32_t command, target_addr_t address, void *buffer, size_t length);
 static void lpc43x0_spi_write(target_s *t, uint32_t command, target_addr_t address, const void *buffer, size_t length);
+static void lpc43x0_spi_run_command(target_s *t, uint32_t command);
 static bool lpc43x0_spi_mass_erase(target_s *t);
 static bool lpc43x0_spi_flash_erase(target_flash_s *f, target_addr_t addr, size_t length);
 static bool lpc43x0_spi_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t length);
@@ -602,7 +606,9 @@ static void lpc43x0_spi_abort(target_s *const t)
 		/* And drain the response buffer too, giving our best effort at bringing to known state */
 		while (target_mem_read32(t, LPC43x0_SSP0_SR) & SPI43x0_SSP_SR_RNE)
 			target_mem_read32(t, LPC43x0_SSP0_DR);
+		target_mem_write32(t, LPC43xx_GPIO_PORT0_CLR, 1U << 6U);
 	}
+	lpc43x0_spi_run_command(t, SPI_FLASH_CMD_WAKE_UP);
 }
 
 static inline void lpc43x0_spi_wait_complete(target_s *const t)
