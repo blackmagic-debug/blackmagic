@@ -560,10 +560,11 @@ static bool lpc43x0_attach(target_s *const t)
 	/* If we read out valid Flash information, set up a region for it */
 	if (flash_id.manufacturer != 0xffU && flash_id.type != 0xffU && flash_id.capacity != 0xffU) {
 		const uint32_t capacity = 1U << flash_id.capacity;
-		DEBUG_WARN("SPI Flash: mfr = %02x, type = %02x, capacity = %08" PRIx32 "\n", flash_id.manufacturer,
+		DEBUG_INFO("SPI Flash: mfr = %02x, type = %02x, capacity = %08" PRIx32 "\n", flash_id.manufacturer,
 			flash_id.type, capacity);
 		lpc43x0_add_spi_flash(t, capacity, read_command);
-	}
+	} else
+		DEBUG_INFO("Flash identification failed\n");
 	/* Restore the read command as using the other command register clobbers this. */
 	target_mem_write32(t, LPC43x0_SPIFI_MCMD, read_command);
 	return true;
