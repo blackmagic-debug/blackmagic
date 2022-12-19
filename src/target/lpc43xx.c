@@ -167,6 +167,13 @@
 #define LPC43x0_SPIFI_STATUS_CMD_ACTIVE    (1U << 1U)
 #define LPC43x0_SPIFI_STATUS_RESET         (1U << 4U)
 
+#define LPC43x0_SSP0_BASE 0x40083000
+#define LPC43x0_SSP0_DR   (LPC43x0_SSP0_BASE + 0x008)
+#define LPC43x0_SSP0_SR   (LPC43x0_SSP0_BASE + 0x00c)
+
+#define SPI43x0_SSP_SR_RNE 0x00000004U
+#define SPI43x0_SSP_SR_BSY 0x00000010U
+
 #define SPI_FLASH_CMD_WRITE_ENABLE                                                              \
 	(LPC43x0_SPIFI_CMD_SERIAL | LPC43x0_SPIFI_FRAME_OPCODE_ONLY | LPC43x0_SPIFI_OPCODE(0x06U) | \
 		LPC43x0_SPIFI_INTER_LENGTH(0))
@@ -578,9 +585,20 @@ static lpc43xx_partid_s lpc43x0_spi_read_partid(target_s *const t)
 
 static void lpc43x0_spi_abort(target_s *const t)
 {
-	target_mem_write32(t, LPC43x0_SPIFI_STAT, LPC43x0_SPIFI_STATUS_RESET);
-	while (target_mem_read32(t, LPC43x0_SPIFI_STAT) & LPC43x0_SPIFI_STATUS_RESET)
-		continue;
+	lpc43x0_priv_s *const priv = (lpc43x0_priv_s *)t->target_storage;
+	if (priv->interface == FLASH_SPIFI) {
+		/* If in SPIFI mode, reset the controller to get to a known state */
+		target_mem_write32(t, LPC43x0_SPIFI_STAT, LPC43x0_SPIFI_STATUS_RESET);
+		while (target_mem_read32(t, LPC43x0_SPIFI_STAT) & LPC43x0_SPIFI_STATUS_RESET)
+			continue;
+	} else if (priv->interface == FLASH_SPI) {
+		/* If in SPI/SSP0 mode, first wait for the controller to finish transmitting all outstanding frames */
+		while (target_mem_read32(t, LPC43x0_SSP0_SR) & SPI43x0_SSP_SR_BSY)
+			continue;
+		/* And drain the response buffer too, giving our best effort at bringing to known state */
+		while (target_mem_read32(t, LPC43x0_SSP0_SR) & SPI43x0_SSP_SR_RNE)
+			target_mem_read32(t, LPC43x0_SSP0_DR);
+	}
 }
 
 static inline void lpc43x0_spi_wait_complete(target_s *const t)
