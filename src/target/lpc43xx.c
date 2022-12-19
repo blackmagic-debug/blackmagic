@@ -85,10 +85,28 @@
 #define LPC43xx_ETBAHB_SRAM_BASE 0x2000c000U
 #define LPC43xx_ETBAHB_SRAM_SIZE (16U * 1024U)
 
+#define LPC43xx_SCU_BASE       0x40086000U
+#define LPC43xx_SCU_BANK3_PIN3 (LPC43xx_SCU_BASE + 0x18cU)
+#define LPC43xx_SCU_CLK0       (LPC43xx_SCU_BASE + 0xc00U)
+#define LPC43xx_SCU_CLK1       (LPC43xx_SCU_BASE + 0xc04U)
+#define LPC43xx_SCU_CLK2       (LPC43xx_SCU_BASE + 0xc08U)
+#define LPC43xx_SCU_CLK3       (LPC43xx_SCU_BASE + 0xc0cU)
+
+#define LPC43xx_SCU_PIN_MODE_MASK    0x00000007U
+#define LPC43xx_SCU_PIN_MODE_SSP0    0x00000002U
+#define LPC43xx_SCU_PIN_MODE_SPIFI   0x00000003U
+#define LPC43xx_SCU_PIN_MODE_EMC_CLK 0x00000001U
+
 #define LPC43xx_CGU_BASE               0x40050000U
 #define LPC43xx_CGU_CPU_CLK            (LPC43xx_CGU_BASE + 0x06cU)
 #define LPC43xx_CGU_BASE_CLK_AUTOBLOCK (1U << 11U)
 #define LPC43xx_CGU_BASE_CLK_SEL_IRC   (1U << 24U)
+
+#define LPC43xx_EMC_BASE                    0x40005100U
+#define LPC43xx_EMC_DYN_CONFIG0             (LPC43xx_EMC_BASE + 0xc00U)
+#define LPC43xx_EMC_DYN_CONFIG_MAPPING_MASK 0x00005000U
+#define LPC43xx_EMC_DYN_CONFIG_MAPPING_8    0x00000000U
+#define LPC43xx_EMC_DYN_CONFIG_MAPPING_16   0x00001000U
 
 /* Cortex-M4 Application Interrupt and Reset Control Register */
 #define LPC43xx_AIRCR 0xe000ed0cU
@@ -174,6 +192,15 @@
 #define SPI_FLASH_STATUS_BUSY          0x01U
 #define SPI_FLASH_STATUS_WRITE_ENABLED 0x02U
 
+typedef enum lpc43x0_flash_interface {
+	FLASH_NONE,
+	FLASH_SPIFI,
+	FLASH_EMC8,
+	FLASH_EMC16,
+	FLASH_EMC32,
+	FLASH_SPI
+} lpc43x0_flash_interface_e;
+
 typedef struct lpc43xx_partid {
 	uint32_t part;
 	uint8_t flash_config;
@@ -190,6 +217,10 @@ typedef struct lpc43xx_spi_flash {
 typedef struct lpc43xx_priv {
 	uint8_t flash_banks;
 } lpc43xx_priv_s;
+
+typedef struct lpc43x0_priv {
+	lpc43x0_flash_interface_e interface;
+} lpc43x0_priv_s;
 
 static bool lpc43xx_cmd_reset(target_s *t, int argc, const char **argv);
 static bool lpc43xx_cmd_mkboot(target_s *t, int argc, const char **argv);
@@ -441,10 +472,68 @@ bool lpc43xx_probe(target_s *const t)
 
 /* LPC43xx Flashless part routines */
 
+static lpc43x0_flash_interface_e lpc43x0_determine_flash_interface(target_s *const t)
+{
+	const uint32_t clk_pin_mode = target_mem_read32(t, LPC43xx_SCU_BANK3_PIN3) & LPC43xx_SCU_PIN_MODE_MASK;
+	if (clk_pin_mode == LPC43xx_SCU_PIN_MODE_SPIFI)
+		return FLASH_SPIFI;
+	if (clk_pin_mode == LPC43xx_SCU_PIN_MODE_SSP0)
+		return FLASH_SPI;
+	if ((target_mem_read32(t, LPC43xx_SCU_CLK0) & LPC43xx_SCU_PIN_MODE_MASK) == LPC43xx_SCU_PIN_MODE_EMC_CLK) {
+		const uint32_t emc_config = target_mem_read32(t, LPC43xx_EMC_DYN_CONFIG0) & LPC43xx_EMC_DYN_CONFIG_MAPPING_MASK;
+		if (emc_config == LPC43xx_EMC_DYN_CONFIG_MAPPING_8)
+			return FLASH_EMC8;
+		if (emc_config == LPC43xx_EMC_DYN_CONFIG_MAPPING_16)
+			return FLASH_EMC16;
+		return FLASH_EMC32;
+	}
+	return FLASH_NONE;
+}
+
 static bool lpc43x0_attach(target_s *const t)
 {
 	if (!cortexm_attach(t))
 		return false;
+
+	if (!t->target_storage) {
+		lpc43x0_priv_s *priv = calloc(1, sizeof(lpc43x0_priv_s));
+		if (!priv) { /* calloc failed: heap exhaustion */
+			DEBUG_WARN("calloc: failed in %s\n", __func__);
+			return false;
+		}
+		t->target_storage = priv;
+
+		/*
+		* Before we can go down a specific route here, we first have to figure out how the device was booted:
+		* - Was it bought up on the SPIFI interface
+		* - Was it bought up on SSP0
+		* - Was it bought up on the EMC interface
+		*
+		* Once this is ascertained, we can pick how to proceed.
+		*
+		* Start by reading 0x40045030 - OTP[3,0], Customer control data.
+		* If bits 25:28 read as 0, boot is controlled by the external pins, otherwise
+		* this determines the boot source. 2 for SPIFI, 3 through 5 for EMC, and 8 for SPI
+		* For external pins, P1_1, P1_2, P2_8 and P2_9 control the process.
+		*
+		* When assembled as [P2_9, P2_9, P1_2, P1_1] and interpreted as a bitvector, the following holds:
+		* - 0b0001 -> SPIFI
+		* - 0b0010 -> EMC (8-bit)
+		* - 0b0011 -> EMC (16-bit)
+		* - 0b0100 -> EMC (32-bit)
+		* - 0b0111 -> SPI (SSP0)
+		*
+		* We don't actually care about any of the other modes as they're inconsequential.
+		* If the boot source contains a header prior to the image or is SPI boot, the header
+		* is validated and the image copied to SRAM at 0x10000000, then executed from there.
+		* If the boot source is anything other than SPI and the image contains no header,
+		* the chip sets switches execution to that boot source.
+		*
+		* This process is laid out in Chaper 5 of UM10503. See Fig 16 on pg 59 for a more detailed view.
+		*/
+		const lpc43x0_flash_interface_e interface = lpc43x0_determine_flash_interface(t);
+		priv->interface = interface;
+	}
 
 	const uint32_t read_command = target_mem_read32(t, LPC43x0_SPIFI_MCMD);
 	lpc43x0_spi_abort(t);
