@@ -440,6 +440,7 @@ static void lpc43x0_add_spi_flash(target_s *const t, const size_t length, const 
 
 static void lpc43x0_detect(target_s *const t, const lpc43xx_partid_s part_id)
 {
+	target_add_ram(t, LPC43xx_SHADOW_BASE, LPC43xx_SHADOW_SIZE);
 	switch (part_id.part) {
 	case LPC43xx_PARTID_LPC4310:
 		t->driver = "LPC4310";
