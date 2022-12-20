@@ -86,16 +86,36 @@
 #define LPC43xx_ETBAHB_SRAM_SIZE (16U * 1024U)
 
 #define LPC43xx_SCU_BASE       0x40086000U
+#define LPC43xx_SCU_BANK1_PIN1 (LPC43xx_SCU_BASE + 0x084U)
+#define LPC43xx_SCU_BANK1_PIN2 (LPC43xx_SCU_BASE + 0x088U)
+#define LPC43xx_SCU_BANK2_PIN8 (LPC43xx_SCU_BASE + 0x120U)
+#define LPC43xx_SCU_BANK2_PIN9 (LPC43xx_SCU_BASE + 0x124U)
 #define LPC43xx_SCU_BANK3_PIN3 (LPC43xx_SCU_BASE + 0x18cU)
 #define LPC43xx_SCU_CLK0       (LPC43xx_SCU_BASE + 0xc00U)
 #define LPC43xx_SCU_CLK1       (LPC43xx_SCU_BASE + 0xc04U)
 #define LPC43xx_SCU_CLK2       (LPC43xx_SCU_BASE + 0xc08U)
 #define LPC43xx_SCU_CLK3       (LPC43xx_SCU_BASE + 0xc0cU)
 
-#define LPC43xx_SCU_PIN_MODE_MASK    0x00000007U
-#define LPC43xx_SCU_PIN_MODE_SSP0    0x00000002U
-#define LPC43xx_SCU_PIN_MODE_SPIFI   0x00000003U
-#define LPC43xx_SCU_PIN_MODE_EMC_CLK 0x00000001U
+#define LPC43xx_SCU_PIN_MODE_MASK       0x00000007U
+#define LPC43xx_SCU_PIN_MODE_SSP0       0x00000002U
+#define LPC43xx_SCU_PIN_MODE_SPIFI      0x00000003U
+#define LPC43xx_SCU_PIN_MODE_EMC_CLK    0x00000001U
+#define LPC43xx_SCU_PIN_DISABLE_PULL_UP 0x00000010U
+#define LPC43xx_SCU_PIN_SLEW_FAST       0x00000020U
+#define LPC43xx_SCU_PIN_DISABLE_FILTER  0x00000080U
+#define LPC43xx_SCU_PIN_GPIO_INPUT \
+	(LPC43xx_SCU_PIN_DISABLE_PULL_UP | LPC43xx_SCU_PIN_SLEW_FAST | LPC43xx_SCU_PIN_DISABLE_FILTER)
+
+#define LPC43xx_CREG_BASE        0x40043000U
+#define LPC43xx_CREG_M4MEMMAP    (LPC43xx_CREG_BASE + 0x100U)
+#define LPC43xx_CREG_BOOT_CONFIG (LPC43xx_CREG_BASE + 0x204U)
+
+#define LPC43xx_CREG_BOOT_CONFIG_SRC_MASK 0x0000000fU
+
+#define LPC43xx_OTP_BASE           0x40045000U
+#define LPC43xx_OTP_CONTROL_DATA   (LPC43xx_OTP_BASE + 0x030U)
+#define LPC43xx_OTP_BOOT_SRC_MASK  0x1e000000U
+#define LPC43xx_OTP_BOOT_SRC_SHIFT 25U
 
 #define LPC43xx_CGU_BASE               0x40050000U
 #define LPC43xx_CGU_CPU_CLK            (LPC43xx_CGU_BASE + 0x06cU)
@@ -175,6 +195,12 @@
 #define SPI43x0_SSP_SR_BSY 0x00000010U
 
 #define LPC43xx_GPIO_BASE      0x400f4000U
+#define LPC43xx_GPIO_PORT0_DIR (LPC43xx_GPIO_BASE + 0x2000U)
+#define LPC43xx_GPIO_PORT1_DIR (LPC43xx_GPIO_BASE + 0x2004U)
+#define LPC43xx_GPIO_PORT5_DIR (LPC43xx_GPIO_BASE + 0x2014U)
+#define LPC43xx_GPIO_PORT0_PIN (LPC43xx_GPIO_BASE + 0x2100U)
+#define LPC43xx_GPIO_PORT1_PIN (LPC43xx_GPIO_BASE + 0x2104U)
+#define LPC43xx_GPIO_PORT5_PIN (LPC43xx_GPIO_BASE + 0x2114U)
 #define LPC43xx_GPIO_PORT0_SET (LPC43xx_GPIO_BASE + 0x2200U)
 #define LPC43xx_GPIO_PORT0_CLR (LPC43xx_GPIO_BASE + 0x2280U)
 
@@ -489,20 +515,84 @@ bool lpc43xx_probe(target_s *const t)
 
 /* LPC43xx Flashless part routines */
 
+static uint8_t lpc43x0_read_boot_src(target_s *const t)
+{
+	const uint32_t port0_dir = target_mem_read32(t, LPC43xx_GPIO_PORT0_DIR);
+	target_mem_write32(t, LPC43xx_GPIO_PORT0_DIR, port0_dir & 0xfffffcffU);
+	const uint32_t port1_dir = target_mem_read32(t, LPC43xx_GPIO_PORT1_DIR);
+	target_mem_write32(t, LPC43xx_GPIO_PORT1_DIR, port1_dir & 0xfffffbffU);
+	const uint32_t port5_dir = target_mem_read32(t, LPC43xx_GPIO_PORT5_DIR);
+	target_mem_write32(t, LPC43xx_GPIO_PORT5_DIR, port5_dir & 0xffffff7fU);
+
+	const uint32_t p1_1_config = target_mem_read32(t, LPC43xx_SCU_BANK1_PIN1);
+	target_mem_write32(t, LPC43xx_SCU_BANK1_PIN1, LPC43xx_SCU_PIN_GPIO_INPUT);
+	const uint32_t p1_2_config = target_mem_read32(t, LPC43xx_SCU_BANK1_PIN2);
+	target_mem_write32(t, LPC43xx_SCU_BANK1_PIN2, LPC43xx_SCU_PIN_GPIO_INPUT);
+	const uint32_t p2_8_config = target_mem_read32(t, LPC43xx_SCU_BANK2_PIN8);
+	/* P2_8 uses function 4 for GPIO, function 0 is SGPIO which is a different controller. */
+	target_mem_write32(t, LPC43xx_SCU_BANK2_PIN8, LPC43xx_SCU_PIN_GPIO_INPUT | 4U);
+	const uint32_t p2_9_config = target_mem_read32(t, LPC43xx_SCU_BANK2_PIN9);
+	target_mem_write32(t, LPC43xx_SCU_BANK2_PIN9, LPC43xx_SCU_PIN_GPIO_INPUT);
+
+	const uint8_t boot_src = target_mem_read32(t, LPC43xx_CREG_BOOT_CONFIG) & LPC43xx_CREG_BOOT_CONFIG_SRC_MASK;
+
+	target_mem_write32(t, LPC43xx_GPIO_PORT0_DIR, port0_dir);
+	target_mem_write32(t, LPC43xx_GPIO_PORT1_DIR, port1_dir);
+	target_mem_write32(t, LPC43xx_GPIO_PORT5_DIR, port5_dir);
+
+	target_mem_write32(t, LPC43xx_SCU_BANK1_PIN1, p1_1_config);
+	target_mem_write32(t, LPC43xx_SCU_BANK1_PIN2, p1_2_config);
+	target_mem_write32(t, LPC43xx_SCU_BANK2_PIN8, p2_8_config);
+	target_mem_write32(t, LPC43xx_SCU_BANK2_PIN9, p2_9_config);
+
+	return boot_src;
+}
+
 static lpc43x0_flash_interface_e lpc43x0_determine_flash_interface(target_s *const t)
 {
-	const uint32_t clk_pin_mode = target_mem_read32(t, LPC43xx_SCU_BANK3_PIN3) & LPC43xx_SCU_PIN_MODE_MASK;
-	if (clk_pin_mode == LPC43xx_SCU_PIN_MODE_SPIFI)
+	/*
+	 * If the device is not operating out of SRAM1 (meaning the boot ROM booted to a XIP mode)
+	 * then we can analyse the active configuration and take it at face value - that will work.
+	 */
+	if (target_mem_read32(t, LPC43xx_CREG_M4MEMMAP) != LPC43xx_LOCAL_SRAM1_BASE) {
+		const uint32_t clk_pin_mode = target_mem_read32(t, LPC43xx_SCU_BANK3_PIN3) & LPC43xx_SCU_PIN_MODE_MASK;
+		if (clk_pin_mode == LPC43xx_SCU_PIN_MODE_SPIFI)
+			return FLASH_SPIFI;
+		if ((target_mem_read32(t, LPC43xx_SCU_CLK0) & LPC43xx_SCU_PIN_MODE_MASK) == LPC43xx_SCU_PIN_MODE_EMC_CLK) {
+			const uint32_t emc_config =
+				target_mem_read32(t, LPC43xx_EMC_DYN_CONFIG0) & LPC43xx_EMC_DYN_CONFIG_MAPPING_MASK;
+			if (emc_config == LPC43xx_EMC_DYN_CONFIG_MAPPING_8)
+				return FLASH_EMC8;
+			if (emc_config == LPC43xx_EMC_DYN_CONFIG_MAPPING_16)
+				return FLASH_EMC16;
+			return FLASH_EMC32;
+		}
+	}
+	/*
+	 * If, however, SRAM1 is in use meaning the boot ROM copied the image (with or without header)
+	 * from the boot device, we need to determine what kind of device was used and how. We then
+	 * must reconfigure back onto that device to compensate for anything the firmware has done.
+	 */
+	const uint32_t otp_boot_src = target_mem_read32(t, LPC43xx_OTP_CONTROL_DATA) & LPC43xx_OTP_BOOT_SRC_MASK;
+	uint8_t boot_src = 0;
+
+	if (otp_boot_src == 0) {
+		/* The boot mode pins result in a value offset by 1 due to not special-caseing 0, correct that */
+		boot_src = lpc43x0_read_boot_src(t) + 1U;
+	} else
+		boot_src = otp_boot_src >> LPC43xx_OTP_BOOT_SRC_SHIFT;
+
+	switch (boot_src) {
+	case 2:
 		return FLASH_SPIFI;
-	if (clk_pin_mode == LPC43xx_SCU_PIN_MODE_SSP0)
-		return FLASH_SPI;
-	if ((target_mem_read32(t, LPC43xx_SCU_CLK0) & LPC43xx_SCU_PIN_MODE_MASK) == LPC43xx_SCU_PIN_MODE_EMC_CLK) {
-		const uint32_t emc_config = target_mem_read32(t, LPC43xx_EMC_DYN_CONFIG0) & LPC43xx_EMC_DYN_CONFIG_MAPPING_MASK;
-		if (emc_config == LPC43xx_EMC_DYN_CONFIG_MAPPING_8)
-			return FLASH_EMC8;
-		if (emc_config == LPC43xx_EMC_DYN_CONFIG_MAPPING_16)
-			return FLASH_EMC16;
+	case 3:
+		return FLASH_EMC8;
+	case 4:
+		return FLASH_EMC16;
+	case 5:
 		return FLASH_EMC32;
+	case 8:
+		return FLASH_SPI;
 	}
 	return FLASH_NONE;
 }
