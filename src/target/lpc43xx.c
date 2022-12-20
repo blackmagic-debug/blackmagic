@@ -20,6 +20,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <string.h>
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
@@ -754,7 +755,8 @@ static void lpc43x0_spi_read(
 			data[i] = lpc43x0_ssp0_transfer(t, 0U);
 		/* Deselect the Flash */
 		target_mem_write32(t, LPC43xx_GPIO_PORT0_CLR, 1U << 6U);
-	}
+	} else
+		memset(buffer, 0xffU, length);
 }
 
 static void lpc43x0_spi_write(target_s *const t, const uint32_t command, const target_addr_t address,
