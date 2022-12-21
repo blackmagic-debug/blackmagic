@@ -813,16 +813,16 @@ static bool lpc43x0_spi_mass_erase(target_s *const t)
 	platform_timeout_set(&timeout, 500);
 	lpc43x0_spi_abort(t);
 	lpc43x0_spi_run_command(t, SPI_FLASH_CMD_WRITE_ENABLE);
-	if (!(lpc43x0_spi_read_status(t) & SPI_FLASH_STATUS_WRITE_ENABLED))
+	if (!(lpc43x0_spi_read_status(t) & SPI_FLASH_STATUS_WRITE_ENABLED)) {
+		lpc43x0_spi_flash_done(t->flash);
 		return false;
+	}
 
 	lpc43x0_spi_run_command(t, SPI_FLASH_CMD_CHIP_ERASE);
 	while (lpc43x0_spi_read_status(t) & SPI_FLASH_STATUS_BUSY)
 		target_print_progress(&timeout);
 
-	const lpc43xx_spi_flash_s *const flash = (lpc43xx_spi_flash_s *)t->flash;
-	target_mem_write32(t, LPC43x0_SPIFI_MCMD, flash->read_command);
-	return true;
+	return lpc43x0_spi_flash_done(t->flash);
 }
 
 static bool lpc43x0_spi_flash_prepare(target_flash_s *f)
