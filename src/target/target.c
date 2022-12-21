@@ -96,27 +96,31 @@ void target_mem_map_free(target_s *t)
 
 void target_list_free(void)
 {
-	while (target_list) {
-		target_s *t = target_list->next;
-		if (target_list->tc && target_list->tc->destroy_callback)
-			target_list->tc->destroy_callback(target_list->tc, target_list);
-		if (target_list->priv)
-			target_list->priv_free(target_list->priv);
-		while (target_list->commands) {
-			target_command_s *const tc = target_list->commands->next;
-			free(target_list->commands);
-			target_list->commands = tc;
+	target_s *target = target_list;
+	while (target) {
+		target_s *next_target = target->next;
+		if (target->attached)
+			target->detach(target);
+		if (target->tc && target->tc->destroy_callback)
+			target->tc->destroy_callback(target->tc, target);
+		if (target->priv)
+			target->priv_free(target->priv);
+		while (target->commands) {
+			target_command_s *const tc = target->commands->next;
+			free(target->commands);
+			target->commands = tc;
 		}
-		free(target_list->target_storage);
-		target_mem_map_free(target_list);
-		while (target_list->bw_list) {
-			void *next = target_list->bw_list->next;
-			free(target_list->bw_list);
-			target_list->bw_list = next;
+		free(target->target_storage);
+		target_mem_map_free(target);
+		while (target->bw_list) {
+			void *next = target->bw_list->next;
+			free(target->bw_list);
+			target->bw_list = next;
 		}
-		free(target_list);
-		target_list = t;
+		free(target);
+		target = next_target;
 	}
+	target_list = NULL;
 }
 
 void target_add_commands(target_s *t, const command_s *cmds, const char *name)
