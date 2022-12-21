@@ -286,6 +286,8 @@ static bool lpc43xx_iap_mass_erase(target_s *t);
 static void lpc43xx_wdt_set_period(target_s *t);
 static void lpc43xx_wdt_kick(target_s *t);
 
+static bool lpc43xx_enter_flash_mode(target_s *t);
+
 const command_s lpc43xx_cmd_list[] = {
 	{"reset", lpc43xx_cmd_reset, "Reset target"},
 	{"mkboot", lpc43xx_cmd_mkboot, "Make flash bank bootable"},
@@ -517,6 +519,14 @@ bool lpc43xx_probe(target_s *const t)
 		lpc43x0_detect(t, part_id);
 	} else
 		return false;
+
+	t->enter_flash_mode = lpc43xx_enter_flash_mode;
+	return true;
+}
+
+static bool lpc43xx_enter_flash_mode(target_s *t)
+{
+	(void)t;
 	return true;
 }
 
