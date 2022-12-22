@@ -194,6 +194,7 @@
 #define LPC43x0_SPIFI_OPCODE(x)            ((x) << 24U)
 #define LPC43x0_SPIFI_STATUS_CMD_ACTIVE    (1U << 1U)
 #define LPC43x0_SPIFI_STATUS_RESET         (1U << 4U)
+#define LPC43x0_SPIFI_STATUS_INTRQ         (1U << 5U)
 
 #define LPC43x0_SSP0_BASE 0x40083000
 #define LPC43x0_SSP0_DR   (LPC43x0_SSP0_BASE + 0x008)
@@ -845,6 +846,7 @@ static inline void lpc43x0_spi_wait_complete(target_s *const t)
 {
 	while (target_mem_read32(t, LPC43x0_SPIFI_STAT) & LPC43x0_SPIFI_STATUS_CMD_ACTIVE)
 		continue;
+	target_mem_write32(t, LPC43x0_SPIFI_STAT, LPC43x0_SPIFI_STATUS_INTRQ);
 }
 
 static uint8_t lpc43x0_ssp0_transfer(target_s *const t, const uint8_t value)
