@@ -261,6 +261,7 @@ typedef struct lpc43xx_priv {
 typedef struct lpc43x0_priv {
 	lpc43xx_spi_flash_s *flash;
 	lpc43x0_flash_interface_e interface;
+	uint32_t boot_address;
 } lpc43x0_priv_s;
 
 static bool lpc43xx_cmd_reset(target_s *t, int argc, const char **argv);
@@ -565,25 +566,29 @@ static uint8_t lpc43x0_read_boot_src(target_s *const t)
 	return boot_src;
 }
 
-static lpc43x0_flash_interface_e lpc43x0_determine_flash_interface(target_s *const t)
+static void lpc43x0_determine_flash_interface(target_s *const t)
 {
+	lpc43x0_priv_s *priv = (lpc43x0_priv_s *)t->target_storage;
 	/*
 	 * If the device is not operating out of SRAM1 (meaning the boot ROM booted to a XIP mode)
 	 * then we can analyse the active configuration and take it at face value - that will work.
 	 */
-	if (target_mem_read32(t, LPC43xx_CREG_M4MEMMAP) != LPC43xx_LOCAL_SRAM1_BASE) {
+	priv->boot_address = target_mem_read32(t, LPC43xx_CREG_M4MEMMAP);
+	if (priv->boot_address != LPC43xx_LOCAL_SRAM1_BASE) {
 		const uint32_t clk_pin_mode = target_mem_read32(t, LPC43xx_SCU_BANK3_PIN3) & LPC43xx_SCU_PIN_MODE_MASK;
 		if (clk_pin_mode == LPC43xx_SCU_PIN_MODE_SPIFI)
-			return FLASH_SPIFI;
-		if ((target_mem_read32(t, LPC43xx_SCU_CLK0) & LPC43xx_SCU_PIN_MODE_MASK) == LPC43xx_SCU_PIN_MODE_EMC_CLK) {
+			priv->interface = FLASH_SPIFI;
+		else if ((target_mem_read32(t, LPC43xx_SCU_CLK0) & LPC43xx_SCU_PIN_MODE_MASK) == LPC43xx_SCU_PIN_MODE_EMC_CLK) {
 			const uint32_t emc_config =
 				target_mem_read32(t, LPC43xx_EMC_DYN_CONFIG0) & LPC43xx_EMC_DYN_CONFIG_MAPPING_MASK;
 			if (emc_config == LPC43xx_EMC_DYN_CONFIG_MAPPING_8)
-				return FLASH_EMC8;
-			if (emc_config == LPC43xx_EMC_DYN_CONFIG_MAPPING_16)
-				return FLASH_EMC16;
-			return FLASH_EMC32;
+				priv->interface = FLASH_EMC8;
+			else if (emc_config == LPC43xx_EMC_DYN_CONFIG_MAPPING_16)
+				priv->interface = FLASH_EMC16;
+			else
+				priv->interface = FLASH_EMC32;
 		}
+		return;
 	}
 	/*
 	 * If, however, SRAM1 is in use meaning the boot ROM copied the image (with or without header)
@@ -601,17 +606,24 @@ static lpc43x0_flash_interface_e lpc43x0_determine_flash_interface(target_s *con
 
 	switch (boot_src) {
 	case 2:
-		return FLASH_SPIFI;
+		priv->interface = FLASH_SPIFI;
+		break;
 	case 3:
-		return FLASH_EMC8;
+		priv->interface = FLASH_EMC8;
+		break;
 	case 4:
-		return FLASH_EMC16;
+		priv->interface = FLASH_EMC16;
+		break;
 	case 5:
-		return FLASH_EMC32;
+		priv->interface = FLASH_EMC32;
+		break;
 	case 8:
-		return FLASH_SPI;
+		priv->interface = FLASH_SPI;
+		break;
+	default:
+		priv->interface = FLASH_NONE;
+		break;
 	}
-	return FLASH_NONE;
 }
 
 static bool lpc43x0_attach(target_s *const t)
@@ -655,8 +667,7 @@ static bool lpc43x0_attach(target_s *const t)
 		*
 		* This process is laid out in Chaper 5 of UM10503. See Fig 16 on pg 59 for a more detailed view.
 		*/
-		const lpc43x0_flash_interface_e interface = lpc43x0_determine_flash_interface(t);
-		priv->interface = interface;
+		lpc43x0_determine_flash_interface(t);
 	}
 
 	const uint32_t read_command = target_mem_read32(t, LPC43x0_SPIFI_MCMD);
