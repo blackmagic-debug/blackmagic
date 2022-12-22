@@ -269,6 +269,12 @@ typedef struct lpc43x0_priv {
 	lpc43x0_flash_interface_e interface;
 	uint32_t boot_address;
 	uint32_t spifi_memory_command;
+	uint32_t bank3_pin3_config;
+	uint32_t bank3_pin4_config;
+	uint32_t bank3_pin5_config;
+	uint32_t bank3_pin6_config;
+	uint32_t bank3_pin7_config;
+	uint32_t bank3_pin8_config;
 } lpc43x0_priv_s;
 
 static bool lpc43xx_cmd_reset(target_s *t, int argc, const char **argv);
@@ -639,6 +645,12 @@ static void lpc43x0_determine_flash_interface(target_s *const t)
 	 * the firmware being debugged configured things? Probably not a good idea, but the question
 	 * needs consideration and an answer.
 	 */
+	priv->bank3_pin3_config = target_mem_read32(t, LPC43xx_SCU_BANK3_PIN3);
+	priv->bank3_pin4_config = target_mem_read32(t, LPC43xx_SCU_BANK3_PIN4);
+	priv->bank3_pin5_config = target_mem_read32(t, LPC43xx_SCU_BANK3_PIN5);
+	priv->bank3_pin6_config = target_mem_read32(t, LPC43xx_SCU_BANK3_PIN6);
+	priv->bank3_pin7_config = target_mem_read32(t, LPC43xx_SCU_BANK3_PIN7);
+	priv->bank3_pin8_config = target_mem_read32(t, LPC43xx_SCU_BANK3_PIN8);
 }
 
 static bool lpc43x0_attach(target_s *const t)
@@ -781,6 +793,18 @@ static bool lpc43x0_exit_flash_mode(target_s *const t)
 	default:
 		break;
 	}
+
+	/* If we're booted from the interface, we're done */
+	if (priv->boot_address != LPC43xx_LOCAL_SRAM1_BASE)
+		return true;
+
+	/* Otherwise restore the old pin configurations */
+	target_mem_write32(t, LPC43xx_SCU_BANK3_PIN3, priv->bank3_pin3_config);
+	target_mem_write32(t, LPC43xx_SCU_BANK3_PIN4, priv->bank3_pin4_config);
+	target_mem_write32(t, LPC43xx_SCU_BANK3_PIN5, priv->bank3_pin5_config);
+	target_mem_write32(t, LPC43xx_SCU_BANK3_PIN6, priv->bank3_pin6_config);
+	target_mem_write32(t, LPC43xx_SCU_BANK3_PIN7, priv->bank3_pin7_config);
+	target_mem_write32(t, LPC43xx_SCU_BANK3_PIN8, priv->bank3_pin8_config);
 	return true;
 }
 
