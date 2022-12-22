@@ -249,7 +249,6 @@ typedef struct lpc43xx_partid {
 typedef struct lpc43xx_spi_flash {
 	target_flash_s flash_low;
 	target_flash_s flash_high;
-	uint32_t read_command;
 	uint32_t page_size;
 	uint8_t sector_erase_opcode;
 } lpc43xx_spi_flash_s;
@@ -262,6 +261,7 @@ typedef struct lpc43x0_priv {
 	lpc43xx_spi_flash_s *flash;
 	lpc43x0_flash_interface_e interface;
 	uint32_t boot_address;
+	uint32_t spifi_memory_command;
 } lpc43x0_priv_s;
 
 static bool lpc43xx_cmd_reset(target_s *t, int argc, const char **argv);
@@ -270,24 +270,23 @@ static bool lpc43xx_cmd_mkboot(target_s *t, int argc, const char **argv);
 static lpc43xx_partid_s lpc43x0_spi_read_partid(target_s *t);
 static bool lpc43x0_attach(target_s *t);
 static void lpc43x0_detach(target_s *t);
+static bool lpc43x0_enter_flash_mode(target_s *t);
+static bool lpc43x0_exit_flash_mode(target_s *t);
 static void lpc43x0_spi_abort(target_s *t);
 static void lpc43x0_spi_read(target_s *t, uint32_t command, target_addr_t address, void *buffer, size_t length);
 static void lpc43x0_spi_write(target_s *t, uint32_t command, target_addr_t address, const void *buffer, size_t length);
 static void lpc43x0_spi_run_command(target_s *t, uint32_t command);
 static bool lpc43x0_spi_mass_erase(target_s *t);
-static bool lpc43x0_spi_flash_prepare(target_flash_s *f);
 static bool lpc43x0_spi_flash_erase(target_flash_s *f, target_addr_t addr, size_t length);
 static bool lpc43x0_spi_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t length);
-static bool lpc43x0_spi_flash_done(target_flash_s *f);
 
 static bool lpc43xx_iap_init(target_flash_s *flash);
 static lpc43xx_partid_s lpc43xx_iap_read_partid(target_s *t);
+static bool lpc43xx_enter_flash_mode(target_s *t);
 static bool lpc43xx_iap_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 static bool lpc43xx_iap_mass_erase(target_s *t);
 static void lpc43xx_wdt_set_period(target_s *t);
 static void lpc43xx_wdt_kick(target_s *t);
-
-static bool lpc43xx_enter_flash_mode(target_s *t);
 
 const command_s lpc43xx_cmd_list[] = {
 	{"reset", lpc43xx_cmd_reset, "Reset target"},
@@ -394,7 +393,7 @@ static void lpc43x0_spi_read_sfdp(target_s *const t, const uint32_t address, voi
 	lpc43x0_spi_read(t, SPI_FLASH_CMD_READ_SFDP, address, buffer, length);
 }
 
-static void lpc43x0_add_spi_flash(target_s *const t, const size_t length, const uint32_t read_command)
+static void lpc43x0_add_spi_flash(target_s *const t, const size_t length)
 {
 	lpc43xx_spi_flash_s *const flash = calloc(1, sizeof(*flash));
 	if (!flash) {
@@ -420,8 +419,6 @@ static void lpc43x0_add_spi_flash(target_s *const t, const size_t length, const 
 	flash_high->blocksize = spi_parameters.sector_size;
 	flash_high->write = lpc43x0_spi_flash_write;
 	flash_high->erase = lpc43x0_spi_flash_erase;
-	flash_high->prepare = lpc43x0_spi_flash_prepare;
-	flash_high->done = lpc43x0_spi_flash_done;
 	flash_high->erased = 0xffU;
 	target_add_flash(t, flash_high);
 
@@ -436,12 +433,9 @@ static void lpc43x0_add_spi_flash(target_s *const t, const size_t length, const 
 	flash_low->blocksize = spi_parameters.sector_size;
 	flash_low->write = lpc43x0_spi_flash_write;
 	flash_low->erase = lpc43x0_spi_flash_erase;
-	flash_low->prepare = lpc43x0_spi_flash_prepare;
-	flash_low->done = lpc43x0_spi_flash_done;
 	flash_low->erased = 0xffU;
 	target_add_flash(t, flash_low);
 
-	flash->read_command = read_command;
 	flash->page_size = spi_parameters.page_size;
 	flash->sector_erase_opcode = spi_parameters.sector_erase_opcode;
 }
@@ -509,6 +503,7 @@ bool lpc43xx_probe(target_s *const t)
 		t->target_storage = priv;
 
 		t->mass_erase = lpc43xx_iap_mass_erase;
+		t->enter_flash_mode = lpc43xx_enter_flash_mode;
 		lpc43xx_detect(t, part_id);
 	} else if (chip_code == 5U || chip_code == 6U) {
 		const lpc43xx_partid_s part_id = lpc43x0_spi_read_partid(t);
@@ -517,11 +512,12 @@ bool lpc43xx_probe(target_s *const t)
 			return false;
 
 		t->mass_erase = lpc43x0_spi_mass_erase;
+		t->enter_flash_mode = lpc43x0_enter_flash_mode;
+		t->exit_flash_mode = lpc43x0_exit_flash_mode;
 		lpc43x0_detect(t, part_id);
 	} else
 		return false;
 
-	t->enter_flash_mode = lpc43xx_enter_flash_mode;
 	return true;
 }
 
@@ -576,9 +572,11 @@ static void lpc43x0_determine_flash_interface(target_s *const t)
 	priv->boot_address = target_mem_read32(t, LPC43xx_CREG_M4MEMMAP);
 	if (priv->boot_address != LPC43xx_LOCAL_SRAM1_BASE) {
 		const uint32_t clk_pin_mode = target_mem_read32(t, LPC43xx_SCU_BANK3_PIN3) & LPC43xx_SCU_PIN_MODE_MASK;
-		if (clk_pin_mode == LPC43xx_SCU_PIN_MODE_SPIFI)
+		if (clk_pin_mode == LPC43xx_SCU_PIN_MODE_SPIFI) {
+			priv->spifi_memory_command = target_mem_read32(t, LPC43x0_SPIFI_MCMD);
 			priv->interface = FLASH_SPIFI;
-		else if ((target_mem_read32(t, LPC43xx_SCU_CLK0) & LPC43xx_SCU_PIN_MODE_MASK) == LPC43xx_SCU_PIN_MODE_EMC_CLK) {
+		} else if ((target_mem_read32(t, LPC43xx_SCU_CLK0) & LPC43xx_SCU_PIN_MODE_MASK) ==
+			LPC43xx_SCU_PIN_MODE_EMC_CLK) {
 			const uint32_t emc_config =
 				target_mem_read32(t, LPC43xx_EMC_DYN_CONFIG0) & LPC43xx_EMC_DYN_CONFIG_MAPPING_MASK;
 			if (emc_config == LPC43xx_EMC_DYN_CONFIG_MAPPING_8)
@@ -606,6 +604,7 @@ static void lpc43x0_determine_flash_interface(target_s *const t)
 
 	switch (boot_src) {
 	case 2:
+		priv->spifi_memory_command = target_mem_read32(t, LPC43x0_SPIFI_MCMD);
 		priv->interface = FLASH_SPIFI;
 		break;
 	case 3:
@@ -624,6 +623,15 @@ static void lpc43x0_determine_flash_interface(target_s *const t)
 		priv->interface = FLASH_NONE;
 		break;
 	}
+
+	/*
+	 * Having determined the mode we should be in, grab and save all the configuration registers
+	 * involved for all possible modes we are currently in.
+	 *
+	 * XXX: Do we really have to do this? Is it ok to just force the configuration and ignore how
+	 * the firmware being debugged configured things? Probably not a good idea, but the question
+	 * needs consideration and an answer.
+	 */
 }
 
 static bool lpc43x0_attach(target_s *const t)
@@ -670,8 +678,7 @@ static bool lpc43x0_attach(target_s *const t)
 		lpc43x0_determine_flash_interface(t);
 	}
 
-	const uint32_t read_command = target_mem_read32(t, LPC43x0_SPIFI_MCMD);
-	lpc43x0_spi_abort(t);
+	lpc43x0_enter_flash_mode(t);
 	spi_flash_id_s flash_id;
 	lpc43x0_spi_read(t, SPI_FLASH_CMD_READ_JEDEC_ID, 0, &flash_id, sizeof(flash_id));
 
@@ -680,12 +687,11 @@ static bool lpc43x0_attach(target_s *const t)
 		const uint32_t capacity = 1U << flash_id.capacity;
 		DEBUG_INFO("SPI Flash: mfr = %02x, type = %02x, capacity = %08" PRIx32 "\n", flash_id.manufacturer,
 			flash_id.type, capacity);
-		lpc43x0_add_spi_flash(t, capacity, read_command);
+		lpc43x0_add_spi_flash(t, capacity);
 	} else
 		DEBUG_INFO("Flash identification failed\n");
-	/* Restore the read command as using the other command register clobbers this. */
-	target_mem_write32(t, LPC43x0_SPIFI_MCMD, read_command);
-	return true;
+
+	return lpc43x0_exit_flash_mode(t);
 }
 
 static void lpc43x0_detach(target_s *const t)
@@ -695,6 +701,28 @@ static void lpc43x0_detach(target_s *const t)
 	priv->flash = NULL;
 	t->flash = NULL;
 	cortexm_detach(t);
+}
+
+static bool lpc43x0_enter_flash_mode(target_s *const t)
+{
+	lpc43x0_priv_s *priv = (lpc43x0_priv_s *)t->target_storage;
+	lpc43x0_spi_abort(t);
+	return true;
+}
+
+static bool lpc43x0_exit_flash_mode(target_s *const t)
+{
+	lpc43x0_priv_s *priv = (lpc43x0_priv_s *)t->target_storage;
+
+	/* First restore any disturbed configuration */
+	switch (priv->interface) {
+	case FLASH_SPIFI:
+		target_mem_write32(t, LPC43x0_SPIFI_MCMD, priv->spifi_memory_command);
+		break;
+	default:
+		break;
+	}
+	return true;
 }
 
 /*
@@ -832,10 +860,10 @@ static bool lpc43x0_spi_mass_erase(target_s *const t)
 {
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500);
-	lpc43x0_spi_abort(t);
+	lpc43x0_enter_flash_mode(t);
 	lpc43x0_spi_run_command(t, SPI_FLASH_CMD_WRITE_ENABLE);
 	if (!(lpc43x0_spi_read_status(t) & SPI_FLASH_STATUS_WRITE_ENABLED)) {
-		lpc43x0_spi_flash_done(t->flash);
+		lpc43x0_exit_flash_mode(t);
 		return false;
 	}
 
@@ -843,13 +871,7 @@ static bool lpc43x0_spi_mass_erase(target_s *const t)
 	while (lpc43x0_spi_read_status(t) & SPI_FLASH_STATUS_BUSY)
 		target_print_progress(&timeout);
 
-	return lpc43x0_spi_flash_done(t->flash);
-}
-
-static bool lpc43x0_spi_flash_prepare(target_flash_s *f)
-{
-	lpc43x0_spi_abort(f->t);
-	return true;
+	return lpc43x0_exit_flash_mode(t);
 }
 
 static bool lpc43x0_spi_flash_erase(target_flash_s *f, target_addr_t addr, size_t length)
@@ -886,14 +908,6 @@ static bool lpc43x0_spi_flash_write(target_flash_s *f, target_addr_t dest, const
 		while (lpc43x0_spi_read_status(t) & SPI_FLASH_STATUS_BUSY)
 			continue;
 	}
-	return true;
-}
-
-static bool lpc43x0_spi_flash_done(target_flash_s *f)
-{
-	target_s *const t = f->t;
-	const lpc43xx_spi_flash_s *const flash = (lpc43xx_spi_flash_s *)t->flash;
-	target_mem_write32(t, LPC43x0_SPIFI_MCMD, flash->read_command);
 	return true;
 }
 
