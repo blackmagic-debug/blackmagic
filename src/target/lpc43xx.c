@@ -85,6 +85,7 @@
 #define LPC43x5_AHB_SRAM_SIZE    (48U * 1024U)
 #define LPC43xx_ETBAHB_SRAM_BASE 0x2000c000U
 #define LPC43xx_ETBAHB_SRAM_SIZE (16U * 1024U)
+#define LPC43xx_BOOT_ROM_BASE    0x10400000U
 
 #define LPC43xx_SCU_BASE       0x40086000U
 #define LPC43xx_SCU_BANK1_PIN1 (LPC43xx_SCU_BASE + 0x084U)
@@ -583,8 +584,8 @@ static void lpc43x0_determine_flash_interface(target_s *const t)
 	 * If the device is not operating out of SRAM1 (meaning the boot ROM booted to a XIP mode)
 	 * then we can analyse the active configuration and take it at face value - that will work.
 	 */
-	priv->boot_address = target_mem_read32(t, LPC43xx_CREG_M4MEMMAP);
-	if (priv->boot_address != LPC43xx_LOCAL_SRAM1_BASE) {
+	const uint32_t boot_address = target_mem_read32(t, LPC43xx_CREG_M4MEMMAP);
+	if (boot_address != LPC43xx_LOCAL_SRAM1_BASE && boot_address != LPC43xx_BOOT_ROM_BASE) {
 		const uint32_t clk_pin_mode = target_mem_read32(t, LPC43xx_SCU_BANK3_PIN3) & LPC43xx_SCU_PIN_MODE_MASK;
 		if (clk_pin_mode == LPC43xx_SCU_PIN_MODE_SPIFI) {
 			priv->spifi_memory_command = target_mem_read32(t, LPC43x0_SPIFI_MCMD);
@@ -726,7 +727,8 @@ static void lpc43x0_detach(target_s *const t)
 static bool lpc43x0_enter_flash_mode(target_s *const t)
 {
 	lpc43x0_priv_s *priv = (lpc43x0_priv_s *)t->target_storage;
-	if (priv->boot_address != LPC43xx_LOCAL_SRAM1_BASE) {
+	priv->boot_address = target_mem_read32(t, LPC43xx_CREG_M4MEMMAP);
+	if (priv->boot_address != LPC43xx_LOCAL_SRAM1_BASE && priv->boot_address != LPC43xx_BOOT_ROM_BASE) {
 		lpc43x0_spi_abort(t);
 		return true;
 	}
