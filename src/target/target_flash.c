@@ -123,6 +123,9 @@ bool target_flash_erase(target_s *t, target_addr_t addr, size_t len)
 		return false;
 
 	target_flash_s *active_flash = target_flash_for_addr(t, addr);
+	if (!active_flash)
+		return false;
+
 	bool ret = true; /* Catch false returns with &= */
 	while (len) {
 		target_flash_s *f = target_flash_for_addr(t, addr);
