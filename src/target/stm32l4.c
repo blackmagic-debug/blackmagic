@@ -168,6 +168,7 @@ typedef enum stm32l4_device_id {
 	 */
 	ID_STM32WLXX = 0x4970U, /* from RM0461, Rev.5 §36.4.5, and RM0453, Rev.3 §38.4.5 */
 	ID_STM32WBXX = 0x4950U, /* from RM0434, Rev.10 §41.4.8 */
+	ID_STM32WB1X = 0x4940U, /* from RM0473, Rev.7 §33.4.8 and RM0478 Rev.5 §31.4.8 */
 } stm32l4_device_id_e;
 
 typedef enum stm32l4_family {
@@ -362,6 +363,15 @@ static stm32l4_device_info_s const stm32l4_device_info[] = {
 		.flash_regs_map = stm32wb_flash_regs_map,
 	},
 	{
+		.device_id = ID_STM32WB1X,
+		.family = STM32L4_FAMILY_WBxx,
+		.designator = "STM32WB1x",
+		.sram1 = 12U,
+		.sram2 = 36U,
+		.flags = 2U,
+		.flash_regs_map = stm32wb_flash_regs_map,
+	},
+	{
 		/* Sentinel entry */
 		.device_id = 0,
 	},
@@ -525,6 +535,7 @@ bool stm32l4_probe(target_s *const t)
 	switch (device_id) {
 	case ID_STM32WLXX:
 	case ID_STM32WBXX:
+	case ID_STM32WB1X:
 		if ((stm32l4_flash_read32(t, FLASH_OPTR)) & FLASH_OPTR_ESE) {
 			DEBUG_WARN("STM32W security enabled\n");
 			t->driver = device_id == ID_STM32WLXX ? "STM32WLxx (secure)" : "STM32WBxx (secure)";
@@ -582,9 +593,12 @@ static bool stm32l4_attach(target_s *const t)
 	const uint32_t options = stm32l4_flash_read32(t, FLASH_OPTR);
 
 	/* Now we have a base RAM map, rebuild the Flash map */
-	if (device->family == STM32L4_FAMILY_WBxx)
-		stm32l4_add_flash(t, STM32L4_FLASH_BANK_1_BASE, flash_len * 1024U, 0x1000, UINT32_MAX);
-	else if (device->family == STM32L4_FAMILY_L4Rx) {
+	if (device->family == STM32L4_FAMILY_WBxx) {
+		if (device->device_id == ID_STM32WB1X)
+			stm32l4_add_flash(t, STM32L4_FLASH_BANK_1_BASE, flash_len * 1024U, 0x0800, UINT32_MAX);
+		else
+			stm32l4_add_flash(t, STM32L4_FLASH_BANK_1_BASE, flash_len * 1024U, 0x1000, UINT32_MAX);
+	} else if (device->family == STM32L4_FAMILY_L4Rx) {
 		/* RM0432 Rev. 2 does not mention 1MiB devices or explain DB1M.*/
 		if (options & OR_DBANK) {
 			stm32l4_add_flash(t, STM32L4_FLASH_BANK_1_BASE, 0x00100000, 0x1000, 0x08100000);
@@ -851,7 +865,7 @@ static bool stm32l4_cmd_option(target_s *t, int argc, const char **argv)
 		tc_printf(t, "STM32L5 options not implemented!\n");
 		return false;
 	}
-	if (t->part_id == ID_STM32WBXX) {
+	if (t->part_id == ID_STM32WBXX || t->part_id == ID_STM32WB1X) {
 		tc_printf(t, "STM32WBxx options not implemented!\n");
 		return false;
 	}
