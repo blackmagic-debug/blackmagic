@@ -638,21 +638,6 @@ static void lpc43x0_determine_flash_interface(target_s *const t)
 		priv->interface = FLASH_NONE;
 		break;
 	}
-
-	/*
-	 * Having determined the mode we should be in, grab and save all the configuration registers
-	 * involved for all possible modes we are currently in.
-	 *
-	 * XXX: Do we really have to do this? Is it ok to just force the configuration and ignore how
-	 * the firmware being debugged configured things? Probably not a good idea, but the question
-	 * needs consideration and an answer.
-	 */
-	priv->bank3_pin3_config = target_mem_read32(t, LPC43xx_SCU_BANK3_PIN3);
-	priv->bank3_pin4_config = target_mem_read32(t, LPC43xx_SCU_BANK3_PIN4);
-	priv->bank3_pin5_config = target_mem_read32(t, LPC43xx_SCU_BANK3_PIN5);
-	priv->bank3_pin6_config = target_mem_read32(t, LPC43xx_SCU_BANK3_PIN6);
-	priv->bank3_pin7_config = target_mem_read32(t, LPC43xx_SCU_BANK3_PIN7);
-	priv->bank3_pin8_config = target_mem_read32(t, LPC43xx_SCU_BANK3_PIN8);
 }
 
 static bool lpc43x0_attach(target_s *const t)
@@ -732,6 +717,13 @@ static bool lpc43x0_enter_flash_mode(target_s *const t)
 		lpc43x0_spi_abort(t);
 		return true;
 	}
+
+	priv->bank3_pin3_config = target_mem_read32(t, LPC43xx_SCU_BANK3_PIN3);
+	priv->bank3_pin4_config = target_mem_read32(t, LPC43xx_SCU_BANK3_PIN4);
+	priv->bank3_pin5_config = target_mem_read32(t, LPC43xx_SCU_BANK3_PIN5);
+	priv->bank3_pin6_config = target_mem_read32(t, LPC43xx_SCU_BANK3_PIN6);
+	priv->bank3_pin7_config = target_mem_read32(t, LPC43xx_SCU_BANK3_PIN7);
+	priv->bank3_pin8_config = target_mem_read32(t, LPC43xx_SCU_BANK3_PIN8);
 
 	switch (priv->interface) {
 	case FLASH_SPIFI:
