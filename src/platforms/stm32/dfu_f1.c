@@ -116,7 +116,7 @@ void dfu_jump_app_if_valid(void)
 		__asm__(
 			"msr msp, %1\n"     /* Load the system stack register with the new stack pointer */
 			"ldr pc, [%0, 4]\n" /* Jump to application */
-			: : "g"(app_address), "g"(stack_pointer) : "r0"
+			: : "l"(app_address), "l"(stack_pointer) : "r0"
 		);
 		/* clang-format on */
 
