@@ -3,16 +3,21 @@ PLATFORM_DIR = platforms/$(PROBE_HOST)
 VPATH += $(PLATFORM_DIR) target
 ENABLE_DEBUG ?=
 
+SYS = $(shell $(CC) -dumpmachine)
+
 ifneq ($(V), 1)
 MAKEFLAGS += --no-print-dir
 Q := @
 endif
 
-CFLAGS += -Wall -Wextra -Werror -Wmaybe-uninitialized \
-	-Wreturn-type -Wstringop-overflow -Wunsafe-loop-optimizations \
+CFLAGS += -Wall -Wextra -Werror -Wreturn-type \
 	-Wno-char-subscripts \
 	-std=c11 -g3 -MD -I./target \
 	-I. -Iinclude -I$(PLATFORM_DIR)
+
+ifeq (filter, macosx darwin, $(SYS))
+CFLAGS += -Wmaybe-uninitialized -Wstringop-overflow -Wunsafe-loop-optimizations 
+endif
 
 ifeq ($(ENABLE_DEBUG), 1)
 CFLAGS += -DENABLE_DEBUG
