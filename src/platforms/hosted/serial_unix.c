@@ -72,7 +72,7 @@ static int set_interface_attribs(void)
 }
 
 #ifdef __APPLE__
-int serial_open(const bmda_cli_options_s *cl_opts, char *serial)
+int serial_open(const bmda_cli_options_s *cl_opts, const char *serial)
 {
 	char name[4096];
 	if (!cl_opts->opt_device) {
