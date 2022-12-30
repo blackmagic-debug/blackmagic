@@ -62,11 +62,11 @@ static target_controller_s cl_controller = {
 typedef struct mmap_data {
 	void *data;
 	size_t size;
-	size_t real_size;
 #if defined(_WIN32) || defined(__CYGWIN__)
 	HANDLE hFile;
 	HANDLE hMapFile;
 #else
+	size_t real_size;
 	int fd;
 #endif
 } mmap_data_s;
@@ -122,7 +122,7 @@ static void bmp_munmap(mmap_data_s *map)
 	CloseHandle(map->hMapFile);
 	CloseHandle(map->hFile);
 #else
-	/* Use the untainted 'real_size' not 'size' here otherwise we don't unmap the entire file */
+	/* Use the untainted 'real_size' here, 'size' may have been bounded to the flash size and we want to unmap the whole file */
 	munmap(map->data, map->real_size);
 #endif
 }
