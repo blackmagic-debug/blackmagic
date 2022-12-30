@@ -109,6 +109,7 @@ static bool bmp_mmap(char *file, mmap_data_s *map)
 	if (fstat(map->fd, &stat))
 		return false;
 	map->real_size = stat.st_size;
+	map->size = stat.st_size;
 	map->data = mmap(NULL, map->real_size, PROT_READ, MAP_PRIVATE, map->fd, 0);
 #endif
 	return true;
