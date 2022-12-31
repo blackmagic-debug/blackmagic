@@ -42,6 +42,23 @@
 #define IDCODE_XMEGA192A3U 0x9744U
 #define IDCODE_XMEGA256A3U 0x9842U
 
+#define ATXMEGA_NVM_BASE   0x010001c0U
+#define ATXMEGA_NVM_DATA   (ATXMEGA_NVM_BASE + 0x4U)
+#define ATXMEGA_NVM_CMD    (ATXMEGA_NVM_BASE + 0xaU)
+#define ATXMEGA_NVM_STATUS (ATXMEGA_NVM_BASE + 0xfU)
+
+#define ATXMEGA_NVM_CMD_NOP                0x00U
+#define ATXMEGA_NVM_CMD_ERASE_FLASH_BUFFER 0x26U
+#define ATXMEGA_NVM_CMD_WRITE_FLASH_BUFFER 0x23U
+#define ATXMEGA_NVM_CMD_ERASE_FLASH_PAGE   0x2bU
+#define ATXMEGA_NVM_CMD_WRITE_FLASH_PAGE   0x2eU
+#define ATXMEGA_NVM_CMD_READ_NVM           0x43U
+
+#define ATXMEGA_NVM_STATUS_BUSY  0x80U
+#define ATXMEGA_NVM_STATUS_FBUSY 0x40U
+
+static bool atxmega_ensure_nvm_idle(const avr_pdi_s *pdi);
+
 void avr_add_flash(target_s *const target, const uint32_t start, const size_t length, const uint16_t block_size)
 {
 	target_flash_s *flash = calloc(1, sizeof(*flash));
@@ -138,5 +155,14 @@ bool atxmega_probe(target_s *const target)
 	avr_add_flash(target, flash_base_address, application_table_flash, flash_block_size);
 	flash_base_address += application_table_flash;
 	avr_add_flash(target, flash_base_address, bootloader_flash, flash_block_size);
+
+	avr_pdi_s *const pdi = avr_pdi_struct(target);
+	pdi->ensure_nvm_idle = atxmega_ensure_nvm_idle;
 	return true;
+}
+
+static bool atxmega_ensure_nvm_idle(const avr_pdi_s *const pdi)
+{
+	return avr_pdi_write(pdi, PDI_DATA_8, ATXMEGA_NVM_CMD, ATXMEGA_NVM_CMD_NOP) &&
+		avr_pdi_write(pdi, PDI_DATA_8, ATXMEGA_NVM_DATA, 0xffU);
 }
