@@ -1,8 +1,6 @@
-# Firmware BMP for STM32F401/stm32f411 MiniF4 aka BlackPillV2 boards
+# Firmware BMP for STM32F401/STM32F411 MiniF4 aka BlackPill v2 boards
 
-Allows the use of BlackPillV2 as a Black Magic Probe
-
-https://github.com/WeActTC/MiniSTM32F4x1
+Allows the use of [BlackPill v2](https://github.com/WeActStudio/WeActStudio.MiniSTM32F4x1) as a Black Magic Probe
 
 ## Connections
 
@@ -31,12 +29,14 @@ make PROBE_HOST=blackpillv2
 
 ## How to Flash with dfu
 
-* After build:
-  * 1) `apt install dfu-util`
-  * 2) Force the F4 into system bootloader mode by keeping BOOT0 button pressed while pressing and releasing NRST button. System bootloader should appear.
-  * 3) `dfu-util -a 0 --dfuse-address 0x08000000 -D blackmagic.bin`
+After building the firmware as above:
 
-To exit from dfu mode just press and release NRST. The newly Flashed BMP firmware should boot and enumerate.
+* 1) `apt install dfu-util`
+* 2) Force the F4 into system bootloader mode by keeping BOOT0 button pressed while pressing and releasing nRST
+      button. The board should re-enumerate as the bootloader.
+* 3) `dfu-util -a 0 --dfuse-address 0x08000000 -D blackmagic.bin`
+
+To exit from dfu mode just press and release nRST. The newly Flashed BMP firmware should boot and enumerate.
 
 ## 10 pin male from pins
 
