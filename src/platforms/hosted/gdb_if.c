@@ -47,6 +47,7 @@
 
 #include "gdb_if.h"
 #include "bmp_hosted.h"
+#include "command.h"
 
 static const uint16_t default_port = 2000U;
 static const uint16_t max_port = default_port + 4U;
@@ -66,6 +67,7 @@ static inline int closesocket(const int s)
 
 static int gdb_if_serv = -1;
 static int gdb_if_conn = -1;
+bool shutdown_bmda = false;
 
 #define GDB_BUFFER_LEN 2048U
 static size_t gdb_buffer_used = 0U;

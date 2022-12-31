@@ -75,6 +75,9 @@ static bool cmd_rtt(target_s *t, int argc, const char **argv);
 #if defined(PLATFORM_HAS_DEBUG) && (PC_HOSTED == 0)
 static bool cmd_debug_bmp(target_s *t, int argc, const char **argv);
 #endif
+#if PC_HOSTED == 1
+static bool cmd_shutdown_bmda(target_s *t, int argc, const char **argv);
+#endif
 
 const command_s cmd_list[] = {
 	{"version", cmd_version, "Display firmware version info"},
@@ -106,6 +109,9 @@ const command_s cmd_list[] = {
 	{"heapinfo", cmd_heapinfo, "Set semihosting heapinfo"},
 #if defined(PLATFORM_HAS_DEBUG) && (PC_HOSTED == 0)
 	{"debug_bmp", cmd_debug_bmp, "Output BMP \"debug\" strings to the second vcom: (enable|disable)"},
+#endif
+#if PC_HOSTED == 1
+	{"shutdown_bmda", cmd_shutdown_bmda, "Tell the BMDA server to shut down when the GDB connection closes"},
 #endif
 	{NULL, NULL, NULL},
 };
@@ -643,6 +649,17 @@ static bool cmd_debug_bmp(target_s *t, int argc, const char **argv)
 	}
 
 	gdb_outf("Debug mode is %s\n", debug_bmp ? "enabled" : "disabled");
+	return true;
+}
+#endif
+
+#if PC_HOSTED == 1
+static bool cmd_shutdown_bmda(target_s *t, int argc, const char **argv)
+{
+	(void)t;
+	(void)argc;
+	(void)argv;
+	shutdown_bmda = true;
 	return true;
 }
 #endif

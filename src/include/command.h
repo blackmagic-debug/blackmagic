@@ -35,4 +35,8 @@ int command_process(target_s *t, char *cmd);
  */
 bool parse_enable_or_disable(const char *s, bool *out);
 
+#if PC_HOSTED == 1
+extern bool shutdown_bmda;
+#endif
+
 #endif /* INCLUDE_COMMAND_H */
