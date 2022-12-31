@@ -31,6 +31,51 @@
 
 #include <stdarg.h>
 
+void consume_remote_packet(char *const packet, const size_t size)
+{
+#if PC_HOSTED == 0
+	/* We got what looks like probably a remote control packet */
+	size_t offset = 0;
+	bool getting_remote_packet = true;
+	while (getting_remote_packet) {
+		/* Consume bytes until we either have a complete remote control packet or have to leave this mode */
+		const char c = gdb_if_getchar();
+		switch (c) {
+		case REMOTE_SOM: /* Oh dear, packet restarts */
+			offset = 0;
+			break;
+
+		case REMOTE_EOM: /* Complete packet for processing */
+			packet[offset] = 0;
+			remote_packet_process(offset, packet);
+			getting_remote_packet = false;
+			break;
+
+		case '$': /* A 'real' gdb packet, best stop squatting now */
+			packet[0] = '$';
+			getting_remote_packet = false;
+			break;
+
+		default:
+			if (offset < size)
+				packet[offset++] = c;
+			else
+				/* Who knows what is going on...return to normality */
+				getting_remote_packet = false;
+			break;
+		}
+	}
+#endif
+	(void)size;
+	/*
+	 * Reset the packet buffer start character to zero, because function
+	 * 'remote_packet_process()' above overwrites this buffer, and
+	 * an arbitrary character may have been placed there. If this is a '$'
+	 * character, this will cause this loop to be terminated, which is wrong.
+	 */
+	packet[0] = '\0';
+}
+
 size_t gdb_getpacket(char *const packet, const size_t size)
 {
 	unsigned char csum;
@@ -38,62 +83,22 @@ size_t gdb_getpacket(char *const packet, const size_t size)
 	size_t offset = 0;
 
 	while (true) {
+		char start_char = '\0';
 		/* Wait for packet start */
-		do {
-			/*
-			 * Spin waiting for a start of packet character - either a gdb
-             * start ('$') or a BMP remote packet start ('!').
-			 */
-			do {
-				/* Smells like bad code */
-				packet[0] = gdb_if_getchar();
-				if (packet[0] == '\x04')
-					return 1;
-			} while (packet[0] != '$' && packet[0] != REMOTE_SOM);
-#if PC_HOSTED == 0
-			if (packet[0] == REMOTE_SOM) {
-				/* This is probably a remote control packet - get and handle it */
-				offset = 0;
-				bool getting_remote_packet = true;
-				while (getting_remote_packet) {
-					/* Smells like bad code */
-					const char c = gdb_if_getchar();
-					switch (c) {
-					case REMOTE_SOM: /* Oh dear, packet restarts */
-						offset = 0;
-						break;
+		while (start_char != '$' && start_char != REMOTE_SOM) {
+			start_char = gdb_if_getchar();
+			if (start_char == '\x04')
+				return 1;
+		}
+		packet[0] = start_char;
 
-					case REMOTE_EOM: /* Complete packet for processing */
-						packet[offset] = 0;
-						remote_packet_process(offset, packet);
-						getting_remote_packet = false;
-						break;
+		/* If the packet appears to start a remote control message, consume it */
+		if (start_char == REMOTE_SOM) {
+			consume_remote_packet(packet, size);
+			continue;
+		}
 
-					case '$': /* A 'real' gdb packet, best stop squatting now */
-						packet[0] = '$';
-						getting_remote_packet = false;
-						break;
-
-					default:
-						if (offset < size)
-							packet[offset++] = c;
-						else
-							/* Who knows what is going on...return to normality */
-							getting_remote_packet = false;
-						break;
-					}
-				}
-				/*
-				 * Reset the packet buffer start character to zero, because function
-				 * 'remote_packet_process()' above overwrites this buffer, and
-				 * an arbitrary character may have been placed there. If this is a '$'
-				 * character, this will cause this loop to be terminated, which is wrong.
-				 */
-				packet[0] = '\0';
-			}
-#endif
-		} while (packet[0] != '$');
-
+		/* Handle a normal GDB packet */
 		offset = 0;
 		csum = 0;
 		char c = '\0';
