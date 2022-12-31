@@ -49,6 +49,7 @@
 
 #define PDI_LDCS 0x80U
 #define PDI_STCS 0xc0U
+#define PDI_KEY  0xe0U
 
 #define PDI_REG_STATUS 0U
 #define PDI_REG_RESET  1U
@@ -57,6 +58,14 @@
 #define PDI_REG_R4     4U
 
 #define PDI_RESET 0x59U
+
+typedef enum pdi_key {
+	PDI_NVM = 0x02U,
+	PDI_DEBUG = 0x04U,
+} pdi_key_e;
+
+static const uint8_t pdi_key_nvm[] = {0xff, 0x88, 0xd8, 0xcd, 0x45, 0xab, 0x89, 0x12};
+static const uint8_t pdi_key_debug[] = {0x21, 0x81, 0x7c, 0x9f, 0xd4, 0x2d, 0x21, 0x3a};
 
 static bool avr_pdi_init(avr_pdi_s *pdi);
 static void avr_reset(target_s *target);
@@ -166,6 +175,24 @@ uint8_t avr_pdi_reg_read(const avr_pdi_s *const pdi, const uint8_t reg)
 		!avr_jtag_shift_dr(pdi->dev_index, &result, 0))
 		return 0xffU; // TODO - figure out a better way to indicate failure.
 	return result;
+}
+
+static bool avr_enable(const avr_pdi_s *const pdi, const pdi_key_e what)
+{
+	const uint8_t *const key = what == PDI_DEBUG ? pdi_key_debug : pdi_key_nvm;
+	uint8_t result = 0;
+	if (avr_jtag_shift_dr(pdi->dev_index, &result, PDI_KEY) || result != PDI_EMPTY)
+		return false;
+	for (uint8_t i = 0; i < 8; ++i) {
+		if (avr_jtag_shift_dr(pdi->dev_index, &result, key[i]) || result != PDI_EMPTY)
+			return false;
+	}
+	return (avr_pdi_reg_read(pdi, PDI_REG_STATUS) & what) == what;
+}
+
+static bool avr_disable(const avr_pdi_s *const pdi, const pdi_key_e what)
+{
+	return avr_pdi_reg_write(pdi, PDI_REG_STATUS, ~what);
 }
 
 static void avr_reset(target_s *const target)
