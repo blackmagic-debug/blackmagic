@@ -306,6 +306,10 @@ int gdb_main_loop(target_controller_s *tc, bool in_syscall)
 
 		case '\x04':
 		case 'D': /* GDB 'detach' command. */
+#if PC_HOSTED == 1
+			if (shutdown_bmda)
+				return 0;
+#endif
 			if (cur_target) {
 				SET_RUN_STATE(true);
 				target_detach(cur_target);

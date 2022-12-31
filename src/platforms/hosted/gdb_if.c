@@ -248,6 +248,8 @@ int gdb_if_init(void)
 char gdb_if_getchar(void)
 {
 	if (gdb_if_conn == -1) {
+		if (shutdown_bmda)
+			return '\x04';
 		const int flags = socket_get_flags(gdb_if_serv);
 		socket_set_flags(gdb_if_serv, flags | O_NONBLOCK);
 		gdb_if_conn = -1;
