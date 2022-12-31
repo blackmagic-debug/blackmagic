@@ -19,7 +19,7 @@ makes [SWO viewing as simple as connecting to a serial port](https://black-magic
 ## Resources
 
 * [Official website](https://black-magic.org/index.html)
-* [Binary builds](http://builds.blacksphere.co.nz/blackmagic)
+* [Binary builds](https://github.com/blackmagic-debug/blackmagic/releases)
 
 ## Toolchain specific remarks
 
