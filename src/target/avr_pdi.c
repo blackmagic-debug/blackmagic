@@ -35,6 +35,10 @@
 #include "jtag_scan.h"
 #include "avr_pdi.h"
 
+#define PDI_BREAK 0xbbU
+#define PDI_DELAY 0xdbU
+#define PDI_EMPTY 0xebU
+
 void avr_jtag_pdi_handler(const uint8_t dev_index)
 {
 	avr_pdi_s *pdi = calloc(1, sizeof(*pdi));
@@ -45,4 +49,39 @@ void avr_jtag_pdi_handler(const uint8_t dev_index)
 
 	pdi->dev_index = dev_index;
 	pdi->idcode = jtag_devs[dev_index].jd_idcode;
+}
+
+/*
+ * This is a PDI-specific DR manipulation function that handles PDI_DELAY responses
+ * transparently to the caller. It also does parity validation, returning true for
+ * valid parity.
+ */
+static bool avr_jtag_shift_dr(uint8_t dev_index, uint8_t *data_out, const uint8_t data_in)
+{
+	jtag_dev_s *dev = &jtag_devs[dev_index];
+	uint8_t result = 0;
+	uint16_t request = 0;
+	uint16_t response = 0;
+	uint8_t *data;
+	if (!data_out)
+		return false;
+	do {
+		data = (uint8_t *)&request;
+		jtagtap_shift_dr();
+		jtag_proc.jtagtap_tdi_seq(false, ones, dev->dr_prescan);
+		data[0] = data_in;
+		/* Calculate the parity bit */
+		for (uint8_t i = 0; i < 8; ++i)
+			data[1] ^= (data_in >> i) & 1U;
+		jtag_proc.jtagtap_tdi_tdo_seq((uint8_t *)&response, !dev->dr_postscan, (uint8_t *)&request, 9);
+		jtag_proc.jtagtap_tdi_seq(true, ones, dev->dr_postscan);
+		jtagtap_return_idle(0);
+		data = (uint8_t *)&response;
+	} while (data[0] == PDI_DELAY && data[1] == 1);
+	/* Calculate the parity bit */
+	for (uint8_t i = 0; i < 8; ++i)
+		result ^= (data[0] >> i) & 1U;
+	*data_out = data[0];
+	DEBUG_WARN("Sent 0x%02x to target, response was 0x%02x (0x%x)\n", data_in, data[0], data[1]);
+	return result == data[1];
 }
