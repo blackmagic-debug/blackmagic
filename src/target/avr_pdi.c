@@ -42,6 +42,9 @@
 #define PDI_DELAY 0xdbU
 #define PDI_EMPTY 0xebU
 
+#define PDI_LDCS 0x80U
+#define PDI_STCS 0xc0U
+
 void avr_jtag_pdi_handler(const uint8_t dev_index)
 {
 	avr_pdi_s *pdi = calloc(1, sizeof(*pdi));
@@ -97,4 +100,24 @@ static bool avr_jtag_shift_dr(uint8_t dev_index, uint8_t *data_out, const uint8_
 	*data_out = data[0];
 	DEBUG_WARN("Sent 0x%02x to target, response was 0x%02x (0x%x)\n", data_in, data[0], data[1]);
 	return result == data[1];
+}
+
+bool avr_pdi_reg_write(const avr_pdi_s *const pdi, const uint8_t reg, const uint8_t value)
+{
+	uint8_t result = 0;
+	const uint8_t command = PDI_STCS | reg;
+	if (reg >= 16 || avr_jtag_shift_dr(pdi->dev_index, &result, command) || result != PDI_EMPTY ||
+		avr_jtag_shift_dr(pdi->dev_index, &result, value))
+		return false;
+	return result == PDI_EMPTY;
+}
+
+uint8_t avr_pdi_reg_read(const avr_pdi_s *const pdi, const uint8_t reg)
+{
+	uint8_t result = 0;
+	const uint8_t command = PDI_LDCS | reg;
+	if (reg >= 16 || avr_jtag_shift_dr(pdi->dev_index, &result, command) || result != PDI_EMPTY ||
+		!avr_jtag_shift_dr(pdi->dev_index, &result, 0))
+		return 0xffU; // TODO - figure out a better way to indicate failure.
+	return result;
 }
