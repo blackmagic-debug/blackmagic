@@ -33,7 +33,10 @@
 
 #include "general.h"
 #include "jtag_scan.h"
+#include "jtagtap.h"
 #include "avr_pdi.h"
+
+#define IR_PDI 0x7U
 
 #define PDI_BREAK 0xbbU
 #define PDI_DELAY 0xdbU
@@ -49,6 +52,16 @@ void avr_jtag_pdi_handler(const uint8_t dev_index)
 
 	pdi->dev_index = dev_index;
 	pdi->idcode = jtag_devs[dev_index].jd_idcode;
+
+	/* Check for a valid part number in the JTAG ID code */
+	if ((pdi->idcode & 0x0ffff000U) == 0) {
+		DEBUG_WARN("Invalid PDI idcode %08" PRIx32 "\n", pdi->idcode);
+		free(pdi);
+		return;
+	}
+	DEBUG_INFO("AVR ID 0x%08" PRIx32 " (v%u)\n", pdi->idcode, (uint8_t)((pdi->idcode >> 28U) & 0xfU));
+	/* Transition the part into PDI mode */
+	jtag_dev_write_ir(pdi->dev_index, IR_PDI);
 }
 
 /*
