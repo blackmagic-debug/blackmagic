@@ -47,6 +47,7 @@
 #define PDI_DELAY 0xdbU
 #define PDI_EMPTY 0xebU
 
+#define PDI_LDS  0x00U
 #define PDI_STS  0x40U
 #define PDI_LDCS 0x80U
 #define PDI_STCS 0xc0U
@@ -210,6 +211,33 @@ static bool avr_pdi_write(const avr_pdi_s *const pdi, const uint8_t bytes, const
 		if (avr_jtag_shift_dr(pdi->dev_index, &result, data_bytes[i]) || result != PDI_EMPTY)
 			return false;
 	}
+	return true;
+}
+
+static bool avr_pdi_read(const avr_pdi_s *const pdi, const uint8_t bytes, const uint32_t reg, uint32_t *const value)
+{
+	uint8_t result = 0;
+	uint8_t command = PDI_LDS | PDI_ADDR_32 | bytes;
+	uint8_t data_bytes[4];
+	uint32_t data = 0xffffffffU;
+	if (avr_jtag_shift_dr(pdi->dev_index, &result, command) || result != PDI_EMPTY ||
+		avr_jtag_shift_dr(pdi->dev_index, &result, reg & 0xffU) || result != PDI_EMPTY ||
+		avr_jtag_shift_dr(pdi->dev_index, &result, (reg >> 8U) & 0xffU) || result != PDI_EMPTY ||
+		avr_jtag_shift_dr(pdi->dev_index, &result, (reg >> 16U) & 0xffU) || result != PDI_EMPTY ||
+		avr_jtag_shift_dr(pdi->dev_index, &result, (reg >> 24U) & 0xffU) || result != PDI_EMPTY)
+		return false;
+	for (uint8_t i = 0; i <= bytes; ++i) {
+		if (!avr_jtag_shift_dr(pdi->dev_index, &data_bytes[i], 0))
+			return false;
+	}
+	data = data_bytes[0];
+	if (bytes > PDI_DATA_8)
+		data |= (uint32_t)data_bytes[1] << 8U;
+	if (bytes > PDI_DATA_16)
+		data |= (uint32_t)data_bytes[2] << 16U;
+	if (bytes > PDI_DATA_24)
+		data |= (uint32_t)data_bytes[3] << 24U;
+	*value = data;
 	return true;
 }
 
