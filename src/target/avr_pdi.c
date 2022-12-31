@@ -32,11 +32,15 @@
  */
 
 #include "general.h"
+#include "target_probe.h"
+#include "target_internal.h"
 #include "jtag_scan.h"
 #include "jtagtap.h"
 #include "avr_pdi.h"
+#include "gdb_packet.h"
 
-#define IR_PDI 0x7U
+#define IR_PDI    0x7U
+#define IR_BYPASS 0xfU
 
 #define PDI_BREAK 0xbbU
 #define PDI_DELAY 0xdbU
@@ -44,6 +48,8 @@
 
 #define PDI_LDCS 0x80U
 #define PDI_STCS 0xc0U
+
+static bool avr_pdi_init(avr_pdi_s *pdi);
 
 void avr_jtag_pdi_handler(const uint8_t dev_index)
 {
@@ -55,16 +61,42 @@ void avr_jtag_pdi_handler(const uint8_t dev_index)
 
 	pdi->dev_index = dev_index;
 	pdi->idcode = jtag_devs[dev_index].jd_idcode;
+	if (!avr_pdi_init(pdi))
+		free(pdi);
+	jtag_dev_write_ir(dev_index, IR_BYPASS);
+}
 
+static bool avr_pdi_init(avr_pdi_s *const pdi)
+{
 	/* Check for a valid part number in the JTAG ID code */
 	if ((pdi->idcode & 0x0ffff000U) == 0) {
 		DEBUG_WARN("Invalid PDI idcode %08" PRIx32 "\n", pdi->idcode);
-		free(pdi);
-		return;
+		return false;
 	}
 	DEBUG_INFO("AVR ID 0x%08" PRIx32 " (v%u)\n", pdi->idcode, (uint8_t)((pdi->idcode >> 28U) & 0xfU));
 	/* Transition the part into PDI mode */
 	jtag_dev_write_ir(pdi->dev_index, IR_PDI);
+
+	target_s *target = target_new();
+	if (!target)
+		return false;
+
+	target->cpuid = pdi->idcode;
+	target->part_id = (pdi->idcode >> 12U) & 0xffffU;
+	target->driver = "Atmel AVR";
+	target->core = "AVR";
+	target->priv = pdi;
+	target->priv_free = free;
+
+	/* Try probing for various known AVR parts */
+	PROBE(atxmega_probe);
+
+#if PC_HOSTED == 0
+	gdb_outf("Please report unknown AVR device with Part ID 0x%x\n", target->part_id);
+#else
+	DEBUG_WARN("Please report unknown AVR device with Part ID 0x%x\n", target->part_id);
+#endif
+	return true;
 }
 
 /*
