@@ -599,6 +599,8 @@ void dap_jtagtap_tdi_tdo_seq(
 	const uint8_t *din = data_in;
 	uint8_t *dout = data_out;
 	if (!tms) {
+		if (!ticks)
+			return;
 		int last_byte = last_byte = (ticks - 1U) >> 3U;
 		int last_bit = (ticks - 1U) & 7U;
 		if (final_tms)
