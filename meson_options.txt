@@ -32,6 +32,7 @@ option(
 		'riscv64',
 		'avr',
 		'apollo3',
+		'atxmega',
 		'at32f4',
 		'ch32',
 		'ch579',
