@@ -38,6 +38,7 @@
 #include "jtagtap.h"
 #include "avr_pdi.h"
 #include "gdb_packet.h"
+#include "exception.h"
 
 #define IR_PDI    0x7U
 #define IR_BYPASS 0xfU
@@ -49,7 +50,14 @@
 #define PDI_LDCS 0x80U
 #define PDI_STCS 0xc0U
 
+#define PDI_REG_STATUS 0U
+#define PDI_REG_RESET  1U
+#define PDI_REG_CTRL   2U
+#define PDI_REG_R3     3U
+#define PDI_REG_R4     4U
+
 static bool avr_pdi_init(avr_pdi_s *pdi);
+static void avr_halt_request(target_s *target);
 
 void avr_jtag_pdi_handler(const uint8_t dev_index)
 {
@@ -87,6 +95,8 @@ static bool avr_pdi_init(avr_pdi_s *const pdi)
 	target->core = "AVR";
 	target->priv = pdi;
 	target->priv_free = free;
+
+	target->halt_request = avr_halt_request;
 
 	/* Try probing for various known AVR parts */
 	PROBE(atxmega_probe);
@@ -152,4 +162,22 @@ uint8_t avr_pdi_reg_read(const avr_pdi_s *const pdi, const uint8_t reg)
 		!avr_jtag_shift_dr(pdi->dev_index, &result, 0))
 		return 0xffU; // TODO - figure out a better way to indicate failure.
 	return result;
+}
+
+static void avr_halt_request(target_s *const target)
+{
+	avr_pdi_s *const pdi = target->priv;
+	/* To halt the processor we go through a few really specific steps:
+	 * Write r4 to 1 to indicate we want to put the processor into debug-based pause
+	 * Read r3 and check it's 0x10 which indicates the processor is held in reset and no debugging is active
+	 * Release reset
+	 * Read r3 twice more, the first time should respond 0x14 to indicate the processor is still reset
+	 * but that debug pause is requested, and the second should respond 0x04 to indicate the processor is now
+	 * in debug pause state (halted)
+	 */
+	if (!avr_pdi_reg_write(pdi, PDI_REG_R4, 1) || avr_pdi_reg_read(pdi, PDI_REG_R3) != 0x10U ||
+		!avr_pdi_reg_write(pdi, PDI_REG_RESET, 0) || avr_pdi_reg_read(pdi, PDI_REG_R3) != 0x14U ||
+		avr_pdi_reg_read(pdi, PDI_REG_R3) != 0x04U)
+		raise_exception(EXCEPTION_ERROR, "Error halting device, device in incorrect state");
+	pdi->halt_reason = TARGET_HALT_REQUEST;
 }

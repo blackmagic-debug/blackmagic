@@ -35,11 +35,13 @@
 #define TARGET_AVR_PDI_H
 
 #include <stdint.h>
+#include "target.h"
 
 typedef struct avr_pdi {
 	uint32_t idcode;
 
 	uint8_t dev_index;
+	target_halt_reason_e halt_reason;
 } avr_pdi_s;
 
 void avr_jtag_pdi_handler(uint8_t dev_index);
