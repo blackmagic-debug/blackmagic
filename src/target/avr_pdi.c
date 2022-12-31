@@ -53,11 +53,6 @@
 #define PDI_STCS 0xc0U
 #define PDI_KEY  0xe0U
 
-#define PDI_DATA_8  0x00U
-#define PDI_DATA_16 0x01U
-#define PDI_DATA_24 0x02U
-#define PDI_DATA_32 0x03U
-
 #define PDI_ADDR_8  0x00U
 #define PDI_ADDR_16 0x04U
 #define PDI_ADDR_24 0x08U
@@ -189,7 +184,7 @@ uint8_t avr_pdi_reg_read(const avr_pdi_s *const pdi, const uint8_t reg)
 	return result;
 }
 
-static bool avr_pdi_write(const avr_pdi_s *const pdi, const uint8_t bytes, const uint32_t reg, const uint32_t value)
+bool avr_pdi_write(const avr_pdi_s *const pdi, const uint8_t bytes, const uint32_t reg, const uint32_t value)
 {
 	uint8_t result = 0;
 	uint8_t command = PDI_STS | PDI_ADDR_32 | bytes;
@@ -214,7 +209,7 @@ static bool avr_pdi_write(const avr_pdi_s *const pdi, const uint8_t bytes, const
 	return true;
 }
 
-static bool avr_pdi_read(const avr_pdi_s *const pdi, const uint8_t bytes, const uint32_t reg, uint32_t *const value)
+bool avr_pdi_read(const avr_pdi_s *const pdi, const uint8_t bytes, const uint32_t reg, uint32_t *const value)
 {
 	uint8_t result = 0;
 	uint8_t command = PDI_LDS | PDI_ADDR_32 | bytes;

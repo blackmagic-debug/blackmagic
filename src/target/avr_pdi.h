@@ -44,6 +44,14 @@ typedef struct avr_pdi {
 	target_halt_reason_e halt_reason;
 } avr_pdi_s;
 
+#define PDI_DATA_8  0x00U
+#define PDI_DATA_16 0x01U
+#define PDI_DATA_24 0x02U
+#define PDI_DATA_32 0x03U
+
 void avr_jtag_pdi_handler(uint8_t dev_index);
+
+bool avr_pdi_write(const avr_pdi_s *pdi, uint8_t bytes, uint32_t reg, uint32_t value);
+bool avr_pdi_read(const avr_pdi_s *pdi, uint8_t bytes, uint32_t reg, uint32_t *value);
 
 #endif /*TARGET_AVR_PDI_H*/
