@@ -56,7 +56,10 @@
 #define PDI_REG_R3     3U
 #define PDI_REG_R4     4U
 
+#define PDI_RESET 0x59U
+
 static bool avr_pdi_init(avr_pdi_s *pdi);
+static void avr_reset(target_s *target);
 static void avr_halt_request(target_s *target);
 
 void avr_jtag_pdi_handler(const uint8_t dev_index)
@@ -97,6 +100,7 @@ static bool avr_pdi_init(avr_pdi_s *const pdi)
 	target->priv_free = free;
 
 	target->halt_request = avr_halt_request;
+	target->reset = avr_reset;
 
 	/* Try probing for various known AVR parts */
 	PROBE(atxmega_probe);
@@ -162,6 +166,13 @@ uint8_t avr_pdi_reg_read(const avr_pdi_s *const pdi, const uint8_t reg)
 		!avr_jtag_shift_dr(pdi->dev_index, &result, 0))
 		return 0xffU; // TODO - figure out a better way to indicate failure.
 	return result;
+}
+
+static void avr_reset(target_s *const target)
+{
+	avr_pdi_s *const pdi = target->priv;
+	if (!avr_pdi_reg_write(pdi, PDI_REG_RESET, PDI_RESET))
+		raise_exception(EXCEPTION_ERROR, "Error resetting device, device in incorrect state");
 }
 
 static void avr_halt_request(target_s *const target)
