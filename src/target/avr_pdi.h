@@ -37,12 +37,16 @@
 #include <stdint.h>
 #include "target.h"
 
-typedef struct avr_pdi {
+typedef struct avr_pdi avr_pdi_s;
+
+struct avr_pdi {
 	uint32_t idcode;
 
 	uint8_t dev_index;
 	target_halt_reason_e halt_reason;
-} avr_pdi_s;
+
+	bool (*ensure_nvm_idle)(const avr_pdi_s *pdi);
+};
 
 #define PDI_DATA_8  0x00U
 #define PDI_DATA_16 0x01U

@@ -259,6 +259,13 @@ static bool avr_disable(const avr_pdi_s *const pdi, const pdi_key_e what)
 	return avr_pdi_reg_write(pdi, PDI_REG_STATUS, ~what);
 }
 
+static bool avr_ensure_nvm_idle(const avr_pdi_s *const pdi)
+{
+	if (pdi->ensure_nvm_idle)
+		return pdi->ensure_nvm_idle(pdi);
+	return true;
+}
+
 static void avr_reset(target_s *const target)
 {
 	avr_pdi_s *const pdi = target->priv;
