@@ -27,6 +27,7 @@
 #include "exception.h"
 #include "gdb_packet.h"
 #include "morse.h"
+#include "command.h"
 
 int main(int argc, char **argv)
 {
@@ -49,8 +50,12 @@ int main(int argc, char **argv)
 			gdb_outf("Uncaught exception: %s\n", e.msg);
 			morse("TARGET LOST.", true);
 		}
+#if PC_HOSTED == 1
+		if (shutdown_bmda)
+			break;
+#endif
 	}
 
-	/* Should never get here */
+	target_list_free();
 	return 0;
 }
