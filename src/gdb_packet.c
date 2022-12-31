@@ -46,7 +46,7 @@ size_t gdb_getpacket(char *const packet, const size_t size)
 			 */
 			do {
 				/* Smells like bad code */
-				packet[0] = (char)gdb_if_getchar();
+				packet[0] = gdb_if_getchar();
 				if (packet[0] == '\x04')
 					return 1;
 			} while (packet[0] != '$' && packet[0] != REMOTE_SOM);
@@ -57,7 +57,7 @@ size_t gdb_getpacket(char *const packet, const size_t size)
 				bool getting_remote_packet = true;
 				while (getting_remote_packet) {
 					/* Smells like bad code */
-					const char c = (char)gdb_if_getchar();
+					const char c = gdb_if_getchar();
 					switch (c) {
 					case REMOTE_SOM: /* Oh dear, packet restarts */
 						offset = 0;
@@ -99,7 +99,7 @@ size_t gdb_getpacket(char *const packet, const size_t size)
 		char c = '\0';
 		/* Capture packet data into buffer */
 		while (c != '#') {
-			c = (char)gdb_if_getchar();
+			c = gdb_if_getchar();
 			if (c == '#')
 				break;
 			/* If we run out of buffer space, exit early */
@@ -120,8 +120,8 @@ size_t gdb_getpacket(char *const packet, const size_t size)
 			csum += c;
 			packet[offset++] = c;
 		}
-		recv_csum[0] = (char)gdb_if_getchar();
-		recv_csum[1] = (char)gdb_if_getchar();
+		recv_csum[0] = gdb_if_getchar();
+		recv_csum[1] = gdb_if_getchar();
 		recv_csum[2] = 0;
 
 		/* Return packet if checksum matches */
