@@ -72,7 +72,7 @@ static bool cmd_heapinfo(target_s *t, int argc, const char **argv);
 #ifdef ENABLE_RTT
 static bool cmd_rtt(target_s *t, int argc, const char **argv);
 #endif
-#if defined(PLATFORM_HAS_DEBUG) && (PC_HOSTED == 0)
+#if defined(PLATFORM_HAS_DEBUG) && PC_HOSTED == 0
 static bool cmd_debug_bmp(target_s *t, int argc, const char **argv);
 #endif
 #if PC_HOSTED == 1
@@ -107,7 +107,7 @@ const command_s cmd_list[] = {
 #endif
 #endif
 	{"heapinfo", cmd_heapinfo, "Set semihosting heapinfo"},
-#if defined(PLATFORM_HAS_DEBUG) && (PC_HOSTED == 0)
+#if defined(PLATFORM_HAS_DEBUG) && PC_HOSTED == 0
 	{"debug_bmp", cmd_debug_bmp, "Output BMP \"debug\" strings to the second vcom: (enable|disable)"},
 #endif
 #if PC_HOSTED == 1
@@ -117,7 +117,7 @@ const command_s cmd_list[] = {
 };
 
 bool connect_assert_nrst;
-#if defined(PLATFORM_HAS_DEBUG) && (PC_HOSTED == 0)
+#if defined(PLATFORM_HAS_DEBUG) && PC_HOSTED == 0
 bool debug_bmp;
 #endif
 unsigned cortexm_wait_timeout = 2000; /* Timeout to wait for Cortex to react on halt command. */
@@ -636,7 +636,7 @@ static bool cmd_traceswo(target_s *t, int argc, const char **argv)
 }
 #endif
 
-#if defined(PLATFORM_HAS_DEBUG) && (PC_HOSTED == 0)
+#if defined(PLATFORM_HAS_DEBUG) && PC_HOSTED == 0
 static bool cmd_debug_bmp(target_s *t, int argc, const char **argv)
 {
 	(void)t;
