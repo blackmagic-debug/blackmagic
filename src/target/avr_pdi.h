@@ -50,6 +50,7 @@ typedef struct avr_pdi {
 #define PDI_DATA_32 0x03U
 
 void avr_jtag_pdi_handler(uint8_t dev_index);
+avr_pdi_s *avr_pdi_struct(target_s *target);
 
 bool avr_pdi_write(const avr_pdi_s *pdi, uint8_t bytes, uint32_t reg, uint32_t value);
 bool avr_pdi_read(const avr_pdi_s *pdi, uint8_t bytes, uint32_t reg, uint32_t *value);
