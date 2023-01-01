@@ -57,6 +57,9 @@ void avr_jtag_pdi_handler(uint8_t dev_index);
 avr_pdi_s *avr_pdi_struct(target_s *target);
 
 bool avr_pdi_write(const avr_pdi_s *pdi, uint8_t bytes, uint32_t reg, uint32_t value);
-bool avr_pdi_read(const avr_pdi_s *pdi, uint8_t bytes, uint32_t reg, uint32_t *value);
+bool avr_pdi_read8(const avr_pdi_s *pdi, uint32_t reg, uint8_t *value);
+bool avr_pdi_read16(const avr_pdi_s *pdi, uint32_t reg, uint16_t *value);
+bool avr_pdi_read24(const avr_pdi_s *pdi, uint32_t reg, uint32_t *value);
+bool avr_pdi_read32(const avr_pdi_s *pdi, uint32_t reg, uint32_t *value);
 
 #endif /*TARGET_AVR_PDI_H*/

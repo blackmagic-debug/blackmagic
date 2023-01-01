@@ -219,7 +219,7 @@ bool avr_pdi_write(const avr_pdi_s *const pdi, const uint8_t bytes, const uint32
 	return true;
 }
 
-bool avr_pdi_read(const avr_pdi_s *const pdi, const uint8_t bytes, const uint32_t reg, uint32_t *const value)
+static bool avr_pdi_read(const avr_pdi_s *const pdi, const uint8_t bytes, const uint32_t reg, uint32_t *const value)
 {
 	uint8_t result = 0;
 	uint8_t command = PDI_LDS | PDI_ADDR_32 | bytes;
@@ -244,6 +244,34 @@ bool avr_pdi_read(const avr_pdi_s *const pdi, const uint8_t bytes, const uint32_
 		data |= (uint32_t)data_bytes[3] << 24U;
 	*value = data;
 	return true;
+}
+
+bool avr_pdi_read8(const avr_pdi_s *const pdi, const uint32_t reg, uint8_t *const value)
+{
+	uint32_t data;
+	const bool result = avr_pdi_read(pdi, PDI_DATA_8, reg, &data);
+	if (result)
+		*value = data;
+	return result;
+}
+
+bool avr_pdi_read16(const avr_pdi_s *const pdi, const uint32_t reg, uint16_t *const value)
+{
+	uint32_t data;
+	const bool result = avr_pdi_read(pdi, PDI_DATA_16, reg, &data);
+	if (result)
+		*value = data;
+	return result;
+}
+
+bool avr_pdi_read24(const avr_pdi_s *const pdi, const uint32_t reg, uint32_t *const value)
+{
+	return avr_pdi_read(pdi, PDI_DATA_24, reg, value);
+}
+
+bool avr_pdi_read32(const avr_pdi_s *const pdi, const uint32_t reg, uint32_t *const value)
+{
+	return avr_pdi_read(pdi, PDI_DATA_32, reg, value);
 }
 
 static bool avr_enable(const avr_pdi_s *const pdi, const pdi_key_e what)
