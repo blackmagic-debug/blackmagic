@@ -1,8 +1,9 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2022  1bitsquared - Mikaela Szekely <mikaela.szekely@qyriad.me>
+ * Copyright (C) 2022-2023 1BitSquared <info@1bitsquared.com>
  * Written by Mikaela Szekely <mikaela.szekely@qyriad.me>
+ * With contributions from Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,17 +22,23 @@
 #ifndef TARGET_GDB_REG_H
 #define TARGET_GDB_REG_H
 
-// The beginning XML for GDB target descriptions that are common to ARM targets,
+// The beginning XML for GDB target descriptions that are common to all targets,
 // save for one word: the word after DOCTYPE, which is "target" for Cortex-M, and "feature"
-// for Cortex-A. The "preamble" is thus split into two halves, with this single word missing
+// for Cortex-A. The "preamble" is thus split into three parts, with this single word missing
 // and as the split point.
-extern const char *gdb_arm_preamble_first;
+extern const char *gdb_xml_preamble_first;
 
-// The beginning XML for GDB target descriptions that are common to ARM targets,
+// The beginning XML for GDB target descriptions that are common to all targets,
 // save for one word: the word after DOCTYPE, which is "target" for Cortex-M, and "feature"
-// for Cortex-A. The "preamble" is thus split into two halves, with this single word missing
+// for Cortex-A. The "preamble" is thus split into three parts, with this single word missing
 // and as the split point.
-extern const char *gdb_arm_preamble_second;
+extern const char *gdb_xml_preamble_second;
+
+// The beginning XML for GDB target descriptions that are common to all targets,
+// save for one word: the word after <architecture>, which is "arm" for Cortex-*, and "avr"
+// for AVR. The "preamble" is thus split into three parts, with this single word missing
+// and as the split point.
+extern const char *gdb_xml_preamble_third;
 
 // The "type" field of a register tag.
 typedef enum gdb_reg_type {

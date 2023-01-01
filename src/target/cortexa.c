@@ -260,10 +260,8 @@ static size_t create_tdesc_cortex_a(char *buffer, size_t max_len)
 	// Start with the "preamble", which is generic across ARM targets,
 	// ...save for one word, so we'll have to do the preamble in halves, and then we'll
 	// follow it with the GDB ARM Core feature tag.
-	total += snprintf(buffer, printsz,
-		"%s feature %s "
-		"<feature name=\"org.gnu.gdb.arm.core\">",
-		gdb_arm_preamble_first, gdb_arm_preamble_second);
+	total += snprintf(buffer, printsz, "%s feature %sarm%s <feature name=\"org.gnu.gdb.arm.core\">",
+		gdb_xml_preamble_first, gdb_xml_preamble_second, gdb_xml_preamble_third);
 
 	// Then the general purpose registers, which have names of r0 to r12.
 	for (uint8_t i = 0; i <= 12; ++i) {
