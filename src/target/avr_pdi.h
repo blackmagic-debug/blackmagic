@@ -48,6 +48,13 @@ struct avr_pdi {
 	bool (*ensure_nvm_idle)(const avr_pdi_s *pdi);
 };
 
+typedef struct __attribute__((packed)) avr_regs {
+	uint8_t general[32]; /* r0-r31 */
+	uint8_t sreg;        /* r32 */
+	uint16_t sp;         /* r33 */
+	uint32_t pc;         /* r34 */
+} avr_regs_s;
+
 #define PDI_DATA_8  0x00U
 #define PDI_DATA_16 0x01U
 #define PDI_DATA_24 0x02U

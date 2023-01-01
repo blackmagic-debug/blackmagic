@@ -74,13 +74,6 @@ typedef enum pdi_key {
 	PDI_DEBUG = 0x04U,
 } pdi_key_e;
 
-typedef struct __attribute__((packed)) avr_regs {
-	uint8_t general[32]; /* r0-r31 */
-	uint8_t sreg;        /* r32 */
-	uint16_t sp;         /* r33 */
-	uint32_t pc;         /* r34 */
-} avr_regs_s;
-
 static const uint8_t pdi_key_nvm[] = {0xff, 0x88, 0xd8, 0xcd, 0x45, 0xab, 0x89, 0x12};
 static const uint8_t pdi_key_debug[] = {0x21, 0x81, 0x7c, 0x9f, 0xd4, 0x2d, 0x21, 0x3a};
 
