@@ -67,5 +67,6 @@ bool avr_pdi_read16(const avr_pdi_s *pdi, uint32_t reg, uint16_t *value);
 bool avr_pdi_read24(const avr_pdi_s *pdi, uint32_t reg, uint32_t *value);
 bool avr_pdi_read32(const avr_pdi_s *pdi, uint32_t reg, uint32_t *value);
 bool avr_pdi_write_ind(const avr_pdi_s *pdi, uint32_t addr, uint8_t ptr_mode, const void *src, uint32_t count);
+bool avr_pdi_read_ind(const avr_pdi_s *pdi, uint32_t addr, uint8_t ptr_mode, void *dst, uint32_t count);
 
 #endif /*TARGET_AVR_PDI_H*/

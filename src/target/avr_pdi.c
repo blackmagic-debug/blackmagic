@@ -48,6 +48,7 @@
 #define PDI_EMPTY 0xebU
 
 #define PDI_LDS    0x00U
+#define PDI_LD     0x20U
 #define PDI_STS    0x40U
 #define PDI_ST     0x60U
 #define PDI_LDCS   0x80U
@@ -316,6 +317,24 @@ bool avr_pdi_write_ind(const avr_pdi_s *const pdi, const uint32_t addr, const ui
 		return false;
 	for (uint32_t i = 0; i < count; ++i) {
 		if (avr_jtag_shift_dr(pdi->dev_index, &result, data[i]) || result != PDI_EMPTY)
+			return false;
+	}
+	return true;
+}
+
+bool avr_pdi_read_ind(
+	const avr_pdi_s *const pdi, const uint32_t addr, const uint8_t ptr_mode, void *const dst, const uint32_t count)
+{
+	const uint8_t command = PDI_LD | ptr_mode;
+	uint8_t result = 0;
+	uint8_t *const data = (uint8_t *)dst;
+	if ((ptr_mode & PDI_MODE_MASK) || !count || !avr_pdi_write_ptr(pdi, addr) || !avr_pdi_repeat(pdi, count))
+		return false;
+	// Run `ld <ptr_mode>`
+	if (avr_jtag_shift_dr(pdi->dev_index, &result, command) || result != PDI_EMPTY)
+		return false;
+	for (uint32_t i = 0; i < count; ++i) {
+		if (!avr_jtag_shift_dr(pdi->dev_index, data + i, 0))
 			return false;
 	}
 	return true;
