@@ -53,6 +53,11 @@ struct avr_pdi {
 #define PDI_DATA_24 0x02U
 #define PDI_DATA_32 0x03U
 
+#define PDI_MODE_IND_PTR    0x00U
+#define PDI_MODE_IND_INCPTR 0x04U
+#define PDI_MODE_DIR_PTR    0x08U
+#define PDI_MODE_DIR_INCPTR 0x0cU /* "Reserved" */
+
 void avr_jtag_pdi_handler(uint8_t dev_index);
 avr_pdi_s *avr_pdi_struct(target_s *target);
 
@@ -61,5 +66,6 @@ bool avr_pdi_read8(const avr_pdi_s *pdi, uint32_t reg, uint8_t *value);
 bool avr_pdi_read16(const avr_pdi_s *pdi, uint32_t reg, uint16_t *value);
 bool avr_pdi_read24(const avr_pdi_s *pdi, uint32_t reg, uint32_t *value);
 bool avr_pdi_read32(const avr_pdi_s *pdi, uint32_t reg, uint32_t *value);
+bool avr_pdi_write_ind(const avr_pdi_s *pdi, uint32_t addr, uint8_t ptr_mode, const void *src, uint32_t count);
 
 #endif /*TARGET_AVR_PDI_H*/

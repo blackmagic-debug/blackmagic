@@ -60,6 +60,8 @@
 #define PDI_ADDR_24 0x08U
 #define PDI_ADDR_32 0x0cU
 
+#define PDI_MODE_MASK 0xf3U
+
 #define PDI_REG_STATUS 0U
 #define PDI_REG_RESET  1U
 #define PDI_REG_CTRL   2U
@@ -299,6 +301,24 @@ static bool avr_pdi_repeat(const avr_pdi_s *const pdi, const uint32_t count)
 		!avr_jtag_shift_dr(pdi->dev_index, &result, (repeat >> 8U) & 0xffU) && result == PDI_EMPTY &&
 		!avr_jtag_shift_dr(pdi->dev_index, &result, (repeat >> 16U) & 0xffU) && result == PDI_EMPTY &&
 		!avr_jtag_shift_dr(pdi->dev_index, &result, (repeat >> 24U) & 0xffU) && result == PDI_EMPTY;
+}
+
+bool avr_pdi_write_ind(const avr_pdi_s *const pdi, const uint32_t addr, const uint8_t ptr_mode, const void *const src,
+	const uint32_t count)
+{
+	const uint8_t command = PDI_ST | ptr_mode;
+	uint8_t result = 0;
+	const uint8_t *const data = (const uint8_t *)src;
+	if ((ptr_mode & PDI_MODE_MASK) || !count || !avr_pdi_write_ptr(pdi, addr) || !avr_pdi_repeat(pdi, count))
+		return false;
+	// Run `st <ptr_mode>`
+	if (avr_jtag_shift_dr(pdi->dev_index, &result, command) || result != PDI_EMPTY)
+		return false;
+	for (uint32_t i = 0; i < count; ++i) {
+		if (avr_jtag_shift_dr(pdi->dev_index, &result, data[i]) || result != PDI_EMPTY)
+			return false;
+	}
+	return true;
 }
 
 static bool avr_enable(const avr_pdi_s *const pdi, const pdi_key_e what)
