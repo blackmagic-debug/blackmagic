@@ -36,6 +36,7 @@
 #include "target_internal.h"
 #include "target_probe.h"
 #include "gdb_reg.h"
+#include "exception.h"
 #include "avr_pdi.h"
 
 #include <assert.h>
@@ -44,6 +45,20 @@
 #define IDCODE_XMEGA128A3U 0x9742U
 #define IDCODE_XMEGA192A3U 0x9744U
 #define IDCODE_XMEGA256A3U 0x9842U
+
+#define ATXMEGA_DBG_BASE    0x00000000U
+#define ATXMEGA_DBG_CTR     (ATXMEGA_DBG_BASE + 0x0U)
+#define ATXMEGA_DBG_PC      (ATXMEGA_DBG_BASE + 0x4U)
+#define ATXMEGA_DBG_CTRL    (ATXMEGA_DBG_BASE + 0xaU)
+#define ATXMEGA_DBG_SPECIAL (ATXMEGA_DBG_BASE + 0xcU)
+
+#define AVR_DBG_READ_REGS 0x11U
+#define AVR_NUM_REGS      32
+
+#define ATXMEGA_CPU_BASE 0x01000030U
+/* Address of the low byte of the stack pointer */
+#define ATXMEGA_CPU_SPL (ATXMEGA_CPU_BASE + 0xdU)
+/* This is followed by the high byte and SREG */
 
 #define ATXMEGA_NVM_BASE   0x010001c0U
 #define ATXMEGA_NVM_DATA   (ATXMEGA_NVM_BASE + 0x4U)
@@ -96,6 +111,8 @@ static bool atxmega_flash_write(target_flash_s *flash, target_addr_t dest, const
 static bool atxmega_flash_done(target_flash_s *flash);
 
 static const char *atxmega_target_description(target_s *target);
+
+static void atxmega_regs_read(target_s *target, void *data);
 
 static bool atxmega_ensure_nvm_idle(const avr_pdi_s *pdi);
 
@@ -188,6 +205,7 @@ bool atxmega_probe(target_s *const target)
 	}
 
 	target->regs_description = atxmega_target_description;
+	target->regs_read = atxmega_regs_read;
 
 	/*
 	 * RAM is actually at 0x01002000 in the 24-bit linearised PDI address space however, because GDB/GCC,
@@ -360,4 +378,29 @@ static const char *atxmega_target_description(target_s *const target)
 	if (description)
 		atxmega_build_target_description(description, description_length);
 	return description;
+}
+
+static void atxmega_regs_read(target_s *const target, void *const data)
+{
+	const avr_pdi_s *const pdi = avr_pdi_struct(target);
+	avr_regs_s *regs = (avr_regs_s *)data;
+	uint8_t status[3];
+	uint32_t pc = 0;
+	if (!avr_pdi_read32(pdi, ATXMEGA_DBG_PC, &pc) ||
+		!avr_pdi_read_ind(pdi, ATXMEGA_CPU_SPL, PDI_MODE_IND_INCPTR, status, 3) ||
+		!avr_pdi_write(pdi, PDI_DATA_32, ATXMEGA_DBG_PC, 0) ||
+		!avr_pdi_write(pdi, PDI_DATA_32, ATXMEGA_DBG_CTR, AVR_NUM_REGS) ||
+		!avr_pdi_write(pdi, PDI_DATA_8, ATXMEGA_DBG_CTRL, AVR_DBG_READ_REGS) ||
+		!avr_pdi_reg_write(pdi, PDI_REG_R4, 1) ||
+		!avr_pdi_read_ind(pdi, ATXMEGA_DBG_SPECIAL, PDI_MODE_IND_PTR, regs->general, 32) ||
+		avr_pdi_reg_read(pdi, PDI_REG_R3) != 0x04U)
+		raise_exception(EXCEPTION_ERROR, "Error reading registers");
+	/*
+	 * These aren't in the reads above because regs is a packed struct, which results in compiler errors.
+	 * Additionally, the program counter is stored in words and points to the next instruction to be executed
+	 * so we have to adjust it by 1 and make it bytes.
+	 */
+	regs->pc = (pc - 1) << 1U;
+	regs->sp = status[0] | (status[1] << 8);
+	regs->sreg = status[2];
 }
