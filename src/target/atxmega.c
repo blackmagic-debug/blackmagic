@@ -35,7 +35,10 @@
 #include "target.h"
 #include "target_internal.h"
 #include "target_probe.h"
+#include "gdb_reg.h"
 #include "avr_pdi.h"
+
+#include <assert.h>
 
 #define IDCODE_XMEGA64A3U  0x9642U
 #define IDCODE_XMEGA128A3U 0x9742U
@@ -57,9 +60,42 @@
 #define ATXMEGA_NVM_STATUS_BUSY  0x80U
 #define ATXMEGA_NVM_STATUS_FBUSY 0x40U
 
+/* Special-purpose register name strings */
+static const char *const avr_spr_names[] = {
+	"sreg",
+	"sp",
+	"pc",
+};
+
+/* Special-purpose register types */
+static const gdb_reg_type_e avr_spr_types[] = {
+	GDB_TYPE_UNSPECIFIED, /* sreg */
+	GDB_TYPE_DATA_PTR,    /* sp */
+	GDB_TYPE_CODE_PTR,    /* pc */
+};
+
+/* Special-purpose register bitsizes */
+static const uint8_t avr_spr_bitsizes[] = {
+	8,  /* sreg */
+	16, /* sp */
+	32, /* pc */
+};
+
+// clang-format off
+static_assert(ARRAY_LENGTH(avr_spr_types) == ARRAY_LENGTH(avr_spr_names),
+	"SPR array length mismatch! SPR type array should have the same length as SPR name array."
+);
+
+static_assert(ARRAY_LENGTH(avr_spr_bitsizes) == ARRAY_LENGTH(avr_spr_names),
+	"SPR array length mismatch! SPR bitsize array should have the same length as SPR name array."
+);
+// clang-format on
+
 static bool atxmega_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
 static bool atxmega_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
 static bool atxmega_flash_done(target_flash_s *flash);
+
+static const char *atxmega_target_description(target_s *target);
 
 static bool atxmega_ensure_nvm_idle(const avr_pdi_s *pdi);
 
@@ -151,6 +187,8 @@ bool atxmega_probe(target_s *const target)
 		return false;
 	}
 
+	target->regs_description = atxmega_target_description;
+
 	/*
 	 * RAM is actually at 0x01002000 in the 24-bit linearised PDI address space however, because GDB/GCC,
 	 * internally we have to map at 0x00800000 to get a suitable mapping for the host
@@ -226,4 +264,100 @@ static bool atxmega_flash_done(target_flash_s *const flash)
 {
 	const avr_pdi_s *const pdi = avr_pdi_struct(flash->t);
 	return atxmega_ensure_nvm_idle(pdi);
+}
+
+/*
+ * This function creates the target description XML string for an ATXMega6 part.
+ * This is done this way to decrease string duplication and thus code size, making it
+ * unfortunately much less readable than the string literal it is equivilent to.
+ *
+ * This string it creates is the XML-equivalent to the following:
+ * "<?xml version=\"1.0\"?>"
+ * "<!DOCTYPE target SYSTEM \"gdb-target.dtd\">"
+ * "<target>"
+ * "	<architecture>avr:106</architecture>"
+ * "	<feature name=\"org.gnu.gdb.avr.cpu\">"
+ * "		<reg name=\"r0\" bitsize=\"8\" regnum=\"0\"/>"
+ * "		<reg name=\"r1\" bitsize=\"8\"/>"
+ * "		<reg name=\"r2\" bitsize=\"8\"/>"
+ * "		<reg name=\"r3\" bitsize=\"8\"/>"
+ * "		<reg name=\"r4\" bitsize=\"8\"/>"
+ * "		<reg name=\"r5\" bitsize=\"8\"/>"
+ * "		<reg name=\"r6\" bitsize=\"8\"/>"
+ * "		<reg name=\"r7\" bitsize=\"8\"/>"
+ * "		<reg name=\"r8\" bitsize=\"8\"/>"
+ * "		<reg name=\"r9\" bitsize=\"8\"/>"
+ * "		<reg name=\"r10\" bitsize=\"8\"/>"
+ * "		<reg name=\"r11\" bitsize=\"8\"/>"
+ * "		<reg name=\"r12\" bitsize=\"8\"/>"
+ * "		<reg name=\"r13\" bitsize=\"8\"/>"
+ * "		<reg name=\"r14\" bitsize=\"8\"/>"
+ * "		<reg name=\"r15\" bitsize=\"8\"/>"
+ * "		<reg name=\"r16\" bitsize=\"8\"/>"
+ * "		<reg name=\"r17\" bitsize=\"8\"/>"
+ * "		<reg name=\"r18\" bitsize=\"8\"/>"
+ * "		<reg name=\"r19\" bitsize=\"8\"/>"
+ * "		<reg name=\"r20\" bitsize=\"8\"/>"
+ * "		<reg name=\"r21\" bitsize=\"8\"/>"
+ * "		<reg name=\"r22\" bitsize=\"8\"/>"
+ * "		<reg name=\"r23\" bitsize=\"8\"/>"
+ * "		<reg name=\"r24\" bitsize=\"8\"/>"
+ * "		<reg name=\"r25\" bitsize=\"8\"/>"
+ * "		<reg name=\"r26\" bitsize=\"8\"/>"
+ * "		<reg name=\"r27\" bitsize=\"8\"/>"
+ * "		<reg name=\"r28\" bitsize=\"8\"/>"
+ * "		<reg name=\"r29\" bitsize=\"8\"/>"
+ * "		<reg name=\"r30\" bitsize=\"8\"/>"
+ * "		<reg name=\"r31\" bitsize=\"8\"/>"
+ * "		<reg name=\"sreg\" bitsize=\"8\"/>"
+ * "		<reg name=\"sp\" bitsize=\"16\" type=\"data_ptr\"/>"
+ * "		<reg name=\"pc\" bitsize=\"32\" type=\"code_ptr\"/>"
+ * "	</feature>"
+ * "</target>"
+ */
+static size_t atxmega_build_target_description(char *buffer, size_t max_len)
+{
+	size_t print_size = max_len;
+	/* Start with the "preamble" chunks, which are mostly common across targets save for 2 words. */
+	int offset = snprintf(buffer, print_size, "%s target %savr:106%s <feature name=\"org.gnu.gdb.avr.cpu\">",
+		gdb_xml_preamble_first, gdb_xml_preamble_second, gdb_xml_preamble_third);
+
+	/* Then build the general purpose register descriptions which have names r0 through r31 and the same bitsize */
+	for (uint8_t i = 0; i < 32; ++i) {
+		if (max_len != 0)
+			print_size = max_len - (size_t)offset;
+		offset += snprintf(
+			buffer + offset, print_size, "<reg name=\"r%u\" bitsize=\"8\"%s/>", i, i == 0 ? " regnum=\"0\"" : "");
+	}
+
+	/* Then finally build the special-purpose register descriptions using the arrays at top of file. */
+	for (size_t i = 0; i < ARRAY_LENGTH(avr_spr_names); ++i) {
+		if (max_len != 0)
+			print_size = max_len - (size_t)offset;
+
+		const char *const name = avr_spr_names[i];
+		const uint8_t bitsize = avr_spr_bitsizes[i];
+		const gdb_reg_type_e type = avr_spr_types[i];
+
+		offset += snprintf(buffer + offset, print_size, "<reg name=\"%s\" bitsize=\"%u\"%s/>", name, bitsize,
+			gdb_reg_type_strings[type]);
+	}
+
+	/* Add the closing tags required */
+	if (max_len != 0)
+		print_size = max_len - (size_t)offset;
+
+	offset += snprintf(buffer + offset, print_size, "</feature></target>");
+	/* offset is now the total length of the string created, discard the sign and return it. */
+	return (size_t)offset;
+}
+
+static const char *atxmega_target_description(target_s *const target)
+{
+	(void)target;
+	const size_t description_length = atxmega_build_target_description(NULL, 0) + 1U;
+	char *const description = malloc(description_length);
+	if (description)
+		atxmega_build_target_description(description, description_length);
+	return description;
 }
