@@ -47,11 +47,13 @@
 #define PDI_DELAY 0xdbU
 #define PDI_EMPTY 0xebU
 
-#define PDI_LDS  0x00U
-#define PDI_STS  0x40U
-#define PDI_LDCS 0x80U
-#define PDI_STCS 0xc0U
-#define PDI_KEY  0xe0U
+#define PDI_LDS    0x00U
+#define PDI_STS    0x40U
+#define PDI_ST     0x60U
+#define PDI_LDCS   0x80U
+#define PDI_REPEAT 0xa0U
+#define PDI_STCS   0xc0U
+#define PDI_KEY    0xe0U
 
 #define PDI_ADDR_8  0x00U
 #define PDI_ADDR_16 0x04U
@@ -272,6 +274,31 @@ bool avr_pdi_read24(const avr_pdi_s *const pdi, const uint32_t reg, uint32_t *co
 bool avr_pdi_read32(const avr_pdi_s *const pdi, const uint32_t reg, uint32_t *const value)
 {
 	return avr_pdi_read(pdi, PDI_DATA_32, reg, value);
+}
+
+// Runs `st ptr <addr>`
+static bool avr_pdi_write_ptr(const avr_pdi_s *const pdi, const uint32_t addr)
+{
+	const uint8_t command = PDI_ST | PDI_MODE_DIR_PTR | PDI_DATA_32;
+	uint8_t result = 0;
+	return !avr_jtag_shift_dr(pdi->dev_index, &result, command) && result == PDI_EMPTY &&
+		!avr_jtag_shift_dr(pdi->dev_index, &result, addr & 0xffU) && result == PDI_EMPTY &&
+		!avr_jtag_shift_dr(pdi->dev_index, &result, (addr >> 8U) & 0xffU) && result == PDI_EMPTY &&
+		!avr_jtag_shift_dr(pdi->dev_index, &result, (addr >> 16U) & 0xffU) && result == PDI_EMPTY &&
+		!avr_jtag_shift_dr(pdi->dev_index, &result, (addr >> 24U) & 0xffU) && result == PDI_EMPTY;
+}
+
+// Runs `repeat <count - 1>`
+static bool avr_pdi_repeat(const avr_pdi_s *const pdi, const uint32_t count)
+{
+	const uint32_t repeat = count - 1U;
+	const uint8_t command = PDI_REPEAT | PDI_DATA_32;
+	uint8_t result = 0;
+	return !avr_jtag_shift_dr(pdi->dev_index, &result, command) && result == PDI_EMPTY &&
+		!avr_jtag_shift_dr(pdi->dev_index, &result, repeat & 0xffU) && result == PDI_EMPTY &&
+		!avr_jtag_shift_dr(pdi->dev_index, &result, (repeat >> 8U) & 0xffU) && result == PDI_EMPTY &&
+		!avr_jtag_shift_dr(pdi->dev_index, &result, (repeat >> 16U) & 0xffU) && result == PDI_EMPTY &&
+		!avr_jtag_shift_dr(pdi->dev_index, &result, (repeat >> 24U) & 0xffU) && result == PDI_EMPTY;
 }
 
 static bool avr_enable(const avr_pdi_s *const pdi, const pdi_key_e what)
