@@ -1,8 +1,9 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2022  1bitsquared - Mikaela Szekely <mikaela.szekely@qyriad.me>
+ * Copyright (C) 2022-2023 1BitSquared <info@1bitsquared.com>
  * Written by Mikaela Szekely <mikaela.szekely@qyriad.me>
+ * With contributions from Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,13 +21,13 @@
 
 #include "gdb_reg.h"
 
-const char *gdb_arm_preamble_first = "<?xml version=\"1.0\"?>"
+const char *gdb_xml_preamble_first = "<?xml version=\"1.0\"?>"
 									 "<!DOCTYPE";
 
-const char *gdb_arm_preamble_second = "SYSTEM "
-									  "\"gdb-target.dtd\">"
+const char *gdb_xml_preamble_second = "SYSTEM \"gdb-target.dtd\">"
 									  "<target>"
-									  "  <architecture>arm</architecture>";
+									  "  <architecture>";
+const char *gdb_xml_preamble_third = "</architecture>";
 
 const char *gdb_reg_type_strings[] = {
 	"",                   // GDB_TYPE_UNSPECIFIED.

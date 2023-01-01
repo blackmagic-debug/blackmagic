@@ -288,8 +288,8 @@ static size_t create_tdesc_cortex_m(char *buffer, size_t max_len)
 
 	// Start with the "preamble", which is generic across ARM targets,
 	// ...save for one word, so we'll have to do the preamble in halves.
-	total += snprintf(buffer, printsz, "%s target %s <feature name=\"org.gnu.gdb.arm.m-profile\">",
-		gdb_arm_preamble_first, gdb_arm_preamble_second);
+	total += snprintf(buffer, printsz, "%s target %sarm%s <feature name=\"org.gnu.gdb.arm.m-profile\">",
+		gdb_xml_preamble_first, gdb_xml_preamble_second, gdb_xml_preamble_third);
 
 	// Then the general purpose registers, which have names of r0 to r12,
 	// and all the same bitsize.
