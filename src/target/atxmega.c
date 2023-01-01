@@ -57,6 +57,9 @@
 #define ATXMEGA_NVM_STATUS_BUSY  0x80U
 #define ATXMEGA_NVM_STATUS_FBUSY 0x40U
 
+static bool atxmega_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
+static bool atxmega_flash_done(target_flash_s *flash);
+
 static bool atxmega_ensure_nvm_idle(const avr_pdi_s *pdi);
 
 void avr_add_flash(target_s *const target, const uint32_t start, const size_t length, const uint16_t block_size)
@@ -70,6 +73,8 @@ void avr_add_flash(target_s *const target, const uint32_t start, const size_t le
 	flash->start = start;
 	flash->length = length;
 	flash->blocksize = block_size;
+	flash->erase = atxmega_flash_erase;
+	flash->done = atxmega_flash_done;
 	flash->erased = 0xffU;
 	target_add_flash(target, flash);
 }
@@ -165,4 +170,31 @@ static bool atxmega_ensure_nvm_idle(const avr_pdi_s *const pdi)
 {
 	return avr_pdi_write(pdi, PDI_DATA_8, ATXMEGA_NVM_CMD, ATXMEGA_NVM_CMD_NOP) &&
 		avr_pdi_write(pdi, PDI_DATA_8, ATXMEGA_NVM_DATA, 0xffU);
+}
+
+static bool atxmega_flash_erase(target_flash_s *const flash, const target_addr_t addr, const size_t len)
+{
+	const avr_pdi_s *const pdi = avr_pdi_struct(flash->t);
+	for (size_t i = 0; i < len; i += flash->blocksize) {
+		if (!avr_pdi_write(pdi, PDI_DATA_8, ATXMEGA_NVM_CMD, ATXMEGA_NVM_CMD_ERASE_FLASH_PAGE) ||
+			!avr_pdi_write(pdi, PDI_DATA_8, (addr + i) | PDI_FLASH_OFFSET, 0x55U))
+			return false;
+
+		uint8_t status = 0;
+		while (avr_pdi_read8(pdi, ATXMEGA_NVM_STATUS, &status) &&
+			(status & (ATXMEGA_NVM_STATUS_BUSY | ATXMEGA_NVM_STATUS_FBUSY)) ==
+				(ATXMEGA_NVM_STATUS_BUSY | ATXMEGA_NVM_STATUS_FBUSY))
+			continue;
+
+		/* Check if the read status failed */
+		if (status & (ATXMEGA_NVM_STATUS_BUSY | ATXMEGA_NVM_STATUS_FBUSY))
+			return false;
+	}
+	return true;
+}
+
+static bool atxmega_flash_done(target_flash_s *const flash)
+{
+	const avr_pdi_s *const pdi = avr_pdi_struct(flash->t);
+	return atxmega_ensure_nvm_idle(pdi);
 }

@@ -58,6 +58,8 @@ struct avr_pdi {
 #define PDI_MODE_DIR_PTR    0x08U
 #define PDI_MODE_DIR_INCPTR 0x0cU /* "Reserved" */
 
+#define PDI_FLASH_OFFSET 0x00800000U
+
 void avr_jtag_pdi_handler(uint8_t dev_index);
 avr_pdi_s *avr_pdi_struct(target_s *target);
 
