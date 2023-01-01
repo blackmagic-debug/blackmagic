@@ -66,8 +66,6 @@
 #define PDI_REG_STATUS 0U
 #define PDI_REG_RESET  1U
 #define PDI_REG_CTRL   2U
-#define PDI_REG_R3     3U
-#define PDI_REG_R4     4U
 
 #define PDI_RESET 0x59U
 

@@ -53,6 +53,9 @@ struct avr_pdi {
 #define PDI_DATA_24 0x02U
 #define PDI_DATA_32 0x03U
 
+#define PDI_REG_R3 3U
+#define PDI_REG_R4 4U
+
 #define PDI_MODE_IND_PTR    0x00U
 #define PDI_MODE_IND_INCPTR 0x04U
 #define PDI_MODE_DIR_PTR    0x08U
@@ -62,6 +65,9 @@ struct avr_pdi {
 
 void avr_jtag_pdi_handler(uint8_t dev_index);
 avr_pdi_s *avr_pdi_struct(target_s *target);
+
+bool avr_pdi_reg_write(const avr_pdi_s *pdi, uint8_t reg, uint8_t value);
+uint8_t avr_pdi_reg_read(const avr_pdi_s *pdi, uint8_t reg);
 
 bool avr_pdi_write(const avr_pdi_s *pdi, uint8_t bytes, uint32_t reg, uint32_t value);
 bool avr_pdi_read8(const avr_pdi_s *pdi, uint32_t reg, uint8_t *value);
