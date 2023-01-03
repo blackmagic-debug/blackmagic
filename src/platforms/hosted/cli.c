@@ -160,7 +160,7 @@ static void cl_help(char **argv)
 			   "\t-F, --fast-poll  Poll the target for execution status at maximum speed at\n"
 			   "\t                  the expense of increased CPU and USB resource utilisation.\n"
 			   "\t-t, --list-chain Perform a chain scan and display information about the\n"
-			   "\t                   conected devices\n"
+			   "\t                   connected devices\n"
 			   "\t-T, --timing     Perform continues read- or write-back of a value to allow\n"
 			   "\t                   measurement of protocol timing. Aborted by ^C\n"
 			   "\t-e, --ext-res    Assume external resistors for FTDI devices, that is having the\n"
