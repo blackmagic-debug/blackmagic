@@ -291,7 +291,7 @@ static bool sam4l_flash_command(target_s *t, uint32_t page, uint32_t cmd)
 	/* Load up the new command */
 	const uint32_t cmd_reg = (cmd & FLASHCALW_FCMD_CMD_MASK) |
 		((page & FLASHCALW_FCMD_PAGEN_MASK) << FLASHCALW_FCMD_PAGEN_SHIFT) | (0xa5U << FLASHCALW_FCMD_KEY_SHIFT);
-	DEBUG_INFO("%s: Wrting command word 0x%08" PRIx32 "\n", __func__, cmd_reg);
+	DEBUG_INFO("%s: Writing command word 0x%08" PRIx32 "\n", __func__, cmd_reg);
 
 	/* And kick it off */
 	target_mem_write32(t, FLASHCALW_FCMD, cmd_reg);
