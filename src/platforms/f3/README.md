@@ -2,7 +2,7 @@
 
 ## System vs BMP Bootloader
 
-For simpicity, the ST system bootloader is used. Thi saves additional 4 kB for the BMPfirmware.
+For simpicity, the ST system bootloader is used. This saves additional 4 kB for the BMP firmware.
 
 ## Connections
 
