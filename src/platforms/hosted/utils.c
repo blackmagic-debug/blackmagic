@@ -83,7 +83,7 @@ bool ends_with(const char *const str, const size_t str_length, const char *const
 	return memcmp(str + offset, value, value_length) == 0;
 }
 
-bool constains_substring(const char *const str, const size_t str_len, const char *const search)
+bool contains_substring(const char *const str, const size_t str_len, const char *const search)
 {
 	const size_t search_len = strlen(search);
 	if (str_len < search_len)

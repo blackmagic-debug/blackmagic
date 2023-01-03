@@ -125,7 +125,7 @@ static bool match_serial(const char *const device, const char *const serial)
 	/* This represents one past the last byte of the serial number string */
 	const char *const end = device + strlen(device) - 5U;
 	/* Try to match the (partial) serial string in the correct part of the device string */
-	return constains_substring(begin, end - begin, serial);
+	return contains_substring(begin, end - begin, serial);
 }
 
 int serial_open(const bmda_cli_options_s *const cl_opts, const char *const serial)

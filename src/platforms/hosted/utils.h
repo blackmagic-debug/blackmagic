@@ -40,6 +40,6 @@
 
 bool begins_with(const char *str, size_t str_length, const char *value);
 bool ends_with(const char *str, size_t str_length, const char *value);
-bool constains_substring(const char *str, size_t str_len, const char *search);
+bool contains_substring(const char *str, size_t str_len, const char *search);
 
 #endif /* PLATFORMS_HOSTED_UTILS_H */
