@@ -253,7 +253,7 @@ static bool scan_linux_id(const char *name, char **const type, char **const vers
 		*version = strdup("Unknown");
 		*type = strdup("Native");
 		/*
-		 * If the device name has two underscores delimted sections after the prefix,
+		 * If the device name has two underscores delimited sections after the prefix,
 		 * it's a non-native device running the Black Magic Firmware.
 		 */
 	} else if (underscores == 2) {

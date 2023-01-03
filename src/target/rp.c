@@ -385,7 +385,7 @@ static bool rp_read_rom_func_table(target_s *const t)
 
 /* RP ROM functions calls
  *
- * timout == 0: Do not wait for poll, use for rom_reset_usb_boot()
+ * timeout == 0: Do not wait for poll, use for rom_reset_usb_boot()
  * timeout > 500 (ms) : display spinner
  */
 static bool rp_rom_call(target_s *t, uint32_t *regs, uint32_t cmd, uint32_t timeout)
@@ -455,11 +455,11 @@ static bool rp_flash_resume(target_s *t)
 }
 
 /*
- * 4k sector erase    45/  400 ms
- * 32k block erase   120/ 1600 ms
- * 64k block erase   150/ 2000 ms
- * chip erase       5000/25000 ms
- * page programm       0.4/  3 ms
+ * 4k sector erase	45/  400 ms
+ * 32k block erase	120/ 1600 ms
+ * 64k block erase	150/ 2000 ms
+ * chip erase		5000/25000 ms
+ * page program		0.4/  3 ms
  */
 static bool rp_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
@@ -541,7 +541,7 @@ static bool rp_flash_write(target_flash_s *f, target_addr_t dest, const void *sr
 	while (len) {
 		uint32_t chunksize = (len <= MAX_WRITE_CHUNK) ? len : MAX_WRITE_CHUNK;
 		target_mem_write(t, RP_SRAM_BASE, src, chunksize);
-		/* Programm range */
+		/* Program range */
 		ps->regs[0] = dest;
 		ps->regs[1] = RP_SRAM_BASE;
 		ps->regs[2] = chunksize;

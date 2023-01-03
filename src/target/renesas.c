@@ -150,12 +150,12 @@ typedef enum {
  * ra2l1 - Fixed location 1
  * ra2e1 - Fixed location 1
  * ra2e2 - Fixed location 1
- * ra2a1 - Flash Root Table *undocummented
- * ra4m1 - *undocummented
- * ra4m2 - Fixed location 2 *undocummented
- * ra4m3 - Fixed location 2 *undocummented
+ * ra2a1 - Flash Root Table *undocumented
+ * ra4m1 - *undocumented
+ * ra4m2 - Fixed location 2 *undocumented
+ * ra4m3 - Fixed location 2 *undocumented
  * ra4e1 - Fixed location 2
- * ra4w1 - *undocummented
+ * ra4w1 - *undocumented
  * ra6m1 - Flash Root Table
  * ra6m2 - Flash Root Table
  * ra6m3 - Flash Root Table
@@ -197,12 +197,12 @@ typedef enum {
 
 /* Renesas RA MCUs can have one of two kinds of flash memory, MF3/4 and RV40 */
 
-#define RENESAS_CF_END UINT32_C(0x00200000) /* End of Flash (maximum possible accross families) */
+#define RENESAS_CF_END UINT32_C(0x00200000) /* End of Flash (maximum possible across families) */
 
 /* MF3/4 Flash */
 /*
  * MF3/4 Flash Memory Specifications
- * Block Size: Code area: 2 KB (exept RA2A1 is 1KB), Data area: 1 KB
+ * Block Size: Code area: 2 KB (except RA2A1 is 1KB), Data area: 1 KB
  * Program/Erase unit Program: Code area: 64 bits, Data area: 8 bits
  *					  Erase:  1 block
  */
@@ -746,8 +746,8 @@ bool renesas_probe(target_s *t)
 		 * memory accesses in case of failure, and is the most common case
 		 */
 		/*
-		 * ra4m1 *undocummented (part_id + pnr loc wanted)
-		 * ra4w1 *undocummented (part_id + pnr loc wanted)
+		 * ra4m1 *undocumented (part_id + pnr loc wanted)
+		 * ra4w1 *undocumented (part_id + pnr loc wanted)
 		 */
 
 		if (renesas_pnr_read(t, RENESAS_FIXED2_PNR, pnr)) {

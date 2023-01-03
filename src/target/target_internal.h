@@ -93,7 +93,7 @@ struct target {
 	bool attached;
 	target_controller_s *tc;
 
-	/* Attach/Detach funcitons */
+	/* Attach/Detach functions */
 	bool (*attach)(target_s *t);
 	void (*detach)(target_s *t);
 	bool (*check_error)(target_s *t);

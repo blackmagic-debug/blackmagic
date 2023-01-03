@@ -299,7 +299,7 @@ static bool sam4l_flash_command(target_s *t, uint32_t page, uint32_t cmd)
 	return true;
 }
 
-/* Write data from 'src' into flash using the algorithim provided by Atmel in their data sheet. */
+/* Write data from 'src' into flash using the algorithm provided by Atmel in their data sheet. */
 static bool sam4l_flash_write(
 	target_flash_s *const f, const target_addr_t dest, const void *const src, const size_t len)
 {

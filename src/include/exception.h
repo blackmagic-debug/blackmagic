@@ -19,7 +19,7 @@
  */
 
 /* Exception handling to escape deep nesting.
- * Used for the case of communicaiton failure and timeouts.
+ * Used for the case of communication failure and timeouts.
  */
 
 /* Example usage:

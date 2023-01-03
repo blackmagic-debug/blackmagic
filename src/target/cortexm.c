@@ -234,7 +234,7 @@ static_assert(ARRAY_LENGTH(cortex_m_spr_bitsizes) == ARRAY_LENGTH(cortex_m_spr_n
 // string.
 //
 // This function is hand-optimized to decrease string duplication and thus code size, making it
-// unforunately much less readable than the string literal it is equivalent to.
+// unfortunately much less readable than the string literal it is equivalent to.
 //
 // The string it creates is XML-equivalent to the following:
 /*
@@ -333,7 +333,7 @@ static size_t create_tdesc_cortex_m(char *buffer, size_t max_len)
 // string.
 //
 // This function is hand-optimized to decrease string duplication and thus code size, making it
-// unforunately much less readable than the string literal it is equivalent to.
+// unfortunately much less readable than the string literal it is equivalent to.
 //
 // The string it creates is XML-equivalent to the following:
 /*

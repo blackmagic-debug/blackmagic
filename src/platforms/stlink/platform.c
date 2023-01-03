@@ -145,7 +145,7 @@ const char *platform_target_voltage(void)
 		continue;
 	uint32_t vrefint_value = adc_read_regular(ADC1);
 
-	/* Value in milivolts */
+	/* Value in millivolts */
 	uint32_t val = (platform_adc_value * 2400U) / vrefint_value;
 	ret[0] = '0' + val / 1000U;
 	ret[2] = '0' + (val / 100U) % 10U;

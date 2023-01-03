@@ -21,7 +21,7 @@
  * This file implements STM32H7 target specific functions for detecting
  * the device, providing the XML memory map and Flash memory programming.
  *
- * Refereces:
+ * References:
  * ST doc - RM0433
  *   Reference manual - STM32H7x3 advanced ARM®-based 32-bit MCUs Rev.3
  */

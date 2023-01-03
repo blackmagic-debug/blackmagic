@@ -24,7 +24,7 @@
  * This file implements STM32F4 target specific functions for detecting
  * the device, providing the XML memory map and Flash memory programming.
  *
- * Refereces:
+ * References:
  * ST doc - RM0090
  *   Reference manual - STM32F405xx, STM32F407xx, STM32F415xx and STM32F417xx
  *   advanced ARM-based 32-bit MCUs

@@ -119,7 +119,7 @@ const char *platform_target_voltage(void)
 
 void read_serial_number(void)
 {
-	/* FIXME: Store a unique serial number somewhere and retreive here */
+	/* FIXME: Store a unique serial number somewhere and retrieve here */
 	uint32_t unique_id = SERIAL_NO;
 
 	/* Fetch serial number from chip's unique ID */

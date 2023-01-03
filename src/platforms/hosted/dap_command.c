@@ -79,7 +79,7 @@ bool perform_dap_swj_sequence(size_t clock_cycles, const uint8_t *data)
 		DAP_SWJ_SEQUENCE,
 		(uint8_t)clock_cycles,
 	};
-	/* Calculate the number of bytes needed to represent the requeted number of clock cycles */
+	/* Calculate the number of bytes needed to represent the requested number of clock cycles */
 	const size_t bytes = (clock_cycles + 7U) >> 3U;
 	/* And copy the data into the buffer */
 	memcpy(request + 2, data, bytes);
@@ -109,7 +109,7 @@ static size_t dap_encode_transfer(
 bool perform_dap_transfer(adiv5_debug_port_s *const dp, const dap_transfer_request_s *const transfer_requests,
 	const size_t requests, uint32_t *const response_data, const size_t responses)
 {
-	/* Validate that the number of requests this transfer is valid. We artifically limit it to 12 (from 256) */
+	/* Validate that the number of requests this transfer is valid. We artificially limit it to 12 (from 256) */
 	if (!requests || requests > 12 || (responses && !response_data))
 		return false;
 
@@ -130,7 +130,7 @@ bool perform_dap_transfer(adiv5_debug_port_s *const dp, const dap_transfer_reque
 	if (!dap_run_cmd(request, offset, &response, 2U + (responses * 4U)))
 		return false;
 
-	/* Look at the response and decypher what went on */
+	/* Look at the response and decipher what went on */
 	if (response.processed == requests && response.status == DAP_TRANSFER_OK) {
 		for (size_t i = 0; i < responses; ++i)
 			response_data[i] = read_le4(response.data[i], 0);

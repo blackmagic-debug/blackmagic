@@ -44,7 +44,7 @@
  *       e.g. SI21 : Request input with parity, 33 ticks
  *       resp: K<PARAM> - hex value returned.
  *       resp: F<PARAM> - hex value returned, bad parity.
- *             X<err>   - error occured
+ *             X<err>   - error occurred
  *
  * The whole protocol is defined in this header file. Parameters have
  * to be marshalled in remote.c, swdptap.c and jtagtap.c, so be

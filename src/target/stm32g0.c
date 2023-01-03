@@ -139,7 +139,7 @@
 #define DBG_APB_FZ1_DBG_WWDG_STOP (1U << 11U)
 
 /*
- * The underscores in these defintions represent /'s, this means
+ * The underscores in these definitions represent /'s, this means
  * that STM32G03_4 is supposed to refer to the G03/4 aka the G03 and G04.
  */
 #define STM32G03_4 0x466U
@@ -379,7 +379,7 @@ static bool stm32g0_flash_erase(target_flash_s *f, const target_addr_t addr, con
 		target_mem_write32(t, FLASH_CR, ctrl);
 		target_mem_write32(t, FLASH_CR, ctrl | FLASH_CR_START);
 
-		/* Wait for the operation to finsh and report errors */
+		/* Wait for the operation to finish and report errors */
 		if (!stm32g0_wait_busy(t, NULL)) {
 			stm32g0_flash_op_finish(t);
 			return false;
@@ -591,7 +591,7 @@ exit_error:
 }
 
 /*
- * This fonction adds a register given on the command line to a table.
+ * This function adds a register given on the command line to a table.
  * This table is further written to the target.
  * The register is added only if its address is valid.
  */

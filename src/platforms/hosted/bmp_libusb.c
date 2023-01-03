@@ -274,7 +274,7 @@ rescan:
 				}
 				if (cable->description) {
 					if (strncmp(cable->description, product, strlen(cable->description)) != 0)
-						continue; /* discriptions do not match*/
+						continue; /* descriptions do not match*/
 					found = true;
 				} else {                                 /* VID/PID fits, but no cl_opts->opt_cable and no description*/
 					if (cable->vendor == 0x0403 &&       /* FTDI*/

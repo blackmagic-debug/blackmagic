@@ -444,7 +444,7 @@ static bool stm32lx_nvm_data_write(
  * The address is the physical address of the word and the value is a complete word value.
  * The caller is responsible for making sure that the value satisfies the proper
  * format where the upper 16 bits are the 1s complement of the lower 16 bits.
- * The funtion returns when the operation is complete.
+ * The function returns when the operation is complete.
  * The return value is true if the write succeeded.
  */
 static bool stm32lx_option_write(target_s *t, uint32_t address, uint32_t value)
@@ -462,7 +462,7 @@ static bool stm32lx_option_write(target_s *t, uint32_t address, uint32_t value)
  * Write one eeprom value.
  * This version is more flexible than that bulk version used for writing data from the executable file.
  * The address is the physical address of the word and the value is a complete word value.
- * The funtion returns when the operation is complete.
+ * The function returns when the operation is complete.
  * The return value is true if the write succeeded.
  * FWIW, byte writing isn't supported because the ADIv5 layer doesn't support byte-level operations.
  */

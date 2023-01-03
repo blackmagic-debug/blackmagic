@@ -118,7 +118,7 @@ static void jlink_info(bmp_info_s *const info)
 /*
  * On success this copies the endpoint addresses identified into the
  * usb_link_s sub-structure of bmp_info_s (info->usb_link) for later use.
- * Returns true for sucess, false for failure.
+ * Returns true for success, false for failure.
  */
 static bool claim_jlink_interface(bmp_info_s *info, libusb_device *dev)
 {

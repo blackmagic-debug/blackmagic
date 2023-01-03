@@ -210,7 +210,7 @@ extern bool samd_protected_attach(target_s *t);
 #define samx5x_protected_attach samd_protected_attach
 
 /*
- * Use the DSU Device Indentification Register to populate a struct
+ * Use the DSU Device Identification Register to populate a struct
  * describing the SAM D device.
  */
 typedef struct samx5x_descr {
@@ -322,7 +322,7 @@ bool samx5x_probe(target_s *t)
 	const uint32_t cid = adiv5_ap_read_pidr(ap, SAMX5X_DSU_CID);
 	const uint32_t pid = adiv5_ap_read_pidr(ap, SAMX5X_DSU_PID);
 
-	/* Check the ARM Coresight Component and Perhiperal IDs */
+	/* Check the ARM Coresight Component and Peripheral IDs */
 	if (cid != SAMX5X_CID_VALUE || (pid & SAMX5X_PID_MASK) != SAMX5X_PID_CONST_VALUE)
 		return false;
 

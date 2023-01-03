@@ -83,7 +83,7 @@ uint32_t detect_rev(void)
 		} else
 			/* Catch F4 Discovery board with both resistors fitted. */
 			revision = 1;
-		/* On boards identifing as anything other than ST-Link v1 unconditionally activate MCO on PA8 with HSE. */
+		/* On boards identifying as anything other than ST-Link v1 unconditionally activate MCO on PA8 with HSE. */
 		RCC_CFGR &= ~(0xfU << 24U);
 		RCC_CFGR |= (RCC_CFGR_MCO_HSE << 24U);
 		gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO8);

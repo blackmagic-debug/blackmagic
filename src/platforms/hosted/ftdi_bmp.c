@@ -122,7 +122,7 @@ const cable_desc_s cable_desc[] = {
 	{
 		/*
 		 * Buffered connection from FTDI to JTAG/SWD.
-		 * TCK and TMS are not independantly switchable.
+		 * TCK and TMS are not independently switchable.
 		 * => SWD is not possible.
 		 * PIN4 low enables buffers
 		 * PIN5 Low indicates VRef applied
@@ -188,7 +188,7 @@ const cable_desc_s cable_desc[] = {
 	{
 		/*
 		 * Buffered connection from FTDI to JTAG/SWD.
-		 * TCK and TMS are not independantly switchable.
+		 * TCK and TMS are not independently switchable.
 		 * => SWD is not possible.
 		 * DBUS PIN4 / JTAGOE low enables buffers
 		 * DBUS PIN5 / TRST high drives nTRST low OC
@@ -214,7 +214,7 @@ const cable_desc_s cable_desc[] = {
 		 * https://reference.digilentinc.com/jtag_hs1/jtag_hs1
 		 * No schmeatics available.
 		 * Buffered from FTDI to JTAG/SWD announced
-		 * Independant switch for TMS not known
+		 * Independent switch for TMS not known
 		 * => SWD not possible. */
 		.vendor = 0x0403U,
 		.product = 0xbdc8U,
@@ -273,7 +273,7 @@ const cable_desc_s cable_desc[] = {
 		/*
 		 * http://www.olimex.com/dev/pdf/ARM-USB-OCD.pdf.
 		 * DBUS 4 global enables JTAG Buffer.
-		 * TCK and TMS are not independantly switchable.
+		 * TCK and TMS are not independently switchable.
 		 * => SWD is not possible.
 		 */
 		.vendor = 0x15baU,
@@ -745,7 +745,7 @@ void libftdi_max_frequency_set(uint32_t freq)
 
 	uint32_t div = (clock + 2U * freq - 1U) / freq;
 	if (div < 4U && ftdic->type == TYPE_2232C)
-		div = 4U; /* Avoid bad asymetric FT2232C clock at 6 MHz*/
+		div = 4U; /* Avoid bad asymmetric FT2232C clock at 6 MHz*/
 	divisor = div / 2U - 1U;
 	uint8_t buf[3];
 	buf[0] = TCK_DIVISOR;

@@ -23,7 +23,7 @@
 /* This file implements the transport generic functions.
  * See the following ARM Reference Documents:
  *
- * ARM Debug Interface v5 Architecure Specification, ARM IHI 0031E
+ * ARM Debug Interface v5 Architecture Specification, ARM IHI 0031E
  */
 #include "general.h"
 #include "target.h"
@@ -444,7 +444,7 @@ static bool cortexm_prepare(adiv5_access_port_s *ap)
 
 static cid_class_e adiv5_class_from_cid(const uint16_t part_number, const uint16_t arch_id, const cid_class_e cid_class)
 {
-	/* Cortex-M23 and 33 incorectly list their SCS's as a debug component,
+	/* Cortex-M23 and 33 incorrectly list their SCS's as a debug component,
 	 * but they're a generic IP component, so we adjust the cid_class.
 	 */
 	if ((part_number == 0xd20U || part_number == 0xd21U) && arch_id == 0x2a04U && cid_class == cidc_dc)
@@ -922,7 +922,7 @@ void adiv5_dp_init(adiv5_debug_port_s *dp, const uint32_t idcode)
 
 #define ALIGNOF(x) (((x)&3U) == 0 ? ALIGN_WORD : (((x)&1U) == 0 ? ALIGN_HALFWORD : ALIGN_BYTE))
 
-/* Program the CSW and TAR for sequencial access at a given width */
+/* Program the CSW and TAR for sequential access at a given width */
 static void ap_mem_access_setup(adiv5_access_port_s *ap, uint32_t addr, align_e align)
 {
 	uint32_t csw = ap->csw | ADIV5_AP_CSW_ADDRINC_SINGLE;
