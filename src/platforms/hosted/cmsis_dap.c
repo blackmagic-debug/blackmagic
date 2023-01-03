@@ -601,8 +601,8 @@ static bool dap_dp_low_write(adiv5_debug_port_s *dp, uint16_t addr, const uint32
 {
 	DEBUG_PROBE("dap_dp_low_write %08" PRIx32 "\n", data);
 	(void)dp;
-	unsigned int paket_request = make_packet_request(ADIV5_LOW_WRITE, addr);
-	uint8_t buf[32] = {DAP_SWD_SEQUENCE, 5, 8, paket_request,
+	unsigned int packet_request = make_packet_request(ADIV5_LOW_WRITE, addr);
+	uint8_t buf[32] = {DAP_SWD_SEQUENCE, 5, 8, packet_request,
 		4U + SWD_SEQUENCE_IN, /* one turn-around + read 3 bit ACK */
 		1,                    /* one bit turn around to drive SWDIO */
 		0, 32,                /* write 32 bit data */
