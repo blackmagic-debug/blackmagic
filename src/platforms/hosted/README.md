@@ -62,7 +62,7 @@ blackmagic -M "option help"
 ## Compiling on windows
 
 You can crosscompile blackmagic for windows with mingw or on windows
-with cygwin. For suppport of other probes beside BMP, headers for libftdi1 and
+with cygwin. For support of other probes beside BMP, headers for libftdi1 and
 libusb-1.0 are needed. For running, libftdi1.dll and libusb-1.0.dll are needed
 and the executable must be able to find them. Mingw on cygwin does not provide
 a libftdi package yet.
@@ -80,7 +80,7 @@ pacman -S mingw-w64-x86_64-gcc --needed
 PROBE_HOST=hosted make
 ```
 
-For suppport of other probes beside BMP, libusb access is needed. To prepare
+For support of other probes beside BMP, libusb access is needed. To prepare
 libusb access to the ftdi/stlink/jlink/cmsis-dap devices, run zadig
 https://zadig.akeo.ie/. Choose WinUSB(libusb-1.0).
 
@@ -99,8 +99,8 @@ Probes below only when compiled with HOSTED_BMP_ONLY=0
 | ST-Link V2   |  +++  | Requires recent firmware, No CDCACM uart! Cortex only!
 | ST-Link V2/1 |  +++  | Requires recent firmware, Cortex only!
 | CMSIS-DAP    |  +++  | Speed varies with MCU implementing CMSIS-DAP
-| FTDI MPSSE   |   ++  | Requires a device descrition
-| JLINK        |    -  | Usefull to add BMP support for MCUs with built-in JLINK
+| FTDI MPSSE   |   ++  | Requires a device description
+| JLINK        |    -  | Useful to add BMP support for MCUs with built-in JLINK
 
 ## Device matching
 As other USB dongles already connected to the host PC may use FTDI chips,
@@ -130,7 +130,7 @@ Example: [Flossjtag](https://randomprojects.org/wiki/Floss-JTAG).
 | MPSSE_DI <--- JTAG_TMS |
 
 BMP would allow direct MPSSE_DO ->JTAG_TMS connections as BMP tristates DO
-when reading. Resistor defeats contentions anyways. R is typical choosen
+when reading. Resistor defeats contentions anyways. R is typical chosen
 in the range of 470R
 
 \+ MPSSE SWD possible<br>
