@@ -47,7 +47,7 @@ typedef enum dap_command {
 
 typedef enum dap_response_status {
 	DAP_RESPONSE_OK = 0x00U,
-	DAP_RESPOSE_ERROR = 0xffU,
+	DAP_RESPONSE_ERROR = 0xffU,
 } dap_response_status_e;
 
 typedef enum dap_transfer_status {
