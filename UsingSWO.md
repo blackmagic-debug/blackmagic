@@ -17,7 +17,7 @@ monitor traceswo 115200
 The maximum SWO speed is constrained by both the capabilities of the BMP STM32F103 USART and
 USB bandwidth. The UART baudrate is set by `b=(72x10^6)/d` where `d >= 16` or a maximum speed
 of 4.5Mbps `UART1` and 2.25Mbps on `UART2`.  4.5Mbps is too fast for the USB link when
-streaming continously.
+streaming continuously.
 
 One can safely use the 4.5Mbps setting if the debug data is sent in bursts, or if a different
 CPU is used than the STM32F103 as BMP host, but one can potentially run the risk of losing
@@ -39,7 +39,7 @@ BRR        USART1(stlink)  USART2(swlink)
 ```
 
 The USART will cope with some timing slip, but it's recommended to stay as close to these
-values as you can. As the speed comes down the spread between each valid value so mis-timing is
+values as you can. As the speed comes down the spread between each valid value so miss-timing is
 less of an issue. The `monitor traceswo <x>` command will automatically find the closest
 divisor to the value you set for the speed, so be aware the error could be significant.
 
@@ -244,7 +244,7 @@ was lost or corrupted during the experiment.
 # Swolisten, using a USB to Serial Adapter
 
 The NRZ data that is sent out from SWO is essentially UART, but in a frame. swolisten has been
-extended to accomodate USB to serial adapters that can pick this up. This was successfully
+extended to accommodate USB to serial adapters that can pick this up. This was successfully
 tested with CP2102 adapters at up to 921600 baud.
 
 To use this mode just connect SWO to the RX pin of your dongle, and start swolisten with
