@@ -253,7 +253,7 @@ int platform_buffer_read(uint8_t *data, int maxsize)
 	/* Drain the buffer for the remote till we see a start-of-response byte */
 	while (response != REMOTE_RESP) {
 		if (!ReadFile(port_handle, &response, 1, &read, NULL)) {
-			DEBUG_WARN("error occured while reading response: %lu\n", GetLastError());
+			DEBUG_WARN("error occurred while reading response: %lu\n", GetLastError());
 			exit(-3);
 		}
 		if (platform_time_ms() > end_time) {
