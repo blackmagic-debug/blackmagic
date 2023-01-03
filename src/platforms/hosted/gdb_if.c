@@ -241,7 +241,7 @@ int gdb_if_init(void)
 		return 0;
 	}
 
-	DEBUG_WARN("Failed to aquire a port to listen on\n");
+	DEBUG_WARN("Failed to acquire a port to listen on\n");
 	return -1;
 }
 
