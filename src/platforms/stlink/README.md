@@ -66,7 +66,7 @@ JTAG and target SWIM pins are accessible on connector (footprints). They are han
 
 ### SWIM-only ST-Link adapters on STM8 Nucleo-Stm8 boards
 
-As only a SWIM connector is accessible, they are not usefull as BMP target.
+As only a SWIM connector is accessible, they are not useful as BMP target.
 
 ### [SWD only ST-Link adapter](https://www.st.com/content/ccc/resource/technical/document/technical_note/group0/30/c8/1d/0f/15/62/46/ef/DM00290229/files/DM00290229.pdf/jcr:content/translations/en.DM00290229.pdf) (Stm32 Nucleo Boards, recent Discovery boards)
 
@@ -114,4 +114,4 @@ UART RX/TX
 ## ST-Link v2.1 force Bootloader entry
 
 On ST-Link v2/2-1 boards with the original bootloader, you can force
-bootloader entry with asserting [NRST](https://www.carminenoviello.com/2016/02/26/restore-st-link-interface-bad-update-2-26-15-firmware/) of the STM32F103CB of the USB powered board. Serveral attempts may be needed.
+bootloader entry with asserting [NRST](https://www.carminenoviello.com/2016/02/26/restore-st-link-interface-bad-update-2-26-15-firmware/) of the STM32F103CB of the USB powered board. Several attempts may be needed.
