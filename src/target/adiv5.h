@@ -249,7 +249,7 @@ struct adiv5_debug_port {
 	void (*seq_out_parity)(uint32_t tms_states, size_t clock_cycles);
 	uint32_t (*seq_in)(size_t clock_cycles);
 	bool (*seq_in_parity)(uint32_t *ret, size_t clock_cycles);
-	/* dp_low_write returns true if no OK resonse, but ignores errors */
+	/* dp_low_write returns true if no OK response, but ignores errors */
 	bool (*dp_low_write)(adiv5_debug_port_s *dp, uint16_t addr, const uint32_t data);
 	uint32_t (*dp_read)(adiv5_debug_port_s *dp, uint16_t addr);
 	uint32_t (*error)(adiv5_debug_port_s *dp, bool protocol_recovery);

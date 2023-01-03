@@ -20,7 +20,7 @@
  */
 
 /* This file implements the SW-DP specific functions of the
- * ARM Debug Interface v5 Architecure Specification, ARM doc IHI0031A.
+ * ARM Debug Interface v5 Architecture Specification, ARM doc IHI0031A.
  */
 
 #include <assert.h>

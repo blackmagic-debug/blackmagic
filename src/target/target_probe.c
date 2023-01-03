@@ -59,7 +59,7 @@ APPLE_STATIC bool target_probe_nop(target_s *t)
 }
 
 /*
- * nop alias functions to allow suport for target probe methods
+ * nop alias functions to allow support for target probe methods
  * to be disabled by not compiling/linking them in.
  */
 

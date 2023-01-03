@@ -22,7 +22,7 @@
  * This file implements STM32 target specific functions for detecting
  * the device, providing the XML memory map and Flash memory programming.
  *
- * Refereces:
+ * References:
  * ST doc - RM0008
  *   Reference manual - STM32F101xx, STM32F102xx, STM32F103xx, STM32F105xx
  *   and STM32F107xx advanced ARM-based 32-bit MCUs
@@ -374,7 +374,7 @@ static bool stm32f1_flash_busy_wait(target_s *const t, const uint32_t bank_offse
 	/* Read FLASH_SR to poll for BSY bit */
 	uint32_t status = FLASH_SR_BSY;
 	/*
-	 * Please note that checking EOP here is only legal because every operation is preceeded by
+	 * Please note that checking EOP here is only legal because every operation is preceded by
 	 * a call to stm32f1_flash_clear_eop. Without this the flag could be stale from a previous
 	 * operation and is always set at the end of every program/erase operation.
 	 * For more information, see FLASH_SR register description §3.4 pg 25.

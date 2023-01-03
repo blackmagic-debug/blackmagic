@@ -167,7 +167,7 @@ static const usb_iface_assoc_descriptor_s gdb_assoc = {
 	.iFunction = 4,
 };
 
-/* Phyiscal/debug UART interface */
+/* Physical/debug UART interface */
 
 static const usb_endpoint_descriptor_s uart_comm_endp = {
 	.bLength = USB_DT_ENDPOINT_SIZE,

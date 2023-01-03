@@ -97,7 +97,7 @@ bool libftdi_jtagtap_init(void)
 	libftdi_buffer_write_arr(cmd);
 	libftdi_buffer_flush();
 	/* Write out start condition and pull garbage from read buffer.
-	 * FT2232D otherwise misbehaves on runs follwoing the first run.*/
+	 * FT2232D otherwise misbehaves on runs following the first run.*/
 	libftdi_drain_potential_garbage();
 
 	/* Ensure we're in JTAG mode */

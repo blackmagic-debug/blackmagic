@@ -49,7 +49,7 @@ void platform_init(void)
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Warray-bounds"
-	/* Buttom is BOOT0, so buttom is already evaluated!*/
+	/* Button is BOOT0, so button is already evaluated!*/
 	if (magic[0] == BOOTMAGIC0 && magic[1] == BOOTMAGIC1) {
 		magic[0] = 0;
 		magic[1] = 0;

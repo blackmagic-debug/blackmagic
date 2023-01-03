@@ -558,7 +558,7 @@ static bool stm32l4_attach(target_s *const t)
 	if (!cortexm_attach(t))
 		return false;
 
-	/* Retrive device information, and locate the device ID register */
+	/* Retrieve device information, and locate the device ID register */
 	const stm32l4_device_info_s *device = stm32l4_get_device_info(t->part_id);
 	const uint32_t idcode_addr = stm32l4_idcode_reg_address(t);
 

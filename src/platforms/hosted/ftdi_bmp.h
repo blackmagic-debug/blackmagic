@@ -78,7 +78,7 @@ typedef struct cable_desc {
 	 * SWDIO can be routed to TDI and TDO.
 	 * If both mpsse_swd_read|write and
 	 * bitbang_swd_dbus_read_data/bitbang_tms_in_port_cmd/bitbang_tms_in_pin
-	 * are provided, pure MPSSE SWD is choosen.
+	 * are provided, pure MPSSE SWD is chosen.
 	 * If neither a complete set of swd_read|write or
 	 * bitbang_swd_dbus_read_data/bitbang_tms_in_port_cmd/bitbang_tms_in_pin
 	 * are provided, SWD can not be done.

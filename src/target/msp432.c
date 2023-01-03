@@ -21,7 +21,7 @@
  * This file implements MSP432 target specific functions for detecting
  * the device, providing the XML memory map and Flash memory programming.
  *
- * Refereces:
+ * References:
  * TI doc - SLAU356G
  *   MSP423P4xx Technical Reference Manual
  * TI doc - SLAS826G
@@ -333,7 +333,7 @@ static bool msp432_cmd_sector_erase(target_s *t, int argc, const char **argv)
 
 	uint32_t addr = strtoul(argv[1], NULL, 0);
 
-	/* Find the flash structure (for the rigth protect register) */
+	/* Find the flash structure (for the right protect register) */
 	target_flash_s *f = target_flash_for_addr(t, addr);
 
 	if (f)

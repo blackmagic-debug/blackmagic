@@ -336,7 +336,7 @@ bool samd_protected_attach(target_s *t)
 }
 
 /*
- * Use the DSU Device Indentification Register to populate a struct
+ * Use the DSU Device Identification Register to populate a struct
  * describing the SAM D device.
  */
 typedef struct samd_descr {
@@ -499,7 +499,7 @@ bool samd_probe(target_s *t)
 	const uint32_t cid = adiv5_ap_read_pidr(ap, SAMD_DSU_CID);
 	const uint32_t pid = adiv5_ap_read_pidr(ap, SAMD_DSU_PID);
 
-	/* Check the ARM Coresight Component and Perhiperal IDs */
+	/* Check the ARM Coresight Component and Peripheral IDs */
 	if (cid != SAMD_CID_VALUE || (pid & SAMD_PID_MASK) != SAMD_PID_CONST_VALUE)
 		return false;
 

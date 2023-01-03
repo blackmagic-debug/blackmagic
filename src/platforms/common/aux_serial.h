@@ -59,7 +59,7 @@ void aux_serial_switch_transmit_buffers(void);
 char *aux_serial_current_transmit_buffer(void);
 /* Get how full the current transmit buffer is */
 size_t aux_serial_transmit_buffer_fullness(void);
-/* Send a number of bytes staged into the current transmit bufer */
+/* Send a number of bytes staged into the current transmit buffer */
 void aux_serial_send(size_t len);
 
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4)

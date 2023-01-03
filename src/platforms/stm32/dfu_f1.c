@@ -80,7 +80,7 @@ void dfu_protect(bool enable)
 	(void)enable;
 #endif
 	/*
-	 * There is no way we can update the bootloader with a programm running
+	 * There is no way we can update the bootloader with a program running
 	 * on the same device when the bootloader pages are write
 	 * protected or the device is read protected!
 	 *

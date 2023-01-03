@@ -71,7 +71,7 @@ uint32_t jtag_scan(const uint8_t *irlens)
 	jtag_dev_count = 0;
 	memset(&jtag_devs, 0, sizeof(jtag_devs));
 
-	/* Run throught the SWD to JTAG sequence for the case where an attached SWJ-DP is
+	/* Run through the SWD to JTAG sequence for the case where an attached SWJ-DP is
 	 * in SW-DP mode.
 	 */
 	DEBUG_INFO("Resetting TAP\n");

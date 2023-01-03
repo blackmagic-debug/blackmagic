@@ -202,7 +202,7 @@ static bool nrf51_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 	target_s *t = f->t;
 
 	for (size_t offset = 0; offset < len; offset += f->blocksize) {
-		/* If the address to erase is the UICR, we have to handle that seperately */
+		/* If the address to erase is the UICR, we have to handle that separately */
 		if (addr + offset == NRF51_UICR)
 			/* Write to the ERASE_UICR register to erase */
 			target_mem_write32(t, NRF51_NVMC_ERASEUICR, 0x1);

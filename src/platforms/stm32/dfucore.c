@@ -270,7 +270,7 @@ static usbd_request_return_codes_e usbdfu_control_request(usbd_device *dev, usb_
 		return USBD_REQ_HANDLED;
 	}
 	case DFU_GETSTATE:
-		/* Return state with no state transision */
+		/* Return state with no state transition */
 		data[0] = usbdfu_state;
 		*len = 1;
 		return USBD_REQ_HANDLED;

@@ -508,7 +508,7 @@ static void exec_q_c(const char *packet, const size_t length)
 
 /*
  * qfThreadInfo queries are required in GDB 11 and 12 as these GDBs require the server to support
- * threading even when there's only the possiblity for one thread to exist. In this instance,
+ * threading even when there's only the possibility for one thread to exist. In this instance,
  * we have to tell GDB that there is a single active thread so it doesn't think the "thread" died.
  * qsThreadInfo will always follow qfThreadInfo when we reply as we have to specify 'l' at the
  * end to terminate the list.. GDB doesn't like this not happening.

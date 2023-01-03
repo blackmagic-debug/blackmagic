@@ -194,7 +194,7 @@ static void lpc43xx_set_internal_clock(target_s *t)
  * Call Boot ROM code to make a flash bank bootable by computing and writing the
  * correct signature into the exception table near the start of the bank.
  *
- * This is done indepently of writing to give the user a chance to verify flash
+ * This is done independently of writing to give the user a chance to verify flash
  * before changing it.
  */
 static bool lpc43xx_cmd_mkboot(target_s *t, int argc, const char *argv[])

@@ -31,11 +31,11 @@ typedef struct jtag_proc {
 	void (*jtagtap_reset)(void);
 
 	/*
-	 * tap_next executes one state transision in the JTAG TAP state machine:
+	 * tap_next executes one state transition in the JTAG TAP state machine:
 	 * - Ensure TCK is low
 	 * - Assert the values of TMS and TDI
 	 * - Assert TCK (TMS and TDO are latched on rising edge
-	 * - Caputure the value on TDO
+	 * - Capture the value on TDO
 	 * - Release TCK.
 	 */
 	bool (*jtagtap_next)(const bool tms, const bool tdi);

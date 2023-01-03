@@ -95,7 +95,7 @@ const command_s efm32_cmd_list[] = {
 #define EFM32_MSC_STATUS_WDATAREADY (1U << 3U)
 
 /* -------------------------------------------------------------------------- */
-/* Flash Infomation Area                                                      */
+/* Flash Information Area                                                      */
 /* -------------------------------------------------------------------------- */
 
 #define EFM32_INFO      0x0fe00000U
@@ -861,7 +861,7 @@ static bool efm32_cmd_bootloader(target_s *t, int argc, const char **argv)
 	/* Unlock */
 	target_mem_write32(t, EFM32_MSC_LOCK(msc), EFM32_MSC_LOCK_LOCKKEY);
 
-	/* Set WREN bit to enabel MSC write and erase functionality */
+	/* Set WREN bit to enable MSC write and erase functionality */
 	target_mem_write32(t, EFM32_MSC_WRITECTRL(msc), 1);
 
 	/* Write address of CLW0 */
@@ -938,7 +938,7 @@ bool efm32_aap_probe(adiv5_access_port_s *ap)
 	} else
 		return false;
 
-	/* Both revsion 1 and revision 2 devices seen in the wild */
+	/* Both revision 1 and revision 2 devices seen in the wild */
 	uint16_t aap_revision = (uint16_t)((ap->idr & 0xf0000000U) >> 28U);
 
 	/* New target */
