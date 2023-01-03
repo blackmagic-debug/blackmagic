@@ -366,7 +366,7 @@ static bool ch32f1_flash_write(target_flash_s *f, target_addr_t dest, const void
 		const uint32_t expected = *(uint32_t *)(org_src + i);
 		const uint32_t actual = target_mem_read32(t, org_dest + i);
 		if (expected != actual) {
-			DEBUG_WARN(">>>>write mistmatch at address 0x%" PRIx32 "\n", org_dest + i);
+			DEBUG_WARN(">>>>write mismatch at address 0x%" PRIx32 "\n", org_dest + i);
 			DEBUG_WARN(">>>>expected: 0x%" PRIx32 "\n", expected);
 			DEBUG_WARN(">>>>  actual: 0x%" PRIx32 "\n", actual);
 			return false;
