@@ -78,7 +78,7 @@ by running `make PROBE_HOST=hosted`
 This builds the same GDB server that is running on the Black Magic Probe.
 While connection to the Black Magic Probe GDB server is via serial line,
 connection to the Black Magic Debug App is via TCP port 2000 for the first
-GDB server and higher for more invokations. Use "tar(get) ext(ented) :2000"
+GDB server and higher for more invocations. Use "tar(get) ext(ented) :2000"
 to connect.
 
 Black Magic Debug App can talk to
