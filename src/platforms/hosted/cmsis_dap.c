@@ -479,7 +479,7 @@ static void dap_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size
 			offset += transfer_length;
 		}
 	}
-	DEBUG_WIRE("dap_mem_read transfered %zu blocks\n", len >> align);
+	DEBUG_WIRE("dap_mem_read transferred %zu blocks\n", len >> align);
 }
 
 static void dap_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, align_e align)
@@ -514,7 +514,7 @@ static void dap_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const vo
 			offset += transfer_length;
 		}
 	}
-	DEBUG_WIRE("dap_mem_write_sized transfered %zu blocks\n", len >> align);
+	DEBUG_WIRE("dap_mem_write_sized transferred %zu blocks\n", len >> align);
 
 	/* Make sure this write is complete by doing a dummy read */
 	adiv5_dp_read(ap->dp, ADIV5_DP_RDBUFF);
