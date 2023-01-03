@@ -6,7 +6,7 @@ https://embdev.net/articles/STM_Discovery_as_Black_Magic_Probe
 an updated bootloader can also be programmed via DFU. This requires three
 steps:
 1. Prepare bootloader update
-Normal BMP has to be replaced by the upgrade programm:
+Normal BMP has to be replaced by the upgrade program:
  dfu-util -s 0x08002000:leave -D dfu_upgrade.bin
 Wait until Dual color led flashes red, indicating DFU is active for the
 bootloader.

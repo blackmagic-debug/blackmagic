@@ -9,7 +9,7 @@ StlinkV2-1 has a STM32F103CB, like a genuine BMP.
 However with more and more devices supported, BMP at about version 282 hit
 this limit. There are two ways to work around:
 - Branch STlink V2-1 as separate platform and and care for the original STlink
-  platform by restricting/ommitting features.
+  platform by restricting/omitting features.
 - Rely on uncertain upper flash on F103C8
 
 The first option needs more care as an additional platform is introduced and
