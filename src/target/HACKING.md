@@ -18,16 +18,16 @@ to a reset initiated over JTAG protocol by poking registers in the target device
 ADIv5 'System Reset' refers to resetting the target using its nRST pin.
 
 A third moving piece to all this is that 'nTRST' (sometimes also referred to as 'JRST') is an
-optional pin sometimes found in JTAG interfaces to reset the JTAG machinary itself.
+optional pin sometimes found in JTAG interfaces to reset the JTAG machinery itself.
 
 In summary, the following applies:
 
 * In the ADIv5 spec, the physical reset pin is referred to by 'SRST'
 * In this code base, we refer to it by 'nRST'
-* Refering to it by 'nRST' is also then consistent with the silkscreen naming convention
+* Referring to it by 'nRST' is also then consistent with the silkscreen naming convention
   on probe host boards and in the ARM 10-pin JTAG pinout
 * JTAG physical reset is referred to by 'nTRST'
-* Software reset as in the case of JTAG-PDI is refered to by 'SRST' if shortened.
+* Software reset as in the case of JTAG-PDI is referred to by 'SRST' if shortened.
 
 The upshot of this is that to inhibit physical reset in the ARM ADIv5/Cortex-M code, set
 `CORTEXM_TOPT_INHIBIT_NRST`, which refers to inhibiting the ADIv5 spec 'SRST'.
@@ -72,7 +72,7 @@ request:
   for what kind of definition is being `typedef`d added.
 
 The suffixes expected are `_s` for a `struct`, `_e` for an `enum`, `_u` for a `union`, and `_t` for other
-miscelaneous types.
+miscellaneous types.
 
 A complete example for what this looks like is this:
 
