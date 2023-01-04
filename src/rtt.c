@@ -61,7 +61,7 @@ typedef enum rtt_retval {
 	RTT_OK,
 	RTT_IDLE,
 	RTT_ERR
-} rtt_retval;
+} rtt_retval_e;
 
 #ifdef RTT_IDENT
 #define Q(x)     #x
@@ -220,7 +220,7 @@ static void find_rtt(target_s *const cur_target)
 */
 
 /* poll if host has new data for target */
-static rtt_retval read_rtt(target_s *const cur_target, const uint32_t i)
+static rtt_retval_e read_rtt(target_s *const cur_target, const uint32_t i)
 {
 	uint32_t head_addr = 0;
 	uint32_t next_head;
@@ -286,7 +286,7 @@ int rtt_aligned_mem_read(target_s *t, void *dest, target_addr_t src, size_t len)
 }
 
 /* poll if target has new data for host */
-static rtt_retval print_rtt(target_s *const cur_target, const uint32_t i)
+static rtt_retval_e print_rtt(target_s *const cur_target, const uint32_t i)
 {
 	uint32_t tail_addr;
 
@@ -392,7 +392,7 @@ void poll_rtt(target_s *const cur_target)
 				rtt_err = true;
 			} else {
 				for (uint32_t i = 0; i < rtt_num_up_chan + rtt_num_down_chan; i++) {
-					rtt_retval v;
+					rtt_retval_e v;
 					if (rtt_channel_enabled[i]) {
 						if (i < rtt_num_up_chan)
 							v = print_rtt(cur_target, i); /* rtt from target to host */
