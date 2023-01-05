@@ -65,7 +65,8 @@ void trace_buf_drain(usbd_device *dev, uint8_t ep)
 				dev, CDCACM_UART_ENDPOINT, &trace_rx_buf[read_index * TRACE_ENDPOINT_SIZE], TRACE_ENDPOINT_SIZE);
 		else
 			/* write raw swo packets to the trace port */
-			result = usbd_ep_write_packet(dev, ep, &trace_rx_buf[read_index * TRACE_ENDPOINT_SIZE], TRACE_ENDPOINT_SIZE);
+			result =
+				usbd_ep_write_packet(dev, ep, &trace_rx_buf[read_index * TRACE_ENDPOINT_SIZE], TRACE_ENDPOINT_SIZE);
 		if (result)
 			read_index = (read_index + 1U) % NUM_TRACE_PACKETS;
 	}
@@ -112,7 +113,8 @@ void SWO_DMA_ISR(void)
 	}
 	if (DMA_ISR(SWO_DMA_BUS) & DMA_ISR_TCIF(SWO_DMA_CHAN)) {
 		DMA_IFCR(SWO_DMA_BUS) |= DMA_ISR_TCIF(SWO_DMA_CHAN);
-		memcpy(&trace_rx_buf[write_index * TRACE_ENDPOINT_SIZE], &pingpong_buf[TRACE_ENDPOINT_SIZE], TRACE_ENDPOINT_SIZE);
+		memcpy(
+			&trace_rx_buf[write_index * TRACE_ENDPOINT_SIZE], &pingpong_buf[TRACE_ENDPOINT_SIZE], TRACE_ENDPOINT_SIZE);
 	}
 	write_index = (write_index + 1U) % NUM_TRACE_PACKETS;
 	trace_buf_drain(usbdev, TRACE_ENDPOINT | USB_REQ_TYPE_IN);

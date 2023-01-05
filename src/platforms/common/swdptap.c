@@ -26,10 +26,10 @@
 #include "gdb_packet.h"
 
 #if !defined(SWDIO_IN_PORT)
-# define SWDIO_IN_PORT SWDIO_PORT
+#define SWDIO_IN_PORT SWDIO_PORT
 #endif
 #if !defined(SWDIO_IN_PIN)
-# define SWDIO_IN_PIN SWDIO_PIN
+#define SWDIO_IN_PIN SWDIO_PIN
 #endif
 
 typedef enum swdio_status_e {
