@@ -38,19 +38,17 @@ void dfu_detach(void)
 int main(void)
 {
 	/* Use Top of ITCM Flash as magic marker */
-	volatile uint32_t *magic = (volatile uint32_t *) 0x3ff8;
+	volatile uint32_t *magic = (volatile uint32_t *)0x3ff8;
 	rcc_periph_clock_enable(RCC_GPIOA);
 	/* On the Mini, NRST is on the footprint for the 1.27 mm Jumper
 	 * to the side of the USB connector.
 	 * With debugger connected, ignore reset. Use debugger to enter!
 	 */
 	bool force_bootloader;
-	force_bootloader = (!(SCS_DHCSR  & SCS_DHCSR_C_DEBUGEN) &&
-						((RCC_CSR &  RCC_CSR_RESET_FLAGS) == RCC_CSR_PINRSTF));
+	force_bootloader = (!(SCS_DHCSR & SCS_DHCSR_C_DEBUGEN) && ((RCC_CSR & RCC_CSR_RESET_FLAGS) == RCC_CSR_PINRSTF));
 	RCC_CSR |= RCC_CSR_RMVF;
 	RCC_CSR &= ~RCC_CSR_RMVF;
-	if (force_bootloader ||
-	   ((magic[0] == BOOTMAGIC0) && (magic[1] == BOOTMAGIC1))) {
+	if (force_bootloader || ((magic[0] == BOOTMAGIC0) && (magic[1] == BOOTMAGIC1))) {
 		magic[0] = 0;
 		magic[1] = 0;
 	} else {
@@ -71,7 +69,7 @@ int main(void)
 #define MCO1_PORT GPIOA
 #define MCO1_PIN  GPIO8
 #define MCO1_AF   0
-	gpio_set_af    (MCO1_PORT, MCO1_AF, MCO1_PIN);
+	gpio_set_af(MCO1_PORT, MCO1_AF, MCO1_PIN);
 	gpio_mode_setup(MCO1_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, MCO1_PIN);
 	gpio_set_output_options(MCO1_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_25MHZ, MCO1_PIN);
 	RCC_CR |= RCC_CR_HSION;
@@ -84,16 +82,14 @@ int main(void)
 	gpio_clear(LED_PORT, LED_PIN);
 
 	systick_set_clocksource(STK_CSR_CLKSOURCE_AHB_DIV8);
-	systick_set_reload(216*1000*1000/(8 * 10));
+	systick_set_reload(216 * 1000 * 1000 / (8 * 10));
 	systick_interrupt_enable();
 	systick_counter_enable();
 
 	dfu_protect(false);
 	dfu_init(&USB_DRIVER);
 	dfu_main();
-
 }
-
 
 void dfu_event(void)
 {

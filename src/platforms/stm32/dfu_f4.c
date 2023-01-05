@@ -104,12 +104,12 @@ void dfu_protect(bool enable)
 #endif
 }
 
-#if defined(STM32F7)		/* Set vector table base address */
+#if defined(STM32F7) /* Set vector table base address */
 #define SCB_VTOR_MASK 0xffffff00U
-#define RAM_MASK  0x2ff00000U
+#define RAM_MASK      0x2ff00000U
 #else
 #define SCB_VTOR_MASK 0x001fffffU
-#define RAM_MASK  0x2ffc0000U
+#define RAM_MASK      0x2ffc0000U
 #endif
 
 void dfu_jump_app_if_valid(void)

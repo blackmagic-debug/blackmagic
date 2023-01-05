@@ -40,8 +40,8 @@
 #include <libopencm3/stm32/usart.h>
 #include <libopencm3/stm32/dma.h>
 
-static volatile uint32_t w;	/* Packet currently received via UART */
-static volatile uint32_t r;	/* Packet currently waiting to transmit to USB */
+static volatile uint32_t w; /* Packet currently received via UART */
+static volatile uint32_t r; /* Packet currently waiting to transmit to USB */
 /* Packets arrived from the SWO interface */
 static uint8_t trace_rx_buf[NUM_TRACE_PACKETS * TRACE_ENDPOINT_SIZE];
 /* Packet pingpong buffer used for receiving packets */
@@ -54,24 +54,22 @@ void trace_buf_drain(usbd_device *dev, uint8_t ep)
 	static volatile char inBufDrain;
 
 	/* If we are already in this routine then we don't need to come in again */
-	if (__atomic_test_and_set (&inBufDrain, __ATOMIC_RELAXED))
+	if (__atomic_test_and_set(&inBufDrain, __ATOMIC_RELAXED))
 		return;
 	/* Attempt to write everything we buffered */
 	if (w != r) {
 		uint16_t rc;
 		if (decoding)
 			/* write decoded swo packets to the uart port */
-			rc = traceswo_decode(dev, CDCACM_UART_ENDPOINT,
-								 &trace_rx_buf[r * TRACE_ENDPOINT_SIZE],
-								 TRACE_ENDPOINT_SIZE);
+			rc =
+				traceswo_decode(dev, CDCACM_UART_ENDPOINT, &trace_rx_buf[r * TRACE_ENDPOINT_SIZE], TRACE_ENDPOINT_SIZE);
 		else
 			/* write raw swo packets to the trace port */
-			rc = usbd_ep_write_packet(dev, ep,
-									  &trace_rx_buf[r * TRACE_ENDPOINT_SIZE],
-									  TRACE_ENDPOINT_SIZE);
-		if (rc) r = (r + 1) % NUM_TRACE_PACKETS;
+			rc = usbd_ep_write_packet(dev, ep, &trace_rx_buf[r * TRACE_ENDPOINT_SIZE], TRACE_ENDPOINT_SIZE);
+		if (rc)
+			r = (r + 1) % NUM_TRACE_PACKETS;
 	}
-	__atomic_clear (&inBufDrain, __ATOMIC_RELAXED);
+	__atomic_clear(&inBufDrain, __ATOMIC_RELAXED);
 }
 
 void traceswo_setspeed(uint32_t baudrate)
@@ -87,17 +85,15 @@ void traceswo_setspeed(uint32_t baudrate)
 
 	/* Set up DMA channel*/
 	dma_stream_reset(SWO_DMA_BUS, SWO_DMA_STREAM);
-	dma_set_peripheral_address(SWO_DMA_BUS, SWO_DMA_STREAM,
-							   (uint32_t)&SWO_UART_DR);
-	dma_set_transfer_mode(SWO_DMA_BUS, SWO_DMA_STREAM,
-				DMA_SxCR_DIR_PERIPHERAL_TO_MEM);
+	dma_set_peripheral_address(SWO_DMA_BUS, SWO_DMA_STREAM, (uint32_t)&SWO_UART_DR);
+	dma_set_transfer_mode(SWO_DMA_BUS, SWO_DMA_STREAM, DMA_SxCR_DIR_PERIPHERAL_TO_MEM);
 	dma_enable_memory_increment_mode(SWO_DMA_BUS, SWO_DMA_STREAM);
 	dma_set_peripheral_size(SWO_DMA_BUS, SWO_DMA_STREAM, DMA_SxCR_PSIZE_8BIT);
 	dma_set_memory_size(SWO_DMA_BUS, SWO_DMA_STREAM, DMA_SxCR_MSIZE_8BIT);
 	dma_set_priority(SWO_DMA_BUS, SWO_DMA_STREAM, DMA_SxCR_PL_VERY_HIGH);
 	dma_enable_transfer_complete_interrupt(SWO_DMA_BUS, SWO_DMA_STREAM);
 	dma_enable_half_transfer_interrupt(SWO_DMA_BUS, SWO_DMA_STREAM);
-	dma_enable_circular_mode(SWO_DMA_BUS,SWO_DMA_STREAM);
+	dma_enable_circular_mode(SWO_DMA_BUS, SWO_DMA_STREAM);
 
 	usart_enable(SWO_UART);
 	nvic_enable_irq(SWO_DMA_IRQ);
@@ -113,13 +109,11 @@ void SWO_DMA_ISR(void)
 {
 	if (DMA_LISR(SWO_DMA_BUS) & DMA_LISR_HTIF0) {
 		DMA_LIFCR(SWO_DMA_BUS) |= DMA_LISR_HTIF0;
-		memcpy(&trace_rx_buf[w * TRACE_ENDPOINT_SIZE], pingpong_buf,
-			   TRACE_ENDPOINT_SIZE);
+		memcpy(&trace_rx_buf[w * TRACE_ENDPOINT_SIZE], pingpong_buf, TRACE_ENDPOINT_SIZE);
 	}
 	if (DMA_LISR(SWO_DMA_BUS) & DMA_LISR_TCIF0) {
 		DMA_LIFCR(SWO_DMA_BUS) |= DMA_LISR_TCIF0;
-		memcpy(&trace_rx_buf[w * TRACE_ENDPOINT_SIZE],
-			   &pingpong_buf[TRACE_ENDPOINT_SIZE], TRACE_ENDPOINT_SIZE);
+		memcpy(&trace_rx_buf[w * TRACE_ENDPOINT_SIZE], &pingpong_buf[TRACE_ENDPOINT_SIZE], TRACE_ENDPOINT_SIZE);
 	}
 	w = (w + 1) % NUM_TRACE_PACKETS;
 	trace_buf_drain(usbdev, TRACE_ENDPOINT);

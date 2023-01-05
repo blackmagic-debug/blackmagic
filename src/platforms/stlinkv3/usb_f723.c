@@ -34,32 +34,31 @@
  * or definitions that need hacking in order to use here.
  */
 /* ??? This bit is present in the st header files, but I could not find it described in the documentation. */
-#define OTG_GCCFG_PHYHSEN		(1 << 23)
-#define OTG_PHYC_LDO_DISABLE		(1 << 2)
-#define OTG_PHYC_LDO_STATUS		(1 << 1)
+#define OTG_GCCFG_PHYHSEN    (1 << 23)
+#define OTG_PHYC_LDO_DISABLE (1 << 2)
+#define OTG_PHYC_LDO_STATUS  (1 << 1)
 
 /* USB PHY controller registers. */
-#define USBPHYC_BASE			0x40017C00
-#define OTG_HS_PHYC_PLL1		MMIO32(USBPHYC_BASE + 0)
+#define USBPHYC_BASE     0x40017C00
+#define OTG_HS_PHYC_PLL1 MMIO32(USBPHYC_BASE + 0)
 
-#define OTG_PHYC_PLL1_ENABLE		1
+#define OTG_PHYC_PLL1_ENABLE 1
 
-#define OTG_HS_PHYC_TUNE		MMIO32(USBPHYC_BASE + 0xc)
-#define OTG_HS_PHYC_LDO			MMIO32(USBPHYC_BASE + 0x18)
+#define OTG_HS_PHYC_TUNE MMIO32(USBPHYC_BASE + 0xc)
+#define OTG_HS_PHYC_LDO  MMIO32(USBPHYC_BASE + 0x18)
 /* ??? The st header files have this:
  * #define USB_HS_PHYC_LDO_ENABLE                   USB_HS_PHYC_LDO_DISABLE
  * ...go figure...
  */
-#define OTG_PHYC_LDO_DISABLE		(1 << 2)
-#define OTG_PHYC_LDO_STATUS		(1 << 1)
-
+#define OTG_PHYC_LDO_DISABLE (1 << 2)
+#define OTG_PHYC_LDO_STATUS  (1 << 1)
 
 /* Yes, this is unpleasant. It does not belong here. */
-#define _REG_BIT(base, bit)             (((base) << 5) + (bit))
+#define _REG_BIT(base, bit) (((base) << 5) + (bit))
+
 /* STM32F7x3xx and STM32F730xx devices have an internal usb high-speed usb phy controller */
-enum
-{
-	RCC_OTGPHYC	= _REG_BIT(0x44, 31),
+enum {
+	RCC_OTGPHYC = _REG_BIT(0x44, 31),
 };
 
 /* Receive FIFO size in 32-bit words. */
@@ -103,7 +102,7 @@ static usbd_device *stm32f723_usbd_init(void)
 	gpio_set_output_options(GPIOB, GPIO_OTYPE_PP, GPIO_OSPEED_100MHZ, GPIO14 | GPIO15);
 	gpio_set_af(GPIOB, GPIO_AF12, GPIO14 | GPIO15);
 
-	rcc_periph_clock_enable((enum rcc_periph_clken) RCC_OTGPHYC);
+	rcc_periph_clock_enable((enum rcc_periph_clken)RCC_OTGPHYC);
 	rcc_periph_clock_enable(RCC_OTGHSULPI);
 
 	// TODO - check the preemption and subpriority, they are unified here
@@ -130,18 +129,21 @@ static usbd_device *stm32f723_usbd_init(void)
 	 * Used by DFU too, so platform_xxx not available.
 	 * Some Stlinkv3-Set did not cold start w/o the delay
 	 */
-	volatile int i = 200*1000;
-	while(i--);
+	volatile int i = 200 * 1000;
+	while (i--)
+		;
 
 	////OTG_HS_GUSBCFG |= OTG_GUSBCFG_PHYSEL;
 	/* Enable VBUS sensing in device mode and power down the PHY. */
 	////OTG_HS_GCCFG |= OTG_GCCFG_VBUSBSEN | OTG_GCCFG_PWRDWN;
 
 	/* Wait for AHB idle. */
-	while (!(OTG_HS_GRSTCTL & OTG_GRSTCTL_AHBIDL));
+	while (!(OTG_HS_GRSTCTL & OTG_GRSTCTL_AHBIDL))
+		;
 	/* Do core soft reset. */
 	OTG_HS_GRSTCTL |= OTG_GRSTCTL_CSRST;
-	while (OTG_HS_GRSTCTL & OTG_GRSTCTL_CSRST);
+	while (OTG_HS_GRSTCTL & OTG_GRSTCTL_CSRST)
+		;
 
 	/* Force peripheral only mode. */
 	OTG_HS_GUSBCFG |= OTG_GUSBCFG_FDMOD | OTG_GUSBCFG_TRDT_MASK;
@@ -161,20 +163,16 @@ static usbd_device *stm32f723_usbd_init(void)
 
 	/* Unmask interrupts for TX and RX. */
 	OTG_HS_GAHBCFG |= OTG_GAHBCFG_GINT;
-	OTG_HS_GINTMSK = OTG_GINTMSK_ENUMDNEM |
-			 OTG_GINTMSK_RXFLVLM |
-			 OTG_GINTMSK_IEPINT |
-			 OTG_GINTMSK_OEPINT |
-			 //OTG_GINTMSK_USBRST |
-			 OTG_GINTMSK_USBSUSPM |
-			 OTG_GINTMSK_WUIM;
+	OTG_HS_GINTMSK = OTG_GINTMSK_ENUMDNEM | OTG_GINTMSK_RXFLVLM | OTG_GINTMSK_IEPINT | OTG_GINTMSK_OEPINT |
+		//OTG_GINTMSK_USBRST |
+		OTG_GINTMSK_USBSUSPM | OTG_GINTMSK_WUIM;
 
 	OTG_HS_DAINTMSK = 0xffffffff;
 
-	OTG_HS_DOEPMSK |= OTG_DOEPMSK_STUPM | OTG_DOEPMSK_XFRCM ;
-	OTG_HS_DIEPMSK |= OTG_DIEPMSK_XFRCM ;
+	OTG_HS_DOEPMSK |= OTG_DOEPMSK_STUPM | OTG_DOEPMSK_XFRCM;
+	OTG_HS_DIEPMSK |= OTG_DIEPMSK_XFRCM;
 
-	OTG_HS_DCTL &=~ OTG_DCTL_SDIS;
+	OTG_HS_DCTL &= ~OTG_DCTL_SDIS;
 
 	return &usbd_dev;
 }

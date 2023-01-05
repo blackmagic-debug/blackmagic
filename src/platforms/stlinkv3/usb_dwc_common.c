@@ -32,10 +32,9 @@
 #define REBASE(x)        MMIO32((x) + (dev_base_address))
 
 /* TODO: this does not belong here; maybe add it as a new field in the driver structure */
-enum
-{
-	MAX_BULK_PACKET_SIZE	= 512,
-	USB_ENDPOINT_COUNT	= 9,
+enum {
+	MAX_BULK_PACKET_SIZE = 512,
+	USB_ENDPOINT_COUNT = 9,
 };
 
 /* Note: the original 'usb_dwc_common.c' source code
@@ -72,11 +71,10 @@ enum
  * to me that the setup packet is actually read in the '_usbd_control_setup()'
  * function, instead of handling it as a special case here.
  */
-static struct incoming_packet
-{
-	bool	is_packet_present;
-	int	packet_length;
-	uint8_t	packet_data[MAX_BULK_PACKET_SIZE];
+static struct incoming_packet {
+	bool is_packet_present;
+	int packet_length;
+	uint8_t packet_data[MAX_BULK_PACKET_SIZE];
 } stashed_packets[USB_ENDPOINT_COUNT];
 
 void dwc_set_address(usbd_device *usbd_dev, uint8_t addr)
@@ -84,9 +82,8 @@ void dwc_set_address(usbd_device *usbd_dev, uint8_t addr)
 	REBASE(OTG_DCFG) = (REBASE(OTG_DCFG) & ~OTG_DCFG_DAD) | (addr << 4);
 }
 
-void dwc_ep_setup(usbd_device *usbd_dev, uint8_t addr, uint8_t type,
-			uint16_t max_size,
-			void (*callback) (usbd_device *usbd_dev, uint8_t ep))
+void dwc_ep_setup(usbd_device *usbd_dev, uint8_t addr, uint8_t type, uint16_t max_size,
+	void (*callback)(usbd_device *usbd_dev, uint8_t ep))
 {
 	/*
 	 * Configure endpoint address and type. Allocate FIFO memory for
@@ -107,21 +104,16 @@ void dwc_ep_setup(usbd_device *usbd_dev, uint8_t addr, uint8_t type,
 			REBASE(OTG_DIEPCTL0) = OTG_DIEPCTL0_MPSIZ_8;
 		}
 
-		REBASE(OTG_DIEPTSIZ0) =
-			(max_size & OTG_DIEPSIZ0_XFRSIZ_MASK);
+		REBASE(OTG_DIEPTSIZ0) = (max_size & OTG_DIEPSIZ0_XFRSIZ_MASK);
 		REBASE(OTG_DIEPCTL0) |=
-			/* OTG_DIEPCTL0_EPENA | */OTG_DIEPCTL0_SNAK;
+			/* OTG_DIEPCTL0_EPENA | */ OTG_DIEPCTL0_SNAK;
 
 		/* Configure OUT part. */
-		usbd_dev->doeptsiz[0] = OTG_DIEPSIZ0_STUPCNT_1 |
-			OTG_DIEPSIZ0_PKTCNT |
-			(max_size & OTG_DIEPSIZ0_XFRSIZ_MASK);
+		usbd_dev->doeptsiz[0] = OTG_DIEPSIZ0_STUPCNT_1 | OTG_DIEPSIZ0_PKTCNT | (max_size & OTG_DIEPSIZ0_XFRSIZ_MASK);
 		REBASE(OTG_DOEPTSIZ(0)) = usbd_dev->doeptsiz[0];
-		REBASE(OTG_DOEPCTL(0)) |=
-		    OTG_DOEPCTL0_EPENA | OTG_DIEPCTL0_SNAK;
+		REBASE(OTG_DOEPCTL(0)) |= OTG_DOEPCTL0_EPENA | OTG_DIEPCTL0_SNAK;
 
-		REBASE(OTG_GNPTXFSIZ) = ((max_size / 4) << 16) |
-					 usbd_dev->driver->rx_fifo_size;
+		REBASE(OTG_GNPTXFSIZ) = ((max_size / 4) << 16) | usbd_dev->driver->rx_fifo_size;
 		usbd_dev->fifo_mem_top += max_size / 4;
 		usbd_dev->fifo_mem_top_ep0 = usbd_dev->fifo_mem_top;
 
@@ -129,34 +121,27 @@ void dwc_ep_setup(usbd_device *usbd_dev, uint8_t addr, uint8_t type,
 	}
 
 	if (dir) {
-		REBASE(OTG_DIEPTXF(addr)) = ((max_size / 4) << 16) |
-					     usbd_dev->fifo_mem_top;
+		REBASE(OTG_DIEPTXF(addr)) = ((max_size / 4) << 16) | usbd_dev->fifo_mem_top;
 		usbd_dev->fifo_mem_top += max_size / 4;
 
-		REBASE(OTG_DIEPTSIZ(addr)) =
-		    (max_size & OTG_DIEPSIZ0_XFRSIZ_MASK);
+		REBASE(OTG_DIEPTSIZ(addr)) = (max_size & OTG_DIEPSIZ0_XFRSIZ_MASK);
 		REBASE(OTG_DIEPCTL(addr)) |=
-		    /*OTG_DIEPCTL0_EPENA |*/ OTG_DIEPCTL0_SNAK | (type << 18)
-		    | OTG_DIEPCTL0_USBAEP | OTG_DIEPCTLX_SD0PID
-		    | (addr << 22) | max_size;
+			/*OTG_DIEPCTL0_EPENA |*/ OTG_DIEPCTL0_SNAK | (type << 18) | OTG_DIEPCTL0_USBAEP | OTG_DIEPCTLX_SD0PID |
+			(addr << 22) | max_size;
 
 		if (callback) {
-			usbd_dev->user_callback_ctr[addr][USB_TRANSACTION_IN] =
-			    (void *)callback;
+			usbd_dev->user_callback_ctr[addr][USB_TRANSACTION_IN] = (void *)callback;
 		}
 	}
 
 	if (!dir) {
-		usbd_dev->doeptsiz[addr] = OTG_DIEPSIZ0_PKTCNT |
-				 (max_size & OTG_DIEPSIZ0_XFRSIZ_MASK);
+		usbd_dev->doeptsiz[addr] = OTG_DIEPSIZ0_PKTCNT | (max_size & OTG_DIEPSIZ0_XFRSIZ_MASK);
 		REBASE(OTG_DOEPTSIZ(addr)) = usbd_dev->doeptsiz[addr];
-		REBASE(OTG_DOEPCTL(addr)) |= OTG_DOEPCTL0_EPENA |
-		    OTG_DOEPCTL0_USBAEP | OTG_DIEPCTL0_CNAK |
-		    OTG_DOEPCTLX_SD0PID | (type << 18) | max_size;
+		REBASE(OTG_DOEPCTL(addr)) |= OTG_DOEPCTL0_EPENA | OTG_DOEPCTL0_USBAEP | OTG_DIEPCTL0_CNAK |
+			OTG_DOEPCTLX_SD0PID | (type << 18) | max_size;
 
 		if (callback) {
-			usbd_dev->user_callback_ctr[addr][USB_TRANSACTION_OUT] =
-			    (void *)callback;
+			usbd_dev->user_callback_ctr[addr][USB_TRANSACTION_OUT] = (void *)callback;
 		}
 	}
 }
@@ -178,8 +163,7 @@ void dwc_endpoints_reset(usbd_device *usbd_dev)
 	}
 
 	/* Flush all tx/rx fifos */
-	REBASE(OTG_GRSTCTL) = OTG_GRSTCTL_TXFFLSH | OTG_GRSTCTL_TXFNUM_ALL
-			      | OTG_GRSTCTL_RXFFLSH;
+	REBASE(OTG_GRSTCTL) = OTG_GRSTCTL_TXFFLSH | OTG_GRSTCTL_TXFNUM_ALL | OTG_GRSTCTL_RXFFLSH;
 }
 
 void dwc_ep_stall_set(usbd_device *usbd_dev, uint8_t addr, uint8_t stall)
@@ -215,11 +199,9 @@ uint8_t dwc_ep_stall_get(usbd_device *usbd_dev, uint8_t addr)
 {
 	/* Return non-zero if STALL set. */
 	if (addr & 0x80) {
-		return (REBASE(OTG_DIEPCTL(addr & 0x7f)) &
-				OTG_DIEPCTL0_STALL) ? 1 : 0;
+		return (REBASE(OTG_DIEPCTL(addr & 0x7f)) & OTG_DIEPCTL0_STALL) ? 1 : 0;
 	} else {
-		return (REBASE(OTG_DOEPCTL(addr)) &
-				OTG_DOEPCTL0_STALL) ? 1 : 0;
+		return (REBASE(OTG_DOEPCTL(addr)) & OTG_DOEPCTL0_STALL) ? 1 : 0;
 	}
 }
 
@@ -239,8 +221,7 @@ void dwc_ep_nak_set(usbd_device *usbd_dev, uint8_t addr, uint8_t nak)
 	}
 }
 
-uint16_t dwc_ep_write_packet(usbd_device *usbd_dev, uint8_t addr,
-			      const void *buf, uint16_t len)
+uint16_t dwc_ep_write_packet(usbd_device *usbd_dev, uint8_t addr, const void *buf, uint16_t len)
 {
 	const uint32_t *buf32 = buf;
 #if defined(__ARM_ARCH_6M__)
@@ -298,8 +279,7 @@ uint16_t dwc_ep_write_packet(usbd_device *usbd_dev, uint8_t addr,
 	 */
 	uint32_t saved_interrupt_mask = REBASE(OTG_GINTMSK);
 	REBASE(OTG_GINTMSK) = 0;
-	REBASE(OTG_DIEPCTL(addr)) |= OTG_DIEPCTL0_EPENA |
-				     OTG_DIEPCTL0_CNAK;
+	REBASE(OTG_DIEPCTL(addr)) |= OTG_DIEPCTL0_EPENA | OTG_DIEPCTL0_CNAK;
 
 	/* Copy buffer to endpoint FIFO, note - memcpy does not work.
 	 * ARMv7M supports non-word-aligned accesses, ARMv6M does not. */
@@ -328,11 +308,10 @@ uint16_t dwc_ep_write_packet(usbd_device *usbd_dev, uint8_t addr,
 	return len;
 }
 
-uint16_t dwc_ep_read_packet(usbd_device *usbd_dev, uint8_t addr,
-				  void *buf, uint16_t len)
+uint16_t dwc_ep_read_packet(usbd_device *usbd_dev, uint8_t addr, void *buf, uint16_t len)
 {
-	(void) usbd_dev;
-	struct incoming_packet * packet = stashed_packets + addr;
+	(void)usbd_dev;
+	struct incoming_packet *packet = stashed_packets + addr;
 	if (!packet->is_packet_present)
 		return 0;
 	len = MIN(len, packet->packet_length);
@@ -345,8 +324,8 @@ uint16_t dwc_ep_read_packet(usbd_device *usbd_dev, uint8_t addr,
 void dwc_ep_read_packet_internal(usbd_device *usbd_dev, int ep)
 {
 	int i;
-	struct incoming_packet * packet = stashed_packets + ep;
-	uint32_t *buf32 = (uint32_t *) packet->packet_data;
+	struct incoming_packet *packet = stashed_packets + ep;
+	uint32_t *buf32 = (uint32_t *)packet->packet_data;
 	uint32_t extra;
 	uint16_t len = sizeof packet->packet_data;
 
@@ -381,7 +360,7 @@ void dwc_poll(usbd_device *usbd_dev)
 	if (!(intsts & REBASE(OTG_GINTMSK)))
 		/* No interrupts to handle - can happen if this function is
 		 * not invoked from the usb interrupt handler. */
-		 return;
+		return;
 	int i;
 
 	if (intsts & OTG_GINTSTS_ENUMDNE) {
@@ -393,16 +372,13 @@ void dwc_poll(usbd_device *usbd_dev)
 	}
 
 	/* Handle IN endpoint interrupt requests. */
-	if (intsts & OTG_GINTSTS_IEPINT)
-	{
+	if (intsts & OTG_GINTSTS_IEPINT) {
 		for (i = 0; i < USB_ENDPOINT_COUNT; i++) { /* Iterate over endpoints. */
 			if (REBASE(OTG_DIEPINT(i)) & OTG_DIEPINTX_XFRC) {
 				/* Transfer complete. */
 				REBASE(OTG_DIEPINT(i)) = OTG_DIEPINTX_XFRC;
-				if (usbd_dev->user_callback_ctr[i]
-						[USB_TRANSACTION_IN]) {
-					usbd_dev->user_callback_ctr[i]
-						[USB_TRANSACTION_IN](usbd_dev, i);
+				if (usbd_dev->user_callback_ctr[i][USB_TRANSACTION_IN]) {
+					usbd_dev->user_callback_ctr[i][USB_TRANSACTION_IN](usbd_dev, i);
 				}
 			}
 		}
@@ -416,17 +392,14 @@ void dwc_poll(usbd_device *usbd_dev)
 
 		/* Save packet size for dwc_ep_read_packet(). */
 		usbd_dev->rxbcnt = (rxstsp & OTG_GRXSTSP_BCNT_MASK) >> 4;
-		struct incoming_packet * packet = stashed_packets + ep;
+		struct incoming_packet *packet = stashed_packets + ep;
 
-		if (pktsts == OTG_GRXSTSP_PKTSTS_OUT)
-		{
+		if (pktsts == OTG_GRXSTSP_PKTSTS_OUT) {
 			if (usbd_dev->rxbcnt)
 				dwc_ep_read_packet_internal(usbd_dev, ep);
 			else
 				packet->is_packet_present = true, packet->packet_length = 0;
-		}
-		else if (pktsts == OTG_GRXSTSP_PKTSTS_SETUP)
-		{
+		} else if (pktsts == OTG_GRXSTSP_PKTSTS_SETUP) {
 			if (usbd_dev->rxbcnt)
 				dwc_ep_read_packet_internal(usbd_dev, ep);
 			else
@@ -435,40 +408,34 @@ void dwc_poll(usbd_device *usbd_dev)
 	}
 
 	/* Handle OUT endpoint interrupt requests. */
-	if (intsts & OTG_GINTSTS_OEPINT)
-	{
+	if (intsts & OTG_GINTSTS_OEPINT) {
 		uint32_t daint = REBASE(OTG_DAINT);
 		int epnum;
-		for (epnum = 0; epnum < USB_ENDPOINT_COUNT; epnum ++)
-			if (daint & (1 << (16 + epnum)))
-			{
+		for (epnum = 0; epnum < USB_ENDPOINT_COUNT; epnum++)
+			if (daint & (1 << (16 + epnum))) {
 				uint32_t t = REBASE(OTG_DOEPINT(epnum));
 				REBASE(OTG_DOEPINT(epnum)) = t;
 
-				if (t & OTG_DOEPINTX_XFRC)
-				{
+				if (t & OTG_DOEPINTX_XFRC) {
 					REBASE(OTG_DOEPINT(epnum)) = OTG_DOEPINTX_XFRC;
 					if (usbd_dev->user_callback_ctr[epnum][USB_TRANSACTION_OUT]) {
-						usbd_dev->user_callback_ctr[epnum][USB_TRANSACTION_OUT] (usbd_dev, epnum);
+						usbd_dev->user_callback_ctr[epnum][USB_TRANSACTION_OUT](usbd_dev, epnum);
 					}
 					REBASE(OTG_DOEPTSIZ(epnum)) = usbd_dev->doeptsiz[epnum];
-					REBASE(OTG_DOEPCTL(epnum)) |= OTG_DOEPCTL0_EPENA |
-						(usbd_dev->force_nak[epnum] ?
-						 OTG_DOEPCTL0_SNAK : OTG_DOEPCTL0_CNAK);
+					REBASE(OTG_DOEPCTL(epnum)) |=
+						OTG_DOEPCTL0_EPENA | (usbd_dev->force_nak[epnum] ? OTG_DOEPCTL0_SNAK : OTG_DOEPCTL0_CNAK);
 				}
-				if (t & OTG_DOEPINTX_STUP)
-				{
+				if (t & OTG_DOEPINTX_STUP) {
 					/* Special case for control endpoints - reception of OUT packets is
 					 * always enabled. */
 					REBASE(OTG_DOEPINT(epnum)) = OTG_DOEPINTX_STUP;
 					if (usbd_dev->user_callback_ctr[epnum][USB_TRANSACTION_SETUP]) {
-						usbd_dev->user_callback_ctr[epnum][USB_TRANSACTION_SETUP] (usbd_dev, epnum);
+						usbd_dev->user_callback_ctr[epnum][USB_TRANSACTION_SETUP](usbd_dev, epnum);
 					}
 					REBASE(OTG_DOEPTSIZ(epnum)) = usbd_dev->doeptsiz[epnum];
 					REBASE(OTG_DOEPCTL(epnum)) |= OTG_DOEPCTL0_EPENA |
 
-						(usbd_dev->force_nak[epnum] ?
-						 OTG_DOEPCTL0_SNAK : OTG_DOEPCTL0_CNAK);
+						(usbd_dev->force_nak[epnum] ? OTG_DOEPCTL0_SNAK : OTG_DOEPCTL0_CNAK);
 				}
 				if (t & OTG_DOEPINTX_OTEPDIS)
 					REBASE(OTG_DOEPINT(epnum)) = OTG_DOEPINTX_OTEPDIS;
