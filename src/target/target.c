@@ -470,7 +470,9 @@ size_t target_regs_size(target_s *t)
  */
 const char *target_regs_description(target_s *t)
 {
-	return t->regs_description(t);
+	if (t->regs_description)
+		return t->regs_description(t);
+	return NULL;
 }
 
 const char *target_driver_name(target_s *t)
