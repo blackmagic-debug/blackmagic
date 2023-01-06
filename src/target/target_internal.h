@@ -21,6 +21,9 @@
 #ifndef TARGET_TARGET_INTERNAL_H
 #define TARGET_TARGET_INTERNAL_H
 
+#include <stdint.h>
+#include <stddef.h>
+#include <stdbool.h>
 #include "platform_support.h"
 
 extern target_s *target_list;
