@@ -497,9 +497,9 @@ unsigned int target_part_id(target_s *t)
 
 uint32_t target_mem_read32(target_s *t, uint32_t addr)
 {
-	uint32_t ret;
-	t->mem_read(t, &ret, addr, sizeof(ret));
-	return ret;
+	uint32_t result = 0;
+	t->mem_read(t, &result, addr, sizeof(result));
+	return result;
 }
 
 void target_mem_write32(target_s *t, uint32_t addr, uint32_t value)
@@ -509,9 +509,9 @@ void target_mem_write32(target_s *t, uint32_t addr, uint32_t value)
 
 uint16_t target_mem_read16(target_s *t, uint32_t addr)
 {
-	uint16_t ret;
-	t->mem_read(t, &ret, addr, sizeof(ret));
-	return ret;
+	uint16_t result = 0;
+	t->mem_read(t, &result, addr, sizeof(result));
+	return result;
 }
 
 void target_mem_write16(target_s *t, uint32_t addr, uint16_t value)
@@ -521,9 +521,9 @@ void target_mem_write16(target_s *t, uint32_t addr, uint16_t value)
 
 uint8_t target_mem_read8(target_s *t, uint32_t addr)
 {
-	uint8_t ret;
-	t->mem_read(t, &ret, addr, sizeof(ret));
-	return ret;
+	uint8_t result = 0;
+	t->mem_read(t, &result, addr, sizeof(result));
+	return result;
 }
 
 void target_mem_write8(target_s *t, uint32_t addr, uint8_t value)
