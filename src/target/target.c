@@ -38,16 +38,6 @@ const command_s target_cmd_list[] = {
 	{NULL, NULL, NULL},
 };
 
-static bool nop_function()
-{
-	return true;
-}
-
-static bool false_function()
-{
-	return false;
-}
-
 target_s *target_new(void)
 {
 	target_s *t = calloc(1, sizeof(*t));
@@ -63,20 +53,6 @@ target_s *target_new(void)
 		c->next = t;
 	} else
 		target_list = t;
-
-	t->attach = (void *)nop_function;
-	t->detach = (void *)nop_function;
-	t->mem_read = (void *)nop_function;
-	t->mem_write = (void *)nop_function;
-	t->reg_read = (void *)nop_function;
-	t->reg_write = (void *)nop_function;
-	t->regs_read = (void *)nop_function;
-	t->regs_write = (void *)nop_function;
-	t->reset = (void *)nop_function;
-	t->halt_request = (void *)nop_function;
-	t->halt_poll = (void *)nop_function;
-	t->halt_resume = (void *)nop_function;
-	t->check_error = (void *)false_function;
 
 	t->target_storage = NULL;
 
@@ -182,7 +158,7 @@ target_s *target_attach(target_s *t, target_controller_s *tc)
 	t->tc = tc;
 	platform_target_clk_output_enable(true);
 
-	if (!t->attach(t)) {
+	if (t->attach && !t->attach(t)) {
 		platform_target_clk_output_enable(false);
 		return NULL;
 	}
@@ -257,7 +233,8 @@ void target_print_progress(platform_timeout_s *const timeout)
 /* Wrapper functions */
 void target_detach(target_s *t)
 {
-	t->detach(t);
+	if (t->detach)
+		t->detach(t);
 	platform_target_clk_output_enable(false);
 	t->attached = false;
 #if PC_HOSTED == 1
@@ -267,7 +244,7 @@ void target_detach(target_s *t)
 
 bool target_check_error(target_s *t)
 {
-	if (t)
+	if (t && t->check_error)
 		return t->check_error(t);
 	return false;
 }
@@ -280,13 +257,15 @@ bool target_attached(target_s *t)
 /* Memory access functions */
 int target_mem_read(target_s *t, void *dest, target_addr_t src, size_t len)
 {
-	t->mem_read(t, dest, src, len);
+	if (t->mem_read)
+		t->mem_read(t, dest, src, len);
 	return target_check_error(t);
 }
 
 int target_mem_write(target_s *t, target_addr_t dest, const void *src, size_t len)
 {
-	t->mem_write(t, dest, src, len);
+	if (t->mem_write)
+		t->mem_write(t, dest, src, len);
 	return target_check_error(t);
 }
 
@@ -302,53 +281,63 @@ bool target_mem_access_needs_halt(target_s *t)
 /* Register access functions */
 ssize_t target_reg_read(target_s *t, int reg, void *data, size_t max)
 {
-	return t->reg_read(t, reg, data, max);
+	if (t->reg_read)
+		return t->reg_read(t, reg, data, max);
+	return 0;
 }
 
 ssize_t target_reg_write(target_s *t, int reg, const void *data, size_t size)
 {
-	return t->reg_write(t, reg, data, size);
+	if (t->reg_write)
+		return t->reg_write(t, reg, data, size);
+	return 0;
 }
 
 void target_regs_read(target_s *t, void *data)
 {
-	if (t->regs_read) {
+	if (t->regs_read)
 		t->regs_read(t, data);
-		return;
+	else {
+		for (size_t x = 0, i = 0; x < t->regs_size;)
+			x += target_reg_read(t, i++, data + x, t->regs_size - x);
 	}
-	for (size_t x = 0, i = 0; x < t->regs_size;)
-		x += t->reg_read(t, i++, data + x, t->regs_size - x);
 }
 
 void target_regs_write(target_s *t, const void *data)
 {
-	if (t->regs_write) {
+	if (t->regs_write)
 		t->regs_write(t, data);
-		return;
+	else {
+		for (size_t x = 0, i = 0; x < t->regs_size;)
+			x += target_reg_write(t, i++, data + x, t->regs_size - x);
 	}
-	for (size_t x = 0, i = 0; x < t->regs_size;)
-		x += t->reg_write(t, i++, data + x, t->regs_size - x);
 }
 
 /* Halt/resume functions */
 void target_reset(target_s *t)
 {
-	t->reset(t);
+	if (t->reset)
+		t->reset(t);
 }
 
 void target_halt_request(target_s *t)
 {
-	t->halt_request(t);
+	if (t->halt_request)
+		t->halt_request(t);
 }
 
 target_halt_reason_e target_halt_poll(target_s *t, target_addr_t *watch)
 {
-	return t->halt_poll(t, watch);
+	if (t->halt_poll)
+		return t->halt_poll(t, watch);
+	/* XXX: Is this actually the desired fallback behaviour? */
+	return TARGET_HALT_RUNNING;
 }
 
 void target_halt_resume(target_s *t, bool step)
 {
-	t->halt_resume(t, step);
+	if (t->halt_resume)
+		t->halt_resume(t, step);
 }
 
 /* Command line for semihosting get_cmdline */
@@ -498,37 +487,43 @@ unsigned int target_part_id(target_s *t)
 uint32_t target_mem_read32(target_s *t, uint32_t addr)
 {
 	uint32_t result = 0;
-	t->mem_read(t, &result, addr, sizeof(result));
+	if (t->mem_read)
+		t->mem_read(t, &result, addr, sizeof(result));
 	return result;
 }
 
 void target_mem_write32(target_s *t, uint32_t addr, uint32_t value)
 {
-	t->mem_write(t, addr, &value, sizeof(value));
+	if (t->mem_write)
+		t->mem_write(t, addr, &value, sizeof(value));
 }
 
 uint16_t target_mem_read16(target_s *t, uint32_t addr)
 {
 	uint16_t result = 0;
-	t->mem_read(t, &result, addr, sizeof(result));
+	if (t->mem_read)
+		t->mem_read(t, &result, addr, sizeof(result));
 	return result;
 }
 
 void target_mem_write16(target_s *t, uint32_t addr, uint16_t value)
 {
-	t->mem_write(t, addr, &value, sizeof(value));
+	if (t->mem_write)
+		t->mem_write(t, addr, &value, sizeof(value));
 }
 
 uint8_t target_mem_read8(target_s *t, uint32_t addr)
 {
 	uint8_t result = 0;
-	t->mem_read(t, &result, addr, sizeof(result));
+	if (t->mem_read)
+		t->mem_read(t, &result, addr, sizeof(result));
 	return result;
 }
 
 void target_mem_write8(target_s *t, uint32_t addr, uint8_t value)
 {
-	t->mem_write(t, addr, &value, sizeof(value));
+	if (t->mem_write)
+		t->mem_write(t, addr, &value, sizeof(value));
 }
 
 void target_command_help(target_s *t)
