@@ -37,16 +37,23 @@ SRC += 	\
 	traceswoasync_f723.c	\
 	traceswodecode.c	\
 
+.PHONY: libopencm3_stm32f7
+
 ifeq ($(NO_BOOTLOADER), 1)
-all:	blackmagic.bin
+all:	libopencm3_stm32f7 blackmagic.bin
 else
-all:	blackmagic.bin blackmagic_dfu.bin blackmagic_dfu.hex
+all:	libopencm3_stm32f7 blackmagic.bin blackmagic_dfu.bin blackmagic_dfu.hex
 
 blackmagic_dfu.elf: usbdfu.o dfucore.o dfu_f4.o usb_f723.o \
 		usb_dwc_common.o usb_control.o serialno.o
 	@echo "  LD      $@"
 	$(Q)$(CC) $^ -o $@ $(LDFLAGS_BOOT)
 endif
+
+blackmagic.elf: libopencm3_stm32f7
+libopencm3_stm32f7:
+	$(Q)$(MAKE) $(MFLAGS) -C ../libopencm3 lib/stm32/f7
+
 host_clean:
 	-$(Q)$(RM) *.bin *elf *hex *.o
 
