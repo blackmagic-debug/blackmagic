@@ -47,15 +47,15 @@ static uint32_t hw_version;
 #define SCB_CCR_DC_Pos 16U                     /*!< SCB CCR: Cache enable bit Position */
 #define SCB_CCR_DC_Msk (1UL << SCB_CCR_DC_Pos) /*!< SCB CCR: DC Mask */
 
-#define SCB_CCSIDR_NUMSETS_Msk (0x7FFFUL << SCB_CCSIDR_NUMSETS_Pos) /*!< SCB CCSIDR: NumSets Mask */
+#define SCB_CCSIDR_NUMSETS_Msk (0x7fffUL << SCB_CCSIDR_NUMSETS_Pos) /*!< SCB CCSIDR: NumSets Mask */
 #define SCB_CCSIDR_NUMSETS_Pos 13U                                  /*!< SCB CCSIDR: NumSets Position */
 
 #define SCB_CCSIDR_ASSOCIATIVITY_Pos 3U /*!< SCB CCSIDR: Associativity Position */
-#define SCB_CCSIDR_ASSOCIATIVITY_Msk (0x3FFUL << SCB_CCSIDR_ASSOCIATIVITY_Pos) /*!< SCB CCSIDR: Associativity Mask */
+#define SCB_CCSIDR_ASSOCIATIVITY_Msk (0x3ffUL << SCB_CCSIDR_ASSOCIATIVITY_Pos) /*!< SCB CCSIDR: Associativity Mask */
 #define CCSIDR_WAYS(x)               (((x)&SCB_CCSIDR_ASSOCIATIVITY_Msk) >> SCB_CCSIDR_ASSOCIATIVITY_Pos)
 
 #define SCB_DCISW_SET_Pos 5U                             /*!< SCB DCISW: Set Position */
-#define SCB_DCISW_SET_Msk (0x1FFUL << SCB_DCISW_SET_Pos) /*!< SCB DCISW: Set Mask */
+#define SCB_DCISW_SET_Msk (0x1ffUL << SCB_DCISW_SET_Pos) /*!< SCB DCISW: Set Mask */
 
 #define SCB_DCISW_WAY_Pos 30U                        /*!< SCB DCISW: Way Position */
 #define SCB_DCISW_WAY_Msk (3UL << SCB_DCISW_WAY_Pos) /*!< SCB DCISW: Way Mask */
@@ -64,12 +64,12 @@ static uint32_t hw_version;
 
 static void __DSB(void)
 {
-	__asm__ volatile("dsb 0xF" ::: "memory");
+	__asm__ volatile("dsb 0xf" ::: "memory");
 }
 
 static void __ISB(void)
 {
-	__asm__ volatile("isb 0xF" ::: "memory");
+	__asm__ volatile("isb 0xf" ::: "memory");
 }
 
 static void SCB_EnableICache(void)

@@ -177,7 +177,7 @@ void dwc_ep_stall_set(usbd_device *usbd_dev, uint8_t addr, uint8_t stall)
 	}
 
 	if (addr & 0x80) {
-		addr &= 0x7F;
+		addr &= 0x7f;
 
 		if (stall) {
 			REBASE(OTG_DIEPCTL(addr)) |= OTG_DIEPCTL0_STALL;
@@ -230,7 +230,7 @@ uint16_t dwc_ep_write_packet(usbd_device *usbd_dev, uint8_t addr, const void *bu
 #endif /* defined(__ARM_ARCH_6M__) */
 	int i;
 
-	addr &= 0x7F;
+	addr &= 0x7f;
 
 	/* Note: because of the libopencm3 API specification of this
 	 * function, the type of the return code is 'uint16_t'.
