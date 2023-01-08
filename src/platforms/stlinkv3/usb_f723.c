@@ -39,7 +39,7 @@
 #define OTG_PHYC_LDO_STATUS  (1 << 1)
 
 /* USB PHY controller registers. */
-#define USBPHYC_BASE     0x40017C00
+#define USBPHYC_BASE     0x40017c00
 #define OTG_HS_PHYC_PLL1 MMIO32(USBPHYC_BASE + 0)
 
 #define OTG_PHYC_PLL1_ENABLE 1
@@ -123,7 +123,7 @@ static usbd_device *stm32f723_usbd_init(void)
 		;
 	/* This setting is for a HSE clock of 25 MHz. */
 	OTG_HS_PHYC_PLL1 = 5 << 1;
-	OTG_HS_PHYC_TUNE |= 0x00000F13U;
+	OTG_HS_PHYC_TUNE |= 0x00000f13U;
 	OTG_HS_PHYC_PLL1 |= OTG_PHYC_PLL1_ENABLE;
 	/* 2ms Delay required to get internal phy clock stable
 	 * Used by DFU too, so platform_xxx not available.
