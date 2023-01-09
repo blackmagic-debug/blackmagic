@@ -40,10 +40,14 @@ static const usb_device_descriptor_s dev_desc = {
 	.bDeviceClass = 0xef, /* Miscellaneous Device */
 	.bDeviceSubClass = 2, /* Common Class */
 	.bDeviceProtocol = 1, /* Interface Association */
+#if defined(LM4F) || defined(USB_HS)
 	/* The USB specification requires that the control endpoint size for high
 	 * speed devices (e.g., stlinkv3) is 64 bytes.
-	 * Best to have its size set to 64 bytes in all cases. */
+	 * On the LM4F is is required to be 64 bytes for the ICDI driver. */
 	.bMaxPacketSize0 = 64,
+#else
+	.bMaxPacketSize0 = 32,
+#endif
 	.idVendor = 0x1d50,
 	.idProduct = 0x6018,
 	.bcdDevice = 0x0100,
