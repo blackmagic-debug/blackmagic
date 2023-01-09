@@ -28,20 +28,15 @@ extern usbd_device *usbdev;
 extern uint16_t usb_config;
 
 #if defined(USB_HS)
-#define CDCACM_PACKET_SIZE 512U
+#define CDCACM_PACKET_SIZE  512U
+#define TRACE_ENDPOINT_SIZE 512U
 #else
-#define CDCACM_PACKET_SIZE 64U
+#define CDCACM_PACKET_SIZE  64U
+#define TRACE_ENDPOINT_SIZE 64U
 #endif
 
 #if !defined(MAX_BINTERVAL)
 #define MAX_BINTERVAL 255U
-#endif
-
-#define TRACE_ENDPOINT_SIZE CDCACM_PACKET_SIZE
-
-/* Use platform provided value if given. */
-#if !defined(TRACE_ENDPOINT_SIZE)
-#define TRACE_ENDPOINT_SIZE CDCACM_PACKET_SIZE
 #endif
 
 #define CDCACM_GDB_ENDPOINT  1U
