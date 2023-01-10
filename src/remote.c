@@ -313,6 +313,9 @@ static void remote_packet_process_general(unsigned i, char *packet)
 #define PLATFORM_IDENT() BOARD_IDENT
 #endif
 	case REMOTE_START:
+#if defined(ENABLE_DEBUG) && defined(PLATFORM_HAS_DEBUG)
+		debug_bmp = true;
+#endif
 		remote_respond_string(REMOTE_RESP_OK, PLATFORM_IDENT "" FIRMWARE_VERSION);
 		break;
 
