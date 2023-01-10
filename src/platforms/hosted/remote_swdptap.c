@@ -52,10 +52,6 @@ int remote_swdptap_init(adiv5_debug_port_s *dp)
 	dp->seq_in_parity = swdptap_seq_in_parity;
 	dp->seq_out = swdptap_seq_out;
 	dp->seq_out_parity = swdptap_seq_out_parity;
-	dp->dp_read = firmware_swdp_read;
-	dp->error = firmware_swdp_error;
-	dp->low_access = firmware_swdp_low_access;
-	dp->abort = firmware_swdp_abort;
 	return 0;
 }
 
