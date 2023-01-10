@@ -208,10 +208,14 @@ uint32_t firmware_swdp_read(adiv5_debug_port_s *dp, uint16_t addr)
 
 uint32_t firmware_swdp_error(adiv5_debug_port_s *dp, const bool protocol_recovery)
 {
-	if (dp->version >= 2 || protocol_recovery) {
-		/* On protocol error target gets deselected.
-		 * With DP Change, another target needs selection.
-		 * => Reselect with right target! */
+	/* Only do the comms reset dance on DPv2+ w/ fault or to perform protocol recovery. */
+	if ((dp->version >= 2 && dp->fault) || protocol_recovery) {
+		/*
+		 * Note that on DPv2+ devices, during a protocol error condition
+		 * the target becomes deselected during line reset. Once reset,
+		 * we must then re-select the target to bring the device back
+		 * into the expected state.
+		 */
 		dp_line_reset(dp);
 		if (dp->version >= 2)
 			firmware_dp_low_write(dp, ADIV5_DP_TARGETSEL, dp->targetsel);
