@@ -60,16 +60,17 @@ static void dp_line_reset(adiv5_debug_port_s *dp)
 
 bool firmware_dp_low_write(adiv5_debug_port_s *dp, const uint16_t addr, const uint32_t data)
 {
-	const uint8_t request = make_packet_request(ADIV5_LOW_WRITE, addr & 0xfU);
+	const uint8_t request = make_packet_request(ADIV5_LOW_WRITE, addr);
 	dp->seq_out(request, 8);
 	const uint8_t res = dp->seq_in(3);
 	dp->seq_out_parity(data, 32);
+	dp->seq_out(0, 8);
 	return res != SWDP_ACK_OK;
 }
 
 uint32_t firmware_dp_low_read(adiv5_debug_port_s *dp, const uint16_t addr)
 {
-	const uint8_t request = make_packet_request(ADIV5_LOW_READ, addr & 0xfU);
+	const uint8_t request = make_packet_request(ADIV5_LOW_READ, addr);
 	dp->seq_out(request, 8);
 	const uint8_t res = dp->seq_in(3);
 	uint32_t data = 0;
