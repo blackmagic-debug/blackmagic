@@ -1012,7 +1012,6 @@ const void *adiv5_pack_data(const uint32_t dest, const void *const src, uint32_t
 
 void firmware_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t len)
 {
-	uint32_t tmp;
 	uint32_t osrc = src;
 	const align_e align = MIN(ALIGNOF(src), ALIGNOF(len));
 
@@ -1023,8 +1022,8 @@ void firmware_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t
 	ap_mem_access_setup(ap, src, align);
 	adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_AP_DRW, 0);
 	while (--len) {
-		tmp = adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_AP_DRW, 0);
-		dest = adiv5_unpack_data(dest, src, tmp, align);
+		const uint32_t value = adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_AP_DRW, 0);
+		dest = adiv5_unpack_data(dest, src, value, align);
 
 		src += (1U << align);
 		/* Check for 10 bit address overflow */
@@ -1034,8 +1033,8 @@ void firmware_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t
 			adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_AP_DRW, 0);
 		}
 	}
-	tmp = adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_DP_RDBUFF, 0);
-	adiv5_unpack_data(dest, src, tmp, align);
+	const uint32_t value = adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_DP_RDBUFF, 0);
+	adiv5_unpack_data(dest, src, value, align);
 }
 
 void firmware_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, align_e align)
