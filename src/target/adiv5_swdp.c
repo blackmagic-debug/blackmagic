@@ -213,8 +213,9 @@ uint32_t firmware_swdp_error(adiv5_debug_port_s *dp, const bool protocol_recover
 		 * With DP Change, another target needs selection.
 		 * => Reselect with right target! */
 		dp_line_reset(dp);
+		if (dp->version >= 2)
+			firmware_dp_low_write(dp, ADIV5_DP_TARGETSEL, dp->targetsel);
 		firmware_dp_low_read(dp, ADIV5_DP_DPIDR);
-		dp->dp_low_write(dp, ADIV5_DP_TARGETSEL, dp->targetsel);
 		/* Exception here is unexpected, so do not catch */
 	}
 	const uint32_t err = firmware_dp_low_read(dp, ADIV5_DP_CTRLSTAT) &
