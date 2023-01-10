@@ -159,11 +159,12 @@ uint32_t adiv5_swdp_scan(uint32_t targetid)
 		}
 	}
 
+#if PC_HOSTED == 1
 	if (!initial_dp->dp_low_write) {
-		DEBUG_WARN("CMSIS_DAP < V1.2 can not handle multi-drop!\n");
-		/* E.g. CMSIS_DAP < V1.2 can not handle multi-drop!*/
+		DEBUG_WARN("CMSIS_DAP < v1.2 can not handle multi-drop, disabling\n");
 		scan_multidrop = false;
 	}
+#endif
 
 	DEBUG_WARN("scan_multidrop: %s\n", scan_multidrop ? "true" : "false");
 
