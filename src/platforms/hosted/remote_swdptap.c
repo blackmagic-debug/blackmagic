@@ -74,8 +74,8 @@ static bool swdptap_seq_in_parity(uint32_t *res, size_t clock_cycles)
 
 	*res = remotehston(-1, (char *)&construct[1]);
 	DEBUG_PROBE("swdptap_seq_in_parity  %2d clock_cycles: %08" PRIx32 " %s\n", clock_cycles, *res,
-		(construct[0] != REMOTE_RESP_OK) ? "ERR" : "OK");
-	return (construct[0] != REMOTE_RESP_OK);
+		construct[0] != REMOTE_RESP_OK ? "ERR" : "OK");
+	return construct[0] != REMOTE_RESP_OK;
 }
 
 static uint32_t swdptap_seq_in(size_t clock_cycles)
