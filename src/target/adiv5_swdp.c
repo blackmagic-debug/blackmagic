@@ -150,6 +150,8 @@ uint32_t adiv5_swdp_scan(uint32_t targetid)
 		const uint8_t dp_version = (dp_dpidr & ADIV5_DP_DPIDR_VERSION_MASK) >> ADIV5_DP_DPIDR_VERSION_OFFSET;
 		if (dp_version >= 2) {
 			scan_multidrop = true;
+			// initial_dp must have the version field set so adiv5_dp_read() does protocol recovery correctly.
+			initial_dp->version = dp_version;
 
 			/* Read TargetID. Can be done with device in WFI, sleep or reset! */
 			/* TARGETID is on bank 2 */
@@ -171,14 +173,15 @@ uint32_t adiv5_swdp_scan(uint32_t targetid)
 	const volatile size_t max_dp = scan_multidrop ? 16U : 1U;
 	for (volatile size_t i = 0; i < max_dp; i++) {
 		if (scan_multidrop) {
+			initial_dp->fault = 0;
 			dp_line_reset(initial_dp);
 
 			initial_dp->dp_low_write(initial_dp, ADIV5_DP_TARGETSEL,
-				(i << ADIV5_DP_TARGETSEL_TINSTANCE_OFFSET) |
-					(dp_targetid & (ADIV5_DP_TARGETSEL_TPARTNO_MASK | ADIV5_DP_TARGETSEL_TDESIGNER_MASK | 1U)));
+				i << ADIV5_DP_TARGETSEL_TINSTANCE_OFFSET |
+					(dp_targetid & (ADIV5_DP_TARGETID_TDESIGNER_MASK | ADIV5_DP_TARGETID_TPARTNO_MASK)) | 1U);
 
 			TRY_CATCH (e, EXCEPTION_ALL) {
-				initial_dp->dp_read(initial_dp, ADIV5_DP_DPIDR);
+				adiv5_dp_read(initial_dp, ADIV5_DP_DPIDR);
 			}
 			if (e.type || initial_dp->fault)
 				continue;
