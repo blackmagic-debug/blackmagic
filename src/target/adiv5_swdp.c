@@ -167,7 +167,7 @@ uint32_t adiv5_swdp_scan(uint32_t targetid)
 
 	DEBUG_WARN("scan_multidrop: %s\n", scan_multidrop ? "true" : "false");
 
-	const volatile size_t max_dp = (scan_multidrop) ? 16U : 1U;
+	const volatile size_t max_dp = scan_multidrop ? 16U : 1U;
 	for (volatile size_t i = 0; i < max_dp; i++) {
 		if (scan_multidrop) {
 			dp_line_reset(initial_dp);
