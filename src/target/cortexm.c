@@ -504,6 +504,9 @@ static void cortexm_read_cpuid(target_s *const t, const adiv5_access_port_s *con
 	t->cpuid = target_mem_read32(t, CORTEXM_CPUID);
 	const uint16_t cpuid_partno = t->cpuid & CPUID_PARTNO_MASK;
 	switch (cpuid_partno) {
+	case STAR_MC1:
+		t->core = "STAR-MC1";
+		break;
 	case CORTEX_M33:
 		t->core = "M33";
 		break;
@@ -697,6 +700,9 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 	case JEP106_MANUFACTURER_RENESAS:
 		PROBE(renesas_probe);
 		break;
+	case JEP106_MANUFACTURER_ARM_CHINA:
+		PROBE(mm32f3xx_probe); /* MindMotion Star-MC1 */
+		break;
 	case JEP106_MANUFACTURER_ARM:
 		/*
 		 * All of these have braces as a brake from the standard so they're completely
@@ -711,9 +717,11 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 			PROBE(ch32f1_probe);
 			PROBE(stm32f1_probe);          /* Care for other STM32F1 clones (?) */
 			PROBE(lpc15xx_probe);          /* Thanks to JojoS for testing */
+			PROBE(mm32f3xx_probe);         /* MindMotion MM32 */
 		} else if (t->part_id == 0x471U) { /* Cortex-M0 ROM */
 			PROBE(lpc11xx_probe);          /* LPC24C11 */
 			PROBE(lpc43xx_probe);
+			PROBE(mm32l0xx_probe);         /* MindMotion MM32 */
 		} else if (t->part_id == 0x4c4U) { /* Cortex-M4 ROM */
 			PROBE(lmi_probe);
 			/* The LPC546xx and LPC43xx parts present with the same AP ROM Part

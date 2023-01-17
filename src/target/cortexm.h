@@ -180,6 +180,7 @@ extern unsigned cortexm_wait_timeout;
 #define CORTEX_M7  0xc270U
 #define CORTEX_M23 0xd200U
 #define CORTEX_M33 0xd210U
+#define STAR_MC1   0x1320U
 
 #define CPUID_PARTNO_MASK   0xfff0U
 #define CPUID_REVISION_MASK 0x00f00000U

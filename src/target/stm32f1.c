@@ -101,6 +101,9 @@ static bool stm32f1_mass_erase(target_s *t);
 #define AT32F41_SERIES             0x70030000U
 #define AT32F40_SERIES             0x70050000U
 
+#define DBGMCU_IDCODE_MM32L0 0x40013400U
+#define DBGMCU_IDCODE_MM32F3 0x40007080U
+
 static void stm32f1_add_flash(target_s *t, uint32_t addr, size_t length, size_t erasesize)
 {
 	target_flash_s *f = calloc(1, sizeof(*f));
@@ -252,6 +255,138 @@ bool at32fxx_probe(target_s *t)
 	if (series == AT32F41_SERIES)
 		return at32f41_detect(t, part_id);
 	return false;
+}
+
+/* mm32l0 flash write */
+
+void mm32l0_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, align_e align)
+{
+	uint32_t odest = dest;
+
+	len >>= align;
+	ap_mem_access_setup(ap, dest, align);
+	while (len--) {
+		uint32_t tmp = 0;
+		/* Pack data into correct data lane */
+		switch (align) {
+		case ALIGN_BYTE: {
+			uint8_t value;
+			memcpy(&value, src, sizeof(value));
+			tmp = (uint32_t)value << (8U * (dest & 3U));
+			break;
+		}
+		case ALIGN_HALFWORD: {
+			uint16_t value;
+			memcpy(&value, src, sizeof(value));
+			tmp = (uint32_t)value; /* MM32 special, no shift << (8U * (dest & 2U)) */
+			break;
+		}
+		case ALIGN_DWORD:
+		case ALIGN_WORD:
+			memcpy(&tmp, src, sizeof(tmp));
+			break;
+		}
+		src = (uint8_t *)src + (1 << align);
+		dest += (1 << align);
+		adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DRW, tmp);
+
+		/* Check for 10 bit address overflow */
+		if ((dest ^ odest) & 0xfffffc00U) {
+			odest = dest;
+			adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR, dest);
+		}
+	}
+	/* Make sure this write is complete by doing a dummy read */
+	adiv5_dp_read(ap->dp, ADIV5_DP_RDBUFF);
+}
+
+/* Identify MM32 devices (Cortex-M0) */
+
+bool mm32l0xx_probe(target_s *t)
+{
+	uint32_t mm32_id;
+	const char *name = "?";
+	size_t flash_kbyte = 0;
+	size_t ram_kbyte = 0;
+	size_t block_size = 0x400U;
+
+	mm32_id = target_mem_read32(t, DBGMCU_IDCODE_MM32L0);
+	if (target_check_error(t)) {
+		DEBUG_WARN("mm32l0xx_probe: read error at 0x%" PRIx32 "\n", (uint32_t)DBGMCU_IDCODE_MM32L0);
+		return false;
+	}
+	switch (mm32_id) {
+	case 0xcc568091U:
+		name = "MM32L07x";
+		flash_kbyte = 128;
+		ram_kbyte = 8;
+		break;
+	case 0xcc56a097U:
+		name = "MM32SPIN27";
+		flash_kbyte = 128;
+		ram_kbyte = 12;
+		break;
+	case 0x00000000U:
+	case 0xffffffffU:
+		return false;
+	default:
+		DEBUG_WARN("mm32l0xx_probe: unknown mm32 dev_id 0x%" PRIx32 "\n", mm32_id);
+		return false;
+	}
+	t->part_id = mm32_id & 0xfffU;
+	t->driver = name;
+	t->mass_erase = stm32f1_mass_erase;
+	target_add_ram(t, 0x20000000U, ram_kbyte * 1024U);
+	stm32f1_add_flash(t, 0x08000000U, flash_kbyte * 1024U, block_size);
+	target_add_commands(t, stm32f1_cmd_list, name);
+	cortexm_ap(t)->dp->mem_write_sized = mm32l0_mem_write_sized;
+	return true;
+}
+
+/* Identify MM32 devices (Cortex-M3, Star-MC1) */
+bool mm32f3xx_probe(target_s *t)
+{
+	uint32_t mm32_id;
+	const char *name = "?";
+	size_t flash_kbyte = 0;
+	size_t ram1_kbyte = 0; /* ram at 0x20000000 */
+	size_t ram2_kbyte = 0; /* ram at 0x30000000 */
+	size_t block_size = 0x400U;
+
+	mm32_id = target_mem_read32(t, DBGMCU_IDCODE_MM32F3);
+	if (target_check_error(t)) {
+		DEBUG_WARN("mm32f3xx_probe: read error at 0x%" PRIx32 "\n", (uint32_t)DBGMCU_IDCODE_MM32F3);
+		return false;
+	}
+	switch (mm32_id) {
+	case 0xcc9aa0e7U:
+		name = "MM32F3270";
+		flash_kbyte = 512;
+		ram1_kbyte = 128;
+		break;
+	case 0x4d4d0800U:
+		name = "MM32F5270";
+		flash_kbyte = 256;
+		ram1_kbyte = 32;
+		ram2_kbyte = 128;
+		break;
+	case 0x00000000U:
+	case 0xffffffffU:
+		return false;
+	default:
+		DEBUG_WARN("mm32f3xx_probe: unknown mm32 dev_id 0x%" PRIx32 "\n", mm32_id);
+		return false;
+	}
+	t->part_id = mm32_id & 0xfffU;
+	t->driver = name;
+	t->mass_erase = stm32f1_mass_erase;
+	if (ram1_kbyte != 0)
+		target_add_ram(t, 0x20000000U, ram1_kbyte * 1024U);
+	if (ram2_kbyte != 0)
+		target_add_ram(t, 0x30000000U, ram2_kbyte * 1024U);
+	stm32f1_add_flash(t, 0x08000000U, flash_kbyte * 1024U, block_size);
+	target_add_commands(t, stm32f1_cmd_list, name);
+	return true;
 }
 
 /* Identify real STM32F0/F1/F3 devices */

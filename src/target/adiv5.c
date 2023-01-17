@@ -923,7 +923,7 @@ void adiv5_dp_init(adiv5_debug_port_s *dp, const uint32_t idcode)
 #define ALIGNOF(x) (((x)&3U) == 0 ? ALIGN_WORD : (((x)&1U) == 0 ? ALIGN_HALFWORD : ALIGN_BYTE))
 
 /* Program the CSW and TAR for sequential access at a given width */
-static void ap_mem_access_setup(adiv5_access_port_s *ap, uint32_t addr, align_e align)
+void ap_mem_access_setup(adiv5_access_port_s *ap, uint32_t addr, align_e align)
 {
 	uint32_t csw = ap->csw | ADIV5_AP_CSW_ADDRINC_SINGLE;
 
