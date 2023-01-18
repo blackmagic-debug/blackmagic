@@ -72,7 +72,7 @@ int main(int argc, char **argv)
 			// If port closed and target detached, stay idle
 			if (pbuf[0] != 0x04 || cur_target)
 				SET_IDLE_STATE(false);
-			gdb_main(pbuf, size);
+			gdb_main(pbuf, sizeof(pbuf), size);
 		}
 		if (e.type) {
 			gdb_putpacketz("EFF");
