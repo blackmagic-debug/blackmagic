@@ -33,6 +33,7 @@
 #define GDB_PACKET_NOTIFICATION_START '%'
 #define GDB_PACKET_ESCAPE_XOR         (0x20U)
 
+void gdb_set_noackmode(bool enable);
 size_t gdb_getpacket(char *packet, size_t size);
 void gdb_putpacket(const char *packet, size_t size);
 void gdb_putpacket2(const char *packet1, size_t size1, const char *packet2, size_t size2);

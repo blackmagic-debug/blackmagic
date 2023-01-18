@@ -39,6 +39,15 @@ typedef enum packet_state {
 	PACKET_GDB_CHECKSUM_LOWER,
 } packet_state_e;
 
+static bool noackmode = false;
+
+/* https://sourceware.org/gdb/onlinedocs/gdb/Packet-Acknowledgment.html */
+void gdb_set_noackmode(bool enable)
+{
+	DEBUG_GDB("%s NoAckMode\n", enable ? "Enabling" : "Disabling");
+	noackmode = enable;
+}
+
 packet_state_e consume_remote_packet(char *const packet, const size_t size)
 {
 #if PC_HOSTED == 0
@@ -169,21 +178,23 @@ size_t gdb_getpacket(char *const packet, const size_t size)
 
 		case PACKET_GDB_CHECKSUM_UPPER:
 			/* Checksum upper nibble */
-			rx_checksum = unhex_digit(rx_char) << 4U; /* This also clears the lower nibble */
+			if (!noackmode)
+				/* As per GDB spec, checksums can be ignored in NoAckMode */
+				rx_checksum = unhex_digit(rx_char) << 4U; /* This also clears the lower nibble */
 			state = PACKET_GDB_CHECKSUM_LOWER;
 			break;
 
 		case PACKET_GDB_CHECKSUM_LOWER:
 			/* Checksum lower nibble */
-			rx_checksum |= unhex_digit(rx_char); /* BITWISE OR lower nibble with upper nibble */
+			if (!noackmode) {
+				/* As per GDB spec, checksums can be ignored in NoAckMode */
+				rx_checksum |= unhex_digit(rx_char); /* BITWISE OR lower nibble with upper nibble */
 
-			/* Check checksum */
-			if (rx_checksum == checksum) {
-				/* Checksum matches our calculated checksum, captured valid packet */
+				/* (N)Acknowledge packet */
+				gdb_if_putchar(rx_checksum == checksum ? GDB_PACKET_ACK : GDB_PACKET_NACK, 1U);
+			}
 
-				/* Acknowledge packet */
-				gdb_if_putchar(GDB_PACKET_ACK, 1U);
-
+			if (noackmode || rx_checksum == checksum) {
 				/* Null terminate packet */
 				packet[offset] = '\0';
 
@@ -200,15 +211,10 @@ size_t gdb_getpacket(char *const packet, const size_t size)
 
 				/* Return packet captured size */
 				return offset;
-			} else {
-				/* Checksum does not match our calculated checksum */
-
-				/* N-Acknowledge packet */
-				gdb_if_putchar(GDB_PACKET_NACK, 1U);
-
-				/* Restart packet capture */
-				state = PACKET_IDLE;
 			}
+
+			/* Restart packet capture */
+			state = PACKET_IDLE;
 			break;
 
 		default:
@@ -260,7 +266,7 @@ void gdb_putpacket2(const char *const packet1, const size_t size1, const char *c
 		gdb_if_putchar(xmit_csum[0], 0);
 		gdb_if_putchar(xmit_csum[1], 1);
 		DEBUG_GDB("\n");
-	} while (gdb_if_getchar_to(2000) != GDB_PACKET_ACK && tries++ < 3U);
+	} while (!noackmode && gdb_if_getchar_to(2000) != GDB_PACKET_ACK && tries++ < 3U);
 }
 
 void gdb_putpacket(const char *const packet, const size_t size)
@@ -279,7 +285,7 @@ void gdb_putpacket(const char *const packet, const size_t size)
 		gdb_if_putchar(xmit_csum[0], 0);
 		gdb_if_putchar(xmit_csum[1], 1);
 		DEBUG_GDB("\n");
-	} while (gdb_if_getchar_to(2000) != GDB_PACKET_ACK && tries++ < 3U);
+	} while (!noackmode && gdb_if_getchar_to(2000) != GDB_PACKET_ACK && tries++ < 3U);
 }
 
 void gdb_put_notification(const char *const packet, const size_t size)
