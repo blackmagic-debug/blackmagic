@@ -334,6 +334,7 @@ int gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, size_t 
 		break;
 	}
 
+	case 'Q': /* General set packet */
 	case 'q': /* General query packet */
 		handle_q_packet(pbuf, size);
 		break;
