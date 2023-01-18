@@ -115,7 +115,7 @@ target_controller_s gdb_controller = {
 
 /* execute gdb remote command stored in 'pbuf'. returns immediately, no busy waiting. */
 
-int gdb_main_loop(target_controller_s *tc, char *pbuf, size_t size, bool in_syscall)
+int gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, size_t size, bool in_syscall)
 {
 	bool single_step = false;
 
@@ -134,7 +134,7 @@ int gdb_main_loop(target_controller_s *tc, char *pbuf, size_t size, bool in_sysc
 			uint32_t addr, len;
 			ERROR_IF_NO_TARGET();
 			sscanf(pbuf, "m%" SCNx32 ",%" SCNx32, &addr, &len);
-			if (len > sizeof(pbuf) / 2U) {
+			if (len > pbuf_size / 2U) {
 				gdb_putpacketz("E02");
 				break;
 			}
@@ -662,9 +662,9 @@ static void handle_z_packet(char *packet, const size_t plen)
 		gdb_putpacketz("OK");
 }
 
-void gdb_main(char *pbuf, size_t size)
+void gdb_main(char *pbuf, size_t pbuf_size, size_t size)
 {
-	gdb_main_loop(&gdb_controller, pbuf, size, false);
+	gdb_main_loop(&gdb_controller, pbuf, pbuf_size, size, false);
 }
 
 /* halt target */

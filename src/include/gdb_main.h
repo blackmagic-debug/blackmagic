@@ -25,6 +25,6 @@
 extern bool gdb_target_running;
 extern target_s *cur_target;
 void gdb_poll_target(void);
-void gdb_main(char *pbuf, size_t size);
+void gdb_main(char *pbuf, size_t pbuf_size, size_t size);
 
 #endif /* INCLUDE_GDB_MAIN_H */
