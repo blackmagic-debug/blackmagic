@@ -299,6 +299,7 @@ int gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, size_t 
 		}
 		if (pbuf[0] == 'D')
 			gdb_putpacketz("OK");
+		gdb_set_noackmode(false);
 		break;
 
 	case 'k': /* Kill the target */
@@ -422,7 +423,14 @@ static void exec_q_supported(const char *packet, const size_t length)
 {
 	(void)packet;
 	(void)length;
-	gdb_putpacket_f("PacketSize=%X;qXfer:memory-map:read+;qXfer:features:read+", GDB_MAX_PACKET_SIZE);
+
+	/* 
+	 * This is the first packet sent by GDB, so we can reset the NoAckMode flag here in case
+	 * the previous session was terminated abruptly with NoAckMode enabled
+	 */
+	gdb_set_noackmode(false);
+
+	gdb_putpacket_f("PacketSize=%X;qXfer:memory-map:read+;qXfer:features:read+;QStartNoAckMode+", GDB_MAX_PACKET_SIZE);
 }
 
 static void exec_q_memory_map(const char *packet, const size_t length)
@@ -504,6 +512,14 @@ static void exec_q_thread_info(const char *packet, const size_t length)
 		gdb_putpacketz("l");
 }
 
+static void exec_q_noackmode(const char *packet, const size_t length)
+{
+	(void)packet;
+	(void)length;
+	gdb_set_noackmode(true);
+	gdb_putpacketz("OK");
+}
+
 static const cmd_executer_s q_commands[] = {
 	{"qRcmd,", exec_q_rcmd},
 	{"qSupported", exec_q_supported},
@@ -513,6 +529,7 @@ static const cmd_executer_s q_commands[] = {
 	{"qC", exec_q_c},
 	{"qfThreadInfo", exec_q_thread_info},
 	{"qsThreadInfo", exec_q_thread_info},
+	{"QStartNoAckMode", exec_q_noackmode},
 	{NULL, NULL},
 };
 
