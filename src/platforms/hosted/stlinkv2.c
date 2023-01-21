@@ -838,7 +838,7 @@ static int stlink_usb_get_rw_status(bool verbose)
 	return stlink_usb_error_check(data, verbose);
 }
 
-static void stlink_readmem(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t len)
+static void stlink_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t len)
 {
 	if (len == 0)
 		return;
@@ -876,13 +876,13 @@ static void stlink_readmem(adiv5_access_port_s *ap, void *dest, uint32_t src, si
 		 * Approach taken:
 		 * Fill the memory with some fixed pattern so hopefully
 		 * the caller notices the error*/
-		DEBUG_WARN("stlink_readmem from  %" PRIx32 " to %p, len %zu failed\n", src, dest, len);
+		DEBUG_WARN("stlink_mem_read from  %" PRIx32 " to %p, len %zu failed\n", src, dest, len);
 		memset(dest, 0xff, len);
 	}
-	DEBUG_PROBE("stlink_readmem from %" PRIx32 " to %p, len %zu\n", src, dest, len);
+	DEBUG_PROBE("stlink_mem_read from %" PRIx32 " to %p, len %zu\n", src, dest, len);
 }
 
-static void stlink_writemem8(usb_link_s *link, adiv5_access_port_s *ap, uint32_t addr, size_t len, uint8_t *buffer)
+static void stlink_mem_write8(usb_link_s *link, adiv5_access_port_s *ap, uint32_t addr, size_t len, uint8_t *buffer)
 {
 	while (len) {
 		size_t length;
@@ -910,7 +910,7 @@ static void stlink_writemem8(usb_link_s *link, adiv5_access_port_s *ap, uint32_t
 	}
 }
 
-static void stlink_writemem16(usb_link_s *link, adiv5_access_port_s *ap, uint32_t addr, size_t len, uint16_t *buffer)
+static void stlink_mem_write16(usb_link_s *link, adiv5_access_port_s *ap, uint32_t addr, size_t len, uint16_t *buffer)
 {
 	uint8_t cmd[16];
 	memset(cmd, 0, sizeof(cmd));
@@ -928,7 +928,7 @@ static void stlink_writemem16(usb_link_s *link, adiv5_access_port_s *ap, uint32_
 	stlink_usb_get_rw_status(true);
 }
 
-static void stlink_writemem32(adiv5_access_port_s *ap, uint32_t addr, size_t len, uint32_t *buffer)
+static void stlink_mem_write32(adiv5_access_port_s *ap, uint32_t addr, size_t len, uint32_t *buffer)
 {
 	uint8_t cmd[16];
 	memset(cmd, 0, sizeof(cmd));
@@ -999,14 +999,14 @@ static void stlink_mem_write(adiv5_access_port_s *ap, uint32_t dest, const void 
 	usb_link_s *link = info.usb_link;
 	switch (align) {
 	case ALIGN_BYTE:
-		stlink_writemem8(link, ap, dest, len, (uint8_t *)src);
+		stlink_mem_write8(link, ap, dest, len, (uint8_t *)src);
 		break;
 	case ALIGN_HALFWORD:
-		stlink_writemem16(link, ap, dest, len, (uint16_t *)src);
+		stlink_mem_write16(link, ap, dest, len, (uint16_t *)src);
 		break;
 	case ALIGN_WORD:
 	case ALIGN_DWORD:
-		stlink_writemem32(ap, dest, len, (uint32_t *)src);
+		stlink_mem_write32(ap, dest, len, (uint32_t *)src);
 		break;
 	}
 }
@@ -1069,7 +1069,7 @@ void stlink_adiv5_dp_defaults(adiv5_debug_port_s *dp)
 	dp->ap_cleanup = stlink_ap_cleanup;
 	dp->ap_write = stlink_ap_write;
 	dp->ap_read = stlink_ap_read;
-	dp->mem_read = stlink_readmem;
+	dp->mem_read = stlink_mem_read;
 	dp->mem_write = stlink_mem_write;
 }
 
