@@ -1025,7 +1025,7 @@ void firmware_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t
 		const uint32_t value = adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_AP_DRW, 0);
 		dest = adiv5_unpack_data(dest, src, value, align);
 
-		src += (1U << align);
+		src += 1U << align;
 		/* Check for 10 bit address overflow */
 		if ((src ^ osrc) & 0xfffffc00U) {
 			osrc = src;
@@ -1044,24 +1044,11 @@ void firmware_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void
 	len >>= align;
 	ap_mem_access_setup(ap, dest, align);
 	while (len--) {
-		uint32_t tmp = 0;
-		/* Pack data into correct data lane */
-		switch (align) {
-		case ALIGN_BYTE:
-			tmp = ((uint32_t) * (uint8_t *)src) << ((dest & 3U) << 3U);
-			break;
-		case ALIGN_HALFWORD:
-			tmp = ((uint32_t) * (uint16_t *)src) << ((dest & 2U) << 3U);
-			break;
-		case ALIGN_DWORD:
-		case ALIGN_WORD:
-			tmp = *(uint32_t *)src;
-			break;
-		}
-		src = (uint8_t *)src + (1 << align);
-		dest += (1 << align);
-		adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DRW, tmp);
+		uint32_t value = 0;
+		src = adiv5_pack_data(dest, src, &value, align);
+		adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DRW, value);
 
+		dest += 1U << align;
 		/* Check for 10 bit address overflow */
 		if ((dest ^ odest) & 0xfffffc00U) {
 			odest = dest;
