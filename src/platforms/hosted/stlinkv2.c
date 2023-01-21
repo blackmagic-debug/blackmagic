@@ -1050,14 +1050,11 @@ uint32_t jtag_scan_stlinkv2(bmp_info_s *info, const uint8_t *irlens)
 	return jtag_dev_count;
 }
 
-int stlink_jtag_dp_init(adiv5_debug_port_s *dp)
+void stlink_jtag_dp_init(adiv5_debug_port_s *dp)
 {
-	dp->dp_read = firmware_swdp_read;
 	dp->error = stlink_dp_error;
 	dp->low_access = stlink_dp_low_access;
 	dp->abort = stlink_dp_abort;
-
-	return true;
 }
 
 void stlink_adiv5_dp_defaults(adiv5_debug_port_s *dp)
