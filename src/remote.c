@@ -113,7 +113,7 @@ static void remote_respond_string(char respCode, const char *s)
 static adiv5_debug_port_s remote_dp = {
 	.ap_read = firmware_ap_read,
 	.ap_write = firmware_ap_write,
-	.mem_read = firmware_mem_read,
+	.mem_read = advi5_mem_read_bytes,
 	.mem_write_sized = firmware_mem_write_sized,
 };
 
