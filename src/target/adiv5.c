@@ -803,7 +803,7 @@ void adiv5_dp_init(adiv5_debug_port_s *dp, const uint32_t idcode)
 	dp->ap_write = firmware_ap_write;
 	dp->ap_read = firmware_ap_read;
 	dp->mem_read = advi5_mem_read_bytes;
-	dp->mem_write_sized = adiv5_mem_write_bytes;
+	dp->mem_write = adiv5_mem_write_bytes;
 #if PC_HOSTED == 1
 	platform_adiv5_dp_defaults(dp);
 #endif

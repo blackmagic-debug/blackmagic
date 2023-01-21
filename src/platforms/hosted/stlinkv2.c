@@ -992,7 +992,7 @@ static void stlink_reg_write(adiv5_access_port_s *ap, int num, uint32_t val)
 	stlink_usb_error_check(res, true);
 }
 
-static void stlink_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, align_e align)
+static void stlink_mem_write(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, align_e align)
 {
 	if (len == 0)
 		return;
@@ -1070,7 +1070,7 @@ void stlink_adiv5_dp_defaults(adiv5_debug_port_s *dp)
 	dp->ap_write = stlink_ap_write;
 	dp->ap_read = stlink_ap_read;
 	dp->mem_read = stlink_readmem;
-	dp->mem_write_sized = stlink_mem_write_sized;
+	dp->mem_write = stlink_mem_write;
 }
 
 uint32_t stlink_swdp_scan(bmp_info_s *info)

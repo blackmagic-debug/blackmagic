@@ -270,7 +270,7 @@ struct adiv5_debug_port {
 	void (*ap_write)(adiv5_access_port_s *ap, uint16_t addr, uint32_t value);
 
 	void (*mem_read)(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t len);
-	void (*mem_write_sized)(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, align_e align);
+	void (*mem_write)(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, align_e align);
 	uint8_t dp_jd_index;
 	uint8_t fault;
 
@@ -349,7 +349,7 @@ static inline void adiv5_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t 
 static inline void adiv5_mem_write_sized(
 	adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, align_e align)
 {
-	return ap->dp->mem_write_sized(ap, dest, src, len, align);
+	return ap->dp->mem_write(ap, dest, src, len, align);
 }
 
 static inline void adiv5_dp_write(adiv5_debug_port_s *dp, uint16_t addr, uint32_t value)

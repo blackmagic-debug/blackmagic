@@ -339,7 +339,7 @@ bool mm32l0xx_probe(target_s *t)
 	target_add_ram(t, 0x20000000U, ram_kbyte * 1024U);
 	stm32f1_add_flash(t, 0x08000000U, flash_kbyte * 1024U, block_size);
 	target_add_commands(t, stm32f1_cmd_list, name);
-	cortexm_ap(t)->dp->mem_write_sized = mm32l0_mem_write_sized;
+	cortexm_ap(t)->dp->mem_write = mm32l0_mem_write_sized;
 	return true;
 }
 

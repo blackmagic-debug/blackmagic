@@ -273,7 +273,7 @@ void remote_adiv5_dp_defaults(adiv5_debug_port_s *dp)
 	dp->ap_write = remote_adiv5_ap_write;
 	dp->ap_read = remote_adiv5_ap_read;
 	dp->mem_read = remote_ap_mem_read;
-	dp->mem_write_sized = remote_ap_mem_write_sized;
+	dp->mem_write = remote_ap_mem_write_sized;
 }
 
 void remote_add_jtag_dev(uint32_t i, const jtag_dev_s *jtag_dev)

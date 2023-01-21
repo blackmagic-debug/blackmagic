@@ -668,7 +668,7 @@ void adiv5_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void *s
 			fprintf(stderr, " ...");
 		fprintf(stderr, "\n");
 	}
-	return ap->dp->mem_write_sized(ap, dest, src, len, align);
+	return ap->dp->mem_write(ap, dest, src, len, align);
 }
 
 void adiv5_dp_abort(adiv5_debug_port_s *dp, uint32_t abort)
