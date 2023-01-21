@@ -807,13 +807,13 @@ void adiv5_dp_init(adiv5_debug_port_s *dp, const uint32_t idcode)
 	if (!dp->ap_read)
 		dp->ap_read = firmware_ap_read;
 	if (!dp->mem_read)
-		dp->mem_read = firmware_mem_read;
+		dp->mem_read = advi5_mem_read_bytes;
 	if (!dp->mem_write_sized)
 		dp->mem_write_sized = firmware_mem_write_sized;
 #else
 	dp->ap_write = firmware_ap_write;
 	dp->ap_read = firmware_ap_read;
-	dp->mem_read = firmware_mem_read;
+	dp->mem_read = advi5_mem_read_bytes;
 	dp->mem_write_sized = firmware_mem_write_sized;
 #endif
 
@@ -1010,7 +1010,7 @@ const void *adiv5_pack_data(const uint32_t dest, const void *const src, uint32_t
 	return (const uint8_t *)src + (1 << align);
 }
 
-void firmware_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t len)
+void advi5_mem_read_bytes(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t len)
 {
 	uint32_t osrc = src;
 	const align_e align = MIN(ALIGNOF(src), ALIGNOF(len));
