@@ -591,14 +591,12 @@ int cmsis_dap_jtagtap_init(jtag_proc_s *jtag_proc)
 	return 0;
 }
 
-int dap_jtag_dp_init(adiv5_debug_port_s *dp)
+void dap_jtag_dp_init(adiv5_debug_port_s *dp)
 {
 	dp->dp_read = dap_dp_read_reg;
 	dp->error = dap_jtag_dp_error;
 	dp->low_access = dap_dp_low_access;
 	dp->abort = dap_dp_abort;
-
-	return true;
 }
 
 #define SWD_SEQUENCE_IN  0x80U

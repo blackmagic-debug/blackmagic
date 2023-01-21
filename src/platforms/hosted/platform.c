@@ -249,22 +249,17 @@ void platform_adiv5_dp_defaults(adiv5_debug_port_s *dp)
 	}
 }
 
-int platform_jtag_dp_init(adiv5_debug_port_s *dp)
+void platform_jtag_dp_init(adiv5_debug_port_s *dp)
 {
 	switch (info.bmp_type) {
-	case BMP_TYPE_BMP:
-	case BMP_TYPE_LIBFTDI:
-	case BMP_TYPE_JLINK:
-		return 0;
-
 	case BMP_TYPE_STLINKV2:
-		return stlink_jtag_dp_init(dp);
-
+		stlink_jtag_dp_init(dp);
+		break;
 	case BMP_TYPE_CMSIS_DAP:
-		return dap_jtag_dp_init(dp);
-
+		dap_jtag_dp_init(dp);
+		break;
 	default:
-		return 0;
+		break;
 	}
 }
 
