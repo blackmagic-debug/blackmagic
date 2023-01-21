@@ -800,21 +800,12 @@ void adiv5_dp_init(adiv5_debug_port_s *dp, const uint32_t idcode)
 		return;
 	}
 
-#if PC_HOSTED == 1
-	platform_adiv5_dp_defaults(dp);
-	if (!dp->ap_write)
-		dp->ap_write = firmware_ap_write;
-	if (!dp->ap_read)
-		dp->ap_read = firmware_ap_read;
-	if (!dp->mem_read)
-		dp->mem_read = advi5_mem_read_bytes;
-	if (!dp->mem_write_sized)
-		dp->mem_write_sized = adiv5_mem_write_bytes;
-#else
 	dp->ap_write = firmware_ap_write;
 	dp->ap_read = firmware_ap_read;
 	dp->mem_read = advi5_mem_read_bytes;
 	dp->mem_write_sized = adiv5_mem_write_bytes;
+#if PC_HOSTED == 1
+	platform_adiv5_dp_defaults(dp);
 #endif
 
 	volatile uint32_t ctrlstat = 0;
