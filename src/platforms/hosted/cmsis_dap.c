@@ -489,7 +489,7 @@ static void dap_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size
 	DEBUG_WIRE("dap_mem_read transferred %zu blocks\n", len >> align);
 }
 
-static void dap_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, align_e align)
+static void dap_mem_write(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, align_e align)
 {
 	if (len == 0)
 		return;
@@ -534,7 +534,7 @@ void dap_adiv5_dp_defaults(adiv5_debug_port_s *dp)
 	dp->ap_read = dap_ap_read;
 	dp->ap_write = dap_ap_write;
 	dp->mem_read = dap_mem_read;
-	dp->mem_write_sized = dap_mem_write_sized;
+	dp->mem_write = dap_mem_write;
 }
 
 static void cmsis_dap_jtagtap_reset(void)
