@@ -114,7 +114,7 @@ static adiv5_debug_port_s remote_dp = {
 	.ap_read = firmware_ap_read,
 	.ap_write = firmware_ap_write,
 	.mem_read = advi5_mem_read_bytes,
-	.mem_write_sized = firmware_mem_write_sized,
+	.mem_write_sized = adiv5_mem_write_bytes,
 };
 
 static void remote_packet_process_swd(unsigned i, char *packet)
