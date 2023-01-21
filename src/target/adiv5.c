@@ -809,12 +809,12 @@ void adiv5_dp_init(adiv5_debug_port_s *dp, const uint32_t idcode)
 	if (!dp->mem_read)
 		dp->mem_read = advi5_mem_read_bytes;
 	if (!dp->mem_write_sized)
-		dp->mem_write_sized = firmware_mem_write_sized;
+		dp->mem_write_sized = adiv5_mem_write_bytes;
 #else
 	dp->ap_write = firmware_ap_write;
 	dp->ap_read = firmware_ap_read;
 	dp->mem_read = advi5_mem_read_bytes;
-	dp->mem_write_sized = firmware_mem_write_sized;
+	dp->mem_write_sized = adiv5_mem_write_bytes;
 #endif
 
 	volatile uint32_t ctrlstat = 0;
@@ -1037,7 +1037,7 @@ void advi5_mem_read_bytes(adiv5_access_port_s *ap, void *dest, uint32_t src, siz
 	adiv5_unpack_data(dest, src, value, align);
 }
 
-void firmware_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, align_e align)
+void adiv5_mem_write_bytes(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, align_e align)
 {
 	uint32_t odest = dest;
 
