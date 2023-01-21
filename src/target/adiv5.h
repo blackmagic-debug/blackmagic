@@ -258,7 +258,6 @@ struct adiv5_debug_port {
 	void (*abort)(adiv5_debug_port_s *dp, uint32_t abort);
 
 #if PC_HOSTED == 1
-	bmp_type_t dp_bmp_type;
 	bool (*ap_setup)(int i);
 	void (*ap_cleanup)(int i);
 	void (*ap_regs_read)(adiv5_access_port_s *ap, void *data);

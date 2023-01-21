@@ -230,8 +230,6 @@ int platform_jtagtap_init(void)
 
 void platform_adiv5_dp_defaults(adiv5_debug_port_s *dp)
 {
-	dp->dp_bmp_type = info.bmp_type;
-
 	switch (info.bmp_type) {
 	case BMP_TYPE_BMP:
 		if (cl_opts.opt_no_hl) {
