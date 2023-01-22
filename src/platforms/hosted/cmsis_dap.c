@@ -574,7 +574,7 @@ static bool cmsis_dap_jtagtap_next(const bool tms, const bool tdi)
 	return tdo;
 }
 
-int cmsis_dap_jtagtap_init(jtag_proc_s *jtag_proc)
+int cmsis_dap_jtagtap_init(void)
 {
 	DEBUG_PROBE("jtap_init\n");
 	if (!(dap_caps & DAP_CAP_JTAG))
@@ -583,11 +583,11 @@ int cmsis_dap_jtagtap_init(jtag_proc_s *jtag_proc)
 	dap_disconnect();
 	dap_connect(true);
 	dap_reset_link(true);
-	jtag_proc->jtagtap_reset = cmsis_dap_jtagtap_reset;
-	jtag_proc->jtagtap_next = cmsis_dap_jtagtap_next;
-	jtag_proc->jtagtap_tms_seq = cmsis_dap_jtagtap_tms_seq;
-	jtag_proc->jtagtap_tdi_tdo_seq = cmsis_dap_jtagtap_tdi_tdo_seq;
-	jtag_proc->jtagtap_tdi_seq = cmsis_dap_jtagtap_tdi_seq;
+	jtag_proc.jtagtap_reset = cmsis_dap_jtagtap_reset;
+	jtag_proc.jtagtap_next = cmsis_dap_jtagtap_next;
+	jtag_proc.jtagtap_tms_seq = cmsis_dap_jtagtap_tms_seq;
+	jtag_proc.jtagtap_tdi_tdo_seq = cmsis_dap_jtagtap_tdi_tdo_seq;
+	jtag_proc.jtagtap_tdi_seq = cmsis_dap_jtagtap_tdi_seq;
 	return 0;
 }
 

@@ -32,7 +32,7 @@ int platform_buffer_read(uint8_t *data, int size);
 
 int remote_init(void);
 int remote_swdptap_init(void);
-int remote_jtagtap_init(jtag_proc_s *jtag_proc);
+int remote_jtagtap_init(void);
 bool remote_target_get_power(void);
 const char *remote_target_voltage(void);
 bool remote_target_set_power(bool power);
