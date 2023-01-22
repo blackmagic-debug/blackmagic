@@ -173,7 +173,7 @@ int platform_swdptap_init(adiv5_debug_port_s *dp)
 		return 0;
 
 	case BMP_TYPE_LIBFTDI:
-		return libftdi_swdptap_init(dp);
+		return libftdi_swdptap_init();
 
 	default:
 		return -1;
