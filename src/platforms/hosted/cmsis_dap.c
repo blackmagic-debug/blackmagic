@@ -619,10 +619,10 @@ static bool dap_dp_low_write(uint16_t addr, const uint32_t data)
 	return (ack != SWDP_ACK_OK);
 }
 
-int dap_swdptap_init(adiv5_debug_port_s *dp)
+bool dap_swdptap_init(adiv5_debug_port_s *dp)
 {
 	if (!(dap_caps & DAP_CAP_SWD))
-		return 1;
+		return false;
 	mode = DAP_CAP_SWD;
 	dap_transfer_configure(2, 128, 128);
 	dap_swd_configure(0);
@@ -642,5 +642,5 @@ int dap_swdptap_init(adiv5_debug_port_s *dp)
 	dp->error = dap_swd_dp_error;
 	dp->low_access = dap_dp_low_access;
 	dp->abort = dap_dp_abort;
-	return 0;
+	return true;
 }
