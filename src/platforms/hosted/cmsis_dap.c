@@ -574,11 +574,11 @@ static bool cmsis_dap_jtagtap_next(const bool tms, const bool tdi)
 	return tdo;
 }
 
-int cmsis_dap_jtagtap_init(void)
+bool dap_jtagtap_init(void)
 {
 	DEBUG_PROBE("jtap_init\n");
 	if (!(dap_caps & DAP_CAP_JTAG))
-		return -1;
+		return false;
 	mode = DAP_CAP_JTAG;
 	dap_disconnect();
 	dap_connect(true);
@@ -588,7 +588,7 @@ int cmsis_dap_jtagtap_init(void)
 	jtag_proc.jtagtap_tms_seq = cmsis_dap_jtagtap_tms_seq;
 	jtag_proc.jtagtap_tdi_tdo_seq = cmsis_dap_jtagtap_tdi_tdo_seq;
 	jtag_proc.jtagtap_tdi_seq = cmsis_dap_jtagtap_tdi_seq;
-	return 0;
+	return true;
 }
 
 void dap_jtag_dp_init(adiv5_debug_port_s *dp)

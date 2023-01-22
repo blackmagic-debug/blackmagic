@@ -48,7 +48,7 @@ static inline unsigned int bool_to_int(const bool value)
 	return value ? 1 : 0;
 }
 
-int remote_jtagtap_init(void)
+bool remote_jtagtap_init(void)
 {
 	platform_buffer_write((uint8_t *)REMOTE_JTAG_INIT_STR, sizeof(REMOTE_JTAG_INIT_STR));
 
@@ -72,7 +72,7 @@ int remote_jtagtap_init(void)
 	else
 		jtag_proc.jtagtap_cycle = jtagtap_cycle;
 
-	return 0;
+	return true;
 }
 
 /* See remote.c/.h for protocol information */
