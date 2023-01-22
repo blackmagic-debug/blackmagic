@@ -34,7 +34,7 @@ static void jtagtap_tdi_seq(bool final_tms, const uint8_t *data_in, size_t clock
 static bool jtagtap_next(bool tms, bool tdi);
 static void jtagtap_cycle(bool tms, bool tdi, size_t clock_cycles);
 
-int jtagtap_init()
+void jtagtap_init(void)
 {
 	platform_target_clk_output_enable(true);
 	TMS_SET_MODE();
@@ -52,7 +52,6 @@ int jtagtap_init()
 		jtagtap_next(true, false); /* 50 idle cylces for SWD reset */
 	jtagtap_tms_seq(0xe73cU, 16U); /* SWD to JTAG sequence */
 	jtagtap_soft_reset();
-	return 0;
 }
 
 static void jtagtap_reset(void)

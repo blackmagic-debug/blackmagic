@@ -54,7 +54,7 @@ bool remote_jtagtap_init(void)
 
 	char buffer[REMOTE_MAX_MSG_SIZE];
 	int length = platform_buffer_read((uint8_t *)buffer, REMOTE_MAX_MSG_SIZE);
-	if ((!length) || (buffer[0] == REMOTE_RESP_ERR)) {
+	if (!length || buffer[0] == REMOTE_RESP_ERR) {
 		DEBUG_WARN("jtagtap_init failed, error %s\n", length ? buffer + 1 : "unknown");
 		exit(-1);
 	}
