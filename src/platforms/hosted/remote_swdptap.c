@@ -23,11 +23,12 @@
  * Speed is sensible.
  */
 
+#include "general.h"
 #include <stdio.h>
 #include <assert.h>
 
-#include "general.h"
 #include "remote.h"
+#include "jtagtap.h"
 #include "bmp_remote.h"
 
 static bool swdptap_seq_in_parity(uint32_t *res, size_t clock_cycles);
@@ -35,7 +36,7 @@ static uint32_t swdptap_seq_in(size_t clock_cycles);
 static void swdptap_seq_out(uint32_t tms_states, size_t clock_cycles);
 static void swdptap_seq_out_parity(uint32_t tms_states, size_t clock_cycles);
 
-int remote_swdptap_init(adiv5_debug_port_s *dp)
+int remote_swdptap_init(void)
 {
 	DEBUG_WIRE("remote_swdptap_init\n");
 	uint8_t construct[REMOTE_MAX_MSG_SIZE];
@@ -48,10 +49,10 @@ int remote_swdptap_init(adiv5_debug_port_s *dp)
 		exit(-1);
 	}
 
-	dp->seq_in = swdptap_seq_in;
-	dp->seq_in_parity = swdptap_seq_in_parity;
-	dp->seq_out = swdptap_seq_out;
-	dp->seq_out_parity = swdptap_seq_out_parity;
+	swd_proc.seq_in = swdptap_seq_in;
+	swd_proc.seq_in_parity = swdptap_seq_in_parity;
+	swd_proc.seq_out = swdptap_seq_out;
+	swd_proc.seq_out_parity = swdptap_seq_out_parity;
 	return 0;
 }
 

@@ -32,7 +32,7 @@
 #include "jlink.h"
 #include "cli.h"
 
-static bool jlink_adiv5_swdp_write_nocheck(adiv5_debug_port_s *dp, uint16_t addr, uint32_t data);
+static bool jlink_adiv5_swdp_write_nocheck(uint16_t addr, uint32_t data);
 static uint32_t jlink_adiv5_swdp_read_nocheck(uint16_t addr);
 static uint32_t jlink_adiv5_swdp_error(adiv5_debug_port_s *dp, bool protocol_recovery);
 static uint32_t jlink_adiv5_swdp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value);
@@ -159,9 +159,8 @@ static void jlink_adiv5_swdp_make_packet_request(
 	cmd[6] = make_packet_request(RnW, addr);
 }
 
-static bool jlink_adiv5_swdp_write_nocheck(adiv5_debug_port_s *dp, const uint16_t addr, const uint32_t data)
+static bool jlink_adiv5_swdp_write_nocheck(const uint16_t addr, const uint32_t data)
 {
-	(void)dp;
 	uint8_t result[3];
 	uint8_t request[8];
 	jlink_adiv5_swdp_make_packet_request(request, sizeof(request), ADIV5_LOW_WRITE, addr & 0xfU);
@@ -214,7 +213,7 @@ static uint32_t jlink_adiv5_swdp_error(adiv5_debug_port_s *const dp, const bool 
 	if (dp->version >= 2 || protocol_recovery) {
 		line_reset(&info);
 		jlink_adiv5_swdp_read_nocheck(ADIV5_DP_DPIDR);
-		dp->dp_low_write(dp, ADIV5_DP_TARGETSEL, dp->targetsel);
+		jlink_adiv5_swdp_write_nocheck(ADIV5_DP_TARGETSEL, dp->targetsel);
 	}
 	uint32_t err = jlink_adiv5_swdp_read_nocheck(ADIV5_DP_CTRLSTAT) &
 		(ADIV5_DP_CTRLSTAT_STICKYORUN | ADIV5_DP_CTRLSTAT_STICKYCMP | ADIV5_DP_CTRLSTAT_STICKYERR |
@@ -230,7 +229,7 @@ static uint32_t jlink_adiv5_swdp_error(adiv5_debug_port_s *const dp, const bool 
 	if (err & ADIV5_DP_CTRLSTAT_WDATAERR)
 		clr |= ADIV5_DP_ABORT_WDERRCLR;
 
-	jlink_adiv5_swdp_write_nocheck(dp, ADIV5_DP_ABORT, clr);
+	jlink_adiv5_swdp_write_nocheck(ADIV5_DP_ABORT, clr);
 	if (dp->fault)
 		err |= 0x8000U;
 	dp->fault = 0;

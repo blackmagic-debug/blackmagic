@@ -22,8 +22,7 @@
 
 #include "general.h"
 #include "timing.h"
-#include "adiv5.h"
-#include "gdb_packet.h"
+#include "swd.h"
 
 #if !defined(SWDIO_IN_PORT)
 #define SWDIO_IN_PORT SWDIO_PORT
@@ -37,11 +36,21 @@ typedef enum swdio_status_e {
 	SWDIO_STATUS_DRIVE
 } swdio_status_t;
 
+swd_proc_s swd_proc;
+
 static void swdptap_turnaround(swdio_status_t dir) __attribute__((optimize(3)));
 static uint32_t swdptap_seq_in(size_t clock_cycles) __attribute__((optimize(3)));
 static bool swdptap_seq_in_parity(uint32_t *ret, size_t clock_cycles) __attribute__((optimize(3)));
 static void swdptap_seq_out(uint32_t tms_states, size_t clock_cycles) __attribute__((optimize(3)));
 static void swdptap_seq_out_parity(uint32_t tms_states, size_t clock_cycles) __attribute__((optimize(3)));
+
+void swdptap_init(void)
+{
+	swd_proc.seq_in = swdptap_seq_in;
+	swd_proc.seq_in_parity = swdptap_seq_in_parity;
+	swd_proc.seq_out = swdptap_seq_out;
+	swd_proc.seq_out_parity = swdptap_seq_out_parity;
+}
 
 static void swdptap_turnaround(const swdio_status_t dir)
 {
@@ -52,7 +61,7 @@ static void swdptap_turnaround(const swdio_status_t dir)
 	olddir = dir;
 
 #ifdef DEBUG_SWD_BITS
-	DEBUG("%s", dir ? "\n-> " : "\n<- ");
+	DEBUG_INFO("%s", dir ? "\n-> " : "\n<- ");
 #endif
 
 	if (dir == SWDIO_STATUS_FLOAT) {
@@ -181,13 +190,4 @@ static void swdptap_seq_out_parity(const uint32_t tms_states, const size_t clock
 	for (volatile int32_t cnt = swd_delay_cnt - 2; cnt > 0; cnt--)
 		continue;
 	gpio_clear(SWCLK_PORT, SWCLK_PIN);
-}
-
-int swdptap_init(adiv5_debug_port_s *dp)
-{
-	dp->seq_in = swdptap_seq_in;
-	dp->seq_in_parity = swdptap_seq_in_parity;
-	dp->seq_out = swdptap_seq_out;
-	dp->seq_out_parity = swdptap_seq_out_parity;
-	return 0;
 }

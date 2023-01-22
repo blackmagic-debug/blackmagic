@@ -22,6 +22,7 @@
 
 #include "general.h"
 #include "jtagtap.h"
+#include "swd.h"
 #include "target.h"
 #include "target_internal.h"
 #include "adiv5.h"
@@ -44,6 +45,7 @@
 bmp_info_s info;
 
 jtag_proc_s jtag_proc;
+swd_proc_s swd_proc;
 
 static bmda_cli_options_s cl_opts;
 
@@ -157,11 +159,11 @@ uint32_t platform_adiv5_swdp_scan(uint32_t targetid)
 	}
 }
 
-int swdptap_init(adiv5_debug_port_s *dp)
+int platform_swdptap_init(adiv5_debug_port_s *dp)
 {
 	switch (info.bmp_type) {
 	case BMP_TYPE_BMP:
-		return remote_swdptap_init(dp);
+		return remote_swdptap_init();
 
 	case BMP_TYPE_CMSIS_DAP:
 		return dap_swdptap_init(dp);

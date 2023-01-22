@@ -39,10 +39,6 @@ typedef struct swd_proc {
 
 extern swd_proc_s swd_proc;
 
-#if PC_HOSTED == 1
-int platform_swdptap_init(void);
-#else
-int swdptap_init(void);
-#endif
+void swdptap_init(void);
 
 #endif /*INCLUDE_SWD_H*/
