@@ -76,7 +76,7 @@ uint32_t jtag_scan(const uint8_t *irlens)
 	 */
 	DEBUG_INFO("Resetting TAP\n");
 #if PC_HOSTED == 1
-	if (platform_jtagtap_init()) {
+	if (!platform_jtagtap_init()) {
 		DEBUG_WARN("JTAG not available\n");
 		return 0;
 	}
