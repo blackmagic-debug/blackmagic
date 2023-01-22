@@ -76,7 +76,7 @@ extern jtag_proc_s jtag_proc;
 #if PC_HOSTED == 1
 bool platform_jtagtap_init(void);
 #else
-int jtagtap_init(void);
+void jtagtap_init(void);
 #endif
 
 #endif /* INCLUDE_JTAGTAP_H */
