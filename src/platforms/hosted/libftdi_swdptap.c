@@ -69,7 +69,7 @@ bool libftdi_swd_possible(void)
 	return true;
 }
 
-int libftdi_swdptap_init(adiv5_debug_port_s *dp)
+int libftdi_swdptap_init(void)
 {
 	if (!libftdi_swd_possible()) {
 		DEBUG_WARN("SWD not possible or missing item in cable description.\n");
@@ -111,10 +111,6 @@ int libftdi_swdptap_init(adiv5_debug_port_s *dp)
 	swd_proc.seq_in_parity = swdptap_seq_in_parity;
 	swd_proc.seq_out = swdptap_seq_out;
 	swd_proc.seq_out_parity = swdptap_seq_out_parity;
-	dp->dp_read = firmware_swdp_read;
-	dp->error = firmware_swdp_error;
-	dp->low_access = firmware_swdp_low_access;
-	dp->abort = firmware_swdp_abort;
 	return 0;
 }
 

@@ -113,7 +113,7 @@ int ftdi_bmp_init(bmda_cli_options_s *cl_opts, bmp_info_s *info)
 	return -1;
 }
 
-int libftdi_swdptap_init(adiv5_debug_port_s *dp)
+int libftdi_swdptap_init(void)
 {
 	return -1;
 }
@@ -179,7 +179,7 @@ extern ftdi_context_s *ftdic;
 extern data_desc_s active_state;
 
 int ftdi_bmp_init(bmda_cli_options_s *cl_opts, bmp_info_s *info);
-int libftdi_swdptap_init(adiv5_debug_port_s *dp);
+int libftdi_swdptap_init(void);
 bool libftdi_jtagtap_init(void);
 void libftdi_buffer_flush(void);
 size_t libftdi_buffer_write(const uint8_t *data, size_t size);
