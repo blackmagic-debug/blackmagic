@@ -48,7 +48,7 @@ static inline unsigned int bool_to_int(const bool value)
 	return value ? 1 : 0;
 }
 
-int remote_jtagtap_init(jtag_proc_s *jtag_proc)
+int remote_jtagtap_init(void)
 {
 	platform_buffer_write((uint8_t *)REMOTE_JTAG_INIT_STR, sizeof(REMOTE_JTAG_INIT_STR));
 
@@ -59,18 +59,18 @@ int remote_jtagtap_init(jtag_proc_s *jtag_proc)
 		exit(-1);
 	}
 
-	jtag_proc->jtagtap_reset = jtagtap_reset;
-	jtag_proc->jtagtap_next = jtagtap_next;
-	jtag_proc->jtagtap_tms_seq = jtagtap_tms_seq;
-	jtag_proc->jtagtap_tdi_tdo_seq = jtagtap_tdi_tdo_seq;
-	jtag_proc->jtagtap_tdi_seq = jtagtap_tdi_seq;
+	jtag_proc.jtagtap_reset = jtagtap_reset;
+	jtag_proc.jtagtap_next = jtagtap_next;
+	jtag_proc.jtagtap_tms_seq = jtagtap_tms_seq;
+	jtag_proc.jtagtap_tdi_tdo_seq = jtagtap_tdi_tdo_seq;
+	jtag_proc.jtagtap_tdi_seq = jtagtap_tdi_seq;
 
 	platform_buffer_write((uint8_t *)REMOTE_HL_CHECK_STR, sizeof(REMOTE_HL_CHECK_STR));
 	length = platform_buffer_read((uint8_t *)buffer, REMOTE_MAX_MSG_SIZE);
 	if (!length || buffer[0] == REMOTE_RESP_ERR || buffer[0] == 1)
 		PRINT_INFO("Firmware does not support newer JTAG commands, please update it.");
 	else
-		jtag_proc->jtagtap_cycle = jtagtap_cycle;
+		jtag_proc.jtagtap_cycle = jtagtap_cycle;
 
 	return 0;
 }

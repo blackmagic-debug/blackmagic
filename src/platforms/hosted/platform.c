@@ -211,7 +211,7 @@ int platform_jtagtap_init(void)
 {
 	switch (info.bmp_type) {
 	case BMP_TYPE_BMP:
-		return remote_jtagtap_init(&jtag_proc);
+		return remote_jtagtap_init();
 
 	case BMP_TYPE_STLINKV2:
 		return 0;
@@ -223,7 +223,7 @@ int platform_jtagtap_init(void)
 		return jlink_jtagtap_init(&info) ? 0 : -1;
 
 	case BMP_TYPE_CMSIS_DAP:
-		return cmsis_dap_jtagtap_init(&jtag_proc);
+		return cmsis_dap_jtagtap_init();
 
 	default:
 		return -1;
