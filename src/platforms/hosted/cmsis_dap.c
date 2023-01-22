@@ -87,7 +87,7 @@ typedef enum cmsis_type {
 typedef struct hid_device_info hid_device_info_s;
 #endif
 
-static bool dap_dp_low_write(adiv5_debug_port_s *dp, uint16_t addr, uint32_t data);
+static bool dap_dp_low_write(uint16_t addr, uint32_t data);
 
 /*- Variables ---------------------------------------------------------------*/
 static cmsis_type_e type;
@@ -294,7 +294,7 @@ static uint32_t dap_swd_dp_error(adiv5_debug_port_s *dp, const bool protocol_rec
 		 */
 		dap_line_reset();
 		if (dp->version >= 2)
-			dap_dp_low_write(dp, ADIV5_DP_TARGETSEL, dp->targetsel);
+			dap_dp_low_write(ADIV5_DP_TARGETSEL, dp->targetsel);
 		dap_read_reg(dp, ADIV5_DP_DPIDR);
 		/* Exception here is unexpected, so do not catch */
 	}
@@ -602,10 +602,9 @@ void dap_jtag_dp_init(adiv5_debug_port_s *dp)
 #define SWD_SEQUENCE_IN  0x80U
 #define DAP_SWD_SEQUENCE 0x1dU
 
-static bool dap_dp_low_write(adiv5_debug_port_s *dp, uint16_t addr, const uint32_t data)
+static bool dap_dp_low_write(uint16_t addr, const uint32_t data)
 {
 	DEBUG_PROBE("dap_dp_low_write %08" PRIx32 "\n", data);
-	(void)dp;
 	unsigned int packet_request = make_packet_request(ADIV5_LOW_WRITE, addr);
 	uint8_t buf[32] = {DAP_SWD_SEQUENCE, 5, 8, packet_request,
 		4U + SWD_SEQUENCE_IN, /* one turn-around + read 3 bit ACK */
@@ -635,10 +634,10 @@ int dap_swdptap_init(adiv5_debug_port_s *dp)
 		dp->dp_low_write = dap_dp_low_write;
 	else
 		dp->dp_low_write = NULL;
-	dp->seq_in = dap_swdptap_seq_in;
-	dp->seq_in_parity = dap_swdptap_seq_in_parity;
-	dp->seq_out = dap_swdptap_seq_out;
-	dp->seq_out_parity = dap_swdptap_seq_out_parity;
+	swd_proc.seq_in = dap_swdptap_seq_in;
+	swd_proc.seq_in_parity = dap_swdptap_seq_in_parity;
+	swd_proc.seq_out = dap_swdptap_seq_out;
+	swd_proc.seq_out_parity = dap_swdptap_seq_out_parity;
 	dp->dp_read = dap_dp_read_reg;
 	dp->error = dap_swd_dp_error;
 	dp->low_access = dap_dp_low_access;

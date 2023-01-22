@@ -23,6 +23,7 @@
 #include "remote.h"
 #include "gdb_packet.h"
 #include "jtagtap.h"
+#include "swd.h"
 #include "gdb_if.h"
 #include "version.h"
 #include "exception.h"
@@ -129,7 +130,7 @@ static void remote_packet_process_swd(unsigned i, char *packet)
 			remote_dp.dp_read = firmware_swdp_read;
 			remote_dp.low_access = firmware_swdp_low_access;
 			remote_dp.abort = firmware_swdp_abort;
-			swdptap_init(&remote_dp);
+			swdptap_init();
 			remote_respond(REMOTE_RESP_OK, 0);
 		} else {
 			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_WRONGLEN);
@@ -138,27 +139,27 @@ static void remote_packet_process_swd(unsigned i, char *packet)
 
 	case REMOTE_IN_PAR: /* SI = In parity ============================= */
 		ticks = remotehston(2, &packet[2]);
-		badParity = remote_dp.seq_in_parity(&param, ticks);
+		badParity = swd_proc.seq_in_parity(&param, ticks);
 		remote_respond(badParity ? REMOTE_RESP_PARERR : REMOTE_RESP_OK, param);
 		break;
 
 	case REMOTE_IN: /* Si = In ======================================= */
 		ticks = remotehston(2, &packet[2]);
-		param = remote_dp.seq_in(ticks);
+		param = swd_proc.seq_in(ticks);
 		remote_respond(REMOTE_RESP_OK, param);
 		break;
 
 	case REMOTE_OUT: /* So= Out ====================================== */
 		ticks = remotehston(2, &packet[2]);
 		param = remotehston(-1, &packet[4]);
-		remote_dp.seq_out(param, ticks);
+		swd_proc.seq_out(param, ticks);
 		remote_respond(REMOTE_RESP_OK, 0);
 		break;
 
 	case REMOTE_OUT_PAR: /* SO = Out parity ========================== */
 		ticks = remotehston(2, &packet[2]);
 		param = remotehston(-1, &packet[4]);
-		remote_dp.seq_out_parity(param, ticks);
+		swd_proc.seq_out_parity(param, ticks);
 		remote_respond(REMOTE_RESP_OK, 0);
 		break;
 

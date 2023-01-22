@@ -23,6 +23,7 @@
 
 #include "general.h"
 #include "jtag_scan.h"
+#include "swd.h"
 
 #if PC_HOSTED == 1
 #include "platform.h"
@@ -246,12 +247,8 @@ typedef struct adiv5_debug_port adiv5_debug_port_s;
 struct adiv5_debug_port {
 	int refcnt;
 
-	void (*seq_out)(uint32_t tms_states, size_t clock_cycles);
-	void (*seq_out_parity)(uint32_t tms_states, size_t clock_cycles);
-	uint32_t (*seq_in)(size_t clock_cycles);
-	bool (*seq_in_parity)(uint32_t *ret, size_t clock_cycles);
 	/* dp_low_write returns true if no OK response, but ignores errors */
-	bool (*dp_low_write)(adiv5_debug_port_s *dp, uint16_t addr, const uint32_t data);
+	bool (*dp_low_write)(uint16_t addr, const uint32_t data);
 	uint32_t (*dp_read)(adiv5_debug_port_s *dp, uint16_t addr);
 	uint32_t (*error)(adiv5_debug_port_s *dp, bool protocol_recovery);
 	uint32_t (*low_access)(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value);
@@ -376,7 +373,7 @@ static inline uint32_t adiv5_dp_recoverable_access(adiv5_debug_port_s *dp, uint8
 	if (dp->fault == SWDP_ACK_NO_RESPONSE) {
 		uint32_t response;
 		/* Wait the response period, then clear the error */
-		dp->seq_in_parity(&response, 32);
+		swd_proc.seq_in_parity(&response, 32);
 		DEBUG_WARN("Recovering and re-trying access\n");
 		dp->error(dp, true);
 		return dp->low_access(dp, RnW, addr, value);
@@ -393,8 +390,10 @@ void adiv5_ap_unref(adiv5_access_port_s *ap);
 void platform_add_jtag_dev(uint32_t dev_index, const jtag_dev_s *jtag_dev);
 
 void adiv5_jtag_dp_handler(uint8_t jd_index);
+#if PC_HOSTED == 1
 void platform_jtag_dp_init(adiv5_debug_port_s *dp);
-int swdptap_init(adiv5_debug_port_s *dp);
+int platform_swdptap_init(adiv5_debug_port_s *dp);
+#endif
 
 void adiv5_mem_write(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len);
 uint64_t adiv5_ap_read_pidr(adiv5_access_port_s *ap, uint32_t addr);

@@ -107,10 +107,10 @@ int libftdi_swdptap_init(adiv5_debug_port_s *dp)
 	libftdi_buffer_flush();
 	olddir = SWDIO_STATUS_FLOAT;
 
-	dp->seq_in = swdptap_seq_in;
-	dp->seq_in_parity = swdptap_seq_in_parity;
-	dp->seq_out = swdptap_seq_out;
-	dp->seq_out_parity = swdptap_seq_out_parity;
+	swd_proc.seq_in = swdptap_seq_in;
+	swd_proc.seq_in_parity = swdptap_seq_in_parity;
+	swd_proc.seq_out = swdptap_seq_out;
+	swd_proc.seq_out_parity = swdptap_seq_out_parity;
 	dp->dp_read = firmware_swdp_read;
 	dp->error = firmware_swdp_error;
 	dp->low_access = firmware_swdp_low_access;

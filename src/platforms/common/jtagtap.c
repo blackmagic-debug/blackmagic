@@ -24,7 +24,6 @@
 
 #include "general.h"
 #include "jtagtap.h"
-#include "gdb_packet.h"
 
 jtag_proc_s jtag_proc;
 
