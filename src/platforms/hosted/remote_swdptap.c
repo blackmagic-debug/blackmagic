@@ -36,7 +36,7 @@ static uint32_t swdptap_seq_in(size_t clock_cycles);
 static void swdptap_seq_out(uint32_t tms_states, size_t clock_cycles);
 static void swdptap_seq_out_parity(uint32_t tms_states, size_t clock_cycles);
 
-int remote_swdptap_init(void)
+bool remote_swdptap_init(void)
 {
 	DEBUG_WIRE("remote_swdptap_init\n");
 	uint8_t construct[REMOTE_MAX_MSG_SIZE];
@@ -44,7 +44,7 @@ int remote_swdptap_init(void)
 	platform_buffer_write(construct, s);
 
 	s = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
-	if ((!s) || (construct[0] == REMOTE_RESP_ERR)) {
+	if (!s || construct[0] == REMOTE_RESP_ERR) {
 		DEBUG_WARN("swdptap_init failed, error %s\n", s ? (char *)&(construct[1]) : "unknown");
 		exit(-1);
 	}
@@ -53,7 +53,7 @@ int remote_swdptap_init(void)
 	swd_proc.seq_in_parity = swdptap_seq_in_parity;
 	swd_proc.seq_out = swdptap_seq_out;
 	swd_proc.seq_out_parity = swdptap_seq_out_parity;
-	return 0;
+	return true;
 }
 
 static bool swdptap_seq_in_parity(uint32_t *res, size_t clock_cycles)

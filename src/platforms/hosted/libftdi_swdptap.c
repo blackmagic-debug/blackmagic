@@ -69,11 +69,11 @@ bool libftdi_swd_possible(void)
 	return true;
 }
 
-int libftdi_swdptap_init(void)
+bool libftdi_swdptap_init(void)
 {
 	if (!libftdi_swd_possible()) {
 		DEBUG_WARN("SWD not possible or missing item in cable description.\n");
-		return -1;
+		return false;
 	}
 	active_state.data_low &= ~MPSSE_SK;
 	active_state.data_low |= MPSSE_CS | MPSSE_DI | MPSSE_DO;
@@ -111,7 +111,7 @@ int libftdi_swdptap_init(void)
 	swd_proc.seq_in_parity = swdptap_seq_in_parity;
 	swd_proc.seq_out = swdptap_seq_out;
 	swd_proc.seq_out_parity = swdptap_seq_out_parity;
-	return 0;
+	return true;
 }
 
 static void swdptap_turnaround_mpsse(const swdio_status_e dir)

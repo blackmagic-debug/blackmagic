@@ -159,7 +159,7 @@ uint32_t platform_adiv5_swdp_scan(uint32_t targetid)
 	}
 }
 
-int platform_swdptap_init(adiv5_debug_port_s *dp)
+bool platform_swdptap_init(adiv5_debug_port_s *dp)
 {
 	switch (info.bmp_type) {
 	case BMP_TYPE_BMP:
@@ -176,7 +176,7 @@ int platform_swdptap_init(adiv5_debug_port_s *dp)
 		return libftdi_swdptap_init();
 
 	default:
-		return -1;
+		return false;
 	}
 }
 
