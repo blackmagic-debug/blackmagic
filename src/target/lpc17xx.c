@@ -138,17 +138,33 @@ static void lpc17xx_extended_reset(target_s *t)
 	target_mem_write32(t, MEMMAP, 1);
 }
 
+static size_t lpc17xx_iap_params(const iap_cmd_e cmd)
+{
+	switch (cmd) {
+	case IAP_CMD_PREPARE:
+	case IAP_CMD_BLANKCHECK:
+		return 2U;
+	case IAP_CMD_ERASE:
+		return 3U;
+	default:
+		return 0U;
+	}
+}
+
 iap_status_e lpc17xx_iap_call(target_s *t, flash_param_s *param, iap_cmd_e cmd, ...)
 {
 	param->opcode = ARM_THUMB_BREAKPOINT;
 	param->command = cmd;
 
 	/* Fill out the remainder of the parameters */
-	va_list ap;
-	va_start(ap, cmd);
-	for (int i = 0; i < 4; i++)
-		param->words[i] = va_arg(ap, uint32_t);
-	va_end(ap);
+	const size_t params_count = lpc17xx_iap_params(cmd);
+	va_list params;
+	va_start(params, cmd);
+	for (size_t i = 0; i < params_count; ++i)
+		param->words[i] = va_arg(params, uint32_t);
+	va_end(params);
+	for (size_t i = params_count; i < 4; ++i)
+		param->words[i] = 0U;
 
 	/* Copy the structure to RAM */
 	target_mem_write(t, IAP_RAM_BASE, param, sizeof(flash_param_s));
