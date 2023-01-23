@@ -113,8 +113,8 @@ static uint32_t fast_search(target_s *const cur_target, const uint32_t ram_start
 
 static uint32_t memory_search(target_s *const cur_target, const uint32_t ram_start, const uint32_t ram_end)
 {
-	char *srch_str = rtt_ident;
-	uint32_t srch_str_len = strlen(srch_str);
+	const char *const srch_str = rtt_ident;
+	const uint32_t srch_str_len = strlen(srch_str);
 	uint8_t srch_buf[128];
 
 	if (srch_str_len == 0 || srch_str_len > sizeof(srch_buf) / 2U)
@@ -222,10 +222,6 @@ static void find_rtt(target_s *const cur_target)
 /* poll if host has new data for target */
 static rtt_retval_e read_rtt(target_s *const cur_target, const uint32_t i)
 {
-	uint32_t head_addr = 0;
-	uint32_t next_head;
-	int ch;
-
 	/* copy data from recv_buf to target rtt 'down' buffer */
 	if (rtt_nodata())
 		return RTT_IDLE;
@@ -238,10 +234,10 @@ static rtt_retval_e read_rtt(target_s *const cur_target, const uint32_t i)
 
 	/* write recv_buf to target rtt 'down' buf */
 	while (true) {
-		next_head = (rtt_channel[i].head + 1U) % rtt_channel[i].buf_size;
-		if (next_head == rtt_channel[i].tail)
+		const uint32_t next_head = (rtt_channel[i].head + 1U) % rtt_channel[i].buf_size;
+		if (rtt_channel[i].tail == next_head)
 			break;
-		ch = rtt_getchar();
+		const int ch = rtt_getchar();
 		if (ch == -1)
 			break;
 		if (target_mem_write(cur_target, rtt_channel[i].buf_addr + rtt_channel[i].head, &ch, 1))
@@ -251,7 +247,7 @@ static rtt_retval_e read_rtt(target_s *const cur_target, const uint32_t i)
 	}
 
 	/* update head of target 'down' buffer */
-	head_addr = rtt_cbaddr + 24U + i * 24U + 12U;
+	const uint32_t head_addr = rtt_cbaddr + 24U + i * 24U + 12U;
 	if (target_mem_write(cur_target, head_addr, &rtt_channel[i].head, sizeof(rtt_channel[i].head)))
 		return RTT_ERR;
 	return RTT_OK;
@@ -267,13 +263,11 @@ static rtt_retval_e read_rtt(target_s *const cur_target, const uint32_t i)
 /* rtt_aligned_mem_read(): same as target_mem_read, but word aligned for speed.
    note: dest has to be len + 8 bytes, to allow for alignment and padding.
  */
-int rtt_aligned_mem_read(target_s *t, void *dest, target_addr_t src, size_t len)
+uint32_t rtt_aligned_mem_read(target_s *t, void *dest, target_addr_t src, size_t len)
 {
-	uint32_t src0 = src;
-	uint32_t len0 = len;
-	uint32_t offset = src & 0x3U;
-	src0 -= offset;
-	len0 += offset;
+	const uint32_t offset = src & 0x3U;
+	const uint32_t src0 = src - offset;
+	uint32_t len0 = len + offset;
 	if (len0 & 0x3U)
 		len0 = (len0 + 4U) & ~0x3U;
 
@@ -288,8 +282,6 @@ int rtt_aligned_mem_read(target_s *t, void *dest, target_addr_t src, size_t len)
 /* poll if target has new data for host */
 static rtt_retval_e print_rtt(target_s *const cur_target, const uint32_t i)
 {
-	uint32_t tail_addr;
-
 	if (!cur_target || rtt_channel[i].buf_addr == 0 || rtt_channel[i].buf_size == 0)
 		return RTT_IDLE;
 
@@ -323,7 +315,7 @@ static rtt_retval_e print_rtt(target_s *const cur_target, const uint32_t i)
 	}
 
 	/* update tail of target 'up' buffer */
-	tail_addr = rtt_cbaddr + 24U + i * 24U + 16U;
+	const uint32_t tail_addr = rtt_cbaddr + 24U + i * 24U + 16U;
 	if (target_mem_write(cur_target, tail_addr, &rtt_channel[i].tail, sizeof(rtt_channel[i].tail)))
 		return RTT_ERR;
 
@@ -342,24 +334,19 @@ static rtt_retval_e print_rtt(target_s *const cur_target, const uint32_t i)
 
 void poll_rtt(target_s *const cur_target)
 {
-	uint32_t cblock_header[6]; // first 24 bytes of control block
-
 	/* rtt off */
 	if (!cur_target || !rtt_enabled)
 		return;
 
 	/* target present and rtt enabled */
 	uint32_t now = platform_time_ms();
-	bool rtt_err = false;
-	bool rtt_busy = false;
 
 	if (last_poll_ms + poll_ms <= now || now < last_poll_ms) {
-		bool resume_target = false;
-
 		if (!rtt_found)
 			/* check if target needs to be halted during memory access */
 			rtt_halt = target_mem_access_needs_halt(cur_target);
 
+		bool resume_target = false;
 		target_addr_t watch;
 		if (rtt_halt && target_halt_poll(cur_target, &watch) == TARGET_HALT_RUNNING) {
 			/* briefly halt target during target memory access */
@@ -377,12 +364,15 @@ void poll_rtt(target_s *const cur_target)
 			find_rtt(cur_target);
 
 		if (rtt_found) {
+			uint32_t cblock_header[6]; // first 24 bytes of control block
 			/* check control block not changed or corrupted */
 			if (target_mem_read(cur_target, cblock_header, rtt_cbaddr, sizeof(cblock_header)) ||
 				memcmp(saved_cblock_header, cblock_header, sizeof(cblock_header)) != 0)
 				rtt_found = false; // force searching control block next poll_rtt()
 		}
 
+		bool rtt_err = false;
+		bool rtt_busy = false;
 		/* do rtt i/o if control block found */
 		if (rtt_found && rtt_cbaddr) {
 			/* copy control block from target */
@@ -392,19 +382,19 @@ void poll_rtt(target_s *const cur_target)
 				rtt_err = true;
 			} else {
 				for (uint32_t i = 0; i < rtt_num_up_chan + rtt_num_down_chan; i++) {
-					rtt_retval_e v;
 					if (rtt_channel_enabled[i]) {
+						rtt_retval_e result;
 						if (i < rtt_num_up_chan)
-							v = print_rtt(cur_target, i); /* rtt from target to host */
+							result = print_rtt(cur_target, i); /* rtt from target to host */
 						else {
 							/* rtt from host to target */
 							rtt_flag_skip = rtt_channel[i].flag == 0;
 							rtt_flag_block = rtt_channel[i].flag == 2U;
-							v = read_rtt(cur_target, i);
+							result = read_rtt(cur_target, i);
 						}
-						if (v == RTT_OK)
+						if (result == RTT_OK)
 							rtt_busy = true;
-						else if (v == RTT_ERR)
+						else if (result == RTT_ERR)
 							rtt_err = true;
 					}
 				}
