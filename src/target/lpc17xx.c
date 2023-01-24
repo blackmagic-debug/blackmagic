@@ -88,7 +88,7 @@ bool lpc17xx_probe(target_s *target)
 		/* Read the Part ID */
 		iap_result_s result;
 		lpc17xx_iap_call(target, &result, IAP_CMD_PARTID);
-		target_halt_resume(target, 0);
+		target_halt_resume(target, false);
 
 		if (result.return_code)
 			return false;
