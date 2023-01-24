@@ -24,6 +24,13 @@
 #include "lpc_common.h"
 #include "adiv5.h"
 
+/*
+ * For detailed documentation on how this code works and the IAP variant used here, see:
+ * https://www.nxp.com/docs/en/data-sheet/LPC1759_58_56_54_52_51.pdf
+ * and (behind their login wall):
+ * https://cache.nxp.com/secured/assets/documents/en/user-guide/UM10360.pdf?fileExt=.pdf
+ */
+
 #define IAP_PGM_CHUNKSIZE 4096U
 
 #define MIN_RAM_SIZE               8192U // LPC1751
@@ -35,21 +42,21 @@
 #define MEMMAP           0x400fc040U
 #define FLASH_NUM_SECTOR 30U
 
-typedef struct flash_param {
+typedef struct __attribute__((aligned(4))) flash_param {
 	uint16_t opcode;
 	uint16_t pad0;
 	uint32_t command;
 	uint32_t words[4];
 	uint32_t result[5]; // Return code and maximum of 4 result parameters
-} __attribute__((aligned(4))) flash_param_s;
+} flash_param_s;
 
 static void lpc17xx_extended_reset(target_s *t);
 static bool lpc17xx_mass_erase(target_s *t);
 iap_status_e lpc17xx_iap_call(target_s *t, flash_param_s *param, iap_cmd_e cmd, ...);
 
-static void lpc17xx_add_flash(target_s *t, uint32_t addr, size_t len, size_t erasesize, unsigned int base_sector)
+static void lpc17xx_add_flash(target_s *t, uint32_t addr, size_t len, size_t erasesize, uint8_t base_sector)
 {
-	struct lpc_flash *lf = lpc_add_flash(t, addr, len);
+	lpc_flash_s *lf = lpc_add_flash(t, addr, len);
 	lf->f.blocksize = erasesize;
 	lf->base_sector = base_sector;
 	lf->f.writesize = IAP_PGM_CHUNKSIZE;
