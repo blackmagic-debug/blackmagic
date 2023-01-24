@@ -211,6 +211,10 @@ iap_status_e lpc17xx_iap_call(target_s *target, iap_result_s *result, iap_cmd_e 
 	while (!target_halt_poll(target, NULL)) {
 		if (cmd == IAP_CMD_ERASE)
 			target_print_progress(&timeout);
+		else if (cmd == IAP_CMD_PARTID && platform_timeout_is_expired(&timeout)) {
+			target_halt_request(target);
+			return IAP_STATUS_INVALID_COMMAND;
+		}
 	}
 
 	/* Copy back just the results */
