@@ -42,17 +42,26 @@
 #define MEMMAP           0x400fc040U
 #define FLASH_NUM_SECTOR 30U
 
-typedef struct __attribute__((aligned(4))) flash_param {
-	uint16_t opcode;
-	uint16_t pad0;
+typedef struct iap_config {
 	uint32_t command;
-	uint32_t words[4];
-	uint32_t result[5]; // Return code and maximum of 4 result parameters
-} flash_param_s;
+	uint32_t params[4];
+} iap_config_s;
+
+typedef struct __attribute__((aligned(4))) iap_frame {
+	/* The start of an IAP stack frame is the opcode we set as the return point. */
+	uint16_t opcode;
+	/* There's then a hidden alignment field here, followed by the IAP call setup */
+	iap_config_s config;
+} iap_frame_s;
+
+typedef struct iap_result {
+	uint32_t return_code;
+	uint32_t values[4];
+} iap_result_s;
 
 static void lpc17xx_extended_reset(target_s *t);
 static bool lpc17xx_mass_erase(target_s *t);
-iap_status_e lpc17xx_iap_call(target_s *t, flash_param_s *param, iap_cmd_e cmd, ...);
+iap_status_e lpc17xx_iap_call(target_s *t, iap_result_s *result, iap_cmd_e cmd, ...);
 
 static void lpc17xx_add_flash(target_s *t, uint32_t addr, size_t len, size_t erasesize, uint8_t base_sector)
 {
@@ -77,14 +86,14 @@ bool lpc17xx_probe(target_s *t)
 		target_halt_request(t);
 
 		/* Read the Part ID */
-		flash_param_s param;
-		lpc17xx_iap_call(t, &param, IAP_CMD_PARTID);
+		iap_result_s result;
+		lpc17xx_iap_call(t, &result, IAP_CMD_PARTID);
 		target_halt_resume(t, 0);
 
-		if (param.result[0])
+		if (result.return_code)
 			return false;
 
-		switch (param.result[1]) {
+		switch (result.values[0]) {
 		case 0x26113f37U: /* LPC1769 */
 		case 0x26013f37U: /* LPC1768 */
 		case 0x26012837U: /* LPC1767 */
@@ -114,20 +123,20 @@ bool lpc17xx_probe(target_s *t)
 
 static bool lpc17xx_mass_erase(target_s *t)
 {
-	flash_param_s param;
+	iap_result_s result;
 
-	if (lpc17xx_iap_call(t, &param, IAP_CMD_PREPARE, 0, FLASH_NUM_SECTOR - 1U)) {
-		DEBUG_WARN("lpc17xx_cmd_erase: prepare failed %" PRIu32 "\n", param.result[0]);
+	if (lpc17xx_iap_call(t, &result, IAP_CMD_PREPARE, 0, FLASH_NUM_SECTOR - 1U)) {
+		DEBUG_WARN("lpc17xx_cmd_erase: prepare failed %" PRIu32 "\n", result.return_code);
 		return false;
 	}
 
-	if (lpc17xx_iap_call(t, &param, IAP_CMD_ERASE, 0, FLASH_NUM_SECTOR - 1U, CPU_CLK_KHZ)) {
-		DEBUG_WARN("lpc17xx_cmd_erase: erase failed %" PRIu32 "\n", param.result[0]);
+	if (lpc17xx_iap_call(t, &result, IAP_CMD_ERASE, 0, FLASH_NUM_SECTOR - 1U, CPU_CLK_KHZ)) {
+		DEBUG_WARN("lpc17xx_cmd_erase: erase failed %" PRIu32 "\n", result.return_code);
 		return false;
 	}
 
-	if (lpc17xx_iap_call(t, &param, IAP_CMD_BLANKCHECK, 0, FLASH_NUM_SECTOR - 1U)) {
-		DEBUG_WARN("lpc17xx_cmd_erase: blankcheck failed %" PRIu32 "\n", param.result[0]);
+	if (lpc17xx_iap_call(t, &result, IAP_CMD_BLANKCHECK, 0, FLASH_NUM_SECTOR - 1U)) {
+		DEBUG_WARN("lpc17xx_cmd_erase: blankcheck failed %" PRIu32 "\n", result.return_code);
 		return false;
 	}
 
@@ -158,31 +167,40 @@ static size_t lpc17xx_iap_params(const iap_cmd_e cmd)
 	}
 }
 
-iap_status_e lpc17xx_iap_call(target_s *t, flash_param_s *param, iap_cmd_e cmd, ...)
+iap_status_e lpc17xx_iap_call(target_s *t, iap_result_s *result, iap_cmd_e cmd, ...)
 {
-	param->opcode = ARM_THUMB_BREAKPOINT;
-	param->command = cmd;
+	/* Set up our IAP frame with the break opcode and command to run */
+	iap_frame_s frame = {
+		.opcode = ARM_THUMB_BREAKPOINT,
+		{.command = cmd},
+	};
 
 	/* Fill out the remainder of the parameters */
 	const size_t params_count = lpc17xx_iap_params(cmd);
 	va_list params;
 	va_start(params, cmd);
 	for (size_t i = 0; i < params_count; ++i)
-		param->words[i] = va_arg(params, uint32_t);
+		frame.config.params[i] = va_arg(params, uint32_t);
 	va_end(params);
 	for (size_t i = params_count; i < 4; ++i)
-		param->words[i] = 0U;
+		frame.config.params[i] = 0U;
 
 	/* Copy the structure to RAM */
-	target_mem_write(t, IAP_RAM_BASE, param, sizeof(flash_param_s));
+	target_mem_write(t, IAP_RAM_BASE, &frame, sizeof(iap_frame_s));
+	const uint32_t iap_params_addr = IAP_RAM_BASE + offsetof(iap_frame_s, config);
 
 	/* Set up for the call to the IAP ROM */
 	uint32_t regs[t->regs_size / sizeof(uint32_t)];
 	target_regs_read(t, regs);
-	regs[0] = IAP_RAM_BASE + offsetof(flash_param_s, command);
-	regs[1] = IAP_RAM_BASE + offsetof(flash_param_s, result);
-	regs[REG_MSP] = IAP_RAM_BASE + MIN_RAM_SIZE - RAM_USAGE_FOR_IAP_ROUTINES;
+	/* Point r0 to the start of the config block */
+	regs[0] = iap_params_addr;
+	/* And r1 to the same so we re-use the same memory for the results */
+	regs[1] = iap_params_addr;
+	/* Set the top of stack to the top of the RAM block we're using */
+	regs[REG_MSP] = IAP_RAM_BASE + MIN_RAM_SIZE;
+	/* Point the return address to our breakpoint opcode (thumb mode) */
 	regs[REG_LR] = IAP_RAM_BASE | 1;
+	/* And set the program counter to the IAP ROM entrypoint */
 	regs[REG_PC] = IAP_ENTRYPOINT;
 	target_regs_write(t, regs);
 
@@ -195,7 +213,7 @@ iap_status_e lpc17xx_iap_call(target_s *t, flash_param_s *param, iap_cmd_e cmd, 
 			target_print_progress(&timeout);
 	}
 
-	/* Copy back just the parameters structure */
-	target_mem_read(t, (void *)param, IAP_RAM_BASE, sizeof(flash_param_s));
-	return param->result[0];
+	/* Copy back just the results */
+	target_mem_read(t, result, iap_params_addr, sizeof(iap_result_s));
+	return result->return_code;
 }
