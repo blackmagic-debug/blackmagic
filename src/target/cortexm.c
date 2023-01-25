@@ -853,7 +853,7 @@ static void cortexm_regs_read(target_s *t, void *data)
 	uint32_t *regs = data;
 	adiv5_access_port_s *ap = cortexm_ap(t);
 #if PC_HOSTED == 1
-	if ((ap->dp->ap_reg_read) && (ap->dp->ap_regs_read)) {
+	if (ap->dp->ap_reg_read && ap->dp->ap_regs_read) {
 		uint32_t base_regs[21];
 		ap->dp->ap_regs_read(ap, base_regs);
 		for (size_t i = 0; i < sizeof(regnum_cortex_m) / 4U; i++)
