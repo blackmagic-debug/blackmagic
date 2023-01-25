@@ -654,10 +654,6 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 	switch (t->designer_code) {
 	case JEP106_MANUFACTURER_FREESCALE:
 		PROBE(kinetis_probe);
-		if (t->part_id == 0x88cU) {
-			t->driver = "MIMXRT10xx(no flash)";
-			target_halt_resume(t, 0);
-		}
 		break;
 	case JEP106_MANUFACTURER_GIGADEVICE:
 		PROBE(gd32f1_probe);
