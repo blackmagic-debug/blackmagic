@@ -34,6 +34,13 @@
 #include "general.h"
 #include "target_internal.h"
 
+/*
+ * For detailed information on how this code works, see:
+ * https://www.nxp.com/docs/en/nxp/data-sheets/IMXRT1060CEC.pdf
+ * and (behind their login wall):
+ * https://cache.nxp.com/secured/assets/documents/en/reference-manual/IMXRT1060RM.pdf?fileExt=.pdf
+ */
+
 bool imxrt_probe(target_s *target)
 {
 	/* If the part number fails to match, instantly return. */
