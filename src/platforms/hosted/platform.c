@@ -498,7 +498,7 @@ void platform_target_clk_output_enable(const bool enable)
 static void ap_decode_access(uint16_t addr, uint8_t RnW)
 {
 	if (RnW)
-		fprintf(stderr, "Read  ");
+		fprintf(stderr, "Read ");
 	else
 		fprintf(stderr, "Write ");
 
@@ -506,9 +506,9 @@ static void ap_decode_access(uint16_t addr, uint8_t RnW)
 		switch (addr) {
 		case 0x00U:
 			if (RnW)
-				fprintf(stderr, "DP_DPIDR :");
+				fprintf(stderr, "DP_DPIDR:");
 			else
-				fprintf(stderr, "DP_ABORT :");
+				fprintf(stderr, "DP_ABORT:");
 			break;
 
 		case 0x04U:
@@ -517,7 +517,7 @@ static void ap_decode_access(uint16_t addr, uint8_t RnW)
 
 		case 0x08U:
 			if (RnW)
-				fprintf(stderr, "RESEND   :");
+				fprintf(stderr, "RESEND:");
 			else
 				fprintf(stderr, "DP_SELECT:");
 			break;
@@ -527,50 +527,50 @@ static void ap_decode_access(uint16_t addr, uint8_t RnW)
 			break;
 
 		default:
-			fprintf(stderr, "Unknown %02x   :", addr);
+			fprintf(stderr, "Unknown register %02x:", addr);
 		}
 	} else {
-		fprintf(stderr, "AP 0x%02x ", addr >> 8U);
+		fprintf(stderr, "AP %u ", addr >> 8U);
 
 		switch (addr & 0xffU) {
 		case 0x00U:
-			fprintf(stderr, "CSW   :");
+			fprintf(stderr, "CSW:");
 			break;
 
 		case 0x04U:
-			fprintf(stderr, "TAR   :");
+			fprintf(stderr, "TAR:");
 			break;
 
 		case 0x0cU:
-			fprintf(stderr, "DRW   :");
+			fprintf(stderr, "DRW:");
 			break;
 
 		case 0x10U:
-			fprintf(stderr, "DB0   :");
+			fprintf(stderr, "DB0:");
 			break;
 
 		case 0x14U:
-			fprintf(stderr, "DB1   :");
+			fprintf(stderr, "DB1:");
 			break;
 
 		case 0x18U:
-			fprintf(stderr, "DB2   :");
+			fprintf(stderr, "DB2:");
 			break;
 
 		case 0x1cU:
-			fprintf(stderr, "DB3   :");
+			fprintf(stderr, "DB3:");
 			break;
 
 		case 0xf8U:
-			fprintf(stderr, "BASE  :");
+			fprintf(stderr, "BASE:");
 			break;
 
 		case 0xf4U:
-			fprintf(stderr, "CFG   :");
+			fprintf(stderr, "CFG:");
 			break;
 
 		case 0xfcU:
-			fprintf(stderr, "IDR   :");
+			fprintf(stderr, "IDR:");
 			break;
 
 		default:
