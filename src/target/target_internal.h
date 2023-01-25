@@ -25,6 +25,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include "platform_support.h"
+#include "target_probe.h"
 
 extern target_s *target_list;
 target_s *target_new(void);
