@@ -413,17 +413,17 @@ static uint32_t cortexm_initial_halt(adiv5_access_port_s *ap)
  */
 static bool cortexm_prepare(adiv5_access_port_s *ap)
 {
-#if ((PC_HOSTED == 1) || (ENABLE_DEBUG == 1))
+#if PC_HOSTED == 1 || ENABLE_DEBUG == 1
 	uint32_t start_time = platform_time_ms();
 #endif
 	uint32_t dhcsr = cortexm_initial_halt(ap);
 	if (!dhcsr) {
-		DEBUG_WARN("Halt via DHCSR: Failure DHCSR %08" PRIx32 " after % " PRId32 "ms\nTry again, evt. with longer "
+		DEBUG_WARN("Halt via DHCSR(%08" PRIx32 "): failure after %" PRId32 "ms\nTry again, evt. with longer "
 				   "timeout or connect under reset\n",
 			adiv5_mem_read32(ap, CORTEXM_DHCSR), platform_time_ms() - start_time);
 		return false;
 	}
-	DEBUG_INFO("Halt via DHCSR: success %08" PRIx32 " after %" PRId32 "ms\n", dhcsr, platform_time_ms() - start_time);
+	DEBUG_INFO("Halt via DHCSR(%08" PRIx32 "): success after %" PRId32 "ms\n", dhcsr, platform_time_ms() - start_time);
 	ap->ap_cortexm_demcr = adiv5_mem_read32(ap, CORTEXM_DEMCR);
 	const uint32_t demcr = CORTEXM_DEMCR_TRCENA | CORTEXM_DEMCR_VC_HARDERR | CORTEXM_DEMCR_VC_CORERESET;
 	adiv5_mem_write(ap, CORTEXM_DEMCR, &demcr, sizeof(demcr));
@@ -636,7 +636,7 @@ static void adiv5_component_probe(
 
 adiv5_access_port_s *adiv5_new_ap(adiv5_debug_port_s *dp, uint8_t apsel)
 {
-	adiv5_access_port_s *ap, tmpap;
+	adiv5_access_port_s tmpap;
 	/* Assume valid and try to read IDR */
 	memset(&tmpap, 0, sizeof(tmpap));
 	tmpap.dp = dp;
@@ -666,7 +666,7 @@ adiv5_access_port_s *adiv5_new_ap(adiv5_debug_port_s *dp, uint8_t apsel)
 	}
 
 	/* It's valid to so create a heap copy */
-	ap = malloc(sizeof(*ap));
+	adiv5_access_port_s *ap = malloc(sizeof(*ap));
 	if (!ap) { /* malloc failed: heap exhaustion */
 		DEBUG_WARN("malloc: failed in %s\n", __func__);
 		return NULL;
