@@ -32,6 +32,7 @@
  */
 
 #include "general.h"
+#include "target.h"
 #include "target_internal.h"
 #include "cortexm.h"
 
@@ -45,6 +46,11 @@
 #define IMXRT_SRC_BASE       UINT32_C(0x400f8000)
 #define IMXRT_SRC_BOOT_MODE1 (IMXRT_SRC_BASE + 0x004U)
 #define IMXRT_SRC_BOOT_MODE2 (IMXRT_SRC_BASE + 0x01cU)
+
+#define IMXRT_OCRAM1_BASE UINT32_C(0x20280000)
+#define IMXRT_OCRAM1_SIZE 0x00080000U
+#define IMXRT_OCRAM2_BASE UINT32_C(0x20200000)
+#define IMXRT_OCRAM2_SIZE 0x00080000U
 
 typedef enum imxrt_boot_src {
 	boot_spi_flash_nor,
@@ -105,6 +111,10 @@ bool imxrt_probe(target_s *target)
 		DEBUG_TARGET("-> booting from SPI Flash (NAND)\n");
 		break;
 	}
+
+	/* Build the RAM map for the part */
+	target_add_ram(target, IMXRT_OCRAM1_BASE, IMXRT_OCRAM1_SIZE);
+	target_add_ram(target, IMXRT_OCRAM2_BASE, IMXRT_OCRAM2_SIZE);
 
 	return true;
 }
