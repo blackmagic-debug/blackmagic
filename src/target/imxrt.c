@@ -77,6 +77,8 @@
 #define IMXRT_FLEXSPI1_LUT_KEY_VALUE              0x5af05af0U
 #define IMXRT_FLEXSPI1_LUT_CTRL_LOCK              0x00000001U
 #define IMXRT_FLEXSPI1_LUT_CTRL_UNLOCK            0x00000002U
+#define IMXRT_FLEXSPI1_CTRL1_CAS_MASK             0x00007800U
+#define IMXRT_FLEXSPI1_CTRL1_CAS_SHIFT            11U
 #define IMXRT_FLEXSPI1_PRG_LENGTH(x)              ((x)&0x0000ffffU)
 #define IMXRT_FLEXSPI1_PRG_LUT_INDEX_0            0U
 #define IMXRT_FLEXSPI1_PRG_RUN                    0x00000001U
@@ -89,22 +91,28 @@
 #define IMXRT_FLEXSPI_LUT_MODE_QUAD   0x2U
 #define IMXRT_FLEXSPI_LUT_MODE_OCT    0x3U
 
-#define IMXRT_FLEXSPI_LUT_OP_STOP        0x00U
-#define IMXRT_FLEXSPI_LUT_OP_COMMAND     0x01U
-#define IMXRT_FLEXSPI_LUT_OP_DATA_LENGTH 0x0bU
-#define IMXRT_FLEXSPI_LUT_OP_READ        0x09U
-#define IMXRT_FLEXSPI_LUT_OP_WRITE       0x08U
+#define IMXRT_FLEXSPI_LUT_OP_STOP         0x00U
+#define IMXRT_FLEXSPI_LUT_OP_COMMAND      0x01U
+#define IMXRT_FLEXSPI_LUT_OP_CADDR        0x03U
+#define IMXRT_FLEXSPI_LUT_OP_RADDR        0x02U
+#define IMXRT_FLEXSPI_LUT_OP_DUMMY_CYCLES 0x0cU
+#define IMXRT_FLEXSPI_LUT_OP_READ         0x09U
+#define IMXRT_FLEXSPI_LUT_OP_WRITE        0x08U
 
-#define IMXRT_SPI_FLASH_OPCODE_MASK      0x00ffU
+#define IMXRT_SPI_FLASH_OPCODE_MASK      0x000000ffU
 #define IMXRT_SPI_FLASH_OPCODE(x)        ((x)&IMXRT_SPI_FLASH_OPCODE_MASK)
-#define IMXRT_SPI_FLASH_OPCODE_MODE_MASK 0x0100U
-#define IMXRT_SPI_FLASH_OPCODE_ONLY      (0U << 8U)
-#define IMXRT_SPI_FLASH_OPCODE_3B_ADDR   (1U << 8U)
-#define IMXRT_SPI_FLASH_DATA_IN          (0U << 9U)
-#define IMXRT_SPI_FLASH_DATA_OUT         (1U << 9U)
+#define IMXRT_SPI_FLASH_DUMMY_MASK       0x0000ff00U
+#define IMXRT_SPI_FLASH_DUMMY_SHIFT      8U
+#define IMXRT_SPI_FLASH_DUMMY_LEN(x)     (((x) << IMXRT_SPI_FLASH_DUMMY_SHIFT) & IMXRT_SPI_FLASH_DUMMY_MASK)
+#define IMXRT_SPI_FLASH_OPCODE_MODE_MASK 0x00010000U
+#define IMXRT_SPI_FLASH_OPCODE_ONLY      (0U << 16U)
+#define IMXRT_SPI_FLASH_OPCODE_3B_ADDR   (1U << 16U)
+#define IMXRT_SPI_FLASH_DATA_IN          (0U << 17U)
+#define IMXRT_SPI_FLASH_DATA_OUT         (1U << 17U)
 
-#define SPI_FLASH_CMD_READ_JEDEC_ID \
-	(IMXRT_SPI_FLASH_OPCODE_ONLY | IMXRT_SPI_FLASH_DATA_IN | IMXRT_SPI_FLASH_OPCODE(0x9fU))
+#define SPI_FLASH_CMD_READ_JEDEC_ID                                                         \
+	(IMXRT_SPI_FLASH_OPCODE_ONLY | IMXRT_SPI_FLASH_DATA_IN | IMXRT_SPI_FLASH_DUMMY_LEN(0) | \
+		IMXRT_SPI_FLASH_OPCODE(0x9fU))
 
 typedef enum imxrt_boot_src {
 	boot_spi_flash_nor,
@@ -126,7 +134,7 @@ typedef struct imxrt_priv {
 } imxrt_priv_s;
 
 static void imxrt_enter_flash_mode(target_s *target);
-static void imxrt_spi_read(target_s *target, uint16_t command, target_addr_t address, void *buffer, size_t length);
+static void imxrt_spi_read(target_s *target, uint32_t command, target_addr_t address, void *buffer, size_t length);
 static imxrt_boot_src_e imxrt_boot_source(uint32_t boot_cfg);
 
 bool imxrt_probe(target_s *target)
@@ -228,7 +236,7 @@ static void imxrt_enter_flash_mode(target_s *const target)
 }
 
 static void imxrt_spi_configure_sequence(
-	target_s *const target, const uint16_t command, const target_addr_t address, const size_t length)
+	target_s *const target, const uint32_t command, const target_addr_t address, const size_t length)
 {
 	/* Read the current value of the LUT index to use */
 	imxrt_priv_s *const priv = (imxrt_priv_s *)target->target_storage;
@@ -241,8 +249,22 @@ static void imxrt_spi_configure_sequence(
 	sequence[0].value = command & IMXRT_SPI_FLASH_OPCODE_MASK;
 	size_t offset = 1;
 	/* Then, if the command has an address, perform the necessary addressing */
-	// if ((command & IMXRT_SPI_FLASH_OPCODE_MODE_MASK) == IMXRT_SPI_FLASH_OPCODE_3B_ADDR) {
-	// }
+	if ((command & IMXRT_SPI_FLASH_OPCODE_MODE_MASK) == IMXRT_SPI_FLASH_OPCODE_3B_ADDR) {
+		const uint8_t column_address_bits =
+			(target_mem_read32(target, IMXRT_FLEXSPI1_CTRL1) & IMXRT_FLEXSPI1_CTRL1_CAS_MASK) >>
+			IMXRT_FLEXSPI1_CTRL1_CAS_SHIFT;
+		sequence[offset].opcode_mode =
+			IMXRT_FLEXSPI_LUT_OPCODE(IMXRT_FLEXSPI_LUT_OP_RADDR) | IMXRT_FLEXSPI_LUT_MODE_SERIAL;
+		sequence[offset++].value = 24U - column_address_bits;
+		if (column_address_bits) {
+			sequence[offset].opcode_mode =
+				IMXRT_FLEXSPI_LUT_OPCODE(IMXRT_FLEXSPI_LUT_OP_CADDR) | IMXRT_FLEXSPI_LUT_MODE_SERIAL;
+			sequence[offset++].value = column_address_bits;
+		}
+	}
+	sequence[offset].opcode_mode =
+		IMXRT_FLEXSPI_LUT_OPCODE(IMXRT_FLEXSPI_LUT_OP_DUMMY_CYCLES) | IMXRT_FLEXSPI_LUT_MODE_SERIAL;
+	sequence[offset++].value = (command & IMXRT_SPI_FLASH_DUMMY_MASK) >> IMXRT_SPI_FLASH_DUMMY_SHIFT;
 	/* Now run the data phase based on the operation's data direction */
 	if (command & IMXRT_SPI_FLASH_DATA_OUT)
 		sequence[offset].opcode_mode =
@@ -250,8 +272,7 @@ static void imxrt_spi_configure_sequence(
 	else
 		sequence[offset].opcode_mode =
 			IMXRT_FLEXSPI_LUT_OPCODE(IMXRT_FLEXSPI_LUT_OP_READ) | IMXRT_FLEXSPI_LUT_MODE_SERIAL;
-	sequence[offset].value = 0;
-	++offset;
+	sequence[offset++].value = 0;
 	/* Because sequence gets 0 initalised above when it's declared, the STOP entry is already present */
 
 	/* Write the new sequence to the programmable sequence LUT */
@@ -282,7 +303,7 @@ static void imxrt_spi_wait_complete(target_s *const target)
 	target_mem_write32(target, IMXRT_FLEXSPI1_INT, IMXRT_FLEXSPI1_INT_PRG_CMD_DONE);
 }
 
-static void imxrt_spi_read(target_s *const target, const uint16_t command, const target_addr_t address,
+static void imxrt_spi_read(target_s *const target, const uint32_t command, const target_addr_t address,
 	void *const buffer, const size_t length)
 {
 	/* Configure the programmable sequence LUT and execute the read */
