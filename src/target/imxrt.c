@@ -49,10 +49,11 @@
 #define IMXRT_SRC_BOOT_MODE1 (IMXRT_SRC_BASE + 0x004U)
 #define IMXRT_SRC_BOOT_MODE2 (IMXRT_SRC_BASE + 0x01cU)
 
-#define IMXRT_OCRAM1_BASE UINT32_C(0x20280000)
-#define IMXRT_OCRAM1_SIZE 0x00080000U
-#define IMXRT_OCRAM2_BASE UINT32_C(0x20200000)
-#define IMXRT_OCRAM2_SIZE 0x00080000U
+#define IMXRT_OCRAM1_BASE  UINT32_C(0x20280000)
+#define IMXRT_OCRAM1_SIZE  0x00080000U
+#define IMXRT_OCRAM2_BASE  UINT32_C(0x20200000)
+#define IMXRT_OCRAM2_SIZE  0x00080000U
+#define IMXRT_FLEXSPI_BASE UINT32_C(0x60000000)
 
 #define IMXRT_FLEXSPI1_BASE UINT32_C(0x402a8000)
 /* We only carry definitions for FlexSPI1 Flash controller A1. */
@@ -111,9 +112,13 @@
 #define IMXRT_SPI_FLASH_DATA_IN          (0U << 17U)
 #define IMXRT_SPI_FLASH_DATA_OUT         (1U << 17U)
 
+#define SPI_FLASH_OPCODE_SECTOR_ERASE 0x20U
 #define SPI_FLASH_CMD_READ_JEDEC_ID                                                         \
 	(IMXRT_SPI_FLASH_OPCODE_ONLY | IMXRT_SPI_FLASH_DATA_IN | IMXRT_SPI_FLASH_DUMMY_LEN(0) | \
 		IMXRT_SPI_FLASH_OPCODE(0x9fU))
+#define SPI_FLASH_CMD_READ_SFDP                                                                \
+	(IMXRT_SPI_FLASH_OPCODE_3B_ADDR | IMXRT_SPI_FLASH_DATA_IN | IMXRT_SPI_FLASH_DUMMY_LEN(8) | \
+		IMXRT_SPI_FLASH_OPCODE(0x5aU))
 
 typedef enum imxrt_boot_src {
 	boot_spi_flash_nor,
@@ -138,7 +143,38 @@ static void imxrt_enter_flash_mode(target_s *target);
 static void imxrt_spi_read(target_s *target, uint32_t command, target_addr_t address, void *buffer, size_t length);
 static imxrt_boot_src_e imxrt_boot_source(uint32_t boot_cfg);
 
-bool imxrt_probe(target_s *target)
+static void imxrt_spi_read_sfdp(target_s *const target, const uint32_t address, void *const buffer, const size_t length)
+{
+	imxrt_spi_read(target, SPI_FLASH_CMD_READ_SFDP, address, buffer, length);
+}
+
+static void imxrt_add_flash(target_s *const target, const size_t length)
+{
+	target_flash_s *flash = calloc(1, sizeof(*flash));
+	if (!flash) { /* calloc failed: heap exhaustion */
+		DEBUG_WARN("calloc: failed in %s\n", __func__);
+		return;
+	}
+
+	spi_parameters_s spi_parameters;
+	if (!sfdp_read_parameters(target, &spi_parameters, imxrt_spi_read_sfdp)) {
+		/* SFDP readout failed, so make some assumptions and hope for the best. */
+		spi_parameters.page_size = 256U;
+		spi_parameters.sector_size = 4096U;
+		spi_parameters.capacity = length;
+		spi_parameters.sector_erase_opcode = SPI_FLASH_OPCODE_SECTOR_ERASE;
+	}
+	DEBUG_INFO("Flash size: %" PRIu32 "MiB\n", (uint32_t)spi_parameters.capacity / (1024U * 1024U));
+
+	flash->start = IMXRT_FLEXSPI_BASE;
+	flash->length = spi_parameters.capacity;
+	flash->blocksize = spi_parameters.sector_size;
+	//flash->writesize = ;
+	flash->erased = 0xffU;
+	target_add_flash(target, flash);
+}
+
+bool imxrt_probe(target_s *const target)
 {
 	/* If the part number fails to match, instantly return. */
 	if (target->part_id != 0x88cU)
@@ -188,16 +224,19 @@ bool imxrt_probe(target_s *target)
 	target_add_ram(target, IMXRT_OCRAM2_BASE, IMXRT_OCRAM2_SIZE);
 
 	if (priv->boot_source == boot_spi_flash_nor || priv->boot_source == boot_spi_flash_nand) {
-		imxrt_enter_flash_mode(target);
-		const uint32_t flash_size = target_mem_read32(target, IMXRT_FLEXSPI1_CTRL0);
-		DEBUG_INFO("i.MXRT configured for %" PRIu32 " bytes (%" PRIx32 ") of Flash\n", flash_size, flash_size);
-
 		/* Try to detect the Flash that should be attached */
+		imxrt_enter_flash_mode(target);
 		spi_flash_id_s flash_id;
 		imxrt_spi_read(target, SPI_FLASH_CMD_READ_JEDEC_ID, 0, &flash_id, sizeof(flash_id));
-		const uint32_t capacity = 1U << flash_id.capacity;
-		DEBUG_INFO("SPI Flash: mfr = %02x, type = %02x, capacity = %08" PRIx32 "\n", flash_id.manufacturer,
-			flash_id.type, capacity);
+
+		/* If we read out valid Flash information, set up a region for it */
+		if (flash_id.manufacturer != 0xffU && flash_id.type != 0xffU && flash_id.capacity != 0xffU) {
+			const uint32_t capacity = 1U << flash_id.capacity;
+			DEBUG_INFO("SPI Flash: mfr = %02x, type = %02x, capacity = %08" PRIx32 "\n", flash_id.manufacturer,
+				flash_id.type, capacity);
+			imxrt_add_flash(target, capacity);
+		} else
+			DEBUG_INFO("Flash identification failed\n");
 	}
 
 	return true;
