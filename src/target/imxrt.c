@@ -115,6 +115,10 @@
 #define IMXRT_SPI_FLASH_DATA_OUT         (1U << 17U)
 
 #define SPI_FLASH_OPCODE_SECTOR_ERASE 0x20U
+#define SPI_FLASH_CMD_WRITE_ENABLE \
+	(IMXRT_SPI_FLASH_OPCODE_ONLY | IMXRT_SPI_FLASH_DUMMY_LEN(0) | IMXRT_SPI_FLASH_OPCODE(0x06U))
+#define SPI_FLASH_CMD_CHIP_ERASE \
+	(IMXRT_SPI_FLASH_OPCODE_ONLY | IMXRT_SPI_FLASH_DUMMY_LEN(0) | IMXRT_SPI_FLASH_OPCODE(0x60U))
 #define SPI_FLASH_CMD_READ_STATUS                                                           \
 	(IMXRT_SPI_FLASH_OPCODE_ONLY | IMXRT_SPI_FLASH_DATA_IN | IMXRT_SPI_FLASH_DUMMY_LEN(0) | \
 		IMXRT_SPI_FLASH_OPCODE(0x05U))
@@ -151,6 +155,7 @@ static void imxrt_enter_flash_mode(target_s *target);
 static void imxrt_spi_read(target_s *target, uint32_t command, target_addr_t address, void *buffer, size_t length);
 static void imxrt_spi_write(
 	target_s *target, uint32_t command, target_addr_t address, const void *buffer, size_t length);
+static bool imxrt_spi_mass_erase(target_s *target);
 static imxrt_boot_src_e imxrt_boot_source(uint32_t boot_cfg);
 
 static void imxrt_spi_read_sfdp(target_s *const target, const uint32_t address, void *const buffer, const size_t length)
@@ -238,6 +243,8 @@ bool imxrt_probe(target_s *const target)
 		imxrt_enter_flash_mode(target);
 		spi_flash_id_s flash_id;
 		imxrt_spi_read(target, SPI_FLASH_CMD_READ_JEDEC_ID, 0, &flash_id, sizeof(flash_id));
+
+		target->mass_erase = imxrt_spi_mass_erase;
 
 		/* If we read out valid Flash information, set up a region for it */
 		if (flash_id.manufacturer != 0xffU && flash_id.type != 0xffU && flash_id.capacity != 0xffU) {
@@ -408,4 +415,22 @@ static inline uint8_t imxrt_spi_read_status(target_s *const target)
 static inline void imxrt_spi_run_command(target_s *const target, const uint32_t command)
 {
 	imxrt_spi_write(target, command, 0U, NULL, 0U);
+}
+
+static bool imxrt_spi_mass_erase(target_s *const target)
+{
+	platform_timeout_s timeout;
+	platform_timeout_set(&timeout, 500);
+	imxrt_enter_flash_mode(target);
+	imxrt_spi_run_command(target, SPI_FLASH_CMD_WRITE_ENABLE);
+	if (!(imxrt_spi_read_status(target) & SPI_FLASH_STATUS_WRITE_ENABLED)) {
+		// imxrt_exit_flash_mode(target);
+		return false;
+	}
+
+	imxrt_spi_run_command(target, SPI_FLASH_CMD_CHIP_ERASE);
+	while (imxrt_spi_read_status(target) & SPI_FLASH_STATUS_BUSY)
+		target_print_progress(&timeout);
+
+	return true; // imxrt_exit_flash_mode(target);
 }
