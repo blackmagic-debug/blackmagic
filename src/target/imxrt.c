@@ -36,6 +36,7 @@
 #include "target.h"
 #include "target_internal.h"
 #include "cortexm.h"
+#include "sfdp.h"
 
 /*
  * For detailed information on how this code works, see:
@@ -190,6 +191,13 @@ bool imxrt_probe(target_s *target)
 		imxrt_enter_flash_mode(target);
 		const uint32_t flash_size = target_mem_read32(target, IMXRT_FLEXSPI1_CTRL0);
 		DEBUG_INFO("i.MXRT configured for %" PRIu32 " bytes (%" PRIx32 ") of Flash\n", flash_size, flash_size);
+
+		/* Try to detect the Flash that should be attached */
+		spi_flash_id_s flash_id;
+		imxrt_spi_read(target, SPI_FLASH_CMD_READ_JEDEC_ID, 0, &flash_id, sizeof(flash_id));
+		const uint32_t capacity = 1U << flash_id.capacity;
+		DEBUG_INFO("SPI Flash: mfr = %02x, type = %02x, capacity = %08" PRIx32 "\n", flash_id.manufacturer,
+			flash_id.type, capacity);
 	}
 
 	return true;
