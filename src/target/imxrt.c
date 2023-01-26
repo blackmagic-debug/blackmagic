@@ -52,6 +52,22 @@
 #define IMXRT_OCRAM2_BASE UINT32_C(0x20200000)
 #define IMXRT_OCRAM2_SIZE 0x00080000U
 
+#define IMXRT_FLEXSPI1_BASE UINT32_C(0x402a8000)
+/* We only carry definitions for FlexSPI1 Flash controller A1. */
+#define IMXRT_FLEXSPI1_MOD_CTRL0 (IMXRT_FLEXSPI1_BASE + 0x000U)
+#define IMXRT_FLEXSPI1_LUT_KEY   (IMXRT_FLEXSPI1_BASE + 0x018U)
+#define IMXRT_FLEXSPI1_LUT_CTRL  (IMXRT_FLEXSPI1_BASE + 0x01cU)
+#define IMXRT_FLEXSPI1_CTRL0     (IMXRT_FLEXSPI1_BASE + 0x060U)
+#define IMXRT_FLEXSPI1_CTRL1     (IMXRT_FLEXSPI1_BASE + 0x070U)
+#define IMXRT_FLEXSPI1_CTRL2     (IMXRT_FLEXSPI1_BASE + 0x080U)
+#define IMXRT_FLEXSPI1_STAT1     (IMXRT_FLEXSPI1_BASE + 0x0e4U)
+#define IMXRT_FLEXSPI1_LUT_BASE  (IMXRT_FLEXSPI1_BASE + 0x200U)
+
+#define IMXRT_FLEXSPI1_MOD_CTRL0_SUSPEND 0x00000002U
+#define IMXRT_FLEXSPI1_LUT_KEY_VALUE     0x5af05af0U
+#define IMXRT_FLEXSPI1_LUT_CTRL_LOCK     0x00000001U
+#define IMXRT_FLEXSPI1_LUT_CTRL_UNLOCK   0x00000002U
+
 typedef enum imxrt_boot_src {
 	boot_spi_flash_nor,
 	boot_sd_card,
@@ -65,6 +81,7 @@ typedef struct imxrt_priv {
 	imxrt_boot_src_e boot_source;
 } imxrt_priv_s;
 
+static void imxrt_enter_flash_mode(target_s *target);
 static imxrt_boot_src_e imxrt_boot_source(uint32_t boot_cfg);
 
 bool imxrt_probe(target_s *target)
@@ -116,6 +133,12 @@ bool imxrt_probe(target_s *target)
 	target_add_ram(target, IMXRT_OCRAM1_BASE, IMXRT_OCRAM1_SIZE);
 	target_add_ram(target, IMXRT_OCRAM2_BASE, IMXRT_OCRAM2_SIZE);
 
+	if (priv->boot_source == boot_spi_flash_nor || priv->boot_source == boot_spi_flash_nand) {
+		imxrt_enter_flash_mode(target);
+		const uint32_t flash_size = target_mem_read32(target, IMXRT_FLEXSPI1_CTRL0);
+		DEBUG_INFO("i.MXRT configured for %" PRIu32 " bytes (%" PRIx32 ") of Flash\n", flash_size, flash_size);
+	}
+
 	return true;
 }
 
@@ -140,3 +163,17 @@ static imxrt_boot_src_e imxrt_boot_source(const uint32_t boot_cfg)
 	/* The only upper bits combination not tested by this point is 0b11xx. */
 	return boot_spi_flash_nand;
 }
+
+static void imxrt_enter_flash_mode(target_s *const target)
+{
+	/* Start by checking that the controller isn't suspended */
+	const uint32_t module_state = target_mem_read32(target, IMXRT_FLEXSPI1_MOD_CTRL0);
+	if (module_state & IMXRT_FLEXSPI1_MOD_CTRL0_SUSPEND)
+		target_mem_write32(target, IMXRT_FLEXSPI1_MOD_CTRL0, module_state & ~IMXRT_FLEXSPI1_MOD_CTRL0_SUSPEND);
+	/* Then unlock the sequence LUT so we can use it to to run Flash commands */
+	if (target_mem_read32(target, IMXRT_FLEXSPI1_LUT_CTRL) != IMXRT_FLEXSPI1_LUT_CTRL_UNLOCK) {
+		target_mem_write32(target, IMXRT_FLEXSPI1_LUT_KEY, IMXRT_FLEXSPI1_LUT_KEY_VALUE);
+		target_mem_write32(target, IMXRT_FLEXSPI1_LUT_CTRL, IMXRT_FLEXSPI1_LUT_CTRL_UNLOCK);
+	}
+}
+
