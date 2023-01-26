@@ -33,6 +33,7 @@
 
 #include "general.h"
 #include "target_internal.h"
+#include "cortexm.h"
 
 /*
  * For detailed information on how this code works, see:
@@ -74,6 +75,7 @@ bool imxrt_probe(target_s *target)
 		return false;
 	}
 	target->target_storage = priv;
+	target->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
 	target->driver = "i.MXRT10xx";
 
 #if ENABLE_DEBUG
