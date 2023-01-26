@@ -148,10 +148,13 @@ typedef struct imxrt_flexspi_lut_insn {
 
 typedef struct imxrt_priv {
 	imxrt_boot_src_e boot_source;
+	uint32_t flexspi_module_state;
+	uint32_t flexspi_lut_state;
 	imxrt_flexspi_lut_insn_s flexspi_lut_seq[8];
 } imxrt_priv_s;
 
-static void imxrt_enter_flash_mode(target_s *target);
+static bool imxrt_enter_flash_mode(target_s *target);
+static bool imxrt_exit_flash_mode(target_s *target);
 static void imxrt_spi_read(target_s *target, uint32_t command, target_addr_t address, void *buffer, size_t length);
 static void imxrt_spi_write(
 	target_s *target, uint32_t command, target_addr_t address, const void *buffer, size_t length);
@@ -245,6 +248,8 @@ bool imxrt_probe(target_s *const target)
 		imxrt_spi_read(target, SPI_FLASH_CMD_READ_JEDEC_ID, 0, &flash_id, sizeof(flash_id));
 
 		target->mass_erase = imxrt_spi_mass_erase;
+		target->enter_flash_mode = imxrt_enter_flash_mode;
+		target->exit_flash_mode = imxrt_exit_flash_mode;
 
 		/* If we read out valid Flash information, set up a region for it */
 		if (flash_id.manufacturer != 0xffU && flash_id.type != 0xffU && flash_id.capacity != 0xffU) {
@@ -254,6 +259,8 @@ bool imxrt_probe(target_s *const target)
 			imxrt_add_flash(target, capacity);
 		} else
 			DEBUG_INFO("Flash identification failed\n");
+
+		imxrt_exit_flash_mode(target);
 	}
 
 	return true;
@@ -281,12 +288,14 @@ static imxrt_boot_src_e imxrt_boot_source(const uint32_t boot_cfg)
 	return boot_spi_flash_nand;
 }
 
-static void imxrt_enter_flash_mode(target_s *const target)
+static bool imxrt_enter_flash_mode(target_s *const target)
 {
+	imxrt_priv_s *const priv = (imxrt_priv_s *)target->target_storage;
 	/* Start by checking that the controller isn't suspended */
-	const uint32_t module_state = target_mem_read32(target, IMXRT_FLEXSPI1_MOD_CTRL0);
-	if (module_state & IMXRT_FLEXSPI1_MOD_CTRL0_SUSPEND)
-		target_mem_write32(target, IMXRT_FLEXSPI1_MOD_CTRL0, module_state & ~IMXRT_FLEXSPI1_MOD_CTRL0_SUSPEND);
+	priv->flexspi_module_state = target_mem_read32(target, IMXRT_FLEXSPI1_MOD_CTRL0);
+	if (priv->flexspi_module_state & IMXRT_FLEXSPI1_MOD_CTRL0_SUSPEND)
+		target_mem_write32(
+			target, IMXRT_FLEXSPI1_MOD_CTRL0, priv->flexspi_module_state & ~IMXRT_FLEXSPI1_MOD_CTRL0_SUSPEND);
 	/* Clear all outstanding interrupts so we can consume their status cleanly */
 	target_mem_write32(target, IMXRT_FLEXSPI1_INT, target_mem_read32(target, IMXRT_FLEXSPI1_INT));
 	/* Tell the controller we want to use the entire read FIFO */
@@ -296,10 +305,24 @@ static void imxrt_enter_flash_mode(target_s *const target)
 	target_mem_write32(target, IMXRT_FLEXSPI1_PRG_WRITE_FIFO_CTRL,
 		IMXRT_FLEXSPI1_PRG_FIFO_CTRL_WATERMARK(128) | IMXRT_FLEXSPI1_PRG_FIFO_CTRL_CLR);
 	/* Then unlock the sequence LUT so we can use it to to run Flash commands */
-	if (target_mem_read32(target, IMXRT_FLEXSPI1_LUT_CTRL) != IMXRT_FLEXSPI1_LUT_CTRL_UNLOCK) {
+	priv->flexspi_lut_state = target_mem_read32(target, IMXRT_FLEXSPI1_LUT_CTRL);
+	if (priv->flexspi_lut_state != IMXRT_FLEXSPI1_LUT_CTRL_UNLOCK) {
 		target_mem_write32(target, IMXRT_FLEXSPI1_LUT_KEY, IMXRT_FLEXSPI1_LUT_KEY_VALUE);
 		target_mem_write32(target, IMXRT_FLEXSPI1_LUT_CTRL, IMXRT_FLEXSPI1_LUT_CTRL_UNLOCK);
 	}
+	return true;
+}
+
+static bool imxrt_exit_flash_mode(target_s *const target)
+{
+	const imxrt_priv_s *const priv = (imxrt_priv_s *)target->target_storage;
+	/* To leave Flash mode, we do things in the opposite order to entering. */
+	if (priv->flexspi_lut_state != IMXRT_FLEXSPI1_LUT_CTRL_UNLOCK) {
+		target_mem_write32(target, IMXRT_FLEXSPI1_LUT_KEY, IMXRT_FLEXSPI1_LUT_KEY_VALUE);
+		target_mem_write32(target, IMXRT_FLEXSPI1_LUT_CTRL, priv->flexspi_lut_state);
+	}
+	target_mem_write32(target, IMXRT_FLEXSPI1_MOD_CTRL0, priv->flexspi_module_state);
+	return true;
 }
 
 static void imxrt_spi_configure_sequence(
@@ -424,7 +447,7 @@ static bool imxrt_spi_mass_erase(target_s *const target)
 	imxrt_enter_flash_mode(target);
 	imxrt_spi_run_command(target, SPI_FLASH_CMD_WRITE_ENABLE);
 	if (!(imxrt_spi_read_status(target) & SPI_FLASH_STATUS_WRITE_ENABLED)) {
-		// imxrt_exit_flash_mode(target);
+		imxrt_exit_flash_mode(target);
 		return false;
 	}
 
@@ -432,5 +455,5 @@ static bool imxrt_spi_mass_erase(target_s *const target)
 	while (imxrt_spi_read_status(target) & SPI_FLASH_STATUS_BUSY)
 		target_print_progress(&timeout);
 
-	return true; // imxrt_exit_flash_mode(target);
+	return imxrt_exit_flash_mode(target);
 }
