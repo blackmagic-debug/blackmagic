@@ -54,6 +54,10 @@ typedef enum imxrt_boot_src {
 	boot_spi_flash_nand,
 } imxrt_boot_src_e;
 
+typedef struct imxrt_priv {
+	imxrt_boot_src_e boot_source;
+} imxrt_priv_s;
+
 static imxrt_boot_src_e imxrt_boot_source(uint32_t boot_cfg);
 
 bool imxrt_probe(target_s *target)
@@ -62,14 +66,24 @@ bool imxrt_probe(target_s *target)
 	if (target->part_id != 0x88cU)
 		return false;
 
+	/* XXX: Would really like to find some way to have a more positive identification on the part */
+
+	imxrt_priv_s *priv = calloc(1, sizeof(imxrt_priv_s));
+	if (!priv) { /* calloc faled: heap exhaustion */
+		DEBUG_WARN("calloc: failed in %s\n", __func__);
+		return false;
+	}
+	target->target_storage = priv;
+	target->driver = "i.MXRT10xx";
+
 #if ENABLE_DEBUG
 	const uint8_t boot_mode = (target_mem_read32(target, IMXRT_SRC_BOOT_MODE2) >> 24U) & 3U;
 #endif
 	DEBUG_TARGET("i.MXRT boot mode is %x\n", boot_mode);
 	const uint32_t boot_cfg = target_mem_read32(target, IMXRT_SRC_BOOT_MODE1);
-	const imxrt_boot_src_e boot_src = imxrt_boot_source(boot_cfg);
 	DEBUG_TARGET("i.MXRT boot config is %08" PRIx32 "\n", boot_cfg);
-	switch (boot_src) {
+	priv->boot_source = imxrt_boot_source(boot_cfg);
+	switch (priv->boot_source) {
 	case boot_spi_flash_nor:
 		DEBUG_TARGET("-> booting from SPI Flash (NOR)\n");
 		break;
@@ -90,7 +104,6 @@ bool imxrt_probe(target_s *target)
 		break;
 	}
 
-	target->driver = "i.MXRT10xx";
 	return true;
 }
 
