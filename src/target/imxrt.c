@@ -41,12 +41,77 @@
  * https://cache.nxp.com/secured/assets/documents/en/reference-manual/IMXRT1060RM.pdf?fileExt=.pdf
  */
 
+#define IMXRT_SRC_BASE       UINT32_C(0x400f8000)
+#define IMXRT_SRC_BOOT_MODE1 (IMXRT_SRC_BASE + 0x004U)
+#define IMXRT_SRC_BOOT_MODE2 (IMXRT_SRC_BASE + 0x01cU)
+
+typedef enum imxrt_boot_src {
+	boot_spi_flash_nor,
+	boot_sd_card,
+	boot_emmc,
+	boot_slc_nand,
+	boot_parallel_nor,
+	boot_spi_flash_nand,
+} imxrt_boot_src_e;
+
+static imxrt_boot_src_e imxrt_boot_source(uint32_t boot_cfg);
+
 bool imxrt_probe(target_s *target)
 {
 	/* If the part number fails to match, instantly return. */
 	if (target->part_id != 0x88cU)
 		return false;
 
+#if ENABLE_DEBUG
+	const uint8_t boot_mode = (target_mem_read32(target, IMXRT_SRC_BOOT_MODE2) >> 24U) & 3U;
+#endif
+	DEBUG_TARGET("i.MXRT boot mode is %x\n", boot_mode);
+	const uint32_t boot_cfg = target_mem_read32(target, IMXRT_SRC_BOOT_MODE1);
+	const imxrt_boot_src_e boot_src = imxrt_boot_source(boot_cfg);
+	DEBUG_TARGET("i.MXRT boot config is %08" PRIx32 "\n", boot_cfg);
+	switch (boot_src) {
+	case boot_spi_flash_nor:
+		DEBUG_TARGET("-> booting from SPI Flash (NOR)\n");
+		break;
+	case boot_sd_card:
+		DEBUG_TARGET("-> booting from SD Card\n");
+		break;
+	case boot_emmc:
+		DEBUG_TARGET("-> booting from eMMC via uSDHC\n");
+		break;
+	case boot_slc_nand:
+		DEBUG_TARGET("-> booting from SLC NAND via SEMC\n");
+		break;
+	case boot_parallel_nor:
+		DEBUG_TARGET("-> booting from parallel Flash (NOR) via SEMC\n");
+		break;
+	case boot_spi_flash_nand:
+		DEBUG_TARGET("-> booting from SPI Flash (NAND)\n");
+		break;
+	}
+
 	target->driver = "i.MXRT10xx";
 	return true;
+}
+
+static imxrt_boot_src_e imxrt_boot_source(const uint32_t boot_cfg)
+{
+	/*
+	 * See table 9-9 in §9.6, pg210 of the reference manual for how all these constants and masks were derived.
+	 * The bottom 8 bits of boot_cfg must be the value of register BOOT_CFG1.
+	 * The boot source is the upper 4 bits of this register (BOOT_CFG1[7:4])
+	 */
+	const uint8_t boot_src = boot_cfg & 0xf0U;
+	if (boot_src == 0x00U)
+		return boot_spi_flash_nor;
+	if ((boot_src & 0xc0U) == 0x40U)
+		return boot_sd_card;
+	if ((boot_src & 0xc0U) == 0x80U)
+		return boot_emmc;
+	if ((boot_src & 0xe0U) == 0x20U)
+		return boot_slc_nand;
+	if (boot_src == 0x10U)
+		return boot_parallel_nor;
+	/* The only upper bits combination not tested by this point is 0b11xx. */
+	return boot_spi_flash_nand;
 }
