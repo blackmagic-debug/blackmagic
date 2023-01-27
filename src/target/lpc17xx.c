@@ -39,7 +39,9 @@
 #define IAP_ENTRYPOINT 0x1fff1ff1U
 #define IAP_RAM_BASE   0x10000000U
 
-#define LPC17xx_MEMMAP UINT32_C(0x400fc040)
+#define LPC17xx_MEMMAP   UINT32_C(0x400fc040)
+#define LPC17xx_MPU_BASE UINT32_C(0xe000ed90)
+#define LPC17xx_MPU_CTRL (LPC17xx_MPU_BASE + 0x04U)
 
 #define FLASH_NUM_SECTOR 30U
 
@@ -66,6 +68,8 @@ typedef struct lpc17xx_priv {
 } lpc17xx_priv_s;
 
 static void lpc17xx_extended_reset(target_s *target);
+static bool lpc17xx_enter_flash_mode(target_s *target);
+static bool lpc17xx_exit_flash_mode(target_s *target);
 static bool lpc17xx_mass_erase(target_s *target);
 iap_status_e lpc17xx_iap_call(target_s *target, iap_result_s *result, iap_cmd_e cmd, ...);
 
@@ -99,9 +103,13 @@ bool lpc17xx_probe(target_s *target)
 		}
 		target->target_storage = priv;
 
+		/* Prepare Flash mode */
+		lpc17xx_enter_flash_mode(target);
 		/* Read the Part ID */
 		iap_result_s result;
 		lpc17xx_iap_call(target, &result, IAP_CMD_PARTID);
+		/* Transition back to normal mode and resume the target */
+		lpc17xx_exit_flash_mode(target);
 		target_halt_resume(target, false);
 
 		/*
@@ -128,9 +136,11 @@ bool lpc17xx_probe(target_s *target)
 		case 0x25001121U: /* LPC1752 */
 		case 0x25001118U: /* LPC1751 */
 		case 0x25001110U: /* LPC1751 (No CRP) */
-			target->mass_erase = lpc17xx_mass_erase;
 			target->driver = "LPC17xx";
 			target->extended_reset = lpc17xx_extended_reset;
+			target->mass_erase = lpc17xx_mass_erase;
+			target->enter_flash_mode = lpc17xx_enter_flash_mode;
+			target->exit_flash_mode = lpc17xx_exit_flash_mode;
 			target_add_ram(target, 0x10000000U, 0x8000U);
 			target_add_ram(target, 0x2007c000U, 0x4000U);
 			target_add_ram(target, 0x20080000U, 0x4000U);
@@ -140,6 +150,26 @@ bool lpc17xx_probe(target_s *target)
 		}
 	}
 	return false;
+}
+
+static bool lpc17xx_enter_flash_mode(target_s *const target)
+{
+	lpc17xx_priv_s *const priv = (lpc17xx_priv_s *)target->target_storage;
+	/* Disable the MPU, if enabled */
+	priv->mpu_ctrl_state = target_mem_read32(target, LPC17xx_MPU_CTRL);
+	target_mem_write32(target, LPC17xx_MPU_CTRL, 0);
+	/* And store the memory mapping state */
+	priv->memmap_state = target_mem_read32(target, LPC17xx_MEMMAP);
+	return true;
+}
+
+static bool lpc17xx_exit_flash_mode(target_s *const target)
+{
+	const lpc17xx_priv_s *const priv = (lpc17xx_priv_s *)target->target_storage;
+	/* Restore the memory mapping and MPU state (in that order!) */
+	target_mem_write32(target, LPC17xx_MEMMAP, priv->memmap_state);
+	target_mem_write32(target, LPC17xx_MPU_CTRL, priv->mpu_ctrl_state);
+	return true;
 }
 
 static bool lpc17xx_mass_erase(target_s *target)
