@@ -152,13 +152,19 @@ typedef struct imxrt_priv {
 	imxrt_flexspi_lut_insn_s flexspi_lut_seq[8];
 } imxrt_priv_s;
 
+typedef struct imxrt_spi_flash {
+	target_flash_s flash;
+	uint32_t page_size;
+	uint8_t sector_erase_opcode;
+} imxrt_spi_flash_s;
+
+static imxrt_boot_src_e imxrt_boot_source(uint32_t boot_cfg);
 static bool imxrt_enter_flash_mode(target_s *target);
 static bool imxrt_exit_flash_mode(target_s *target);
 static void imxrt_spi_read(target_s *target, uint32_t command, target_addr_t address, void *buffer, size_t length);
 static void imxrt_spi_write(
 	target_s *target, uint32_t command, target_addr_t address, const void *buffer, size_t length);
 static bool imxrt_spi_mass_erase(target_s *target);
-static imxrt_boot_src_e imxrt_boot_source(uint32_t boot_cfg);
 
 static void imxrt_spi_read_sfdp(target_s *const target, const uint32_t address, void *const buffer, const size_t length)
 {
@@ -167,8 +173,8 @@ static void imxrt_spi_read_sfdp(target_s *const target, const uint32_t address, 
 
 static void imxrt_add_flash(target_s *const target, const size_t length)
 {
-	target_flash_s *flash = calloc(1, sizeof(*flash));
-	if (!flash) { /* calloc failed: heap exhaustion */
+	imxrt_spi_flash_s *spi_flash = calloc(1, sizeof(*spi_flash));
+	if (!spi_flash) { /* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return;
 	}
@@ -183,12 +189,16 @@ static void imxrt_add_flash(target_s *const target, const size_t length)
 	}
 	DEBUG_INFO("Flash size: %" PRIu32 "MiB\n", (uint32_t)spi_parameters.capacity / (1024U * 1024U));
 
+	target_flash_s *const flash = &spi_flash->flash;
 	flash->start = IMXRT_FLEXSPI_BASE;
 	flash->length = spi_parameters.capacity;
 	flash->blocksize = spi_parameters.sector_size;
 	//flash->writesize = ;
 	flash->erased = 0xffU;
 	target_add_flash(target, flash);
+
+	spi_flash->page_size = spi_parameters.page_size;
+	spi_flash->sector_erase_opcode = spi_parameters.sector_erase_opcode;
 }
 
 bool imxrt_probe(target_s *const target)
