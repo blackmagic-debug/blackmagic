@@ -117,6 +117,7 @@
 #define SPI_FLASH_OPCODE_SECTOR_ERASE 0x20U
 #define SPI_FLASH_CMD_WRITE_ENABLE \
 	(IMXRT_SPI_FLASH_OPCODE_ONLY | IMXRT_SPI_FLASH_DUMMY_LEN(0) | IMXRT_SPI_FLASH_OPCODE(0x06U))
+#define SPI_FLASH_CMD_SECTOR_ERASE (IMXRT_SPI_FLASH_OPCODE_3B_ADDR | IMXRT_SPI_FLASH_DUMMY_LEN(0))
 #define SPI_FLASH_CMD_CHIP_ERASE \
 	(IMXRT_SPI_FLASH_OPCODE_ONLY | IMXRT_SPI_FLASH_DUMMY_LEN(0) | IMXRT_SPI_FLASH_OPCODE(0x60U))
 #define SPI_FLASH_CMD_READ_STATUS                                                           \
@@ -165,6 +166,7 @@ static void imxrt_spi_read(target_s *target, uint32_t command, target_addr_t add
 static void imxrt_spi_write(
 	target_s *target, uint32_t command, target_addr_t address, const void *buffer, size_t length);
 static bool imxrt_spi_mass_erase(target_s *target);
+static bool imxrt_spi_flash_erase(target_flash_s *flash, target_addr_t addr, size_t length);
 
 static void imxrt_spi_read_sfdp(target_s *const target, const uint32_t address, void *const buffer, const size_t length)
 {
@@ -193,7 +195,7 @@ static void imxrt_add_flash(target_s *const target, const size_t length)
 	flash->start = IMXRT_FLEXSPI_BASE;
 	flash->length = spi_parameters.capacity;
 	flash->blocksize = spi_parameters.sector_size;
-	//flash->writesize = ;
+	flash->erase = imxrt_spi_flash_erase;
 	flash->erased = 0xffU;
 	target_add_flash(target, flash);
 
@@ -462,4 +464,22 @@ static bool imxrt_spi_mass_erase(target_s *const target)
 		target_print_progress(&timeout);
 
 	return imxrt_exit_flash_mode(target);
+}
+
+static bool imxrt_spi_flash_erase(target_flash_s *const flash, const target_addr_t addr, const size_t length)
+{
+	target_s *const target = flash->t;
+	const imxrt_spi_flash_s *const spi_flash = (imxrt_spi_flash_s *)flash;
+	const target_addr_t begin = addr - flash->start;
+	for (size_t offset = 0; offset < length; offset += flash->blocksize) {
+		imxrt_spi_run_command(target, SPI_FLASH_CMD_WRITE_ENABLE);
+		if (!(imxrt_spi_read_status(target) & SPI_FLASH_STATUS_WRITE_ENABLED))
+			return false;
+
+		imxrt_spi_write(target, SPI_FLASH_CMD_SECTOR_ERASE | IMXRT_SPI_FLASH_OPCODE(spi_flash->sector_erase_opcode),
+			begin + offset, NULL, 0);
+		while (imxrt_spi_read_status(target) & SPI_FLASH_STATUS_BUSY)
+			continue;
+	}
+	return true;
 }
