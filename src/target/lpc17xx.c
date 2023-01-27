@@ -39,7 +39,8 @@
 #define IAP_ENTRYPOINT 0x1fff1ff1U
 #define IAP_RAM_BASE   0x10000000U
 
-#define MEMMAP           0x400fc040U
+#define LPC17xx_MEMMAP UINT32_C(0x400fc040)
+
 #define FLASH_NUM_SECTOR 30U
 
 typedef struct iap_config {
@@ -150,8 +151,12 @@ static bool lpc17xx_mass_erase(target_s *target)
  */
 static void lpc17xx_extended_reset(target_s *target)
 {
-	/* From §33.6 Debug memory re-mapping (Page 643) UM10360.pdf (Rev 2) */
-	target_mem_write32(target, MEMMAP, 1);
+	/*
+	 * Transition the memory map to user mode (if it wasn't already) to ensure
+	 * the correct environment is seen by the user
+	 * See §33.6 Debug memory re-mapping, pg655 of UM10360 for more details.
+	 */
+	target_mem_write32(target, LPC17xx_MEMMAP, 1);
 }
 
 static size_t lpc17xx_iap_params(const iap_cmd_e cmd)
