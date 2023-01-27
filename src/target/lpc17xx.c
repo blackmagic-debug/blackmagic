@@ -60,6 +60,11 @@ typedef struct iap_result {
 	uint32_t values[4];
 } iap_result_s;
 
+typedef struct lpc17xx_priv {
+	uint32_t mpu_ctrl_state;
+	uint32_t memmap_state;
+} lpc17xx_priv_s;
+
 static void lpc17xx_extended_reset(target_s *target);
 static bool lpc17xx_mass_erase(target_s *target);
 iap_status_e lpc17xx_iap_call(target_s *target, iap_result_s *result, iap_cmd_e cmd, ...);
@@ -86,13 +91,28 @@ bool lpc17xx_probe(target_s *target)
 		 */
 		target_halt_request(target);
 
+		/* Allocate private storage so the flash mode entry/exit routines can save state */
+		lpc17xx_priv_s *priv = calloc(1, sizeof(*priv));
+		if (!priv) { /* calloc failed: heap exhaustion */
+			DEBUG_WARN("calloc: failed in %s\n", __func__);
+			return false;
+		}
+		target->target_storage = priv;
+
 		/* Read the Part ID */
 		iap_result_s result;
 		lpc17xx_iap_call(target, &result, IAP_CMD_PARTID);
 		target_halt_resume(target, false);
 
-		if (result.return_code)
+		/*
+		 * If we got an error response, it cannot be a LPC17xx as the only response
+		 * a real device gives is IAP_STATUS_CMD_SUCCESS.
+		 */
+		if (result.return_code) {
+			free(priv);
+			target->target_storage = NULL;
 			return false;
+		}
 
 		switch (result.values[0]) {
 		case 0x26113f37U: /* LPC1769 */
