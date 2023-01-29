@@ -155,7 +155,7 @@ int command_process(target_s *t, char *cmd)
 	return target_command(t, argc, argv);
 }
 
-#define BOARD_IDENT "Black Magic Probe" PLATFORM_IDENT FIRMWARE_VERSION
+#define BOARD_IDENT "Black Magic Probe " PLATFORM_IDENT "" FIRMWARE_VERSION
 
 bool cmd_version(target_s *t, int argc, const char **argv)
 {
