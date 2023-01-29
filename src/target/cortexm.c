@@ -1060,14 +1060,13 @@ static target_halt_reason_e cortexm_halt_poll(target_s *t, target_addr_t *watch)
 		return TARGET_HALT_FAULT;
 
 	/* Remember if we stopped on a breakpoint */
-	priv->on_bkpt = dfsr & (CORTEXM_DFSR_BKPT);
+	priv->on_bkpt = dfsr & CORTEXM_DFSR_BKPT;
 	if (priv->on_bkpt) {
-		/* If we've hit a programmed breakpoint, check for semihosting
-		 * call. */
-		uint32_t pc = cortexm_pc_read(t);
-		uint16_t bkpt_instr;
-		bkpt_instr = target_mem_read16(t, pc);
-		if (bkpt_instr == 0xbeabU) {
+		/* If we've hit a programmed breakpoint, check for semihosting call. */
+		const uint32_t program_counter = cortexm_pc_read(t);
+		const uint16_t instruction = target_mem_read16(t, program_counter);
+		/* 0xbeab encodes the breakpoint instruction used to indicate a semihosting call */
+		if (instruction == 0xbeabU) {
 			if (cortexm_hostio_request(t))
 				return TARGET_HALT_REQUEST;
 
