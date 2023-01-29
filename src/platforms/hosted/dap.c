@@ -364,7 +364,7 @@ void dap_write_reg(adiv5_debug_port_s *dp, uint8_t reg, uint32_t data)
 	}
 	if (buf[1] == DAP_TRANSFER_ERROR) {
 		DEBUG_WARN("dap_write_reg %02x data %08x: protocol error\n", reg, data);
-		dap_line_reset();
+		dp->fault = 7;
 	}
 }
 
