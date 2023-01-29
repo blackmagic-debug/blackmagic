@@ -436,7 +436,7 @@ bool dap_run_cmd(const void *const request_data, const size_t request_length, vo
 	/* This subtracts one off the result to account for the command byte that gets stripped above */
 	const ssize_t result =
 		dap_run_cmd_raw((const uint8_t *)request_data, request_length, (uint8_t *)response_data, response_length) - 1U;
-	return (size_t)result == response_length;
+	return (size_t)result >= response_length;
 }
 
 ssize_t dbg_dap_cmd(uint8_t *const data, const size_t response_length, const size_t request_length)
