@@ -338,26 +338,24 @@ uint32_t dap_read_reg(adiv5_debug_port_s *dp, uint8_t reg)
 //-----------------------------------------------------------------------------
 void dap_write_reg(adiv5_debug_port_s *dp, uint8_t reg, uint32_t data)
 {
-	uint8_t buf[8];
 	DEBUG_PROBE("\tdap_write_reg %02x %08x\n", reg, data);
 
-	buf[0] = ID_DAP_TRANSFER;
-	uint8_t dap_index = 0;
-	dap_index = dp->dp_jd_index;
-	buf[1] = dap_index;
-	buf[2] = 0x01; // Request size
-	buf[3] = reg & ~DAP_TRANSFER_RnW;
-	buf[4] = data & 0xffU;
-	buf[5] = (data >> 8U) & 0xffU;
-	buf[6] = (data >> 16U) & 0xffU;
-	buf[7] = (data >> 24U) & 0xffU;
+	uint8_t buf[8] = {
+		ID_DAP_TRANSFER,
+		dp->dp_jd_index,
+		0x01, // Request size
+		reg & ~DAP_TRANSFER_RnW,
+		data & 0xffU,
+		(data >> 8U) & 0xffU,
+		(data >> 16U) & 0xffU,
+		(data >> 24U) & 0xffU,
+	};
+
 	uint8_t cmd_copy[8];
 	memcpy(cmd_copy, buf, 8);
 	do {
 		memcpy(buf, cmd_copy, 8);
 		dbg_dap_cmd(buf, sizeof(buf), 8);
-		if (buf[1] < DAP_TRANSFER_WAIT)
-			break;
 	} while (buf[1] == DAP_TRANSFER_WAIT);
 
 	if (buf[1] > DAP_TRANSFER_WAIT) {
