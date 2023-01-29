@@ -292,7 +292,7 @@ static uint32_t dap_swd_dp_error(adiv5_debug_port_s *dp, const bool protocol_rec
 		 */
 		dap_line_reset();
 		if (dp->version >= 2)
-			dap_write_reg(dp, ADIV5_DP_TARGETSEL, dp->targetsel);
+			dap_write_reg_no_check(dp, ADIV5_DP_TARGETSEL, dp->targetsel);
 		dap_read_reg(dp, ADIV5_DP_DPIDR);
 		/* Exception here is unexpected, so do not catch */
 	}
