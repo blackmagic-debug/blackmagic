@@ -282,13 +282,18 @@ static uint32_t dap_jtag_dp_error(adiv5_debug_port_s *dp, const bool protocol_re
 static uint32_t dap_swd_dp_error(adiv5_debug_port_s *dp, const bool protocol_recovery)
 {
 	DEBUG_PROBE("dap_swd_dp_error (protocol recovery? %s)\n", protocol_recovery ? "true" : "false");
-	if (dp->version >= 2 || protocol_recovery) {
-		/* On protocol error target gets deselected.
-		 * With DP Change, another target needs selection.
-		 * => Reselect with right target! */
+	/* Only do the comms reset dance on DPv2+ w/ fault or to perform protocol recovery. */
+	if ((dp->version >= 2 && dp->fault) || protocol_recovery) {
+		/*
+		 * Note that on DPv2+ devices, during a protocol error condition
+		 * the target becomes deselected during line reset. Once reset,
+		 * we must then re-select the target to bring the device back
+		 * into the expected state.
+		 */
 		dap_line_reset();
+		if (dp->version >= 2)
+			dap_write_reg(dp, ADIV5_DP_TARGETSEL, dp->targetsel);
 		dap_read_reg(dp, ADIV5_DP_DPIDR);
-		dap_write_reg(dp, ADIV5_DP_TARGETSEL, dp->targetsel);
 		/* Exception here is unexpected, so do not catch */
 	}
 	const uint32_t err = dap_read_reg(dp, ADIV5_DP_CTRLSTAT) &
