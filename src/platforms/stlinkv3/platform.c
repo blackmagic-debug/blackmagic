@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2011-2021 Black Sphere Technologies Ltd.
+ * Copyright (C) 2022-2023 1BitSquared  <info@1bitsquared.com>
  * Portions (C) 2020-2021 Stoyan Shopov <stoyan.shopov@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
