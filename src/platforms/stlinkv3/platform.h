@@ -68,12 +68,24 @@ extern bool debug_bmp;
 #define TMS_DRIVE_PORT GPIOA
 #define TMS_DRIVE_PIN  GPIO7
 
+/* GND_DETECT is pull low with 100R. Probably some task should
+ * pull is high, test and than immediate release */
+#define GND_DETECT_PORT GPIOG
+#define GND_DETECT_PIN  GPIO5
+
+#define PWR_EN_PORT GPIOB
+#define PWR_EN_PIN  GPIO0
+
+#define MCO1_PORT GPIOA
+#define MCO1_PIN  GPIO8
+#define MCO1_AF   0
+
 #define PLATFORM_HAS_TRACESWO 1
 #define NUM_TRACE_PACKETS     (16)
 #define TRACESWO_PROTOCOL     2 /* 1 = Manchester, 2 = NRZ / async */
 
-#define SWDIO_MODER      GPIO_MODER(TMS_PORT)
-#define SWDIO_MODER_MULT (1 << (9 << 1))
+#define SWDIO_MODE_REG      GPIO_MODER(TMS_PORT)
+#define SWDIO_MODE_REG_MULT (1 << (9 << 1))
 
 #define TMS_SET_MODE()                                                    \
 	gpio_mode_setup(TMS_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, TMS_PIN); \
@@ -81,17 +93,17 @@ extern bool debug_bmp;
 
 #define SWDIO_MODE_FLOAT()                         \
 	do {                                           \
-		uint32_t moder = SWDIO_MODER;              \
-		moder &= ~(0x3 * SWDIO_MODER_MULT);        \
-		SWDIO_MODER = moder;                       \
+		uint32_t mode_reg = SWDIO_MODE_REG;        \
+		mode_reg &= ~(0x3 * SWDIO_MODE_REG_MULT);  \
+		SWDIO_MODE_REG = mode_reg;                 \
 		gpio_clear(TMS_DRIVE_PORT, TMS_DRIVE_PIN); \
 	} while (0)
 
 #define SWDIO_MODE_DRIVE()                       \
 	do {                                         \
-		uint32_t moder = SWDIO_MODER;            \
-		moder |= (1 * SWDIO_MODER_MULT);         \
-		SWDIO_MODER = moder;                     \
+		uint32_t mode_reg = SWDIO_MODE_REG;      \
+		mode_reg |= (1 * SWDIO_MODE_REG_MULT);   \
+		SWDIO_MODE_REG = mode_reg;               \
 		gpio_set(TMS_DRIVE_PORT, TMS_DRIVE_PIN); \
 	} while (0)
 
