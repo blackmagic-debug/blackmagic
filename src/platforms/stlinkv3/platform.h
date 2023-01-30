@@ -110,10 +110,10 @@ extern bool debug_bmp;
 	} while (0)
 
 extern const struct _usbd_driver stm32f723_usb_driver;
-#define USB_DRIVER    stm32f723_usb_driver
-#define USB_IRQ       NVIC_OTG_HS_IRQ
-#define USB_ISR       otg_hs_isr
-#define MAX_BINTERVAL 11
+#define USB_DRIVER       stm32f723_usb_driver
+#define USB_IRQ          NVIC_OTG_HS_IRQ
+#define USB_ISR          otg_hs_isr
+#define USB_MAX_INTERVAL 11
 #define USB_HS
 
 /* Interrupt priorities.  Low numbers are high priority.
