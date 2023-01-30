@@ -18,7 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file provides the platform specific functions for the ST-Link V3
+/* This file provides the platform specific functions for the STLINK-V3
  * implementation.
  */
 
@@ -41,77 +41,64 @@
 uint16_t srst_pin;
 static uint32_t hw_version;
 
-#define SCB_CCR_IC_Pos 17U                     /*!< SCB CCR: Instruction cache enable bit Position */
-#define SCB_CCR_IC_Msk (1UL << SCB_CCR_IC_Pos) /*!< SCB CCR: Instruction cache enable bit Mask */
+#define SCB_CCR_IC_SHIFT               17U                       /*!< SCB CCR: Instruction cache enable bit Position */
+#define SCB_CCR_IC_MASK                (1UL << SCB_CCR_IC_SHIFT) /*!< SCB CCR: Instruction cache enable bit Mask */
+#define SCB_CCR_DC_SHIFT               16U                       /*!< SCB CCR: Cache enable bit Position */
+#define SCB_CCR_DC_MASK                (1UL << SCB_CCR_DC_SHIFT) /*!< SCB CCR: DC Mask */
+#define SCB_CCSIDR_NUMSETS_MASK        (0x7fffUL << SCB_CCSIDR_NUMSETS_SHIFT) /*!< SCB CCSIDR: NumSets Mask */
+#define SCB_CCSIDR_NUMSETS_SHIFT       13U                                    /*!< SCB CCSIDR: NumSets Position */
+#define SCB_CCSIDR_ASSOCIATIVITY_SHIFT 3U                                     /*!< SCB CCSIDR: Associativity Position */
+#define SCB_CCSIDR_ASSOCIATIVITY_MASK  (0x3ffUL << SCB_CCSIDR_ASSOCIATIVITY_SHIFT) /*!< SCB CCSIDR: Associativity Mask */
+#define CCSIDR_WAYS(x)                 (((x)&SCB_CCSIDR_ASSOCIATIVITY_MASK) >> SCB_CCSIDR_ASSOCIATIVITY_SHIFT)
+#define CCSIDR_SETS(x)                 (((x)&SCB_CCSIDR_NUMSETS_MASK) >> SCB_CCSIDR_NUMSETS_SHIFT)
+#define SCB_DCISW_SET_SHIFT            5U                               /*!< SCB DCISW: Set Position */
+#define SCB_DCISW_SET_MASK             (0x1ffUL << SCB_DCISW_SET_SHIFT) /*!< SCB DCISW: Set Mask */
+#define SCB_DCISW_WAY_SHIFT            30U                              /*!< SCB DCISW: Way Position */
+#define SCB_DCISW_WAY_MASK             (3UL << SCB_DCISW_WAY_SHIFT)     /*!< SCB DCISW: Way Mask */
 
-#define SCB_CCR_DC_Pos 16U                     /*!< SCB CCR: Cache enable bit Position */
-#define SCB_CCR_DC_Msk (1UL << SCB_CCR_DC_Pos) /*!< SCB CCR: DC Mask */
-
-#define SCB_CCSIDR_NUMSETS_Msk (0x7fffUL << SCB_CCSIDR_NUMSETS_Pos) /*!< SCB CCSIDR: NumSets Mask */
-#define SCB_CCSIDR_NUMSETS_Pos 13U                                  /*!< SCB CCSIDR: NumSets Position */
-
-#define SCB_CCSIDR_ASSOCIATIVITY_Pos 3U /*!< SCB CCSIDR: Associativity Position */
-#define SCB_CCSIDR_ASSOCIATIVITY_Msk (0x3ffUL << SCB_CCSIDR_ASSOCIATIVITY_Pos) /*!< SCB CCSIDR: Associativity Mask */
-#define CCSIDR_WAYS(x)               (((x)&SCB_CCSIDR_ASSOCIATIVITY_Msk) >> SCB_CCSIDR_ASSOCIATIVITY_Pos)
-
-#define SCB_DCISW_SET_Pos 5U                             /*!< SCB DCISW: Set Position */
-#define SCB_DCISW_SET_Msk (0x1ffUL << SCB_DCISW_SET_Pos) /*!< SCB DCISW: Set Mask */
-
-#define SCB_DCISW_WAY_Pos 30U                        /*!< SCB DCISW: Way Position */
-#define SCB_DCISW_WAY_Msk (3UL << SCB_DCISW_WAY_Pos) /*!< SCB DCISW: Way Mask */
-
-#define CCSIDR_SETS(x) (((x)&SCB_CCSIDR_NUMSETS_Msk) >> SCB_CCSIDR_NUMSETS_Pos)
-
-static void __DSB(void)
+static void cm_dsb(void)
 {
 	__asm__ volatile("dsb 0xf" ::: "memory");
 }
 
-static void __ISB(void)
+static void cm_isb(void)
 {
 	__asm__ volatile("isb 0xf" ::: "memory");
 }
 
-static void SCB_EnableICache(void)
+static void scb_enable_i_cache(void)
 {
-	__DSB();
-	__ISB();
+	cm_dsb();
+	cm_isb();
 	SCB_ICIALLU = 0UL; /* invalidate I-Cache */
-	__DSB();
-	__ISB();
-	SCB_CCR |= (uint32_t)SCB_CCR_IC_Msk; /* enable I-Cache */
-	__DSB();
-	__ISB();
+	cm_dsb();
+	cm_isb();
+	SCB_CCR |= (uint32_t)SCB_CCR_IC_MASK; /* enable I-Cache */
+	cm_dsb();
+	cm_isb();
 }
 
-static void SCB_EnableDCache(void)
+static void scb_enable_d_cache(void)
 {
-	uint32_t ccsidr;
-	uint32_t sets;
-	uint32_t ways;
-
 	SCB_CCSELR = 0U; /*(0U << 1U) | 0U;*/ /* Level 1 data cache */
-	__DSB();
+	cm_dsb();
 
-	ccsidr = SCB_CCSIDR;
+	uint32_t ccsidr = SCB_CCSIDR;
 
-	sets = (uint32_t)(CCSIDR_SETS(ccsidr));
+	uint32_t sets = (uint32_t)CCSIDR_SETS(ccsidr);
 	do {
-		ways = (uint32_t)(CCSIDR_WAYS(ccsidr));
+		uint32_t ways = (uint32_t)CCSIDR_WAYS(ccsidr);
 		do {
-			SCB_DCISW =
-				(((sets << SCB_DCISW_SET_Pos) & SCB_DCISW_SET_Msk) | ((ways << SCB_DCISW_WAY_Pos) & SCB_DCISW_WAY_Msk));
-#if defined(__CC_ARM)
-			__schedule_barrier();
-#endif
+			SCB_DCISW = ((sets << SCB_DCISW_SET_SHIFT) & SCB_DCISW_SET_MASK) |
+				((ways << SCB_DCISW_WAY_SHIFT) & SCB_DCISW_WAY_MASK);
 		} while (ways-- != 0U);
 	} while (sets-- != 0U);
-	__DSB();
+	cm_dsb();
 
-	SCB_CCR |= (uint32_t)SCB_CCR_DC_Msk; /* enable D-Cache */
+	SCB_CCR |= (uint32_t)SCB_CCR_DC_MASK; /* enable D-Cache */
 
-	__DSB();
-	__ISB();
+	cm_dsb();
+	cm_isb();
 }
 
 int platform_hwversion(void)
@@ -123,8 +110,8 @@ void platform_nrst_set_val(bool assert)
 {
 	gpio_set_val(SRST_PORT, SRST_PIN, !assert);
 	if (assert)
-		for (int i = 0; i < 10000; i++)
-			__asm__("nop");
+		for (volatile size_t i = 0; i < 10000; i++)
+			continue;
 }
 
 bool platform_nrst_get_val()
@@ -132,27 +119,19 @@ bool platform_nrst_get_val()
 	return gpio_get(SRST_PORT, SRST_PIN) == 0;
 }
 
-/* GND_DETECT is pull low with 100R. Probably some task should
- * pull is high, test and than immediate release */
-#define GND_DETECT_PORT GPIOG
-#define GND_DETECT_PIN  GPIO5
-
 const char *platform_target_voltage(void)
 {
 	/* On the stlinkv3, the target input voltage is divided by two.
 	 * The ADC is sampling at 12 bit resolution.
 	 * Vref+ input is assumed to be 3.3 volts. */
 	static char ret[] = "0.0V";
-	uint8_t channels[] = {
-		ADC_CHANNEL0,
-	};
-	unsigned value;
+	uint8_t channel = ADC_CHANNEL0;
 
-	adc_set_regular_sequence(ADC1, 1, channels);
+	adc_set_regular_sequence(ADC1, 1, &channel);
 	adc_start_conversion_regular(ADC1);
 	while (!adc_eoc(ADC1))
-		;
-	value = adc_read_regular(ADC1);
+		continue;
+	uint32_t value = adc_read_regular(ADC1);
 
 	value *= 3379;   /* 3.3 * 1024 == 3379.2 */
 	value += 104858; /* round, 0.05V * 2 ^ 21 == 104857.6 */
@@ -177,8 +156,8 @@ void platform_init(void)
 {
 	rcc_periph_clock_enable(RCC_APB2ENR_SYSCFGEN);
 	rcc_clock_setup_hse(rcc_3v3 + RCC_CLOCK_3V3_216MHZ, 25);
-	SCB_EnableICache();
-	SCB_EnableDCache();
+	scb_enable_i_cache();
+	scb_enable_d_cache();
 	rcc_periph_clock_enable(RCC_GPIOA);
 	rcc_periph_clock_enable(RCC_GPIOB);
 	rcc_periph_clock_enable(RCC_GPIOD);
@@ -216,16 +195,11 @@ void platform_init(void)
 	gpio_set_output_options(TMS_DRIVE_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ, TMS_DRIVE_PIN);
 	gpio_set(TMS_DRIVE_PORT, TMS_DRIVE_PIN);
 
-#define PWR_EN_PORT GPIOB
-#define PWR_EN_PIN  GPIO0
 	gpio_mode_setup(PWR_EN_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, PWR_EN_PIN);
 	gpio_set_output_options(PWR_EN_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_2MHZ, PWR_EN_PIN);
 	gpio_set(PWR_EN_PORT, PWR_EN_PIN);
 
 	/* Set up MCO at 8 MHz on PA8 */
-#define MCO1_PORT GPIOA
-#define MCO1_PIN  GPIO8
-#define MCO1_AF   0
 	gpio_set_af(MCO1_PORT, MCO1_AF, MCO1_PIN);
 	gpio_mode_setup(MCO1_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, MCO1_PIN);
 	gpio_set_output_options(MCO1_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_25MHZ, MCO1_PIN);
