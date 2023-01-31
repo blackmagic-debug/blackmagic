@@ -56,11 +56,15 @@ static uint32_t hw_version;
 #define SCB_DCISW_WAY_SHIFT            30U                              /*!< SCB DCISW: Way Position */
 #define SCB_DCISW_WAY_MASK             (3UL << SCB_DCISW_WAY_SHIFT)     /*!< SCB DCISW: Way Mask */
 
+/* DSB - Data Synchronization Barrier
+ * forces memory access needs to have completed before program execution progresses */
 static void cm_dsb(void)
 {
 	__asm__ volatile("dsb 0xf" ::: "memory");
 }
 
+/* ISB - Instruction Synchronization Barrier
+ * forces instruction fetches to explicitly take place after a certain point in the program */
 static void cm_isb(void)
 {
 	__asm__ volatile("isb 0xf" ::: "memory");
@@ -70,12 +74,12 @@ static void scb_enable_i_cache(void)
 {
 	cm_dsb();
 	cm_isb();
-	SCB_ICIALLU = 0UL; /* invalidate I-Cache */
-	cm_dsb();
-	cm_isb();
-	SCB_CCR |= (uint32_t)SCB_CCR_IC_MASK; /* enable I-Cache */
-	cm_dsb();
-	cm_isb();
+	SCB_ICIALLU = 0UL;          /* invalidate I-Cache */
+	cm_dsb();                   /* ensure completion of the invalidation */
+	cm_isb();                   /* ensure instruction fetch path sees new I-Cache state */
+	SCB_CCR |= SCB_CCR_IC_MASK; /* enable I-Cache */
+	cm_dsb();                   /* ensure completion of enable I-Cache */
+	cm_isb();                   /* ensure instruction fetch path sees new I-Cache state */
 }
 
 static void scb_enable_d_cache(void)
@@ -85,9 +89,9 @@ static void scb_enable_d_cache(void)
 
 	uint32_t ccsidr = SCB_CCSIDR;
 
-	uint32_t sets = (uint32_t)CCSIDR_SETS(ccsidr);
+	uint32_t sets = CCSIDR_SETS(ccsidr);
 	do {
-		uint32_t ways = (uint32_t)CCSIDR_WAYS(ccsidr);
+		uint32_t ways = CCSIDR_WAYS(ccsidr);
 		do {
 			SCB_DCISW = ((sets << SCB_DCISW_SET_SHIFT) & SCB_DCISW_SET_MASK) |
 				((ways << SCB_DCISW_WAY_SHIFT) & SCB_DCISW_WAY_MASK);
@@ -95,10 +99,10 @@ static void scb_enable_d_cache(void)
 	} while (sets-- != 0U);
 	cm_dsb();
 
-	SCB_CCR |= (uint32_t)SCB_CCR_DC_MASK; /* enable D-Cache */
+	SCB_CCR |= SCB_CCR_DC_MASK; /* enable D-Cache */
 
-	cm_dsb();
-	cm_isb();
+	cm_dsb(); /* ensure completion of enable I-Cache */
+	cm_isb(); /* ensure instruction fetch path sees new D-Cache state */
 }
 
 int platform_hwversion(void)
@@ -218,7 +222,7 @@ void platform_init(void)
 
 	/* Relocate interrupt vector table here */
 	extern int vector_table;
-	SCB_VTOR = (uint32_t)&vector_table;
+	SCB_VTOR = (uintptr_t)&vector_table;
 
 	platform_timing_init();
 	blackmagic_usb_init();
