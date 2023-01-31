@@ -87,6 +87,8 @@ typedef enum cmsis_type {
 typedef struct hid_device_info hid_device_info_s;
 #endif
 
+static bool dap_dp_low_write(adiv5_debug_port_s *dp, uint16_t addr, uint32_t data);
+
 /*- Variables ---------------------------------------------------------------*/
 static cmsis_type_e type;
 static libusb_device_handle *usb_handle = NULL;
@@ -292,7 +294,7 @@ static uint32_t dap_swd_dp_error(adiv5_debug_port_s *dp, const bool protocol_rec
 		 */
 		dap_line_reset();
 		if (dp->version >= 2)
-			dap_write_reg_no_check(dp, ADIV5_DP_TARGETSEL, dp->targetsel);
+			dap_dp_low_write(dp, ADIV5_DP_TARGETSEL, dp->targetsel);
 		dap_read_reg(dp, ADIV5_DP_DPIDR);
 		/* Exception here is unexpected, so do not catch */
 	}
