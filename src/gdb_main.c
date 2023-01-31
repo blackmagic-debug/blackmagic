@@ -29,6 +29,7 @@
 #include "hex_utils.h"
 #include "gdb_if.h"
 #include "gdb_packet.h"
+#include "gdb_main.h"
 #include "gdb_hostio.h"
 #include "target.h"
 #include "command.h"
@@ -120,211 +121,217 @@ int gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, size_t 
 	bool single_step = false;
 
 	/* GDB protocol main loop */
-	{
-		switch (pbuf[0]) {
-		/* Implementation of these is mandatory! */
-		case 'g': { /* 'g': Read general registers */
-			ERROR_IF_NO_TARGET();
-			uint8_t gp_regs[target_regs_size(cur_target)];
-			target_regs_read(cur_target, gp_regs);
-			gdb_putpacket(hexify(pbuf, gp_regs, sizeof(gp_regs)), sizeof(gp_regs) * 2U);
+	switch (pbuf[0]) {
+	/* Implementation of these is mandatory! */
+	case 'g': { /* 'g': Read general registers */
+		ERROR_IF_NO_TARGET();
+		uint8_t gp_regs[target_regs_size(cur_target)];
+		target_regs_read(cur_target, gp_regs);
+		gdb_putpacket(hexify(pbuf, gp_regs, sizeof(gp_regs)), sizeof(gp_regs) * 2U);
+		break;
+	}
+	case 'm': { /* 'm addr,len': Read len bytes from addr */
+		uint32_t addr, len;
+		ERROR_IF_NO_TARGET();
+		sscanf(pbuf, "m%" SCNx32 ",%" SCNx32, &addr, &len);
+		if (len > pbuf_size / 2U) {
+			gdb_putpacketz("E02");
 			break;
 		}
-		case 'm': { /* 'm addr,len': Read len bytes from addr */
-			uint32_t addr, len;
-			ERROR_IF_NO_TARGET();
-			sscanf(pbuf, "m%" SCNx32 ",%" SCNx32, &addr, &len);
-			if (len > pbuf_size / 2U) {
-				gdb_putpacketz("E02");
-				break;
-			}
-			DEBUG_GDB("m packet: addr = %" PRIx32 ", len = %" PRIx32 "\n", addr, len);
-			uint8_t mem[len];
-			if (target_mem_read(cur_target, mem, addr, len))
-				gdb_putpacketz("E01");
-			else
-				gdb_putpacket(hexify(pbuf, mem, len), len * 2U);
+		DEBUG_GDB("m packet: addr = %" PRIx32 ", len = %" PRIx32 "\n", addr, len);
+		uint8_t mem[len];
+		if (target_mem_read(cur_target, mem, addr, len))
+			gdb_putpacketz("E01");
+		else
+			gdb_putpacket(hexify(pbuf, mem, len), len * 2U);
+		break;
+	}
+	case 'G': { /* 'G XX': Write general registers */
+		ERROR_IF_NO_TARGET();
+		uint8_t gp_regs[target_regs_size(cur_target)];
+		unhexify(gp_regs, &pbuf[1], sizeof(gp_regs));
+		target_regs_write(cur_target, gp_regs);
+		gdb_putpacketz("OK");
+		break;
+	}
+	case 'M': { /* 'M addr,len:XX': Write len bytes to addr */
+		uint32_t addr = 0;
+		uint32_t len = 0;
+		int hex;
+		ERROR_IF_NO_TARGET();
+		sscanf(pbuf, "M%" SCNx32 ",%" SCNx32 ":%n", &addr, &len, &hex);
+		if (len > (unsigned)(size - hex) / 2U) {
+			gdb_putpacketz("E02");
 			break;
 		}
-		case 'G': { /* 'G XX': Write general registers */
-			ERROR_IF_NO_TARGET();
-			uint8_t gp_regs[target_regs_size(cur_target)];
-			unhexify(gp_regs, &pbuf[1], sizeof(gp_regs));
-			target_regs_write(cur_target, gp_regs);
+		DEBUG_GDB("M packet: addr = %" PRIx32 ", len = %" PRIx32 "\n", addr, len);
+		uint8_t mem[len];
+		unhexify(mem, pbuf + hex, len);
+		if (target_mem_write(cur_target, addr, mem, len))
+			gdb_putpacketz("E01");
+		else
 			gdb_putpacketz("OK");
+		break;
+	}
+	/* '[m|M|g|G|c][thread-id]' : Set the thread ID for the given subsequent operation
+	 * (we don't actually care which as we only care about the TID for whether to send OK or an error)
+	 */
+	case 'H': {
+		char operation = 0;
+		uint32_t thread_id = 0;
+		sscanf(pbuf, "H%c%" SCNx32, &operation, &thread_id);
+		if (thread_id <= 1)
+			gdb_putpacketz("OK");
+		else
+			gdb_putpacketz("E01");
+		break;
+	}
+	case 's': /* 's [addr]': Single step [start at addr] */
+		single_step = true;
+		/* fall through */
+	case 'c': /* 'c [addr]': Continue [at addr] */
+	case 'C': /* 'C sig[;addr]': Continue with signal [at addr] */
+		if (!cur_target) {
+			gdb_putpacketz("X1D");
 			break;
 		}
-		case 'M': { /* 'M addr,len:XX': Write len bytes to addr */
-			uint32_t addr = 0;
-			uint32_t len = 0;
-			int hex;
-			ERROR_IF_NO_TARGET();
-			sscanf(pbuf, "M%" SCNx32 ",%" SCNx32 ":%n", &addr, &len, &hex);
-			if (len > (unsigned)(size - hex) / 2U) {
-				gdb_putpacketz("E02");
-				break;
-			}
-			DEBUG_GDB("M packet: addr = %" PRIx32 ", len = %" PRIx32 "\n", addr, len);
-			uint8_t mem[len];
-			unhexify(mem, pbuf + hex, len);
-			if (target_mem_write(cur_target, addr, mem, len))
-				gdb_putpacketz("E01");
-			else
-				gdb_putpacketz("OK");
-			break;
-		}
-		/* '[m|M|g|G|c][thread-id]' : Set the thread ID for the given subsequent operation
-		 * (we don't actually care which as we only care about the TID for whether to send OK or an error)
+
+		target_halt_resume(cur_target, single_step);
+		SET_RUN_STATE(true);
+		single_step = false;
+		/* fall through */
+	case '?': { /* '?': Request reason for target halt */
+		/*
+		 * This packet isn't documented as being mandatory,
+		 * but GDB doesn't work without it.
 		 */
-		case 'H': {
-			char operation = 0;
-			uint32_t thread_id = 0;
-			sscanf(pbuf, "H%c%" SCNx32, &operation, &thread_id);
-			if (thread_id <= 1)
-				gdb_putpacketz("OK");
-			else
-				gdb_putpacketz("E01");
-			break;
-		}
-		case 's': /* 's [addr]': Single step [start at addr] */
-			single_step = true;
-			/* fall through */
-		case 'c': /* 'c [addr]': Continue [at addr] */
-		case 'C': /* 'C sig[;addr]': Continue with signal [at addr] */
-			if (!cur_target) {
-				gdb_putpacketz("X1D");
-				break;
-			}
-
-			target_halt_resume(cur_target, single_step);
-			SET_RUN_STATE(true);
-			single_step = false;
-			/* fall through */
-		case '?': { /* '?': Request reason for target halt */
-			/*
-			 * This packet isn't documented as being mandatory,
-			 * but GDB doesn't work without it.
-			 */
-			if (cur_target)
-				gdb_target_running = true;
-			else
-				gdb_putpacketz("W00"); /* target exited */
+		if (!cur_target) {
+			gdb_putpacketz("W00"); /* Report "target exited" if no target */
 			break;
 		}
 
-		/* Optional GDB packet support */
-		case 'p': { /* Read single register */
-			ERROR_IF_NO_TARGET();
-			uint32_t reg;
-			sscanf(pbuf, "p%" SCNx32, &reg);
-			uint8_t val[8];
-			size_t s = target_reg_read(cur_target, reg, val, sizeof(val));
-			if (s > 0)
-				gdb_putpacket(hexify(pbuf, val, s), s * 2U);
-			else
-				gdb_putpacketz("EFF");
-			break;
-		}
-		case 'P': { /* Write single register */
-			ERROR_IF_NO_TARGET();
-			uint32_t reg;
-			int n;
-			sscanf(pbuf, "P%" SCNx32 "=%n", &reg, &n);
-			// TODO: FIXME, VLAs considered harmful.
-			uint8_t val[strlen(&pbuf[n]) / 2U];
-			unhexify(val, pbuf + n, sizeof(val));
-			if (target_reg_write(cur_target, reg, val, sizeof(val)) > 0)
-				gdb_putpacketz("OK");
-			else
-				gdb_putpacketz("EFF");
-			break;
-		}
+		/*
+		 * The target is running, so there is no response to give.
+		 * The calling function will poll the state of the target
+		 * by calling gdb_poll_target() as long as `cur_target`
+		 * is not NULL and `gdb_target_running` is true.
+		 */
+		gdb_target_running = true;
+		break;
+	}
 
-		case 'F': /* Semihosting call finished */
-			if (in_syscall)
-				return hostio_reply(tc, pbuf, size);
-			else {
-				DEBUG_GDB("*** F packet when not in syscall! '%s'\n", pbuf);
-				gdb_putpacketz("");
-			}
-			break;
+	/* Optional GDB packet support */
+	case 'p': { /* Read single register */
+		ERROR_IF_NO_TARGET();
+		uint32_t reg;
+		sscanf(pbuf, "p%" SCNx32, &reg);
+		uint8_t val[8];
+		size_t s = target_reg_read(cur_target, reg, val, sizeof(val));
+		if (s > 0)
+			gdb_putpacket(hexify(pbuf, val, s), s * 2U);
+		else
+			gdb_putpacketz("EFF");
+		break;
+	}
+	case 'P': { /* Write single register */
+		ERROR_IF_NO_TARGET();
+		uint32_t reg;
+		int n;
+		sscanf(pbuf, "P%" SCNx32 "=%n", &reg, &n);
+		// TODO: FIXME, VLAs considered harmful.
+		uint8_t val[strlen(&pbuf[n]) / 2U];
+		unhexify(val, pbuf + n, sizeof(val));
+		if (target_reg_write(cur_target, reg, val, sizeof(val)) > 0)
+			gdb_putpacketz("OK");
+		else
+			gdb_putpacketz("EFF");
+		break;
+	}
 
-		case '!': /* Enable Extended GDB Protocol. */
-			/* This doesn't do anything, we support the extended
+	case 'F': /* Semihosting call finished */
+		if (in_syscall)
+			return hostio_reply(tc, pbuf, size);
+		else {
+			DEBUG_GDB("*** F packet when not in syscall! '%s'\n", pbuf);
+			gdb_putpacketz("");
+		}
+		break;
+
+	case '!': /* Enable Extended GDB Protocol. */
+		/* This doesn't do anything, we support the extended
 			 * protocol anyway, but GDB will never send us a 'R'
 			 * packet unless we answer 'OK' here.
 			 */
-			gdb_putpacketz("OK");
-			break;
+		gdb_putpacketz("OK");
+		break;
 
-		case '\x04':
-		case 'D': /* GDB 'detach' command. */
+	case '\x04':
+	case 'D': /* GDB 'detach' command. */
 #if PC_HOSTED == 1
-			if (shutdown_bmda)
-				return 0;
+		if (shutdown_bmda)
+			return 0;
 #endif
-			if (cur_target) {
-				SET_RUN_STATE(true);
-				target_detach(cur_target);
-				last_target = cur_target;
-				cur_target = NULL;
-			}
-			if (pbuf[0] == 'D')
-				gdb_putpacketz("OK");
-			break;
+		if (cur_target) {
+			SET_RUN_STATE(true);
+			target_detach(cur_target);
+			last_target = cur_target;
+			cur_target = NULL;
+		}
+		if (pbuf[0] == 'D')
+			gdb_putpacketz("OK");
+		break;
 
-		case 'k': /* Kill the target */
-			handle_kill_target();
-			break;
+	case 'k': /* Kill the target */
+		handle_kill_target();
+		break;
 
-		case 'r': /* Reset the target system */
-		case 'R': /* Restart the target program */
+	case 'r': /* Reset the target system */
+	case 'R': /* Restart the target program */
+		if (cur_target)
+			target_reset(cur_target);
+		else if (last_target) {
+			cur_target = target_attach(last_target, &gdb_controller);
 			if (cur_target)
-				target_reset(cur_target);
-			else if (last_target) {
-				cur_target = target_attach(last_target, &gdb_controller);
-				if (cur_target)
-					morse(NULL, false);
-				target_reset(cur_target);
-			}
-			break;
+				morse(NULL, false);
+			target_reset(cur_target);
+		}
+		break;
 
-		case 'X': { /* 'X addr,len:XX': Write binary data to addr */
-			uint32_t addr, len;
-			int bin;
-			ERROR_IF_NO_TARGET();
-			sscanf(pbuf, "X%" SCNx32 ",%" SCNx32 ":%n", &addr, &len, &bin);
-			if (len > (unsigned)(size - bin)) {
-				gdb_putpacketz("E02");
-				break;
-			}
-			DEBUG_GDB("X packet: addr = %" PRIx32 ", len = %" PRIx32 "\n", addr, len);
-			if (target_mem_write(cur_target, addr, pbuf + bin, len))
-				gdb_putpacketz("E01");
-			else
-				gdb_putpacketz("OK");
+	case 'X': { /* 'X addr,len:XX': Write binary data to addr */
+		uint32_t addr, len;
+		int bin;
+		ERROR_IF_NO_TARGET();
+		sscanf(pbuf, "X%" SCNx32 ",%" SCNx32 ":%n", &addr, &len, &bin);
+		if (len > (unsigned)(size - bin)) {
+			gdb_putpacketz("E02");
 			break;
 		}
+		DEBUG_GDB("X packet: addr = %" PRIx32 ", len = %" PRIx32 "\n", addr, len);
+		if (target_mem_write(cur_target, addr, pbuf + bin, len))
+			gdb_putpacketz("E01");
+		else
+			gdb_putpacketz("OK");
+		break;
+	}
 
-		case 'q': /* General query packet */
-			handle_q_packet(pbuf, size);
-			break;
+	case 'q': /* General query packet */
+		handle_q_packet(pbuf, size);
+		break;
 
-		case 'v': /* Verbose command packet */
-			handle_v_packet(pbuf, size);
-			break;
+	case 'v': /* Verbose command packet */
+		handle_v_packet(pbuf, size);
+		break;
 
-		/* These packet implement hardware break-/watchpoints */
-		case 'Z': /* Z type,addr,len: Set breakpoint packet */
-		case 'z': /* z type,addr,len: Clear breakpoint packet */
-			ERROR_IF_NO_TARGET();
-			handle_z_packet(pbuf, size);
-			break;
+	/* These packet implement hardware break-/watchpoints */
+	case 'Z': /* Z type,addr,len: Set breakpoint packet */
+	case 'z': /* z type,addr,len: Clear breakpoint packet */
+		ERROR_IF_NO_TARGET();
+		handle_z_packet(pbuf, size);
+		break;
 
-		default: /* Packet not implemented */
-			DEBUG_GDB("*** Unsupported packet: %s\n", pbuf);
-			gdb_putpacketz("");
-		}
+	default: /* Packet not implemented */
+		DEBUG_GDB("*** Unsupported packet: %s\n", pbuf);
+		gdb_putpacketz("");
 	}
 	return 0;
 }
