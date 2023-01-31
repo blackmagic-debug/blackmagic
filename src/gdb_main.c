@@ -196,6 +196,7 @@ int gdb_main_loop(target_controller_s *tc, bool in_syscall)
 			single_step = true;
 			/* fall through */
 		case 'c': /* 'c [addr]': Continue [at addr] */
+		case 'C': /* 'C sig[;addr]': Continue with signal [at addr] */
 			if (!cur_target) {
 				gdb_putpacketz("X1D");
 				break;
