@@ -368,24 +368,6 @@ void dap_write_reg(adiv5_debug_port_s *dp, uint8_t reg, uint32_t data)
 	}
 }
 
-bool dap_write_reg_no_check(adiv5_debug_port_s *dp, uint8_t reg, uint32_t data)
-{
-	DEBUG_PROBE("\tdap_write_reg %02x %08x\n", reg, data);
-
-	uint8_t buf[8] = {
-		ID_DAP_TRANSFER,
-		dp->dp_jd_index,
-		0x01, // Request size
-		reg & ~DAP_TRANSFER_RnW,
-		data & 0xffU,
-		(data >> 8U) & 0xffU,
-		(data >> 16U) & 0xffU,
-		(data >> 24U) & 0xffU,
-	};
-	dbg_dap_cmd(buf, sizeof(buf), 8);
-	return buf[1] != DAP_TRANSFER_OK;
-}
-
 bool dap_read_block(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t len, align_e align)
 {
 	const size_t blocks = len >> MAX(align, 2U);
