@@ -687,8 +687,6 @@ void gdb_halt_target(void)
 /* poll running target */
 void gdb_poll_target(void)
 {
-	target_addr_t watch;
-	enum target_halt_reason reason;
 	if (!cur_target) {
 		/* Report "target exited" if no target */
 		gdb_putpacketz("W00");
@@ -696,7 +694,8 @@ void gdb_poll_target(void)
 	}
 
 	/* poll target */
-	reason = target_halt_poll(cur_target, &watch);
+	target_addr_t watch;
+	enum target_halt_reason reason = target_halt_poll(cur_target, &watch);
 	if (!reason)
 		return;
 
@@ -722,5 +721,4 @@ void gdb_poll_target(void)
 	default:
 		gdb_putpacket_f("T%02X", GDB_SIGTRAP);
 	}
-	return;
 }
