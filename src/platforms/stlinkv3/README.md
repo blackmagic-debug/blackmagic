@@ -31,7 +31,8 @@ warm plug will fail. Cold plug should work with any STM32 device.
 ## Building.
 
 As simple as
-```make PROBE_HOST=stlinkv3 clean
+```
+make PROBE_HOST=stlinkv3 clean
 make PROBE_HOST=stlinkv3
 ```
 
