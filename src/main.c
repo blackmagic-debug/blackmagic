@@ -54,10 +54,9 @@ int main(int argc, char **argv)
 
 				// Check again, as `gdb_poll_target()` may
 				// alter these variables.
-				if (!gdb_target_running || !cur_target) {
+				if (!gdb_target_running || !cur_target)
 					break;
-				}
-				char c = (char)gdb_if_getchar_to(0);
+				char c = gdb_if_getchar_to(0);
 				if (c == '\x03' || c == '\x04')
 					target_halt_request(cur_target);
 				platform_pace_poll();
