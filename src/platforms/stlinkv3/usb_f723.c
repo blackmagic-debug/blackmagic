@@ -22,7 +22,6 @@
 #include <libopencm3/cm3/common.h>
 #include <libopencm3/stm32/tools.h>
 #include <libopencm3/stm32/rcc.h>
-#include <libopencm3/cm3/nvic.h>
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/dwc/otg_hs.h>
 #include "usb_private.h"
@@ -98,9 +97,6 @@ static usbd_device *stm32f723_usbd_init(void)
 {
 	rcc_periph_clock_enable((enum rcc_periph_clken)RCC_OTGPHYC);
 	rcc_periph_clock_enable(RCC_OTGHSULPI);
-
-	// TODO - check the preemption and subpriority, they are unified here
-	nvic_set_priority(NVIC_OTG_HS_IRQ, 0);
 
 	rcc_periph_clock_enable(RCC_OTGHS);
 	OTG_HS_GINTSTS = OTG_GINTSTS_MMIS;
