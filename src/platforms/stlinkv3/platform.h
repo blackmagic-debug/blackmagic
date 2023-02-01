@@ -130,7 +130,7 @@ extern const struct _usbd_driver stm32f723_usb_driver;
 /* Interrupt priorities.  Low numbers are high priority.
  * For now USART2 preempts USB which may spin while buffer is drained.
  */
-#define IRQ_PRI_USB          (1 << 4)
+#define IRQ_PRI_USB          (0 << 4)
 #define IRQ_PRI_USBUSART     (2 << 4)
 #define IRQ_PRI_USBUSART_DMA (2 << 4)
 #define IRQ_PRI_USB_VBUS     (14 << 4)
