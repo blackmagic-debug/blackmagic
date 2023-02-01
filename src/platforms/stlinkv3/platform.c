@@ -93,8 +93,8 @@ static void scb_enable_d_cache(void)
 	const uint32_t ways = CCSIDR_WAYS(ccsidr);
 	for (uint32_t set = 0; set <= sets; ++set) {
 		for (uint32_t way = 0; way <= ways; ++way) {
-			SCB_DCISW = ((sets << SCB_DCISW_SET_SHIFT) & SCB_DCISW_SET_MASK) |
-				((ways << SCB_DCISW_WAY_SHIFT) & SCB_DCISW_WAY_MASK);
+			SCB_DCISW = ((set << SCB_DCISW_SET_SHIFT) & SCB_DCISW_SET_MASK) |
+				((way << SCB_DCISW_WAY_SHIFT) & SCB_DCISW_WAY_MASK);
 		}
 	}
 	cm_dsb();
