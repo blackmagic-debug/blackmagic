@@ -213,6 +213,12 @@ void platform_init(void)
 	RCC_CFGR &= ~(0x7 << RCC_CFGR_MCO1PRE_SHIFT);
 	RCC_CFGR |= RCC_CFGR_MCOPRE_DIV_2 << RCC_CFGR_MCO1PRE_SHIFT;
 
+	/* Setup USB pins */
+	rcc_periph_clock_enable(RCC_GPIOB);
+	gpio_mode_setup(GPIOB, GPIO_MODE_AF, GPIO_PUPD_NONE, GPIO14 | GPIO15);
+	gpio_set_output_options(GPIOB, GPIO_OTYPE_PP, GPIO_OSPEED_100MHZ, GPIO14 | GPIO15);
+	gpio_set_af(GPIOB, GPIO_AF12, GPIO14 | GPIO15);
+
 	/* Set up green/red led to steady green to indicate application active
 	 * FIXME: Allow RED and yellow constant and blinking,
 	 * e.g. by PWM onTIM1_CH3 (PA10)
