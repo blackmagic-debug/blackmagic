@@ -48,7 +48,7 @@ int main(void)
 	force_bootloader = (!(SCS_DHCSR & SCS_DHCSR_C_DEBUGEN) && ((RCC_CSR & RCC_CSR_RESET_FLAGS) == RCC_CSR_PINRSTF));
 	RCC_CSR |= RCC_CSR_RMVF;
 	RCC_CSR &= ~RCC_CSR_RMVF;
-	if (force_bootloader || ((magic[0] == BOOTMAGIC0) && (magic[1] == BOOTMAGIC1))) {
+	if (force_bootloader || (magic[0] == BOOTMAGIC0 && magic[1] == BOOTMAGIC1)) {
 		magic[0] = 0;
 		magic[1] = 0;
 	} else {

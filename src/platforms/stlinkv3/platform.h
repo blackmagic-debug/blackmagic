@@ -37,11 +37,10 @@
 extern bool debug_bmp;
 #endif
 
-#define PLATFORM_HAS_USBUART
 #define PLATFORM_IDENT "STLINK-V3 "
 
-#define BOOTMAGIC0 0xb007da7a
-#define BOOTMAGIC1 0xbaadfeed
+#define BOOTMAGIC0 0xb007da7aU
+#define BOOTMAGIC1 0xbaadfeedU
 
 #define DESIG_UNIQUE_ID_BASE DESIG_UNIQUE_ID_BASE_452
 

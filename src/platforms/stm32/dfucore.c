@@ -40,7 +40,6 @@
 #elif APP_START == 0x08004000
 #define DFU_IFACE_STRING_OFFSET 54
 #define DFU_IFACE_STRING        "@Internal Flash   /0x08000000/1*016Ka,3*016Kg,1*064Kg,000*128Kg"
-#else
 #endif
 #endif
 #include <libopencm3/stm32/flash.h>
