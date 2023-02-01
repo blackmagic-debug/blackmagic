@@ -120,7 +120,7 @@ static usbd_device *stm32f723_usbd_init(void)
 	 */
 	OTG_HS_PHYC_LDO |= OTG_PHYC_LDO_DISABLE;
 	while (!(OTG_HS_PHYC_LDO & OTG_PHYC_LDO_STATUS))
-		;
+		continue;
 	/* This setting is for a HSE clock of 25 MHz. */
 	OTG_HS_PHYC_PLL1 = 5 << 1;
 	OTG_HS_PHYC_TUNE |= 0x00000f13U;
@@ -129,9 +129,8 @@ static usbd_device *stm32f723_usbd_init(void)
 	 * Used by DFU too, so platform_xxx not available.
 	 * Some Stlinkv3-Set did not cold start w/o the delay
 	 */
-	volatile int i = 200 * 1000;
-	while (i--)
-		;
+	for (volatile size_t i = 0; i < 200 * 1000; ++i)
+		continue;
 
 	////OTG_HS_GUSBCFG |= OTG_GUSBCFG_PHYSEL;
 	/* Enable VBUS sensing in device mode and power down the PHY. */
@@ -139,11 +138,11 @@ static usbd_device *stm32f723_usbd_init(void)
 
 	/* Wait for AHB idle. */
 	while (!(OTG_HS_GRSTCTL & OTG_GRSTCTL_AHBIDL))
-		;
+		continue;
 	/* Do core soft reset. */
 	OTG_HS_GRSTCTL |= OTG_GRSTCTL_CSRST;
 	while (OTG_HS_GRSTCTL & OTG_GRSTCTL_CSRST)
-		;
+		continue;
 
 	/* Force peripheral only mode. */
 	OTG_HS_GUSBCFG |= OTG_GUSBCFG_FDMOD | OTG_GUSBCFG_TRDT_MASK;
