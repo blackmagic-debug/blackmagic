@@ -113,9 +113,10 @@ int platform_hwversion(void)
 void platform_nrst_set_val(bool assert)
 {
 	gpio_set_val(SRST_PORT, SRST_PIN, !assert);
-	if (assert)
+	if (assert) {
 		for (volatile size_t i = 0; i < 10000; i++)
 			continue;
+	}
 }
 
 bool platform_nrst_get_val()

@@ -267,7 +267,7 @@ static uint16_t stm32f723_ep_write_packet(usbd_device *usbd_dev, uint8_t addr, c
 	 * transfer is still in progress. */
 	if (OTG_HS_DIEPCTL(addr) & OTG_DIEPCTL0_EPENA)
 		return 0;
-	if ((OTG_HS_DTXFSTS(addr) & 0xffff) < (unsigned)((len + 3) >> 2))
+	if ((OTG_HS_DTXFSTS(addr) & 0xffffU) < (uint16_t)((len + 3) >> 2))
 		return 0;
 
 	/* Enable endpoint for transmission. */
@@ -319,25 +319,23 @@ static void stm32f723_ep_read_packet_internal(usbd_device *usbd_dev, int ep)
 {
 	struct incoming_packet *packet = stashed_packets + ep;
 	uint32_t *buf32 = (uint32_t *)packet->packet_data;
-	uint32_t extra;
-	const uint16_t len = MIN(sizeof(packet->packet_data), usbd_dev->rxbcnt);
+	const size_t len = MIN(sizeof(packet->packet_data), usbd_dev->rxbcnt);
 
 	/* ARMv7M supports non-word-aligned accesses, ARMv6M does not. */
-	int i;
+	size_t i;
 	for (i = len; i >= 4; i -= 4) {
 		*buf32++ = MMIO32(OTG_HS_FIFO(0));
 		usbd_dev->rxbcnt -= 4;
 	}
 
 	if (i) {
-		extra = MMIO32(OTG_HS_FIFO(0));
+		uint32_t extra = MMIO32(OTG_HS_FIFO(0));
 		/* we read 4 bytes from the fifo, so update rxbcnt */
-		if (usbd_dev->rxbcnt < 4) {
+		if (usbd_dev->rxbcnt < 4)
 			/* Be careful not to underflow (rxbcnt is unsigned) */
 			usbd_dev->rxbcnt = 0;
-		} else {
+		else
 			usbd_dev->rxbcnt -= 4;
-		}
 		memcpy(buf32, &extra, i);
 	}
 	packet->is_packet_present = true;
@@ -401,8 +399,7 @@ static void stm32f723_poll(usbd_device *usbd_dev)
 	/* Handle OUT endpoint interrupt requests. */
 	if (intsts & OTG_GINTSTS_OEPINT) {
 		uint32_t daint = OTG_HS_DAINT;
-		int epnum;
-		for (epnum = 0; epnum < USB_ENDPOINT_COUNT; epnum++)
+		for (size_t epnum = 0; epnum < USB_ENDPOINT_COUNT; epnum++) {
 			if (daint & (1 << (16 + epnum))) {
 				uint32_t t = OTG_HS_DOEPINT(epnum);
 				OTG_HS_DOEPINT(epnum) = t;
@@ -428,6 +425,7 @@ static void stm32f723_poll(usbd_device *usbd_dev)
 				if (t & OTG_DOEPINTX_OTEPDIS)
 					OTG_HS_DOEPINT(epnum) = OTG_DOEPINTX_OTEPDIS;
 			}
+		}
 	}
 
 	if (intsts & OTG_GINTSTS_USBSUSP) {
