@@ -27,61 +27,44 @@
 #include "usb_private.h"
 #include "usb_dwc_common.h"
 
+/* Receive FIFO size in 32-bit words. */
+#define RX_FIFO_SIZE 512
+
 /*
  * These are some register definitions, not yet provided by libopencm3,
  * or definitions that need hacking in order to use here.
  */
-/* ??? This bit is present in the st header files, but I could not find it described in the documentation. */
-#define OTG_GCCFG_PHYHSEN    (1 << 23)
-#define OTG_PHYC_LDO_DISABLE (1 << 2)
-#define OTG_PHYC_LDO_STATUS  (1 << 1)
+#define USBPHYC_BASE						(PERIPH_BASE_APB2 + 0x7C00)
+#define RCC_OTGPHYC							(((0x44) << 5) + (31))
+#define OTG_GCCFG_PHYHSEN					(1 << 23)
+#define OTG_PHYC_PLL1						0x000
+#define OTG_PHYC_TUNE						0x00C
+#define OTG_PHYC_LDO						0x018
+#define OTG_HS_PHYC_PLL1					MMIO32(USBPHYC_BASE + OTG_PHYC_PLL1)
+#define OTG_HS_PHYC_TUNE					MMIO32(USBPHYC_BASE + OTG_PHYC_TUNE)
+#define OTG_HS_PHYC_LDO						MMIO32(USBPHYC_BASE + OTG_PHYC_LDO)
+#define OTG_PHYC_LDO_DISABLE				(1 << 2)
+#define OTG_PHYC_LDO_STATUS					(1 << 1)
+#define OTG_PHYC_PLL1_ENABLE				(1 << 0)
+#define OTG_PHYC_PLL1_SEL_25MHZ				(0x5 << 1)
+#define OTG_PHYC_TUNE_INCURRINT				(1 << 1)
+#define OTG_PHYC_TUNE_INCURREN				(1 << 0)
+#define OTG_PHYC_TUNE_HSDRVDCCUR			(1 << 4)
+#define OTG_PHYC_TUNE_HSDRVRFRED			(1 << 8)
+#define OTG_PHYC_TUNE_HSDRVCHKITRM_20_935MA	(0x7 << 9)
 
-/* USB PHY controller registers. */
-#define USBPHYC_BASE     0x40017c00
-#define OTG_HS_PHYC_PLL1 MMIO32(USBPHYC_BASE + 0)
+#define MAX_BULK_PACKET_SIZE 512
+#define USB_ENDPOINT_COUNT 9
 
-#define OTG_PHYC_PLL1_ENABLE 1
+static struct incoming_packet
+{
+	bool	is_packet_present;
+	int	packet_length;
+	uint8_t	packet_data[MAX_BULK_PACKET_SIZE];
+} stashed_packets[USB_ENDPOINT_COUNT];
 
-#define OTG_HS_PHYC_TUNE MMIO32(USBPHYC_BASE + 0xc)
-#define OTG_HS_PHYC_LDO  MMIO32(USBPHYC_BASE + 0x18)
-/* ??? The st header files have this:
- * #define USB_HS_PHYC_LDO_ENABLE                   USB_HS_PHYC_LDO_DISABLE
- * ...go figure...
- */
-#define OTG_PHYC_LDO_DISABLE (1 << 2)
-#define OTG_PHYC_LDO_STATUS  (1 << 1)
-
-/* Yes, this is unpleasant. It does not belong here. */
-#define _REG_BIT(base, bit) (((base) << 5) + (bit))
-
-/* STM32F7x3xx and STM32F730xx devices have an internal usb high-speed usb phy controller */
-enum {
-	RCC_OTGPHYC = _REG_BIT(0x44, 31),
-};
-
-/* Receive FIFO size in 32-bit words. */
-#define RX_FIFO_SIZE 512
-
-static usbd_device *stm32f723_usbd_init(void);
-
-static struct _usbd_device usbd_dev;
-
-const struct _usbd_driver stm32f723_usb_driver = {
-	.init = stm32f723_usbd_init,
-	.set_address = dwc_set_address,
-	.ep_setup = dwc_ep_setup,
-	.ep_reset = dwc_endpoints_reset,
-	.ep_stall_set = dwc_ep_stall_set,
-	.ep_stall_get = dwc_ep_stall_get,
-	.ep_nak_set = dwc_ep_nak_set,
-	.ep_write_packet = dwc_ep_write_packet,
-	.ep_read_packet = dwc_ep_read_packet,
-	.poll = dwc_poll,
-	.disconnect = dwc_disconnect,
-	.base_address = USB_OTG_HS_BASE,
-	.set_address_before_status = 1,
-	.rx_fifo_size = RX_FIFO_SIZE,
-};
+static struct _usbd_device _usbd_dev;
+extern const struct _usbd_driver stm32f723_usb_driver;
 
 /*
  * Initialize the USB device controller hardware of the STM32.
@@ -95,7 +78,7 @@ const struct _usbd_driver stm32f723_usb_driver = {
  * enable the delays before starting to debug other stuff. */
 static usbd_device *stm32f723_usbd_init(void)
 {
-	rcc_periph_clock_enable((enum rcc_periph_clken)RCC_OTGPHYC);
+	rcc_periph_clock_enable(RCC_OTGPHYC);
 	rcc_periph_clock_enable(RCC_OTGHSULPI);
 
 	rcc_periph_clock_enable(RCC_OTGHS);
@@ -104,16 +87,15 @@ static usbd_device *stm32f723_usbd_init(void)
 	// ??? What is this??? It is not documented in the manual
 	OTG_HS_GCCFG |= OTG_GCCFG_PHYHSEN;
 
-	/* ??? The st header files have this:
-	 * #define USB_HS_PHYC_LDO_ENABLE                   USB_HS_PHYC_LDO_DISABLE
-	 * ...go figure...
-	 */
 	OTG_HS_PHYC_LDO |= OTG_PHYC_LDO_DISABLE;
 	while (!(OTG_HS_PHYC_LDO & OTG_PHYC_LDO_STATUS))
 		continue;
-	/* This setting is for a HSE clock of 25 MHz. */
-	OTG_HS_PHYC_PLL1 = 5 << 1;
-	OTG_HS_PHYC_TUNE |= 0x00000f13U;
+	OTG_HS_PHYC_PLL1 = OTG_PHYC_PLL1_SEL_25MHZ;
+	OTG_HS_PHYC_TUNE |= OTG_PHYC_TUNE_INCURREN |
+		OTG_PHYC_TUNE_INCURRINT |
+		OTG_PHYC_TUNE_HSDRVDCCUR |
+		OTG_PHYC_TUNE_HSDRVRFRED |
+		OTG_PHYC_TUNE_HSDRVCHKITRM_20_935MA;
 	OTG_HS_PHYC_PLL1 |= OTG_PHYC_PLL1_ENABLE;
 	/* 2ms Delay required to get internal phy clock stable
 	 * Used by DFU too, so platform_xxx not available.
@@ -121,10 +103,6 @@ static usbd_device *stm32f723_usbd_init(void)
 	 */
 	for (volatile size_t i = 0; i < 200 * 1000; ++i)
 		continue;
-
-	////OTG_HS_GUSBCFG |= OTG_GUSBCFG_PHYSEL;
-	/* Enable VBUS sensing in device mode and power down the PHY. */
-	////OTG_HS_GCCFG |= OTG_GCCFG_VBUSBSEN | OTG_GCCFG_PWRDWN;
 
 	/* Wait for AHB idle. */
 	while (!(OTG_HS_GRSTCTL & OTG_GRSTCTL_AHBIDL))
@@ -136,19 +114,14 @@ static usbd_device *stm32f723_usbd_init(void)
 
 	/* Force peripheral only mode. */
 	OTG_HS_GUSBCFG |= OTG_GUSBCFG_FDMOD | OTG_GUSBCFG_TRDT_MASK;
-	//HAL_Delay(50U);
-
-	/* Full speed device. */
-	////OTG_HS_DCFG |= OTG_DCFG_DSPD;
 
 	/* Restart the PHY clock. */
 	OTG_HS_PCGCCTL = 0;
 
 	OTG_HS_GRXFSIZ = stm32f723_usb_driver.rx_fifo_size;
-	usbd_dev.fifo_mem_top = stm32f723_usb_driver.rx_fifo_size;
+	_usbd_dev.fifo_mem_top = stm32f723_usb_driver.rx_fifo_size;
 
 	OTG_HS_DCTL |= OTG_DCTL_SDIS;
-	//HAL_Delay(10);
 
 	/* Unmask interrupts for TX and RX. */
 	OTG_HS_GAHBCFG |= OTG_GAHBCFG_GINT;
@@ -163,5 +136,392 @@ static usbd_device *stm32f723_usbd_init(void)
 
 	OTG_HS_DCTL &= ~OTG_DCTL_SDIS;
 
-	return &usbd_dev;
+	return &_usbd_dev;
 }
+
+/* Note: the original 'usb_dwc_common.c' source code
+ * handles incoming OUT and SETUP usb packets as soon as they are available
+ * in the packet FIFO.
+ *
+ * I inspected the stm-cube sources, and there, the incoming OUT and
+ * SETUP packets are handled only when a XFRC - transfer complete interrupt is
+ * received. This means that, at this point, it is guaranteed that the respective
+ * usb endpoint 'enable' bit is cleared by the usb core. From the st manual:
+ *
+ * The core clears this (EPENA) bit before setting any of the following interrupts on this endpoint:
+ * - SETUP phase done
+ * - Endpoint disabled
+ * - Transfer completed
+ *
+ * Maybe this is not relevant, but it seems to me that such handling is more
+ * robust. I spent a significant amount of time debugging some other usb issues,
+ * and while debugging, I adjusted the code to behave more like the stm-cube
+ * sources. When I was done with debugging, I did not investigate if the original
+ * usb_dwc_common driver code for handling incoming (OUT) usb packages would work with.
+ * the adjustments I made. It seems to me that the stm-cube handling of incoming (OUT)
+ * usb packages is more robust, and I decided to keep it this way.
+ *
+ * However, for that to work, it is needed that the packets are read from the usb FIFO packet
+ * memory in some temporary storage, and are handed to the upper usb layers only
+ * when the corresponding XFRC interrupts are received. This means that some temporary
+ * storage is necessary, so this variable serves this purpose.
+ */
+
+static void stm32f723_ep_setup(usbd_device *usbd_dev, uint8_t addr, uint8_t type,
+			uint16_t max_size,
+			void (*callback) (usbd_device *usbd_dev, uint8_t ep))
+{
+	/*
+	 * Configure endpoint address and type. Allocate FIFO memory for
+	 * endpoint. Install callback function.
+	 */
+	uint8_t dir = addr & 0x80;
+	addr &= 0x7f;
+
+	if (addr == 0) { /* For the default control endpoint */
+		/* Configure IN part. */
+		if (max_size >= 64) {
+			OTG_HS_DIEPCTL0 = OTG_DIEPCTL0_MPSIZ_64;
+		} else if (max_size >= 32) {
+			OTG_HS_DIEPCTL0 = OTG_DIEPCTL0_MPSIZ_32;
+		} else if (max_size >= 16) {
+			OTG_HS_DIEPCTL0 = OTG_DIEPCTL0_MPSIZ_16;
+		} else {
+			OTG_HS_DIEPCTL0 = OTG_DIEPCTL0_MPSIZ_8;
+		}
+
+		OTG_HS_DIEPTSIZ0 =
+			(max_size & OTG_DIEPSIZ0_XFRSIZ_MASK);
+		OTG_HS_DIEPCTL0 |=
+			/* OTG_DIEPCTL0_EPENA | */OTG_DIEPCTL0_SNAK;
+
+		/* Configure OUT part. */
+		usbd_dev->doeptsiz[0] = OTG_DIEPSIZ0_STUPCNT_1 |
+			OTG_DIEPSIZ0_PKTCNT |
+			(max_size & OTG_DIEPSIZ0_XFRSIZ_MASK);
+		OTG_HS_DOEPTSIZ(0) = usbd_dev->doeptsiz[0];
+		OTG_HS_DOEPCTL(0) |=
+		    OTG_DOEPCTL0_EPENA | OTG_DIEPCTL0_SNAK;
+
+		OTG_HS_GNPTXFSIZ = ((max_size / 4) << 16) |
+					 usbd_dev->driver->rx_fifo_size;
+		usbd_dev->fifo_mem_top += max_size / 4;
+		usbd_dev->fifo_mem_top_ep0 = usbd_dev->fifo_mem_top;
+
+		return;
+	}
+
+	if (dir) {
+		OTG_HS_DIEPTXF(addr) = ((max_size / 4) << 16) |
+					     usbd_dev->fifo_mem_top;
+		usbd_dev->fifo_mem_top += max_size / 4;
+
+		OTG_HS_DIEPTSIZ(addr) =
+		    (max_size & OTG_DIEPSIZ0_XFRSIZ_MASK);
+		OTG_HS_DIEPCTL(addr) |=
+		    /*OTG_DIEPCTL0_EPENA |*/ OTG_DIEPCTL0_SNAK | (type << 18)
+		    | OTG_DIEPCTL0_USBAEP | OTG_DIEPCTLX_SD0PID
+		    | (addr << 22) | max_size;
+
+		if (callback) {
+			usbd_dev->user_callback_ctr[addr][USB_TRANSACTION_IN] =
+			    (void *)callback;
+		}
+	}
+
+	if (!dir) {
+		usbd_dev->doeptsiz[addr] = OTG_DIEPSIZ0_PKTCNT |
+				 (max_size & OTG_DIEPSIZ0_XFRSIZ_MASK);
+		OTG_HS_DOEPTSIZ(addr) = usbd_dev->doeptsiz[addr];
+		OTG_HS_DOEPCTL(addr) |= OTG_DOEPCTL0_EPENA |
+		    OTG_DOEPCTL0_USBAEP | OTG_DIEPCTL0_CNAK |
+		    OTG_DOEPCTLX_SD0PID | (type << 18) | max_size;
+
+		if (callback) {
+			usbd_dev->user_callback_ctr[addr][USB_TRANSACTION_OUT] =
+			    (void *)callback;
+		}
+	}
+}
+
+static void stm32f723_endpoints_reset(usbd_device *usbd_dev)
+{
+	int i;
+	/* The core resets the endpoints automatically on reset. */
+	usbd_dev->fifo_mem_top = usbd_dev->fifo_mem_top_ep0;
+
+	/* Disable any currently active endpoints */
+	for (i = 1; i < USB_ENDPOINT_COUNT; i++) {
+		if (OTG_HS_DOEPCTL(i) & OTG_DOEPCTL0_EPENA) {
+			OTG_HS_DOEPCTL(i) |= OTG_DOEPCTL0_EPDIS;
+		}
+		if (OTG_HS_DIEPCTL(i) & OTG_DIEPCTL0_EPENA) {
+			OTG_HS_DIEPCTL(i) |= OTG_DIEPCTL0_EPDIS;
+		}
+	}
+
+	/* Flush all tx/rx fifos */
+	OTG_HS_GRSTCTL = OTG_GRSTCTL_TXFFLSH | OTG_GRSTCTL_TXFNUM_ALL
+			      | OTG_GRSTCTL_RXFFLSH;
+}
+
+static uint16_t stm32f723_ep_write_packet(usbd_device *usbd_dev, uint8_t addr,
+			      const void *buf, uint16_t len)
+{
+	(void) usbd_dev;
+	const uint32_t *buf32 = buf;
+	int i;
+
+	addr &= 0x7F;
+
+	/* Note: because of the libopencm3 API specification of this
+	 * function, the type of the return code is 'uint16_t'.
+	 * This means that it is not possible to return a negative
+	 * result code for error. Also, the API specification
+	 * expects that the length of the data packet written to
+	 * the usb core is returned. This means that zero-length
+	 * usb data packets cannot be reliably sent with the current api,
+	 * and zero-length packets are needed in some cases for usb
+	 * cdcacm class interfaces to signify the end of a transfer.
+	 * At the moment, the blackmagic firmware works around this
+	 * limitation by sending a single byte (containing a zero)
+	 * usb packet for the gdb cdcacm interface, whenever a zero-length
+	 * packet needs to be sent. This particular workaround works
+	 * for the blackmagic use case, because the gdb protocol is
+	 * packetized, and the single zero byte will be silently discarded
+	 * by gdb, but this approach is incorrect in general.
+	 *
+	 * For the time being, return zero here in case of error. */
+	/* Return if endpoint is already enabled, which means a packet
+	 * transfer is still in progress. */
+	if (OTG_HS_DIEPCTL(addr) & OTG_DIEPCTL0_EPENA)
+		return 0;
+	if ((OTG_HS_DTXFSTS(addr) & 0xffff) < (unsigned)((len + 3) >> 2))
+		return 0;
+
+	/* Enable endpoint for transmission. */
+	OTG_HS_DIEPTSIZ(addr) = OTG_DIEPSIZ0_PKTCNT | len;
+
+	/* WARNING: it is not explicitly stated in the ST documentation,
+	 * but the usb core fifo memory read/write accesses should not
+	 * be interrupted by usb core fifo memory write/read accesses.
+	 *
+	 * For example, this function can be run from within the usb interrupt
+	 * context, and also from outside of the usb interrupt context.
+	 * When this function executes outside of the usb interrupt context,
+	 * if it gets interrupted by the usb interrupt while it writes to
+	 * the usb core fifo memory, and from within the usb
+	 * interrupt the usb core fifo memory is read, then when control returns
+	 * to this function, the usb core fifo memory write accesses can not
+	 * simply continue, this will result in a transaction error on the
+	 * usb line.
+	 *
+	 * In order to avoid such situation, the usb interrupt is masked here
+	 * prior to writing the data to the usb core fifo memory.
+	 */
+	uint32_t saved_interrupt_mask = OTG_HS_GINTMSK;
+	OTG_HS_GINTMSK = 0;
+	OTG_HS_DIEPCTL(addr) |= OTG_DIEPCTL0_EPENA |
+				     OTG_DIEPCTL0_CNAK;
+
+	/* Copy buffer to endpoint FIFO, note - memcpy does not work.
+	 * ARMv7M supports non-word-aligned accesses, ARMv6M does not. */
+	for (i = len; i > 0; i -= 4) {
+		MMIO32(OTG_HS_FIFO(addr)) = *buf32++;
+	}
+
+	OTG_HS_GINTMSK = saved_interrupt_mask;
+	return len;
+}
+
+static uint16_t stm32f723_ep_read_packet(usbd_device *usbd_dev, uint8_t addr,
+				  void *buf, uint16_t len)
+{
+	(void) usbd_dev;
+	struct incoming_packet * packet = stashed_packets + addr;
+	if (!packet->is_packet_present)
+		return 0;
+	len = MIN(len, packet->packet_length);
+	packet->is_packet_present = false;
+	memcpy(buf, packet->packet_data, len);
+	return len;
+}
+
+static void stm32f723_ep_read_packet_internal(usbd_device *usbd_dev, int ep)
+{
+	int i;
+	struct incoming_packet * packet = stashed_packets + ep;
+	uint32_t *buf32 = (uint32_t *) packet->packet_data;
+	uint32_t extra;
+	uint16_t len = sizeof packet->packet_data;
+
+	len = MIN(len, usbd_dev->rxbcnt);
+
+	/* ARMv7M supports non-word-aligned accesses, ARMv6M does not. */
+	for (i = len; i >= 4; i -= 4) {
+		*buf32++ = MMIO32(OTG_HS_FIFO(0));
+		usbd_dev->rxbcnt -= 4;
+	}
+
+	if (i) {
+		extra = MMIO32(OTG_HS_FIFO(0));
+		/* we read 4 bytes from the fifo, so update rxbcnt */
+		if (usbd_dev->rxbcnt < 4) {
+			/* Be careful not to underflow (rxbcnt is unsigned) */
+			usbd_dev->rxbcnt = 0;
+		} else {
+			usbd_dev->rxbcnt -= 4;
+		}
+		memcpy(buf32, &extra, i);
+	}
+	packet->is_packet_present = true;
+
+	packet->packet_length = len;
+}
+
+static void stm32f723_poll(usbd_device *usbd_dev)
+{
+	/* Read interrupt status register. */
+	uint32_t intsts = OTG_HS_GINTSTS;
+	if (!(intsts & OTG_HS_GINTMSK))
+		/* No interrupts to handle - can happen if this function is
+		 * not invoked from the usb interrupt handler. */
+		 return;
+	int i;
+
+	if (intsts & OTG_GINTSTS_ENUMDNE) {
+		/* Handle USB RESET condition. */
+		OTG_HS_GINTSTS = OTG_GINTSTS_ENUMDNE;
+		usbd_dev->fifo_mem_top = usbd_dev->driver->rx_fifo_size;
+		_usbd_reset(usbd_dev);
+		return;
+	}
+
+	/* Handle IN endpoint interrupt requests. */
+	if (intsts & OTG_GINTSTS_IEPINT)
+	{
+		for (i = 0; i < USB_ENDPOINT_COUNT; i++) { /* Iterate over endpoints. */
+			if (OTG_HS_DIEPINT(i) & OTG_DIEPINTX_XFRC) {
+				/* Transfer complete. */
+				OTG_HS_DIEPINT(i) = OTG_DIEPINTX_XFRC;
+				if (usbd_dev->user_callback_ctr[i]
+						[USB_TRANSACTION_IN]) {
+					usbd_dev->user_callback_ctr[i]
+						[USB_TRANSACTION_IN](usbd_dev, i);
+				}
+			}
+		}
+	}
+
+	if (intsts & OTG_GINTSTS_RXFLVL) {
+		/* Receive FIFO non-empty. */
+		uint32_t rxstsp = OTG_HS_GRXSTSP;
+		uint32_t pktsts = rxstsp & OTG_GRXSTSP_PKTSTS_MASK;
+		uint8_t ep = rxstsp & OTG_GRXSTSP_EPNUM_MASK;
+
+		/* Save packet size for dwc_ep_read_packet(). */
+		usbd_dev->rxbcnt = (rxstsp & OTG_GRXSTSP_BCNT_MASK) >> 4;
+		struct incoming_packet * packet = stashed_packets + ep;
+
+		if (pktsts == OTG_GRXSTSP_PKTSTS_OUT)
+		{
+			if (usbd_dev->rxbcnt)
+				stm32f723_ep_read_packet_internal(usbd_dev, ep);
+			else
+				packet->is_packet_present = true, packet->packet_length = 0;
+		}
+		else if (pktsts == OTG_GRXSTSP_PKTSTS_SETUP)
+		{
+			if (usbd_dev->rxbcnt)
+				stm32f723_ep_read_packet_internal(usbd_dev, ep);
+			else
+				packet->is_packet_present = true, packet->packet_length = 0;
+			stm32f723_ep_read_packet(usbd_dev, ep, &usbd_dev->control_state.req, 8);
+		}
+	}
+
+	/* Handle OUT endpoint interrupt requests. */
+	if (intsts & OTG_GINTSTS_OEPINT)
+	{
+		uint32_t daint = OTG_HS_DAINT;
+		int epnum;
+		for (epnum = 0; epnum < USB_ENDPOINT_COUNT; epnum ++)
+			if (daint & (1 << (16 + epnum)))
+			{
+				uint32_t t = OTG_HS_DOEPINT(epnum);
+				OTG_HS_DOEPINT(epnum) = t;
+
+				if (t & OTG_DOEPINTX_XFRC)
+				{
+					OTG_HS_DOEPINT(epnum) = OTG_DOEPINTX_XFRC;
+					if (usbd_dev->user_callback_ctr[epnum][USB_TRANSACTION_OUT]) {
+						usbd_dev->user_callback_ctr[epnum][USB_TRANSACTION_OUT] (usbd_dev, epnum);
+					}
+					OTG_HS_DOEPTSIZ(epnum) = usbd_dev->doeptsiz[epnum];
+					OTG_HS_DOEPCTL(epnum) |= OTG_DOEPCTL0_EPENA |
+						(usbd_dev->force_nak[epnum] ?
+						 OTG_DOEPCTL0_SNAK : OTG_DOEPCTL0_CNAK);
+				}
+				if (t & OTG_DOEPINTX_STUP)
+				{
+					/* Special case for control endpoints - reception of OUT packets is
+					 * always enabled. */
+					OTG_HS_DOEPINT(epnum) = OTG_DOEPINTX_STUP;
+					if (usbd_dev->user_callback_ctr[epnum][USB_TRANSACTION_SETUP]) {
+						usbd_dev->user_callback_ctr[epnum][USB_TRANSACTION_SETUP] (usbd_dev, epnum);
+					}
+					OTG_HS_DOEPTSIZ(epnum) = usbd_dev->doeptsiz[epnum];
+					OTG_HS_DOEPCTL(epnum) |= OTG_DOEPCTL0_EPENA |
+
+						(usbd_dev->force_nak[epnum] ?
+						 OTG_DOEPCTL0_SNAK : OTG_DOEPCTL0_CNAK);
+				}
+				if (t & OTG_DOEPINTX_OTEPDIS)
+					OTG_HS_DOEPINT(epnum) = OTG_DOEPINTX_OTEPDIS;
+			}
+	}
+
+	if (intsts & OTG_GINTSTS_USBSUSP) {
+		if (usbd_dev->user_callback_suspend) {
+			usbd_dev->user_callback_suspend();
+		}
+		OTG_HS_GINTSTS = OTG_GINTSTS_USBSUSP;
+	}
+
+	if (intsts & OTG_GINTSTS_WKUPINT) {
+		if (usbd_dev->user_callback_resume) {
+			usbd_dev->user_callback_resume();
+		}
+		OTG_HS_GINTSTS = OTG_GINTSTS_WKUPINT;
+	}
+
+	if (intsts & OTG_GINTSTS_SOF) {
+		if (usbd_dev->user_callback_sof) {
+			usbd_dev->user_callback_sof();
+		}
+		OTG_HS_GINTSTS = OTG_GINTSTS_SOF;
+	}
+
+	if (usbd_dev->user_callback_sof) {
+		OTG_HS_GINTMSK |= OTG_GINTMSK_SOFM;
+	} else {
+		OTG_HS_GINTMSK &= ~OTG_GINTMSK_SOFM;
+	}
+}
+
+const struct _usbd_driver stm32f723_usb_driver = {
+	.init = stm32f723_usbd_init,
+	.set_address = dwc_set_address,
+	.ep_setup = stm32f723_ep_setup, // dwc_ep_setup,
+	.ep_reset = stm32f723_endpoints_reset, // dwc_endpoints_reset,
+	.ep_stall_set = dwc_ep_stall_set,
+	.ep_stall_get = dwc_ep_stall_get,
+	.ep_nak_set = dwc_ep_nak_set,
+	.ep_write_packet = stm32f723_ep_write_packet, // dwc_ep_write_packet,
+	.ep_read_packet = stm32f723_ep_read_packet, // dwc_ep_read_packet,
+	.poll = stm32f723_poll, // dwc_poll,
+	.disconnect = dwc_disconnect,
+	.base_address = USB_OTG_HS_BASE,
+	.set_address_before_status = 1,
+	.rx_fifo_size = RX_FIFO_SIZE,
+};

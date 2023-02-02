@@ -44,8 +44,7 @@ all:	libopencm3_stm32f7 blackmagic.bin
 else
 all:	libopencm3_stm32f7 blackmagic.bin blackmagic_dfu.bin blackmagic_dfu.hex
 
-blackmagic_dfu.elf: usbdfu.o dfucore.o dfu_f4.o usb_f723.o \
-		usb_dwc_common.o usb_control.o serialno.o
+blackmagic_dfu.elf: usbdfu.o dfucore.o dfu_f4.o usb_f723.o serialno.o
 	@echo "  LD      $@"
 	$(Q)$(CC) $^ -o $@ $(LDFLAGS_BOOT)
 endif
@@ -58,8 +57,6 @@ host_clean:
 	-$(Q)$(RM) *.bin *elf *hex *.o
 
 # Add local libopencm3 patched usb driver.
-SRC += usb_dwc_common.c
-SRC += usb_control.c
 SRC += usb_f723.c
 
 # Note: below are provided some customized versions of
@@ -77,22 +74,6 @@ SRC += usb_f723.c
 # error of multiple symbol definitions. The strange
 # thing is why linking succeeds in the case described above.
 
-# The replacement libopencm3 usb_dwc_common.c driver
-# needs some extra include paths within libopencm3.
-usb_dwc_common.o: usb_dwc_common.c
-	@echo "  CC      $<"
-	$(Q)$(CC) -I../libopencm3/lib/usb/ $(CFLAGS) $(OPT_FLAGS) -c $< -o $@
-# Also build a custom version of the 'usb_control.c' high level
-# driver. A very minor change is applied to the original source code -
-# the data for setup usb packets is now read by the high level driver
-# in function '_usbd_control_setup()', and in the original source it is
-# expected that this data packet has already been read prior to invoking
-# the '_usbd_control_setup()' function
-usb_control.o: usb_control.c
-	@echo "  CC      $<"
-	$(Q)$(CC) -I../libopencm3/lib/usb/ $(CFLAGS) $(OPT_FLAGS) -c $< -o $@
-# TODO: decide if it is better that the 'usb_f723.c' usb driver initialization code
-# is merged into 'platform.c'
 usb_f723.o: usb_f723.c
 	@echo "  CC      $<"
 	$(Q)$(CC) -I../libopencm3/lib/usb/ $(CFLAGS) $(OPT_FLAGS) -c $< -o $@
