@@ -695,7 +695,7 @@ void gdb_poll_target(void)
 
 	/* poll target */
 	target_addr_t watch;
-	enum target_halt_reason reason = target_halt_poll(cur_target, &watch);
+	target_halt_reason_e reason = target_halt_poll(cur_target, &watch);
 	if (!reason)
 		return;
 
