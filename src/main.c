@@ -35,6 +35,34 @@
 #define BUF_SIZE 1024U
 static char pbuf[BUF_SIZE + 1U];
 
+static void bmp_poll_loop(void)
+{
+	SET_IDLE_STATE(false);
+	while (gdb_target_running && cur_target) {
+		gdb_poll_target();
+
+		// Check again, as `gdb_poll_target()` may
+		// alter these variables.
+		if (!gdb_target_running || !cur_target)
+			break;
+		char c = gdb_if_getchar_to(0);
+		if (c == '\x03' || c == '\x04')
+			target_halt_request(cur_target);
+		platform_pace_poll();
+#ifdef ENABLE_RTT
+		if (rtt_enabled)
+			poll_rtt(cur_target);
+#endif
+	}
+
+	SET_IDLE_STATE(true);
+	size_t size = gdb_getpacket(pbuf, BUF_SIZE);
+	// If port closed and target detached, stay idle
+	if (pbuf[0] != '\x04' || cur_target)
+		SET_IDLE_STATE(false);
+	gdb_main(pbuf, sizeof(pbuf), size);
+}
+
 int main(int argc, char **argv)
 {
 #if PC_HOSTED == 1
@@ -48,30 +76,7 @@ int main(int argc, char **argv)
 	while (true) {
 		volatile exception_s e;
 		TRY_CATCH (e, EXCEPTION_ALL) {
-			SET_IDLE_STATE(false);
-			while (gdb_target_running && cur_target) {
-				gdb_poll_target();
-
-				// Check again, as `gdb_poll_target()` may
-				// alter these variables.
-				if (!gdb_target_running || !cur_target)
-					break;
-				char c = gdb_if_getchar_to(0);
-				if (c == '\x03' || c == '\x04')
-					target_halt_request(cur_target);
-				platform_pace_poll();
-#ifdef ENABLE_RTT
-				if (rtt_enabled)
-					poll_rtt(cur_target);
-#endif
-			}
-
-			SET_IDLE_STATE(true);
-			size_t size = gdb_getpacket(pbuf, BUF_SIZE);
-			// If port closed and target detached, stay idle
-			if (pbuf[0] != 0x04 || cur_target)
-				SET_IDLE_STATE(false);
-			gdb_main(pbuf, sizeof(pbuf), size);
+			bmp_poll_loop();
 		}
 		if (e.type) {
 			gdb_putpacketz("EFF");
