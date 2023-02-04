@@ -55,6 +55,9 @@
 #define IMXRT_OCRAM2_SIZE  0x00080000U
 #define IMXRT_FLEXSPI_BASE UINT32_C(0x60000000)
 
+#define IMXRT_MPU_BASE UINT32_C(0xe000ed90)
+#define IMXRT_MPU_CTRL (IMXRT_MPU_BASE + 0x04U)
+
 #define IMXRT_FLEXSPI1_BASE UINT32_C(0x402a8000)
 /* We only carry definitions for FlexSPI1 Flash controller A1. */
 #define IMXRT_FLEXSPI1_MOD_CTRL0             (IMXRT_FLEXSPI1_BASE + 0x000U)
@@ -153,6 +156,7 @@ typedef struct imxrt_flexspi_lut_insn {
 
 typedef struct imxrt_priv {
 	imxrt_boot_src_e boot_source;
+	uint32_t mpu_state;
 	uint32_t flexspi_module_state;
 	uint32_t flexspi_lut_state;
 	imxrt_flexspi_lut_insn_s flexspi_lut_seq[8];
@@ -306,6 +310,9 @@ static imxrt_boot_src_e imxrt_boot_source(const uint32_t boot_cfg)
 static bool imxrt_enter_flash_mode(target_s *const target)
 {
 	imxrt_priv_s *const priv = (imxrt_priv_s *)target->target_storage;
+	/* Store MPU state and disable it to guarantee Flash control works */
+	priv->mpu_state = target_mem_read32(target, IMXRT_MPU_CTRL);
+	target_mem_write32(target, IMXRT_MPU_CTRL, 0);
 	/* Start by checking that the controller isn't suspended */
 	priv->flexspi_module_state = target_mem_read32(target, IMXRT_FLEXSPI1_MOD_CTRL0);
 	if (priv->flexspi_module_state & IMXRT_FLEXSPI1_MOD_CTRL0_SUSPEND)
@@ -340,6 +347,7 @@ static bool imxrt_exit_flash_mode(target_s *const target)
 		target_mem_write32(target, IMXRT_FLEXSPI1_LUT_CTRL, priv->flexspi_lut_state);
 	}
 	target_mem_write32(target, IMXRT_FLEXSPI1_MOD_CTRL0, priv->flexspi_module_state);
+	target_mem_write32(target, IMXRT_MPU_CTRL, priv->mpu_state);
 	return true;
 }
 
