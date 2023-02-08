@@ -79,11 +79,17 @@ typedef struct riscv_hart {
 	uint32_t hartsel;
 	riscv_debug_version_e version;
 	uint8_t address_width;
+
+	uint32_t vendorid;
+	uint32_t archid;
+	uint32_t implid;
+	uint32_t hartid;
 } riscv_hart_s;
 
 #define RV_STATUS_VERSION_MASK 0x0000000fU
 
 void riscv_jtag_dtm_handler(uint8_t dev_index);
 void riscv_dmi_init(riscv_dmi_s *dmi);
+bool riscv_csr_read(riscv_hart_s *hart, uint16_t reg, void *data);
 
 #endif /*TARGET_RISCV_DEBUG_H*/
