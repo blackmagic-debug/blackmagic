@@ -39,6 +39,15 @@
 #define IR_DMI    0x11U
 #define IR_BYPASS 0x1fU
 
+#define RV_DTMCS_NOOP           0x00000000U
+#define RV_DTMCS_DMI_RESET      0x00010000U
+#define RV_DTMCS_DMI_HARD_RESET 0x00020000U
+#define RV_DTMCS_VERSION_MASK   0x0000000fU
+
+static bool riscv_jtag_dtm_init(riscv_dmi_s *dmi);
+static uint32_t riscv_shift_dtmcs(const riscv_dmi_s *dmi, uint32_t control);
+static riscv_debug_version_e riscv_dtmcs_version(uint32_t dtmcs);
+
 void riscv_jtag_dtm_handler(const uint8_t dev_index)
 {
 	riscv_dmi_s *dmi = calloc(1, sizeof(*dmi));
@@ -49,9 +58,16 @@ void riscv_jtag_dtm_handler(const uint8_t dev_index)
 
 	dmi->idcode = jtag_devs[dev_index].jd_idcode;
 	dmi->dev_index = dev_index;
-	if (!riscv_dmi_init(dmi))
+	if (!riscv_jtag_dtm_init(dmi))
 		free(dmi);
 	jtag_dev_write_ir(dev_index, IR_BYPASS);
+}
+
+static bool riscv_jtag_dtm_init(riscv_dmi_s *const dmi)
+{
+	const uint32_t dtmcs = riscv_shift_dtmcs(dmi, RV_DTMCS_NOOP);
+	dmi->version = riscv_dtmcs_version(dtmcs);
+	return riscv_dmi_init(dmi);
 }
 
 /* Shift (read + write) the Debug Transport Module Control/Status (DTMCS) register */
@@ -61,4 +77,21 @@ uint32_t riscv_shift_dtmcs(const riscv_dmi_s *const dmi, const uint32_t control)
 	uint32_t status = 0;
 	jtag_dev_shift_dr(dmi->dev_index, (uint8_t *)&status, (const uint8_t *)&control, 32);
 	return status;
+}
+
+static riscv_debug_version_e riscv_dtmcs_version(const uint32_t dtmcs)
+{
+	switch (dtmcs & RV_DTMCS_VERSION_MASK) {
+	case 0:
+		DEBUG_INFO("RISC-V debug v0.11 DMI\n");
+		return RISCV_DEBUG_0_11;
+	case 1:
+		/* The stable version of the spec (v1.0) does not currently provide a way to distinguish between */
+		/* a device built against v0.13 of the spec or v1.0 of the spec. They use the same value here. */
+		DEBUG_INFO("RISC-V debug v0.13/v1.0 DMI\n");
+		return RISCV_DEBUG_0_13;
+	}
+	DEBUG_INFO(
+		"Please report part with unknown RISC-V debug DMI version %x\n", (uint8_t)(dtmcs & RV_DTMCS_VERSION_MASK));
+	return RISCV_DEBUG_UNKNOWN;
 }
