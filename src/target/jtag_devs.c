@@ -22,6 +22,7 @@
 #include "general.h"
 #include "jtag_scan.h"
 #include "adiv5.h"
+#include "riscv_debug.h"
 #include "jtag_devs.h"
 
 const jtag_dev_descr_s dev_descr[] = {
@@ -112,9 +113,10 @@ const jtag_dev_descr_s dev_descr[] = {
 			},
 	},
 	{
-		.idcode = 0x0000063dU,
-		.idmask = 0x00000fffU,
-		.descr = "Xambala: RVDBG013.",
+		.idcode = 0x0000563dU,
+		.idmask = 0x0fffffffU,
+		.descr = "RISC-V debug v0.13.",
+		.handler = riscv_debug_dtm_handler,
 	},
 	{
 		.idcode = 0x000007a3U,
