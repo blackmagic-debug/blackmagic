@@ -31,27 +31,17 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef TARGET_RISCV_DEBUG_H
-#define TARGET_RISCV_DEBUG_H
+#include "general.h"
+#include "jtag_scan.h"
+#include "riscv_debug.h"
 
-#include <stdint.h>
+#define IR_DTMCS 0x10U
 
-typedef enum riscv_debug_version {
-	RISCV_DEBUG_0_11,
-	RISCV_DEBUG_0_13,
-	RISCV_DEBUG_1_0,
-} riscv_debug_version_e;
-
-/* This structure represents a version-agnostic Debug Module Interface on a RISC-V device */
-typedef struct riscv_dmi {
-	uint32_t idcode;
-	riscv_debug_version_e version;
-
-	uint8_t dev_index;
-} riscv_dmi_s;
-
-void riscv_debug_dtm_handler(uint8_t dev_index);
-
-uint32_t riscv_shift_dtmcs(const riscv_dmi_s *dmi, uint32_t control);
-
-#endif /*TARGET_RISCV_DEBUG_H*/
+/* Shift (read + write) the Debug Transport Module Control/Status (DTMCS) register */
+uint32_t riscv_shift_dtmcs(const riscv_dmi_s *const dmi, const uint32_t control)
+{
+	jtag_dev_write_ir(dmi->dev_index, IR_DTMCS);
+	uint32_t status = 0;
+	jtag_dev_shift_dr(dmi->dev_index, (uint8_t *)&status, (const uint8_t *)&control, 32);
+	return status;
+}
