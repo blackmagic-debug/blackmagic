@@ -36,7 +36,13 @@
 
 bool riscv_dmi_init(riscv_dmi_s *const dmi)
 {
-	dmi->version = RISCV_DEBUG_0_13;
-	DEBUG_INFO("RISC-V debug v0.13 DMI\n");
+	/* If we don't currently know how to talk to this DMI, warn and fail */
+	if (dmi->version == RISCV_DEBUG_UNKNOWN)
+		return false;
+	if (dmi->version == RISCV_DEBUG_0_11) {
+		DEBUG_INFO("RISC-V debug v0.11 not presently supported\n");
+		return false;
+	}
+
 	return false;
 }
