@@ -46,3 +46,31 @@ bool riscv_dmi_init(riscv_dmi_s *const dmi)
 
 	return false;
 }
+
+static inline void riscv_dmi_ref(riscv_dmi_s *const dmi)
+{
+	++dmi->ref_count;
+}
+
+static inline void riscv_dmi_unref(riscv_dmi_s *const dmi)
+{
+	--dmi->ref_count;
+	if (!dmi->ref_count)
+		free(dmi);
+}
+
+void riscv_dm_ref(riscv_dm_s *const dbg_module)
+{
+	if (!dbg_module->ref_count)
+		riscv_dmi_ref(dbg_module->dmi_bus);
+	++dbg_module->ref_count;
+}
+
+void riscv_dm_unref(riscv_dm_s *const dbg_module)
+{
+	--dbg_module->ref_count;
+	if (!dbg_module->ref_count) {
+		riscv_dmi_unref(dbg_module->dmi_bus);
+		free(dbg_module);
+	}
+}
