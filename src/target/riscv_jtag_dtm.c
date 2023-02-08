@@ -44,7 +44,7 @@
 #define RV_DTMCS_DMI_HARD_RESET 0x00020000U
 #define RV_DTMCS_VERSION_MASK   0x0000000fU
 
-static bool riscv_jtag_dtm_init(riscv_dmi_s *dmi);
+static void riscv_jtag_dtm_init(riscv_dmi_s *dmi);
 static uint32_t riscv_shift_dtmcs(const riscv_dmi_s *dmi, uint32_t control);
 static riscv_debug_version_e riscv_dtmcs_version(uint32_t dtmcs);
 
@@ -58,16 +58,18 @@ void riscv_jtag_dtm_handler(const uint8_t dev_index)
 
 	dmi->idcode = jtag_devs[dev_index].jd_idcode;
 	dmi->dev_index = dev_index;
-	if (!riscv_jtag_dtm_init(dmi))
+	riscv_jtag_dtm_init(dmi);
+	/* If we failed to find any DMs or Harts, free the structure */
+	if (!dmi->ref_count)
 		free(dmi);
 	jtag_dev_write_ir(dev_index, IR_BYPASS);
 }
 
-static bool riscv_jtag_dtm_init(riscv_dmi_s *const dmi)
+static void riscv_jtag_dtm_init(riscv_dmi_s *const dmi)
 {
 	const uint32_t dtmcs = riscv_shift_dtmcs(dmi, RV_DTMCS_NOOP);
 	dmi->version = riscv_dtmcs_version(dtmcs);
-	return riscv_dmi_init(dmi);
+	riscv_dmi_init(dmi);
 }
 
 /* Shift (read + write) the Debug Transport Module Control/Status (DTMCS) register */
