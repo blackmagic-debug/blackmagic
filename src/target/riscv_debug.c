@@ -35,8 +35,11 @@
 #include "target_internal.h"
 #include "riscv_debug.h"
 
+#define RV_DM_DATA0              0x04U
 #define RV_DM_CONTROL            0x10U
 #define RV_DM_STATUS             0x11U
+#define RV_DM_ABST_CTRLSTATUS    0x16U
+#define RV_DM_ABST_COMMAND       0x17U
 #define RV_DM_NEXT_DM            0x1dU
 #define RV_DM_SYS_BUS_CTRLSTATUS 0x38U
 
@@ -55,6 +58,21 @@
 
 #define RV_DM_SYS_BUS_ADDRESS_MASK  0x00000fe0U
 #define RV_DM_SYS_BUS_ADDRESS_SHIFT 5U
+
+#define RV_DM_ABST_STATUS_BUSY    0x00001000U
+#define RV_DM_ABST_CMD_ACCESS_REG 0x00000000U
+
+#define RV_REG_READ           0x00000000U
+#define RV_REG_WRITE          0x00010000U
+#define RV_REG_XFER           0x00020000U
+#define RV_REG_ACCESS_32_BIT  0x00200000U
+#define RV_REG_ACCESS_64_BIT  0x00300000U
+#define RV_REG_ACCESS_128_BIT 0x00400000U
+
+#define RV_VENDOR_ID 0xf11U
+#define RV_ARCH_ID   0xf12U
+#define RV_IMPL_ID   0xf13U
+#define RV_HART_ID   0xf14U
 
 static void riscv_dm_init(riscv_dm_s *dbg_module);
 static bool riscv_hart_init(riscv_hart_s *hart);
@@ -174,6 +192,17 @@ static bool riscv_hart_init(riscv_hart_s *const hart)
 	target->priv = hart;
 	target->priv_free = riscv_hart_free;
 
+	riscv_halt_request(target);
+	riscv_csr_read(hart, RV_VENDOR_ID, &hart->vendorid);
+	/* XXX: These will technically go wrong on rv64 - need some way to deal with that. */
+	riscv_csr_read(hart, RV_ARCH_ID, &hart->archid);
+	riscv_csr_read(hart, RV_IMPL_ID, &hart->implid);
+	riscv_csr_read(hart, RV_HART_ID, &hart->hartid);
+	riscv_halt_resume(target, false);
+
+	DEBUG_INFO("Hart %" PRIu32 ": %u-bit RISC-V (arch = %" PRIx32 "), vendor = %" PRIx32 ", impl = %" PRIx32 "\n",
+		hart->hartid, hart->address_width, hart->archid, hart->vendorid, hart->implid);
+
 	target->halt_request = riscv_halt_request;
 	target->halt_resume = riscv_halt_resume;
 
@@ -265,6 +294,19 @@ static void riscv_dm_unref(riscv_dm_s *const dbg_module)
 		riscv_dmi_unref(dbg_module->dmi_bus);
 		free(dbg_module);
 	}
+}
+
+bool riscv_csr_read(riscv_hart_s *const hart, const uint16_t reg, void *const data)
+{
+	if (!riscv_dm_write(
+			hart->dbg_module, RV_DM_ABST_COMMAND, RV_DM_ABST_CMD_ACCESS_REG | RV_REG_XFER | RV_REG_ACCESS_32_BIT | reg))
+		return false;
+	uint32_t status = RV_DM_ABST_STATUS_BUSY;
+	while (status & RV_DM_ABST_STATUS_BUSY) {
+		if (!riscv_dm_read(hart->dbg_module, RV_DM_ABST_CTRLSTATUS, &status))
+			return false;
+	}
+	return riscv_dm_read(hart->dbg_module, RV_DM_DATA0, (uint32_t *)data);
 }
 
 static void riscv_halt_request(target_s *const target)
