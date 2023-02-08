@@ -35,9 +35,10 @@
 #include "target_internal.h"
 #include "riscv_debug.h"
 
-#define RV_DM_CONTROL 0x10U
-#define RV_DM_STATUS  0x11U
-#define RV_DM_NEXT_DM 0x1dU
+#define RV_DM_CONTROL            0x10U
+#define RV_DM_STATUS             0x11U
+#define RV_DM_NEXT_DM            0x1dU
+#define RV_DM_SYS_BUS_CTRLSTATUS 0x38U
 
 #define RV_DM_CTRL_ACTIVE          0x00000001U
 #define RV_DM_CTRL_HARTSEL_MASK    0x03ffffc0U
@@ -47,6 +48,9 @@
 #define RV_DM_CTRL_HARTSELHI_SHIFT 4U
 
 #define RV_DM_STAT_NON_EXISTENT 0x00004000U
+
+#define RV_DM_SYS_BUS_ADDRESS_MASK  0x00000fe0U
+#define RV_DM_SYS_BUS_ADDRESS_SHIFT 5U
 
 static void riscv_dm_init(riscv_dm_s *dbg_module);
 static bool riscv_hart_init(riscv_hart_s *hart);
@@ -58,6 +62,7 @@ static void riscv_dm_unref(riscv_dm_s *dbg_module);
 static inline bool riscv_dm_read(riscv_dm_s *dbg_module, uint8_t address, uint32_t *value);
 static inline bool riscv_dm_write(riscv_dm_s *dbg_module, uint8_t address, uint32_t value);
 static riscv_debug_version_e riscv_dm_version(uint32_t status);
+static riscv_debug_version_e riscv_sys_bus_version(uint32_t status);
 
 void riscv_dmi_init(riscv_dmi_s *const dmi)
 {
@@ -137,6 +142,7 @@ static void riscv_dm_init(riscv_dm_s *const dbg_module)
 		}
 		/* Setup the hart structure and discover the target core */
 		hart->dbg_module = dbg_module;
+		hart->hart_idx = hart_idx;
 		hart->hartsel = control;
 		if (!riscv_hart_init(hart))
 			free(hart);
@@ -145,6 +151,12 @@ static void riscv_dm_init(riscv_dm_s *const dbg_module)
 
 static bool riscv_hart_init(riscv_hart_s *const hart)
 {
+	uint32_t bus_status = 0;
+	if (!riscv_dm_read(hart->dbg_module, RV_DM_SYS_BUS_CTRLSTATUS, &bus_status))
+		return false;
+	hart->version = riscv_sys_bus_version(bus_status);
+	hart->address_width = (bus_status & RV_DM_SYS_BUS_ADDRESS_MASK) >> RV_DM_SYS_BUS_ADDRESS_SHIFT;
+
 	target_s *target = target_new();
 	if (!target)
 		return false;
@@ -185,7 +197,8 @@ static inline bool riscv_dm_write(riscv_dm_s *dbg_module, const uint8_t address,
 
 static riscv_debug_version_e riscv_dm_version(const uint32_t status)
 {
-	switch (status & RV_STATUS_VERSION_MASK) {
+	uint8_t version = status & RV_STATUS_VERSION_MASK;
+	switch (version) {
 	case 0:
 		return RISCV_DEBUG_UNIMPL;
 	case 1:
@@ -198,8 +211,20 @@ static riscv_debug_version_e riscv_dm_version(const uint32_t status)
 		DEBUG_INFO("RISC-V debug v1.0 DM\n");
 		return RISCV_DEBUG_1_0;
 	}
-	DEBUG_INFO(
-		"Please report part with unknown RISC-V debug DM version %x\n", (uint8_t)(status & RV_STATUS_VERSION_MASK));
+	DEBUG_INFO("Please report part with unknown RISC-V debug DM version %x\n", version);
+	return RISCV_DEBUG_UNKNOWN;
+}
+
+static riscv_debug_version_e riscv_sys_bus_version(uint32_t status)
+{
+	uint8_t version = (status >> 29) & RV_STATUS_VERSION_MASK;
+	switch (version) {
+	case 0:
+		return RISCV_DEBUG_0_11;
+	case 1:
+		return RISCV_DEBUG_0_13;
+	}
+	DEBUG_INFO("Please report part with unknown RISC-V system bus version %x\n", version);
 	return RISCV_DEBUG_UNKNOWN;
 }
 

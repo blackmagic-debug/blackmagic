@@ -157,7 +157,8 @@ static bool riscv_jtag_dmi_write(riscv_dmi_s *const dmi, const uint32_t address,
 
 static riscv_debug_version_e riscv_dtmcs_version(const uint32_t dtmcs)
 {
-	switch (dtmcs & RV_STATUS_VERSION_MASK) {
+	uint8_t version = dtmcs & RV_STATUS_VERSION_MASK;
+	switch (version) {
 	case 0:
 		DEBUG_INFO("RISC-V debug v0.11 DMI\n");
 		return RISCV_DEBUG_0_11;
@@ -167,7 +168,6 @@ static riscv_debug_version_e riscv_dtmcs_version(const uint32_t dtmcs)
 		DEBUG_INFO("RISC-V debug v0.13/v1.0 DMI\n");
 		return RISCV_DEBUG_0_13;
 	}
-	DEBUG_INFO(
-		"Please report part with unknown RISC-V debug DMI version %x\n", (uint8_t)(dtmcs & RV_STATUS_VERSION_MASK));
+	DEBUG_INFO("Please report part with unknown RISC-V debug DMI version %x\n", version);
 	return RISCV_DEBUG_UNKNOWN;
 }
