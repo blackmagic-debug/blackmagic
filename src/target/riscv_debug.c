@@ -44,10 +44,14 @@
 #define RV_DM_CTRL_HARTSEL_MASK    0x03ffffc0U
 #define RV_DM_CTRL_HARTSELLO_MASK  0x03ff0000U
 #define RV_DM_CTRL_HARTSELHI_MASK  0x0000ffc0U
+#define RV_DM_CTRL_HALT_REQ        0x80000000U
+#define RV_DM_CTRL_RESUME_REQ      0x40000000U
 #define RV_DM_CTRL_HARTSELLO_SHIFT 16U
 #define RV_DM_CTRL_HARTSELHI_SHIFT 4U
 
-#define RV_DM_STAT_NON_EXISTENT 0x00004000U
+#define RV_DM_STAT_ALL_RESUME_ACK 0x00020000U
+#define RV_DM_STAT_NON_EXISTENT   0x00004000U
+#define RV_DM_STAT_ALL_HALTED     0x00000200U
 
 #define RV_DM_SYS_BUS_ADDRESS_MASK  0x00000fe0U
 #define RV_DM_SYS_BUS_ADDRESS_SHIFT 5U
@@ -63,6 +67,9 @@ static inline bool riscv_dm_read(riscv_dm_s *dbg_module, uint8_t address, uint32
 static inline bool riscv_dm_write(riscv_dm_s *dbg_module, uint8_t address, uint32_t value);
 static riscv_debug_version_e riscv_dm_version(uint32_t status);
 static riscv_debug_version_e riscv_sys_bus_version(uint32_t status);
+
+static void riscv_halt_request(target_s *target);
+static void riscv_halt_resume(target_s *target, bool step);
 
 void riscv_dmi_init(riscv_dmi_s *const dmi)
 {
@@ -166,6 +173,10 @@ static bool riscv_hart_init(riscv_hart_s *const hart)
 	target->driver = "RISC-V";
 	target->priv = hart;
 	target->priv_free = riscv_hart_free;
+
+	target->halt_request = riscv_halt_request;
+	target->halt_resume = riscv_halt_resume;
+
 	return true;
 }
 
@@ -254,4 +265,37 @@ static void riscv_dm_unref(riscv_dm_s *const dbg_module)
 		riscv_dmi_unref(dbg_module->dmi_bus);
 		free(dbg_module);
 	}
+}
+
+static void riscv_halt_request(target_s *const target)
+{
+	riscv_hart_s *const hart = (riscv_hart_s *)target->priv;
+	/* Request the hart to halt */
+	if (!riscv_dm_write(hart->dbg_module, RV_DM_CONTROL, hart->hartsel | RV_DM_CTRL_HALT_REQ))
+		return;
+	uint32_t status = 0;
+	/* Poll for the hart to become halted */
+	while (!(status & RV_DM_STAT_ALL_HALTED)) {
+		if (!riscv_dm_read(hart->dbg_module, RV_DM_STATUS, &status))
+			return;
+	}
+	/* Clear the request now we've got it halted */
+	(void)riscv_dm_write(hart->dbg_module, RV_DM_CONTROL, hart->hartsel);
+}
+
+static void riscv_halt_resume(target_s *target, const bool step)
+{
+	(void)step;
+	riscv_hart_s *const hart = (riscv_hart_s *)target->priv;
+	/* Request the hart to resume */
+	if (!riscv_dm_write(hart->dbg_module, RV_DM_CONTROL, hart->hartsel | RV_DM_CTRL_RESUME_REQ))
+		return;
+	uint32_t status = 0;
+	/* Poll for the hart to become resumed */
+	while (!(status & RV_DM_STAT_ALL_RESUME_ACK)) {
+		if (!riscv_dm_read(hart->dbg_module, RV_DM_STATUS, &status))
+			return;
+	}
+	/* Clear the request now we've got it resumed */
+	(void)riscv_dm_write(hart->dbg_module, RV_DM_CONTROL, hart->hartsel);
 }
