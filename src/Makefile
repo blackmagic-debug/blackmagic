@@ -3,6 +3,7 @@ PLATFORM_DIR = platforms/$(PROBE_HOST)
 VPATH += $(PLATFORM_DIR) target
 ENABLE_DEBUG ?= 0
 ENABLE_CORTEXAR ?= 0
+ENABLE_RISCV ?= 0
 
 SYS = $(shell $(CC) -dumpmachine)
 
@@ -92,6 +93,12 @@ endif
 ifeq ($(ENABLE_CORTEXAR), 1)
 CFLAGS += -DENABLE_CORTEXAR
 SRC += cortexar.c
+endif
+
+ifeq ($(ENABLE_RISCV), 1)
+CFLAGS += -DENABLE_RISCV
+SRC +=            \
+	riscv_debug.c
 endif
 
 ifneq ($(PC_HOSTED),1)
