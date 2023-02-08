@@ -6,6 +6,7 @@ CFLAGS += -DENABLE_DEBUG -DPLATFORM_HAS_DEBUG
 CFLAGS +=-I ./target
 
 ENABLE_CORTEXAR := 1
+ENABLE_RISCV := 1
 
 # Clang requires some special handling here: -gnu means MinGW
 # while -msvc means Clang/CL. We don't currently support the latter
