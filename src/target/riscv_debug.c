@@ -34,17 +34,15 @@
 #include "general.h"
 #include "riscv_debug.h"
 
-bool riscv_dmi_init(riscv_dmi_s *const dmi)
+void riscv_dmi_init(riscv_dmi_s *const dmi)
 {
 	/* If we don't currently know how to talk to this DMI, warn and fail */
 	if (dmi->version == RISCV_DEBUG_UNKNOWN)
-		return false;
+		return;
 	if (dmi->version == RISCV_DEBUG_0_11) {
 		DEBUG_INFO("RISC-V debug v0.11 not presently supported\n");
-		return false;
+		return;
 	}
-
-	return false;
 }
 
 static inline void riscv_dmi_ref(riscv_dmi_s *const dmi)
