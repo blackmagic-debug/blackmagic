@@ -67,7 +67,7 @@ typedef struct riscv_hart {
 } riscv_hart_s;
 
 void riscv_jtag_dtm_handler(uint8_t dev_index);
-bool riscv_dmi_init(riscv_dmi_s *dmi);
+void riscv_dmi_init(riscv_dmi_s *dmi);
 
 void riscv_dm_ref(riscv_dm_s *dbg_module);
 void riscv_dm_unref(riscv_dm_s *dbg_module);
