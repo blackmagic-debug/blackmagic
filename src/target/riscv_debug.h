@@ -77,8 +77,7 @@ typedef struct riscv_hart {
 	riscv_dm_s *dbg_module;
 	uint32_t hart_idx;
 	uint32_t hartsel;
-	riscv_debug_version_e version;
-	uint8_t address_width;
+	uint8_t access_width;
 
 	uint32_t vendorid;
 	uint32_t archid;
