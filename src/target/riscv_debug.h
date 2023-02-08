@@ -44,8 +44,10 @@ typedef enum riscv_debug_version {
 	RISCV_DEBUG_1_0,
 } riscv_debug_version_e;
 
+typedef struct riscv_dmi riscv_dmi_s;
+
 /* This structure represents a version-agnostic Debug Module Interface on a RISC-V device */
-typedef struct riscv_dmi {
+struct riscv_dmi {
 	uint32_t ref_count;
 
 	uint32_t idcode;
@@ -53,7 +55,11 @@ typedef struct riscv_dmi {
 
 	uint8_t dev_index;
 	uint8_t idle_cycles;
-} riscv_dmi_s;
+	uint8_t address_width;
+	uint8_t fault;
+
+	bool (*read)(riscv_dmi_s *dmi, uint32_t address, uint32_t *value);
+};
 
 /* This represents a specific Debug Module on the DMI bus */
 typedef struct riscv_dm {

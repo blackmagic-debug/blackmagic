@@ -34,6 +34,8 @@
 #include "general.h"
 #include "riscv_debug.h"
 
+bool riscv_dmi_read(riscv_dmi_s *dmi, uint32_t address, uint32_t *value);
+
 void riscv_dmi_init(riscv_dmi_s *const dmi)
 {
 	/* If we don't currently know how to talk to this DMI, warn and fail */
@@ -43,6 +45,11 @@ void riscv_dmi_init(riscv_dmi_s *const dmi)
 		DEBUG_INFO("RISC-V debug v0.11 not presently supported\n");
 		return;
 	}
+}
+
+bool riscv_dmi_read(riscv_dmi_s *const dmi, const uint32_t address, uint32_t *const value)
+{
+	return dmi->read(dmi, address, value);
 }
 
 static inline void riscv_dmi_ref(riscv_dmi_s *const dmi)
