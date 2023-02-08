@@ -97,8 +97,9 @@ endif
 
 ifeq ($(ENABLE_RISCV), 1)
 CFLAGS += -DENABLE_RISCV
-SRC +=            \
-	riscv_debug.c
+SRC +=               \
+	riscv_debug.c    \
+	riscv_jtag_dtm.c
 endif
 
 ifneq ($(PC_HOSTED),1)
