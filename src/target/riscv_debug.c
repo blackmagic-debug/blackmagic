@@ -38,8 +38,15 @@
 #define RV_DM_STATUS  0x11U
 #define RV_DM_NEXT_DM 0x1dU
 
+#define RV_DM_CTRL_ACTIVE        0x00000001U
+#define RV_DM_CTRL_HARTSEL_MASK  0x0003ffc0U
+#define RV_DM_CTRL_HARTSEL_SHIFT 6U
+
 static void riscv_dm_init(riscv_dm_s *dbg_module);
 static bool riscv_dmi_read(riscv_dmi_s *dmi, uint32_t address, uint32_t *value);
+static bool riscv_dmi_write(riscv_dmi_s *dmi, uint32_t address, uint32_t value);
+static inline bool riscv_dm_read(riscv_dm_s *dbg_module, uint8_t address, uint32_t *value);
+static inline bool riscv_dm_write(riscv_dm_s *dbg_module, uint8_t address, uint32_t value);
 static riscv_debug_version_e riscv_dm_version(uint32_t status);
 
 void riscv_dmi_init(riscv_dmi_s *const dmi)
@@ -92,12 +99,37 @@ void riscv_dmi_init(riscv_dmi_s *const dmi)
 
 static void riscv_dm_init(riscv_dm_s *const dbg_module)
 {
-	(void)dbg_module;
+	/* Attempt to activate the DM */
+	if (!riscv_dm_write(dbg_module, RV_DM_CONTROL, RV_DM_CTRL_ACTIVE))
+		return;
+	/* Now find out how many hartsel bits are present */
+	uint32_t control = RV_DM_CTRL_ACTIVE | RV_DM_CTRL_HARTSEL_MASK;
+	if (!riscv_dm_write(dbg_module, RV_DM_CONTROL, control) || !riscv_dm_read(dbg_module, RV_DM_CONTROL, &control))
+		return;
+	/* Extract the maxinium number of harts present and iterate through the harts */
+	const uint32_t harts_max = (control & RV_DM_CTRL_HARTSEL_MASK) >> RV_DM_CTRL_HARTSEL_SHIFT;
+	for (uint32_t hart = 0; hart <= harts_max; ++hart) {
+	}
 }
 
 static bool riscv_dmi_read(riscv_dmi_s *const dmi, const uint32_t address, uint32_t *const value)
 {
 	return dmi->read(dmi, address, value);
+}
+
+static bool riscv_dmi_write(riscv_dmi_s *const dmi, const uint32_t address, const uint32_t value)
+{
+	return dmi->write(dmi, address, value);
+}
+
+static inline bool riscv_dm_read(riscv_dm_s *dbg_module, const uint8_t address, uint32_t *const value)
+{
+	return riscv_dmi_read(dbg_module->dmi_bus, dbg_module->base + address, value);
+}
+
+static inline bool riscv_dm_write(riscv_dm_s *dbg_module, const uint8_t address, const uint32_t value)
+{
+	return riscv_dmi_write(dbg_module->dmi_bus, dbg_module->base + address, value);
 }
 
 static riscv_debug_version_e riscv_dm_version(const uint32_t status)

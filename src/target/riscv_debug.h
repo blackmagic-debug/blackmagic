@@ -60,6 +60,7 @@ struct riscv_dmi {
 	uint8_t fault;
 
 	bool (*read)(riscv_dmi_s *dmi, uint32_t address, uint32_t *value);
+	bool (*write)(riscv_dmi_s *dmi, uint32_t address, uint32_t value);
 };
 
 /* This represents a specific Debug Module on the DMI bus */
