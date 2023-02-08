@@ -60,6 +60,7 @@
 static void riscv_jtag_dtm_init(riscv_dmi_s *dmi);
 static uint32_t riscv_shift_dtmcs(const riscv_dmi_s *dmi, uint32_t control);
 static bool riscv_jtag_dmi_read(riscv_dmi_s *dmi, uint32_t address, uint32_t *value);
+static bool riscv_jtag_dmi_write(riscv_dmi_s *dmi, uint32_t address, uint32_t value);
 static riscv_debug_version_e riscv_dtmcs_version(uint32_t dtmcs);
 
 void riscv_jtag_dtm_handler(const uint8_t dev_index)
@@ -93,6 +94,7 @@ static void riscv_jtag_dtm_init(riscv_dmi_s *const dmi)
 	jtag_dev_write_ir(dmi->dev_index, IR_DMI);
 
 	dmi->read = riscv_jtag_dmi_read;
+	dmi->write = riscv_jtag_dmi_write;
 
 	riscv_dmi_init(dmi);
 }
@@ -131,11 +133,25 @@ static bool riscv_shift_dmi(riscv_dmi_s *const dmi, const uint8_t operation, con
 
 static bool riscv_jtag_dmi_read(riscv_dmi_s *const dmi, const uint32_t address, uint32_t *const value)
 {
-	bool result = riscv_shift_dmi(dmi, RV_DMI_READ, address, 0, 0);
+	/* Setup the location to read from */
+	bool result = riscv_shift_dmi(dmi, RV_DMI_READ, address, 0, NULL);
 	if (result)
+		/* If that worked, read back the value and check the operation status */
 		result = riscv_shift_dmi(dmi, RV_DMI_NOOP, 0, 0, value);
 	if (!result)
 		DEBUG_WARN("DMI read at 0x%08" PRIx32 " failed with status %u\n", address, dmi->fault);
+	return result;
+}
+
+static bool riscv_jtag_dmi_write(riscv_dmi_s *const dmi, const uint32_t address, const uint32_t value)
+{
+	/* Write a value to the requested register */
+	bool result = riscv_shift_dmi(dmi, RV_DMI_WRITE, address, value, NULL);
+	if (result)
+		/* If that worked, read back the operation status to ensure the write actually worked */
+		result = riscv_shift_dmi(dmi, RV_DMI_NOOP, 0, 0, NULL);
+	if (!result)
+		DEBUG_WARN("DMI write at 0x%08" PRIx32 " failed with status %u\n", address, dmi->fault);
 	return result;
 }
 
