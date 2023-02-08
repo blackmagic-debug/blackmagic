@@ -50,8 +50,6 @@
 #define RV_DTMCS_ADDRESS_MASK      0x000003f0U
 #define RV_DTMCS_ADDRESS_SHIFT     4U
 
-#define RV_STATUS_VERSION_MASK 0x0000000fU
-
 #define RV_DMI_NOOP     0U
 #define RV_DMI_READ     1U
 #define RV_DMI_WRITE    2U
@@ -72,6 +70,7 @@ void riscv_jtag_dtm_handler(const uint8_t dev_index)
 		return;
 	}
 
+	/* Setup and try to discover the DMI bus */
 	dmi->idcode = jtag_devs[dev_index].jd_idcode;
 	dmi->dev_index = dev_index;
 	riscv_jtag_dtm_init(dmi);
@@ -86,7 +85,12 @@ static void riscv_jtag_dtm_init(riscv_dmi_s *const dmi)
 {
 	const uint32_t dtmcs = riscv_shift_dtmcs(dmi, RV_DTMCS_NOOP);
 	dmi->version = riscv_dtmcs_version(dtmcs);
+	/* Configure the TAP idle cylces based on what we've read */
 	dmi->idle_cycles = (dtmcs & RV_DTMCS_IDLE_CYCLES_MASK) >> RV_DTMCS_IDLE_CYCLES_SHIFT;
+	/* And figure out how many address bits the DMI address space has */
+	dmi->address_width = (dtmcs & RV_DTMCS_ADDRESS_MASK) >> RV_DTMCS_ADDRESS_SHIFT;
+	/* Switch into DMI access mode for speed */
+	jtag_dev_write_ir(dmi->dev_index, IR_DMI);
 
 	dmi->read = riscv_jtag_dmi_read;
 
