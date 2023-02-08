@@ -35,13 +35,12 @@
 #include "target_internal.h"
 #include "riscv_debug.h"
 
-#define RV_DM_DATA0              0x04U
-#define RV_DM_CONTROL            0x10U
-#define RV_DM_STATUS             0x11U
-#define RV_DM_ABST_CTRLSTATUS    0x16U
-#define RV_DM_ABST_COMMAND       0x17U
-#define RV_DM_NEXT_DM            0x1dU
-#define RV_DM_SYS_BUS_CTRLSTATUS 0x38U
+#define RV_DM_DATA0           0x04U
+#define RV_DM_CONTROL         0x10U
+#define RV_DM_STATUS          0x11U
+#define RV_DM_ABST_CTRLSTATUS 0x16U
+#define RV_DM_ABST_COMMAND    0x17U
+#define RV_DM_NEXT_DM         0x1dU
 
 #define RV_DM_CTRL_ACTIVE          0x00000001U
 #define RV_DM_CTRL_HARTSEL_MASK    0x03ffffc0U
@@ -56,9 +55,6 @@
 #define RV_DM_STAT_NON_EXISTENT   0x00004000U
 #define RV_DM_STAT_ALL_HALTED     0x00000200U
 
-#define RV_DM_SYS_BUS_ADDRESS_MASK  0x00000fe0U
-#define RV_DM_SYS_BUS_ADDRESS_SHIFT 5U
-
 #define RV_DM_ABST_STATUS_BUSY    0x00001000U
 #define RV_DM_ABST_CMD_ACCESS_REG 0x00000000U
 
@@ -69,6 +65,7 @@
 #define RV_REG_ACCESS_64_BIT  0x00300000U
 #define RV_REG_ACCESS_128_BIT 0x00400000U
 
+#define RV_ISA       0x301U
 #define RV_VENDOR_ID 0xf11U
 #define RV_ARCH_ID   0xf12U
 #define RV_IMPL_ID   0xf13U
@@ -84,7 +81,6 @@ static void riscv_dm_unref(riscv_dm_s *dbg_module);
 static inline bool riscv_dm_read(riscv_dm_s *dbg_module, uint8_t address, uint32_t *value);
 static inline bool riscv_dm_write(riscv_dm_s *dbg_module, uint8_t address, uint32_t value);
 static riscv_debug_version_e riscv_dm_version(uint32_t status);
-static riscv_debug_version_e riscv_sys_bus_version(uint32_t status);
 
 static void riscv_halt_request(target_s *target);
 static void riscv_halt_resume(target_s *target, bool step);
@@ -174,25 +170,39 @@ static void riscv_dm_init(riscv_dm_s *const dbg_module)
 	}
 }
 
+static uint8_t riscv_isa_address_width(const uint32_t isa)
+{
+	switch (isa >> 30U) {
+	case 1:
+		return 32U;
+	case 2:
+		return 64U;
+	case 3:
+		return 128U;
+	}
+	DEBUG_INFO("Unknown address width, defaulting to 32\n");
+	return 32U;
+}
+
 static bool riscv_hart_init(riscv_hart_s *const hart)
 {
-	uint32_t bus_status = 0;
-	if (!riscv_dm_read(hart->dbg_module, RV_DM_SYS_BUS_CTRLSTATUS, &bus_status))
-		return false;
-	hart->version = riscv_sys_bus_version(bus_status);
-	hart->address_width = (bus_status & RV_DM_SYS_BUS_ADDRESS_MASK) >> RV_DM_SYS_BUS_ADDRESS_SHIFT;
-
+	/* Allocate a new target */
 	target_s *target = target_new();
 	if (!target)
 		return false;
 
+	/* Grab a reference to the DMI and DM structurues and do preliminary setup of the target structure */
 	riscv_dm_ref(hart->dbg_module);
 	target->cpuid = hart->dbg_module->dmi_bus->idcode;
 	target->driver = "RISC-V";
 	target->priv = hart;
 	target->priv_free = riscv_hart_free;
 
+	/* Request halt and read certain key registers */
 	riscv_halt_request(target);
+	uint32_t isa = 0;
+	riscv_csr_read(hart, RV_ISA, &isa);
+	hart->access_width = riscv_isa_address_width(isa);
 	riscv_csr_read(hart, RV_VENDOR_ID, &hart->vendorid);
 	/* XXX: These will technically go wrong on rv64 - need some way to deal with that. */
 	riscv_csr_read(hart, RV_ARCH_ID, &hart->archid);
@@ -201,7 +211,7 @@ static bool riscv_hart_init(riscv_hart_s *const hart)
 	riscv_halt_resume(target, false);
 
 	DEBUG_INFO("Hart %" PRIu32 ": %u-bit RISC-V (arch = %" PRIx32 "), vendor = %" PRIx32 ", impl = %" PRIx32 "\n",
-		hart->hartid, hart->address_width, hart->archid, hart->vendorid, hart->implid);
+		hart->hartid, hart->access_width, hart->archid, hart->vendorid, hart->implid);
 
 	target->halt_request = riscv_halt_request;
 	target->halt_resume = riscv_halt_resume;
@@ -252,19 +262,6 @@ static riscv_debug_version_e riscv_dm_version(const uint32_t status)
 		return RISCV_DEBUG_1_0;
 	}
 	DEBUG_INFO("Please report part with unknown RISC-V debug DM version %x\n", version);
-	return RISCV_DEBUG_UNKNOWN;
-}
-
-static riscv_debug_version_e riscv_sys_bus_version(uint32_t status)
-{
-	uint8_t version = (status >> 29) & RV_STATUS_VERSION_MASK;
-	switch (version) {
-	case 0:
-		return RISCV_DEBUG_0_11;
-	case 1:
-		return RISCV_DEBUG_0_13;
-	}
-	DEBUG_INFO("Please report part with unknown RISC-V system bus version %x\n", version);
 	return RISCV_DEBUG_UNKNOWN;
 }
 
