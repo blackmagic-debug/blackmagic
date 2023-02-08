@@ -46,13 +46,30 @@ typedef enum riscv_debug_version {
 
 /* This structure represents a version-agnostic Debug Module Interface on a RISC-V device */
 typedef struct riscv_dmi {
+	uint32_t ref_count;
+
 	uint32_t idcode;
 	riscv_debug_version_e version;
 
 	uint8_t dev_index;
 } riscv_dmi_s;
 
+/* This represents a specific Debug Module on the DMI bus */
+typedef struct riscv_dm {
+	uint32_t ref_count;
+
+	riscv_dmi_s *dmi_bus;
+} riscv_dm_s;
+
+/* This represents a specifc Hart on a DM */
+typedef struct riscv_hart {
+	riscv_dm_s *dbg_module;
+} riscv_hart_s;
+
 void riscv_jtag_dtm_handler(uint8_t dev_index);
 bool riscv_dmi_init(riscv_dmi_s *dmi);
+
+void riscv_dm_ref(riscv_dm_s *dbg_module);
+void riscv_dm_unref(riscv_dm_s *dbg_module);
 
 #endif /*TARGET_RISCV_DEBUG_H*/
