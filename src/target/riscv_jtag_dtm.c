@@ -33,16 +33,24 @@
 
 #include "general.h"
 #include "jtag_scan.h"
+#include "jtagtap.h"
 #include "riscv_debug.h"
 
 #define IR_DTMCS  0x10U
 #define IR_DMI    0x11U
 #define IR_BYPASS 0x1fU
 
-#define RV_DTMCS_NOOP           0x00000000U
-#define RV_DTMCS_DMI_RESET      0x00010000U
-#define RV_DTMCS_DMI_HARD_RESET 0x00020000U
-#define RV_DTMCS_VERSION_MASK   0x0000000fU
+#define RV_DTMCS_NOOP              0x00000000U
+#define RV_DTMCS_DMI_RESET         0x00010000U
+#define RV_DTMCS_DMI_HARD_RESET    0x00020000U
+#define RV_DTMCS_IDLE_CYCLES_MASK  0x00007000U
+#define RV_DTMCS_IDLE_CYCLES_SHIFT 12U
+#define RV_DTMCS_DMI_STATUS_MASK   0x00000c00U
+#define RV_DTMCS_DMI_STATUS_SHIFT  10U
+#define RV_DTMCS_ADDRESS_MASK      0x000003f0U
+#define RV_DTMCS_ADDRESS_SHIFT     4U
+
+#define RV_STATUS_VERSION_MASK 0x0000000fU
 
 static void riscv_jtag_dtm_init(riscv_dmi_s *dmi);
 static uint32_t riscv_shift_dtmcs(const riscv_dmi_s *dmi, uint32_t control);
@@ -62,6 +70,7 @@ void riscv_jtag_dtm_handler(const uint8_t dev_index)
 	/* If we failed to find any DMs or Harts, free the structure */
 	if (!dmi->ref_count)
 		free(dmi);
+	/* Reset the JTAG machinary back to bypass to scan the next device in the chain */
 	jtag_dev_write_ir(dev_index, IR_BYPASS);
 }
 
@@ -69,6 +78,7 @@ static void riscv_jtag_dtm_init(riscv_dmi_s *const dmi)
 {
 	const uint32_t dtmcs = riscv_shift_dtmcs(dmi, RV_DTMCS_NOOP);
 	dmi->version = riscv_dtmcs_version(dtmcs);
+	dmi->idle_cycles = (dtmcs & RV_DTMCS_IDLE_CYCLES_MASK) >> RV_DTMCS_IDLE_CYCLES_SHIFT;
 	riscv_dmi_init(dmi);
 }
 
@@ -83,7 +93,7 @@ uint32_t riscv_shift_dtmcs(const riscv_dmi_s *const dmi, const uint32_t control)
 
 static riscv_debug_version_e riscv_dtmcs_version(const uint32_t dtmcs)
 {
-	switch (dtmcs & RV_DTMCS_VERSION_MASK) {
+	switch (dtmcs & RV_STATUS_VERSION_MASK) {
 	case 0:
 		DEBUG_INFO("RISC-V debug v0.11 DMI\n");
 		return RISCV_DEBUG_0_11;
@@ -94,6 +104,6 @@ static riscv_debug_version_e riscv_dtmcs_version(const uint32_t dtmcs)
 		return RISCV_DEBUG_0_13;
 	}
 	DEBUG_INFO(
-		"Please report part with unknown RISC-V debug DMI version %x\n", (uint8_t)(dtmcs & RV_DTMCS_VERSION_MASK));
+		"Please report part with unknown RISC-V debug DMI version %x\n", (uint8_t)(dtmcs & RV_STATUS_VERSION_MASK));
 	return RISCV_DEBUG_UNKNOWN;
 }

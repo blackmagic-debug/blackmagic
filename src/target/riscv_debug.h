@@ -52,6 +52,7 @@ typedef struct riscv_dmi {
 	riscv_debug_version_e version;
 
 	uint8_t dev_index;
+	uint8_t idle_cycles;
 } riscv_dmi_s;
 
 /* This represents a specific Debug Module on the DMI bus */
