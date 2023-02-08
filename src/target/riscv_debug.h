@@ -39,6 +39,7 @@
 
 typedef enum riscv_debug_version {
 	RISCV_DEBUG_UNKNOWN,
+	RISCV_DEBUG_UNIMPL,
 	RISCV_DEBUG_0_11,
 	RISCV_DEBUG_0_13,
 	RISCV_DEBUG_1_0,
@@ -66,12 +67,16 @@ typedef struct riscv_dm {
 	uint32_t ref_count;
 
 	riscv_dmi_s *dmi_bus;
+	uint32_t base;
+	riscv_debug_version_e version;
 } riscv_dm_s;
 
 /* This represents a specifc Hart on a DM */
 typedef struct riscv_hart {
 	riscv_dm_s *dbg_module;
 } riscv_hart_s;
+
+#define RV_STATUS_VERSION_MASK 0x0000000fU
 
 void riscv_jtag_dtm_handler(uint8_t dev_index);
 void riscv_dmi_init(riscv_dmi_s *dmi);
