@@ -52,8 +52,16 @@
 
 #define RV_STATUS_VERSION_MASK 0x0000000fU
 
+#define RV_DMI_NOOP     0U
+#define RV_DMI_READ     1U
+#define RV_DMI_WRITE    2U
+#define RV_DMI_SUCCESS  0U
+#define RV_DMI_FAILURE  2U
+#define RV_DMI_TOO_SOON 3U
+
 static void riscv_jtag_dtm_init(riscv_dmi_s *dmi);
 static uint32_t riscv_shift_dtmcs(const riscv_dmi_s *dmi, uint32_t control);
+static bool riscv_jtag_dmi_read(riscv_dmi_s *dmi, uint32_t address, uint32_t *value);
 static riscv_debug_version_e riscv_dtmcs_version(uint32_t dtmcs);
 
 void riscv_jtag_dtm_handler(const uint8_t dev_index)
@@ -79,6 +87,9 @@ static void riscv_jtag_dtm_init(riscv_dmi_s *const dmi)
 	const uint32_t dtmcs = riscv_shift_dtmcs(dmi, RV_DTMCS_NOOP);
 	dmi->version = riscv_dtmcs_version(dtmcs);
 	dmi->idle_cycles = (dtmcs & RV_DTMCS_IDLE_CYCLES_MASK) >> RV_DTMCS_IDLE_CYCLES_SHIFT;
+
+	dmi->read = riscv_jtag_dmi_read;
+
 	riscv_dmi_init(dmi);
 }
 
@@ -89,6 +100,39 @@ uint32_t riscv_shift_dtmcs(const riscv_dmi_s *const dmi, const uint32_t control)
 	uint32_t status = 0;
 	jtag_dev_shift_dr(dmi->dev_index, (uint8_t *)&status, (const uint8_t *)&control, 32);
 	return status;
+}
+
+static bool riscv_shift_dmi(riscv_dmi_s *const dmi, const uint8_t operation, const uint32_t address,
+	const uint32_t data_in, uint32_t *const data_out)
+{
+	jtag_dev_s *device = &jtag_devs[dmi->dev_index];
+	jtagtap_shift_dr();
+	jtag_proc.jtagtap_tdi_seq(false, ones, device->dr_prescan);
+	/* Shift out the 2 bits for the operation, and get the status bits for the previous back */
+	uint8_t status = 0;
+	jtag_proc.jtagtap_tdi_tdo_seq(&status, false, &operation, 2);
+	/* Then the data component */
+	if (data_out)
+		jtag_proc.jtagtap_tdi_tdo_seq((uint8_t *)data_out, false, (const uint8_t *)&data_in, 32);
+	else
+		jtag_proc.jtagtap_tdi_seq(false, (const uint8_t *)&data_in, 32);
+	/* And finally the address component */
+	jtag_proc.jtagtap_tdi_seq(!device->dr_postscan, (const uint8_t *)&address, dmi->address_width);
+	jtag_proc.jtagtap_tdi_seq(true, ones, device->dr_postscan);
+	jtagtap_return_idle(dmi->idle_cycles);
+	/* XXX: Need to deal with when status is 3. */
+	dmi->fault = status;
+	return status == RV_DMI_SUCCESS;
+}
+
+static bool riscv_jtag_dmi_read(riscv_dmi_s *const dmi, const uint32_t address, uint32_t *const value)
+{
+	bool result = riscv_shift_dmi(dmi, RV_DMI_READ, address, 0, 0);
+	if (result)
+		result = riscv_shift_dmi(dmi, RV_DMI_NOOP, 0, 0, value);
+	if (!result)
+		DEBUG_WARN("DMI read at 0x%08" PRIx32 " failed with status %u\n", address, dmi->fault);
+	return result;
 }
 
 static riscv_debug_version_e riscv_dtmcs_version(const uint32_t dtmcs)
