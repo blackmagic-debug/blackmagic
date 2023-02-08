@@ -32,19 +32,29 @@
  */
 
 #include "general.h"
+#include "target_internal.h"
 #include "riscv_debug.h"
 
 #define RV_DM_CONTROL 0x10U
 #define RV_DM_STATUS  0x11U
 #define RV_DM_NEXT_DM 0x1dU
 
-#define RV_DM_CTRL_ACTIVE        0x00000001U
-#define RV_DM_CTRL_HARTSEL_MASK  0x0003ffc0U
-#define RV_DM_CTRL_HARTSEL_SHIFT 6U
+#define RV_DM_CTRL_ACTIVE          0x00000001U
+#define RV_DM_CTRL_HARTSEL_MASK    0x03ffffc0U
+#define RV_DM_CTRL_HARTSELLO_MASK  0x03ff0000U
+#define RV_DM_CTRL_HARTSELHI_MASK  0x0000ffc0U
+#define RV_DM_CTRL_HARTSELLO_SHIFT 16U
+#define RV_DM_CTRL_HARTSELHI_SHIFT 4U
+
+#define RV_DM_STAT_NON_EXISTENT 0x00004000U
 
 static void riscv_dm_init(riscv_dm_s *dbg_module);
+static bool riscv_hart_init(riscv_hart_s *hart);
+static void riscv_hart_free(void *priv);
 static bool riscv_dmi_read(riscv_dmi_s *dmi, uint32_t address, uint32_t *value);
 static bool riscv_dmi_write(riscv_dmi_s *dmi, uint32_t address, uint32_t value);
+static void riscv_dm_ref(riscv_dm_s *dbg_module);
+static void riscv_dm_unref(riscv_dm_s *dbg_module);
 static inline bool riscv_dm_read(riscv_dm_s *dbg_module, uint8_t address, uint32_t *value);
 static inline bool riscv_dm_write(riscv_dm_s *dbg_module, uint8_t address, uint32_t value);
 static riscv_debug_version_e riscv_dm_version(uint32_t status);
@@ -106,10 +116,51 @@ static void riscv_dm_init(riscv_dm_s *const dbg_module)
 	uint32_t control = RV_DM_CTRL_ACTIVE | RV_DM_CTRL_HARTSEL_MASK;
 	if (!riscv_dm_write(dbg_module, RV_DM_CONTROL, control) || !riscv_dm_read(dbg_module, RV_DM_CONTROL, &control))
 		return;
-	/* Extract the maxinium number of harts present and iterate through the harts */
-	const uint32_t harts_max = (control & RV_DM_CTRL_HARTSEL_MASK) >> RV_DM_CTRL_HARTSEL_SHIFT;
-	for (uint32_t hart = 0; hart <= harts_max; ++hart) {
+	/* Extract the maximum number of harts present and iterate through the harts */
+	const uint32_t harts_max = ((control & RV_DM_CTRL_HARTSELLO_MASK) >> RV_DM_CTRL_HARTSELLO_SHIFT) |
+		((control & RV_DM_CTRL_HARTSELHI_MASK) << RV_DM_CTRL_HARTSELHI_SHIFT);
+	for (uint32_t hart_idx = 0; hart_idx <= harts_max; ++hart_idx) {
+		/* Select the hart */
+		control = ((hart_idx << RV_DM_CTRL_HARTSELLO_SHIFT) & RV_DM_CTRL_HARTSELLO_MASK) |
+			((hart_idx >> RV_DM_CTRL_HARTSELHI_SHIFT) & RV_DM_CTRL_HARTSELHI_MASK) | RV_DM_CTRL_ACTIVE;
+		uint32_t status = 0;
+		if (!riscv_dm_write(dbg_module, RV_DM_CONTROL, control) || !riscv_dm_read(dbg_module, RV_DM_STATUS, &status))
+			return;
+		/* If the hart doesn't exist, the spec says to terminate scan */
+		if (status & RV_DM_STAT_NON_EXISTENT)
+			break;
+
+		riscv_hart_s *hart = calloc(1, sizeof(*hart));
+		if (!hart) { /* calloc failed: heap exhaustion */
+			DEBUG_WARN("calloc: failed in %s\n", __func__);
+			return;
+		}
+		/* Setup the hart structure and discover the target core */
+		hart->dbg_module = dbg_module;
+		hart->hartsel = control;
+		if (!riscv_hart_init(hart))
+			free(hart);
 	}
+}
+
+static bool riscv_hart_init(riscv_hart_s *const hart)
+{
+	target_s *target = target_new();
+	if (!target)
+		return false;
+
+	riscv_dm_ref(hart->dbg_module);
+	target->cpuid = hart->dbg_module->dmi_bus->idcode;
+	target->driver = "RISC-V";
+	target->priv = hart;
+	target->priv_free = riscv_hart_free;
+	return true;
+}
+
+static void riscv_hart_free(void *const priv)
+{
+	riscv_dm_unref(((riscv_hart_s *)priv)->dbg_module);
+	free(priv);
 }
 
 static bool riscv_dmi_read(riscv_dmi_s *const dmi, const uint32_t address, uint32_t *const value)
@@ -164,14 +215,14 @@ static inline void riscv_dmi_unref(riscv_dmi_s *const dmi)
 		free(dmi);
 }
 
-void riscv_dm_ref(riscv_dm_s *const dbg_module)
+static void riscv_dm_ref(riscv_dm_s *const dbg_module)
 {
 	if (!dbg_module->ref_count)
 		riscv_dmi_ref(dbg_module->dmi_bus);
 	++dbg_module->ref_count;
 }
 
-void riscv_dm_unref(riscv_dm_s *const dbg_module)
+static void riscv_dm_unref(riscv_dm_s *const dbg_module)
 {
 	--dbg_module->ref_count;
 	if (!dbg_module->ref_count) {

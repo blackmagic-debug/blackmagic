@@ -75,14 +75,12 @@ typedef struct riscv_dm {
 /* This represents a specifc Hart on a DM */
 typedef struct riscv_hart {
 	riscv_dm_s *dbg_module;
+	uint32_t hartsel;
 } riscv_hart_s;
 
 #define RV_STATUS_VERSION_MASK 0x0000000fU
 
 void riscv_jtag_dtm_handler(uint8_t dev_index);
 void riscv_dmi_init(riscv_dmi_s *dmi);
-
-void riscv_dm_ref(riscv_dm_s *dbg_module);
-void riscv_dm_unref(riscv_dm_s *dbg_module);
 
 #endif /*TARGET_RISCV_DEBUG_H*/
