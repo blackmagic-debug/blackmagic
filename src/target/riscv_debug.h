@@ -38,6 +38,7 @@
 #include <stdbool.h>
 
 typedef enum riscv_debug_version {
+	RISCV_DEBUG_UNKNOWN,
 	RISCV_DEBUG_0_11,
 	RISCV_DEBUG_0_13,
 	RISCV_DEBUG_1_0,
