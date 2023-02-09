@@ -111,5 +111,6 @@ typedef struct riscv_hart {
 void riscv_jtag_dtm_handler(uint8_t dev_index);
 void riscv_dmi_init(riscv_dmi_s *dmi);
 bool riscv_csr_read(riscv_hart_s *hart, uint16_t reg, void *data);
+bool riscv_csr_write(riscv_hart_s *hart, uint16_t reg, const void *data);
 
 #endif /*TARGET_RISCV_DEBUG_H*/
