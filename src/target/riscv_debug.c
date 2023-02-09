@@ -70,11 +70,17 @@
 #define RV_REG_ACCESS_64_BIT  0x00300000U
 #define RV_REG_ACCESS_128_BIT 0x00400000U
 
-#define RV_ISA       0x301U
+/* The following is a set of CSR address definitions */
+/* misa -> The Hart's machine ISA register */
+#define RV_ISA 0x301U
+/* mvendorid -> The JEP-106 code for the vendor implementing this Hart */
 #define RV_VENDOR_ID 0xf11U
-#define RV_ARCH_ID   0xf12U
-#define RV_IMPL_ID   0xf13U
-#define RV_HART_ID   0xf14U
+/* marchid -> The RISC-V International architecture ID code */
+#define RV_ARCH_ID 0xf12U
+/* mimplid -> Hart's processor implementation ID */
+#define RV_IMPL_ID 0xf13U
+/* mhartid -> machine ID of the Hart */
+#define RV_HART_ID 0xf14U
 
 #define RV_ISA_EXTENSIONS_MASK 0x03ffffffU
 
