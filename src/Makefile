@@ -98,6 +98,8 @@ endif
 ifeq ($(ENABLE_RISCV), 1)
 CFLAGS += -DENABLE_RISCV
 SRC +=               \
+	riscv32.c        \
+	riscv64.c        \
 	riscv_debug.c    \
 	riscv_jtag_dtm.c
 endif

@@ -36,6 +36,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "target.h"
 
 typedef enum riscv_debug_version {
 	RISCV_DEBUG_UNKNOWN,
@@ -110,6 +111,8 @@ typedef struct riscv_hart {
 
 void riscv_jtag_dtm_handler(uint8_t dev_index);
 void riscv_dmi_init(riscv_dmi_s *dmi);
+riscv_hart_s *riscv_hart_struct(target_s *target);
+
 bool riscv_csr_read(riscv_hart_s *hart, uint16_t reg, void *data);
 bool riscv_csr_write(riscv_hart_s *hart, uint16_t reg, const void *data);
 
