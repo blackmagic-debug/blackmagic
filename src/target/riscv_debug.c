@@ -214,7 +214,7 @@ static bool riscv_hart_init(riscv_hart_s *const hart)
 	uint32_t isa = riscv_hart_discover_isa(hart);
 	hart->address_width = riscv_isa_address_width(isa);
 	hart->extensions = isa & RV_ISA_EXTENSIONS_MASK;
-	riscv_csr_read(hart, RV_VENDOR_ID, &hart->vendorid);
+	riscv_csr_read(hart, RV_VENDOR_ID | RV_CSR_FORCE_32_BIT, &hart->vendorid);
 	/* XXX: These will technically go wrong on rv64 - need some way to deal with that. */
 	riscv_csr_read(hart, RV_ARCH_ID, &hart->archid);
 	riscv_csr_read(hart, RV_IMPL_ID, &hart->implid);
