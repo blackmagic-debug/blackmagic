@@ -218,9 +218,13 @@ static bool riscv_hart_init(riscv_hart_s *const hart)
 	riscv_csr_read(hart, RV_HART_ID, &hart->hartid);
 	riscv_halt_resume(target, false);
 
-	DEBUG_INFO("Hart %" PRIx32 ": %u-bit RISC-V (arch = %08" PRIx32 "), vendor = %08" PRIx32 ", impl = %08" PRIx32
+	DEBUG_INFO("Hart %" PRIx32 ": %u-bit RISC-V (arch = %08" PRIx32 "), vendor = %" PRIx32 ", impl = %" PRIx32
 			   ", exts = %08" PRIx32 "\n",
 		hart->hartid, hart->access_width, hart->archid, hart->vendorid, hart->implid, hart->extensions);
+	/* If the hart implements mvendorid, this gives us the JEP-106, otherwise use the JTAG IDCode */
+	target->designer_code = hart->vendorid ?
+		hart->vendorid :
+		((hart->dbg_module->dmi_bus->idcode & JTAG_IDCODE_DESIGNER_MASK) >> JTAG_IDCODE_DESIGNER_OFFSET);
 
 	target->halt_request = riscv_halt_request;
 	target->halt_resume = riscv_halt_resume;
