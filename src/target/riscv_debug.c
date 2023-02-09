@@ -244,7 +244,6 @@ static bool riscv_hart_init(riscv_hart_s *const hart)
 	riscv_csr_read(hart, RV_ARCH_ID, &hart->archid);
 	riscv_csr_read(hart, RV_IMPL_ID, &hart->implid);
 	riscv_csr_read(hart, RV_HART_ID, &hart->hartid);
-	riscv_halt_resume(target, false);
 
 	DEBUG_INFO("Hart %" PRIx32 ": %u-bit RISC-V (arch = %08" PRIx32 "), vendor = %" PRIx32 ", impl = %" PRIx32
 			   ", exts = %08" PRIx32 "\n",
@@ -254,17 +253,22 @@ static bool riscv_hart_init(riscv_hart_s *const hart)
 		hart->vendorid :
 		((hart->dbg_module->dmi_bus->idcode & JTAG_IDCODE_DESIGNER_MASK) >> JTAG_IDCODE_DESIGNER_OFFSET);
 
+	target->mem_read = riscv_mem_read;
+
 	target->halt_request = riscv_halt_request;
 	target->halt_resume = riscv_halt_resume;
 
 	if (hart->access_width == 32U) {
 		DEBUG_INFO("-> riscv32_probe\n");
-		return riscv32_probe(target);
+		if (!riscv32_probe(target))
+			DEBUG_INFO("Probing failed, please report unknown RISC-V 32 device\n");
 	}
 	if (hart->access_width == 64U) {
 		DEBUG_INFO("-> riscv64_probe\n");
-		return riscv64_probe(target);
+		if (!riscv64_probe(target))
+			DEBUG_INFO("Probing failed, please report unknown RISC-V 64 device\n");
 	}
+	riscv_halt_resume(target, false);
 	return true;
 }
 
