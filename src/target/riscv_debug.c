@@ -62,13 +62,21 @@
 #define RV_DM_ABST_STATUS_BUSY       0x00001000U
 #define RV_DM_ABST_STATUS_DATA_COUNT 0x0000000fU
 #define RV_DM_ABST_CMD_ACCESS_REG    0x00000000U
+#define RV_DM_ABST_CMD_ACCESS_MEM    0x02000000U
 
-#define RV_REG_READ           0x00000000U
-#define RV_REG_WRITE          0x00010000U
+#define RV_ABST_READ          0x00000000U
+#define RV_ABST_WRITE         0x00010000U
 #define RV_REG_XFER           0x00020000U
 #define RV_REG_ACCESS_32_BIT  0x00200000U
 #define RV_REG_ACCESS_64_BIT  0x00300000U
 #define RV_REG_ACCESS_128_BIT 0x00400000U
+
+#define RV_MEM_ACCESS_8_BIT   0x0U
+#define RV_MEM_ACCESS_16_BIT  0x1U
+#define RV_MEM_ACCESS_32_BIT  0x2U
+#define RV_MEM_ACCESS_64_BIT  0x3U
+#define RV_MEM_ACCESS_128_BIT 0x4U
+#define RV_MEM_ACCESS_SHIFT   20U
 
 #define RV_CSR_FORCE_MASK   0x3000U
 #define RV_CSR_FORCE_32_BIT 0x1000U
@@ -424,7 +432,7 @@ bool riscv_csr_read(riscv_hart_s *const hart, const uint16_t reg, void *const da
 	const uint8_t access_width = (reg & RV_CSR_FORCE_MASK) ? riscv_csr_access_width(reg) : hart->access_width;
 	/* Set up the register read and wait for it to complete */
 	if (!riscv_dm_write(hart->dbg_module, RV_DM_ABST_COMMAND,
-			RV_DM_ABST_CMD_ACCESS_REG | RV_REG_READ | RV_REG_XFER | riscv_hart_access_width(access_width) |
+			RV_DM_ABST_CMD_ACCESS_REG | RV_ABST_READ | RV_REG_XFER | riscv_hart_access_width(access_width) |
 				(reg & ~RV_CSR_FORCE_MASK)) ||
 		!riscv_csr_wait_complete(hart))
 		return false;
@@ -456,7 +464,7 @@ bool riscv_csr_write(riscv_hart_s *const hart, const uint16_t reg, const void *c
 		return false;
 	/* Configure and run the write */
 	if (!riscv_dm_write(hart->dbg_module, RV_DM_ABST_COMMAND,
-			RV_DM_ABST_CMD_ACCESS_REG | RV_REG_WRITE | RV_REG_XFER | riscv_hart_access_width(access_width) |
+			RV_DM_ABST_CMD_ACCESS_REG | RV_ABST_WRITE | RV_REG_XFER | riscv_hart_access_width(access_width) |
 				(reg & ~RV_CSR_FORCE_MASK)))
 		return false;
 	return riscv_csr_wait_complete(hart);
