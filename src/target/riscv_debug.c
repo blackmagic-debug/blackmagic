@@ -395,6 +395,25 @@ bool riscv_csr_read(riscv_hart_s *const hart, const uint16_t reg, void *const da
 	return riscv_dm_read(hart->dbg_module, RV_DM_DATA0, value);
 }
 
+bool riscv_csr_write(riscv_hart_s *const hart, const uint16_t reg, const void *const data)
+{
+	/* Set up the data registers based on the Hart native access size */
+	const uint32_t *const value = (const uint32_t *)data;
+	if (!riscv_dm_write(hart->dbg_module, RV_DM_DATA0, value[0]))
+		return false;
+	if (hart->access_width >= 64U && !riscv_dm_write(hart->dbg_module, RV_DM_DATA1, value[1]))
+		return false;
+	if (hart->access_width == 128 &&
+		!(riscv_dm_write(hart->dbg_module, RV_DM_DATA2, value[2]) &&
+			riscv_dm_write(hart->dbg_module, RV_DM_DATA3, value[3])))
+		return false;
+	/* Configure and run the write */
+	if (!riscv_dm_write(hart->dbg_module, RV_DM_ABST_COMMAND,
+			RV_DM_ABST_CMD_ACCESS_REG | RV_REG_WRITE | RV_REG_XFER | riscv_hart_access_width(hart) | reg))
+		return false;
+	return riscv_csr_wait_complete(hart);
+}
+
 static void riscv_halt_request(target_s *const target)
 {
 	riscv_hart_s *const hart = (riscv_hart_s *)target->priv;
