@@ -223,13 +223,20 @@ static bool riscv_hart_init(riscv_hart_s *const hart)
 	DEBUG_INFO("Hart %" PRIx32 ": %u-bit RISC-V (arch = %08" PRIx32 "), vendor = %" PRIx32 ", impl = %" PRIx32
 			   ", exts = %08" PRIx32 "\n",
 		hart->hartid, hart->access_width, hart->archid, hart->vendorid, hart->implid, hart->extensions);
+
+	/* We don't support rv128, so tell the user and fast-quit on this target. */
+	if (hart->access_width == 128U) {
+		target->core = "(unsup) rv128";
+		DEBUG_WARN("rv128 is unsupported, ignoring this hart\n");
+		return true;
+	}
+
 	/* If the hart implements mvendorid, this gives us the JEP-106, otherwise use the JTAG IDCode */
 	target->designer_code = hart->vendorid ?
 		hart->vendorid :
 		((hart->dbg_module->dmi_bus->idcode & JTAG_IDCODE_DESIGNER_MASK) >> JTAG_IDCODE_DESIGNER_OFFSET);
 
 	target->check_error = riscv_check_error;
-
 	target->halt_request = riscv_halt_request;
 	target->halt_resume = riscv_halt_resume;
 
