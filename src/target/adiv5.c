@@ -29,6 +29,7 @@
 #include "target.h"
 #include "target_internal.h"
 #include "target_probe.h"
+#include "jep106.h"
 #include "adiv5.h"
 #include "cortexm.h"
 #include "exception.h"

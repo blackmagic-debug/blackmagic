@@ -33,6 +33,7 @@
 #include "target.h"
 #include "target_internal.h"
 #include "target_probe.h"
+#include "jep106.h"
 #include "cortexm.h"
 #include "gdb_reg.h"
 #include "command.h"
