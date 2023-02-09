@@ -92,10 +92,12 @@ static riscv_debug_version_e riscv_dm_version(uint32_t status);
 
 static uint32_t riscv_hart_discover_isa(riscv_hart_s *hart);
 
-static void riscv_halt_request(target_s *target);
-static void riscv_halt_resume(target_s *target, bool step);
+static bool riscv_attach(target_s *target);
+static void riscv_detach(target_s *target);
 
 static bool riscv_check_error(target_s *target);
+static void riscv_halt_request(target_s *target);
+static void riscv_halt_resume(target_s *target, bool step);
 
 void riscv_dmi_init(riscv_dmi_s *const dmi)
 {
@@ -235,6 +237,10 @@ static bool riscv_hart_init(riscv_hart_s *const hart)
 	target->designer_code = hart->vendorid ?
 		hart->vendorid :
 		((hart->dbg_module->dmi_bus->idcode & JTAG_IDCODE_DESIGNER_MASK) >> JTAG_IDCODE_DESIGNER_OFFSET);
+
+	/* Setup core-agnostic target functions */
+	target->attach = riscv_attach;
+	target->detach = riscv_detach;
 
 	target->check_error = riscv_check_error;
 	target->halt_request = riscv_halt_request;
@@ -483,6 +489,27 @@ uint8_t riscv_mem_access_width(const riscv_hart_s *const hart, const target_addr
 	return access_width;
 }
 
+static bool riscv_attach(target_s *const target)
+{
+	riscv_hart_s *const hart = riscv_hart_struct(target);
+	/* If the DMI requires special preparation, do that first */
+	if (hart->dbg_module->dmi_bus->prepare)
+		hart->dbg_module->dmi_bus->prepare(target);
+	/* We then also need to select the Hart again so we're poking with the right one on the target */
+	if (!riscv_dm_write(hart->dbg_module, RV_DM_CONTROL, hart->hartsel))
+		return false;
+
+	return true;
+}
+
+static void riscv_detach(target_s *const target)
+{
+	riscv_hart_s *const hart = riscv_hart_struct(target);
+	/* If the DMI needs steps done to quiesce it, finsh up with that */
+	if (hart->dbg_module->dmi_bus->quiesce)
+		hart->dbg_module->dmi_bus->quiesce(target);
+}
+
 static bool riscv_check_error(target_s *const target)
 {
 	return riscv_hart_struct(target)->status != RISCV_HART_NO_ERROR;
@@ -490,7 +517,7 @@ static bool riscv_check_error(target_s *const target)
 
 static void riscv_halt_request(target_s *const target)
 {
-	riscv_hart_s *const hart = (riscv_hart_s *)target->priv;
+	riscv_hart_s *const hart = riscv_hart_struct(target);
 	/* Request the hart to halt */
 	if (!riscv_dm_write(hart->dbg_module, RV_DM_CONTROL, hart->hartsel | RV_DM_CTRL_HALT_REQ))
 		return;
@@ -506,7 +533,7 @@ static void riscv_halt_request(target_s *const target)
 
 static void riscv_halt_resume(target_s *target, const bool step)
 {
-	riscv_hart_s *const hart = (riscv_hart_s *)target->priv;
+	riscv_hart_s *const hart = riscv_hart_struct(target);
 	/* Configure the debug controller for single-stepping as appropriate */
 	uint32_t stepping_config = 0U;
 	if (!riscv_csr_read(hart, RV_DCSR | RV_CSR_FORCE_32_BIT, &stepping_config))
