@@ -36,15 +36,9 @@
 #include "target_internal.h"
 #include "riscv_debug.h"
 
-#define RV_DM_DATA0           0x04U
-#define RV_DM_DATA1           0x05U
-#define RV_DM_DATA2           0x06U
-#define RV_DM_DATA3           0x07U
-#define RV_DM_CONTROL         0x10U
-#define RV_DM_STATUS          0x11U
-#define RV_DM_ABST_CTRLSTATUS 0x16U
-#define RV_DM_ABST_COMMAND    0x17U
-#define RV_DM_NEXT_DM         0x1dU
+#define RV_DM_CONTROL 0x10U
+#define RV_DM_STATUS  0x11U
+#define RV_DM_NEXT_DM 0x1dU
 
 #define RV_DM_CTRL_ACTIVE          0x00000001U
 #define RV_DM_CTRL_HARTSEL_MASK    0x03ffffc0U
@@ -61,23 +55,6 @@
 
 #define RV_DM_ABST_STATUS_BUSY       0x00001000U
 #define RV_DM_ABST_STATUS_DATA_COUNT 0x0000000fU
-#define RV_DM_ABST_CMD_ACCESS_REG    0x00000000U
-#define RV_DM_ABST_CMD_ACCESS_MEM    0x02000000U
-
-#define RV_ABST_READ          0x00000000U
-#define RV_ABST_WRITE         0x00010000U
-#define RV_REG_XFER           0x00020000U
-#define RV_REG_ACCESS_32_BIT  0x00200000U
-#define RV_REG_ACCESS_64_BIT  0x00300000U
-#define RV_REG_ACCESS_128_BIT 0x00400000U
-#define RV_MEM_ADDR_POST_INC  0x00080000U
-
-#define RV_MEM_ACCESS_8_BIT   0x0U
-#define RV_MEM_ACCESS_16_BIT  0x1U
-#define RV_MEM_ACCESS_32_BIT  0x2U
-#define RV_MEM_ACCESS_64_BIT  0x3U
-#define RV_MEM_ACCESS_128_BIT 0x4U
-#define RV_MEM_ACCESS_SHIFT   20U
 
 #define RV_CSR_FORCE_MASK   0x3000U
 #define RV_CSR_FORCE_32_BIT 0x1000U
@@ -111,8 +88,6 @@ static bool riscv_dmi_read(riscv_dmi_s *dmi, uint32_t address, uint32_t *value);
 static bool riscv_dmi_write(riscv_dmi_s *dmi, uint32_t address, uint32_t value);
 static void riscv_dm_ref(riscv_dm_s *dbg_module);
 static void riscv_dm_unref(riscv_dm_s *dbg_module);
-static inline bool riscv_dm_read(riscv_dm_s *dbg_module, uint8_t address, uint32_t *value);
-static inline bool riscv_dm_write(riscv_dm_s *dbg_module, uint8_t address, uint32_t value);
 static riscv_debug_version_e riscv_dm_version(uint32_t status);
 
 static uint32_t riscv_hart_discover_isa(riscv_hart_s *hart);
@@ -295,12 +270,12 @@ static bool riscv_dmi_write(riscv_dmi_s *const dmi, const uint32_t address, cons
 	return dmi->write(dmi, address, value);
 }
 
-static inline bool riscv_dm_read(riscv_dm_s *dbg_module, const uint8_t address, uint32_t *const value)
+bool riscv_dm_read(riscv_dm_s *dbg_module, const uint8_t address, uint32_t *const value)
 {
 	return riscv_dmi_read(dbg_module->dmi_bus, dbg_module->base + address, value);
 }
 
-static inline bool riscv_dm_write(riscv_dm_s *dbg_module, const uint8_t address, const uint32_t value)
+bool riscv_dm_write(riscv_dm_s *dbg_module, const uint8_t address, const uint32_t value)
 {
 	return riscv_dmi_write(dbg_module->dmi_bus, dbg_module->base + address, value);
 }
@@ -421,7 +396,7 @@ static uint32_t riscv_csr_access_width(const uint16_t reg)
 	return 128U;
 }
 
-static bool riscv_csr_wait_complete(riscv_hart_s *const hart)
+bool riscv_command_wait_complete(riscv_hart_s *const hart)
 {
 	uint32_t status = RV_DM_ABST_STATUS_BUSY;
 	while (status & RV_DM_ABST_STATUS_BUSY) {
@@ -446,7 +421,7 @@ bool riscv_csr_read(riscv_hart_s *const hart, const uint16_t reg, void *const da
 	if (!riscv_dm_write(hart->dbg_module, RV_DM_ABST_COMMAND,
 			RV_DM_ABST_CMD_ACCESS_REG | RV_ABST_READ | RV_REG_XFER | riscv_hart_access_width(access_width) |
 				(reg & ~RV_CSR_FORCE_MASK)) ||
-		!riscv_csr_wait_complete(hart))
+		!riscv_command_wait_complete(hart))
 		return false;
 	uint32_t *const value = (uint32_t *)data;
 	/* If we're doing a 128-bit read, grab the upper-most 2 uint32_t's */
@@ -480,10 +455,10 @@ bool riscv_csr_write(riscv_hart_s *const hart, const uint16_t reg, const void *c
 			RV_DM_ABST_CMD_ACCESS_REG | RV_ABST_WRITE | RV_REG_XFER | riscv_hart_access_width(access_width) |
 				(reg & ~RV_CSR_FORCE_MASK)))
 		return false;
-	return riscv_csr_wait_complete(hart);
+	return riscv_command_wait_complete(hart);
 }
 
-static uint8_t riscv_mem_access_width(const riscv_hart_s *const hart, const target_addr_t address, const size_t length)
+uint8_t riscv_mem_access_width(const riscv_hart_s *const hart, const target_addr_t address, const size_t length)
 {
 	/* Grab the Hart's most maxmimally aligned possible write width */
 	uint8_t access_width = riscv_hart_access_width(hart->address_width) >> RV_MEM_ACCESS_SHIFT;
