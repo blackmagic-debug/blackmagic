@@ -58,8 +58,9 @@
 #define RV_DM_STAT_NON_EXISTENT   0x00004000U
 #define RV_DM_STAT_ALL_HALTED     0x00000200U
 
-#define RV_DM_ABST_STATUS_BUSY    0x00001000U
-#define RV_DM_ABST_CMD_ACCESS_REG 0x00000000U
+#define RV_DM_ABST_STATUS_BUSY       0x00001000U
+#define RV_DM_ABST_STATUS_DATA_COUNT 0x0000000fU
+#define RV_DM_ABST_CMD_ACCESS_REG    0x00000000U
 
 #define RV_REG_READ           0x00000000U
 #define RV_REG_WRITE          0x00010000U
@@ -74,6 +75,8 @@
 #define RV_IMPL_ID   0xf13U
 #define RV_HART_ID   0xf14U
 
+#define RV_ISA_EXTENSIONS_MASK 0x03ffffffU
+
 static void riscv_dm_init(riscv_dm_s *dbg_module);
 static bool riscv_hart_init(riscv_hart_s *hart);
 static void riscv_hart_free(void *priv);
@@ -84,6 +87,8 @@ static void riscv_dm_unref(riscv_dm_s *dbg_module);
 static inline bool riscv_dm_read(riscv_dm_s *dbg_module, uint8_t address, uint32_t *value);
 static inline bool riscv_dm_write(riscv_dm_s *dbg_module, uint8_t address, uint32_t value);
 static riscv_debug_version_e riscv_dm_version(uint32_t status);
+
+static uint32_t riscv_hart_discover_isa(riscv_hart_s *hart);
 
 static void riscv_halt_request(target_s *target);
 static void riscv_halt_resume(target_s *target, bool step);
@@ -203,9 +208,9 @@ static bool riscv_hart_init(riscv_hart_s *const hart)
 
 	/* Request halt and read certain key registers */
 	riscv_halt_request(target);
-	uint32_t isa = 0;
-	riscv_csr_read(hart, RV_ISA, &isa);
-	hart->access_width = riscv_isa_address_width(isa);
+	uint32_t isa = riscv_hart_discover_isa(hart);
+	hart->address_width = riscv_isa_address_width(isa);
+	hart->extensions = isa & RV_ISA_EXTENSIONS_MASK;
 	riscv_csr_read(hart, RV_VENDOR_ID, &hart->vendorid);
 	/* XXX: These will technically go wrong on rv64 - need some way to deal with that. */
 	riscv_csr_read(hart, RV_ARCH_ID, &hart->archid);
@@ -213,8 +218,9 @@ static bool riscv_hart_init(riscv_hart_s *const hart)
 	riscv_csr_read(hart, RV_HART_ID, &hart->hartid);
 	riscv_halt_resume(target, false);
 
-	DEBUG_INFO("Hart %" PRIu32 ": %u-bit RISC-V (arch = %" PRIx32 "), vendor = %" PRIx32 ", impl = %" PRIx32 "\n",
-		hart->hartid, hart->access_width, hart->archid, hart->vendorid, hart->implid);
+	DEBUG_INFO("Hart %" PRIx32 ": %u-bit RISC-V (arch = %08" PRIx32 "), vendor = %08" PRIx32 ", impl = %08" PRIx32
+			   ", exts = %08" PRIx32 "\n",
+		hart->hartid, hart->access_width, hart->archid, hart->vendorid, hart->implid, hart->extensions);
 
 	target->halt_request = riscv_halt_request;
 	target->halt_resume = riscv_halt_resume;
@@ -294,6 +300,55 @@ static void riscv_dm_unref(riscv_dm_s *const dbg_module)
 		riscv_dmi_unref(dbg_module->dmi_bus);
 		free(dbg_module);
 	}
+}
+
+static uint32_t riscv_hart_discover_isa(riscv_hart_s *const hart)
+{
+	/* Read out the abstract command control/status register */
+	uint32_t data_registers = 0;
+	if (!riscv_dm_read(hart->dbg_module, RV_DM_ABST_CTRLSTATUS, &data_registers))
+		return 0U;
+	/* And use the data count bits to divine an initial guess on the platform width */
+	data_registers &= RV_DM_ABST_STATUS_DATA_COUNT;
+	DEBUG_INFO("Hart has %" PRIu32 " data registers\n", data_registers);
+	/* Check we have at least enough data registers for arg0 */
+	if (data_registers >= 4)
+		hart->access_width = 128U;
+	else if (data_registers >= 2)
+		hart->access_width = 64U;
+	else if (data_registers)
+		hart->access_width = 32U;
+	/* If the control/status register contains an invalid count, abort */
+	else
+		return 0;
+
+	do {
+		DEBUG_INFO("Attempting %u-bit read on misa\n", hart->access_width);
+		/* Try reading the register on the guessed width */
+		uint32_t isa_data[4] = {};
+		bool result = riscv_csr_read(hart, RV_ISA, isa_data);
+		if (result) {
+			if (hart->access_width == 128U)
+				return (isa_data[3] & 0xc0000000) | (isa_data[0] & 0x3fffffffU);
+			if (hart->access_width == 64U)
+				return (isa_data[1] & 0xc0000000) | (isa_data[0] & 0x3fffffffU);
+			return isa_data[0];
+		}
+		/* If that failed, then find out why and instead try the next narrower width */
+		if (hart->status != RISCV_HART_BUS_ERROR && hart->status != RISCV_HART_EXCEPTION)
+			return 0;
+		if (hart->access_width == 32U) {
+			hart->access_width = 0U;
+			return 0; /* We are unable to read the misa register */
+		}
+		if (hart->access_width == 64U)
+			hart->access_width = 32U;
+		if (hart->access_width == 128U)
+			hart->access_width = 64U;
+	} while (hart->access_width != 0U);
+	DEBUG_WARN("Unable to read misa register\n");
+	/* If the above loop failed, we're done.. */
+	return 0U;
 }
 
 static uint32_t riscv_hart_access_width(const riscv_hart_s *const hart)
