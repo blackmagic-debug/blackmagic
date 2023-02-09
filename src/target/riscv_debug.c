@@ -430,6 +430,8 @@ static bool riscv_csr_wait_complete(riscv_hart_s *const hart)
 	hart->status = (status >> 8U) & RISCV_HART_OTHER;
 	if (!riscv_dm_write(hart->dbg_module, RV_DM_ABST_CTRLSTATUS, RISCV_HART_OTHER << 8U))
 		return false;
+	if (hart->status != RISCV_HART_NO_ERROR)
+		DEBUG_WARN("CSR access failed: %u\n", hart->status);
 	/* If the command failed, return the failure */
 	return hart->status == RISCV_HART_NO_ERROR;
 }
@@ -437,6 +439,7 @@ static bool riscv_csr_wait_complete(riscv_hart_s *const hart)
 bool riscv_csr_read(riscv_hart_s *const hart, const uint16_t reg, void *const data)
 {
 	const uint8_t access_width = (reg & RV_CSR_FORCE_MASK) ? riscv_csr_access_width(reg) : hart->access_width;
+	DEBUG_TARGET("Reading %u-bit CSR %03x\n", access_width, reg & ~RV_CSR_FORCE_MASK);
 	/* Set up the register read and wait for it to complete */
 	if (!riscv_dm_write(hart->dbg_module, RV_DM_ABST_COMMAND,
 			RV_DM_ABST_CMD_ACCESS_REG | RV_ABST_READ | RV_REG_XFER | riscv_hart_access_width(access_width) |
@@ -459,6 +462,7 @@ bool riscv_csr_read(riscv_hart_s *const hart, const uint16_t reg, void *const da
 bool riscv_csr_write(riscv_hart_s *const hart, const uint16_t reg, const void *const data)
 {
 	const uint8_t access_width = (reg & RV_CSR_FORCE_MASK) ? riscv_csr_access_width(reg) : hart->access_width;
+	DEBUG_TARGET("Writing %u-bit CSR %03x\n", access_width, reg & ~RV_CSR_FORCE_MASK);
 	/* Set up the data registers based on the Hart native access size */
 	const uint32_t *const value = (const uint32_t *)data;
 	if (!riscv_dm_write(hart->dbg_module, RV_DM_DATA0, value[0]))
