@@ -78,6 +78,8 @@ struct riscv_dmi {
 	uint8_t address_width;
 	uint8_t fault;
 
+	void (*prepare)(target_s *target);
+	void (*quiesce)(target_s *target);
 	bool (*read)(riscv_dmi_s *dmi, uint32_t address, uint32_t *value);
 	bool (*write)(riscv_dmi_s *dmi, uint32_t address, uint32_t value);
 };

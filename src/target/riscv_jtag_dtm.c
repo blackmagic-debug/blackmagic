@@ -63,6 +63,9 @@ static bool riscv_jtag_dmi_read(riscv_dmi_s *dmi, uint32_t address, uint32_t *va
 static bool riscv_jtag_dmi_write(riscv_dmi_s *dmi, uint32_t address, uint32_t value);
 static riscv_debug_version_e riscv_dtmcs_version(uint32_t dtmcs);
 
+static void riscv_jtag_prepare(target_s *target);
+static void riscv_jtag_quiesce(target_s *target);
+
 void riscv_jtag_dtm_handler(const uint8_t dev_index)
 {
 	riscv_dmi_s *dmi = calloc(1, sizeof(*dmi));
@@ -93,6 +96,8 @@ static void riscv_jtag_dtm_init(riscv_dmi_s *const dmi)
 	/* Switch into DMI access mode for speed */
 	jtag_dev_write_ir(dmi->dev_index, IR_DMI);
 
+	dmi->prepare = riscv_jtag_prepare;
+	dmi->quiesce = riscv_jtag_quiesce;
 	dmi->read = riscv_jtag_dmi_read;
 	dmi->write = riscv_jtag_dmi_write;
 
@@ -170,4 +175,18 @@ static riscv_debug_version_e riscv_dtmcs_version(const uint32_t dtmcs)
 	}
 	DEBUG_INFO("Please report part with unknown RISC-V debug DMI version %x\n", version);
 	return RISCV_DEBUG_UNKNOWN;
+}
+
+static void riscv_jtag_prepare(target_s *const target)
+{
+	riscv_hart_s *const hart = riscv_hart_struct(target);
+	/* We put the TAP into bypass at the end of the JTAG handler, so put it back into DMI */
+	jtag_dev_write_ir(hart->dbg_module->dmi_bus->dev_index, IR_DMI);
+}
+
+static void riscv_jtag_quiesce(target_s *const target)
+{
+	riscv_hart_s *const hart = riscv_hart_struct(target);
+	/* On detaching, stick the TAP back into bypass */
+	jtag_dev_write_ir(hart->dbg_module->dmi_bus->dev_index, IR_BYPASS);
 }
