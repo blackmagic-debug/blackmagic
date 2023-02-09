@@ -32,6 +32,9 @@ bool cortexa_probe(adiv5_access_port_s *apb, uint32_t debug_base);
 
 bool cortexm_probe(adiv5_access_port_s *ap);
 
+bool riscv32_probe(target_s *target);
+bool riscv64_probe(target_s *target);
+
 bool kinetis_mdm_probe(adiv5_access_port_s *ap);
 bool nrf51_mdm_probe(adiv5_access_port_s *ap);
 bool efm32_aap_probe(adiv5_access_port_s *ap);
