@@ -237,6 +237,7 @@ static bool riscv_hart_init(riscv_hart_s *const hart)
 	target->designer_code = hart->vendorid ?
 		hart->vendorid :
 		((hart->dbg_module->dmi_bus->idcode & JTAG_IDCODE_DESIGNER_MASK) >> JTAG_IDCODE_DESIGNER_OFFSET);
+	target->cpuid = hart->archid;
 
 	/* Setup core-agnostic target functions */
 	target->attach = riscv_attach;
