@@ -32,6 +32,7 @@
  */
 
 #include "general.h"
+#include "target_probe.h"
 #include "target_internal.h"
 #include "riscv_debug.h"
 
@@ -201,7 +202,6 @@ static bool riscv_hart_init(riscv_hart_s *const hart)
 
 	/* Grab a reference to the DMI and DM structurues and do preliminary setup of the target structure */
 	riscv_dm_ref(hart->dbg_module);
-	target->cpuid = hart->dbg_module->dmi_bus->idcode;
 	target->driver = "RISC-V";
 	target->priv = hart;
 	target->priv_free = riscv_hart_free;
@@ -225,7 +225,20 @@ static bool riscv_hart_init(riscv_hart_s *const hart)
 	target->halt_request = riscv_halt_request;
 	target->halt_resume = riscv_halt_resume;
 
+	if (hart->access_width == 32U) {
+		DEBUG_INFO("-> riscv32_probe\n");
+		return riscv32_probe(target);
+	}
+	if (hart->access_width == 64U) {
+		DEBUG_INFO("-> riscv64_probe\n");
+		return riscv64_probe(target);
+	}
 	return true;
+}
+
+riscv_hart_s *riscv_hart_struct(target_s *const target)
+{
+	return (riscv_hart_s *)target->priv;
 }
 
 static void riscv_hart_free(void *const priv)
