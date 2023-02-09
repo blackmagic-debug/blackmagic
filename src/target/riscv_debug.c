@@ -70,6 +70,10 @@
 #define RV_REG_ACCESS_64_BIT  0x00300000U
 #define RV_REG_ACCESS_128_BIT 0x00400000U
 
+#define RV_CSR_FORCE_MASK   0x3000U
+#define RV_CSR_FORCE_32_BIT 0x1000U
+#define RV_CSR_FORCE_64_BIT 0x2000U
+
 /* The following is a set of CSR address definitions */
 /* misa -> The Hart's machine ISA register */
 #define RV_ISA 0x301U
@@ -374,13 +378,23 @@ static uint32_t riscv_hart_discover_isa(riscv_hart_s *const hart)
 	return 0U;
 }
 
-static uint32_t riscv_hart_access_width(const riscv_hart_s *const hart)
+static uint32_t riscv_hart_access_width(uint8_t access_width)
 {
-	if (hart->access_width == 128U)
+	if (access_width == 128U)
 		return RV_REG_ACCESS_128_BIT;
-	if (hart->access_width == 64U)
+	if (access_width == 64U)
 		return RV_REG_ACCESS_64_BIT;
 	return RV_REG_ACCESS_32_BIT;
+}
+
+static uint32_t riscv_csr_access_width(const uint16_t reg)
+{
+	const uint16_t access_width = reg & RV_CSR_FORCE_MASK;
+	if (access_width == RV_CSR_FORCE_32_BIT)
+		return 32U;
+	if (access_width == RV_CSR_FORCE_64_BIT)
+		return 64U;
+	return 128U;
 }
 
 static bool riscv_csr_wait_complete(riscv_hart_s *const hart)
@@ -400,19 +414,21 @@ static bool riscv_csr_wait_complete(riscv_hart_s *const hart)
 
 bool riscv_csr_read(riscv_hart_s *const hart, const uint16_t reg, void *const data)
 {
+	const uint8_t access_width = (reg & RV_CSR_FORCE_MASK) ? riscv_csr_access_width(reg) : hart->access_width;
 	/* Set up the register read and wait for it to complete */
 	if (!riscv_dm_write(hart->dbg_module, RV_DM_ABST_COMMAND,
-			RV_DM_ABST_CMD_ACCESS_REG | RV_REG_READ | RV_REG_XFER | riscv_hart_access_width(hart) | reg) ||
+			RV_DM_ABST_CMD_ACCESS_REG | RV_REG_READ | RV_REG_XFER | riscv_hart_access_width(access_width) |
+				(reg & ~RV_CSR_FORCE_MASK)) ||
 		!riscv_csr_wait_complete(hart))
 		return false;
 	uint32_t *const value = (uint32_t *)data;
 	/* If we're doing a 128-bit read, grab the upper-most 2 uint32_t's */
-	if (hart->access_width == 128U &&
+	if (access_width == 128U &&
 		!(riscv_dm_read(hart->dbg_module, RV_DM_DATA3, value + 3) &&
 			riscv_dm_read(hart->dbg_module, RV_DM_DATA2, value + 2)))
 		return false;
 	/* If we're doing at least a 64-bit read, grab the next uint32_t */
-	if (hart->access_width >= 64U && !riscv_dm_read(hart->dbg_module, RV_DM_DATA1, value + 1))
+	if (access_width >= 64U && !riscv_dm_read(hart->dbg_module, RV_DM_DATA1, value + 1))
 		return false;
 	/* Finally grab the last and lowest uint32_t */
 	return riscv_dm_read(hart->dbg_module, RV_DM_DATA0, value);
@@ -420,19 +436,21 @@ bool riscv_csr_read(riscv_hart_s *const hart, const uint16_t reg, void *const da
 
 bool riscv_csr_write(riscv_hart_s *const hart, const uint16_t reg, const void *const data)
 {
+	const uint8_t access_width = (reg & RV_CSR_FORCE_MASK) ? riscv_csr_access_width(reg) : hart->access_width;
 	/* Set up the data registers based on the Hart native access size */
 	const uint32_t *const value = (const uint32_t *)data;
 	if (!riscv_dm_write(hart->dbg_module, RV_DM_DATA0, value[0]))
 		return false;
-	if (hart->access_width >= 64U && !riscv_dm_write(hart->dbg_module, RV_DM_DATA1, value[1]))
+	if (access_width >= 64U && !riscv_dm_write(hart->dbg_module, RV_DM_DATA1, value[1]))
 		return false;
-	if (hart->access_width == 128 &&
+	if (access_width == 128 &&
 		!(riscv_dm_write(hart->dbg_module, RV_DM_DATA2, value[2]) &&
 			riscv_dm_write(hart->dbg_module, RV_DM_DATA3, value[3])))
 		return false;
 	/* Configure and run the write */
 	if (!riscv_dm_write(hart->dbg_module, RV_DM_ABST_COMMAND,
-			RV_DM_ABST_CMD_ACCESS_REG | RV_REG_WRITE | RV_REG_XFER | riscv_hart_access_width(hart) | reg))
+			RV_DM_ABST_CMD_ACCESS_REG | RV_REG_WRITE | RV_REG_XFER | riscv_hart_access_width(access_width) |
+				(reg & ~RV_CSR_FORCE_MASK)))
 		return false;
 	return riscv_csr_wait_complete(hart);
 }
