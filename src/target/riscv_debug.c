@@ -380,6 +380,7 @@ static bool riscv_hart_init(riscv_hart_s *const hart)
 
 	/* If the hart implements mvendorid, this gives us the JEP-106, otherwise use the DTM designer code */
 	target->designer_code = hart->vendorid ? hart->vendorid : hart->dbg_module->dmi_bus->designer_code;
+	target->cpuid = hart->archid;
 
 	riscv_hart_discover_triggers(hart);
 
