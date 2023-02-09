@@ -57,6 +57,7 @@ bool at32f43x_probe(target_s *target);
 bool mm32l0xx_probe(target_s *target);
 bool mm32f3xx_probe(target_s *target);
 bool gd32f1_probe(target_s *target);
+bool gd32vf1_probe(target_s *target);
 bool gd32f4_probe(target_s *target);
 bool stm32f1_probe(target_s *target);
 bool stm32f4_probe(target_s *target);
