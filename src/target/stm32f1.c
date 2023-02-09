@@ -181,6 +181,31 @@ bool gd32f1_probe(target_s *target)
 	return true;
 }
 
+/* Identify RISC-V GD32VF1 chips */
+bool gd32vf1_probe(target_s *const target)
+{
+	const uint16_t device_id = target_mem_read32(target, DBGMCU_IDCODE) & 0xfffU;
+	switch (device_id) {
+	case 0x410U: /* GD32VF103 */
+		target->driver = "GD32VF1";
+		break;
+	default:
+		return false;
+	}
+
+	const uint32_t signature = target_mem_read32(target, GD32Fx_FLASHSIZE);
+	const uint16_t flash_size = signature & 0xffffU;
+	const uint16_t ram_size = signature >> 16U;
+
+	target->part_id = device_id;
+	target->mass_erase = stm32f1_mass_erase;
+	target_add_ram(target, 0x20000000, ram_size * 1024U);
+	stm32f1_add_flash(target, 0x8000000, (size_t)flash_size * 1024U, 0x400U);
+	target_add_commands(target, stm32f1_cmd_list, target->driver);
+
+	return true;
+}
+
 static bool at32f40_detect(target_s *target, const uint16_t part_id)
 {
 	// Current driver supports only *default* memory layout (256 KB Flash / 96 KB SRAM)
