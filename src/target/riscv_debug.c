@@ -120,6 +120,7 @@ static uint32_t riscv_hart_discover_isa(riscv_hart_s *hart);
 static void riscv_halt_request(target_s *target);
 static void riscv_halt_resume(target_s *target, bool step);
 
+static bool riscv_check_error(target_s *target);
 static void riscv_mem_read(target_s *target, void *dest, target_addr_t src, size_t len);
 
 void riscv_dmi_init(riscv_dmi_s *const dmi)
@@ -253,6 +254,7 @@ static bool riscv_hart_init(riscv_hart_s *const hart)
 		hart->vendorid :
 		((hart->dbg_module->dmi_bus->idcode & JTAG_IDCODE_DESIGNER_MASK) >> JTAG_IDCODE_DESIGNER_OFFSET);
 
+	target->check_error = riscv_check_error;
 	target->mem_read = riscv_mem_read;
 
 	target->halt_request = riscv_halt_request;
@@ -536,6 +538,11 @@ static void riscv_mem_read(target_s *const target, void *const dest, const targe
 		/* And copy the right part into data */
 		memcpy(data + offset, values, access_length);
 	}
+}
+
+static bool riscv_check_error(target_s *const target)
+{
+	return riscv_hart_struct(target)->status != RISCV_HART_NO_ERROR;
 }
 
 static void riscv_halt_request(target_s *const target)
