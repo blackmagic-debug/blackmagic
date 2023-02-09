@@ -63,6 +63,8 @@ SRC =                \
 	nrf91.c          \
 	nxpke04.c        \
 	remote.c         \
+	riscv32.c        \
+	riscv64.c        \
 	riscv_debug.c    \
 	riscv_jtag_dtm.c \
 	rp.c             \

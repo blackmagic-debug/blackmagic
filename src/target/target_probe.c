@@ -75,6 +75,9 @@ CORTEXA_PROBE_WEAK_NOP(cortexa_probe)
 
 CORTEXM_PROBE_WEAK_NOP(cortexm_probe)
 
+TARGET_PROBE_WEAK_NOP(riscv32_probe)
+TARGET_PROBE_WEAK_NOP(riscv64_probe)
+
 CORTEXM_PROBE_WEAK_NOP(kinetis_mdm_probe)
 CORTEXM_PROBE_WEAK_NOP(nrf51_mdm_probe)
 CORTEXM_PROBE_WEAK_NOP(efm32_aap_probe)
