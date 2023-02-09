@@ -77,6 +77,10 @@
 /* The following is a set of CSR address definitions */
 /* misa -> The Hart's machine ISA register */
 #define RV_ISA 0x301U
+/* dcsr -> Debug Control/Status Register */
+#define RV_DCSR 0x7b0U
+/* dpc -> Debug Program Counter */
+#define RV_DPC 0x7b1U
 /* mvendorid -> The JEP-106 code for the vendor implementing this Hart */
 #define RV_VENDOR_ID 0xf11U
 /* marchid -> The RISC-V International architecture ID code */
@@ -87,6 +91,9 @@
 #define RV_HART_ID 0xf14U
 
 #define RV_ISA_EXTENSIONS_MASK 0x03ffffffU
+
+#define RV_DCSR_STEP   0x00000004U
+#define RV_DCSR_STEPIE 0x00000800U
 
 static void riscv_dm_init(riscv_dm_s *dbg_module);
 static bool riscv_hart_init(riscv_hart_s *hart);
@@ -473,8 +480,17 @@ static void riscv_halt_request(target_s *const target)
 
 static void riscv_halt_resume(target_s *target, const bool step)
 {
-	(void)step;
 	riscv_hart_s *const hart = (riscv_hart_s *)target->priv;
+	/* Configure the debug controller for single-stepping as appropriate */
+	uint32_t stepping_config = 0U;
+	if (!riscv_csr_read(hart, RV_DCSR | RV_CSR_FORCE_32_BIT, &stepping_config))
+		return;
+	if (step)
+		stepping_config |= RV_DCSR_STEP | RV_DCSR_STEPIE;
+	else
+		stepping_config &= ~(RV_DCSR_STEP | RV_DCSR_STEPIE);
+	if (!riscv_csr_write(hart, RV_DCSR | RV_CSR_FORCE_32_BIT, &stepping_config))
+		return;
 	/* Request the hart to resume */
 	if (!riscv_dm_write(hart->dbg_module, RV_DM_CONTROL, hart->hartsel | RV_DM_CTRL_RESUME_REQ))
 		return;
