@@ -96,7 +96,6 @@ static void riscv_halt_request(target_s *target);
 static void riscv_halt_resume(target_s *target, bool step);
 
 static bool riscv_check_error(target_s *target);
-static void riscv_mem_read(target_s *target, void *dest, target_addr_t src, size_t len);
 
 void riscv_dmi_init(riscv_dmi_s *const dmi)
 {
@@ -230,7 +229,6 @@ static bool riscv_hart_init(riscv_hart_s *const hart)
 		((hart->dbg_module->dmi_bus->idcode & JTAG_IDCODE_DESIGNER_MASK) >> JTAG_IDCODE_DESIGNER_OFFSET);
 
 	target->check_error = riscv_check_error;
-	target->mem_read = riscv_mem_read;
 
 	target->halt_request = riscv_halt_request;
 	target->halt_resume = riscv_halt_resume;
@@ -476,43 +474,6 @@ uint8_t riscv_mem_access_width(const riscv_hart_s *const hart, const target_addr
 		align_mask >>= 1U;
 	}
 	return access_width;
-}
-
-/* XXX: target_addr_t supports only 32-bit addresses, artificially limiting this function to 32-bit targets */
-static void riscv_mem_read(target_s *const target, void *const dest, const target_addr_t src, const size_t len)
-{
-	DEBUG_TARGET("Performing %zu byte read of %08" PRIx32 "\n", len, src);
-	/* If we're asked to do a 0-byte read, do nothing */
-	if (!len)
-		return;
-	riscv_hart_s *const hart = riscv_hart_struct(target);
-	/* Figure out the maxmial width of access to perform, up to the bitness of the target */
-	const uint8_t access_width = riscv_mem_access_width(hart, src, len);
-	const uint8_t access_length = 1U << access_width;
-	/* Build the access command */
-	const uint32_t command = RV_DM_ABST_CMD_ACCESS_MEM | RV_ABST_READ | (access_width << RV_MEM_ACCESS_SHIFT) |
-		(access_length < len ? RV_MEM_ADDR_POST_INC : 0U);
-	/* Write the address to read to arg1 */
-	/* XXX: This intentionally does not support 128-bit harts(!) */
-	if (hart->address_width == 32 && !riscv_dm_write(hart->dbg_module, RV_DM_DATA1, src))
-		return;
-	if (hart->address_width == 64 &&
-		!(riscv_dm_write(hart->dbg_module, RV_DM_DATA2, src) || riscv_dm_write(hart->dbg_module, RV_DM_DATA3, 0U)))
-		return;
-	uint8_t *const data = (uint8_t *)dest;
-	for (size_t offset = 0; offset < len; offset += access_length) {
-		/* Execute the read */
-		if (!riscv_dm_write(hart->dbg_module, RV_DM_ABST_COMMAND, command) || !riscv_csr_wait_complete(hart))
-			return;
-		/* Extract back the data from arg0 */
-		uint32_t values[2] = {};
-		if (access_width == RV_MEM_ACCESS_64_BIT && !riscv_dm_read(hart->dbg_module, RV_DM_DATA1, values + 1))
-			return;
-		if (!riscv_dm_read(hart->dbg_module, RV_DM_DATA0, values))
-			return;
-		/* And copy the right part into data */
-		memcpy(data + offset, values, access_length);
-	}
 }
 
 static bool riscv_check_error(target_s *const target)
