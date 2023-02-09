@@ -37,8 +37,60 @@
 #include "target_probe.h"
 #include "riscv_debug.h"
 
+static void riscv32_mem_read(target_s *target, void *dest, target_addr_t src, size_t len);
+
 bool riscv32_probe(target_s *const target)
 {
 	target->core = "rv32";
+	target->mem_read = riscv32_mem_read;
+
 	return false;
+}
+
+void riscv32_unpack_data(void *const dest, const uint32_t data, const uint8_t access_width)
+{
+	switch (access_width) {
+	case RV_MEM_ACCESS_8_BIT: {
+		const uint8_t value = data & 0xffU;
+		memcpy(dest, &value, sizeof(value));
+		break;
+	}
+	case RV_MEM_ACCESS_16_BIT: {
+		const uint16_t value = data & 0xffffU;
+		memcpy(dest, &value, sizeof(value));
+		break;
+	}
+	case RV_MEM_ACCESS_32_BIT:
+		memcpy(dest, &data, sizeof(data));
+		break;
+	}
+}
+
+static void riscv32_mem_read(target_s *const target, void *const dest, const target_addr_t src, const size_t len)
+{
+	DEBUG_TARGET("Performing %zu byte read of %08" PRIx32 "\n", len, src);
+	/* If we're asked to do a 0-byte read, do nothing */
+	if (!len)
+		return;
+	riscv_hart_s *const hart = riscv_hart_struct(target);
+	/* Figure out the maxmial width of access to perform, up to the bitness of the target */
+	const uint8_t access_width = riscv_mem_access_width(hart, src, len);
+	const uint8_t access_length = 1U << access_width;
+	/* Build the access command */
+	const uint32_t command = RV_DM_ABST_CMD_ACCESS_MEM | RV_ABST_READ | (access_width << RV_MEM_ACCESS_SHIFT) |
+		(access_length < len ? RV_MEM_ADDR_POST_INC : 0U);
+	/* Write the address to read to arg1 */
+	if (!riscv_dm_write(hart->dbg_module, RV_DM_DATA1, src))
+		return;
+	uint8_t *const data = (uint8_t *)dest;
+	for (size_t offset = 0; offset < len; offset += access_length) {
+		/* Execute the read */
+		if (!riscv_dm_write(hart->dbg_module, RV_DM_ABST_COMMAND, command) || !riscv_command_wait_complete(hart))
+			return;
+		/* Extract back the data from arg0 */
+		uint32_t value = 0;
+		if (!riscv_dm_read(hart->dbg_module, RV_DM_DATA0, &value))
+			return;
+		riscv32_unpack_data(data + offset, value, access_width);
+	}
 }

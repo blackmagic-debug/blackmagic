@@ -144,4 +144,7 @@ bool riscv_command_wait_complete(riscv_hart_s *hart);
 bool riscv_csr_read(riscv_hart_s *hart, uint16_t reg, void *data);
 bool riscv_csr_write(riscv_hart_s *hart, uint16_t reg, const void *data);
 
+uint8_t riscv_mem_access_width(const riscv_hart_s *hart, target_addr_t address, size_t length);
+void riscv32_unpack_data(void *dest, uint32_t data, uint8_t access_width);
+
 #endif /*TARGET_RISCV_DEBUG_H*/
