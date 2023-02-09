@@ -179,60 +179,6 @@
 #define SWDP_ACK_FAULT       0x04U
 #define SWDP_ACK_NO_RESPONSE 0x07U
 
-/* JEP-106 code list
- * JEP-106 is a JEDEC standard assigning IDs to different manufacturers
- * the codes in this list are encoded as 16 bit values,
- * with the first bit marking a legacy code (ASCII, not JEP106), the following 3 bits being NULL/unused
- * the following 4 bits the number of continuation codes (see JEP106 continuation scheme),
- * and the last 8 bits being the code itself (without parity, bit 7 is always 0).
- *
- * |15     |11     |7|6           0|
- * | | | | | | | | |0| | | | | | | |
- *  |\____/ \______/|\_____________/
- *  |  V        V   |       V
- *  | Unused   Cont	|      code
- *  |          Code |
- *  \_ Legacy flag  \_ Parity bit (always 0)
- */
-#define ASCII_CODE_FLAG (1U << 15U) /* flag the code as legacy ASCII */
-
-#define JEP106_MANUFACTURER_ARM          0x43bU /* ARM Ltd. */
-#define JEP106_MANUFACTURER_FREESCALE    0x00eU /* Freescale */
-#define JEP106_MANUFACTURER_TEXAS        0x017U /* Texas Instruments */
-#define JEP106_MANUFACTURER_ATMEL        0x01fU /* Atmel */
-#define JEP106_MANUFACTURER_STM          0x020U /* STMicroelectronics */
-#define JEP106_MANUFACTURER_CYPRESS      0x034U /* Cypress Semiconductor */
-#define JEP106_MANUFACTURER_INFINEON     0x041U /* Infineon Technologies */
-#define JEP106_MANUFACTURER_NORDIC       0x244U /* Nordic Semiconductor */
-#define JEP106_MANUFACTURER_SPECULAR     0x501U /* LPC845 with code 501. Strange!? Specular Networks */
-#define JEP106_MANUFACTURER_ARM_CHINA    0xa75U /* Arm China */
-#define JEP106_MANUFACTURER_ENERGY_MICRO 0x673U /* Energy Micro */
-#define JEP106_MANUFACTURER_GIGADEVICE   0x751U /* GigaDevice */
-#define JEP106_MANUFACTURER_RASPBERRY    0x913U /* Raspberry Pi */
-#define JEP106_MANUFACTURER_RENESAS      0x423U /* Renesas */
-
-/*
- * This code is not listed in the JEP106 standard, but is used by some stm32f1 clones
- * since we're not using this code elsewhere let's switch to the stm code.
- */
-#define JEP106_MANUFACTURER_ERRATA_CS 0x555U
-
-/* CPU2 for STM32W(L|B) uses ARM's JEP-106 continuation code (4) instead of
- * STM's JEP-106 continuation code (0) like expected, CPU1 behaves as expected.
- *
- * See RM0453
- * https://www.st.com/resource/en/reference_manual/rm0453-stm32wl5x-advanced-armbased-32bit-mcus-with-subghz-radio-solution-stmicroelectronics.pdf :
- * 38.8.2 CPU1 ROM CoreSight peripheral identity register 4 (ROM_PIDR4)
- * vs
- * 38.13.2 CPU2 ROM1 CoreSight peripheral identity register 4 (C2ROM1_PIDR4)
- *
- * let's call this an errata and switch to the "correct" continuation scheme.
- *
- * note: the JEP code 0x420 would belong to "Legend Silicon Corp." so in
- * the unlikely event we need to support chips by them, here be dragons.
- */
-#define JEP106_MANUFACTURER_ERRATA_STM32WX 0x420U
-
 typedef enum align {
 	ALIGN_BYTE = 0,
 	ALIGN_HALFWORD = 1,
