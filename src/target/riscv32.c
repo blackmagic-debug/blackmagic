@@ -35,7 +35,9 @@
 #include "target.h"
 #include "target_internal.h"
 #include "target_probe.h"
+#include "jep106.h"
 #include "riscv_debug.h"
+#include "gdb_packet.h"
 
 typedef struct riscv32_regs {
 	uint32_t gprs[32];
@@ -91,6 +93,17 @@ bool riscv32_probe(target_s *const target)
 	target->breakwatch_set = riscv32_breakwatch_set;
 	target->breakwatch_clear = riscv32_breakwatch_clear;
 
+	switch (target->designer_code) {
+	case JEP106_MANUFACTURER_RV_GIGADEVICE:
+		PROBE(gd32vf1_probe);
+		break;
+	}
+
+#if PC_HOSTED == 0
+	gdb_outf("Please report unknown device with Designer 0x%x\n", target->designer_code);
+#else
+	DEBUG_WARN("Please report unknown device with Designer 0x%x\n", target->designer_code);
+#endif
 	return false;
 }
 
