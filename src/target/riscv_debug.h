@@ -45,6 +45,24 @@ typedef enum riscv_debug_version {
 	RISCV_DEBUG_1_0,
 } riscv_debug_version_e;
 
+/* This enum describes the Hart status (eg after a CSR read/write) */
+typedef enum riscv_hart_status {
+	/* The Hart is in a good state */
+	RISCV_HART_NO_ERROR = 0,
+	/* The Hart was bust when the status was read */
+	RISCV_HART_BUSY = 1,
+	/* The operation requested of the Hart was not supported */
+	RISCV_HART_NOT_SUPP = 2,
+	/* An exception occured on the Hart while running the operation */
+	RISCV_HART_EXCEPTION = 3,
+	/* The Hart is in the wrong state for the requested operation */
+	RISCV_HART_WRONG_STATE = 4,
+	/* The operation triggered a Hart bus error (bad alignment, access size, or timeout) */
+	RISCV_HART_BUS_ERROR = 5,
+	/* The operation failed for other (unknown) reasons */
+	RISCV_HART_OTHER = 7,
+} riscv_hart_status_e;
+
 typedef struct riscv_dmi riscv_dmi_s;
 
 /* This structure represents a version-agnostic Debug Module Interface on a RISC-V device */
@@ -78,6 +96,7 @@ typedef struct riscv_hart {
 	uint32_t hart_idx;
 	uint32_t hartsel;
 	uint8_t access_width;
+	riscv_hart_status_e status;
 
 	uint32_t vendorid;
 	uint32_t archid;
