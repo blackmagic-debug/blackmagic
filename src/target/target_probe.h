@@ -28,9 +28,9 @@
 #define PROBE(x)                                    \
 	do {                                            \
 		DEBUG_TARGET("Calling " STRINGIFY(x) "\n"); \
-		if ((x)(t))                                 \
+		if ((x)(target))                            \
 			return true;                            \
-		target_check_error(t);                      \
+		target_check_error(target);                 \
 	} while (0)
 
 /*

@@ -484,25 +484,25 @@ const char *cortexm_regs_description(target_s *t)
 
 bool cortexm_probe(adiv5_access_port_s *ap)
 {
-	target_s *t = target_new();
-	if (!t)
+	target_s *target = target_new();
+	if (!target)
 		return false;
 
 	adiv5_ap_ref(ap);
 	if (ap->dp->version >= 2 && ap->dp->target_designer_code != 0) {
 		/* Use TARGETID register to identify target */
-		t->designer_code = ap->dp->target_designer_code;
-		t->part_id = ap->dp->target_partno;
+		target->designer_code = ap->dp->target_designer_code;
+		target->part_id = ap->dp->target_partno;
 	} else {
 		/* Use AP DESIGNER and AP PARTNO to identify target */
-		t->designer_code = ap->designer_code;
-		t->part_id = ap->partno;
+		target->designer_code = ap->designer_code;
+		target->part_id = ap->partno;
 	}
 
 	/* MM32F5xxx: part designer code is Arm China, target designer code uses forbidden continuation code */
-	if (t->designer_code == JEP106_MANUFACTURER_ERRATA_ARM_CHINA &&
+	if (target->designer_code == JEP106_MANUFACTURER_ERRATA_ARM_CHINA &&
 		ap->dp->designer_code == JEP106_MANUFACTURER_ARM_CHINA)
-		t->designer_code = JEP106_MANUFACTURER_ARM_CHINA;
+		target->designer_code = JEP106_MANUFACTURER_ARM_CHINA;
 
 	cortexm_priv_s *priv = calloc(1, sizeof(*priv));
 	if (!priv) { /* calloc failed: heap exhaustion */
@@ -510,48 +510,48 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 		return false;
 	}
 
-	t->priv = priv;
-	t->priv_free = cortex_priv_free;
+	target->priv = priv;
+	target->priv_free = cortex_priv_free;
 	priv->base.ap = ap;
 	priv->base.base_addr = CORTEXM_SCS_BASE;
 
-	t->check_error = cortex_check_error;
-	t->mem_read = cortexm_mem_read;
-	t->mem_write = cortexm_mem_write;
+	target->check_error = cortex_check_error;
+	target->mem_read = cortexm_mem_read;
+	target->mem_write = cortexm_mem_write;
 
-	t->driver = "ARM Cortex-M";
+	target->driver = "ARM Cortex-M";
 
-	cortex_read_cpuid(t);
+	cortex_read_cpuid(target);
 
-	t->attach = cortexm_attach;
-	t->detach = cortexm_detach;
+	target->attach = cortexm_attach;
+	target->detach = cortexm_detach;
 
 	/* Probe for FP extension. */
-	uint32_t cpacr = target_mem_read32(t, CORTEXM_CPACR);
+	uint32_t cpacr = target_mem_read32(target, CORTEXM_CPACR);
 	cpacr |= 0x00f00000U; /* CP10 = 0b11, CP11 = 0b11 */
-	target_mem_write32(t, CORTEXM_CPACR, cpacr);
-	bool is_cortexmf = target_mem_read32(t, CORTEXM_CPACR) == cpacr;
+	target_mem_write32(target, CORTEXM_CPACR, cpacr);
+	bool is_cortexmf = target_mem_read32(target, CORTEXM_CPACR) == cpacr;
 
-	t->regs_description = cortexm_regs_description;
-	t->regs_read = cortexm_regs_read;
-	t->regs_write = cortexm_regs_write;
-	t->reg_read = cortexm_reg_read;
-	t->reg_write = cortexm_reg_write;
+	target->regs_description = cortexm_regs_description;
+	target->regs_read = cortexm_regs_read;
+	target->regs_write = cortexm_regs_write;
+	target->reg_read = cortexm_reg_read;
+	target->reg_write = cortexm_reg_write;
 
-	t->reset = cortexm_reset;
-	t->halt_request = cortexm_halt_request;
-	t->halt_poll = cortexm_halt_poll;
-	t->halt_resume = cortexm_halt_resume;
-	t->regs_size = sizeof(uint32_t) * CORTEXM_GENERAL_REG_COUNT;
+	target->reset = cortexm_reset;
+	target->halt_request = cortexm_halt_request;
+	target->halt_poll = cortexm_halt_poll;
+	target->halt_resume = cortexm_halt_resume;
+	target->regs_size = sizeof(uint32_t) * CORTEXM_GENERAL_REG_COUNT;
 
-	t->breakwatch_set = cortexm_breakwatch_set;
-	t->breakwatch_clear = cortexm_breakwatch_clear;
+	target->breakwatch_set = cortexm_breakwatch_set;
+	target->breakwatch_clear = cortexm_breakwatch_clear;
 
-	target_add_commands(t, cortexm_cmd_list, t->driver);
+	target_add_commands(target, cortexm_cmd_list, target->driver);
 
 	if (is_cortexmf) {
-		t->target_options |= TOPT_FLAVOUR_V7MF;
-		t->regs_size += sizeof(uint32_t) * CORTEX_FLOAT_REG_COUNT;
+		target->target_options |= TOPT_FLAVOUR_V7MF;
+		target->regs_size += sizeof(uint32_t) * CORTEX_FLOAT_REG_COUNT;
 	}
 
 	/* Default vectors to catch */
@@ -569,15 +569,15 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 		conn_reset = true;
 
 		/* Request halt when reset is de-asseted */
-		target_mem_write32(t, CORTEXM_DEMCR, priv->demcr);
+		target_mem_write32(target, CORTEXM_DEMCR, priv->demcr);
 		/* Force a halt */
-		cortexm_halt_request(t);
+		cortexm_halt_request(target);
 		/* Release reset */
 		platform_nrst_set_val(false);
 		/* Poll for release from reset */
 		platform_timeout_s timeout;
 		platform_timeout_set(&timeout, 1000);
-		while (target_mem_read32(t, CORTEXM_DHCSR) & CORTEXM_DHCSR_S_RESET_ST) {
+		while (target_mem_read32(target, CORTEXM_DHCSR) & CORTEXM_DHCSR_S_RESET_ST) {
 			if (platform_timeout_is_expired(&timeout)) {
 				DEBUG_ERROR("Error releasing from reset\n");
 				/* Go on and try to detect the target anyways */
@@ -588,18 +588,18 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 	}
 
 	/* Check cache type */
-	const uint32_t cache_type = target_mem_read32(t, CORTEXM_CTR);
+	const uint32_t cache_type = target_mem_read32(target, CORTEXM_CTR);
 	if (cache_type >> CORTEX_CTR_FORMAT_SHIFT == CORTEX_CTR_FORMAT_ARMv7) {
 		priv->base.icache_line_length = CORTEX_CTR_ICACHE_LINE(cache_type);
 		priv->base.dcache_line_length = CORTEX_CTR_DCACHE_LINE(cache_type);
 	} else
-		target_check_error(t);
+		target_check_error(target);
 
 	/* If we set the interrupt catch vector earlier, clear it. */
 	if (conn_reset)
-		target_mem_write32(t, CORTEXM_DEMCR, 0);
+		target_mem_write32(target, CORTEXM_DEMCR, 0);
 
-	switch (t->designer_code) {
+	switch (target->designer_code) {
 	case JEP106_MANUFACTURER_FREESCALE:
 		PROBE(kinetis_probe);
 		PROBE(imxrt_probe);
@@ -649,7 +649,7 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 		PROBE(renesas_probe);
 		break;
 	case JEP106_MANUFACTURER_NXP:
-		if ((t->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M33)
+		if ((target->cpuid & CORTEX_CPUID_PARTNO_MASK) == CORTEX_M33)
 			PROBE(lpc55xx_probe);
 		else
 			DEBUG_WARN("Unhandled NXP device\n");
@@ -662,22 +662,22 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 		 * All of these have braces as a brake from the standard so they're completely
 		 * consistent and easier to add new probe calls to.
 		 */
-		if (t->part_id == 0x4c0U) {        /* Cortex-M0+ ROM */
-			PROBE(lpc11xx_probe);          /* LPC8 */
-			PROBE(hc32l110_probe);         /* HDSC HC32L110 */
-		} else if (t->part_id == 0x4c1U) { /* NXP Cortex-M0+ ROM */
-			PROBE(lpc11xx_probe);          /* newer LPC11U6x */
-		} else if (t->part_id == 0x4c3U) { /* Cortex-M3 ROM */
+		if (target->part_id == 0x4c0U) {        /* Cortex-M0+ ROM */
+			PROBE(lpc11xx_probe);               /* LPC8 */
+			PROBE(hc32l110_probe);              /* HDSC HC32L110 */
+		} else if (target->part_id == 0x4c1U) { /* NXP Cortex-M0+ ROM */
+			PROBE(lpc11xx_probe);               /* newer LPC11U6x */
+		} else if (target->part_id == 0x4c3U) { /* Cortex-M3 ROM */
 			PROBE(lmi_probe);
 			PROBE(ch32f1_probe);
-			PROBE(stm32f1_probe);          /* Care for other STM32F1 clones (?) */
-			PROBE(lpc15xx_probe);          /* Thanks to JojoS for testing */
-			PROBE(mm32f3xx_probe);         /* MindMotion MM32 */
-		} else if (t->part_id == 0x471U) { /* Cortex-M0 ROM */
-			PROBE(lpc11xx_probe);          /* LPC24C11 */
+			PROBE(stm32f1_probe);               /* Care for other STM32F1 clones (?) */
+			PROBE(lpc15xx_probe);               /* Thanks to JojoS for testing */
+			PROBE(mm32f3xx_probe);              /* MindMotion MM32 */
+		} else if (target->part_id == 0x471U) { /* Cortex-M0 ROM */
+			PROBE(lpc11xx_probe);               /* LPC24C11 */
 			PROBE(lpc43xx_probe);
-			PROBE(mm32l0xx_probe);         /* MindMotion MM32 */
-		} else if (t->part_id == 0x4c4U) { /* Cortex-M4 ROM */
+			PROBE(mm32l0xx_probe);              /* MindMotion MM32 */
+		} else if (target->part_id == 0x4c4U) { /* Cortex-M4 ROM */
 			PROBE(sam3x_probe);
 			PROBE(lmi_probe);
 			/*
@@ -694,8 +694,8 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 			PROBE(kinetis_probe); /* Older K-series */
 			PROBE(at32fxx_probe);
 			PROBE(msp432e4_probe);
-		} else if (t->part_id == 0x4cbU) { /* Cortex-M23 ROM */
-			PROBE(gd32f1_probe);           /* GD32E23x uses GD32F1 peripherals */
+		} else if (target->part_id == 0x4cbU) { /* Cortex-M23 ROM */
+			PROBE(gd32f1_probe);                /* GD32E23x uses GD32F1 peripherals */
 		}
 		break;
 	case ASCII_CODE_FLAG:
@@ -712,7 +712,8 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 #if PC_HOSTED == 0
 	gdb_outf("Please report unknown device with Designer 0x%x Part ID 0x%x\n", t->designer_code, t->part_id);
 #else
-	DEBUG_WARN("Please report unknown device with Designer 0x%x Part ID 0x%x\n", t->designer_code, t->part_id);
+	DEBUG_WARN(
+		"Please report unknown device with Designer 0x%x Part ID 0x%x\n", target->designer_code, target->part_id);
 #endif
 	return true;
 }
