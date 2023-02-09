@@ -36,6 +36,9 @@
 #include "riscv_debug.h"
 
 #define RV_DM_DATA0           0x04U
+#define RV_DM_DATA1           0x05U
+#define RV_DM_DATA2           0x06U
+#define RV_DM_DATA3           0x07U
 #define RV_DM_CONTROL         0x10U
 #define RV_DM_STATUS          0x11U
 #define RV_DM_ABST_CTRLSTATUS 0x16U
@@ -293,17 +296,48 @@ static void riscv_dm_unref(riscv_dm_s *const dbg_module)
 	}
 }
 
-bool riscv_csr_read(riscv_hart_s *const hart, const uint16_t reg, void *const data)
+static uint32_t riscv_hart_access_width(const riscv_hart_s *const hart)
 {
-	if (!riscv_dm_write(
-			hart->dbg_module, RV_DM_ABST_COMMAND, RV_DM_ABST_CMD_ACCESS_REG | RV_REG_XFER | RV_REG_ACCESS_32_BIT | reg))
-		return false;
+	if (hart->access_width == 128U)
+		return RV_REG_ACCESS_128_BIT;
+	if (hart->access_width == 64U)
+		return RV_REG_ACCESS_64_BIT;
+	return RV_REG_ACCESS_32_BIT;
+}
+
+static bool riscv_csr_wait_complete(riscv_hart_s *const hart)
+{
 	uint32_t status = RV_DM_ABST_STATUS_BUSY;
 	while (status & RV_DM_ABST_STATUS_BUSY) {
 		if (!riscv_dm_read(hart->dbg_module, RV_DM_ABST_CTRLSTATUS, &status))
 			return false;
 	}
-	return riscv_dm_read(hart->dbg_module, RV_DM_DATA0, (uint32_t *)data);
+	/* Shift out and mask off the command status, then reset the status on the Hart */
+	hart->status = (status >> 8U) & RISCV_HART_OTHER;
+	if (!riscv_dm_write(hart->dbg_module, RV_DM_ABST_CTRLSTATUS, RISCV_HART_OTHER << 8U))
+		return false;
+	/* If the command failed, return the failure */
+	return hart->status == RISCV_HART_NO_ERROR;
+}
+
+bool riscv_csr_read(riscv_hart_s *const hart, const uint16_t reg, void *const data)
+{
+	/* Set up the register read and wait for it to complete */
+	if (!riscv_dm_write(hart->dbg_module, RV_DM_ABST_COMMAND,
+			RV_DM_ABST_CMD_ACCESS_REG | RV_REG_READ | RV_REG_XFER | riscv_hart_access_width(hart) | reg) ||
+		!riscv_csr_wait_complete(hart))
+		return false;
+	uint32_t *const value = (uint32_t *)data;
+	/* If we're doing a 128-bit read, grab the upper-most 2 uint32_t's */
+	if (hart->access_width == 128U &&
+		!(riscv_dm_read(hart->dbg_module, RV_DM_DATA3, value + 3) &&
+			riscv_dm_read(hart->dbg_module, RV_DM_DATA2, value + 2)))
+		return false;
+	/* If we're doing at least a 64-bit read, grab the next uint32_t */
+	if (hart->access_width >= 64U && !riscv_dm_read(hart->dbg_module, RV_DM_DATA1, value + 1))
+		return false;
+	/* Finally grab the last and lowest uint32_t */
+	return riscv_dm_read(hart->dbg_module, RV_DM_DATA0, value);
 }
 
 static void riscv_halt_request(target_s *const target)
