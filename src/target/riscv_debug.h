@@ -96,8 +96,10 @@ typedef struct riscv_hart {
 	uint32_t hart_idx;
 	uint32_t hartsel;
 	uint8_t access_width;
+	uint8_t address_width;
 	riscv_hart_status_e status;
 
+	uint32_t extensions;
 	uint32_t vendorid;
 	uint32_t archid;
 	uint32_t implid;
