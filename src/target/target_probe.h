@@ -42,6 +42,9 @@ bool cortexa_probe(adiv5_access_port_s *ap, target_addr_t base_address);
 bool cortexr_probe(adiv5_access_port_s *ap, target_addr_t base_address);
 bool cortexm_probe(adiv5_access_port_s *ap);
 
+bool riscv32_probe(target_s *target);
+bool riscv64_probe(target_s *target);
+
 bool kinetis_mdm_probe(adiv5_access_port_s *ap);
 bool nrf51_mdm_probe(adiv5_access_port_s *ap);
 bool efm32_aap_probe(adiv5_access_port_s *ap);
