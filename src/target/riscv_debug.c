@@ -34,7 +34,10 @@
 #include "general.h"
 #include "target_probe.h"
 #include "target_internal.h"
+#include "gdb_reg.h"
 #include "riscv_debug.h"
+
+#include <assert.h>
 
 #define RV_DM_CONTROL 0x10U
 #define RV_DM_STATUS  0x11U
@@ -76,10 +79,73 @@
 /* mhartid -> machine ID of the Hart */
 #define RV_HART_ID 0xf14U
 
-#define RV_ISA_EXTENSIONS_MASK 0x03ffffffU
+#define RV_ISA_EXTENSIONS_MASK  0x03ffffffU
+#define RV_ISA_EXT_EMBEDDED     0x00000010U
+#define RV_ISA_EXT_ANY_FLOAT    0x00010028U
+#define RV_ISA_EXT_SINGLE_FLOAT 0x00000020U
+#define RV_ISA_EXT_DOUBLE_FLOAT 0x00000008U
+#define RV_ISA_EXT_QUAD_FLOAT   0x00010000U
 
 #define RV_DCSR_STEP   0x00000004U
 #define RV_DCSR_STEPIE 0x00000800U
+
+#define RV_GPRS_COUNT 32U
+
+// clang-format off
+/* General-purpose register name strings */
+static const char *const riscv_gpr_names[RV_GPRS_COUNT] = {
+	"zero", "ra", "sp", "gp",
+	"tp", "t0", "t1", "t2",
+	"fp", "s1", "a0", "a1",
+	"a2", "a3", "a4", "a5",
+	"a6", "a7", "s2", "s3",
+	"s4", "s5", "s6", "s7",
+	"s8", "s9", "s10", "s11",
+	"t3", "t4", "t5", "t6",
+};
+// clang-format on
+
+/* General-purpose register types */
+static const gdb_reg_type_e riscv_gpr_types[RV_GPRS_COUNT] = {
+	GDB_TYPE_UNSPECIFIED,
+	GDB_TYPE_CODE_PTR,
+	GDB_TYPE_DATA_PTR,
+	GDB_TYPE_DATA_PTR,
+	GDB_TYPE_DATA_PTR,
+	GDB_TYPE_UNSPECIFIED,
+	GDB_TYPE_UNSPECIFIED,
+	GDB_TYPE_UNSPECIFIED,
+	GDB_TYPE_DATA_PTR,
+	GDB_TYPE_UNSPECIFIED,
+	GDB_TYPE_UNSPECIFIED,
+	GDB_TYPE_UNSPECIFIED,
+	GDB_TYPE_UNSPECIFIED,
+	GDB_TYPE_UNSPECIFIED,
+	GDB_TYPE_UNSPECIFIED,
+	GDB_TYPE_UNSPECIFIED,
+	GDB_TYPE_UNSPECIFIED,
+	GDB_TYPE_UNSPECIFIED,
+	GDB_TYPE_UNSPECIFIED,
+	GDB_TYPE_UNSPECIFIED,
+	GDB_TYPE_UNSPECIFIED,
+	GDB_TYPE_UNSPECIFIED,
+	GDB_TYPE_UNSPECIFIED,
+	GDB_TYPE_UNSPECIFIED,
+	GDB_TYPE_UNSPECIFIED,
+	GDB_TYPE_UNSPECIFIED,
+	GDB_TYPE_UNSPECIFIED,
+	GDB_TYPE_UNSPECIFIED,
+	GDB_TYPE_UNSPECIFIED,
+	GDB_TYPE_UNSPECIFIED,
+	GDB_TYPE_UNSPECIFIED,
+	GDB_TYPE_UNSPECIFIED,
+};
+
+// clang-format off
+static_assert(ARRAY_LENGTH(riscv_gpr_names) == ARRAY_LENGTH(riscv_gpr_types),
+	"GPR array length mismatch! GPR type array should have the same length as GPR name array."
+);
+// clang-format on
 
 static void riscv_dm_init(riscv_dm_s *dbg_module);
 static bool riscv_hart_init(riscv_hart_s *hart);
@@ -94,6 +160,8 @@ static uint32_t riscv_hart_discover_isa(riscv_hart_s *hart);
 
 static bool riscv_attach(target_s *target);
 static void riscv_detach(target_s *target);
+
+static const char *riscv_target_description(target_s *target);
 
 static bool riscv_check_error(target_s *target);
 static void riscv_halt_request(target_s *target);
@@ -242,6 +310,8 @@ static bool riscv_hart_init(riscv_hart_s *const hart)
 	/* Setup core-agnostic target functions */
 	target->attach = riscv_attach;
 	target->detach = riscv_detach;
+
+	target->regs_description = riscv_target_description;
 
 	target->check_error = riscv_check_error;
 	target->halt_request = riscv_halt_request;
@@ -556,4 +626,118 @@ static void riscv_halt_resume(target_s *target, const bool step)
 	}
 	/* Clear the request now we've got it resumed */
 	(void)riscv_dm_write(hart->dbg_module, RV_DM_CONTROL, hart->hartsel);
+}
+
+static const char *riscv_fpu_ext_string(const uint32_t extensions)
+{
+	if (extensions & RV_ISA_EXT_QUAD_FLOAT)
+		return "q";
+	if (extensions & RV_ISA_EXT_DOUBLE_FLOAT)
+		return "d";
+	if (extensions & RV_ISA_EXT_SINGLE_FLOAT)
+		return "f";
+	return "";
+}
+
+/*
+ * This function creates the target description XML string for a RISC-V part.
+ * This is done this way to decrease string duplication and thus code size, making it
+ * unfortunately much less readable than the string literal it is equivalent to.
+ *
+ * This string it creates is the XML-equivalent to the following:
+ * "<?xml version=\"1.0\"?>"
+ * "<!DOCTYPE target SYSTEM \"gdb-target.dtd\">"
+ * "<target>"
+ * "	<architecture>riscv:rv[address_width][exts]</architecture>"
+ * "	<feature name=\"org.gnu.gdb.riscv.cpu\">"
+ * "		<reg name=\"zero\" bitsize=\"[address_width]\" regnum=\"0\"/>"
+ * "		<reg name=\"ra\" bitsize=\"[address_width]\" type=\"code_ptr\"/>"
+ * "		<reg name=\"sp\" bitsize=\"[address_width]\" type=\"data_ptr\"/>"
+ * "		<reg name=\"gp\" bitsize=\"[address_width]\" type=\"data_ptr\"/>"
+ * "		<reg name=\"tp\" bitsize=\"[address_width]\" type=\"data_ptr\"/>"
+ * "		<reg name=\"t0\" bitsize=\"[address_width]\"/>"
+ * "		<reg name=\"t1\" bitsize=\"[address_width]\"/>"
+ * "		<reg name=\"t2\" bitsize=\"[address_width]\"/>"
+ * "		<reg name=\"fp\" bitsize=\"[address_width]\" type=\"data_ptr\"/>"
+ * "		<reg name=\"s1\" bitsize=\"[address_width]\"/>"
+ * "		<reg name=\"a0\" bitsize=\"[address_width]\"/>"
+ * "		<reg name=\"a1\" bitsize=\"[address_width]\"/>"
+ * "		<reg name=\"a2\" bitsize=\"[address_width]\"/>"
+ * "		<reg name=\"a3\" bitsize=\"[address_width]\"/>"
+ * "		<reg name=\"a4\" bitsize=\"[address_width]\"/>"
+ * "		<reg name=\"a5\" bitsize=\"[address_width]\"/>"
+ * The following are only generated for an I core, not an E:
+ * "		<reg name=\"a6\" bitsize=\"[address_width]\"/>"
+ * "		<reg name=\"a7\" bitsize=\"[address_width]\"/>"
+ * "		<reg name=\"s2\" bitsize=\"[address_width]\"/>"
+ * "		<reg name=\"s3\" bitsize=\"[address_width]\"/>"
+ * "		<reg name=\"s4\" bitsize=\"[address_width]\"/>"
+ * "		<reg name=\"s5\" bitsize=\"[address_width]\"/>"
+ * "		<reg name=\"s6\" bitsize=\"[address_width]\"/>"
+ * "		<reg name=\"s7\" bitsize=\"[address_width]\"/>"
+ * "		<reg name=\"s8\" bitsize=\"[address_width]\"/>"
+ * "		<reg name=\"s9\" bitsize=\"[address_width]\"/>"
+ * "		<reg name=\"s10\" bitsize=\"[address_width]\"/>"
+ * "		<reg name=\"s11\" bitsize=\"[address_width]\"/>"
+ * "		<reg name=\"t3\" bitsize=\"[address_width]\"/>"
+ * "		<reg name=\"t4\" bitsize=\"[address_width]\"/>"
+ * "		<reg name=\"t5\" bitsize=\"[address_width]\"/>"
+ * "		<reg name=\"t6\" bitsize=\"[address_width]\"/>"
+ * Both are then continued with:
+ * "		<reg name=\"pc\" bitsize=\"[address_width]\" type=\"code_ptr\"/>"
+ * "	</feature>"
+ * "</target>"
+ */
+static size_t riscv_build_target_description(
+	char *const buffer, size_t max_length, const uint8_t address_width, const uint32_t extensions)
+{
+	const bool embedded = extensions & RV_ISA_EXT_EMBEDDED;
+	const uint32_t fpu = extensions & RV_ISA_EXT_ANY_FLOAT;
+
+	size_t print_size = max_length;
+	/* Start with the "preamble" chunks, which are mostly common across targets save for 2 words. */
+	int offset = snprintf(buffer, print_size, "%s target %sriscv:rv%u%c%s%s <feature name=\"org.gnu.gdb.riscv.cpu\">",
+		gdb_xml_preamble_first, gdb_xml_preamble_second, address_width, embedded ? 'e' : 'i', riscv_fpu_ext_string(fpu),
+		gdb_xml_preamble_third);
+
+	const uint8_t gprs = embedded ? 16U : 32U;
+	/* Then build the general purpose register descriptions using the arrays at top of file */
+	/* Note that in a device using the embedded (E) extension, we only generate the first 16. */
+	for (uint8_t i = 0; i < gprs; ++i) {
+		if (max_length != 0)
+			print_size = max_length - (size_t)offset;
+
+		const char *const name = riscv_gpr_names[i];
+		const gdb_reg_type_e type = riscv_gpr_types[i];
+
+		offset += snprintf(buffer + offset, print_size, "<reg name=\"%s\" bitsize=\"%u\"%s%s/>", name, address_width,
+			gdb_reg_type_strings[type], i == 0 ? " regnum=\"0\"" : "");
+	}
+
+	/* Then build the program counter register description, which has the same bitsize as the GPRs. */
+	if (max_length != 0)
+		print_size = max_length - (size_t)offset;
+	offset += snprintf(buffer + offset, print_size, "<reg name=\"pc\" bitsize=\"%u\"%s/>", address_width,
+		gdb_reg_type_strings[GDB_TYPE_CODE_PTR]);
+
+	/* XXX: TODO - implement generation of the FPU feature and registers */
+
+	/* Add the closing tags required */
+	if (max_length != 0)
+		print_size = max_length - (size_t)offset;
+
+	offset += snprintf(buffer + offset, print_size, "</feature></target>");
+	/* offset is now the total length of the string created, discard the sign and return it. */
+	return (size_t)offset;
+}
+
+static const char *riscv_target_description(target_s *const target)
+{
+	const riscv_hart_s *const hart = riscv_hart_struct(target);
+	const size_t description_length =
+		riscv_build_target_description(NULL, 0, hart->address_width, hart->extensions) + 1U;
+	char *const description = malloc(description_length);
+	if (description)
+		(void)riscv_build_target_description(description, description_length, hart->address_width, hart->extensions);
+	return description;
 }
