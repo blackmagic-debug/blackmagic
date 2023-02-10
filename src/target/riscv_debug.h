@@ -64,6 +64,13 @@ typedef enum riscv_hart_status {
 	RISCV_HART_OTHER = 7,
 } riscv_hart_status_e;
 
+/* This enum describes the current state of a trigger in the TM */
+typedef enum riscv_trigger_state {
+	RISCV_TRIGGER_MODE_UNUSED = 0x00000000U,
+	RISCV_TRIGGER_MODE_BREAKPOINT = 0x00010000U,
+	RISCV_TRIGGER_MODE_WATCHPOINT = 0x00020000U,
+} riscv_trigger_state_e;
+
 typedef struct riscv_dmi riscv_dmi_s;
 
 /* This structure represents a version-agnostic Debug Module Interface on a RISC-V device */
@@ -154,6 +161,9 @@ typedef struct riscv_hart {
 #define RV_ISA_EXT_DOUBLE_FLOAT 0x00000008U
 #define RV_ISA_EXT_QUAD_FLOAT   0x00010000U
 
+#define RV_TRIGGER_SUPPORT_MASK 0x0000fffeU
+#define RV_TRIGGER_MODE_MASK    0xffff0000U
+
 void riscv_jtag_dtm_handler(uint8_t dev_index);
 void riscv_dmi_init(riscv_dmi_s *dmi);
 riscv_hart_s *riscv_hart_struct(target_s *target);
@@ -163,6 +173,8 @@ bool riscv_dm_write(riscv_dm_s *dbg_module, uint8_t address, uint32_t value);
 bool riscv_command_wait_complete(riscv_hart_s *hart);
 bool riscv_csr_read(riscv_hart_s *hart, uint16_t reg, void *data);
 bool riscv_csr_write(riscv_hart_s *hart, uint16_t reg, const void *data);
+bool riscv_config_trigger(
+	riscv_hart_s *hart, uint32_t trigger, riscv_trigger_state_e mode, const void *config, const void *address);
 
 uint8_t riscv_mem_access_width(const riscv_hart_s *hart, target_addr_t address, size_t length);
 void riscv32_unpack_data(void *dest, uint32_t data, uint8_t access_width);
