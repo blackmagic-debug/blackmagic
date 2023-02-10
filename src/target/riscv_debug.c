@@ -39,6 +39,16 @@
 
 #include <assert.h>
 
+/*
+ * Links to exact specifications used in this code are listed here for ease:
+ * riscv-debug-spec v0.11 as used by SiFive:
+ * https://static.dev.sifive.com/riscv-debug-spec-0.11nov12.pdf
+ * riscv-debug-spec v0.13.2 (release):
+ * https://raw.githubusercontent.com/riscv/riscv-debug-spec/v0.13-release/riscv-debug-release.pdf
+ * riscv-debug-spec v1.0 (stable):
+ * https://github.com/riscv/riscv-debug-spec/blob/master/riscv-debug-stable.pdf
+ */
+
 #define RV_DM_CONTROL 0x10U
 #define RV_DM_STATUS  0x11U
 #define RV_DM_NEXT_DM 0x1dU
