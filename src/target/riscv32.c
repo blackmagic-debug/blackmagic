@@ -39,6 +39,12 @@
 #include "riscv_debug.h"
 #include "gdb_packet.h"
 
+typedef struct riscv32_regs {
+	uint32_t gprs[32];
+	uint32_t pc;
+} riscv32_regs_s;
+
+static void riscv32_regs_read(target_s *target, void *data);
 static void riscv32_mem_read(target_s *target, void *dest, target_addr_t src, size_t len);
 
 #define STRINGIFY(x) #x
@@ -52,6 +58,9 @@ static void riscv32_mem_read(target_s *target, void *dest, target_addr_t src, si
 bool riscv32_probe(target_s *const target)
 {
 	target->core = "rv32";
+	/* Provide the length of a suitable registers structure */
+	target->regs_size = sizeof(riscv32_regs_s);
+	target->regs_read = riscv32_regs_read;
 	target->mem_read = riscv32_mem_read;
 
 	switch (target->designer_code) {
@@ -66,6 +75,18 @@ bool riscv32_probe(target_s *const target)
 #endif
 #undef PROBE
 	return false;
+}
+
+static void riscv32_regs_read(target_s *const target, void *const data)
+{
+	riscv_hart_s *const hart = riscv_hart_struct(target);
+	riscv32_regs_s *const regs = (riscv32_regs_s *)data;
+	const size_t gprs_count = hart->extensions & RV_ISA_EXT_EMBEDDED ? 16U : 32U;
+	for (size_t gpr = 0; gpr < gprs_count; ++gpr) {
+		// TODO: handle when this fails..
+		riscv_csr_read(hart, RV_GPR_BASE + gpr, &regs->gprs[gpr]);
+	}
+	riscv_csr_read(hart, RV_DPC, &regs->pc);
 }
 
 void riscv32_unpack_data(void *const dest, const uint32_t data, const uint8_t access_width)

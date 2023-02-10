@@ -59,17 +59,15 @@
 #define RV_DM_ABST_STATUS_BUSY       0x00001000U
 #define RV_DM_ABST_STATUS_DATA_COUNT 0x0000000fU
 
-#define RV_CSR_FORCE_MASK   0x3000U
-#define RV_CSR_FORCE_32_BIT 0x1000U
-#define RV_CSR_FORCE_64_BIT 0x2000U
+#define RV_CSR_FORCE_MASK   0xc000U
+#define RV_CSR_FORCE_32_BIT 0x4000U
+#define RV_CSR_FORCE_64_BIT 0x8000U
 
 /* The following is a set of CSR address definitions */
 /* misa -> The Hart's machine ISA register */
 #define RV_ISA 0x301U
 /* dcsr -> Debug Control/Status Register */
 #define RV_DCSR 0x7b0U
-/* dpc -> Debug Program Counter */
-#define RV_DPC 0x7b1U
 /* mvendorid -> The JEP-106 code for the vendor implementing this Hart */
 #define RV_VENDOR_ID 0xf11U
 /* marchid -> The RISC-V International architecture ID code */
@@ -79,12 +77,7 @@
 /* mhartid -> machine ID of the Hart */
 #define RV_HART_ID 0xf14U
 
-#define RV_ISA_EXTENSIONS_MASK  0x03ffffffU
-#define RV_ISA_EXT_EMBEDDED     0x00000010U
-#define RV_ISA_EXT_ANY_FLOAT    0x00010028U
-#define RV_ISA_EXT_SINGLE_FLOAT 0x00000020U
-#define RV_ISA_EXT_DOUBLE_FLOAT 0x00000008U
-#define RV_ISA_EXT_QUAD_FLOAT   0x00010000U
+#define RV_ISA_EXTENSIONS_MASK 0x03ffffffU
 
 #define RV_DCSR_STEP   0x00000004U
 #define RV_DCSR_STEPIE 0x00000800U

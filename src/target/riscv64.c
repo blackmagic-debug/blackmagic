@@ -37,14 +37,35 @@
 #include "target_probe.h"
 #include "riscv_debug.h"
 
+typedef struct riscv64_regs {
+	uint64_t gprs[32];
+	uint64_t pc;
+} riscv64_regs_s;
+
+static void riscv64_regs_read(target_s *target, void *data);
 static void riscv64_mem_read(target_s *target, void *dest, target_addr_t src, size_t len);
 
 bool riscv64_probe(target_s *const target)
 {
 	target->core = "rv64";
+	/* Provide the length of a suitable registers structure */
+	target->regs_size = sizeof(riscv64_regs_s);
+	target->regs_read = riscv64_regs_read;
 	target->mem_read = riscv64_mem_read;
 
 	return false;
+}
+
+static void riscv64_regs_read(target_s *const target, void *const data)
+{
+	riscv_hart_s *const hart = riscv_hart_struct(target);
+	riscv64_regs_s *const regs = (riscv64_regs_s *)data;
+	const size_t gprs_count = hart->extensions & RV_ISA_EXT_EMBEDDED ? 16U : 32U;
+	for (size_t gpr = 0; gpr < gprs_count; ++gpr) {
+		// TODO: handle when this fails..
+		riscv_csr_read(hart, RV_GPR_BASE + gpr, &regs->gprs[gpr]);
+	}
+	riscv_csr_read(hart, RV_DPC, &regs->pc);
 }
 
 void riscv64_unpack_data(
