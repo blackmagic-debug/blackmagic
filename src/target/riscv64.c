@@ -47,6 +47,7 @@ static void riscv64_mem_read(target_s *target, void *dest, target_addr_t src, si
 
 bool riscv64_probe(target_s *const target)
 {
+	/* Finish setting up the target structure with generic rv64 functions */
 	target->core = "rv64";
 	/* Provide the length of a suitable registers structure */
 	target->regs_size = sizeof(riscv64_regs_s);
@@ -58,26 +59,32 @@ bool riscv64_probe(target_s *const target)
 
 static void riscv64_regs_read(target_s *const target, void *const data)
 {
+	/* Grab the hart structure and figure out how many registers need reading out */
 	riscv_hart_s *const hart = riscv_hart_struct(target);
 	riscv64_regs_s *const regs = (riscv64_regs_s *)data;
 	const size_t gprs_count = hart->extensions & RV_ISA_EXT_EMBEDDED ? 16U : 32U;
+	/* Loop through reading out the GPRs */
 	for (size_t gpr = 0; gpr < gprs_count; ++gpr) {
 		// TODO: handle when this fails..
 		riscv_csr_read(hart, RV_GPR_BASE + gpr, &regs->gprs[gpr]);
 	}
+	/* Special access to grab the program counter that would be executed on resuming the hart */
 	riscv_csr_read(hart, RV_DPC, &regs->pc);
 }
 
+/* Takes in data from abstract command arg0 and, based on the access width, unpacks it to dest */
 void riscv64_unpack_data(
 	void *const dest, const uint32_t data_low, const uint32_t data_high, const uint8_t access_width)
 {
 	switch (access_width) {
+	/* If the access was 32-bit or less, ignore data_high and delegate to the RV32 version of this function */
 	case RV_MEM_ACCESS_8_BIT:
 	case RV_MEM_ACCESS_16_BIT:
 	case RV_MEM_ACCESS_32_BIT:
 		riscv32_unpack_data(dest, data_low, access_width);
 		break;
 	case RV_MEM_ACCESS_64_BIT: {
+		/* Reconstruct the 64-bit value and copy it into the destination */
 		uint64_t value = ((uint64_t)data_high << 32U) | data_low;
 		memcpy(dest, &value, sizeof(value));
 		break;
