@@ -645,6 +645,31 @@ static void riscv_hart_discover_triggers(riscv_hart_s *const hart)
 	}
 }
 
+riscv_match_size_e riscv_breakwatch_match_size(const size_t size)
+{
+	switch (size) {
+	case 8U:
+		return RV_MATCH_SIZE_8_BIT;
+	case 16U:
+		return RV_MATCH_SIZE_16_BIT;
+	case 32U:
+		return RV_MATCH_SIZE_32_BIT;
+	case 48U:
+		return RV_MATCH_SIZE_48_BIT;
+	case 64U:
+		return RV_MATCH_SIZE_64_BIT;
+	case 80U:
+		return RV_MATCH_SIZE_80_BIT;
+	case 96U:
+		return RV_MATCH_SIZE_96_BIT;
+	case 112U:
+		return RV_MATCH_SIZE_112_BIT;
+	case 128U:
+		return RV_MATCH_SIZE_128_BIT;
+	}
+	return 0;
+}
+
 bool riscv_config_trigger(riscv_hart_s *const hart, const uint32_t trigger, const riscv_trigger_state_e mode,
 	const void *const config, const void *const address)
 {
