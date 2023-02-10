@@ -399,15 +399,15 @@ int target_breakwatch_set(target_s *t, target_breakwatch_e type, target_addr_t a
 int target_breakwatch_clear(target_s *t, target_breakwatch_e type, target_addr_t addr, size_t len)
 {
 	breakwatch_s *bwp = NULL, *bw;
-	int ret = 1;
 	for (bw = t->bw_list; bw; bwp = bw, bw = bw->next) {
-		if ((bw->type == type) && (bw->addr == addr) && (bw->size == len))
+		if (bw->type == type && bw->addr == addr && bw->size == len)
 			break;
 	}
 
 	if (bw == NULL)
 		return -1;
 
+	int ret = 1;
 	if (t->breakwatch_clear)
 		ret = t->breakwatch_clear(t, bw);
 
