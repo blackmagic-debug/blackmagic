@@ -693,13 +693,14 @@ static bool stm32l4_flash_erase(target_flash_s *const f, const target_addr_t add
 {
 	target_s *t = f->t;
 	const stm32l4_flash_s *const sf = (stm32l4_flash_s *)f;
+
+	/* STM32WBXX ERRATA ES0394 2.2.9: OPTVERR flag is always set after system reset */
+	stm32l4_flash_write32(t, FLASH_SR, stm32l4_flash_read32(t, FLASH_SR));
+
 	/* Unlock the Flash and wait for the operation to complete, reporting any errors */
 	stm32l4_flash_unlock(t);
 	if (!stm32l4_flash_busy_wait(t, NULL))
 		return false;
-
-	/* Fixme: OPTVER always set after reset! Wrong option defaults? */
-	stm32l4_flash_write32(t, FLASH_SR, stm32l4_flash_read32(t, FLASH_SR));
 
 	/* Erase the requested chunk of flash, one page at a time. */
 	for (size_t offset = 0; offset < len; offset += f->blocksize) {
