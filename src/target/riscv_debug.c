@@ -77,6 +77,13 @@
 /* mhartid -> machine ID of the Hart */
 #define RV_HART_ID 0xf14U
 
+/* tselect -> Trigger selection register */
+#define RV_TRIG_SELECT 0x7a0U
+/* tinfo -> selected trigger information register */
+#define RV_TRIG_INFO 0x7a4U
+/* tdata1 -> selected trigger configuration register 1 */
+#define RV_TRIG_DATA_1 0x7a1U
+
 #define RV_ISA_EXTENSIONS_MASK 0x03ffffffU
 
 #define RV_DCSR_STEP       0x00000004U
@@ -165,6 +172,7 @@ static void riscv_dm_unref(riscv_dm_s *dbg_module);
 static riscv_debug_version_e riscv_dm_version(uint32_t status);
 
 static uint32_t riscv_hart_discover_isa(riscv_hart_s *hart);
+static void riscv_hart_discover_triggers(riscv_hart_s *hart);
 
 static bool riscv_attach(target_s *target);
 static void riscv_detach(target_s *target);
@@ -316,6 +324,8 @@ static bool riscv_hart_init(riscv_hart_s *const hart)
 		hart->vendorid :
 		((hart->dbg_module->dmi_bus->idcode & JTAG_IDCODE_DESIGNER_MASK) >> JTAG_IDCODE_DESIGNER_OFFSET);
 	target->cpuid = hart->archid;
+
+	riscv_hart_discover_triggers(hart);
 
 	/* Setup core-agnostic target functions */
 	target->attach = riscv_attach;
@@ -569,6 +579,58 @@ uint8_t riscv_mem_access_width(const riscv_hart_s *const hart, const target_addr
 		align_mask >>= 1U;
 	}
 	return access_width;
+}
+
+static void riscv_hart_discover_triggers(riscv_hart_s *const hart)
+{
+	/* Discover how many breakpoints this hart supports */
+	hart->triggers = UINT32_MAX;
+	if (!riscv_csr_write(hart, RV_TRIG_SELECT | RV_CSR_FORCE_32_BIT, &hart->triggers) ||
+		!riscv_csr_read(hart, RV_TRIG_SELECT | RV_CSR_FORCE_32_BIT, &hart->triggers)) {
+		hart->triggers = 0;
+		return;
+	}
+	/*
+	 * The value we read back will always be one less than the actual number supported
+	 * as it represents the last valid index, rather than the last valid breakpoint.
+	 */
+	++hart->triggers;
+	DEBUG_INFO("Hart has %" PRIu32 " trigger slots available\n", hart->triggers);
+	/* If the hardware supports more slots than we do, cap it. */
+	if (hart->triggers > RV_TRIGGERS_MAX)
+		hart->triggers = RV_TRIGGERS_MAX;
+
+	/* Next, go through each one and map what it supports out into the trigger_uses slots */
+	for (uint32_t trigger = 0; trigger < hart->triggers; ++trigger) {
+		/* Select the trigger */
+		riscv_csr_write(hart, RV_TRIG_SELECT | RV_CSR_FORCE_32_BIT, &trigger);
+		/* Try reading the trigger info */
+		uint32_t info = 0;
+		if (!riscv_csr_read(hart, RV_TRIG_INFO | RV_CSR_FORCE_32_BIT, &info)) {
+			/*
+			 * If that fails, it's probably because the tinfo register isn't implemented, so read
+			 * the tdata1 register instead and extract the type from the MSb and build the info bitset from that
+			 */
+			if (hart->access_width == 32U) {
+				uint32_t data = 0;
+				riscv_csr_read(hart, RV_TRIG_DATA_1, &data);
+				/* The last 4 bits contain the trigger info */
+				info = data >> 28U;
+			} else {
+				uint64_t data = 0;
+				riscv_csr_read(hart, RV_TRIG_DATA_1, &data);
+				/* The last 4 bits contain the trigger info */
+				info = data >> 60U;
+			}
+			/* Info now needs converting from a value from 0 to 15 to having the correct bit set */
+			info = 1U << info;
+		}
+		/* If the 0th bit is set, this means the trigger is unsupported. Clear it to make testing easy */
+		info &= 0x0000fffeU;
+		/* Now info's bottom 16 bits contain the supported trigger modes, so write this info to the slot in the hart */
+		hart->trigger_uses[trigger] = info;
+		DEBUG_TARGET("Hart trigger slot %" PRIu32 " modes: %04" PRIx32 "\n", trigger, info);
+	}
 }
 
 static bool riscv_attach(target_s *const target)
