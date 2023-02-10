@@ -182,13 +182,14 @@ void riscv_dmi_init(riscv_dmi_s *const dmi)
 		}
 		const riscv_debug_version_e dm_version = riscv_dm_version(dm_status);
 
+		/* If the DM is not unimplemented, allocate a structure for it and do further processing */
 		if (dm_version != RISCV_DEBUG_UNIMPL) {
 			riscv_dm_s *dbg_module = calloc(1, sizeof(*dbg_module));
 			if (!dbg_module) { /* calloc failed: heap exhaustion */
 				DEBUG_WARN("calloc: failed in %s\n", __func__);
 				return;
 			}
-			/* Setup and try to discover the DM */
+			/* Setup and try to discover the DM's Harts */
 			dbg_module->dmi_bus = dmi;
 			dbg_module->base = base_addr;
 			dbg_module->version = dm_version;
