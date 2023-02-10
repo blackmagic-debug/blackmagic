@@ -721,10 +721,13 @@ static void handle_z_packet(char *packet, const size_t plen)
 	else
 		ret = target_breakwatch_clear(cur_target, type, addr, len);
 
+	/* If the target handler was unable to set/clear the break/watch-point, return an error */
 	if (ret < 0)
 		gdb_putpacketz("E01");
+	/* If the handler does not support the kind requested, return empty string */
 	else if (ret > 0)
 		gdb_putpacketz("");
+	/* Otherwise let GDB know that everything went well */
 	else
 		gdb_putpacketz("OK");
 }
