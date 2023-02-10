@@ -79,10 +79,25 @@
 
 #define RV_ISA_EXTENSIONS_MASK 0x03ffffffU
 
-#define RV_DCSR_STEP   0x00000004U
-#define RV_DCSR_STEPIE 0x00000800U
+#define RV_DCSR_STEP       0x00000004U
+#define RV_DCSR_CAUSE_MASK 0x000001c0U
+#define RV_DCSR_STEPIE     0x00000800U
 
 #define RV_GPRS_COUNT 32U
+
+/* This enum defines the set of currently known and valid halt causes */
+typedef enum riscv_halt_cause {
+	/* Halt was caused by an `ebreak` instruction executing */
+	RV_HALT_CAUSE_EBREAK = (1U << 6U),
+	/* Halt was caused by a breakpoint (set in the trigger module) */
+	RV_HALT_CAUSE_BREAKPOINT = (2U << 6U),
+	/* Halt was caused by debugger request (haltreq) */
+	RV_HALT_CAUSE_REQUEST = (3U << 6U),
+	/* Halt was caused by single-step execution */
+	RV_HALT_CAUSE_STEP = (4U << 6U),
+	/* Halt was caused by request out of reset (resethaltreq) */
+	RV_HALT_CAUSE_RESET = (5U << 6U),
+} riscv_halt_cause_e;
 
 // clang-format off
 /* General-purpose register name strings */
@@ -159,6 +174,7 @@ static const char *riscv_target_description(target_s *target);
 static bool riscv_check_error(target_s *target);
 static void riscv_halt_request(target_s *target);
 static void riscv_halt_resume(target_s *target, bool step);
+static target_halt_reason_e riscv_halt_poll(target_s *target, target_addr_t *watch);
 
 void riscv_dmi_init(riscv_dmi_s *const dmi)
 {
@@ -310,6 +326,7 @@ static bool riscv_hart_init(riscv_hart_s *const hart)
 	target->check_error = riscv_check_error;
 	target->halt_request = riscv_halt_request;
 	target->halt_resume = riscv_halt_resume;
+	target->halt_poll = riscv_halt_poll;
 
 	if (hart->access_width == 32U) {
 		DEBUG_INFO("-> riscv32_probe\n");
@@ -623,6 +640,34 @@ static void riscv_halt_resume(target_s *target, const bool step)
 	}
 	/* Clear the request now we've got it resumed */
 	(void)riscv_dm_write(hart->dbg_module, RV_DM_CONTROL, hart->hartsel);
+}
+
+static target_halt_reason_e riscv_halt_poll(target_s *const target, target_addr_t *const watch)
+{
+	(void)watch;
+	riscv_hart_s *const hart = riscv_hart_struct(target);
+	uint32_t status = 0;
+	/* Check if the hart is currently halted */
+	if (!riscv_dm_read(hart->dbg_module, RV_DM_STATUS, &status))
+		return TARGET_HALT_ERROR;
+	/* If the hart is currently running, exit out early */
+	if (!(status & RV_DM_STAT_ALL_HALTED))
+		return TARGET_HALT_RUNNING;
+	/* Read out DCSR to find out why we're halted */
+	if (!riscv_csr_read(hart, RV_DCSR, &status))
+		return TARGET_HALT_ERROR;
+	status &= RV_DCSR_CAUSE_MASK;
+	/* Dispatch on the cause code */
+	switch (status) {
+	case RV_HALT_CAUSE_BREAKPOINT:
+		return TARGET_HALT_BREAKPOINT;
+	case RV_HALT_CAUSE_STEP:
+		return TARGET_HALT_STEPPING;
+	default:
+		break;
+	}
+	/* In the default case, assume it was by request (ebreak, haltreq, resethaltreq) */
+	return TARGET_HALT_REQUEST;
 }
 
 static const char *riscv_fpu_ext_string(const uint32_t extensions)
