@@ -71,6 +71,19 @@ typedef enum riscv_trigger_state {
 	RISCV_TRIGGER_MODE_WATCHPOINT = 0x00020000U,
 } riscv_trigger_state_e;
 
+/* The size bits are 22:21 + 17:16, but the upper 2 are only valid on rv64 */
+typedef enum riscv_match_size {
+	RV_MATCH_SIZE_8_BIT = 0x00010000U,
+	RV_MATCH_SIZE_16_BIT = 0x00020000U,
+	RV_MATCH_SIZE_32_BIT = 0x00030000U,
+	RV_MATCH_SIZE_48_BIT = 0x00200000U,
+	RV_MATCH_SIZE_64_BIT = 0x00210000U,
+	RV_MATCH_SIZE_80_BIT = 0x00220000U,
+	RV_MATCH_SIZE_96_BIT = 0x00230000U,
+	RV_MATCH_SIZE_112_BIT = 0x00400000U,
+	RV_MATCH_SIZE_128_BIT = 0x00410000U,
+} riscv_match_size_e;
+
 typedef struct riscv_dmi riscv_dmi_s;
 
 /* This structure represents a version-agnostic Debug Module Interface on a RISC-V device */
@@ -173,6 +186,7 @@ bool riscv_dm_write(riscv_dm_s *dbg_module, uint8_t address, uint32_t value);
 bool riscv_command_wait_complete(riscv_hart_s *hart);
 bool riscv_csr_read(riscv_hart_s *hart, uint16_t reg, void *data);
 bool riscv_csr_write(riscv_hart_s *hart, uint16_t reg, const void *data);
+riscv_match_size_e riscv_breakwatch_match_size(size_t size);
 bool riscv_config_trigger(
 	riscv_hart_s *hart, uint32_t trigger, riscv_trigger_state_e mode, const void *config, const void *address);
 
