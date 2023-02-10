@@ -562,13 +562,16 @@ static bool riscv_attach(target_s *const target)
 	/* We then also need to select the Hart again so we're poking with the right one on the target */
 	if (!riscv_dm_write(hart->dbg_module, RV_DM_CONTROL, hart->hartsel))
 		return false;
-
+	/* We then need to halt the hart so the attach process can function */
+	riscv_halt_request(target);
 	return true;
 }
 
 static void riscv_detach(target_s *const target)
 {
 	riscv_hart_s *const hart = riscv_hart_struct(target);
+	/* Once we get done and the user's asked us to detach, we need to resume the hart */
+	riscv_halt_resume(target, false);
 	/* If the DMI needs steps done to quiesce it, finsh up with that */
 	if (hart->dbg_module->dmi_bus->quiesce)
 		hart->dbg_module->dmi_bus->quiesce(target);
