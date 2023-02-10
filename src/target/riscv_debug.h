@@ -93,6 +93,8 @@ typedef struct riscv_dm {
 	riscv_debug_version_e version;
 } riscv_dm_s;
 
+#define RV_TRIGGERS_MAX 8U
+
 /* This represents a specifc Hart on a DM */
 typedef struct riscv_hart {
 	riscv_dm_s *dbg_module;
@@ -107,6 +109,9 @@ typedef struct riscv_hart {
 	uint32_t archid;
 	uint32_t implid;
 	uint32_t hartid;
+
+	uint32_t triggers;
+	uint32_t trigger_uses[RV_TRIGGERS_MAX];
 } riscv_hart_s;
 
 #define RV_STATUS_VERSION_MASK 0x0000000fU
