@@ -136,6 +136,19 @@ typedef struct riscv_hart {
 #define RV_MEM_ACCESS_128_BIT 0x4U
 #define RV_MEM_ACCESS_SHIFT   20U
 
+/* dpc -> Debug Program Counter */
+#define RV_DPC 0x7b1U
+/* The GPR base defines the starting register space address for the CPU state registers */
+#define RV_GPR_BASE 0x1000U
+/* The FP base defines the starting register space address for the floating point registers */
+#define RV_FP_BASE 0x1020U
+
+#define RV_ISA_EXT_EMBEDDED     0x00000010U
+#define RV_ISA_EXT_ANY_FLOAT    0x00010028U
+#define RV_ISA_EXT_SINGLE_FLOAT 0x00000020U
+#define RV_ISA_EXT_DOUBLE_FLOAT 0x00000008U
+#define RV_ISA_EXT_QUAD_FLOAT   0x00010000U
+
 void riscv_jtag_dtm_handler(uint8_t dev_index);
 void riscv_dmi_init(riscv_dmi_s *dmi);
 riscv_hart_s *riscv_hart_struct(target_s *target);
