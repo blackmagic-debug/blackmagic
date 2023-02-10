@@ -71,6 +71,7 @@ static void riscv32_regs_read(target_s *target, void *data);
 static void riscv32_mem_read(target_s *target, void *dest, target_addr_t src, size_t len);
 
 static int riscv32_breakwatch_set(target_s *target, breakwatch_s *breakwatch);
+static int riscv32_breakwatch_clear(target_s *target, breakwatch_s *breakwatch);
 
 #define STRINGIFY(x) #x
 #define PROBE(x)                                  \
@@ -90,6 +91,7 @@ bool riscv32_probe(target_s *const target)
 	target->mem_read = riscv32_mem_read;
 
 	target->breakwatch_set = riscv32_breakwatch_set;
+	target->breakwatch_clear = riscv32_breakwatch_clear;
 
 	switch (target->designer_code) {
 	case JEP106_MANUFACTURER_RV_GIGADEVICE:
@@ -220,4 +222,12 @@ static int riscv32_breakwatch_set(target_s *const target, breakwatch_s *const br
 		breakwatch->reserved[0] = trigger;
 	/* Return based on whether setting up the hardware worked or not */
 	return result ? 0 : -1;
+}
+
+static int riscv32_breakwatch_clear(target_s *const target, breakwatch_s *const breakwatch)
+{
+	riscv_hart_s *const hart = riscv_hart_struct(target);
+	const uint32_t config = RV32_MATCH_ADDR_DATA_TRIGGER;
+	const uint32_t address = 0;
+	return riscv_config_trigger(hart, breakwatch->reserved[0], RISCV_TRIGGER_MODE_UNUSED, &config, &address) ? 0 : -1;
 }
