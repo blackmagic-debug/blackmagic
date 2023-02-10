@@ -44,8 +44,33 @@ typedef struct riscv32_regs {
 	uint32_t pc;
 } riscv32_regs_s;
 
+/* This defines a match trigger that's for an address or data location */
+#define RV32_MATCH_ADDR_DATA_TRIGGER 0x20000000U
+/* A dmode of 1 restricts the writability of the trigger to debug mode only */
+#define RV32_MATCH_DMODE_DEBUG 0x08000000U
+/* Match when the processor tries to execute the location */
+#define RV32_MATCH_EXECUTE 0x00000004U
+/* Match when the processor tries to read the location */
+#define RV32_MATCH_READ 0x00000001U
+/* Match when the processor tries to write the location */
+#define RV32_MATCH_WRITE 0x00000002U
+/* Define that the match should occur in all/any mode */
+#define RV32_MATCH_ANY_MODE 0x00000058U
+/* Set the match action to raise a breakpoint exception */
+#define RV32_MATCH_ACTION_EXCEPTION 0x00000000U
+/* Set the match action to enter debug mode */
+#define RV32_MATCH_ACTION_DEBUG_MODE 0x00001000U
+/* These two define whether the match should be performed on the address, or specific data */
+#define RV32_MATCH_ADDR 0x00000000U
+#define RV32_MATCH_DATA 0x00080000U
+/* These two define the match timing (before-or-after operation execution) */
+#define RV32_MATCH_BEFORE 0x00000000U
+#define RV32_MATCH_AFTER  0x00040000U
+
 static void riscv32_regs_read(target_s *target, void *data);
 static void riscv32_mem_read(target_s *target, void *dest, target_addr_t src, size_t len);
+
+static int riscv32_breakwatch_set(target_s *target, breakwatch_s *breakwatch);
 
 #define STRINGIFY(x) #x
 #define PROBE(x)                                  \
@@ -63,6 +88,8 @@ bool riscv32_probe(target_s *const target)
 	target->regs_size = sizeof(riscv32_regs_s);
 	target->regs_read = riscv32_regs_read;
 	target->mem_read = riscv32_mem_read;
+
+	target->breakwatch_set = riscv32_breakwatch_set;
 
 	switch (target->designer_code) {
 	case JEP106_MANUFACTURER_RV_GIGADEVICE:
@@ -140,4 +167,57 @@ static void riscv32_mem_read(target_s *const target, void *const dest, const tar
 			return;
 		riscv32_unpack_data(data + offset, value, access_width);
 	}
+}
+
+/*
+ * The following can be used as a key for understanding the various return results from the breakwatch functions:
+ * 0 -> success
+ * 1 -> not supported
+ * -1 -> an error occured
+ */
+
+static int riscv32_breakwatch_set(target_s *const target, breakwatch_s *const breakwatch)
+{
+	riscv_hart_s *const hart = riscv_hart_struct(target);
+	size_t trigger = 0;
+	/* Find the first unused trigger slot */
+	for (; trigger < hart->triggers; ++trigger) {
+		if ((hart->trigger_uses[trigger] & RV_TRIGGER_MODE_MASK) == RISCV_TRIGGER_MODE_UNUSED)
+			break;
+	}
+	/* If none was available, return an error */
+	if (trigger == hart->triggers)
+		return -1;
+
+	/* Build the mcontrol config for the requested breakwatch type */
+	uint32_t config = RV32_MATCH_ADDR_DATA_TRIGGER | RV32_MATCH_DMODE_DEBUG | RV32_MATCH_ANY_MODE |
+		RV32_MATCH_ACTION_DEBUG_MODE | RV32_MATCH_ADDR | riscv_breakwatch_match_size(breakwatch->size);
+	// RV32_MATCH_DATA (bit 19)
+	riscv_trigger_state_e mode = RISCV_TRIGGER_MODE_WATCHPOINT;
+	switch (breakwatch->type) {
+	case TARGET_BREAK_HARD:
+		config |= RV32_MATCH_EXECUTE | RV32_MATCH_BEFORE;
+		mode = RISCV_TRIGGER_MODE_BREAKPOINT;
+		break;
+	case TARGET_WATCH_READ:
+		config |= RV32_MATCH_READ | RV32_MATCH_AFTER;
+		break;
+	case TARGET_WATCH_WRITE:
+		config |= RV32_MATCH_WRITE | RV32_MATCH_BEFORE;
+		break;
+	case TARGET_WATCH_ACCESS:
+		config |= RV32_MATCH_READ | RV32_MATCH_WRITE | RV32_MATCH_AFTER;
+		break;
+	default:
+		/* If the breakwatch type is not one of the above, tell the debugger we don't support it */
+		return 1;
+	}
+	/* Grab the address to set the breakwatch on and configure the hardware */
+	const uint32_t address = breakwatch->addr;
+	const bool result = riscv_config_trigger(hart, trigger, mode, &config, &address);
+	/* If configuration succeeds, store the trigger index in the breakwatch structure */
+	if (result)
+		breakwatch->reserved[0] = trigger;
+	/* Return based on whether setting up the hardware worked or not */
+	return result ? 0 : -1;
 }
