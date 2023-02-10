@@ -83,6 +83,8 @@
 #define RV_TRIG_INFO 0x7a4U
 /* tdata1 -> selected trigger configuration register 1 */
 #define RV_TRIG_DATA_1 0x7a1U
+/* tdata2 -> selected trigger configuration register 2 */
+#define RV_TRIG_DATA_2 0x7a2U
 
 #define RV_ISA_EXTENSIONS_MASK 0x03ffffffU
 
@@ -626,11 +628,29 @@ static void riscv_hart_discover_triggers(riscv_hart_s *const hart)
 			info = 1U << info;
 		}
 		/* If the 0th bit is set, this means the trigger is unsupported. Clear it to make testing easy */
-		info &= 0x0000fffeU;
+		info &= RV_TRIGGER_SUPPORT_MASK;
 		/* Now info's bottom 16 bits contain the supported trigger modes, so write this info to the slot in the hart */
 		hart->trigger_uses[trigger] = info;
 		DEBUG_TARGET("Hart trigger slot %" PRIu32 " modes: %04" PRIx32 "\n", trigger, info);
 	}
+}
+
+bool riscv_config_trigger(riscv_hart_s *const hart, const uint32_t trigger, const riscv_trigger_state_e mode,
+	const void *const config, const void *const address)
+{
+	/*
+	 * Select the trigger and write the new configuration to it provided by config.
+	 * tdata1 (RV_TRIG_DATA_1) becomes mcontrol (match control) for this -
+	 * see §5.2.9 pg53 of the RISC-V debug spec v0.13.2 for more details.
+	 */
+	const bool result = riscv_csr_write(hart, RV_TRIG_SELECT | RV_CSR_FORCE_32_BIT, &trigger) &&
+		riscv_csr_write(hart, RV_TRIG_DATA_1, config) && riscv_csr_write(hart, RV_TRIG_DATA_2, address);
+	if (result) {
+		/* If that succeeds, update the slot with the new mode it's in */
+		hart->trigger_uses[trigger] &= ~RV_TRIGGER_MODE_MASK;
+		hart->trigger_uses[trigger] |= mode;
+	}
+	return result;
 }
 
 static bool riscv_attach(target_s *const target)
