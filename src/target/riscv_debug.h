@@ -177,6 +177,8 @@ typedef struct riscv_hart {
 #define RV_TRIGGER_SUPPORT_MASK 0x0000fffeU
 #define RV_TRIGGER_MODE_MASK    0xffff0000U
 
+#define RV_TOPT_INHIBIT_NRST 0x00000001U
+
 void riscv_jtag_dtm_handler(uint8_t dev_index);
 void riscv_dmi_init(riscv_dmi_s *dmi);
 riscv_hart_s *riscv_hart_struct(target_s *target);
