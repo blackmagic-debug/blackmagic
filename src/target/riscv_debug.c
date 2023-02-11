@@ -68,6 +68,7 @@
 #define RV_DM_STAT_ALL_RESUME_ACK 0x00020000U
 #define RV_DM_STAT_NON_EXISTENT   0x00004000U
 #define RV_DM_STAT_ALL_HALTED     0x00000200U
+#define RV_DM_STAT_ALL_RESET      0x00080000U
 
 #define RV_DM_ABST_STATUS_BUSY       0x00001000U
 #define RV_DM_ABST_STATUS_DATA_COUNT 0x0000000fU
@@ -816,9 +817,11 @@ static target_halt_reason_e riscv_halt_poll(target_s *const target, target_addr_
 /* Do note that this can be used with a riscv_halt_request() call to initiate halt-on-reset debugging */
 static void riscv_reset(target_s *const target)
 {
+	riscv_hart_s *const hart = riscv_hart_struct(target);
 	/* If the target does not have the nRST pin inhibited, use that to initiate reset */
 	if (!(target->target_options & RV_TOPT_INHIBIT_NRST)) {
 		platform_nrst_set_val(true);
+		riscv_dm_poll_state(hart->dbg_module, RV_DM_STAT_ALL_RESET);
 		platform_nrst_set_val(false);
 		/* In theory we're done at this point and no debug state was perturbed */
 	} else {
@@ -826,11 +829,14 @@ static void riscv_reset(target_s *const target)
 		 * Otherwise, if nRST is not usable, use instead reset via dmcontrol. In this case,
 		 * when reset is requested, use the ndmreset bit to perform a system reset
 		 */
-		riscv_hart_s *const hart = riscv_hart_struct(target);
 		riscv_dm_write(hart->dbg_module, RV_DM_CONTROL, hart->hartsel | RV_DM_CTRL_SYSTEM_RESET);
+		riscv_dm_poll_state(hart->dbg_module, RV_DM_STAT_ALL_RESET);
 		/* Complete the reset by resetting ndmreset */
 		riscv_dm_write(hart->dbg_module, RV_DM_CONTROL, hart->hartsel);
 	}
+	/* Acknowledge the reset */
+	riscv_dm_write(hart->dbg_module, RV_DM_CONTROL, hart->hartsel | RV_DM_CTRL_HART_ACK_RESET);
+	target_check_error(target);
 }
 
 static const char *riscv_fpu_ext_string(const uint32_t extensions)
