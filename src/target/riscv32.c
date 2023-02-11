@@ -70,6 +70,7 @@ typedef struct riscv32_regs {
 static void riscv32_regs_read(target_s *target, void *data);
 static void riscv32_regs_write(target_s *target, const void *data);
 static void riscv32_mem_read(target_s *target, void *dest, target_addr_t src, size_t len);
+static void riscv32_mem_write(target_s *target, target_addr_t dest, const void *src, size_t len);
 
 static int riscv32_breakwatch_set(target_s *target, breakwatch_s *breakwatch);
 static int riscv32_breakwatch_clear(target_s *target, breakwatch_s *breakwatch);
@@ -91,6 +92,7 @@ bool riscv32_probe(target_s *const target)
 	target->regs_read = riscv32_regs_read;
 	target->regs_write = riscv32_regs_write;
 	target->mem_read = riscv32_mem_read;
+	target->mem_write = riscv32_mem_write;
 
 	target->breakwatch_set = riscv32_breakwatch_set;
 	target->breakwatch_clear = riscv32_breakwatch_clear;
@@ -159,6 +161,29 @@ void riscv32_unpack_data(void *const dest, const uint32_t data, const uint8_t ac
 	}
 }
 
+/* Takes in data from src, based on the access width, to be written to abstract command arg0 and packs it */
+uint32_t riscv32_pack_data(const void *const src, const uint8_t access_width)
+{
+	switch (access_width) {
+	case RV_MEM_ACCESS_8_BIT: {
+		uint8_t value = 0;
+		memcpy(&value, src, sizeof(value));
+		return value;
+	}
+	case RV_MEM_ACCESS_16_BIT: {
+		uint16_t value = 0;
+		memcpy(&value, src, sizeof(value));
+		return value;
+	}
+	case RV_MEM_ACCESS_32_BIT: {
+		uint32_t value = 0;
+		memcpy(&value, src, sizeof(value));
+		return value;
+	}
+	}
+	return 0;
+}
+
 static void riscv32_mem_read(target_s *const target, void *const dest, const target_addr_t src, const size_t len)
 {
 	DEBUG_TARGET("Performing %zu byte read of %08" PRIx32 "\n", len, src);
@@ -185,6 +210,34 @@ static void riscv32_mem_read(target_s *const target, void *const dest, const tar
 		if (!riscv_dm_read(hart->dbg_module, RV_DM_DATA0, &value))
 			return;
 		riscv32_unpack_data(data + offset, value, access_width);
+	}
+}
+
+static void riscv32_mem_write(target_s *const target, const target_addr_t dest, const void *const src, const size_t len)
+{
+	DEBUG_TARGET("Performing %zu byte write of %08" PRIx32 "\n", len, dest);
+	/* If we're asked to do a 0-byte read, do nothing */
+	if (!len)
+		return;
+	riscv_hart_s *const hart = riscv_hart_struct(target);
+	/* Figure out the maxmial width of access to perform, up to the bitness of the target */
+	const uint8_t access_width = riscv_mem_access_width(hart, dest, len);
+	const uint8_t access_length = 1U << access_width;
+	/* Build the access command */
+	const uint32_t command = RV_DM_ABST_CMD_ACCESS_MEM | RV_ABST_WRITE | (access_width << RV_MEM_ACCESS_SHIFT) |
+		(access_length < len ? RV_MEM_ADDR_POST_INC : 0U);
+	/* Write the address to write to arg1 */
+	if (!riscv_dm_write(hart->dbg_module, RV_DM_DATA1, dest))
+		return;
+	const uint8_t *const data = (const uint8_t *)src;
+	for (size_t offset = 0; offset < len; offset += access_length) {
+		/* Pack the data to write into arg0 */
+		uint32_t value = riscv32_pack_data(data + offset, access_width);
+		if (!riscv_dm_write(hart->dbg_module, RV_DM_DATA0, value))
+			return;
+		/* Execute the write */
+		if (!riscv_dm_write(hart->dbg_module, RV_DM_ABST_COMMAND, command) || !riscv_command_wait_complete(hart))
+			return;
 	}
 }
 
