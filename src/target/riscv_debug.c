@@ -59,6 +59,9 @@
 #define RV_DM_CTRL_HARTSELHI_MASK  0x0000ffc0U
 #define RV_DM_CTRL_HALT_REQ        0x80000000U
 #define RV_DM_CTRL_RESUME_REQ      0x40000000U
+#define RV_DM_CTRL_HART_RESET      0x20000000U
+#define RV_DM_CTRL_HART_ACK_RESET  0x10000000U
+#define RV_DM_CTRL_SYSTEM_RESET    0x00000002U
 #define RV_DM_CTRL_HARTSELLO_SHIFT 16U
 #define RV_DM_CTRL_HARTSELHI_SHIFT 4U
 
@@ -195,6 +198,7 @@ static bool riscv_check_error(target_s *target);
 static void riscv_halt_request(target_s *target);
 static void riscv_halt_resume(target_s *target, bool step);
 static target_halt_reason_e riscv_halt_poll(target_s *target, target_addr_t *watch);
+static void riscv_reset(target_s *target);
 
 void riscv_dmi_init(riscv_dmi_s *const dmi)
 {
@@ -365,6 +369,7 @@ static bool riscv_hart_init(riscv_hart_s *const hart)
 	target->halt_request = riscv_halt_request;
 	target->halt_resume = riscv_halt_resume;
 	target->halt_poll = riscv_halt_poll;
+	target->reset = riscv_reset;
 
 	if (hart->access_width == 32U) {
 		DEBUG_INFO("-> riscv32_probe\n");
@@ -801,6 +806,26 @@ static target_halt_reason_e riscv_halt_poll(target_s *const target, target_addr_
 	}
 	/* In the default case, assume it was by request (ebreak, haltreq, resethaltreq) */
 	return TARGET_HALT_REQUEST;
+}
+
+/* Do note that this can be used with a riscv_halt_request() call to initiate halt-on-reset debugging */
+static void riscv_reset(target_s *const target)
+{
+	/* If the target does not have the nRST pin inhibited, use that to initiate reset */
+	if (!(target->target_options & RV_TOPT_INHIBIT_NRST)) {
+		platform_nrst_set_val(true);
+		platform_nrst_set_val(false);
+		/* In theory we're done at this point and no debug state was perturbed */
+	} else {
+		/*
+		 * Otherwise, if nRST is not usable, use instead reset via dmcontrol. In this case,
+		 * when reset is requested, use the ndmreset bit to perform a system reset
+		 */
+		riscv_hart_s *const hart = riscv_hart_struct(target);
+		riscv_dm_write(hart->dbg_module, RV_DM_CONTROL, hart->hartsel | RV_DM_CTRL_SYSTEM_RESET);
+		/* Complete the reset by resetting ndmreset */
+		riscv_dm_write(hart->dbg_module, RV_DM_CONTROL, hart->hartsel);
+	}
 }
 
 static const char *riscv_fpu_ext_string(const uint32_t extensions)
