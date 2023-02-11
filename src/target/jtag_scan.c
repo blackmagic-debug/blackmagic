@@ -194,7 +194,7 @@ uint32_t jtag_scan(const uint8_t *irlens)
 	}
 	DEBUG_INFO("Return to Run-Test/Idle\n");
 	jtag_proc.jtagtap_next(true, true);
-	jtagtap_return_idle(jtag_proc.tap_idle_cycles);
+	jtagtap_return_idle(1);
 
 #if PC_HOSTED == 1
 	/*Transfer needed device information to firmware jtag_devs */
