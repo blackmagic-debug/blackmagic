@@ -653,9 +653,9 @@ void libftdi_jtagtap_tdi_tdo_seq(uint8_t *data_out, const bool final_tms, const 
 		return;
 
 	DEBUG_WIRE("libftdi_jtagtap_tdi_tdo_seq %s ticks: %d\n",
-		data_in && data_out ? "read/write"
-			: data_in       ? "write"
-							: "read",
+		data_in && data_out ? "read/write" :
+			data_in         ? "write" :
+							  "read",
 		ticks);
 	if (final_tms)
 		--ticks;
