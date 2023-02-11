@@ -184,7 +184,10 @@ static int riscv32_breakwatch_set(target_s *const target, breakwatch_s *const br
 	size_t trigger = 0;
 	/* Find the first unused trigger slot */
 	for (; trigger < hart->triggers; ++trigger) {
-		if ((hart->trigger_uses[trigger] & RV_TRIGGER_MODE_MASK) == RISCV_TRIGGER_MODE_UNUSED)
+		const uint32_t trigger_use = hart->trigger_uses[trigger];
+		/* Make sure it's unused and that it supports breakwatch mode */
+		if ((trigger_use & RV_TRIGGER_MODE_MASK) == RISCV_TRIGGER_MODE_UNUSED &&
+			(trigger_use & RV_TRIGGER_SUPPORT_BREAKWATCH))
 			break;
 	}
 	/* If none was available, return an error */
