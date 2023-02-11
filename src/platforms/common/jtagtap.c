@@ -48,10 +48,9 @@ void jtagtap_init(void)
 	jtag_proc.tap_idle_cycles = 1;
 
 	/* Ensure we're in JTAG mode */
-	for (size_t i = 0; i <= 50U; ++i)
+	for (size_t i = 0; i < 50U; ++i)
 		jtagtap_next(true, false); /* 50 idle cylces for SWD reset */
 	jtagtap_tms_seq(0xe73cU, 16U); /* SWD to JTAG sequence */
-	jtagtap_soft_reset();
 }
 
 static void jtagtap_reset(void)
