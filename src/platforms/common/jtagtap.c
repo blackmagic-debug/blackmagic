@@ -168,33 +168,42 @@ static void jtagtap_tdi_tdo_seq_swd_delay(
 		data_out[byte] = value;
 }
 
+static inline void jtag_next_tms_tdi(const bool tms, const bool tdi)
+{
+	/* Initiate the falling edge on the bus */
+	gpio_clear(TCK_PORT, TCK_PIN);
+	/* It is now safe to change TMS and TDI */
+	gpio_set_val(TMS_PORT, TMS_PIN, tms);
+	gpio_set_val(TDI_PORT, TDI_PIN, tdi);
+}
+
 static void jtagtap_tdi_tdo_seq_no_delay(
 	const uint8_t *const data_in, uint8_t *const data_out, const bool final_tms, const size_t clock_cycles)
 {
 	uint8_t value = 0;
-	for (size_t cycle = 0; cycle < clock_cycles; ++cycle) {
-		const size_t bit = cycle & 7U;
+	for (size_t cycle = 0; cycle < clock_cycles;) {
+		/* Calculate the next bit and byte to consume data from */
+		const uint8_t bit = cycle & 7U;
 		const size_t byte = cycle >> 3U;
-		/* On the last tick, assert final_tms to TMS_PIN */
-		gpio_set_val(TMS_PORT, TMS_PIN, cycle + 1U >= clock_cycles && final_tms);
-		/* Set up the TDI pin and start the clock cycle */
-		gpio_set_val(TDI_PORT, TDI_PIN, data_in[byte] & (1U << bit));
+		/* Configure the bus for the next cycle */
+		jtag_next_tms_tdi(cycle + 1U >= clock_cycles && final_tms, data_in[byte] & (1U << bit));
+		/* Increment the cycle counter */
+		++cycle;
+		/* Block the compiler from re-ordering the calculations to preserve timings */
+		__asm__ volatile("" ::: "memory");
+		/* Start the clock cycle */
 		gpio_set(TCK_PORT, TCK_PIN);
 		/* If TDO is high, store a 1 in the appropriate position in the value being accumulated */
 		if (gpio_get(TDO_PORT, TDO_PIN))
-			value |= (1 << bit);
-		/* If we've got to the next whole byte, store the accumulated value and reset state */
+			value |= 1U << bit;
+		/* If we've got the next whole byte, store the accumulated value and reset state */
 		if (bit == 7U) {
 			data_out[byte] = value;
 			value = 0;
 		}
 		/* Finish the clock cycle */
-		gpio_clear(TCK_PORT, TCK_PIN);
 	}
-	const size_t bit = (clock_cycles - 1U) & 7U;
-	const size_t byte = (clock_cycles - 1U) >> 3U;
-	if (bit)
-		data_out[byte] = value;
+	gpio_clear(TCK_PORT, TCK_PIN);
 }
 
 static void jtagtap_tdi_tdo_seq(
