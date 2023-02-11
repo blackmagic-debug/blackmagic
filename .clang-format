@@ -26,6 +26,7 @@ BraceWrapping:
   BeforeElse: false
   IndentBraces: false
 BreakBeforeBraces: Linux
+BreakBeforeTernaryOperators: false
 BasedOnStyle: LLVM
 BinPackArguments: true
 BinPackParameters: true
