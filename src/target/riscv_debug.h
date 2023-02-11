@@ -195,5 +195,6 @@ bool riscv_config_trigger(
 
 uint8_t riscv_mem_access_width(const riscv_hart_s *hart, target_addr_t address, size_t length);
 void riscv32_unpack_data(void *dest, uint32_t data, uint8_t access_width);
+uint32_t riscv32_pack_data(const void *src, uint8_t access_width);
 
 #endif /*TARGET_RISCV_DEBUG_H*/
