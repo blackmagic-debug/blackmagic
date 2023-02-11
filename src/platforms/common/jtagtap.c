@@ -230,6 +230,7 @@ static void jtagtap_tdi_seq_swd_delay(const uint8_t *const data_in, const bool f
 static void jtagtap_tdi_seq_no_delay(const uint8_t *const data_in, const bool final_tms, size_t clock_cycles)
 {
 	for (size_t cycle = 0; cycle < clock_cycles; ++cycle) {
+		gpio_clear(TCK_PORT, TCK_PIN);
 		const size_t bit = cycle & 7U;
 		const size_t byte = cycle >> 3U;
 		/* On the last tick, assert final_tms to TMS_PIN */
@@ -238,8 +239,10 @@ static void jtagtap_tdi_seq_no_delay(const uint8_t *const data_in, const bool fi
 		gpio_set_val(TDI_PORT, TDI_PIN, data_in[byte] & (1U << bit));
 		gpio_set(TCK_PORT, TCK_PIN);
 		/* Finish the clock cycle */
-		gpio_clear(TCK_PORT, TCK_PIN);
 	}
+	__asm__("nop");
+	__asm__("nop");
+	gpio_clear(TCK_PORT, TCK_PIN);
 }
 
 static void jtagtap_tdi_seq(const bool final_tms, const uint8_t *const data_in, const size_t clock_cycles)
