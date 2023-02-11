@@ -738,18 +738,26 @@ static bool riscv_check_error(target_s *const target)
 	return riscv_hart_struct(target)->status != RISCV_HART_NO_ERROR;
 }
 
+static bool riscv_dm_poll_state(riscv_dm_s *const dbg_module, const uint32_t state)
+{
+	/* Poll for the requested state to become set */
+	uint32_t status = 0;
+	while (!(status & state)) {
+		if (!riscv_dm_read(dbg_module, RV_DM_STATUS, &status))
+			return false;
+	}
+	return true;
+}
+
 static void riscv_halt_request(target_s *const target)
 {
 	riscv_hart_s *const hart = riscv_hart_struct(target);
 	/* Request the hart to halt */
 	if (!riscv_dm_write(hart->dbg_module, RV_DM_CONTROL, hart->hartsel | RV_DM_CTRL_HALT_REQ))
 		return;
-	uint32_t status = 0;
 	/* Poll for the hart to become halted */
-	while (!(status & RV_DM_STAT_ALL_HALTED)) {
-		if (!riscv_dm_read(hart->dbg_module, RV_DM_STATUS, &status))
-			return;
-	}
+	if (!riscv_dm_poll_state(hart->dbg_module, RV_DM_STAT_ALL_HALTED))
+		return;
 	/* Clear the request now we've got it halted */
 	(void)riscv_dm_write(hart->dbg_module, RV_DM_CONTROL, hart->hartsel);
 }
@@ -770,12 +778,9 @@ static void riscv_halt_resume(target_s *target, const bool step)
 	/* Request the hart to resume */
 	if (!riscv_dm_write(hart->dbg_module, RV_DM_CONTROL, hart->hartsel | RV_DM_CTRL_RESUME_REQ))
 		return;
-	uint32_t status = 0;
 	/* Poll for the hart to become resumed */
-	while (!(status & RV_DM_STAT_ALL_RESUME_ACK)) {
-		if (!riscv_dm_read(hart->dbg_module, RV_DM_STATUS, &status))
-			return;
-	}
+	if (!riscv_dm_poll_state(hart->dbg_module, RV_DM_STAT_ALL_RESUME_ACK))
+		return;
 	/* Clear the request now we've got it resumed */
 	(void)riscv_dm_write(hart->dbg_module, RV_DM_CONTROL, hart->hartsel);
 }
