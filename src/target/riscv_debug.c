@@ -296,6 +296,26 @@ static uint8_t riscv_isa_address_width(const uint32_t isa)
 	return 32U;
 }
 
+static void riscv_hart_read_ids(riscv_hart_s *const hart)
+{
+	riscv_csr_read(hart, RV_VENDOR_ID | RV_CSR_FORCE_32_BIT, &hart->vendorid);
+	if (hart->access_width == 32U) {
+		riscv_csr_read(hart, RV_ARCH_ID, &hart->archid);
+		riscv_csr_read(hart, RV_IMPL_ID, &hart->implid);
+		riscv_csr_read(hart, RV_HART_ID, &hart->hartid);
+	} else if (hart->access_width == 64U) {
+		/* For now, on rv64, we just truncate these down after read */
+		uint64_t ident = 0;
+		riscv_csr_read(hart, RV_ARCH_ID, &ident);
+		hart->archid = ident & 0xffffffffU;
+		riscv_csr_read(hart, RV_IMPL_ID, &ident);
+		hart->implid = ident & 0xffffffffU;
+		riscv_csr_read(hart, RV_HART_ID, &ident);
+		hart->hartid = ident & 0xffffffffU;
+	}
+	/* rv128 is unimpl. */
+}
+
 static bool riscv_hart_init(riscv_hart_s *const hart)
 {
 	/* Allocate a new target */
@@ -314,11 +334,7 @@ static bool riscv_hart_init(riscv_hart_s *const hart)
 	uint32_t isa = riscv_hart_discover_isa(hart);
 	hart->address_width = riscv_isa_address_width(isa);
 	hart->extensions = isa & RV_ISA_EXTENSIONS_MASK;
-	riscv_csr_read(hart, RV_VENDOR_ID | RV_CSR_FORCE_32_BIT, &hart->vendorid);
-	/* XXX: These will technically go wrong on rv64 - need some way to deal with that. */
-	riscv_csr_read(hart, RV_ARCH_ID, &hart->archid);
-	riscv_csr_read(hart, RV_IMPL_ID, &hart->implid);
-	riscv_csr_read(hart, RV_HART_ID, &hart->hartid);
+	riscv_hart_read_ids(hart);
 
 	DEBUG_INFO("Hart %" PRIx32 ": %u-bit RISC-V (arch = %08" PRIx32 "), vendor = %" PRIx32 ", impl = %" PRIx32
 			   ", exts = %08" PRIx32 "\n",
