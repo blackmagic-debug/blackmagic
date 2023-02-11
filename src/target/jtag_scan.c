@@ -151,7 +151,7 @@ uint32_t jtag_scan(const uint8_t *irlens)
 	}
 
 	DEBUG_INFO("Return to Run-Test/Idle\n");
-	jtag_proc.jtagtap_next(1, 1);
+	jtag_proc.jtagtap_next(true, true);
 	jtagtap_return_idle(1);
 
 	/* All devices should be in BYPASS now */
