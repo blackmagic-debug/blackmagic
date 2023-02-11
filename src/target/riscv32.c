@@ -68,6 +68,7 @@ typedef struct riscv32_regs {
 #define RV32_MATCH_AFTER  0x00040000U
 
 static void riscv32_regs_read(target_s *target, void *data);
+static void riscv32_regs_write(target_s *target, const void *data);
 static void riscv32_mem_read(target_s *target, void *dest, target_addr_t src, size_t len);
 
 static int riscv32_breakwatch_set(target_s *target, breakwatch_s *breakwatch);
@@ -88,6 +89,7 @@ bool riscv32_probe(target_s *const target)
 	/* Provide the length of a suitable registers structure */
 	target->regs_size = sizeof(riscv32_regs_s);
 	target->regs_read = riscv32_regs_read;
+	target->regs_write = riscv32_regs_write;
 	target->mem_read = riscv32_mem_read;
 
 	target->breakwatch_set = riscv32_breakwatch_set;
@@ -120,6 +122,21 @@ static void riscv32_regs_read(target_s *const target, void *const data)
 	}
 	/* Special access to grab the program counter that would be executed on resuming the hart */
 	riscv_csr_read(hart, RV_DPC, &regs->pc);
+}
+
+static void riscv32_regs_write(target_s *const target, const void *const data)
+{
+	/* Grab the hart structure and figure out how many registers need reading out */
+	riscv_hart_s *const hart = riscv_hart_struct(target);
+	riscv32_regs_s *const regs = (riscv32_regs_s *)data;
+	const size_t gprs_count = hart->extensions & RV_ISA_EXT_EMBEDDED ? 16U : 32U;
+	/* Loop through writing out the GPRs, except for the first which is always 0 */
+	for (size_t gpr = 1; gpr < gprs_count; ++gpr) {
+		// TODO: handle when this fails..
+		riscv_csr_write(hart, RV_GPR_BASE + gpr, &regs->gprs[gpr]);
+	}
+	/* Special access to poke in the program counter that will be executed on resuming the hart */
+	riscv_csr_write(hart, RV_DPC, &regs->pc);
 }
 
 /* Takes in data from abstract command arg0 and, based on the access width, unpacks it to dest */
