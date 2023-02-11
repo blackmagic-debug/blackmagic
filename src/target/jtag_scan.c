@@ -234,13 +234,16 @@ uint32_t jtag_scan(const uint8_t *irlens)
 void jtag_dev_write_ir(const uint8_t dev_index, const uint32_t ir)
 {
 	jtag_dev_s *device = &jtag_devs[dev_index];
+	/* If the request would duplicate work already done, do nothing */
 	if (ir == device->current_ir)
 		return;
 
+	/* Set all the other devices IR's to being in bypass */
 	for (size_t device = 0; device < jtag_dev_count; device++)
-		jtag_devs[device].current_ir = -1;
+		jtag_devs[device].current_ir = UINT32_MAX;
 	device->current_ir = ir;
 
+	/* Do the work to make the scanchain match the jtag_devs state */
 	jtagtap_shift_ir();
 	jtag_proc.jtagtap_tdi_seq(false, ones, device->ir_prescan);
 	jtag_proc.jtagtap_tdi_seq(!device->ir_postscan, (const uint8_t *)&ir, device->ir_len);
