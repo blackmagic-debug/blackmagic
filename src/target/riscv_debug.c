@@ -112,8 +112,8 @@
 typedef enum riscv_halt_cause {
 	/* Halt was caused by an `ebreak` instruction executing */
 	RV_HALT_CAUSE_EBREAK = (1U << 6U),
-	/* Halt was caused by a breakpoint (set in the trigger module) */
-	RV_HALT_CAUSE_BREAKPOINT = (2U << 6U),
+	/* Halt was caused by a breakpoint or watchpoint (set in the trigger module) */
+	RV_HALT_CAUSE_TRIGGER = (2U << 6U),
 	/* Halt was caused by debugger request (haltreq) */
 	RV_HALT_CAUSE_REQUEST = (3U << 6U),
 	/* Halt was caused by single-step execution */
@@ -803,7 +803,8 @@ static target_halt_reason_e riscv_halt_poll(target_s *const target, target_addr_
 	status &= RV_DCSR_CAUSE_MASK;
 	/* Dispatch on the cause code */
 	switch (status) {
-	case RV_HALT_CAUSE_BREAKPOINT:
+	case RV_HALT_CAUSE_TRIGGER:
+		/* XXX: Need to read out the triggers to find the one causing this, and grab the watch value */
 		return TARGET_HALT_BREAKPOINT;
 	case RV_HALT_CAUSE_STEP:
 		return TARGET_HALT_STEPPING;
