@@ -64,6 +64,7 @@ bool remote_jtagtap_init(void)
 	jtag_proc.jtagtap_tms_seq = jtagtap_tms_seq;
 	jtag_proc.jtagtap_tdi_tdo_seq = jtagtap_tdi_tdo_seq;
 	jtag_proc.jtagtap_tdi_seq = jtagtap_tdi_seq;
+	jtag_proc.tap_idle_cycles = 1;
 
 	platform_buffer_write((uint8_t *)REMOTE_HL_CHECK_STR, sizeof(REMOTE_HL_CHECK_STR));
 	length = platform_buffer_read((uint8_t *)buffer, REMOTE_MAX_MSG_SIZE);
