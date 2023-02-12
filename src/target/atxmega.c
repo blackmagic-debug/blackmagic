@@ -119,6 +119,8 @@ static bool atxmega_flash_done(target_flash_s *flash);
 static const char *atxmega_target_description(target_s *target);
 
 static bool atxmega_check_error(target_s *target);
+static void atxmega_halt_resume(target_s *target, bool step);
+
 static void atxmega_regs_read(target_s *target, void *data);
 static void atxmega_mem_read(target_s *target, void *dest, target_addr64_t src, size_t len);
 
@@ -215,6 +217,7 @@ bool atxmega_probe(target_s *const target)
 
 	target->regs_description = atxmega_target_description;
 	target->check_error = atxmega_check_error;
+	target->halt_resume = atxmega_halt_resume;
 
 	target->regs_read = atxmega_regs_read;
 	target->mem_read = atxmega_mem_read;
@@ -469,4 +472,37 @@ static bool atxmega_config_breakpoints(const avr_pdi_s *const pdi, const bool st
 		avr_pdi_write(pdi, PDI_DATA_8, ATXMEGA_BRK_UNKNOWN2, 0) &&
 		avr_pdi_write(pdi, PDI_DATA_16, ATXMEGA_BRK_COUNTER, (uint16_t)breakpoint_count << 8U) &&
 		avr_pdi_write(pdi, PDI_DATA_8, ATXMEGA_BRK_UNKNOWN3, 0);
+}
+
+static void atxmega_halt_resume(target_s *const target, const bool step)
+{
+	avr_pdi_s *const pdi = avr_pdi_struct(target);
+	if (step) {
+		const uint32_t current_pc = pdi->program_counter;
+		const uint32_t next_pc = current_pc + 1U;
+		/*
+		 * To do a single step, we run the following steps:
+		 * Write the debug control register to 4, which puts the processor in a temporary breakpoint mode
+		 * Write the debug counter register with the address to stop execution on
+		 * Write the program counter with the address to resume execution on
+		 */
+		/* Check that we are in administrative halt */
+		if (avr_pdi_reg_read(pdi, PDI_REG_R3) != 0x04U ||
+			/* Try to configure (clear) the breakpoints */
+			!atxmega_config_breakpoints(pdi, step) || avr_pdi_reg_read(pdi, PDI_REG_R3) != 0x04U ||
+			/* Configure the debug controller */
+			!avr_pdi_write(pdi, PDI_DATA_8, ATXMEGA_DBG_CTRL, 4U) ||
+			!avr_pdi_write(pdi, PDI_DATA_32, ATXMEGA_DBG_CTR, next_pc) ||
+			!avr_pdi_write(pdi, PDI_DATA_32, ATXMEGA_DBG_PC, current_pc) ||
+			avr_pdi_reg_read(pdi, PDI_REG_R3) != 0x04U ||
+			/* And try to execute the request*/
+			!avr_pdi_reg_write(pdi, PDI_REG_R4, 1U))
+			raise_exception(EXCEPTION_ERROR, "Error stepping device, device in incorrect state");
+		/* Then spin waiting to see the processor stop back in administrative halt */
+		while (avr_pdi_reg_read(pdi, PDI_REG_R3) != 0x04U)
+			continue;
+		pdi->halt_reason = TARGET_HALT_STEPPING;
+	} else {
+		pdi->halt_reason = TARGET_HALT_RUNNING;
+	}
 }
