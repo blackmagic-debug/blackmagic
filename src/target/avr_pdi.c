@@ -96,10 +96,13 @@ void avr_jtag_pdi_handler(const uint8_t dev_index)
 		return;
 	}
 
+	/* Setup and try to initialise the PDI controller */
 	pdi->dev_index = dev_index;
 	pdi->idcode = jtag_devs[dev_index].jd_idcode;
+	/* If we failed, free the structure */
 	if (!avr_pdi_init(pdi))
 		free(pdi);
+	/* Reset the JTAG machinary back to bypass to scan the next device in the chain */
 	jtag_dev_write_ir(dev_index, IR_BYPASS);
 }
 
@@ -114,10 +117,12 @@ static bool avr_pdi_init(avr_pdi_s *const pdi)
 	/* Transition the part into PDI mode */
 	jtag_dev_write_ir(pdi->dev_index, IR_PDI);
 
+	/* Allocate a new target */
 	target_s *target = target_new();
 	if (!target)
 		return false;
 
+	/* Do preliminary setup of the target structure for an AVR target */
 	target->cpuid = pdi->idcode;
 	target->part_id = (pdi->idcode >> 12U) & 0xffffU;
 	target->driver = "Atmel AVR";
@@ -170,24 +175,30 @@ static bool avr_jtag_shift_dr(uint8_t dev_index, uint8_t *data_out, const uint8_
 	uint8_t *data;
 	if (!data_out)
 		return false;
+	/* Try to perform a PDI access, with retry when the reply is a delay packet */
 	do {
 		data = (uint8_t *)&request;
+		/* Begin the data register transaction, handling any devices in bypass before us in the chain */
 		jtagtap_shift_dr();
 		jtag_proc.jtagtap_tdi_seq(false, ones, dev->dr_prescan);
+		/* Build the PDI packet to send */
 		data[0] = data_in;
-		/* Calculate the parity bit */
+		/* Calculate the parity bit of the request */
 		for (uint8_t i = 0; i < 8; ++i)
 			data[1] ^= (data_in >> i) & 1U;
+		/* Then send it and handle any devices in bypass after us in the chain */
 		jtag_proc.jtagtap_tdi_tdo_seq((uint8_t *)&response, !dev->dr_postscan, (uint8_t *)&request, 9);
 		jtag_proc.jtagtap_tdi_seq(true, ones, dev->dr_postscan);
+		/* Then return the JTAG bus to idle */
 		jtagtap_return_idle(0);
 		data = (uint8_t *)&response;
 	} while (data[0] == PDI_DELAY && data[1] == 1);
-	/* Calculate the parity bit */
+	/* Calculate the parity bit from the reply */
 	for (uint8_t i = 0; i < 8; ++i)
 		result ^= (data[0] >> i) & 1U;
 	*data_out = data[0];
-	DEBUG_WARN("Sent 0x%02x to target, response was 0x%02x (0x%x)\n", data_in, data[0], data[1]);
+	DEBUG_TARGET("Sent 0x%02x to target, response was 0x%02x (0x%x)\n", data_in, data[0], data[1]);
+	/* Return if the calculated parity matches the received parity */
 	return result == data[1];
 }
 
@@ -352,6 +363,11 @@ bool avr_pdi_read_ind(
 	return true;
 }
 
+/*
+ * Enable a PDI feature based on the `what` argument.
+ * This sends a PDI `KEY` instruction with the appropriate enablement key and
+ * returns if the PDI controller did actually enable the requested feature.
+ */
 static bool avr_enable(const avr_pdi_s *const pdi, const pdi_key_e what)
 {
 	const uint8_t *const key = what == PDI_DEBUG ? pdi_key_debug : pdi_key_nvm;
@@ -365,6 +381,7 @@ static bool avr_enable(const avr_pdi_s *const pdi, const pdi_key_e what)
 	return (avr_pdi_reg_read(pdi, PDI_REG_STATUS) & what) == what;
 }
 
+/* Disables the requested PDI feature based on the `what` argument */
 static bool avr_disable(const avr_pdi_s *const pdi, const pdi_key_e what)
 {
 	return avr_pdi_reg_write(pdi, PDI_REG_STATUS, ~what);
@@ -380,13 +397,21 @@ static bool avr_ensure_nvm_idle(const avr_pdi_s *const pdi)
 static bool avr_attach(target_s *const target)
 {
 	const avr_pdi_s *const pdi = target->priv;
+	/* Put the target back in PDI comms mode */
 	jtag_dev_write_ir(pdi->dev_index, IR_PDI);
 
 	TRY (EXCEPTION_ALL) {
+		/* Attempt to reset the target */
 		target_reset(target);
+		/* Then enable the debug unit in the PDI controller */
 		if (!avr_enable(pdi, PDI_DEBUG))
 			return false;
+		/* Ask the PDI controller to halt the processor */
 		target_halt_request(target);
+		/*
+		 * And now finish by enabling the NVM unit in the PDI controller and
+		 * check that the processor is in administrative halt
+		 */
 		if (!avr_enable(pdi, PDI_NVM) || !avr_ensure_nvm_idle(pdi) || avr_pdi_reg_read(pdi, PDI_REG_R3) != 0x04U)
 			return false;
 	}
@@ -401,6 +426,7 @@ static void avr_detach(target_s *const target)
 {
 	const avr_pdi_s *const pdi = target->priv;
 
+	/* Disable all enabled PDI controller units to detach from the target */
 	avr_disable(pdi, PDI_NVM);
 	avr_disable(pdi, PDI_DEBUG);
 	jtag_dev_write_ir(pdi->dev_index, IR_BYPASS);
@@ -415,8 +441,10 @@ static void avr_reset(target_s *const target)
 	 */
 	if (target->attached)
 		return;
+	/* Write the reset register to initiate reset */
 	if (!avr_pdi_reg_write(pdi, PDI_REG_RESET, PDI_RESET))
 		raise_exception(EXCEPTION_ERROR, "Error resetting device, device in incorrect state");
+	/* If any PDI controller units are presently enabled, disable them */
 	if (avr_pdi_reg_read(pdi, PDI_REG_STATUS) != 0x00) {
 		avr_disable(pdi, PDI_NVM);
 		avr_disable(pdi, PDI_DEBUG);
@@ -426,7 +454,8 @@ static void avr_reset(target_s *const target)
 static void avr_halt_request(target_s *const target)
 {
 	avr_pdi_s *const pdi = target->priv;
-	/* To halt the processor we go through a few really specific steps:
+	/*
+	 * To halt the processor we go through a few really specific steps:
 	 * Write r4 to 1 to indicate we want to put the processor into debug-based pause
 	 * Read r3 and check it's 0x10 which indicates the processor is held in reset and no debugging is active
 	 * Release reset
