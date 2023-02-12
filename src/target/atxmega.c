@@ -55,6 +55,12 @@
 #define AVR_DBG_READ_REGS 0x11U
 #define AVR_NUM_REGS      32
 
+#define ATXMEGA_BRK_BASE     0x00000020U
+#define ATXMEGA_BRK_COUNTER  0x00000028U
+#define ATXMEGA_BRK_UNKNOWN1 0x00000040U
+#define ATXMEGA_BRK_UNKNOWN2 0x00000046U
+#define ATXMEGA_BRK_UNKNOWN3 0x00000048U
+
 #define ATXMEGA_CPU_BASE 0x01000030U
 /* Address of the low byte of the stack pointer */
 #define ATXMEGA_CPU_SPL (ATXMEGA_CPU_BASE + 0xdU)
@@ -117,6 +123,7 @@ static void atxmega_regs_read(target_s *target, void *data);
 static void atxmega_mem_read(target_s *target, void *dest, target_addr64_t src, size_t len);
 
 static bool atxmega_ensure_nvm_idle(const avr_pdi_s *pdi);
+static bool atxmega_config_breakpoints(const avr_pdi_s *pdi, bool step);
 
 void avr_add_flash(target_s *const target, const uint32_t start, const size_t length, const uint16_t block_size)
 {
@@ -431,4 +438,33 @@ static void atxmega_regs_read(target_s *const target, void *const data)
 	regs->pc = (pc - 1) << 1U;
 	regs->sp = status[0] | (status[1] << 8);
 	regs->sreg = status[2];
+}
+
+static bool atxmega_config_breakpoints(const avr_pdi_s *const pdi, const bool step)
+{
+	uint8_t breakpoint_count = 0U;
+	if (step) {
+		/* If we are single stepping, clear all enabled breakpoints */
+		for (uint8_t idx = 0; idx < pdi->breakpoints_available; ++idx) {
+			if (!avr_pdi_write(pdi, PDI_DATA_32, ATXMEGA_BRK_BASE + (idx * 4U), 0U))
+				return false;
+		}
+	} else {
+		/* We are not single stepping, so configure the breakpoints as defined in the PDI structure */
+		for (uint8_t idx = 0; idx < pdi->breakpoints_available; ++idx) {
+			const uint32_t breakpoint = pdi->breakpoints[idx];
+			/* If the breakpoint is enabled, increment breakpoint_count */
+			if (breakpoint & AVR_BREAKPOINT_ENABLED)
+				++breakpoint_count;
+			/* Try to write the address of the breakpoint */
+			/* XXX: Need to first collect all the breakpoints on the stack, then write all of them used first */
+			if (!avr_pdi_write(pdi, PDI_DATA_32, ATXMEGA_BRK_BASE + (idx * 4U), breakpoint & AVR_BREAKPOINT_MASK))
+				return false;
+		}
+	}
+	/* Tell the breakpoint unit how many breakpoints are enabled */
+	return avr_pdi_write(pdi, PDI_DATA_8, ATXMEGA_BRK_UNKNOWN1, 0) &&
+		avr_pdi_write(pdi, PDI_DATA_8, ATXMEGA_BRK_UNKNOWN2, 0) &&
+		avr_pdi_write(pdi, PDI_DATA_16, ATXMEGA_BRK_COUNTER, (uint16_t)breakpoint_count << 8U) &&
+		avr_pdi_write(pdi, PDI_DATA_8, ATXMEGA_BRK_UNKNOWN3, 0);
 }
