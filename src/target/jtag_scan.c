@@ -35,7 +35,7 @@ jtag_dev_s jtag_devs[JTAG_MAX_DEVS + 1U];
 uint32_t jtag_dev_count = 0;
 
 /* bucket of ones for don't care TDI */
-static const uint8_t ones[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+const uint8_t ones[8] = {0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU};
 
 #if PC_HOSTED == 0
 void jtag_add_device(const uint32_t dev_index, const jtag_dev_s *jtag_dev)

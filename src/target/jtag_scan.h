@@ -46,6 +46,7 @@ typedef struct jtag_dev {
 
 extern jtag_dev_s jtag_devs[JTAG_MAX_DEVS + 1U];
 extern uint32_t jtag_dev_count;
+extern const uint8_t ones[8];
 
 void jtag_dev_write_ir(uint8_t jd_index, uint32_t ir);
 void jtag_dev_shift_dr(uint8_t jd_index, uint8_t *dout, const uint8_t *din, size_t ticks);
