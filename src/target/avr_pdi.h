@@ -42,6 +42,10 @@ typedef enum avr_error {
 	pdi_failure,
 } avr_error_e;
 
+#define AVR_MAX_BREAKPOINTS    2U
+#define AVR_BREAKPOINT_ENABLED 0x80000000U
+#define AVR_BREAKPOINT_MASK    0x00ffffffU
+
 typedef struct avr_pdi avr_pdi_s;
 
 struct avr_pdi {
@@ -50,6 +54,11 @@ struct avr_pdi {
 	uint8_t dev_index;
 	target_halt_reason_e halt_reason;
 	avr_error_e error_state;
+
+	/* Storage slots for the current breakpoints configuration */
+	uint32_t breakpoints[AVR_MAX_BREAKPOINTS];
+	/* A count of the total available breakpoints on the target */
+	uint8_t breakpoints_available;
 
 	bool (*ensure_nvm_idle)(const avr_pdi_s *pdi);
 };
