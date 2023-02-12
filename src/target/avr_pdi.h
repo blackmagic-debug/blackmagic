@@ -76,8 +76,11 @@ typedef struct __attribute__((packed)) avr_regs {
 #define PDI_DATA_24 0x02U
 #define PDI_DATA_32 0x03U
 
-#define PDI_REG_R3 3U
-#define PDI_REG_R4 4U
+#define PDI_REG_STATUS 0U
+#define PDI_REG_RESET  1U
+#define PDI_REG_CTRL   2U
+#define PDI_REG_R3     3U
+#define PDI_REG_R4     4U
 
 #define PDI_MODE_IND_PTR    0x00U
 #define PDI_MODE_IND_INCPTR 0x04U
