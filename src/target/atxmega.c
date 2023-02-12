@@ -112,6 +112,7 @@ static bool atxmega_flash_done(target_flash_s *flash);
 
 static const char *atxmega_target_description(target_s *target);
 
+static bool atxmega_check_error(target_s *target);
 static void atxmega_regs_read(target_s *target, void *data);
 static void atxmega_mem_read(target_s *target, void *dest, target_addr64_t src, size_t len);
 
@@ -206,6 +207,8 @@ bool atxmega_probe(target_s *const target)
 	}
 
 	target->regs_description = atxmega_target_description;
+	target->check_error = atxmega_check_error;
+
 	target->regs_read = atxmega_regs_read;
 	target->mem_read = atxmega_mem_read;
 
@@ -380,6 +383,12 @@ static const char *atxmega_target_description(target_s *const target)
 	if (description)
 		atxmega_build_target_description(description, description_length);
 	return description;
+}
+
+static bool atxmega_check_error(target_s *const target)
+{
+	const avr_pdi_s *const pdi = avr_pdi_struct(target);
+	return pdi->error_state != pdi_ok;
 }
 
 static void atxmega_mem_read(target_s *const target, void *const dest, const target_addr64_t src, const size_t len)
