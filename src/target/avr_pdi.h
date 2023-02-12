@@ -54,6 +54,7 @@ struct avr_pdi {
 	uint8_t dev_index;
 	target_halt_reason_e halt_reason;
 	avr_error_e error_state;
+	uint32_t program_counter;
 
 	/* Storage slots for the current breakpoints configuration */
 	uint32_t breakpoints[AVR_MAX_BREAKPOINTS];

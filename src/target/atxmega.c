@@ -417,11 +417,11 @@ static void atxmega_mem_read(target_s *const target, void *const dest, const tar
 
 static void atxmega_regs_read(target_s *const target, void *const data)
 {
-	const avr_pdi_s *const pdi = avr_pdi_struct(target);
+	avr_pdi_s *const pdi = avr_pdi_struct(target);
 	avr_regs_s *regs = (avr_regs_s *)data;
 	uint8_t status[3];
-	uint32_t pc = 0;
-	if (!avr_pdi_read32(pdi, ATXMEGA_DBG_PC, &pc) ||
+	uint32_t program_counter = 0;
+	if (!avr_pdi_read32(pdi, ATXMEGA_DBG_PC, &program_counter) ||
 		!avr_pdi_read_ind(pdi, ATXMEGA_CPU_SPL, PDI_MODE_IND_INCPTR, status, 3) ||
 		!avr_pdi_write(pdi, PDI_DATA_32, ATXMEGA_DBG_PC, 0) ||
 		!avr_pdi_write(pdi, PDI_DATA_32, ATXMEGA_DBG_CTR, AVR_NUM_REGS) ||
@@ -430,13 +430,15 @@ static void atxmega_regs_read(target_s *const target, void *const data)
 		!avr_pdi_read_ind(pdi, ATXMEGA_DBG_SPECIAL, PDI_MODE_IND_PTR, regs->general, 32) ||
 		avr_pdi_reg_read(pdi, PDI_REG_R3) != 0x04U)
 		raise_exception(EXCEPTION_ERROR, "Error reading registers");
+	/* Store the newly read program counter */
+	pdi->program_counter = program_counter - 1U;
 	/*
 	 * These aren't in the reads above because regs is a packed struct, which results in compiler errors.
 	 * Additionally, the program counter is stored in words and points to the next instruction to be executed
 	 * so we have to adjust it by 1 and make it bytes.
 	 */
-	regs->pc = (pc - 1) << 1U;
-	regs->sp = status[0] | (status[1] << 8);
+	regs->pc = pdi->program_counter << 1U;
+	regs->sp = status[0] | ((uint16_t)status[1] << 8);
 	regs->sreg = status[2];
 }
 
