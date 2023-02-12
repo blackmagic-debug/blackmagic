@@ -226,6 +226,9 @@ bool atxmega_probe(target_s *const target)
 
 	avr_pdi_s *const pdi = avr_pdi_struct(target);
 	pdi->ensure_nvm_idle = atxmega_ensure_nvm_idle;
+
+	/* This is unfortunately hard-coded as we don't currently have a way to "learn" this from the target. */
+	pdi->breakpoints_available = 2;
 	return true;
 }
 
