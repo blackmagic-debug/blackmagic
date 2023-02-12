@@ -85,6 +85,9 @@ static void avr_reset(target_s *target);
 static void avr_halt_request(target_s *target);
 static target_halt_reason_e avr_halt_poll(target_s *target, target_addr_t *watch);
 
+static int avr_breakwatch_set(target_s *target, breakwatch_s *breakwatch);
+static int avr_breakwatch_clear(target_s *target, breakwatch_s *breakwatch);
+
 void avr_jtag_pdi_handler(const uint8_t dev_index)
 {
 	avr_pdi_s *pdi = calloc(1, sizeof(*pdi));
@@ -133,6 +136,9 @@ static bool avr_pdi_init(avr_pdi_s *const pdi)
 	 * we return the size of a sutable registers structure.
 	 */
 	target->regs_size = sizeof(avr_regs_s);
+
+	target->breakwatch_set = avr_breakwatch_set;
+	target->breakwatch_clear = avr_breakwatch_clear;
 
 	/* Try probing for various known AVR parts */
 	PROBE(atxmega_probe);
@@ -444,4 +450,48 @@ static target_halt_reason_e avr_halt_poll(target_s *const target, target_addr_t 
 	if (pdi->halt_reason == TARGET_HALT_RUNNING && avr_pdi_reg_read(pdi, PDI_REG_R3) == 0x04U)
 		pdi->halt_reason = TARGET_HALT_BREAKPOINT;
 	return pdi->halt_reason;
+}
+
+/*
+ * The following can be used as a key for understanding the various return results from the breakwatch functions:
+ * 0 -> success
+ * 1 -> not supported
+ * -1 -> an error occured
+ */
+
+static int avr_breakwatch_set(target_s *const target, breakwatch_s *const breakwatch)
+{
+	avr_pdi_s *const pdi = avr_pdi_struct(target);
+	switch (breakwatch->type) {
+	case TARGET_BREAK_HARD: {
+		/* First try and find a unused breakpoint slot */
+		size_t breakpoint = 0;
+		for (; breakpoint < pdi->breakpoints_available; ++breakpoint) {
+			/* Check if the slot is presently in use, breaking if it is not */
+			if (!(pdi->breakpoints[breakpoint] & AVR_BREAKPOINT_ENABLED))
+				break;
+		}
+		/* If none was available, return an error */
+		if (breakpoint == pdi->breakpoints_available)
+			return -1;
+
+		/* Store the address to set the breakpoint, and store the index of the slot used in the breakwatch structure */
+		pdi->breakpoints[breakpoint] = AVR_BREAKPOINT_ENABLED | (breakwatch->addr & AVR_BREAKPOINT_MASK);
+		breakwatch->reserved[0] = breakpoint;
+		/* Tell the debugger that it was successfully able to "set" the breakpoint */
+		return 0;
+	}
+	default:
+		/* If the breakwatch type is not one of the above, tell the debugger we don't support it */
+		return 1;
+	}
+}
+
+static int avr_breakwatch_clear(target_s *const target, breakwatch_s *const breakwatch)
+{
+	avr_pdi_s *const pdi = avr_pdi_struct(target);
+	/* Clear the breakpoint slot this used */
+	pdi->breakpoints[breakwatch->reserved[0]] = 0U;
+	/* Tell the debugger that it was successfully able to "clear" the breakpoint */
+	return 0;
 }
