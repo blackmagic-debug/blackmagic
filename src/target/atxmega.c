@@ -113,6 +113,7 @@ static bool atxmega_flash_done(target_flash_s *flash);
 static const char *atxmega_target_description(target_s *target);
 
 static void atxmega_regs_read(target_s *target, void *data);
+static void atxmega_mem_read(target_s *target, void *dest, target_addr64_t src, size_t len);
 
 static bool atxmega_ensure_nvm_idle(const avr_pdi_s *pdi);
 
@@ -206,6 +207,7 @@ bool atxmega_probe(target_s *const target)
 
 	target->regs_description = atxmega_target_description;
 	target->regs_read = atxmega_regs_read;
+	target->mem_read = atxmega_mem_read;
 
 	/*
 	 * RAM is actually at 0x01002000 in the 24-bit linearised PDI address space however, because GDB/GCC,
@@ -378,6 +380,20 @@ static const char *atxmega_target_description(target_s *const target)
 	if (description)
 		atxmega_build_target_description(description, description_length);
 	return description;
+}
+
+static void atxmega_mem_read(target_s *const target, void *const dest, const target_addr64_t src, const size_t len)
+{
+	avr_pdi_s *const pdi = avr_pdi_struct(target);
+	const target_addr32_t translated_src = (target_addr32_t)src + PDI_FLASH_OFFSET;
+	if (target_flash_for_addr(target, src)) {
+		if (!avr_pdi_write(pdi, PDI_DATA_8, ATXMEGA_NVM_CMD, ATXMEGA_NVM_CMD_READ_NVM) ||
+			!avr_pdi_read_ind(pdi, translated_src, PDI_MODE_IND_INCPTR, dest, len) || !atxmega_ensure_nvm_idle(pdi))
+			pdi->error_state = pdi_failure;
+	} else if (translated_src < PDI_FLASH_OFFSET) {
+		if (!avr_pdi_read_ind(pdi, translated_src, PDI_MODE_IND_INCPTR, dest, len))
+			pdi->error_state = pdi_failure;
+	}
 }
 
 static void atxmega_regs_read(target_s *const target, void *const data)
