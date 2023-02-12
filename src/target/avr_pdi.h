@@ -37,6 +37,11 @@
 #include <stdint.h>
 #include "target.h"
 
+typedef enum avr_error {
+	pdi_ok,
+	pdi_failure,
+} avr_error_e;
+
 typedef struct avr_pdi avr_pdi_s;
 
 struct avr_pdi {
@@ -44,6 +49,7 @@ struct avr_pdi {
 
 	uint8_t dev_index;
 	target_halt_reason_e halt_reason;
+	avr_error_e error_state;
 
 	bool (*ensure_nvm_idle)(const avr_pdi_s *pdi);
 };
