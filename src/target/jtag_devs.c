@@ -126,6 +126,12 @@ const jtag_dev_descr_s dev_descr[] = {
 		.handler = riscv_jtag_dtm_handler,
 	},
 	{
+		.idcode = 0x00005c25U,
+		.idmask = 0x0fffffffU,
+		.descr = "RISC-V debug v0.13.",
+		.handler = riscv_jtag_dtm_handler,
+	},
+	{
 		.idcode = 0x000007a3U,
 		.idmask = 0x00000fffU,
 		.descr = "Gigadevice BSD.",
