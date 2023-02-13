@@ -624,6 +624,17 @@ done:
 	return true;
 }
 
+static const char *stm32lx_block_size_str(const size_t block_size)
+{
+	if (block_size == 4U)
+		return "word";
+	if (block_size == 2U)
+		return "halfword";
+	if (block_size == 1U)
+		return "byte";
+	return "";
+}
+
 static bool stm32lx_cmd_eeprom(target_s *const target, const int argc, const char **const argv)
 {
 	const uint32_t nvm = stm32lx_nvm_phys(target);
@@ -641,25 +652,30 @@ static bool stm32lx_cmd_eeprom(target_s *const target, const int argc, const cha
 			goto usage;
 
 		const size_t command_len = strlen(argv[1]);
+		size_t block_size = 0U;
 		if (!strncasecmp(argv[1], "byte", command_len)) {
-			tc_printf(target, "write byte 0x%08x <- 0x%08x\n", addr, val);
-			if (!stm32lx_eeprom_write(target, addr, 1U, val))
-				tc_printf(target, "eeprom write failed\n");
+			val &= 0xffU;
+			block_size = 1U;
 		} else if (!strncasecmp(argv[1], "halfword", command_len)) {
 			val &= 0xffffU;
-			tc_printf(target, "write halfword 0x%08x <- 0x%04x\n", addr, val);
-			if (addr & 1U)
+			block_size = 2U;
+			if (addr & 1U) {
+				tc_printf(target, "Refusing to do unaligned write\n");
 				goto usage;
-			if (!stm32lx_eeprom_write(target, addr, 2U, val))
-				tc_printf(target, "eeprom write failed\n");
+			}
 		} else if (!strncasecmp(argv[1], "word", command_len)) {
-			tc_printf(target, "write word 0x%08x <- 0x%08x\n", addr, val);
-			if (addr & 3U)
+			block_size = 4U;
+			if (addr & 3U) {
+				tc_printf(target, "Refusing to do unaligned write\n");
 				goto usage;
-			if (!stm32lx_eeprom_write(target, addr, 4U, val))
-				tc_printf(target, "eeprom write failed\n");
+			}
 		} else
 			goto usage;
+
+		tc_printf(
+			target, "writing %s 0x%08" PRIx32 " with 0x%" PRIx32 "\n", stm32lx_block_size_str(block_size), addr, val);
+		if (!stm32lx_eeprom_write(target, addr, block_size, val))
+			tc_printf(target, "eeprom write failed\n");
 	} else
 		goto usage;
 
