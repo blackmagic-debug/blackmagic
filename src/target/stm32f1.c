@@ -668,7 +668,7 @@ static bool stm32f1_option_erase(target_s *target)
 }
 
 static bool stm32f1_option_write_erased(
-	target_s *const target, const uint32_t addr, const uint16_t value, const bool write16_broken)
+	target_s *const target, const size_t offset, const uint16_t value, const bool write16_broken)
 {
 	if (value == 0xffffU)
 		return true;
@@ -678,6 +678,7 @@ static bool stm32f1_option_write_erased(
 	/* Erase option bytes instruction */
 	target_mem_write32(target, FLASH_CR, FLASH_CR_OPTPG | FLASH_CR_OPTWRE);
 
+	const uint32_t addr = FLASH_OBP_RDP + (offset * 2U);
 	if (write16_broken)
 		target_mem_write32(target, addr, 0xffff0000U | value);
 	else
@@ -717,7 +718,7 @@ static bool stm32f1_option_write(target_s *const target, const uint32_t addr, co
 	 */
 	const bool write16_broken = target->part_id == 0x410U && (target->cpuid & CPUID_PARTNO_MASK) == CORTEX_M23;
 	for (size_t i = 0U; i < 8U; ++i) {
-		if (!stm32f1_option_write_erased(target, FLASH_OBP_RDP + (i * 2U), opt_val[i], write16_broken) && i != 0)
+		if (!stm32f1_option_write_erased(target, i, opt_val[i], write16_broken) && i != 0)
 			return false;
 	}
 
@@ -750,7 +751,7 @@ static bool stm32f1_cmd_option(target_s *target, int argc, const char **argv)
 		 * GD32E230 is a special case as target_mem_write16 does not work
 		 */
 		const bool write16_broken = target->part_id == 0x410U && (target->cpuid & CPUID_PARTNO_MASK) == CORTEX_M23;
-		if (!stm32f1_option_write_erased(target, FLASH_OBP_RDP, stm32f1_flash_readable_key(target), write16_broken))
+		if (!stm32f1_option_write_erased(target, 0U, stm32f1_flash_readable_key(target), write16_broken))
 			return false;
 	} else if (argc == 3) {
 		/* If 3 arguments are given, assume the second is an address, and the third a value */
