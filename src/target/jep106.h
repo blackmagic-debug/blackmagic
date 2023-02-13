@@ -68,6 +68,7 @@
 #define JEP106_MANUFACTURER_RASPBERRY    0x913U /* Raspberry Pi */
 #define JEP106_MANUFACTURER_RENESAS      0x423U /* Renesas */
 #define JEP106_MANUFACTURER_XILINX       0x309U /* Xilinx */
+#define JEP106_MANUFACTURER_ESPRESSIF    0xc12U /* Espressif */
 /*
  * This JEP code should belong to "Andes Technology Corporation", but is used on RISC-V by GigaDevice,
  * so in the unlikely event we need to support chips by them, here be dragons.
