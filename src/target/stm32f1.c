@@ -104,66 +104,66 @@ static bool stm32f1_mass_erase(target_s *target);
 #define DBGMCU_IDCODE_MM32L0 0x40013400U
 #define DBGMCU_IDCODE_MM32F3 0x40007080U
 
-static void stm32f1_add_flash(target_s *t, uint32_t addr, size_t length, size_t erasesize)
+static void stm32f1_add_flash(target_s *target, uint32_t addr, size_t length, size_t erasesize)
 {
-	target_flash_s *f = calloc(1, sizeof(*f));
-	if (!f) { /* calloc failed: heap exhaustion */
+	target_flash_s *flash = calloc(1, sizeof(*flash));
+	if (!flash) { /* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return;
 	}
 
-	f->start = addr;
-	f->length = length;
-	f->blocksize = erasesize;
-	f->erase = stm32f1_flash_erase;
-	f->write = stm32f1_flash_write;
-	f->writesize = erasesize;
-	f->erased = 0xff;
-	target_add_flash(t, f);
+	flash->start = addr;
+	flash->length = length;
+	flash->blocksize = erasesize;
+	flash->erase = stm32f1_flash_erase;
+	flash->write = stm32f1_flash_write;
+	flash->writesize = erasesize;
+	flash->erased = 0xff;
+	target_add_flash(target, flash);
 }
 
-static uint16_t stm32f1_read_idcode(target_s *const t)
+static uint16_t stm32f1_read_idcode(target_s *const target)
 {
-	if ((t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M0 || (t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M23)
-		return target_mem_read32(t, DBGMCU_IDCODE_F0) & 0xfffU;
-	return target_mem_read32(t, DBGMCU_IDCODE) & 0xfffU;
+	if ((target->cpuid & CPUID_PARTNO_MASK) == CORTEX_M0 || (target->cpuid & CPUID_PARTNO_MASK) == CORTEX_M23)
+		return target_mem_read32(target, DBGMCU_IDCODE_F0) & 0xfffU;
+	return target_mem_read32(target, DBGMCU_IDCODE) & 0xfffU;
 }
 
 /* Identify GD32F1 and GD32F3 chips */
-bool gd32f1_probe(target_s *t)
+bool gd32f1_probe(target_s *target)
 {
-	const uint16_t device_id = stm32f1_read_idcode(t);
+	const uint16_t device_id = stm32f1_read_idcode(target);
 	switch (device_id) {
 	case 0x414U: /* Gigadevice gd32f303 */
 	case 0x430U:
-		t->driver = "GD32F3";
+		target->driver = "GD32F3";
 		break;
 	case 0x410U: /* Gigadevice gd32f103, gd32e230 */
-		if ((t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M23)
-			t->driver = "GD32E230";
-		else if ((t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M4)
-			t->driver = "GD32F3";
+		if ((target->cpuid & CPUID_PARTNO_MASK) == CORTEX_M23)
+			target->driver = "GD32E230";
+		else if ((target->cpuid & CPUID_PARTNO_MASK) == CORTEX_M4)
+			target->driver = "GD32F3";
 		else
-			t->driver = "GD32F1";
+			target->driver = "GD32F1";
 		break;
 	default:
 		return false;
 	}
 
-	const uint32_t signature = target_mem_read32(t, GD32Fx_FLASHSIZE);
+	const uint32_t signature = target_mem_read32(target, GD32Fx_FLASHSIZE);
 	const uint16_t flash_size = signature & 0xffffU;
 	const uint16_t ram_size = signature >> 16U;
 
-	t->part_id = device_id;
-	t->mass_erase = stm32f1_mass_erase;
-	target_add_ram(t, 0x20000000, ram_size * 1024U);
-	stm32f1_add_flash(t, 0x8000000, flash_size * 1024U, 0x400);
-	target_add_commands(t, stm32f1_cmd_list, t->driver);
+	target->part_id = device_id;
+	target->mass_erase = stm32f1_mass_erase;
+	target_add_ram(target, 0x20000000, ram_size * 1024U);
+	stm32f1_add_flash(target, 0x8000000, (size_t)flash_size * 1024U, 0x400);
+	target_add_commands(target, stm32f1_cmd_list, target->driver);
 
 	return true;
 }
 
-static bool at32f40_detect(target_s *t, const uint16_t part_id)
+static bool at32f40_detect(target_s *target, const uint16_t part_id)
 {
 	// Current driver supports only *default* memory layout (256 KB Flash / 96 KB SRAM)
 	// XXX: Support for external Flash for 512KB and 1024KB parts requires specific flash code (not implemented)
@@ -189,20 +189,20 @@ static bool at32f40_detect(target_s *t, const uint16_t part_id)
 	case 0x034cU: // AT32F407VGT7 1024KB / LQFP64 (*)
 	case 0x0353U: // AT32F407AVGT7 1024KB / LQFP100 (*)
 		// Flash: 256 KB / 2KB per block
-		stm32f1_add_flash(t, 0x08000000, 256U * 1024U, 2U * 1024U);
+		stm32f1_add_flash(target, 0x08000000, 256U * 1024U, 2U * 1024U);
 		break;
 	// Unknown/undocumented
 	default:
 		return false;
 	}
 	// All parts have 96KB SRAM
-	target_add_ram(t, 0x20000000, 96U * 1024U);
-	t->driver = "AT32F403A/407";
-	t->mass_erase = stm32f1_mass_erase;
+	target_add_ram(target, 0x20000000, 96U * 1024U);
+	target->driver = "AT32F403A/407";
+	target->mass_erase = stm32f1_mass_erase;
 	return true;
 }
 
-static bool at32f41_detect(target_s *t, const uint16_t part_id)
+static bool at32f41_detect(target_s *target, const uint16_t part_id)
 {
 	switch (part_id) {
 	case 0x0240U: // LQFP64_10x10
@@ -211,7 +211,7 @@ static bool at32f41_detect(target_s *t, const uint16_t part_id)
 	case 0x0243U: // LQFP64_7x7
 	case 0x024cU: // QFN48_6x6
 		// Flash: 256 KB / 2KB per block
-		stm32f1_add_flash(t, 0x08000000, 256U * 1024U, 2U * 1024U);
+		stm32f1_add_flash(target, 0x08000000, 256U * 1024U, 2U * 1024U);
 		break;
 	case 0x01c4U: // LQFP64_10x10
 	case 0x01c5U: // LQFP48_7x7
@@ -219,41 +219,41 @@ static bool at32f41_detect(target_s *t, const uint16_t part_id)
 	case 0x01c7U: // LQFP64_7x7
 	case 0x01cdU: // QFN48_6x6
 		// Flash: 128 KB / 2KB per block
-		stm32f1_add_flash(t, 0x08000000, 128U * 1024U, 2U * 1024U);
+		stm32f1_add_flash(target, 0x08000000, 128U * 1024U, 2U * 1024U);
 		break;
 	case 0x0108U: // LQFP64_10x10
 	case 0x0109U: // LQFP48_7x7
 	case 0x010aU: // QFN32_4x4
 		// Flash: 64 KB / 2KB per block
-		stm32f1_add_flash(t, 0x08000000, 64U * 1024U, 2U * 1024U);
+		stm32f1_add_flash(target, 0x08000000, 64U * 1024U, 2U * 1024U);
 		break;
 	// Unknown/undocumented
 	default:
 		return false;
 	}
 	// All parts have 32KB SRAM
-	target_add_ram(t, 0x20000000, 32U * 1024U);
-	t->driver = "AT32F415";
-	t->mass_erase = stm32f1_mass_erase;
+	target_add_ram(target, 0x20000000, 32U * 1024U);
+	target->driver = "AT32F415";
+	target->mass_erase = stm32f1_mass_erase;
 	return true;
 }
 
 /* Identify AT32F4x devices (Cortex-M4) */
-bool at32fxx_probe(target_s *t)
+bool at32fxx_probe(target_s *target)
 {
 	// Artery clones use Cortex M4 cores
-	if ((t->cpuid & CPUID_PARTNO_MASK) != CORTEX_M4)
+	if ((target->cpuid & CPUID_PARTNO_MASK) != CORTEX_M4)
 		return false;
 
 	// Artery chips use the complete idcode word for identification
-	const uint32_t idcode = target_mem_read32(t, DBGMCU_IDCODE);
+	const uint32_t idcode = target_mem_read32(target, DBGMCU_IDCODE);
 	const uint32_t series = idcode & AT32F4x_IDCODE_SERIES_MASK;
 	const uint16_t part_id = idcode & AT32F4x_IDCODE_PART_MASK;
 
 	if (series == AT32F40_SERIES)
-		return at32f40_detect(t, part_id);
+		return at32f40_detect(target, part_id);
 	if (series == AT32F41_SERIES)
-		return at32f41_detect(t, part_id);
+		return at32f41_detect(target, part_id);
 	return false;
 }
 
@@ -312,16 +312,15 @@ void mm32l0_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void *
 
 /* Identify MM32 devices (Cortex-M0) */
 
-bool mm32l0xx_probe(target_s *t)
+bool mm32l0xx_probe(target_s *target)
 {
-	uint32_t mm32_id;
-	const char *name = "?";
+	const char *name;
 	size_t flash_kbyte = 0;
 	size_t ram_kbyte = 0;
 	size_t block_size = 0x400U;
 
-	mm32_id = target_mem_read32(t, DBGMCU_IDCODE_MM32L0);
-	if (target_check_error(t)) {
+	const uint32_t mm32_id = target_mem_read32(target, DBGMCU_IDCODE_MM32L0);
+	if (target_check_error(target)) {
 		DEBUG_WARN("mm32l0xx_probe: read error at 0x%" PRIx32 "\n", (uint32_t)DBGMCU_IDCODE_MM32L0);
 		return false;
 	}
@@ -343,18 +342,18 @@ bool mm32l0xx_probe(target_s *t)
 		DEBUG_WARN("mm32l0xx_probe: unknown mm32 dev_id 0x%" PRIx32 "\n", mm32_id);
 		return false;
 	}
-	t->part_id = mm32_id & 0xfffU;
-	t->driver = name;
-	t->mass_erase = stm32f1_mass_erase;
-	target_add_ram(t, 0x20000000U, ram_kbyte * 1024U);
-	stm32f1_add_flash(t, 0x08000000U, flash_kbyte * 1024U, block_size);
-	target_add_commands(t, stm32f1_cmd_list, name);
-	cortexm_ap(t)->dp->mem_write = mm32l0_mem_write_sized;
+	target->part_id = mm32_id & 0xfffU;
+	target->driver = name;
+	target->mass_erase = stm32f1_mass_erase;
+	target_add_ram(target, 0x20000000U, ram_kbyte * 1024U);
+	stm32f1_add_flash(target, 0x08000000U, flash_kbyte * 1024U, block_size);
+	target_add_commands(target, stm32f1_cmd_list, name);
+	cortexm_ap(target)->dp->mem_write = mm32l0_mem_write_sized;
 	return true;
 }
 
 /* Identify MM32 devices (Cortex-M3, Star-MC1) */
-bool mm32f3xx_probe(target_s *t)
+bool mm32f3xx_probe(target_s *target)
 {
 	uint32_t mm32_id;
 	const char *name = "?";
@@ -363,8 +362,8 @@ bool mm32f3xx_probe(target_s *t)
 	size_t ram2_kbyte = 0; /* ram at 0x30000000 */
 	size_t block_size = 0x400U;
 
-	mm32_id = target_mem_read32(t, DBGMCU_IDCODE_MM32F3);
-	if (target_check_error(t)) {
+	mm32_id = target_mem_read32(target, DBGMCU_IDCODE_MM32F3);
+	if (target_check_error(target)) {
 		DEBUG_WARN("mm32f3xx_probe: read error at 0x%" PRIx32 "\n", (uint32_t)DBGMCU_IDCODE_MM32F3);
 		return false;
 	}
@@ -387,24 +386,24 @@ bool mm32f3xx_probe(target_s *t)
 		DEBUG_WARN("mm32f3xx_probe: unknown mm32 dev_id 0x%" PRIx32 "\n", mm32_id);
 		return false;
 	}
-	t->part_id = mm32_id & 0xfffU;
-	t->driver = name;
-	t->mass_erase = stm32f1_mass_erase;
+	target->part_id = mm32_id & 0xfffU;
+	target->driver = name;
+	target->mass_erase = stm32f1_mass_erase;
 	if (ram1_kbyte != 0)
-		target_add_ram(t, 0x20000000U, ram1_kbyte * 1024U);
+		target_add_ram(target, 0x20000000U, ram1_kbyte * 1024U);
 	if (ram2_kbyte != 0)
-		target_add_ram(t, 0x30000000U, ram2_kbyte * 1024U);
-	stm32f1_add_flash(t, 0x08000000U, flash_kbyte * 1024U, block_size);
-	target_add_commands(t, stm32f1_cmd_list, name);
+		target_add_ram(target, 0x30000000U, ram2_kbyte * 1024U);
+	stm32f1_add_flash(target, 0x08000000U, flash_kbyte * 1024U, block_size);
+	target_add_commands(target, stm32f1_cmd_list, name);
 	return true;
 }
 
 /* Identify real STM32F0/F1/F3 devices */
-bool stm32f1_probe(target_s *t)
+bool stm32f1_probe(target_s *target)
 {
-	const uint16_t device_id = stm32f1_read_idcode(t);
+	const uint16_t device_id = stm32f1_read_idcode(target);
 
-	t->mass_erase = stm32f1_mass_erase;
+	target->mass_erase = stm32f1_mass_erase;
 	size_t flash_size = 0;
 	size_t block_size = 0x400;
 
@@ -413,76 +412,76 @@ bool stm32f1_probe(target_s *t)
 	case 0x410U: /* Medium density */
 	case 0x412U: /* Low density */
 	case 0x420U: /* Value Line, Low-/Medium density */
-		target_add_ram(t, 0x20000000, 0x5000);
-		stm32f1_add_flash(t, 0x8000000, 0x20000, 0x400);
-		target_add_commands(t, stm32f1_cmd_list, "STM32 LD/MD/VL-LD/VL-MD");
+		target_add_ram(target, 0x20000000, 0x5000);
+		stm32f1_add_flash(target, 0x8000000, 0x20000, 0x400);
+		target_add_commands(target, stm32f1_cmd_list, "STM32 LD/MD/VL-LD/VL-MD");
 		/* Test for clone parts with Core rev 2*/
-		adiv5_access_port_s *ap = cortexm_ap(t);
+		adiv5_access_port_s *ap = cortexm_ap(target);
 		if ((ap->idr >> 28U) > 1U) {
-			t->driver = "STM32F1 (clone) medium density";
+			target->driver = "STM32F1 (clone) medium density";
 			DEBUG_WARN("Detected clone STM32F1\n");
 		} else
-			t->driver = "STM32F1 medium density";
-		t->part_id = device_id;
+			target->driver = "STM32F1 medium density";
+		target->part_id = device_id;
 		return true;
 
 	case 0x414U: /* High density */
 	case 0x418U: /* Connectivity Line */
 	case 0x428U: /* Value Line, High Density */
-		t->driver = "STM32F1  VL density";
-		t->part_id = device_id;
-		target_add_ram(t, 0x20000000, 0x10000);
-		stm32f1_add_flash(t, 0x8000000, 0x80000, 0x800);
-		target_add_commands(t, stm32f1_cmd_list, "STM32 HF/CL/VL-HD");
+		target->driver = "STM32F1  VL density";
+		target->part_id = device_id;
+		target_add_ram(target, 0x20000000, 0x10000);
+		stm32f1_add_flash(target, 0x8000000, 0x80000, 0x800);
+		target_add_commands(target, stm32f1_cmd_list, "STM32 HF/CL/VL-HD");
 		return true;
 
 	case 0x430U: /* XL-density */
-		t->driver = "STM32F1  XL density";
-		t->part_id = device_id;
-		target_add_ram(t, 0x20000000, 0x18000);
-		stm32f1_add_flash(t, 0x8000000, 0x80000, 0x800);
-		stm32f1_add_flash(t, 0x8080000, 0x80000, 0x800);
-		target_add_commands(t, stm32f1_cmd_list, "STM32 XL/VL-XL");
+		target->driver = "STM32F1  XL density";
+		target->part_id = device_id;
+		target_add_ram(target, 0x20000000, 0x18000);
+		stm32f1_add_flash(target, 0x8000000, 0x80000, 0x800);
+		stm32f1_add_flash(target, 0x8080000, 0x80000, 0x800);
+		target_add_commands(target, stm32f1_cmd_list, "STM32 XL/VL-XL");
 		return true;
 
 	case 0x438U: /* STM32F303x6/8 and STM32F328 */
 	case 0x422U: /* STM32F30x */
 	case 0x446U: /* STM32F303xD/E and STM32F398xE */
-		target_add_ram(t, 0x10000000, 0x4000);
+		target_add_ram(target, 0x10000000, 0x4000);
 		/* fall through */
 
 	case 0x432U: /* STM32F37x */
 	case 0x439U: /* STM32F302C8 */
-		t->driver = "STM32F3";
-		t->part_id = device_id;
-		target_add_ram(t, 0x20000000, 0x10000);
-		stm32f1_add_flash(t, 0x8000000, 0x80000, 0x800);
-		target_add_commands(t, stm32f1_cmd_list, "STM32F3");
+		target->driver = "STM32F3";
+		target->part_id = device_id;
+		target_add_ram(target, 0x20000000, 0x10000);
+		stm32f1_add_flash(target, 0x8000000, 0x80000, 0x800);
+		target_add_commands(target, stm32f1_cmd_list, "STM32F3");
 		return true;
 
 	case 0x444U: /* STM32F03 RM0091 Rev. 7, STM32F030x[4|6] RM0360 Rev. 4 */
-		t->driver = "STM32F03";
+		target->driver = "STM32F03";
 		flash_size = 0x8000;
 		break;
 
 	case 0x445U: /* STM32F04 RM0091 Rev. 7, STM32F070x6 RM0360 Rev. 4 */
-		t->driver = "STM32F04/F070x6";
+		target->driver = "STM32F04/F070x6";
 		flash_size = 0x8000;
 		break;
 
 	case 0x440U: /* STM32F05 RM0091 Rev. 7, STM32F030x8 RM0360 Rev. 4 */
-		t->driver = "STM32F05/F030x8";
+		target->driver = "STM32F05/F030x8";
 		flash_size = 0x10000;
 		break;
 
 	case 0x448U: /* STM32F07 RM0091 Rev. 7, STM32F070xb RM0360 Rev. 4 */
-		t->driver = "STM32F07";
+		target->driver = "STM32F07";
 		flash_size = 0x20000;
 		block_size = 0x800;
 		break;
 
 	case 0x442U: /* STM32F09 RM0091 Rev. 7, STM32F030xc RM0360 Rev. 4 */
-		t->driver = "STM32F09/F030xc";
+		target->driver = "STM32F09/F030xc";
 		flash_size = 0x40000;
 		block_size = 0x800;
 		break;
@@ -491,10 +490,10 @@ bool stm32f1_probe(target_s *t)
 		return false;
 	}
 
-	t->part_id = device_id;
-	target_add_ram(t, 0x20000000, 0x5000);
-	stm32f1_add_flash(t, 0x8000000, flash_size, block_size);
-	target_add_commands(t, stm32f1_cmd_list, "STM32F0");
+	target->part_id = device_id;
+	target_add_ram(target, 0x20000000, 0x5000);
+	stm32f1_add_flash(target, 0x8000000, flash_size, block_size);
+	target_add_commands(target, stm32f1_cmd_list, "STM32F0");
 	return true;
 }
 
