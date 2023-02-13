@@ -497,23 +497,24 @@ bool stm32f1_probe(target_s *target)
 	return true;
 }
 
-static bool stm32f1_flash_unlock(target_s *t, uint32_t bank_offset)
+static bool stm32f1_flash_unlock(target_s *target, uint32_t bank_offset)
 {
-	target_mem_write32(t, FLASH_KEYR + bank_offset, KEY1);
-	target_mem_write32(t, FLASH_KEYR + bank_offset, KEY2);
-	uint32_t cr = target_mem_read32(t, FLASH_CR);
-	if (cr & FLASH_CR_LOCK)
-		DEBUG_WARN("unlock failed, cr: 0x%08" PRIx32 "\n", cr);
-	return !(cr & FLASH_CR_LOCK);
+	target_mem_write32(target, FLASH_KEYR + bank_offset, KEY1);
+	target_mem_write32(target, FLASH_KEYR + bank_offset, KEY2);
+	uint32_t ctrl = target_mem_read32(target, FLASH_CR);
+	if (ctrl & FLASH_CR_LOCK)
+		DEBUG_WARN("unlock failed, cr: 0x%08" PRIx32 "\n", ctrl);
+	return !(ctrl & FLASH_CR_LOCK);
 }
 
-static inline void stm32f1_flash_clear_eop(target_s *const t, const uint32_t bank_offset)
+static inline void stm32f1_flash_clear_eop(target_s *const target, const uint32_t bank_offset)
 {
-	const uint32_t status = target_mem_read32(t, FLASH_SR + bank_offset);
-	target_mem_write32(t, FLASH_SR + bank_offset, status | SR_EOP); /* EOP is W1C */
+	const uint32_t status = target_mem_read32(target, FLASH_SR + bank_offset);
+	target_mem_write32(target, FLASH_SR + bank_offset, status | SR_EOP); /* EOP is W1C */
 }
 
-static bool stm32f1_flash_busy_wait(target_s *const t, const uint32_t bank_offset, platform_timeout_s *const timeout)
+static bool stm32f1_flash_busy_wait(
+	target_s *const target, const uint32_t bank_offset, platform_timeout_s *const timeout)
 {
 	/* Read FLASH_SR to poll for BSY bit */
 	uint32_t status = FLASH_SR_BSY;
@@ -525,8 +526,8 @@ static bool stm32f1_flash_busy_wait(target_s *const t, const uint32_t bank_offse
 	 * https://www.st.com/resource/en/programming_manual/pm0075-stm32f10xxx-flash-memory-microcontrollers-stmicroelectronics.pdf
 	 */
 	while (!(status & SR_EOP) && (status & FLASH_SR_BSY)) {
-		status = target_mem_read32(t, FLASH_SR + bank_offset);
-		if (target_check_error(t)) {
+		status = target_mem_read32(target, FLASH_SR + bank_offset);
+		if (target_check_error(target)) {
 			DEBUG_WARN("Lost communications with target");
 			return false;
 		}
