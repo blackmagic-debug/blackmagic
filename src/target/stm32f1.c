@@ -47,9 +47,9 @@ const command_s stm32f1_cmd_list[] = {
 	{NULL, NULL, NULL},
 };
 
-static bool stm32f1_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
-static bool stm32f1_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
-static bool stm32f1_mass_erase(target_s *t);
+static bool stm32f1_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
+static bool stm32f1_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
+static bool stm32f1_mass_erase(target_s *target);
 
 /* Flash Program ad Erase Controller Register Map */
 #define FPEC_BASE     0x40022000U
@@ -617,34 +617,35 @@ static bool stm32f1_flash_write(target_flash_s *flash, target_addr_t dest, const
 	return true;
 }
 
-static bool stm32f1_mass_erase_bank(target_s *const t, const uint32_t bank_offset, platform_timeout_s *const timeout)
+static bool stm32f1_mass_erase_bank(
+	target_s *const target, const uint32_t bank_offset, platform_timeout_s *const timeout)
 {
 	/* Unlock the bank */
-	if (!stm32f1_flash_unlock(t, bank_offset))
+	if (!stm32f1_flash_unlock(target, bank_offset))
 		return false;
-	stm32f1_flash_clear_eop(t, bank_offset);
+	stm32f1_flash_clear_eop(target, bank_offset);
 
 	/* Flash mass erase start instruction */
-	target_mem_write32(t, FLASH_CR + bank_offset, FLASH_CR_MER);
-	target_mem_write32(t, FLASH_CR + bank_offset, FLASH_CR_STRT | FLASH_CR_MER);
+	target_mem_write32(target, FLASH_CR + bank_offset, FLASH_CR_MER);
+	target_mem_write32(target, FLASH_CR + bank_offset, FLASH_CR_STRT | FLASH_CR_MER);
 
 	/* Wait for completion or an error */
-	return stm32f1_flash_busy_wait(t, bank_offset, timeout);
+	return stm32f1_flash_busy_wait(target, bank_offset, timeout);
 }
 
-static bool stm32f1_mass_erase(target_s *t)
+static bool stm32f1_mass_erase(target_s *target)
 {
-	if (!stm32f1_flash_unlock(t, 0))
+	if (!stm32f1_flash_unlock(target, 0))
 		return false;
 
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500);
-	if (!stm32f1_mass_erase_bank(t, FLASH_BANK1_OFFSET, &timeout))
+	if (!stm32f1_mass_erase_bank(target, FLASH_BANK1_OFFSET, &timeout))
 		return false;
 
 	/* If we're on a part that has a second bank, mass erase that bank too */
-	if (t->part_id == 0x430U)
-		return stm32f1_mass_erase_bank(t, FLASH_BANK2_OFFSET, &timeout);
+	if (target->part_id == 0x430U)
+		return stm32f1_mass_erase_bank(target, FLASH_BANK2_OFFSET, &timeout);
 	return true;
 }
 
