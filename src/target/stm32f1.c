@@ -3,6 +3,7 @@
  *
  * Copyright (C) 2011  Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
+ * Copyright (C) 2022-2023 1BitSquared <info@1bitsquared.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -88,6 +89,7 @@ static bool stm32f1_mass_erase(target_s *target);
 #define KEY2 0xcdef89abU
 
 #define SR_ERROR_MASK 0x14U
+#define SR_PROG_ERROR 0x04U
 #define SR_EOP        0x20U
 
 #define DBGMCU_IDCODE    0xe0042000U
@@ -685,7 +687,16 @@ static bool stm32f1_option_write_erased(
 		target_mem_write16(target, addr, value);
 
 	/* Wait for completion or an error */
-	return stm32f1_flash_busy_wait(target, FLASH_BANK1_OFFSET, NULL);
+	const bool result = stm32f1_flash_busy_wait(target, FLASH_BANK1_OFFSET, NULL);
+	if (result || offset != 0U)
+		return result;
+	/*
+	 * In the case that the write failed and we're handling option byte 0 (RDP),
+	 * check if we got a status of "Program Error" in FLASH_SR, indicating the target
+	 * refused to erase the read protection option bytes (and turn it into a truthy return).
+	 */
+	const uint8_t status = target_mem_read32(target, FLASH_SR) & SR_ERROR_MASK;
+	return status == SR_PROG_ERROR;
 }
 
 static bool stm32f1_option_write(target_s *const target, const uint32_t addr, const uint16_t value)
@@ -718,7 +729,7 @@ static bool stm32f1_option_write(target_s *const target, const uint32_t addr, co
 	 */
 	const bool write16_broken = target->part_id == 0x410U && (target->cpuid & CPUID_PARTNO_MASK) == CORTEX_M23;
 	for (size_t i = 0U; i < 8U; ++i) {
-		if (!stm32f1_option_write_erased(target, i, opt_val[i], write16_broken) && i != 0)
+		if (!stm32f1_option_write_erased(target, i, opt_val[i], write16_broken))
 			return false;
 	}
 
