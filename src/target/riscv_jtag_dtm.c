@@ -125,6 +125,12 @@ uint32_t riscv_shift_dtmcs(const riscv_dmi_s *const dmi, const uint32_t control)
 	return status;
 }
 
+static void riscv_dmi_reset(const riscv_dmi_s *const dmi)
+{
+	riscv_shift_dtmcs(dmi, RV_DTMCS_DMI_RESET);
+	jtag_dev_write_ir(dmi->dev_index, IR_DMI);
+}
+
 static bool riscv_shift_dmi(riscv_dmi_s *const dmi, const uint8_t operation, const uint32_t address,
 	const uint32_t data_in, uint32_t *const data_out)
 {
@@ -145,6 +151,8 @@ static bool riscv_shift_dmi(riscv_dmi_s *const dmi, const uint8_t operation, con
 	jtagtap_return_idle(dmi->idle_cycles);
 	/* XXX: Need to deal with when status is 3. */
 	dmi->fault = status;
+	if (status == RV_DMI_FAILURE)
+		riscv_dmi_reset(dmi);
 	return status == RV_DMI_SUCCESS;
 }
 
