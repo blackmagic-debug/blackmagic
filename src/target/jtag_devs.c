@@ -413,6 +413,14 @@ const jtag_dev_descr_s dev_descr[] = {
 #endif
 		.handler = riscv_jtag_dtm_handler,
 	},
+	{
+		.idcode = 0x00005c25U,
+		.idmask = 0x0fffffffU,
+#if ENABLE_DEBUG == 1
+		.descr = "RISC-V debug v0.13.",
+#endif
+		.handler = riscv_jtag_dtm_handler,
+	},
 #endif
 #if defined(ENABLE_CORTEXAR) // && defined(ENABLE_SITARA)
 	{
