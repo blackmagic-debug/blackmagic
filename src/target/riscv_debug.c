@@ -522,7 +522,8 @@ static uint32_t riscv_hart_discover_isa(riscv_hart_s *const hart)
 			return isa_data[0];
 		}
 		/* If that failed, then find out why and instead try the next narrower width */
-		if (hart->status != RISCV_HART_BUS_ERROR && hart->status != RISCV_HART_EXCEPTION)
+		if (hart->status != RISCV_HART_BUS_ERROR && hart->status != RISCV_HART_EXCEPTION &&
+			hart->status != RISCV_HART_NOT_SUPP)
 			return 0;
 		if (hart->access_width == 32U) {
 			hart->access_width = 0U;
