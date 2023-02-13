@@ -40,7 +40,7 @@
 #include "target_internal.h"
 #include "cortexm.h"
 
-static bool stm32f1_cmd_option(target_s *t, int argc, const char **argv);
+static bool stm32f1_cmd_option(target_s *target, int argc, const char **argv);
 
 const command_s stm32f1_cmd_list[] = {
 	{"option", stm32f1_cmd_option, "Manipulate option bytes"},
@@ -649,39 +649,39 @@ static bool stm32f1_mass_erase(target_s *target)
 	return true;
 }
 
-static bool stm32f1_option_erase(target_s *t)
+static bool stm32f1_option_erase(target_s *target)
 {
-	stm32f1_flash_clear_eop(t, FLASH_BANK1_OFFSET);
+	stm32f1_flash_clear_eop(target, FLASH_BANK1_OFFSET);
 
 	/* Erase option bytes instruction */
-	target_mem_write32(t, FLASH_CR, FLASH_CR_OPTER | FLASH_CR_OPTWRE);
-	target_mem_write32(t, FLASH_CR, FLASH_CR_STRT | FLASH_CR_OPTER | FLASH_CR_OPTWRE);
+	target_mem_write32(target, FLASH_CR, FLASH_CR_OPTER | FLASH_CR_OPTWRE);
+	target_mem_write32(target, FLASH_CR, FLASH_CR_STRT | FLASH_CR_OPTER | FLASH_CR_OPTWRE);
 
 	/* Wait for completion or an error */
-	return stm32f1_flash_busy_wait(t, FLASH_BANK1_OFFSET, NULL);
+	return stm32f1_flash_busy_wait(target, FLASH_BANK1_OFFSET, NULL);
 }
 
 static bool stm32f1_option_write_erased(
-	target_s *const t, const uint32_t addr, const uint16_t value, const bool write16_broken)
+	target_s *const target, const uint32_t addr, const uint16_t value, const bool write16_broken)
 {
 	if (value == 0xffffU)
 		return true;
 
-	stm32f1_flash_clear_eop(t, FLASH_BANK1_OFFSET);
+	stm32f1_flash_clear_eop(target, FLASH_BANK1_OFFSET);
 
 	/* Erase option bytes instruction */
-	target_mem_write32(t, FLASH_CR, FLASH_CR_OPTPG | FLASH_CR_OPTWRE);
+	target_mem_write32(target, FLASH_CR, FLASH_CR_OPTPG | FLASH_CR_OPTWRE);
 
 	if (write16_broken)
-		target_mem_write32(t, addr, 0xffff0000U | value);
+		target_mem_write32(target, addr, 0xffff0000U | value);
 	else
-		target_mem_write16(t, addr, value);
+		target_mem_write16(target, addr, value);
 
 	/* Wait for completion or an error */
-	return stm32f1_flash_busy_wait(t, FLASH_BANK1_OFFSET, NULL);
+	return stm32f1_flash_busy_wait(target, FLASH_BANK1_OFFSET, NULL);
 }
 
-static bool stm32f1_option_write(target_s *const t, const uint32_t addr, const uint16_t value)
+static bool stm32f1_option_write(target_s *const target, const uint32_t addr, const uint16_t value)
 {
 	uint32_t index = (addr - FLASH_OBP_RDP) / 2U;
 	/* If index would be negative, the high most bit is set, so we get a giant positive number. */
@@ -692,7 +692,7 @@ static bool stm32f1_option_write(target_s *const t, const uint32_t addr, const u
 	/* Retrieve old values */
 	for (size_t i = 0U; i < 16U; i += 4U) {
 		const size_t offset = i >> 1U;
-		uint32_t val = target_mem_read32(t, FLASH_OBP_RDP + i);
+		uint32_t val = target_mem_read32(target, FLASH_OBP_RDP + i);
 		opt_val[offset] = val & 0xffffU;
 		opt_val[offset + 1U] = val >> 16U;
 	}
@@ -701,7 +701,7 @@ static bool stm32f1_option_write(target_s *const t, const uint32_t addr, const u
 		return true;
 
 	/* Check for erased value */
-	if (opt_val[index] != 0xffffU && !stm32f1_option_erase(t))
+	if (opt_val[index] != 0xffffU && !stm32f1_option_erase(target))
 		return false;
 	opt_val[index] = value;
 
@@ -709,19 +709,19 @@ static bool stm32f1_option_write(target_s *const t, const uint32_t addr, const u
 	 * Write changed values, taking into account if we can use 32- or have to use 16-bit writes.
 	 * GD32E230 is a special case as target_mem_write16 does not work
 	 */
-	const bool write16_broken = t->part_id == 0x410U && (t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M23;
+	const bool write16_broken = target->part_id == 0x410U && (target->cpuid & CPUID_PARTNO_MASK) == CORTEX_M23;
 	for (size_t i = 0U; i < 8U; ++i) {
-		if (!stm32f1_option_write_erased(t, FLASH_OBP_RDP + (i * 2U), opt_val[i], write16_broken) && i != 0)
+		if (!stm32f1_option_write_erased(target, FLASH_OBP_RDP + (i * 2U), opt_val[i], write16_broken) && i != 0)
 			return false;
 	}
 
 	return true;
 }
 
-static bool stm32f1_cmd_option(target_s *t, int argc, const char **argv)
+static bool stm32f1_cmd_option(target_s *target, int argc, const char **argv)
 {
 	uint32_t flash_obp_rdp_key = FLASH_OBP_RDP_KEY;
-	switch (t->part_id) {
+	switch (target->part_id) {
 	case 0x422U: /* STM32F30x */
 	case 0x432U: /* STM32F37x */
 	case 0x438U: /* STM32F303x6/8 and STM32F328 */
@@ -734,36 +734,36 @@ static bool stm32f1_cmd_option(target_s *t, int argc, const char **argv)
 		break;
 	}
 
-	const uint32_t rdprt = target_mem_read32(t, FLASH_OBR) & FLASH_OBR_RDPRT;
+	const uint32_t rdprt = target_mem_read32(target, FLASH_OBR) & FLASH_OBR_RDPRT;
 
-	if (!stm32f1_flash_unlock(t, FLASH_BANK1_OFFSET))
+	if (!stm32f1_flash_unlock(target, FLASH_BANK1_OFFSET))
 		return false;
-	target_mem_write32(t, FLASH_OPTKEYR, KEY1);
-	target_mem_write32(t, FLASH_OPTKEYR, KEY2);
+	target_mem_write32(target, FLASH_OPTKEYR, KEY1);
+	target_mem_write32(target, FLASH_OPTKEYR, KEY2);
 
 	if (argc == 2 && strcmp(argv[1], "erase") == 0) {
-		stm32f1_option_erase(t);
+		stm32f1_option_erase(target);
 		/*
 		 * Write OBD RDP key, taking into account if we can use 32- or have to use 16-bit writes.
 		 * GD32E230 is a special case as target_mem_write16 does not work
 		 */
-		const bool write16_broken = t->part_id == 0x410U && (t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M23;
-		stm32f1_option_write_erased(t, FLASH_OBP_RDP, flash_obp_rdp_key, write16_broken);
+		const bool write16_broken = target->part_id == 0x410U && (target->cpuid & CPUID_PARTNO_MASK) == CORTEX_M23;
+		stm32f1_option_write_erased(target, FLASH_OBP_RDP, flash_obp_rdp_key, write16_broken);
 	} else if (rdprt) {
-		tc_printf(t, "Device is Read Protected\nUse `monitor option erase` to unprotect and erase device\n");
+		tc_printf(target, "Device is Read Protected\nUse `monitor option erase` to unprotect and erase device\n");
 		return true;
 	} else if (argc == 3) {
 		const uint32_t addr = strtol(argv[1], NULL, 0);
 		const uint32_t val = strtol(argv[2], NULL, 0);
-		stm32f1_option_write(t, addr, val);
+		stm32f1_option_write(target, addr, val);
 	} else
-		tc_printf(t, "usage: monitor option erase\nusage: monitor option <addr> <value>\n");
+		tc_printf(target, "usage: monitor option erase\nusage: monitor option <addr> <value>\n");
 
 	for (size_t i = 0U; i < 16U; i += 4U) {
 		const uint32_t addr = FLASH_OBP_RDP + i;
-		const uint32_t val = target_mem_read32(t, addr);
-		tc_printf(t, "0x%08X: 0x%04X\n", addr, val & 0xffffU);
-		tc_printf(t, "0x%08X: 0x%04X\n", addr + 2U, val >> 16U);
+		const uint32_t val = target_mem_read32(target, addr);
+		tc_printf(target, "0x%08X: 0x%04X\n", addr, val & 0xffffU);
+		tc_printf(target, "0x%08X: 0x%04X\n", addr + 2U, val >> 16U);
 	}
 
 	return true;
