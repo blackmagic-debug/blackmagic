@@ -649,6 +649,22 @@ static bool stm32f1_mass_erase(target_s *target)
 	return true;
 }
 
+static uint16_t stm32f1_flash_readable_key(const target_s *const target)
+{
+	switch (target->part_id) {
+	case 0x422U: /* STM32F30x */
+	case 0x432U: /* STM32F37x */
+	case 0x438U: /* STM32F303x6/8 and STM32F328 */
+	case 0x440U: /* STM32F0 */
+	case 0x446U: /* STM32F303xD/E and STM32F398xE */
+	case 0x445U: /* STM32F04 RM0091 Rev.7, STM32F070x6 RM0360 Rev. 4*/
+	case 0x448U: /* STM32F07 RM0091 Rev.7, STM32F070xb RM0360 Rev. 4*/
+	case 0x442U: /* STM32F09 RM0091 Rev.7, STM32F030xc RM0360 Rev. 4*/
+		return FLASH_OBP_RDP_KEY_F3;
+	}
+	return FLASH_OBP_RDP_KEY;
+}
+
 static bool stm32f1_option_erase(target_s *target)
 {
 	stm32f1_flash_clear_eop(target, FLASH_BANK1_OFFSET);
@@ -720,45 +736,43 @@ static bool stm32f1_option_write(target_s *const target, const uint32_t addr, co
 
 static bool stm32f1_cmd_option(target_s *target, int argc, const char **argv)
 {
-	uint32_t flash_obp_rdp_key = FLASH_OBP_RDP_KEY;
-	switch (target->part_id) {
-	case 0x422U: /* STM32F30x */
-	case 0x432U: /* STM32F37x */
-	case 0x438U: /* STM32F303x6/8 and STM32F328 */
-	case 0x440U: /* STM32F0 */
-	case 0x446U: /* STM32F303xD/E and STM32F398xE */
-	case 0x445U: /* STM32F04 RM0091 Rev.7, STM32F070x6 RM0360 Rev. 4*/
-	case 0x448U: /* STM32F07 RM0091 Rev.7, STM32F070xb RM0360 Rev. 4*/
-	case 0x442U: /* STM32F09 RM0091 Rev.7, STM32F030xc RM0360 Rev. 4*/
-		flash_obp_rdp_key = FLASH_OBP_RDP_KEY_F3;
-		break;
+	const uint32_t read_protected = target_mem_read32(target, FLASH_OBR) & FLASH_OBR_RDPRT;
+	const bool erase_requested = argc == 2 && strcmp(argv[1], "erase") == 0;
+	/* Fast-exit if the Flash is not readable and the user didn't ask us to erase the option bytes */
+	if (read_protected && !erase_requested) {
+		tc_printf(target, "Device is Read Protected\nUse `monitor option erase` to unprotect and erase device\n");
+		return true;
 	}
 
-	const uint32_t rdprt = target_mem_read32(target, FLASH_OBR) & FLASH_OBR_RDPRT;
-
+	/* Unprotect the option bytes so we can modify them */
 	if (!stm32f1_flash_unlock(target, FLASH_BANK1_OFFSET))
 		return false;
 	target_mem_write32(target, FLASH_OPTKEYR, KEY1);
 	target_mem_write32(target, FLASH_OPTKEYR, KEY2);
 
-	if (argc == 2 && strcmp(argv[1], "erase") == 0) {
-		stm32f1_option_erase(target);
+	if (erase_requested) {
+		/* When the user asks us to erase the option bytes, kick of an erase */
+		if (!stm32f1_option_erase(target))
+			return false;
 		/*
-		 * Write OBD RDP key, taking into account if we can use 32- or have to use 16-bit writes.
+		 * Write the option bytes Flash readable key, taking into account if we can
+		 * use 32- or have to use 16-bit writes.
 		 * GD32E230 is a special case as target_mem_write16 does not work
 		 */
 		const bool write16_broken = target->part_id == 0x410U && (target->cpuid & CPUID_PARTNO_MASK) == CORTEX_M23;
-		stm32f1_option_write_erased(target, FLASH_OBP_RDP, flash_obp_rdp_key, write16_broken);
-	} else if (rdprt) {
-		tc_printf(target, "Device is Read Protected\nUse `monitor option erase` to unprotect and erase device\n");
-		return true;
+		if (!stm32f1_option_write_erased(target, FLASH_OBP_RDP, stm32f1_flash_readable_key(target), write16_broken))
+			return false;
 	} else if (argc == 3) {
+		/* If 3 arguments are given, assume the second is an address, and the third a value */
 		const uint32_t addr = strtol(argv[1], NULL, 0);
 		const uint32_t val = strtol(argv[2], NULL, 0);
-		stm32f1_option_write(target, addr, val);
+		/* Try and program the new option value to the requested option byte */
+		if (!stm32f1_option_write(target, addr, val))
+			return false;
 	} else
 		tc_printf(target, "usage: monitor option erase\nusage: monitor option <addr> <value>\n");
 
+	/* When all gets said and done, display the current option bytes values */
 	for (size_t i = 0U; i < 16U; i += 4U) {
 		const uint32_t addr = FLASH_OBP_RDP + i;
 		const uint32_t val = target_mem_read32(target, addr);
