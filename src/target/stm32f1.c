@@ -701,7 +701,7 @@ static bool stm32f1_option_write_erased(
 
 static bool stm32f1_option_write(target_s *const target, const uint32_t addr, const uint16_t value)
 {
-	uint32_t index = (addr - FLASH_OBP_RDP) / 2U;
+	const uint32_t index = (addr - FLASH_OBP_RDP) >> 1U;
 	/* If index would be negative, the high most bit is set, so we get a giant positive number. */
 	if (index > 7U)
 		return false;
