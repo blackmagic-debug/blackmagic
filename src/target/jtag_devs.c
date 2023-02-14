@@ -105,6 +105,11 @@ const jtag_dev_descr_s dev_descr[] = {
 		.idcode = 0x00000093U,
 		.idmask = 0x00000fffU,
 		.descr = "Xilinx.",
+		.ir_quirks =
+			{
+				.ir_length = 6U,
+				.ir_value = 1U,
+			},
 	},
 	{
 		.idcode = 0x0000063dU,
