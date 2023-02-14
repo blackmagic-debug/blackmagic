@@ -49,7 +49,8 @@ void jtag_add_device(const uint32_t dev_index, const jtag_dev_s *jtag_dev)
 }
 #endif
 
-/* Scan JTAG chain for devices, store IR length and IDCODE (if present).
+/*
+ * Scan JTAG chain for devices, store IR length and IDCODE (if present).
  * Reset TAP state machine.
  * Select Shift-IR state.
  * Each device is assumed to shift out IR at 0x01. (this may not always be true)
@@ -68,13 +69,15 @@ void jtag_add_device(const uint32_t dev_index, const jtag_dev_s *jtag_dev)
  */
 uint32_t jtag_scan(const uint8_t *irlens)
 {
+	/* Free the device list if any, and clean state ready */
 	target_list_free();
 
 	jtag_dev_count = 0;
 	memset(&jtag_devs, 0, sizeof(jtag_devs));
 
-	/* Run through the SWD to JTAG sequence for the case where an attached SWJ-DP is
-	 * in SW-DP mode.
+	/*
+	 * Initialise the JTAG backend if it's not already
+	 * This will automatically do the SWD-to-JTAG sequence just in case we've got any SWJ-DP's in chain
 	 */
 	DEBUG_INFO("Resetting TAP\n");
 #if PC_HOSTED == 1
