@@ -32,11 +32,8 @@ typedef struct jtag_dev {
 	uint32_t jd_idcode;
 	uint32_t current_ir;
 
-	union {
-		uint8_t jd_dev;
-		uint8_t dr_prescan;
-	};
-
+	/* The DR prescan doubles as the device index */
+	uint8_t dr_prescan;
 	uint8_t dr_postscan;
 
 	uint8_t ir_len;
