@@ -116,7 +116,7 @@ uint32_t jtag_scan(const uint8_t *irlens)
 
 			jtag_devs[device].ir_len = irlens[device];
 			jtag_devs[device].ir_prescan = prescan;
-			jtag_devs[device].jd_dev = device;
+			jtag_devs[device].dr_prescan = device;
 			prescan += irlens[device];
 		}
 		jtag_dev_count = device;
@@ -182,7 +182,6 @@ static bool jtag_read_idcodes()
 		}
 		/* We got a valid device, add it to the set */
 		jtag_devs[device].jd_idcode = idcode;
-		jtag_devs[device].jd_dev = device;
 	}
 
 	/* Well, it worked, so clean up and do housekeeping */
@@ -297,10 +296,15 @@ static bool jtag_sanity_check()
 	/* Transition to Shift-DR */
 	DEBUG_INFO("Change state to Shift-DR\n");
 	jtagtap_shift_dr();
-	/* Count devices on chain and configure the DR postcan values */
+	/* Count devices on chain */
 	size_t device = 0;
-	for (; !jtag_proc.jtagtap_next(false, true) && device <= jtag_dev_count; ++device)
+	for (; device <= jtag_dev_count; ++device) {
+		if (jtag_proc.jtagtap_next(false, true))
+			break;
+		/* Configure the DR pre/post scan values */
+		jtag_devs[device].dr_prescan = device;
 		jtag_devs[device].dr_postscan = jtag_dev_count - device - 1U;
+	}
 
 	/* If the device count gleaned above does not match the device count, error out */
 	if (device != jtag_dev_count) {
