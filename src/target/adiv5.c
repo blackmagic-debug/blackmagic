@@ -589,7 +589,7 @@ static void adiv5_component_probe(
 			return;
 		}
 
-		/* ADIv6: For CoreSight components, read DEVTYPE and ARCHID */
+		/* ADIv5: For CoreSight components, read DEVTYPE and ARCHID */
 		uint16_t arch_id = 0;
 		uint8_t dev_type = 0;
 		if (cid_class == cidc_dc) {
@@ -824,7 +824,7 @@ void adiv5_dp_init(adiv5_debug_port_s *dp, const uint32_t idcode)
 		ctrlstat = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT);
 	}
 	if (e.type) {
-		DEBUG_WARN("DP not responding!  Trying abort sequence...\n");
+		DEBUG_WARN("DP not responding! Trying abort sequence...\n");
 		adiv5_dp_abort(dp, ADIV5_DP_ABORT_DAPABORT);
 		ctrlstat = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT);
 	}
@@ -836,8 +836,9 @@ void adiv5_dp_init(adiv5_debug_port_s *dp, const uint32_t idcode)
 	/* Wait for acknowledge */
 	while (true) {
 		ctrlstat = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT);
-		uint32_t check = ctrlstat & (ADIV5_DP_CTRLSTAT_CSYSPWRUPACK | ADIV5_DP_CTRLSTAT_CDBGPWRUPACK);
-		if (check == (ADIV5_DP_CTRLSTAT_CSYSPWRUPACK | ADIV5_DP_CTRLSTAT_CDBGPWRUPACK))
+		const uint32_t status = ctrlstat & (ADIV5_DP_CTRLSTAT_CSYSPWRUPACK | ADIV5_DP_CTRLSTAT_CDBGPWRUPACK);
+		//DEBUG_INFO("status %08" PRIx32 " (%08" PRIx32 ")\n", ctrlstat, status);
+		if (status == (ADIV5_DP_CTRLSTAT_CSYSPWRUPACK | ADIV5_DP_CTRLSTAT_CDBGPWRUPACK))
 			break;
 		if (platform_timeout_is_expired(&timeout)) {
 			DEBUG_INFO("DEBUG Power-Up failed\n");
