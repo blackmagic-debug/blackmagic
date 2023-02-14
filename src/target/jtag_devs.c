@@ -420,6 +420,11 @@ const jtag_dev_descr_s dev_descr[] = {
 		.descr = "RISC-V debug v0.13.",
 #endif
 		.handler = riscv_jtag_dtm_handler,
+		.ir_quirks =
+			{
+				.ir_length = 5,
+				.ir_value = 0x0005U,
+			},
 	},
 #endif
 #if defined(ENABLE_CORTEXAR) // && defined(ENABLE_SITARA)
