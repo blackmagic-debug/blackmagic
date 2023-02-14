@@ -332,7 +332,6 @@ static void remote_packet_process_general(unsigned i, char *packet)
 }
 
 static void remote_packet_process_high_level(unsigned i, char *packet)
-
 {
 	(void)i;
 	SET_IDLE_STATE(0);
@@ -350,46 +349,44 @@ static void remote_packet_process_high_level(unsigned i, char *packet)
 	packet += 2;
 	remote_ap.apsel = remotehston(2, packet);
 	remote_ap.dp = &remote_dp;
+	packet += 2;
 	switch (index) {
-	case REMOTE_DP_READ: /* Hd = Read from DP register */
-		packet += 2;
-		uint16_t addr16 = remotehston(4, packet);
-		uint32_t data = adiv5_dp_read(&remote_dp, addr16);
-		remote_respond_buf(REMOTE_RESP_OK, (uint8_t *)&data, 4);
+	case REMOTE_DP_READ: { /* Hd = Read from DP register */
+		const uint16_t addr16 = remotehston(4, packet);
+		const uint32_t data = adiv5_dp_read(&remote_dp, addr16);
+		remote_respond_buf(REMOTE_RESP_OK, &data, 4);
 		break;
-	case REMOTE_LOW_ACCESS: /* HL = Low level access */
-		packet += 2;
-		addr16 = remotehston(4, packet);
+	}
+	case REMOTE_LOW_ACCESS: { /* HL = Low level access */
+		const uint16_t addr16 = remotehston(4, packet);
 		packet += 4;
-		uint32_t value = remotehston(8, packet);
-		data = remote_dp.low_access(&remote_dp, remote_ap.apsel, addr16, value);
-		remote_respond_buf(REMOTE_RESP_OK, (uint8_t *)&data, 4);
+		const uint32_t value = remotehston(8, packet);
+		const uint32_t data = remote_dp.low_access(&remote_dp, remote_ap.apsel, addr16, value);
+		remote_respond_buf(REMOTE_RESP_OK, &data, 4);
 		break;
-	case REMOTE_AP_READ: /* Ha = Read from AP register*/
-		packet += 2;
-		addr16 = remotehston(4, packet);
-		data = adiv5_ap_read(&remote_ap, addr16);
-		remote_respond_buf(REMOTE_RESP_OK, (uint8_t *)&data, 4);
+	}
+	case REMOTE_AP_READ: { /* Ha = Read from AP register*/
+		const uint16_t addr16 = remotehston(4, packet);
+		const uint32_t data = adiv5_ap_read(&remote_ap, addr16);
+		remote_respond_buf(REMOTE_RESP_OK, &data, 4);
 		break;
-	case REMOTE_AP_WRITE: /* Ha = Write to AP register*/
-		packet += 2;
-		addr16 = remotehston(4, packet);
+	}
+	case REMOTE_AP_WRITE: { /* Ha = Write to AP register*/
+		const uint16_t addr16 = remotehston(4, packet);
 		packet += 4;
-		value = remotehston(8, packet);
+		const uint32_t value = remotehston(8, packet);
 		adiv5_ap_write(&remote_ap, addr16, value);
 		remote_respond(REMOTE_RESP_OK, 0);
 		break;
+	}
 	case REMOTE_AP_MEM_READ: /* HM = Read from Mem and set csw */
-		packet += 2;
 		remote_ap.csw = remotehston(8, packet);
 		packet += 6;
 		/*fall through*/
-	case REMOTE_MEM_READ: /* Hh = Read from Mem */
-		packet += 2;
-		uint32_t address = remotehston(8, packet);
+	case REMOTE_MEM_READ: { /* Hh = Read from Mem */
+		const uint32_t address = remotehston(8, packet);
 		packet += 8;
-		uint32_t count = remotehston(8, packet);
-		packet += 8;
+		const uint32_t count = remotehston(8, packet);
 		adiv5_mem_read(&remote_ap, src, address, count);
 		if (remote_ap.dp->fault == 0) {
 			remote_respond_buf(REMOTE_RESP_OK, src, count);
@@ -398,35 +395,35 @@ static void remote_packet_process_high_level(unsigned i, char *packet)
 		remote_respond(REMOTE_RESP_ERR, 0);
 		remote_ap.dp->fault = 0;
 		break;
+	}
 	case REMOTE_AP_MEM_WRITE_SIZED: /* Hm = Write to memory and set csw */
-		packet += 2;
 		remote_ap.csw = remotehston(8, packet);
 		packet += 6;
-		/*fall through*/
-	case REMOTE_MEM_WRITE_SIZED: /* HH = Write to memory*/
+		/* fall through */
+	case REMOTE_MEM_WRITE_SIZED: { /* HH = Write to memory */
+		const align_e align = remotehston(2, packet);
 		packet += 2;
-		align_e align = remotehston(2, packet);
-		packet += 2;
-		uint32_t dest = remotehston(8, packet);
+		const uint32_t dest = remotehston(8, packet);
 		packet += 8;
-		size_t len = remotehston(8, packet);
+		const size_t len = remotehston(8, packet);
 		packet += 8;
 		if (len & ((1U << align) - 1U)) {
-			/* len  and align do not fit*/
+			/* align is unsuitable for the length requested */
 			remote_respond(REMOTE_RESP_ERR, 0);
 			break;
 		}
-		/* Read as stream of hexified bytes*/
+		/* Read as stream of hexified bytes */
 		unhexify(src, packet, len);
 		adiv5_mem_write_sized(&remote_ap, dest, src, len, align);
 		if (remote_ap.dp->fault) {
-			/* Errors handles on hosted side.*/
+			/* Errors are handled on the host side */
 			remote_respond(REMOTE_RESP_ERR, 0);
 			remote_ap.dp->fault = 0;
 			break;
 		}
 		remote_respond(REMOTE_RESP_OK, 0);
 		break;
+	}
 	default:
 		remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_UNRECOGNISED);
 		break;
