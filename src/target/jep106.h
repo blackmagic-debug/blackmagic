@@ -67,6 +67,7 @@
 #define JEP106_MANUFACTURER_GIGADEVICE   0x751U /* GigaDevice */
 #define JEP106_MANUFACTURER_RASPBERRY    0x913U /* Raspberry Pi */
 #define JEP106_MANUFACTURER_RENESAS      0x423U /* Renesas */
+#define JEP106_MANUFACTURER_XILINX       0x309U /* Xilinx */
 
 /*
  * This code is not listed in the JEP106 standard, but is used by some stm32f1 clones
