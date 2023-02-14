@@ -53,22 +53,23 @@ void jtag_add_device(const uint32_t dev_index, const jtag_dev_s *jtag_dev)
 #endif
 
 /*
- * Scan JTAG chain for devices, store IR length and IDCODE (if present).
- * Reset TAP state machine.
- * Select Shift-IR state.
- * Each device is assumed to shift out IR at 0x01. (this may not always be true)
- * Shift in ones until we read two consecutive ones, then we have shifted out the
- * 	IRs of all devices.
+ * This scans the JTAG interface for any possible device chain attached.
+ * It acomplishes this by performing these basic steps:
  *
- * After this process all the IRs are loaded with the BYPASS command.
- * Select Shift-DR state.
- * Shift in ones and count zeros shifted out. Should be one for each device.
- * Check this against device count obtained by IR scan above.
+ * 1. Perform a SWD -> JTAG transition just in case any ARM devices were in SWD mode
+ * 2. Reset the TAPs of any attached device (this ensures they're all in ID code mode)
+ * 3. Read out the ID code register chain, shifting in all 1's, until we read an
+ *    all-1's ID back (indicating the end of the chain)
+ * 4. Read out the active instruction register chain, shifting in all 1's,
+ *    and applying quirks as required to calculate how long each IR is
+ * 5. Switch back to the DR chain and read out all the devices again now they are in
+ *    BYPASS mode as a way to validate we have the chain length right
  *
- * Reset the TAP state machine again. This should load all IRs with IDCODE.
- * For each device, shift out one bit. If this is zero IDCODE isn't present,
- *	continue to next device. If this is one shift out the remaining 31 bits
- *	of the IDCODE register.
+ * Once this process is complete, all devices should be accounted for, the
+ * device structures all set up with suitable pre- and post-scan values for both the
+ * IR and DR chains, and all devices should be in BYPASS ready for additional probing
+ * and inspection. Finally, we loop through seeing if we understand any of the
+ * ID codes seen and dispatching to suitable handlers if we do.
  */
 uint32_t jtag_scan(const uint8_t *irlens)
 {
