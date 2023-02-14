@@ -40,6 +40,7 @@ const uint8_t ones[8] = {0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU}
 static bool jtag_read_idcodes();
 static void jtag_display_idcodes();
 static bool jtag_read_irs();
+static bool jtag_sanity_check();
 
 #if PC_HOSTED == 0
 void jtag_add_device(const uint32_t dev_index, const jtag_dev_s *jtag_dev)
@@ -123,25 +124,8 @@ uint32_t jtag_scan(const uint8_t *irlens)
 	} else if (!jtag_read_irs())
 		return 0;
 
-	/* All devices should be in BYPASS now */
-
-	/* Count device on chain */
-	DEBUG_INFO("Change state to Shift-DR\n");
-	jtagtap_shift_dr();
-	size_t device = 0;
-	for (; !jtag_proc.jtagtap_next(false, true) && device <= jtag_dev_count; ++device)
-		jtag_devs[device].dr_postscan = jtag_dev_count - device - 1U;
-
-	if (device != jtag_dev_count) {
-		DEBUG_WARN("jtag_scan: Sanity check failed: BYPASS dev count doesn't match IR scan\n");
-		jtag_dev_count = 0;
-		return 0;
-	}
-
-	DEBUG_INFO("Return to Run-Test/Idle\n");
-	jtag_proc.jtagtap_next(true, true);
-	jtagtap_return_idle(1);
-	if (!jtag_dev_count)
+	/* All devices should be in BYPASS now so do the sanity check */
+	if (!jtag_sanity_check())
 		return 0;
 
 	/* Fill in the ir_postscan fields */
@@ -306,6 +290,31 @@ static bool jtag_read_irs()
 	jtag_proc.jtagtap_next(true, true);
 	jtagtap_return_idle(1);
 	return true;
+}
+
+static bool jtag_sanity_check()
+{
+	/* Transition to Shift-DR */
+	DEBUG_INFO("Change state to Shift-DR\n");
+	jtagtap_shift_dr();
+	/* Count devices on chain and configure the DR postcan values */
+	size_t device = 0;
+	for (; !jtag_proc.jtagtap_next(false, true) && device <= jtag_dev_count; ++device)
+		jtag_devs[device].dr_postscan = jtag_dev_count - device - 1U;
+
+	/* If the device count gleaned above does not match the device count, error out */
+	if (device != jtag_dev_count) {
+		DEBUG_WARN("jtag_scan: Sanity check failed: BYPASS dev count doesn't match IR scan\n");
+		jtag_dev_count = 0;
+		return false;
+	}
+
+	/* Everything's accounted for, so clean up */
+	DEBUG_INFO("Return to Run-Test/Idle\n");
+	jtag_proc.jtagtap_next(true, true);
+	jtagtap_return_idle(1);
+	/* Return if there are any devices on the scan chain */
+	return jtag_dev_count;
 }
 
 void jtag_dev_write_ir(const uint8_t dev_index, const uint32_t ir)
