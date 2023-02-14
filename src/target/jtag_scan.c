@@ -39,6 +39,7 @@ const uint8_t ones[8] = {0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU}
 
 static bool jtag_read_idcodes();
 static void jtag_display_idcodes();
+static bool jtag_read_irs();
 
 #if PC_HOSTED == 0
 void jtag_add_device(const uint32_t dev_index, const jtag_dev_s *jtag_dev)
@@ -94,6 +95,7 @@ uint32_t jtag_scan(const uint8_t *irlens)
 	if (!jtag_read_idcodes())
 		return 0;
 
+	/* If we've been given a set of IR lengths, use those to verify the chain length and set things up */
 	if (irlens) {
 		DEBUG_WARN("Given list of IR lengths, skipping probe\n");
 		DEBUG_INFO("Change state to Shift-IR\n");
@@ -117,51 +119,9 @@ uint32_t jtag_scan(const uint8_t *irlens)
 			prescan += irlens[device];
 		}
 		jtag_dev_count = device;
-	} else {
-		DEBUG_INFO("Change state to Shift-IR\n");
-		jtagtap_shift_ir();
-
-		DEBUG_INFO("Scanning out IRs\n");
-		/* IEEE 1149.1 requires the first bit to be a 1, but not all devices conform (see #1130 on GH) */
-		if (!jtag_proc.jtagtap_next(false, true))
-			DEBUG_WARN("jtag_scan: Sanity check failed: IR[0] shifted out as 0\n");
-
-		jtag_devs[0].ir_len = 1;
-		size_t device = 0;
-		for (size_t prescan = 1; device <= JTAG_MAX_DEVS && jtag_devs[device].ir_len <= JTAG_MAX_IR_LEN;) {
-			/* If we read out a '1' from TDO, we're at the end of the current device and the start of the next */
-			if (jtag_proc.jtagtap_next(false, true)) {
-				/* If the device was not actually a new device, exit */
-				if (jtag_devs[device].ir_len == 1)
-					break;
-				++device;
-				/* Set up the next device */
-				jtag_devs[device].ir_len = 1;
-				jtag_devs[device].ir_prescan = prescan;
-				jtag_devs[device].jd_dev = device;
-			} else
-				/* Otherwise we have another bit in this device's IR */
-				++jtag_devs[device].ir_len;
-			++prescan;
-		}
-		jtag_dev_count = device;
-
-		if (jtag_dev_count > JTAG_MAX_DEVS) {
-			DEBUG_WARN("jtag_scan: Maximum device count exceeded\n");
-			jtag_dev_count = 0;
-			return 0;
-		}
-
-		if (jtag_devs[jtag_dev_count].ir_len > JTAG_MAX_IR_LEN) {
-			DEBUG_WARN("jtag_scan: Maximum IR length exceeded\n");
-			jtag_dev_count = 0;
-			return 0;
-		}
-	}
-
-	DEBUG_INFO("Return to Run-Test/Idle\n");
-	jtag_proc.jtagtap_next(true, true);
-	jtagtap_return_idle(1);
+		/* Otherwise, try and learn the chain IR lengths */
+	} else if (!jtag_read_irs())
+		return 0;
 
 	/* All devices should be in BYPASS now */
 
@@ -200,7 +160,6 @@ uint32_t jtag_scan(const uint8_t *irlens)
 	for (size_t device = 0; device < jtag_dev_count; device++) {
 		for (size_t descr = 0; dev_descr[descr].idcode; descr++) {
 			if ((jtag_devs[device].jd_idcode & dev_descr[descr].idmask) == dev_descr[descr].idcode) {
-				jtag_devs[device].current_ir = UINT32_MAX;
 				/* Save description in table */
 				jtag_devs[device].jd_descr = dev_descr[descr].descr;
 				/* Call handler to initialise/probe device further */
@@ -265,6 +224,88 @@ static void jtag_display_idcodes()
 		DEBUG_INFO("ID code 0x%08" PRIx32 ": %s\n", jtag_devs[device].jd_idcode, description);
 	}
 #endif
+}
+
+static jtag_ir_quirks_s jtag_device_get_quirks(const uint32_t idcode)
+{
+	for (size_t idx = 0; dev_descr[idx].idcode; ++idx) {
+		if ((idcode & dev_descr[idx].idmask) == dev_descr[idx].idcode)
+			return dev_descr[idx].ir_quirks;
+	}
+	return (jtag_ir_quirks_s){};
+}
+
+static bool jtag_read_irs()
+{
+	/* Transition to Shift-IR */
+	DEBUG_INFO("Change state to Shift-IR\n");
+	jtagtap_shift_ir();
+
+	DEBUG_INFO("Scanning out IRs\n");
+	/* Start with no prescan and the first device */
+	size_t prescan = 0U;
+	size_t device = 0U;
+	uint8_t ir_len = 0U;
+	/* Grab the first device's quirks, if any */
+	jtag_ir_quirks_s ir_quirks = jtag_device_get_quirks(jtag_devs[0].jd_idcode);
+
+	/* Try scanning out the IR for the device */
+	while (ir_len <= JTAG_MAX_IR_LEN) {
+		/* Read the next IR bit */
+		const bool next_bit = jtag_proc.jtagtap_next(false, true);
+		/* If we have quirks, validate the bit against the expected IR */
+		if (ir_quirks.ir_length && ((ir_quirks.ir_value >> ir_len) & 1U) != next_bit) {
+			DEBUG_WARN("jtag_scan: IR does not match the expected value, bailing out\n");
+			jtag_dev_count = 0;
+			return false;
+		}
+		/* IEEE 1149.1 requires the first bit to be a 1, but not all devices conform (see #1130 on GH) */
+		if (ir_len == 0 && !next_bit)
+			DEBUG_WARN("jtag_scan: Sanity check failed: IR[0] shifted out as 0\n");
+
+		/* The bit validated ok, so increment the counter */
+		++ir_len;
+
+		/*
+		 * If we do not have quirks in play, this was a 1 bit and we're not reading the first bit of the
+		 * current IR, or if we've now read sufficient bits for the quirk, we've begun the next device
+		 */
+		if ((!ir_quirks.ir_length && next_bit && ir_len > 1U) || ir_len == ir_quirks.ir_length) {
+			/* If we're not in quirks mode and the IR length is now 2 (2 1-bits in a row read), we're actually done */
+			if (!ir_quirks.ir_length && ir_len == 2U)
+				break;
+
+			/*
+			 * If we're reading using quirks, we'll read exactly the right number of bits,
+			 * if not then we overrun by 1 for the device. Calculate the adjustment.
+			 */
+			const uint8_t overrun = ir_quirks.ir_length ? 0U : 1U;
+			const uint8_t device_ir = ir_len - overrun;
+
+			/* Set up the IR fields for the device and set up for the next */
+			jtag_devs[device].ir_len = device_ir;
+			jtag_devs[device].ir_prescan = prescan;
+			jtag_devs[device].current_ir = UINT32_MAX;
+			prescan += device_ir;
+			++device;
+			ir_len = overrun;
+			/* Grab the device quirks for this new device, if any */
+			ir_quirks = jtag_device_get_quirks(jtag_devs[device].jd_idcode);
+		}
+	}
+
+	/* Sanity check that we didn't get an over-long IR */
+	if (ir_len > JTAG_MAX_IR_LEN) {
+		DEBUG_WARN("jtag_scan: Maximum IR length exceeded\n");
+		jtag_dev_count = 0;
+		return 0;
+	}
+
+	/* IRs are all succesfully accounted for, so clean up and do housekeeping */
+	DEBUG_INFO("Return to Run-Test/Idle\n");
+	jtag_proc.jtagtap_next(true, true);
+	jtagtap_return_idle(1);
+	return true;
 }
 
 void jtag_dev_write_ir(const uint8_t dev_index, const uint32_t ir)
