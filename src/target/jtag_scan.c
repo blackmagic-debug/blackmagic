@@ -38,6 +38,7 @@ uint32_t jtag_dev_count = 0;
 const uint8_t ones[8] = {0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU};
 
 static bool jtag_read_idcodes();
+static void jtag_display_idcodes();
 
 #if PC_HOSTED == 0
 void jtag_add_device(const uint32_t dev_index, const jtag_dev_s *jtag_dev)
@@ -193,16 +194,7 @@ uint32_t jtag_scan(const uint8_t *irlens)
 		platform_add_jtag_dev(device, jtag_devs + device);
 #endif
 
-	for (size_t device = 0; device < jtag_dev_count; ++device) {
-		DEBUG_INFO("IDCode 0x%08" PRIx32, jtag_devs[device].jd_idcode);
-		for (size_t descr = 0; dev_descr[descr].idcode; ++descr) {
-			if ((jtag_devs[device].jd_idcode & dev_descr[descr].idmask) == dev_descr[descr].idcode) {
-				DEBUG_INFO(": %s", dev_descr[descr].descr ? dev_descr[descr].descr : "Unknown");
-				break;
-			}
-		}
-		DEBUG_INFO("\n");
-	}
+	jtag_display_idcodes();
 
 	/* Check for known devices and handle accordingly */
 	for (size_t device = 0; device < jtag_dev_count; device++) {
@@ -256,6 +248,23 @@ static bool jtag_read_idcodes()
 	jtagtap_return_idle(1);
 	jtag_dev_count = device;
 	return true;
+}
+
+static void jtag_display_idcodes()
+{
+#if ENABLE_DEBUG
+	for (size_t device = 0; device < jtag_dev_count; ++device) {
+		const char *description = "Unknown";
+		for (size_t idx = 0; dev_descr[idx].idcode; ++idx) {
+			if ((jtag_devs[device].jd_idcode & dev_descr[idx].idmask) == dev_descr[idx].idcode) {
+				if (dev_descr[idx].descr)
+					description = dev_descr[idx].descr;
+				break;
+			}
+		}
+		DEBUG_INFO("ID code 0x%08" PRIx32 ": %s\n", jtag_devs[device].jd_idcode, description);
+	}
+#endif
 }
 
 void jtag_dev_write_ir(const uint8_t dev_index, const uint32_t ir)
