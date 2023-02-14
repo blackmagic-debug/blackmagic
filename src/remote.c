@@ -51,17 +51,16 @@ uint64_t remotehston(const uint32_t max, const char *const str)
 }
 
 #if PC_HOSTED == 0
-static void remote_send_buf(uint8_t *buffer, size_t len)
+/* hex-ify and send a buffer of data */
+static void remote_send_buf(const void *const buffer, const size_t len)
 {
-	uint8_t *p = buffer;
-	char hex[2];
-	do {
-		hexify(hex, (const void *)p++, 1);
-
+	char hex[2] = {};
+	const uint8_t *const data = (const uint8_t *)buffer;
+	for (size_t offset = 0; offset < len; ++offset) {
+		hexify(hex, data + offset, 1U);
 		gdb_if_putchar(hex[0], 0);
 		gdb_if_putchar(hex[1], 0);
-
-	} while (p < (buffer + len));
+	}
 }
 
 static void remote_respond_buf(char respCode, uint8_t *buffer, size_t len)
