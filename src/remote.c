@@ -63,10 +63,11 @@ static void remote_send_buf(const void *const buffer, const size_t len)
 	}
 }
 
-static void remote_respond_buf(char respCode, uint8_t *buffer, size_t len)
+/* Send a response with some data following */
+static void remote_respond_buf(const char response_code, const void *const buffer, const size_t len)
 {
 	gdb_if_putchar(REMOTE_RESP, 0);
-	gdb_if_putchar(respCode, 0);
+	gdb_if_putchar(response_code, 0);
 
 	remote_send_buf(buffer, len);
 
