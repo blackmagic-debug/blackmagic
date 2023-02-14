@@ -37,6 +37,8 @@ uint32_t jtag_dev_count = 0;
 /* bucket of ones for don't care TDI */
 const uint8_t ones[8] = {0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU};
 
+static bool jtag_read_idcodes();
+
 #if PC_HOSTED == 0
 void jtag_add_device(const uint32_t dev_index, const jtag_dev_s *jtag_dev)
 {
@@ -83,7 +85,10 @@ uint32_t jtag_scan(const uint8_t *irlens)
 #else
 	jtagtap_init();
 #endif
-	jtag_proc.jtagtap_reset();
+
+	/* Start by reading out the ID Codes for all the devices on the chain */
+	if (!jtag_read_idcodes())
+		return 0;
 
 	if (irlens) {
 		DEBUG_WARN("Given list of IR lengths, skipping probe\n");
@@ -179,23 +184,6 @@ uint32_t jtag_scan(const uint8_t *irlens)
 	for (size_t device = jtag_dev_count - 1U; device > 0; --device)
 		jtag_devs[device - 1U].ir_postscan = jtag_devs[device].ir_postscan + jtag_devs[device].ir_len;
 
-	/* Reset jtagtap: should take all devs to IDCODE */
-	jtag_proc.jtagtap_reset();
-	jtagtap_shift_dr();
-	/* Now shift out the ID codes for all the attached devices. */
-	for (size_t device = 0; device < jtag_dev_count; ++device) {
-		if (!jtag_proc.jtagtap_next(false, true))
-			continue;
-		jtag_devs[device].jd_idcode = 1U;
-		for (size_t bit = 1; bit < 32U; ++bit) {
-			if (jtag_proc.jtagtap_next(false, true))
-				jtag_devs[device].jd_idcode |= 1U << bit;
-		}
-	}
-	DEBUG_INFO("Return to Run-Test/Idle\n");
-	jtag_proc.jtagtap_next(true, true);
-	jtagtap_return_idle(1);
-
 #if PC_HOSTED == 1
 	/*Transfer needed device information to firmware jtag_devs */
 	for (size_t device = 0; device < jtag_dev_count; ++device)
@@ -229,6 +217,42 @@ uint32_t jtag_scan(const uint8_t *irlens)
 	}
 
 	return jtag_dev_count;
+}
+
+static bool jtag_read_idcodes()
+{
+	/* Reset the chain ready and transition to Shift-DR */
+	jtag_proc.jtagtap_reset();
+	DEBUG_INFO("Change state to Shift-DR\n");
+	jtagtap_shift_dr();
+
+	DEBUG_INFO("Scanning out ID codes\n");
+	size_t device = 0;
+	/* Try scanning to one ID past the end of the chain */
+	for (; device <= JTAG_MAX_DEVS; ++device) {
+		/* Try to read out 32 bits, while shifting in 1's */
+		uint32_t idcode = 0;
+		jtag_proc.jtagtap_tdi_tdo_seq((uint8_t *)&idcode, false, ones, 32);
+		/* If the IDCode read is all 1's, we've reached the end */
+		if (idcode == 0xffffffffU)
+			break;
+		/* Check if the max suported chain length is exceeded */
+		if (device == JTAG_MAX_DEVS) {
+			DEBUG_WARN("jtag_scan: Maximum chain length exceeded\n");
+			jtag_dev_count = 0;
+			return false;
+		}
+		/* We got a valid device, add it to the set */
+		jtag_devs[device].jd_idcode = idcode;
+		jtag_devs[device].jd_dev = device;
+	}
+
+	/* Well, it worked, so clean up and do housekeeping */
+	DEBUG_INFO("Return to Run-Test/Idle\n");
+	jtag_proc.jtagtap_next(true, true);
+	jtagtap_return_idle(1);
+	jtag_dev_count = device;
+	return true;
 }
 
 void jtag_dev_write_ir(const uint8_t dev_index, const uint32_t ir)
