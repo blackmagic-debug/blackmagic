@@ -3,6 +3,8 @@
  *
  * Copyright (C) 2011  Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
+ * Copyright (C) 2022-2023 1BitSquared <info@1bitsquared.com>
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -41,7 +43,7 @@ typedef struct jtag_dev {
 	uint8_t ir_postscan;
 } jtag_dev_s;
 
-extern jtag_dev_s jtag_devs[JTAG_MAX_DEVS + 1U];
+extern jtag_dev_s jtag_devs[JTAG_MAX_DEVS];
 extern uint32_t jtag_dev_count;
 extern const uint8_t ones[8];
 
