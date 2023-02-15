@@ -3,6 +3,8 @@
  *
  * Copyright (C) 2019  Black Sphere Technologies Ltd.
  * Written by Dave Marples <dave@marples.net>
+ * Copyright (C) 2022-2023 1BitSquared <info@1bitsquared.com>
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,7 +26,7 @@
 #include <inttypes.h>
 #include "general.h"
 
-#define REMOTE_HL_VERSION 2
+#define REMOTE_HL_VERSION 3
 
 /*
  * Commands to remote end, and responses
