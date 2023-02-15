@@ -248,14 +248,27 @@ static void jtagtap_tdi_seq_swd_delay(const uint8_t *const data_in, const bool f
 
 static void jtagtap_tdi_seq_no_delay(const uint8_t *const data_in, const bool final_tms, size_t clock_cycles)
 {
-	for (size_t cycle = 0; cycle < clock_cycles; ++cycle) {
-		gpio_clear(TCK_PORT, TCK_PIN);
+	for (size_t cycle = 0; cycle < clock_cycles;) {
 		const size_t bit = cycle & 7U;
 		const size_t byte = cycle >> 3U;
+		const bool tms = cycle + 1U >= clock_cycles && final_tms;
+		const bool tdi = data_in[byte] & (1U << bit);
+		/* Block the compiler from re-ordering the calculations to preserve timings */
+		__asm__ volatile("" ::: "memory");
+		gpio_clear(TCK_PORT, TCK_PIN);
 		/* On the last tick, assert final_tms to TMS_PIN */
-		gpio_set_val(TMS_PORT, TMS_PIN, cycle + 1U >= clock_cycles && final_tms);
+		gpio_set_val(TMS_PORT, TMS_PIN, tms);
 		/* Set up the TDI pin and start the clock cycle */
-		gpio_set_val(TDI_PORT, TDI_PIN, data_in[byte] & (1U << bit));
+		gpio_set_val(TDI_PORT, TDI_PIN, tdi);
+		/* Block the compiler from re-ordering the calculations to preserve timings */
+		__asm__ volatile("" ::: "memory");
+		/* Increment the cycle counter */
+		++cycle;
+		__asm__("nop");
+		__asm__("nop");
+		/* Block the compiler from re-ordering the calculations to preserve timings */
+		__asm__ volatile("nop" ::: "memory");
+		/* Start the clock cycle */
 		gpio_set(TCK_PORT, TCK_PIN);
 		/* Finish the clock cycle */
 	}
@@ -289,7 +302,7 @@ static void jtagtap_cycle_no_delay(const size_t clock_cycles)
 {
 	for (size_t cycle = 0; cycle < clock_cycles; ++cycle) {
 		gpio_set(TCK_PORT, TCK_PIN);
-		gpio_set(TCK_PORT, TCK_PIN);
+		__asm__ volatile("nop" ::: "memory");
 		gpio_clear(TCK_PORT, TCK_PIN);
 	}
 }
