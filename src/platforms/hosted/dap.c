@@ -681,23 +681,27 @@ void dap_jtagtap_tdi_tdo_seq(
 	}
 }
 
-int dap_jtag_configure(void)
+bool dap_jtag_configure(void)
 {
-	uint8_t buf[64], *p = &buf[2];
-	uint32_t i = 0;
-	for (; i < jtag_dev_count; i++) {
-		jtag_dev_s *jtag_dev = &jtag_devs[i];
-		*p++ = jtag_dev->ir_len;
-		DEBUG_PROBE("irlen %d\n", jtag_dev->ir_len);
+	/* Check if there are no or too many devices */
+	if (!jtag_dev_count || jtag_dev_count >= JTAG_MAX_DEVS)
+		return false;
+	/* Begin building the configuration packet */
+	uint8_t buf[64U] = {
+		ID_DAP_JTAG_CONFIGURE,
+		jtag_dev_count,
+	};
+	/* For each device in the chain copy its IR length to the configuration */
+	for (uint32_t device = 0; device < jtag_dev_count; device++) {
+		const jtag_dev_s *const dev = &jtag_devs[device];
+		buf[2U + device] = dev->ir_len;
+		DEBUG_PROBE("irlen %u\n", dev->ir_len);
 	}
-	if (!i || i >= JTAG_MAX_DEVS)
-		return -1;
-	buf[0] = 0x15;
-	buf[1] = i;
-	dbg_dap_cmd(buf, sizeof(buf), p - buf);
+	/* Send the configuration and ensure it succeeded */
+	dbg_dap_cmd(buf, sizeof(buf), 2U + jtag_dev_count);
 	if (buf[0] != DAP_OK)
 		DEBUG_WARN("dap_jtag_configure Failed %02x\n", buf[0]);
-	return 0;
+	return true;
 }
 
 void dap_swdptap_seq_out(const uint32_t tms_states, const size_t clock_cycles)
