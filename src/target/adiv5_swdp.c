@@ -201,6 +201,7 @@ uint32_t adiv5_swdp_scan(uint32_t targetid)
 		memcpy(dp, initial_dp, sizeof(adiv5_debug_port_s));
 		dp->instance = i;
 
+		adiv5_dp_abort(dp, ADIV5_DP_ABORT_STKERRCLR);
 		adiv5_dp_init(dp, 0);
 	}
 	return target_list ? 1U : 0U;

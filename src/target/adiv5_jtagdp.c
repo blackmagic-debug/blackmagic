@@ -57,6 +57,10 @@ void adiv5_jtag_dp_handler(uint8_t jd_index)
 	platform_jtag_dp_init(dp);
 #endif
 
+	if (jtag_devs[jd_index].jd_idcode == JTAG_IDCODE_ARM_DPv0)
+		adiv5_dp_error(dp);
+	else
+		adiv5_dp_abort(dp, ADIV5_DP_ABORT_STKERRCLR);
 	adiv5_dp_init(dp, jtag_devs[jd_index].jd_idcode);
 }
 

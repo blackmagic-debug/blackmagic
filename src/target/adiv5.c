@@ -725,6 +725,18 @@ static void adiv5_dp_clear_sticky_errors(adiv5_debug_port_s *dp)
 void adiv5_dp_init(adiv5_debug_port_s *dp, const uint32_t idcode)
 {
 	/*
+	 * We have to initialse the DP routines up front before any adiv5_* functions are called or
+	 * bad things happen under BMDA (particularly CMSIS-DAP)
+	 */
+	dp->ap_write = firmware_ap_write;
+	dp->ap_read = firmware_ap_read;
+	dp->mem_read = advi5_mem_read_bytes;
+	dp->mem_write = adiv5_mem_write_bytes;
+#if PC_HOSTED == 1
+	platform_adiv5_dp_defaults(dp);
+#endif
+
+	/*
 	 * Start by assuming DP v1 or later.
 	 * this may not be true for JTAG-DP (we attempt to detect this with the part ID code)
 	 * in such cases (DPv0) DPIDR is not implemented
@@ -810,14 +822,6 @@ void adiv5_dp_init(adiv5_debug_port_s *dp, const uint32_t idcode)
 		rp_rescue_setup(dp);
 		return;
 	}
-
-	dp->ap_write = firmware_ap_write;
-	dp->ap_read = firmware_ap_read;
-	dp->mem_read = advi5_mem_read_bytes;
-	dp->mem_write = adiv5_mem_write_bytes;
-#if PC_HOSTED == 1
-	platform_adiv5_dp_defaults(dp);
-#endif
 
 	volatile uint32_t ctrlstat = 0;
 	TRY_CATCH (e, EXCEPTION_TIMEOUT) {
