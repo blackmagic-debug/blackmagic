@@ -690,7 +690,7 @@ int dap_jtag_configure(void)
 		*p++ = jtag_dev->ir_len;
 		DEBUG_PROBE("irlen %d\n", jtag_dev->ir_len);
 	}
-	if ((!i || i >= JTAG_MAX_DEVS))
+	if (!i || i >= JTAG_MAX_DEVS)
 		return -1;
 	buf[0] = 0x15;
 	buf[1] = i;
