@@ -3,6 +3,8 @@
  *
  * Copyright (C) 2011  Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
+ * Copyright (C) 2022-2023 1BitSquared <info@1bitsquared.com>
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -177,7 +179,7 @@ static void jtagtap_tdi_tdo_seq_no_delay(
 		const uint8_t bit = cycle & 7U;
 		const size_t byte = cycle >> 3U;
 		const bool tms = cycle + 1U >= clock_cycles && final_tms;
-		const bool tdi = (data_in[byte] >> bit) & 1U;
+		const bool tdi = data_in[byte] & (1U << bit);
 		/* Block the compiler from re-ordering the calculations to preserve timings */
 		__asm__ volatile("" ::: "memory");
 		gpio_clear(TCK_PORT, TCK_PIN);
@@ -205,6 +207,11 @@ static void jtagtap_tdi_tdo_seq_no_delay(
 			value = 0;
 		}
 		/* Finish the clock cycle */
+	}
+	/* If clock_cycles is not divisable by 8, we have some extra data to write back here. */
+	if (clock_cycles & 7U) {
+		const size_t byte = (clock_cycles - 1U) >> 3U;
+		data_out[byte] = value;
 	}
 	gpio_clear(TCK_PORT, TCK_PIN);
 }
