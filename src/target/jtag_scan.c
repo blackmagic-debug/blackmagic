@@ -148,6 +148,16 @@ uint32_t jtag_scan(const uint8_t *irlens)
 
 	jtag_display_idcodes();
 
+#if PC_HOSTED == 1
+	DEBUG_PROBE("Enumerated %" PRIu32 " devices\n", jtag_dev_count);
+	for (size_t device = 0; device < jtag_dev_count; ++device) {
+		const jtag_dev_s *dev = &jtag_devs[device];
+		DEBUG_PROBE("%" PRIu32 ": IR length = %u, ID %08" PRIx32 "\n", (uint32_t)device, dev->ir_len, dev->jd_idcode);
+		DEBUG_PROBE("-> IR prescan: %u, postscan: %u\n", dev->ir_prescan, dev->ir_postscan);
+		DEBUG_PROBE("-> DR prescan: %u, postscan: %u\n", dev->dr_prescan, dev->dr_postscan);
+	}
+#endif
+
 	/* Check for known devices and handle accordingly */
 	for (size_t device = 0; device < jtag_dev_count; device++) {
 		for (size_t descr = 0; dev_descr[descr].idcode; descr++) {
