@@ -130,8 +130,14 @@ uint32_t jtag_scan(const uint8_t *irlens)
 		return 0;
 
 	/* Fill in the ir_postscan fields */
-	for (size_t device = jtag_dev_count - 1U; device > 0; --device)
-		jtag_devs[device - 1U].ir_postscan = jtag_devs[device].ir_postscan + jtag_devs[device].ir_len;
+	uint8_t postscan = 0;
+	for (size_t device = 0; device < jtag_dev_count; ++device) {
+		/* Traverse the device list from the back */
+		const size_t idx = (jtag_dev_count - 1U) - device;
+		/* Copy the current postscan value in and add this device's IR to it for the next lowest in the list  */
+		jtag_devs[idx].ir_postscan = postscan;
+		postscan += jtag_devs[idx].ir_len;
+	}
 
 #if PC_HOSTED == 1
 	/*Transfer needed device information to firmware jtag_devs */
