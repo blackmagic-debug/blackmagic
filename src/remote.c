@@ -34,7 +34,6 @@
 #include "target.h"
 #include "hex_utils.h"
 
-#define NTOH(x)    (((x) <= 9) ? (x) + '0' : 'a' + (x)-10)
 #define HTON(x)    (((x) <= '9') ? (x) - '0' : ((TOUPPER(x)) - 'A' + 10))
 #define TOUPPER(x) ((((x) >= 'a') && ((x) <= 'z')) ? ((x) - ('a' - 'A')) : (x))
 #define ISHEX(x)   ((((x) >= '0') && ((x) <= '9')) || (((x) >= 'A') && ((x) <= 'F')) || (((x) >= 'a') && ((x) <= 'f')))
@@ -76,32 +75,38 @@ static void remote_respond_buf(const char response_code, const void *const buffe
 	gdb_if_putchar(REMOTE_EOM, 1);
 }
 
-/* Send response to far end */
-static void remote_respond(char respCode, uint64_t param)
+/* Send a response with a simple result code parameter */
+static void remote_respond(const char response_code, uint64_t param)
 {
-	char buf[35]; /*Response, code, EOM and 2*16 hex nibbles*/
-	char *p = buf;
+	/* Put out the start of response marker and response code */
+	gdb_if_putchar(REMOTE_RESP, false);
+	gdb_if_putchar(response_code, false);
 
-	gdb_if_putchar(REMOTE_RESP, 0);
-	gdb_if_putchar(respCode, 0);
+	/* This defines space for exactly a 64-bit number expressed in hex */
+	char response[16];
+	size_t idx = 0;
 
-	do {
-		*p++ = NTOH(param & 0x0fU);
+	/* Convert the response to hexadecimal */
+	for (; idx < 16U && param; ++idx) {
+		response[idx] = hex_digit(param & 0xfU);
 		param >>= 4U;
-	} while (param);
+	}
+	/* Adjust for 0 responses */
+	if (!idx)
+		response[idx++] = '0';
 
-	/* At this point the number to print is the buf, but backwards, so spool it out */
-	do {
-		gdb_if_putchar(*--p, 0);
-	} while (p > buf);
-	gdb_if_putchar(REMOTE_EOM, 1);
+	/* response now contains the response but logically backwards, so iterate backwards through it sending it */
+	for (; idx; --idx)
+		gdb_if_putchar(response[idx - 1U], false);
+	/* Finish with the endof response marker */
+	gdb_if_putchar(REMOTE_EOM, true);
 }
 
-static void remote_respond_string(char respCode, const char *s)
+static void remote_respond_string(char response_code, const char *s)
 /* Send response to far end */
 {
 	gdb_if_putchar(REMOTE_RESP, 0);
-	gdb_if_putchar(respCode, 0);
+	gdb_if_putchar(response_code, 0);
 	while (*s) {
 		/* Just clobber illegal characters so they don't disturb the protocol */
 		if ((*s == '$') || (*s == REMOTE_SOM) || (*s == REMOTE_EOM))
