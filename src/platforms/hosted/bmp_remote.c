@@ -154,7 +154,7 @@ static uint64_t remote_decode_response(const char *const response, size_t digits
 	return value;
 }
 
-bool remote_adiv5_check_error(
+static bool remote_adiv5_check_error(
 	const char *const func, adiv5_debug_port_s *const target_dp, const char *const buffer, const ssize_t length)
 {
 	/* Check the response length for error codes */
@@ -177,18 +177,21 @@ bool remote_adiv5_check_error(
 	return buffer[0] == REMOTE_RESP_OK;
 }
 
-static uint32_t remote_adiv5_dp_read(adiv5_debug_port_s *dp, uint16_t addr)
+static uint32_t remote_adiv5_dp_read(adiv5_debug_port_s *const target_dp, const uint16_t addr)
 {
 	char buffer[REMOTE_MAX_MSG_SIZE];
-	int length = snprintf(buffer, REMOTE_MAX_MSG_SIZE, REMOTE_DP_READ_STR, dp->dev_index, addr);
+	/* Create the request and send it to the remote */
+	int length = snprintf(buffer, REMOTE_MAX_MSG_SIZE, REMOTE_DP_READ_STR, target_dp->dev_index, addr);
 	platform_buffer_write(buffer, length);
+	/* Read back the answer and check for errors */
 	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
-	if (length < 1 || buffer[0] == REMOTE_RESP_ERR)
-		DEBUG_WARN("%s error %d\n", __func__, length);
-	uint32_t dest;
-	unhexify(&dest, buffer + 1, 4);
-	DEBUG_PROBE("dp_read addr %04x: %08" PRIx32 "\n", dest);
-	return dest;
+	if (!remote_adiv5_check_error(__func__, target_dp, buffer, length))
+		return 0U;
+	/* If the response indicates all's OK, decode the data read and return it */
+	uint32_t value = 0U;
+	unhexify(&value, buffer + 1, 4);
+	DEBUG_PROBE("%s: addr %04x -> %08" PRIx32 "\n", __func__, addr, value);
+	return value;
 }
 
 static uint32_t remote_adiv5_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value)
