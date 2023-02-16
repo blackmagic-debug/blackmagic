@@ -39,10 +39,10 @@ static void swdptap_seq_out_parity(uint32_t tms_states, size_t clock_cycles);
 bool remote_swdptap_init(void)
 {
 	DEBUG_WIRE("remote_swdptap_init\n");
-	platform_buffer_write((uint8_t *)REMOTE_SWDP_INIT_STR, sizeof(REMOTE_SWDP_INIT_STR));
+	platform_buffer_write(REMOTE_SWDP_INIT_STR, sizeof(REMOTE_SWDP_INIT_STR));
 
 	char construct[REMOTE_MAX_MSG_SIZE];
-	int length = platform_buffer_read((uint8_t *)construct, REMOTE_MAX_MSG_SIZE);
+	int length = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
 	if (!length || construct[0] == REMOTE_RESP_ERR) {
 		DEBUG_WARN("swdptap_init failed, error %s\n", length ? construct + 1 : "unknown");
 		exit(-1);
@@ -60,9 +60,9 @@ static bool swdptap_seq_in_parity(uint32_t *res, size_t clock_cycles)
 	char construct[REMOTE_MAX_MSG_SIZE];
 
 	int length = sprintf(construct, REMOTE_SWDP_IN_PAR_STR, clock_cycles);
-	platform_buffer_write((uint8_t *)construct, length);
+	platform_buffer_write(construct, length);
 
-	length = platform_buffer_read((uint8_t *)construct, REMOTE_MAX_MSG_SIZE);
+	length = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
 	if (length < 2 || construct[0] == REMOTE_RESP_ERR) {
 		DEBUG_WARN("swdptap_seq_in_parity failed, error %s\n", length ? &(construct[1]) : "short response");
 		exit(-1);
@@ -79,9 +79,9 @@ static uint32_t swdptap_seq_in(size_t clock_cycles)
 	char construct[REMOTE_MAX_MSG_SIZE];
 
 	int length = sprintf(construct, REMOTE_SWDP_IN_STR, clock_cycles);
-	platform_buffer_write((uint8_t *)construct, length);
+	platform_buffer_write(construct, length);
 
-	length = platform_buffer_read((uint8_t *)construct, REMOTE_MAX_MSG_SIZE);
+	length = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
 	if (length < 2 || construct[0] == REMOTE_RESP_ERR) {
 		DEBUG_WARN("swdptap_seq_in failed, error %s\n", length ? construct + 1 : "short response");
 		exit(-1);
@@ -97,9 +97,9 @@ static void swdptap_seq_out(uint32_t tms_states, size_t clock_cycles)
 
 	DEBUG_PROBE("swdptap_seq_out        %2d clock_cycles: %08" PRIx32 "\n", clock_cycles, tms_states);
 	int length = sprintf(construct, REMOTE_SWDP_OUT_STR, clock_cycles, tms_states);
-	platform_buffer_write((uint8_t *)construct, length);
+	platform_buffer_write(construct, length);
 
-	length = platform_buffer_read((uint8_t *)construct, REMOTE_MAX_MSG_SIZE);
+	length = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
 	if (length < 1 || construct[0] == REMOTE_RESP_ERR) {
 		DEBUG_WARN("swdptap_seq_out failed, error %s\n", length ? construct + 1 : "short response");
 		exit(-1);
@@ -112,9 +112,9 @@ static void swdptap_seq_out_parity(uint32_t tms_states, size_t clock_cycles)
 
 	DEBUG_PROBE("swdptap_seq_out_parity %2d clock_cycles: %08" PRIx32 "\n", clock_cycles, tms_states);
 	int length = sprintf(construct, REMOTE_SWDP_OUT_PAR_STR, clock_cycles, tms_states);
-	platform_buffer_write((uint8_t *)construct, length);
+	platform_buffer_write(construct, length);
 
-	length = platform_buffer_read((uint8_t *)construct, REMOTE_MAX_MSG_SIZE);
+	length = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
 	if (length < 1 || construct[1] == REMOTE_RESP_ERR) {
 		DEBUG_WARN("swdptap_seq_out_parity failed, error %s\n", length ? construct + 2 : "short response");
 		exit(-1);
