@@ -3,6 +3,8 @@
  *
  * Copyright (C) 2011  Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
+ * Copyright (C) 2023 1BitSquared <info@1bitsquared.com>
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,7 +25,14 @@
 #include "general.h"
 #include "hex_utils.h"
 
-static const char hexdigits[] = "0123456789abcdef";
+static char hex_digit(const uint8_t value)
+{
+	char digit = (char)value;
+	if (value > 9U)
+		digit += 'A' - '0' - 10U;
+	digit += '0';
+	return digit;
+}
 
 char *hexify(char *const hex, const void *const buf, const size_t size)
 {
@@ -31,8 +40,8 @@ char *hexify(char *const hex, const void *const buf, const size_t size)
 	const uint8_t *const src = buf;
 
 	for (size_t idx = 0; idx < size; ++idx) {
-		*dst++ = hexdigits[src[idx] >> 4U];
-		*dst++ = hexdigits[src[idx] & 0xfU];
+		*dst++ = hex_digit(src[idx] >> 4U);
+		*dst++ = hex_digit(src[idx] & 0xfU);
 	}
 	*dst = 0;
 
