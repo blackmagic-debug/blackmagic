@@ -277,12 +277,12 @@ void remote_adiv5_dp_defaults(adiv5_debug_port_s *dp)
 	dp->mem_write = remote_ap_mem_write_sized;
 }
 
-void remote_add_jtag_dev(uint32_t i, const jtag_dev_s *jtag_dev)
+void remote_add_jtag_dev(uint32_t dev_indx, const jtag_dev_s *jtag_dev)
 {
-	uint8_t construct[REMOTE_MAX_MSG_SIZE];
-	const int s = snprintf((char *)construct, REMOTE_MAX_MSG_SIZE, REMOTE_JTAG_ADD_DEV_STR, i, jtag_dev->dr_prescan,
+	char buffer[REMOTE_MAX_MSG_SIZE];
+	const int length = snprintf(buffer, REMOTE_MAX_MSG_SIZE, REMOTE_JTAG_ADD_DEV_STR, dev_indx, jtag_dev->dr_prescan,
 		jtag_dev->dr_postscan, jtag_dev->ir_len, jtag_dev->ir_prescan, jtag_dev->ir_postscan, jtag_dev->current_ir);
-	platform_buffer_write(construct, s);
-	(void)platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
+	platform_buffer_write(buffer, length);
+	(void)platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	/* Don't need to check for error here - it's already done in remote_adiv5_dp_defaults */
 }
