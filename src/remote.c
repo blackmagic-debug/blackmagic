@@ -359,14 +359,6 @@ static void remote_packet_process_high_level(unsigned i, char *packet)
 	remote_ap.dp = &remote_dp;
 	packet += 2;
 	switch (index) {
-	case REMOTE_LOW_ACCESS: { /* HL = Low level access */
-		const uint16_t addr16 = remote_hex_string_to_num(4, packet);
-		packet += 4;
-		const uint32_t value = remote_hex_string_to_num(8, packet);
-		const uint32_t data = remote_dp.low_access(&remote_dp, remote_ap.apsel, addr16, value);
-		remote_respond_buf(REMOTE_RESP_OK, &data, 4);
-		break;
-	}
 	case REMOTE_AP_READ: { /* Ha = Read from AP register*/
 		const uint16_t addr16 = remote_hex_string_to_num(4, packet);
 		const uint32_t data = adiv5_ap_read(&remote_ap, addr16);
@@ -433,6 +425,16 @@ static void remote_packet_process_high_level(unsigned i, char *packet)
 	SET_IDLE_STATE(1);
 }
 
+static void remote_adiv5_respond(const void *const data, const size_t length)
+{
+	if (remote_dp.fault)
+		/* If the request didn't work and caused a fault, tell the host */
+		remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_FAULT | ((uint16_t)remote_dp.fault << 8U));
+	else
+		/* Otherwise reply back with the data */
+		remote_respond_buf(REMOTE_RESP_OK, data, length);
+}
+
 static void remote_packet_process_adiv5(const char *const packet)
 {
 	/* Set up the DP and a fake AP structure to perform the access with */
@@ -440,7 +442,6 @@ static void remote_packet_process_adiv5(const char *const packet)
 	adiv5_access_port_s remote_ap;
 	remote_ap.apsel = remote_hex_string_to_num(2, packet + 4);
 	remote_ap.dp = &remote_dp;
-	(void)remote_ap;
 
 	SET_IDLE_STATE(0);
 	switch (packet[1]) {
@@ -448,12 +449,14 @@ static void remote_packet_process_adiv5(const char *const packet)
 		/* Grab the address to read from and try to perform the access */
 		const uint16_t addr = remote_hex_string_to_num(4, packet + 6);
 		const uint32_t data = adiv5_dp_read(&remote_dp, addr);
-		if (remote_dp.fault)
-			/* If that didn't work and caused a fault, tell the host */
-			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_FAULT | ((uint16_t)remote_dp.fault << 8U));
-		else
-			/* Otherwise reply back with the data */
-			remote_respond_buf(REMOTE_RESP_OK, &data, 4);
+		remote_adiv5_respond(&data, 4U);
+		break;
+	}
+	case REMOTE_ADIv5_RAW_ACCESS: { /* AR = Perform a raw ADIv5 access */
+		const uint16_t addr = remote_hex_string_to_num(4, packet + 6);
+		const uint32_t value = remote_hex_string_to_num(8, packet + 10);
+		const uint32_t data = adiv5_dp_low_access(&remote_dp, remote_ap.apsel, addr, value);
+		remote_adiv5_respond(&data, 4U);
 		break;
 	}
 	default:
