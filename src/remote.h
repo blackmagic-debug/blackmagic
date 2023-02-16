@@ -297,6 +297,11 @@
 		REMOTE_SOM, REMOTE_ADIv5_PACKET, REMOTE_MEM_WRITE, REMOTE_ADIv5_DEV_INDEX, REMOTE_ADIv5_AP_SEL, \
 			REMOTE_ADIv5_CSW, REMOTE_ADIv5_ALIGNMENT, REMOTE_ADIv5_ADDR32, REMOTE_ADIv5_COUNT, 0        \
 	}
+/*
+ * 3 leader bytes + 2 bytes for dev index + 2 bytes for AP select + 8 for CSW + 2 for the alignment +
+ * 8 for the address and 8 for the count and one trailer gives 34U
+ */
+#define REMOTE_ADIv5_MEM_WRITE_LENGTH 34U
 
 uint64_t remote_hex_string_to_num(uint32_t limit, const char *str);
 void remote_packet_process(unsigned int i, char *packet);

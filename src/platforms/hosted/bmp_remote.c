@@ -282,36 +282,39 @@ static void remote_adiv5_mem_read_bytes(
 	}
 }
 
-static void remote_ap_mem_write_sized(
-	adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, align_e align)
+static void remote_adiv5_mem_write_bytes(adiv5_access_port_s *const target_ap, const uint32_t dest,
+	const void *const src, const size_t write_length, const align_e align)
 {
-	if (len == 0)
+	/* Check if we have anything to do */
+	if (!write_length)
 		return;
-	char buffer[REMOTE_MAX_MSG_SIZE];
-	/* (5 * 1 (char)) + (2 * 2 (bytes)) + (3 * 8 (words)) */
-	size_t batchsize = (REMOTE_MAX_MSG_SIZE - 0x30U) / 2U;
 	const char *data = (const char *)src;
-	for (size_t offset = 0; offset < len; offset += batchsize) {
-		const size_t count = MIN(len - offset, batchsize);
-		int s = snprintf(buffer, REMOTE_MAX_MSG_SIZE, REMOTE_ADIv5_MEM_WRITE_STR, ap->dp->dev_index, ap->apsel, ap->csw,
-			align, dest + offset, count);
-		assert(s > 0);
-		hexify(buffer + s, data + offset, count);
-		const size_t hex_length = s + (count * 2U);
-		buffer[hex_length] = REMOTE_EOM;
-		buffer[hex_length + 1U] = '\0';
-		platform_buffer_write(buffer, hex_length + 2U);
+	DEBUG_PROBE("%s: @%08" PRIx32 "+%zx alignment %u\n", __func__, dest, write_length, align);
+	/* + 1 for terminating NUL character */
+	char buffer[REMOTE_MAX_MSG_SIZE + 1U];
+	/* As we do, calculate how large a transfer we can do to the firmware */
+	const size_t blocksize = (REMOTE_MAX_MSG_SIZE - REMOTE_ADIv5_MEM_WRITE_LENGTH) / 2U;
+	/* For each transfer block size, ask the firmware to write that block of bytes */
+	for (size_t offset = 0; offset < write_length; offset += blocksize) {
+		/* Pick the amount left to write or the block size, whichever is smaller */
+		const size_t amount = MIN(write_length - offset, blocksize);
+		/* Create the request and validate it ends up the right length */
+		ssize_t length = snprintf(buffer, REMOTE_MAX_MSG_SIZE, REMOTE_ADIv5_MEM_WRITE_STR, target_ap->dp->dev_index,
+			target_ap->apsel, target_ap->csw, align, dest + offset, amount);
+		assert(length == REMOTE_ADIv5_MEM_WRITE_LENGTH - 1U);
+		/* Encode the data to send after the request block and append the packet termination marker */
+		hexify(buffer + length, data + offset, amount);
+		length += (ssize_t)(amount * 2U);
+		buffer[length++] = REMOTE_EOM;
+		buffer[length++] = '\0';
+		platform_buffer_write(buffer, length);
 
-		s = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
-		if (s > 0 && buffer[0] == REMOTE_RESP_OK)
-			continue;
-		if (s > 0 && buffer[0] == REMOTE_RESP_ERR) {
-			ap->dp->fault = 1;
-			DEBUG_WARN(
-				"%s returned REMOTE_RESP_ERR at apsel %u, addr: 0x%08zx\n", __func__, ap->apsel, (size_t)dest + offset);
+		/* Read back the answer and check for errors */
+		length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
+		if (!remote_adiv5_check_error(__func__, target_ap->dp, buffer, length)) {
+			DEBUG_WARN("%s error around 0x%08zx\n", __func__, (size_t)dest + offset);
+			return;
 		}
-		DEBUG_WARN("%s error %d around address 0x%08zx\n", __func__, s, (size_t)dest + offset);
-		break;
 	}
 }
 
@@ -330,7 +333,7 @@ void remote_adiv5_dp_defaults(adiv5_debug_port_s *dp)
 	dp->ap_write = remote_adiv5_ap_write;
 	dp->ap_read = remote_adiv5_ap_read;
 	dp->mem_read = remote_adiv5_mem_read_bytes;
-	dp->mem_write = remote_ap_mem_write_sized;
+	dp->mem_write = remote_adiv5_mem_write_bytes;
 }
 
 void remote_add_jtag_dev(uint32_t dev_indx, const jtag_dev_s *jtag_dev)
