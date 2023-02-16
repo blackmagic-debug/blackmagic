@@ -419,6 +419,7 @@ static void remote_packet_process_adiv5(const char *const packet)
 
 	SET_IDLE_STATE(0);
 	switch (packet[1]) {
+	/* DP access commands */
 	case REMOTE_DP_READ: { /* Ad = Read from DP register */
 		/* Grab the address to read from and try to perform the access */
 		const uint16_t addr = remote_hex_string_to_num(4, packet + 6);
@@ -426,20 +427,26 @@ static void remote_packet_process_adiv5(const char *const packet)
 		remote_adiv5_respond(&data, 4U);
 		break;
 	}
+	/* Raw access comands */
 	case REMOTE_ADIv5_RAW_ACCESS: { /* AR = Perform a raw ADIv5 access */
+		/* Grab the address to perform an access against and the value to work with */
 		const uint16_t addr = remote_hex_string_to_num(4, packet + 6);
 		const uint32_t value = remote_hex_string_to_num(8, packet + 10);
+		/* Try to perform the access using the AP selection value as R/!W */
 		const uint32_t data = adiv5_dp_low_access(&remote_dp, remote_ap.apsel, addr, value);
 		remote_adiv5_respond(&data, 4U);
 		break;
 	}
+	/* AP access commands */
 	case REMOTE_AP_READ: { /* Aa = Read from AP register */
+		/* Grab the AP address to read from and try to perform the access */
 		const uint16_t addr = remote_hex_string_to_num(4, packet + 6);
 		const uint32_t data = adiv5_ap_read(&remote_ap, addr);
 		remote_adiv5_respond(&data, 4U);
 		break;
 	}
 	case REMOTE_AP_WRITE: { /* AA = Write to AP register */
+		/* Grab the AP address to write to and the data to write then try to perform the access */
 		const uint16_t addr = remote_hex_string_to_num(4, packet + 6);
 		const uint32_t value = remote_hex_string_to_num(8, packet + 10);
 		adiv5_ap_write(&remote_ap, addr, value);
