@@ -214,7 +214,7 @@ struct adiv5_debug_port {
 
 	void (*mem_read)(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t len);
 	void (*mem_write)(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, align_e align);
-	uint8_t dp_jd_index;
+	uint8_t dev_index;
 	uint8_t fault;
 
 	/* targetsel DPv2 */

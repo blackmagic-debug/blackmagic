@@ -117,7 +117,7 @@ bool perform_dap_transfer(adiv5_debug_port_s *const dp, const dap_transfer_reque
 	/* 63 is 3 + (12 * 5) where 5 is the max length of each transfer request */
 	uint8_t request[63] = {
 		DAP_TRANSFER,
-		dp->dp_jd_index,
+		dp->dev_index,
 		requests,
 	};
 	/* Encode the transfers into the buffer and detect if we're doing any reads */
@@ -164,7 +164,7 @@ bool perform_dap_transfer_block_read(
 	DEBUG_PROBE("-> dap_transfer_block (%u transfer blocks)\n", block_count);
 	dap_transfer_block_request_read_s request = {
 		DAP_TRANSFER_BLOCK,
-		dp->dp_jd_index,
+		dp->dev_index,
 		{},
 		reg | DAP_TRANSFER_RnW,
 	};
@@ -197,7 +197,7 @@ bool perform_dap_transfer_block_write(
 	DEBUG_PROBE("-> dap_transfer_block (%u transfer blocks)\n", block_count);
 	dap_transfer_block_request_write_s request = {
 		DAP_TRANSFER_BLOCK,
-		dp->dp_jd_index,
+		dp->dev_index,
 		{},
 		reg & ~DAP_TRANSFER_RnW,
 	};
