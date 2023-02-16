@@ -153,7 +153,7 @@ static void jtagtap_tdi_tdo_seq(
 			exit(-1);
 		}
 		if (data_out) {
-			const uint64_t data = remotehston(-1, buffer + 1);
+			const uint64_t data = remote_hex_string_to_num(-1, buffer + 1);
 			for (size_t i = 0; i < bytes; ++i)
 				data_out[out_offset++] = (uint8_t)(data >> (i * 8U));
 		}
@@ -177,7 +177,7 @@ static bool jtagtap_next(const bool tms, const bool tdi)
 		exit(-1);
 	}
 
-	return remotehston(-1, buffer + 1);
+	return remote_hex_string_to_num(-1, buffer + 1);
 }
 
 static void jtagtap_cycle(const bool tms, const bool tdi, const size_t clock_cycles)

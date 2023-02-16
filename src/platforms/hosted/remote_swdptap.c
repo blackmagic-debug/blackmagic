@@ -68,7 +68,7 @@ static bool swdptap_seq_in_parity(uint32_t *res, size_t clock_cycles)
 		exit(-1);
 	}
 
-	*res = remotehston(-1, &construct[1]);
+	*res = remote_hex_string_to_num(-1, &construct[1]);
 	DEBUG_PROBE("swdptap_seq_in_parity  %2d clock_cycles: %08" PRIx32 " %s\n", clock_cycles, *res,
 		construct[0] != REMOTE_RESP_OK ? "ERR" : "OK");
 	return construct[0] != REMOTE_RESP_OK;
@@ -86,7 +86,7 @@ static uint32_t swdptap_seq_in(size_t clock_cycles)
 		DEBUG_WARN("swdptap_seq_in failed, error %s\n", length ? construct + 1 : "short response");
 		exit(-1);
 	}
-	uint32_t res = remotehston(-1, &construct[1]);
+	uint32_t res = remote_hex_string_to_num(-1, &construct[1]);
 	DEBUG_PROBE("swdptap_seq_in         %2d clock_cycles: %08" PRIx32 "\n", clock_cycles, res);
 	return res;
 }
