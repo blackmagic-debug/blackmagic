@@ -322,7 +322,7 @@ static void remote_packet_process_general(unsigned i, char *packet)
 	}
 }
 
-static void remote_packet_process_high_level(unsigned i, char *packet)
+static void remote_packet_process_high_level(const char *packet, const size_t packet_len)
 {
 	SET_IDLE_STATE(0);
 	char index = packet[1];
@@ -332,7 +332,7 @@ static void remote_packet_process_high_level(unsigned i, char *packet)
 	}
 	switch (index) {
 	case REMOTE_ADD_JTAG_DEV: /* HJ = fill firmware jtag_devs */
-		if (i < 22U) {
+		if (packet_len < 22U) {
 			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_WRONGLEN);
 		} else {
 			jtag_dev_s jtag_dev = {};
@@ -489,7 +489,7 @@ void remote_packet_process(unsigned i, char *packet)
 		break;
 
 	case REMOTE_HL_PACKET:
-		remote_packet_process_high_level(i, packet);
+		remote_packet_process_high_level(packet, i);
 		break;
 
 	case REMOTE_ADIv5_PACKET:
