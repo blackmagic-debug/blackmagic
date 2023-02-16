@@ -57,6 +57,7 @@
 /* Protocol error messages */
 #define REMOTE_ERROR_UNRECOGNISED 1
 #define REMOTE_ERROR_WRONGLEN     2
+#define REMOTE_ERROR_FAULT        3
 
 /* Start and end of message identifiers */
 #define REMOTE_SOM  '!'
@@ -211,16 +212,8 @@
 	}
 
 /* High-level protocol elements */
-#define REMOTE_HL_PACKET          'H'
-#define REMOTE_HL_CHECK           'C'
-#define REMOTE_DP_READ            'd'
-#define REMOTE_LOW_ACCESS         'L'
-#define REMOTE_AP_READ            'a'
-#define REMOTE_AP_WRITE           'A'
-#define REMOTE_AP_MEM_READ        'M'
-#define REMOTE_MEM_READ           'h'
-#define REMOTE_MEM_WRITE_SIZED    'H'
-#define REMOTE_AP_MEM_WRITE_SIZED 'm'
+#define REMOTE_HL_PACKET 'H'
+#define REMOTE_HL_CHECK  'C'
 
 #define HEX        '%', '0', '2', 'x'
 #define HEX_U32(x) '%', '0', '8', 'x'
@@ -244,11 +237,29 @@
 	{                                                                \
 		REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_HL_CHECK, REMOTE_EOM, 0 \
 	}
-#define REMOTE_DP_READ_STR                                                                                            \
-	(char[])                                                                                                          \
-	{                                                                                                                 \
-		REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_DP_READ, '%', '0', '2', 'x', 'f', 'f', '%', '0', '4', 'x', REMOTE_EOM, 0 \
+
+/* ADIv5 protocol elements */
+#define REMOTE_ADIv5_PACKET       'A'
+#define REMOTE_DP_READ            'd'
+#define REMOTE_LOW_ACCESS         'L'
+#define REMOTE_AP_READ            'a'
+#define REMOTE_AP_WRITE           'A'
+#define REMOTE_AP_MEM_READ        'M'
+#define REMOTE_MEM_READ           'm'
+#define REMOTE_MEM_WRITE_SIZED    'H'
+#define REMOTE_AP_MEM_WRITE_SIZED 'S'
+
+#define REMOTE_ADIv5_DEV_INDEX '%', '0', '2', 'x'
+#define REMOTE_ADIv5_AP_SEL    '%', '0', '2', 'x'
+#define REMOTE_ADIv5_ADDR      '%', '0', '4', 'x'
+
+#define REMOTE_DP_READ_STR                                                                                    \
+	(char[])                                                                                                  \
+	{                                                                                                         \
+		REMOTE_SOM, REMOTE_ADIv5_PACKET, REMOTE_DP_READ, REMOTE_ADIv5_DEV_INDEX, 'f', 'f', REMOTE_ADIv5_ADDR, \
+			REMOTE_EOM, 0                                                                                     \
 	}
+
 #define REMOTE_LOW_ACCESS_STR                                                                                        \
 	(char[])                                                                                                         \
 	{                                                                                                                \

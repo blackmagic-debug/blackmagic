@@ -353,12 +353,6 @@ static void remote_packet_process_high_level(unsigned i, char *packet)
 	remote_ap.dp = &remote_dp;
 	packet += 2;
 	switch (index) {
-	case REMOTE_DP_READ: { /* Hd = Read from DP register */
-		const uint16_t addr16 = remotehston(4, packet);
-		const uint32_t data = adiv5_dp_read(&remote_dp, addr16);
-		remote_respond_buf(REMOTE_RESP_OK, &data, 4);
-		break;
-	}
 	case REMOTE_LOW_ACCESS: { /* HL = Low level access */
 		const uint16_t addr16 = remotehston(4, packet);
 		packet += 4;
@@ -433,6 +427,36 @@ static void remote_packet_process_high_level(unsigned i, char *packet)
 	SET_IDLE_STATE(1);
 }
 
+static void remote_packet_process_adiv5(const char *const packet)
+{
+	/* Set up the DP and a fake AP structure to perform the access with */
+	remote_dp.dp_jd_index = remotehston(2, packet + 2);
+	adiv5_access_port_s remote_ap;
+	remote_ap.apsel = remotehston(2, packet + 4);
+	remote_ap.dp = &remote_dp;
+	(void)remote_ap;
+
+	SET_IDLE_STATE(0);
+	switch (packet[1]) {
+	case REMOTE_DP_READ: { /* Ad = Read from DP register */
+		/* Grab the address to read from and try to perform the access */
+		const uint16_t addr = remotehston(4, packet + 6);
+		const uint32_t data = adiv5_dp_read(&remote_dp, addr);
+		if (remote_dp.fault)
+			/* If that didn't work and caused a fault, tell the host */
+			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_FAULT | ((uint16_t)remote_dp.fault << 8U));
+		else
+			/* Otherwise reply back with the data */
+			remote_respond_buf(REMOTE_RESP_OK, &data, 4);
+		break;
+	}
+	default:
+		remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_UNRECOGNISED);
+		break;
+	}
+	SET_IDLE_STATE(1);
+}
+
 void remote_packet_process(unsigned i, char *packet)
 {
 	switch (packet[0]) {
@@ -450,6 +474,10 @@ void remote_packet_process(unsigned i, char *packet)
 
 	case REMOTE_HL_PACKET:
 		remote_packet_process_high_level(i, packet);
+		break;
+
+	case REMOTE_ADIv5_PACKET:
+		remote_packet_process_adiv5(packet);
 		break;
 
 	default: /* Oh dear, unrecognised, return an error */
