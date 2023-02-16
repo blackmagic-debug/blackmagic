@@ -234,14 +234,18 @@ static uint32_t remote_adiv5_ap_read(adiv5_access_port_s *const target_ap, const
 	return value;
 }
 
-static void remote_adiv5_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value)
+static void remote_adiv5_ap_write(adiv5_access_port_s *const target_ap, const uint16_t addr, const uint32_t value)
 {
 	char buffer[REMOTE_MAX_MSG_SIZE];
-	int length = snprintf(buffer, REMOTE_MAX_MSG_SIZE, REMOTE_AP_WRITE_STR, ap->dp->dev_index, ap->apsel, addr, value);
+	/* Create the request and send it to the remote */
+	int length = snprintf(
+		buffer, REMOTE_MAX_MSG_SIZE, REMOTE_AP_WRITE_STR, target_ap->dp->dev_index, target_ap->apsel, addr, value);
 	platform_buffer_write(buffer, length);
+	/* Read back the answer and check for errors */
 	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
-	if (length < 1 || buffer[0] == REMOTE_RESP_ERR)
-		DEBUG_WARN("%s error %d\n", __func__, length);
+	if (!remote_adiv5_check_error(__func__, target_ap->dp, buffer, length))
+		return;
+	DEBUG_PROBE("%s: addr %04x <- %08" PRIx32 "\n", __func__, addr, value);
 }
 
 static void remote_ap_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t len)
