@@ -359,20 +359,6 @@ static void remote_packet_process_high_level(unsigned i, char *packet)
 	remote_ap.dp = &remote_dp;
 	packet += 2;
 	switch (index) {
-	case REMOTE_AP_READ: { /* Ha = Read from AP register*/
-		const uint16_t addr16 = remote_hex_string_to_num(4, packet);
-		const uint32_t data = adiv5_ap_read(&remote_ap, addr16);
-		remote_respond_buf(REMOTE_RESP_OK, &data, 4);
-		break;
-	}
-	case REMOTE_AP_WRITE: { /* Ha = Write to AP register*/
-		const uint16_t addr16 = remote_hex_string_to_num(4, packet);
-		packet += 4;
-		const uint32_t value = remote_hex_string_to_num(8, packet);
-		adiv5_ap_write(&remote_ap, addr16, value);
-		remote_respond(REMOTE_RESP_OK, 0);
-		break;
-	}
 	case REMOTE_AP_MEM_READ: /* HM = Read from Mem and set csw */
 		remote_ap.csw = remote_hex_string_to_num(8, packet);
 		packet += 6;
@@ -430,9 +416,13 @@ static void remote_adiv5_respond(const void *const data, const size_t length)
 	if (remote_dp.fault)
 		/* If the request didn't work and caused a fault, tell the host */
 		remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_FAULT | ((uint16_t)remote_dp.fault << 8U));
-	else
+	else {
 		/* Otherwise reply back with the data */
-		remote_respond_buf(REMOTE_RESP_OK, data, length);
+		if (data)
+			remote_respond_buf(REMOTE_RESP_OK, data, length);
+		else
+			remote_respond(REMOTE_RESP_OK, 0);
+	}
 }
 
 static void remote_packet_process_adiv5(const char *const packet)
@@ -457,6 +447,19 @@ static void remote_packet_process_adiv5(const char *const packet)
 		const uint32_t value = remote_hex_string_to_num(8, packet + 10);
 		const uint32_t data = adiv5_dp_low_access(&remote_dp, remote_ap.apsel, addr, value);
 		remote_adiv5_respond(&data, 4U);
+		break;
+	}
+	case REMOTE_AP_READ: { /* Aa = Read from AP register */
+		const uint16_t addr = remote_hex_string_to_num(4, packet + 6);
+		const uint32_t data = adiv5_ap_read(&remote_ap, addr);
+		remote_adiv5_respond(&data, 4U);
+		break;
+	}
+	case REMOTE_AP_WRITE: { /* AA = Write to AP register */
+		const uint16_t addr = remote_hex_string_to_num(4, packet + 6);
+		const uint32_t value = remote_hex_string_to_num(8, packet + 10);
+		adiv5_ap_write(&remote_ap, addr, value);
+		remote_adiv5_respond(NULL, 0U);
 		break;
 	}
 	default:
