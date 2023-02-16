@@ -344,50 +344,12 @@ static void remote_packet_process_high_level(unsigned i, char *packet)
 {
 	(void)i;
 	SET_IDLE_STATE(0);
-
-	adiv5_access_port_s remote_ap;
-	/* Re-use packet buffer. Align to DWORD! */
-	void *src = (void *)(((uint32_t)packet + 7U) & ~7U);
 	char index = packet[1];
 	if (index == REMOTE_HL_CHECK) {
 		remote_respond(REMOTE_RESP_OK, REMOTE_HL_VERSION);
 		return;
 	}
-	packet += 2;
-	remote_dp.dp_jd_index = remote_hex_string_to_num(2, packet);
-	packet += 2;
-	remote_ap.apsel = remote_hex_string_to_num(2, packet);
-	remote_ap.dp = &remote_dp;
-	packet += 2;
 	switch (index) {
-	case REMOTE_MEM_WRITE_CSW: /* Hm = Write to memory and set csw */
-		remote_ap.csw = remote_hex_string_to_num(8, packet);
-		packet += 6;
-		/* fall through */
-	case REMOTE_MEM_WRITE: { /* HH = Write to memory */
-		const align_e align = remote_hex_string_to_num(2, packet);
-		packet += 2;
-		const uint32_t dest = remote_hex_string_to_num(8, packet);
-		packet += 8;
-		const size_t len = remote_hex_string_to_num(8, packet);
-		packet += 8;
-		if (len & ((1U << align) - 1U)) {
-			/* align is unsuitable for the length requested */
-			remote_respond(REMOTE_RESP_ERR, 0);
-			break;
-		}
-		/* Read as stream of hexified bytes */
-		unhexify(src, packet, len);
-		adiv5_mem_write_sized(&remote_ap, dest, src, len, align);
-		if (remote_ap.dp->fault) {
-			/* Errors are handled on the host side */
-			remote_respond(REMOTE_RESP_ERR, 0);
-			remote_ap.dp->fault = 0;
-			break;
-		}
-		remote_respond(REMOTE_RESP_OK, 0);
-		break;
-	}
 	default:
 		remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_UNRECOGNISED);
 		break;
@@ -470,6 +432,33 @@ static void remote_packet_process_adiv5(const char *const packet)
 		/* Perform the read and send back the results */
 		adiv5_mem_read(&remote_ap, data, address, length);
 		remote_adiv5_respond(data, length);
+		break;
+	}
+	case REMOTE_MEM_WRITE: { /* Am = Write to memory */
+		/* Grab the CSW value to use in the access */
+		remote_ap.csw = remote_hex_string_to_num(8, packet + 6);
+		/* Grab the alignment for the access */
+		const align_e align = remote_hex_string_to_num(2, packet + 14U);
+		/* Grab the start address for the write */
+		const uint32_t dest = remote_hex_string_to_num(8, packet + 16U);
+		/* And how many bytes to read, validating it for buffer overflows */
+		const size_t length = remote_hex_string_to_num(8, packet + 24U);
+		if (length > 1024U) {
+			remote_respond(REMOTE_RESP_PARERR, 0);
+			break;
+		}
+		/* Validate the alignment is suitable */
+		if (length & ((1U << align) - 1U)) {
+			remote_respond(REMOTE_RESP_PARERR, 0);
+			break;
+		}
+		/* Get the aligned packet buffer to reuse for the data to write */
+		void *data = gdb_packet_buffer();
+		/* And decode the data from the packet into it */
+		unhexify(data, packet + 32U, length);
+		/* Perform the write and report success/failures */
+		adiv5_mem_write_sized(&remote_ap, dest, data, length, align);
+		remote_adiv5_respond(NULL, 0);
 		break;
 	}
 

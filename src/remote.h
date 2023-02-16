@@ -245,8 +245,6 @@
 #define REMOTE_ADIv5_RAW_ACCESS 'R'
 #define REMOTE_MEM_READ         'm'
 #define REMOTE_MEM_WRITE        'M'
-#define REMOTE_MEM_READ_CSW     'c'
-#define REMOTE_MEM_WRITE_CSW    'C'
 
 #define REMOTE_ADIv5_DEV_INDEX '%', '0', '2', 'x'
 #define REMOTE_ADIv5_AP_SEL    '%', '0', '2', 'x'
@@ -254,6 +252,7 @@
 #define REMOTE_ADIv5_ADDR32    '%', '0', '8', 'x'
 #define REMOTE_ADIv5_DATA      '%', '0', '8', 'x'
 #define REMOTE_ADIv5_CSW       '%', '0', '8', 'x'
+#define REMOTE_ADIv5_ALIGNMENT '%', '0', '2', 'x'
 #define REMOTE_ADIv5_COUNT     '%', '0', '8', 'x'
 
 #define REMOTE_DP_READ_STR                                                                                      \
@@ -286,18 +285,11 @@
 		REMOTE_SOM, REMOTE_ADIv5_PACKET, REMOTE_MEM_READ, REMOTE_ADIv5_DEV_INDEX, REMOTE_ADIv5_AP_SEL, \
 			REMOTE_ADIv5_CSW, REMOTE_ADIv5_ADDR32, REMOTE_ADIv5_COUNT, REMOTE_EOM, 0                   \
 	}
-
-#define REMOTE_AP_MEM_WRITE_SIZED_STR                                                                                  \
-	(char[])                                                                                                           \
-	{                                                                                                                  \
-		REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_MEM_WRITE_CSW, '%', '0', '2', 'x', '%', '0', '2', 'x', HEX_U32(csw), '%', \
-			'0', '2', 'x', HEX_U32(address), HEX_U32(count), 0                                                         \
-	}
-#define REMOTE_MEM_WRITE_SIZED_STR                                                                                    \
-	(char[])                                                                                                          \
-	{                                                                                                                 \
-		REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_MEM_WRITE_CSW, '%', '0', '2', 'x', '%', '0', '2', 'x', HEX_U32(address), \
-			HEX_U32(count), 0                                                                                         \
+#define REMOTE_ADIv5_MEM_WRITE_STR                                                                      \
+	(char[])                                                                                            \
+	{                                                                                                   \
+		REMOTE_SOM, REMOTE_ADIv5_PACKET, REMOTE_MEM_WRITE, REMOTE_ADIv5_DEV_INDEX, REMOTE_ADIv5_AP_SEL, \
+			REMOTE_ADIv5_CSW, REMOTE_ADIv5_ALIGNMENT, REMOTE_ADIv5_ADDR32, REMOTE_ADIv5_COUNT, 0        \
 	}
 
 uint64_t remote_hex_string_to_num(uint32_t limit, const char *str);
