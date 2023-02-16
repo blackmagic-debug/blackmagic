@@ -194,17 +194,26 @@ static uint32_t remote_adiv5_dp_read(adiv5_debug_port_s *const target_dp, const 
 	return value;
 }
 
-static uint32_t remote_adiv5_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value)
+static uint32_t remote_adiv5_raw_access(
+	adiv5_debug_port_s *const target_dp, const uint8_t rnw, const uint16_t addr, const uint32_t request_value)
 {
 	char buffer[REMOTE_MAX_MSG_SIZE];
-	int length = snprintf(buffer, REMOTE_MAX_MSG_SIZE, REMOTE_ADIv5_RAW_ACCESS_STR, dp->dev_index, RnW, addr, value);
+	/* Create the request and send it to the remote */
+	int length = snprintf(
+		buffer, REMOTE_MAX_MSG_SIZE, REMOTE_ADIv5_RAW_ACCESS_STR, target_dp->dev_index, rnw, addr, request_value);
 	platform_buffer_write(buffer, length);
+	/* Read back the answer and check for errors */
 	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
-	if (length < 1 || buffer[0] == REMOTE_RESP_ERR)
-		DEBUG_WARN("%s error %d\n", __func__, length);
-	uint32_t dest;
-	unhexify(&dest, buffer + 1, 4);
-	return dest;
+	if (!remote_adiv5_check_error(__func__, target_dp, buffer, length))
+		return 0U;
+	/* If the response indicates all's OK, decode the data read and return it */
+	uint32_t result_value = 0U;
+	unhexify(&result_value, buffer + 1, 4);
+	DEBUG_PROBE("%s: addr %04x %s %08" PRIx32, __func__, addr, rnw ? "->" : "<-", rnw ? result_value : request_value);
+	if (!rnw)
+		DEBUG_PROBE(" -> %08" PRIx32, result_value);
+	DEBUG_PROBE("\n");
+	return result_value;
 }
 
 static uint32_t remote_adiv5_ap_read(adiv5_access_port_s *ap, uint16_t addr)
@@ -301,7 +310,7 @@ void remote_adiv5_dp_defaults(adiv5_debug_port_s *dp)
 		DEBUG_WARN("Please update BMP firmware for substantial speed increase!\n");
 		return;
 	}
-	dp->low_access = remote_adiv5_low_access;
+	dp->low_access = remote_adiv5_raw_access;
 	dp->dp_read = remote_adiv5_dp_read;
 	dp->ap_write = remote_adiv5_ap_write;
 	dp->ap_read = remote_adiv5_ap_read;
