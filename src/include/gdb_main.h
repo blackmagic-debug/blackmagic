@@ -22,9 +22,12 @@
 #define INCLUDE_GDB_MAIN_H
 
 #include "target.h"
+
 extern bool gdb_target_running;
 extern target_s *cur_target;
+
 void gdb_poll_target(void);
 void gdb_main(char *pbuf, size_t pbuf_size, size_t size);
+char *gdb_packet_buffer();
 
 #endif /* INCLUDE_GDB_MAIN_H */

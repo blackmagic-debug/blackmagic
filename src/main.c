@@ -33,7 +33,13 @@
 #endif
 
 #define BUF_SIZE 1024U
-static char pbuf[BUF_SIZE + 1U];
+/* This has to be aligned so the remote protocol can re-use it without causing Problems */
+static char pbuf[BUF_SIZE + 1U] __attribute__((aligned(8)));
+
+char *gdb_packet_buffer()
+{
+	return pbuf;
+}
 
 static void bmp_poll_loop(void)
 {
