@@ -103,80 +103,73 @@ extern int cl_debuglevel;
 
 static inline void DEBUG_WARN(const char *format, ...)
 {
-	va_list ap;
-	va_start(ap, format);
-	vfprintf(stderr, format, ap);
-	va_end(ap);
-	return;
+	va_list args;
+	va_start(args, format);
+	vfprintf(stderr, format, args);
+	va_end(args);
 }
 
 static inline void DEBUG_INFO(const char *format, ...)
 {
 	if (~cl_debuglevel & BMP_DEBUG_INFO)
 		return;
-	va_list ap;
-	va_start(ap, format);
+	va_list args;
+	va_start(args, format);
 	if (cl_debuglevel & BMP_DEBUG_STDOUT)
-		vfprintf(stdout, format, ap);
+		vfprintf(stdout, format, args);
 	else
-		vfprintf(stderr, format, ap);
-	va_end(ap);
-	return;
+		vfprintf(stderr, format, args);
+	va_end(args);
 }
 
 static inline void DEBUG_GDB(const char *format, ...)
 {
 	if (~cl_debuglevel & BMP_DEBUG_GDB)
 		return;
-	va_list ap;
-	va_start(ap, format);
-	vfprintf(stderr, format, ap);
-	va_end(ap);
-	return;
+	va_list args;
+	va_start(args, format);
+	vfprintf(stderr, format, args);
+	va_end(args);
 }
 
 static inline void DEBUG_GDB_WIRE(const char *format, ...)
 {
 	if ((cl_debuglevel & (BMP_DEBUG_GDB | BMP_DEBUG_WIRE)) != (BMP_DEBUG_GDB | BMP_DEBUG_WIRE))
 		return;
-	va_list ap;
-	va_start(ap, format);
-	vfprintf(stderr, format, ap);
-	va_end(ap);
-	return;
+	va_list args;
+	va_start(args, format);
+	vfprintf(stderr, format, args);
+	va_end(args);
 }
 
 static inline void DEBUG_TARGET(const char *format, ...)
 {
 	if (~cl_debuglevel & BMP_DEBUG_TARGET)
 		return;
-	va_list ap;
-	va_start(ap, format);
-	vfprintf(stderr, format, ap);
-	va_end(ap);
-	return;
+	va_list args;
+	va_start(args, format);
+	vfprintf(stderr, format, args);
+	va_end(args);
 }
 
 static inline void DEBUG_PROBE(const char *format, ...)
 {
 	if (~cl_debuglevel & BMP_DEBUG_PROBE)
 		return;
-	va_list ap;
-	va_start(ap, format);
-	vfprintf(stderr, format, ap);
-	va_end(ap);
-	return;
+	va_list args;
+	va_start(args, format);
+	vfprintf(stderr, format, args);
+	va_end(args);
 }
 
 static inline void DEBUG_WIRE(const char *format, ...)
 {
 	if (~cl_debuglevel & BMP_DEBUG_WIRE)
 		return;
-	va_list ap;
-	va_start(ap, format);
-	vfprintf(stderr, format, ap);
-	va_end(ap);
-	return;
+	va_list args;
+	va_start(args, format);
+	vfprintf(stderr, format, args);
+	va_end(args);
 }
 #endif
 
