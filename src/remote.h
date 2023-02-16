@@ -70,6 +70,11 @@
 #define REMOTE_RESP_ERR    'E'
 #define REMOTE_RESP_NOTSUP 'N'
 
+/* Protocol data elements */
+#define REMOTE_UINT8  '%', '0', '2', 'x'
+#define REMOTE_UINT16 '%', '0', '4', 'x'
+#define REMOTE_UINT32 '%', '0', '8', 'x'
+
 /* Generic protocol elements */
 #define REMOTE_GEN_PACKET 'G'
 
@@ -215,23 +220,22 @@
 #define REMOTE_HL_PACKET 'H'
 #define REMOTE_HL_CHECK  'C'
 
-#define REMOTE_JTAG_ADD_DEV_STR                                                                  \
-	(char[])                                                                                     \
-	{                                                                                            \
-		REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_ADD_JTAG_DEV, '%', '0', '2', 'x', /* index */       \
-			'%', '0', '2', 'x',                                                /* dr_prescan */  \
-			'%', '0', '2', 'x',                                                /* dr_postscan */ \
-			'%', '0', '2', 'x',                                                /* ir_len */      \
-			'%', '0', '2', 'x',                                                /* ir_prescan */  \
-			'%', '0', '2', 'x',                                                /* ir_postscan */ \
-			'%', '0', '8', 'x',                                                /* current_ir */  \
-			REMOTE_EOM, 0                                                                        \
-	}
-
 #define REMOTE_HL_CHECK_STR                                          \
 	(char[])                                                         \
 	{                                                                \
 		REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_HL_CHECK, REMOTE_EOM, 0 \
+	}
+#define REMOTE_JTAG_ADD_DEV_STR                                                            \
+	(char[])                                                                               \
+	{                                                                                      \
+		REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_ADD_JTAG_DEV, REMOTE_UINT8, /* index */       \
+			REMOTE_UINT8,                                                /* dr_prescan */  \
+			REMOTE_UINT8,                                                /* dr_postscan */ \
+			REMOTE_UINT8,                                                /* ir_len */      \
+			REMOTE_UINT8,                                                /* ir_prescan */  \
+			REMOTE_UINT8,                                                /* ir_postscan */ \
+			REMOTE_UINT32,                                               /* current_ir */  \
+			REMOTE_EOM, 0                                                                  \
 	}
 
 /* ADIv5 protocol elements */
@@ -243,14 +247,14 @@
 #define REMOTE_MEM_READ         'm'
 #define REMOTE_MEM_WRITE        'M'
 
-#define REMOTE_ADIv5_DEV_INDEX '%', '0', '2', 'x'
-#define REMOTE_ADIv5_AP_SEL    '%', '0', '2', 'x'
-#define REMOTE_ADIv5_ADDR16    '%', '0', '4', 'x'
-#define REMOTE_ADIv5_ADDR32    '%', '0', '8', 'x'
-#define REMOTE_ADIv5_DATA      '%', '0', '8', 'x'
-#define REMOTE_ADIv5_CSW       '%', '0', '8', 'x'
-#define REMOTE_ADIv5_ALIGNMENT '%', '0', '2', 'x'
-#define REMOTE_ADIv5_COUNT     '%', '0', '8', 'x'
+#define REMOTE_ADIv5_DEV_INDEX REMOTE_UINT8
+#define REMOTE_ADIv5_AP_SEL    REMOTE_UINT8
+#define REMOTE_ADIv5_ADDR16    REMOTE_UINT16
+#define REMOTE_ADIv5_ADDR32    REMOTE_UINT32
+#define REMOTE_ADIv5_DATA      REMOTE_UINT32
+#define REMOTE_ADIv5_CSW       REMOTE_UINT32
+#define REMOTE_ADIv5_ALIGNMENT REMOTE_UINT8
+#define REMOTE_ADIv5_COUNT     REMOTE_UINT32
 
 #define REMOTE_DP_READ_STR                                                                                      \
 	(char[])                                                                                                    \
