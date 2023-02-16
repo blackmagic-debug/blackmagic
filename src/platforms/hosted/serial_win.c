@@ -227,24 +227,24 @@ void serial_close(void)
 	port_handle = INVALID_HANDLE_VALUE;
 }
 
-/* XXX: This should return bool and the size parameter should be size_t as it cannot be negative. */
-int platform_buffer_write(const uint8_t *data, int size)
+bool platform_buffer_write(const void *const data, const size_t length)
 {
-	DEBUG_WIRE("%s\n", data);
+	const char *const buffer = (const char *)data;
+	DEBUG_WIRE("%s\n", buffer);
 	DWORD written = 0;
-	for (size_t offset = 0; offset < (size_t)size; offset += written) {
-		if (!WriteFile(port_handle, data + offset, size - offset, &written, NULL)) {
+	for (size_t offset = 0; offset < length; offset += written) {
+		if (!WriteFile(port_handle, buffer + offset, length - offset, &written, NULL)) {
 			DEBUG_WARN("Serial write failed %lu, written %zu\n", GetLastError(), offset);
-			return -1;
+			return false;
 		}
 		offset += written;
 	}
-	return 0;
+	return true;
 }
 
-/* XXX: The size parameter should be size_t and we should either return size_t or bool */
+/* XXX: We should either return size_t or bool */
 /* XXX: This needs documenting that it can abort the program with exit(), or the error handling fixed */
-int platform_buffer_read(uint8_t *data, int maxsize)
+int platform_buffer_read(void *const data, const size_t length)
 {
 	DWORD read = 0;
 	char response = 0;
@@ -261,23 +261,24 @@ int platform_buffer_read(uint8_t *data, int maxsize)
 			exit(-4);
 		}
 	}
+	char *const buffer = (char *)data;
 	/* Now collect the response */
-	for (size_t offset = 0; offset < (size_t)maxsize && platform_time_ms() < end_time;) {
-		if (!ReadFile(port_handle, data + offset, 1, &read, NULL)) {
+	for (size_t offset = 0; offset < length && platform_time_ms() < end_time;) {
+		if (!ReadFile(port_handle, buffer + offset, 1, &read, NULL)) {
 			DEBUG_WARN("Error on read\n");
 			exit(-3);
 		}
 		if (read > 0) {
-			DEBUG_WIRE("%c", data[offset]);
-			if (data[offset] == REMOTE_EOM) {
-				data[offset] = 0;
+			DEBUG_WIRE("%c", buffer[offset]);
+			if (buffer[offset] == REMOTE_EOM) {
+				buffer[offset] = 0;
 				DEBUG_WIRE("\n");
 				return offset;
 			}
 			++offset;
 		}
 	}
-	DEBUG_WARN("Failed to read EOM at %u\n", platform_time_ms() - start_time);
+	DEBUG_WARN("Failed to read response after %ums\n", platform_time_ms() - start_time);
 	exit(-3);
 	return 0;
 }
