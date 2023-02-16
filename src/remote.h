@@ -215,20 +215,17 @@
 #define REMOTE_HL_PACKET 'H'
 #define REMOTE_HL_CHECK  'C'
 
-#define HEX_U32(x) '%', '0', '8', 'x'
-#define CHR(x)     '%', 'c'
-
-#define REMOTE_JTAG_ADD_DEV_STR                                                                    \
-	(char[])                                                                                       \
-	{                                                                                              \
-		REMOTE_SOM, REMOTE_JTAG_PACKET, REMOTE_ADD_JTAG_DEV, '%', '0', '2', 'x', /* index */       \
-			'%', '0', '2', 'x',                                                  /* dr_prescan */  \
-			'%', '0', '2', 'x',                                                  /*	dr_postscan	*/ \
-			'%', '0', '2', 'x',                                                  /* ir_len */      \
-			'%', '0', '2', 'x',                                                  /* ir_prescan */  \
-			'%', '0', '2', 'x',                                                  /* ir_postscan */ \
-			HEX_U32(current_ir),                                                 /* current_ir */  \
-			REMOTE_EOM, 0                                                                          \
+#define REMOTE_JTAG_ADD_DEV_STR                                                                  \
+	(char[])                                                                                     \
+	{                                                                                            \
+		REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_ADD_JTAG_DEV, '%', '0', '2', 'x', /* index */       \
+			'%', '0', '2', 'x',                                                /* dr_prescan */  \
+			'%', '0', '2', 'x',                                                /* dr_postscan */ \
+			'%', '0', '2', 'x',                                                /* ir_len */      \
+			'%', '0', '2', 'x',                                                /* ir_prescan */  \
+			'%', '0', '2', 'x',                                                /* ir_postscan */ \
+			'%', '0', '8', 'x',                                                /* current_ir */  \
+			REMOTE_EOM, 0                                                                        \
 	}
 
 #define REMOTE_HL_CHECK_STR                                          \
