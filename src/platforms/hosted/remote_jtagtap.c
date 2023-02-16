@@ -50,10 +50,10 @@ static inline unsigned int bool_to_int(const bool value)
 
 bool remote_jtagtap_init(void)
 {
-	platform_buffer_write((uint8_t *)REMOTE_JTAG_INIT_STR, sizeof(REMOTE_JTAG_INIT_STR));
+	platform_buffer_write(REMOTE_JTAG_INIT_STR, sizeof(REMOTE_JTAG_INIT_STR));
 
 	char buffer[REMOTE_MAX_MSG_SIZE];
-	int length = platform_buffer_read((uint8_t *)buffer, REMOTE_MAX_MSG_SIZE);
+	int length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	if (!length || buffer[0] == REMOTE_RESP_ERR) {
 		DEBUG_WARN("jtagtap_init failed, error %s\n", length ? buffer + 1 : "unknown");
 		exit(-1);
@@ -66,8 +66,8 @@ bool remote_jtagtap_init(void)
 	jtag_proc.jtagtap_tdi_seq = jtagtap_tdi_seq;
 	jtag_proc.tap_idle_cycles = 1;
 
-	platform_buffer_write((uint8_t *)REMOTE_HL_CHECK_STR, sizeof(REMOTE_HL_CHECK_STR));
-	length = platform_buffer_read((uint8_t *)buffer, REMOTE_MAX_MSG_SIZE);
+	platform_buffer_write(REMOTE_HL_CHECK_STR, sizeof(REMOTE_HL_CHECK_STR));
+	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	if (!length || buffer[0] == REMOTE_RESP_ERR || buffer[0] == 1)
 		PRINT_INFO("Firmware does not support newer JTAG commands, please update it.");
 	else
@@ -80,9 +80,9 @@ bool remote_jtagtap_init(void)
 
 static void jtagtap_reset(void)
 {
-	platform_buffer_write((uint8_t *)REMOTE_JTAG_RESET_STR, sizeof(REMOTE_JTAG_RESET_STR));
+	platform_buffer_write(REMOTE_JTAG_RESET_STR, sizeof(REMOTE_JTAG_RESET_STR));
 	char buffer[REMOTE_MAX_MSG_SIZE];
-	const int length = platform_buffer_read((uint8_t *)buffer, REMOTE_MAX_MSG_SIZE);
+	const int length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	if (!length || buffer[0] == REMOTE_RESP_ERR) {
 		DEBUG_WARN("jtagtap_reset failed, error %s\n", length ? buffer + 1 : "unknown");
 		exit(-1);
@@ -93,9 +93,9 @@ static void jtagtap_tms_seq(uint32_t tms_states, size_t clock_cycles)
 {
 	char buffer[REMOTE_MAX_MSG_SIZE];
 	int length = snprintf(buffer, REMOTE_MAX_MSG_SIZE, REMOTE_JTAG_TMS_STR, clock_cycles, tms_states);
-	platform_buffer_write((uint8_t *)buffer, length);
+	platform_buffer_write(buffer, length);
 
-	length = platform_buffer_read((uint8_t *)buffer, REMOTE_MAX_MSG_SIZE);
+	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	if (!length || buffer[0] == REMOTE_RESP_ERR) {
 		DEBUG_WARN("jtagtap_tms_seq failed, error %s\n", length ? buffer + 1 : "unknown");
 		exit(-1);
@@ -144,10 +144,10 @@ static void jtagtap_tdi_tdo_seq(
 		 */
 		int length =
 			snprintf(buffer, REMOTE_MAX_MSG_SIZE, "!J%c%02zx%" PRIx64 "%c", tms_state, chunk, data, REMOTE_EOM);
-		platform_buffer_write((uint8_t *)buffer, length);
+		platform_buffer_write(buffer, length);
 
 		/* Receive the response and check if it's an error response */
-		length = platform_buffer_read((uint8_t *)buffer, REMOTE_MAX_MSG_SIZE);
+		length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 		if (!length || buffer[0] == REMOTE_RESP_ERR) {
 			DEBUG_WARN("jtagtap_tdi_tdo_seq failed, error %s\n", length ? buffer + 1 : "unknown");
 			exit(-1);
@@ -169,9 +169,9 @@ static bool jtagtap_next(const bool tms, const bool tdi)
 {
 	char buffer[REMOTE_MAX_MSG_SIZE];
 	int length = snprintf((char *)buffer, REMOTE_MAX_MSG_SIZE, REMOTE_JTAG_NEXT, bool_to_int(tms), bool_to_int(tdi));
-	platform_buffer_write((uint8_t *)buffer, length);
+	platform_buffer_write(buffer, length);
 
-	length = platform_buffer_read((uint8_t *)buffer, REMOTE_MAX_MSG_SIZE);
+	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	if (!length || buffer[0] == REMOTE_RESP_ERR) {
 		DEBUG_WARN("jtagtap_next failed, error %s\n", length ? buffer + 1 : "unknown");
 		exit(-1);
@@ -185,9 +185,9 @@ static void jtagtap_cycle(const bool tms, const bool tdi, const size_t clock_cyc
 	char buffer[REMOTE_MAX_MSG_SIZE];
 	int length =
 		snprintf(buffer, REMOTE_MAX_MSG_SIZE, REMOTE_JTAG_CYCLE_STR, bool_to_int(tms), bool_to_int(tdi), clock_cycles);
-	platform_buffer_write((uint8_t *)buffer, length);
+	platform_buffer_write(buffer, length);
 
-	length = platform_buffer_read((uint8_t *)buffer, REMOTE_MAX_MSG_SIZE);
+	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	if (!length || buffer[0] == REMOTE_RESP_ERR) {
 		DEBUG_WARN("jtagtap_cycle failed, error %s\n", length ? buffer + 1 : "unknown");
 		exit(-1);
