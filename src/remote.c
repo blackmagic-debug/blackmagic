@@ -325,12 +325,11 @@ static void remote_packet_process_general(unsigned i, char *packet)
 static void remote_packet_process_high_level(const char *packet, const size_t packet_len)
 {
 	SET_IDLE_STATE(0);
-	char index = packet[1];
-	if (index == REMOTE_HL_CHECK) {
+	switch (packet[1]) {
+	case REMOTE_HL_CHECK: /* HC = check the version of the protocol */
 		remote_respond(REMOTE_RESP_OK, REMOTE_HL_VERSION);
-		return;
-	}
-	switch (index) {
+		break;
+
 	case REMOTE_ADD_JTAG_DEV: /* HJ = fill firmware jtag_devs */
 		if (packet_len < 22U) {
 			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_WRONGLEN);
