@@ -63,7 +63,15 @@
 #define REMOTE_EOM  '#'
 #define REMOTE_RESP '&'
 
+/* Protocol response options */
+#define REMOTE_RESP_OK     'K'
+#define REMOTE_RESP_PARERR 'P'
+#define REMOTE_RESP_ERR    'E'
+#define REMOTE_RESP_NOTSUP 'N'
+
 /* Generic protocol elements */
+#define REMOTE_GEN_PACKET 'G'
+
 #define REMOTE_START         'A'
 #define REMOTE_TDITDO_TMS    'D'
 #define REMOTE_TDITDO_NOTMS  'd'
@@ -86,26 +94,6 @@
 #define REMOTE_NRST_GET      'z'
 #define REMOTE_ADD_JTAG_DEV  'J'
 
-/* Protocol response options */
-#define REMOTE_RESP_OK     'K'
-#define REMOTE_RESP_PARERR 'P'
-#define REMOTE_RESP_ERR    'E'
-#define REMOTE_RESP_NOTSUP 'N'
-
-/* High level protocol elements */
-#define REMOTE_HL_CHECK           'C'
-#define REMOTE_HL_PACKET          'H'
-#define REMOTE_DP_READ            'd'
-#define REMOTE_LOW_ACCESS         'L'
-#define REMOTE_AP_READ            'a'
-#define REMOTE_AP_WRITE           'A'
-#define REMOTE_AP_MEM_READ        'M'
-#define REMOTE_MEM_READ           'h'
-#define REMOTE_MEM_WRITE_SIZED    'H'
-#define REMOTE_AP_MEM_WRITE_SIZED 'm'
-
-/* Generic protocol elements */
-#define REMOTE_GEN_PACKET 'G'
 #define REMOTE_START_STR                                                            \
 	(char[])                                                                        \
 	{                                                                               \
@@ -222,7 +210,18 @@
 		REMOTE_SOM, REMOTE_JTAG_PACKET, REMOTE_NEXT, '%', 'u', '%', 'u', REMOTE_EOM, 0 \
 	}
 
-/* HL protocol elements */
+/* High-level protocol elements */
+#define REMOTE_HL_PACKET          'H'
+#define REMOTE_HL_CHECK           'C'
+#define REMOTE_DP_READ            'd'
+#define REMOTE_LOW_ACCESS         'L'
+#define REMOTE_AP_READ            'a'
+#define REMOTE_AP_WRITE           'A'
+#define REMOTE_AP_MEM_READ        'M'
+#define REMOTE_MEM_READ           'h'
+#define REMOTE_MEM_WRITE_SIZED    'H'
+#define REMOTE_AP_MEM_WRITE_SIZED 'm'
+
 #define HEX        '%', '0', '2', 'x'
 #define HEX_U32(x) '%', '0', '8', 'x'
 #define CHR(x)     '%', 'c'
