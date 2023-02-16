@@ -164,7 +164,7 @@ static uint32_t remote_adiv5_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uin
 {
 	(void)dp;
 	char construct[REMOTE_MAX_MSG_SIZE];
-	int s = snprintf(construct, REMOTE_MAX_MSG_SIZE, REMOTE_LOW_ACCESS_STR, dp->dp_jd_index, RnW, addr, value);
+	int s = snprintf(construct, REMOTE_MAX_MSG_SIZE, REMOTE_ADIv5_RAW_ACCESS_STR, dp->dp_jd_index, RnW, addr, value);
 	platform_buffer_write((uint8_t *)construct, s);
 	s = platform_buffer_read((uint8_t *)construct, REMOTE_MAX_MSG_SIZE);
 	if (s < 1 || construct[0] == REMOTE_RESP_ERR)
@@ -206,7 +206,7 @@ static void remote_ap_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src
 	size_t batchsize = (REMOTE_MAX_MSG_SIZE - 0x20U) / 2U;
 	for (size_t offset = 0; offset < len; offset += batchsize) {
 		const size_t count = MIN(len - offset, batchsize);
-		int s = snprintf(construct, REMOTE_MAX_MSG_SIZE, REMOTE_AP_MEM_READ_STR, ap->dp->dp_jd_index, ap->apsel,
+		int s = snprintf(construct, REMOTE_MAX_MSG_SIZE, REMOTE_ADIv5_MEM_READ_STR, ap->dp->dp_jd_index, ap->apsel,
 			ap->csw, src + offset, count);
 		platform_buffer_write((uint8_t *)construct, s);
 		s = platform_buffer_read((uint8_t *)construct, REMOTE_MAX_MSG_SIZE);
@@ -237,7 +237,7 @@ static void remote_ap_mem_write_sized(
 	const char *data = (const char *)src;
 	for (size_t offset = 0; offset < len; offset += batchsize) {
 		const size_t count = MIN(len - offset, batchsize);
-		int s = snprintf(construct, REMOTE_MAX_MSG_SIZE, REMOTE_AP_MEM_WRITE_SIZED_STR, ap->dp->dp_jd_index, ap->apsel,
+		int s = snprintf(construct, REMOTE_MAX_MSG_SIZE, REMOTE_ADIv5_MEM_WRITE_STR, ap->dp->dp_jd_index, ap->apsel,
 			ap->csw, align, dest + offset, count);
 		assert(s > 0);
 		hexify(construct + s, data + offset, count);
