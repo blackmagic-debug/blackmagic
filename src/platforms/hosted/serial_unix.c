@@ -205,21 +205,21 @@ void serial_close(void)
 	close(fd);
 }
 
-int platform_buffer_write(const uint8_t *data, int size)
+bool platform_buffer_write(const void *const data, const size_t length)
 {
 	DEBUG_WIRE("%s\n", data);
-	const int written = write(fd, data, size);
+	const ssize_t written = write(fd, data, length);
 	if (written < 0) {
 		const int error = errno;
 		DEBUG_WARN("Failed to write (%d): %s\n", errno, strerror(error));
 		exit(-2);
 	}
-	return size;
+	return (size_t)written == length;
 }
 
-/* XXX: The size parameter should be size_t and we should either return size_t or bool */
+/* XXX: We should either return size_t or bool */
 /* XXX: This needs documenting that it can abort the program with exit(), or the error handling fixed */
-int platform_buffer_read(uint8_t *data, int maxsize)
+int platform_buffer_read(void *const data, size_t length)
 {
 	char response = 0;
 	timeval_s timeout = {
@@ -249,7 +249,7 @@ int platform_buffer_read(uint8_t *data, int maxsize)
 		}
 	}
 	/* Now collect the response */
-	for (size_t offset = 0; offset < (size_t)maxsize;) {
+	for (size_t offset = 0; offset < length;) {
 		fd_set select_set;
 		FD_ZERO(&select_set);
 		FD_SET(fd, &select_set);
@@ -267,8 +267,9 @@ int platform_buffer_read(uint8_t *data, int maxsize)
 			DEBUG_WARN("Failed to read response (%d): %s\n", error, strerror(error));
 			return -6;
 		}
-		if (data[offset] == REMOTE_EOM) {
-			data[offset] = 0;
+		char *const buffer = (char *)data;
+		if (buffer[offset] == REMOTE_EOM) {
+			buffer[offset] = 0;
 			DEBUG_WIRE("       %s\n", data);
 			return offset;
 		}

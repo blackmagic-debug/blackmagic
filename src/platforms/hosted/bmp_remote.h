@@ -27,8 +27,8 @@
 
 #define REMOTE_MAX_MSG_SIZE 1024U
 
-int platform_buffer_write(const uint8_t *data, int size);
-int platform_buffer_read(uint8_t *data, int size);
+bool platform_buffer_write(const void *data, size_t size);
+int platform_buffer_read(void *data, size_t size);
 
 int remote_init(const bool power_up);
 bool remote_swdptap_init(void);
