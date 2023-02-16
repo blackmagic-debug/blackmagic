@@ -27,6 +27,7 @@
 #include "bmp_remote.h"
 #include "cli.h"
 #include "hex_utils.h"
+#include "exception.h"
 
 #include <assert.h>
 #include <sys/time.h>
@@ -169,6 +170,9 @@ static bool remote_adiv5_check_error(
 		/* If the error part of the response code indicates a fault, store the fault value */
 		if (error == REMOTE_ERROR_FAULT)
 			target_dp->fault = response_code >> 8U;
+		/* If the error part indicates an exception had occured, make that happen here too */
+		else if (error == REMOTE_ERROR_EXCEPTION)
+			raise_exception(response_code >> 8U, "Remote protocol exception");
 		/* Otherwise it's an unexpected error */
 		else
 			DEBUG_WARN("%s: Unexpected error %u\n", func, error);
