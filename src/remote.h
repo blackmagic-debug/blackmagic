@@ -241,9 +241,9 @@
 /* ADIv5 protocol elements */
 #define REMOTE_ADIv5_PACKET       'A'
 #define REMOTE_DP_READ            'd'
-#define REMOTE_LOW_ACCESS         'L'
 #define REMOTE_AP_READ            'a'
 #define REMOTE_AP_WRITE           'A'
+#define REMOTE_ADIv5_RAW_ACCESS   'R'
 #define REMOTE_AP_MEM_READ        'M'
 #define REMOTE_MEM_READ           'm'
 #define REMOTE_MEM_WRITE_SIZED    'H'
@@ -252,6 +252,7 @@
 #define REMOTE_ADIv5_DEV_INDEX '%', '0', '2', 'x'
 #define REMOTE_ADIv5_AP_SEL    '%', '0', '2', 'x'
 #define REMOTE_ADIv5_ADDR      '%', '0', '4', 'x'
+#define REMOTE_ADIv5_DATA      '%', '0', '8', 'x'
 
 #define REMOTE_DP_READ_STR                                                                                    \
 	(char[])                                                                                                  \
@@ -259,13 +260,13 @@
 		REMOTE_SOM, REMOTE_ADIv5_PACKET, REMOTE_DP_READ, REMOTE_ADIv5_DEV_INDEX, 'f', 'f', REMOTE_ADIv5_ADDR, \
 			REMOTE_EOM, 0                                                                                     \
 	}
-
-#define REMOTE_LOW_ACCESS_STR                                                                                        \
-	(char[])                                                                                                         \
-	{                                                                                                                \
-		REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_LOW_ACCESS, '%', '0', '2', 'x', '%', '0', '2', 'x', '%', '0', '4', 'x', \
-			HEX_U32(csw), REMOTE_EOM, 0                                                                              \
+#define REMOTE_ADIv5_RAW_ACCESS_STR                                                                            \
+	(char[])                                                                                                   \
+	{                                                                                                          \
+		REMOTE_SOM, REMOTE_ADIv5_PACKET, REMOTE_ADIv5_RAW_ACCESS, REMOTE_ADIv5_DEV_INDEX, REMOTE_ADIv5_AP_SEL, \
+			REMOTE_ADIv5_ADDR, REMOTE_ADIv5_DATA, REMOTE_EOM, 0                                                \
 	}
+
 #define REMOTE_AP_READ_STR                                                                                        \
 	(char[])                                                                                                      \
 	{                                                                                                             \
