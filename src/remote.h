@@ -239,15 +239,15 @@
 	}
 
 /* ADIv5 protocol elements */
-#define REMOTE_ADIv5_PACKET       'A'
-#define REMOTE_DP_READ            'd'
-#define REMOTE_AP_READ            'a'
-#define REMOTE_AP_WRITE           'A'
-#define REMOTE_ADIv5_RAW_ACCESS   'R'
-#define REMOTE_AP_MEM_READ        'M'
-#define REMOTE_MEM_READ           'm'
-#define REMOTE_MEM_WRITE_SIZED    'H'
-#define REMOTE_AP_MEM_WRITE_SIZED 'S'
+#define REMOTE_ADIv5_PACKET     'A'
+#define REMOTE_DP_READ          'd'
+#define REMOTE_AP_READ          'a'
+#define REMOTE_AP_WRITE         'A'
+#define REMOTE_ADIv5_RAW_ACCESS 'R'
+#define REMOTE_MEM_READ         'm'
+#define REMOTE_MEM_WRITE        'M'
+#define REMOTE_MEM_READ_CSW     'c'
+#define REMOTE_MEM_WRITE_CSW    'C'
 
 #define REMOTE_ADIv5_DEV_INDEX '%', '0', '2', 'x'
 #define REMOTE_ADIv5_AP_SEL    '%', '0', '2', 'x'
@@ -279,23 +279,23 @@
 			REMOTE_ADIv5_ADDR, REMOTE_ADIv5_DATA, REMOTE_EOM, 0                                                \
 	}
 
-#define REMOTE_AP_MEM_READ_STR                                                                                  \
-	(char[])                                                                                                    \
-	{                                                                                                           \
-		REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_AP_MEM_READ, '%', '0', '2', 'x', '%', '0', '2', 'x', HEX_U32(csw), \
-			HEX_U32(address), HEX_U32(count), REMOTE_EOM, 0                                                     \
+#define REMOTE_AP_MEM_READ_STR                                                                                   \
+	(char[])                                                                                                     \
+	{                                                                                                            \
+		REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_MEM_READ_CSW, '%', '0', '2', 'x', '%', '0', '2', 'x', HEX_U32(csw), \
+			HEX_U32(address), HEX_U32(count), REMOTE_EOM, 0                                                      \
 	}
 #define REMOTE_AP_MEM_WRITE_SIZED_STR                                                                                  \
 	(char[])                                                                                                           \
 	{                                                                                                                  \
-		REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_AP_MEM_WRITE_SIZED, '%', '0', '2', 'x', '%', '0', '2', 'x', HEX_U32(csw), \
-			'%', '0', '2', 'x', HEX_U32(address), HEX_U32(count), 0                                                    \
+		REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_MEM_WRITE_CSW, '%', '0', '2', 'x', '%', '0', '2', 'x', HEX_U32(csw), '%', \
+			'0', '2', 'x', HEX_U32(address), HEX_U32(count), 0                                                         \
 	}
-#define REMOTE_MEM_WRITE_SIZED_STR                                                                       \
-	(char[])                                                                                             \
-	{                                                                                                    \
-		REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_AP_MEM_WRITE_SIZED, '%', '0', '2', 'x', '%', '0', '2', 'x', \
-			HEX_U32(address), HEX_U32(count), 0                                                          \
+#define REMOTE_MEM_WRITE_SIZED_STR                                                                                    \
+	(char[])                                                                                                          \
+	{                                                                                                                 \
+		REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_MEM_WRITE_CSW, '%', '0', '2', 'x', '%', '0', '2', 'x', HEX_U32(address), \
+			HEX_U32(count), 0                                                                                         \
 	}
 
 uint64_t remote_hex_string_to_num(uint32_t limit, const char *str);
