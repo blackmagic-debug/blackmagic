@@ -144,6 +144,39 @@ void remote_target_clk_output_enable(const bool enable)
 		DEBUG_WARN("remote_target_clk_output_enable failed, error %s\n", length ? buffer + 1 : "unknown");
 }
 
+static uint64_t remote_decode_response(const char *const response, size_t digits)
+{
+	uint64_t value = 0U;
+	for (size_t idx = 0U; idx < digits; ++idx) {
+		value <<= 4U;
+		value |= unhex_digit(response[idx]);
+	}
+	return value;
+}
+
+bool remote_adiv5_check_error(
+	const char *const func, adiv5_debug_port_s *const target_dp, const char *const buffer, const ssize_t length)
+{
+	/* Check the response length for error codes */
+	if (length < 1) {
+		DEBUG_WARN("%s comms error: %zd\n", func, length);
+		return false;
+	}
+	/* Now check if the remote is reporting an error */
+	if (buffer[0] == REMOTE_RESP_ERR) {
+		const uint64_t response_code = remote_decode_response(buffer + 1, (size_t)length - 1U);
+		const uint8_t error = response_code & 0xffU;
+		/* If the error part of the response code indicates a fault, store the fault value */
+		if (error == REMOTE_ERROR_FAULT)
+			target_dp->fault = response_code >> 8U;
+		/* Otherwise it's an unexpected error */
+		else
+			DEBUG_WARN("%s: Unexpected error %u\n", func, error);
+	}
+	/* Return whether the remote indicated the request was successfull */
+	return buffer[0] == REMOTE_RESP_OK;
+}
+
 static uint32_t remote_adiv5_dp_read(adiv5_debug_port_s *dp, uint16_t addr)
 {
 	char buffer[REMOTE_MAX_MSG_SIZE];
