@@ -215,7 +215,6 @@
 #define REMOTE_HL_PACKET 'H'
 #define REMOTE_HL_CHECK  'C'
 
-#define HEX        '%', '0', '2', 'x'
 #define HEX_U32(x) '%', '0', '8', 'x'
 #define CHR(x)     '%', 'c'
 
@@ -251,40 +250,43 @@
 
 #define REMOTE_ADIv5_DEV_INDEX '%', '0', '2', 'x'
 #define REMOTE_ADIv5_AP_SEL    '%', '0', '2', 'x'
-#define REMOTE_ADIv5_ADDR      '%', '0', '4', 'x'
+#define REMOTE_ADIv5_ADDR16    '%', '0', '4', 'x'
+#define REMOTE_ADIv5_ADDR32    '%', '0', '8', 'x'
 #define REMOTE_ADIv5_DATA      '%', '0', '8', 'x'
+#define REMOTE_ADIv5_CSW       '%', '0', '8', 'x'
+#define REMOTE_ADIv5_COUNT     '%', '0', '8', 'x'
 
-#define REMOTE_DP_READ_STR                                                                                    \
-	(char[])                                                                                                  \
-	{                                                                                                         \
-		REMOTE_SOM, REMOTE_ADIv5_PACKET, REMOTE_DP_READ, REMOTE_ADIv5_DEV_INDEX, 'f', 'f', REMOTE_ADIv5_ADDR, \
-			REMOTE_EOM, 0                                                                                     \
+#define REMOTE_DP_READ_STR                                                                                      \
+	(char[])                                                                                                    \
+	{                                                                                                           \
+		REMOTE_SOM, REMOTE_ADIv5_PACKET, REMOTE_DP_READ, REMOTE_ADIv5_DEV_INDEX, 'f', 'f', REMOTE_ADIv5_ADDR16, \
+			REMOTE_EOM, 0                                                                                       \
 	}
 #define REMOTE_AP_READ_STR                                                                            \
 	(char[])                                                                                          \
 	{                                                                                                 \
 		REMOTE_SOM, REMOTE_ADIv5_PACKET, REMOTE_AP_READ, REMOTE_ADIv5_DEV_INDEX, REMOTE_ADIv5_AP_SEL, \
-			REMOTE_ADIv5_ADDR, REMOTE_EOM, 0                                                          \
+			REMOTE_ADIv5_ADDR16, REMOTE_EOM, 0                                                        \
 	}
 #define REMOTE_AP_WRITE_STR                                                                            \
 	(char[])                                                                                           \
 	{                                                                                                  \
 		REMOTE_SOM, REMOTE_ADIv5_PACKET, REMOTE_AP_WRITE, REMOTE_ADIv5_DEV_INDEX, REMOTE_ADIv5_AP_SEL, \
-			REMOTE_ADIv5_ADDR, REMOTE_ADIv5_DATA, REMOTE_EOM, 0                                        \
+			REMOTE_ADIv5_ADDR16, REMOTE_ADIv5_DATA, REMOTE_EOM, 0                                      \
 	}
 #define REMOTE_ADIv5_RAW_ACCESS_STR                                                                            \
 	(char[])                                                                                                   \
 	{                                                                                                          \
 		REMOTE_SOM, REMOTE_ADIv5_PACKET, REMOTE_ADIv5_RAW_ACCESS, REMOTE_ADIv5_DEV_INDEX, REMOTE_ADIv5_AP_SEL, \
-			REMOTE_ADIv5_ADDR, REMOTE_ADIv5_DATA, REMOTE_EOM, 0                                                \
+			REMOTE_ADIv5_ADDR16, REMOTE_ADIv5_DATA, REMOTE_EOM, 0                                              \
+	}
+#define REMOTE_ADIv5_MEM_READ_STR                                                                      \
+	(char[])                                                                                           \
+	{                                                                                                  \
+		REMOTE_SOM, REMOTE_ADIv5_PACKET, REMOTE_MEM_READ, REMOTE_ADIv5_DEV_INDEX, REMOTE_ADIv5_AP_SEL, \
+			REMOTE_ADIv5_CSW, REMOTE_ADIv5_ADDR32, REMOTE_ADIv5_COUNT, REMOTE_EOM, 0                   \
 	}
 
-#define REMOTE_AP_MEM_READ_STR                                                                                   \
-	(char[])                                                                                                     \
-	{                                                                                                            \
-		REMOTE_SOM, REMOTE_HL_PACKET, REMOTE_MEM_READ_CSW, '%', '0', '2', 'x', '%', '0', '2', 'x', HEX_U32(csw), \
-			HEX_U32(address), HEX_U32(count), REMOTE_EOM, 0                                                      \
-	}
 #define REMOTE_AP_MEM_WRITE_SIZED_STR                                                                                  \
 	(char[])                                                                                                           \
 	{                                                                                                                  \
