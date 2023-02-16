@@ -248,31 +248,37 @@ static void remote_adiv5_ap_write(adiv5_access_port_s *const target_ap, const ui
 	DEBUG_PROBE("%s: addr %04x <- %08" PRIx32 "\n", __func__, addr, value);
 }
 
-static void remote_ap_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t len)
+static void remote_adiv5_mem_read_bytes(
+	adiv5_access_port_s *const target_ap, void *const dest, const uint32_t src, const size_t read_length)
 {
-	(void)ap;
-	if (len == 0)
+	/* Check if we have anything to do */
+	if (!read_length)
 		return;
+	char *const data = (char *)dest;
+	DEBUG_PROBE("%s: @%08" PRIx32 "+%zx\n", __func__, src, read_length);
 	char buffer[REMOTE_MAX_MSG_SIZE];
-	size_t batchsize = (REMOTE_MAX_MSG_SIZE - 0x20U) / 2U;
-	for (size_t offset = 0; offset < len; offset += batchsize) {
-		const size_t count = MIN(len - offset, batchsize);
-		int s = snprintf(buffer, REMOTE_MAX_MSG_SIZE, REMOTE_ADIv5_MEM_READ_STR, ap->dp->dev_index, ap->apsel, ap->csw,
-			src + offset, count);
-		platform_buffer_write(buffer, s);
-		s = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
-		if (s > 0 && buffer[0] == REMOTE_RESP_OK) {
-			unhexify(dest + offset, (const char *)&buffer[1], count);
-			continue;
+	/*
+	 * As we do, calculate how large a transfer we can do to the firmware.
+	 * there are 2 leader bytes around responses and the data is hex-encoded taking 2 bytes a byte
+	 */
+	const size_t blocksize = (REMOTE_MAX_MSG_SIZE - 2U) / 2U;
+	/* For each transfer block size, ask the firmware to read that block of bytes */
+	for (size_t offset = 0; offset < read_length; offset += blocksize) {
+		/* Pick the amount left to read or the block size, whichever is smaller */
+		const size_t amount = MIN(read_length - offset, blocksize);
+		/* Create the request and send it to the remote */
+		int length = snprintf(buffer, REMOTE_MAX_MSG_SIZE, REMOTE_ADIv5_MEM_READ_STR, target_ap->dp->dev_index,
+			target_ap->apsel, target_ap->csw, src + offset, amount);
+		platform_buffer_write(buffer, length);
+
+		/* Read back the answer and check for errors */
+		length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
+		if (!remote_adiv5_check_error(__func__, target_ap->dp, buffer, length)) {
+			DEBUG_WARN("%s error around 0x%08zx\n", __func__, (size_t)src + offset);
+			return;
 		}
-		if (buffer[0] == REMOTE_RESP_ERR) {
-			ap->dp->fault = 1;
-			DEBUG_WARN(
-				"%s returned REMOTE_RESP_ERR at apsel %u, addr: 0x%08zx\n", __func__, ap->apsel, (size_t)src + offset);
-			break;
-		}
-		DEBUG_WARN("%s error %d around 0x%08zx\n", __func__, s, (size_t)src + offset);
-		break;
+		/* If the response indicates all's OK, decode the data read */
+		unhexify(data + offset, buffer + 1, amount);
 	}
 }
 
@@ -323,7 +329,7 @@ void remote_adiv5_dp_defaults(adiv5_debug_port_s *dp)
 	dp->dp_read = remote_adiv5_dp_read;
 	dp->ap_write = remote_adiv5_ap_write;
 	dp->ap_read = remote_adiv5_ap_read;
-	dp->mem_read = remote_ap_mem_read;
+	dp->mem_read = remote_adiv5_mem_read_bytes;
 	dp->mem_write = remote_ap_mem_write_sized;
 }
 
