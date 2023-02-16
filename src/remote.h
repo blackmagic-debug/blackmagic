@@ -297,7 +297,7 @@
 			HEX_U32(address), HEX_U32(count), 0                                                          \
 	}
 
-uint64_t remotehston(uint32_t limit, const char *s);
+uint64_t remote_hex_string_to_num(uint32_t limit, const char *str);
 void remote_packet_process(unsigned int i, char *packet);
 
 #endif /* REMOTE_H */
