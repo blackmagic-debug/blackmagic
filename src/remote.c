@@ -102,18 +102,19 @@ static void remote_respond(const char response_code, uint64_t param)
 	gdb_if_putchar(REMOTE_EOM, true);
 }
 
-static void remote_respond_string(char response_code, const char *s)
-/* Send response to far end */
+/* Send a response with a string following */
+static void remote_respond_string(const char response_code, const char *const str)
 {
 	gdb_if_putchar(REMOTE_RESP, 0);
 	gdb_if_putchar(response_code, 0);
-	while (*s) {
-		/* Just clobber illegal characters so they don't disturb the protocol */
-		if ((*s == '$') || (*s == REMOTE_SOM) || (*s == REMOTE_EOM))
+	const size_t str_length = strlen(str);
+	for (size_t idx = 0; idx < str_length; ++idx) {
+		const char chr = str[idx];
+		/* Replace problematic/illegal characters with a space to not disturb the protocol */
+		if (chr == '$' || chr == REMOTE_SOM || chr == REMOTE_EOM)
 			gdb_if_putchar(' ', 0);
 		else
-			gdb_if_putchar(*s, 0);
-		s++;
+			gdb_if_putchar(chr, 0);
 	}
 	gdb_if_putchar(REMOTE_EOM, 1);
 }
