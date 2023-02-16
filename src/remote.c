@@ -371,8 +371,14 @@ static void remote_adiv5_respond(const void *const data, const size_t length)
 	}
 }
 
-static void remote_packet_process_adiv5(const char *const packet)
+static void remote_packet_process_adiv5(const char *const packet, const size_t packet_len)
 {
+	/* Our shortest ADIv5 packet is 8 bytes long, check that we have at least that */
+	if (packet_len < 8U) {
+		remote_respond(REMOTE_RESP_PARERR, 0);
+		return;
+	}
+
 	/* Set up the DP and a fake AP structure to perform the access with */
 	remote_dp.dp_jd_index = remote_hex_string_to_num(2, packet + 2);
 	adiv5_access_port_s remote_ap;
@@ -489,7 +495,7 @@ void remote_packet_process(unsigned i, char *packet)
 		break;
 
 	case REMOTE_ADIv5_PACKET:
-		remote_packet_process_adiv5(packet);
+		remote_packet_process_adiv5(packet, i);
 		break;
 
 	default: /* Oh dear, unrecognised, return an error */
