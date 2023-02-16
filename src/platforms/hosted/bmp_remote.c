@@ -30,17 +30,16 @@
 
 #include <assert.h>
 #include <sys/time.h>
-#include <sys/time.h>
 #include <errno.h>
 
 #include "adiv5.h"
 
 int remote_init(const bool power_up)
 {
+	platform_buffer_write(REMOTE_START_STR, sizeof(REMOTE_START_STR));
+
 	char buffer[REMOTE_MAX_MSG_SIZE];
-	int length = snprintf(buffer, REMOTE_MAX_MSG_SIZE, "%s", REMOTE_START_STR);
-	platform_buffer_write(buffer, length);
-	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
+	const int length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	if (length < 1 || buffer[0] == REMOTE_RESP_ERR) {
 		DEBUG_WARN("Remote Start failed, error %s\n", length ? buffer + 1 : "unknown");
 		return -1;
