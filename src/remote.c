@@ -330,22 +330,25 @@ static void remote_packet_process_high_level(const char *packet, const size_t pa
 		remote_respond(REMOTE_RESP_OK, REMOTE_HL_VERSION);
 		break;
 
-	case REMOTE_ADD_JTAG_DEV: /* HJ = fill firmware jtag_devs */
+	case REMOTE_ADD_JTAG_DEV: { /* HJ = fill firmware jtag_devs */
+		/* Check the packet is an appropriate length */
 		if (packet_len < 22U) {
 			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_WRONGLEN);
-		} else {
-			jtag_dev_s jtag_dev = {};
-			const uint32_t index = remote_hex_string_to_num(2, &packet[2]);
-			jtag_dev.dr_prescan = remote_hex_string_to_num(2, &packet[4]);
-			jtag_dev.dr_postscan = remote_hex_string_to_num(2, &packet[6]);
-			jtag_dev.ir_len = remote_hex_string_to_num(2, &packet[8]);
-			jtag_dev.ir_prescan = remote_hex_string_to_num(2, &packet[10]);
-			jtag_dev.ir_postscan = remote_hex_string_to_num(2, &packet[12]);
-			jtag_dev.current_ir = remote_hex_string_to_num(8, &packet[14]);
-			jtag_add_device(index, &jtag_dev);
-			remote_respond(REMOTE_RESP_OK, 0);
+			break;
 		}
+
+		jtag_dev_s jtag_dev = {};
+		const uint8_t index = remote_hex_string_to_num(2, packet + 2);
+		jtag_dev.dr_prescan = remote_hex_string_to_num(2, packet + 4);
+		jtag_dev.dr_postscan = remote_hex_string_to_num(2, packet + 6);
+		jtag_dev.ir_len = remote_hex_string_to_num(2, packet + 8);
+		jtag_dev.ir_prescan = remote_hex_string_to_num(2, packet + 10);
+		jtag_dev.ir_postscan = remote_hex_string_to_num(2, packet + 12);
+		jtag_dev.current_ir = remote_hex_string_to_num(8, packet + 14);
+		jtag_add_device(index, &jtag_dev);
+		remote_respond(REMOTE_RESP_OK, 0);
 		break;
+	}
 
 	default:
 		remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_UNRECOGNISED);
