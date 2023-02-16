@@ -359,7 +359,7 @@ static void remote_packet_process_high_level(unsigned i, char *packet)
 	remote_ap.dp = &remote_dp;
 	packet += 2;
 	switch (index) {
-	case REMOTE_AP_MEM_READ: /* HM = Read from Mem and set csw */
+	case REMOTE_MEM_READ_CSW: /* HM = Read from Mem and set csw */
 		remote_ap.csw = remote_hex_string_to_num(8, packet);
 		packet += 6;
 		/*fall through*/
@@ -376,11 +376,11 @@ static void remote_packet_process_high_level(unsigned i, char *packet)
 		remote_ap.dp->fault = 0;
 		break;
 	}
-	case REMOTE_AP_MEM_WRITE_SIZED: /* Hm = Write to memory and set csw */
+	case REMOTE_MEM_WRITE_CSW: /* Hm = Write to memory and set csw */
 		remote_ap.csw = remote_hex_string_to_num(8, packet);
 		packet += 6;
 		/* fall through */
-	case REMOTE_MEM_WRITE_SIZED: { /* HH = Write to memory */
+	case REMOTE_MEM_WRITE: { /* HH = Write to memory */
 		const align_e align = remote_hex_string_to_num(2, packet);
 		packet += 2;
 		const uint32_t dest = remote_hex_string_to_num(8, packet);
