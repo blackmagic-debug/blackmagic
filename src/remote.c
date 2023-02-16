@@ -184,7 +184,6 @@ static void remote_packet_process_jtag(unsigned i, char *packet)
 	uint64_t DO = 0;
 	size_t ticks;
 	uint64_t DI = 0;
-	jtag_dev_s jtag_dev;
 	switch (packet[1]) {
 	case REMOTE_INIT: /* JS = initialise ============================= */
 		remote_dp.dp_read = fw_adiv5_jtagdp_read;
@@ -242,23 +241,6 @@ static void remote_packet_process_jtag(unsigned i, char *packet)
 		else {
 			const bool tdo = jtag_proc.jtagtap_next(packet[2] == '1', packet[3] == '1');
 			remote_respond(REMOTE_RESP_OK, tdo ? 1U : 0U);
-		}
-		break;
-
-	case REMOTE_ADD_JTAG_DEV: /* JJ = fill firmware jtag_devs */
-		if (i < 22U) {
-			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_WRONGLEN);
-		} else {
-			memset(&jtag_dev, 0, sizeof(jtag_dev));
-			const uint32_t index = remote_hex_string_to_num(2, &packet[2]);
-			jtag_dev.dr_prescan = remote_hex_string_to_num(2, &packet[4]);
-			jtag_dev.dr_postscan = remote_hex_string_to_num(2, &packet[6]);
-			jtag_dev.ir_len = remote_hex_string_to_num(2, &packet[8]);
-			jtag_dev.ir_prescan = remote_hex_string_to_num(2, &packet[10]);
-			jtag_dev.ir_postscan = remote_hex_string_to_num(2, &packet[12]);
-			jtag_dev.current_ir = remote_hex_string_to_num(8, &packet[14]);
-			jtag_add_device(index, &jtag_dev);
-			remote_respond(REMOTE_RESP_OK, 0);
 		}
 		break;
 
@@ -342,7 +324,6 @@ static void remote_packet_process_general(unsigned i, char *packet)
 
 static void remote_packet_process_high_level(unsigned i, char *packet)
 {
-	(void)i;
 	SET_IDLE_STATE(0);
 	char index = packet[1];
 	if (index == REMOTE_HL_CHECK) {
@@ -350,6 +331,23 @@ static void remote_packet_process_high_level(unsigned i, char *packet)
 		return;
 	}
 	switch (index) {
+	case REMOTE_ADD_JTAG_DEV: /* HJ = fill firmware jtag_devs */
+		if (i < 22U) {
+			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_WRONGLEN);
+		} else {
+			jtag_dev_s jtag_dev = {};
+			const uint32_t index = remote_hex_string_to_num(2, &packet[2]);
+			jtag_dev.dr_prescan = remote_hex_string_to_num(2, &packet[4]);
+			jtag_dev.dr_postscan = remote_hex_string_to_num(2, &packet[6]);
+			jtag_dev.ir_len = remote_hex_string_to_num(2, &packet[8]);
+			jtag_dev.ir_prescan = remote_hex_string_to_num(2, &packet[10]);
+			jtag_dev.ir_postscan = remote_hex_string_to_num(2, &packet[12]);
+			jtag_dev.current_ir = remote_hex_string_to_num(8, &packet[14]);
+			jtag_add_device(index, &jtag_dev);
+			remote_respond(REMOTE_RESP_OK, 0);
+		}
+		break;
+
 	default:
 		remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_UNRECOGNISED);
 		break;
