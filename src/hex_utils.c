@@ -25,7 +25,7 @@
 #include "general.h"
 #include "hex_utils.h"
 
-static char hex_digit(const uint8_t value)
+char hex_digit(const uint8_t value)
 {
 	char digit = (char)value;
 	if (value > 9U)
@@ -48,7 +48,7 @@ char *hexify(char *const hex, const void *const buf, const size_t size)
 	return hex;
 }
 
-static uint8_t unhex_digit(const char hex)
+uint8_t unhex_digit(const char hex)
 {
 	uint8_t tmp = hex - '0';
 	if (tmp > 9U)
