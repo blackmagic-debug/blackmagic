@@ -34,6 +34,7 @@
 #include "target/adiv5.h"
 #include "target.h"
 #include "hex_utils.h"
+#include "exception.h"
 
 #define HTON(x)    (((x) <= '9') ? (x) - '0' : ((TOUPPER(x)) - 'A' + 10))
 #define TOUPPER(x) ((((x) >= 'a') && ((x) <= 'z')) ? ((x) - ('a' - 'A')) : (x))
@@ -494,9 +495,17 @@ void remote_packet_process(unsigned i, char *packet)
 		remote_packet_process_high_level(packet, i);
 		break;
 
-	case REMOTE_ADIv5_PACKET:
-		remote_packet_process_adiv5(packet, i);
+	case REMOTE_ADIv5_PACKET: {
+		/* Setup an exception frame to try the ADIv5 operation in */
+		volatile exception_s error = {};
+		TRY_CATCH (error, EXCEPTION_ALL) {
+			remote_packet_process_adiv5(packet, i);
+		}
+		/* Handle any exception we've caught by translating it into a remote protocol response */
+		if (error.type)
+			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_EXCEPTION | ((uint64_t)error.type << 8U));
 		break;
+	}
 
 	default: /* Oh dear, unrecognised, return an error */
 		remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_UNRECOGNISED);

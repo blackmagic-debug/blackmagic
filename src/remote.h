@@ -58,6 +58,7 @@
 #define REMOTE_ERROR_UNRECOGNISED 1
 #define REMOTE_ERROR_WRONGLEN     2
 #define REMOTE_ERROR_FAULT        3
+#define REMOTE_ERROR_EXCEPTION    4
 
 /* Start and end of message identifiers */
 #define REMOTE_SOM  '!'
