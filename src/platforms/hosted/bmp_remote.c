@@ -318,22 +318,37 @@ static void remote_adiv5_mem_write_bytes(adiv5_access_port_s *const target_ap, c
 	}
 }
 
-void remote_adiv5_dp_defaults(adiv5_debug_port_s *dp)
+void remote_adiv5_dp_defaults(adiv5_debug_port_s *const target_dp)
 {
+	/* Ask the remote for its protocol version */
+	platform_buffer_write(REMOTE_HL_CHECK_STR, sizeof(REMOTE_HL_CHECK_STR));
 	char buffer[REMOTE_MAX_MSG_SIZE];
-	int length = snprintf(buffer, REMOTE_MAX_MSG_SIZE, "%s", REMOTE_HL_CHECK_STR);
-	platform_buffer_write(buffer, length);
-	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
-	if (length < 1 || buffer[0] == REMOTE_RESP_ERR || buffer[1] - '0' < REMOTE_HL_VERSION) {
-		DEBUG_WARN("Please update BMP firmware for substantial speed increase!\n");
+	/* Read back the answer and check for errors */
+	const ssize_t length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
+	if (length < 1) {
+		DEBUG_WARN("%s comms error: %zd\n", __func__, length);
+		exit(2);
+	} else if (buffer[0] != REMOTE_RESP_OK) {
+		DEBUG_INFO("Your probe firmware is too old, please update it to continue\n");
+		exit(1);
+	}
+	/* If the probe's indicated that the request succeeded, convert the version number */
+	const uint64_t version = remote_decode_response(buffer + 1, length - 1);
+	if (version < 2) {
+		DEBUG_WARN("Please update your probe's firmware for a substantial speed increase\n");
 		return;
 	}
-	dp->low_access = remote_adiv5_raw_access;
-	dp->dp_read = remote_adiv5_dp_read;
-	dp->ap_write = remote_adiv5_ap_write;
-	dp->ap_read = remote_adiv5_ap_read;
-	dp->mem_read = remote_adiv5_mem_read_bytes;
-	dp->mem_write = remote_adiv5_mem_write_bytes;
+	if (version == 2) {
+		DEBUG_WARN("Falling back to non-high-level probe interface\n");
+		return;
+	}
+	/* If the probe firmware talks a new enough variant of the protocol, we can use the accelerated routines above. */
+	target_dp->low_access = remote_adiv5_raw_access;
+	target_dp->dp_read = remote_adiv5_dp_read;
+	target_dp->ap_write = remote_adiv5_ap_write;
+	target_dp->ap_read = remote_adiv5_ap_read;
+	target_dp->mem_read = remote_adiv5_mem_read_bytes;
+	target_dp->mem_write = remote_adiv5_mem_write_bytes;
 }
 
 void remote_add_jtag_dev(uint32_t dev_indx, const jtag_dev_s *jtag_dev)
