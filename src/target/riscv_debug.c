@@ -352,10 +352,8 @@ static bool riscv_hart_init(riscv_hart_s *const hart)
 		return true;
 	}
 
-	/* If the hart implements mvendorid, this gives us the JEP-106, otherwise use the JTAG IDCode */
-	target->designer_code = hart->vendorid ?
-		hart->vendorid :
-		((hart->dbg_module->dmi_bus->idcode & JTAG_IDCODE_DESIGNER_MASK) >> JTAG_IDCODE_DESIGNER_OFFSET);
+	/* If the hart implements mvendorid, this gives us the JEP-106, otherwise use the DTM designer code */
+	target->designer_code = hart->vendorid ? hart->vendorid : hart->dbg_module->dmi_bus->designer_code;
 	target->cpuid = hart->archid;
 
 	riscv_hart_discover_triggers(hart);
