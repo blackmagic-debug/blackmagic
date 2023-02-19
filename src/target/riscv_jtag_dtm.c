@@ -35,6 +35,7 @@
 #include "jtag_scan.h"
 #include "jtagtap.h"
 #include "riscv_debug.h"
+#include "adiv5.h"
 
 #define IR_DTMCS  0x10U
 #define IR_DMI    0x11U
@@ -75,12 +76,23 @@ void riscv_jtag_dtm_handler(const uint8_t dev_index)
 	}
 
 	/* Setup and try to discover the DMI bus */
-	dmi->idcode = jtag_devs[dev_index].jd_idcode;
 	dmi->dev_index = dev_index;
+	/*
+	 * The code in JTAG_IDCODE_DESIGNER is in the form
+	 * Bits 10:7 - JEP-106 Continuation code
+	 * Bits 6:0 - JEP-106 Identity code
+	 * here we convert it to our internal representation, See JEP-106 code list
+	 */
+	const uint16_t designer =
+		(jtag_devs[dev_index].jd_idcode & JTAG_IDCODE_DESIGNER_MASK) >> JTAG_IDCODE_DESIGNER_OFFSET;
+	dmi->designer_code =
+		(designer & JTAG_IDCODE_DESIGNER_JEP106_CONT_MASK) << 1U | (designer & JTAG_IDCODE_DESIGNER_JEP106_CODE_MASK);
+
 	riscv_jtag_dtm_init(dmi);
 	/* If we failed to find any DMs or Harts, free the structure */
 	if (!dmi->ref_count)
 		free(dmi);
+
 	/* Reset the JTAG machinary back to bypass to scan the next device in the chain */
 	jtag_dev_write_ir(dev_index, IR_BYPASS);
 }

@@ -90,7 +90,7 @@ typedef struct riscv_dmi riscv_dmi_s;
 struct riscv_dmi {
 	uint32_t ref_count;
 
-	uint32_t idcode;
+	uint16_t designer_code;
 	riscv_debug_version_e version;
 
 	uint8_t dev_index;
