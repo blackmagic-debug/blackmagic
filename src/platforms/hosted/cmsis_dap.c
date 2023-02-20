@@ -258,31 +258,6 @@ static void dap_dp_abort(adiv5_debug_port_s *dp, uint32_t abort)
 	dap_write_reg(dp, ADIV5_DP_ABORT, abort);
 }
 
-/* JTAG DP error recovery function */
-static uint32_t dap_jtag_dp_error(adiv5_debug_port_s *dp, const bool protocol_recovery)
-{
-	(void)protocol_recovery;
-	/* XXX: This seems entirely wrong considering adiv5_jtagdp.c adiv5_jtagdp_error */
-	const uint32_t err = dap_read_reg(dp, ADIV5_DP_CTRLSTAT) &
-		(ADIV5_DP_CTRLSTAT_STICKYORUN | ADIV5_DP_CTRLSTAT_STICKYCMP | ADIV5_DP_CTRLSTAT_STICKYERR |
-			ADIV5_DP_CTRLSTAT_WDATAERR);
-	uint32_t clr = 0;
-
-	if (err & ADIV5_DP_CTRLSTAT_STICKYORUN)
-		clr |= ADIV5_DP_ABORT_ORUNERRCLR;
-	if (err & ADIV5_DP_CTRLSTAT_STICKYCMP)
-		clr |= ADIV5_DP_ABORT_STKCMPCLR;
-	if (err & ADIV5_DP_CTRLSTAT_STICKYERR)
-		clr |= ADIV5_DP_ABORT_STKERRCLR;
-	if (err & ADIV5_DP_CTRLSTAT_WDATAERR)
-		clr |= ADIV5_DP_ABORT_WDERRCLR;
-
-	if (clr)
-		dap_write_reg(dp, ADIV5_DP_ABORT, clr);
-	dp->fault = 0;
-	return err;
-}
-
 static uint32_t dap_swd_dp_error(adiv5_debug_port_s *dp, const bool protocol_recovery)
 {
 	DEBUG_PROBE("dap_swd_dp_error (protocol recovery? %s)\n", protocol_recovery ? "true" : "false");
@@ -599,7 +574,6 @@ bool dap_jtagtap_init(void)
 void dap_jtag_dp_init(adiv5_debug_port_s *dp)
 {
 	dp->dp_read = dap_dp_read_reg;
-	dp->error = dap_jtag_dp_error;
 	dp->low_access = dap_dp_low_access;
 	dp->abort = dap_dp_abort;
 }
