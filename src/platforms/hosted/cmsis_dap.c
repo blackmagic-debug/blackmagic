@@ -558,7 +558,9 @@ bool dap_jtagtap_init(void)
 	mode = DAP_CAP_JTAG;
 	dap_disconnect();
 	dap_connect(true);
-	dap_reset_link(true);
+	adiv5_debug_port_s target_dp = {};
+	target_dp.dev_index = 0U;
+	dap_reset_link(&target_dp, true);
 	jtag_proc.jtagtap_reset = cmsis_dap_jtagtap_reset;
 	jtag_proc.jtagtap_next = cmsis_dap_jtagtap_next;
 	jtag_proc.jtagtap_tms_seq = cmsis_dap_jtagtap_tms_seq;
@@ -606,7 +608,7 @@ bool dap_swdptap_init(adiv5_debug_port_s *dp)
 	dap_swd_configure(0);
 	dap_connect(false);
 	dap_led(0, 1);
-	dap_reset_link(false);
+	dap_reset_link(dp, false);
 	if (has_swd_sequence)
 		/* DAP_SWD_SEQUENCE does not do auto turnaround, use own!*/
 		dp->dp_low_write = dap_dp_low_write;
