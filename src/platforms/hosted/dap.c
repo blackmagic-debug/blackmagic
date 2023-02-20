@@ -418,12 +418,6 @@ void dap_reset_link(adiv5_debug_port_s *const target_dp, const bool jtag)
 	}
 }
 
-//-----------------------------------------------------------------------------
-uint32_t dap_read_idcode(adiv5_debug_port_s *dp)
-{
-	return dap_read_reg(dp, SWD_DP_R_IDCODE);
-}
-
 static void mem_access_setup(const adiv5_access_port_s *const target_ap,
 	dap_transfer_request_s *const transfer_requests, const uint32_t addr, const align_e align)
 {
