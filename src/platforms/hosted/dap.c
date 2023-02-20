@@ -320,19 +320,17 @@ static uint32_t wait_word(uint8_t *buf, size_t response_length, size_t request_l
 	return res;
 }
 
-//-----------------------------------------------------------------------------
-uint32_t dap_read_reg(adiv5_debug_port_s *dp, uint8_t reg)
+uint32_t dap_read_reg(adiv5_debug_port_s *target_dp, const uint8_t reg)
 {
-	uint8_t buf[8];
-	uint8_t dap_index = 0;
-	dap_index = dp->dev_index;
-	buf[0] = ID_DAP_TRANSFER;
-	buf[1] = dap_index;
-	buf[2] = 0x01; // Request size
-	buf[3] = reg | DAP_TRANSFER_RnW;
-	uint32_t res = wait_word(buf, 8, 4, &dp->fault);
-	DEBUG_WIRE("\tdap_read_reg %02x %08x\n", reg, res);
-	return res;
+	const dap_transfer_request_s request = {.request = reg | DAP_TRANSFER_RnW};
+	uint32_t value = 0;
+	do {
+		if (perform_dap_transfer(target_dp, &request, 1U, &value, 1U)) {
+			DEBUG_PROBE("dap_read_reg: %02x -> %08x\n", reg, value);
+			return value;
+		}
+	} while (target_dp->fault == DAP_TRANSFER_WAIT);
+	return 0U;
 }
 
 //-----------------------------------------------------------------------------
