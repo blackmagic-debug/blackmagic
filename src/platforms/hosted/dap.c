@@ -389,47 +389,32 @@ bool dap_write_block(
 	return result;
 }
 
-void dap_reset_link(bool jtag)
+void dap_reset_link(adiv5_debug_port_s *const target_dp, const bool jtag)
 {
-	uint8_t buf[128], *p = buf;
+	uint8_t sequence[18U];
+	size_t bytes = 8U;
+	memset(sequence, 0xffU, bytes);
 
-	//-------------
-	*p++ = ID_DAP_SWJ_SEQUENCE;
-	p++;
-	*p++ = 0xff;
-	*p++ = 0xff;
-	*p++ = 0xff;
-	*p++ = 0xff;
-	*p++ = 0xff;
-	*p++ = 0xff;
-	*p++ = 0xff;
 	if (jtag) {
-		*p++ = 0x3c;
-		*p++ = 0xe7;
-		*p++ = 0x1f;
-		buf[1] = ((p - (buf + 2U)) * 8U) - 2U;
+		sequence[bytes + 0] = 0x3cU;
+		sequence[bytes + 1] = 0xe7U;
+		sequence[bytes + 2] = 0x1fU;
+		bytes += 3U;
 	} else {
-		*p++ = 0x9e;
-		*p++ = 0xe7;
-		*p++ = 0xff;
-		*p++ = 0xff;
-		*p++ = 0xff;
-		*p++ = 0xff;
-		*p++ = 0xff;
-		*p++ = 0xff;
-		*p++ = 0xff;
-		*p++ = 0x00;
-		buf[1] = (p - (buf + 2U)) * 8U;
+		sequence[bytes + 0] = 0x9e;
+		sequence[bytes + 1] = 0xe7;
+		bytes += 2;
+		memset(sequence + bytes, 0xffU, 7U);
+		bytes += 7U;
+		sequence[bytes++] = 0x00U;
 	}
-	dbg_dap_cmd(buf, sizeof(buf), p - buf);
+	const size_t cycles = (bytes * 8U) - (jtag ? 2U : 0U);
+	perform_dap_swj_sequence(cycles, sequence);
 
 	if (!jtag) {
-		//-------------
-		buf[0] = ID_DAP_TRANSFER;
-		buf[1] = 0; // DAP index
-		buf[2] = 1; // Request size
-		buf[3] = SWD_DP_R_IDCODE | DAP_TRANSFER_RnW;
-		dbg_dap_cmd(buf, sizeof(buf), 4);
+		const dap_transfer_request_s request = {.request = SWD_DP_R_IDCODE | DAP_TRANSFER_RnW};
+		uint32_t response = 0;
+		perform_dap_transfer(target_dp, &request, 1, &response, 1);
 	}
 }
 
