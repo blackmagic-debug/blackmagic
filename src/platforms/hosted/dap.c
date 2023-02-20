@@ -333,37 +333,18 @@ uint32_t dap_read_reg(adiv5_debug_port_s *target_dp, const uint8_t reg)
 	return 0U;
 }
 
-//-----------------------------------------------------------------------------
-void dap_write_reg(adiv5_debug_port_s *dp, uint8_t reg, uint32_t data)
+void dap_write_reg(adiv5_debug_port_s *target_dp, const uint8_t reg, const uint32_t value)
 {
-	DEBUG_PROBE("\tdap_write_reg %02x %08x\n", reg, data);
-
-	uint8_t buf[8] = {
-		ID_DAP_TRANSFER,
-		dp->dev_index,
-		0x01, // Request size
-		reg & ~DAP_TRANSFER_RnW,
-		data & 0xffU,
-		(data >> 8U) & 0xffU,
-		(data >> 16U) & 0xffU,
-		(data >> 24U) & 0xffU,
+	DEBUG_PROBE("dap_write_reg: %02x <- %08x\n", reg, value);
+	const dap_transfer_request_s request = {
+		.request = reg & ~DAP_TRANSFER_RnW,
+		.data = value,
 	};
 
-	uint8_t cmd_copy[8];
-	memcpy(cmd_copy, buf, 8);
 	do {
-		memcpy(buf, cmd_copy, 8);
-		dbg_dap_cmd(buf, sizeof(buf), 8);
-	} while (buf[1] == DAP_TRANSFER_WAIT);
-
-	if (buf[1] > DAP_TRANSFER_WAIT) {
-		DEBUG_WARN("dap_write_reg %02x data %08x:fault\n", reg, data);
-		dp->fault = 1;
-	}
-	if (buf[1] == DAP_TRANSFER_ERROR) {
-		DEBUG_WARN("dap_write_reg %02x data %08x: protocol error\n", reg, data);
-		dp->fault = 7;
-	}
+		if (perform_dap_transfer(target_dp, &request, 1U, NULL, 0))
+			return;
+	} while (target_dp->fault == DAP_TRANSFER_WAIT);
 }
 
 bool dap_read_block(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t len, align_e align)
