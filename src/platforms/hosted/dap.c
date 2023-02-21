@@ -508,21 +508,21 @@ bool dap_jtag_configure(void)
 	if (!jtag_dev_count || jtag_dev_count >= JTAG_MAX_DEVS)
 		return false;
 	/* Begin building the configuration packet */
-	uint8_t buf[64U] = {
+	uint8_t request[2U + JTAG_MAX_DEVS] = {
 		ID_DAP_JTAG_CONFIGURE,
 		jtag_dev_count,
 	};
 	/* For each device in the chain copy its IR length to the configuration */
 	for (uint32_t device = 0; device < jtag_dev_count; device++) {
 		const jtag_dev_s *const dev = &jtag_devs[device];
-		buf[2U + device] = dev->ir_len;
-		DEBUG_PROBE("irlen %u\n", dev->ir_len);
+		request[2U + device] = dev->ir_len;
+		DEBUG_PROBE("%" PRIu32 ": irlen = %u\n", device, dev->ir_len);
 	}
+	uint8_t response = DAP_RESPONSE_OK;
 	/* Send the configuration and ensure it succeeded */
-	dbg_dap_cmd(buf, sizeof(buf), 2U + jtag_dev_count);
-	if (buf[0] != DAP_OK)
-		DEBUG_WARN("dap_jtag_configure Failed %02x\n", buf[0]);
-	return true;
+	if (!dap_run_cmd(request, 2U + jtag_dev_count, &response, 1U) || response != DAP_RESPONSE_OK)
+		DEBUG_WARN("dap_jtag_configure failed with %02x\n", response);
+	return response == DAP_RESPONSE_OK;
 }
 
 void dap_swdptap_seq_out(const uint32_t tms_states, const size_t clock_cycles)
