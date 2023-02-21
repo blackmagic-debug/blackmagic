@@ -106,7 +106,7 @@ static size_t dap_encode_transfer(
 	return 5U;
 }
 
-bool perform_dap_transfer(adiv5_debug_port_s *const dp, const dap_transfer_request_s *const transfer_requests,
+bool perform_dap_transfer(adiv5_debug_port_s *const target_dp, const dap_transfer_request_s *const transfer_requests,
 	const size_t requests, uint32_t *const response_data, const size_t responses)
 {
 	/* Validate that the number of requests this transfer is valid. We artificially limit it to 12 (from 256) */
@@ -117,7 +117,7 @@ bool perform_dap_transfer(adiv5_debug_port_s *const dp, const dap_transfer_reque
 	/* 63 is 3 + (12 * 5) where 5 is the max length of each transfer request */
 	uint8_t request[63] = {
 		DAP_TRANSFER,
-		dp->dev_index,
+		target_dp->dev_index,
 		requests,
 	};
 	/* Encode the transfers into the buffer and detect if we're doing any reads */
@@ -136,27 +136,27 @@ bool perform_dap_transfer(adiv5_debug_port_s *const dp, const dap_transfer_reque
 			response_data[i] = read_le4(response.data[i], 0);
 		return true;
 	}
-	dp->fault = response.status;
+	target_dp->fault = response.status;
 
 	DEBUG_PROBE("-> transfer failed with %u after processing %u requests\n", response.status, response.processed);
 	return false;
 }
 
-bool perform_dap_transfer_recoverable(adiv5_debug_port_s *const dp,
+bool perform_dap_transfer_recoverable(adiv5_debug_port_s *const target_dp,
 	const dap_transfer_request_s *const transfer_requests, const size_t requests, uint32_t *const response_data,
 	const size_t responses)
 {
-	const bool result = perform_dap_transfer(dp, transfer_requests, requests, response_data, responses);
+	const bool result = perform_dap_transfer(target_dp, transfer_requests, requests, response_data, responses);
 	/* If all went well, or we can't recover, we get to early return */
-	if (result || dp->fault != DAP_TRANSFER_NO_RESPONSE)
+	if (result || target_dp->fault != DAP_TRANSFER_NO_RESPONSE)
 		return result;
 	/* Otherwise clear the error and try again as our best and final answer */
-	dp->error(dp, true);
-	return perform_dap_transfer(dp, transfer_requests, requests, response_data, responses);
+	target_dp->error(target_dp, true);
+	return perform_dap_transfer(target_dp, transfer_requests, requests, response_data, responses);
 }
 
 bool perform_dap_transfer_block_read(
-	adiv5_debug_port_s *const dp, const uint8_t reg, const uint16_t block_count, uint32_t *const blocks)
+	adiv5_debug_port_s *const target_dp, const uint8_t reg, const uint16_t block_count, uint32_t *const blocks)
 {
 	if (block_count > 256U)
 		return false;
@@ -164,7 +164,7 @@ bool perform_dap_transfer_block_read(
 	DEBUG_PROBE("-> dap_transfer_block (%u transfer blocks)\n", block_count);
 	dap_transfer_block_request_read_s request = {
 		DAP_TRANSFER_BLOCK,
-		dp->dev_index,
+		target_dp->dev_index,
 		{},
 		reg | DAP_TRANSFER_RnW,
 	};
@@ -182,14 +182,14 @@ bool perform_dap_transfer_block_read(
 			blocks[i] = read_le4(response.data[i], 0);
 		return true;
 	}
-	dp->fault = response.status;
+	target_dp->fault = response.status;
 
 	DEBUG_PROBE("-> transfer failed with %u after processing %u blocks\n", response.status, blocks_read);
 	return false;
 }
 
 bool perform_dap_transfer_block_write(
-	adiv5_debug_port_s *const dp, const uint8_t reg, const uint16_t block_count, const uint32_t *const blocks)
+	adiv5_debug_port_s *const target_dp, const uint8_t reg, const uint16_t block_count, const uint32_t *const blocks)
 {
 	if (block_count > 256U)
 		return false;
@@ -197,7 +197,7 @@ bool perform_dap_transfer_block_write(
 	DEBUG_PROBE("-> dap_transfer_block (%u transfer blocks)\n", block_count);
 	dap_transfer_block_request_write_s request = {
 		DAP_TRANSFER_BLOCK,
-		dp->dev_index,
+		target_dp->dev_index,
 		{},
 		reg & ~DAP_TRANSFER_RnW,
 	};
@@ -214,7 +214,7 @@ bool perform_dap_transfer_block_write(
 	const uint16_t blocks_written = read_le2(response.count, 0);
 	if (blocks_written == block_count && response.status == DAP_TRANSFER_OK)
 		return true;
-	dp->fault = response.status;
+	target_dp->fault = response.status;
 
 	DEBUG_PROBE("-> transfer failed with %u after processing %u blocks\n", response.status, blocks_written);
 	return false;
