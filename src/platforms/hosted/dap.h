@@ -77,7 +77,7 @@ bool dap_read_block(adiv5_access_port_s *target_ap, void *dest, uint32_t src, si
 bool dap_write_block(adiv5_access_port_s *target_ap, uint32_t dest, const void *src, size_t len, align_e align);
 void dap_ap_mem_access_setup(adiv5_access_port_s *target_ap, uint32_t addr, align_e align);
 uint32_t dap_ap_read(adiv5_access_port_s *target_ap, uint16_t addr);
-void dap_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value);
+void dap_ap_write(adiv5_access_port_s *target_ap, uint16_t addr, uint32_t value);
 void dap_read_single(adiv5_access_port_s *target_ap, void *dest, uint32_t src, align_e align);
 void dap_write_single(adiv5_access_port_s *target_ap, uint32_t dest, const void *src, align_e align);
 ssize_t dbg_dap_cmd(uint8_t *data, size_t response_length, size_t request_length);
