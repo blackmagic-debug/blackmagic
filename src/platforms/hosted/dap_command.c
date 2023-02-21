@@ -42,6 +42,10 @@
 #define DAP_TRANSFER_MATCH_VALUE (1U << 4U)
 #define DAP_TRANSFER_MATCH_MASK  (1U << 5U)
 
+#define DAP_JTAG_TMS_SET     (1U << 6U)
+#define DAP_JTAG_TMS_CLEAR   (0U << 6U)
+#define DAP_JTAG_TDO_CAPTURE (1U << 7U)
+
 static inline void write_le2(uint8_t *const buffer, const size_t offset, const uint16_t value)
 {
 	buffer[offset] = value & 0xffU;
@@ -218,4 +222,69 @@ bool perform_dap_transfer_block_write(
 
 	DEBUG_PROBE("-> transfer failed with %u after processing %u blocks\n", response.status, blocks_written);
 	return false;
+}
+
+bool perform_dap_jtag_sequence(
+	const uint8_t *const data_in, uint8_t *const data_out, const bool final_tms, const size_t clock_cycles)
+{
+	/* Check for any over-long sequences */
+	if (clock_cycles > 64)
+		return false;
+
+	DEBUG_PROBE("-> dap_jtag_sequence (%zu cycles)\n", clock_cycles);
+	/* Check for 0-length sequences */
+	if (!clock_cycles)
+		return true;
+
+	const uint8_t capture_tdo = data_out ? DAP_JTAG_TDO_CAPTURE : 0U;
+	/*
+	 * If final_tms is true, we need to generate 2 sequences because of how TMS data is sent,
+	 * except if we need to generate just a single clock cycle.
+	 */
+	const uint8_t sequences = final_tms && clock_cycles > 1 ? 2U : 1U;
+	/* Adjust clock_cycles accordingly */
+	const uint8_t cycles = clock_cycles - (sequences - 1U);
+
+	/* 3 + 2 bytes for the request preambles + 9 for the sending data */
+	uint8_t request[14] = {
+		DAP_JTAG_SEQUENCE,
+		sequences,
+		/* The number of clock cycles to run is encoded with 64 remapped to 0 */
+		(cycles & 63U) | (final_tms && sequences == 1U ? DAP_JTAG_TMS_SET : DAP_JTAG_TMS_CLEAR) | capture_tdo,
+	};
+	/* Copy in a suitable amount of data from the source buffer */
+	const size_t sequence_length = (cycles + 7U) >> 3U;
+	memcpy(request + 3, data_in, sequence_length);
+	size_t offset = 3 + sequence_length;
+	/* Figure out where the final bit is */
+	const uint8_t final_byte = cycles >> 3U;
+	const uint8_t final_bit = cycles & 7U;
+	/* If we need to build a second sequence, set up for it */
+	if (sequences == 2U) {
+		request[offset++] = 1U | DAP_JTAG_TMS_SET | DAP_JTAG_TDO_CAPTURE | capture_tdo;
+		/* Copy the final bit out to the request LSb */
+		request[offset++] = data_in[final_byte] >> final_bit;
+	}
+
+	/*
+	 * If we should capture TDO, then calculate the response length as the sequence length + 1 if final_tms needs.
+	 * Otherwise, if not capturing TDO, it is 0
+	 */
+	const size_t response_length = capture_tdo ? sequence_length + (sequences == 2U ? 1U : 0U) : 0U;
+	uint8_t response[6U] = {DAP_RESPONSE_OK};
+	/* Run the request having set up the request buffer */
+	if (!dap_run_cmd(request, offset, response, 1U + response_length)) {
+		DEBUG_PROBE("-> sequence failed with %u\n", response[0U]);
+		return false;
+	}
+
+	if (response_length) {
+		/* Copy the captured data out */
+		memcpy(data_out, response + 1U, sequence_length);
+		/* And the final bit from the second response LSb */
+		if (sequences == 2U)
+			data_out[final_byte] = (response[1 + sequence_length] & 1U) << final_bit;
+	}
+	/* And check that it succeeded */
+	return response[0] == DAP_RESPONSE_OK;
 }

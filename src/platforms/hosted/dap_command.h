@@ -43,6 +43,7 @@ typedef enum dap_command {
 	DAP_TRANSFER = 0x05U,
 	DAP_TRANSFER_BLOCK = 0x06U,
 	DAP_SWJ_SEQUENCE = 0x12U,
+	DAP_JTAG_SEQUENCE = 0x14U,
 } dap_command_e;
 
 typedef enum dap_response_status {
@@ -103,5 +104,6 @@ bool perform_dap_transfer_block_read(
 	adiv5_debug_port_s *target_dp, uint8_t reg, uint16_t block_count, uint32_t *blocks);
 bool perform_dap_transfer_block_write(
 	adiv5_debug_port_s *target_dp, uint8_t reg, uint16_t block_count, const uint32_t *blocks);
+bool perform_dap_jtag_sequence(const uint8_t *data_in, uint8_t *data_out, bool final_tms, size_t clock_cycles);
 
 #endif /*PLATFORMS_HOSTED_DAP_COMMAND_H*/
