@@ -458,28 +458,19 @@ uint32_t dap_ap_read(adiv5_access_port_s *const target_ap, const uint16_t addr)
 	return result;
 }
 
-void dap_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value)
+void dap_ap_write(adiv5_access_port_s *const target_ap, const uint16_t addr, const uint32_t value)
 {
-	DEBUG_PROBE("dap_ap_write addr %04x value %08x\n", addr, value);
-	uint8_t buf[63], *p = buf;
-	uint8_t dap_index = 0;
-	dap_index = ap->dp->dev_index;
-	*p++ = ID_DAP_TRANSFER;
-	*p++ = dap_index;
-	*p++ = 2; /* Nr transfers */
-	*p++ = SWD_DP_W_SELECT;
-	*p++ = (addr & 0xf0U);
-	*p++ = 0;
-	*p++ = 0;
-	*p++ = ap->apsel & 0xffU;
-	*p++ = (addr & 0x0cU) | (addr & 0x100U ? DAP_TRANSFER_APnDP : 0);
-	*p++ = (value >> 0U) & 0xffU;
-	*p++ = (value >> 8U) & 0xffU;
-	*p++ = (value >> 16U) & 0xffU;
-	*p++ = (value >> 24U) & 0xffU;
-	dbg_dap_cmd(buf, sizeof(buf), p - buf);
-	if (buf[0] != 2U || buf[1] != 1U)
-		DEBUG_WARN("dap_ap_write error %x\n", buf[1]);
+	dap_transfer_request_s requests[2];
+	DEBUG_PROBE("dap_ap_write addr %04x value %08" PRIx32 "\n", addr, value);
+	/* Select the bank for the register */
+	requests[0].request = SWD_DP_W_SELECT;
+	requests[0].data = SWD_DP_REG(addr & 0xf0U, target_ap->apsel);
+	/* Write the register */
+	requests[1].request = (addr & 0x0cU) | (addr & 0x100U ? DAP_TRANSFER_APnDP : 0);
+	requests[1].data = value;
+	adiv5_debug_port_s *const target_dp = target_ap->dp;
+	if (!perform_dap_transfer(target_dp, requests, 2U, NULL, 0U))
+		DEBUG_WARN("dap_ap_write failed (fault = %u)\n", target_dp->fault);
 }
 
 void dap_read_single(adiv5_access_port_s *const target_ap, void *const dest, const uint32_t src, const align_e align)
