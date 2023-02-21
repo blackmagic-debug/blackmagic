@@ -522,10 +522,8 @@ static void cmsis_dap_jtagtap_reset(void)
 
 static void cmsis_dap_jtagtap_tms_seq(const uint32_t tms_states, const size_t clock_cycles)
 {
-	const uint8_t tms[4] = {
-		(uint8_t)tms_states, (uint8_t)(tms_states >> 8U), (uint8_t)(tms_states >> 16U), (uint8_t)(tms_states >> 24U)};
-	dap_jtagtap_tdi_tdo_seq(NULL, false, tms, NULL, clock_cycles);
-	DEBUG_PROBE("tms_seq data_in %08x %zu\n", tms_states, clock_cycles);
+	perform_dap_jtag_tms_sequence(tms_states, clock_cycles);
+	DEBUG_PROBE("jtagtap_tms_seq data_in %08x %zu\n", tms_states, clock_cycles);
 }
 
 static void cmsis_dap_jtagtap_tdi_tdo_seq(
