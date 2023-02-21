@@ -19,7 +19,7 @@
 
 /* Find all known usb connected debuggers */
 #include "general.h"
-#include "libusb-1.0/libusb.h"
+#include <libusb.h>
 #include "cli.h"
 #include "ftdi_bmp.h"
 #include "version.h"
