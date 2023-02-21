@@ -32,6 +32,7 @@
 #include "gdb_main.h"
 #include "gdb_hostio.h"
 #include "target.h"
+#include "target_internal.h"
 #include "command.h"
 #include "crc32.h"
 #include "morse.h"
@@ -125,9 +126,14 @@ int gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, size_t 
 	/* Implementation of these is mandatory! */
 	case 'g': { /* 'g': Read general registers */
 		ERROR_IF_NO_TARGET();
-		uint8_t gp_regs[target_regs_size(cur_target)];
-		target_regs_read(cur_target, gp_regs);
-		gdb_putpacket(hexify(pbuf, gp_regs, sizeof(gp_regs)), sizeof(gp_regs) * 2U);
+		const size_t reg_size = target_regs_size(cur_target);
+		if (reg_size) {
+			uint8_t gp_regs[reg_size];
+			target_regs_read(cur_target, gp_regs);
+			gdb_putpacket(hexify(pbuf, gp_regs, reg_size), reg_size * 2U);
+		} else {
+			gdb_putpacketz("00");
+		}
 		break;
 	}
 	case 'm': { /* 'm addr,len': Read len bytes from addr */
@@ -148,9 +154,12 @@ int gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, size_t 
 	}
 	case 'G': { /* 'G XX': Write general registers */
 		ERROR_IF_NO_TARGET();
-		uint8_t gp_regs[target_regs_size(cur_target)];
-		unhexify(gp_regs, &pbuf[1], sizeof(gp_regs));
-		target_regs_write(cur_target, gp_regs);
+		const size_t reg_size = target_regs_size(cur_target);
+		if (reg_size) {
+			uint8_t gp_regs[reg_size];
+			unhexify(gp_regs, &pbuf[1], reg_size);
+			target_regs_write(cur_target, gp_regs);
+		}
 		gdb_putpacketz("OK");
 		break;
 	}
@@ -223,28 +232,36 @@ int gdb_main_loop(target_controller_s *tc, char *pbuf, size_t pbuf_size, size_t 
 	/* Optional GDB packet support */
 	case 'p': { /* Read single register */
 		ERROR_IF_NO_TARGET();
-		uint32_t reg;
-		sscanf(pbuf, "p%" SCNx32, &reg);
-		uint8_t val[8];
-		size_t s = target_reg_read(cur_target, reg, val, sizeof(val));
-		if (s > 0)
-			gdb_putpacket(hexify(pbuf, val, s), s * 2U);
-		else
-			gdb_putpacketz("EFF");
+		if (cur_target->reg_read) {
+			uint32_t reg;
+			sscanf(pbuf, "p%" SCNx32, &reg);
+			uint8_t val[8];
+			size_t s = target_reg_read(cur_target, reg, val, sizeof(val));
+			if (s > 0)
+				gdb_putpacket(hexify(pbuf, val, s), s * 2U);
+			else
+				gdb_putpacketz("EFF");
+		} else {
+			gdb_putpacketz("00");
+		}
 		break;
 	}
 	case 'P': { /* Write single register */
 		ERROR_IF_NO_TARGET();
-		uint32_t reg;
-		int n;
-		sscanf(pbuf, "P%" SCNx32 "=%n", &reg, &n);
-		// TODO: FIXME, VLAs considered harmful.
-		uint8_t val[strlen(&pbuf[n]) / 2U];
-		unhexify(val, pbuf + n, sizeof(val));
-		if (target_reg_write(cur_target, reg, val, sizeof(val)) > 0)
+		if (cur_target->reg_write) {
+			uint32_t reg;
+			int n;
+			sscanf(pbuf, "P%" SCNx32 "=%n", &reg, &n);
+			// TODO: FIXME, VLAs considered harmful.
+			uint8_t val[strlen(&pbuf[n]) / 2U];
+			unhexify(val, pbuf + n, sizeof(val));
+			if (target_reg_write(cur_target, reg, val, sizeof(val)) > 0)
+				gdb_putpacketz("OK");
+			else
+				gdb_putpacketz("EFF");
+		} else {
 			gdb_putpacketz("OK");
-		else
-			gdb_putpacketz("EFF");
+		}
 		break;
 	}
 
