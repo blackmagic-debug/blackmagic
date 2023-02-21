@@ -585,12 +585,22 @@ static bool dap_dp_low_write(uint16_t addr, const uint32_t data)
 {
 	DEBUG_PROBE("dap_dp_low_write %08" PRIx32 "\n", data);
 	unsigned int packet_request = make_packet_request(ADIV5_LOW_WRITE, addr);
-	uint8_t buf[32] = {DAP_SWD_SEQUENCE, 5, 8, packet_request,
+	uint8_t buf[32] = {
+		DAP_SWD_SEQUENCE,
+		5,
+		8,
+		packet_request,
 		4U + SWD_SEQUENCE_IN, /* one turn-around + read 3 bit ACK */
 		1,                    /* one bit turn around to drive SWDIO */
-		0, 32,                /* write 32 bit data */
-		data & 0xffU, (data >> 8U) & 0xffU, (data >> 16U) & 0xffU, (data >> 24U) & 0xffU, 1, /* write parity biT */
-		__builtin_parity(data)};
+		0,
+		32, /* write 32 bit data */
+		data & 0xffU,
+		(data >> 8U) & 0xffU,
+		(data >> 16U) & 0xffU,
+		(data >> 24U) & 0xffU,
+		1, /* write parity bit */
+		__builtin_parity(data),
+	};
 	dbg_dap_cmd(buf, sizeof(buf), 14);
 	if (buf[0])
 		DEBUG_WARN("dap_dp_low_write failed\n");
