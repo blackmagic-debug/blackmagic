@@ -288,3 +288,38 @@ bool perform_dap_jtag_sequence(
 	/* And check that it succeeded */
 	return response[0] == DAP_RESPONSE_OK;
 }
+
+bool perform_dap_jtag_tms_sequence(const uint64_t tms_states, const size_t clock_cycles)
+{
+	/* Check for any over-long sequences */
+	if (clock_cycles > 64)
+		return false;
+
+	DEBUG_PROBE("-> dap_jtag_sequence (%zu cycles)\n", clock_cycles);
+	/* Check for 0-length sequences */
+	if (!clock_cycles)
+		return true;
+
+	/* 2 + (2 * 64) bytes for the request */
+	uint8_t request[130] = {
+		DAP_JTAG_SEQUENCE,
+		clock_cycles,
+	};
+	size_t offset = 2;
+	/* Build all the TMS cycles required */
+	for (size_t cycle = 0; cycle < clock_cycles; ++cycle) {
+		const bool tms = (tms_states >> cycle) & 1U;
+		request[offset + 0] = 1U | (tms ? DAP_JTAG_TMS_SET : DAP_JTAG_TMS_CLEAR);
+		request[offset + 1] = 1U;
+		offset += 2U;
+	}
+
+	uint8_t response = DAP_RESPONSE_OK;
+	/* Run the request having set up the request buffer */
+	if (!dap_run_cmd(request, offset, &response, 1U)) {
+		DEBUG_PROBE("-> sequence failed with %u\n", response);
+		return false;
+	}
+	/* And check that it succeeded */
+	return response == DAP_RESPONSE_OK;
+}
