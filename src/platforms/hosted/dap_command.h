@@ -105,5 +105,6 @@ bool perform_dap_transfer_block_read(
 bool perform_dap_transfer_block_write(
 	adiv5_debug_port_s *target_dp, uint8_t reg, uint16_t block_count, const uint32_t *blocks);
 bool perform_dap_jtag_sequence(const uint8_t *data_in, uint8_t *data_out, bool final_tms, size_t clock_cycles);
+bool perform_dap_jtag_tms_sequence(uint64_t tms_states, size_t clock_cycles);
 
 #endif /*PLATFORMS_HOSTED_DAP_COMMAND_H*/
