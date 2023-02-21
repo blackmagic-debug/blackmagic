@@ -298,28 +298,6 @@ void dap_line_reset(void)
 		DEBUG_WARN("line reset failed\n");
 }
 
-static uint32_t wait_word(uint8_t *buf, size_t response_length, size_t request_length, uint8_t *dp_fault)
-{
-	uint8_t cmd_copy[request_length];
-	memcpy(cmd_copy, buf, request_length);
-	do {
-		memcpy(buf, cmd_copy, request_length);
-		dbg_dap_cmd(buf, response_length, request_length);
-		if (buf[1] < DAP_TRANSFER_WAIT)
-			break;
-	} while (buf[1] == DAP_TRANSFER_WAIT);
-
-	if (buf[1] == SWDP_ACK_FAULT) {
-		*dp_fault = 1;
-		return 0;
-	}
-
-	if (buf[1] != SWDP_ACK_OK)
-		raise_exception(EXCEPTION_ERROR, "SWDP invalid ACK");
-	uint32_t res = ((uint32_t)buf[5] << 24U) | ((uint32_t)buf[4] << 16U) | ((uint32_t)buf[3] << 8U) | (uint32_t)buf[2];
-	return res;
-}
-
 uint32_t dap_read_reg(adiv5_debug_port_s *target_dp, const uint8_t reg)
 {
 	const dap_transfer_request_s request = {.request = reg | DAP_TRANSFER_RnW};
@@ -462,26 +440,22 @@ void dap_ap_mem_access_setup(adiv5_access_port_s *const target_ap, const uint32_
 	}
 }
 
-uint32_t dap_ap_read(adiv5_access_port_s *ap, uint16_t addr)
+uint32_t dap_ap_read(adiv5_access_port_s *const target_ap, const uint16_t addr)
 {
-	DEBUG_PROBE("dap_ap_read_start addr %x\n", addr);
-	uint8_t buf[63], *p = buf;
-	buf[0] = ID_DAP_TRANSFER;
-	uint8_t dap_index = 0;
-	dap_index = ap->dp->dev_index;
-	*p++ = ID_DAP_TRANSFER;
-	*p++ = dap_index;
-	*p++ = 2; /* Nr transfers */
-	*p++ = SWD_DP_W_SELECT;
-	*p++ = (addr & 0xf0U);
-	*p++ = 0;
-	*p++ = 0;
-	*p++ = ap->apsel & 0xffU;
-	*p++ = (addr & 0x0cU) | DAP_TRANSFER_RnW | (addr & 0x100U ? DAP_TRANSFER_APnDP : 0);
-	uint32_t res = wait_word(buf, 63, p - buf, &ap->dp->fault);
-	if (buf[0] != 2U || buf[1] != 1U)
-		DEBUG_WARN("dap_ap_read error %x\n", buf[1]);
-	return res;
+	dap_transfer_request_s requests[2];
+	DEBUG_PROBE("dap_ap_read addr %x\n", addr);
+	/* Select the bank for the register */
+	requests[0].request = SWD_DP_W_SELECT;
+	requests[0].data = SWD_DP_REG(addr & 0xf0U, target_ap->apsel);
+	/* Read the register */
+	requests[1].request = (addr & 0x0cU) | DAP_TRANSFER_RnW | (addr & 0x100U ? DAP_TRANSFER_APnDP : 0);
+	uint32_t result = 0;
+	adiv5_debug_port_s *const target_dp = target_ap->dp;
+	if (!perform_dap_transfer(target_dp, requests, 2U, &result, 1U)) {
+		DEBUG_WARN("dap_ap_read failed (fault = %u)\n", target_dp->fault);
+		return 0U;
+	}
+	return result;
 }
 
 void dap_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value)
