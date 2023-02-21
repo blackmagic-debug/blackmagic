@@ -496,20 +496,7 @@ void dap_write_single(
 	mem_access_setup(target_ap, requests, dest, align);
 	requests[3].request = SWD_AP_DRW;
 	/* Pack data into correct data lane */
-	switch (align) {
-	case ALIGN_BYTE:
-		requests[3].data = ((uint32_t) * (uint8_t *)src) << ((dest & 3U) << 3U);
-		break;
-	case ALIGN_HALFWORD:
-		requests[3].data = ((uint32_t) * (uint16_t *)src) << ((dest & 2U) << 3U);
-		break;
-	case ALIGN_DWORD:
-	case ALIGN_WORD:
-		requests[3].data = *(uint32_t *)src;
-		break;
-	default:
-		requests[3].data = 0;
-	}
+	adiv5_pack_data(dest, src, &requests[3].data, align);
 	adiv5_debug_port_s *target_dp = target_ap->dp;
 	if (!perform_dap_transfer_recoverable(target_dp, requests, 4U, NULL, 0U))
 		DEBUG_WARN("dap_write_single failed (fault = %u)\n", target_dp->fault);
