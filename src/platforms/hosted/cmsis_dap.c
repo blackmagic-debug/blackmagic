@@ -66,6 +66,7 @@
 
 #include "bmp_hosted.h"
 #include "dap.h"
+#include "dap_command.h"
 #include "cmsis_dap.h"
 
 #include "cli.h"
@@ -530,13 +531,13 @@ static void cmsis_dap_jtagtap_tms_seq(const uint32_t tms_states, const size_t cl
 static void cmsis_dap_jtagtap_tdi_tdo_seq(
 	uint8_t *const data_out, const bool final_tms, const uint8_t *const data_in, const size_t clock_cycles)
 {
-	dap_jtagtap_tdi_tdo_seq(data_out, final_tms, NULL, data_in, clock_cycles);
-	DEBUG_PROBE("jtagtap_tdi_tdo_seq %zu, %02x-> %02x\n", clock_cycles, data_in[0], data_out ? data_out[0] : 0);
+	perform_dap_jtag_sequence(data_in, data_out, final_tms, clock_cycles);
+	DEBUG_PROBE("jtagtap_tdi_tdo_seq %zu, %02x -> %02x\n", clock_cycles, data_in[0], data_out ? data_out[0] : 0);
 }
 
 static void cmsis_dap_jtagtap_tdi_seq(const bool final_tms, const uint8_t *const data_in, const size_t clock_cycles)
 {
-	dap_jtagtap_tdi_tdo_seq(NULL, final_tms, NULL, data_in, clock_cycles);
+	perform_dap_jtag_sequence(data_in, NULL, final_tms, clock_cycles);
 	DEBUG_PROBE("jtagtap_tdi_seq %zu, %02x\n", clock_cycles, data_in[0]);
 }
 
@@ -545,8 +546,8 @@ static bool cmsis_dap_jtagtap_next(const bool tms, const bool tdi)
 	const uint8_t tms_byte = tms ? 1 : 0;
 	const uint8_t tdi_byte = tdi ? 1 : 0;
 	uint8_t tdo = 0;
-	dap_jtagtap_tdi_tdo_seq(&tdo, false, &tms_byte, &tdi_byte, 1U);
-	DEBUG_PROBE("next tms %02x tdi %02x tdo %02x\n", tms, tdi, tdo);
+	perform_dap_jtag_sequence(&tdi_byte, &tdo, tms, 1U);
+	DEBUG_PROBE("jtagtap_next tms=%u tdi=%u tdo=%u\n", tms_byte, tdi_byte, tdo);
 	return tdo;
 }
 
