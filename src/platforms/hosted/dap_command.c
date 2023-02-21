@@ -71,32 +71,6 @@ static inline uint32_t read_le4(const uint8_t *const buffer, const size_t offset
 		((uint32_t)buffer[offset + 3U] << 24U);
 }
 
-bool perform_dap_swj_sequence(size_t clock_cycles, const uint8_t *data)
-{
-	/* Validate that clock_cycles is in range for the request (spec limits it to 256) */
-	if (clock_cycles > 256)
-		return false;
-
-	DEBUG_PROBE("-> dap_swj_sequence (%zu cycles)\n", clock_cycles);
-	/* Construct the request buffer */
-	uint8_t request[34] = {
-		DAP_SWJ_SEQUENCE,
-		(uint8_t)clock_cycles,
-	};
-	/* Calculate the number of bytes needed to represent the requested number of clock cycles */
-	const size_t bytes = (clock_cycles + 7U) >> 3U;
-	/* And copy the data into the buffer */
-	memcpy(request + 2, data, bytes);
-
-	/* Sequence response is a single byte */
-	uint8_t response = DAP_RESPONSE_OK;
-	/* Run the request */
-	if (!dap_run_cmd(request, 2U + bytes, &response, 1U))
-		return false;
-	/* And check that it succeeded */
-	return response == DAP_RESPONSE_OK;
-}
-
 static size_t dap_encode_transfer(
 	const dap_transfer_request_s *const transfer, uint8_t *const buffer, const size_t offset)
 {
@@ -222,6 +196,32 @@ bool perform_dap_transfer_block_write(
 
 	DEBUG_PROBE("-> transfer failed with %u after processing %u blocks\n", response.status, blocks_written);
 	return false;
+}
+
+bool perform_dap_swj_sequence(size_t clock_cycles, const uint8_t *data)
+{
+	/* Validate that clock_cycles is in range for the request (spec limits it to 256) */
+	if (clock_cycles > 256)
+		return false;
+
+	DEBUG_PROBE("-> dap_swj_sequence (%zu cycles)\n", clock_cycles);
+	/* Construct the request buffer */
+	uint8_t request[34] = {
+		DAP_SWJ_SEQUENCE,
+		(uint8_t)clock_cycles,
+	};
+	/* Calculate the number of bytes needed to represent the requested number of clock cycles */
+	const size_t bytes = (clock_cycles + 7U) >> 3U;
+	/* And copy the data into the buffer */
+	memcpy(request + 2, data, bytes);
+
+	/* Sequence response is a single byte */
+	uint8_t response = DAP_RESPONSE_OK;
+	/* Run the request */
+	if (!dap_run_cmd(request, 2U + bytes, &response, 1U))
+		return false;
+	/* And check that it succeeded */
+	return response == DAP_RESPONSE_OK;
 }
 
 bool perform_dap_jtag_sequence(
