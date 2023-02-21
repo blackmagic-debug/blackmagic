@@ -431,7 +431,7 @@ bool nrf51_mdm_probe(adiv5_access_port_s *ap)
 		t->driver = "Nordic nRF52 Access Port";
 	else
 		t->driver = "Nordic nRF52 Access Port (protected)";
-	t->regs_size = 4;
+	t->regs_size = 0;
 
 	return true;
 }
