@@ -32,6 +32,12 @@ jobs:
           - 'clang-15'
           - 'gcc-9'
           - 'gcc-11'
+        arm-compiler:
+          - '12.2.Rel1'
+        include:
+          - os: {id: ubuntu-20.04, name: focal}
+            compiler: gcc-9
+            arm-compiler: '10-2020-q4'
       fail-fast: false
 
     # Steps represent a sequence of tasks that will be executed as part of the job
@@ -81,7 +87,9 @@ jobs:
 
       # Setup and use a suitable ARM GCC for the firwmare
       - name: Setup ARM GCC
-        uses: numworks/setup-arm-toolchain@2020-q4
+        uses: carlosperate/arm-none-eabi-gcc-action@v1
+        with:
+          release: ${{ matrix.arm-compiler }}
 
       # Record the versions of all the tools used in the build
       - name: Version tools
@@ -105,6 +113,6 @@ jobs:
       - name: Archive firmware build artifacts as a zip
         uses: actions/upload-artifact@v3
         with:
-          name: blackmagic-linux.zip
+          name: blackmagic-linux_${{ matrix.os.name }}-${{ matrix.compiler }}+arm-${{ matrix.arm-compiler }}
           path: src/artifacts/*
           if-no-files-found: error
