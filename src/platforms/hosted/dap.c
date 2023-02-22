@@ -1,5 +1,7 @@
 /*
  * Copyright (c) 2013-2015, Alex Taradov <alex@taradov.com>
+ * Copyright (C) 2023 1BitSquared <info@1bitsquared.com>
+ * Modified by Rachel Mant <git@dragonmux.network>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
