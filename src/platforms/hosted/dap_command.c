@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2022 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2022-2023 1BitSquared <info@1bitsquared.com>
  * Written by Rachel Mant <git@dragonmux.network>
  * All rights reserved.
  *
@@ -322,4 +322,75 @@ bool perform_dap_jtag_tms_sequence(const uint64_t tms_states, const size_t clock
 	}
 	/* And check that it succeeded */
 	return response == DAP_RESPONSE_OK;
+}
+
+static size_t dap_encode_swd_sequence(
+	const dap_swd_sequence_s *const sequence, uint8_t *const buffer, const size_t offset)
+{
+	/* If the sequence is over-long, ignore it */
+	if (sequence->cycles > 64U)
+		return 0U;
+
+	const uint8_t clock_cycles = sequence->cycles;
+	/* Encode the cycle count and direction information */
+	buffer[offset] = (clock_cycles & 0x3fU) | (sequence->direction << 7U);
+	/* If we're dealing with an output sequence, encode the data here */
+	if (sequence->direction == DAP_SWD_OUT_SEQUENCE) {
+		/* Calculate how many data bytes are in use and copy that much data in */
+		const size_t bytes = (clock_cycles + 7U) >> 3U;
+		memcpy(buffer + offset + 1U, sequence->data, bytes);
+		/* Then return the offset adjustment */
+		return 1U + bytes;
+	}
+	/* If we're encoding an input sequence, we only encode the control byte */
+	return 1U;
+}
+
+bool perform_dap_swd_sequences(dap_swd_sequence_s *const sequences, const uint8_t sequence_count)
+{
+	if (sequence_count > 4)
+		return false;
+
+	DEBUG_PROBE("-> dap_swd_sequence (%u sequences)\n", sequence_count);
+	/* 38 is 2 + (4 * 9) where 9 is the max length of each sequence request */
+	uint8_t request[38] = {
+		DAP_SWD_SEQUENCE,
+		sequence_count,
+	};
+	/* Encode the transfers into the buffer */
+	size_t offset = 2U;
+	size_t result_length = 0U;
+	for (uint8_t i = 0; i < sequence_count; ++i) {
+		const dap_swd_sequence_s *const sequence = &sequences[i];
+		const size_t adjustment = dap_encode_swd_sequence(sequence, request, offset);
+		/* If encoding failed, return */
+		if (!adjustment)
+			return false;
+		offset += adjustment;
+		/* Count up how many response bytes we're expecting */
+		if (sequence->direction == DAP_SWD_IN_SEQUENCE)
+			result_length += (sequence->cycles + 7U) >> 3U;
+	}
+
+	uint8_t response[33] = {DAP_RESPONSE_OK};
+	/* Run the request having set up the request buffer */
+	if (!dap_run_cmd(request, offset, response, 1U + result_length)) {
+		DEBUG_PROBE("-> sequence failed with %u\n", response[0]);
+		return false;
+	}
+
+	/* Now we have data, grab the response bytes and stuff them back into the sequence structures */
+	offset = 1U;
+	for (uint8_t i = 0; i < sequence_count; ++i) {
+		dap_swd_sequence_s *const sequence = &sequences[i];
+		/* If this one is not an in sequence, skip it */
+		if (sequence->direction == DAP_SWD_OUT_SEQUENCE)
+			continue;
+		/* Figure out how many bytes to copy back and copy them */
+		const size_t bytes = (sequence->cycles + 7U) >> 3U;
+		memcpy(sequence->data, response + offset, bytes);
+		offset += bytes;
+	}
+	/* Finally, check that it all succeeded */
+	return response[0] == DAP_RESPONSE_OK;
 }
