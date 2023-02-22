@@ -1,7 +1,7 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2022 1BitSquared <info@1bitsquared.com>
+ * Copyright (C) 2022-2023 1BitSquared <info@1bitsquared.com>
  * Written by Rachel Mant <git@dragonmux.network>
  * All rights reserved.
  *
@@ -44,6 +44,7 @@ typedef enum dap_command {
 	DAP_TRANSFER_BLOCK = 0x06U,
 	DAP_SWJ_SEQUENCE = 0x12U,
 	DAP_JTAG_SEQUENCE = 0x14U,
+	DAP_SWD_SEQUENCE = 0x1dU,
 } dap_command_e;
 
 typedef enum dap_response_status {
@@ -57,6 +58,9 @@ typedef enum dap_transfer_status {
 	DAP_TRANSFER_FAULT = 0x04U,
 	DAP_TRANSFER_NO_RESPONSE = 0x07U,
 } dap_transfer_status_e;
+
+#define DAP_SWD_OUT_SEQUENCE 0U
+#define DAP_SWD_IN_SEQUENCE  1U
 
 typedef struct dap_transfer_request {
 	uint8_t request;
@@ -95,6 +99,12 @@ typedef struct dap_transfer_block_response_write {
 	uint8_t status;
 } dap_transfer_block_response_write_s;
 
+typedef struct dap_swd_sequence {
+	uint8_t cycles : 7;
+	uint8_t direction : 1;
+	uint8_t data[8];
+} dap_swd_sequence_s;
+
 bool perform_dap_transfer(adiv5_debug_port_s *target_dp, const dap_transfer_request_s *transfer_requests,
 	size_t requests, uint32_t *response_data, size_t responses);
 bool perform_dap_transfer_recoverable(adiv5_debug_port_s *target_dp, const dap_transfer_request_s *transfer_requests,
@@ -108,5 +118,7 @@ bool perform_dap_swj_sequence(size_t clock_cycles, const uint8_t *data);
 
 bool perform_dap_jtag_sequence(const uint8_t *data_in, uint8_t *data_out, bool final_tms, size_t clock_cycles);
 bool perform_dap_jtag_tms_sequence(uint64_t tms_states, size_t clock_cycles);
+
+bool perform_dap_swd_sequences(dap_swd_sequence_s *sequences, uint8_t sequence_count);
 
 #endif /*PLATFORMS_HOSTED_DAP_COMMAND_H*/
