@@ -4,10 +4,15 @@ name: build and upload
 on:
   # Triggers the workflow on push or pull request events but only for the main branch
   push:
-    branches: [ main ]
+    branches: ['main', 'feature/windows-ci']
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
+
+# This controls the concurrency level for the jobs and how it's calculated
+concurrency:
+  group: ${{ github.workflow }}-${{ github.job }}-${{ github.ref }}
+  cancel-in-progress: true
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
