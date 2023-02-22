@@ -113,6 +113,95 @@ jobs:
       - name: Build full BMDA binary
         run: make PROBE_HOST=hosted HOSTED_BMP_ONLY=0
 
+  build-windows-mingw:
+    # Name the job more appropriately so we can tell which windows and which MinGW ABI is in use
+    name: 'build-mingw (${{ matrix.os }}, ${{ matrix.sys.abi }})'
+    # The type of runner that the job will run on
+    runs-on: ${{ matrix.os }}
+
+    # Set the shell so run steps will execute from in msys2 correctly by default
+    defaults:
+      run:
+        shell: msys2 {0}
+
+    # We define a matrix of compilers and OS versions to build against so we can cover a variety of
+    # suitable compilation environments and early discover issues. The `build-and-upload`
+    # workflow contains an extended set.
+    strategy:
+      matrix:
+        os:
+          - windows-2022
+        sys:
+          - {abi: ucrt64, env: ucrt-x86_64, compiler: gcc}
+          - {abi: clang64, env: clang-x86_64, compiler: clang}
+      fail-fast: false
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Install a suitable system compiler for the build
+      - name: Use MinGW from MSYS
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{matrix.sys.abi}}
+          update: true
+          path-type: inherit
+          install: >-
+            mingw-w64-${{matrix.sys.env}}-toolchain
+
+      # Build a suitable runtime environment
+      - name: Runtime environment
+        env:
+          WORKSPACE: ${{ github.workspace }}
+        # The GITHUB_WORKSPACE step here fixes https://github.com/actions/runner/issues/2058 which is an ongoing issue.
+        run: |
+          echo "$GITHUB_WORKSPACE=`pwd`" >> $GITHUB_ENV
+
+      # Configure the system toolchain environment
+      - name: Setup system GCC
+        if: matrix.sys.compiler == 'gcc'
+        run: |
+          CXX=${CC/#gcc/g++}
+          echo "CC=$CC" >> $GITHUB_ENV
+          echo "CXX=$CXX" >> $GITHUB_ENV
+        env:
+          CC: ${{ matrix.sys.compiler }}
+      - name: Setup system Clang
+        if: matrix.sys.compiler == 'clang'
+        run: |
+          CXX=${CC/#clang/clang++}
+          echo "CC=$CC" >> $GITHUB_ENV
+          echo "CXX=$CXX" >> $GITHUB_ENV
+        env:
+          CC: ${{ matrix.sys.compiler }}
+
+      # Record the versions of all the tools used in the build
+      - name: Version tools
+        shell: bash
+        run: |
+          $CC --version
+          make --version
+
+      # Checkout the repository and branch to build under the default location
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      # Build BMDA in BMP-only mode
+      - name: Build BMP only BMDA
+        run: make PROBE_HOST=hosted HOSTED_BMP_ONLY=1
+
+      - name: Clean
+        run: make -C src clean
+
+      # Install the dependencies needed for a full BMDA build
+      - name: Install BMDA dependencies
+        run: |
+          pacman --noconfirm -S mingw-w64-${{matrix.sys.env}}-libusb mingw-w64-${{matrix.sys.env}}-libftdi \
+            mingw-w64-${{matrix.sys.env}}-hidapi
+
+      # And build that full binary
+      - name: Build full BMDA
+        run: make PROBE_HOST=hosted HOSTED_BMP_ONLY=0
+
   size-diff:
     runs-on: ubuntu-latest
 
