@@ -39,54 +39,24 @@
 #include "dap_command.h"
 #include "jtag_scan.h"
 
-/*- Definitions -------------------------------------------------------------*/
 #define ID_DAP_INFO               0x00U
 #define ID_DAP_LED                0x01U
 #define ID_DAP_CONNECT            0x02U
 #define ID_DAP_DISCONNECT         0x03U
 #define ID_DAP_TRANSFER_CONFIGURE 0x04U
-#define ID_DAP_TRANSFER           0x05U
-#define ID_DAP_TRANSFER_BLOCK     0x06U
-#define ID_DAP_TRANSFER_ABORT     0x07U
-#define ID_DAP_WRITE_ABORT        0x08U
-#define ID_DAP_DELAY              0x09U
 #define ID_DAP_RESET_TARGET       0x0aU
 #define ID_DAP_SWJ_PINS           0x10U
 #define ID_DAP_SWJ_CLOCK          0x11U
-#define ID_DAP_SWJ_SEQUENCE       0x12U
 #define ID_DAP_SWD_CONFIGURE      0x13U
-#define ID_DAP_JTAG_SEQUENCE      0x14U
 #define ID_DAP_JTAG_CONFIGURE     0x15U
-#define ID_DAP_JTAG_IDCODE        0x16U
-#define ID_DAP_SWD_SEQUENCE       0x1dU
 
-#define DAP_TRANSFER_APnDP       (1U << 0U)
-#define DAP_TRANSFER_RnW         (1U << 1U)
-#define DAP_TRANSFER_A2          (1U << 2U)
-#define DAP_TRANSFER_A3          (1U << 3U)
-#define DAP_TRANSFER_MATCH_VALUE (1U << 4U)
-#define DAP_TRANSFER_MATCH_MASK  (1U << 5U)
+#define DAP_TRANSFER_APnDP (1U << 0U)
+#define DAP_TRANSFER_RnW   (1U << 1U)
 
-#define DAP_TRANSFER_INVALID   0U
-#define DAP_TRANSFER_OK        (1U << 0U)
-#define DAP_TRANSFER_WAIT      (1U << 1U)
-#define DAP_TRANSFER_FAULT     (1U << 2U)
-#define DAP_TRANSFER_ERROR     (1U << 3U)
-#define DAP_TRANSFER_MISMATCH  (1U << 4U)
-#define DAP_TRANSFER_NO_TARGET 7U
+#define DAP_TRANSFER_WAIT (1U << 1U)
 
-#define DAP_SWJ_SWCLK_TCK (1U << 0U)
-#define DAP_SWJ_SWDIO_TMS (1U << 1U)
-#define DAP_SWJ_TDI       (1U << 2U)
-#define DAP_SWJ_TDO       (1U << 3U)
-#define DAP_SWJ_nTRST     (1U << 5U)
-#define DAP_SWJ_nRESET    (1U << 7U)
-
-#define DAP_OK    0x00U
-#define DAP_ERROR 0xffU
-
-#define DAP_JTAG_TMS         (1U << 6U)
-#define DAP_JTAG_TDO_CAPTURE (1U << 7U)
+#define DAP_SWJ_nTRST  (1U << 5U)
+#define DAP_SWJ_nRESET (1U << 7U)
 
 #define SWD_DP_R_IDCODE    0x00U
 #define SWD_DP_W_ABORT     0x00U
@@ -111,30 +81,6 @@
 #define SWD_AP_CFG  (0x04U | DAP_TRANSFER_APnDP) // 0xf4
 #define SWD_AP_BASE (0x08U | DAP_TRANSFER_APnDP) // 0xf8
 #define SWD_AP_IDR  (0x0cU | DAP_TRANSFER_APnDP) // 0xfc
-
-#define DP_ABORT_DAPABORT   (1U << 0U)
-#define DP_ABORT_STKCMPCLR  (1U << 1U)
-#define DP_ABORT_STKERRCLR  (1U << 2U)
-#define DP_ABORT_WDERRCLR   (1U << 3U)
-#define DP_ABORT_ORUNERRCLR (1U << 4U)
-
-#define DP_CST_ORUNDETECT      (1U << 0U)
-#define DP_CST_STICKYORUN      (1U << 1U)
-#define DP_CST_TRNMODE_NORMAL  (0U << 2U)
-#define DP_CST_TRNMODE_VERIFY  (1U << 2U)
-#define DP_CST_TRNMODE_COMPARE (2U << 2U)
-#define DP_CST_STICKYCMP       (1U << 4U)
-#define DP_CST_STICKYERR       (1U << 5U)
-#define DP_CST_READOK          (1U << 6U)
-#define DP_CST_WDATAERR        (1U << 7U)
-#define DP_CST_MASKLANE(x)     ((x) << 8U)
-#define DP_CST_TRNCNT(x)       ((x) << 12U)
-#define DP_CST_CDBGRSTREQ      (1U << 26U)
-#define DP_CST_CDBGRSTACK      (1U << 27U)
-#define DP_CST_CDBGPWRUPREQ    (1U << 28U)
-#define DP_CST_CDBGPWRUPACK    (1U << 29U)
-#define DP_CST_CSYSPWRUPREQ    (1U << 30U)
-#define DP_CST_CSYSPWRUPACK    (1U << 31U)
 
 #define DP_SELECT_CTRLSEL      (1U << 0U)
 #define DP_SELECT_APBANKSEL(x) ((x) << 4U)
@@ -551,8 +497,6 @@ void dap_swdptap_seq_out_parity(const uint32_t tms_states, const size_t clock_cy
 	if (!perform_dap_swj_sequence(clock_cycles + 1U, data))
 		DEBUG_WARN("dap_swdptap_seq_out_parity error\n");
 }
-
-#define SWD_SEQUENCE_IN 0x80U
 
 uint32_t dap_swdptap_seq_in(const size_t clock_cycles)
 {
