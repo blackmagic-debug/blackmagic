@@ -16,7 +16,7 @@ CFLAGS += -Wall -Wextra -Werror -Wreturn-type \
 	-I. -Iinclude -I$(PLATFORM_DIR)
 
 ifeq (filter, macosx darwin, $(SYS))
-CFLAGS += -Wmaybe-uninitialized -Wstringop-overflow -Wunsafe-loop-optimizations 
+CFLAGS += -Wmaybe-uninitialized -Wstringop-overflow -Wunsafe-loop-optimizations
 endif
 
 ifeq ($(ENABLE_DEBUG), 1)
@@ -74,7 +74,9 @@ SRC =              \
 	target_flash.c \
 	target_probe.c
 
+ifeq (,$(filter all_platforms,$(MAKECMDGOALS)))
 include $(PLATFORM_DIR)/Makefile.inc
+endif
 
 ifneq ($(PC_HOSTED),1)
 # Output memory usage information
@@ -206,4 +208,6 @@ endif
 clang-format:
 	$(Q)clang-format -i *.c */*.c */*/*.c *.h */*.h */*/*.h
 
+ifeq (,$(filter clean,$(MAKECMDGOALS)))
 -include *.d
+endif
