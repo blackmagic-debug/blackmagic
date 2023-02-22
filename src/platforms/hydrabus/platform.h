@@ -28,8 +28,6 @@
 #include "timing.h"
 #include "timing_stm32.h"
 
-#include <setjmp.h>
-
 #define PLATFORM_HAS_USBUART
 #define PLATFORM_HAS_TRACESWO
 #define PLATFORM_IDENT " (HydraBus))"

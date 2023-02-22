@@ -13,7 +13,7 @@ CFLAGS +=-I ./target
 # The benefit of only building for the Black Magic Firmware is a reduced linking
 # footprint. Specifically no requirement to link against libftdi1, libusb1, or
 # hidapi (hidapi-hidraw on Linux). This makes building on Windows in particular easier.
-ifneq (, $(findstring linux, $(SYS)))
+ifneq (,$(findstring linux, $(SYS)))
     HOSTED_BMP_ONLY ?= 0
 else
     HOSTED_BMP_ONLY ?= 1
@@ -22,30 +22,37 @@ CFLAGS += -DHOSTED_BMP_ONLY=$(HOSTED_BMP_ONLY)
 
 ifeq ($(ASAN), 1)
     CFLAGS += -fsanitize=address
-    ifeq (, $(findstring darwin, $(SYS)))
+    ifeq (, $(findstring darwin,$(SYS)))
         CFLAGS += -Wno-format-truncation
     endif
     LDFLAGS += -fsanitize=address
 endif
 
 HIDAPILIB = hidapi
-ifneq (, $(findstring linux, $(SYS)))
+ifneq (,$(findstring linux,$(SYS)))
     SRC += serial_unix.c
     HIDAPILIB = hidapi-hidraw
-else ifneq (, $(findstring mingw, $(SYS)))
+else ifneq (,$(findstring mingw,$(SYS)))
+    FLAVOUR = $(shell which $(CC))
+    ifneq (,$(findstring ucrt64,$(FLAVOUR)))
+        CRT = ucrt
+    else ifneq (,$(findstring clang,$(FLAVOUR)))
+        CRT = ucrt
+    else
+        CRT = msvcrt
+    endif
+
+    # Build for windows versions Vista, and above, where the
+    # 'SetupDiGetDevicePropertyW()' function is available
+    CFLAGS += -D_WIN32_WINNT=0x600 -mcrtdll=$(CRT)
+    SRC += serial_win.c
+    LDFLAGS += -lws2_32 -lsetupapi -mcrtdll=$(CRT)
+else ifneq (,$(findstring cygwin,$(SYS)))
     # Build for windows versions Vista, and above, where the
     # 'SetupDiGetDevicePropertyW()' function is available
     CFLAGS += -D_WIN32_WINNT=0x600
     SRC += serial_win.c
-    LDFLAGS += -lws2_32
-    LDFLAGS += -lsetupapi
-else ifneq (, $(findstring cygwin, $(SYS)))
-    # Build for windows versions Vista, and above, where the
-    # 'SetupDiGetDevicePropertyW()' function is available
-    CFLAGS += -D_WIN32_WINNT=0x600
-    SRC += serial_win.c
-    LDFLAGS += -lws2_32
-    LDFLAGS += -lsetupapi
+    LDFLAGS += -lws2_32 -lsetupapi
 # https://github.com/dmlc/xgboost/issues/1945 indicates macosx as indicator
 else ifneq (filter, macosx darwin, $(SYS))
     SRC += serial_unix.c

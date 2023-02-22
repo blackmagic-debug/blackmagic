@@ -42,11 +42,7 @@
 #ifndef INCLUDE_EXCEPTION_H
 #define INCLUDE_EXCEPTION_H
 
-#if defined(__MINGW32__) || defined(__MINGW64__)
-#include <setjmpex.h>
-#else
 #include <setjmp.h>
-#endif
 #include <stdint.h>
 
 #define EXCEPTION_ERROR   0x01U

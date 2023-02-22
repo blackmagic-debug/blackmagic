@@ -28,8 +28,6 @@
 #include "timing_stm32.h"
 #include "version.h"
 
-#include <setjmp.h>
-
 #define PLATFORM_HAS_TRACESWO
 #define PLATFORM_IDENT "(Carbon)"
 
