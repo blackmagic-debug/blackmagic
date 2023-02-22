@@ -16,37 +16,102 @@ concurrency:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
-  build:
+  # This workflow contains a job for each supported OS in the form `build-<os>`
+  build-linux:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os.id }}
+
+    # We define a matrix of GCCs and OSes to build against so we can cover a variety of
+    # suitable compilation environments and early discover issues. The `build-and-upload`
+    # workflow contains an extended set.
+    strategy:
+      matrix:
+        os:
+          - {id: ubuntu-20.04, name: focal}
+        compiler:
+          - 'clang-15'
+          - 'gcc-11'
+      fail-fast: false
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      # Build a suitable runtime environment
+      - name: Runtime environment
+        shell: bash
+        env:
+          WORKSPACE: ${{ github.workspace }}
+        # The GITHUB_WORKSPACE step here fixes https://github.com/actions/runner/issues/2058 which is an ongoing issue.
+        run: |
+          echo "$GITHUB_WORKSPACE=`pwd`" >> $GITHUB_ENV
 
-      # Use embedded toolchain
-      - uses: numworks/setup-arm-toolchain@2020-q4
+      # Install a suitable system compiler for the build
+      - name: Setup system GCC
+        if: startsWith(matrix.compiler, 'gcc')
+        shell: bash
+        run: |
+          CXX=${CC/#gcc/g++}
+          sudo apt-add-repository ppa:ubuntu-toolchain-r/test
+          sudo apt-get update
+          sudo apt-get install $CC $CXX
+          echo "CC=$CC" >> $GITHUB_ENV
+          echo "CXX=$CXX" >> $GITHUB_ENV
+        env:
+          CC: ${{ matrix.compiler }}
+      - name: Setup system Clang
+        if: startsWith(matrix.compiler, 'clang')
+        shell: bash
+        run: |
+          wget https://apt.llvm.org/llvm-snapshot.gpg.key
+          sudo apt-key add llvm-snapshot.gpg.key
+          rm llvm-snapshot.gpg.key
+          sudo apt-add-repository "deb https://apt.llvm.org/${{ matrix.os.name }}/ llvm-toolchain-${{ matrix.os.name }}${CC/#clang/} main"
+          sudo apt-get update
+          sudo apt-get install $CC
+          CXX=${CC/#clang/clang++}
+          echo "CC=$CC" >> $GITHUB_ENV
+          echo "CXX=$CXX" >> $GITHUB_ENV
+        env:
+          CC: ${{ matrix.compiler }}
+        working-directory: ${{ runner.temp }}
 
-      # Build all the firmwares
-      - name: Build all platform firmwares and BMP only BMPA
+      # Setup and use a suitable ARM GCC for the firwmare
+      - name: Setup ARM GCC
+        uses: numworks/setup-arm-toolchain@2020-q4
+
+      # Record the versions of all the tools used in the build
+      - name: Version tools
+        shell: bash
+        run: |
+          $CC --version
+          $CXX --version
+          arm-none-eabi-gcc --version
+          make --version
+
+      # Checkout the repository and branch to build under the default location
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      # Build the firmware for all platform variants and BMDA in BMP-only mode
+      - name: Build all platform variants firmware and BMP only BMDA
         run: make all_platforms HOSTED_BMP_ONLY=1
 
       - name: Clean
         run: make clean
 
-      - name: Build all platform firmwares with RTT
+      # Build all the firmware variants with RTT enabled
+      - name: Build all platform variants firmware with RTT
         run: make all_platforms HOSTED_BMP_ONLY=1 ENABLE_RTT=1
 
       - name: Clean
         run: make clean
 
+      # Having tested the BMP-only BMDA builds, now install the deps for full BMDA
       - name: Install BMDA dependencies
         run: sudo apt-get -y install libusb-dev libftdi1-dev libhidapi-dev
 
+      # And build that full binary
       - name: Build full BMDA binary
-        run: make PROBE_HOST=hosted
+        run: make PROBE_HOST=hosted HOSTED_BMP_ONLY=0
 
   size-diff:
     runs-on: ubuntu-latest
