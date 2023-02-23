@@ -231,6 +231,7 @@ target_stm = declare_dependency(
 	sources: files(
 		'at32f43x.c',
 		'ch32f1.c',
+		'ch32vx.c',
 		'stm32f1.c',
 		'stm32f4.c',
 		'stm32g0.c',
