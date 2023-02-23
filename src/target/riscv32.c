@@ -101,6 +101,9 @@ bool riscv32_probe(target_s *const target)
 	case JEP106_MANUFACTURER_ESPRESSIF:
 		PROBE(esp32c3_probe);
 		break;
+	case NOT_JEP106_MANUFACTURER_WCH:
+		PROBE(ch32vx_probe);
+		break;
 	}
 #if PC_HOSTED == 0
 	gdb_outf("Please report unknown device with Designer 0x%x\n", target->designer_code);

@@ -77,6 +77,7 @@ SRC =                \
 	spi.c            \
 	stm32f1.c        \
 	ch32f1.c         \
+	ch32vx.c         \
 	stm32f4.c        \
 	stm32h5.c        \
 	stm32h7.c        \
