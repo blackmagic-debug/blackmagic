@@ -289,6 +289,7 @@ target_stm32f4 = declare_dependency(
 target_ch32 = declare_dependency(
 	sources: files(
 		'ch32f1.c',
+		'ch32vx.c',
 	),
 	dependencies: target_stm32f1,
 )
