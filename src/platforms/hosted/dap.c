@@ -556,39 +556,41 @@ void dap_swdptap_seq_out_parity(const uint32_t tms_states, const size_t clock_cy
 
 uint32_t dap_swdptap_seq_in(const size_t clock_cycles)
 {
-	uint8_t buf[6] = {
-		ID_DAP_SWD_SEQUENCE,
-		1,
-		clock_cycles + SWD_SEQUENCE_IN,
+	/* Setup the sequence */
+	dap_swd_sequence_s sequence = {
+		clock_cycles,
+		DAP_SWD_IN_SEQUENCE,
 	};
-	const size_t sequence_bytes = (clock_cycles + 7U) >> 3U;
-	dbg_dap_cmd(buf, 2U + sequence_bytes, 3U);
-	if (buf[0])
-		DEBUG_WARN("dap_swdptap_seq_in error\n");
+	/* And perform it */
+	if (!perform_dap_swd_sequences(&sequence, 1U)) {
+		DEBUG_WARN("dap_swdptap_seq_in failed\n");
+		return 0U;
+	}
 
 	uint32_t result = 0;
 	for (size_t offset = 0; offset < clock_cycles; offset += 8U)
-		result |= buf[1 + (offset >> 3U)] << offset;
+		result |= sequence.data[offset >> 3U] << offset;
 	return result;
 }
 
 bool dap_swdptap_seq_in_parity(uint32_t *const result, const size_t clock_cycles)
 {
-	uint8_t buf[7] = {
-		ID_DAP_SWD_SEQUENCE,
-		1,
-		clock_cycles + 1U + SWD_SEQUENCE_IN,
+	/* Setup the sequence */
+	dap_swd_sequence_s sequence = {
+		clock_cycles + 1U,
+		DAP_SWD_IN_SEQUENCE,
 	};
-	const size_t sequence_bytes = (clock_cycles + 8U) >> 3U;
-	dbg_dap_cmd(buf, 2U + sequence_bytes, 4U);
-	if (buf[0])
-		DEBUG_WARN("dap_swdptap_seq_in_parity error\n");
+	/* And perform it */
+	if (!perform_dap_swd_sequences(&sequence, 1U)) {
+		DEBUG_WARN("dap_swdptap_seq_in_parity failed\n");
+		return false;
+	}
 
 	uint32_t data = 0;
 	for (size_t offset = 0; offset < clock_cycles; offset += 8U)
-		data |= buf[1 + (offset >> 3U)] << offset;
+		data |= sequence.data[offset >> 3U] << offset;
 	*result = data;
 	uint8_t parity = __builtin_parity(data) & 1U;
-	parity ^= buf[5] & 1U;
+	parity ^= sequence.data[4] & 1U;
 	return !parity;
 }
