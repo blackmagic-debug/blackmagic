@@ -5,6 +5,14 @@ SYS := $(shell $(CC) -dumpmachine)
 CFLAGS += -DENABLE_DEBUG -DPLATFORM_HAS_DEBUG
 CFLAGS +=-I ./target
 
+# Clang requires some special handling here: -gnu means MinGW
+# while -msvc means Clang/CL. We don't currently support the latter
+# and we need the former to fit the formula of `x86_64-w64-mingw32`
+# and friends so we correctly trigger the MinGW block below.
+ifeq ($(SYS),x86_64-w64-windows-gnu)
+    SYS := x86_64-clang64-mingw
+endif
+
 # HOSTED_BMP_ONLY, which defaults to 1 on Windows + MacOS and 0 on Linux,
 # defines whether to build Black Magic Debug App for the Black Magic Firmware
 # only, or whether to include support for other adaptor types including FTDI,
@@ -35,18 +43,19 @@ ifneq (,$(findstring linux,$(SYS)))
 else ifneq (,$(findstring mingw,$(SYS)))
     FLAVOUR = $(shell which $(CC))
     ifneq (,$(findstring ucrt64,$(FLAVOUR)))
-        CRT = ucrt
+        CFLAGS += -mcrtdll=ucrt
+        LDFLAGS += -mcrtdll=ucrt
     else ifneq (,$(findstring clang,$(FLAVOUR)))
-        CRT = ucrt
     else
-        CRT = msvcrt
+        CFLAGS += -mcrtdll=msvcrt
+        LDFLAGS += -mcrtdll=msvcrt
     endif
 
     # Build for windows versions Vista, and above, where the
     # 'SetupDiGetDevicePropertyW()' function is available
-    CFLAGS += -D_WIN32_WINNT=0x600 -mcrtdll=$(CRT)
+    CFLAGS += -D_WIN32_WINNT=0x600
     SRC += serial_win.c
-    LDFLAGS += -lws2_32 -lsetupapi -mcrtdll=$(CRT)
+    LDFLAGS += -lws2_32 -lsetupapi
 else ifneq (,$(findstring cygwin,$(SYS)))
     # Build for windows versions Vista, and above, where the
     # 'SetupDiGetDevicePropertyW()' function is available
