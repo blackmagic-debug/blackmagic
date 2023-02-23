@@ -83,6 +83,10 @@
 #define JEP106_MANUFACTURER_WCH          0x72aU /* "Nanjing Yihuo Technology", used by CH579 */
 #define JEP106_MANUFACTURER_XILINX       0x309U /* Xilinx - Technically 0x049, but they use Ikanos Communications' code */
 
+/* BMD internal codes */
+/* WCH AKA Nanjing Qinheng Microelectronics */
+#define NOT_JEP106_MANUFACTURER_WCH (BMD_INTERNAL_FLAG | 0x01U) /* WCH (WinChipHead) */
+
 /*
  * This JEP code should belong to "Andes Technology Corporation", but is used on RISC-V by GigaDevice,
  * so in the unlikely event we need to support chips by them, here be dragons.
