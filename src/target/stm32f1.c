@@ -257,7 +257,12 @@ bool at32fxx_probe(target_s *t)
 	return false;
 }
 
-/* mm32l0 flash write */
+/*
+   mm32l0 flash write
+   On stm32, 16-bit writes use bits 0:15 for even halfwords; bits 16:31 for odd halfwords.
+   On mm32 cortex-m0, 16-bit writes always use bits 0:15.
+   Set both halfwords to the same value, works on both stm32 and mm32.
+*/
 
 void mm32l0_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, align_e align)
 {
@@ -272,13 +277,18 @@ void mm32l0_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void *
 		case ALIGN_BYTE: {
 			uint8_t value;
 			memcpy(&value, src, sizeof(value));
-			tmp = (uint32_t)value << (8U * (dest & 3U));
+			/* copy byte to be written to all four bytes of the uint32_t */
+			tmp = (uint32_t)value;
+			tmp = tmp | tmp << 8U;
+			tmp = tmp | tmp << 16U;
 			break;
 		}
 		case ALIGN_HALFWORD: {
 			uint16_t value;
 			memcpy(&value, src, sizeof(value));
-			tmp = (uint32_t)value; /* MM32 special, no shift << (8U * (dest & 2U)) */
+			/* copy halfword to be written to both halfwords of the uint32_t */
+			tmp = (uint32_t)value;
+			tmp = tmp | tmp << 16U;
 			break;
 		}
 		case ALIGN_DWORD:
@@ -360,12 +370,12 @@ bool mm32f3xx_probe(target_s *t)
 	}
 	switch (mm32_id) {
 	case 0xcc9aa0e7U:
-		name = "MM32F3270";
+		name = "MM32F3273";
 		flash_kbyte = 512;
 		ram1_kbyte = 128;
 		break;
 	case 0x4d4d0800U:
-		name = "MM32F5270";
+		name = "MM32F5277";
 		flash_kbyte = 256;
 		ram1_kbyte = 32;
 		ram2_kbyte = 128;

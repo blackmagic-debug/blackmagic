@@ -90,4 +90,7 @@
  */
 #define JEP106_MANUFACTURER_ERRATA_STM32WX 0x420U
 
+/* MindMotion MM32F5 uses the forbidden continuation code */
+#define JEP106_MANUFACTURER_ERRATA_ARM_CHINA 0xc7fU
+
 #endif /*TARGET_JEP106_H*/
