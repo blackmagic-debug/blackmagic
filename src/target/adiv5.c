@@ -270,6 +270,14 @@ static const struct {
 	{0xd21, 0x14, 0x1a14, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("Cortex-M33", "(Cross Trigger)")},
 	{0xd21, 0x13, 0x4a13, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("Cortex-M33", "(Embedded Trace)")},
 	{0xd21, 0x11, 0, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("Cortex-M33", "(Trace Port Interface Unit)")},
+	{0x132, 0x31, 0x0a31, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("STAR-MC1 MTB", "(Execution Trace)")},
+	{0x132, 0x43, 0x1a01, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("STAR-MC1 ITM", "(Instrumentation Trace Module)")},
+	{0x132, 0x00, 0x1a02, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("STAR-MC1 DWT", "(Data Watchpoint and Trace)")},
+	{0x132, 0x00, 0x1a03, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("STAR-MC1 BPU", "(Breakpoint Unit)")},
+	{0x132, 0x14, 0x1a14, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("STAR-MC1 CTI", "(Cross Trigger)")},
+	{0x132, 0x00, 0x2a04, aa_cortexm, cidc_dc, ARM_COMPONENT_STR("STAR-MC1 SCS", "(System Control Space)")},
+	{0x132, 0x13, 0x4a13, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("STAR-MC1 ETM", "(Embedded Trace)")},
+	{0x132, 0x11, 0, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("STAR-MC1 TPIU", "(Trace Port Interface Unit)")},
 	{0xfff, 0x00, 0, aa_end, cidc_unknown, ARM_COMPONENT_STR("end", "end")},
 };
 
@@ -573,7 +581,7 @@ static void adiv5_component_probe(
 		DEBUG_INFO("%sROM: Table END\n", indent);
 
 	} else {
-		if (designer_code != JEP106_MANUFACTURER_ARM) {
+		if (designer_code != JEP106_MANUFACTURER_ARM && designer_code != JEP106_MANUFACTURER_ARM_CHINA) {
 			/* non arm components not supported currently */
 			DEBUG_WARN("%s0x%" PRIx32 ": 0x%08" PRIx32 "%08" PRIx32 " Non ARM component ignored\n", indent, addr,
 				(uint32_t)(pidr >> 32U), (uint32_t)pidr);

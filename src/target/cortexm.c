@@ -572,6 +572,11 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 		t->part_id = ap->partno;
 	}
 
+	/* MM32F5xxx: part designer code is Arm China, target designer code uses forbidden continuation code */
+	if (t->designer_code == JEP106_MANUFACTURER_ERRATA_ARM_CHINA &&
+		ap->dp->designer_code == JEP106_MANUFACTURER_ARM_CHINA)
+		t->designer_code = JEP106_MANUFACTURER_ARM_CHINA;
+
 	cortexm_priv_s *priv = calloc(1, sizeof(*priv));
 	if (!priv) { /* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
