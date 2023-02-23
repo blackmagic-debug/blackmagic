@@ -60,6 +60,7 @@ bool at32f43x_probe(target_s *target);
 bool ch32f1_probe(target_s *target); // will catch all the clones
 bool ch579_probe(target_s *target);
 bool efm32_probe(target_s *target);
+bool ch32vx_probe(target_s *target);
 bool gd32f1_probe(target_s *target);
 bool gd32f4_probe(target_s *target);
 bool gd32vf1_probe(target_s *target);
