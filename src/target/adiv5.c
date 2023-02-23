@@ -479,8 +479,6 @@ static void adiv5_component_probe(
 		DEBUG_WARN("CIDR read timeout on AP%d, aborting.\n", ap->apsel);
 		return;
 	}
-	if ((cidr & ~CID_CLASS_MASK) != CID_PREAMBLE)
-		return;
 
 #if defined(ENABLE_DEBUG)
 	char indent[recursion + 1U];
@@ -635,8 +633,7 @@ static void adiv5_component_probe(
 		}
 		if (arm_component_lut[i].arch == aa_end) {
 			DEBUG_WARN("%s%" PRIu32 " 0x%" PRIx32 ": %s - Unknown (PIDR = 0x%08" PRIx32 "%08" PRIx32 " DEVTYPE = "
-					   "0x%02x ARCHID = "
-					   "0x%04x)\n",
+					   "0x%02x ARCHID = 0x%04x)\n",
 				indent, num_entry, addr, cidc_debug_strings[cid_class], (uint32_t)(pidr >> 32U), (uint32_t)pidr,
 				dev_type, arch_id);
 		}
