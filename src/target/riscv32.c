@@ -97,6 +97,9 @@ bool riscv32_probe(target_s *const target)
 		break;
 	default:
 		break;
+	case JEP106_MANUFACTURER_WCH:
+		PROBE(ch32vx_probe);
+		break;
 	}
 
 #if CONFIG_BMDA == 0

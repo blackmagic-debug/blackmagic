@@ -33,6 +33,7 @@ option(
 		'apollo3',
 		'at32f4',
 		'ch32',
+		'ch32v',
 		'ch579',
 		'efm',
 		'gd32',
