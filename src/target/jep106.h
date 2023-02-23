@@ -83,6 +83,10 @@
 #define JEP106_MANUFACTURER_XILINX       0x309U /* Xilinx */
 #define JEP106_MANUFACTURER_ESPRESSIF    0xc12U /* Espressif */
 
+/* BMD internal codes */
+/* WCH AKA Nanjing Qinheng Microelectronics */
+#define NOT_JEP106_MANUFACTURER_WCH (BMD_INTERNAL_FLAG | 0x01U) /* WCH (WinChipHead) */
+
 /*
  * This JEP code should belong to "Andes Technology Corporation", but is used on RISC-V by GigaDevice,
  * so in the unlikely event we need to support chips by them, here be dragons.
