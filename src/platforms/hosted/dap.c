@@ -38,6 +38,7 @@
 #include "dap.h"
 #include "dap_command.h"
 #include "jtag_scan.h"
+#include "buffer_utils.h"
 
 #define ID_DAP_INFO               0x00U
 #define ID_DAP_LED                0x01U
@@ -475,27 +476,29 @@ bool dap_jtag_configure(void)
 
 void dap_swdptap_seq_out(const uint32_t tms_states, const size_t clock_cycles)
 {
-	uint8_t data[4] = {
-		(tms_states >> 0U) & 0xffU,
-		(tms_states >> 8U) & 0xffU,
-		(tms_states >> 16U) & 0xffU,
-		(tms_states >> 24U) & 0xffU,
+	/* Setup the sequence */
+	dap_swd_sequence_s sequence = {
+		clock_cycles,
+		DAP_SWD_OUT_SEQUENCE,
 	};
-	if (!perform_dap_swj_sequence(clock_cycles, data))
-		DEBUG_WARN("dap_swdptap_seq_out error\n");
+	write_le4(sequence.data, 0, tms_states);
+	/* And perform it */
+	if (!perform_dap_swd_sequences(&sequence, 1U))
+		DEBUG_WARN("dap_swdptap_seq_out failed\n");
 }
 
 void dap_swdptap_seq_out_parity(const uint32_t tms_states, const size_t clock_cycles)
 {
-	uint8_t data[5] = {
-		(tms_states >> 0U) & 0xffU,
-		(tms_states >> 8U) & 0xffU,
-		(tms_states >> 16U) & 0xffU,
-		(tms_states >> 24U) & 0xffU,
-		__builtin_parity(tms_states),
+	/* Setup the sequence */
+	dap_swd_sequence_s sequence = {
+		clock_cycles + 1,
+		DAP_SWD_OUT_SEQUENCE,
 	};
-	if (!perform_dap_swj_sequence(clock_cycles + 1U, data))
-		DEBUG_WARN("dap_swdptap_seq_out_parity error\n");
+	write_le4(sequence.data, 0, tms_states);
+	sequence.data[4] = __builtin_parity(tms_states);
+	/* And perform it */
+	if (!perform_dap_swd_sequences(&sequence, 1U))
+		DEBUG_WARN("dap_swdptap_seq_out_parity failed\n");
 }
 
 uint32_t dap_swdptap_seq_in(const size_t clock_cycles)
