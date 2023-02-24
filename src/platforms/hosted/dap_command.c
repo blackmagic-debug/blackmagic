@@ -34,6 +34,7 @@
 #include <string.h>
 #include "dap.h"
 #include "dap_command.h"
+#include "buffer_utils.h"
 
 #define DAP_TRANSFER_APnDP       (1U << 0U)
 #define DAP_TRANSFER_RnW         (1U << 1U)
@@ -45,31 +46,6 @@
 #define DAP_JTAG_TMS_SET     (1U << 6U)
 #define DAP_JTAG_TMS_CLEAR   (0U << 6U)
 #define DAP_JTAG_TDO_CAPTURE (1U << 7U)
-
-static inline void write_le2(uint8_t *const buffer, const size_t offset, const uint16_t value)
-{
-	buffer[offset] = value & 0xffU;
-	buffer[offset + 1U] = (value >> 8U) & 0xffU;
-}
-
-static inline void write_le4(uint8_t *const buffer, const size_t offset, const uint32_t value)
-{
-	buffer[offset] = value & 0xffU;
-	buffer[offset + 1U] = (value >> 8U) & 0xffU;
-	buffer[offset + 2U] = (value >> 16U) & 0xffU;
-	buffer[offset + 3U] = (value >> 24U) & 0xffU;
-}
-
-static inline uint16_t read_le2(const uint8_t *const buffer, const size_t offset)
-{
-	return buffer[offset] | ((uint16_t)buffer[offset + 1U] << 8U);
-}
-
-static inline uint32_t read_le4(const uint8_t *const buffer, const size_t offset)
-{
-	return buffer[offset] | ((uint32_t)buffer[offset + 1U] << 8U) | ((uint32_t)buffer[offset + 2U] << 16U) |
-		((uint32_t)buffer[offset + 3U] << 24U);
-}
 
 static size_t dap_encode_transfer(
 	const dap_transfer_request_s *const transfer, uint8_t *const buffer, const size_t offset)
