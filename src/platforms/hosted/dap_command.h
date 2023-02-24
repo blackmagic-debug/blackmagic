@@ -40,6 +40,9 @@
 #include "adiv5.h"
 
 typedef enum dap_command {
+	DAP_HOST_STATUS = 0x01U,
+	DAP_CONNECT = 0x02U,
+	DAP_DISCONNECT = 0x03U,
 	DAP_TRANSFER = 0x05U,
 	DAP_TRANSFER_BLOCK = 0x06U,
 	DAP_SWJ_SEQUENCE = 0x12U,
@@ -51,6 +54,12 @@ typedef enum dap_response_status {
 	DAP_RESPONSE_OK = 0x00U,
 	DAP_RESPONSE_ERROR = 0xffU,
 } dap_response_status_e;
+
+typedef enum dap_port {
+	DAP_PORT_DEFAULT = 0U,
+	DAP_PORT_SWD = 1U,
+	DAP_PORT_JTAG = 2U,
+} dap_port_e;
 
 typedef enum dap_transfer_status {
 	DAP_TRANSFER_OK = 0x01U,

@@ -58,13 +58,18 @@ typedef enum dap_cap {
 	DAP_CAP_SWO_STREAMING = (1U << 6U),
 } dap_cap_e;
 
+typedef enum dap_led_type {
+	DAP_LED_CONNECT = 0U,
+	DAP_LED_RUNNING = 1U,
+} dap_led_type_e;
+
 extern uint8_t dap_caps;
 extern dap_cap_e dap_mode;
 extern bool dap_has_swd_sequence;
 
-void dap_led(int index, int state);
-void dap_connect(bool jtag);
-void dap_disconnect(void);
+bool dap_connect(void);
+bool dap_disconnect(void);
+bool dap_led(dap_led_type_e type, bool state);
 void dap_transfer_configure(uint8_t idle, uint16_t count, uint16_t retry);
 void dap_swd_configure(uint8_t cfg);
 size_t dap_info(dap_info_e info, uint8_t *data, size_t size);
