@@ -41,7 +41,7 @@ static void dap_swdptap_seq_out(uint32_t tms_states, size_t clock_cycles);
 static void dap_swdptap_seq_out_parity(uint32_t tms_states, size_t clock_cycles);
 
 static bool dap_write_reg_no_check(uint16_t addr, uint32_t data);
-static uint32_t dap_swd_dp_error(adiv5_debug_port_s *dp, bool protocol_recovery);
+static uint32_t dap_swd_dp_error(adiv5_debug_port_s *target_dp, bool protocol_recovery);
 
 bool dap_swdptap_init(adiv5_debug_port_s *target_dp)
 {
@@ -55,15 +55,17 @@ bool dap_swdptap_init(adiv5_debug_port_s *target_dp)
 	dap_connect(false);
 	dap_led(0, 1);
 	dap_reset_link(target_dp, false);
+	/* If we have SWD sequences available, make use of them */
 	if (dap_has_swd_sequence)
-		/* DAP_SWD_SEQUENCE does not do auto turnaround, use own!*/
 		target_dp->dp_low_write = dap_write_reg_no_check;
 	else
 		target_dp->dp_low_write = NULL;
+	/* Set up the underlying SWD functions using the implementation below */
 	swd_proc.seq_in = dap_swdptap_seq_in;
 	swd_proc.seq_in_parity = dap_swdptap_seq_in_parity;
 	swd_proc.seq_out = dap_swdptap_seq_out;
 	swd_proc.seq_out_parity = dap_swdptap_seq_out_parity;
+	/* Set up the accelerated SWD functions for basic target operations */
 	target_dp->dp_read = dap_dp_read_reg;
 	target_dp->error = dap_swd_dp_error;
 	target_dp->low_access = dap_dp_low_access;
@@ -173,11 +175,11 @@ static bool dap_write_reg_no_check(uint16_t addr, const uint32_t data)
 	return ack != SWDP_ACK_OK;
 }
 
-static uint32_t dap_swd_dp_error(adiv5_debug_port_s *dp, const bool protocol_recovery)
+static uint32_t dap_swd_dp_error(adiv5_debug_port_s *const target_dp, const bool protocol_recovery)
 {
 	DEBUG_PROBE("dap_swd_dp_error (protocol recovery? %s)\n", protocol_recovery ? "true" : "false");
 	/* Only do the comms reset dance on DPv2+ w/ fault or to perform protocol recovery. */
-	if ((dp->version >= 2 && dp->fault) || protocol_recovery) {
+	if ((target_dp->version >= 2 && target_dp->fault) || protocol_recovery) {
 		/*
 		 * Note that on DPv2+ devices, during a protocol error condition
 		 * the target becomes deselected during line reset. Once reset,
@@ -185,12 +187,12 @@ static uint32_t dap_swd_dp_error(adiv5_debug_port_s *dp, const bool protocol_rec
 		 * into the expected state.
 		 */
 		dap_line_reset();
-		if (dp->version >= 2)
-			dap_write_reg_no_check(ADIV5_DP_TARGETSEL, dp->targetsel);
-		dap_read_reg(dp, ADIV5_DP_DPIDR);
+		if (target_dp->version >= 2)
+			dap_write_reg_no_check(ADIV5_DP_TARGETSEL, target_dp->targetsel);
+		dap_read_reg(target_dp, ADIV5_DP_DPIDR);
 		/* Exception here is unexpected, so do not catch */
 	}
-	const uint32_t err = dap_read_reg(dp, ADIV5_DP_CTRLSTAT) &
+	const uint32_t err = dap_read_reg(target_dp, ADIV5_DP_CTRLSTAT) &
 		(ADIV5_DP_CTRLSTAT_STICKYORUN | ADIV5_DP_CTRLSTAT_STICKYCMP | ADIV5_DP_CTRLSTAT_STICKYERR |
 			ADIV5_DP_CTRLSTAT_WDATAERR);
 	uint32_t clr = 0;
@@ -205,7 +207,7 @@ static uint32_t dap_swd_dp_error(adiv5_debug_port_s *dp, const bool protocol_rec
 		clr |= ADIV5_DP_ABORT_WDERRCLR;
 
 	if (clr)
-		dap_write_reg(dp, ADIV5_DP_ABORT, clr);
-	dp->fault = 0;
+		dap_write_reg(target_dp, ADIV5_DP_ABORT, clr);
+	target_dp->fault = 0;
 	return err;
 }
