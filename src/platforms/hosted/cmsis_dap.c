@@ -91,8 +91,6 @@ typedef enum cmsis_type {
 typedef struct hid_device_info hid_device_info_s;
 #endif
 
-static bool dap_write_reg_no_check(uint16_t addr, uint32_t data);
-
 /*- Variables ---------------------------------------------------------------*/
 static cmsis_type_e type;
 static libusb_device_handle *usb_handle = NULL;
@@ -581,40 +579,6 @@ void dap_jtag_dp_init(adiv5_debug_port_s *dp)
 	dp->dp_read = dap_dp_read_reg;
 	dp->low_access = dap_dp_low_access;
 	dp->abort = dap_dp_abort;
-}
-
-static bool dap_write_reg_no_check(uint16_t addr, const uint32_t data)
-{
-	DEBUG_PROBE("dap_write_reg_no_check %04x <- %08" PRIx32 "\n", addr, data);
-	/* Setup the sequences */
-	dap_swd_sequence_s sequences[4] = {
-		/* Write the 8 byte request */
-		{
-			8U,
-			DAP_SWD_OUT_SEQUENCE,
-			{make_packet_request(ADIV5_LOW_WRITE, addr)},
-		},
-		/* Perform one turn-around cycle then read the 3 bit ACK */
-		{4U, DAP_SWD_IN_SEQUENCE},
-		/* Perform another turnaround cycle */
-		{1U, DAP_SWD_OUT_SEQUENCE, {}},
-		/* Now write out the 32b of data to send and the 1b of parity */
-		{
-			33U,
-			DAP_SWD_OUT_SEQUENCE,
-			/* The 4 data bytes are filled in below with write_le4() */
-			{0U, 0U, 0U, 0U, __builtin_parity(data)},
-		},
-	};
-	write_le4(sequences[3].data, 0, data);
-	/* Now perform the sequences */
-	if (!perform_dap_swd_sequences(sequences, 4U)) {
-		DEBUG_WARN("dap_write_reg_no_check failed\n");
-		return false;
-	}
-	/* Check the ack state */
-	const uint8_t ack = (sequences[1].data[0] >> 1U) & 7U;
-	return ack != SWDP_ACK_OK;
 }
 
 bool dap_swdptap_init(adiv5_debug_port_s *dp)
