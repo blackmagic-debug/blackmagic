@@ -77,7 +77,7 @@
 #include "target_internal.h"
 
 uint8_t dap_caps;
-uint8_t mode;
+dap_cap_e dap_mode;
 
 #define TRANSFER_TIMEOUT_MS (100)
 
@@ -99,7 +99,7 @@ static uint8_t out_ep;
 static hid_device *handle = NULL;
 static uint8_t buffer[1024U];
 static size_t report_size = 64U + 1U; // TODO: read actual report size
-static bool has_swd_sequence = false;
+bool dap_has_swd_sequence = false;
 
 static size_t mbslen(const char *str)
 {
@@ -230,7 +230,7 @@ int dap_init(bmp_info_s *info)
 					sub = 0;
 				}
 			}
-			has_swd_sequence = ((major > 1) || ((major > 0) && (minor > 1)));
+			dap_has_swd_sequence = major > 1 || (major > 0 && minor > 1);
 		}
 	}
 	size = dap_info(DAP_INFO_CAPABILITIES, buffer, sizeof(buffer));
@@ -243,7 +243,7 @@ int dap_init(bmp_info_s *info)
 		DEBUG_INFO(", SWO_MANCHESTER");
 	if (dap_caps & 0x10U)
 		DEBUG_INFO(", Atomic Cmds");
-	if (has_swd_sequence)
+	if (dap_has_swd_sequence)
 		DEBUG_INFO(", DAP_SWD_Sequence");
 	DEBUG_INFO("\n");
 	return 0;
@@ -254,10 +254,10 @@ void dap_nrst_set_val(bool assert)
 	dap_reset_pin(!assert);
 }
 
-static void dap_dp_abort(adiv5_debug_port_s *dp, uint32_t abort)
+void dap_dp_abort(adiv5_debug_port_s *const target_dp, const uint32_t abort)
 {
 	/* DP Write to Reg 0.*/
-	dap_write_reg(dp, ADIV5_DP_ABORT, abort);
+	dap_write_reg(target_dp, ADIV5_DP_ABORT, abort);
 }
 
 static uint32_t dap_swd_dp_error(adiv5_debug_port_s *dp, const bool protocol_recovery)
@@ -297,21 +297,22 @@ static uint32_t dap_swd_dp_error(adiv5_debug_port_s *dp, const bool protocol_rec
 	return err;
 }
 
-static uint32_t dap_dp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value)
+uint32_t dap_dp_low_access(
+	adiv5_debug_port_s *const target_dp, const uint8_t rnw, const uint16_t addr, const uint32_t value)
 {
 	const bool APnDP = addr & ADIV5_APnDP;
 	uint32_t res = 0;
 	const uint8_t reg = (addr & 0xcU) | (APnDP ? 1 : 0);
-	if (RnW)
-		res = dap_read_reg(dp, reg);
+	if (rnw)
+		res = dap_read_reg(target_dp, reg);
 	else
-		dap_write_reg(dp, reg, value);
+		dap_write_reg(target_dp, reg, value);
 	return res;
 }
 
-static uint32_t dap_dp_read_reg(adiv5_debug_port_s *dp, uint16_t addr)
+uint32_t dap_dp_read_reg(adiv5_debug_port_s *const target_dp, const uint16_t addr)
 {
-	uint32_t res = dap_dp_low_access(dp, ADIV5_LOW_READ, addr, 0);
+	uint32_t res = dap_dp_low_access(target_dp, ADIV5_LOW_READ, addr, 0);
 	DEBUG_PROBE("dp_read %04x %08" PRIx32 "\n", addr, res);
 	return res;
 }
@@ -557,7 +558,7 @@ bool dap_jtagtap_init(void)
 	DEBUG_PROBE("jtap_init\n");
 	if (!(dap_caps & DAP_CAP_JTAG))
 		return false;
-	mode = DAP_CAP_JTAG;
+	dap_mode = DAP_CAP_JTAG;
 	dap_disconnect();
 	dap_connect(true);
 	adiv5_debug_port_s target_dp = {};
@@ -585,13 +586,13 @@ bool dap_swdptap_init(adiv5_debug_port_s *dp)
 {
 	if (!(dap_caps & DAP_CAP_SWD))
 		return false;
-	mode = DAP_CAP_SWD;
+	dap_mode = DAP_CAP_SWD;
 	dap_transfer_configure(2, 128, 128);
 	dap_swd_configure(0);
 	dap_connect(false);
 	dap_led(0, 1);
 	dap_reset_link(dp, false);
-	if (has_swd_sequence)
+	if (dap_has_swd_sequence)
 		/* DAP_SWD_SEQUENCE does not do auto turnaround, use own!*/
 		dp->dp_low_write = dap_write_reg_no_check;
 	else
