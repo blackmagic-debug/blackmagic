@@ -114,7 +114,7 @@
 static const uint8_t cmd_lens[] = {4, 1, 2, 3, 6, 0, 6, 6, 1, 2, 2, 1, 5, 3, 3};
 
 /* Flash routines */
-static bool ke04_command(target_s *t, uint8_t cmd, uint32_t addr, const uint8_t *data);
+static bool ke04_command(target_s *t, uint8_t cmd, uint32_t addr, const void *data);
 static bool ke04_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 static bool ke04_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 static bool ke04_flash_done(target_flash_s *f);
@@ -260,7 +260,7 @@ static bool ke04_wait_complete(target_s *t)
 	return true;
 }
 
-static bool ke04_command(target_s *t, uint8_t cmd, uint32_t addr, const uint8_t *data)
+static bool ke04_command(target_s *t, uint8_t cmd, uint32_t addr, const void *const data)
 {
 	/* Set FCLKDIV to 0x17 for 24MHz (default at reset) */
 	uint8_t fclkdiv = target_mem_read8(t, FTMRE_FCLKDIV);
@@ -296,9 +296,10 @@ static bool ke04_command(target_s *t, uint8_t cmd, uint32_t addr, const uint8_t 
 	}
 
 	/* Write one or two 32 bit words of data */
-	for (uint8_t offset = 0; fccob_idx < cmd_len; ++fccob_idx, offset += 2U) {
+	const uint16_t *const cmd_data = (const uint16_t *)data;
+	for (uint8_t offset = 0; fccob_idx < cmd_len; ++fccob_idx, ++offset) {
 		target_mem_write8(t, FTMRE_FCCOBIX, fccob_idx);
-		target_mem_write16(t, FTMRE_FCCOB, *(uint16_t *)(data + offset));
+		target_mem_write16(t, FTMRE_FCCOB, cmd_data[offset]);
 	}
 
 	/* Enable execution by clearing CCIF */
@@ -354,5 +355,5 @@ static bool ke04_flash_done(target_flash_s *f)
 	/* Note: Cumulative programming is not allowed according to the RM */
 	uint32_t vals[2] = {target_mem_read32(f->t, FLASH_SECURITY_WORD_ADDRESS), 0};
 	vals[0] = (vals[0] & 0xff00ffffU) | (FLASH_SECURITY_BYTE_UNSECURED << 16U);
-	return ke04_command(f->t, CMD_PROGRAM_FLASH_32, FLASH_SECURITY_WORD_ADDRESS, (uint8_t *)&vals);
+	return ke04_command(f->t, CMD_PROGRAM_FLASH_32, FLASH_SECURITY_WORD_ADDRESS, &vals);
 }
