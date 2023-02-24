@@ -58,6 +58,10 @@ typedef enum dap_cap {
 	DAP_CAP_SWO_STREAMING = (1U << 6U),
 } dap_cap_e;
 
+extern uint8_t dap_caps;
+extern dap_cap_e dap_mode;
+extern bool dap_has_swd_sequence;
+
 void dap_led(int index, int state);
 void dap_connect(bool jtag);
 void dap_disconnect(void);
@@ -83,6 +87,10 @@ void dap_write_single(adiv5_access_port_s *target_ap, uint32_t dest, const void 
 ssize_t dbg_dap_cmd(uint8_t *data, size_t response_length, size_t request_length);
 bool dap_run_cmd(const void *request_data, size_t request_length, void *response_data, size_t response_length);
 bool dap_jtag_configure(void);
+
+void dap_dp_abort(adiv5_debug_port_s *target_dp, uint32_t abort);
+uint32_t dap_dp_low_access(adiv5_debug_port_s *target_dp, uint8_t rnw, uint16_t addr, uint32_t value);
+uint32_t dap_dp_read_reg(adiv5_debug_port_s *target_dp, uint16_t addr);
 
 bool dap_write_reg_no_check(uint16_t addr, uint32_t data);
 uint32_t dap_swdptap_seq_in(size_t clock_cycles);
