@@ -40,6 +40,12 @@
  *
  */
 
+#ifndef ENABLE_DEBUG
+#include <sys/stat.h>
+#include <string.h>
+
+typedef struct stat stat_s;
+#endif
 #include "general.h"
 #include "gdb_if.h"
 #include "usb_serial.h"
@@ -422,5 +428,68 @@ void debug_monitor_handler(void)
 		frame->r0 = UINT32_MAX;
 	}
 	__asm__("bx lr");
+}
+#else
+/* This defines stubs for the newlib fake file IO layer for compatability with GCC 12 `-spec=nosys.spec` */
+
+/* NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp) */
+int _write(const int file, const void *const buffer, const size_t length)
+{
+	(void)file;
+	(void)buffer;
+	return length;
+}
+
+/* NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp) */
+int _read(const int file, void *const buffer, const size_t length)
+{
+	(void)file;
+	(void)buffer;
+	return length;
+}
+
+/* NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp) */
+off_t _lseek(const int file, const off_t offset, const int direction)
+{
+	(void)file;
+	(void)offset;
+	(void)direction;
+	return 0;
+}
+
+/* NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp) */
+int _fstat(const int file, stat_s *stats)
+{
+	(void)file;
+	memset(stats, 0, sizeof(*stats));
+	return 0;
+}
+
+/* NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp) */
+int _isatty(const int file)
+{
+	(void)file;
+	return true;
+}
+
+/* NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp) */
+int _close(const int file)
+{
+	(void)file;
+	return 0;
+}
+
+/* NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp) */
+pid_t _getpid(void)
+{
+	return 1;
+}
+
+/* NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp) */
+int _kill(const int pid, const int signal)
+{
+	(void)pid;
+	(void)signal;
+	return 0;
 }
 #endif
