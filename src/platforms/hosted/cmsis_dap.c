@@ -70,6 +70,7 @@
 #include "dap.h"
 #include "dap_command.h"
 #include "cmsis_dap.h"
+#include "buffer_utils.h"
 
 #include "cli.h"
 #include "target.h"
@@ -524,7 +525,9 @@ static void cmsis_dap_jtagtap_reset(void)
 
 static void cmsis_dap_jtagtap_tms_seq(const uint32_t tms_states, const size_t clock_cycles)
 {
-	perform_dap_jtag_tms_sequence(tms_states, clock_cycles);
+	uint8_t sequence[4] = {};
+	write_le4(sequence, 0, tms_states);
+	perform_dap_swj_sequence(clock_cycles, sequence);
 	DEBUG_PROBE("jtagtap_tms_seq data_in %08x %zu\n", tms_states, clock_cycles);
 }
 
