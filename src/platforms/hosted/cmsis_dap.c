@@ -583,34 +583,38 @@ void dap_jtag_dp_init(adiv5_debug_port_s *dp)
 	dp->abort = dap_dp_abort;
 }
 
-#define SWD_SEQUENCE_IN  0x80U
-#define DAP_SWD_SEQUENCE 0x1dU
-
 static bool dap_write_reg_no_check(uint16_t addr, const uint32_t data)
 {
 	DEBUG_PROBE("dap_write_reg_no_check %04x <- %08" PRIx32 "\n", addr, data);
-	unsigned int packet_request = make_packet_request(ADIV5_LOW_WRITE, addr);
-	uint8_t buf[32] = {
-		DAP_SWD_SEQUENCE,
-		5,
-		8,
-		packet_request,
-		4U + SWD_SEQUENCE_IN, /* one turn-around + read 3 bit ACK */
-		1,                    /* one bit turn around to drive SWDIO */
-		0,
-		32, /* write 32 bit data */
-		data & 0xffU,
-		(data >> 8U) & 0xffU,
-		(data >> 16U) & 0xffU,
-		(data >> 24U) & 0xffU,
-		1, /* write parity bit */
-		__builtin_parity(data),
+	/* Setup the sequences */
+	dap_swd_sequence_s sequences[4] = {
+		/* Write the 8 byte request */
+		{
+			8U,
+			DAP_SWD_OUT_SEQUENCE,
+			{make_packet_request(ADIV5_LOW_WRITE, addr)},
+		},
+		/* Perform one turn-around cycle then read the 3 bit ACK */
+		{4U, DAP_SWD_IN_SEQUENCE},
+		/* Perform another turnaround cycle */
+		{1U, DAP_SWD_OUT_SEQUENCE, {}},
+		/* Now write out the 32b of data to send and the 1b of parity */
+		{
+			33U,
+			DAP_SWD_OUT_SEQUENCE,
+			/* The 4 data bytes are filled in below with write_le4() */
+			{0U, 0U, 0U, 0U, __builtin_parity(data)},
+		},
 	};
-	dbg_dap_cmd(buf, sizeof(buf), 14);
-	if (buf[0])
+	write_le4(sequences[3].data, 0, data);
+	/* Now perform the sequences */
+	if (!perform_dap_swd_sequences(sequences, 4U)) {
 		DEBUG_WARN("dap_write_reg_no_check failed\n");
-	uint32_t ack = (buf[1] >> 1U) & 7U;
-	return (ack != SWDP_ACK_OK);
+		return false;
+	}
+	/* Check the ack state */
+	const uint8_t ack = (sequences[1].data[0] >> 1U) & 7U;
+	return ack != SWDP_ACK_OK;
 }
 
 bool dap_swdptap_init(adiv5_debug_port_s *dp)
