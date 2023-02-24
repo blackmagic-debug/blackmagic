@@ -92,10 +92,4 @@ void dap_dp_abort(adiv5_debug_port_s *target_dp, uint32_t abort);
 uint32_t dap_dp_low_access(adiv5_debug_port_s *target_dp, uint8_t rnw, uint16_t addr, uint32_t value);
 uint32_t dap_dp_read_reg(adiv5_debug_port_s *target_dp, uint16_t addr);
 
-bool dap_write_reg_no_check(uint16_t addr, uint32_t data);
-uint32_t dap_swdptap_seq_in(size_t clock_cycles);
-bool dap_swdptap_seq_in_parity(uint32_t *result, size_t clock_cycles);
-void dap_swdptap_seq_out(uint32_t tms_states, size_t clock_cycles);
-void dap_swdptap_seq_out_parity(uint32_t tms_states, size_t clock_cycles);
-
 #endif /* PLATFORMS_HOSTED_DAP_H */
