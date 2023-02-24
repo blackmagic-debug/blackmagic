@@ -166,7 +166,7 @@ bool platform_swdptap_init(adiv5_debug_port_s *dp)
 		return remote_swdptap_init();
 
 	case BMP_TYPE_CMSIS_DAP:
-		return dap_swdptap_init(dp);
+		return dap_swd_init(dp);
 
 	case BMP_TYPE_STLINKV2:
 	case BMP_TYPE_JLINK:

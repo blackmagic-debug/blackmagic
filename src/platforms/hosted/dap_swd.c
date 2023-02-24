@@ -35,45 +35,49 @@
 #include "dap_command.h"
 #include "buffer_utils.h"
 
-static uint32_t dap_swdptap_seq_in(size_t clock_cycles);
-static bool dap_swdptap_seq_in_parity(uint32_t *result, size_t clock_cycles);
-static void dap_swdptap_seq_out(uint32_t tms_states, size_t clock_cycles);
-static void dap_swdptap_seq_out_parity(uint32_t tms_states, size_t clock_cycles);
+static uint32_t dap_swd_seq_in(size_t clock_cycles);
+static bool dap_swd_seq_in_parity(uint32_t *result, size_t clock_cycles);
+static void dap_swd_seq_out(uint32_t tms_states, size_t clock_cycles);
+static void dap_swd_seq_out_parity(uint32_t tms_states, size_t clock_cycles);
 
 static bool dap_write_reg_no_check(uint16_t addr, uint32_t data);
-static uint32_t dap_swd_dp_error(adiv5_debug_port_s *target_dp, bool protocol_recovery);
+static uint32_t swd_clear_error(adiv5_debug_port_s *target_dp, bool protocol_recovery);
 
-bool dap_swdptap_init(adiv5_debug_port_s *target_dp)
+bool dap_swd_init(adiv5_debug_port_s *target_dp)
 {
+	/* If we are not able to talk SWD with this adaptor, make this insta-fail */
 	if (!(dap_caps & DAP_CAP_SWD))
 		return false;
 
 	DEBUG_PROBE("-> dap_swd_init(%u)\n", target_dp->dev_index);
+	/* Mark that we're going into SWD mode and configure the CMSIS-DAP adaptor accordingly */
 	dap_mode = DAP_CAP_SWD;
 	dap_transfer_configure(2, 128, 128);
 	dap_swd_configure(0);
 	dap_connect(false);
 	dap_led(0, 1);
 	dap_reset_link(target_dp, false);
+
+	/* Set up the underlying SWD functions using the implementation below */
+	swd_proc.seq_in = dap_swd_seq_in;
+	swd_proc.seq_in_parity = dap_swd_seq_in_parity;
+	swd_proc.seq_out = dap_swd_seq_out;
+	swd_proc.seq_out_parity = dap_swd_seq_out_parity;
+
 	/* If we have SWD sequences available, make use of them */
 	if (dap_has_swd_sequence)
 		target_dp->dp_low_write = dap_write_reg_no_check;
 	else
 		target_dp->dp_low_write = NULL;
-	/* Set up the underlying SWD functions using the implementation below */
-	swd_proc.seq_in = dap_swdptap_seq_in;
-	swd_proc.seq_in_parity = dap_swdptap_seq_in_parity;
-	swd_proc.seq_out = dap_swdptap_seq_out;
-	swd_proc.seq_out_parity = dap_swdptap_seq_out_parity;
 	/* Set up the accelerated SWD functions for basic target operations */
 	target_dp->dp_read = dap_dp_read_reg;
-	target_dp->error = dap_swd_dp_error;
+	target_dp->error = swd_clear_error;
 	target_dp->low_access = dap_dp_low_access;
 	target_dp->abort = dap_dp_abort;
 	return true;
 }
 
-static void dap_swdptap_seq_out(const uint32_t tms_states, const size_t clock_cycles)
+static void dap_swd_seq_out(const uint32_t tms_states, const size_t clock_cycles)
 {
 	/* Setup the sequence */
 	dap_swd_sequence_s sequence = {
@@ -83,10 +87,10 @@ static void dap_swdptap_seq_out(const uint32_t tms_states, const size_t clock_cy
 	write_le4(sequence.data, 0, tms_states);
 	/* And perform it */
 	if (!perform_dap_swd_sequences(&sequence, 1U))
-		DEBUG_WARN("dap_swdptap_seq_out failed\n");
+		DEBUG_WARN("dap_swd_seq_out failed\n");
 }
 
-static void dap_swdptap_seq_out_parity(const uint32_t tms_states, const size_t clock_cycles)
+static void dap_swd_seq_out_parity(const uint32_t tms_states, const size_t clock_cycles)
 {
 	/* Setup the sequence */
 	dap_swd_sequence_s sequence = {
@@ -97,10 +101,10 @@ static void dap_swdptap_seq_out_parity(const uint32_t tms_states, const size_t c
 	sequence.data[4] = __builtin_parity(tms_states);
 	/* And perform it */
 	if (!perform_dap_swd_sequences(&sequence, 1U))
-		DEBUG_WARN("dap_swdptap_seq_out_parity failed\n");
+		DEBUG_WARN("dap_swd_seq_out_parity failed\n");
 }
 
-static uint32_t dap_swdptap_seq_in(const size_t clock_cycles)
+static uint32_t dap_swd_seq_in(const size_t clock_cycles)
 {
 	/* Setup the sequence */
 	dap_swd_sequence_s sequence = {
@@ -109,7 +113,7 @@ static uint32_t dap_swdptap_seq_in(const size_t clock_cycles)
 	};
 	/* And perform it */
 	if (!perform_dap_swd_sequences(&sequence, 1U)) {
-		DEBUG_WARN("dap_swdptap_seq_in failed\n");
+		DEBUG_WARN("dap_swd_seq_in failed\n");
 		return 0U;
 	}
 
@@ -119,7 +123,7 @@ static uint32_t dap_swdptap_seq_in(const size_t clock_cycles)
 	return result;
 }
 
-static bool dap_swdptap_seq_in_parity(uint32_t *const result, const size_t clock_cycles)
+static bool dap_swd_seq_in_parity(uint32_t *const result, const size_t clock_cycles)
 {
 	/* Setup the sequence */
 	dap_swd_sequence_s sequence = {
@@ -128,7 +132,7 @@ static bool dap_swdptap_seq_in_parity(uint32_t *const result, const size_t clock
 	};
 	/* And perform it */
 	if (!perform_dap_swd_sequences(&sequence, 1U)) {
-		DEBUG_WARN("dap_swdptap_seq_in_parity failed\n");
+		DEBUG_WARN("dap_swd_seq_in_parity failed\n");
 		return false;
 	}
 
@@ -191,9 +195,9 @@ static bool dap_write_reg_no_check(uint16_t addr, const uint32_t data)
 	return ack != SWDP_ACK_OK;
 }
 
-static uint32_t dap_swd_dp_error(adiv5_debug_port_s *const target_dp, const bool protocol_recovery)
+static uint32_t swd_clear_error(adiv5_debug_port_s *const target_dp, const bool protocol_recovery)
 {
-	DEBUG_PROBE("dap_swd_dp_error (protocol recovery? %s)\n", protocol_recovery ? "true" : "false");
+	DEBUG_PROBE("swd_clear_error (protocol recovery? %s)\n", protocol_recovery ? "true" : "false");
 	/* Only do the comms reset dance on DPv2+ w/ fault or to perform protocol recovery. */
 	if ((target_dp->version >= 2 && target_dp->fault) || protocol_recovery) {
 		/*
