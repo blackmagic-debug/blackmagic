@@ -521,9 +521,9 @@ bool dap_jtagtap_init(void)
 	DEBUG_PROBE("jtap_init\n");
 	if (!(dap_caps & DAP_CAP_JTAG))
 		return false;
-	dap_mode = DAP_CAP_JTAG;
 	dap_disconnect();
-	dap_connect(true);
+	dap_mode = DAP_CAP_JTAG;
+	dap_connect();
 	adiv5_debug_port_s target_dp = {};
 	target_dp.dev_index = 0U;
 	dap_reset_link(&target_dp, true);

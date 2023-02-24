@@ -41,9 +41,6 @@
 #include "buffer_utils.h"
 
 #define ID_DAP_INFO               0x00U
-#define ID_DAP_LED                0x01U
-#define ID_DAP_CONNECT            0x02U
-#define ID_DAP_DISCONNECT         0x03U
 #define ID_DAP_TRANSFER_CONFIGURE 0x04U
 #define ID_DAP_RESET_TARGET       0x0aU
 #define ID_DAP_SWJ_PINS           0x10U
@@ -99,36 +96,53 @@
 #define AP_CSW_PROT(x)        ((x) << 24U)
 #define AP_CSW_DBGSWENABLE    (1U << 31U)
 
-/*- Implementations ---------------------------------------------------------*/
-
-//-----------------------------------------------------------------------------
-void dap_led(int index, int state)
+bool dap_connect(void)
 {
-	uint8_t buf[3];
-
-	buf[0] = ID_DAP_LED;
-	buf[1] = index;
-	buf[2] = state;
-	dbg_dap_cmd(buf, sizeof(buf), 3);
+	/* Setup the connection request */
+	const uint8_t request[2] = {
+		DAP_CONNECT,
+		dap_mode == DAP_CAP_JTAG ? DAP_PORT_JTAG : DAP_PORT_SWD,
+	};
+	uint8_t result = DAP_PORT_DEFAULT;
+	/* Execute it and check if it failed */
+	if (!dap_run_cmd(request, 2U, &result, 1U)) {
+		DEBUG_PROBE("%s failed\n", __func__);
+		return false;
+	}
+	/* Check that the port requested matches the port initialised and setup the LEDs accordingly */
+	return dap_led(DAP_LED_CONNECT, result == request[1]) && result == request[1];
 }
 
-//-----------------------------------------------------------------------------
-void dap_connect(bool jtag)
+bool dap_disconnect(void)
 {
-	uint8_t buf[2];
-
-	buf[0] = ID_DAP_CONNECT;
-	buf[1] = jtag ? DAP_CAP_JTAG : DAP_CAP_SWD;
-	dbg_dap_cmd(buf, sizeof(buf), 2);
+	/* Disconnect is just the command byte and a DAP response code */
+	const uint8_t request = DAP_DISCONNECT;
+	uint8_t result = DAP_RESPONSE_OK;
+	/* Execute it and check if it failed */
+	if (!dap_run_cmd(&request, 1U, &result, 1U)) {
+		DEBUG_PROBE("%s failed\n", __func__);
+		return false;
+	}
+	/* Setup the LEDs according to the result */
+	return dap_led(DAP_LED_CONNECT, result != DAP_RESPONSE_OK) && result == DAP_RESPONSE_OK;
 }
 
-//-----------------------------------------------------------------------------
-void dap_disconnect(void)
+bool dap_led(const dap_led_type_e type, const bool state)
 {
-	uint8_t buf[65];
-
-	buf[0] = ID_DAP_DISCONNECT;
-	dbg_dap_cmd(buf, sizeof(buf), 1);
+	/* Setup the host status (LED) information command */
+	const uint8_t request[3] = {
+		DAP_HOST_STATUS,
+		type,
+		/* Map the bool state to a DAP status value */
+		state ? 1U : 0U,
+	};
+	uint8_t result = DAP_RESPONSE_OK;
+	/* Execute it and check if it failed */
+	if (!dap_run_cmd(request, 3U, &result, 1U)) {
+		DEBUG_PROBE("%s failed\n", __func__);
+		return false;
+	}
+	return result == DAP_RESPONSE_OK;
 }
 
 static uint32_t swj_clock;
