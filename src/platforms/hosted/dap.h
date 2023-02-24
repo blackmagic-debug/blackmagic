@@ -73,7 +73,6 @@ void dap_nrst_set_val(bool assert);
 void dap_trst_reset(void);
 void dap_reset_target_hw(int state);
 void dap_reset_pin(int state);
-void dap_line_reset(void);
 uint32_t dap_read_reg(adiv5_debug_port_s *target_dp, uint8_t reg);
 void dap_write_reg(adiv5_debug_port_s *target_dp, uint8_t reg, uint32_t data);
 void dap_reset_link(adiv5_debug_port_s *target_dp, bool jtag);

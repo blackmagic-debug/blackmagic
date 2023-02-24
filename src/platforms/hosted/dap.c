@@ -231,22 +231,6 @@ void dap_trst_reset(void)
 	dbg_dap_cmd(buf, sizeof(buf), 7);
 }
 
-void dap_line_reset(void)
-{
-	const uint8_t data[8] = {
-		0xffU,
-		0xffU,
-		0xffU,
-		0xffU,
-		0xffU,
-		0xffU,
-		0xffU,
-		0x0fU,
-	};
-	if (!perform_dap_swj_sequence(64, data))
-		DEBUG_WARN("line reset failed\n");
-}
-
 uint32_t dap_read_reg(adiv5_debug_port_s *target_dp, const uint8_t reg)
 {
 	const dap_transfer_request_s request = {.request = reg | DAP_TRANSFER_RnW};
