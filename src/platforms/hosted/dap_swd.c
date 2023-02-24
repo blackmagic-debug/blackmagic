@@ -141,6 +141,22 @@ static bool dap_swdptap_seq_in_parity(uint32_t *const result, const size_t clock
 	return !parity;
 }
 
+static void dap_line_reset(void)
+{
+	const uint8_t data[8] = {
+		0xffU,
+		0xffU,
+		0xffU,
+		0xffU,
+		0xffU,
+		0xffU,
+		0xffU,
+		0x0fU,
+	};
+	if (!perform_dap_swj_sequence(64, data))
+		DEBUG_WARN("line reset failed\n");
+}
+
 static bool dap_write_reg_no_check(uint16_t addr, const uint32_t data)
 {
 	DEBUG_PROBE("dap_write_reg_no_check %04x <- %08" PRIx32 "\n", addr, data);
