@@ -444,35 +444,34 @@ static void exec_q_supported(const char *packet, const size_t length)
 
 static void exec_q_memory_map(const char *packet, const size_t length)
 {
-	(void)packet;
 	(void)length;
+	target_s *target = cur_target;
+
 	/* Read target XML memory map */
-	if ((!cur_target) && last_target) {
-		/* Attach to last target if detached. */
-		cur_target = target_attach(last_target, &gdb_controller);
-	}
-	if (!cur_target) {
+	if (!target)
+		target = last_target;
+	if (!target) {
 		gdb_putpacketz("E01");
 		return;
 	}
 	char buf[1024];
-	target_mem_map(cur_target, buf, sizeof(buf)); /* Fixme: Check size!*/
+	target_mem_map(target, buf, sizeof(buf)); /* Fixme: Check size!*/
 	handle_q_string_reply(buf, packet);
 }
 
 static void exec_q_feature_read(const char *packet, const size_t length)
 {
 	(void)length;
-	/* Read target description */
-	if (!cur_target && last_target)
-		/* Attach to last target if detached. */
-		cur_target = target_attach(last_target, &gdb_controller);
+	target_s *target = cur_target;
 
-	if (!cur_target) {
+	/* Read target description */
+	if (!target)
+		target = last_target;
+	if (!target) {
 		gdb_putpacketz("E01");
 		return;
 	}
-	const char *const description = target_regs_description(cur_target);
+	const char *const description = target_regs_description(target);
 	handle_q_string_reply(description ? description : "", packet);
 	free((void *)description);
 }
