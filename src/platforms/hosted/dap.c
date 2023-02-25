@@ -44,7 +44,6 @@
 #define ID_DAP_TRANSFER_CONFIGURE 0x04U
 #define ID_DAP_RESET_TARGET       0x0aU
 #define ID_DAP_SWJ_PINS           0x10U
-#define ID_DAP_SWD_CONFIGURE      0x13U
 #define ID_DAP_JTAG_CONFIGURE     0x15U
 
 #define DAP_TRANSFER_APnDP (1U << 0U)
@@ -199,17 +198,6 @@ static bool dap_transfer_configure(const uint8_t idle_cycles, const uint16_t wai
 	return result == DAP_RESPONSE_OK;
 }
 
-//-----------------------------------------------------------------------------
-void dap_swd_configure(uint8_t cfg)
-{
-	uint8_t buf[2];
-
-	buf[0] = ID_DAP_SWD_CONFIGURE;
-	buf[1] = cfg;
-	dbg_dap_cmd(buf, sizeof(buf), 2);
-}
-
-//-----------------------------------------------------------------------------
 size_t dap_info(const dap_info_e info, uint8_t *const data, const size_t size)
 {
 	uint8_t buf[256];

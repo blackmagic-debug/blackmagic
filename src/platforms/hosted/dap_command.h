@@ -48,6 +48,7 @@ typedef enum dap_command {
 	DAP_TRANSFER_BLOCK = 0x06U,
 	DAP_SWJ_CLOCK = 0x11U,
 	DAP_SWJ_SEQUENCE = 0x12U,
+	DAP_SWD_CONFIGURE = 0x13U,
 	DAP_JTAG_SEQUENCE = 0x14U,
 	DAP_SWD_SEQUENCE = 0x1dU,
 } dap_command_e;
