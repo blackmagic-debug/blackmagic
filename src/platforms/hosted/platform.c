@@ -223,7 +223,7 @@ bool platform_jtagtap_init(void)
 		return jlink_jtagtap_init(&info);
 
 	case BMP_TYPE_CMSIS_DAP:
-		return dap_jtagtap_init();
+		return dap_jtag_init();
 
 	default:
 		return false;
