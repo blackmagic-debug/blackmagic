@@ -95,10 +95,20 @@
 #define AP_CSW_PROT(x)        ((x) << 24U)
 #define AP_CSW_DBGSWENABLE    (1U << 31U)
 
+static bool dap_transfer_configure(uint8_t idle_cycles, uint16_t wait_retries, uint16_t match_retries);
+
 static uint32_t dap_current_clock_freq;
 
 bool dap_connect(void)
 {
+	/*
+	 * Setup how DAP_TRANSFER* commands will work
+	 * Sets 2 idle cycles between commands,
+	 * 128 retries each for wait and match retries
+	 */
+	if (!dap_transfer_configure(2, 128, 128))
+		return false;
+
 	/* Setup the connection request */
 	const uint8_t request[2] = {
 		DAP_CONNECT,
@@ -170,7 +180,7 @@ uint32_t dap_swj_clock(const uint32_t clock)
 	return dap_current_clock_freq;
 }
 
-bool dap_transfer_configure(const uint8_t idle_cycles, const uint16_t wait_retries, const uint16_t match_retries)
+static bool dap_transfer_configure(const uint8_t idle_cycles, const uint16_t wait_retries, const uint16_t match_retries)
 {
 	/* Setup the request buffer to configure DAP_TRANSFER* handling */
 	uint8_t request[6] = {
@@ -181,7 +191,7 @@ bool dap_transfer_configure(const uint8_t idle_cycles, const uint16_t wait_retri
 	write_le2(request, 4, match_retries);
 	uint8_t result = DAP_RESPONSE_OK;
 	/* Execute it and check if it failed */
-	if (!dap_run_cmd(&request, 1U, &result, 1U)) {
+	if (!dap_run_cmd(request, 6U, &result, 1U)) {
 		DEBUG_PROBE("%s failed\n", __func__);
 		return false;
 	}
