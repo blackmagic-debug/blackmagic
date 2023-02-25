@@ -70,7 +70,6 @@ extern bool dap_has_swd_sequence;
 bool dap_connect(void);
 bool dap_disconnect(void);
 bool dap_led(dap_led_type_e type, bool state);
-bool dap_transfer_configure(uint8_t idle_cycles, uint16_t wait_retries, uint16_t match_retries);
 void dap_swd_configure(uint8_t cfg);
 size_t dap_info(dap_info_e info, uint8_t *data, size_t size);
 void dap_reset_target(void);
