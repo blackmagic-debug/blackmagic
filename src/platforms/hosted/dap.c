@@ -44,7 +44,6 @@
 #define ID_DAP_TRANSFER_CONFIGURE 0x04U
 #define ID_DAP_RESET_TARGET       0x0aU
 #define ID_DAP_SWJ_PINS           0x10U
-#define ID_DAP_SWJ_CLOCK          0x11U
 #define ID_DAP_SWD_CONFIGURE      0x13U
 #define ID_DAP_JTAG_CONFIGURE     0x15U
 
@@ -96,6 +95,8 @@
 #define AP_CSW_PROT(x)        ((x) << 24U)
 #define AP_CSW_DBGSWENABLE    (1U << 31U)
 
+static uint32_t dap_current_clock_freq;
+
 bool dap_connect(void)
 {
 	/* Setup the connection request */
@@ -145,31 +146,30 @@ bool dap_led(const dap_led_type_e type, const bool state)
 	return result == DAP_RESPONSE_OK;
 }
 
-static uint32_t swj_clock;
-
-/* Set/Get JTAG/SWD clock frequency
- *
- * With clock == 0, return last set value.
+/*
+ * Accessor for the current JTAG/SWD clock frequency.
+ * When called with clock == 0, it only returns the current value.
  */
-uint32_t dap_swj_clock(uint32_t clock)
+uint32_t dap_swj_clock(const uint32_t clock)
 {
-	if (clock == 0)
-		return swj_clock;
-	uint8_t buf[5];
-	buf[0] = ID_DAP_SWJ_CLOCK;
-	buf[1] = clock & 0xffU;
-	buf[2] = (clock >> 8U) & 0xffU;
-	buf[3] = (clock >> 16U) & 0xffU;
-	buf[4] = (clock >> 24U) & 0xffU;
-	dbg_dap_cmd(buf, sizeof(buf), 5);
-	if (buf[0])
-		DEBUG_WARN("dap_swj_clock failed\n");
-	else
-		swj_clock = clock;
-	return swj_clock;
+	/* Fast-return if clock is 0 */
+	if (!clock)
+		return dap_current_clock_freq;
+	/* Setup the request buffer to change the clock frequency */
+	uint8_t request[5] = {DAP_SWJ_CLOCK};
+	write_le4(request, 1, clock);
+	uint8_t result = DAP_RESPONSE_OK;
+	/* Execute it and check if it failed */
+	if (!dap_run_cmd(request, 5U, &result, 1U)) {
+		DEBUG_PROBE("%s failed\n", __func__);
+		return false;
+	}
+	/* Check that it succeeded before changing the cached frequency */
+	if (result == DAP_RESPONSE_OK)
+		dap_current_clock_freq = clock;
+	return dap_current_clock_freq;
 }
 
-//-----------------------------------------------------------------------------
 void dap_transfer_configure(uint8_t idle, uint16_t count, uint16_t retry)
 {
 	uint8_t buf[6];
