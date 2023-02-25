@@ -35,11 +35,24 @@
 #include "dap_command.h"
 #include "buffer_utils.h"
 
+typedef enum dap_swd_turnaround_cycles {
+	DAP_SWD_TURNAROUND_1_CYCLE = 0U,
+	DAP_SWD_TURNAROUND_2_CYCLES = 1U,
+	DAP_SWD_TURNAROUND_3_CYCLES = 2U,
+	DAP_SWD_TURNAROUND_4_CYCLES = 3U,
+} dap_swd_turnaround_cycles_e;
+
+typedef enum dap_swd_fault_cfg {
+	DAP_SWD_FAULT_NO_DATA_PHASE = 0U,
+	DAP_SWD_FAULT_ALWAYS_DATA_PHASE = 4U,
+} dap_swd_fault_cfg_e;
+
 static uint32_t dap_swd_seq_in(size_t clock_cycles);
 static bool dap_swd_seq_in_parity(uint32_t *result, size_t clock_cycles);
 static void dap_swd_seq_out(uint32_t tms_states, size_t clock_cycles);
 static void dap_swd_seq_out_parity(uint32_t tms_states, size_t clock_cycles);
 
+static bool dap_swd_configure(dap_swd_turnaround_cycles_e turnaround, dap_swd_fault_cfg_e fault_cfg);
 static bool dap_write_reg_no_check(uint16_t addr, uint32_t data);
 static uint32_t swd_clear_error(adiv5_debug_port_s *target_dp, bool protocol_recovery);
 
@@ -53,7 +66,7 @@ bool dap_swd_init(adiv5_debug_port_s *target_dp)
 	/* Mark that we're going into SWD mode and configure the CMSIS-DAP adaptor accordingly */
 	dap_disconnect();
 	dap_mode = DAP_CAP_SWD;
-	dap_swd_configure(0);
+	dap_swd_configure(DAP_SWD_TURNAROUND_1_CYCLE, DAP_SWD_FAULT_ALWAYS_DATA_PHASE);
 	dap_connect();
 	dap_reset_link(target_dp, false);
 
@@ -74,6 +87,23 @@ bool dap_swd_init(adiv5_debug_port_s *target_dp)
 	target_dp->low_access = dap_dp_low_access;
 	target_dp->abort = dap_dp_abort;
 	return true;
+}
+
+static bool dap_swd_configure(const dap_swd_turnaround_cycles_e turnaround, const dap_swd_fault_cfg_e fault_cfg)
+{
+	/* Setup the request buffer to configure how DAP_SWD_SEQUENCE works */
+	const uint8_t request[2] = {
+		DAP_SWD_CONFIGURE,
+		turnaround | fault_cfg,
+	};
+	uint8_t result = DAP_RESPONSE_OK;
+	/* Execute it and check if it failed */
+	if (!dap_run_cmd(request, 2U, &result, 1U)) {
+		DEBUG_PROBE("%s failed\n", __func__);
+		return false;
+	}
+	/* Validate that it actually succeeded */
+	return result == DAP_RESPONSE_OK;
 }
 
 static void dap_swd_seq_out(const uint32_t tms_states, const size_t clock_cycles)
