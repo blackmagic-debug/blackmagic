@@ -40,6 +40,7 @@
 #include "adiv5.h"
 
 typedef enum dap_command {
+	DAP_INFO = 0x00U,
 	DAP_HOST_STATUS = 0x01U,
 	DAP_CONNECT = 0x02U,
 	DAP_DISCONNECT = 0x03U,
@@ -71,8 +72,15 @@ typedef enum dap_transfer_status {
 	DAP_TRANSFER_NO_RESPONSE = 0x07U,
 } dap_transfer_status_e;
 
+typedef enum dap_info_status {
+	DAP_INFO_NO_INFO = 0U,
+	DAP_INFO_NO_STRING = 1U,
+} dap_info_status_e;
+
 #define DAP_SWD_OUT_SEQUENCE 0U
 #define DAP_SWD_IN_SEQUENCE  1U
+
+#define DAP_INFO_MAX_LENGTH 256U
 
 typedef struct dap_transfer_request {
 	uint8_t request;

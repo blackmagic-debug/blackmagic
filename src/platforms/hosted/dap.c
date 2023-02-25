@@ -40,11 +40,8 @@
 #include "jtag_scan.h"
 #include "buffer_utils.h"
 
-#define ID_DAP_INFO               0x00U
-#define ID_DAP_TRANSFER_CONFIGURE 0x04U
-#define ID_DAP_RESET_TARGET       0x0aU
-#define ID_DAP_SWJ_PINS           0x10U
-#define ID_DAP_JTAG_CONFIGURE     0x15U
+#define ID_DAP_SWJ_PINS       0x10U
+#define ID_DAP_JTAG_CONFIGURE 0x15U
 
 #define DAP_TRANSFER_APnDP (1U << 0U)
 #define DAP_TRANSFER_RnW   (1U << 1U)
@@ -198,22 +195,28 @@ static bool dap_transfer_configure(const uint8_t idle_cycles, const uint16_t wai
 	return result == DAP_RESPONSE_OK;
 }
 
-size_t dap_info(const dap_info_e info, uint8_t *const data, const size_t size)
+size_t dap_info(const dap_info_e requested_info, void *const buffer, const size_t buffer_length)
 {
-	uint8_t buf[256];
-	size_t rsize;
-
-	buf[0] = ID_DAP_INFO;
-	buf[1] = info;
-	dbg_dap_cmd(buf, sizeof(buf), 2);
-
-	rsize = size < buf[0] ? size : buf[0];
-	memcpy(data, &buf[1], rsize);
-
-	if (rsize < size)
-		data[rsize] = 0;
-
-	return rsize;
+	/* Setup the request buffer for the DAP_INFO request */
+	const uint8_t request[2] = {
+		DAP_INFO,
+		requested_info,
+	};
+	uint8_t response[DAP_INFO_MAX_LENGTH + 1U] = {DAP_INFO_NO_INFO};
+	/* Execute it and check if it failed */
+	dap_run_cmd(request, 2U, response, DAP_INFO_MAX_LENGTH + 1U);
+	if (response[0] == DAP_INFO_NO_INFO) {
+		DEBUG_PROBE("%s failed or unsupported\n", __func__);
+		return 0U;
+	}
+	/* Extract the response length, capped to the result buffer length */
+	const size_t result_length = MIN(response[0], buffer_length);
+	/* Copy out the response and possibly NUL terminate it (if there's room) */
+	memcpy(buffer, response + 1, result_length);
+	if (result_length < buffer_length)
+		((uint8_t *)buffer)[result_length] = 0U;
+	/* Return how many bytes were retrieved */
+	return result_length;
 }
 
 void dap_reset_pin(int state)
