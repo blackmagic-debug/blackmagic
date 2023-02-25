@@ -170,17 +170,23 @@ uint32_t dap_swj_clock(const uint32_t clock)
 	return dap_current_clock_freq;
 }
 
-void dap_transfer_configure(uint8_t idle, uint16_t count, uint16_t retry)
+bool dap_transfer_configure(const uint8_t idle_cycles, const uint16_t wait_retries, const uint16_t match_retries)
 {
-	uint8_t buf[6];
-
-	buf[0] = ID_DAP_TRANSFER_CONFIGURE;
-	buf[1] = idle;
-	buf[2] = count & 0xffU;
-	buf[3] = (count >> 8U) & 0xffU;
-	buf[4] = retry & 0xffU;
-	buf[5] = (retry >> 8U) & 0xffU;
-	dbg_dap_cmd(buf, sizeof(buf), 6);
+	/* Setup the request buffer to configure DAP_TRANSFER* handling */
+	uint8_t request[6] = {
+		DAP_TRANSFER_CONFIGURE,
+		idle_cycles,
+	};
+	write_le2(request, 2, wait_retries);
+	write_le2(request, 4, match_retries);
+	uint8_t result = DAP_RESPONSE_OK;
+	/* Execute it and check if it failed */
+	if (!dap_run_cmd(&request, 1U, &result, 1U)) {
+		DEBUG_PROBE("%s failed\n", __func__);
+		return false;
+	}
+	/* Validate that it actually succeeded */
+	return result == DAP_RESPONSE_OK;
 }
 
 //-----------------------------------------------------------------------------
