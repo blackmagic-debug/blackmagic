@@ -473,13 +473,3 @@ void dap_adiv5_dp_defaults(adiv5_debug_port_s *dp)
 	dp->mem_read = dap_mem_read;
 	dp->mem_write = dap_mem_write;
 }
-
-void dap_jtag_dp_init(adiv5_debug_port_s *dp)
-{
-	/* Try to configure the JTAG engine on the adaptor */
-	if (!dap_jtag_configure())
-		return;
-	dp->dp_read = dap_dp_read_reg;
-	dp->low_access = dap_dp_low_access;
-	dp->abort = dap_dp_abort;
-}
