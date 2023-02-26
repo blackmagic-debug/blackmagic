@@ -51,9 +51,7 @@ bool dap_jtag_init(void)
 	dap_disconnect();
 	dap_mode = DAP_CAP_JTAG;
 	dap_connect();
-	adiv5_debug_port_s target_dp = {};
-	target_dp.dev_index = 0U;
-	dap_reset_link(&target_dp, true);
+	dap_reset_link(NULL);
 	jtag_proc.jtagtap_reset = dap_jtag_reset;
 	jtag_proc.jtagtap_next = dap_jtag_next;
 	jtag_proc.jtagtap_tms_seq = dap_jtag_tms_seq;
