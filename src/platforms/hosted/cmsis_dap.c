@@ -465,11 +465,11 @@ static void dap_mem_write(adiv5_access_port_s *ap, uint32_t dest, const void *sr
 	adiv5_dp_read(ap->dp, ADIV5_DP_RDBUFF);
 }
 
-void dap_adiv5_dp_defaults(adiv5_debug_port_s *dp)
+void dap_adiv5_dp_defaults(adiv5_debug_port_s *target_dp)
 {
 	/* Setup the access functions for this adaptor */
-	dp->ap_read = dap_ap_read;
-	dp->ap_write = dap_ap_write;
-	dp->mem_read = dap_mem_read;
-	dp->mem_write = dap_mem_write;
+	target_dp->ap_read = dap_ap_read;
+	target_dp->ap_write = dap_ap_write;
+	target_dp->mem_read = dap_mem_read;
+	target_dp->mem_write = dap_mem_write;
 }
