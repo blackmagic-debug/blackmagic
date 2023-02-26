@@ -506,10 +506,6 @@ static void dap_mem_write(adiv5_access_port_s *ap, uint32_t dest, const void *sr
 
 void dap_adiv5_dp_defaults(adiv5_debug_port_s *dp)
 {
-	/* Try to configure the JTAG engine on the adaptor if we're in JTAG mode */
-	/* XXX: If this fails we don't currently tell the invoking code which will make things go v. wrong */
-	if (mode == DAP_CAP_JTAG && !dap_jtag_configure())
-		return;
 	/* Setup the access functions for this adaptor */
 	dp->ap_read = dap_ap_read;
 	dp->ap_write = dap_ap_write;
@@ -573,6 +569,9 @@ bool dap_jtagtap_init(void)
 
 void dap_jtag_dp_init(adiv5_debug_port_s *dp)
 {
+	/* Try to configure the JTAG engine on the adaptor */
+	if (!dap_jtag_configure())
+		return;
 	dp->dp_read = dap_dp_read_reg;
 	dp->low_access = dap_dp_low_access;
 	dp->abort = dap_dp_abort;
