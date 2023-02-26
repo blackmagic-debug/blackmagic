@@ -125,7 +125,7 @@ static void ch32f1_add_flash(target_s *t, uint32_t addr, size_t length, size_t e
 		target_mem_write32(t, FLASH_MAGIC, magic);         \
 	} while (0)
 
-/* Attempt ynlock ch32f103 in fast mode */
+/* Attempt unlock ch32f103 in fast mode */
 static bool ch32f1_flash_unlock(target_s *t)
 {
 	DEBUG_INFO("CH32: flash unlock \n");
@@ -206,6 +206,11 @@ bool ch32f1_probe(target_s *t)
 
 	t->part_id = device_id;
 	uint32_t signature = target_mem_read32(t, FLASHSIZE);
+	/* Some ch32f103c8t6 MCU's found on Blue Pill boards have a zero (0) in the flash memory capacity register */
+	if (signature == 0) {
+		signature = 64;
+		DEBUG_WARN("CH32: FLASHSIZE = 0, assuming CH32F103C8T6 MCU, seting FLASHSIZE = 64\n");
+	}
 	uint32_t flashSize = signature & 0xffffU;
 
 	target_add_ram(t, 0x20000000, 0x5000);
@@ -259,10 +264,12 @@ bool ch32f1_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
  */
 static bool ch32f1_wait_flash_ready(target_s *t, uint32_t addr)
 {
-	uint32_t ff = 0;
-	for (size_t i = 0; i < 32U; i++)
-		ff = target_mem_read32(t, addr);
-	if (ff != 0xffffffffU) {
+	uint32_t flash_val = 0;
+	/* Certain ch32f103c8t6 MCU's found on Blue Pill boards need some uninterrupted time (no SWD link activity) */
+	platform_delay(1);
+	for (size_t cnt = 0; cnt < 32U && flash_val != 0xffffffffU; ++cnt)
+		flash_val = target_mem_read32(t, addr);
+	if (flash_val != 0xffffffffU) {
 		DEBUG_WARN("ch32f1 Not erased properly at %" PRIx32 " or flash access issue\n", addr);
 		return false;
 	}
