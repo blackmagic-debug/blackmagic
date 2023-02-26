@@ -62,6 +62,16 @@ bool dap_jtag_init(void)
 	return true;
 }
 
+void dap_jtag_dp_init(adiv5_debug_port_s *target_dp)
+{
+	/* Try to configure the JTAG engine on the adaptor */
+	if (!dap_jtag_configure())
+		return;
+	target_dp->dp_read = dap_dp_read_reg;
+	target_dp->low_access = dap_dp_low_access;
+	target_dp->abort = dap_dp_abort;
+}
+
 static void dap_jtag_reset(void)
 {
 	jtagtap_soft_reset();
