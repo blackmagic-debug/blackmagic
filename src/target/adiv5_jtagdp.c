@@ -39,7 +39,7 @@
 
 static uint32_t adiv5_jtagdp_error(adiv5_debug_port_s *dp, bool protocol_recovery);
 
-void adiv5_jtag_dp_handler(uint8_t jd_index)
+void adiv5_jtag_dp_handler(const uint8_t dev_index)
 {
 	adiv5_debug_port_s *dp = calloc(1, sizeof(*dp));
 	if (!dp) { /* calloc failed: heap exhaustion */
@@ -47,7 +47,7 @@ void adiv5_jtag_dp_handler(uint8_t jd_index)
 		return;
 	}
 
-	dp->dev_index = jd_index;
+	dp->dev_index = dev_index;
 
 	dp->dp_read = fw_adiv5_jtagdp_read;
 	dp->error = adiv5_jtagdp_error;
@@ -57,11 +57,11 @@ void adiv5_jtag_dp_handler(uint8_t jd_index)
 	platform_jtag_dp_init(dp);
 #endif
 
-	if (jtag_devs[jd_index].jd_idcode == JTAG_IDCODE_ARM_DPv0)
+	if (jtag_devs[dev_index].jd_idcode == JTAG_IDCODE_ARM_DPv0)
 		adiv5_dp_error(dp);
 	else
 		adiv5_dp_abort(dp, ADIV5_DP_ABORT_STKERRCLR);
-	adiv5_dp_init(dp, jtag_devs[jd_index].jd_idcode);
+	adiv5_dp_init(dp, jtag_devs[dev_index].jd_idcode);
 }
 
 uint32_t fw_adiv5_jtagdp_read(adiv5_debug_port_s *dp, uint16_t addr)
