@@ -40,16 +40,12 @@
 #include "jtag_scan.h"
 #include "buffer_utils.h"
 
-#define ID_DAP_SWJ_PINS       0x10U
 #define ID_DAP_JTAG_CONFIGURE 0x15U
 
 #define DAP_TRANSFER_APnDP (1U << 0U)
 #define DAP_TRANSFER_RnW   (1U << 1U)
 
 #define DAP_TRANSFER_WAIT (1U << 1U)
-
-#define DAP_SWJ_nTRST  (1U << 5U)
-#define DAP_SWJ_nRESET (1U << 7U)
 
 #define SWD_DP_R_IDCODE    0x00U
 #define SWD_DP_W_ABORT     0x00U
@@ -219,18 +215,24 @@ size_t dap_info(const dap_info_e requested_info, void *const buffer, const size_
 	return result_length;
 }
 
-void dap_reset_pin(int state)
+bool dap_set_reset_state(const bool nrst_state)
 {
-	uint8_t buf[7];
-
-	buf[0] = ID_DAP_SWJ_PINS;
-	buf[1] = state ? DAP_SWJ_nRESET : 0; // Value
-	buf[2] = DAP_SWJ_nRESET;             // Select
-	buf[3] = 0;                          // Wait
-	buf[4] = 0;                          // Wait
-	buf[5] = 0;                          // Wait
-	buf[6] = 0;                          // Wait
-	dbg_dap_cmd(buf, sizeof(buf), 7);
+	/* Setup the request for the pin state change request */
+	dap_swj_pins_request_s request = {
+		.request = DAP_SWJ_PINS,
+		/* nRST is active low, so take that into account */
+		.pin_values = nrst_state ? 0U : DAP_SWJ_nRST,
+		.selected_pins = DAP_SWJ_nRST,
+	};
+	/* Tell the hardware to wait for 10µs for the pin to settle */
+	write_le4(request.wait_time, 0, 10);
+	uint8_t response = 0U;
+	/* Execute it and check if it failed */
+	if (!dap_run_cmd(&request, 7U, &response, 1U)) {
+		DEBUG_PROBE("%s failed\n", __func__);
+		return false;
+	}
+	return response == request.pin_values;
 }
 
 uint32_t dap_read_reg(adiv5_debug_port_s *target_dp, const uint8_t reg)
