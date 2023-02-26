@@ -52,6 +52,7 @@ typedef enum dap_command {
 	DAP_SWJ_SEQUENCE = 0x12U,
 	DAP_SWD_CONFIGURE = 0x13U,
 	DAP_JTAG_SEQUENCE = 0x14U,
+	DAP_JTAG_CONFIGURE = 0x15U,
 	DAP_SWD_SEQUENCE = 0x1dU,
 } dap_command_e;
 

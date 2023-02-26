@@ -100,3 +100,26 @@ static bool dap_jtag_next(const bool tms, const bool tdi)
 	DEBUG_PROBE("jtagtap_next tms=%u tdi=%u tdo=%u\n", tms_byte, tdi_byte, tdo);
 	return tdo;
 }
+
+bool dap_jtag_configure(void)
+{
+	/* Check if there are no or too many devices */
+	if (!jtag_dev_count || jtag_dev_count >= JTAG_MAX_DEVS)
+		return false;
+	/* Begin building the configuration packet */
+	uint8_t request[2U + JTAG_MAX_DEVS] = {
+		DAP_JTAG_CONFIGURE,
+		jtag_dev_count,
+	};
+	/* For each device in the chain copy its IR length to the configuration */
+	for (uint32_t device = 0; device < jtag_dev_count; device++) {
+		const jtag_dev_s *const dev = &jtag_devs[device];
+		request[2U + device] = dev->ir_len;
+		DEBUG_PROBE("%" PRIu32 ": irlen = %u\n", device, dev->ir_len);
+	}
+	uint8_t response = DAP_RESPONSE_OK;
+	/* Send the configuration and ensure it succeeded */
+	if (!dap_run_cmd(request, 2U + jtag_dev_count, &response, 1U) || response != DAP_RESPONSE_OK)
+		DEBUG_WARN("dap_jtag_configure failed with %02x\n", response);
+	return response == DAP_RESPONSE_OK;
+}
