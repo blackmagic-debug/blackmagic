@@ -389,11 +389,6 @@ bool dap_run_cmd(const void *const request_data, const size_t request_length, vo
 	return (size_t)result >= response_length;
 }
 
-ssize_t dbg_dap_cmd(uint8_t *const data, const size_t response_length, const size_t request_length)
-{
-	return dap_run_cmd_raw(data, request_length, data, response_length);
-}
-
 #define ALIGNOF(x) (((x)&3) == 0 ? ALIGN_WORD : (((x)&1) == 0 ? ALIGN_HALFWORD : ALIGN_BYTE))
 
 static void dap_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t len)
