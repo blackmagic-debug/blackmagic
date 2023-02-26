@@ -60,6 +60,9 @@
 #define FLASH_SIZE_MAX_G07_8   (128U * 1024U) // 128kiB
 #define FLASH_SIZE_MAX_G0B_C   (512U * 1024U) // 512kiB
 
+#define FLASH_SIZE_MAX_C01 (32U * 1024U) // 32kiB
+#define FLASH_SIZE_MAX_C03 (32U * 1024U) // 32kiB
+
 #define G0_FLASH_BASE   0x40022000U
 #define FLASH_ACR       (G0_FLASH_BASE + 0x000U)
 #define FLASH_ACR_EMPTY (1U << 16U)
@@ -124,6 +127,9 @@
 #define RAM_SIZE_G07_8 (36U * 1024U)  // 36kiB
 #define RAM_SIZE_G0B_C (144U * 1024U) // 144kiB
 
+#define RAM_SIZE_C01 (6U * 1024U)  // 6kiB
+#define RAM_SIZE_C03 (12U * 1024U) // 12kiB
+
 /* RCC */
 #define G0_RCC_BASE       0x40021000U
 #define RCC_APBENR1       (G0_RCC_BASE + 0x3cU)
@@ -131,6 +137,7 @@
 
 /* DBG */
 #define DBG_BASE                  0x40015800U
+#define DBG_IDCODE                (DBG_BASE + 0x00U)
 #define DBG_CR                    (DBG_BASE + 0x04U)
 #define DBG_CR_DBG_STANDBY        (1U << 2U)
 #define DBG_CR_DBG_STOP           (1U << 1U)
@@ -142,6 +149,8 @@
  * The underscores in these definitions represent /'s, this means
  * that STM32G03_4 is supposed to refer to the G03/4 aka the G03 and G04.
  */
+#define STM32C011  0x443U
+#define STM32C031  0x453U
 #define STM32G03_4 0x466U
 #define STM32G05_6 0x456U
 #define STM32G07_8 0x460U
@@ -206,11 +215,30 @@ bool stm32g0_probe(target_s *t)
 	size_t flash_size = 0U;
 
 	switch (t->part_id) {
-	case STM32G03_4:
-		/* SRAM 8kiB, Flash up to 64kiB */
-		ram_size = RAM_SIZE_G03_4;
-		flash_size = FLASH_SIZE_MAX_G03_4;
-		t->driver = "STM32G03/4";
+	case STM32G03_4:;
+		const uint32_t dev_id = target_mem_read32(t, DBG_IDCODE) & 0xfffU;
+		switch (dev_id) {
+		case STM32G03_4:
+			/* SRAM 8kiB, Flash up to 64kiB */
+			ram_size = RAM_SIZE_G03_4;
+			flash_size = FLASH_SIZE_MAX_G03_4;
+			t->driver = "STM32G03/4";
+			break;
+		case STM32C011:
+			/* SRAM 6kiB, Flash up to 32kiB */
+			ram_size = RAM_SIZE_C01;
+			flash_size = FLASH_SIZE_MAX_C01;
+			t->driver = "STM32C011";
+			break;
+		case STM32C031:
+			/* SRAM 12kiB, Flash up to 32kiB */
+			ram_size = RAM_SIZE_C03;
+			flash_size = FLASH_SIZE_MAX_C03;
+			t->driver = "STM32C031";
+			break;
+		default:
+			return false;
+		}
 		break;
 	case STM32G05_6:
 		/* SRAM 18kiB, Flash up to 64kiB */
