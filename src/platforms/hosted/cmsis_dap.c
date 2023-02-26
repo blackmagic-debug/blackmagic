@@ -251,7 +251,7 @@ int dap_init(bmp_info_s *info)
 
 void dap_nrst_set_val(bool assert)
 {
-	dap_reset_pin(!assert);
+	dap_set_reset_state(assert);
 }
 
 void dap_dp_abort(adiv5_debug_port_s *const target_dp, const uint32_t abort)

@@ -47,6 +47,7 @@ typedef enum dap_command {
 	DAP_TRANSFER_CONFIGURE = 0x04U,
 	DAP_TRANSFER = 0x05U,
 	DAP_TRANSFER_BLOCK = 0x06U,
+	DAP_SWJ_PINS = 0x10U,
 	DAP_SWJ_CLOCK = 0x11U,
 	DAP_SWJ_SEQUENCE = 0x12U,
 	DAP_SWD_CONFIGURE = 0x13U,
@@ -81,6 +82,13 @@ typedef enum dap_info_status {
 #define DAP_SWD_IN_SEQUENCE  1U
 
 #define DAP_INFO_MAX_LENGTH 256U
+
+#define DAP_SWJ_SWCLK_TCK (1U << 0U)
+#define DAP_SWJ_SWDIO_TMS (1U << 1U)
+#define DAP_SWJ_TDI       (1U << 2U)
+#define DAP_SWJ_TDO       (1U << 3U)
+#define DAP_SWJ_nTRST     (1U << 5U)
+#define DAP_SWJ_nRST      (1U << 7U)
 
 typedef struct dap_transfer_request {
 	uint8_t request;
@@ -124,6 +132,13 @@ typedef struct dap_swd_sequence {
 	uint8_t direction : 1;
 	uint8_t data[8];
 } dap_swd_sequence_s;
+
+typedef struct dap_swj_pins_request {
+	uint8_t request;
+	uint8_t pin_values;
+	uint8_t selected_pins;
+	uint8_t wait_time[4];
+} dap_swj_pins_request_s;
 
 bool perform_dap_transfer(adiv5_debug_port_s *target_dp, const dap_transfer_request_s *transfer_requests,
 	size_t requests, uint32_t *response_data, size_t responses);

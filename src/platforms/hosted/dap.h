@@ -74,7 +74,7 @@ size_t dap_info(dap_info_e requested_info, void *buffer, size_t buffer_length);
 void dap_reset_target(void);
 void dap_nrst_set_val(bool assert);
 void dap_reset_target_hw(int state);
-void dap_reset_pin(int state);
+bool dap_set_reset_state(bool nrst_state);
 uint32_t dap_read_reg(adiv5_debug_port_s *target_dp, uint8_t reg);
 void dap_write_reg(adiv5_debug_port_s *target_dp, uint8_t reg, uint32_t data);
 void dap_reset_link(adiv5_debug_port_s *target_dp, bool jtag);
