@@ -645,9 +645,13 @@ static void adiv5_component_probe(
 
 adiv5_access_port_s *adiv5_new_ap(adiv5_debug_port_s *dp, uint8_t apsel)
 {
-	adiv5_access_port_s tmpap;
+#if PC_HOSTED == 1
+	if (dp->ap_setup && !dp->ap_setup(apsel))
+		return NULL;
+#endif
+
+	adiv5_access_port_s tmpap = {};
 	/* Assume valid and try to read IDR */
-	memset(&tmpap, 0, sizeof(tmpap));
 	tmpap.dp = dp;
 	tmpap.apsel = apsel;
 	tmpap.idr = adiv5_ap_read(&tmpap, ADIV5_AP_IDR);
@@ -879,13 +883,7 @@ void adiv5_dp_init(adiv5_debug_port_s *dp, const uint32_t idcode)
 	size_t invalid_aps = 0;
 	dp->refcnt++;
 	for (size_t i = 0; i < 256U && invalid_aps < 8U; ++i) {
-		adiv5_access_port_s *ap = NULL;
-#if PC_HOSTED == 1
-		if ((!dp->ap_setup) || dp->ap_setup(i))
-			ap = adiv5_new_ap(dp, i);
-#else
-		ap = adiv5_new_ap(dp, i);
-#endif
+		adiv5_access_port_s *ap = adiv5_new_ap(dp, i);
 		if (ap == NULL) {
 			/* Clear sticky errors in case scanning for this AP triggered any */
 			adiv5_dp_clear_sticky_errors(dp);
