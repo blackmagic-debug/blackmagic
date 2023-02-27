@@ -487,7 +487,7 @@ static void adiv5_component_probe(
 	/* CIDR preamble sanity check */
 	if ((cidr & ~CID_CLASS_MASK) != CID_PREAMBLE) {
 		DEBUG_WARN("%s%" PRIu32 " 0x%08" PRIx32 ": 0x%08" PRIx32 " <- does not match preamble (0x%08" PRIx32 ")\n",
-			indent + 1, num_entry, addr, cidr, CID_PREAMBLE);
+			indent, num_entry, addr, cidr, CID_PREAMBLE);
 		return;
 	}
 
