@@ -331,30 +331,38 @@ uint64_t adiv5_ap_read_pidr(adiv5_access_port_s *ap, uint32_t addr)
 	return pidr;
 }
 
-/* Halt CortexM
- *
- * Run in tight loop to catch small windows of awakeness.
- * Repeat the write command with the highest possible value
- * of the trannsaction counter, if not on MINDP
+/*
+ * This function tries to halt Cortex-M processors.
+ * To handle WFI and other sleep states, it does this in as tight a loop as it can,
+ * either using the TRNCNT bits, or, if on a minimal DP implementation by doing the
+ * memory writes as fast as possible.
  */
 static uint32_t cortexm_initial_halt(adiv5_access_port_s *ap)
 {
+	/* Read the current CTRL/STATUS register value to use in the non-minimal DP case */
 	const uint32_t ctrlstat = adiv5_dp_read(ap->dp, ADIV5_DP_CTRLSTAT);
 
-	const uint32_t dhcsr_ctl = CORTEXM_DHCSR_DBGKEY | CORTEXM_DHCSR_C_DEBUGEN | CORTEXM_DHCSR_C_HALT;
-	const uint32_t dhcsr_valid = CORTEXM_DHCSR_S_HALT | CORTEXM_DHCSR_C_DEBUGEN;
-	const bool use_low_access = !ap->dp->mindp;
+	/* Pre-bake constants to operate on DHCSR with for use in adiv5_mem_write() calls */
+	static const uint32_t dhcsr_debug_en = CORTEXM_DHCSR_DBGKEY | CORTEXM_DHCSR_C_DEBUGEN;
+	static const uint32_t dhcsr_ctl = CORTEXM_DHCSR_DBGKEY | CORTEXM_DHCSR_C_DEBUGEN | CORTEXM_DHCSR_C_HALT;
+	const bool is_minimal_dp = ap->dp->mindp;
 
 	platform_timeout_s halt_timeout;
 	platform_timeout_set(&halt_timeout, cortexm_wait_timeout);
 
-	if (use_low_access) {
-		/* ap_mem_access_setup() sets ADIV5_AP_CSW_ADDRINC_SINGLE -> unusable!*/
+	if (!is_minimal_dp) {
+		/* Setup to read/write DHCSR */
+		/* ap_mem_access_setup() uses ADIV5_AP_CSW_ADDRINC_SINGLE which is undesirable for our use here */
 		adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw | ADIV5_AP_CSW_SIZE_WORD);
 		adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR, CORTEXM_DHCSR);
+		/* Write (and do a dummy read of) DHCSR to ensure debug is enabled */
+		adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DRW, dhcsr_debug_en);
+		adiv5_dp_read(ap->dp, ADIV5_DP_RDBUFF);
 	} else {
-		/* When interacting with a minimal DP implementation, ensure we first enable debug before trying to halt the processor */
-		const uint32_t dhcsr_debug_en = CORTEXM_DHCSR_DBGKEY | CORTEXM_DHCSR_C_DEBUGEN;
+		/*
+		 * When interacting with a minimal DP implementation, ensure we first
+		 * enable debug before trying to halt the processor
+		 */
 		adiv5_mem_write(ap, CORTEXM_DHCSR, &dhcsr_debug_en, sizeof(dhcsr_debug_en));
 	}
 
@@ -362,11 +370,12 @@ static uint32_t cortexm_initial_halt(adiv5_access_port_s *ap)
 	while (!platform_timeout_is_expired(&halt_timeout)) {
 		uint32_t dhcsr;
 
-		if (use_low_access) {
+		if (!is_minimal_dp) {
+			/* Ask the AP to repeatedly retry the write to DHCSR */
 			adiv5_dp_low_access(
 				ap->dp, ADIV5_LOW_WRITE, ADIV5_DP_CTRLSTAT, ctrlstat | ADIV5_DP_CTRLSTAT_TRNCNT(0xfffU));
+			/* Repeatedly try to halt the processor */
 			adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DRW, dhcsr_ctl);
-
 			dhcsr = adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_AP_DRW, 0);
 		} else {
 			/* Repeatedly try to halt the processor */
@@ -374,25 +383,27 @@ static uint32_t cortexm_initial_halt(adiv5_access_port_s *ap)
 			dhcsr = adiv5_mem_read32(ap, CORTEXM_DHCSR);
 		}
 
-		/* ADIV5_DP_CTRLSTAT_READOK is always set e.g. on STM32F7 even so
-		   CORTEXM_DHCS reads nonsense*/
-		/* On a sleeping STM32F7, invalid DHCSR reads with e.g. 0xffffffff and
-		 * 0x0xA05F0000  may happen.
-		 * M23/33 will have S_SDE set when debug is allowed
+		/*
+		 * Check how we did, handling some errata along the way.
+		 * On STM32F7 parts, invalid DHCSR reads of 0xffffffff and 0xa05f0000 may happen,
+		 * so filter those out (we check for the latter by checking the reserved bits are 0)
 		 */
-		if (dhcsr != 0xffffffffU && (dhcsr & 0xf000fff0U) == 0) { /* (Check for invalid read) && (Check RAZ bits) */
-			if ((dhcsr & CORTEXM_DHCSR_S_RESET_ST) && !reset_seen) {
-				if (connect_assert_nrst)
-					return dhcsr;
-				reset_seen = true;
-				continue;
-			}
-			if ((dhcsr & dhcsr_valid) == dhcsr_valid) /* Halted */
+		if (dhcsr == 0xffffffffU || (dhcsr & 0xf000fff0U) != 0)
+			continue;
+		/* Now we've got some confidence we've got a good read, check for resets */
+		if ((dhcsr & CORTEXM_DHCSR_S_RESET_ST) && !reset_seen) {
+			if (connect_assert_nrst)
 				return dhcsr;
+			reset_seen = true;
+			continue;
 		}
+		/* And finally check if halt succeeded */
+		if ((dhcsr & (CORTEXM_DHCSR_S_HALT | CORTEXM_DHCSR_C_DEBUGEN)) ==
+			(CORTEXM_DHCSR_S_HALT | CORTEXM_DHCSR_C_DEBUGEN))
+			return dhcsr;
 	}
 
-	return 0;
+	return 0U;
 }
 
 /* Prepare to read SYSROM and SYSROM PIDR
