@@ -898,18 +898,18 @@ void adiv5_dp_init(adiv5_debug_port_s *dp, const uint32_t idcode)
 		efm32_aap_probe(ap);
 		lpc55_dmap_probe(ap);
 
-		/* Halt the device and release from reset if reset is active! */
-		if (!ap->apsel && (ap->idr & 0xfU) == ARM_AP_TYPE_AHB)
-			cortexm_prepare(ap);
-		/* Should probe further here to make sure it's a valid target.
-		 * AP should be unref'd if not valid.
-		 */
+		/* Try to prepare the AP if it seems to be a AHB (memory) AP */
+		if (!ap->apsel && (ap->idr & 0xfU) == ARM_AP_TYPE_AHB) {
+			if (!cortexm_prepare(ap))
+				DEBUG_WARN("adiv5: Failed to prepare AP, results may be unpredictable\n");
+		}
 
 		/* The rest should only be added after checking ROM table */
 		adiv5_component_probe(ap, ap->base, 0, 0);
 		adiv5_ap_unref(ap);
 	}
-	/* We halted at least CortexM for Romtable scan.
+	/*
+	 * We halted at least Cortex-M for Romtable scan.
 	 * With connect under reset, keep the devices halted.
 	 * Otherwise, release the devices now.
 	 * Attach() will halt them again.
