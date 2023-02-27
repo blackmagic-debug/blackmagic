@@ -905,18 +905,18 @@ void adiv5_dp_init(adiv5_debug_port_s *dp, const uint32_t idcode)
 
 		/* The rest should only be added after checking ROM table */
 		adiv5_component_probe(ap, ap->base, 0, 0);
-		adiv5_ap_unref(ap);
-	}
-	/*
-	 * We halted at least Cortex-M for Romtable scan.
-	 * With connect under reset, keep the devices halted.
-	 * Otherwise, release the devices now.
-	 * Attach() will halt them again.
-	 */
-	for (target_s *t = target_list; t; t = t->next) {
-		if (!connect_assert_nrst) {
-			target_halt_resume(t, false);
+		/*
+		 * Having completed discovery on this AP, if we're not in connect-under-reset mode,
+		 * and now that we're done with this AP's ROM tables, look for the target and resume the core.
+		 */
+		for (target_s *target = target_list; target; target = target->next) {
+			if (!connect_assert_nrst && target->priv_free == cortexm_priv_free) {
+				adiv5_access_port_s *target_ap = cortexm_ap(target);
+				if (target_ap == ap)
+					target_halt_resume(target, false);
+			}
 		}
+		adiv5_ap_unref(ap);
 	}
 	adiv5_dp_unref(dp);
 }

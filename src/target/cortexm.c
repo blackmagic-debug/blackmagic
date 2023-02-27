@@ -489,7 +489,7 @@ static bool cortexm_check_error(target_s *t)
 	return adiv5_dp_error(ap->dp) != 0;
 }
 
-static void cortexm_priv_free(void *priv)
+void cortexm_priv_free(void *priv)
 {
 	adiv5_ap_unref(((cortexm_priv_s *)priv)->ap);
 	free(priv);

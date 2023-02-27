@@ -194,4 +194,7 @@ void cortexm_halt_resume(target_s *t, bool step);
 bool cortexm_run_stub(target_s *t, uint32_t loadaddr, uint32_t r0, uint32_t r1, uint32_t r2, uint32_t r3);
 int cortexm_mem_write_sized(target_s *t, target_addr_t dest, const void *src, size_t len, align_e align);
 
+/* This is only for the ADIv5 implementation's use, do not call. */
+void cortexm_priv_free(void *priv);
+
 #endif /* TARGET_CORTEXM_H */
