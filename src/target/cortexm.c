@@ -844,10 +844,11 @@ void cortexm_detach(target_s *t)
 	for (size_t i = 0; i < priv->hw_watchpoint_max; i++)
 		target_mem_write32(t, CORTEXM_DWT_FUNC(i), 0);
 
-	/* Restort DEMCR */
+	/* Restore DEMCR */
 	adiv5_access_port_s *ap = cortexm_ap(t);
 	target_mem_write32(t, CORTEXM_DEMCR, ap->ap_cortexm_demcr);
-	/* Resume target and disable debug */
+	/* Resume target and disable debug, re-enabling interrupts in the process */
+	target_mem_write32(t, CORTEXM_DHCSR, CORTEXM_DHCSR_DBGKEY | CORTEXM_DHCSR_C_DEBUGEN | CORTEXM_DHCSR_C_HALT);
 	target_mem_write32(t, CORTEXM_DHCSR, CORTEXM_DHCSR_DBGKEY | CORTEXM_DHCSR_C_DEBUGEN);
 	target_mem_write32(t, CORTEXM_DHCSR, CORTEXM_DHCSR_DBGKEY);
 }
