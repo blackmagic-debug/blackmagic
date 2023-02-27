@@ -146,7 +146,7 @@ static const uint32_t regnum_cortex_mf[] = {
 	0x58, 0x59, 0x5a, 0x5b, 0x5c, 0x5d, 0x5e, 0x5f, /* s24-s31 */
 };
 
-/**
+/*
  * Fields for Cortex-M special purpose registers, used in the generation of GDB's target description XML.
  * The general purpose registers r0-r12 and the vector floating point registers d0-d15 all follow a very
  * regular format, so we only need to store fields for the special purpose registers.
@@ -497,7 +497,8 @@ static void cortexm_priv_free(void *priv)
 
 static void cortexm_read_cpuid(target_s *const t, const adiv5_access_port_s *const ap)
 {
-	/* The CPUID register is defined in the ARMv7-M and ARMv8-M
+	/*
+	 * The CPUID register is defined in the ARMv6-M, ARMv7-M and ARMv8-M
 	 * architecture manuals. The PARTNO field is implementation defined,
 	 * that is, the actual values are found in the Technical Reference Manual
 	 * for each Cortex-M core.
@@ -533,7 +534,7 @@ static void cortexm_read_cpuid(target_s *const t, const adiv5_access_port_s *con
 		t->core = "M0";
 		break;
 	default:
-		if (ap->designer_code != JEP106_MANUFACTURER_ATMEL) /* Protected Atmel device?*/
+		if (ap->designer_code != JEP106_MANUFACTURER_ATMEL) /* Protected Atmel device? */
 			DEBUG_WARN("Unexpected Cortex-M CPU partno %04x\n", cpuid_partno);
 	}
 	DEBUG_INFO("CPUID 0x%08" PRIx32 " (%s var %" PRIx32 " rev %" PRIx32 ")\n", t->cpuid, t->core,
