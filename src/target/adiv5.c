@@ -358,27 +358,14 @@ static uint32_t cortexm_initial_halt(adiv5_access_port_s *ap)
 		adiv5_mem_write(ap, CORTEXM_DHCSR, &dhcsr_debug_en, sizeof(dhcsr_debug_en));
 	}
 
-	/* Workaround for CMSIS-DAP Bulk orbtrace
-	 * High values of TRNCNT lead to NO_ACK answer from debugger.
-	 *
-	 * However CMSIS/HID even with highest value has few chances to catch
-	 * a STM32F767 mostly sleeping in WFI!
-	 */
-	uint32_t start_time = platform_time_ms();
-	uint32_t trncnt = 0x80U;
 	bool reset_seen = false;
 	while (!platform_timeout_is_expired(&halt_timeout)) {
 		uint32_t dhcsr;
 
 		if (use_low_access) {
 			adiv5_dp_low_access(
-				ap->dp, ADIV5_LOW_WRITE, ADIV5_DP_CTRLSTAT, ctrlstat | (trncnt * ADIV5_DP_CTRLSTAT_TRNCNT));
+				ap->dp, ADIV5_LOW_WRITE, ADIV5_DP_CTRLSTAT, ctrlstat | ADIV5_DP_CTRLSTAT_TRNCNT(0xfffU));
 			adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DRW, dhcsr_ctl);
-
-			if (trncnt < 0xfffU)
-				trncnt += (platform_time_ms() - start_time) * 8U;
-			else
-				trncnt = 0xfffU;
 
 			dhcsr = adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_AP_DRW, 0);
 		} else {
