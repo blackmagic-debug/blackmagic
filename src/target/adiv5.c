@@ -352,6 +352,10 @@ static uint32_t cortexm_initial_halt(adiv5_access_port_s *ap)
 		/* ap_mem_access_setup() sets ADIV5_AP_CSW_ADDRINC_SINGLE -> unusable!*/
 		adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw | ADIV5_AP_CSW_SIZE_WORD);
 		adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR, CORTEXM_DHCSR);
+	} else {
+		/* When interacting with a minimal DP implementation, ensure we first enable debug before trying to halt the processor */
+		const uint32_t dhcsr_debug_en = CORTEXM_DHCSR_DBGKEY | CORTEXM_DHCSR_C_DEBUGEN;
+		adiv5_mem_write(ap, CORTEXM_DHCSR, &dhcsr_debug_en, sizeof(dhcsr_debug_en));
 	}
 
 	/* Workaround for CMSIS-DAP Bulk orbtrace
@@ -370,13 +374,15 @@ static uint32_t cortexm_initial_halt(adiv5_access_port_s *ap)
 			adiv5_dp_low_access(
 				ap->dp, ADIV5_LOW_WRITE, ADIV5_DP_CTRLSTAT, ctrlstat | (trncnt * ADIV5_DP_CTRLSTAT_TRNCNT));
 			adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DRW, dhcsr_ctl);
-			if (trncnt < 0xfffU) {
+
+			if (trncnt < 0xfffU)
 				trncnt += (platform_time_ms() - start_time) * 8U;
-			} else {
+			else
 				trncnt = 0xfffU;
-			}
+
 			dhcsr = adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_AP_DRW, 0);
 		} else {
+			/* Repeatedly try to halt the processor */
 			adiv5_mem_write(ap, CORTEXM_DHCSR, &dhcsr_ctl, sizeof(dhcsr_ctl));
 			dhcsr = adiv5_mem_read32(ap, CORTEXM_DHCSR);
 		}
