@@ -342,46 +342,31 @@ static uint32_t cortexm_initial_halt(adiv5_access_port_s *ap)
 	/* Read the current CTRL/STATUS register value to use in the non-minimal DP case */
 	const uint32_t ctrlstat = adiv5_dp_read(ap->dp, ADIV5_DP_CTRLSTAT);
 
-	/* Pre-bake constants to operate on DHCSR with for use in adiv5_mem_write() calls */
-	static const uint32_t dhcsr_debug_en = CORTEXM_DHCSR_DBGKEY | CORTEXM_DHCSR_C_DEBUGEN;
-	static const uint32_t dhcsr_ctl = CORTEXM_DHCSR_DBGKEY | CORTEXM_DHCSR_C_DEBUGEN | CORTEXM_DHCSR_C_HALT;
-	const bool is_minimal_dp = ap->dp->mindp;
-
 	platform_timeout_s halt_timeout;
 	platform_timeout_set(&halt_timeout, cortexm_wait_timeout);
 
-	if (!is_minimal_dp) {
-		/* Setup to read/write DHCSR */
-		/* ap_mem_access_setup() uses ADIV5_AP_CSW_ADDRINC_SINGLE which is undesirable for our use here */
-		adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw | ADIV5_AP_CSW_SIZE_WORD);
-		adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR, CORTEXM_DHCSR);
-		/* Write (and do a dummy read of) DHCSR to ensure debug is enabled */
-		adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DRW, dhcsr_debug_en);
-		adiv5_dp_read(ap->dp, ADIV5_DP_RDBUFF);
-	} else {
-		/*
-		 * When interacting with a minimal DP implementation, ensure we first
-		 * enable debug before trying to halt the processor
-		 */
-		adiv5_mem_write(ap, CORTEXM_DHCSR, &dhcsr_debug_en, sizeof(dhcsr_debug_en));
-	}
+	/* Setup to read/write DHCSR */
+	/* ap_mem_access_setup() uses ADIV5_AP_CSW_ADDRINC_SINGLE which is undesirable for our use here */
+	adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw | ADIV5_AP_CSW_SIZE_WORD);
+	adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR, CORTEXM_DHCSR);
+	/* Write (and do a dummy read of) DHCSR to ensure debug is enabled */
+	adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DRW, CORTEXM_DHCSR_DBGKEY | CORTEXM_DHCSR_C_DEBUGEN);
+	adiv5_dp_read(ap->dp, ADIV5_DP_RDBUFF);
 
 	bool reset_seen = false;
 	while (!platform_timeout_is_expired(&halt_timeout)) {
 		uint32_t dhcsr;
 
-		if (!is_minimal_dp) {
+		/* if we're not on a minimal DP implementation, use TRNCNT to help */
+		if (!ap->dp->mindp) {
 			/* Ask the AP to repeatedly retry the write to DHCSR */
 			adiv5_dp_low_access(
 				ap->dp, ADIV5_LOW_WRITE, ADIV5_DP_CTRLSTAT, ctrlstat | ADIV5_DP_CTRLSTAT_TRNCNT(0xfffU));
-			/* Repeatedly try to halt the processor */
-			adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DRW, dhcsr_ctl);
-			dhcsr = adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_AP_DRW, 0);
-		} else {
-			/* Repeatedly try to halt the processor */
-			adiv5_mem_write(ap, CORTEXM_DHCSR, &dhcsr_ctl, sizeof(dhcsr_ctl));
-			dhcsr = adiv5_mem_read32(ap, CORTEXM_DHCSR);
 		}
+		/* Repeatedly try to halt the processor */
+		adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DRW,
+			CORTEXM_DHCSR_DBGKEY | CORTEXM_DHCSR_C_DEBUGEN | CORTEXM_DHCSR_C_HALT);
+		dhcsr = adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_AP_DRW, 0);
 
 		/*
 		 * Check how we did, handling some errata along the way.
