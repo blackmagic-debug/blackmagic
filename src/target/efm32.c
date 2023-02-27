@@ -959,7 +959,7 @@ bool efm32_aap_probe(adiv5_access_port_s *ap)
 	efm32_aap_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
 	sprintf(priv_storage->aap_driver_string, "EFM32 Authentication Access Port rev.%hu", aap_revision);
 	t->driver = priv_storage->aap_driver_string;
-	t->regs_size = 4;
+	t->regs_size = 0;
 
 	return true;
 }
