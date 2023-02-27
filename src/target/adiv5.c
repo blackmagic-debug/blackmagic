@@ -391,24 +391,22 @@ static uint32_t cortexm_initial_halt(adiv5_access_port_s *ap)
 	return 0U;
 }
 
-/* Prepare to read SYSROM and SYSROM PIDR
+/*
+ * Prepare the core to read the ROM tables, PIDR, etc
  *
- * Try hard to halt, if not connecting under reset
- * Request TRCENA and default vector catch
- * release from reset when connecting under reset.
+ * Because of various errata, failing to halt the core is considered
+ * a hard error. We also need to set the debug exception and monitor
+ * control register (DEMCR) up but save its value to restore later,
+ * and release the core from reset when connecting under reset.
  *
- * E.g. Stm32F7
+ * Example errata for STM32F7:
  * - fails reading romtable in WFI
  * - fails with some AP accesses when romtable is read under reset.
  * - fails reading some ROMTABLE entries w/o TRCENA
- * - fails reading outside SYSROM when halted from WFI and
- *   DBGMCU_CR not set.
+ * - fails reading outside SYSROM when halted from WFI and DBGMCU_CR not set.
  *
- * E.g. Stm32F0
+ * Example errata for STM32F0
  * - fails reading DBGMCU when under reset
- *
- * Keep a copy of DEMCR at startup to restore with exit, to
- * not interrupt tracing initiated by the CPU.
  */
 static bool cortexm_prepare(adiv5_access_port_s *ap)
 {
@@ -425,21 +423,27 @@ static bool cortexm_prepare(adiv5_access_port_s *ap)
 	/* Clear any residual WAIT fault code to keep things in good state for the next steps */
 	ap->dp->fault = 0;
 	DEBUG_INFO("Halt via DHCSR(%08" PRIx32 "): success after %" PRId32 "ms\n", dhcsr, platform_time_ms() - start_time);
+	/* Save the old value of DEMCR and enable the DWT, and both vector table debug bits */
 	ap->ap_cortexm_demcr = adiv5_mem_read32(ap, CORTEXM_DEMCR);
 	const uint32_t demcr = CORTEXM_DEMCR_TRCENA | CORTEXM_DEMCR_VC_HARDERR | CORTEXM_DEMCR_VC_CORERESET;
 	adiv5_mem_write(ap, CORTEXM_DEMCR, &demcr, sizeof(demcr));
+	/* Having setup DEMCR, try to observe the core being released from reset */
 	platform_timeout_s reset_timeout;
 	platform_timeout_set(&reset_timeout, cortexm_wait_timeout);
+	/* Deassert the physical reset line */
 	platform_nrst_set_val(false);
 	while (true) {
+		/* Read back DHCSR and check if the reset status bit is still set */
 		dhcsr = adiv5_mem_read32(ap, CORTEXM_DHCSR);
-		if (!(dhcsr & CORTEXM_DHCSR_S_RESET_ST))
+		if ((dhcsr & CORTEXM_DHCSR_S_RESET_ST) == 0)
 			break;
+		/* If it is and we timeout, turn that into an error */
 		if (platform_timeout_is_expired(&reset_timeout)) {
 			DEBUG_WARN("Error releasing from reset\n");
 			return false;
 		}
 	}
+	/* Core is now in a good state */
 	return true;
 }
 
