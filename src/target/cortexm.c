@@ -3,6 +3,8 @@
  *
  * Copyright (C) 2012-2020  Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>,
+ * Copyright (C) 2022-2023 1BitSquared <info@1bitsquared.com>
+ * Modified by Rachel Mant <git@dragonmux.network>
  * Koen De Vleeschauwer and Uwe Bonnes
  *
  * This program is free software: you can redistribute it and/or modify
@@ -19,12 +21,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file implements debugging functionality specific to ARM
- * the Cortex-M3 core.  This should be generic to ARMv7-M as it is
- * implemented according to the "ARMv7-M Architectue Reference Manual",
- * ARM doc DDI0403C.
- *
- * Also supports Cortex-M0 / ARMv6-M
+/*
+ * This file implements debugging functionality specific ARM Cortex-M cores.
+ * This is be generic to both the ARMv6-M and ARMv7-M profiles as defined in
+ * the architecture TRMs with ARM document IDs DDI0419E and DDI0403C.
  */
 
 #include "general.h"
