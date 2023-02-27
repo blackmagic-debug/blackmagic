@@ -1104,22 +1104,29 @@ static target_halt_reason_e cortexm_halt_poll(target_s *t, target_addr_t *watch)
 	return TARGET_HALT_BREAKPOINT;
 }
 
-void cortexm_halt_resume(target_s *t, bool step)
+void cortexm_halt_resume(target_s *const t, const bool step)
 {
 	cortexm_priv_s *priv = t->priv;
+	/* Begin building the new DHCSR value to resume the core with */
 	uint32_t dhcsr = CORTEXM_DHCSR_DBGKEY | CORTEXM_DHCSR_C_DEBUGEN;
 
+	/* Disable interrupts while single stepping */
 	if (step)
 		dhcsr |= CORTEXM_DHCSR_C_STEP | CORTEXM_DHCSR_C_MASKINTS;
 
-	/* Disable interrupts while single stepping... */
+	/*
+	 * If we're switching between single-stepped and run modes, update C_MASKINTS
+	 * (which requires C_HALT to be set or the write is unpredictable)
+	 */
 	if (step != priv->stepping) {
 		target_mem_write32(t, CORTEXM_DHCSR, dhcsr | CORTEXM_DHCSR_C_HALT);
 		priv->stepping = step;
 	}
 
 	if (priv->on_bkpt) {
+		/* Read the instruction to resume on */
 		uint32_t pc = cortexm_pc_read(t);
+		/* If it actually is a breakpoint instruction, update the program counter one past it. */
 		if ((target_mem_read16(t, pc) & 0xff00U) == 0xbe00U)
 			cortexm_pc_write(t, pc + 2U);
 	}
@@ -1127,6 +1134,7 @@ void cortexm_halt_resume(target_s *t, bool step)
 	if (priv->has_cache)
 		target_mem_write32(t, CORTEXM_ICIALLU, 0);
 
+	/* Release C_HALT to resume the core in whichever mode is selected */
 	target_mem_write32(t, CORTEXM_DHCSR, dhcsr);
 }
 
