@@ -715,6 +715,7 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 			PROBE(lpc11xx_probe);          /* LPC24C11 */
 			PROBE(lpc43xx_probe);
 		} else if (t->part_id == 0x4c4U) { /* Cortex-M4 ROM */
+			PROBE(sam3x_probe);
 			PROBE(lmi_probe);
 			/* The LPC546xx and LPC43xx parts present with the same AP ROM Part
 			Number, so we need to probe both. Unfortunately, when probing for
