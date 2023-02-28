@@ -77,9 +77,6 @@
 #include "target.h"
 #include "target_internal.h"
 
-uint8_t dap_caps;
-dap_cap_e dap_mode;
-
 #define TRANSFER_TIMEOUT_MS (100)
 
 typedef enum cmsis_type {
@@ -97,6 +94,10 @@ typedef struct dap_version {
 	uint16_t minor;
 	uint16_t revision;
 } dap_version_s;
+
+uint8_t dap_caps;
+dap_cap_e dap_mode;
+uint8_t dap_quirks;
 
 static cmsis_type_e type;
 static libusb_device_handle *usb_handle = NULL;
@@ -230,7 +231,7 @@ bool dap_init(bmp_info_s *const info)
 	/* Ensure the adaptor is idle and not prepared for any protocol in particular */
 	dap_disconnect();
 	/* Get the adaptor version information so we can set quirks as-needed */
-	/* const dap_version_s adaptor_version = dap_adaptor_version(DAP_INFO_ADAPTOR_VERSION); */
+	const dap_version_s adaptor_version = dap_adaptor_version(DAP_INFO_ADAPTOR_VERSION);
 	const dap_version_s cmsis_version = dap_adaptor_version(DAP_INFO_CMSIS_DAP_VERSION);
 	/* Look for CMSIS-DAP v1.2+ */
 	dap_has_swd_sequence = cmsis_version.major > 1 || (cmsis_version.major == 1 && cmsis_version.minor > 1);
@@ -262,6 +263,14 @@ bool dap_init(bmp_info_s *const info)
 	DEBUG_INFO(")\n");
 
 	DEBUG_INFO("Adaptor %s DAP SWD sequences\n", dap_has_swd_sequence ? "supports" : "does not support");
+
+	dap_quirks = 0;
+	/* Handle multi-TAP JTAG on older ORBTrace gateware being broken */
+	if (strcmp(info->product, "Orbtrace") == 0 &&
+		(adaptor_version.major < 1 || (adaptor_version.major == 1 && adaptor_version.minor <= 2))) {
+		dap_quirks |= DAP_QUIRK_NO_JTAG_MUTLI_TAP;
+	}
+
 	return true;
 }
 
