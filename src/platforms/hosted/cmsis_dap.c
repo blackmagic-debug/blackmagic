@@ -205,16 +205,16 @@ static bool dap_init_bulk(const bmp_info_s *const info)
 }
 
 /* LPC845 Breakout Board Rev. 0 report invalid response with > 65 bytes */
-int dap_init(bmp_info_s *info)
+bool dap_init(bmp_info_s *info)
 {
 	type = (info->in_ep && info->out_ep) ? CMSIS_TYPE_BULK : CMSIS_TYPE_HID;
 
 	if (type == CMSIS_TYPE_HID) {
 		if (!dap_init_hid(info))
-			return -1;
+			return false;
 	} else if (type == CMSIS_TYPE_BULK) {
 		if (!dap_init_bulk(info))
-			return -1;
+			return false;
 	}
 	dap_disconnect();
 	size_t size = dap_info(DAP_INFO_FW_VER, buffer, sizeof(buffer));
@@ -246,7 +246,7 @@ int dap_init(bmp_info_s *info)
 	if (dap_has_swd_sequence)
 		DEBUG_INFO(", DAP_SWD_Sequence");
 	DEBUG_INFO("\n");
-	return 0;
+	return true;
 }
 
 void dap_nrst_set_val(bool assert)
