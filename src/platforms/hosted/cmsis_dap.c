@@ -59,6 +59,7 @@
 #include <assert.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include <signal.h>
 #include <ctype.h>
 #include <sys/time.h>
@@ -91,7 +92,12 @@ typedef enum cmsis_type {
 typedef struct hid_device_info hid_device_info_s;
 #endif
 
-/*- Variables ---------------------------------------------------------------*/
+typedef struct dap_version {
+	uint16_t major;
+	uint16_t minor;
+	uint16_t revision;
+} dap_version_s;
+
 static cmsis_type_e type;
 static libusb_device_handle *usb_handle = NULL;
 static uint8_t in_ep;
@@ -100,6 +106,8 @@ static hid_device *handle = NULL;
 static uint8_t buffer[1024U];
 static size_t report_size = 64U + 1U; // TODO: read actual report size
 bool dap_has_swd_sequence = false;
+
+dap_version_s dap_adaptor_version(dap_info_e version_kind);
 
 static size_t mbslen(const char *str)
 {
@@ -204,7 +212,7 @@ static bool dap_init_bulk(const bmp_info_s *const info)
 	return true;
 }
 
-/* LPC845 Breakout Board Rev. 0 report invalid response with > 65 bytes */
+/* LPC845 Breakout Board Rev. 0 reports an invalid response with > 65 bytes */
 bool dap_init(bmp_info_s *const info)
 {
 	/* Initialise the adaptor via a suitable protocol */
@@ -218,24 +226,18 @@ bool dap_init(bmp_info_s *const info)
 			return false;
 	}
 
+	/* Ensure the adaptor is idle and not prepared for any protocol in particular */
 	dap_disconnect();
-	size_t size = dap_info(DAP_INFO_FW_VER, buffer, sizeof(buffer));
-	if (size) {
-		DEBUG_INFO("Ver %s, ", buffer);
-		int major = -1;
-		int minor = -1;
-		int sub = -1;
-		if (sscanf((const char *)buffer, "%d.%d.%d", &major, &minor, &sub)) {
-			if (sub == -1) {
-				if (minor >= 10) {
-					minor /= 10U;
-					sub = 0;
-				}
-			}
-			dap_has_swd_sequence = major > 1 || (major > 0 && minor > 1);
-		}
-	}
-	size = dap_info(DAP_INFO_CAPABILITIES, buffer, sizeof(buffer));
+	/* Get the adaptor version information so we can set quirks as-needed */
+	/* const dap_version_s adaptor_version = dap_adaptor_version(DAP_INFO_ADAPTOR_VERSION); */
+	const dap_version_s cmsis_version = dap_adaptor_version(DAP_INFO_CMSIS_DAP_VERSION);
+	/* Look for CMSIS-DAP v1.2+ */
+	dap_has_swd_sequence = cmsis_version.major > 1 || (cmsis_version.major == 1 && cmsis_version.minor > 1);
+
+	const size_t size = dap_info(DAP_INFO_CAPABILITIES, buffer, sizeof(buffer));
+	if (!size)
+		/* XXX: need to handle this info request failing properly. */
+		return true;
 	dap_caps = buffer[0];
 	DEBUG_INFO("Cap (0x%2x): %s%s%s", dap_caps, (dap_caps & 1U) ? "SWD" : "", ((dap_caps & 3U) == 3U) ? "/" : "",
 		(dap_caps & 0x2U) ? "JTAG" : "");
@@ -249,6 +251,54 @@ bool dap_init(bmp_info_s *const info)
 		DEBUG_INFO(", DAP_SWD_Sequence");
 	DEBUG_INFO("\n");
 	return true;
+}
+
+dap_version_s dap_adaptor_version(const dap_info_e version_kind)
+{
+	char version_str[256U] = {};
+	/* Try to retrieve the version string, and if we fail, report back an obvious bad one */
+	const size_t version_length = dap_info(version_kind, version_str, ARRAY_LENGTH(version_str));
+	if (!version_length)
+		return (dap_version_s){UINT16_MAX, UINT16_MAX, UINT16_MAX};
+
+	/* Display the version string */
+	if (version_kind == DAP_INFO_ADAPTOR_VERSION)
+		DEBUG_INFO("Adaptor version %s, ", version_str);
+	else if (version_kind == DAP_INFO_CMSIS_DAP_VERSION)
+		DEBUG_INFO("CMSIS-DAP v%s, ", version_str);
+	const char *begin = version_str;
+	char *end = NULL;
+	dap_version_s version = {};
+	/* Now try to parse out the individual parts of the version string */
+	const uint16_t major = strtoul(begin, &end, 10);
+	/* If we fail on the first hurdle, return the bad version */
+	if (!end)
+		return (dap_version_s){UINT16_MAX, UINT16_MAX, UINT16_MAX};
+	version.major = major;
+	/* Otherwise see if it's worth converting anything more */
+	if ((size_t)(end - version_str) >= version_length || end[0] != '.')
+		return version;
+
+	/* Now skip the delimeter and try to parse out the next component */
+	begin = end + 1U;
+	const uint16_t minor = strtoul(begin, &end, 10);
+	/* If that failed, return just the major */
+	if (!end)
+		return version;
+	version.minor = minor;
+	/* Check if it's worth trying to convert anything more */
+	if ((size_t)(end - version_str) >= version_length || end[0] != '.')
+		return version;
+
+	/* Finally skip the delimeter and try to parse out the final component */
+	begin = end + 1U;
+	const uint16_t revision = strtoul(begin, &end, 10);
+	/* If that failed, return just the major + minor */
+	if (!end)
+		return version;
+	version.revision = revision;
+	/* We got a complete version, discard anything more and return the 3 parts we care about. */
+	return version;
 }
 
 void dap_nrst_set_val(bool assert)
