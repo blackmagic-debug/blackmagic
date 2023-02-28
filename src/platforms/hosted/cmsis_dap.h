@@ -20,11 +20,12 @@
 #ifndef PLATFORMS_HOSTED_CMSIS_DAP_H
 #define PLATFORMS_HOSTED_CMSIS_DAP_H
 
+#include "bmp_hosted.h"
 #include "adiv5.h"
 #include "cli.h"
 
 #if defined(CMSIS_DAP)
-int dap_init(bmp_info_s *info);
+bool dap_init(bmp_info_s *info);
 void dap_exit_function(void);
 void dap_adiv5_dp_defaults(adiv5_debug_port_s *dp);
 bool dap_jtag_init(void);
@@ -34,11 +35,11 @@ uint32_t dap_swj_clock(uint32_t clock);
 void dap_swd_configure(uint8_t cfg);
 void dap_nrst_set_val(bool assert);
 #else
-int dap_init(bmp_info_s *info)
+bool dap_init(bmp_info_s *info)
 {
-	DEBUG_WARN("FATAL: Missing hidapi-libusb\n");
 	(void)info;
-	return -1;
+	DEBUG_WARN("FATAL: Missing hidapi-libusb\n");
+	return false;
 }
 
 #pragma GCC diagnostic push
