@@ -205,17 +205,19 @@ static bool dap_init_bulk(const bmp_info_s *const info)
 }
 
 /* LPC845 Breakout Board Rev. 0 report invalid response with > 65 bytes */
-bool dap_init(bmp_info_s *info)
+bool dap_init(bmp_info_s *const info)
 {
-	type = (info->in_ep && info->out_ep) ? CMSIS_TYPE_BULK : CMSIS_TYPE_HID;
-
-	if (type == CMSIS_TYPE_HID) {
-		if (!dap_init_hid(info))
-			return false;
-	} else if (type == CMSIS_TYPE_BULK) {
+	/* Initialise the adaptor via a suitable protocol */
+	if (info->in_ep && info->out_ep) {
+		type = CMSIS_TYPE_BULK;
 		if (!dap_init_bulk(info))
 			return false;
+	} else {
+		type = CMSIS_TYPE_HID;
+		if (!dap_init_hid(info))
+			return false;
 	}
+
 	dap_disconnect();
 	size_t size = dap_info(DAP_INFO_FW_VER, buffer, sizeof(buffer));
 	if (size) {
