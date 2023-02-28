@@ -33,6 +33,7 @@
 
 #include "dap.h"
 #include "dap_command.h"
+#include "jtag_scan.h"
 #include "buffer_utils.h"
 
 static void dap_jtag_reset(void);
@@ -57,11 +58,19 @@ bool dap_jtag_init(void)
 	jtag_proc.jtagtap_tms_seq = dap_jtag_tms_seq;
 	jtag_proc.jtagtap_tdi_tdo_seq = dap_jtag_tdi_tdo_seq;
 	jtag_proc.jtagtap_tdi_seq = dap_jtag_tdi_seq;
+
+	if (dap_quirks & DAP_QUIRK_NO_JTAG_MUTLI_TAP)
+		DEBUG_WARN("Multi-TAP JTAG is broken on this adaptor firmware revision, please upgrade it\n");
 	return true;
 }
 
 void dap_jtag_dp_init(adiv5_debug_port_s *target_dp)
 {
+	if ((dap_quirks & DAP_QUIRK_NO_JTAG_MUTLI_TAP) && jtag_dev_count > 1) {
+		DEBUG_WARN("Bailing out on multi-TAP chain\n");
+		exit(2);
+	}
+
 	/* Try to configure the JTAG engine on the adaptor */
 	if (!dap_jtag_configure())
 		return;
