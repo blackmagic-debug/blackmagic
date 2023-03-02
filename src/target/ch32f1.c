@@ -266,7 +266,7 @@ static bool ch32f1_wait_flash_ready(target_s *t, uint32_t addr)
 {
 	uint32_t flash_val = 0;
 	/* Certain ch32f103c8t6 MCU's found on Blue Pill boards need some uninterrupted time (no SWD link activity) */
-	platform_delay(1);
+	platform_delay(2);
 	for (size_t cnt = 0; cnt < 32U && flash_val != 0xffffffffU; ++cnt)
 		flash_val = target_mem_read32(t, addr);
 	if (flash_val != 0xffffffffU) {
