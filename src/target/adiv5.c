@@ -469,7 +469,7 @@ static void adiv5_component_probe(
 
 	const volatile uint32_t cidr = adiv5_ap_read_id(ap, addr + CIDR0_OFFSET);
 	if (ap->dp->fault) {
-		DEBUG_WARN("CIDR read timeout on AP%d, aborting.\n", ap->apsel);
+		DEBUG_WARN("Error reading CIDR on AP%u: %u\n", ap->apsel, ap->dp->fault);
 		return;
 	}
 	if ((cidr & ~CID_CLASS_MASK) != CID_PREAMBLE)
