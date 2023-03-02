@@ -147,9 +147,12 @@ static bool ch32f1_flash_unlock(target_s *t)
 static bool ch32f1_flash_lock(target_s *t)
 {
 	DEBUG_INFO("CH32: flash lock \n");
-	SET_CR(FLASH_CR_LOCK);
+	/*
+	 * The LOCK (bit 7) and FLOCK (bit 15) must be set (1) in the same write
+	 * operation, if not FLOCK will be read back as unset (0).
+	 */
+	SET_CR(FLASH_CR_LOCK | FLASH_CR_FLOCK_CH32);
 	const uint32_t cr = target_mem_read32(t, FLASH_CR);
-	// FLASH_CR_FLOCK_CH32 bit does not exists on *regular* clones and defaults to '0' (see PM0075 for STM32F1xx)
 	if (!(cr & FLASH_CR_FLOCK_CH32)) {
 		DEBUG_WARN("Fast lock failed, cr: 0x%08" PRIx32 "\n", cr);
 	}
