@@ -59,17 +59,17 @@ const command_s lpc11xx_cmd_list[] = {
 	{NULL, NULL, NULL},
 };
 
-static void lpc11xx_add_flash(target_s *t, const uint32_t addr, const size_t len, const size_t erase_block_len,
+static void lpc11xx_add_flash(target_s *target, const uint32_t addr, const size_t len, const size_t erase_block_len,
 	const uint32_t iap_entry, const size_t reserved_pages)
 {
-	lpc_flash_s *lf = lpc_add_flash(t, addr, len);
-	lf->f.blocksize = erase_block_len;
-	lf->f.writesize = IAP_PGM_CHUNKSIZE;
-	lf->f.write = lpc_flash_write_magic_vect;
-	lf->iap_entry = iap_entry;
-	lf->iap_ram = IAP_RAM_BASE;
-	lf->iap_msp = IAP_RAM_BASE + MIN_RAM_SIZE - RAM_USAGE_FOR_IAP_ROUTINES;
-	lf->reserved_pages = reserved_pages;
+	lpc_flash_s *const flash = lpc_add_flash(target, addr, len);
+	flash->f.blocksize = erase_block_len;
+	flash->f.writesize = IAP_PGM_CHUNKSIZE;
+	flash->f.write = lpc_flash_write_magic_vect;
+	flash->iap_entry = iap_entry;
+	flash->iap_ram = IAP_RAM_BASE;
+	flash->iap_msp = IAP_RAM_BASE + MIN_RAM_SIZE - RAM_USAGE_FOR_IAP_ROUTINES;
+	flash->reserved_pages = reserved_pages;
 }
 
 static bool lpc11xx_detect(target_s *const t)
