@@ -75,22 +75,22 @@ static const char *const iap_error[] = {
 
 static bool lpc_flash_write(target_flash_s *tf, target_addr_t dest, const void *src, size_t len);
 
-lpc_flash_s *lpc_add_flash(target_s *t, target_addr_t addr, size_t length)
+lpc_flash_s *lpc_add_flash(target_s *const target, const target_addr_t addr, const size_t length)
 {
-	lpc_flash_s *lf = calloc(1, sizeof(*lf));
-	if (!lf) { /* calloc failed: heap exhaustion */
+	lpc_flash_s *const lpc_flash = calloc(1, sizeof(*lpc_flash));
+	if (!lpc_flash) { /* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return NULL;
 	}
 
-	target_flash_s *f = &lf->f;
-	f->start = addr;
-	f->length = length;
-	f->erase = lpc_flash_erase;
-	f->write = lpc_flash_write;
-	f->erased = 0xff;
-	target_add_flash(t, f);
-	return lf;
+	target_flash_s *const flash = &lpc_flash->f;
+	flash->start = addr;
+	flash->length = length;
+	flash->erase = lpc_flash_erase;
+	flash->write = lpc_flash_write;
+	flash->erased = 0xff;
+	target_add_flash(target, flash);
+	return lpc_flash;
 }
 
 static uint8_t lpc_sector_for_addr(lpc_flash_s *f, uint32_t addr)
