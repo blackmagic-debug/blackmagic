@@ -42,7 +42,8 @@
 #define DID0_CLASS_MASK           0x00ff0000U
 #define DID0_CLASS_STELLARIS_FURY 0x00010000U
 #define DID0_CLASS_STELLARIS_DUST 0x00030000U
-#define DID0_CLASS_TIVA           0x00050000U
+#define DID0_CLASS_TIVA_C123      0x00050000U
+#define DID0_CLASS_TIVA_C129      0x000a0000U
 
 #define DID1_LM3S3748      0x1049U
 #define DID1_LM3S5732      0x1096U
@@ -150,7 +151,8 @@ bool lmi_probe(target_s *const t)
 	case DID0_CLASS_STELLARIS_FURY:
 	case DID0_CLASS_STELLARIS_DUST:
 		return lm3s_probe(t, did1);
-	case DID0_CLASS_TIVA:
+	case DID0_CLASS_TIVA_C123:
+	case DID0_CLASS_TIVA_C129:
 		return tm4c_probe(t, did1);
 	default:
 		return false;
