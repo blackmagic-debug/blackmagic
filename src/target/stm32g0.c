@@ -3,7 +3,7 @@
  *
  * MIT License
  *
- * Copyright (c) 2021 Fabrice Prost-Boucle <fabalthazar@falbalab.fr>
+ * Copyright (c) 2021-2023 Fabrice Prost-Boucle <fabalthazar@falbalab.fr>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -36,9 +36,13 @@
  *   Reference manual - STM32G0x1 advanced ARM(R)-based 32-bit MCUs
  *                      (STM32G031/STM32G041/STM32G051/STM32G061/
  *                       STM32G071/STM32G081/STM32G0B1/STM32G0C1)
- * PM0223 - Rev 5
+ * RM0490 - Rev 3
+ *   Reference manual - STM32C0x1 advanced ARM(R)-based 32-bit MCUs
+ *                      (STM32C011/STM32C031)
+ * STM32C0 shares the same technological platform as STM32G0.
+ * PM0223 - Rev 6
  *   Programming manual - Cortex(R)-M0+ programming manual for STM32L0, STM32G0,
- *                        STM32WL and STM32WB Series
+ *                        STM32C0, STM32WL and STM32WB Series
  */
 
 #include "general.h"
@@ -106,6 +110,8 @@
 #define FLASH_OPTKEYR_KEY2  0x4c5d6e7fU
 #define FLASH_OPTR          (G0_FLASH_BASE + 0x020U)
 #define FLASH_OPTR_RDP_MASK 0xffU
+#define FLASH_OPTR_G0x1_DEF 0xfffffeaaU
+#define FLASH_OPTR_C0x1_DEF 0xffffffaaU
 #define FLASH_PCROP1ASR     (G0_FLASH_BASE + 0x024U)
 #define FLASH_PCROP1AER     (G0_FLASH_BASE + 0x028U)
 #define FLASH_WRP1AR        (G0_FLASH_BASE + 0x02cU)
@@ -216,7 +222,7 @@ bool stm32g0_probe(target_s *t)
 
 	switch (t->part_id) {
 	case STM32G03_4:;
-		const uint32_t dev_id = target_mem_read32(t, DBG_IDCODE) & 0xfffU;
+		const uint16_t dev_id = target_mem_read32(t, DBG_IDCODE) & 0xfffU;
 		switch (dev_id) {
 		case STM32G03_4:
 			/* SRAM 8kiB, Flash up to 64kiB */
@@ -239,6 +245,7 @@ bool stm32g0_probe(target_s *t)
 		default:
 			return false;
 		}
+		t->part_id = dev_id;
 		break;
 	case STM32G05_6:
 		/* SRAM 18kiB, Flash up to 64kiB */
@@ -559,11 +566,15 @@ typedef struct option_register {
  * G0x0: OPTR = DFFFE1AA
  * 1101 1111 1111 1111 1110 0001 1010 1010
  *   *IRHEN               * ****BOREN
- * IRH and BOR are reserved on G0x0, it is safe to apply G0x1 options.
+ * C0x1: OPTR = FFFFFFAA
+ * 1111 1111 1111 1111 1111 1111 1010 1010
+ *                             *BOREN
+ * IRH and BOR are reserved on G0x0, it is safe to apply G0x1 options on G0x0.
  * The same for PCROP and SECR.
+ * This is not true for C0x1 which has BOREN set.
  */
-static const option_register_s options_def[OPT_REG_COUNT] = {
-	[OPT_REG_OPTR] = {FLASH_OPTR, 0xfffffeaa},
+static option_register_s options_def[OPT_REG_COUNT] = {
+	[OPT_REG_OPTR] = {FLASH_OPTR, FLASH_OPTR_G0x1_DEF},
 	[OPT_REG_PCROP1ASR] = {FLASH_PCROP1ASR, 0xffffffff},
 	[OPT_REG_PCROP1AER] = {FLASH_PCROP1AER, 0x00000000},
 	[OPT_REG_WRP1AR] = {FLASH_WRP1AR, 0x000000ff},
@@ -679,6 +690,8 @@ static bool stm32g0_cmd_option(target_s *t, int argc, const char **argv)
 	option_register_s options_req[OPT_REG_COUNT] = {};
 
 	if (argc == 2 && strcasecmp(argv[1], "erase") == 0) {
+		if (t->part_id == STM32C011 || t->part_id == STM32C031)
+			options_def[OPT_REG_OPTR].val = FLASH_OPTR_C0x1_DEF;
 		if (!stm32g0_option_write(t, options_def))
 			goto exit_error;
 	} else if (argc > 2 && (argc & 1U) == 0U && strcasecmp(argv[1], "write") == 0) {
