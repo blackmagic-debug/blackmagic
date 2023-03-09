@@ -55,15 +55,15 @@ const command_s lpc15xx_cmd_list[] = {
 	{NULL, NULL, NULL},
 };
 
-static void lpc15xx_add_flash(target_s *t, uint32_t addr, size_t len, size_t erasesize)
+static void lpc15xx_add_flash(target_s *target, uint32_t addr, size_t len, size_t erasesize)
 {
-	struct lpc_flash *lf = lpc_add_flash(t, addr, len);
-	lf->f.blocksize = erasesize;
-	lf->f.writesize = IAP_PGM_CHUNKSIZE;
-	lf->f.write = lpc_flash_write_magic_vect;
-	lf->iap_entry = IAP_ENTRYPOINT;
-	lf->iap_ram = IAP_RAM_BASE;
-	lf->iap_msp = IAP_RAM_BASE + MIN_RAM_SIZE - RAM_USAGE_FOR_IAP_ROUTINES;
+	struct lpc_flash *flash = lpc_add_flash(target, addr, len);
+	flash->f.blocksize = erasesize;
+	flash->f.writesize = IAP_PGM_CHUNKSIZE;
+	flash->f.write = lpc_flash_write_magic_vect;
+	flash->iap_entry = IAP_ENTRYPOINT;
+	flash->iap_ram = IAP_RAM_BASE;
+	flash->iap_msp = IAP_RAM_BASE + MIN_RAM_SIZE - RAM_USAGE_FOR_IAP_ROUTINES;
 }
 
 bool lpc15xx_probe(target_s *t)
