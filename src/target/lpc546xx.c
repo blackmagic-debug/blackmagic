@@ -78,22 +78,20 @@ const command_s lpc546xx_cmd_list[] = {
 };
 
 static void lpc546xx_add_flash(
-	target_s *t, uint32_t iap_entry, uint8_t base_sector, uint32_t addr, size_t len, size_t erasesize)
+	target_s *target, uint32_t iap_entry, uint8_t base_sector, uint32_t addr, size_t len, size_t erasesize)
 {
-	struct lpc_flash *lf = lpc_add_flash(t, addr, len);
-	lf->f.erase = lpc546xx_flash_erase;
-
+	lpc_flash_s *flash = lpc_add_flash(target, addr, len);
+	flash->f.blocksize = erasesize;
+	flash->f.writesize = IAP_PGM_CHUNKSIZE;
+	flash->f.erase = lpc546xx_flash_erase;
 	/* LPC546xx devices require the checksum value written into the vector table in sector 0 */
-	lf->f.write = lpc_flash_write_magic_vect;
-
-	lf->f.blocksize = erasesize;
-	lf->f.writesize = IAP_PGM_CHUNKSIZE;
-	lf->bank = 0;
-	lf->base_sector = base_sector;
-	lf->iap_entry = iap_entry;
-	lf->iap_ram = IAP_RAM_BASE;
-	lf->iap_msp = IAP_RAM_BASE + IAP_RAM_SIZE;
-	lf->wdt_kick = lpc546xx_wdt_kick;
+	flash->f.write = lpc_flash_write_magic_vect;
+	flash->bank = 0;
+	flash->base_sector = base_sector;
+	flash->iap_entry = iap_entry;
+	flash->iap_ram = IAP_RAM_BASE;
+	flash->iap_msp = IAP_RAM_BASE + IAP_RAM_SIZE;
+	flash->wdt_kick = lpc546xx_wdt_kick;
 }
 
 bool lpc546xx_probe(target_s *t)
