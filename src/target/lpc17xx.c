@@ -75,10 +75,9 @@ iap_status_e lpc17xx_iap_call(target_s *target, iap_result_s *result, iap_cmd_e 
 
 static void lpc17xx_add_flash(target_s *target, uint32_t addr, size_t len, size_t erasesize, uint8_t base_sector)
 {
-	lpc_flash_s *flash = lpc_add_flash(target, addr, len);
+	lpc_flash_s *flash = lpc_add_flash(target, addr, len, IAP_PGM_CHUNKSIZE);
 	flash->f.blocksize = erasesize;
 	flash->base_sector = base_sector;
-	flash->f.writesize = IAP_PGM_CHUNKSIZE;
 	flash->f.write = lpc_flash_write_magic_vect;
 	flash->iap_entry = IAP_ENTRYPOINT;
 	flash->iap_ram = IAP_RAM_BASE;

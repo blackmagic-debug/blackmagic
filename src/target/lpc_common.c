@@ -75,7 +75,8 @@ static const char *const iap_error[] = {
 
 static bool lpc_flash_write(target_flash_s *tf, target_addr_t dest, const void *src, size_t len);
 
-lpc_flash_s *lpc_add_flash(target_s *const target, const target_addr_t addr, const size_t length)
+lpc_flash_s *lpc_add_flash(
+	target_s *const target, const target_addr_t addr, const size_t length, const size_t write_size)
 {
 	lpc_flash_s *const lpc_flash = calloc(1, sizeof(*lpc_flash));
 	if (!lpc_flash) { /* calloc failed: heap exhaustion */
@@ -89,6 +90,7 @@ lpc_flash_s *lpc_add_flash(target_s *const target, const target_addr_t addr, con
 	flash->erase = lpc_flash_erase;
 	flash->write = lpc_flash_write;
 	flash->erased = 0xff;
+	flash->writesize = write_size;
 	target_add_flash(target, flash);
 	return lpc_flash;
 }
