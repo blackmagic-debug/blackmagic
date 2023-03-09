@@ -309,19 +309,19 @@ const command_s lpc43xx_cmd_list[] = {
 	{NULL, NULL, NULL},
 };
 
-static void lpc43xx_add_iap_flash(
-	target_s *t, uint32_t iap_entry, uint8_t bank, uint8_t base_sector, uint32_t addr, size_t len, size_t erasesize)
+static void lpc43xx_add_iap_flash(target_s *target, uint32_t iap_entry, uint8_t bank, uint8_t base_sector,
+	uint32_t addr, size_t len, size_t erasesize)
 {
-	lpc_flash_s *lf = lpc_add_flash(t, addr, len);
-	lf->f.erase = lpc43xx_iap_flash_erase;
-	lf->f.blocksize = erasesize;
-	lf->f.writesize = IAP_PGM_CHUNKSIZE;
-	lf->bank = bank;
-	lf->base_sector = base_sector;
-	lf->iap_entry = iap_entry;
-	lf->iap_ram = IAP_RAM_BASE;
-	lf->iap_msp = IAP_RAM_BASE + IAP_RAM_SIZE;
-	lf->wdt_kick = lpc43xx_wdt_kick;
+	lpc_flash_s *flash = lpc_add_flash(target, addr, len);
+	flash->f.blocksize = erasesize;
+	flash->f.writesize = IAP_PGM_CHUNKSIZE;
+	flash->f.erase = lpc43xx_iap_flash_erase;
+	flash->bank = bank;
+	flash->base_sector = base_sector;
+	flash->iap_entry = iap_entry;
+	flash->iap_ram = IAP_RAM_BASE;
+	flash->iap_msp = IAP_RAM_BASE + IAP_RAM_SIZE;
+	flash->wdt_kick = lpc43xx_wdt_kick;
 }
 
 static void lpc43xx_detect(target_s *const t, const lpc43xx_partid_s part_id)
