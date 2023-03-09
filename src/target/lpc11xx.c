@@ -62,9 +62,8 @@ const command_s lpc11xx_cmd_list[] = {
 static void lpc11xx_add_flash(target_s *target, const uint32_t addr, const size_t len, const size_t erase_block_len,
 	const uint32_t iap_entry, const size_t reserved_pages)
 {
-	lpc_flash_s *const flash = lpc_add_flash(target, addr, len);
+	lpc_flash_s *const flash = lpc_add_flash(target, addr, len, IAP_PGM_CHUNKSIZE);
 	flash->f.blocksize = erase_block_len;
-	flash->f.writesize = IAP_PGM_CHUNKSIZE;
 	flash->f.write = lpc_flash_write_magic_vect;
 	flash->iap_entry = iap_entry;
 	flash->iap_ram = IAP_RAM_BASE;

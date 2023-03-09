@@ -312,9 +312,8 @@ const command_s lpc43xx_cmd_list[] = {
 static void lpc43xx_add_iap_flash(target_s *target, uint32_t iap_entry, uint8_t bank, uint8_t base_sector,
 	uint32_t addr, size_t len, size_t erasesize)
 {
-	lpc_flash_s *flash = lpc_add_flash(target, addr, len);
+	lpc_flash_s *flash = lpc_add_flash(target, addr, len, IAP_PGM_CHUNKSIZE);
 	flash->f.blocksize = erasesize;
-	flash->f.writesize = IAP_PGM_CHUNKSIZE;
 	flash->f.erase = lpc43xx_iap_flash_erase;
 	flash->bank = bank;
 	flash->base_sector = base_sector;

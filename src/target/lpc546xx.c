@@ -80,9 +80,8 @@ const command_s lpc546xx_cmd_list[] = {
 static void lpc546xx_add_flash(
 	target_s *target, uint32_t iap_entry, uint8_t base_sector, uint32_t addr, size_t len, size_t erasesize)
 {
-	lpc_flash_s *flash = lpc_add_flash(target, addr, len);
+	lpc_flash_s *flash = lpc_add_flash(target, addr, len, IAP_PGM_CHUNKSIZE);
 	flash->f.blocksize = erasesize;
-	flash->f.writesize = IAP_PGM_CHUNKSIZE;
 	flash->f.erase = lpc546xx_flash_erase;
 	/* LPC546xx devices require the checksum value written into the vector table in sector 0 */
 	flash->f.write = lpc_flash_write_magic_vect;

@@ -83,7 +83,7 @@ typedef struct lpc_flash {
 	uint32_t iap_msp;
 } lpc_flash_s;
 
-lpc_flash_s *lpc_add_flash(target_s *t, target_addr_t addr, size_t length);
+lpc_flash_s *lpc_add_flash(target_s *target, target_addr_t addr, size_t length, size_t write_size);
 iap_status_e lpc_iap_call(struct lpc_flash *f, void *result, iap_cmd_e cmd, ...);
 bool lpc_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 bool lpc_flash_write_magic_vect(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
