@@ -464,7 +464,7 @@ static void dap_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size
 		 * We also have to take into account how much of the chunk the caller
 		 * has requested we fill.
 		 */
-		const size_t chunk_remaining = MIN(1024 - (src & 0x3ffU), len - offset);
+		const size_t chunk_remaining = MIN(1024 - ((src + offset) & 0x3ffU), len - offset);
 		const size_t blocks = chunk_remaining >> align;
 		for (size_t i = 0; i < blocks; i += blocks_per_transfer) {
 			/* blocks - i gives how many blocks are left to transfer in this 1024 byte chunk */
@@ -499,7 +499,7 @@ static void dap_mem_write(adiv5_access_port_s *ap, uint32_t dest, const void *sr
 		 * We also have to take into account how much of the chunk the caller
 		 * has requested we fill.
 		 */
-		const size_t chunk_remaining = MIN(1024 - (dest & 0x3ffU), len - offset);
+		const size_t chunk_remaining = MIN(1024 - ((dest + offset) & 0x3ffU), len - offset);
 		const size_t blocks = chunk_remaining >> align;
 		for (size_t i = 0; i < blocks; i += blocks_per_transfer) {
 			/* blocks - i gives how many blocks are left to transfer in this 1024 byte chunk */
