@@ -136,7 +136,10 @@ bool perform_dap_transfer_block_read(
 			blocks[i] = read_le4(response.data[i], 0);
 		return true;
 	}
-	target_dp->fault = response.status;
+	if (response.status != DAP_TRANSFER_OK)
+		target_dp->fault = response.status;
+	else
+		target_dp->fault = 0;
 
 	DEBUG_PROBE("-> transfer failed with %u after processing %u blocks\n", response.status, blocks_read);
 	return false;
@@ -168,7 +171,10 @@ bool perform_dap_transfer_block_write(
 	const uint16_t blocks_written = read_le2(response.count, 0);
 	if (blocks_written == block_count && response.status == DAP_TRANSFER_OK)
 		return true;
-	target_dp->fault = response.status;
+	if (response.status != DAP_TRANSFER_OK)
+		target_dp->fault = response.status;
+	else
+		target_dp->fault = 0;
 
 	DEBUG_PROBE("-> transfer failed with %u after processing %u blocks\n", response.status, blocks_written);
 	return false;
