@@ -278,6 +278,7 @@ static const struct {
 	{0x132, 0x00, 0x2a04, aa_cortexm, cidc_dc, ARM_COMPONENT_STR("STAR-MC1 SCS", "(System Control Space)")},
 	{0x132, 0x13, 0x4a13, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("STAR-MC1 ETM", "(Embedded Trace)")},
 	{0x132, 0x11, 0, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("STAR-MC1 TPIU", "(Trace Port Interface Unit)")},
+	{0x9a3, 0x13, 0, aa_nosupport, cidc_dc, ARM_COMPONENT_STR("nRF NTB", "(Nordic Trace Buffer)")},
 	{0xfff, 0x00, 0, aa_end, cidc_unknown, ARM_COMPONENT_STR("end", "end")},
 };
 
@@ -596,9 +597,8 @@ static void adiv5_component_probe(
 
 			uint32_t devarch = adiv5_mem_read32(ap, addr + DEVARCH_OFFSET);
 
-			if (devarch & DEVARCH_PRESENT) {
+			if (devarch & DEVARCH_PRESENT)
 				arch_id = devarch & DEVARCH_ARCHID_MASK;
-			}
 		}
 
 		/* Find the part number in our part list and run the appropriate probe routine if applicable. */
