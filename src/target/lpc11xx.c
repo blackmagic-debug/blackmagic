@@ -18,6 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <string.h>
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
@@ -52,7 +53,7 @@
  * LPC845  16k   64k   64   1024
  */
 
-static bool lpc11xx_read_uid(target_s *t, int argc, const char **argv);
+static bool lpc11xx_read_uid(target_s *target, int argc, const char **argv);
 
 const command_s lpc11xx_cmd_list[] = {
 	{"readuid", lpc11xx_read_uid, "Read out the 16-byte UID."},
@@ -292,17 +293,19 @@ bool lpc11xx_probe(target_s *t)
 	return lpc11xx_detect(t) || lpc8xx_detect(t);
 }
 
-static bool lpc11xx_read_uid(target_s *t, int argc, const char **argv)
+static bool lpc11xx_read_uid(target_s *target, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
-	lpc_flash_s *f = (lpc_flash_s *)t->flash;
-	uint8_t uid[16];
-	if (lpc_iap_call(f, uid, IAP_CMD_READUID))
+	lpc_flash_s *flash = (lpc_flash_s *)target->flash;
+	iap_result_s result = {};
+	if (lpc_iap_call(flash, &result, IAP_CMD_READUID))
 		return false;
-	tc_printf(t, "UID: 0x");
+	uint8_t uid[16] = {};
+	memcpy(&uid, result.values, sizeof(uid));
+	tc_printf(target, "UID: 0x");
 	for (size_t i = 0; i < sizeof(uid); ++i)
-		tc_printf(t, "%02x", uid[i]);
-	tc_printf(t, "\n");
+		tc_printf(target, "%02x", uid[i]);
+	tc_printf(target, "\n");
 	return true;
 }
