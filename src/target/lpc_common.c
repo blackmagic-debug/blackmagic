@@ -229,7 +229,7 @@ bool lpc_flash_erase(target_flash_s *tf, target_addr_t addr, size_t len)
 	const uint32_t end = lpc_sector_for_addr(f, addr + len - 1U);
 	uint32_t last_full_sector = end;
 
-	if (lpc_iap_call(f, NULL, IAP_CMD_PREPARE, start, end, f->bank))
+	if (lpc_iap_call(f, NULL, IAP_CMD_PREPARE, start, end, f->bank) != IAP_STATUS_CMD_SUCCESS)
 		return false;
 
 	/* Only LPC80x has reserved pages!*/
@@ -238,11 +238,12 @@ bool lpc_flash_erase(target_flash_s *tf, target_addr_t addr, size_t len)
 
 	if (start <= last_full_sector) {
 		/* Sector erase */
-		if (lpc_iap_call(f, NULL, IAP_CMD_ERASE, start, last_full_sector, CPU_CLK_KHZ, f->bank))
+		if (lpc_iap_call(f, NULL, IAP_CMD_ERASE, start, last_full_sector, CPU_CLK_KHZ, f->bank) !=
+			IAP_STATUS_CMD_SUCCESS)
 			return false;
 
 		/* Check erase ok */
-		if (lpc_iap_call(f, NULL, IAP_CMD_BLANKCHECK, start, last_full_sector, f->bank))
+		if (lpc_iap_call(f, NULL, IAP_CMD_BLANKCHECK, start, last_full_sector, f->bank) != IAP_STATUS_CMD_SUCCESS)
 			return false;
 	}
 
@@ -250,10 +251,11 @@ bool lpc_flash_erase(target_flash_s *tf, target_addr_t addr, size_t len)
 		const uint32_t page_start = (addr + len - LPX80X_SECTOR_SIZE) / LPX80X_PAGE_SIZE;
 		const uint32_t page_end = page_start + LPX80X_SECTOR_SIZE / LPX80X_PAGE_SIZE - 1U - f->reserved_pages;
 
-		if (lpc_iap_call(f, NULL, IAP_CMD_PREPARE, end, end, f->bank))
+		if (lpc_iap_call(f, NULL, IAP_CMD_PREPARE, end, end, f->bank) != IAP_STATUS_CMD_SUCCESS)
 			return false;
 
-		if (lpc_iap_call(f, NULL, IAP_CMD_ERASE_PAGE, page_start, page_end, CPU_CLK_KHZ, f->bank))
+		if (lpc_iap_call(f, NULL, IAP_CMD_ERASE_PAGE, page_start, page_end, CPU_CLK_KHZ, f->bank) !=
+			IAP_STATUS_CMD_SUCCESS)
 			return false;
 		/* Blank check omitted!*/
 	}
@@ -265,7 +267,7 @@ static bool lpc_flash_write(target_flash_s *tf, target_addr_t dest, const void *
 	lpc_flash_s *f = (lpc_flash_s *)tf;
 	/* Prepare... */
 	const uint32_t sector = lpc_sector_for_addr(f, dest);
-	if (lpc_iap_call(f, NULL, IAP_CMD_PREPARE, sector, sector, f->bank)) {
+	if (lpc_iap_call(f, NULL, IAP_CMD_PREPARE, sector, sector, f->bank) != IAP_STATUS_CMD_SUCCESS) {
 		DEBUG_ERROR("Prepare failed\n");
 		return false;
 	}
@@ -277,20 +279,21 @@ static bool lpc_flash_write(target_flash_s *tf, target_addr_t dest, const void *
 		 * Write payload to target ram,
 		 * set the destination address and program
 		 */
-		if (lpc_iap_call(f, NULL, IAP_CMD_PROGRAM, dest, bufaddr, len, CPU_CLK_KHZ))
+		if (lpc_iap_call(f, NULL, IAP_CMD_PROGRAM, dest, bufaddr, len, CPU_CLK_KHZ) != IAP_STATUS_CMD_SUCCESS)
 			return false;
 	} else {
 		/*
 		 * On LPC80x, write top sector in pages.
 		 * Silently ignore write to the 2 reserved pages at top!
 		 */
-		for (size_t offset = 0; offset < len - (0x40U * f->reserved_pages); offset += LPX80X_PAGE_SIZE) {
-			if (lpc_iap_call(f, NULL, IAP_CMD_PREPARE, sector, sector, f->bank)) {
+		for (size_t offset = 0; offset < len - (0x40U * (size_t)f->reserved_pages); offset += LPX80X_PAGE_SIZE) {
+			if (lpc_iap_call(f, NULL, IAP_CMD_PREPARE, sector, sector, f->bank) != IAP_STATUS_CMD_SUCCESS) {
 				DEBUG_ERROR("Prepare failed\n");
 				return false;
 			}
 			/* Set the destination address and program */
-			if (lpc_iap_call(f, NULL, IAP_CMD_PROGRAM, dest + offset, bufaddr + offset, LPX80X_PAGE_SIZE, CPU_CLK_KHZ))
+			if (lpc_iap_call(f, NULL, IAP_CMD_PROGRAM, dest + offset, bufaddr + offset, LPX80X_PAGE_SIZE,
+					CPU_CLK_KHZ) != IAP_STATUS_CMD_SUCCESS)
 				return false;
 		}
 	}
