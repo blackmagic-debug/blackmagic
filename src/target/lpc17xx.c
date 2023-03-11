@@ -233,7 +233,7 @@ iap_status_e lpc17xx_iap_call(target_s *target, iap_result_s *result, iap_cmd_e 
 	/* Set up our IAP frame with the break opcode and command to run */
 	iap_frame_s frame = {
 		.opcode = ARM_THUMB_BREAKPOINT,
-		{.command = cmd},
+		.config = {.command = cmd},
 	};
 
 	/* Fill out the remainder of the parameters */
@@ -260,7 +260,7 @@ iap_status_e lpc17xx_iap_call(target_s *target, iap_result_s *result, iap_cmd_e 
 	/* Set the top of stack to the top of the RAM block we're using */
 	regs[REG_MSP] = IAP_RAM_BASE + MIN_RAM_SIZE;
 	/* Point the return address to our breakpoint opcode (thumb mode) */
-	regs[REG_LR] = IAP_RAM_BASE | 1;
+	regs[REG_LR] = IAP_RAM_BASE | 1U;
 	/* And set the program counter to the IAP ROM entrypoint */
 	regs[REG_PC] = IAP_ENTRYPOINT;
 	target_regs_write(target, regs);
