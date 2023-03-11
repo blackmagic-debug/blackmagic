@@ -1024,17 +1024,14 @@ static lpc43xx_partid_s lpc43xx_iap_read_partid(target_s *const t)
 	result.part = LPC43xx_PARTID_INVALID;
 	result.flash_config = LPC43xx_PARTID_FLASH_CONFIG_NONE;
 
-	/* Read back the part ID
-	 * XXX: We only use the first 2 values but because of limitations in lpc_iap_call,
-	 * we have to declare an array of 4
-	 */
-	uint32_t part_id[4];
-	if (!lpc43xx_iap_init(&flash.f) || lpc_iap_call(&flash, part_id, IAP_CMD_PARTID) != IAP_STATUS_CMD_SUCCESS)
+	/* Read back the part ID */
+	iap_result_s iap_result;
+	if (!lpc43xx_iap_init(&flash.f) || lpc_iap_call(&flash, &iap_result, IAP_CMD_PARTID) != IAP_STATUS_CMD_SUCCESS)
 		return result;
 
 	/* Prepare the result and return it */
-	result.part = part_id[0];
-	result.flash_config = part_id[1] & LPC43xx_PARTID_FLASH_CONFIG_MASK;
+	result.part = iap_result.values[0];
+	result.flash_config = iap_result.values[1] & LPC43xx_PARTID_FLASH_CONFIG_MASK;
 	return result;
 }
 

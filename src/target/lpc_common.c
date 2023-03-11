@@ -37,11 +37,6 @@ typedef struct __attribute__((aligned(4))) iap_frame {
 	iap_config_s config;
 } iap_frame_s;
 
-typedef struct iap_result {
-	uint32_t return_code;
-	uint32_t values[4];
-} iap_result_s;
-
 #if defined(ENABLE_DEBUG)
 static const char *const iap_error[] = {
 	"CMD_SUCCESS",
@@ -130,7 +125,7 @@ void lpc_restore_state(
 	target_regs_write(target, regs);
 }
 
-iap_status_e lpc_iap_call(lpc_flash_s *const flash, void *result, iap_cmd_e cmd, ...)
+iap_status_e lpc_iap_call(lpc_flash_s *const flash, iap_result_s *const result, iap_cmd_e cmd, ...)
 {
 	target_s *const target = flash->f.t;
 
@@ -204,7 +199,7 @@ iap_status_e lpc_iap_call(lpc_flash_s *const flash, void *result, iap_cmd_e cmd,
 
 	/* If the user expected a result, set the result (16 bytes). */
 	if (result != NULL)
-		memcpy(result, results.values, sizeof(results.values));
+		*result = results;
 
 #if defined(ENABLE_DEBUG)
 	if (results.return_code != IAP_STATUS_CMD_SUCCESS) {
