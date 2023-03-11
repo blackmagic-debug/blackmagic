@@ -107,9 +107,9 @@ static inline bool lpc_is_full_erase(lpc_flash_s *f, const uint32_t begin, const
 	return begin == lpc_sector_for_addr(f, addr) && end == lpc_sector_for_addr(f, addr + len - 1U);
 }
 
-iap_status_e lpc_iap_call(lpc_flash_s *f, void *result, iap_cmd_e cmd, ...)
+iap_status_e lpc_iap_call(lpc_flash_s *const flash, void *result, iap_cmd_e cmd, ...)
 {
-	target_s *t = f->f.t;
+	target_s *const target = flash->f.t;
 	flash_param_s param = {
 		.opcode = ARM_THUMB_BREAKPOINT,
 		.command = cmd,
@@ -117,53 +117,53 @@ iap_status_e lpc_iap_call(lpc_flash_s *f, void *result, iap_cmd_e cmd, ...)
 	};
 
 	/* Pet WDT before each IAP call, if it is on */
-	if (f->wdt_kick)
-		f->wdt_kick(t);
+	if (flash->wdt_kick)
+		flash->wdt_kick(target);
 
 	/* Save IAP RAM to restore after IAP call */
 	flash_param_s backup_param;
-	target_mem_read(t, &backup_param, f->iap_ram, sizeof(backup_param));
+	target_mem_read(target, &backup_param, flash->iap_ram, sizeof(backup_param));
 
 	/* save registers to restore after IAP call */
-	uint32_t backup_regs[t->regs_size / sizeof(uint32_t)];
-	target_regs_read(t, backup_regs);
+	uint32_t backup_regs[target->regs_size / sizeof(uint32_t)];
+	target_regs_read(target, backup_regs);
 
 	/* Fill out the remainder of the parameters */
-	va_list ap;
-	va_start(ap, cmd);
+	va_list params;
+	va_start(params, cmd);
 	for (size_t i = 0; i < 4U; ++i)
-		param.words[i] = va_arg(ap, uint32_t);
-	va_end(ap);
+		param.words[i] = va_arg(params, uint32_t);
+	va_end(params);
 
 	/* Copy the structure to RAM */
-	target_mem_write(t, f->iap_ram, &param, sizeof(param));
+	target_mem_write(target, flash->iap_ram, &param, sizeof(param));
 
 	/* Set up for the call to the IAP ROM */
-	uint32_t regs[t->regs_size / sizeof(uint32_t)];
-	target_regs_read(t, regs);
-	regs[0] = f->iap_ram + offsetof(flash_param_s, command);
-	regs[1] = f->iap_ram + offsetof(flash_param_s, status);
-	regs[REG_MSP] = f->iap_msp;
-	regs[REG_LR] = f->iap_ram | 1U;
-	regs[REG_PC] = f->iap_entry;
-	target_regs_write(t, regs);
+	uint32_t regs[target->regs_size / sizeof(uint32_t)];
+	target_regs_read(target, regs);
+	regs[0] = flash->iap_ram + offsetof(flash_param_s, command);
+	regs[1] = flash->iap_ram + offsetof(flash_param_s, status);
+	regs[REG_MSP] = flash->iap_msp;
+	regs[REG_LR] = flash->iap_ram | 1U;
+	regs[REG_PC] = flash->iap_entry;
+	target_regs_write(target, regs);
 
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500);
-	const bool full_erase = cmd == IAP_CMD_ERASE && lpc_is_full_erase(f, param.words[0], param.words[1]);
+	const bool full_erase = cmd == IAP_CMD_ERASE && lpc_is_full_erase(flash, param.words[0], param.words[1]);
 	/* Start the target and wait for it to halt again */
-	target_halt_resume(t, false);
-	while (!target_halt_poll(t, NULL)) {
+	target_halt_resume(target, false);
+	while (!target_halt_poll(target, NULL)) {
 		if (full_erase)
 			target_print_progress(&timeout);
 	}
 
 	/* Copy back just the parameters structure */
-	target_mem_read(t, &param, f->iap_ram, sizeof(param));
+	target_mem_read(target, &param, flash->iap_ram, sizeof(param));
 
 	/* Restore the original data in RAM and registers */
-	target_mem_write(t, f->iap_ram, &backup_param, sizeof(param));
-	target_regs_write(t, backup_regs);
+	target_mem_write(target, flash->iap_ram, &backup_param, sizeof(param));
+	target_regs_write(target, backup_regs);
 
 	/* If the user expected a result, set the result (16 bytes). */
 	if (result != NULL)
@@ -264,14 +264,14 @@ bool lpc_flash_write_magic_vect(target_flash_s *f, target_addr_t dest, const voi
 {
 	if (dest == 0) {
 		/* Fill in the magic vector to allow booting the flash */
-		uint32_t *const w = (uint32_t *)src;
+		uint32_t *const vectors = (uint32_t *)src;
 		uint32_t sum = 0;
 
 		/* compute checksum of first 7 vectors */
 		for (size_t i = 0; i < 7U; ++i)
-			sum += w[i];
+			sum += vectors[i];
 		/* two's complement is written to 8'th vector */
-		w[7] = ~sum + 1U;
+		vectors[7] = ~sum + 1U;
 	}
 	return lpc_flash_write(f, dest, src, len);
 }
