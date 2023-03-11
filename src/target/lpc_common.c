@@ -125,6 +125,23 @@ void lpc_restore_state(
 	target_regs_write(target, regs);
 }
 
+static size_t lpc_iap_params(const iap_cmd_e cmd)
+{
+	switch (cmd) {
+	case IAP_CMD_PREPARE:
+	case IAP_CMD_BLANKCHECK:
+		return 3U;
+	case IAP_CMD_ERASE:
+	case IAP_CMD_ERASE_PAGE:
+	case IAP_CMD_PROGRAM:
+		return 4U;
+	case IAP_CMD_SET_ACTIVE_BANK:
+		return 2U;
+	default:
+		return 0U;
+	}
+}
+
 iap_status_e lpc_iap_call(lpc_flash_s *const flash, iap_result_s *const result, iap_cmd_e cmd, ...)
 {
 	target_s *const target = flash->f.t;
@@ -145,11 +162,14 @@ iap_status_e lpc_iap_call(lpc_flash_s *const flash, iap_result_s *const result, 
 	};
 
 	/* Fill out the remainder of the parameters */
+	const size_t params_count = lpc_iap_params(cmd);
 	va_list params;
 	va_start(params, cmd);
-	for (size_t i = 0; i < 4U; ++i)
+	for (size_t i = 0; i < params_count; ++i)
 		frame.config.params[i] = va_arg(params, uint32_t);
 	va_end(params);
+	for (size_t i = params_count; i < 4; ++i)
+		frame.config.params[i] = 0U;
 
 	/* Copy the structure to RAM */
 	target_mem_write(target, flash->iap_ram, &frame, sizeof(iap_frame_s));
