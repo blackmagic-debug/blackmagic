@@ -861,45 +861,50 @@ enum {
 	DB_DEMCR
 };
 
-static void cortexm_regs_read(target_s *t, void *data)
+static void cortexm_regs_read(target_s *const target, void *const data)
 {
-	uint32_t *regs = data;
-	adiv5_access_port_s *ap = cortexm_ap(t);
+	uint32_t *const regs = data;
+	adiv5_access_port_s *const ap = cortexm_ap(target);
 #if PC_HOSTED == 1
-	if (ap->dp->ap_reg_read && ap->dp->ap_regs_read) {
-		uint32_t base_regs[21];
-		ap->dp->ap_regs_read(ap, base_regs);
-		for (size_t i = 0; i < sizeof(regnum_cortex_m) / 4U; i++)
-			*regs++ = base_regs[regnum_cortex_m[i]];
-		if (t->target_options & TOPT_FLAVOUR_V7MF)
-			for (size_t i = 0; i < sizeof(regnum_cortex_mf) / 4U; i++)
-				*regs++ = ap->dp->ap_reg_read(ap, regnum_cortex_mf[i]);
-	} else
-#endif
-	{
-		/* FIXME: Describe what's really going on here */
-		adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw | ADIV5_AP_CSW_SIZE_WORD);
+	if (ap->dp->ap_regs_read && ap->dp->ap_reg_read) {
+		uint32_t core_regs[21U];
+		ap->dp->ap_regs_read(ap, core_regs);
+		for (size_t i = 0; i < ARRAY_LENGTH(regnum_cortex_m); ++i)
+			regs[i] = core_regs[regnum_cortex_m[i]];
 
-		/* Map the banked data registers (0x10-0x1c) to the
-		 * debug registers DHCSR, DCRSR, DCRDR and DEMCR respectively */
-		adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR, CORTEXM_DHCSR);
-
-		/* Walk the regnum_cortex_m array, reading the registers it
-		 * calls out. */
-		adiv5_ap_write(ap, ADIV5_AP_DB(DB_DCRSR), regnum_cortex_m[0]);
-		/* Required to switch banks */
-		*regs++ = adiv5_dp_read(ap->dp, ADIV5_AP_DB(DB_DCRDR));
-		for (size_t i = 1; i < sizeof(regnum_cortex_m) / 4U; i++) {
-			adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DB(DB_DCRSR), regnum_cortex_m[i]);
-			*regs++ = adiv5_dp_read(ap->dp, ADIV5_AP_DB(DB_DCRDR));
+		if (target->target_options & TOPT_FLAVOUR_V7MF) {
+			const size_t offset = ARRAY_LENGTH(regnum_cortex_m);
+			for (size_t i = 0; i < ARRAY_LENGTH(regnum_cortex_mf); ++i)
+				regs[offset + i] = ap->dp->ap_reg_read(ap, regnum_cortex_mf[i]);
 		}
-		if (t->target_options & TOPT_FLAVOUR_V7MF) {
-			for (size_t i = 0; i < sizeof(regnum_cortex_mf) / 4U; i++) {
+	} else {
+#endif
+		/* Set up CSW for 32-bit access to allow us to read the target's registers */
+		adiv5_ap_write(ap, ADIV5_AP_CSW, ap->csw | ADIV5_AP_CSW_SIZE_WORD);
+		/*
+		 * Map the banked data registers (0x10-0x1c) to the
+		 * debug registers DHCSR, DCRSR, DCRDR and DEMCR respectively
+		 */
+		adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_TAR, CORTEXM_DHCSR);
+		/* Configure the bank selection to the appropriate AP register bank */
+		adiv5_dp_write(ap->dp, ADIV5_DP_SELECT, ((uint32_t)ap->apsel << 24U) | 0x10U);
+
+		/* Walk the regnum_cortex_m array, reading the registers it specifies */
+		for (size_t i = 0; i < ARRAY_LENGTH(regnum_cortex_m); ++i) {
+			adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DB(DB_DCRSR), regnum_cortex_m[i]);
+			regs[i] = adiv5_dp_read(ap->dp, ADIV5_AP_DB(DB_DCRDR));
+		}
+		/* If the device has a FPU, also walk the regnum_cortex_mf array */
+		if (target->target_options & TOPT_FLAVOUR_V7MF) {
+			const size_t offset = ARRAY_LENGTH(regnum_cortex_m);
+			for (size_t i = 0; i < ARRAY_LENGTH(regnum_cortex_mf); ++i) {
 				adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DB(DB_DCRSR), regnum_cortex_mf[i]);
-				*regs++ = adiv5_dp_read(ap->dp, ADIV5_AP_DB(DB_DCRDR));
+				regs[offset + i] = adiv5_dp_read(ap->dp, ADIV5_AP_DB(DB_DCRDR));
 			}
 		}
+#if PC_HOSTED == 1
 	}
+#endif
 }
 
 static void cortexm_regs_write(target_s *t, const void *data)
