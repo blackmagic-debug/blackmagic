@@ -17,6 +17,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <string.h>
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
@@ -180,7 +181,7 @@ iap_status_e lpc_iap_call(lpc_flash_s *const flash, iap_result_s *const result, 
 
 	/* Set up for the call to the IAP ROM */
 	uint32_t regs[target->regs_size / sizeof(uint32_t)];
-	target_regs_read(target, regs);
+	memset(regs, 0, target->regs_size);
 	/* Point r0 to the start of the config block */
 	regs[0] = iap_params_addr;
 	/* And r1 to the same so we re-use the same memory for the results */
@@ -211,6 +212,23 @@ iap_status_e lpc_iap_call(lpc_flash_s *const flash, iap_result_s *const result, 
 			lpc_restore_state(target, flash->iap_ram, &saved_frame, saved_regs);
 			return IAP_STATUS_INVALID_COMMAND;
 		}
+	}
+
+	/* Check if a fault occured while executing the call */
+	uint32_t status = 0;
+	target_reg_read(target, REG_XPSR, &status, sizeof(status));
+	if (status & CORTEXM_XPSR_EXCEPTION_MASK) {
+		/*
+		 * Read back the program counter to determine the fault address
+		 * (cortexm_fault_unwind puts the frame back in registers for us)
+		 */
+		uint32_t fault_address = 0;
+		target_reg_read(target, REG_PC, &fault_address, sizeof(fault_address));
+
+		DEBUG_WARN("%s: Failure due to fault (%" PRIu32 ")\n", __func__, status & CORTEXM_XPSR_EXCEPTION_MASK);
+		DEBUG_WARN("\t-> Fault at %08" PRIx32 "\n", fault_address);
+		lpc_restore_state(target, flash->iap_ram, &saved_frame, saved_regs);
+		return IAP_STATUS_INVALID_COMMAND;
 	}
 
 	/* Copy back just the results */
