@@ -137,6 +137,10 @@
 #define LPC43xx_EMC_DYN_CONFIG_MAPPING_8    0x00000000U
 #define LPC43xx_EMC_DYN_CONFIG_MAPPING_16   0x00001000U
 
+#define LPC43xx_RGU_BASE  0x40053000U
+#define LPC43xx_RGU_CTRL0 (LPC43xx_RGU_BASE + 0x100U)
+#define LPC43xx_RGU_CTRL1 (LPC43xx_RGU_BASE + 0x104U)
+
 /* Cortex-M4 Application Interrupt and Reset Control Register */
 #define LPC43xx_AIRCR 0xe000ed0cU
 /* Magic value reset key */
@@ -501,6 +505,12 @@ bool lpc43xx_probe(target_s *const t)
 
 	const uint32_t chip_code = (chipid & LPC43xx_CHIPID_CHIP_MASK) >> LPC43xx_CHIPID_CHIP_SHIFT;
 	t->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
+
+	/* If we're on the M4 core, poke the M0APP and M0SUB core resets to make them available */
+	if ((t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M4) {
+		target_mem_write32(t, LPC43xx_RGU_CTRL0, 0);
+		target_mem_write32(t, LPC43xx_RGU_CTRL1, 0);
+	}
 
 	/* 4 is for rev '-' parts with on-chip Flash, 7 is for rev 'A' parts with on-chip Flash */
 	if (chip_code == 4U || chip_code == 7U) {
