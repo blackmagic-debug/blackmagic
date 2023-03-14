@@ -146,6 +146,12 @@
 /* Magic value reset key */
 #define LPC43xx_AIRCR_RESET 0x05fa0004U
 
+#define LPC43xx_MPU_CTRL 0xe000ed94U
+#define LPC43xx_M4MEMMAP 0x40043100U
+#define LPC43xx_ETB_CFG  0x40043128U
+
+#define LPC43xx_M4MEMMAP_BOOT_ROM 0x10400000U
+
 #define LPC43xx_WDT_MODE       0x40080000U
 #define LPC43xx_WDT_CNT        0x40080004U
 #define LPC43xx_WDT_FEED       0x40080008U
@@ -268,6 +274,8 @@ typedef struct lpc43xx_spi_flash {
 
 typedef struct lpc43xx_priv {
 	uint8_t flash_banks;
+	uint32_t mpu_ctrl;
+	uint32_t shadow_map;
 } lpc43xx_priv_s;
 
 typedef struct lpc43x0_priv {
@@ -1007,7 +1015,23 @@ static bool lpc43x0_spi_flash_write(target_flash_s *f, target_addr_t dest, const
 static bool lpc43xx_iap_init(target_flash_s *const target_flash)
 {
 	target_s *const target = target_flash->t;
+	lpc43xx_priv_s *const priv = (lpc43xx_priv_s *)target->target_storage;
 	lpc_flash_s *const flash = (lpc_flash_s *)target_flash;
+	/* If on the M4 core, check and set the shadow region mapping */
+	if ((target->cpuid & CPUID_PARTNO_MASK) == CORTEX_M4) {
+		priv->shadow_map = target_mem_read32(target, LPC43xx_M4MEMMAP);
+		target_mem_write32(target, LPC43xx_M4MEMMAP, LPC43xx_M4MEMMAP_BOOT_ROM);
+	}
+
+	/* Check if the block we use (shared with the ETB) is in ETB mode, and reset that if it is */
+	const uint32_t etb_cfg = target_mem_read32(target, LPC43xx_ETB_CFG);
+	target_mem_write32(target, LPC43xx_ETB_CFG, 1U);
+	(void)etb_cfg;
+
+	/* Check MPU state and disable */
+	priv->mpu_ctrl = target_mem_read32(target, LPC43xx_MPU_CTRL);
+	target_mem_write32(target, LPC43xx_MPU_CTRL, 0);
+
 	/* Deal with WDT */
 	lpc43xx_wdt_set_period(target);
 
