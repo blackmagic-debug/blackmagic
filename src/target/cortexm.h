@@ -169,7 +169,9 @@ extern unsigned cortexm_wait_timeout;
 #define REG_SPECIAL 19U
 
 #define ARM_THUMB_BREAKPOINT 0xbe00U
-#define CORTEXM_XPSR_THUMB   (1U << 24U)
+
+#define CORTEXM_XPSR_THUMB          (1U << 24U)
+#define CORTEXM_XPSR_EXCEPTION_MASK 0x0000001fU
 
 #define CORTEXM_TOPT_INHIBIT_NRST (1U << 2U)
 
