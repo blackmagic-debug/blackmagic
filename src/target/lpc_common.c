@@ -171,6 +171,9 @@ iap_status_e lpc_iap_call(lpc_flash_s *const flash, iap_result_s *const result, 
 	for (size_t i = params_count; i < 4; ++i)
 		frame.config.params[i] = 0U;
 
+	DEBUG_INFO("%s: cmd %d (%x), params: %08" PRIx32 " %08" PRIx32 " %08" PRIx32 " %08" PRIx32 "\n", __func__, cmd, cmd,
+		frame.config.params[0], frame.config.params[1], frame.config.params[2], frame.config.params[3]);
+
 	/* Copy the structure to RAM */
 	target_mem_write(target, flash->iap_ram, &frame, sizeof(iap_frame_s));
 	const uint32_t iap_params_addr = flash->iap_ram + offsetof(iap_frame_s, config);
@@ -221,16 +224,16 @@ iap_status_e lpc_iap_call(lpc_flash_s *const flash, iap_result_s *const result, 
 	if (result != NULL)
 		*result = results;
 
+/* This guard block deals with the fact iap_error is only defined when ENABLE_DEBUG is */
 #if defined(ENABLE_DEBUG)
-	if (results.return_code != IAP_STATUS_CMD_SUCCESS) {
-		if (results.return_code > ARRAY_LENGTH(iap_error))
-			DEBUG_WARN("IAP cmd %d: %" PRIu32 "\n", cmd, results.return_code);
-		else
-			DEBUG_WARN("IAP cmd %d: %s\n", cmd, iap_error[results.return_code]);
-		DEBUG_WARN("return parameters: %08" PRIx32 " %08" PRIx32 " %08" PRIx32 " %08" PRIx32 "\n", results.values[0],
-			results.values[1], results.values[2], results.values[3]);
-	}
+	if (results.return_code < ARRAY_LENGTH(iap_error))
+		DEBUG_INFO("%s: result %s, ", __func__, iap_error[results.return_code]);
+	else
+		DEBUG_INFO("%s: result %" PRIu32 ", ", __func__, results.return_code);
 #endif
+	DEBUG_INFO("return values: %08" PRIx32 " %08" PRIx32 " %08" PRIx32 " %08" PRIx32 "\n", results.values[0],
+		results.values[1], results.values[2], results.values[3]);
+
 	return results.return_code;
 }
 
