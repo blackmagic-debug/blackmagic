@@ -1001,18 +1001,18 @@ static bool lpc43x0_spi_flash_write(target_flash_s *f, target_addr_t dest, const
 
 /* LPC43xx IAP On-board Flash part routines */
 
-static bool lpc43xx_iap_init(target_flash_s *const flash)
+static bool lpc43xx_iap_init(target_flash_s *const target_flash)
 {
-	target_s *const t = flash->t;
-	lpc_flash_s *const f = (lpc_flash_s *)flash;
+	target_s *const target = target_flash->t;
+	lpc_flash_s *const flash = (lpc_flash_s *)target_flash;
 	/* Deal with WDT */
-	lpc43xx_wdt_set_period(t);
+	lpc43xx_wdt_set_period(target);
 
 	/* Force internal clock */
-	target_mem_write32(t, LPC43xx_CGU_CPU_CLK, LPC43xx_CGU_BASE_CLK_AUTOBLOCK | LPC43xx_CGU_BASE_CLK_SEL_IRC);
+	target_mem_write32(target, LPC43xx_CGU_CPU_CLK, LPC43xx_CGU_BASE_CLK_AUTOBLOCK | LPC43xx_CGU_BASE_CLK_SEL_IRC);
 
 	/* Initialize flash IAP */
-	return lpc_iap_call(f, NULL, IAP_CMD_INIT) == IAP_STATUS_CMD_SUCCESS;
+	return lpc_iap_call(flash, NULL, IAP_CMD_INIT) == IAP_STATUS_CMD_SUCCESS;
 }
 
 /*
