@@ -514,17 +514,20 @@ bool lpc43xx_probe(target_s *const t)
 
 	/* 4 is for rev '-' parts with on-chip Flash, 7 is for rev 'A' parts with on-chip Flash */
 	if (chip_code == 4U || chip_code == 7U) {
-		const lpc43xx_partid_s part_id = lpc43xx_iap_read_partid(t);
-		DEBUG_WARN("LPC43xx part ID: 0x%08" PRIx32 ":%02x\n", part_id.part, part_id.flash_config);
-		if (part_id.part == LPC43xx_PARTID_INVALID)
-			return false;
-
 		lpc43xx_priv_s *priv = calloc(1, sizeof(lpc43xx_priv_s));
 		if (!priv) { /* calloc failed: heap exhaustion */
 			DEBUG_ERROR("calloc: failed in %s\n", __func__);
 			return false;
 		}
 		t->target_storage = priv;
+
+		const lpc43xx_partid_s part_id = lpc43xx_iap_read_partid(t);
+		DEBUG_WARN("LPC43xx part ID: 0x%08" PRIx32 ":%02x\n", part_id.part, part_id.flash_config);
+		if (part_id.part == LPC43xx_PARTID_INVALID) {
+			free(priv);
+			t->target_storage = NULL;
+			return false;
+		}
 
 		t->mass_erase = lpc43xx_iap_mass_erase;
 		t->enter_flash_mode = lpc43xx_enter_flash_mode;
