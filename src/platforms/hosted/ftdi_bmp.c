@@ -632,14 +632,18 @@ size_t libftdi_buffer_read(void *const buffer, const size_t size)
 {
 	uint8_t *const data = (uint8_t *)buffer;
 #if defined(USE_USB_VERSION_BIT)
-	outbuf[bufptr++] = SEND_IMMEDIATE;
-	libftdi_buffer_flush();
+	if (bufptr) {
+		outbuf[bufptr++] = SEND_IMMEDIATE;
+		libftdi_buffer_flush();
+	}
 	ftdi_transfer_control_s *tc = ftdi_read_data_submit(info.ftdi_ctx, data, size);
 	ftdi_transfer_data_done(tc);
 #else
-	const uint8_t cmd = SEND_IMMEDIATE;
-	libftdi_buffer_write(&cmd, 1);
-	libftdi_buffer_flush();
+	if (bufptr) {
+		const uint8_t cmd = SEND_IMMEDIATE;
+		libftdi_buffer_write(&cmd, 1);
+		libftdi_buffer_flush();
+	}
 	for (size_t index = 0; index < size;)
 		index += ftdi_read_data(info.ftdi_ctx, data + index, size - index);
 #endif
