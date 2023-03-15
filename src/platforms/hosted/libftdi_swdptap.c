@@ -270,14 +270,16 @@ void swdptap_bit_out(bool val)
 	}
 }
 
-static bool swdptap_seq_in_parity_mpsse(uint32_t *const result, const size_t clock_cycles)
+static bool ftdi_swd_seq_in_parity_mpsse(uint32_t *const result, const size_t clock_cycles)
 {
-	uint8_t data_out[5];
+	uint8_t data_out[5] = {};
 	libftdi_jtagtap_tdi_tdo_seq(data_out, false, NULL, clock_cycles + 1U);
 	const uint32_t data = data_out[0] + (data_out[1] << 8U) + (data_out[2] << 16U) + (data_out[3] << 24U);
-	uint8_t parity = __builtin_parity(data & ((1U << clock_cycles) - 1U)) & 1U;
+	uint8_t parity = __builtin_parity(data & ((UINT64_C(1) << clock_cycles) - 1U));
 	parity ^= data_out[4] & 1U;
 	*result = data;
+	DEBUG_PROBE(
+		"ftdi_swd_seq_in_parity %zu clock_cycles: %08" PRIx32 " %s\n", clock_cycles, *result, parity ? "ERR" : "OK");
 	return parity;
 }
 
@@ -313,7 +315,7 @@ static bool swdptap_seq_in_parity(uint32_t *const result, const size_t clock_cyc
 		return false;
 	swdptap_turnaround(SWDIO_STATUS_FLOAT);
 	if (do_mpsse)
-		return swdptap_seq_in_parity_mpsse(result, clock_cycles);
+		return ftdi_swd_seq_in_parity_mpsse(result, clock_cycles);
 	return swdptap_seq_in_parity_raw(result, clock_cycles);
 }
 
