@@ -80,7 +80,7 @@ typedef struct bmp_info {
 	bool is_jtag;
 #if HOSTED_BMP_ONLY != 1
 	libusb_context *libusb_ctx;
-	ftdi_context_s *ftdic;
+	ftdi_context_s *ftdi_ctx;
 	usb_link_s *usb_link;
 	uint16_t vid;
 	uint16_t pid;

@@ -33,8 +33,6 @@
 typedef struct ftdi_transfer_control ftdi_transfer_control_s;
 #endif
 
-ftdi_context_s *ftdic;
-
 #define BUF_SIZE 4096U
 static uint8_t outbuf[BUF_SIZE];
 static uint16_t bufptr = 0;
@@ -374,7 +372,7 @@ const cable_desc_s cable_desc[] = {
 	{},
 };
 
-bool ftdi_bmp_init(bmda_cli_options_s *cl_opts, bmp_info_s *info)
+bool ftdi_bmp_init(bmda_cli_options_s *const cl_opts)
 {
 	int err;
 	const cable_desc_s *cable = cable_desc;
@@ -408,68 +406,62 @@ bool ftdi_bmp_init(bmda_cli_options_s *cl_opts, bmp_info_s *info)
 		cl_opts->opt_scanmode = BMP_SCAN_JTAG;
 	}
 
-	if (ftdic) {
-		ftdi_usb_close(ftdic);
-		ftdi_free(ftdic);
-		ftdic = NULL;
-	}
-	ftdic = ftdi_new();
-	if (ftdic == NULL) {
-		DEBUG_WARN("ftdi_new: %s\n", ftdi_get_error_string(ftdic));
+	ftdi_context_s *ctx = ftdi_new();
+	if (ctx == NULL) {
+		DEBUG_WARN("ftdi_new: %s\n", ftdi_get_error_string(ctx));
 		abort();
 	}
-	info->ftdic = ftdic;
-	err = ftdi_set_interface(ftdic, active_cable.interface);
+	err = ftdi_set_interface(ctx, active_cable.interface);
 	if (err != 0) {
-		DEBUG_WARN("ftdi_set_interface: %d: %s\n", err, ftdi_get_error_string(ftdic));
+		DEBUG_WARN("ftdi_set_interface: %d: %s\n", err, ftdi_get_error_string(ctx));
 		goto error_1;
 	}
 	err = ftdi_usb_open_desc(
-		ftdic, active_cable.vendor, active_cable.product, active_cable.description, cl_opts->opt_serial);
+		ctx, active_cable.vendor, active_cable.product, active_cable.description, cl_opts->opt_serial);
 	if (err != 0) {
-		DEBUG_WARN("unable to open ftdi device: %d (%s)\n", err, ftdi_get_error_string(ftdic));
+		DEBUG_WARN("unable to open ftdi device: %d (%s)\n", err, ftdi_get_error_string(ctx));
 		goto error_1;
 	}
-	err = ftdi_set_latency_timer(ftdic, 1);
+	err = ftdi_set_latency_timer(ctx, 1);
 	if (err != 0) {
-		DEBUG_WARN("ftdi_set_latency_timer: %d: %s\n", err, ftdi_get_error_string(ftdic));
+		DEBUG_WARN("ftdi_set_latency_timer: %d: %s\n", err, ftdi_get_error_string(ctx));
 		goto error_2;
 	}
-	err = ftdi_set_baudrate(ftdic, 1000000);
+	err = ftdi_set_baudrate(ctx, 1000000);
 	if (err != 0) {
-		DEBUG_WARN("ftdi_set_baudrate: %d: %s\n", err, ftdi_get_error_string(ftdic));
+		DEBUG_WARN("ftdi_set_baudrate: %d: %s\n", err, ftdi_get_error_string(ctx));
 		goto error_2;
 	}
-	err = ftdi_write_data_set_chunksize(ftdic, BUF_SIZE);
+	err = ftdi_write_data_set_chunksize(ctx, BUF_SIZE);
 	if (err != 0) {
-		DEBUG_WARN("ftdi_write_data_set_chunksize: %d: %s\n", err, ftdi_get_error_string(ftdic));
+		DEBUG_WARN("ftdi_write_data_set_chunksize: %d: %s\n", err, ftdi_get_error_string(ctx));
 		goto error_2;
 	}
-	assert(ftdic != NULL);
+	assert(ctx != NULL);
 #ifdef _Ftdi_Pragma
-	err = ftdi_tcioflush(ftdic);
+	err = ftdi_tcioflush(ctx);
 #else
-	err = ftdi_usb_purge_buffers(ftdic);
+	err = ftdi_usb_purge_buffers(ctx);
 #endif
 	if (err != 0) {
-		DEBUG_WARN("ftdi_tcioflush(ftdi_usb_purge_buffer): %d: %s\n", err, ftdi_get_error_string(ftdic));
+		DEBUG_WARN("ftdi_tcioflush(ftdi_usb_purge_buffer): %d: %s\n", err, ftdi_get_error_string(ctx));
 		goto error_2;
 	}
 	/* Reset MPSSE controller. */
-	err = ftdi_set_bitmode(ftdic, 0, BITMODE_RESET);
+	err = ftdi_set_bitmode(ctx, 0, BITMODE_RESET);
 	if (err != 0) {
-		DEBUG_WARN("ftdi_set_bitmode: %d: %s\n", err, ftdi_get_error_string(ftdic));
+		DEBUG_WARN("ftdi_set_bitmode: %d: %s\n", err, ftdi_get_error_string(ctx));
 		goto error_2;
 	}
 	/* Enable MPSSE controller. Pin directions are set later.*/
-	err = ftdi_set_bitmode(ftdic, 0, BITMODE_MPSSE);
+	err = ftdi_set_bitmode(ctx, 0, BITMODE_MPSSE);
 	if (err != 0) {
-		DEBUG_WARN("ftdi_set_bitmode: %d: %s\n", err, ftdi_get_error_string(ftdic));
+		DEBUG_WARN("ftdi_set_bitmode: %d: %s\n", err, ftdi_get_error_string(ctx));
 		goto error_2;
 	}
 	uint8_t ftdi_init[16];
 	/* Test for pending garbage.*/
-	int garbage = ftdi_read_data(ftdic, ftdi_init, sizeof(ftdi_init));
+	int garbage = ftdi_read_data(ctx, ftdi_init, sizeof(ftdi_init));
 	if (garbage > 0) {
 		DEBUG_WARN("FTDI init garbage at start:");
 		for (int i = 0; i < garbage; i++)
@@ -478,7 +470,7 @@ bool ftdi_bmp_init(bmda_cli_options_s *cl_opts, bmp_info_s *info)
 	}
 	size_t index = 0;
 	ftdi_init[index++] = LOOPBACK_END; /* FT2232D gets upset otherwise*/
-	switch (ftdic->type) {
+	switch (ctx->type) {
 	case TYPE_2232H:
 	case TYPE_4232H:
 	case TYPE_232H:
@@ -490,6 +482,8 @@ bool ftdi_bmp_init(bmda_cli_options_s *cl_opts, bmp_info_s *info)
 		DEBUG_WARN("FTDI Chip has no MPSSE\n");
 		goto error_2;
 	}
+
+	info.ftdi_ctx = ctx;
 	ftdi_init[index++] = TCK_DIVISOR;
 	/* Use CLK/2 for about 50 % SWDCLK duty cycle on FT2232c.*/
 	ftdi_init[index++] = 1;
@@ -502,7 +496,7 @@ bool ftdi_bmp_init(bmda_cli_options_s *cl_opts, bmp_info_s *info)
 	ftdi_init[index++] = active_state.ddr_high;
 	libftdi_buffer_write(ftdi_init, index);
 	libftdi_buffer_flush();
-	garbage = ftdi_read_data(ftdic, ftdi_init, sizeof(ftdi_init));
+	garbage = ftdi_read_data(ctx, ftdi_init, sizeof(ftdi_init));
 	if (garbage > 0) {
 		DEBUG_WARN("FTDI init garbage at end:");
 		for (int i = 0; i < garbage; i++)
@@ -512,9 +506,9 @@ bool ftdi_bmp_init(bmda_cli_options_s *cl_opts, bmp_info_s *info)
 	return true;
 
 error_2:
-	ftdi_usb_close(ftdic);
+	ftdi_usb_close(ctx);
 error_1:
-	ftdi_free(ftdic);
+	ftdi_free(ctx);
 	return false;
 }
 
@@ -601,9 +595,9 @@ void libftdi_buffer_flush(void)
 #if defined(USE_USB_VERSION_BIT)
 	if (tc_write)
 		ftdi_transfer_data_done(tc_write);
-	tc_write = ftdi_write_data_submit(ftdic, outbuf, bufptr);
+	tc_write = ftdi_write_data_submit(info.ftdi_ctx, outbuf, bufptr);
 #else
-	assert(ftdi_write_data(ftdic, outbuf, bufptr) == bufptr);
+	assert(ftdi_write_data(info.ftdi_ctx, outbuf, bufptr) == bufptr);
 	DEBUG_WIRE("FT2232 libftdi_buffer flush: %d bytes\n", bufptr);
 #endif
 	bufptr = 0;
@@ -630,14 +624,14 @@ size_t libftdi_buffer_read(uint8_t *data, size_t size)
 #if defined(USE_USB_VERSION_BIT)
 	outbuf[bufptr++] = SEND_IMMEDIATE;
 	libftdi_buffer_flush();
-	ftdi_transfer_control_s *tc = ftdi_read_data_submit(ftdic, data, size);
+	ftdi_transfer_control_s *tc = ftdi_read_data_submit(info.ftdi_ctx, data, size);
 	ftdi_transfer_data_done(tc);
 #else
 	const uint8_t cmd = SEND_IMMEDIATE;
 	libftdi_buffer_write(&cmd, 1);
 	libftdi_buffer_flush();
 	for (size_t index = 0; index < size;)
-		index += ftdi_read_data(ftdic, data + index, size - index);
+		index += ftdi_read_data(info.ftdi_ctx, data + index, size - index);
 #endif
 	DEBUG_WIRE("Read  %d bytes:", size);
 	for (size_t i = 0; i < size; i++) {
@@ -741,14 +735,14 @@ static uint16_t divisor;
 void libftdi_max_frequency_set(uint32_t freq)
 {
 	uint32_t clock;
-	if (ftdic->type == TYPE_2232C)
+	if (info.ftdi_ctx->type == TYPE_2232C)
 		clock = 12U * 1000U * 1000U;
 	else
 		/* Undivided clock set during startup*/
 		clock = 60U * 1000U * 1000U;
 
 	uint32_t div = (clock + 2U * freq - 1U) / freq;
-	if (div < 4U && ftdic->type == TYPE_2232C)
+	if (div < 4U && info.ftdi_ctx->type == TYPE_2232C)
 		div = 4U; /* Avoid bad asymmetric FT2232C clock at 6 MHz*/
 	divisor = div / 2U - 1U;
 	uint8_t buf[3];
@@ -761,7 +755,7 @@ void libftdi_max_frequency_set(uint32_t freq)
 uint32_t libftdi_max_frequency_get(void)
 {
 	uint32_t clock;
-	if (ftdic->type == TYPE_2232C)
+	if (info.ftdi_ctx->type == TYPE_2232C)
 		clock = 12U * 1000U * 1000U;
 	else
 		/* Undivided clock set during startup*/
