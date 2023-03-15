@@ -382,7 +382,7 @@ int ftdi_bmp_init(bmda_cli_options_s *cl_opts, bmp_info_s *info)
 	}
 
 	if (!cable->name) {
-		DEBUG_WARN("No cable matching found for %s\n", cl_opts->opt_cable);
+		DEBUG_WARN("No adaptor matching found for %s\n", cl_opts->opt_cable);
 		return -1;
 	}
 
@@ -402,9 +402,10 @@ int ftdi_bmp_init(bmda_cli_options_s *cl_opts, bmp_info_s *info)
 		active_cable.mpsse_swd_read.set_data_low = MPSSE_DO;
 		active_cable.mpsse_swd_write.set_data_low = MPSSE_DO;
 	} else if (!libftdi_swd_possible() && cl_opts->opt_scanmode != BMP_SCAN_JTAG) {
-		DEBUG_WARN("SWD with cable not possible, trying JTAG\n");
+		DEBUG_WARN("SWD with adaptor not possible, trying JTAG\n");
 		cl_opts->opt_scanmode = BMP_SCAN_JTAG;
 	}
+
 	if (ftdic) {
 		ftdi_usb_close(ftdic);
 		ftdi_free(ftdic);
