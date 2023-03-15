@@ -112,7 +112,7 @@ void platform_init(int argc, char **argv)
 		break;
 
 	case BMP_TYPE_LIBFTDI:
-		if (ftdi_bmp_init(&cl_opts, &info))
+		if (!ftdi_bmp_init(&cl_opts, &info))
 			exit(-1);
 		break;
 

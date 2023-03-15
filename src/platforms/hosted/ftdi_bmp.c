@@ -372,7 +372,7 @@ const cable_desc_s cable_desc[] = {
 	{},
 };
 
-int ftdi_bmp_init(bmda_cli_options_s *cl_opts, bmp_info_s *info)
+bool ftdi_bmp_init(bmda_cli_options_s *cl_opts, bmp_info_s *info)
 {
 	int err;
 	const cable_desc_s *cable = cable_desc;
@@ -383,7 +383,7 @@ int ftdi_bmp_init(bmda_cli_options_s *cl_opts, bmp_info_s *info)
 
 	if (!cable->name) {
 		DEBUG_WARN("No adaptor matching found for %s\n", cl_opts->opt_cable);
-		return -1;
+		return false;
 	}
 
 	active_cable = *cable;
@@ -507,13 +507,13 @@ int ftdi_bmp_init(bmda_cli_options_s *cl_opts, bmp_info_s *info)
 			DEBUG_WARN(" %02x", ftdi_init[i]);
 		DEBUG_WARN("\n");
 	}
-	return 0;
+	return true;
 
 error_2:
 	ftdi_usb_close(ftdic);
 error_1:
 	ftdi_free(ftdic);
-	return -1;
+	return false;
 }
 
 static void libftdi_set_data(data_desc_s *data)

@@ -108,9 +108,9 @@ typedef struct cable_desc {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 
-int ftdi_bmp_init(bmda_cli_options_s *cl_opts, bmp_info_s *info)
+bool ftdi_bmp_init(bmda_cli_options_s *cl_opts, bmp_info_s *info)
 {
-	return -1;
+	return false;
 }
 
 bool libftdi_swdptap_init(void)
@@ -178,7 +178,7 @@ extern cable_desc_s active_cable;
 extern ftdi_context_s *ftdic;
 extern data_desc_s active_state;
 
-int ftdi_bmp_init(bmda_cli_options_s *cl_opts, bmp_info_s *info);
+bool ftdi_bmp_init(bmda_cli_options_s *cl_opts, bmp_info_s *info);
 bool libftdi_swdptap_init(void);
 bool libftdi_jtagtap_init(void);
 void libftdi_buffer_flush(void);
