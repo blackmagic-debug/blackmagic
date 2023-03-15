@@ -192,6 +192,8 @@ iap_status_e lpc_iap_call(lpc_flash_s *const flash, iap_result_s *const result, 
 	regs[REG_LR] = flash->iap_ram | 1U;
 	/* And set the program counter to the IAP ROM entrypoint */
 	regs[REG_PC] = flash->iap_entry;
+	/* Finally set up xPSR to indicate a suitable instruction mode, no fault */
+	regs[REG_XPSR] = (flash->iap_entry & 1U) ? CORTEXM_XPSR_THUMB : 0U;
 	target_regs_write(target, regs);
 
 	/* Figure out if we're about to execute a mass erase or not */
@@ -224,6 +226,9 @@ iap_status_e lpc_iap_call(lpc_flash_s *const flash, iap_result_s *const result, 
 		 */
 		uint32_t fault_address = 0;
 		target_reg_read(target, REG_PC, &fault_address, sizeof(fault_address));
+		/* Set the thumb bit in the address appropriately */
+		if (status & CORTEXM_XPSR_THUMB)
+			fault_address |= 1U;
 
 		DEBUG_WARN("%s: Failure due to fault (%" PRIu32 ")\n", __func__, status & CORTEXM_XPSR_EXCEPTION_MASK);
 		DEBUG_WARN("\t-> Fault at %08" PRIx32 "\n", fault_address);
