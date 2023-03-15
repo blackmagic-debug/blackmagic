@@ -658,27 +658,25 @@ size_t libftdi_buffer_read(void *const buffer, const size_t size)
 	return size;
 }
 
-void libftdi_jtagtap_tdi_tdo_seq(uint8_t *data_out, const bool final_tms, const uint8_t *data_in, size_t ticks)
+void libftdi_jtagtap_tdi_tdo_seq(uint8_t *data_out, const bool final_tms, const uint8_t *data_in, size_t clock_cycles)
 {
-	if (!ticks)
-		return;
-	if (!data_in && !data_out)
+	if (!clock_cycles || (!data_in && !data_out))
 		return;
 
 	DEBUG_WIRE("libftdi_jtagtap_tdi_tdo_seq %s %zu clock cycles\n",
 		data_in && data_out ? "read/write" :
 			data_in         ? "write" :
 							  "read",
-		ticks);
+		clock_cycles);
 
 	/* Start by calculating the number of full bytes we can send and how many residual bits there will be */
-	const size_t bytes = (ticks - (final_tms ? 1U : 0U)) >> 3U;
-	size_t bits = ticks & 7U;
+	const size_t bytes = (clock_cycles - (final_tms ? 1U : 0U)) >> 3U;
+	size_t bits = clock_cycles & 7U;
 	/* If the transfer would be a whole number of bytes if not for final_tms, adjust bits accordingly */
 	if (!bits && final_tms)
 		bits = 8U;
-	const size_t final_byte = (ticks - 1U) >> 3U;
-	const size_t final_bit = (ticks - 1U) & 7U;
+	const size_t final_byte = (clock_cycles - 1U) >> 3U;
+	const size_t final_bit = (clock_cycles - 1U) & 7U;
 
 	/* Set up a suitable initial transfer command for the data */
 	const uint8_t cmd =
