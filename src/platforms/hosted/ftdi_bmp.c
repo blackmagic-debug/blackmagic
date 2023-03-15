@@ -610,10 +610,12 @@ void libftdi_buffer_flush(void)
 	bufptr = 0;
 }
 
-size_t libftdi_buffer_write(const uint8_t *data, size_t size)
+size_t libftdi_buffer_write(const void *const buffer, const size_t size)
 {
 	if ((bufptr + size) / BUF_SIZE > 0)
 		libftdi_buffer_flush();
+
+	const uint8_t *const data = (const uint8_t *)buffer;
 	DEBUG_WIRE("Write %d bytes:", size);
 	for (size_t i = 0; i < size; i++) {
 		DEBUG_WIRE(" %02x", data[i]);
@@ -621,13 +623,14 @@ size_t libftdi_buffer_write(const uint8_t *data, size_t size)
 			DEBUG_WIRE("\n\t");
 	}
 	DEBUG_WIRE("\n");
-	memcpy(outbuf + bufptr, data, size);
+	memcpy(outbuf + bufptr, buffer, size);
 	bufptr += size;
 	return size;
 }
 
-size_t libftdi_buffer_read(uint8_t *data, size_t size)
+size_t libftdi_buffer_read(void *const buffer, const size_t size)
 {
+	uint8_t *const data = (uint8_t *)buffer;
 #if defined(USE_USB_VERSION_BIT)
 	outbuf[bufptr++] = SEND_IMMEDIATE;
 	libftdi_buffer_flush();
