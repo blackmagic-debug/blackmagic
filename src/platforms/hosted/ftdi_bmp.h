@@ -182,6 +182,11 @@ typedef struct ftdi_mpsse_cmd {
 	uint8_t length[2];
 } ftdi_mpsse_cmd_s;
 
+typedef struct ftdi_mpsse_cmd_bits {
+	uint8_t command;
+	uint8_t length;
+} ftdi_mpsse_cmd_bits_s;
+
 bool ftdi_bmp_init(bmda_cli_options_s *cl_opts);
 bool libftdi_swdptap_init(void);
 bool libftdi_jtagtap_init(void);
