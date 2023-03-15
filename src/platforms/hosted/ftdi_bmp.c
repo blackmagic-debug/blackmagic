@@ -303,22 +303,23 @@ const cable_desc_s cable_desc[] = {
 	},
 	{
 		/*
-		 * MPSSE_SK (DB0) ----------- SWDCK/JTCK
+		 * https://github.com/tigard-tools/tigard#pinouts
+		 * MPSSE_SK (DB0) ----------- SWCLK/TCK
 		 * Mode-Switch 1-2/4-5: JTAG
-		 * MPSSE-DO (DB1) ----------- JTAG/TDI
-		 * MPSSE-DI (DB2) ----------- JTAG/TDO
-		 * MPSSE-CS (DB3) ----------- JTAG/TMS
+		 * MPSSE-DO (DB1) ----------- TDI
+		 * MPSSE-DI (DB2) ----------- TDO
+		 * MPSSE-CS (DB3) ----------- TMS
 		 * Mode-Switch 3-2/6-5: SWD
-		 * MPSSE-DO (DB1) -- 330 R -- SWD/SWDIO
-		 * MPSSE-DI (DB2) ----------- SWD/SWDIO
+		 * MPSSE-DO (DB1) -- 330 R -- SWDIO
+		 * MPSSE-DI (DB2) ----------- SWDIO
 		 * Indicate Mode-SW set to SWD with "-e" on the command line
 		 * TRST is Push/Pull, not OD!
-		 * PIN4     (DB5) ----------- TRST
+		 * PIN4     (DB4) ----------- nTRST
 		 * nRST is Push/Pull, not OD! Keep DDR set.
-		 * PIN5     (DB5) ----------- NRST
+		 * PIN5     (DB5) ----------- nRST
 		 */
 		.vendor = 0x0403U,
-		.product = 0x6010U, /*FT2232H*/
+		.product = 0x6010U, /* FT2232H */
 		.interface = INTERFACE_B,
 		.init.data_high = PIN4 | PIN5, /* High   on PIN4/5 */
 		.init.ddr_high = PIN4 | PIN5,  /* Output on PIN4/5 */
