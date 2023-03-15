@@ -23,6 +23,7 @@
 #include "target.h"
 
 #include <assert.h>
+#include <string.h>
 #include <unistd.h>
 #include <sys/time.h>
 
@@ -328,7 +329,7 @@ const cable_desc_s cable_desc[] = {
 		.target_voltage_cmd = GET_BITS_LOW,
 		.mpsse_swd_read.set_data_low = MPSSE_DI,
 		.mpsse_swd_write.set_data_low = MPSSE_DO,
-		.description = "Tigard",
+		.description = "Tigard", /* The actual description string is "Tigard" followed by the version string */
 		.name = "tigard",
 	},
 	{
@@ -388,6 +389,9 @@ bool ftdi_bmp_init(bmda_cli_options_s *const cl_opts)
 
 	active_cable = *cable;
 	memcpy(&active_state, &active_cable.init, sizeof(data_desc_s));
+	/* If the adaptor being used is Tigard, NULL the description out as libftdi can't deal with the partial match. */
+	if (memcmp(active_cable.description, "Tigard", 7) == 0)
+		active_cable.description = NULL;
 	/*
 	 * If swd_(read|write) is not given for the selected cable and
 	 * the 'e' command line argument is give, assume resistor SWD
