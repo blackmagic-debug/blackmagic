@@ -1038,8 +1038,13 @@ static bool lpc43xx_iap_init(target_flash_s *const target_flash)
 	/* Force internal clock */
 	target_mem_write32(target, LPC43xx_CGU_CPU_CLK, LPC43xx_CGU_BASE_CLK_AUTOBLOCK | LPC43xx_CGU_BASE_CLK_SEL_IRC);
 
-	/* Initialize flash IAP */
-	return lpc_iap_call(flash, NULL, IAP_CMD_INIT) == IAP_STATUS_CMD_SUCCESS;
+	/*
+	 * Initialize flash IAP
+	 * errata: should return IAP_STATUS_SUCCESS, may just not alter the result code resulting in
+	 * returning IAP_CMD_INIT. Test instead that it didn't fail by testing for the internally
+	 * generated IAP_STATUS_INVALID_COMMAND used by lpc_iap_call()'s failure paths.
+	 */
+	return lpc_iap_call(flash, NULL, IAP_CMD_INIT) != IAP_STATUS_INVALID_COMMAND;
 }
 
 /*
