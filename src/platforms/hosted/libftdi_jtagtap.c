@@ -56,7 +56,7 @@ static bool jtagtap_next(bool tms, bool tdi);
 void libftdi_drain_potential_garbage(void)
 {
 	uint8_t data[16];
-	int garbage = ftdi_read_data(ftdic, data, sizeof(data));
+	int garbage = ftdi_read_data(info.ftdi_ctx, data, sizeof(data));
 	if (garbage > 0) {
 		DEBUG_WARN("FTDI JTAG init got garbage:");
 		for (int i = 0; i < garbage; i++)
