@@ -328,6 +328,8 @@ const cable_desc_s cable_desc[] = {
 		.deassert_nrst.data_low = PIN5,
 		.deassert_nrst.ddr_low = PIN5,
 		.target_voltage_cmd = GET_BITS_LOW,
+		.mpsse_swd_read.set_data_low = MPSSE_DI,
+		.mpsse_swd_write.set_data_low = MPSSE_DO,
 		.description = "Tigard",
 		.name = "tigard",
 	},
