@@ -21,6 +21,7 @@
 #include "general.h"
 #include "gdb_if.h"
 #include "target.h"
+#include "buffer_utils.h"
 
 #include <assert.h>
 #include <string.h>
@@ -664,64 +665,81 @@ void libftdi_jtagtap_tdi_tdo_seq(uint8_t *data_out, const bool final_tms, const 
 	if (!data_in && !data_out)
 		return;
 
-	DEBUG_WIRE("libftdi_jtagtap_tdi_tdo_seq %s ticks: %d\n",
+	DEBUG_WIRE("libftdi_jtagtap_tdi_tdo_seq %s %zu clock cycles\n",
 		data_in && data_out ? "read/write" :
 			data_in         ? "write" :
 							  "read",
 		ticks);
-	if (final_tms)
-		--ticks;
-	uint8_t rticks = ticks & 7U;
-	ticks >>= 3U;
-	uint8_t data[8];
-	uint8_t cmd = (data_out ? MPSSE_DO_READ : 0U) | (data_in ? (MPSSE_DO_WRITE | MPSSE_WRITE_NEG) : 0U) | MPSSE_LSB;
-	size_t rsize = ticks;
-	if (ticks) {
-		data[0] = cmd;
-		data[1] = ticks - 1U;
-		data[2] = 0;
-		libftdi_buffer_write(data, 3U);
+
+	/* Start by calculating the number of full bytes we can send and how many residual bits there will be */
+	const size_t bytes = (ticks - (final_tms ? 1U : 0U)) >> 3U;
+	size_t bits = ticks & 7U;
+	/* If the transfer would be a whole number of bytes if not for final_tms, adjust bits accordingly */
+	if (!bits && final_tms)
+		bits = 8U;
+	const size_t final_byte = (ticks - 1U) >> 3U;
+	const size_t final_bit = (ticks - 1U) & 7U;
+
+	/* Set up a suitable initial transfer command for the data */
+	const uint8_t cmd =
+		(data_out ? MPSSE_DO_READ : 0U) | (data_in ? (MPSSE_DO_WRITE | MPSSE_WRITE_NEG) : 0U) | MPSSE_LSB;
+
+	/* Set up the transfer for the number of whole bytes specified */
+	if (bytes) {
+		ftdi_mpsse_cmd_s command = {cmd};
+		write_le2(command.length, 0, bytes - 1U);
+		libftdi_buffer_write_val(command);
+		/* If there's data to send, queue it */
 		if (data_in)
-			libftdi_buffer_write(data_in, ticks);
+			libftdi_buffer_write(data_in, bytes);
 	}
-	size_t index = 0;
-	if (rticks) {
-		rsize++;
-		data[index++] = cmd | MPSSE_BITMODE;
-		data[index++] = rticks - 1U;
+
+	/* Now set up a transfer for the residual bits needed */
+	if (bits - (final_tms ? 1U : 0U)) {
+		/* Set up the bitwise command and its length */
+		const ftdi_mpsse_cmd_bits_s command = {cmd | MPSSE_BITMODE, bits - (final_tms ? 2U : 1U)};
+		libftdi_buffer_write_val(command);
+		/* If there's data to send, queue it */
 		if (data_in)
-			data[index++] = data_in[ticks];
+			libftdi_buffer_write_val(data_in[bytes]);
 	}
+
+	/* Finally, if TMS should be 1 after we get done, set up the final command to do this. */
 	if (final_tms) {
-		rsize++;
-		data[index++] = MPSSE_WRITE_TMS | (data_out ? MPSSE_DO_READ : 0) | MPSSE_LSB | MPSSE_BITMODE | MPSSE_WRITE_NEG;
-		data[index++] = 0;
-		if (data_in)
-			data[index++] = (data_in[ticks] & (1U << rticks)) ? 0x81U : 0x01U;
+		/* The command length byte is 0 after this, indicating 1 bit to go */
+		ftdi_mpsse_cmd_bits_s command = {
+			MPSSE_WRITE_TMS | (data_out ? MPSSE_DO_READ : 0) | MPSSE_LSB | MPSSE_BITMODE | MPSSE_WRITE_NEG};
+		libftdi_buffer_write_val(command);
+		/* The LSb determins what TMS gets set to */
+		uint8_t data = 1U;
+		/* If there's data to send, queue it */
+		if (data_in) {
+			/* The final bit to send has to go into the MSb of the data byte */
+			const uint8_t value = (data_in[final_byte] >> final_bit) & 1U;
+			data |= value << 7U;
+		}
+		/* Queue the data portion of the operation */
+		libftdi_buffer_write_val(data);
 	}
-	if (index)
-		libftdi_buffer_write(data, index);
+
+	/* If we're expecting data back, start reading */
 	if (data_out) {
-		size_t index = 0;
-		uint8_t *tmp = alloca(rsize);
-		libftdi_buffer_read(tmp, rsize);
-		if (final_tms)
-			rsize--;
-
-		while (rsize--)
-			*data_out++ = tmp[index++];
-		if (rticks == 0)
-			*data_out++ = 0;
-
+		/* Read the whole bytes */
+		if (bytes)
+			libftdi_buffer_read(data_out, bytes);
+		/* Read the residual bits */
+		if (bits) {
+			libftdi_buffer_read_val(data_out[bytes]);
+			/* Because of a quirk in how the FTDI device works, the bits will be MSb aligned, so shift them down */
+			const size_t shift = bits - (final_tms ? 1U : 0U);
+			data_out[bytes] >>= 8U - shift;
+		}
+		/* And read the data assocated with the TMS transaction and adjust the final byte */
 		if (final_tms) {
-			rticks++;
-			*(--data_out) >>= 1U;
-			*data_out |= tmp[index] & 0x80U;
-		} else
-			--data_out;
-
-		if (rticks)
-			*data_out >>= (8U - rticks);
+			uint8_t value = 0;
+			libftdi_buffer_read_val(value);
+			data_out[final_byte] |= (value & 0x80U) >> (7U - final_bit);
+		}
 	}
 }
 
