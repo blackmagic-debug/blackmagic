@@ -234,7 +234,7 @@ static void ftdi_swd_turnaround(const swdio_status_e dir)
 static bool ftdi_swd_seq_in_parity_mpsse(uint32_t *const result, const size_t clock_cycles)
 {
 	uint8_t data_out[5] = {};
-	libftdi_jtagtap_tdi_tdo_seq(data_out, false, NULL, clock_cycles + 1U);
+	ftdi_jtag_tdi_tdo_seq(data_out, false, NULL, clock_cycles + 1U);
 	const uint32_t data = data_out[0] + (data_out[1] << 8U) + (data_out[2] << 16U) + (data_out[3] << 24U);
 	uint8_t parity = __builtin_parity(data & ((UINT64_C(1) << clock_cycles) - 1U));
 	parity ^= data_out[4] & 1U;
@@ -283,7 +283,7 @@ static bool ftdi_swd_seq_in_parity(uint32_t *const result, const size_t clock_cy
 static uint32_t ftdi_swd_seq_in_mpsse(const size_t clock_cycles)
 {
 	uint8_t data_out[4];
-	libftdi_jtagtap_tdi_tdo_seq(data_out, false, NULL, clock_cycles);
+	ftdi_jtag_tdi_tdo_seq(data_out, false, NULL, clock_cycles);
 	size_t bytes = clock_cycles >> 3U;
 	if (clock_cycles & 7U)
 		bytes++;
@@ -335,7 +335,7 @@ static void ftdi_swd_seq_out_mpsse(const uint32_t tms_states, const size_t clock
 		(tms_states >> 16U) & 0xffU,
 		(tms_states >> 24U) & 0xffU,
 	};
-	libftdi_jtagtap_tdi_tdo_seq(NULL, false, data_in, clock_cycles);
+	ftdi_jtag_tdi_tdo_seq(NULL, false, data_in, clock_cycles);
 }
 
 static void ftdi_swd_seq_out_raw(uint32_t tms_states, const size_t clock_cycles)
@@ -394,7 +394,7 @@ static void ftdi_swd_seq_out_parity_mpsse(const uint32_t tms_states, const uint8
 	 * then an additional 1 for the parity, and finally
 	 * 8 more to complete the idle cycles.
 	 */
-	libftdi_jtagtap_tdi_tdo_seq(NULL, false, data_in, clock_cycles + 9U);
+	ftdi_jtag_tdi_tdo_seq(NULL, false, data_in, clock_cycles + 9U);
 }
 
 static void ftdi_swd_seq_out_parity_raw(const uint32_t tms_states, const uint8_t parity, const size_t clock_cycles)

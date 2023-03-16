@@ -142,7 +142,7 @@ const char *libftdi_target_voltage(void)
 	return "ERROR";
 }
 
-void libftdi_jtagtap_tdi_tdo_seq(
+void ftdi_jtag_tdi_tdo_seq(
 	uint8_t *const data_out, const bool final_tms, const uint8_t *const data_in, const size_t ticks)
 {
 }
@@ -194,7 +194,7 @@ void libftdi_buffer_flush(void);
 size_t libftdi_buffer_write(const void *buffer, size_t size);
 size_t libftdi_buffer_read(void *buffer, size_t size);
 const char *libftdi_target_voltage(void);
-void libftdi_jtagtap_tdi_tdo_seq(uint8_t *data_out, bool final_tms, const uint8_t *data_in, size_t ticks);
+void ftdi_jtag_tdi_tdo_seq(uint8_t *data_out, bool final_tms, const uint8_t *data_in, size_t ticks);
 bool ftdi_swd_possible(void);
 void libftdi_max_frequency_set(uint32_t freq);
 uint32_t libftdi_max_frequency_get(void);
