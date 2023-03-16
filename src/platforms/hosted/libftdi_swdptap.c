@@ -45,7 +45,7 @@ static bool direct_bb_swd;
 static bool ftdi_swd_seq_in_parity(uint32_t *res, size_t clock_cycles);
 static uint32_t ftdi_swd_seq_in(size_t clock_cycles);
 static void ftdi_swd_seq_out(uint32_t tms_states, size_t clock_cycles);
-static void swdptap_seq_out_parity(uint32_t tms_states, size_t clock_cycles);
+static void ftdi_swd_seq_out_parity(uint32_t tms_states, size_t clock_cycles);
 
 bool ftdi_swd_possible(void)
 {
@@ -110,7 +110,7 @@ bool ftdi_swd_init(void)
 	swd_proc.seq_in = ftdi_swd_seq_in;
 	swd_proc.seq_in_parity = ftdi_swd_seq_in_parity;
 	swd_proc.seq_out = ftdi_swd_seq_out;
-	swd_proc.seq_out_parity = swdptap_seq_out_parity;
+	swd_proc.seq_out_parity = ftdi_swd_seq_out_parity;
 	return true;
 }
 
@@ -408,7 +408,7 @@ static void ftdi_swd_seq_out(const uint32_t tms_states, const size_t clock_cycle
  * We implement the last option to favour correctness over a slight speed decrease
  */
 
-static void swdptap_seq_out_parity_mpsse(const uint32_t tms_states, const uint8_t parity, const size_t clock_cycles)
+static void ftdi_swd_seq_out_parity_mpsse(const uint32_t tms_states, const uint8_t parity, const size_t clock_cycles)
 {
 	uint8_t data_in[6] = {
 		tms_states & 0xffU,
@@ -431,7 +431,7 @@ static void swdptap_seq_out_parity_mpsse(const uint32_t tms_states, const uint8_
 	libftdi_jtagtap_tdi_tdo_seq(NULL, false, data_in, clock_cycles + 9U);
 }
 
-static void swdptap_seq_out_parity_raw(const uint32_t tms_states, const uint8_t parity, const size_t clock_cycles)
+static void ftdi_swd_seq_out_parity_raw(const uint32_t tms_states, const uint8_t parity, const size_t clock_cycles)
 {
 	uint8_t cmd[18] = {};
 	size_t offset = 0;
@@ -466,14 +466,14 @@ static void swdptap_seq_out_parity_raw(const uint32_t tms_states, const uint8_t 
 	libftdi_buffer_write(cmd, offset);
 }
 
-static void swdptap_seq_out_parity(uint32_t tms_states, size_t clock_cycles)
+static void ftdi_swd_seq_out_parity(uint32_t tms_states, size_t clock_cycles)
 {
 	if (clock_cycles > 32U)
 		return;
 	const uint8_t parity = __builtin_parity(tms_states) & 1U;
 	swdptap_turnaround(SWDIO_STATUS_DRIVE);
 	if (do_mpsse)
-		swdptap_seq_out_parity_mpsse(tms_states, parity, clock_cycles);
+		ftdi_swd_seq_out_parity_mpsse(tms_states, parity, clock_cycles);
 	else
-		swdptap_seq_out_parity_raw(tms_states, parity, clock_cycles);
+		ftdi_swd_seq_out_parity_raw(tms_states, parity, clock_cycles);
 }
