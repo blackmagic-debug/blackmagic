@@ -208,12 +208,12 @@ static void ftdi_swd_turnaround_raw(const swdio_status_e dir)
 	libftdi_buffer_write_arr(cmd);
 }
 
-static void swdptap_turnaround(const swdio_status_e dir)
+static void ftdi_swd_turnaround(const swdio_status_e dir)
 {
 	if (dir == olddir)
 		return;
 	olddir = dir;
-	DEBUG_PROBE("Turnaround %s\n", dir == SWDIO_STATUS_FLOAT ? "float" : "drive");
+	DEBUG_PROBE("%s: %s\n", __func__, dir == SWDIO_STATUS_FLOAT ? "float" : "drive");
 	if (do_mpsse)
 		ftdi_swd_turnaround_mpsse(dir);
 	else
@@ -248,7 +248,7 @@ bool swdptap_bit_in_raw(void)
 
 bool swdptap_bit_in(void)
 {
-	swdptap_turnaround(SWDIO_STATUS_FLOAT);
+	ftdi_swd_turnaround(SWDIO_STATUS_FLOAT);
 	if (do_mpsse)
 		return swdptap_bit_in_mpsse();
 	return swdptap_bit_in_raw();
@@ -256,7 +256,7 @@ bool swdptap_bit_in(void)
 
 void swdptap_bit_out(bool val)
 {
-	swdptap_turnaround(SWDIO_STATUS_DRIVE);
+	ftdi_swd_turnaround(SWDIO_STATUS_DRIVE);
 	if (do_mpsse) {
 		const uint8_t cmd[3] = {
 			MPSSE_TDO_SHIFT,
@@ -317,7 +317,7 @@ static bool ftdi_swd_seq_in_parity(uint32_t *const result, const size_t clock_cy
 {
 	if (clock_cycles > 32U)
 		return false;
-	swdptap_turnaround(SWDIO_STATUS_FLOAT);
+	ftdi_swd_turnaround(SWDIO_STATUS_FLOAT);
 	if (do_mpsse)
 		return ftdi_swd_seq_in_parity_mpsse(result, clock_cycles);
 	return ftdi_swd_seq_in_parity_raw(result, clock_cycles);
@@ -361,7 +361,7 @@ static uint32_t ftdi_swd_seq_in(size_t clock_cycles)
 {
 	if (!clock_cycles || clock_cycles > 32U)
 		return 0;
-	swdptap_turnaround(SWDIO_STATUS_FLOAT);
+	ftdi_swd_turnaround(SWDIO_STATUS_FLOAT);
 	if (do_mpsse)
 		return ftdi_swd_seq_in_mpsse(clock_cycles);
 	return ftdi_swd_seq_in_raw(clock_cycles);
@@ -395,7 +395,7 @@ static void ftdi_swd_seq_out(const uint32_t tms_states, const size_t clock_cycle
 {
 	if (!clock_cycles || clock_cycles > 32U)
 		return;
-	swdptap_turnaround(SWDIO_STATUS_DRIVE);
+	ftdi_swd_turnaround(SWDIO_STATUS_DRIVE);
 	if (do_mpsse)
 		ftdi_swd_seq_out_mpsse(tms_states, clock_cycles);
 	else
@@ -475,7 +475,7 @@ static void ftdi_swd_seq_out_parity(uint32_t tms_states, size_t clock_cycles)
 	if (clock_cycles > 32U)
 		return;
 	const uint8_t parity = __builtin_parity(tms_states) & 1U;
-	swdptap_turnaround(SWDIO_STATUS_DRIVE);
+	ftdi_swd_turnaround(SWDIO_STATUS_DRIVE);
 	if (do_mpsse)
 		ftdi_swd_seq_out_parity_mpsse(tms_states, parity, clock_cycles);
 	else
