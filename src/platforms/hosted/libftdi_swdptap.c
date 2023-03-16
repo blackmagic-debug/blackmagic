@@ -114,14 +114,16 @@ bool ftdi_swd_init(void)
 	return true;
 }
 
-static void swdptap_turnaround_mpsse(const swdio_status_e dir)
+static void ftdi_swd_turnaround_mpsse(const swdio_status_e dir)
 {
-	if (dir == SWDIO_STATUS_FLOAT) { /* SWDIO goes to input */
+	/* If the turnaround should set SWDIO to an input */
+	if (dir == SWDIO_STATUS_FLOAT) {
 		active_state.data_low |= active_cable.mpsse_swd_read.set_data_low | MPSSE_DO;
 		active_state.data_low &= ~active_cable.mpsse_swd_read.clr_data_low;
 		active_state.ddr_low &= ~MPSSE_DO;
 		active_state.data_high |= active_cable.mpsse_swd_read.set_data_high;
 		active_state.data_high &= ~active_cable.mpsse_swd_read.clr_data_high;
+		/* Set up the pin states accordingly */
 		const uint8_t cmd_read[6] = {
 			SET_BITS_LOW,
 			active_state.data_low,
@@ -132,19 +134,17 @@ static void swdptap_turnaround_mpsse(const swdio_status_e dir)
 		};
 		libftdi_buffer_write_arr(cmd_read);
 	}
-	/* One clock cycle */
-	const uint8_t cmd[3] = {
-		MPSSE_TDO_SHIFT,
-		0,
-		0,
-	};
-	libftdi_buffer_write_arr(cmd);
-	if (dir == SWDIO_STATUS_DRIVE) { /* SWDIO goes to output */
+	/* Run one idle clock cycle */
+	const ftdi_mpsse_cmd_s cmd = {MPSSE_TDO_SHIFT, {}};
+	libftdi_buffer_write_val(cmd);
+	/* If the turnaround should set SWDIO to an output */
+	if (dir == SWDIO_STATUS_DRIVE) {
 		active_state.data_low |= active_cable.mpsse_swd_write.set_data_low | MPSSE_DO;
 		active_state.data_low &= ~active_cable.mpsse_swd_write.clr_data_low;
 		active_state.ddr_low |= MPSSE_DO;
 		active_state.data_high |= active_cable.mpsse_swd_write.set_data_high;
 		active_state.data_high &= ~active_cable.mpsse_swd_write.clr_data_high;
+		/* Set up the pin states accordingly */
 		const uint8_t cmd_write[6] = {
 			SET_BITS_LOW,
 			active_state.data_low,
@@ -211,7 +211,7 @@ static void swdptap_turnaround(const swdio_status_e dir)
 	olddir = dir;
 	DEBUG_PROBE("Turnaround %s\n", dir == SWDIO_STATUS_FLOAT ? "float" : "drive");
 	if (do_mpsse)
-		swdptap_turnaround_mpsse(dir);
+		ftdi_swd_turnaround_mpsse(dir);
 	else
 		swdptap_turnaround_raw(dir);
 }
