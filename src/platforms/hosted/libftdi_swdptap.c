@@ -44,7 +44,7 @@ static bool direct_bb_swd;
 
 static bool ftdi_swd_seq_in_parity(uint32_t *res, size_t clock_cycles);
 static uint32_t ftdi_swd_seq_in(size_t clock_cycles);
-static void swdptap_seq_out(uint32_t tms_states, size_t clock_cycles);
+static void ftdi_swd_seq_out(uint32_t tms_states, size_t clock_cycles);
 static void swdptap_seq_out_parity(uint32_t tms_states, size_t clock_cycles);
 
 bool ftdi_swd_possible(void)
@@ -109,7 +109,7 @@ bool ftdi_swd_init(void)
 
 	swd_proc.seq_in = ftdi_swd_seq_in;
 	swd_proc.seq_in_parity = ftdi_swd_seq_in_parity;
-	swd_proc.seq_out = swdptap_seq_out;
+	swd_proc.seq_out = ftdi_swd_seq_out;
 	swd_proc.seq_out_parity = swdptap_seq_out_parity;
 	return true;
 }
@@ -363,7 +363,7 @@ static uint32_t ftdi_swd_seq_in(size_t clock_cycles)
 	return ftdi_swd_seq_in_raw(clock_cycles);
 }
 
-static void swdptap_seq_out_mpsse(const uint32_t tms_states, const size_t clock_cycles)
+static void ftdi_swd_seq_out_mpsse(const uint32_t tms_states, const size_t clock_cycles)
 {
 	const uint8_t data_in[4] = {
 		tms_states & 0xffU,
@@ -374,7 +374,7 @@ static void swdptap_seq_out_mpsse(const uint32_t tms_states, const size_t clock_
 	libftdi_jtagtap_tdi_tdo_seq(NULL, false, data_in, clock_cycles);
 }
 
-static void swdptap_seq_out_raw(uint32_t tms_states, const size_t clock_cycles)
+static void ftdi_swd_seq_out_raw(uint32_t tms_states, const size_t clock_cycles)
 {
 	uint8_t cmd[15] = {};
 	size_t offset = 0U;
@@ -387,15 +387,15 @@ static void swdptap_seq_out_raw(uint32_t tms_states, const size_t clock_cycles)
 	libftdi_buffer_write(cmd, offset);
 }
 
-static void swdptap_seq_out(const uint32_t tms_states, const size_t clock_cycles)
+static void ftdi_swd_seq_out(const uint32_t tms_states, const size_t clock_cycles)
 {
 	if (!clock_cycles || clock_cycles > 32U)
 		return;
 	swdptap_turnaround(SWDIO_STATUS_DRIVE);
 	if (do_mpsse)
-		swdptap_seq_out_mpsse(tms_states, clock_cycles);
+		ftdi_swd_seq_out_mpsse(tms_states, clock_cycles);
 	else
-		swdptap_seq_out_raw(tms_states, clock_cycles);
+		ftdi_swd_seq_out_raw(tms_states, clock_cycles);
 }
 
 /*
