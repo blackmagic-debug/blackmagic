@@ -53,7 +53,7 @@ static bool jtagtap_next(bool tms, bool tdi);
  * Each command block is allowed to handle at most 7 clock cycles - why not 8 is undocumented.
  */
 
-void libftdi_drain_potential_garbage(void)
+void ftdi_jtag_drain_potential_garbage(void)
 {
 	uint8_t data[16];
 	int garbage = ftdi_read_data(info.ftdi_ctx, data, sizeof(data));
@@ -65,7 +65,7 @@ void libftdi_drain_potential_garbage(void)
 	}
 }
 
-bool libftdi_jtagtap_init(void)
+bool ftdi_jtag_init(void)
 {
 	if (active_cable.mpsse_swd_read.set_data_low == MPSSE_DO && active_cable.mpsse_swd_write.set_data_low == MPSSE_DO) {
 		DEBUG_WARN("JTAG not possible with resistor SWD!\n");
@@ -84,7 +84,7 @@ bool libftdi_jtagtap_init(void)
 	active_state.ddr_low &= ~MPSSE_DI;
 	active_state.data_high |= active_cable.jtag.set_data_high;
 	active_state.data_high &= ~active_cable.jtag.clr_data_high;
-	libftdi_drain_potential_garbage();
+	ftdi_jtag_drain_potential_garbage();
 
 	const uint8_t cmd[6] = {
 		SET_BITS_LOW,
@@ -98,7 +98,7 @@ bool libftdi_jtagtap_init(void)
 	libftdi_buffer_flush();
 	/* Write out start condition and pull garbage from read buffer.
 	 * FT2232D otherwise misbehaves on runs following the first run.*/
-	libftdi_drain_potential_garbage();
+	ftdi_jtag_drain_potential_garbage();
 
 	/* Ensure we're in JTAG mode */
 	for (size_t i = 0; i <= 50U; ++i)
