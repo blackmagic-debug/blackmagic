@@ -41,10 +41,10 @@ bool remote_swdptap_init(void)
 	DEBUG_WIRE("remote_swdptap_init\n");
 	platform_buffer_write(REMOTE_SWDP_INIT_STR, sizeof(REMOTE_SWDP_INIT_STR));
 
-	char construct[REMOTE_MAX_MSG_SIZE];
-	int length = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
-	if (!length || construct[0] == REMOTE_RESP_ERR) {
-		DEBUG_WARN("swdptap_init failed, error %s\n", length ? construct + 1 : "unknown");
+	char buffer[REMOTE_MAX_MSG_SIZE];
+	int length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
+	if (!length || buffer[0] == REMOTE_RESP_ERR) {
+		DEBUG_WARN("swdptap_init failed, error %s\n", length ? buffer + 1 : "unknown");
 		exit(-1);
 	}
 
