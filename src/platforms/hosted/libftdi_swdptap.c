@@ -398,8 +398,8 @@ static void ftdi_swd_seq_out_parity_raw(const uint32_t tms_states, const uint8_t
 		cmd[offset + 2U] = tms_states & 0x7fU;
 	}
 	/* Calculate which command block the parity goes in */
-	const div_t parity_index = div(clock_cycles, 7U);
-	const size_t parity_offset = parity_index.quot * 3U;
+	const div_t parity_index = div((int32_t)clock_cycles, 7U);
+	const uint32_t parity_offset = parity_index.quot * 3U;
 	cmd[parity_offset] = MPSSE_TMS_SHIFT;
 	cmd[parity_offset + 1U] = 6U;                            /* Increase that block's cycle count to 7 cycles */
 	cmd[parity_offset + 2U] |= (parity << parity_index.rem); /* And write the parity bit in */
