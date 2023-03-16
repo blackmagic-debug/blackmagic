@@ -28,10 +28,10 @@
 #include "bmp_hosted.h"
 
 typedef struct data_desc {
-	int16_t data_low;
-	int16_t ddr_low;
-	int16_t data_high;
-	int16_t ddr_high;
+	uint16_t data_low;
+	uint16_t ddr_low;
+	uint16_t data_high;
+	uint16_t ddr_high;
 } data_desc_s;
 
 typedef struct pin_settings {
