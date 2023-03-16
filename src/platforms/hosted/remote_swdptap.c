@@ -32,7 +32,7 @@
 #include "bmp_remote.h"
 
 static bool remote_swd_seq_in_parity(uint32_t *res, size_t clock_cycles);
-static uint32_t swdptap_seq_in(size_t clock_cycles);
+static uint32_t remote_swd_seq_in(size_t clock_cycles);
 static void swdptap_seq_out(uint32_t tms_states, size_t clock_cycles);
 static void swdptap_seq_out_parity(uint32_t tms_states, size_t clock_cycles);
 
@@ -48,7 +48,7 @@ bool remote_swdptap_init(void)
 		exit(-1);
 	}
 
-	swd_proc.seq_in = swdptap_seq_in;
+	swd_proc.seq_in = remote_swd_seq_in;
 	swd_proc.seq_in_parity = remote_swd_seq_in_parity;
 	swd_proc.seq_out = swdptap_seq_out;
 	swd_proc.seq_out_parity = swdptap_seq_out_parity;
@@ -74,7 +74,7 @@ static bool remote_swd_seq_in_parity(uint32_t *res, size_t clock_cycles)
 	return buffer[0] != REMOTE_RESP_OK;
 }
 
-static uint32_t swdptap_seq_in(size_t clock_cycles)
+static uint32_t remote_swd_seq_in(size_t clock_cycles)
 {
 	char buffer[REMOTE_MAX_MSG_SIZE];
 
@@ -83,11 +83,11 @@ static uint32_t swdptap_seq_in(size_t clock_cycles)
 
 	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	if (length < 2 || buffer[0] == REMOTE_RESP_ERR) {
-		DEBUG_WARN("swdptap_seq_in failed, error %s\n", length ? buffer + 1 : "short response");
+		DEBUG_WARN("%s failed, error %s\n", __func__, length ? buffer + 1 : "short response");
 		exit(-1);
 	}
 	uint32_t res = remote_hex_string_to_num(-1, buffer + 1);
-	DEBUG_PROBE("swdptap_seq_in %zu clock_cycles: %08" PRIx32 "\n", clock_cycles, res);
+	DEBUG_PROBE("%s %zu clock_cycles: %08" PRIx32 "\n", __func__, clock_cycles, res);
 	return res;
 }
 
