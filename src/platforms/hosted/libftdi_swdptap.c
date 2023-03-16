@@ -101,9 +101,15 @@ bool ftdi_swd_init(void)
 		else if (active_cable.bb_swdio_in_port_cmd == GET_BITS_HIGH)
 			active_state.ddr_high &= ~active_cable.bb_swdio_in_pin;
 	}
-	uint8_t cmd_write[6] = {SET_BITS_LOW, active_state.data_low, active_state.ddr_low, SET_BITS_HIGH,
-		active_state.data_high, active_state.ddr_high};
-	libftdi_buffer_write(cmd_write, 6);
+	const uint8_t cmd_write[6] = {
+		SET_BITS_LOW,
+		active_state.data_low,
+		active_state.ddr_low,
+		SET_BITS_HIGH,
+		active_state.data_high,
+		active_state.ddr_high,
+	};
+	libftdi_buffer_write_arr(cmd_write);
 	libftdi_buffer_flush();
 	olddir = SWDIO_STATUS_FLOAT;
 
