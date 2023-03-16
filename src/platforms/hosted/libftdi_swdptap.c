@@ -47,7 +47,7 @@ static uint32_t swdptap_seq_in(size_t clock_cycles);
 static void swdptap_seq_out(uint32_t tms_states, size_t clock_cycles);
 static void swdptap_seq_out_parity(uint32_t tms_states, size_t clock_cycles);
 
-bool libftdi_swd_possible(void)
+bool ftdi_swd_possible(void)
 {
 	const bool swd_read = active_cable.mpsse_swd_read.set_data_low || active_cable.mpsse_swd_read.clr_data_low ||
 		active_cable.mpsse_swd_read.set_data_high || active_cable.mpsse_swd_read.clr_data_high;
@@ -69,9 +69,9 @@ bool libftdi_swd_possible(void)
 	return true;
 }
 
-bool libftdi_swdptap_init(void)
+bool ftdi_swd_init(void)
 {
-	if (!libftdi_swd_possible()) {
+	if (!ftdi_swd_possible()) {
 		DEBUG_WARN("SWD not possible or missing item in cable description.\n");
 		return false;
 	}

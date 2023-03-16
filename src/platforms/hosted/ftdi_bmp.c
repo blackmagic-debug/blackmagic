@@ -409,7 +409,7 @@ bool ftdi_bmp_init(bmda_cli_options_s *const cl_opts)
 		DEBUG_INFO("Using external resistor SWD\n");
 		active_cable.mpsse_swd_read.set_data_low = MPSSE_DO;
 		active_cable.mpsse_swd_write.set_data_low = MPSSE_DO;
-	} else if (!libftdi_swd_possible() && cl_opts->opt_scanmode != BMP_SCAN_JTAG) {
+	} else if (!ftdi_swd_possible() && cl_opts->opt_scanmode != BMP_SCAN_JTAG) {
 		DEBUG_WARN("SWD with adaptor not possible, trying JTAG\n");
 		cl_opts->opt_scanmode = BMP_SCAN_JTAG;
 	}

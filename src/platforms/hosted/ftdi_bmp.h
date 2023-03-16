@@ -113,7 +113,7 @@ bool ftdi_bmp_init(bmda_cli_options_s *cl_opts)
 	return false;
 }
 
-bool libftdi_swdptap_init(void)
+bool ftdi_swd_init(void)
 {
 	return false;
 }
@@ -147,7 +147,7 @@ void libftdi_jtagtap_tdi_tdo_seq(
 {
 }
 
-bool libftdi_swd_possible(void)
+bool ftdi_swd_possible(void)
 {
 	return false;
 }
@@ -188,14 +188,14 @@ typedef struct ftdi_mpsse_cmd_bits {
 } ftdi_mpsse_cmd_bits_s;
 
 bool ftdi_bmp_init(bmda_cli_options_s *cl_opts);
-bool libftdi_swdptap_init(void);
+bool ftdi_swd_init(void);
 bool libftdi_jtagtap_init(void);
 void libftdi_buffer_flush(void);
 size_t libftdi_buffer_write(const void *buffer, size_t size);
 size_t libftdi_buffer_read(void *buffer, size_t size);
 const char *libftdi_target_voltage(void);
 void libftdi_jtagtap_tdi_tdo_seq(uint8_t *data_out, bool final_tms, const uint8_t *data_in, size_t ticks);
-bool libftdi_swd_possible(void);
+bool ftdi_swd_possible(void);
 void libftdi_max_frequency_set(uint32_t freq);
 uint32_t libftdi_max_frequency_get(void);
 void libftdi_nrst_set_val(bool assert);
