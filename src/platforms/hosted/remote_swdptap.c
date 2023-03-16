@@ -76,17 +76,17 @@ static bool swdptap_seq_in_parity(uint32_t *res, size_t clock_cycles)
 
 static uint32_t swdptap_seq_in(size_t clock_cycles)
 {
-	char construct[REMOTE_MAX_MSG_SIZE];
+	char buffer[REMOTE_MAX_MSG_SIZE];
 
-	int length = sprintf(construct, REMOTE_SWDP_IN_STR, clock_cycles);
-	platform_buffer_write(construct, length);
+	int length = sprintf(buffer, REMOTE_SWDP_IN_STR, clock_cycles);
+	platform_buffer_write(buffer, length);
 
-	length = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
-	if (length < 2 || construct[0] == REMOTE_RESP_ERR) {
-		DEBUG_WARN("swdptap_seq_in failed, error %s\n", length ? construct + 1 : "short response");
+	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
+	if (length < 2 || buffer[0] == REMOTE_RESP_ERR) {
+		DEBUG_WARN("swdptap_seq_in failed, error %s\n", length ? buffer + 1 : "short response");
 		exit(-1);
 	}
-	uint32_t res = remote_hex_string_to_num(-1, &construct[1]);
+	uint32_t res = remote_hex_string_to_num(-1, buffer + 1);
 	DEBUG_PROBE("swdptap_seq_in         %2d clock_cycles: %08" PRIx32 "\n", clock_cycles, res);
 	return res;
 }
