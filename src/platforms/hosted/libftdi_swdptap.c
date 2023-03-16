@@ -42,7 +42,7 @@ static bool direct_bb_swd;
 #define MPSSE_TMS_SHIFT (MPSSE_WRITE_TMS | MPSSE_LSB | MPSSE_BITMODE | MPSSE_WRITE_NEG)
 #define MPSSE_TDO_SHIFT (MPSSE_DO_WRITE | MPSSE_LSB | MPSSE_BITMODE | MPSSE_WRITE_NEG)
 
-static bool swdptap_seq_in_parity(uint32_t *res, size_t clock_cycles);
+static bool ftdi_swd_seq_in_parity(uint32_t *res, size_t clock_cycles);
 static uint32_t swdptap_seq_in(size_t clock_cycles);
 static void swdptap_seq_out(uint32_t tms_states, size_t clock_cycles);
 static void swdptap_seq_out_parity(uint32_t tms_states, size_t clock_cycles);
@@ -108,7 +108,7 @@ bool ftdi_swd_init(void)
 	olddir = SWDIO_STATUS_FLOAT;
 
 	swd_proc.seq_in = swdptap_seq_in;
-	swd_proc.seq_in_parity = swdptap_seq_in_parity;
+	swd_proc.seq_in_parity = ftdi_swd_seq_in_parity;
 	swd_proc.seq_out = swdptap_seq_out;
 	swd_proc.seq_out_parity = swdptap_seq_out_parity;
 	return true;
@@ -283,7 +283,7 @@ static bool ftdi_swd_seq_in_parity_mpsse(uint32_t *const result, const size_t cl
 	return parity;
 }
 
-static bool swdptap_seq_in_parity_raw(uint32_t *const result, const size_t clock_cycles)
+static bool ftdi_swd_seq_in_parity_raw(uint32_t *const result, const size_t clock_cycles)
 {
 	const uint8_t cmd[4] = {
 		active_cable.bb_swdio_in_port_cmd,
@@ -309,14 +309,14 @@ static bool swdptap_seq_in_parity_raw(uint32_t *const result, const size_t clock
 	return parity;
 }
 
-static bool swdptap_seq_in_parity(uint32_t *const result, const size_t clock_cycles)
+static bool ftdi_swd_seq_in_parity(uint32_t *const result, const size_t clock_cycles)
 {
 	if (clock_cycles > 32U)
 		return false;
 	swdptap_turnaround(SWDIO_STATUS_FLOAT);
 	if (do_mpsse)
 		return ftdi_swd_seq_in_parity_mpsse(result, clock_cycles);
-	return swdptap_seq_in_parity_raw(result, clock_cycles);
+	return ftdi_swd_seq_in_parity_raw(result, clock_cycles);
 }
 
 static uint32_t swdptap_seq_in_mpsse(const size_t clock_cycles)
