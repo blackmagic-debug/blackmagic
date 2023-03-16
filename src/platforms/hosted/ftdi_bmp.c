@@ -625,7 +625,6 @@ void libftdi_buffer_flush(void)
 	tc_write = ftdi_write_data_submit(info.ftdi_ctx, outbuf, bufptr);
 #else
 	assert(ftdi_write_data(info.ftdi_ctx, outbuf, bufptr) == bufptr);
-	DEBUG_WIRE("FT2232 libftdi_buffer flush: %d bytes\n", bufptr);
 #endif
 	bufptr = 0;
 }
@@ -650,23 +649,21 @@ size_t libftdi_buffer_write(const void *const buffer, const size_t size)
 
 size_t libftdi_buffer_read(void *const buffer, const size_t size)
 {
-	uint8_t *const data = (uint8_t *)buffer;
-#if defined(USE_USB_VERSION_BIT)
-	if (bufptr) {
-		outbuf[bufptr++] = SEND_IMMEDIATE;
-		libftdi_buffer_flush();
-	}
-	ftdi_transfer_control_s *tc = ftdi_read_data_submit(info.ftdi_ctx, data, size);
-	ftdi_transfer_data_done(tc);
-#else
 	if (bufptr) {
 		const uint8_t cmd = SEND_IMMEDIATE;
 		libftdi_buffer_write(&cmd, 1);
 		libftdi_buffer_flush();
 	}
+
+	uint8_t *const data = (uint8_t *)buffer;
+#if defined(USE_USB_VERSION_BIT)
+	ftdi_transfer_control_s *transfer = ftdi_read_data_submit(info.ftdi_ctx, data, (int)size);
+	ftdi_transfer_data_done(transfer);
+#else
 	for (size_t index = 0; index < size;)
 		index += ftdi_read_data(info.ftdi_ctx, data + index, size - index);
 #endif
+
 	DEBUG_WIRE("%s: %zu bytes:", __func__, size);
 	for (size_t i = 0; i < size; i++) {
 		DEBUG_WIRE(" %02x", data[i]);
