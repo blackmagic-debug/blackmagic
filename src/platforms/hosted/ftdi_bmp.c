@@ -618,7 +618,7 @@ void libftdi_buffer_flush(void)
 {
 	if (!bufptr)
 		return;
-	DEBUG_WIRE("Flush %d\n", bufptr);
+	DEBUG_WIRE("%s: %u bytes\n", __func__, bufptr);
 #if defined(USE_USB_VERSION_BIT)
 	if (tc_write)
 		ftdi_transfer_data_done(tc_write);
@@ -636,7 +636,7 @@ size_t libftdi_buffer_write(const void *const buffer, const size_t size)
 		libftdi_buffer_flush();
 
 	const uint8_t *const data = (const uint8_t *)buffer;
-	DEBUG_WIRE("Write %d bytes:", size);
+	DEBUG_WIRE("%s: %zu bytes:", __func__, size);
 	for (size_t i = 0; i < size; i++) {
 		DEBUG_WIRE(" %02x", data[i]);
 		if (i && (i & 0xfU) == 0xfU)
@@ -667,7 +667,7 @@ size_t libftdi_buffer_read(void *const buffer, const size_t size)
 	for (size_t index = 0; index < size;)
 		index += ftdi_read_data(info.ftdi_ctx, data + index, size - index);
 #endif
-	DEBUG_WIRE("Read  %d bytes:", size);
+	DEBUG_WIRE("%s: %zu bytes:", __func__, size);
 	for (size_t i = 0; i < size; i++) {
 		DEBUG_WIRE(" %02x", data[i]);
 		if ((i & 0xfU) == 0xfU)
@@ -682,7 +682,7 @@ void ftdi_jtag_tdi_tdo_seq(uint8_t *data_out, const bool final_tms, const uint8_
 	if (!clock_cycles || (!data_in && !data_out))
 		return;
 
-	DEBUG_WIRE("%s: %s %zu clock cycles\n", __func__,
+	DEBUG_PROBE("%s: %s %zu clock cycles\n", __func__,
 		data_in && data_out ? "read/write" :
 			data_in         ? "write" :
 							  "read",
