@@ -82,9 +82,9 @@ bool ftdi_swd_init(void)
 	if (do_mpsse) {
 		DEBUG_INFO("Using genuine MPSSE for SWD.\n");
 		active_state.data_low |= active_cable.mpsse_swd_read.set_data_low;
-		active_state.data_low &= ~(active_cable.mpsse_swd_read.clr_data_low);
+		active_state.data_low &= ~active_cable.mpsse_swd_read.clr_data_low;
 		active_state.data_high |= active_cable.mpsse_swd_read.set_data_high;
-		active_state.data_high &= ~(active_cable.mpsse_swd_read.clr_data_high);
+		active_state.data_high &= ~active_cable.mpsse_swd_read.clr_data_high;
 	} else if (direct_bb_swd) {
 		DEBUG_INFO("Using direct bitbang with SWDIO %cBUS%d.\n",
 			(active_cable.bb_swdio_in_port_cmd == GET_BITS_LOW) ? 'C' : 'D',
@@ -92,9 +92,9 @@ bool ftdi_swd_init(void)
 	} else {
 		DEBUG_INFO("Using switched bitbang for SWD.\n");
 		active_state.data_low |= active_cable.bb_swd_read.set_data_low;
-		active_state.data_low &= ~(active_cable.bb_swd_read.clr_data_low);
+		active_state.data_low &= (~active_cable.bb_swd_read.clr_data_low);
 		active_state.data_high |= active_cable.bb_swd_read.set_data_high;
-		active_state.data_high &= ~(active_cable.bb_swd_read.clr_data_high);
+		active_state.data_high &= (~active_cable.bb_swd_read.clr_data_high);
 		active_state.ddr_low |= MPSSE_CS;
 		if (active_cable.bb_swdio_in_port_cmd == GET_BITS_LOW)
 			active_state.ddr_low &= ~active_cable.bb_swdio_in_pin;

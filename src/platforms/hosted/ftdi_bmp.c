@@ -525,31 +525,48 @@ static void libftdi_set_data(data_desc_s *data)
 	uint8_t cmd[6];
 	size_t index = 0;
 	if (data->data_low || data->ddr_low) {
-		if (data->data_low > 0)
+		/* If non-zero and positive if signed */
+		if (data->data_low && !(data->data_low & 0x8000U))
 			active_state.data_low |= data->data_low & 0xffU;
-		else if (data->data_low < 0)
+		/* If negative if signed */
+		else if (data->data_low & 0x8000U)
 			active_state.data_low &= data->data_low & 0xffU;
-		if (data->ddr_low > 0)
+
+		/* If non-zero and positive if signed */
+		if (data->ddr_low && !(data->ddr_low & 0x8000U))
 			active_state.ddr_low |= data->ddr_low & 0xffU;
-		else if (data->ddr_low < 0)
+		/* If negative if signed */
+		else if (data->ddr_low & 0x8000U)
 			active_state.ddr_low &= data->ddr_low & 0xffU;
-		cmd[index++] = SET_BITS_LOW;
-		cmd[index++] = active_state.data_low;
-		cmd[index++] = active_state.ddr_low;
+
+		/* Having adjusted the active state, configure the pins */
+		cmd[index + 0U] = SET_BITS_LOW;
+		cmd[index + 1U] = active_state.data_low;
+		cmd[index + 2U] = active_state.ddr_low;
+		index += 3U;
 	}
 	if (data->data_high || data->ddr_high) {
-		if (data->data_high > 0)
+		/* If non-zero and positive if signed */
+		if (data->data_high && !(data->data_high & 0x8000U))
 			active_state.data_high |= data->data_high & 0xffU;
-		else if (data->data_high < 0)
+		/* If negative if signed */
+		else if (data->data_high & 0x8000U)
 			active_state.data_high &= data->data_high & 0xffU;
-		if (data->ddr_high > 0)
+
+		/* If non-zero and positive if signed */
+		if (data->ddr_high && !(data->ddr_high & 0x8000U))
 			active_state.ddr_high |= data->ddr_high & 0xffU;
-		else if (data->ddr_high < 0)
+		/* If negative if signed */
+		else if (data->ddr_high & 0x8000U)
 			active_state.ddr_high &= data->ddr_high & 0xffU;
-		cmd[index++] = SET_BITS_HIGH;
-		cmd[index++] = active_state.data_high;
-		cmd[index++] = active_state.ddr_high;
+
+		/* Having adjusted the active state, configure the pins */
+		cmd[index + 0U] = SET_BITS_HIGH;
+		cmd[index + 1U] = active_state.data_high;
+		cmd[index + 2U] = active_state.ddr_high;
+		index += 3U;
 	}
+	/* If any adjustments needed to be made, send the commands and flush */
 	if (index) {
 		libftdi_buffer_write(cmd, index);
 		libftdi_buffer_flush();
