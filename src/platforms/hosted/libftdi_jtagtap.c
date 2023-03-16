@@ -3,6 +3,8 @@
  *
  * Copyright (C) 2008  Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
+ * Copyright (C) 2022-2023 1BitSquared <info@1bitsquared.com>
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,9 +20,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/*
- * Low level JTAG implementation using FT2232 with libftdi.
- */
+/* Low level JTAG implementation using FTDI parts via libftdi. */
 
 #include "general.h"
 #include <unistd.h>

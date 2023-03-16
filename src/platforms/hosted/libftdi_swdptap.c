@@ -1,7 +1,9 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright(C) 2018 - 2021 Uwe Bonnes (bon@elektron.ikp.physik.tu-darmstadt.de)
+ * Copyright (C) 2018-2021 Uwe Bonnes (bon@elektron.ikp.physik.tu-darmstadt.de)
+ * Copyright (C) 2022-2023 1BitSquared <info@1bitsquared.com>
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,8 +19,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* MPSSE bit-banging SW-DP interface over FTDI with loop unrolled.
- * Speed is sensible.
+/*
+ * Low level SWD implementation using FTDI parts via libftdi.
+ *
+ * Both bitbanged and MPSSE implementations are provided and provide decent speed
  */
 
 #include "general.h"
