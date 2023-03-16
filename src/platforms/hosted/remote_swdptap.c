@@ -38,7 +38,7 @@ static void swdptap_seq_out_parity(uint32_t tms_states, size_t clock_cycles);
 
 bool remote_swdptap_init(void)
 {
-	DEBUG_WIRE("remote_swdptap_init\n");
+	DEBUG_PROBE("remote_swdptap_init\n");
 	platform_buffer_write(REMOTE_SWDP_INIT_STR, sizeof(REMOTE_SWDP_INIT_STR));
 
 	char buffer[REMOTE_MAX_MSG_SIZE];
@@ -69,7 +69,7 @@ static bool swdptap_seq_in_parity(uint32_t *res, size_t clock_cycles)
 	}
 
 	*res = remote_hex_string_to_num(-1, buffer + 1);
-	DEBUG_PROBE("swdptap_seq_in_parity  %2d clock_cycles: %08" PRIx32 " %s\n", clock_cycles, *res,
+	DEBUG_PROBE("swdptap_seq_in_parity %zu clock_cycles: %08" PRIx32 " %s\n", clock_cycles, *res,
 		buffer[0] != REMOTE_RESP_OK ? "ERR" : "OK");
 	return buffer[0] != REMOTE_RESP_OK;
 }
@@ -87,7 +87,7 @@ static uint32_t swdptap_seq_in(size_t clock_cycles)
 		exit(-1);
 	}
 	uint32_t res = remote_hex_string_to_num(-1, buffer + 1);
-	DEBUG_PROBE("swdptap_seq_in         %2d clock_cycles: %08" PRIx32 "\n", clock_cycles, res);
+	DEBUG_PROBE("swdptap_seq_in %zu clock_cycles: %08" PRIx32 "\n", clock_cycles, res);
 	return res;
 }
 
@@ -95,7 +95,7 @@ static void swdptap_seq_out(uint32_t tms_states, size_t clock_cycles)
 {
 	char buffer[REMOTE_MAX_MSG_SIZE];
 
-	DEBUG_PROBE("swdptap_seq_out        %2d clock_cycles: %08" PRIx32 "\n", clock_cycles, tms_states);
+	DEBUG_PROBE("swdptap_seq_out %zu clock_cycles: %08" PRIx32 "\n", clock_cycles, tms_states);
 	int length = sprintf(buffer, REMOTE_SWDP_OUT_STR, clock_cycles, tms_states);
 	platform_buffer_write(buffer, length);
 
@@ -110,7 +110,7 @@ static void swdptap_seq_out_parity(uint32_t tms_states, size_t clock_cycles)
 {
 	char buffer[REMOTE_MAX_MSG_SIZE];
 
-	DEBUG_PROBE("swdptap_seq_out_parity %2d clock_cycles: %08" PRIx32 "\n", clock_cycles, tms_states);
+	DEBUG_PROBE("swdptap_seq_out_parity %zu clock_cycles: %08" PRIx32 "\n", clock_cycles, tms_states);
 	int length = sprintf(buffer, REMOTE_SWDP_OUT_PAR_STR, clock_cycles, tms_states);
 	platform_buffer_write(buffer, length);
 
