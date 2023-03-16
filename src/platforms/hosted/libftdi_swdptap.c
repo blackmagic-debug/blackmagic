@@ -72,9 +72,10 @@ bool ftdi_swd_possible(void)
 bool ftdi_swd_init(void)
 {
 	if (!ftdi_swd_possible()) {
-		DEBUG_WARN("SWD not possible or missing item in cable description.\n");
+		DEBUG_WARN("SWD not possible or missing item in adaptor description.\n");
 		return false;
 	}
+	DEBUG_PROBE("%s\n", __func__);
 	active_state.data_low &= ~MPSSE_SK;
 	active_state.data_low |= MPSSE_CS | MPSSE_DI | MPSSE_DO;
 	active_state.ddr_low &= ~(MPSSE_CS | MPSSE_DI | MPSSE_DO);
@@ -233,9 +234,8 @@ static bool ftdi_swd_seq_in_parity_mpsse(uint32_t *const result, const size_t cl
 	const uint32_t data = data_out[0] + (data_out[1] << 8U) + (data_out[2] << 16U) + (data_out[3] << 24U);
 	uint8_t parity = __builtin_parity(data & ((UINT64_C(1) << clock_cycles) - 1U));
 	parity ^= data_out[4] & 1U;
+	DEBUG_PROBE("%s %zu clock_cycles: %08" PRIx32 " %s\n", __func__, clock_cycles, data, parity ? "ERR" : "OK");
 	*result = data;
-	DEBUG_PROBE(
-		"ftdi_swd_seq_in_parity %zu clock_cycles: %08" PRIx32 " %s\n", clock_cycles, *result, parity ? "ERR" : "OK");
 	return parity;
 }
 
@@ -261,6 +261,7 @@ static bool ftdi_swd_seq_in_parity_raw(uint32_t *const result, const size_t cloc
 			data |= 1U << clock_cycle;
 		}
 	}
+	DEBUG_PROBE("%s %zu clock_cycles: %08" PRIx32 " %s\n", __func__, clock_cycles, data, parity ? "ERR" : "OK");
 	*result = data;
 	return parity;
 }
@@ -285,6 +286,7 @@ static uint32_t ftdi_swd_seq_in_mpsse(const size_t clock_cycles)
 	uint32_t result = 0U;
 	for (size_t i = 0U; i < bytes; i++)
 		result |= data_out[i] << (8U * i);
+	DEBUG_PROBE("%s %zu clock_cycles: %08" PRIx32 "\n", __func__, clock_cycles, result);
 	return result;
 }
 
@@ -306,6 +308,7 @@ static uint32_t ftdi_swd_seq_in_raw(const size_t clock_cycles)
 		if (data[clock_cycle] & active_cable.bb_swdio_in_pin)
 			result |= (1U << clock_cycle);
 	}
+	DEBUG_PROBE("%s %zu clock_cycles: %08" PRIx32 "\n", __func__, clock_cycles, result);
 	return result;
 }
 
@@ -321,6 +324,7 @@ static uint32_t ftdi_swd_seq_in(size_t clock_cycles)
 
 static void ftdi_swd_seq_out_mpsse(const uint32_t tms_states, const size_t clock_cycles)
 {
+	DEBUG_PROBE("%s %zu clock_cycles: %08" PRIx32 "\n", __func__, clock_cycles, tms_states);
 	const uint8_t data_in[4] = {
 		tms_states & 0xffU,
 		(tms_states >> 8U) & 0xffU,
@@ -332,6 +336,7 @@ static void ftdi_swd_seq_out_mpsse(const uint32_t tms_states, const size_t clock
 
 static void ftdi_swd_seq_out_raw(uint32_t tms_states, const size_t clock_cycles)
 {
+	DEBUG_PROBE("%s %zu clock_cycles: %08" PRIx32 "\n", __func__, clock_cycles, tms_states);
 	uint8_t cmd[15] = {};
 	size_t offset = 0U;
 	for (size_t cycle = 0U; cycle < clock_cycles; cycle += 7U, offset += 3U) {
@@ -366,6 +371,7 @@ static void ftdi_swd_seq_out(const uint32_t tms_states, const size_t clock_cycle
 
 static void ftdi_swd_seq_out_parity_mpsse(const uint32_t tms_states, const uint8_t parity, const size_t clock_cycles)
 {
+	DEBUG_PROBE("%s %zu clock_cycles: %08" PRIx32 "\n", __func__, clock_cycles, tms_states);
 	uint8_t data_in[6] = {
 		tms_states & 0xffU,
 		(tms_states >> 8U) & 0xffU,
@@ -389,6 +395,7 @@ static void ftdi_swd_seq_out_parity_mpsse(const uint32_t tms_states, const uint8
 
 static void ftdi_swd_seq_out_parity_raw(const uint32_t tms_states, const uint8_t parity, const size_t clock_cycles)
 {
+	DEBUG_PROBE("%s %zu clock_cycles: %08" PRIx32 "\n", __func__, clock_cycles, tms_states);
 	uint8_t cmd[18] = {};
 	size_t offset = 0;
 	for (size_t cycle = 0U; cycle < clock_cycles; cycle += 7U, offset += 3U) {
