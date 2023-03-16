@@ -226,60 +226,6 @@ static void ftdi_swd_turnaround(const swdio_status_e dir)
 		ftdi_swd_turnaround_raw(dir);
 }
 
-bool swdptap_bit_in_mpsse(void)
-{
-	const uint8_t cmd[2] = {
-		MPSSE_DO_READ | MPSSE_LSB | MPSSE_BITMODE,
-		0,
-	};
-	libftdi_buffer_write_arr(cmd);
-	uint8_t data;
-	libftdi_buffer_read_val(data);
-	return data & 0x80U;
-}
-
-bool swdptap_bit_in_raw(void)
-{
-	const uint8_t cmd[4] = {
-		active_cable.bb_swdio_in_port_cmd,
-		MPSSE_TMS_SHIFT,
-		0,
-		0,
-	};
-	libftdi_buffer_write_arr(cmd);
-	uint8_t data;
-	libftdi_buffer_read_val(data);
-	return data & active_cable.bb_swdio_in_pin;
-}
-
-bool swdptap_bit_in(void)
-{
-	ftdi_swd_turnaround(SWDIO_STATUS_FLOAT);
-	if (do_mpsse)
-		return swdptap_bit_in_mpsse();
-	return swdptap_bit_in_raw();
-}
-
-void swdptap_bit_out(bool val)
-{
-	ftdi_swd_turnaround(SWDIO_STATUS_DRIVE);
-	if (do_mpsse) {
-		const uint8_t cmd[3] = {
-			MPSSE_TDO_SHIFT,
-			0,
-			val ? 1 : 0,
-		};
-		libftdi_buffer_write_arr(cmd);
-	} else {
-		const uint8_t cmd[3] = {
-			MPSSE_TMS_SHIFT,
-			0,
-			val ? 1 : 0,
-		};
-		libftdi_buffer_write_arr(cmd);
-	}
-}
-
 static bool ftdi_swd_seq_in_parity_mpsse(uint32_t *const result, const size_t clock_cycles)
 {
 	uint8_t data_out[5] = {};
