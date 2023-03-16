@@ -29,7 +29,7 @@
 #include "ftdi_bmp.h"
 
 static void ftdi_jtag_reset(void);
-static void jtagtap_tms_seq(uint32_t tms_states, size_t clock_cycles);
+static void ftdi_jtag_tms_seq(uint32_t tms_states, size_t clock_cycles);
 static void ftdi_jtag_tdi_seq(bool final_tms, const uint8_t *data_in, size_t clock_cycles);
 static bool ftdi_jtag_next(bool tms, bool tdi);
 
@@ -74,7 +74,7 @@ bool ftdi_jtag_init(void)
 
 	jtag_proc.jtagtap_reset = ftdi_jtag_reset;
 	jtag_proc.jtagtap_next = ftdi_jtag_next;
-	jtag_proc.jtagtap_tms_seq = jtagtap_tms_seq;
+	jtag_proc.jtagtap_tms_seq = ftdi_jtag_tms_seq;
 	jtag_proc.jtagtap_tdi_tdo_seq = libftdi_jtagtap_tdi_tdo_seq;
 	jtag_proc.jtagtap_tdi_seq = ftdi_jtag_tdi_seq;
 	jtag_proc.tap_idle_cycles = 1;
@@ -102,10 +102,9 @@ bool ftdi_jtag_init(void)
 	ftdi_jtag_drain_potential_garbage();
 
 	/* Ensure we're in JTAG mode */
-	for (size_t i = 0; i <= 50U; ++i)
+	for (size_t i = 0; i < 50U; ++i)
 		ftdi_jtag_next(true, false); /* 50 idle cycles for SWD reset */
-	jtagtap_tms_seq(0xe73cU, 16);    /* SWD to JTAG sequence */
-	jtagtap_soft_reset();
+	ftdi_jtag_tms_seq(0xe73cU, 16U); /* SWD to JTAG sequence */
 	return true;
 }
 
@@ -114,7 +113,7 @@ static void ftdi_jtag_reset(void)
 	jtagtap_soft_reset();
 }
 
-static void jtagtap_tms_seq(uint32_t tms_states, const size_t clock_cycles)
+static void ftdi_jtag_tms_seq(uint32_t tms_states, const size_t clock_cycles)
 {
 	for (size_t cycle = 0U; cycle < clock_cycles; cycle += 7U) {
 		const uint8_t cmd[3U] = {
