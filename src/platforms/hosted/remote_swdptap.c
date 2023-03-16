@@ -93,15 +93,15 @@ static uint32_t swdptap_seq_in(size_t clock_cycles)
 
 static void swdptap_seq_out(uint32_t tms_states, size_t clock_cycles)
 {
-	char construct[REMOTE_MAX_MSG_SIZE];
+	char buffer[REMOTE_MAX_MSG_SIZE];
 
 	DEBUG_PROBE("swdptap_seq_out        %2d clock_cycles: %08" PRIx32 "\n", clock_cycles, tms_states);
-	int length = sprintf(construct, REMOTE_SWDP_OUT_STR, clock_cycles, tms_states);
-	platform_buffer_write(construct, length);
+	int length = sprintf(buffer, REMOTE_SWDP_OUT_STR, clock_cycles, tms_states);
+	platform_buffer_write(buffer, length);
 
-	length = platform_buffer_read(construct, REMOTE_MAX_MSG_SIZE);
-	if (length < 1 || construct[0] == REMOTE_RESP_ERR) {
-		DEBUG_WARN("swdptap_seq_out failed, error %s\n", length ? construct + 1 : "short response");
+	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
+	if (length < 1 || buffer[0] == REMOTE_RESP_ERR) {
+		DEBUG_WARN("swdptap_seq_out failed, error %s\n", length ? buffer + 1 : "short response");
 		exit(-1);
 	}
 }
