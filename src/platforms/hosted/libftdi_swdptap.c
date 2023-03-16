@@ -43,7 +43,7 @@ static bool direct_bb_swd;
 #define MPSSE_TDO_SHIFT (MPSSE_DO_WRITE | MPSSE_LSB | MPSSE_BITMODE | MPSSE_WRITE_NEG)
 
 static bool ftdi_swd_seq_in_parity(uint32_t *res, size_t clock_cycles);
-static uint32_t swdptap_seq_in(size_t clock_cycles);
+static uint32_t ftdi_swd_seq_in(size_t clock_cycles);
 static void swdptap_seq_out(uint32_t tms_states, size_t clock_cycles);
 static void swdptap_seq_out_parity(uint32_t tms_states, size_t clock_cycles);
 
@@ -107,7 +107,7 @@ bool ftdi_swd_init(void)
 	libftdi_buffer_flush();
 	olddir = SWDIO_STATUS_FLOAT;
 
-	swd_proc.seq_in = swdptap_seq_in;
+	swd_proc.seq_in = ftdi_swd_seq_in;
 	swd_proc.seq_in_parity = ftdi_swd_seq_in_parity;
 	swd_proc.seq_out = swdptap_seq_out;
 	swd_proc.seq_out_parity = swdptap_seq_out_parity;
@@ -319,7 +319,7 @@ static bool ftdi_swd_seq_in_parity(uint32_t *const result, const size_t clock_cy
 	return ftdi_swd_seq_in_parity_raw(result, clock_cycles);
 }
 
-static uint32_t swdptap_seq_in_mpsse(const size_t clock_cycles)
+static uint32_t ftdi_swd_seq_in_mpsse(const size_t clock_cycles)
 {
 	uint8_t data_out[4];
 	libftdi_jtagtap_tdi_tdo_seq(data_out, false, NULL, clock_cycles);
@@ -332,7 +332,7 @@ static uint32_t swdptap_seq_in_mpsse(const size_t clock_cycles)
 	return result;
 }
 
-static uint32_t swdptap_seq_in_raw(const size_t clock_cycles)
+static uint32_t ftdi_swd_seq_in_raw(const size_t clock_cycles)
 {
 	const uint8_t cmd[4] = {
 		active_cable.bb_swdio_in_port_cmd,
@@ -353,14 +353,14 @@ static uint32_t swdptap_seq_in_raw(const size_t clock_cycles)
 	return result;
 }
 
-static uint32_t swdptap_seq_in(size_t clock_cycles)
+static uint32_t ftdi_swd_seq_in(size_t clock_cycles)
 {
 	if (!clock_cycles || clock_cycles > 32U)
 		return 0;
 	swdptap_turnaround(SWDIO_STATUS_FLOAT);
 	if (do_mpsse)
-		return swdptap_seq_in_mpsse(clock_cycles);
-	return swdptap_seq_in_raw(clock_cycles);
+		return ftdi_swd_seq_in_mpsse(clock_cycles);
+	return ftdi_swd_seq_in_raw(clock_cycles);
 }
 
 static void swdptap_seq_out_mpsse(const uint32_t tms_states, const size_t clock_cycles)
