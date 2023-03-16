@@ -118,7 +118,7 @@ bool ftdi_swd_init(void)
 	return false;
 }
 
-bool libftdi_jtagtap_init(void)
+bool ftdi_jtag_init(void)
 {
 	return false;
 }
@@ -189,7 +189,7 @@ typedef struct ftdi_mpsse_cmd_bits {
 
 bool ftdi_bmp_init(bmda_cli_options_s *cl_opts);
 bool ftdi_swd_init(void);
-bool libftdi_jtagtap_init(void);
+bool ftdi_jtag_init(void);
 void libftdi_buffer_flush(void);
 size_t libftdi_buffer_write(const void *buffer, size_t size);
 size_t libftdi_buffer_read(void *buffer, size_t size);
