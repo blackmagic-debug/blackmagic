@@ -75,7 +75,7 @@ bool ftdi_jtag_init(void)
 	jtag_proc.jtagtap_reset = ftdi_jtag_reset;
 	jtag_proc.jtagtap_next = ftdi_jtag_next;
 	jtag_proc.jtagtap_tms_seq = ftdi_jtag_tms_seq;
-	jtag_proc.jtagtap_tdi_tdo_seq = libftdi_jtagtap_tdi_tdo_seq;
+	jtag_proc.jtagtap_tdi_tdo_seq = ftdi_jtag_tdi_tdo_seq;
 	jtag_proc.jtagtap_tdi_seq = ftdi_jtag_tdi_seq;
 	jtag_proc.tap_idle_cycles = 1;
 
@@ -128,7 +128,7 @@ static void ftdi_jtag_tms_seq(uint32_t tms_states, const size_t clock_cycles)
 
 static void ftdi_jtag_tdi_seq(const bool final_tms, const uint8_t *const data_in, const size_t clock_cycles)
 {
-	return libftdi_jtagtap_tdi_tdo_seq(NULL, final_tms, data_in, clock_cycles);
+	return ftdi_jtag_tdi_tdo_seq(NULL, final_tms, data_in, clock_cycles);
 }
 
 static bool ftdi_jtag_next(const bool tms, const bool tdi)

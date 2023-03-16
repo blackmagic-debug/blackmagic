@@ -677,12 +677,12 @@ size_t libftdi_buffer_read(void *const buffer, const size_t size)
 	return size;
 }
 
-void libftdi_jtagtap_tdi_tdo_seq(uint8_t *data_out, const bool final_tms, const uint8_t *data_in, size_t clock_cycles)
+void ftdi_jtag_tdi_tdo_seq(uint8_t *data_out, const bool final_tms, const uint8_t *data_in, size_t clock_cycles)
 {
 	if (!clock_cycles || (!data_in && !data_out))
 		return;
 
-	DEBUG_WIRE("libftdi_jtagtap_tdi_tdo_seq %s %zu clock cycles\n",
+	DEBUG_WIRE("%s: %s %zu clock cycles\n", __func__,
 		data_in && data_out ? "read/write" :
 			data_in         ? "write" :
 							  "read",
