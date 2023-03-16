@@ -31,7 +31,7 @@
 static void jtagtap_reset(void);
 static void jtagtap_tms_seq(uint32_t tms_states, size_t clock_cycles);
 static void jtagtap_tdi_seq(bool final_tms, const uint8_t *data_in, size_t clock_cycles);
-static bool jtagtap_next(bool tms, bool tdi);
+static bool ftdi_jtag_next(bool tms, bool tdi);
 
 /*
  * Throughout this file you will see command buffers being built which have the following basic form:
@@ -73,7 +73,7 @@ bool ftdi_jtag_init(void)
 	}
 
 	jtag_proc.jtagtap_reset = jtagtap_reset;
-	jtag_proc.jtagtap_next = jtagtap_next;
+	jtag_proc.jtagtap_next = ftdi_jtag_next;
 	jtag_proc.jtagtap_tms_seq = jtagtap_tms_seq;
 	jtag_proc.jtagtap_tdi_tdo_seq = libftdi_jtagtap_tdi_tdo_seq;
 	jtag_proc.jtagtap_tdi_seq = jtagtap_tdi_seq;
@@ -102,8 +102,8 @@ bool ftdi_jtag_init(void)
 
 	/* Ensure we're in JTAG mode */
 	for (size_t i = 0; i <= 50U; ++i)
-		jtagtap_next(true, false); /* 50 idle cycles for SWD reset */
-	jtagtap_tms_seq(0xe73cU, 16);  /* SWD to JTAG sequence */
+		ftdi_jtag_next(true, false); /* 50 idle cycles for SWD reset */
+	jtagtap_tms_seq(0xe73cU, 16);    /* SWD to JTAG sequence */
 	jtagtap_soft_reset();
 	return true;
 }
@@ -131,7 +131,7 @@ static void jtagtap_tdi_seq(const bool final_tms, const uint8_t *const data_in, 
 	return libftdi_jtagtap_tdi_tdo_seq(NULL, final_tms, data_in, clock_cycles);
 }
 
-static bool jtagtap_next(bool tms, bool tdi)
+static bool ftdi_jtag_next(const bool tms, const bool tdi)
 {
 	const uint8_t cmd[3] = {
 		MPSSE_WRITE_TMS | MPSSE_DO_READ | MPSSE_LSB | MPSSE_BITMODE | MPSSE_WRITE_NEG,
