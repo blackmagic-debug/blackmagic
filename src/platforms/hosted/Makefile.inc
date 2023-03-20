@@ -69,6 +69,20 @@ else ifneq (filter, macosx darwin, $(SYS))
     CFLAGS += -I /opt/homebrew/include -I /opt/homebrew/include/libusb-1.0
 endif
 
+# If we're on Windows, pick the correct FTD2xx implementation
+ifeq ($(OS), Windows_NT)
+    ifneq ($(HOSTED_BMP_ONLY), 1)
+            CFLAGS += -I../3rdparty/ftdi
+        ifeq ($(PROCESSOR_ARCHITECTURE), AMD64)
+            LDFLAGS += ../3rdparty/ftdi/amd64/ftd2xx.lib
+            FTDI_DLL = ../3rdparty/ftdi/amd64/ftd2xx.dll
+        else
+            LDFLAGS += ../3rdparty/ftdi/i386/ftd2xx.lib
+            FTDI_DLL = ../3rdparty/ftdi/i386/ftd2xx.dll
+        endif
+    endif
+endif
+
 ifneq ($(HOSTED_BMP_ONLY), 1)
     ifneq ($(shell pkg-config --exists libusb-1.0; echo $$?), 0)
         $(error Please install libusb-1.0 dependency or set HOSTED_BMP_ONLY to 1)
@@ -100,6 +114,9 @@ SRC += protocol_v1.c protocol_v1_adiv5.c protocol_v2.c
 SRC += protocol_v3.c protocol_v3_adiv5.c
 SRC += bmp_remote.c
 ifneq ($(HOSTED_BMP_ONLY), 1)
+    ifeq ($(OS), Windows_NT)
+        SRC += ftd2xx.dll
+    endif
     SRC += bmp_libusb.c stlinkv2.c stlinkv2_jtag.c stlinkv2_swd.c
     SRC += ftdi_bmp.c ftdi_jtag.c ftdi_swd.c
     SRC += jlink.c jlink_jtag.c jlink_swd.c
@@ -110,5 +127,11 @@ PC_HOSTED = 1
 
 all: blackmagic
 
+ifeq ($(OS), Windows_NT)
+.PHONY: ftd2xx.dll
+
+ftd2xx.dll:
+	cp $(FTDI_DLL) ../src
+endif
 host_clean:
 	-$(Q)$(RM) blackmagic

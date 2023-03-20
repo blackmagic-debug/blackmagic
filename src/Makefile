@@ -154,7 +154,7 @@ GIT_VERSION := $(shell if [ -e "../.git" ]; then git describe --always --dirty -
 clean:	host_clean
 	$(Q)echo "  CLEAN"
 	-$(Q)$(RM) *.o *.d *.elf *~ $(TARGET) $(HOSTFILES)
-	-$(Q)$(RM) platforms/*/*.o platforms/*/*.d mapfile
+	-$(Q)$(RM) platforms/*/*.o platforms/*/*.d mapfile ftd2xx.dll
 ifeq ($(GIT_VERSION),)
 	@echo Git not found, not deleting include/version.h
 else
