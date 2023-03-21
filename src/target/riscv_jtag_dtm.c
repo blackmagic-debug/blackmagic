@@ -35,7 +35,24 @@
 #include "jtag_scan.h"
 #include "riscv_debug.h"
 
-#define IR_DTMCS 0x10U
+#define IR_DTMCS  0x10U
+#define IR_DMI    0x11U
+#define IR_BYPASS 0x1fU
+
+void riscv_jtag_dtm_handler(const uint8_t dev_index)
+{
+	riscv_dmi_s *dmi = calloc(1, sizeof(*dmi));
+	if (!dmi) { /* calloc failed: heap exhaustion */
+		DEBUG_WARN("calloc: failed in %s\n", __func__);
+		return;
+	}
+
+	dmi->idcode = jtag_devs[dev_index].jd_idcode;
+	dmi->dev_index = dev_index;
+	if (!riscv_dmi_init(dmi))
+		free(dmi);
+	jtag_dev_write_ir(dev_index, IR_BYPASS);
+}
 
 /* Shift (read + write) the Debug Transport Module Control/Status (DTMCS) register */
 uint32_t riscv_shift_dtmcs(const riscv_dmi_s *const dmi, const uint32_t control)
