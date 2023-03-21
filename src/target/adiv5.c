@@ -357,7 +357,7 @@ static uint32_t cortexm_initial_halt(adiv5_access_port_s *ap)
 	while (!platform_timeout_is_expired(&halt_timeout)) {
 		uint32_t dhcsr;
 
-		/* if we're not on a minimal DP implementation, use TRNCNT to help */
+		/* If we're not on a minimal DP implementation, use TRNCNT to help */
 		if (!ap->dp->mindp) {
 			/* Ask the AP to repeatedly retry the write to DHCSR */
 			adiv5_dp_low_access(
@@ -367,6 +367,15 @@ static uint32_t cortexm_initial_halt(adiv5_access_port_s *ap)
 		adiv5_dp_low_access(ap->dp, ADIV5_LOW_WRITE, ADIV5_AP_DRW,
 			CORTEXM_DHCSR_DBGKEY | CORTEXM_DHCSR_C_DEBUGEN | CORTEXM_DHCSR_C_HALT);
 		dhcsr = adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_AP_DRW, 0);
+
+		/*
+		 * If we are on a minimal DP implementation, then we have to do things a little differently
+		 * so the reads behave consistently. If we use raw accesses as above, then on some parts the
+		 * data we want to read will be returned in the first raw access, and on others the read
+		 * will do nothing (return 0) and instead need RDBUFF read to get the data.
+		 */
+		if (ap->dp->mindp)
+			dhcsr = adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_DP_RDBUFF, 0);
 
 		/*
 		 * Check how we did, handling some errata along the way.
