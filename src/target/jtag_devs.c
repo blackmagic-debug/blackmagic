@@ -116,7 +116,7 @@ const jtag_dev_descr_s dev_descr[] = {
 		.idcode = 0x0000563dU,
 		.idmask = 0x0fffffffU,
 		.descr = "RISC-V debug v0.13.",
-		.handler = riscv_debug_dtm_handler,
+		.handler = riscv_jtag_dtm_handler,
 	},
 	{
 		.idcode = 0x000007a3U,
