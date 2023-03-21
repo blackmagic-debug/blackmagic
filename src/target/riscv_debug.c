@@ -32,31 +32,9 @@
  */
 
 #include "general.h"
-#include "jtag_scan.h"
 #include "riscv_debug.h"
 
-#define IR_DTMCS  0x10U
-#define IR_DMI    0x11U
-#define IR_BYPASS 0x1fU
-
-static bool riscv_dmi_init(riscv_dmi_s *dmi);
-
-void riscv_debug_dtm_handler(const uint8_t dev_index)
-{
-	riscv_dmi_s *dmi = calloc(1, sizeof(*dmi));
-	if (!dmi) { /* calloc failed: heap exhaustion */
-		DEBUG_WARN("calloc: failed in %s\n", __func__);
-		return;
-	}
-
-	dmi->idcode = jtag_devs[dev_index].jd_idcode;
-	dmi->dev_index = dev_index;
-	if (!riscv_dmi_init(dmi))
-		free(dmi);
-	jtag_dev_write_ir(dev_index, IR_BYPASS);
-}
-
-static bool riscv_dmi_init(riscv_dmi_s *const dmi)
+bool riscv_dmi_init(riscv_dmi_s *const dmi)
 {
 	dmi->version = RISCV_DEBUG_0_13;
 	DEBUG_INFO("RISC-V debug v0.13 DMI\n");
