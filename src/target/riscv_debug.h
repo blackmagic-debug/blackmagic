@@ -35,6 +35,7 @@
 #define TARGET_RISCV_DEBUG_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
 typedef enum riscv_debug_version {
 	RISCV_DEBUG_0_11,
@@ -50,8 +51,7 @@ typedef struct riscv_dmi {
 	uint8_t dev_index;
 } riscv_dmi_s;
 
-void riscv_debug_dtm_handler(uint8_t dev_index);
-
-uint32_t riscv_shift_dtmcs(const riscv_dmi_s *dmi, uint32_t control);
+void riscv_jtag_dtm_handler(uint8_t dev_index);
+bool riscv_dmi_init(riscv_dmi_s *dmi);
 
 #endif /*TARGET_RISCV_DEBUG_H*/
