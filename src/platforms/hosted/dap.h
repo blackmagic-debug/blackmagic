@@ -52,9 +52,9 @@ typedef enum dap_info {
 typedef enum dap_cap {
 	DAP_CAP_SWD = (1U << 0U),
 	DAP_CAP_JTAG = (1U << 1U),
-	DAP_CAP_SWO_UART = (1U << 2U),
+	DAP_CAP_SWO_ASYNC = (1U << 2U),
 	DAP_CAP_SWO_MANCHESTER = (1U << 3U),
-	DAP_CAP_ATOMIC_CMD = (1U << 4U),
+	DAP_CAP_ATOMIC_CMDS = (1U << 4U),
 	DAP_CAP_TDT = (1U << 5U),
 	DAP_CAP_SWO_STREAMING = (1U << 6U),
 } dap_cap_e;
