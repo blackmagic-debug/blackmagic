@@ -33,6 +33,9 @@
 #include "adiv5.h"
 #include "cortexm.h"
 #include "exception.h"
+#if PC_HOSTED == 1
+#include "bmp_hosted.h"
+#endif
 
 /* All this should probably be defined in a dedicated ADIV5 header, so that they
  * are consistently named and accessible when needed in the codebase.
@@ -374,7 +377,11 @@ static uint32_t cortexm_initial_halt(adiv5_access_port_s *ap)
 		 * data we want to read will be returned in the first raw access, and on others the read
 		 * will do nothing (return 0) and instead need RDBUFF read to get the data.
 		 */
-		if (ap->dp->mindp)
+		if (ap->dp->mindp
+#if PC_HOSTED == 1
+			&& info.bmp_type != BMP_TYPE_CMSIS_DAP
+#endif
+		)
 			dhcsr = adiv5_dp_low_access(ap->dp, ADIV5_LOW_READ, ADIV5_DP_RDBUFF, 0);
 
 		/*
