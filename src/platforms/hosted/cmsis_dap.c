@@ -234,22 +234,33 @@ bool dap_init(bmp_info_s *const info)
 	/* Look for CMSIS-DAP v1.2+ */
 	dap_has_swd_sequence = cmsis_version.major > 1 || (cmsis_version.major == 1 && cmsis_version.minor > 1);
 
-	const size_t size = dap_info(DAP_INFO_CAPABILITIES, buffer, sizeof(buffer));
-	if (!size)
-		/* XXX: need to handle this info request failing properly. */
-		return true;
-	dap_caps = buffer[0];
-	DEBUG_INFO("Cap (0x%2x): %s%s%s", dap_caps, (dap_caps & 1U) ? "SWD" : "", ((dap_caps & 3U) == 3U) ? "/" : "",
-		(dap_caps & 0x2U) ? "JTAG" : "");
-	if (dap_caps & 0x4U)
-		DEBUG_INFO(", SWO_UART");
-	if (dap_caps & 0x8U)
-		DEBUG_INFO(", SWO_MANCHESTER");
-	if (dap_caps & 0x10U)
-		DEBUG_INFO(", Atomic Cmds");
-	if (dap_has_swd_sequence)
-		DEBUG_INFO(", DAP_SWD_Sequence");
-	DEBUG_INFO("\n");
+	/* Try to get the device's capabilities */
+	const size_t size = dap_info(DAP_INFO_CAPABILITIES, &dap_caps, sizeof(dap_caps));
+	if (size != 1U) {
+		/* Report the failure */
+		DEBUG_WARN("Failed to get adaptor capabilities, aborting\n");
+		/* Close any open connections and return failure so we don't go further */
+		dap_exit_function();
+		return false;
+	}
+
+	/* Having got the capabilities, decode and print an informitive string about them */
+	const bool supportsJTAG = dap_caps & DAP_CAP_JTAG;
+	const bool supportsSWD = dap_caps & DAP_CAP_SWD;
+	DEBUG_INFO("Capabilities: %02x (", dap_caps);
+	if (supportsJTAG)
+		DEBUG_INFO("JTAG%s", supportsSWD ? "/" : "");
+	if (supportsSWD)
+		DEBUG_INFO("SWD");
+	if (dap_caps & DAP_CAP_SWO_ASYNC)
+		DEBUG_INFO(", Async SWO");
+	if (dap_caps & DAP_CAP_SWO_MANCHESTER)
+		DEBUG_INFO(", Manchester SWO");
+	if (dap_caps & DAP_CAP_ATOMIC_CMDS)
+		DEBUG_INFO(", Atomic commands");
+	DEBUG_INFO(")\n");
+
+	DEBUG_INFO("Adaptor %s DAP SWD sequences\n", dap_has_swd_sequence ? "supports" : "does not support");
 	return true;
 }
 
@@ -265,7 +276,7 @@ dap_version_s dap_adaptor_version(const dap_info_e version_kind)
 	if (version_kind == DAP_INFO_ADAPTOR_VERSION)
 		DEBUG_INFO("Adaptor version %s, ", version_str);
 	else if (version_kind == DAP_INFO_CMSIS_DAP_VERSION)
-		DEBUG_INFO("CMSIS-DAP v%s, ", version_str);
+		DEBUG_INFO("CMSIS-DAP v%s\n", version_str);
 	const char *begin = version_str;
 	char *end = NULL;
 	dap_version_s version = {};
