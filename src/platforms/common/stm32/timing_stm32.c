@@ -2,6 +2,8 @@
  * This file is part of the Black Magic Debug project.
  *
  * Copyright (C) 2015 Gareth McMullin <gareth@blacksphere.co.nz>
+ * Copyright (C) 2023 1BitSquared <info@1bitsquared.com>
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,12 +25,24 @@
 #include <libopencm3/cm3/systick.h>
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/stm32/rcc.h>
+#include <libopencm3/stm32/adc.h>
 
 bool running_status = false;
 static volatile uint32_t time_ms = 0;
 uint32_t target_clk_divider = 0;
 
 static size_t morse_tick = 0;
+#ifdef PLATFORM_HAS_POWER_SWITCH
+static uint8_t monitor_ticks = 0;
+
+/* Derived from calculating (1.2V / 3.0V) * 4096 */
+#define ADC_VREFINT_MAX 1638U
+/*
+ * Derived from calculating (1.2V / 3.6V) * 4096 (1365) and
+ * then applying an offset to adjust for being 10-20mV over
+ */
+#define ADC_VREFINT_MIN 1404U
+#endif
 
 void platform_timing_init(void)
 {
@@ -61,6 +75,45 @@ void sys_tick_handler(void)
 		morse_tick = 0;
 	} else
 		++morse_tick;
+
+#ifdef PLATFORM_HAS_POWER_SWITCH
+	/* First check if target power is presently enabled */
+	if (platform_target_get_power()) {
+		/*
+		 * Every 10 systicks, set up an ADC conversion on the 9th tick, then
+		 * read back the value on the 10th, checking the internal bandgap reference
+		 * is still sat in the correct range. If it diverges down, this indicates
+		 * backfeeding and that VCC is being pulled higher than 3.3V. If it diverges
+		 * up, this indicates either backfeeding or overcurrent and that VCC is being
+		 * pulled below 3.3V. In either case, for safety, disable tpwr and set
+		 * a morse error of "TPWR ERROR"
+		 */
+
+		/* If we're on the 9th tick, start the bandgap conversion */
+		if (monitor_ticks == 8U) {
+			uint8_t channel = ADC_CHANNEL_VREF;
+			adc_set_regular_sequence(ADC1, 1, &channel);
+			adc_start_conversion_direct(ADC1);
+		}
+
+		/* If we're on the 10th tick, check the result of bandgap conversion */
+		if (monitor_ticks == 9U) {
+			const uint32_t ref = adc_read_regular(ADC1);
+			/* Clear EOC bit. The GD32F103 does not automatically reset it on ADC read. */
+			ADC_SR(ADC1) &= ~ADC_SR_EOC;
+			monitor_ticks = 0;
+
+			/* Now compare the reference against the known good range */
+			if (ref > ADC_VREFINT_MAX || ref < ADC_VREFINT_MIN) {
+				/* Something's wrong, so turn tpwr off and set the morse blink pattern */
+				platform_target_set_power(false);
+				morse("TPWR ERROR", true);
+			}
+		} else
+			++monitor_ticks;
+	} else
+		monitor_ticks = 0;
+#endif
 }
 
 uint32_t platform_time_ms(void)
