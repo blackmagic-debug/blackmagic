@@ -293,7 +293,7 @@ static void adc_init(void)
 	adc_disable_external_trigger_regular(ADC1);
 	adc_set_right_aligned(ADC1);
 	adc_set_sample_time_on_all_channels(ADC1, ADC_SMPR_SMP_239DOT5CYC);
-
+	adc_enable_temperature_sensor();
 	adc_power_on(ADC1);
 
 	/* Wait for the ADC to finish starting up */
