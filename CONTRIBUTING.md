@@ -48,6 +48,8 @@ If you wish to fix a bug, `type` in the new branch name should be `fix`, otherwi
 4. Push to your fork (`git push`)
 5. Continue at 2. [in the steps for first time](#if-contributing-for-the-first-time)
 
+### Commit message guidelines
+
 Additionally, please write good and descriptive commit messages that both summarise the change and,
 if necessary, expand on the summary using description lines.
 "Patched the adiv5 code" is, while terse and correct, an example of a bad commit message.
