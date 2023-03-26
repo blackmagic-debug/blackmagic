@@ -30,7 +30,7 @@
 int platform_buffer_write(const uint8_t *data, int size);
 int platform_buffer_read(uint8_t *data, int size);
 
-int remote_init(void);
+int remote_init(const bool power_up);
 bool remote_swdptap_init(void);
 bool remote_jtagtap_init(void);
 bool remote_target_get_power(void);

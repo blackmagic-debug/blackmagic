@@ -35,7 +35,7 @@
 
 #include "adiv5.h"
 
-int remote_init(void)
+int remote_init(const bool power_up)
 {
 	char construct[REMOTE_MAX_MSG_SIZE];
 	int c = snprintf(construct, REMOTE_MAX_MSG_SIZE, "%s", REMOTE_START_STR);
@@ -46,6 +46,7 @@ int remote_init(void)
 		return -1;
 	}
 	DEBUG_PROBE("Remote is %s\n", construct + 1);
+	remote_target_set_power(power_up) ;
 	return 0;
 }
 
