@@ -406,10 +406,6 @@ static void display_target(int i, target_s *t, void *context)
 int cl_execute(bmda_cli_options_s *opt)
 {
 	int num_targets;
-	if (opt->opt_tpwr) {
-		platform_target_set_power(true);
-		platform_delay(500);
-	}
 	if (opt->opt_mode == BMP_MODE_RESET_HW) {
 		platform_nrst_set_val(true);
 		platform_delay(1);
