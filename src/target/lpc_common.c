@@ -36,6 +36,7 @@ typedef struct __attribute__((aligned(4))) iap_frame {
 	uint16_t opcode;
 	/* There's then a hidden alignment field here, followed by the IAP call setup */
 	iap_config_s config;
+	iap_result_s result;
 } iap_frame_s;
 
 #if defined(ENABLE_DEBUG)
@@ -172,20 +173,23 @@ iap_status_e lpc_iap_call(lpc_flash_s *const flash, iap_result_s *const result, 
 	for (size_t i = params_count; i < 4; ++i)
 		frame.config.params[i] = 0U;
 
+	/* Set the result code to something notable to help with checking if the call ran */
+	frame.result.return_code = cmd;
+
 	DEBUG_INFO("%s: cmd %d (%x), params: %08" PRIx32 " %08" PRIx32 " %08" PRIx32 " %08" PRIx32 "\n", __func__, cmd, cmd,
 		frame.config.params[0], frame.config.params[1], frame.config.params[2], frame.config.params[3]);
 
 	/* Copy the structure to RAM */
 	target_mem_write(target, flash->iap_ram, &frame, sizeof(iap_frame_s));
-	const uint32_t iap_params_addr = flash->iap_ram + offsetof(iap_frame_s, config);
+	const uint32_t iap_results_addr = flash->iap_ram + offsetof(iap_frame_s, result);
 
 	/* Set up for the call to the IAP ROM */
 	uint32_t regs[target->regs_size / sizeof(uint32_t)];
 	memset(regs, 0, target->regs_size);
 	/* Point r0 to the start of the config block */
-	regs[0] = iap_params_addr;
-	/* And r1 to the same so we re-use the same memory for the results */
-	regs[1] = iap_params_addr;
+	regs[0] = flash->iap_ram + offsetof(iap_frame_s, config);
+	/* And r1 to the next block memory after for the results */
+	regs[1] = iap_results_addr;
 	/* Set the top of stack to the location of the RAM block the target uses */
 	regs[REG_MSP] = flash->iap_msp;
 	/* Point the return address to our breakpoint opcode (thumb mode) */
@@ -238,7 +242,7 @@ iap_status_e lpc_iap_call(lpc_flash_s *const flash, iap_result_s *const result, 
 
 	/* Copy back just the results */
 	iap_result_s results = {};
-	target_mem_read(target, &results, iap_params_addr, sizeof(iap_result_s));
+	target_mem_read(target, &results, iap_results_addr, sizeof(iap_result_s));
 
 	/* Restore the original data in RAM and registers */
 	lpc_restore_state(target, flash->iap_ram, &saved_frame, saved_regs);
