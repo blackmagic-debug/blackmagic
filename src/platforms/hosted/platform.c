@@ -98,7 +98,7 @@ void platform_init(int argc, char **argv)
 	case BMP_TYPE_BMP:
 		if (serial_open(&cl_opts, info.serial))
 			exit(-1);
-		remote_init();
+		remote_init(cl_opts.opt_tpwr);
 		break;
 
 	case BMP_TYPE_STLINKV2:
