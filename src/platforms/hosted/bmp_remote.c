@@ -46,7 +46,7 @@ int remote_init(const bool power_up)
 		return -1;
 	}
 	DEBUG_PROBE("Remote is %s\n", construct + 1);
-	remote_target_set_power(power_up) ;
+	remote_target_set_power(power_up);
 	return 0;
 }
 
