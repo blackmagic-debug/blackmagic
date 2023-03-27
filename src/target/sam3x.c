@@ -27,6 +27,7 @@
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
+#include "cortexm.h"
 
 static bool sam_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 static bool sam3_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
@@ -423,6 +424,7 @@ bool sam3x_probe(target_s *t)
 	case CHIPID_CIDR_ARCH_SAM3XxE | CHIPID_CIDR_EPROC_CM3:
 	case CHIPID_CIDR_ARCH_SAM3XxG | CHIPID_CIDR_EPROC_CM3:
 		t->driver = "Atmel SAM3X";
+		t->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
 		target_add_ram(t, 0x20000000, 0x200000);
 		/* 2 Flash memories back-to-back starting at 0x80000 */
 		sam3_add_flash(t, SAM3X_EEFC_BASE(0), 0x80000, size / 2U);
@@ -481,7 +483,7 @@ bool sam3x_probe(target_s *t)
 
 static bool sam_flash_cmd(target_s *t, uint32_t base, uint8_t cmd, uint16_t arg)
 {
-	DEBUG_INFO("%s: base = 0x%08" PRIx32 " cmd = 0x%02X, arg = 0x%06X\n", __func__, base, cmd, arg);
+	DEBUG_INFO("%s: base = 0x%08" PRIx32 " cmd = 0x%02X, arg = 0x%04X\n", __func__, base, cmd, arg);
 
 	if (base == 0)
 		return false;
