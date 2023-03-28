@@ -218,13 +218,13 @@ uint32_t riscv32_pack_data(const void *const src, const uint8_t access_width)
 	return 0;
 }
 
-static void riscv32_mem_read(target_s *const target, void *const dest, const target_addr_t src, const size_t len)
+static void riscv32_abstract_mem_read(
+	riscv_hart_s *const hart, void *const dest, const target_addr_t src, const size_t len)
 {
 	DEBUG_TARGET("Performing %zu byte read of %08" PRIx32 "\n", len, src);
 	/* If we're asked to do a 0-byte read, do nothing */
 	if (!len)
 		return;
-	riscv_hart_s *const hart = riscv_hart_struct(target);
 	/* Figure out the maxmial width of access to perform, up to the bitness of the target */
 	const uint8_t access_width = riscv_mem_access_width(hart, src, len);
 	const uint8_t access_length = 1U << access_width;
@@ -247,13 +247,13 @@ static void riscv32_mem_read(target_s *const target, void *const dest, const tar
 	}
 }
 
-static void riscv32_mem_write(target_s *const target, const target_addr_t dest, const void *const src, const size_t len)
+static void riscv32_abstract_mem_write(
+	riscv_hart_s *const hart, const target_addr_t dest, const void *const src, const size_t len)
 {
 	DEBUG_TARGET("Performing %zu byte write of %08" PRIx32 "\n", len, dest);
 	/* If we're asked to do a 0-byte read, do nothing */
 	if (!len)
 		return;
-	riscv_hart_s *const hart = riscv_hart_struct(target);
 	/* Figure out the maxmial width of access to perform, up to the bitness of the target */
 	const uint8_t access_width = riscv_mem_access_width(hart, dest, len);
 	const uint8_t access_length = 1U << access_width;
@@ -273,6 +273,40 @@ static void riscv32_mem_write(target_s *const target, const target_addr_t dest, 
 		if (!riscv_dm_write(hart->dbg_module, RV_DM_ABST_COMMAND, command) || !riscv_command_wait_complete(hart))
 			return;
 	}
+}
+
+static void riscv32_sysbus_mem_read(
+	riscv_hart_s *const hart, void *const dest, const target_addr_t src, const size_t len)
+{
+	(void)hart;
+	(void)dest;
+	(void)src;
+	(void)len;
+}
+
+static void riscv32_sysbus_mem_write(
+	riscv_hart_s *const hart, const target_addr_t dest, const void *const src, const size_t len)
+{
+	(void)hart;
+	(void)dest;
+	(void)src;
+	(void)len;
+}
+
+static void riscv32_mem_read(target_s *const target, void *const dest, const target_addr_t src, const size_t len)
+{
+	riscv_hart_s *const hart = riscv_hart_struct(target);
+	if (hart->flags & RV_HART_FLAG_MEMORY_SYSBUS)
+		return riscv32_sysbus_mem_read(hart, dest, src, len);
+	return riscv32_abstract_mem_read(hart, dest, src, len);
+}
+
+static void riscv32_mem_write(target_s *const target, const target_addr_t dest, const void *const src, const size_t len)
+{
+	riscv_hart_s *const hart = riscv_hart_struct(target);
+	if (hart->flags & RV_HART_FLAG_MEMORY_SYSBUS)
+		return riscv32_sysbus_mem_write(hart, dest, src, len);
+	return riscv32_abstract_mem_write(hart, dest, src, len);
 }
 
 /*
