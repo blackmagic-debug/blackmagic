@@ -85,8 +85,13 @@ typedef enum riscv_match_size {
 } riscv_match_size_e;
 
 /* These defines specify Hart-specific information such as which memory access style to use */
-#define RV_HART_FLAG_MEMORY_ABSTRACT 0x00U
-#define RV_HART_FLAG_MEMORY_SYSBUS   0x01U
+#define RV_HART_FLAG_MEMORY_ABSTRACT    0x00U
+#define RV_HART_FLAG_MEMORY_SYSBUS      0x10U
+#define RV_HART_FLAG_ACCESS_WIDTH_MASK  0x0fU
+#define RV_HART_FLAG_ACCESS_WIDTH_8BIT  0x01U
+#define RV_HART_FLAG_ACCESS_WIDTH_16BIT 0x02U
+#define RV_HART_FLAG_ACCESS_WIDTH_32BIT 0x04U
+#define RV_HART_FLAG_ACCESS_WIDTH_64BIT 0x08U
 
 typedef struct riscv_dmi riscv_dmi_s;
 
@@ -141,12 +146,17 @@ typedef struct riscv_hart {
 
 #define RV_STATUS_VERSION_MASK 0x0000000fU
 
-#define RV_DM_DATA0           0x04U
-#define RV_DM_DATA1           0x05U
-#define RV_DM_DATA2           0x06U
-#define RV_DM_DATA3           0x07U
-#define RV_DM_ABST_CTRLSTATUS 0x16U
-#define RV_DM_ABST_COMMAND    0x17U
+#define RV_DM_DATA0             0x04U
+#define RV_DM_DATA1             0x05U
+#define RV_DM_DATA2             0x06U
+#define RV_DM_DATA3             0x07U
+#define RV_DM_ABST_CTRLSTATUS   0x16U
+#define RV_DM_ABST_COMMAND      0x17U
+#define RV_DM_SYSBUS_CTRLSTATUS 0x38U
+#define RV_DM_SYSBUS_ADDR0      0x39U
+#define RV_DM_SYSBUS_ADDR1      0x3aU
+#define RV_DM_SYSBUS_DATA0      0x3cU
+#define RV_DM_SYSBUS_DATA1      0x3dU
 
 #define RV_DM_ABST_CMD_ACCESS_REG 0x00000000U
 #define RV_DM_ABST_CMD_ACCESS_MEM 0x02000000U
