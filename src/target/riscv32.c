@@ -270,10 +270,32 @@ static void riscv32_abstract_mem_write(
 static void riscv32_sysbus_mem_read(
 	riscv_hart_s *const hart, void *const dest, const target_addr_t src, const size_t len)
 {
-	(void)hart;
-	(void)dest;
-	(void)src;
-	(void)len;
+	/* Figure out the maxmial width of access to perform, up to the bitness of the target */
+	const uint8_t access_width = riscv_mem_access_width(hart, src, len);
+	const uint8_t access_length = 1U << access_width;
+	/* Build the access command */
+	const uint32_t command = (access_width << RV_SYSBUS_MEM_ACCESS_SHIFT) | RV_SYSBUS_MEM_READ_ON_ADDR |
+		(access_length < len ? RV_SYSBUS_MEM_ADDR_POST_INC | RV_SYSBUS_MEM_READ_ON_DATA : 0U);
+	/*
+	 * Write the command setup to the access control register
+	 * Then set up the read by writing the address to the address register
+	 */
+	if (!riscv_dm_write(hart->dbg_module, RV_DM_SYSBUS_CTRLSTATUS, command) ||
+		!riscv_dm_write(hart->dbg_module, RV_DM_SYSBUS_ADDR0, src))
+		return;
+	uint8_t *const data = (uint8_t *)dest;
+	for (size_t offset = 0; offset < len; offset += access_length) {
+		/* If this would be the last read, clean up the access control register */
+		if (offset + access_length == len && (command & RV_SYSBUS_MEM_ADDR_POST_INC)) {
+			if (!riscv_dm_write(hart->dbg_module, RV_DM_SYSBUS_CTRLSTATUS, 0))
+				return;
+		}
+		uint32_t value = 0;
+		/* Read back and extract the data for this block */
+		if (!riscv_dm_read(hart->dbg_module, RV_DM_SYSBUS_DATA0, &value))
+			return;
+		riscv32_unpack_data(data + offset, value, access_width);
+	}
 }
 
 static void riscv32_sysbus_mem_write(

@@ -172,6 +172,11 @@ typedef struct riscv_hart {
 #define RV_ABST_MEM_ADDR_POST_INC 0x00080000U
 #define RV_ABST_MEM_ACCESS_SHIFT  20U
 
+#define RV_SYSBUS_MEM_ADDR_POST_INC 0x00010000U
+#define RV_SYSBUS_MEM_READ_ON_ADDR  0x00100000U
+#define RV_SYSBUS_MEM_READ_ON_DATA  0x00008000U
+#define RV_SYSBUS_MEM_ACCESS_SHIFT  17U
+
 /* dpc -> Debug Program Counter */
 #define RV_DPC 0x7b1U
 /* The GPR base defines the starting register space address for the CPU state registers */
