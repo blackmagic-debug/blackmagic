@@ -33,6 +33,7 @@ SRC =                \
 	cortexm.c        \
 	crc32.c          \
 	efm32.c          \
+	esp32c3.c        \
 	exception.c      \
 	gdb_if.c         \
 	gdb_main.c       \
