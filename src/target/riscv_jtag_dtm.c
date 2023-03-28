@@ -202,11 +202,15 @@ static bool riscv_jtag_dmi_read(riscv_dmi_s *const dmi, const uint32_t address, 
 
 static bool riscv_jtag_dmi_write(riscv_dmi_s *const dmi, const uint32_t address, const uint32_t value)
 {
-	/* Write a value to the requested register */
-	bool result = riscv_dmi_transfer(dmi, RV_DMI_WRITE, address, value, NULL);
-	if (result)
-		/* If that worked, read back the operation status to ensure the write actually worked */
-		result = riscv_dmi_transfer(dmi, RV_DMI_NOOP, 0, 0, NULL);
+	bool result = true;
+	do {
+		/* Write a value to the requested register */
+		result = riscv_dmi_transfer(dmi, RV_DMI_WRITE, address, value, NULL);
+		if (result)
+			/* If that worked, read back the operation status to ensure the write actually worked */
+			result = riscv_dmi_transfer(dmi, RV_DMI_NOOP, 0, 0, NULL);
+	} while (dmi->fault == RV_DMI_TOO_SOON);
+
 	if (!result)
 		DEBUG_WARN("DMI write at 0x%08" PRIx32 " failed with status %u\n", address, dmi->fault);
 	return result;
