@@ -39,7 +39,35 @@
 #define ESP32_C3_ARCH_ID 0x80000001U
 #define ESP32_C3_IMPL_ID 0x00000001U
 
-bool esp32c3_probe(target_s *target)
+#define ESP32_C3_DBUS_SRAM1_BASE 0x3fc80000U
+#define ESP32_C3_DBUS_SRAM1_SIZE 0x00060000U
+#define ESP32_C3_IBUS_SRAM0_BASE 0x4037c000U
+#define ESP32_C3_IBUS_SRAM0_SIZE 0x00004000U
+#define ESP32_C3_IBUS_SRAM1_BASE 0x40380000U
+#define ESP32_C3_IBUS_SRAM1_SIZE 0x00060000U
+#define ESP32_C3_RTC_SRAM_BASE   0x50000000U
+#define ESP32_C3_RTC_SRAM_SIZE   0x00002000U
+
+#define ESP32_C3_IBUS_FLASH_BASE 0x42000000U
+#define ESP32_C3_IBUS_FLASH_SIZE 0x00800000U
+
+static void esp32c3_add_flash(target_s *const target)
+{
+	target_flash_s *const flash = calloc(1, sizeof(*flash));
+	if (!flash) { /* calloc failed: heap exhaustion */
+		DEBUG_WARN("calloc: failed in %s\n", __func__);
+		return;
+	}
+
+	flash->start = ESP32_C3_IBUS_FLASH_BASE;
+	flash->length = ESP32_C3_IBUS_FLASH_SIZE;
+	flash->blocksize = 256U;
+	flash->writesize = 4096U;
+	flash->erased = 0xffU;
+	target_add_flash(target, flash);
+}
+
+bool esp32c3_probe(target_s *const target)
 {
 	const riscv_hart_s *const hart = riscv_hart_struct(target);
 	/* Seems that the best we can do is check the marchid and mimplid register values */
@@ -47,14 +75,14 @@ bool esp32c3_probe(target_s *target)
 		return false;
 
 	target->driver = "ESP32-C3";
+	/* Establish the target RAM mappings */
+	target_add_ram(target, ESP32_C3_IBUS_SRAM0_BASE, ESP32_C3_IBUS_SRAM0_SIZE);
+	target_add_ram(target, ESP32_C3_IBUS_SRAM1_BASE, ESP32_C3_IBUS_SRAM1_SIZE);
+	target_add_ram(target, ESP32_C3_DBUS_SRAM1_BASE, ESP32_C3_DBUS_SRAM1_SIZE);
+	target_add_ram(target, ESP32_C3_RTC_SRAM_BASE, ESP32_C3_RTC_SRAM_SIZE);
 
-	/* I-bus mapping for SRAM 0 + 1 */
-	target_add_ram(target, 0x4037c000U, 0x4000U);
-	target_add_ram(target, 0x40380000U, 0x60000U);
-	/* D-bus mapping for SRAM 1 */
-	target_add_ram(target, 0x3fc80000U, 0x60000U);
-	/* Mapping for the RTC SRAM */
-	target_add_ram(target, 0x50000000U, 0x2000U);
+	/* Establish the target Flash mappings */
+	esp32c3_add_flash(target);
 
 	return true;
 }
