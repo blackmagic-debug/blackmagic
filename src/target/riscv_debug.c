@@ -102,6 +102,9 @@
 
 #define RV_ISA_EXTENSIONS_MASK 0x03ffffffU
 
+#define RV_VENDOR_JEP106_CONT_MASK 0x7fffff80U
+#define RV_VENDOR_JEP106_CODE_MASK 0x7fU
+
 #define RV_DCSR_STEP       0x00000004U
 #define RV_DCSR_CAUSE_MASK 0x000001c0U
 #define RV_DCSR_STEPIE     0x00000800U
@@ -303,7 +306,12 @@ static uint8_t riscv_isa_address_width(const uint32_t isa)
 
 static void riscv_hart_read_ids(riscv_hart_s *const hart)
 {
+	/* Read out the vendor ID */
 	riscv_csr_read(hart, RV_VENDOR_ID | RV_CSR_FORCE_32_BIT, &hart->vendorid);
+	/* Adjust the value to fit our view of JEP-106 codes */
+	hart->vendorid =
+		((hart->vendorid & RV_VENDOR_JEP106_CONT_MASK) << 1U) | (hart->vendorid & RV_VENDOR_JEP106_CODE_MASK);
+	/* Depending on the bus width, read out the other IDs suitably */
 	if (hart->access_width == 32U) {
 		riscv_csr_read(hart, RV_ARCH_ID, &hart->archid);
 		riscv_csr_read(hart, RV_IMPL_ID, &hart->implid);
