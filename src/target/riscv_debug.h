@@ -141,12 +141,17 @@ typedef struct riscv_hart {
 
 #define RV_STATUS_VERSION_MASK 0x0000000fU
 
-#define RV_DM_DATA0           0x04U
-#define RV_DM_DATA1           0x05U
-#define RV_DM_DATA2           0x06U
-#define RV_DM_DATA3           0x07U
-#define RV_DM_ABST_CTRLSTATUS 0x16U
-#define RV_DM_ABST_COMMAND    0x17U
+#define RV_DM_DATA0             0x04U
+#define RV_DM_DATA1             0x05U
+#define RV_DM_DATA2             0x06U
+#define RV_DM_DATA3             0x07U
+#define RV_DM_ABST_CTRLSTATUS   0x16U
+#define RV_DM_ABST_COMMAND      0x17U
+#define RV_DM_SYSBUS_CTRLSTATUS 0x38U
+#define RV_DM_SYSBUS_ADDR0      0x39U
+#define RV_DM_SYSBUS_ADDR1      0x3aU
+#define RV_DM_SYSBUS_DATA0      0x3cU
+#define RV_DM_SYSBUS_DATA1      0x3dU
 
 #define RV_DM_ABST_CMD_ACCESS_REG 0x00000000U
 #define RV_DM_ABST_CMD_ACCESS_MEM 0x02000000U

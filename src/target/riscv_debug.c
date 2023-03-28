@@ -73,6 +73,8 @@
 #define RV_DM_ABST_STATUS_BUSY       0x00001000U
 #define RV_DM_ABST_STATUS_DATA_COUNT 0x0000000fU
 
+#define RV_DM_SYSBUS_STATUS_ADDR_WIDTH_MASK 0x00000fe0U
+
 #define RV_CSR_FORCE_MASK   0xc000U
 #define RV_CSR_FORCE_32_BIT 0x4000U
 #define RV_CSR_FORCE_64_BIT 0x8000U
@@ -210,6 +212,7 @@ static riscv_debug_version_e riscv_dm_version(uint32_t status);
 
 static uint32_t riscv_hart_discover_isa(riscv_hart_s *hart);
 static void riscv_hart_discover_triggers(riscv_hart_s *hart);
+static void riscv_hart_memory_access_type(riscv_hart_s *hart);
 
 static bool riscv_attach(target_s *target);
 static void riscv_detach(target_s *target);
@@ -383,6 +386,7 @@ static bool riscv_hart_init(riscv_hart_s *const hart)
 	target->cpuid = hart->archid;
 
 	riscv_hart_discover_triggers(hart);
+	riscv_hart_memory_access_type(hart);
 
 	/* Setup core-agnostic target functions */
 	target->attach = riscv_attach;
@@ -694,6 +698,21 @@ static void riscv_hart_discover_triggers(riscv_hart_s *const hart)
 		hart->trigger_uses[trigger] = info;
 		DEBUG_TARGET("Hart trigger slot %" PRIu32 " modes: %04" PRIx32 "\n", trigger, info);
 	}
+}
+
+static void riscv_hart_memory_access_type(riscv_hart_s *const hart)
+{
+	uint32_t sysbus_status;
+	hart->flags &= ~RV_HART_FLAG_MEMORY_SYSBUS;
+	/*
+	 * Try reading the system bus access control and status register.
+	 * Check if the value read back is non-zero for the sbasize field
+	 */
+	if (!riscv_dm_read(hart->dbg_module, RV_DM_SYSBUS_CTRLSTATUS, &sysbus_status) ||
+		!(sysbus_status & RV_DM_SYSBUS_STATUS_ADDR_WIDTH_MASK))
+		return;
+	/* If all the checks passed, we now have a valid system bus so can proceed with using it for memory access */
+	hart->flags = RV_HART_FLAG_MEMORY_SYSBUS;
 }
 
 riscv_match_size_e riscv_breakwatch_match_size(const size_t size)
