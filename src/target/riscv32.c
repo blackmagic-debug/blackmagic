@@ -267,6 +267,21 @@ static void riscv32_abstract_mem_write(
 	}
 }
 
+static void riscv_sysbus_check(riscv_hart_s *const hart)
+{
+	uint32_t status = 0;
+	/* Read back the system bus status */
+	if (!riscv_dm_read(hart->dbg_module, RV_DM_SYSBUS_CTRLSTATUS, &status))
+		return;
+	/* Store the result and reset the value in the control/status register */
+	hart->status = (status >> 12U) & RISCV_HART_OTHER;
+	if (!riscv_dm_write(hart->dbg_module, RV_DM_SYSBUS_CTRLSTATUS, RISCV_HART_OTHER << 12U))
+		return;
+	/* If something goes wrong, tell the user */
+	if (hart->status != RISCV_HART_NO_ERROR)
+		DEBUG_WARN("memory access failed: %u\n", hart->status);
+}
+
 static void riscv32_sysbus_mem_read(
 	riscv_hart_s *const hart, void *const dest, const target_addr_t src, const size_t len)
 {
@@ -291,29 +306,38 @@ static void riscv32_sysbus_mem_read(
 				return;
 		}
 		uint32_t value = 0;
-		/* Read back and extract the data for this block */
+		/* Read back and unpack the data for this block */
 		if (!riscv_dm_read(hart->dbg_module, RV_DM_SYSBUS_DATA0, &value))
 			return;
 		riscv32_unpack_data(data + offset, value, access_width);
 	}
-	uint32_t status = 0;
-	/* Read back the system bus status */
-	if (!riscv_dm_read(hart->dbg_module, RV_DM_SYSBUS_CTRLSTATUS, &status))
-		return;
-	hart->status = (status >> 12U) & RISCV_HART_OTHER;
-	if (!riscv_dm_write(hart->dbg_module, RV_DM_SYSBUS_CTRLSTATUS, RISCV_HART_OTHER << 12U))
-		return;
-	if (hart->status != RISCV_HART_NO_ERROR)
-		DEBUG_WARN("memory read failed: %u\n", hart->status);
+	riscv_sysbus_check(hart);
 }
 
 static void riscv32_sysbus_mem_write(
 	riscv_hart_s *const hart, const target_addr_t dest, const void *const src, const size_t len)
 {
-	(void)hart;
-	(void)dest;
-	(void)src;
-	(void)len;
+	/* Figure out the maxmial width of access to perform, up to the bitness of the target */
+	const uint8_t access_width = riscv_mem_access_width(hart, dest, len);
+	const uint8_t access_length = 1U << access_width;
+	/* Build the access command */
+	const uint32_t command =
+		(access_width << RV_SYSBUS_MEM_ACCESS_SHIFT) | (access_length < len ? RV_SYSBUS_MEM_ADDR_POST_INC : 0U);
+	/*
+	 * Write the command setup to the access control register
+	 * Then set up the write by writing the address to the address register
+	 */
+	if (!riscv_dm_write(hart->dbg_module, RV_DM_SYSBUS_CTRLSTATUS, command) ||
+		!riscv_dm_write(hart->dbg_module, RV_DM_SYSBUS_ADDR0, dest))
+		return;
+	const uint8_t *const data = (const uint8_t *)src;
+	for (size_t offset = 0; offset < len; offset += access_length) {
+		/* Pack the data for this block and write it */
+		const uint32_t value = riscv32_pack_data(data + offset, access_width);
+		if (!riscv_dm_write(hart->dbg_module, RV_DM_SYSBUS_DATA0, value))
+			return;
+	}
+	riscv_sysbus_check(hart);
 }
 
 static void riscv32_mem_read(target_s *const target, void *const dest, const target_addr_t src, const size_t len)
