@@ -296,6 +296,15 @@ static void riscv32_sysbus_mem_read(
 			return;
 		riscv32_unpack_data(data + offset, value, access_width);
 	}
+	uint32_t status = 0;
+	/* Read back the system bus status */
+	if (!riscv_dm_read(hart->dbg_module, RV_DM_SYSBUS_CTRLSTATUS, &status))
+		return;
+	hart->status = (status >> 12U) & RISCV_HART_OTHER;
+	if (!riscv_dm_write(hart->dbg_module, RV_DM_SYSBUS_CTRLSTATUS, RISCV_HART_OTHER << 12U))
+		return;
+	if (hart->status != RISCV_HART_NO_ERROR)
+		DEBUG_WARN("memory read failed: %u\n", hart->status);
 }
 
 static void riscv32_sysbus_mem_write(
