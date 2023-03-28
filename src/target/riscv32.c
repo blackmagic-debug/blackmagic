@@ -96,6 +96,9 @@ bool riscv32_probe(target_s *const target)
 	case JEP106_MANUFACTURER_RV_GIGADEVICE:
 		PROBE(gd32vf1_probe);
 		break;
+	case JEP106_MANUFACTURER_ESPRESSIF:
+		PROBE(esp32c3_probe);
+		break;
 	}
 
 #if PC_HOSTED == 0

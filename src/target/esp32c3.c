@@ -40,6 +40,15 @@
 #define ESP32_C3_ARCH_ID 0x80000001U
 #define ESP32_C3_IMPL_ID 0x00000001U
 
+#define ESP32_C3_DBUS_SRAM1_BASE 0x3fc80000U
+#define ESP32_C3_DBUS_SRAM1_SIZE 0x00060000U
+#define ESP32_C3_IBUS_SRAM0_BASE 0x4037c000U
+#define ESP32_C3_IBUS_SRAM0_SIZE 0x00004000U
+#define ESP32_C3_IBUS_SRAM1_BASE 0x40380000U
+#define ESP32_C3_IBUS_SRAM1_SIZE 0x00060000U
+#define ESP32_C3_RTC_SRAM_BASE   0x50000000U
+#define ESP32_C3_RTC_SRAM_SIZE   0x00002000U
+
 #define ESP32_C3_RTC_BASE           0x60008000U
 #define ESP32_C3_RTC_WDT_CONFIG0    (ESP32_C3_RTC_BASE + 0x090U)
 #define ESP32_C3_RTC_WDT_FEED       (ESP32_C3_RTC_BASE + 0x0a4U)
@@ -89,6 +98,24 @@ bool esp32c3_target_prepare(target_s *const target)
 	target->mem_write = riscv32_mem_write;
 	/* Now disable the WDTs so the stop causing problems ready for discovering trigger slots, etc */
 	esp32c3_disable_wdts(target);
+	return true;
+}
+
+bool esp32c3_probe(target_s *const target)
+{
+	const riscv_hart_s *const hart = riscv_hart_struct(target);
+	/* Seems that the best we can do is check the marchid and mimplid register values */
+	if (hart->archid != ESP32_C3_ARCH_ID || hart->implid != ESP32_C3_IMPL_ID)
+		return false;
+
+	target->driver = "ESP32-C3";
+
+	/* Establish the target RAM mappings */
+	target_add_ram32(target, ESP32_C3_IBUS_SRAM0_BASE, ESP32_C3_IBUS_SRAM0_SIZE);
+	target_add_ram32(target, ESP32_C3_IBUS_SRAM1_BASE, ESP32_C3_IBUS_SRAM1_SIZE);
+	target_add_ram32(target, ESP32_C3_DBUS_SRAM1_BASE, ESP32_C3_DBUS_SRAM1_SIZE);
+	target_add_ram32(target, ESP32_C3_RTC_SRAM_BASE, ESP32_C3_RTC_SRAM_SIZE);
+
 	return true;
 }
 
