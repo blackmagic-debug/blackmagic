@@ -131,7 +131,7 @@ static void riscv_dmi_reset(const riscv_dmi_s *const dmi)
 	jtag_dev_write_ir(dmi->dev_index, IR_DMI);
 }
 
-static bool riscv_shift_dmi(riscv_dmi_s *const dmi, const uint8_t operation, const uint32_t address,
+static uint8_t riscv_shift_dmi(riscv_dmi_s *const dmi, const uint8_t operation, const uint32_t address,
 	const uint32_t data_in, uint32_t *const data_out)
 {
 	jtag_dev_s *device = &jtag_devs[dmi->dev_index];
@@ -149,20 +149,52 @@ static bool riscv_shift_dmi(riscv_dmi_s *const dmi, const uint8_t operation, con
 	jtag_proc.jtagtap_tdi_seq(!device->dr_postscan, (const uint8_t *)&address, dmi->address_width);
 	jtag_proc.jtagtap_tdi_seq(true, ones, device->dr_postscan);
 	jtagtap_return_idle(dmi->idle_cycles);
-	/* XXX: Need to deal with when status is 3. */
+	/* Translate error 1 into RV_DMI_FAILURE per the spec */
+	if (status == 1U)
+		return RV_DMI_FAILURE;
+	return status;
+}
+
+static bool riscv_dmi_transfer(riscv_dmi_s *const dmi, const uint8_t operation, const uint32_t address,
+	const uint32_t data_in, uint32_t *const data_out)
+{
+	/* Try the transfer */
+	uint8_t status = riscv_shift_dmi(dmi, operation, address, data_in, data_out);
+
+	/* Handle status == 3 (RV_DMI_TOO_SOON) */
+	if (status == RV_DMI_TOO_SOON) {
+		/*
+		 * If we got RV_DMI_TOO_SOON and we're under 8 idle cycles, increase the number
+		 * of idle cycles used to compensate and have the outer code re-run the transnfers
+		 */
+		if (dmi->idle_cycles < 8)
+			++dmi->idle_cycles;
+		/*
+		 * Otherwise we've hit 8 idle cycles, it doesn't matter if we get another
+		 * RV_DMI_TOO_SOON, treat that as a hard error and bail out.
+		 */
+		else
+			status = RV_DMI_FAILURE;
+	}
+
 	dmi->fault = status;
-	if (status == RV_DMI_FAILURE)
+	/* If we get straight failure, do a DMI reset */
+	if (status == RV_DMI_FAILURE || status == RV_DMI_TOO_SOON)
 		riscv_dmi_reset(dmi);
 	return status == RV_DMI_SUCCESS;
 }
 
 static bool riscv_jtag_dmi_read(riscv_dmi_s *const dmi, const uint32_t address, uint32_t *const value)
 {
-	/* Setup the location to read from */
-	bool result = riscv_shift_dmi(dmi, RV_DMI_READ, address, 0, NULL);
-	if (result)
-		/* If that worked, read back the value and check the operation status */
-		result = riscv_shift_dmi(dmi, RV_DMI_NOOP, 0, 0, value);
+	bool result = true;
+	do {
+		/* Setup the location to read from */
+		result = riscv_dmi_transfer(dmi, RV_DMI_READ, address, 0, NULL);
+		if (result)
+			/* If that worked, read back the value and check the operation status */
+			result = riscv_dmi_transfer(dmi, RV_DMI_NOOP, 0, 0, value);
+	} while (dmi->fault == RV_DMI_TOO_SOON);
+
 	if (!result)
 		DEBUG_WARN("DMI read at 0x%08" PRIx32 " failed with status %u\n", address, dmi->fault);
 	return result;
@@ -171,10 +203,10 @@ static bool riscv_jtag_dmi_read(riscv_dmi_s *const dmi, const uint32_t address, 
 static bool riscv_jtag_dmi_write(riscv_dmi_s *const dmi, const uint32_t address, const uint32_t value)
 {
 	/* Write a value to the requested register */
-	bool result = riscv_shift_dmi(dmi, RV_DMI_WRITE, address, value, NULL);
+	bool result = riscv_dmi_transfer(dmi, RV_DMI_WRITE, address, value, NULL);
 	if (result)
 		/* If that worked, read back the operation status to ensure the write actually worked */
-		result = riscv_shift_dmi(dmi, RV_DMI_NOOP, 0, 0, NULL);
+		result = riscv_dmi_transfer(dmi, RV_DMI_NOOP, 0, 0, NULL);
 	if (!result)
 		DEBUG_WARN("DMI write at 0x%08" PRIx32 " failed with status %u\n", address, dmi->fault);
 	return result;
