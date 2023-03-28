@@ -162,14 +162,15 @@ typedef struct riscv_hart {
 #define RV_REG_ACCESS_32_BIT  0x00200000U
 #define RV_REG_ACCESS_64_BIT  0x00300000U
 #define RV_REG_ACCESS_128_BIT 0x00400000U
-#define RV_MEM_ADDR_POST_INC  0x00080000U
 
 #define RV_MEM_ACCESS_8_BIT   0x0U
 #define RV_MEM_ACCESS_16_BIT  0x1U
 #define RV_MEM_ACCESS_32_BIT  0x2U
 #define RV_MEM_ACCESS_64_BIT  0x3U
 #define RV_MEM_ACCESS_128_BIT 0x4U
-#define RV_MEM_ACCESS_SHIFT   20U
+
+#define RV_ABST_MEM_ADDR_POST_INC 0x00080000U
+#define RV_ABST_MEM_ACCESS_SHIFT  20U
 
 /* dpc -> Debug Program Counter */
 #define RV_DPC 0x7b1U

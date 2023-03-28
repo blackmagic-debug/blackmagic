@@ -631,7 +631,7 @@ bool riscv_csr_write(riscv_hart_s *const hart, const uint16_t reg, const void *c
 uint8_t riscv_mem_access_width(const riscv_hart_s *const hart, const target_addr_t address, const size_t length)
 {
 	/* Grab the Hart's most maxmimally aligned possible write width */
-	uint8_t access_width = riscv_hart_access_width(hart->address_width) >> RV_MEM_ACCESS_SHIFT;
+	uint8_t access_width = riscv_hart_access_width(hart->address_width) >> RV_ABST_MEM_ACCESS_SHIFT;
 	/* Convert the hart access width to a mask - for example, for 32-bit harts, this gives (1U << 2U) - 1U = 3U */
 	uint8_t align_mask = (1U << access_width) - 1U;
 	/* Mask out the bottom bits of both the address and length - anything that determines the alignment */

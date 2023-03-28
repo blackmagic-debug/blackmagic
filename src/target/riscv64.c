@@ -121,8 +121,8 @@ static void riscv64_mem_read(target_s *const target, void *const dest, const tar
 	const uint8_t access_width = riscv_mem_access_width(hart, src, len);
 	const uint8_t access_length = 1U << access_width;
 	/* Build the access command */
-	const uint32_t command = RV_DM_ABST_CMD_ACCESS_MEM | RV_ABST_READ | (access_width << RV_MEM_ACCESS_SHIFT) |
-		(access_length < len ? RV_MEM_ADDR_POST_INC : 0U);
+	const uint32_t command = RV_DM_ABST_CMD_ACCESS_MEM | RV_ABST_READ | (access_width << RV_ABST_MEM_ACCESS_SHIFT) |
+		(access_length < len ? RV_ABST_MEM_ADDR_POST_INC : 0U);
 	/* Write the address to read to arg1 */
 	if (!riscv_dm_write(hart->dbg_module, RV_DM_DATA2, src) || !riscv_dm_write(hart->dbg_module, RV_DM_DATA3, 0U))
 		return;
