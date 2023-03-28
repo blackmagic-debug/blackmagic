@@ -84,6 +84,10 @@ typedef enum riscv_match_size {
 	RV_MATCH_SIZE_128_BIT = 0x00410000U,
 } riscv_match_size_e;
 
+/* These defines specify Hart-specific information such as which memory access style to use */
+#define RV_HART_FLAG_MEMORY_ABSTRACT 0x00U
+#define RV_HART_FLAG_MEMORY_SYSBUS   0x01U
+
 typedef struct riscv_dmi riscv_dmi_s;
 
 /* This structure represents a version-agnostic Debug Module Interface on a RISC-V device */
@@ -122,6 +126,7 @@ typedef struct riscv_hart {
 	uint32_t hartsel;
 	uint8_t access_width;
 	uint8_t address_width;
+	uint8_t flags;
 	riscv_hart_status_e status;
 
 	uint32_t extensions;
@@ -208,5 +213,8 @@ bool riscv_config_trigger(
 uint8_t riscv_mem_access_width(const riscv_hart_s *hart, target_addr_t address, size_t length);
 void riscv32_unpack_data(void *dest, uint32_t data, uint8_t access_width);
 uint32_t riscv32_pack_data(const void *src, uint8_t access_width);
+
+void riscv32_mem_read(target_s *target, void *dest, target_addr_t src, size_t len);
+void riscv32_mem_write(target_s *target, target_addr_t dest, const void *src, size_t len);
 
 #endif /*TARGET_RISCV_DEBUG_H*/
