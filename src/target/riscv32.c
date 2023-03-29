@@ -38,6 +38,7 @@
 #include "jep106.h"
 #include "riscv_debug.h"
 #include "gdb_packet.h"
+#include "adiv5.h"
 
 typedef struct riscv32_regs {
 	uint32_t gprs[32];
@@ -312,13 +313,78 @@ static void riscv32_sysbus_mem_native_read(riscv_hart_s *const hart, void *const
 	riscv_sysbus_check(hart);
 }
 
+static void riscv32_sysbus_mem_adjusted_read(riscv_hart_s *const hart, void *const dest, const target_addr_t src,
+	const uint8_t access_width, const uint8_t native_access_width, const uint8_t access_length)
+{
+	DEBUG_PROBE("%s: %u read for %u bytes\n", __func__, access_length, 1U << access_width);
+	const target_addr_t alignment = ~(access_length - 1U);
+	/*
+	 * On a 32-bit target the only possible widths are 8- 16- and 32-bit, so after the adjustment loop,
+	 * there are only and exactly 2 possible cases to handle here: 16- and 32-bit access.
+	 */
+	switch (native_access_width) {
+	case RV_MEM_ACCESS_16_BIT: {
+		uint16_t value = 0;
+		riscv32_sysbus_mem_native_read(
+			hart, &value, src & alignment, access_length, RV_MEM_ACCESS_16_BIT, access_length);
+		adiv5_unpack_data(dest, src & 1U, value, access_width);
+		break;
+	}
+	case RV_MEM_ACCESS_32_BIT: {
+		uint32_t value = 0;
+		riscv32_sysbus_mem_native_read(
+			hart, &value, src & alignment, access_length, RV_MEM_ACCESS_32_BIT, access_length);
+		adiv5_unpack_data(dest, src & 3U, value, access_width);
+		break;
+	}
+	}
+}
+
 static void riscv32_sysbus_mem_read(
 	riscv_hart_s *const hart, void *const dest, const target_addr_t src, const size_t len)
 {
 	/* Figure out the maxmial width of access to perform, up to the bitness of the target */
 	const uint8_t access_width = riscv_mem_access_width(hart, src, len);
 	const uint8_t access_length = (uint8_t)(1U << access_width);
-	riscv32_sysbus_mem_native_read(hart, dest, src, len, access_width, access_length);
+	/* Check if the access is a natural/native width */
+	if (hart->flags & access_length) {
+		riscv32_sysbus_mem_native_read(hart, dest, src, len, access_width, access_length);
+		return;
+	}
+
+	/* If we were unable to do this using a native access, find the next largest supported access width */
+	uint8_t native_access_width = access_width;
+	while (!((hart->flags >> native_access_width) & 1U) && native_access_width < RV_MEM_ACCESS_32_BIT)
+		++native_access_width;
+	const uint8_t native_access_length = (uint8_t)(1U << native_access_width);
+
+	/* Do the initial adjusted access */
+	size_t remainder = len;
+	target_addr_t address = src;
+	uint8_t *data = (uint8_t *)dest;
+	riscv32_sysbus_mem_adjusted_read(hart, data, address, access_width, native_access_width, native_access_length);
+
+	/* After doing the initial access, adjust the location of the next and do any follow-up accesses required */
+	remainder -= access_length;
+	address += access_length;
+	data += access_length;
+
+	/*
+	 * Now we're aligned to the wider access width, do another set of reads if there's
+	 * any remainder. Do this till we either reach nothing left, or we have another small left-over amount
+	 */
+	if (!remainder)
+		return;
+	const size_t amount = remainder & ~(native_access_length - 1U);
+	if (amount)
+		riscv32_sysbus_mem_native_read(hart, data, address, amount, native_access_width, native_access_length);
+	remainder -= amount;
+	address += (uint32_t)amount;
+	data += amount;
+
+	/* If there's any data left to read, do another adjusted access to grab it */
+	if (remainder)
+		riscv32_sysbus_mem_adjusted_read(hart, data, address, access_width, native_access_width, native_access_length);
 }
 
 static void riscv32_sysbus_mem_write(
