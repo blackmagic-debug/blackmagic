@@ -85,8 +85,13 @@ typedef enum riscv_match_size {
 } riscv_match_size_e;
 
 /* These defines specify Hart-specific information such as which memory access style to use */
-#define RV_HART_FLAG_MEMORY_ABSTRACT 0x00U
-#define RV_HART_FLAG_MEMORY_SYSBUS   0x01U
+#define RV_HART_FLAG_MEMORY_ABSTRACT    0x00U
+#define RV_HART_FLAG_MEMORY_SYSBUS      0x10U
+#define RV_HART_FLAG_ACCESS_WIDTH_MASK  0x0fU
+#define RV_HART_FLAG_ACCESS_WIDTH_8BIT  0x01U
+#define RV_HART_FLAG_ACCESS_WIDTH_16BIT 0x02U
+#define RV_HART_FLAG_ACCESS_WIDTH_32BIT 0x04U
+#define RV_HART_FLAG_ACCESS_WIDTH_64BIT 0x08U
 
 typedef struct riscv_dmi riscv_dmi_s;
 
