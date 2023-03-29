@@ -429,7 +429,7 @@ static bool riscv_dmi_read(riscv_dmi_s *const dmi, const uint32_t address, uint3
 {
 	const bool result = dmi->read(dmi, address, value);
 	if (result)
-		DEBUG_TARGET("%s: %08" PRIx32 " -> %08" PRIx32 "\n", __func__, address, *value);
+		DEBUG_TARGET("%s:  %08" PRIx32 " -> %08" PRIx32 "\n", __func__, address, *value);
 	return result;
 }
 

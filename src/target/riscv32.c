@@ -299,6 +299,12 @@ static void riscv32_sysbus_mem_native_read(riscv_hart_s *const hart, void *const
 		return;
 	uint8_t *const data = (uint8_t *)dest;
 	for (size_t offset = 0; offset < len; offset += access_length) {
+		uint32_t status = RV_SYSBUS_STATUS_BUSY;
+		/* Wait for the current read cycle to complete */
+		while (status & RV_SYSBUS_STATUS_BUSY) {
+			if (!riscv_dm_read(hart->dbg_module, RV_DM_SYSBUS_CTRLSTATUS, &status))
+				return;
+		}
 		/* If this would be the last read, clean up the access control register */
 		if (offset + access_length == len && (command & RV_SYSBUS_MEM_ADDR_POST_INC)) {
 			if (!riscv_dm_write(hart->dbg_module, RV_DM_SYSBUS_CTRLSTATUS, 0))

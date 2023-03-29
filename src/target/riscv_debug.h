@@ -180,6 +180,7 @@ typedef struct riscv_hart {
 #define RV_SYSBUS_MEM_ADDR_POST_INC 0x00010000U
 #define RV_SYSBUS_MEM_READ_ON_ADDR  0x00100000U
 #define RV_SYSBUS_MEM_READ_ON_DATA  0x00008000U
+#define RV_SYSBUS_STATUS_BUSY       0x00200000U
 #define RV_SYSBUS_MEM_ACCESS_SHIFT  17U
 
 /* dpc -> Debug Program Counter */
