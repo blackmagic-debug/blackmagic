@@ -282,14 +282,12 @@ static void riscv_sysbus_check(riscv_hart_s *const hart)
 		DEBUG_WARN("memory access failed: %u\n", hart->status);
 }
 
-static void riscv32_sysbus_mem_read(
-	riscv_hart_s *const hart, void *const dest, const target_addr_t src, const size_t len)
+static void riscv32_sysbus_mem_native_read(riscv_hart_s *const hart, void *const dest, const target_addr_t src,
+	const size_t len, const uint8_t access_width, const uint8_t access_length)
 {
-	/* Figure out the maxmial width of access to perform, up to the bitness of the target */
-	const uint8_t access_width = riscv_mem_access_width(hart, src, len);
-	const uint8_t access_length = 1U << access_width;
+	DEBUG_TARGET("%s: %zu byte read at %08" PRIx32 " in %u byte blocks\n", __func__, len, src, access_length);
 	/* Build the access command */
-	const uint32_t command = (access_width << RV_SYSBUS_MEM_ACCESS_SHIFT) | RV_SYSBUS_MEM_READ_ON_ADDR |
+	const uint32_t command = ((uint32_t)access_width << RV_SYSBUS_MEM_ACCESS_SHIFT) | RV_SYSBUS_MEM_READ_ON_ADDR |
 		(access_length < len ? RV_SYSBUS_MEM_ADDR_POST_INC | RV_SYSBUS_MEM_READ_ON_DATA : 0U);
 	/*
 	 * Write the command setup to the access control register
@@ -312,6 +310,15 @@ static void riscv32_sysbus_mem_read(
 		riscv32_unpack_data(data + offset, value, access_width);
 	}
 	riscv_sysbus_check(hart);
+}
+
+static void riscv32_sysbus_mem_read(
+	riscv_hart_s *const hart, void *const dest, const target_addr_t src, const size_t len)
+{
+	/* Figure out the maxmial width of access to perform, up to the bitness of the target */
+	const uint8_t access_width = riscv_mem_access_width(hart, src, len);
+	const uint8_t access_length = (uint8_t)(1U << access_width);
+	riscv32_sysbus_mem_native_read(hart, dest, src, len, access_width, access_length);
 }
 
 static void riscv32_sysbus_mem_write(
