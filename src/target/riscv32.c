@@ -415,6 +415,13 @@ static void riscv32_sysbus_mem_write(
 		const uint32_t value = riscv32_pack_data(data + offset, access_width);
 		if (!riscv_dm_write(hart->dbg_module, RV_DM_SYSBUS_DATA0, value))
 			return;
+
+		uint32_t status = RV_SYSBUS_STATUS_BUSY;
+		/* Wait for the current write cycle to complete */
+		while (status & RV_SYSBUS_STATUS_BUSY) {
+			if (!riscv_dm_read(hart->dbg_module, RV_DM_SYSBUS_CTRLSTATUS, &status))
+				return;
+		}
 	}
 	riscv_sysbus_check(hart);
 }
