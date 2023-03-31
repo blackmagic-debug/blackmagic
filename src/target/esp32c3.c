@@ -121,10 +121,15 @@ static void esp32c3_add_flash(target_s *const target)
 
 	spi_parameters_s spi_parameters;
 	if (!sfdp_read_parameters(target, &spi_parameters, esp32c3_spi_read_sfdp)) {
-		/* SFDP readout failed, so make some assumptions and hope for the best. */
+		/* SFDP readout failed, so read the JTAG ID of the device next */
+		spi_flash_id_s flash_id;
+		esp32c3_spi_read(target, SPI_FLASH_CMD_READ_JEDEC_ID, 0, &flash_id, sizeof(flash_id));
+		const uint32_t capacity = 1U << flash_id.capacity;
+
+		/* Now make some assumptions and hope for the best. */
 		spi_parameters.page_size = 256U;
 		spi_parameters.sector_size = 4096U;
-		spi_parameters.capacity = ESP32_C3_IBUS_FLASH_SIZE;
+		spi_parameters.capacity = MIN(capacity, ESP32_C3_IBUS_FLASH_SIZE);
 		spi_parameters.sector_erase_opcode = SPI_FLASH_OPCODE_SECTOR_ERASE;
 	}
 
