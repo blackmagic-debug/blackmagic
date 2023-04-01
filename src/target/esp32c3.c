@@ -120,12 +120,22 @@
 #define ESP32_C3_SPI_FLASH_COMMAND_MASK     0x0003ffffU
 
 #define SPI_FLASH_OPCODE_SECTOR_ERASE 0x20U
+#define SPI_FLASH_CMD_WRITE_ENABLE \
+	(ESP32_C3_SPI_FLASH_OPCODE_ONLY | ESP32_C3_SPI_FLASH_DUMMY_LEN(0) | ESP32_C3_SPI_FLASH_OPCODE(0x06U))
+#define SPI_FLASH_CMD_CHIP_ERASE \
+	(ESP32_C3_SPI_FLASH_OPCODE_ONLY | ESP32_C3_SPI_FLASH_DUMMY_LEN(0) | ESP32_C3_SPI_FLASH_OPCODE(0x60U))
+#define SPI_FLASH_CMD_READ_STATUS                                                                    \
+	(ESP32_C3_SPI_FLASH_OPCODE_ONLY | ESP32_C3_SPI_FLASH_DATA_IN | ESP32_C3_SPI_FLASH_DUMMY_LEN(0) | \
+		ESP32_C3_SPI_FLASH_OPCODE(0x05U))
 #define SPI_FLASH_CMD_READ_JEDEC_ID                                                                  \
 	(ESP32_C3_SPI_FLASH_OPCODE_ONLY | ESP32_C3_SPI_FLASH_DATA_IN | ESP32_C3_SPI_FLASH_DUMMY_LEN(0) | \
 		ESP32_C3_SPI_FLASH_OPCODE(0x9fU))
 #define SPI_FLASH_CMD_READ_SFDP                                                                         \
 	(ESP32_C3_SPI_FLASH_OPCODE_3B_ADDR | ESP32_C3_SPI_FLASH_DATA_IN | ESP32_C3_SPI_FLASH_DUMMY_LEN(8) | \
 		ESP32_C3_SPI_FLASH_OPCODE(0x5aU))
+
+#define SPI_FLASH_STATUS_BUSY          0x01U
+#define SPI_FLASH_STATUS_WRITE_ENABLED 0x02U
 
 typedef struct esp32c3_priv {
 	uint32_t wdt_config[4];
@@ -138,6 +148,10 @@ static void esp32c3_halt_resume(target_s *target, bool step);
 static target_halt_reason_e esp32c3_halt_poll(target_s *target, target_addr_t *watch);
 
 static void esp32c3_spi_read(target_s *target, uint32_t command, target_addr_t address, void *buffer, size_t length);
+static void esp32c3_spi_write(
+	target_s *target, uint32_t command, target_addr_t address, const void *buffer, size_t length);
+
+static bool esp32c3_mass_erase(target_s *target);
 
 static void esp32c3_spi_read_sfdp(
 	target_s *const target, const uint32_t address, void *const buffer, const size_t length)
@@ -194,6 +208,8 @@ bool esp32c3_probe(target_s *const target)
 	target->halt_request = esp32c3_halt_request;
 	target->halt_resume = esp32c3_halt_resume;
 	target->halt_poll = esp32c3_halt_poll;
+	/* Provide an implementation of the mass erase command */
+	target->mass_erase = esp32c3_mass_erase;
 
 	/* Establish the target RAM mappings */
 	target_add_ram(target, ESP32_C3_IBUS_SRAM0_BASE, ESP32_C3_IBUS_SRAM0_SIZE);
@@ -348,4 +364,79 @@ static void esp32c3_spi_read(
 			memcpy(data + offset + idx, &value, bytes);
 		}
 	}
+}
+
+static void esp32c3_spi_write(target_s *const target, const uint32_t command, const target_addr_t address,
+	const void *const buffer, const size_t length)
+{
+	/* Start by setting up the common components of the transaction */
+	const uint32_t enabled_stages = esp32c3_spi_config(target, command, address, length);
+	const uint8_t *const data = (const uint8_t *)buffer;
+	/* Handle the case where we have nothing to write (execute command) */
+	if (!length) {
+		/* Write the stages to execute and run the transaction */
+		target_mem_write32(target, ESP32_C3_SPI1_USER0, enabled_stages);
+		esp32c3_spi_wait_complete(target);
+		/* The for loop below will do nothing so we do nothing */
+	}
+
+	/*
+	 * The transfer has to proceed in no more than 64 bytes at a time because that's
+	 * how many data registers are available in the SPI peripheral
+	 */
+	for (size_t offset = 0U; offset < length; offset += 64U) {
+		const uint32_t amount = MIN(length - offset, 64U);
+		/* Tell the controller how many bytes we want sent in this transaction */
+		target_mem_write32(target, ESP32_C3_SPI1_DATA_OUT_LEN, ESP32_C3_SPI_DATA_BIT_LEN(amount));
+		/* Configure which transaction stages to use */
+		if (offset)
+			target_mem_write32(target, ESP32_C3_SPI1_USER0, ESP32_C3_SPI_USER0_DATA_OUT);
+		else
+			target_mem_write32(target, ESP32_C3_SPI1_USER0, enabled_stages);
+
+		/* On the final transfer, clear the chip select hold bit, otherwise set it */
+		const uint32_t misc_reg = target_mem_read32(target, ESP32_C3_SPI1_MISC);
+		if (length - offset == amount)
+			target_mem_write32(target, ESP32_C3_SPI1_MISC, misc_reg & ~ESP32_C3_SPI_MISC_CS_HOLD);
+		else
+			target_mem_write32(target, ESP32_C3_SPI1_MISC, misc_reg | ESP32_C3_SPI_MISC_CS_HOLD);
+
+		/* Pack and stage the data to transmit */
+		for (size_t idx = 0; idx < amount; idx += 4U) {
+			const size_t bytes = MIN(4U, amount - idx);
+			uint32_t value = 0;
+			memcpy(&value, data + offset + idx, bytes);
+			target_mem_write32(target, ESP32_C3_SPI1_DATA + idx, value);
+		}
+
+		/* Run the transaction */
+		esp32c3_spi_wait_complete(target);
+	}
+}
+
+static inline uint8_t esp32c3_spi_read_status(target_s *const target)
+{
+	uint8_t status = 0;
+	esp32c3_spi_read(target, SPI_FLASH_CMD_READ_STATUS, 0, &status, sizeof(status));
+	return status;
+}
+
+static inline void esp32c3_spi_run_command(target_s *const target, const uint32_t command)
+{
+	esp32c3_spi_write(target, command, 0U, NULL, 0U);
+}
+
+static bool esp32c3_mass_erase(target_s *const target)
+{
+	platform_timeout_s timeout;
+	platform_timeout_set(&timeout, 500U);
+	esp32c3_spi_run_command(target, SPI_FLASH_CMD_WRITE_ENABLE);
+	if (!(esp32c3_spi_read_status(target) & SPI_FLASH_STATUS_WRITE_ENABLED))
+		return false;
+
+	esp32c3_spi_run_command(target, SPI_FLASH_CMD_CHIP_ERASE);
+	while (esp32c3_spi_read_status(target) & SPI_FLASH_STATUS_BUSY)
+		target_print_progress(&timeout);
+
+	return true;
 }
