@@ -141,6 +141,12 @@ typedef struct esp32c3_priv {
 	uint32_t wdt_config[4];
 } esp32c3_priv_s;
 
+typedef struct esp32c3_spi_flash {
+	target_flash_s flash;
+	uint32_t page_size;
+	uint8_t sector_erase_opcode;
+} esp32c3_spi_flash_s;
+
 static void esp32c3_disable_wdts(target_s *target);
 static void esp32c3_restore_wdts(target_s *target);
 static void esp32c3_halt_request(target_s *target);
@@ -161,8 +167,8 @@ static void esp32c3_spi_read_sfdp(
 
 static void esp32c3_add_flash(target_s *const target)
 {
-	target_flash_s *const flash = calloc(1, sizeof(*flash));
-	if (!flash) { /* calloc failed: heap exhaustion */
+	esp32c3_spi_flash_s *const spi_flash = calloc(1, sizeof(*spi_flash));
+	if (!spi_flash) { /* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return;
 	}
@@ -181,11 +187,15 @@ static void esp32c3_add_flash(target_s *const target)
 		spi_parameters.sector_erase_opcode = SPI_FLASH_OPCODE_SECTOR_ERASE;
 	}
 
+	target_flash_s *const flash = &spi_flash->flash;
 	flash->start = ESP32_C3_IBUS_FLASH_BASE;
 	flash->length = MIN(spi_parameters.capacity, ESP32_C3_IBUS_FLASH_SIZE);
 	flash->blocksize = spi_parameters.sector_size;
 	flash->erased = 0xffU;
 	target_add_flash(target, flash);
+
+	spi_flash->page_size = spi_parameters.page_size;
+	spi_flash->sector_erase_opcode = spi_parameters.sector_erase_opcode;
 }
 
 bool esp32c3_probe(target_s *const target)
