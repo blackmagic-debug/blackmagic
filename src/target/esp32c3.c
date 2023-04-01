@@ -122,6 +122,7 @@
 #define SPI_FLASH_OPCODE_SECTOR_ERASE 0x20U
 #define SPI_FLASH_CMD_WRITE_ENABLE \
 	(ESP32_C3_SPI_FLASH_OPCODE_ONLY | ESP32_C3_SPI_FLASH_DUMMY_LEN(0) | ESP32_C3_SPI_FLASH_OPCODE(0x06U))
+#define SPI_FLASH_CMD_SECTOR_ERASE (ESP32_C3_SPI_FLASH_OPCODE_3B_ADDR | ESP32_C3_SPI_FLASH_DUMMY_LEN(0))
 #define SPI_FLASH_CMD_CHIP_ERASE \
 	(ESP32_C3_SPI_FLASH_OPCODE_ONLY | ESP32_C3_SPI_FLASH_DUMMY_LEN(0) | ESP32_C3_SPI_FLASH_OPCODE(0x60U))
 #define SPI_FLASH_CMD_READ_STATUS                                                                    \
@@ -158,6 +159,7 @@ static void esp32c3_spi_write(
 	target_s *target, uint32_t command, target_addr_t address, const void *buffer, size_t length);
 
 static bool esp32c3_mass_erase(target_s *target);
+static bool esp32c3_spi_flash_erase(target_flash_s *flash, target_addr_t addr, size_t length);
 
 static void esp32c3_spi_read_sfdp(
 	target_s *const target, const uint32_t address, void *const buffer, const size_t length)
@@ -191,6 +193,7 @@ static void esp32c3_add_flash(target_s *const target)
 	flash->start = ESP32_C3_IBUS_FLASH_BASE;
 	flash->length = MIN(spi_parameters.capacity, ESP32_C3_IBUS_FLASH_SIZE);
 	flash->blocksize = spi_parameters.sector_size;
+	flash->erase = esp32c3_spi_flash_erase;
 	flash->erased = 0xffU;
 	target_add_flash(target, flash);
 
@@ -448,5 +451,24 @@ static bool esp32c3_mass_erase(target_s *const target)
 	while (esp32c3_spi_read_status(target) & SPI_FLASH_STATUS_BUSY)
 		target_print_progress(&timeout);
 
+	return true;
+}
+
+static bool esp32c3_spi_flash_erase(target_flash_s *const flash, const target_addr_t addr, const size_t length)
+{
+	target_s *const target = flash->t;
+	const esp32c3_spi_flash_s *const spi_flash = (esp32c3_spi_flash_s *)flash;
+	const target_addr_t begin = addr - flash->start;
+	for (size_t offset = 0; offset < length; offset += flash->blocksize) {
+		esp32c3_spi_run_command(target, SPI_FLASH_CMD_WRITE_ENABLE);
+		if (!(esp32c3_spi_read_status(target) & SPI_FLASH_STATUS_WRITE_ENABLED))
+			return false;
+
+		esp32c3_spi_write(target,
+			SPI_FLASH_CMD_SECTOR_ERASE | ESP32_C3_SPI_FLASH_OPCODE(spi_flash->sector_erase_opcode), begin + offset,
+			NULL, 0);
+		while (esp32c3_spi_read_status(target) & SPI_FLASH_STATUS_BUSY)
+			continue;
+	}
 	return true;
 }
