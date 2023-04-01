@@ -233,4 +233,8 @@ uint8_t riscv_mem_access_width(const riscv_hart_s *hart, target_addr_t address, 
 void riscv32_unpack_data(void *dest, uint32_t data, uint8_t access_width);
 uint32_t riscv32_pack_data(const void *src, uint8_t access_width);
 
+void riscv_halt_request(target_s *target);
+void riscv_halt_resume(target_s *target, bool step);
+target_halt_reason_e riscv_halt_poll(target_s *target, target_addr_t *watch);
+
 #endif /*TARGET_RISCV_DEBUG_H*/

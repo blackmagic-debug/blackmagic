@@ -220,9 +220,6 @@ static void riscv_detach(target_s *target);
 static const char *riscv_target_description(target_s *target);
 
 static bool riscv_check_error(target_s *target);
-static void riscv_halt_request(target_s *target);
-static void riscv_halt_resume(target_s *target, bool step);
-static target_halt_reason_e riscv_halt_poll(target_s *target, target_addr_t *watch);
 static void riscv_reset(target_s *target);
 
 void riscv_dmi_init(riscv_dmi_s *const dmi)
@@ -802,7 +799,7 @@ static bool riscv_dm_poll_state(riscv_dm_s *const dbg_module, const uint32_t sta
 	return true;
 }
 
-static void riscv_halt_request(target_s *const target)
+void riscv_halt_request(target_s *const target)
 {
 	riscv_hart_s *const hart = riscv_hart_struct(target);
 	/* Request the hart to halt */
@@ -815,7 +812,7 @@ static void riscv_halt_request(target_s *const target)
 	(void)riscv_dm_write(hart->dbg_module, RV_DM_CONTROL, hart->hartsel);
 }
 
-static void riscv_halt_resume(target_s *target, const bool step)
+void riscv_halt_resume(target_s *const target, const bool step)
 {
 	riscv_hart_s *const hart = riscv_hart_struct(target);
 	/* Configure the debug controller for single-stepping as appropriate */
@@ -838,7 +835,7 @@ static void riscv_halt_resume(target_s *target, const bool step)
 	(void)riscv_dm_write(hart->dbg_module, RV_DM_CONTROL, hart->hartsel);
 }
 
-static target_halt_reason_e riscv_halt_poll(target_s *const target, target_addr_t *const watch)
+target_halt_reason_e riscv_halt_poll(target_s *const target, target_addr_t *const watch)
 {
 	(void)watch;
 	riscv_hart_s *const hart = riscv_hart_struct(target);

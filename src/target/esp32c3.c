@@ -85,6 +85,28 @@
 #define ESP32_C3_SPI_DATA_BIT_LEN_MASK    0x000003ffU
 #define ESP32_C3_SPI_DATA_BIT_LEN(x)      ((((x)*8U) - 1U) & ESP32_C3_SPI_DATA_BIT_LEN_MASK)
 
+#define ESP32_C3_RTC_BASE           0x60008000U
+#define ESP32_C3_RTC_WDT_CONFIG0    (ESP32_C3_RTC_BASE + 0x090U)
+#define ESP32_C3_RTC_WDT_FEED       (ESP32_C3_RTC_BASE + 0x0a4U)
+#define ESP32_C3_RTC_WDT_WRITE_PROT (ESP32_C3_RTC_BASE + 0x0a8U)
+#define ESP32_C3_RTC_SWD_CONFIG     (ESP32_C3_RTC_BASE + 0x0acU)
+#define ESP32_C3_RTC_SWD_WRITE_PROT (ESP32_C3_RTC_BASE + 0x0b0U)
+
+#define ESP32_C3_WDT_WRITE_PROT_KEY     0x50d83aa1U
+#define ESP32_C3_RTC_SWD_WRITE_PROT_KEY 0x8f1d312aU
+#define ESP32_C3_RTC_SWD_CONFIG_DISABLE 0x40000002U
+#define ESP32_C3_RTC_SWD_CONFIG_FEED    0x60000002U
+
+#define ESP32_C3_TIMG0_BASE           0x6001f000U
+#define ESP32_C3_TIMG0_WDT_CONFIG0    (ESP32_C3_TIMG0_BASE + 0x048U)
+#define ESP32_C3_TIMG0_WDT_FEED       (ESP32_C3_TIMG0_BASE + 0x060U)
+#define ESP32_C3_TIMG0_WDT_WRITE_PROT (ESP32_C3_TIMG0_BASE + 0x064U)
+
+#define ESP32_C3_TIMG1_BASE           0x60020000U
+#define ESP32_C3_TIMG1_WDT_CONFIG0    (ESP32_C3_TIMG1_BASE + 0x048U)
+#define ESP32_C3_TIMG1_WDT_FEED       (ESP32_C3_TIMG1_BASE + 0x060U)
+#define ESP32_C3_TIMG1_WDT_WRITE_PROT (ESP32_C3_TIMG1_BASE + 0x064U)
+
 #define ESP32_C3_SPI_FLASH_OPCODE_MASK      0x000000ffU
 #define ESP32_C3_SPI_FLASH_OPCODE(x)        ((x)&ESP32_C3_SPI_FLASH_OPCODE_MASK)
 #define ESP32_C3_SPI_FLASH_DUMMY_MASK       0x0000ff00U
@@ -104,6 +126,16 @@
 #define SPI_FLASH_CMD_READ_SFDP                                                                         \
 	(ESP32_C3_SPI_FLASH_OPCODE_3B_ADDR | ESP32_C3_SPI_FLASH_DATA_IN | ESP32_C3_SPI_FLASH_DUMMY_LEN(8) | \
 		ESP32_C3_SPI_FLASH_OPCODE(0x5aU))
+
+typedef struct esp32c3_priv {
+	uint32_t wdt_config[4];
+} esp32c3_priv_s;
+
+static void esp32c3_disable_wdts(target_s *target);
+static void esp32c3_restore_wdts(target_s *target);
+static void esp32c3_halt_request(target_s *target);
+static void esp32c3_halt_resume(target_s *target, bool step);
+static target_halt_reason_e esp32c3_halt_poll(target_s *target, target_addr_t *watch);
 
 static void esp32c3_spi_read(target_s *target, uint32_t command, target_addr_t address, void *buffer, size_t length);
 
@@ -149,7 +181,20 @@ bool esp32c3_probe(target_s *const target)
 	if (hart->archid != ESP32_C3_ARCH_ID || hart->implid != ESP32_C3_IMPL_ID)
 		return false;
 
+	esp32c3_priv_s *const priv = calloc(1, sizeof(esp32c3_priv_s));
+	if (!priv) { /* calloc failed: heap exhaustion */
+		DEBUG_WARN("calloc: failed in %s\n", __func__);
+		return false;
+	}
+	target->target_storage = priv;
 	target->driver = "ESP32-C3";
+	esp32c3_disable_wdts(target);
+
+	/* We have to provide our own halt/resume functions to take care of the WDTs as they cause Problems */
+	target->halt_request = esp32c3_halt_request;
+	target->halt_resume = esp32c3_halt_resume;
+	target->halt_poll = esp32c3_halt_poll;
+
 	/* Establish the target RAM mappings */
 	target_add_ram(target, ESP32_C3_IBUS_SRAM0_BASE, ESP32_C3_IBUS_SRAM0_SIZE);
 	target_add_ram(target, ESP32_C3_IBUS_SRAM1_BASE, ESP32_C3_IBUS_SRAM1_SIZE);
@@ -158,8 +203,66 @@ bool esp32c3_probe(target_s *const target)
 
 	/* Establish the target Flash mappings */
 	esp32c3_add_flash(target);
-
 	return true;
+}
+
+static void esp32c3_disable_wdts(target_s *const target)
+{
+	esp32c3_priv_s *const priv = (esp32c3_priv_s *)target->target_storage;
+	/* Disable Timer Group 0's WDT */
+	target_mem_write32(target, ESP32_C3_TIMG0_WDT_WRITE_PROT, ESP32_C3_WDT_WRITE_PROT_KEY);
+	priv->wdt_config[0] = target_mem_read32(target, ESP32_C3_TIMG0_WDT_CONFIG0);
+	target_mem_write32(target, ESP32_C3_TIMG0_WDT_CONFIG0, 0U);
+	/* Disable Timer Group 1's WDT */
+	target_mem_write32(target, ESP32_C3_TIMG1_WDT_WRITE_PROT, ESP32_C3_WDT_WRITE_PROT_KEY);
+	priv->wdt_config[1] = target_mem_read32(target, ESP32_C3_TIMG1_WDT_CONFIG0);
+	target_mem_write32(target, ESP32_C3_TIMG1_WDT_CONFIG0, 0U);
+	/* Disable the RTC WDT */
+	target_mem_write32(target, ESP32_C3_RTC_WDT_WRITE_PROT, ESP32_C3_WDT_WRITE_PROT_KEY);
+	priv->wdt_config[2] = target_mem_read32(target, ESP32_C3_RTC_WDT_CONFIG0);
+	target_mem_write32(target, ESP32_C3_RTC_WDT_CONFIG0, 0U);
+	/* Disable the "super" WDT */
+	target_mem_write32(target, ESP32_C3_RTC_SWD_WRITE_PROT, ESP32_C3_RTC_SWD_WRITE_PROT_KEY);
+	priv->wdt_config[3] = target_mem_read32(target, ESP32_C3_RTC_SWD_CONFIG);
+	target_mem_write32(target, ESP32_C3_RTC_SWD_CONFIG, ESP32_C3_RTC_SWD_CONFIG_DISABLE);
+}
+
+static void esp32c3_restore_wdts(target_s *const target)
+{
+	esp32c3_priv_s *const priv = (esp32c3_priv_s *)target->target_storage;
+	/* Restore Timger Group 0's WDT */
+	target_mem_write32(target, ESP32_C3_TIMG0_WDT_CONFIG0, priv->wdt_config[0]);
+	target_mem_write32(target, ESP32_C3_TIMG0_WDT_WRITE_PROT, 0U);
+	/* Restore Timger Group 1's WDT */
+	target_mem_write32(target, ESP32_C3_TIMG1_WDT_CONFIG0, priv->wdt_config[1]);
+	target_mem_write32(target, ESP32_C3_TIMG1_WDT_WRITE_PROT, 0U);
+	/* Restore the RTC WDT */
+	target_mem_write32(target, ESP32_C3_RTC_WDT_CONFIG0, priv->wdt_config[2]);
+	target_mem_write32(target, ESP32_C3_RTC_WDT_WRITE_PROT, 0U);
+	/* Restore the "super" WDT */
+	target_mem_write32(target, ESP32_C3_RTC_SWD_CONFIG, priv->wdt_config[2]);
+	target_mem_write32(target, ESP32_C3_RTC_SWD_WRITE_PROT, 0U);
+}
+
+static void esp32c3_halt_request(target_s *const target)
+{
+	riscv_halt_request(target);
+	esp32c3_disable_wdts(target);
+}
+
+static void esp32c3_halt_resume(target_s *const target, const bool step)
+{
+	if (!step)
+		esp32c3_restore_wdts(target);
+	riscv_halt_resume(target, step);
+}
+
+static target_halt_reason_e esp32c3_halt_poll(target_s *const target, target_addr_t *const watch)
+{
+	const target_halt_reason_e reason = riscv_halt_poll(target, watch);
+	if (reason == TARGET_HALT_BREAKPOINT)
+		esp32c3_disable_wdts(target);
+	return reason;
 }
 
 static uint32_t esp32c3_spi_config(
