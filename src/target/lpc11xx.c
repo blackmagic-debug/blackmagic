@@ -53,6 +53,7 @@
  * LPC845  16k   64k   64   1024
  */
 
+static bool lpc8xx_flash_mode(target_s *target);
 static bool lpc11xx_read_uid(target_s *target, int argc, const char **argv);
 
 const command_s lpc11xx_cmd_list[] = {
@@ -182,6 +183,8 @@ static bool lpc8xx_detect(target_s *const t)
 	 * LPC11U3x variants.
 	 */
 	const uint32_t device_id = target_mem_read32(t, LPC8XX_DEVICE_ID);
+	t->enter_flash_mode = lpc8xx_flash_mode;
+	t->exit_flash_mode = lpc8xx_flash_mode;
 
 	switch (device_id) {
 	case 0x00008021U: /* LPC802M001JDH20 - 16K Flash 2K SRAM */
@@ -291,6 +294,12 @@ static bool lpc8xx_detect(target_s *const t)
 bool lpc11xx_probe(target_s *t)
 {
 	return lpc11xx_detect(t) || lpc8xx_detect(t);
+}
+
+static bool lpc8xx_flash_mode(target_s *const target)
+{
+	(void)target;
+	return true;
 }
 
 static bool lpc11xx_read_uid(target_s *target, int argc, const char **argv)
