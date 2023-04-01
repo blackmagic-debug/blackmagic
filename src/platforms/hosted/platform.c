@@ -389,8 +389,8 @@ void platform_max_frequency_set(uint32_t freq)
 	if (max_freq == FREQ_FIXED)
 		DEBUG_INFO("Device has fixed frequency for %s\n", (info.is_jtag) ? "JTAG" : "SWD");
 	else
-		DEBUG_INFO("Speed set to %7.4f MHz for %s\n", platform_max_frequency_get() / 1000000.0,
-			(info.is_jtag) ? "JTAG" : "SWD");
+		DEBUG_INFO(
+			"Speed set to %7.4f MHz for %s\n", platform_max_frequency_get() / 1000000.0, info.is_jtag ? "JTAG" : "SWD");
 }
 
 uint32_t platform_max_frequency_get(void)
