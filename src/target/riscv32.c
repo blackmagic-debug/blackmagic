@@ -424,6 +424,48 @@ static void riscv32_sysbus_mem_native_write(riscv_hart_s *const hart, const targ
 	riscv_sysbus_check(hart);
 }
 
+static void riscv32_sysbus_mem_adjusted_write(riscv_hart_s *const hart, const target_addr_t dest, const void *const src,
+	const uint8_t access_width, const uint8_t native_access_width, const uint8_t access_length)
+{
+	DEBUG_PROBE("%s: %u write for %u bytes\n", __func__, access_length, 1U << access_width);
+	const target_addr_t alignment = ~(access_length - 1U);
+	/*
+	 * On a 32-bit target the only possible widths are 8- 16- and 32-bit, so after the adjustment loop,
+	 * there are only and exactly 2 possible cases to handle here: 16- and 32-bit access.
+	 * The basic premise here is that we have to read to correctly write - to do a N bit write with a
+	 * wider access primitive, we first have to read back what's at the target aligned location, replace
+	 * the correct set of bits in the target value, then write the new combined value back
+	 */
+	switch (native_access_width) {
+	case RV_MEM_ACCESS_16_BIT: {
+		uint16_t value = 0;
+		/* Start by reading 16 bits */
+		riscv32_sysbus_mem_native_read(
+			hart, &value, dest & alignment, access_length, RV_MEM_ACCESS_16_BIT, access_length);
+		/* Now replace the part to write (must be done on the widened version of the value) */
+		uint32_t widened_value = value;
+		adiv5_pack_data(dest & 1U, src, &widened_value, access_width);
+		value = (uint16_t)widened_value;
+		/* And finally write the new value back */
+		riscv32_sysbus_mem_native_write(
+			hart, dest & alignment, &value, access_length, RV_MEM_ACCESS_16_BIT, access_length);
+		break;
+	}
+	case RV_MEM_ACCESS_32_BIT: {
+		uint32_t value = 0;
+		/* Start by reading 32 bits */
+		riscv32_sysbus_mem_native_read(
+			hart, &value, dest & alignment, access_length, RV_MEM_ACCESS_32_BIT, access_length);
+		/* Now replace the part to write */
+		adiv5_pack_data(dest & 3U, src, &value, access_width);
+		/* And finally write the new value back */
+		riscv32_sysbus_mem_native_write(
+			hart, dest & alignment, &value, access_length, RV_MEM_ACCESS_32_BIT, access_length);
+		break;
+	}
+	}
+}
+
 static void riscv32_sysbus_mem_write(
 	riscv_hart_s *const hart, const target_addr_t dest, const void *const src, const size_t len)
 {
@@ -431,7 +473,44 @@ static void riscv32_sysbus_mem_write(
 	const uint8_t access_width = riscv_mem_access_width(hart, dest, len);
 	const uint8_t access_length = 1U << access_width;
 	/* Check if the access is a natural/native width */
-	riscv32_sysbus_mem_native_write(hart, dest, src, len, access_width, access_length);
+	if (hart->flags & access_length) {
+		riscv32_sysbus_mem_native_write(hart, dest, src, len, access_width, access_length);
+		return;
+	}
+
+	/* If we were unable to do this using a native access, find the next largest supported access width */
+	uint8_t native_access_width = access_width;
+	while (!((hart->flags >> native_access_width) & 1U) && native_access_width < RV_MEM_ACCESS_32_BIT)
+		++native_access_width;
+	const uint8_t native_access_length = (uint8_t)(1U << native_access_width);
+
+	/* Do the initial adjusted access */
+	size_t remainder = len;
+	target_addr_t address = dest;
+	const uint8_t *data = (const uint8_t *)src;
+	riscv32_sysbus_mem_adjusted_write(hart, address, data, access_width, native_access_width, native_access_length);
+
+	/* After doing the initial access, adjust the location of the next and do any follow-up accesses required */
+	remainder -= access_length;
+	address += access_length;
+	data += access_length;
+
+	/*
+	 * Now we're aligned to the wider access width, do another set of writes if there's
+	 * any remainder. Do this till we either reach nothing left, or we have another small left-over amount
+	 */
+	if (!remainder)
+		return;
+	const size_t amount = remainder & ~(native_access_length - 1U);
+	if (amount)
+		riscv32_sysbus_mem_native_write(hart, address, data, amount, native_access_width, native_access_length);
+	remainder -= amount;
+	address += (uint32_t)amount;
+	data += amount;
+
+	/* If there's any data left to write, do another adjusted access to perform it */
+	if (remainder)
+		riscv32_sysbus_mem_adjusted_write(hart, address, data, access_width, native_access_width, native_access_length);
 }
 
 static void riscv32_mem_read(target_s *const target, void *const dest, const target_addr_t src, const size_t len)
