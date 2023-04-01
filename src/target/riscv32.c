@@ -393,15 +393,13 @@ static void riscv32_sysbus_mem_read(
 		riscv32_sysbus_mem_adjusted_read(hart, data, address, access_width, native_access_width, native_access_length);
 }
 
-static void riscv32_sysbus_mem_write(
-	riscv_hart_s *const hart, const target_addr_t dest, const void *const src, const size_t len)
+static void riscv32_sysbus_mem_native_write(riscv_hart_s *const hart, const target_addr_t dest, const void *const src,
+	const size_t len, const uint8_t access_width, const uint8_t access_length)
 {
-	/* Figure out the maxmial width of access to perform, up to the bitness of the target */
-	const uint8_t access_width = riscv_mem_access_width(hart, dest, len);
-	const uint8_t access_length = 1U << access_width;
+	DEBUG_TARGET("%s: %zu byte write at %08" PRIx32 " in %u byte blocks\n", __func__, len, dest, access_length);
 	/* Build the access command */
-	const uint32_t command =
-		(access_width << RV_SYSBUS_MEM_ACCESS_SHIFT) | (access_length < len ? RV_SYSBUS_MEM_ADDR_POST_INC : 0U);
+	const uint32_t command = ((uint32_t)access_width << RV_SYSBUS_MEM_ACCESS_SHIFT) |
+		(access_length < len ? RV_SYSBUS_MEM_ADDR_POST_INC : 0U);
 	/*
 	 * Write the command setup to the access control register
 	 * Then set up the write by writing the address to the address register
@@ -424,6 +422,16 @@ static void riscv32_sysbus_mem_write(
 		}
 	}
 	riscv_sysbus_check(hart);
+}
+
+static void riscv32_sysbus_mem_write(
+	riscv_hart_s *const hart, const target_addr_t dest, const void *const src, const size_t len)
+{
+	/* Figure out the maxmial width of access to perform, up to the bitness of the target */
+	const uint8_t access_width = riscv_mem_access_width(hart, dest, len);
+	const uint8_t access_length = 1U << access_width;
+	/* Check if the access is a natural/native width */
+	riscv32_sysbus_mem_native_write(hart, dest, src, len, access_width, access_length);
 }
 
 static void riscv32_mem_read(target_s *const target, void *const dest, const target_addr_t src, const size_t len)
