@@ -747,10 +747,12 @@ static bool riscv_check_error(target_s *const target)
 
 static bool riscv_dm_poll_state(riscv_dm_s *const dbg_module, const uint32_t state)
 {
+	platform_timeout_s timeout;
+	platform_timeout_set(&timeout, 500U);
 	/* Poll for the requested state to become set */
 	uint32_t status = 0;
 	while (!(status & state)) {
-		if (!riscv_dm_read(dbg_module, RV_DM_STATUS, &status))
+		if (!riscv_dm_read(dbg_module, RV_DM_STATUS, &status) || platform_timeout_is_expired(&timeout))
 			return false;
 	}
 	return true;
