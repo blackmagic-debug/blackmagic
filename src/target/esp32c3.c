@@ -162,6 +162,7 @@ static void esp32c3_spi_write(
 	target_s *target, uint32_t command, target_addr_t address, const void *buffer, size_t length);
 
 static bool esp32c3_mass_erase(target_s *target);
+static bool esp32c3_enter_flash_mode(target_s *target);
 static bool esp32c3_spi_flash_erase(target_flash_s *flash, target_addr_t addr, size_t length);
 static bool esp32c3_spi_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t length);
 
@@ -228,6 +229,8 @@ bool esp32c3_probe(target_s *const target)
 	target->halt_poll = esp32c3_halt_poll;
 	/* Provide an implementation of the mass erase command */
 	target->mass_erase = esp32c3_mass_erase;
+	/* Special care must be taken during Flash programming */
+	target->enter_flash_mode = esp32c3_enter_flash_mode;
 
 	/* Establish the target RAM mappings */
 	target_add_ram(target, ESP32_C3_IBUS_SRAM0_BASE, ESP32_C3_IBUS_SRAM0_SIZE);
@@ -456,6 +459,12 @@ static bool esp32c3_mass_erase(target_s *const target)
 	while (esp32c3_spi_read_status(target) & SPI_FLASH_STATUS_BUSY)
 		target_print_progress(&timeout);
 
+	return true;
+}
+
+static bool esp32c3_enter_flash_mode(target_s *const target)
+{
+	esp32c3_disable_wdts(target);
 	return true;
 }
 
