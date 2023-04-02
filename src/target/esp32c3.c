@@ -125,6 +125,7 @@ static void esp32c3_spi_write(
 	target_s *target, uint16_t command, target_addr32_t address, const void *buffer, size_t length);
 static void esp32c3_spi_run_command(target_s *target, uint16_t command, target_addr32_t address);
 
+static bool esp32c3_enter_flash_mode(target_s *target);
 static bool esp32c3_spi_flash_write(target_flash_s *flash, target_addr32_t dest, const void *src, size_t length);
 
 /* Make an ESP32-C3 ready for probe operations having identified one */
@@ -166,6 +167,8 @@ bool esp32c3_probe(target_s *const target)
 	target->halt_poll = esp32c3_halt_poll;
 	/* Provide an implementation of the mass erase command */
 	target->mass_erase = bmp_spi_mass_erase;
+	/* Special care must be taken during Flash programming */
+	target->enter_flash_mode = esp32c3_enter_flash_mode;
 
 	/* Establish the target RAM mappings */
 	target_add_ram32(target, ESP32_C3_IBUS_SRAM0_BASE, ESP32_C3_IBUS_SRAM0_SIZE);
@@ -381,6 +384,12 @@ static void esp32c3_spi_run_command(target_s *const target, const uint16_t comma
 	/* Write the stages to execute and run the transaction */
 	target_mem32_write32(target, ESP32_C3_SPI1_USER0, enabled_stages);
 	esp32c3_spi_wait_complete(target);
+}
+
+static bool esp32c3_enter_flash_mode(target_s *const target)
+{
+	esp32c3_disable_wdts(target);
+	return true;
 }
 
 static bool esp32c3_spi_flash_write(
