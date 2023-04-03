@@ -55,7 +55,7 @@ extern bool debug_bmp;
  * nTRST    = PB1  (output) [blackmagic]
  * PWR_BR   = PB1  (output) [blackmagic_mini] -- supply power to the target, active low
  * TMS_DIR  = PA1  (output) [blackmagic_mini v2.1] -- choose direction of the TCK pin, input low, output high
- * nRST_OUT = PA2  (output) -- Hardware 5 and older
+ * nRST     = PA2  (output) -- Hardware 5 and older
  *          = PA9  (output) -- Hardware 6 and newer
  * TDI      = PA3  (output) -- Hardware 5 and older
  *          = PA7  (output) -- Hardware 6 and newer
@@ -67,7 +67,7 @@ extern bool debug_bmp;
  *                             Hardware 4 has a normally open jumper between TDO and TRACESWO
  *                             Hardware 5 has hardwired connection between TDO and TRACESWO
  *          = PA10 (input)  -- Hardware 6 and newer
- * nRST     = PA7  (input)  -- Hardware 5 and older
+ * nRST_SNS = PA7  (input)  -- Hardware 5 and older
  *          = PC13 (input)  -- Hardware 6 and newer
  *
  * USB_PU   = PA8  (output)
@@ -100,6 +100,8 @@ extern bool debug_bmp;
  * BTN1       = PB12 (input)  -- Shared with the DFU bootloader button
  * BTN2       = PB9  (input)
  * VBAT       = PA0  (input)  -- Battery voltage sense ADC2, CH0
+ *
+ * nRST_SNS is the nRST sense line
  */
 
 /* Hardware definitions... */
@@ -130,7 +132,7 @@ extern bool debug_bmp;
 #define PWR_BR_PIN      GPIO1
 #define NRST_PORT       GPIOA
 #define NRST_PIN        HW_SWITCH(6, GPIO2, GPIO9)
-#define NRST_SENSE_PORT GPIOA
+#define NRST_SENSE_PORT HW_SWITCH(6, GPIOA, GPIOC)
 #define NRST_SENSE_PIN  HW_SWITCH(6, GPIO7, GPIO13)
 
 #define USB_PU_PORT GPIOA
