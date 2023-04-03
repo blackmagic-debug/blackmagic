@@ -107,6 +107,19 @@
 #define ESP32_C3_TIMG1_WDT_FEED       (ESP32_C3_TIMG1_BASE + 0x060U)
 #define ESP32_C3_TIMG1_WDT_WRITE_PROT (ESP32_C3_TIMG1_BASE + 0x064U)
 
+#define ESP32_C3_EXTMEM_BASE                0x600c4000U
+#define ESP32_C3_EXTMEM_ICACHE_SYNC_CTRL    (ESP32_C3_EXTMEM_BASE + 0x028U)
+#define ESP32_C3_EXTMEM_ICACHE_SYNC_ADDR    (ESP32_C3_EXTMEM_BASE + 0x02cU)
+#define ESP32_C3_EXTMEM_ICACHE_SYNC_SIZE    (ESP32_C3_EXTMEM_BASE + 0x030U)
+#define ESP32_C3_EXTMEM_ICACHE_PRELOAD_CTRL (ESP32_C3_EXTMEM_BASE + 0x034U)
+#define ESP32_C3_EXTMEM_ICACHE_PRELOAD_ADDR (ESP32_C3_EXTMEM_BASE + 0x038U)
+#define ESP32_C3_EXTMEM_ICACHE_PRELOAD_SIZE (ESP32_C3_EXTMEM_BASE + 0x03cU)
+
+#define ESP32_C3_EXTMEM_ICACHE_INVALIDATE   0x00000001U
+#define ESP32_C3_EXTMEM_ICACHE_SYNC_DONE    0x00000002U
+#define ESP32_C3_EXTMEM_ICACHE_PRELOAD      0x00000001U
+#define ESP32_C3_EXTMEM_ICACHE_PRELOAD_DONE 0x00000002U
+
 #define ESP32_C3_SPI_FLASH_OPCODE_MASK      0x000000ffU
 #define ESP32_C3_SPI_FLASH_OPCODE(x)        ((x)&ESP32_C3_SPI_FLASH_OPCODE_MASK)
 #define ESP32_C3_SPI_FLASH_DUMMY_MASK       0x0000ff00U
@@ -143,6 +156,7 @@
 
 typedef struct esp32c3_priv {
 	uint32_t wdt_config[4];
+	target_addr_t last_invalidated_sector;
 } esp32c3_priv_s;
 
 typedef struct esp32c3_spi_flash {
@@ -163,6 +177,7 @@ static void esp32c3_spi_write(
 
 static bool esp32c3_mass_erase(target_s *target);
 static bool esp32c3_enter_flash_mode(target_s *target);
+static bool esp32c3_exit_flash_mode(target_s *target);
 static bool esp32c3_spi_flash_erase(target_flash_s *flash, target_addr_t addr, size_t length);
 static bool esp32c3_spi_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t length);
 
@@ -231,6 +246,7 @@ bool esp32c3_probe(target_s *const target)
 	target->mass_erase = esp32c3_mass_erase;
 	/* Special care must be taken during Flash programming */
 	target->enter_flash_mode = esp32c3_enter_flash_mode;
+	target->exit_flash_mode = esp32c3_exit_flash_mode;
 
 	/* Establish the target RAM mappings */
 	target_add_ram(target, ESP32_C3_IBUS_SRAM0_BASE, ESP32_C3_IBUS_SRAM0_SIZE);
@@ -468,6 +484,29 @@ static bool esp32c3_enter_flash_mode(target_s *const target)
 	return true;
 }
 
+static bool esp32c3_exit_flash_mode(target_s *const target)
+{
+	esp32c3_priv_s *const priv = (esp32c3_priv_s *)target->target_storage;
+	/* Calculate the length of the region to invalidate and reload */
+	const uint32_t region_length = priv->last_invalidated_sector - ESP32_C3_IBUS_FLASH_BASE;
+	/* Invalidate the i-cache for the required length */
+	target_mem_write32(target, ESP32_C3_EXTMEM_ICACHE_SYNC_ADDR, ESP32_C3_IBUS_FLASH_BASE);
+	target_mem_write32(target, ESP32_C3_EXTMEM_ICACHE_SYNC_SIZE, region_length);
+	target_mem_write32(target, ESP32_C3_EXTMEM_ICACHE_SYNC_CTRL, ESP32_C3_EXTMEM_ICACHE_INVALIDATE);
+	/* Wait for invalidation to complete */
+	while (!(target_mem_read32(target, ESP32_C3_EXTMEM_ICACHE_SYNC_CTRL) & ESP32_C3_EXTMEM_ICACHE_SYNC_DONE))
+		continue;
+	/* Now preload the cache with the new data */
+	target_mem_write32(target, ESP32_C3_EXTMEM_ICACHE_PRELOAD_ADDR, ESP32_C3_IBUS_FLASH_BASE);
+	target_mem_write32(target, ESP32_C3_EXTMEM_ICACHE_PRELOAD_SIZE, region_length);
+	target_mem_write32(target, ESP32_C3_EXTMEM_ICACHE_PRELOAD_CTRL, ESP32_C3_EXTMEM_ICACHE_PRELOAD);
+	/* Wait for preload to complete */
+	while (!(target_mem_read32(target, ESP32_C3_EXTMEM_ICACHE_PRELOAD_CTRL) & ESP32_C3_EXTMEM_ICACHE_PRELOAD_DONE))
+		continue;
+	target_reset(target);
+	return true;
+}
+
 static bool esp32c3_spi_flash_erase(target_flash_s *const flash, const target_addr_t addr, const size_t length)
 {
 	target_s *const target = flash->t;
@@ -484,6 +523,9 @@ static bool esp32c3_spi_flash_erase(target_flash_s *const flash, const target_ad
 		while (esp32c3_spi_read_status(target) & SPI_FLASH_STATUS_BUSY)
 			continue;
 	}
+	/* Update the address of the last invalidated sector so we can correctly invalidate the i-cache and reload it */
+	esp32c3_priv_s *const priv = (esp32c3_priv_s *)target->target_storage;
+	priv->last_invalidated_sector = addr + length;
 	return true;
 }
 
