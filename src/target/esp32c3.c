@@ -110,6 +110,19 @@
 #define ESP32_C3_TIMG1_WDT_FEED       (ESP32_C3_TIMG1_BASE + 0x060U)
 #define ESP32_C3_TIMG1_WDT_WRITE_PROT (ESP32_C3_TIMG1_BASE + 0x064U)
 
+#define ESP32_C3_EXTMEM_BASE                0x600c4000U
+#define ESP32_C3_EXTMEM_ICACHE_SYNC_CTRL    (ESP32_C3_EXTMEM_BASE + 0x028U)
+#define ESP32_C3_EXTMEM_ICACHE_SYNC_ADDR    (ESP32_C3_EXTMEM_BASE + 0x02cU)
+#define ESP32_C3_EXTMEM_ICACHE_SYNC_SIZE    (ESP32_C3_EXTMEM_BASE + 0x030U)
+#define ESP32_C3_EXTMEM_ICACHE_PRELOAD_CTRL (ESP32_C3_EXTMEM_BASE + 0x034U)
+#define ESP32_C3_EXTMEM_ICACHE_PRELOAD_ADDR (ESP32_C3_EXTMEM_BASE + 0x038U)
+#define ESP32_C3_EXTMEM_ICACHE_PRELOAD_SIZE (ESP32_C3_EXTMEM_BASE + 0x03cU)
+
+#define ESP32_C3_EXTMEM_ICACHE_INVALIDATE   0x00000001U
+#define ESP32_C3_EXTMEM_ICACHE_SYNC_DONE    0x00000002U
+#define ESP32_C3_EXTMEM_ICACHE_PRELOAD      0x00000001U
+#define ESP32_C3_EXTMEM_ICACHE_PRELOAD_DONE 0x00000002U
+
 typedef struct esp32c3_priv {
 	uint32_t wdt_config[4];
 } esp32c3_priv_s;
@@ -126,6 +139,7 @@ static void esp32c3_spi_write(
 static void esp32c3_spi_run_command(target_s *target, uint16_t command, target_addr32_t address);
 
 static bool esp32c3_enter_flash_mode(target_s *target);
+static bool esp32c3_exit_flash_mode(target_s *target);
 static bool esp32c3_spi_flash_write(target_flash_s *flash, target_addr32_t dest, const void *src, size_t length);
 
 /* Make an ESP32-C3 ready for probe operations having identified one */
@@ -169,6 +183,7 @@ bool esp32c3_probe(target_s *const target)
 	target->mass_erase = bmp_spi_mass_erase;
 	/* Special care must be taken during Flash programming */
 	target->enter_flash_mode = esp32c3_enter_flash_mode;
+	target->exit_flash_mode = esp32c3_exit_flash_mode;
 
 	/* Establish the target RAM mappings */
 	target_add_ram32(target, ESP32_C3_IBUS_SRAM0_BASE, ESP32_C3_IBUS_SRAM0_SIZE);
@@ -389,6 +404,19 @@ static void esp32c3_spi_run_command(target_s *const target, const uint16_t comma
 static bool esp32c3_enter_flash_mode(target_s *const target)
 {
 	esp32c3_disable_wdts(target);
+	return true;
+}
+
+static bool esp32c3_exit_flash_mode(target_s *const target)
+{
+	/* Invalidate the i-cache for the required length */
+	target_mem32_write32(target, ESP32_C3_EXTMEM_ICACHE_SYNC_ADDR, ESP32_C3_IBUS_FLASH_BASE);
+	target_mem32_write32(target, ESP32_C3_EXTMEM_ICACHE_SYNC_SIZE, target->flash->length);
+	target_mem32_write32(target, ESP32_C3_EXTMEM_ICACHE_SYNC_CTRL, ESP32_C3_EXTMEM_ICACHE_INVALIDATE);
+	/* Wait for invalidation to complete */
+	while (!(target_mem32_read32(target, ESP32_C3_EXTMEM_ICACHE_SYNC_CTRL) & ESP32_C3_EXTMEM_ICACHE_SYNC_DONE))
+		continue;
+	target_reset(target);
 	return true;
 }
 
