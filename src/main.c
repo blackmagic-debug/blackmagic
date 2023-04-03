@@ -32,9 +32,8 @@
 #include "rtt.h"
 #endif
 
-#define BUF_SIZE 1024U
 /* This has to be aligned so the remote protocol can re-use it without causing Problems */
-static char pbuf[BUF_SIZE + 1U] __attribute__((aligned(8)));
+static char pbuf[GDB_PACKET_BUFFER_SIZE + 1U] __attribute__((aligned(8)));
 
 char *gdb_packet_buffer()
 {
@@ -62,11 +61,11 @@ static void bmp_poll_loop(void)
 	}
 
 	SET_IDLE_STATE(true);
-	size_t size = gdb_getpacket(pbuf, BUF_SIZE);
+	size_t size = gdb_getpacket(pbuf, GDB_PACKET_BUFFER_SIZE);
 	// If port closed and target detached, stay idle
 	if (pbuf[0] != '\x04' || cur_target)
 		SET_IDLE_STATE(false);
-	gdb_main(pbuf, sizeof(pbuf), size);
+	gdb_main(pbuf, GDB_PACKET_BUFFER_SIZE, size);
 }
 
 int main(int argc, char **argv)
