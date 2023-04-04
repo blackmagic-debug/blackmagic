@@ -37,6 +37,7 @@
 
 #include "general.h"
 #include "target_internal.h"
+#include "gdb_packet.h"
 
 target_flash_s *target_flash_for_addr(target_s *t, uint32_t addr)
 {
@@ -55,10 +56,10 @@ static bool target_enter_flash_mode(target_s *t)
 	bool ret = true;
 	if (t->enter_flash_mode)
 		ret = t->enter_flash_mode(t);
-	else
+	//else
 		/* Reset target on flash command */
 		/* This saves us if we're interrupted in IRQ context */
-		target_reset(t);
+	//	target_reset(t);
 
 	if (ret == true)
 		t->flash_mode = true;
@@ -188,10 +189,10 @@ static bool flash_buffered_flush(target_flash_s *f)
 
 		const uint8_t *src = f->buf + (aligned_addr - f->buf_addr_base);
 		uint32_t len = f->buf_addr_high - aligned_addr;
-
-		for (size_t offset = 0; offset < len; offset += f->writesize)
+		
+		for (size_t offset = 0; offset < len; offset += f->writesize){
 			ret &= f->write(f, aligned_addr + offset, src + offset, f->writesize);
-
+		}
 		f->buf_addr_base = UINT32_MAX;
 		f->buf_addr_low = UINT32_MAX;
 		f->buf_addr_high = 0;
