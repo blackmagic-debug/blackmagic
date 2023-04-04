@@ -744,6 +744,7 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 			LPC43xx detection. */
 			PROBE(lpc546xx_probe);
 			PROBE(lpc43xx_probe);
+			PROBE(lpc40xx_probe);
 			PROBE(kinetis_probe); /* Older K-series */
 			PROBE(at32fxx_probe);
 		} else if (t->part_id == 0x4cbU) { /* Cortex-M23 ROM */
