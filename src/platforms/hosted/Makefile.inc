@@ -72,7 +72,8 @@ endif
 # If we're on Windows, pick the correct FTD2xx implementation
 ifeq ($(OS), Windows_NT)
     ifneq ($(HOSTED_BMP_ONLY), 1)
-            CFLAGS += -I../3rdparty/ftdi
+        VPATH += platforms/hosted/windows
+        CFLAGS += -I../3rdparty/ftdi -Iplatforms/hosted/windows
         ifeq ($(PROCESSOR_ARCHITECTURE), AMD64)
             LDFLAGS += ../3rdparty/ftdi/amd64/ftd2xx.lib
             FTDI_DLL = ../3rdparty/ftdi/amd64/ftd2xx.dll
@@ -87,11 +88,15 @@ ifneq ($(HOSTED_BMP_ONLY), 1)
     ifneq ($(shell pkg-config --exists libusb-1.0; echo $$?), 0)
         $(error Please install libusb-1.0 dependency or set HOSTED_BMP_ONLY to 1)
     endif
-    ifneq ($(shell pkg-config --exists libftdi1; echo $$?), 0)
-        $(error Please install libftdi1 dependency or set HOSTED_BMP_ONLY to 1)
+    ifneq ($(OS), Windows_NT)
+        ifneq ($(shell pkg-config --exists libftdi1; echo $$?), 0)
+            $(error Please install libftdi1 dependency or set HOSTED_BMP_ONLY to 1)
+        endif
+        CFLAGS += $(shell pkg-config --cflags libftdi1)
+        LDFLAGS += $(shell pkg-config --libs libftdi1)
     endif
-    CFLAGS += $(shell pkg-config --cflags libusb-1.0) $(shell pkg-config --cflags libftdi1)
-    LDFLAGS += $(shell pkg-config --libs libusb-1.0) $(shell pkg-config --libs libftdi1)
+    CFLAGS += $(shell pkg-config --cflags libusb-1.0)
+    LDFLAGS += $(shell pkg-config --libs libusb-1.0)
     CFLAGS += -Wno-missing-field-initializers
 endif
 
@@ -115,7 +120,7 @@ SRC += protocol_v3.c protocol_v3_adiv5.c
 SRC += bmp_remote.c
 ifneq ($(HOSTED_BMP_ONLY), 1)
     ifeq ($(OS), Windows_NT)
-        SRC += ftd2xx.dll
+        SRC += ftd2xx.dll ftdi.c
     endif
     SRC += bmp_libusb.c stlinkv2.c stlinkv2_jtag.c stlinkv2_swd.c
     SRC += ftdi_bmp.c ftdi_jtag.c ftdi_swd.c
