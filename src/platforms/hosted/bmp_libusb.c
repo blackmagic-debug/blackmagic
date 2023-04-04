@@ -398,7 +398,7 @@ int find_debuggers(bmda_cli_options_s *cl_opts, bmp_info_s *info)
 	DEBUG_WARN("Using: %-20s %-20s %-25s %s\n", probe->product, probe->serial, probe->manufacturer, probe->version);
 	probe_info_to_bmp_info(probe, info);
 	/* If the selected probe is an FTDI adapter try to resolve the adaptor type */
-	if (probe->vid == VENDOR_ID_FTDI && !ftdi_lookup_adapter_from_vid_pid(cl_opts, probe)) {
+	if (probe->vid == VENDOR_ID_FTDI && !ftdi_lookup_adaptor_descriptor(cl_opts, probe)) {
 		// Don't know the cable type, ask user to specify with "-c"
 		DEBUG_WARN("Multiple FTDI adapters match Vendor and Product ID.\n");
 		DEBUG_WARN("Please specify adapter type on command line using \"-c\" option.\n");
