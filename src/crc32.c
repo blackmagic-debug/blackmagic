@@ -124,7 +124,7 @@ bool generic_crc32(target_s *const t, uint32_t *const crc_res, uint32_t base, si
 			gdb_if_putchar(0, true);
 		}
 		const size_t read_len = MIN(sizeof(bytes), len);
-		if (target_mem_read(t, bytes, base, read_len)) {
+		if (target_mem_read(t, bytes, base, (read_len + 3U) & ~3U)) {
 			DEBUG_WARN("generic_crc32 error around address 0x%08" PRIx32 "\n", base);
 			return false;
 		}
