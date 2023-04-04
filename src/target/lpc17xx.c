@@ -86,68 +86,70 @@ static void lpc17xx_add_flash(target_s *target, uint32_t addr, size_t len, size_
 
 bool lpc17xx_probe(target_s *target)
 {
-	if ((target->cpuid & CPUID_PARTNO_MASK) == CORTEX_M3) {
-		/*
-		 * Now that we're sure it's a Cortex-M3, we need to halt the
-		 * target and make an IAP call to get the part number.
-		 * There appears to have no other method of reading the part number.
-		 */
-		target_halt_request(target);
+	if ((target->cpuid & CPUID_PARTNO_MASK) != CORTEX_M3)
+		return false;
 
-		/* Allocate private storage so the flash mode entry/exit routines can save state */
-		lpc17xx_priv_s *priv = calloc(1, sizeof(*priv));
-		if (!priv) { /* calloc failed: heap exhaustion */
-			DEBUG_WARN("calloc: failed in %s\n", __func__);
-			return false;
-		}
-		target->target_storage = priv;
+	/*
+		* Now that we're sure it's a Cortex-M3, we need to halt the
+		* target and make an IAP call to get the part number.
+		* There appears to have no other method of reading the part number.
+		*/
+	target_halt_request(target);
 
-		/* Prepare Flash mode */
-		lpc17xx_enter_flash_mode(target);
-		/* Read the Part ID */
-		iap_result_s result;
-		lpc17xx_iap_call(target, &result, IAP_CMD_PARTID);
-		/* Transition back to normal mode and resume the target */
-		lpc17xx_exit_flash_mode(target);
-		target_halt_resume(target, false);
-
-		/*
-		 * If we got an error response, it cannot be a LPC17xx as the only response
-		 * a real device gives is IAP_STATUS_CMD_SUCCESS.
-		 */
-		if (result.return_code) {
-			free(priv);
-			target->target_storage = NULL;
-			return false;
-		}
-
-		switch (result.values[0]) {
-		case 0x26113f37U: /* LPC1769 */
-		case 0x26013f37U: /* LPC1768 */
-		case 0x26012837U: /* LPC1767 */
-		case 0x26013f33U: /* LPC1766 */
-		case 0x26013733U: /* LPC1765 */
-		case 0x26011922U: /* LPC1764 */
-		case 0x25113737U: /* LPC1759 */
-		case 0x25013f37U: /* LPC1758 */
-		case 0x25011723U: /* LPC1756 */
-		case 0x25011722U: /* LPC1754 */
-		case 0x25001121U: /* LPC1752 */
-		case 0x25001118U: /* LPC1751 */
-		case 0x25001110U: /* LPC1751 (No CRP) */
-			target->driver = "LPC17xx";
-			target->extended_reset = lpc17xx_extended_reset;
-			target->mass_erase = lpc17xx_mass_erase;
-			target->enter_flash_mode = lpc17xx_enter_flash_mode;
-			target->exit_flash_mode = lpc17xx_exit_flash_mode;
-			target_add_ram(target, 0x10000000U, 0x8000U);
-			target_add_ram(target, 0x2007c000U, 0x4000U);
-			target_add_ram(target, 0x20080000U, 0x4000U);
-			lpc17xx_add_flash(target, 0x00000000U, 0x10000U, 0x1000U, 0);
-			lpc17xx_add_flash(target, 0x00010000U, 0x70000U, 0x8000U, 16);
-			return true;
-		}
+	/* Allocate private storage so the flash mode entry/exit routines can save state */
+	lpc17xx_priv_s *priv = calloc(1, sizeof(*priv));
+	if (!priv) { /* calloc failed: heap exhaustion */
+		DEBUG_WARN("calloc: failed in %s\n", __func__);
+		return false;
 	}
+	target->target_storage = priv;
+
+	/* Prepare Flash mode */
+	lpc17xx_enter_flash_mode(target);
+	/* Read the Part ID */
+	iap_result_s result;
+	lpc17xx_iap_call(target, &result, IAP_CMD_PARTID);
+	/* Transition back to normal mode and resume the target */
+	lpc17xx_exit_flash_mode(target);
+	target_halt_resume(target, false);
+
+	/*
+		* If we got an error response, it cannot be a LPC17xx as the only response
+		* a real device gives is IAP_STATUS_CMD_SUCCESS.
+		*/
+	if (result.return_code) {
+		free(priv);
+		target->target_storage = NULL;
+		return false;
+	}
+
+	switch (result.values[0]) {
+	case 0x26113f37U: /* LPC1769 */
+	case 0x26013f37U: /* LPC1768 */
+	case 0x26012837U: /* LPC1767 */
+	case 0x26013f33U: /* LPC1766 */
+	case 0x26013733U: /* LPC1765 */
+	case 0x26011922U: /* LPC1764 */
+	case 0x25113737U: /* LPC1759 */
+	case 0x25013f37U: /* LPC1758 */
+	case 0x25011723U: /* LPC1756 */
+	case 0x25011722U: /* LPC1754 */
+	case 0x25001121U: /* LPC1752 */
+	case 0x25001118U: /* LPC1751 */
+	case 0x25001110U: /* LPC1751 (No CRP) */
+		target->driver = "LPC17xx";
+		target->extended_reset = lpc17xx_extended_reset;
+		target->mass_erase = lpc17xx_mass_erase;
+		target->enter_flash_mode = lpc17xx_enter_flash_mode;
+		target->exit_flash_mode = lpc17xx_exit_flash_mode;
+		target_add_ram(target, 0x10000000U, 0x8000U);
+		target_add_ram(target, 0x2007c000U, 0x4000U);
+		target_add_ram(target, 0x20080000U, 0x4000U);
+		lpc17xx_add_flash(target, 0x00000000U, 0x10000U, 0x1000U, 0);
+		lpc17xx_add_flash(target, 0x00010000U, 0x70000U, 0x8000U, 16);
+		return true;
+	}
+
 	return false;
 }
 
