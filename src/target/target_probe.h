@@ -55,6 +55,7 @@ bool lmi_probe(target_s *t);
 bool lpc11xx_probe(target_s *t);
 bool lpc15xx_probe(target_s *t);
 bool lpc17xx_probe(target_s *t);
+bool lpc40xx_probe(target_s *t);
 bool lpc43xx_probe(target_s *t);
 bool lpc546xx_probe(target_s *t);
 bool lpc55xx_probe(target_s *t);

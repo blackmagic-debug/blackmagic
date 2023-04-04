@@ -46,6 +46,7 @@ SRC =              \
 	lpc11xx.c      \
 	lpc17xx.c      \
 	lpc15xx.c      \
+	lpc40xx.c      \
 	lpc43xx.c      \
 	lpc546xx.c     \
 	lpc55xx.c      \
