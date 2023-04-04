@@ -386,6 +386,10 @@ const cable_desc_s cable_desc[] = {
  */
 bool ftdi_lookup_adapter_from_vid_pid(bmda_cli_options_s *const cl_opts, const probe_info_s *const probe)
 {
+	/* If the user entered a serial number, check if the attached probe is the right one */
+	if (cl_opts->opt_serial && strstr(cl_opts->opt_serial, probe->serial))
+		return true;
+
 	/* If the user entered an adapter name use it */
 	if (cl_opts->opt_cable)
 		return true;
@@ -403,6 +407,30 @@ bool ftdi_lookup_adapter_from_vid_pid(bmda_cli_options_s *const cl_opts, const p
 	if (adapter_count == 1)
 		cl_opts->opt_cable = selection->name;
 	return adapter_count == 1;
+}
+
+bool ftdi_lookup_cable_by_product(bmda_cli_options_s *cl_opts, const char *product)
+{
+	if (cl_opts->opt_cable)
+		return false;
+
+	for (const cable_desc_s *cable = &cable_desc[0]; cable->vendor; ++cable) {
+		if (cable->description && strstr(product, cable->description) != 0) {
+			cl_opts->opt_cable = cable->name;
+			return true;
+		}
+	}
+	return false;
+}
+
+bool ftdi_lookup_adaptor_descriptor(bmda_cli_options_s *cl_opts, const probe_info_s *probe)
+{
+	/* Did the user specify a serial number for the probe? */
+	if (cl_opts && cl_opts->opt_serial) {
+		const char *const product = probe->product;
+		return ftdi_lookup_cable_by_product(cl_opts, product);
+	}
+	return false;
 }
 
 bool ftdi_bmp_init(bmda_cli_options_s *const cl_opts)
