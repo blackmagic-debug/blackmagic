@@ -409,13 +409,6 @@ static void esp32c3_spi_write(target_s *const target, const uint32_t command, co
 	/* Start by setting up the common components of the transaction */
 	const uint32_t enabled_stages = esp32c3_spi_config(target, command, address, length);
 	const uint8_t *const data = (const uint8_t *)buffer;
-	/* Handle the case where we have nothing to write (execute command) */
-	if (!length) {
-		/* Write the stages to execute and run the transaction */
-		target_mem_write32(target, ESP32_C3_SPI1_USER0, enabled_stages);
-		esp32c3_spi_wait_complete(target);
-		/* The for loop below will do nothing so we do nothing */
-	}
 
 	/*
 	 * The transfer has to proceed in no more than 64 bytes at a time because that's
@@ -460,7 +453,11 @@ static inline uint8_t esp32c3_spi_read_status(target_s *const target)
 
 static inline void esp32c3_spi_run_command(target_s *const target, const uint32_t command, const target_addr_t address)
 {
-	esp32c3_spi_write(target, command, address, NULL, 0U);
+	/* Start by setting up the common components of the transaction */
+	const uint32_t enabled_stages = esp32c3_spi_config(target, command, address, 0U);
+	/* Write the stages to execute and run the transaction */
+	target_mem_write32(target, ESP32_C3_SPI1_USER0, enabled_stages);
+	esp32c3_spi_wait_complete(target);
 }
 
 static bool esp32c3_mass_erase(target_s *const target)
