@@ -458,20 +458,20 @@ static inline uint8_t esp32c3_spi_read_status(target_s *const target)
 	return status;
 }
 
-static inline void esp32c3_spi_run_command(target_s *const target, const uint32_t command)
+static inline void esp32c3_spi_run_command(target_s *const target, const uint32_t command, const target_addr_t address)
 {
-	esp32c3_spi_write(target, command, 0U, NULL, 0U);
+	esp32c3_spi_write(target, command, address, NULL, 0U);
 }
 
 static bool esp32c3_mass_erase(target_s *const target)
 {
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500U);
-	esp32c3_spi_run_command(target, SPI_FLASH_CMD_WRITE_ENABLE);
+	esp32c3_spi_run_command(target, SPI_FLASH_CMD_WRITE_ENABLE, 0U);
 	if (!(esp32c3_spi_read_status(target) & SPI_FLASH_STATUS_WRITE_ENABLED))
 		return false;
 
-	esp32c3_spi_run_command(target, SPI_FLASH_CMD_CHIP_ERASE);
+	esp32c3_spi_run_command(target, SPI_FLASH_CMD_CHIP_ERASE, 0U);
 	while (esp32c3_spi_read_status(target) & SPI_FLASH_STATUS_BUSY)
 		target_print_progress(&timeout);
 
@@ -513,13 +513,12 @@ static bool esp32c3_spi_flash_erase(target_flash_s *const flash, const target_ad
 	const esp32c3_spi_flash_s *const spi_flash = (esp32c3_spi_flash_s *)flash;
 	const target_addr_t begin = addr - flash->start;
 	for (size_t offset = 0; offset < length; offset += flash->blocksize) {
-		esp32c3_spi_run_command(target, SPI_FLASH_CMD_WRITE_ENABLE);
+		esp32c3_spi_run_command(target, SPI_FLASH_CMD_WRITE_ENABLE, 0U);
 		if (!(esp32c3_spi_read_status(target) & SPI_FLASH_STATUS_WRITE_ENABLED))
 			return false;
 
-		esp32c3_spi_write(target,
-			SPI_FLASH_CMD_SECTOR_ERASE | ESP32_C3_SPI_FLASH_OPCODE(spi_flash->sector_erase_opcode), begin + offset,
-			NULL, 0);
+		esp32c3_spi_run_command(target,
+			SPI_FLASH_CMD_SECTOR_ERASE | ESP32_C3_SPI_FLASH_OPCODE(spi_flash->sector_erase_opcode), begin + offset);
 		while (esp32c3_spi_read_status(target) & SPI_FLASH_STATUS_BUSY)
 			continue;
 	}
@@ -537,7 +536,7 @@ static bool esp32c3_spi_flash_write(
 	const target_addr_t begin = dest - flash->start;
 	const char *const buffer = src;
 	for (size_t offset = 0; offset < length; offset += spi_flash->page_size) {
-		esp32c3_spi_run_command(target, SPI_FLASH_CMD_WRITE_ENABLE);
+		esp32c3_spi_run_command(target, SPI_FLASH_CMD_WRITE_ENABLE, 0U);
 		if (!(esp32c3_spi_read_status(target) & SPI_FLASH_STATUS_WRITE_ENABLED))
 			return false;
 
