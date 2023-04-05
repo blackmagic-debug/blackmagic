@@ -175,7 +175,6 @@ extern bool debug_bmp;
 #define AUX_DDC_PORT  AUX_PORT
 #define AUX_BTN1_PORT AUX_PORT
 #define AUX_BTN2_PORT AUX_PORT
-#define AUX_VBAT_PORT GPIOA
 #define AUX_SCLK      GPIO13
 #define AUX_COPI      GPIO15
 #define AUX_CIPO      GPIO14
@@ -186,6 +185,8 @@ extern bool debug_bmp;
 #define AUX_DDC       GPIO8
 #define AUX_BTN1      GPIO12
 #define AUX_BTN2      GPIO9
+/* Note that VBat is on PA0, not PB. */
+#define AUX_VBAT_PORT GPIOA
 #define AUX_VBAT      GPIO0
 
 #define SWD_CR       GPIO_CRL(SWDIO_PORT)
