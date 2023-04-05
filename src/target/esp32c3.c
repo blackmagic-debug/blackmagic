@@ -409,6 +409,7 @@ static void esp32c3_spi_write(target_s *const target, const uint32_t command, co
 	/* Start by setting up the common components of the transaction */
 	const uint32_t enabled_stages = esp32c3_spi_config(target, command, address, length);
 	const uint8_t *const data = (const uint8_t *)buffer;
+	const uint32_t misc_reg = target_mem_read32(target, ESP32_C3_SPI1_MISC) & ~ESP32_C3_SPI_MISC_CS_HOLD;
 
 	/*
 	 * The transfer has to proceed in no more than 64 bytes at a time because that's
@@ -425,9 +426,8 @@ static void esp32c3_spi_write(target_s *const target, const uint32_t command, co
 			target_mem_write32(target, ESP32_C3_SPI1_USER0, enabled_stages);
 
 		/* On the final transfer, clear the chip select hold bit, otherwise set it */
-		const uint32_t misc_reg = target_mem_read32(target, ESP32_C3_SPI1_MISC);
 		if (length - offset == amount)
-			target_mem_write32(target, ESP32_C3_SPI1_MISC, misc_reg & ~ESP32_C3_SPI_MISC_CS_HOLD);
+			target_mem_write32(target, ESP32_C3_SPI1_MISC, misc_reg);
 		else
 			target_mem_write32(target, ESP32_C3_SPI1_MISC, misc_reg | ESP32_C3_SPI_MISC_CS_HOLD);
 
