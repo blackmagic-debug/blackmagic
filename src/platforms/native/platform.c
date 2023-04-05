@@ -267,7 +267,7 @@ static void adc_init(void)
 {
 	rcc_periph_clock_enable(RCC_ADC1);
 
-	gpio_set_mode(GPIOB, GPIO_MODE_INPUT, GPIO_CNF_INPUT_ANALOG, GPIO0);
+	gpio_set_mode(TPWR_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_ANALOG, TPWR_PIN);
 
 	adc_power_off(ADC1);
 	adc_disable_scan_mode(ADC1);
