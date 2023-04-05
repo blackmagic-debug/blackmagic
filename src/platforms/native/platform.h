@@ -129,12 +129,17 @@ extern bool debug_bmp;
 
 #define TRST_PORT       GPIOB
 #define TRST_PIN        GPIO1
-#define PWR_BR_PORT     GPIOB
-#define PWR_BR_PIN      GPIO1
 #define NRST_PORT       GPIOA
 #define NRST_PIN        HW_SWITCH(6, GPIO2, GPIO9)
 #define NRST_SENSE_PORT HW_SWITCH(6, GPIOA, GPIOC)
 #define NRST_SENSE_PIN  HW_SWITCH(6, GPIO7, GPIO13)
+
+/*
+ * These are the control output pin definitions for TPWR.
+ * TPWR is sensed via PB0 by sampling ADC1's channel 8.
+ */
+#define PWR_BR_PORT GPIOB
+#define PWR_BR_PIN  GPIO1
 
 #define USB_PU_PORT GPIOA
 #define USB_PU_PIN  GPIO8
