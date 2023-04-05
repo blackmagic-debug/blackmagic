@@ -139,6 +139,8 @@ extern bool debug_bmp;
  */
 #define PWR_BR_PORT GPIOB
 #define PWR_BR_PIN  GPIO1
+#define TPWR_PORT   GPIOB
+#define TPWR_PIN    GPIO0
 
 #define USB_PU_PORT GPIOA
 #define USB_PU_PIN  GPIO8
