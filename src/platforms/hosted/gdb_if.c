@@ -23,7 +23,9 @@
  * uses a TCP server on port 2000.
  */
 
+#ifndef __CYGWIN__
 #include "general.h"
+#endif
 
 #if defined(_WIN32) || defined(__CYGWIN__)
 #define WIN32_LEAN_AND_MEAN
@@ -31,7 +33,9 @@
 #include <winsock2.h>
 
 typedef SOCKET socket_t;
+#ifndef __CYGWIN__
 typedef signed long long ssize_t;
+#endif
 #else
 #include <sys/socket.h>
 #include <netdb.h>
@@ -43,6 +47,10 @@ typedef signed long long ssize_t;
 
 typedef int32_t socket_t;
 #define INVALID_SOCKET (-1)
+#endif
+
+#ifdef __CYGWIN__
+#include "general.h"
 #endif
 
 #include <string.h>
@@ -303,7 +311,11 @@ char gdb_if_getchar_to(uint32_t timeout)
 	if (gdb_if_conn == INVALID_SOCKET)
 		return -1;
 
+#ifndef __CYGWIN__
 	timeval_s select_timeout;
+#else
+	TIMEVAL select_timeout;
+#endif
 	select_timeout.tv_sec = timeout / 1000U;
 	select_timeout.tv_usec = (timeout % 1000U) * 1000U;
 
