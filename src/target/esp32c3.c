@@ -395,11 +395,7 @@ static void esp32c3_spi_read(
 		esp32c3_spi_wait_complete(target);
 
 		/* Extract and unpack the received data */
-		for (size_t idx = 0; idx < amount; idx += 4U) {
-			const uint32_t value = target_mem_read32(target, ESP32_C3_SPI1_DATA + idx);
-			const size_t bytes = MIN(4U, amount - idx);
-			memcpy(data + offset + idx, &value, bytes);
-		}
+		target_mem_read(target, data + offset, ESP32_C3_SPI1_DATA, amount);
 	}
 }
 
@@ -432,12 +428,7 @@ static void esp32c3_spi_write(target_s *const target, const uint32_t command, co
 			target_mem_write32(target, ESP32_C3_SPI1_MISC, misc_reg | ESP32_C3_SPI_MISC_CS_HOLD);
 
 		/* Pack and stage the data to transmit */
-		for (size_t idx = 0; idx < amount; idx += 4U) {
-			const size_t bytes = MIN(4U, amount - idx);
-			uint32_t value = 0;
-			memcpy(&value, data + offset + idx, bytes);
-			target_mem_write32(target, ESP32_C3_SPI1_DATA + idx, value);
-		}
+		target_mem_write(target, ESP32_C3_SPI1_DATA, data + offset, amount);
 
 		/* Run the transaction */
 		esp32c3_spi_wait_complete(target);
