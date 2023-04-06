@@ -39,7 +39,7 @@
 #include "rtt.h"
 #endif
 
-#if defined(_WIN32) || defined(__CYGWIN__)
+#if defined(_WIN32)
 #include <malloc.h>
 #else
 #include <alloca.h>

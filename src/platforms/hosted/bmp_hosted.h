@@ -90,11 +90,7 @@ typedef struct bmp_info {
 #endif
 } bmp_info_s;
 
-#if defined(__CYGWIN__)
-typedef TIMEVAL timeval_s;
-#else
 typedef struct timeval timeval_s;
-#endif
 
 extern bmp_info_s info;
 void bmp_ident(bmp_info_s *info);
