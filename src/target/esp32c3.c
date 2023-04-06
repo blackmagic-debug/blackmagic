@@ -520,15 +520,15 @@ static bool esp32c3_spi_flash_write(
 	target_flash_s *const flash, const target_addr_t dest, const void *const src, const size_t length)
 {
 	target_s *const target = flash->t;
-	const esp32c3_spi_flash_s *const spi_flash = (esp32c3_spi_flash_s *)flash;
+	// const esp32c3_spi_flash_s *const spi_flash = (esp32c3_spi_flash_s *)flash;
 	const target_addr_t begin = dest - flash->start;
 	const char *const buffer = src;
-	for (size_t offset = 0; offset < length; offset += spi_flash->page_size) {
+	for (size_t offset = 0; offset < length; offset += 64U) {
 		esp32c3_spi_run_command(target, SPI_FLASH_CMD_WRITE_ENABLE, 0U);
 		if (!(esp32c3_spi_read_status(target) & SPI_FLASH_STATUS_WRITE_ENABLED))
 			return false;
 
-		const size_t amount = MIN(length - offset, spi_flash->page_size);
+		const size_t amount = MIN(length - offset, 64U);
 		esp32c3_spi_write(target, SPI_FLASH_CMD_PAGE_PROGRAM, begin + offset, buffer + offset, amount);
 		while (esp32c3_spi_read_status(target) & SPI_FLASH_STATUS_BUSY)
 			continue;
