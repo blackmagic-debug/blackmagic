@@ -133,7 +133,6 @@ static bool lpc11xx_detect(target_s *const target)
 		target->driver = "LPC11xx";
 		target_add_ram(target, LPC_RAM_BASE, 0x2000);
 		lpc11xx_add_flash(target, LPC_FLASH_BASE, 0x20000, 0x1000, IAP_ENTRY_MOST, 0);
-		target_add_commands(target, lpc11xx_cmd_list, target->driver);
 		return true;
 
 	case 0x0a24902bU:
@@ -162,7 +161,6 @@ static bool lpc11xx_detect(target_s *const target)
 		 * Do not touch them!
 		 */
 		lpc11xx_add_flash(target, LPC_FLASH_BASE, 0x7800, 0x400, IAP_ENTRY_MOST, 0);
-		target_add_commands(target, lpc11xx_cmd_list, target->driver);
 		return true;
 	}
 
@@ -197,7 +195,6 @@ static bool lpc8xx_detect(target_s *const target)
 		target->driver = "LPC802";
 		target_add_ram(target, LPC_RAM_BASE, 0x800);
 		lpc11xx_add_flash(target, LPC_FLASH_BASE, 0x4000, 0x400, IAP_ENTRY_84x, 2);
-		target_add_commands(target, lpc11xx_cmd_list, target->driver);
 		return true;
 	case 0x00008040U: /* LPC804M101JBD64 - 32K Flash 4K SRAM */
 	case 0x00008041U: /* LPC804M101JDH20 */
@@ -207,7 +204,6 @@ static bool lpc8xx_detect(target_s *const target)
 		target->driver = "LPC804";
 		target_add_ram(target, LPC_RAM_BASE, 0x1000);
 		lpc11xx_add_flash(target, LPC_FLASH_BASE, 0x8000, 0x400, IAP_ENTRY_84x, 2);
-		target_add_commands(target, lpc11xx_cmd_list, target->driver);
 		return true;
 	case 0x00008100U: /* LPC810M021FN8 - 4K Flash 1K SRAM */
 	case 0x00008110U: /* LPC811M001JDH16 - 8K Flash 2K SRAM */
@@ -217,7 +213,6 @@ static bool lpc8xx_detect(target_s *const target)
 		target->driver = "LPC81x";
 		target_add_ram(target, LPC_RAM_BASE, 0x1000);
 		lpc11xx_add_flash(target, LPC_FLASH_BASE, 0x4000, 0x400, IAP_ENTRY_MOST, 0);
-		target_add_commands(target, lpc11xx_cmd_list, target->driver);
 		return true;
 	case 0x00008221U: /* LPC822M101JHI33 - 16K Flash 4K SRAM */
 	case 0x00008222U: /* LPC822M101JDH20 */
@@ -226,19 +221,16 @@ static bool lpc8xx_detect(target_s *const target)
 		target->driver = "LPC82x";
 		target_add_ram(target, LPC_RAM_BASE, 0x2000);
 		lpc11xx_add_flash(target, LPC_FLASH_BASE, 0x8000, 0x400, IAP_ENTRY_MOST, 0);
-		target_add_commands(target, lpc11xx_cmd_list, target->driver);
 		return true;
 	case 0x00008322U: /* LPC832M101FDH20 - 16K Flash 4K SRAM */
 		target->driver = "LPC832";
 		target_add_ram(target, LPC_RAM_BASE, 0x1000);
 		lpc11xx_add_flash(target, LPC_FLASH_BASE, 0x4000, 0x400, IAP_ENTRY_MOST, 0);
-		target_add_commands(target, lpc11xx_cmd_list, target->driver);
 		return true;
 	case 0x00008341U: /* LPC834M101FHI33 - 32K Flash 4K SRAM */
 		target->driver = "LPC834";
 		target_add_ram(target, LPC_RAM_BASE, 0x1000);
 		lpc11xx_add_flash(target, LPC_FLASH_BASE, 0x8000, 0x400, IAP_ENTRY_MOST, 0);
-		target_add_commands(target, lpc11xx_cmd_list, target->driver);
 		return true;
 	case 0x00008441U: /* LPC844M201JBD64 - 64K Flash 8K SRAM */
 	case 0x00008442U: /* LPC844M201JBD48 */
@@ -247,7 +239,6 @@ static bool lpc8xx_detect(target_s *const target)
 		target->driver = "LPC844";
 		target_add_ram(target, LPC_RAM_BASE, 0x2000);
 		lpc11xx_add_flash(target, LPC_FLASH_BASE, 0x10000, 0x400, IAP_ENTRY_84x, 0);
-		target_add_commands(target, lpc11xx_cmd_list, target->driver);
 		return true;
 	case 0x00008451U: /* LPC845M301JBD64 - 64K Flash 16K SRAM */
 	case 0x00008452U: /* LPC845M301JBD48 */
@@ -256,7 +247,6 @@ static bool lpc8xx_detect(target_s *const target)
 		target->driver = "LPC845";
 		target_add_ram(target, LPC_RAM_BASE, 0x4000);
 		lpc11xx_add_flash(target, LPC_FLASH_BASE, 0x10000, 0x400, IAP_ENTRY_84x, 0);
-		target_add_commands(target, lpc11xx_cmd_list, target->driver);
 		return true;
 	case 0x0003d440U: /* LPC11U34/311 - 40K Flash 8K SRAM */
 	case 0x0001cc40U: /* LPC11U34/421 - 48K Flash 8K SRAM */
@@ -269,7 +259,6 @@ static bool lpc8xx_detect(target_s *const target)
 		target->driver = "LPC11U3x";
 		target_add_ram(target, LPC_RAM_BASE, 0x2000);
 		lpc11xx_add_flash(target, LPC_FLASH_BASE, 0x20000, 0x1000, IAP_ENTRY_MOST, 0);
-		target_add_commands(target, lpc11xx_cmd_list, target->driver);
 		return true;
 	case 0x00010013U: /* LPC1111/103 - 8K Flash 2K SRAM */
 	case 0x00010012U: /* LPC1111/203 - 8K Flash 4K SRAM */
@@ -285,7 +274,6 @@ static bool lpc8xx_detect(target_s *const target)
 		target->driver = "LPC11xx-XL";
 		target_add_ram(target, LPC_RAM_BASE, 0x2000);
 		lpc11xx_add_flash(target, LPC_FLASH_BASE, 0x20000, 0x1000, IAP_ENTRY_MOST, 0);
-		target_add_commands(target, lpc11xx_cmd_list, target->driver);
 		return true;
 	case 0x00140040U: /* LPC1124/303 - 32K Flash 8K SRAM */
 	case 0x00150080U: /* LPC1125/303 - 64K Flash 8K SRAM */
@@ -293,7 +281,6 @@ static bool lpc8xx_detect(target_s *const target)
 		target_add_ram(target, LPC_RAM_BASE, 0x2000U);
 		lpc11xx_add_flash(
 			target, LPC_FLASH_BASE, device_id == 0x00140040U ? 0x8000U : 0x10000U, 0x1000, IAP_ENTRY_MOST, 0);
-		target_add_commands(target, lpc11xx_cmd_list, target->driver);
 		return true;
 	}
 
@@ -304,7 +291,10 @@ static bool lpc8xx_detect(target_s *const target)
 
 bool lpc11xx_probe(target_s *const target)
 {
-	return lpc11xx_detect(target) || lpc8xx_detect(target);
+	const bool result = lpc11xx_detect(target) || lpc8xx_detect(target);
+	if (result)
+		target_add_commands(target, lpc11xx_cmd_list, target->driver);
+	return result;
 }
 
 static bool lpc8xx_flash_mode(target_s *const target)
