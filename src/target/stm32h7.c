@@ -22,8 +22,8 @@
  * the device, providing the XML memory map and Flash memory programming.
  *
  * References:
- * ST doc - RM0433
- *   Reference manual - STM32H7x3 advanced ARM®-based 32-bit MCUs Rev.3
+ * RM0433 - STM32H742, STM32H743/753 and STM32H750 Value line advanced Arm®-based 32-bit MCUs, Rev. 8
+ *   https://www.st.com/resource/en/reference_manual/dm00314099-stm32h742-stm32h743-753-and-stm32h750-value-line-advanced-arm-based-32-bit-mcus-stmicroelectronics.pdf
  */
 
 /*
