@@ -136,10 +136,10 @@ typedef struct stm32h7_priv {
 } stm32h7_priv_s;
 
 /* static bool stm32h7_cmd_option(target_s *t, int argc, const char **argv); */
-static bool stm32h7_uid(target_s *t, int argc, const char **argv);
-static bool stm32h7_crc(target_s *t, int argc, const char **argv);
-static bool stm32h7_cmd_psize(target_s *t, int argc, const char **argv);
-static bool stm32h7_cmd_rev(target_s *t, int argc, const char **argv);
+static bool stm32h7_uid(target_s *target, int argc, const char **argv);
+static bool stm32h7_crc(target_s *target, int argc, const char **argv);
+static bool stm32h7_cmd_psize(target_s *target, int argc, const char **argv);
+static bool stm32h7_cmd_rev(target_s *target, int argc, const char **argv);
 
 const command_s stm32h7_cmd_list[] = {
 	/*{"option", stm32h7_cmd_option, "Manipulate option bytes"},*/
@@ -393,9 +393,9 @@ static bool stm32h7_mass_erase(target_s *t)
 	return stm32h7_check_bank(t, FPEC1_BASE) && stm32h7_check_bank(t, FPEC2_BASE);
 }
 
-static uint32_t stm32h7_part_uid_addr(target_s *const t)
+static uint32_t stm32h7_part_uid_addr(target_s *const target)
 {
-	if (t->part_id == ID_STM32H7Bx)
+	if (target->part_id == ID_STM32H7Bx)
 		return 0x08fff800U; /* 7B3/7A3/7B0 */
 	return 0x1ff1e800U;
 }
@@ -404,42 +404,42 @@ static uint32_t stm32h7_part_uid_addr(target_s *const t)
  * Print the Unique device ID.
  * Can be reused for other STM32 devices with uid as parameter.
  */
-static bool stm32h7_uid(target_s *t, int argc, const char **argv)
+static bool stm32h7_uid(target_s *target, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
 
-	const uint32_t uid_addr = stm32h7_part_uid_addr(t);
+	const uint32_t uid_addr = stm32h7_part_uid_addr(target);
 
-	tc_printf(t, "0x");
+	tc_printf(target, "0x");
 	for (size_t i = 0; i < 12U; i += 4U) {
-		uint32_t val = target_mem_read32(t, uid_addr + i);
-		tc_printf(t, "%02X", (val >> 24U) & 0xffU);
-		tc_printf(t, "%02X", (val >> 16U) & 0xffU);
-		tc_printf(t, "%02X", (val >> 8U) & 0xffU);
-		tc_printf(t, "%02X", val & 0xffU);
+		uint32_t val = target_mem_read32(target, uid_addr + i);
+		tc_printf(target, "%02X", (val >> 24U) & 0xffU);
+		tc_printf(target, "%02X", (val >> 16U) & 0xffU);
+		tc_printf(target, "%02X", (val >> 8U) & 0xffU);
+		tc_printf(target, "%02X", val & 0xffU);
 	}
-	tc_printf(t, "\n");
+	tc_printf(target, "\n");
 	return true;
 }
 
-static bool stm32h7_crc_bank(target_s *t, uint32_t addr)
+static bool stm32h7_crc_bank(target_s *target, uint32_t addr)
 {
 	const uint32_t reg_base = stm32h7_flash_bank_base(addr);
-	if (!stm32h7_flash_unlock(t, addr))
+	if (!stm32h7_flash_unlock(target, addr))
 		return false;
 
-	target_mem_write32(t, reg_base + FLASH_CR, FLASH_CR_CRC_EN);
+	target_mem_write32(target, reg_base + FLASH_CR, FLASH_CR_CRC_EN);
 	const uint32_t crc_ctrl = FLASH_CRCCR_CRC_BURST_3 | FLASH_CRCCR_CLEAN_CRC | FLASH_CRCCR_ALL_BANK;
-	target_mem_write32(t, reg_base + FLASH_CRCCR, crc_ctrl);
-	target_mem_write32(t, reg_base + FLASH_CRCCR, crc_ctrl | FLASH_CRCCR_START_CRC);
+	target_mem_write32(target, reg_base + FLASH_CRCCR, crc_ctrl);
+	target_mem_write32(target, reg_base + FLASH_CRCCR, crc_ctrl | FLASH_CRCCR_START_CRC);
 	uint32_t status = FLASH_SR_CRC_BUSY;
 #ifdef ENABLE_DEBUG
 	const uint8_t bank = reg_base == FPEC1_BASE ? 1 : 2;
 #endif
 	while (status & FLASH_SR_CRC_BUSY) {
-		status = target_mem_read32(t, reg_base + FLASH_SR);
-		if (target_check_error(t)) {
+		status = target_mem_read32(target, reg_base + FLASH_SR);
+		if (target_check_error(target)) {
 			DEBUG_ERROR("CRC bank %u: comm failed\n", bank);
 			return false;
 		}
@@ -451,24 +451,22 @@ static bool stm32h7_crc_bank(target_s *t, uint32_t addr)
 	return true;
 }
 
-static bool stm32h7_crc(target_s *t, int argc, const char **argv)
+static bool stm32h7_crc(target_s *target, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
-	if (!stm32h7_crc_bank(t, BANK1_START))
+	if (!stm32h7_crc_bank(target, BANK1_START))
 		return false;
-	uint32_t crc1 = target_mem_read32(t, FPEC1_BASE + FLASH_CRCDATA);
-	if (!stm32h7_crc_bank(t, BANK2_START))
+	uint32_t crc1 = target_mem_read32(target, FPEC1_BASE + FLASH_CRCDATA);
+	if (!stm32h7_crc_bank(target, BANK2_START))
 		return false;
-	uint32_t crc2 = target_mem_read32(t, FPEC2_BASE + FLASH_CRCDATA);
-	tc_printf(t, "CRC: bank1 0x%08lx, bank2 0x%08lx\n", crc1, crc2);
+	uint32_t crc2 = target_mem_read32(target, FPEC2_BASE + FLASH_CRCDATA);
+	tc_printf(target, "CRC: bank1 0x%08lx, bank2 0x%08lx\n", crc1, crc2);
 	return true;
 }
 
-static bool stm32h7_cmd_psize(target_s *t, int argc, const char **argv)
+static bool stm32h7_cmd_psize(target_s *target, int argc, const char **argv)
 {
-	(void)argc;
-	(void)argv;
 	if (argc == 1) {
 		align_e psize = ALIGN_DWORD;
 		/*
@@ -476,14 +474,14 @@ static bool stm32h7_cmd_psize(target_s *t, int argc, const char **argv)
 		 * A dry-run walk-through says it'll pull out the psize for the first Flash region added by stm32h7_probe()
 		 * because all Flash regions added by stm32h7_add_flash match the if condition. This looks redundant and wrong.
 		 */
-		for (target_flash_s *f = t->flash; f; f = f->next) {
-			if (f->write == stm32h7_flash_write)
-				psize = ((stm32h7_flash_s *)f)->psize;
+		for (target_flash_s *flash = target->flash; flash; flash = flash->next) {
+			if (flash->write == stm32h7_flash_write)
+				psize = ((stm32h7_flash_s *)flash)->psize;
 		}
-		tc_printf(t, "Flash write parallelism: %s\n", stm32_psize_to_string(psize));
+		tc_printf(target, "Flash write parallelism: %s\n", stm32_psize_to_string(psize));
 	} else {
 		align_e psize;
-		if (!stm32_psize_from_string(t, argv[1], &psize))
+		if (!stm32_psize_from_string(target, argv[1], &psize))
 			return false;
 
 		/*
@@ -491,9 +489,9 @@ static bool stm32h7_cmd_psize(target_s *t, int argc, const char **argv)
 		 * A dry-run walk-through says it'll overwrite psize for every Flash region added by stm32h7_probe()
 		 * because all Flash regions added by stm32h7_add_flash match the if condition. This looks redundant and wrong.
 		 */
-		for (target_flash_s *f = t->flash; f; f = f->next) {
-			if (f->write == stm32h7_flash_write)
-				((stm32h7_flash_s *)f)->psize = psize;
+		for (target_flash_s *flash = target->flash; flash; flash = flash->next) {
+			if (flash->write == stm32h7_flash_write)
+				((stm32h7_flash_s *)flash)->psize = psize;
 		}
 	}
 	return true;
@@ -510,19 +508,19 @@ static const struct {
 	{0x2003, 'V'},
 };
 
-static bool stm32h7_cmd_rev(target_s *t, int argc, const char **argv)
+static bool stm32h7_cmd_rev(target_s *target, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
 	/* DBGMCU identity code register */
-	const uint32_t dbgmcu_idc = target_mem_read32(t, DBGMCU_IDC);
+	const uint32_t dbgmcu_idc = target_mem_read32(target, DBGMCU_IDC);
 	const uint16_t rev_id = (dbgmcu_idc >> 16U) & 0xffffU;
 	const uint16_t dev_id = (dbgmcu_idc & 0xfffU) << 4U;
 
 	/* Print device */
 	switch (dev_id) {
 	case ID_STM32H74x:
-		tc_printf(t, "STM32H742/743/753/750\n");
+		tc_printf(target, "STM32H742/743/753/750\n");
 
 		/* Print revision */
 		char rev = '?';
@@ -531,17 +529,17 @@ static bool stm32h7_cmd_rev(target_s *t, int argc, const char **argv)
 			if (stm32h7xx_revisions[i].rev_id == rev_id)
 				rev = stm32h7xx_revisions[i].revision;
 		}
-		tc_printf(t, "Revision %c\n", rev);
+		tc_printf(target, "Revision %c\n", rev);
 		break;
 
 	case ID_STM32H7Bx:
-		tc_printf(t, "STM32H7B3/7A3/7B0\n");
+		tc_printf(target, "STM32H7B3/7A3/7B0\n");
 		break;
 	case ID_STM32H72x:
-		tc_printf(t, "STM32H723/733/725/735/730\n");
+		tc_printf(target, "STM32H723/733/725/735/730\n");
 		break;
 	default:
-		tc_printf(t, "Unknown STM32H7. BMP may not correctly support it!\n");
+		tc_printf(target, "Unknown STM32H7. BMP may not correctly support it!\n");
 	}
 
 	return true;
