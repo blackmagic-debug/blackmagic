@@ -132,7 +132,7 @@ bool stm32h5_probe(target_s *const target)
 	return true;
 }
 
-static bool stm32h5_flash_wait_complete(target_s *const target)
+static bool stm32h5_flash_wait_complete(target_s *const target, platform_timeout_s *const timeout)
 {
 	uint32_t status = STM32H5_FLASH_STATUS_BUSY;
 	/* Read the status register and poll for busy and !EOP */
@@ -142,6 +142,8 @@ static bool stm32h5_flash_wait_complete(target_s *const target)
 			DEBUG_ERROR("%s: error reading status\n", __func__);
 			return false;
 		}
+		if (timeout)
+			target_print_progress(timeout);
 	}
 	if (status & STM32H5_FLASH_STATUS_ERROR_MASK)
 		DEBUG_ERROR("%s: Flash error: %08" PRIx32 "\n", __func__, status);
@@ -155,7 +157,7 @@ static bool stm32h5_enter_flash_mode(target_s *const target)
 {
 	target_reset(target);
 	/* Wait to ensure any pending operations are complete */
-	if (!stm32h5_flash_wait_complete(target))
+	if (!stm32h5_flash_wait_complete(target, NULL))
 		return false;
 	/* Now, if the Flash controller's not already unlocked, unlock it */
 	if (target_mem_read32(target, STM32H5_FLASH_CTRL) & STM32H5_FLASH_CTRL_LOCK) {
@@ -190,7 +192,7 @@ static bool stm32h5_flash_erase(target_flash_s *const flash, const target_addr_t
 		target_mem_write32(target, STM32H5_FLASH_CTRL, ctrl | STM32H5_FLASH_CTRL_START);
 
 		/* Wait for the operation to complete, reporting errors */
-		if (!stm32h5_flash_wait_complete(target))
+		if (!stm32h5_flash_wait_complete(target, NULL))
 			return false;
 	}
 	return true;
@@ -202,11 +204,13 @@ static bool stm32h5_mass_erase(target_s *const target)
 	if (!stm32h5_enter_flash_mode(target))
 		return false;
 
+	platform_timeout_s timeout;
+	platform_timeout_set(&timeout, 500);
 	/* Trigger the mass erase */
 	target_mem_write32(target, STM32H5_FLASH_CTRL, STM32H5_FLASH_CTRL_MASS_ERASE);
 	target_mem_write32(target, STM32H5_FLASH_CTRL, STM32H5_FLASH_CTRL_MASS_ERASE | STM32H5_FLASH_CTRL_START);
 	/* And wait for it to complete, reporting errors along the way */
-	const bool result = stm32h5_flash_wait_complete(target);
+	const bool result = stm32h5_flash_wait_complete(target, &timeout);
 
 	/* When done, leave Flash mode */
 	return stm32h5_exit_flash_mode(target) && result;
