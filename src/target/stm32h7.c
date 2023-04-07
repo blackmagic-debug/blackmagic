@@ -99,13 +99,14 @@
 #define FLASH_CRCCR_CLEAN_CRC   (1U << 17U)
 #define FLASH_CRCCR_CRC_BURST_3 (3U << 20U)
 
-#define KEY1 0x45670123U
-#define KEY2 0xcdef89abU
+#define STM32H7_FLASH_KEY1 0x45670123U
+#define STM32H7_FLASH_KEY2 0xcdef89abU
 
-#define OPTKEY1 0x08192a3bU
-#define OPTKEY2 0x4c5d6e7fU
+#define STM32H7_OPT_KEY1 0x08192a3bU
+#define STM32H7_OPT_KEY2 0x4c5d6e7fU
 
-#define DBGMCU_IDCODE 0x5c001000U
+#define DBGMCU_IDCODE      0x5c001000U
+#define STM32H7_FLASH_SIZE 0x1ff1e800U
 /* Access from processor address space.
  * Access via the APB-D is at 0xe00e1000 */
 #define DBGMCU_IDC  (DBGMCU_IDCODE + 0U)
@@ -118,10 +119,13 @@
 #define D1DBGCKEN   (1U << 21U)
 #define D3DBGCKEN   (1U << 22U)
 
-#define BANK1_START         0x08000000U
-#define NUM_SECTOR_PER_BANK 8U
-#define FLASH_SECTOR_SIZE   0x20000U
-#define BANK2_START         0x08100000U
+#define STM32H7_FLASH_BANK1_BASE    0x08000000U
+#define STM32H7_FLASH_BANK2_BASE    0x08100000U
+#define STM32H7_FLASH_BANK_SIZE     0x00100000U
+#define STM32H74xxG_FLASH_BANK_SIZE 0x00080000U
+#define STM32H74xxG_FLASH_SIZE      0x00100000U
+#define NUM_SECTOR_PER_BANK         8U
+#define FLASH_SECTOR_SIZE           0x20000U
 
 #define ID_STM32H74x 0x4500U /* RM0433, RM0399 */
 #define ID_STM32H7Bx 0x4800U /* RM0455 */
@@ -174,8 +178,9 @@ static void stm32h7_add_flash(target_s *target, uint32_t addr, size_t length, si
 	target_flash->write = stm32h7_flash_write;
 	target_flash->writesize = 2048;
 	target_flash->erased = 0xffU;
-	flash->regbase = FPEC1_BASE;
-	if (addr >= BANK2_START)
+	if (addr < STM32H7_FLASH_BANK2_BASE)
+		flash->regbase = FPEC1_BASE;
+	else
 		flash->regbase = FPEC2_BASE;
 	flash->psize = ALIGN_DWORD;
 	target_add_flash(target, target_flash);
@@ -208,8 +213,29 @@ bool stm32h7_probe(target_s *target)
 	target_add_ram(target, 0x38000000, 0x10000); /* AHB SRAM4,  64kiB */
 
 	/* Build the Flash map */
-	stm32h7_add_flash(target, 0x8000000, 0x100000, FLASH_SECTOR_SIZE);
-	stm32h7_add_flash(target, 0x8100000, 0x100000, FLASH_SECTOR_SIZE);
+	switch (target->part_id) {
+	case ID_STM32H74x: {
+		/* Read the Flash size from the device (expressed in kiB) and multiply it by 1024 */
+		const uint32_t flash_size = target_mem_read32(target, STM32H7_FLASH_SIZE) << 10U;
+		/* STM32H750nB */
+		if (flash_size == FLASH_SECTOR_SIZE)
+			stm32h7_add_flash(target, STM32H7_FLASH_BANK1_BASE, flash_size, FLASH_SECTOR_SIZE);
+		/* STM32H742xG/H743xG */
+		else if (flash_size == STM32H74xxG_FLASH_SIZE) {
+			stm32h7_add_flash(target, STM32H7_FLASH_BANK1_BASE, STM32H74xxG_FLASH_BANK_SIZE, FLASH_SECTOR_SIZE);
+			stm32h7_add_flash(target, STM32H7_FLASH_BANK2_BASE, STM32H74xxG_FLASH_BANK_SIZE, FLASH_SECTOR_SIZE);
+		}
+		/* STM32H742xL/H743xL/H753xL */
+		else {
+			stm32h7_add_flash(target, STM32H7_FLASH_BANK1_BASE, STM32H7_FLASH_BANK_SIZE, FLASH_SECTOR_SIZE);
+			stm32h7_add_flash(target, STM32H7_FLASH_BANK2_BASE, STM32H7_FLASH_BANK_SIZE, FLASH_SECTOR_SIZE);
+		}
+		break;
+	}
+	default:
+		stm32h7_add_flash(target, STM32H7_FLASH_BANK1_BASE, STM32H7_FLASH_BANK_SIZE, FLASH_SECTOR_SIZE);
+		stm32h7_add_flash(target, STM32H7_FLASH_BANK2_BASE, STM32H7_FLASH_BANK_SIZE, FLASH_SECTOR_SIZE);
+	}
 
 	/* RM0433 Rev 4 is not really clear, what bits are needed in DBGMCU_CR. Maybe more flags needed? */
 	const uint32_t dbgmcu_ctrl = DBGSLEEP_D1 | D1DBGCKEN;
@@ -255,7 +281,7 @@ static bool stm32h7_flash_busy_wait(target_s *const target, const uint32_t regba
 
 static uint32_t stm32h7_flash_bank_base(const uint32_t addr)
 {
-	if (addr >= BANK2_START)
+	if (addr >= STM32H7_FLASH_BANK2_BASE)
 		return FPEC2_BASE;
 	return FPEC1_BASE;
 }
@@ -269,8 +295,8 @@ static bool stm32h7_flash_unlock(target_s *const target, const uint32_t addr)
 	/* Unlock the device Flash if not already unlocked (it's an error to re-key the controller if it is) */
 	if (target_mem_read32(target, regbase + FLASH_CR) & FLASH_CR_LOCK) {
 		/* Enable Flash controller access */
-		target_mem_write32(target, regbase + FLASH_KEYR, KEY1);
-		target_mem_write32(target, regbase + FLASH_KEYR, KEY2);
+		target_mem_write32(target, regbase + FLASH_KEYR, STM32H7_FLASH_KEY1);
+		target_mem_write32(target, regbase + FLASH_KEYR, STM32H7_FLASH_KEY2);
 	}
 	/* Return whether we were able to put the device into unlocked mode */
 	return !(target_mem_read32(target, regbase + FLASH_CR) & FLASH_CR_LOCK);
@@ -381,8 +407,8 @@ static bool stm32h7_mass_erase(target_s *target)
 			psize = ((struct stm32h7_flash *)flash)->psize;
 	}
 	/* Send mass erase Flash start instruction */
-	if (!stm32h7_erase_bank(target, psize, BANK1_START, FPEC1_BASE) ||
-		!stm32h7_erase_bank(target, psize, BANK2_START, FPEC2_BASE))
+	if (!stm32h7_erase_bank(target, psize, STM32H7_FLASH_BANK1_BASE, FPEC1_BASE) ||
+		!stm32h7_erase_bank(target, psize, STM32H7_FLASH_BANK2_BASE, FPEC2_BASE))
 		return false;
 
 	platform_timeout_s timeout;
@@ -458,10 +484,10 @@ static bool stm32h7_crc(target_s *target, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
-	if (!stm32h7_crc_bank(target, BANK1_START))
+	if (!stm32h7_crc_bank(target, STM32H7_FLASH_BANK1_BASE))
 		return false;
 	uint32_t crc1 = target_mem_read32(target, FPEC1_BASE + FLASH_CRCDATA);
-	if (!stm32h7_crc_bank(target, BANK2_START))
+	if (!stm32h7_crc_bank(target, STM32H7_FLASH_BANK2_BASE))
 		return false;
 	uint32_t crc2 = target_mem_read32(target, FPEC2_BASE + FLASH_CRCDATA);
 	tc_printf(target, "CRC: bank1 0x%08lx, bank2 0x%08lx\n", crc1, crc2);
