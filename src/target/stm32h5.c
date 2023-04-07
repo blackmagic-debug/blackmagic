@@ -44,6 +44,17 @@
 #include "target.h"
 #include "target_internal.h"
 
+/* Memory map constants */
+#define STM32H5_FLASH_BASE 0x08000000U
+#define STM32H5_FLASH_SIZE 0x00200000U
+#define STM32H5_SRAM1_BASE 0x0a000000U
+#define STM32H5_SRAM1_SIZE 0x00040000U
+#define STM32H5_SRAM2_BASE 0x0a040000U
+#define STM32H5_SRAM2_SIZE 0x00010000U
+#define STM32H5_SRAM3_BASE 0x0a050000U
+#define STM32H5_SRAM3_SIZE 0x00050000U
+/* NB: Take all base addresses and add 0x04000000U to find their TrustZone addresses */
+
 /* Taken from DP_TARGETIDR in §58.3.3 of RM0481 rev 1, pg2958 */
 #define ID_STM32H5xx 0x4840U
 
@@ -53,6 +64,14 @@ bool stm32h5_probe(target_s *const target)
 		return false;
 
 	target->driver = "STM32H5";
+
+	/*
+	 * Build the RAM map.
+	 * This uses the addresses and sizes found in §2.3.2, Figure 2, pg113 of RM0481 Rev. 1
+	 */
+	target_add_ram(target, STM32H5_SRAM1_BASE, STM32H5_SRAM1_SIZE);
+	target_add_ram(target, STM32H5_SRAM2_BASE, STM32H5_SRAM2_SIZE);
+	target_add_ram(target, STM32H5_SRAM3_BASE, STM32H5_SRAM3_SIZE);
 
 	return true;
 }
