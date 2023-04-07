@@ -549,7 +549,7 @@ static bool stm32h7_cmd_rev(target_s *target, int argc, const char **argv)
 	/* Print device */
 	switch (dev_id) {
 	case ID_STM32H74x:
-		tc_printf(target, "STM32H742/743/753/750\n");
+		tc_printf(target, "STM32H74x/75x\n");
 
 		/* Print revision */
 		char rev = '?';
@@ -565,7 +565,7 @@ static bool stm32h7_cmd_rev(target_s *target, int argc, const char **argv)
 		tc_printf(target, "STM32H7B3/7A3/7B0\n");
 		break;
 	case ID_STM32H72x:
-		tc_printf(target, "STM32H723/733/725/735/730\n");
+		tc_printf(target, "STM32H72x/73x\n");
 		break;
 	default:
 		tc_printf(target, "Unknown STM32H7. BMP may not correctly support it!\n");
