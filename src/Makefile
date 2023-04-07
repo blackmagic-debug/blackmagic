@@ -69,6 +69,7 @@ SRC =              \
 	stm32f1.c      \
 	ch32f1.c       \
 	stm32f4.c      \
+	stm32h5.c      \
 	stm32h7.c      \
 	stm32l0.c      \
 	stm32l4.c      \

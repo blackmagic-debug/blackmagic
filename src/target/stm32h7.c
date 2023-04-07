@@ -27,7 +27,7 @@
  */
 
 /*
- * While the ST document (RM 0433) claims that the stm32h750 only has 1 bank
+ * While the ST document (RM 0433) claims that the STM32H750 only has 1 bank
  * with 1 sector (128k) of user main memory flash (pages 151-152), we were able
  * to write and successfully verify into other regions in bank 1 and also into
  * bank 2 (0x0810 0000 as indicated for the other chips).
