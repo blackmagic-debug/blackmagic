@@ -88,6 +88,7 @@
 static bool stm32h5_enter_flash_mode(target_s *target);
 static bool stm32h5_exit_flash_mode(target_s *target);
 static bool stm32h5_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
+static bool stm32h5_mass_erase(target_s *target);
 
 static void stm32h5_add_flash(
 	target_s *const target, const uint32_t base_addr, const size_t length, const size_t block_size)
@@ -112,6 +113,7 @@ bool stm32h5_probe(target_s *const target)
 		return false;
 
 	target->driver = "STM32H5";
+	target->mass_erase = stm32h5_mass_erase;
 	target->enter_flash_mode = stm32h5_enter_flash_mode;
 	target->exit_flash_mode = stm32h5_exit_flash_mode;
 
@@ -192,4 +194,20 @@ static bool stm32h5_flash_erase(target_flash_s *const flash, const target_addr_t
 			return false;
 	}
 	return true;
+}
+
+static bool stm32h5_mass_erase(target_s *const target)
+{
+	/* To start mass erase, enter into Flash mode */
+	if (!stm32h5_enter_flash_mode(target))
+		return false;
+
+	/* Trigger the mass erase */
+	target_mem_write32(target, STM32H5_FLASH_CTRL, STM32H5_FLASH_CTRL_MASS_ERASE);
+	target_mem_write32(target, STM32H5_FLASH_CTRL, STM32H5_FLASH_CTRL_MASS_ERASE | STM32H5_FLASH_CTRL_START);
+	/* And wait for it to complete, reporting errors along the way */
+	const bool result = stm32h5_flash_wait_complete(target);
+
+	/* When done, leave Flash mode */
+	return stm32h5_exit_flash_mode(target) && result;
 }
