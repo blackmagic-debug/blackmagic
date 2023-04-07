@@ -45,18 +45,39 @@
 #include "target_internal.h"
 
 /* Memory map constants */
-#define STM32H5_FLASH_BASE 0x08000000U
-#define STM32H5_FLASH_SIZE 0x00200000U
-#define STM32H5_SRAM1_BASE 0x0a000000U
-#define STM32H5_SRAM1_SIZE 0x00040000U
-#define STM32H5_SRAM2_BASE 0x0a040000U
-#define STM32H5_SRAM2_SIZE 0x00010000U
-#define STM32H5_SRAM3_BASE 0x0a050000U
-#define STM32H5_SRAM3_SIZE 0x00050000U
+#define STM32H5_FLASH_BANK1_BASE 0x08000000U
+#define STM32H5_FLASH_BANK2_BASE 0x08100000U
+#define STM32H5_FLASH_BANK_SIZE  0x00100000U
+#define STM32H5_SRAM1_BASE       0x0a000000U
+#define STM32H5_SRAM1_SIZE       0x00040000U
+#define STM32H5_SRAM2_BASE       0x0a040000U
+#define STM32H5_SRAM2_SIZE       0x00010000U
+#define STM32H5_SRAM3_BASE       0x0a050000U
+#define STM32H5_SRAM3_SIZE       0x00050000U
 /* NB: Take all base addresses and add 0x04000000U to find their TrustZone addresses */
+
+#define STM32H5_FLASH_BASE        0x40022000
+#define STM32H5_SECTORS_PER_BANK  128U
+#define STM32H5_FLASH_SECTOR_SIZE 0x2000U
 
 /* Taken from DP_TARGETIDR in §58.3.3 of RM0481 rev 1, pg2958 */
 #define ID_STM32H5xx 0x4840U
+
+static void stm32h5_add_flash(
+	target_s *const target, const uint32_t base_addr, const size_t length, const size_t block_size)
+{
+	target_flash_s *flash = calloc(1, sizeof(*flash));
+	if (!flash) { /* calloc failed: heap exhaustion */
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
+		return;
+	}
+
+	flash->start = base_addr;
+	flash->length = length;
+	flash->blocksize = block_size;
+	flash->erased = 0xffU;
+	target_add_flash(target, flash);
+}
 
 bool stm32h5_probe(target_s *const target)
 {
@@ -72,6 +93,10 @@ bool stm32h5_probe(target_s *const target)
 	target_add_ram(target, STM32H5_SRAM1_BASE, STM32H5_SRAM1_SIZE);
 	target_add_ram(target, STM32H5_SRAM2_BASE, STM32H5_SRAM2_SIZE);
 	target_add_ram(target, STM32H5_SRAM3_BASE, STM32H5_SRAM3_SIZE);
+
+	/* Build the Flash map */
+	stm32h5_add_flash(target, STM32H5_FLASH_BANK1_BASE, STM32H5_FLASH_BANK_SIZE, STM32H5_FLASH_SECTOR_SIZE);
+	stm32h5_add_flash(target, STM32H5_FLASH_BANK2_BASE, STM32H5_FLASH_BANK_SIZE, STM32H5_FLASH_SECTOR_SIZE);
 
 	return true;
 }
