@@ -57,11 +57,37 @@
 /* NB: Take all base addresses and add 0x04000000U to find their TrustZone addresses */
 
 #define STM32H5_FLASH_BASE        0x40022000
+#define STM32H5_FLASH_ACCESS_CTRL (STM32H5_FLASH_BASE + 0x000U)
+#define STM32H5_FLASH_KEY         (STM32H5_FLASH_BASE + 0x004U)
+#define STM32H5_FLASH_OPTION_KEY  (STM32H5_FLASH_BASE + 0x00cU)
+#define STM32H5_FLASH_STATUS      (STM32H5_FLASH_BASE + 0x020U)
+#define STM32H5_FLASH_CTRL        (STM32H5_FLASH_BASE + 0x028U)
+#define STM32H5_FLASH_CLEAR_CTRL  (STM32H5_FLASH_BASE + 0x030U)
+
+#define STM32H5_FLASH_KEY1              0x45670123U
+#define STM32H5_FLASH_KEY2              0xcdef89abU
+#define STM32H5_FLASH_STATUS_BUSY       (1U << 0U)
+#define STM32H5_FLASH_STATUS_EOP        (1U << 16U)
+#define STM32H5_FLASH_STATUS_ERROR_MASK 0x00fc0000U
+#define STM32H5_FLASH_CTRL_LOCK         (1U << 0U)
+#define STM32H5_FLASH_CTRL_PROGRAM      (1U << 1U)
+#define STM32H5_FLASH_CTRL_SECTOR_ERASE (1U << 2U)
+#define STM32H5_FLASH_CTRL_BANK_ERASE   (1U << 3U)
+#define STM32H5_FLASH_CTRL_START        (1U << 5U)
+#define STM32H5_FLASH_CTRL_SECTOR(x)    (((x)&0x7fU) << 6U)
+#define STM32H5_FLASH_CTRL_MASS_ERASE   (1U << 15U)
+#define STM32H5_FLASH_CTRL_BANK1        (0U << 31U)
+#define STM32H5_FLASH_CTRL_BANK2        (1U << 31U)
+
 #define STM32H5_SECTORS_PER_BANK  128U
 #define STM32H5_FLASH_SECTOR_SIZE 0x2000U
 
 /* Taken from DP_TARGETIDR in §58.3.3 of RM0481 rev 1, pg2958 */
 #define ID_STM32H5xx 0x4840U
+
+static bool stm32h5_enter_flash_mode(target_s *target);
+static bool stm32h5_exit_flash_mode(target_s *target);
+static bool stm32h5_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
 
 static void stm32h5_add_flash(
 	target_s *const target, const uint32_t base_addr, const size_t length, const size_t block_size)
@@ -75,6 +101,7 @@ static void stm32h5_add_flash(
 	flash->start = base_addr;
 	flash->length = length;
 	flash->blocksize = block_size;
+	flash->erase = stm32h5_flash_erase;
 	flash->erased = 0xffU;
 	target_add_flash(target, flash);
 }
@@ -85,6 +112,8 @@ bool stm32h5_probe(target_s *const target)
 		return false;
 
 	target->driver = "STM32H5";
+	target->enter_flash_mode = stm32h5_enter_flash_mode;
+	target->exit_flash_mode = stm32h5_exit_flash_mode;
 
 	/*
 	 * Build the RAM map.
@@ -98,5 +127,69 @@ bool stm32h5_probe(target_s *const target)
 	stm32h5_add_flash(target, STM32H5_FLASH_BANK1_BASE, STM32H5_FLASH_BANK_SIZE, STM32H5_FLASH_SECTOR_SIZE);
 	stm32h5_add_flash(target, STM32H5_FLASH_BANK2_BASE, STM32H5_FLASH_BANK_SIZE, STM32H5_FLASH_SECTOR_SIZE);
 
+	return true;
+}
+
+static bool stm32h5_flash_wait_complete(target_s *const target)
+{
+	uint32_t status = STM32H5_FLASH_STATUS_BUSY;
+	/* Read the status register and poll for busy and !EOP */
+	while (!(status & STM32H5_FLASH_STATUS_EOP) && (status & STM32H5_FLASH_STATUS_BUSY)) {
+		status = target_mem_read32(target, STM32H5_FLASH_STATUS);
+		if (target_check_error(target)) {
+			DEBUG_ERROR("%s: error reading status\n", __func__);
+			return false;
+		}
+	}
+	if (status & STM32H5_FLASH_STATUS_ERROR_MASK)
+		DEBUG_ERROR("%s: Flash error: %08" PRIx32 "\n", __func__, status);
+	/* Clear all error and status bits */
+	target_mem_write32(
+		target, STM32H5_FLASH_CLEAR_CTRL, (status & (STM32H5_FLASH_STATUS_ERROR_MASK | STM32H5_FLASH_STATUS_EOP)));
+	return !(status & STM32H5_FLASH_STATUS_ERROR_MASK);
+}
+
+static bool stm32h5_enter_flash_mode(target_s *const target)
+{
+	target_reset(target);
+	/* Wait to ensure any pending operations are complete */
+	if (!stm32h5_flash_wait_complete(target))
+		return false;
+	/* Now, if the Flash controller's not already unlocked, unlock it */
+	if (target_mem_read32(target, STM32H5_FLASH_CTRL) & STM32H5_FLASH_CTRL_LOCK) {
+		target_mem_write32(target, STM32H5_FLASH_KEY, STM32H5_FLASH_KEY1);
+		target_mem_write32(target, STM32H5_FLASH_KEY, STM32H5_FLASH_KEY2);
+	}
+	/* Success of entering Flash mode is predicated on successfully unlocking the controller */
+	return !(target_mem_read32(target, STM32H5_FLASH_CTRL) & STM32H5_FLASH_CTRL_LOCK);
+}
+
+static bool stm32h5_exit_flash_mode(target_s *const target)
+{
+	/* On leaving Flash mode, lock the controller again */
+	target_mem_write32(target, STM32H5_FLASH_CTRL, STM32H5_FLASH_CTRL_LOCK);
+	target_reset(target);
+	return true;
+}
+
+static bool stm32h5_flash_erase(target_flash_s *const flash, const target_addr_t addr, const size_t len)
+{
+	target_s *const target = flash->t;
+	/* Compute how many sectors should be erased (inclusive) and from which bank */
+	const uint32_t begin = flash->start - addr;
+	const uint32_t bank = addr < STM32H5_FLASH_BANK2_BASE ? STM32H5_FLASH_CTRL_BANK1 : STM32H5_FLASH_CTRL_BANK2;
+	const size_t end_sector = (begin + len - 1U) / STM32H5_FLASH_SECTOR_SIZE;
+
+	/* For each sector in the requested address range */
+	for (size_t begin_sector = begin / STM32H5_FLASH_SECTOR_SIZE; begin_sector <= end_sector; ++begin_sector) {
+		/* Erase the current Flash sector */
+		const uint32_t ctrl = bank | STM32H5_FLASH_CTRL_SECTOR_ERASE | STM32H5_FLASH_CTRL_SECTOR(begin_sector);
+		target_mem_write32(target, STM32H5_FLASH_CTRL, ctrl);
+		target_mem_write32(target, STM32H5_FLASH_CTRL, ctrl | STM32H5_FLASH_CTRL_START);
+
+		/* Wait for the operation to complete, reporting errors */
+		if (!stm32h5_flash_wait_complete(target))
+			return false;
+	}
 	return true;
 }
