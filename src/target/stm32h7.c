@@ -271,7 +271,7 @@ static bool stm32h7_flash_busy_wait(target_s *const target, const uint32_t regba
 	while (status & (FLASH_SR_BSY | FLASH_SR_QW)) {
 		status = target_mem_read32(target, regbase + FLASH_SR);
 		if ((status & FLASH_SR_ERROR_MASK) || target_check_error(target)) {
-			DEBUG_ERROR("stm32h7_flash_write: error status %08" PRIx32 "\n", status);
+			DEBUG_ERROR("%s: error status %08" PRIx32 "\n", __func__, status);
 			target_mem_write32(target, regbase + FLASH_CCR, status & FLASH_SR_ERROR_MASK);
 			return false;
 		}
