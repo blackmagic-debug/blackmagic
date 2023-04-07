@@ -88,6 +88,7 @@
 static bool stm32h5_enter_flash_mode(target_s *target);
 static bool stm32h5_exit_flash_mode(target_s *target);
 static bool stm32h5_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len);
+static bool stm32h5_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len);
 static bool stm32h5_mass_erase(target_s *target);
 
 static void stm32h5_add_flash(
@@ -103,6 +104,7 @@ static void stm32h5_add_flash(
 	flash->length = length;
 	flash->blocksize = block_size;
 	flash->erase = stm32h5_flash_erase;
+	flash->write = stm32h5_flash_write;
 	flash->erased = 0xffU;
 	target_add_flash(target, flash);
 }
@@ -195,6 +197,22 @@ static bool stm32h5_flash_erase(target_flash_s *const flash, const target_addr_t
 		if (!stm32h5_flash_wait_complete(target, NULL))
 			return false;
 	}
+	return true;
+}
+
+static bool stm32h5_flash_write(
+	target_flash_s *const flash, const target_addr_t dest, const void *const src, const size_t len)
+{
+	target_s *const target = flash->t;
+	/* Enable programming operations */
+	target_mem_write32(target, STM32H5_FLASH_CTRL, STM32H5_FLASH_CTRL_PROGRAM);
+	/* Write the data to the Flash */
+	target_mem_write(target, dest, src, len);
+	/* Wait for the operation to complete and report errors */
+	if (!stm32h5_flash_wait_complete(target, NULL))
+		return false;
+	/* Disable programming operations */
+	target_mem_write32(target, STM32H5_FLASH_CTRL, 0U);
 	return true;
 }
 
