@@ -39,25 +39,6 @@
 #include "cortexm.h"
 #include "stm32_common.h"
 
-/* static bool stm32h7_cmd_option(target_s *t, int argc, const char **argv); */
-static bool stm32h7_uid(target_s *t, int argc, const char **argv);
-static bool stm32h7_crc(target_s *t, int argc, const char **argv);
-static bool stm32h7_cmd_psize(target_s *t, int argc, const char **argv);
-static bool stm32h7_cmd_rev(target_s *t, int argc, const char **argv);
-
-const command_s stm32h7_cmd_list[] = {
-	/*{"option", stm32h7_cmd_option, "Manipulate option bytes"},*/
-	{"psize", stm32h7_cmd_psize, "Configure flash write parallelism: (x8|x16|x32|x64(default))"},
-	{"uid", stm32h7_uid, "Print unique device ID"},
-	{"crc", stm32h7_crc, "Print CRC of both banks"},
-	{"revision", stm32h7_cmd_rev, "Returns the Device ID and Revision"},
-	{NULL, NULL, NULL},
-};
-
-static bool stm32h7_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
-static bool stm32h7_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
-static bool stm32h7_mass_erase(target_s *t);
-
 #define FLASH_ACR       0x00U
 #define FLASH_KEYR      0x04U
 #define FLASH_OPTKEYR   0x08U
@@ -154,8 +135,26 @@ typedef struct stm32h7_priv {
 	uint32_t dbg_cr;
 } stm32h7_priv_s;
 
-static bool stm32h7_attach(target_s *t);
-static void stm32h7_detach(target_s *t);
+/* static bool stm32h7_cmd_option(target_s *t, int argc, const char **argv); */
+static bool stm32h7_uid(target_s *t, int argc, const char **argv);
+static bool stm32h7_crc(target_s *t, int argc, const char **argv);
+static bool stm32h7_cmd_psize(target_s *t, int argc, const char **argv);
+static bool stm32h7_cmd_rev(target_s *t, int argc, const char **argv);
+
+const command_s stm32h7_cmd_list[] = {
+	/*{"option", stm32h7_cmd_option, "Manipulate option bytes"},*/
+	{"psize", stm32h7_cmd_psize, "Configure flash write parallelism: (x8|x16|x32|x64(default))"},
+	{"uid", stm32h7_uid, "Print unique device ID"},
+	{"crc", stm32h7_crc, "Print CRC of both banks"},
+	{"revision", stm32h7_cmd_rev, "Returns the Device ID and Revision"},
+	{NULL, NULL, NULL},
+};
+
+static bool stm32h7_attach(target_s *target);
+static void stm32h7_detach(target_s *target);
+static bool stm32h7_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
+static bool stm32h7_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
+static bool stm32h7_mass_erase(target_s *t);
 
 static void stm32h7_add_flash(target_s *target, uint32_t addr, size_t length, size_t blocksize)
 {
@@ -180,62 +179,62 @@ static void stm32h7_add_flash(target_s *target, uint32_t addr, size_t length, si
 	target_add_flash(target, target_flash);
 }
 
-bool stm32h7_probe(target_s *t)
+bool stm32h7_probe(target_s *target)
 {
-	if (t->part_id != ID_STM32H74x && t->part_id != ID_STM32H7Bx && t->part_id != ID_STM32H72x)
+	if (target->part_id != ID_STM32H74x && target->part_id != ID_STM32H7Bx && target->part_id != ID_STM32H72x)
 		return false;
 
-	t->driver = "STM32H7";
-	t->attach = stm32h7_attach;
-	t->detach = stm32h7_detach;
-	t->mass_erase = stm32h7_mass_erase;
-	target_add_commands(t, stm32h7_cmd_list, t->driver);
+	target->driver = "STM32H7";
+	target->attach = stm32h7_attach;
+	target->detach = stm32h7_detach;
+	target->mass_erase = stm32h7_mass_erase;
+	target_add_commands(target, stm32h7_cmd_list, target->driver);
 
 	/* Save private storage */
 	stm32h7_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
-	priv_storage->dbg_cr = target_mem_read32(t, DBGMCU_CR);
-	t->target_storage = priv_storage;
+	priv_storage->dbg_cr = target_mem_read32(target, DBGMCU_CR);
+	target->target_storage = priv_storage;
 
 	/* Build the RAM map */
 	/* Table 7. Memory map and default device memory area attributes RM0433, pg130 */
-	target_add_ram(t, 0x00000000, 0x10000); /* ITCM RAM,   64kiB */
-	target_add_ram(t, 0x20000000, 0x20000); /* DTCM RAM,  128kiB */
-	target_add_ram(t, 0x24000000, 0x80000); /* AXI RAM,   512kiB */
-	target_add_ram(t, 0x30000000, 0x20000); /* AHB SRAM1, 128kiB */
-	target_add_ram(t, 0x30020000, 0x20000); /* AHB SRAM2, 128kiB */
-	target_add_ram(t, 0x30040000, 0x08000); /* AHB SRAM3,  32kiB */
-	target_add_ram(t, 0x38000000, 0x10000); /* AHB SRAM4,  64kiB */
+	target_add_ram(target, 0x00000000, 0x10000); /* ITCM RAM,   64kiB */
+	target_add_ram(target, 0x20000000, 0x20000); /* DTCM RAM,  128kiB */
+	target_add_ram(target, 0x24000000, 0x80000); /* AXI RAM,   512kiB */
+	target_add_ram(target, 0x30000000, 0x20000); /* AHB SRAM1, 128kiB */
+	target_add_ram(target, 0x30020000, 0x20000); /* AHB SRAM2, 128kiB */
+	target_add_ram(target, 0x30040000, 0x08000); /* AHB SRAM3,  32kiB */
+	target_add_ram(target, 0x38000000, 0x10000); /* AHB SRAM4,  64kiB */
 
 	/* Build the Flash map */
-	stm32h7_add_flash(t, 0x8000000, 0x100000, FLASH_SECTOR_SIZE);
-	stm32h7_add_flash(t, 0x8100000, 0x100000, FLASH_SECTOR_SIZE);
+	stm32h7_add_flash(target, 0x8000000, 0x100000, FLASH_SECTOR_SIZE);
+	stm32h7_add_flash(target, 0x8100000, 0x100000, FLASH_SECTOR_SIZE);
 
 	/* RM0433 Rev 4 is not really clear, what bits are needed in DBGMCU_CR. Maybe more flags needed? */
 	const uint32_t dbgmcu_ctrl = DBGSLEEP_D1 | D1DBGCKEN;
-	target_mem_write32(t, DBGMCU_CR, dbgmcu_ctrl);
+	target_mem_write32(target, DBGMCU_CR, dbgmcu_ctrl);
 	return true;
 }
 
-static bool stm32h7_attach(target_s *t)
+static bool stm32h7_attach(target_s *target)
 {
-	if (!cortexm_attach(t))
+	if (!cortexm_attach(target))
 		return false;
 	/*
 	 * If IWDG runs as HARDWARE watchdog (§44.3.4) erase
 	 * will be aborted by the Watchdog and erase fails!
 	 * Setting IWDG_KR to 0xaaaa does not seem to help!
 	 */
-	const uint32_t optsr = target_mem_read32(t, FPEC1_BASE + FLASH_OPTSR);
+	const uint32_t optsr = target_mem_read32(target, FPEC1_BASE + FLASH_OPTSR);
 	if (!(optsr & FLASH_OPTSR_IWDG1_SW))
-		tc_printf(t, "Hardware IWDG running. Expect failure. Set IWDG1_SW!");
+		tc_printf(target, "Hardware IWDG running. Expect failure. Set IWDG1_SW!");
 	return true;
 }
 
-static void stm32h7_detach(target_s *t)
+static void stm32h7_detach(target_s *target)
 {
-	stm32h7_priv_s *ps = (stm32h7_priv_s *)t->target_storage;
-	target_mem_write32(t, DBGMCU_CR, ps->dbg_cr);
-	cortexm_detach(t);
+	stm32h7_priv_s *ps = (stm32h7_priv_s *)target->target_storage;
+	target_mem_write32(target, DBGMCU_CR, ps->dbg_cr);
+	cortexm_detach(target);
 }
 
 static bool stm32h7_flash_busy_wait(target_s *const t, const uint32_t regbase)
