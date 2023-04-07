@@ -234,10 +234,13 @@ iap_status_e lpc_iap_call(lpc_flash_s *const flash, iap_result_s *const result, 
 		if (status & CORTEXM_XPSR_THUMB)
 			fault_address |= 1U;
 
-		DEBUG_WARN("%s: Failure due to fault (%" PRIu32 ")\n", __func__, status & CORTEXM_XPSR_EXCEPTION_MASK);
-		DEBUG_WARN("\t-> Fault at %08" PRIx32 "\n", fault_address);
-		lpc_restore_state(target, flash->iap_ram, &saved_frame, saved_regs);
-		return IAP_STATUS_INVALID_COMMAND;
+		/* If the fault is not because of our break instruction at the end of the IAP sequence */
+		if (fault_address != (flash->iap_ram | 1U)) {
+			DEBUG_WARN("%s: Failure due to fault (%" PRIu32 ")\n", __func__, status & CORTEXM_XPSR_EXCEPTION_MASK);
+			DEBUG_WARN("\t-> Fault at %08" PRIx32 "\n", fault_address);
+			lpc_restore_state(target, flash->iap_ram, &saved_frame, saved_regs);
+			return IAP_STATUS_INVALID_COMMAND;
+		}
 	}
 
 	/* Copy back just the results */
