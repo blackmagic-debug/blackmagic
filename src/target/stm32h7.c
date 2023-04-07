@@ -154,6 +154,9 @@ typedef struct stm32h7_priv {
 	uint32_t dbg_cr;
 } stm32h7_priv_s;
 
+static bool stm32h7_attach(target_s *t);
+static void stm32h7_detach(target_s *t);
+
 static void stm32h7_add_flash(target_s *t, uint32_t addr, size_t length, size_t blocksize)
 {
 	stm32h7_flash_s *sf = calloc(1, sizeof(*sf));
@@ -175,28 +178,6 @@ static void stm32h7_add_flash(target_s *t, uint32_t addr, size_t length, size_t 
 		sf->regbase = FPEC2_BASE;
 	sf->psize = ALIGN_DWORD;
 	target_add_flash(t, f);
-}
-
-static bool stm32h7_attach(target_s *t)
-{
-	if (!cortexm_attach(t))
-		return false;
-	/*
-	 * If IWDG runs as HARDWARE watchdog (§44.3.4) erase
-	 * will be aborted by the Watchdog and erase fails!
-	 * Setting IWDG_KR to 0xaaaa does not seem to help!
-	 */
-	const uint32_t optsr = target_mem_read32(t, FPEC1_BASE + FLASH_OPTSR);
-	if (!(optsr & FLASH_OPTSR_IWDG1_SW))
-		tc_printf(t, "Hardware IWDG running. Expect failure. Set IWDG1_SW!");
-	return true;
-}
-
-static void stm32h7_detach(target_s *t)
-{
-	stm32h7_priv_s *ps = (stm32h7_priv_s *)t->target_storage;
-	target_mem_write32(t, DBGMCU_CR, ps->dbg_cr);
-	cortexm_detach(t);
 }
 
 bool stm32h7_probe(target_s *t)
@@ -233,6 +214,28 @@ bool stm32h7_probe(target_s *t)
 	const uint32_t dbgmcu_ctrl = DBGSLEEP_D1 | D1DBGCKEN;
 	target_mem_write32(t, DBGMCU_CR, dbgmcu_ctrl);
 	return true;
+}
+
+static bool stm32h7_attach(target_s *t)
+{
+	if (!cortexm_attach(t))
+		return false;
+	/*
+	 * If IWDG runs as HARDWARE watchdog (§44.3.4) erase
+	 * will be aborted by the Watchdog and erase fails!
+	 * Setting IWDG_KR to 0xaaaa does not seem to help!
+	 */
+	const uint32_t optsr = target_mem_read32(t, FPEC1_BASE + FLASH_OPTSR);
+	if (!(optsr & FLASH_OPTSR_IWDG1_SW))
+		tc_printf(t, "Hardware IWDG running. Expect failure. Set IWDG1_SW!");
+	return true;
+}
+
+static void stm32h7_detach(target_s *t)
+{
+	stm32h7_priv_s *ps = (stm32h7_priv_s *)t->target_storage;
+	target_mem_write32(t, DBGMCU_CR, ps->dbg_cr);
+	cortexm_detach(t);
 }
 
 static bool stm32h7_flash_busy_wait(target_s *const t, const uint32_t regbase)
