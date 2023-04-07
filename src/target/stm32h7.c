@@ -145,7 +145,7 @@ static bool stm32h7_mass_erase(target_s *t);
 #define ID_STM32H72x 0x4830U /* RM0468 */
 
 typedef struct stm32h7_flash {
-	target_flash_s f;
+	target_flash_s target_flash;
 	align_e psize;
 	uint32_t regbase;
 } stm32h7_flash_s;
@@ -157,27 +157,27 @@ typedef struct stm32h7_priv {
 static bool stm32h7_attach(target_s *t);
 static void stm32h7_detach(target_s *t);
 
-static void stm32h7_add_flash(target_s *t, uint32_t addr, size_t length, size_t blocksize)
+static void stm32h7_add_flash(target_s *target, uint32_t addr, size_t length, size_t blocksize)
 {
-	stm32h7_flash_s *sf = calloc(1, sizeof(*sf));
-	if (!sf) { /* calloc failed: heap exhaustion */
+	stm32h7_flash_s *flash = calloc(1, sizeof(*flash));
+	if (!flash) { /* calloc failed: heap exhaustion */
 		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return;
 	}
 
-	target_flash_s *f = &sf->f;
-	f->start = addr;
-	f->length = length;
-	f->blocksize = blocksize;
-	f->erase = stm32h7_flash_erase;
-	f->write = stm32h7_flash_write;
-	f->writesize = 2048;
-	f->erased = 0xffU;
-	sf->regbase = FPEC1_BASE;
+	target_flash_s *target_flash = &flash->target_flash;
+	target_flash->start = addr;
+	target_flash->length = length;
+	target_flash->blocksize = blocksize;
+	target_flash->erase = stm32h7_flash_erase;
+	target_flash->write = stm32h7_flash_write;
+	target_flash->writesize = 2048;
+	target_flash->erased = 0xffU;
+	flash->regbase = FPEC1_BASE;
 	if (addr >= BANK2_START)
-		sf->regbase = FPEC2_BASE;
-	sf->psize = ALIGN_DWORD;
-	target_add_flash(t, f);
+		flash->regbase = FPEC2_BASE;
+	flash->psize = ALIGN_DWORD;
+	target_add_flash(target, target_flash);
 }
 
 bool stm32h7_probe(target_s *t)
