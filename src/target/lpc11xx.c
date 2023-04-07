@@ -287,6 +287,14 @@ static bool lpc8xx_detect(target_s *const target)
 		lpc11xx_add_flash(target, LPC_FLASH_BASE, 0x20000, 0x1000, IAP_ENTRY_MOST, 0);
 		target_add_commands(target, lpc11xx_cmd_list, target->driver);
 		return true;
+	case 0x00140040U: /* LPC1124/303 - 32K Flash 8K SRAM */
+	case 0x00150080U: /* LPC1125/303 - 64K Flash 8K SRAM */
+		target->driver = "LPC112x";
+		target_add_ram(target, LPC_RAM_BASE, 0x2000U);
+		lpc11xx_add_flash(
+			target, LPC_FLASH_BASE, device_id == 0x00140040U ? 0x8000U : 0x10000U, 0x1000, IAP_ENTRY_MOST, 0);
+		target_add_commands(target, lpc11xx_cmd_list, target->driver);
+		return true;
 	}
 
 	if (device_id)
