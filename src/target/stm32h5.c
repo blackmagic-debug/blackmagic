@@ -36,15 +36,17 @@
  * memory maps and Flash programming routines.
  *
  * References:
- * RM0481 - STM32H563, H573 and H562 ARM®-based 32-bit MCUs, Rev. 1
+ * RM0481 - STM32H563, H573 and H562 Arm®-based 32-bit MCUs, Rev. 1
  *   https://www.st.com/resource/en/reference_manual/rm0481-stm32h563h573-and-stm32h562-armbased-32bit-mcus-stmicroelectronics.pdf
+ * RM0492 - STM32H503 Arm®-based 32-bit MCUs, Rev. 2
+ *   https://www.st.com/resource/en/reference_manual/rm0492-stm32h503-line-armbased-32bit-mcus-stmicroelectronics.pdf
  */
 
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
 
-/* Memory map constants */
+/* Memory map constants for STM32H5xx */
 #define STM32H5_FLASH_BANK1_BASE 0x08000000U
 #define STM32H5_FLASH_BANK2_BASE 0x08100000U
 #define STM32H5_FLASH_BANK_SIZE  0x00100000U
@@ -55,6 +57,15 @@
 #define STM32H5_SRAM3_BASE       0x0a050000U
 #define STM32H5_SRAM3_SIZE       0x00050000U
 /* NB: Take all base addresses and add 0x04000000U to find their TrustZone addresses */
+
+/* Memory map constants for the STM32H503 */
+#define STM32H503_FLASH_BANK1_BASE 0x08000000U
+#define STM32H503_FLASH_BANK2_BASE 0x08010000U
+#define STM32H503_FLASH_BANK_SIZE  0x00010000U
+#define STM32H503_SRAM1_BASE       0x0a000000U
+#define STM32H503_SRAM1_SIZE       0x00004000U
+#define STM32H503_SRAM2_BASE       0x0a004000U
+#define STM32H503_SRAM2_SIZE       0x00004000U
 
 #define STM32H5_FLASH_BASE        0x40022000
 #define STM32H5_FLASH_ACCESS_CTRL (STM32H5_FLASH_BASE + 0x000U)
@@ -79,11 +90,21 @@
 #define STM32H5_FLASH_CTRL_BANK1        (0U << 31U)
 #define STM32H5_FLASH_CTRL_BANK2        (1U << 31U)
 
-#define STM32H5_SECTORS_PER_BANK  128U
-#define STM32H5_FLASH_SECTOR_SIZE 0x2000U
+#define STM32H5_SECTORS_PER_BANK        128U
+#define STM32H5_FLASH_SECTOR_SIZE       0x00002000U
+#define STM32H503_SECTORS_PER_BANK      8U
+#define STM32H5_FLASH_BANK_MASK         0x80000000U
+#define STM32H5_FLASH_SECTOR_COUNT_MASK 0x000000ffU
 
 /* Taken from DP_TARGETIDR in §58.3.3 of RM0481 rev 1, pg2958 */
 #define ID_STM32H5xx 0x4840U
+/* Taken from DP_TARGETIDR in §41.3.3 of RM0492 rev 2, pg1682 */
+#define ID_STM32H503 0x4740U
+
+typedef struct stm32h5_flash {
+	target_flash_s target_flash;
+	uint32_t bank_and_sector_count;
+} stm32h5_flash_s;
 
 static bool stm32h5_enter_flash_mode(target_s *target);
 static bool stm32h5_exit_flash_mode(target_s *target);
@@ -92,26 +113,28 @@ static bool stm32h5_flash_write(target_flash_s *flash, target_addr_t dest, const
 static bool stm32h5_mass_erase(target_s *target);
 
 static void stm32h5_add_flash(
-	target_s *const target, const uint32_t base_addr, const size_t length, const size_t block_size)
+	target_s *const target, const uint32_t base_addr, const size_t length, const uint32_t bank_and_sector_count)
 {
-	target_flash_s *flash = calloc(1, sizeof(*flash));
+	stm32h5_flash_s *flash = calloc(1, sizeof(*flash));
 	if (!flash) { /* calloc failed: heap exhaustion */
 		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return;
 	}
 
-	flash->start = base_addr;
-	flash->length = length;
-	flash->blocksize = block_size;
-	flash->erase = stm32h5_flash_erase;
-	flash->write = stm32h5_flash_write;
-	flash->erased = 0xffU;
-	target_add_flash(target, flash);
+	target_flash_s *target_flash = &flash->target_flash;
+	target_flash->start = base_addr;
+	target_flash->length = length;
+	target_flash->blocksize = STM32H5_FLASH_SECTOR_SIZE;
+	target_flash->erase = stm32h5_flash_erase;
+	target_flash->write = stm32h5_flash_write;
+	target_flash->erased = 0xffU;
+	target_add_flash(target, target_flash);
+	flash->bank_and_sector_count = bank_and_sector_count;
 }
 
 bool stm32h5_probe(target_s *const target)
 {
-	if (target->part_id != ID_STM32H5xx)
+	if (target->part_id != ID_STM32H5xx && target->part_id != ID_STM32H503)
 		return false;
 
 	target->driver = "STM32H5";
@@ -119,17 +142,37 @@ bool stm32h5_probe(target_s *const target)
 	target->enter_flash_mode = stm32h5_enter_flash_mode;
 	target->exit_flash_mode = stm32h5_exit_flash_mode;
 
-	/*
-	 * Build the RAM map.
-	 * This uses the addresses and sizes found in §2.3.2, Figure 2, pg113 of RM0481 Rev. 1
-	 */
-	target_add_ram(target, STM32H5_SRAM1_BASE, STM32H5_SRAM1_SIZE);
-	target_add_ram(target, STM32H5_SRAM2_BASE, STM32H5_SRAM2_SIZE);
-	target_add_ram(target, STM32H5_SRAM3_BASE, STM32H5_SRAM3_SIZE);
+	switch (target->part_id) {
+	case ID_STM32H5xx:
+		/*
+		 * Build the RAM map.
+		 * This uses the addresses and sizes found in §2.3.2, Figure 2, pg113 of RM0481 Rev. 1
+		 */
+		target_add_ram(target, STM32H5_SRAM1_BASE, STM32H5_SRAM1_SIZE);
+		target_add_ram(target, STM32H5_SRAM2_BASE, STM32H5_SRAM2_SIZE);
+		target_add_ram(target, STM32H5_SRAM3_BASE, STM32H5_SRAM3_SIZE);
 
-	/* Build the Flash map */
-	stm32h5_add_flash(target, STM32H5_FLASH_BANK1_BASE, STM32H5_FLASH_BANK_SIZE, STM32H5_FLASH_SECTOR_SIZE);
-	stm32h5_add_flash(target, STM32H5_FLASH_BANK2_BASE, STM32H5_FLASH_BANK_SIZE, STM32H5_FLASH_SECTOR_SIZE);
+		/* Build the Flash map */
+		stm32h5_add_flash(target, STM32H5_FLASH_BANK1_BASE, STM32H5_FLASH_BANK_SIZE,
+			STM32H5_SECTORS_PER_BANK | STM32H5_FLASH_CTRL_BANK1);
+		stm32h5_add_flash(target, STM32H5_FLASH_BANK2_BASE, STM32H5_FLASH_BANK_SIZE,
+			STM32H5_SECTORS_PER_BANK | STM32H5_FLASH_CTRL_BANK2);
+		break;
+	case ID_STM32H503:
+		/*
+		 * Build the RAM map.
+		 * This uses the addresses and sizes found in §2.2.2, Figure 2, pg70 of RM0492 Rev. 2
+		 */
+		target_add_ram(target, STM32H503_SRAM1_BASE, STM32H503_SRAM1_SIZE);
+		target_add_ram(target, STM32H503_SRAM2_BASE, STM32H503_SRAM2_SIZE);
+
+		/* Build the Flash map */
+		stm32h5_add_flash(target, STM32H503_FLASH_BANK1_BASE, STM32H503_FLASH_BANK_SIZE,
+			STM32H503_SECTORS_PER_BANK | STM32H5_FLASH_CTRL_BANK1);
+		stm32h5_add_flash(target, STM32H503_FLASH_BANK2_BASE, STM32H503_FLASH_BANK_SIZE,
+			STM32H503_SECTORS_PER_BANK | STM32H5_FLASH_CTRL_BANK2);
+		break;
+	}
 
 	return true;
 }
@@ -178,12 +221,13 @@ static bool stm32h5_exit_flash_mode(target_s *const target)
 	return true;
 }
 
-static bool stm32h5_flash_erase(target_flash_s *const flash, const target_addr_t addr, const size_t len)
+static bool stm32h5_flash_erase(target_flash_s *const target_flash, const target_addr_t addr, const size_t len)
 {
-	target_s *const target = flash->t;
+	target_s *const target = target_flash->t;
+	const stm32h5_flash_s *const flash = (stm32h5_flash_s *)target_flash;
 	/* Compute how many sectors should be erased (inclusive) and from which bank */
-	const uint32_t begin = flash->start - addr;
-	const uint32_t bank = addr < STM32H5_FLASH_BANK2_BASE ? STM32H5_FLASH_CTRL_BANK1 : STM32H5_FLASH_CTRL_BANK2;
+	const uint32_t begin = target_flash->start - addr;
+	const uint32_t bank = flash->bank_and_sector_count & STM32H5_FLASH_BANK_MASK;
 	const size_t end_sector = (begin + len - 1U) / STM32H5_FLASH_SECTOR_SIZE;
 
 	/* For each sector in the requested address range */
