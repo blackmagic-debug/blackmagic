@@ -39,11 +39,11 @@ uint32_t jtag_dev_count = 0;
 /* bucket of ones for don't care TDI */
 const uint8_t ones[8] = {0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU};
 
-static bool jtag_read_idcodes();
-static void jtag_display_idcodes();
-static bool jtag_read_irs();
+static bool jtag_read_idcodes(void);
+static void jtag_display_idcodes(void);
+static bool jtag_read_irs(void);
 static bool jtag_validate_irs(const uint8_t *ir_lengths, size_t lengths_count);
-static bool jtag_sanity_check();
+static bool jtag_sanity_check(void);
 
 #if PC_HOSTED == 0
 void jtag_add_device(const uint32_t dev_index, const jtag_dev_s *jtag_dev)
@@ -163,7 +163,7 @@ uint32_t jtag_scan(const uint8_t *const ir_lengths, const size_t lengths_count)
 	return jtag_dev_count;
 }
 
-static bool jtag_read_idcodes()
+static bool jtag_read_idcodes(void)
 {
 	/* Reset the chain ready and transition to Shift-DR */
 	jtag_proc.jtagtap_reset();
@@ -198,7 +198,7 @@ static bool jtag_read_idcodes()
 	return true;
 }
 
-static void jtag_display_idcodes()
+static void jtag_display_idcodes(void)
 {
 #if ENABLE_DEBUG
 	for (size_t device = 0; device < jtag_dev_count; ++device) {
@@ -224,7 +224,7 @@ static jtag_ir_quirks_s jtag_device_get_quirks(const uint32_t idcode)
 	return (jtag_ir_quirks_s){};
 }
 
-static bool jtag_read_irs()
+static bool jtag_read_irs(void)
 {
 	/* Transition to Shift-IR */
 	DEBUG_INFO("Change state to Shift-IR\n");
@@ -324,7 +324,7 @@ static bool jtag_validate_irs(const uint8_t *const ir_lengths, const size_t leng
 	return true;
 }
 
-static bool jtag_sanity_check()
+static bool jtag_sanity_check(void)
 {
 	/* Transition to Shift-DR */
 	DEBUG_INFO("Change state to Shift-DR\n");
