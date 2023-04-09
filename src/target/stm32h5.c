@@ -96,7 +96,14 @@
 #define STM32H5_FLASH_BANK_MASK         0x80000000U
 #define STM32H5_FLASH_SECTOR_COUNT_MASK 0x000000ffU
 
-#define STM32H5_UID_BASE 0x08fff800U
+#define STM32H5_DBGMCU_BASE   0xe0044000
+#define STM32H5_DBGMCU_IDCODE (STM32H5_DBGMCU_BASE + 0x00U)
+#define STM32H5_UID_BASE      0x08fff800U
+
+#define STM32H5_DBGMCU_IDCODE_DEV_MASK  0x00000fffU
+#define STM32H5_DBGMCU_IDCODE_DEV_SHIFT 4U
+#define STM32H5_DBGMCU_IDCODE_REV_MASK  0xffff0000U
+#define STM32H5_DBGMCU_IDCODE_REV_SHIFT 16U
 
 /* Taken from DP_TARGETIDR in §58.3.3 of RM0481 rev 1, pg2958 */
 #define ID_STM32H5xx 0x4840U
@@ -109,9 +116,11 @@ typedef struct stm32h5_flash {
 } stm32h5_flash_s;
 
 static bool stm32h5_cmd_uid(target_s *target, int argc, const char **argv);
+static bool stm32h5_cmd_rev(target_s *target, int argc, const char **argv);
 
 const command_s stm32h5_cmd_list[] = {
 	{"uid", stm32h5_cmd_uid, "Print unique device ID"},
+	{"revision", stm32h5_cmd_rev, "Returns the Device ID and Revision"},
 	{NULL, NULL, NULL},
 };
 
@@ -299,5 +308,42 @@ static bool stm32h5_cmd_uid(target_s *target, int argc, const char **argv)
 			value & 0xffU);
 	}
 	tc_printf(target, "\n");
+	return true;
+}
+
+static const struct {
+	uint16_t rev_id;
+	char revision;
+} stm32h5_revisions[] = {
+	{0x1000U, 'A'},
+	{0x1001U, 'Z'},
+	{0x1002U, 'Y'},
+	{0x1007U, 'X'},
+};
+
+static bool stm32h5_cmd_rev(target_s *target, int argc, const char **argv)
+{
+	(void)argc;
+	(void)argv;
+	/* Read the device identity register */
+	const uint32_t idcode = target_mem_read32(target, STM32H5_DBGMCU_IDCODE);
+	const uint16_t rev_id = (idcode & STM32H5_DBGMCU_IDCODE_REV_MASK) >> STM32H5_DBGMCU_IDCODE_REV_SHIFT;
+	const uint16_t dev_id = (idcode & STM32H5_DBGMCU_IDCODE_DEV_MASK) << STM32H5_DBGMCU_IDCODE_DEV_SHIFT;
+
+	/* Display the device ID */
+	switch (dev_id) {
+	case ID_STM32H5xx:
+		tc_printf(target, "STM32H56x/57x\n");
+		break;
+	case ID_STM32H503:
+		tc_printf(target, "STM32H503\n");
+		break;
+	}
+	char revision = '?';
+	for (size_t i = 0; i < ARRAY_LENGTH(stm32h5_revisions); ++i) {
+		if (stm32h5_revisions[i].rev_id == rev_id)
+			revision = stm32h5_revisions[i].revision;
+	}
+	tc_printf(target, "Revision %c\n", revision);
 	return true;
 }
