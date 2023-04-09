@@ -1023,10 +1023,9 @@ static uint32_t stlink_ap_read(adiv5_access_port_s *ap, uint16_t addr)
 	return ret;
 }
 
-uint32_t jtag_scan_stlinkv2(const uint8_t *irlens)
+uint32_t jtag_scan_stlinkv2(void)
 {
 	uint32_t idcodes[JTAG_MAX_DEVS];
-	(void)irlens;
 	target_list_free();
 
 	jtag_dev_count = 0;
