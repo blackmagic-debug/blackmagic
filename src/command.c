@@ -52,7 +52,7 @@
 static bool cmd_version(target_s *t, int argc, const char **argv);
 static bool cmd_help(target_s *t, int argc, const char **argv);
 
-static bool cmd_jtag_scan(target_s *t, int argc, const char **argv);
+static bool cmd_jtag_scan(target_s *target, int argc, const char **argv);
 static bool cmd_swdp_scan(target_s *t, int argc, const char **argv);
 static bool cmd_auto_scan(target_s *t, int argc, const char **argv);
 static bool cmd_frequency(target_s *t, int argc, const char **argv);
@@ -194,9 +194,9 @@ bool cmd_help(target_s *t, int argc, const char **argv)
 	return true;
 }
 
-static bool cmd_jtag_scan(target_s *t, int argc, const char **argv)
+static bool cmd_jtag_scan(target_s *target, int argc, const char **argv)
 {
-	(void)t;
+	(void)target;
 	uint8_t irlens[argc];
 
 	if (platform_target_voltage())
