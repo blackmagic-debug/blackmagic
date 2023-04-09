@@ -442,11 +442,9 @@ static bool stm32h7_uid(target_s *target, int argc, const char **argv)
 
 	tc_printf(target, "0x");
 	for (size_t i = 0; i < 12U; i += 4U) {
-		uint32_t val = target_mem_read32(target, uid_addr + i);
-		tc_printf(target, "%02X", (val >> 24U) & 0xffU);
-		tc_printf(target, "%02X", (val >> 16U) & 0xffU);
-		tc_printf(target, "%02X", (val >> 8U) & 0xffU);
-		tc_printf(target, "%02X", val & 0xffU);
+		const uint32_t value = target_mem_read32(target, uid_addr + i);
+		tc_printf(target, "%02X%02X%02X%02X", (value >> 24U) & 0xffU, (value >> 16U) & 0xffU, (value >> 8U) & 0xffU,
+			value & 0xffU);
 	}
 	tc_printf(target, "\n");
 	return true;
