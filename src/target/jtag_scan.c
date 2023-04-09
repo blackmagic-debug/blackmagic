@@ -31,6 +31,7 @@
 #include "target.h"
 #include "adiv5.h"
 #include "jtag_devs.h"
+#include "gdb_packet.h"
 
 jtag_dev_s jtag_devs[JTAG_MAX_DEVS];
 uint32_t jtag_dev_count = 0;
@@ -100,12 +101,17 @@ uint32_t jtag_scan(const uint8_t *irlens, const size_t lengths_count)
 
 	/* If we've been given a set of IR lengths, use those to verify the chain length and set things up */
 	if (lengths_count) {
-		DEBUG_WARN("Given list of IR lengths, skipping probe\n");
+		if (lengths_count != jtag_dev_count) {
+			gdb_outf("Number of IR lengths given does not match device count\n");
+			jtag_dev_count = 0;
+			return 0;
+		}
+
 		DEBUG_INFO("Change state to Shift-IR\n");
 		jtagtap_shift_ir();
 
 		size_t device = 0;
-		for (size_t prescan = 0; device < JTAG_MAX_DEVS && jtag_devs[device].ir_len <= JTAG_MAX_IR_LEN; ++device) {
+		for (size_t prescan = 0; device < lengths_count && jtag_devs[device].ir_len <= JTAG_MAX_IR_LEN; ++device) {
 			if (irlens[device] == 0)
 				break;
 
