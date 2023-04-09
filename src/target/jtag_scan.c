@@ -103,7 +103,7 @@ uint32_t jtag_scan(const uint8_t *const ir_lengths, const size_t lengths_count)
 	/* If we've been given a set of IR lengths, use those to verify the chain length and set things up */
 	if (lengths_count) {
 		if (!jtag_validate_irs(ir_lengths, lengths_count))
-			return 0;
+			return 0U;
 	}
 	/* Otherwise, try and learn the chain IR lengths */
 	else if (!jtag_read_irs())
@@ -300,13 +300,24 @@ static bool jtag_validate_irs(const uint8_t *const ir_lengths, const size_t leng
 		return false;
 	}
 
+	/* Transition to Shift-IR to begin validation */
 	DEBUG_INFO("Change state to Shift-IR\n");
 	jtagtap_shift_ir();
 
-	size_t device = 0;
-	for (size_t prescan = 0; device < lengths_count && jtag_devs[device].ir_len <= JTAG_MAX_IR_LEN; ++device) {
-		if (ir_lengths[device] == 0)
-			break;
+	DEBUG_INFO("Scanning out IRs\n");
+	/* Start with no prescan and the first device */
+	size_t prescan = 0;
+	for (size_t device = 0; device < lengths_count; ++device) {
+		if (ir_lengths[device] > JTAG_MAX_IR_LEN) {
+			DEBUG_WARN("jtag_scan: Maximum IR length exceeded\n");
+			jtag_dev_count = 0U;
+			return false;
+		}
+		if (ir_lengths[device] == 0) {
+			DEBUG_WARN("jtag_scan: IR length must be at least 1\n");
+			jtag_dev_count = 0U;
+			return false;
+		}
 
 		uint32_t irout = 0;
 		jtag_proc.jtagtap_tdi_tdo_seq((uint8_t *)&irout, 0, ones, ir_lengths[device]);
@@ -317,10 +328,9 @@ static bool jtag_validate_irs(const uint8_t *const ir_lengths, const size_t leng
 
 		jtag_devs[device].ir_len = ir_lengths[device];
 		jtag_devs[device].ir_prescan = prescan;
-		jtag_devs[device].dr_prescan = device;
+		jtag_devs[device].current_ir = UINT32_MAX;
 		prescan += ir_lengths[device];
 	}
-	jtag_dev_count = device;
 	return true;
 }
 
