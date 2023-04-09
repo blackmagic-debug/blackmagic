@@ -308,6 +308,7 @@ static bool jtag_validate_irs(const uint8_t *const ir_lengths, const size_t leng
 	/* Start with no prescan and the first device */
 	size_t prescan = 0;
 	for (size_t device = 0; device < lengths_count; ++device) {
+		/* Validate the next ir_lengths value */
 		if (ir_lengths[device] > JTAG_MAX_IR_LEN) {
 			DEBUG_WARN("jtag_scan: Maximum IR length exceeded\n");
 			jtag_dev_count = 0U;
@@ -319,6 +320,7 @@ static bool jtag_validate_irs(const uint8_t *const ir_lengths, const size_t leng
 			return false;
 		}
 
+		/* Read out the IR to validate it */
 		uint32_t irout = 0;
 		jtag_proc.jtagtap_tdi_tdo_seq((uint8_t *)&irout, 0, ones, ir_lengths[device]);
 
@@ -326,6 +328,7 @@ static bool jtag_validate_irs(const uint8_t *const ir_lengths, const size_t leng
 		if (!(irout & 1U))
 			DEBUG_WARN("jtag_scan: Sanity check failed: IR[0] shifted out as 0\n");
 
+		/* Set up the IR fileds for the device */
 		jtag_devs[device].ir_len = ir_lengths[device];
 		jtag_devs[device].ir_prescan = prescan;
 		jtag_devs[device].current_ir = UINT32_MAX;
