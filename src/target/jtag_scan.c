@@ -42,6 +42,7 @@ const uint8_t ones[8] = {0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU}
 static bool jtag_read_idcodes();
 static void jtag_display_idcodes();
 static bool jtag_read_irs();
+static bool jtag_validate_irs(const uint8_t *ir_lengths, size_t lengths_count);
 static bool jtag_sanity_check();
 
 #if PC_HOSTED == 0
@@ -73,7 +74,7 @@ void jtag_add_device(const uint32_t dev_index, const jtag_dev_s *jtag_dev)
  * and inspection. Finally, we loop through seeing if we understand any of the
  * ID codes seen and dispatching to suitable handlers if we do.
  */
-uint32_t jtag_scan(const uint8_t *irlens, const size_t lengths_count)
+uint32_t jtag_scan(const uint8_t *const ir_lengths, const size_t lengths_count)
 {
 	/* Free the device list if any, and clean state ready */
 	target_list_free();
@@ -101,35 +102,11 @@ uint32_t jtag_scan(const uint8_t *irlens, const size_t lengths_count)
 
 	/* If we've been given a set of IR lengths, use those to verify the chain length and set things up */
 	if (lengths_count) {
-		if (lengths_count != jtag_dev_count) {
-			gdb_outf("Number of IR lengths given does not match device count\n");
-			jtag_dev_count = 0;
+		if (!jtag_validate_irs(ir_lengths, lengths_count))
 			return 0;
-		}
-
-		DEBUG_INFO("Change state to Shift-IR\n");
-		jtagtap_shift_ir();
-
-		size_t device = 0;
-		for (size_t prescan = 0; device < lengths_count && jtag_devs[device].ir_len <= JTAG_MAX_IR_LEN; ++device) {
-			if (irlens[device] == 0)
-				break;
-
-			uint32_t irout = 0;
-			jtag_proc.jtagtap_tdi_tdo_seq((uint8_t *)&irout, 0, ones, irlens[device]);
-
-			/* IEEE 1149.1 requires the first bit to be a 1, but not all devices conform (see #1130 on GH) */
-			if (!(irout & 1U))
-				DEBUG_WARN("check failed: IR[0] != 1\n");
-
-			jtag_devs[device].ir_len = irlens[device];
-			jtag_devs[device].ir_prescan = prescan;
-			jtag_devs[device].dr_prescan = device;
-			prescan += irlens[device];
-		}
-		jtag_dev_count = device;
-		/* Otherwise, try and learn the chain IR lengths */
-	} else if (!jtag_read_irs())
+	}
+	/* Otherwise, try and learn the chain IR lengths */
+	else if (!jtag_read_irs())
 		return 0;
 
 	/* All devices should be in BYPASS now so do the sanity check */
@@ -312,6 +289,38 @@ static bool jtag_read_irs()
 	DEBUG_INFO("Return to Run-Test/Idle\n");
 	jtag_proc.jtagtap_next(true, true);
 	jtagtap_return_idle(1);
+	return true;
+}
+
+static bool jtag_validate_irs(const uint8_t *const ir_lengths, const size_t lengths_count)
+{
+	if (lengths_count != jtag_dev_count) {
+		gdb_outf("Number of IR lengths given does not match device count\n");
+		jtag_dev_count = 0;
+		return false;
+	}
+
+	DEBUG_INFO("Change state to Shift-IR\n");
+	jtagtap_shift_ir();
+
+	size_t device = 0;
+	for (size_t prescan = 0; device < lengths_count && jtag_devs[device].ir_len <= JTAG_MAX_IR_LEN; ++device) {
+		if (ir_lengths[device] == 0)
+			break;
+
+		uint32_t irout = 0;
+		jtag_proc.jtagtap_tdi_tdo_seq((uint8_t *)&irout, 0, ones, ir_lengths[device]);
+
+		/* IEEE 1149.1 requires the first bit to be a 1, but not all devices conform (see #1130 on GH) */
+		if (!(irout & 1U))
+			DEBUG_WARN("check failed: IR[0] != 1\n");
+
+		jtag_devs[device].ir_len = ir_lengths[device];
+		jtag_devs[device].ir_prescan = prescan;
+		jtag_devs[device].dr_prescan = device;
+		prescan += ir_lengths[device];
+	}
+	jtag_dev_count = device;
 	return true;
 }
 
