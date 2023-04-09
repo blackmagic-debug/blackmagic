@@ -422,11 +422,11 @@ int cl_execute(bmda_cli_options_s *opt)
 
 	int res = 0;
 	if (opt->opt_scanmode == BMP_SCAN_JTAG)
-		num_targets = platform_jtag_scan(NULL);
+		num_targets = platform_jtag_scan(NULL, 0);
 	else if (opt->opt_scanmode == BMP_SCAN_SWD)
 		num_targets = platform_adiv5_swdp_scan(opt->opt_targetid);
 	else {
-		num_targets = platform_jtag_scan(NULL);
+		num_targets = platform_jtag_scan(NULL, 0);
 		if (num_targets > 0)
 			goto found_targets;
 		DEBUG_INFO("JTAG scan found no devices, trying SWD.\n");

@@ -186,7 +186,7 @@ void platform_add_jtag_dev(uint32_t i, const jtag_dev_s *jtag_dev)
 		remote_add_jtag_dev(i, jtag_dev);
 }
 
-uint32_t platform_jtag_scan(const uint8_t *lrlens)
+uint32_t platform_jtag_scan(const uint8_t *lrlens, const size_t lengths_count)
 {
 	info.is_jtag = true;
 
@@ -197,7 +197,7 @@ uint32_t platform_jtag_scan(const uint8_t *lrlens)
 	case BMP_TYPE_LIBFTDI:
 	case BMP_TYPE_JLINK:
 	case BMP_TYPE_CMSIS_DAP:
-		return jtag_scan(lrlens);
+		return jtag_scan(lrlens, lengths_count);
 
 	case BMP_TYPE_STLINKV2:
 		return jtag_scan_stlinkv2(&info, lrlens);
