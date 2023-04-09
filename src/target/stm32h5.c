@@ -96,6 +96,8 @@
 #define STM32H5_FLASH_BANK_MASK         0x80000000U
 #define STM32H5_FLASH_SECTOR_COUNT_MASK 0x000000ffU
 
+#define STM32H5_UID_BASE 0x08fff800U
+
 /* Taken from DP_TARGETIDR in §58.3.3 of RM0481 rev 1, pg2958 */
 #define ID_STM32H5xx 0x4840U
 /* Taken from DP_TARGETIDR in §41.3.3 of RM0492 rev 2, pg1682 */
@@ -105,6 +107,13 @@ typedef struct stm32h5_flash {
 	target_flash_s target_flash;
 	uint32_t bank_and_sector_count;
 } stm32h5_flash_s;
+
+static bool stm32h5_cmd_uid(target_s *target, int argc, const char **argv);
+
+const command_s stm32h5_cmd_list[] = {
+	{"uid", stm32h5_cmd_uid, "Print unique device ID"},
+	{NULL, NULL, NULL},
+};
 
 static bool stm32h5_enter_flash_mode(target_s *target);
 static bool stm32h5_exit_flash_mode(target_s *target);
@@ -141,6 +150,7 @@ bool stm32h5_probe(target_s *const target)
 	target->mass_erase = stm32h5_mass_erase;
 	target->enter_flash_mode = stm32h5_enter_flash_mode;
 	target->exit_flash_mode = stm32h5_exit_flash_mode;
+	target_add_commands(target, stm32h5_cmd_list, target->driver);
 
 	switch (target->part_id) {
 	case ID_STM32H5xx:
@@ -276,4 +286,18 @@ static bool stm32h5_mass_erase(target_s *const target)
 
 	/* When done, leave Flash mode */
 	return stm32h5_exit_flash_mode(target) && result;
+}
+
+static bool stm32h5_cmd_uid(target_s *target, int argc, const char **argv)
+{
+	(void)argc;
+	(void)argv;
+	tc_printf(target, "0x");
+	for (size_t i = 0U; i < 12U; i += 4U) {
+		const uint32_t value = target_mem_read32(target, STM32H5_UID_BASE + i);
+		tc_printf(target, "%02X%02X%02X%02X", (value >> 24U) & 0xffU, (value >> 16U) & 0xffU, (value >> 8U) & 0xffU,
+			value & 0xffU);
+	}
+	tc_printf(target, "\n");
+	return true;
 }
