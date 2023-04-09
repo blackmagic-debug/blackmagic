@@ -105,7 +105,7 @@ uint32_t jtag_scan(const uint8_t *irlens)
 		jtagtap_shift_ir();
 
 		size_t device = 0;
-		for (size_t prescan = 0; device <= JTAG_MAX_DEVS && jtag_devs[device].ir_len <= JTAG_MAX_IR_LEN; ++device) {
+		for (size_t prescan = 0; device < JTAG_MAX_DEVS && jtag_devs[device].ir_len <= JTAG_MAX_IR_LEN; ++device) {
 			if (irlens[device] == 0)
 				break;
 
