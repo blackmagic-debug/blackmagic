@@ -324,7 +324,7 @@ static bool jtag_validate_irs(const uint8_t *const ir_lengths, const size_t leng
 
 		/* IEEE 1149.1 requires the first bit to be a 1, but not all devices conform (see #1130 on GH) */
 		if (!(irout & 1U))
-			DEBUG_WARN("check failed: IR[0] != 1\n");
+			DEBUG_WARN("jtag_scan: Sanity check failed: IR[0] shifted out as 0\n");
 
 		jtag_devs[device].ir_len = ir_lengths[device];
 		jtag_devs[device].ir_prescan = prescan;
