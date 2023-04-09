@@ -525,14 +525,14 @@ static bool stm32h7_cmd_psize(target_s *target, int argc, const char **argv)
 }
 
 static const struct {
-	uint32_t rev_id;
+	uint16_t rev_id;
 	char revision;
 } stm32h7xx_revisions[] = {
-	{0x1000, 'A'},
-	{0x1001, 'Z'},
-	{0x1003, 'Y'},
-	{0x2001, 'X'},
-	{0x2003, 'V'},
+	{0x1000U, 'A'},
+	{0x1001U, 'Z'},
+	{0x1003U, 'Y'},
+	{0x2001U, 'X'},
+	{0x2003U, 'V'},
 };
 
 static bool stm32h7_cmd_rev(target_s *target, int argc, const char **argv)
