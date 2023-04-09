@@ -29,6 +29,7 @@
 #include "timing.h"
 #include "cli.h"
 #include "gdb_if.h"
+#include "gdb_packet.h"
 #include <signal.h>
 
 #ifdef ENABLE_RTT
@@ -200,7 +201,9 @@ uint32_t platform_jtag_scan(const uint8_t *ir_lengths, const size_t lengths_coun
 		return jtag_scan(ir_lengths, lengths_count);
 
 	case BMP_TYPE_STLINKV2:
-		return jtag_scan_stlinkv2(ir_lengths);
+		if (lengths_count)
+			gdb_outf("Manually specified IR lengths is not supported when using a ST-Link adaptor\n");
+		return jtag_scan_stlinkv2();
 
 	default:
 		return 0;
