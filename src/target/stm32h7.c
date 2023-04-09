@@ -566,7 +566,7 @@ static bool stm32h7_cmd_rev(target_s *target, int argc, const char **argv)
 		tc_printf(target, "STM32H72x/73x\n");
 		break;
 	default:
-		tc_printf(target, "Unknown STM32H7. BMP may not correctly support it!\n");
+		tc_printf(target, "Unknown %s. BMP may not correctly support it!\n", target->driver);
 	}
 
 	return true;

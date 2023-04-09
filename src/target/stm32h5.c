@@ -338,6 +338,8 @@ static bool stm32h5_cmd_rev(target_s *target, int argc, const char **argv)
 	case ID_STM32H503:
 		tc_printf(target, "STM32H503\n");
 		break;
+	default:
+		tc_printf(target, "Unknown %s. BMP may not correctly support it!\n", target->driver);
 	}
 	char revision = '?';
 	for (size_t i = 0; i < ARRAY_LENGTH(stm32h5_revisions); ++i) {
