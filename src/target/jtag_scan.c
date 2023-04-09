@@ -109,6 +109,11 @@ uint32_t jtag_scan(const uint8_t *const ir_lengths, const size_t lengths_count)
 	else if (!jtag_read_irs())
 		return 0;
 
+	/* IRs are all succesfully accounted for, so clean up and do housekeeping */
+	DEBUG_INFO("Return to Run-Test/Idle\n");
+	jtag_proc.jtagtap_next(true, true);
+	jtagtap_return_idle(1);
+
 	/* All devices should be in BYPASS now so do the sanity check */
 	if (!jtag_sanity_check())
 		return 0;
@@ -284,11 +289,6 @@ static bool jtag_read_irs()
 		jtag_dev_count = 0;
 		return 0;
 	}
-
-	/* IRs are all succesfully accounted for, so clean up and do housekeeping */
-	DEBUG_INFO("Return to Run-Test/Idle\n");
-	jtag_proc.jtagtap_next(true, true);
-	jtagtap_return_idle(1);
 	return true;
 }
 
