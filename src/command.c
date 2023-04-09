@@ -34,6 +34,7 @@
 #include "version.h"
 #include "serialno.h"
 #include "jtagtap.h"
+#include "jtag_scan.h"
 
 #ifdef ENABLE_RTT
 #include "rtt.h"
@@ -197,16 +198,16 @@ bool cmd_help(target_s *t, int argc, const char **argv)
 static bool cmd_jtag_scan(target_s *target, int argc, const char **argv)
 {
 	(void)target;
-	uint8_t irlens[argc];
+	uint8_t ir_lengths[JTAG_MAX_DEVS];
+	const volatile size_t lengths_count = MIN((size_t)argc - 1U, JTAG_MAX_DEVS);
 
 	if (platform_target_voltage())
 		gdb_outf("Target voltage: %s\n", platform_target_voltage());
 
-	if (argc > 1) {
+	if (lengths_count) {
 		/* Accept a list of IR lengths on command line */
-		for (size_t i = 1; i < (size_t)argc; i++)
-			irlens[i - 1U] = strtoul(argv[i], NULL, 0);
-		irlens[argc - 1] = 0;
+		for (size_t offset = 0; offset < lengths_count; ++offset)
+			ir_lengths[offset] = strtoul(argv[offset + 1U], NULL, 0);
 	}
 
 	if (connect_assert_nrst)
@@ -216,9 +217,9 @@ static bool cmd_jtag_scan(target_s *target, int argc, const char **argv)
 	volatile exception_s e;
 	TRY_CATCH (e, EXCEPTION_ALL) {
 #if PC_HOSTED == 1
-		devs = platform_jtag_scan(argc > 1 ? irlens : NULL);
+		devs = platform_jtag_scan(lengths_count ? ir_lengths : NULL, lengths_count);
 #else
-		devs = jtag_scan(argc > 1 ? irlens : NULL);
+		devs = jtag_scan(ir_lengths, lengths_count);
 #endif
 	}
 	switch (e.type) {
@@ -301,9 +302,9 @@ bool cmd_auto_scan(target_s *t, int argc, const char **argv)
 	volatile exception_s e;
 	TRY_CATCH (e, EXCEPTION_ALL) {
 #if PC_HOSTED == 1
-		devs = platform_jtag_scan(NULL);
+		devs = platform_jtag_scan(NULL, 0U);
 #else
-		devs = jtag_scan(NULL);
+		devs = jtag_scan(NULL, 0U);
 #endif
 		if (devs > 0)
 			break;

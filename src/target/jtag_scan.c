@@ -72,7 +72,7 @@ void jtag_add_device(const uint32_t dev_index, const jtag_dev_s *jtag_dev)
  * and inspection. Finally, we loop through seeing if we understand any of the
  * ID codes seen and dispatching to suitable handlers if we do.
  */
-uint32_t jtag_scan(const uint8_t *irlens)
+uint32_t jtag_scan(const uint8_t *irlens, const size_t lengths_count)
 {
 	/* Free the device list if any, and clean state ready */
 	target_list_free();
@@ -99,7 +99,7 @@ uint32_t jtag_scan(const uint8_t *irlens)
 		return 0;
 
 	/* If we've been given a set of IR lengths, use those to verify the chain length and set things up */
-	if (irlens) {
+	if (lengths_count) {
 		DEBUG_WARN("Given list of IR lengths, skipping probe\n");
 		DEBUG_INFO("Change state to Shift-IR\n");
 		jtagtap_shift_ir();
