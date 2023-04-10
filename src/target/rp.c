@@ -193,11 +193,8 @@
 typedef struct rp_priv {
 	uint16_t rom_debug_trampoline_begin;
 	uint16_t rom_debug_trampoline_end;
-	uint16_t rom_flash_range_erase;
-	uint16_t rom_flash_range_program;
 	uint16_t rom_reset_usb_boot;
 	bool is_prepared;
-	bool is_monitor;
 	uint32_t regs[0x20]; /* Register playground*/
 } rp_priv_s;
 
@@ -312,7 +309,6 @@ bool rp_probe(target_s *t)
 		return false;
 	}
 	priv_storage->is_prepared = false;
-	priv_storage->is_monitor = false;
 	t->target_storage = (void *)priv_storage;
 
 	t->mass_erase = rp_mass_erase;
@@ -364,12 +360,6 @@ static bool rp_read_rom_func_table(target_s *const t)
 		case BOOTROM_FUNC_TABLE_TAG('D', 'E'):
 			priv->rom_debug_trampoline_end = addr;
 			break;
-		case BOOTROM_FUNC_TABLE_TAG('R', 'E'):
-			priv->rom_flash_range_erase = addr;
-			break;
-		case BOOTROM_FUNC_TABLE_TAG('R', 'P'):
-			priv->rom_flash_range_program = addr;
-			break;
 		case BOOTROM_FUNC_TABLE_TAG('U', 'B'):
 			priv->rom_reset_usb_boot = addr;
 			break;
@@ -405,11 +395,7 @@ static bool rp_rom_call(target_s *t, uint32_t *regs, uint32_t cmd, uint32_t time
 	DEBUG_INFO("Call cmd %04" PRIx32 "\n", cmd);
 	platform_timeout_s operation_timeout;
 	platform_timeout_set(&operation_timeout, timeout);
-	platform_timeout_s wait_timeout;
-	platform_timeout_set(&wait_timeout, 500);
 	while (!target_halt_poll(t, NULL)) {
-		if (ps->is_monitor)
-			target_print_progress(&wait_timeout);
 		if (platform_timeout_is_expired(&operation_timeout)) {
 			DEBUG_WARN("RP run timeout %" PRIu32 "ms reached: ", timeout);
 			break;
@@ -874,13 +860,10 @@ static bool rp_cmd_erase_sector(target_s *t, int argc, const char **argv)
 	else
 		return false;
 
-	rp_priv_s *ps = (rp_priv_s *)t->target_storage;
-	ps->is_monitor = true;
 	bool result = true; /* catch false returns with &= */
 	result &= rp_flash_prepare(t);
 	result &= rp_flash_erase(t->flash, start, length);
 	result &= rp_flash_resume(t);
-	ps->is_monitor = false;
 	return result;
 }
 
