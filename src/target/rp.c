@@ -191,11 +191,8 @@
 #define SPI_FLASH_STATUS_WRITE_ENABLED 0x02U
 
 typedef struct rp_priv {
-	uint16_t rom_debug_trampoline_begin;
-	uint16_t rom_debug_trampoline_end;
 	uint16_t rom_reset_usb_boot;
 	bool is_prepared;
-	uint32_t regs[0x20]; /* Register playground*/
 } rp_priv_s;
 
 typedef struct rp_flash_state {
@@ -349,28 +346,15 @@ static bool rp_read_rom_func_table(target_s *const t)
 	if (target_mem_read(t, table, table_offset, RP_MAX_TABLE_SIZE))
 		return false;
 
-	size_t check = 0;
 	for (size_t i = 0; i < RP_MAX_TABLE_SIZE; i += 2U) {
 		const uint16_t tag = table[i];
 		const uint16_t addr = table[i + 1U];
-		switch (tag) {
-		case BOOTROM_FUNC_TABLE_TAG('D', 'T'):
-			priv->rom_debug_trampoline_begin = addr;
-			break;
-		case BOOTROM_FUNC_TABLE_TAG('D', 'E'):
-			priv->rom_debug_trampoline_end = addr;
-			break;
-		case BOOTROM_FUNC_TABLE_TAG('U', 'B'):
+		if (tag == BOOTROM_FUNC_TABLE_TAG('U', 'B')) {
 			priv->rom_reset_usb_boot = addr;
-			break;
-		default:
-			continue;
+			return true;
 		}
-		++check;
 	}
-	DEBUG_TARGET("RP ROM routines debug_trampoline %04x end %04x\n", priv->rom_debug_trampoline_begin,
-		priv->rom_debug_trampoline_end);
-	return check == 9;
+	return false;
 }
 
 static bool rp_flash_prepare(target_s *target)
@@ -832,23 +816,22 @@ static bool rp_cmd_erase_sector(target_s *t, int argc, const char **argv)
 
 static bool rp_cmd_reset_usb_boot(target_s *t, int argc, const char **argv)
 {
+	uint32_t regs[20U] = {0};
 	rp_priv_s *ps = (rp_priv_s *)t->target_storage;
 	/* Set up the arguments for the function call */
-	ps->regs[0] = 0;
-	ps->regs[1] = 0;
 	if (argc > 1)
-		ps->regs[0] = strtoul(argv[1], NULL, 0);
+		regs[0] = strtoul(argv[1], NULL, 0);
 	if (argc > 2)
-		ps->regs[1] = strtoul(argv[2], NULL, 0);
+		regs[1] = strtoul(argv[2], NULL, 0);
 	/* The USB boot function does not return and takes its arguments in r0 and r1 */
-	ps->regs[REG_PC] = ps->rom_reset_usb_boot;
+	regs[REG_PC] = ps->rom_reset_usb_boot;
 	/* So load the link register with a dummy return address like we just booted the chip */
-	ps->regs[REG_LR] = UINT32_MAX;
+	regs[REG_LR] = UINT32_MAX;
 	/* Configure the stack to the end of SRAM and configure the status register for Thumb execution */
-	ps->regs[REG_MSP] = RP_SRAM_BASE + RP_SRAM_SIZE;
-	ps->regs[REG_XPSR] = CORTEXM_XPSR_THUMB;
+	regs[REG_MSP] = RP_SRAM_BASE + RP_SRAM_SIZE;
+	regs[REG_XPSR] = CORTEXM_XPSR_THUMB;
 	/* Now reconfigure the core with the new execution environment */
-	target_regs_write(t, ps->regs);
+	target_regs_write(t, regs);
 	/* And resume the core */
 	target_halt_resume(t, false);
 	return true;
