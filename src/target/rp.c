@@ -49,7 +49,6 @@
 #include "cortexm.h"
 #include "sfdp.h"
 
-#define RP_ID                 "Raspberry RP2040"
 #define RP_MAX_TABLE_SIZE     0x80U
 #define BOOTROM_MAGIC_ADDR    0x00000010U
 #define BOOTROM_MAGIC         ((uint32_t)'M' | ((uint32_t)'u' << 8U) | (1U << 16U))
@@ -308,12 +307,12 @@ bool rp_probe(target_s *target)
 	target->target_storage = (void *)priv_storage;
 
 	target->mass_erase = rp_mass_erase;
-	target->driver = RP_ID;
+	target->driver = "Raspberry RP2040";
 	target->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
 	target->attach = rp_attach;
 	target->enter_flash_mode = rp_flash_prepare;
 	target->exit_flash_mode = rp_flash_resume;
-	target_add_commands(target, rp_cmd_list, RP_ID);
+	target_add_commands(target, rp_cmd_list, target->driver);
 	return true;
 }
 
