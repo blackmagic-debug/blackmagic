@@ -373,43 +373,6 @@ static bool rp_read_rom_func_table(target_s *const t)
 	return check == 9;
 }
 
-/* RP ROM functions calls
- *
- * timeout == 0: Do not wait for poll, use for rom_reset_usb_boot()
- * timeout > 500 (ms) : display spinner
- */
-static bool rp_rom_call(target_s *t, uint32_t cmd, uint32_t timeout)
-{
-	rp_priv_s *ps = (rp_priv_s *)t->target_storage;
-	ps->regs[7] = cmd;
-	ps->regs[REG_LR] = ps->rom_debug_trampoline_end;
-	ps->regs[REG_PC] = ps->rom_debug_trampoline_begin;
-	ps->regs[REG_MSP] = 0x20042000;
-	ps->regs[REG_XPSR] = CORTEXM_XPSR_THUMB;
-	uint32_t dbg_regs[t->regs_size / sizeof(uint32_t)];
-	target_regs_write(t, ps->regs);
-	/* start the target and wait for it to halt again */
-	target_halt_resume(t, false);
-	if (!timeout)
-		return false;
-	DEBUG_INFO("Call cmd %04" PRIx32 "\n", cmd);
-	platform_timeout_s operation_timeout;
-	platform_timeout_set(&operation_timeout, timeout);
-	while (!target_halt_poll(t, NULL)) {
-		if (platform_timeout_is_expired(&operation_timeout)) {
-			DEBUG_WARN("RP run timeout %" PRIu32 "ms reached: ", timeout);
-			break;
-		}
-	}
-	/* Debug */
-	target_regs_read(t, dbg_regs);
-	const bool result = (dbg_regs[REG_PC] & ~1U) == (ps->rom_debug_trampoline_end & ~1U);
-	if (!result) {
-		DEBUG_WARN("rp_rom_call cmd %04" PRIx32 " failed, PC %08" PRIx32 "\n", cmd, dbg_regs[REG_PC]);
-	}
-	return result;
-}
-
 static bool rp_flash_prepare(target_s *target)
 {
 	rp_priv_s *ps = (rp_priv_s *)target->target_storage;
@@ -870,13 +833,24 @@ static bool rp_cmd_erase_sector(target_s *t, int argc, const char **argv)
 static bool rp_cmd_reset_usb_boot(target_s *t, int argc, const char **argv)
 {
 	rp_priv_s *ps = (rp_priv_s *)t->target_storage;
+	/* Set up the arguments for the function call */
 	ps->regs[0] = 0;
 	ps->regs[1] = 0;
 	if (argc > 1)
 		ps->regs[0] = strtoul(argv[1], NULL, 0);
 	if (argc > 2)
 		ps->regs[1] = strtoul(argv[2], NULL, 0);
-	rp_rom_call(t, ps->rom_reset_usb_boot, 0);
+	/* The USB boot function does not return and takes its arguments in r0 and r1 */
+	ps->regs[REG_PC] = ps->rom_reset_usb_boot;
+	/* So load the link register with a dummy return address like we just booted the chip */
+	ps->regs[REG_LR] = UINT32_MAX;
+	/* Configure the stack to the end of SRAM and configure the status register for Thumb execution */
+	ps->regs[REG_MSP] = RP_SRAM_BASE + RP_SRAM_SIZE;
+	ps->regs[REG_XPSR] = CORTEXM_XPSR_THUMB;
+	/* Now reconfigure the core with the new execution environment */
+	target_regs_write(t, ps->regs);
+	/* And resume the core */
+	target_halt_resume(t, false);
 	return true;
 }
 
