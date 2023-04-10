@@ -219,8 +219,8 @@ static bool rp_flash_write(target_flash_s *f, target_addr_t dest, const void *sr
 
 static bool rp_read_rom_func_table(target_s *t);
 static bool rp_attach(target_s *t);
-static bool rp_flash_prepare(target_s *t);
-static bool rp_flash_resume(target_s *t);
+static bool rp_flash_prepare(target_s *target);
+static bool rp_flash_resume(target_s *target);
 static void rp_spi_read(target_s *target, uint16_t command, target_addr_t address, void *buffer, size_t length);
 static uint32_t rp_get_flash_length(target_s *t);
 static bool rp_mass_erase(target_s *t);
@@ -424,31 +424,31 @@ static bool rp_rom_call(target_s *t, uint32_t *regs, uint32_t cmd, uint32_t time
 	return result;
 }
 
-static bool rp_flash_prepare(target_s *t)
+static bool rp_flash_prepare(target_s *target)
 {
-	rp_priv_s *ps = (rp_priv_s *)t->target_storage;
+	rp_priv_s *ps = (rp_priv_s *)target->target_storage;
 	bool result = true; /* catch false returns with &= */
 	if (!ps->is_prepared) {
 		DEBUG_INFO("rp_flash_prepare\n");
 		/* connect*/
-		result &= rp_rom_call(t, ps->regs, ps->rom_connect_internal_flash, 100);
+		result &= rp_rom_call(target, ps->regs, ps->rom_connect_internal_flash, 100);
 		/* exit_xip */
-		result &= rp_rom_call(t, ps->regs, ps->rom_flash_exit_xip, 100);
+		result &= rp_rom_call(target, ps->regs, ps->rom_flash_exit_xip, 100);
 		ps->is_prepared = true;
 	}
 	return result;
 }
 
-static bool rp_flash_resume(target_s *t)
+static bool rp_flash_resume(target_s *target)
 {
-	rp_priv_s *ps = (rp_priv_s *)t->target_storage;
+	rp_priv_s *ps = (rp_priv_s *)target->target_storage;
 	bool result = true; /* catch false returns with &= */
 	if (ps->is_prepared) {
 		DEBUG_INFO("rp_flash_resume\n");
 		/* flush */
-		result &= rp_rom_call(t, ps->regs, ps->rom_flash_flush_cache, 100);
+		result &= rp_rom_call(target, ps->regs, ps->rom_flash_flush_cache, 100);
 		/* enter_cmd_xip */
-		result &= rp_rom_call(t, ps->regs, ps->rom_flash_enter_xip, 100);
+		result &= rp_rom_call(target, ps->regs, ps->rom_flash_enter_xip, 100);
 		ps->is_prepared = false;
 	}
 	return result;
