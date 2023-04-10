@@ -192,15 +192,11 @@
 
 typedef struct rp_priv {
 	uint16_t rom_reset_usb_boot;
-	bool is_prepared;
-} rp_priv_s;
-
-typedef struct rp_flash_state {
 	uint32_t ssi_enabled;
 	uint32_t ctrl0;
 	uint32_t ctrl1;
 	uint32_t xpi_ctrl0;
-} rp_flash_state_s;
+} rp_priv_s;
 
 typedef struct rp_flash {
 	target_flash_s f;
@@ -222,6 +218,8 @@ static bool rp_flash_write(target_flash_s *flash, target_addr_t dest, const void
 
 static bool rp_read_rom_func_table(target_s *t);
 static bool rp_attach(target_s *t);
+static void rp_spi_config(target_s *target);
+static void rp_spi_restore(target_s *target);
 static bool rp_flash_prepare(target_s *target);
 static bool rp_flash_resume(target_s *target);
 static void rp_spi_read(target_s *target, uint16_t command, target_addr_t address, void *buffer, size_t length);
@@ -256,6 +254,7 @@ static void rp_add_flash(target_s *t)
 	if (por_state)
 		rp_flash_connect_internal(t);
 	rp_flash_exit_xip(t);
+	rp_spi_config(t);
 
 	spi_parameters_s spi_parameters;
 	if (!sfdp_read_parameters(t, &spi_parameters, rp_spi_read_sfdp)) {
@@ -266,6 +265,7 @@ static void rp_add_flash(target_s *t)
 		spi_parameters.sector_erase_opcode = SPI_FLASH_OPCODE_SECTOR_ERASE;
 	}
 
+	rp_spi_restore(t);
 	if (por_state)
 		rp_flash_flush_cache(t);
 	rp_flash_enter_xip(t);
@@ -305,7 +305,6 @@ bool rp_probe(target_s *t)
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return false;
 	}
-	priv_storage->is_prepared = false;
 	t->target_storage = (void *)priv_storage;
 
 	t->mass_erase = rp_mass_erase;
@@ -357,30 +356,55 @@ static bool rp_read_rom_func_table(target_s *const t)
 	return false;
 }
 
-static bool rp_flash_prepare(target_s *target)
+static void rp_spi_config(target_s *const target)
 {
-	rp_priv_s *ps = (rp_priv_s *)target->target_storage;
-	bool result = true; /* catch false returns with &= */
-	if (!ps->is_prepared) {
-		DEBUG_TARGET("%s\n", __func__);
-		rp_flash_connect_internal(target);
-		rp_flash_exit_xip(target);
-		ps->is_prepared = true;
-	}
-	return result;
+	rp_priv_s *const priv = (rp_priv_s *)target->target_storage;
+	/* Ensure the controller is in the correct serial SPI mode */
+	priv->ssi_enabled = target_mem_read32(target, RP_SSI_ENABLE);
+	target_mem_write32(target, RP_SSI_ENABLE, 0);
+	priv->ctrl0 = target_mem_read32(target, RP_SSI_CTRL0);
+	priv->ctrl1 = target_mem_read32(target, RP_SSI_CTRL1);
+	priv->xpi_ctrl0 = target_mem_read32(target, RP_SSI_XIP_SPI_CTRL0);
+	target_mem_write32(target, RP_SSI_CTRL0,
+		(priv->ctrl0 & RP_SSI_CTRL0_MASK) | RP_SSI_CTRL0_FRF_SERIAL | RP_SSI_CTRL0_TMOD_BIDI |
+			RP_SSI_CTRL0_DATA_BITS(8));
+	target_mem_write32(target, RP_SSI_XIP_SPI_CTRL0,
+		RP_SSI_XIP_SPI_CTRL0_FORMAT_FRF | RP_SSI_XIP_SPI_CTRL0_ADDRESS_LENGTH(0) |
+			RP_SSI_XIP_SPI_CTRL0_INSTR_LENGTH_8b | RP_SSI_XIP_SPI_CTRL0_WAIT_CYCLES(0));
+	target_mem_write32(target, RP_SSI_ENABLE, RP_SSI_ENABLE_SSI);
 }
 
-static bool rp_flash_resume(target_s *target)
+static void rp_spi_restore(target_s *const target)
 {
-	rp_priv_s *ps = (rp_priv_s *)target->target_storage;
-	bool result = true; /* catch false returns with &= */
-	if (ps->is_prepared) {
-		DEBUG_TARGET("%s\n", __func__);
-		rp_flash_flush_cache(target);
-		rp_flash_enter_xip(target);
-		ps->is_prepared = false;
-	}
-	return result;
+	const rp_priv_s *const priv = (rp_priv_s *)target->target_storage;
+	/* Put things back to how they were */
+	target_mem_write32(target, RP_SSI_ENABLE, 0);
+	target_mem_write32(target, RP_SSI_CTRL1, priv->ctrl1);
+	target_mem_write32(target, RP_SSI_CTRL0, priv->ctrl0);
+	target_mem_write32(target, RP_SSI_XIP_SPI_CTRL0, priv->xpi_ctrl0);
+	target_mem_write32(target, RP_SSI_ENABLE, priv->ssi_enabled);
+}
+
+static bool rp_flash_prepare(target_s *const target)
+{
+	DEBUG_TARGET("%s\n", __func__);
+	/* Suspend the cache, come out of XIP */
+	rp_flash_connect_internal(target);
+	rp_flash_exit_xip(target);
+	/* Configure the SPI controller for our use */
+	rp_spi_config(target);
+	return true;
+}
+
+static bool rp_flash_resume(target_s *const target)
+{
+	DEBUG_TARGET("%s\n", __func__);
+	/* Put the SPI controller back how it was when we entered Flash mode */
+	rp_spi_restore(target);
+	/* Flush the cache and resume XIP */
+	rp_flash_flush_cache(target);
+	rp_flash_enter_xip(target);
+	return true;
 }
 
 /*
@@ -429,7 +453,7 @@ static bool rp_flash_write(target_flash_s *const flash, target_addr_t dest, cons
 	return true;
 }
 
-static bool rp_mass_erase(target_s *target)
+static bool rp_mass_erase(target_s *const target)
 {
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500U);
@@ -450,42 +474,6 @@ static void rp_spi_chip_select(target_s *const target, const uint32_t state)
 	target_mem_write32(target, RP_GPIO_QSPI_CS_CTRL, (value & ~RP_GPIO_QSPI_CS_DRIVE_MASK) | state);
 }
 
-static rp_flash_state_s rp_spi_config(target_s *const target, const uint32_t length)
-{
-	/* Ensure the controller is in the correct serial SPI mode and select the Flash */
-	const uint32_t ssi_enabled = target_mem_read32(target, RP_SSI_ENABLE);
-	target_mem_write32(target, RP_SSI_ENABLE, 0);
-	const uint32_t ctrl0 = target_mem_read32(target, RP_SSI_CTRL0);
-	const uint32_t ctrl1 = target_mem_read32(target, RP_SSI_CTRL1);
-	const uint32_t xpi_ctrl0 = target_mem_read32(target, RP_SSI_XIP_SPI_CTRL0);
-	target_mem_write32(target, RP_SSI_CTRL0,
-		(ctrl0 & RP_SSI_CTRL0_MASK) | RP_SSI_CTRL0_FRF_SERIAL | RP_SSI_CTRL0_TMOD_BIDI | RP_SSI_CTRL0_DATA_BITS(8));
-	target_mem_write32(target, RP_SSI_XIP_SPI_CTRL0,
-		RP_SSI_XIP_SPI_CTRL0_FORMAT_FRF | RP_SSI_XIP_SPI_CTRL0_ADDRESS_LENGTH(0) |
-			RP_SSI_XIP_SPI_CTRL0_INSTR_LENGTH_8b | RP_SSI_XIP_SPI_CTRL0_WAIT_CYCLES(0));
-	target_mem_write32(target, RP_SSI_CTRL1, length);
-	target_mem_write32(target, RP_SSI_ENABLE, RP_SSI_ENABLE_SSI);
-	rp_spi_chip_select(target, RP_GPIO_QSPI_CS_DRIVE_LOW);
-
-	return (rp_flash_state_s){
-		.ssi_enabled = ssi_enabled,
-		.ctrl0 = ctrl0,
-		.ctrl1 = ctrl1,
-		.xpi_ctrl0 = xpi_ctrl0,
-	};
-}
-
-static void rp_spi_restore(target_s *const target, const rp_flash_state_s *const state)
-{
-	/* Deselect the Flash and put things back to how they were */
-	rp_spi_chip_select(target, RP_GPIO_QSPI_CS_DRIVE_HIGH);
-	target_mem_write32(target, RP_SSI_ENABLE, 0);
-	target_mem_write32(target, RP_SSI_CTRL1, state->ctrl1);
-	target_mem_write32(target, RP_SSI_CTRL0, state->ctrl0);
-	target_mem_write32(target, RP_SSI_XIP_SPI_CTRL0, state->xpi_ctrl0);
-	target_mem_write32(target, RP_SSI_ENABLE, state->ssi_enabled);
-}
-
 static uint8_t rp_spi_xfer_data(target_s *const target, const uint8_t data)
 {
 	target_mem_write32(target, RP_SSI_DR0, data);
@@ -496,7 +484,8 @@ static void rp_spi_read(target_s *const target, const uint16_t command, const ta
 	const size_t length)
 {
 	/* Configure the controller, and select the Flash */
-	const rp_flash_state_s state = rp_spi_config(target, length);
+	target_mem_write32(target, RP_SSI_CTRL1, length);
+	rp_spi_chip_select(target, RP_GPIO_QSPI_CS_DRIVE_LOW);
 
 	/* Set up the instruction */
 	const uint8_t opcode = command & RP_SPI_FLASH_OPCODE_MASK;
@@ -521,15 +510,16 @@ static void rp_spi_read(target_s *const target, const uint16_t command, const ta
 		/* Do a write to read */
 		data[i] = rp_spi_xfer_data(target, 0);
 
-	/* Deselect the Flash and restore the controller state */
-	rp_spi_restore(target, &state);
+	/* Deselect the Flash */
+	rp_spi_chip_select(target, RP_GPIO_QSPI_CS_DRIVE_HIGH);
 }
 
 static void rp_spi_write(target_s *const target, const uint16_t command, const target_addr_t address,
 	const void *const buffer, const size_t length)
 {
 	/* Configure the controller, and select the Flash */
-	const rp_flash_state_s state = rp_spi_config(target, length);
+	target_mem_write32(target, RP_SSI_CTRL1, length);
+	rp_spi_chip_select(target, RP_GPIO_QSPI_CS_DRIVE_LOW);
 
 	/* Set up the instruction */
 	const uint8_t opcode = command & RP_SPI_FLASH_OPCODE_MASK;
@@ -554,8 +544,8 @@ static void rp_spi_write(target_s *const target, const uint16_t command, const t
 		/* Do a write to read */
 		rp_spi_xfer_data(target, data[i]);
 
-	/* Deselect the Flash and restore the controller state */
-	rp_spi_restore(target, &state);
+	/* Deselect the Flash */
+	rp_spi_chip_select(target, RP_GPIO_QSPI_CS_DRIVE_HIGH);
 }
 
 static inline uint8_t rp_spi_read_status(target_s *const target)
