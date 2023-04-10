@@ -182,10 +182,12 @@
 #define FLASHCMD_BLOCK64K_ERASE       0xd8U
 #define FLASHCMD_CHIP_ERASE           0x60U
 #define SPI_FLASH_CMD_WRITE_ENABLE    (RP_SPI_FLASH_OPCODE_ONLY | RP_SPI_FLASH_DUMMY_LEN(0) | RP_SPI_FLASH_OPCODE(0x06U))
-#define SPI_FLASH_CMD_SECTOR_ERASE    (RP_SPI_FLASH_OPCODE_3B_ADDR | RP_SPI_FLASH_DUMMY_LEN(0))
-#define SPI_FLASH_CMD_READ_STATUS     (RP_SPI_FLASH_OPCODE_ONLY | RP_SPI_FLASH_DUMMY_LEN(0) | RP_SPI_FLASH_OPCODE(0x05U))
-#define SPI_FLASH_CMD_READ_JEDEC_ID   (RP_SPI_FLASH_OPCODE_ONLY | RP_SPI_FLASH_DUMMY_LEN(0) | RP_SPI_FLASH_OPCODE(0x9fU))
-#define SPI_FLASH_CMD_READ_SFDP       (RP_SPI_FLASH_OPCODE_3B_ADDR | RP_SPI_FLASH_DUMMY_LEN(1U) | RP_SPI_FLASH_OPCODE(0x5aU))
+#define SPI_FLASH_CMD_PAGE_PROGRAM \
+	(RP_SPI_FLASH_OPCODE_3B_ADDR | RP_SPI_FLASH_DUMMY_LEN(0) | RP_SPI_FLASH_OPCODE(0x02U))
+#define SPI_FLASH_CMD_SECTOR_ERASE  (RP_SPI_FLASH_OPCODE_3B_ADDR | RP_SPI_FLASH_DUMMY_LEN(0))
+#define SPI_FLASH_CMD_READ_STATUS   (RP_SPI_FLASH_OPCODE_ONLY | RP_SPI_FLASH_DUMMY_LEN(0) | RP_SPI_FLASH_OPCODE(0x05U))
+#define SPI_FLASH_CMD_READ_JEDEC_ID (RP_SPI_FLASH_OPCODE_ONLY | RP_SPI_FLASH_DUMMY_LEN(0) | RP_SPI_FLASH_OPCODE(0x9fU))
+#define SPI_FLASH_CMD_READ_SFDP     (RP_SPI_FLASH_OPCODE_3B_ADDR | RP_SPI_FLASH_DUMMY_LEN(1U) | RP_SPI_FLASH_OPCODE(0x5aU))
 
 #define SPI_FLASH_STATUS_BUSY          0x01U
 #define SPI_FLASH_STATUS_WRITE_ENABLED 0x02U
@@ -224,7 +226,7 @@ const command_s rp_cmd_list[] = {
 };
 
 static bool rp_flash_erase(target_flash_s *flash, target_addr_t addr, size_t length);
-static bool rp_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
+static bool rp_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t length);
 
 static bool rp_read_rom_func_table(target_s *t);
 static bool rp_attach(target_s *t);
@@ -475,40 +477,23 @@ static bool rp_flash_erase(target_flash_s *const flash, const target_addr_t addr
 	return true;
 }
 
-static bool rp_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
+static bool rp_flash_write(target_flash_s *const flash, target_addr_t dest, const void *src, size_t length)
 {
-	DEBUG_INFO("RP Write 0x%08" PRIx32 " len 0x%" PRIx32 "\n", dest, (uint32_t)len);
-	target_s *t = f->t;
-	if ((dest & 0xffU) || (len & 0xffU)) {
-		DEBUG_WARN("Unaligned write\n");
-		return false;
+	target_s *const target = flash->t;
+	const rp_flash_s *const spi_flash = (rp_flash_s *)flash;
+	const target_addr_t begin = dest - flash->start;
+	const char *const buffer = (const char *)src;
+	for (size_t offset = 0; offset < length; offset += spi_flash->page_size) {
+		rp_spi_run_command(target, SPI_FLASH_CMD_WRITE_ENABLE, 0U);
+		if (!(rp_spi_read_status(target) & SPI_FLASH_STATUS_WRITE_ENABLED))
+			return false;
+
+		const size_t amount = MIN(length - offset, spi_flash->page_size);
+		rp_spi_write(target, SPI_FLASH_CMD_PAGE_PROGRAM, begin + offset, buffer + offset, amount);
+		while (rp_spi_read_status(target) & SPI_FLASH_STATUS_BUSY)
+			continue;
 	}
-	dest -= f->start;
-	rp_priv_s *ps = (rp_priv_s *)t->target_storage;
-	/* Write payload to target ram */
-	bool result = true;
-	while (len) {
-		uint32_t chunksize = (len <= MAX_WRITE_CHUNK) ? len : MAX_WRITE_CHUNK;
-		target_mem_write(t, RP_SRAM_BASE, src, chunksize);
-		/* Program range */
-		ps->regs[0] = dest;
-		ps->regs[1] = RP_SRAM_BASE;
-		ps->regs[2] = chunksize;
-		/* Loading takes 3 ms per 256 byte page
-		 * however it takes much longer if the XOSC is not enabled
-		 * so lets give ourselves a little bit more time (x10)
-		 */
-		result = rp_rom_call(t, ps->regs, ps->rom_flash_range_program, (3U * chunksize * 10U) >> 8U);
-		if (!result) {
-			DEBUG_WARN("Write failed!\n");
-			break;
-		}
-		len -= chunksize;
-		src += chunksize;
-		dest += chunksize;
-	}
-	DEBUG_INFO("Write done!\n");
-	return result;
+	return true;
 }
 
 static bool rp_mass_erase(target_s *t)
