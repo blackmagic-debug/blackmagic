@@ -430,10 +430,8 @@ static bool rp_flash_prepare(target_s *target)
 	bool result = true; /* catch false returns with &= */
 	if (!ps->is_prepared) {
 		DEBUG_INFO("rp_flash_prepare\n");
-		/* connect*/
-		result &= rp_rom_call(target, ps->regs, ps->rom_connect_internal_flash, 100);
-		/* exit_xip */
-		result &= rp_rom_call(target, ps->regs, ps->rom_flash_exit_xip, 100);
+		rp_flash_connect_internal(target);
+		rp_flash_exit_xip(target);
 		ps->is_prepared = true;
 	}
 	return result;
@@ -445,10 +443,8 @@ static bool rp_flash_resume(target_s *target)
 	bool result = true; /* catch false returns with &= */
 	if (ps->is_prepared) {
 		DEBUG_INFO("rp_flash_resume\n");
-		/* flush */
-		result &= rp_rom_call(target, ps->regs, ps->rom_flash_flush_cache, 100);
-		/* enter_cmd_xip */
-		result &= rp_rom_call(target, ps->regs, ps->rom_flash_enter_xip, 100);
+		rp_flash_flush_cache(target);
+		rp_flash_enter_xip(target);
 		ps->is_prepared = false;
 	}
 	return result;
