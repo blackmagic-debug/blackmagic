@@ -195,6 +195,13 @@ typedef struct rp_priv {
 	uint32_t regs[0x20]; /* Register playground*/
 } rp_priv_s;
 
+typedef struct rp_flash_state {
+	uint32_t ssi_enabled;
+	uint32_t ctrl0;
+	uint32_t ctrl1;
+	uint32_t xpi_ctrl0;
+} rp_flash_state_s;
+
 typedef struct rp_flash {
 	target_flash_s f;
 	uint32_t page_size;
@@ -560,14 +567,7 @@ static void rp_spi_chip_select(target_s *const target, const uint32_t state)
 	target_mem_write32(target, RP_GPIO_QSPI_CS_CTRL, (value & ~RP_GPIO_QSPI_CS_DRIVE_MASK) | state);
 }
 
-static uint8_t rp_spi_xfer_data(target_s *const target, const uint8_t data)
-{
-	target_mem_write32(target, RP_SSI_DR0, data);
-	return target_mem_read32(target, RP_SSI_DR0) & 0xffU;
-}
-
-static void rp_spi_read(target_s *const target, const uint16_t command, const target_addr_t address, void *const buffer,
-	const size_t length)
+static rp_flash_state_s rp_spi_config(target_s *const target, const uint32_t length)
 {
 	/* Ensure the controller is in the correct serial SPI mode and select the Flash */
 	const uint32_t ssi_enabled = target_mem_read32(target, RP_SSI_ENABLE);
@@ -583,6 +583,37 @@ static void rp_spi_read(target_s *const target, const uint16_t command, const ta
 	target_mem_write32(target, RP_SSI_CTRL1, length);
 	target_mem_write32(target, RP_SSI_ENABLE, RP_SSI_ENABLE_SSI);
 	rp_spi_chip_select(target, RP_GPIO_QSPI_CS_DRIVE_LOW);
+
+	return (rp_flash_state_s){
+		.ssi_enabled = ssi_enabled,
+		.ctrl0 = ctrl0,
+		.ctrl1 = ctrl1,
+		.xpi_ctrl0 = xpi_ctrl0,
+	};
+}
+
+static void rp_spi_restore(target_s *const target, const rp_flash_state_s *const state)
+{
+	/* Deselect the Flash and put things back to how they were */
+	rp_spi_chip_select(target, RP_GPIO_QSPI_CS_DRIVE_HIGH);
+	target_mem_write32(target, RP_SSI_ENABLE, 0);
+	target_mem_write32(target, RP_SSI_CTRL1, state->ctrl1);
+	target_mem_write32(target, RP_SSI_CTRL0, state->ctrl0);
+	target_mem_write32(target, RP_SSI_XIP_SPI_CTRL0, state->xpi_ctrl0);
+	target_mem_write32(target, RP_SSI_ENABLE, state->ssi_enabled);
+}
+
+static uint8_t rp_spi_xfer_data(target_s *const target, const uint8_t data)
+{
+	target_mem_write32(target, RP_SSI_DR0, data);
+	return target_mem_read32(target, RP_SSI_DR0) & 0xffU;
+}
+
+static void rp_spi_read(target_s *const target, const uint16_t command, const target_addr_t address, void *const buffer,
+	const size_t length)
+{
+	/* Configure the controller, and select the Flash */
+	const rp_flash_state_s state = rp_spi_config(target, length);
 
 	/* Set up the instruction */
 	const uint8_t opcode = command & RP_SPI_OPCODE_MASK;
@@ -607,13 +638,8 @@ static void rp_spi_read(target_s *const target, const uint16_t command, const ta
 		/* Do a write to read */
 		data[i] = rp_spi_xfer_data(target, 0);
 
-	/* Deselect the Flash and put things back to how they were */
-	rp_spi_chip_select(target, RP_GPIO_QSPI_CS_DRIVE_HIGH);
-	target_mem_write32(target, RP_SSI_ENABLE, 0);
-	target_mem_write32(target, RP_SSI_CTRL1, ctrl1);
-	target_mem_write32(target, RP_SSI_CTRL0, ctrl0);
-	target_mem_write32(target, RP_SSI_XIP_SPI_CTRL0, xpi_ctrl0);
-	target_mem_write32(target, RP_SSI_ENABLE, ssi_enabled);
+	/* Deselect the Flash and restore the controller state */
+	rp_spi_restore(target, &state);
 }
 
 /* Checks if the QSPI and XIP controllers are in their POR state */
