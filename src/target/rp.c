@@ -160,11 +160,11 @@
 #define MAX_FLASH                (16U * 1024U * 1024U)
 #define MAX_WRITE_CHUNK          0x1000U
 
-#define RP_SPI_OPCODE(x)            (x)
-#define RP_SPI_OPCODE_MASK          0x00ffU
-#define RP_SPI_INTER_SHIFT          8U
-#define RP_SPI_INTER_LENGTH(x)      (((x)&7U) << RP_SPI_INTER_SHIFT)
-#define RP_SPI_INTER_MASK           0x0700U
+#define RP_SPI_FLASH_OPCODE(x)      (x)
+#define RP_SPI_FLASH_OPCODE_MASK    0x00ffU
+#define RP_SPI_FLASH_DUMMY_SHIFT    8U
+#define RP_SPI_FLASH_DUMMY_LEN(x)   (((x)&7U) << RP_SPI_FLASH_DUMMY_SHIFT)
+#define RP_SPI_FLASH_DUMMY_MASK     0x0700U
 #define RP_SPI_FRAME_OPCODE_ONLY    (1 << 11U)
 #define RP_SPI_FRAME_OPCODE_3B_ADDR (2 << 11U)
 #define RP_SPI_FRAME_MASK           0x1800U
@@ -177,12 +177,15 @@
  * not support these commands
  */
 
-#define SPI_FLASH_CMD_SECTOR_ERASE  0x20U
-#define FLASHCMD_BLOCK32K_ERASE     0x52U
-#define FLASHCMD_BLOCK64K_ERASE     0xd8U
-#define FLASHCMD_CHIP_ERASE         0x60U
-#define SPI_FLASH_CMD_READ_JEDEC_ID (RP_SPI_OPCODE(0x9fU) | RP_SPI_INTER_LENGTH(0) | RP_SPI_FRAME_OPCODE_ONLY)
-#define SPI_FLASH_CMD_READ_SFDP     (RP_SPI_OPCODE(0x5aU) | RP_SPI_INTER_LENGTH(1U) | RP_SPI_FRAME_OPCODE_3B_ADDR)
+#define SPI_FLASH_OPCODE_SECTOR_ERASE 0x20U
+#define FLASHCMD_BLOCK32K_ERASE       0x52U
+#define FLASHCMD_BLOCK64K_ERASE       0xd8U
+#define FLASHCMD_CHIP_ERASE           0x60U
+#define SPI_FLASH_CMD_WRITE_ENABLE    (RP_SPI_FLASH_OPCODE_ONLY | RP_SPI_FLASH_DUMMY_LEN(0) | RP_SPI_FLASH_OPCODE(0x06U))
+#define SPI_FLASH_CMD_SECTOR_ERASE    (RP_SPI_FLASH_OPCODE_3B_ADDR | RP_SPI_FLASH_DUMMY_LEN(0))
+#define SPI_FLASH_CMD_READ_STATUS     (RP_SPI_FRAME_OPCODE_ONLY | RP_SPI_FLASH_DUMMY_LEN(0) | RP_SPI_FLASH_OPCODE(0x05U))
+#define SPI_FLASH_CMD_READ_JEDEC_ID   (RP_SPI_FRAME_OPCODE_ONLY | RP_SPI_FLASH_DUMMY_LEN(0) | RP_SPI_FLASH_OPCODE(0x9fU))
+#define SPI_FLASH_CMD_READ_SFDP       (RP_SPI_FRAME_OPCODE_3B_ADDR | RP_SPI_FLASH_DUMMY_LEN(1U) | RP_SPI_FLASH_OPCODE(0x5aU))
 
 typedef struct rp_priv {
 	uint16_t rom_debug_trampoline_begin;
@@ -225,6 +228,7 @@ static bool rp_attach(target_s *t);
 static bool rp_flash_prepare(target_s *target);
 static bool rp_flash_resume(target_s *target);
 static void rp_spi_read(target_s *target, uint16_t command, target_addr_t address, void *buffer, size_t length);
+static void rp_spi_write(target_s *target, uint16_t command, target_addr_t address, const void *buffer, size_t length);
 static uint32_t rp_get_flash_length(target_s *t);
 static bool rp_mass_erase(target_s *t);
 
@@ -260,7 +264,7 @@ static void rp_add_flash(target_s *t)
 		spi_parameters.page_size = 256U;
 		spi_parameters.sector_size = 4096U;
 		spi_parameters.capacity = rp_get_flash_length(t);
-		spi_parameters.sector_erase_opcode = SPI_FLASH_CMD_SECTOR_ERASE;
+		spi_parameters.sector_erase_opcode = SPI_FLASH_OPCODE_SECTOR_ERASE;
 	}
 
 	if (por_state)
@@ -616,7 +620,7 @@ static void rp_spi_read(target_s *const target, const uint16_t command, const ta
 	const rp_flash_state_s state = rp_spi_config(target, length);
 
 	/* Set up the instruction */
-	const uint8_t opcode = command & RP_SPI_OPCODE_MASK;
+	const uint8_t opcode = command & RP_SPI_FLASH_OPCODE_MASK;
 	rp_spi_xfer_data(target, opcode);
 
 	const uint16_t addr_mode = command & RP_SPI_FRAME_MASK;
@@ -627,7 +631,7 @@ static void rp_spi_read(target_s *const target, const uint16_t command, const ta
 		rp_spi_xfer_data(target, address & 0xffU);
 	}
 
-	const size_t inter_length = (command & RP_SPI_INTER_MASK) >> RP_SPI_INTER_SHIFT;
+	const size_t inter_length = (command & RP_SPI_FLASH_DUMMY_MASK) >> RP_SPI_FLASH_DUMMY_SHIFT;
 	for (size_t i = 0; i < inter_length; ++i)
 		/* For each byte sent here, we have to manually clean up from the controller with a read */
 		rp_spi_xfer_data(target, 0);
@@ -640,6 +644,51 @@ static void rp_spi_read(target_s *const target, const uint16_t command, const ta
 
 	/* Deselect the Flash and restore the controller state */
 	rp_spi_restore(target, &state);
+}
+
+static void rp_spi_write(target_s *const target, const uint16_t command, const target_addr_t address,
+	const void *const buffer, const size_t length)
+{
+	/* Configure the controller, and select the Flash */
+	const rp_flash_state_s state = rp_spi_config(target, length);
+
+	/* Set up the instruction */
+	const uint8_t opcode = command & RP_SPI_FLASH_OPCODE_MASK;
+	rp_spi_xfer_data(target, opcode);
+
+	const uint16_t addr_mode = command & RP_SPI_FRAME_MASK;
+	if (addr_mode == RP_SPI_FRAME_OPCODE_3B_ADDR) {
+		/* For each byte sent here, we have to manually clean up from the controller with a read */
+		rp_spi_xfer_data(target, (address >> 16U) & 0xffU);
+		rp_spi_xfer_data(target, (address >> 8U) & 0xffU);
+		rp_spi_xfer_data(target, address & 0xffU);
+	}
+
+	const size_t inter_length = (command & RP_SPI_FLASH_DUMMY_MASK) >> RP_SPI_FLASH_DUMMY_SHIFT;
+	for (size_t i = 0; i < inter_length; ++i)
+		/* For each byte sent here, we have to manually clean up from the controller with a read */
+		rp_spi_xfer_data(target, 0);
+
+	/* Now write out back the data requested */
+	uint8_t *const data = (uint8_t *const)buffer;
+	for (size_t i = 0; i < length; ++i)
+		/* Do a write to read */
+		rp_spi_xfer_data(target, data[i]);
+
+	/* Deselect the Flash and restore the controller state */
+	rp_spi_restore(target, &state);
+}
+
+uint8_t rp_spi_read_status(target_s *const target)
+{
+	uint8_t status = 0;
+	rp_spi_read(target, SPI_FLASH_CMD_READ_STATUS, 0, &status, sizeof(status));
+	return status;
+}
+
+void rp_spi_run_command(target_s *const target, const uint32_t command, const target_addr_t address)
+{
+	rp_spi_write(target, command, address, NULL, 0);
 }
 
 /* Checks if the QSPI and XIP controllers are in their POR state */
