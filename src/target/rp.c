@@ -378,16 +378,16 @@ static bool rp_read_rom_func_table(target_s *const t)
  * timeout == 0: Do not wait for poll, use for rom_reset_usb_boot()
  * timeout > 500 (ms) : display spinner
  */
-static bool rp_rom_call(target_s *t, uint32_t *regs, uint32_t cmd, uint32_t timeout)
+static bool rp_rom_call(target_s *t, uint32_t cmd, uint32_t timeout)
 {
 	rp_priv_s *ps = (rp_priv_s *)t->target_storage;
-	regs[7] = cmd;
-	regs[REG_LR] = ps->rom_debug_trampoline_end;
-	regs[REG_PC] = ps->rom_debug_trampoline_begin;
-	regs[REG_MSP] = 0x20042000;
-	regs[REG_XPSR] = CORTEXM_XPSR_THUMB;
+	ps->regs[7] = cmd;
+	ps->regs[REG_LR] = ps->rom_debug_trampoline_end;
+	ps->regs[REG_PC] = ps->rom_debug_trampoline_begin;
+	ps->regs[REG_MSP] = 0x20042000;
+	ps->regs[REG_XPSR] = CORTEXM_XPSR_THUMB;
 	uint32_t dbg_regs[t->regs_size / sizeof(uint32_t)];
-	target_regs_write(t, regs);
+	target_regs_write(t, ps->regs);
 	/* start the target and wait for it to halt again */
 	target_halt_resume(t, false);
 	if (!timeout)
@@ -876,7 +876,7 @@ static bool rp_cmd_reset_usb_boot(target_s *t, int argc, const char **argv)
 		ps->regs[0] = strtoul(argv[1], NULL, 0);
 	if (argc > 2)
 		ps->regs[1] = strtoul(argv[2], NULL, 0);
-	rp_rom_call(t, ps->regs, ps->rom_reset_usb_boot, 0);
+	rp_rom_call(t, ps->rom_reset_usb_boot, 0);
 	return true;
 }
 
