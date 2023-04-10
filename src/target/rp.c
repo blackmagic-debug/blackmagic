@@ -560,6 +560,12 @@ static void rp_spi_chip_select(target_s *const target, const uint32_t state)
 	target_mem_write32(target, RP_GPIO_QSPI_CS_CTRL, (value & ~RP_GPIO_QSPI_CS_DRIVE_MASK) | state);
 }
 
+static uint8_t rp_spi_xfer_data(target_s *const target, const uint8_t data)
+{
+	target_mem_write32(target, RP_SSI_DR0, data);
+	return target_mem_read32(target, RP_SSI_DR0) & 0xffU;
+}
+
 static void rp_spi_read(target_s *const target, const uint16_t command, const target_addr_t address, void *const buffer,
 	const size_t length)
 {
@@ -580,34 +586,26 @@ static void rp_spi_read(target_s *const target, const uint16_t command, const ta
 
 	/* Set up the instruction */
 	const uint8_t opcode = command & RP_SPI_OPCODE_MASK;
-	target_mem_write32(target, RP_SSI_DR0, opcode);
-	target_mem_read32(target, RP_SSI_DR0);
+	rp_spi_xfer_data(target, opcode);
 
 	const uint16_t addr_mode = command & RP_SPI_FRAME_MASK;
 	if (addr_mode == RP_SPI_FRAME_OPCODE_3B_ADDR) {
 		/* For each byte sent here, we have to manually clean up from the controller with a read */
-		target_mem_write32(target, RP_SSI_DR0, (address >> 16U) & 0xffU);
-		target_mem_read32(target, RP_SSI_DR0);
-		target_mem_write32(target, RP_SSI_DR0, (address >> 8U) & 0xffU);
-		target_mem_read32(target, RP_SSI_DR0);
-		target_mem_write32(target, RP_SSI_DR0, address & 0xffU);
-		target_mem_read32(target, RP_SSI_DR0);
+		rp_spi_xfer_data(target, (address >> 16U) & 0xffU);
+		rp_spi_xfer_data(target, (address >> 8U) & 0xffU);
+		rp_spi_xfer_data(target, address & 0xffU);
 	}
 
 	const size_t inter_length = (command & RP_SPI_INTER_MASK) >> RP_SPI_INTER_SHIFT;
-	for (size_t i = 0; i < inter_length; ++i) {
+	for (size_t i = 0; i < inter_length; ++i)
 		/* For each byte sent here, we have to manually clean up from the controller with a read */
-		target_mem_write32(target, RP_SSI_DR0, 0);
-		target_mem_read32(target, RP_SSI_DR0);
-	}
+		rp_spi_xfer_data(target, 0);
 
 	/* Now read back the data that elicited */
 	uint8_t *const data = (uint8_t *const)buffer;
-	for (size_t i = 0; i < length; ++i) {
+	for (size_t i = 0; i < length; ++i)
 		/* Do a write to read */
-		target_mem_write32(target, RP_SSI_DR0, 0);
-		data[i] = target_mem_read32(target, RP_SSI_DR0) & 0xffU;
-	}
+		data[i] = rp_spi_xfer_data(target, 0);
 
 	/* Deselect the Flash and put things back to how they were */
 	rp_spi_chip_select(target, RP_GPIO_QSPI_CS_DRIVE_HIGH);
