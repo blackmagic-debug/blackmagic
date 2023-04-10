@@ -362,7 +362,7 @@ static bool rp_flash_prepare(target_s *target)
 	rp_priv_s *ps = (rp_priv_s *)target->target_storage;
 	bool result = true; /* catch false returns with &= */
 	if (!ps->is_prepared) {
-		DEBUG_INFO("rp_flash_prepare\n");
+		DEBUG_TARGET("%s\n", __func__);
 		rp_flash_connect_internal(target);
 		rp_flash_exit_xip(target);
 		ps->is_prepared = true;
@@ -375,7 +375,7 @@ static bool rp_flash_resume(target_s *target)
 	rp_priv_s *ps = (rp_priv_s *)target->target_storage;
 	bool result = true; /* catch false returns with &= */
 	if (ps->is_prepared) {
-		DEBUG_INFO("rp_flash_resume\n");
+		DEBUG_TARGET("%s\n", __func__);
 		rp_flash_flush_cache(target);
 		rp_flash_enter_xip(target);
 		ps->is_prepared = false;
@@ -395,6 +395,7 @@ static bool rp_flash_erase(target_flash_s *const flash, const target_addr_t addr
 	target_s *const target = flash->t;
 	const rp_flash_s *const spi_flash = (rp_flash_s *)flash;
 	const target_addr_t begin = addr - flash->start;
+	DEBUG_TARGET("%s: %zu bytes starting at %08" PRIx32 " (%08" PRIx32 ")\n", __func__, length, addr, begin);
 	for (size_t offset = 0; offset < length; offset += flash->blocksize) {
 		rp_spi_run_command(target, SPI_FLASH_CMD_WRITE_ENABLE, 0U);
 		if (!(rp_spi_read_status(target) & SPI_FLASH_STATUS_WRITE_ENABLED))
@@ -414,6 +415,7 @@ static bool rp_flash_write(target_flash_s *const flash, target_addr_t dest, cons
 	const rp_flash_s *const spi_flash = (rp_flash_s *)flash;
 	const target_addr_t begin = dest - flash->start;
 	const char *const buffer = (const char *)src;
+	DEBUG_TARGET("%s: %zu bytes starting at %08" PRIx32 " (%08" PRIx32 ")\n", __func__, length, dest, begin);
 	for (size_t offset = 0; offset < length; offset += spi_flash->page_size) {
 		rp_spi_run_command(target, SPI_FLASH_CMD_WRITE_ENABLE, 0U);
 		if (!(rp_spi_read_status(target) & SPI_FLASH_STATUS_WRITE_ENABLED))
@@ -431,6 +433,7 @@ static bool rp_mass_erase(target_s *target)
 {
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500U);
+	DEBUG_TARGET("%s\n", __func__);
 	rp_spi_run_command(target, SPI_FLASH_CMD_WRITE_ENABLE, 0U);
 	if (!(rp_spi_read_status(target) & SPI_FLASH_STATUS_WRITE_ENABLED))
 		return false;
@@ -438,7 +441,6 @@ static bool rp_mass_erase(target_s *target)
 	rp_spi_run_command(target, SPI_FLASH_CMD_CHIP_ERASE, 0U);
 	while (rp_spi_read_status(target) & SPI_FLASH_STATUS_BUSY)
 		target_print_progress(&timeout);
-
 	return true;
 }
 
