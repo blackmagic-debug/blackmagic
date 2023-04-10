@@ -458,14 +458,17 @@ static bool rp_mass_erase(target_s *const target)
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500U);
 	DEBUG_TARGET("%s\n", __func__);
+	rp_flash_prepare(target);
 	rp_spi_run_command(target, SPI_FLASH_CMD_WRITE_ENABLE, 0U);
-	if (!(rp_spi_read_status(target) & SPI_FLASH_STATUS_WRITE_ENABLED))
+	if (!(rp_spi_read_status(target) & SPI_FLASH_STATUS_WRITE_ENABLED)) {
+		rp_flash_resume(target);
 		return false;
+	}
 
 	rp_spi_run_command(target, SPI_FLASH_CMD_CHIP_ERASE, 0U);
 	while (rp_spi_read_status(target) & SPI_FLASH_STATUS_BUSY)
 		target_print_progress(&timeout);
-	return true;
+	return rp_flash_resume(target);
 }
 
 static void rp_spi_chip_select(target_s *const target, const uint32_t state)
