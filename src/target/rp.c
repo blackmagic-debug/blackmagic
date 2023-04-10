@@ -178,13 +178,11 @@
  */
 
 #define SPI_FLASH_OPCODE_SECTOR_ERASE 0x20U
-#define FLASHCMD_BLOCK32K_ERASE       0x52U
-#define FLASHCMD_BLOCK64K_ERASE       0xd8U
-#define FLASHCMD_CHIP_ERASE           0x60U
 #define SPI_FLASH_CMD_WRITE_ENABLE    (RP_SPI_FLASH_OPCODE_ONLY | RP_SPI_FLASH_DUMMY_LEN(0) | RP_SPI_FLASH_OPCODE(0x06U))
 #define SPI_FLASH_CMD_PAGE_PROGRAM \
 	(RP_SPI_FLASH_OPCODE_3B_ADDR | RP_SPI_FLASH_DUMMY_LEN(0) | RP_SPI_FLASH_OPCODE(0x02U))
 #define SPI_FLASH_CMD_SECTOR_ERASE  (RP_SPI_FLASH_OPCODE_3B_ADDR | RP_SPI_FLASH_DUMMY_LEN(0))
+#define SPI_FLASH_CMD_CHIP_ERASE    (RP_SPI_FLASH_OPCODE_ONLY | RP_SPI_FLASH_DUMMY_LEN(0) | RP_SPI_FLASH_OPCODE(0x60U))
 #define SPI_FLASH_CMD_READ_STATUS   (RP_SPI_FLASH_OPCODE_ONLY | RP_SPI_FLASH_DUMMY_LEN(0) | RP_SPI_FLASH_OPCODE(0x05U))
 #define SPI_FLASH_CMD_READ_JEDEC_ID (RP_SPI_FLASH_OPCODE_ONLY | RP_SPI_FLASH_DUMMY_LEN(0) | RP_SPI_FLASH_OPCODE(0x9fU))
 #define SPI_FLASH_CMD_READ_SFDP     (RP_SPI_FLASH_OPCODE_3B_ADDR | RP_SPI_FLASH_DUMMY_LEN(1U) | RP_SPI_FLASH_OPCODE(0x5aU))
@@ -237,7 +235,7 @@ static void rp_spi_write(target_s *target, uint16_t command, target_addr_t addre
 static inline uint8_t rp_spi_read_status(target_s *target);
 static inline void rp_spi_run_command(target_s *target, uint32_t command, target_addr_t address);
 static uint32_t rp_get_flash_length(target_s *t);
-static bool rp_mass_erase(target_s *t);
+static bool rp_mass_erase(target_s *target);
 
 static bool rp_flash_in_por_state(target_s *t);
 // Our own implementation of bootloader functions for handling flash chip
@@ -496,16 +494,19 @@ static bool rp_flash_write(target_flash_s *const flash, target_addr_t dest, cons
 	return true;
 }
 
-static bool rp_mass_erase(target_s *t)
+static bool rp_mass_erase(target_s *target)
 {
-	rp_priv_s *ps = (rp_priv_s *)t->target_storage;
-	ps->is_monitor = true;
-	bool result = true; /* catch false returns with &= */
-	result &= rp_flash_prepare(t);
-	result &= rp_flash_erase(t->flash, t->flash->start, t->flash->length);
-	result &= rp_flash_resume(t);
-	ps->is_monitor = false;
-	return result;
+	platform_timeout_s timeout;
+	platform_timeout_set(&timeout, 500U);
+	rp_spi_run_command(target, SPI_FLASH_CMD_WRITE_ENABLE, 0U);
+	if (!(rp_spi_read_status(target) & SPI_FLASH_STATUS_WRITE_ENABLED))
+		return false;
+
+	rp_spi_run_command(target, SPI_FLASH_CMD_CHIP_ERASE, 0U);
+	while (rp_spi_read_status(target) & SPI_FLASH_STATUS_BUSY)
+		target_print_progress(&timeout);
+
+	return true;
 }
 
 static void rp_spi_chip_select(target_s *const target, const uint32_t state)
