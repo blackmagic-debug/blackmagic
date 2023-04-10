@@ -187,12 +187,8 @@
 typedef struct rp_priv {
 	uint16_t rom_debug_trampoline_begin;
 	uint16_t rom_debug_trampoline_end;
-	uint16_t rom_connect_internal_flash;
-	uint16_t rom_flash_enter_xip;
-	uint16_t rom_flash_exit_xip;
 	uint16_t rom_flash_range_erase;
 	uint16_t rom_flash_range_program;
-	uint16_t rom_flash_flush_cache;
 	uint16_t rom_reset_usb_boot;
 	bool is_prepared;
 	bool is_monitor;
@@ -352,23 +348,11 @@ static bool rp_read_rom_func_table(target_s *const t)
 		case BOOTROM_FUNC_TABLE_TAG('D', 'E'):
 			priv->rom_debug_trampoline_end = addr;
 			break;
-		case BOOTROM_FUNC_TABLE_TAG('I', 'F'):
-			priv->rom_connect_internal_flash = addr;
-			break;
-		case BOOTROM_FUNC_TABLE_TAG('C', 'X'):
-			priv->rom_flash_enter_xip = addr;
-			break;
-		case BOOTROM_FUNC_TABLE_TAG('E', 'X'):
-			priv->rom_flash_exit_xip = addr;
-			break;
 		case BOOTROM_FUNC_TABLE_TAG('R', 'E'):
 			priv->rom_flash_range_erase = addr;
 			break;
 		case BOOTROM_FUNC_TABLE_TAG('R', 'P'):
 			priv->rom_flash_range_program = addr;
-			break;
-		case BOOTROM_FUNC_TABLE_TAG('F', 'C'):
-			priv->rom_flash_flush_cache = addr;
 			break;
 		case BOOTROM_FUNC_TABLE_TAG('U', 'B'):
 			priv->rom_reset_usb_boot = addr;
@@ -378,8 +362,8 @@ static bool rp_read_rom_func_table(target_s *const t)
 		}
 		++check;
 	}
-	DEBUG_TARGET("RP ROM routines connect %04x debug_trampoline %04x end %04x\n", priv->rom_connect_internal_flash,
-		priv->rom_debug_trampoline_begin, priv->rom_debug_trampoline_end);
+	DEBUG_TARGET("RP ROM routines debug_trampoline %04x end %04x\n", priv->rom_debug_trampoline_begin,
+		priv->rom_debug_trampoline_end);
 	return check == 9;
 }
 
