@@ -199,7 +199,7 @@ typedef struct rp_priv {
 } rp_priv_s;
 
 typedef struct rp_flash {
-	target_flash_s f;
+	target_flash_s flash;
 	uint32_t page_size;
 	uint8_t sector_erase_opcode;
 } rp_flash_s;
@@ -241,49 +241,49 @@ static void rp_spi_read_sfdp(target_s *const target, const uint32_t address, voi
 	rp_spi_read(target, SPI_FLASH_CMD_READ_SFDP, address, buffer, length);
 }
 
-static void rp_add_flash(target_s *t)
+static void rp_add_flash(target_s *target)
 {
-	rp_flash_s *flash = calloc(1, sizeof(*flash));
-	if (!flash) { /* calloc failed: heap exhaustion */
+	rp_flash_s *spi_flash = calloc(1, sizeof(*spi_flash));
+	if (!spi_flash) { /* calloc failed: heap exhaustion */
 		DEBUG_WARN("calloc: failed in %s\n", __func__);
 		return;
 	}
 
-	const bool por_state = rp_flash_in_por_state(t);
+	const bool por_state = rp_flash_in_por_state(target);
 	DEBUG_INFO("RP2040 Flash controller %sin POR state, reconfiguring\n", por_state ? "" : "not ");
 	if (por_state)
-		rp_flash_connect_internal(t);
-	rp_flash_exit_xip(t);
-	rp_spi_config(t);
+		rp_flash_connect_internal(target);
+	rp_flash_exit_xip(target);
+	rp_spi_config(target);
 
 	spi_parameters_s spi_parameters;
-	if (!sfdp_read_parameters(t, &spi_parameters, rp_spi_read_sfdp)) {
+	if (!sfdp_read_parameters(target, &spi_parameters, rp_spi_read_sfdp)) {
 		/* SFDP readout failed, so make some assumptions and hope for the best. */
 		spi_parameters.page_size = 256U;
 		spi_parameters.sector_size = 4096U;
-		spi_parameters.capacity = rp_get_flash_length(t);
+		spi_parameters.capacity = rp_get_flash_length(target);
 		spi_parameters.sector_erase_opcode = SPI_FLASH_OPCODE_SECTOR_ERASE;
 	}
 
-	rp_spi_restore(t);
+	rp_spi_restore(target);
 	if (por_state)
-		rp_flash_flush_cache(t);
-	rp_flash_enter_xip(t);
+		rp_flash_flush_cache(target);
+	rp_flash_enter_xip(target);
 
 	DEBUG_INFO("Flash size: %" PRIu32 "MiB\n", (uint32_t)spi_parameters.capacity / (1024U * 1024U));
 
-	target_flash_s *const f = &flash->f;
-	f->start = RP_XIP_FLASH_BASE;
-	f->length = spi_parameters.capacity;
-	f->blocksize = spi_parameters.sector_size;
-	f->erase = rp_flash_erase;
-	f->write = rp_flash_write;
-	f->writesize = MAX_WRITE_CHUNK; /* Max buffer size used otherwise */
-	f->erased = 0xffU;
-	target_add_flash(t, f);
+	target_flash_s *const flash = &spi_flash->flash;
+	flash->start = RP_XIP_FLASH_BASE;
+	flash->length = spi_parameters.capacity;
+	flash->blocksize = spi_parameters.sector_size;
+	flash->erase = rp_flash_erase;
+	flash->write = rp_flash_write;
+	flash->writesize = MAX_WRITE_CHUNK; /* Max buffer size used otherwise */
+	flash->erased = 0xffU;
+	target_add_flash(target, flash);
 
-	flash->page_size = spi_parameters.page_size;
-	flash->sector_erase_opcode = spi_parameters.sector_erase_opcode;
+	spi_flash->page_size = spi_parameters.page_size;
+	spi_flash->sector_erase_opcode = spi_parameters.sector_erase_opcode;
 }
 
 bool rp_probe(target_s *t)
