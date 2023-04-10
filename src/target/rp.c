@@ -221,7 +221,7 @@ static bool rp_read_rom_func_table(target_s *t);
 static bool rp_attach(target_s *t);
 static bool rp_flash_prepare(target_s *t);
 static bool rp_flash_resume(target_s *t);
-static void rp_spi_read(target_s *t, uint16_t command, target_addr_t address, void *buffer, size_t length);
+static void rp_spi_read(target_s *target, uint16_t command, target_addr_t address, void *buffer, size_t length);
 static uint32_t rp_get_flash_length(target_s *t);
 static bool rp_mass_erase(target_s *t);
 
@@ -232,9 +232,9 @@ static void rp_flash_enter_xip(target_s *t);
 static void rp_flash_connect_internal(target_s *t);
 static void rp_flash_flush_cache(target_s *t);
 
-static void rp_spi_read_sfdp(target_s *const t, const uint32_t address, void *const buffer, const size_t length)
+static void rp_spi_read_sfdp(target_s *const target, const uint32_t address, void *const buffer, const size_t length)
 {
-	rp_spi_read(t, SPI_FLASH_CMD_READ_SFDP, address, buffer, length);
+	rp_spi_read(target, SPI_FLASH_CMD_READ_SFDP, address, buffer, length);
 }
 
 static void rp_add_flash(target_s *t)
@@ -574,68 +574,68 @@ static bool rp_mass_erase(target_s *t)
 	return result;
 }
 
-static void rp_spi_chip_select(target_s *const t, const uint32_t state)
+static void rp_spi_chip_select(target_s *const target, const uint32_t state)
 {
-	const uint32_t value = target_mem_read32(t, RP_GPIO_QSPI_CS_CTRL);
-	target_mem_write32(t, RP_GPIO_QSPI_CS_CTRL, (value & ~RP_GPIO_QSPI_CS_DRIVE_MASK) | state);
+	const uint32_t value = target_mem_read32(target, RP_GPIO_QSPI_CS_CTRL);
+	target_mem_write32(target, RP_GPIO_QSPI_CS_CTRL, (value & ~RP_GPIO_QSPI_CS_DRIVE_MASK) | state);
 }
 
-static void rp_spi_read(
-	target_s *const t, const uint16_t command, const target_addr_t address, void *const buffer, const size_t length)
+static void rp_spi_read(target_s *const target, const uint16_t command, const target_addr_t address, void *const buffer,
+	const size_t length)
 {
 	/* Ensure the controller is in the correct serial SPI mode and select the Flash */
-	const uint32_t ssi_enabled = target_mem_read32(t, RP_SSI_ENABLE);
-	target_mem_write32(t, RP_SSI_ENABLE, 0);
-	const uint32_t ctrl0 = target_mem_read32(t, RP_SSI_CTRL0);
-	const uint32_t ctrl1 = target_mem_read32(t, RP_SSI_CTRL1);
-	const uint32_t xpi_ctrl0 = target_mem_read32(t, RP_SSI_XIP_SPI_CTRL0);
-	target_mem_write32(t, RP_SSI_CTRL0,
+	const uint32_t ssi_enabled = target_mem_read32(target, RP_SSI_ENABLE);
+	target_mem_write32(target, RP_SSI_ENABLE, 0);
+	const uint32_t ctrl0 = target_mem_read32(target, RP_SSI_CTRL0);
+	const uint32_t ctrl1 = target_mem_read32(target, RP_SSI_CTRL1);
+	const uint32_t xpi_ctrl0 = target_mem_read32(target, RP_SSI_XIP_SPI_CTRL0);
+	target_mem_write32(target, RP_SSI_CTRL0,
 		(ctrl0 & RP_SSI_CTRL0_MASK) | RP_SSI_CTRL0_FRF_SERIAL | RP_SSI_CTRL0_TMOD_BIDI | RP_SSI_CTRL0_DATA_BITS(8));
-	target_mem_write32(t, RP_SSI_XIP_SPI_CTRL0,
+	target_mem_write32(target, RP_SSI_XIP_SPI_CTRL0,
 		RP_SSI_XIP_SPI_CTRL0_FORMAT_FRF | RP_SSI_XIP_SPI_CTRL0_ADDRESS_LENGTH(0) |
 			RP_SSI_XIP_SPI_CTRL0_INSTR_LENGTH_8b | RP_SSI_XIP_SPI_CTRL0_WAIT_CYCLES(0));
-	target_mem_write32(t, RP_SSI_CTRL1, length);
-	target_mem_write32(t, RP_SSI_ENABLE, RP_SSI_ENABLE_SSI);
-	rp_spi_chip_select(t, RP_GPIO_QSPI_CS_DRIVE_LOW);
+	target_mem_write32(target, RP_SSI_CTRL1, length);
+	target_mem_write32(target, RP_SSI_ENABLE, RP_SSI_ENABLE_SSI);
+	rp_spi_chip_select(target, RP_GPIO_QSPI_CS_DRIVE_LOW);
 
 	/* Set up the instruction */
 	const uint8_t opcode = command & RP_SPI_OPCODE_MASK;
-	target_mem_write32(t, RP_SSI_DR0, opcode);
-	target_mem_read32(t, RP_SSI_DR0);
+	target_mem_write32(target, RP_SSI_DR0, opcode);
+	target_mem_read32(target, RP_SSI_DR0);
 
 	const uint16_t addr_mode = command & RP_SPI_FRAME_MASK;
 	if (addr_mode == RP_SPI_FRAME_OPCODE_3B_ADDR) {
 		/* For each byte sent here, we have to manually clean up from the controller with a read */
-		target_mem_write32(t, RP_SSI_DR0, (address >> 16U) & 0xffU);
-		target_mem_read32(t, RP_SSI_DR0);
-		target_mem_write32(t, RP_SSI_DR0, (address >> 8U) & 0xffU);
-		target_mem_read32(t, RP_SSI_DR0);
-		target_mem_write32(t, RP_SSI_DR0, address & 0xffU);
-		target_mem_read32(t, RP_SSI_DR0);
+		target_mem_write32(target, RP_SSI_DR0, (address >> 16U) & 0xffU);
+		target_mem_read32(target, RP_SSI_DR0);
+		target_mem_write32(target, RP_SSI_DR0, (address >> 8U) & 0xffU);
+		target_mem_read32(target, RP_SSI_DR0);
+		target_mem_write32(target, RP_SSI_DR0, address & 0xffU);
+		target_mem_read32(target, RP_SSI_DR0);
 	}
 
 	const size_t inter_length = (command & RP_SPI_INTER_MASK) >> RP_SPI_INTER_SHIFT;
 	for (size_t i = 0; i < inter_length; ++i) {
 		/* For each byte sent here, we have to manually clean up from the controller with a read */
-		target_mem_write32(t, RP_SSI_DR0, 0);
-		target_mem_read32(t, RP_SSI_DR0);
+		target_mem_write32(target, RP_SSI_DR0, 0);
+		target_mem_read32(target, RP_SSI_DR0);
 	}
 
 	/* Now read back the data that elicited */
 	uint8_t *const data = (uint8_t *const)buffer;
 	for (size_t i = 0; i < length; ++i) {
 		/* Do a write to read */
-		target_mem_write32(t, RP_SSI_DR0, 0);
-		data[i] = target_mem_read32(t, RP_SSI_DR0) & 0xffU;
+		target_mem_write32(target, RP_SSI_DR0, 0);
+		data[i] = target_mem_read32(target, RP_SSI_DR0) & 0xffU;
 	}
 
 	/* Deselect the Flash and put things back to how they were */
-	rp_spi_chip_select(t, RP_GPIO_QSPI_CS_DRIVE_HIGH);
-	target_mem_write32(t, RP_SSI_ENABLE, 0);
-	target_mem_write32(t, RP_SSI_CTRL1, ctrl1);
-	target_mem_write32(t, RP_SSI_CTRL0, ctrl0);
-	target_mem_write32(t, RP_SSI_XIP_SPI_CTRL0, xpi_ctrl0);
-	target_mem_write32(t, RP_SSI_ENABLE, ssi_enabled);
+	rp_spi_chip_select(target, RP_GPIO_QSPI_CS_DRIVE_HIGH);
+	target_mem_write32(target, RP_SSI_ENABLE, 0);
+	target_mem_write32(target, RP_SSI_CTRL1, ctrl1);
+	target_mem_write32(target, RP_SSI_CTRL0, ctrl0);
+	target_mem_write32(target, RP_SSI_XIP_SPI_CTRL0, xpi_ctrl0);
+	target_mem_write32(target, RP_SSI_ENABLE, ssi_enabled);
 }
 
 /* Checks if the QSPI and XIP controllers are in their POR state */
