@@ -81,11 +81,10 @@ extern uint32_t delay_cnt;
 #define DEBUG_WARN(...) PRINT_NOOP(__VA_ARGS__)
 #define DEBUG_INFO(...) PRINT_NOOP(__VA_ARGS__)
 #endif
-#define DEBUG_GDB(...)      PRINT_NOOP(__VA_ARGS__)
-#define DEBUG_TARGET(...)   PRINT_NOOP(__VA_ARGS__)
-#define DEBUG_PROBE(...)    PRINT_NOOP(__VA_ARGS__)
-#define DEBUG_WIRE(...)     PRINT_NOOP(__VA_ARGS__)
-#define DEBUG_GDB_WIRE(...) PRINT_NOOP(__VA_ARGS__)
+#define DEBUG_GDB(...)    PRINT_NOOP(__VA_ARGS__)
+#define DEBUG_TARGET(...) PRINT_NOOP(__VA_ARGS__)
+#define DEBUG_PROBE(...)  PRINT_NOOP(__VA_ARGS__)
+#define DEBUG_WIRE(...)   PRINT_NOOP(__VA_ARGS__)
 
 void debug_serial_send_stdout(const uint8_t *data, size_t len);
 #else
@@ -95,26 +94,7 @@ void debug_serial_send_stdout(const uint8_t *data, size_t len);
 #define DEBUG_ERROR(...) debug_error(__VA_ARGS__)
 #define DEBUG_WARN(...)  debug_warning(__VA_ARGS__)
 #define DEBUG_INFO(...)  debug_info(__VA_ARGS__)
-
-static inline void DEBUG_GDB(const char *format, ...)
-{
-	if (~bmda_debug_flags & BMD_DEBUG_GDB)
-		return;
-	va_list args;
-	va_start(args, format);
-	vfprintf(stderr, format, args);
-	va_end(args);
-}
-
-static inline void DEBUG_GDB_WIRE(const char *format, ...)
-{
-	if ((bmda_debug_flags & (BMD_DEBUG_GDB | BMD_DEBUG_WIRE)) != (BMD_DEBUG_GDB | BMD_DEBUG_WIRE))
-		return;
-	va_list args;
-	va_start(args, format);
-	vfprintf(stderr, format, args);
-	va_end(args);
-}
+#define DEBUG_GDB(...)   debug_gdb(__VA_ARGS__)
 
 static inline void DEBUG_TARGET(const char *format, ...)
 {
