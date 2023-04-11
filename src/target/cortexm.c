@@ -1230,8 +1230,8 @@ bool cortexm_run_stub(target_s *t, uint32_t loadaddr, uint32_t r0, uint32_t r1, 
 			DEBUG_WARN("Stub hangs\n");
 			uint32_t arm_regs[t->regs_size];
 			target_regs_read(t, arm_regs);
-			for (size_t i = 0; i < 20U; i++)
-				DEBUG_WARN("%2d: %08" PRIx32 ", %08" PRIx32 "\n", i, arm_regs_start[i], arm_regs[i]);
+			for (uint32_t i = 0; i < 20U; ++i)
+				DEBUG_WARN("%2" PRIu32 ": %08" PRIx32 ", %08" PRIx32 "\n", i, arm_regs_start[i], arm_regs[i]);
 #endif
 			return false;
 		}
