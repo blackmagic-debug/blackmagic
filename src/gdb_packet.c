@@ -114,7 +114,7 @@ size_t gdb_getpacket(char *const packet, const size_t size)
 			if (c == '}') { /* Escaped char */
 				c = gdb_if_getchar();
 				csum += c + '}';
-				packet[offset++] = c ^ 0x20U;
+				packet[offset++] = (char)((uint8_t)c ^ 0x20U);
 				continue;
 			}
 			csum += c;
@@ -134,35 +134,31 @@ size_t gdb_getpacket(char *const packet, const size_t size)
 	gdb_if_putchar('+', 1); /* Send ack */
 	packet[offset] = '\0';
 
-#if PC_HOSTED == 1
-	DEBUG_GDB_WIRE("%s : ", __func__);
+	DEBUG_GDB("%s: ", __func__);
 	for (size_t j = 0; j < offset; j++) {
-		const char c = packet[j];
-		if (c >= ' ' && c < '\x7f')
-			DEBUG_GDB_WIRE("%c", c);
+		const char value = packet[j];
+		if (value >= ' ' && value < '\x7f')
+			DEBUG_GDB("%c", value);
 		else
-			DEBUG_GDB_WIRE("\\x%02X", c);
+			DEBUG_GDB("\\x%02X", value);
 	}
-	DEBUG_GDB_WIRE("\n");
-#endif
+	DEBUG_GDB("\n");
 	return offset;
 }
 
-static void gdb_next_char(const char c, uint8_t *const csum)
+static void gdb_next_char(const char value, uint8_t *const csum)
 {
-#if PC_HOSTED == 1
-	if (c >= 32 && c < 127)
-		DEBUG_GDB_WIRE("%c", c);
+	if (value >= ' ' && value < '\x7f')
+		DEBUG_GDB("%c", value);
 	else
-		DEBUG_GDB_WIRE("\\x%02X", c);
-#endif
-	if (c == '$' || c == '#' || c == '}' || c == '*') {
+		DEBUG_GDB("\\x%02X", value);
+	if (value == '$' || value == '#' || value == '}' || value == '*') {
 		gdb_if_putchar('}', 0);
-		gdb_if_putchar(c ^ 0x20U, 0);
-		*csum += '}' + (c ^ 0x20U);
+		gdb_if_putchar((char)((uint8_t)value ^ 0x20U), 0);
+		*csum += '}' + (value ^ 0x20U);
 	} else {
-		gdb_if_putchar(c, 0);
-		*csum += c;
+		gdb_if_putchar(value, 0);
+		*csum += value;
 	}
 }
 
@@ -172,7 +168,7 @@ void gdb_putpacket2(const char *const packet1, const size_t size1, const char *c
 	size_t tries = 0;
 
 	do {
-		DEBUG_GDB_WIRE("%s: ", __func__);
+		DEBUG_GDB("%s: ", __func__);
 		uint8_t csum = 0;
 		gdb_if_putchar('$', 0);
 
@@ -185,7 +181,7 @@ void gdb_putpacket2(const char *const packet1, const size_t size1, const char *c
 		snprintf(xmit_csum, sizeof(xmit_csum), "%02X", csum);
 		gdb_if_putchar(xmit_csum[0], 0);
 		gdb_if_putchar(xmit_csum[1], 1);
-		DEBUG_GDB_WIRE("\n");
+		DEBUG_GDB("\n");
 	} while (gdb_if_getchar_to(2000) != '+' && tries++ < 3U);
 }
 
@@ -195,7 +191,7 @@ void gdb_putpacket(const char *const packet, const size_t size)
 	size_t tries = 0;
 
 	do {
-		DEBUG_GDB_WIRE("%s: ", __func__);
+		DEBUG_GDB("%s: ", __func__);
 		uint8_t csum = 0;
 		gdb_if_putchar('$', 0);
 		for (size_t i = 0; i < size; ++i)
@@ -204,7 +200,7 @@ void gdb_putpacket(const char *const packet, const size_t size)
 		snprintf(xmit_csum, sizeof(xmit_csum), "%02X", csum);
 		gdb_if_putchar(xmit_csum[0], 0);
 		gdb_if_putchar(xmit_csum[1], 1);
-		DEBUG_GDB_WIRE("\n");
+		DEBUG_GDB("\n");
 	} while (gdb_if_getchar_to(2000) != '+' && tries++ < 3U);
 }
 
@@ -212,7 +208,7 @@ void gdb_put_notification(const char *const packet, const size_t size)
 {
 	char xmit_csum[3];
 
-	DEBUG_GDB_WIRE("%s: ", __func__);
+	DEBUG_GDB("%s: ", __func__);
 	uint8_t csum = 0;
 	gdb_if_putchar('%', 0);
 	for (size_t i = 0; i < size; ++i)
@@ -221,7 +217,7 @@ void gdb_put_notification(const char *const packet, const size_t size)
 	snprintf(xmit_csum, sizeof(xmit_csum), "%02X", csum);
 	gdb_if_putchar(xmit_csum[0], 0);
 	gdb_if_putchar(xmit_csum[1], 1);
-	DEBUG_GDB_WIRE("\n");
+	DEBUG_GDB("\n");
 }
 
 void gdb_putpacket_f(const char *const fmt, ...)
