@@ -207,7 +207,7 @@ void serial_close(void)
 
 bool platform_buffer_write(const void *const data, const size_t length)
 {
-	DEBUG_WIRE("%s\n", data);
+	DEBUG_WIRE("%s\n", (const char *)data);
 	const ssize_t written = write(fd, data, length);
 	if (written < 0) {
 		const int error = errno;
@@ -270,7 +270,7 @@ int platform_buffer_read(void *const data, size_t length)
 		char *const buffer = (char *)data;
 		if (buffer[offset] == REMOTE_EOM) {
 			buffer[offset] = 0;
-			DEBUG_WIRE("       %s\n", data);
+			DEBUG_WIRE("       %s\n", buffer);
 			return offset;
 		}
 		++offset;
