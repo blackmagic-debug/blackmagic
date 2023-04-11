@@ -66,7 +66,7 @@
  */
 
 /* family + series + group no */
-#define PNR_FAMILY_INDEX                   3
+#define PNR_FAMILY_INDEX                   3U
 #define PNR_SERIES(pnr3, pnr4, pnr5, pnr6) (((pnr3) << 24U) | ((pnr4) << 16U) | ((pnr5) << 8U) | (pnr6))
 
 typedef enum {
@@ -92,7 +92,7 @@ typedef enum {
 } pnr_series_t;
 
 /* Code flash memory size */
-#define PNR_MEMSIZE_INDEX 8
+#define PNR_MEMSIZE_INDEX 8U
 
 typedef enum {
 	PNR_MEMSIZE_16KB = '3',
@@ -298,7 +298,7 @@ static uint32_t renesas_fmifrt_read(target_s *t)
 	return target_mem_read32(t, RENESAS_FMIFRT);
 }
 
-static void renesas_uid_read(target_s *t, const uint32_t base, uint8_t *uid)
+static void renesas_uid_read(target_s *const t, const uint32_t base, uint8_t *const uid)
 {
 	uint32_t uidr[4];
 	for (size_t i = 0U; i < 4U; i++)
@@ -308,7 +308,7 @@ static void renesas_uid_read(target_s *t, const uint32_t base, uint8_t *uid)
 		uid[i] = uidr[i / 4U] >> (i & 3U) * 8U; /* & 3U == % 4U */
 }
 
-static bool renesas_pnr_read(target_s *t, const uint32_t base, uint8_t *pnr)
+static bool renesas_pnr_read(target_s *const t, const uint32_t base, uint8_t *const pnr)
 {
 	uint32_t pnrr[4];
 	for (size_t i = 0U; i < 4U; i++)
@@ -329,7 +329,7 @@ static bool renesas_pnr_read(target_s *t, const uint32_t base, uint8_t *pnr)
 	return pnr[0] == 'R' && pnr[1] == '7';
 }
 
-static pnr_series_t renesas_series(const uint8_t *pnr)
+static pnr_series_t renesas_series(const uint8_t *const pnr)
 {
 	uint32_t series = 0;
 	for (size_t i = 0; i < 4U; i++)
@@ -338,7 +338,7 @@ static pnr_series_t renesas_series(const uint8_t *pnr)
 	return (pnr_series_t)series;
 }
 
-static uint32_t renesas_flash_size(const uint8_t *pnr)
+static uint32_t renesas_flash_size(const uint8_t *const pnr)
 {
 	switch (pnr[PNR_MEMSIZE_INDEX]) {
 	case PNR_MEMSIZE_16KB:
@@ -368,7 +368,7 @@ static uint32_t renesas_flash_size(const uint8_t *pnr)
 	}
 }
 
-static bool renesas_enter_flash_mode(target_s *t)
+static bool renesas_enter_flash_mode(target_s *const t)
 {
 	target_reset(t);
 
@@ -384,11 +384,11 @@ typedef enum pe_mode {
 	PE_MODE_DF,
 } pe_mode_e;
 
-static bool renesas_rv40_pe_mode(target_s *t, pe_mode_e pe_mode)
+static bool renesas_rv40_pe_mode(target_s *const t, const pe_mode_e pe_mode)
 {
 	/* See "Transition to Code Flash P/E Mode": Section 47.9.3.3 of the RA6M4 manual R01UH0890EJ0100. */
 
-	renesas_priv_s *priv_storage = (renesas_priv_s *)t->target_storage;
+	const renesas_priv_s *const priv_storage = (renesas_priv_s *)t->target_storage;
 	if (!priv_storage)
 		return false;
 
@@ -440,11 +440,11 @@ static bool renesas_rv40_pe_mode(target_s *t, pe_mode_e pe_mode)
 	return true;
 }
 
-static bool renesas_rv40_error_check(target_s *t, uint32_t error_bits)
+static bool renesas_rv40_error_check(target_s *const t, const uint32_t error_bits)
 {
 	bool error = false;
 
-	uint8_t fstatr = target_mem_read32(t, RV40_FSTATR);
+	const uint8_t fstatr = target_mem_read32(t, RV40_FSTATR);
 
 	/* see "Recovery from the Command-Locked State": Section 47.9.3.6 of the RA6M4 manual R01UH0890EJ0100.*/
 	if (target_mem_read8(t, RV40_FASTAT) & RV40_FASTAT_CMDLK) {
@@ -481,9 +481,9 @@ static bool renesas_rv40_error_check(target_s *t, uint32_t error_bits)
 	return error;
 }
 
-static bool renesas_rv40_prepare(target_flash_s *f)
+static bool renesas_rv40_prepare(target_flash_s *const f)
 {
-	target_s *t = f->t;
+	target_s *const t = f->t;
 
 	if (!(target_mem_read32(t, RV40_FSTATR) & RV40_FSTATR_RDY) || target_mem_read16(t, RV40_FENTRYR) != 0) {
 		DEBUG_WARN("flash is not ready, may be hanging mid unfinished command due to something going wrong, "
@@ -501,9 +501,9 @@ static bool renesas_rv40_prepare(target_flash_s *f)
 	return renesas_rv40_pe_mode(t, pe_mode) && !renesas_rv40_error_check(t, RV40_FSTATR_ILGLERR);
 }
 
-static bool renesas_rv40_done(target_flash_s *f)
+static bool renesas_rv40_done(target_flash_s *const f)
 {
-	target_s *t = f->t;
+	target_s *const t = f->t;
 
 	/* return to read mode */
 	return renesas_rv40_pe_mode(t, PE_MODE_READ);
@@ -512,7 +512,7 @@ static bool renesas_rv40_done(target_flash_s *f)
 /* !TODO: implement blank check */
 static bool renesas_rv40_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
-	target_s *t = f->t;
+	target_s *const t = f->t;
 
 	/* code flash or data flash operation */
 	const bool code_flash = addr < RENESAS_CF_END;
@@ -558,9 +558,9 @@ static bool renesas_rv40_flash_erase(target_flash_s *f, target_addr_t addr, size
 	return true;
 }
 
-static bool renesas_rv40_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
+static bool renesas_rv40_flash_write(target_flash_s *const f, target_addr_t dest, const void *src, size_t len)
 {
-	target_s *t = f->t;
+	target_s *const t = f->t;
 
 	/* code flash or data flash operation */
 	const bool code_flash = dest < RENESAS_CF_END;
@@ -783,7 +783,7 @@ bool renesas_probe(target_s *t)
 		return false;
 	}
 
-	renesas_priv_s *priv_storage = calloc(1, sizeof(renesas_priv_s));
+	renesas_priv_s *const priv_storage = calloc(1, sizeof(renesas_priv_s));
 	if (!priv_storage) /* calloc failed: heap exhaustion */
 		return false;
 	memcpy(priv_storage->pnr, pnr, sizeof(pnr));
