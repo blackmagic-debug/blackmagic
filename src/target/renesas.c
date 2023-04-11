@@ -195,6 +195,10 @@ typedef enum {
 #define FENTRYR_PE_CF      (1U)
 #define FENTRYR_PE_DF      (1U << 7U)
 
+/* Option-Setting Flash memory for RA4 and RA6, RA2 is different */
+#define RENESAS_OF_START UINT32_C(0x0100A100) /* Start of Option-Setting for RA4 and RA6 Family */
+#define RENESAS_OF_SIZE UINT32_C(0x200) /* Size of Option-Setting area */
+
 /* Renesas RA MCUs can have one of two kinds of flash memory, MF3/4 and RV40 */
 
 #define RENESAS_CF_END UINT32_C(0x00200000) /* End of Flash (maximum possible across families) */
@@ -225,6 +229,7 @@ typedef enum {
 #define RV40_DF_BLOCK_SIZE         (0x40U)
 #define RV40_CF_WRITE_SIZE         (0x80U)
 #define RV40_DF_WRITE_SIZE         (0x4U)
+#define RV40_OF_WRITE_SIZE         (0x10U) /* as stated in Table 44.1 of RA4M2 User's Manual */
 
 /* RV40 Flash Commands */
 #define RV40_CMD               UINT32_C(0x407e0000)
@@ -487,7 +492,8 @@ static bool renesas_rv40_prepare(target_flash_s *f)
 	}
 
 	/* code flash or data flash operation */
-	const bool code_flash = f->start < RENESAS_CF_END;
+	/* Option-Setting flash is CF type as per Table 44.1 of RA4M2 User's Manual */
+	const bool code_flash = f->start < (RENESAS_OF_START + RENESAS_OF_SIZE);
 
 	/* Transition to PE mode */
 	const pe_mode_e pe_mode = code_flash ? PE_MODE_CF : PE_MODE_DF;
@@ -510,6 +516,10 @@ static bool renesas_rv40_flash_erase(target_flash_s *f, target_addr_t addr, size
 
 	/* code flash or data flash operation */
 	const bool code_flash = addr < RENESAS_CF_END;
+
+	/* Erasing Option-Setting flash memory is not allowed, only write is supported */
+	if (RENESAS_OF_START <= addr && addr <= (RENESAS_OF_START + RENESAS_OF_SIZE))
+		return true;
 
 	/* Set Erasure Priority Mode */
 	target_mem_write16(t, RV40_FCPSR, RV40_FCPSR_ESUSPMD);
@@ -558,9 +568,17 @@ static bool renesas_rv40_flash_write(target_flash_s *f, target_addr_t dest, cons
 
 	/* code flash or data flash operation */
 	const bool code_flash = dest < RENESAS_CF_END;
+	bool option_flash = false;
+
+	if (RENESAS_OF_START <= dest && dest <= (RENESAS_OF_START + RENESAS_OF_SIZE))
+		option_flash = true;
 
 	/* write size for code flash / data flash */
-	const uint8_t write_size = code_flash ? RV40_CF_WRITE_SIZE : RV40_DF_WRITE_SIZE;
+	uint8_t write_size = code_flash ? RV40_CF_WRITE_SIZE : RV40_DF_WRITE_SIZE;
+
+	/* Option-Setting write size is different to CF and DF memory */
+	if (option_flash)
+		write_size = RV40_OF_WRITE_SIZE;
 
 	while (len) {
 		/* set block start address */
@@ -571,15 +589,21 @@ static bool renesas_rv40_flash_write(target_flash_s *f, target_addr_t dest, cons
 		len -= write_size;
 
 		/* issue two part Write commands */
-		target_mem_write8(t, RV40_CMD, RV40_CMD_PROGRAM);
-		target_mem_write8(t, RV40_CMD, (uint8_t)(write_size / 2U));
+		if (option_flash) {
+			target_mem_write8(t, RV40_CMD, RV40_CMD_CONFIG_SET_1);
+			target_mem_write8(t, RV40_CMD, RV40_CMD_CONFIG_SET_2);
+		} else {
+			target_mem_write8(t, RV40_CMD, RV40_CMD_PROGRAM);
+			target_mem_write8(t, RV40_CMD, (uint8_t)(write_size / 2U));
+		}
 
 		/* according to reference manual the data buffer full time for 2 bytes is 2 usec.
 		 * this is with a FCLK of 4MHz
 		 * a complete should take less than 1 msec.
 		 */
 		platform_timeout_s timeout;
-		platform_timeout_set(&timeout, 10);
+		/* 200ms is arbitrary number i made up */
+		platform_timeout_set(&timeout, option_flash ? 200: 20);
 
 		/* write one chunk */
 		for (size_t i = 0U; i < (write_size / 2U); i++) {
@@ -620,6 +644,10 @@ static void renesas_add_rv40_flash(target_s *t, target_addr_t addr, size_t lengt
 	f->prepare = renesas_rv40_prepare;
 	f->done = renesas_rv40_done;
 
+	if (RENESAS_OF_START <= addr && addr <= (RENESAS_OF_START + RENESAS_OF_SIZE)) {
+		f->blocksize = RV40_DF_BLOCK_SIZE;
+		f->writesize = RV40_OF_WRITE_SIZE;
+	} else
 	if (code_flash) {
 		f->blocksize = RV40_CF_REGION1_BLOCK_SIZE;
 		f->writesize = RV40_CF_WRITE_SIZE;
@@ -805,6 +833,7 @@ bool renesas_probe(target_s *t)
 	case PNR_SERIES_RA4M2:
 	case PNR_SERIES_RA4M3:
 	case PNR_SERIES_RA4E1:
+		renesas_add_flash(t, RENESAS_OF_START, RENESAS_OF_SIZE); /* Option flash memory 512B 0x0100A100 */
 		renesas_add_flash(t, 0x08000000, 8U * 1024U); /* Data flash memory 8 KB 0x08000000 */
 		target_add_ram(t, 0x20000000, 128U * 1024U);  /* SRAM 128 KB 0x20000000 */
 		target_add_ram(t, 0x28000000, 1024U);         /* Standby SRAM 1 KB 0x28000000 */
