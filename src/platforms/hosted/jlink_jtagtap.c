@@ -137,7 +137,7 @@ static void jtagtap_tdi_tdo_seq(
 	if (!clock_cycles)
 		return;
 	const size_t total_chunks = (clock_cycles >> 3U) + ((clock_cycles & 7U) ? 1U : 0U);
-	DEBUG_PROBE("jtagtap_tdi_tdo final tms: %u, clock cycles: %u, data_in: ", final_tms ? 1 : 0, clock_cycles);
+	DEBUG_PROBE("jtagtap_tdi_tdo final tms: %u, clock cycles: %zu, data_in: ", final_tms ? 1 : 0, clock_cycles);
 	for (size_t i = 0; i < total_chunks; ++i)
 		DEBUG_PROBE("%02x", data_in[i]);
 	DEBUG_PROBE("\n");
