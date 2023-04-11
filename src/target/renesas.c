@@ -78,6 +78,7 @@ typedef enum {
 	PNR_SERIES_RA4M2 = PNR_SERIES('A', '4', 'M', '2'),
 	PNR_SERIES_RA4M3 = PNR_SERIES('A', '4', 'M', '3'),
 	PNR_SERIES_RA4E1 = PNR_SERIES('A', '4', 'E', '1'),
+	PNR_SERIES_RA4E2 = PNR_SERIES('A', '4', 'E', '2'),
 	PNR_SERIES_RA4W1 = PNR_SERIES('A', '4', 'W', '1'),
 	PNR_SERIES_RA6M1 = PNR_SERIES('A', '6', 'M', '1'),
 	PNR_SERIES_RA6M2 = PNR_SERIES('A', '6', 'M', '2'),
@@ -85,6 +86,7 @@ typedef enum {
 	PNR_SERIES_RA6M4 = PNR_SERIES('A', '6', 'M', '4'),
 	PNR_SERIES_RA6M5 = PNR_SERIES('A', '6', 'M', '5'),
 	PNR_SERIES_RA6E1 = PNR_SERIES('A', '6', 'E', '1'),
+	PNR_SERIES_RA6E2 = PNR_SERIES('A', '6', 'E', '2'),
 	PNR_SERIES_RA6T1 = PNR_SERIES('A', '6', 'T', '1'),
 	PNR_SERIES_RA6T2 = PNR_SERIES('A', '6', 'T', '2'),
 } pnr_series_t;
@@ -155,13 +157,14 @@ typedef enum {
  * ra4m2 - Fixed location 2 *undocumented
  * ra4m3 - Fixed location 2 *undocumented
  * ra4e1 - Fixed location 2
- * ra4w1 - *undocumented
+ * ra4e2 - Fixed location 2
  * ra6m1 - Flash Root Table
  * ra6m2 - Flash Root Table
  * ra6m3 - Flash Root Table
  * ra6m4 - Fixed location 2
  * ra6m5 - Fixed location 2
  * ra6e1 - Fixed location 2
+ * ra6e2 - Fixed location 2
  * ra6t1 - Flash Root Table
  * ra6t2 - Fixed location 2
  */
@@ -391,11 +394,13 @@ static bool renesas_rv40_pe_mode(target_s *t, pe_mode_e pe_mode)
 	bool has_fmeprot = false; /* Code Flash P/E Mode Entry Protection */
 	switch (priv_storage->series) {
 	case PNR_SERIES_RA4E1:
+	case PNR_SERIES_RA4E2:
 	case PNR_SERIES_RA4M2:
 	case PNR_SERIES_RA4M3:
 	case PNR_SERIES_RA6M4:
 	case PNR_SERIES_RA6M5:
 	case PNR_SERIES_RA6E1:
+	case PNR_SERIES_RA6E2:
 	case PNR_SERIES_RA6T2:
 		has_fmeprot = true;
 	default:
@@ -647,6 +652,7 @@ static void renesas_add_flash(target_s *t, target_addr_t addr, size_t length)
 	 * ra4m2 - RV40
 	 * ra4m3 - RV40
 	 * ra4e1 - RV40
+	 * ra4e2 - RV40
 	 * ra4w1 - MF3
 	 * ra6m1 - RV40
 	 * ra6m2 - RV40
@@ -654,6 +660,7 @@ static void renesas_add_flash(target_s *t, target_addr_t addr, size_t length)
 	 * ra6m4 - RV40
 	 * ra6m5 - RV40
 	 * ra6e1 - RV40
+	 * ra6e2 - RV40
 	 * ra6t1 - RV40
 	 * ra6t2 - RV40
 	 */
@@ -670,11 +677,13 @@ static void renesas_add_flash(target_s *t, target_addr_t addr, size_t length)
 	case PNR_SERIES_RA4M2:
 	case PNR_SERIES_RA4M3:
 	case PNR_SERIES_RA4E1:
+	case PNR_SERIES_RA4E2:
 	case PNR_SERIES_RA6M1:
 	case PNR_SERIES_RA6M2:
 	case PNR_SERIES_RA6M3:
 	case PNR_SERIES_RA6M4:
 	case PNR_SERIES_RA6E1:
+	case PNR_SERIES_RA6E2:
 	case PNR_SERIES_RA6M5:
 	case PNR_SERIES_RA6T1:
 	case PNR_SERIES_RA6T2:
@@ -712,9 +721,11 @@ bool renesas_probe(target_s *t)
 	case RENESAS_PARTID_RA4M3:
 		/* mcus with PNR located at 0x010080f0
 		 * ra4e1 (part_id wanted)
+		 * ra4e2 (part_id wanted)
 		 * ra6m4 (part_id wanted)
 		 * ra6m5 (part_id wanted)
 		 * ra6e1 (part_id wanted)
+		 * ra6e2 (part_id wanted)
 		 * ra6t2 (part_id wanted)
 		 */
 		if (!renesas_pnr_read(t, RENESAS_FIXED2_PNR, pnr))
@@ -810,6 +821,13 @@ bool renesas_probe(target_s *t)
 		target_add_ram(t, 0x28000000, 1024U);         /* Standby SRAM 1 KB 0x28000000 */
 		break;
 
+	case PNR_SERIES_RA4E2:
+	case PNR_SERIES_RA6E2:
+		renesas_add_flash(t, 0x08000000, 4U * 1024U); /* Data flash memory 4 KB 0x08000000 */
+		target_add_ram(t, 0x20000000, 40U * 1024U);   /* SRAM 40 KB 0x20000000 */
+		target_add_ram(t, 0x28000000, 1024U);         /* Standby SRAM 1 KB 0x28000000 */
+		break;
+
 	case PNR_SERIES_RA4W1:
 		renesas_add_flash(t, 0x40100000, 8U * 1024U); /* Data flash memory 8 KB 0x40100000 */
 		target_add_ram(t, 0x20000000, 96U * 1024U);   /* SRAM 96 KB 0x20000000 */
@@ -898,10 +916,11 @@ static bool renesas_uid(target_s *t, int argc, const char **argv)
 	case PNR_SERIES_RA4M2:
 	case PNR_SERIES_RA4M3:
 	case PNR_SERIES_RA4E1:
-	case PNR_SERIES_RA4W1:
+	case PNR_SERIES_RA4E2:
 	case PNR_SERIES_RA6M4:
 	case PNR_SERIES_RA6M5:
 	case PNR_SERIES_RA6E1:
+	case PNR_SERIES_RA6E2:
 	case PNR_SERIES_RA6T2:
 		uid_addr = RENESAS_FIXED2_UID;
 		break;
