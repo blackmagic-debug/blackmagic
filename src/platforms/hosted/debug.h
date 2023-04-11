@@ -48,13 +48,13 @@
 
 extern uint16_t bmda_debug_flags;
 
-void debug_error(const char *format, ...);
-void debug_warning(const char *format, ...);
-void debug_info(const char *format, ...);
-void debug_gdb(const char *format, ...);
-void debug_target(const char *format, ...);
-void debug_protocol(const char *format, ...);
-void debug_probe(const char *format, ...);
-void debug_wire(const char *format, ...);
+void debug_error(const char *format, ...) __attribute__((format(printf, 1, 2)));
+void debug_warning(const char *format, ...) __attribute__((format(printf, 1, 2)));
+void debug_info(const char *format, ...) __attribute__((format(printf, 1, 2)));
+void debug_gdb(const char *format, ...) __attribute__((format(printf, 1, 2)));
+void debug_target(const char *format, ...) __attribute__((format(printf, 1, 2)));
+void debug_protocol(const char *format, ...) __attribute__((format(printf, 1, 2)));
+void debug_probe(const char *format, ...) __attribute__((format(printf, 1, 2)));
+void debug_wire(const char *format, ...) __attribute__((format(printf, 1, 2)));
 
 #endif /*PLATFORMS_HOSTED_DEBUG_H*/
