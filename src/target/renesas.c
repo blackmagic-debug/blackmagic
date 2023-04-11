@@ -200,7 +200,7 @@ typedef enum {
 
 /* Renesas RA MCUs can have one of two kinds of flash memory, MF3/4 and RV40 */
 
-#define RENESAS_CF_END UINT32_C(0x00200000) /* End of Flash (maximum possible across families) */
+#define RENESAS_CF_END UINT32_C(0x00300000) /* End of Flash (maximum possible across families) */
 
 /* MF3/4 Flash */
 /*
