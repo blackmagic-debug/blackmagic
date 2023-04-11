@@ -153,11 +153,12 @@ typedef enum {
  * ra2e1 - Fixed location 1
  * ra2e2 - Fixed location 1
  * ra2a1 - Flash Root Table *undocumented
- * ra4m1 - *undocumented
+ * ra4m1 - Flash Root Table *undocumented
  * ra4m2 - Fixed location 2 *undocumented
  * ra4m3 - Fixed location 2 *undocumented
  * ra4e1 - Fixed location 2
  * ra4e2 - Fixed location 2
+ * ra4w1 - Flash Root Table *undocumented
  * ra6m1 - Flash Root Table
  * ra6m2 - Flash Root Table
  * ra6m3 - Flash Root Table
@@ -735,6 +736,8 @@ bool renesas_probe(target_s *t)
 	case RENESAS_PARTID_RA2A1:
 	case RENESAS_PARTID_RA6M2:
 		/* mcus with Flash Root Table
+		 * ra4m1 *undocumented (part_id wanted)
+		 * ra4w1 *undocumented (part_id wanted)
 		 * ra6m1 (part_id wanted)
 		 * ra6m3 (part_id wanted)
 		 * ra6t1 (part_id wanted)
@@ -753,10 +756,6 @@ bool renesas_probe(target_s *t)
 		 *
 		 * try the fixed address RENESAS_FIXED2_PNR first, as it should lead to less illegal/erroneous
 		 * memory accesses in case of failure, and is the most common case
-		 */
-		/*
-		 * ra4m1 *undocumented (part_id + pnr loc wanted)
-		 * ra4w1 *undocumented (part_id + pnr loc wanted)
 		 */
 
 		if (renesas_pnr_read(t, RENESAS_FIXED2_PNR, pnr)) {
@@ -912,7 +911,6 @@ static bool renesas_uid(target_s *t, int argc, const char **argv)
 		break;
 
 	case PNR_SERIES_RA2A1:
-	case PNR_SERIES_RA4M1:
 	case PNR_SERIES_RA4M2:
 	case PNR_SERIES_RA4M3:
 	case PNR_SERIES_RA4E1:
@@ -925,6 +923,8 @@ static bool renesas_uid(target_s *t, int argc, const char **argv)
 		uid_addr = RENESAS_FIXED2_UID;
 		break;
 
+	case PNR_SERIES_RA4M1:
+	case PNR_SERIES_RA4W1:
 	case PNR_SERIES_RA6M1:
 	case PNR_SERIES_RA6M2:
 	case PNR_SERIES_RA6M3:
