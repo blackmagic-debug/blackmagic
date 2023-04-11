@@ -92,26 +92,9 @@ void debug_serial_send_stdout(const uint8_t *data, size_t len);
 #include "debug.h"
 #include <stdarg.h>
 
-static inline void DEBUG_WARN(const char *format, ...)
-{
-	va_list args;
-	va_start(args, format);
-	vfprintf(stderr, format, args);
-	va_end(args);
-}
-
-static inline void DEBUG_INFO(const char *format, ...)
-{
-	if (~bmda_debug_flags & BMD_DEBUG_INFO)
-		return;
-	va_list args;
-	va_start(args, format);
-	if (bmda_debug_flags & BMD_DEBUG_USE_STDERR)
-		vfprintf(stderr, format, args);
-	else
-		vfprintf(stdout, format, args);
-	va_end(args);
-}
+#define DEBUG_ERROR(...) debug_error(__VA_ARGS__)
+#define DEBUG_WARN(...)  debug_warning(__VA_ARGS__)
+#define DEBUG_INFO(...)  debug_info(__VA_ARGS__)
 
 static inline void DEBUG_GDB(const char *format, ...)
 {
