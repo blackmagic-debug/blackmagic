@@ -283,7 +283,7 @@ typedef enum {
 static bool renesas_uid(target_s *t, int argc, const char **argv);
 
 const command_s renesas_cmd_list[] = {
-	{"uid", renesas_uid, "Prints unique number"},
+	{"uid", renesas_uid, "Prints unique id"},
 	{NULL, NULL, NULL},
 };
 
@@ -890,7 +890,7 @@ bool renesas_probe(target_s *t)
 	return true;
 }
 
-/* Reads the 16-byte unique number */
+/* Reads the 16-byte unique id */
 static bool renesas_uid(target_s *t, int argc, const char **argv)
 {
 	(void)argc;
@@ -938,7 +938,7 @@ static bool renesas_uid(target_s *t, int argc, const char **argv)
 
 	renesas_uid_read(t, uid_addr, uid);
 
-	tc_printf(t, "Unique Number: 0x");
+	tc_printf(t, "Unique id: 0x");
 	for (size_t i = 0U; i < 16U; i++)
 		tc_printf(t, "%02" PRIx8, uid[i]);
 	tc_printf(t, "\n");
