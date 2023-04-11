@@ -295,31 +295,36 @@ typedef struct renesas_priv {
 
 static uint32_t renesas_fmifrt_read(target_s *t)
 {
+	/* Read Flash Root Table base address  */
 	return target_mem_read32(t, RENESAS_FMIFRT);
 }
 
 static void renesas_uid_read(target_s *const t, const uint32_t base, uint8_t *const uid)
 {
+	/* Register should be read in 32b units */
 	uint32_t uidr[4];
 	for (size_t i = 0U; i < 4U; i++)
 		uidr[i] = target_mem_read32(t, base + i * 4U);
 
+	/* Write bytewise into provided container */
 	for (size_t i = 0U; i < 16U; i++)
 		uid[i] = uidr[i / 4U] >> (i & 3U) * 8U; /* & 3U == % 4U */
 }
 
 static bool renesas_pnr_read(target_s *const t, const uint32_t base, uint8_t *const pnr)
 {
+	/* Register should be read in 32b units */
 	uint32_t pnrr[4];
 	for (size_t i = 0U; i < 4U; i++)
 		pnrr[i] = target_mem_read32(t, base + i * 4U);
 
+	/* Write bytewise into provided container */
 	if (base == RENESAS_FIXED1_PNR) {
 		/* Renesas... look what you made me do...  */
 		/* reverse order, see 'Part numbering scheme' note for context */
 		for (size_t i = 0U; i < 13U; i++)
 			pnr[i] = pnrr[3U - (i + 3U) / 4U] >> (24U - ((i + 3U) & 3U) * 8U); /* & 3U == % 4U */
-		memset(pnr + 13U, 0x20, 3);
+		memset(pnr + 13U, 0x20, 3); /* Last 3 bytes are unused and filled with ' ' chars aka 0x20 */
 	} else {
 		for (size_t i = 0; i < 16U; i++)
 			pnr[i] = pnrr[i / 4U] >> (i & 3U) * 8U; /* & 3U == % 4U */
@@ -372,7 +377,7 @@ static bool renesas_enter_flash_mode(target_s *const t)
 {
 	target_reset(t);
 
-	/* permit flash operations */
+	/* Permit flash operations */
 	target_mem_write8(t, SYSC_FWEPROR, SYSC_FWEPROR_PERMIT);
 
 	return true;
@@ -446,9 +451,9 @@ static bool renesas_rv40_error_check(target_s *const t, const uint32_t error_bit
 
 	const uint8_t fstatr = target_mem_read32(t, RV40_FSTATR);
 
-	/* see "Recovery from the Command-Locked State": Section 47.9.3.6 of the RA6M4 manual R01UH0890EJ0100.*/
+	/* See "Recovery from the Command-Locked State": Section 47.9.3.6 of the RA6M4 manual R01UH0890EJ0100.*/
 	if (target_mem_read8(t, RV40_FASTAT) & RV40_FASTAT_CMDLK) {
-		/* if an illegal error occurred read and clear CFAE and DFAE in FASTAT. */
+		/* If an illegal error occurred read and clear CFAE and DFAE in FASTAT. */
 		if (fstatr & RV40_FSTATR_ILGLERR) {
 			target_mem_read8(t, RV40_FASTAT);
 			target_mem_write8(t, RV40_FASTAT, 0);
@@ -456,7 +461,7 @@ static bool renesas_rv40_error_check(target_s *const t, const uint32_t error_bit
 		error = true;
 	}
 
-	/* check if status is indicating a programming error */
+	/* Check if status is indicating a programming error */
 	if (fstatr & error_bits)
 		error = true;
 
@@ -492,7 +497,7 @@ static bool renesas_rv40_prepare(target_flash_s *const f)
 		return false;
 	}
 
-	/* code flash or data flash operation */
+	/* Code flash or data flash operation */
 	const bool code_flash = f->start < RENESAS_CF_END;
 
 	/* Transition to PE mode */
@@ -505,7 +510,7 @@ static bool renesas_rv40_done(target_flash_s *const f)
 {
 	target_s *const t = f->t;
 
-	/* return to read mode */
+	/* Return to read mode */
 	return renesas_rv40_pe_mode(t, PE_MODE_READ);
 }
 
@@ -514,7 +519,7 @@ static bool renesas_rv40_flash_erase(target_flash_s *f, target_addr_t addr, size
 {
 	target_s *const t = f->t;
 
-	/* code flash or data flash operation */
+	/* Code flash or data flash operation */
 	const bool code_flash = addr < RENESAS_CF_END;
 
 	/* Set Erasure Priority Mode */
@@ -524,7 +529,7 @@ static bool renesas_rv40_flash_erase(target_flash_s *f, target_addr_t addr, size
 		/* Set block start address*/
 		target_mem_write32(t, RV40_FSADDR, addr);
 
-		/* increment block address */
+		/* Increment block address */
 		uint16_t block_size;
 		if (code_flash)
 			block_size = addr < RV40_CF_REGION0_SIZE ? RV40_CF_REGION0_BLOCK_SIZE : RV40_CF_REGION1_BLOCK_SIZE;
@@ -538,14 +543,12 @@ static bool renesas_rv40_flash_erase(target_flash_s *f, target_addr_t addr, size
 		target_mem_write8(t, RV40_CMD, RV40_CMD_BLOCK_ERASE);
 		target_mem_write8(t, RV40_CMD, RV40_CMD_FINAL);
 
-		/* according to reference manual the max erase time for a 32K block is around 1040ms
-		 * this is with a FCLK of 4MHz
-		 */
+		/* According to reference manual the max erase time for a 32K block with a FCLK of 4MHz is around 1040ms */
 		platform_timeout_s timeout;
 		platform_timeout_set(&timeout, 1100);
 
 		/* Wait until the operation has completed or timeout */
-		/* Read FRDY bit until it has been set to 1 indicating that the current  operation is complete.*/
+		/* Read FRDY bit until it has been set to 1 indicating that the current operation is complete.*/
 		while (!(target_mem_read32(t, RV40_FSTATR) & RV40_FSTATR_RDY)) {
 			if (target_check_error(t) || platform_timeout_is_expired(&timeout))
 				return false;
@@ -580,27 +583,27 @@ static bool renesas_rv40_flash_write(target_flash_s *const f, target_addr_t dest
 		target_mem_write8(t, RV40_CMD, RV40_CMD_PROGRAM);
 		target_mem_write8(t, RV40_CMD, (uint8_t)(write_size / 2U));
 
-		/* according to reference manual the data buffer full time for 2 bytes is 2 usec.
-		 * this is with a FCLK of 4MHz
-		 * a complete should take less than 1 msec.
+		/* 
+		 * According to reference manual the data buffer full time for 2 bytes is 2 usec with a FCLK of 4MHz.
+		 * A complete write should take less than 1 msec.
 		 */
 		platform_timeout_s timeout;
 		platform_timeout_set(&timeout, 10);
 
-		/* write one chunk */
+		/* Write one chunk */
 		for (size_t i = 0U; i < (write_size / 2U); i++) {
-			/* copy data from source address to destination */
+			/* Copy data from source address to destination */
 			target_mem_write16(t, RV40_CMD, *(uint16_t *)src);
 
 			/* 2 bytes of data */
 			src += 2U;
 		}
 
-		/* issue write end command */
+		/* Issue write end command */
 		target_mem_write8(t, RV40_CMD, RV40_CMD_FINAL);
 
-		/* wait until the operation has completed or timeout */
-		/* read FRDY bit until it has been set to 1 indicating that the current operation is complete.*/
+		/* Wait until the operation has completed or timeout */
+		/* Read FRDY bit until it has been set to 1 indicating that the current operation is complete.*/
 		while (!(target_mem_read32(t, RV40_FSTATR) & RV40_FSTATR_RDY)) {
 			if (target_check_error(t) || platform_timeout_is_expired(&timeout))
 				return false;
