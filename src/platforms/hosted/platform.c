@@ -584,7 +584,7 @@ static void ap_decode_access(uint16_t addr, uint8_t RnW)
 
 void adiv5_dp_write(adiv5_debug_port_s *dp, uint16_t addr, uint32_t value)
 {
-	if (cl_debuglevel & BMP_DEBUG_TARGET) {
+	if (bmda_debug_flags & BMD_DEBUG_TARGET) {
 		ap_decode_access(addr, ADIV5_LOW_WRITE);
 		fprintf(stderr, " 0x%08" PRIx32 "\n", value);
 	}
@@ -594,7 +594,7 @@ void adiv5_dp_write(adiv5_debug_port_s *dp, uint16_t addr, uint32_t value)
 uint32_t adiv5_dp_read(adiv5_debug_port_s *dp, uint16_t addr)
 {
 	uint32_t ret = dp->dp_read(dp, addr);
-	if (cl_debuglevel & BMP_DEBUG_TARGET) {
+	if (bmda_debug_flags & BMD_DEBUG_TARGET) {
 		ap_decode_access(addr, ADIV5_LOW_READ);
 		fprintf(stderr, " 0x%08" PRIx32 "\n", ret);
 	}
@@ -611,7 +611,7 @@ uint32_t adiv5_dp_error(adiv5_debug_port_s *dp)
 uint32_t adiv5_dp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value)
 {
 	uint32_t ret = dp->low_access(dp, RnW, addr, value);
-	if (cl_debuglevel & BMP_DEBUG_TARGET) {
+	if (bmda_debug_flags & BMD_DEBUG_TARGET) {
 		ap_decode_access(addr, RnW);
 		fprintf(stderr, " 0x%08" PRIx32 "\n", RnW ? ret : value);
 	}
@@ -621,7 +621,7 @@ uint32_t adiv5_dp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr,
 uint32_t adiv5_ap_read(adiv5_access_port_s *ap, uint16_t addr)
 {
 	uint32_t ret = ap->dp->ap_read(ap, addr);
-	if (cl_debuglevel & BMP_DEBUG_TARGET) {
+	if (bmda_debug_flags & BMD_DEBUG_TARGET) {
 		ap_decode_access(addr, ADIV5_LOW_READ);
 		fprintf(stderr, " 0x%08" PRIx32 "\n", ret);
 	}
@@ -630,7 +630,7 @@ uint32_t adiv5_ap_read(adiv5_access_port_s *ap, uint16_t addr)
 
 void adiv5_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value)
 {
-	if (cl_debuglevel & BMP_DEBUG_TARGET) {
+	if (bmda_debug_flags & BMD_DEBUG_TARGET) {
 		ap_decode_access(addr, ADIV5_LOW_WRITE);
 		fprintf(stderr, " 0x%08" PRIx32 "\n", value);
 	}
@@ -640,7 +640,7 @@ void adiv5_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value)
 void adiv5_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t len)
 {
 	ap->dp->mem_read(ap, dest, src, len);
-	if (cl_debuglevel & BMP_DEBUG_TARGET) {
+	if (bmda_debug_flags & BMD_DEBUG_TARGET) {
 		fprintf(stderr, "ap_memread @ %" PRIx32 " len %zu:", src, len);
 		const uint8_t *const data = (const uint8_t *)dest;
 		for (size_t offset = 0; offset < len; ++offset) {
@@ -656,7 +656,7 @@ void adiv5_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t le
 
 void adiv5_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, align_e align)
 {
-	if (cl_debuglevel & BMP_DEBUG_TARGET) {
+	if (bmda_debug_flags & BMD_DEBUG_TARGET) {
 		fprintf(stderr, "ap_mem_write_sized @ %" PRIx32 " len %zu, align %d:", dest, len, 1 << align);
 		const uint8_t *const data = (const uint8_t *)src;
 		for (size_t offset = 0; offset < len; ++offset) {

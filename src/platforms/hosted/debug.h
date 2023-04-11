@@ -46,6 +46,10 @@
 #define BMD_DEBUG_WIRE       (1U << 7U)
 #define BMD_DEBUG_USE_STDERR (1U << 15U)
 
+/* These two macros control which of the above levels are accessible from the verbosity CLI argument */
+#define BMD_DEBUG_LEVEL_MASK  0x00fcU
+#define BMD_DEBUG_LEVEL_SHIFT 2U
+
 extern uint16_t bmda_debug_flags;
 
 void debug_error(const char *format, ...) __attribute__((format(printf, 1, 2)));
