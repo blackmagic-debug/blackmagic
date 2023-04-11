@@ -43,19 +43,10 @@
 #include "platform_support.h"
 
 #ifndef ARRAY_LENGTH
-#define ARRAY_LENGTH(arr) (sizeof(arr) / sizeof(arr[0]))
+#define ARRAY_LENGTH(arr) (sizeof(arr) / sizeof((arr)[0]))
 #endif
 
 extern uint32_t delay_cnt;
-
-#define BMP_DEBUG_NONE   0U
-#define BMP_DEBUG_INFO   (1U << 0U)
-#define BMP_DEBUG_GDB    (1U << 1U)
-#define BMP_DEBUG_TARGET (1U << 2U)
-#define BMP_DEBUG_PROBE  (1U << 3U)
-#define BMP_DEBUG_WIRE   (1U << 4U)
-#define BMP_DEBUG_MAX    (1U << 5U)
-#define BMP_DEBUG_STDOUT (1U << 15U)
 
 #define FREQ_FIXED 0xffffffffU
 
@@ -98,8 +89,8 @@ extern uint32_t delay_cnt;
 
 void debug_serial_send_stdout(const uint8_t *data, size_t len);
 #else
+#include "debug.h"
 #include <stdarg.h>
-extern int cl_debuglevel;
 
 static inline void DEBUG_WARN(const char *format, ...)
 {
@@ -111,20 +102,20 @@ static inline void DEBUG_WARN(const char *format, ...)
 
 static inline void DEBUG_INFO(const char *format, ...)
 {
-	if (~cl_debuglevel & BMP_DEBUG_INFO)
+	if (~bmda_debug_flags & BMD_DEBUG_INFO)
 		return;
 	va_list args;
 	va_start(args, format);
-	if (cl_debuglevel & BMP_DEBUG_STDOUT)
-		vfprintf(stdout, format, args);
-	else
+	if (bmda_debug_flags & BMD_DEBUG_USE_STDERR)
 		vfprintf(stderr, format, args);
+	else
+		vfprintf(stdout, format, args);
 	va_end(args);
 }
 
 static inline void DEBUG_GDB(const char *format, ...)
 {
-	if (~cl_debuglevel & BMP_DEBUG_GDB)
+	if (~bmda_debug_flags & BMD_DEBUG_GDB)
 		return;
 	va_list args;
 	va_start(args, format);
@@ -134,7 +125,7 @@ static inline void DEBUG_GDB(const char *format, ...)
 
 static inline void DEBUG_GDB_WIRE(const char *format, ...)
 {
-	if ((cl_debuglevel & (BMP_DEBUG_GDB | BMP_DEBUG_WIRE)) != (BMP_DEBUG_GDB | BMP_DEBUG_WIRE))
+	if ((bmda_debug_flags & (BMD_DEBUG_GDB | BMD_DEBUG_WIRE)) != (BMD_DEBUG_GDB | BMD_DEBUG_WIRE))
 		return;
 	va_list args;
 	va_start(args, format);
@@ -144,7 +135,7 @@ static inline void DEBUG_GDB_WIRE(const char *format, ...)
 
 static inline void DEBUG_TARGET(const char *format, ...)
 {
-	if (~cl_debuglevel & BMP_DEBUG_TARGET)
+	if (~bmda_debug_flags & BMD_DEBUG_TARGET)
 		return;
 	va_list args;
 	va_start(args, format);
@@ -154,7 +145,7 @@ static inline void DEBUG_TARGET(const char *format, ...)
 
 static inline void DEBUG_PROBE(const char *format, ...)
 {
-	if (~cl_debuglevel & BMP_DEBUG_PROBE)
+	if (~bmda_debug_flags & BMD_DEBUG_PROBE)
 		return;
 	va_list args;
 	va_start(args, format);
@@ -164,7 +155,7 @@ static inline void DEBUG_PROBE(const char *format, ...)
 
 static inline void DEBUG_WIRE(const char *format, ...)
 {
-	if (~cl_debuglevel & BMP_DEBUG_WIRE)
+	if (~bmda_debug_flags & BMD_DEBUG_WIRE)
 		return;
 	va_list args;
 	va_start(args, format);

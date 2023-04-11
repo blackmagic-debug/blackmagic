@@ -71,8 +71,6 @@ typedef struct mmap_data {
 #endif
 } mmap_data_s;
 
-int cl_debuglevel;
-
 static bool bmp_mmap(char *file, mmap_data_s *map)
 {
 #if defined(_WIN32) || defined(__CYGWIN__)
@@ -235,6 +233,7 @@ void cl_init(bmda_cli_options_s *opt, int argc, char **argv)
 	opt->opt_max_swj_frequency = 4000000;
 	opt->opt_scanmode = BMP_SCAN_SWD;
 	opt->opt_mode = BMP_MODE_DEBUG;
+	bmda_debug_flags |= BMD_DEBUG_USE_STDERR;
 	while (true) {
 		const int option = getopt_long(argc, argv, "eEFhHv:d:f:s:I:c:Cln:m:M:wVtTa:S:jApP:rR::", long_options, NULL);
 		if (option == -1)
@@ -246,15 +245,17 @@ void cl_init(bmda_cli_options_s *opt, int argc, char **argv)
 				opt->opt_cable = optarg;
 			break;
 		case 'h':
-			cl_debuglevel = 3;
+			bmda_debug_flags |= BMD_DEBUG_INFO;
 			cl_help(argv);
 			break;
 		case 'H':
 			opt->opt_no_hl = true;
 			break;
 		case 'v':
-			if (optarg)
-				cl_debuglevel = strtol(optarg, NULL, 0) & (BMP_DEBUG_MAX - 1U);
+			if (optarg) {
+				const uint16_t level = (strtoul(optarg, NULL, 10) << BMD_DEBUG_LEVEL_SHIFT) & BMD_DEBUG_LEVEL_MASK;
+				bmda_debug_flags |= level;
+			}
 			break;
 		case 'j':
 			opt->opt_scanmode = BMP_SCAN_JTAG;
@@ -264,7 +265,7 @@ void cl_init(bmda_cli_options_s *opt, int argc, char **argv)
 			break;
 		case 'l':
 			opt->opt_list_only = true;
-			cl_debuglevel |= BMP_DEBUG_STDOUT;
+			bmda_debug_flags &= ~BMD_DEBUG_USE_STDERR;
 			break;
 		case 'C':
 			opt->opt_connect_under_reset = true;
@@ -307,7 +308,8 @@ void cl_init(bmda_cli_options_s *opt, int argc, char **argv)
 			break;
 		case 't':
 			opt->opt_mode = BMP_MODE_TEST;
-			cl_debuglevel |= BMP_DEBUG_INFO | BMP_DEBUG_STDOUT;
+			bmda_debug_flags |= BMD_DEBUG_INFO;
+			bmda_debug_flags &= ~BMD_DEBUG_USE_STDERR;
 			break;
 		case 'T':
 			opt->opt_mode = BMP_MODE_SWJ_TEST;
