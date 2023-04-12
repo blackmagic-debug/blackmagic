@@ -197,7 +197,7 @@ typedef enum {
 
 /* Option-Setting Flash memory for RA4 and RA6, RA2 is different */
 #define RENESAS_OF_START UINT32_C(0x0100A100) /* Start of Option-Setting for RA4 and RA6 Family */
-#define RENESAS_OF_SIZE UINT32_C(0x200) /* Size of Option-Setting area */
+#define RENESAS_OF_SIZE UINT32_C(0x200) 	  /* Size of Option-Setting area */
 
 /* Renesas RA MCUs can have one of two kinds of flash memory, MF3/4 and RV40 */
 
@@ -602,8 +602,7 @@ static bool renesas_rv40_flash_write(target_flash_s *f, target_addr_t dest, cons
 		 * a complete should take less than 1 msec.
 		 */
 		platform_timeout_s timeout;
-		/* 200ms is arbitrary number i made up */
-		platform_timeout_set(&timeout, option_flash ? 200: 20);
+		platform_timeout_set(&timeout, option_flash ? 200 : 20);
 
 		/* write one chunk */
 		for (size_t i = 0U; i < (write_size / 2U); i++) {
@@ -647,8 +646,7 @@ static void renesas_add_rv40_flash(target_s *t, target_addr_t addr, size_t lengt
 	if (RENESAS_OF_START <= addr && addr <= (RENESAS_OF_START + RENESAS_OF_SIZE)) {
 		f->blocksize = RV40_DF_BLOCK_SIZE;
 		f->writesize = RV40_OF_WRITE_SIZE;
-	} else
-	if (code_flash) {
+	} else if (code_flash) {
 		f->blocksize = RV40_CF_REGION1_BLOCK_SIZE;
 		f->writesize = RV40_CF_WRITE_SIZE;
 	} else {
@@ -834,9 +832,9 @@ bool renesas_probe(target_s *t)
 	case PNR_SERIES_RA4M3:
 	case PNR_SERIES_RA4E1:
 		renesas_add_flash(t, RENESAS_OF_START, RENESAS_OF_SIZE); /* Option flash memory 512B 0x0100A100 */
-		renesas_add_flash(t, 0x08000000, 8U * 1024U); /* Data flash memory 8 KB 0x08000000 */
-		target_add_ram(t, 0x20000000, 128U * 1024U);  /* SRAM 128 KB 0x20000000 */
-		target_add_ram(t, 0x28000000, 1024U);         /* Standby SRAM 1 KB 0x28000000 */
+		renesas_add_flash(t, 0x08000000, 8U * 1024U); 			 /* Data flash memory 8 KB 0x08000000 */
+		target_add_ram(t, 0x20000000, 128U * 1024U);  			 /* SRAM 128 KB 0x20000000 */
+		target_add_ram(t, 0x28000000, 1024U);         			 /* Standby SRAM 1 KB 0x28000000 */
 		break;
 
 	case PNR_SERIES_RA4W1:
