@@ -522,54 +522,48 @@ static void decode_dp_access(const uint8_t addr, const uint8_t rnw)
 		DEBUG_PROTO("Unknown DP register %02x:", addr);
 }
 
-static void decode_ap_access(const uint16_t addr)
+static void decode_ap_access(const uint8_t ap, const uint8_t addr)
 {
-	DEBUG_PROTO("AP %u ", addr >> 8U);
+	DEBUG_PROTO("AP %u ", ap);
 
-	switch (addr & 0xffU) {
+	const char *reg = NULL;
+	switch (addr) {
 	case 0x00U:
-		DEBUG_PROTO("CSW:");
+		reg = "CSW";
 		break;
-
 	case 0x04U:
-		DEBUG_PROTO("TAR:");
+		reg = "TAR";
 		break;
-
 	case 0x0cU:
-		DEBUG_PROTO("DRW:");
+		reg = "DRW";
 		break;
-
 	case 0x10U:
-		DEBUG_PROTO("DB0:");
+		reg = "DB0";
 		break;
-
 	case 0x14U:
-		DEBUG_PROTO("DB1:");
+		reg = "DB1";
 		break;
-
 	case 0x18U:
-		DEBUG_PROTO("DB2:");
+		reg = "DB2";
 		break;
-
 	case 0x1cU:
-		DEBUG_PROTO("DB3:");
+		reg = "DB3";
 		break;
-
 	case 0xf8U:
-		DEBUG_PROTO("BASE:");
+		reg = "BASE";
 		break;
-
 	case 0xf4U:
-		DEBUG_PROTO("CFG:");
+		reg = "CFG";
 		break;
-
 	case 0xfcU:
-		DEBUG_PROTO("IDR:");
+		reg = "IDR";
 		break;
-
-	default:
-		DEBUG_PROTO("RSVD%02x:", addr & 0xffU);
 	}
+
+	if (reg)
+		DEBUG_PROTO("%s:", reg);
+	else
+		DEBUG_PROTO("Reserved(%02x):", addr);
 }
 
 static void decode_access(const uint16_t addr, const uint8_t rnw)
@@ -582,7 +576,7 @@ static void decode_access(const uint16_t addr, const uint8_t rnw)
 	if (addr < 0x100U)
 		decode_dp_access(addr & 0xffU, rnw);
 	else
-		decode_ap_access(addr);
+		decode_ap_access(addr >> 8U, addr & 0xffU);
 }
 
 void adiv5_dp_write(adiv5_debug_port_s *dp, uint16_t addr, uint32_t value)
