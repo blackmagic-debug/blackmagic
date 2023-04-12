@@ -517,9 +517,9 @@ static void decode_dp_access(const uint8_t addr, const uint8_t rnw)
 	}
 
 	if (reg)
-		DEBUG_PROTO("%s:", reg);
+		DEBUG_PROTO("%s: ", reg);
 	else
-		DEBUG_PROTO("Unknown DP register %02x:", addr);
+		DEBUG_PROTO("Unknown DP register %02x: ", addr);
 }
 
 static void decode_ap_access(const uint8_t ap, const uint8_t addr)
@@ -561,9 +561,9 @@ static void decode_ap_access(const uint8_t ap, const uint8_t addr)
 	}
 
 	if (reg)
-		DEBUG_PROTO("%s:", reg);
+		DEBUG_PROTO("%s: ", reg);
 	else
-		DEBUG_PROTO("Reserved(%02x):", addr);
+		DEBUG_PROTO("Reserved(%02x): ", addr);
 }
 
 static void decode_access(const uint16_t addr, const uint8_t rnw)
@@ -582,7 +582,7 @@ static void decode_access(const uint16_t addr, const uint8_t rnw)
 void adiv5_dp_write(adiv5_debug_port_s *dp, uint16_t addr, uint32_t value)
 {
 	decode_access(addr, ADIV5_LOW_WRITE);
-	DEBUG_PROTO(" 0x%08" PRIx32 "\n", value);
+	DEBUG_PROTO("0x%08" PRIx32 "\n", value);
 	dp->low_access(dp, ADIV5_LOW_WRITE, addr, value);
 }
 
@@ -590,7 +590,7 @@ uint32_t adiv5_dp_read(adiv5_debug_port_s *dp, uint16_t addr)
 {
 	uint32_t ret = dp->dp_read(dp, addr);
 	decode_access(addr, ADIV5_LOW_READ);
-	DEBUG_PROTO(" 0x%08" PRIx32 "\n", ret);
+	DEBUG_PROTO("0x%08" PRIx32 "\n", ret);
 	return ret;
 }
 
@@ -605,7 +605,7 @@ uint32_t adiv5_dp_low_access(adiv5_debug_port_s *dp, uint8_t rnw, uint16_t addr,
 {
 	uint32_t ret = dp->low_access(dp, rnw, addr, value);
 	decode_access(addr, rnw);
-	DEBUG_PROTO(" 0x%08" PRIx32 "\n", rnw ? ret : value);
+	DEBUG_PROTO("0x%08" PRIx32 "\n", rnw ? ret : value);
 	return ret;
 }
 
@@ -613,14 +613,14 @@ uint32_t adiv5_ap_read(adiv5_access_port_s *ap, uint16_t addr)
 {
 	uint32_t ret = ap->dp->ap_read(ap, addr);
 	decode_access(addr, ADIV5_LOW_READ);
-	DEBUG_PROTO(" 0x%08" PRIx32 "\n", ret);
+	DEBUG_PROTO("0x%08" PRIx32 "\n", ret);
 	return ret;
 }
 
 void adiv5_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value)
 {
 	decode_access(addr, ADIV5_LOW_WRITE);
-	DEBUG_PROTO(" 0x%08" PRIx32 "\n", value);
+	DEBUG_PROTO("0x%08" PRIx32 "\n", value);
 	return ap->dp->ap_write(ap, addr, value);
 }
 
