@@ -129,16 +129,18 @@ static void cl_help(char **argv)
 {
 	bmp_ident(NULL);
 	PRINT_INFO("\n"
-			   "Usage: %s [-h | -l | [-vBITMASK] [-d PATH | -P NUMBER | -s SERIAL | -c TYPE]\n"
+			   "Usage: %s [-h | -l | [-v BITMASK] [-O] [-d PATH | -P NUMBER | -s SERIAL | -c TYPE]\n"
 			   "\t[-n NUMBER] [-j | -A] [-C] [-t | -T] [-e] [-p] [-R[h]] [-H] [-M STRING ...]\n"
 			   "\t[-f | -m] [-E | -w | -V | -r] [-a ADDR] [-S number] [file]]\n"
 			   "\n"
 			   "The default is to start a debug server at localhost:2000\n\n"
-			   "Single-shot and verbosity options [-h | -l | -vBITMASK]:\n"
+			   "Single-shot and verbosity options [-h | -l | -v BITMASK]:\n"
 			   "\t-h, --help       Show the version and this help, then exit\n"
 			   "\t-l, --list       List available supported probes\n"
 			   "\t-v, --verbose    Set the output verbosity level based on some combination of:\n"
 			   "\t                   1 = INFO, 2 = GDB, 4 = TARGET, 8 = PROTO, 16 = PROBE, 32 = WIRE\n"
+			   "\t-O, --no-stdout  Don't use stdout for debugging output, making it available\n"
+			   "\t                   for use by RTT, Semihosting, or other target output\n"
 			   "\n"
 			   "Probe selection arguments [-d PATH | -P NUMBER | -s SERIAL | -c TYPE]:\n"
 			   "\t-d, --device     Use a serial device at the given path\n"
@@ -198,6 +200,7 @@ static const getopt_option_s long_options[] = {
 	{"help", no_argument, NULL, 'h'},
 	{"list", no_argument, NULL, 'l'},
 	{"verbose", required_argument, NULL, 'v'},
+	{"no-stdout", no_argument, NULL, 'O'},
 	{"device", required_argument, NULL, 'd'},
 	{"probe", required_argument, NULL, 'P'},
 	{"serial", required_argument, NULL, 's'},
@@ -233,9 +236,8 @@ void cl_init(bmda_cli_options_s *opt, int argc, char **argv)
 	opt->opt_max_swj_frequency = 4000000;
 	opt->opt_scanmode = BMP_SCAN_SWD;
 	opt->opt_mode = BMP_MODE_DEBUG;
-	bmda_debug_flags |= BMD_DEBUG_USE_STDERR;
 	while (true) {
-		const int option = getopt_long(argc, argv, "eEFhHv:d:f:s:I:c:Cln:m:M:wVtTa:S:jApP:rR::", long_options, NULL);
+		const int option = getopt_long(argc, argv, "eEFhHv:Od:f:s:I:c:Cln:m:M:wVtTa:S:jApP:rR::", long_options, NULL);
 		if (option == -1)
 			break;
 
@@ -257,6 +259,9 @@ void cl_init(bmda_cli_options_s *opt, int argc, char **argv)
 				bmda_debug_flags |= level;
 			}
 			break;
+		case 'O':
+			bmda_debug_flags |= BMD_DEBUG_USE_STDERR;
+			break;
 		case 'j':
 			opt->opt_scanmode = BMP_SCAN_JTAG;
 			break;
@@ -265,7 +270,6 @@ void cl_init(bmda_cli_options_s *opt, int argc, char **argv)
 			break;
 		case 'l':
 			opt->opt_list_only = true;
-			bmda_debug_flags &= ~BMD_DEBUG_USE_STDERR;
 			break;
 		case 'C':
 			opt->opt_connect_under_reset = true;
@@ -309,7 +313,6 @@ void cl_init(bmda_cli_options_s *opt, int argc, char **argv)
 		case 't':
 			opt->opt_mode = BMP_MODE_TEST;
 			bmda_debug_flags |= BMD_DEBUG_INFO;
-			bmda_debug_flags &= ~BMD_DEBUG_USE_STDERR;
 			break;
 		case 'T':
 			opt->opt_mode = BMP_MODE_SWJ_TEST;
