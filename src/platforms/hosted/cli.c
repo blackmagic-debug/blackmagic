@@ -138,7 +138,7 @@ static void cl_help(char **argv)
 			   "\t-h, --help       Show the version and this help, then exit\n"
 			   "\t-l, --list       List available supported probes\n"
 			   "\t-v, --verbose    Set the output verbosity level based on some combination of:\n"
-			   "\t                   1 = INFO, 2 = GDB, 4 = TARGET, 8 = PROBE, 16 = WIRE\n"
+			   "\t                   1 = INFO, 2 = GDB, 4 = TARGET, 8 = PROTO, 16 = PROBE, 32 = WIRE\n"
 			   "\n"
 			   "Probe selection arguments [-d PATH | -P NUMBER | -s SERIAL | -c TYPE]:\n"
 			   "\t-d, --device     Use a serial device at the given path\n"
