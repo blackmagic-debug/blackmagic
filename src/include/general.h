@@ -84,6 +84,7 @@ extern uint32_t delay_cnt;
 #endif
 #define DEBUG_GDB(...)    PRINT_NOOP(__VA_ARGS__)
 #define DEBUG_TARGET(...) PRINT_NOOP(__VA_ARGS__)
+#define DEBUG_PROTO(...)  PRINT_NOOP(__VA_ARGS__)
 #define DEBUG_PROBE(...)  PRINT_NOOP(__VA_ARGS__)
 #define DEBUG_WIRE(...)   PRINT_NOOP(__VA_ARGS__)
 
@@ -96,6 +97,7 @@ void debug_serial_send_stdout(const uint8_t *data, size_t len);
 #define DEBUG_INFO(...)   debug_info(__VA_ARGS__)
 #define DEBUG_GDB(...)    debug_gdb(__VA_ARGS__)
 #define DEBUG_TARGET(...) debug_target(__VA_ARGS__)
+#define DEBUG_PROTO(...)  debug_protocol(__VA_ARGS__)
 #define DEBUG_PROBE(...)  debug_probe(__VA_ARGS__)
 #define DEBUG_WIRE(...)   debug_wire(__VA_ARGS__)
 #endif
