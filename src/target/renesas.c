@@ -196,7 +196,7 @@ typedef enum {
 #define FENTRYR_PE_DF      (1U << 7U)
 
 /* Option-Setting Flash memory for RA4 and RA6, RA2 is different */
-#define RENESAS_OF_START UINT32_C(0x0100A100) /* Start of Option-Setting for RA4 and RA6 Family */
+#define RENESAS_OF_START UINT32_C(0x0100a100) /* Start of Option-Setting for RA4 and RA6 Family */
 #define RENESAS_OF_SIZE  UINT32_C(0x200)      /* Size of Option-Setting area */
 
 /* Renesas RA MCUs can have one of two kinds of flash memory, MF3/4 and RV40 */
