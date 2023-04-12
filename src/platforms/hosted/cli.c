@@ -255,7 +255,13 @@ void cl_init(bmda_cli_options_s *opt, int argc, char **argv)
 			break;
 		case 'v':
 			if (optarg) {
-				const uint16_t level = (strtoul(optarg, NULL, 10) << BMD_DEBUG_LEVEL_SHIFT) & BMD_DEBUG_LEVEL_MASK;
+				const char *end = optarg + strlen(optarg);
+				char *valid = NULL;
+				const uint16_t level = (strtoul(optarg, &valid, 10) << BMD_DEBUG_LEVEL_SHIFT) & BMD_DEBUG_LEVEL_MASK;
+				if (valid != end) {
+					DEBUG_ERROR("Value after verbosity flag was not a valid positive integer, got '%s'\n", optarg);
+					exit(1);
+				}
 				bmda_debug_flags |= level;
 			}
 			break;
