@@ -89,42 +89,13 @@ extern uint32_t delay_cnt;
 void debug_serial_send_stdout(const uint8_t *data, size_t len);
 #else
 #include "debug.h"
-#include <stdarg.h>
 
-#define DEBUG_ERROR(...) debug_error(__VA_ARGS__)
-#define DEBUG_WARN(...)  debug_warning(__VA_ARGS__)
-#define DEBUG_INFO(...)  debug_info(__VA_ARGS__)
-#define DEBUG_GDB(...)   debug_gdb(__VA_ARGS__)
-
-static inline void DEBUG_TARGET(const char *format, ...)
-{
-	if (~bmda_debug_flags & BMD_DEBUG_TARGET)
-		return;
-	va_list args;
-	va_start(args, format);
-	vfprintf(stderr, format, args);
-	va_end(args);
-}
-
-static inline void DEBUG_PROBE(const char *format, ...)
-{
-	if (~bmda_debug_flags & BMD_DEBUG_PROBE)
-		return;
-	va_list args;
-	va_start(args, format);
-	vfprintf(stderr, format, args);
-	va_end(args);
-}
-
-static inline void DEBUG_WIRE(const char *format, ...)
-{
-	if (~bmda_debug_flags & BMD_DEBUG_WIRE)
-		return;
-	va_list args;
-	va_start(args, format);
-	vfprintf(stderr, format, args);
-	va_end(args);
-}
+#define DEBUG_WARN(...)   debug_warning(__VA_ARGS__)
+#define DEBUG_INFO(...)   debug_info(__VA_ARGS__)
+#define DEBUG_GDB(...)    debug_gdb(__VA_ARGS__)
+#define DEBUG_TARGET(...) debug_target(__VA_ARGS__)
+#define DEBUG_PROBE(...)  debug_probe(__VA_ARGS__)
+#define DEBUG_WIRE(...)   debug_wire(__VA_ARGS__)
 #endif
 
 #define ALIGN(x, n) (((x) + (n)-1) & ~((n)-1))
