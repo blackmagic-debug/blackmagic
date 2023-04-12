@@ -500,30 +500,26 @@ void platform_target_clk_output_enable(const bool enable)
 
 static void decode_dp_access(const uint8_t addr, const uint8_t rnw)
 {
+	const char *reg = NULL;
 	switch (addr) {
-	case 0x00U: {
-		const char *const reg = rnw ? "DPIDR" : "ABORT";
-		DEBUG_PROTO("%s:", reg);
+	case 0x00U:
+		reg = rnw ? "DPIDR" : "ABORT";
 		break;
-	}
-
 	case 0x04U:
-		DEBUG_PROTO("CTRL/STAT:");
+		reg = "CTRL/STAT";
 		break;
-
-	case 0x08U: {
-		const char *const reg = rnw ? "RESEND" : "SELECT";
-		DEBUG_PROTO("%s:", reg);
+	case 0x08U:
+		reg = rnw ? "RESEND" : "SELECT";
 		break;
-	}
-
 	case 0x0cU:
-		DEBUG_PROTO("RDBUFF:");
+		reg = "RDBUFF";
 		break;
-
-	default:
-		DEBUG_PROTO("Unknown DP register %02x:", addr);
 	}
+
+	if (reg)
+		DEBUG_PROTO("%s:", reg);
+	else
+		DEBUG_PROTO("Unknown DP register %02x:", addr);
 }
 
 static void decode_ap_access(const uint16_t addr)
