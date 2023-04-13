@@ -103,12 +103,4 @@ bool device_is_bmp_gdb_port(const char *device);
 int send_recv(usb_link_s *link, uint8_t *txbuf, size_t txsize, uint8_t *rxbuf, size_t rxsize);
 #endif
 
-#if defined(_WIN32) || defined(__CYGWIN__)
-#include <wchar.h>
-#define PRINT_INFO(fmt, ...) wprintf(L##fmt, ##__VA_ARGS__)
-#else
-#include <stdio.h>
-#define PRINT_INFO(fmt, ...) printf((fmt), ##__VA_ARGS__)
-#endif
-
 #endif /* PLATFORMS_HOSTED_BMP_HOSTED_H */
