@@ -36,10 +36,10 @@
 
 void bmp_ident(bmp_info_s *info)
 {
-	PRINT_INFO("Black Magic Debug App (for BMP only) %s\n", FIRMWARE_VERSION);
+	DEBUG_INFO("Black Magic Debug App (for BMP only) %s\n", FIRMWARE_VERSION);
 	if (!info)
 		return;
-	PRINT_INFO("Using:\n %s %s %s\n", info->manufacturer, info->version, info->serial);
+	DEBUG_INFO("Using:\n %s %s %s\n", info->manufacturer, info->version, info->serial);
 }
 
 void libusb_exit_function(bmp_info_s *info)

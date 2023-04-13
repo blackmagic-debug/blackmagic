@@ -128,7 +128,7 @@ static void bmp_munmap(mmap_data_s *map)
 static void cl_help(char **argv)
 {
 	bmp_ident(NULL);
-	PRINT_INFO("\n"
+	DEBUG_INFO("\n"
 			   "Usage: %s [-h | -l | [-v BITMASK] [-O] [-d PATH | -P NUMBER | -s SERIAL | -c TYPE]\n"
 			   "\t[-n NUMBER] [-j | -A] [-C] [-t | -T] [-e] [-p] [-R[h]] [-H] [-M STRING ...]\n"
 			   "\t[-f | -m] [-E | -w | -V | -r] [-a ADDR] [-S number] [file]]\n"
