@@ -451,7 +451,7 @@ int cl_execute(bmda_cli_options_s *opt)
 	uint32_t num_targets = scan_for_targets(opt);
 
 	if (!num_targets) {
-		DEBUG_WARN("No target found\n");
+		DEBUG_ERROR("No target found\n");
 		return -1;
 	}
 	num_targets = target_foreach(display_target, &num_targets);
@@ -465,7 +465,7 @@ int cl_execute(bmda_cli_options_s *opt)
 
 	int read_file = -1;
 	if (!t) {
-		DEBUG_WARN("Can not attach to target %d\n", opt->opt_target_dev);
+		DEBUG_ERROR("Can not attach to target %d\n", opt->opt_target_dev);
 		res = -1;
 		goto target_detach;
 	}
@@ -538,7 +538,7 @@ int cl_execute(bmda_cli_options_s *opt)
 	if (opt->opt_mode == BMP_MODE_FLASH_WRITE || opt->opt_mode == BMP_MODE_FLASH_VERIFY ||
 		opt->opt_mode == BMP_MODE_FLASH_WRITE_VERIFY) {
 		if (!bmp_mmap(opt->opt_flash_file, &map)) {
-			DEBUG_WARN("Can not map file: %s. Aborting!\n", strerror(errno));
+			DEBUG_ERROR("Can not map file: %s. Aborting!\n", strerror(errno));
 			res = -1;
 			goto target_detach;
 		}
@@ -546,7 +546,7 @@ int cl_execute(bmda_cli_options_s *opt)
 		/* Open as binary */
 		read_file = open(opt->opt_flash_file, O_TRUNC | O_CREAT | O_RDWR | O_BINARY, S_IRUSR | S_IWUSR);
 		if (read_file == -1) {
-			DEBUG_WARN("Error opening flashfile %s for read: %s\n", opt->opt_flash_file, strerror(errno));
+			DEBUG_ERROR("Error opening flashfile %s for read: %s\n", opt->opt_flash_file, strerror(errno));
 			res = -1;
 			goto target_detach;
 		}
@@ -557,14 +557,14 @@ int cl_execute(bmda_cli_options_s *opt)
 	if (opt->opt_monitor) {
 		res = command_process(t, opt->opt_monitor);
 		if (res)
-			DEBUG_WARN("Command \"%s\" failed\n", opt->opt_monitor);
+			DEBUG_ERROR("Command \"%s\" failed\n", opt->opt_monitor);
 	}
 	if (opt->opt_mode == BMP_MODE_RESET)
 		target_reset(t);
 	else if (opt->opt_mode == BMP_MODE_FLASH_ERASE) {
 		DEBUG_INFO("Erase %zu bytes at 0x%08" PRIx32 "\n", opt->opt_flash_size, opt->opt_flash_start);
 		if (!target_flash_erase(t, opt->opt_flash_start, opt->opt_flash_size)) {
-			DEBUG_WARN("Flash erase failed!\n");
+			DEBUG_ERROR("Flash erase failed!\n");
 			res = -1;
 			goto free_map;
 		}
@@ -573,14 +573,14 @@ int cl_execute(bmda_cli_options_s *opt)
 		DEBUG_INFO("Erasing %zu bytes at 0x%08" PRIx32 "\n", map.size, opt->opt_flash_start);
 		const uint32_t start_time = platform_time_ms();
 		if (!target_flash_erase(t, opt->opt_flash_start, map.size)) {
-			DEBUG_WARN("Flash erase failed!\n");
+			DEBUG_ERROR("Flash erase failed!\n");
 			res = -1;
 			goto free_map;
 		}
 		DEBUG_INFO("Flashing %zu bytes at 0x%08" PRIx32 "\n", map.size, opt->opt_flash_start);
 		/* Buffered write cares for padding*/
 		if (!target_flash_write(t, opt->opt_flash_start, map.data, map.size) || !target_flash_complete(t)) {
-			DEBUG_WARN("Flashing failed!\n");
+			DEBUG_ERROR("Flashing failed!\n");
 			res = -1;
 			goto free_map;
 		}
@@ -612,13 +612,13 @@ int cl_execute(bmda_cli_options_s *opt)
 				if (opt->opt_flash_size == 0) /* we reached end of flash */
 					DEBUG_INFO("Reached end of flash at size %" PRId32 "\n", flash_src - opt->opt_flash_start);
 				else
-					DEBUG_WARN("Read failed at flash address 0x%08" PRIx32 "\n", flash_src);
+					DEBUG_ERROR("Read failed at flash address 0x%08" PRIx32 "\n", flash_src);
 				break;
 			}
 			bytes_read += worksize;
 			if (opt->opt_mode == BMP_MODE_FLASH_VERIFY || opt->opt_mode == BMP_MODE_FLASH_WRITE_VERIFY) {
 				if (memcmp(data, flash + offset, worksize) != 0) {
-					DEBUG_WARN("Verify failed at flash region 0x%08" PRIx32 "\n", flash_src);
+					DEBUG_ERROR("Verify failed at flash region 0x%08" PRIx32 "\n", flash_src);
 					res = -1;
 					goto free_map;
 				}
@@ -626,12 +626,12 @@ int cl_execute(bmda_cli_options_s *opt)
 				const ssize_t written = write(read_file, data, worksize);
 				if (written < 0) {
 					const int error = errno;
-					DEBUG_INFO("Write to %s failed (%d): %s\n", opt->opt_flash_file, error, strerror(error));
+					DEBUG_ERROR("Write to %s failed (%d): %s\n", opt->opt_flash_file, error, strerror(error));
 					res = -1;
 					goto free_map;
 				}
 				if ((size_t)written < worksize) {
-					DEBUG_WARN("Read failed at flash region 0x%08" PRIx32 "\n", flash_src);
+					DEBUG_ERROR("Read failed at flash region 0x%08" PRIx32 "\n", flash_src);
 					res = -1;
 					goto free_map;
 				}
