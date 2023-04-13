@@ -130,13 +130,13 @@ static size_t mbslen(const char *str)
 static void dap_hid_print_permissions_for(const hid_device_info_s *const dev)
 {
 	const char *const path = dev->path;
-	PRINT_INFO("Tried device '%s'", path);
+	DEBUG_ERROR("Tried device '%s'", path);
 	struct stat dev_stat;
 	if (stat(path, &dev_stat) == 0) {
-		PRINT_INFO(", permissions = %04o, owner = %u, group = %u", dev_stat.st_mode & ACCESSPERMS, dev_stat.st_uid,
+		DEBUG_ERROR(", permissions = %04o, owner = %u, group = %u", dev_stat.st_mode & ACCESSPERMS, dev_stat.st_uid,
 			dev_stat.st_gid);
 	}
-	PRINT_INFO("\n");
+	DEBUG_ERROR("\n");
 }
 
 static void dap_hid_print_permissions(const uint16_t vid, const uint16_t pid, const wchar_t *const serial)
@@ -165,27 +165,28 @@ static bool dap_init_hid(const bmp_info_s *const info)
 
 	const size_t size = mbslen(info->serial);
 	if (size > 64U) {
-		PRINT_INFO("Serial number invalid, aborting\n");
+		DEBUG_ERROR("Serial number invalid, aborting\n");
 		hid_exit();
 		return false;
 	}
 	wchar_t serial[65] = {0};
 	if (mbstowcs(serial, info->serial, size) != size) {
-		PRINT_INFO("Serial number conversion failed, aborting\n");
+		DEBUG_ERROR("Serial number conversion failed, aborting\n");
 		hid_exit();
 		return false;
 	}
 	serial[size] = 0;
-	/* Blacklist devices that do not work with 513 byte report length
-	* FIXME: Find a solution to decipher from the device.
-	*/
+	/*
+	 * Special-case devices that do not work with 513 byte report length
+	 * FIXME: Find a solution to decipher from the device.
+	 */
 	if (info->vid == 0x1fc9U && info->pid == 0x0132U) {
-		DEBUG_WARN("Blacklist\n");
+		DEBUG_WARN("Device does not work with the normal report length, activating quirk\n");
 		report_size = 64U + 1U;
 	}
 	handle = hid_open(info->vid, info->pid, serial[0] ? serial : NULL);
 	if (!handle) {
-		PRINT_INFO("hid_open failed: %ls\n", hid_error(NULL));
+		DEBUG_ERROR("hid_open failed: %ls\n", hid_error(NULL));
 #ifdef __linux__
 		dap_hid_print_permissions(info->vid, info->pid, serial[0] ? serial : NULL);
 #endif

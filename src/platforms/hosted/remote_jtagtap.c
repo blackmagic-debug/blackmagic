@@ -55,7 +55,7 @@ bool remote_jtagtap_init(void)
 	char buffer[REMOTE_MAX_MSG_SIZE];
 	int length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	if (!length || buffer[0] == REMOTE_RESP_ERR) {
-		DEBUG_WARN("jtagtap_init failed, error %s\n", length ? buffer + 1 : "unknown");
+		DEBUG_ERROR("jtagtap_init failed, error %s\n", length ? buffer + 1 : "unknown");
 		exit(-1);
 	}
 
@@ -69,7 +69,7 @@ bool remote_jtagtap_init(void)
 	platform_buffer_write(REMOTE_HL_CHECK_STR, sizeof(REMOTE_HL_CHECK_STR));
 	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	if (!length || buffer[0] == REMOTE_RESP_ERR || buffer[0] == 1)
-		PRINT_INFO("Firmware does not support newer JTAG commands, please update it.");
+		DEBUG_ERROR("Firmware does not support newer JTAG commands, please update it.");
 	else
 		jtag_proc.jtagtap_cycle = jtagtap_cycle;
 
@@ -84,7 +84,7 @@ static void jtagtap_reset(void)
 	char buffer[REMOTE_MAX_MSG_SIZE];
 	const int length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	if (!length || buffer[0] == REMOTE_RESP_ERR) {
-		DEBUG_WARN("jtagtap_reset failed, error %s\n", length ? buffer + 1 : "unknown");
+		DEBUG_ERROR("jtagtap_reset failed, error %s\n", length ? buffer + 1 : "unknown");
 		exit(-1);
 	}
 }
@@ -97,7 +97,7 @@ static void jtagtap_tms_seq(uint32_t tms_states, size_t clock_cycles)
 
 	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	if (!length || buffer[0] == REMOTE_RESP_ERR) {
-		DEBUG_WARN("jtagtap_tms_seq failed, error %s\n", length ? buffer + 1 : "unknown");
+		DEBUG_ERROR("jtagtap_tms_seq failed, error %s\n", length ? buffer + 1 : "unknown");
 		exit(-1);
 	}
 }
@@ -149,7 +149,7 @@ static void jtagtap_tdi_tdo_seq(
 		/* Receive the response and check if it's an error response */
 		length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 		if (!length || buffer[0] == REMOTE_RESP_ERR) {
-			DEBUG_WARN("jtagtap_tdi_tdo_seq failed, error %s\n", length ? buffer + 1 : "unknown");
+			DEBUG_ERROR("jtagtap_tdi_tdo_seq failed, error %s\n", length ? buffer + 1 : "unknown");
 			exit(-1);
 		}
 		if (data_out) {
@@ -173,7 +173,7 @@ static bool jtagtap_next(const bool tms, const bool tdi)
 
 	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	if (!length || buffer[0] == REMOTE_RESP_ERR) {
-		DEBUG_WARN("jtagtap_next failed, error %s\n", length ? buffer + 1 : "unknown");
+		DEBUG_ERROR("jtagtap_next failed, error %s\n", length ? buffer + 1 : "unknown");
 		exit(-1);
 	}
 
@@ -189,7 +189,7 @@ static void jtagtap_cycle(const bool tms, const bool tdi, const size_t clock_cyc
 
 	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	if (!length || buffer[0] == REMOTE_RESP_ERR) {
-		DEBUG_WARN("jtagtap_cycle failed, error %s\n", length ? buffer + 1 : "unknown");
+		DEBUG_ERROR("jtagtap_cycle failed, error %s\n", length ? buffer + 1 : "unknown");
 		exit(-1);
 	}
 }
