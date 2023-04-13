@@ -35,6 +35,13 @@
 #define PLATFORMS_HOSTED_DEBUG_H
 
 #include <stdint.h>
+#if defined(_WIN32) || defined(__CYGWIN__)
+typedef const wchar_t *debug_str_t;
+#define DEBUG_FORMAT_ATTR /*__attribute__((format(__wprintf__, 1, 2)))*/
+#else
+typedef const char *debug_str_t;
+#define DEBUG_FORMAT_ATTR __attribute__((format(printf, 1, 2)))
+#endif
 
 #define BMD_DEBUG_ERROR      (1U << 0U)
 #define BMD_DEBUG_WARNING    (1U << 1U)
@@ -52,13 +59,13 @@
 
 extern uint16_t bmda_debug_flags;
 
-void debug_error(const char *format, ...) __attribute__((format(printf, 1, 2)));
-void debug_warning(const char *format, ...) __attribute__((format(printf, 1, 2)));
-void debug_info(const char *format, ...) __attribute__((format(printf, 1, 2)));
-void debug_gdb(const char *format, ...) __attribute__((format(printf, 1, 2)));
-void debug_target(const char *format, ...) __attribute__((format(printf, 1, 2)));
-void debug_protocol(const char *format, ...) __attribute__((format(printf, 1, 2)));
-void debug_probe(const char *format, ...) __attribute__((format(printf, 1, 2)));
-void debug_wire(const char *format, ...) __attribute__((format(printf, 1, 2)));
+void debug_error(debug_str_t format, ...) DEBUG_FORMAT_ATTR;
+void debug_warning(debug_str_t format, ...) DEBUG_FORMAT_ATTR;
+void debug_info(debug_str_t format, ...) DEBUG_FORMAT_ATTR;
+void debug_gdb(debug_str_t format, ...) DEBUG_FORMAT_ATTR;
+void debug_target(debug_str_t format, ...) DEBUG_FORMAT_ATTR;
+void debug_protocol(debug_str_t format, ...) DEBUG_FORMAT_ATTR;
+void debug_probe(debug_str_t format, ...) DEBUG_FORMAT_ATTR;
+void debug_wire(debug_str_t format, ...) DEBUG_FORMAT_ATTR;
 
 #endif /*PLATFORMS_HOSTED_DEBUG_H*/

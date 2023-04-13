@@ -31,14 +31,20 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#if defined(_WIN32) || defined(__CYGWIN__)
+#include <wchar.h>
+#define PRINT_FN vfwprintf
+#else
 #include <stdio.h>
+#define PRINT_FN vfprintf
+#endif
 #include <stdarg.h>
 #include "general.h"
 #include "debug.h"
 
 uint16_t bmda_debug_flags = BMD_DEBUG_ERROR | BMD_DEBUG_WARNING;
 
-static void debug_print(const uint16_t level, const char *const format, va_list args)
+static void debug_print(const uint16_t level, const debug_str_t format, va_list args)
 {
 	/* Check if the required level is enabled */
 	if (!(bmda_debug_flags & level))
@@ -46,7 +52,7 @@ static void debug_print(const uint16_t level, const char *const format, va_list 
 	/* Check to see which of stderr and stdout the message should go to */
 	FILE *const where = bmda_debug_flags & BMD_DEBUG_USE_STDERR ? stderr : stdout;
 	/* And shoot the message to the correct place */
-	(void)vfprintf(where, format, args);
+	(void)PRINT_FN(where, format, args);
 	/* Note: we have no useful way to use the output of the above call, so we ignore it. */
 }
 
@@ -56,42 +62,42 @@ static void debug_print(const uint16_t level, const char *const format, va_list 
 	debug_print((level), format, args); \
 	va_end(args)
 
-void debug_error(const char *const format, ...)
+void debug_error(const debug_str_t format, ...)
 {
 	DEBUG_PRINT(BMD_DEBUG_ERROR);
 }
 
-void debug_warning(const char *const format, ...)
+void debug_warning(const debug_str_t format, ...)
 {
 	DEBUG_PRINT(BMD_DEBUG_WARNING);
 }
 
-void debug_info(const char *const format, ...)
+void debug_info(const debug_str_t format, ...)
 {
 	DEBUG_PRINT(BMD_DEBUG_INFO);
 }
 
-void debug_gdb(const char *const format, ...)
+void debug_gdb(const debug_str_t format, ...)
 {
 	DEBUG_PRINT(BMD_DEBUG_GDB);
 }
 
-void debug_target(const char *const format, ...)
+void debug_target(const debug_str_t format, ...)
 {
 	DEBUG_PRINT(BMD_DEBUG_TARGET);
 }
 
-void debug_protocol(const char *const format, ...)
+void debug_protocol(const debug_str_t format, ...)
 {
 	DEBUG_PRINT(BMD_DEBUG_PROTO);
 }
 
-void debug_probe(const char *const format, ...)
+void debug_probe(const debug_str_t format, ...)
 {
 	DEBUG_PRINT(BMD_DEBUG_PROBE);
 }
 
-void debug_wire(const char *const format, ...)
+void debug_wire(const debug_str_t format, ...)
 {
 	DEBUG_PRINT(BMD_DEBUG_WIRE);
 }
