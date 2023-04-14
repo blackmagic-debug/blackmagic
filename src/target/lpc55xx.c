@@ -37,6 +37,15 @@
 #include "target_internal.h"
 #include "cortexm.h"
 
+/*
+ * For detailed documentation on how this code works and the IAP variant used here, see:
+ * https://www.nxp.com/docs/en/data-sheet/LPC55S0x_LPC550x_DS.pdf
+ * https://www.nxp.com/docs/en/nxp/data-sheets/LPC55S1x_LPC551x_DS.pdf
+ * and (behind their login wall):
+ * https://cache.nxp.com/secured/assets/documents/en/nxp/user-guides/UM11424.pdf?fileExt=.pdf
+ * https://cache.nxp.com/secured/assets/documents/en/nxp/user-guides/UM11295.pdf?fileExt=.pdf
+ */
+
 #define LPC55_DMAP_IDR                 0x002a0000U
 #define LPC55_DMAP_BULK_ERASE          0x02U
 #define LPC55_DMAP_START_DEBUG_SESSION 0x07U
