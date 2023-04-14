@@ -705,20 +705,13 @@ static bool renesas_rv40_flash_write(target_flash_s *f, target_addr_t dest, cons
 {
 	target_s *t = f->t;
 
-	/* code flash or data flash operation */
-	const bool code_flash = dest < RENESAS_CF_END;
+	/* write size for code flash / data flash */
+	const uint8_t write_size = f->writesize;
 	bool option_flash = false;
 
 	if (renesas_check_option_setting(t, dest)) {
 		option_flash = true;
 	}
-
-	/* write size for code flash / data flash */
-	uint8_t write_size = code_flash ? RV40_CF_WRITE_SIZE : RV40_DF_WRITE_SIZE;
-
-	/* Option-Setting write size is different to CF and DF memory */
-	if (option_flash)
-		write_size = RV40_OF_WRITE_SIZE;
 
 	while (len) {
 		/* set block start address */
