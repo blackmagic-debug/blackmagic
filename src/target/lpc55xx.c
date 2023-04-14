@@ -487,8 +487,10 @@ static target_flash_s *lpc55xx_add_flash(target_s *target)
 
 	lpc55xx_flash_config_s config;
 
-	if (!lpc55xx_flash_init(target, &config))
+	if (!lpc55xx_flash_init(target, &config)) {
+		free(flash);
 		return NULL;
+	}
 
 	DEBUG_INFO("LPC55xx: Detected flash with %" PRIu32 " bytes, %" PRIu32 "-byte pages\n", config.flash_total_size,
 		config.flash_page_size);

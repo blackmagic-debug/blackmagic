@@ -422,11 +422,11 @@ int cl_execute(bmda_cli_options_s *opt)
 
 	int res = 0;
 	if (opt->opt_scanmode == BMP_SCAN_JTAG)
-		num_targets = platform_jtag_scan(NULL);
+		num_targets = platform_jtag_scan(NULL, 0);
 	else if (opt->opt_scanmode == BMP_SCAN_SWD)
 		num_targets = platform_adiv5_swdp_scan(opt->opt_targetid);
 	else {
-		num_targets = platform_jtag_scan(NULL);
+		num_targets = platform_jtag_scan(NULL, 0);
 		if (num_targets > 0)
 			goto found_targets;
 		DEBUG_INFO("JTAG scan found no devices, trying SWD.\n");
@@ -550,16 +550,16 @@ found_targets:
 	else if (opt->opt_mode == BMP_MODE_FLASH_ERASE) {
 		DEBUG_INFO("Erase %zu bytes at 0x%08" PRIx32 "\n", opt->opt_flash_size, opt->opt_flash_start);
 		if (!target_flash_erase(t, opt->opt_flash_start, opt->opt_flash_size)) {
-			DEBUG_WARN("Erasure failed!\n");
+			DEBUG_WARN("Flash erase failed!\n");
 			res = -1;
 			goto free_map;
 		}
 		target_reset(t);
 	} else if (opt->opt_mode == BMP_MODE_FLASH_WRITE || opt->opt_mode == BMP_MODE_FLASH_WRITE_VERIFY) {
-		DEBUG_INFO("Erasing  %zu bytes at 0x%08" PRIx32 "\n", map.size, opt->opt_flash_start);
+		DEBUG_INFO("Erasing %zu bytes at 0x%08" PRIx32 "\n", map.size, opt->opt_flash_start);
 		const uint32_t start_time = platform_time_ms();
 		if (!target_flash_erase(t, opt->opt_flash_start, map.size)) {
-			DEBUG_WARN("Erasure failed!\n");
+			DEBUG_WARN("Flash erase failed!\n");
 			res = -1;
 			goto free_map;
 		}

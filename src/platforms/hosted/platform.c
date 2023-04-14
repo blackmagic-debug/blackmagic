@@ -29,6 +29,7 @@
 #include "timing.h"
 #include "cli.h"
 #include "gdb_if.h"
+#include "gdb_packet.h"
 #include <signal.h>
 
 #ifdef ENABLE_RTT
@@ -149,7 +150,7 @@ uint32_t platform_adiv5_swdp_scan(uint32_t targetid)
 		break;
 
 	case BMP_TYPE_STLINKV2:
-		return stlink_swdp_scan(&info);
+		return stlink_swdp_scan();
 
 	case BMP_TYPE_JLINK:
 		return jlink_swdp_scan(&info);
@@ -186,7 +187,7 @@ void platform_add_jtag_dev(uint32_t i, const jtag_dev_s *jtag_dev)
 		remote_add_jtag_dev(i, jtag_dev);
 }
 
-uint32_t platform_jtag_scan(const uint8_t *lrlens)
+uint32_t platform_jtag_scan(const uint8_t *ir_lengths, const size_t lengths_count)
 {
 	info.is_jtag = true;
 
@@ -197,10 +198,12 @@ uint32_t platform_jtag_scan(const uint8_t *lrlens)
 	case BMP_TYPE_LIBFTDI:
 	case BMP_TYPE_JLINK:
 	case BMP_TYPE_CMSIS_DAP:
-		return jtag_scan(lrlens);
+		return jtag_scan(ir_lengths, lengths_count);
 
 	case BMP_TYPE_STLINKV2:
-		return jtag_scan_stlinkv2(&info, lrlens);
+		if (lengths_count)
+			gdb_outf("Manually specified IR lengths is not supported when using a ST-Link adaptor\n");
+		return jtag_scan_stlinkv2();
 
 	default:
 		return 0;

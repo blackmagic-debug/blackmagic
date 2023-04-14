@@ -102,8 +102,8 @@ bool ftdi_jtag_init(void)
 	ftdi_jtag_drain_potential_garbage();
 
 	/* Ensure we're in JTAG mode */
-	for (size_t i = 0; i < 50U; ++i)
-		ftdi_jtag_next(true, false); /* 50 idle cycles for SWD reset */
+	for (size_t i = 0; i <= 50U; ++i)
+		ftdi_jtag_next(true, false); /* 50 + 1 idle cycles for SWD reset */
 	ftdi_jtag_tms_seq(0xe73cU, 16U); /* SWD to JTAG sequence */
 	return true;
 }

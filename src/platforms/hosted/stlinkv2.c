@@ -438,19 +438,19 @@ static void stlink_version(bmp_info_s *info)
 	DEBUG_INFO("\n");
 }
 
-static bool stlink_leave_state(bmp_info_s *info)
+static bool stlink_leave_state(void)
 {
 	uint8_t cmd[16];
 	uint8_t data[2];
 	memset(cmd, 0, sizeof(cmd));
 	cmd[0] = STLINK_GET_CURRENT_MODE;
-	send_recv(info->usb_link, cmd, 16, data, 2);
+	send_recv(info.usb_link, cmd, 16, data, 2);
 	if (data[0] == STLINK_DEV_DFU_MODE) {
 		DEBUG_INFO("Leaving DFU Mode\n");
 		memset(cmd, 0, sizeof(cmd));
 		cmd[0] = STLINK_DFU_COMMAND;
 		cmd[1] = STLINK_DFU_EXIT;
-		send_recv(info->usb_link, cmd, 16, NULL, 0);
+		send_recv(info.usb_link, cmd, 16, NULL, 0);
 		return true;
 	}
 	if (data[0] == STLINK_DEV_SWIM_MODE) {
@@ -458,13 +458,13 @@ static bool stlink_leave_state(bmp_info_s *info)
 		memset(cmd, 0, sizeof(cmd));
 		cmd[0] = STLINK_SWIM_COMMAND;
 		cmd[1] = STLINK_SWIM_EXIT;
-		send_recv(info->usb_link, cmd, 16, NULL, 0);
+		send_recv(info.usb_link, cmd, 16, NULL, 0);
 	} else if (data[0] == STLINK_DEV_DEBUG_MODE) {
 		DEBUG_INFO("Leaving DEBUG Mode\n");
 		memset(cmd, 0, sizeof(cmd));
 		cmd[0] = STLINK_DEBUG_COMMAND;
 		cmd[1] = STLINK_DEBUG_EXIT;
-		send_recv(info->usb_link, cmd, 16, NULL, 0);
+		send_recv(info.usb_link, cmd, 16, NULL, 0);
 	} else if (data[0] == STLINK_DEV_BOOTLOADER_MODE)
 		DEBUG_INFO("Leaving BOOTLOADER Mode\n");
 	else if (data[0] == STLINK_DEV_MASS_MODE)
@@ -623,7 +623,7 @@ int stlink_init(bmp_info_s *info)
 		DEBUG_WARN("Please update the firmware on your ST-Link\n");
 		return -1;
 	}
-	if (stlink_leave_state(info)) {
+	if (stlink_leave_state()) {
 		DEBUG_WARN("ST-Link board was in DFU mode. Restart\n");
 		return -1;
 	}
@@ -654,16 +654,16 @@ int stlink_hwversion(void)
 	return stlink.ver_stlink;
 }
 
-static int stlink_enter_debug_jtag(bmp_info_s *info)
+static int stlink_enter_debug_jtag(void)
 {
-	stlink_leave_state(info);
+	stlink_leave_state();
 	uint8_t cmd[16];
 	uint8_t data[2];
 	memset(cmd, 0, sizeof(cmd));
 	cmd[0] = STLINK_DEBUG_COMMAND;
 	cmd[1] = STLINK_DEBUG_APIV2_ENTER;
 	cmd[2] = STLINK_DEBUG_ENTER_JTAG_NO_RESET;
-	send_recv(info->usb_link, cmd, 16, data, 2);
+	send_recv(info.usb_link, cmd, 16, data, 2);
 	return stlink_usb_error_check(data, true);
 }
 
@@ -677,14 +677,14 @@ static int stlink_enter_debug_jtag(bmp_info_s *info)
 // 	return id;
 // }
 
-static size_t stlink_read_idcodes(bmp_info_s *info, uint32_t *idcodes)
+static size_t stlink_read_idcodes(uint32_t *idcodes)
 {
 	uint8_t cmd[16];
 	uint8_t data[12];
 	memset(cmd, 0, sizeof(cmd));
 	cmd[0] = STLINK_DEBUG_COMMAND;
 	cmd[1] = STLINK_DEBUG_APIV2_READ_IDCODES;
-	send_recv(info->usb_link, cmd, 16, data, 12);
+	send_recv(info.usb_link, cmd, 16, data, 12);
 	if (stlink_usb_error_check(data, true))
 		return 0;
 	idcodes[0] = data[4] | (data[5] << 8U) | (data[6] << 16U) | (data[7] << 24U);
@@ -1023,20 +1023,20 @@ static uint32_t stlink_ap_read(adiv5_access_port_s *ap, uint16_t addr)
 	return ret;
 }
 
-uint32_t jtag_scan_stlinkv2(bmp_info_s *info, const uint8_t *irlens)
+uint32_t jtag_scan_stlinkv2(void)
 {
-	uint32_t idcodes[JTAG_MAX_DEVS + 1U];
-	(void)*irlens;
+	uint32_t idcodes[JTAG_MAX_DEVS];
 	target_list_free();
 
 	jtag_dev_count = 0;
 	memset(jtag_devs, 0, sizeof(jtag_devs));
-	if (stlink_enter_debug_jtag(info))
+	if (stlink_enter_debug_jtag())
 		return 0;
-	jtag_dev_count = stlink_read_idcodes(info, idcodes);
+	jtag_dev_count = stlink_read_idcodes(idcodes);
 	/* Check for known devices and handle accordingly */
 	for (uint32_t i = 0; i < jtag_dev_count; ++i)
 		jtag_devs[i].jd_idcode = idcodes[i];
+
 	for (uint32_t i = 0; i < jtag_dev_count; ++i) {
 		for (size_t j = 0; dev_descr[j].idcode; ++j) {
 			if ((jtag_devs[i].jd_idcode & dev_descr[j].idmask) == dev_descr[j].idcode) {
@@ -1046,7 +1046,6 @@ uint32_t jtag_scan_stlinkv2(bmp_info_s *info, const uint8_t *irlens)
 			}
 		}
 	}
-
 	return jtag_dev_count;
 }
 
@@ -1070,11 +1069,11 @@ void stlink_adiv5_dp_defaults(adiv5_debug_port_s *dp)
 	dp->mem_write = stlink_mem_write;
 }
 
-uint32_t stlink_swdp_scan(bmp_info_s *info)
+uint32_t stlink_swdp_scan(void)
 {
 	target_list_free();
 
-	stlink_leave_state(info);
+	stlink_leave_state();
 
 	uint8_t cmd[16];
 	uint8_t data[2];
