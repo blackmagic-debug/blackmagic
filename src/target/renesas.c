@@ -657,8 +657,13 @@ static bool renesas_rv40_flash_erase(target_flash_s *f, target_addr_t addr, size
 {
 	target_s *t = f->t;
 
+	uint16_t block_size;
+
 	/* code flash or data flash operation */
-	const bool code_flash = addr < RENESAS_CF_END;
+	if (addr < RENESAS_CF_END)
+		block_size = addr < RV40_CF_REGION0_SIZE ? RV40_CF_REGION0_BLOCK_SIZE : RV40_CF_REGION1_BLOCK_SIZE;
+	else
+		block_size = f->blocksize;
 
 	/* Set Erasure Priority Mode */
 	target_mem_write16(t, RV40_FCPSR, RV40_FCPSR_ESUSPMD);
@@ -668,12 +673,6 @@ static bool renesas_rv40_flash_erase(target_flash_s *f, target_addr_t addr, size
 		target_mem_write32(t, RV40_FSADDR, addr);
 
 		/* increment block address */
-		uint16_t block_size;
-		if (code_flash)
-			block_size = addr < RV40_CF_REGION0_SIZE ? RV40_CF_REGION0_BLOCK_SIZE : RV40_CF_REGION1_BLOCK_SIZE;
-		else
-			block_size = RV40_DF_BLOCK_SIZE;
-
 		addr += block_size;
 		len -= block_size;
 
