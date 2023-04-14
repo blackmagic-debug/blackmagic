@@ -89,7 +89,7 @@ typedef enum {
 	PNR_SERIES_RA6E2 = PNR_SERIES('A', '6', 'E', '2'),
 	PNR_SERIES_RA6T1 = PNR_SERIES('A', '6', 'T', '1'),
 	PNR_SERIES_RA6T2 = PNR_SERIES('A', '6', 'T', '2'),
-} pnr_series_t;
+} renesas_pnr_series_e;
 
 /* Code flash memory size */
 #define PNR_MEMSIZE_INDEX 8U
@@ -106,7 +106,7 @@ typedef enum {
 	PNR_MEMSIZE_1MB = 'F',
 	PNR_MEMSIZE_1_5MB = 'G',
 	PNR_MEMSIZE_2MB = 'H',
-} pnr_memsize_t;
+} renesas_pnr_memsize_e;
 
 /* For future reference, if we want to add an info command
  *
@@ -289,17 +289,17 @@ const command_s renesas_cmd_list[] = {
 
 typedef struct renesas_priv {
 	uint8_t pnr[17]; /* 16-byte PNR + 1-byte null termination */
-	pnr_series_t series;
-	uint32_t flash_root_table; /* if applicable */
+	renesas_pnr_series_e series;
+	target_addr_t flash_root_table; /* if applicable */
 } renesas_priv_s;
 
-static uint32_t renesas_fmifrt_read(target_s *t)
+static target_addr_t renesas_fmifrt_read(target_s *t)
 {
 	/* Read Flash Root Table base address  */
 	return target_mem_read32(t, RENESAS_FMIFRT);
 }
 
-static void renesas_uid_read(target_s *const t, const uint32_t base, uint8_t *const uid)
+static void renesas_uid_read(target_s *const t, const target_addr_t base, uint8_t *const uid)
 {
 	/* Register should be read in 32b units */
 	uint32_t uidr[4];
@@ -311,7 +311,7 @@ static void renesas_uid_read(target_s *const t, const uint32_t base, uint8_t *co
 		uid[i] = uidr[i / 4U] >> (i & 3U) * 8U; /* & 3U == % 4U */
 }
 
-static bool renesas_pnr_read(target_s *const t, const uint32_t base, uint8_t *const pnr)
+static bool renesas_pnr_read(target_s *const t, const target_addr_t base, uint8_t *const pnr)
 {
 	/* Register should be read in 32b units */
 	uint32_t pnrr[4];
@@ -334,13 +334,13 @@ static bool renesas_pnr_read(target_s *const t, const uint32_t base, uint8_t *co
 	return pnr[0] == 'R' && pnr[1] == '7';
 }
 
-static pnr_series_t renesas_series(const uint8_t *const pnr)
+static renesas_pnr_series_e renesas_series(const uint8_t *const pnr)
 {
 	uint32_t series = 0;
 	for (size_t i = 0; i < 4U; i++)
 		series = (series << 8U) | pnr[PNR_FAMILY_INDEX + i];
 
-	return (pnr_series_t)series;
+	return (renesas_pnr_series_e)series;
 }
 
 static uint32_t renesas_flash_size(const uint8_t *const pnr)
@@ -702,7 +702,7 @@ static void renesas_add_flash(target_s *t, target_addr_t addr, size_t length)
 bool renesas_probe(target_s *t)
 {
 	uint8_t pnr[16]; /* 16-byte PNR */
-	uint32_t flash_root_table = 0;
+	target_addr_t flash_root_table = 0;
 
 	/* Enable debug */
 	/* a read back doesn't seem to show the change, tried 32-bit write too */
@@ -904,7 +904,7 @@ static bool renesas_uid(target_s *t, int argc, const char **argv)
 		return false;
 
 	uint8_t uid[16];
-	uint32_t uid_addr;
+	target_addr_t uid_addr;
 
 	switch (priv_storage->series) {
 	case PNR_SERIES_RA2L1:
