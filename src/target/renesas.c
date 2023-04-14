@@ -801,11 +801,11 @@ static void renesas_add_flash(target_s *t, target_addr_t addr, size_t length)
 
 	switch (priv_storage->details.flash_type) {
 	case FLASH_MF3:
-		DEBUG_WARN("Found renesas chip with Flash type MF3 type, not implemented\n");
+		DEBUG_WARN("Found renesas chip with Flash type MF3, not implemented\n");
 		return;
 
 	case FLASH_MF4:
-		DEBUG_WARN("Found renesas chip with Flash type MF4 type, not implemented\n");
+		DEBUG_WARN("Found renesas chip with Flash type MF4, not implemented\n");
 		return;
 
 	case FLASH_RV40:
