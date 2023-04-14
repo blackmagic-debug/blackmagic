@@ -69,16 +69,16 @@
 #define LPC5502_CHIPID  0xa1003702U // UM11424
 #define LPC5504_CHIPID  0xa1001504U // UM11424
 #define LPC5506_CHIPID  0xa1000406U // UM11424
-#define LPC5512_CHIPID              // (unknown)
-#define LPC5514_CHIPID              // (unknown)
-#define LPC5516_CHIPID              // (unknown)
+#define LPC5512_CHIPID  0xa100370cU // UM11295
+#define LPC5514_CHIPID  0xa100150eU // UM11295
+#define LPC5516_CHIPID  0xa1000410U // UM11295
 #define LPC5524_CHIPID              // (unknown)
 #define LPC5526_CHIPID  0xa010221aU // NXP forum
 #define LPC5528_CHIPID  0xa010111cU // NXP forum
 #define LPC55S04_CHIPID 0x51001584U // UM11424
 #define LPC55S06_CHIPID 0x51000486U // UM11424
-#define LPC55S14_CHIPID             // (unknown)
-#define LPC55S16_CHIPID             // (unknown)
+#define LPC55S14_CHIPID 0x5100158eU // UM11295
+#define LPC55S16_CHIPID 0x51000490U // UM11295
 #define LPC55S26_CHIPID 0xa010229aU // NXP forum
 #define LPC55S28_CHIPID 0xa010119cU // NXP forum
 #define LPC55S66_CHIPID             // (unknown)
