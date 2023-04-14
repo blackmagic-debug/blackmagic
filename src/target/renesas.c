@@ -134,16 +134,17 @@ typedef struct renesas_ra_family {
 	renesas_ra_family_details_s details;
 } renesas_ra_family_s;
 
-typedef struct renesas_option_setting_range {
-	uint32_t addr;
-	uint8_t size;
-} renesas_option_setting_range_s;
+typedef struct renesas_restricted_setting {
+	uint32_t addr_start;
+	uint32_t addr_end;
+} renesas_restricted_setting_s;
 
-typedef struct {
-	pnr_series_t series;
-	renesas_option_setting_range_s rw_registers[9];  /* 9 is maximum registers across all RA MCU series */
-	renesas_option_setting_range_s opt_registers[5]; /* 5 is maximum registers across all RA MCU series */
-} renesas_option_setting_s;
+/* For details please check https://github.com/blackmagic-debug/blackmagic/pull/1450#issuecomment-1508416224 */
+renesas_restricted_setting_s renesas_restricted_setting[] = {
+	{0x0100a130, 0x0100a168},
+	{0x0100a1c0, 0x0100a1e4},
+	{0x0100a240, 0x0100a264},
+};
 
 renesas_ra_family_s renesas_ra_family[] = {
 	{PNR_SERIES_RA2L1,
@@ -657,10 +658,6 @@ static bool renesas_check_option_setting(target_s *t, target_addr_t addr)
 static bool renesas_rv40_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
 	target_s *t = f->t;
-
-	renesas_priv_s *priv_storage = (renesas_priv_s *)t->target_storage;
-	if (!priv_storage)
-		return false;
 
 	/* code flash or data flash operation */
 	const bool code_flash = addr < RENESAS_CF_END;
