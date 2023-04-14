@@ -92,22 +92,23 @@ typedef enum {
 } pnr_series_t;
 
 typedef enum {
-	FLASH_MF3,
-	FLASH_MF4,
-	FLASH_RV40,
-} renesas_ra_flash_type_t;
+	RENESAS_FLASH_MF3,
+	RENESAS_FLASH_MF4,
+	RENESAS_FLASH_RV40,
+} renesas_flash_type_e;
 
 typedef enum {
-	PNR_FL1,
-	PNR_FL2,
-	PNR_FRT,
-} renesas_ra_pnr_location;
+	RENESAS_LOCATION_FIXED1,
+	RENESAS_LOCATION_FIXED2,
+	RENESAS_LOCATION_FRT,
+} renesas_pnr_location_e;
 
-typedef struct renesas_ra_family_details {
+typedef struct renesas_family {
+	pnr_series_t series;
 	uint32_t option_start;
-	uint32_t option_size;
+	uint16_t option_size;
 	uint32_t option_start_2;
-	uint32_t option_size_2;
+	uint16_t option_size_2;
 	uint32_t data_flash_start;
 	uint32_t data_flash_end;
 	uint32_t factory_flash_start;
@@ -120,14 +121,9 @@ typedef struct renesas_ra_family_details {
 	uint32_t sram1_end;
 	uint32_t stdby_sram_start;
 	uint32_t stdby_sram_end;
-	renesas_ra_flash_type_t flash_type;
-	renesas_ra_pnr_location pnr_location;
-} renesas_ra_family_details_s;
-
-typedef struct renesas_ra_family {
-	pnr_series_t series;
-	renesas_ra_family_details_s details;
-} renesas_ra_family_s;
+	renesas_flash_type_e flash_type;
+	renesas_pnr_location_e pnr_location;
+} renesas_family_s;
 
 typedef struct renesas_restricted_setting {
 	uint32_t addr_start;
@@ -141,74 +137,54 @@ renesas_restricted_setting_s renesas_restricted_setting[] = {
 	{0x0100a240, 0x0100a264},
 };
 
-renesas_ra_family_s renesas_ra_family[] = {
-	{PNR_SERIES_RA2L1,
-		{0x01010010, 36, 0, 0, 0x40100000, 0x40102000, 0, 0, 0, 0, 0x20000000, 0x20008000, 0, 0, 0, 0, FLASH_MF4,
-			PNR_FL1}},
-	{PNR_SERIES_RA2E1,
-		{0x01010010, 36, 0, 0, 0x40100000, 0x40101000, 0, 0, 0, 0, 0x20004000, 0x20008000, 0, 0, 0, 0, FLASH_MF4,
-			PNR_FL1}},
-	{PNR_SERIES_RA2E2,
-		{0x01010010, 36, 0, 0, 0x40100000, 0x40100800, 0, 0, 0, 0, 0x20004000, 0x20006000, 0, 0, 0, 0, FLASH_MF4,
-			PNR_FL1}},
-	{PNR_SERIES_RA2A1,
-		{0x01010008, 44, 0, 0, 0x40100000, 0x40102000, 0, 0, 0, 0, 0x20000000, 0x20008000, 0, 0, 0, 0, FLASH_MF3,
-			PNR_FRT}},
-	{PNR_SERIES_RA4M1,
-		{0x01010008, 44, 0, 0, 0x40100000, 0x40102000, 0, 0, 0, 0, 0x20000000, 0x20008000, 0, 0, 0, 0, FLASH_MF3,
-			PNR_FRT}},
-	{PNR_SERIES_RA4M2,
-		{0x0100a100, 512, 0, 0, 0x08000000, 0x08002000, 0x010080f0, 196, 0, 0, 0x20000000, 0x20020000, 0, 0, 0x28000000,
-			0x28000400, FLASH_RV40, PNR_FL2}},
-	{PNR_SERIES_RA4M3,
-		{0x0100a100, 512, 0, 0, 0x08000000, 0x08002000, 0x010080f0, 196, 0, 0, 0x20000000, 0x20020000, 0, 0, 0x28000000,
-			0x28000400, FLASH_RV40, PNR_FL2}},
-	{PNR_SERIES_RA4E1,
-		{0x0100a100, 512, 0, 0, 0x08000000, 0x08002000, 0x010080f0, 196, 0, 0, 0x20000000, 0x20020000, 0, 0, 0x28000000,
-			0x28000400, FLASH_RV40, PNR_FL2}},
-	{PNR_SERIES_RA4E2,
-		{0x0100a100, 512, 0, 0, 0x08000000, 0x08001000, 0x010080f0, 196, 0, 0, 0x20000000, 0x2000a000, 0, 0, 0x28000000,
-			0x28000400, FLASH_RV40, PNR_FL2}},
-	{PNR_SERIES_RA4W1,
-		{0x01010008, 44, 0, 0, 0x40100000, 0x40102000, 0, 0, 0, 0, 0x20000000, 0x20018000, 0, 0, 0, 0, FLASH_MF3,
-			PNR_FRT}},
-	{PNR_SERIES_RA6M1,
-		{0x01007000, 4096, 0x0100a150, 24, 0x40100000, 0x40102000, 0, 0, 0x1ffe0000, 0x20000000, 0x20000000, 0x20020000,
-			0, 0, 0x200fe000, 0x20100000, FLASH_RV40, PNR_FRT}},
-	{PNR_SERIES_RA6M2,
-		{0x01007000, 4096, 0x0100a150, 24, 0x40100000, 0x40108000, 0, 0, 0x1ffe0000, 0x20000000, 0x20000000, 0x20040000,
-			0, 0, 0x200fe000, 0x20100000, FLASH_RV40, PNR_FRT}},
-	{PNR_SERIES_RA6M3,
-		{0x01007000, 4096, 0x0100a150, 24, 0x40100000, 0x40110000, 0, 0, 0x1ffe0000, 0x20000000, 0x20000000, 0x20040000,
-			0x20040000, 0x20080000, 0x200fe000, 0x20100000, FLASH_RV40, PNR_FRT}},
-	{PNR_SERIES_RA6M4,
-		{0x0100a100, 512, 0, 0, 0x08000000, 0x08002000, 0x010080f0, 196, 0, 0, 0x20000000, 0x20040000, 0, 0, 0x28000000,
-			0x28000400, FLASH_RV40, PNR_FL2}},
-	{PNR_SERIES_RA6M5,
-		{0x0100a100, 512, 0, 0, 0x08000000, 0x08002000, 0x010080f0, 196, 0, 0, 0x20000000, 0x20080000, 0, 0, 0x28000000,
-			0x28000400, FLASH_RV40, PNR_FL2}},
-	{PNR_SERIES_RA6E1,
-		{0x0100a100, 512, 0, 0, 0x08000000, 0x08002000, 0x010080f0, 196, 0, 0, 0x20000000, 0x20040000, 0, 0, 0x28000000,
-			0x28000400, FLASH_RV40, PNR_FL2}},
-	{PNR_SERIES_RA6E2,
-		{0x0100a100, 512, 0, 0, 0x08000000, 0x08001000, 0x010080f0, 196, 0, 0, 0x20000000, 0x2000a000, 0, 0, 0x28000000,
-			0x28000400, FLASH_RV40, PNR_FL2}},
-	{PNR_SERIES_RA6T1,
-		{0x01007000, 4096, 0x0100a150, 24, 0x40100000, 0x40102000, 0, 0, 0x1ffe0000, 0x1fff0000, 0, 0, 0, 0, 0, 0,
-			FLASH_RV40, PNR_FRT}},
-	{PNR_SERIES_RA6T2,
-		{0x0100a100, 512, 0, 0, 0x08000000, 0x08004000, 0x010080f0, 196, 0, 0, 0x20000000, 0x20010000, 0, 0, 0x28000000,
-			0x28000400, FLASH_RV40, PNR_FL2}},
+renesas_family_s renesas_family[] = {
+	{PNR_SERIES_RA2L1, 0x01010010, 36, 0, 0, 0x40100000, 0x40102000, 0, 0, 0, 0, 0x20000000, 0x20008000, 0, 0, 0, 0,
+		RENESAS_FLASH_MF4, RENESAS_LOCATION_FIXED1},
+	{PNR_SERIES_RA2E1, 0x01010010, 36, 0, 0, 0x40100000, 0x40101000, 0, 0, 0, 0, 0x20004000, 0x20008000, 0, 0, 0, 0,
+		RENESAS_FLASH_MF4, RENESAS_LOCATION_FIXED1},
+	{PNR_SERIES_RA2E2, 0x01010010, 36, 0, 0, 0x40100000, 0x40100800, 0, 0, 0, 0, 0x20004000, 0x20006000, 0, 0, 0, 0,
+		RENESAS_FLASH_MF4, RENESAS_LOCATION_FIXED1},
+	{PNR_SERIES_RA2A1, 0x01010008, 44, 0, 0, 0x40100000, 0x40102000, 0, 0, 0, 0, 0x20000000, 0x20008000, 0, 0, 0, 0,
+		RENESAS_FLASH_MF3, RENESAS_LOCATION_FRT},
+	{PNR_SERIES_RA4M1, 0x01010008, 44, 0, 0, 0x40100000, 0x40102000, 0, 0, 0, 0, 0x20000000, 0x20008000, 0, 0, 0, 0,
+		RENESAS_FLASH_MF3, RENESAS_LOCATION_FRT},
+	{PNR_SERIES_RA4M2, 0x0100a100, 512, 0, 0, 0x08000000, 0x08002000, 0x010080f0, 196, 0, 0, 0x20000000, 0x20020000, 0,
+		0, 0x28000000, 0x28000400, RENESAS_FLASH_RV40, RENESAS_LOCATION_FIXED2},
+	{PNR_SERIES_RA4M3, 0x0100a100, 512, 0, 0, 0x08000000, 0x08002000, 0x010080f0, 196, 0, 0, 0x20000000, 0x20020000, 0,
+		0, 0x28000000, 0x28000400, RENESAS_FLASH_RV40, RENESAS_LOCATION_FIXED2},
+	{PNR_SERIES_RA4E1, 0x0100a100, 512, 0, 0, 0x08000000, 0x08002000, 0x010080f0, 196, 0, 0, 0x20000000, 0x20020000, 0,
+		0, 0x28000000, 0x28000400, RENESAS_FLASH_RV40, RENESAS_LOCATION_FIXED2},
+	{PNR_SERIES_RA4E2, 0x0100a100, 512, 0, 0, 0x08000000, 0x08001000, 0x010080f0, 196, 0, 0, 0x20000000, 0x2000a000, 0,
+		0, 0x28000000, 0x28000400, RENESAS_FLASH_RV40, RENESAS_LOCATION_FIXED2},
+	{PNR_SERIES_RA4W1, 0x01010008, 44, 0, 0, 0x40100000, 0x40102000, 0, 0, 0, 0, 0x20000000, 0x20018000, 0, 0, 0, 0,
+		RENESAS_FLASH_MF3, RENESAS_LOCATION_FRT},
+	{PNR_SERIES_RA6M1, 0x01007000, 4096, 0x0100a150, 24, 0x40100000, 0x40102000, 0, 0, 0x1ffe0000, 0x20000000,
+		0x20000000, 0x20020000, 0, 0, 0x200fe000, 0x20100000, RENESAS_FLASH_RV40, RENESAS_LOCATION_FRT},
+	{PNR_SERIES_RA6M2, 0x01007000, 4096, 0x0100a150, 24, 0x40100000, 0x40108000, 0, 0, 0x1ffe0000, 0x20000000,
+		0x20000000, 0x20040000, 0, 0, 0x200fe000, 0x20100000, RENESAS_FLASH_RV40, RENESAS_LOCATION_FRT},
+	{PNR_SERIES_RA6M3, 0x01007000, 4096, 0x0100a150, 24, 0x40100000, 0x40110000, 0, 0, 0x1ffe0000, 0x20000000,
+		0x20000000, 0x20040000, 0x20040000, 0x20080000, 0x200fe000, 0x20100000, RENESAS_FLASH_RV40,
+		RENESAS_LOCATION_FRT},
+	{PNR_SERIES_RA6M4, 0x0100a100, 512, 0, 0, 0x08000000, 0x08002000, 0x010080f0, 196, 0, 0, 0x20000000, 0x20040000, 0,
+		0, 0x28000000, 0x28000400, RENESAS_FLASH_RV40, RENESAS_LOCATION_FIXED2},
+	{PNR_SERIES_RA6M5, 0x0100a100, 512, 0, 0, 0x08000000, 0x08002000, 0x010080f0, 196, 0, 0, 0x20000000, 0x20080000, 0,
+		0, 0x28000000, 0x28000400, RENESAS_FLASH_RV40, RENESAS_LOCATION_FIXED2},
+	{PNR_SERIES_RA6E1, 0x0100a100, 512, 0, 0, 0x08000000, 0x08002000, 0x010080f0, 196, 0, 0, 0x20000000, 0x20040000, 0,
+		0, 0x28000000, 0x28000400, RENESAS_FLASH_RV40, RENESAS_LOCATION_FIXED2},
+	{PNR_SERIES_RA6E2, 0x0100a100, 512, 0, 0, 0x08000000, 0x08001000, 0x010080f0, 196, 0, 0, 0x20000000, 0x2000a000, 0,
+		0, 0x28000000, 0x28000400, RENESAS_FLASH_RV40, RENESAS_LOCATION_FIXED2},
+	{PNR_SERIES_RA6T1, 0x01007000, 4096, 0x0100a150, 24, 0x40100000, 0x40102000, 0, 0, 0x1ffe0000, 0x1fff0000, 0, 0, 0,
+		0, 0, 0, RENESAS_FLASH_RV40, RENESAS_LOCATION_FRT},
+	{PNR_SERIES_RA6T2, 0x0100a100, 512, 0, 0, 0x08000000, 0x08004000, 0x010080f0, 196, 0, 0, 0x20000000, 0x20010000, 0,
+		0, 0x28000000, 0x28000400, RENESAS_FLASH_RV40, RENESAS_LOCATION_FIXED2},
 };
 
-renesas_ra_family_details_s renesas_ra_family_lookup(pnr_series_t series)
+renesas_family_s renesas_family_lookup(pnr_series_t series)
 {
-	renesas_ra_family_details_s details = {};
-	for (uint32_t i = 0U; i < sizeof(renesas_ra_family) / 19; i++) {
-		if (renesas_ra_family[i].series == series) {
-			return renesas_ra_family[i].details;
-		}
-	}
+	renesas_family_s details = {};
+	for (size_t i = 0; i < ARRAY_LENGTH(renesas_family); ++i)
+		if (renesas_family[i].series == series)
+			return renesas_family[i];
 	return details;
 }
 
@@ -413,7 +389,7 @@ typedef struct renesas_priv {
 	uint8_t pnr[17]; /* 16-byte PNR + 1-byte null termination */
 	pnr_series_t series;
 	uint32_t flash_root_table; /* if applicable */
-	renesas_ra_family_details_s details;
+	renesas_family_s details;
 } renesas_priv_s;
 
 static uint32_t renesas_fmifrt_read(target_s *t)
@@ -805,15 +781,12 @@ static void renesas_add_flash(target_s *t, target_addr_t addr, size_t length)
 		return;
 
 	switch (priv_storage->details.flash_type) {
-	case FLASH_MF3:
-		DEBUG_WARN("Found renesas chip with Flash type MF3, not implemented\n");
+	case RENESAS_FLASH_MF3:
+	case RENESAS_FLASH_MF4:
+		DEBUG_WARN("Found renesas chip with Flash type MF3/MF4, not implemented\n");
 		return;
 
-	case FLASH_MF4:
-		DEBUG_WARN("Found renesas chip with Flash type MF4, not implemented\n");
-		return;
-
-	case FLASH_RV40:
+	case RENESAS_FLASH_RV40:
 		t->enter_flash_mode = renesas_enter_flash_mode;
 		return renesas_add_rv40_flash(t, addr, length);
 
@@ -885,14 +858,14 @@ bool renesas_probe(target_s *t)
 		 */
 
 		if (renesas_pnr_read(t, RENESAS_FIXED2_PNR, pnr)) {
-			DEBUG_WARN("Found renesas chip (%.*s) with pnr location RENESAS_FIXED2_PNR and unsupported Part ID %" PRIx16
+			DEBUG_WARN("Found Renesas chip (%.*s) with pnr location RENESAS_FIXED2_PNR and unsupported Part ID %" PRIx16
 					   " please report it\n",
 				sizeof(pnr), pnr, t->part_id);
 			break;
 		}
 
 		if (renesas_pnr_read(t, RENESAS_FIXED1_PNR, pnr)) {
-			DEBUG_WARN("Found renesas chip (%.*s) with pnr location RENESAS_FIXED1_PNR and unsupported Part ID "
+			DEBUG_WARN("Found Renesas chip (%.*s) with pnr location RENESAS_FIXED1_PNR and unsupported Part ID "
 					   "0x%" PRIx16 " please report it\n",
 				sizeof(pnr), pnr, t->part_id);
 			break;
@@ -900,7 +873,7 @@ bool renesas_probe(target_s *t)
 
 		flash_root_table = renesas_fmifrt_read(t);
 		if (renesas_pnr_read(t, RENESAS_FMIFRT_PNR(flash_root_table), pnr)) {
-			DEBUG_WARN("Found renesas chip (%.*s) with Flash Root Table and unsupported Part ID 0x%" PRIx16 " "
+			DEBUG_WARN("Found Renesas chip (%.*s) with Flash Root Table and unsupported Part ID 0x%" PRIx16 " "
 					   "please report it\n",
 				sizeof(pnr), pnr, t->part_id);
 			break;
@@ -920,7 +893,14 @@ bool renesas_probe(target_s *t)
 	t->target_storage = (void *)priv_storage;
 	t->driver = (char *)priv_storage->pnr;
 
-	priv_storage->details = renesas_ra_family_lookup(priv_storage->series);
+	priv_storage->details = renesas_family_lookup(priv_storage->series);
+
+	if (priv_storage->details.series != priv_storage->series) {
+		DEBUG_WARN("Found Renesas chip (%.*s) with Part ID 0x%" PRIx16 ", but it's not mapped into BMP, please report "
+				   "it\n ",
+			sizeof(pnr), pnr, t->part_id);
+		return false;
+	}
 
 	/* Data flash */
 	if (priv_storage->details.data_flash_start != 0)
@@ -977,15 +957,15 @@ static bool renesas_uid(target_s *t, int argc, const char **argv)
 	uint32_t uid_addr;
 
 	switch (priv_storage->details.pnr_location) {
-	case PNR_FL1:
+	case RENESAS_LOCATION_FIXED1:
 		uid_addr = RENESAS_FIXED1_UID;
 		break;
 
-	case PNR_FL2:
+	case RENESAS_LOCATION_FIXED2:
 		uid_addr = RENESAS_FIXED2_UID;
 		break;
 
-	case PNR_FRT:
+	case RENESAS_LOCATION_FRT:
 		uid_addr = RENESAS_FMIFRT_UID(priv_storage->flash_root_table);
 		break;
 
