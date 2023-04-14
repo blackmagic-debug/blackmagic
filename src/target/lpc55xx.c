@@ -49,7 +49,6 @@
 #define LPC55xx_ERASE_SIZE 4096
 
 /* Target memory layout for IAP calls, we will scribble over SRAM */
-
 #define LPC55xx_FLASH_CONFIG_ADDRESS 0x04000000U
 #define LPC55xx_CODE_PATCH_ADDRESS   0x0400003cU
 #define LPC55xx_UUID_ADDRESS         0x04000040U
@@ -57,17 +56,16 @@
 #define LPC55xx_SCRATCH_MEMORY_LEN   0x40
 #define LPC55xx_UUID_LEN             0x10
 
-/* The ROM code seems to default to an MSP in the SRAM-X region, which
+/*
+ * The ROM code seems to default to an MSP in the SRAM-X region, which
  * is code-only. This seems fairly safe, so do the same for IAP calls.
  *
  * This may not matter as supposedly IAP doesn't use the stack (?)
  */
-
 #define LPC55xx_IAP_MSP_ADDRESS 0x04003000U
 #define LPC55xx_IAP_FREQ_IN_MHZ 96
 
 /* Device chip IDs */
-
 #define LPC5502_CHIPID  0xa1003702U // UM11424
 #define LPC5504_CHIPID  0xa1001504U // UM11424
 #define LPC5506_CHIPID  0xa1000406U // UM11424
@@ -87,7 +85,6 @@
 #define LPC55S69_CHIPID             // (unknown)
 
 /* The available IAP commands that we support, mostly flash access */
-
 typedef enum lpc55xx_iap_cmd {
 	IAP_CMD_FLASH_INIT,
 	IAP_CMD_FLASH_ERASE,
@@ -97,7 +94,6 @@ typedef enum lpc55xx_iap_cmd {
 } lpc55xx_iap_cmd_e;
 
 /* The possible IAP errors are documented here for easy reference */
-
 typedef enum lpc55xx_iap_status {
 	IAP_STATUS_FLASH_SUCCESS = 0,
 	IAP_STATUS_FLASH_INVALID_ARGUMENT = 4,
@@ -228,8 +224,7 @@ static target_addr_t lpc55xx_get_ffr_init_address(target_s *target)
 
 	if (lpc55xx_get_rom_api_version(target, bootloader_tree_address) == 0)
 		return target_mem_read32(target, flash_table_address + 7 * sizeof(uint32_t));
-	else
-		return target_mem_read32(target, flash_table_address + 10 * sizeof(uint32_t));
+	return target_mem_read32(target, flash_table_address + 10 * sizeof(uint32_t));
 }
 
 static target_addr_t lpc55xx_get_ffr_get_uuid_address(target_s *target)
@@ -239,14 +234,12 @@ static target_addr_t lpc55xx_get_ffr_get_uuid_address(target_s *target)
 
 	if (lpc55xx_get_rom_api_version(target, bootloader_tree_address) == 0)
 		return target_mem_read32(target, flash_table_address + 10 * sizeof(uint32_t));
-	else
-		return target_mem_read32(target, flash_table_address + 13 * sizeof(uint32_t));
+	return target_mem_read32(target, flash_table_address + 13 * sizeof(uint32_t));
 }
 
 static lpc55xx_iap_status_e iap_call_raw(target_s *target, lpc55xx_iap_cmd_e cmd, uint32_t r1, uint32_t r2, uint32_t r3)
 {
 	/* Prepare the registers for the IAP call. R0 is always flash_config */
-
 	uint32_t regs[target->regs_size / sizeof(uint32_t)];
 	target_regs_read(target, regs);
 
@@ -257,7 +250,6 @@ static lpc55xx_iap_status_e iap_call_raw(target_s *target, lpc55xx_iap_cmd_e cmd
 	regs[3] = r3;
 
 	/* Locate the correct IAP function address based on silicon revision */
-
 	switch (cmd) {
 	case IAP_CMD_FLASH_INIT:
 		regs[REG_PC] = lpc55xx_get_flash_init_address(target);
@@ -279,27 +271,22 @@ static lpc55xx_iap_status_e iap_call_raw(target_s *target, lpc55xx_iap_cmd_e cmd
 		return IAP_STATUS_FLASH_INVALID_ARGUMENT;
 	}
 
-	/* Setting a dummy LR does not seem to work as it makes the target
+	/*
+	 * Setting a dummy LR does not seem to work as it makes the target
 	 * hard-fault. Instead, set LR to a word known to contain the BKPT
 	 * instruction, so that we can safely halt on IAP function return.
 	 */
-
 	target_mem_write16(target, LPC55xx_CODE_PATCH_ADDRESS, ARM_THUMB_BREAKPOINT);
 	regs[REG_LR] = LPC55xx_CODE_PATCH_ADDRESS | 1; // set the ARM thumb call bit
 
 	/* Write the registers to the target and perform the IAP call */
-
 	target_regs_write(target, regs);
-
 	target_halt_resume(target, false);
-
 	while (!target_halt_poll(target, NULL))
 		continue;
 
 	/* Read back the status code from r0 and return */
-
 	target_regs_read(target, regs);
-
 	return (lpc55xx_iap_status_e)regs[0];
 }
 
@@ -317,11 +304,11 @@ typedef struct lpc55xx_flash_config {
 
 static void lpc55xx_prepare_flash_config(target_s *target, target_addr_t address)
 {
-	/* The flash config structure is 60 bytes in size, zero it out as that
+	/*
+	 * The flash config structure is 60 bytes in size, zero it out as that
 	 * is what the SDK does. For some reason you have to fill in the clock
 	 * speed field ("sys_freq_mhz") before flash_init. Set it to 96MHz (?)
 	 */
-
 	lpc55xx_flash_config_s config = {
 		.sys_freq_mhz = LPC55xx_IAP_FREQ_IN_MHZ,
 	};
@@ -341,8 +328,7 @@ static bool lpc55xx_flash_init(target_s *target, lpc55xx_flash_config_s *config)
 
 	lpc55xx_prepare_flash_config(target, LPC55xx_FLASH_CONFIG_ADDRESS);
 
-	lpc55xx_iap_status_e status = iap_call_raw(target, IAP_CMD_FLASH_INIT, 0, 0, 0);
-
+	const lpc55xx_iap_status_e status = iap_call_raw(target, IAP_CMD_FLASH_INIT, 0, 0, 0);
 	if (status != IAP_STATUS_FLASH_SUCCESS) {
 		DEBUG_ERROR("LPC55xx: IAP error: FLASH_INIT (%d)\n", status);
 		goto exit;
@@ -353,7 +339,6 @@ static bool lpc55xx_flash_init(target_s *target, lpc55xx_flash_config_s *config)
 	success = true;
 
 exit:
-
 	target_mem_write(target, LPC55xx_FLASH_CONFIG_ADDRESS, backup_memory, sizeof(backup_memory));
 	target_regs_write(target, regs);
 
@@ -373,21 +358,18 @@ static bool lpc55xx_get_uuid(target_s *target, uint8_t *uuid)
 	lpc55xx_prepare_flash_config(target, LPC55xx_FLASH_CONFIG_ADDRESS);
 
 	lpc55xx_iap_status_e status = iap_call_raw(target, IAP_CMD_FLASH_INIT, 0, 0, 0);
-
 	if (status != IAP_STATUS_FLASH_SUCCESS) {
 		DEBUG_ERROR("LPC55xx: IAP error: FLASH_INIT (%d)\n", status);
 		goto exit;
 	}
 
 	status = iap_call_raw(target, IAP_CMD_FFR_INIT, 0, 0, 0);
-
 	if (status != IAP_STATUS_FLASH_SUCCESS) {
 		DEBUG_ERROR("LPC55xx: IAP error: FFR_INIT (%d)\n", status);
 		goto exit;
 	}
 
 	status = iap_call_raw(target, IAP_CMD_FFR_GET_UUID, LPC55xx_UUID_ADDRESS, 0, 0);
-
 	if (status != IAP_STATUS_FLASH_SUCCESS) {
 		DEBUG_ERROR("LPC55xx: IAP error: FFR_GET_UUID (%d)\n", status);
 		goto exit;
@@ -398,7 +380,6 @@ static bool lpc55xx_get_uuid(target_s *target, uint8_t *uuid)
 	success = true;
 
 exit:
-
 	target_mem_write(target, LPC55xx_FLASH_CONFIG_ADDRESS, backup_memory, sizeof(backup_memory));
 	target_regs_write(target, regs);
 
@@ -416,16 +397,13 @@ static bool lpc55xx_enter_flash_mode(target_s *target)
 	// Execute a small binary patch which just disables interrupts and then hits
 	// a breakpoint, to allow the flash IAP calls to run undisturbed. This patch
 	// consists of the instructions CPSID I; BKPT; in ARM Thumb encoding.
-
 	const uint32_t CODE_PATCH = 0xbe00b672U;
 
 	target_mem_write32(target, LPC55xx_CODE_PATCH_ADDRESS, CODE_PATCH);
 	target_reg_write(target, REG_PC, &reg_pc_value, sizeof(uint32_t));
 
 	target_halt_resume(target, false);
-
 	// Wait for the target to halt on the BKPT instruction
-
 	while (!target_halt_poll(target, NULL))
 		continue;
 
@@ -439,54 +417,41 @@ static bool lpc55xx_flash_prepare(target_flash_s *flash)
 	// Initialize the IAP flash context once in a predefined location
 	// of SRAM, the flash erase/write functions assume it is present.
 
-	lpc55xx_iap_status_e status = iap_call_raw(flash->t, IAP_CMD_FLASH_INIT, 0, 0, 0);
-
-	if (status != IAP_STATUS_FLASH_SUCCESS) {
+	const lpc55xx_iap_status_e status = iap_call_raw(flash->t, IAP_CMD_FLASH_INIT, 0, 0, 0);
+	if (status != IAP_STATUS_FLASH_SUCCESS)
 		DEBUG_ERROR("LPC55xx: IAP error: FLASH_INIT (%d)\n", status);
-		return false;
-	}
-
-	return true;
+	return status == IAP_STATUS_FLASH_SUCCESS;
 }
 
 static bool lpc55xx_flash_erase(target_flash_s *flash, target_addr_t addr, size_t len)
 {
-	lpc55xx_iap_status_e status = iap_call_raw(flash->t, IAP_CMD_FLASH_ERASE, addr, (uint32_t)len, LPC55xx_ERASE_KEY);
-
-	if (status != IAP_STATUS_FLASH_SUCCESS) {
+	const lpc55xx_iap_status_e status =
+		iap_call_raw(flash->t, IAP_CMD_FLASH_ERASE, addr, (uint32_t)len, LPC55xx_ERASE_KEY);
+	if (status != IAP_STATUS_FLASH_SUCCESS)
 		DEBUG_ERROR("LPC55xx: IAP error: FLASH_ERASE (%d)\n", status);
-		return false;
-	}
-
-	return true;
+	return status == IAP_STATUS_FLASH_SUCCESS;
 }
 
 static bool lpc55xx_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t len)
 {
 	target_mem_write(flash->t, LPC55xx_WRITE_BUFFER_ADDRESS, src, len);
 
-	lpc55xx_iap_status_e status =
+	const lpc55xx_iap_status_e status =
 		iap_call_raw(flash->t, IAP_CMD_FLASH_PROGRAM, dest, LPC55xx_WRITE_BUFFER_ADDRESS, (uint32_t)len);
-
-	if (status != IAP_STATUS_FLASH_SUCCESS) {
+	if (status != IAP_STATUS_FLASH_SUCCESS)
 		DEBUG_ERROR("LPC55xx: IAP error: FLASH_PROGRAM (%d)\n", status);
-		return false;
-	}
-
-	return true;
+	return status == IAP_STATUS_FLASH_SUCCESS;
 }
 
 static target_flash_s *lpc55xx_add_flash(target_s *target)
 {
 	target_flash_s *flash = calloc(1, sizeof(*flash));
-
 	if (!flash) { /* calloc failed: heap exhaustion */
 		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return NULL;
 	}
 
 	lpc55xx_flash_config_s config;
-
 	if (!lpc55xx_flash_init(target, &config)) {
 		free(flash);
 		return NULL;
@@ -526,7 +491,6 @@ static bool lpc55xx_read_uid(target_s *target, int argc, const char *argv[])
 	(void)argv;
 
 	uint8_t uuid[LPC55xx_UUID_LEN];
-
 	if (!lpc55xx_get_uuid(target, uuid))
 		return false;
 
@@ -538,7 +502,7 @@ static bool lpc55xx_read_uid(target_s *target, int argc, const char *argv[])
 	return true;
 }
 
-const command_s lpc55xx_cmd_list[] = {
+static const command_s lpc55xx_cmd_list[] = {
 	{"readuid", lpc55xx_read_uid, "Read out the 16-byte UID."},
 	{NULL, NULL, NULL},
 };
@@ -549,8 +513,9 @@ static void lpc55_dmap_ap_free(void *priv);
 
 void lpc55_dp_prepare(adiv5_debug_port_s *const dp)
 {
-	/* Reading targetid again here upsets the LPC55 and STM32U5!*/
-	/* UM11126, 51.6.1
+	/* Reading targetid again here upsets the LPC55 and STM32U5 */
+	/*
+	 * UM11126, 51.6.1
 	 * Debug session with uninitialized/invalid flash image or ISP mode
 	 */
 	adiv5_dp_abort(dp, ADIV5_DP_ABORT_DAPABORT);
@@ -676,13 +641,13 @@ static bool lpc55_dmap_cmd(adiv5_access_port_s *const ap, const uint32_t cmd)
 
 static bool lpc55_dmap_mass_erase(target_s *target)
 {
-	/* TODO: This doesn't actually work at least on the LPC550x, there seems to be
+	/*
+	 * TODO: This doesn't actually work at least on the LPC550x, there seems to be
 	 * a lot more to figure out about the debug mailbox before this code can work.
 	 *
 	 * In the meantime, if you get your chip into a bad state where you cannot
 	 * communicate with the AP to debug the core, your best chance is probably
 	 * to try and drive low the ISP pin (PIO0_5 on LPC550x) during power-on.
 	*/
-
 	return lpc55_dmap_cmd(cortexm_ap(target), LPC55_DMAP_BULK_ERASE);
 }
