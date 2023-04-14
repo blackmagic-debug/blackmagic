@@ -646,9 +646,9 @@ static bool renesas_check_option_setting(target_s *t, target_addr_t addr)
 		return false;
 
 	if ((priv_storage->details.option_start != NONE && addr >= priv_storage->details.option_start &&
-			addr <= (priv_storage->details.option_start + priv_storage->details.option_size)) ||
+			addr < (priv_storage->details.option_start + priv_storage->details.option_size)) ||
 		(priv_storage->details.option_start_2 != NONE && addr >= priv_storage->details.option_start_2 &&
-			addr <= (priv_storage->details.option_start_2 + priv_storage->details.option_size_2)))
+			addr < (priv_storage->details.option_start_2 + priv_storage->details.option_size_2)))
 		return true;
 	else
 		return false;
