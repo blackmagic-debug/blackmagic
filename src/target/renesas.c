@@ -407,9 +407,11 @@ typedef enum {
 #define RV40_FCPSR_ESUSPMD 1U
 
 static bool renesas_uid(target_s *t, int argc, const char **argv);
+static bool renesas_cmd_option(target_s *target, int argc, const char **argv);
 
 const command_s renesas_cmd_list[] = {
 	{"uid", renesas_uid, "Prints unique number"},
+	{"option", renesas_cmd_option, "Manipulate option bytes"},
 	{NULL, NULL, NULL},
 };
 
@@ -928,7 +930,7 @@ bool renesas_probe(target_s *t)
 
 	/* Data flash */
 	if (priv_storage->details.data_flash_start != NONE)
-		renesas_add_rv40_flash(t, priv_storage->details.data_flash_start,
+		renesas_add_flash(t, priv_storage->details.data_flash_start,
 			priv_storage->details.data_flash_end - priv_storage->details.data_flash_start);
 
 	/* SRAM 0 */
@@ -953,11 +955,11 @@ bool renesas_probe(target_s *t)
 
 	/* Option-Setting flash */
 	if (priv_storage->details.option_start != NONE)
-		renesas_add_rv40_flash(t, priv_storage->details.option_start, priv_storage->details.option_size);
+		renesas_add_flash(t, priv_storage->details.option_start, priv_storage->details.option_size);
 
 	/* Option-Setting 2 flash */
 	if (priv_storage->details.option_start_2 != NONE)
-		renesas_add_rv40_flash(t, priv_storage->details.option_start_2, priv_storage->details.option_size_2);
+		renesas_add_flash(t, priv_storage->details.option_start_2, priv_storage->details.option_size_2);
 
 	/* Code flash */
 	renesas_add_flash(t, 0x00000000, renesas_flash_size(pnr)); /* Code flash memory 0x00000000 */
@@ -1003,6 +1005,18 @@ static bool renesas_uid(target_s *t, int argc, const char **argv)
 	for (size_t i = 0U; i < 16U; i++)
 		tc_printf(t, "%02" PRIx8, uid[i]);
 	tc_printf(t, "\n");
+
+	return true;
+}
+
+static bool renesas_cmd_option(target_s *t, int argc, const char **argv)
+{
+	(void)argc;
+	(void)argv;
+
+	renesas_priv_s *priv_storage = (renesas_priv_s *)t->target_storage;
+	if (!priv_storage)
+		return false;
 
 	return true;
 }
