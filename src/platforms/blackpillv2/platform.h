@@ -32,45 +32,46 @@
 /*
  * Important pin mappings for STM32 implementation:
  *   * JTAG/SWD
- *     * PA1: TDI
- *     * PA13: TMS/SWDIO
- *     * PA14: TCK/SWCLK
- *     * PB3: TDO/TRACESWO
- *     * PB5: TRST
- *     * PB4: nRST
+ *     * PB6: TDI
+ *     * PB7: TDO/TRACESWO
+ *     * PB8: TCK/SWCLK
+ *     * PB9: TMS/SWDIO
+ *     * PA6: TRST
+ *     * PA5: nRST
  *   * USB USART
- *     * PB6: USART1 TX
- *     * PB7: USART1 RX
+ *     * PA2: USART TX
+ *     * PA3: USART RX
  *   * +3V3
- *     * PB8 - turn on IRLML5103 transistor
- *   * Force DFU mode button: PA0
+ *     * PA1: power pin
+ *   * Force DFU mode button:
+ *     * PA0: user button KEY
  */
 
 /* Hardware definitions... */
-#define TDI_PORT               GPIOA
-#define TDI_PIN                GPIO1
+#define TDI_PORT               GPIOB
+#define TDI_PIN                GPIO6
 
 #define TDO_PORT               GPIOB
-#define TDO_PIN                GPIO3
+#define TDO_PIN                GPIO7
 
-#define TCK_PORT               GPIOA
-#define TCK_PIN                GPIO14
+#define TCK_PORT               GPIOB
+#define TCK_PIN                GPIO8
 #define SWCLK_PORT             TCK_PORT
 #define SWCLK_PIN              TCK_PIN
 
-#define TMS_PORT               GPIOA
-#define TMS_PIN                GPIO13
+#define TMS_PORT               GPIOB
+#define TMS_PIN                GPIO9
 #define SWDIO_PORT             TMS_PORT
 #define SWDIO_PIN              TMS_PIN
 
-#define TRST_PORT              GPIOB
-#define TRST_PIN               GPIO5
+#define TRST_PORT              GPIOA
+#define TRST_PIN               GPIO6
 
-#define NRST_PORT              GPIOB
-#define NRST_PIN               GPIO4
+#define NRST_PORT              GPIOA
+#define NRST_PIN               GPIO5
 
-#define PWR_BR_PORT            GPIOB
-#define PWR_BR_PIN             GPIO8
+#define PWR_BR_PORT            GPIOA
+#define PWR_BR_PIN             GPIO1
 
 #define LED_PORT               GPIOC
 #define LED_IDLE_RUN           GPIO13
@@ -78,26 +79,29 @@
 #define LED_BOOTLOADER         GPIO15
 
 #define LED_PORT_UART          GPIOA
-#define LED_UART               GPIO1
+#define LED_UART               GPIO4
 
-#define USBUSART               USART1
-#define USBUSART_CR1           USART1_CR1
-#define USBUSART_DR            USART1_DR
-#define USBUSART_IRQ           NVIC_USART1_IRQ
-#define USBUSART_CLK           RCC_USART1
-#define USBUSART_PORT          GPIOB
-#define USBUSART_TX_PIN        GPIO6
-#define USBUSART_RX_PIN        GPIO7
-#define USBUSART_ISR(x)        usart1_isr(x)
-#define USBUSART_DMA_BUS       DMA2
-#define USBUSART_DMA_CLK       RCC_DMA2
-#define USBUSART_DMA_TX_CHAN   DMA_STREAM7
-#define USBUSART_DMA_TX_IRQ    NVIC_DMA2_STREAM7_IRQ
-#define USBUSART_DMA_TX_ISR(x) dma2_stream7_isr(x)
+/* for USART2, DMA1 is selected from https://www.st.com/resource/en/reference_manual/dm00119316-stm32f411xc-e-advanced-arm-based-32-bit-mcus-stmicroelectronics.pdf, page 170, table 27.
+ * This table defines USART2_TX as stream 6, channel 4, and USART2_RX as stream 5, channel 4.
+ */
+#define USBUSART               USART2
+#define USBUSART_CR1           USART2_CR1
+#define USBUSART_DR            USART2_DR
+#define USBUSART_IRQ           NVIC_USART2_IRQ
+#define USBUSART_CLK           RCC_USART2
+#define USBUSART_PORT          GPIOA
+#define USBUSART_TX_PIN        GPIO2
+#define USBUSART_RX_PIN        GPIO3
+#define USBUSART_ISR(x)        usart2_isr(x)
+#define USBUSART_DMA_BUS       DMA1
+#define USBUSART_DMA_CLK       RCC_DMA1
+#define USBUSART_DMA_TX_CHAN   DMA_STREAM6
+#define USBUSART_DMA_TX_IRQ    NVIC_DMA1_STREAM6_IRQ
+#define USBUSART_DMA_TX_ISR(x) dma1_stream6_isr(x)
 #define USBUSART_DMA_RX_CHAN   DMA_STREAM5
-#define USBUSART_DMA_RX_IRQ    NVIC_DMA2_STREAM5_IRQ
-#define USBUSART_DMA_RX_ISR(x) dma2_stream5_isr(x)
-/* For STM32F4 DMA trigger source must be specified */
+#define USBUSART_DMA_RX_IRQ    NVIC_DMA1_STREAM5_IRQ
+#define USBUSART_DMA_RX_ISR(x) dma1_stream5_isr(x)
+/* For STM32F4 DMA trigger source must be specified. Channel 4 is selected, in line with the USART selected in the DMA table. */
 #define USBUSART_DMA_TRG DMA_SxCR_CHSEL_4
 
 #define BOOTMAGIC0 UINT32_C(0xb007da7a)
