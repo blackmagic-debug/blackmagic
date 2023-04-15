@@ -191,7 +191,7 @@ static void esp32c3_add_flash(target_s *const target)
 {
 	esp32c3_spi_flash_s *const spi_flash = calloc(1, sizeof(*spi_flash));
 	if (!spi_flash) { /* calloc failed: heap exhaustion */
-		DEBUG_WARN("calloc: failed in %s\n", __func__);
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return;
 	}
 
@@ -231,7 +231,7 @@ bool esp32c3_probe(target_s *const target)
 
 	esp32c3_priv_s *const priv = calloc(1, sizeof(esp32c3_priv_s));
 	if (!priv) { /* calloc failed: heap exhaustion */
-		DEBUG_WARN("calloc: failed in %s\n", __func__);
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return false;
 	}
 	target->target_storage = priv;
@@ -522,7 +522,7 @@ static bool esp32c3_spi_flash_write(
 	target_s *const target = flash->t;
 	// const esp32c3_spi_flash_s *const spi_flash = (esp32c3_spi_flash_s *)flash;
 	const target_addr_t begin = dest - flash->start;
-	const char *const buffer = src;
+	const char *const buffer = (const char *)src;
 	for (size_t offset = 0; offset < length; offset += 64U) {
 		esp32c3_spi_run_command(target, SPI_FLASH_CMD_WRITE_ENABLE, 0U);
 		if (!(esp32c3_spi_read_status(target) & SPI_FLASH_STATUS_WRITE_ENABLED))
