@@ -126,7 +126,7 @@ static void kinetis_add_flash(
 {
 	kinetis_flash_s *kf = calloc(1, sizeof(*kf));
 	if (!kf) { /* calloc failed: heap exhaustion */
-		DEBUG_WARN("calloc: failed in %s\n", __func__);
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return;
 	}
 

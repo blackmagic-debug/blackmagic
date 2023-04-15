@@ -89,7 +89,7 @@ uint32_t jtag_scan(const uint8_t *const ir_lengths, const size_t lengths_count)
 	DEBUG_INFO("Resetting TAP\n");
 #if PC_HOSTED == 1
 	if (!platform_jtagtap_init()) {
-		DEBUG_WARN("JTAG not available\n");
+		DEBUG_ERROR("JTAG not available\n");
 		return 0;
 	}
 #else
@@ -182,7 +182,7 @@ static bool jtag_read_idcodes(void)
 			break;
 		/* Check if the max suported chain length is exceeded */
 		if (device == JTAG_MAX_DEVS) {
-			DEBUG_WARN("jtag_scan: Maximum chain length exceeded\n");
+			DEBUG_ERROR("jtag_scan: Maximum chain length exceeded\n");
 			jtag_dev_count = 0;
 			return false;
 		}
@@ -244,7 +244,7 @@ static bool jtag_read_irs(void)
 		const bool next_bit = jtag_proc.jtagtap_next(false, true);
 		/* If we have quirks, validate the bit against the expected IR */
 		if (ir_quirks.ir_length && ((ir_quirks.ir_value >> ir_len) & 1U) != next_bit) {
-			DEBUG_WARN("jtag_scan: IR does not match the expected value, bailing out\n");
+			DEBUG_ERROR("jtag_scan: IR does not match the expected value, bailing out\n");
 			jtag_dev_count = 0;
 			return false;
 		}
@@ -285,7 +285,7 @@ static bool jtag_read_irs(void)
 
 	/* Sanity check that we didn't get an over-long IR */
 	if (ir_len > JTAG_MAX_IR_LEN) {
-		DEBUG_WARN("jtag_scan: Maximum IR length exceeded\n");
+		DEBUG_ERROR("jtag_scan: Maximum IR length exceeded\n");
 		jtag_dev_count = 0;
 		return 0;
 	}
@@ -310,12 +310,12 @@ static bool jtag_validate_irs(const uint8_t *const ir_lengths, const size_t leng
 	for (size_t device = 0; device < lengths_count; ++device) {
 		/* Validate the next ir_lengths value */
 		if (ir_lengths[device] > JTAG_MAX_IR_LEN) {
-			DEBUG_WARN("jtag_scan: Maximum IR length exceeded\n");
+			DEBUG_ERROR("jtag_scan: Maximum IR length exceeded\n");
 			jtag_dev_count = 0U;
 			return false;
 		}
 		if (ir_lengths[device] == 0) {
-			DEBUG_WARN("jtag_scan: IR length must be at least 1\n");
+			DEBUG_ERROR("jtag_scan: IR length must be at least 1\n");
 			jtag_dev_count = 0U;
 			return false;
 		}
@@ -354,7 +354,7 @@ static bool jtag_sanity_check(void)
 
 	/* If the device count gleaned above does not match the device count, error out */
 	if (device != jtag_dev_count) {
-		DEBUG_WARN("jtag_scan: Sanity check failed: BYPASS dev count doesn't match IR scan\n");
+		DEBUG_ERROR("jtag_scan: Sanity check failed: BYPASS dev count doesn't match IR scan\n");
 		jtag_dev_count = 0;
 		return false;
 	}

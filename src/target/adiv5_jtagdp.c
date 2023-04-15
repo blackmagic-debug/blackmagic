@@ -43,7 +43,7 @@ void adiv5_jtag_dp_handler(const uint8_t dev_index)
 {
 	adiv5_debug_port_s *dp = calloc(1, sizeof(*dp));
 	if (!dp) { /* calloc failed: heap exhaustion */
-		DEBUG_WARN("calloc: failed in %s\n", __func__);
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return;
 	}
 
@@ -100,14 +100,14 @@ uint32_t fw_adiv5_jtagdp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_
 	} while (!platform_timeout_is_expired(&timeout) && ack == JTAGDP_ACK_WAIT);
 
 	if (ack == JTAGDP_ACK_WAIT) {
-		DEBUG_WARN("JTAG access resulted in wait, aborting\n");
+		DEBUG_ERROR("JTAG access resulted in wait, aborting\n");
 		dp->abort(dp, ADIV5_DP_ABORT_DAPABORT);
 		dp->fault = 1;
 		return 0;
 	}
 
 	if (ack != JTAGDP_ACK_OK) {
-		DEBUG_WARN("JTAG access resulted in: %" PRIx32 ":%x\n", result, ack);
+		DEBUG_ERROR("JTAG access resulted in: %" PRIx32 ":%x\n", result, ack);
 		raise_exception(EXCEPTION_ERROR, "JTAG-DP invalid ACK");
 	}
 

@@ -148,7 +148,7 @@ static void stm32f4_add_flash(target_s *const t, const uint32_t addr, const size
 
 	stm32f4_flash_s *sf = calloc(1, sizeof(*sf));
 	if (!sf) { /* calloc failed: heap exhaustion */
-		DEBUG_WARN("calloc: failed in %s\n", __func__);
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return;
 	}
 
@@ -351,7 +351,7 @@ static bool stm32f4_attach(target_s *t)
 	/* Allocate target-specific storage */
 	stm32f4_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
 	if (!priv_storage) { /* calloc failed: heap exhaustion */
-		DEBUG_WARN("calloc: failed in %s\n", __func__);
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return false;
 	}
 	t->target_storage = priv_storage;
@@ -469,7 +469,7 @@ static bool stm32f4_flash_busy_wait(target_s *const t, platform_timeout_s *const
 	while (status & FLASH_SR_BSY) {
 		status = target_mem_read32(t, FLASH_SR);
 		if ((status & SR_ERROR_MASK) || target_check_error(t)) {
-			DEBUG_WARN("stm32f4 flash error 0x%" PRIx32 "\n", status);
+			DEBUG_ERROR("stm32f4 flash error 0x%" PRIx32 "\n", status);
 			return false;
 		}
 		if (timeout)

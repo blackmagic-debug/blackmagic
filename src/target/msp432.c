@@ -144,7 +144,7 @@ static void msp432_add_flash(target_s *t, uint32_t addr, size_t length, target_a
 	msp432_flash_s *mf = calloc(1, sizeof(*mf));
 	target_flash_s *f;
 	if (!mf) { /* calloc failed: heap exhaustion */
-		DEBUG_WARN("calloc: failed in %s\n", __func__);
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return;
 	}
 

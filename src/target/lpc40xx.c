@@ -91,16 +91,16 @@ bool lpc40xx_probe(target_s *target)
 		return false;
 
 	/*
-		* Now that we're sure it's a Cortex-M3, we need to halt the
-		* target and make an IAP call to get the part number.
-		* There appears to have no other method of reading the part number.
-		*/
+	 * Now that we're sure it's a Cortex-M3, we need to halt the
+	 * target and make an IAP call to get the part number.
+	 * There appears to have no other method of reading the part number.
+	 */
 	target_halt_request(target);
 
 	/* Allocate private storage so the flash mode entry/exit routines can save state */
 	lpc40xx_priv_s *priv = calloc(1, sizeof(*priv));
 	if (!priv) { /* calloc failed: heap exhaustion */
-		DEBUG_WARN("calloc: failed in %s\n", __func__);
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return false;
 	}
 	target->target_storage = priv;
@@ -115,9 +115,9 @@ bool lpc40xx_probe(target_s *target)
 	target_halt_resume(target, false);
 
 	/*
-		* If we got an error response, it cannot be a LPC40xx as the only response
-		* a real device gives is IAP_STATUS_CMD_SUCCESS.
-		*/
+	 * If we got an error response, it cannot be a LPC40xx as the only response
+	 * a real device gives is IAP_STATUS_CMD_SUCCESS.
+	 */
 	if (result.return_code) {
 		free(priv);
 		target->target_storage = NULL;
@@ -172,19 +172,19 @@ static bool lpc40xx_mass_erase(target_s *target)
 
 	if (lpc40xx_iap_call(target, &result, IAP_CMD_PREPARE, 0, FLASH_NUM_SECTOR - 1U)) {
 		lpc40xx_exit_flash_mode(target);
-		DEBUG_WARN("lpc40xx_cmd_erase: prepare failed %" PRIu32 "\n", result.return_code);
+		DEBUG_ERROR("lpc40xx_cmd_erase: prepare failed %" PRIu32 "\n", result.return_code);
 		return false;
 	}
 
 	if (lpc40xx_iap_call(target, &result, IAP_CMD_ERASE, 0, FLASH_NUM_SECTOR - 1U, CPU_CLK_KHZ)) {
 		lpc40xx_exit_flash_mode(target);
-		DEBUG_WARN("lpc40xx_cmd_erase: erase failed %" PRIu32 "\n", result.return_code);
+		DEBUG_ERROR("lpc40xx_cmd_erase: erase failed %" PRIu32 "\n", result.return_code);
 		return false;
 	}
 
 	if (lpc40xx_iap_call(target, &result, IAP_CMD_BLANKCHECK, 0, FLASH_NUM_SECTOR - 1U)) {
 		lpc40xx_exit_flash_mode(target);
-		DEBUG_WARN("lpc40xx_cmd_erase: blankcheck failed %" PRIu32 "\n", result.return_code);
+		DEBUG_ERROR("lpc40xx_cmd_erase: blankcheck failed %" PRIu32 "\n", result.return_code);
 		return false;
 	}
 

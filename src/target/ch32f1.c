@@ -70,7 +70,7 @@ static void ch32f1_add_flash(target_s *t, uint32_t addr, size_t length, size_t e
 {
 	target_flash_s *f = calloc(1, sizeof(*f));
 	if (!f) { /* calloc failed: heap exhaustion */
-		DEBUG_WARN("calloc: failed in %s\n", __func__);
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return;
 	}
 
@@ -84,22 +84,22 @@ static void ch32f1_add_flash(target_s *t, uint32_t addr, size_t length, size_t e
 	target_add_flash(t, f);
 }
 
-#define WAIT_BUSY()                                         \
-	do {                                                    \
-		sr = target_mem_read32(t, FLASH_SR);                \
-		if (target_check_error(t)) {                        \
-			DEBUG_WARN("ch32f1 flash write: comm error\n"); \
-			return -1;                                      \
-		}                                                   \
+#define WAIT_BUSY()                                          \
+	do {                                                     \
+		sr = target_mem_read32(t, FLASH_SR);                 \
+		if (target_check_error(t)) {                         \
+			DEBUG_ERROR("ch32f1 flash write: comm error\n"); \
+			return -1;                                       \
+		}                                                    \
 	} while (sr & FLASH_SR_BSY);
 
-#define WAIT_EOP()                                          \
-	do {                                                    \
-		sr = target_mem_read32(t, FLASH_SR);                \
-		if (target_check_error(t)) {                        \
-			DEBUG_WARN("ch32f1 flash write: comm error\n"); \
-			return -1;                                      \
-		}                                                   \
+#define WAIT_EOP()                                           \
+	do {                                                     \
+		sr = target_mem_read32(t, FLASH_SR);                 \
+		if (target_check_error(t)) {                         \
+			DEBUG_ERROR("ch32f1 flash write: comm error\n"); \
+			return -1;                                       \
+		}                                                    \
 	} while (!(sr & FLASH_SR_EOP));
 
 #define CLEAR_EOP() target_mem_write32(t, FLASH_SR, FLASH_SR_EOP)
@@ -137,7 +137,7 @@ static bool ch32f1_flash_unlock(target_s *t)
 	target_mem_write32(t, FLASH_MODEKEYR_CH32, KEY2);
 	uint32_t cr = target_mem_read32(t, FLASH_CR);
 	if (cr & FLASH_CR_FLOCK_CH32)
-		DEBUG_WARN("Fast unlock failed, cr: 0x%08" PRIx32 "\n", cr);
+		DEBUG_ERROR("Fast unlock failed, cr: 0x%08" PRIx32 "\n", cr);
 	return !(cr & FLASH_CR_FLOCK_CH32);
 }
 
@@ -153,9 +153,8 @@ static bool ch32f1_flash_lock(target_s *t)
 	 */
 	SET_CR(FLASH_CR_LOCK | FLASH_CR_FLOCK_CH32);
 	const uint32_t cr = target_mem_read32(t, FLASH_CR);
-	if (!(cr & FLASH_CR_FLOCK_CH32)) {
-		DEBUG_WARN("Fast lock failed, cr: 0x%08" PRIx32 "\n", cr);
-	}
+	if (!(cr & FLASH_CR_FLOCK_CH32))
+		DEBUG_ERROR("Fast lock failed, cr: 0x%08" PRIx32 "\n", cr);
 	return cr & FLASH_CR_FLOCK_CH32;
 }
 
@@ -231,7 +230,7 @@ bool ch32f1_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 	DEBUG_INFO("CH32: flash erase \n");
 
 	if (!ch32f1_flash_unlock(t)) {
-		DEBUG_WARN("CH32: Unlock failed\n");
+		DEBUG_ERROR("CH32: Unlock failed\n");
 		return false;
 	}
 	// Fast Erase 128 bytes pages (ch32 mode)
@@ -255,7 +254,7 @@ bool ch32f1_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 	sr = target_mem_read32(t, FLASH_SR);
 	ch32f1_flash_lock(t);
 	if (sr & SR_ERROR_MASK)
-		DEBUG_WARN("ch32f1 flash erase error 0x%" PRIx32 "\n", sr);
+		DEBUG_ERROR("ch32f1 flash erase error 0x%" PRIx32 "\n", sr);
 	return !(sr & SR_ERROR_MASK);
 }
 
@@ -273,7 +272,7 @@ static bool ch32f1_wait_flash_ready(target_s *t, uint32_t addr)
 	for (size_t cnt = 0; cnt < 32U && flash_val != 0xffffffffU; ++cnt)
 		flash_val = target_mem_read32(t, addr);
 	if (flash_val != 0xffffffffU) {
-		DEBUG_WARN("ch32f1 Not erased properly at %" PRIx32 " or flash access issue\n", addr);
+		DEBUG_ERROR("ch32f1 Not erased properly at %" PRIx32 " or flash access issue\n", addr);
 		return false;
 	}
 	return true;
@@ -326,7 +325,7 @@ static bool ch32f1_flash_write(target_flash_s *f, target_addr_t dest, const void
 
 	while (length > 0) {
 		if (!ch32f1_flash_unlock(t)) {
-			DEBUG_WARN("ch32f1 cannot fast unlock\n");
+			DEBUG_ERROR("ch32f1 cannot fast unlock\n");
 			return false;
 		}
 		WAIT_BUSY();
@@ -339,7 +338,7 @@ static bool ch32f1_flash_write(target_flash_s *f, target_addr_t dest, const void
 
 		for (size_t i = 0; i < 8U; i++) {
 			if (ch32f1_upload(t, dest, src, i * 16U)) {
-				DEBUG_WARN("Cannot upload to buffer\n");
+				DEBUG_ERROR("Cannot upload to buffer\n");
 				return false;
 			}
 		}
@@ -365,7 +364,7 @@ static bool ch32f1_flash_write(target_flash_s *f, target_addr_t dest, const void
 		sr = target_mem_read32(t, FLASH_SR); // 13
 		ch32f1_flash_lock(t);
 		if (sr & SR_ERROR_MASK) {
-			DEBUG_WARN("ch32f1 flash write error 0x%" PRIx32 "\n", sr);
+			DEBUG_ERROR("ch32f1 flash write error 0x%" PRIx32 "\n", sr);
 			return false;
 		}
 	}
@@ -376,9 +375,9 @@ static bool ch32f1_flash_write(target_flash_s *f, target_addr_t dest, const void
 		const uint32_t expected = *(uint32_t *)(org_src + i);
 		const uint32_t actual = target_mem_read32(t, org_dest + i);
 		if (expected != actual) {
-			DEBUG_WARN(">>>>write mismatch at address 0x%" PRIx32 "\n", org_dest + i);
-			DEBUG_WARN(">>>>expected: 0x%" PRIx32 "\n", expected);
-			DEBUG_WARN(">>>>  actual: 0x%" PRIx32 "\n", actual);
+			DEBUG_ERROR(">>>>write mismatch at address 0x%" PRIx32 "\n", org_dest + i);
+			DEBUG_ERROR(">>>>expected: 0x%" PRIx32 "\n", expected);
+			DEBUG_ERROR(">>>>  actual: 0x%" PRIx32 "\n", actual);
 			return false;
 		}
 	}

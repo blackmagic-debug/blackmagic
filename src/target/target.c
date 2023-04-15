@@ -43,7 +43,7 @@ target_s *target_new(void)
 {
 	target_s *t = calloc(1, sizeof(*t));
 	if (!t) { /* calloc failed: heap exhaustion */
-		DEBUG_WARN("calloc: failed in %s\n", __func__);
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return NULL;
 	}
 
@@ -128,7 +128,7 @@ void target_add_commands(target_s *t, const command_s *cmds, const char *name)
 {
 	target_command_s *tc = malloc(sizeof(*tc));
 	if (!tc) { /* malloc failed: heap exhaustion */
-		DEBUG_WARN("malloc: failed in %s\n", __func__);
+		DEBUG_ERROR("malloc: failed in %s\n", __func__);
 		return;
 	}
 
@@ -176,7 +176,7 @@ void target_add_ram(target_s *t, target_addr_t start, uint32_t len)
 {
 	target_ram_s *ram = malloc(sizeof(*ram));
 	if (!ram) { /* malloc failed: heap exhaustion */
-		DEBUG_WARN("malloc: failed in %s\n", __func__);
+		DEBUG_ERROR("malloc: failed in %s\n", __func__);
 		return;
 	}
 
@@ -392,7 +392,7 @@ int target_breakwatch_set(target_s *t, target_breakwatch_e type, target_addr_t a
 		/* Success, make a heap copy */
 		breakwatch_s *bwm = malloc(sizeof(bw));
 		if (!bwm) { /* malloc failed: heap exhaustion */
-			DEBUG_WARN("malloc: failed in %s\n", __func__);
+			DEBUG_ERROR("malloc: failed in %s\n", __func__);
 			return 1;
 		}
 		memcpy(bwm, &bw, sizeof(bw));

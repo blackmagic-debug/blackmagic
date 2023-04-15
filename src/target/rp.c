@@ -244,7 +244,7 @@ static void rp_add_flash(target_s *target)
 {
 	rp_flash_s *spi_flash = calloc(1, sizeof(*spi_flash));
 	if (!spi_flash) { /* calloc failed: heap exhaustion */
-		DEBUG_WARN("calloc: failed in %s\n", __func__);
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return;
 	}
 
@@ -290,7 +290,7 @@ bool rp_probe(target_s *target)
 	/* Check bootrom magic*/
 	uint32_t boot_magic = target_mem_read32(target, BOOTROM_MAGIC_ADDR);
 	if ((boot_magic & BOOTROM_MAGIC_MASK) != BOOTROM_MAGIC) {
-		DEBUG_WARN("Wrong Bootmagic %08" PRIx32 " found!\n", boot_magic);
+		DEBUG_ERROR("Wrong Bootmagic %08" PRIx32 " found!\n", boot_magic);
 		return false;
 	}
 
@@ -301,7 +301,7 @@ bool rp_probe(target_s *target)
 
 	rp_priv_s *priv_storage = calloc(1, sizeof(rp_priv_s));
 	if (!priv_storage) { /* calloc failed: heap exhaustion */
-		DEBUG_WARN("calloc: failed in %s\n", __func__);
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return false;
 	}
 	target->target_storage = (void *)priv_storage;
