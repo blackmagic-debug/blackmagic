@@ -195,7 +195,7 @@ static void stm32g0_add_flash(target_s *t, uint32_t addr, size_t length, size_t 
 {
 	target_flash_s *f = calloc(1, sizeof(*f));
 	if (!f) { /* calloc failed: heap exhaustion */
-		DEBUG_WARN("calloc: failed in %s\n", __func__);
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return;
 	}
 
@@ -424,7 +424,7 @@ static bool stm32g0_flash_erase(target_flash_s *f, const target_addr_t addr, con
 	/* Check for error */
 	const uint32_t status = target_mem_read32(t, FLASH_SR);
 	if (status & FLASH_SR_ERROR_MASK)
-		DEBUG_WARN("stm32g0 flash erase error: sr 0x%" PRIx32 "\n", status);
+		DEBUG_ERROR("stm32g0 flash erase error: sr 0x%" PRIx32 "\n", status);
 	stm32g0_flash_op_finish(t);
 	return !(status & FLASH_SR_ERROR_MASK);
 }
@@ -453,14 +453,14 @@ static bool stm32g0_flash_write(target_flash_s *f, target_addr_t dest, const voi
 	target_mem_write(t, dest, src, len);
 	/* Wait for completion or an error */
 	if (!stm32g0_wait_busy(t, NULL)) {
-		DEBUG_WARN("stm32g0 flash write: comm error\n");
+		DEBUG_ERROR("stm32g0 flash write: comm error\n");
 		stm32g0_flash_op_finish(t);
 		return false;
 	}
 
 	const uint32_t status = target_mem_read32(t, FLASH_SR);
 	if (status & FLASH_SR_ERROR_MASK) {
-		DEBUG_WARN("stm32g0 flash write error: sr 0x%" PRIx32 "\n", status);
+		DEBUG_ERROR("stm32g0 flash write error: sr 0x%" PRIx32 "\n", status);
 		stm32g0_flash_op_finish(t);
 		return false;
 	}

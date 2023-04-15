@@ -411,7 +411,7 @@ static void lpc43x0_add_spi_flash(target_s *const t, const size_t length)
 {
 	lpc43xx_spi_flash_s *const flash = calloc(1, sizeof(*flash));
 	if (!flash) {
-		DEBUG_WARN("calloc: failed in %s\n", __func__);
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return;
 	}
 	lpc43x0_priv_s *const priv = (lpc43x0_priv_s *)t->target_storage;
@@ -511,7 +511,7 @@ bool lpc43xx_probe(target_s *const t)
 
 		lpc43xx_priv_s *priv = calloc(1, sizeof(lpc43xx_priv_s));
 		if (!priv) { /* calloc failed: heap exhaustion */
-			DEBUG_WARN("calloc: failed in %s\n", __func__);
+			DEBUG_ERROR("calloc: failed in %s\n", __func__);
 			return false;
 		}
 		t->target_storage = priv;
@@ -647,7 +647,7 @@ static bool lpc43x0_attach(target_s *const t)
 	if (!t->target_storage) {
 		lpc43x0_priv_s *priv = calloc(1, sizeof(lpc43x0_priv_s));
 		if (!priv) { /* calloc failed: heap exhaustion */
-			DEBUG_WARN("calloc: failed in %s\n", __func__);
+			DEBUG_ERROR("calloc: failed in %s\n", __func__);
 			return false;
 		}
 		t->target_storage = priv;

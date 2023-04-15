@@ -195,7 +195,7 @@ static void sam3_add_flash(target_s *t, uint32_t eefc_base, uint32_t addr, size_
 {
 	sam_flash_s *sf = calloc(1, sizeof(*sf));
 	if (!sf) { /* calloc failed: heap exhaustion */
-		DEBUG_WARN("calloc: failed in %s\n", __func__);
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return;
 	}
 
@@ -215,7 +215,7 @@ static void sam_add_flash(target_s *t, uint32_t eefc_base, uint32_t addr, size_t
 {
 	sam_flash_s *sf = calloc(1, sizeof(*sf));
 	if (!sf) { /* calloc failed: heap exhaustion */
-		DEBUG_WARN("calloc: failed in %s\n", __func__);
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return;
 	}
 
@@ -391,7 +391,7 @@ bool samx7x_probe(target_s *t)
 
 	sam_priv_s *priv_storage = calloc(1, sizeof(*priv_storage));
 	if (!priv_storage) { /* calloc failed: heap exhaustion */
-		DEBUG_WARN("calloc: failed in %s\n", __func__);
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return false;
 	}
 	t->target_storage = priv_storage;

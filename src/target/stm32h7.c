@@ -158,7 +158,7 @@ static void stm32h7_add_flash(target_s *t, uint32_t addr, size_t length, size_t 
 {
 	stm32h7_flash_s *sf = calloc(1, sizeof(*sf));
 	if (!sf) { /* calloc failed: heap exhaustion */
-		DEBUG_WARN("calloc: failed in %s\n", __func__);
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return;
 	}
 
@@ -241,7 +241,7 @@ static bool stm32h7_flash_busy_wait(target_s *const t, const uint32_t regbase)
 	while (status & (FLASH_SR_BSY | FLASH_SR_QW)) {
 		status = target_mem_read32(t, regbase + FLASH_SR);
 		if ((status & FLASH_SR_ERROR_MASK) || target_check_error(t)) {
-			DEBUG_WARN("stm32h7_flash_write: error status %08" PRIx32 "\n", status);
+			DEBUG_ERROR("stm32h7_flash_write: error status %08" PRIx32 "\n", status);
 			target_mem_write32(t, regbase + FLASH_CCR, status & FLASH_SR_ERROR_MASK);
 			return false;
 		}
@@ -333,7 +333,7 @@ static bool stm32h7_erase_bank(
 	target_s *const t, const align_e psize, const uint32_t start_addr, const uint32_t reg_base)
 {
 	if (!stm32h7_flash_unlock(t, start_addr)) {
-		DEBUG_WARN("Bank erase: Unlock bank failed\n");
+		DEBUG_ERROR("Bank erase: Unlock bank failed\n");
 		return false;
 	}
 	/* BER and start can be merged (§3.3.10). */
@@ -347,7 +347,7 @@ static bool stm32h7_wait_erase_bank(target_s *const t, platform_timeout_s *const
 {
 	while (target_mem_read32(t, reg_base + FLASH_SR) & FLASH_SR_QW) {
 		if (target_check_error(t)) {
-			DEBUG_WARN("mass erase bank: comm failed\n");
+			DEBUG_ERROR("mass erase bank: comm failed\n");
 			return false;
 		}
 		target_print_progress(timeout);
@@ -359,7 +359,7 @@ static bool stm32h7_check_bank(target_s *const t, const uint32_t reg_base)
 {
 	uint32_t status = target_mem_read32(t, reg_base + FLASH_SR);
 	if (status & FLASH_SR_ERROR_MASK)
-		DEBUG_WARN("mass erase bank: error sr %" PRIx32 "\n", status);
+		DEBUG_ERROR("mass erase bank: error sr %" PRIx32 "\n", status);
 	return !(status & FLASH_SR_ERROR_MASK);
 }
 
@@ -437,11 +437,11 @@ static bool stm32h7_crc_bank(target_s *t, uint32_t addr)
 	while (status & FLASH_SR_CRC_BUSY) {
 		status = target_mem_read32(t, reg_base + FLASH_SR);
 		if (target_check_error(t)) {
-			DEBUG_WARN("CRC bank %u: comm failed\n", bank);
+			DEBUG_ERROR("CRC bank %u: comm failed\n", bank);
 			return false;
 		}
 		if (status & FLASH_SR_ERROR_READ) {
-			DEBUG_WARN("CRC bank %u: error status %08" PRIx32 "\n", bank, status);
+			DEBUG_ERROR("CRC bank %u: error status %08" PRIx32 "\n", bank, status);
 			return false;
 		}
 	}

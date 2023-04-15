@@ -470,7 +470,7 @@ bool cortexa_probe(adiv5_access_port_s *apb, uint32_t debug_base)
 	adiv5_ap_ref(apb);
 	cortexa_priv_s *priv = calloc(1, sizeof(*priv));
 	if (!priv) { /* calloc failed: heap exhaustion */
-		DEBUG_WARN("calloc: failed in %s\n", __func__);
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return false;
 	}
 

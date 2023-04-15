@@ -110,7 +110,7 @@ static void stm32f1_add_flash(target_s *target, uint32_t addr, size_t length, si
 {
 	target_flash_s *flash = calloc(1, sizeof(*flash));
 	if (!flash) { /* calloc failed: heap exhaustion */
-		DEBUG_WARN("calloc: failed in %s\n", __func__);
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return;
 	}
 
@@ -323,7 +323,7 @@ bool mm32l0xx_probe(target_s *target)
 
 	const uint32_t mm32_id = target_mem_read32(target, DBGMCU_IDCODE_MM32L0);
 	if (target_check_error(target)) {
-		DEBUG_WARN("mm32l0xx_probe: read error at 0x%" PRIx32 "\n", (uint32_t)DBGMCU_IDCODE_MM32L0);
+		DEBUG_ERROR("mm32l0xx_probe: read error at 0x%" PRIx32 "\n", (uint32_t)DBGMCU_IDCODE_MM32L0);
 		return false;
 	}
 	switch (mm32_id) {
@@ -366,7 +366,7 @@ bool mm32f3xx_probe(target_s *target)
 
 	mm32_id = target_mem_read32(target, DBGMCU_IDCODE_MM32F3);
 	if (target_check_error(target)) {
-		DEBUG_WARN("mm32f3xx_probe: read error at 0x%" PRIx32 "\n", (uint32_t)DBGMCU_IDCODE_MM32F3);
+		DEBUG_ERROR("mm32f3xx_probe: read error at 0x%" PRIx32 "\n", (uint32_t)DBGMCU_IDCODE_MM32F3);
 		return false;
 	}
 	switch (mm32_id) {
@@ -505,7 +505,7 @@ static bool stm32f1_flash_unlock(target_s *target, uint32_t bank_offset)
 	target_mem_write32(target, FLASH_KEYR + bank_offset, KEY2);
 	uint32_t ctrl = target_mem_read32(target, FLASH_CR);
 	if (ctrl & FLASH_CR_LOCK)
-		DEBUG_WARN("unlock failed, cr: 0x%08" PRIx32 "\n", ctrl);
+		DEBUG_ERROR("unlock failed, cr: 0x%08" PRIx32 "\n", ctrl);
 	return !(ctrl & FLASH_CR_LOCK);
 }
 
@@ -530,14 +530,14 @@ static bool stm32f1_flash_busy_wait(
 	while (!(status & SR_EOP) && (status & FLASH_SR_BSY)) {
 		status = target_mem_read32(target, FLASH_SR + bank_offset);
 		if (target_check_error(target)) {
-			DEBUG_WARN("Lost communications with target");
+			DEBUG_ERROR("Lost communications with target");
 			return false;
 		}
 		if (timeout)
 			target_print_progress(timeout);
 	};
 	if (status & SR_ERROR_MASK)
-		DEBUG_WARN("stm32f1 flash error 0x%" PRIx32 "\n", status);
+		DEBUG_ERROR("stm32f1 flash error 0x%" PRIx32 "\n", status);
 	return !(status & SR_ERROR_MASK);
 }
 

@@ -147,7 +147,7 @@ uint32_t adiv5_swdp_scan(uint32_t targetid)
 				dp_dpidr = initial_dp->dp_read(initial_dp, ADIV5_DP_DPIDR);
 			}
 			if (e.type || initial_dp->fault) {
-				DEBUG_WARN("No usable DP found\n");
+				DEBUG_ERROR("No usable DP found\n");
 				return 0;
 			}
 		}
@@ -194,7 +194,7 @@ uint32_t adiv5_swdp_scan(uint32_t targetid)
 
 		adiv5_debug_port_s *dp = calloc(1, sizeof(*dp));
 		if (!dp) { /* calloc failed: heap exhaustion */
-			DEBUG_WARN("calloc: failed in %s\n", __func__);
+			DEBUG_ERROR("calloc: failed in %s\n", __func__);
 			continue;
 		}
 
@@ -266,7 +266,7 @@ uint32_t firmware_swdp_low_access(adiv5_debug_port_s *dp, const uint8_t RnW, con
 		swd_proc.seq_out(request, 8);
 		ack = swd_proc.seq_in(3);
 		if (ack == SWDP_ACK_FAULT) {
-			DEBUG_WARN("SWD access resulted in fault, retrying\n");
+			DEBUG_ERROR("SWD access resulted in fault, retrying\n");
 			/* On fault, abort the request and repeat */
 			/* Yes, this is self-recursive.. no, we can't think of a better option */
 			adiv5_dp_write(dp, ADIV5_DP_ABORT,
@@ -276,33 +276,33 @@ uint32_t firmware_swdp_low_access(adiv5_debug_port_s *dp, const uint8_t RnW, con
 	} while ((ack == SWDP_ACK_WAIT || ack == SWDP_ACK_FAULT) && !platform_timeout_is_expired(&timeout));
 
 	if (ack == SWDP_ACK_WAIT) {
-		DEBUG_WARN("SWD access resulted in wait, aborting\n");
+		DEBUG_ERROR("SWD access resulted in wait, aborting\n");
 		dp->abort(dp, ADIV5_DP_ABORT_DAPABORT);
 		dp->fault = ack;
 		return 0;
 	}
 
 	if (ack == SWDP_ACK_FAULT) {
-		DEBUG_WARN("SWD access resulted in fault\n");
+		DEBUG_ERROR("SWD access resulted in fault\n");
 		dp->fault = ack;
 		return 0;
 	}
 
 	if (ack == SWDP_ACK_NO_RESPONSE) {
-		DEBUG_WARN("SWD access resulted in no response\n");
+		DEBUG_ERROR("SWD access resulted in no response\n");
 		dp->fault = ack;
 		return 0;
 	}
 
 	if (ack != SWDP_ACK_OK) {
-		DEBUG_WARN("SWD access has invalid ack %x\n", ack);
+		DEBUG_ERROR("SWD access has invalid ack %x\n", ack);
 		raise_exception(EXCEPTION_ERROR, "SWD invalid ACK");
 	}
 
 	if (RnW) {
 		if (swd_proc.seq_in_parity(&response, 32)) { /* Give up on parity error */
 			dp->fault = 1;
-			DEBUG_WARN("SWD access resulted in parity error\n");
+			DEBUG_ERROR("SWD access resulted in parity error\n");
 			raise_exception(EXCEPTION_ERROR, "SWD parity error");
 		}
 	} else {

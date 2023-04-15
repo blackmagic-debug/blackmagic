@@ -187,7 +187,7 @@ static void stm32l_add_flash(target_s *const target, const uint32_t addr, const 
 {
 	target_flash_s *flash = calloc(1, sizeof(*flash));
 	if (!flash) { /* calloc failed: heap exhaustion */
-		DEBUG_WARN("calloc: failed in %s\n", __func__);
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return;
 	}
 
@@ -204,7 +204,7 @@ static void stm32l_add_eeprom(target_s *const target, const uint32_t addr, const
 {
 	target_flash_s *flash = calloc(1, sizeof(*flash));
 	if (!flash) { /* calloc failed: heap exhaustion */
-		DEBUG_WARN("calloc: failed in %s\n", __func__);
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return;
 	}
 
@@ -249,7 +249,7 @@ bool stm32l0_probe(target_s *const target)
 
 	stm32l_priv_t *priv_storage = calloc(1, sizeof(*priv_storage));
 	if (!priv_storage) {
-		DEBUG_WARN("calloc: failed in %s\n", __func__);
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return false;
 	}
 	target->target_storage = (void *)priv_storage;

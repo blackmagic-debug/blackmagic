@@ -467,7 +467,7 @@ static void stm32l4_add_flash(
 {
 	stm32l4_flash_s *sf = calloc(1, sizeof(*sf));
 	if (!sf) { /* calloc failed: heap exhaustion */
-		DEBUG_WARN("calloc: failed in %s\n", __func__);
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return;
 	}
 
@@ -680,7 +680,7 @@ static bool stm32l4_flash_busy_wait(target_s *const t, platform_timeout_s *timeo
 	while (status & FLASH_SR_BSY) {
 		status = stm32l4_flash_read32(t, FLASH_SR);
 		if ((status & FLASH_SR_ERROR_MASK) || target_check_error(t)) {
-			DEBUG_WARN("stm32l4 Flash error: status 0x%" PRIx32 "\n", status);
+			DEBUG_ERROR("stm32l4 Flash error: status 0x%" PRIx32 "\n", status);
 			return false;
 		}
 		if (timeout)
