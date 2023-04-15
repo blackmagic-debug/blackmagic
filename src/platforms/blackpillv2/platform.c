@@ -149,6 +149,22 @@ void platform_target_set_power(const bool power)
 {
 	gpio_set_val(PWR_BR_PORT, PWR_BR_PIN, !power);
 }
+
+/**
+ * @brief Senses the voltage on the power pin in tenths of a volt (so 33 means 3.3V).
+ * 
+ * However it returns 0 for blackpillv2, as it does not sense the voltage on the power pin.
+ * This function is only needed for implementations that allow the target to be powered
+ * from the debug probe.
+ * 
+ * @param void
+ * @return voltage sensed on the power pin. 0 for blackpillv2.
+ */
+uint32_t platform_target_voltage_sense(void)
+{
+	return 0;
+}
+
 #endif
 
 void platform_target_clk_output_enable(bool enable)
