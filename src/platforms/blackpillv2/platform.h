@@ -47,35 +47,40 @@
  */
 
 /* Hardware definitions... */
-#define JTAG_PORT GPIOA
-#define TDI_PORT  JTAG_PORT
-#define TMS_PORT  JTAG_PORT
-#define TCK_PORT  JTAG_PORT
-#define TDO_PORT  GPIOB
-#define TDI_PIN   GPIO1
-#define TMS_PIN   GPIO13
-#define TCK_PIN   GPIO14
-#define TDO_PIN   GPIO3
+#define JTAG_PORT              GPIOA
 
-#define SWDIO_PORT JTAG_PORT
-#define SWCLK_PORT JTAG_PORT
-#define SWDIO_PIN  TMS_PIN
-#define SWCLK_PIN  TCK_PIN
+#define TDI_PORT               JTAG_PORT
+#define TDI_PIN                GPIO1
 
-#define TRST_PORT GPIOB
-#define TRST_PIN  GPIO5
-#define NRST_PORT GPIOB
-#define NRST_PIN  GPIO4
+#define TDO_PORT               GPIOB
+#define TDO_PIN                GPIO3
 
-#define PWR_BR_PORT GPIOB
-#define PWR_BR_PIN  GPIO8
+#define TCK_PORT               JTAG_PORT
+#define TCK_PIN                GPIO14
+#define SWCLK_PORT             JTAG_PORT
+#define SWCLK_PIN              TCK_PIN
 
-#define LED_PORT       GPIOC
-#define LED_PORT_UART  GPIOA
-#define LED_UART       GPIO1
-#define LED_IDLE_RUN   GPIO13
-#define LED_ERROR      GPIO14
-#define LED_BOOTLOADER GPIO15
+#define TMS_PORT               JTAG_PORT
+#define TMS_PIN                GPIO13
+#define SWDIO_PORT             JTAG_PORT
+#define SWDIO_PIN              TMS_PIN
+
+#define TRST_PORT              GPIOB
+#define TRST_PIN               GPIO5
+
+#define NRST_PORT              GPIOB
+#define NRST_PIN               GPIO4
+
+#define PWR_BR_PORT            GPIOB
+#define PWR_BR_PIN             GPIO8
+
+#define LED_PORT               GPIOC
+#define LED_IDLE_RUN           GPIO13
+#define LED_ERROR              GPIO14
+#define LED_BOOTLOADER         GPIO15
+
+#define LED_PORT_UART          GPIOA
+#define LED_UART               GPIO1
 
 #define USBUSART               USART1
 #define USBUSART_CR1           USART1_CR1
