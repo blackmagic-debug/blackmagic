@@ -110,17 +110,17 @@ typedef struct renesas_family {
 	uint32_t option_start_2;
 	uint16_t option_size_2;
 	uint32_t data_flash_start;
-	uint32_t data_flash_end;
+	uint16_t data_flash_size;
 	uint32_t factory_flash_start;
-	uint32_t factory_size;
+	uint16_t factory_flash_size;
 	uint32_t sramhs_start;
-	uint32_t sramhs_end;
+	uint32_t sramhs_size;
 	uint32_t sram0_start;
-	uint32_t sram0_end;
+	uint32_t sram0_size;
 	uint32_t sram1_start;
-	uint32_t sram1_end;
+	uint32_t sram1_size;
 	uint32_t stdby_sram_start;
-	uint32_t stdby_sram_end;
+	uint16_t stdby_sram_size;
 	renesas_flash_type_e flash_type;
 	renesas_pnr_location_e pnr_location;
 } renesas_family_s;
@@ -138,45 +138,44 @@ renesas_restricted_setting_s renesas_restricted_setting[] = {
 };
 
 renesas_family_s renesas_family[] = {
-	{PNR_SERIES_RA2L1, 0x01010010, 36, 0, 0, 0x40100000, 0x40102000, 0, 0, 0, 0, 0x20000000, 0x20008000, 0, 0, 0, 0,
+	{PNR_SERIES_RA2L1, 0x01010010, 36, 0, 0, 0x40100000, 0x2000, 0, 0, 0, 0, 0x20000000, 0x8000, 0, 0, 0, 0,
 		RENESAS_FLASH_MF4, RENESAS_LOCATION_FIXED1},
-	{PNR_SERIES_RA2E1, 0x01010010, 36, 0, 0, 0x40100000, 0x40101000, 0, 0, 0, 0, 0x20004000, 0x20008000, 0, 0, 0, 0,
+	{PNR_SERIES_RA2E1, 0x01010010, 36, 0, 0, 0x40100000, 0x1000, 0, 0, 0, 0, 0x20004000, 0x4000, 0, 0, 0, 0,
 		RENESAS_FLASH_MF4, RENESAS_LOCATION_FIXED1},
-	{PNR_SERIES_RA2E2, 0x01010010, 36, 0, 0, 0x40100000, 0x40100800, 0, 0, 0, 0, 0x20004000, 0x20006000, 0, 0, 0, 0,
+	{PNR_SERIES_RA2E2, 0x01010010, 36, 0, 0, 0x40100000, 0x800, 0, 0, 0, 0, 0x20004000, 0x2000, 0, 0, 0, 0,
 		RENESAS_FLASH_MF4, RENESAS_LOCATION_FIXED1},
-	{PNR_SERIES_RA2A1, 0x01010008, 44, 0, 0, 0x40100000, 0x40102000, 0, 0, 0, 0, 0x20000000, 0x20008000, 0, 0, 0, 0,
+	{PNR_SERIES_RA2A1, 0x01010008, 44, 0, 0, 0x40100000, 0x2000, 0, 0, 0, 0, 0x20000000, 0x8000, 0, 0, 0, 0,
 		RENESAS_FLASH_MF3, RENESAS_LOCATION_FRT},
-	{PNR_SERIES_RA4M1, 0x01010008, 44, 0, 0, 0x40100000, 0x40102000, 0, 0, 0, 0, 0x20000000, 0x20008000, 0, 0, 0, 0,
+	{PNR_SERIES_RA4M1, 0x01010008, 44, 0, 0, 0x40100000, 0x2000, 0, 0, 0, 0, 0x20000000, 0x8000, 0, 0, 0, 0,
 		RENESAS_FLASH_MF3, RENESAS_LOCATION_FRT},
-	{PNR_SERIES_RA4M2, 0x0100a100, 512, 0, 0, 0x08000000, 0x08002000, 0x010080f0, 196, 0, 0, 0x20000000, 0x20020000, 0,
-		0, 0x28000000, 0x28000400, RENESAS_FLASH_RV40, RENESAS_LOCATION_FIXED2},
-	{PNR_SERIES_RA4M3, 0x0100a100, 512, 0, 0, 0x08000000, 0x08002000, 0x010080f0, 196, 0, 0, 0x20000000, 0x20020000, 0,
-		0, 0x28000000, 0x28000400, RENESAS_FLASH_RV40, RENESAS_LOCATION_FIXED2},
-	{PNR_SERIES_RA4E1, 0x0100a100, 512, 0, 0, 0x08000000, 0x08002000, 0x010080f0, 196, 0, 0, 0x20000000, 0x20020000, 0,
-		0, 0x28000000, 0x28000400, RENESAS_FLASH_RV40, RENESAS_LOCATION_FIXED2},
-	{PNR_SERIES_RA4E2, 0x0100a100, 512, 0, 0, 0x08000000, 0x08001000, 0x010080f0, 196, 0, 0, 0x20000000, 0x2000a000, 0,
-		0, 0x28000000, 0x28000400, RENESAS_FLASH_RV40, RENESAS_LOCATION_FIXED2},
-	{PNR_SERIES_RA4W1, 0x01010008, 44, 0, 0, 0x40100000, 0x40102000, 0, 0, 0, 0, 0x20000000, 0x20018000, 0, 0, 0, 0,
+	{PNR_SERIES_RA4M2, 0x0100a100, 512, 0, 0, 0x08000000, 0x2000, 0x010080f0, 196, 0, 0, 0x20000000, 0x20000, 0, 0,
+		0x28000000, 0x400, RENESAS_FLASH_RV40, RENESAS_LOCATION_FIXED2},
+	{PNR_SERIES_RA4M3, 0x0100a100, 512, 0, 0, 0x08000000, 0x2000, 0x010080f0, 196, 0, 0, 0x20000000, 0x20000, 0, 0,
+		0x28000000, 0x400, RENESAS_FLASH_RV40, RENESAS_LOCATION_FIXED2},
+	{PNR_SERIES_RA4E1, 0x0100a100, 512, 0, 0, 0x08000000, 0x2000, 0x010080f0, 196, 0, 0, 0x20000000, 0x20000, 0, 0,
+		0x28000000, 0x400, RENESAS_FLASH_RV40, RENESAS_LOCATION_FIXED2},
+	{PNR_SERIES_RA4E2, 0x0100a100, 512, 0, 0, 0x08000000, 0x1000, 0x010080f0, 196, 0, 0, 0x20000000, 0xa000, 0, 0,
+		0x28000000, 0x400, RENESAS_FLASH_RV40, RENESAS_LOCATION_FIXED2},
+	{PNR_SERIES_RA4W1, 0x01010008, 44, 0, 0, 0x40100000, 0x2000, 0, 0, 0, 0, 0x20000000, 0x18000, 0, 0, 0, 0,
 		RENESAS_FLASH_MF3, RENESAS_LOCATION_FRT},
-	{PNR_SERIES_RA6M1, 0x01007000, 4096, 0x0100a150, 24, 0x40100000, 0x40102000, 0, 0, 0x1ffe0000, 0x20000000,
-		0x20000000, 0x20020000, 0, 0, 0x200fe000, 0x20100000, RENESAS_FLASH_RV40, RENESAS_LOCATION_FRT},
-	{PNR_SERIES_RA6M2, 0x01007000, 4096, 0x0100a150, 24, 0x40100000, 0x40108000, 0, 0, 0x1ffe0000, 0x20000000,
-		0x20000000, 0x20040000, 0, 0, 0x200fe000, 0x20100000, RENESAS_FLASH_RV40, RENESAS_LOCATION_FRT},
-	{PNR_SERIES_RA6M3, 0x01007000, 4096, 0x0100a150, 24, 0x40100000, 0x40110000, 0, 0, 0x1ffe0000, 0x20000000,
-		0x20000000, 0x20040000, 0x20040000, 0x20080000, 0x200fe000, 0x20100000, RENESAS_FLASH_RV40,
-		RENESAS_LOCATION_FRT},
-	{PNR_SERIES_RA6M4, 0x0100a100, 512, 0, 0, 0x08000000, 0x08002000, 0x010080f0, 196, 0, 0, 0x20000000, 0x20040000, 0,
-		0, 0x28000000, 0x28000400, RENESAS_FLASH_RV40, RENESAS_LOCATION_FIXED2},
-	{PNR_SERIES_RA6M5, 0x0100a100, 512, 0, 0, 0x08000000, 0x08002000, 0x010080f0, 196, 0, 0, 0x20000000, 0x20080000, 0,
-		0, 0x28000000, 0x28000400, RENESAS_FLASH_RV40, RENESAS_LOCATION_FIXED2},
-	{PNR_SERIES_RA6E1, 0x0100a100, 512, 0, 0, 0x08000000, 0x08002000, 0x010080f0, 196, 0, 0, 0x20000000, 0x20040000, 0,
-		0, 0x28000000, 0x28000400, RENESAS_FLASH_RV40, RENESAS_LOCATION_FIXED2},
-	{PNR_SERIES_RA6E2, 0x0100a100, 512, 0, 0, 0x08000000, 0x08001000, 0x010080f0, 196, 0, 0, 0x20000000, 0x2000a000, 0,
-		0, 0x28000000, 0x28000400, RENESAS_FLASH_RV40, RENESAS_LOCATION_FIXED2},
-	{PNR_SERIES_RA6T1, 0x01007000, 4096, 0x0100a150, 24, 0x40100000, 0x40102000, 0, 0, 0x1ffe0000, 0x1fff0000, 0, 0, 0,
-		0, 0, 0, RENESAS_FLASH_RV40, RENESAS_LOCATION_FRT},
-	{PNR_SERIES_RA6T2, 0x0100a100, 512, 0, 0, 0x08000000, 0x08004000, 0x010080f0, 196, 0, 0, 0x20000000, 0x20010000, 0,
-		0, 0x28000000, 0x28000400, RENESAS_FLASH_RV40, RENESAS_LOCATION_FIXED2},
+	{PNR_SERIES_RA6M1, 0x01007000, 4096, 0x0100a150, 24, 0x40100000, 0x2000, 0, 0, 0x1ffe0000, 0x20000, 0x20000000,
+		0x20000, 0, 0, 0x200fe000, 0x2000, RENESAS_FLASH_RV40, RENESAS_LOCATION_FRT},
+	{PNR_SERIES_RA6M2, 0x01007000, 4096, 0x0100a150, 24, 0x40100000, 0x8000, 0, 0, 0x1ffe0000, 0x20000, 0x20000000,
+		0x40000, 0, 0, 0x200fe000, 0x2000, RENESAS_FLASH_RV40, RENESAS_LOCATION_FRT},
+	{PNR_SERIES_RA6M3, 0x01007000, 4096, 0x0100a150, 24, 0x40100000, 0x1000, 0, 0, 0x1ffe0000, 0x20000, 0x20000000,
+		0x40000, 0x20040000, 0x40000, 0x200fe000, 0x2000, RENESAS_FLASH_RV40, RENESAS_LOCATION_FRT},
+	{PNR_SERIES_RA6M4, 0x0100a100, 512, 0, 0, 0x08000000, 0x2000, 0x010080f0, 196, 0, 0, 0x20000000, 0x40000, 0, 0,
+		0x28000000, 0x400, RENESAS_FLASH_RV40, RENESAS_LOCATION_FIXED2},
+	{PNR_SERIES_RA6M5, 0x0100a100, 512, 0, 0, 0x08000000, 0x2000, 0x010080f0, 196, 0, 0, 0x20000000, 0x80000, 0, 0,
+		0x28000000, 0x400, RENESAS_FLASH_RV40, RENESAS_LOCATION_FIXED2},
+	{PNR_SERIES_RA6E1, 0x0100a100, 512, 0, 0, 0x08000000, 0x2000, 0x010080f0, 196, 0, 0, 0x20000000, 0x40000, 0, 0,
+		0x28000000, 0x400, RENESAS_FLASH_RV40, RENESAS_LOCATION_FIXED2},
+	{PNR_SERIES_RA6E2, 0x0100a100, 512, 0, 0, 0x08000000, 0x1000, 0x010080f0, 196, 0, 0, 0x20000000, 0xa000, 0, 0,
+		0x28000000, 0x400, RENESAS_FLASH_RV40, RENESAS_LOCATION_FIXED2},
+	{PNR_SERIES_RA6T1, 0x01007000, 4096, 0x0100a150, 24, 0x40100000, 0x2000, 0, 0, 0x1ffe0000, 0x10000, 0, 0, 0, 0, 0,
+		0, RENESAS_FLASH_RV40, RENESAS_LOCATION_FRT},
+	{PNR_SERIES_RA6T2, 0x0100a100, 512, 0, 0, 0x08000000, 0x4000, 0x010080f0, 196, 0, 0, 0x20000000, 0x10000, 0, 0,
+		0x28000000, 0x400, RENESAS_FLASH_RV40, RENESAS_LOCATION_FIXED2},
 };
 
 renesas_family_s renesas_family_lookup(pnr_series_t series)
@@ -539,7 +538,13 @@ static bool renesas_rv40_pe_mode(target_s *t, pe_mode_e pe_mode)
 
 static bool renesas_check_restricted_option(uint32_t dest)
 {
-	return true;
+	for (size_t i = 0; i < ARRAY_LENGTH(renesas_restricted_setting); ++i) {
+		tc_printf("checking dest: 0x%x" PRId32, dest);
+		if (renesas_restricted_setting[i].addr_start >= dest && dest <= renesas_restricted_setting[i].addr_end)
+			return true;
+		else
+			return false;
+	}
 }
 
 static bool renesas_rv40_error_check(target_s *t, uint32_t error_bits)
@@ -904,28 +909,23 @@ bool renesas_probe(target_s *t)
 
 	/* Data flash */
 	if (priv_storage->details.data_flash_start != 0)
-		renesas_add_flash(t, priv_storage->details.data_flash_start,
-			priv_storage->details.data_flash_end - priv_storage->details.data_flash_start);
+		renesas_add_flash(t, priv_storage->details.data_flash_start, priv_storage->details.data_flash_size);
 
 	/* SRAM 0 */
 	if (priv_storage->details.sram0_start != 0)
-		target_add_ram(
-			t, priv_storage->details.sram0_start, priv_storage->details.sram0_end - priv_storage->details.sram0_start);
+		target_add_ram(t, priv_storage->details.sram0_start, priv_storage->details.sram0_size);
 
 	/* Standby SRAM */
 	if (priv_storage->details.stdby_sram_start != 0)
-		target_add_ram(t, priv_storage->details.stdby_sram_start,
-			priv_storage->details.stdby_sram_end - priv_storage->details.stdby_sram_start);
+		target_add_ram(t, priv_storage->details.stdby_sram_start, priv_storage->details.stdby_sram_size);
 
 	/* SRAM HS */
 	if (priv_storage->details.sramhs_start != 0)
-		target_add_ram(t, priv_storage->details.sramhs_start,
-			priv_storage->details.sramhs_end - priv_storage->details.sramhs_start);
+		target_add_ram(t, priv_storage->details.sramhs_start, priv_storage->details.sramhs_size);
 
 	/* SRAM 1 */
 	if (priv_storage->details.sram1_start != 0)
-		target_add_ram(
-			t, priv_storage->details.sram1_start, priv_storage->details.sram1_end - priv_storage->details.sram1_start);
+		target_add_ram(t, priv_storage->details.sram1_start, priv_storage->details.sram1_size);
 
 	/* Option-Setting flash */
 	if (priv_storage->details.option_start != 0)
