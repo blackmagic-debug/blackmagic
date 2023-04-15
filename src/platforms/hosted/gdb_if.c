@@ -170,7 +170,7 @@ static void display_socket_error(const int error, const socket_t socket, const c
 #else
 	const char *message = strerror(error);
 #endif
-	DEBUG_WARN("Error %s %d, got error %d: %s\n", operation, socket, error, message);
+	DEBUG_ERROR("Error %s %d, got error %d: %s\n", operation, socket, error, message);
 #if defined(_WIN32) || defined(__CYGWIN__)
 	LocalFree(message);
 #endif
@@ -207,7 +207,7 @@ static void socket_set_flags(const socket_t socket, const int flags)
 	ULONG option = (flags & O_NONBLOCK) ? 1U : 0U;
 	const int result = ioctlsocket(socket, FIONBIO, &option);
 	if (result != NO_ERROR)
-		DEBUG_WARN("ioctlsocket failed with error: %d\n", result);
+		DEBUG_ERROR("ioctlsocket failed with error: %d\n", result);
 #else
 	fcntl(socket, F_SETFL, flags);
 #endif
@@ -219,14 +219,14 @@ int gdb_if_init(void)
 	WSADATA wsa_data = {};
 	const int result = WSAStartup(MAKEWORD(2, 2), &wsa_data);
 	if (result != NO_ERROR) {
-		DEBUG_WARN("WSAStartup failed with error: %d\n", result);
+		DEBUG_ERROR("WSAStartup failed with error: %d\n", result);
 		return -1;
 	}
 #endif
 	for (uint16_t port = default_port; port < max_port; ++port) {
 		const sockaddr_storage_s addr = sockaddr_prepare(port);
 		if (addr.ss_family == AF_UNSPEC) {
-			DEBUG_WARN("Failed to get a suitable socket address\n");
+			DEBUG_ERROR("Failed to get a suitable socket address\n");
 			return -1;
 		}
 
@@ -254,7 +254,7 @@ int gdb_if_init(void)
 		return 0;
 	}
 
-	DEBUG_WARN("Failed to acquire a port to listen on\n");
+	DEBUG_ERROR("Failed to acquire a port to listen on\n");
 	return -1;
 }
 

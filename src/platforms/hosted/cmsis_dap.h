@@ -38,7 +38,7 @@ void dap_nrst_set_val(bool assert);
 bool dap_init(bmp_info_s *info)
 {
 	(void)info;
-	DEBUG_WARN("FATAL: Missing hidapi-libusb\n");
+	DEBUG_ERROR("Missing hidapi-libusb\n");
 	return false;
 }
 

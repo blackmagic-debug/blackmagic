@@ -76,7 +76,7 @@ static bool bmp_mmap(char *file, mmap_data_s *map)
 #if defined(_WIN32) || defined(__CYGWIN__)
 	map->hFile = CreateFile(file, GENERIC_WRITE | GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_ALWAYS, 0, NULL);
 	if (map->hFile == INVALID_HANDLE_VALUE) {
-		DEBUG_WARN("Open file %s failed: %s\n", file, strerror(errno));
+		DEBUG_ERROR("Open file %s failed: %s\n", file, strerror(errno));
 		return false;
 	}
 	map->size = GetFileSize(map->hFile, NULL);
@@ -87,20 +87,20 @@ static bool bmp_mmap(char *file, mmap_data_s *map)
 		NULL);                                          /* name of mapping object */
 
 	if (map->hMapFile == NULL || map->hMapFile == INVALID_HANDLE_VALUE) {
-		DEBUG_WARN("Map file %s failed: %s\n", file, strerror(errno));
+		DEBUG_ERROR("Map file %s failed: %s\n", file, strerror(errno));
 		CloseHandle(map->hFile);
 		return false;
 	}
 	map->data = MapViewOfFile(map->hMapFile, FILE_MAP_READ, 0, 0, 0);
 	if (!map->data) {
-		DEBUG_WARN("Could not create file mapping object (%s).\n", strerror(errno));
+		DEBUG_ERROR("Could not create file mapping object (%s).\n", strerror(errno));
 		CloseHandle(map->hMapFile);
 		return false;
 	}
 #else
 	map->fd = open(file, O_RDONLY | O_BINARY);
 	if (map->fd < 0) {
-		DEBUG_WARN("Open file %s failed: %s\n", file, strerror(errno));
+		DEBUG_ERROR("Open file %s failed: %s\n", file, strerror(errno));
 		return false;
 	}
 	struct stat stat = {};
@@ -529,7 +529,7 @@ int cl_execute(bmda_cli_options_s *opt)
 				platform_delay(1); /* To allow trigger */
 			}
 		} else
-			DEBUG_WARN("No test for this core type yet\n");
+			DEBUG_ERROR("No test for this core type yet\n");
 	}
 	if (opt->opt_mode == BMP_MODE_TEST || opt->opt_mode == BMP_MODE_SWJ_TEST)
 		goto target_detach;

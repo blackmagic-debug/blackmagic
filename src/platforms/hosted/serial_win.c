@@ -57,7 +57,7 @@ static void display_error(const LSTATUS error, const char *const operation, cons
 	char *message = NULL;
 	FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL,
 		error, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (char *)&message, 0, NULL);
-	DEBUG_WARN("Error %s %s, got error %08x: %s\n", operation, path, error, message);
+	DEBUG_ERROR("Error %s %s, got error %08x: %s\n", operation, path, error, message);
 	LocalFree(message);
 }
 
@@ -67,7 +67,7 @@ static void handle_dev_error(HANDLE device, const char *const operation)
 	char *message = NULL;
 	FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL,
 		error, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (char *)&message, 0, NULL);
-	DEBUG_WARN("Error %s (%08lx): %s\n", operation, error, message);
+	DEBUG_ERROR("Error %s (%08lx): %s\n", operation, error, message);
 	LocalFree(message);
 	if (device != INVALID_HANDLE_VALUE)
 		CloseHandle(device);
@@ -106,7 +106,7 @@ static char *read_key_from_path(const char *const subpath, const char *const key
 
 	char *value = calloc(1, value_len);
 	if (!value) {
-		DEBUG_WARN("Could not allocation sufficient memory for key value\n");
+		DEBUG_ERROR("Could not allocate sufficient memory for key value\n");
 		RegCloseKey(key_path_handle);
 		return NULL;
 	}
@@ -124,7 +124,7 @@ static char *find_bmp_by_serial(const char *serial)
 	free(serial_path);
 	if (!prefix)
 		return NULL;
-	printf("prefix: %s\n", prefix);
+	DEBUG_INFO("prefix: %s\n", prefix);
 
 	char *parameter_path = format_string("&MI_00\\%s&0000\\Device Parameters", prefix);
 	if (!parameter_path) {
@@ -135,7 +135,7 @@ static char *find_bmp_by_serial(const char *serial)
 	free(prefix);
 	if (!port_name)
 		return NULL;
-	printf("Using BMP at %s\n", port_name);
+	DEBUG_WARN("Using BMP at %s\n", port_name);
 	return port_name;
 }
 
@@ -168,7 +168,7 @@ int serial_open(const bmda_cli_options_s *const cl_opts, const char *const seria
 {
 	char *const device = find_bmp_device(cl_opts, serial);
 	if (!device) {
-		DEBUG_WARN("Unexpected problems finding the device!\n");
+		DEBUG_ERROR("Unexpected problems finding the device!\n");
 		return -1;
 	}
 
@@ -234,7 +234,7 @@ bool platform_buffer_write(const void *const data, const size_t length)
 	DWORD written = 0;
 	for (size_t offset = 0; offset < length; offset += written) {
 		if (!WriteFile(port_handle, buffer + offset, length - offset, &written, NULL)) {
-			DEBUG_WARN("Serial write failed %lu, written %zu\n", GetLastError(), offset);
+			DEBUG_ERROR("Serial write failed %lu, written %zu\n", GetLastError(), offset);
 			return false;
 		}
 		offset += written;
@@ -253,11 +253,11 @@ int platform_buffer_read(void *const data, const size_t length)
 	/* Drain the buffer for the remote till we see a start-of-response byte */
 	while (response != REMOTE_RESP) {
 		if (!ReadFile(port_handle, &response, 1, &read, NULL)) {
-			DEBUG_WARN("error occurred while reading response: %lu\n", GetLastError());
+			DEBUG_ERROR("error occurred while reading response: %lu\n", GetLastError());
 			exit(-3);
 		}
 		if (platform_time_ms() > end_time) {
-			DEBUG_WARN("Timeout while waiting for BMP response\n");
+			DEBUG_ERROR("Timeout while waiting for BMP response\n");
 			exit(-4);
 		}
 	}
@@ -265,7 +265,7 @@ int platform_buffer_read(void *const data, const size_t length)
 	/* Now collect the response */
 	for (size_t offset = 0; offset < length && platform_time_ms() < end_time;) {
 		if (!ReadFile(port_handle, buffer + offset, 1, &read, NULL)) {
-			DEBUG_WARN("Error on read\n");
+			DEBUG_ERROR("Error on read\n");
 			exit(-3);
 		}
 		if (read > 0) {
@@ -278,7 +278,7 @@ int platform_buffer_read(void *const data, const size_t length)
 			++offset;
 		}
 	}
-	DEBUG_WARN("Failed to read response after %ums\n", platform_time_ms() - start_time);
+	DEBUG_ERROR("Failed to read response after %ums\n", platform_time_ms() - start_time);
 	exit(-3);
 	return 0;
 }

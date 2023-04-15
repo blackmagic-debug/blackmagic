@@ -66,7 +66,7 @@ bool jlink_jtagtap_init(bmp_info_s *const info)
 	uint8_t res[4];
 	send_recv(info->usb_link, cmd_switch, 2, res, sizeof(res));
 	if (!(res[0] & JLINK_IF_JTAG)) {
-		DEBUG_WARN("JTAG not available\n");
+		DEBUG_ERROR("JTAG not available\n");
 		return false;
 	}
 	cmd_switch[1] = SELECT_IF_JTAG;
@@ -92,7 +92,7 @@ bool jlink_jtagtap_init(bmp_info_s *const info)
 	send_recv(info->usb_link, NULL, 0, res, 1);
 
 	if (res[0] != 0) {
-		DEBUG_WARN("Switch to JTAG failed\n");
+		DEBUG_ERROR("Switch to JTAG failed\n");
 		return false;
 	}
 	jtag_proc.jtagtap_reset = jtagtap_reset;

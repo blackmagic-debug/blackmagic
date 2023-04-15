@@ -427,7 +427,7 @@ void platform_target_set_power(const bool power)
 		if (remote_target_set_power(power))
 			DEBUG_INFO("Powering up device!\n");
 		else
-			DEBUG_WARN("Powering up device unimplemented or failed\n");
+			DEBUG_ERROR("Powering up device unimplemented or failed\n");
 		break;
 
 	default:

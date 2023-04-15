@@ -201,11 +201,11 @@ static bool dap_init_bulk(const bmp_info_s *const info)
 	DEBUG_INFO("Using bulk transfer\n");
 	usb_handle = libusb_open_device_with_vid_pid(info->libusb_ctx, info->vid, info->pid);
 	if (!usb_handle) {
-		DEBUG_WARN("WARN: libusb_open_device_with_vid_pid() failed\n");
+		DEBUG_ERROR("libusb_open_device_with_vid_pid() failed\n");
 		return false;
 	}
 	if (libusb_claim_interface(usb_handle, info->interface_num) < 0) {
-		DEBUG_WARN("WARN: libusb_claim_interface() failed\n");
+		DEBUG_ERROR("libusb_claim_interface() failed\n");
 		return false;
 	}
 	in_ep = info->in_ep;
@@ -239,7 +239,7 @@ bool dap_init(bmp_info_s *const info)
 	const size_t size = dap_info(DAP_INFO_CAPABILITIES, &dap_caps, sizeof(dap_caps));
 	if (size != 1U) {
 		/* Report the failure */
-		DEBUG_WARN("Failed to get adaptor capabilities, aborting\n");
+		DEBUG_ERROR("Failed to get adaptor capabilities, aborting\n");
 		/* Close any open connections and return failure so we don't go further */
 		dap_exit_function();
 		return false;
@@ -363,7 +363,7 @@ ssize_t dbg_dap_cmd_hid(const uint8_t *const request_data, const size_t request_
 	const size_t response_length)
 {
 	if (request_length + 1U > report_size) {
-		DEBUG_WARN(
+		DEBUG_ERROR(
 			"Attempted to make over-long request of %zu bytes, max length is %zu\n", request_length + 1U, report_size);
 		exit(-1);
 	}
@@ -374,7 +374,7 @@ ssize_t dbg_dap_cmd_hid(const uint8_t *const request_data, const size_t request_
 
 	const int result = hid_write(handle, buffer, report_size);
 	if (result < 0) {
-		DEBUG_WARN("CMSIS-DAP write error: %ls\n", hid_error(handle));
+		DEBUG_ERROR("CMSIS-DAP write error: %ls\n", hid_error(handle));
 		exit(-1);
 	}
 
@@ -382,10 +382,10 @@ ssize_t dbg_dap_cmd_hid(const uint8_t *const request_data, const size_t request_
 	do {
 		response = hid_read_timeout(handle, response_data, response_length, 1000);
 		if (response < 0) {
-			DEBUG_WARN("CMSIS-DAP read error: %ls\n", hid_error(handle));
+			DEBUG_ERROR("CMSIS-DAP read error: %ls\n", hid_error(handle));
 			exit(-1);
 		} else if (response == 0) {
-			DEBUG_WARN("CMSIS-DAP read timeout\n");
+			DEBUG_ERROR("CMSIS-DAP read timeout\n");
 			exit(-1);
 		}
 	} while (response_data[0] != request_data[0]);
@@ -399,7 +399,7 @@ ssize_t dbg_dap_cmd_bulk(const uint8_t *const request_data, const size_t request
 	const int result = libusb_bulk_transfer(
 		usb_handle, out_ep, (uint8_t *)request_data, (int)request_length, &transferred, TRANSFER_TIMEOUT_MS);
 	if (result < 0) {
-		DEBUG_WARN("CMSIS-DAP write error: %s (%d)\n", libusb_strerror(result), result);
+		DEBUG_ERROR("CMSIS-DAP write error: %s (%d)\n", libusb_strerror(result), result);
 		return result;
 	}
 
@@ -408,7 +408,7 @@ ssize_t dbg_dap_cmd_bulk(const uint8_t *const request_data, const size_t request
 		const int result = libusb_bulk_transfer(
 			usb_handle, in_ep, response_data, (int)response_length, &transferred, TRANSFER_TIMEOUT_MS);
 		if (result < 0) {
-			DEBUG_WARN("CMSIS-DAP read error: %s (%d)\n", libusb_strerror(result), result);
+			DEBUG_ERROR("CMSIS-DAP read error: %s (%d)\n", libusb_strerror(result), result);
 			return result;
 		}
 	} while (response_data[0] != request_data[0]);
