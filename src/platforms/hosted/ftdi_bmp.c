@@ -389,7 +389,7 @@ bool ftdi_bmp_init(bmda_cli_options_s *const cl_opts)
 	}
 
 	if (!cable->name) {
-		DEBUG_WARN("No adaptor matching found for %s\n", cl_opts->opt_cable);
+		DEBUG_ERROR("No adaptor matching found for %s\n", cl_opts->opt_cable);
 		return false;
 	}
 
@@ -418,33 +418,33 @@ bool ftdi_bmp_init(bmda_cli_options_s *const cl_opts)
 
 	ftdi_context_s *ctx = ftdi_new();
 	if (ctx == NULL) {
-		DEBUG_WARN("ftdi_new: %s\n", ftdi_get_error_string(ctx));
+		DEBUG_ERROR("ftdi_new: %s\n", ftdi_get_error_string(ctx));
 		abort();
 	}
 	err = ftdi_set_interface(ctx, active_cable.interface);
 	if (err != 0) {
-		DEBUG_WARN("ftdi_set_interface: %d: %s\n", err, ftdi_get_error_string(ctx));
+		DEBUG_ERROR("ftdi_set_interface: %d: %s\n", err, ftdi_get_error_string(ctx));
 		goto error_1;
 	}
 	err = ftdi_usb_open_desc(
 		ctx, active_cable.vendor, active_cable.product, active_cable.description, cl_opts->opt_serial);
 	if (err != 0) {
-		DEBUG_WARN("unable to open ftdi device: %d (%s)\n", err, ftdi_get_error_string(ctx));
+		DEBUG_ERROR("unable to open ftdi device: %d (%s)\n", err, ftdi_get_error_string(ctx));
 		goto error_1;
 	}
 	err = ftdi_set_latency_timer(ctx, 1);
 	if (err != 0) {
-		DEBUG_WARN("ftdi_set_latency_timer: %d: %s\n", err, ftdi_get_error_string(ctx));
+		DEBUG_ERROR("ftdi_set_latency_timer: %d: %s\n", err, ftdi_get_error_string(ctx));
 		goto error_2;
 	}
 	err = ftdi_set_baudrate(ctx, 1000000);
 	if (err != 0) {
-		DEBUG_WARN("ftdi_set_baudrate: %d: %s\n", err, ftdi_get_error_string(ctx));
+		DEBUG_ERROR("ftdi_set_baudrate: %d: %s\n", err, ftdi_get_error_string(ctx));
 		goto error_2;
 	}
 	err = ftdi_write_data_set_chunksize(ctx, BUF_SIZE);
 	if (err != 0) {
-		DEBUG_WARN("ftdi_write_data_set_chunksize: %d: %s\n", err, ftdi_get_error_string(ctx));
+		DEBUG_ERROR("ftdi_write_data_set_chunksize: %d: %s\n", err, ftdi_get_error_string(ctx));
 		goto error_2;
 	}
 	assert(ctx != NULL);
@@ -454,19 +454,19 @@ bool ftdi_bmp_init(bmda_cli_options_s *const cl_opts)
 	err = ftdi_usb_purge_buffers(ctx);
 #endif
 	if (err != 0) {
-		DEBUG_WARN("ftdi_tcioflush(ftdi_usb_purge_buffer): %d: %s\n", err, ftdi_get_error_string(ctx));
+		DEBUG_ERROR("ftdi_tcioflush(ftdi_usb_purge_buffer): %d: %s\n", err, ftdi_get_error_string(ctx));
 		goto error_2;
 	}
 	/* Reset MPSSE controller. */
 	err = ftdi_set_bitmode(ctx, 0, BITMODE_RESET);
 	if (err != 0) {
-		DEBUG_WARN("ftdi_set_bitmode: %d: %s\n", err, ftdi_get_error_string(ctx));
+		DEBUG_ERROR("ftdi_set_bitmode: %d: %s\n", err, ftdi_get_error_string(ctx));
 		goto error_2;
 	}
 	/* Enable MPSSE controller. Pin directions are set later.*/
 	err = ftdi_set_bitmode(ctx, 0, BITMODE_MPSSE);
 	if (err != 0) {
-		DEBUG_WARN("ftdi_set_bitmode: %d: %s\n", err, ftdi_get_error_string(ctx));
+		DEBUG_ERROR("ftdi_set_bitmode: %d: %s\n", err, ftdi_get_error_string(ctx));
 		goto error_2;
 	}
 	uint8_t ftdi_init[16];
@@ -489,7 +489,7 @@ bool ftdi_bmp_init(bmda_cli_options_s *const cl_opts)
 	case TYPE_2232C:
 		break;
 	default:
-		DEBUG_WARN("FTDI Chip has no MPSSE\n");
+		DEBUG_ERROR("FTDI Chip has no MPSSE\n");
 		goto error_2;
 	}
 

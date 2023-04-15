@@ -132,7 +132,7 @@ void probe_info_to_bmp_info(const probe_info_s *const probe, bmp_info_s *info)
 
 	if (snprintf(info->manufacturer, descriptor_len, "%s (%s)", probe->product, probe->manufacturer) !=
 		(int)descriptor_len - 1) {
-		DEBUG_WARN("Probe descriptor string '%s (%s)' exceeds allowable manufacturer description length\n",
+		DEBUG_ERROR("Probe descriptor string '%s (%s)' exceeds allowable manufacturer description length\n",
 			probe->product, probe->manufacturer);
 	}
 }

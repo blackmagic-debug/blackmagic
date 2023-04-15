@@ -42,7 +42,7 @@ static int set_interface_attribs(void)
 	struct termios tty;
 	memset(&tty, 0, sizeof tty);
 	if (tcgetattr(fd, &tty) != 0) {
-		DEBUG_WARN("error %d from tcgetattr", errno);
+		DEBUG_ERROR("error %d from tcgetattr", errno);
 		return -1;
 	}
 
@@ -65,7 +65,7 @@ static int set_interface_attribs(void)
 	tty.c_cflag &= ~CRTSCTS;
 #endif
 	if (tcsetattr(fd, TCSANOW, &tty) != 0) {
-		DEBUG_WARN("error %d from tcsetattr", errno);
+		DEBUG_ERROR("error %d from tcsetattr", errno);
 		return -1;
 	}
 	return 0;
@@ -88,7 +88,7 @@ int serial_open(const bmda_cli_options_s *cl_opts, const char *serial)
 	}
 	fd = open(name, O_RDWR | O_SYNC | O_NOCTTY);
 	if (fd < 0) {
-		DEBUG_WARN("Couldn't open serial port %s\n", name);
+		DEBUG_ERROR("Couldn't open serial port %s\n", name);
 		return -1;
 	}
 	/* BMP only offers an USB-Serial connection with no real serial
@@ -159,7 +159,7 @@ int serial_open(const bmda_cli_options_s *const cl_opts, const char *const seria
 		}
 		closedir(dir);
 		if (total == 0) {
-			DEBUG_WARN("No Black Magic Probes found\n");
+			DEBUG_ERROR("No Black Magic Probes found\n");
 			return -1;
 		}
 		if (matches != 1) {
@@ -175,11 +175,11 @@ int serial_open(const bmda_cli_options_s *const cl_opts, const char *const seria
 				}
 				closedir(dir);
 				if (serial)
-					DEBUG_WARN("No match for (partial) serial number \"%s\"\n", serial);
+					DEBUG_ERROR("No match for (partial) serial number \"%s\"\n", serial);
 				else
 					DEBUG_WARN("Select probe with `-s <(Partial) Serial Number>`\n");
 			} else
-				DEBUG_WARN("Could not scan %s: %s\n", name, strerror(errno));
+				DEBUG_ERROR("Could not scan %s: %s\n", name, strerror(errno));
 			return -1;
 		}
 	} else {
@@ -190,7 +190,7 @@ int serial_open(const bmda_cli_options_s *const cl_opts, const char *const seria
 	}
 	fd = open(name, O_RDWR | O_SYNC | O_NOCTTY);
 	if (fd < 0) {
-		DEBUG_WARN("Couldn't open serial port %s\n", name);
+		DEBUG_ERROR("Couldn't open serial port %s\n", name);
 		return -1;
 	}
 	/* BMP only offers an USB-Serial connection with no real serial
@@ -211,7 +211,7 @@ bool platform_buffer_write(const void *const data, const size_t length)
 	const ssize_t written = write(fd, data, length);
 	if (written < 0) {
 		const int error = errno;
-		DEBUG_WARN("Failed to write (%d): %s\n", errno, strerror(error));
+		DEBUG_ERROR("Failed to write (%d): %s\n", errno, strerror(error));
 		exit(-2);
 	}
 	return (size_t)written == length;
@@ -235,16 +235,16 @@ int platform_buffer_read(void *const data, size_t length)
 
 		const int result = select(FD_SETSIZE, &select_set, NULL, NULL, &timeout);
 		if (result < 0) {
-			DEBUG_WARN("Failed on select\n");
+			DEBUG_ERROR("Failed on select\n");
 			return -3;
 		}
 		if (result == 0) {
-			DEBUG_WARN("Timeout while waiting for BMP response\n");
+			DEBUG_ERROR("Timeout while waiting for BMP response\n");
 			return -4;
 		}
 		if (read(fd, &response, 1) != 1) {
 			const int error = errno;
-			DEBUG_WARN("Failed to read response (%d): %s\n", error, strerror(error));
+			DEBUG_ERROR("Failed to read response (%d): %s\n", error, strerror(error));
 			return -6;
 		}
 	}
@@ -255,16 +255,16 @@ int platform_buffer_read(void *const data, size_t length)
 		FD_SET(fd, &select_set);
 		const int result = select(FD_SETSIZE, &select_set, NULL, NULL, &timeout);
 		if (result < 0) {
-			DEBUG_WARN("Failed on select\n");
+			DEBUG_ERROR("Failed on select\n");
 			exit(-4);
 		}
 		if (result == 0) {
-			DEBUG_WARN("Timeout on read\n");
+			DEBUG_ERROR("Timeout on read\n");
 			return -5;
 		}
 		if (read(fd, data + offset, 1) != 1) {
 			const int error = errno;
-			DEBUG_WARN("Failed to read response (%d): %s\n", error, strerror(error));
+			DEBUG_ERROR("Failed to read response (%d): %s\n", error, strerror(error));
 			return -6;
 		}
 		char *const buffer = (char *)data;
@@ -276,6 +276,6 @@ int platform_buffer_read(void *const data, size_t length)
 		++offset;
 	}
 
-	DEBUG_WARN("Failed to read\n");
+	DEBUG_ERROR("Failed to read\n");
 	return -6;
 }

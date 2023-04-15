@@ -58,14 +58,14 @@ static bmp_type_t find_cmsis_dap_interface(libusb_device *dev, bmp_info_s *info)
 
 	int res = libusb_get_active_config_descriptor(dev, &conf);
 	if (res < 0) {
-		DEBUG_WARN("WARN: libusb_get_active_config_descriptor() failed: %s", libusb_strerror(res));
+		DEBUG_ERROR("libusb_get_active_config_descriptor() failed: %s", libusb_strerror(res));
 		return type;
 	}
 
 	libusb_device_handle *handle;
 	res = libusb_open(dev, &handle);
 	if (res != LIBUSB_SUCCESS) {
-		DEBUG_INFO("INFO: libusb_open() failed: %s\n", libusb_strerror(res));
+		DEBUG_INFO("libusb_open() failed: %s\n", libusb_strerror(res));
 		libusb_free_config_descriptor(conf);
 		return type;
 	}
@@ -79,7 +79,7 @@ static bmp_type_t find_cmsis_dap_interface(libusb_device *dev, bmp_info_s *info)
 		res = libusb_get_string_descriptor_ascii(
 			handle, interface->iInterface, (uint8_t *)interface_string, sizeof(interface_string));
 		if (res < 0) {
-			DEBUG_WARN("WARN: libusb_get_string_descriptor_ascii() failed: %s\n", libusb_strerror(res));
+			DEBUG_ERROR("libusb_get_string_descriptor_ascii() failed: %s\n", libusb_strerror(res));
 			continue;
 		}
 
@@ -111,7 +111,7 @@ int find_debuggers(bmda_cli_options_s *cl_opts, bmp_info_s *info)
 	libusb_device **devs;
 	int res = libusb_init(&info->libusb_ctx);
 	if (res) {
-		DEBUG_WARN("Fatal: Failed to get USB context: %s\n", libusb_strerror(res));
+		DEBUG_ERROR("Failed to get USB context: %s\n", libusb_strerror(res));
 		exit(-1);
 	}
 	if (cl_opts->opt_cable) {
@@ -128,7 +128,7 @@ int find_debuggers(bmda_cli_options_s *cl_opts, bmp_info_s *info)
 	}
 	ssize_t n_devs = libusb_get_device_list(info->libusb_ctx, &devs);
 	if (n_devs < 0) {
-		DEBUG_WARN("WARN:libusb_get_device_list() failed");
+		DEBUG_ERROR("libusb_get_device_list() failed");
 		return -1;
 	}
 	bool report = false;
@@ -152,7 +152,7 @@ rescan:
 		libusb_device *dev = devs[i];
 		int res = libusb_get_device_descriptor(dev, &desc);
 		if (res < 0) {
-			DEBUG_WARN("WARN: libusb_get_device_descriptor() failed: %s", libusb_strerror(res));
+			DEBUG_ERROR("libusb_get_device_descriptor() failed: %s", libusb_strerror(res));
 			libusb_free_device_list(devs, 1);
 			continue;
 		}
@@ -166,8 +166,7 @@ rescan:
 		res = libusb_open(dev, &handle);
 		if (res != LIBUSB_SUCCESS) {
 			if (!access_problems) {
-				DEBUG_INFO(
-					"INFO: Open USB %04x:%04x class %2x failed\n", desc.idVendor, desc.idProduct, desc.bDeviceClass);
+				DEBUG_INFO("Open USB %04x:%04x class %2x failed\n", desc.idVendor, desc.idProduct, desc.bDeviceClass);
 				access_problems = true;
 			}
 			continue;
@@ -195,7 +194,7 @@ rescan:
 				handle, desc.iManufacturer, (uint8_t *)manufacturer, sizeof(manufacturer));
 			/* If the call fails and it's not because the device gave us STALL, continue to the next one */
 			if (res < 0 && res != LIBUSB_ERROR_PIPE) {
-				DEBUG_WARN("WARN: libusb_get_string_descriptor_ascii() call to fetch manufacturer string failed: %s\n",
+				DEBUG_ERROR("libusb_get_string_descriptor_ascii() call to fetch manufacturer string failed: %s\n",
 					libusb_strerror(res));
 				libusb_close(handle);
 				continue;
@@ -210,7 +209,7 @@ rescan:
 			res = libusb_get_string_descriptor_ascii(handle, desc.iProduct, (uint8_t *)product, sizeof(product));
 			/* If the call fails and it's not because the device gave us STALL, continue to the next one */
 			if (res < 0 && res != LIBUSB_ERROR_PIPE) {
-				DEBUG_WARN("WARN: libusb_get_string_descriptor_ascii() call to fetch product string failed: %s\n",
+				DEBUG_ERROR("libusb_get_string_descriptor_ascii() call to fetch product string failed: %s\n",
 					libusb_strerror(res));
 				libusb_close(handle);
 				continue;
@@ -255,7 +254,7 @@ rescan:
 				type = BMP_TYPE_STLINKV2;
 				break;
 			case PRODUCT_ID_STLINKV1:
-				DEBUG_WARN("INFO: STLINKV1 not supported\n");
+				DEBUG_WARN("STLINKV1 not supported\n");
 			default:
 				continue;
 			}
@@ -316,7 +315,7 @@ rescan:
 	if (found_debuggers == 1U && !cl_opts->opt_cable && info->bmp_type == BMP_TYPE_LIBFTDI)
 		cl_opts->opt_cable = active_cable;
 	if (!found_debuggers && cl_opts->opt_list_only)
-		DEBUG_WARN("No usable debugger found\n");
+		DEBUG_ERROR("No usable debugger found\n");
 	if (found_debuggers > 1U || (found_debuggers == 1U && cl_opts->opt_list_only)) {
 		if (!report) {
 			if (found_debuggers > 1U)
@@ -329,7 +328,7 @@ rescan:
 		found_debuggers = 0;
 	}
 	if (!found_debuggers && access_problems)
-		DEBUG_WARN("No debugger found. Please check access rights to USB devices!\n");
+		DEBUG_ERROR("No debugger found. Please check access rights to USB devices!\n");
 	libusb_free_device_list(devs, 1);
 	return found_debuggers == 1U ? 0 : -1;
 }
@@ -365,7 +364,7 @@ static int submit_wait(usb_link_s *link, libusb_transfer_s *transfer)
 
 	const libusb_error_e error = libusb_submit_transfer(transfer);
 	if (error) {
-		DEBUG_WARN("libusb_submit_transfer(%d): %s\n", error, libusb_strerror(error));
+		DEBUG_ERROR("libusb_submit_transfer(%d): %s\n", error, libusb_strerror(error));
 		exit(-1);
 	}
 
@@ -375,18 +374,18 @@ static int submit_wait(usb_link_s *link, libusb_transfer_s *transfer)
 		timeout.tv_sec = 1;
 		timeout.tv_usec = 0;
 		if (libusb_handle_events_timeout(link->ul_libusb_ctx, &timeout)) {
-			DEBUG_WARN("libusb_handle_events()\n");
+			DEBUG_ERROR("libusb_handle_events()\n");
 			return -1;
 		}
 		const uint32_t now = platform_time_ms();
 		if (now - start_time > 1000U) {
 			libusb_cancel_transfer(transfer);
-			DEBUG_WARN("libusb_handle_events() timeout\n");
+			DEBUG_ERROR("libusb_handle_events() timeout\n");
 			return -1;
 		}
 	}
 	if (transfer_ctx.flags & TRANSFER_HAS_ERROR) {
-		DEBUG_WARN("libusb_handle_events() | has_error\n");
+		DEBUG_ERROR("libusb_handle_events() | has_error\n");
 		return -1;
 	}
 

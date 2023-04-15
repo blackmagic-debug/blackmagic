@@ -266,7 +266,7 @@ bool dap_read_block(
 	const size_t blocks = len >> MIN(align, 2U);
 	uint32_t data[256];
 	if (!perform_dap_transfer_block_read(target_ap->dp, SWD_AP_DRW, blocks, data)) {
-		DEBUG_WARN("dap_read_block failed\n");
+		DEBUG_ERROR("dap_read_block failed\n");
 		return false;
 	}
 
@@ -298,7 +298,7 @@ bool dap_write_block(
 
 	const bool result = perform_dap_transfer_block_write(target_ap->dp, SWD_AP_DRW, blocks, data);
 	if (!result)
-		DEBUG_WARN("dap_write_block failed\n");
+		DEBUG_ERROR("dap_write_block failed\n");
 	return result;
 }
 
@@ -368,9 +368,9 @@ void dap_ap_mem_access_setup(adiv5_access_port_s *const target_ap, const uint32_
 	/* If it didn't go well, say something and abort */
 	if (!result) {
 		if (target_dp->fault != DAP_TRANSFER_NO_RESPONSE)
-			DEBUG_WARN("Transport error (%u), aborting\n", target_dp->fault);
+			DEBUG_ERROR("Transport error (%u), aborting\n", target_dp->fault);
 		else
-			DEBUG_WARN("Transaction unrecoverably failed\n");
+			DEBUG_ERROR("Transaction unrecoverably failed\n");
 		exit(-1);
 	}
 }
@@ -387,7 +387,7 @@ uint32_t dap_ap_read(adiv5_access_port_s *const target_ap, const uint16_t addr)
 	uint32_t result = 0;
 	adiv5_debug_port_s *const target_dp = target_ap->dp;
 	if (!perform_dap_transfer(target_dp, requests, 2U, &result, 1U)) {
-		DEBUG_WARN("dap_ap_read failed (fault = %u)\n", target_dp->fault);
+		DEBUG_ERROR("dap_ap_read failed (fault = %u)\n", target_dp->fault);
 		return 0U;
 	}
 	return result;
@@ -405,7 +405,7 @@ void dap_ap_write(adiv5_access_port_s *const target_ap, const uint16_t addr, con
 	requests[1].data = value;
 	adiv5_debug_port_s *const target_dp = target_ap->dp;
 	if (!perform_dap_transfer(target_dp, requests, 2U, NULL, 0U))
-		DEBUG_WARN("dap_ap_write failed (fault = %u)\n", target_dp->fault);
+		DEBUG_ERROR("dap_ap_write failed (fault = %u)\n", target_dp->fault);
 }
 
 void dap_read_single(adiv5_access_port_s *const target_ap, void *const dest, const uint32_t src, const align_e align)
@@ -416,7 +416,7 @@ void dap_read_single(adiv5_access_port_s *const target_ap, void *const dest, con
 	uint32_t result;
 	adiv5_debug_port_s *target_dp = target_ap->dp;
 	if (!perform_dap_transfer_recoverable(target_dp, requests, 4U, &result, 1U)) {
-		DEBUG_WARN("dap_read_single failed (fault = %u)\n", target_dp->fault);
+		DEBUG_ERROR("dap_read_single failed (fault = %u)\n", target_dp->fault);
 		memset(dest, 0, 1U << align);
 		return;
 	}
@@ -434,5 +434,5 @@ void dap_write_single(
 	adiv5_pack_data(dest, src, &requests[3].data, align);
 	adiv5_debug_port_s *target_dp = target_ap->dp;
 	if (!perform_dap_transfer_recoverable(target_dp, requests, 4U, NULL, 0U))
-		DEBUG_WARN("dap_write_single failed (fault = %u)\n", target_dp->fault);
+		DEBUG_ERROR("dap_write_single failed (fault = %u)\n", target_dp->fault);
 }
