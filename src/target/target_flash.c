@@ -134,30 +134,32 @@ bool target_flash_erase(target_s *t, target_addr_t addr, size_t len)
 			return false;
 		}
 
-		/* Target is not implementing flash erase function */
-		if (f->erase == NULL)
-			return true;
-
 		/* Terminate flash operations if we're not in the same target flash */
 		if (f != active_flash) {
 			ret &= flash_done(active_flash);
 			active_flash = f;
 		}
 
-		const target_addr_t local_start_addr = addr & ~(f->blocksize - 1U);
-		const target_addr_t local_end_addr = local_start_addr + f->blocksize;
+		if (f->erase != NULL) {
+			const target_addr_t local_start_addr = addr & ~(f->blocksize - 1U);
+			const target_addr_t local_end_addr = local_start_addr + f->blocksize;
 
-		if (!flash_prepare(f))
-			return false;
+			if (!flash_prepare(f))
+				return false;
 
-		ret &= f->erase(f, local_start_addr, f->blocksize);
-		if (!ret) {
-			DEBUG_WARN("Erase failed at %" PRIx32 "\n", local_start_addr);
-			break;
+			ret &= f->erase(f, local_start_addr, f->blocksize);
+			if (!ret) {
+				DEBUG_WARN("Erase failed at %" PRIx32 "\n", local_start_addr);
+				break;
+			}
+
+			len -= MIN(local_end_addr - addr, len);
+			addr = local_end_addr;
+		} else {
+			/* This flash does not implement an erase function, skip it */
+			len -= MIN(f->length, len);
+			addr = f->start + f->length;
 		}
-
-		len -= MIN(local_end_addr - addr, len);
-		addr = local_end_addr;
 	}
 	/* Issue flash done on last operation */
 	ret &= flash_done(active_flash);
