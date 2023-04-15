@@ -47,22 +47,20 @@
  */
 
 /* Hardware definitions... */
-#define JTAG_PORT              GPIOA
-
-#define TDI_PORT               JTAG_PORT
+#define TDI_PORT               GPIOA
 #define TDI_PIN                GPIO1
 
 #define TDO_PORT               GPIOB
 #define TDO_PIN                GPIO3
 
-#define TCK_PORT               JTAG_PORT
+#define TCK_PORT               GPIOA
 #define TCK_PIN                GPIO14
-#define SWCLK_PORT             JTAG_PORT
+#define SWCLK_PORT             TCK_PORT
 #define SWCLK_PIN              TCK_PIN
 
-#define TMS_PORT               JTAG_PORT
+#define TMS_PORT               GPIOA
 #define TMS_PIN                GPIO13
-#define SWDIO_PORT             JTAG_PORT
+#define SWDIO_PORT             TMS_PORT
 #define SWDIO_PIN              TMS_PIN
 
 #define TRST_PORT              GPIOB
