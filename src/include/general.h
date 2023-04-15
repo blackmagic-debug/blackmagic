@@ -53,11 +53,10 @@ extern uint32_t delay_cnt;
 #if PC_HOSTED == 0
 /*
  * XXX: This entire system needs replacing with something better thought out
- * XXX: This has no error diagnostic level.
  *
- * When built as firmware, if the target supports debugging, DEBUG_WARN and DEBUG_INFO
- * get defined to a macro that turns them into printf() calls. The rest of the levels
- * turn into no-ops.
+ * When built as firmware, if the target supports debugging, DEBUG_ERROR, DEBUG_WARN and
+ * DEBUG_INFO get defined to a macro that turns them into printf() calls. The rest of the
+ * levels turn into no-ops.
  *
  * When built as BMDA, the debug macros all turn into various kinds of console-printing
  * function, w/ gating for diagnostics other than warnings and info.
@@ -75,11 +74,13 @@ extern uint32_t delay_cnt;
 	do {                \
 	} while (false)
 #if defined(ENABLE_DEBUG)
-#define DEBUG_WARN(...) PLATFORM_PRINTF(__VA_ARGS__)
-#define DEBUG_INFO(...) PLATFORM_PRINTF(__VA_ARGS__)
+#define DEBUG_ERROR(...) PLATFORM_PRINTF(__VA_ARGS__)
+#define DEBUG_WARN(...)  PLATFORM_PRINTF(__VA_ARGS__)
+#define DEBUG_INFO(...)  PLATFORM_PRINTF(__VA_ARGS__)
 #else
-#define DEBUG_WARN(...) PRINT_NOOP(__VA_ARGS__)
-#define DEBUG_INFO(...) PRINT_NOOP(__VA_ARGS__)
+#define DEBUG_ERROR(...) PRINT_NOOP(__VA_ARGS__)
+#define DEBUG_WARN(...)  PRINT_NOOP(__VA_ARGS__)
+#define DEBUG_INFO(...)  PRINT_NOOP(__VA_ARGS__)
 #endif
 #define DEBUG_GDB(...)    PRINT_NOOP(__VA_ARGS__)
 #define DEBUG_TARGET(...) PRINT_NOOP(__VA_ARGS__)
@@ -90,6 +91,7 @@ void debug_serial_send_stdout(const uint8_t *data, size_t len);
 #else
 #include "debug.h"
 
+#define DEBUG_ERROR(...)  debug_error(__VA_ARGS__)
 #define DEBUG_WARN(...)   debug_warning(__VA_ARGS__)
 #define DEBUG_INFO(...)   debug_info(__VA_ARGS__)
 #define DEBUG_GDB(...)    debug_gdb(__VA_ARGS__)
