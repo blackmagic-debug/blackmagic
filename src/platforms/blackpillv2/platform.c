@@ -149,6 +149,17 @@ void platform_target_set_power(const bool power)
 {
 	gpio_set_val(PWR_BR_PORT, PWR_BR_PIN, !power);
 }
+
+/*
+ * A dummy implementation of platform_target_voltage_sense as the
+ * blackpillv2 has no ability to sense the voltage on the power pin.
+ * This function is only needed for implementations that allow the target
+ * to be powered from the debug probe.
+ */
+uint32_t platform_target_voltage_sense(void)
+{
+	return 0;
+}
 #endif
 
 void platform_target_clk_output_enable(bool enable)
