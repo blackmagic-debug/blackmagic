@@ -325,7 +325,7 @@ typedef enum {
 #define RV40_DF_BLOCK_SIZE         (0x40U)
 #define RV40_CF_WRITE_SIZE         (0x80U)
 #define RV40_DF_WRITE_SIZE         (0x4U)
-#define RV40_OF_WRITE_SIZE         (0x4U)
+#define RV40_OF_WRITE_SIZE         (0x10U)
 
 /* RV40 Flash Commands */
 #define RV40_CMD               UINT32_C(0x407e0000)
@@ -614,7 +614,10 @@ static bool renesas_rv40_prepare(target_flash_s *const f)
 
 	/* Code flash or data flash operation */
 	/* Option-Setting flash is CF type as per Table 44.1 of RA4M2 User's Manual */
-	const bool code_flash = f->start < (priv_storage->details.option_start + priv_storage->details.option_size);
+	const bool code_flash =
+		f->start < (priv_storage->details.option_start_2 > 0 ?
+						   priv_storage->details.option_start_2 + priv_storage->details.option_size_2 :
+						   priv_storage->details.option_start + priv_storage->details.option_size);
 
 	/* Transition to PE mode */
 	const pe_mode_e pe_mode = code_flash ? PE_MODE_CF : PE_MODE_DF;
@@ -729,8 +732,8 @@ static bool renesas_rv40_flash_write(target_flash_s *const f, target_addr_t dest
 		 * A complete write should take less than 1 msec.
 		 */
 		platform_timeout_s timeout;
-		/* 200ms is arbitrary number i made up */
-		platform_timeout_set(&timeout, option_flash ? 200 : 20);
+		/* 100ms is almost 7x more than PDF says, but this is where I got consistent repetitive writes to option-setting memory without errors */
+		platform_timeout_set(&timeout, option_flash ? 100 : 20);
 
 		/* Write one chunk */
 		for (size_t i = 0U; i < (write_size / 2U); i++) {
