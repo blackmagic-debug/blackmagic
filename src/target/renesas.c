@@ -547,15 +547,12 @@ static bool renesas_rv40_pe_mode(target_s *const t, const pe_mode_e pe_mode)
 
 static bool renesas_check_restricted_option(target_addr_t dest)
 {
-	for (size_t i = 0; i < ARRAY_LENGTH(renesas_restricted_setting); i++) {
-		DEBUG_WARN(
-			"0x%x 0x%x 0x%x\n", renesas_restricted_setting[i].addr_start, dest, renesas_restricted_setting[i].addr_end);
-		if (dest < renesas_restricted_setting[i].addr_start - 4 || dest > renesas_restricted_setting[i].addr_end + 4) {
+	for (size_t i = 0; i < ARRAY_LENGTH(renesas_restricted_setting); i++)
+		if (dest < renesas_restricted_setting[i].addr_start || dest > renesas_restricted_setting[i].addr_end)
 			return false;
-		} else {
+		else
 			return true;
-		}
-	}
+
 	return true;
 }
 
