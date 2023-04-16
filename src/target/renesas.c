@@ -66,7 +66,7 @@
  */
 
 /* family + series + group no */
-#define PNR_FAMILY_INDEX                   3
+#define PNR_FAMILY_INDEX                   3U
 #define PNR_SERIES(pnr3, pnr4, pnr5, pnr6) (((pnr3) << 24U) | ((pnr4) << 16U) | ((pnr5) << 8U) | (pnr6))
 
 typedef enum {
@@ -89,7 +89,7 @@ typedef enum {
 	PNR_SERIES_RA6E2 = PNR_SERIES('A', '6', 'E', '2'),
 	PNR_SERIES_RA6T1 = PNR_SERIES('A', '6', 'T', '1'),
 	PNR_SERIES_RA6T2 = PNR_SERIES('A', '6', 'T', '2'),
-} pnr_series_t;
+} renesas_pnr_series_e;
 
 typedef enum {
 	RENESAS_FLASH_MF3,
@@ -104,7 +104,7 @@ typedef enum {
 } renesas_pnr_location_e;
 
 typedef struct renesas_family {
-	pnr_series_t series;
+	renesas_pnr_series_e series;
 	uint32_t option_start;
 	uint16_t option_size;
 	uint32_t option_start_2;
@@ -178,7 +178,7 @@ renesas_family_s renesas_family[] = {
 		0x28000000, 0x400, RENESAS_FLASH_RV40, RENESAS_LOCATION_FIXED2},
 };
 
-renesas_family_s renesas_family_lookup(pnr_series_t series)
+renesas_family_s renesas_family_lookup(renesas_pnr_series_e series)
 {
 	renesas_family_s details = {};
 	for (size_t i = 0; i < ARRAY_LENGTH(renesas_family); ++i)
@@ -188,7 +188,7 @@ renesas_family_s renesas_family_lookup(pnr_series_t series)
 }
 
 /* Code flash memory size */
-#define PNR_MEMSIZE_INDEX 8
+#define PNR_MEMSIZE_INDEX 8U
 
 typedef enum {
 	PNR_MEMSIZE_16KB = '3',
@@ -202,7 +202,7 @@ typedef enum {
 	PNR_MEMSIZE_1MB = 'F',
 	PNR_MEMSIZE_1_5MB = 'G',
 	PNR_MEMSIZE_2MB = 'H',
-} pnr_memsize_t;
+} renesas_pnr_memsize_e;
 
 /* For future reference, if we want to add an info command
  *
@@ -249,17 +249,19 @@ typedef enum {
  * ra2e1 - Fixed location 1
  * ra2e2 - Fixed location 1
  * ra2a1 - Flash Root Table *undocumented
- * ra4m1 - *undocumented
+ * ra4m1 - Flash Root Table *undocumented
  * ra4m2 - Fixed location 2 *undocumented
  * ra4m3 - Fixed location 2 *undocumented
  * ra4e1 - Fixed location 2
- * ra4w1 - *undocumented
+ * ra4e2 - Fixed location 2
+ * ra4w1 - Flash Root Table *undocumented
  * ra6m1 - Flash Root Table
  * ra6m2 - Flash Root Table
  * ra6m3 - Flash Root Table
  * ra6m4 - Fixed location 2
  * ra6m5 - Fixed location 2
  * ra6e1 - Fixed location 2
+ * ra6e2 - Fixed location 2
  * ra6t1 - Flash Root Table
  * ra6t2 - Fixed location 2
  */
@@ -295,7 +297,7 @@ typedef enum {
 
 /* Renesas RA MCUs can have one of two kinds of flash memory, MF3/4 and RV40 */
 
-#define RENESAS_CF_END UINT32_C(0x00200000) /* End of Flash (maximum possible across families) */
+#define RENESAS_CF_END UINT32_C(0x00300000) /* End of Flash (maximum possible across families) */
 
 /* MF3/4 Flash */
 /*
@@ -323,7 +325,7 @@ typedef enum {
 #define RV40_DF_BLOCK_SIZE         (0x40U)
 #define RV40_CF_WRITE_SIZE         (0x80U)
 #define RV40_DF_WRITE_SIZE         (0x4U)
-#define RV40_OF_WRITE_SIZE         (0x10U)
+#define RV40_OF_WRITE_SIZE         (0x4U)
 
 /* RV40 Flash Commands */
 #define RV40_CMD               UINT32_C(0x407e0000)
@@ -379,45 +381,50 @@ static bool renesas_uid(target_s *t, int argc, const char **argv);
 static bool renesas_cmd_option(target_s *target, int argc, const char **argv);
 
 const command_s renesas_cmd_list[] = {
-	{"uid", renesas_uid, "Prints unique number"},
+	{"uid", renesas_uid, "Prints unique id"},
 	{"option", renesas_cmd_option, "Manipulate option settings"},
 	{NULL, NULL, NULL},
 };
 
 typedef struct renesas_priv {
 	uint8_t pnr[17]; /* 16-byte PNR + 1-byte null termination */
-	pnr_series_t series;
-	uint32_t flash_root_table; /* if applicable */
+	renesas_pnr_series_e series;
+	target_addr_t flash_root_table; /* if applicable */
 	renesas_family_s details;
 } renesas_priv_s;
 
-static uint32_t renesas_fmifrt_read(target_s *t)
+static target_addr_t renesas_fmifrt_read(target_s *t)
 {
+	/* Read Flash Root Table base address  */
 	return target_mem_read32(t, RENESAS_FMIFRT);
 }
 
-static void renesas_uid_read(target_s *t, const uint32_t base, uint8_t *uid)
+static void renesas_uid_read(target_s *const t, const target_addr_t base, uint8_t *const uid)
 {
+	/* Register should be read in 32b units */
 	uint32_t uidr[4];
 	for (size_t i = 0U; i < 4U; i++)
 		uidr[i] = target_mem_read32(t, base + i * 4U);
 
+	/* Write bytewise into provided container */
 	for (size_t i = 0U; i < 16U; i++)
 		uid[i] = uidr[i / 4U] >> (i & 3U) * 8U; /* & 3U == % 4U */
 }
 
-static bool renesas_pnr_read(target_s *t, const uint32_t base, uint8_t *pnr)
+static bool renesas_pnr_read(target_s *const t, const target_addr_t base, uint8_t *const pnr)
 {
+	/* Register should be read in 32b units */
 	uint32_t pnrr[4];
 	for (size_t i = 0U; i < 4U; i++)
 		pnrr[i] = target_mem_read32(t, base + i * 4U);
 
+	/* Write bytewise into provided container */
 	if (base == RENESAS_FIXED1_PNR) {
 		/* Renesas... look what you made me do...  */
 		/* reverse order, see 'Part numbering scheme' note for context */
 		for (size_t i = 0U; i < 13U; i++)
 			pnr[i] = pnrr[3U - (i + 3U) / 4U] >> (24U - ((i + 3U) & 3U) * 8U); /* & 3U == % 4U */
-		memset(pnr + 13U, 0x20, 3);
+		memset(pnr + 13U, 0x20, 3); /* Last 3 bytes are unused and filled with ' ' chars aka 0x20 */
 	} else {
 		for (size_t i = 0; i < 16U; i++)
 			pnr[i] = pnrr[i / 4U] >> (i & 3U) * 8U; /* & 3U == % 4U */
@@ -427,16 +434,16 @@ static bool renesas_pnr_read(target_s *t, const uint32_t base, uint8_t *pnr)
 	return pnr[0] == 'R' && pnr[1] == '7';
 }
 
-static pnr_series_t renesas_series(const uint8_t *pnr)
+static renesas_pnr_series_e renesas_series(const uint8_t *const pnr)
 {
 	uint32_t series = 0;
 	for (size_t i = 0; i < 4U; i++)
 		series = (series << 8U) | pnr[PNR_FAMILY_INDEX + i];
 
-	return (pnr_series_t)series;
+	return (renesas_pnr_series_e)series;
 }
 
-static uint32_t renesas_flash_size(const uint8_t *pnr)
+static uint32_t renesas_flash_size(const uint8_t *const pnr)
 {
 	switch (pnr[PNR_MEMSIZE_INDEX]) {
 	case PNR_MEMSIZE_16KB:
@@ -466,11 +473,11 @@ static uint32_t renesas_flash_size(const uint8_t *pnr)
 	}
 }
 
-static bool renesas_enter_flash_mode(target_s *t)
+static bool renesas_enter_flash_mode(target_s *const t)
 {
 	target_reset(t);
 
-	/* permit flash operations */
+	/* Permit flash operations */
 	target_mem_write8(t, SYSC_FWEPROR, SYSC_FWEPROR_PERMIT);
 
 	return true;
@@ -482,22 +489,24 @@ typedef enum pe_mode {
 	PE_MODE_DF,
 } pe_mode_e;
 
-static bool renesas_rv40_pe_mode(target_s *t, pe_mode_e pe_mode)
+static bool renesas_rv40_pe_mode(target_s *const t, const pe_mode_e pe_mode)
 {
 	/* See "Transition to Code Flash P/E Mode": Section 47.9.3.3 of the RA6M4 manual R01UH0890EJ0100. */
 
-	renesas_priv_s *priv_storage = (renesas_priv_s *)t->target_storage;
+	const renesas_priv_s *const priv_storage = (renesas_priv_s *)t->target_storage;
 	if (!priv_storage)
 		return false;
 
 	bool has_fmeprot = false; /* Code Flash P/E Mode Entry Protection */
 	switch (priv_storage->series) {
 	case PNR_SERIES_RA4E1:
+	case PNR_SERIES_RA4E2:
 	case PNR_SERIES_RA4M2:
 	case PNR_SERIES_RA4M3:
 	case PNR_SERIES_RA6M4:
 	case PNR_SERIES_RA6M5:
 	case PNR_SERIES_RA6E1:
+	case PNR_SERIES_RA6E2:
 	case PNR_SERIES_RA6T2:
 		has_fmeprot = true;
 	default:
@@ -536,26 +545,29 @@ static bool renesas_rv40_pe_mode(target_s *t, pe_mode_e pe_mode)
 	return true;
 }
 
-static bool renesas_check_restricted_option(uint32_t dest)
+static bool renesas_check_restricted_option(target_addr_t dest)
 {
-	for (size_t i = 0; i < ARRAY_LENGTH(renesas_restricted_setting); ++i) {
-		tc_printf("checking dest: 0x%x" PRId32, dest);
-		if (renesas_restricted_setting[i].addr_start >= dest && dest <= renesas_restricted_setting[i].addr_end)
-			return true;
-		else
+	for (size_t i = 0; i < ARRAY_LENGTH(renesas_restricted_setting); i++) {
+		DEBUG_WARN(
+			"0x%x 0x%x 0x%x\n", renesas_restricted_setting[i].addr_start, dest, renesas_restricted_setting[i].addr_end);
+		if (dest < renesas_restricted_setting[i].addr_start - 4 || dest > renesas_restricted_setting[i].addr_end + 4) {
 			return false;
+		} else {
+			return true;
+		}
 	}
+	return true;
 }
 
-static bool renesas_rv40_error_check(target_s *t, uint32_t error_bits)
+static bool renesas_rv40_error_check(target_s *const t, const uint32_t error_bits)
 {
 	bool error = false;
 
-	uint8_t fstatr = target_mem_read32(t, RV40_FSTATR);
+	const uint8_t fstatr = target_mem_read32(t, RV40_FSTATR);
 
-	/* see "Recovery from the Command-Locked State": Section 47.9.3.6 of the RA6M4 manual R01UH0890EJ0100.*/
+	/* See "Recovery from the Command-Locked State": Section 47.9.3.6 of the RA6M4 manual R01UH0890EJ0100.*/
 	if (target_mem_read8(t, RV40_FASTAT) & RV40_FASTAT_CMDLK) {
-		/* if an illegal error occurred read and clear CFAE and DFAE in FASTAT. */
+		/* If an illegal error occurred read and clear CFAE and DFAE in FASTAT. */
 		if (fstatr & RV40_FSTATR_ILGLERR) {
 			target_mem_read8(t, RV40_FASTAT);
 			target_mem_write8(t, RV40_FASTAT, 0);
@@ -563,7 +575,7 @@ static bool renesas_rv40_error_check(target_s *t, uint32_t error_bits)
 		error = true;
 	}
 
-	/* check if status is indicating a programming error */
+	/* Check if status is indicating a programming error */
 	if (fstatr & error_bits)
 		error = true;
 
@@ -588,9 +600,9 @@ static bool renesas_rv40_error_check(target_s *t, uint32_t error_bits)
 	return error;
 }
 
-static bool renesas_rv40_prepare(target_flash_s *f)
+static bool renesas_rv40_prepare(target_flash_s *const f)
 {
-	target_s *t = f->t;
+	target_s *const t = f->t;
 
 	renesas_priv_s *priv_storage = (renesas_priv_s *)t->target_storage;
 	if (!priv_storage)
@@ -603,7 +615,7 @@ static bool renesas_rv40_prepare(target_flash_s *f)
 		return false;
 	}
 
-	/* code flash or data flash operation */
+	/* Code flash or data flash operation */
 	/* Option-Setting flash is CF type as per Table 44.1 of RA4M2 User's Manual */
 	const bool code_flash = f->start < (priv_storage->details.option_start + priv_storage->details.option_size);
 
@@ -613,11 +625,11 @@ static bool renesas_rv40_prepare(target_flash_s *f)
 	return renesas_rv40_pe_mode(t, pe_mode) && !renesas_rv40_error_check(t, RV40_FSTATR_ILGLERR);
 }
 
-static bool renesas_rv40_done(target_flash_s *f)
+static bool renesas_rv40_done(target_flash_s *const f)
 {
-	target_s *t = f->t;
+	target_s *const t = f->t;
 
-	/* return to read mode */
+	/* Return to read mode */
 	return renesas_rv40_pe_mode(t, PE_MODE_READ);
 }
 
@@ -639,11 +651,11 @@ static bool renesas_check_option_setting(target_s *t, target_addr_t addr)
 /* !TODO: implement blank check */
 static bool renesas_rv40_flash_erase(target_flash_s *f, target_addr_t addr, size_t len)
 {
-	target_s *t = f->t;
+	target_s *const t = f->t;
 
 	uint16_t block_size;
 
-	/* code flash or data flash operation */
+	/* Code flash or data flash operation */
 	if (addr < RENESAS_CF_END)
 		block_size = addr < RV40_CF_REGION0_SIZE ? RV40_CF_REGION0_BLOCK_SIZE : RV40_CF_REGION1_BLOCK_SIZE;
 	else
@@ -656,7 +668,7 @@ static bool renesas_rv40_flash_erase(target_flash_s *f, target_addr_t addr, size
 		/* Set block start address*/
 		target_mem_write32(t, RV40_FSADDR, addr);
 
-		/* increment block address */
+		/* Increment block address */
 		addr += block_size;
 		len -= block_size;
 
@@ -664,14 +676,12 @@ static bool renesas_rv40_flash_erase(target_flash_s *f, target_addr_t addr, size
 		target_mem_write8(t, RV40_CMD, RV40_CMD_BLOCK_ERASE);
 		target_mem_write8(t, RV40_CMD, RV40_CMD_FINAL);
 
-		/* according to reference manual the max erase time for a 32K block is around 1040ms
-		 * this is with a FCLK of 4MHz
-		 */
+		/* According to reference manual the max erase time for a 32K block with a FCLK of 4MHz is around 1040ms */
 		platform_timeout_s timeout;
 		platform_timeout_set(&timeout, 1100);
 
 		/* Wait until the operation has completed or timeout */
-		/* Read FRDY bit until it has been set to 1 indicating that the current  operation is complete.*/
+		/* Read FRDY bit until it has been set to 1 indicating that the current operation is complete.*/
 		while (!(target_mem_read32(t, RV40_FSTATR) & RV40_FSTATR_RDY)) {
 			if (target_check_error(t) || platform_timeout_is_expired(&timeout))
 				return false;
@@ -684,9 +694,9 @@ static bool renesas_rv40_flash_erase(target_flash_s *f, target_addr_t addr, size
 	return true;
 }
 
-static bool renesas_rv40_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t len)
+static bool renesas_rv40_flash_write(target_flash_s *const f, target_addr_t dest, const void *src, size_t len)
 {
-	target_s *t = f->t;
+	target_s *const t = f->t;
 
 	/* write size for code flash / data flash */
 	const uint8_t write_size = f->writesize;
@@ -697,8 +707,9 @@ static bool renesas_rv40_flash_write(target_flash_s *f, target_addr_t dest, cons
 	}
 
 	while (len) {
-		if (renesas_check_restricted_option(dest))
+		if (option_flash && renesas_check_restricted_option(dest)) {
 			return true;
+		}
 
 		/* set block start address */
 		target_mem_write32(t, RV40_FSADDR, dest);
@@ -716,28 +727,28 @@ static bool renesas_rv40_flash_write(target_flash_s *f, target_addr_t dest, cons
 			target_mem_write8(t, RV40_CMD, (uint8_t)(write_size / 2U));
 		}
 
-		/* according to reference manual the data buffer full time for 2 bytes is 2 usec.
-		 * this is with a FCLK of 4MHz
-		 * a complete should take less than 1 msec.
+		/* 
+		 * According to reference manual the data buffer full time for 2 bytes is 2 usec with a FCLK of 4MHz.
+		 * A complete write should take less than 1 msec.
 		 */
 		platform_timeout_s timeout;
 		/* 200ms is arbitrary number i made up */
 		platform_timeout_set(&timeout, option_flash ? 200 : 20);
 
-		/* write one chunk */
+		/* Write one chunk */
 		for (size_t i = 0U; i < (write_size / 2U); i++) {
-			/* copy data from source address to destination */
+			/* Copy data from source address to destination */
 			target_mem_write16(t, RV40_CMD, *(uint16_t *)src);
 
 			/* 2 bytes of data */
 			src += 2U;
 		}
 
-		/* issue write end command */
+		/* Issue write end command */
 		target_mem_write8(t, RV40_CMD, RV40_CMD_FINAL);
 
-		/* wait until the operation has completed or timeout */
-		/* read FRDY bit until it has been set to 1 indicating that the current operation is complete.*/
+		/* Wait until the operation has completed or timeout */
+		/* Read FRDY bit until it has been set to 1 indicating that the current operation is complete.*/
 		while (!(target_mem_read32(t, RV40_FSTATR) & RV40_FSTATR_RDY)) {
 			if (target_check_error(t) || platform_timeout_is_expired(&timeout))
 				return false;
@@ -803,7 +814,7 @@ static void renesas_add_flash(target_s *t, target_addr_t addr, size_t length)
 bool renesas_probe(target_s *t)
 {
 	uint8_t pnr[16]; /* 16-byte PNR */
-	uint32_t flash_root_table = 0;
+	target_addr_t flash_root_table = 0;
 
 	/* Enable debug */
 	/* a read back doesn't seem to show the change, tried 32-bit write too */
@@ -826,9 +837,11 @@ bool renesas_probe(target_s *t)
 	case RENESAS_PARTID_RA4M3:
 		/* mcus with PNR located at 0x010080f0
 		 * ra4e1 (part_id wanted)
+		 * ra4e2 (part_id wanted)
 		 * ra6m4 (part_id wanted)
 		 * ra6m5 (part_id wanted)
 		 * ra6e1 (part_id wanted)
+		 * ra6e2 (part_id wanted)
 		 * ra6t2 (part_id wanted)
 		 */
 		if (!renesas_pnr_read(t, RENESAS_FIXED2_PNR, pnr))
@@ -838,6 +851,8 @@ bool renesas_probe(target_s *t)
 	case RENESAS_PARTID_RA2A1:
 	case RENESAS_PARTID_RA6M2:
 		/* mcus with Flash Root Table
+		 * ra4m1 *undocumented (part_id wanted)
+		 * ra4w1 *undocumented (part_id wanted)
 		 * ra6m1 (part_id wanted)
 		 * ra6m3 (part_id wanted)
 		 * ra6t1 (part_id wanted)
@@ -856,10 +871,6 @@ bool renesas_probe(target_s *t)
 		 *
 		 * try the fixed address RENESAS_FIXED2_PNR first, as it should lead to less illegal/erroneous
 		 * memory accesses in case of failure, and is the most common case
-		 */
-		/*
-		 * ra4m1 *undocumented (part_id + pnr loc wanted)
-		 * ra4w1 *undocumented (part_id + pnr loc wanted)
 		 */
 
 		if (renesas_pnr_read(t, RENESAS_FIXED2_PNR, pnr)) {
@@ -887,7 +898,7 @@ bool renesas_probe(target_s *t)
 		return false;
 	}
 
-	renesas_priv_s *priv_storage = calloc(1, sizeof(renesas_priv_s));
+	renesas_priv_s *const priv_storage = calloc(1, sizeof(renesas_priv_s));
 	if (!priv_storage) /* calloc failed: heap exhaustion */
 		return false;
 	memcpy(priv_storage->pnr, pnr, sizeof(pnr));
@@ -943,7 +954,7 @@ bool renesas_probe(target_s *t)
 	return true;
 }
 
-/* Reads the 16-byte unique number */
+/* Reads the 16-byte unique id */
 static bool renesas_uid(target_s *t, int argc, const char **argv)
 {
 	(void)argc;
@@ -954,7 +965,7 @@ static bool renesas_uid(target_s *t, int argc, const char **argv)
 		return false;
 
 	uint8_t uid[16];
-	uint32_t uid_addr;
+	target_addr_t uid_addr;
 
 	switch (priv_storage->details.pnr_location) {
 	case RENESAS_LOCATION_FIXED1:
@@ -975,7 +986,7 @@ static bool renesas_uid(target_s *t, int argc, const char **argv)
 
 	renesas_uid_read(t, uid_addr, uid);
 
-	tc_printf(t, "Unique Number: 0x");
+	tc_printf(t, "Unique id: 0x");
 	for (size_t i = 0U; i < 16U; i++)
 		tc_printf(t, "%02" PRIx8, uid[i]);
 	tc_printf(t, "\n");
