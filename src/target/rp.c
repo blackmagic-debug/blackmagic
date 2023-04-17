@@ -403,6 +403,7 @@ static bool rp_flash_resume(target_s *const target)
 	/* Flush the cache and resume XIP */
 	rp_flash_flush_cache(target);
 	rp_flash_enter_xip(target);
+	target_mem_write32(target, CORTEXM_AIRCR, CORTEXM_AIRCR_VECTKEY | CORTEXM_AIRCR_SYSRESETREQ);
 	return true;
 }
 
