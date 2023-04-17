@@ -157,7 +157,7 @@ bool target_flash_erase(target_s *t, target_addr_t addr, size_t len)
 			addr = local_end_addr;
 		} else {
 			/* This flash does not implement an erase function, skip it */
-			len -= MIN(f->length, len);
+			len -= MIN((f->start + f->length) - addr, len);
 			addr = f->start + f->length;
 		}
 	}
