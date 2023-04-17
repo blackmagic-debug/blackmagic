@@ -185,10 +185,11 @@ uint32_t adiv5_swdp_scan(uint32_t targetid)
 				i << ADIV5_DP_TARGETSEL_TINSTANCE_OFFSET |
 					(dp_targetid & (ADIV5_DP_TARGETID_TDESIGNER_MASK | ADIV5_DP_TARGETID_TPARTNO_MASK)) | 1U);
 
+			volatile uint32_t target_id = 0;
 			TRY_CATCH (e, EXCEPTION_ALL) {
-				adiv5_dp_read(initial_dp, ADIV5_DP_DPIDR);
+				target_id = adiv5_dp_read(initial_dp, ADIV5_DP_DPIDR);
 			}
-			if (e.type || initial_dp->fault)
+			if (e.type || initial_dp->fault || !target_id)
 				continue;
 		}
 
