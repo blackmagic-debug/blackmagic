@@ -387,8 +387,7 @@ const command_s renesas_cmd_list[] = {
 };
 
 typedef struct renesas_priv {
-	uint8_t pnr[17]; /* 16-byte PNR + 1-byte null termination */
-	renesas_pnr_series_e series;
+	uint8_t pnr[17];                /* 16-byte PNR + 1-byte null termination */
 	target_addr_t flash_root_table; /* if applicable */
 	renesas_family_s details;
 } renesas_priv_s;
@@ -498,7 +497,7 @@ static bool renesas_rv40_pe_mode(target_s *const t, const pe_mode_e pe_mode)
 		return false;
 
 	bool has_fmeprot = false; /* Code Flash P/E Mode Entry Protection */
-	switch (priv_storage->series) {
+	switch (priv_storage->details.series) {
 	case PNR_SERIES_RA4E1:
 	case PNR_SERIES_RA4E2:
 	case PNR_SERIES_RA4M2:
@@ -903,15 +902,15 @@ bool renesas_probe(target_s *t)
 		return false;
 	memcpy(priv_storage->pnr, pnr, sizeof(pnr));
 
-	priv_storage->series = renesas_series(pnr);
+	const renesas_pnr_series_e series = renesas_series(pnr);
 	priv_storage->flash_root_table = flash_root_table;
 
 	t->target_storage = (void *)priv_storage;
 	t->driver = (char *)priv_storage->pnr;
 
-	priv_storage->details = renesas_family_lookup(priv_storage->series);
+	priv_storage->details = renesas_family_lookup(series);
 
-	if (priv_storage->details.series != priv_storage->series) {
+	if (series != priv_storage->details.series) {
 		DEBUG_WARN("Found Renesas chip (%.*s) with Part ID 0x%" PRIx16 ", but it's not mapped into BMP, please report "
 				   "it\n ",
 			sizeof(pnr), pnr, t->part_id);
