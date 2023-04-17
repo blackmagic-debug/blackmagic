@@ -998,9 +998,82 @@ static bool renesas_cmd_option(target_s *t, int argc, const char **argv)
 	(void)argc;
 	(void)argv;
 
-	renesas_priv_s *priv_storage = (renesas_priv_s *)t->target_storage;
-	if (!priv_storage)
+	if (argc != 4) {
+		tc_printf(t, "bad usage\n");
 		return false;
+	}
+
+	const uint8_t arglen = strlen(argv[1]);
+	if (arglen == 0) {
+		tc_printf(t, "bad usage\n");
+		return false;
+	}
+
+	if (strncmp(argv[1], "set", arglen) == 0) {
+		target_addr_t option_addr = strtoul(argv[2], NULL, 0);
+
+		if (!renesas_check_option_setting(t, option_addr)) {
+			tc_printf(t, "bad addr\n");
+			return false;
+		}
+
+		/* We have to align the address to full word byte */
+		uint8_t align = option_addr % 0x10;
+		target_addr_t real_addr = option_addr;
+		if (align > 0)
+			real_addr = option_addr - align;
+		DEBUG_WARN("Full word aligned addr: 0x%x\n", real_addr);
+
+		/* Configuration-Set command always needs 16 bytes of data */
+		const uint8_t len = 8U;
+		uint16_t data[len];
+
+		DEBUG_WARN("Reading data: ");
+		for (uint8_t i = 0; i < len;) {
+			data[i] = target_mem_read16(t, real_addr + i);
+			DEBUG_WARN("%02x", data[i]);
+			i += 2;
+		}
+		DEBUG_WARN("\n");
+
+		data[align] = strtoul(argv[3], NULL, 0);
+		DEBUG_WARN("Setting value: 0x%x to addr: 0x%x\n", strtoul(argv[3], NULL, 0), option_addr);
+
+		DEBUG_WARN("Writing data: ");
+		for (uint8_t i = 0; i < len;) {
+			DEBUG_WARN("%02x", data[i]);
+			i += 2;
+		}
+		DEBUG_WARN("\n");
+
+		if (renesas_rv40_pe_mode(t, PE_MODE_CF)) {
+			/* set block start address */
+			target_mem_write32(t, RV40_FSADDR, real_addr);
+
+			/* issue two part Write commands */
+			target_mem_write8(t, RV40_CMD, RV40_CMD_CONFIG_SET_1);
+			target_mem_write8(t, RV40_CMD, RV40_CMD_CONFIG_SET_2);
+
+			platform_timeout_s timeout;
+			platform_timeout_set(&timeout, 2000);
+
+			/* Write one chunk */
+			for (size_t i = 0U; i < len;) {
+				/* Copy data from source address to destination */
+				target_mem_write16(t, RV40_CMD, data[i]);
+				i += 2;
+			}
+
+			/* Issue write end command */
+			target_mem_write8(t, RV40_CMD, RV40_CMD_FINAL);
+
+			/* Wait until the operation has completed or timeout */
+			/* Read FRDY bit until it has been set to 1 indicating that the current operation is complete.*/
+			while (!(target_mem_read32(t, RV40_FSTATR) & RV40_FSTATR_RDY))
+				if (target_check_error(t) || platform_timeout_is_expired(&timeout))
+					return false;
+		}
+	}
 
 	return true;
 }
