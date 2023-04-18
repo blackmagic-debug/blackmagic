@@ -431,8 +431,8 @@ static bool cortexm_prepare(adiv5_access_port_s *ap)
 #endif
 	uint32_t dhcsr = cortexm_initial_halt(ap);
 	if (!dhcsr) {
-		DEBUG_WARN("Halt via DHCSR(%08" PRIx32 "): failure after %" PRId32 "ms\nTry again, evt. with longer "
-				   "timeout or connect under reset\n",
+		DEBUG_ERROR("Halt via DHCSR(%08" PRIx32 "): failure after %" PRId32 "ms\nTry again with longer "
+					"timeout or connect under reset\n",
 			adiv5_mem_read32(ap, CORTEXM_DHCSR), platform_time_ms() - start_time);
 		return false;
 	}
@@ -455,7 +455,7 @@ static bool cortexm_prepare(adiv5_access_port_s *ap)
 			break;
 		/* If it is and we timeout, turn that into an error */
 		if (platform_timeout_is_expired(&reset_timeout)) {
-			DEBUG_WARN("Error releasing from reset\n");
+			DEBUG_ERROR("Error releasing from reset\n");
 			return false;
 		}
 	}
@@ -487,7 +487,7 @@ static void adiv5_component_probe(
 
 	const volatile uint32_t cidr = adiv5_ap_read_id(ap, addr + CIDR0_OFFSET);
 	if (ap->dp->fault) {
-		DEBUG_WARN("Error reading CIDR on AP%u: %u\n", ap->apsel, ap->dp->fault);
+		DEBUG_ERROR("Error reading CIDR on AP%u: %u\n", ap->apsel, ap->dp->fault);
 		return;
 	}
 
@@ -500,7 +500,7 @@ static void adiv5_component_probe(
 #endif
 
 	if (adiv5_dp_error(ap->dp)) {
-		DEBUG_WARN("%sFault reading ID registers\n", indent);
+		DEBUG_ERROR("%sFault reading ID registers\n", indent);
 		return;
 	}
 
@@ -562,7 +562,7 @@ static void adiv5_component_probe(
 		const uint32_t memtype = adiv5_mem_read32(ap, addr | ADIV5_ROM_MEMTYPE) & ADIV5_ROM_MEMTYPE_SYSMEM;
 
 		if (adiv5_dp_error(ap->dp)) {
-			DEBUG_WARN("Fault reading ROM table entry\n");
+			DEBUG_ERROR("Fault reading ROM table entry\n");
 		}
 
 		DEBUG_INFO("ROM: Table BASE=0x%" PRIx32 " SYSMEM=0x%08" PRIx32 ", Manufacturer %3x Partno %3x\n", addr, memtype,
@@ -573,7 +573,7 @@ static void adiv5_component_probe(
 
 			uint32_t entry = adiv5_mem_read32(ap, addr + i * 4U);
 			if (adiv5_dp_error(ap->dp)) {
-				DEBUG_WARN("%sFault reading ROM table entry %" PRIu32 "\n", indent, i);
+				DEBUG_ERROR("%sFault reading ROM table entry %" PRIu32 "\n", indent, i);
 				break;
 			}
 
@@ -625,8 +625,8 @@ static void adiv5_component_probe(
 			const cid_class_e adjusted_class = adiv5_class_from_cid(part_number, arch_id, cid_class);
 			/* Perform sanity check, if we know what to expect as * component ID class. */
 			if (arm_component_lut[i].cidc != cidc_unknown && adjusted_class != arm_component_lut[i].cidc)
-				DEBUG_WARN("%sWARNING: \"%s\" expected, got \"%s\"\n", indent + 1,
-					cidc_debug_strings[arm_component_lut[i].cidc], cidc_debug_strings[adjusted_class]);
+				DEBUG_WARN("%s\"%s\" expected, got \"%s\"\n", indent + 1, cidc_debug_strings[arm_component_lut[i].cidc],
+					cidc_debug_strings[adjusted_class]);
 
 			switch (arm_component_lut[i].arch) {
 			case aa_cortexm:
@@ -684,14 +684,14 @@ adiv5_access_port_s *adiv5_new_ap(adiv5_debug_port_s *dp, uint8_t apsel)
 	tmpap.csw |= ADIV5_AP_CSW_DBGSWENABLE;
 
 	if (tmpap.csw & ADIV5_AP_CSW_TRINPROG) {
-		DEBUG_WARN("AP %d: Transaction in progress. AP is not usable!\n", apsel);
+		DEBUG_ERROR("AP %d: Transaction in progress. AP is not usable!\n", apsel);
 		return NULL;
 	}
 
 	/* It's valid to so create a heap copy */
 	adiv5_access_port_s *ap = malloc(sizeof(*ap));
 	if (!ap) { /* malloc failed: heap exhaustion */
-		DEBUG_WARN("malloc: failed in %s\n", __func__);
+		DEBUG_ERROR("malloc: failed in %s\n", __func__);
 		return NULL;
 	}
 
@@ -712,7 +712,7 @@ static void rp_rescue_setup(adiv5_debug_port_s *dp)
 {
 	adiv5_access_port_s *ap = calloc(1, sizeof(*ap));
 	if (!ap) { /* calloc failed: heap exhaustion */
-		DEBUG_WARN("calloc: failed in %s\n", __func__);
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return;
 	}
 	ap->dp = dp;
@@ -763,7 +763,7 @@ void adiv5_dp_init(adiv5_debug_port_s *dp, const uint32_t idcode)
 			dpidr = adiv5_dp_read(dp, ADIV5_DP_DPIDR);
 	}
 	if (e.type) {
-		DEBUG_WARN("DP not responding!...\n");
+		DEBUG_ERROR("DP not responding!...\n");
 		free(dp);
 		return;
 	}

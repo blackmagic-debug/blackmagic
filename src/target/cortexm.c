@@ -580,7 +580,7 @@ bool cortexm_probe(adiv5_access_port_s *ap)
 
 	cortexm_priv_s *priv = calloc(1, sizeof(*priv));
 	if (!priv) { /* calloc failed: heap exhaustion */
-		DEBUG_WARN("calloc: failed in %s\n", __func__);
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return false;
 	}
 
@@ -825,7 +825,7 @@ bool cortexm_attach(target_s *t)
 			if (!(reset_status & CORTEXM_DHCSR_S_RESET_ST))
 				break;
 			if (platform_timeout_is_expired(&timeout)) {
-				DEBUG_WARN("Error releasing from reset\n");
+				DEBUG_ERROR("Error releasing from reset\n");
 				return false;
 			}
 		}
@@ -1227,11 +1227,11 @@ bool cortexm_run_stub(target_s *t, uint32_t loadaddr, uint32_t r0, uint32_t r1, 
 		if (platform_timeout_is_expired(&timeout)) {
 			cortexm_halt_request(t);
 #if defined(PLATFORM_HAS_DEBUG)
-			DEBUG_WARN("Stub hangs\n");
+			DEBUG_WARN("Stub hung\n");
 			uint32_t arm_regs[t->regs_size];
 			target_regs_read(t, arm_regs);
-			for (size_t i = 0; i < 20U; i++)
-				DEBUG_WARN("%2d: %08" PRIx32 ", %08" PRIx32 "\n", i, arm_regs_start[i], arm_regs[i]);
+			for (uint32_t i = 0; i < 20U; ++i)
+				DEBUG_WARN("%2" PRIu32 ": %08" PRIx32 ", %08" PRIx32 "\n", i, arm_regs_start[i], arm_regs[i]);
 #endif
 			return false;
 		}

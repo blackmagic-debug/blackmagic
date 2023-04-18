@@ -116,7 +116,7 @@ static void dap_swd_seq_out(const uint32_t tms_states, const size_t clock_cycles
 	write_le4(sequence.data, 0, tms_states);
 	/* And perform it */
 	if (!perform_dap_swd_sequences(&sequence, 1U))
-		DEBUG_WARN("dap_swd_seq_out failed\n");
+		DEBUG_ERROR("dap_swd_seq_out failed\n");
 }
 
 static void dap_swd_seq_out_parity(const uint32_t tms_states, const size_t clock_cycles)
@@ -130,7 +130,7 @@ static void dap_swd_seq_out_parity(const uint32_t tms_states, const size_t clock
 	sequence.data[4] = __builtin_parity(tms_states);
 	/* And perform it */
 	if (!perform_dap_swd_sequences(&sequence, 1U))
-		DEBUG_WARN("dap_swd_seq_out_parity failed\n");
+		DEBUG_ERROR("dap_swd_seq_out_parity failed\n");
 }
 
 static uint32_t dap_swd_seq_in(const size_t clock_cycles)
@@ -142,7 +142,7 @@ static uint32_t dap_swd_seq_in(const size_t clock_cycles)
 	};
 	/* And perform it */
 	if (!perform_dap_swd_sequences(&sequence, 1U)) {
-		DEBUG_WARN("dap_swd_seq_in failed\n");
+		DEBUG_ERROR("dap_swd_seq_in failed\n");
 		return 0U;
 	}
 
@@ -161,7 +161,7 @@ static bool dap_swd_seq_in_parity(uint32_t *const result, const size_t clock_cyc
 	};
 	/* And perform it */
 	if (!perform_dap_swd_sequences(&sequence, 1U)) {
-		DEBUG_WARN("dap_swd_seq_in_parity failed\n");
+		DEBUG_ERROR("dap_swd_seq_in_parity failed\n");
 		return false;
 	}
 
@@ -187,7 +187,7 @@ static void dap_line_reset(void)
 		0x0fU,
 	};
 	if (!perform_dap_swj_sequence(64, data))
-		DEBUG_WARN("line reset failed\n");
+		DEBUG_ERROR("line reset failed\n");
 }
 
 static bool dap_write_reg_no_check(uint16_t addr, const uint32_t data)
@@ -216,7 +216,7 @@ static bool dap_write_reg_no_check(uint16_t addr, const uint32_t data)
 	write_le4(sequences[3].data, 0, data);
 	/* Now perform the sequences */
 	if (!perform_dap_swd_sequences(sequences, 4U)) {
-		DEBUG_WARN("dap_write_reg_no_check failed\n");
+		DEBUG_ERROR("dap_write_reg_no_check failed\n");
 		return false;
 	}
 	/* Check the ack state */

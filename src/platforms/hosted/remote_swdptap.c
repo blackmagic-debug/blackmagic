@@ -19,7 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* MPSSE bit-banging SW-DP interface over FTDI with loop unrolled.
+/*
+ * MPSSE bit-banging SW-DP interface over FTDI with loop unrolled.
  * Speed is sensible.
  */
 
@@ -44,7 +45,7 @@ bool remote_swdptap_init(void)
 	char buffer[REMOTE_MAX_MSG_SIZE];
 	int length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	if (!length || buffer[0] == REMOTE_RESP_ERR) {
-		DEBUG_WARN("swdptap_init failed, error %s\n", length ? buffer + 1 : "unknown");
+		DEBUG_ERROR("swdptap_init failed, error %s\n", length ? buffer + 1 : "unknown");
 		exit(-1);
 	}
 
@@ -64,7 +65,7 @@ static bool remote_swd_seq_in_parity(uint32_t *res, size_t clock_cycles)
 
 	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	if (length < 2 || buffer[0] == REMOTE_RESP_ERR) {
-		DEBUG_WARN("%s failed, error %s\n", __func__, length ? buffer + 1 : "short response");
+		DEBUG_ERROR("%s failed, error %s\n", __func__, length ? buffer + 1 : "short response");
 		exit(-1);
 	}
 
@@ -83,7 +84,7 @@ static uint32_t remote_swd_seq_in(size_t clock_cycles)
 
 	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	if (length < 2 || buffer[0] == REMOTE_RESP_ERR) {
-		DEBUG_WARN("%s failed, error %s\n", __func__, length ? buffer + 1 : "short response");
+		DEBUG_ERROR("%s failed, error %s\n", __func__, length ? buffer + 1 : "short response");
 		exit(-1);
 	}
 	uint32_t res = remote_hex_string_to_num(-1, buffer + 1);
@@ -101,7 +102,7 @@ static void remote_swd_seq_out(uint32_t tms_states, size_t clock_cycles)
 
 	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	if (length < 1 || buffer[0] == REMOTE_RESP_ERR) {
-		DEBUG_WARN("%s failed, error %s\n", __func__, length ? buffer + 1 : "short response");
+		DEBUG_ERROR("%s failed, error %s\n", __func__, length ? buffer + 1 : "short response");
 		exit(-1);
 	}
 }
@@ -116,7 +117,7 @@ static void remote_swd_seq_out_parity(uint32_t tms_states, size_t clock_cycles)
 
 	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	if (length < 1 || buffer[1] == REMOTE_RESP_ERR) {
-		DEBUG_WARN("%s failed, error %s\n", __func__, length ? buffer + 2 : "short response");
+		DEBUG_ERROR("%s failed, error %s\n", __func__, length ? buffer + 2 : "short response");
 		exit(-1);
 	}
 }

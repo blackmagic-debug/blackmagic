@@ -76,7 +76,7 @@ bool ftdi_swd_possible(void)
 bool ftdi_swd_init(void)
 {
 	if (!ftdi_swd_possible()) {
-		DEBUG_WARN("SWD not possible or missing item in adaptor description.\n");
+		DEBUG_ERROR("SWD not possible or missing item in adaptor description.\n");
 		return false;
 	}
 	DEBUG_PROBE("%s\n", __func__);

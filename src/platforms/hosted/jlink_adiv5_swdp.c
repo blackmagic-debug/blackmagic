@@ -62,7 +62,7 @@ static bool line_reset(bmp_info_s *const info)
 	send_recv(info->usb_link, NULL, 0U, res, 1U);
 
 	if (res[0] != 0) {
-		DEBUG_WARN("Line reset failed\n");
+		DEBUG_ERROR("Line reset failed\n");
 		return false;
 	}
 	return true;
@@ -113,13 +113,13 @@ uint32_t jlink_swdp_scan(bmp_info_s *const info)
 	send_recv(info->usb_link, NULL, 0U, res, 1U);
 
 	if (res[0] != 0) {
-		DEBUG_WARN("Line reset failed\n");
+		DEBUG_ERROR("Line reset failed\n");
 		return 0;
 	}
 
 	adiv5_debug_port_s *dp = calloc(1, sizeof(*dp));
 	if (!dp) { /* calloc failed: heap exhaustion */
-		DEBUG_WARN("calloc: failed in %s\n", __func__);
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return 0;
 	}
 
@@ -257,7 +257,7 @@ static uint32_t jlink_adiv5_swdp_low_read(adiv5_debug_port_s *const dp)
 	if (bit_count & 1U) /* Give up on parity error */
 	{
 		dp->fault = 1;
-		DEBUG_WARN("SWD access resulted in parity error\n");
+		DEBUG_ERROR("SWD access resulted in parity error\n");
 		raise_exception(EXCEPTION_ERROR, "SWD parity error");
 	}
 	return response;
@@ -314,19 +314,19 @@ static uint32_t jlink_adiv5_swdp_low_access(
 	}
 
 	if (ack == SWDP_ACK_FAULT) {
-		DEBUG_WARN("SWD access resulted in fault\n");
+		DEBUG_ERROR("SWD access resulted in fault\n");
 		dp->fault = ack;
 		return 0;
 	}
 
 	if (ack == SWDP_ACK_NO_RESPONSE) {
-		DEBUG_WARN("SWD access resulted in no response\n");
+		DEBUG_ERROR("SWD access resulted in no response\n");
 		dp->fault = ack;
 		return 0;
 	}
 
 	if (ack != SWDP_ACK_OK) {
-		DEBUG_WARN("SWD access has invalid ack %x\n", ack);
+		DEBUG_ERROR("SWD access has invalid ack %x\n", ack);
 		raise_exception(EXCEPTION_ERROR, "SWD invalid ACK");
 	}
 

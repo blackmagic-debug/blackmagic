@@ -42,7 +42,7 @@ int remote_init(const bool power_up)
 	char buffer[REMOTE_MAX_MSG_SIZE];
 	const int length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	if (length < 1 || buffer[0] == REMOTE_RESP_ERR) {
-		DEBUG_WARN("Remote Start failed, error %s\n", length ? buffer + 1 : "unknown");
+		DEBUG_ERROR("Remote Start failed, error %s\n", length ? buffer + 1 : "unknown");
 		return -1;
 	}
 	DEBUG_PROBE("Remote is %s\n", buffer + 1);
@@ -57,7 +57,7 @@ bool remote_target_get_power(void)
 	platform_buffer_write(buffer, length);
 	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	if (length < 1 || buffer[0] == REMOTE_RESP_ERR) {
-		DEBUG_WARN("platform_target_get_power failed, error %s\n", length ? buffer + 1 : "unknown");
+		DEBUG_ERROR("platform_target_get_power failed, error %s\n", length ? buffer + 1 : "unknown");
 		exit(-1);
 	}
 	return buffer[1] == '1';
@@ -70,7 +70,7 @@ bool remote_target_set_power(const bool power)
 	platform_buffer_write(buffer, length);
 	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	if (length < 1 || buffer[0] == REMOTE_RESP_ERR)
-		DEBUG_WARN("platform_target_set_power failed, error %s\n", length ? buffer + 1 : "unknown");
+		DEBUG_ERROR("platform_target_set_power failed, error %s\n", length ? buffer + 1 : "unknown");
 	return length > 0 && buffer[0] == REMOTE_RESP_OK;
 }
 
@@ -81,7 +81,7 @@ void remote_nrst_set_val(bool assert)
 	platform_buffer_write(buffer, length);
 	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	if (length < 1 || buffer[0] == REMOTE_RESP_ERR) {
-		DEBUG_WARN("platform_nrst_set_val failed, error %s\n", length ? buffer + 1 : "unknown");
+		DEBUG_ERROR("platform_nrst_set_val failed, error %s\n", length ? buffer + 1 : "unknown");
 		exit(-1);
 	}
 }
@@ -93,7 +93,7 @@ bool remote_nrst_get_val(void)
 	platform_buffer_write(buffer, length);
 	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	if (length < 1 || buffer[0] == REMOTE_RESP_ERR) {
-		DEBUG_WARN("platform_nrst_set_val failed, error %s\n", length ? buffer + 1 : "unknown");
+		DEBUG_ERROR("platform_nrst_set_val failed, error %s\n", length ? buffer + 1 : "unknown");
 		exit(-1);
 	}
 	return buffer[1] == '1';
@@ -129,7 +129,7 @@ const char *remote_target_voltage(void)
 	platform_buffer_write(buffer, length);
 	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	if (length < 1 || buffer[0] == REMOTE_RESP_ERR) {
-		DEBUG_WARN("platform_target_voltage failed, error %s\n", length ? buffer + 1 : "unknown");
+		DEBUG_ERROR("platform_target_voltage failed, error %s\n", length ? buffer + 1 : "unknown");
 		exit(-1);
 	}
 	return buffer + 1;
@@ -142,7 +142,7 @@ void remote_target_clk_output_enable(const bool enable)
 	platform_buffer_write(buffer, length);
 	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	if (length < 1 || buffer[0] == REMOTE_RESP_ERR)
-		DEBUG_WARN("remote_target_clk_output_enable failed, error %s\n", length ? buffer + 1 : "unknown");
+		DEBUG_ERROR("remote_target_clk_output_enable failed, error %s\n", length ? buffer + 1 : "unknown");
 }
 
 static uint64_t remote_decode_response(const char *const response, size_t digits)
@@ -160,7 +160,7 @@ static bool remote_adiv5_check_error(
 {
 	/* Check the response length for error codes */
 	if (length < 1) {
-		DEBUG_WARN("%s comms error: %zd\n", func, length);
+		DEBUG_ERROR("%s comms error: %zd\n", func, length);
 		return false;
 	}
 	/* Now check if the remote is reporting an error */
@@ -175,7 +175,7 @@ static bool remote_adiv5_check_error(
 			raise_exception(response_code >> 8U, "Remote protocol exception");
 		/* Otherwise it's an unexpected error */
 		else
-			DEBUG_WARN("%s: Unexpected error %u\n", func, error);
+			DEBUG_ERROR("%s: Unexpected error %u\n", func, error);
 	}
 	/* Return whether the remote indicated the request was successfull */
 	return buffer[0] == REMOTE_RESP_OK;
@@ -278,7 +278,7 @@ static void remote_adiv5_mem_read_bytes(
 		/* Read back the answer and check for errors */
 		length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 		if (!remote_adiv5_check_error(__func__, target_ap->dp, buffer, length)) {
-			DEBUG_WARN("%s error around 0x%08zx\n", __func__, (size_t)src + offset);
+			DEBUG_ERROR("%s error around 0x%08zx\n", __func__, (size_t)src + offset);
 			return;
 		}
 		/* If the response indicates all's OK, decode the data read */
@@ -316,7 +316,7 @@ static void remote_adiv5_mem_write_bytes(adiv5_access_port_s *const target_ap, c
 		/* Read back the answer and check for errors */
 		length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 		if (!remote_adiv5_check_error(__func__, target_ap->dp, buffer, length)) {
-			DEBUG_WARN("%s error around 0x%08zx\n", __func__, (size_t)dest + offset);
+			DEBUG_ERROR("%s error around 0x%08zx\n", __func__, (size_t)dest + offset);
 			return;
 		}
 	}
@@ -330,7 +330,7 @@ void remote_adiv5_dp_defaults(adiv5_debug_port_s *const target_dp)
 	/* Read back the answer and check for errors */
 	const ssize_t length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	if (length < 1) {
-		DEBUG_WARN("%s comms error: %zd\n", __func__, length);
+		DEBUG_ERROR("%s comms error: %zd\n", __func__, length);
 		exit(2);
 	} else if (buffer[0] != REMOTE_RESP_OK) {
 		DEBUG_INFO("Your probe firmware is too old, please update it to continue\n");

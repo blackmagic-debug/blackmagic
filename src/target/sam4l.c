@@ -189,7 +189,7 @@ static void sam4l_add_flash(target_s *t, uint32_t addr, size_t length)
 {
 	target_flash_s *f = calloc(1, sizeof(*f));
 	if (!f) { /* calloc failed: heap exhaustion */
-		DEBUG_WARN("calloc: failed in %s\n", __func__);
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return;
 	}
 
@@ -233,7 +233,7 @@ bool sam4l_probe(target_s *t)
 	/* Enable SMAP if not, check for HCR and reset if set */
 	sam4l_extended_reset(t);
 	if (target_check_error(t))
-		DEBUG_WARN("SAM4L: target_check_error returned true\n");
+		DEBUG_ERROR("SAM4L: target_check_error returned true\n");
 	return true;
 }
 

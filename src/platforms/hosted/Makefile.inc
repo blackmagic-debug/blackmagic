@@ -91,7 +91,7 @@ ifneq ($(HOSTED_BMP_ONLY), 1)
     LDFLAGS += $(shell pkg-config --libs $(HIDAPILIB))
 endif
 
-SRC += timing.c cli.c utils.c probe_info.c
+SRC += timing.c cli.c utils.c probe_info.c debug.c
 SRC += bmp_remote.c remote_swdptap.c remote_jtagtap.c
 ifneq ($(HOSTED_BMP_ONLY), 1)
     SRC += bmp_libusb.c stlinkv2.c

@@ -80,7 +80,7 @@ lpc_flash_s *lpc_add_flash(
 {
 	lpc_flash_s *const lpc_flash = calloc(1, sizeof(*lpc_flash));
 	if (!lpc_flash) { /* calloc failed: heap exhaustion */
-		DEBUG_WARN("calloc: failed in %s\n", __func__);
+		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return NULL;
 	}
 
@@ -229,7 +229,7 @@ static bool lpc_flash_write(target_flash_s *tf, target_addr_t dest, const void *
 	/* Prepare... */
 	const uint32_t sector = lpc_sector_for_addr(f, dest);
 	if (lpc_iap_call(f, NULL, IAP_CMD_PREPARE, sector, sector, f->bank)) {
-		DEBUG_WARN("Prepare failed\n");
+		DEBUG_ERROR("Prepare failed\n");
 		return false;
 	}
 	const uint32_t bufaddr = ALIGN(f->iap_ram + sizeof(flash_param_s), 4);
@@ -249,7 +249,7 @@ static bool lpc_flash_write(target_flash_s *tf, target_addr_t dest, const void *
 		 */
 		for (size_t offset = 0; offset < len - (0x40U * f->reserved_pages); offset += LPX80X_PAGE_SIZE) {
 			if (lpc_iap_call(f, NULL, IAP_CMD_PREPARE, sector, sector, f->bank)) {
-				DEBUG_WARN("Prepare failed\n");
+				DEBUG_ERROR("Prepare failed\n");
 				return false;
 			}
 			/* Set the destination address and program */

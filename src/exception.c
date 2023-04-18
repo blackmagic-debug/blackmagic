@@ -33,6 +33,6 @@ void raise_exception(const uint32_t type, const char *const msg)
 			longjmp(exception->jmpbuf, type);
 		}
 	}
-	DEBUG_WARN("Unhandled exception: %s\n", msg);
+	DEBUG_ERROR("Unhandled exception: %s\n", msg);
 	abort();
 }

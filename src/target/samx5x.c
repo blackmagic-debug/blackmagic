@@ -492,7 +492,7 @@ static bool samx5x_flash_erase(target_flash_s *f, target_addr_t addr, size_t len
 		}
 
 		if (target_check_error(t) || samx5x_check_nvm_error(t)) {
-			DEBUG_WARN("Error\n");
+			DEBUG_ERROR("Error\n");
 			return false;
 		}
 
@@ -534,7 +534,7 @@ static bool samx5x_flash_write(target_flash_s *f, target_addr_t dest, const void
 	}
 
 	if (error || target_check_error(t) || samx5x_check_nvm_error(t)) {
-		DEBUG_WARN("Error writing flash page at 0x%08" PRIx32 " (len 0x%08" PRIx32 ")\n", dest, (uint32_t)len);
+		DEBUG_ERROR("Error writing flash page at 0x%08" PRIx32 " (len 0x%08" PRIx32 ")\n", dest, (uint32_t)len);
 		return false;
 	}
 

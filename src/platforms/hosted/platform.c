@@ -427,7 +427,7 @@ void platform_target_set_power(const bool power)
 		if (remote_target_set_power(power))
 			DEBUG_INFO("Powering up device!\n");
 		else
-			DEBUG_WARN("Powering up device unimplemented or failed\n");
+			DEBUG_ERROR("Powering up device unimplemented or failed\n");
 		break;
 
 	default:
@@ -498,181 +498,164 @@ void platform_target_clk_output_enable(const bool enable)
 	}
 }
 
-static void ap_decode_access(uint16_t addr, uint8_t RnW)
+static void decode_dp_access(const uint8_t addr, const uint8_t rnw)
 {
-	if (RnW)
-		fprintf(stderr, "Read ");
-	else
-		fprintf(stderr, "Write ");
-
-	if (addr < 0x100U) {
-		switch (addr) {
-		case 0x00U:
-			if (RnW)
-				fprintf(stderr, "DP_DPIDR:");
-			else
-				fprintf(stderr, "DP_ABORT:");
-			break;
-
-		case 0x04U:
-			fprintf(stderr, "CTRL/STAT:");
-			break;
-
-		case 0x08U:
-			if (RnW)
-				fprintf(stderr, "RESEND:");
-			else
-				fprintf(stderr, "DP_SELECT:");
-			break;
-
-		case 0x0cU:
-			fprintf(stderr, "DP_RDBUFF:");
-			break;
-
-		default:
-			fprintf(stderr, "Unknown register %02x:", addr);
-		}
-	} else {
-		fprintf(stderr, "AP %u ", addr >> 8U);
-
-		switch (addr & 0xffU) {
-		case 0x00U:
-			fprintf(stderr, "CSW:");
-			break;
-
-		case 0x04U:
-			fprintf(stderr, "TAR:");
-			break;
-
-		case 0x0cU:
-			fprintf(stderr, "DRW:");
-			break;
-
-		case 0x10U:
-			fprintf(stderr, "DB0:");
-			break;
-
-		case 0x14U:
-			fprintf(stderr, "DB1:");
-			break;
-
-		case 0x18U:
-			fprintf(stderr, "DB2:");
-			break;
-
-		case 0x1cU:
-			fprintf(stderr, "DB3:");
-			break;
-
-		case 0xf8U:
-			fprintf(stderr, "BASE:");
-			break;
-
-		case 0xf4U:
-			fprintf(stderr, "CFG:");
-			break;
-
-		case 0xfcU:
-			fprintf(stderr, "IDR:");
-			break;
-
-		default:
-			fprintf(stderr, "RSVD%02x:", addr & 0xffU);
-		}
+	const char *reg = NULL;
+	switch (addr) {
+	case 0x00U:
+		reg = rnw ? "DPIDR" : "ABORT";
+		break;
+	case 0x04U:
+		reg = "CTRL/STAT";
+		break;
+	case 0x08U:
+		reg = rnw ? "RESEND" : "SELECT";
+		break;
+	case 0x0cU:
+		reg = "RDBUFF";
+		break;
 	}
+
+	if (reg)
+		DEBUG_PROTO("%s: ", reg);
+	else
+		DEBUG_PROTO("Unknown DP register %02x: ", addr);
+}
+
+static void decode_ap_access(const uint8_t ap, const uint8_t addr)
+{
+	DEBUG_PROTO("AP %u ", ap);
+
+	const char *reg = NULL;
+	switch (addr) {
+	case 0x00U:
+		reg = "CSW";
+		break;
+	case 0x04U:
+		reg = "TAR";
+		break;
+	case 0x0cU:
+		reg = "DRW";
+		break;
+	case 0x10U:
+		reg = "DB0";
+		break;
+	case 0x14U:
+		reg = "DB1";
+		break;
+	case 0x18U:
+		reg = "DB2";
+		break;
+	case 0x1cU:
+		reg = "DB3";
+		break;
+	case 0xf8U:
+		reg = "BASE";
+		break;
+	case 0xf4U:
+		reg = "CFG";
+		break;
+	case 0xfcU:
+		reg = "IDR";
+		break;
+	}
+
+	if (reg)
+		DEBUG_PROTO("%s: ", reg);
+	else
+		DEBUG_PROTO("Reserved(%02x): ", addr);
+}
+
+static void decode_access(const uint16_t addr, const uint8_t rnw)
+{
+	if (rnw)
+		DEBUG_PROTO("Read ");
+	else
+		DEBUG_PROTO("Write ");
+
+	if (addr < 0x100U)
+		decode_dp_access(addr & 0xffU, rnw);
+	else
+		decode_ap_access(addr >> 8U, addr & 0xffU);
 }
 
 void adiv5_dp_write(adiv5_debug_port_s *dp, uint16_t addr, uint32_t value)
 {
-	if (cl_debuglevel & BMP_DEBUG_TARGET) {
-		ap_decode_access(addr, ADIV5_LOW_WRITE);
-		fprintf(stderr, " 0x%08" PRIx32 "\n", value);
-	}
+	decode_access(addr, ADIV5_LOW_WRITE);
+	DEBUG_PROTO("0x%08" PRIx32 "\n", value);
 	dp->low_access(dp, ADIV5_LOW_WRITE, addr, value);
 }
 
 uint32_t adiv5_dp_read(adiv5_debug_port_s *dp, uint16_t addr)
 {
 	uint32_t ret = dp->dp_read(dp, addr);
-	if (cl_debuglevel & BMP_DEBUG_TARGET) {
-		ap_decode_access(addr, ADIV5_LOW_READ);
-		fprintf(stderr, " 0x%08" PRIx32 "\n", ret);
-	}
+	decode_access(addr, ADIV5_LOW_READ);
+	DEBUG_PROTO("0x%08" PRIx32 "\n", ret);
 	return ret;
 }
 
 uint32_t adiv5_dp_error(adiv5_debug_port_s *dp)
 {
 	uint32_t ret = dp->error(dp, false);
-	DEBUG_TARGET("DP Error 0x%08" PRIx32 "\n", ret);
+	DEBUG_PROTO("DP Error 0x%08" PRIx32 "\n", ret);
 	return ret;
 }
 
-uint32_t adiv5_dp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value)
+uint32_t adiv5_dp_low_access(adiv5_debug_port_s *dp, uint8_t rnw, uint16_t addr, uint32_t value)
 {
-	uint32_t ret = dp->low_access(dp, RnW, addr, value);
-	if (cl_debuglevel & BMP_DEBUG_TARGET) {
-		ap_decode_access(addr, RnW);
-		fprintf(stderr, " 0x%08" PRIx32 "\n", RnW ? ret : value);
-	}
+	uint32_t ret = dp->low_access(dp, rnw, addr, value);
+	decode_access(addr, rnw);
+	DEBUG_PROTO("0x%08" PRIx32 "\n", rnw ? ret : value);
 	return ret;
 }
 
 uint32_t adiv5_ap_read(adiv5_access_port_s *ap, uint16_t addr)
 {
 	uint32_t ret = ap->dp->ap_read(ap, addr);
-	if (cl_debuglevel & BMP_DEBUG_TARGET) {
-		ap_decode_access(addr, ADIV5_LOW_READ);
-		fprintf(stderr, " 0x%08" PRIx32 "\n", ret);
-	}
+	decode_access(addr, ADIV5_LOW_READ);
+	DEBUG_PROTO("0x%08" PRIx32 "\n", ret);
 	return ret;
 }
 
 void adiv5_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value)
 {
-	if (cl_debuglevel & BMP_DEBUG_TARGET) {
-		ap_decode_access(addr, ADIV5_LOW_WRITE);
-		fprintf(stderr, " 0x%08" PRIx32 "\n", value);
-	}
+	decode_access(addr, ADIV5_LOW_WRITE);
+	DEBUG_PROTO("0x%08" PRIx32 "\n", value);
 	return ap->dp->ap_write(ap, addr, value);
 }
 
 void adiv5_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t len)
 {
 	ap->dp->mem_read(ap, dest, src, len);
-	if (cl_debuglevel & BMP_DEBUG_TARGET) {
-		fprintf(stderr, "ap_memread @ %" PRIx32 " len %zu:", src, len);
-		const uint8_t *const data = (const uint8_t *)dest;
-		for (size_t offset = 0; offset < len; ++offset) {
-			if (offset == 16U)
-				break;
-			fprintf(stderr, " %02x", data[offset]);
-		}
-		if (len > 16U)
-			fprintf(stderr, " ...");
-		fprintf(stderr, "\n");
+	DEBUG_PROTO("ap_memread @ %" PRIx32 " len %zu:", src, len);
+	const uint8_t *const data = (const uint8_t *)dest;
+	for (size_t offset = 0; offset < len; ++offset) {
+		if (offset == 16U)
+			break;
+		DEBUG_PROTO(" %02x", data[offset]);
 	}
+	if (len > 16U)
+		DEBUG_PROTO(" ...");
+	DEBUG_PROTO("\n");
 }
 
 void adiv5_mem_write_sized(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, align_e align)
 {
-	if (cl_debuglevel & BMP_DEBUG_TARGET) {
-		fprintf(stderr, "ap_mem_write_sized @ %" PRIx32 " len %zu, align %d:", dest, len, 1 << align);
-		const uint8_t *const data = (const uint8_t *)src;
-		for (size_t offset = 0; offset < len; ++offset) {
-			if (offset == 16U)
-				break;
-			fprintf(stderr, " %02x", data[offset]);
-		}
-		if (len > 16U)
-			fprintf(stderr, " ...");
-		fprintf(stderr, "\n");
+	DEBUG_PROTO("ap_mem_write_sized @ %" PRIx32 " len %zu, align %d:", dest, len, 1 << align);
+	const uint8_t *const data = (const uint8_t *)src;
+	for (size_t offset = 0; offset < len; ++offset) {
+		if (offset == 16U)
+			break;
+		DEBUG_PROTO(" %02x", data[offset]);
 	}
+	if (len > 16U)
+		DEBUG_PROTO(" ...");
+	DEBUG_PROTO("\n");
 	return ap->dp->mem_write(ap, dest, src, len, align);
 }
 
 void adiv5_dp_abort(adiv5_debug_port_s *dp, uint32_t abort)
 {
-	DEBUG_TARGET("Abort: %08" PRIx32 "\n", abort);
+	DEBUG_PROTO("Abort: %08" PRIx32 "\n", abort);
 	return dp->abort(dp, abort);
 }

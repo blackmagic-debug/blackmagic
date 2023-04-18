@@ -125,7 +125,7 @@ static bool claim_jlink_interface(bmp_info_s *info, libusb_device *dev)
 	libusb_config_descriptor_s *config;
 	const int result = libusb_get_active_config_descriptor(dev, &config);
 	if (result != LIBUSB_SUCCESS) {
-		DEBUG_WARN("Failed to get configuration descriptor: %s\n", libusb_error_name(result));
+		DEBUG_ERROR("Failed to get configuration descriptor: %s\n", libusb_error_name(result));
 		return false;
 	}
 	const libusb_interface_descriptor_s *descriptor = NULL;
@@ -137,7 +137,7 @@ static bool claim_jlink_interface(bmp_info_s *info, libusb_device *dev)
 			interface_desc->bInterfaceSubClass == LIBUSB_CLASS_VENDOR_SPEC && interface_desc->bNumEndpoints > 1U) {
 			const int result = libusb_claim_interface(info->usb_link->ul_libusb_device_handle, i);
 			if (result) {
-				DEBUG_WARN("Can not claim handle: %s\n", libusb_error_name(result));
+				DEBUG_ERROR("Can not claim handle: %s\n", libusb_error_name(result));
 				break;
 			}
 			info->usb_link->interface = i;
@@ -145,7 +145,7 @@ static bool claim_jlink_interface(bmp_info_s *info, libusb_device *dev)
 		}
 	}
 	if (!descriptor) {
-		DEBUG_WARN("No suitable interface found\n");
+		DEBUG_ERROR("No suitable interface found\n");
 		libusb_free_config_descriptor(config);
 		return false;
 	}
@@ -174,7 +174,7 @@ bool jlink_init(bmp_info_s *const info)
 	libusb_device **device_list = NULL;
 	const ssize_t devices = libusb_get_device_list(info->libusb_ctx, &device_list);
 	if (devices < 0) {
-		DEBUG_WARN("libusb_get_device_list() failed");
+		DEBUG_ERROR("libusb_get_device_list() failed");
 		return false;
 	}
 	libusb_device *dev = NULL;
@@ -184,7 +184,7 @@ bool jlink_init(bmp_info_s *const info)
 		libusb_device *const device = device_list[index];
 		struct libusb_device_descriptor dev_desc;
 		if (libusb_get_device_descriptor(device, &dev_desc) < 0) {
-			DEBUG_WARN("libusb_get_device_descriptor() failed");
+			DEBUG_ERROR("libusb_get_device_descriptor() failed");
 			libusb_free_device_list(device_list, devices);
 			return false;
 		}
@@ -217,7 +217,7 @@ bool jlink_init(bmp_info_s *const info)
 	link->req_trans = libusb_alloc_transfer(0);
 	link->rep_trans = libusb_alloc_transfer(0);
 	if (!link->req_trans || !link->rep_trans || !link->ep_tx || !link->ep_rx) {
-		DEBUG_WARN("Device setup failed\n");
+		DEBUG_ERROR("Device setup failed\n");
 		libusb_release_interface(info->usb_link->ul_libusb_device_handle, info->usb_link->interface);
 		libusb_close(info->usb_link->ul_libusb_device_handle);
 		libusb_free_device_list(device_list, devices);

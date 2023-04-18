@@ -68,7 +68,7 @@ void ftdi_jtag_drain_potential_garbage(void)
 bool ftdi_jtag_init(void)
 {
 	if (active_cable.mpsse_swd_read.set_data_low == MPSSE_DO && active_cable.mpsse_swd_write.set_data_low == MPSSE_DO) {
-		DEBUG_WARN("JTAG not possible with resistor SWD!\n");
+		DEBUG_ERROR("JTAG not possible with resistor SWD!\n");
 		return false;
 	}
 

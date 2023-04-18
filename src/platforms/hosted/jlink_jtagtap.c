@@ -66,7 +66,7 @@ bool jlink_jtagtap_init(bmp_info_s *const info)
 	uint8_t res[4];
 	send_recv(info->usb_link, cmd_switch, 2, res, sizeof(res));
 	if (!(res[0] & JLINK_IF_JTAG)) {
-		DEBUG_WARN("JTAG not available\n");
+		DEBUG_ERROR("JTAG not available\n");
 		return false;
 	}
 	cmd_switch[1] = SELECT_IF_JTAG;
@@ -92,7 +92,7 @@ bool jlink_jtagtap_init(bmp_info_s *const info)
 	send_recv(info->usb_link, NULL, 0, res, 1);
 
 	if (res[0] != 0) {
-		DEBUG_WARN("Switch to JTAG failed\n");
+		DEBUG_ERROR("Switch to JTAG failed\n");
 		return false;
 	}
 	jtag_proc.jtagtap_reset = jtagtap_reset;
@@ -137,12 +137,10 @@ static void jtagtap_tdi_tdo_seq(
 	if (!clock_cycles)
 		return;
 	const size_t total_chunks = (clock_cycles >> 3U) + ((clock_cycles & 7U) ? 1U : 0U);
-	if (cl_debuglevel & BMP_DEBUG_PROBE) {
-		DEBUG_PROBE("jtagtap_tdi_tdo final tms: %u, clock cycles: %u, data_in: ", final_tms ? 1 : 0, clock_cycles);
-		for (size_t i = 0; i < total_chunks; ++i)
-			DEBUG_PROBE("%02x", data_in[i]);
-		DEBUG_PROBE("\n");
-	}
+	DEBUG_PROBE("jtagtap_tdi_tdo final tms: %u, clock cycles: %zu, data_in: ", final_tms ? 1 : 0, clock_cycles);
+	for (size_t i = 0; i < total_chunks; ++i)
+		DEBUG_PROBE("%02x", data_in[i]);
+	DEBUG_PROBE("\n");
 	const size_t cmd_len = 4 + (total_chunks * 2U);
 	uint8_t *cmd = calloc(1, cmd_len);
 	cmd[0] = CMD_HW_JTAG3;
@@ -168,18 +166,16 @@ static void jtagtap_tdi_tdo_seq(
 
 static void jtagtap_tdi_seq(const bool final_tms, const uint8_t *const data_in, const size_t clock_cycles)
 {
-	if (cl_debuglevel & BMP_DEBUG_PROBE) {
-		DEBUG_PROBE("jtagtap_tdi_seq final tms: %u, data_in: ", final_tms ? 1 : 0);
-		for (size_t cycle = 0; cycle < clock_cycles; cycle += 8U) {
-			const size_t chunk = cycle >> 3U;
-			if (chunk > 16U) {
-				DEBUG_PROBE(" ...");
-				break;
-			}
-			DEBUG_PROBE(" %02x", data_in[chunk]);
+	DEBUG_PROBE("jtagtap_tdi_seq final tms: %u, data_in: ", final_tms ? 1 : 0);
+	for (size_t cycle = 0; cycle < clock_cycles; cycle += 8U) {
+		const size_t chunk = cycle >> 3U;
+		if (chunk > 16U) {
+			DEBUG_PROBE(" ...");
+			break;
 		}
-		DEBUG_PROBE("\n");
+		DEBUG_PROBE(" %02x", data_in[chunk]);
 	}
+	DEBUG_PROBE("\n");
 	return jtagtap_tdi_tdo_seq(NULL, final_tms, data_in, clock_cycles);
 }
 

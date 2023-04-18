@@ -128,6 +128,6 @@ bool dap_jtag_configure(void)
 	uint8_t response = DAP_RESPONSE_OK;
 	/* Send the configuration and ensure it succeeded */
 	if (!dap_run_cmd(request, 2U + jtag_dev_count, &response, 1U) || response != DAP_RESPONSE_OK)
-		DEBUG_WARN("dap_jtag_configure failed with %02x\n", response);
+		DEBUG_ERROR("dap_jtag_configure failed with %02x\n", response);
 	return response == DAP_RESPONSE_OK;
 }

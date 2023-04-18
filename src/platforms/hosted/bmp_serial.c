@@ -36,10 +36,10 @@
 
 void bmp_ident(bmp_info_s *info)
 {
-	PRINT_INFO("Black Magic Debug App (for BMP only) %s\n", FIRMWARE_VERSION);
+	DEBUG_INFO("Black Magic Debug App (for BMP only) %s\n", FIRMWARE_VERSION);
 	if (!info)
 		return;
-	PRINT_INFO("Using:\n %s %s %s\n", info->manufacturer, info->version, info->serial);
+	DEBUG_INFO("Using:\n %s %s %s\n", info->manufacturer, info->version, info->serial);
 }
 
 void libusb_exit_function(bmp_info_s *info)
@@ -50,7 +50,7 @@ void libusb_exit_function(bmp_info_s *info)
 #ifdef __APPLE__
 int find_debuggers(bmda_cli_options_s *cl_opts, bmp_info_s *info)
 {
-	DEBUG_WARN("Please implement find_debuggers for MACOS!\n");
+	DEBUG_ERROR("Please implement find_debuggers for MACOS!\n");
 	(void)cl_opts;
 	(void)info;
 	return -1;
@@ -145,7 +145,7 @@ print_probes_info:
 		 * in the detection loop, so use this probe. */
 		return 0;
 	if (probes_found < 1U) {
-		DEBUG_WARN("No BMP probe found\n");
+		DEBUG_ERROR("No BMP probe found\n");
 		return -1;
 	}
 	/* Otherwise, if this line is reached, then more than one probe has been found,
@@ -217,7 +217,7 @@ static probe_info_s *parse_device_node(const char *name, probe_info_s *probe_lis
 	while (name[prefix_length] == '_' && prefix_length < name_len)
 		++prefix_length;
 	if (prefix_length == name_len) {
-		DEBUG_WARN("Unexpected end\n");
+		DEBUG_ERROR("Unexpected end\n");
 		return probe_list;
 	}
 
@@ -283,7 +283,7 @@ static probe_info_s *parse_device_node(const char *name, probe_info_s *probe_lis
 	}
 
 	if (!version || !type) {
-		DEBUG_WARN("Failed to construct version of type string");
+		DEBUG_ERROR("Failed to construct version of type string");
 		free(serial);
 		free(version);
 		free(type);
@@ -314,7 +314,7 @@ static const probe_info_s *scan_for_devices(void)
 			}
 			/* If the operation returned the probe_list unchanged, it failed to parse the node */
 			if (probe_info == probe_list)
-				DEBUG_WARN("Error parsing device name \"%s\"\n", entry->d_name);
+				DEBUG_ERROR("Error parsing device name \"%s\"\n", entry->d_name);
 			probe_list = probe_info;
 		}
 	}
@@ -329,7 +329,7 @@ int find_debuggers(bmda_cli_options_s *cl_opts, bmp_info_s *info)
 	/* Scan for all possible probes on the system */
 	const probe_info_s *const probe_list = scan_for_devices();
 	if (!probe_list) {
-		DEBUG_WARN("No BMP probe found\n");
+		DEBUG_ERROR("No BMP probe found\n");
 		return -1;
 	}
 	/* Count up how many were found and filter the list for a match to the program options request */
