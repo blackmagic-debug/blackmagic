@@ -194,6 +194,11 @@ void remote_target_clk_output_enable(const bool enable)
 		DEBUG_WARN("Please update probe firmware to enable high impedance clock feature\n");
 }
 
+bool remote_jtagtap_init(void)
+{
+	return remote_funcs.jtag_init();
+}
+
 void remote_adiv5_dp_defaults(adiv5_debug_port_s *const dp)
 {
 	remote_funcs.adiv5_init(dp);
