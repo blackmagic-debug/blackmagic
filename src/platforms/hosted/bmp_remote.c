@@ -35,7 +35,7 @@
 
 #include "adiv5.h"
 
-int remote_init(const bool power_up)
+bool remote_init(const bool power_up)
 {
 	platform_buffer_write(REMOTE_START_STR, sizeof(REMOTE_START_STR));
 
@@ -43,11 +43,11 @@ int remote_init(const bool power_up)
 	const int length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	if (length < 1 || buffer[0] == REMOTE_RESP_ERR) {
 		DEBUG_ERROR("Remote Start failed, error %s\n", length ? buffer + 1 : "unknown");
-		return -1;
+		return false;
 	}
 	DEBUG_PROBE("Remote is %s\n", buffer + 1);
 	remote_target_set_power(power_up);
-	return 0;
+	return true;
 }
 
 bool remote_target_get_power(void)
