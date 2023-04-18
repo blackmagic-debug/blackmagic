@@ -39,8 +39,10 @@
 #include "protocol_v0_defs.h"
 #include "protocol_v0_swd.h"
 #include "protocol_v0_jtag.h"
+#include "protocol_v0_adiv5.h"
 
 static bool remote_v0_adiv5_init(adiv5_debug_port_s *dp);
+static bool remote_v0_plus_adiv5_init(adiv5_debug_port_s *dp);
 
 void remote_v0_init(void)
 {
@@ -49,6 +51,16 @@ void remote_v0_init(void)
 		.swd_init = remote_v0_swd_init,
 		.jtag_init = remote_v0_jtag_init,
 		.adiv5_init = remote_v0_adiv5_init,
+	};
+}
+
+void remote_v0_plus_init(void)
+{
+	DEBUG_WARN("Probe firmware does not support the newer JTAG commands or ADIv5 acceleration, please update it.\n");
+	remote_funcs = (bmp_remote_protocol_s){
+		.swd_init = remote_v0_swd_init,
+		.jtag_init = remote_v0_jtag_init,
+		.adiv5_init = remote_v0_plus_adiv5_init,
 	};
 }
 
@@ -97,5 +109,16 @@ static bool remote_v0_adiv5_init(adiv5_debug_port_s *const dp)
 	(void)dp;
 	DEBUG_WARN("Falling back to non-accelerated probe interface\n");
 	DEBUG_WARN("Please update your probe's firmware for a substantial speed increase\n");
+	return true;
+}
+
+static bool remote_v0_plus_adiv5_init(adiv5_debug_port_s *const dp)
+{
+	dp->low_access = remote_v0_adiv5_raw_access;
+	dp->dp_read = remote_v0_adiv5_dp_read;
+	dp->ap_read = remote_v0_adiv5_ap_read;
+	dp->ap_write = remote_v0_adiv5_ap_write;
+	dp->mem_read = remote_v0_adiv5_mem_read_bytes;
+	dp->mem_write = remote_v0_adiv5_mem_write_bytes;
 	return true;
 }

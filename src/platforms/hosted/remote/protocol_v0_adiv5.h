@@ -31,15 +31,19 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef PLATFORMS_HOSTED_REMOTE_PROTOCOL_V0_H
-#define PLATFORMS_HOSTED_REMOTE_PROTOCOL_V0_H
+#ifndef PLATFORMS_HOSTED_REMOTE_PROTOCOL_V0_ADIV5_H
+#define PLATFORMS_HOSTED_REMOTE_PROTOCOL_V0_ADIV5_H
 
-#include <stdbool.h>
+#include <stdint.h>
+#include <stddef.h>
+#include "adiv5.h"
 
-void remote_v0_init(void);
-void remote_v0_plus_init(void);
+uint32_t remote_v0_adiv5_raw_access(adiv5_debug_port_s *dp, uint8_t rnw, uint16_t addr, uint32_t request_value);
+uint32_t remote_v0_adiv5_dp_read(adiv5_debug_port_s *dp, uint16_t addr);
+uint32_t remote_v0_adiv5_ap_read(adiv5_access_port_s *ap, uint16_t addr);
+void remote_v0_adiv5_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value);
+void remote_v0_adiv5_mem_read_bytes(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t read_length);
+void remote_v0_adiv5_mem_write_bytes(
+	adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t write_length, align_e align);
 
-bool remote_v0_swd_init(void);
-bool remote_v0_jtag_init(void);
-
-#endif /*PLATFORMS_HOSTED_REMOTE_PROTOCOL_V0_H*/
+#endif /*PLATFORMS_HOSTED_REMOTE_PROTOCOL_V0_ADIV5_H*/
