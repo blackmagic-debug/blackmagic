@@ -32,40 +32,34 @@
  */
 
 #include "bmp_remote.h"
+#include "hex_utils.h"
+
 #include "protocol_v0.h"
 #include "protocol_v1.h"
-#include "protocol_v1_defs.h"
-#include "protocol_v1_adiv5.h"
+#include "protocol_v2.h"
+#include "protocol_v3.h"
+#include "protocol_v3_adiv5.h"
 
-void remote_v1_init(void)
+void remote_v3_init(void)
 {
-	DEBUG_WARN("Probe firmware does not support the newer JTAG commands, please update it.\n");
 	remote_funcs = (bmp_remote_protocol_s){
 		.swd_init = remote_v0_swd_init,
-		.jtag_init = remote_v0_jtag_init,
-		.adiv5_init = remote_v1_adiv5_init,
+		.jtag_init = remote_v2_jtag_init,
+		.adiv5_init = remote_v3_adiv5_init,
 		.add_jtag_dev = remote_v1_add_jtag_dev,
+		.get_comms_frequency = remote_v2_get_comms_frequency,
+		.set_comms_frequency = remote_v2_set_comms_frequency,
+		.target_clk_output_enable = remote_v2_target_clk_output_enable,
 	};
 }
 
-bool remote_v1_adiv5_init(adiv5_debug_port_s *const dp)
+bool remote_v3_adiv5_init(adiv5_debug_port_s *const dp)
 {
-	DEBUG_WARN("Please update your probe's firmware for improved error handling\n");
-	dp->low_access = remote_v1_adiv5_raw_access;
-	dp->dp_read = remote_v1_adiv5_dp_read;
-	dp->ap_read = remote_v1_adiv5_ap_read;
-	dp->ap_write = remote_v1_adiv5_ap_write;
-	dp->mem_read = remote_v1_adiv5_mem_read_bytes;
-	dp->mem_write = remote_v1_adiv5_mem_write_bytes;
+	dp->low_access = remote_v3_adiv5_raw_access;
+	dp->dp_read = remote_v3_adiv5_dp_read;
+	dp->ap_read = remote_v3_adiv5_ap_read;
+	dp->ap_write = remote_v3_adiv5_ap_write;
+	dp->mem_read = remote_v3_adiv5_mem_read_bytes;
+	dp->mem_write = remote_v3_adiv5_mem_write_bytes;
 	return true;
-}
-
-void remote_v1_add_jtag_dev(const uint32_t dev_index, const jtag_dev_s *const jtag_dev)
-{
-	char buffer[REMOTE_MAX_MSG_SIZE];
-	const int length = snprintf(buffer, REMOTE_MAX_MSG_SIZE, REMOTE_JTAG_ADD_DEV_STR, dev_index, jtag_dev->dr_prescan,
-		jtag_dev->dr_postscan, jtag_dev->ir_len, jtag_dev->ir_prescan, jtag_dev->ir_postscan, jtag_dev->current_ir);
-	platform_buffer_write(buffer, length);
-	(void)platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
-	/* Don't need to check for error here - it's already done in remote_adiv5_dp_defaults */
 }

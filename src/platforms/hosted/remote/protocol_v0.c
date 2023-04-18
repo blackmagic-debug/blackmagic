@@ -114,6 +114,7 @@ static bool remote_v0_adiv5_init(adiv5_debug_port_s *const dp)
 
 static bool remote_v0_plus_adiv5_init(adiv5_debug_port_s *const dp)
 {
+	DEBUG_WARN("Please update your probe's firmware for improved error handling\n");
 	dp->low_access = remote_v0_adiv5_raw_access;
 	dp->dp_read = remote_v0_adiv5_dp_read;
 	dp->ap_read = remote_v0_adiv5_ap_read;

@@ -31,41 +31,19 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "bmp_remote.h"
-#include "protocol_v0.h"
-#include "protocol_v1.h"
-#include "protocol_v1_defs.h"
-#include "protocol_v1_adiv5.h"
+#ifndef PLATFORMS_HOSTED_REMOTE_PROTOCOL_V3_ADIV5_H
+#define PLATFORMS_HOSTED_REMOTE_PROTOCOL_V3_ADIV5_H
 
-void remote_v1_init(void)
-{
-	DEBUG_WARN("Probe firmware does not support the newer JTAG commands, please update it.\n");
-	remote_funcs = (bmp_remote_protocol_s){
-		.swd_init = remote_v0_swd_init,
-		.jtag_init = remote_v0_jtag_init,
-		.adiv5_init = remote_v1_adiv5_init,
-		.add_jtag_dev = remote_v1_add_jtag_dev,
-	};
-}
+#include <stdint.h>
+#include <stddef.h>
+#include "adiv5.h"
 
-bool remote_v1_adiv5_init(adiv5_debug_port_s *const dp)
-{
-	DEBUG_WARN("Please update your probe's firmware for improved error handling\n");
-	dp->low_access = remote_v1_adiv5_raw_access;
-	dp->dp_read = remote_v1_adiv5_dp_read;
-	dp->ap_read = remote_v1_adiv5_ap_read;
-	dp->ap_write = remote_v1_adiv5_ap_write;
-	dp->mem_read = remote_v1_adiv5_mem_read_bytes;
-	dp->mem_write = remote_v1_adiv5_mem_write_bytes;
-	return true;
-}
+uint32_t remote_v3_adiv5_raw_access(adiv5_debug_port_s *dp, uint8_t rnw, uint16_t addr, uint32_t request_value);
+uint32_t remote_v3_adiv5_dp_read(adiv5_debug_port_s *dp, uint16_t addr);
+uint32_t remote_v3_adiv5_ap_read(adiv5_access_port_s *ap, uint16_t addr);
+void remote_v3_adiv5_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value);
+void remote_v3_adiv5_mem_read_bytes(adiv5_access_port_s *ap, void *dest, uint32_t src, size_t read_length);
+void remote_v3_adiv5_mem_write_bytes(
+	adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t write_length, align_e align);
 
-void remote_v1_add_jtag_dev(const uint32_t dev_index, const jtag_dev_s *const jtag_dev)
-{
-	char buffer[REMOTE_MAX_MSG_SIZE];
-	const int length = snprintf(buffer, REMOTE_MAX_MSG_SIZE, REMOTE_JTAG_ADD_DEV_STR, dev_index, jtag_dev->dr_prescan,
-		jtag_dev->dr_postscan, jtag_dev->ir_len, jtag_dev->ir_prescan, jtag_dev->ir_postscan, jtag_dev->current_ir);
-	platform_buffer_write(buffer, length);
-	(void)platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
-	/* Don't need to check for error here - it's already done in remote_adiv5_dp_defaults */
-}
+#endif /*PLATFORMS_HOSTED_REMOTE_PROTOCOL_V3_ADIV5_H*/

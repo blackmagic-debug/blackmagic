@@ -31,41 +31,31 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "bmp_remote.h"
-#include "protocol_v0.h"
-#include "protocol_v1.h"
-#include "protocol_v1_defs.h"
-#include "protocol_v1_adiv5.h"
+#ifndef PLATFORMS_HOSTED_REMOTE_PROTOCOL_V3_DEFS_H
+#define PLATFORMS_HOSTED_REMOTE_PROTOCOL_V3_DEFS_H
 
-void remote_v1_init(void)
-{
-	DEBUG_WARN("Probe firmware does not support the newer JTAG commands, please update it.\n");
-	remote_funcs = (bmp_remote_protocol_s){
-		.swd_init = remote_v0_swd_init,
-		.jtag_init = remote_v0_jtag_init,
-		.adiv5_init = remote_v1_adiv5_init,
-		.add_jtag_dev = remote_v1_add_jtag_dev,
-	};
-}
+/* Bring in the v2 protocol definitions and undefine the ADIv5 acceleration protocol */
+#include "protocol_v2_defs.h"
 
-bool remote_v1_adiv5_init(adiv5_debug_port_s *const dp)
-{
-	DEBUG_WARN("Please update your probe's firmware for improved error handling\n");
-	dp->low_access = remote_v1_adiv5_raw_access;
-	dp->dp_read = remote_v1_adiv5_dp_read;
-	dp->ap_read = remote_v1_adiv5_ap_read;
-	dp->ap_write = remote_v1_adiv5_ap_write;
-	dp->mem_read = remote_v1_adiv5_mem_read_bytes;
-	dp->mem_write = remote_v1_adiv5_mem_write_bytes;
-	return true;
-}
+#undef REMOTE_ADIv5_PACKET
+#undef REMOTE_DP_READ
+#undef REMOTE_AP_READ
+#undef REMOTE_AP_WRITE
+#undef REMOTE_ADIv5_RAW_ACCESS
+#undef REMOTE_MEM_READ
+#undef REMOTE_MEM_WRITE
 
-void remote_v1_add_jtag_dev(const uint32_t dev_index, const jtag_dev_s *const jtag_dev)
-{
-	char buffer[REMOTE_MAX_MSG_SIZE];
-	const int length = snprintf(buffer, REMOTE_MAX_MSG_SIZE, REMOTE_JTAG_ADD_DEV_STR, dev_index, jtag_dev->dr_prescan,
-		jtag_dev->dr_postscan, jtag_dev->ir_len, jtag_dev->ir_prescan, jtag_dev->ir_postscan, jtag_dev->current_ir);
-	platform_buffer_write(buffer, length);
-	(void)platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
-	/* Don't need to check for error here - it's already done in remote_adiv5_dp_defaults */
-}
+/* This version of the protocol introdces proper error reporting */
+#define REMOTE_ERROR_FAULT     3
+#define REMOTE_ERROR_EXCEPTION 4
+
+/* This version of the protocol completely reimplements the ADIv5 acceleration protocol message IDs */
+#define REMOTE_ADIv5_PACKET     'A'
+#define REMOTE_DP_READ          'd'
+#define REMOTE_AP_READ          'a'
+#define REMOTE_AP_WRITE         'A'
+#define REMOTE_ADIv5_RAW_ACCESS 'R'
+#define REMOTE_MEM_READ         'm'
+#define REMOTE_MEM_WRITE        'M'
+
+#endif /*PLATFORMS_HOSTED_REMOTE_PROTOCOL_V3_DEFS_H*/
