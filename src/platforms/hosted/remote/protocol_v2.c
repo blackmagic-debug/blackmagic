@@ -40,6 +40,8 @@
 #include "protocol_v2.h"
 #include "protocol_v2_defs.h"
 
+static void remote_v2_jtag_cycle(bool tms, bool tdi, size_t clock_cycles);
+
 void remote_v2_init(void)
 {
 	remote_funcs = (bmp_remote_protocol_s){
@@ -70,6 +72,7 @@ bool remote_v2_jtag_init(void)
 	jtag_proc.jtagtap_tms_seq = remote_v0_jtag_tms_seq;
 	jtag_proc.jtagtap_tdi_tdo_seq = remote_v0_jtag_tdi_tdo_seq;
 	jtag_proc.jtagtap_tdi_seq = remote_v0_jtag_tdi_seq;
+	jtag_proc.jtagtap_cycle = remote_v2_jtag_cycle;
 	jtag_proc.tap_idle_cycles = 1;
 	return true;
 }
@@ -109,4 +112,23 @@ void remote_v2_target_clk_output_enable(const bool enable)
 	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	if (length < 1 || buffer[0] == REMOTE_RESP_ERR)
 		DEBUG_ERROR("remote_target_clk_output_enable failed, error %s\n", length ? buffer + 1 : "with communication");
+}
+
+static inline uint8_t bool_to_int(const bool value)
+{
+	return value ? 1U : 0U;
+}
+
+static void remote_v2_jtag_cycle(const bool tms, const bool tdi, const size_t clock_cycles)
+{
+	char buffer[REMOTE_MAX_MSG_SIZE];
+	int length =
+		snprintf(buffer, REMOTE_MAX_MSG_SIZE, REMOTE_JTAG_CYCLE_STR, bool_to_int(tms), bool_to_int(tdi), clock_cycles);
+	platform_buffer_write(buffer, length);
+
+	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
+	if (!length || buffer[0] == REMOTE_RESP_ERR) {
+		DEBUG_ERROR("jtagtap_cycle failed, error %s\n", length ? buffer + 1 : "unknown");
+		exit(-1);
+	}
 }
