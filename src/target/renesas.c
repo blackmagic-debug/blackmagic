@@ -911,9 +911,9 @@ bool renesas_probe(target_s *t)
 	priv_storage->details = renesas_family_lookup(series);
 
 	if (series != priv_storage->details.series) {
-		DEBUG_WARN("Found Renesas chip (%.*s) with Part ID 0x%" PRIx16 ", but it's not mapped into BMP, please report "
-				   "it\n ",
-			sizeof(pnr), pnr, t->part_id);
+		DEBUG_WARN("Found renesas chip (%.*s) with pnr location RENESAS_FIXED2_PNR and unsupported Part ID %x "
+				   "please report it\n",
+			(int)sizeof(pnr), pnr, t->part_id);
 		return false;
 	}
 
