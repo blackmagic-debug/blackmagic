@@ -37,13 +37,13 @@ static int fd; /* File descriptor for connection to GDB remote */
 /* A nice routine grabbed from
  * https://stackoverflow.com/questions/6947413/how-to-open-read-and-write-from-serial-port-in-c
  */
-static int set_interface_attribs(void)
+static bool set_interface_attribs(void)
 {
 	struct termios tty;
 	memset(&tty, 0, sizeof tty);
 	if (tcgetattr(fd, &tty) != 0) {
 		DEBUG_ERROR("error %d from tcgetattr", errno);
-		return -1;
+		return false;
 	}
 
 	tty.c_cflag = (tty.c_cflag & ~CSIZE) | CS8; // 8-bit chars
@@ -66,9 +66,9 @@ static int set_interface_attribs(void)
 #endif
 	if (tcsetattr(fd, TCSANOW, &tty) != 0) {
 		DEBUG_ERROR("error %d from tcsetattr", errno);
-		return -1;
+		return false;
 	}
-	return 0;
+	return true;
 }
 
 #ifdef __APPLE__
@@ -128,7 +128,7 @@ static bool match_serial(const char *const device, const char *const serial)
 	return contains_substring(begin, end - begin, serial);
 }
 
-int serial_open(const bmda_cli_options_s *const cl_opts, const char *const serial)
+bool serial_open(const bmda_cli_options_s *const cl_opts, const char *const serial)
 {
 	char name[4096];
 	if (!cl_opts->opt_device) {
@@ -136,7 +136,7 @@ int serial_open(const bmda_cli_options_s *const cl_opts, const char *const seria
 		DIR *dir = opendir(DEVICE_BY_ID);
 		if (!dir) {
 			DEBUG_WARN("No serial devices found\n");
-			return -1;
+			return false;
 		}
 		size_t matches = 0;
 		size_t total = 0;
@@ -160,7 +160,7 @@ int serial_open(const bmda_cli_options_s *const cl_opts, const char *const seria
 		closedir(dir);
 		if (total == 0) {
 			DEBUG_ERROR("No Black Magic Probes found\n");
-			return -1;
+			return false;
 		}
 		if (matches != 1) {
 			DEBUG_INFO("Available Probes:\n");
@@ -180,7 +180,7 @@ int serial_open(const bmda_cli_options_s *const cl_opts, const char *const seria
 					DEBUG_WARN("Select probe with `-s <(Partial) Serial Number>`\n");
 			} else
 				DEBUG_ERROR("Could not scan %s: %s\n", name, strerror(errno));
-			return -1;
+			return false;
 		}
 	} else {
 		const size_t path_len = strlen(cl_opts->opt_device);
@@ -191,7 +191,7 @@ int serial_open(const bmda_cli_options_s *const cl_opts, const char *const seria
 	fd = open(name, O_RDWR | O_SYNC | O_NOCTTY);
 	if (fd < 0) {
 		DEBUG_ERROR("Couldn't open serial port %s\n", name);
-		return -1;
+		return false;
 	}
 	/* BMP only offers an USB-Serial connection with no real serial
 	 * line in between. No need for baudrate or parity.!
