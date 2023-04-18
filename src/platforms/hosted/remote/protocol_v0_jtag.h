@@ -31,13 +31,17 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef PLATFORMS_HOSTED_REMOTE_PROTOCOL_V0_H
-#define PLATFORMS_HOSTED_REMOTE_PROTOCOL_V0_H
+#ifndef PLATFORMS_HOSTED_REMOTE_PROTOCOL_V0_JTAG_H
+#define PLATFORMS_HOSTED_REMOTE_PROTOCOL_V0_JTAG_H
 
+#include <stdint.h>
+#include <stddef.h>
 #include <stdbool.h>
 
-void remote_v0_init(void);
-bool remote_v0_swd_init(void);
-bool remote_v0_jtag_init(void);
+void remote_v0_jtag_reset(void);
+void remote_v0_jtag_tms_seq(uint32_t tms_states, size_t clock_cycles);
+void remote_v0_jtag_tdi_tdo_seq(uint8_t *data_out, bool final_tms, const uint8_t *data_in, size_t clock_cycles);
+void remote_v0_jtag_tdi_seq(bool final_tms, const uint8_t *data_in, size_t clock_cycles);
+bool remote_v0_jtag_next(bool tms, bool tdi);
 
-#endif /*PLATFORMS_HOSTED_REMOTE_PROTOCOL_V0_H*/
+#endif /*PLATFORMS_HOSTED_REMOTE_PROTOCOL_V0_JTAG_H*/

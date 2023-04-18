@@ -38,11 +38,13 @@
 #include "protocol_v0.h"
 #include "protocol_v0_defs.h"
 #include "protocol_v0_swd.h"
+#include "protocol_v0_jtag.h"
 
 void remote_v0_init(void)
 {
 	remote_funcs = (bmp_remote_protocol_s){
 		.swd_init = remote_v0_swd_init,
+		.jtag_init = remote_v0_jtag_init,
 	};
 }
 
@@ -62,5 +64,26 @@ bool remote_v0_swd_init(void)
 	swd_proc.seq_in_parity = remote_v0_swd_seq_in_parity;
 	swd_proc.seq_out = remote_v0_swd_seq_out;
 	swd_proc.seq_out_parity = remote_v0_swd_seq_out_parity;
+	return true;
+}
+
+bool remote_v0_jtag_init(void)
+{
+	DEBUG_PROBE("remote_jtag_init\n");
+	platform_buffer_write(REMOTE_JTAG_INIT_STR, sizeof(REMOTE_JTAG_INIT_STR));
+
+	char buffer[REMOTE_MAX_MSG_SIZE];
+	const int length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
+	if (!length || buffer[0] == REMOTE_RESP_ERR) {
+		DEBUG_ERROR("remote_jtag_init failed, error %s\n", length ? buffer + 1 : "unknown");
+		return false;
+	}
+
+	jtag_proc.jtagtap_reset = remote_v0_jtag_reset;
+	jtag_proc.jtagtap_next = remote_v0_jtag_next;
+	jtag_proc.jtagtap_tms_seq = remote_v0_jtag_tms_seq;
+	jtag_proc.jtagtap_tdi_tdo_seq = remote_v0_jtag_tdi_tdo_seq;
+	jtag_proc.jtagtap_tdi_seq = remote_v0_jtag_tdi_seq;
+	jtag_proc.tap_idle_cycles = 1;
 	return true;
 }
