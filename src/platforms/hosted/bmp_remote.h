@@ -33,7 +33,7 @@
 
 typedef struct bmp_remote_protocol {
 	bool (*swd_init)(void);
-	/* JTAG remote functions */
+	bool (*jtag_init)(void);
 
 	/* ADIv5 remote functions */
 } bmp_remote_protocol_s;
