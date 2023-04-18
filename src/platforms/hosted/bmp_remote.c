@@ -37,6 +37,16 @@
 
 bmp_remote_protocol_s remote_funcs;
 
+static uint64_t remote_decode_response(const char *const response, size_t digits)
+{
+	uint64_t value = 0U;
+	for (size_t idx = 0U; idx < digits; ++idx) {
+		value <<= 4U;
+		value |= unhex_digit(response[idx]);
+	}
+	return value;
+}
+
 bool remote_init(const bool power_up)
 {
 	platform_buffer_write(REMOTE_START_STR, sizeof(REMOTE_START_STR));
@@ -145,16 +155,6 @@ void remote_target_clk_output_enable(const bool enable)
 	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
 	if (length < 1 || buffer[0] == REMOTE_RESP_ERR)
 		DEBUG_ERROR("remote_target_clk_output_enable failed, error %s\n", length ? buffer + 1 : "unknown");
-}
-
-static uint64_t remote_decode_response(const char *const response, size_t digits)
-{
-	uint64_t value = 0U;
-	for (size_t idx = 0U; idx < digits; ++idx) {
-		value <<= 4U;
-		value |= unhex_digit(response[idx]);
-	}
-	return value;
 }
 
 static bool remote_adiv5_check_error(
