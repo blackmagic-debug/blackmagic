@@ -199,6 +199,11 @@ bool remote_jtagtap_init(void)
 	return remote_funcs.jtag_init();
 }
 
+bool remote_swdptap_init(void)
+{
+	return remote_funcs.swd_init();
+}
+
 void remote_adiv5_dp_defaults(adiv5_debug_port_s *const dp)
 {
 	remote_funcs.adiv5_init(dp);
