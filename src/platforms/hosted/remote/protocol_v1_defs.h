@@ -47,6 +47,7 @@
 #undef REMOTE_ADIv5_MEM_WRITE_LENGTH
 
 /* This version of the protocol introduces a command for sending JTAG device information */
+#define REMOTE_HL_PACKET    'H'
 #define REMOTE_ADD_JTAG_DEV 'J'
 /* And introduces a device index concept to the ADIv5 protocol */
 #define REMOTE_ADIv5_DEV_INDEX REMOTE_UINT8

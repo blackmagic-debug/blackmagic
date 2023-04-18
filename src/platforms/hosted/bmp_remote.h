@@ -25,6 +25,7 @@
 #include <stdbool.h>
 
 #include "jtagtap.h"
+#include "jtag_devs.h"
 #include "adiv5.h"
 #include "target.h"
 #include "target_internal.h"
@@ -35,6 +36,7 @@ typedef struct bmp_remote_protocol {
 	bool (*swd_init)(void);
 	bool (*jtag_init)(void);
 	bool (*adiv5_init)(adiv5_debug_port_s *dp);
+	void (*add_jtag_dev)(uint32_t dev_index, const jtag_dev_s *jtag_dev);
 } bmp_remote_protocol_s;
 
 extern bmp_remote_protocol_s remote_funcs;
