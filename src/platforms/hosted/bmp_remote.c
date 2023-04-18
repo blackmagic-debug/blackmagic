@@ -37,7 +37,7 @@
 
 bmp_remote_protocol_s remote_funcs;
 
-static uint64_t remote_decode_response(const char *const response, size_t digits)
+uint64_t remote_decode_response(const char *const response, const size_t digits)
 {
 	uint64_t value = 0U;
 	for (size_t idx = 0U; idx < digits; ++idx) {
