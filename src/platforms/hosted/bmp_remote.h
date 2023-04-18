@@ -37,6 +37,9 @@ typedef struct bmp_remote_protocol {
 	bool (*jtag_init)(void);
 	bool (*adiv5_init)(adiv5_debug_port_s *dp);
 	void (*add_jtag_dev)(uint32_t dev_index, const jtag_dev_s *jtag_dev);
+	uint32_t (*get_comms_frequency)(void);
+	bool (*set_comms_frequency)(uint32_t freq);
+	void (*target_clk_output_enable)(bool enable);
 } bmp_remote_protocol_s;
 
 extern bmp_remote_protocol_s remote_funcs;
