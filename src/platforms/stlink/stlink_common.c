@@ -49,7 +49,7 @@ uint32_t detect_rev(void)
 	 * First, get the board revision by pulling PC13/14 up then reading them.
 	 * This gives us the following table of values for these pins:
 	 *  11 for ST-Link v1, e.g. on VL Discovery, tag as rev 0
-	 *  11 for "Baite" clones, PB11 pulled high, tag as rev 1
+	 *  11 for "Baite" clones, PB11 pulled high, tag as rev 257 (0x101)
 	 *  00 for ST-Link v2, e.g. on F4 Discovery, tag as rev 1
 	 *  01 for ST-Link v2, else,                 tag as rev 1
 	 */
@@ -60,7 +60,7 @@ uint32_t detect_rev(void)
 
 	uint32_t revision = 0;
 	if (stlink_stable_read(GPIOC, GPIO13))
-		revision = gpio_get(GPIOB, GPIO11) ? 1 : 0;
+		revision = gpio_get(GPIOB, GPIO11) ? 0x101 : 0;
 	else {
 		/*
 		 * Check for ST-Link v2.1 boards.
@@ -89,7 +89,7 @@ uint32_t detect_rev(void)
 		gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, GPIO8);
 	}
 	/* Clean up after ourself on boards that aren't identified as ST-Link v2.1's */
-	if (revision < 2U) {
+	if ((revision & 0xff) < 2U) {
 		gpio_clear(GPIOA, GPIO12);
 		gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_2_MHZ, GPIO_CNF_OUTPUT_OPENDRAIN, GPIO12);
 	}
