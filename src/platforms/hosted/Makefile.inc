@@ -96,6 +96,7 @@ VPATH += platforms/hosted/remote
 SRC += timing.c cli.c utils.c probe_info.c debug.c
 SRC += protocol_v0.c protocol_v0_swd.c protocol_v0_jtag.c protocol_v0_adiv5.c
 SRC += protocol_v1.c protocol_v1_adiv5.c protocol_v2.c
+SRC += protocol_v3.c protocol_v3_adiv5.c
 SRC += bmp_remote.c remote_swdptap.c remote_jtagtap.c
 ifneq ($(HOSTED_BMP_ONLY), 1)
     SRC += bmp_libusb.c stlinkv2.c
