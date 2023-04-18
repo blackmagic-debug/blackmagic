@@ -40,11 +40,15 @@
 #include "protocol_v0_swd.h"
 #include "protocol_v0_jtag.h"
 
+static bool remote_v0_adiv5_init(adiv5_debug_port_s *dp);
+
 void remote_v0_init(void)
 {
+	DEBUG_WARN("Probe firmware does not support the newer JTAG commands or ADIv5 acceleration, please update it.\n");
 	remote_funcs = (bmp_remote_protocol_s){
 		.swd_init = remote_v0_swd_init,
 		.jtag_init = remote_v0_jtag_init,
+		.adiv5_init = remote_v0_adiv5_init,
 	};
 }
 
@@ -85,5 +89,13 @@ bool remote_v0_jtag_init(void)
 	jtag_proc.jtagtap_tdi_tdo_seq = remote_v0_jtag_tdi_tdo_seq;
 	jtag_proc.jtagtap_tdi_seq = remote_v0_jtag_tdi_seq;
 	jtag_proc.tap_idle_cycles = 1;
+	return true;
+}
+
+static bool remote_v0_adiv5_init(adiv5_debug_port_s *const dp)
+{
+	(void)dp;
+	DEBUG_WARN("Falling back to non-accelerated probe interface\n");
+	DEBUG_WARN("Please update your probe's firmware for a substantial speed increase\n");
 	return true;
 }

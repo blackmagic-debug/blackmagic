@@ -34,8 +34,7 @@
 typedef struct bmp_remote_protocol {
 	bool (*swd_init)(void);
 	bool (*jtag_init)(void);
-
-	/* ADIv5 remote functions */
+	bool (*adiv5_init)(adiv5_debug_port_s *dp);
 } bmp_remote_protocol_s;
 
 extern bmp_remote_protocol_s remote_funcs;
