@@ -91,8 +91,10 @@ ifneq ($(HOSTED_BMP_ONLY), 1)
     LDFLAGS += $(shell pkg-config --libs $(HIDAPILIB))
 endif
 
+VPATH += platforms/hosted/remote
+
 SRC += timing.c cli.c utils.c probe_info.c debug.c
-SRC += bmp_remote.c remote_swdptap.c remote_jtagtap.c
+SRC += bmp_remote.c protocol_v0.c remote_swdptap.c remote_jtagtap.c
 ifneq ($(HOSTED_BMP_ONLY), 1)
     SRC += bmp_libusb.c stlinkv2.c
     SRC += ftdi_bmp.c libftdi_swdptap.c libftdi_jtagtap.c
