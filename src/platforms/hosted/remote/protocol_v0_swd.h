@@ -31,12 +31,16 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef PLATFORMS_HOSTED_REMOTE_PROTOCOL_V0_H
-#define PLATFORMS_HOSTED_REMOTE_PROTOCOL_V0_H
+#ifndef PLATFORMS_HOSTED_REMOTE_PROTOCOL_V0_SWD_H
+#define PLATFORMS_HOSTED_REMOTE_PROTOCOL_V0_SWD_H
 
+#include <stdint.h>
+#include <stddef.h>
 #include <stdbool.h>
 
-void remote_v0_init(void);
-bool remote_v0_swd_init(void);
+uint32_t remote_v0_swd_seq_in(size_t clock_cycles);
+bool remote_v0_swd_seq_in_parity(uint32_t *result, size_t clock_cycles);
+void remote_v0_swd_seq_out(uint32_t value, size_t clock_cycles);
+void remote_v0_swd_seq_out_parity(uint32_t value, size_t clock_cycles);
 
-#endif /*PLATFORMS_HOSTED_REMOTE_PROTOCOL_V0_H*/
+#endif /*PLATFORMS_HOSTED_REMOTE_PROTOCOL_V0_SWD_H*/

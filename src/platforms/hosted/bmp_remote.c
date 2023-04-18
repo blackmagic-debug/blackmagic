@@ -35,6 +35,8 @@
 
 #include "adiv5.h"
 
+bmp_remote_protocol_s remote_funcs;
+
 bool remote_init(const bool power_up)
 {
 	platform_buffer_write(REMOTE_START_STR, sizeof(REMOTE_START_STR));

@@ -32,9 +32,35 @@
  */
 
 #include "bmp_remote.h"
+#include "swd.h"
+#include "jtagtap.h"
+
 #include "protocol_v0.h"
 #include "protocol_v0_defs.h"
+#include "protocol_v0_swd.h"
 
 void remote_v0_init(void)
 {
+	remote_funcs = (bmp_remote_protocol_s){
+		.swd_init = remote_v0_swd_init,
+	};
+}
+
+bool remote_v0_swd_init(void)
+{
+	DEBUG_PROBE("remote_swd_init\n");
+	platform_buffer_write(REMOTE_SWD_INIT_STR, sizeof(REMOTE_SWD_INIT_STR));
+
+	char buffer[REMOTE_MAX_MSG_SIZE];
+	const int length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
+	if (!length || buffer[0] == REMOTE_RESP_ERR) {
+		DEBUG_ERROR("remote_swd_init failed, error %s\n", length ? buffer + 1 : "unknown");
+		return false;
+	}
+
+	swd_proc.seq_in = remote_v0_swd_seq_in;
+	swd_proc.seq_in_parity = remote_v0_swd_seq_in_parity;
+	swd_proc.seq_out = remote_v0_swd_seq_out;
+	swd_proc.seq_out_parity = remote_v0_swd_seq_out_parity;
+	return true;
 }
