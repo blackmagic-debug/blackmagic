@@ -29,6 +29,11 @@
 #include "hex_utils.h"
 #include "exception.h"
 
+#include "remote/protocol_v0.h"
+#include "remote/protocol_v1.h"
+#include "remote/protocol_v2.h"
+#include "remote/protocol_v3.h"
+
 #include <assert.h>
 #include <sys/time.h>
 #include <errno.h>
@@ -49,15 +54,57 @@ uint64_t remote_decode_response(const char *const response, const size_t digits)
 
 bool remote_init(const bool power_up)
 {
+	/* When starting remote communications, start by asking the firmware to initialise remote mode */
 	platform_buffer_write(REMOTE_START_STR, sizeof(REMOTE_START_STR));
 
 	char buffer[REMOTE_MAX_MSG_SIZE];
-	const int length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
+	ssize_t length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
+	/* Check if the launch failed for any reason */
 	if (length < 1 || buffer[0] == REMOTE_RESP_ERR) {
 		DEBUG_ERROR("Remote Start failed, error %s\n", length ? buffer + 1 : "unknown");
 		return false;
 	}
+	/* If it did not, we now have the firmware version string so log it */
 	DEBUG_PROBE("Remote is %s\n", buffer + 1);
+
+	/*
+	 * Next, ask the probe for its protocol version number.
+	 * This is unfortunately part of the "high level" protocol component, but it's a general request.
+	 */
+	platform_buffer_write(REMOTE_HL_CHECK_STR, sizeof(REMOTE_HL_CHECK_STR));
+	length = platform_buffer_read(buffer, REMOTE_MAX_MSG_SIZE);
+	/* Check for communication failures */
+	if (length < 1) {
+		DEBUG_ERROR("%s comms error: %zd\n", __func__, length);
+		return false;
+	}
+	/* If the request failed by way of a not implemented response, we're on a v0 protocol probe */
+	if (buffer[0] != REMOTE_RESP_OK)
+		remote_v0_init();
+	else {
+		/* If the probe's indicated that the request succeeded, convert the version number */
+		const uint64_t version = remote_decode_response(buffer + 1, length - 1);
+		switch (version) {
+		case 0:
+			/* protocol version number 0 coresponds to an enhanced v0 protocol probe ("v0+") */
+			remote_v0_plus_init();
+			break;
+		case 1:
+			remote_v1_init();
+			break;
+		case 2:
+			remote_v2_init();
+			break;
+		case 3:
+			remote_v3_init();
+			break;
+		default:
+			DEBUG_ERROR("Unknown remote protocol version %" PRIu64 ", aborting\n", version);
+			return false;
+		}
+	}
+
+	/* Finally, power the target up having selected remote routines to use */
 	remote_target_set_power(power_up);
 	return true;
 }
