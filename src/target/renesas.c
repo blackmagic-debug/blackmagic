@@ -993,74 +993,77 @@ static bool renesas_uid(target_s *t, int argc, const char **argv)
 	return true;
 }
 
+static bool renesas_print_cmd_usage(target_s *t)
+{
+	tc_printf(t, "command help goes here\n");
+	return false;
+}
+
 static bool renesas_cmd_option(target_s *t, int argc, const char **argv)
 {
 	(void)argc;
 	(void)argv;
 
-	if (argc != 4) {
-		tc_printf(t, "bad usage\n");
-		return false;
-	}
-
 	const uint8_t arglen = strlen(argv[1]);
-	if (arglen == 0) {
-		tc_printf(t, "bad usage\n");
-		return false;
-	}
 
-	if (strncmp(argv[1], "set", arglen) == 0) {
+	if (arglen > 0 && strncmp(argv[1], "get", arglen) == 0) {
+		if (argc != 3)
+			return renesas_print_cmd_usage(t);
+
 		target_addr_t option_addr = strtoul(argv[2], NULL, 0);
+		if (!renesas_check_option_setting(t, option_addr))
+			return renesas_print_cmd_usage(t);
 
-		if (!renesas_check_option_setting(t, option_addr)) {
-			tc_printf(t, "bad addr\n");
-			return false;
-		}
+		/* The address must be aligned */
+		if (option_addr % 0x10 > 0)
+			return renesas_print_cmd_usage(t);
 
-		/* We have to align the address to full word byte */
-		uint8_t align = option_addr % 0x10;
-		target_addr_t real_addr = option_addr;
-		if (align > 0)
-			real_addr = option_addr - align;
-		DEBUG_WARN("Full word aligned addr: 0x%x\n", real_addr);
+		uint32_t value = target_mem_read32(t, option_addr);
+
+		tc_printf(t, "Read from address: 0x%02x, value: %" PRIx32 "\n", option_addr, value);
+
+		return true;
+	} else if (arglen > 0 && strncmp(argv[1], "set", arglen) == 0) {
+		if (argc != 4)
+			return renesas_print_cmd_usage(t);
+
+		target_addr_t option_addr = strtoul(argv[2], NULL, 0);
+		if (!renesas_check_option_setting(t, option_addr))
+			return renesas_print_cmd_usage(t);
+
+		/* The address must be aligned */
+		if (option_addr % 0x10 > 0)
+			return renesas_print_cmd_usage(t);
 
 		/* Configuration-Set command always needs 16 bytes of data */
-		const uint8_t len = 8U;
-		uint16_t data[len];
+		const uint8_t len = 16UL;
+		uint8_t data[len];
 
-		DEBUG_WARN("Reading data: ");
-		for (uint8_t i = 0; i < len;) {
-			data[i] = target_mem_read16(t, real_addr + i);
-			DEBUG_WARN("%02x", data[i]);
-			i += 2;
+		for (size_t i = 0; i < len;) {
+			uint32_t value = target_mem_read32(t, option_addr + i);
+			memcpy(&data[i], &value, 4UL);
+			i += 4UL;
 		}
-		DEBUG_WARN("\n");
 
-		data[align] = strtoul(argv[3], NULL, 0);
-		DEBUG_WARN("Setting value: 0x%x to addr: 0x%x\n", strtoul(argv[3], NULL, 0), option_addr);
-
-		DEBUG_WARN("Writing data: ");
-		for (uint8_t i = 0; i < len;) {
-			DEBUG_WARN("%02x", data[i]);
-			i += 2;
-		}
-		DEBUG_WARN("\n");
+		uint32_t value = strtoul(argv[3], NULL, 0);
+		memcpy(&data, &value, sizeof(uint32_t));
+		tc_printf(t, "Write to address: 0x%02x, value: %" PRIx32 "\n", option_addr, value);
 
 		if (renesas_rv40_pe_mode(t, PE_MODE_CF)) {
+			/* Permit flash operations */
+			target_mem_write8(t, SYSC_FWEPROR, SYSC_FWEPROR_PERMIT);
 			/* set block start address */
-			target_mem_write32(t, RV40_FSADDR, real_addr);
+			target_mem_write32(t, RV40_FSADDR, option_addr);
 
 			/* issue two part Write commands */
 			target_mem_write8(t, RV40_CMD, RV40_CMD_CONFIG_SET_1);
 			target_mem_write8(t, RV40_CMD, RV40_CMD_CONFIG_SET_2);
 
 			platform_timeout_s timeout;
-			platform_timeout_set(&timeout, 2000);
+			platform_timeout_set(&timeout, 200);
 
-			/* Write one chunk */
 			for (size_t i = 0U; i < len;) {
-				/* Copy data from source address to destination */
-				target_mem_write16(t, RV40_CMD, data[i]);
+				target_mem_write16(t, RV40_CMD, (uint16_t)((data[i + 1] << 8) + (data[i])));
 				i += 2;
 			}
 
@@ -1069,11 +1072,20 @@ static bool renesas_cmd_option(target_s *t, int argc, const char **argv)
 
 			/* Wait until the operation has completed or timeout */
 			/* Read FRDY bit until it has been set to 1 indicating that the current operation is complete.*/
-			while (!(target_mem_read32(t, RV40_FSTATR) & RV40_FSTATR_RDY))
-				if (target_check_error(t) || platform_timeout_is_expired(&timeout))
+			while (!(target_mem_read32(t, RV40_FSTATR) & RV40_FSTATR_RDY)) {
+				if (target_check_error(t) || platform_timeout_is_expired(&timeout)) {
+					renesas_rv40_pe_mode(t, PE_MODE_READ);
 					return false;
+				}
+			}
+		} else {
+			renesas_rv40_pe_mode(t, PE_MODE_READ);
+			return false;
 		}
-	}
+	} else
+		return renesas_print_cmd_usage(t);
+
+	renesas_rv40_pe_mode(t, PE_MODE_READ);
 
 	return true;
 }
