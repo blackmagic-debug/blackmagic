@@ -71,7 +71,7 @@ typedef struct bmda_cli_options {
 
 void cl_init(bmda_cli_options_s *opt, int argc, char **argv);
 int cl_execute(bmda_cli_options_s *opt);
-int serial_open(const bmda_cli_options_s *opt, const char *serial);
+bool serial_open(const bmda_cli_options_s *opt, const char *serial);
 void serial_close(void);
 
 #endif /* PLATFORMS_HOSTED_CLI_H */
