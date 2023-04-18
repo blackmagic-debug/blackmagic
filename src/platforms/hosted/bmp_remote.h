@@ -20,12 +20,25 @@
 #ifndef PLATFORMS_HOSTED_BMP_REMOTE_H
 #define PLATFORMS_HOSTED_BMP_REMOTE_H
 
+#include <stdint.h>
+#include <stddef.h>
+#include <stdbool.h>
+
 #include "jtagtap.h"
 #include "adiv5.h"
 #include "target.h"
 #include "target_internal.h"
 
 #define REMOTE_MAX_MSG_SIZE 1024U
+
+typedef struct bmp_remote_protocol {
+	bool (*swd_init)(void);
+	/* JTAG remote functions */
+
+	/* ADIv5 remote functions */
+} bmp_remote_protocol_s;
+
+extern bmp_remote_protocol_s remote_funcs;
 
 bool platform_buffer_write(const void *data, size_t size);
 int platform_buffer_read(void *data, size_t size);
@@ -44,5 +57,7 @@ void remote_target_clk_output_enable(bool enable);
 
 void remote_adiv5_dp_defaults(adiv5_debug_port_s *dp);
 void remote_add_jtag_dev(uint32_t i, const jtag_dev_s *jtag_dev);
+
+uint64_t remote_hex_string_to_num(uint32_t limit, const char *str);
 
 #endif /* PLATFORMS_HOSTED_BMP_REMOTE_H */
