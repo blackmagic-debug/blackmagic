@@ -53,9 +53,10 @@ extern bool debug_bmp;
 #define SWDIO_PIN  TMS_PIN
 #define SWCLK_PIN  TCK_PIN
 
-#define NRST_PORT   GPIOB
-#define NRST_PIN_V1 GPIO1
-#define NRST_PIN_V2 GPIO0
+#define NRST_PORT      GPIOB
+#define NRST_PIN_V1    GPIO1
+#define NRST_PIN_V2    GPIO0
+#define NRST_PIN_CLONE GPIO6
 
 #ifdef BLUEPILL
 #define LED_PORT GPIOC
