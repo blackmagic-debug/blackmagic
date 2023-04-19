@@ -100,7 +100,7 @@ void libusb_exit_function(bmp_info_s *info);
 #if HOSTED_BMP_ONLY == 1
 bool device_is_bmp_gdb_port(const char *device);
 #else
-int send_recv(usb_link_s *link, uint8_t *txbuf, size_t txsize, uint8_t *rxbuf, size_t rxsize);
+int bmda_usb_transfer(usb_link_s *link, uint8_t *txbuf, size_t txsize, uint8_t *rxbuf, size_t rxsize);
 #endif
 
 #endif /* PLATFORMS_HOSTED_BMP_HOSTED_H */

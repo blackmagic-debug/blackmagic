@@ -324,7 +324,7 @@ static int stlink_send_recv_retry(uint8_t *txbuf, size_t txsize, uint8_t *rxbuf,
 	int first_res = STLINK_ERROR_OK;
 	usb_link_s *link = info.usb_link;
 	while (true) {
-		send_recv(link, txbuf, txsize, rxbuf, rxsize);
+		bmda_usb_transfer(link, txbuf, txsize, rxbuf, rxsize);
 		res = stlink_usb_error_check(rxbuf, false);
 		if (res == STLINK_ERROR_OK)
 			return res;
@@ -352,7 +352,7 @@ static int read_retry(uint8_t *txbuf, size_t txsize, uint8_t *rxbuf, size_t rxsi
 	uint32_t start = platform_time_ms();
 	int res;
 	while (true) {
-		send_recv(info.usb_link, txbuf, txsize, rxbuf, rxsize);
+		bmda_usb_transfer(info.usb_link, txbuf, txsize, rxbuf, rxsize);
 		res = stlink_usb_get_rw_status(false);
 		if (res == STLINK_ERROR_OK)
 			return res;
@@ -372,8 +372,8 @@ static int write_retry(uint8_t *cmdbuf, size_t cmdsize, uint8_t *txbuf, size_t t
 	int res;
 	usb_link_s *link = info.usb_link;
 	while (true) {
-		send_recv(link, cmdbuf, cmdsize, NULL, 0);
-		send_recv(link, txbuf, txsize, NULL, 0);
+		bmda_usb_transfer(link, cmdbuf, cmdsize, NULL, 0);
+		bmda_usb_transfer(link, txbuf, txsize, NULL, 0);
 		res = stlink_usb_get_rw_status(false);
 		if (res == STLINK_ERROR_OK)
 			return res;
@@ -396,7 +396,7 @@ static void stlink_version(bmp_info_s *info)
 		uint8_t data[12];
 		memset(cmd, 0, sizeof(cmd));
 		cmd[0] = STLINK_APIV3_GET_VERSION_EX;
-		int size = send_recv(info->usb_link, cmd, 16, data, 12);
+		int size = bmda_usb_transfer(info->usb_link, cmd, 16, data, 12);
 		if (size == -1)
 			DEBUG_WARN("[!] stlink_send_recv STLINK_APIV3_GET_VERSION_EX\n");
 
@@ -413,7 +413,7 @@ static void stlink_version(bmp_info_s *info)
 		uint8_t data[6];
 		memset(cmd, 0, sizeof(cmd));
 		cmd[0] = STLINK_GET_VERSION;
-		int size = send_recv(info->usb_link, cmd, 16, data, 6);
+		int size = bmda_usb_transfer(info->usb_link, cmd, 16, data, 6);
 		if (size == -1)
 			DEBUG_WARN("[!] stlink_send_recv STLINK_GET_VERSION_EX\n");
 		stlink.vid = (data[3] << 8U) | data[2];
@@ -443,13 +443,13 @@ static bool stlink_leave_state(void)
 	uint8_t data[2];
 	memset(cmd, 0, sizeof(cmd));
 	cmd[0] = STLINK_GET_CURRENT_MODE;
-	send_recv(info.usb_link, cmd, 16, data, 2);
+	bmda_usb_transfer(info.usb_link, cmd, 16, data, 2);
 	if (data[0] == STLINK_DEV_DFU_MODE) {
 		DEBUG_INFO("Leaving DFU Mode\n");
 		memset(cmd, 0, sizeof(cmd));
 		cmd[0] = STLINK_DFU_COMMAND;
 		cmd[1] = STLINK_DFU_EXIT;
-		send_recv(info.usb_link, cmd, 16, NULL, 0);
+		bmda_usb_transfer(info.usb_link, cmd, 16, NULL, 0);
 		return true;
 	}
 	if (data[0] == STLINK_DEV_SWIM_MODE) {
@@ -457,13 +457,13 @@ static bool stlink_leave_state(void)
 		memset(cmd, 0, sizeof(cmd));
 		cmd[0] = STLINK_SWIM_COMMAND;
 		cmd[1] = STLINK_SWIM_EXIT;
-		send_recv(info.usb_link, cmd, 16, NULL, 0);
+		bmda_usb_transfer(info.usb_link, cmd, 16, NULL, 0);
 	} else if (data[0] == STLINK_DEV_DEBUG_MODE) {
 		DEBUG_INFO("Leaving DEBUG Mode\n");
 		memset(cmd, 0, sizeof(cmd));
 		cmd[0] = STLINK_DEBUG_COMMAND;
 		cmd[1] = STLINK_DEBUG_EXIT;
-		send_recv(info.usb_link, cmd, 16, NULL, 0);
+		bmda_usb_transfer(info.usb_link, cmd, 16, NULL, 0);
 	} else if (data[0] == STLINK_DEV_BOOTLOADER_MODE)
 		DEBUG_INFO("Leaving BOOTLOADER Mode\n");
 	else if (data[0] == STLINK_DEV_MASS_MODE)
@@ -479,7 +479,7 @@ const char *stlink_target_voltage(bmp_info_s *info)
 	uint8_t data[8];
 	memset(cmd, 0, sizeof(cmd));
 	cmd[0] = STLINK_GET_TARGET_VOLTAGE;
-	send_recv(info->usb_link, cmd, 16, data, 8);
+	bmda_usb_transfer(info->usb_link, cmd, 16, data, 8);
 	uint16_t adc[2];
 	adc[0] = data[0] | (data[1] << 8U); /* Calibration value? */
 	adc[1] = data[4] | (data[5] << 8U); /* Measured value?*/
@@ -498,7 +498,7 @@ static void stlink_resetsys(bmp_info_s *info)
 	memset(cmd, 0, sizeof(cmd));
 	cmd[0] = STLINK_DEBUG_COMMAND;
 	cmd[1] = STLINK_DEBUG_APIV2_RESETSYS;
-	send_recv(info->usb_link, cmd, 16, data, 2);
+	bmda_usb_transfer(info->usb_link, cmd, 16, data, 2);
 }
 
 int stlink_init(bmp_info_s *info)
@@ -639,7 +639,7 @@ void stlink_nrst_set_val(bmp_info_s *info, bool assert)
 	cmd[1] = STLINK_DEBUG_APIV2_DRIVE_NRST;
 	cmd[2] = assert ? STLINK_DEBUG_APIV2_DRIVE_NRST_LOW : STLINK_DEBUG_APIV2_DRIVE_NRST_HIGH;
 	stlink.nrst = assert;
-	send_recv(info->usb_link, cmd, 16, data, 2);
+	bmda_usb_transfer(info->usb_link, cmd, 16, data, 2);
 	stlink_usb_error_check(data, true);
 }
 
@@ -662,7 +662,7 @@ static int stlink_enter_debug_jtag(void)
 	cmd[0] = STLINK_DEBUG_COMMAND;
 	cmd[1] = STLINK_DEBUG_APIV2_ENTER;
 	cmd[2] = STLINK_DEBUG_ENTER_JTAG_NO_RESET;
-	send_recv(info.usb_link, cmd, 16, data, 2);
+	bmda_usb_transfer(info.usb_link, cmd, 16, data, 2);
 	return stlink_usb_error_check(data, true);
 }
 
@@ -670,7 +670,7 @@ static int stlink_enter_debug_jtag(void)
 // {
 // 	uint8_t cmd[16] = {STLINK_DEBUG_COMMAND, STLINK_DEBUG_APIV2_READ_IDCODES};
 // 	uint8_t data[12];
-// 	send_recv(info.usb_link, cmd, 16, data, 12);
+// 	bmda_usb_transfer(info.usb_link, cmd, 16, data, 12);
 // 	uint32_t id =  data[4] | data[5] << 8 | data[6] << 16 | data[7] << 24;
 // 	DEBUG_INFO("Read Core ID: 0x%08" PRIx32 "\n", id);
 // 	return id;
@@ -683,7 +683,7 @@ static size_t stlink_read_idcodes(uint32_t *idcodes)
 	memset(cmd, 0, sizeof(cmd));
 	cmd[0] = STLINK_DEBUG_COMMAND;
 	cmd[1] = STLINK_DEBUG_APIV2_READ_IDCODES;
-	send_recv(info.usb_link, cmd, 16, data, 12);
+	bmda_usb_transfer(info.usb_link, cmd, 16, data, 12);
 	if (stlink_usb_error_check(data, true))
 		return 0;
 	idcodes[0] = data[4] | (data[5] << 8U) | (data[6] << 16U) | (data[7] << 24U);
@@ -821,7 +821,7 @@ static void stlink_ap_cleanup(int ap)
 	cmd[1] = STLINK_DEBUG_APIV2_CLOSE_AP_DBG;
 	cmd[2] = ap;
 	uint8_t data[2];
-	send_recv(info.usb_link, cmd, 16, data, 2);
+	bmda_usb_transfer(info.usb_link, cmd, 16, data, 2);
 	DEBUG_PROBE("Close AP %d\n", ap);
 	stlink_usb_error_check(data, true);
 }
@@ -833,7 +833,7 @@ static int stlink_usb_get_rw_status(bool verbose)
 	cmd[0] = STLINK_DEBUG_COMMAND;
 	cmd[1] = STLINK_DEBUG_APIV2_GETLASTRWSTATUS2;
 	uint8_t data[12];
-	send_recv(info.usb_link, cmd, 16, data, 12);
+	bmda_usb_transfer(info.usb_link, cmd, 16, data, 12);
 	return stlink_usb_error_check(data, verbose);
 }
 
@@ -901,8 +901,8 @@ static void stlink_mem_write8(usb_link_s *link, adiv5_access_port_s *ap, uint32_
 		cmd[6] = length & 0xffU;
 		cmd[7] = length >> 8U;
 		cmd[8] = ap->apsel;
-		send_recv(link, cmd, 16, NULL, 0);
-		send_recv(link, (void *)buffer, length, NULL, 0);
+		bmda_usb_transfer(link, cmd, 16, NULL, 0);
+		bmda_usb_transfer(link, (void *)buffer, length, NULL, 0);
 		stlink_usb_get_rw_status(true);
 		len -= length;
 		addr += length;
@@ -922,8 +922,8 @@ static void stlink_mem_write16(usb_link_s *link, adiv5_access_port_s *ap, uint32
 	cmd[6] = len & 0xffU;
 	cmd[7] = len >> 8U;
 	cmd[8] = ap->apsel;
-	send_recv(link, cmd, 16, NULL, 0);
-	send_recv(link, (void *)buffer, len, NULL, 0);
+	bmda_usb_transfer(link, cmd, 16, NULL, 0);
+	bmda_usb_transfer(link, (void *)buffer, len, NULL, 0);
 	stlink_usb_get_rw_status(true);
 }
 
@@ -952,7 +952,7 @@ static void stlink_regs_read(adiv5_access_port_s *ap, void *data)
 	cmd[1] = STLINK_DEBUG_APIV2_READALLREGS;
 	cmd[2] = ap->apsel;
 	DEBUG_PROBE("AP %hhu: Read all core registers\n", ap->apsel);
-	send_recv(info.usb_link, cmd, 16, res, 88);
+	bmda_usb_transfer(info.usb_link, cmd, 16, res, 88);
 	stlink_usb_error_check(res, true);
 	memcpy(data, res + 4U, 84);
 }
@@ -966,7 +966,7 @@ static uint32_t stlink_reg_read(adiv5_access_port_s *ap, int num)
 	cmd[1] = STLINK_DEBUG_APIV2_READREG;
 	cmd[2] = num;
 	cmd[3] = ap->apsel;
-	send_recv(info.usb_link, cmd, 16, res, 8);
+	bmda_usb_transfer(info.usb_link, cmd, 16, res, 8);
 	stlink_usb_error_check(res, true);
 	uint32_t ret = (res[0]) | (res[1] << 8U) | (res[2] << 16U) | (res[3] << 24U);
 	DEBUG_PROBE("AP %hhu: Read reg %02d val 0x%08" PRIx32 "\n", ap->apsel, num, ret);
@@ -986,7 +986,7 @@ static void stlink_reg_write(adiv5_access_port_s *ap, int num, uint32_t val)
 	cmd[5] = (val >> 16U) & 0xffU;
 	cmd[6] = (val >> 24U) & 0xffU;
 	cmd[7] = ap->apsel;
-	send_recv(info.usb_link, cmd, 16, res, 2);
+	bmda_usb_transfer(info.usb_link, cmd, 16, res, 2);
 	DEBUG_PROBE("AP %hhu: Write reg %02d val 0x%08" PRIx32 "\n", ap->apsel, num, val);
 	stlink_usb_error_check(res, true);
 }
@@ -1133,7 +1133,7 @@ void stlink_max_frequency_set(bmp_info_s *info, uint32_t freq)
 		cmd[0] = STLINK_DEBUG_COMMAND;
 		cmd[1] = STLINK_APIV3_GET_COM_FREQ;
 		cmd[2] = info->is_jtag ? STLINK_MODE_JTAG : STLINK_MODE_SWD;
-		send_recv(info->usb_link, cmd, 16, data, 52);
+		bmda_usb_transfer(info->usb_link, cmd, 16, data, 52);
 		stlink_usb_error_check(data, true);
 		uint32_t frequency = 0;
 		DEBUG_INFO("Available speed settings: ");
@@ -1155,7 +1155,7 @@ void stlink_max_frequency_set(bmp_info_s *info, uint32_t freq)
 		cmd[5] = (frequency >> 8U) & 0xffU;
 		cmd[6] = (frequency >> 16U) & 0xffU;
 		cmd[7] = (frequency >> 24U) & 0xffU;
-		send_recv(info->usb_link, cmd, 16, data, 8);
+		bmda_usb_transfer(info->usb_link, cmd, 16, data, 8);
 		stlink_usb_error_check(data, true);
 		v3_freq[info->is_jtag ? 1 : 0] = frequency * 1000U;
 	} else {
@@ -1188,7 +1188,7 @@ void stlink_max_frequency_set(bmp_info_s *info, uint32_t freq)
 		cmd[2] = divisor & 0xffU;
 		cmd[3] = (divisor >> 8U) & 0xffU;
 		uint8_t data[2];
-		send_recv(info->usb_link, cmd, 16, data, 2);
+		bmda_usb_transfer(info->usb_link, cmd, 16, data, 2);
 		if (stlink_usb_error_check(data, false))
 			DEBUG_ERROR("Set frequency failed!\n");
 	}

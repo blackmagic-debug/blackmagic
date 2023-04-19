@@ -393,7 +393,7 @@ static int submit_wait(usb_link_s *link, libusb_transfer_s *transfer)
 }
 
 /* One USB transaction */
-int send_recv(usb_link_s *link, uint8_t *txbuf, size_t txsize, uint8_t *rxbuf, size_t rxsize)
+int bmda_usb_transfer(usb_link_s *link, uint8_t *txbuf, size_t txsize, uint8_t *rxbuf, size_t rxsize)
 {
 	int res = 0;
 	if (txsize) {
