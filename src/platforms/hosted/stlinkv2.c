@@ -409,17 +409,18 @@ static int stlink_write_retry(const void *req_buffer, size_t req_len, const void
 	return res;
 }
 
-/* Version data is at 0x080103f8 with STLINKV3 bootloader flashed with
+/*
+ * Version data is at 0x080103f8 with STLINKV3 bootloader flashed with
  * STLinkUpgrade_v3[3|5].jar
  */
-static void stlink_version(bmp_info_s *info)
+static void stlink_version(void)
 {
 	if (stlink.ver_hw == 30) {
 		uint8_t cmd[16];
 		uint8_t data[12];
 		memset(cmd, 0, sizeof(cmd));
 		cmd[0] = STLINK_APIV3_GET_VERSION_EX;
-		int size = bmda_usb_transfer(info->usb_link, cmd, 16, data, 12);
+		int size = bmda_usb_transfer(info.usb_link, cmd, 16, data, 12);
 		if (size == -1)
 			DEBUG_WARN("[!] stlink_send_recv STLINK_APIV3_GET_VERSION_EX\n");
 
@@ -436,7 +437,7 @@ static void stlink_version(bmp_info_s *info)
 		uint8_t data[6];
 		memset(cmd, 0, sizeof(cmd));
 		cmd[0] = STLINK_GET_VERSION;
-		int size = bmda_usb_transfer(info->usb_link, cmd, 16, data, 6);
+		int size = bmda_usb_transfer(info.usb_link, cmd, 16, data, 6);
 		if (size == -1)
 			DEBUG_WARN("[!] stlink_send_recv STLINK_GET_VERSION_EX\n");
 		stlink.vid = (data[3] << 8U) | data[2];
@@ -514,14 +515,14 @@ const char *stlink_target_voltage(bmp_info_s *info)
 	return res;
 }
 
-static void stlink_resetsys(bmp_info_s *info)
+static void stlink_resetsys(void)
 {
 	uint8_t cmd[16];
 	uint8_t data[2];
 	memset(cmd, 0, sizeof(cmd));
 	cmd[0] = STLINK_DEBUG_COMMAND;
 	cmd[1] = STLINK_DEBUG_APIV2_RESETSYS;
-	bmda_usb_transfer(info->usb_link, cmd, 16, data, 2);
+	bmda_usb_transfer(info.usb_link, cmd, 16, data, 2);
 }
 
 bool stlink_init(bmp_info_s *info)
@@ -626,7 +627,7 @@ bool stlink_init(bmp_info_s *info)
 	}
 	sl->req_trans = libusb_alloc_transfer(0);
 	sl->rep_trans = libusb_alloc_transfer(0);
-	stlink_version(info);
+	stlink_version();
 	if ((stlink.ver_stlink < 3U && stlink.ver_jtag < 32U) || (stlink.ver_stlink == 3U && stlink.ver_jtag < 3U)) {
 		/* Maybe the adapter is in some strange state. Try to reset */
 		int result = libusb_reset_device(sl->ul_libusb_device_handle);
@@ -639,7 +640,7 @@ bool stlink_init(bmp_info_s *info)
 			DEBUG_ERROR("ST-Link libusb_reset_device failed\n");
 			return false;
 		}
-		stlink_version(info);
+		stlink_version();
 	}
 	if ((stlink.ver_stlink < 3U && stlink.ver_jtag < 32U) || (stlink.ver_stlink == 3U && stlink.ver_jtag < 3U)) {
 		DEBUG_WARN("Please update the firmware on your ST-Link\n");
@@ -649,7 +650,7 @@ bool stlink_init(bmp_info_s *info)
 		DEBUG_WARN("ST-Link board was in DFU mode. Restart\n");
 		return false;
 	}
-	stlink_resetsys(info);
+	stlink_resetsys();
 	return true;
 }
 
