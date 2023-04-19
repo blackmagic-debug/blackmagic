@@ -399,17 +399,14 @@ int send_recv(usb_link_s *link, uint8_t *txbuf, size_t txsize, uint8_t *rxbuf, s
 	if (txsize) {
 		libusb_fill_bulk_transfer(link->req_trans, link->ul_libusb_device_handle, link->ep_tx | LIBUSB_ENDPOINT_OUT,
 			txbuf, txsize, NULL, NULL, 0);
-		size_t i = 0;
-		DEBUG_WIRE(" Send (%3zu): ", txsize);
-		for (; i < txsize; ++i) {
-			DEBUG_WIRE("%02x", txbuf[i]);
-			if ((i & 7U) == 7U)
-				DEBUG_WIRE(".");
-			if ((i & 31U) == 31U)
-				DEBUG_WIRE("\n             ");
-		}
-		if (!(i & 31U))
-			DEBUG_WIRE("\n");
+
+		DEBUG_WIRE(" request:");
+		for (size_t i = 0; i < txsize && i < 32U; ++i)
+			DEBUG_WIRE(" %02x", txbuf[i]);
+		if (txsize > 32U)
+			DEBUG_WIRE(" ...");
+		DEBUG_WIRE("\n");
+
 		if (submit_wait(link, link->req_trans)) {
 			libusb_clear_halt(link->ul_libusb_device_handle, link->ep_tx);
 			return -1;
@@ -426,17 +423,17 @@ int send_recv(usb_link_s *link, uint8_t *txbuf, size_t txsize, uint8_t *rxbuf, s
 			libusb_clear_halt(link->ul_libusb_device_handle, link->ep_rx);
 			return -1;
 		}
+
 		res = link->rep_trans->actual_length;
 		if (res > 0) {
 			const size_t rxlen = (size_t)res;
-			DEBUG_WIRE(" Rec (%zu/%zu)", rxsize, rxlen);
-			for (size_t i = 0; i < rxlen && i < 32U; ++i) {
-				if (i && ((i & 7U) == 0U))
-					DEBUG_WIRE(".");
-				DEBUG_WIRE("%02x", rxbuf[i]);
-			}
+			DEBUG_WIRE("response:");
+			for (size_t i = 0; i < rxlen && i < 32U; ++i)
+				DEBUG_WIRE(" %02x", rxbuf[i]);
+			if (rxlen > 32U)
+				DEBUG_WIRE(" ...");
+			DEBUG_WIRE("\n");
 		}
 	}
-	DEBUG_WIRE("\n");
 	return res;
 }
