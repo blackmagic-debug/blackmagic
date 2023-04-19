@@ -36,6 +36,7 @@
 #include "target.h"
 #include "cortexm.h"
 #include "target_internal.h"
+#include "buffer_utils.h"
 
 #include <assert.h>
 #include <unistd.h>
@@ -196,6 +197,15 @@ typedef struct stlink {
 	bool ap_error;
 } stlink_s;
 
+typedef struct stlink_mem_command {
+	uint8_t command;
+	uint8_t operation;
+	uint8_t address[4];
+	uint8_t length[2];
+	uint8_t apsel;
+	uint8_t reserved[7];
+} stlink_mem_command_s;
+
 stlink_s stlink;
 
 static int stlink_usb_get_rw_status(bool verbose);
@@ -204,6 +214,19 @@ int debug_level = 0;
 
 #define STLINK_ERROR_DP_FAULT (-2)
 #define STLINK_ERROR_AP_FAULT (-3)
+
+static stlink_mem_command_s stlink_memory_access(
+	const uint8_t operation, const uint32_t address, const uint16_t length, const uint8_t apsel)
+{
+	stlink_mem_command_s command = {
+		.command = STLINK_DEBUG_COMMAND,
+		.operation = operation,
+		.apsel = apsel,
+	};
+	write_le4(command.address, 0, address);
+	write_le2(command.length, 0, length);
+	return command;
+}
 
 /**
     Converts an STLINK status code held in the first byte of a response to
@@ -856,18 +879,8 @@ static void stlink_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, s
 	else
 		type = STLINK_DEBUG_READMEM_32BIT;
 
-	uint8_t cmd[16];
-	memset(cmd, 0, sizeof(cmd));
-	cmd[0] = STLINK_DEBUG_COMMAND;
-	cmd[1] = type;
-	cmd[2] = src & 0xffU;
-	cmd[3] = (src >> 8U) & 0xffU;
-	cmd[4] = (src >> 16U) & 0xffU;
-	cmd[5] = (src >> 24U) & 0xffU;
-	cmd[6] = len & 0xffU;
-	cmd[7] = len >> 8U;
-	cmd[8] = ap->apsel;
-	int res = read_retry(cmd, 16, dest, read_len);
+	stlink_mem_command_s command = stlink_memory_access(type, src, len, ap->apsel);
+	int res = read_retry(&command.command, sizeof(command), dest, read_len);
 	if (res != STLINK_ERROR_OK) {
 		/* FIXME: What is the right measure when failing?
 		 *
