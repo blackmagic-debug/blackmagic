@@ -531,7 +531,7 @@ bool stlink_init(bmp_info_s *info)
 	if (!sl)
 		return false;
 	info->usb_link = sl;
-	sl->ul_libusb_ctx = info->libusb_ctx;
+	sl->context = info->libusb_ctx;
 	libusb_device **devs = NULL;
 	const ssize_t cnt = libusb_get_device_list(info->libusb_ctx, &devs);
 	if (cnt < 0) {
@@ -550,7 +550,7 @@ bool stlink_init(bmp_info_s *info)
 		if (desc.idVendor != info->vid || desc.idProduct != info->pid)
 			continue;
 
-		result = libusb_open(dev, &sl->ul_libusb_device_handle);
+		result = libusb_open(dev, &sl->device_handle);
 		if (result != LIBUSB_SUCCESS) {
 			DEBUG_ERROR("Failed to open ST-Link device %04x:%04x - %s\n", desc.idVendor, desc.idProduct,
 				libusb_strerror(result));
@@ -560,10 +560,10 @@ bool stlink_init(bmp_info_s *info)
 		char serial[64];
 		if (desc.iSerialNumber) {
 			int result = libusb_get_string_descriptor_ascii(
-				sl->ul_libusb_device_handle, desc.iSerialNumber, (uint8_t *)serial, sizeof(serial));
+				sl->device_handle, desc.iSerialNumber, (uint8_t *)serial, sizeof(serial));
 			/* If the call fails and it's not because the device gave us STALL, continue to the next one */
 			if (result < 0 && result != LIBUSB_ERROR_PIPE) {
-				libusb_close(sl->ul_libusb_device_handle);
+				libusb_close(sl->device_handle);
 				continue;
 			}
 			if (result <= 0)
@@ -572,7 +572,7 @@ bool stlink_init(bmp_info_s *info)
 			serial[0] = '\0';
 		/* Likewise, if the serial number returned doesn't match the one in info, go to next */
 		if (!strstr(serial, info->serial)) {
-			libusb_close(sl->ul_libusb_device_handle);
+			libusb_close(sl->device_handle);
 			continue;
 		}
 		found = true;
@@ -608,33 +608,31 @@ bool stlink_init(bmp_info_s *info)
 	}
 	info->usb_link->ep_rx = 1U;
 	int config;
-	int r = libusb_get_configuration(sl->ul_libusb_device_handle, &config);
+	int r = libusb_get_configuration(sl->device_handle, &config);
 	if (r) {
 		DEBUG_ERROR("ST-Link libusb_get_configuration failed %d: %s\n", r, libusb_strerror(r));
 		return false;
 	}
 	if (config != 1) {
-		r = libusb_set_configuration(sl->ul_libusb_device_handle, 0);
+		r = libusb_set_configuration(sl->device_handle, 0);
 		if (r) {
 			DEBUG_ERROR("ST-Link libusb_set_configuration failed %d: %s\n", r, libusb_strerror(r));
 			return false;
 		}
 	}
-	r = libusb_claim_interface(sl->ul_libusb_device_handle, 0);
+	r = libusb_claim_interface(sl->device_handle, 0);
 	if (r) {
 		DEBUG_ERROR("ST-Link libusb_claim_interface failed %s\n", libusb_strerror(r));
 		return false;
 	}
-	sl->req_trans = libusb_alloc_transfer(0);
-	sl->rep_trans = libusb_alloc_transfer(0);
 	stlink_version();
 	if ((stlink.ver_stlink < 3U && stlink.ver_jtag < 32U) || (stlink.ver_stlink == 3U && stlink.ver_jtag < 3U)) {
 		/* Maybe the adapter is in some strange state. Try to reset */
-		int result = libusb_reset_device(sl->ul_libusb_device_handle);
+		int result = libusb_reset_device(sl->device_handle);
 		DEBUG_WARN("Trying ST-Link reset\n");
 		if (result == LIBUSB_ERROR_BUSY) { /* Try again */
 			platform_delay(50);
-			result = libusb_reset_device(sl->ul_libusb_device_handle);
+			result = libusb_reset_device(sl->device_handle);
 		}
 		if (result != LIBUSB_SUCCESS) {
 			DEBUG_ERROR("ST-Link libusb_reset_device failed\n");
