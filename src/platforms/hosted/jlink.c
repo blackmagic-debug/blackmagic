@@ -50,13 +50,13 @@ static void jlink_print_caps(bmp_info_s *const info)
 {
 	uint8_t cmd = CMD_GET_CAPS;
 	uint8_t res[4];
-	send_recv(info->usb_link, &cmd, 1, res, sizeof(res));
+	bmda_usb_transfer(info->usb_link, &cmd, 1, res, sizeof(res));
 	emu_caps = res[0] | (res[1] << 8U) | (res[2] << 16U) | (res[3] << 24U);
 	DEBUG_INFO("Caps %" PRIx32 "\n", emu_caps);
 	if (emu_caps & JLINK_CAP_GET_HW_VERSION) {
 		uint8_t cmd = CMD_GET_HW_VERSION;
-		send_recv(info->usb_link, &cmd, 1, NULL, 0);
-		send_recv(info->usb_link, NULL, 0, res, sizeof(res));
+		bmda_usb_transfer(info->usb_link, &cmd, 1, NULL, 0);
+		bmda_usb_transfer(info->usb_link, NULL, 0, res, sizeof(res));
 		DEBUG_INFO("HW: Type %u, Major %u, Minor %u, Rev %u\n", res[3], res[2], res[1], res[0]);
 	}
 }
@@ -65,7 +65,7 @@ static void jlink_print_speed(bmp_info_s *const info)
 {
 	uint8_t cmd = CMD_GET_SPEEDS;
 	uint8_t res[6];
-	send_recv(info->usb_link, &cmd, 1, res, sizeof(res));
+	bmda_usb_transfer(info->usb_link, &cmd, 1, res, sizeof(res));
 	emu_speed_khz = (res[0] | (res[1] << 8U) | (res[2] << 16U) | (res[3] << 24U)) / 1000U;
 	emu_min_divisor = res[4] | (res[5] << 8U);
 	DEBUG_INFO("Emulator speed %ukHz, minimum divisor %u%s\n", emu_speed_khz, emu_min_divisor,
@@ -76,9 +76,9 @@ static void jlink_print_version(bmp_info_s *const info)
 {
 	uint8_t cmd = CMD_GET_VERSION;
 	uint8_t len_str[2];
-	send_recv(info->usb_link, &cmd, 1, len_str, sizeof(len_str));
+	bmda_usb_transfer(info->usb_link, &cmd, 1, len_str, sizeof(len_str));
 	uint8_t version[0x70];
-	send_recv(info->usb_link, NULL, 0, version, sizeof(version));
+	bmda_usb_transfer(info->usb_link, NULL, 0, version, sizeof(version));
 	version[0x6f] = '\0';
 	DEBUG_INFO("%s\n", version);
 }
@@ -90,10 +90,10 @@ static void jlink_print_interfaces(bmp_info_s *const info)
 		JLINK_IF_GET_ACTIVE,
 	};
 	uint8_t selected_if[4];
-	send_recv(info->usb_link, cmd, 2, selected_if, sizeof(selected_if));
+	bmda_usb_transfer(info->usb_link, cmd, 2, selected_if, sizeof(selected_if));
 	cmd[1] = JLINK_IF_GET_AVAILABLE;
 	uint8_t available_ifs[4];
-	send_recv(info->usb_link, cmd, 2, available_ifs, sizeof(available_ifs));
+	bmda_usb_transfer(info->usb_link, cmd, 2, available_ifs, sizeof(available_ifs));
 	if (selected_if[0] == SELECT_IF_SWD)
 		DEBUG_INFO("SWD active");
 	else if (selected_if[0] == SELECT_IF_JTAG)
@@ -233,7 +233,7 @@ const char *jlink_target_voltage(bmp_info_s *const info)
 	static char ret[7];
 	uint8_t cmd = CMD_GET_HW_STATUS;
 	uint8_t res[8];
-	send_recv(info->usb_link, &cmd, 1, res, sizeof(res));
+	bmda_usb_transfer(info->usb_link, &cmd, 1, res, sizeof(res));
 	const uint16_t millivolts = res[0] | (res[1] << 8U);
 	snprintf(ret, sizeof(ret), "%2u.%03u", millivolts / 1000U, millivolts % 1000U);
 	return ret;
@@ -242,7 +242,7 @@ const char *jlink_target_voltage(bmp_info_s *const info)
 void jlink_nrst_set_val(bmp_info_s *const info, const bool assert)
 {
 	uint8_t cmd = assert ? CMD_HW_RESET0 : CMD_HW_RESET1;
-	send_recv(info->usb_link, &cmd, 1, NULL, 0);
+	bmda_usb_transfer(info->usb_link, &cmd, 1, NULL, 0);
 	platform_delay(2);
 }
 
@@ -250,7 +250,7 @@ bool jlink_nrst_get_val(bmp_info_s *const info)
 {
 	uint8_t cmd[1] = {CMD_GET_HW_STATUS};
 	uint8_t res[8];
-	send_recv(info->usb_link, cmd, 1, res, sizeof(res));
+	bmda_usb_transfer(info->usb_link, cmd, 1, res, sizeof(res));
 	return res[6] == 0;
 }
 
@@ -273,7 +273,7 @@ void jlink_max_frequency_set(bmp_info_s *const info, const uint32_t freq)
 		speed_khz >> 8U,
 	};
 	DEBUG_WARN("Set Speed %d\n", speed_khz);
-	send_recv(info->usb_link, cmd, 3, NULL, 0);
+	bmda_usb_transfer(info->usb_link, cmd, 3, NULL, 0);
 }
 
 uint32_t jlink_max_frequency_get(bmp_info_s *const info)

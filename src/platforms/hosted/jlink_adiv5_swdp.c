@@ -58,8 +58,8 @@ static bool line_reset(bmp_info_s *const info)
 	data[13] = 0xa5U;
 
 	uint8_t res[19];
-	send_recv(info->usb_link, cmd, 42U, res, 19U);
-	send_recv(info->usb_link, NULL, 0U, res, 1U);
+	bmda_usb_transfer(info->usb_link, cmd, 42U, res, 19U);
+	bmda_usb_transfer(info->usb_link, NULL, 0U, res, 1U);
 
 	if (res[0] != 0) {
 		DEBUG_ERROR("Line reset failed\n");
@@ -75,13 +75,13 @@ static bool jlink_swdptap_init(bmp_info_s *const info)
 		JLINK_IF_GET_AVAILABLE,
 	};
 	uint8_t res[4];
-	send_recv(info->usb_link, cmd, 2, res, sizeof(res));
+	bmda_usb_transfer(info->usb_link, cmd, 2, res, sizeof(res));
 
 	if (!(res[0] & JLINK_IF_SWD))
 		return false;
 
 	cmd[1] = SELECT_IF_SWD;
-	send_recv(info->usb_link, cmd, 2, res, sizeof(res));
+	bmda_usb_transfer(info->usb_link, cmd, 2, res, sizeof(res));
 
 	platform_delay(10);
 	/* SWD speed is fixed. Do not set it here*/
@@ -109,8 +109,8 @@ uint32_t jlink_swdp_scan(bmp_info_s *const info)
 	memset(data + 9U, 0xffU, 6U);
 
 	uint8_t res[18];
-	send_recv(info->usb_link, cmd, 38U, res, 17U);
-	send_recv(info->usb_link, NULL, 0U, res, 1U);
+	bmda_usb_transfer(info->usb_link, cmd, 38U, res, 17U);
+	bmda_usb_transfer(info->usb_link, NULL, 0U, res, 1U);
 
 	if (res[0] != 0) {
 		DEBUG_ERROR("Line reset failed\n");
@@ -164,8 +164,8 @@ static bool jlink_adiv5_swdp_write_nocheck(const uint16_t addr, const uint32_t d
 	uint8_t result[3];
 	uint8_t request[8];
 	jlink_adiv5_swdp_make_packet_request(request, sizeof(request), ADIV5_LOW_WRITE, addr & 0xfU);
-	send_recv(info.usb_link, request, 8U, result, 2U);
-	send_recv(info.usb_link, NULL, 0U, result + 2U, 1U);
+	bmda_usb_transfer(info.usb_link, request, 8U, result, 2U);
+	bmda_usb_transfer(info.usb_link, NULL, 0U, result + 2U, 1U);
 	const uint8_t ack = result[1] & 7U;
 
 	uint8_t response[16];
@@ -179,8 +179,8 @@ static bool jlink_adiv5_swdp_write_nocheck(const uint16_t addr, const uint32_t d
 	const uint8_t bit_count = __builtin_popcount(data);
 	response[14] = bit_count & 1U;
 
-	send_recv(info.usb_link, response, 16, result, 6);
-	send_recv(info.usb_link, NULL, 0, result, 1);
+	bmda_usb_transfer(info.usb_link, response, 16, result, 6);
+	bmda_usb_transfer(info.usb_link, NULL, 0, result, 1);
 	if (result[0] != 0)
 		raise_exception(EXCEPTION_ERROR, "Low access write failed");
 	return ack != SWDP_ACK_OK;
@@ -191,8 +191,8 @@ static uint32_t jlink_adiv5_swdp_read_nocheck(const uint16_t addr)
 	uint8_t result[6];
 	uint8_t request[8];
 	jlink_adiv5_swdp_make_packet_request(request, sizeof(request), ADIV5_LOW_READ, addr & 0xfU);
-	send_recv(info.usb_link, request, 8U, result, 2U);
-	send_recv(info.usb_link, NULL, 0U, result + 2U, 1U);
+	bmda_usb_transfer(info.usb_link, request, 8U, result, 2U);
+	bmda_usb_transfer(info.usb_link, NULL, 0U, result + 2U, 1U);
 	const uint8_t ack = result[1] & 7U;
 
 	uint8_t response[14];
@@ -200,8 +200,8 @@ static uint32_t jlink_adiv5_swdp_read_nocheck(const uint16_t addr)
 	response[0] = CMD_HW_JTAG3;
 	response[2] = 33U + 2U; /* 2 idle cycles */
 	response[8] = 0xfe;
-	send_recv(info.usb_link, response, 14, result, 5);
-	send_recv(info.usb_link, NULL, 0, result + 5U, 1);
+	bmda_usb_transfer(info.usb_link, response, 14, result, 5);
+	bmda_usb_transfer(info.usb_link, NULL, 0, result + 5U, 1);
 	if (result[5] != 0)
 		raise_exception(EXCEPTION_ERROR, "Low access read failed");
 	const uint32_t data = result[0] | result[1] << 8U | result[2] << 16U | result[3] << 24U;
@@ -244,8 +244,8 @@ static uint32_t jlink_adiv5_swdp_low_read(adiv5_debug_port_s *const dp)
 	cmd[0] = CMD_HW_JTAG3;
 	cmd[2] = 33U + 2U; /* 2 idle cycles */
 	cmd[8] = 0xfe;
-	send_recv(info.usb_link, cmd, 14, result, 5);
-	send_recv(info.usb_link, NULL, 0, result + 5U, 1);
+	bmda_usb_transfer(info.usb_link, cmd, 14, result, 5);
+	bmda_usb_transfer(info.usb_link, NULL, 0, result + 5U, 1);
 
 	if (result[5] != 0)
 		raise_exception(EXCEPTION_ERROR, "Low access read failed");
@@ -277,8 +277,8 @@ static void jlink_adiv5_swdp_low_write(const uint32_t value)
 	const uint8_t bit_count = __builtin_popcount(value);
 	cmd[14] = bit_count & 1U;
 
-	send_recv(info.usb_link, cmd, 16, result, 6);
-	send_recv(info.usb_link, NULL, 0, result, 1);
+	bmda_usb_transfer(info.usb_link, cmd, 16, result, 6);
+	bmda_usb_transfer(info.usb_link, NULL, 0, result, 1);
 
 	if (result[0] != 0)
 		raise_exception(EXCEPTION_ERROR, "Low access write failed");
@@ -298,8 +298,8 @@ static uint32_t jlink_adiv5_swdp_low_access(
 	platform_timeout_set(&timeout, 2000);
 	uint8_t ack = SWDP_ACK_WAIT;
 	while (ack == SWDP_ACK_WAIT && !platform_timeout_is_expired(&timeout)) {
-		send_recv(info.usb_link, cmd, 8U, res, 2U);
-		send_recv(info.usb_link, NULL, 0U, res + 2U, 1U);
+		bmda_usb_transfer(info.usb_link, cmd, 8U, res, 2U);
+		bmda_usb_transfer(info.usb_link, NULL, 0U, res + 2U, 1U);
 
 		if (res[2] != 0)
 			raise_exception(EXCEPTION_ERROR, "Low access setup failed");

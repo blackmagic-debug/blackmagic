@@ -64,13 +64,13 @@ bool jlink_jtagtap_init(bmp_info_s *const info)
 		JLINK_IF_GET_AVAILABLE,
 	};
 	uint8_t res[4];
-	send_recv(info->usb_link, cmd_switch, 2, res, sizeof(res));
+	bmda_usb_transfer(info->usb_link, cmd_switch, 2, res, sizeof(res));
 	if (!(res[0] & JLINK_IF_JTAG)) {
 		DEBUG_ERROR("JTAG not available\n");
 		return false;
 	}
 	cmd_switch[1] = SELECT_IF_JTAG;
-	send_recv(info->usb_link, cmd_switch, 2, res, sizeof(res));
+	bmda_usb_transfer(info->usb_link, cmd_switch, 2, res, sizeof(res));
 	platform_delay(10);
 	/* Set speed 256 kHz*/
 	const uint16_t speed = 2000;
@@ -79,7 +79,7 @@ bool jlink_jtagtap_init(bmp_info_s *const info)
 		speed & 0xffU,
 		speed >> 8U,
 	};
-	send_recv(info->usb_link, jtag_speed, 3, NULL, 0);
+	bmda_usb_transfer(info->usb_link, jtag_speed, 3, NULL, 0);
 	uint8_t cmd[22];
 	memset(cmd, 0, 22);
 	cmd[0] = CMD_HW_JTAG3;
@@ -88,8 +88,8 @@ bool jlink_jtagtap_init(bmp_info_s *const info)
 	memset(cmd + 4U, 0xffU, 7);
 	cmd[11] = 0x3c;
 	cmd[12] = 0xe7;
-	send_recv(info->usb_link, cmd, 22, cmd, 9);
-	send_recv(info->usb_link, NULL, 0, res, 1);
+	bmda_usb_transfer(info->usb_link, cmd, 22, cmd, 9);
+	bmda_usb_transfer(info->usb_link, NULL, 0, res, 1);
 
 	if (res[0] != 0) {
 		DEBUG_ERROR("Switch to JTAG failed\n");
@@ -125,8 +125,8 @@ static void jtagtap_tms_seq(const uint32_t tms_states, const size_t clock_cycles
 		cmd[index + total_chunks] = cmd[index];
 	}
 	uint8_t result[4];
-	send_recv(info.usb_link, cmd, 4U + (total_chunks * 2U), result, len);
-	send_recv(info.usb_link, NULL, 0, result, 1);
+	bmda_usb_transfer(info.usb_link, cmd, 4U + (total_chunks * 2U), result, len);
+	bmda_usb_transfer(info.usb_link, NULL, 0, result, 1);
 	if (result[0] != 0)
 		raise_exception(EXCEPTION_ERROR, "tagtap_tms_seq failed");
 }
@@ -157,8 +157,8 @@ static void jtagtap_tdi_tdo_seq(
 		}
 	}
 	uint8_t result[4];
-	send_recv(info.usb_link, cmd, cmd_len, data_out ? data_out : result, total_chunks);
-	send_recv(info.usb_link, NULL, 0, result, 1);
+	bmda_usb_transfer(info.usb_link, cmd, cmd_len, data_out ? data_out : result, total_chunks);
+	bmda_usb_transfer(info.usb_link, NULL, 0, result, 1);
 	free(cmd);
 	if (result[0] != 0)
 		raise_exception(EXCEPTION_ERROR, "jtagtap_tdi_tdi failed");
@@ -191,9 +191,9 @@ static bool jtagtap_next(bool tms, bool tdi)
 	if (tdi)
 		cmd[5] = 1;
 	uint8_t tdo;
-	send_recv(info.usb_link, cmd, 6, &tdo, 1);
+	bmda_usb_transfer(info.usb_link, cmd, 6, &tdo, 1);
 	uint8_t result;
-	send_recv(info.usb_link, NULL, 0, &result, 1);
+	bmda_usb_transfer(info.usb_link, NULL, 0, &result, 1);
 	if (result != 0)
 		raise_exception(EXCEPTION_ERROR, "jtagtap_next failed");
 	return tdo & 1U;
