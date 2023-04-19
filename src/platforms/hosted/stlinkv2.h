@@ -32,9 +32,9 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 
-int stlink_init(bmp_info_s *info)
+bool stlink_init(bmp_info_s *info)
 {
-	return -1;
+	return false;
 }
 
 int stlink_hwversion(void)
@@ -90,7 +90,7 @@ uint32_t stlink_max_frequency_get(bmp_info_s *info)
 
 #pragma GCC diagnostic pop
 #else
-int stlink_init(bmp_info_s *info);
+bool stlink_init(bmp_info_s *info);
 int stlink_hwversion(void);
 const char *stlink_target_voltage(bmp_info_s *info);
 void stlink_nrst_set_val(bmp_info_s *info, bool assert);
