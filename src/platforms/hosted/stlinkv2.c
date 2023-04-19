@@ -524,18 +524,18 @@ static void stlink_resetsys(bmp_info_s *info)
 	bmda_usb_transfer(info->usb_link, cmd, 16, data, 2);
 }
 
-int stlink_init(bmp_info_s *info)
+bool stlink_init(bmp_info_s *info)
 {
 	usb_link_s *sl = calloc(1, sizeof(usb_link_s));
 	if (!sl)
-		return -1;
+		return false;
 	info->usb_link = sl;
 	sl->ul_libusb_ctx = info->libusb_ctx;
 	libusb_device **devs = NULL;
 	const ssize_t cnt = libusb_get_device_list(info->libusb_ctx, &devs);
 	if (cnt < 0) {
 		DEBUG_ERROR("FATAL: ST-Link libusb_get_device_list failed\n");
-		return -1;
+		return false;
 	}
 	bool found = false;
 	for (size_t i = 0; devs[i]; ++i) {
@@ -544,7 +544,7 @@ int stlink_init(bmp_info_s *info)
 		int result = libusb_get_device_descriptor(dev, &desc);
 		if (result != LIBUSB_SUCCESS) {
 			DEBUG_ERROR("libusb_get_device_descriptor failed %s\n", libusb_strerror(result));
-			return -1;
+			return false;
 		}
 		if (desc.idVendor != info->vid || desc.idProduct != info->pid)
 			continue;
@@ -579,9 +579,9 @@ int stlink_init(bmp_info_s *info)
 	}
 	libusb_free_device_list(devs, cnt);
 	if (!found)
-		return 1;
+		return false;
 	if (info->vid != VENDOR_ID_STLINK)
-		return 0;
+		return true;
 	switch (info->pid) {
 	case PRODUCT_ID_STLINKV2:
 		stlink.ver_hw = 20U;
@@ -610,19 +610,19 @@ int stlink_init(bmp_info_s *info)
 	int r = libusb_get_configuration(sl->ul_libusb_device_handle, &config);
 	if (r) {
 		DEBUG_ERROR("ST-Link libusb_get_configuration failed %d: %s\n", r, libusb_strerror(r));
-		return -1;
+		return false;
 	}
 	if (config != 1) {
 		r = libusb_set_configuration(sl->ul_libusb_device_handle, 0);
 		if (r) {
 			DEBUG_ERROR("ST-Link libusb_set_configuration failed %d: %s\n", r, libusb_strerror(r));
-			return -1;
+			return false;
 		}
 	}
 	r = libusb_claim_interface(sl->ul_libusb_device_handle, 0);
 	if (r) {
 		DEBUG_ERROR("ST-Link libusb_claim_interface failed %s\n", libusb_strerror(r));
-		return -1;
+		return false;
 	}
 	sl->req_trans = libusb_alloc_transfer(0);
 	sl->rep_trans = libusb_alloc_transfer(0);
@@ -637,20 +637,20 @@ int stlink_init(bmp_info_s *info)
 		}
 		if (result != LIBUSB_SUCCESS) {
 			DEBUG_ERROR("ST-Link libusb_reset_device failed\n");
-			return -1;
+			return false;
 		}
 		stlink_version(info);
 	}
 	if ((stlink.ver_stlink < 3U && stlink.ver_jtag < 32U) || (stlink.ver_stlink == 3U && stlink.ver_jtag < 3U)) {
 		DEBUG_WARN("Please update the firmware on your ST-Link\n");
-		return -1;
+		return false;
 	}
 	if (stlink_leave_state()) {
 		DEBUG_WARN("ST-Link board was in DFU mode. Restart\n");
-		return -1;
+		return false;
 	}
 	stlink_resetsys(info);
-	return 0;
+	return true;
 }
 
 void stlink_nrst_set_val(bmp_info_s *info, bool assert)
