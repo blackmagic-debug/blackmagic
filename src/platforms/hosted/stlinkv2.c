@@ -370,18 +370,18 @@ static int stlink_send_recv_retry(uint8_t *txbuf, size_t txsize, uint8_t *rxbuf,
 	return res;
 }
 
-static int read_retry(uint8_t *txbuf, size_t txsize, uint8_t *rxbuf, size_t rxsize)
+static int stlink_read_retry(const void *req_buffer, size_t req_len, void *rx_buffer, size_t rx_len)
 {
 	uint32_t start = platform_time_ms();
 	int res;
 	while (true) {
-		bmda_usb_transfer(info.usb_link, txbuf, txsize, rxbuf, rxsize);
+		bmda_usb_transfer(info.usb_link, req_buffer, req_len, rx_buffer, rx_len);
 		res = stlink_usb_get_rw_status(false);
 		if (res == STLINK_ERROR_OK)
 			return res;
 		uint32_t now = platform_time_ms();
 		if (now - start > 1000U || res != STLINK_ERROR_WAIT) {
-			DEBUG_ERROR("read_retry failed.\n");
+			DEBUG_ERROR("stlink_read_retry failed.\n");
 			stlink_usb_get_rw_status(true);
 			return res;
 		}
@@ -389,14 +389,14 @@ static int read_retry(uint8_t *txbuf, size_t txsize, uint8_t *rxbuf, size_t rxsi
 	return res;
 }
 
-static int write_retry(uint8_t *cmdbuf, size_t cmdsize, uint8_t *txbuf, size_t txsize)
+static int stlink_write_retry(const void *req_buffer, size_t req_len, const void *tx_buffer, size_t tx_len)
 {
 	uint32_t start = platform_time_ms();
 	int res;
 	usb_link_s *link = info.usb_link;
 	while (true) {
-		bmda_usb_transfer(link, cmdbuf, cmdsize, NULL, 0);
-		bmda_usb_transfer(link, txbuf, txsize, NULL, 0);
+		bmda_usb_transfer(link, req_buffer, req_len, NULL, 0);
+		bmda_usb_transfer(link, tx_buffer, tx_len, NULL, 0);
 		res = stlink_usb_get_rw_status(false);
 		if (res == STLINK_ERROR_OK)
 			return res;
@@ -881,14 +881,14 @@ static void stlink_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, s
 	stlink_mem_command_s command = stlink_memory_access(type, src, len, ap->apsel);
 	int res = 0;
 	if (len > 1)
-		res = read_retry(&command.command, sizeof(command), dest, len);
+		res = stlink_read_retry(&command.command, sizeof(command), dest, len);
 	else {
 		/*
 		 * Due to an artefact of how the ST-Link protocol works (minimum read size is 2),
 		 * a single byte read must be done into a 2 byte buffer
 		 */
 		uint8_t buffer[2];
-		res = read_retry(&command.command, sizeof(command), buffer, sizeof(buffer));
+		res = stlink_read_retry(&command.command, sizeof(command), buffer, sizeof(buffer));
 		/* But we only want and need to keep a single byte from this */
 		memcpy(dest, buffer, 1);
 	}
@@ -964,7 +964,7 @@ static void stlink_mem_write32(adiv5_access_port_s *ap, uint32_t addr, size_t le
 	cmd[6] = len & 0xffU;
 	cmd[7] = len >> 8U;
 	cmd[8] = ap->apsel;
-	write_retry(cmd, 16, (void *)buffer, len);
+	stlink_write_retry(cmd, 16, (void *)buffer, len);
 }
 
 static void stlink_regs_read(adiv5_access_port_s *ap, void *data)
