@@ -630,7 +630,7 @@ bool efm32_probe(target_s *t)
 			di_version = 3;
 		} 
 		/* Unknown OUI - assume version 1 */
-		else di_version = 0;
+		else di_version = 3;
 	}
 
 	/* Read the part family, and reject if unknown */
