@@ -333,65 +333,6 @@ rescan:
 	return found_debuggers == 1U ? 0 : -1;
 }
 
-static void LIBUSB_CALL on_trans_done(libusb_transfer_s *const transfer)
-{
-	transfer_ctx_s *const ctx = transfer->user_data;
-
-	if (transfer->status != LIBUSB_TRANSFER_COMPLETED) {
-		DEBUG_WARN("on_trans_done: ");
-		if (transfer->status == LIBUSB_TRANSFER_TIMED_OUT)
-			DEBUG_WARN(" Timeout\n");
-		else if (transfer->status == LIBUSB_TRANSFER_CANCELLED)
-			DEBUG_WARN(" cancelled\n");
-		else if (transfer->status == LIBUSB_TRANSFER_NO_DEVICE)
-			DEBUG_WARN(" no device\n");
-		else
-			DEBUG_WARN(" unknown\n");
-		ctx->flags |= TRANSFER_HAS_ERROR;
-	}
-	ctx->flags |= TRANSFER_IS_DONE;
-}
-
-static int submit_wait(usb_link_s *link, libusb_transfer_s *transfer)
-{
-	transfer_ctx_s transfer_ctx;
-
-	transfer_ctx.flags = 0;
-
-	/* brief intrusion inside the libusb interface */
-	transfer->callback = on_trans_done;
-	transfer->user_data = &transfer_ctx;
-
-	const libusb_error_e error = libusb_submit_transfer(transfer);
-	if (error) {
-		DEBUG_ERROR("libusb_submit_transfer(%d): %s\n", error, libusb_strerror(error));
-		exit(-1);
-	}
-
-	const uint32_t start_time = platform_time_ms();
-	while (transfer_ctx.flags == 0) {
-		timeval_s timeout;
-		timeout.tv_sec = 1;
-		timeout.tv_usec = 0;
-		if (libusb_handle_events_timeout(link->ul_libusb_ctx, &timeout)) {
-			DEBUG_ERROR("libusb_handle_events()\n");
-			return -1;
-		}
-		const uint32_t now = platform_time_ms();
-		if (now - start_time > 1000U) {
-			libusb_cancel_transfer(transfer);
-			DEBUG_ERROR("libusb_handle_events() timeout\n");
-			return -1;
-		}
-	}
-	if (transfer_ctx.flags & TRANSFER_HAS_ERROR) {
-		DEBUG_ERROR("libusb_handle_events() | has_error\n");
-		return -1;
-	}
-
-	return 0;
-}
-
 /*
  * Transfer data back and forth with the debug adaptor.
  *
@@ -403,9 +344,8 @@ static int submit_wait(usb_link_s *link, libusb_transfer_s *transfer)
  *   sent/received may be less (per libusb's documentation). If used, rx_buffer must be
  *   suitably intialised up front to avoid UB reads when accessed.
  */
-int bmda_usb_transfer(usb_link_s *link, const void *tx_buffer, size_t tx_len, uint8_t *rx_buffer, size_t rx_len)
+int bmda_usb_transfer(usb_link_s *link, const void *tx_buffer, size_t tx_len, void *rx_buffer, size_t rx_len)
 {
-	int res = 0;
 	/* If there's data to send */
 	if (tx_len) {
 		uint8_t *tx_data = (uint8_t *)tx_buffer;
@@ -431,26 +371,28 @@ int bmda_usb_transfer(usb_link_s *link, const void *tx_buffer, size_t tx_len, ui
 	}
 	/* If there's data to receive */
 	if (rx_len) {
-		/* read the response */
-		libusb_fill_bulk_transfer(link->rep_trans, link->ul_libusb_device_handle, link->ep_rx | LIBUSB_ENDPOINT_IN,
-			rx_buffer, rx_len, NULL, NULL, 0);
-
-		if (submit_wait(link, link->rep_trans)) {
-			DEBUG_WARN("clear 1\n");
-			libusb_clear_halt(link->ul_libusb_device_handle, link->ep_rx);
-			return -1;
+		uint8_t *rx_data = (uint8_t *)rx_buffer;
+		int rx_bytes = 0;
+		/* Perform the transfer */
+		const int result = libusb_bulk_transfer(
+			link->ul_libusb_device_handle, link->ep_rx | LIBUSB_ENDPOINT_IN, rx_data, (int)rx_len, &rx_bytes, 0);
+		/* Then decode the result value - if its anything other than LIBUSB_SUCCESS, something went horribly wrong */
+		if (result != LIBUSB_SUCCESS) {
+			DEBUG_ERROR(
+				"%s: Receiving response from adaptor failed (%d): %s\n", __func__, result, libusb_error_name(result));
+			if (result == LIBUSB_ERROR_PIPE)
+				libusb_clear_halt(link->ul_libusb_device_handle, link->ep_rx | LIBUSB_ENDPOINT_IN);
+			return result;
 		}
 
-		res = link->rep_trans->actual_length;
-		if (res > 0) {
-			const size_t rxlen = (size_t)res;
-			DEBUG_WIRE("response:");
-			for (size_t i = 0; i < rxlen && i < 32U; ++i)
-				DEBUG_WIRE(" %02x", rx_buffer[i]);
-			if (rxlen > 32U)
-				DEBUG_WIRE(" ...");
-			DEBUG_WIRE("\n");
-		}
+		/* Display the response */
+		DEBUG_WIRE("response:");
+		for (size_t i = 0; i < (size_t)rx_bytes && i < 32U; ++i)
+			DEBUG_WIRE(" %02x", rx_data[i]);
+		if (rx_bytes > 32)
+			DEBUG_WIRE(" ...");
+		DEBUG_WIRE("\n");
+		return rx_bytes;
 	}
-	return res;
+	return LIBUSB_SUCCESS;
 }
