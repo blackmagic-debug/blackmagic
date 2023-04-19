@@ -864,23 +864,34 @@ static void stlink_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, s
 {
 	if (len == 0)
 		return;
-	size_t read_len = len;
+	if (len > stlink.block_size) {
+		DEBUG_WARN("Too large!\n");
+		return;
+	}
+
 	uint8_t type;
-	if ((src & 1U) || (len & 1U)) {
+	if ((src & 1U) || (len & 1U))
 		type = STLINK_DEBUG_READMEM_8BIT;
-		if (len > stlink.block_size) {
-			DEBUG_WARN("Too large!\n");
-			return;
-		}
-		if (len == 1)
-			++read_len; /* Fix read length as in openocd*/
-	} else if ((src & 3U) || (len & 3U))
+	else if ((src & 3U) || (len & 3U))
 		type = STLINK_DEBUG_APIV2_READMEM_16BIT;
 	else
 		type = STLINK_DEBUG_READMEM_32BIT;
 
+	/* Build the command packet and perform the access */
 	stlink_mem_command_s command = stlink_memory_access(type, src, len, ap->apsel);
-	int res = read_retry(&command.command, sizeof(command), dest, read_len);
+	int res = 0;
+	if (len > 1)
+		res = read_retry(&command.command, sizeof(command), dest, len);
+	else {
+		/*
+		 * Due to an artefact of how the ST-Link protocol works (minimum read size is 2),
+		 * a single byte read must be done into a 2 byte buffer
+		 */
+		uint8_t buffer[2];
+		res = read_retry(&command.command, sizeof(command), buffer, sizeof(buffer));
+		/* But we only want and need to keep a single byte from this */
+		memcpy(dest, buffer, 1);
+	}
 	if (res != STLINK_ERROR_OK) {
 		/* FIXME: What is the right measure when failing?
 		 *
