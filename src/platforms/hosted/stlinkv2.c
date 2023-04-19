@@ -905,66 +905,34 @@ static void stlink_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, s
 	DEBUG_PROBE("stlink_mem_read from %" PRIx32 " to %p, len %zu\n", src, dest, len);
 }
 
-static void stlink_mem_write8(usb_link_s *link, adiv5_access_port_s *ap, uint32_t addr, size_t len, uint8_t *buffer)
+static void stlink_mem_write(
+	adiv5_access_port_s *const ap, const uint32_t dest, const void *const src, const size_t len, const align_e align)
 {
-	while (len) {
-		size_t length;
-		/* OpenOCD has some note about writemem8*/
-		if (len > stlink.block_size)
-			length = stlink.block_size;
-		else
-			length = len;
-		uint8_t cmd[16];
-		memset(cmd, 0, sizeof(cmd));
-		cmd[0] = STLINK_DEBUG_COMMAND;
-		cmd[1] = STLINK_DEBUG_WRITEMEM_8BIT;
-		cmd[2] = addr & 0xffU;
-		cmd[3] = (addr >> 8U) & 0xffU;
-		cmd[4] = (addr >> 16U) & 0xffU;
-		cmd[5] = (addr >> 24U) & 0xffU;
-		cmd[6] = length & 0xffU;
-		cmd[7] = length >> 8U;
-		cmd[8] = ap->apsel;
-		bmda_usb_transfer(link, cmd, 16, NULL, 0);
-		bmda_usb_transfer(link, (void *)buffer, length, NULL, 0);
-		stlink_usb_get_rw_status(true);
-		len -= length;
-		addr += length;
+	if (len == 0)
+		return;
+	const uint8_t *const data = (const uint8_t *)src;
+	/* Chunk the write up into stlink.block_size blocks */
+	for (size_t offset = 0; offset < len; offset += stlink.block_size) {
+		/* Figure out how many bytes are in the block and at what start address */
+		const size_t amount = MIN(len - offset, stlink.block_size);
+		const uint32_t addr = dest + offset;
+		/* Now generate an appropriate access packet */
+		stlink_mem_command_s command;
+		switch (align) {
+		case ALIGN_BYTE:
+			command = stlink_memory_access(STLINK_DEBUG_WRITEMEM_8BIT, addr, amount, ap->apsel);
+			break;
+		case ALIGN_HALFWORD:
+			command = stlink_memory_access(STLINK_DEBUG_APIV2_WRITEMEM_16BIT, addr, amount, ap->apsel);
+			break;
+		case ALIGN_WORD:
+		case ALIGN_DWORD:
+			command = stlink_memory_access(STLINK_DEBUG_WRITEMEM_32BIT, addr, amount, ap->apsel);
+			break;
+		}
+		/* And perform the block write */
+		stlink_write_retry(&command.command, sizeof(command), data + offset, amount);
 	}
-}
-
-static void stlink_mem_write16(usb_link_s *link, adiv5_access_port_s *ap, uint32_t addr, size_t len, uint16_t *buffer)
-{
-	uint8_t cmd[16];
-	memset(cmd, 0, sizeof(cmd));
-	cmd[0] = STLINK_DEBUG_COMMAND;
-	cmd[1] = STLINK_DEBUG_APIV2_WRITEMEM_16BIT;
-	cmd[2] = addr & 0xffU;
-	cmd[3] = (addr >> 8U) & 0xffU;
-	cmd[4] = (addr >> 16U) & 0xffU;
-	cmd[5] = (addr >> 24U) & 0xffU;
-	cmd[6] = len & 0xffU;
-	cmd[7] = len >> 8U;
-	cmd[8] = ap->apsel;
-	bmda_usb_transfer(link, cmd, 16, NULL, 0);
-	bmda_usb_transfer(link, (void *)buffer, len, NULL, 0);
-	stlink_usb_get_rw_status(true);
-}
-
-static void stlink_mem_write32(adiv5_access_port_s *ap, uint32_t addr, size_t len, uint32_t *buffer)
-{
-	uint8_t cmd[16];
-	memset(cmd, 0, sizeof(cmd));
-	cmd[0] = STLINK_DEBUG_COMMAND;
-	cmd[1] = STLINK_DEBUG_WRITEMEM_32BIT;
-	cmd[2] = addr & 0xffU;
-	cmd[3] = (addr >> 8U) & 0xffU;
-	cmd[4] = (addr >> 16U) & 0xffU;
-	cmd[5] = (addr >> 24U) & 0xffU;
-	cmd[6] = len & 0xffU;
-	cmd[7] = len >> 8U;
-	cmd[8] = ap->apsel;
-	stlink_write_retry(cmd, 16, (void *)buffer, len);
 }
 
 static void stlink_regs_read(adiv5_access_port_s *ap, void *data)
@@ -1013,25 +981,6 @@ static void stlink_reg_write(adiv5_access_port_s *ap, int num, uint32_t val)
 	bmda_usb_transfer(info.usb_link, cmd, 16, res, 2);
 	DEBUG_PROBE("AP %hhu: Write reg %02d val 0x%08" PRIx32 "\n", ap->apsel, num, val);
 	stlink_usb_error_check(res, true);
-}
-
-static void stlink_mem_write(adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t len, align_e align)
-{
-	if (len == 0)
-		return;
-	usb_link_s *link = info.usb_link;
-	switch (align) {
-	case ALIGN_BYTE:
-		stlink_mem_write8(link, ap, dest, len, (uint8_t *)src);
-		break;
-	case ALIGN_HALFWORD:
-		stlink_mem_write16(link, ap, dest, len, (uint16_t *)src);
-		break;
-	case ALIGN_WORD:
-	case ALIGN_DWORD:
-		stlink_mem_write32(ap, dest, len, (uint32_t *)src);
-		break;
-	}
 }
 
 static void stlink_ap_write(adiv5_access_port_s *ap, uint16_t addr, uint32_t value)
