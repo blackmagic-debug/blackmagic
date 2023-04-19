@@ -228,10 +228,10 @@ static stlink_mem_command_s stlink_memory_access(
 	return command;
 }
 
-/**
-    Converts an STLINK status code held in the first byte of a response to
-	readable error
-*/
+/*
+ * Converts an ST-Link status code held in the first byte of a response to
+ * readable error
+ */
 static int stlink_usb_error_check(uint8_t *data, bool verbose)
 {
 	switch (data[0]) {
