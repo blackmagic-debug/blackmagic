@@ -397,29 +397,36 @@ static int submit_wait(usb_link_s *link, libusb_transfer_s *transfer)
  *
  * If tx_len is non-zero, then send the data in tx_buffer to the adaptor.
  * If rx_len is non-zero, then receive data from the adaptor into rx_buffer.
+ * The result is either the number of bytes received, or a libusb error code indicating what went wrong
  *
  * NB: The lengths represent the maximum number of expected bytes and the actual amount
  *   sent/received may be less (per libusb's documentation). If used, rx_buffer must be
  *   suitably intialised up front to avoid UB reads when accessed.
  */
-int bmda_usb_transfer(usb_link_s *link, uint8_t *tx_buffer, size_t tx_len, uint8_t *rx_buffer, size_t rx_len)
+int bmda_usb_transfer(usb_link_s *link, const void *tx_buffer, size_t tx_len, uint8_t *rx_buffer, size_t rx_len)
 {
 	int res = 0;
 	/* If there's data to send */
 	if (tx_len) {
-		libusb_fill_bulk_transfer(link->req_trans, link->ul_libusb_device_handle, link->ep_tx | LIBUSB_ENDPOINT_OUT,
-			tx_buffer, tx_len, NULL, NULL, 0);
-
+		uint8_t *tx_data = (uint8_t *)tx_buffer;
+		/* Display the request */
 		DEBUG_WIRE(" request:");
 		for (size_t i = 0; i < tx_len && i < 32U; ++i)
-			DEBUG_WIRE(" %02x", tx_buffer[i]);
+			DEBUG_WIRE(" %02x", tx_data[i]);
 		if (tx_len > 32U)
 			DEBUG_WIRE(" ...");
 		DEBUG_WIRE("\n");
 
-		if (submit_wait(link, link->req_trans)) {
-			libusb_clear_halt(link->ul_libusb_device_handle, link->ep_tx);
-			return -1;
+		/* Perform the transfer */
+		const int result = libusb_bulk_transfer(
+			link->ul_libusb_device_handle, link->ep_tx | LIBUSB_ENDPOINT_OUT, tx_data, (int)tx_len, NULL, 0);
+		/* Then decode the result value - if its anything other than LIBUSB_SUCCESS, something went horribly wrong */
+		if (result != LIBUSB_SUCCESS) {
+			DEBUG_ERROR(
+				"%s: Sending request to adaptor failed (%d): %s\n", __func__, result, libusb_error_name(result));
+			if (result == LIBUSB_ERROR_PIPE)
+				libusb_clear_halt(link->ul_libusb_device_handle, link->ep_tx | LIBUSB_ENDPOINT_OUT);
+			return result;
 		}
 	}
 	/* If there's data to receive */
