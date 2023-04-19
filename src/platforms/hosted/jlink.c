@@ -135,7 +135,7 @@ static bool claim_jlink_interface(bmp_info_s *info, libusb_device *dev)
 		const libusb_interface_descriptor_s *const interface_desc = &interface->altsetting[0];
 		if (interface_desc->bInterfaceClass == LIBUSB_CLASS_VENDOR_SPEC &&
 			interface_desc->bInterfaceSubClass == LIBUSB_CLASS_VENDOR_SPEC && interface_desc->bNumEndpoints > 1U) {
-			const int result = libusb_claim_interface(info->usb_link->ul_libusb_device_handle, i);
+			const int result = libusb_claim_interface(info->usb_link->device_handle, i);
 			if (result) {
 				DEBUG_ERROR("Can not claim handle: %s\n", libusb_error_name(result));
 				break;
@@ -170,7 +170,7 @@ bool jlink_init(bmp_info_s *const info)
 	if (!link)
 		return false;
 	info->usb_link = link;
-	link->ul_libusb_ctx = info->libusb_ctx;
+	link->context = info->libusb_ctx;
 	libusb_device **device_list = NULL;
 	const ssize_t devices = libusb_get_device_list(info->libusb_ctx, &device_list);
 	if (devices < 0) {
@@ -196,30 +196,28 @@ bool jlink_init(bmp_info_s *const info)
 				dev_desc.idProduct);
 			continue;
 		}
-		int result = libusb_open(device, &link->ul_libusb_device_handle);
+		int result = libusb_open(device, &link->device_handle);
 		if (result != LIBUSB_SUCCESS)
 			continue;
 		if (dev_desc.iSerialNumber != 0) {
 			char serial[32]; // XXX: Static buffers like this considered harmful.
 			const int result = libusb_get_string_descriptor_ascii(
-				link->ul_libusb_device_handle, dev_desc.iSerialNumber, (uint8_t *)serial, sizeof(serial));
+				link->device_handle, dev_desc.iSerialNumber, (uint8_t *)serial, sizeof(serial));
 			if (result > 0 && strstr(serial, info->serial)) {
 				dev = device;
 				break;
 			}
 		}
-		libusb_close(link->ul_libusb_device_handle);
+		libusb_close(link->device_handle);
 	}
 	if (!dev || !claim_jlink_interface(info, dev)) {
 		libusb_free_device_list(device_list, devices);
 		return false;
 	}
-	link->req_trans = libusb_alloc_transfer(0);
-	link->rep_trans = libusb_alloc_transfer(0);
-	if (!link->req_trans || !link->rep_trans || !link->ep_tx || !link->ep_rx) {
+	if (!link->ep_tx || !link->ep_rx) {
 		DEBUG_ERROR("Device setup failed\n");
-		libusb_release_interface(info->usb_link->ul_libusb_device_handle, info->usb_link->interface);
-		libusb_close(info->usb_link->ul_libusb_device_handle);
+		libusb_release_interface(info->usb_link->device_handle, info->usb_link->interface);
+		libusb_close(info->usb_link->device_handle);
 		libusb_free_device_list(device_list, devices);
 		return false;
 	}

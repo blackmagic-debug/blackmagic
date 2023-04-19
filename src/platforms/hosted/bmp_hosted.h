@@ -53,19 +53,16 @@ typedef struct libusb_config_descriptor libusb_config_descriptor_s;
 typedef struct libusb_interface_descriptor libusb_interface_descriptor_s;
 typedef struct libusb_endpoint_descriptor libusb_endpoint_descriptor_s;
 typedef struct libusb_interface libusb_interface_s;
-typedef struct libusb_transfer libusb_transfer_s;
 typedef enum libusb_error libusb_error_e;
 
 typedef struct ftdi_context ftdi_context_s;
 
 typedef struct usb_link {
-	libusb_context *ul_libusb_ctx;
-	libusb_device_handle *ul_libusb_device_handle;
+	libusb_context *context;
+	libusb_device_handle *device_handle;
 	uint8_t interface;
 	uint8_t ep_tx;
 	uint8_t ep_rx;
-	libusb_transfer_s *req_trans;
-	libusb_transfer_s *rep_trans;
 	void *priv;
 } usb_link_s;
 #endif

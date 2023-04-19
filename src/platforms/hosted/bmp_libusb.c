@@ -41,11 +41,9 @@ void libusb_exit_function(bmp_info_s *info)
 {
 	if (!info->usb_link)
 		return;
-	libusb_free_transfer(info->usb_link->req_trans);
-	libusb_free_transfer(info->usb_link->rep_trans);
-	if (info->usb_link->ul_libusb_device_handle) {
-		libusb_release_interface(info->usb_link->ul_libusb_device_handle, 0);
-		libusb_close(info->usb_link->ul_libusb_device_handle);
+	if (info->usb_link->device_handle) {
+		libusb_release_interface(info->usb_link->device_handle, 0);
+		libusb_close(info->usb_link->device_handle);
 	}
 }
 
@@ -358,14 +356,14 @@ int bmda_usb_transfer(usb_link_s *link, const void *tx_buffer, size_t tx_len, vo
 		DEBUG_WIRE("\n");
 
 		/* Perform the transfer */
-		const int result = libusb_bulk_transfer(
-			link->ul_libusb_device_handle, link->ep_tx | LIBUSB_ENDPOINT_OUT, tx_data, (int)tx_len, NULL, 0);
+		const int result =
+			libusb_bulk_transfer(link->device_handle, link->ep_tx | LIBUSB_ENDPOINT_OUT, tx_data, (int)tx_len, NULL, 0);
 		/* Then decode the result value - if its anything other than LIBUSB_SUCCESS, something went horribly wrong */
 		if (result != LIBUSB_SUCCESS) {
 			DEBUG_ERROR(
 				"%s: Sending request to adaptor failed (%d): %s\n", __func__, result, libusb_error_name(result));
 			if (result == LIBUSB_ERROR_PIPE)
-				libusb_clear_halt(link->ul_libusb_device_handle, link->ep_tx | LIBUSB_ENDPOINT_OUT);
+				libusb_clear_halt(link->device_handle, link->ep_tx | LIBUSB_ENDPOINT_OUT);
 			return result;
 		}
 	}
@@ -375,13 +373,13 @@ int bmda_usb_transfer(usb_link_s *link, const void *tx_buffer, size_t tx_len, vo
 		int rx_bytes = 0;
 		/* Perform the transfer */
 		const int result = libusb_bulk_transfer(
-			link->ul_libusb_device_handle, link->ep_rx | LIBUSB_ENDPOINT_IN, rx_data, (int)rx_len, &rx_bytes, 0);
+			link->device_handle, link->ep_rx | LIBUSB_ENDPOINT_IN, rx_data, (int)rx_len, &rx_bytes, 0);
 		/* Then decode the result value - if its anything other than LIBUSB_SUCCESS, something went horribly wrong */
 		if (result != LIBUSB_SUCCESS) {
 			DEBUG_ERROR(
 				"%s: Receiving response from adaptor failed (%d): %s\n", __func__, result, libusb_error_name(result));
 			if (result == LIBUSB_ERROR_PIPE)
-				libusb_clear_halt(link->ul_libusb_device_handle, link->ep_rx | LIBUSB_ENDPOINT_IN);
+				libusb_clear_halt(link->device_handle, link->ep_rx | LIBUSB_ENDPOINT_IN);
 			return result;
 		}
 
