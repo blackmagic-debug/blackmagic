@@ -392,18 +392,28 @@ static int submit_wait(usb_link_s *link, libusb_transfer_s *transfer)
 	return 0;
 }
 
-/* One USB transaction */
-int bmda_usb_transfer(usb_link_s *link, uint8_t *txbuf, size_t txsize, uint8_t *rxbuf, size_t rxsize)
+/*
+ * Transfer data back and forth with the debug adaptor.
+ *
+ * If tx_len is non-zero, then send the data in tx_buffer to the adaptor.
+ * If rx_len is non-zero, then receive data from the adaptor into rx_buffer.
+ *
+ * NB: The lengths represent the maximum number of expected bytes and the actual amount
+ *   sent/received may be less (per libusb's documentation). If used, rx_buffer must be
+ *   suitably intialised up front to avoid UB reads when accessed.
+ */
+int bmda_usb_transfer(usb_link_s *link, uint8_t *tx_buffer, size_t tx_len, uint8_t *rx_buffer, size_t rx_len)
 {
 	int res = 0;
-	if (txsize) {
+	/* If there's data to send */
+	if (tx_len) {
 		libusb_fill_bulk_transfer(link->req_trans, link->ul_libusb_device_handle, link->ep_tx | LIBUSB_ENDPOINT_OUT,
-			txbuf, txsize, NULL, NULL, 0);
+			tx_buffer, tx_len, NULL, NULL, 0);
 
 		DEBUG_WIRE(" request:");
-		for (size_t i = 0; i < txsize && i < 32U; ++i)
-			DEBUG_WIRE(" %02x", txbuf[i]);
-		if (txsize > 32U)
+		for (size_t i = 0; i < tx_len && i < 32U; ++i)
+			DEBUG_WIRE(" %02x", tx_buffer[i]);
+		if (tx_len > 32U)
 			DEBUG_WIRE(" ...");
 		DEBUG_WIRE("\n");
 
@@ -412,11 +422,11 @@ int bmda_usb_transfer(usb_link_s *link, uint8_t *txbuf, size_t txsize, uint8_t *
 			return -1;
 		}
 	}
-	/* send_only */
-	if (rxsize != 0) {
+	/* If there's data to receive */
+	if (rx_len) {
 		/* read the response */
 		libusb_fill_bulk_transfer(link->rep_trans, link->ul_libusb_device_handle, link->ep_rx | LIBUSB_ENDPOINT_IN,
-			rxbuf, rxsize, NULL, NULL, 0);
+			rx_buffer, rx_len, NULL, NULL, 0);
 
 		if (submit_wait(link, link->rep_trans)) {
 			DEBUG_WARN("clear 1\n");
@@ -429,7 +439,7 @@ int bmda_usb_transfer(usb_link_s *link, uint8_t *txbuf, size_t txsize, uint8_t *
 			const size_t rxlen = (size_t)res;
 			DEBUG_WIRE("response:");
 			for (size_t i = 0; i < rxlen && i < 32U; ++i)
-				DEBUG_WIRE(" %02x", rxbuf[i]);
+				DEBUG_WIRE(" %02x", rx_buffer[i]);
 			if (rxlen > 32U)
 				DEBUG_WIRE(" ...");
 			DEBUG_WIRE("\n");
