@@ -100,6 +100,7 @@ bool remote_v0_jtag_init(void)
 	jtag_proc.jtagtap_tms_seq = remote_v0_jtag_tms_seq;
 	jtag_proc.jtagtap_tdi_tdo_seq = remote_v0_jtag_tdi_tdo_seq;
 	jtag_proc.jtagtap_tdi_seq = remote_v0_jtag_tdi_seq;
+	jtag_proc.jtagtap_cycle = remote_v0_jtag_cycle;
 	jtag_proc.tap_idle_cycles = 1;
 	return true;
 }

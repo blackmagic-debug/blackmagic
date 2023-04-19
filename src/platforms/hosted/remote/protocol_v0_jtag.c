@@ -130,3 +130,9 @@ bool remote_v0_jtag_next(bool tms, bool tdi)
 
 	return remote_hex_string_to_num(1, buffer + 1);
 }
+
+void remote_v0_jtag_cycle(const bool tms, const bool tdi, const size_t clock_cycles)
+{
+	for (size_t cycle = 0; cycle < clock_cycles; ++cycle)
+		remote_v0_jtag_next(tms, tdi);
+}
