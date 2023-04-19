@@ -102,7 +102,7 @@ void platform_init(int argc, char **argv)
 		break;
 
 	case BMP_TYPE_STLINKV2:
-		if (!stlink_init(&info))
+		if (!stlink_init())
 			exit(-1);
 		break;
 
