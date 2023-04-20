@@ -28,8 +28,6 @@
 #define STLINK_ERROR_OK   0
 #define STLINK_ERROR_WAIT 1
 
-#define STLINK_DEBUG_PORT_ACCESS 0xffffU
-
 bool stlink_init(void);
 uint32_t stlink_swd_scan(void);
 uint32_t stlink_jtag_scan(void);

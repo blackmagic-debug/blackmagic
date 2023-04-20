@@ -154,6 +154,8 @@
 
 #define STLINK_V3_MAX_FREQ_NB 10U
 
+#define STLINK_DEBUG_PORT 0xffffU
+
 typedef struct stlink_simple_command {
 	uint8_t command;
 	uint8_t operation;
@@ -166,6 +168,14 @@ typedef struct stlink_simple_request {
 	uint8_t param;
 	uint8_t reserved[13];
 } stlink_simple_request_s;
+
+typedef struct stlink_adiv5_reg_read {
+	uint8_t command;
+	uint8_t operation;
+	uint8_t apsel[2];
+	uint8_t address[2];
+	uint8_t reserved[10];
+} stlink_adiv5_reg_read_s;
 
 typedef struct stlink_mem_command {
 	uint8_t command;
