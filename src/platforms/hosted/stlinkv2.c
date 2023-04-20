@@ -913,16 +913,12 @@ static void stlink_mem_write(
 
 static void stlink_regs_read(adiv5_access_port_s *ap, void *data)
 {
-	uint8_t cmd[16];
-	uint8_t res[88];
-	memset(cmd, 0, sizeof(cmd));
-	cmd[0] = STLINK_DEBUG_COMMAND;
-	cmd[1] = STLINK_DEBUG_APIV2_READALLREGS;
-	cmd[2] = ap->apsel;
-	DEBUG_PROBE("AP %hhu: Read all core registers\n", ap->apsel);
-	bmda_usb_transfer(info.usb_link, cmd, 16, res, 88);
-	stlink_usb_error_check(res, true);
-	memcpy(data, res + 4U, 84);
+	uint8_t result[88];
+	DEBUG_PROBE("%s: AP %u\n", __func__, ap->apsel);
+	stlink_simple_request(STLINK_DEBUG_COMMAND, STLINK_DEBUG_APIV2_READALLREGS, ap->apsel, result, sizeof(result));
+	stlink_usb_error_check(result, true);
+	/* Ignore the first 4 bytes as protocol overhead */
+	memcpy(data, result + 4U, sizeof(result) - 4U);
 }
 
 static uint32_t stlink_reg_read(adiv5_access_port_s *ap, int num)
