@@ -682,13 +682,9 @@ int stlink_hwversion(void)
 static int stlink_enter_debug_jtag(void)
 {
 	stlink_leave_state();
-	uint8_t cmd[16];
 	uint8_t data[2];
-	memset(cmd, 0, sizeof(cmd));
-	cmd[0] = STLINK_DEBUG_COMMAND;
-	cmd[1] = STLINK_DEBUG_APIV2_ENTER;
-	cmd[2] = STLINK_DEBUG_ENTER_JTAG_NO_RESET;
-	bmda_usb_transfer(info.usb_link, cmd, 16, data, 2);
+	stlink_simple_request(
+		STLINK_DEBUG_COMMAND, STLINK_DEBUG_APIV2_ENTER, STLINK_DEBUG_ENTER_JTAG_NO_RESET, data, sizeof(data));
 	return stlink_usb_error_check(data, true);
 }
 
