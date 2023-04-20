@@ -177,6 +177,15 @@ typedef struct stlink_adiv5_reg_read {
 	uint8_t reserved[10];
 } stlink_adiv5_reg_read_s;
 
+typedef struct stlink_adiv5_reg_write {
+	uint8_t command;
+	uint8_t operation;
+	uint8_t apsel[2];
+	uint8_t address[2];
+	uint8_t value[4];
+	uint8_t reserved[6];
+} stlink_adiv5_reg_write_s;
+
 typedef struct stlink_mem_command {
 	uint8_t command;
 	uint8_t operation;
