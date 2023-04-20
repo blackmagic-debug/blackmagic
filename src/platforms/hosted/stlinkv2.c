@@ -688,24 +688,10 @@ static int stlink_enter_debug_jtag(void)
 	return stlink_usb_error_check(data, true);
 }
 
-// static uint32_t stlink_read_coreid(void)
-// {
-// 	uint8_t cmd[16] = {STLINK_DEBUG_COMMAND, STLINK_DEBUG_APIV2_READ_IDCODES};
-// 	uint8_t data[12];
-// 	bmda_usb_transfer(info.usb_link, cmd, 16, data, 12);
-// 	uint32_t id =  data[4] | data[5] << 8 | data[6] << 16 | data[7] << 24;
-// 	DEBUG_INFO("Read Core ID: 0x%08" PRIx32 "\n", id);
-// 	return id;
-// }
-
 static size_t stlink_read_idcodes(uint32_t *idcodes)
 {
-	uint8_t cmd[16];
 	uint8_t data[12];
-	memset(cmd, 0, sizeof(cmd));
-	cmd[0] = STLINK_DEBUG_COMMAND;
-	cmd[1] = STLINK_DEBUG_APIV2_READ_IDCODES;
-	bmda_usb_transfer(info.usb_link, cmd, 16, data, 12);
+	stlink_simple_query(STLINK_DEBUG_COMMAND, STLINK_DEBUG_APIV2_READ_IDCODES, data, sizeof(data));
 	if (stlink_usb_error_check(data, true))
 		return 0;
 	idcodes[0] = data[4] | (data[5] << 8U) | (data[6] << 16U) | (data[7] << 24U);
