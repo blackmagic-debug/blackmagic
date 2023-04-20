@@ -42,7 +42,7 @@ int stlink_hwversion(void)
 	return -1;
 }
 
-const char *stlink_target_voltage(bmp_info_s *info)
+const char *stlink_target_voltage(void)
 {
 	return "ERROR";
 }
@@ -92,7 +92,7 @@ uint32_t stlink_max_frequency_get(bmp_info_s *info)
 #else
 bool stlink_init(void);
 int stlink_hwversion(void);
-const char *stlink_target_voltage(bmp_info_s *info);
+const char *stlink_target_voltage(void);
 void stlink_nrst_set_val(bmp_info_s *info, bool assert);
 bool stlink_nrst_get_val(void);
 uint32_t stlink_swdp_scan(void);
