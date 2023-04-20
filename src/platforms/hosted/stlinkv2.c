@@ -353,19 +353,19 @@ static int stlink_usb_error_check(uint8_t *data, bool verbose)
 	}
 }
 
-static int stlink_send_recv_retry(uint8_t *txbuf, size_t txsize, uint8_t *rxbuf, size_t rxsize)
+static int stlink_send_recv_retry(const void *req_buffer, size_t req_len, void *rx_buffer, size_t rx_len)
 {
 	uint32_t start = platform_time_ms();
 	int res;
 	int first_res = STLINK_ERROR_OK;
-	usb_link_s *link = info.usb_link;
 	while (true) {
-		bmda_usb_transfer(link, txbuf, txsize, rxbuf, rxsize);
-		res = stlink_usb_error_check(rxbuf, false);
+		bmda_usb_transfer(info.usb_link, req_buffer, req_len, rx_buffer, rx_len);
+		res = stlink_usb_error_check(rx_buffer, false);
 		if (res == STLINK_ERROR_OK)
 			return res;
 		if (res == STLINK_ERROR_AP_FAULT && first_res == STLINK_ERROR_WAIT) {
-			/* ST-Link v3 while AP is busy answers once with ERROR_WAIT, then
+			/*
+			 * ST-Link v3 while AP is busy answers once with ERROR_WAIT, then
 			 * with AP_FAULT and finally with ERROR_OK and the pending result.
 			 * Interpret AP_FAULT as AP_WAIT in this case.
 			 */
@@ -803,18 +803,18 @@ uint32_t stlink_dp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr
 	return response;
 }
 
-static bool stlink_ap_setup(int ap)
+static bool stlink_ap_setup(const uint8_t ap)
 {
 	if (ap > 7)
 		return false;
-	uint8_t cmd[16];
-	memset(cmd, 0, sizeof(cmd));
-	cmd[0] = STLINK_DEBUG_COMMAND;
-	cmd[1] = STLINK_DEBUG_APIV2_INIT_AP;
-	cmd[2] = ap;
+	const stlink_simple_request_s command = {
+		STLINK_DEBUG_COMMAND,
+		STLINK_DEBUG_APIV2_INIT_AP,
+		ap,
+	};
 	uint8_t data[2];
-	DEBUG_PROBE("Open AP %d\n", ap);
-	stlink_send_recv_retry(cmd, 16, data, 2);
+	DEBUG_PROBE("%s: AP %u\n", __func__, ap);
+	stlink_send_recv_retry(&command, sizeof(command), data, sizeof(data));
 	int res = stlink_usb_error_check(data, true);
 	if (res && stlink.ver_hw == 30)
 		DEBUG_WARN("ST-Link v3 only connects to STM8/32!\n");
