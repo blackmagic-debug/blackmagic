@@ -4,6 +4,8 @@
  * Copyright (C) 2011  Black Sphere Technologies Ltd.
  * Written by Gareth McMullin <gareth@blacksphere.co.nz>
  * Copyright (C) 2018  Uwe Bonnes (non@elektron.ikp.physik.tu-darmstadt.de)
+ * Copyright (C) 2022-2023 1BitSquared <info@1bitsquared.com>
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,6 +23,8 @@
 
 #ifndef PLATFORMS_HOSTED_FTDI_BMP_H
 #define PLATFORMS_HOSTED_FTDI_BMP_H
+
+#include <ftdi.h>
 
 #include "cli.h"
 #include "jtagtap.h"
@@ -99,84 +103,6 @@ typedef struct cable_desc {
 	char *name;
 } cable_desc_s;
 
-#define libftdi_buffer_write_arr(array) libftdi_buffer_write(array, sizeof(array))
-#define libftdi_buffer_write_val(value) libftdi_buffer_write(&(value), sizeof(value))
-#define libftdi_buffer_read_arr(array)  libftdi_buffer_read(array, sizeof(array))
-#define libftdi_buffer_read_val(value)  libftdi_buffer_read(&(value), sizeof(value))
-
-#if HOSTED_BMP_ONLY == 1
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-
-bool ftdi_bmp_init(bmda_cli_options_s *cl_opts)
-{
-	return false;
-}
-
-bool ftdi_swd_init(void)
-{
-	return false;
-}
-
-bool ftdi_jtag_init(void)
-{
-	return false;
-}
-
-void libftdi_buffer_flush(void)
-{
-}
-
-size_t libftdi_buffer_write(const uint8_t *data, size_t size)
-{
-	return size;
-}
-
-size_t libftdi_buffer_read(uint8_t *data, size_t size)
-{
-	return size;
-}
-
-const char *libftdi_target_voltage(void)
-{
-	return "ERROR";
-}
-
-void ftdi_jtag_tdi_tdo_seq(
-	uint8_t *const data_out, const bool final_tms, const uint8_t *const data_in, const size_t ticks)
-{
-}
-
-bool ftdi_swd_possible(void)
-{
-	return false;
-}
-
-void libftdi_max_frequency_set(uint32_t freq)
-{
-}
-
-uint32_t libftdi_max_frequency_get(void)
-{
-	return 0;
-}
-
-void libftdi_nrst_set_val(bool assert)
-{
-}
-
-bool libftdi_nrst_get_val(void)
-{
-	return false;
-}
-
-#pragma GCC diagnostic pop
-#else
-#include <ftdi.h>
-extern const cable_desc_s cable_desc[];
-extern cable_desc_s active_cable;
-extern data_desc_s active_state;
-
 typedef struct ftdi_mpsse_cmd {
 	uint8_t command;
 	uint8_t length[2];
@@ -186,6 +112,15 @@ typedef struct ftdi_mpsse_cmd_bits {
 	uint8_t command;
 	uint8_t length;
 } ftdi_mpsse_cmd_bits_s;
+
+extern const cable_desc_s cable_desc[];
+extern cable_desc_s active_cable;
+extern data_desc_s active_state;
+
+#define libftdi_buffer_write_arr(array) libftdi_buffer_write(array, sizeof(array))
+#define libftdi_buffer_write_val(value) libftdi_buffer_write(&(value), sizeof(value))
+#define libftdi_buffer_read_arr(array)  libftdi_buffer_read(array, sizeof(array))
+#define libftdi_buffer_read_val(value)  libftdi_buffer_read(&(value), sizeof(value))
 
 bool ftdi_bmp_init(bmda_cli_options_s *cl_opts);
 bool ftdi_swd_init(void);
@@ -200,7 +135,6 @@ void libftdi_max_frequency_set(uint32_t freq);
 uint32_t libftdi_max_frequency_get(void);
 void libftdi_nrst_set_val(bool assert);
 bool libftdi_nrst_get_val(void);
-#endif
 
 #define MPSSE_SK 1
 #define PIN0     1
