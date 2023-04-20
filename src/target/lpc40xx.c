@@ -58,11 +58,6 @@ typedef struct __attribute__((aligned(4))) iap_frame {
 	iap_config_s config;
 } iap_frame_s;
 
-typedef struct iap_result {
-	uint32_t return_code;
-	uint32_t values[4];
-} iap_result_s;
-
 typedef struct lpc40xx_priv {
 	uint32_t mpu_ctrl_state;
 	uint32_t memmap_state;

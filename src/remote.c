@@ -251,20 +251,21 @@ static void remote_packet_process_jtag(unsigned i, char *packet)
 	}
 }
 
-static void remote_packet_process_general(unsigned i, char *packet)
+#if !defined(BOARD_IDENT) && defined(BOARD_IDENT)
+#define PLATFORM_IDENT BOARD_IDENT
+#endif
+
+static void remote_packet_process_general(char *packet, const size_t packet_len)
 {
-	(void)i;
-	uint32_t freq;
+	(void)packet_len;
 	switch (packet[1]) {
 	case REMOTE_VOLTAGE:
 		remote_respond_string(REMOTE_RESP_OK, platform_target_voltage());
 		break;
-
 	case REMOTE_NRST_SET:
 		platform_nrst_set_val(packet[2] == '1');
 		remote_respond(REMOTE_RESP_OK, 0);
 		break;
-
 	case REMOTE_NRST_GET:
 		remote_respond(REMOTE_RESP_OK, platform_nrst_get_val());
 		break;
@@ -272,11 +273,11 @@ static void remote_packet_process_general(unsigned i, char *packet)
 		platform_max_frequency_set(remote_hex_string_to_num(8, packet + 2));
 		remote_respond(REMOTE_RESP_OK, 0);
 		break;
-	case REMOTE_FREQ_GET:
-		freq = platform_max_frequency_get();
+	case REMOTE_FREQ_GET: {
+		const uint32_t freq = platform_max_frequency_get();
 		remote_respond_buf(REMOTE_RESP_OK, (uint8_t *)&freq, 4);
 		break;
-
+	}
 	case REMOTE_PWR_SET:
 #ifdef PLATFORM_HAS_POWER_SWITCH
 		if (packet[2] == '1' && !platform_target_get_power() &&
@@ -293,7 +294,6 @@ static void remote_packet_process_general(unsigned i, char *packet)
 		remote_respond(REMOTE_RESP_NOTSUP, 0);
 #endif
 		break;
-
 	case REMOTE_PWR_GET:
 #ifdef PLATFORM_HAS_POWER_SWITCH
 		remote_respond(REMOTE_RESP_OK, platform_target_get_power());
@@ -301,22 +301,16 @@ static void remote_packet_process_general(unsigned i, char *packet)
 		remote_respond(REMOTE_RESP_NOTSUP, 0);
 #endif
 		break;
-
-#if !defined(BOARD_IDENT) && defined(BOARD_IDENT)
-#define PLATFORM_IDENT() BOARD_IDENT
-#endif
 	case REMOTE_START:
 #if defined(ENABLE_DEBUG) && defined(PLATFORM_HAS_DEBUG)
 		debug_bmp = true;
 #endif
 		remote_respond_string(REMOTE_RESP_OK, PLATFORM_IDENT "" FIRMWARE_VERSION);
 		break;
-
 	case REMOTE_TARGET_CLK_OE:
 		platform_target_clk_output_enable(packet[2] != '0');
 		remote_respond(REMOTE_RESP_OK, 0);
 		break;
-
 	default:
 		remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_UNRECOGNISED);
 		break;
@@ -488,7 +482,7 @@ void remote_packet_process(unsigned i, char *packet)
 		break;
 
 	case REMOTE_GEN_PACKET:
-		remote_packet_process_general(i, packet);
+		remote_packet_process_general(packet, i);
 		break;
 
 	case REMOTE_HL_PACKET:

@@ -20,17 +20,34 @@
 #ifndef PLATFORMS_HOSTED_BMP_REMOTE_H
 #define PLATFORMS_HOSTED_BMP_REMOTE_H
 
+#include <stdint.h>
+#include <stddef.h>
+#include <stdbool.h>
+
 #include "jtagtap.h"
+#include "jtag_devs.h"
 #include "adiv5.h"
 #include "target.h"
 #include "target_internal.h"
 
 #define REMOTE_MAX_MSG_SIZE 1024U
 
+typedef struct bmp_remote_protocol {
+	bool (*swd_init)(void);
+	bool (*jtag_init)(void);
+	bool (*adiv5_init)(adiv5_debug_port_s *dp);
+	void (*add_jtag_dev)(uint32_t dev_index, const jtag_dev_s *jtag_dev);
+	uint32_t (*get_comms_frequency)(void);
+	bool (*set_comms_frequency)(uint32_t freq);
+	void (*target_clk_output_enable)(bool enable);
+} bmp_remote_protocol_s;
+
+extern bmp_remote_protocol_s remote_funcs;
+
 bool platform_buffer_write(const void *data, size_t size);
 int platform_buffer_read(void *data, size_t size);
 
-int remote_init(const bool power_up);
+bool remote_init(bool power_up);
 bool remote_swdptap_init(void);
 bool remote_jtagtap_init(void);
 bool remote_target_get_power(void);
@@ -43,6 +60,9 @@ uint32_t remote_max_frequency_get(void);
 void remote_target_clk_output_enable(bool enable);
 
 void remote_adiv5_dp_defaults(adiv5_debug_port_s *dp);
-void remote_add_jtag_dev(uint32_t i, const jtag_dev_s *jtag_dev);
+void remote_add_jtag_dev(uint32_t dev_index, const jtag_dev_s *jtag_dev);
+
+uint64_t remote_decode_response(const char *response, size_t digits);
+uint64_t remote_hex_string_to_num(uint32_t limit, const char *str);
 
 #endif /* PLATFORMS_HOSTED_BMP_REMOTE_H */
