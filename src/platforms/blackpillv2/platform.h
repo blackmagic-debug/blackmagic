@@ -27,6 +27,11 @@
 #include "timing.h"
 #include "timing_stm32.h"
 
+#include <libopencm3/stm32/rcc.h>
+#include <libopencm3/stm32/usart.h>
+#include <libopencm3/stm32/dma.h>
+#include <libopencm3/cm3/cortex.h>
+
 #define PLATFORM_HAS_TRACESWO
 #define PLATFORM_IDENT "(BlackPillV2) "
 /*
@@ -41,6 +46,9 @@
  *   * USB USART
  *     * PB6: USART1 TX
  *     * PB7: USART1 RX
+ *   * DEBUG USART
+ *     * PA2: USART2 TX
+ *     * PA3: USART2 RX
  *   * +3V3
  *     * PB8 - turn on IRLML5103 transistor
  *   * Force DFU mode button: PA0
@@ -97,6 +105,26 @@
 /* For STM32F4 DMA trigger source must be specified */
 #define USBUSART_DMA_TRG DMA_SxCR_CHSEL_4
 
+#define DEBUGUSART               USART2
+#define DEBUGUSART_CR1           USART2_CR1
+#define DEBUGUSART_DR            USART2_DR
+#define DEBUGUSART_IRQ           NVIC_USART2_IRQ
+#define DEBUGUSART_CLK           RCC_USART2
+#define DEBUGUSART_PORT          GPIOA
+#define DEBUGUSART_TX_PIN        GPIO2
+#define DEBUGUSART_RX_PIN        GPIO3
+#define DEBUGUSART_ISR(x)        usart2_isr(x)
+#define DEBUGUSART_DMA_BUS       DMA1
+#define DEBUGUSART_DMA_CLK       RCC_DMA1
+#define DEBUGUSART_DMA_TX_CHAN   DMA_STREAM6
+#define DEBUGUSART_DMA_TX_IRQ    NVIC_DMA1_STREAM6_IRQ
+#define DEBUGUSART_DMA_TX_ISR(x) dma1_stream6_isr(x)
+#define DEBUGUSART_DMA_RX_CHAN   DMA_STREAM5
+#define DEBUGUSART_DMA_RX_IRQ    NVIC_DMA1_STREAM5_IRQ
+#define DEBUGUSART_DMA_RX_ISR(x) dma1_stream5_isr(x)
+/* For STM32F4 DMA trigger source must be specified. Channel 4 is selected, in line with the USART selected in the DMA table. */
+#define DEBUGUSART_DMA_TRG DMA_SxCR_CHSEL_4
+
 #define BOOTMAGIC0 UINT32_C(0xb007da7a)
 #define BOOTMAGIC1 UINT32_C(0xbaadfeed)
 
@@ -112,6 +140,12 @@
 		gpio_mode_setup(USBUSART_PORT, GPIO_MODE_AF, GPIO_PUPD_PULLUP, USBUSART_RX_PIN);            \
 		gpio_set_output_options(USBUSART_PORT, GPIO_OTYPE_OD, GPIO_OSPEED_100MHZ, USBUSART_RX_PIN); \
 		gpio_set_af(USBUSART_PORT, GPIO_AF7, USBUSART_RX_PIN);                                      \
+		gpio_mode_setup(DEBUGUSART_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, DEBUGUSART_TX_PIN);              \
+		gpio_set_output_options(DEBUGUSART_PORT, GPIO_OTYPE_PP, GPIO_OSPEED_100MHZ, DEBUGUSART_TX_PIN); \
+		gpio_set_af(DEBUGUSART_PORT, GPIO_AF7, DEBUGUSART_TX_PIN);                                      \
+		gpio_mode_setup(DEBUGUSART_PORT, GPIO_MODE_AF, GPIO_PUPD_PULLUP, DEBUGUSART_RX_PIN);            \
+		gpio_set_output_options(DEBUGUSART_PORT, GPIO_OTYPE_OD, GPIO_OSPEED_100MHZ, DEBUGUSART_RX_PIN); \
+		gpio_set_af(DEBUGUSART_PORT, GPIO_AF7, DEBUGUSART_RX_PIN);                                      \
 	} while (0)
 
 #define USB_DRIVER stm32f107_usb_driver
@@ -123,7 +157,9 @@
  */
 #define IRQ_PRI_USB          (1U << 4U)
 #define IRQ_PRI_USBUSART     (2U << 4U)
+#define IRQ_PRI_DEBUGUSART     (2U << 4U)
 #define IRQ_PRI_USBUSART_DMA (2U << 4U)
+#define IRQ_PRI_DEBUGUSART_DMA (2U << 4U)
 #define IRQ_PRI_TRACE        (0U << 4U)
 
 #define TRACE_TIM          TIM3

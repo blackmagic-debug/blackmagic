@@ -25,6 +25,15 @@
 #include "aux_serial.h"
 #include "morse.h"
 #include "exception.h"
+#include "platform.h"
+
+#include <libopencm3/cm3/nvic.h>
+#include <libopencm3/usb/usbd.h>
+#include <libopencm3/usb/cdc.h>
+
+#include "general.h"
+#include "usb_serial.h"
+#include "aux_serial.h"
 
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/cm3/scb.h>
@@ -37,8 +46,34 @@
 #include <libopencm3/cm3/cortex.h>
 #include <libopencm3/usb/dwc/otg_fs.h>
 
+#define dma_channel_reset(dma, channel)   dma_stream_reset(dma, channel)
+#define dma_enable_channel(dma, channel)  dma_enable_stream(dma, channel)
+#define dma_disable_channel(dma, channel) dma_disable_stream(dma, channel)
+
+#define DMA_PSIZE_8BIT DMA_SxCR_PSIZE_8BIT
+#define DMA_MSIZE_8BIT DMA_SxCR_MSIZE_8BIT
+#define DMA_PL_HIGH    DMA_SxCR_PL_HIGH
+#define DMA_CGIF       DMA_ISR_FLAGS
+
+#define PLATFORM_PRINTF printf
+
+int _write(int file, char *ptr, int len)
+{
+	int i;
+
+	if (file == 1) {
+		for (i = 0; i < len; i++)
+			usart_send_blocking(DEBUGUSART, ptr[i]);
+		return i;
+	}
+
+	// errno = EIO;
+	return -1;
+}
+
 jmp_buf fatal_error_jmpbuf;
 extern uint32_t _ebss; // NOLINT(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)
+void debug_serial_init(void);
 
 void platform_init(void)
 {
@@ -98,10 +133,97 @@ void platform_init(void)
 	platform_timing_init();
 	blackmagic_usb_init();
 	aux_serial_init();
+	debug_serial_init();
 
 	/* https://github.com/libopencm3/libopencm3/pull/1256#issuecomment-779424001 */
 	OTG_FS_GCCFG |= OTG_GCCFG_NOVBUSSENS | OTG_GCCFG_PWRDWN;
 	OTG_FS_GCCFG &= ~(OTG_GCCFG_VBUSBSEN | OTG_GCCFG_VBUSASEN);
+}
+
+void debug_serial_init(void)
+{
+	/* Enable clocks */
+	rcc_periph_clock_enable(DEBUGUSART_CLK);
+	rcc_periph_clock_enable(DEBUGUSART_DMA_CLK);
+
+	/* Setup UART parameters */
+	UART_PIN_SETUP();
+	usart_set_baudrate(DEBUGUSART, 115200);
+	usart_set_databits(DEBUGUSART, 8);
+	usart_set_stopbits(DEBUGUSART, USART_STOPBITS_1);
+	usart_set_mode(DEBUGUSART, USART_MODE_TX);
+	usart_set_parity(DEBUGUSART, USART_PARITY_NONE);
+	usart_set_flow_control(DEBUGUSART, USART_FLOWCONTROL_NONE);
+
+	/* Setup USART TX DMA */
+#if !defined(DEBUGUSART_TDR) && defined(DEBUGUSART_DR)
+#define DEBUGUSART_TDR DEBUGUSART_DR
+#elif !defined(DEBUGUSART_TDR)
+#define DEBUGUSART_TDR USART_DR(DEBUGUSART)
+#endif
+#if !defined(DEBUGUSART_RDR) && defined(DEBUGUSART_DR)
+#define DEBUGUSART_RDR DEBUGUSART_DR
+#elif !defined(DEBUGUSART_RDR)
+#define DEBUGUSART_RDR USART_DR(DEBUGUSART)
+#endif
+	dma_channel_reset(DEBUGUSART_DMA_BUS, DEBUGUSART_DMA_TX_CHAN);
+	dma_set_peripheral_address(DEBUGUSART_DMA_BUS, DEBUGUSART_DMA_TX_CHAN, (uintptr_t)&DEBUGUSART_TDR);
+	dma_enable_memory_increment_mode(DEBUGUSART_DMA_BUS, DEBUGUSART_DMA_TX_CHAN);
+	dma_set_peripheral_size(DEBUGUSART_DMA_BUS, DEBUGUSART_DMA_TX_CHAN, DMA_PSIZE_8BIT);
+	dma_set_memory_size(DEBUGUSART_DMA_BUS, DEBUGUSART_DMA_TX_CHAN, DMA_MSIZE_8BIT);
+	dma_set_priority(DEBUGUSART_DMA_BUS, DEBUGUSART_DMA_TX_CHAN, DMA_PL_HIGH);
+	dma_enable_transfer_complete_interrupt(DEBUGUSART_DMA_BUS, DEBUGUSART_DMA_TX_CHAN);
+#ifdef DMA_STREAM0
+	dma_set_transfer_mode(DEBUGUSART_DMA_BUS, DEBUGUSART_DMA_TX_CHAN, DMA_SxCR_DIR_MEM_TO_PERIPHERAL);
+	dma_channel_select(DEBUGUSART_DMA_BUS, DEBUGUSART_DMA_TX_CHAN, DEBUGUSART_DMA_TRG);
+	dma_set_dma_flow_control(DEBUGUSART_DMA_BUS, DEBUGUSART_DMA_TX_CHAN);
+	dma_enable_direct_mode(DEBUGUSART_DMA_BUS, DEBUGUSART_DMA_TX_CHAN);
+#else
+	dma_set_read_from_memory(DEBUGUSART_DMA_BUS, DEBUGUSART_DMA_TX_CHAN);
+#endif
+
+	// 	/* Setup USART RX DMA */
+	// 	dma_channel_reset(DEBUGUSART_DMA_BUS, DEBUGUSART_DMA_RX_CHAN);
+	// 	dma_set_peripheral_address(DEBUGUSART_DMA_BUS, DEBUGUSART_DMA_RX_CHAN, (uintptr_t)&DEBUGUSART_RDR);
+	// 	dma_set_memory_address(DEBUGUSART_DMA_BUS, DEBUGUSART_DMA_RX_CHAN, (uintptr_t)aux_serial_receive_buffer);
+	// 	dma_set_number_of_data(DEBUGUSART_DMA_BUS, DEBUGUSART_DMA_RX_CHAN, AUX_UART_BUFFER_SIZE);
+	// 	dma_enable_memory_increment_mode(DEBUGUSART_DMA_BUS, DEBUGUSART_DMA_RX_CHAN);
+	// 	dma_enable_circular_mode(DEBUGUSART_DMA_BUS, DEBUGUSART_DMA_RX_CHAN);
+	// 	dma_set_peripheral_size(DEBUGUSART_DMA_BUS, DEBUGUSART_DMA_RX_CHAN, DMA_PSIZE_8BIT);
+	// 	dma_set_memory_size(DEBUGUSART_DMA_BUS, DEBUGUSART_DMA_RX_CHAN, DMA_MSIZE_8BIT);
+	// 	dma_set_priority(DEBUGUSART_DMA_BUS, DEBUGUSART_DMA_RX_CHAN, DMA_PL_HIGH);
+	// 	dma_enable_half_transfer_interrupt(DEBUGUSART_DMA_BUS, DEBUGUSART_DMA_RX_CHAN);
+	// 	dma_enable_transfer_complete_interrupt(DEBUGUSART_DMA_BUS, DEBUGUSART_DMA_RX_CHAN);
+	// #ifdef DMA_STREAM0
+	// 	dma_set_transfer_mode(DEBUGUSART_DMA_BUS, DEBUGUSART_DMA_RX_CHAN, DMA_SxCR_DIR_PERIPHERAL_TO_MEM);
+	// 	dma_channel_select(DEBUGUSART_DMA_BUS, DEBUGUSART_DMA_RX_CHAN, DEBUGUSART_DMA_TRG);
+	// 	dma_set_dma_flow_control(DEBUGUSART_DMA_BUS, DEBUGUSART_DMA_RX_CHAN);
+	// 	dma_enable_direct_mode(DEBUGUSART_DMA_BUS, DEBUGUSART_DMA_RX_CHAN);
+	// #else
+	// 	dma_set_read_from_peripheral(DEBUGUSART_DMA_BUS, DEBUGUSART_DMA_RX_CHAN);
+	// #endif
+	// 	dma_enable_channel(DEBUGUSART_DMA_BUS, DEBUGUSART_DMA_RX_CHAN);
+
+	/* Enable interrupts */
+	nvic_set_priority(DEBUGUSART_IRQ, IRQ_PRI_DEBUGUSART);
+#if defined(DEBUGUSART_DMA_RXTX_IRQ)
+	nvic_set_priority(DEBUGUSART_DMA_RXTX_IRQ, IRQ_PRI_DEBUGUSART_DMA);
+#else
+	nvic_set_priority(DEBUGUSART_DMA_TX_IRQ, IRQ_PRI_DEBUGUSART_DMA);
+	// nvic_set_priority(DEBUGUSART_DMA_RX_IRQ, IRQ_PRI_DEBUGUSART_DMA);
+#endif
+	nvic_enable_irq(DEBUGUSART_IRQ);
+#if defined(DEBUGUSART_DMA_RXTX_IRQ)
+	nvic_enable_irq(DEBUGUSART_DMA_RXTX_IRQ);
+#else
+	nvic_enable_irq(DEBUGUSART_DMA_TX_IRQ);
+	// nvic_enable_irq(DEBUGUSART_DMA_RX_IRQ);
+#endif
+
+	/* Finally enable the USART */
+	usart_enable(DEBUGUSART);
+	usart_enable_tx_dma(DEBUGUSART);
+	// usart_enable_rx_dma(DEBUGUSART);
 }
 
 void platform_nrst_set_val(bool assert)
