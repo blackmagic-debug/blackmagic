@@ -610,22 +610,23 @@ static int stlink_write_dp_register(const uint16_t apsel, const uint16_t address
 uint32_t stlink_raw_access(adiv5_debug_port_s *dp, uint8_t rnw, uint16_t addr, uint32_t value)
 {
 	uint32_t response = 0;
-	int res;
-	if (rnw)
-		res = stlink_read_dp_register(addr < 0x100U ? STLINK_DEBUG_PORT : 0U, addr, &response);
-	else
-		res = stlink_write_dp_register(addr < 0x100U ? STLINK_DEBUG_PORT : 0U, addr, value);
+	const int result = rnw ? stlink_read_dp_register(addr < 0x100U ? STLINK_DEBUG_PORT : 0U, addr, &response) :
+							 stlink_write_dp_register(addr < 0x100U ? STLINK_DEBUG_PORT : 0U, addr, value);
 
-	if (res == STLINK_ERROR_WAIT)
-		raise_exception(EXCEPTION_TIMEOUT, "DP ACK timeout");
-
-	if (res == STLINK_ERROR_DP_FAULT) {
-		dp->fault = 1;
+	if (result == STLINK_ERROR_WAIT) {
+		DEBUG_ERROR("SWD access resulted in wait, aborting\n");
+		dp->fault = SWDP_ACK_WAIT;
 		return 0;
 	}
-	if (res == STLINK_ERROR_FAIL)
-		raise_exception(EXCEPTION_ERROR, "SWDP invalid ACK");
 
+	if (result == STLINK_ERROR_DP_FAULT || result == STLINK_ERROR_AP_FAULT) {
+		DEBUG_ERROR("SWD access resulted in fault\n");
+		dp->fault = SWDP_ACK_FAULT;
+		return 0;
+	}
+
+	if (result == STLINK_ERROR_FAIL)
+		raise_exception(EXCEPTION_ERROR, "SWDP invalid ACK");
 	return response;
 }
 
