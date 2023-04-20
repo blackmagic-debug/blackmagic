@@ -197,6 +197,12 @@ typedef struct stlink {
 	bool ap_error;
 } stlink_s;
 
+typedef struct stlink_simple_command {
+	uint8_t command;
+	uint8_t operation;
+	uint8_t reserved[14];
+} stlink_simple_command_s;
+
 typedef struct stlink_mem_command {
 	uint8_t command;
 	uint8_t operation;
@@ -214,6 +220,14 @@ int debug_level = 0;
 
 #define STLINK_ERROR_DP_FAULT (-2)
 #define STLINK_ERROR_AP_FAULT (-3)
+
+static stlink_simple_command_s stlink_simple_command(const uint8_t command, const uint8_t operation)
+{
+	return (stlink_simple_command_s){
+		.command = command,
+		.operation = operation,
+	};
+}
 
 static stlink_mem_command_s stlink_memory_access(
 	const uint8_t operation, const uint32_t address, const uint16_t length, const uint8_t apsel)
@@ -416,11 +430,9 @@ static int stlink_write_retry(const void *req_buffer, size_t req_len, const void
 static void stlink_version(void)
 {
 	if (stlink.ver_hw == 30) {
-		uint8_t cmd[16];
+		const stlink_simple_command_s command = stlink_simple_command(STLINK_APIV3_GET_VERSION_EX, 0);
 		uint8_t data[12];
-		memset(cmd, 0, sizeof(cmd));
-		cmd[0] = STLINK_APIV3_GET_VERSION_EX;
-		int size = bmda_usb_transfer(info.usb_link, cmd, 16, data, 12);
+		int size = bmda_usb_transfer(info.usb_link, &command, sizeof(command), data, 12);
 		if (size == -1)
 			DEBUG_WARN("[!] stlink_send_recv STLINK_APIV3_GET_VERSION_EX\n");
 
@@ -433,11 +445,9 @@ static void stlink_version(void)
 		stlink.vid = (data[3] << 9U) | data[8];
 		stlink.pid = (data[5] << 11U) | data[10];
 	} else {
-		uint8_t cmd[16];
+		const stlink_simple_command_s command = stlink_simple_command(STLINK_GET_VERSION, 0);
 		uint8_t data[6];
-		memset(cmd, 0, sizeof(cmd));
-		cmd[0] = STLINK_GET_VERSION;
-		int size = bmda_usb_transfer(info.usb_link, cmd, 16, data, 6);
+		int size = bmda_usb_transfer(info.usb_link, &command, sizeof(command), data, 6);
 		if (size == -1)
 			DEBUG_WARN("[!] stlink_send_recv STLINK_GET_VERSION_EX\n");
 		stlink.vid = (data[3] << 8U) | data[2];
