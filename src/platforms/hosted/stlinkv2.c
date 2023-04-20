@@ -578,7 +578,7 @@ bool stlink_init(void)
 		found = true;
 		break;
 	}
-	libusb_free_device_list(devs, cnt);
+	libusb_free_device_list(devs, (int)cnt);
 	if (!found)
 		return false;
 	if (info.vid != VENDOR_ID_STLINK)
@@ -880,14 +880,14 @@ static void stlink_mem_read(adiv5_access_port_s *ap, void *dest, uint32_t src, s
 	stlink_mem_command_s command = stlink_memory_access(type, src, len, ap->apsel);
 	int res = 0;
 	if (len > 1)
-		res = stlink_read_retry(&command.command, sizeof(command), dest, len);
+		res = stlink_read_retry(&command, sizeof(command), dest, len);
 	else {
 		/*
 		 * Due to an artefact of how the ST-Link protocol works (minimum read size is 2),
 		 * a single byte read must be done into a 2 byte buffer
 		 */
 		uint8_t buffer[2];
-		res = stlink_read_retry(&command.command, sizeof(command), buffer, sizeof(buffer));
+		res = stlink_read_retry(&command, sizeof(command), buffer, sizeof(buffer));
 		/* But we only want and need to keep a single byte from this */
 		memcpy(dest, buffer, 1);
 	}
@@ -930,7 +930,7 @@ static void stlink_mem_write(
 			break;
 		}
 		/* And perform the block write */
-		stlink_write_retry(&command.command, sizeof(command), data + offset, amount);
+		stlink_write_retry(&command, sizeof(command), data + offset, amount);
 	}
 }
 
