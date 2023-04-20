@@ -194,6 +194,15 @@ typedef struct stlink_arm_reg_read {
 	uint8_t reserved[12];
 } stlink_arm_reg_read_s;
 
+typedef struct stlink_arm_reg_write {
+	uint8_t command;
+	uint8_t operation;
+	uint8_t reg_num;
+	uint8_t value[4];
+	uint8_t apsel;
+	uint8_t reserved[8];
+} stlink_arm_reg_write_s;
+
 typedef struct stlink_mem_command {
 	uint8_t command;
 	uint8_t operation;
