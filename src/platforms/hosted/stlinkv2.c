@@ -847,15 +847,13 @@ uint32_t stlink_swdp_scan(void)
 
 	stlink_leave_state();
 
-	uint8_t cmd[16];
+	const stlink_simple_request_s command = {
+		.command = STLINK_DEBUG_COMMAND,
+		.operation = STLINK_DEBUG_APIV2_ENTER,
+		.param = STLINK_DEBUG_ENTER_SWD_NO_RESET,
+	};
 	uint8_t data[2];
-	memset(cmd, 0, sizeof(cmd));
-	cmd[0] = STLINK_DEBUG_COMMAND;
-	cmd[1] = STLINK_DEBUG_APIV2_ENTER;
-	cmd[2] = STLINK_DEBUG_ENTER_SWD_NO_RESET;
-
-	stlink_send_recv_retry(cmd, 16, data, 2);
-
+	stlink_send_recv_retry(&command, sizeof(command), data, sizeof(data));
 	if (stlink_usb_error_check(data, true))
 		return 0;
 
@@ -871,9 +869,7 @@ uint32_t stlink_swdp_scan(void)
 	dp->abort = stlink_dp_abort;
 
 	adiv5_dp_error(dp);
-
 	adiv5_dp_init(dp, 0);
-
 	return target_list ? 1U : 0U;
 }
 
