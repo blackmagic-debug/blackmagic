@@ -423,6 +423,12 @@ static int stlink_write_retry(const void *req_buffer, size_t req_len, const void
 	return res;
 }
 
+static int stlink_simple_query(const uint8_t command, const uint8_t operation, void *rx_buffer, size_t rx_len)
+{
+	const stlink_simple_command_s request = stlink_simple_command(command, operation);
+	return bmda_usb_transfer(info.usb_link, &request, sizeof(request), rx_buffer, rx_len);
+}
+
 /*
  * Version data is at 0x080103f8 with STLINKV3 bootloader flashed with
  * STLinkUpgrade_v3[3|5].jar
@@ -430,9 +436,8 @@ static int stlink_write_retry(const void *req_buffer, size_t req_len, const void
 static void stlink_version(void)
 {
 	if (stlink.ver_hw == 30) {
-		const stlink_simple_command_s command = stlink_simple_command(STLINK_APIV3_GET_VERSION_EX, 0);
 		uint8_t data[12];
-		int size = bmda_usb_transfer(info.usb_link, &command, sizeof(command), data, 12);
+		int size = stlink_simple_query(STLINK_APIV3_GET_VERSION_EX, 0, data, sizeof(data));
 		if (size == -1)
 			DEBUG_WARN("[!] stlink_send_recv STLINK_APIV3_GET_VERSION_EX\n");
 
@@ -445,9 +450,8 @@ static void stlink_version(void)
 		stlink.vid = (data[3] << 9U) | data[8];
 		stlink.pid = (data[5] << 11U) | data[10];
 	} else {
-		const stlink_simple_command_s command = stlink_simple_command(STLINK_GET_VERSION, 0);
 		uint8_t data[6];
-		int size = bmda_usb_transfer(info.usb_link, &command, sizeof(command), data, 6);
+		int size = stlink_simple_query(STLINK_GET_VERSION, 0, data, sizeof(data));
 		if (size == -1)
 			DEBUG_WARN("[!] stlink_send_recv STLINK_GET_VERSION_EX\n");
 		stlink.vid = (data[3] << 8U) | data[2];
@@ -473,31 +477,19 @@ static void stlink_version(void)
 
 static bool stlink_leave_state(void)
 {
-	uint8_t cmd[16];
 	uint8_t data[2];
-	memset(cmd, 0, sizeof(cmd));
-	cmd[0] = STLINK_GET_CURRENT_MODE;
-	bmda_usb_transfer(info.usb_link, cmd, 16, data, 2);
+	stlink_simple_query(STLINK_GET_CURRENT_MODE, 0, data, sizeof(data));
 	if (data[0] == STLINK_DEV_DFU_MODE) {
 		DEBUG_INFO("Leaving DFU Mode\n");
-		memset(cmd, 0, sizeof(cmd));
-		cmd[0] = STLINK_DFU_COMMAND;
-		cmd[1] = STLINK_DFU_EXIT;
-		bmda_usb_transfer(info.usb_link, cmd, 16, NULL, 0);
+		stlink_simple_query(STLINK_DFU_COMMAND, STLINK_DFU_EXIT, NULL, 0);
 		return true;
 	}
 	if (data[0] == STLINK_DEV_SWIM_MODE) {
 		DEBUG_INFO("Leaving SWIM Mode\n");
-		memset(cmd, 0, sizeof(cmd));
-		cmd[0] = STLINK_SWIM_COMMAND;
-		cmd[1] = STLINK_SWIM_EXIT;
-		bmda_usb_transfer(info.usb_link, cmd, 16, NULL, 0);
+		stlink_simple_query(STLINK_SWIM_COMMAND, STLINK_SWIM_EXIT, NULL, 0);
 	} else if (data[0] == STLINK_DEV_DEBUG_MODE) {
 		DEBUG_INFO("Leaving DEBUG Mode\n");
-		memset(cmd, 0, sizeof(cmd));
-		cmd[0] = STLINK_DEBUG_COMMAND;
-		cmd[1] = STLINK_DEBUG_EXIT;
-		bmda_usb_transfer(info.usb_link, cmd, 16, NULL, 0);
+		stlink_simple_query(STLINK_DEBUG_COMMAND, STLINK_DEBUG_EXIT, NULL, 0);
 	} else if (data[0] == STLINK_DEV_BOOTLOADER_MODE)
 		DEBUG_INFO("Leaving BOOTLOADER Mode\n");
 	else if (data[0] == STLINK_DEV_MASS_MODE)
