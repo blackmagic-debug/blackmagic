@@ -31,8 +31,8 @@
 #include "adiv5.h"
 #include "bmp_hosted.h"
 #include "stlinkv2.h"
+#include "stlinkv2_protocol.h"
 #include "exception.h"
-#include "jtag_devs.h"
 #include "target.h"
 #include "cortexm.h"
 #include "target_internal.h"
@@ -45,134 +45,6 @@
 #include <sys/time.h>
 
 #include "cli.h"
-
-#define STLINK_SWIM_ERR_OK             0x00U
-#define STLINK_SWIM_BUSY               0x01U
-#define STLINK_DEBUG_ERR_OK            0x80U
-#define STLINK_DEBUG_ERR_FAULT         0x81U
-#define STLINK_JTAG_UNKNOWN_JTAG_CHAIN 0x04U
-#define STLINK_NO_DEVICE_CONNECTED     0x05U
-#define STLINK_JTAG_COMMAND_ERROR      0x08U
-#define STLINK_JTAG_COMMAND_ERROR      0x08U
-#define STLINK_JTAG_GET_IDCODE_ERROR   0x09U
-#define STLINK_JTAG_DBG_POWER_ERROR    0x0bU
-#define STLINK_SWD_AP_WAIT             0x10U
-#define STLINK_SWD_AP_FAULT            0x11U
-#define STLINK_SWD_AP_ERROR            0x12U
-#define STLINK_SWD_AP_PARITY_ERROR     0x13U
-#define STLINK_JTAG_WRITE_ERROR        0x0cU
-#define STLINK_JTAG_WRITE_VERIF_ERROR  0x0dU
-#define STLINK_SWD_DP_WAIT             0x14U
-#define STLINK_SWD_DP_FAULT            0x15U
-#define STLINK_SWD_DP_ERROR            0x16U
-#define STLINK_SWD_DP_PARITY_ERROR     0x17U
-
-#define STLINK_SWD_AP_WDATA_ERROR      0x18U
-#define STLINK_SWD_AP_STICKY_ERROR     0x19U
-#define STLINK_SWD_AP_STICKYORUN_ERROR 0x1aU
-#define STLINK_BAD_AP_ERROR            0x1dU
-#define STLINK_TOO_MANY_AP_ERROR       0x29U
-#define STLINK_JTAG_UNKNOWN_CMD        0x42U
-
-#define STLINK_CORE_RUNNING      0x80U
-#define STLINK_CORE_HALTED       0x81U
-#define STLINK_CORE_STAT_UNKNOWN (-1)
-
-#define STLINK_GET_VERSION        0xf1U
-#define STLINK_DEBUG_COMMAND      0xf2U
-#define STLINK_DFU_COMMAND        0xf3U
-#define STLINK_SWIM_COMMAND       0xf4U
-#define STLINK_GET_CURRENT_MODE   0xf5U
-#define STLINK_GET_TARGET_VOLTAGE 0xf7U
-
-#define STLINK_DEV_DFU_MODE        0x00U
-#define STLINK_DEV_MASS_MODE       0x01U
-#define STLINK_DEV_DEBUG_MODE      0x02U
-#define STLINK_DEV_SWIM_MODE       0x03U
-#define STLINK_DEV_BOOTLOADER_MODE 0x04U
-#define STLINK_DEV_UNKNOWN_MODE    (-1)
-
-#define STLINK_DFU_EXIT 0x07U
-
-#define STLINK_SWIM_ENTER          0x00U
-#define STLINK_SWIM_EXIT           0x01U
-#define STLINK_SWIM_READ_CAP       0x02U
-#define STLINK_SWIM_SPEED          0x03U
-#define STLINK_SWIM_ENTER_SEQ      0x04U
-#define STLINK_SWIM_GEN_RST        0x05U
-#define STLINK_SWIM_RESET          0x06U
-#define STLINK_SWIM_ASSERT_RESET   0x07U
-#define STLINK_SWIM_DEASSERT_RESET 0x08U
-#define STLINK_SWIM_READSTATUS     0x09U
-#define STLINK_SWIM_WRITEMEM       0x0aU
-#define STLINK_SWIM_READMEM        0x0bU
-#define STLINK_SWIM_READBUF        0x0cU
-
-#define STLINK_DEBUG_GETSTATUS           0x01U
-#define STLINK_DEBUG_FORCEDEBUG          0x02U
-#define STLINK_DEBUG_APIV1_RESETSYS      0x03U
-#define STLINK_DEBUG_APIV1_READALLREGS   0x04U
-#define STLINK_DEBUG_APIV1_READREG       0x05U
-#define STLINK_DEBUG_APIV1_WRITEREG      0x06U
-#define STLINK_DEBUG_READMEM_32BIT       0x07U
-#define STLINK_DEBUG_WRITEMEM_32BIT      0x08U
-#define STLINK_DEBUG_RUNCORE             0x09U
-#define STLINK_DEBUG_STEPCORE            0x0aU
-#define STLINK_DEBUG_APIV1_SETFP         0x0bU
-#define STLINK_DEBUG_READMEM_8BIT        0x0cU
-#define STLINK_DEBUG_WRITEMEM_8BIT       0x0dU
-#define STLINK_DEBUG_APIV1_CLEARFP       0x0eU
-#define STLINK_DEBUG_APIV1_WRITEDEBUGREG 0x0fU
-#define STLINK_DEBUG_APIV1_SETWATCHPOINT 0x10U
-
-#define STLINK_DEBUG_ENTER_JTAG_RESET    0x00U
-#define STLINK_DEBUG_ENTER_SWD_NO_RESET  0xa3U
-#define STLINK_DEBUG_ENTER_JTAG_NO_RESET 0xa4U
-
-#define STLINK_DEBUG_APIV1_ENTER 0x20U
-#define STLINK_DEBUG_EXIT        0x21U
-#define STLINK_DEBUG_READCOREID  0x22U
-
-#define STLINK_DEBUG_APIV2_ENTER         0x30U
-#define STLINK_DEBUG_APIV2_READ_IDCODES  0x31U
-#define STLINK_DEBUG_APIV2_RESETSYS      0x32U
-#define STLINK_DEBUG_APIV2_READREG       0x33U
-#define STLINK_DEBUG_APIV2_WRITEREG      0x34U
-#define STLINK_DEBUG_APIV2_WRITEDEBUGREG 0x35U
-#define STLINK_DEBUG_APIV2_READDEBUGREG  0x36U
-
-#define STLINK_DEBUG_APIV2_READALLREGS     0x3aU
-#define STLINK_DEBUG_APIV2_GETLASTRWSTATUS 0x3bU
-#define STLINK_DEBUG_APIV2_DRIVE_NRST      0x3cU
-
-#define STLINK_DEBUG_APIV2_GETLASTRWSTATUS2 0x3eU
-
-#define STLINK_DEBUG_APIV2_START_TRACE_RX 0x40U
-#define STLINK_DEBUG_APIV2_STOP_TRACE_RX  0x41U
-#define STLINK_DEBUG_APIV2_GET_TRACE_NB   0x42U
-#define STLINK_DEBUG_APIV2_SWD_SET_FREQ   0x43U
-#define STLINK_DEBUG_APIV2_JTAG_SET_FREQ  0x44U
-#define STLINK_DEBUG_APIV2_READ_DAP_REG   0x45U
-#define STLINK_DEBUG_APIV2_WRITE_DAP_REG  0x46U
-#define STLINK_DEBUG_APIV2_READMEM_16BIT  0x47U
-#define STLINK_DEBUG_APIV2_WRITEMEM_16BIT 0x48U
-
-#define STLINK_DEBUG_APIV2_INIT_AP      0x4bU
-#define STLINK_DEBUG_APIV2_CLOSE_AP_DBG 0x4cU
-
-#define STLINK_APIV3_SET_COM_FREQ 0x61U
-#define STLINK_APIV3_GET_COM_FREQ 0x62U
-
-#define STLINK_APIV3_GET_VERSION_EX 0xfbU
-
-#define STLINK_DEBUG_APIV2_DRIVE_NRST_LOW   0x00U
-#define STLINK_DEBUG_APIV2_DRIVE_NRST_HIGH  0x01U
-#define STLINK_DEBUG_APIV2_DRIVE_NRST_PULSE 0x02U
-
-#define STLINK_TRACE_SIZE   4096U
-#define STLINK_TRACE_MAX_HZ 2000000U
-
-#define STLINK_V3_MAX_FREQ_NB 10U
 
 typedef enum transport_mode {
 	STLINK_MODE_SWD = 0,
@@ -245,7 +117,7 @@ static stlink_mem_command_s stlink_memory_access(
  * Converts an ST-Link status code held in the first byte of a response to
  * readable error
  */
-static int stlink_usb_error_check(uint8_t *data, bool verbose)
+int stlink_usb_error_check(uint8_t *const data, const bool verbose)
 {
 	switch (data[0]) {
 	case STLINK_DEBUG_ERR_OK:
@@ -383,7 +255,8 @@ static int stlink_send_recv_retry(const void *req_buffer, size_t req_len, void *
 	return res;
 }
 
-static int stlink_read_retry(const void *req_buffer, size_t req_len, void *rx_buffer, size_t rx_len)
+static int stlink_read_retry(
+	const void *const req_buffer, const size_t req_len, void *const rx_buffer, const size_t rx_len)
 {
 	uint32_t start = platform_time_ms();
 	int res;
@@ -402,7 +275,8 @@ static int stlink_read_retry(const void *req_buffer, size_t req_len, void *rx_bu
 	return res;
 }
 
-static int stlink_write_retry(const void *req_buffer, size_t req_len, const void *tx_buffer, size_t tx_len)
+static int stlink_write_retry(
+	const void *const req_buffer, const size_t req_len, const void *const tx_buffer, const size_t tx_len)
 {
 	uint32_t start = platform_time_ms();
 	int res;
@@ -422,7 +296,7 @@ static int stlink_write_retry(const void *req_buffer, size_t req_len, const void
 	return res;
 }
 
-static int stlink_simple_query(const uint8_t command, const uint8_t operation, void *rx_buffer, size_t rx_len)
+int stlink_simple_query(const uint8_t command, const uint8_t operation, void *const rx_buffer, const size_t rx_len)
 {
 	const stlink_simple_command_s request = {
 		.command = command,
@@ -431,8 +305,8 @@ static int stlink_simple_query(const uint8_t command, const uint8_t operation, v
 	return bmda_usb_transfer(info.usb_link, &request, sizeof(request), rx_buffer, rx_len);
 }
 
-static int stlink_simple_request(
-	const uint8_t command, const uint8_t operation, const uint8_t param, void *rx_buffer, size_t rx_len)
+int stlink_simple_request(
+	const uint8_t command, const uint8_t operation, const uint8_t param, void *const rx_buffer, const size_t rx_len)
 {
 	const stlink_simple_request_s request = {
 		.command = command,
@@ -488,7 +362,7 @@ static void stlink_version(void)
 	DEBUG_INFO("\n");
 }
 
-static bool stlink_leave_state(void)
+bool stlink_leave_state(void)
 {
 	uint8_t data[2];
 	stlink_simple_query(STLINK_GET_CURRENT_MODE, 0, data, sizeof(data));
@@ -677,26 +551,6 @@ bool stlink_nrst_get_val(void)
 int stlink_hwversion(void)
 {
 	return stlink.ver_stlink;
-}
-
-static int stlink_enter_debug_jtag(void)
-{
-	stlink_leave_state();
-	uint8_t data[2];
-	stlink_simple_request(
-		STLINK_DEBUG_COMMAND, STLINK_DEBUG_APIV2_ENTER, STLINK_DEBUG_ENTER_JTAG_NO_RESET, data, sizeof(data));
-	return stlink_usb_error_check(data, true);
-}
-
-static size_t stlink_read_idcodes(uint32_t *idcodes)
-{
-	uint8_t data[12];
-	stlink_simple_query(STLINK_DEBUG_COMMAND, STLINK_DEBUG_APIV2_READ_IDCODES, data, sizeof(data));
-	if (stlink_usb_error_check(data, true))
-		return 0;
-	idcodes[0] = data[4] | (data[5] << 8U) | (data[6] << 16U) | (data[7] << 24U);
-	idcodes[1] = data[8] | (data[9] << 8U) | (data[10] << 16U) | (data[11] << 24U);
-	return 2;
 }
 
 uint32_t stlink_dp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value);
@@ -965,32 +819,6 @@ static uint32_t stlink_ap_read(adiv5_access_port_s *ap, uint16_t addr)
 	uint32_t ret = 0;
 	stlink_read_dp_register(ap->apsel, addr, &ret);
 	return ret;
-}
-
-uint32_t jtag_scan_stlinkv2(void)
-{
-	uint32_t idcodes[JTAG_MAX_DEVS];
-	target_list_free();
-
-	jtag_dev_count = 0;
-	memset(jtag_devs, 0, sizeof(jtag_devs));
-	if (stlink_enter_debug_jtag())
-		return 0;
-	jtag_dev_count = stlink_read_idcodes(idcodes);
-	/* Check for known devices and handle accordingly */
-	for (uint32_t i = 0; i < jtag_dev_count; ++i)
-		jtag_devs[i].jd_idcode = idcodes[i];
-
-	for (uint32_t i = 0; i < jtag_dev_count; ++i) {
-		for (size_t j = 0; dev_descr[j].idcode; ++j) {
-			if ((jtag_devs[i].jd_idcode & dev_descr[j].idmask) == dev_descr[j].idcode) {
-				if (dev_descr[j].handler)
-					dev_descr[j].handler(i);
-				break;
-			}
-		}
-	}
-	return jtag_dev_count;
 }
 
 void stlink_jtag_dp_init(adiv5_debug_port_s *dp)
