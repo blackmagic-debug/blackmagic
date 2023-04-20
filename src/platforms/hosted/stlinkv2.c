@@ -203,6 +203,13 @@ typedef struct stlink_simple_command {
 	uint8_t reserved[14];
 } stlink_simple_command_s;
 
+typedef struct stlink_simple_request {
+	uint8_t command;
+	uint8_t operation;
+	uint8_t param;
+	uint8_t reserved[13];
+} stlink_simple_request_s;
+
 typedef struct stlink_mem_command {
 	uint8_t command;
 	uint8_t operation;
@@ -220,14 +227,6 @@ int debug_level = 0;
 
 #define STLINK_ERROR_DP_FAULT (-2)
 #define STLINK_ERROR_AP_FAULT (-3)
-
-static stlink_simple_command_s stlink_simple_command(const uint8_t command, const uint8_t operation)
-{
-	return (stlink_simple_command_s){
-		.command = command,
-		.operation = operation,
-	};
-}
 
 static stlink_mem_command_s stlink_memory_access(
 	const uint8_t operation, const uint32_t address, const uint16_t length, const uint8_t apsel)
@@ -425,7 +424,21 @@ static int stlink_write_retry(const void *req_buffer, size_t req_len, const void
 
 static int stlink_simple_query(const uint8_t command, const uint8_t operation, void *rx_buffer, size_t rx_len)
 {
-	const stlink_simple_command_s request = stlink_simple_command(command, operation);
+	const stlink_simple_command_s request = {
+		.command = command,
+		.operation = operation,
+	};
+	return bmda_usb_transfer(info.usb_link, &request, sizeof(request), rx_buffer, rx_len);
+}
+
+static int stlink_simple_request(
+	const uint8_t command, const uint8_t operation, const uint8_t param, void *rx_buffer, size_t rx_len)
+{
+	const stlink_simple_request_s request = {
+		.command = command,
+		.operation = operation,
+		.param = param,
+	};
 	return bmda_usb_transfer(info.usb_link, &request, sizeof(request), rx_buffer, rx_len);
 }
 
@@ -647,16 +660,12 @@ bool stlink_init(void)
 	return true;
 }
 
-void stlink_nrst_set_val(bmp_info_s *info, bool assert)
+void stlink_nrst_set_val(bool assert)
 {
-	uint8_t cmd[16];
 	uint8_t data[2];
-	memset(cmd, 0, sizeof(cmd));
-	cmd[0] = STLINK_DEBUG_COMMAND;
-	cmd[1] = STLINK_DEBUG_APIV2_DRIVE_NRST;
-	cmd[2] = assert ? STLINK_DEBUG_APIV2_DRIVE_NRST_LOW : STLINK_DEBUG_APIV2_DRIVE_NRST_HIGH;
+	stlink_simple_request(STLINK_DEBUG_COMMAND, STLINK_DEBUG_APIV2_DRIVE_NRST,
+		assert ? STLINK_DEBUG_APIV2_DRIVE_NRST_LOW : STLINK_DEBUG_APIV2_DRIVE_NRST_HIGH, data, sizeof(data));
 	stlink.nrst = assert;
-	bmda_usb_transfer(info->usb_link, cmd, 16, data, 2);
 	stlink_usb_error_check(data, true);
 }
 
