@@ -499,13 +499,10 @@ static bool stlink_leave_state(void)
 	return false;
 }
 
-const char *stlink_target_voltage(bmp_info_s *info)
+const char *stlink_target_voltage(void)
 {
-	uint8_t cmd[16];
 	uint8_t data[8];
-	memset(cmd, 0, sizeof(cmd));
-	cmd[0] = STLINK_GET_TARGET_VOLTAGE;
-	bmda_usb_transfer(info->usb_link, cmd, 16, data, 8);
+	stlink_simple_query(STLINK_GET_TARGET_VOLTAGE, 0, data, sizeof(data));
 	uint16_t adc[2];
 	adc[0] = data[0] | (data[1] << 8U); /* Calibration value? */
 	adc[1] = data[4] | (data[5] << 8U); /* Measured value?*/

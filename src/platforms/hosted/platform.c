@@ -300,7 +300,7 @@ const char *platform_target_voltage(void)
 		return remote_target_voltage();
 
 	case BMP_TYPE_STLINKV2:
-		return stlink_target_voltage(&info);
+		return stlink_target_voltage();
 
 	case BMP_TYPE_LIBFTDI:
 		return libftdi_target_voltage();
