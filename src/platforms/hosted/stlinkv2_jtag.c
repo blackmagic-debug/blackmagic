@@ -73,3 +73,10 @@ static size_t stlink_read_idcodes(uint32_t *idcodes)
 	idcodes[1] = data[8] | (data[9] << 8U) | (data[10] << 16U) | (data[11] << 24U);
 	return STLINK_JTAG_MAX_DEVS;
 }
+
+void stlink_jtag_dp_init(adiv5_debug_port_s *dp)
+{
+	dp->error = stlink_dp_error;
+	dp->low_access = stlink_dp_low_access;
+	dp->abort = stlink_dp_abort;
+}
