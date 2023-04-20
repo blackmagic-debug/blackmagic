@@ -2,6 +2,8 @@
  * This file is part of the Black Magic Debug project.
  *
  * Copyright (C) 2019 Uwe Bonnes
+ * Copyright (C) 2022-2023 1BitSquared <info@1bitsquared.com>
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,69 +30,6 @@
 
 #define STLINK_DEBUG_PORT_ACCESS 0xffffU
 
-#if HOSTED_BMP_ONLY == 1
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-
-bool stlink_init(void)
-{
-	return false;
-}
-
-int stlink_hwversion(void)
-{
-	return -1;
-}
-
-const char *stlink_target_voltage(void)
-{
-	return "ERROR";
-}
-
-void stlink_nrst_set_val(bool assert)
-{
-	(void)assert;
-}
-
-bool stlink_nrst_get_val(void)
-{
-	return true;
-}
-
-uint32_t stlink_swdp_scan(void)
-{
-	return 0;
-}
-
-void stlink_adiv5_dp_defaults(adiv5_debug_port_s *dp)
-{
-}
-
-void stlink_jtag_dp_init(adiv5_debug_port_s *dp)
-{
-	(void)dp;
-}
-
-uint32_t jtag_scan_stlinkv2(void)
-{
-	return 0;
-}
-
-void stlink_exit_function(bmp_info_s *info)
-{
-}
-
-void stlink_max_frequency_set(bmp_info_s *info, uint32_t freq)
-{
-}
-
-uint32_t stlink_max_frequency_get(bmp_info_s *info)
-{
-	return 0;
-}
-
-#pragma GCC diagnostic pop
-#else
 bool stlink_init(void);
 int stlink_hwversion(void);
 const char *stlink_target_voltage(void);
@@ -103,6 +42,5 @@ uint32_t jtag_scan_stlinkv2(void);
 void stlink_exit_function(bmp_info_s *info);
 void stlink_max_frequency_set(bmp_info_s *info, uint32_t freq);
 uint32_t stlink_max_frequency_get(bmp_info_s *info);
-#endif
 
 #endif /* PLATFORMS_HOSTED_STLINKV2_H */
