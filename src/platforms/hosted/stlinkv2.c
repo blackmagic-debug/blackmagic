@@ -821,16 +821,11 @@ static bool stlink_ap_setup(const uint8_t ap)
 	return !res;
 }
 
-static void stlink_ap_cleanup(int ap)
+static void stlink_ap_cleanup(const uint8_t ap)
 {
-	uint8_t cmd[16];
-	memset(cmd, 0, sizeof(cmd));
-	cmd[0] = STLINK_DEBUG_COMMAND;
-	cmd[1] = STLINK_DEBUG_APIV2_CLOSE_AP_DBG;
-	cmd[2] = ap;
 	uint8_t data[2];
-	bmda_usb_transfer(info.usb_link, cmd, 16, data, 2);
-	DEBUG_PROBE("Close AP %d\n", ap);
+	stlink_simple_request(STLINK_DEBUG_COMMAND, STLINK_DEBUG_APIV2_CLOSE_AP_DBG, ap, data, sizeof(data));
+	DEBUG_PROBE("%s: AP %u\n", __func__, ap);
 	stlink_usb_error_check(data, true);
 }
 
