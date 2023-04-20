@@ -76,6 +76,10 @@ int debug_level = 0;
 #define STLINK_ERROR_DP_FAULT (-2)
 #define STLINK_ERROR_AP_FAULT (-3)
 
+#define V2_USED_SWD_CYCLES 20U
+#define V2_CYCLES_PER_CNT  20U
+#define V2_CLOCK_RATE      (72U * 1000U * 1000U)
+
 static stlink_mem_command_s stlink_memory_access(
 	const uint8_t operation, const uint32_t address, const uint16_t length, const uint8_t apsel)
 {
@@ -809,9 +813,6 @@ void stlink_adiv5_dp_defaults(adiv5_debug_port_s *dp)
 	dp->mem_write = stlink_mem_write;
 }
 
-#define V2_USED_SWD_CYCLES 20U
-#define V2_CYCLES_PER_CNT  20U
-#define V2_CLOCK_RATE      (72U * 1000U * 1000U)
 /* Above values reproduce the known values for V2
 #include <stdio.h>
 
