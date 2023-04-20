@@ -158,7 +158,7 @@ uint32_t platform_adiv5_swdp_scan(uint32_t targetid)
 
 #if HOSTED_BMP_ONLY == 0
 	case BMP_TYPE_STLINKV2:
-		return stlink_swdp_scan();
+		return stlink_swd_scan();
 
 	case BMP_TYPE_JLINK:
 		return jlink_swdp_scan(&info);

@@ -31,7 +31,7 @@
 #define STLINK_DEBUG_PORT_ACCESS 0xffffU
 
 bool stlink_init(void);
-uint32_t stlink_swdp_scan(void);
+uint32_t stlink_swd_scan(void);
 uint32_t stlink_jtag_scan(void);
 int stlink_hwversion(void);
 const char *stlink_target_voltage(void);

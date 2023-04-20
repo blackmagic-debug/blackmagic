@@ -99,7 +99,7 @@ SRC += protocol_v1.c protocol_v1_adiv5.c protocol_v2.c
 SRC += protocol_v3.c protocol_v3_adiv5.c
 SRC += bmp_remote.c
 ifneq ($(HOSTED_BMP_ONLY), 1)
-    SRC += bmp_libusb.c stlinkv2.c stlinkv2_jtag.c
+    SRC += bmp_libusb.c stlinkv2.c stlinkv2_jtag.c stlinkv2_swd.c
     SRC += ftdi_bmp.c libftdi_swdptap.c libftdi_jtagtap.c
     SRC += jlink.c jlink_adiv5_swdp.c jlink_jtagtap.c
 else
