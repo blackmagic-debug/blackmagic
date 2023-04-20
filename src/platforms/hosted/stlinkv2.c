@@ -587,27 +587,23 @@ static int stlink_read_dp_register(const uint16_t apsel, const uint16_t address,
 	return result;
 }
 
-static int stlink_write_dp_register(uint16_t port, uint16_t addr, uint32_t val)
+static int stlink_write_dp_register(const uint16_t apsel, const uint16_t address, const uint32_t value)
 {
-	if (port == STLINK_DEBUG_PORT_ACCESS && addr == 8U) {
-		stlink.dap_select = val;
-		DEBUG_PROBE("Caching SELECT 0x%02" PRIx32 "\n", val);
+	if (apsel == STLINK_DEBUG_PORT && address == 8U) {
+		stlink.dap_select = value;
+		DEBUG_PROBE("Caching SELECT 0x%02" PRIx32 "\n", value);
 		return STLINK_ERROR_OK;
 	}
-	uint8_t cmd[16];
-	memset(cmd, 0, sizeof(cmd));
-	cmd[0] = STLINK_DEBUG_COMMAND;
-	cmd[1] = STLINK_DEBUG_APIV2_WRITE_DAP_REG;
-	cmd[2] = port & 0xffU;
-	cmd[3] = port >> 8U;
-	cmd[4] = addr & 0xffU;
-	cmd[5] = addr >> 8U;
-	cmd[6] = val & 0xffU;
-	cmd[7] = (val >> 8U) & 0xffU;
-	cmd[8] = (val >> 16U) & 0xffU;
-	cmd[9] = (val >> 24U) & 0xffU;
+
+	stlink_adiv5_reg_write_s request = {
+		.command = STLINK_DEBUG_COMMAND,
+		.operation = STLINK_DEBUG_APIV2_WRITE_DAP_REG,
+	};
+	write_le2(request.apsel, 0, apsel);
+	write_le2(request.address, 0, address);
+	write_le4(request.value, 0, value);
 	uint8_t data[2];
-	stlink_send_recv_retry(cmd, 16, data, 2);
+	stlink_send_recv_retry(&request, sizeof(request), data, sizeof(data));
 	return stlink_usb_error_check(data, true);
 }
 
@@ -618,7 +614,7 @@ uint32_t stlink_raw_access(adiv5_debug_port_s *dp, uint8_t rnw, uint16_t addr, u
 	if (rnw)
 		res = stlink_read_dp_register(addr < 0x100U ? STLINK_DEBUG_PORT : 0U, addr, &response);
 	else
-		res = stlink_write_dp_register(addr < 0x100U ? STLINK_DEBUG_PORT_ACCESS : 0, addr, value);
+		res = stlink_write_dp_register(addr < 0x100U ? STLINK_DEBUG_PORT : 0U, addr, value);
 
 	if (res == STLINK_ERROR_WAIT)
 		raise_exception(EXCEPTION_TIMEOUT, "DP ACK timeout");
