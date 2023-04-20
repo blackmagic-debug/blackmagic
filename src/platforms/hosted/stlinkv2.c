@@ -514,14 +514,10 @@ const char *stlink_target_voltage(void)
 	return res;
 }
 
-static void stlink_resetsys(void)
+static void stlink_reset_adaptor(void)
 {
-	uint8_t cmd[16];
 	uint8_t data[2];
-	memset(cmd, 0, sizeof(cmd));
-	cmd[0] = STLINK_DEBUG_COMMAND;
-	cmd[1] = STLINK_DEBUG_APIV2_RESETSYS;
-	bmda_usb_transfer(info.usb_link, cmd, 16, data, 2);
+	stlink_simple_query(STLINK_DEBUG_COMMAND, STLINK_DEBUG_APIV2_RESETSYS, data, sizeof(data));
 }
 
 bool stlink_init(void)
@@ -647,7 +643,7 @@ bool stlink_init(void)
 		DEBUG_WARN("ST-Link board was in DFU mode. Restart\n");
 		return false;
 	}
-	stlink_resetsys();
+	stlink_reset_adaptor();
 	return true;
 }
 
