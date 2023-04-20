@@ -567,24 +567,21 @@ void stlink_dp_abort(adiv5_debug_port_s *dp, uint32_t abort)
 	adiv5_dp_write(dp, ADIV5_DP_ABORT, abort);
 }
 
-static int stlink_read_dp_register(uint16_t port, uint16_t addr, uint32_t *reg)
+static int stlink_read_dp_register(const uint16_t apsel, const uint16_t address, uint32_t *const reg)
 {
-	uint8_t cmd[16];
-	memset(cmd, 0, sizeof(cmd));
-	cmd[0] = STLINK_DEBUG_COMMAND;
-	cmd[1] = STLINK_DEBUG_APIV2_READ_DAP_REG;
-	cmd[2] = port & 0xffU;
-	cmd[3] = port >> 8U;
-	cmd[4] = addr & 0xffU;
-	cmd[5] = addr >> 8U;
-	if (port == STLINK_DEBUG_PORT_ACCESS && stlink.dap_select)
-		cmd[4] = ((stlink.dap_select & 0xfU) << 4U) | (addr & 0xfU);
-	else
-		cmd[4] = addr & 0xffU;
+	stlink_adiv5_reg_read_s request = {
+		.command = STLINK_DEBUG_COMMAND,
+		.operation = STLINK_DEBUG_APIV2_READ_DAP_REG,
+	};
+	write_le2(request.apsel, 0, apsel);
+	write_le2(request.address, 0, address);
+	if (apsel == STLINK_DEBUG_PORT && stlink.dap_select)
+		request.address[0] = ((stlink.dap_select & 0xfU) << 4U) | (address & 0xfU);
+
 	uint8_t data[8];
-	int result = stlink_send_recv_retry(cmd, 16, data, 8);
+	int result = stlink_send_recv_retry(&request, sizeof(request), data, sizeof(data));
 	if (result == STLINK_ERROR_OK)
-		*reg = data[4] | (data[5] << 8U) | (data[6] << 16U) | (data[7] << 24U);
+		*reg = read_le4(data, 4U);
 	else
 		DEBUG_ERROR("%s error %d\n", __func__, result);
 	return result;
@@ -619,7 +616,7 @@ uint32_t stlink_raw_access(adiv5_debug_port_s *dp, uint8_t rnw, uint16_t addr, u
 	uint32_t response = 0;
 	int res;
 	if (rnw)
-		res = stlink_read_dp_register(addr < 0x100U ? STLINK_DEBUG_PORT_ACCESS : 0, addr, &response);
+		res = stlink_read_dp_register(addr < 0x100U ? STLINK_DEBUG_PORT : 0U, addr, &response);
 	else
 		res = stlink_write_dp_register(addr < 0x100U ? STLINK_DEBUG_PORT_ACCESS : 0, addr, value);
 
