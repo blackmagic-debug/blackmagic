@@ -614,11 +614,11 @@ static int stlink_write_dp_register(uint16_t port, uint16_t addr, uint32_t val)
 	return stlink_usb_error_check(data, true);
 }
 
-uint32_t stlink_dp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value)
+uint32_t stlink_raw_access(adiv5_debug_port_s *dp, uint8_t rnw, uint16_t addr, uint32_t value)
 {
 	uint32_t response = 0;
 	int res;
-	if (RnW)
+	if (rnw)
 		res = stlink_read_dp_register(addr < 0x100U ? STLINK_DEBUG_PORT_ACCESS : 0, addr, &response);
 	else
 		res = stlink_write_dp_register(addr < 0x100U ? STLINK_DEBUG_PORT_ACCESS : 0, addr, value);
