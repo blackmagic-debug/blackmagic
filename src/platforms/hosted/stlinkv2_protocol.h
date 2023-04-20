@@ -24,6 +24,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include "adiv5.h"
 
 #define STLINK_SWIM_ERR_OK             0x00U
 #define STLINK_SWIM_BUSY               0x01U
@@ -153,10 +154,37 @@
 
 #define STLINK_V3_MAX_FREQ_NB 10U
 
+typedef struct stlink_simple_command {
+	uint8_t command;
+	uint8_t operation;
+	uint8_t reserved[14];
+} stlink_simple_command_s;
+
+typedef struct stlink_simple_request {
+	uint8_t command;
+	uint8_t operation;
+	uint8_t param;
+	uint8_t reserved[13];
+} stlink_simple_request_s;
+
+typedef struct stlink_mem_command {
+	uint8_t command;
+	uint8_t operation;
+	uint8_t address[4];
+	uint8_t length[2];
+	uint8_t apsel;
+	uint8_t reserved[7];
+} stlink_mem_command_s;
+
 int stlink_simple_query(uint8_t command, uint8_t operation, void *rx_buffer, size_t rx_len);
 int stlink_simple_request(uint8_t command, uint8_t operation, uint8_t param, void *rx_buffer, size_t rx_len);
+int stlink_send_recv_retry(const void *req_buffer, size_t req_len, void *rx_buffer, size_t rx_len);
 
 bool stlink_leave_state(void);
 int stlink_usb_error_check(uint8_t *data, bool verbose);
+
+uint32_t stlink_dp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value);
+uint32_t stlink_dp_error(adiv5_debug_port_s *dp, bool protocol_recovery);
+void stlink_dp_abort(adiv5_debug_port_s *dp, uint32_t abort);
 
 #endif /*PLATFORMS_HOSTED_STLINKV2_PROTOCOL_H*/

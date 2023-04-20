@@ -33,9 +33,7 @@
 #include "stlinkv2.h"
 #include "stlinkv2_protocol.h"
 #include "exception.h"
-#include "target.h"
 #include "cortexm.h"
-#include "target_internal.h"
 #include "buffer_utils.h"
 
 #include <assert.h>
@@ -68,28 +66,6 @@ typedef struct stlink {
 	uint16_t block_size;
 	bool ap_error;
 } stlink_s;
-
-typedef struct stlink_simple_command {
-	uint8_t command;
-	uint8_t operation;
-	uint8_t reserved[14];
-} stlink_simple_command_s;
-
-typedef struct stlink_simple_request {
-	uint8_t command;
-	uint8_t operation;
-	uint8_t param;
-	uint8_t reserved[13];
-} stlink_simple_request_s;
-
-typedef struct stlink_mem_command {
-	uint8_t command;
-	uint8_t operation;
-	uint8_t address[4];
-	uint8_t length[2];
-	uint8_t apsel;
-	uint8_t reserved[7];
-} stlink_mem_command_s;
 
 stlink_s stlink;
 
@@ -225,7 +201,8 @@ int stlink_usb_error_check(uint8_t *const data, const bool verbose)
 	}
 }
 
-static int stlink_send_recv_retry(const void *req_buffer, size_t req_len, void *rx_buffer, size_t rx_len)
+int stlink_send_recv_retry(
+	const void *const req_buffer, const size_t req_len, void *const rx_buffer, const size_t rx_len)
 {
 	uint32_t start = platform_time_ms();
 	int res;
@@ -553,8 +530,6 @@ int stlink_hwversion(void)
 	return stlink.ver_stlink;
 }
 
-uint32_t stlink_dp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value);
-
 uint32_t stlink_dp_error(adiv5_debug_port_s *dp, const bool protocol_recovery)
 {
 	/* XXX: This should perform a line reset for protocol recovery.. */
@@ -839,38 +814,6 @@ void stlink_adiv5_dp_defaults(adiv5_debug_port_s *dp)
 	dp->ap_read = stlink_ap_read;
 	dp->mem_read = stlink_mem_read;
 	dp->mem_write = stlink_mem_write;
-}
-
-uint32_t stlink_swdp_scan(void)
-{
-	target_list_free();
-
-	stlink_leave_state();
-
-	const stlink_simple_request_s command = {
-		.command = STLINK_DEBUG_COMMAND,
-		.operation = STLINK_DEBUG_APIV2_ENTER,
-		.param = STLINK_DEBUG_ENTER_SWD_NO_RESET,
-	};
-	uint8_t data[2];
-	stlink_send_recv_retry(&command, sizeof(command), data, sizeof(data));
-	if (stlink_usb_error_check(data, true))
-		return 0;
-
-	adiv5_debug_port_s *dp = calloc(1, sizeof(*dp));
-	if (!dp) { /* calloc failed: heap exhaustion */
-		DEBUG_ERROR("calloc: failed in %s\n", __func__);
-		return 0;
-	}
-
-	dp->dp_read = firmware_swdp_read;
-	dp->error = stlink_dp_error;
-	dp->low_access = stlink_dp_low_access;
-	dp->abort = stlink_dp_abort;
-
-	adiv5_dp_error(dp);
-	adiv5_dp_init(dp, 0);
-	return target_list ? 1U : 0U;
 }
 
 #define V2_USED_SWD_CYCLES 20U
