@@ -183,7 +183,7 @@ int stlink_send_recv_retry(const void *req_buffer, size_t req_len, void *rx_buff
 bool stlink_leave_state(void);
 int stlink_usb_error_check(uint8_t *data, bool verbose);
 
-uint32_t stlink_dp_low_access(adiv5_debug_port_s *dp, uint8_t RnW, uint16_t addr, uint32_t value);
+uint32_t stlink_raw_access(adiv5_debug_port_s *dp, uint8_t rnw, uint16_t addr, uint32_t value);
 uint32_t stlink_dp_error(adiv5_debug_port_s *dp, bool protocol_recovery);
 void stlink_dp_abort(adiv5_debug_port_s *dp, uint32_t abort);
 
