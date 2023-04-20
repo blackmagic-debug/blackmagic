@@ -1,7 +1,9 @@
 /*
  * This file is part of the Black Magic Debug project.
  *
- * Copyright (C) 2020- 2021 Uwe Bonnes (bon@elektron.ikp.physik.tu-darmstadt.de)
+ * Copyright (C) 2020-2021 Uwe Bonnes (bon@elektron.ikp.physik.tu-darmstadt.de)
+ * Copyright (C) 2022-2023 1BitSquared <info@1bitsquared.com>
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -38,10 +40,12 @@
 
 #include "bmp_remote.h"
 #include "bmp_hosted.h"
+#if HOSTED_BMP_ONLY == 0
 #include "stlinkv2.h"
 #include "ftdi_bmp.h"
 #include "jlink.h"
 #include "cmsis_dap.h"
+#endif
 
 bmp_info_s info;
 
@@ -60,9 +64,11 @@ static void exit_function(void)
 	libusb_exit_function(&info);
 
 	switch (info.bmp_type) {
+#if HOSTED_BMP_ONLY == 0
 	case BMP_TYPE_CMSIS_DAP:
 		dap_exit_function();
 		break;
+#endif
 
 	default:
 		break;
@@ -101,6 +107,7 @@ void platform_init(int argc, char **argv)
 			exit(-1);
 		break;
 
+#if HOSTED_BMP_ONLY == 0
 	case BMP_TYPE_STLINKV2:
 		if (!stlink_init())
 			exit(-1);
@@ -120,6 +127,7 @@ void platform_init(int argc, char **argv)
 		if (!jlink_init(&info))
 			exit(-1);
 		break;
+#endif
 
 	default:
 		exit(-1);
@@ -148,11 +156,13 @@ uint32_t platform_adiv5_swdp_scan(uint32_t targetid)
 		return adiv5_swdp_scan(targetid);
 		break;
 
+#if HOSTED_BMP_ONLY == 0
 	case BMP_TYPE_STLINKV2:
 		return stlink_swdp_scan();
 
 	case BMP_TYPE_JLINK:
 		return jlink_swdp_scan(&info);
+#endif
 
 	default:
 		return 0;
@@ -161,10 +171,14 @@ uint32_t platform_adiv5_swdp_scan(uint32_t targetid)
 
 bool platform_swdptap_init(adiv5_debug_port_s *dp)
 {
+#if HOSTED_BMP_ONLY == 1
+	(void)dp;
+#endif
 	switch (info.bmp_type) {
 	case BMP_TYPE_BMP:
 		return remote_swdptap_init();
 
+#if HOSTED_BMP_ONLY == 0
 	case BMP_TYPE_CMSIS_DAP:
 		return dap_swd_init(dp);
 
@@ -174,6 +188,7 @@ bool platform_swdptap_init(adiv5_debug_port_s *dp)
 
 	case BMP_TYPE_LIBFTDI:
 		return ftdi_swd_init();
+#endif
 
 	default:
 		return false;
@@ -199,10 +214,12 @@ uint32_t platform_jtag_scan(const uint8_t *ir_lengths, const size_t lengths_coun
 	case BMP_TYPE_CMSIS_DAP:
 		return jtag_scan(ir_lengths, lengths_count);
 
+#if HOSTED_BMP_ONLY == 0
 	case BMP_TYPE_STLINKV2:
 		if (lengths_count)
 			gdb_outf("Manually specified IR lengths is not supported when using a ST-Link adaptor\n");
 		return jtag_scan_stlinkv2();
+#endif
 
 	default:
 		return 0;
@@ -215,6 +232,7 @@ bool platform_jtagtap_init(void)
 	case BMP_TYPE_BMP:
 		return remote_jtagtap_init();
 
+#if HOSTED_BMP_ONLY == 0
 	case BMP_TYPE_STLINKV2:
 		return 0;
 
@@ -226,6 +244,7 @@ bool platform_jtagtap_init(void)
 
 	case BMP_TYPE_CMSIS_DAP:
 		return dap_jtag_init();
+#endif
 
 	default:
 		return false;
@@ -242,11 +261,13 @@ void platform_adiv5_dp_defaults(adiv5_debug_port_s *dp)
 		}
 		return remote_adiv5_dp_defaults(dp);
 
+#if HOSTED_BMP_ONLY == 0
 	case BMP_TYPE_STLINKV2:
 		return stlink_adiv5_dp_defaults(dp);
 
 	case BMP_TYPE_CMSIS_DAP:
 		return dap_adiv5_dp_defaults(dp);
+#endif
 
 	default:
 		break;
@@ -255,6 +276,7 @@ void platform_adiv5_dp_defaults(adiv5_debug_port_s *dp)
 
 void platform_jtag_dp_init(adiv5_debug_port_s *dp)
 {
+#if HOSTED_BMP_ONLY == 0
 	switch (info.bmp_type) {
 	case BMP_TYPE_STLINKV2:
 		stlink_jtag_dp_init(dp);
@@ -265,6 +287,9 @@ void platform_jtag_dp_init(adiv5_debug_port_s *dp)
 	default:
 		break;
 	}
+#else
+	(void)dp;
+#endif
 }
 
 char *platform_ident(void)
@@ -299,6 +324,7 @@ const char *platform_target_voltage(void)
 	case BMP_TYPE_BMP:
 		return remote_target_voltage();
 
+#if HOSTED_BMP_ONLY == 0
 	case BMP_TYPE_STLINKV2:
 		return stlink_target_voltage();
 
@@ -307,6 +333,7 @@ const char *platform_target_voltage(void)
 
 	case BMP_TYPE_JLINK:
 		return jlink_target_voltage(&info);
+#endif
 
 	default:
 		return NULL;
@@ -316,11 +343,12 @@ const char *platform_target_voltage(void)
 void platform_nrst_set_val(bool assert)
 {
 	switch (info.bmp_type) {
-	case BMP_TYPE_STLINKV2:
-		return stlink_nrst_set_val(assert);
-
 	case BMP_TYPE_BMP:
 		return remote_nrst_set_val(assert);
+
+#if HOSTED_BMP_ONLY == 0
+	case BMP_TYPE_STLINKV2:
+		return stlink_nrst_set_val(assert);
 
 	case BMP_TYPE_JLINK:
 		return jlink_nrst_set_val(&info, assert);
@@ -330,6 +358,7 @@ void platform_nrst_set_val(bool assert)
 
 	case BMP_TYPE_CMSIS_DAP:
 		return dap_nrst_set_val(assert);
+#endif
 
 	default:
 		break;
@@ -342,6 +371,7 @@ bool platform_nrst_get_val(void)
 	case BMP_TYPE_BMP:
 		return remote_nrst_get_val();
 
+#if HOSTED_BMP_ONLY == 0
 	case BMP_TYPE_STLINKV2:
 		return stlink_nrst_get_val();
 
@@ -350,6 +380,7 @@ bool platform_nrst_get_val(void)
 
 	case BMP_TYPE_LIBFTDI:
 		return libftdi_nrst_get_val();
+#endif
 
 	default:
 		return false;
@@ -366,6 +397,7 @@ void platform_max_frequency_set(uint32_t freq)
 		remote_max_frequency_set(freq);
 		break;
 
+#if HOSTED_BMP_ONLY == 0
 	case BMP_TYPE_CMSIS_DAP:
 		dap_swj_clock(freq);
 		break;
@@ -381,6 +413,7 @@ void platform_max_frequency_set(uint32_t freq)
 	case BMP_TYPE_JLINK:
 		jlink_max_frequency_set(&info, freq);
 		break;
+#endif
 
 	default:
 		DEBUG_WARN("Setting max SWJ frequency not yet implemented\n");
@@ -401,6 +434,7 @@ uint32_t platform_max_frequency_get(void)
 	case BMP_TYPE_BMP:
 		return remote_max_frequency_get();
 
+#if HOSTED_BMP_ONLY == 0
 	case BMP_TYPE_CMSIS_DAP:
 		return dap_swj_clock(0);
 
@@ -412,6 +446,7 @@ uint32_t platform_max_frequency_get(void)
 
 	case BMP_TYPE_JLINK:
 		return jlink_max_frequency_get(&info);
+#endif
 
 	default:
 		DEBUG_WARN("Reading max SWJ frequency not yet implemented\n");
@@ -471,8 +506,10 @@ uint32_t platform_target_voltage_sense(void)
 void platform_buffer_flush(void)
 {
 	switch (info.bmp_type) {
+#if HOSTED_BMP_ONLY == 0
 	case BMP_TYPE_LIBFTDI:
 		return libftdi_buffer_flush();
+#endif
 
 	default:
 		break;
