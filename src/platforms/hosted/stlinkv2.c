@@ -748,20 +748,20 @@ static void stlink_regs_read(adiv5_access_port_s *ap, void *data)
 	memcpy(data, result + 4U, sizeof(result) - 4U);
 }
 
-static uint32_t stlink_reg_read(adiv5_access_port_s *ap, int num)
+static uint32_t stlink_reg_read(adiv5_access_port_s *const ap, const uint8_t reg_num)
 {
-	uint8_t cmd[16];
-	uint8_t res[8];
-	memset(cmd, 0, sizeof(cmd));
-	cmd[0] = STLINK_DEBUG_COMMAND;
-	cmd[1] = STLINK_DEBUG_APIV2_READREG;
-	cmd[2] = num;
-	cmd[3] = ap->apsel;
-	bmda_usb_transfer(info.usb_link, cmd, 16, res, 8);
-	stlink_usb_error_check(res, true);
-	uint32_t ret = (res[0]) | (res[1] << 8U) | (res[2] << 16U) | (res[3] << 24U);
-	DEBUG_PROBE("AP %hhu: Read reg %02d val 0x%08" PRIx32 "\n", ap->apsel, num, ret);
-	return ret;
+	uint8_t data[8];
+	const stlink_arm_reg_read_s request = {
+		.command = STLINK_DEBUG_COMMAND,
+		.operation = STLINK_DEBUG_APIV2_READREG,
+		.reg_num = reg_num,
+		.apsel = ap->apsel,
+	};
+	bmda_usb_transfer(info.usb_link, &request, sizeof(request), data, sizeof(data));
+	stlink_usb_error_check(data, true);
+	const uint32_t result = read_le4(data, 0U);
+	DEBUG_PROBE("%s: AP %u, reg %02u val 0x%08" PRIx32 "\n", __func__, ap->apsel, reg_num, result);
+	return result;
 }
 
 static void stlink_reg_write(adiv5_access_port_s *ap, int num, uint32_t val)
