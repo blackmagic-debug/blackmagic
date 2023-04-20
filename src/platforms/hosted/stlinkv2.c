@@ -831,12 +831,8 @@ static void stlink_ap_cleanup(const uint8_t ap)
 
 static int stlink_usb_get_rw_status(bool verbose)
 {
-	uint8_t cmd[16];
-	memset(cmd, 0, sizeof(cmd));
-	cmd[0] = STLINK_DEBUG_COMMAND;
-	cmd[1] = STLINK_DEBUG_APIV2_GETLASTRWSTATUS2;
 	uint8_t data[12];
-	bmda_usb_transfer(info.usb_link, cmd, 16, data, 12);
+	stlink_simple_query(STLINK_DEBUG_COMMAND, STLINK_DEBUG_APIV2_GETLASTRWSTATUS2, data, sizeof(data));
 	return stlink_usb_error_check(data, verbose);
 }
 
