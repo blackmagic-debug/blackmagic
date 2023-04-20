@@ -317,7 +317,7 @@ void platform_nrst_set_val(bool assert)
 {
 	switch (info.bmp_type) {
 	case BMP_TYPE_STLINKV2:
-		return stlink_nrst_set_val(&info, assert);
+		return stlink_nrst_set_val(assert);
 
 	case BMP_TYPE_BMP:
 		return remote_nrst_set_val(assert);

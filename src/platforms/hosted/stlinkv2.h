@@ -47,8 +47,9 @@ const char *stlink_target_voltage(void)
 	return "ERROR";
 }
 
-void stlink_nrst_set_val(bmp_info_s *info, bool assert)
+void stlink_nrst_set_val(bool assert)
 {
+	(void)assert;
 }
 
 bool stlink_nrst_get_val(void)
@@ -93,7 +94,7 @@ uint32_t stlink_max_frequency_get(bmp_info_s *info)
 bool stlink_init(void);
 int stlink_hwversion(void);
 const char *stlink_target_voltage(void);
-void stlink_nrst_set_val(bmp_info_s *info, bool assert);
+void stlink_nrst_set_val(bool assert);
 bool stlink_nrst_get_val(void);
 uint32_t stlink_swdp_scan(void);
 void stlink_adiv5_dp_defaults(adiv5_debug_port_s *dp);
