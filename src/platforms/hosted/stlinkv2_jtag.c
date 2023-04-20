@@ -28,7 +28,7 @@
 static int stlink_enter_debug_jtag(void);
 static size_t stlink_read_idcodes(uint32_t *idcodes);
 
-uint32_t jtag_scan_stlinkv2(void)
+uint32_t stlink_jtag_scan(void)
 {
 	uint32_t idcodes[STLINK_JTAG_MAX_DEVS];
 	target_list_free();

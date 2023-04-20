@@ -31,14 +31,14 @@
 #define STLINK_DEBUG_PORT_ACCESS 0xffffU
 
 bool stlink_init(void);
+uint32_t stlink_swdp_scan(void);
+uint32_t stlink_jtag_scan(void);
 int stlink_hwversion(void);
 const char *stlink_target_voltage(void);
 void stlink_nrst_set_val(bool assert);
 bool stlink_nrst_get_val(void);
-uint32_t stlink_swdp_scan(void);
 void stlink_adiv5_dp_defaults(adiv5_debug_port_s *dp);
 void stlink_jtag_dp_init(adiv5_debug_port_s *dp);
-uint32_t jtag_scan_stlinkv2(void);
 void stlink_exit_function(bmp_info_s *info);
 void stlink_max_frequency_set(bmp_info_s *info, uint32_t freq);
 uint32_t stlink_max_frequency_get(bmp_info_s *info);

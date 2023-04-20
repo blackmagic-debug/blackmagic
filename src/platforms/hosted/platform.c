@@ -218,7 +218,7 @@ uint32_t platform_jtag_scan(const uint8_t *ir_lengths, const size_t lengths_coun
 	case BMP_TYPE_STLINKV2:
 		if (lengths_count)
 			gdb_outf("Manually specified IR lengths is not supported when using a ST-Link adaptor\n");
-		return jtag_scan_stlinkv2();
+		return stlink_jtag_scan();
 #endif
 
 	default:
