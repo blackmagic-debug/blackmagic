@@ -796,13 +796,6 @@ static uint32_t stlink_ap_read(adiv5_access_port_s *ap, uint16_t addr)
 	return ret;
 }
 
-void stlink_jtag_dp_init(adiv5_debug_port_s *dp)
-{
-	dp->error = stlink_dp_error;
-	dp->low_access = stlink_dp_low_access;
-	dp->abort = stlink_dp_abort;
-}
-
 void stlink_adiv5_dp_defaults(adiv5_debug_port_s *dp)
 {
 	dp->ap_regs_read = stlink_regs_read;
