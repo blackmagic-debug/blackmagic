@@ -152,7 +152,7 @@
 #define STLINK_TRACE_SIZE   4096U
 #define STLINK_TRACE_MAX_HZ 2000000U
 
-#define STLINK_V3_MAX_FREQ_NB 10U
+#define STLINK_V3_FREQ_ENTRY_COUNT 10U
 
 #define STLINK_DEBUG_PORT 0xffffU
 
@@ -211,6 +211,15 @@ typedef struct stlink_mem_command {
 	uint8_t apsel;
 	uint8_t reserved[7];
 } stlink_mem_command_s;
+
+typedef struct stlink_v3_set_freq {
+	uint8_t command;
+	uint8_t operation;
+	uint8_t mode;
+	uint8_t reserved1;
+	uint8_t frequency[4];
+	uint8_t reserved2[8];
+} stlink_v3_set_freq_s;
 
 int stlink_simple_query(uint8_t command, uint8_t operation, void *rx_buffer, size_t rx_len);
 int stlink_simple_request(uint8_t command, uint8_t operation, uint8_t param, void *rx_buffer, size_t rx_len);
