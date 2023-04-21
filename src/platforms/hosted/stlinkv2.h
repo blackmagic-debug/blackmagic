@@ -39,6 +39,6 @@ void stlink_adiv5_dp_defaults(adiv5_debug_port_s *dp);
 void stlink_jtag_dp_init(adiv5_debug_port_s *dp);
 void stlink_exit_function(bmp_info_s *info);
 void stlink_max_frequency_set(uint32_t freq);
-uint32_t stlink_max_frequency_get(bmp_info_s *info);
+uint32_t stlink_max_frequency_get(void);
 
 #endif /* PLATFORMS_HOSTED_STLINKV2_H */

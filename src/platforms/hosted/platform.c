@@ -442,7 +442,7 @@ uint32_t platform_max_frequency_get(void)
 		return libftdi_max_frequency_get();
 
 	case BMP_TYPE_STLINKV2:
-		return stlink_max_frequency_get(&info);
+		return stlink_max_frequency_get();
 
 	case BMP_TYPE_JLINK:
 		return jlink_max_frequency_get(&info);
