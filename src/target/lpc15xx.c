@@ -19,6 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <string.h>
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
@@ -35,18 +36,20 @@
 
 #define LPC15XX_DEVICE_ID 0x400743f8U
 
-static bool lpc15xx_read_uid(target_s *t, int argc, const char *argv[])
+static bool lpc15xx_read_uid(target_s *target, int argc, const char *argv[])
 {
 	(void)argc;
 	(void)argv;
-	struct lpc_flash *f = (struct lpc_flash *)t->flash;
-	uint8_t uid[16];
-	if (lpc_iap_call(f, uid, IAP_CMD_READUID))
+	struct lpc_flash *flash = (struct lpc_flash *)target->flash;
+	iap_result_s result = {};
+	if (lpc_iap_call(flash, &result, IAP_CMD_READUID))
 		return false;
-	tc_printf(t, "UID: 0x");
+	uint8_t uid[16] = {};
+	memcpy(&uid, result.values, sizeof(uid));
+	tc_printf(target, "UID: 0x");
 	for (uint32_t i = 0; i < sizeof(uid); ++i)
-		tc_printf(t, "%02x", uid[i]);
-	tc_printf(t, "\n");
+		tc_printf(target, "%02x", uid[i]);
+	tc_printf(target, "\n");
 	return true;
 }
 

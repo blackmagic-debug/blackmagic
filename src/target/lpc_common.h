@@ -68,6 +68,11 @@ typedef enum iap_status {
 	IAP_STATUS_INVALID_PAGE = 33,
 } iap_status_e;
 
+typedef struct iap_result {
+	uint32_t return_code;
+	uint32_t values[4];
+} iap_result_s;
+
 /* CPU Frequency */
 #define CPU_CLK_KHZ 12000U
 
@@ -84,7 +89,7 @@ typedef struct lpc_flash {
 } lpc_flash_s;
 
 lpc_flash_s *lpc_add_flash(target_s *target, target_addr_t addr, size_t length, size_t write_size);
-iap_status_e lpc_iap_call(struct lpc_flash *f, void *result, iap_cmd_e cmd, ...);
+iap_status_e lpc_iap_call(lpc_flash_s *flash, iap_result_s *result, iap_cmd_e cmd, ...);
 bool lpc_flash_erase(target_flash_s *f, target_addr_t addr, size_t len);
 bool lpc_flash_write_magic_vect(target_flash_s *f, target_addr_t dest, const void *src, size_t len);
 

@@ -109,6 +109,17 @@ static usbd_request_return_codes_e gdb_serial_control_request(usbd_device *dev, 
 		if (*len < sizeof(usb_cdc_line_coding_s))
 			return USBD_REQ_NOTSUPP;
 		return USBD_REQ_HANDLED; /* Ignore on GDB Port */
+	case USB_CDC_REQ_GET_LINE_CODING: {
+		if (*len < sizeof(usb_cdc_line_coding_s))
+			return USBD_REQ_NOTSUPP;
+		usb_cdc_line_coding_s *line_coding = (usb_cdc_line_coding_s *)*buf;
+		/* This tells the host that we talk 1MBaud, 8-bit no parity w/ 1 stop bit */
+		line_coding->dwDTERate = 1 * 1000 * 1000;
+		line_coding->bCharFormat = USB_CDC_1_STOP_BITS;
+		line_coding->bParityType = USB_CDC_NO_PARITY;
+		line_coding->bDataBits = 8;
+		return USBD_REQ_HANDLED;
+	}
 	}
 	return USBD_REQ_NOTSUPP;
 }
@@ -141,6 +152,11 @@ static usbd_request_return_codes_e debug_serial_control_request(usbd_device *dev
 		if (*len < sizeof(usb_cdc_line_coding_s))
 			return USBD_REQ_NOTSUPP;
 		aux_serial_set_encoding((usb_cdc_line_coding_s *)*buf);
+		return USBD_REQ_HANDLED;
+	case USB_CDC_REQ_GET_LINE_CODING:
+		if (*len < sizeof(usb_cdc_line_coding_s))
+			return USBD_REQ_NOTSUPP;
+		aux_serial_get_encoding((usb_cdc_line_coding_s *)*buf);
 		return USBD_REQ_HANDLED;
 	}
 	return USBD_REQ_NOTSUPP;

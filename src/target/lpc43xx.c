@@ -137,10 +137,20 @@
 #define LPC43xx_EMC_DYN_CONFIG_MAPPING_8    0x00000000U
 #define LPC43xx_EMC_DYN_CONFIG_MAPPING_16   0x00001000U
 
+#define LPC43xx_RGU_BASE  0x40053000U
+#define LPC43xx_RGU_CTRL0 (LPC43xx_RGU_BASE + 0x100U)
+#define LPC43xx_RGU_CTRL1 (LPC43xx_RGU_BASE + 0x104U)
+
 /* Cortex-M4 Application Interrupt and Reset Control Register */
 #define LPC43xx_AIRCR 0xe000ed0cU
 /* Magic value reset key */
 #define LPC43xx_AIRCR_RESET 0x05fa0004U
+
+#define LPC43xx_MPU_CTRL 0xe000ed94U
+#define LPC43xx_M4MEMMAP 0x40043100U
+#define LPC43xx_ETB_CFG  0x40043128U
+
+#define LPC43xx_M4MEMMAP_BOOT_ROM 0x10400000U
 
 #define LPC43xx_WDT_MODE       0x40080000U
 #define LPC43xx_WDT_CNT        0x40080004U
@@ -264,6 +274,8 @@ typedef struct lpc43xx_spi_flash {
 
 typedef struct lpc43xx_priv {
 	uint8_t flash_banks;
+	uint32_t mpu_ctrl;
+	uint32_t shadow_map;
 } lpc43xx_priv_s;
 
 typedef struct lpc43x0_priv {
@@ -502,19 +514,28 @@ bool lpc43xx_probe(target_s *const t)
 	const uint32_t chip_code = (chipid & LPC43xx_CHIPID_CHIP_MASK) >> LPC43xx_CHIPID_CHIP_SHIFT;
 	t->target_options |= CORTEXM_TOPT_INHIBIT_NRST;
 
+	/* If we're on the M4 core, poke the M0APP and M0SUB core resets to make them available */
+	if ((t->cpuid & CPUID_PARTNO_MASK) == CORTEX_M4) {
+		target_mem_write32(t, LPC43xx_RGU_CTRL0, 0);
+		target_mem_write32(t, LPC43xx_RGU_CTRL1, 0);
+	}
+
 	/* 4 is for rev '-' parts with on-chip Flash, 7 is for rev 'A' parts with on-chip Flash */
 	if (chip_code == 4U || chip_code == 7U) {
-		const lpc43xx_partid_s part_id = lpc43xx_iap_read_partid(t);
-		DEBUG_WARN("LPC43xx part ID: 0x%08" PRIx32 ":%02x\n", part_id.part, part_id.flash_config);
-		if (part_id.part == LPC43xx_PARTID_INVALID)
-			return false;
-
 		lpc43xx_priv_s *priv = calloc(1, sizeof(lpc43xx_priv_s));
 		if (!priv) { /* calloc failed: heap exhaustion */
 			DEBUG_ERROR("calloc: failed in %s\n", __func__);
 			return false;
 		}
 		t->target_storage = priv;
+
+		const lpc43xx_partid_s part_id = lpc43xx_iap_read_partid(t);
+		DEBUG_WARN("LPC43xx part ID: 0x%08" PRIx32 ":%02x\n", part_id.part, part_id.flash_config);
+		if (part_id.part == LPC43xx_PARTID_INVALID) {
+			free(priv);
+			t->target_storage = NULL;
+			return false;
+		}
 
 		t->mass_erase = lpc43xx_iap_mass_erase;
 		t->enter_flash_mode = lpc43xx_enter_flash_mode;
@@ -991,18 +1012,39 @@ static bool lpc43x0_spi_flash_write(target_flash_s *f, target_addr_t dest, const
 
 /* LPC43xx IAP On-board Flash part routines */
 
-static bool lpc43xx_iap_init(target_flash_s *const flash)
+static bool lpc43xx_iap_init(target_flash_s *const target_flash)
 {
-	target_s *const t = flash->t;
-	lpc_flash_s *const f = (lpc_flash_s *)flash;
+	target_s *const target = target_flash->t;
+	lpc43xx_priv_s *const priv = (lpc43xx_priv_s *)target->target_storage;
+	lpc_flash_s *const flash = (lpc_flash_s *)target_flash;
+	/* If on the M4 core, check and set the shadow region mapping */
+	if ((target->cpuid & CPUID_PARTNO_MASK) == CORTEX_M4) {
+		priv->shadow_map = target_mem_read32(target, LPC43xx_M4MEMMAP);
+		target_mem_write32(target, LPC43xx_M4MEMMAP, LPC43xx_M4MEMMAP_BOOT_ROM);
+	}
+
+	/* Check if the block we use (shared with the ETB) is in ETB mode, and reset that if it is */
+	const uint32_t etb_cfg = target_mem_read32(target, LPC43xx_ETB_CFG);
+	target_mem_write32(target, LPC43xx_ETB_CFG, 1U);
+	(void)etb_cfg;
+
+	/* Check MPU state and disable */
+	priv->mpu_ctrl = target_mem_read32(target, LPC43xx_MPU_CTRL);
+	target_mem_write32(target, LPC43xx_MPU_CTRL, 0);
+
 	/* Deal with WDT */
-	lpc43xx_wdt_set_period(t);
+	lpc43xx_wdt_set_period(target);
 
 	/* Force internal clock */
-	target_mem_write32(t, LPC43xx_CGU_CPU_CLK, LPC43xx_CGU_BASE_CLK_AUTOBLOCK | LPC43xx_CGU_BASE_CLK_SEL_IRC);
+	target_mem_write32(target, LPC43xx_CGU_CPU_CLK, LPC43xx_CGU_BASE_CLK_AUTOBLOCK | LPC43xx_CGU_BASE_CLK_SEL_IRC);
 
-	/* Initialize flash IAP */
-	return lpc_iap_call(f, NULL, IAP_CMD_INIT) == IAP_STATUS_CMD_SUCCESS;
+	/*
+	 * Initialize flash IAP
+	 * errata: should return IAP_STATUS_SUCCESS, may just not alter the result code resulting in
+	 * returning IAP_CMD_INIT. Test instead that it didn't fail by testing for the internally
+	 * generated IAP_STATUS_INVALID_COMMAND used by lpc_iap_call()'s failure paths.
+	 */
+	return lpc_iap_call(flash, NULL, IAP_CMD_INIT) != IAP_STATUS_INVALID_COMMAND;
 }
 
 /*
@@ -1024,17 +1066,14 @@ static lpc43xx_partid_s lpc43xx_iap_read_partid(target_s *const t)
 	result.part = LPC43xx_PARTID_INVALID;
 	result.flash_config = LPC43xx_PARTID_FLASH_CONFIG_NONE;
 
-	/* Read back the part ID
-	 * XXX: We only use the first 2 values but because of limitations in lpc_iap_call,
-	 * we have to declare an array of 4
-	 */
-	uint32_t part_id[4];
-	if (!lpc43xx_iap_init(&flash.f) || lpc_iap_call(&flash, part_id, IAP_CMD_PARTID) != IAP_STATUS_CMD_SUCCESS)
+	/* Read back the part ID */
+	iap_result_s iap_result;
+	if (!lpc43xx_iap_init(&flash.f) || lpc_iap_call(&flash, &iap_result, IAP_CMD_PARTID) != IAP_STATUS_CMD_SUCCESS)
 		return result;
 
 	/* Prepare the result and return it */
-	result.part = part_id[0];
-	result.flash_config = part_id[1] & LPC43xx_PARTID_FLASH_CONFIG_MASK;
+	result.part = iap_result.values[0];
+	result.flash_config = iap_result.values[1] & LPC43xx_PARTID_FLASH_CONFIG_MASK;
 	return result;
 }
 

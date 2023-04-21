@@ -164,12 +164,12 @@ static char *find_bmp_device(const bmda_cli_options_s *const cl_opts, const char
 	return result;
 }
 
-int serial_open(const bmda_cli_options_s *const cl_opts, const char *const serial)
+bool serial_open(const bmda_cli_options_s *const cl_opts, const char *const serial)
 {
 	char *const device = find_bmp_device(cl_opts, serial);
 	if (!device) {
 		DEBUG_ERROR("Unexpected problems finding the device!\n");
-		return -1;
+		return false;
 	}
 
 	port_handle = CreateFile(device,                    /* NT path to the device */
@@ -183,14 +183,14 @@ int serial_open(const bmda_cli_options_s *const cl_opts, const char *const seria
 
 	if (port_handle == INVALID_HANDLE_VALUE) {
 		handle_dev_error(port_handle, "opening device");
-		return -1;
+		return false;
 	}
 
 	DCB serial_params = {};
 	serial_params.DCBlength = sizeof(serial_params);
 	if (!GetCommState(port_handle, &serial_params)) {
 		handle_dev_error(port_handle, "getting communication state from device");
-		return -1;
+		return false;
 	}
 
 	serial_params.fParity = FALSE;
@@ -205,7 +205,7 @@ int serial_open(const bmda_cli_options_s *const cl_opts, const char *const seria
 	serial_params.Parity = NOPARITY;
 	if (!SetCommState(port_handle, &serial_params)) {
 		handle_dev_error(port_handle, "setting communication state on device");
-		return -1;
+		return false;
 	}
 
 	COMMTIMEOUTS timeouts = {};
@@ -216,9 +216,9 @@ int serial_open(const bmda_cli_options_s *const cl_opts, const char *const seria
 	timeouts.WriteTotalTimeoutMultiplier = 10;
 	if (!SetCommTimeouts(port_handle, &timeouts)) {
 		handle_dev_error(port_handle, "setting communication timeouts for device");
-		return -1;
+		return false;
 	}
-	return 0;
+	return true;
 }
 
 void serial_close(void)

@@ -30,12 +30,12 @@
 #error "Unknown processor target"
 #endif
 #include <libopencm3/cm3/nvic.h>
-#include <libopencm3/usb/usbd.h>
-#include <libopencm3/usb/cdc.h>
 
 #include "general.h"
 #include "usb_serial.h"
 #include "aux_serial.h"
+
+static uint32_t aux_serial_active_baud_rate;
 
 static char aux_serial_receive_buffer[AUX_UART_BUFFER_SIZE];
 /* Fifo in pointer, writes assumed to be atomic, should be only incremented within RX ISR */
@@ -65,9 +65,18 @@ static char aux_serial_transmit_buffer[AUX_UART_BUFFER_SIZE];
 #define usart_enable(uart)                 uart_enable(uart)
 #define usart_disable(uart)                uart_disable(uart)
 #define usart_set_baudrate(uart, baud)     uart_set_baudrate(uart, baud)
+#define usart_get_databits(uart)           uart_get_databits(uart)
+#define usart_get_stopbits(uart)           uart_get_stopbits(uart)
 #define usart_set_stopbits(uart, stopbits) uart_set_stopbits(uart, stopbits)
+#define usart_get_parity(uart)             uart_get_parity(uart)
 #define usart_set_parity(uart, parity)     uart_set_parity(uart, parity)
 #endif
+
+static void aux_serial_set_baudrate(const uint32_t baud_rate)
+{
+	usart_set_baudrate(USBUSART, baud_rate);
+	aux_serial_active_baud_rate = baud_rate;
+}
 
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7)
 void aux_serial_init(void)
@@ -78,7 +87,7 @@ void aux_serial_init(void)
 
 	/* Setup UART parameters */
 	UART_PIN_SETUP();
-	usart_set_baudrate(USBUSART, 38400);
+	aux_serial_set_baudrate(38400);
 	usart_set_databits(USBUSART, 8);
 	usart_set_stopbits(USBUSART, USART_STOPBITS_1);
 	usart_set_mode(USBUSART, USART_MODE_TX_RX);
@@ -170,7 +179,7 @@ void aux_serial_init(void)
 
 	/* Setup UART parameters. */
 	uart_clock_from_sysclk(USBUART);
-	uart_set_baudrate(USBUART, 38400);
+	aux_serial_set_baudrate(38400);
 	uart_set_databits(USBUART, 8);
 	uart_set_stopbits(USBUART, 1);
 	uart_set_parity(USBUART, UART_PARITY_NONE);
@@ -195,15 +204,15 @@ void aux_serial_init(void)
 }
 #endif
 
-void aux_serial_set_encoding(usb_cdc_line_coding_s *coding)
+void aux_serial_set_encoding(const usb_cdc_line_coding_s *const coding)
 {
 	/* Some devices require that the usart is disabled before
 	 * changing the usart registers. */
 	usart_disable(USBUSART);
-	usart_set_baudrate(USBUSART, coding->dwDTERate);
+	aux_serial_set_baudrate(coding->dwDTERate);
 
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7)
-	if (coding->bParityType)
+	if (coding->bParityType != USB_CDC_NO_PARITY)
 		usart_set_databits(USBUSART, coding->bDataBits + 1U <= 8U ? 8 : 9);
 	else
 		usart_set_databits(USBUSART, coding->bDataBits <= 8U ? 8 : 9);
@@ -211,32 +220,76 @@ void aux_serial_set_encoding(usb_cdc_line_coding_s *coding)
 	uart_set_databits(USBUART, coding->bDataBits);
 #endif
 
+	uint32_t stop_bits = USART_STOPBITS_2;
 	switch (coding->bCharFormat) {
-	case 0:
-		usart_set_stopbits(USBUSART, USART_STOPBITS_1);
+	case USB_CDC_1_STOP_BITS:
+		stop_bits = USART_STOPBITS_1;
 		break;
-	case 1:
-		usart_set_stopbits(USBUSART, USART_STOPBITS_1_5);
+	case USB_CDC_1_5_STOP_BITS:
+		stop_bits = USART_STOPBITS_1_5;
 		break;
-	case 2:
+	case USB_CDC_2_STOP_BITS:
 	default:
-		usart_set_stopbits(USBUSART, USART_STOPBITS_2);
 		break;
 	}
+	usart_set_stopbits(USBUSART, stop_bits);
 
 	switch (coding->bParityType) {
-	case 0:
+	case USB_CDC_NO_PARITY:
+	default:
 		usart_set_parity(USBUSART, USART_PARITY_NONE);
 		break;
-	case 1:
+	case USB_CDC_ODD_PARITY:
 		usart_set_parity(USBUSART, USART_PARITY_ODD);
 		break;
-	case 2:
-	default:
+	case USB_CDC_EVEN_PARITY:
 		usart_set_parity(USBUSART, USART_PARITY_EVEN);
 		break;
 	}
 	usart_enable(USBUSART);
+}
+
+void aux_serial_get_encoding(usb_cdc_line_coding_s *const coding)
+{
+	coding->dwDTERate = aux_serial_active_baud_rate;
+
+	switch (usart_get_stopbits(USBUSART)) {
+	case USART_STOPBITS_1:
+		coding->bCharFormat = USB_CDC_1_STOP_BITS;
+		break;
+#if !defined(LM4F)
+	/*
+	 * Only include this back mapping on non-Tiva-C platforms as USART_STOPBITS_1 and
+	 * USART_STOPBITS_1_5 are the same thing on LM4F
+	 */
+	case USART_STOPBITS_1_5:
+		coding->bCharFormat = USB_CDC_1_5_STOP_BITS;
+		break;
+#endif
+	case USART_STOPBITS_2:
+	default:
+		coding->bCharFormat = USB_CDC_2_STOP_BITS;
+		break;
+	}
+
+	switch (usart_get_parity(USBUSART)) {
+	case USART_PARITY_NONE:
+	default:
+		coding->bParityType = USB_CDC_NO_PARITY;
+		break;
+	case USART_PARITY_ODD:
+		coding->bParityType = USB_CDC_ODD_PARITY;
+		break;
+	case USART_PARITY_EVEN:
+		coding->bParityType = USB_CDC_EVEN_PARITY;
+		break;
+	}
+
+	const uint32_t data_bits = usart_get_databits(USBUSART);
+	if (coding->bParityType == USB_CDC_NO_PARITY)
+		coding->bDataBits = data_bits;
+	else
+		coding->bDataBits = data_bits - 1;
 }
 
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7)
