@@ -407,7 +407,7 @@ void platform_max_frequency_set(uint32_t freq)
 		break;
 
 	case BMP_TYPE_STLINKV2:
-		stlink_max_frequency_set(&info, freq);
+		stlink_max_frequency_set(freq);
 		break;
 
 	case BMP_TYPE_JLINK:
@@ -416,7 +416,7 @@ void platform_max_frequency_set(uint32_t freq)
 #endif
 
 	default:
-		DEBUG_WARN("Setting max SWJ frequency not yet implemented\n");
+		DEBUG_WARN("Setting max SWD/JTAG frequency not yet implemented\n");
 		break;
 	}
 

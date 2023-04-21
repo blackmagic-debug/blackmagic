@@ -76,9 +76,9 @@ int debug_level = 0;
 #define STLINK_ERROR_DP_FAULT (-2)
 #define STLINK_ERROR_AP_FAULT (-3)
 
-#define V2_USED_SWD_CYCLES 20U
-#define V2_CYCLES_PER_CNT  20U
-#define V2_CLOCK_RATE      (72U * 1000U * 1000U)
+#define STLINK_V2_USED_SWD_CYCLES 20U
+#define STLINK_V2_CYCLES_PER_CNT  20U
+#define STLINK_V2_CLOCK_RATE      (72U * 1000U * 1000U)
 
 static stlink_mem_command_s stlink_memory_access(
 	const uint8_t operation, const uint32_t address, const uint16_t length, const uint8_t apsel)
@@ -804,22 +804,45 @@ void stlink_adiv5_dp_defaults(adiv5_debug_port_s *dp)
 	dp->mem_write = stlink_mem_write;
 }
 
-/* Above values reproduce the known values for V2
-#include <stdio.h>
-
-int main(void)
-{
-    int divs[] = {0, 1,2,3,7,15,31,40,79,158,265,798};
-    for (int i = 0; i < (sizeof(divs) /sizeof(divs[0])); i++) {
-        float ret = 72.0 * 1000 * 1000 / (20 + 20 * divs[i]);
-        printf("%3d: %6.4f MHz\n", divs[i], ret/ 1000000);
-    }
-    return 0;
-}
-*/
-
-static uint32_t divisor;
+static uint32_t stlink_v2_divisor;
 static unsigned int stlink_v3_freq[2];
+
+static void stlink_v2_set_frequency(const uint32_t freq)
+{
+	stlink_v2_set_freq_s request = {
+		.command = STLINK_DEBUG_COMMAND,
+		.operation = info.is_jtag ? STLINK_DEBUG_APIV2_JTAG_SET_FREQ : STLINK_DEBUG_APIV2_SWD_SET_FREQ,
+	};
+
+	if (info.is_jtag) {
+		/* V2_CLOCK_RATE / (4, 8, 16, ... 256) */
+		uint32_t div = (STLINK_V2_CLOCK_RATE + (2U * freq) - 1U) / (2U * freq);
+		if (div & (div - 1U)) { /* Round up */
+			uint32_t clz = __builtin_clz(div);
+			stlink_v2_divisor = 1U << (32U - clz);
+		} else
+			stlink_v2_divisor = div;
+		if (stlink_v2_divisor < 4U)
+			stlink_v2_divisor = 4U;
+		else if (stlink_v2_divisor > 256U)
+			stlink_v2_divisor = 256U;
+	} else {
+		stlink_v2_divisor = STLINK_V2_CLOCK_RATE + freq - 1U;
+		stlink_v2_divisor /= freq;
+		stlink_v2_divisor -= STLINK_V2_USED_SWD_CYCLES;
+		/* If the subtraction made the value negative, set it to 0 */
+		if (stlink_v2_divisor & 0x80000000U)
+			stlink_v2_divisor = 0;
+		stlink_v2_divisor /= STLINK_V2_CYCLES_PER_CNT;
+	}
+
+	DEBUG_WARN("Divisor for %6.4f MHz is %u\n", freq / 1000000.0F, stlink_v2_divisor);
+	write_le2(request.divisor, 0U, stlink_v2_divisor);
+	uint8_t data[2];
+	bmda_usb_transfer(info.usb_link, &request, sizeof(request), data, sizeof(data));
+	if (stlink_usb_error_check(data, false))
+		DEBUG_ERROR("Set frequency failed!\n");
+}
 
 static void stlink_v3_set_frequency(const uint32_t freq)
 {
@@ -851,53 +874,20 @@ static void stlink_v3_set_frequency(const uint32_t freq)
 	stlink_v3_freq[mode] = frequency * 1000U;
 }
 
-void stlink_max_frequency_set(bmp_info_s *info, uint32_t freq)
+void stlink_max_frequency_set(const uint32_t freq)
 {
-	uint8_t cmd[16];
 	if (stlink.ver_hw == 30U)
 		stlink_v3_set_frequency(freq);
-	else {
-		memset(cmd, 0, sizeof(cmd));
-		cmd[0] = STLINK_DEBUG_COMMAND;
-		if (info->is_jtag) {
-			cmd[1] = STLINK_DEBUG_APIV2_JTAG_SET_FREQ;
-			/*  V2_CLOCK_RATE / (4, 8, 16, ... 256)*/
-			uint32_t div = (V2_CLOCK_RATE + (2U * freq) - 1U) / (2U * freq);
-			if (div & (div - 1U)) { /* Round up */
-				uint32_t clz = __builtin_clz(div);
-				divisor = 1U << (32U - clz);
-			} else
-				divisor = div;
-			if (divisor < 4U)
-				divisor = 4U;
-			else if (divisor > 256U)
-				divisor = 256U;
-		} else {
-			cmd[1] = STLINK_DEBUG_APIV2_SWD_SET_FREQ;
-			divisor = V2_CLOCK_RATE + freq - 1U;
-			divisor /= freq;
-			divisor -= V2_USED_SWD_CYCLES;
-			/* If the subtraction made the value negative, set it to 0 */
-			if (divisor & 0x80000000U)
-				divisor = 0;
-			divisor /= V2_CYCLES_PER_CNT;
-		}
-		DEBUG_WARN("Divisor for %6.4f MHz is %u\n", freq / 1000000.0F, divisor);
-		cmd[2] = divisor & 0xffU;
-		cmd[3] = (divisor >> 8U) & 0xffU;
-		uint8_t data[2];
-		bmda_usb_transfer(info->usb_link, cmd, 16, data, 2);
-		if (stlink_usb_error_check(data, false))
-			DEBUG_ERROR("Set frequency failed!\n");
-	}
+	else
+		stlink_v2_set_frequency(freq);
 }
 
 uint32_t stlink_max_frequency_get(bmp_info_s *info)
 {
 	if (stlink.ver_hw == 30U)
 		return stlink_v3_freq[info->is_jtag ? STLINK_MODE_JTAG : STLINK_MODE_SWD];
-	const uint32_t result = V2_CLOCK_RATE;
+	const uint32_t result = STLINK_V2_CLOCK_RATE;
 	if (info->is_jtag)
-		return result / (2U * divisor);
-	return result / (V2_USED_SWD_CYCLES + (V2_CYCLES_PER_CNT * divisor));
+		return result / (2U * stlink_v2_divisor);
+	return result / (STLINK_V2_USED_SWD_CYCLES + (STLINK_V2_CYCLES_PER_CNT * stlink_v2_divisor));
 }

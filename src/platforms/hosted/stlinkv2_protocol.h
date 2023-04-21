@@ -212,6 +212,13 @@ typedef struct stlink_mem_command {
 	uint8_t reserved[7];
 } stlink_mem_command_s;
 
+typedef struct stlink_v2_set_freq {
+	uint8_t command;
+	uint8_t operation;
+	uint8_t divisor[2];
+	uint8_t reserved[12];
+} stlink_v2_set_freq_s;
+
 typedef struct stlink_v3_set_freq {
 	uint8_t command;
 	uint8_t operation;
