@@ -23,7 +23,7 @@
 #include "general.h"
 
 #ifdef PLATFORM_EXP_DEBUG
-extern size_t platform_debug_usart_send(const char *buf, const size_t len);
+extern size_t platform_debug_uart_send(const char *buf, const size_t len);
 #endif
 
 /*
@@ -45,7 +45,7 @@ int _write(const int file, const void *const ptr, const size_t len)
 	(void)ptr;
 #endif
 #ifdef PLATFORM_EXP_DEBUG
-	return platform_debug_usart_send(ptr, len);
+	return platform_debug_uart_send(ptr, len);
 #endif
 	return len;
 }

@@ -168,7 +168,7 @@ void debug_serial_init(void)
 	usart_enable_tx_dma(DEBUGUSART);
 }
 
-size_t platform_debug_usart_send(const char *buf, const size_t len)
+size_t platform_debug_uart_send(const char *buf, const size_t len)
 {
 	for (size_t i = 0; i < len; i++)
 		usart_send_blocking(DEBUGUSART, buf[i]);
