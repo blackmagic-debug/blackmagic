@@ -82,7 +82,7 @@ extern uint32_t delay_cnt;
 #define DEBUG_TARGET(...) PLATFORM_PRINTF(__VA_ARGS__)
 #define DEBUG_PROTO(...)  PLATFORM_PRINTF(__VA_ARGS__)
 #define DEBUG_PROBE(...)  PLATFORM_PRINTF(__VA_ARGS__)
-#define DEBUG_WIRE(...)   PRINT_NOOP(__VA_ARGS__)
+#define DEBUG_WIRE(...)   PLATFORM_PRINTF(__VA_ARGS__)
 #endif
 #else
 #define DEBUG_ERROR(...) PRINT_NOOP(__VA_ARGS__)
