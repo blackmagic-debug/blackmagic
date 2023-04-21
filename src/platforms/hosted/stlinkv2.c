@@ -71,12 +71,6 @@ typedef struct stlink {
 	bool ap_error;
 } stlink_s;
 
-stlink_s stlink;
-
-static int stlink_usb_get_rw_status(bool verbose);
-
-int debug_level = 0;
-
 #define STLINK_ERROR_DP_FAULT (-2)
 #define STLINK_ERROR_AP_FAULT (-3)
 
@@ -93,6 +87,13 @@ int debug_level = 0;
 #else
 #define unlikely(x) x
 #endif
+
+static stlink_s stlink;
+
+static uint32_t stlink_v2_divisor;
+static unsigned int stlink_v3_freq[2];
+
+static int stlink_usb_get_rw_status(bool verbose);
 
 static stlink_mem_command_s stlink_memory_access(
 	const uint8_t operation, const uint32_t address, const uint16_t length, const uint8_t apsel)
@@ -817,9 +818,6 @@ void stlink_adiv5_dp_defaults(adiv5_debug_port_s *dp)
 	dp->mem_read = stlink_mem_read;
 	dp->mem_write = stlink_mem_write;
 }
-
-static uint32_t stlink_v2_divisor;
-static unsigned int stlink_v3_freq[2];
 
 static uint8_t stlink_ulog2(uint32_t value)
 {
