@@ -882,12 +882,12 @@ void stlink_max_frequency_set(const uint32_t freq)
 		stlink_v2_set_frequency(freq);
 }
 
-uint32_t stlink_max_frequency_get(bmp_info_s *info)
+uint32_t stlink_max_frequency_get(void)
 {
 	if (stlink.ver_hw == 30U)
-		return stlink_v3_freq[info->is_jtag ? STLINK_MODE_JTAG : STLINK_MODE_SWD];
-	const uint32_t result = STLINK_V2_CLOCK_RATE;
-	if (info->is_jtag)
-		return result / (2U * stlink_v2_divisor);
-	return result / (STLINK_V2_USED_SWD_CYCLES + (STLINK_V2_CYCLES_PER_CNT * stlink_v2_divisor));
+		return stlink_v3_freq[info.is_jtag ? STLINK_MODE_JTAG : STLINK_MODE_SWD];
+
+	if (info.is_jtag)
+		return STLINK_V2_CLOCK_RATE / (2U * stlink_v2_divisor);
+	return STLINK_V2_CLOCK_RATE / (STLINK_V2_USED_SWD_CYCLES + (STLINK_V2_CYCLES_PER_CNT * stlink_v2_divisor));
 }
