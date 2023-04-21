@@ -819,43 +819,44 @@ int main(void)
 */
 
 static uint32_t divisor;
-static unsigned int v3_freq[2];
+static unsigned int stlink_v3_freq[2];
+
+static void stlink_v3_set_frequency(const uint32_t freq)
+{
+	const uint8_t mode = info.is_jtag ? STLINK_MODE_JTAG : STLINK_MODE_SWD;
+	uint8_t data[52];
+	stlink_simple_request(STLINK_DEBUG_COMMAND, STLINK_APIV3_GET_COM_FREQ, mode, data, sizeof(data));
+	stlink_usb_error_check(data, true);
+	uint32_t frequency = 0;
+	DEBUG_INFO("Available speed settings: ");
+	for (size_t i = 0; i < STLINK_V3_FREQ_ENTRY_COUNT; ++i) {
+		const size_t offset = 12U + (i * 4U);
+		const uint32_t new_freq = read_le4(data, offset);
+		if (!new_freq)
+			break;
+		frequency = new_freq;
+		DEBUG_INFO("%s%u", i ? "/" : "", frequency);
+		if (freq / 1000U >= frequency)
+			break;
+	}
+	DEBUG_INFO(" kHz for %s\n", info.is_jtag ? "JTAG" : "SWD");
+	stlink_v3_set_freq_s request = {
+		.command = STLINK_DEBUG_COMMAND,
+		.operation = STLINK_APIV3_SET_COM_FREQ,
+		.mode = mode,
+	};
+	write_le4(request.frequency, 0U, frequency);
+	bmda_usb_transfer(info.usb_link, &request, sizeof(request), data, 8);
+	stlink_usb_error_check(data, true);
+	stlink_v3_freq[mode] = frequency * 1000U;
+}
 
 void stlink_max_frequency_set(bmp_info_s *info, uint32_t freq)
 {
 	uint8_t cmd[16];
-	if (stlink.ver_hw == 30U) {
-		uint8_t data[52];
-		memset(cmd, 0, sizeof(cmd));
-		cmd[0] = STLINK_DEBUG_COMMAND;
-		cmd[1] = STLINK_APIV3_GET_COM_FREQ;
-		cmd[2] = info->is_jtag ? STLINK_MODE_JTAG : STLINK_MODE_SWD;
-		bmda_usb_transfer(info->usb_link, cmd, 16, data, 52);
-		stlink_usb_error_check(data, true);
-		uint32_t frequency = 0;
-		DEBUG_INFO("Available speed settings: ");
-		for (size_t i = 0; i < STLINK_V3_MAX_FREQ_NB; ++i) {
-			const size_t offset = 12U + (i * 4U);
-			const uint32_t new_freq =
-				data[offset] | (data[offset + 1U] << 8U) | (data[offset + 2U] << 16U) | (data[offset + 3U] << 24U);
-			if (!new_freq)
-				break;
-			frequency = new_freq;
-			DEBUG_INFO("%s%u", i ? "/" : "", frequency);
-			if (freq / 1000U >= frequency)
-				break;
-		}
-		DEBUG_INFO(" kHz for %s\n", info->is_jtag ? "JTAG" : "SWD");
-		cmd[1] = STLINK_APIV3_SET_COM_FREQ;
-		/* cmd[0] and cmd[2..3] are kept the same as the previous command */
-		cmd[4] = frequency & 0xffU;
-		cmd[5] = (frequency >> 8U) & 0xffU;
-		cmd[6] = (frequency >> 16U) & 0xffU;
-		cmd[7] = (frequency >> 24U) & 0xffU;
-		bmda_usb_transfer(info->usb_link, cmd, 16, data, 8);
-		stlink_usb_error_check(data, true);
-		v3_freq[info->is_jtag ? 1 : 0] = frequency * 1000U;
-	} else {
+	if (stlink.ver_hw == 30U)
+		stlink_v3_set_frequency(freq);
+	else {
 		memset(cmd, 0, sizeof(cmd));
 		cmd[0] = STLINK_DEBUG_COMMAND;
 		if (info->is_jtag) {
@@ -894,7 +895,7 @@ void stlink_max_frequency_set(bmp_info_s *info, uint32_t freq)
 uint32_t stlink_max_frequency_get(bmp_info_s *info)
 {
 	if (stlink.ver_hw == 30U)
-		return v3_freq[info->is_jtag ? STLINK_MODE_JTAG : STLINK_MODE_SWD];
+		return stlink_v3_freq[info->is_jtag ? STLINK_MODE_JTAG : STLINK_MODE_SWD];
 	const uint32_t result = V2_CLOCK_RATE;
 	if (info->is_jtag)
 		return result / (2U * divisor);
