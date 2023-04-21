@@ -80,12 +80,13 @@ int debug_level = 0;
 #define STLINK_ERROR_DP_FAULT (-2)
 #define STLINK_ERROR_AP_FAULT (-3)
 
-#define STLINK_V2_USED_SWD_CYCLES     20U
-#define STLINK_V2_CYCLES_PER_CNT      20U
-#define STLINK_V2_JTAG_MUL_FACTOR     2U
 #define STLINK_V2_CPU_CLOCK_FREQ      (72U * 1000U * 1000U)
+#define STLINK_V2_JTAG_MUL_FACTOR     2U
 #define STLINK_V2_MAX_JTAG_CLOCK_FREQ (9U * 1000U * 1000U)
 #define STLINK_V2_MIN_JTAG_CLOCK_FREQ (281250U)
+#define STLINK_V2_SWD_MUL_FACTOR      20U
+#define STLINK_V2_MAX_SWD_CLOCK_FREQ  (3600U * 1000U)
+#define STLINK_V2_MIN_SWD_CLOCK_FREQ  (4505U)
 
 #ifdef __GNUC__
 #define unlikely(x) __builtin_expect(x, 0)
@@ -878,13 +879,11 @@ static void stlink_v2_set_frequency(const uint32_t freq)
 		stlink_v2_divisor = 1U << stlink_ulog2(divisor);
 		stlink_v2_divisor /= STLINK_V2_JTAG_MUL_FACTOR;
 	} else {
-		stlink_v2_divisor = STLINK_V2_CLOCK_SPEED + freq - 1U;
-		stlink_v2_divisor /= freq;
-		stlink_v2_divisor -= STLINK_V2_USED_SWD_CYCLES;
-		/* If the subtraction made the value negative, set it to 0 */
-		if (stlink_v2_divisor & 0x80000000U)
-			stlink_v2_divisor = 0;
-		stlink_v2_divisor /= STLINK_V2_CYCLES_PER_CNT;
+		/* Adjust the clock frequency request to result in the corrector dividor */
+		const uint32_t adjusted_freq = MAX(STLINK_V2_MIN_SWD_CLOCK_FREQ, MIN(freq, STLINK_V2_MAX_SWD_CLOCK_FREQ) + 1U);
+		const uint32_t divisor = STLINK_V2_CPU_CLOCK_FREQ / adjusted_freq;
+		/* Then compute the divisor using the multiplication factor */
+		stlink_v2_divisor = divisor / STLINK_V2_SWD_MUL_FACTOR;
 	}
 
 	const uint16_t freq_mhz = freq / 1000000U;
@@ -942,5 +941,5 @@ uint32_t stlink_max_frequency_get(void)
 
 	if (info.is_jtag)
 		return STLINK_V2_CPU_CLOCK_FREQ / (STLINK_V2_JTAG_MUL_FACTOR * stlink_v2_divisor);
-	return STLINK_V2_CLOCK_SPEED / (STLINK_V2_USED_SWD_CYCLES + (STLINK_V2_CYCLES_PER_CNT * stlink_v2_divisor));
+	return STLINK_V2_CPU_CLOCK_FREQ / (STLINK_V2_SWD_MUL_FACTOR * (stlink_v2_divisor + 1U));
 }
