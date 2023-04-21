@@ -77,16 +77,25 @@ extern uint32_t delay_cnt;
 #define DEBUG_ERROR(...) PLATFORM_PRINTF(__VA_ARGS__)
 #define DEBUG_WARN(...)  PLATFORM_PRINTF(__VA_ARGS__)
 #define DEBUG_INFO(...)  PLATFORM_PRINTF(__VA_ARGS__)
-#else
-#define DEBUG_ERROR(...) PRINT_NOOP(__VA_ARGS__)
-#define DEBUG_WARN(...)  PRINT_NOOP(__VA_ARGS__)
-#define DEBUG_INFO(...)  PRINT_NOOP(__VA_ARGS__)
-#endif
+#ifdef PLATFORM_BLACKPILLV2_DEBUG
 #define DEBUG_GDB(...)    PLATFORM_PRINTF(__VA_ARGS__)
 #define DEBUG_TARGET(...) PLATFORM_PRINTF(__VA_ARGS__)
 #define DEBUG_PROTO(...)  PLATFORM_PRINTF(__VA_ARGS__)
 #define DEBUG_PROBE(...)  PLATFORM_PRINTF(__VA_ARGS__)
 #define DEBUG_WIRE(...)   PRINT_NOOP(__VA_ARGS__)
+#endif
+#else
+#define DEBUG_ERROR(...) PRINT_NOOP(__VA_ARGS__)
+#define DEBUG_WARN(...)  PRINT_NOOP(__VA_ARGS__)
+#define DEBUG_INFO(...)  PRINT_NOOP(__VA_ARGS__)
+#endif
+#ifndef PLATFORM_BLACKPILLV2_DEBUG
+#define DEBUG_GDB(...)    PRINT_NOOP(__VA_ARGS__)
+#define DEBUG_TARGET(...) PRINT_NOOP(__VA_ARGS__)
+#define DEBUG_PROTO(...)  PRINT_NOOP(__VA_ARGS__)
+#define DEBUG_PROBE(...)  PRINT_NOOP(__VA_ARGS__)
+#define DEBUG_WIRE(...)   PRINT_NOOP(__VA_ARGS__)
+#endif
 
 void debug_serial_send_stdout(const uint8_t *data, size_t len);
 #else
