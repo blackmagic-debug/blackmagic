@@ -32,7 +32,6 @@
 #include <libopencm3/stm32/dma.h>
 #include <libopencm3/cm3/cortex.h>
 
-#define PLATFORM_BLACKPILLV2_DEBUG
 #define PLATFORM_HAS_TRACESWO
 #define PLATFORM_IDENT "(BlackPillV2) "
 
@@ -107,7 +106,7 @@
 /* For STM32F4 DMA trigger source must be specified */
 #define USBUSART_DMA_TRG DMA_SxCR_CHSEL_4
 
-#ifdef PLATFORM_BLACKPILLV2_DEBUG
+#ifdef PLATFORM_EXP_DEBUG
 #define DEBUGUSART               USART2
 #define DEBUGUSART_CR1           USART2_CR1
 #define DEBUGUSART_DR            USART2_DR
@@ -146,7 +145,7 @@
 		gpio_set_af(USBUSART_PORT, GPIO_AF7, USBUSART_RX_PIN);                                      \
 	} while (0)
 
-#ifdef PLATFORM_BLACKPILLV2_DEBUG
+#ifdef PLATFORM_EXP_DEBUG
 #define DEBUGUART_PIN_SETUP()                                                                           \
 	do {                                                                                                \
 		gpio_mode_setup(DEBUGUSART_PORT, GPIO_MODE_AF, GPIO_PUPD_NONE, DEBUGUSART_TX_PIN);              \
@@ -170,7 +169,7 @@
 #define IRQ_PRI_USBUSART_DMA (2U << 4U)
 #define IRQ_PRI_TRACE        (0U << 4U)
 
-#ifdef PLATFORM_BLACKPILLV2_DEBUG
+#ifdef PLATFORM_EXP_DEBUG
 #define IRQ_PRI_DEBUGUSART     (2U << 4U)
 #define IRQ_PRI_DEBUGUSART_DMA (2U << 4U)
 #endif

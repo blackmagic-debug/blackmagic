@@ -2,10 +2,12 @@ CROSS_COMPILE ?= arm-none-eabi-
 BMP_BOOTLOADER ?=
 CC = $(CROSS_COMPILE)gcc
 OBJCOPY = $(CROSS_COMPILE)objcopy
+PLATFORM_EXP_DEBUG ?=
 
 CFLAGS += -Istm32/include -mcpu=cortex-m4 -mthumb \
 	-mfloat-abi=hard -mfpu=fpv4-sp-d16 \
 	-DSTM32F4 -I../libopencm3/include \
+	-DPLATFORM_EXP_DEBUG \
 	-Iplatforms/stm32
 
 LINKER_SCRIPT=platforms/stm32/blackpillv2.ld

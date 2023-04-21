@@ -36,22 +36,6 @@
 
 #define PLATFORM_PRINTF printf
 
-#ifdef PLATFORM_BLACKPILLV2_DEBUG
-int _write(int file, char *ptr, int len)
-{
-	int i;
-
-	if (file == 1) {
-		for (i = 0; i < len; i++)
-			usart_send_blocking(DEBUGUSART, ptr[i]);
-		return i;
-	}
-
-	// errno = EIO;
-	return -1;
-}
-#endif
-
 jmp_buf fatal_error_jmpbuf;
 extern uint32_t _ebss; // NOLINT(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp)
 void debug_serial_init(void);
@@ -114,7 +98,7 @@ void platform_init(void)
 	platform_timing_init();
 	blackmagic_usb_init();
 	aux_serial_init();
-#ifdef PLATFORM_BLACKPILLV2_DEBUG
+#ifdef PLATFORM_EXP_DEBUG
 	debug_serial_init();
 #endif
 
@@ -123,7 +107,7 @@ void platform_init(void)
 	OTG_FS_GCCFG &= ~(OTG_GCCFG_VBUSBSEN | OTG_GCCFG_VBUSASEN);
 }
 
-#ifdef PLATFORM_BLACKPILLV2_DEBUG
+#ifdef PLATFORM_EXP_DEBUG
 void debug_serial_init(void)
 {
 	/* Enable clocks */
@@ -131,7 +115,7 @@ void debug_serial_init(void)
 	rcc_periph_clock_enable(DEBUGUSART_DMA_CLK);
 
 	/* Setup UART parameters */
-	UART_PIN_SETUP();
+	DEBUGUART_PIN_SETUP();
 	usart_set_baudrate(DEBUGUSART, 115200);
 	usart_set_databits(DEBUGUSART, 8);
 	usart_set_stopbits(DEBUGUSART, USART_STOPBITS_1);
@@ -182,6 +166,13 @@ void debug_serial_init(void)
 	/* Finally enable the USART */
 	usart_enable(DEBUGUSART);
 	usart_enable_tx_dma(DEBUGUSART);
+}
+
+size_t platform_debug_usart_send(const char *buf, const size_t len)
+{
+	for (size_t i = 0; i < len; i++)
+		usart_send_blocking(DEBUGUSART, buf[i]);
+	return len;
 }
 #endif
 
