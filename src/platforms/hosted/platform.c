@@ -420,12 +420,14 @@ void platform_max_frequency_set(uint32_t freq)
 		break;
 	}
 
-	uint32_t max_freq = platform_max_frequency_get();
-	if (max_freq == FREQ_FIXED)
+	const uint32_t actual_freq = platform_max_frequency_get();
+	if (actual_freq == FREQ_FIXED)
 		DEBUG_INFO("Device has fixed frequency for %s\n", (info.is_jtag) ? "JTAG" : "SWD");
-	else
-		DEBUG_INFO(
-			"Speed set to %7.4f MHz for %s\n", platform_max_frequency_get() / 1000000.0, info.is_jtag ? "JTAG" : "SWD");
+	else {
+		const uint16_t freq_mhz = actual_freq / 1000000U;
+		const uint16_t freq_khz = (actual_freq / 1000U) - (freq_mhz * 1000U);
+		DEBUG_INFO("Speed set to %u.%03uMHz for %s\n", freq_mhz, freq_khz, info.is_jtag ? "JTAG" : "SWD");
+	}
 }
 
 uint32_t platform_max_frequency_get(void)
