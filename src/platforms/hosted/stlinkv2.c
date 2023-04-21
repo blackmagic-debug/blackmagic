@@ -44,6 +44,10 @@
 
 #include "cli.h"
 
+#ifdef _MSC_VER
+#include <intrin.h>
+#endif
+
 typedef enum transport_mode {
 	STLINK_MODE_SWD = 0,
 	STLINK_MODE_JTAG
@@ -76,9 +80,18 @@ int debug_level = 0;
 #define STLINK_ERROR_DP_FAULT (-2)
 #define STLINK_ERROR_AP_FAULT (-3)
 
-#define STLINK_V2_USED_SWD_CYCLES 20U
-#define STLINK_V2_CYCLES_PER_CNT  20U
-#define STLINK_V2_CLOCK_RATE      (72U * 1000U * 1000U)
+#define STLINK_V2_USED_SWD_CYCLES     20U
+#define STLINK_V2_CYCLES_PER_CNT      20U
+#define STLINK_V2_JTAG_MUL_FACTOR     2U
+#define STLINK_V2_CPU_CLOCK_FREQ      (72U * 1000U * 1000U)
+#define STLINK_V2_MAX_JTAG_CLOCK_FREQ (9U * 1000U * 1000U)
+#define STLINK_V2_MIN_JTAG_CLOCK_FREQ (281250U)
+
+#ifdef __GNUC__
+#define unlikely(x) __builtin_expect(x, 0)
+#else
+#define unlikely(x) x
+#endif
 
 static stlink_mem_command_s stlink_memory_access(
 	const uint8_t operation, const uint32_t address, const uint16_t length, const uint8_t apsel)
@@ -807,6 +820,38 @@ void stlink_adiv5_dp_defaults(adiv5_debug_port_s *dp)
 static uint32_t stlink_v2_divisor;
 static unsigned int stlink_v3_freq[2];
 
+static uint8_t stlink_ulog2(uint32_t value)
+{
+	if (unlikely(!value))
+		return UINT8_MAX;
+#if defined(__GNUC__)
+	return (uint8_t)((sizeof(uint32_t) * 8U) - (uint8_t)__builtin_clz(value));
+#elif defined(_MSC_VER)
+	return (uint8_t)((sizeof(uint32_t) * 8U) - (uint8_t)__lzcnt(value));
+#else
+	uint8_t result = 0U;
+	if (value <= UINT32_C(0x0000ffff)) {
+		result += 16;
+		value <<= 16U;
+	}
+	if (value <= UINT32_C(0x00ffffff)) {
+		result += 8;
+		value <<= 8U;
+	}
+	if (value <= UINT32_C(0x0fffffff)) {
+		result += 4;
+		value <<= 4U;
+	}
+	if (value <= UINT32_C(0x3fffffff)) {
+		result += 2;
+		value <<= 2U;
+	}
+	if (value <= UINT32_C(0x7fffffff))
+		++result;
+	return (sizeof(uint8_t) * 8U) - result;
+#endif
+}
+
 static void stlink_v2_set_frequency(const uint32_t freq)
 {
 	stlink_v2_set_freq_s request = {
@@ -815,19 +860,25 @@ static void stlink_v2_set_frequency(const uint32_t freq)
 	};
 
 	if (info.is_jtag) {
-		/* V2_CLOCK_RATE / (4, 8, 16, ... 256) */
-		uint32_t div = (STLINK_V2_CLOCK_RATE + (2U * freq) - 1U) / (2U * freq);
-		if (div & (div - 1U)) { /* Round up */
-			uint32_t clz = __builtin_clz(div);
-			stlink_v2_divisor = 1U << (32U - clz);
-		} else
-			stlink_v2_divisor = div;
-		if (stlink_v2_divisor < 4U)
-			stlink_v2_divisor = 4U;
-		else if (stlink_v2_divisor > 256U)
-			stlink_v2_divisor = 256U;
+		/*
+		 * The minimum divisor is /4, so cap freq before computing the divisor.
+		 * Additionally, the divisor must be a power of 2 and no more than 256.
+		 */
+		const uint32_t adjusted_freq =
+			MAX(STLINK_V2_MIN_JTAG_CLOCK_FREQ, MIN(freq, STLINK_V2_MAX_JTAG_CLOCK_FREQ) + 1U);
+		const uint32_t divisor = STLINK_V2_CPU_CLOCK_FREQ / adjusted_freq;
+		/*
+		 * divisor is now a value between 4 and 256, but may not be a power of 2,
+		 * so do PoT rounding to the nearest higher value.
+		 *
+		 * This algorithm was derived from the information available from
+		 * http://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
+		 * For a worked example of it in action, see https://bmp.godbolt.org/z/Pqhjco8e3
+		 */
+		stlink_v2_divisor = 1U << stlink_ulog2(divisor);
+		stlink_v2_divisor /= STLINK_V2_JTAG_MUL_FACTOR;
 	} else {
-		stlink_v2_divisor = STLINK_V2_CLOCK_RATE + freq - 1U;
+		stlink_v2_divisor = STLINK_V2_CLOCK_SPEED + freq - 1U;
 		stlink_v2_divisor /= freq;
 		stlink_v2_divisor -= STLINK_V2_USED_SWD_CYCLES;
 		/* If the subtraction made the value negative, set it to 0 */
@@ -836,7 +887,9 @@ static void stlink_v2_set_frequency(const uint32_t freq)
 		stlink_v2_divisor /= STLINK_V2_CYCLES_PER_CNT;
 	}
 
-	DEBUG_WARN("Divisor for %6.4f MHz is %u\n", freq / 1000000.0F, stlink_v2_divisor);
+	const uint16_t freq_mhz = freq / 1000000U;
+	const uint16_t freq_khz = (freq / 1000U) - (freq_mhz * 1000U);
+	DEBUG_WARN("Divisor for %u.%03uMHz is %u\n", freq_mhz, freq_khz, stlink_v2_divisor);
 	write_le2(request.divisor, 0U, stlink_v2_divisor);
 	uint8_t data[2];
 	bmda_usb_transfer(info.usb_link, &request, sizeof(request), data, sizeof(data));
@@ -888,6 +941,6 @@ uint32_t stlink_max_frequency_get(void)
 		return stlink_v3_freq[info.is_jtag ? STLINK_MODE_JTAG : STLINK_MODE_SWD];
 
 	if (info.is_jtag)
-		return STLINK_V2_CLOCK_RATE / (2U * stlink_v2_divisor);
-	return STLINK_V2_CLOCK_RATE / (STLINK_V2_USED_SWD_CYCLES + (STLINK_V2_CYCLES_PER_CNT * stlink_v2_divisor));
+		return STLINK_V2_CPU_CLOCK_FREQ / (STLINK_V2_JTAG_MUL_FACTOR * stlink_v2_divisor);
+	return STLINK_V2_CLOCK_SPEED / (STLINK_V2_USED_SWD_CYCLES + (STLINK_V2_CYCLES_PER_CNT * stlink_v2_divisor));
 }
