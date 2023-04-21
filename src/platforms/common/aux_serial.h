@@ -26,6 +26,21 @@
 #include "usb_types.h"
 
 #if defined(STM32F0) || defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7)
+#ifdef DMA_STREAM0
+#define dma_channel_reset(dma, channel)   dma_stream_reset(dma, channel)
+#define dma_enable_channel(dma, channel)  dma_enable_stream(dma, channel)
+#define dma_disable_channel(dma, channel) dma_disable_stream(dma, channel)
+
+#define DMA_PSIZE_8BIT DMA_SxCR_PSIZE_8BIT
+#define DMA_MSIZE_8BIT DMA_SxCR_MSIZE_8BIT
+#define DMA_PL_HIGH    DMA_SxCR_PL_HIGH
+#define DMA_CGIF       DMA_ISR_FLAGS
+#else
+#define DMA_PSIZE_8BIT DMA_CCR_PSIZE_8BIT
+#define DMA_MSIZE_8BIT DMA_CCR_MSIZE_8BIT
+#define DMA_PL_HIGH    DMA_CCR_PL_HIGH
+#define DMA_CGIF       DMA_IFCR_CGIF_BIT
+#endif
 /* XXX: Does the st_usbfs_v2_usb_driver work on F3 with 128 byte buffers? */
 #if defined(STM32F1) || defined(STM32F3) || defined(STM32F4) || defined(STM32F7)
 #define USART_DMA_BUF_SHIFT 7U

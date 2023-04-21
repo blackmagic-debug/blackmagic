@@ -51,21 +51,6 @@ static bool aux_serial_transmit_complete = true;
 
 static volatile uint8_t aux_serial_led_state = 0;
 
-#ifdef DMA_STREAM0
-#define dma_channel_reset(dma, channel)   dma_stream_reset(dma, channel)
-#define dma_enable_channel(dma, channel)  dma_enable_stream(dma, channel)
-#define dma_disable_channel(dma, channel) dma_disable_stream(dma, channel)
-
-#define DMA_PSIZE_8BIT DMA_SxCR_PSIZE_8BIT
-#define DMA_MSIZE_8BIT DMA_SxCR_MSIZE_8BIT
-#define DMA_PL_HIGH    DMA_SxCR_PL_HIGH
-#define DMA_CGIF       DMA_ISR_FLAGS
-#else
-#define DMA_PSIZE_8BIT DMA_CCR_PSIZE_8BIT
-#define DMA_MSIZE_8BIT DMA_CCR_MSIZE_8BIT
-#define DMA_PL_HIGH    DMA_CCR_PL_HIGH
-#define DMA_CGIF       DMA_IFCR_CGIF_BIT
-#endif
 #elif defined(LM4F)
 static char aux_serial_transmit_buffer[AUX_UART_BUFFER_SIZE];
 

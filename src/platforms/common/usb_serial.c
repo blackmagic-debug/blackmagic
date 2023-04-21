@@ -356,6 +356,7 @@ static size_t debug_serial_debug_write(const char *buf, const size_t len)
 }
 #endif
 
+#ifndef PLATFORM_BLACKPILLV2_DEBUG
 /*
  * newlib defines _write as a weak link'd function for user code to override.
  *
@@ -365,17 +366,18 @@ static size_t debug_serial_debug_write(const char *buf, const size_t len)
  * The result of this function is the number of bytes written.
  */
 /* NOLINTNEXTLINE(bugprone-reserved-identifier,cert-dcl37-c,cert-dcl51-cpp) */
-// int _write(const int file, const void *const ptr, const size_t len)
-// {
-// 	(void)file;
-// #ifdef PLATFORM_HAS_DEBUG
-// 	if (debug_bmp)
-// 		return debug_serial_debug_write(ptr, len);
-// #else
-// 	(void)ptr;
-// #endif
-// 	return len;
-// }
+int _write(const int file, const void *const ptr, const size_t len)
+{
+	(void)file;
+#ifdef PLATFORM_HAS_DEBUG
+	if (debug_bmp)
+		return debug_serial_debug_write(ptr, len);
+#else
+	(void)ptr;
+#endif
+	return len;
+}
+#endif
 
 /*
  * newlib defines isatty as a weak link'd function for user code to override.

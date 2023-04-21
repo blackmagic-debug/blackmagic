@@ -2,7 +2,6 @@ CROSS_COMPILE ?= arm-none-eabi-
 BMP_BOOTLOADER ?=
 CC = $(CROSS_COMPILE)gcc
 OBJCOPY = $(CROSS_COMPILE)objcopy
-ENABLE_DEBUG = 1
 
 CFLAGS += -Istm32/include -mcpu=cortex-m4 -mthumb \
 	-mfloat-abi=hard -mfpu=fpv4-sp-d16 \
