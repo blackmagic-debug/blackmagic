@@ -551,14 +551,23 @@ int stlink_hwversion(void)
 
 uint32_t stlink_dp_error(adiv5_debug_port_s *dp, const bool protocol_recovery)
 {
-	/* XXX: This should perform a line reset for protocol recovery.. */
-	(void)protocol_recovery;
-
-	uint32_t err = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT) &
+	if ((dp->version >= 2 && dp->fault) || protocol_recovery) {
+		/*
+		 * Note that on DPv2+ devices, during a protocol error condition
+		 * the target becomes deselected during line reset. Once reset,
+		 * we must then re-select the target to bring the device back
+		 * into the expected state.
+		 */
+		stlink_reset_adaptor();
+		if (dp->version >= 2)
+			adiv5_dp_write(dp, ADIV5_DP_TARGETSEL, dp->targetsel);
+		adiv5_dp_read(dp, ADIV5_DP_DPIDR);
+	}
+	const uint32_t err = adiv5_dp_read(dp, ADIV5_DP_CTRLSTAT) &
 		(ADIV5_DP_CTRLSTAT_STICKYORUN | ADIV5_DP_CTRLSTAT_STICKYCMP | ADIV5_DP_CTRLSTAT_STICKYERR |
 			ADIV5_DP_CTRLSTAT_WDATAERR);
-
 	uint32_t clr = 0;
+
 	if (err & ADIV5_DP_CTRLSTAT_STICKYORUN)
 		clr |= ADIV5_DP_ABORT_ORUNERRCLR;
 	if (err & ADIV5_DP_CTRLSTAT_STICKYCMP)
@@ -568,11 +577,9 @@ uint32_t stlink_dp_error(adiv5_debug_port_s *dp, const bool protocol_recovery)
 	if (err & ADIV5_DP_CTRLSTAT_WDATAERR)
 		clr |= ADIV5_DP_ABORT_WDERRCLR;
 
-	adiv5_dp_write(dp, ADIV5_DP_ABORT, clr);
+	if (clr)
+		adiv5_dp_write(dp, ADIV5_DP_ABORT, clr);
 	dp->fault = 0;
-	if (err)
-		DEBUG_ERROR("stlink_dp_error %u\n", err);
-	err |= stlink.ap_error;
 	stlink.ap_error = false;
 	return err;
 }
