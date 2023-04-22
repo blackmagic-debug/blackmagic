@@ -48,38 +48,38 @@
  */
 
 /* Hardware definitions... */
-#define TDI_PORT               GPIOB
-#define TDI_PIN                GPIO6
+#define TDI_PORT GPIOB
+#define TDI_PIN  GPIO6
 
-#define TDO_PORT               GPIOB
-#define TDO_PIN                GPIO7
+#define TDO_PORT GPIOB
+#define TDO_PIN  GPIO7
 
-#define TCK_PORT               GPIOB
-#define TCK_PIN                GPIO8
-#define SWCLK_PORT             TCK_PORT
-#define SWCLK_PIN              TCK_PIN
+#define TCK_PORT   GPIOB
+#define TCK_PIN    GPIO8
+#define SWCLK_PORT TCK_PORT
+#define SWCLK_PIN  TCK_PIN
 
-#define TMS_PORT               GPIOB
-#define TMS_PIN                GPIO9
-#define SWDIO_PORT             TMS_PORT
-#define SWDIO_PIN              TMS_PIN
+#define TMS_PORT   GPIOB
+#define TMS_PIN    GPIO9
+#define SWDIO_PORT TMS_PORT
+#define SWDIO_PIN  TMS_PIN
 
-#define TRST_PORT              GPIOA
-#define TRST_PIN               GPIO6
+#define TRST_PORT GPIOA
+#define TRST_PIN  GPIO6
 
-#define NRST_PORT              GPIOA
-#define NRST_PIN               GPIO5
+#define NRST_PORT GPIOA
+#define NRST_PIN  GPIO5
 
-#define PWR_BR_PORT            GPIOA
-#define PWR_BR_PIN             GPIO1
+#define PWR_BR_PORT GPIOA
+#define PWR_BR_PIN  GPIO1
 
-#define LED_PORT               GPIOC
-#define LED_IDLE_RUN           GPIO13
-#define LED_ERROR              GPIO14
-#define LED_BOOTLOADER         GPIO15
+#define LED_PORT       GPIOC
+#define LED_IDLE_RUN   GPIO13
+#define LED_ERROR      GPIO14
+#define LED_BOOTLOADER GPIO15
 
-#define LED_PORT_UART          GPIOA
-#define LED_UART               GPIO4
+#define LED_PORT_UART GPIOA
+#define LED_UART      GPIO4
 
 /* for USART2, DMA1 is selected from https://www.st.com/resource/en/reference_manual/dm00119316-stm32f411xc-e-advanced-arm-based-32-bit-mcus-stmicroelectronics.pdf, page 170, table 27.
  * This table defines USART2_TX as stream 6, channel 4, and USART2_RX as stream 5, channel 4.
