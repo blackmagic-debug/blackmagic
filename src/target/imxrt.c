@@ -481,9 +481,13 @@ static inline uint8_t imxrt_spi_read_status(target_s *const target)
 	return status;
 }
 
-static inline void imxrt_spi_run_command(target_s *const target, const uint32_t command)
+static inline void imxrt_spi_run_command(target_s *const target, const uint32_t command, const target_addr_t address)
 {
-	imxrt_spi_write(target, command, 0U, NULL, 0U);
+	/* Configure the programmable sequence LUT */
+	const uint8_t slot = imxrt_spi_build_insn_sequence(target, command, 0U);
+	imxrt_spi_exec_sequence(target, slot, address, 0U);
+	/* Now wait for the FlexSPI controller to indicate the command completed we're done */
+	imxrt_spi_wait_complete(target);
 }
 
 static bool imxrt_spi_mass_erase(target_s *const target)
@@ -491,13 +495,13 @@ static bool imxrt_spi_mass_erase(target_s *const target)
 	platform_timeout_s timeout;
 	platform_timeout_set(&timeout, 500);
 	imxrt_enter_flash_mode(target);
-	imxrt_spi_run_command(target, SPI_FLASH_CMD_WRITE_ENABLE);
+	imxrt_spi_run_command(target, SPI_FLASH_CMD_WRITE_ENABLE, 0U);
 	if (!(imxrt_spi_read_status(target) & SPI_FLASH_STATUS_WRITE_ENABLED)) {
 		imxrt_exit_flash_mode(target);
 		return false;
 	}
 
-	imxrt_spi_run_command(target, SPI_FLASH_CMD_CHIP_ERASE);
+	imxrt_spi_run_command(target, SPI_FLASH_CMD_CHIP_ERASE, 0U);
 	while (imxrt_spi_read_status(target) & SPI_FLASH_STATUS_BUSY)
 		target_print_progress(&timeout);
 
@@ -510,12 +514,12 @@ static bool imxrt_spi_flash_erase(target_flash_s *const flash, const target_addr
 	const imxrt_spi_flash_s *const spi_flash = (imxrt_spi_flash_s *)flash;
 	const target_addr_t begin = addr - flash->start;
 	for (size_t offset = 0; offset < length; offset += flash->blocksize) {
-		imxrt_spi_run_command(target, SPI_FLASH_CMD_WRITE_ENABLE);
+		imxrt_spi_run_command(target, SPI_FLASH_CMD_WRITE_ENABLE, 0U);
 		if (!(imxrt_spi_read_status(target) & SPI_FLASH_STATUS_WRITE_ENABLED))
 			return false;
 
-		imxrt_spi_write(target, SPI_FLASH_CMD_SECTOR_ERASE | IMXRT_SPI_FLASH_OPCODE(spi_flash->sector_erase_opcode),
-			begin + offset, NULL, 0);
+		imxrt_spi_run_command(target,
+			SPI_FLASH_CMD_SECTOR_ERASE | IMXRT_SPI_FLASH_OPCODE(spi_flash->sector_erase_opcode), begin + offset);
 		while (imxrt_spi_read_status(target) & SPI_FLASH_STATUS_BUSY)
 			continue;
 	}
@@ -530,7 +534,7 @@ static bool imxrt_spi_flash_write(
 	const target_addr_t begin = dest - flash->start;
 	const char *const buffer = src;
 	for (size_t offset = 0; offset < length; offset += spi_flash->page_size) {
-		imxrt_spi_run_command(target, SPI_FLASH_CMD_WRITE_ENABLE);
+		imxrt_spi_run_command(target, SPI_FLASH_CMD_WRITE_ENABLE, 0U);
 		if (!(imxrt_spi_read_status(target) & SPI_FLASH_STATUS_WRITE_ENABLED))
 			return false;
 
