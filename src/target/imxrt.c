@@ -425,6 +425,9 @@ static uint8_t imxrt_spi_build_insn_sequence(target_s *const target, const uint3
 		sequence[offset++].value = 0;
 	}
 	/* Because sequence gets 0 initalised above when it's declared, the STOP entry is already present */
+	DEBUG_TARGET("Writing new instruction seqeunce to slot %u\n", slot);
+	for (size_t idx = 0; idx < 8U; ++idx)
+		DEBUG_TARGET("%zu: %02x %02x\n", idx, sequence[idx].opcode_mode, sequence[idx].value);
 
 	/* Write the new sequence to the programmable sequence LUT */
 	target_mem_write(target, IMXRT_FLEXSPI1_LUT_BASE + IMXRT_FLEXSI_SLOT_OFFSET(slot), sequence, sizeof(sequence));
