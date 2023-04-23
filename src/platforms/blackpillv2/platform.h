@@ -29,6 +29,38 @@
 
 #define PLATFORM_HAS_TRACESWO
 #define PLATFORM_IDENT "(BlackPillV2) "
+
+/* Error handling for ALTERNATIVE_PINOUT
+ * If ALTERNATIVE_PINOUT has a value >= 4 (undefined), or <= 0, an error is thrown.
+ */
+#ifdef ALTERNATIVE_PINOUT
+#if ALTERNATIVE_PINOUT <= 0
+#error "Invalid value for ALTERNATIVE_PINOUT. Value is smaller than 1, or larger than 3. Value must be between 1 and 3"
+#endif
+#endif /* ALTERNATIVE_PINOUT */
+
+/* Pinout switcher helper function for alternative pinouts.
+ * If ALTERNATIVE_PINOUT is passed to make, an alternative pinout is selected.
+ * If ALTERNATIVE_PINOUT == 1, it outputs the argument opt1,
+ * if ALTERNATIVE_PINOUT == 2, it outputs the argument opt2,
+ * if ALTERNATIVE_PINOUT == 3, it outputs the argument opt3,
+ * if ALTERNATIVE_PINOUT is not defined it outputs the argument opt0.
+ * If the number of arguments is less than ALTERNATIVE_PINOUT+1, e.g. 2 arguments while ALTERNATIVE_PINOUT==2, an error is thrown.
+ * The maximum number of input arguments is 4.
+ * The 3rd and 4th arguments to this function are optional.
+ */
+#ifndef ALTERNATIVE_PINOUT // if ALTERNATIVE_PINOUT is not defined
+#define PINOUT_SWITCH(opt0, ...) (opt0) // select the first argument
+#elif ALTERNATIVE_PINOUT == 1
+#define PINOUT_SWITCH(opt0, opt1, ...) (opt1) // select the second argument
+#elif ALTERNATIVE_PINOUT == 2
+#define PINOUT_SWITCH(opt0, opt1, opt2, ...) (opt2) // select the third argument
+#elif ALTERNATIVE_PINOUT == 3
+#define PINOUT_SWITCH(opt0, opt1, opt2, opt3, ...) (opt3) // select the fourth argument
+#else
+#warning "if-statement entered else, which should not be reachable"
+#endif /* ALTERNATIVE_PINOUT */
+
 /*
  * Important pin mappings for STM32 implementation:
  *   * JTAG/SWD
