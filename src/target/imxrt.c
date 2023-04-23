@@ -58,6 +58,20 @@
 #define IMXRT_MPU_BASE UINT32_C(0xe000ed90)
 #define IMXRT_MPU_CTRL (IMXRT_MPU_BASE + 0x04U)
 
+#define IMXRT_CCM_ANALOG_BASE     UINT32_C(0x400d8000)
+#define IMXRT_CCM_ANALOG_PLL3_PFD (IMXRT_CCM_ANALOG_BASE + 0x0f0U)
+
+#define IMXRT_CCM_ANALOG_PLL_PFD0_FRAC_MASK 0xffffffc0
+
+#define IMXRT_CCM_BASE  UINT32_C(0x400fc000)
+#define IMXRT_CCM_CSCM1 (IMXRT_CCM_BASE + 0x01cU)
+#define IMXRT_CCM_CCG6  (IMXRT_CCM_BASE + 0x080U)
+
+#define IMXRT_CCM_CSCM1_FLEXSPI_CLK_SEL_MASK      0xfc7fffffU
+#define IMXRT_CCM_CSCM1_FLEXSPI_CLK_SEL_PLL3_PFD0 0x03800000U
+#define IMXRT_CCM_CCG6_FLEXSPI_CLK_MASK           0xfffff3ffU
+#define IMXRT_CCM_CCG6_FLEXSPI_CLK_ENABLE         0x00000c00U
+
 #define IMXRT_FLEXSPI1_BASE UINT32_C(0x402a8000)
 /* We only carry definitions for FlexSPI1 Flash controller A1. */
 #define IMXRT_FLEXSPI1_MOD_CTRL0             (IMXRT_FLEXSPI1_BASE + 0x000U)
@@ -158,7 +172,6 @@ typedef struct imxrt_flexspi_lut_insn {
 typedef struct imxrt_priv {
 	imxrt_boot_src_e boot_source;
 	uint32_t mpu_state;
-	uint32_t flexspi_module_state;
 	uint32_t flexspi_lut_state;
 	uint32_t flexspi_cached_commands[4];
 	imxrt_flexspi_lut_insn_s flexspi_prg_seq_state[4][8];
@@ -316,11 +329,20 @@ static bool imxrt_enter_flash_mode(target_s *const target)
 	/* Store MPU state and disable it to guarantee Flash control works */
 	priv->mpu_state = target_mem_read32(target, IMXRT_MPU_CTRL);
 	target_mem_write32(target, IMXRT_MPU_CTRL, 0);
-	/* Start by checking that the controller isn't suspended */
-	priv->flexspi_module_state = target_mem_read32(target, IMXRT_FLEXSPI1_MOD_CTRL0);
-	if (priv->flexspi_module_state & IMXRT_FLEXSPI1_MOD_CTRL0_SUSPEND)
-		target_mem_write32(
-			target, IMXRT_FLEXSPI1_MOD_CTRL0, priv->flexspi_module_state & ~IMXRT_FLEXSPI1_MOD_CTRL0_SUSPEND);
+	/* Start by stepping the clocks to ~50MHz and putting the controller in a known state */
+	target_mem_write32(target, IMXRT_FLEXSPI1_MOD_CTRL0,
+		target_mem_read32(target, IMXRT_FLEXSPI1_MOD_CTRL0) | IMXRT_FLEXSPI1_MOD_CTRL0_SUSPEND);
+	target_mem_write32(
+		target, IMXRT_CCM_CCG6, target_mem_read32(target, IMXRT_CCM_CCG6) & IMXRT_CCM_CCG6_FLEXSPI_CLK_MASK);
+	target_mem_write32(target, IMXRT_CCM_CSCM1,
+		(target_mem_read32(target, IMXRT_CCM_CSCM1) & IMXRT_CCM_CSCM1_FLEXSPI_CLK_SEL_MASK) |
+			IMXRT_CCM_CSCM1_FLEXSPI_CLK_SEL_PLL3_PFD0);
+	target_mem_write32(target, IMXRT_CCM_ANALOG_PLL3_PFD,
+		(target_mem_read32(target, IMXRT_CCM_ANALOG_PLL3_PFD) & IMXRT_CCM_ANALOG_PLL_PFD0_FRAC_MASK) | 0x16U);
+	target_mem_write32(
+		target, IMXRT_CCM_CCG6, target_mem_read32(target, IMXRT_CCM_CCG6) | IMXRT_CCM_CCG6_FLEXSPI_CLK_ENABLE);
+	target_mem_write32(target, IMXRT_FLEXSPI1_MOD_CTRL0,
+		target_mem_read32(target, IMXRT_FLEXSPI1_MOD_CTRL0) & ~IMXRT_FLEXSPI1_MOD_CTRL0_SUSPEND);
 	/* Clear all outstanding interrupts so we can consume their status cleanly */
 	target_mem_write32(target, IMXRT_FLEXSPI1_INT, target_mem_read32(target, IMXRT_FLEXSPI1_INT));
 	/* Tell the controller we want to use the entire read FIFO */
@@ -351,7 +373,7 @@ static bool imxrt_exit_flash_mode(target_s *const target)
 		target_mem_write32(target, IMXRT_FLEXSPI1_LUT_KEY, IMXRT_FLEXSPI1_LUT_KEY_VALUE);
 		target_mem_write32(target, IMXRT_FLEXSPI1_LUT_CTRL, priv->flexspi_lut_state);
 	}
-	target_mem_write32(target, IMXRT_FLEXSPI1_MOD_CTRL0, priv->flexspi_module_state);
+	/* But we don't bother restoring the clocks as the boot ROM'll do that if needed */
 	target_mem_write32(target, IMXRT_MPU_CTRL, priv->mpu_state);
 	return true;
 }
