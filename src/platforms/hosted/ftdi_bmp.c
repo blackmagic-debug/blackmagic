@@ -445,7 +445,7 @@ bool ftdi_bmp_init(bmda_cli_options_s *const cl_opts)
 	active_cable = *cable;
 	memcpy(&active_state, &active_cable.init, sizeof(data_desc_s));
 	/* If the adaptor being used is Tigard, NULL the description out as libftdi can't deal with the partial match. */
-	if (memcmp(active_cable.description, "Tigard", 7) == 0)
+	if (active_cable.description && memcmp(active_cable.description, "Tigard", 7) == 0)
 		active_cable.description = NULL;
 	/*
 	 * If swd_(read|write) is not given for the selected cable and
