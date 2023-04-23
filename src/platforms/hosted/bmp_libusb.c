@@ -156,7 +156,8 @@ static probe_info_s *process_ftdi_probe(void)
 	}
 
 	probe_info_s *probe_list = NULL;
-	const char *serial_skip = NULL;
+	const char *probe_skip = NULL;
+	bool use_serial = true;
 	/* Device list is loaded, iterate over the found probes */
 	for (size_t index = 0; index < ftdi_dev_count; ++index) {
 		const uint16_t vid = (dev_info[index].ID >> 16U) & 0xffffU;
@@ -166,23 +167,43 @@ static probe_info_s *process_ftdi_probe(void)
 		char *serial = strdup(dev_info[index].SerialNumber);
 		char *const product = strdup(dev_info[index].Description);
 		size_t serial_len = strlen(serial);
-		if (serial_len <= 1) {
+		if (!serial_len) {
 			free(serial);
-			serial = strdup("Unknown serial");
+			serial = strdup("---"); // Unknown serial number
 		} else {
 			--serial_len;
 			if (serial[serial_len] == 'A') {
 				serial[serial_len] = '\0'; // Remove the trailing "A"
-				if (serial_skip)           // Clean up any previous serial number to skip
-					free((void *)serial_skip);
-				serial_skip = strdup(serial); // Save the fixed serial number so we can skip over other interfaces
+
+				if (probe_skip) { // Clean up any previous serial number to skip
+					use_serial = true;
+					free((void *)probe_skip);
+					probe_skip = NULL;
+				}
+
+				// If the serial number is valid, save it for later interface skip testing
+				if (serial_len)
+					probe_skip = strdup(serial); // Save the fixed serial number so we can skip over other interfaces
 
 				size_t product_len = strlen(product); // Product has " A" appended
 				product_len -= 2;
 				product[product_len] = '\0'; // Remove it
-			} else
-				// Skip this interface if the serial matches
-				add_probe = serial_skip == NULL || strstr(serial, serial_skip) == NULL;
+
+				// If we don't have a saved serial number, use the truncated product for the probe skip test
+				if (!probe_skip) {
+					use_serial = false;
+					probe_skip = strdup(product);
+				}
+			} else {
+				if (probe_skip) {
+					if (use_serial)
+						// Skip this interface if the serial matches
+						add_probe = strstr(serial, probe_skip) == NULL;
+					else
+						// Skip this interface if the product name matches
+						add_probe = strstr(product, probe_skip) == NULL;
+				}
+			}
 		}
 		if (add_probe) {
 			const char *const manufacturer = strdup("FTDI");
@@ -193,8 +214,8 @@ static probe_info_s *process_ftdi_probe(void)
 			free(product);
 		}
 	}
-	if (serial_skip)
-		free((void *)serial_skip);
+	if (probe_skip)
+		free((void *)probe_skip);
 	free(dev_info);
 	return probe_list;
 }
