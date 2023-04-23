@@ -425,12 +425,7 @@ bool ftdi_lookup_cable_by_product(bmda_cli_options_s *cl_opts, const char *produ
 
 bool ftdi_lookup_adaptor_descriptor(bmda_cli_options_s *cl_opts, const probe_info_s *probe)
 {
-	/* Did the user specify a serial number for the probe? */
-	if (cl_opts && cl_opts->opt_serial) {
-		const char *const product = probe->product;
-		return ftdi_lookup_cable_by_product(cl_opts, product);
-	}
-	return false;
+	return ftdi_lookup_cable_by_product(cl_opts, probe->product);
 }
 
 bool ftdi_bmp_init(bmda_cli_options_s *const cl_opts)
