@@ -94,6 +94,7 @@
 
 #define IMXRT_FLEXSPI1_MOD_CTRL0_SUSPEND          0x00000002U
 #define IMXRT_FLEXSPI1_INT_PRG_CMD_DONE           0x00000001U
+#define IMXRT_FLEXSPI1_INT_CMD_ERR                0x00000008U
 #define IMXRT_FLEXSPI1_INT_READ_FIFO_FULL         0x00000020U
 #define IMXRT_FLEXSPI1_INT_WRITE_FIFO_EMPTY       0x00000040U
 #define IMXRT_FLEXSPI1_LUT_KEY_VALUE              0x5af05af0U
@@ -454,6 +455,17 @@ static void imxrt_spi_wait_complete(target_s *const target)
 		continue;
 	/* Then clear the interrupt bit it sets. */
 	target_mem_write32(target, IMXRT_FLEXSPI1_INT, IMXRT_FLEXSPI1_INT_PRG_CMD_DONE);
+	/* Check if any errors occured */
+	if (target_mem_read32(target, IMXRT_FLEXSPI1_INT) & IMXRT_FLEXSPI1_INT_CMD_ERR) {
+#ifdef ENABLE_DEBUG
+		/* Read out the status code and display it */
+		const uint32_t status = target_mem_read32(target, IMXRT_FLEXSPI1_STAT1);
+		DEBUG_TARGET(
+			"Error executing sequence, offset %u, error code %u\n", (status >> 16U) & 0xfU, (status >> 24U) & 0xfU);
+#endif
+		/* Now clear the error (this clears the status field bits too) */
+		target_mem_write32(target, IMXRT_FLEXSPI1_INT, IMXRT_FLEXSPI1_INT_CMD_ERR);
+	}
 }
 
 /*
