@@ -4,22 +4,22 @@ Allows the use of a [BlackPill v2](https://github.com/WeActStudio/WeActStudio.Mi
 
 ## Pinout
 
-| Function        | Pinout | Cluster   |
-| --------------- | ------ | --------- |
-| TDI             | PB6    | JTAG/SWD  |
-| TDO/TRACESWO    | PB7    | JTAG/SWD  |
-| TCK/SWCLK       | PB8    | JTAG/SWD  |
-| TMS/SWDIO       | PB9    | JTAG/SWD  |
-| nRST            | PA5    | JTAG/SWD  |
-| TRST (optional) | PA6    | JTAG/SWD  |
-| UART TX         | PA2    | USB USART |
-| UART RX         | PA3    | USB USART |
-| Power pin       | PA1    | Power     |
-| LED idle run    | PC13   | LED       |
-| LED error       | PC14   | LED       |
-| LED bootloader  | PC15   | LED       |
-| LED UART        | PA4    | LED       |
-| User button KEY | PA0    |           |
+| Function        | Pinout | Alternative pinout 1 | Cluster   |
+| --------------- | ------ | -------------------- | --------- |
+| TDI             | PB6    | PB5                  | JTAG/SWD  |
+| TDO/TRACESWO    | PB7    | PB6                  | JTAG/SWD  |
+| TCK/SWCLK       | PB8    | PB7                  | JTAG/SWD  |
+| TMS/SWDIO       | PB9    | PB8                  | JTAG/SWD  |
+| nRST            | PA5    | PB4                  | JTAG/SWD  |
+| TRST (optional) | PA6    | PB3                  | JTAG/SWD  |
+| UART TX         | PA2    | PA2                  | USB USART |
+| UART RX         | PA3    | PA3                  | USB USART |
+| Power pin       | PA1    | PB9                  | Power     |
+| LED idle run    | PC13   | PC13                 | LED       |
+| LED error       | PC14   | PC14                 | LED       |
+| LED bootloader  | PC15   | PC15                 | LED       |
+| LED UART        | PA4    | PA1                  | LED       |
+| User button KEY | PA0    | PA0                  |           |
 
 
 ## How to Build
@@ -29,6 +29,15 @@ cd blackmagic
 make clean
 make PROBE_HOST=blackpillv2
 ```
+
+or
+
+```sh
+cd blackmagic
+make clean
+make PROBE_HOST=blackpillv2 ALTERNATIVE_PINOUT=1
+```
+
 
 ## How to Flash with dfu
 
