@@ -49,7 +49,7 @@
  * The maximum number of input arguments is 4.
  * The 3rd and 4th arguments to this function are optional.
  */
-#ifndef ALTERNATIVE_PINOUT // if ALTERNATIVE_PINOUT is not defined
+#ifndef ALTERNATIVE_PINOUT              // if ALTERNATIVE_PINOUT is not defined
 #define PINOUT_SWITCH(opt0, ...) (opt0) // select the first argument
 #elif ALTERNATIVE_PINOUT == 1
 #define PINOUT_SWITCH(opt0, opt1, ...) (opt1) // select the second argument
@@ -64,46 +64,47 @@
 /*
  * Important pin mappings for STM32 implementation:
  *   * JTAG/SWD
- *     * PB6: TDI
- *     * PB7: TDO/TRACESWO
- *     * PB8: TCK/SWCLK
- *     * PB9: TMS/SWDIO
- *     * PA6: TRST
- *     * PA5: nRST
+ *     * PB6 or PB5: TDI
+ *     * PB7 or PB6: TDO/TRACESWO
+ *     * PB8 or PB7: TCK/SWCLK
+ *     * PB9 or PB8: TMS/SWDIO
+ *     * PA6 or PB3: TRST
+ *     * PA5 or PB4: nRST
  *   * USB USART
  *     * PA2: USART TX
  *     * PA3: USART RX
  *   * +3V3
- *     * PA1: power pin
+ *     * PA1 or PB9: power pin
  *   * Force DFU mode button:
  *     * PA0: user button KEY
  */
 
 /* Hardware definitions... */
+// Build the code using `make PROBE_HOST=blackpillv2 ALTERNATIVE_PINOUT=1` to select the second pinout.
 #define TDI_PORT GPIOB
-#define TDI_PIN  GPIO6
+#define TDI_PIN  PINOUT_SWITCH(GPIO6, GPIO5)
 
 #define TDO_PORT GPIOB
-#define TDO_PIN  GPIO7
+#define TDO_PIN  PINOUT_SWITCH(GPIO7, GPIO6)
 
 #define TCK_PORT   GPIOB
-#define TCK_PIN    GPIO8
+#define TCK_PIN    PINOUT_SWITCH(GPIO8, GPIO7)
 #define SWCLK_PORT TCK_PORT
 #define SWCLK_PIN  TCK_PIN
 
 #define TMS_PORT   GPIOB
-#define TMS_PIN    GPIO9
+#define TMS_PIN    PINOUT_SWITCH(GPIO9, GPIO8)
 #define SWDIO_PORT TMS_PORT
 #define SWDIO_PIN  TMS_PIN
 
-#define TRST_PORT GPIOA
-#define TRST_PIN  GPIO6
+#define TRST_PORT PINOUT_SWITCH(GPIOA, GPIOB)
+#define TRST_PIN  PINOUT_SWITCH(GPIO6, GPIO3)
 
-#define NRST_PORT GPIOA
-#define NRST_PIN  GPIO5
+#define NRST_PORT PINOUT_SWITCH(GPIOA, GPIOB)
+#define NRST_PIN  PINOUT_SWITCH(GPIO5, GPIO4)
 
-#define PWR_BR_PORT GPIOA
-#define PWR_BR_PIN  GPIO1
+#define PWR_BR_PORT PINOUT_SWITCH(GPIOA, GPIOB)
+#define PWR_BR_PIN  PINOUT_SWITCH(GPIO1, GPIO9)
 
 #define LED_PORT       GPIOC
 #define LED_IDLE_RUN   GPIO13
@@ -111,30 +112,71 @@
 #define LED_BOOTLOADER GPIO15
 
 #define LED_PORT_UART GPIOA
-#define LED_UART      GPIO4
+#define LED_UART      PINOUT_SWITCH(GPIO4, GPIO1)
 
-/* for USART2, DMA1 is selected from https://www.st.com/resource/en/reference_manual/dm00119316-stm32f411xc-e-advanced-arm-based-32-bit-mcus-stmicroelectronics.pdf, page 170, table 27.
- * This table defines USART2_TX as stream 6, channel 4, and USART2_RX as stream 5, channel 4.
+/* USART2 with PA2 and PA3 is selected as USBUSART. Alternatively USART1 with PB6 and PB7 can be used.
  */
-#define USBUSART               USART2
-#define USBUSART_CR1           USART2_CR1
-#define USBUSART_DR            USART2_DR
-#define USBUSART_IRQ           NVIC_USART2_IRQ
-#define USBUSART_CLK           RCC_USART2
-#define USBUSART_PORT          GPIOA
-#define USBUSART_TX_PIN        GPIO2
-#define USBUSART_RX_PIN        GPIO3
-#define USBUSART_ISR(x)        usart2_isr(x)
-#define USBUSART_DMA_BUS       DMA1
-#define USBUSART_DMA_CLK       RCC_DMA1
-#define USBUSART_DMA_TX_CHAN   DMA_STREAM6
-#define USBUSART_DMA_TX_IRQ    NVIC_DMA1_STREAM6_IRQ
-#define USBUSART_DMA_TX_ISR(x) dma1_stream6_isr(x)
-#define USBUSART_DMA_RX_CHAN   DMA_STREAM5
-#define USBUSART_DMA_RX_IRQ    NVIC_DMA1_STREAM5_IRQ
-#define USBUSART_DMA_RX_ISR(x) dma1_stream5_isr(x)
+#define USBUSART               USBUSART2
+#define USBUSART_CR1           USBUSART2_CR1
+#define USBUSART_DR            USBUSART2_DR
+#define USBUSART_IRQ           USBUSART2_IRQ
+#define USBUSART_CLK           USBUSART2_CLK
+#define USBUSART_PORT          USBUSART2_PORT
+#define USBUSART_TX_PIN        USBUSART2_TX_PIN
+#define USBUSART_RX_PIN        USBUSART2_RX_PIN
+#define USBUSART_ISR(x)        USBUSART2_ISRx(x)
+#define USBUSART_DMA_BUS       USBUSART2_DMA_BUS
+#define USBUSART_DMA_CLK       USBUSART2_DMA_CLK
+#define USBUSART_DMA_TX_CHAN   USBUSART2_DMA_TX_CHAN
+#define USBUSART_DMA_TX_IRQ    USBUSART2_DMA_TX_IRQ
+#define USBUSART_DMA_TX_ISR(x) USBUSART2_DMA_TX_ISRx(x)
+#define USBUSART_DMA_RX_CHAN   USBUSART2_DMA_RX_CHAN
+#define USBUSART_DMA_RX_IRQ    USBUSART2_DMA_RX_IRQ
+#define USBUSART_DMA_RX_ISR(x) USBUSART2_DMA_RX_ISRx(x)
 /* For STM32F4 DMA trigger source must be specified. Channel 4 is selected, in line with the USART selected in the DMA table. */
 #define USBUSART_DMA_TRG DMA_SxCR_CHSEL_4
+
+/* To use USART1 as USBUSART, DMA2 is selected from https://www.st.com/resource/en/reference_manual/dm00119316-stm32f411xc-e-advanced-arm-based-32-bit-mcus-stmicroelectronics.pdf, page 170, table 28.
+ * This table defines USART1_TX as stream 7, channel 4, and USART1_RX as stream 5, channel 4.
+ */
+#define USBUSART1                USART1
+#define USBUSART1_CR1            USART1_CR1
+#define USBUSART1_DR             USART1_DR
+#define USBUSART1_IRQ            NVIC_USART1_IRQ
+#define USBUSART1_CLK            RCC_USART1
+#define USBUSART1_PORT           GPIOB
+#define USBUSART1_TX_PIN         GPIO6
+#define USBUSART1_RX_PIN         GPIO7
+#define USBUSART1_ISRx(x)        usart1_isr(x)
+#define USBUSART1_DMA_BUS        DMA2
+#define USBUSART1_DMA_CLK        RCC_DMA2
+#define USBUSART1_DMA_TX_CHAN    DMA_STREAM7
+#define USBUSART1_DMA_TX_IRQ     NVIC_DMA2_STREAM7_IRQ
+#define USBUSART1_DMA_TX_ISRx(x) dma2_stream7_isr(x)
+#define USBUSART1_DMA_RX_CHAN    DMA_STREAM5
+#define USBUSART1_DMA_RX_IRQ     NVIC_DMA2_STREAM5_IRQ
+#define USBUSART1_DMA_RX_ISRx(x) dma2_stream5_isr(x)
+
+/* To use USART2 as USBUSART, DMA1 is selected from https://www.st.com/resource/en/reference_manual/dm00119316-stm32f411xc-e-advanced-arm-based-32-bit-mcus-stmicroelectronics.pdf, page 170, table 27.
+ * This table defines USART2_TX as stream 6, channel 4, and USART2_RX as stream 5, channel 4.
+ */
+#define USBUSART2                USART2
+#define USBUSART2_CR1            USART2_CR1
+#define USBUSART2_DR             USART2_DR
+#define USBUSART2_IRQ            NVIC_USART2_IRQ
+#define USBUSART2_CLK            RCC_USART2
+#define USBUSART2_PORT           GPIOA
+#define USBUSART2_TX_PIN         GPIO2
+#define USBUSART2_RX_PIN         GPIO3
+#define USBUSART2_ISRx(x)        usart2_isr(x)
+#define USBUSART2_DMA_BUS        DMA1
+#define USBUSART2_DMA_CLK        RCC_DMA1
+#define USBUSART2_DMA_TX_CHAN    DMA_STREAM6
+#define USBUSART2_DMA_TX_IRQ     NVIC_DMA1_STREAM6_IRQ
+#define USBUSART2_DMA_TX_ISRx(x) dma1_stream6_isr(x)
+#define USBUSART2_DMA_RX_CHAN    DMA_STREAM5
+#define USBUSART2_DMA_RX_IRQ     NVIC_DMA1_STREAM5_IRQ
+#define USBUSART2_DMA_RX_ISRx(x) dma1_stream5_isr(x)
 
 #define BOOTMAGIC0 UINT32_C(0xb007da7a)
 #define BOOTMAGIC1 UINT32_C(0xbaadfeed)
