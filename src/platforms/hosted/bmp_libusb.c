@@ -156,25 +156,45 @@ static probe_info_s *process_ftdi_probe(void)
 	}
 
 	probe_info_s *probe_list = NULL;
+	const char *serial_skip = NULL;
 	/* Device list is loaded, iterate over the found probes */
 	for (size_t index = 0; index < ftdi_dev_count; ++index) {
 		const uint16_t vid = (dev_info[index].ID >> 16U) & 0xffffU;
 		const uint16_t pid = dev_info[index].ID & 0xffffU;
+		bool add_probe = true;
+
 		char *serial = strdup(dev_info[index].SerialNumber);
-		const char *const product = strdup(dev_info[index].Description);
+		char *const product = strdup(dev_info[index].Description);
 		size_t serial_len = strlen(serial);
 		if (serial_len <= 1) {
 			free(serial);
 			serial = strdup("Unknown serial");
 		} else {
 			--serial_len;
-			if (serial[serial_len] == 'A')
-				serial[serial_len] = '\0';
+			if (serial[serial_len] == 'A') {
+				serial[serial_len] = '\0'; // Remove the trailing "A"
+				if (serial_skip)           // Clean up any previous serial number to skip
+					free((void *)serial_skip);
+				serial_skip = strdup(serial); // Save the fixed serial number so we can skip over other interfaces
+
+				size_t product_len = strlen(product); // Product has " A" appended
+				product_len -= 2;
+				product[product_len] = '\0'; // Remove it
+			} else
+				// Skip this interface if the serial matches
+				add_probe = serial_skip == NULL || strstr(serial, serial_skip) == NULL;
 		}
-		const char *const manufacturer = strdup("FTDI");
-		probe_list =
-			probe_info_add_by_id(probe_list, BMP_TYPE_LIBFTDI, vid, pid, manufacturer, product, serial, strdup("---"));
+		if (add_probe) {
+			const char *const manufacturer = strdup("FTDI");
+			probe_list =
+				probe_info_add_by_id(probe_list, BMP_TYPE_FTDI, vid, pid, manufacturer, product, serial, strdup("---"));
+		} else {
+			free(serial);
+			free(product);
+		}
 	}
+	if (serial_skip)
+		free((void *)serial_skip);
 	free(dev_info);
 	return probe_list;
 }
