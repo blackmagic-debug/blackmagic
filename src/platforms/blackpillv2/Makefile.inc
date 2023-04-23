@@ -27,6 +27,16 @@ endif
 
 VPATH += platforms/stm32
 
+ifeq ($(ALTERNATIVE_PINOUT) <= 0, 1)
+CFLAGS += -DALTERNATIVE_PINOUT=0
+else ifeq ($(ALTERNATIVE_PINOUT), 1)
+CFLAGS += -DALTERNATIVE_PINOUT=1
+else ifeq ($(ALTERNATIVE_PINOUT), 2)
+CFLAGS += -DALTERNATIVE_PINOUT=2
+else ifeq ($(ALTERNATIVE_PINOUT), 3)
+CFLAGS += -DALTERNATIVE_PINOUT=3
+endif
+
 SRC +=               \
 	traceswodecode.c \
 	traceswo.c	\
