@@ -61,33 +61,34 @@ static const size_t number_of_ftdi_chip_types = ARRAY_LENGTH(ftdi_chip_types);
 
 struct ftdi_context *ftdi_new(void)
 {
+	return &ftdi_ctx; // Just need to fake the structure being created
+}
+
+int ftdi_set_interface(ftdi_context_s *ftdi, enum ftdi_interface interface)
+{
+	(void)ftdi;
 	/*
-	 * The FTD2XX library needs the device serial number to open a handle to it. The device
-	 * scanner places this into the BMP "info" structure.
+	 * FTD2XX needs a qualified serial number to open the correct device. Append
+	 * an interface letter to the serial number by adding the number to 'A'
 	 */
-	if (FT_OpenEx(info.serial, FT_OPEN_BY_SERIAL_NUMBER, &ftdi_handle) != FT_OK ||
+	char serial_number[16] = {0};
+	strcpy(serial_number, info.serial);
+	serial_number[strlen(serial_number)] = 'A' + (interface - 1);
+
+	if (FT_OpenEx(serial_number, FT_OPEN_BY_SERIAL_NUMBER, &ftdi_handle) != FT_OK ||
 		FT_SetTimeouts(ftdi_handle, READ_TIMEOUT, WRITE_TIMEOUT) != FT_OK)
-		return NULL;
+		return 0;
 
 	FT_DEVICE device;
-	DWORD device_id;
-	char serial_number[16];
-	char description[64];
+	DWORD device_id = 0;
+	char description[64] = {'\0'};
 	if (FT_GetDeviceInfo(ftdi_handle, &device, &device_id, serial_number, description, NULL) != FT_OK)
-		return NULL;
+		return 0;
 
 	const size_t device_type_index = device;
 	if (device_type_index < number_of_ftdi_chip_types)
 		ftdi_ctx.type = ftdi_chip_types[device_type_index];
-	return ctx;
-}
-
-int ftdi_set_interface(struct ftdi_context *ftdi, enum ftdi_interface interface)
-{
-	(void)ftdi;
-	(void)interface;
-	// The interface is already selected by the serial number used
-	// return 0;
+	return 0;
 }
 
 int ftdi_usb_open_desc(struct ftdi_context *ftdi, int vendor, int product, const char *description, const char *serial)
