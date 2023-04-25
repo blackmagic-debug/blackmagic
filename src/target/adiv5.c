@@ -527,7 +527,7 @@ static void adiv5_component_probe(
 			 * JEP-106 standard to their expected codes, this is later used to determine the correct probe function.
 			 */
 			DEBUG_WARN(
-				"Patching Designer code 0x%03" PRIx16 " -> 0x%03" PRIx16 "\n", designer_code, JEP106_MANUFACTURER_STM);
+				"Patching Designer code 0x%03" PRIx16 " -> 0x%03u\n", designer_code, JEP106_MANUFACTURER_STM);
 			designer_code = JEP106_MANUFACTURER_STM;
 		}
 	} else {
