@@ -72,14 +72,14 @@ static bool set_interface_attribs(void)
 }
 
 #ifdef __APPLE__
-int serial_open(const bmda_cli_options_s *cl_opts, const char *serial)
+bool serial_open(const bmda_cli_options_s *cl_opts, const char *serial)
 {
 	char name[4096];
 	if (!cl_opts->opt_device) {
 		/* Try to find some BMP if0*/
 		if (!serial) {
 			DEBUG_WARN("No serial device found\n");
-			return -1;
+			return false;
 		} else {
 			sprintf(name, "/dev/cu.usbmodem%s1", serial);
 		}
@@ -89,7 +89,7 @@ int serial_open(const bmda_cli_options_s *cl_opts, const char *serial)
 	fd = open(name, O_RDWR | O_SYNC | O_NOCTTY);
 	if (fd < 0) {
 		DEBUG_ERROR("Couldn't open serial port %s\n", name);
-		return -1;
+		return false;
 	}
 	/* BMP only offers an USB-Serial connection with no real serial
      * line in between. No need for baudrate or parity.!
