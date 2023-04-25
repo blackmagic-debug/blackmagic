@@ -2,7 +2,7 @@ exclude: '^upgrade/|^scripts/'  # don't run hooks on scripts/ and upgrade/
 
 repos:
 - repo: https://github.com/pre-commit/mirrors-clang-format
-  rev: v15.0.4
+  rev: v16.0.2
   hooks:
   - id: clang-format
     args: [-Werror]  # change formatting warnings to errors, hook includes -i (Inplace edit) by default
