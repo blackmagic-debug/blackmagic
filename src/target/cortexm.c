@@ -1261,22 +1261,22 @@ bool cortexm_run_stub(target_s *t, uint32_t loadaddr, uint32_t r0, uint32_t r1, 
 	return bkpt_instr & 0xffU;
 }
 
-/* The following routines implement hardware breakpoints and watchpoints.
+/*
+ * The following routines implement hardware breakpoints and watchpoints.
  * The Flash Patch and Breakpoint (FPB) and Data Watch and Trace (DWT)
- * systems are used. */
+ * systems are used.
+ */
 
+/*
+ * DWT only supports powers of two as size. Convert length in bytes to
+ * number of least-significant bits of the address to ignore during
+ * match (maximum 31).
+ */
 static uint32_t dwt_mask(size_t len)
 {
-	switch (len) {
-	case 1:
-		return CORTEXM_DWT_MASK_BYTE;
-	case 2:
-		return CORTEXM_DWT_MASK_HALFWORD;
-	case 4:
-		return CORTEXM_DWT_MASK_WORD;
-	default:
-		return -1;
-	}
+	if (len < 2)
+		return 0;
+	return MIN(ulog2(len - 1), 31);
 }
 
 static uint32_t dwt_func(target_s *t, target_breakwatch_e type)
