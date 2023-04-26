@@ -84,32 +84,34 @@ const command_s cmd_list[] = {
 	{"version", cmd_version, "Display firmware version info"},
 	{"help", cmd_help, "Display help for monitor commands"},
 	{"jtag_scan", cmd_jtag_scan, "Scan JTAG chain for devices"},
-	{"swdp_scan", cmd_swdp_scan, "Scan SW-DP for devices"},
+	{"swdp_scan", cmd_swdp_scan, "Scan SW-DP for devices: [TARGET_ID]"},
 	{"auto_scan", cmd_auto_scan, "Automatically scan all chain types for devices"},
-	{"frequency", cmd_frequency, "set minimum high and low times"},
+	{"frequency", cmd_frequency, "set minimum high and low times: [FREQ]"},
 	{"targets", cmd_targets, "Display list of available targets"},
 	{"morse", cmd_morse, "Display morse error message"},
-	{"halt_timeout", cmd_halt_timeout, "Timeout (ms) to wait until Cortex-M is halted: (Default 2000)"},
-	{"connect_rst", cmd_connect_reset, "Configure connect under reset: (enable|disable)"},
-	{"reset", cmd_reset, "Pulse the nRST line - disconnects target: (pulse_len_ms, default 0)"},
+	{"halt_timeout", cmd_halt_timeout, "Timeout to wait until Cortex-M is halted: [TIMEOUT, default 2000ms]"},
+	{"connect_rst", cmd_connect_reset, "Configure connect under reset: [enable|disable]"},
+	{"reset", cmd_reset, "Pulse the nRST line - disconnects target: [PULSE_LEN, default 0ms]"},
 	{"tdi_low_reset", cmd_tdi_low_reset,
 		"Pulse nRST with TDI set low to attempt to wake certain targets up (eg LPC82x)"},
 #ifdef PLATFORM_HAS_POWER_SWITCH
-	{"tpwr", cmd_target_power, "Supplies power to the target: (enable|disable)"},
+	{"tpwr", cmd_target_power, "Supplies power to the target: [enable|disable]"},
 #endif
 #ifdef ENABLE_RTT
-	{"rtt", cmd_rtt, "enable|disable|status|channel 0..15|ident (str)|cblock|ram|poll maxms minms maxerr"},
+	{"rtt", cmd_rtt,
+		"[enable|disable|status|channel [0..15 ...]|ident [STR]|cblock|ram [RAM_START RAM_END]|poll [MAXMS MINMS "
+		"MAXERR]]"},
 #endif
 #ifdef PLATFORM_HAS_TRACESWO
 #if defined TRACESWO_PROTOCOL && TRACESWO_PROTOCOL == 2
-	{"traceswo", cmd_traceswo, "Start trace capture, NRZ mode: (baudrate) (decode channel ...)"},
+	{"traceswo", cmd_traceswo, "Start trace capture, NRZ mode: [BAUDRATE] [decode [CHANNEL_NR ...]]"},
 #else
-	{"traceswo", cmd_traceswo, "Start trace capture, Manchester mode: (decode channel ...)"},
+	{"traceswo", cmd_traceswo, "Start trace capture, Manchester mode: [decode [CHANNEL_NR ...]]"},
 #endif
 #endif
-	{"heapinfo", cmd_heapinfo, "Set semihosting heapinfo"},
+	{"heapinfo", cmd_heapinfo, "Set semihosting heapinfo: HEAPINFO HEAP_BASE HEAP_LIMIT STACK_BASE STACK_LIMIT"},
 #if defined(PLATFORM_HAS_DEBUG) && PC_HOSTED == 0
-	{"debug_bmp", cmd_debug_bmp, "Output BMP \"debug\" strings to the second vcom: (enable|disable)"},
+	{"debug_bmp", cmd_debug_bmp, "Output BMP \"debug\" strings to the second vcom: [enable|disable]"},
 #endif
 #if PC_HOSTED == 1
 	{"shutdown_bmda", cmd_shutdown_bmda, "Tell the BMDA server to shut down when the GDB connection closes"},
