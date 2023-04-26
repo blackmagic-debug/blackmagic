@@ -85,7 +85,7 @@ jobs:
       - name: Install BMDA dependencies
         run: sudo apt-get -y install libc6-dev-i386 libusb-dev libftdi1-dev libhidapi-dev
 
-      # Setup and use a suitable ARM GCC for the firwmare
+      # Setup and use a suitable ARM GCC for the firmware
       - name: Setup ARM GCC
         uses: carlosperate/arm-none-eabi-gcc-action@v1
         with:
@@ -185,7 +185,7 @@ jobs:
           pacman --noconfirm -S mingw-w64-${{matrix.sys.env}}-libusb mingw-w64-${{matrix.sys.env}}-libftdi \
             mingw-w64-${{matrix.sys.env}}-hidapi
 
-      # Setup and use a suitable ARM GCC for the firwmare
+      # Setup and use a suitable ARM GCC for the firmware
       - name: Setup ARM GCC
         uses: carlosperate/arm-none-eabi-gcc-action@v1
         with:
