@@ -208,12 +208,12 @@ jobs:
     steps:
       - uses: numworks/setup-arm-toolchain@2020-q4
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           ref: ${{ github.base_ref }}
           path: base
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           path: head
