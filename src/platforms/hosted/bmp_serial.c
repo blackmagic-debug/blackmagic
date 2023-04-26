@@ -57,7 +57,7 @@ int find_debuggers(bmda_cli_options_s *cl_opts, bmp_info_s *info)
 }
 #elif defined(__WIN32__) || defined(__CYGWIN__)
 
-	/* This source has been used as an example:
+/* This source has been used as an example:
  * https://stackoverflow.com/questions/3438366/setupdigetdeviceproperty-usage-example */
 
 #include <windows.h>
