@@ -53,6 +53,7 @@ SRC =              \
 	lpc55xx.c      \
 	kinetis.c      \
 	main.c         \
+	maths_utils.c  \
 	morse.c        \
 	msp432.c       \
 	nrf51.c        \

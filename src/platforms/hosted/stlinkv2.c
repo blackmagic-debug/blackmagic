@@ -82,12 +82,6 @@ typedef struct stlink {
 #define STLINK_V2_MAX_SWD_CLOCK_FREQ  (3600U * 1000U)
 #define STLINK_V2_MIN_SWD_CLOCK_FREQ  (4505U)
 
-#ifdef __GNUC__
-#define unlikely(x) __builtin_expect(x, 0)
-#else
-#define unlikely(x) x
-#endif
-
 static stlink_s stlink;
 
 static uint32_t stlink_v2_divisor;
@@ -826,38 +820,6 @@ void stlink_adiv5_dp_defaults(adiv5_debug_port_s *dp)
 	dp->mem_write = stlink_mem_write;
 }
 
-static uint8_t stlink_ulog2(uint32_t value)
-{
-	if (unlikely(!value))
-		return UINT8_MAX;
-#if defined(__GNUC__)
-	return (uint8_t)((sizeof(uint32_t) * 8U) - (uint8_t)__builtin_clz(value));
-#elif defined(_MSC_VER)
-	return (uint8_t)((sizeof(uint32_t) * 8U) - (uint8_t)__lzcnt(value));
-#else
-	uint8_t result = 0U;
-	if (value <= UINT32_C(0x0000ffff)) {
-		result += 16;
-		value <<= 16U;
-	}
-	if (value <= UINT32_C(0x00ffffff)) {
-		result += 8;
-		value <<= 8U;
-	}
-	if (value <= UINT32_C(0x0fffffff)) {
-		result += 4;
-		value <<= 4U;
-	}
-	if (value <= UINT32_C(0x3fffffff)) {
-		result += 2;
-		value <<= 2U;
-	}
-	if (value <= UINT32_C(0x7fffffff))
-		++result;
-	return (sizeof(uint8_t) * 8U) - result;
-#endif
-}
-
 static void stlink_v2_set_frequency(const uint32_t freq)
 {
 	stlink_v2_set_freq_s request = {
@@ -881,7 +843,7 @@ static void stlink_v2_set_frequency(const uint32_t freq)
 		 * http://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
 		 * For a worked example of it in action, see https://bmp.godbolt.org/z/Pqhjco8e3
 		 */
-		stlink_v2_divisor = 1U << stlink_ulog2(divisor);
+		stlink_v2_divisor = 1U << ulog2(divisor);
 		stlink_v2_divisor /= STLINK_V2_JTAG_MUL_FACTOR;
 	} else {
 		/* Adjust the clock frequency request to result in the corrector dividor */
