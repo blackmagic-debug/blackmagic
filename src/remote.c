@@ -470,6 +470,21 @@ static void remote_packet_process_adiv5(const char *const packet, const size_t p
 	SET_IDLE_STATE(1);
 }
 
+void remote_packet_process_spi(const char *const packet, const size_t packet_len)
+{
+	/* Our shortest SPI packet is 2 bytes long, check that we have at least that */
+	if (packet_len < 2U) {
+		remote_respond(REMOTE_RESP_PARERR, 0);
+		return;
+	}
+
+	switch (packet[1]) {
+	default:
+		remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_UNRECOGNISED);
+		break;
+	}
+}
+
 void remote_packet_process(unsigned i, char *packet)
 {
 	switch (packet[0]) {
@@ -500,6 +515,10 @@ void remote_packet_process(unsigned i, char *packet)
 			remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_EXCEPTION | ((uint64_t)error.type << 8U));
 		break;
 	}
+
+	case REMOTE_SPI_PACKET:
+		remote_packet_process_spi(packet, i);
+		break;
 
 	default: /* Oh dear, unrecognised, return an error */
 		remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_UNRECOGNISED);
