@@ -36,10 +36,10 @@ typedef struct target_controller target_controller_s;
 
 #if PC_HOSTED == 1
 uint32_t platform_adiv5_swdp_scan(uint32_t targetid);
-uint32_t platform_jtag_scan(const uint8_t *ir_lengths, size_t lengths_count);
+uint32_t platform_jtag_scan(void);
 #endif
 uint32_t adiv5_swdp_scan(uint32_t targetid);
-uint32_t jtag_scan(const uint8_t *ir_lengths, size_t lengths_count);
+uint32_t jtag_scan(void);
 
 int target_foreach(void (*cb)(int i, target_s *t, void *context), void *context);
 void target_list_free(void);
