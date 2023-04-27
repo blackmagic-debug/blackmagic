@@ -45,6 +45,7 @@
 #include "general.h"
 #include "target.h"
 #include "target_internal.h"
+#include "cortexm.h"
 
 /* Memory map constants for STM32H5xx */
 #define STM32H5_FLASH_BANK1_BASE 0x08000000U
@@ -101,14 +102,13 @@
 #define STM32H5_UID_BASE      0x08fff800U
 
 #define STM32H5_DBGMCU_IDCODE_DEV_MASK  0x00000fffU
-#define STM32H5_DBGMCU_IDCODE_DEV_SHIFT 4U
 #define STM32H5_DBGMCU_IDCODE_REV_MASK  0xffff0000U
 #define STM32H5_DBGMCU_IDCODE_REV_SHIFT 16U
 
-/* Taken from DP_TARGETIDR in §58.3.3 of RM0481 rev 1, pg2958 */
-#define ID_STM32H5xx 0x4840U
-/* Taken from DP_TARGETIDR in §41.3.3 of RM0492 rev 2, pg1682 */
-#define ID_STM32H503 0x4740U
+/* Taken from DBGMCU_IDCODE in §18.12.4 of RM0481 rev 1, pg3085 */
+#define ID_STM32H5xx 0x484U
+/* Taken from DBGMCU_IDCODE in §41.124 of RM0492 rev 2, pg1807 */
+#define ID_STM32H503 0x474U
 
 typedef struct stm32h5_flash {
 	target_flash_s target_flash;
@@ -152,8 +152,11 @@ static void stm32h5_add_flash(
 
 bool stm32h5_probe(target_s *const target)
 {
-	if (target->part_id != ID_STM32H5xx && target->part_id != ID_STM32H503)
+	const adiv5_access_port_s *const ap = cortexm_ap(target);
+	/* Use the partno from the AP always to handle the difference between JTAG and SWD */
+	if (ap->partno != ID_STM32H5xx && ap->partno != ID_STM32H503)
 		return false;
+	target->part_id = ap->partno;
 
 	target->driver = "STM32H5";
 	target->mass_erase = stm32h5_mass_erase;
@@ -328,7 +331,7 @@ static bool stm32h5_cmd_rev(target_s *target, int argc, const char **argv)
 	/* Read the device identity register */
 	const uint32_t idcode = target_mem_read32(target, STM32H5_DBGMCU_IDCODE);
 	const uint16_t rev_id = (idcode & STM32H5_DBGMCU_IDCODE_REV_MASK) >> STM32H5_DBGMCU_IDCODE_REV_SHIFT;
-	const uint16_t dev_id = (idcode & STM32H5_DBGMCU_IDCODE_DEV_MASK) << STM32H5_DBGMCU_IDCODE_DEV_SHIFT;
+	const uint16_t dev_id = idcode & STM32H5_DBGMCU_IDCODE_DEV_MASK;
 
 	/* Display the device ID */
 	switch (dev_id) {
