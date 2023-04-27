@@ -201,7 +201,7 @@ void platform_add_jtag_dev(uint32_t i, const jtag_dev_s *jtag_dev)
 		remote_add_jtag_dev(i, jtag_dev);
 }
 
-uint32_t platform_jtag_scan(const uint8_t *ir_lengths, const size_t lengths_count)
+uint32_t platform_jtag_scan(void)
 {
 	info.is_jtag = true;
 
@@ -212,12 +212,10 @@ uint32_t platform_jtag_scan(const uint8_t *ir_lengths, const size_t lengths_coun
 	case BMP_TYPE_LIBFTDI:
 	case BMP_TYPE_JLINK:
 	case BMP_TYPE_CMSIS_DAP:
-		return jtag_scan(ir_lengths, lengths_count);
+		return jtag_scan();
 
 #if HOSTED_BMP_ONLY == 0
 	case BMP_TYPE_STLINKV2:
-		if (lengths_count)
-			gdb_outf("Manually specified IR lengths is not supported when using a ST-Link adaptor\n");
 		return stlink_jtag_scan();
 #endif
 

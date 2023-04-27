@@ -198,17 +198,11 @@ bool cmd_help(target_s *t, int argc, const char **argv)
 static bool cmd_jtag_scan(target_s *target, int argc, const char **argv)
 {
 	(void)target;
-	uint8_t ir_lengths[JTAG_MAX_DEVS];
-	const volatile size_t lengths_count = MIN((size_t)argc - 1U, JTAG_MAX_DEVS);
+	(void)argc;
+	(void)argv;
 
 	if (platform_target_voltage())
 		gdb_outf("Target voltage: %s\n", platform_target_voltage());
-
-	if (lengths_count) {
-		/* Accept a list of IR lengths on command line */
-		for (size_t offset = 0; offset < lengths_count; ++offset)
-			ir_lengths[offset] = strtoul(argv[offset + 1U], NULL, 0);
-	}
 
 	if (connect_assert_nrst)
 		platform_nrst_set_val(true); /* will be deasserted after attach */
@@ -217,9 +211,9 @@ static bool cmd_jtag_scan(target_s *target, int argc, const char **argv)
 	volatile exception_s e;
 	TRY_CATCH (e, EXCEPTION_ALL) {
 #if PC_HOSTED == 1
-		devs = platform_jtag_scan(ir_lengths, lengths_count);
+		devs = platform_jtag_scan();
 #else
-		devs = jtag_scan(ir_lengths, lengths_count);
+		devs = jtag_scan();
 #endif
 	}
 	switch (e.type) {
@@ -302,9 +296,9 @@ bool cmd_auto_scan(target_s *t, int argc, const char **argv)
 	volatile exception_s e;
 	TRY_CATCH (e, EXCEPTION_ALL) {
 #if PC_HOSTED == 1
-		devs = platform_jtag_scan(NULL, 0U);
+		devs = platform_jtag_scan();
 #else
-		devs = jtag_scan(NULL, 0U);
+		devs = jtag_scan();
 #endif
 		if (devs > 0)
 			break;
