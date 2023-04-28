@@ -196,6 +196,12 @@ extern bool debug_bmp;
 #define AUX_VBAT_PORT GPIOA
 #define AUX_VBAT      GPIO0
 
+/* SPI bus definitions */
+#define AUX_SPI         SPI2
+#define EXT_SPI         SPI1
+#define EXT_SPI_CS_PORT GPIOA
+#define EXT_SPI_CS      GPIO4
+
 #define SWD_CR       GPIO_CRL(SWDIO_PORT)
 #define SWD_CR_SHIFT (4U << 2U)
 
