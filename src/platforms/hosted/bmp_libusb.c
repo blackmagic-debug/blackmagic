@@ -296,6 +296,7 @@ rescan:
 			DEBUG_WARN("%2zu: %s, %s, %s\n", found_debuggers + 1U, serial[0] ? serial : NO_SERIAL_NUMBER, manufacturer,
 				product);
 
+		info->libusb_dev = dev;
 		info->vid = desc.idVendor;
 		info->pid = desc.idProduct;
 		info->bmp_type = type;
@@ -327,6 +328,8 @@ rescan:
 	}
 	if (!found_debuggers && access_problems)
 		DEBUG_ERROR("No debugger found. Please check access rights to USB devices!\n");
+	if (info->libusb_dev)
+		libusb_ref_device(info->libusb_dev);
 	libusb_free_device_list(devs, 1);
 	return found_debuggers == 1U ? 0 : -1;
 }
