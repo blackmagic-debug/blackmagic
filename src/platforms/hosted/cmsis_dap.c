@@ -199,9 +199,9 @@ static bool dap_init_hid(const bmp_info_s *const info)
 static bool dap_init_bulk(const bmp_info_s *const info)
 {
 	DEBUG_INFO("Using bulk transfer\n");
-	usb_handle = libusb_open_device_with_vid_pid(info->libusb_ctx, info->vid, info->pid);
-	if (!usb_handle) {
-		DEBUG_ERROR("libusb_open_device_with_vid_pid() failed\n");
+	int res = libusb_open(info->libusb_dev, &usb_handle);
+	if (res != LIBUSB_SUCCESS) {
+		DEBUG_ERROR("libusb_open() failed (%d): %s\n", res, libusb_error_name(res));
 		return false;
 	}
 	if (libusb_claim_interface(usb_handle, info->interface_num) < 0) {
