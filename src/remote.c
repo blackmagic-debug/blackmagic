@@ -27,6 +27,7 @@
 #include "gdb_packet.h"
 #include "jtagtap.h"
 #include "swd.h"
+#include "spi.h"
 #include "gdb_if.h"
 #include "version.h"
 #include "exception.h"
@@ -470,15 +471,46 @@ static void remote_packet_process_adiv5(const char *const packet, const size_t p
 	SET_IDLE_STATE(1);
 }
 
+static void remote_spi_respond(const bool result)
+{
+	if (result)
+		/* If the request suceeded, send an OK response */
+		remote_respond(REMOTE_RESP_OK, 0);
+	else
+		/* Otherwise signal that something went wrong with the request */
+		remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_FAULT);
+}
+
 void remote_packet_process_spi(const char *const packet, const size_t packet_len)
 {
-	/* Our shortest SPI packet is 2 bytes long, check that we have at least that */
-	if (packet_len < 2U) {
+	/* Our shortest SPI packet is 4 bytes long, check that we have at least that */
+	if (packet_len < 4U) {
 		remote_respond(REMOTE_RESP_PARERR, 0);
 		return;
 	}
 
+	const uint8_t spi_bus = remote_hex_string_to_num(2, packet + 2);
+
 	switch (packet[1]) {
+	/* Bus initialisation/deinitialisation commands */
+	case REMOTE_SPI_BEGIN:
+		remote_spi_respond(platform_spi_init(spi_bus));
+		break;
+	case REMOTE_SPI_END:
+		remote_spi_respond(platform_spi_deinit(spi_bus));
+		break;
+	/* Selects a SPI device to talk with */
+	case REMOTE_SPI_CHIP_SELECT:
+		/* For this command, spi_bus above is actually the device ID + whether to select it */
+		remote_spi_respond(platform_spi_chip_select(spi_bus));
+		break;
+	/* Performs a single byte SPI transfer */
+	case REMOTE_SPI_TRANSFER: {
+		const uint8_t data_in = remote_hex_string_to_num(2, packet + 4);
+		const uint8_t data_out = platform_spi_xfer(spi_bus, data_in);
+		remote_respond(REMOTE_RESP_OK, data_out);
+		break;
+	}
 	default:
 		remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_UNRECOGNISED);
 		break;
