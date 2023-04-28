@@ -34,6 +34,10 @@
 #ifndef TARGET_SPI_H
 #define TARGET_SPI_H
 
+#include <stdint.h>
+#include <stdbool.h>
+#include "spi_types.h"
+
 #define SPI_FLASH_OPCODE_MASK      0x00ffU
 #define SPI_FLASH_OPCODE(x)        ((x)&SPI_FLASH_OPCODE_MASK)
 #define SPI_FLASH_DUMMY_MASK       0x0700U
