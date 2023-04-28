@@ -410,55 +410,12 @@ bool stlink_init(void)
 		return false;
 	info.usb_link = link;
 	link->context = info.libusb_ctx;
-	libusb_device **devs = NULL;
-	const ssize_t cnt = libusb_get_device_list(info.libusb_ctx, &devs);
-	if (cnt < 0) {
-		DEBUG_ERROR("FATAL: ST-Link libusb_get_device_list failed\n");
+	int result = libusb_open(info.libusb_dev, &link->device_handle);
+	if (result != LIBUSB_SUCCESS) {
+		DEBUG_ERROR("libusb_open() failed (%d): %s\n", result, libusb_error_name(result));
+		DEBUG_WARN("Are you sure the permissions on the device are set correctly?\n");
 		return false;
 	}
-	bool found = false;
-	for (size_t i = 0; devs[i]; ++i) {
-		libusb_device *dev = devs[i];
-		struct libusb_device_descriptor desc;
-		int result = libusb_get_device_descriptor(dev, &desc);
-		if (result != LIBUSB_SUCCESS) {
-			DEBUG_ERROR("libusb_get_device_descriptor failed %s\n", libusb_strerror(result));
-			return false;
-		}
-		if (desc.idVendor != info.vid || desc.idProduct != info.pid)
-			continue;
-
-		result = libusb_open(dev, &link->device_handle);
-		if (result != LIBUSB_SUCCESS) {
-			DEBUG_ERROR("Failed to open ST-Link device %04x:%04x - %s\n", desc.idVendor, desc.idProduct,
-				libusb_strerror(result));
-			DEBUG_WARN("Are you sure the permissions on the device are set correctly?\n");
-			continue;
-		}
-		char serial[64];
-		if (desc.iSerialNumber) {
-			int result = libusb_get_string_descriptor_ascii(
-				link->device_handle, desc.iSerialNumber, (uint8_t *)serial, sizeof(serial));
-			/* If the call fails and it's not because the device gave us STALL, continue to the next one */
-			if (result < 0 && result != LIBUSB_ERROR_PIPE) {
-				libusb_close(link->device_handle);
-				continue;
-			}
-			if (result <= 0)
-				serial[0] = '\0';
-		} else
-			serial[0] = '\0';
-		/* Likewise, if the serial number returned doesn't match the one in info, go to next */
-		if (!strstr(serial, info.serial)) {
-			libusb_close(link->device_handle);
-			continue;
-		}
-		found = true;
-		break;
-	}
-	libusb_free_device_list(devs, (int)cnt);
-	if (!found)
-		return false;
 	if (info.vid != VENDOR_ID_STLINK)
 		return true;
 	switch (info.pid) {
