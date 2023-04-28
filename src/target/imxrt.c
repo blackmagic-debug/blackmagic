@@ -146,12 +146,6 @@ typedef struct imxrt_priv {
 	imxrt_flexspi_lut_insn_s flexspi_prg_seq_state[4][8];
 } imxrt_priv_s;
 
-typedef struct imxrt_spi_flash {
-	target_flash_s flash;
-	uint32_t page_size;
-	uint8_t sector_erase_opcode;
-} imxrt_spi_flash_s;
-
 static imxrt_boot_src_e imxrt_boot_source(uint32_t boot_cfg);
 static bool imxrt_enter_flash_mode(target_s *target);
 static bool imxrt_exit_flash_mode(target_s *target);
@@ -159,40 +153,7 @@ static uint8_t imxrt_spi_build_insn_sequence(target_s *target, uint16_t command,
 static void imxrt_spi_read(target_s *target, uint16_t command, target_addr_t address, void *buffer, size_t length);
 static void imxrt_spi_write(
 	target_s *target, uint16_t command, target_addr_t address, const void *buffer, size_t length);
-static bool imxrt_spi_mass_erase(target_s *target);
-static bool imxrt_spi_flash_erase(target_flash_s *flash, target_addr_t addr, size_t length);
-static bool imxrt_spi_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t length);
-
-static void imxrt_add_flash(target_s *const target, const size_t length)
-{
-	imxrt_spi_flash_s *spi_flash = calloc(1, sizeof(*spi_flash));
-	if (!spi_flash) { /* calloc failed: heap exhaustion */
-		DEBUG_WARN("calloc: failed in %s\n", __func__);
-		return;
-	}
-
-	spi_parameters_s spi_parameters;
-	if (!sfdp_read_parameters(target, &spi_parameters, imxrt_spi_read)) {
-		/* SFDP readout failed, so make some assumptions and hope for the best. */
-		spi_parameters.page_size = 256U;
-		spi_parameters.sector_size = 4096U;
-		spi_parameters.capacity = length;
-		spi_parameters.sector_erase_opcode = SPI_FLASH_OPCODE_SECTOR_ERASE;
-	}
-	DEBUG_INFO("Flash size: %" PRIu32 "MiB\n", (uint32_t)spi_parameters.capacity / (1024U * 1024U));
-
-	target_flash_s *const flash = &spi_flash->flash;
-	flash->start = IMXRT_FLEXSPI_BASE;
-	flash->length = spi_parameters.capacity;
-	flash->blocksize = spi_parameters.sector_size;
-	flash->write = imxrt_spi_flash_write;
-	flash->erase = imxrt_spi_flash_erase;
-	flash->erased = 0xffU;
-	target_add_flash(target, flash);
-
-	spi_flash->page_size = spi_parameters.page_size;
-	spi_flash->sector_erase_opcode = spi_parameters.sector_erase_opcode;
-}
+static void imxrt_spi_run_command(target_s *target, uint16_t command, target_addr_t address);
 
 bool imxrt_probe(target_s *const target)
 {
@@ -246,7 +207,7 @@ bool imxrt_probe(target_s *const target)
 		spi_flash_id_s flash_id;
 		imxrt_spi_read(target, SPI_FLASH_CMD_READ_JEDEC_ID, 0, &flash_id, sizeof(flash_id));
 
-		target->mass_erase = imxrt_spi_mass_erase;
+		target->mass_erase = bmp_spi_mass_erase;
 		target->enter_flash_mode = imxrt_enter_flash_mode;
 		target->exit_flash_mode = imxrt_exit_flash_mode;
 
@@ -255,7 +216,8 @@ bool imxrt_probe(target_s *const target)
 			const uint32_t capacity = 1U << flash_id.capacity;
 			DEBUG_INFO("SPI Flash: mfr = %02x, type = %02x, capacity = %08" PRIx32 "\n", flash_id.manufacturer,
 				flash_id.type, capacity);
-			imxrt_add_flash(target, capacity);
+			bmp_spi_add_flash(
+				target, IMXRT_FLEXSPI_BASE, capacity, imxrt_spi_read, imxrt_spi_write, imxrt_spi_run_command);
 		} else
 			DEBUG_INFO("Flash identification failed\n");
 
@@ -475,74 +437,11 @@ static void imxrt_spi_write(target_s *const target, const uint16_t command, cons
 	imxrt_spi_wait_complete(target);
 }
 
-static inline uint8_t imxrt_spi_read_status(target_s *const target)
-{
-	uint8_t status = 0;
-	imxrt_spi_read(target, SPI_FLASH_CMD_READ_STATUS, 0, &status, sizeof(status));
-	return status;
-}
-
-static inline void imxrt_spi_run_command(target_s *const target, const uint32_t command, const target_addr_t address)
+static void imxrt_spi_run_command(target_s *const target, const uint16_t command, const target_addr_t address)
 {
 	/* Configure the programmable sequence LUT */
 	const uint8_t slot = imxrt_spi_build_insn_sequence(target, command, 0U);
 	imxrt_spi_exec_sequence(target, slot, address, 0U);
 	/* Now wait for the FlexSPI controller to indicate the command completed we're done */
 	imxrt_spi_wait_complete(target);
-}
-
-static bool imxrt_spi_mass_erase(target_s *const target)
-{
-	platform_timeout_s timeout;
-	platform_timeout_set(&timeout, 500);
-	imxrt_enter_flash_mode(target);
-	imxrt_spi_run_command(target, SPI_FLASH_CMD_WRITE_ENABLE, 0U);
-	if (!(imxrt_spi_read_status(target) & SPI_FLASH_STATUS_WRITE_ENABLED)) {
-		imxrt_exit_flash_mode(target);
-		return false;
-	}
-
-	imxrt_spi_run_command(target, SPI_FLASH_CMD_CHIP_ERASE, 0U);
-	while (imxrt_spi_read_status(target) & SPI_FLASH_STATUS_BUSY)
-		target_print_progress(&timeout);
-
-	return imxrt_exit_flash_mode(target);
-}
-
-static bool imxrt_spi_flash_erase(target_flash_s *const flash, const target_addr_t addr, const size_t length)
-{
-	target_s *const target = flash->t;
-	const imxrt_spi_flash_s *const spi_flash = (imxrt_spi_flash_s *)flash;
-	const target_addr_t begin = addr - flash->start;
-	for (size_t offset = 0; offset < length; offset += flash->blocksize) {
-		imxrt_spi_run_command(target, SPI_FLASH_CMD_WRITE_ENABLE, 0U);
-		if (!(imxrt_spi_read_status(target) & SPI_FLASH_STATUS_WRITE_ENABLED))
-			return false;
-
-		imxrt_spi_run_command(
-			target, SPI_FLASH_CMD_SECTOR_ERASE | SPI_FLASH_OPCODE(spi_flash->sector_erase_opcode), begin + offset);
-		while (imxrt_spi_read_status(target) & SPI_FLASH_STATUS_BUSY)
-			continue;
-	}
-	return true;
-}
-
-static bool imxrt_spi_flash_write(
-	target_flash_s *const flash, const target_addr_t dest, const void *const src, const size_t length)
-{
-	target_s *const target = flash->t;
-	const imxrt_spi_flash_s *const spi_flash = (imxrt_spi_flash_s *)flash;
-	const target_addr_t begin = dest - flash->start;
-	const char *const buffer = src;
-	for (size_t offset = 0; offset < length; offset += spi_flash->page_size) {
-		imxrt_spi_run_command(target, SPI_FLASH_CMD_WRITE_ENABLE, 0U);
-		if (!(imxrt_spi_read_status(target) & SPI_FLASH_STATUS_WRITE_ENABLED))
-			return false;
-
-		const size_t amount = MIN(length - offset, spi_flash->page_size);
-		imxrt_spi_write(target, SPI_FLASH_CMD_PAGE_PROGRAM, begin + offset, buffer + offset, amount);
-		while (imxrt_spi_read_status(target) & SPI_FLASH_STATUS_BUSY)
-			continue;
-	}
-	return true;
 }
