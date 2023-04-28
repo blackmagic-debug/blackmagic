@@ -30,8 +30,8 @@ target_s *target_list = NULL;
 #define STDOUT_READ_BUF_SIZE       64U
 #define FLASH_WRITE_BUFFER_CEILING 1024U
 
-static bool target_cmd_mass_erase(target_s *t, int argc, const char **argv);
-static bool target_cmd_range_erase(target_s *t, int argc, const char **argv);
+static bool target_cmd_mass_erase(target_s *target, int argc, const char **argv);
+static bool target_cmd_range_erase(target_s *target, int argc, const char **argv);
 
 const command_s target_cmd_list[] = {
 	{"erase_mass", target_cmd_mass_erase, "Erase whole device Flash"},
@@ -41,58 +41,58 @@ const command_s target_cmd_list[] = {
 
 target_s *target_new(void)
 {
-	target_s *t = calloc(1, sizeof(*t));
-	if (!t) { /* calloc failed: heap exhaustion */
+	target_s *target = calloc(1, sizeof(*target));
+	if (!target) { /* calloc failed: heap exhaustion */
 		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return NULL;
 	}
 
 	if (target_list) {
-		target_s *c = target_list;
-		while (c->next)
-			c = c->next;
-		c->next = t;
+		target_s *last_target = target_list;
+		while (last_target->next)
+			last_target = last_target->next;
+		last_target->next = target;
 	} else
-		target_list = t;
+		target_list = target;
 
-	t->target_storage = NULL;
+	target->target_storage = NULL;
 
-	target_add_commands(t, target_cmd_list, "Target");
-	return t;
+	target_add_commands(target, target_cmd_list, "Target");
+	return target;
 }
 
-int target_foreach(void (*cb)(int, target_s *t, void *context), void *context)
+int target_foreach(void (*callback)(int, target_s *target, void *context), void *context)
 {
-	size_t i = 0;
-	for (target_s *t = target_list; t; t = t->next)
-		cb(++i, t, context);
-	return i;
+	size_t idx = 0;
+	for (target_s *target = target_list; target; target = target->next)
+		callback(++idx, target, context);
+	return idx;
 }
 
-void target_ram_map_free(target_s *t)
+void target_ram_map_free(target_s *target)
 {
-	while (t->ram) {
-		void *next = t->ram->next;
-		free(t->ram);
-		t->ram = next;
+	while (target->ram) {
+		target_ram_s *next = target->ram->next;
+		free(target->ram);
+		target->ram = next;
 	}
 }
 
-void target_flash_map_free(target_s *t)
+void target_flash_map_free(target_s *target)
 {
-	while (t->flash) {
-		void *next = t->flash->next;
-		if (t->flash->buf)
-			free(t->flash->buf);
-		free(t->flash);
-		t->flash = next;
+	while (target->flash) {
+		target_flash_s *next = target->flash->next;
+		if (target->flash->buf)
+			free(target->flash->buf);
+		free(target->flash);
+		target->flash = next;
 	}
 }
 
-void target_mem_map_free(target_s *t)
+void target_mem_map_free(target_s *target)
 {
-	target_ram_map_free(t);
-	target_flash_map_free(t);
+	target_ram_map_free(target);
+	target_flash_map_free(target);
 }
 
 void target_list_free(void)
@@ -124,55 +124,55 @@ void target_list_free(void)
 	target_list = NULL;
 }
 
-void target_add_commands(target_s *t, const command_s *cmds, const char *name)
+void target_add_commands(target_s *target, const command_s *cmds, const char *name)
 {
-	target_command_s *tc = malloc(sizeof(*tc));
-	if (!tc) { /* malloc failed: heap exhaustion */
+	target_command_s *command = malloc(sizeof(*command));
+	if (!command) { /* malloc failed: heap exhaustion */
 		DEBUG_ERROR("malloc: failed in %s\n", __func__);
 		return;
 	}
 
-	if (t->commands) {
+	if (target->commands) {
 		target_command_s *tail;
-		for (tail = t->commands; tail->next; tail = tail->next)
+		for (tail = target->commands; tail->next; tail = tail->next)
 			continue;
-		tail->next = tc;
+		tail->next = command;
 	} else
-		t->commands = tc;
+		target->commands = command;
 
-	tc->specific_name = name;
-	tc->cmds = cmds;
-	tc->next = NULL;
+	command->specific_name = name;
+	command->cmds = cmds;
+	command->next = NULL;
 }
 
-target_s *target_attach_n(const size_t n, target_controller_s *tc)
+target_s *target_attach_n(const size_t n, target_controller_s *controller)
 {
-	target_s *t = target_list;
-	for (size_t i = 1; t; t = t->next, ++i) {
-		if (i == n)
-			return target_attach(t, tc);
+	target_s *target = target_list;
+	for (size_t idx = 1; target; target = target->next, ++idx) {
+		if (idx == n)
+			return target_attach(target, controller);
 	}
 	return NULL;
 }
 
-target_s *target_attach(target_s *t, target_controller_s *tc)
+target_s *target_attach(target_s *target, target_controller_s *controller)
 {
-	if (t->tc)
-		t->tc->destroy_callback(t->tc, t);
+	if (target->tc)
+		target->tc->destroy_callback(target->tc, target);
 
-	t->tc = tc;
+	target->tc = controller;
 	platform_target_clk_output_enable(true);
 
-	if (t->attach && !t->attach(t)) {
+	if (target->attach && !target->attach(target)) {
 		platform_target_clk_output_enable(false);
 		return NULL;
 	}
 
-	t->attached = true;
-	return t;
+	target->attached = true;
+	return target;
 }
 
-void target_add_ram(target_s *t, target_addr_t start, uint32_t len)
+void target_add_ram(target_s *target, target_addr_t start, uint32_t len)
 {
 	target_ram_s *ram = malloc(sizeof(*ram));
 	if (!ram) { /* malloc failed: heap exhaustion */
@@ -182,27 +182,27 @@ void target_add_ram(target_s *t, target_addr_t start, uint32_t len)
 
 	ram->start = start;
 	ram->length = len;
-	ram->next = t->ram;
-	t->ram = ram;
+	ram->next = target->ram;
+	target->ram = ram;
 }
 
-void target_add_flash(target_s *t, target_flash_s *f)
+void target_add_flash(target_s *target, target_flash_s *flash)
 {
-	if (f->writesize == 0)
-		f->writesize = f->blocksize;
+	if (flash->writesize == 0)
+		flash->writesize = flash->blocksize;
 
 	/* Automatically sized buffer */
 	/* For targets with larger than FLASH_WRITE_BUFFER_CEILING write size, we use a buffer of write size */
 	/* No point doing math if we can't fit at least 2 writesizes in a buffer */
-	if (f->writesize <= FLASH_WRITE_BUFFER_CEILING / 2U) {
-		const size_t count = FLASH_WRITE_BUFFER_CEILING / f->writesize;
-		f->writebufsize = f->writesize * count;
+	if (flash->writesize <= FLASH_WRITE_BUFFER_CEILING / 2U) {
+		const size_t count = FLASH_WRITE_BUFFER_CEILING / flash->writesize;
+		flash->writebufsize = flash->writesize * count;
 	} else
-		f->writebufsize = f->writesize;
+		flash->writebufsize = flash->writesize;
 
-	f->t = t;
-	f->next = t->flash;
-	t->flash = f;
+	flash->t = target;
+	flash->next = target->flash;
+	target->flash = flash;
 }
 
 static ssize_t map_ram(char *buf, size_t len, target_ram_s *ram)
@@ -211,28 +211,29 @@ static ssize_t map_ram(char *buf, size_t len, target_ram_s *ram)
 		(uint32_t)ram->length);
 }
 
-static ssize_t map_flash(char *buf, size_t len, target_flash_s *f)
+static ssize_t map_flash(char *buf, size_t len, target_flash_s *flash)
 {
-	int i = 0;
-	i += snprintf(&buf[i], len - i, "<memory type=\"flash\" start=\"0x%08" PRIx32 "\" length=\"0x%" PRIx32 "\">",
-		f->start, (uint32_t)f->length);
-	i += snprintf(
-		&buf[i], len - i, "<property name=\"blocksize\">0x%" PRIx32 "</property></memory>", (uint32_t)f->blocksize);
-	return i;
+	ssize_t offset = 0;
+	offset += snprintf(&buf[offset], len - offset,
+		"<memory type=\"flash\" start=\"0x%08" PRIx32 "\" length=\"0x%" PRIx32 "\">", flash->start,
+		(uint32_t)flash->length);
+	offset += snprintf(buf + offset, len - offset, "<property name=\"blocksize\">0x%" PRIx32 "</property></memory>",
+		(uint32_t)flash->blocksize);
+	return offset;
 }
 
-bool target_mem_map(target_s *t, char *tmp, size_t len)
+bool target_mem_map(target_s *target, char *tmp, size_t len)
 {
-	size_t i = 0;
-	i = snprintf(&tmp[i], len - i, "<memory-map>");
+	size_t offset = 0;
+	offset = snprintf(tmp + offset, len - offset, "<memory-map>");
 	/* Map each defined RAM */
-	for (target_ram_s *r = t->ram; r; r = r->next)
-		i += map_ram(&tmp[i], len - i, r);
+	for (target_ram_s *ram = target->ram; ram; ram = ram->next)
+		offset += map_ram(tmp + offset, len - offset, ram);
 	/* Map each defined Flash */
-	for (target_flash_s *f = t->flash; f; f = f->next)
-		i += map_flash(&tmp[i], len - i, f);
-	i += snprintf(&tmp[i], len - i, "</memory-map>");
-	return i < len - 1U;
+	for (target_flash_s *flash = target->flash; flash; flash = flash->next)
+		offset += map_flash(tmp + offset, len - offset, flash);
+	offset += snprintf(tmp + offset, len - offset, "</memory-map>");
+	return offset < len - 1U;
 }
 
 void target_print_progress(platform_timeout_s *const timeout)
@@ -244,27 +245,27 @@ void target_print_progress(platform_timeout_s *const timeout)
 }
 
 /* Wrapper functions */
-void target_detach(target_s *t)
+void target_detach(target_s *target)
 {
-	if (t->detach)
-		t->detach(t);
+	if (target->detach)
+		target->detach(target);
 	platform_target_clk_output_enable(false);
-	t->attached = false;
+	target->attached = false;
 #if PC_HOSTED == 1
 	platform_buffer_flush();
 #endif
 }
 
-bool target_check_error(target_s *t)
+bool target_check_error(target_s *target)
 {
-	if (t && t->check_error)
-		return t->check_error(t);
+	if (target && target->check_error)
+		return target->check_error(target);
 	return false;
 }
 
-bool target_attached(target_s *t)
+bool target_attached(target_s *target)
 {
-	return t->attached;
+	return target->attached;
 }
 
 /* Memory access functions */

@@ -41,36 +41,36 @@ uint32_t platform_jtag_scan(void);
 uint32_t adiv5_swdp_scan(uint32_t targetid);
 uint32_t jtag_scan(void);
 
-int target_foreach(void (*cb)(int i, target_s *t, void *context), void *context);
+int target_foreach(void (*callback)(int index, target_s *target, void *context), void *context);
 void target_list_free(void);
 
 /* Attach/detach functions */
-target_s *target_attach(target_s *t, target_controller_s *);
-target_s *target_attach_n(size_t n, target_controller_s *);
-void target_detach(target_s *t);
-bool target_attached(target_s *t);
-const char *target_driver_name(target_s *t);
-const char *target_core_name(target_s *t);
-unsigned int target_designer(target_s *t);
-unsigned int target_part_id(target_s *t);
+target_s *target_attach(target_s *target, target_controller_s *controller);
+target_s *target_attach_n(size_t n, target_controller_s *controller);
+void target_detach(target_s *target);
+bool target_attached(target_s *target);
+const char *target_driver_name(target_s *target);
+const char *target_core_name(target_s *target);
+unsigned int target_designer(target_s *target);
+unsigned int target_part_id(target_s *target);
 
 /* Memory access functions */
-bool target_mem_map(target_s *t, char *buf, size_t len);
-int target_mem_read(target_s *t, void *dest, target_addr_t src, size_t len);
-int target_mem_write(target_s *t, target_addr_t dest, const void *src, size_t len);
-bool target_mem_access_needs_halt(target_s *t);
+bool target_mem_map(target_s *target, char *buf, size_t len);
+int target_mem_read(target_s *target, void *dest, target_addr_t src, size_t len);
+int target_mem_write(target_s *target, target_addr_t dest, const void *src, size_t len);
+bool target_mem_access_needs_halt(target_s *target);
 /* Flash memory access functions */
-bool target_flash_erase(target_s *t, target_addr_t addr, size_t len);
-bool target_flash_write(target_s *t, target_addr_t dest, const void *src, size_t len);
-bool target_flash_complete(target_s *t);
+bool target_flash_erase(target_s *target, target_addr_t addr, size_t len);
+bool target_flash_write(target_s *target, target_addr_t dest, const void *src, size_t len);
+bool target_flash_complete(target_s *target);
 
 /* Register access functions */
-size_t target_regs_size(target_s *t);
-const char *target_regs_description(target_s *t);
-void target_regs_read(target_s *t, void *data);
-void target_regs_write(target_s *t, const void *data);
-ssize_t target_reg_read(target_s *t, int reg, void *data, size_t max);
-ssize_t target_reg_write(target_s *t, int reg, const void *data, size_t size);
+size_t target_regs_size(target_s *target);
+const char *target_regs_description(target_s *target);
+void target_regs_read(target_s *target, void *data);
+void target_regs_write(target_s *target, const void *data);
+ssize_t target_reg_read(target_s *target, int reg, void *data, size_t max);
+ssize_t target_reg_write(target_s *target, int reg, const void *data, size_t size);
 
 /* Halt/resume functions */
 typedef enum target_halt_reason {
@@ -83,12 +83,12 @@ typedef enum target_halt_reason {
 	TARGET_HALT_FAULT,
 } target_halt_reason_e;
 
-void target_reset(target_s *t);
-void target_halt_request(target_s *t);
-target_halt_reason_e target_halt_poll(target_s *t, target_addr_t *watch);
-void target_halt_resume(target_s *t, bool step);
-void target_set_cmdline(target_s *t, char *cmdline);
-void target_set_heapinfo(target_s *t, target_addr_t heap_base, target_addr_t heap_limit, target_addr_t stack_base,
+void target_reset(target_s *target);
+void target_halt_request(target_s *target);
+target_halt_reason_e target_halt_poll(target_s *target, target_addr_t *watch);
+void target_halt_resume(target_s *target, bool step);
+void target_set_cmdline(target_s *target, char *cmdline);
+void target_set_heapinfo(target_s *target, target_addr_t heap_base, target_addr_t heap_limit, target_addr_t stack_base,
 	target_addr_t stack_limit);
 
 /* Break-/watchpoint functions */
@@ -100,12 +100,12 @@ typedef enum target_breakwatch {
 	TARGET_WATCH_ACCESS,
 } target_breakwatch_e;
 
-int target_breakwatch_set(target_s *t, target_breakwatch_e, target_addr_t, size_t);
-int target_breakwatch_clear(target_s *t, target_breakwatch_e, target_addr_t, size_t);
+int target_breakwatch_set(target_s *target, target_breakwatch_e, target_addr_t, size_t);
+int target_breakwatch_clear(target_s *target, target_breakwatch_e, target_addr_t, size_t);
 
 /* Command interpreter */
-void target_command_help(target_s *t);
-int target_command(target_s *t, int argc, const char *argv[]);
+void target_command_help(target_s *target);
+int target_command(target_s *target, int argc, const char *argv[]);
 
 /* keep target_errno in sync with errno values in gdb/include/gdb/fileio.h */
 typedef enum target_errno {
@@ -149,7 +149,7 @@ typedef enum target_seek_flag {
 } target_seek_flag_e;
 
 struct target_controller {
-	void (*destroy_callback)(target_controller_s *, target_s *t);
+	void (*destroy_callback)(target_controller_s *, target_s *target);
 	void (*printf)(target_controller_s *, const char *fmt, va_list);
 
 	/* Interface to host system calls */
