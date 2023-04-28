@@ -306,13 +306,36 @@
 
 /* SPI protocol elements */
 #define REMOTE_SPI_PACKET      's'
-#define REMOTE_SPI_TRANSFER    'X'
+#define REMOTE_SPI_BEGIN       'B'
+#define REMOTE_SPI_END         'E'
 #define REMOTE_SPI_CHIP_SELECT 'C'
+#define REMOTE_SPI_TRANSFER    'X'
 #define REMOTE_SPI_READ        'r'
 #define REMOTE_SPI_WRTIE       'w'
 #define REMOTE_SPI_CHIP_ID     'I'
 #define REMOTE_SPI_SFDP        'S'
 #define REMOTE_SPI_RUN_COMMAND 'c'
+
+#define REMOTE_SPI_BEGIN_STR                                                                          \
+	(char[])                                                                                          \
+	{                                                                                                 \
+		'+', REMOTE_EOM, REMOTE_SOM, REMOTE_SPI_PACKET, REMOTE_SPI_BEGIN, REMOTE_UINT8, REMOTE_EOM, 0 \
+	}
+#define REMOTE_SPI_END_STR                                                         \
+	(char[])                                                                       \
+	{                                                                              \
+		REMOTE_SOM, REMOTE_SPI_PACKET, REMOTE_SPI_END, REMOTE_UINT8, REMOTE_EOM, 0 \
+	}
+#define REMOTE_SPI_CHIP_SELECT_STR                                                         \
+	(char[])                                                                               \
+	{                                                                                      \
+		REMOTE_SOM, REMOTE_SPI_PACKET, REMOTE_SPI_CHIP_SELECT, REMOTE_UINT8, REMOTE_EOM, 0 \
+	}
+#define REMOTE_SPI_TRANSFER_STR                                                                        \
+	(char[])                                                                                           \
+	{                                                                                                  \
+		REMOTE_SOM, REMOTE_SPI_PACKET, REMOTE_SPI_TRANSFER, REMOTE_UINT8, REMOTE_UINT8, REMOTE_EOM, 0, \
+	}
 
 uint64_t remote_hex_string_to_num(uint32_t limit, const char *str);
 void remote_packet_process(unsigned int i, char *packet);
