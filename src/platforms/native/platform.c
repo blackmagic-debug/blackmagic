@@ -137,6 +137,7 @@ int platform_hwversion(void)
 
 void platform_init(void)
 {
+	const int hwversion = platform_hwversion();
 	SCS_DEMCR |= SCS_DEMCR_VC_MON_EN;
 
 	rcc_clock_setup_pll(&rcc_hse_configs[RCC_CLOCK_HSE8_72MHZ]);
@@ -145,7 +146,7 @@ void platform_init(void)
 	rcc_periph_clock_enable(RCC_USB);
 	rcc_periph_clock_enable(RCC_GPIOA);
 	rcc_periph_clock_enable(RCC_GPIOB);
-	if (platform_hwversion() >= 6)
+	if (hwversion >= 6)
 		rcc_periph_clock_enable(RCC_GPIOC);
 	rcc_periph_clock_enable(RCC_AFIO);
 	rcc_periph_clock_enable(RCC_CRC);
@@ -165,7 +166,7 @@ void platform_init(void)
 	gpio_port_write(GPIOA, 0x8182);
 	gpio_port_write(GPIOB, 0x2002);
 
-	if (platform_hwversion() >= 6) {
+	if (hwversion >= 6) {
 		gpio_set_mode(TCK_DIR_PORT, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, TCK_DIR_PIN);
 		gpio_set_mode(TCK_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, TCK_PIN);
 		gpio_clear(TCK_DIR_PORT, TCK_DIR_PIN);
@@ -180,10 +181,9 @@ void platform_init(void)
 	 */
 	platform_nrst_set_val(false);
 	gpio_set_mode(NRST_PORT, GPIO_MODE_OUTPUT_50_MHZ,
-		platform_hwversion() == 0 || platform_hwversion() >= 3 ? GPIO_CNF_OUTPUT_PUSHPULL : GPIO_CNF_OUTPUT_OPENDRAIN,
-		NRST_PIN);
+		hwversion == 0 || hwversion >= 3 ? GPIO_CNF_OUTPUT_PUSHPULL : GPIO_CNF_OUTPUT_OPENDRAIN, NRST_PIN);
 	/* FIXME: Gareth, Esden, what versions need this fix? */
-	if (platform_hwversion() < 3)
+	if (hwversion < 3)
 		/*
 		 * FIXME: This pin in intended to be input, but the TXS0108 fails
 		 * to release the device from reset if this floats.
@@ -197,15 +197,15 @@ void platform_init(void)
 	 * Enable internal pull-up on PWR_BR so that we don't drive
 	 * TPWR locally or inadvertently supply power to the target.
 	 */
-	if (platform_hwversion() == 1) {
+	if (hwversion == 1) {
 		gpio_set(PWR_BR_PORT, PWR_BR_PIN);
 		gpio_set_mode(PWR_BR_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_PULL_UPDOWN, PWR_BR_PIN);
-	} else if (platform_hwversion() > 1) {
+	} else if (hwversion > 1) {
 		gpio_set(PWR_BR_PORT, PWR_BR_PIN);
 		gpio_set_mode(PWR_BR_PORT, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_OPENDRAIN, PWR_BR_PIN);
 	}
 
-	if (platform_hwversion() > 0)
+	if (hwversion > 0)
 		adc_init();
 	else {
 		gpio_clear(GPIOB, GPIO0);
@@ -221,7 +221,7 @@ void platform_init(void)
 	 * On hardware version 1 and 2, UART and SWD share connector pins.
 	 * Don't enable UART if we're being debugged.
 	 */
-	if (platform_hwversion() == 0 || platform_hwversion() >= 3 || !(SCS_DEMCR & SCS_DEMCR_TRCENA))
+	if (hwversion == 0 || hwversion >= 3 || !(SCS_DEMCR & SCS_DEMCR_TRCENA))
 		aux_serial_init();
 
 	setup_vbus_irq();
