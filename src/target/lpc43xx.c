@@ -669,6 +669,7 @@ static bool lpc43x0_attach(target_s *const target)
 static void lpc43x0_detach(target_s *const target)
 {
 	lpc43x0_priv_s *const priv = (lpc43x0_priv_s *)target->target_storage;
+	free(priv->flash->flash_high);
 	free(priv->flash);
 	priv->flash = NULL;
 	target->flash = NULL;
