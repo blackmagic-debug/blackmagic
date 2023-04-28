@@ -270,8 +270,8 @@ static bool lpc43xx_cmd_reset(target_s *t, int argc, const char **argv);
 static bool lpc43xx_cmd_mkboot(target_s *t, int argc, const char **argv);
 
 static lpc43xx_partid_s lpc43x0_spi_read_partid(target_s *t);
-static bool lpc43x0_attach(target_s *t);
-static void lpc43x0_detach(target_s *t);
+static bool lpc43x0_attach(target_s *target);
+static void lpc43x0_detach(target_s *target);
 static bool lpc43x0_enter_flash_mode(target_s *t);
 static bool lpc43x0_exit_flash_mode(target_s *t);
 static void lpc43x0_spi_abort(target_s *t);
@@ -606,73 +606,73 @@ static void lpc43x0_determine_flash_interface(target_s *const t)
 	}
 }
 
-static bool lpc43x0_attach(target_s *const t)
+static bool lpc43x0_attach(target_s *const target)
 {
-	if (!cortexm_attach(t))
+	if (!cortexm_attach(target))
 		return false;
 
-	if (!t->target_storage) {
+	if (!target->target_storage) {
 		lpc43x0_priv_s *priv = calloc(1, sizeof(lpc43x0_priv_s));
 		if (!priv) { /* calloc failed: heap exhaustion */
 			DEBUG_ERROR("calloc: failed in %s\n", __func__);
 			return false;
 		}
-		t->target_storage = priv;
+		target->target_storage = priv;
 
 		/*
-		* Before we can go down a specific route here, we first have to figure out how the device was booted:
-		* - Was it bought up on the SPIFI interface
-		* - Was it bought up on SSP0
-		* - Was it bought up on the EMC interface
-		*
-		* Once this is ascertained, we can pick how to proceed.
-		*
-		* Start by reading 0x40045030 - OTP[3,0], Customer control data.
-		* If bits 25:28 read as 0, boot is controlled by the external pins, otherwise
-		* this determines the boot source. 2 for SPIFI, 3 through 5 for EMC, and 8 for SPI
-		* For external pins, P1_1, P1_2, P2_8 and P2_9 control the process.
-		*
-		* When assembled as [P2_9, P2_9, P1_2, P1_1] and interpreted as a bitvector, the following holds:
-		* - 0b0001 -> SPIFI
-		* - 0b0010 -> EMC (8-bit)
-		* - 0b0011 -> EMC (16-bit)
-		* - 0b0100 -> EMC (32-bit)
-		* - 0b0111 -> SPI (SSP0)
-		*
-		* We don't actually care about any of the other modes as they're inconsequential.
-		* If the boot source contains a header prior to the image or is SPI boot, the header
-		* is validated and the image copied to SRAM at 0x10000000, then executed from there.
-		* If the boot source is anything other than SPI and the image contains no header,
-		* the chip sets switches execution to that boot source.
-		*
-		* This process is laid out in Chaper 5 of UM10503. See Fig 16 on pg 59 for a more detailed view.
-		*/
-		lpc43x0_determine_flash_interface(t);
+		 * Before we can go down a specific route here, we first have to figure out how the device was booted:
+		 * - Was it bought up on the SPIFI interface
+		 * - Was it bought up on SSP0
+		 * - Was it bought up on the EMC interface
+		 *
+		 * Once this is ascertained, we can pick how to proceed.
+		 *
+		 * Start by reading 0x40045030 - OTP[3,0], Customer control data.
+		 * If bits 25:28 read as 0, boot is controlled by the external pins, otherwise
+		 * this determines the boot source. 2 for SPIFI, 3 through 5 for EMC, and 8 for SPI
+		 * For external pins, P1_1, P1_2, P2_8 and P2_9 control the process.
+		 *
+		 * When assembled as [P2_9, P2_9, P1_2, P1_1] and interpreted as a bitvector, the following holds:
+		 * - 0b0001 -> SPIFI
+		 * - 0b0010 -> EMC (8-bit)
+		 * - 0b0011 -> EMC (16-bit)
+		 * - 0b0100 -> EMC (32-bit)
+		 * - 0b0111 -> SPI (SSP0)
+		 *
+		 * We don't actually care about any of the other modes as they're inconsequential.
+		 * If the boot source contains a header prior to the image or is SPI boot, the header
+		 * is validated and the image copied to SRAM at 0x10000000, then executed from there.
+		 * If the boot source is anything other than SPI and the image contains no header,
+		 * the chip sets switches execution to that boot source.
+		 *
+		 * This process is laid out in Chaper 5 of UM10503. See Fig 16 on pg 59 for a more detailed view.
+		 */
+		lpc43x0_determine_flash_interface(target);
 	}
 
-	lpc43x0_enter_flash_mode(t);
+	lpc43x0_enter_flash_mode(target);
 	spi_flash_id_s flash_id;
-	lpc43x0_spi_read(t, SPI_FLASH_CMD_READ_JEDEC_ID, 0, &flash_id, sizeof(flash_id));
+	lpc43x0_spi_read(target, SPI_FLASH_CMD_READ_JEDEC_ID, 0, &flash_id, sizeof(flash_id));
 
 	/* If we read out valid Flash information, set up a region for it */
 	if (flash_id.manufacturer != 0xffU && flash_id.type != 0xffU && flash_id.capacity != 0xffU) {
 		const uint32_t capacity = 1U << flash_id.capacity;
 		DEBUG_INFO("SPI Flash: mfr = %02x, type = %02x, capacity = %08" PRIx32 "\n", flash_id.manufacturer,
 			flash_id.type, capacity);
-		lpc43x0_add_spi_flash(t, capacity);
+		lpc43x0_add_spi_flash(target, capacity);
 	} else
 		DEBUG_INFO("Flash identification failed\n");
 
-	return lpc43x0_exit_flash_mode(t);
+	return lpc43x0_exit_flash_mode(target);
 }
 
-static void lpc43x0_detach(target_s *const t)
+static void lpc43x0_detach(target_s *const target)
 {
-	lpc43x0_priv_s *const priv = (lpc43x0_priv_s *)t->target_storage;
+	lpc43x0_priv_s *const priv = (lpc43x0_priv_s *)target->target_storage;
 	free(priv->flash);
 	priv->flash = NULL;
-	t->flash = NULL;
-	cortexm_detach(t);
+	target->flash = NULL;
+	cortexm_detach(target);
 }
 
 static bool lpc43x0_enter_flash_mode(target_s *const t)
