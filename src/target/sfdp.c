@@ -66,11 +66,11 @@ static inline size_t sfdp_memory_density_to_capacity_bits(const uint8_t *const d
 }
 
 static spi_parameters_s sfdp_read_basic_parameter_table(
-	target_s *const t, const uint32_t address, const size_t length, const spi_read_func spi_read)
+	target_s *const target, const uint32_t address, const size_t length, const spi_read_func spi_read)
 {
 	sfdp_basic_parameter_table_s parameter_table;
 	const size_t table_length = MIN(sizeof(sfdp_basic_parameter_table_s), length);
-	spi_read(t, SPI_FLASH_CMD_READ_SFDP, address, &parameter_table, table_length);
+	spi_read(target, SPI_FLASH_CMD_READ_SFDP, address, &parameter_table, table_length);
 
 	spi_parameters_s result;
 	result.capacity = sfdp_memory_density_to_capacity_bits(parameter_table.memory_density) >> 3U;
@@ -86,24 +86,24 @@ static spi_parameters_s sfdp_read_basic_parameter_table(
 	return result;
 }
 
-bool sfdp_read_parameters(target_s *const t, spi_parameters_s *params, const spi_read_func spi_read)
+bool sfdp_read_parameters(target_s *const target, spi_parameters_s *params, const spi_read_func spi_read)
 {
 	sfdp_header_s header;
-	spi_read(t, SPI_FLASH_CMD_READ_SFDP, SFDP_HEADER_ADDRESS, &header, sizeof(header));
+	spi_read(target, SPI_FLASH_CMD_READ_SFDP, SFDP_HEADER_ADDRESS, &header, sizeof(header));
 	sfdp_debug_print(SFDP_HEADER_ADDRESS, &header, sizeof(header));
 	if (memcmp(header.magic, SFDP_MAGIC, 4) != 0)
 		return false;
 
 	for (size_t i = 0; i <= header.parameter_headers_count; ++i) {
 		sfdp_parameter_table_header_s table_header;
-		spi_read(t, SPI_FLASH_CMD_READ_SFDP, SFDP_TABLE_HEADER_ADDRESS + (sizeof(table_header) * i), &table_header,
+		spi_read(target, SPI_FLASH_CMD_READ_SFDP, SFDP_TABLE_HEADER_ADDRESS + (sizeof(table_header) * i), &table_header,
 			sizeof(table_header));
 		sfdp_debug_print(SFDP_TABLE_HEADER_ADDRESS + (sizeof(table_header) * i), &table_header, sizeof(table_header));
 		const uint16_t jedec_parameter_id = SFDP_JEDEC_PARAMETER_ID(table_header);
 		if (jedec_parameter_id == SFDP_BASIC_SPI_PARAMETER_TABLE) {
 			const uint32_t table_address = SFDP_TABLE_ADDRESS(table_header);
 			const uint16_t table_length = table_header.table_length_in_u32s * 4U;
-			*params = sfdp_read_basic_parameter_table(t, table_address, table_length, spi_read);
+			*params = sfdp_read_basic_parameter_table(target, table_address, table_length, spi_read);
 			return true;
 		}
 	}
