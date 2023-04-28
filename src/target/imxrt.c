@@ -156,17 +156,12 @@ static imxrt_boot_src_e imxrt_boot_source(uint32_t boot_cfg);
 static bool imxrt_enter_flash_mode(target_s *target);
 static bool imxrt_exit_flash_mode(target_s *target);
 static uint8_t imxrt_spi_build_insn_sequence(target_s *target, uint16_t command, uint16_t length);
-static void imxrt_spi_read(target_s *target, uint32_t command, target_addr_t address, void *buffer, uint16_t length);
+static void imxrt_spi_read(target_s *target, uint16_t command, target_addr_t address, void *buffer, size_t length);
 static void imxrt_spi_write(
-	target_s *target, uint32_t command, target_addr_t address, const void *buffer, uint16_t length);
+	target_s *target, uint16_t command, target_addr_t address, const void *buffer, size_t length);
 static bool imxrt_spi_mass_erase(target_s *target);
 static bool imxrt_spi_flash_erase(target_flash_s *flash, target_addr_t addr, size_t length);
 static bool imxrt_spi_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t length);
-
-static void imxrt_spi_read_sfdp(target_s *const target, const uint32_t address, void *const buffer, const size_t length)
-{
-	imxrt_spi_read(target, SPI_FLASH_CMD_READ_SFDP, address, buffer, length);
-}
 
 static void imxrt_add_flash(target_s *const target, const size_t length)
 {
@@ -177,7 +172,7 @@ static void imxrt_add_flash(target_s *const target, const size_t length)
 	}
 
 	spi_parameters_s spi_parameters;
-	if (!sfdp_read_parameters(target, &spi_parameters, imxrt_spi_read_sfdp)) {
+	if (!sfdp_read_parameters(target, &spi_parameters, imxrt_spi_read)) {
 		/* SFDP readout failed, so make some assumptions and hope for the best. */
 		spi_parameters.page_size = 256U;
 		spi_parameters.sector_size = 4096U;
@@ -444,8 +439,8 @@ static void imxrt_spi_wait_complete(target_s *const target)
  * XXX: This routine cannot handle reads larger than 128 bytes.
  * This doesn't currently matter but may need fixing in the future
  */
-static void imxrt_spi_read(target_s *const target, const uint32_t command, const target_addr_t address,
-	void *const buffer, const uint16_t length)
+static void imxrt_spi_read(target_s *const target, const uint16_t command, const target_addr_t address,
+	void *const buffer, const size_t length)
 {
 	/* Configure the programmable sequence LUT and execute the read */
 	const uint8_t slot = imxrt_spi_build_insn_sequence(target, command, length);
@@ -458,8 +453,8 @@ static void imxrt_spi_read(target_s *const target, const uint32_t command, const
 	target_mem_write32(target, IMXRT_FLEXSPI1_INT, IMXRT_FLEXSPI1_INT_READ_FIFO_FULL);
 }
 
-static void imxrt_spi_write(target_s *const target, const uint32_t command, const target_addr_t address,
-	const void *const buffer, const uint16_t length)
+static void imxrt_spi_write(target_s *const target, const uint16_t command, const target_addr_t address,
+	const void *const buffer, const size_t length)
 {
 	/* Configure the programmable sequence LUT */
 	const uint8_t slot = imxrt_spi_build_insn_sequence(target, command, length);

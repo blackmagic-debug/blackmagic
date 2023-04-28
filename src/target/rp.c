@@ -206,11 +206,6 @@ static void rp_flash_enter_xip(target_s *target);
 static void rp_flash_connect_internal(target_s *target);
 static void rp_flash_flush_cache(target_s *target);
 
-static void rp_spi_read_sfdp(target_s *const target, const uint32_t address, void *const buffer, const size_t length)
-{
-	rp_spi_read(target, SPI_FLASH_CMD_READ_SFDP, address, buffer, length);
-}
-
 static void rp_add_flash(target_s *target)
 {
 	rp_flash_s *spi_flash = calloc(1, sizeof(*spi_flash));
@@ -227,7 +222,7 @@ static void rp_add_flash(target_s *target)
 	rp_spi_config(target);
 
 	spi_parameters_s spi_parameters;
-	if (!sfdp_read_parameters(target, &spi_parameters, rp_spi_read_sfdp)) {
+	if (!sfdp_read_parameters(target, &spi_parameters, rp_spi_read)) {
 		/* SFDP readout failed, so make some assumptions and hope for the best. */
 		spi_parameters.page_size = 256U;
 		spi_parameters.sector_size = 4096U;

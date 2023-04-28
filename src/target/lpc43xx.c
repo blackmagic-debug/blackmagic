@@ -389,11 +389,6 @@ static void lpc43xx_detect(target_s *const t, const lpc43xx_partid_s part_id)
 	target_add_commands(t, lpc43xx_cmd_list, "LPC43xx");
 }
 
-static void lpc43x0_spi_read_sfdp(target_s *const t, const uint32_t address, void *const buffer, const size_t length)
-{
-	lpc43x0_spi_read(t, SPI_FLASH_CMD_READ_SFDP, address, buffer, length);
-}
-
 static void lpc43x0_add_spi_flash(target_s *const t, const size_t length)
 {
 	lpc43xx_spi_flash_s *const flash = calloc(1, sizeof(*flash));
@@ -405,7 +400,7 @@ static void lpc43x0_add_spi_flash(target_s *const t, const size_t length)
 	priv->flash = flash;
 
 	spi_parameters_s spi_parameters;
-	if (!sfdp_read_parameters(t, &spi_parameters, lpc43x0_spi_read_sfdp)) {
+	if (!sfdp_read_parameters(t, &spi_parameters, lpc43x0_spi_read)) {
 		/* SFDP readout failed, so make some assumptions and hope for the best. */
 		spi_parameters.page_size = 256U;
 		spi_parameters.sector_size = 4096U;
