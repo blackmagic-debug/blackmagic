@@ -26,6 +26,7 @@
 #include "target_internal.h"
 #include "cortexm.h"
 #include "lpc_common.h"
+#include "spi.h"
 #include "sfdp.h"
 
 #define LPC43xx_CHIPID                0x40043200U
@@ -189,9 +190,10 @@
 #define LPC43x0_SPIFI_STAT (LPC43x0_SPIFI_BASE + 0x01cU)
 
 #define LPC43x0_SPIFI_DATA_LENGTH(x)       ((x)&0x00003fffU)
+#define LPC43x0_SPIFI_DATA_SHIFT           15U
 #define LPC43x0_SPIFI_DATA_IN              (0U << 15U)
 #define LPC43x0_SPIFI_DATA_OUT             (1U << 15U)
-#define LPC43x0_SPIFI_INTER_LENGTH(x)      (((x)&7U) << 16U)
+#define LPC43x0_SPIFI_DUMMY_SHIFT          16U
 #define LPC43x0_SPIFI_CMD_SERIAL           (0U << 19U)
 #define LPC43x0_SPIFI_CMD_QUAD_OPCODE      (1U << 19U)
 #define LPC43x0_SPIFI_CMD_SERIAL_OPCODE    (2U << 19U)
@@ -202,7 +204,7 @@
 #define LPC43x0_SPIFI_FRAME_OPCODE_3B_ADDR (4U << 21U)
 #define LPC43x0_SPIFI_FRAME_OPCODE_4B_ADDR (5U << 21U)
 #define LPC43x0_SPIFI_FRAME_MASK           0x00e00000U
-#define LPC43x0_SPIFI_OPCODE(x)            ((x) << 24U)
+#define LPC43x0_SPIFI_OPCODE_SHIFT         24U
 #define LPC43x0_SPIFI_STATUS_CMD_ACTIVE    (1U << 1U)
 #define LPC43x0_SPIFI_STATUS_RESET         (1U << 4U)
 #define LPC43x0_SPIFI_STATUS_INTRQ         (1U << 5U)
@@ -223,33 +225,6 @@
 #define LPC43xx_GPIO_PORT5_PIN (LPC43xx_GPIO_BASE + 0x2114U)
 #define LPC43xx_GPIO_PORT0_SET (LPC43xx_GPIO_BASE + 0x2200U)
 #define LPC43xx_GPIO_PORT0_CLR (LPC43xx_GPIO_BASE + 0x2280U)
-
-#define SPI_FLASH_CMD_WRITE_ENABLE                                                              \
-	(LPC43x0_SPIFI_CMD_SERIAL | LPC43x0_SPIFI_FRAME_OPCODE_ONLY | LPC43x0_SPIFI_OPCODE(0x06U) | \
-		LPC43x0_SPIFI_INTER_LENGTH(0))
-#define SPI_FLASH_CMD_PAGE_PROGRAM                                                                \
-	(LPC43x0_SPIFI_CMD_SERIAL | LPC43x0_SPIFI_FRAME_OPCODE_3B_ADDR | LPC43x0_SPIFI_OPCODE(0x02) | \
-		LPC43x0_SPIFI_DATA_OUT | LPC43x0_SPIFI_INTER_LENGTH(0))
-#define SPI_FLASH_CMD_SECTOR_ERASE \
-	(LPC43x0_SPIFI_CMD_SERIAL | LPC43x0_SPIFI_FRAME_OPCODE_3B_ADDR | LPC43x0_SPIFI_INTER_LENGTH(0))
-#define SPI_FLASH_CMD_CHIP_ERASE                                                                \
-	(LPC43x0_SPIFI_CMD_SERIAL | LPC43x0_SPIFI_FRAME_OPCODE_ONLY | LPC43x0_SPIFI_OPCODE(0x60U) | \
-		LPC43x0_SPIFI_INTER_LENGTH(0))
-#define SPI_FLASH_CMD_READ_STATUS                                                               \
-	(LPC43x0_SPIFI_CMD_SERIAL | LPC43x0_SPIFI_FRAME_OPCODE_ONLY | LPC43x0_SPIFI_OPCODE(0x05U) | \
-		LPC43x0_SPIFI_DATA_IN | LPC43x0_SPIFI_INTER_LENGTH(0))
-#define SPI_FLASH_CMD_READ_JEDEC_ID                                                             \
-	(LPC43x0_SPIFI_CMD_SERIAL | LPC43x0_SPIFI_FRAME_OPCODE_ONLY | LPC43x0_SPIFI_OPCODE(0x9fU) | \
-		LPC43x0_SPIFI_DATA_IN | LPC43x0_SPIFI_INTER_LENGTH(0))
-#define SPI_FLASH_CMD_READ_SFDP                                                                    \
-	(LPC43x0_SPIFI_CMD_SERIAL | LPC43x0_SPIFI_FRAME_OPCODE_3B_ADDR | LPC43x0_SPIFI_OPCODE(0x5aU) | \
-		LPC43x0_SPIFI_DATA_IN | LPC43x0_SPIFI_INTER_LENGTH(1))
-#define SPI_FLASH_CMD_WAKE_UP                                                                   \
-	(LPC43x0_SPIFI_CMD_SERIAL | LPC43x0_SPIFI_FRAME_OPCODE_ONLY | LPC43x0_SPIFI_OPCODE(0xabU) | \
-		LPC43x0_SPIFI_INTER_LENGTH(0))
-
-#define SPI_FLASH_STATUS_BUSY          0x01U
-#define SPI_FLASH_STATUS_WRITE_ENABLED 0x02U
 
 typedef enum lpc43x0_flash_interface {
 	FLASH_NONE,
@@ -300,9 +275,9 @@ static void lpc43x0_detach(target_s *t);
 static bool lpc43x0_enter_flash_mode(target_s *t);
 static bool lpc43x0_exit_flash_mode(target_s *t);
 static void lpc43x0_spi_abort(target_s *t);
-static void lpc43x0_spi_read(target_s *t, uint32_t command, target_addr_t address, void *buffer, size_t length);
-static void lpc43x0_spi_write(target_s *t, uint32_t command, target_addr_t address, const void *buffer, size_t length);
-static void lpc43x0_spi_run_command(target_s *t, uint32_t command);
+static void lpc43x0_spi_read(target_s *t, uint16_t command, target_addr_t address, void *buffer, size_t length);
+static void lpc43x0_spi_write(target_s *t, uint16_t command, target_addr_t address, const void *buffer, size_t length);
+static void lpc43x0_spi_run_command(target_s *t, uint16_t command);
 static bool lpc43x0_spi_mass_erase(target_s *t);
 static bool lpc43x0_spi_flash_erase(target_flash_s *f, target_addr_t addr, size_t length);
 static bool lpc43x0_spi_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t length);
@@ -435,7 +410,7 @@ static void lpc43x0_add_spi_flash(target_s *const t, const size_t length)
 		spi_parameters.page_size = 256U;
 		spi_parameters.sector_size = 4096U;
 		spi_parameters.capacity = length;
-		spi_parameters.sector_erase_opcode = 0x20U;
+		spi_parameters.sector_erase_opcode = SPI_FLASH_OPCODE_SECTOR_ERASE;
 	}
 
 	/* Add the high region first so it appears second in the map */
@@ -887,14 +862,33 @@ static void lpc43x0_ssp0_setup_command(target_s *const t, const uint32_t command
 		lpc43x0_ssp0_transfer(t, 0U);
 }
 
+static void lpc43x0_spi_setup_xfer(
+	target_s *const target, const uint16_t command, const target_addr_t address, const size_t length)
+{
+	/* Rebuild the command for the SPIFI controller */
+	uint32_t spifi_command = LPC43x0_SPIFI_CMD_SERIAL | SPI_FLASH_DATA_IN |
+		((command & SPI_FLASH_OPCODE_MASK) << LPC43x0_SPIFI_OPCODE_SHIFT) |
+		(((command & SPI_FLASH_DUMMY_MASK) >> SPI_FLASH_DUMMY_SHIFT) << LPC43x0_SPIFI_DUMMY_SHIFT) |
+		(((command & SPI_FLASH_DATA_MASK) >> SPI_FLASH_DATA_SHIFT) << LPC43x0_SPIFI_DATA_SHIFT) |
+		LPC43x0_SPIFI_DATA_LENGTH(length);
+
+	/* Setup addressing for the instruction */
+	if ((command & SPI_FLASH_OPCODE_MASK) != SPI_FLASH_OPCODE_ONLY) {
+		target_mem_write32(target, LPC43x0_SPIFI_ADDR, address);
+		spifi_command |= LPC43x0_SPIFI_FRAME_OPCODE_ONLY;
+	} else
+		spifi_command |= LPC43x0_SPIFI_FRAME_OPCODE_3B_ADDR;
+
+	/* Write the resulting command to the command register */
+	target_mem_write32(target, LPC43x0_SPIFI_CMD, spifi_command);
+}
+
 static void lpc43x0_spi_read(
-	target_s *const t, const uint32_t command, const target_addr_t address, void *const buffer, const size_t length)
+	target_s *const t, const uint16_t command, const target_addr_t address, void *const buffer, const size_t length)
 {
 	lpc43x0_priv_s *const priv = (lpc43x0_priv_s *)t->target_storage;
 	if (priv->interface == FLASH_SPIFI) {
-		if ((command & LPC43x0_SPIFI_FRAME_MASK) != LPC43x0_SPIFI_FRAME_OPCODE_ONLY)
-			target_mem_write32(t, LPC43x0_SPIFI_ADDR, address);
-		target_mem_write32(t, LPC43x0_SPIFI_CMD, command | LPC43x0_SPIFI_DATA_LENGTH(length));
+		lpc43x0_spi_setup_xfer(t, command, address, length);
 		uint8_t *const data = (uint8_t *)buffer;
 		for (size_t i = 0; i < length; ++i)
 			data[i] = target_mem_read8(t, LPC43x0_SPIFI_DATA);
@@ -913,14 +907,12 @@ static void lpc43x0_spi_read(
 		memset(buffer, 0xffU, length);
 }
 
-static void lpc43x0_spi_write(target_s *const t, const uint32_t command, const target_addr_t address,
+static void lpc43x0_spi_write(target_s *const t, const uint16_t command, const target_addr_t address,
 	const void *const buffer, const size_t length)
 {
 	lpc43x0_priv_s *const priv = (lpc43x0_priv_s *)t->target_storage;
 	if (priv->interface == FLASH_SPIFI) {
-		if ((command & LPC43x0_SPIFI_FRAME_MASK) != LPC43x0_SPIFI_FRAME_OPCODE_ONLY)
-			target_mem_write32(t, LPC43x0_SPIFI_ADDR, address);
-		target_mem_write32(t, LPC43x0_SPIFI_CMD, command | LPC43x0_SPIFI_DATA_LENGTH(length));
+		lpc43x0_spi_setup_xfer(t, command, address, length);
 		const uint8_t *const data = (const uint8_t *)buffer;
 		for (size_t i = 0; i < length; ++i)
 			target_mem_write8(t, LPC43x0_SPIFI_DATA, data[i]);
@@ -945,7 +937,7 @@ static inline uint8_t lpc43x0_spi_read_status(target_s *const t)
 	return status;
 }
 
-static void lpc43x0_spi_run_command(target_s *const t, const uint32_t command)
+static void lpc43x0_spi_run_command(target_s *const t, const uint16_t command)
 {
 	lpc43x0_priv_s *const priv = (lpc43x0_priv_s *)t->target_storage;
 	if (priv->interface == FLASH_SPIFI) {
@@ -984,7 +976,7 @@ static bool lpc43x0_spi_flash_erase(target_flash_s *f, target_addr_t addr, size_
 			return false;
 
 		lpc43x0_spi_write(
-			t, SPI_FLASH_CMD_SECTOR_ERASE | LPC43x0_SPIFI_OPCODE(flash->sector_erase_opcode), begin + offset, NULL, 0);
+			t, SPI_FLASH_CMD_SECTOR_ERASE | SPI_FLASH_OPCODE(flash->sector_erase_opcode), begin + offset, NULL, 0);
 		while (lpc43x0_spi_read_status(t) & SPI_FLASH_STATUS_BUSY)
 			continue;
 	}
