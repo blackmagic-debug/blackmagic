@@ -33,6 +33,7 @@
 #include <libopencm3/stm32/usart.h>
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/stm32/adc.h>
+#include <libopencm3/stm32/spi.h>
 #include <libopencm3/stm32/flash.h>
 
 static void adc_init(void);
@@ -203,6 +204,18 @@ void platform_init(void)
 	} else if (hwversion > 1) {
 		gpio_set(PWR_BR_PORT, PWR_BR_PIN);
 		gpio_set_mode(PWR_BR_PORT, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_OPENDRAIN, PWR_BR_PIN);
+	}
+
+	if (hwversion >= 5) {
+		gpio_set_mode(AUX_PORT, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_ALTFN_PUSHPULL, AUX_SCLK | AUX_COPI);
+		gpio_set_mode(AUX_PORT, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, AUX_FCS | AUX_SDCS);
+		gpio_set_mode(AUX_PORT, GPIO_MODE_INPUT, GPIO_CNF_INPUT_FLOAT, AUX_CIPO);
+		gpio_set(AUX_PORT, AUX_FCS | AUX_SDCS);
+		/* hw6 introduced an SD Card chip select on PB6, moving the display select to PB7 */
+		if (hwversion >= 6) {
+			gpio_set_mode(AUX_PORT, GPIO_MODE_OUTPUT_50_MHZ, GPIO_CNF_OUTPUT_PUSHPULL, AUX_DCS6);
+			gpio_set(AUX_PORT, AUX_DCS6);
+		}
 	}
 
 	if (hwversion > 0)
