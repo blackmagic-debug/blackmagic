@@ -241,8 +241,8 @@ typedef struct lpc43xx_partid {
 } lpc43xx_partid_s;
 
 typedef struct lpc43xx_spi_flash {
-	target_flash_s flash_low;
-	target_flash_s flash_high;
+	spi_flash_s flash_low;
+	spi_flash_s *flash_high;
 	uint32_t page_size;
 	uint8_t sector_erase_opcode;
 } lpc43xx_spi_flash_s;
@@ -275,12 +275,10 @@ static void lpc43x0_detach(target_s *t);
 static bool lpc43x0_enter_flash_mode(target_s *t);
 static bool lpc43x0_exit_flash_mode(target_s *t);
 static void lpc43x0_spi_abort(target_s *t);
-static void lpc43x0_spi_read(target_s *t, uint16_t command, target_addr_t address, void *buffer, size_t length);
-static void lpc43x0_spi_write(target_s *t, uint16_t command, target_addr_t address, const void *buffer, size_t length);
-static void lpc43x0_spi_run_command(target_s *t, uint16_t command);
-static bool lpc43x0_spi_mass_erase(target_s *t);
-static bool lpc43x0_spi_flash_erase(target_flash_s *f, target_addr_t addr, size_t length);
-static bool lpc43x0_spi_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t length);
+static void lpc43x0_spi_read(target_s *target, uint16_t command, target_addr_t address, void *buffer, size_t length);
+static void lpc43x0_spi_write(
+	target_s *target, uint16_t command, target_addr_t address, const void *buffer, size_t length);
+static void lpc43x0_spi_run_command(target_s *target, uint16_t command, target_addr_t address);
 
 static bool lpc43xx_iap_init(target_flash_s *flash);
 static lpc43xx_partid_s lpc43xx_iap_read_partid(target_s *t);
@@ -389,51 +387,29 @@ static void lpc43xx_detect(target_s *const t, const lpc43xx_partid_s part_id)
 	target_add_commands(t, lpc43xx_cmd_list, "LPC43xx");
 }
 
-static void lpc43x0_add_spi_flash(target_s *const t, const size_t length)
+static void lpc43x0_add_spi_flash(target_s *const target, const size_t length)
 {
 	lpc43xx_spi_flash_s *const flash = calloc(1, sizeof(*flash));
 	if (!flash) {
 		DEBUG_ERROR("calloc: failed in %s\n", __func__);
 		return;
 	}
-	lpc43x0_priv_s *const priv = (lpc43x0_priv_s *)t->target_storage;
+	lpc43x0_priv_s *const priv = (lpc43x0_priv_s *)target->target_storage;
 	priv->flash = flash;
 
-	spi_parameters_s spi_parameters;
-	if (!sfdp_read_parameters(t, &spi_parameters, lpc43x0_spi_read)) {
-		/* SFDP readout failed, so make some assumptions and hope for the best. */
-		spi_parameters.page_size = 256U;
-		spi_parameters.sector_size = 4096U;
-		spi_parameters.capacity = length;
-		spi_parameters.sector_erase_opcode = SPI_FLASH_OPCODE_SECTOR_ERASE;
-	}
-
 	/* Add the high region first so it appears second in the map */
-	target_flash_s *const flash_high = &flash->flash_high;
-	flash_high->start = LPC43x0_SPI_FLASH_HIGH_BASE;
-	flash_high->length = MIN(spi_parameters.capacity, LPC43x0_SPI_FLASH_HIGH_SIZE);
-	flash_high->blocksize = spi_parameters.sector_size;
-	flash_high->write = lpc43x0_spi_flash_write;
-	flash_high->erase = lpc43x0_spi_flash_erase;
-	flash_high->erased = 0xffU;
-	target_add_flash(t, flash_high);
+	flash->flash_high = bmp_spi_add_flash(target, LPC43x0_SPI_FLASH_HIGH_BASE, MIN(length, LPC43x0_SPI_FLASH_HIGH_SIZE),
+		lpc43x0_spi_read, lpc43x0_spi_write, lpc43x0_spi_run_command);
 
 	/*
 	 * Then add the low region - the reason for this is that
 	 * target_add_flash inserts new entries to the beginning of the
 	 * Flash linked-list in the target structure, so this becomes t->flash.
 	 */
-	target_flash_s *const flash_low = &flash->flash_low;
+	memcpy(&flash->flash_low, flash->flash_high, sizeof(spi_flash_s));
+	target_flash_s *const flash_low = &flash->flash_low.flash;
 	flash_low->start = LPC43x0_SPI_FLASH_LOW_BASE;
-	flash_low->length = MIN(spi_parameters.capacity, LPC43x0_SPI_FLASH_LOW_SIZE);
-	flash_low->blocksize = spi_parameters.sector_size;
-	flash_low->write = lpc43x0_spi_flash_write;
-	flash_low->erase = lpc43x0_spi_flash_erase;
-	flash_low->erased = 0xffU;
-	target_add_flash(t, flash_low);
-
-	flash->page_size = spi_parameters.page_size;
-	flash->sector_erase_opcode = spi_parameters.sector_erase_opcode;
+	target_add_flash(target, flash_low);
 }
 
 static void lpc43x0_detect(target_s *const t, const lpc43xx_partid_s part_id)
@@ -516,7 +492,7 @@ bool lpc43xx_probe(target_s *const t)
 		if (part_id.part == LPC43xx_PARTID_INVALID)
 			return false;
 
-		t->mass_erase = lpc43x0_spi_mass_erase;
+		t->mass_erase = bmp_spi_mass_erase;
 		t->enter_flash_mode = lpc43x0_enter_flash_mode;
 		t->exit_flash_mode = lpc43x0_exit_flash_mode;
 		lpc43x0_detect(t, part_id);
@@ -823,7 +799,7 @@ static void lpc43x0_spi_abort(target_s *const t)
 			target_mem_read32(t, LPC43x0_SSP0_DR);
 		target_mem_write32(t, LPC43xx_GPIO_PORT0_CLR, 1U << 6U);
 	}
-	lpc43x0_spi_run_command(t, SPI_FLASH_CMD_WAKE_UP);
+	lpc43x0_spi_run_command(t, SPI_FLASH_CMD_WAKE_UP, 0U);
 }
 
 static inline void lpc43x0_spi_wait_complete(target_s *const t)
@@ -925,76 +901,14 @@ static void lpc43x0_spi_write(target_s *const t, const uint16_t command, const t
 	}
 }
 
-static inline uint8_t lpc43x0_spi_read_status(target_s *const t)
+static void lpc43x0_spi_run_command(target_s *const target, const uint16_t command, target_addr_t address)
 {
-	uint8_t status = 0;
-	lpc43x0_spi_read(t, SPI_FLASH_CMD_READ_STATUS, 0, &status, sizeof(status));
-	return status;
-}
-
-static void lpc43x0_spi_run_command(target_s *const t, const uint16_t command)
-{
-	lpc43x0_priv_s *const priv = (lpc43x0_priv_s *)t->target_storage;
+	lpc43x0_priv_s *const priv = (lpc43x0_priv_s *)target->target_storage;
 	if (priv->interface == FLASH_SPIFI) {
-		target_mem_write32(t, LPC43x0_SPIFI_CMD, command);
-		lpc43x0_spi_wait_complete(t);
+		lpc43x0_spi_setup_xfer(target, command, address, 0U);
+		lpc43x0_spi_wait_complete(target);
 	} else if (priv->interface == FLASH_SPI)
-		lpc43x0_spi_write(t, command, 0U, NULL, 0U);
-}
-
-static bool lpc43x0_spi_mass_erase(target_s *const t)
-{
-	platform_timeout_s timeout;
-	platform_timeout_set(&timeout, 500);
-	lpc43x0_enter_flash_mode(t);
-	lpc43x0_spi_run_command(t, SPI_FLASH_CMD_WRITE_ENABLE);
-	if (!(lpc43x0_spi_read_status(t) & SPI_FLASH_STATUS_WRITE_ENABLED)) {
-		lpc43x0_exit_flash_mode(t);
-		return false;
-	}
-
-	lpc43x0_spi_run_command(t, SPI_FLASH_CMD_CHIP_ERASE);
-	while (lpc43x0_spi_read_status(t) & SPI_FLASH_STATUS_BUSY)
-		target_print_progress(&timeout);
-
-	return lpc43x0_exit_flash_mode(t);
-}
-
-static bool lpc43x0_spi_flash_erase(target_flash_s *f, target_addr_t addr, size_t length)
-{
-	target_s *const t = f->t;
-	const lpc43xx_spi_flash_s *const flash = (lpc43xx_spi_flash_s *)t->flash;
-	const target_addr_t begin = addr - f->start;
-	for (size_t offset = 0; offset < length; offset += f->blocksize) {
-		lpc43x0_spi_run_command(t, SPI_FLASH_CMD_WRITE_ENABLE);
-		if (!(lpc43x0_spi_read_status(t) & SPI_FLASH_STATUS_WRITE_ENABLED))
-			return false;
-
-		lpc43x0_spi_write(
-			t, SPI_FLASH_CMD_SECTOR_ERASE | SPI_FLASH_OPCODE(flash->sector_erase_opcode), begin + offset, NULL, 0);
-		while (lpc43x0_spi_read_status(t) & SPI_FLASH_STATUS_BUSY)
-			continue;
-	}
-	return true;
-}
-
-static bool lpc43x0_spi_flash_write(target_flash_s *f, target_addr_t dest, const void *src, size_t length)
-{
-	target_s *const t = f->t;
-	const lpc43xx_spi_flash_s *const flash = (lpc43xx_spi_flash_s *)t->flash;
-	const target_addr_t begin = dest - f->start;
-	const char *buffer = src;
-	for (size_t offset = 0; offset < length; offset += flash->page_size) {
-		lpc43x0_spi_run_command(t, SPI_FLASH_CMD_WRITE_ENABLE);
-		if (!(lpc43x0_spi_read_status(t) & SPI_FLASH_STATUS_WRITE_ENABLED))
-			return false;
-
-		const size_t amount = MIN(length - offset, flash->page_size);
-		lpc43x0_spi_write(t, SPI_FLASH_CMD_PAGE_PROGRAM, begin + offset, buffer + offset, amount);
-		while (lpc43x0_spi_read_status(t) & SPI_FLASH_STATUS_BUSY)
-			continue;
-	}
-	return true;
+		lpc43x0_spi_write(target, command, address, NULL, 0U);
 }
 
 /* LPC43xx IAP On-board Flash part routines */

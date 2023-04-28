@@ -32,6 +32,10 @@
  */
 
 #include "spi.h"
+#include "sfdp.h"
+
+static bool bmp_spi_flash_erase(target_flash_s *flash, target_addr_t addr, size_t length);
+static bool bmp_spi_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t length);
 
 static inline uint8_t bmp_spi_read_status(target_s *const target, const spi_flash_s *const flash)
 {
@@ -39,6 +43,42 @@ static inline uint8_t bmp_spi_read_status(target_s *const target, const spi_flas
 	/* Read the main status register of the Flash */
 	flash->read(target, SPI_FLASH_CMD_READ_STATUS, 0U, &status, sizeof(status));
 	return status;
+}
+
+spi_flash_s *bmp_spi_add_flash(target_s *const target, const target_addr_t begin, const size_t length,
+	const spi_read_func spi_read, const spi_write_func spi_write, const spi_run_command_func spi_run_command)
+{
+	spi_flash_s *spi_flash = calloc(1, sizeof(*spi_flash));
+	if (!spi_flash) { /* calloc failed: heap exhaustion */
+		DEBUG_WARN("calloc: failed in %s\n", __func__);
+		return NULL;
+	}
+
+	spi_parameters_s spi_parameters;
+	if (!sfdp_read_parameters(target, &spi_parameters, spi_read)) {
+		/* SFDP readout failed, so make some assumptions and hope for the best. */
+		spi_parameters.page_size = 256U;
+		spi_parameters.sector_size = 4096U;
+		spi_parameters.capacity = length;
+		spi_parameters.sector_erase_opcode = SPI_FLASH_OPCODE_SECTOR_ERASE;
+	}
+	DEBUG_INFO("Flash size: %" PRIu32 "MiB\n", (uint32_t)spi_parameters.capacity / (1024U * 1024U));
+
+	target_flash_s *const flash = &spi_flash->flash;
+	flash->start = begin;
+	flash->length = spi_parameters.capacity;
+	flash->blocksize = spi_parameters.sector_size;
+	flash->write = bmp_spi_flash_write;
+	flash->erase = bmp_spi_flash_erase;
+	flash->erased = 0xffU;
+	target_add_flash(target, flash);
+
+	spi_flash->page_size = spi_parameters.page_size;
+	spi_flash->sector_erase_opcode = spi_parameters.sector_erase_opcode;
+	spi_flash->read = spi_read;
+	spi_flash->write = spi_write;
+	spi_flash->run_command = spi_run_command;
+	return spi_flash;
 }
 
 /* Note: These routines assume that the first Flash registered on the target is a SPI Flash device */
@@ -50,10 +90,10 @@ bool bmp_spi_mass_erase(target_s *const target)
 	platform_timeout_set(&timeout, 500);
 	DEBUG_TARGET("Running %s\n", __func__);
 	/* Go into Flash mode and tell the Flash to enable writing */
-	flash->enter_flash_mode(target);
+	target->enter_flash_mode(target);
 	flash->run_command(target, SPI_FLASH_CMD_WRITE_ENABLE, 0U);
 	if (!(bmp_spi_read_status(target, flash) & SPI_FLASH_STATUS_WRITE_ENABLED)) {
-		flash->exit_flash_mode(target);
+		target->exit_flash_mode(target);
 		return false;
 	}
 
@@ -63,5 +103,43 @@ bool bmp_spi_mass_erase(target_s *const target)
 		target_print_progress(&timeout);
 
 	/* Finally, leave Flash mode to conclude business */
-	return flash->exit_flash_mode(target);
+	return target->exit_flash_mode(target);
+}
+
+static bool bmp_spi_flash_erase(target_flash_s *const flash, const target_addr_t addr, const size_t length)
+{
+	target_s *const target = flash->t;
+	const spi_flash_s *const spi_flash = (spi_flash_s *)flash;
+	const target_addr_t begin = addr - flash->start;
+	for (size_t offset = 0; offset < length; offset += flash->blocksize) {
+		spi_flash->run_command(target, SPI_FLASH_CMD_WRITE_ENABLE, 0U);
+		if (!(bmp_spi_read_status(target, spi_flash) & SPI_FLASH_STATUS_WRITE_ENABLED))
+			return false;
+
+		spi_flash->run_command(
+			target, SPI_FLASH_CMD_SECTOR_ERASE | SPI_FLASH_OPCODE(spi_flash->sector_erase_opcode), begin + offset);
+		while (bmp_spi_read_status(target, spi_flash) & SPI_FLASH_STATUS_BUSY)
+			continue;
+	}
+	return true;
+}
+
+static bool bmp_spi_flash_write(
+	target_flash_s *const flash, const target_addr_t dest, const void *const src, const size_t length)
+{
+	target_s *const target = flash->t;
+	const spi_flash_s *const spi_flash = (spi_flash_s *)flash;
+	const target_addr_t begin = dest - flash->start;
+	const char *const buffer = src;
+	for (size_t offset = 0; offset < length; offset += spi_flash->page_size) {
+		spi_flash->run_command(target, SPI_FLASH_CMD_WRITE_ENABLE, 0U);
+		if (!(bmp_spi_read_status(target, spi_flash) & SPI_FLASH_STATUS_WRITE_ENABLED))
+			return false;
+
+		const size_t amount = MIN(length - offset, spi_flash->page_size);
+		spi_flash->write(target, SPI_FLASH_CMD_PAGE_PROGRAM, begin + offset, buffer + offset, amount);
+		while (bmp_spi_read_status(target, spi_flash) & SPI_FLASH_STATUS_BUSY)
+			continue;
+	}
+	return true;
 }

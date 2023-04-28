@@ -70,18 +70,23 @@
 #define SPI_FLASH_STATUS_BUSY          0x01U
 #define SPI_FLASH_STATUS_WRITE_ENABLED 0x02U
 
+typedef void (*spi_read_func)(target_s *target, uint16_t command, target_addr_t address, void *buffer, size_t length);
+typedef void (*spi_write_func)(
+	target_s *target, uint16_t command, target_addr_t address, const void *buffer, size_t length);
+typedef void (*spi_run_command_func)(target_s *target, uint16_t command, target_addr_t address);
+
 typedef struct spi_flash {
 	target_flash_s flash;
 	uint32_t page_size;
 	uint8_t sector_erase_opcode;
 
-	bool (*enter_flash_mode)(target_s *target);
-	bool (*exit_flash_mode)(target_s *target);
-	void (*read)(target_s *target, uint32_t command, target_addr_t address, void *buffer, size_t length);
-	void (*write)(target_s *target, uint32_t command, target_addr_t address, const void *buffer, size_t length);
-	void (*run_command)(target_s *target, uint32_t command, target_addr_t address);
+	spi_read_func read;
+	spi_write_func write;
+	spi_run_command_func run_command;
 } spi_flash_s;
 
+spi_flash_s *bmp_spi_add_flash(target_s *target, target_addr_t begin, size_t length, spi_read_func spi_read,
+	spi_write_func spi_write, spi_run_command_func spi_run_command);
 bool bmp_spi_mass_erase(target_s *target);
 
 #endif /* TARGET_SPI_H */
