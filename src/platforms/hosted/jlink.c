@@ -120,10 +120,10 @@ static void jlink_info(bmp_info_s *const info)
  * usb_link_s sub-structure of bmp_info_s (info->usb_link) for later use.
  * Returns true for success, false for failure.
  */
-static bool claim_jlink_interface(bmp_info_s *info, libusb_device *dev)
+static bool claim_jlink_interface(bmp_info_s *info)
 {
 	libusb_config_descriptor_s *config;
-	const int result = libusb_get_active_config_descriptor(dev, &config);
+	const int result = libusb_get_active_config_descriptor(info->libusb_dev, &config);
 	if (result != LIBUSB_SUCCESS) {
 		DEBUG_ERROR("Failed to get configuration descriptor: %s\n", libusb_error_name(result));
 		return false;
@@ -171,57 +171,19 @@ bool jlink_init(bmp_info_s *const info)
 		return false;
 	info->usb_link = link;
 	link->context = info->libusb_ctx;
-	libusb_device **device_list = NULL;
-	const ssize_t devices = libusb_get_device_list(info->libusb_ctx, &device_list);
-	if (devices < 0) {
-		DEBUG_ERROR("libusb_get_device_list() failed");
+	int result = libusb_open(info->libusb_dev, &link->device_handle);
+	if (result != LIBUSB_SUCCESS) {
+		DEBUG_ERROR("libusb_open() failed (%d): %s\n", result, libusb_error_name(result));
 		return false;
 	}
-	libusb_device *dev = NULL;
-	for (ssize_t index = 0; index < devices; ++index) {
-		if (!device_list[index])
-			continue;
-		libusb_device *const device = device_list[index];
-		struct libusb_device_descriptor dev_desc;
-		if (libusb_get_device_descriptor(device, &dev_desc) < 0) {
-			DEBUG_ERROR("libusb_get_device_descriptor() failed");
-			libusb_free_device_list(device_list, devices);
-			return false;
-		}
-		if (dev_desc.idVendor != USB_VID_SEGGER)
-			continue;
-		if (dev_desc.idProduct != USB_PID_SEGGER_0101 && dev_desc.idProduct != USB_PID_SEGGER_0105 &&
-			dev_desc.idProduct != USB_PID_SEGGER_1015 && dev_desc.idProduct != USB_PID_SEGGER_1020) {
-			DEBUG_WARN("Ignored device with product id 0x%04x, please report if this is a valid J-Link probe\n",
-				dev_desc.idProduct);
-			continue;
-		}
-		int result = libusb_open(device, &link->device_handle);
-		if (result != LIBUSB_SUCCESS)
-			continue;
-		if (dev_desc.iSerialNumber != 0) {
-			char serial[32]; // XXX: Static buffers like this considered harmful.
-			const int result = libusb_get_string_descriptor_ascii(
-				link->device_handle, dev_desc.iSerialNumber, (uint8_t *)serial, sizeof(serial));
-			if (result > 0 && strstr(serial, info->serial)) {
-				dev = device;
-				break;
-			}
-		}
-		libusb_close(link->device_handle);
-	}
-	if (!dev || !claim_jlink_interface(info, dev)) {
-		libusb_free_device_list(device_list, devices);
+	if (!claim_jlink_interface(info))
 		return false;
-	}
 	if (!link->ep_tx || !link->ep_rx) {
 		DEBUG_ERROR("Device setup failed\n");
 		libusb_release_interface(info->usb_link->device_handle, info->usb_link->interface);
 		libusb_close(info->usb_link->device_handle);
-		libusb_free_device_list(device_list, devices);
 		return false;
 	}
-	libusb_free_device_list(device_list, devices);
 	jlink_info(info);
 	return true;
 }
