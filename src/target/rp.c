@@ -47,6 +47,7 @@
 #include "target.h"
 #include "target_internal.h"
 #include "cortexm.h"
+#include "spi.h"
 #include "sfdp.h"
 
 #define RP_MAX_TABLE_SIZE     0x80U
@@ -158,36 +159,6 @@
 #define FLASHSIZE_64K_BLOCK_MASK ~(FLASHSIZE_64K_BLOCK - 1U)
 #define MAX_FLASH                (16U * 1024U * 1024U)
 #define MAX_WRITE_CHUNK          0x1000U
-
-#define RP_SPI_FLASH_OPCODE(x)      (x)
-#define RP_SPI_FLASH_OPCODE_MASK    0x00ffU
-#define RP_SPI_FLASH_DUMMY_SHIFT    8U
-#define RP_SPI_FLASH_DUMMY_LEN(x)   (((x)&7U) << RP_SPI_FLASH_DUMMY_SHIFT)
-#define RP_SPI_FLASH_DUMMY_MASK     0x0700U
-#define RP_SPI_FLASH_OPCODE_ONLY    (1 << 11U)
-#define RP_SPI_FLASH_OPCODE_3B_ADDR (2 << 11U)
-#define RP_SPI_FLASH_MASK           0x1800U
-
-/* Instruction codes taken from Winbond W25Q16JV datasheet, as used on the
- * original Pico board from Raspberry Pi.
- * https://www.winbond.com/resource-files/w25q16jv%20spi%20revd%2008122016.pdf
- * All dev boards supported by Pico SDK V1.3.1 use SPI flash chips which support
- * these commands. Other custom boards using different SPI flash chips might
- * not support these commands
- */
-
-#define SPI_FLASH_OPCODE_SECTOR_ERASE 0x20U
-#define SPI_FLASH_CMD_WRITE_ENABLE    (RP_SPI_FLASH_OPCODE_ONLY | RP_SPI_FLASH_DUMMY_LEN(0) | RP_SPI_FLASH_OPCODE(0x06U))
-#define SPI_FLASH_CMD_PAGE_PROGRAM \
-	(RP_SPI_FLASH_OPCODE_3B_ADDR | RP_SPI_FLASH_DUMMY_LEN(0) | RP_SPI_FLASH_OPCODE(0x02U))
-#define SPI_FLASH_CMD_SECTOR_ERASE  (RP_SPI_FLASH_OPCODE_3B_ADDR | RP_SPI_FLASH_DUMMY_LEN(0))
-#define SPI_FLASH_CMD_CHIP_ERASE    (RP_SPI_FLASH_OPCODE_ONLY | RP_SPI_FLASH_DUMMY_LEN(0) | RP_SPI_FLASH_OPCODE(0x60U))
-#define SPI_FLASH_CMD_READ_STATUS   (RP_SPI_FLASH_OPCODE_ONLY | RP_SPI_FLASH_DUMMY_LEN(0) | RP_SPI_FLASH_OPCODE(0x05U))
-#define SPI_FLASH_CMD_READ_JEDEC_ID (RP_SPI_FLASH_OPCODE_ONLY | RP_SPI_FLASH_DUMMY_LEN(0) | RP_SPI_FLASH_OPCODE(0x9fU))
-#define SPI_FLASH_CMD_READ_SFDP     (RP_SPI_FLASH_OPCODE_3B_ADDR | RP_SPI_FLASH_DUMMY_LEN(1U) | RP_SPI_FLASH_OPCODE(0x5aU))
-
-#define SPI_FLASH_STATUS_BUSY          0x01U
-#define SPI_FLASH_STATUS_WRITE_ENABLED 0x02U
 
 typedef struct rp_priv {
 	uint16_t rom_reset_usb_boot;
@@ -426,7 +397,7 @@ static bool rp_flash_erase(target_flash_s *const flash, const target_addr_t addr
 			return false;
 
 		rp_spi_run_command(
-			target, SPI_FLASH_CMD_SECTOR_ERASE | RP_SPI_FLASH_OPCODE(spi_flash->sector_erase_opcode), begin + offset);
+			target, SPI_FLASH_CMD_SECTOR_ERASE | SPI_FLASH_OPCODE(spi_flash->sector_erase_opcode), begin + offset);
 		while (rp_spi_read_status(target) & SPI_FLASH_STATUS_BUSY)
 			continue;
 	}
@@ -483,36 +454,40 @@ static uint8_t rp_spi_xfer_data(target_s *const target, const uint8_t data)
 	return target_mem_read32(target, RP_SSI_DR0) & 0xffU;
 }
 
-static void rp_spi_read(target_s *const target, const uint16_t command, const target_addr_t address, void *const buffer,
-	const size_t length)
+static void rp_spi_setup_xfer(
+	target_s *const target, const uint16_t command, const target_addr_t address, const size_t length)
 {
 	/* Configure the controller, and select the Flash */
 	target_mem_write32(target, RP_SSI_CTRL1, length);
 	rp_spi_chip_select(target, RP_GPIO_QSPI_CS_DRIVE_LOW);
 
 	/* Set up the instruction */
-	const uint8_t opcode = command & RP_SPI_FLASH_OPCODE_MASK;
+	const uint8_t opcode = command & SPI_FLASH_OPCODE_MASK;
 	rp_spi_xfer_data(target, opcode);
 
-	const uint16_t addr_mode = command & RP_SPI_FLASH_MASK;
-	if (addr_mode == RP_SPI_FLASH_OPCODE_3B_ADDR) {
+	if ((command & SPI_FLASH_OPCODE_MODE_MASK) == SPI_FLASH_OPCODE_3B_ADDR) {
 		/* For each byte sent here, we have to manually clean up from the controller with a read */
 		rp_spi_xfer_data(target, (address >> 16U) & 0xffU);
 		rp_spi_xfer_data(target, (address >> 8U) & 0xffU);
 		rp_spi_xfer_data(target, address & 0xffU);
 	}
 
-	const size_t inter_length = (command & RP_SPI_FLASH_DUMMY_MASK) >> RP_SPI_FLASH_DUMMY_SHIFT;
+	const size_t inter_length = (command & SPI_FLASH_DUMMY_MASK) >> SPI_FLASH_DUMMY_SHIFT;
 	for (size_t i = 0; i < inter_length; ++i)
 		/* For each byte sent here, we have to manually clean up from the controller with a read */
 		rp_spi_xfer_data(target, 0);
+}
 
+static void rp_spi_read(target_s *const target, const uint16_t command, const target_addr_t address, void *const buffer,
+	const size_t length)
+{
+	/* Setup the transaction */
+	rp_spi_setup_xfer(target, command, address, length);
 	/* Now read back the data that elicited */
 	uint8_t *const data = (uint8_t *const)buffer;
 	for (size_t i = 0; i < length; ++i)
 		/* Do a write to read */
 		data[i] = rp_spi_xfer_data(target, 0);
-
 	/* Deselect the Flash */
 	rp_spi_chip_select(target, RP_GPIO_QSPI_CS_DRIVE_HIGH);
 }
@@ -520,33 +495,13 @@ static void rp_spi_read(target_s *const target, const uint16_t command, const ta
 static void rp_spi_write(target_s *const target, const uint16_t command, const target_addr_t address,
 	const void *const buffer, const size_t length)
 {
-	/* Configure the controller, and select the Flash */
-	target_mem_write32(target, RP_SSI_CTRL1, length);
-	rp_spi_chip_select(target, RP_GPIO_QSPI_CS_DRIVE_LOW);
-
-	/* Set up the instruction */
-	const uint8_t opcode = command & RP_SPI_FLASH_OPCODE_MASK;
-	rp_spi_xfer_data(target, opcode);
-
-	const uint16_t addr_mode = command & RP_SPI_FLASH_MASK;
-	if (addr_mode == RP_SPI_FLASH_OPCODE_3B_ADDR) {
-		/* For each byte sent here, we have to manually clean up from the controller with a read */
-		rp_spi_xfer_data(target, (address >> 16U) & 0xffU);
-		rp_spi_xfer_data(target, (address >> 8U) & 0xffU);
-		rp_spi_xfer_data(target, address & 0xffU);
-	}
-
-	const size_t inter_length = (command & RP_SPI_FLASH_DUMMY_MASK) >> RP_SPI_FLASH_DUMMY_SHIFT;
-	for (size_t i = 0; i < inter_length; ++i)
-		/* For each byte sent here, we have to manually clean up from the controller with a read */
-		rp_spi_xfer_data(target, 0);
-
+	/* Setup the transaction */
+	rp_spi_setup_xfer(target, command, address, length);
 	/* Now write out back the data requested */
 	uint8_t *const data = (uint8_t *const)buffer;
 	for (size_t i = 0; i < length; ++i)
 		/* Do a write to read */
 		rp_spi_xfer_data(target, data[i]);
-
 	/* Deselect the Flash */
 	rp_spi_chip_select(target, RP_GPIO_QSPI_CS_DRIVE_HIGH);
 }
