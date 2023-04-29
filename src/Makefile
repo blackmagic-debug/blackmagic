@@ -145,7 +145,7 @@ endif
 .PHONY:	clean host_clean all_platforms clang-format FORCE
 
 
-GIT_VERSION := $(shell if [ -d "../.git" ]; then git describe --always --dirty --tags; fi)
+GIT_VERSION := $(shell if [ -e "../.git" ]; then git describe --always --dirty --tags; fi)
 
 clean:	host_clean
 	$(Q)echo "  CLEAN"
