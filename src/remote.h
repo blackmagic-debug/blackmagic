@@ -314,7 +314,6 @@
 #define REMOTE_SPI_READ        'r'
 #define REMOTE_SPI_WRTIE       'w'
 #define REMOTE_SPI_CHIP_ID     'I'
-#define REMOTE_SPI_SFDP        'S'
 #define REMOTE_SPI_RUN_COMMAND 'c'
 
 #define REMOTE_SPI_BEGIN_STR                                                                          \
@@ -348,6 +347,17 @@
 	{                                                                                                              \
 		REMOTE_SOM, REMOTE_SPI_PACKET, REMOTE_SPI_WRITE, REMOTE_UINT8, REMOTE_UINT8, REMOTE_UINT16, REMOTE_UINT24, \
 			REMOTE_UINT16, 0,                                                                                      \
+	}
+#define REMOTE_SPI_CHIP_ID_STR                                                                       \
+	(char[])                                                                                         \
+	{                                                                                                \
+		REMOTE_SOM, REMOTE_SPI_PACKET, REMOTE_SPI_CHIP_ID, REMOTE_UINT8, REMOTE_UINT8, REMOTE_EOM, 0 \
+	}
+#define REMOTE_SPI_RUN_COMMAND_STR                                                                        \
+	(char[])                                                                                              \
+	{                                                                                                     \
+		REMOTE_SOM, REMOTE_SPI_PACKET, REMOTE_SPI_RUN_COMMAND, REMOTE_UINT8, REMOTE_UINT8, REMOTE_UINT16, \
+			REMOTE_UINT24, REMOTE_EOM, 0                                                                  \
 	}
 
 uint64_t remote_hex_string_to_num(uint32_t limit, const char *str);
