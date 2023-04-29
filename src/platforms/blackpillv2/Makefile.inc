@@ -6,7 +6,7 @@ OBJCOPY = $(CROSS_COMPILE)objcopy
 CFLAGS += -Istm32/include -mcpu=cortex-m4 -mthumb \
 	-mfloat-abi=hard -mfpu=fpv4-sp-d16 \
 	-DSTM32F4 -I../libopencm3/include \
-	-Iplatforms/stm32
+	-Iplatforms/common_stm32
 
 LINKER_SCRIPT=platforms/blackpillv2/blackpillv2.ld
 
@@ -29,7 +29,7 @@ ifdef ALTERNATIVE_PINOUT
 CFLAGS += -DALTERNATIVE_PINOUT=$(ALTERNATIVE_PINOUT)
 endif
 
-VPATH += platforms/stm32
+VPATH += platforms/common_stm32
 
 SRC +=               \
 	traceswodecode.c \
