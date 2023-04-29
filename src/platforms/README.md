@@ -9,7 +9,7 @@ used by (multiple) platforms.
 * stlink: Firmware for ST-Link v2 and ST-Link v2.1
 * swlink:  Firmware for ST-Link v1 and Bluepill
 * blackpillv2: Firmware for the WeAct Blackpill v2
-* hydrabus:  Firmware for [hydrabus](https://hydrabus.com/)
+* hydrabus:  Firmware for [HydraBus](https://hydrabus.com/)
 * f4discovery: Firmware for STM32F407DISCO
 * f3: Firmware for the STM32F3
 * f072: Firmware for the STM32F072
@@ -25,5 +25,5 @@ used by (multiple) platforms.
 ## Support directories
 
 * common: common platform support for all platforms except hosted (BMDA)
-* stm32: STM32 specific libopencm3 common platform support
-* tm4c: Tiva-C specific libopencm3 common platform support
+* common_stm32: STM32 specific libopencm3 common platform support
+* common_tm4c: Tiva-C specific libopencm3 common platform support
