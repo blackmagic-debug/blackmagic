@@ -511,6 +511,52 @@ void remote_packet_process_spi(const char *const packet, const size_t packet_len
 		remote_respond(REMOTE_RESP_OK, data_out);
 		break;
 	}
+	/* Perform a complete read cycle with a SPI Flash of up to 256 bytes */
+	case REMOTE_SPI_READ: {
+		/*
+		 * Decode the device to talk to, what command to send, and the addressing
+		 * and length information for that command
+		 */
+		const uint8_t spi_device = remote_hex_string_to_num(2, packet + 4);
+		const uint16_t command = remote_hex_string_to_num(4, packet + 6);
+		const target_addr_t address = remote_hex_string_to_num(6, packet + 10);
+		const size_t length = remote_hex_string_to_num(4, packet + 16);
+		/* Validate the data length isn't overly long */
+		if (length > 256U) {
+			remote_respond(REMOTE_RESP_PARERR, 0);
+			break;
+		}
+		/* Get the aligned packet buffer to reuse for the data read */
+		void *data = gdb_packet_buffer();
+		/* Perform the read cycle */
+		bmp_spi_read(spi_bus, spi_device, command, address, data, length);
+		remote_respond_buf(REMOTE_RESP_OK, data, length);
+		break;
+	}
+	/* Perform a complete write cycle with a SPI Flash of up to 256 bytes */
+	case REMOTE_SPI_WRTIE: {
+		/*
+		 * Decode the device to talk to, what command to send, and the addressing
+		 * and length information for that command
+		 */
+		const uint8_t spi_device = remote_hex_string_to_num(2, packet + 4);
+		const uint16_t command = remote_hex_string_to_num(4, packet + 6);
+		const target_addr_t address = remote_hex_string_to_num(6, packet + 10);
+		const size_t length = remote_hex_string_to_num(4, packet + 16);
+		/* Validate the data length isn't overly long */
+		if (length > 256U) {
+			remote_respond(REMOTE_RESP_PARERR, 0);
+			break;
+		}
+		/* Get the aligned packet buffer to reuse for the data to write */
+		void *data = gdb_packet_buffer();
+		/* And decode the data from the packet into it */
+		unhexify(data, packet + 20U, length);
+		/* Perform the write cycle */
+		bmp_spi_write(spi_bus, spi_device, command, address, data, length);
+		remote_respond(REMOTE_RESP_OK, 0);
+		break;
+	}
 	default:
 		remote_respond(REMOTE_RESP_ERR, REMOTE_ERROR_UNRECOGNISED);
 		break;
