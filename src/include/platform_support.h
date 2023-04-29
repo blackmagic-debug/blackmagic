@@ -39,8 +39,8 @@ inline void platform_pace_poll(void)
 #endif
 
 typedef struct platform_timeout platform_timeout_s;
-void platform_timeout_set(platform_timeout_s *t, uint32_t ms);
-bool platform_timeout_is_expired(const platform_timeout_s *t);
+void platform_timeout_set(platform_timeout_s *target, uint32_t ms);
+bool platform_timeout_is_expired(const platform_timeout_s *target);
 void platform_delay(uint32_t ms);
 
 #define POWER_CONFLICT_THRESHOLD 5U /* in 0.1V, so 5 stands for 0.5V */
