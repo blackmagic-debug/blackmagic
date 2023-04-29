@@ -61,7 +61,7 @@ target_s *target_new(void)
 	return target;
 }
 
-int target_foreach(void (*callback)(int, target_s *target, void *context), void *context)
+size_t target_foreach(void (*callback)(size_t index, target_s *target, void *context), void *context)
 {
 	size_t idx = 0;
 	for (target_s *target = target_list; target; target = target->next)

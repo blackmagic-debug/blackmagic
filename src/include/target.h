@@ -41,7 +41,7 @@ uint32_t platform_jtag_scan(void);
 uint32_t adiv5_swdp_scan(uint32_t targetid);
 uint32_t jtag_scan(void);
 
-int target_foreach(void (*callback)(int index, target_s *target, void *context), void *context);
+size_t target_foreach(void (*callback)(size_t index, target_s *target, void *context), void *context);
 void target_list_free(void);
 
 /* Attach/detach functions */

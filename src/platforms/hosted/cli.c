@@ -402,16 +402,16 @@ void cl_init(bmda_cli_options_s *opt, int argc, char **argv)
 	}
 }
 
-static void display_target(int i, target_s *t, void *context)
+static void display_target(size_t idx, target_s *target, void *context)
 {
 	(void)context;
-	const char *const core_name = target_core_name(t);
-	if (strcmp(target_driver_name(t), "ARM Cortex-M") == 0)
-		DEBUG_INFO("*** %2d %c Unknown %s Designer %x Part ID %x %s\n", i, target_attached(t) ? '*' : ' ',
-			target_driver_name(t), target_designer(t), target_part_id(t), core_name ? core_name : "");
+	const char *const core_name = target_core_name(target);
+	if (strcmp(target_driver_name(target), "ARM Cortex-M") == 0)
+		DEBUG_INFO("*** %2zu %c Unknown %s Designer %x Part ID %x %s\n", idx, target_attached(target) ? '*' : ' ',
+			target_driver_name(target), target_designer(target), target_part_id(target), core_name ? core_name : "");
 	else
-		DEBUG_INFO(
-			"*** %2d %c %s %s\n", i, target_attached(t) ? '*' : ' ', target_driver_name(t), core_name ? core_name : "");
+		DEBUG_INFO("*** %2zu %c %s %s\n", idx, target_attached(target) ? '*' : ' ', target_driver_name(target),
+			core_name ? core_name : "");
 }
 
 uint32_t scan_for_targets(const bmda_cli_options_s *const opt)
