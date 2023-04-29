@@ -368,21 +368,21 @@ bool cmd_frequency(target_s *t, int argc, const char **argv)
 	return true;
 }
 
-static void display_target(int i, target_s *t, void *context)
+static void display_target(size_t idx, target_s *target, void *context)
 {
 	(void)context;
-	const char attached = target_attached(t) ? '*' : ' ';
-	const char *const core_name = target_core_name(t);
-	if (!strcmp(target_driver_name(t), "ARM Cortex-M"))
-		gdb_outf("***%2d %c Unknown %s Designer 0x%x Part ID 0x%x %s\n", i, attached, target_driver_name(t),
-			target_designer(t), target_part_id(t), core_name ? core_name : "");
+	const char attached = target_attached(target) ? '*' : ' ';
+	const char *const core_name = target_core_name(target);
+	if (!strcmp(target_driver_name(target), "ARM Cortex-M"))
+		gdb_outf("***%2u %c Unknown %s Designer 0x%x Part ID 0x%x %s\n", (unsigned)idx, attached,
+			target_driver_name(target), target_designer(target), target_part_id(target), core_name ? core_name : "");
 	else
-		gdb_outf("%2d   %c  %s %s\n", i, attached, target_driver_name(t), core_name ? core_name : "");
+		gdb_outf("%2u %3c  %s %s\n", (unsigned)idx, attached, target_driver_name(target), core_name ? core_name : "");
 }
 
-bool cmd_targets(target_s *t, int argc, const char **argv)
+bool cmd_targets(target_s *target, int argc, const char **argv)
 {
-	(void)t;
+	(void)target;
 	(void)argc;
 	(void)argv;
 	gdb_out("Available Targets:\n");
