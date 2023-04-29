@@ -74,6 +74,7 @@
 /* Protocol data elements */
 #define REMOTE_UINT8  '%', '0', '2', 'x'
 #define REMOTE_UINT16 '%', '0', '4', 'x'
+#define REMOTE_UINT24 '%', '0', '6', 'x'
 #define REMOTE_UINT32 '%', '0', '8', 'x'
 
 /* Generic protocol elements */
@@ -335,6 +336,18 @@
 	(char[])                                                                                           \
 	{                                                                                                  \
 		REMOTE_SOM, REMOTE_SPI_PACKET, REMOTE_SPI_TRANSFER, REMOTE_UINT8, REMOTE_UINT8, REMOTE_EOM, 0, \
+	}
+#define REMOTE_SPI_READ_STR                                                                                       \
+	(char[])                                                                                                      \
+	{                                                                                                             \
+		REMOTE_SOM, REMOTE_SPI_PACKET, REMOTE_SPI_READ, REMOTE_UINT8, REMOTE_UINT8, REMOTE_UINT16, REMOTE_UINT24, \
+			REMOTE_UINT16, REMOTE_EOM, 0,                                                                         \
+	}
+#define REMOTE_SPI_WRITE_STR                                                                                       \
+	(char[])                                                                                                       \
+	{                                                                                                              \
+		REMOTE_SOM, REMOTE_SPI_PACKET, REMOTE_SPI_WRITE, REMOTE_UINT8, REMOTE_UINT8, REMOTE_UINT16, REMOTE_UINT24, \
+			REMOTE_UINT16, 0,                                                                                      \
 	}
 
 uint64_t remote_hex_string_to_num(uint32_t limit, const char *str);
