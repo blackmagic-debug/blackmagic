@@ -85,6 +85,10 @@ typedef struct spi_flash {
 	spi_run_command_func run_command;
 } spi_flash_s;
 
+void bmp_spi_read(spi_bus_e bus, uint8_t device, uint16_t command, target_addr_t address, void *buffer, size_t length);
+void bmp_spi_write(
+	spi_bus_e bus, uint8_t device, uint16_t command, target_addr_t address, const void *buffer, size_t length);
+
 spi_flash_s *bmp_spi_add_flash(target_s *target, target_addr_t begin, size_t length, spi_read_func spi_read,
 	spi_write_func spi_write, spi_run_command_func spi_run_command);
 bool bmp_spi_mass_erase(target_s *target);

@@ -37,6 +37,58 @@
 static bool bmp_spi_flash_erase(target_flash_s *flash, target_addr_t addr, size_t length);
 static bool bmp_spi_flash_write(target_flash_s *flash, target_addr_t dest, const void *src, size_t length);
 
+#if PC_HOSTED == 0
+static void bmp_spi_setup_xfer(
+	const spi_bus_e bus, const uint8_t device, const uint16_t command, const target_addr_t address)
+{
+	platform_spi_chip_select(device | 0x80U);
+
+	/* Set up the instruction */
+	const uint8_t opcode = command & SPI_FLASH_OPCODE_MASK;
+	platform_spi_xfer(bus, opcode);
+
+	if ((command & SPI_FLASH_OPCODE_MODE_MASK) == SPI_FLASH_OPCODE_3B_ADDR) {
+		/* For each byte sent here, we have to manually clean up from the controller with a read */
+		platform_spi_xfer(bus, (address >> 16U) & 0xffU);
+		platform_spi_xfer(bus, (address >> 8U) & 0xffU);
+		platform_spi_xfer(bus, address & 0xffU);
+	}
+
+	const size_t dummy_length = (command & SPI_FLASH_DUMMY_MASK) >> SPI_FLASH_DUMMY_SHIFT;
+	for (size_t i = 0; i < dummy_length; ++i)
+		/* For each byte sent here, we have to manually clean up from the controller with a read */
+		platform_spi_xfer(bus, 0);
+}
+
+void bmp_spi_read(const spi_bus_e bus, const uint8_t device, const uint16_t command, const target_addr_t address,
+	void *const buffer, const size_t length)
+{
+	/* Setup the transaction */
+	bmp_spi_setup_xfer(bus, device, command, address);
+	/* Now read back the data that elicited */
+	uint8_t *const data = (uint8_t *const)buffer;
+	for (size_t i = 0; i < length; ++i)
+		/* Do a write to read */
+		data[i] = platform_spi_xfer(bus, 0);
+	/* Deselect the Flash */
+	platform_spi_chip_select(device);
+}
+
+void bmp_spi_write(const spi_bus_e bus, const uint8_t device, const uint16_t command, const target_addr_t address,
+	const void *const buffer, const size_t length)
+{
+	/* Setup the transaction */
+	bmp_spi_setup_xfer(bus, device, command, address);
+	/* Now write out back the data requested */
+	uint8_t *const data = (uint8_t *const)buffer;
+	for (size_t i = 0; i < length; ++i)
+		/* Do a write to read */
+		platform_spi_xfer(bus, data[i]);
+	/* Deselect the Flash */
+	platform_spi_chip_select(device);
+}
+#endif
+
 static inline uint8_t bmp_spi_read_status(target_s *const target, const spi_flash_s *const flash)
 {
 	uint8_t status = 0;
