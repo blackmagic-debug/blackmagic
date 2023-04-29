@@ -561,9 +561,22 @@ void remote_packet_process_spi(const char *const packet, const size_t packet_len
 	case REMOTE_SPI_CHIP_ID: {
 		/* Decoder the device to talk to */
 		const uint8_t spi_device = remote_hex_string_to_num(2, packet + 4);
+		/* Set up a suitable buffer for and read the JEDEC ID */
 		spi_flash_id_s flash_id;
 		bmp_spi_read(spi_bus, spi_device, SPI_FLASH_CMD_READ_JEDEC_ID, 0, &flash_id, sizeof(flash_id));
+		/* Respond with the ID */
 		remote_respond_buf(REMOTE_RESP_OK, &flash_id, sizeof(flash_id));
+		break;
+	}
+	/* Run a command against a SPI Flash device */
+	case REMOTE_SPI_RUN_COMMAND: {
+		/* Decode the device to talk to, what command to send, and the addressing information for that command */
+		const uint8_t spi_device = remote_hex_string_to_num(2, packet + 4);
+		const uint16_t command = remote_hex_string_to_num(4, packet + 6);
+		const target_addr_t address = remote_hex_string_to_num(6, packet + 10);
+		/* Execute the command and signal success */
+		bmp_spi_run_command(spi_bus, spi_device, command, address);
+		remote_respond(REMOTE_RESP_OK, 0);
 		break;
 	}
 	default:
