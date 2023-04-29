@@ -21,21 +21,21 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdarg.h>
 #include "general.h"
 #include "remote.h"
 #include "gdb_main.h"
 #include "gdb_packet.h"
+#include "gdb_if.h"
 #include "jtagtap.h"
 #include "swd.h"
 #include "spi.h"
-#include "gdb_if.h"
+#include "sfdp.h"
+#include "target.h"
+#include "adiv5.h"
 #include "version.h"
 #include "exception.h"
-#include <stdarg.h>
-#include "target/adiv5.h"
-#include "target.h"
 #include "hex_utils.h"
-#include "exception.h"
 
 #define HTON(x)    (((x) <= '9') ? (x) - '0' : ((TOUPPER(x)) - 'A' + 10))
 #define TOUPPER(x) ((((x) >= 'a') && ((x) <= 'z')) ? ((x) - ('a' - 'A')) : (x))
@@ -555,6 +555,15 @@ void remote_packet_process_spi(const char *const packet, const size_t packet_len
 		/* Perform the write cycle */
 		bmp_spi_write(spi_bus, spi_device, command, address, data, length);
 		remote_respond(REMOTE_RESP_OK, 0);
+		break;
+	}
+	/* Get the JEDEC device ID for a Flash device */
+	case REMOTE_SPI_CHIP_ID: {
+		/* Decoder the device to talk to */
+		const uint8_t spi_device = remote_hex_string_to_num(2, packet + 4);
+		spi_flash_id_s flash_id;
+		bmp_spi_read(spi_bus, spi_device, SPI_FLASH_CMD_READ_JEDEC_ID, 0, &flash_id, sizeof(flash_id));
+		remote_respond_buf(REMOTE_RESP_OK, &flash_id, sizeof(flash_id));
 		break;
 	}
 	default:
