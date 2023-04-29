@@ -87,6 +87,14 @@ void bmp_spi_write(const spi_bus_e bus, const uint8_t device, const uint16_t com
 	/* Deselect the Flash */
 	platform_spi_chip_select(device);
 }
+
+void bmp_spi_run_command(const spi_bus_e bus, const uint8_t device, const uint16_t command, const target_addr_t address)
+{
+	/* Setup the transaction */
+	bmp_spi_setup_xfer(bus, device, command, address);
+	/* Deselect the Flash */
+	platform_spi_chip_select(device);
+}
 #endif
 
 static inline uint8_t bmp_spi_read_status(target_s *const target, const spi_flash_s *const flash)
