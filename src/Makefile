@@ -144,10 +144,18 @@ endif
 
 .PHONY:	clean host_clean all_platforms clang-format FORCE
 
+
+GIT_VERSION := $(shell if [ -d "../.git" ]; then git describe --always --dirty --tags; fi)
+
 clean:	host_clean
 	$(Q)echo "  CLEAN"
 	-$(Q)$(RM) *.o *.d *.elf *~ $(TARGET) $(HOSTFILES)
-	-$(Q)$(RM) platforms/*/*.o platforms/*/*.d mapfile include/version.h
+	-$(Q)$(RM) platforms/*/*.o platforms/*/*.d mapfile
+ifeq ($(GIT_VERSION),)
+	@echo Git not found, not deleting include/version.h
+else
+	-$(Q)$(RM) include/version.h
+endif
 
 all_platforms:
 	$(Q)if [ ! -f ../libopencm3/Makefile ]; then \
@@ -191,7 +199,6 @@ all_platforms:
 
 command.c: include/version.h
 
-GIT_VERSION := $(shell git describe --always --dirty --tags)
 VERSION_HEADER := \#define FIRMWARE_VERSION "$(GIT_VERSION)"
 
 include/version.h: FORCE
