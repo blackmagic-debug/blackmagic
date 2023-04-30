@@ -6,7 +6,7 @@ OBJCOPY = $(CROSS_COMPILE)objcopy
 CFLAGS += -Istm32/include -mcpu=cortex-m4 -mthumb \
 	-mfloat-abi=hard -mfpu=fpv4-sp-d16 \
 	-DSTM32F4 -I../libopencm3/include \
-	-Iplatforms/common_stm32
+	-Iplatforms/common/stm32
 
 LINKER_SCRIPT=platforms/f4discovery/f4discovery.ld
 
@@ -25,7 +25,7 @@ LDFLAGS += $(LDFLAGS_BOOT)
 CFLAGS += -DDFU_SERIAL_LENGTH=13
 endif
 
-VPATH += platforms/common_stm32
+VPATH += platforms/common/stm32
 
 SRC +=               \
 	traceswodecode.c \
