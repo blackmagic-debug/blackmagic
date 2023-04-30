@@ -4,7 +4,7 @@ OBJCOPY = $(CROSS_COMPILE)objcopy
 
 CFLAGS += -mcpu=cortex-m3 -mthumb \
 	-DSTM32F1  -DDFU_SERIAL_LENGTH=9 -I../libopencm3/include \
-	-I platforms/common_stm32
+	-I platforms/common/stm32
 LDFLAGS_BOOT := $(LDFLAGS) --specs=nano.specs -lopencm3_stm32f1 \
 	-Wl,-T,platforms/swlink/swlink.ld -nostartfiles -lc\
 	-Wl,-Map=mapfile -mthumb -mcpu=cortex-m3 -Wl,-gc-sections \
@@ -17,7 +17,7 @@ else
 LDFLAGS += --specs=nosys.specs
 endif
 
-VPATH += platforms/common_stm32
+VPATH += platforms/common/stm32
 
 SRC +=          \
 	serialno.c	\

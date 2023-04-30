@@ -25,5 +25,5 @@ used by (multiple) platforms.
 ## Support directories
 
 * common: common platform support for all platforms except hosted (BMDA)
-* common_stm32: STM32 specific libopencm3 common platform support
-* common_tm4c: Tiva-C specific libopencm3 common platform support
+* common/stm32: STM32 specific libopencm3 common platform support
+* common/tm4c: Tiva-C specific libopencm3 common platform support

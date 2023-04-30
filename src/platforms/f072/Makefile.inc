@@ -4,14 +4,14 @@ OBJCOPY = $(CROSS_COMPILE)objcopy
 
 CFLAGS += -Istm32/include -mcpu=cortex-m0 -mthumb \
 	-DSTM32F0 -I../libopencm3/include \
-	-DDFU_SERIAL_LENGTH=13 -Iplatforms/common_stm32
+	-DDFU_SERIAL_LENGTH=13 -Iplatforms/common/stm32
 
 LDFLAGS = --specs=nano.specs -lopencm3_stm32f0 \
 	-Wl,-T,platforms/f072/stm32f07xzb.ld \
 	-nostartfiles -lc -lnosys -Wl,-Map=mapfile -mthumb \
 	-mcpu=cortex-m0 -Wl,-gc-sections -L../libopencm3/lib
 
-VPATH += platforms/common_stm32
+VPATH += platforms/common/stm32
 
 SRC +=               \
 	traceswodecode.c \
