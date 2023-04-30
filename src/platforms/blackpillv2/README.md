@@ -21,7 +21,6 @@ Allows the use of a [BlackPill v2](https://github.com/WeActStudio/WeActStudio.Mi
 | LED UART        | PA4    | PA1                  | LED       |
 | User button KEY | PA0    | PA0                  |           |
 
-
 ## How to Build
 
 ```sh
@@ -37,7 +36,6 @@ cd blackmagic
 make clean
 make PROBE_HOST=blackpillv2 ALTERNATIVE_PINOUT=1
 ```
-
 
 ## How to Flash with dfu
 

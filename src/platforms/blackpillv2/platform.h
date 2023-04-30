@@ -34,7 +34,7 @@
  * If ALTERNATIVE_PINOUT has a value >= 4 (undefined), or <= 0, an error is thrown.
  */
 #ifdef ALTERNATIVE_PINOUT
-#if ALTERNATIVE_PINOUT <= 0
+#if ALTERNATIVE_PINOUT < 1 || ALTERNATIVE_PINOUT > 3
 #error "Invalid value for ALTERNATIVE_PINOUT. Value is smaller than 1, or larger than 3. Value must be between 1 and 3"
 #endif
 #endif /* ALTERNATIVE_PINOUT */
@@ -57,9 +57,7 @@
 #define PINOUT_SWITCH(opt0, opt1, opt2, ...) (opt2) // select the third argument
 #elif ALTERNATIVE_PINOUT == 3
 #define PINOUT_SWITCH(opt0, opt1, opt2, opt3, ...) (opt3) // select the fourth argument
-#else
-#warning "if-statement entered else, which should not be reachable"
-#endif /* ALTERNATIVE_PINOUT */
+#endif                                                    /* ALTERNATIVE_PINOUT */
 
 /*
  * Important pin mappings for STM32 implementation:
@@ -80,7 +78,7 @@
  */
 
 /* Hardware definitions... */
-// Build the code using `make PROBE_HOST=blackpillv2 ALTERNATIVE_PINOUT=1` to select the second pinout.
+/* Build the code using `make PROBE_HOST=blackpillv2 ALTERNATIVE_PINOUT=1` to select the second pinout. */
 #define TDI_PORT GPIOB
 #define TDI_PIN  PINOUT_SWITCH(GPIO6, GPIO5)
 
@@ -114,8 +112,7 @@
 #define LED_PORT_UART GPIOA
 #define LED_UART      PINOUT_SWITCH(GPIO4, GPIO1)
 
-/* USART2 with PA2 and PA3 is selected as USBUSART. Alternatively USART1 with PB6 and PB7 can be used.
- */
+/* USART2 with PA2 and PA3 is selected as USBUSART. Alternatively USART1 with PB6 and PB7 can be used. */
 #define USBUSART               USBUSART2
 #define USBUSART_CR1           USBUSART2_CR1
 #define USBUSART_DR            USBUSART2_DR
@@ -199,7 +196,7 @@
 #define USB_IRQ    NVIC_OTG_FS_IRQ
 #define USB_ISR(x) otg_fs_isr(x)
 /*
- * Interrupt priorities.  Low numbers are high priority.
+ * Interrupt priorities. Low numbers are high priority.
  * TIM3 is used for traceswo capture and must be highest priority.
  */
 #define IRQ_PRI_USB          (1U << 4U)
