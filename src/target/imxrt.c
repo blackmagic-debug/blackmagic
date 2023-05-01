@@ -463,8 +463,8 @@ static void imxrt_spi_wait_complete(target_s *const target)
 #ifdef ENABLE_DEBUG
 		/* Read out the status code and display it */
 		const uint32_t status = target_mem_read32(target, IMXRT_FLEXSPI1_STAT1);
-		DEBUG_TARGET("Error executing sequence, offset %" PRIu8 ", error code %" PRIu8 "\n",
-			(uint8_t)(status >> 16U) & 0xfU, (uint8_t)(status >> 24U) & 0xfU);
+		DEBUG_TARGET("Error executing sequence, offset %u, error code %u\n", (uint8_t)(status >> 16U) & 0xfU,
+			(uint8_t)(status >> 24U) & 0xfU);
 #endif
 		/* Now clear the error (this clears the status field bits too) */
 		target_mem_write32(target, IMXRT_FLEXSPI1_INT, IMXRT_FLEXSPI1_INT_CMD_ERR);
