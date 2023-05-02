@@ -1,11 +1,11 @@
 name: lint
 
-on: 
+on:
   push:
-    branches: [ main ]
+    branches: ['main']
 
   pull_request:
-    branches: [ main ]
+    branches: ['main']
 
   workflow_dispatch:
 
@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3.0.2
+    - uses: actions/checkout@v3
 
     - name: Run pre-commit
-      uses: before-commit/run-action@v2.0.3
+      uses: before-commit/run-action@v2
