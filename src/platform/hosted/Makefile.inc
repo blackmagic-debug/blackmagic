@@ -91,7 +91,7 @@ ifneq ($(HOSTED_BMP_ONLY), 1)
     LDFLAGS += $(shell pkg-config --libs $(HIDAPILIB))
 endif
 
-VPATH += platforms/hosted/remote
+VPATH += platform/hosted/remote
 
 SRC += timing.c cli.c utils.c probe_info.c debug.c
 SRC += protocol_v0.c protocol_v0_swd.c protocol_v0_jtag.c protocol_v0_adiv5.c

@@ -1,5 +1,5 @@
 PROBE_HOST ?= native
-PLATFORM_DIR = platforms/$(PROBE_HOST)
+PLATFORM_DIR = platform/$(PROBE_HOST)
 VPATH += $(PLATFORM_DIR) target
 ENABLE_DEBUG ?=
 
@@ -107,7 +107,7 @@ ifdef PC_HOSTED
 CFLAGS += -DPC_HOSTED=1
 else
 CFLAGS += -DPC_HOSTED=0
-include platforms/common/Makefile.inc
+include platform/common/Makefile.inc
 endif
 
 ifeq ($(ENABLE_RTT), 1)
@@ -151,7 +151,7 @@ GIT_VERSION := $(shell if [ -e "../.git" ]; then git describe --always --dirty -
 clean:	host_clean
 	$(Q)echo "  CLEAN"
 	-$(Q)$(RM) *.o *.d *.elf *~ $(TARGET) $(HOSTFILES)
-	-$(Q)$(RM) platforms/*/*.o platforms/*/*.d mapfile
+	-$(Q)$(RM) platform/*/*.o platform/*/*.d mapfile
 ifeq ($(GIT_VERSION),)
 	@echo Git not found, not deleting include/version.h
 else
@@ -169,9 +169,9 @@ all_platforms:
 	mkdir -p artifacts/$(shell git describe --always --dirty --tags) ;\
 	echo "<html><body><ul>" > artifacts/index.html ;\
 	$(MAKE) clean ;\
-	for i in platforms/*/Makefile.inc ; do \
+	for i in platform/*/Makefile.inc ; do \
 		export DIRNAME=`dirname $$i` ;\
-		if [ "$$DIRNAME" = "platforms/common" ]; then \
+		if [ "$$DIRNAME" = "platform/common" ]; then \
 			continue; \
 		fi; \
 		export PROBE_HOST=`basename $$DIRNAME` ;\

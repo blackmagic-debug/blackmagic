@@ -17,4 +17,4 @@ repos:
   - id: check-accidental-assignment
     args: [--strict, --skip-keywords, DO_PRAGMA, --] # strict, check in all parentheses found, skip check in DO_PRAGMA macro
     # FIXME: Known assignment in find_debuggers, needs large refactoring, ignore file temporarily so we get a working check for the rest of the code base
-    exclude: '^src/platforms/hosted/bmp_serial.c'
+    exclude: '^src/platform/hosted/bmp_serial.c'

@@ -18,8 +18,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-VPATH += platforms/common
-CFLAGS += -Iplatforms/common
+VPATH += platform/common
+CFLAGS += -Iplatform/common
 
 SRC +=             \
 	jtagtap.c      \

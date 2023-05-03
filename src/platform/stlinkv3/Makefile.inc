@@ -5,10 +5,10 @@ OBJCOPY = $(CROSS_COMPILE)objcopy
 OPT_FLAGS = -Og -g
 CFLAGS += -mcpu=cortex-m7 -mthumb -mfpu=fpv5-sp-d16 -mfloat-abi=hard \
 	-DSTM32F7 -DDFU_SERIAL_LENGTH=25 -I../libopencm3/include \
-	-I platforms/common/stm32
+	-I platform/common/stm32
 LDFLAGS_BOOT := $(LDFLAGS) -mfpu=fpv5-sp-d16 -mfloat-abi=hard \
 	--specs=nano.specs -lopencm3_stm32f7 \
-	-Wl,-T,platforms/stlinkv3/stlinkv3.ld -nostartfiles -lc \
+	-Wl,-T,platform/stlinkv3/stlinkv3.ld -nostartfiles -lc \
 	-Wl,-Map=mapfile -mthumb -mcpu=cortex-m7 -Wl,-gc-sections \
 	-L../libopencm3/lib
 
@@ -28,7 +28,7 @@ else
 LDFLAGS += --specs=nosys.specs
 endif
 
-VPATH += platforms/common/stm32
+VPATH += platform/common/stm32
 
 SRC += 	\
 	serialno.c	\

@@ -5,15 +5,15 @@ OBJCOPY = $(CROSS_COMPILE)objcopy
 CFLAGS += -Istm32/include -mcpu=cortex-m4 -mthumb \
 	-mfloat-abi=hard -mfpu=fpv4-sp-d16 \
 	-DSTM32F3 -I../libopencm3/include \
-	-DDFU_SERIAL_LENGTH=13 -Iplatforms/common/stm32
+	-DDFU_SERIAL_LENGTH=13 -Iplatform/common/stm32
 
 LDFLAGS =  --specs=nano.specs -lopencm3_stm32f3 \
-	-Wl,-T,platforms/f3/stm32f303xc.ld -nostartfiles -lc -lnosys \
+	-Wl,-T,platform/f3/stm32f303xc.ld -nostartfiles -lc -lnosys \
 	-Wl,-Map=mapfile -mthumb -mcpu=cortex-m4 -Wl,-gc-sections \
 	-mfloat-abi=hard -mfpu=fpv4-sp-d16 \
 	-L../libopencm3/lib
 
-VPATH += platforms/common/stm32
+VPATH += platform/common/stm32
 
 SRC +=               \
 	traceswodecode.c \

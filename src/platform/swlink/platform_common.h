@@ -18,12 +18,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef PLATFORMS_SWLINK_PLATFORM_COMMON_H
-#define PLATFORMS_SWLINK_PLATFORM_COMMON_H
+#ifndef PLATFORMS_SWLINK_PLATFORMS_COMMON_H
+#define PLATFORMS_SWLINK_PLATFORMS_COMMON_H
 
 #include <stdint.h>
 
 uint8_t detect_rev();
 void platform_request_boot(void);
 
-#endif /*PLATFORMS_SWLINK_PLATFORM_COMMON_H*/
+#endif /*PLATFORMS_SWLINK_PLATFORMS_COMMON_H*/

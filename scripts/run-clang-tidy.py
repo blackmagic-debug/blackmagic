@@ -33,8 +33,8 @@ def gatherFiles():
 			yield file
 
 extraArgs = [
-	'-Isrc/target', '-Isrc', '-Isrc/include', '-Isrc/platforms/common',
-	'-Isrc/platforms/native', '-Ilibopencm3/include', '-Isrc/platforms/stm32'
+	'-Isrc/target', '-Isrc', '-Isrc/include', '-Isrc/platform/common',
+	'-Isrc/platform/native', '-Ilibopencm3/include', '-Isrc/platform/stm32'
 ] + args.includePaths
 
 for i, arg in enumerate(extraArgs):
