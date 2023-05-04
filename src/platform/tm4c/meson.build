@@ -1,6 +1,5 @@
 
 platform_sources += files(
-	'usbuart.c',
 	'traceswo.c',
 	'gdb_if.c',
 )

@@ -1,5 +1,5 @@
 project('Black Magic Firmware', 'c',
-	version: 'v1.8',
+	version: 'v1.9.1',
 	license: 'GPL-3.0',
 	default_options: [
 		'optimization=s',
@@ -11,11 +11,13 @@ project('Black Magic Firmware', 'c',
 	subproject_dir: 'lib',
 )
 
-if not meson.is_cross_build()
-	error('Black Magic Firmware must be cross-compiled to the target probe/platform and cannot be built for the host machine')
-endif
-
 subdir('src')
+
+if probe != 'bmda'
+	if not meson.is_cross_build()
+		error('Black Magic Firmware must be cross-compiled to the target probe/platform and when not built for the host machine')
+	endif
+endif
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Project wide flags

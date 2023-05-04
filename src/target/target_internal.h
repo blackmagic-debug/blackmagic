@@ -24,6 +24,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include <general.h>
 #include "platform_support.h"
 #include "target_probe.h"
 

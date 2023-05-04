@@ -4,9 +4,9 @@ platform_includes = [include_directories(
 )]
 
 platform_sources = [files(
-	'common/cdcacm.c',
-	'common/jtagtap.c',
-	'common/swdptap.c',
+	# 'common/cdcacm.c',
+	# 'common/jtagtap.c',
+	# 'common/swdptap.c',
 )]
 
 platform_args = []

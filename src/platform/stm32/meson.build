@@ -4,13 +4,13 @@ platform_includes += include_directories(
 )
 
 platform_sources += files(
-	'serialno.c',
-	'usbuart.c',
-	'traceswo.c',
-	'traceswodecode.c',
 	'traceswoasync.c',
+	'traceswo.c',
 	# 'rtt_if.c',
+	'traceswodecode.c',
+	'serialno.c',
 	'gdb_if.c',
+	'traceswoasync_f723.c',
 	'timing_stm32.c',
 )
 
