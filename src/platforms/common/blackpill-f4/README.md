@@ -1,6 +1,9 @@
-# Firmware BMP for STM32F401/STM32F411 MiniF4 aka BlackPill v2 boards
+# Common code for the Black Magic Probe Firmware for WeAct Studio F401CC/F401CE/F411CE boards
 
-Allows the use of a [BlackPill v2](https://github.com/WeActStudio/WeActStudio.MiniSTM32F4x1) as a Black Magic Probe.
+This code allows the use of a [Black Pill F4](https://github.com/WeActStudio/WeActStudio.MiniSTM32F4x1) as a Black Magic Probe.
+
+This directory contains the common code for the following platforms:
+- blackpill-f401ce
 
 ## Pinout
 
@@ -26,7 +29,7 @@ Allows the use of a [BlackPill v2](https://github.com/WeActStudio/WeActStudio.Mi
 ```sh
 cd blackmagic
 make clean
-make PROBE_HOST=blackpillv2
+make PROBE_HOST=blackpill-f4x1cx
 ```
 
 or
@@ -34,7 +37,7 @@ or
 ```sh
 cd blackmagic
 make clean
-make PROBE_HOST=blackpillv2 ALTERNATIVE_PINOUT=1
+make PROBE_HOST=blackpill-f4x1cx ALTERNATIVE_PINOUT=1
 ```
 
 ## How to Flash with dfu

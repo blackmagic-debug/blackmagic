@@ -18,17 +18,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file provides the platform specific declarations for the Blackpillv2 implementation. */
+/* This file provides the platform specific declarations for the blackpill-f4 implementation. */
 
-#ifndef PLATFORMS_BLACKPILLV2_PLATFORM_H
-#define PLATFORMS_BLACKPILLV2_PLATFORM_H
+#ifndef BLACKPILL_F4_H
+#define BLACKPILL_F4_H
 
 #include "gpio.h"
 #include "timing.h"
 #include "timing_stm32.h"
 
 #define PLATFORM_HAS_TRACESWO
-#define PLATFORM_IDENT "(BlackPillV2) "
 
 /* Error handling for ALTERNATIVE_PINOUT
  * If ALTERNATIVE_PINOUT has a value >= 4 (undefined), or <= 0, an error is thrown.
@@ -78,7 +77,7 @@
  */
 
 /* Hardware definitions... */
-/* Build the code using `make PROBE_HOST=blackpillv2 ALTERNATIVE_PINOUT=1` to select the second pinout. */
+/* Build the code using `make PROBE_HOST=blackpill-f4x1cx ALTERNATIVE_PINOUT=1` to select the second pinout. */
 #define TDI_PORT GPIOB
 #define TDI_PIN  PINOUT_SWITCH(GPIO6, GPIO5)
 
@@ -249,4 +248,4 @@ static inline int platform_hwversion(void)
 #endif
 #define snprintf sniprintf
 
-#endif /* PLATFORMS_BLACKPILLV2_PLATFORM_H */
+#endif /* BLACKPILL_F4_H */
