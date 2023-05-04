@@ -5,7 +5,7 @@ endif
 
 PC_HOSTED =
 NO_LIBOPENCM3 =
-ifeq ($(PROBE_HOST), hosted)
+ifeq ($(PROBE_HOST), bmda)
 	PC_HOSTED = true
 	NO_LIBOPENCM3 = true
 endif

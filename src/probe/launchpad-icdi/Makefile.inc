@@ -13,7 +13,7 @@ LINKER_SCRIPT="platform/launchpad-icdi/launchpad-icdi.ld"
 LDFLAGS = -nostartfiles -lc $(CPU_FLAGS) -nodefaultlibs -T$(LINKER_SCRIPT) -Wl,--gc-sections \
 	-L../libopencm3/lib -lopencm3_lm4f -lnosys -lm -lgcc
 
-VPATH += platform/common/tm4c
+VPATH += platform/tm4c
 
 SRC +=          \
 	timing.c        \

@@ -1,5 +1,5 @@
 PROBE_HOST ?= native
-PLATFORM_DIR = platform/$(PROBE_HOST)
+PLATFORM_DIR = probe/$(PROBE_HOST)
 VPATH += $(PLATFORM_DIR) target
 ENABLE_DEBUG ?=
 
@@ -151,7 +151,7 @@ GIT_VERSION := $(shell if [ -e "../.git" ]; then git describe --always --dirty -
 clean:	host_clean
 	$(Q)echo "  CLEAN"
 	-$(Q)$(RM) *.o *.d *.elf *~ $(TARGET) $(HOSTFILES)
-	-$(Q)$(RM) platform/*/*.o platform/*/*.d mapfile
+	-$(Q)$(RM) platform/*/*.o platform/*/*.d probe/*/*.o probe/*/*.d mapfile
 ifeq ($(GIT_VERSION),)
 	@echo Git not found, not deleting include/version.h
 else
@@ -169,7 +169,7 @@ all_platforms:
 	mkdir -p artifacts/$(shell git describe --always --dirty --tags) ;\
 	echo "<html><body><ul>" > artifacts/index.html ;\
 	$(MAKE) clean ;\
-	for i in platform/*/Makefile.inc ; do \
+	for i in probe/*/Makefile.inc ; do \
 		export DIRNAME=`dirname $$i` ;\
 		if [ "$$DIRNAME" = "platform/common" ]; then \
 			continue; \

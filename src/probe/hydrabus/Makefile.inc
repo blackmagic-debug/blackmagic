@@ -4,16 +4,16 @@ OBJCOPY = $(CROSS_COMPILE)objcopy
 
 CFLAGS += -Istm32/include -mcpu=cortex-m4 -mthumb \
 	-mfloat-abi=hard -mfpu=fpv4-sp-d16 \
-	-DSTM32F3 -I../libopencm3/include \
-	-DDFU_SERIAL_LENGTH=13 -Iplatform/common/stm32
+	-DSTM32F4 -I../libopencm3/include \
+	-Iplatform/stm32 -DDFU_SERIAL_LENGTH=9
 
-LDFLAGS =  --specs=nano.specs -lopencm3_stm32f3 \
-	-Wl,-T,platform/f3/stm32f303xc.ld -nostartfiles -lc -lnosys \
+LDFLAGS = -lopencm3_stm32f4 \
+	-Wl,-T,probe/hydrabus/hydrabus.ld -nostartfiles -lc -lnosys \
 	-Wl,-Map=mapfile -mthumb -mcpu=cortex-m4 -Wl,-gc-sections \
 	-mfloat-abi=hard -mfpu=fpv4-sp-d16 \
 	-L../libopencm3/lib
 
-VPATH += platform/common/stm32
+VPATH += platform/stm32
 
 SRC +=               \
 	traceswodecode.c \
@@ -22,13 +22,11 @@ SRC +=               \
 	timing.c	\
 	timing_stm32.c	\
 
-all:	blackmagic.bin
-blackmagic.elf: libopencm3_stm32f3
+all: blackmagic.bin blackmagic.hex
 
-libopencm3_stm32f3:
-	$(Q)$(MAKE) $(MFLAGS) -C ../libopencm3 lib/stm32/f3
+blackmagic.dfu: blackmagic.hex
+	@echo Creating $@
+	@python3 ../scripts/dfu-convert.py -i $< $@
 
 host_clean:
-	-$(Q)$(RM) blackmagic.bin
-
-.PHONY: libopencm3_stm32f3
+	-$(Q)$(RM) blackmagic.bin blackmagic.hex blackmagic.dfu

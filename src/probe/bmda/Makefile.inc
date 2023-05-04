@@ -3,7 +3,7 @@ ifeq ($(origin CC),default)
 endif
 SYS := $(shell $(CC) -dumpmachine)
 CFLAGS += -DENABLE_DEBUG -DPLATFORM_HAS_DEBUG
-CFLAGS +=-I ./target
+CFLAGS += -I./target -Iplatform/hosted
 
 # Clang requires some special handling here: -gnu means MinGW
 # while -msvc means Clang/CL. We don't currently support the latter
@@ -91,6 +91,7 @@ ifneq ($(HOSTED_BMP_ONLY), 1)
     LDFLAGS += $(shell pkg-config --libs $(HIDAPILIB))
 endif
 
+VPATH += platform/hosted
 VPATH += platform/hosted/remote
 
 SRC += timing.c cli.c utils.c probe_info.c debug.c

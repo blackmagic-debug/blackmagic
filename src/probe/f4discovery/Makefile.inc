@@ -6,9 +6,9 @@ OBJCOPY = $(CROSS_COMPILE)objcopy
 CFLAGS += -Istm32/include -mcpu=cortex-m4 -mthumb \
 	-mfloat-abi=hard -mfpu=fpv4-sp-d16 \
 	-DSTM32F4 -I../libopencm3/include \
-	-Iplatform/common/stm32
+	-Iplatform/stm32
 
-LINKER_SCRIPT=platform/blackpillv2/blackpillv2.ld
+LINKER_SCRIPT=probe/f4discovery/f4discovery.ld
 
 LDFLAGS_BOOT = -lopencm3_stm32f4 \
 	-Wl,-T,$(LINKER_SCRIPT) -nostartfiles -lc -lnosys \
@@ -25,11 +25,7 @@ LDFLAGS += $(LDFLAGS_BOOT)
 CFLAGS += -DDFU_SERIAL_LENGTH=13
 endif
 
-ifdef ALTERNATIVE_PINOUT
-CFLAGS += -DALTERNATIVE_PINOUT=$(ALTERNATIVE_PINOUT)
-endif
-
-VPATH += platform/common/stm32
+VPATH += platform/stm32
 
 SRC +=               \
 	traceswodecode.c \
@@ -42,14 +38,10 @@ ifneq ($(BMP_BOOTLOADER), 1)
 all:	blackmagic.bin
 else
 all:	blackmagic.bin  blackmagic_dfu.bin blackmagic_dfu.hex
-blackmagic_dfu: usbdfu.o dfucore.o dfu_f4.o serialno.o
-	$(CC) $^ -o $@ $(LDFLAGS_BOOT)
-
-blackmagic_dfu.bin:    blackmagic_dfu
-	$(OBJCOPY) -O binary $^ $@
-
-blackmagic_dfu.hex:    blackmagic_dfu
-	$(OBJCOPY) -O ihex $^ $@
+blackmagic_dfu.elf: usbdfu.o dfucore.o dfu_f4.o serialno.o
+	@echo "  LD      $@"
+	$(Q)$(CC) $^ -o $@ $(LDFLAGS_BOOT)
 endif
+
 host_clean:
 	-$(Q)$(RM) blackmagic.bin
