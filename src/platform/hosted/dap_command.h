@@ -31,8 +31,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef PLATFORMS_HOSTED_DAP_COMMAND_H
-#define PLATFORMS_HOSTED_DAP_COMMAND_H
+#ifndef PLATFORM_HOSTED_DAP_COMMAND_H
+#define PLATFORM_HOSTED_DAP_COMMAND_H
 
 #include <stdint.h>
 #include <stddef.h>
@@ -157,4 +157,4 @@ bool perform_dap_jtag_tms_sequence(uint64_t tms_states, size_t clock_cycles);
 
 bool perform_dap_swd_sequences(dap_swd_sequence_s *sequences, uint8_t sequence_count);
 
-#endif /*PLATFORMS_HOSTED_DAP_COMMAND_H*/
+#endif /* PLATFORM_HOSTED_DAP_COMMAND_H*/

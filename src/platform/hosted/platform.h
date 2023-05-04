@@ -32,8 +32,8 @@
  * SUCH DAMAGE.
  */
 
-#ifndef PLATFORMS_HOSTED_PLATFORM_H
-#define PLATFORMS_HOSTED_PLATFORM_H
+#ifndef PLATFORM_HOSTED_PLATFORM_H
+#define PLATFORM_HOSTED_PLATFORM_H
 
 #include "timing.h"
 
@@ -80,4 +80,4 @@ typedef enum bmp_type_e {
 
 void gdb_ident(char *p, int count);
 
-#endif /* PLATFORMS_HOSTED_PLATFORM_H */
+#endif /* PLATFORM_HOSTED_PLATFORM_H */

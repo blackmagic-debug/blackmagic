@@ -18,8 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef PLATFORMS_COMMON_USB_DESCRIPTORS_H
-#define PLATFORMS_COMMON_USB_DESCRIPTORS_H
+#ifndef PLATFORM_COMMON_USB_DESCRIPTORS_H
+#define PLATFORM_COMMON_USB_DESCRIPTORS_H
 
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/cdc.h>
@@ -419,4 +419,4 @@ static const char *const usb_strings[] = {
 #endif
 };
 
-#endif /* PLATFORMS_COMMON_USB_DESCRIPTORS_H */
+#endif /* PLATFORM_COMMON_USB_DESCRIPTORS_H */

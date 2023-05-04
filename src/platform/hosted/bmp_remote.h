@@ -17,8 +17,8 @@
  * along with this program.	 If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef PLATFORMS_HOSTED_BMP_REMOTE_H
-#define PLATFORMS_HOSTED_BMP_REMOTE_H
+#ifndef PLATFORM_HOSTED_BMP_REMOTE_H
+#define PLATFORM_HOSTED_BMP_REMOTE_H
 
 #include <stdint.h>
 #include <stddef.h>
@@ -65,4 +65,4 @@ void remote_add_jtag_dev(uint32_t dev_index, const jtag_dev_s *jtag_dev);
 uint64_t remote_decode_response(const char *response, size_t digits);
 uint64_t remote_hex_string_to_num(uint32_t limit, const char *str);
 
-#endif /* PLATFORMS_HOSTED_BMP_REMOTE_H */
+#endif /* PLATFORM_HOSTED_BMP_REMOTE_H */

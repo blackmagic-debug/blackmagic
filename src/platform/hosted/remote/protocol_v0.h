@@ -31,8 +31,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef PLATFORMS_HOSTED_REMOTE_PROTOCOL_V0_H
-#define PLATFORMS_HOSTED_REMOTE_PROTOCOL_V0_H
+#ifndef PLATFORM_HOSTED_REMOTE_PROTOCOL_V0_H
+#define PLATFORM_HOSTED_REMOTE_PROTOCOL_V0_H
 
 #include <stdbool.h>
 
@@ -42,4 +42,4 @@ void remote_v0_plus_init(void);
 bool remote_v0_swd_init(void);
 bool remote_v0_jtag_init(void);
 
-#endif /*PLATFORMS_HOSTED_REMOTE_PROTOCOL_V0_H*/
+#endif /*PLATFORM_HOSTED_REMOTE_PROTOCOL_V0_H*/

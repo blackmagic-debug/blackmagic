@@ -18,8 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef PLATFORMS_COMMON_USB_TYPES_H
-#define PLATFORMS_COMMON_USB_TYPES_H
+#ifndef PLATFORM_COMMON_USB_TYPES_H
+#define PLATFORM_COMMON_USB_TYPES_H
 
 typedef struct usb_device_descriptor usb_device_descriptor_s;
 typedef struct usb_config_descriptor usb_config_descriptor_s;
@@ -43,4 +43,4 @@ typedef struct usb_dfu_descriptor usb_dfu_descriptor_s;
 
 typedef enum dfu_state dfu_state_e;
 
-#endif /* PLATFORMS_COMMON_USB_TYPES_H */
+#endif /* PLATFORM_COMMON_USB_TYPES_H */

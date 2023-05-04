@@ -20,8 +20,8 @@
 
 /* This file provides the platform specific declarations for the native implementation. */
 
-#ifndef PLATFORMS_NATIVE_PLATFORM_H
-#define PLATFORMS_NATIVE_PLATFORM_H
+#ifndef PLATFORM_NATIVE_PLATFORM_H
+#define PLATFORM_NATIVE_PLATFORM_H
 
 #include "gpio.h"
 #include "timing.h"
@@ -308,4 +308,4 @@ extern bool debug_bmp;
 #endif
 #define snprintf sniprintf
 
-#endif /* PLATFORMS_NATIVE_PLATFORM_H */
+#endif /* PLATFORM_NATIVE_PLATFORM_H */

@@ -17,8 +17,8 @@
  * along with this program.	 If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef PLATFORMS_HOSTED_JLINK_H
-#define PLATFORMS_HOSTED_JLINK_H
+#ifndef PLATFORM_HOSTED_JLINK_H
+#define PLATFORM_HOSTED_JLINK_H
 
 #include <stdbool.h>
 #include "bmp_hosted.h"
@@ -101,4 +101,4 @@ void jlink_max_frequency_set(bmp_info_s *info, uint32_t freq);
 uint32_t jlink_max_frequency_get(bmp_info_s *info);
 #endif
 
-#endif /* PLATFORMS_HOSTED_JLINK_H */
+#endif /* PLATFORM_HOSTED_JLINK_H */

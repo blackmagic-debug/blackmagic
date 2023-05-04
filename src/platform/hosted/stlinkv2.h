@@ -19,8 +19,8 @@
  * along with this program.	 If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef PLATFORMS_HOSTED_STLINKV2_H
-#define PLATFORMS_HOSTED_STLINKV2_H
+#ifndef PLATFORM_HOSTED_STLINKV2_H
+#define PLATFORM_HOSTED_STLINKV2_H
 
 #include "bmp_hosted.h"
 
@@ -41,4 +41,4 @@ void stlink_exit_function(bmp_info_s *info);
 void stlink_max_frequency_set(uint32_t freq);
 uint32_t stlink_max_frequency_get(void);
 
-#endif /* PLATFORMS_HOSTED_STLINKV2_H */
+#endif /* PLATFORM_HOSTED_STLINKV2_H */

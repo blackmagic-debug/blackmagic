@@ -31,8 +31,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef PLATFORMS_HOSTED_DEBUG_H
-#define PLATFORMS_HOSTED_DEBUG_H
+#ifndef PLATFORM_HOSTED_DEBUG_H
+#define PLATFORM_HOSTED_DEBUG_H
 
 #include <stdint.h>
 #if defined(_WIN32) || defined(__CYGWIN__)
@@ -68,4 +68,4 @@ void debug_protocol(debug_str_t format, ...) DEBUG_FORMAT_ATTR;
 void debug_probe(debug_str_t format, ...) DEBUG_FORMAT_ATTR;
 void debug_wire(debug_str_t format, ...) DEBUG_FORMAT_ATTR;
 
-#endif /*PLATFORMS_HOSTED_DEBUG_H*/
+#endif /* PLATFORM_HOSTED_DEBUG_H*/

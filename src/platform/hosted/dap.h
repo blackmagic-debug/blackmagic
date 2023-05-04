@@ -26,8 +26,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef PLATFORMS_HOSTED_DAP_H
-#define PLATFORMS_HOSTED_DAP_H
+#ifndef PLATFORM_HOSTED_DAP_H
+#define PLATFORM_HOSTED_DAP_H
 
 #include <stdint.h>
 #include <stddef.h>
@@ -93,4 +93,4 @@ void dap_dp_abort(adiv5_debug_port_s *target_dp, uint32_t abort);
 uint32_t dap_dp_low_access(adiv5_debug_port_s *target_dp, uint8_t rnw, uint16_t addr, uint32_t value);
 uint32_t dap_dp_read_reg(adiv5_debug_port_s *target_dp, uint16_t addr);
 
-#endif /* PLATFORMS_HOSTED_DAP_H */
+#endif /* PLATFORM_HOSTED_DAP_H */

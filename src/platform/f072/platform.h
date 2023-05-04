@@ -19,8 +19,8 @@
 
 /* This file provides the platform specific declarations for the STM32F072-IF implementation. */
 
-#ifndef PLATFORMS_F072_PLATFORM_H
-#define PLATFORMS_F072_PLATFORM_H
+#ifndef PLATFORM_F072_PLATFORM_H
+#define PLATFORM_F072_PLATFORM_H
 
 #include "gpio.h"
 #include "timing.h"
@@ -182,4 +182,4 @@ static inline int platform_hwversion(void)
 #endif
 #define snprintf sniprintf
 
-#endif /* PLATFORMS_F072_PLATFORM_H */
+#endif /* PLATFORM_F072_PLATFORM_H */

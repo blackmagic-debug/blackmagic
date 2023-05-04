@@ -17,8 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef PLATFORMS_STM32_USBDFU_H
-#define PLATFORMS_STM32_USBDFU_H
+#ifndef PLATFORM_STM32_USBDFU_H
+#define PLATFORM_STM32_USBDFU_H
 
 #include <stddef.h>
 #include <libopencm3/usb/usbd.h>
@@ -43,4 +43,4 @@ void dfu_event(void);
 /* Platform specific function */
 void dfu_detach(void);
 
-#endif /* PLATFORMS_STM32_USBDFU_H */
+#endif /* PLATFORM_STM32_USBDFU_H */

@@ -31,8 +31,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef PLATFORMS_HOSTED_REMOTE_PROTOCOL_V2_H
-#define PLATFORMS_HOSTED_REMOTE_PROTOCOL_V2_H
+#ifndef PLATFORM_HOSTED_REMOTE_PROTOCOL_V2_H
+#define PLATFORM_HOSTED_REMOTE_PROTOCOL_V2_H
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -45,4 +45,4 @@ uint32_t remote_v2_get_comms_frequency(void);
 bool remote_v2_set_comms_frequency(uint32_t freq);
 void remote_v2_target_clk_output_enable(bool enable);
 
-#endif /*PLATFORMS_HOSTED_REMOTE_PROTOCOL_V2_H*/
+#endif /*PLATFORM_HOSTED_REMOTE_PROTOCOL_V2_H*/

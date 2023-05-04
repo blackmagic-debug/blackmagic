@@ -20,8 +20,8 @@
 
 /* This file provides the platform specific declarations for the ST-Link implementation. */
 
-#ifndef PLATFORMS_STLINK_PLATFORM_H
-#define PLATFORMS_STLINK_PLATFORM_H
+#ifndef PLATFORM_STLINK_PLATFORM_H
+#define PLATFORM_STLINK_PLATFORM_H
 
 #include "gpio.h"
 #include "timing.h"
@@ -196,4 +196,4 @@ extern uint32_t detect_rev(void);
 #endif
 #define snprintf sniprintf
 
-#endif /* PLATFORMS_STLINK_PLATFORM_H */
+#endif /* PLATFORM_STLINK_PLATFORM_H */

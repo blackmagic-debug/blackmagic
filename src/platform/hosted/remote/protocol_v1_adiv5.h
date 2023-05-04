@@ -31,8 +31,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef PLATFORMS_HOSTED_REMOTE_PROTOCOL_V1_ADIV5_H
-#define PLATFORMS_HOSTED_REMOTE_PROTOCOL_V1_ADIV5_H
+#ifndef PLATFORM_HOSTED_REMOTE_PROTOCOL_V1_ADIV5_H
+#define PLATFORM_HOSTED_REMOTE_PROTOCOL_V1_ADIV5_H
 
 #include <stdint.h>
 #include <stddef.h>
@@ -46,4 +46,4 @@ void remote_v1_adiv5_mem_read_bytes(adiv5_access_port_s *ap, void *dest, uint32_
 void remote_v1_adiv5_mem_write_bytes(
 	adiv5_access_port_s *ap, uint32_t dest, const void *src, size_t write_length, align_e align);
 
-#endif /*PLATFORMS_HOSTED_REMOTE_PROTOCOL_V1_ADIV5_H*/
+#endif /*PLATFORM_HOSTED_REMOTE_PROTOCOL_V1_ADIV5_H*/

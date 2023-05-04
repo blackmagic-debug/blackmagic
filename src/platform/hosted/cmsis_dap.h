@@ -17,8 +17,8 @@
  * along with this program.	 If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef PLATFORMS_HOSTED_CMSIS_DAP_H
-#define PLATFORMS_HOSTED_CMSIS_DAP_H
+#ifndef PLATFORM_HOSTED_CMSIS_DAP_H
+#define PLATFORM_HOSTED_CMSIS_DAP_H
 
 #include "bmp_hosted.h"
 #include "adiv5.h"
@@ -84,4 +84,4 @@ void dap_nrst_set_val(bool assert)
 #pragma GCC diagnostic pop
 #endif
 
-#endif /* PLATFORMS_HOSTED_CMSIS_DAP_H */
+#endif /* PLATFORM_HOSTED_CMSIS_DAP_H */

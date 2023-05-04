@@ -31,8 +31,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef PLATFORMS_HOSTED_UTILS_H
-#define PLATFORMS_HOSTED_UTILS_H
+#ifndef PLATFORM_HOSTED_UTILS_H
+#define PLATFORM_HOSTED_UTILS_H
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -42,4 +42,4 @@ bool begins_with(const char *str, size_t str_length, const char *value);
 bool ends_with(const char *str, size_t str_length, const char *value);
 bool contains_substring(const char *str, size_t str_len, const char *search);
 
-#endif /* PLATFORMS_HOSTED_UTILS_H */
+#endif /* PLATFORM_HOSTED_UTILS_H */

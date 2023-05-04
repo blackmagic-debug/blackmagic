@@ -21,8 +21,8 @@
 /* This file implements the platform specific functions for the STM32
  * implementation.
  */
-#ifndef PLATFORMS_STLINKV3_PLATFORM_H
-#define PLATFORMS_STLINKV3_PLATFORM_H
+#ifndef PLATFORM_STLINKV3_PLATFORM_H
+#define PLATFORM_STLINKV3_PLATFORM_H
 
 #include "gpio.h"
 #include "timing.h"
@@ -206,4 +206,4 @@ extern const struct _usbd_driver stm32f723_usb_driver;
 
 extern uint32_t detect_rev(void);
 
-#endif /* PLATFORMS_STLINKV3_PLATFORM_H */
+#endif /* PLATFORM_STLINKV3_PLATFORM_H */

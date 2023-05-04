@@ -18,8 +18,8 @@
  * along with this program.	 If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef PLATFORMS_HOSTED_STLINKV2_PROTOCOL_H
-#define PLATFORMS_HOSTED_STLINKV2_PROTOCOL_H
+#ifndef PLATFORM_HOSTED_STLINKV2_PROTOCOL_H
+#define PLATFORM_HOSTED_STLINKV2_PROTOCOL_H
 
 #include <stdint.h>
 #include <stddef.h>
@@ -239,4 +239,4 @@ uint32_t stlink_raw_access(adiv5_debug_port_s *dp, uint8_t rnw, uint16_t addr, u
 uint32_t stlink_dp_error(adiv5_debug_port_s *dp, bool protocol_recovery);
 void stlink_dp_abort(adiv5_debug_port_s *dp, uint32_t abort);
 
-#endif /*PLATFORMS_HOSTED_STLINKV2_PROTOCOL_H*/
+#endif /* PLATFORM_HOSTED_STLINKV2_PROTOCOL_H*/

@@ -15,8 +15,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef PLATFORMS_LAUNCHPAD_ICDI_PLATFORM_H
-#define PLATFORMS_LAUNCHPAD_ICDI_PLATFORM_H
+#ifndef PLATFORM_LAUNCHPAD_ICDI_PLATFORM_H
+#define PLATFORM_LAUNCHPAD_ICDI_PLATFORM_H
 
 #include <libopencm3/lm4f/gpio.h>
 #include <libopencm3/usb/usbd.h>
@@ -150,4 +150,4 @@ static inline int platform_hwversion(void)
 #endif
 #define snprintf sniprintf
 
-#endif /* PLATFORMS_LAUNCHPAD_ICDI_PLATFORM_H */
+#endif /* PLATFORM_LAUNCHPAD_ICDI_PLATFORM_H */

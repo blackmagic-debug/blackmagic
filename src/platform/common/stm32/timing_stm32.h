@@ -17,8 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef PLATFORMS_STM32_TIMING_STM32_H
-#define PLATFORMS_STM32_TIMING_STM32_H
+#ifndef PLATFORM_STM32_TIMING_STM32_H
+#define PLATFORM_STM32_TIMING_STM32_H
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -28,4 +28,4 @@ extern bool running_status;
 
 void platform_timing_init(void);
 
-#endif /* PLATFORMS_STM32_TIMING_STM32_H */
+#endif /* PLATFORM_STM32_TIMING_STM32_H */

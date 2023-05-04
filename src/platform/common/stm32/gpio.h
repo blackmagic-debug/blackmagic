@@ -18,8 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef PLATFORMS_STM32_GPIO_H
-#define PLATFORMS_STM32_GPIO_H
+#ifndef PLATFORM_STM32_GPIO_H
+#define PLATFORM_STM32_GPIO_H
 
 #include <libopencm3/cm3/common.h>
 #include <libopencm3/stm32/memorymap.h>
@@ -71,4 +71,4 @@ static inline void gpio_set_val(const uint32_t gpioport, const uint16_t gpios, c
 		gpio_clear(gpioport, gpios);
 }
 
-#endif /* PLATFORMS_STM32_GPIO_H */
+#endif /* PLATFORM_STM32_GPIO_H */

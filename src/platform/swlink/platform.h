@@ -21,8 +21,8 @@
 
 /* This file provides the platform specific declarations for the "swlink" (ST-Link clones) implementation. */
 
-#ifndef PLATFORMS_SWLINK_PLATFORM_H
-#define PLATFORMS_SWLINK_PLATFORM_H
+#ifndef PLATFORM_SWLINK_PLATFORM_H
+#define PLATFORM_SWLINK_PLATFORM_H
 
 #include "gpio.h"
 #include "timing.h"
@@ -177,4 +177,4 @@ extern uint8_t detect_rev(void);
 #endif
 #define snprintf sniprintf
 
-#endif /* PLATFORMS_SWLINK_PLATFORM_H */
+#endif /* PLATFORM_SWLINK_PLATFORM_H */

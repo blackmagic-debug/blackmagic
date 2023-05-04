@@ -18,8 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef PLATFORMS_COMMON_USB_H
-#define PLATFORMS_COMMON_USB_H
+#ifndef PLATFORM_COMMON_USB_H
+#define PLATFORM_COMMON_USB_H
 
 #include <stdint.h>
 #include <libopencm3/usb/usbd.h>
@@ -58,4 +58,4 @@ void blackmagic_usb_init(void);
 /* Returns current usb configuration, or 0 if not configured. */
 uint16_t usb_get_config(void);
 
-#endif /* PLATFORMS_COMMON_USB_H */
+#endif /* PLATFORM_COMMON_USB_H */

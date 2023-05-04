@@ -40,7 +40,7 @@ It's simple enough, and it works across platforms and configurations - but how t
 The answer to this question is that you should take the full path to the file, including its name, relative
 to the src/ directory this file is in, and turn that into a capitalised, underscored name - for example:
 
-`src/platforms/common/usb.h` => `PLATFORMS_COMMON_USB_H`
+`src/platform/common/usb.h` => `PLATFORM_COMMON_USB_H`
 
 This creates a consistent, standards compliant name for the macro that's unique to that header and so
 free from conflicts. Please check and define it at the top of the header under the copyright and license

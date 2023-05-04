@@ -18,8 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef PLATFORMS_COMMON_USB_SERIAL_H
-#define PLATFORMS_COMMON_USB_SERIAL_H
+#ifndef PLATFORM_COMMON_USB_SERIAL_H
+#define PLATFORM_COMMON_USB_SERIAL_H
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -32,4 +32,4 @@ bool gdb_serial_get_dtr(void);
 void debug_serial_run(void);
 uint32_t debug_serial_fifo_send(const char *fifo, uint32_t fifo_begin, uint32_t fifo_end);
 
-#endif /* PLATFORMS_COMMON_USB_SERIAL_H */
+#endif /* PLATFORM_COMMON_USB_SERIAL_H */

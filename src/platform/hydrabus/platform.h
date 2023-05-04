@@ -21,8 +21,8 @@
 
 /* This file provides the platform specific declarations for the Hydrabus implementation. */
 
-#ifndef PLATFORMS_HYDRABUS_PLATFORM_H
-#define PLATFORMS_HYDRABUS_PLATFORM_H
+#ifndef PLATFORM_HYDRABUS_PLATFORM_H
+#define PLATFORM_HYDRABUS_PLATFORM_H
 
 #include "gpio.h"
 #include "timing.h"
@@ -169,4 +169,4 @@ static inline int platform_hwversion(void)
 #endif
 #define snprintf sniprintf
 
-#endif /* PLATFORMS_HYDRABUS_PLATFORM_H */
+#endif /* PLATFORM_HYDRABUS_PLATFORM_H */

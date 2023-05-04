@@ -31,8 +31,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef PLATFORMS_HOSTED_PROBE_INFO_H
-#define PLATFORMS_HOSTED_PROBE_INFO_H
+#ifndef PLATFORM_HOSTED_PROBE_INFO_H
+#define PLATFORM_HOSTED_PROBE_INFO_H
 
 #include <stddef.h>
 #include "platform.h"
@@ -61,4 +61,4 @@ const probe_info_s *probe_info_correct_order(probe_info_s *list);
 const probe_info_s *probe_info_filter(const probe_info_s *list, const char *serial, size_t position);
 void probe_info_to_bmp_info(const probe_info_s *probe, bmp_info_s *info);
 
-#endif /* PLATFORMS_HOSTED_PROBE_INFO_H */
+#endif /* PLATFORM_HOSTED_PROBE_INFO_H */

@@ -21,8 +21,8 @@
 /* This file implements the interface to command line command for PC-Hosted
  * platforms.
  */
-#ifndef PLATFORMS_HOSTED_CLI_H
-#define PLATFORMS_HOSTED_CLI_H
+#ifndef PLATFORM_HOSTED_CLI_H
+#define PLATFORM_HOSTED_CLI_H
 
 #include "cortexm.h"
 
@@ -74,4 +74,4 @@ int cl_execute(bmda_cli_options_s *opt);
 bool serial_open(const bmda_cli_options_s *opt, const char *serial);
 void serial_close(void);
 
-#endif /* PLATFORMS_HOSTED_CLI_H */
+#endif /* PLATFORM_HOSTED_CLI_H */

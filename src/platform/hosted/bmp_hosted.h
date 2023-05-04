@@ -32,8 +32,8 @@
  * SUCH DAMAGE.
  */
 
-#ifndef PLATFORMS_HOSTED_BMP_HOSTED_H
-#define PLATFORMS_HOSTED_BMP_HOSTED_H
+#ifndef PLATFORM_HOSTED_BMP_HOSTED_H
+#define PLATFORM_HOSTED_BMP_HOSTED_H
 
 #if HOSTED_BMP_ONLY != 1
 #include <libusb.h>
@@ -101,4 +101,4 @@ bool device_is_bmp_gdb_port(const char *device);
 int bmda_usb_transfer(usb_link_s *link, const void *tx_buffer, size_t tx_len, void *rx_buffer, size_t rx_len);
 #endif
 
-#endif /* PLATFORMS_HOSTED_BMP_HOSTED_H */
+#endif /* PLATFORM_HOSTED_BMP_HOSTED_H */

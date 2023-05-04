@@ -21,8 +21,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef PLATFORMS_HOSTED_FTDI_BMP_H
-#define PLATFORMS_HOSTED_FTDI_BMP_H
+#ifndef PLATFORM_HOSTED_FTDI_BMP_H
+#define PLATFORM_HOSTED_FTDI_BMP_H
 
 #include <ftdi.h>
 
@@ -149,4 +149,4 @@ bool libftdi_nrst_get_val(void);
 #define PIN6     0x40
 #define PIN7     0x80
 
-#endif /* PLATFORMS_HOSTED_FTDI_BMP_H */
+#endif /* PLATFORM_HOSTED_FTDI_BMP_H */
