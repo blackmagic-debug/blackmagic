@@ -3,7 +3,9 @@
 This code allows the use of a [Black Pill F4](https://github.com/WeActStudio/WeActStudio.MiniSTM32F4x1) as a Black Magic Probe.
 
 This directory contains the common code for the following platforms:
+- [blackpill-f401cc](./../../blackpill-f401cc/README.md)
 - [blackpill-f401ce](./../../blackpill-f401ce/README.md)
+- [blackpill-f411ce](./../../blackpill-f411ce/README.md)
 
 ## Pinout
 

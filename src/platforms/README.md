@@ -8,7 +8,9 @@ used by (multiple) platforms.
 * native: Firmware for [Black Magic Probe](https://1bitsquared.com/products/black-magic-probe)
 * stlink: Firmware for ST-Link v2 and ST-Link v2.1
 * swlink:  Firmware for ST-Link v1 and Bluepill
-* blackpill-f401ce: Firmware for the WeAct Studio [Black Pill F401CE]((https://github.com/WeActStudio/WeActStudio.MiniSTM32F4x1))
+* blackpill-f401cc: Firmware for the WeAct Studio [Black Pill F401CC](https://github.com/WeActStudio/WeActStudio.MiniSTM32F4x1)
+* blackpill-f401ce: Firmware for the WeAct Studio [Black Pill F401CE](https://github.com/WeActStudio/WeActStudio.MiniSTM32F4x1)
+* blackpill-f411ce: Firmware for the WeAct Studio [Black Pill F411CE](https://github.com/WeActStudio/WeActStudio.MiniSTM32F4x1)
 * hydrabus:  Firmware for [HydraBus](https://hydrabus.com/)
 * f4discovery: Firmware for STM32F407DISCO
 * f3: Firmware for the STM32F3
