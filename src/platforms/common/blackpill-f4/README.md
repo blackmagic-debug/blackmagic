@@ -1,6 +1,6 @@
 # Common code for the Black Magic Probe Firmware for WeAct Studio F401CC/F401CE/F411CE boards
 
-This code allows the use of a [Black Pill F4](https://github.com/WeActStudio/WeActStudio.MiniSTM32F4x1) as a Black Magic Probe.
+This code allows using a [Black Pill F4](https://github.com/WeActStudio/WeActStudio.MiniSTM32F4x1) as a Black Magic Probe.
 
 This directory contains the common code for the following platforms:
 - [blackpill-f401cc](./../../blackpill-f401cc/README.md)
@@ -28,13 +28,17 @@ This directory contains the common code for the following platforms:
 
 ## How to Build
 
+In the following commands replace `blackpill-f4x1cx` with the platform you are using, e.g. `blackpill-f401cc`.
+
+To build the code using the default pinout, run:
+
 ```sh
 cd blackmagic
 make clean
 make PROBE_HOST=blackpill-f4x1cx
 ```
 
-or
+or, to use alternative pinout 1, run:
 
 ```sh
 cd blackmagic
@@ -42,19 +46,30 @@ make clean
 make PROBE_HOST=blackpill-f4x1cx ALTERNATIVE_PINOUT=1
 ```
 
-## How to Flash with dfu
+## Firmware upgrade with dfu-util
 
-After building the firmware as above:
+- Install [dfu-util](https://dfu-util.sourceforge.net).
+- Connect the Black Pill to the computer via USB. Make sure it is a data cable, not a charging cable.
+- Force the F4 into system bootloader mode:
+  - Push NRST and BOOT0
+  - Wait a moment
+  - Release NRST
+  - Wait a moment
+  - Release BOOT0
+- Upload the firmware:
+```
+./dfu-util -a 0 --dfuse-address 0x08000000:leave -R -D blackmagic-blackpillv2.bin
+```
+- Exit dfu mode: press and release nRST. The newly flashed Black Magic Probe should boot and enumerate.
 
-* 1) `apt install dfu-util`
-* 2) Force the F4 into system bootloader mode by keeping BOOT0 button pressed while pressing and releasing nRST
-      button. The board should re-enumerate as the bootloader.
-* 3) `dfu-util -a 0 --dfuse-address 0x08000000 -D blackmagic.bin`
-
-To exit from dfu mode just press and release nRST. The newly Flashed BMP firmware should boot and enumerate.
+For other firmware upgrade instructions see the [Firmware Upgrade](https://black-magic.org/upgrade.html) section.
 
 ## SWD/JTAG frequency setting
 
-https://github.com/blackmagic-debug/blackmagic/pull/783#issue-529197718
+In special cases the SWD/JTAG frequency needs to be adapted. The fequency can be set to `900k`, as this value was found to be helpful in practice, using:
 
-`mon freq 900k` helps at most
+```
+mon freq 900k
+```
+
+For details see the [pull request](https://github.com/blackmagic-debug/blackmagic/pull/783#issue-529197718) that implemented the `mon freq` command.
