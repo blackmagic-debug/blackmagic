@@ -18,7 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* This file implements the platform specific functions for the Blackpillv2 implementation. */
+/* This file implements the platform specific functions for the blackpill-f4 implementation. */
 
 #include "general.h"
 #include "usb.h"
@@ -156,7 +156,7 @@ void platform_target_set_power(const bool power)
 
 /*
  * A dummy implementation of platform_target_voltage_sense as the
- * blackpillv2 has no ability to sense the voltage on the power pin.
+ * blackpill-f4 has no ability to sense the voltage on the power pin.
  * This function is only needed for implementations that allow the target
  * to be powered from the debug probe.
  */
