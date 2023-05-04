@@ -26,6 +26,12 @@
 #include <unistd.h>
 #include <sys/time.h>
 
+#if defined(_WIN32)
+#include <malloc.h>
+#else
+#include <alloca.h>
+#endif
+
 #include "ftdi_bmp.h"
 #include <ftdi.h>
 
