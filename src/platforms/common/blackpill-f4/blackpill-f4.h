@@ -20,8 +20,8 @@
 
 /* This file provides the platform specific declarations for the blackpill-f4 implementation. */
 
-#ifndef BLACKPILL_F4_H
-#define BLACKPILL_F4_H
+#ifndef PLATFORMS_COMMON_BLACKPILL_F4_H
+#define PLATFORMS_COMMON_BLACKPILL_F4_H
 
 #include "gpio.h"
 #include "timing.h"
@@ -248,4 +248,4 @@ static inline int platform_hwversion(void)
 #endif
 #define snprintf sniprintf
 
-#endif /* BLACKPILL_F4_H */
+#endif /* PLATFORMS_COMMON_BLACKPILL_F4_H */
