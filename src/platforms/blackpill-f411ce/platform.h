@@ -20,11 +20,11 @@
 
 /* This file provides the platform specific declarations for the blackpill-f411ce implementation. */
 
-#ifndef PLATFORMS_BLACKPILLF411CE_PLATFORM_H
-#define PLATFORMS_BLACKPILLF411CE_PLATFORM_H
+#ifndef PLATFORMS_BLACKPILL_F411CE_PLATFORM_H
+#define PLATFORMS_BLACKPILL_F411CE_PLATFORM_H
 
 #define PLATFORM_IDENT "(BlackPill-F411CE) "
 
 #include "blackpill-f4.h"
 
-#endif /* PLATFORMS_BLACKPILLF411CE_PLATFORM_H */
+#endif /* PLATFORMS_BLACKPILL_F411CE_PLATFORM_H */
