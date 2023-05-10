@@ -58,7 +58,6 @@ SRC =              \
 	msp432.c       \
 	nrf51.c        \
 	nxpke04.c      \
-	platform.c     \
 	remote.c       \
 	rp.c           \
 	sam3x.c        \

@@ -16,6 +16,7 @@ LDFLAGS = -nostartfiles -lc $(CPU_FLAGS) -nodefaultlibs -T$(LINKER_SCRIPT) -Wl,-
 VPATH += platforms/common/tm4c
 
 SRC +=          \
+	platform.c \
 	timing.c        \
 	traceswo.o
 
