@@ -32,6 +32,7 @@ VPATH += platforms/common/stm32 \
 	platforms/common/blackpill-f4
 
 SRC +=               \
+	blackpill-f4.c \
 	traceswodecode.c \
 	traceswo.c	\
 	serialno.c	\
