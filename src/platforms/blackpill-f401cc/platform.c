@@ -19,5 +19,3 @@
  */
 
 /* This file implements the platform specific functions for the blackpill-f401cc implementation. */
-
-#include "blackpill-f4.c"
