@@ -31,6 +31,7 @@ endif
 VPATH += platforms/common/stm32
 
 SRC += 	\
+	platform.c \
 	serialno.c	\
 	timing.c	\
 	timing_stm32.c	\

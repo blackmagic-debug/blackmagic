@@ -16,6 +16,7 @@ LDFLAGS = -lopencm3_stm32f4 \
 VPATH += platforms/common/stm32
 
 SRC +=               \
+	platform.c \
 	traceswodecode.c \
 	traceswo.c	\
 	serialno.c	\
