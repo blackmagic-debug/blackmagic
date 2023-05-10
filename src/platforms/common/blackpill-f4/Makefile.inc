@@ -3,16 +3,29 @@ BMP_BOOTLOADER ?=
 CC = $(CROSS_COMPILE)gcc
 OBJCOPY = $(CROSS_COMPILE)objcopy
 
-CFLAGS += -Istm32/include -mcpu=cortex-m4 -mthumb \
-	-mfloat-abi=hard -mfpu=fpv4-sp-d16 \
-	-DSTM32F4 -I../libopencm3/include \
+CFLAGS += \
+	-Istm32/include \
+	-mcpu=cortex-m4 \
+	-mthumb \
+	-mfloat-abi=hard \
+	-mfpu=fpv4-sp-d16 \
+	-DSTM32F4 \
+	-I../libopencm3/include \
 	-Iplatforms/common/stm32 \
 	-Iplatforms/common/blackpill-f4
 
-LDFLAGS_BOOT = -lopencm3_stm32f4 \
-	-Wl,-T,$(LINKER_SCRIPT) -nostartfiles -lc -lnosys \
-	-Wl,-Map=mapfile -mthumb -mcpu=cortex-m4 -Wl,-gc-sections \
-	-mfloat-abi=hard -mfpu=fpv4-sp-d16 \
+LDFLAGS_BOOT = \
+	-lopencm3_stm32f4 \
+	-Wl,-T,$(LINKER_SCRIPT) \
+	-nostartfiles \
+	-lc \
+	-lnosys \
+	-Wl,-Map=mapfile \
+	-mthumb \
+	-mcpu=cortex-m4 \
+	-Wl,-gc-sections \
+	-mfloat-abi=hard \
+	-mfpu=fpv4-sp-d16 \
 	-L../libopencm3/lib
 
 ifeq ($(BMP_BOOTLOADER), 1)
