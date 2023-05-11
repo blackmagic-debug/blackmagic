@@ -48,7 +48,8 @@
 #endif /* ALTERNATIVE_PINOUT */
 #endif /* SHIELD */
 
-/* Error handling for ALTERNATIVE_PINOUT
+/*
+ * Error handling for ALTERNATIVE_PINOUT
  * If ALTERNATIVE_PINOUT has a value >= 4 (undefined), or <= 0, an error is thrown.
  */
 #ifdef ALTERNATIVE_PINOUT
@@ -57,7 +58,8 @@
 #endif
 #endif /* ALTERNATIVE_PINOUT */
 
-/* Pinout switcher helper function for alternative pinouts.
+/*
+ * Pinout switcher helper function for alternative pinouts.
  * If ALTERNATIVE_PINOUT is passed to make, an alternative pinout is selected.
  * If ALTERNATIVE_PINOUT == 1, it outputs the argument opt1,
  * if ALTERNATIVE_PINOUT == 2, it outputs the argument opt2,
@@ -169,7 +171,8 @@
 /* For STM32F4 DMA trigger source must be specified. Channel 4 is selected, in line with the USART selected in the DMA table. */
 #define USBUSART_DMA_TRG DMA_SxCR_CHSEL_4
 
-/* To use USART1 as USBUSART, DMA2 is selected from https://www.st.com/resource/en/reference_manual/dm00119316-stm32f411xc-e-advanced-arm-based-32-bit-mcus-stmicroelectronics.pdf, page 170, table 28.
+/*
+ * To use USART1 as USBUSART, DMA2 is selected from https://www.st.com/resource/en/reference_manual/dm00119316-stm32f411xc-e-advanced-arm-based-32-bit-mcus-stmicroelectronics.pdf, page 170, table 28.
  * This table defines USART1_TX as stream 7, channel 4, and USART1_RX as stream 5, channel 4.
  */
 #define USBUSART1                USART1
@@ -190,7 +193,8 @@
 #define USBUSART1_DMA_RX_IRQ     NVIC_DMA2_STREAM5_IRQ
 #define USBUSART1_DMA_RX_ISRx(x) dma2_stream5_isr(x)
 
-/* To use USART2 as USBUSART, DMA1 is selected from https://www.st.com/resource/en/reference_manual/dm00119316-stm32f411xc-e-advanced-arm-based-32-bit-mcus-stmicroelectronics.pdf, page 170, table 27.
+/*
+ * To use USART2 as USBUSART, DMA1 is selected from https://www.st.com/resource/en/reference_manual/dm00119316-stm32f411xc-e-advanced-arm-based-32-bit-mcus-stmicroelectronics.pdf, page 170, table 27.
  * This table defines USART2_TX as stream 6, channel 4, and USART2_RX as stream 5, channel 4.
  */
 #define USBUSART2                USART2
