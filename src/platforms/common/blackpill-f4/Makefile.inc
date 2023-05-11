@@ -42,6 +42,10 @@ ifdef ALTERNATIVE_PINOUT
 CFLAGS += -DALTERNATIVE_PINOUT=$(ALTERNATIVE_PINOUT)
 endif
 
+ifdef SHIELD
+CFLAGS += -DSHIELD=$(SHIELD)
+endif
+
 VPATH +=                          \
 	platforms/common/stm32        \
 	platforms/common/blackpill-f4

@@ -29,6 +29,25 @@
 
 #define PLATFORM_HAS_TRACESWO
 
+/*
+ * If the SHIELD macro is passed to make, other macros are defined.
+ * Build the code using `make PROBE_HOST=blackpill-f4x1cx SHIELD=1` to define the SHIELD macro.
+ */
+#ifdef SHIELD
+/* Error handling for the SHIELD macro. If SHIELD has a value > 1, or < 1, an error is thrown. */
+#if SHIELD < 1 || SHIELD > 1
+#error "Invalid value for SHIELD. Value is smaller than 1, or larger than 1. If SHIELD is defined, the value must be 1"
+#endif
+/* If SHIELD is defined, the platform is able to power the vRef pin using the PWR_BR pin and the PLATFORM_HAS_POWER_SWITCH is defined. */
+#ifndef PLATFORM_HAS_POWER_SWITCH
+#define PLATFORM_HAS_POWER_SWITCH
+#endif /* PLATFORM_HAS_POWER_SWITCH */
+/* If SHIELD is defined and ALTERNATIVE_PINOUT is not defined, the ALTERNATIVE_PINOUT 1 is selected. */
+#ifndef ALTERNATIVE_PINOUT
+#define ALTERNATIVE_PINOUT 1
+#endif /* ALTERNATIVE_PINOUT */
+#endif /* SHIELD */
+
 /* Error handling for ALTERNATIVE_PINOUT
  * If ALTERNATIVE_PINOUT has a value >= 4 (undefined), or <= 0, an error is thrown.
  */
