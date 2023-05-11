@@ -58,7 +58,7 @@ make PROBE_HOST=blackpill-f4x1cx ALTERNATIVE_PINOUT=1
   - Release BOOT0
 - Upload the firmware:
 ```
-./dfu-util -a 0 --dfuse-address 0x08000000:leave -R -D blackmagic-blackpillv2.bin
+./dfu-util -a 0 --dfuse-address 0x08000000:leave -R -D blackmagic.bin
 ```
 - Exit dfu mode: press and release nRST. The newly flashed Black Magic Probe should boot and enumerate.
 
