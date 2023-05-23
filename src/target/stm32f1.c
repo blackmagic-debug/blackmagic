@@ -131,7 +131,7 @@ static uint16_t stm32f1_read_idcode(target_s *const target)
 	return target_mem_read32(target, DBGMCU_IDCODE) & 0xfffU;
 }
 
-/* Identify GD32F1 and GD32F3 chips */
+/* Identify GD32F1, GD32F2 and GD32F3 chips */
 bool gd32f1_probe(target_s *target)
 {
 	const uint16_t device_id = stm32f1_read_idcode(target);
@@ -139,6 +139,9 @@ bool gd32f1_probe(target_s *target)
 	case 0x414U: /* Gigadevice gd32f303 */
 	case 0x430U:
 		target->driver = "GD32F3";
+		break;
+	case 0x418U:
+		target->driver = "GD32F2";
 		break;
 	case 0x410U: /* Gigadevice gd32f103, gd32e230 */
 		if ((target->cpuid & CPUID_PARTNO_MASK) == CORTEX_M23)
