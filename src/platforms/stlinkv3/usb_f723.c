@@ -23,6 +23,7 @@
 #include <libopencm3/stm32/tools.h>
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/usb/usbd.h>
+#include <libopencm3/usb/bos.h>
 #include <libopencm3/usb/dwc/otg_hs.h>
 #include "usb_private.h"
 #include "usb_dwc_common.h"
