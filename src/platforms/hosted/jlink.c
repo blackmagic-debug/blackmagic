@@ -28,7 +28,9 @@
 #include "general.h"
 #include "gdb_if.h"
 #include "adiv5.h"
+#include "jlink.h"
 #include "exception.h"
+#include "buffer_utils.h"
 
 #include <assert.h>
 #include <unistd.h>
@@ -38,7 +40,6 @@
 #include <libusb.h>
 
 #include "cli.h"
-#include "jlink.h"
 
 #define USB_VID_SEGGER 0x1366U
 
@@ -52,18 +53,22 @@ static uint32_t emu_speed_khz;
 static uint16_t emu_min_divisor;
 static uint16_t emu_current_divisor;
 
-static void jlink_print_caps(bmp_info_s *const info)
+static int jlink_simple_query(const uint8_t command, void *const rx_buffer, const size_t rx_len)
 {
-	uint8_t cmd = CMD_GET_CAPS;
-	uint8_t res[4];
-	bmda_usb_transfer(info->usb_link, &cmd, 1, res, sizeof(res));
-	emu_caps = res[0] | (res[1] << 8U) | (res[2] << 16U) | (res[3] << 24U);
+	return bmda_usb_transfer(info.usb_link, &command, sizeof(command), rx_buffer, rx_len);
+}
+
+static void jlink_print_caps(void)
+{
+	uint8_t caps[4];
+	jlink_simple_query(CMD_GET_CAPS, caps, sizeof(caps));
+	emu_caps = read_le4(caps, 0);
 	DEBUG_INFO("Caps %" PRIx32 "\n", emu_caps);
+
 	if (emu_caps & JLINK_CAP_GET_HW_VERSION) {
-		uint8_t cmd = CMD_GET_HW_VERSION;
-		bmda_usb_transfer(info->usb_link, &cmd, 1, NULL, 0);
-		bmda_usb_transfer(info->usb_link, NULL, 0, res, sizeof(res));
-		DEBUG_INFO("HW: Type %u, Major %u, Minor %u, Rev %u\n", res[3], res[2], res[1], res[0]);
+		uint8_t version[4];
+		jlink_simple_query(CMD_GET_HW_VERSION, version, sizeof(version));
+		DEBUG_INFO("HW: Type %u, Major %u, Minor %u, Rev %u\n", version[3], version[2], version[1], version[0]);
 	}
 }
 
@@ -116,7 +121,7 @@ static void jlink_print_interfaces(bmp_info_s *const info)
 static void jlink_info(bmp_info_s *const info)
 {
 	jlink_print_version(info);
-	jlink_print_caps(info);
+	jlink_print_caps();
 	jlink_print_speed(info);
 	jlink_print_interfaces(info);
 }
