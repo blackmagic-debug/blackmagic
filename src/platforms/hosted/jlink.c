@@ -142,7 +142,7 @@ static bool jlink_claim_interface(void)
 		const libusb_interface_descriptor_s *const interface_desc = &interface->altsetting[0];
 		if (interface_desc->bInterfaceClass == LIBUSB_CLASS_VENDOR_SPEC &&
 			interface_desc->bInterfaceSubClass == LIBUSB_CLASS_VENDOR_SPEC && interface_desc->bNumEndpoints > 1U) {
-			const int result = libusb_claim_interface(info.usb_link->device_handle, idx);
+			const int result = libusb_claim_interface(info.usb_link->device_handle, (int)idx);
 			if (result) {
 				DEBUG_ERROR("Can not claim handle: %s\n", libusb_error_name(result));
 				break;
