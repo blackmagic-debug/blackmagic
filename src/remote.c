@@ -435,7 +435,7 @@ static void remote_packet_process_adiv5(const char *const packet, const size_t p
 		remote_adiv5_respond(data, length);
 		break;
 	}
-	case REMOTE_MEM_WRITE: { /* Am = Write to memory */
+	case REMOTE_MEM_WRITE: { /* AM = Write to memory */
 		/* Grab the CSW value to use in the access */
 		remote_ap.csw = remote_hex_string_to_num(8, packet + 6);
 		/* Grab the alignment for the access */
