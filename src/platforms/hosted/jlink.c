@@ -116,31 +116,32 @@ static void jlink_info(bmp_info_s *const info)
 }
 
 /*
+ * Try to claim the debugging interface of a J-Link adaptor.
  * On success this copies the endpoint addresses identified into the
- * usb_link_s sub-structure of bmp_info_s (info->usb_link) for later use.
+ * usb_link_s sub-structure of bmp_info_s (info.usb_link) for later use.
  * Returns true for success, false for failure.
  */
-static bool claim_jlink_interface(bmp_info_s *info)
+static bool jlink_claim_interface(void)
 {
 	libusb_config_descriptor_s *config;
-	const int result = libusb_get_active_config_descriptor(info->libusb_dev, &config);
+	const int result = libusb_get_active_config_descriptor(info.libusb_dev, &config);
 	if (result != LIBUSB_SUCCESS) {
 		DEBUG_ERROR("Failed to get configuration descriptor: %s\n", libusb_error_name(result));
 		return false;
 	}
 	const libusb_interface_descriptor_s *descriptor = NULL;
-	for (size_t i = 0; i < config->bNumInterfaces; ++i) {
-		const libusb_interface_s *const interface = &config->interface[i];
+	for (size_t idx = 0; idx < config->bNumInterfaces; ++idx) {
+		const libusb_interface_s *const interface = &config->interface[idx];
 		// XXX: This fails to handle multiple alt-modes being present correctly.
 		const libusb_interface_descriptor_s *const interface_desc = &interface->altsetting[0];
 		if (interface_desc->bInterfaceClass == LIBUSB_CLASS_VENDOR_SPEC &&
 			interface_desc->bInterfaceSubClass == LIBUSB_CLASS_VENDOR_SPEC && interface_desc->bNumEndpoints > 1U) {
-			const int result = libusb_claim_interface(info->usb_link->device_handle, i);
+			const int result = libusb_claim_interface(info.usb_link->device_handle, idx);
 			if (result) {
 				DEBUG_ERROR("Can not claim handle: %s\n", libusb_error_name(result));
 				break;
 			}
-			info->usb_link->interface = i;
+			info.usb_link->interface = idx;
 			descriptor = interface_desc;
 		}
 	}
@@ -152,9 +153,9 @@ static bool claim_jlink_interface(bmp_info_s *info)
 	for (size_t i = 0; i < descriptor->bNumEndpoints; i++) {
 		const libusb_endpoint_descriptor_s *endpoint = &descriptor->endpoint[i];
 		if (endpoint->bEndpointAddress & LIBUSB_ENDPOINT_IN)
-			info->usb_link->ep_rx = endpoint->bEndpointAddress;
+			info.usb_link->ep_rx = endpoint->bEndpointAddress;
 		else
-			info->usb_link->ep_tx = endpoint->bEndpointAddress;
+			info.usb_link->ep_tx = endpoint->bEndpointAddress;
 	}
 	libusb_free_config_descriptor(config);
 	return true;
@@ -176,7 +177,7 @@ bool jlink_init(bmp_info_s *const info)
 		DEBUG_ERROR("libusb_open() failed (%d): %s\n", result, libusb_error_name(result));
 		return false;
 	}
-	if (!claim_jlink_interface(info))
+	if (!jlink_claim_interface())
 		return false;
 	if (!link->ep_tx || !link->ep_rx) {
 		DEBUG_ERROR("Device setup failed\n");
