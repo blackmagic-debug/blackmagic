@@ -2,6 +2,8 @@
  * This file is part of the Black Magic Debug project.
  *
  * Copyright (C) 2019 Uwe Bonnes
+ * Copyright (C) 2022-2023 1BitSquared <info@1bitsquared.com>
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -47,50 +49,6 @@
 #define SELECT_IF_JTAG 0U
 #define SELECT_IF_SWD  1U
 
-#if HOSTED_BMP_ONLY == 1
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-
-bool jlink_init(bmp_info_s *info)
-{
-	return false;
-}
-
-uint32_t jlink_swdp_scan(bmp_info_s *info)
-{
-	return 0;
-}
-
-bool jlink_jtagtap_init(bmp_info_s *info)
-{
-	return false;
-}
-
-const char *jlink_target_voltage(bmp_info_s *info)
-{
-	return "ERROR";
-}
-
-void jlink_nrst_set_val(bmp_info_s *info, bool assert)
-{
-}
-
-bool jlink_nrst_get_val(bmp_info_s *info)
-{
-	return true;
-}
-
-void jlink_max_frequency_set(bmp_info_s *info, uint32_t freq)
-{
-}
-
-uint32_t jlink_max_frequency_get(bmp_info_s *info)
-{
-	return 0;
-}
-
-#pragma GCC diagnostic pop
-#else
 bool jlink_init(bmp_info_s *info);
 uint32_t jlink_swdp_scan(bmp_info_s *info);
 bool jlink_jtagtap_init(bmp_info_s *info);
@@ -99,6 +57,5 @@ void jlink_nrst_set_val(bmp_info_s *info, bool assert);
 bool jlink_nrst_get_val(bmp_info_s *info);
 void jlink_max_frequency_set(bmp_info_s *info, uint32_t freq);
 uint32_t jlink_max_frequency_get(bmp_info_s *info);
-#endif
 
 #endif /* PLATFORMS_HOSTED_JLINK_H */
