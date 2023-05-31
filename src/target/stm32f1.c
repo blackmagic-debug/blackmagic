@@ -92,8 +92,9 @@ static bool stm32f1_mass_erase(target_s *target);
 #define SR_PROG_ERROR 0x04U
 #define SR_EOP        0x20U
 
-#define DBGMCU_IDCODE    0xe0042000U
-#define DBGMCU_IDCODE_F0 0x40015800U
+#define DBGMCU_IDCODE        0xe0042000U
+#define DBGMCU_IDCODE_F0     0x40015800U
+#define DBGMCU_IDCODE_GD32E5 0xe0044000U
 
 #define GD32Fx_FLASHSIZE 0x1ffff7e0U
 #define GD32F0_FLASHSIZE 0x1ffff7ccU
@@ -128,6 +129,10 @@ static uint16_t stm32f1_read_idcode(target_s *const target)
 {
 	if ((target->cpuid & CPUID_PARTNO_MASK) == CORTEX_M0 || (target->cpuid & CPUID_PARTNO_MASK) == CORTEX_M23)
 		return target_mem_read32(target, DBGMCU_IDCODE_F0) & 0xfffU;
+	/* Is this a Cortex-M33 core with STM32F1-style peripherals? (GD32E50x) */
+	if ((target->cpuid & CPUID_PARTNO_MASK) == CORTEX_M33)
+		return target_mem_read32(target, DBGMCU_IDCODE_GD32E5) & 0xfffU;
+
 	return target_mem_read32(target, DBGMCU_IDCODE) & 0xfffU;
 }
 
@@ -135,6 +140,8 @@ static uint16_t stm32f1_read_idcode(target_s *const target)
 bool gd32f1_probe(target_s *target)
 {
 	const uint16_t device_id = stm32f1_read_idcode(target);
+	size_t block_size = 0x400;
+
 	switch (device_id) {
 	case 0x414U: /* Gigadevice gd32f303 */
 	case 0x430U:
@@ -151,6 +158,10 @@ bool gd32f1_probe(target_s *target)
 		else
 			target->driver = "GD32F1";
 		break;
+	case 0x444U: /* Gigadevice gd32e50x */
+		target->driver = "GD32E5";
+		block_size = 0x2000;
+		break;
 	default:
 		return false;
 	}
@@ -162,7 +173,7 @@ bool gd32f1_probe(target_s *target)
 	target->part_id = device_id;
 	target->mass_erase = stm32f1_mass_erase;
 	target_add_ram(target, 0x20000000, ram_size * 1024U);
-	stm32f1_add_flash(target, 0x8000000, (size_t)flash_size * 1024U, 0x400);
+	stm32f1_add_flash(target, 0x8000000, (size_t)flash_size * 1024U, block_size);
 	target_add_commands(target, stm32f1_cmd_list, target->driver);
 
 	return true;
