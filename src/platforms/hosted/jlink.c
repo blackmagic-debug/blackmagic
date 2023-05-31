@@ -2,6 +2,8 @@
  * This file is part of the Black Magic Debug project.
  *
  * Copyright (C) 2020 Uwe Bonnes (bon@elektron.ikp.physik.tu-darmstadt.de)
+ * Copyright (C) 2022-2023 1BitSquared <info@1bitsquared.com>
+ * Modified by Rachel Mant <git@dragonmux.network>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,8 +18,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.	 If not, see <http://www.gnu.org/licenses/>.
  */
-/* Base on code from git://repo.or.cz/libjaylink.git
- * and https://github.com/afaerber/jlink.git*/
+
+/*
+ * Originally based on code from:
+ * https://gitlab.zapb.de/libjaylink/libjaylink and
+ * https://github.com/afaerber/jlink
+ */
 
 #include "general.h"
 #include "gdb_if.h"

@@ -25,7 +25,6 @@
 #include <stdbool.h>
 #include "bmp_hosted.h"
 
-/** @cond PRIVATE */
 #define CMD_GET_VERSION    0x01U
 #define CMD_SET_SPEED      0x05U
 #define CMD_GET_HW_STATUS  0x07U
