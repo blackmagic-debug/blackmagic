@@ -186,7 +186,8 @@ void remote_v3_adiv5_mem_write_bytes(adiv5_access_port_s *const ap, const uint32
 	/* + 1 for terminating NUL character */
 	char buffer[REMOTE_MAX_MSG_SIZE + 1U];
 	/* As we do, calculate how large a transfer we can do to the firmware */
-	const size_t blocksize = (REMOTE_MAX_MSG_SIZE - REMOTE_ADIv5_MEM_WRITE_LENGTH) / 2U;
+	const size_t alignment_mask = ~((1U << align) - 1U);
+	const size_t blocksize = ((REMOTE_MAX_MSG_SIZE - REMOTE_ADIv5_MEM_WRITE_LENGTH) / 2U) & alignment_mask;
 	/* For each transfer block size, ask the firmware to write that block of bytes */
 	for (size_t offset = 0; offset < write_length; offset += blocksize) {
 		/* Pick the amount left to write or the block size, whichever is smaller */
