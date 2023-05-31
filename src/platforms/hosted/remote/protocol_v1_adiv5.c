@@ -49,7 +49,12 @@ static bool remote_adiv5_check_error(const char *const func, const char *const b
 		const uint64_t response_code = remote_decode_response(buffer + 1, (size_t)length - 1U);
 		const uint8_t error = response_code & 0xffU;
 		DEBUG_ERROR("%s: Unexpected error %u\n", func, error);
-	}
+	} /* Check if the remote is reporting a parameter error*/
+	else if (buffer[0] == REMOTE_RESP_PARERR)
+		DEBUG_ERROR("%s: !BUG! Firmware reported a parameter error\n", func);
+	/* Check if the firmware is reporting some other kind of error */
+	else if (buffer[0] != REMOTE_RESP_OK)
+		DEBUG_ERROR("%s: Firmware reported unexpected error: %c\n", func, buffer[0]);
 	/* Return whether the remote indicated the request was successfull */
 	return buffer[0] == REMOTE_RESP_OK;
 }
