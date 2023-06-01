@@ -409,7 +409,7 @@ void platform_max_frequency_set(uint32_t freq)
 		break;
 
 	case BMP_TYPE_JLINK:
-		jlink_max_frequency_set(&info, freq);
+		jlink_max_frequency_set(freq);
 		break;
 #endif
 
@@ -445,7 +445,7 @@ uint32_t platform_max_frequency_get(void)
 		return stlink_max_frequency_get();
 
 	case BMP_TYPE_JLINK:
-		return jlink_max_frequency_get(&info);
+		return jlink_max_frequency_get();
 #endif
 
 	default:

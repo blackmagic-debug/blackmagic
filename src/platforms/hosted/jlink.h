@@ -54,7 +54,7 @@ bool jlink_jtagtap_init(bmp_info_s *info);
 const char *jlink_target_voltage(void);
 void jlink_nrst_set_val(bool assert);
 bool jlink_nrst_get_val(void);
-void jlink_max_frequency_set(bmp_info_s *info, uint32_t freq);
-uint32_t jlink_max_frequency_get(bmp_info_s *info);
+void jlink_max_frequency_set(uint32_t freq);
+uint32_t jlink_max_frequency_get(void);
 
 #endif /* PLATFORMS_HOSTED_JLINK_H */
