@@ -186,26 +186,26 @@ static bool jlink_claim_interface(void)
  * Return true if single J-Link device connected or
  * serial given matches one of several J-Link devices.
  */
-bool jlink_init(bmp_info_s *const info)
+bool jlink_init(void)
 {
 	usb_link_s *link = calloc(1, sizeof(usb_link_s));
 	if (!link)
 		return false;
-	info->usb_link = link;
-	link->context = info->libusb_ctx;
-	int result = libusb_open(info->libusb_dev, &link->device_handle);
+	info.usb_link = link;
+	link->context = info.libusb_ctx;
+	int result = libusb_open(info.libusb_dev, &link->device_handle);
 	if (result != LIBUSB_SUCCESS) {
 		DEBUG_ERROR("libusb_open() failed (%d): %s\n", result, libusb_error_name(result));
 		return false;
 	}
 	if (!jlink_claim_interface()) {
-		libusb_close(info->usb_link->device_handle);
+		libusb_close(info.usb_link->device_handle);
 		return false;
 	}
 	if (!link->ep_tx || !link->ep_rx) {
 		DEBUG_ERROR("Device setup failed\n");
-		libusb_release_interface(info->usb_link->device_handle, info->usb_link->interface);
-		libusb_close(info->usb_link->device_handle);
+		libusb_release_interface(info.usb_link->device_handle, info.usb_link->interface);
+		libusb_close(info.usb_link->device_handle);
 		return false;
 	}
 	jlink_info();
