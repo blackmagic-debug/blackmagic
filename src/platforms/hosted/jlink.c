@@ -29,6 +29,7 @@
 #include "gdb_if.h"
 #include "adiv5.h"
 #include "jlink.h"
+#include "jlink_protocol.h"
 #include "exception.h"
 #include "buffer_utils.h"
 
@@ -53,13 +54,12 @@ static uint32_t emu_speed_khz;
 static uint16_t emu_min_divisor;
 static uint16_t emu_current_divisor;
 
-static int jlink_simple_query(const uint8_t command, void *const rx_buffer, const size_t rx_len)
+int jlink_simple_query(const uint8_t command, void *const rx_buffer, const size_t rx_len)
 {
 	return bmda_usb_transfer(info.usb_link, &command, sizeof(command), rx_buffer, rx_len);
 }
 
-static int jlink_simple_request(
-	const uint8_t command, const uint8_t operation, void *const rx_buffer, const size_t rx_len)
+int jlink_simple_request(const uint8_t command, const uint8_t operation, void *const rx_buffer, const size_t rx_len)
 {
 	const uint8_t request[2] = {command, operation};
 	return bmda_usb_transfer(info.usb_link, request, sizeof(request), rx_buffer, rx_len);
@@ -250,13 +250,10 @@ void jlink_max_frequency_set(const uint32_t freq)
 	else
 		emu_current_divisor = emu_min_divisor;
 	const uint16_t speed_khz = emu_speed_khz / emu_current_divisor;
-	const uint8_t cmd[3] = {
-		CMD_SET_SPEED,
-		speed_khz & 0xffU,
-		speed_khz >> 8U,
-	};
+	jlink_set_freq_s command = {CMD_SET_SPEED};
+	write_le2(command.frequency, 0, speed_khz);
 	DEBUG_WARN("Set Speed %d\n", speed_khz);
-	bmda_usb_transfer(info.usb_link, cmd, 3, NULL, 0);
+	bmda_usb_transfer(info.usb_link, &command, sizeof(command), NULL, 0);
 }
 
 uint32_t jlink_max_frequency_get(void)
