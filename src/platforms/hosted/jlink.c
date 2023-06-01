@@ -58,6 +58,13 @@ static int jlink_simple_query(const uint8_t command, void *const rx_buffer, cons
 	return bmda_usb_transfer(info.usb_link, &command, sizeof(command), rx_buffer, rx_len);
 }
 
+static int jlink_simple_request(
+	const uint8_t command, const uint8_t operation, void *const rx_buffer, const size_t rx_len)
+{
+	const uint8_t request[2] = {command, operation};
+	return bmda_usb_transfer(info.usb_link, request, sizeof(request), rx_buffer, rx_len);
+}
+
 static bool jlink_print_version(void)
 {
 	uint8_t len_str[2];
@@ -99,35 +106,34 @@ static bool jlink_query_speed(void)
 	return true;
 }
 
-static void jlink_print_interfaces(void)
+static bool jlink_print_interfaces(void)
 {
-	uint8_t cmd[2] = {
-		CMD_GET_SELECT_IF,
-		JLINK_IF_GET_ACTIVE,
-	};
-	uint8_t selected_if[4];
-	bmda_usb_transfer(info.usb_link, cmd, 2, selected_if, sizeof(selected_if));
-	cmd[1] = JLINK_IF_GET_AVAILABLE;
+	uint8_t active_if[4];
 	uint8_t available_ifs[4];
-	bmda_usb_transfer(info.usb_link, cmd, 2, available_ifs, sizeof(available_ifs));
-	if (selected_if[0] == SELECT_IF_SWD)
+
+	if (jlink_simple_request(CMD_GET_SELECT_IF, JLINK_IF_GET_ACTIVE, active_if, sizeof(active_if)) < 0 ||
+		jlink_simple_request(CMD_GET_SELECT_IF, JLINK_IF_GET_AVAILABLE, available_ifs, sizeof(available_ifs)) < 0)
+		return false;
+	++active_if[0];
+
+	if (active_if[0] == JLINK_IF_SWD)
 		DEBUG_INFO("SWD active");
-	else if (selected_if[0] == SELECT_IF_JTAG)
+	else if (active_if[0] == JLINK_IF_JTAG)
 		DEBUG_INFO("JTAG active");
 	else
 		DEBUG_INFO("No interfaces active");
-	const uint8_t other_interface = available_ifs[0] - (selected_if[0] + 1U);
+
+	const uint8_t other_interface = available_ifs[0] - active_if[0];
 	if (other_interface)
 		DEBUG_INFO(", %s available\n", other_interface == JLINK_IF_SWD ? "SWD" : "JTAG");
 	else
-		DEBUG_INFO(", %s not available\n", selected_if[0] + 1U == JLINK_IF_SWD ? "JTAG" : "SWD");
+		DEBUG_INFO(", %s not available\n", active_if[0] + 1U == JLINK_IF_SWD ? "JTAG" : "SWD");
+	return true;
 }
 
-static void jlink_info(void)
+static bool jlink_info(void)
 {
-	if (!jlink_print_version() || !jlink_query_caps() || !jlink_query_speed())
-		return;
-	jlink_print_interfaces();
+	return jlink_print_version() && jlink_query_caps() && jlink_query_speed() && jlink_print_interfaces();
 }
 
 /*
