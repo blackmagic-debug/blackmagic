@@ -239,11 +239,9 @@ bool jlink_nrst_get_val(void)
 	return result[6] == 0;
 }
 
-void jlink_max_frequency_set(bmp_info_s *const info, const uint32_t freq)
+void jlink_max_frequency_set(const uint32_t freq)
 {
-	if (!(emu_caps & JLINK_CAP_GET_SPEEDS))
-		return;
-	if (!info->is_jtag)
+	if (!(emu_caps & JLINK_CAP_GET_SPEEDS) && !info.is_jtag)
 		return;
 	const uint16_t freq_khz = freq / 1000U;
 	const uint16_t divisor = (emu_speed_khz + freq_khz - 1U) / freq_khz;
@@ -252,18 +250,18 @@ void jlink_max_frequency_set(bmp_info_s *const info, const uint32_t freq)
 	else
 		emu_current_divisor = emu_min_divisor;
 	const uint16_t speed_khz = emu_speed_khz / emu_current_divisor;
-	uint8_t cmd[3] = {
+	const uint8_t cmd[3] = {
 		CMD_SET_SPEED,
 		speed_khz & 0xffU,
 		speed_khz >> 8U,
 	};
 	DEBUG_WARN("Set Speed %d\n", speed_khz);
-	bmda_usb_transfer(info->usb_link, cmd, 3, NULL, 0);
+	bmda_usb_transfer(info.usb_link, cmd, 3, NULL, 0);
 }
 
-uint32_t jlink_max_frequency_get(bmp_info_s *const info)
+uint32_t jlink_max_frequency_get(void)
 {
-	if ((emu_caps & JLINK_CAP_GET_SPEEDS) && info->is_jtag)
+	if ((emu_caps & JLINK_CAP_GET_SPEEDS) && info.is_jtag)
 		return (emu_speed_khz * 1000U) / emu_current_divisor;
 	return FREQ_FIXED;
 }
