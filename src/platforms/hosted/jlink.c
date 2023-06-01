@@ -58,38 +58,45 @@ static int jlink_simple_query(const uint8_t command, void *const rx_buffer, cons
 	return bmda_usb_transfer(info.usb_link, &command, sizeof(command), rx_buffer, rx_len);
 }
 
-static void jlink_print_version(void)
+static bool jlink_print_version(void)
 {
 	uint8_t len_str[2];
-	jlink_simple_query(CMD_GET_VERSION, len_str, sizeof(len_str));
+	if (jlink_simple_query(CMD_GET_VERSION, len_str, sizeof(len_str)) < 0)
+		return false;
 	uint8_t version[0x70];
 	bmda_usb_transfer(info.usb_link, NULL, 0, version, sizeof(version));
 	version[0x6f] = '\0';
 	DEBUG_INFO("%s\n", version);
+	return true;
 }
 
-static void jlink_print_caps(void)
+static bool jlink_query_caps(void)
 {
 	uint8_t caps[4];
-	jlink_simple_query(CMD_GET_CAPS, caps, sizeof(caps));
+	if (jlink_simple_query(CMD_GET_CAPS, caps, sizeof(caps)) < 0)
+		return false;
 	emu_caps = read_le4(caps, 0);
 	DEBUG_INFO("Caps %" PRIx32 "\n", emu_caps);
 
 	if (emu_caps & JLINK_CAP_GET_HW_VERSION) {
 		uint8_t version[4];
-		jlink_simple_query(CMD_GET_HW_VERSION, version, sizeof(version));
+		if (jlink_simple_query(CMD_GET_HW_VERSION, version, sizeof(version)) < 0)
+			return false;
 		DEBUG_INFO("HW: Type %u, Major %u, Minor %u, Rev %u\n", version[3], version[2], version[1], version[0]);
 	}
+	return true;
 }
 
-static void jlink_print_speed(void)
+static bool jlink_query_speed(void)
 {
 	uint8_t data[6];
-	jlink_simple_query(CMD_GET_SPEEDS, data, sizeof(data));
+	if (jlink_simple_query(CMD_GET_SPEEDS, data, sizeof(data)) < 0)
+		return false;
 	emu_speed_khz = read_le4(data, 0) / 1000U;
 	emu_min_divisor = read_le2(data, 4);
 	DEBUG_INFO("Emulator speed %ukHz, minimum divisor %u%s\n", emu_speed_khz, emu_min_divisor,
 		(emu_caps & JLINK_CAP_GET_SPEEDS) ? "" : ", fixed");
+	return true;
 }
 
 static void jlink_print_interfaces(bmp_info_s *const info)
@@ -118,9 +125,8 @@ static void jlink_print_interfaces(bmp_info_s *const info)
 
 static void jlink_info(bmp_info_s *const info)
 {
-	jlink_print_version();
-	jlink_print_caps();
-	jlink_print_speed();
+	if (!jlink_print_version() || !jlink_query_caps() || !jlink_query_speed())
+		return;
 	jlink_print_interfaces(info);
 }
 
