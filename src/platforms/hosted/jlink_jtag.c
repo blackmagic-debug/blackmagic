@@ -32,6 +32,7 @@
 #include "exception.h"
 #include "jtagtap.h"
 #include "jlink.h"
+#include "jlink_protocol.h"
 #include "cli.h"
 
 static void jtagtap_reset(void);

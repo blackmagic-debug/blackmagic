@@ -33,6 +33,7 @@
 #include "target_internal.h"
 #include "adiv5.h"
 #include "jlink.h"
+#include "jlink_protocol.h"
 #include "cli.h"
 
 static bool jlink_adiv5_swdp_write_nocheck(uint16_t addr, uint32_t data);
