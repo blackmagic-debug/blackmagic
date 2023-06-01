@@ -212,15 +212,17 @@ bool jlink_init(void)
 	return true;
 }
 
-const char *jlink_target_voltage(bmp_info_s *const info)
+const char *jlink_target_voltage(void)
 {
-	static char ret[7];
-	uint8_t cmd = CMD_GET_HW_STATUS;
-	uint8_t res[8];
-	bmda_usb_transfer(info->usb_link, &cmd, 1, res, sizeof(res));
-	const uint16_t millivolts = res[0] | (res[1] << 8U);
-	snprintf(ret, sizeof(ret), "%2u.%03u", millivolts / 1000U, millivolts % 1000U);
-	return ret;
+	static char result[7] = {'\0'};
+
+	uint8_t data[8];
+	if (jlink_simple_query(CMD_GET_HW_STATUS, data, sizeof(data)) < 0)
+		return NULL;
+
+	const uint16_t millivolts = read_le2(data, 0);
+	snprintf(result, sizeof(result), "%2u.%03u", millivolts / 1000U, millivolts % 1000U);
+	return result;
 }
 
 void jlink_nrst_set_val(bmp_info_s *const info, const bool assert)

@@ -330,7 +330,7 @@ const char *platform_target_voltage(void)
 		return libftdi_target_voltage();
 
 	case BMP_TYPE_JLINK:
-		return jlink_target_voltage(&info);
+		return jlink_target_voltage();
 #endif
 
 	default:
