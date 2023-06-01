@@ -124,7 +124,7 @@ void platform_init(int argc, char **argv)
 		break;
 
 	case BMP_TYPE_JLINK:
-		if (!jlink_init(&info))
+		if (!jlink_init())
 			exit(-1);
 		break;
 #endif
