@@ -72,13 +72,12 @@ static void jlink_print_caps(void)
 	}
 }
 
-static void jlink_print_speed(bmp_info_s *const info)
+static void jlink_print_speed(void)
 {
-	uint8_t cmd = CMD_GET_SPEEDS;
-	uint8_t res[6];
-	bmda_usb_transfer(info->usb_link, &cmd, 1, res, sizeof(res));
-	emu_speed_khz = (res[0] | (res[1] << 8U) | (res[2] << 16U) | (res[3] << 24U)) / 1000U;
-	emu_min_divisor = res[4] | (res[5] << 8U);
+	uint8_t data[6];
+	jlink_simple_query(CMD_GET_SPEEDS, data, sizeof(data));
+	emu_speed_khz = read_le4(data, 0) / 1000U;
+	emu_min_divisor = read_le2(data, 4);
 	DEBUG_INFO("Emulator speed %ukHz, minimum divisor %u%s\n", emu_speed_khz, emu_min_divisor,
 		(emu_caps & JLINK_CAP_GET_SPEEDS) ? "" : ", fixed");
 }
@@ -122,7 +121,7 @@ static void jlink_info(bmp_info_s *const info)
 {
 	jlink_print_version(info);
 	jlink_print_caps();
-	jlink_print_speed(info);
+	jlink_print_speed();
 	jlink_print_interfaces(info);
 }
 
@@ -188,8 +187,10 @@ bool jlink_init(bmp_info_s *const info)
 		DEBUG_ERROR("libusb_open() failed (%d): %s\n", result, libusb_error_name(result));
 		return false;
 	}
-	if (!jlink_claim_interface())
+	if (!jlink_claim_interface()) {
+		libusb_close(info->usb_link->device_handle);
 		return false;
+	}
 	if (!link->ep_tx || !link->ep_rx) {
 		DEBUG_ERROR("Device setup failed\n");
 		libusb_release_interface(info->usb_link->device_handle, info->usb_link->interface);
