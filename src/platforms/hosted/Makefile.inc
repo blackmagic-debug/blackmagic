@@ -102,7 +102,7 @@ SRC += bmp_remote.c
 ifneq ($(HOSTED_BMP_ONLY), 1)
     SRC += bmp_libusb.c stlinkv2.c stlinkv2_jtag.c stlinkv2_swd.c
     SRC += ftdi_bmp.c libftdi_swdptap.c libftdi_jtagtap.c
-    SRC += jlink.c jlink_adiv5_swdp.c jlink_jtagtap.c
+    SRC += jlink.c jlink_jtag.c jlink_swd.c
 else
     SRC += bmp_serial.c
 endif
