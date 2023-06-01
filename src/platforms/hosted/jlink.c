@@ -58,6 +58,16 @@ static int jlink_simple_query(const uint8_t command, void *const rx_buffer, cons
 	return bmda_usb_transfer(info.usb_link, &command, sizeof(command), rx_buffer, rx_len);
 }
 
+static void jlink_print_version(void)
+{
+	uint8_t len_str[2];
+	jlink_simple_query(CMD_GET_VERSION, len_str, sizeof(len_str));
+	uint8_t version[0x70];
+	bmda_usb_transfer(info.usb_link, NULL, 0, version, sizeof(version));
+	version[0x6f] = '\0';
+	DEBUG_INFO("%s\n", version);
+}
+
 static void jlink_print_caps(void)
 {
 	uint8_t caps[4];
@@ -80,16 +90,6 @@ static void jlink_print_speed(void)
 	emu_min_divisor = read_le2(data, 4);
 	DEBUG_INFO("Emulator speed %ukHz, minimum divisor %u%s\n", emu_speed_khz, emu_min_divisor,
 		(emu_caps & JLINK_CAP_GET_SPEEDS) ? "" : ", fixed");
-}
-
-static void jlink_print_version(void)
-{
-	uint8_t len_str[2];
-	jlink_simple_query(CMD_GET_VERSION, len_str, sizeof(len_str));
-	uint8_t version[0x70];
-	bmda_usb_transfer(info.usb_link, NULL, 0, version, sizeof(version));
-	version[0x6f] = '\0';
-	DEBUG_INFO("%s\n", version);
 }
 
 static void jlink_print_interfaces(bmp_info_s *const info)
