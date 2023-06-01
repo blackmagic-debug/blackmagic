@@ -225,19 +225,18 @@ const char *jlink_target_voltage(void)
 	return result;
 }
 
-void jlink_nrst_set_val(bmp_info_s *const info, const bool assert)
+void jlink_nrst_set_val(const bool assert)
 {
-	uint8_t cmd = assert ? CMD_HW_RESET0 : CMD_HW_RESET1;
-	bmda_usb_transfer(info->usb_link, &cmd, 1, NULL, 0);
+	jlink_simple_query(assert ? CMD_HW_RESET0 : CMD_HW_RESET1, NULL, 0);
 	platform_delay(2);
 }
 
-bool jlink_nrst_get_val(bmp_info_s *const info)
+bool jlink_nrst_get_val(void)
 {
-	uint8_t cmd[1] = {CMD_GET_HW_STATUS};
-	uint8_t res[8];
-	bmda_usb_transfer(info->usb_link, cmd, 1, res, sizeof(res));
-	return res[6] == 0;
+	uint8_t result[8];
+	if (jlink_simple_query(CMD_GET_HW_STATUS, result, sizeof(result)) < 0)
+		return false;
+	return result[6] == 0;
 }
 
 void jlink_max_frequency_set(bmp_info_s *const info, const uint32_t freq)

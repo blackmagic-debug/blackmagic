@@ -349,7 +349,7 @@ void platform_nrst_set_val(bool assert)
 		return stlink_nrst_set_val(assert);
 
 	case BMP_TYPE_JLINK:
-		return jlink_nrst_set_val(&info, assert);
+		return jlink_nrst_set_val(assert);
 
 	case BMP_TYPE_LIBFTDI:
 		return libftdi_nrst_set_val(assert);
@@ -374,7 +374,7 @@ bool platform_nrst_get_val(void)
 		return stlink_nrst_get_val();
 
 	case BMP_TYPE_JLINK:
-		return jlink_nrst_get_val(&info);
+		return jlink_nrst_get_val();
 
 	case BMP_TYPE_LIBFTDI:
 		return libftdi_nrst_get_val();
