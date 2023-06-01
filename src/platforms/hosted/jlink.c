@@ -99,17 +99,17 @@ static bool jlink_query_speed(void)
 	return true;
 }
 
-static void jlink_print_interfaces(bmp_info_s *const info)
+static void jlink_print_interfaces(void)
 {
 	uint8_t cmd[2] = {
 		CMD_GET_SELECT_IF,
 		JLINK_IF_GET_ACTIVE,
 	};
 	uint8_t selected_if[4];
-	bmda_usb_transfer(info->usb_link, cmd, 2, selected_if, sizeof(selected_if));
+	bmda_usb_transfer(info.usb_link, cmd, 2, selected_if, sizeof(selected_if));
 	cmd[1] = JLINK_IF_GET_AVAILABLE;
 	uint8_t available_ifs[4];
-	bmda_usb_transfer(info->usb_link, cmd, 2, available_ifs, sizeof(available_ifs));
+	bmda_usb_transfer(info.usb_link, cmd, 2, available_ifs, sizeof(available_ifs));
 	if (selected_if[0] == SELECT_IF_SWD)
 		DEBUG_INFO("SWD active");
 	else if (selected_if[0] == SELECT_IF_JTAG)
@@ -123,11 +123,11 @@ static void jlink_print_interfaces(bmp_info_s *const info)
 		DEBUG_INFO(", %s not available\n", selected_if[0] + 1U == JLINK_IF_SWD ? "JTAG" : "SWD");
 }
 
-static void jlink_info(bmp_info_s *const info)
+static void jlink_info(void)
 {
 	if (!jlink_print_version() || !jlink_query_caps() || !jlink_query_speed())
 		return;
-	jlink_print_interfaces(info);
+	jlink_print_interfaces();
 }
 
 /*
@@ -202,7 +202,7 @@ bool jlink_init(bmp_info_s *const info)
 		libusb_close(info->usb_link->device_handle);
 		return false;
 	}
-	jlink_info(info);
+	jlink_info();
 	return true;
 }
 
