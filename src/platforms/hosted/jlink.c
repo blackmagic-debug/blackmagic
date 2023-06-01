@@ -82,13 +82,12 @@ static void jlink_print_speed(void)
 		(emu_caps & JLINK_CAP_GET_SPEEDS) ? "" : ", fixed");
 }
 
-static void jlink_print_version(bmp_info_s *const info)
+static void jlink_print_version(void)
 {
-	uint8_t cmd = CMD_GET_VERSION;
 	uint8_t len_str[2];
-	bmda_usb_transfer(info->usb_link, &cmd, 1, len_str, sizeof(len_str));
+	jlink_simple_query(CMD_GET_VERSION, len_str, sizeof(len_str));
 	uint8_t version[0x70];
-	bmda_usb_transfer(info->usb_link, NULL, 0, version, sizeof(version));
+	bmda_usb_transfer(info.usb_link, NULL, 0, version, sizeof(version));
 	version[0x6f] = '\0';
 	DEBUG_INFO("%s\n", version);
 }
@@ -119,7 +118,7 @@ static void jlink_print_interfaces(bmp_info_s *const info)
 
 static void jlink_info(bmp_info_s *const info)
 {
-	jlink_print_version(info);
+	jlink_print_version();
 	jlink_print_caps();
 	jlink_print_speed();
 	jlink_print_interfaces(info);
