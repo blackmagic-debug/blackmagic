@@ -239,6 +239,14 @@ bool jlink_nrst_get_val(void)
 	return result[6] == 0;
 }
 
+bool jlink_set_frequency(const uint16_t frequency_khz)
+{
+	jlink_set_freq_s command = {CMD_SET_SPEED};
+	write_le2(command.frequency, 0, frequency_khz);
+	DEBUG_INFO("%s: %ukHz\n", __func__, frequency_khz);
+	return bmda_usb_transfer(info.usb_link, &command, sizeof(command), NULL, 0) >= 0;
+}
+
 void jlink_max_frequency_set(const uint32_t freq)
 {
 	if (!(emu_caps & JLINK_CAP_GET_SPEEDS) && !info.is_jtag)
@@ -249,11 +257,7 @@ void jlink_max_frequency_set(const uint32_t freq)
 		emu_current_divisor = divisor;
 	else
 		emu_current_divisor = emu_min_divisor;
-	const uint16_t speed_khz = emu_speed_khz / emu_current_divisor;
-	jlink_set_freq_s command = {CMD_SET_SPEED};
-	write_le2(command.frequency, 0, speed_khz);
-	DEBUG_WARN("Set Speed %d\n", speed_khz);
-	bmda_usb_transfer(info.usb_link, &command, sizeof(command), NULL, 0);
+	jlink_set_frequency(emu_speed_khz / emu_current_divisor);
 }
 
 uint32_t jlink_max_frequency_get(void)

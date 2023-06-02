@@ -69,14 +69,9 @@ bool jlink_jtagtap_init(bmp_info_s *const info)
 		return false;
 	}
 	platform_delay(10);
-	/* Set speed 256 kHz*/
-	const uint16_t speed = 2000;
-	uint8_t jtag_speed[3] = {
-		5U,
-		speed & 0xffU,
-		speed >> 8U,
-	};
-	bmda_usb_transfer(info->usb_link, jtag_speed, 3, NULL, 0);
+	/* Set adaptor JTAG frequency to 256 kHz */
+	jlink_set_frequency(2000);
+
 	uint8_t cmd[22];
 	memset(cmd, 0, 22);
 	cmd[0] = CMD_HW_JTAG3;
