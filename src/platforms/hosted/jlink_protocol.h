@@ -55,5 +55,6 @@ typedef struct jlink_set_freq {
 
 int jlink_simple_query(uint8_t command, void *rx_buffer, size_t rx_len);
 int jlink_simple_request(uint8_t command, uint8_t operation, void *rx_buffer, size_t rx_len);
+bool jlink_set_frequency(uint16_t frequency_khz);
 
 #endif /*PLATFORMS_HOSTED_JLINK_PROTOCOL_H*/
