@@ -25,17 +25,17 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-#define CMD_GET_VERSION    0x01U
-#define CMD_SET_SPEED      0x05U
-#define CMD_GET_HW_STATUS  0x07U
-#define CMD_GET_SPEEDS     0xc0U
-#define CMD_GET_SELECT_IF  0xc7U
-#define CMD_HW_JTAG3       0xcfU
-#define CMD_HW_RESET0      0xdcU
-#define CMD_HW_RESET1      0xddU
-#define CMD_GET_CAPS       0xe8U
-#define CMD_GET_EXT_CAPS   0xedU
-#define CMD_GET_HW_VERSION 0xf0U
+#define JLINK_CMD_GET_VERSION         0x01U
+#define JLINK_CMD_SET_FREQ            0x05U
+#define JLINK_CMD_GET_STATE           0x07U
+#define JLINK_CMD_GET_ADAPTOR_FREQS   0xc0U
+#define JLINK_CMD_TARGET_IF           0xc7U
+#define JLINK_CMD_IO_TRANSACT         0xcfU
+#define JLINK_CMD_SET_RESET           0xdcU
+#define JLINK_CMD_CLEAR_RESET         0xddU
+#define JLINK_CMD_GET_CAPABILITIES    0xe8U
+#define JLINK_CMD_GET_CAPS_EXTENDED   0xedU
+#define JLINK_CMD_GET_ADAPTOR_VERSION 0xf0U
 
 #define JLINK_IF_GET_ACTIVE    0xfeU
 #define JLINK_IF_GET_AVAILABLE 0xffU

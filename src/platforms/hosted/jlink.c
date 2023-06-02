@@ -68,7 +68,7 @@ int jlink_simple_request(const uint8_t command, const uint8_t operation, void *c
 static bool jlink_print_version(void)
 {
 	uint8_t len_str[2];
-	if (jlink_simple_query(CMD_GET_VERSION, len_str, sizeof(len_str)) < 0)
+	if (jlink_simple_query(JLINK_CMD_GET_VERSION, len_str, sizeof(len_str)) < 0)
 		return false;
 	uint8_t version[0x70];
 	bmda_usb_transfer(info.usb_link, NULL, 0, version, sizeof(version));
@@ -80,14 +80,14 @@ static bool jlink_print_version(void)
 static bool jlink_query_caps(void)
 {
 	uint8_t caps[4];
-	if (jlink_simple_query(CMD_GET_CAPS, caps, sizeof(caps)) < 0)
+	if (jlink_simple_query(JLINK_CMD_GET_CAPABILITIES, caps, sizeof(caps)) < 0)
 		return false;
 	emu_caps = read_le4(caps, 0);
 	DEBUG_INFO("Caps %" PRIx32 "\n", emu_caps);
 
 	if (emu_caps & JLINK_CAP_GET_HW_VERSION) {
 		uint8_t version[4];
-		if (jlink_simple_query(CMD_GET_HW_VERSION, version, sizeof(version)) < 0)
+		if (jlink_simple_query(JLINK_CMD_GET_ADAPTOR_VERSION, version, sizeof(version)) < 0)
 			return false;
 		DEBUG_INFO("HW: Type %u, Major %u, Minor %u, Rev %u\n", version[3], version[2], version[1], version[0]);
 	}
@@ -97,7 +97,7 @@ static bool jlink_query_caps(void)
 static bool jlink_query_speed(void)
 {
 	uint8_t data[6];
-	if (jlink_simple_query(CMD_GET_SPEEDS, data, sizeof(data)) < 0)
+	if (jlink_simple_query(JLINK_CMD_GET_ADAPTOR_FREQS, data, sizeof(data)) < 0)
 		return false;
 	emu_speed_khz = read_le4(data, 0) / 1000U;
 	emu_min_divisor = read_le2(data, 4);
@@ -111,8 +111,8 @@ static bool jlink_print_interfaces(void)
 	uint8_t active_if[4];
 	uint8_t available_ifs[4];
 
-	if (jlink_simple_request(CMD_GET_SELECT_IF, JLINK_IF_GET_ACTIVE, active_if, sizeof(active_if)) < 0 ||
-		jlink_simple_request(CMD_GET_SELECT_IF, JLINK_IF_GET_AVAILABLE, available_ifs, sizeof(available_ifs)) < 0)
+	if (jlink_simple_request(JLINK_CMD_TARGET_IF, JLINK_IF_GET_ACTIVE, active_if, sizeof(active_if)) < 0 ||
+		jlink_simple_request(JLINK_CMD_TARGET_IF, JLINK_IF_GET_AVAILABLE, available_ifs, sizeof(available_ifs)) < 0)
 		return false;
 	++active_if[0];
 
@@ -217,7 +217,7 @@ const char *jlink_target_voltage(void)
 	static char result[7] = {'\0'};
 
 	uint8_t data[8];
-	if (jlink_simple_query(CMD_GET_HW_STATUS, data, sizeof(data)) < 0)
+	if (jlink_simple_query(JLINK_CMD_GET_STATE, data, sizeof(data)) < 0)
 		return NULL;
 
 	const uint16_t millivolts = read_le2(data, 0);
@@ -227,21 +227,21 @@ const char *jlink_target_voltage(void)
 
 void jlink_nrst_set_val(const bool assert)
 {
-	jlink_simple_query(assert ? CMD_HW_RESET0 : CMD_HW_RESET1, NULL, 0);
+	jlink_simple_query(assert ? JLINK_CMD_SET_RESET : JLINK_CMD_CLEAR_RESET, NULL, 0);
 	platform_delay(2);
 }
 
 bool jlink_nrst_get_val(void)
 {
 	uint8_t result[8];
-	if (jlink_simple_query(CMD_GET_HW_STATUS, result, sizeof(result)) < 0)
+	if (jlink_simple_query(JLINK_CMD_GET_STATE, result, sizeof(result)) < 0)
 		return false;
 	return result[6] == 0;
 }
 
 bool jlink_set_frequency(const uint16_t frequency_khz)
 {
-	jlink_set_freq_s command = {CMD_SET_SPEED};
+	jlink_set_freq_s command = {JLINK_CMD_SET_FREQ};
 	write_le2(command.frequency, 0, frequency_khz);
 	DEBUG_INFO("%s: %ukHz\n", __func__, frequency_khz);
 	return bmda_usb_transfer(info.usb_link, &command, sizeof(command), NULL, 0) >= 0;
