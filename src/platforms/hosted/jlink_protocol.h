@@ -53,8 +53,18 @@ typedef struct jlink_set_freq {
 	uint8_t frequency[2];
 } jlink_set_freq_s;
 
+typedef struct jlink_io_transact {
+	/* This must always be set to JLINK_CMD_IO_TRANSACT */
+	uint8_t command;
+	/* This value exists for alignment purposes and must be 0 */
+	uint8_t reserved;
+	/* clock_cycles defines how many bits need transferring */
+	uint8_t clock_cycles[2];
+} jlink_io_transact_s;
+
 int jlink_simple_query(uint8_t command, void *rx_buffer, size_t rx_len);
 int jlink_simple_request(uint8_t command, uint8_t operation, void *rx_buffer, size_t rx_len);
+bool jlink_transfer(uint16_t clock_cycles, const uint8_t *tms, const uint8_t *tdi, uint8_t *tdo);
 bool jlink_set_frequency(uint16_t frequency_khz);
 
 #endif /*PLATFORMS_HOSTED_JLINK_PROTOCOL_H*/

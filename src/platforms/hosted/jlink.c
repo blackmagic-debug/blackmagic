@@ -65,6 +65,62 @@ int jlink_simple_request(const uint8_t command, const uint8_t operation, void *c
 	return bmda_usb_transfer(info.usb_link, request, sizeof(request), rx_buffer, rx_len);
 }
 
+/*
+ * This runs JLINK_CMD_IO_TRANSACT transactions, these have the following format:
+ * ╭─────────┬─────────┬───────────────┬─────────╮
+ * │    0    │    1    │       2       │    3    │
+ * ├╌╌╌╌╌╌╌╌╌┼╌╌╌╌╌╌╌╌╌┼╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌┼╌╌╌╌╌╌╌╌╌┤
+ * │ Command │  Align  │       Cycle count       │
+ * ├─────────┼─────────┼───────────────┼─────────┤
+ * │    4    │    …    │ 4 + tms_bytes │    …    │
+ * ├╌╌╌╌╌╌╌╌╌┼╌╌╌╌╌╌╌╌╌┼╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌┼╌╌╌╌╌╌╌╌╌┤
+ * │  TMS data bytes…  │     TDI data bytes…     │
+ * ╰─────────┴─────────┴───────────────┴─────────╯
+ * where the byte counts for each of TDI and TMS are defined by:
+ * count = ⌈cycle_count / 8⌉
+ *
+ * ⌈⌉ is defined as the ceiling function.
+ *
+ * In SWD mode, the `tms` buffer represents direction states and
+ * the `tdi` buffer represents SWDIO data to send to the device
+ */
+bool jlink_transfer(const uint16_t clock_cycles, const uint8_t *const tms, const uint8_t *const tdi, uint8_t *const tdo)
+{
+	if (!clock_cycles)
+		return true;
+	/*
+	 * The max number of bits to transfer is one shy of 64kib, meaning byte_count tops out at 8kiB.
+	 * However, we impose an "artificial" limit that it's not allowed to exceed 512B (4096b)
+	 * as we shouldn't be generating anything larger anyway.
+	 */
+	const size_t byte_count = (clock_cycles + 7U) >> 3U;
+	if (byte_count > 512U)
+		return false;
+	/* Allocate a stack buffer for the transfer */
+	uint8_t buffer[1028U] = {0};
+	/* The first 4 bytes define the parameters of the transaction, so map the transfer structure there */
+	jlink_io_transact_s *header = (jlink_io_transact_s *)buffer;
+	header->command = JLINK_CMD_IO_TRANSACT;
+	write_le2(header->clock_cycles, 0, clock_cycles);
+	/* Copy in the TMS state values to transmit (if present) */
+	if (tms)
+		memcpy(buffer + 4U, tms, byte_count);
+	/* Copy in the TDI values to transmit (if present) */
+	if (tdi)
+		memcpy(buffer + 4U + byte_count, tdi, byte_count);
+	/* Send the resulting transaction and try to read back the response data */
+	if (bmda_usb_transfer(info.usb_link, buffer, sizeof(jlink_io_transact_s) + (byte_count * 2U), buffer, byte_count) <
+			0 ||
+		/* Try to read back the transaction return code */
+		bmda_usb_transfer(info.usb_link, NULL, 0, buffer + byte_count, 1U) < 0)
+		return false;
+	/* Copy out the response into the TDO buffer (if present) */
+	if (tdo)
+		memcpy(tdo, buffer, byte_count);
+	/* Check that the response code is 0 ('OK') */
+	return buffer[byte_count] == 0U;
+}
+
 static bool jlink_print_version(void)
 {
 	uint8_t len_str[2];
