@@ -42,7 +42,7 @@ static void jtagtap_tdi_seq(bool final_tms, const uint8_t *data_in, size_t clock
 static bool jtagtap_next(bool tms, bool tdi);
 
 /*
- * In this file, command buffers with the command code CMD_HW_JTAG3 are built.
+ * In this file, command buffers with the command code JLINK_CMD_IO_TRANSACT are built.
  * These have the following format:
  * ┌─────────┬─────────┬───────────────┬─────────┐
  * │    0    │    1    │       2       │    3    │
@@ -63,8 +63,8 @@ bool jlink_jtagtap_init(bmp_info_s *const info)
 {
 	DEBUG_PROBE("jtap_init\n");
 	uint8_t res[4];
-	if (jlink_simple_request(CMD_GET_SELECT_IF, JLINK_IF_GET_AVAILABLE, res, sizeof(res)) < 0 ||
-		!(res[0] & JLINK_IF_JTAG) || jlink_simple_request(CMD_GET_SELECT_IF, SELECT_IF_JTAG, res, sizeof(res)) < 0) {
+	if (jlink_simple_request(JLINK_CMD_TARGET_IF, JLINK_IF_GET_AVAILABLE, res, sizeof(res)) < 0 ||
+		!(res[0] & JLINK_IF_JTAG) || jlink_simple_request(JLINK_CMD_TARGET_IF, SELECT_IF_JTAG, res, sizeof(res)) < 0) {
 		DEBUG_ERROR("JTAG not available\n");
 		return false;
 	}
@@ -74,7 +74,7 @@ bool jlink_jtagtap_init(bmp_info_s *const info)
 
 	uint8_t cmd[22];
 	memset(cmd, 0, 22);
-	cmd[0] = CMD_HW_JTAG3;
+	cmd[0] = JLINK_CMD_IO_TRANSACT;
 	/* write 9 bytes */
 	cmd[2] = 9U * 8U;
 	memset(cmd + 4U, 0xffU, 7);
@@ -108,7 +108,7 @@ static void jtagtap_tms_seq(const uint32_t tms_states, const size_t clock_cycles
 	const size_t len = (clock_cycles + 7U) / 8U;
 	uint8_t cmd[12];
 	memset(cmd, 0, sizeof(cmd));
-	cmd[0] = CMD_HW_JTAG3;
+	cmd[0] = JLINK_CMD_IO_TRANSACT;
 	cmd[2] = clock_cycles;
 	const size_t total_chunks = (clock_cycles >> 3U) + ((clock_cycles & 7U) ? 1U : 0U);
 	for (size_t cycle = 0; cycle < clock_cycles; cycle += 8U) {
@@ -135,7 +135,7 @@ static void jtagtap_tdi_tdo_seq(
 	DEBUG_PROBE("\n");
 	const size_t cmd_len = 4 + (total_chunks * 2U);
 	uint8_t *cmd = calloc(1, cmd_len);
-	cmd[0] = CMD_HW_JTAG3;
+	cmd[0] = JLINK_CMD_IO_TRANSACT;
 	cmd[2] = clock_cycles;
 	if (final_tms) {
 		const size_t bit_offset = (clock_cycles - 1U) & 7U;
@@ -176,7 +176,7 @@ static bool jtagtap_next(bool tms, bool tdi)
 	DEBUG_PROBE("jtagtap_next tms: %u, tdi %u\n", tms ? 1 : 0, tdi ? 1 : 0);
 	uint8_t cmd[6];
 	memset(cmd, 0, sizeof(cmd));
-	cmd[0] = CMD_HW_JTAG3;
+	cmd[0] = JLINK_CMD_IO_TRANSACT;
 	cmd[2] = 1;
 	if (tms)
 		cmd[4] = 1;

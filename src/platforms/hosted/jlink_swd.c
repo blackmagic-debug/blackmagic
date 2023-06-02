@@ -51,7 +51,7 @@ static bool line_reset(bmp_info_s *const info)
 	uint8_t cmd[44];
 	memset(cmd, 0, sizeof(cmd));
 
-	cmd[0] = CMD_HW_JTAG3;
+	cmd[0] = JLINK_CMD_IO_TRANSACT;
 	/* write 19 bytes */
 	cmd[2] = 19U * 8U;
 	uint8_t *const direction = cmd + 4U;
@@ -75,7 +75,7 @@ static bool line_reset(bmp_info_s *const info)
 static bool jlink_swdptap_init(bmp_info_s *const info)
 {
 	uint8_t cmd[2] = {
-		CMD_GET_SELECT_IF,
+		JLINK_CMD_TARGET_IF,
 		JLINK_IF_GET_AVAILABLE,
 	};
 	uint8_t res[4];
@@ -101,7 +101,7 @@ uint32_t jlink_swdp_scan(bmp_info_s *const info)
 	uint8_t cmd[44];
 	memset(cmd, 0, sizeof(cmd));
 
-	cmd[0] = CMD_HW_JTAG3;
+	cmd[0] = JLINK_CMD_IO_TRANSACT;
 	/* write 18 Bytes.*/
 	cmd[2] = 17U * 8U;
 	uint8_t *direction = cmd + 4U;
@@ -143,7 +143,7 @@ static void jlink_adiv5_swdp_make_packet_request(
 {
 	assert(cmd_length == 8U);
 	memset(cmd, 0, cmd_length);
-	cmd[0] = CMD_HW_JTAG3;
+	cmd[0] = JLINK_CMD_IO_TRANSACT;
 
 	/*
 	 * It seems that JLink samples the data to read at the end of the
@@ -201,7 +201,7 @@ static uint32_t jlink_adiv5_swdp_read_nocheck(const uint16_t addr)
 
 	uint8_t response[14];
 	memset(response, 0, sizeof(response));
-	response[0] = CMD_HW_JTAG3;
+	response[0] = JLINK_CMD_IO_TRANSACT;
 	response[2] = 33U + 2U; /* 2 idle cycles */
 	response[8] = 0xfe;
 	bmda_usb_transfer(info.usb_link, response, 14, result, 5);
@@ -245,7 +245,7 @@ static uint32_t jlink_adiv5_swdp_low_read(adiv5_debug_port_s *const dp)
 	uint8_t cmd[14];
 	uint8_t result[6];
 	memset(cmd, 0, sizeof(cmd));
-	cmd[0] = CMD_HW_JTAG3;
+	cmd[0] = JLINK_CMD_IO_TRANSACT;
 	cmd[2] = 33U + 2U; /* 2 idle cycles */
 	cmd[8] = 0xfe;
 	bmda_usb_transfer(info.usb_link, cmd, 14, result, 5);
